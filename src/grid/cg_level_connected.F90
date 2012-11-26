@@ -506,9 +506,6 @@ contains
 
             cg%ro_tgt%seg(g)%buf(:, :, :) = 0.
             fse(:,:) = cg%ro_tgt%seg(g)%se(:,:)
-            fse(:, LO) = fse(:, LO) - cg%off(:)
-            fse(:, HI) = fse(:, HI) - cg%off(:)
-
             off1(:) = mod(cg%ro_tgt%seg(g)%se(:, LO), int(refinement_factor, kind=8))
             do k = fse(zdim, LO), fse(zdim, HI)
                kc = (k-fse(zdim, LO)+off1(zdim))/refinement_factor + 1
@@ -516,7 +513,7 @@ contains
                   jc = (j-fse(ydim, LO)+off1(ydim))/refinement_factor + 1
                   do i = fse(xdim, LO), fse(xdim, HI)
                      ic = (i-fse(xdim, LO)+off1(xdim))/refinement_factor + 1
-                     cg%ro_tgt%seg(g)%buf(ic, jc, kc) = cg%ro_tgt%seg(g)%buf(ic, jc, kc) + cg%q(iv)%arr(i+cg%is, j+cg%js, k+cg%ks) * norm
+                     cg%ro_tgt%seg(g)%buf(ic, jc, kc) = cg%ro_tgt%seg(g)%buf(ic, jc, kc) + cg%q(iv)%arr(i, j, k) * norm
                   enddo
                enddo
             enddo
@@ -540,9 +537,6 @@ contains
             where (.not. cg%leafmap(:,:,:)) cg%q(iv)%arr(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = 0. ! disables check_dirty
             do g = lbound(cg%ri_tgt%seg(:), dim=1), ubound(cg%ri_tgt%seg(:), dim=1)
                cse(:,:) = cg%ri_tgt%seg(g)%se(:,:)
-               cse(:, LO) = cse(:, LO) - cg%off(:) + cg%ijkse(:, LO)
-               cse(:, HI) = cse(:, HI) - cg%off(:) + cg%ijkse(:, LO)
-
                p3 => cg%q(iv)%span(cse)
                p3 = p3 + cg%ri_tgt%seg(g)%buf(:, :, :) !errors on overlap?
             enddo
@@ -619,9 +613,10 @@ contains
    subroutine prolong_q_1var(this, iv, pos)
 
       use cg_list,          only: cg_list_element
-      use constants,        only: xdim, ydim, zdim, LO, HI, I_ZERO, I_ONE, I_TWO, BND_REF, O_INJ, O_LIN, O_D2, O_D3, O_D4, O_I2, O_I3, O_I4, refinement_factor, VAR_CENTER
+      use constants,        only: xdim, ydim, zdim, LO, HI, I_ZERO, I_ONE, I_TWO, BND_REF, O_INJ, O_LIN, O_D2, O_D3, O_D4, O_I2, O_I3, O_I4, VAR_CENTER
       use dataio_pub,       only: msg, warn, die
       use domain,           only: dom
+      use func,             only: f2c, c2f
       use grid_cont,        only: grid_container
       use mpisetup,         only: comm, mpi_err, req, status, inflate_req, master
       use mpi,              only: MPI_DOUBLE_PRECISION
@@ -636,8 +631,7 @@ contains
       type(cg_level_connected_T), pointer                :: fine
       integer                                            :: g
       integer(kind=8), dimension(xdim:zdim, LO:HI)       :: cse ! shortcuts for fine segment and coarse segment
-      integer(kind=8)                                    :: iec, jec, kec
-      integer(kind=8), dimension(xdim:zdim)              :: off, odd, D
+      integer(kind=8), dimension(xdim:zdim)              :: D
       integer(kind=4)                                    :: nr
       integer(kind=4), dimension(:, :), pointer          :: mpistatus
       type(cg_list_element),            pointer          :: cgl
@@ -647,6 +641,7 @@ contains
       real, dimension(:,:,:),           pointer          :: p3d
       logical, save                                      :: warned = .false.
       integer                                            :: position
+      integer(kind=8), dimension(xdim:zdim, LO:HI)       :: fse
 
       position = qna%lst(iv)%position(I_ONE)
       if (present(pos)) position = pos
@@ -724,9 +719,7 @@ contains
          associate( seg => cg%po_tgt%seg )
          do g = lbound(seg(:), dim=1), ubound(seg(:), dim=1)
 
-            cse(:, LO) = seg(g)%se(:,LO) - cg%off(:) + cg%ijkse(:, LO)
-            cse(:, HI) = seg(g)%se(:,HI) - cg%off(:) + cg%ijkse(:, LO)
-
+            cse = seg(g)%se
             nr = nr + I_ONE
             if (nr > size(req, dim=1)) call inflate_req
             p3d => cg%q(iv)%span(cse)
@@ -750,10 +743,8 @@ contains
 
             do g = lbound(cg%pi_tgt%seg(:), dim=1), ubound(cg%pi_tgt%seg(:), dim=1)
 
-               off(:) = cg%pi_tgt%seg(g)%se(:,LO) - cg%off(:)/refinement_factor + cg%ijkse(:,LO)
-               cg%prolong_(off(xdim):off(xdim)+ubound(cg%pi_tgt%seg(g)%buf, dim=1)-1, &
-                    &      off(ydim):off(ydim)+ubound(cg%pi_tgt%seg(g)%buf, dim=2)-1, &
-                    &      off(zdim):off(zdim)+ubound(cg%pi_tgt%seg(g)%buf, dim=3)-1) = cg%pi_tgt%seg(g)%buf(:,:,:)
+               cse = cg%pi_tgt%seg(g)%se
+               cg%prolong_(cse(xdim, LO):cse(xdim, HI), cse(ydim, LO):cse(ydim, HI), cse(zdim, LO):cse(zdim, HI)) = cg%pi_tgt%seg(g)%buf(:,:,:)
 
                !> When this%ord_prolong_set /= O_INJ, the received cg%pi_tgt%seg(:)%buf(:,:,:) may overlap
                !! The incoming data thus must either contain valid guardcells (even if qna%lst(iv)%ord_prolong == O_INJ)
@@ -761,18 +752,13 @@ contains
 
             enddo
 
-            iec = cg%is + (cg%ie - cg%is - 1)/refinement_factor + dom%D_x
-            jec = cg%js + (cg%je - cg%js - 1)/refinement_factor + dom%D_y
-            kec = cg%ks + (cg%ke - cg%ks - 1)/refinement_factor + dom%D_z
-
             !! almost all occurrences of number "2" are in fact connected to refinement_factor
 
-            ! When the grid offset is odd, the coarse data is shifted by half coarse cell (or one fine cell)
-            odd(:) = int(mod(cg%off(:), int(refinement_factor, kind=8)), kind=4)
+            cse = f2c(int(cg%ijkse, kind=8))
+            fse = c2f(cse)
 
-            ! When the grid offset is odd we need to apply mirrored prolongation stencil (swap even and odd stencils)
             where (dom%has_dir(:))
-               D(:) = 1 - 2 * odd(:)
+               D(:) = 1
             elsewhere
                D(:) = 0
             endwhere
@@ -780,99 +766,99 @@ contains
             ! Perform directional-split interpolation
             select case (stencil_range*dom%D_x) ! stencil_range or I_ZERO if .not. dom%has_dir(xdim)
                case (I_ZERO)
-                  cg%prolong_x(           cg%is          :cg%ie+dom%D_x:2,       cg%js:jec, cg%ks:kec) = &
-                       &      cg%prolong_(cg%is          :iec,                   cg%js:jec, cg%ks:kec)
+                  cg%prolong_x      (fse(xdim, LO):fse(xdim, HI):2, cse(ydim, LO):cse(ydim, HI), cse(zdim, LO):cse(zdim, HI)) = &
+                       cg%prolong_  (cse(xdim, LO):cse(xdim, HI),   cse(ydim, LO):cse(ydim, HI), cse(zdim, LO):cse(zdim, HI))
                   if (dom%has_dir(xdim)) &
-                       cg%prolong_x(      cg%is+dom%D_x  :cg%ie        :2,       cg%js:jec, cg%ks:kec) = &
-                       &      cg%prolong_(cg%is+odd(xdim):iec-dom%D_x+odd(xdim), cg%js:jec, cg%ks:kec)
+                       cg%prolong_x (fse(xdim, LO)+dom%D_x:fse(xdim, HI)+dom%D_x:2, cse(ydim, LO):cse(ydim, HI), cse(zdim, LO):cse(zdim, HI)) = &
+                       & cg%prolong_(cse(xdim, LO):cse(xdim, HI),                   cse(ydim, LO):cse(ydim, HI), cse(zdim, LO):cse(zdim, HI))
                case (I_ONE)
-                  cg%prolong_x(           cg%is                  :cg%ie+dom%D_x:2,               cg%js-dom%D_y:jec+dom%D_y, cg%ks-dom%D_z:kec+dom%D_z) = &
-                       + P1 * cg%prolong_(cg%is-D(xdim)          :iec-D(xdim),                   cg%js-dom%D_y:jec+dom%D_y, cg%ks-dom%D_z:kec+dom%D_z)   &
-                       + P0 * cg%prolong_(cg%is                  :iec,                           cg%js-dom%D_y:jec+dom%D_y, cg%ks-dom%D_z:kec+dom%D_z)   &
-                       + P_1* cg%prolong_(cg%is+D(xdim)          :iec+D(xdim),                   cg%js-dom%D_y:jec+dom%D_y, cg%ks-dom%D_z:kec+dom%D_z)
-                  cg%prolong_x(           cg%is+dom%D_x          :cg%ie        :2,               cg%js-dom%D_y:jec+dom%D_y, cg%ks-dom%D_z:kec+dom%D_z) = &
-                       + P_1* cg%prolong_(cg%is+odd(xdim)-D(xdim):iec-dom%D_x+odd(xdim)-D(xdim), cg%js-dom%D_y:jec+dom%D_y, cg%ks-dom%D_z:kec+dom%D_z)   &
-                       + P0 * cg%prolong_(cg%is+odd(xdim)        :iec-dom%D_x+odd(xdim),         cg%js-dom%D_y:jec+dom%D_y, cg%ks-dom%D_z:kec+dom%D_z)   &
-                       + P1 * cg%prolong_(cg%is+odd(xdim)+D(xdim):iec-dom%D_x+odd(xdim)+D(xdim), cg%js-dom%D_y:jec+dom%D_y, cg%ks-dom%D_z:kec+dom%D_z)
+                  cg%prolong_x          (fse(xdim, LO)        :fse(xdim, HI):2,         cse(ydim, LO)-dom%D_y:cse(ydim, HI)+dom%D_y, cse(zdim, LO)-dom%D_z:cse(zdim, HI)+dom%D_z) = &
+                       +P1 * cg%prolong_(cse(xdim, LO)-D(xdim):cse(xdim, HI)-D(xdim),   cse(ydim, LO)-dom%D_y:cse(ydim, HI)+dom%D_y, cse(zdim, LO)-dom%D_z:cse(zdim, HI)+dom%D_z) &
+                       +P0 * cg%prolong_(cse(xdim, LO)        :cse(xdim, HI),           cse(ydim, LO)-dom%D_y:cse(ydim, HI)+dom%D_y, cse(zdim, LO)-dom%D_z:cse(zdim, HI)+dom%D_z) &
+                       +P_1* cg%prolong_(cse(xdim, LO)+D(xdim):cse(xdim, HI)+D(xdim),   cse(ydim, LO)-dom%D_y:cse(ydim, HI)+dom%D_y, cse(zdim, LO)-dom%D_z:cse(zdim, HI)+dom%D_z)
+                  cg%prolong_x          (fse(xdim, LO)+dom%D_x:fse(xdim, HI)+dom%D_x:2, cse(ydim, LO)-dom%D_y:cse(ydim, HI)+dom%D_y, cse(zdim, LO)-dom%D_z:cse(zdim, HI)+dom%D_z) = &
+                       +P_1* cg%prolong_(cse(xdim, LO)-D(xdim):cse(xdim, HI)-D(xdim),   cse(ydim, LO)-dom%D_y:cse(ydim, HI)+dom%D_y, cse(zdim, LO)-dom%D_z:cse(zdim, HI)+dom%D_z) &
+                       +P0 * cg%prolong_(cse(xdim, LO)        :cse(xdim, HI),           cse(ydim, LO)-dom%D_y:cse(ydim, HI)+dom%D_y, cse(zdim, LO)-dom%D_z:cse(zdim, HI)+dom%D_z) &
+                       +P1 * cg%prolong_(cse(xdim, LO)+D(xdim):cse(xdim, HI)+D(xdim),   cse(ydim, LO)-dom%D_y:cse(ydim, HI)+dom%D_y, cse(zdim, LO)-dom%D_z:cse(zdim, HI)+dom%D_z)
                case (I_TWO)
-                  cg%prolong_x(           cg%is                    :cg%ie+dom%D_x:2,                 cg%js-2*dom%D_y:jec+2*dom%D_y, cg%ks-2*dom%D_z:kec+2*dom%D_z) = &
-                       + P2 * cg%prolong_(cg%is-2*D(xdim)          :iec-2*D(xdim),                   cg%js-2*dom%D_y:jec+2*dom%D_y, cg%ks-2*dom%D_z:kec+2*dom%D_z)   &
-                       + P1 * cg%prolong_(cg%is-  D(xdim)          :iec-  D(xdim),                   cg%js-2*dom%D_y:jec+2*dom%D_y, cg%ks-2*dom%D_z:kec+2*dom%D_z)   &
-                       + P0 * cg%prolong_(cg%is                    :iec,                             cg%js-2*dom%D_y:jec+2*dom%D_y, cg%ks-2*dom%D_z:kec+2*dom%D_z)   &
-                       + P_1* cg%prolong_(cg%is+  D(xdim)          :iec+  D(xdim),                   cg%js-2*dom%D_y:jec+2*dom%D_y, cg%ks-2*dom%D_z:kec+2*dom%D_z)   &
-                       + P_2* cg%prolong_(cg%is+2*D(xdim)          :iec+2*D(xdim),                   cg%js-2*dom%D_y:jec+2*dom%D_y, cg%ks-2*dom%D_z:kec+2*dom%D_z)
-                  cg%prolong_x(           cg%is+dom%D_x            :cg%ie:2,                         cg%js-2*dom%D_y:jec+2*dom%D_y, cg%ks-2*dom%D_z:kec+2*dom%D_z) = &
-                       + P_2* cg%prolong_(cg%is+odd(xdim)-2*D(xdim):iec-dom%D_x+odd(xdim)-2*D(xdim), cg%js-2*dom%D_y:jec+2*dom%D_y, cg%ks-2*dom%D_z:kec+2*dom%D_z)   &
-                       + P_1* cg%prolong_(cg%is+odd(xdim)-  D(xdim):iec-dom%D_x+odd(xdim)-  D(xdim), cg%js-2*dom%D_y:jec+2*dom%D_y, cg%ks-2*dom%D_z:kec+2*dom%D_z)   &
-                       + P0 * cg%prolong_(cg%is+odd(xdim)          :iec-dom%D_x+odd(xdim),           cg%js-2*dom%D_y:jec+2*dom%D_y, cg%ks-2*dom%D_z:kec+2*dom%D_z)   &
-                       + P1 * cg%prolong_(cg%is+odd(xdim)+  D(xdim):iec-dom%D_x+odd(xdim)+  D(xdim), cg%js-2*dom%D_y:jec+2*dom%D_y, cg%ks-2*dom%D_z:kec+2*dom%D_z)   &
-                       + P2 * cg%prolong_(cg%is+odd(xdim)+2*D(xdim):iec-dom%D_x+odd(xdim)+2*D(xdim), cg%js-2*dom%D_y:jec+2*dom%D_y, cg%ks-2*dom%D_z:kec+2*dom%D_z)
+                  cg%prolong_x          (fse(xdim, LO)          :fse(xdim, HI):2,         cse(ydim, LO)-2*dom%D_y:cse(ydim, HI)+2*dom%D_y, cse(zdim, LO)-2*dom%D_z:cse(zdim, HI)+2*dom%D_z) = &
+                       +P2 * cg%prolong_(cse(xdim, LO)-2*D(xdim):cse(xdim, HI)-2*D(xdim), cse(ydim, LO)-2*dom%D_y:cse(ydim, HI)+2*dom%D_y, cse(zdim, LO)-2*dom%D_z:cse(zdim, HI)+2*dom%D_z) &
+                       +P1 * cg%prolong_(cse(xdim, LO)-  D(xdim):cse(xdim, HI)-  D(xdim), cse(ydim, LO)-2*dom%D_y:cse(ydim, HI)+2*dom%D_y, cse(zdim, LO)-2*dom%D_z:cse(zdim, HI)+2*dom%D_z) &
+                       +P0 * cg%prolong_(cse(xdim, LO)          :cse(xdim, HI),           cse(ydim, LO)-2*dom%D_y:cse(ydim, HI)+2*dom%D_y, cse(zdim, LO)-2*dom%D_z:cse(zdim, HI)+2*dom%D_z) &
+                       +P_1* cg%prolong_(cse(xdim, LO)+  D(xdim):cse(xdim, HI)+  D(xdim), cse(ydim, LO)-2*dom%D_y:cse(ydim, HI)+2*dom%D_y, cse(zdim, LO)-2*dom%D_z:cse(zdim, HI)+2*dom%D_z) &
+                       +P_2* cg%prolong_(cse(xdim, LO)+2*D(xdim):cse(xdim, HI)+2*D(xdim), cse(ydim, LO)-2*dom%D_y:cse(ydim, HI)+2*dom%D_y, cse(zdim, LO)-2*dom%D_z:cse(zdim, HI)+2*dom%D_z)
+                  cg%prolong_x          (fse(xdim, LO)+dom%D_x  :fse(xdim, HI)+dom%D_x:2, cse(ydim, LO)-2*dom%D_y:cse(ydim, HI)+2*dom%D_y, cse(zdim, LO)-2*dom%D_z:cse(zdim, HI)+2*dom%D_z) = &
+                       +P_2* cg%prolong_(cse(xdim, LO)-2*D(xdim):cse(xdim, HI)-2*D(xdim), cse(ydim, LO)-2*dom%D_y:cse(ydim, HI)+2*dom%D_y, cse(zdim, LO)-2*dom%D_z:cse(zdim, HI)+2*dom%D_z) &
+                       +P_1* cg%prolong_(cse(xdim, LO)-  D(xdim):cse(xdim, HI)-  D(xdim), cse(ydim, LO)-2*dom%D_y:cse(ydim, HI)+2*dom%D_y, cse(zdim, LO)-2*dom%D_z:cse(zdim, HI)+2*dom%D_z) &
+                       +P0 * cg%prolong_(cse(xdim, LO)          :cse(xdim, HI),           cse(ydim, LO)-2*dom%D_y:cse(ydim, HI)+2*dom%D_y, cse(zdim, LO)-2*dom%D_z:cse(zdim, HI)+2*dom%D_z) &
+                       +P1 * cg%prolong_(cse(xdim, LO)+  D(xdim):cse(xdim, HI)+  D(xdim), cse(ydim, LO)-2*dom%D_y:cse(ydim, HI)+2*dom%D_y, cse(zdim, LO)-2*dom%D_z:cse(zdim, HI)+2*dom%D_z) &
+                       +P2 * cg%prolong_(cse(xdim, LO)+2*D(xdim):cse(xdim, HI)+2*D(xdim), cse(ydim, LO)-2*dom%D_y:cse(ydim, HI)+2*dom%D_y, cse(zdim, LO)-2*dom%D_z:cse(zdim, HI)+2*dom%D_z)
                case default
                   call die("[cg_level_connected:prolong_q_1var] unsupported stencil size")
             end select
 
             select case (stencil_range*dom%D_y)
                case (I_ZERO)
-                  cg%prolong_xy(           cg%is:cg%ie, cg%js          :cg%je+dom%D_y:2,       cg%ks:kec) = &
-                       &      cg%prolong_x(cg%is:cg%ie, cg%js          :jec,                   cg%ks:kec)
+                  cg%prolong_xy      (fse(xdim, LO):fse(xdim, HI), fse(ydim, LO):fse(ydim, HI):2, cse(zdim, LO):cse(zdim, HI)) = &
+                       cg%prolong_x  (fse(xdim, LO):fse(xdim, HI), cse(ydim, LO):cse(ydim, HI),   cse(zdim, LO):cse(zdim, HI))
                   if (dom%has_dir(ydim)) &
-                       cg%prolong_xy(      cg%is:cg%ie, cg%js+dom%D_y  :cg%je        :2,       cg%ks:kec) = &
-                       &      cg%prolong_x(cg%is:cg%ie, cg%js+odd(ydim):jec-dom%D_y+odd(ydim), cg%ks:kec)
+                       cg%prolong_xy (fse(xdim, LO):fse(xdim, HI), fse(ydim, LO)+dom%D_y:fse(ydim, HI)+dom%D_y:2, cse(zdim, LO):cse(zdim, HI)) = &
+                       & cg%prolong_x(fse(xdim, LO):fse(xdim, HI), cse(ydim, LO):cse(ydim, HI),                   cse(zdim, LO):cse(zdim, HI))
                case (I_ONE)
-                  cg%prolong_xy(           cg%is:cg%ie, cg%js                  :cg%je+dom%D_y:2,               cg%ks-dom%D_z:kec+dom%D_z) = &
-                       + P1 * cg%prolong_x(cg%is:cg%ie, cg%js-D(ydim)          :jec-D(ydim),                   cg%ks-dom%D_z:kec+dom%D_z)   &
-                       + P0 * cg%prolong_x(cg%is:cg%ie, cg%js                  :jec,                           cg%ks-dom%D_z:kec+dom%D_z)   &
-                       + P_1* cg%prolong_x(cg%is:cg%ie, cg%js+D(ydim)          :jec+D(ydim),                   cg%ks-dom%D_z:kec+dom%D_z)
-                  cg%prolong_xy(           cg%is:cg%ie, cg%js+dom%D_y          :cg%je        :2,               cg%ks-dom%D_z:kec+dom%D_z) = &
-                       + P_1* cg%prolong_x(cg%is:cg%ie, cg%js+odd(ydim)-D(ydim):jec-dom%D_y+odd(ydim)-D(ydim), cg%ks-dom%D_z:kec+dom%D_z)   &
-                       + P0 * cg%prolong_x(cg%is:cg%ie, cg%js+odd(ydim)        :jec-dom%D_y+odd(ydim),         cg%ks-dom%D_z:kec+dom%D_z)   &
-                       + P1 * cg%prolong_x(cg%is:cg%ie, cg%js+odd(ydim)+D(ydim):jec-dom%D_y+odd(ydim)+D(ydim), cg%ks-dom%D_z:kec+dom%D_z)
+                  cg%prolong_xy           (fse(xdim, LO):fse(xdim, HI), fse(ydim, LO):fse(ydim, HI):2,               cse(zdim, LO)-dom%D_z:cse(zdim, HI)+dom%D_z) = &
+                       + P1 * cg%prolong_x(fse(xdim, LO):fse(xdim, HI), cse(ydim, LO)-D(ydim):cse(ydim, HI)-D(ydim), cse(zdim, LO)-dom%D_z:cse(zdim, HI)+dom%D_z) &
+                       + P0 * cg%prolong_x(fse(xdim, LO):fse(xdim, HI), cse(ydim, LO)        :cse(ydim, HI),         cse(zdim, LO)-dom%D_z:cse(zdim, HI)+dom%D_z) &
+                       + P_1* cg%prolong_x(fse(xdim, LO):fse(xdim, HI), cse(ydim, LO)+D(ydim):cse(ydim, HI)+D(ydim), cse(zdim, LO)-dom%D_z:cse(zdim, HI)+dom%D_z)
+                  cg%prolong_xy           (fse(xdim, LO):fse(xdim, HI), fse(ydim, LO)+dom%D_y:fse(ydim, HI)+dom%D_y:2, cse(zdim, LO)-dom%D_z:cse(zdim, HI)+dom%D_z) = &
+                       + P_1* cg%prolong_x(fse(xdim, LO):fse(xdim, HI), cse(ydim, LO)-D(ydim):cse(ydim, HI)-D(ydim),   cse(zdim, LO)-dom%D_z:cse(zdim, HI)+dom%D_z) &
+                       + P0 * cg%prolong_x(fse(xdim, LO):fse(xdim, HI), cse(ydim, LO)        :cse(ydim, HI),           cse(zdim, LO)-dom%D_z:cse(zdim, HI)+dom%D_z) &
+                       + P1 * cg%prolong_x(fse(xdim, LO):fse(xdim, HI), cse(ydim, LO)+D(ydim):cse(ydim, HI)+D(ydim),   cse(zdim, LO)-dom%D_z:cse(zdim, HI)+dom%D_z)
                case (I_TWO)
-                  cg%prolong_xy(           cg%is:cg%ie, cg%js                    :cg%je+dom%D_y:2,                 cg%ks-2*dom%D_z:kec+2*dom%D_z) = &
-                       + P2 * cg%prolong_x(cg%is:cg%ie, cg%js-2*D(ydim)          :jec-2*D(ydim),                   cg%ks-2*dom%D_z:kec+2*dom%D_z)   &
-                       + P1 * cg%prolong_x(cg%is:cg%ie, cg%js-  D(ydim)          :jec-  D(ydim),                   cg%ks-2*dom%D_z:kec+2*dom%D_z)   &
-                       + P0 * cg%prolong_x(cg%is:cg%ie, cg%js                    :jec,                             cg%ks-2*dom%D_z:kec+2*dom%D_z)   &
-                       + P_1* cg%prolong_x(cg%is:cg%ie, cg%js+  D(ydim)          :jec+  D(ydim),                   cg%ks-2*dom%D_z:kec+2*dom%D_z)   &
-                       + P_2* cg%prolong_x(cg%is:cg%ie, cg%js+2*D(ydim)          :jec+2*D(ydim),                   cg%ks-2*dom%D_z:kec+2*dom%D_z)
-                  cg%prolong_xy(           cg%is:cg%ie, cg%js+dom%D_y            :cg%je        :2,                 cg%ks-2*dom%D_z:kec+2*dom%D_z) = &
-                       + P_2* cg%prolong_x(cg%is:cg%ie, cg%js+odd(ydim)-2*D(ydim):jec-dom%D_y+odd(ydim)-2*D(ydim), cg%ks-2*dom%D_z:kec+2*dom%D_z)   &
-                       + P_1* cg%prolong_x(cg%is:cg%ie, cg%js+odd(ydim)-  D(ydim):jec-dom%D_y+odd(ydim)-  D(ydim), cg%ks-2*dom%D_z:kec+2*dom%D_z)   &
-                       + P0 * cg%prolong_x(cg%is:cg%ie, cg%js+odd(ydim)          :jec-dom%D_y+odd(ydim),           cg%ks-2*dom%D_z:kec+2*dom%D_z)   &
-                       + P1 * cg%prolong_x(cg%is:cg%ie, cg%js+odd(ydim)+  D(ydim):jec-dom%D_y+odd(ydim)+  D(ydim), cg%ks-2*dom%D_z:kec+2*dom%D_z)   &
-                       + P2 * cg%prolong_x(cg%is:cg%ie, cg%js+odd(ydim)+2*D(ydim):jec-dom%D_y+odd(ydim)+2*D(ydim), cg%ks-2*dom%D_z:kec+2*dom%D_z)
+                  cg%prolong_xy           (fse(xdim, LO):fse(xdim, HI), fse(ydim, LO)          :fse(ydim, HI):2,         cse(zdim, LO)-2*dom%D_z:cse(zdim, HI)+2*dom%D_z) = &
+                       + P2 * cg%prolong_x(fse(xdim, LO):fse(xdim, HI), cse(ydim, LO)-2*D(ydim):cse(ydim, HI)-2*D(ydim), cse(zdim, LO)-2*dom%D_z:cse(zdim, HI)+2*dom%D_z) &
+                       + P1 * cg%prolong_x(fse(xdim, LO):fse(xdim, HI), cse(ydim, LO)-  D(ydim):cse(ydim, HI)-  D(ydim), cse(zdim, LO)-2*dom%D_z:cse(zdim, HI)+2*dom%D_z) &
+                       + P0 * cg%prolong_x(fse(xdim, LO):fse(xdim, HI), cse(ydim, LO)          :cse(ydim, HI),           cse(zdim, LO)-2*dom%D_z:cse(zdim, HI)+2*dom%D_z) &
+                       + P_1* cg%prolong_x(fse(xdim, LO):fse(xdim, HI), cse(ydim, LO)+  D(ydim):cse(ydim, HI)+  D(ydim), cse(zdim, LO)-2*dom%D_z:cse(zdim, HI)+2*dom%D_z) &
+                       + P_2* cg%prolong_x(fse(xdim, LO):fse(xdim, HI), cse(ydim, LO)+2*D(ydim):cse(ydim, HI)+2*D(ydim), cse(zdim, LO)-2*dom%D_z:cse(zdim, HI)+2*dom%D_z)
+                  cg%prolong_xy           (fse(xdim, LO):fse(xdim, HI), fse(ydim, LO)+dom%D_y  :fse(ydim, HI)+dom%D_y:2, cse(zdim, LO)-2*dom%D_z:cse(zdim, HI)+2*dom%D_z) = &
+                       + P_2* cg%prolong_x(fse(xdim, LO):fse(xdim, HI), cse(ydim, LO)-2*D(ydim):cse(ydim, HI)-2*D(ydim), cse(zdim, LO)-2*dom%D_z:cse(zdim, HI)+2*dom%D_z) &
+                       + P_1* cg%prolong_x(fse(xdim, LO):fse(xdim, HI), cse(ydim, LO)-  D(ydim):cse(ydim, HI)-  D(ydim), cse(zdim, LO)-2*dom%D_z:cse(zdim, HI)+2*dom%D_z) &
+                       + P0 * cg%prolong_x(fse(xdim, LO):fse(xdim, HI), cse(ydim, LO)          :cse(ydim, HI),           cse(zdim, LO)-2*dom%D_z:cse(zdim, HI)+2*dom%D_z) &
+                       + P1 * cg%prolong_x(fse(xdim, LO):fse(xdim, HI), cse(ydim, LO)+  D(ydim):cse(ydim, HI)+  D(ydim), cse(zdim, LO)-2*dom%D_z:cse(zdim, HI)+2*dom%D_z) &
+                       + P2 * cg%prolong_x(fse(xdim, LO):fse(xdim, HI), cse(ydim, LO)+2*D(ydim):cse(ydim, HI)+2*D(ydim), cse(zdim, LO)-2*dom%D_z:cse(zdim, HI)+2*dom%D_z)
                case default
                   call die("[cg_level_connected:prolong_q_1var] unsupported stencil size")
             end select
 
             select case (stencil_range*dom%D_z)
                case (I_ZERO)
-                  cg%q(iv)%arr (            cg%is:cg%ie, cg%js:cg%je, cg%ks          :cg%ke+dom%D_z:2      ) = &
-                       &      cg%prolong_xy(cg%is:cg%ie, cg%js:cg%je, cg%ks          :kec                  )
+                  cg%q(iv)%arr        (fse(xdim, LO):fse(xdim, HI), fse(ydim, LO):fse(ydim, HI), fse(zdim, LO):fse(zdim, HI):2) = &
+                       cg%prolong_xy  (fse(xdim, LO):fse(xdim, HI), fse(ydim, LO):fse(ydim, HI), cse(zdim, LO):cse(zdim, HI))
                   if (dom%has_dir(zdim)) &
-                       cg%q(iv)%arr (       cg%is:cg%ie, cg%js:cg%je, cg%ks+dom%D_z  :cg%ke        :2      ) = &
-                       &      cg%prolong_xy(cg%is:cg%ie, cg%js:cg%je, cg%ks+odd(zdim):kec-dom%D_z+odd(zdim))
+                       cg%q(iv)%arr   (fse(xdim, LO):fse(xdim, HI), fse(ydim, LO):fse(ydim, HI), fse(zdim, LO)+dom%D_z:fse(zdim, HI)+dom%D_z:2) = &
+                       & cg%prolong_xy(fse(xdim, LO):fse(xdim, HI), fse(ydim, LO):fse(ydim, HI), cse(zdim, LO):cse(zdim, HI))
                case (I_ONE)
-                  cg%q(iv)%arr(             cg%is:cg%ie, cg%js:cg%je, cg%ks                  :cg%ke+dom%D_z:2              ) = &
-                       + P1 * cg%prolong_xy(cg%is:cg%ie, cg%js:cg%je, cg%ks-D(zdim)          :kec-D(zdim)                  )   &
-                       + P0 * cg%prolong_xy(cg%is:cg%ie, cg%js:cg%je, cg%ks                  :kec                          )   &
-                       + P_1* cg%prolong_xy(cg%is:cg%ie, cg%js:cg%je, cg%ks+D(zdim)          :kec+D(zdim)                  )
-                  cg%q(iv)%arr(             cg%is:cg%ie, cg%js:cg%je, cg%ks+dom%D_z          :cg%ke        :2              ) = &
-                       + P_1* cg%prolong_xy(cg%is:cg%ie, cg%js:cg%je, cg%ks+odd(zdim)-D(zdim):kec-dom%D_z+odd(zdim)-D(zdim))   &
-                       + P0 * cg%prolong_xy(cg%is:cg%ie, cg%js:cg%je, cg%ks+odd(zdim)        :kec-dom%D_z+odd(zdim)        )   &
-                       + P1 * cg%prolong_xy(cg%is:cg%ie, cg%js:cg%je, cg%ks+odd(zdim)+D(zdim):kec-dom%D_z+odd(zdim)+D(zdim))
+                  cg%q(iv)%arr             (fse(xdim, LO):fse(xdim, HI), fse(ydim, LO):fse(ydim, HI), fse(zdim, LO)        :fse(zdim, HI):2) = &
+                       + P1 * cg%prolong_xy(fse(xdim, LO):fse(xdim, HI), fse(ydim, LO):fse(ydim, HI), cse(zdim, LO)-D(zdim):cse(zdim, HI)-D(zdim)) &
+                       + P0 * cg%prolong_xy(fse(xdim, LO):fse(xdim, HI), fse(ydim, LO):fse(ydim, HI), cse(zdim, LO)        :cse(zdim, HI)        ) &
+                       + P_1* cg%prolong_xy(fse(xdim, LO):fse(xdim, HI), fse(ydim, LO):fse(ydim, HI), cse(zdim, LO)+D(zdim):cse(zdim, HI)+D(zdim))
+                  cg%q(iv)%arr             (fse(xdim, LO):fse(xdim, HI), fse(ydim, LO):fse(ydim, HI), fse(zdim, LO)+dom%D_z:fse(zdim, HI)+dom%D_z:2) = &
+                       + P_1* cg%prolong_xy(fse(xdim, LO):fse(xdim, HI), fse(ydim, LO):fse(ydim, HI), cse(zdim, LO)-D(zdim):cse(zdim, HI)-D(zdim)) &
+                       + P0 * cg%prolong_xy(fse(xdim, LO):fse(xdim, HI), fse(ydim, LO):fse(ydim, HI), cse(zdim, LO)        :cse(zdim, HI)        ) &
+                       + P1 * cg%prolong_xy(fse(xdim, LO):fse(xdim, HI), fse(ydim, LO):fse(ydim, HI), cse(zdim, LO)+D(zdim):cse(zdim, HI)+D(zdim))
                case (I_TWO)
-                  cg%q(iv)%arr(             cg%is:cg%ie, cg%js:cg%je, cg%ks                    :cg%ke+dom%D_z:2) = &
-                       + P2 * cg%prolong_xy(cg%is:cg%ie, cg%js:cg%je, cg%ks-2*D(zdim)          :kec-2*D(zdim)  )   &
-                       + P1 * cg%prolong_xy(cg%is:cg%ie, cg%js:cg%je, cg%ks-  D(zdim)          :kec-  D(zdim)  )   &
-                       + P0 * cg%prolong_xy(cg%is:cg%ie, cg%js:cg%je, cg%ks                    :kec            )   &
-                       + P_1* cg%prolong_xy(cg%is:cg%ie, cg%js:cg%je, cg%ks+  D(zdim)          :kec+  D(zdim)  )   &
-                       + P_2* cg%prolong_xy(cg%is:cg%ie, cg%js:cg%je, cg%ks+2*D(zdim)          :kec+2*D(zdim)  )
-                  cg%q(iv)%arr(             cg%is:cg%ie, cg%js:cg%je, cg%ks+dom%D_z            :cg%ke        :2) = &
-                       + P_2* cg%prolong_xy(cg%is:cg%ie, cg%js:cg%je, cg%ks+odd(zdim)-2*D(zdim):kec-dom%D_z+odd(zdim)-2*D(zdim))   &
-                       + P_1* cg%prolong_xy(cg%is:cg%ie, cg%js:cg%je, cg%ks+odd(zdim)-  D(zdim):kec-dom%D_z+odd(zdim)-  D(zdim))   &
-                       + P0 * cg%prolong_xy(cg%is:cg%ie, cg%js:cg%je, cg%ks+odd(zdim)          :kec-dom%D_z+odd(zdim)          )   &
-                       + P1 * cg%prolong_xy(cg%is:cg%ie, cg%js:cg%je, cg%ks+odd(zdim)+  D(zdim):kec-dom%D_z+odd(zdim)+  D(zdim))   &
-                       + P2 * cg%prolong_xy(cg%is:cg%ie, cg%js:cg%je, cg%ks+odd(zdim)+2*D(zdim):kec-dom%D_z+odd(zdim)+2*D(zdim))
+                  cg%q(iv)%arr             (fse(xdim, LO):fse(xdim, HI), fse(ydim, LO):fse(ydim, HI), fse(zdim, LO)          :fse(zdim, HI):2) = &
+                       + P2 * cg%prolong_xy(fse(xdim, LO):fse(xdim, HI), fse(ydim, LO):fse(ydim, HI), cse(zdim, LO)-2*D(zdim):cse(zdim, HI)-2*D(zdim)) &
+                       + P1 * cg%prolong_xy(fse(xdim, LO):fse(xdim, HI), fse(ydim, LO):fse(ydim, HI), cse(zdim, LO)-  D(zdim):cse(zdim, HI)-  D(zdim)) &
+                       + P0 * cg%prolong_xy(fse(xdim, LO):fse(xdim, HI), fse(ydim, LO):fse(ydim, HI), cse(zdim, LO)          :cse(zdim, HI)          ) &
+                       + P_1* cg%prolong_xy(fse(xdim, LO):fse(xdim, HI), fse(ydim, LO):fse(ydim, HI), cse(zdim, LO)+  D(zdim):cse(zdim, HI)+  D(zdim)) &
+                       + P_2* cg%prolong_xy(fse(xdim, LO):fse(xdim, HI), fse(ydim, LO):fse(ydim, HI), cse(zdim, LO)+2*D(zdim):cse(zdim, HI)+2*D(zdim))
+                  cg%q(iv)%arr             (fse(xdim, LO):fse(xdim, HI), fse(ydim, LO):fse(ydim, HI), fse(zdim, LO)+dom%D_z  :fse(zdim, HI)+dom%D_z:2) = &
+                       + P_2* cg%prolong_xy(fse(xdim, LO):fse(xdim, HI), fse(ydim, LO):fse(ydim, HI), cse(zdim, LO)-2*D(zdim):cse(zdim, HI)-2*D(zdim)) &
+                       + P_1* cg%prolong_xy(fse(xdim, LO):fse(xdim, HI), fse(ydim, LO):fse(ydim, HI), cse(zdim, LO)-  D(zdim):cse(zdim, HI)-  D(zdim)) &
+                       + P0 * cg%prolong_xy(fse(xdim, LO):fse(xdim, HI), fse(ydim, LO):fse(ydim, HI), cse(zdim, LO)          :cse(zdim, HI)          ) &
+                       + P1 * cg%prolong_xy(fse(xdim, LO):fse(xdim, HI), fse(ydim, LO):fse(ydim, HI), cse(zdim, LO)+  D(zdim):cse(zdim, HI)+  D(zdim)) &
+                       + P2 * cg%prolong_xy(fse(xdim, LO):fse(xdim, HI), fse(ydim, LO):fse(ydim, HI), cse(zdim, LO)+2*D(zdim):cse(zdim, HI)+2*D(zdim))
                case default
                   call die("[cg_level_connected:prolong_q_1var] unsupported stencil size")
             end select

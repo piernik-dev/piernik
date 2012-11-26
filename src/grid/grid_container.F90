@@ -126,7 +126,6 @@ module grid_cont
       ! Grid properties
 
       ! cell count and position
-      integer(kind=8), dimension(ndims) :: off                   !< offset of the local domain within computational domain
       integer(kind=4), dimension(ndims) :: n_b                   !< [nxb, nyb, nzb]
       integer(kind=4) :: nxb                                     !< number of %grid cells in one block (without boundary cells) in x-direction
       integer(kind=4) :: nyb                                     !< number of %grid cells in one block (without boundary cells) in y-direction
@@ -246,10 +245,11 @@ contains
    subroutine init(this, n_d, off, my_se, grid_id, level_id)
 
       use cart_comm,     only: cdd
-      use constants,     only: PIERNIK_INIT_DOMAIN, xdim, ydim, zdim, ndims, big_float,refinement_factor, &
+      use constants,     only: PIERNIK_INIT_DOMAIN, xdim, ydim, zdim, ndims, big_float, &
            &                   FLUID, ARR, LO, HI, BND, BLK, INVALID, I_ONE, I_TWO, BND_MPI, BND_COR
       use dataio_pub,    only: die, warn, msg, code_progress
       use domain,        only: dom
+      use func,          only: f2c
       use mpi,           only: MPI_COMM_NULL
       use mpisetup,      only: nproc, inflate_req
 #if defined(SHEAR_BND) && !defined(FFTW)
@@ -274,7 +274,6 @@ contains
       this%membership = 1
       this%grid_id    = grid_id
       this%my_se(:,:) = my_se(:, :)
-      this%off(:)     = this%my_se(:, LO)
       this%h_cor1(:)  = this%my_se(:, HI) + I_ONE
       this%n_b(:)     = int(this%my_se(:, HI) - this%my_se(:, LO) + I_ONE, 4) ! Block 'physical' grid sizes
       this%level_id   = level_id
@@ -341,8 +340,8 @@ contains
 
       where (dom%has_dir(:))
          this%n_(:)        = this%n_b(:) + I_TWO * dom%nb       ! Block total grid size with guardcells
-         this%ijkse(:, LO) = dom%nb + I_ONE
-         this%ijkse(:, HI) = dom%nb + this%n_b(:)
+         this%ijkse(:, LO) = int(this%my_se(:, LO), kind=4)
+         this%ijkse(:, HI) = int(this%my_se(:, HI), kind=4)
          this%ijkseb(:,LO) = this%ijkse(:, LO) + dom%nb - I_ONE
          this%ijkseb(:,HI) = this%ijkse(:, HI) - dom%nb + I_ONE
          this%lh1(:,LO)    = this%ijkse(:, LO) - I_ONE
@@ -354,8 +353,8 @@ contains
          this%fbnd(:, HI)  = dom%edge(:, LO) + this%dl(:) * (this%h_cor1(:) - off(:))
       elsewhere
          this%n_(:)        = 1
-         this%ijkse(:, LO) = 1 ! cannot use this%ijkse(:, :) = 1 due to where shape
-         this%ijkse(:, HI) = 1
+         this%ijkse(:, LO) = 0
+         this%ijkse(:, HI) = 0
          this%ijkseb(:,LO) = this%ijkse(:, LO)
          this%ijkseb(:,HI) = this%ijkse(:, HI)
          this%lh1(:,LO)    = this%ijkse(:, LO)
@@ -442,10 +441,10 @@ contains
       if (allocated(this%prolong_) .or. allocated(this%prolong_x) .or. allocated(this%prolong_xy) ) call die("[grid_container:init] prolong_* arrays already allocated")
       ! size of coarsened grid with guardcells, additional cell is required only when even-sized grid has odd offset
 
-      rn = 1
+      rn = f2c(int(this%ijkse, kind=8))
       where (dom%has_dir(:))
-         rn(:, LO) = 1
-         rn(:, HI) = (this%n_b(:) + 1 + mod(this%off, int(refinement_factor, kind=8)))/refinement_factor + 2*dom%nb + 1
+         rn(:, LO) = rn(:, LO) - dom%nb
+         rn(:, HI) = rn(:, HI) + dom%nb
          ! +1 is because of some simplifications in cg_level::prolong_q_1var in treating grids with odd offsets
       endwhere
       allocate(this%prolong_  (      rn(xdim, LO):      rn(xdim, HI),       rn(ydim, LO):      rn(ydim, HI), rn(zdim, LO):rn(zdim, HI)), &
@@ -785,8 +784,7 @@ contains
       this%leafmap = .true.
       if (allocated(this%ri_tgt%seg)) then
          do g = lbound(this%ri_tgt%seg(:), dim=1), ubound(this%ri_tgt%seg(:), dim=1)
-            se(:, LO) = this%ri_tgt%seg(g)%se(:, LO)-this%off(:)+this%ijkse(:, LO)
-            se(:, HI) = this%ri_tgt%seg(g)%se(:, HI)-this%off(:)+this%ijkse(:, LO)
+            se(:, :) = this%ri_tgt%seg(g)%se(:, :)
             this%leafmap(se(xdim, LO):se(xdim, HI), se(ydim, LO):se(ydim, HI), se(zdim, LO):se(zdim, HI)) = .false.
          enddo
       endif

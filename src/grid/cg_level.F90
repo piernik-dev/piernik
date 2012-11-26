@@ -436,7 +436,7 @@ contains
       integer(kind=4)                                  :: d, dd, hl, lh, ib
       integer(kind=4), dimension(FLUID:ARR), parameter :: dims = [ I_ONE+ndims, I_ONE+ndims, I_ONE+ndims, ndims ] !< dimensionality of arrays
       integer(kind=4), dimension(FLUID:ARR)            :: nc
-      integer(kind=8), dimension(xdim:zdim)            :: ijks, per
+      integer(kind=8), dimension(xdim:zdim)            :: per
       integer(kind=8), dimension(xdim:zdim, LO:HI)     :: b_layer, bp_layer, poff
       logical,         dimension(:,:,:,:), allocatable :: facemap
 
@@ -452,8 +452,6 @@ contains
          if (cdd%comm3d == MPI_COMM_NULL) then
 
             ! assume that cuboids fill the domain and don't collide
-
-            ijks(:) = cg%ijkse(:, LO) - cg%off(:)
             per(:) = 0
             where (dom%periodic(:)) per(:) = this%n_d(:)
 
@@ -489,8 +487,10 @@ contains
                               b_layer(d, hl) = b_layer(d, lh) ! adjacent boundary layer, 1 cell thick, without corners
                               bp_layer(:, :) = b_layer(:, :)
                               where (per(:) > 0)
-                                 bp_layer(:, LO) = mod(b_layer(:, LO) + per(:), per(:))
-                                 bp_layer(:, HI) = mod(b_layer(:, HI) + per(:), per(:)) ! adjacent boundary layer, 1 cell thick, without corners, corrected for periodicity
+                                 where (bp_layer(:, LO) < this%off(:)) bp_layer(:, LO) = bp_layer(:, LO) + per(:)
+                                 where (bp_layer(:, HI) < this%off(:)) bp_layer(:, HI) = bp_layer(:, HI) + per(:)
+                                 where (bp_layer(:, LO) >= this%off(:)+this%n_d(:)) bp_layer(:, LO) = bp_layer(:, LO) - per(:)
+                                 where (bp_layer(:, HI) >= this%off(:)+this%n_d(:)) bp_layer(:, HI) = bp_layer(:, HI) - per(:)
                               endwhere
                               !> \todo save b_layer(:,:) and bp_layer(:,:) and move above calculations outside the b loop
 
@@ -502,8 +502,8 @@ contains
                                  g = g + 1
                                  do ib = 1, dom%nb
                                     cg%i_bnd(d, ib)%seg(g)%proc = j
-                                    cg%i_bnd(d, ib)%seg(g)%se(:,LO) = b_layer(:, LO) + ijks(:)
-                                    cg%i_bnd(d, ib)%seg(g)%se(:,HI) = b_layer(:, HI) + ijks(:)
+                                    cg%i_bnd(d, ib)%seg(g)%se(:,LO) = b_layer(:, LO)
+                                    cg%i_bnd(d, ib)%seg(g)%se(:,HI) = b_layer(:, HI)
                                     if (any(cg%i_bnd(d, ib)%seg(g)%se(d, :) < cg%lhn(d, LO))) &
                                          cg%i_bnd(d, ib)%seg(g)%se(d, :) = cg%i_bnd(d, ib)%seg(g)%se(d, :) + this%n_d(d)
                                     if (any(cg%i_bnd(d, ib)%seg(g)%se(d, :) > cg%lhn(d, HI))) &
@@ -549,8 +549,8 @@ contains
                   facemap = .false.
                   n_lbnd_face_cells = 0
                   do g = lbound(cg%o_bnd(d, I_ONE)%seg, dim=1), ubound(cg%o_bnd(d, I_ONE)%seg, dim=1)
-                     bp_layer(:, LO) = max(cg%o_bnd(d, I_ONE)%seg(g)%se(:, LO) - cg%ijkse(:, LO) + cg%off, cg%my_se(:, LO))
-                     bp_layer(:, HI) = min(cg%o_bnd(d, I_ONE)%seg(g)%se(:, HI) - cg%ijkse(:, LO) + cg%off, cg%my_se(:, HI))
+                     bp_layer(:, LO) = max(cg%o_bnd(d, I_ONE)%seg(g)%se(:, LO), cg%my_se(:, LO))
+                     bp_layer(:, HI) = min(cg%o_bnd(d, I_ONE)%seg(g)%se(:, HI), cg%my_se(:, HI))
                      lh = LO
                      if (cg%o_bnd(d, I_ONE)%seg(g)%se(d, HI) > cg%ijkse(d, LO)) lh = HI
                      bp_layer(d, :) = b_layer(d, :)

@@ -277,7 +277,7 @@ contains
       if (is_multicg) call die("[slice_hdf5:write_plot_hdf5] multiple grid pieces per processor not implemented yet (1)") !nontrivial message tagging
 
       xn = 1
-      if (dom%has_dir(plane)) xn = pl_i(plane) + dom%nb - cg%off(plane)
+      if (dom%has_dir(plane)) xn = pl_i(plane)
 
       if ((xn > dom%nb .and. xn <= cg%n_b(plane)+dom%nb) .or. (xn == 1 .and. .not. dom%has_dir(plane))) then
          allocate(send(cg%n_b(d1(plane)), cg%n_b(d2(plane))))

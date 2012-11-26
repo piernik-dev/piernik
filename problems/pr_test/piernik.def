@@ -1,0 +1,13 @@
+#define HDF5
+#undef IONIZED
+#undef MAGNETIC
+#define NEUTRAL
+#define LOCAL_FR_SPEED
+
+#undef ISO
+#define RTVD
+
+#undef GRAV
+#define MULTIGRID
+
+#define DEBUG

@@ -86,7 +86,7 @@ contains
    subroutine get_extremum(this, ind, minmax, prop, dir)
 
       use cg_list,     only: cg_list_element
-      use constants,   only: MINL, MAXL, I_ONE, ndims, xdim, ydim, zdim, big_float
+      use constants,   only: MINL, MAXL, I_ONE, ndims, xdim, ydim, zdim, big_float, LO
       use dataio_pub,  only: msg, warn, die
       use domain,      only: dom
       use grid_cont,   only: grid_container
@@ -140,13 +140,14 @@ contains
                case (MINL)
                   if (minval(tab) < prop%val) then
                      prop%val = minval(tab)
-                     prop%loc = minloc(tab) + dom%nb
+                     prop%loc = minloc(tab) + cg%ijkse(:, LO) - 1
+                     ! it isn't too much intiutive that minloc and maxloc return values as the array indexing start from 1, but here tab does so anyway
                      cg_x => cg
                   endif
                case (MAXL)
                   if (maxval(tab) > prop%val) then
                      prop%val = maxval(tab)
-                     prop%loc = maxloc(tab) + dom%nb
+                     prop%loc = maxloc(tab) + cg%ijkse(:, LO) - 1
                      cg_x => cg
                   endif
             end select
@@ -571,7 +572,7 @@ contains
    subroutine check_dirty(this, iv, label, expand)
 
       use cg_list,          only: cg_list_element
-      use constants,        only: dirtyL, LO
+      use constants,        only: dirtyL
       use dataio_pub,       only: warn, msg, die
       use domain,           only: dom
       use global,           only: dirty_debug, show_n_dirtys, no_dirty_checks
@@ -606,7 +607,7 @@ contains
                         if (cnt < show_n_dirtys) then
                            write(msg, '(3a,i4,a,i3,a,i5,3a,3i6,a,g20.12)') "[cg_list_dataop:check_dirty] ", trim(label), "@", proc, " lvl^", cgl%cg%level_id, &
                                 &                                          " cg#", cgl%cg%grid_id, " '", trim(qna%lst(iv)%name), "'(", &
-                                &                                          [ i, j, k ] - cgl%cg%ijkse(:, LO) + cgl%cg%off(:), ") = ", cgl%cg%q(iv)%arr(i, j, k)
+                                &                                          i, j, k, ") = ", cgl%cg%q(iv)%arr(i, j, k)
                         else
                            msg="[cg_list_dataop:check_dirty] and so on ... "
                         endif

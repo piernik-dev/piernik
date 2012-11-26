@@ -291,7 +291,6 @@ contains
 
    subroutine ascii_dump(this, filename, qlst)
 
-      use constants,        only: LO
       use dataio_pub,       only: msg, printio
       use named_array_list, only: qna
 
@@ -317,7 +316,7 @@ contains
          do i = cgl%cg%is, cgl%cg%ie
             do j = cgl%cg%js, cgl%cg%je
                do k = cgl%cg%ks, cgl%cg%ke
-                  write(fu, '(3i4,i6,3es20.11e3)', advance='no') [ i, j, k ] - cgl%cg%ijkse(:, LO) + cgl%cg%off(:), cgl%cg%level_id, cgl%cg%x(i), cgl%cg%y(j), cgl%cg%z(k)
+                  write(fu, '(3i4,i6,3es20.11e3)', advance='no') i, j, k, cgl%cg%level_id, cgl%cg%x(i), cgl%cg%y(j), cgl%cg%z(k)
                   do q = lbound(qlst(:), dim=1), ubound(qlst(:), dim=1)
                      write(fu, '(es20.11e3)', advance='no') cgl%cg%q(qlst(q))%arr(i, j, k)
                   enddo

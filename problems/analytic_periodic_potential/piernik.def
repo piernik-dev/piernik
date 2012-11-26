@@ -1,0 +1,11 @@
+#define DUST
+#undef  MAGNETIC
+
+#undef ISO
+
+#define GLOBAL_FR_SPEED
+
+#define GRAV
+#define MULTIGRID
+
+#define RTVD

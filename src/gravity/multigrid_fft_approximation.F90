@@ -85,7 +85,7 @@ contains
       implicit none
 
       integer :: d, g, j, lh, hl, l, nl
-      integer(kind=8), dimension(xdim:zdim) :: ijks, per
+      integer(kind=8), dimension(xdim:zdim) :: per
       logical, dimension(xdim:zdim) :: dmask
       integer(kind=8), dimension(xdim:zdim, LO:HI) :: coarsened, b_layer
       type(pr_segment), pointer :: seg
@@ -151,7 +151,7 @@ contains
                      do while (associated(cgl))
                         cg => cgl%cg
                         if (.not. cg%ext_bnd(d, lh)) then
-                           ijks(:) = cg%ijkse(:, LO) - cg%off(:)  ! add this to convert absolute cell coordinates to local indices. (+nb - off(:))
+
                            procmask(:) = 0
                            ! two layers of cells are required for even locations (+ two layers per each interpolation order)
                            ! one layer of cells is required for odd locations (the local domain face is exactly at the centers of coarse cells)
@@ -198,8 +198,6 @@ contains
                                       &           seg%se(ydim, HI)/2-seg%se(ydim, LO)/2 + 1, &
                                       &           seg%se(zdim, HI)/2-seg%se(zdim, LO)/2 + 1))
 
-                                 seg%se(:, LO) = seg%se(:, LO) - cg%off(:) !+ ijks(:)
-                                 seg%se(:, HI) = seg%se(:, HI) - cg%off(:) !+ ijks(:)
                               endif
                            enddo
                         endif
@@ -213,7 +211,7 @@ contains
                      cgl => curl%first
                      do while (associated(cgl))
                         cg => cgl%cg
-                        ijks(:) = cg%ijkse(:, LO) - cg%off(:)  ! add this to convert absolute cell coordinates to local indices. (+nb - off(:))
+
                         procmask(:) = 0
                         do j = FIRST, LAST
                            is_internal_fine = dom%periodic(d)
@@ -271,14 +269,14 @@ contains
                                  coarsened(:, :) = coarsened(:, :)/2
                                  coarsened(d, :) = coarsened(d, :) + [ -ord_prolong_face_norm, ord_prolong_face_norm ]
 
-                                 seg%se(:, LO) = max(cg%my_se(:, LO), coarsened(:, LO)) + ijks(:)
-                                 seg%se(:, HI) = min(cg%my_se(:, HI), coarsened(:, HI)) + ijks(:)
+                                 seg%se(:, LO) = max(cg%my_se(:, LO), coarsened(:, LO))
+                                 seg%se(:, HI) = min(cg%my_se(:, HI), coarsened(:, HI))
 
                                  coarsened(d, :) = coarsened(d, :) - [ -ord_prolong_face_norm, ord_prolong_face_norm ] ! revert broadening
                                  allocate(seg%f_lay(seg%se(d, HI) - seg%se(d, LO) + 1))
                                  do l = 1, size(seg%f_lay(:))
                                     seg%f_lay(l)%layer = l + int(seg%se(d, LO), kind=4) - 1
-                                    nl = int(minval(abs(seg%f_lay(l)%layer - ijks(d) - coarsened(d, :))), kind=4)
+                                    nl = int(minval(abs(seg%f_lay(l)%layer - coarsened(d, :))), kind=4)
                                     if (mod(curl%finer%pse(j)%c(1)%se(d, lh) + lh - LO, 2_LONG) == 0) then ! fine face at coarse face
                                        seg%f_lay(l)%coeff = opfn_c_ff(nl)
                                     else                                                              ! fine face at coarse center

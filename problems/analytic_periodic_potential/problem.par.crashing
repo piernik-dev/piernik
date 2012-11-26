@@ -1,0 +1,86 @@
+ $BASE_DOMAIN
+    n_d = 40, 40, 1
+    bnd_xl = 'periodic'
+    bnd_xr = 'periodic'
+    bnd_yl = 'periodic'
+    bnd_yr = 'periodic'
+    bnd_zl = 'periodic'
+    bnd_zr = 'periodic'
+    xmin   =  1.
+    xmax   =  4.1415926535897
+    ymin   =  1.
+    ymax   =  4.1415926535897
+!    zmin   =  0.
+!    zmax   =  3.1415926535897
+ /
+
+ $MPI_BLOCKS
+    psize = 1, 1, 1
+    bsize = 3*5            ! it seems odd offsets are momewhat incompatible with coarse-to-fine prolongation. Also occurs for allow_uneven and allow_noncart
+!    allow_uneven = .true.
+!    allow_noncart = .true.
+!    dd_unif_quality = 1.1
+!    dd_rect_quality = 1.1
+ /
+
+ $UNITS
+    units_set = "cgs"
+ /
+
+ $RESTART_CONTROL
+    restart  = 'none'
+    new_id   = ''
+    nrestart = 0
+ /
+
+ $END_CONTROL
+    tend   = 0.0
+    nend   = 1 ! we can set here 0 as well, but this would issue a warning
+ /
+
+ $OUTPUT_CONTROL
+    problem_name ='apot'
+    run_id =  '___'
+    dt_hdf  = 10.0
+    dt_res  = 0.0
+    dt_plt  = 0.0
+    dt_log  = 0.001
+    dt_tsl  = 0.001
+    vars(1:) = 'dens', 'gpot', 'apot', 'errp', 'level', 'relerr', "source", "solution", "defect", "correction", "gp", "sgp", "wa"
+ /
+
+ $FLUID_DUST
+    selfgrav = .true.
+ /
+
+ $NUMERICAL_SETUP
+    cfl    = 0.7
+    smalld = 1.e-20
+    smallei= 1.e-20
+    limiter= 'vanleer'
+ /
+
+ $PROBLEM_CONTROL
+    type = "sin*"
+    n    = 100
+    a    = 1.
+ /
+
+ $MULTIGRID_SOLVER
+!    level_max = 3
+    stdout    = .true.
+    ord_prolong   = -2
+    dirty_debug = .true.
+ /
+
+ $MULTIGRID_GRAVITY
+    norm_tol  = 1.e-6
+    nsmool    = 4
+    grav_bnd_str  = "periodic"
+    ord_time_extrap = -1  ! switch off history (prolongation of the initial states seems to be broken a bit
+    vcycle_abort = 1e10   ! early implementation of the prolongation sometimes has poor convergence on coarse grids due to lack of proper subroutine for fine-to-coarse boundaries
+ /
+
+ $AMR
+    level_max = 1
+ /
