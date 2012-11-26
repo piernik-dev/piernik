@@ -765,11 +765,11 @@ contains
             ! Perform directional-split interpolation
             select case (stencil_range*dom%D_x) ! stencil_range or I_ZERO if .not. dom%has_dir(xdim)
                case (I_ZERO)
-                  cg%prolong_x      (fse(xdim, LO):fse(xdim, HI):2, cse(ydim, LO):cse(ydim, HI), cse(zdim, LO):cse(zdim, HI)) = &
-                       cg%prolong_  (cse(xdim, LO):cse(xdim, HI),   cse(ydim, LO):cse(ydim, HI), cse(zdim, LO):cse(zdim, HI))
+                  cg%prolong_x      (fse(xdim, LO):fse(xdim, HI):2, :, :) = &
+                       cg%prolong_  (cse(xdim, LO):cse(xdim, HI),   :, :)
                   if (dom%has_dir(xdim)) &
-                       cg%prolong_x (fse(xdim, LO)+dom%D_x:fse(xdim, HI)+dom%D_x:2, cse(ydim, LO):cse(ydim, HI), cse(zdim, LO):cse(zdim, HI)) = &
-                       & cg%prolong_(cse(xdim, LO):cse(xdim, HI),                   cse(ydim, LO):cse(ydim, HI), cse(zdim, LO):cse(zdim, HI))
+                       cg%prolong_x (fse(xdim, LO)+dom%D_x:fse(xdim, HI)+dom%D_x:2, :, :) = &
+                       & cg%prolong_(cse(xdim, LO):cse(xdim, HI),                   :, :)
                case (I_ONE)
                   cg%prolong_x          (fse(xdim, LO)        :fse(xdim, HI):2,         cse(ydim, LO)-dom%D_y:cse(ydim, HI)+dom%D_y, cse(zdim, LO)-dom%D_z:cse(zdim, HI)+dom%D_z) = &
                        +P1 * cg%prolong_(cse(xdim, LO)-D(xdim):cse(xdim, HI)-D(xdim),   cse(ydim, LO)-dom%D_y:cse(ydim, HI)+dom%D_y, cse(zdim, LO)-dom%D_z:cse(zdim, HI)+dom%D_z) &
@@ -798,11 +798,11 @@ contains
 
             select case (stencil_range*dom%D_y)
                case (I_ZERO)
-                  cg%prolong_xy      (fse(xdim, LO):fse(xdim, HI), fse(ydim, LO):fse(ydim, HI):2, cse(zdim, LO):cse(zdim, HI)) = &
-                       cg%prolong_x  (fse(xdim, LO):fse(xdim, HI), cse(ydim, LO):cse(ydim, HI),   cse(zdim, LO):cse(zdim, HI))
+                  cg%prolong_xy      (fse(xdim, LO):fse(xdim, HI), fse(ydim, LO):fse(ydim, HI):2, :) = &
+                       cg%prolong_x  (fse(xdim, LO):fse(xdim, HI), cse(ydim, LO):cse(ydim, HI),   :)
                   if (dom%has_dir(ydim)) &
-                       cg%prolong_xy (fse(xdim, LO):fse(xdim, HI), fse(ydim, LO)+dom%D_y:fse(ydim, HI)+dom%D_y:2, cse(zdim, LO):cse(zdim, HI)) = &
-                       & cg%prolong_x(fse(xdim, LO):fse(xdim, HI), cse(ydim, LO):cse(ydim, HI),                   cse(zdim, LO):cse(zdim, HI))
+                       cg%prolong_xy (fse(xdim, LO):fse(xdim, HI), fse(ydim, LO)+dom%D_y:fse(ydim, HI)+dom%D_y:2, :) = &
+                       & cg%prolong_x(fse(xdim, LO):fse(xdim, HI), cse(ydim, LO):cse(ydim, HI),                   :)
                case (I_ONE)
                   cg%prolong_xy           (fse(xdim, LO):fse(xdim, HI), fse(ydim, LO):fse(ydim, HI):2,               cse(zdim, LO)-dom%D_z:cse(zdim, HI)+dom%D_z) = &
                        + P1 * cg%prolong_x(fse(xdim, LO):fse(xdim, HI), cse(ydim, LO)-D(ydim):cse(ydim, HI)-D(ydim), cse(zdim, LO)-dom%D_z:cse(zdim, HI)+dom%D_z) &
