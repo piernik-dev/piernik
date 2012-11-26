@@ -35,6 +35,7 @@
  $OUTPUT_CONTROL
     problem_name = 'otvortex'
     run_id       = 'rs4'
+    use_v2_io = .true.
     dt_hdf  = 0.12
     dt_res  = 0.0
     dt_log  = 0.00001
