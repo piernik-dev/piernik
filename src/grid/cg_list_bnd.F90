@@ -65,7 +65,6 @@ module cg_list_bnd
       procedure          :: internal_boundaries_3d     !< A wrapper that calls internal_boundaries for 3D arrays stored in cg%q(:)
       procedure          :: internal_boundaries_4d     !< A wrapper that calls internal_boundaries for 4D arrays stored in cg%w(:)
       procedure, private :: internal_boundaries        !< Exchanges guardcells for BND_MPI and BND_PER boundaries (internal and periodic external boundaries)
-      procedure, private :: internal_boundaries_comm3d !< Exchanges guardcells for BND_MPI and BND_PER boundaries for cartesian communicator
       procedure, private :: external_boundaries        !< Set up external boundary values
       procedure          :: clear_boundaries           !< Clear (set to 0) all boundaries
       procedure          :: level_3d_boundaries        !< Perform internal boundary exchanges and external boundary extrapolations on 3D named arrays
@@ -82,7 +81,7 @@ contains
 
       class(cg_list_bnd_T),      intent(in) :: this   !< the list on which to perform the boundary exchange
       integer,                   intent(in) :: ind    !< index of cg%q(:) 3d array
-      integer(kind=4), optional, intent(in) :: nb     !< number of grid cells to exchange (not implemented for comm3d)
+      integer(kind=4), optional, intent(in) :: nb     !< number of grid cells to exchange
       integer(kind=4), optional, intent(in) :: dim    !< do the internal boundaries only in the specified dimension
 
       call internal_boundaries(this, ind, .true., nb, dim)
@@ -97,7 +96,7 @@ contains
 
       class(cg_list_bnd_T),      intent(in) :: this !< the list on which to perform the boundary exchange
       integer,                   intent(in) :: ind  !< index of cg%w(:) 4d array
-      integer(kind=4), optional, intent(in) :: nb   !< number of grid cells to exchange (not implemented for comm3d)
+      integer(kind=4), optional, intent(in) :: nb   !< number of grid cells to exchange
       integer(kind=4), optional, intent(in) :: dim  !< do the internal boundaries only in the specified dimension
 
       call internal_boundaries(this, ind, .false., nb, dim)
@@ -123,13 +122,12 @@ contains
 
    subroutine internal_boundaries(this, ind, tgt3d, nb, dim)
 
-      use cart_comm,        only: cdd
       use cg_list,          only: cg_list_element
       use constants,        only: xdim, ydim, zdim, LO, HI, I_ONE, I_TWO
       use dataio_pub,       only: die, warn
       use domain,           only: dom
       use grid_cont,        only: grid_container, segment
-      use mpi,              only: MPI_COMM_NULL, MPI_DOUBLE_PRECISION, MPI_STATUS_SIZE
+      use mpi,              only: MPI_DOUBLE_PRECISION, MPI_STATUS_SIZE
       use mpisetup,         only: comm, mpi_err, req, inflate_req
       use named_array_list, only: wna
 
@@ -138,7 +136,7 @@ contains
       class(cg_list_bnd_T),      intent(in)        :: this   !< the list on which to perform the boundary exchange
       integer,                   intent(in)        :: ind    !< index of cg%q(:) 3d array or cg%w(:) 4d array
       logical,                   intent(in)        :: tgt3d  !< .true. for cg%q, .false. for cg%w
-      integer(kind=4), optional, intent(in)        :: nb     !< number of grid cells to exchange (not implemented for comm3d)
+      integer(kind=4), optional, intent(in)        :: nb     !< number of grid cells to exchange
       integer(kind=4), optional, intent(in)        :: dim    !< do the internal boundaries only in the specified dimension
 
       integer                                      :: g, d, n
@@ -151,12 +149,6 @@ contains
       logical                                      :: active
       type(segment), pointer                       :: i_seg, o_seg !< shortcuts
       integer(kind=4), allocatable, dimension(:,:) :: mpistatus !< status array for MPI_Waitall
-
-      if (cdd%comm3d /= MPI_COMM_NULL) then
-         call warn("[cg_list_bnd:internal_boundaries] comm3d is implemented somewhere else.")
-         return
-         ! ToDo: move comm3d variants here
-      endif
 
       dmask(:) = dom%has_dir(:)
       if (present(dim)) then
@@ -334,88 +326,6 @@ contains
    end subroutine internal_boundaries
 
 !>
-!! \brief Exchanges guardcells for BND_MPI and BND_PER boundaries on rank-3 named arrays with cartesian communicator
-!!
-!! \todo Move here code from fluidboundaries and magboundaries (rank-4 named arrays)
-!<
-
-   subroutine internal_boundaries_comm3d(this, ind, nb, area_type)
-
-      use cart_comm,  only: cdd
-      use constants,  only: ARR, ndims, xdim, ydim, zdim, LO, HI, BND, BLK, AT_NO_B, I_ONE, BND_PER, BND_MPI, BND_FC, BND_MPI_FC
-      use dataio_pub, only: die
-      use domain,     only: dom
-      use grid_cont,  only: grid_container
-      use mpi,        only: MPI_REQUEST_NULL
-      use mpisetup,   only: mpi_err, req, status
-
-      implicit none
-
-      class(cg_list_bnd_T),      intent(in)   :: this       !< the list on which to perform the boundary exchange
-      integer,                   intent(in)   :: ind        !< Negative value: index of cg%q(:) 3d array
-      integer(kind=4), optional, intent(in)   :: nb         !< number of grid cells to exchange (not implemented for comm3d)
-      integer(kind=4), optional, intent(in)   :: area_type  !< defines how do we treat boundaries
-
-      integer(kind=4)                         :: lh, clh, d, n
-      integer(kind=4), dimension(ndims,LO:HI) :: l, r
-      type(grid_container),   pointer         :: cg
-      real, dimension(:,:,:), pointer         :: pa3d
-
-      ! on the coarsest multigrid level there might be only one cg on the master process and onoe on the slaves
-      if (.not. associated(this%first)) return
-      cg => this%first%cg  ! there is only one grid container on level per process for cartesian communicator
-      if (.not. associated(cg)) return
-
-      n = dom%nb
-      if (present(nb)) then
-         n = nb
-         if (n<=0 .or. n>dom%nb) call die("[cg_list_bnd:internal_boundaries_comm3d] wrong number of guardcell layers")
-      endif
-
-      do d = xdim, zdim
-         if (dom%has_dir(d)) then
-
-            req(:) = MPI_REQUEST_NULL
-
-            if (ind > ubound(cg%q(:), dim=1) .or. ind < lbound(cg%q(:), dim=1)) call die("[cg_list_bnd:internal_boundaries_comm3d] wrong 3d index")
-            pa3d =>cg%q(ind)%arr
-
-            l = reshape([lbound(pa3d, kind=4),ubound(pa3d, kind=4)],shape=[ndims,HI])
-            r = l
-            do lh = LO, HI
-
-               select case (cg%bnd(d, lh))
-                  case (BND_PER)
-                     if (present(area_type)) then
-                        if (area_type /= AT_NO_B) cycle
-                     endif
-                     l(d,:) = cg%ijkse(d,lh)*(lh-LO) + [I_ONE, dom%nb]
-                     clh = LO + HI - lh
-                     r(d, lh) = cg%ijkseb(d,clh)
-                     r(d,clh) = cg%ijkse (d,clh)
-                     pa3d(l(xdim,LO):l(xdim,HI),l(ydim,LO):l(ydim,HI),l(zdim,LO):l(zdim,HI)) = pa3d(r(xdim,LO):r(xdim,HI),r(ydim,LO):r(ydim,HI),r(zdim,LO):r(zdim,HI))
-                     ! local copy is cheap (and don't occur so often in large runs) so don't bother with the value of n
-                  case (BND_MPI)
-                     if (cdd%psize(d) > 1) then
-                        call MPI_Isend(pa3d(1, 1, 1), I_ONE, cg%mbc(ARR, d, lh, BLK, n), cdd%procn(d, lh), int(2*d+(LO+HI-lh), kind=4), cdd%comm3d, req(4*(d-xdim)+1+2*(lh-LO)), mpi_err)
-                        call MPI_Irecv(pa3d(1, 1, 1), I_ONE, cg%mbc(ARR, d, lh, BND, n), cdd%procn(d, lh), int(2*d+       lh,  kind=4), cdd%comm3d, req(4*(d-xdim)+2+2*(lh-LO)), mpi_err)
-                     else
-                        call die("[cg_list_bnd:internal_boundaries_comm3d] bnd_[xyz][lr] == 'mpi' && cdd%psize([xyz]dim) <= 1")
-                     endif
-                  case (BND_FC, BND_MPI_FC)
-                     call die("[cg_list_bnd:internal_boundaries_comm3d] fine-coarse interfaces not allowed for cartesian communicator")
-               end select
-            enddo
-
-         !> \warning outside xdim-zdim loop MPI_Waitall may change the operations order and as a result may leave mpi-corners uninitialized
-         call MPI_Waitall(size(req), req, status, mpi_err)
-
-         endif
-      enddo
-
-   end subroutine internal_boundaries_comm3d
-
-!>
 !! \brief Set up external boundary values
 !!
 !! \details This is purely local operation. We don't bother here to limit the number of layers to be filled, because it is cheap.
@@ -580,15 +490,13 @@ contains
 
    subroutine level_3d_boundaries(this, ind, nb, area_type, bnd_type, corners)
 
-      use cart_comm, only: cdd
       use constants, only: xdim, zdim, AT_NO_B
-      use mpi,       only: MPI_COMM_NULL
 
       implicit none
 
       class(cg_list_bnd_T),      intent(in) :: this       !< the list on which to perform the boundary exchange
       integer,                   intent(in) :: ind        !< Negative value: index of cg%q(:) 3d array
-      integer(kind=4), optional, intent(in) :: nb         !< number of grid cells to exchange (not implemented for comm3d)
+      integer(kind=4), optional, intent(in) :: nb         !< number of grid cells to exchange
       integer(kind=4), optional, intent(in) :: area_type  !< defines how do we treat boundaries
       integer(kind=4), optional, intent(in) :: bnd_type   !< Override default boundary type on external boundaries (useful in multigrid solver).
                                                           !< Note that BND_PER, BND_MPI, BND_SHE and BND_COR aren't external and cannot be overridden
@@ -599,29 +507,21 @@ contains
 
       !> \todo fill corners with big_float ?
 
-      if (cdd%comm3d == MPI_COMM_NULL) then
+      do_permpi = .true.
+      if (present(area_type)) then
+         if (area_type /= AT_NO_B) do_permpi = .false.
+      endif
 
-         do_permpi = .true.
-         if (present(area_type)) then
-            if (area_type /= AT_NO_B) do_permpi = .false.
+      if (do_permpi) then
+         do_cor = .false.
+         if (present(corners)) do_cor = corners
+         if (do_cor) then
+            do d = xdim, zdim
+               call this%internal_boundaries_3d(ind, nb=nb, dim=d)
+            enddo
+         else
+            call this%internal_boundaries_3d(ind, nb=nb)
          endif
-
-         if (do_permpi) then
-            do_cor = .false.
-            if (present(corners)) do_cor = corners
-            if (do_cor) then
-               do d = xdim, zdim
-                  call this%internal_boundaries_3d(ind, nb=nb, dim=d)
-               enddo
-            else
-               call this%internal_boundaries_3d(ind, nb=nb)
-            endif
-         endif
-
-      else ! Do the internal boundaries using the cartesian communicator
-
-         call this%internal_boundaries_comm3d(ind, nb, area_type)
-
       endif
 
       call this%external_boundaries(ind, area_type, bnd_type)

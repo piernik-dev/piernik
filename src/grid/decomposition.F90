@@ -74,16 +74,14 @@ module decomposition
 
 contains
 
-!> \brief Initialize the cdd structure and find some prime numbers
+!> \brief Initialize: find some prime numbers
 
    subroutine init_decomposition
 
-      use cart_comm, only: cdd
       use mpisetup,  only: nproc
 
       implicit none
 
-      call cdd%init            ! cdd% will contain valid values if and only if comm3d becomes valid communicator
       call primes%sieve(nproc) ! it is possible to use primes only to sqrt(nproc), but it is easier to have the full table. Cheap for any reasonable nproc.
 
    end subroutine init_decomposition
@@ -92,11 +90,8 @@ contains
 
    subroutine cleanup_decomposition
 
-      use cart_comm, only: cdd
-
       implicit none
 
-      call cdd%cleanup
       call primes%erase
 
    end subroutine cleanup_decomposition
@@ -133,7 +128,7 @@ contains
 
       use constants,  only: ndims, I_ONE
       use dataio_pub, only: warn, printinfo, msg
-      use domain,     only: dom, psize, bsize, allow_noncart, allow_uneven, dd_rect_quality, dd_unif_quality, minsize, use_comm3d
+      use domain,     only: dom, psize, bsize, allow_noncart, allow_uneven, dd_rect_quality, dd_unif_quality, minsize
       use mpisetup,   only: nproc, master, have_mpi
 
       implicit none
@@ -224,17 +219,11 @@ contains
       endif
 
       ! The domain is probably too small for given number of processes, decompose the domain into smallest possible pieces and leave some processes unemployed
-      if (use_comm3d) then
-         ! We have only single cartesian communicator, so we divide either to nproc or put everything on master
-         ! Putting the only piece of the grid on master is valid as long as local boundaries (periodic case) are done by copying memory, not mpi communication
-         p_size(:) = 1
-      else
-         p_size(:) = int(patch%n_d(:) / minsize(:), kind=4)
-         do while (product(p_size(:)) > nproc)
-            ml = maxloc(p_size(:), dim=1)
-            if (p_size(ml) > 1) p_size(ml) = p_size(ml) - I_ONE
-         enddo
-      endif
+      p_size(:) = int(patch%n_d(:) / minsize(:), kind=4)
+      do while (product(p_size(:)) > nproc)
+         ml = maxloc(p_size(:), dim=1)
+         if (p_size(ml) > 1) p_size(ml) = p_size(ml) - I_ONE
+      enddo
       call patch%cartesian_tiling(p_size(:), product(p_size(:)))
       patch_divided = patch%is_not_too_small("decompose_patch_cartesian_less_than_nproc")
       if (patch_divided) return
@@ -253,12 +242,10 @@ contains
 
    subroutine cartesian_tiling(patch, p_size, pieces)
 
-      use cart_comm,  only: cdd
       use constants,  only: xdim, ydim, ndims, LO, HI, I_ZERO, I_ONE
       use dataio_pub, only: printinfo, die
-      use domain,     only: dom, use_comm3d
-      use mpi,        only: MPI_COMM_NULL
-      use mpisetup,   only: master, nproc, mpi_err
+      use domain,     only: dom
+      use mpisetup,   only: master, nproc
 
       implicit none
 
@@ -274,31 +261,10 @@ contains
       if (pieces > nproc) call die("[decomposition:cartesian_tiling] cartesian decomposition into more pieces than processes not implemented yet")
       call patch%allocate_pse(pieces)
 
-      if (use_comm3d) then
-         if (pieces > 1 .or. nproc == 1) then
-            if (pieces /= nproc) call die("[decomposition:cartesian_tiling] use_comm3d is incompatible with decomposition to a number of pieces different than number of processes")
-            call cdd%init_cart(p_size)
-            !> \warning Perhaps cdd%init_cart should be called only once.
-            if (master) call printinfo("[decomposition:cartesian_tiling] Cartesian decomposition with comm3d")
-         else
-            if (master) call printinfo("[decomposition:cartesian_tiling] Whole grid on the master PE")
-         endif
-      else
-         if (master) call printinfo("[decomposition:cartesian_tiling] Cartesian decomposition without comm3d")
-      endif
+      if (master) call printinfo("[decomposition:cartesian_tiling] Cartesian decomposition")
 
       do p = I_ZERO, pieces-I_ONE
-         if (cdd%comm3d == MPI_COMM_NULL) then
-            if (use_comm3d .and. nproc == pieces) call die("[decomposition:cartesian_tiling] MPI_Cart_create failed")
-            pc(:) = [ mod(p, p_size(xdim)), mod(p/p_size(xdim), p_size(ydim)), p/product(p_size(xdim:ydim)) ]
-         else
-            if (pieces == nproc) then
-               call MPI_Cart_coords(cdd%comm3d, p, ndims, pc, mpi_err)
-            else
-               if (pieces /= 1) call die("decomposition:cartesian_tiling] pieces /= nproc and pieces /= 1 and cdd%comm3d set")
-               pc(:) = 0
-            endif
-         endif
+         pc(:) = [ mod(p, p_size(xdim)), mod(p/p_size(xdim), p_size(ydim)), p/product(p_size(xdim:ydim)) ]
          where (dom%has_dir(:))
             patch%pse(p+1)%se(:, LO) = patch%off(:) + (patch%n_d(:) *  pc(:) ) / p_size(:)     ! offset of low boundaries of the local domain (0 at low external boundaries)
             patch%pse(p+1)%se(:, HI) = patch%off(:) + (patch%n_d(:) * (pc(:)+1))/p_size(:) - 1 ! offset of high boundaries of the local domain (n_d(:) - 1 at right external boundaries)
@@ -331,7 +297,7 @@ contains
 
       call patch%allocate_pse
 
-      if (master) call printinfo("[decomposition:choppy_tiling] Non-cartesian decomposition (no comm3d)")
+      if (master) call printinfo("[decomposition:choppy_tiling] Non-cartesian decomposition")
       allocate(pz_slab(p_size(zdim) + 1))
       pz_slab(1) = I_ZERO
       do p = I_ONE, p_size(zdim)

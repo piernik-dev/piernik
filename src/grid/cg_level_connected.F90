@@ -882,7 +882,7 @@ contains
 
       class(cg_level_connected_T), intent(inout) :: this      !< the list on which to perform the boundary exchange
       integer,                     intent(in)    :: ind       !< Negative value: index of cg%q(:) 3d array
-      integer(kind=4), optional,   intent(in)    :: nb        !< number of grid cells to exchange (not implemented for comm3d)
+      integer(kind=4), optional,   intent(in)    :: nb        !< number of grid cells to exchange
       integer(kind=4), optional,   intent(in)    :: area_type !< defines how do we treat boundaries
       integer(kind=4), optional,   intent(in)    :: bnd_type  !< Override default boundary type on external boundaries (useful in multigrid solver).
                                                               !< Note that BND_PER, BND_MPI, BND_SHE and BND_COR aren't external and cannot be overridden

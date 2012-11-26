@@ -169,7 +169,6 @@ module grid_cont
       ! External boundary conditions and internal boundaries
 
       integer(kind=4), dimension(ndims, LO:HI)           :: bnd         !< type of boundary conditions coded in integers
-      integer(kind=4), dimension(:,:,:,:,:), allocatable :: mbc         !< MPI Boundary conditions Container for comm3d-based communication
       type(bnd_list),  dimension(:,:),       allocatable :: i_bnd       !< description of incoming boundary data, the shape is (xdim:zdim, nb)
       type(bnd_list),  dimension(:,:),       allocatable :: o_bnd       !< description of outgoing boundary data, the shape is (xdim:zdim, nb)
       logical,         dimension(xdim:zdim, LO:HI)       :: ext_bnd     !< .false. for BND_PER and BND_MPI
@@ -244,17 +243,10 @@ contains
 
    subroutine init(this, n_d, off, my_se, grid_id, level_id)
 
-      use cart_comm,     only: cdd
-      use constants,     only: PIERNIK_INIT_DOMAIN, xdim, ydim, zdim, ndims, big_float, &
-           &                   FLUID, ARR, LO, HI, BND, BLK, INVALID, I_ONE, I_TWO, BND_MPI, BND_COR
-      use dataio_pub,    only: die, warn, msg, code_progress
+      use constants,     only: PIERNIK_INIT_DOMAIN, xdim, ydim, zdim, ndims, big_float, LO, HI, I_ONE, I_TWO, BND_MPI, BND_COR
+      use dataio_pub,    only: die, warn, code_progress
       use domain,        only: dom
       use func,          only: f2c
-      use mpi,           only: MPI_COMM_NULL
-      use mpisetup,      only: nproc, inflate_req
-#if defined(SHEAR_BND) && !defined(FFTW)
-      use constants,     only: BND_SHE
-#endif /* SHEAR_BND && !FFTW */
 
       implicit none
 
@@ -298,38 +290,16 @@ contains
 
       ! For shear boundaries and some domain decompositions it is possible that a boundary can be mixed 'per' with 'mpi'
 
-      if (cdd%comm3d == MPI_COMM_NULL) then
-         call inflate_req(size([LO, HI]) * 2 * ndims * nproc) ! 2 = count([i_bnd, o_bnd])
-         if (any(dom%bnd(:, :) == BND_COR)) call die("[grid_container:init] Corner BC not implemented without comm3d")
-#ifdef SHEAR_BND
-         call die("[grid_container:init] SHEAR_BND not implemented without comm3d")
-#endif /* SHEAR_BND */
-      else
-         call inflate_req(max(size([LO, HI]) * size([BLK, BND]) * ndims, int(nproc))) ! just another way of defining '4 * 3' ;-)
-         ! write_plot_hdf5 requires nproc entries for the status array
+!      call inflate_req
+      ! write_plot_hdf5 requires nproc entries for the status array
 
-         if (any(dom%bnd(xdim:ydim, :) == BND_COR) .and. (cdd%psize(xdim) /= cdd%psize(ydim) .or. n_d(xdim) /= n_d(ydim))) then
-            write(msg, '(a,4(i4,a))')"[grid_container:init] Corner BC require psize(xdim) equal to psize(ydim) and n_d(xdim) equal to n_d(ydim). Detected: [", &
-                 &                   cdd%psize(xdim),",",cdd%psize(ydim), "] and [",n_d(xdim),",",n_d(ydim),"]"
-            call die(msg)
-         endif
-         if (any(dom%bnd(zdim, :) == BND_COR)) call die("[grid_container:init] Corner BC not allowed for z-direction")
+      if (any(dom%bnd(xdim:ydim, :) == BND_COR)) call die("[grid_container:init] BND_COR unimplemented")
+      if (any(dom%bnd(zdim, :) == BND_COR)) call die("[grid_container:init] Corner BC not allowed for z-direction")
 
 #ifdef SHEAR_BND
-         if (cdd%psize(ydim) > 1) call die("[grid_container:initmpi] Shear-pediodic boundary conditions do not permit psize(ydim) > 1")
-         ! This is possible to be implemented with mpi_noncart
-
-#ifndef FFTW
-         this%bnd(xdim, :) = BND_MPI
-         if (cdd%pcoords(xdim) == 0)             this%bnd(xdim, LO) = BND_SHE
-         if (cdd%pcoords(xdim) == psize(xdim)-1) this%bnd(xdim, HI) = BND_SHE
-#endif /* !FFTW */
+      call die("[grid_container:initmpi] Shear-pediodic boundary conditions unimplemented")
+      ! This is possible to be implemented
 #endif /* SHEAR_BND */
-
-         if (allocated(this%mbc)) call die("[grid_container:init] this%mbc already allocated")
-         allocate(this%mbc(FLUID:ARR, xdim:zdim, LO:HI, BND:BLK, 1:dom%nb))
-         this%mbc(:, :, :, :, :) = INVALID
-      endif
 
       do i = xdim, zdim
          if (dom%has_dir(i)) then
@@ -517,14 +487,12 @@ contains
 
    subroutine cleanup(this)
 
-      use constants, only: FLUID, ARR, xdim, zdim, LO, HI, BND, BLK, INVALID, CENTER, INV_CENTER
-      use domain,    only: dom
-      use mpisetup,  only: mpi_err
+      use constants, only: xdim, zdim, CENTER, INV_CENTER
 
       implicit none
 
       class(grid_container), intent(inout) :: this
-      integer :: d, t, g, b, cdim
+      integer :: d, g, b, cdim
       integer, parameter :: nseg = 2*2
       type(tgt_list), dimension(nseg) :: rpio_tgt
 
@@ -543,22 +511,6 @@ contains
       if (allocated(this%gc_xdim)) deallocate(this%gc_xdim)
       if (allocated(this%gc_ydim)) deallocate(this%gc_ydim)
       if (allocated(this%gc_zdim)) deallocate(this%gc_zdim)
-
-      if (allocated(this%mbc)) then
-         do d = xdim, zdim
-            if (dom%has_dir(d)) then
-               do t = FLUID, ARR
-                  do b = 1, dom%nb
-                     if (this%mbc(t, d, LO, BLK, b) /= INVALID) call MPI_Type_free(this%mbc(t, d, LO, BLK, b), mpi_err)
-                     if (this%mbc(t, d, LO, BND, b) /= INVALID) call MPI_Type_free(this%mbc(t, d, LO, BND, b), mpi_err)
-                     if (this%mbc(t, d, HI, BLK, b) /= INVALID) call MPI_Type_free(this%mbc(t, d, HI, BLK, b), mpi_err)
-                     if (this%mbc(t, d, HI, BND, b) /= INVALID) call MPI_Type_free(this%mbc(t, d, HI, BND, b), mpi_err)
-                  enddo
-               enddo
-            endif
-         enddo
-         deallocate(this%mbc)
-      endif
 
       if (allocated(this%i_bnd)) then
          do d = xdim, zdim

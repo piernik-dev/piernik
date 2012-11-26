@@ -895,151 +895,33 @@ contains
 !<
    subroutine grav_accel2pot
 
-      use cart_comm,        only: cdd
       use cg_leaves,        only: leaves
       use cg_list,          only: cg_list_element
-      use constants,        only: xdim, ydim, zdim, ndims, LO, HI, MAXL, I_ONE, RIGHT
       use dataio_pub,       only: die
-      use domain,           only: is_mpi_noncart, is_multicg, dom
-      use grid_cont,        only: grid_container
-      use mpi,              only: MPI_DOUBLE_PRECISION, MPI_COMM_NULL
-      use mpisetup,         only: master, nproc, FIRST, LAST, comm, mpi_err, have_mpi
-      use named_array_list, only: qna
-      use types,            only: value
 
       implicit none
 
-      integer                                                                      :: i, j, k, ip, px, py, pz, i0, j0, k0
-      integer(kind=4),   dimension(ndims)                                          :: pc
-      real, allocatable, dimension(:,:,:), target                                  :: gpwork
-      real, allocatable, dimension(:)                                              :: gravrx, gravry, gravrz
-      real                                                                         :: dgpx_proc, dgpy_proc, dgpz_proc, ddgph
-      real, dimension(FIRST:LAST)                                                  :: dgpx_all,  dgpy_all,  dgpz_all
-      real, dimension(0:cdd%psize(xdim)-1,0:cdd%psize(ydim)-1,0:cdd%psize(zdim)-1) :: dgpx,      dgpy,      dgpz,     ddgp
-      type(value)                                                                  :: gp_max
-      type(grid_container), pointer                                                :: cg
       type(cg_list_element), pointer :: cgl
 
-      if (cdd%comm3d == MPI_COMM_NULL) then
-         call die("[gravity:grav_accel2pot] cdd%comm3d == MPI_COMM_NULL")
-         cgl => leaves%first
-         do while (associated(cgl))
-            ! calculate local gpwork
+      call die("[gravity:grav_accel2pot] cdd%comm3d == MPI_COMM_NULL")
+      cgl => leaves%first
+      do while (associated(cgl))
+         ! calculate local gpwork
 
-            ! post receives from appropriate neighbour (requires identitying proc number from cg%o_bnd elements for the same level)
-            ! \warning receiving from fine/coarse levels may require interpolation and doing things level-wise from finest to base
-            ! \warning Levels higher than base may be split into separate clusters or form loops around unrefined region
-            cgl => cgl%nxt
-         enddo
+         ! post receives from appropriate neighbour (requires identitying proc number from cg%o_bnd elements for the same level)
+         ! \warning receiving from fine/coarse levels may require interpolation and doing things level-wise from finest to base
+         ! \warning Levels higher than base may be split into separate clusters or form loops around unrefined region
+         cgl => cgl%nxt
+      enddo
 
-         cgl => leaves%first
-         do while (associated(cgl))
-            ! Use MPI_Probe to check if desired corner values already arrived
-            ! If there is nothing to wait for, use cg%o_bnd elements to send offsets
-            cgl => cgl%nxt
-         enddo
+      cgl => leaves%first
+      do while (associated(cgl))
+         ! Use MPI_Probe to check if desired corner values already arrived
+         ! If there is nothing to wait for, use cg%o_bnd elements to send offsets
+         cgl => cgl%nxt
+      enddo
 
-         ! Find the maximum, and adjust cg%gp (call leaves%q_add_val(igp, -max))
-
-      else
-         if (have_mpi .and. is_mpi_noncart) call die("[gravity:grav_accel2pot] is_mpi_noncart is not implemented") ! MPI_Cart_coords, psize, pcoords
-         if (is_multicg) call die("[gravity:grav_accel2pot] multiple grid pieces per procesor not implemented yet") !nontrivial
-
-         cg => leaves%first%cg
-
-         if (any([allocated(gravrx), allocated(gravry), allocated(gravrz)])) call die("[gravity:grav_accel2pot] gravr[xyz] already allocated")
-         i0 = cg%lhn(xdim,LO) ; j0 = cg%lhn(ydim,LO) ; k0 = cg%lhn(zdim,LO)
-         allocate(gravrx(cg%lhn(xdim,LO):cg%lhn(xdim,HI)), gravry(j0:cg%lhn(ydim,HI)), gravrz(k0:cg%lhn(zdim,HI)))
-         allocate(gpwork(cg%lhn(xdim,LO):cg%lhn(xdim,HI),         j0:cg%lhn(ydim,HI),         k0:cg%lhn(zdim,HI)))
-         gpwork(i0, j0, k0) = 0.0
-
-         call grav_accel(xdim, j0, k0, cg%coord(RIGHT, xdim)%r(:), cg%n_(xdim), gravrx)
-         do i = i0, cg%lhn(xdim,HI)-1
-            gpwork(i+1,1,1) = gpwork(i,1,1) - gravrx(i)*cg%dl(xdim)
-         enddo
-
-         do i = i0, cg%lhn(xdim,HI)
-            call grav_accel(ydim, k0, i, cg%coord(RIGHT, ydim)%r(:), cg%n_(ydim), gravry)
-            do j = j0, cg%lhn(ydim,HI)-1
-               gpwork(i,j+1,1) = gpwork(i,j,1) - gravry(j)*cg%dl(ydim)
-            enddo
-         enddo
-
-         do i = i0, cg%lhn(xdim,HI)
-            do j = j0, cg%lhn(ydim,HI)
-               call grav_accel(zdim, i, j, cg%coord(RIGHT, zdim)%r(:), cg%n_(zdim), gravrz)
-               do k = k0, cg%lhn(zdim,HI)-1
-                  gpwork(i,j,k+1) = gpwork(i,j,k) - gravrz(k)*cg%dl(zdim)
-               enddo
-            enddo
-         enddo
-
-         dgpx_proc = gpwork(cg%ie+dom%D_x, cg%js,         cg%ks        )-gpwork(cg%is,cg%js,cg%ks)
-         dgpy_proc = gpwork(cg%is,         cg%je+dom%D_y, cg%ks        )-gpwork(cg%is,cg%js,cg%ks)
-         dgpz_proc = gpwork(cg%is,         cg%js,         cg%ke+dom%D_z)-gpwork(cg%is,cg%js,cg%ks)
-
-         call MPI_Gather ( dgpx_proc, I_ONE, MPI_DOUBLE_PRECISION, dgpx_all, I_ONE, MPI_DOUBLE_PRECISION, FIRST, cdd%comm3d, mpi_err )
-         call MPI_Gather ( dgpy_proc, I_ONE, MPI_DOUBLE_PRECISION, dgpy_all, I_ONE, MPI_DOUBLE_PRECISION, FIRST, cdd%comm3d, mpi_err )
-         call MPI_Gather ( dgpz_proc, I_ONE, MPI_DOUBLE_PRECISION, dgpz_all, I_ONE, MPI_DOUBLE_PRECISION, FIRST, cdd%comm3d, mpi_err )
-
-         if (master) then
-
-            do ip = FIRST, LAST
-               call MPI_Cart_coords(cdd%comm3d, ip, ndims, pc, mpi_err)
-
-               px = pc(xdim)
-               py = pc(ydim)
-               pz = pc(zdim)
-
-               dgpx(px,py,pz) = dgpx_all(ip)
-               dgpy(px,py,pz) = dgpy_all(ip)
-               dgpz(px,py,pz) = dgpz_all(ip)
-
-            enddo
-
-            ddgp(0,0,0) = 0.0
-            do i = 1, cdd%psize(xdim)-1
-               ddgp(i,0,0) = ddgp(i-1,0,0) + dgpx(i-1,0,0)
-            enddo
-
-            do i=0, cdd%psize(xdim)-1
-               do j = 1, cdd%psize(ydim)-1
-                  ddgp(i,j,0) = ddgp(i,j-1,0) + dgpy(i,j-1,0)
-               enddo
-            enddo
-
-            do i=0, cdd%psize(xdim)-1
-               do j=0, cdd%psize(ydim)-1
-                  do k = 1, cdd%psize(zdim)-1
-                     ddgp(i,j,k)= ddgp(i,j,k-1) + dgpz(i,j,k-1)
-                  enddo
-               enddo
-            enddo
-
-         endif
-
-         call MPI_Bcast(ddgp, nproc, MPI_DOUBLE_PRECISION, FIRST, comm, mpi_err)
-
-         px = cdd%pcoords(xdim)
-         py = cdd%pcoords(ydim)
-         pz = cdd%pcoords(zdim)
-
-         ddgph  = gpwork(i0,j0,k0) - gpwork(cg%is,cg%js,cg%ks)
-         gpwork(:,:,:) = gpwork(:,:,:) + ddgp(px,py,pz) + ddgph
-         cg%wa(:,:,:) = gpwork(:,:,:)
-         call leaves%get_extremum(qna%wai, MAXL, gp_max)
-
-         call MPI_Bcast(gp_max%val, I_ONE, MPI_DOUBLE_PRECISION, gp_max%proc, comm, mpi_err)
-         gpwork(:,:,:) = gpwork(:,:,:) - gp_max%val
-
-         cg%gp = gpwork
-         if (allocated(gpwork)) deallocate(gpwork)
-
-      endif
-
-      deallocate(gravrx)
-      deallocate(gravry)
-      deallocate(gravrz)
+      ! Find the maximum, and adjust cg%gp (call leaves%q_add_val(igp, -max))
 
    end subroutine grav_accel2pot
 

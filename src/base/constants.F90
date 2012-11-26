@@ -165,15 +165,6 @@ module constants
    character(len=dsetnamelen), parameter :: wcr_n   = "wcr"     !< auxiliary array for CR diffusion
    character(len=dsetnamelen), parameter :: wa_n    = "wa"      !< general-purpose auxiliary 3D array
 
-   ! first index of cg%mbc(:,:,:) array
-   enum, bind(C)
-      enumerator :: FLUID = 1, MAG, CR, ARR              !! MPI container type for exchanging u(:,:,:,:),  b(ndims,:,:,:), wcr(flind%crs%all,:,:,:) and a rank-3 arrays
-   end enum
-   ! last index of cg%mbc(:,:,:) array
-   enum, bind(C)
-      enumerator :: BND = 1, BLK                         !! receiving and sending area
-   end enum
-
    ! Handling boundary cells in the output
    enum, bind(C)
       enumerator :: AT_IGNORE       !! no output

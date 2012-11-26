@@ -41,56 +41,38 @@ contains
 
    subroutine bnd_a(A)
 
-      use cart_comm,     only: cdd
       use cg_leaves,     only: leaves
-      use constants,     only: MAG, xdim, zdim, LO, HI, BND, BLK, I_ONE, I_FOUR, I_FIVE, I_TEN
       use dataio_pub,    only: die
-      use domain,        only: is_mpi_noncart, is_multicg, dom
+      use domain,        only: is_mpi_noncart, is_multicg
       use grid_cont,     only: grid_container
-      use mpi,           only: MPI_COMM_NULL
-      use mpisetup,      only: mpi_err, req, status, have_mpi
+      use mpisetup,      only: have_mpi
 
       implicit none
 
       real, dimension(:,:,:,:)      :: A  !< vector potential of magnetic field
-      integer(kind=4)               :: i, itag, jtag
+      integer(kind=4)               :: i
       type(grid_container), pointer :: cg
 
-      cg => leaves%first%cg
       if (is_multicg) call die("[magboundaries:bnd_a] multiple grid pieces per procesor not implemented yet") !nontrivial MPI_Waitall
 
       if (have_mpi .and. is_mpi_noncart) call die("[magboundaries:bnd_a] is_mpi_noncart is not implemented") !procn, psize
-      if (cdd%comm3d == MPI_COMM_NULL) call die("[magboundaries:bnd_a] cdd%comm3d == MPI_COMM_NULL")
+      call die("[magboundaries:bnd_a] Unimplemented")
 
-      do i = xdim, zdim
-         if (cdd%psize(i) > 1) then
+      cg => leaves%first%cg
 
-            jtag = I_TEN*i
-            itag = jtag - I_FIVE
-            call MPI_Isend(A(1,1,1,1), I_ONE, cg%mbc(MAG, i, LO, BLK, dom%nb), cdd%procn(i,LO), itag, cdd%comm3d, req(1), mpi_err)
-            call MPI_Isend(A(1,1,1,1), I_ONE, cg%mbc(MAG, i, HI, BLK, dom%nb), cdd%procn(i,HI), jtag, cdd%comm3d, req(3), mpi_err)
-            call MPI_Irecv(A(1,1,1,1), I_ONE, cg%mbc(MAG, i, LO, BND, dom%nb), cdd%procn(i,LO), jtag, cdd%comm3d, req(2), mpi_err)
-            call MPI_Irecv(A(1,1,1,1), I_ONE, cg%mbc(MAG, i, HI, BND, dom%nb), cdd%procn(i,HI), itag, cdd%comm3d, req(4), mpi_err)
-
-            call MPI_Waitall(I_FOUR,req(:),status(:,:),mpi_err)
-         endif
-      enddo
+      if (.false.) i=int(A(1,1,1,1))
 
    end subroutine bnd_a
 
    subroutine bnd_b(dir, cg)
 
-      use cart_comm,     only: cdd
-      use constants,     only: MAG, ndims, xdim, ydim, zdim, LO, HI, BND, BLK, I_ONE, I_TWO, I_THREE, I_FOUR, &
+      use constants,     only: ndims, xdim, ydim, zdim, LO, HI, I_TWO, I_THREE, &
            &                   BND_MPI, BND_FC, BND_MPI_FC, BND_PER, BND_REF, BND_OUT, BND_OUTD, BND_OUTH, BND_OUTHD, BND_COR, BND_SHE
       use dataio_pub,    only: msg, warn, die
-      use domain,        only: is_mpi_noncart, is_multicg, dom
       use grid_cont,     only: grid_container
-      use mpi,           only: MPI_DOUBLE_PRECISION, MPI_COMM_NULL
-      use mpisetup,      only: mpi_err, req, status, comm, master, have_mpi
+      use mpisetup,      only: master
 #ifdef SHEAR
-      use constants,     only: half, one
-      use shear,         only: eps, delj
+      use constants,     only: one
 #endif /* SHEAR */
 
       implicit none
@@ -98,181 +80,13 @@ contains
       integer(kind=4),               intent(in)    :: dir
       type(grid_container), pointer, intent(inout) :: cg
 
-      integer(kind=4), parameter                   :: tag1 = 10, tag2 = 20
-      integer(kind=4), parameter                   :: tag7 = 70, tag8 = 80
-      integer                                      :: i, j
-      integer(kind=4)                              :: itag, jtag, side, cside
-      real, allocatable                            :: send_left(:,:,:,:),recv_left(:,:,:,:)
+      integer(kind=4)                              :: side
 #ifdef SHEAR
       real, allocatable                            :: send_right(:,:,:,:),recv_right(:,:,:,:)
 #endif /* SHEAR */
       logical, save                                :: frun = .true.
       logical, save,   dimension(ndims,LO:HI)      :: bnd_not_provided = .false.
       integer(kind=4), dimension(ndims,LO:HI)      :: l, r
-
-! MPI block comunication
-      if (cdd%comm3d /= MPI_COMM_NULL) then
-         if (is_multicg) call die("[magboundaries:bnd_b] multiple grid pieces per procesor not implemented yet") !nontrivial MPI_Waitall
-
-         if (have_mpi .and. is_mpi_noncart) call die("[magboundaries:bnd_b] is_mpi_noncart is not implemented") !procn, procxyl, procyxl, psize, pcoords
-#ifdef SHEAR
-         if (dir == xdim) then
-            allocate(send_left(3, dom%nb, cg%n_(ydim), cg%n_(zdim)),send_right(3, dom%nb, cg%n_(ydim), cg%n_(zdim)), &
-                 &   recv_left(3, dom%nb, cg%n_(ydim), cg%n_(zdim)),recv_right(3, dom%nb, cg%n_(ydim), cg%n_(zdim)))
-
-            send_left (:,:,:,:)  = cg%b(:, cg%is:cg%isb,:,:)
-            send_right(:,:,:,:)  = cg%b(:, cg%ieb:cg%ie,:,:)
-
-            if (cg%bnd(xdim, LO) == BND_SHE) then
-!
-! przesuwamy o calkowita liczbe komorek + periodyczny wb w kierunku y
-!
-               send_left (:,:,  cg%js:cg%je,:) = cshift(send_left (:,:, cg%js :cg%je, :),dim=3,shift= delj)
-               send_left (:,:,      1:dom%nb,:) =        send_left (:,:, cg%jeb:cg%je, :)
-               send_left (:,:,cg%je+1:cg%n_(ydim),:) =        send_left (:,:, cg%js :cg%jsb,:)
-!
-! remapujemy  - interpolacja kwadratowa
-!
-               send_left (:,:,:,:)  = (one+eps)*(one-eps) * send_left (:,:,:,:) &
-                    &                 -half*eps*(one-eps) * cshift(send_left (:,:,:,:),shift=-1,dim=3) &
-                    &                 +half*eps*(one+eps) * cshift(send_left (:,:,:,:),shift= 1,dim=3)
-            endif ! (cg%bnd(xdim, LO) == BND_SHE)
-
-            if (cg%bnd(xdim, HI) == BND_SHE) then
-!
-! przesuwamy o calkowita liczbe komorek + periodyczny wb w kierunku y
-!
-               send_right (:,:,  cg%js:cg%je,:) = cshift(send_right(:,:, cg%js :cg%je, :),dim=3,shift=-delj)
-               send_right (:,:,      1:dom%nb,:) =        send_right(:,:, cg%jeb:cg%je, :)
-               send_right (:,:,cg%je+1:cg%n_(ydim),:) =        send_right(:,:, cg%js :cg%jsb,:)
-!
-! remapujemy - interpolacja kwadratowa
-!
-               send_right (:,:,:,:) = (one+eps)*(one-eps) * send_right (:,:,:,:) &
-                    &                 -half*eps*(one-eps) * cshift(send_right (:,:,:,:),shift= 1,dim=3) &
-                    &                 +half*eps*(one+eps) * cshift(send_right (:,:,:,:),shift=-1,dim=3)
-            endif ! (cg%bnd(xdim, HI) == BND_SHE)
-!
-! wysylamy na drugi brzeg
-!
-            call MPI_Isend(send_left , 3*cg%n_(ydim)*cg%n_(zdim)*dom%nb, MPI_DOUBLE_PRECISION, cdd%procn(dir,LO), tag1, comm, req(1), mpi_err)
-            call MPI_Isend(send_right, 3*cg%n_(ydim)*cg%n_(zdim)*dom%nb, MPI_DOUBLE_PRECISION, cdd%procn(dir,HI), tag2, comm, req(3), mpi_err)
-            call MPI_Irecv(recv_left , 3*cg%n_(ydim)*cg%n_(zdim)*dom%nb, MPI_DOUBLE_PRECISION, cdd%procn(dir,LO), tag2, comm, req(2), mpi_err)
-            call MPI_Irecv(recv_right, 3*cg%n_(ydim)*cg%n_(zdim)*dom%nb, MPI_DOUBLE_PRECISION, cdd%procn(dir,HI), tag1, comm, req(4), mpi_err)
-
-            call MPI_Waitall(I_FOUR,req(:),status(:,:),mpi_err)
-
-            cg%b(:,        1:dom%nb-1,:,:) = recv_left (:,  1:dom%nb-1,:,:)
-            cg%b(:,cg%ie+1+1:cg%n_(xdim),  :,:) = recv_right(:,1+1:dom%nb,  :,:)
-
-            if (allocated(send_left))  deallocate(send_left)
-            if (allocated(send_right)) deallocate(send_right)
-            if (allocated(recv_left))  deallocate(recv_left)
-            if (allocated(recv_right)) deallocate(recv_right)
-
-!===============================================================================
-         else
-#endif /* SHEAR */
-
-            if (cdd%psize(dir) > 1) then
-
-               jtag = tag2*dir
-               itag = jtag - tag1
-               call MPI_Isend(cg%b(1,1,1,1), I_ONE, cg%mbc(MAG, dir, LO, BLK, dom%nb), cdd%procn(dir,LO), itag, cdd%comm3d, req(1), mpi_err)
-               call MPI_Isend(cg%b(1,1,1,1), I_ONE, cg%mbc(MAG, dir, HI, BLK, dom%nb), cdd%procn(dir,HI), jtag, cdd%comm3d, req(3), mpi_err)
-               call MPI_Irecv(cg%b(1,1,1,1), I_ONE, cg%mbc(MAG, dir, LO, BND, dom%nb), cdd%procn(dir,LO), jtag, cdd%comm3d, req(2), mpi_err)
-               call MPI_Irecv(cg%b(1,1,1,1), I_ONE, cg%mbc(MAG, dir, HI, BND, dom%nb), cdd%procn(dir,HI), itag, cdd%comm3d, req(4), mpi_err)
-
-               call MPI_Waitall(I_FOUR,req(:),status(:,:),mpi_err)
-            endif
-
-#ifdef SHEAR
-         endif
-#endif /* SHEAR */
-
-! MPI + non-MPI corner-periodic boundary condition
-
-         if (cg%bnd(xdim, LO) == BND_COR) then
-!   - lower to left
-            if (cdd%pcoords(xdim) == 0 .and. cdd%pcoords(ydim) == 0) then
-               do i = 0, dom%nb-1
-                  do j = cg%js, cg%lhn(ydim,HI)
-                     cg%b(xdim,cg%lhn(xdim,LO)+i,j,:) = -cg%b(ydim,j,cg%isb-i,:)
-                     cg%b(ydim,cg%lhn(xdim,LO)+i,j,:) =  cg%b(xdim,j,cg%isb-i,:)
-                     cg%b(zdim,cg%lhn(xdim,LO)+i,j,:) =  cg%b(zdim,j,cg%isb-i,:)
-                  enddo
-               enddo
-            endif
-
-            if (cdd%procxyl > 0) then
-               allocate(send_left(3, dom%nb, cg%lhn(ydim,LO):cg%lhn(ydim,HI), cg%lhn(zdim,LO):cg%lhn(zdim,HI)))
-               allocate(recv_left(3, cg%lhn(xdim,LO):cg%lhn(xdim,HI), dom%nb, cg%lhn(zdim,LO):cg%lhn(zdim,HI)))
-
-               send_left(:,:,:,:) = cg%b(:, cg%is:cg%isb,:,:)
-
-               call MPI_Isend(send_left, 3*dom%nb*cg%n_(ydim)*cg%n_(zdim), MPI_DOUBLE_PRECISION, cdd%procxyl, tag7, comm, req(1), mpi_err)
-               call MPI_Irecv(recv_left, 3*cg%n_(xdim)*dom%nb*cg%n_(zdim), MPI_DOUBLE_PRECISION, cdd%procxyl, tag8, comm, req(2), mpi_err)
-
-               call MPI_Waitall(I_TWO,req(:),status(:,:),mpi_err)
-
-               do i = 1, dom%nb
-                  do j = cg%lhn(ydim,LO), cg%lhn(ydim,HI)
-                     cg%b(xdim,cg%lhn(xdim,LO)+i-1,j,:) = -recv_left(ydim,j, cg%is-i,:)
-                     cg%b(ydim,cg%lhn(xdim,LO)+i-1,j,:) =  recv_left(xdim,j, cg%is-i,:)
-                     cg%b(zdim,cg%lhn(xdim,LO)+i-1,j,:) =  recv_left(zdim,j, cg%is-i,:)
-                  enddo
-               enddo
-
-               if (allocated(send_left)) deallocate(send_left)
-               if (allocated(recv_left)) deallocate(recv_left)
-            endif
-         endif
-
-         if (cg%bnd(ydim, LO) == BND_COR) then
-!   - left to lower
-            if (cdd%pcoords(ydim) == 0 .and. cdd%pcoords(xdim) == 0 ) then
-               do j = 0, dom%nb-1
-                  do i = cg%is, cg%lhn(xdim,HI)
-                     cg%b(xdim,i,cg%lhn(ydim,LO)+j,:) =  cg%b(ydim,cg%isb-j,i,:)
-                     cg%b(ydim,i,cg%lhn(ydim,LO)+j,:) = -cg%b(xdim,cg%isb-j,i,:)
-                     cg%b(zdim,i,cg%lhn(ydim,LO)+j,:) =  cg%b(zdim,cg%isb-j,i,:)
-                  enddo
-               enddo
-!   - interior to corner
-               do j = 0, dom%nb-1
-                  do i = 0, dom%nb-1
-                     cg%b(xdim,cg%lhn(xdim,LO)+i,cg%lhn(ydim,LO)+j,:) =  -cg%b(xdim,cg%isb-i,cg%jsb-j,:)
-                     cg%b(ydim,cg%lhn(xdim,LO)+i,cg%lhn(ydim,LO)+j,:) =  -cg%b(ydim,cg%isb-i,cg%jsb-j,:)
-                     cg%b(zdim,cg%lhn(xdim,LO)+i,cg%lhn(ydim,LO)+j,:) =   cg%b(zdim,cg%isb-i,cg%jsb-j,:)
-                  enddo
-               enddo
-            endif
-
-            if (cdd%procyxl > 0) then
-               allocate(send_left(3, cg%lhn(xdim,LO):cg%lhn(xdim,HI), dom%nb, cg%lhn(zdim,LO):cg%lhn(zdim,HI)))
-               allocate(recv_left(3, dom%nb, cg%lhn(ydim,LO):cg%lhn(ydim,HI), cg%lhn(zdim,LO):cg%lhn(zdim,HI)))
-
-               send_left(:,:,:,:) = cg%b(:,:, cg%js:cg%jsb,:)
-
-               call MPI_Isend(send_left , 3*cg%n_(xdim)*dom%nb*cg%n_(zdim), MPI_DOUBLE_PRECISION, cdd%procyxl, tag8, comm, req(1), mpi_err)
-               call MPI_Irecv(recv_left , 3*dom%nb*cg%n_(ydim)*cg%n_(zdim), MPI_DOUBLE_PRECISION, cdd%procyxl, tag7, comm, req(2), mpi_err)
-
-               call MPI_Waitall(I_TWO,req(:),status(:,:),mpi_err)
-
-               do j = 1, dom%nb
-                  do i = cg%lhn(xdim,LO), cg%lhn(xdim,HI)
-                     cg%b(xdim,i,cg%lhn(ydim,LO)+j-1,:) =  recv_left(ydim, cg%js-j,i,:)
-                     cg%b(ydim,i,cg%lhn(ydim,LO)+j-1,:) = -recv_left(xdim, cg%js-j,i,:)
-                     cg%b(zdim,i,cg%lhn(ydim,LO)+j-1,:) =  recv_left(zdim, cg%js-j,i,:)
-                  enddo
-               enddo
-
-               if (allocated(send_left)) deallocate(send_left)
-               if (allocated(recv_left)) deallocate(recv_left)
-            endif
-         endif
-
-      endif
 
 ! Non-MPI boundary conditions
       if (frun) then
@@ -302,13 +116,6 @@ contains
                   if (master) call warn(msg)
                endif
             case (BND_PER)
-                  if (cdd%comm3d /= MPI_COMM_NULL) then
-                     l(dir,:) = cg%ijkse(dir,side) + [I_ONE, dom%nb] + (dom%nb+I_ONE)*(side-HI)
-                     cside = LO + HI - side
-                     r(dir, side) = cg%ijkseb(dir,cside)
-                     r(dir,cside) = cg%ijkse (dir,cside)
-                     cg%b(:,l(xdim,LO):l(xdim,HI),l(ydim,LO):l(ydim,HI),l(zdim,LO):l(zdim,HI)) = cg%b(:,r(xdim,LO):r(xdim,HI),r(ydim,LO):r(ydim,HI),r(zdim,LO):r(zdim,HI))
-                  endif
             case (BND_OUT, BND_OUTD, BND_OUTH, BND_OUTHD)
                   l(dir,:) = cg%lhn(dir,side)
                   r(dir,:) = cg%lhn(dir,side) + I_THREE - I_TWO*side
@@ -469,13 +276,11 @@ contains
 
    subroutine all_mag_boundaries
 
-      use cart_comm,        only: cdd
       use cg_list,          only: cg_list_element
       use cg_leaves,        only: leaves
       use cg_list_global,   only: all_cg
       use constants,        only: xdim, zdim
       use domain,           only: dom
-      use mpi,              only: MPI_COMM_NULL
       use named_array_list, only: wna
 
       implicit none
@@ -483,11 +288,9 @@ contains
       type(cg_list_element), pointer :: cgl
       integer(kind=4) :: dir
 
-      if (cdd%comm3d == MPI_COMM_NULL) then
-         do dir = xdim, zdim
-            if (dom%has_dir(dir)) call all_cg%internal_boundaries_4d(wna%bi, dim=dir) ! should be more selective (modified leaves?)
-         enddo
-      endif
+      do dir = xdim, zdim
+         if (dom%has_dir(dir)) call all_cg%internal_boundaries_4d(wna%bi, dim=dir) ! should be more selective (modified leaves?)
+      enddo
 
       cgl => leaves%first
       do while (associated(cgl))

@@ -127,9 +127,7 @@ contains
       use constants,     only: GEO_XYZ, GEO_RPZ, BND_PER, O_LIN, O_D2, O_I2, I_ONE
       use dataio_pub,    only: nh  ! QA_WARN required for diff_nml
       use dataio_pub,    only: msg, die, warn
-      use cart_comm,     only: cdd
       use domain,        only: dom, is_multicg !, is_uneven
-      use mpi,           only: MPI_COMM_NULL
       use mpisetup,      only: master, slave, ibuff, cbuff, rbuff, lbuff, nproc, piernik_MPI_Bcast
       use multigridvars, only: single_base, bnd_invalid, bnd_isolated, bnd_periodic, bnd_dirichlet, grav_bnd, fft_full_relax, multidim_code_3D, nsmool, nsmoof
       use multigrid_old_soln, only: nold_max, ord_time_extrap
@@ -323,12 +321,6 @@ contains
       if (.not. (grav_bnd == bnd_periodic .or. grav_bnd == bnd_dirichlet .or. grav_bnd == bnd_isolated) .and. .not. base_no_fft) then
          base_no_fft = .true.
          if (master) call warn("[multigrid_gravity:multigrid_grav_par] Use of FFT not allowed by current boundary type/combination.")
-      endif
-
-      ! something is a bit messed up here
-      if (cdd%comm3d /= MPI_COMM_NULL .and. .not. base_no_fft) then
-         base_no_fft = .true.
-         if (master) call warn("[multigrid_gravity:multigrid_grav_par] cdd%comm3d disables use of FFT at coarsest level")
       endif
 
       single_base = .not. base_no_fft

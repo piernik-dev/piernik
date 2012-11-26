@@ -73,21 +73,18 @@ contains
 !<
    subroutine all_wcr_boundaries
 
-      use cart_comm,        only: cdd
       use cg_leaves,        only: leaves
       use cg_list,          only: cg_list_element
       use cg_list_global,   only: all_cg
-      use constants,        only: CR, ndims, xdim, ydim, zdim, LO, HI, BND, BLK, BND_PER, BND_MPI, BND_FC, BND_MPI_FC, I_ONE, I_TWO, I_THREE, wcr_n
+      use constants,        only: ndims, xdim, ydim, zdim, LO, HI, BND_PER, BND_MPI, BND_FC, BND_MPI_FC, I_TWO, I_THREE, wcr_n
       use dataio_pub,       only: die
       use domain,           only: dom
       use grid_cont,        only: grid_container
-      use mpi,              only: MPI_REQUEST_NULL, MPI_COMM_NULL
-      use mpisetup,         only: mpi_err, req, status
       use named_array_list, only: wna
 
       implicit none
 
-      integer(kind=4)                         :: i, d, lh, clh
+      integer(kind=4)                         :: i, d, lh
       integer(kind=4), dimension(ndims,LO:HI) :: l, r
       real, dimension(:,:,:,:), pointer       :: wcr
       type(cg_list_element),    pointer       :: cgl
@@ -95,7 +92,7 @@ contains
 
       if (.not. has_cr) return
 
-      if (cdd%comm3d == MPI_COMM_NULL) call all_cg%internal_boundaries_4d(wna%ind(wcr_n)) ! should be more selective (modified leaves?)
+      call all_cg%internal_boundaries_4d(wna%ind(wcr_n)) ! should be more selective (modified leaves?)
 
       cgl => leaves%first
       do while (associated(cgl))
@@ -103,30 +100,13 @@ contains
          wcr => cg%w(wna%ind(wcr_n))%arr
          if (.not. associated(wcr)) call die("[crdiffusion:all_wcr_boundaries] cannot get wcr")
 
-         req(:) = MPI_REQUEST_NULL
-
          do d = xdim, zdim
             if (dom%has_dir(d)) then
                l = cg%lhn ; r = l
                do lh = LO, HI
                   select case (cg%bnd(d, lh))
                      case (BND_PER)
-                        if (cdd%comm3d /= MPI_COMM_NULL) then
-                           l(d,:) = cg%ijkse(d,lh) + [I_ONE, dom%nb] + (dom%nb+I_ONE)*(lh-HI)
-                           clh = LO + HI - lh
-                           r(d, lh) = cg%ijkseb(d,clh)
-                           r(d,clh) = cg%ijkse (d,clh)
-                           wcr(:,l(xdim,LO):l(xdim,HI),l(ydim,LO):l(ydim,HI),l(zdim,LO):l(zdim,HI)) = wcr(:,r(xdim,LO):r(xdim,HI),r(ydim,LO):r(ydim,HI),r(zdim,LO):r(zdim,HI))
-                        endif
                      case (BND_MPI) !, BND_MPI_FC)
-                        if (cdd%comm3d /= MPI_COMM_NULL) then
-                           if (cdd%psize(d) > 1) then
-                              call MPI_Isend(wcr(1,1,1,1), I_ONE, cg%mbc(CR, d, lh, BLK, dom%nb), cdd%procn(d, lh), int(2*d+(LO+HI-lh), kind=4), cdd%comm3d, req(4*(d-xdim)+1+2*(lh-LO)), mpi_err)
-                              call MPI_Irecv(wcr(1,1,1,1), I_ONE, cg%mbc(CR, d, lh, BND, dom%nb), cdd%procn(d, lh), int(2*d+       lh,  kind=4), cdd%comm3d, req(4*(d-xdim)+2+2*(lh-LO)), mpi_err)
-                           else
-                              call die("[crdiffusion:all_wcr_boundaries] bnd_[xyz][lr] == 'mpi' && psize(:) <= 1")
-                           endif
-                        endif
                      case (BND_FC, BND_MPI_FC)
                         call die("[crdiffusion:all_wcr_boundaries] fine-coarse interfaces are not implemented here")
                      case default ! Set gradient == 0 on the external boundaries
@@ -139,11 +119,6 @@ contains
 
                enddo
             endif
-            !>
-            !! \warning outside xdim-zdim loop MPI_Waitall may change the operations order (at least for openmpi-1.4.3)
-            !! and as a result may leave mpi-corners uninitiallized
-            !<
-            if (cdd%comm3d /= MPI_COMM_NULL) call MPI_Waitall(size(req(:)), req(:), status(:,:), mpi_err)
          enddo
 
          cgl => cgl%nxt

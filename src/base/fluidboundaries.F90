@@ -99,23 +99,17 @@ contains
 
    subroutine bnd_u(dir, cg)
 
-      use cart_comm,             only: cdd
-      use constants,             only: FLUID, ndims, xdim, ydim, zdim, LO, HI, BND, BLK, I_ONE, I_TWO, I_FOUR, &
-           &                           BND_MPI, BND_FC, BND_MPI_FC, BND_PER, BND_REF, BND_OUT, BND_OUTD, BND_COR, BND_SHE, BND_USER, INT4
+      use constants,             only: ndims, xdim, ydim, zdim, LO, HI, INT4, &
+           &                           BND_MPI, BND_FC, BND_MPI_FC, BND_PER, BND_REF, BND_OUT, BND_OUTD, BND_COR, BND_SHE, BND_USER
       use dataio_pub,            only: msg, warn, die
-      use domain,                only: dom, is_multicg
+      use domain,                only: dom
       use fluidboundaries_funcs, only: user_fluidbnd
-      use fluidindex,            only: flind, iarr_all_dn, iarr_all_mx, iarr_all_my, iarr_all_mz
+      use fluidindex,            only: iarr_all_dn
       use grid_cont,             only: grid_container
-      use mpi,                   only: MPI_DOUBLE_PRECISION, MPI_COMM_NULL
-      use mpisetup,              only: mpi_err, req, status, comm
 #ifdef COSM_RAYS
       use initcosmicrays,        only: smallecr
       use fluidindex,            only: iarr_all_crs
 #endif /* COSM_RAYS */
-#ifndef ISO
-      use fluidindex,            only: iarr_all_en
-#endif /* !ISO */
 #ifdef GRAV
       use constants,             only: BND_OUTH, BND_OUTHD
       use hydrostatic,           only: outh_bnd
@@ -126,152 +120,15 @@ contains
       integer(kind=4),               intent(in)    :: dir
       type(grid_container), pointer, intent(inout) :: cg
 
-      integer(kind=4), parameter                   :: tag1 = 10, tag2 = 20
-      integer(kind=4), parameter                   :: tag7 = 70, tag8 = 80
-      integer(kind=4), dimension(ndims,LO:HI)      :: l, r, seb
+      integer(kind=4), dimension(ndims,LO:HI)      :: l, r
       logical, save                                :: frun = .true.
-      integer                                      :: i, j
-      integer(kind=4)                              :: itag, jtag, side, ssign, ib
-      real, allocatable                            :: send_left(:,:,:,:),recv_left(:,:,:,:)
+      integer(kind=4)                              :: side, ssign, ib
 
       if (.not. any([xdim, ydim, zdim] == dir)) call die("[fluidboundaries:bnd_u] Invalid direction.")
 
       if (frun) then
          call init_fluidboundaries(cg)
          frun = .false.
-      endif
-
-! MPI block communication
-      if (cdd%comm3d /= MPI_COMM_NULL) then
-         ! call bnd_shear_u(dir, cg)
-         if (is_multicg) call die("[fluidboundaries:bnd_u] multiple grid pieces per processor not implemented for comm3d")
-
-            if (cdd%psize(dir) > 1) then
-
-               jtag = tag2 * dir
-               itag = jtag - tag1
-               call MPI_Isend(cg%u(1,1,1,1), I_ONE, cg%mbc(FLUID, dir, LO, BLK, dom%nb), cdd%procn(dir,LO), itag, cdd%comm3d, req(1), mpi_err)
-               call MPI_Isend(cg%u(1,1,1,1), I_ONE, cg%mbc(FLUID, dir, HI, BLK, dom%nb), cdd%procn(dir,HI), jtag, cdd%comm3d, req(2), mpi_err)
-               call MPI_Irecv(cg%u(1,1,1,1), I_ONE, cg%mbc(FLUID, dir, LO, BND, dom%nb), cdd%procn(dir,LO), jtag, cdd%comm3d, req(3), mpi_err)
-               call MPI_Irecv(cg%u(1,1,1,1), I_ONE, cg%mbc(FLUID, dir, HI, BND, dom%nb), cdd%procn(dir,HI), itag, cdd%comm3d, req(4), mpi_err)
-
-               call MPI_Waitall(I_FOUR, req, status, mpi_err)
-            endif
-
-! MPI + non-MPI corner-periodic boundary condition
-
-         if (cg%bnd(xdim, LO) == BND_COR) then
-!   - lower to left
-            if (cdd%pcoords(xdim) == 0 .and. cdd%pcoords(ydim) == 0) then
-               do i=1, dom%nb
-                  do j=cg%js, cg%lhn(ydim, HI)
-                     cg%u(iarr_all_dn,i,j,:) =  cg%u(iarr_all_dn,j,cg%isb+1-i,:)
-                     cg%u(iarr_all_mx,i,j,:) = -cg%u(iarr_all_my,j,cg%isb+1-i,:)
-                     cg%u(iarr_all_my,i,j,:) =  cg%u(iarr_all_mx,j,cg%isb+1-i,:)
-                     cg%u(iarr_all_mz,i,j,:) =  cg%u(iarr_all_mz,j,cg%isb+1-i,:)
-#ifndef ISO
-                     cg%u(iarr_all_en,i,j,:) =  cg%u(iarr_all_en,j,cg%isb+1-i,:)
-#endif /* !ISO */
-#ifdef COSM_RAYS
-                     cg%u(iarr_all_crs,i,j,:) =  cg%u(iarr_all_crs,j,cg%isb+1-i,:)
-#endif /* COSM_RAYS */
-                  enddo
-               enddo
-            endif
-
-            if (cdd%procxyl > 0) then
-               allocate(send_left(flind%all, dom%nb, cg%n_(ydim), cg%n_(zdim)), recv_left(flind%all, cg%n_(xdim), dom%nb, cg%n_(zdim)))
-
-               send_left(:,:,:,:) = cg%u(:, cg%is:cg%isb,:,:)
-
-               call MPI_Isend(send_left, flind%all*dom%nb*cg%n_(ydim)*cg%n_(zdim), MPI_DOUBLE_PRECISION, cdd%procxyl, tag7, comm, req(1), mpi_err)
-               call MPI_Irecv(recv_left, flind%all*cg%n_(xdim)*dom%nb*cg%n_(zdim), MPI_DOUBLE_PRECISION, cdd%procxyl, tag8, comm, req(2), mpi_err)
-
-               call MPI_Waitall(I_TWO,req, status, mpi_err)
-
-               do i=cg%lhn(xdim, LO), cg%lh1(xdim, LO)
-                  do j=cg%lhn(ydim, LO), cg%lhn(ydim, HI)
-                     cg%u(iarr_all_dn,i,j,:) =  recv_left(iarr_all_dn,j, cg%is-i,:)
-                     cg%u(iarr_all_mx,i,j,:) = -recv_left(iarr_all_my,j, cg%is-i,:)
-                     cg%u(iarr_all_my,i,j,:) =  recv_left(iarr_all_mx,j, cg%is-i,:)
-                     cg%u(iarr_all_mz,i,j,:) =  recv_left(iarr_all_mz,j, cg%is-i,:)
-#ifndef ISO
-                     cg%u(iarr_all_en,i,j,:) =  recv_left(iarr_all_en,j, cg%is-i,:)
-#endif /* !ISO */
-#ifdef COSM_RAYS
-                     cg%u(iarr_all_crs,i,j,:) =  recv_left(iarr_all_crs,j, cg%is-i,:)
-#endif /* COSM_RAYS */
-                  enddo
-               enddo
-
-               if (allocated(send_left))  deallocate(send_left)
-               if (allocated(recv_left))  deallocate(recv_left)
-            endif
-         endif
-
-         if (cg%bnd(ydim, LO) == BND_COR) then
-!   - left to lower
-            if (cdd%pcoords(ydim) == 0 .and. cdd%pcoords(xdim) == 0 ) then
-               do j=cg%lhn(ydim, LO), cg%lh1(ydim, LO)
-                  do i=cg%is, cg%lhn(xdim, HI)
-                     cg%u(iarr_all_dn,i,j,:) =  cg%u(iarr_all_dn,cg%isb+1-j,i,:)
-                     cg%u(iarr_all_mx,i,j,:) =  cg%u(iarr_all_my,cg%isb+1-j,i,:)
-                     cg%u(iarr_all_my,i,j,:) = -cg%u(iarr_all_mx,cg%isb+1-j,i,:)
-                     cg%u(iarr_all_mz,i,j,:) =  cg%u(iarr_all_mz,cg%isb+1-j,i,:)
-#ifndef ISO
-                     cg%u(iarr_all_en,i,j,:) =  cg%u(iarr_all_en,cg%isb+1-j,i,:)
-#endif /* !ISO */
-#ifdef COSM_RAYS
-                     cg%u(iarr_all_crs,i,j,:) =  cg%u(iarr_all_crs,cg%isb+1-j,i,:)
-#endif /* COSM_RAYS */
-                  enddo
-               enddo
-!   - interior to corner
-               do j=cg%lhn(ydim, LO), cg%lh1(ydim, LO)
-                  do i=cg%lhn(xdim, LO), cg%lh1(xdim, LO)
-                     cg%u(iarr_all_dn,i,j,:) =   cg%u(iarr_all_dn,cg%isb+1-i,cg%jsb+1-j,:)
-                     cg%u(iarr_all_mx,i,j,:) =  -cg%u(iarr_all_mx,cg%isb+1-i,cg%jsb+1-j,:)
-                     cg%u(iarr_all_my,i,j,:) =  -cg%u(iarr_all_my,cg%isb+1-i,cg%jsb+1-j,:)
-                     cg%u(iarr_all_mz,i,j,:) =   cg%u(iarr_all_mz,cg%isb+1-i,cg%jsb+1-j,:)
-#ifndef ISO
-                     cg%u(iarr_all_en,i,j,:) =   cg%u(iarr_all_en,cg%isb+1-i,cg%jsb+1-j,:)
-#endif /* !ISO */
-#ifdef COSM_RAYS
-                     cg%u(iarr_all_crs,i,j,:) =   cg%u(iarr_all_crs,cg%isb+1-i,cg%jsb+1-j,:)
-#endif /* COSM_RAYS */
-                  enddo
-               enddo
-            endif
-
-            if (cdd%procyxl > 0) then
-               allocate(send_left(flind%all, cg%n_(xdim), dom%nb, cg%n_(zdim)), recv_left(flind%all, dom%nb, cg%n_(ydim), cg%n_(zdim)))
-
-               send_left(:,:,:,:) = cg%u(:,:, cg%js:cg%jsb,:)
-
-               call MPI_Isend(send_left, flind%all*cg%n_(xdim)*dom%nb*cg%n_(zdim), MPI_DOUBLE_PRECISION, cdd%procyxl, tag8, comm, req(1), mpi_err)
-               call MPI_Irecv(recv_left, flind%all*dom%nb*cg%n_(ydim)*cg%n_(zdim), MPI_DOUBLE_PRECISION, cdd%procyxl, tag7, comm, req(2), mpi_err)
-
-               call MPI_Waitall(I_TWO, req, status, mpi_err)
-
-               do j=cg%lhn(ydim, LO), cg%lh1(ydim, LO)
-                  do i=cg%lhn(xdim, LO), cg%lhn(xdim, HI)
-                     cg%u(iarr_all_dn,i,j,:) =  recv_left(iarr_all_dn, cg%js-j,i,:)
-                     cg%u(iarr_all_mx,i,j,:) =  recv_left(iarr_all_my, cg%js-j,i,:)
-                     cg%u(iarr_all_my,i,j,:) = -recv_left(iarr_all_mx, cg%js-j,i,:)
-                     cg%u(iarr_all_mz,i,j,:) =  recv_left(iarr_all_mz, cg%js-j,i,:)
-#ifndef ISO
-                     cg%u(iarr_all_en,i,j,:) =  recv_left(iarr_all_en, cg%js-j,i,:)
-#endif /* !ISO */
-#ifdef COSM_RAYS
-                     cg%u(iarr_all_crs,i,j,:) =  recv_left(iarr_all_crs, cg%js-j,i,:)
-#endif /* COSM_RAYS */
-                  enddo
-               enddo
-
-               if (allocated(send_left))  deallocate(send_left)
-               if (allocated(recv_left))  deallocate(recv_left)
-            endif
-         endif
       endif
 
 !===============================================================
@@ -288,13 +145,6 @@ contains
          case (BND_USER)
             call user_fluidbnd(dir,side,cg)
          case (BND_PER)
-            if (cdd%comm3d /= MPI_COMM_NULL) then
-               seb = reshape([[cg%isb, cg%jsb, cg%ksb],[cg%ieb, cg%jeb, cg%keb]],[ndims,HI])
-               r(dir, side) = seb(dir,3_INT4-side)
-               r(dir,3_INT4-side) = cg%ijkse(dir,3_INT4-side)
-               l(dir,:) = [1_INT4, dom%nb] + cg%ijkse(dir,side)*(side-1_INT4)
-               cg%u(:,l(xdim,LO):l(xdim,HI),l(ydim,LO):l(ydim,HI),l(zdim,LO):l(zdim,HI)) = cg%u(:,r(xdim,LO):r(xdim,HI),r(ydim,LO):r(ydim,HI),r(zdim,LO):r(zdim,HI))
-            endif
          case (BND_REF)
             ssign = 2_INT4*side-3_INT4
             do ib=1_INT4, dom%nb
@@ -346,13 +196,11 @@ contains
 
    subroutine all_fluid_boundaries
 
-      use cart_comm,        only: cdd
       use cg_list,          only: cg_list_element
       use cg_leaves,        only: leaves
       use cg_list_global,   only: all_cg
       use constants,        only: xdim, zdim
       use domain,           only: dom
-      use mpi,              only: MPI_COMM_NULL
       use named_array_list, only: wna
 
       implicit none
@@ -360,11 +208,9 @@ contains
       type(cg_list_element), pointer :: cgl
       integer(kind=4) :: dir
 
-      if (cdd%comm3d == MPI_COMM_NULL) then
-         do dir = xdim, zdim
-            if (dom%has_dir(dir)) call all_cg%internal_boundaries_4d(wna%fi, dim=dir) ! should be more selective (modified leaves?)
-         enddo
-      endif
+      do dir = xdim, zdim
+         if (dom%has_dir(dir)) call all_cg%internal_boundaries_4d(wna%fi, dim=dir) ! should be more selective (modified leaves?)
+      enddo
 
       cgl => leaves%first
       do while (associated(cgl))
