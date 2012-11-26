@@ -157,7 +157,7 @@ contains
 !! <tr><td>user_message_file  </td><td>trim(wd_rd)//'/msg'</td><td>string similar to default value              </td><td>\copydoc dataio::user_message_file  </td></tr>
 !! <tr><td>system_message_file</td><td>'/tmp/piernik_msg' </td><td>string of characters similar to default value</td><td>\copydoc dataio::system_message_file</td></tr>
 !! <tr><td>multiple_h5files   </td><td>.false.            </td><td>logical   </td><td>\copydoc dataio_pub::multiple_h5files</td></tr>
-!! <tr><td>use_v2_io          </td><td>.false.            </td><td>logical   </td><td>\copydoc dataio_pub::use_v2_io    </td></tr>
+!! <tr><td>use_v2_io          </td><td>.true.             </td><td>logical   </td><td>\copydoc dataio_pub::use_v2_io    </td></tr>
 !! <tr><td>nproc_io           </td><td>1                  </td><td>integer   </td><td>\copydoc dataio_pub::nproc_io     </td></tr>
 !! <tr><td>enable_compression </td><td>.false.            </td><td>logical   </td><td>\copydoc dataio_pub::enable_compression</td></tr>
 !! <tr><td>gzip_level         </td><td>9                  </td><td>integer   </td><td>\copydoc dataio_pub::gzip_level   </td></tr>
@@ -273,7 +273,7 @@ contains
       system_message_file = "/tmp/piernik_msg"
 
       tsl_firstcall      = .true.
-      use_v2_io          = .false.
+      use_v2_io          = .true.
       nproc_io           = 1
       enable_compression = .false.
       gzip_level         = 9
