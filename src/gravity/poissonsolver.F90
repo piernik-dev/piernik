@@ -68,12 +68,13 @@ contains
 
       if ( all(cg%bnd(xdim:ydim,LO:HI) == BND_PER) .and. all(cg%bnd(zdim,LO:HI) /= BND_PER) )  then ! Periodic in X and Y, nonperiodic in Z
 
-         call poisson_xyp(dens(cg%is:cg%ie, cg%js:cg%je,:), cg%sgp(cg%is:cg%ie, cg%js:cg%je,:), cg%dz)
+         call poisson_xyp(dens(dom%nb+1:cg%ie-cg%is+dom%nb+1, dom%nb+1:cg%je-cg%js+dom%nb+1,:), cg%sgp(cg%is:cg%ie, cg%js:cg%je,:), cg%dz) ! dens lost its natural offset
 
          call die("[poissonsolver:poisson_solve] poisson_xyp called")
 
       elseif ( all(cg%bnd(xdim:zdim,LO:HI) == BND_PER) ) then ! Fully 3D periodic
-         call poisson_xyzp(dens(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), cg%sgp(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), cg) !> \deprecated BEWARE: something may not be fully initialized here
+         call poisson_xyzp(dens(dom%nb+1:cg%ie-cg%is+dom%nb+1, dom%nb+1:cg%je-cg%js+dom%nb+1, dom%nb+1:cg%ke-cg%ks+dom%nb+1), &
+              cg%sgp(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), cg) !> \deprecated BEWARE: something may not be fully initialized here
 
 #ifdef SHEAR
       elseif ( all(cg%bnd(xdim,LO:HI) == BND_SHE) .and. all(cg%bnd(ydim,LO:HI) == BND_PER) ) then ! 2D shearing box
