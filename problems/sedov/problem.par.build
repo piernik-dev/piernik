@@ -38,7 +38,7 @@
     plt_plane = 32, 32, 32
     dt_hdf  = 0.1
     dt_res  = 0.1
-    dt_plt  = 0.0001
+    dt_plt  = 0.000
     dt_log  = 0.00001
     dt_tsl  = 0.001
     vars(1) = 'dens'
