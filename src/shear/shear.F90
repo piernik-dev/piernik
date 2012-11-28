@@ -369,6 +369,7 @@ contains
    subroutine bnd_shear_u(dir, cg)
 
       use dataio_pub, only: die
+      use grid_cont,  only: grid_container
 
       implicit none
 
