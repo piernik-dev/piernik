@@ -60,7 +60,7 @@ contains
 
       cg => leaves%first%cg
 
-      if (.false.) i=int(A(1,1,1,1))
+      if (.false.) i=int(A(1,1,1,1), kind=4)
 
    end subroutine bnd_a
 
