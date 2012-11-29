@@ -329,8 +329,9 @@ def setup_piernik(data=None):
     allfiles.append(probdir + options.param)
 
     foo_fd, foo_path = tempfile.mkstemp(suffix=".f90", dir='.')
-    cmd = "echo '#include \"%spiernik.h\"' > %s && cpp %s -dM -I%s %s && rm %s" % (
-        'src/base/', foo_path, cppflags, probdir, foo_path, foo_path)
+    cmd = "echo '#include \"%spiernik.h\"' > \"%s\"" % ('src/base/', foo_path)
+    cmd += " && cpp %s -dM -I%s \"%s\" && rm \"%s\"" % (
+        cppflags, probdir, foo_path, foo_path)
     defines = sp.Popen(
         [cmd], stdout=sp.PIPE, shell=True).communicate()[0].rstrip().split("\n")
     if(options.verbose):
