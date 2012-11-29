@@ -234,8 +234,9 @@ contains
    end subroutine init_dataio_parameters
 
    subroutine dataio_par_io
+
       use constants,  only: idlen, cbuff_len, I_ONE, I_TWO
-      use dataio_pub, only: nres, nrestart, warn, nhdf, nimg, wd_rd, multiple_h5files
+      use dataio_pub, only: nres, nrestart, warn, nhdf, nimg, wd_rd, multiple_h5files, warn
       use dataio_pub, only: nh  ! QA_WARN required for diff_nml
       use domain,     only: dom
       use mpisetup,   only: lbuff, ibuff, rbuff, cbuff, master, slave, nproc, piernik_MPI_Bcast
@@ -408,6 +409,12 @@ contains
          system_message_file = trim(cbuff(91))
 
       endif
+
+      if (dt_plt /= 0.) then
+         if (master) call warn("[dataio:dataio_par_io] Plotfiles are disabled until they become compatible with recent renumeration and future AMR implementations")
+         dt_plt = 0.
+      endif
+
    end subroutine dataio_par_io
 
 !> \brief Initialize these I/O variables that may depend on any other modules (called at the end of init_piernik)
