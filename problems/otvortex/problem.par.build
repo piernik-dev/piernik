@@ -19,6 +19,10 @@
  /
 
  $UNITS
+    units_set = 'user'
+    cm = 1.0
+    sek = 1.0
+    gram = 1.0
  /
 
  $RESTART_CONTROL
