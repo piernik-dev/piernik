@@ -27,6 +27,9 @@
 !
 #include "piernik.h"
 #include "macros.h"
+#if defined GALAXY && defined SN_SRC
+#define SN_GALAXY
+#endif /* GALAXY && SN_SRC */
 
 module initproblem
 
@@ -35,13 +38,16 @@ module initproblem
 ! Written by: M. Hanasz, February 2006
 ! Modified by M.Hanasz for CR-driven dynamo
 
+   use constants, only: ndims
+
    implicit none
 
    private
    public :: read_problem_par, init_prob, problem_pointers
 
-   real :: d0, alpha, bxn,byn,bzn, amp_cr, beta_cr                           !< galactic disk specific parameters
+   real :: d0, alpha, bxn, byn, bzn, amp_cr, beta_cr                         !< galactic disk specific parameters
    real :: x0, y0, z0                                                        !< parameters for a single supernova exploding at t=0
+   real, dimension(ndims) :: b_n
 
    namelist /PROBLEM_CONTROL/  d0, bxn, byn, bzn, x0, y0, z0, alpha, amp_cr, beta_cr
 
@@ -110,6 +116,8 @@ contains
 
       endif
 
+      b_n    = [bxn, byn, bzn]
+
    end subroutine read_problem_par
 
 !-----------------------------------------------------------------------------
@@ -119,19 +127,21 @@ contains
       use cg_leaves,      only: leaves
       use cg_list,        only: cg_list_element
       use constants,      only: xdim, ydim, zdim, LO, HI
-      use domain,         only: dom
       use fluidindex,     only: flind
       use fluidtypes,     only: component_fluid
       use func,           only: ekin, emag
       use global,         only: smalld
       use grid_cont,      only: grid_container
       use hydrostatic,    only: hydrostatic_zeq_densmid, set_default_hsparams, dprof
-      use snsources,      only: r_sn
 #ifdef SHEAR
       use shear,          only: qshear, omega
 #endif /* SHEAR */
 #ifdef COSM_RAYS
       use initcosmicrays, only: gamma_crs, iarr_crs
+#ifdef SN_GALAXY
+      use domain,         only: dom
+      use snsources,      only: r_sn
+#endif /* SN_GALAXY */
 #endif /* COSM_RAYS */
 
       implicit none
@@ -141,7 +151,9 @@ contains
       real                            :: b0, csim2
       type(cg_list_element),  pointer :: cgl
       type(grid_container),   pointer :: cg
-
+#ifdef SN_GALAXY
+      real                            :: decr, x1, x2, y1, y2, z1
+#endif /* SN_GALAXY */
 !   Secondary parameters
       fl => flind%ion
 
@@ -163,7 +175,7 @@ contains
          do k = cg%lhn(zdim,LO), cg%lhn(zdim,HI)
             do j = cg%lhn(ydim,LO), cg%lhn(ydim,HI)
                do i = cg%lhn(xdim,LO), cg%lhn(xdim,HI)
-                  cg%u(fl%idn,i,j,k)   = max(smalld, dprof(k))
+                  cg%u(fl%idn,i,j,k) = max(smalld, dprof(k))
 
                   cg%u(fl%imx,i,j,k) = 0.0
                   cg%u(fl%imy,i,j,k) = 0.0
@@ -177,14 +189,15 @@ contains
 #endif /* !ISO */
 #ifdef COSM_RAYS
                   cg%u(iarr_crs,i,j,k) =  beta_cr*fl%cs2 * cg%u(fl%idn,i,j,k)/( gamma_crs - 1.0 )
-#ifdef GALAXY
+#ifdef SN_GALAXY
 ! Single SN explosion in x0,y0,z0 at t = 0 if amp_cr /= 0
-                  cg%u(iarr_crs,i,j,k)= cg%u(iarr_crs,i,j,k) &
-                       + amp_cr*exp(-((cg%x(i)- x0              )**2 + (cg%y(j)- y0              )**2 + (cg%z(k)-z0)**2)/r_sn**2) &
-                       + amp_cr*exp(-((cg%x(i)-(x0+dom%L_(xdim)))**2 + (cg%y(j)- y0              )**2 + (cg%z(k)-z0)**2)/r_sn**2) &
-                       + amp_cr*exp(-((cg%x(i)- x0              )**2 + (cg%y(j)-(y0+dom%L_(ydim)))**2 + (cg%z(k)-z0)**2)/r_sn**2) &
-                       + amp_cr*exp(-((cg%x(i)-(x0+dom%L_(xdim)))**2 + (cg%y(j)-(y0+dom%L_(ydim)))**2 + (cg%z(k)-z0)**2)/r_sn**2)
-#endif /* GALAXY */
+
+                  x1 = (cg%x(i)- x0)**2 ; x2 = (cg%x(i)-(x0+dom%L_(xdim)))**2
+                  y1 = (cg%y(j)- y0)**2 ; y2 = (cg%y(j)-(y0+dom%L_(ydim)))**2
+                  z1 = (cg%z(k)- z0)**2
+                  decr = amp_cr * (exp(-(x1 + y1 + z1)/r_sn**2) + exp(-(x2 + y1 + z1)/r_sn**2) + exp(-(x1 + y2 + z1)/r_sn**2) + exp(-(x2 + y2 + z1)/r_sn**2))
+                  cg%u(iarr_crs,i,j,k)= cg%u(iarr_crs,i,j,k) + decr
+#endif /* SN_GALAXY */
 #endif /* COSM_RAYS */
                enddo
             enddo
@@ -193,11 +206,9 @@ contains
          do k = cg%lhn(zdim,LO), cg%lhn(zdim,HI)
             do j = cg%lhn(ydim,LO), cg%lhn(ydim,HI)
                do i = cg%lhn(xdim,LO), cg%lhn(xdim,HI)
-                  cg%b(xdim,i,j,k)   = b0*sqrt(cg%u(fl%idn,i,j,k)/d0)* bxn/sqrt(bxn**2+byn**2+bzn**2)
-                  cg%b(ydim,i,j,k)   = b0*sqrt(cg%u(fl%idn,i,j,k)/d0)* byn/sqrt(bxn**2+byn**2+bzn**2)
-                  cg%b(zdim,i,j,k)   = b0*sqrt(cg%u(fl%idn,i,j,k)/d0)* bzn/sqrt(bxn**2+byn**2+bzn**2)
+                  cg%b(:,i,j,k) = b0*sqrt(cg%u(fl%idn,i,j,k)/d0) * b_n/sqrt(sum(b_n**2))
 #ifndef ISO
-                  cg%u(fl%ien,i,j,k)   = cg%u(fl%ien,i,j,k) + emag(cg%b(xdim,i,j,k), cg%b(ydim,i,j,k), cg%b(zdim,i,j,k))
+                  cg%u(fl%ien,i,j,k) = cg%u(fl%ien,i,j,k) + emag(cg%b(xdim,i,j,k), cg%b(ydim,i,j,k), cg%b(zdim,i,j,k))
 #endif /* !ISO */
                enddo
             enddo
@@ -209,15 +220,15 @@ contains
    end subroutine init_prob
 
    subroutine supernovae_wrapper(forward)
-
+#ifdef SN_SRC
       use snsources, only: random_sn
-
+#endif /* SN_SRC */
       implicit none
 
       logical, intent(in) :: forward
-
+#ifdef SN_SRC
       if (forward) call random_sn
-
+#endif /* SN_SRC */
    end subroutine supernovae_wrapper
 
 end module initproblem

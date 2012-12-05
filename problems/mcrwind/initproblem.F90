@@ -141,8 +141,8 @@ contains
 
    subroutine init_prob
 
-      use cg_list,        only: cg_list_element
       use cg_leaves,      only: leaves
+      use cg_list,        only: cg_list_element
       use constants,      only: xdim, ydim, zdim, LO, HI
       use fluidindex,     only: flind
       use fluidtypes,     only: component_fluid
@@ -187,7 +187,9 @@ contains
       if (eCRSP(icr_O16)) cr_sigma(cr_table(icr_O16),:) = 0.0
 #endif /* COSM_RAYS_SOURCES */
 
+#ifdef GRAV
       call grav_pot_3d
+#endif /* GRAV */
 
 !   Secondary parameters
       fl => flind%ion
@@ -208,7 +210,7 @@ contains
          do k = cg%lhn(zdim,LO), cg%lhn(zdim,HI)
             do j = cg%lhn(ydim,LO), cg%lhn(ydim,HI)
                do i = cg%lhn(xdim,LO), cg%lhn(xdim,HI)
-                  cg%u(fl%idn,i,j,k)   = max(smalld, dprof(k))
+                  cg%u(fl%idn,i,j,k) = max(smalld, dprof(k))
 
                   cg%u(fl%imx,i,j,k) = 0.0
                   cg%u(fl%imy,i,j,k) = 0.0
@@ -279,6 +281,7 @@ contains
 #endif /* SN_SRC */
    end subroutine supernovae_wrapper
 
+#ifdef GRAV
    subroutine my_grav_pot_3d
 
       use dataio_pub, only: die, warn
@@ -416,7 +419,7 @@ contains
       if (.false. .and. present(flatten)) k = 0 ! suppress compiler warnings
 
    end subroutine galactic_grav_pot
-
+#endif /* GRAV */
 !------------------------------------------------------------------------------
 #ifdef CR_SN
 !BEWARE!
