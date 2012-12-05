@@ -173,16 +173,19 @@ def qa_checks(files,options):
    for f in f90files:
       qa_check_id(errors,f)
       pfile = []
-      lines = open(f,'r').readlines()
-      fp    = open(f,'w')
+      lines = open(f, 'r').readlines()
       for line in lines:
          # things done in "in-place"
          line = line.rstrip()    # that removes trailing spaces
          for i in range(0,len(nasty_spaces),2):
             line = re.sub(nasty_spaces[i], nasty_spaces[i+1], line)   # remove nasty spaces
-         fp.write(line+'\n')
          pfile.append(line)
-      fp.close()
+
+      if lines != [line+'\n' for line in pfile]:
+         fp = open(f, 'w')
+         for line in pfile:
+            fp.write(line+'\n')
+         fp.close()
 
       #f = f.split('/')[-1]
       # checks for f90 file as whole
