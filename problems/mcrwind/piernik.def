@@ -3,8 +3,6 @@
 #define COSM_RAYS
 #define COSM_RAYS_SOURCES
 
-#define MAGNETIC
-
 /* adiabatic or isothermal */
 #define ISO
 
@@ -12,13 +10,14 @@
 #define GLOBAL_FR_SPEED
 
 /* physics including */
+#define MAGNETIC
 #define RESISTIVE
 
 /* gravity type choosing */
 #define GRAV
 
 /* structure features including */
-#define GALAXY
+/* #define GALAXY */
 #define SN_SRC
 
 /* numerical solutions and limitations */
