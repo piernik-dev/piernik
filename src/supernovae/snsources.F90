@@ -78,8 +78,10 @@ contains
       use dataio_pub,     only: nh                  ! QA_WARN required for diff_nml
       use dataio_pub,     only: die, code_progress
       use domain,         only: dom
-      use initcosmicrays, only: cr_eff
       use mpisetup,       only: rbuff, master, slave, piernik_MPI_Bcast
+#ifdef COSM_RAYS
+      use initcosmicrays, only: cr_eff
+#endif /* COSM_RAYS */
 
       implicit none
 
@@ -109,7 +111,9 @@ contains
          f_sn_kpc2   = rbuff(5)
       endif
 
+#ifdef COSM_RAYS
       amp_ecr_sn = 4.96e6*cr_eff/r_sn**3
+#endif /* COSM_RAYS */
 
       if (dom%has_dir(xdim)) then
          f_sn = f_sn_kpc2 * dom%L_(xdim)/1000.0 !\deprecated magic numbers
@@ -157,6 +161,7 @@ contains
    end subroutine random_sn
 
 !--------------------------------------------------------------------------
+#ifdef COSM_RAYS
 !>
 !! \brief Routine that inserts an amount of cosmic ray energy around the position of supernova
 !! \param pos real, dimension(3), array of supernova position components
@@ -223,7 +228,7 @@ contains
       enddo
 
    end subroutine cr_sn
-
+#endif /* COSM_RAYS */
 !--------------------------------------------------------------------------
 !>
 !! \brief Routine that determines the position of next supernova
