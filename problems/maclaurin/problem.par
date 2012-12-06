@@ -42,7 +42,6 @@
     run_id =  'sph'
     dt_hdf  = 10.0
     dt_res  = 0.0
-    dt_plt  = 0.0
     dt_log  = 0.001
     dt_tsl  = 0.001
     vars(1) = 'dens'

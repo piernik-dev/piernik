@@ -42,10 +42,8 @@
     problem_name ='moving_pulse'
     run_id =  'ts1'
     use_v2_io = .true.
-    plt_plane = 0, 0, 0
     dt_hdf  = 1.0
     dt_res  = 1.0
-    dt_plt  = 0.1
     dt_log  = 0.00
     dt_tsl  = 0.00
     vars(1) = 'dens'

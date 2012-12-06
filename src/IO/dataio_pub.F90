@@ -70,7 +70,6 @@ module dataio_pub
    integer                     :: nstep_start                    !< number of start timestep
    integer(kind=4)             :: nhdf                           !< current number of hdf file
    integer(kind=4)             :: nres                           !< current number of restart file
-   integer(kind=4)             :: nimg                           !< current number of image in plt files
    integer(kind=4)             :: nrestart                       !< number of restart file to be read while restart is not set to ''
    character(len=domlen)       :: domain_dump                    !< string to choose if boundaries have to be dumped in hdf files
 
@@ -91,7 +90,6 @@ module dataio_pub
    real                        :: last_tsl_time                  !< time in simulation of the recent timeslice dump
    real                        :: last_hdf_time                  !< time in simulation of the recent hdf file dump
    real                        :: last_res_time                  !< time in simulation of the recent res file dump
-   real                        :: last_plt_time                  !< time in simulation of the recent plt file dump
    integer                     :: code_progress                  !< rough estimate of code execution progress
 
    ! storage for the problem.par

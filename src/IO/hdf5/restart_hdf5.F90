@@ -572,7 +572,7 @@ contains
       use common_hdf5,      only: output_fname
       use constants,        only: cwdlen, cbuff_len, domlen, idlen, xdim, ydim, zdim, LO, HI, RD
       use dataio_pub,       only: msg, warn, die, printio, require_init_prob, problem_name, piernik_hdf5_version, fix_string, &
-           &                      domain_dump, last_hdf_time, last_res_time, last_plt_time, last_log_time, last_tsl_time, nhdf, nres, nimg, new_id
+           &                      domain_dump, last_hdf_time, last_res_time, last_log_time, last_tsl_time, nhdf, nres, new_id
       use dataio_user,      only: user_reg_var_restart, user_attrs_rd
       use domain,           only: dom
       use fluidindex,       only: flind
@@ -700,11 +700,9 @@ contains
          call h5ltget_attribute_double_f(file_id,"/","last_tsl_time", rbuf, error) ; last_tsl_time = rbuf(1)
          call h5ltget_attribute_double_f(file_id,"/","last_hdf_time", rbuf, error) ; last_hdf_time = rbuf(1)
          call h5ltget_attribute_double_f(file_id,"/","last_res_time", rbuf, error) ; last_res_time = rbuf(1)
-         call h5ltget_attribute_double_f(file_id,"/","last_plt_time", rbuf, error) ; last_plt_time = rbuf(1)
          call h5ltget_attribute_int_f(file_id,"/","nstep", ibuf, error) ; nstep = ibuf(1)
          call h5ltget_attribute_int_f(file_id,"/","nres",  ibuf, error) ; nres  = ibuf(1)
          call h5ltget_attribute_int_f(file_id,"/","nhdf",  ibuf, error) ; nhdf  = ibuf(1)
-         call h5ltget_attribute_int_f(file_id,"/","nimg",  ibuf, error) ; nimg  = ibuf(1)
 
          call h5ltget_attribute_string_f(file_id,"/","problem_name", problem_name, error)
          call h5ltget_attribute_string_f(file_id,"/","domain",       domain_dump,  error)
@@ -732,14 +730,12 @@ contains
          ibuff(1) = nstep
          ibuff(2) = nres
          ibuff(3) = nhdf
-         ibuff(4) = nimg
          if (restart_hdf5_version > 1.11) ibuff(5) = require_init_prob
 
          rbuff(1) = last_log_time
          rbuff(2) = last_tsl_time
          rbuff(3) = last_hdf_time
          rbuff(4) = last_res_time
-         rbuff(5) = last_plt_time
          rbuff(6) = t
          rbuff(7) = dt
 
@@ -756,14 +752,12 @@ contains
          nstep = ibuff(1)
          nres = ibuff(2)
          nhdf = ibuff(3)
-         nimg = ibuff(4)
          if (restart_hdf5_version > 1.11) require_init_prob = ibuff(5)
 
          last_log_time = rbuff(1)
          last_tsl_time = rbuff(2)
          last_hdf_time = rbuff(3)
          last_res_time = rbuff(4)
-         last_plt_time = rbuff(5)
          t = rbuff(6)
          dt = rbuff(7)
 
@@ -1188,8 +1182,8 @@ contains
            &                 cg_size_aname, cg_offset_aname, cg_lev_aname, base_d_gname, cg_cnt_aname, data_gname, &
            &                 output_fname
       use constants,   only: cwdlen, dsetnamelen, cbuff_len, ndims, xdim, zdim, base_level_id, INVALID, RD, LO, HI
-      use dataio_pub,  only: die, warn, printio, msg, last_hdf_time, last_res_time, last_plt_time, last_log_time, last_tsl_time, problem_name, new_id, domain_dump, &
-           &                 require_init_prob, piernik_hdf5_version2, nres, nhdf, nimg, fix_string
+      use dataio_pub,  only: die, warn, printio, msg, last_hdf_time, last_res_time, last_log_time, last_tsl_time, problem_name, new_id, domain_dump, &
+           &                 require_init_prob, piernik_hdf5_version2, nres, nhdf, fix_string
       use dataio_user, only: user_reg_var_restart, user_attrs_rd
       use domain,      only: dom
       use fluidindex,  only: flind
@@ -1215,9 +1209,9 @@ contains
       integer(kind=4), dimension(:), allocatable        :: ibuf
       real,            dimension(:), allocatable        :: rbuf
       character(len=cbuff_len)                          :: cbuf
-      character(len=cbuff_len), dimension(8), parameter :: real_attrs = [ "time         ", "timestep     ", "last_hdf_time", "last_res_time", "last_plt_time",  &
+      character(len=cbuff_len), dimension(7), parameter :: real_attrs = [ "time         ", "timestep     ", "last_hdf_time", "last_res_time", &
            &                                                              "last_log_time", "last_tsl_time", "magic_mass   " ]
-      character(len=cbuff_len), dimension(5), parameter :: int_attrs = [ "nstep            ", "nres             ", "nhdf             ", "nimg             ", "require_init_prob" ]
+      character(len=cbuff_len), dimension(4), parameter :: int_attrs = [ "nstep            ", "nres             ", "nhdf             ", "require_init_prob" ]
       character(len=cbuff_len), dimension(3), parameter :: str_attrs = [ "problem_name", "domain      ", "run_id      " ]
       !> \deprecated same strings are used independently in set_common_attributes*
       character(len=cwdlen)                             :: filename
@@ -1282,8 +1276,6 @@ contains
                last_hdf_time = rbuf(1)
             case ("last_res_time")
                last_res_time = rbuf(1)
-            case ("last_plt_time")
-               last_plt_time = rbuf(1)
             case ("last_log_time")
                last_log_time = rbuf(1)
             case ("last_tsl_time")
@@ -1310,8 +1302,6 @@ contains
                nres = ibuf(1)
             case ("nhdf")
                nhdf = ibuf(1)
-            case ("nimg")
-               nimg = ibuf(1)
             case ("require_init_prob")
                require_init_prob = ibuf(1)
             case default

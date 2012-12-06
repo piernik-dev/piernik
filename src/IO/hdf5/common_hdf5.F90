@@ -348,7 +348,7 @@ contains
       use cg_level_finest, only: finest
       use constants,       only: cbuff_len, xdim, ydim, zdim, I_ONE
       use dataio_pub,      only: require_init_prob, piernik_hdf5_version, problem_name, run_id, last_hdf_time, &
-         &                       last_res_time, last_plt_time, last_tsl_time, last_log_time, nres, nhdf, nimg, domain_dump
+         &                       last_res_time, last_tsl_time, last_log_time, nres, nhdf, domain_dump
       use domain,          only: dom
       use fluidindex,      only: flind
       use global,          only: t, dt, nstep
@@ -383,7 +383,7 @@ contains
       rbuffer(11)  = last_tsl_time           ; rbuffer_name(11)  = "last_tsl_time" !rr2
       rbuffer(12)  = last_hdf_time           ; rbuffer_name(12)  = "last_hdf_time" !rr2
       rbuffer(13)  = last_res_time           ; rbuffer_name(13)  = "last_res_time" !rr2
-      rbuffer(14)  = last_plt_time           ; rbuffer_name(14)  = "last_plt_time" !rr2
+      rbuffer(14)  = -99999.9                ; rbuffer_name(14)  = "last_plt_time" !rr2 ! FIXME
       rbuffer(15)  = cm                      ; rbuffer_name(15)  = "cm" !rr2
       rbuffer(16)  = gram                    ; rbuffer_name(16)  = "gram" !rr2
       rbuffer(17)  = sek                     ; rbuffer_name(17)  = "sek" !rr2
@@ -395,7 +395,7 @@ contains
       ibuffer(1)   = nstep                   ; ibuffer_name(1)   = "nstep" !rr2
       ibuffer(2)   = nres                    ; ibuffer_name(2)   = "nres" !rr2
       ibuffer(3)   = nhdf                    ; ibuffer_name(3)   = "nhdf" !rr2
-      ibuffer(4)   = nimg                    ; ibuffer_name(4)   = "nimg" !rr2
+      ibuffer(4)   = -1                      ; ibuffer_name(4)   = "nimg" !rr2 !FIXME
       !>
       !! \todo check if finest is complete, if not then find finest complete level
       !! (see data_hdf5::h5_write_to_single_file_v1)
@@ -436,7 +436,7 @@ contains
 
       use constants,   only: cbuff_len, I_ONE
       use dataio_pub,  only: require_init_prob, piernik_hdf5_version2, problem_name, run_id, last_hdf_time, &
-         &                   last_res_time, last_plt_time, last_log_time, last_tsl_time, nres, nhdf, nimg, domain_dump
+         &                   last_res_time, last_log_time, last_tsl_time, nres, nhdf, domain_dump
       use fluidindex,  only: flind
       use global,      only: t, dt, nstep
       use hdf5,        only: HID_T, SIZE_T
@@ -466,14 +466,14 @@ contains
       rbuffer(5) = last_tsl_time         ; rbuffer_name(5) = "last_tsl_time" !rr2
       rbuffer(6) = last_hdf_time         ; rbuffer_name(6) = "last_hdf_time" !rr2
       rbuffer(7) = last_res_time         ; rbuffer_name(7) = "last_res_time" !rr2
-      rbuffer(8) = last_plt_time         ; rbuffer_name(8) = "last_plt_time" !rr2
+      rbuffer(8) = -99999.99999          ; rbuffer_name(8) = "last_plt_time" !rr2 !FIXME
       rbuffer_size(9) = flind%fluids
       rbuffer(9:8+rbuffer_size(9)) = magic_mass ; rbuffer_name(9:8+rbuffer_size(9)) = "magic_mass" !rr2
 
       ibuffer(1) = nstep                 ; ibuffer_name(1) = "nstep" !rr2
       ibuffer(2) = nres                  ; ibuffer_name(2) = "nres" !rr2
       ibuffer(3) = nhdf                  ; ibuffer_name(3) = "nhdf" !rr2
-      ibuffer(4) = nimg                  ; ibuffer_name(4) = "nimg" !rr2
+      ibuffer(4) = -1                    ; ibuffer_name(4) = "nimg" !rr2 !FIXME
       ibuffer(5) = require_init_prob     ; ibuffer_name(5) = "require_init_prob" !rr2
 
       !> \todo  add number of pieces in the restart point/data dump

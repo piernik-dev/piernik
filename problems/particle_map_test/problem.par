@@ -37,7 +37,6 @@
     run_id =  'tst'
     dt_hdf  = 1.0
     dt_res  = 0.0
-    dt_plt  = 0.0
     dt_log  = 0.0
     dt_tsl  = 0.0
     vars(1) = 'ngp'

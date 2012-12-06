@@ -40,10 +40,8 @@
  $OUTPUT_CONTROL
     problem_name ='moving_pulse'
     run_id =  'ts1'
-    plt_plane = 0, 0, 0
     dt_hdf  = 1.0
     dt_res  = 1.0
-    dt_plt  = 0.0
     dt_log  = 0.001
     dt_tsl  = 0.001
     vars(1) = 'dens'

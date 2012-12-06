@@ -36,10 +36,8 @@
  $OUTPUT_CONTROL
     problem_name = 'wengen4'
     run_id       = 'tst'
-    plt_plane = 0, 0, 0
     dt_hdf  = 0.1
     dt_res  = 1.0
-    dt_plt  = 0.0
     dt_log  = 0.01
     dt_tsl  = 0.01
     vars(1) = 'dens'

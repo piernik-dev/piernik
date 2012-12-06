@@ -36,8 +36,6 @@
  $OUTPUT_CONTROL
     problem_name ='dustblob'
     run_id  =  'tst'
-    plt_plane = 0, 0, 1
-    dt_plt  = 0.0
     dt_hdf  = 0.5
     dt_res  = 0.0
     dt_log  = 0.001

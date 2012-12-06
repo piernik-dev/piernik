@@ -37,7 +37,6 @@
     problem_name = 'divv'
     run_id = 'r65'
     dt_hdf  = 0.1
-    dt_plt  = 0.0
     dt_res  = 0.0
     dt_log  = 1.e-6
     dt_tsl  = 1.e-6

@@ -39,10 +39,8 @@
  $OUTPUT_CONTROL
     problem_name ='sg_clump_moving_1D'
     run_id =  'ts1'
-    plt_plane = 0, 0, 0
     dt_hdf  = 0.0002
     dt_res  = 0.0
-    dt_plt  = 0.0
     dt_log  = 0.0001
     dt_tsl  = 0.0001
     vars(1) = 'dens'

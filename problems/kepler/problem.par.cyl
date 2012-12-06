@@ -43,7 +43,6 @@
     dt_res  = 100.0
     dt_log  = 0.1
     dt_tsl  = 0.1
-    dt_plt  = 0.0
     vars(1) = 'dens'
     vars(2) = 'velx'
     vars(3) = 'vely'

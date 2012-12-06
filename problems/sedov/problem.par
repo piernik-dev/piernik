@@ -37,7 +37,6 @@
     run_id =  'tst'
     dt_hdf  = 0.1
     dt_res  = 0.0
-    dt_plt  = 0.0001
     dt_log  = 0.00001
     dt_tsl  = 1.e-10
     vars(1) = 'dens'
