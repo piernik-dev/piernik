@@ -233,7 +233,6 @@ contains
       use constants,  only: idlen, cbuff_len
       use dataio_pub, only: nres, nrestart, warn, nhdf, wd_rd, multiple_h5files, warn
       use dataio_pub, only: nh  ! QA_WARN required for diff_nml
-      use domain,     only: dom
       use mpisetup,   only: lbuff, ibuff, rbuff, cbuff, master, slave, nproc, piernik_MPI_Bcast
 
       implicit none
