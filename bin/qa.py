@@ -9,9 +9,9 @@ debug = False
 typ1 = np.dtype([('name','a50'),('beg','i'),('end','i'),('type','a4')])
 
 test_for_routines  = re.compile('''
-      ^\s{0,12}(|end|pure|elemental|recursive)\s # starts with spaces or spaces and one of { 'end', 'pure', ... }
-      (|real|logical|integer)(|\s)               # if function it can have a type
-      (subroutine|function|type(,|\s))           # next goes subroutine or function or type
+      ^\s{0,12}(|end|pure|elemental|recursive|real|logical|integer)\s # starts with spaces or spaces and one of { 'end', 'pure', ... }
+      (|pure|elemental|recursive|real|logical|integer)(|\s)           # if function it can have a type
+      (subroutine|function|type(,|\s))                                # next goes subroutine or function or type
    ''',re.VERBOSE)
 test_for_interfaces = re.compile('''
       ^\s{0,12}(|end|abstract)\s  # starts with spaces or spaces and one of { 'end', 'pure', ... }
