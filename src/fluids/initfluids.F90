@@ -191,26 +191,28 @@ contains
 
 !>
 !! \brief Find sane values for smalld and smallp
+!! \warning Use span(cg%ijkse) or guarantee that all boundaries with corners have all guardcells with proper values
 !<
 
    subroutine sanitize_smallx_checks
 
-      use constants,   only: big_float, DST, I_ONE, xdim, ydim, zdim
-      use dataio_pub,  only: warn, msg
-      use fluidindex,  only: flind
-      use fluidtypes,  only: component_fluid
-      use func,        only: ekin, emag
-      use cg_list,     only: cg_list_element
-      use global,      only: smalld, smallp
-      use cg_leaves,   only: leaves
-      use grid_cont,   only: grid_container
-      use mpi,         only: MPI_IN_PLACE, MPI_DOUBLE_PRECISION, MPI_MIN, MPI_MAX
-      use mpisetup,    only: master, comm, mpi_err
+      use cg_leaves,        only: leaves
+      use cg_list,          only: cg_list_element
+      use constants,        only: big_float, DST, I_ONE, xdim, ydim, zdim, cs_i2_n
+      use dataio_pub,       only: warn, msg
+      use fluidindex,       only: flind
+      use fluidtypes,       only: component_fluid
+      use func,             only: ekin, emag
+      use global,           only: smalld, smallp
+      use grid_cont,        only: grid_container
+      use mpi,              only: MPI_IN_PLACE, MPI_DOUBLE_PRECISION, MPI_MIN, MPI_MAX
+      use mpisetup,         only: master, comm, mpi_err
+      use named_array_list, only: qna, wna
 
       implicit none
 
-      type(cg_list_element), pointer  :: cgl
-      type(grid_container), pointer   :: cg
+      type(cg_list_element),  pointer :: cgl
+      type(grid_container),   pointer :: cg
       class(component_fluid), pointer :: fl
       integer                         :: i
       real, pointer, dimension(:,:,:) :: dn, mx, my, mz, en, bx, by, bz
@@ -226,13 +228,13 @@ contains
       do while (associated(cgl))
          cg => cgl%cg
 
-         bx => cg%b(xdim,:,:,:)
-         by => cg%b(ydim,:,:,:)
-         bz => cg%b(zdim,:,:,:)
+         bx => cg%w(wna%bi)%span(xdim,cg%ijkse)
+         by => cg%w(wna%bi)%span(ydim,cg%ijkse)
+         bz => cg%w(wna%bi)%span(zdim,cg%ijkse)
 
          if (smalld >= big_float) then
             do i = lbound(flind%all_fluids,1), ubound(flind%all_fluids,1)
-               dn => cg%u(flind%all_fluids(i)%fl%idn,:,:,:)
+               dn => cg%w(wna%fi)%span(flind%all_fluids(i)%fl%idn,cg%ijkse)
                maxdens = max( maxval(dn), maxdens )
                mindens = min( minval(dn), mindens )
             enddo
@@ -242,19 +244,19 @@ contains
             do i = lbound(flind%all_fluids,1), ubound(flind%all_fluids,1)
                fl => flind%all_fluids(i)%fl
                if (fl%tag == DST) cycle
-               dn => cg%u(fl%idn,:,:,:)
-               mx => cg%u(fl%imx,:,:,:)
-               my => cg%u(fl%imy,:,:,:)
-               mz => cg%u(fl%imz,:,:,:)
+               dn => cg%w(wna%fi)%span(fl%idn,cg%ijkse)
+               mx => cg%w(wna%fi)%span(fl%imx,cg%ijkse)
+               my => cg%w(wna%fi)%span(fl%imy,cg%ijkse)
+               mz => cg%w(wna%fi)%span(fl%imz,cg%ijkse)
                if (fl%has_energy) then
-                  en => cg%u(fl%ien,:,:,:)
+                  en => cg%w(wna%fi)%span(fl%ien,cg%ijkse)
                   if (fl%is_magnetized) then
                      minpres = min( minval( en - ekin(mx,my,mz,dn) - emag(bx,by,bz))/fl%gam_1, minpres )
                   else
                      minpres = min( minval( en - ekin(mx,my,mz,dn))/fl%gam_1, minpres )
                   endif
                else
-                  minpres = min( minval( cg%cs_iso2*dn ), minpres )
+                  minpres = min( minval( cg%q(qna%ind(cs_i2_n))%span(cg%ijkse)*dn ), minpres )
                endif
             enddo
          endif
