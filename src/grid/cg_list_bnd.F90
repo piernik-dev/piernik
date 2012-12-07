@@ -65,7 +65,7 @@ module cg_list_bnd
       procedure          :: internal_boundaries_3d     !< A wrapper that calls internal_boundaries for 3D arrays stored in cg%q(:)
       procedure          :: internal_boundaries_4d     !< A wrapper that calls internal_boundaries for 4D arrays stored in cg%w(:)
       procedure, private :: internal_boundaries        !< Exchanges guardcells for BND_MPI and BND_PER boundaries (internal and periodic external boundaries)
-      procedure, private :: external_boundaries        !< Set up external boundary values
+      procedure          :: external_boundaries        !< Set up external boundary values
       procedure          :: clear_boundaries           !< Clear (set to 0) all boundaries
       procedure          :: level_3d_boundaries        !< Perform internal boundary exchanges and external boundary extrapolations on 3D named arrays
       !> \todo move routines for external guardcells for rank-4 arrays here as well (fluidboundaries and magboundaries)
