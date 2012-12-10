@@ -1,0 +1,20 @@
+#
+#   module swap PrgEnv-pgi PrgEnv-intel
+#   module load hdf5-parallel
+#   module load fftw/3.3.0.1
+#
+# Link the code in the object directory manually with
+#   ftn -o piernik *.o
+# because the setup scrip writes some -llibraray_name which are not needed and only cause errors
+#
+
+PROG      = piernik
+
+### INTEL
+F90       = ftn -c
+F90FLAGS   = -r8 -no-ipo -heap-arrays 
+F90FLAGS  += -xHost -O3
+F90FLAGS  += -assume realloc_lhs
+
+#LDFLAGS    = -L/opt/intel/hdf5/lib -L/opt/intel/fgsl/lib
+#LIBS       = -lfgsl
