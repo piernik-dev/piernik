@@ -103,6 +103,7 @@ module mpisetup
    end interface piernik_MPI_Bcast
 
    interface piernik_MPI_Allreduce
+      module procedure MPI_Allreduce_single_logical
       module procedure MPI_Allreduce_single_real4
       module procedure MPI_Allreduce_single_real8
       module procedure MPI_Allreduce_single_int4
@@ -637,6 +638,22 @@ contains
 
       call MPI_Bcast(ivar8, size(ivar8), MPI_INTEGER8, FIRST, comm, mpi_err)
    end subroutine MPI_Bcast_arr3d_int8
+!-----------------------------------------------------------------------------
+!>
+!! \brief Wrapper for MPI_Allreduce with MPI_IN_PLACE
+!! \todo unlimited polimorphism will obsolete me
+!<
+   subroutine MPI_Allreduce_single_logical(lvar, reduction)
+
+      use constants, only: I_ONE
+      use mpi,       only: MPI_LOGICAL, MPI_IN_PLACE, MPI_LOR
+
+      implicit none
+
+      logical, intent(inout) :: lvar     !< logical that will be reduced
+
+      call MPI_Allreduce(MPI_IN_PLACE, lvar, I_ONE, MPI_LOGICAL, MPI_LOR, comm, mpi_err)
+   end subroutine MPI_Allreduce_single_logical
 !-----------------------------------------------------------------------------
 !>
 !! \brief Wrapper for MPI_Allreduce with MPI_IN_PLACE

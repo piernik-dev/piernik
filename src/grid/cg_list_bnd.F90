@@ -340,8 +340,7 @@ contains
       use dataio_pub, only: die, msg
       use domain,     only: dom
       use grid_cont,  only: grid_container
-      use mpi,        only: MPI_IN_PLACE, MPI_LOGICAL, MPI_LOR
-      use mpisetup,   only: mpi_err, comm
+      use mpisetup,   only: piernik_MPI_Allreduce
 
       implicit none
 
@@ -432,7 +431,7 @@ contains
          cgl => cgl%nxt
       enddo
 
-      call MPI_Allreduce(MPI_IN_PLACE, dodie, I_ONE, MPI_LOGICAL, MPI_LOR, comm, mpi_err)
+      call piernik_MPI_Allreduce(dodie)
       if (dodie) call die(msg)
 
    end subroutine external_boundaries
