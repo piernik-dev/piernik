@@ -390,12 +390,11 @@ contains
    subroutine subtract_average(this, iv)
 
       use cg_list,          only: cg_list_element
-      use constants,        only: GEO_XYZ, GEO_RPZ, I_ONE
+      use constants,        only: GEO_XYZ, GEO_RPZ, pSUM
       use dataio_pub,       only: die
       use domain,           only: dom
       use grid_cont,        only: grid_container
-      use mpi,              only: MPI_DOUBLE_PRECISION, MPI_SUM, MPI_IN_PLACE
-      use mpisetup,         only: comm, mpi_err
+      use mpisetup,         only: piernik_MPI_Allreduce
 #ifdef DEBUG
       use dataio_pub,       only: msg, printinfo
       use mpisetup,         only: master
@@ -431,8 +430,8 @@ contains
          end select
          cgl => cgl%nxt
       enddo
-      call MPI_Allreduce(MPI_IN_PLACE, avg, I_ONE, MPI_DOUBLE_PRECISION, MPI_SUM, comm, mpi_err)
-      call MPI_Allreduce(MPI_IN_PLACE, vol, I_ONE, MPI_DOUBLE_PRECISION, MPI_SUM, comm, mpi_err) !! \todo calculate this in some init routine
+      call piernik_MPI_Allreduce(avg, pSUM)
+      call piernik_MPI_Allreduce(vol, pSUM) !! \todo calculate this in some init routine
       avg = avg / vol
 
       call this%q_add_val(iv, -avg)
@@ -457,12 +456,11 @@ contains
    real function norm_sq(this, iv, nomask) result (norm)
 
       use cg_list,    only: cg_list_element
-      use constants,  only: GEO_XYZ, GEO_RPZ, I_ONE
+      use constants,  only: GEO_XYZ, GEO_RPZ, pSUM
       use dataio_pub, only: die
       use domain,     only: dom
       use grid_cont,  only: grid_container
-      use mpi,        only: MPI_DOUBLE_PRECISION, MPI_SUM, MPI_IN_PLACE
-      use mpisetup,   only: comm, mpi_err
+      use mpisetup,   only: piernik_MPI_Allreduce
 
       implicit none
 
@@ -504,7 +502,7 @@ contains
          end select
          cgl => cgl%nxt
       enddo
-      call MPI_Allreduce(MPI_IN_PLACE, norm, I_ONE, MPI_DOUBLE_PRECISION, MPI_SUM, comm, mpi_err)
+      call piernik_MPI_Allreduce(norm, pSUM)
       norm = sqrt(norm)
 
    end function norm_sq
