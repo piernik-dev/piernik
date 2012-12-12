@@ -103,16 +103,15 @@ contains
 !<
    subroutine time_step(dt, flind)
 
-      use constants,            only: one, two, zero, half, I_ONE
+      use cg_leaves,            only: leaves
+      use cg_list,              only: cg_list_element
+      use constants,            only: one, two, zero, half, pMIN, pMAX
       use dataio,               only: write_crashed
       use dataio_pub,           only: tend, msg, warn
       use fluidtypes,           only: var_numbers
       use global,               only: t, dt_old, dt_max_grow, dt_initial, dt_min, nstep
-      use cg_leaves,            only: leaves
-      use cg_list,              only: cg_list_element
       use grid_cont,            only: grid_container
-      use mpi,                  only: MPI_DOUBLE_PRECISION, MPI_MIN, MPI_MAX, MPI_IN_PLACE
-      use mpisetup,             only: comm, mpi_err, master
+      use mpisetup,             only: master, piernik_MPI_Allreduce
       use timestep_pub,         only: c_all
       use timestepinteractions, only: timestep_interactions
 #ifdef COSM_RAYS
@@ -128,13 +127,13 @@ contains
 
       implicit none
 
-      real, intent(inout) :: dt !< the timestep
-      type(var_numbers), intent(in) :: flind
+      real,              intent(inout) :: dt !< the timestep
+      type(var_numbers), intent(in)    :: flind
 
-      type(cg_list_element), pointer :: cgl
-      type(grid_container),  pointer :: cg
-      real :: c_, dt_
-      integer :: ifl
+      type(cg_list_element), pointer   :: cgl
+      type(grid_container),  pointer   :: cg
+      real                             :: c_, dt_
+      integer                          :: ifl
 
 ! Timestep computation
 
@@ -156,7 +155,7 @@ contains
 
 #ifdef COSM_RAYS
          call timestep_crs(cg)
-         dt=min(dt,dt_crs)
+         dt = min(dt,dt_crs)
 #endif /* COSM_RAYS */
 
 #ifdef RESISTIVE
@@ -171,8 +170,8 @@ contains
          cgl => cgl%nxt
       enddo
 
-      call MPI_Allreduce(MPI_IN_PLACE, dt,    I_ONE, MPI_DOUBLE_PRECISION, MPI_MIN, comm, mpi_err)
-      call MPI_Allreduce(MPI_IN_PLACE, c_all, I_ONE, MPI_DOUBLE_PRECISION, MPI_MAX, comm, mpi_err)
+      call piernik_MPI_Allreduce(dt,    pMIN)
+      call piernik_MPI_Allreduce(c_all, pMAX)
 
       ! finally apply some sanity factors
       if (nstep <=1) then
@@ -192,7 +191,7 @@ contains
          call write_crashed("[timestep:time_step] dt < dt_min")
       endif
 
-      dt  = min(dt, (half*(tend-t)) + (two*epsilon(one)*((tend-t))))
+      dt = min(dt, (half*(tend-t)) + (two*epsilon(one)*((tend-t))))
 #ifdef DEBUG
       ! We still need all above for c_all
       if (has_const_dt) then
@@ -211,9 +210,9 @@ contains
 
    subroutine cfl_warn
 
-      use dataio_pub, only: msg, warn
-      use global,     only: cfl, cfl_max, cfl_violated
-      use mpisetup,   only: piernik_MPI_Bcast, master
+      use dataio_pub,   only: msg, warn
+      use global,       only: cfl, cfl_max, cfl_violated
+      use mpisetup,     only: piernik_MPI_Bcast, master
       use timestep_pub, only: c_all
 
       implicit none
@@ -247,10 +246,10 @@ contains
 
    subroutine cfl_auto
 
-      use constants,  only: one, half, zero
-      use dataio_pub, only: msg, warn
-      use global,     only: cfl, cfl_max, dt, dt_old
-      use mpisetup,   only: master
+      use constants,    only: one, half, zero
+      use dataio_pub,   only: msg, warn
+      use global,       only: cfl, cfl_max, dt, dt_old
+      use mpisetup,     only: master
       use timestep_pub, only: c_all
 
       implicit none
@@ -319,18 +318,16 @@ contains
 
       implicit none
 
-      type(grid_container), pointer, intent(in) :: cg !< current grid container
-      real, intent(out)                         :: dt !< resulting timestep
-      real, intent(out)                         :: c_fl !< maximum speed at which information travels in the fluid
-
-      real, dimension(ndims) :: c !< maximum velocity in all directions
-      real, dimension(ndims) :: v !< maximum velocity of fluid in all directions
+      type(grid_container),   pointer, intent(in) :: cg   !< current grid container
+      class(component_fluid), pointer, intent(in) :: fl
+      real, intent(out)                           :: dt   !< resulting timestep
+      real, intent(out)                           :: c_fl !< maximum speed at which information travels in the fluid
 
       ! locals
-      class(component_fluid), pointer, intent(in) :: fl
-      integer :: i, j, k
-      real, dimension(ndims) :: dt_proc !< timestep for the current cg
-      integer :: d
+      real, dimension(ndims) :: c                         !< maximum velocity in all directions
+      real, dimension(ndims) :: v                         !< maximum velocity of fluid in all directions
+      real, dimension(ndims) :: dt_proc                   !< timestep for the current cg
+      integer                :: i, j, k, d
 
       c(:) = 0.0
       c_fl = 0.0
