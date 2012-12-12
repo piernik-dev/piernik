@@ -238,6 +238,11 @@ module constants
       enumerator :: INV_CENTER
    end enum
 
+   ! MPI reduction type
+   enum, bind(C)
+      enumerator :: pSUM = 1, pMIN, pMAX
+   end enum
+
    ! misc
    enum, bind(C)
       enumerator :: MINL, MAXL                           !< constants for func::get_extremum

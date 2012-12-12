@@ -43,7 +43,7 @@ module mpisetup
    public :: cleanup_mpi, init_mpi, inflate_req, &
         &    buffer_dim, cbuff, ibuff, lbuff, rbuff, req, status, mpi_err, procmask, &
         &    master, slave, nproc, proc, FIRST, LAST, comm, have_mpi, is_spawned, &
-        &    piernik_MPI_Barrier, piernik_MPI_Bcast, report_to_master, &
+        &    piernik_MPI_Allreduce, piernik_MPI_Barrier, piernik_MPI_Bcast, report_to_master, &
         &    report_string_to_master
 
    integer(kind=4), protected :: nproc          !< number of processes
@@ -59,7 +59,7 @@ module mpisetup
    logical, protected :: have_mpi    !< .True. when run on more than one processor
    logical, protected :: is_spawned  !< .True. if Piernik was run via MPI_Spawn
 
-   integer(kind=4), allocatable, dimension(:), target   :: req    !< request array for MPI_Waitall
+   integer(kind=4), allocatable, dimension(:),   target :: req    !< request array for MPI_Waitall
    integer(kind=4), allocatable, dimension(:,:), target :: status !< status array for MPI_Waitall
    !> \warning Because we use one centralized req(:) and status(:,:) arrays, the routines that are using them should not call each other to avoid any interference.
    !! If you want nested non-blocking communication, only one set of MPI transactions may use these arrays.
@@ -101,6 +101,17 @@ module mpisetup
       module procedure MPI_Bcast_arr3d_real4
       module procedure MPI_Bcast_arr3d_real8
    end interface piernik_MPI_Bcast
+
+   interface piernik_MPI_Allreduce
+      module procedure MPI_Allreduce_single_real4
+      module procedure MPI_Allreduce_single_real8
+      module procedure MPI_Allreduce_single_int4
+      module procedure MPI_Allreduce_single_int8
+      module procedure MPI_Allreduce_vec_real4
+      module procedure MPI_Allreduce_vec_real8
+      module procedure MPI_Allreduce_vec_int4
+      module procedure MPI_Allreduce_vec_int8
+   end interface piernik_MPI_Allreduce
 
 contains
 
@@ -628,6 +639,150 @@ contains
    end subroutine MPI_Bcast_arr3d_int8
 !-----------------------------------------------------------------------------
 !>
+!! \brief Wrapper for MPI_Allreduce with MPI_IN_PLACE
+!! \todo unlimited polimorphism will obsolete me
+!<
+   subroutine MPI_Allreduce_single_int4(ivar4, reduction)
+
+      use constants, only: pSUM, pMAX, I_ONE
+      use mpi,       only: MPI_INTEGER, MPI_IN_PLACE, MPI_SUM, MPI_MIN, MPI_MAX
+
+      implicit none
+
+      integer(kind=4), intent(inout) :: ivar4     !< int4 that will be reduced
+      integer(kind=4), intent(in)    :: reduction !< integer to mark a reduction type
+      integer, dimension(pSUM:pMAX), parameter :: mpiop = [MPI_SUM, MPI_MIN, MPI_MAX]
+
+      call MPI_Allreduce(MPI_IN_PLACE, ivar4, I_ONE, MPI_INTEGER, mpiop(reduction), comm, mpi_err)
+   end subroutine MPI_Allreduce_single_int4
+!-----------------------------------------------------------------------------
+!>
+!! \brief Wrapper for MPI_Allreduce with MPI_IN_PLACE
+!! \todo unlimited polimorphism will obsolete me
+!<
+   subroutine MPI_Allreduce_single_int8(ivar8, reduction)
+
+      use constants, only: pSUM, pMAX, I_ONE
+      use mpi,       only: MPI_INTEGER8, MPI_IN_PLACE, MPI_SUM, MPI_MIN, MPI_MAX
+
+      implicit none
+
+      integer(kind=8), intent(inout) :: ivar8     !< int8 that will be reduced
+      integer(kind=4), intent(in)    :: reduction !< integer to mark a reduction type
+      integer, dimension(pSUM:pMAX), parameter :: mpiop = [MPI_SUM, MPI_MIN, MPI_MAX]
+
+      call MPI_Allreduce(MPI_IN_PLACE, ivar8, I_ONE, MPI_INTEGER8, mpiop(reduction), comm, mpi_err)
+   end subroutine MPI_Allreduce_single_int8
+!-----------------------------------------------------------------------------
+!>
+!! \brief Wrapper for MPI_Allreduce with MPI_IN_PLACE
+!! \todo unlimited polimorphism will obsolete me
+!<
+   subroutine MPI_Allreduce_vec_int4(ivar4, reduction)
+
+      use constants, only: pSUM, pMAX
+      use mpi,       only: MPI_INTEGER, MPI_IN_PLACE, MPI_SUM, MPI_MIN, MPI_MAX
+
+      implicit none
+
+      integer(kind=4), dimension(:), intent(inout) :: ivar4     !< int4 that will be reduced
+      integer(kind=4),               intent(in)    :: reduction !< integer to mark a reduction type
+      integer, dimension(pSUM:pMAX), parameter     :: mpiop = [MPI_SUM, MPI_MIN, MPI_MAX]
+
+      call MPI_Allreduce(MPI_IN_PLACE, ivar4, size(ivar4), MPI_INTEGER, mpiop(reduction), comm, mpi_err)
+   end subroutine MPI_Allreduce_vec_int4
+!-----------------------------------------------------------------------------
+!>
+!! \brief Wrapper for MPI_Allreduce with MPI_IN_PLACE
+!! \todo unlimited polimorphism will obsolete me
+!<
+   subroutine MPI_Allreduce_vec_int8(ivar8, reduction)
+
+      use constants, only: pSUM, pMAX
+      use mpi,       only: MPI_INTEGER8, MPI_IN_PLACE, MPI_SUM, MPI_MIN, MPI_MAX
+
+      implicit none
+
+      integer(kind=8), dimension(:), intent(inout) :: ivar8     !< int8 that will be reduced
+      integer(kind=4),               intent(in)    :: reduction !< integer to mark a reduction type
+      integer, dimension(pSUM:pMAX), parameter     :: mpiop = [MPI_SUM, MPI_MIN, MPI_MAX]
+
+      call MPI_Allreduce(MPI_IN_PLACE, ivar8, size(ivar8), MPI_INTEGER8, mpiop(reduction), comm, mpi_err)
+   end subroutine MPI_Allreduce_vec_int8
+!-----------------------------------------------------------------------------
+!>
+!! \brief Wrapper for MPI_Allreduce with MPI_IN_PLACE
+!! \todo unlimited polimorphism will obsolete me
+!<
+   subroutine MPI_Allreduce_single_real4(rvar4, reduction)
+
+      use constants, only: pSUM, pMAX, I_ONE
+      use mpi,       only: MPI_REAL, MPI_IN_PLACE, MPI_SUM, MPI_MIN, MPI_MAX
+
+      implicit none
+
+      real(kind=4),    intent(inout) :: rvar4     !< real4 that will be reduced
+      integer(kind=4), intent(in)    :: reduction !< integer to mark a reduction type
+      integer, dimension(pSUM:pMAX), parameter :: mpiop = [MPI_SUM, MPI_MIN, MPI_MAX]
+
+      call MPI_Allreduce(MPI_IN_PLACE, rvar4, I_ONE, MPI_REAL, mpiop(reduction), comm, mpi_err)
+   end subroutine MPI_Allreduce_single_real4
+!-----------------------------------------------------------------------------
+!>
+!! \brief Wrapper for MPI_Allreduce with MPI_IN_PLACE
+!! \todo unlimited polimorphism will obsolete me
+!<
+   subroutine MPI_Allreduce_single_real8(rvar8, reduction)
+
+      use constants, only: pSUM, pMAX, I_ONE
+      use mpi,       only: MPI_DOUBLE_PRECISION, MPI_IN_PLACE, MPI_SUM, MPI_MIN, MPI_MAX
+
+      implicit none
+
+      real(kind=8),    intent(inout) :: rvar8     !< int8 that will be reduced
+      integer(kind=4), intent(in)    :: reduction !< integer to mark a reduction type
+      integer, dimension(pSUM:pMAX), parameter :: mpiop = [MPI_SUM, MPI_MIN, MPI_MAX]
+
+      call MPI_Allreduce(MPI_IN_PLACE, rvar8, I_ONE, MPI_DOUBLE_PRECISION, mpiop(reduction), comm, mpi_err)
+   end subroutine MPI_Allreduce_single_real8
+!-----------------------------------------------------------------------------
+!>
+!! \brief Wrapper for MPI_Allreduce with MPI_IN_PLACE
+!! \todo unlimited polimorphism will obsolete me
+!<
+   subroutine MPI_Allreduce_vec_real4(rvar4, reduction)
+
+      use constants, only: pSUM, pMAX
+      use mpi,       only: MPI_REAL, MPI_IN_PLACE, MPI_SUM, MPI_MIN, MPI_MAX
+
+      implicit none
+
+      real(kind=4), dimension(:), intent(inout) :: rvar4     !< int8 that will be reduced
+      integer(kind=4),            intent(in)    :: reduction !< integer to mark a reduction type
+      integer, dimension(pSUM:pMAX), parameter  :: mpiop = [MPI_SUM, MPI_MIN, MPI_MAX]
+
+      call MPI_Allreduce(MPI_IN_PLACE, rvar4, size(rvar4), MPI_REAL, mpiop(reduction), comm, mpi_err)
+   end subroutine MPI_Allreduce_vec_real4
+!-----------------------------------------------------------------------------
+!>
+!! \brief Wrapper for MPI_Allreduce with MPI_IN_PLACE
+!! \todo unlimited polimorphism will obsolete me
+!<
+   subroutine MPI_Allreduce_vec_real8(rvar8, reduction)
+
+      use constants, only: pSUM, pMAX
+      use mpi,       only: MPI_DOUBLE_PRECISION, MPI_IN_PLACE, MPI_SUM, MPI_MIN, MPI_MAX
+
+      implicit none
+
+      real(kind=8), dimension(:), intent(inout) :: rvar8     !< int8 that will be reduced
+      integer(kind=4),            intent(in)    :: reduction !< integer to mark a reduction type
+      integer, dimension(pSUM:pMAX), parameter  :: mpiop = [MPI_SUM, MPI_MIN, MPI_MAX]
+
+      call MPI_Allreduce(MPI_IN_PLACE, rvar8, size(rvar8), MPI_DOUBLE_PRECISION, mpiop(reduction), comm, mpi_err)
+   end subroutine MPI_Allreduce_vec_real8
+!-----------------------------------------------------------------------------
+!>
 !! \brief Routine used to communicate events to master Python script
 !! \todo just a proof of concept
    subroutine report_to_master(ivar4, only_master)
@@ -661,7 +816,7 @@ contains
       use mpi,       only: MPI_INTEGER, MPI_CHAR
 
       implicit none
-      character(len=*), intent(in) :: str
+      character(len=*),  intent(in) :: str
       logical, optional, intent(in) :: only_master
       integer                       :: tag  !< master scripts accepts ANY_TAG, so it can carry meaningful value too
       integer(kind=4) :: buf
