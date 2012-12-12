@@ -179,11 +179,10 @@ contains
    subroutine refresh_multipole
 
       use cg_level_finest, only: finest
-      use constants,       only: small, pi, xdim, ydim, zdim, GEO_XYZ, GEO_RPZ, LO, HI, I_ONE
+      use constants,       only: small, pi, xdim, ydim, zdim, GEO_XYZ, GEO_RPZ, LO, HI, pMIN
       use dataio_pub,      only: die, warn
       use domain,          only: dom
-      use mpi,             only: MPI_IN_PLACE, MPI_DOUBLE_PRECISION, MPI_MIN
-      use mpisetup,        only: master, comm, mpi_err
+      use mpisetup,        only: master, piernik_MPI_Allreduce
       use particle_pub,    only: pset
 
       implicit none
@@ -258,7 +257,7 @@ contains
          else
             drq = maxval(dom%L_(:))
          endif
-         call MPI_Allreduce(MPI_IN_PLACE, drq, I_ONE, MPI_DOUBLE_PRECISION, MPI_MIN, comm, mpi_err)
+         call piernik_MPI_Allreduce(drq, pMIN)
 
          select case (dom%geometry_type)
             case (GEO_XYZ)
@@ -774,12 +773,11 @@ contains
 
       use cg_leaves,    only: leaves
       use cg_list,      only: cg_list_element
-      use constants,    only: xdim, ydim, zdim, GEO_XYZ, GEO_RPZ, LO, HI, I_ONE
+      use constants,    only: xdim, ydim, zdim, GEO_XYZ, GEO_RPZ, LO, HI, pSUM, pMIN, pMAX
       use dataio_pub,   only: die
       use domain,       only: dom
       use grid_cont,    only: grid_container
-      use mpi,          only: MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_SUM, MPI_MIN, MPI_MAX, MPI_IN_PLACE
-      use mpisetup,     only: comm, mpi_err
+      use mpisetup,     only: piernik_MPI_Allreduce
       use particle_pub, only: pset
       use units,        only: fpiG
 
@@ -846,8 +844,8 @@ contains
          if (pset%p(i)%outside) call point2moments(fpiG*pset%p(i)%mass, pset%p(i)%pos(xdim), pset%p(i)%pos(ydim), pset%p(i)%pos(zdim))
       enddo
 
-      call MPI_Allreduce(MPI_IN_PLACE, irmin, I_ONE, MPI_INTEGER, MPI_MIN, comm, mpi_err)
-      call MPI_Allreduce(MPI_IN_PLACE, irmax, I_ONE, MPI_INTEGER, MPI_MAX, comm, mpi_err)
+      call piernik_MPI_Allreduce(irmin, pMIN)
+      call piernik_MPI_Allreduce(irmax, pMAX)
 
       ! integrate radially and apply normalization factor (the (4 \pi)/(2 l  + 1) terms cancel out)
       rr = max(1, irmin)
@@ -861,7 +859,7 @@ contains
          Q(:, OUTSIDE, r) = Q(:, OUTSIDE, r) * ofact(:) + Q(:, OUTSIDE, r+1)
       enddo
 
-      call MPI_Allreduce(MPI_IN_PLACE, Q(:, :, irmin:irmax), size(Q(:, :, irmin:irmax)), MPI_DOUBLE_PRECISION, MPI_SUM, comm, mpi_err)
+      call piernik_MPI_Allreduce(Q(:, :, irmin:irmax), pSUM)
 
    end subroutine img_mass2moments
 
