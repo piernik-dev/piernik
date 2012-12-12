@@ -307,10 +307,9 @@ contains
 
    subroutine timestep_resist(cg)
 
-      use constants, only: big, I_ONE
+      use constants, only: big, pMIN
       use grid_cont, only: grid_container
-      use mpisetup,  only: comm, mpi_err
-      use mpi,       only: MPI_DOUBLE_PRECISION, MPI_MIN, MPI_IN_PLACE
+      use mpisetup,  only: piernik_MPI_Allreduce
 
       implicit none
 
@@ -325,7 +324,7 @@ contains
          dt_resist = big
       endif
 
-      call MPI_Allreduce(MPI_IN_PLACE, dt_resist, I_ONE, MPI_DOUBLE_PRECISION, MPI_MIN, comm, mpi_err)
+      call piernik_MPI_Allreduce(dt_resist, pMIN)
 
    end subroutine timestep_resist
 
