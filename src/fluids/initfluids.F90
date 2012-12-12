@@ -152,8 +152,8 @@ contains
       do ifl = lbound(flind%all_fluids, dim=1), ubound(flind%all_fluids, dim=1)
          cs2_max = max(cs2_max, flind%all_fluids(ifl)%fl%cs2)
       enddo
-      ! All processes should have same fluids, so MPI_Allreduce shouldn't be required
-      !call MPI_Allreduce(MPI_IN_PLACE, cs_max, I_ONE, MPI_DOUBLE_PRECISION, MPI_MAX, comm, mpi_err)
+      ! All processes should have same fluids, so piernik_MPI_Allreduce shouldn't be required
+      !call piernik_MPI_Allreduce(cs_max, pMAX)
 
       if (has_neu .and. has_ion) then
          if (flind%ion%cs2 /= flind%neu%cs2) &
@@ -198,15 +198,14 @@ contains
 
       use cg_leaves,        only: leaves
       use cg_list,          only: cg_list_element
-      use constants,        only: big_float, DST, I_ONE, xdim, ydim, zdim, cs_i2_n
+      use constants,        only: big_float, DST, xdim, ydim, zdim, cs_i2_n, pMAX, pMIN
       use dataio_pub,       only: warn, msg
       use fluidindex,       only: flind
       use fluidtypes,       only: component_fluid
       use func,             only: ekin, emag
       use global,           only: smalld, smallp
       use grid_cont,        only: grid_container
-      use mpi,              only: MPI_IN_PLACE, MPI_DOUBLE_PRECISION, MPI_MIN, MPI_MAX
-      use mpisetup,         only: master, comm, mpi_err
+      use mpisetup,         only: master, piernik_MPI_Allreduce
       use named_array_list, only: qna, wna
 
       implicit none
@@ -265,8 +264,9 @@ contains
 
       ! reduce across processes
       if (smalld >= big_float) then
-         call MPI_Allreduce(mindens, smalld, I_ONE, MPI_DOUBLE_PRECISION, MPI_MIN, comm, mpi_err)
-         call MPI_Allreduce(MPI_IN_PLACE, maxdens, I_ONE, MPI_DOUBLE_PRECISION, MPI_MAX, comm, mpi_err)
+         smalld = mindens
+         call piernik_MPI_Allreduce(smalld,  pMIN)
+         call piernik_MPI_Allreduce(maxdens, pMAX)
          span = 0
          if (maxdens > mindens) span = log10(maxdens/mindens)
          mindens = mindens * safety_factor
@@ -281,8 +281,8 @@ contains
       endif
 
       if (smallp >= big_float) then
-         minpres = minpres * safety_factor
-         call MPI_Allreduce(minpres, smallp, I_ONE, MPI_DOUBLE_PRECISION, MPI_MIN, comm, mpi_err)
+         smallp = minpres * safety_factor
+         call piernik_MPI_Allreduce(smallp, pMIN)
          if (smallp < 0.) then
             write(msg,'(A,ES11.4,A)') "[initfluids:sanitize_smallx_checks] Negative smallp detected! smallp=",smallp," may indicate nonphysical initial conditions."
             if (master) call warn(msg)
