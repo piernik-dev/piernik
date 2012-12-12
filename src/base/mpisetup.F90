@@ -643,7 +643,7 @@ contains
 !! \brief Wrapper for MPI_Allreduce with MPI_IN_PLACE
 !! \todo unlimited polimorphism will obsolete me
 !<
-   subroutine MPI_Allreduce_single_logical(lvar, reduction)
+   subroutine MPI_Allreduce_single_logical(lvar)
 
       use constants, only: I_ONE
       use mpi,       only: MPI_LOGICAL, MPI_IN_PLACE, MPI_LOR
