@@ -716,7 +716,7 @@ contains
 
       use cg_leaves,        only: leaves
       use cg_list,          only: cg_list_element
-      use constants,        only: cwdlen, xdim, ydim, zdim, DST
+      use constants,        only: cwdlen, xdim, ydim, zdim, DST, pSUM
       use dataio_pub,       only: wd_wr, tsl_file, tsl_lun
 #if defined(__INTEL_COMPILER)
       use dataio_pub,       only: io_blocksize, io_buffered, io_buffno
@@ -731,8 +731,7 @@ contains
       use global,           only: t, dt, smalld, nstep
       use grid_cont,        only: grid_container
       use mass_defect,      only: update_magic_mass
-      use mpi,              only: MPI_IN_PLACE, MPI_DOUBLE_PRECISION, MPI_SUM
-      use mpisetup,         only: master, comm, mpi_err
+      use mpisetup,         only: master, piernik_MPI_Allreduce
       use named_array_list, only: wna
 #ifdef GRAV
       use constants,        only: gpot_n
@@ -883,7 +882,7 @@ contains
       tot_q(T_ENER) = tot_q(T_ENER) + tot_q(T_EPOT)
 #endif /* GRAV */
 
-      call MPI_Allreduce(MPI_IN_PLACE, tot_q(:), size(tot_q), MPI_DOUBLE_PRECISION, MPI_SUM, comm, mpi_err)
+      call piernik_MPI_Allreduce(tot_q, pSUM)
 
       call write_log(tsl)
       call update_magic_mass(tsl=.true.)
