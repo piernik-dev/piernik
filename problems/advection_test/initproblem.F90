@@ -241,13 +241,12 @@ contains
 
       use cg_list,          only: cg_list_element
       use cg_leaves,        only: leaves
-      use constants,        only: I_ONE, I_TWO, PIERNIK_FINISHED
+      use constants,        only: PIERNIK_FINISHED, pSUM, pMIN, pMAX
       use dataio_pub,       only: code_progress, halfstep, msg, printinfo, warn
       use fluidindex,       only: flind
       use global,           only: t, nstep
       use grid_cont,        only: grid_container
-      use mpi,              only: MPI_DOUBLE_PRECISION, MPI_SUM, MPI_MIN, MPI_MAX, MPI_IN_PLACE
-      use mpisetup,         only: master, comm, mpi_err
+      use mpisetup,         only: master, piernik_MPI_Allreduce
       use named_array_list, only: qna
 
       implicit none
@@ -282,16 +281,16 @@ contains
          cg%wa(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = inid(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) - cg%u(flind%neu%idn, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)
 
          norm(N_D) = norm(N_D) + sum(cg%wa(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)**2)
-         norm(N_2) = norm(N_2) + sum(inid(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)**2)
+         norm(N_2) = norm(N_2) + sum(inid( cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)**2)
          neg_err = min(neg_err, minval(cg%wa(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)))
          pos_err = max(pos_err, maxval(cg%wa(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)))
 
          cgl => cgl%nxt
       enddo
 
-      call MPI_Allreduce(MPI_IN_PLACE, norm,    I_TWO, MPI_DOUBLE_PRECISION, MPI_SUM, comm, mpi_err)
-      call MPI_Allreduce(MPI_IN_PLACE, neg_err, I_ONE, MPI_DOUBLE_PRECISION, MPI_MIN, comm, mpi_err)
-      call MPI_Allreduce(MPI_IN_PLACE, pos_err, I_ONE, MPI_DOUBLE_PRECISION, MPI_MAX, comm, mpi_err)
+      call piernik_MPI_Allreduce(norm,    pSUM)
+      call piernik_MPI_Allreduce(neg_err, pMIN)
+      call piernik_MPI_Allreduce(pos_err, pMAX)
 
       if (master) then
          write(msg,'(a,f12.6,a,2f15.6)')"[initproblem:calculate_error_norm] L2 error norm = ", sqrt(norm(N_D)/norm(N_2)), ", min and max error = ", neg_err, pos_err

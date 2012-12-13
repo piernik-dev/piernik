@@ -433,8 +433,8 @@ contains
 !<
    subroutine cr_sn_beware(pos)
 
-      use cg_list,        only: cg_list_element
       use cg_leaves,      only: leaves
+      use cg_list,        only: cg_list_element
       use constants,      only: xdim, ydim, zdim, ndims, LO, HI
       use domain,         only: dom
       use grid_cont,      only: grid_container

@@ -147,9 +147,9 @@ contains
 !
    subroutine init_prob
 
-      use cg_list,           only: cg_list_element
       use cg_leaves,         only: leaves
-      use constants,         only: pi, xdim, ydim, zdim, I_ONE
+      use cg_list,           only: cg_list_element
+      use constants,         only: pi, xdim, ydim, zdim, pSUM, pMIN, pMAX
       use dataio_pub,        only: msg, die, warn, printinfo
       use domain,            only: dom, is_multicg
       use fluidindex,        only: flind
@@ -157,8 +157,7 @@ contains
       use func,              only: ekin, emag
       use global,            only: smalld, smallei, t
       use grid_cont,         only: grid_container
-      use mpi,               only: MPI_IN_PLACE, MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_MIN, MPI_MAX, MPI_SUM
-      use mpisetup,          only: master, comm, mpi_err
+      use mpisetup,          only: master, piernik_MPI_Allreduce
       use multigrid_gravity, only: multigrid_solve_grav
       use units,             only: newtong
 
@@ -243,8 +242,8 @@ contains
          cgl => cgl%nxt
       enddo
 
-      call MPI_Allreduce (MPI_IN_PLACE, iC,   I_ONE, MPI_INTEGER,          MPI_SUM, comm, mpi_err)
-      call MPI_Allreduce (MPI_IN_PLACE, Msph, I_ONE, MPI_DOUBLE_PRECISION, MPI_SUM, comm, mpi_err)
+      call piernik_MPI_Allreduce (iC,   pSUM)
+      call piernik_MPI_Allreduce (Msph, pSUM)
       if (master .and. verbose) then
          write(msg,'(a,es13.7,a,i7,a)')"[initproblem:init_prob] Starting with uniform sphere with M = ", Msph, " (", iC, " cells)"
          call printinfo(msg, .true.)
@@ -278,8 +277,8 @@ contains
 
          Cint = [ minval(cg%sgp(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)), maxval(cg%sgp(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)) ] ! rotation will modify this
 
-         call MPI_Allreduce (MPI_IN_PLACE, Cint(LOW),  I_ONE, MPI_DOUBLE_PRECISION, MPI_MIN, comm, mpi_err)
-         call MPI_Allreduce (MPI_IN_PLACE, Cint(HIGH), I_ONE, MPI_DOUBLE_PRECISION, MPI_MAX, comm, mpi_err)
+         call piernik_MPI_Allreduce (Cint(LOW),  pMIN)
+         call piernik_MPI_Allreduce (Cint(HIGH), pMAX)
 
          call totalMEnthalpic(Cint(LOW),  totME(LOW),  REL_CALC)
          call totalMEnthalpic(Cint(HIGH), totME(HIGH), REL_CALC)
@@ -444,13 +443,13 @@ contains
 
    subroutine virialCheck(tol)
 
-      use cg_list,       only: cg_list_element
       use cg_leaves,     only: leaves
+      use cg_list,       only: cg_list_element
+      use constants,     only: pSUM
       use dataio_pub,    only: msg, die, warn, printinfo
       use fluidindex,    only: flind
       use grid_cont,     only: grid_container
-      use mpi,           only: MPI_IN_PLACE, MPI_DOUBLE_PRECISION, MPI_SUM
-      use mpisetup,      only: master, comm, mpi_err
+      use mpisetup,      only: master, piernik_MPI_Allreduce
       use multigridvars, only: grav_bnd, bnd_isolated
 
       implicit none
@@ -485,7 +484,7 @@ contains
          cgl => cgl%nxt
       enddo
 
-      call MPI_Allreduce (MPI_IN_PLACE, TWP, nTWP, MPI_DOUBLE_PRECISION, MPI_SUM, comm, mpi_err)
+      call piernik_MPI_Allreduce(TWP, pSUM)
 
       vc = abs(2.*TWP(1) + TWP(2) + 3*TWP(3))/abs(TWP(2))
       if (master .and. (verbose .or. tol < 1.0)) then
@@ -511,13 +510,12 @@ contains
 
    subroutine totalMEnthalpic(C, totME, mode)
 
-      use cg_list,     only: cg_list_element
       use cg_leaves,   only: leaves
-      use constants,   only: I_ONE
+      use cg_list,     only: cg_list_element
+      use constants,   only: pSUM
       use fluidindex,  only: flind
       use grid_cont,   only: grid_container
-      use mpi,         only: MPI_IN_PLACE, MPI_DOUBLE_PRECISION, MPI_SUM
-      use mpisetup,    only: comm, mpi_err
+      use mpisetup,    only: piernik_MPI_Allreduce
 
       implicit none
 
@@ -557,7 +555,7 @@ contains
          cgl => cgl%nxt
       enddo
 
-      call MPI_Allreduce (MPI_IN_PLACE, totME, I_ONE, MPI_DOUBLE_PRECISION, MPI_SUM, comm, mpi_err)
+      call piernik_MPI_Allreduce(totME, pSUM)
 
    end subroutine totalMEnthalpic
 

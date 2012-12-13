@@ -128,14 +128,14 @@ contains
 !-----------------------------------------------------------------------------
    subroutine init_prob
 
-      use cg_leaves,   only: leaves
-      use cg_list,     only: cg_list_element
-      use constants,   only: ION, DST, xdim, ydim, zdim, LO, HI
-      use dataio_pub,  only: msg, die, printinfo
-      use fluidindex,  only: flind
-      use fluidtypes,  only: component_fluid
-      use grid_cont,   only: grid_container
-      use mpisetup,    only: master
+      use cg_leaves,  only: leaves
+      use cg_list,    only: cg_list_element
+      use constants,  only: ION, DST, xdim, ydim, zdim, LO, HI
+      use dataio_pub, only: msg, die, printinfo
+      use fluidindex, only: flind
+      use fluidtypes, only: component_fluid
+      use grid_cont,  only: grid_container
+      use mpisetup,   only: master
 
       implicit none
 
@@ -273,10 +273,9 @@ contains
 !-----------------------------------------------------------------------------
    subroutine sedov_tsl(user_vars, tsl_names)
 
-      use constants,   only: I_ONE
+      use constants,   only: pSUM
       use diagnostics, only: pop_vector
-      use mpi,         only: MPI_DOUBLE_PRECISION, MPI_SUM
-      use mpisetup,    only: proc, master, comm, mpi_err
+      use mpisetup,    only: proc, master, piernik_MPI_Allreduce
 
       implicit none
 
@@ -288,7 +287,8 @@ contains
          call pop_vector(tsl_names, len(tsl_names(1)), ["foobar_sedov"])    !   add to header
       else
          ! do mpi stuff here...
-         call MPI_Allreduce(real(proc,8), output, I_ONE, MPI_DOUBLE_PRECISION, MPI_SUM, comm, mpi_err)
+         output = real(proc,8)
+         call piernik_MPI_Allreduce(output, pSUM)
          if (master) call pop_vector(user_vars,[output])                 !   pop value
       endif
 

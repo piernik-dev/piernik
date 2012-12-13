@@ -182,13 +182,13 @@ contains
 
    subroutine init_prob
 
-      use cg_list,     only: cg_list_element
       use cg_leaves,   only: leaves
+      use cg_list,     only: cg_list_element
       use constants,   only: GEO_XYZ, GEO_RPZ
       use dataio_pub,  only: die
       use domain,      only: dom
-      use grid_cont,   only: grid_container
       use fluidindex,  only: iarr_all_dn, iarr_all_mx, iarr_all_my, iarr_all_mz
+      use grid_cont,   only: grid_container
 
       implicit none
 
@@ -296,8 +296,8 @@ contains
 !<
    subroutine compute_maclaurin_potential
 
-      use cg_list,          only: cg_list_element
       use cg_leaves,        only: leaves
+      use cg_list,          only: cg_list_element
       use constants,        only: pi, GEO_XYZ, GEO_RPZ
       use dataio_pub,       only: warn, die
       use domain,           only: dom
@@ -421,14 +421,13 @@ contains
 
    subroutine finalize_problem_maclaurin
 
-      use cg_list,          only: cg_list_element
       use cg_leaves,        only: leaves
-      use constants,        only: GEO_RPZ, I_ONE, I_TWO
+      use cg_list,          only: cg_list_element
+      use constants,        only: GEO_RPZ, pSUM, pMIN, pMAX
       use dataio_pub,       only: msg, printinfo, warn
       use domain,           only: dom
       use grid_cont,        only: grid_container
-      use mpi,              only: MPI_DOUBLE_PRECISION, MPI_SUM, MPI_MIN, MPI_MAX, MPI_IN_PLACE
-      use mpisetup,         only: master, comm, mpi_err
+      use mpisetup,         only: master, piernik_MPI_Allreduce
       use named_array_list, only: qna
 
       implicit none
@@ -469,9 +468,9 @@ contains
          cgl => cgl%nxt
       enddo
 
-      call MPI_Allreduce(MPI_IN_PLACE, norm,   I_TWO, MPI_DOUBLE_PRECISION, MPI_SUM, comm, mpi_err)
-      call MPI_Allreduce(MPI_IN_PLACE, dev(1), I_ONE, MPI_DOUBLE_PRECISION, MPI_MIN, comm, mpi_err)
-      call MPI_Allreduce(MPI_IN_PLACE, dev(2), I_ONE, MPI_DOUBLE_PRECISION, MPI_MAX, comm, mpi_err)
+      call piernik_MPI_Allreduce(norm,   pSUM)
+      call piernik_MPI_Allreduce(dev(1), pMIN)
+      call piernik_MPI_Allreduce(dev(2), pMAX)
 
       if (master) then
          write(msg,'(a,f12.6,a,2f12.6)')"[initproblem:finalize_problem_maclaurin] L2 error norm = ", sqrt(norm(1)/norm(2)), ", min and max error = ", dev(1:2)

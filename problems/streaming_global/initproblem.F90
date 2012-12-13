@@ -209,8 +209,8 @@ contains
 !-----------------------------------------------------------------------------
    subroutine add_sine
 
-      use cg_list,     only: cg_list_element
       use cg_leaves,   only: leaves
+      use cg_list,     only: cg_list_element
       use constants,   only: dpi, xdim, zdim
       use dataio_pub,  only: printinfo, warn
       use domain,      only: dom
@@ -260,8 +260,8 @@ contains
 !-----------------------------------------------------------------------------
    subroutine add_random_noise
 
-      use cg_list,     only: cg_list_element
       use cg_leaves,   only: leaves
+      use cg_list,     only: cg_list_element
       use constants,   only: xdim, ydim, zdim, LO, HI
       use dataio_pub,  only: printinfo
       use grid_cont,   only: grid_container
@@ -304,23 +304,22 @@ contains
 !-----------------------------------------------------------------------------
    subroutine init_prob
 
-      use cg_list,          only: cg_list_element
-      use cg_leaves,        only: leaves
-      use constants,        only: dpi, xdim, ydim, zdim, GEO_RPZ, DST, LO, HI
-      use dataio_pub,       only: msg, printinfo, die
-      use domain,           only: dom, is_multicg
-      use fluidindex,       only: flind
-      use fluidtypes,       only: component_fluid
-      use gravity,          only: r_smooth, ptmass, source_terms_grav, grav_pot2accel, grav_pot_3d
-      use grid_cont,        only: grid_container
-      use interactions,     only: epstein_factor
-      use mpisetup,         only: master
-      use named_array_list, only: wna
-      use units,            only: newtong, gram, cm, kboltz, mH
+      use cg_leaves,          only: leaves
+      use cg_list,            only: cg_list_element
+      use constants,          only: dpi, xdim, ydim, zdim, GEO_RPZ, DST, LO, HI
+      use dataio_pub,         only: msg, printinfo, die
+      use domain,             only: dom, is_multicg
+      use fluidindex,         only: flind
+      use fluidtypes,         only: component_fluid
+      use gravity,            only: r_smooth, ptmass, source_terms_grav, grav_pot2accel, grav_pot_3d
+      use grid_cont,          only: grid_container
+      use interactions,       only: epstein_factor
+      use mpisetup,           only: master
+      use named_array_list,   only: wna
+      use units,              only: newtong, gram, cm, kboltz, mH
 #ifdef FGSL
-      use mpi,                only: MPI_DOUBLE_PRECISION
-      use mpisetup,           only: comm, FIRST, mpi_err, proc
       use cg_level_connected, only: base_lev
+      use mpisetup,           only: proc, piernik_MPI_Bcast
 #endif /* FGSL */
 
       implicit none
@@ -393,7 +392,7 @@ contains
             if (densfile /= "") then
                allocate(gdens(dom%n_d(xdim)+dom%nb*2))
                if (master) call read_dens_profile(densfile,gdens)
-               call MPI_Bcast(gdens, size(gdens), MPI_DOUBLE_PRECISION, FIRST, comm, mpi_err)
+               call piernik_MPI_Bcast(gdens)
                dens_prof(:) = gdens( base_lev%pse(proc)%c(cg%grid_id)%se(xdim, LO)+1:base_lev%pse(proc)%c(cg%grid_id)%se(xdim, HI)+1+dom%nb*2)
                deallocate(gdens)
             endif
@@ -498,8 +497,8 @@ contains
 !-----------------------------------------------------------------------------
    subroutine kepler_problem_post_restart
 
-      use cg_list,          only: cg_list_element
       use cg_leaves,        only: leaves
+      use cg_list,          only: cg_list_element
       use constants,        only: b0_n
       use fluidboundaries,  only: all_fluid_boundaries
       use named_array_list, only: wna
@@ -565,17 +564,16 @@ contains
 !-----------------------------------------------------------------------------
    subroutine problem_customize_solution_kepler(forward)
 
-      use cg_list,          only: cg_list_element
       use cg_leaves,        only: leaves
-      use constants,        only: xdim, ydim, zdim, I_ONE, LO, HI
+      use cg_list,          only: cg_list_element
+      use constants,        only: xdim, ydim, zdim, LO, HI, pMAX
       use dataio_pub,       only: die!, warn, msg
       use domain,           only: is_multicg
       use global,           only: dt, relax_time, smalld !, t, grace_period_passed
       use grid_cont,        only: grid_container
       use fluidboundaries,  only: all_fluid_boundaries
       use fluidindex,       only: flind!, iarr_all_mz, iarr_all_dn
-      use mpisetup,         only: comm, mpi_err
-      use mpi,              only: MPI_MAX, MPI_DOUBLE_PRECISION, MPI_IN_PLACE
+      use mpisetup,         only: piernik_MPI_Allreduce
       use named_array_list, only: wna
 
       implicit none
@@ -634,7 +632,7 @@ contains
             funcR(:,:) = spread(funcR(1,:),1,size(cg%u,dim=1))
 
             max_vy = maxval( abs(cg%u(flind%dst%imy,:,:,:))/cg%u(flind%dst%idn,:,:,:) )
-            call MPI_Allreduce(MPI_IN_PLACE, max_vy, I_ONE, MPI_DOUBLE_PRECISION, MPI_MAX, comm, mpi_err)
+            call piernik_MPI_Allreduce(max_vy, pMAX)
          endif
 
          do j = cg%lhn(ydim, LO), cg%lhn(ydim, HI)
@@ -648,7 +646,7 @@ contains
 !         endwhere
 
          max_vx = maxval( abs(cg%u(flind%neu%imx,:,:,:))/cg%u(flind%neu%idn,:,:,:) )
-         call MPI_Allreduce(MPI_IN_PLACE, max_vx, I_ONE, MPI_DOUBLE_PRECISION, MPI_MAX, comm, mpi_err)
+         call piernik_MPI_Allreduce(max_vx, pMAX)
 
          where (abs(cg%u(flind%dst%imx,:,:,:))/cg%u(flind%dst%idn,:,:,:) >= max_vx)
             adjust = .true.
@@ -702,8 +700,8 @@ contains
 !-----------------------------------------------------------------------------
    subroutine my_grav_pot_3d
 
-      use cg_list,     only: cg_list_element
       use cg_leaves,   only: leaves
+      use cg_list,     only: cg_list_element
       use constants,   only: xdim, zdim, LO, HI
       use gravity,     only: ptmass, sum_potential
       use grid_cont,   only: grid_container

@@ -133,7 +133,7 @@ contains
 
       use cg_leaves,      only: leaves
       use cg_list,        only: cg_list_element
-      use constants,      only: xdim, ydim, zdim, LO, HI, I_ONE
+      use constants,      only: xdim, ydim, zdim, LO, HI, pMAX
       use dataio_pub,     only: msg, warn, printinfo, die
       use domain,         only: dom, is_multicg
       use fluidindex,     only: flind
@@ -141,8 +141,7 @@ contains
       use func,           only: ekin, emag
       use grid_cont,      only: grid_container
       use initcosmicrays, only: iarr_crn, iarr_crs, gamma_crn, K_crn_paral, K_crn_perp
-      use mpi,            only: MPI_IN_PLACE, MPI_INTEGER, MPI_MAX
-      use mpisetup,       only: comm, mpi_err, master
+      use mpisetup,       only: master, piernik_MPI_Allreduce
 #ifdef COSM_RAYS_SOURCES
       use cr_data,        only: icr_H1, icr_C12, cr_table
 #endif /* COSM_RAYS_SOURCES */
@@ -242,7 +241,7 @@ contains
 
       do icr = 1, flind%crs%all
          maxv = maxval(cg%u(iarr_crs(icr),:,:,:))
-         call MPI_Allreduce(MPI_IN_PLACE, maxv, I_ONE, MPI_INTEGER, MPI_MAX, comm, mpi_err)
+         call piernik_MPI_Allreduce(maxv, pMAX)
          if (master) then
             write(msg,*) '[initproblem:init_prob] icr=',icr,' maxecr =',maxv
             call printinfo(msg)

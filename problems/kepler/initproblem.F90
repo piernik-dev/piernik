@@ -631,15 +631,14 @@ contains
 
       use cg_leaves,        only: leaves
       use cg_list,          only: cg_list_element
-      use constants,        only: xdim, ydim, zdim, LO, HI, I_ONE
+      use constants,        only: xdim, ydim, zdim, LO, HI, pMAX
       use dataio_pub,       only: die!, warn, msg
       use domain,           only: is_multicg
       use global,           only: dt, relax_time, smalld !, t, grace_period_passed
       use grid_cont,        only: grid_container
       use fluidboundaries,  only: all_fluid_boundaries
       use fluidindex,       only: flind!, iarr_all_mz, iarr_all_dn
-      use mpisetup,         only: comm, mpi_err
-      use mpi,              only: MPI_MAX, MPI_DOUBLE_PRECISION, MPI_IN_PLACE
+      use mpisetup,         only: piernik_MPI_Allreduce
       use named_array_list, only: wna
       ! use interactions,    only: dragc_gas_dust
 #ifdef VERBOSE
@@ -674,7 +673,7 @@ contains
       cgl => leaves%first
       do while (associated(cgl))
          cg => cgl%cg
-         if (.not.allocated(adjust)) allocate(adjust(cg%n_(xdim),cg%n_(ydim),cg%n_(zdim)))
+         if (.not.allocated(adjust))  allocate(adjust (cg%n_(xdim),cg%n_(ydim),cg%n_(zdim)))
          if (.not.allocated(vx_sign)) allocate(vx_sign(cg%n_(xdim),cg%n_(ydim),cg%n_(zdim)))
          if (.not.allocated(vz_sign)) allocate(vz_sign(cg%n_(xdim),cg%n_(ydim),cg%n_(zdim)))
 
@@ -705,7 +704,7 @@ contains
             funcR(:,:) = spread(funcR(1,:),1,size(cg%u,dim=1))
 
             max_vy = maxval( abs(cg%u(flind%dst%imy,:,:,:))/cg%u(flind%dst%idn,:,:,:) )
-            call MPI_Allreduce(MPI_IN_PLACE, max_vy, I_ONE, MPI_DOUBLE_PRECISION, MPI_MAX, comm, mpi_err)
+            call piernik_MPI_Allreduce(max_vy, pMAX)
          endif
 
          do j = 1, cg%n_(ydim)
@@ -719,7 +718,7 @@ contains
 !         endwhere
 
          max_vx = maxval( abs(cg%u(flind%neu%imx,:,:,:))/cg%u(flind%neu%idn,:,:,:) )
-         call MPI_Allreduce(MPI_IN_PLACE, max_vx, I_ONE, MPI_DOUBLE_PRECISION, MPI_MAX, comm, mpi_err)
+         call piernik_MPI_Allreduce(max_vx, pMAX)
 
          adjust = abs(cg%u(flind%dst%imx,:,:,:))/cg%u(flind%dst%idn,:,:,:) >= max_vx
          if ( any(adjust) ) then
@@ -756,7 +755,7 @@ contains
 !           cg%u(flind%dst%imy,:,:,:) = cg%u(flind%neu%imy,:,:,:)/cg%u(flind%neu%idn,:,:,:) * cg%u(flind%dst%idn,:,:,:)
 !        endwhere
 
-         if (allocated(adjust)) deallocate(adjust)
+         if (allocated(adjust))  deallocate(adjust)
          if (allocated(vx_sign)) deallocate(vx_sign)
          if (allocated(vz_sign)) deallocate(vz_sign)
 
@@ -977,7 +976,6 @@ contains
       use fgsl,       only: fgsl_size_t, fgsl_interp_accel, fgsl_interp, fgsl_int, fgsl_char, fgsl_strmax, fgsl_interp_cspline, &
            &                fgsl_interp_accel_alloc, fgsl_interp_alloc, fgsl_interp_name, fgsl_interp_init, fgsl_interp_eval, fgsl_interp_free, fgsl_interp_accel_free
       !, fgsl_spline
-      use domain,     only: dom
 
       implicit none
 

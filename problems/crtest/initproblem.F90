@@ -142,8 +142,8 @@ contains
 
    subroutine init_prob
 
-      use cg_list,        only: cg_list_element
       use cg_leaves,      only: leaves
+      use cg_list,        only: cg_list_element
       use constants,      only: xdim, ydim, zdim, HI
       use dataio_pub,     only: die
       use domain,         only: dom
@@ -220,8 +220,8 @@ contains
 
    subroutine compute_analytic_ecr1
 
-      use cg_list,          only: cg_list_element
       use cg_leaves,        only: leaves
+      use cg_list,          only: cg_list_element
       use dataio_pub,       only: die
       use global,           only: t
       use grid_cont,        only: grid_container
@@ -301,15 +301,14 @@ contains
 !-----------------------------------------------------------------------------
    subroutine check_norm
 
-      use cg_list,          only: cg_list_element
       use cg_leaves,        only: leaves
-      use constants,        only: PIERNIK_FINISHED, I_ONE, I_TWO
+      use cg_list,          only: cg_list_element
+      use constants,        only: PIERNIK_FINISHED, pSUM, pMIN, pMAX
       use dataio_pub,       only: code_progress, halfstep, msg, die, printinfo
       use global,           only: nstep
       use grid_cont,        only: grid_container
       use initcosmicrays,   only: iarr_crs, ncrn, ncre
-      use mpi,              only: MPI_DOUBLE_PRECISION, MPI_SUM, MPI_MIN, MPI_MAX, MPI_IN_PLACE
-      use mpisetup,         only: master, comm, mpi_err
+      use mpisetup,         only: master, piernik_MPI_Allreduce
       use named_array_list, only: qna
 
       implicit none
@@ -355,9 +354,9 @@ contains
          cgl => cgl%nxt
       enddo
 
-      call MPI_Allreduce(MPI_IN_PLACE, norm,   I_TWO, MPI_DOUBLE_PRECISION, MPI_SUM, comm, mpi_err)
-      call MPI_Allreduce(MPI_IN_PLACE, dev(1), I_ONE, MPI_DOUBLE_PRECISION, MPI_MIN, comm, mpi_err)
-      call MPI_Allreduce(MPI_IN_PLACE, dev(2), I_ONE, MPI_DOUBLE_PRECISION, MPI_MAX, comm, mpi_err)
+      call piernik_MPI_Allreduce(norm,   pSUM)
+      call piernik_MPI_Allreduce(dev(1), pMIN)
+      call piernik_MPI_Allreduce(dev(2), pMAX)
 
       if (master) then
          if (norm(2) /= 0) then
