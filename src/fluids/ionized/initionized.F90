@@ -84,17 +84,17 @@ contains
    end subroutine initialize_ion_indices
 
    real function ion_cs(this, cg, i, j, k)
-      use constants,     only: two
-      use grid_cont,     only: grid_container
+      use constants, only: two
+      use grid_cont, only: grid_container
 #ifndef ISO
-      use func,          only: ekin
+      use func,      only: ekin
 #endif /* !ISO */
 #ifdef MAGNETIC
-      use constants,     only: xdim, ydim, zdim
-      use domain,        only: dom
-      use func,          only: emag
+      use constants, only: xdim, ydim, zdim
+      use domain,    only: dom
+      use func,      only: emag
 #else /* !MAGNETIC */
-      use constants,     only: zero
+      use constants, only: zero
 #endif /* !MAGNETIC */
 
       implicit none
@@ -134,7 +134,7 @@ contains
    function get_tag() result(tag)
       use constants, only: idlen
       implicit none
-      character(len=idlen)   :: tag
+      character(len=idlen) :: tag
 
       tag = "ION"
    end function get_tag

@@ -103,17 +103,17 @@ contains
    end subroutine init_tracer
 
    subroutine tracer_index(flind)
-      use constants,          only: I_ONE
-      use fluidtypes,         only: var_numbers
+      use constants,  only: I_ONE
+      use fluidtypes, only: var_numbers
 
       implicit none
       type(var_numbers), intent(inout) :: flind
       integer :: i
 
-      flind%trc%beg    = flind%all + I_ONE
+      flind%trc%beg  = flind%all + I_ONE
       flind%trc%all  = ntracers
       flind%all      = flind%all + flind%trc%all
-      flind%trc%end    = flind%all
+      flind%trc%end  = flind%all
 
       iarr_trc = int([(i, i = 0, ntracers-1)], kind=4) + flind%trc%beg
 !      flind%components = flind%components + 1

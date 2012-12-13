@@ -79,9 +79,9 @@ contains
    end subroutine initialize_neu_indices
 
    real function neu_cs(this, cg, i, j, k)
-      use grid_cont,     only: grid_container
+      use grid_cont, only: grid_container
 #ifndef ISO
-      use func,          only: ekin
+      use func,      only: ekin
 #endif /* !ISO */
       implicit none
       class(neutral_fluid),          intent(in) :: this
@@ -103,7 +103,7 @@ contains
    function get_tag() result(tag)
       use constants, only: idlen
       implicit none
-      character(len=idlen)   :: tag
+      character(len=idlen) :: tag
 
       tag = "NEU"
    end function get_tag

@@ -196,8 +196,8 @@ contains
 
    subroutine all_fluid_boundaries
 
-      use cg_list,          only: cg_list_element
       use cg_leaves,        only: leaves
+      use cg_list,          only: cg_list_element
       use cg_list_global,   only: all_cg
       use constants,        only: xdim, zdim
       use domain,           only: dom
@@ -206,7 +206,7 @@ contains
       implicit none
 
       type(cg_list_element), pointer :: cgl
-      integer(kind=4) :: dir
+      integer(kind=4)                :: dir
 
       do dir = xdim, zdim
          if (dom%has_dir(dir)) call all_cg%internal_boundaries_4d(wna%fi, dim=dir) ! should be more selective (modified leaves?)

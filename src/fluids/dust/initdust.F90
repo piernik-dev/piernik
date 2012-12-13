@@ -81,7 +81,7 @@ contains
    function get_tag() result(tag)
       use constants, only: idlen
       implicit none
-      character(len=idlen)   :: tag
+      character(len=idlen) :: tag
 
       tag = "DST"
    end function get_tag

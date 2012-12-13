@@ -95,10 +95,10 @@ module fluidtypes
          procedure :: set_gam => update_adiabatic_index
          procedure :: set_c   => update_freezing_speed
          procedure :: info    => printinfo_component_fluid
-         procedure(tag), nopass, deferred :: get_tag
-         procedure(cs_get), pass, deferred :: get_cs
+         procedure(tag),          nopass, deferred :: get_tag
+         procedure(cs_get),         pass, deferred :: get_cs
          procedure(flux_interface), pass, deferred :: compute_flux
-         procedure(pass_flind), pass, deferred :: initialize_indices
+         procedure(pass_flind),     pass, deferred :: initialize_indices
    end type component_fluid
 
    type :: fluid_arr
