@@ -33,7 +33,7 @@
 !<
 module data_hdf5
 
-! pulled by ANY
+! pulled by HDF5
 
    implicit none
 

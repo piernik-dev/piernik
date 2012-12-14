@@ -207,7 +207,9 @@ contains
       last_hdf_time = -dt_hdf
       last_res_time = 0.0
 
+#ifdef HDF5
       if (master .and. restart == 'last') call find_last_restart(nrestart)
+#endif /* HDF5 */
       call piernik_MPI_Barrier
       call piernik_MPI_Bcast(nrestart)
 
@@ -402,17 +404,19 @@ contains
 
    subroutine init_dataio
 
-      use common_hdf5,  only: init_hdf5
       use constants,    only: PIERNIK_INIT_IO_IC
-      use data_hdf5,    only: init_data
       use dataio_pub,   only: nres, nrestart, printinfo, nhdf, nstep_start, die, code_progress
       use domain,       only: dom
       use global,       only: t, nstep
       use mpisetup,     only: master
-      use restart_hdf5, only: read_restart_hdf5
       use timer,        only: time_left
       use user_hooks,   only: user_vars_arr_in_restart
       use version,      only: nenv,env, init_version
+#ifdef HDF5
+      use common_hdf5,  only: init_hdf5
+      use restart_hdf5, only: read_restart_hdf5
+      use data_hdf5,    only: init_data
+#endif /* HDF5 */
 
       implicit none
 
@@ -427,8 +431,10 @@ contains
 
       if (master) tn = time_left(wend)
 
+#ifdef HDF5
       call init_hdf5(vars)
       call init_data
+#endif /* HDF5 */
 
       call init_version
       if (master) then
@@ -443,6 +449,7 @@ contains
       nres = nrestart
 
       if (nrestart /= 0) then
+#ifdef HDF5
          if (master) call printinfo("###############     Reading restart     ###############", .false.)
          call read_restart_hdf5
          nstep_start = nstep
@@ -450,6 +457,9 @@ contains
          nres_start  = nrestart
          nhdf_start  = nhdf-1
          if (new_id /= '') run_id=new_id
+#else /* !HDF5 */
+         call die("[dataio:init_dataio] cannot use restart without HDF5")
+#endif /* !HDF5 */
       endif
 
 #ifdef VERBOSE
@@ -459,19 +469,25 @@ contains
    end subroutine init_dataio
 
    subroutine cleanup_dataio
+#ifdef HDF5
       use common_hdf5,     only: cleanup_hdf5
+#endif /* HDF5 */
       implicit none
 
+#ifdef HDF5
       call cleanup_hdf5
+#endif /* HDF5 */
    end subroutine cleanup_dataio
 
    subroutine user_msg_handler(end_sim)
 
-      use data_hdf5,    only: write_hdf5
       use dataio_pub,   only: msg, printinfo, warn
       use mpisetup,     only: master, piernik_MPI_Bcast
-      use restart_hdf5, only: write_restart_hdf5
       use timer,        only: time_left
+#ifdef HDF5
+      use data_hdf5,    only: write_hdf5
+      use restart_hdf5, only: write_restart_hdf5
+#endif /* HDF5 */
 
       implicit none
 
@@ -489,10 +505,12 @@ contains
 !---  if a user message is received then:
       if (len_trim(umsg) /= 0) then
          select case (trim(umsg))
+#ifdef HDF5
             case ('res', 'dump')
                call write_restart_hdf5
             case ('hdf')
                call write_hdf5
+#endif /* HDF5 */
             case ('log')
                call write_log
             case ('tsl')
@@ -579,10 +597,12 @@ contains
    subroutine write_data(output)
 
       use constants,    only: FINAL, HDF, LOGF
-      use data_hdf5,    only: write_hdf5
       use dataio_pub,   only: last_res_time, last_hdf_time
       use dataio_user,  only: user_post_write_data
+#ifdef HDF5
+      use data_hdf5,    only: write_hdf5
       use restart_hdf5, only: write_restart_hdf5
+#endif /* HDF5 */
 
       implicit none
 
@@ -592,14 +612,14 @@ contains
 
       dump(LOGF) = (output == LOGF .or. output == FINAL) ; if (dump(LOGF)) call write_log
       dump(TSL)  = (output == TSL  .or. output == FINAL) ; if (dump(TSL))  call write_timeslice
-
+#ifdef HDF5
       call determine_dump(dump(RES), last_res_time, dt_res, output, RES)
       if (dump(RES)) call write_restart_hdf5
 
       call determine_dump(dump(HDF), last_hdf_time, dt_hdf, output, HDF)
       call manage_hdf_dump(dump(HDF), output)
       if (dump(HDF)) call write_hdf5
-
+#endif /* HDF5 */
       if (associated(user_post_write_data)) call user_post_write_data(output, dump)
 
    end subroutine write_data
@@ -673,7 +693,7 @@ contains
 !! \todo use restart_fname() function
 !! \todo scan the 9999 .. 0 range somewhat smarter (get directory listing?)
 !<
-
+#ifdef HDF5
    subroutine find_last_restart(restart_number)
 
       use common_hdf5,   only: output_fname
@@ -707,7 +727,7 @@ contains
       enddo
 
    end subroutine find_last_restart
-
+#endif /* HDF5 */
 !>
 !! \brief writes integrals to text file
 !<

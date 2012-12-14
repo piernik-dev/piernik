@@ -48,12 +48,17 @@ contains
 
    subroutine problem_pointers
 
-      use dataio_user, only: user_plt_hdf5, user_vars_hdf5, user_tsl
+      use dataio_user, only: user_tsl
+#ifdef HDF5
+      use dataio_user, only: user_plt_hdf5, user_vars_hdf5
+#endif /* HDF5 */
 
       implicit none
 
+#ifdef HDF5
       user_plt_hdf5  => sedov_plt_hdf5
       user_vars_hdf5 => sedov_vars_hdf5
+#endif /* HDF5 */
       user_tsl       => sedov_tsl
 
    end subroutine problem_pointers

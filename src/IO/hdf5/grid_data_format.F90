@@ -32,7 +32,7 @@
 !! \brief Implementation of Grid Data Format
 !<
 module gdf
-
+! pulled by HDF5
    implicit none
    private
    public :: gdf_create_root_datasets, gdf_create_simulation_parameters, gdf_create_format_stamp, gdf_create_field_types, gdf_field_type, fmax

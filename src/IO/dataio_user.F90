@@ -35,6 +35,7 @@ module dataio_user
 
    public  ! QA_WARN there are no secrets here
 
+#ifdef HDF5
    interface
       subroutine plt_hdf5(var, ij, xn, tab, ierrh, cg)
 
@@ -68,17 +69,6 @@ module dataio_user
    end interface
 
    interface
-      subroutine tsl_out(user_vars, tsl_names)
-
-         implicit none
-
-         real,             dimension(:), intent(inout), allocatable           :: user_vars
-         character(len=*), dimension(:), intent(inout), allocatable, optional :: tsl_names
-
-      end subroutine tsl_out
-   end interface
-
-   interface
       subroutine add_attr(file_id)
 
          use hdf5, only: HID_T
@@ -102,6 +92,7 @@ module dataio_user
 
       end subroutine plt_attr
    end interface
+#endif /* HDF5 */
 
    interface
       subroutine postout(output,dump)
@@ -117,19 +108,32 @@ module dataio_user
    end interface
 
    interface
+      subroutine tsl_out(user_vars, tsl_names)
+
+         implicit none
+
+         real,             dimension(:), intent(inout), allocatable           :: user_vars
+         character(len=*), dimension(:), intent(inout), allocatable, optional :: tsl_names
+
+      end subroutine tsl_out
+   end interface
+
+   interface
       subroutine add_data
          implicit none
       end subroutine add_data
    end interface
 
-   procedure(add_data),  pointer :: user_attrs_pre        => Null()
+#ifdef HDF5
    procedure(add_attr),  pointer :: user_attrs_rd         => Null()
    procedure(add_attr),  pointer :: user_attrs_wr         => Null()
    procedure(plt_attr),  pointer :: user_plt_attrs        => Null()
-   procedure(add_data),  pointer :: user_reg_var_restart  => Null()
    procedure(plt_hdf5),  pointer :: user_plt_hdf5         => Null()
    procedure(vars_hdf5), pointer :: user_vars_hdf5        => Null()
+#endif /* HDF5 */
+   procedure(add_data),  pointer :: user_attrs_pre        => Null()
    procedure(tsl_out),   pointer :: user_tsl              => Null()
+   procedure(add_data),  pointer :: user_reg_var_restart  => Null()
    procedure(postout),   pointer :: user_post_write_data  => Null()
 
 end module dataio_user

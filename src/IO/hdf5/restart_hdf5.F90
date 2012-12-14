@@ -32,7 +32,7 @@
 !! \brief Module that contains HDF5 I/O routines for reading and writing restart files.
 !<
 module restart_hdf5
-! pulled by ANY
+! pulled by HDF5
 
    use constants, only: ndims
 

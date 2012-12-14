@@ -93,7 +93,10 @@ contains
 
       use constants,             only: GEO_RPZ
       use dataio_pub,            only: nh      ! QA_WARN required for diff_nml
-      use dataio_user,           only: user_vars_hdf5, user_reg_var_restart
+#ifdef HDF5
+      use dataio_user,           only: user_vars_hdf5
+#endif HDF5
+      use dataio_user,           only: user_reg_var_restart
       use domain,                only: dom
       use fluidboundaries_funcs, only: user_fluidbnd
       use gravity,               only: grav_pot_3d
@@ -199,7 +202,9 @@ contains
          problem_customize_solution => problem_customize_solution_kepler
          user_fluidbnd => my_fbnd
          grav_pot_3d => my_grav_pot_3d
+#ifdef HDF5
          user_vars_hdf5 => prob_vars_hdf5
+#endif /* HDF5 */
          problem_grace_passed => add_random_noise
          problem_post_restart => kepler_problem_post_restart
 !         problem_grace_passed => add_sine

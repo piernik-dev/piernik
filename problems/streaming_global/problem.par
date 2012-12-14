@@ -1,5 +1,5 @@
  $BASE_DOMAIN
-    n_d = 10240, 1, 300
+    n_d = 65, 65, 65
     nb  = 4
     bnd_xl = 'ref'
     bnd_xr = 'ref'
@@ -60,6 +60,7 @@
  /
 
  $FLUID_DUST
+    selfgrav = .true.
  /
 
  $NUMERICAL_SETUP

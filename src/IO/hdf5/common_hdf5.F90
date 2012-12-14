@@ -33,7 +33,7 @@
 !<
 module common_hdf5
 
-! pulled by ANY
+! pulled by HDF5
 
    use constants, only: singlechar, ndims, dsetnamelen
    use hdf5,      only: HID_T
