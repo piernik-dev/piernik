@@ -44,7 +44,7 @@
 
 module dataio
 
-   use dataio_pub, only: domain_dump, fmin, fmax, vizit, nend, tend, wend, new_id, nrestart, problem_name, run_id, multiple_h5files, use_v2_io, nproc_io, enable_compression, gzip_level
+   use dataio_pub, only: domain_dump, fmin, fmax, vizit, nend, tend, wend, new_id, nrestart, problem_name, run_id, multiple_h5files, use_v2_io, nproc_io, enable_compression, gzip_level, colormode
    use constants,  only: cwdlen, fmt_len, cbuff_len, dsetnamelen, RES, TSL
 
    implicit none
@@ -104,7 +104,8 @@ module dataio
    namelist /RESTART_CONTROL/ restart, new_id, nrestart, resdel
    namelist /OUTPUT_CONTROL/  problem_name, run_id, dt_hdf, dt_res, dt_tsl, dt_log, tsl_with_mom, tsl_with_ptc, &
                               domain_dump, vars, mag_center, vizit, fmin, fmax, user_message_file, system_message_file, &
-                              multiple_h5files, use_v2_io, nproc_io, enable_compression, gzip_level, initial_hdf_dump
+                              multiple_h5files, use_v2_io, nproc_io, enable_compression, gzip_level, initial_hdf_dump, &
+                              colormode
 
 contains
 
@@ -157,6 +158,7 @@ contains
 !! <tr><td>nproc_io           </td><td>1                  </td><td>integer   </td><td>\copydoc dataio_pub::nproc_io     </td></tr>
 !! <tr><td>enable_compression </td><td>.false.            </td><td>logical   </td><td>\copydoc dataio_pub::enable_compression</td></tr>
 !! <tr><td>gzip_level         </td><td>9                  </td><td>integer   </td><td>\copydoc dataio_pub::gzip_level   </td></tr>
+!! <tr><td>colormode          </td><td>.true.             </td><td>logical   </td><td>\copydoc dataio_pub::colormode    </td></tr>
 !! </table>
 !! \n \n
 !<
@@ -279,6 +281,8 @@ contains
       tend = -1.0
       wend = huge(1.0)
 
+      colormode = .true.
+
       if (master) then
 
          diff_nml(OUTPUT_CONTROL)
@@ -313,7 +317,8 @@ contains
 
 !   namelist /OUTPUT_CONTROL/  problem_name, run_id, dt_hdf, dt_res, dt_tsl, dt_log, tsl_with_mom, tsl_with_ptc, &
 !                              domain_dump, vars, mag_center, vizit, fmin, fmax, user_message_file, system_message_file, &
-!                              multiple_h5files, use_v2_io, nproc_io, enable_compression, gzip_level, initial_hdf_dump
+!                              multiple_h5files, use_v2_io, nproc_io, enable_compression, gzip_level, initial_hdf_dump, &
+!                              colormode
          ibuff(43) = nproc_io
          ibuff(44) = gzip_level
 
@@ -331,6 +336,7 @@ contains
          lbuff(5)  = initial_hdf_dump
          lbuff(6)  = tsl_with_mom
          lbuff(7)  = tsl_with_ptc
+         lbuff(8)  = colormode
 
          cbuff(31) = problem_name
          cbuff(32) = run_id
@@ -367,7 +373,9 @@ contains
 
 !   namelist /OUTPUT_CONTROL/  problem_name, run_id, dt_hdf, dt_res, dt_tsl, dt_log, tsl_with_mom, tsl_with_ptc, &
 !                              domain_dump, vars, mag_center, vizit, fmin, fmax, user_message_file, system_message_file, &
-!                              multiple_h5files, use_v2_io, nproc_io, enable_compression, gzip_level, initial_hdf_dump
+!                              multiple_h5files, use_v2_io, nproc_io, enable_compression, gzip_level, initial_hdf_dump, &
+!                              colormode
+
          nproc_io            = int(ibuff(43), kind=4)
          gzip_level          = int(ibuff(44), kind=4)
 
@@ -385,6 +393,7 @@ contains
          initial_hdf_dump    = lbuff(5)
          tsl_with_mom        = lbuff(6)
          tsl_with_ptc        = lbuff(7)
+         colormode           = lbuff(8)
 
          problem_name        = cbuff(31)
          run_id              = cbuff(32)(1:idlen)

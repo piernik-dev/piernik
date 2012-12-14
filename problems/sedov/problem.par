@@ -33,6 +33,7 @@
  /
 
  $OUTPUT_CONTROL
+    colormode = .false.
     problem_name ='sedov'
     run_id =  'tst'
     dt_hdf  = 0.1

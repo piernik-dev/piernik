@@ -121,6 +121,7 @@ module dataio_pub
    character(len=ansilen)      :: ansi_red, ansi_green, ansi_yellow, ansi_blue, ansi_magenta, ansi_cyan, ansi_white
    character(len=*),parameter  :: tmr_hdf = "hdf_dump"
    real                        :: thdf                           !< hdf dump wallclock
+   logical                     :: colormode                      !< enable color messages using bash escape modes
 
    ! Per suggestion of ZEUS sysops:
    ! http://www.fz-juelich.de/ias/jsc/EN/Expertise/Supercomputers/JUROPA/UserInfo/IO_Tuning.htm
@@ -236,13 +237,18 @@ contains
             msg_type_str = ''
       end select
 
+      if (.not.colormode) then
+         ansicolor = ''
+         ansi_black = ''
+      endif
+
       call MPI_Comm_rank(MPI_COMM_WORLD, proc, mpi_err)
 
       if (mode /= T_SILENT) then
          if (mode == T_PLAIN) then
             write(outunit,'(a)') trim(nm)
          else
-            write(outunit,'(a,a," @",a,i5,2a)', advance=adv) trim(ansicolor),msg_type_str,ansi_black, proc, ': ', trim(nm)
+            write(outunit,'(a,a," @",a,i5,2a)', advance=adv) trim(ansicolor), msg_type_str, ansi_black, proc, ': ', trim(nm)
          endif
       endif
 
