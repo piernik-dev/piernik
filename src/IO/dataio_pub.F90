@@ -196,14 +196,25 @@ contains
       character(len=idlen)          :: adv
 
       if (frun) then
-         write(ansi_black,  '(A1,A3)') char(27),"[0m"
-         write(ansi_red,    '(A1,A6)') char(27),"[1;31m"
-         write(ansi_green,  '(A1,A6)') char(27),"[1;32m"
-         write(ansi_yellow, '(A1,A6)') char(27),"[1;33m"
-         write(ansi_blue,   '(A1,A6)') char(27),"[1;34m"
-         write(ansi_magenta,'(A1,A6)') char(27),"[1;35m"
-         write(ansi_cyan,   '(A1,A6)') char(27),"[1;36m"
-         write(ansi_white,  '(A1,A6)') char(27),"[1;37m"
+         if (colormode) then
+            write(ansi_black,  '(A1,A3)') char(27),"[0m"
+            write(ansi_red,    '(A1,A6)') char(27),"[1;31m"
+            write(ansi_green,  '(A1,A6)') char(27),"[1;32m"
+            write(ansi_yellow, '(A1,A6)') char(27),"[1;33m"
+            write(ansi_blue,   '(A1,A6)') char(27),"[1;34m"
+            write(ansi_magenta,'(A1,A6)') char(27),"[1;35m"
+            write(ansi_cyan,   '(A1,A6)') char(27),"[1;36m"
+            write(ansi_white,  '(A1,A6)') char(27),"[1;37m"
+         else
+            ansi_black = ''
+            ansi_red = ''
+            ansi_green = ''
+            ansi_yellow = ''
+            ansi_blue = ''
+            ansi_magenta = ''
+            ansi_cyan = ''
+            ansi_white = ''
+         endif
          frun = .false.
       endif
 
@@ -236,11 +247,6 @@ contains
             outunit   = stdout
             msg_type_str = ''
       end select
-
-      if (.not.colormode) then
-         ansicolor = ''
-         ansi_black = ''
-      endif
 
       call MPI_Comm_rank(MPI_COMM_WORLD, proc, mpi_err)
 
