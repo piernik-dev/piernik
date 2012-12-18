@@ -42,12 +42,13 @@ module common_hdf5
 
    private
    public :: init_hdf5, cleanup_hdf5, set_common_attributes, common_shortcuts, write_to_hdf5_v2, set_h5_properties
-   public :: nhdf_vars, hdf_vars, d_gname, base_d_gname, d_fc_aname, d_size_aname, d_edge_apname, d_bnd_apname, &
+   public :: nhdf_vars, hdf_vars, hdf_vars_avail, cancel_hdf_var, d_gname, base_d_gname, d_fc_aname, d_size_aname, d_edge_apname, d_bnd_apname, &
       cg_gname, cg_cnt_aname, cg_lev_aname, cg_size_aname, cg_offset_aname, n_cg_name, dir_pref, cg_ledge_aname, &
       cg_redge_aname, cg_dl_aname, O_OUT, O_RES, create_empty_cg_dataset, get_nth_cg, data_gname, output_fname, &
       cg_output
 
    character(len=dsetnamelen), allocatable, dimension(:), protected :: hdf_vars  !< dataset names for hdf files
+   logical,                    allocatable, dimension(:), protected :: hdf_vars_avail
    integer, protected :: nhdf_vars !< number of quantities plotted to hdf files
    character(len=*), parameter :: d_gname = "domains", base_d_gname = "base", d_fc_aname = "fine_count", &
         & d_size_aname = "n_d", d_edge_apname = "-edge_position", d_bnd_apname = "-boundary_type", &
@@ -140,6 +141,8 @@ contains
                nhdf_vars = nhdf_vars + 1
          end select
       enddo
+      allocate(hdf_vars_avail(nhdf_vars))
+      hdf_vars_avail = .true.
       allocate(hdf_vars(nhdf_vars)); j = 1
       do i = 1, nvars
          select case (vars(i))
@@ -203,6 +206,19 @@ contains
       if (allocated(hdf_vars)) deallocate(hdf_vars)
 
    end subroutine cleanup_hdf5
+
+   subroutine cancel_hdf_var(var)
+
+      implicit none
+
+      character(len=dsetnamelen), intent(in) :: var
+      integer(kind=4)                        :: i
+
+      do i = 1, nhdf_vars
+         if (hdf_vars(i) == var) hdf_vars_avail(i) = .false.
+      enddo
+
+   end subroutine cancel_hdf_var
 
 !-----------------------------------------------------------------------------
 !>

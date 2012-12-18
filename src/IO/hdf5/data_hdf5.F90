@@ -438,7 +438,8 @@ contains
 
    subroutine get_data_from_cg(hdf_var, cg, tab)
 
-      use dataio_pub,       only: die, msg
+      use common_hdf5,      only: cancel_hdf_var
+      use dataio_pub,       only: warn, msg
       use dataio_user,      only: user_vars_hdf5
       use grid_cont,        only: grid_container
       use named_array_list, only: qna
@@ -474,7 +475,8 @@ contains
       if (ierrh>=0) ok_var = .true.
       if (.not.ok_var) then
          write(msg,'(3a)') "[data_hdf5:get_data_from_cg]: ", hdf_var," is not defined in datafields_hdf5, neither in user_vars_hdf5."
-         call die(msg)
+         call warn(msg)
+         call cancel_hdf_var(hdf_var)
       endif
    end subroutine get_data_from_cg
 
@@ -501,7 +503,7 @@ contains
 
       use cg_level_finest, only: finest
       use cg_list,         only: cg_list_element
-      use common_hdf5,     only: nhdf_vars, hdf_vars
+      use common_hdf5,     only: nhdf_vars, hdf_vars, hdf_vars_avail
       use constants,       only: ndims, LO
       use dataio_pub,      only: die
       use domain,          only: is_multicg !, is_uneven
@@ -549,6 +551,7 @@ contains
       call h5screate_simple_f(rank, dimsf, filespace, error)
 
       do i = 1, nhdf_vars
+         if (.not.hdf_vars_avail(i)) cycle
 
          ! Create chunked dataset.
          call h5pcreate_f(H5P_DATASET_CREATE_F, plist_id, error)
