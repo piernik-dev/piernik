@@ -849,7 +849,7 @@ contains
    subroutine report_string_to_master(str, only_master)
 
       use constants, only: I_ONE
-      use mpi,       only: MPI_INTEGER, MPI_CHAR
+      use mpi,       only: MPI_INTEGER, MPI_CHARACTER
 
       implicit none
       character(len=*),  intent(in) :: str
@@ -865,7 +865,7 @@ contains
       tag = proc ! use proc number as tag
       buf = len(str, kind=4)
       call MPI_Send(buf, I_ONE, MPI_INTEGER, FIRST, tag, intercomm, mpi_err)
-      call MPI_Send(str, buf, MPI_CHAR, FIRST, tag, intercomm, mpi_err)
+      call MPI_Send(str, buf, MPI_CHARACTER, FIRST, tag, intercomm, mpi_err)
    end subroutine report_string_to_master
 
 end module mpisetup
