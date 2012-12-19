@@ -44,7 +44,7 @@
 
 module dataio
 
-   use dataio_pub, only: domain_dump, fmin, fmax, vizit, nend, tend, wend, new_id, nrestart, problem_name, run_id, multiple_h5files, use_v2_io, nproc_io, enable_compression, gzip_level, colormode
+   use dataio_pub, only: domain_dump, fmin, fmax, vizit, nend, tend, wend, new_id, nrestart, problem_name, run_id, multiple_h5files, use_v2_io, nproc_io, enable_compression, gzip_level
    use constants,  only: cwdlen, fmt_len, cbuff_len, dsetnamelen, RES, TSL
 
    implicit none
@@ -83,6 +83,7 @@ module dataio
 
    character(len=cwdlen)    :: filename              !< string of characters indicating currently used file
    character(len=fmt_len), protected, target :: fmt_loc, fmt_dtloc, fmt_vloc
+   logical                  :: colormode             !< enable color messages using ANSI escape modes
 
    type :: tsl_container
       logical :: dummy
@@ -236,7 +237,7 @@ contains
 
       use constants,  only: idlen, cbuff_len
       use dataio_pub, only: nres, nrestart, warn, nhdf, wd_rd, multiple_h5files, warn
-      use dataio_pub, only: nh  ! QA_WARN required for diff_nml
+      use dataio_pub, only: nh, set_colors  ! QA_WARN required for diff_nml
       use mpisetup,   only: lbuff, ibuff, rbuff, cbuff, master, slave, nproc, piernik_MPI_Bcast
 
       implicit none
@@ -406,6 +407,8 @@ contains
          system_message_file = trim(cbuff(91))
 
       endif
+
+      call set_colors(colormode)
 
    end subroutine dataio_par_io
 

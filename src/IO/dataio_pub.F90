@@ -121,7 +121,6 @@ module dataio_pub
    character(len=ansilen)      :: ansi_red, ansi_green, ansi_yellow, ansi_blue, ansi_magenta, ansi_cyan, ansi_white
    character(len=*),parameter  :: tmr_hdf = "hdf_dump"
    real                        :: thdf                           !< hdf dump wallclock
-   logical                     :: colormode                      !< enable color messages using bash escape modes
 
    ! Per suggestion of ZEUS sysops:
    ! http://www.fz-juelich.de/ias/jsc/EN/Expertise/Supercomputers/JUROPA/UserInfo/IO_Tuning.htm
@@ -177,6 +176,34 @@ contains
       this%initialized = .true.
    end subroutine namelist_handler_T_init
 !-----------------------------------------------------------------------------
+   subroutine set_colors(enable)
+
+      implicit none
+
+      logical :: enable
+
+      if (enable) then
+         write(ansi_black,  '(A1,A3)') char(27),"[0m"
+         write(ansi_red,    '(A1,A6)') char(27),"[1;31m"
+         write(ansi_green,  '(A1,A6)') char(27),"[1;32m"
+         write(ansi_yellow, '(A1,A6)') char(27),"[1;33m"
+         write(ansi_blue,   '(A1,A6)') char(27),"[1;34m"
+         write(ansi_magenta,'(A1,A6)') char(27),"[1;35m"
+         write(ansi_cyan,   '(A1,A6)') char(27),"[1;36m"
+         write(ansi_white,  '(A1,A6)') char(27),"[1;37m"
+      else
+         ansi_black = ''
+         ansi_red = ''
+         ansi_green = ''
+         ansi_yellow = ''
+         ansi_blue = ''
+         ansi_magenta = ''
+         ansi_cyan = ''
+         ansi_white = ''
+      endif
+
+   end subroutine set_colors
+
    subroutine colormessage(nm, mode)
 
       use constants, only: stdout, stderr, idlen
@@ -196,25 +223,7 @@ contains
       character(len=idlen)          :: adv
 
       if (frun) then
-         if (colormode) then
-            write(ansi_black,  '(A1,A3)') char(27),"[0m"
-            write(ansi_red,    '(A1,A6)') char(27),"[1;31m"
-            write(ansi_green,  '(A1,A6)') char(27),"[1;32m"
-            write(ansi_yellow, '(A1,A6)') char(27),"[1;33m"
-            write(ansi_blue,   '(A1,A6)') char(27),"[1;34m"
-            write(ansi_magenta,'(A1,A6)') char(27),"[1;35m"
-            write(ansi_cyan,   '(A1,A6)') char(27),"[1;36m"
-            write(ansi_white,  '(A1,A6)') char(27),"[1;37m"
-         else
-            ansi_black = ''
-            ansi_red = ''
-            ansi_green = ''
-            ansi_yellow = ''
-            ansi_blue = ''
-            ansi_magenta = ''
-            ansi_cyan = ''
-            ansi_white = ''
-         endif
+         call set_colors(.false.)
          frun = .false.
       endif
 
