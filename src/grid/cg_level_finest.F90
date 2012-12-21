@@ -61,10 +61,9 @@ contains
 
    subroutine equalize(this)
 
-      use constants,  only: I_ONE
+      use constants,  only: pMAX
       use dataio_pub, only: die
-      use mpi,        only: MPI_INTEGER, MPI_MAX
-      use mpisetup,   only: comm, mpi_err
+      use mpisetup,   only: piernik_MPI_Allreduce
 
       implicit none
 
@@ -72,13 +71,15 @@ contains
 
       integer(kind=4) :: g_finest_id
 
-      call MPI_Allreduce(this%level%level_id, g_finest_id, I_ONE, MPI_INTEGER, MPI_MAX, comm, mpi_err)
+      g_finest_id = this%level%level_id
+      call piernik_MPI_Allreduce(g_finest_id, pMAX)
 
       do while (g_finest_id > this%level%level_id)
          call this%add_finer
       enddo
 
-      call MPI_Allreduce(this%level%level_id, g_finest_id, I_ONE, MPI_INTEGER, MPI_MAX, comm, mpi_err)
+      g_finest_id = this%level%level_id
+      call piernik_MPI_Allreduce(g_finest_id, pMAX)
 
       if (g_finest_id /= this%level%level_id) call die("[cg_level_finest:equalize] failure")
 
