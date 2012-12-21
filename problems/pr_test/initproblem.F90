@@ -69,8 +69,7 @@ contains
       use constants,             only: PIERNIK_INIT_MPI, xdim, zdim
       use dataio_pub,            only: nh  ! QA_WARN required for diff_nml
       use dataio_pub,            only: code_progress, die
-      use mpi,                   only: MPI_INTEGER, MPI_LOGICAL, MPI_DOUBLE_PRECISION
-      use mpisetup,              only: master, slave, comm, mpi_err, ibuff, lbuff, rbuff, buffer_dim, FIRST
+      use mpisetup,              only: master, slave, ibuff, lbuff, rbuff, piernik_MPI_Bcast
 
       implicit none
 
@@ -92,9 +91,9 @@ contains
          rbuff(xdim:zdim) = coords(:)
       endif
 
-      call MPI_Bcast(ibuff, buffer_dim, MPI_INTEGER,          FIRST, comm, mpi_err)
-      call MPI_Bcast(lbuff, buffer_dim, MPI_LOGICAL,          FIRST, comm, mpi_err)
-      call MPI_Bcast(rbuff, buffer_dim, MPI_DOUBLE_PRECISION, FIRST, comm, mpi_err)
+      call piernik_MPI_Bcast(ibuff)
+      call piernik_MPI_Bcast(lbuff)
+      call piernik_MPI_Bcast(rbuff)
 
       if (slave) then
 

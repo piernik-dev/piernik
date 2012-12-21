@@ -326,8 +326,7 @@ contains
       use units,              only: newtong, gram, cm, kboltz, mH
 #ifdef FGSL
       use cg_level_connected, only: base_lev
-      use mpi,                only: MPI_DOUBLE_PRECISION
-      use mpisetup,           only: comm, FIRST, mpi_err, proc
+      use mpisetup,           only: proc, piernik_MPI_Bcast
 #endif /* FGSL */
 
       implicit none
@@ -454,7 +453,7 @@ contains
             if (densfile /= "") then
                allocate(gdens(dom%n_d(xdim)+dom%nb*2))
                if (master) call read_dens_profile(densfile,gdens)
-               call MPI_Bcast(gdens, size(gdens), MPI_DOUBLE_PRECISION, FIRST, comm, mpi_err)
+               call piernik_MPI_Bcast(gdens)
                dens_prof(:) = gdens( base_lev%pse(proc)%c(cg%grid_id)%se(xdim, LO)+1:base_lev%pse(proc)%c(cg%grid_id)%se(xdim, HI)+1+dom%nb*2)
                deallocate(gdens)
             endif
