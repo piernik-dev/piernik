@@ -59,10 +59,9 @@ contains
 
    subroutine print(this)
 
-      use constants,  only: I_ONE
+      use constants,  only: pSUM
       use dataio_pub, only: msg, printinfo, warn
-      use mpi,        only: MPI_INTEGER, MPI_SUM
-      use mpisetup,   only: master, comm, mpi_err
+      use mpisetup,   only: master, piernik_MPI_Allreduce
 
       implicit none
 
@@ -79,7 +78,8 @@ contains
          do i = lbound(this%entries(:),dim=1), ubound(this%entries(:), dim=1)
             if (associated(this%entries(i)%lp)) then
                !> \todo Call MPI_Allgather and print detailed distribution of grid pieces across procesors
-               call MPI_Allreduce(this%entries(i)%lp%cnt, g_cnt, I_ONE, MPI_INTEGER, MPI_SUM, comm, mpi_err)
+               g_cnt = this%entries(i)%lp%cnt
+               call piernik_MPI_Allreduce(g_cnt, pSUM)
                write(msg, '(3a,i7,a)') "'", this%entries(i)%lp%label, "' : ", g_cnt, " element(s)"
                if (master) call printinfo(msg)
             else

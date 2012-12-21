@@ -87,11 +87,10 @@ contains
 
       use cg_level_connected, only: base_lev, cg_level_connected_T
       use cg_list,            only: cg_list_element
-      use constants,          only: I_ONE
+      use constants,          only: pSUM
       use dataio_pub,         only: msg, printinfo
       use list_of_cg_lists,   only: all_lists
-      use mpi,                only: MPI_INTEGER, MPI_SUM
-      use mpisetup,           only: master, comm, mpi_err
+      use mpisetup,           only: master, piernik_MPI_Allreduce
 
       implicit none
 
@@ -115,11 +114,13 @@ contains
             call this%add(cgl%cg)
             cgl => cgl%nxt
          enddo
-         call MPI_Allreduce(curl%cnt, g_cnt, I_ONE, MPI_INTEGER, MPI_SUM, comm, mpi_err)
+         g_cnt = curl%cnt
+         call piernik_MPI_Allreduce(g_cnt, pSUM)
          write(msg(len_trim(msg)+1:),'(i6)') g_cnt
          curl => curl%finer
       enddo
-      call MPI_Allreduce(leaves%cnt, g_cnt, I_ONE, MPI_INTEGER, MPI_SUM, comm, mpi_err)
+      g_cnt = leaves%cnt
+      call piernik_MPI_Allreduce(g_cnt, pSUM)
       write(msg(len_trim(msg)+1:), '(a,i7,a)')",      Total: ",g_cnt, " leaves"
       if (master) call printinfo(msg)
 

@@ -435,12 +435,11 @@ contains
 
       use cg_leaves,    only: leaves
       use cg_list,      only: cg_list_element
-      use constants,    only: ndims, xdim, ydim, zdim, LO, HI, GEO_XYZ, I_ONE !, GEO_RPZ
+      use constants,    only: ndims, xdim, ydim, zdim, LO, HI, GEO_XYZ, pSUM !, GEO_RPZ
       use dataio_pub,   only: die
       use domain,       only: dom
       use grid_cont,    only: grid_container
-      use mpi,          only: MPI_DOUBLE_PRECISION, MPI_SUM
-      use mpisetup,     only: comm, mpi_err
+      use mpisetup,     only: piernik_MPI_Allreduce
       use particle_pub, only: pset
 #ifdef DEBUG
       use dataio_pub,   only: msg, printinfo
@@ -500,7 +499,8 @@ contains
          if (pset%p(i)%outside) lsum(:) = lsum(:) + [ pset%p(i)%mass, pset%p(i)%mass * pset%p(i)%pos(:) ]
       enddo
 
-      call MPI_Allreduce(lsum(imass:ndims), CoM(imass:ndims), ndims+I_ONE, MPI_DOUBLE_PRECISION, MPI_SUM, comm, mpi_err)
+      CoM(imass:ndims) = lsum(imass:ndims)
+      call piernik_MPI_Allreduce(CoM(imass:ndims), pSUM)
 
       if (CoM(imass) /= 0.) then
          CoM(xdim:zdim) = CoM(xdim:zdim) / CoM(imass)
