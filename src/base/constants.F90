@@ -240,7 +240,7 @@ module constants
 
    ! MPI reduction type
    enum, bind(C)
-      enumerator :: pSUM = 1, pMIN, pMAX
+      enumerator :: pSUM = 1, pMIN, pMAX, pLOR, pLAND
    end enum
 
    ! misc

@@ -644,16 +644,18 @@ contains
 !! \brief Wrapper for MPI_Allreduce with MPI_IN_PLACE
 !! \todo unlimited polimorphism will obsolete me
 !<
-   subroutine MPI_Allreduce_single_logical(lvar)
+   subroutine MPI_Allreduce_single_logical(lvar, reduction)
 
-      use constants, only: I_ONE
-      use mpi,       only: MPI_LOGICAL, MPI_IN_PLACE, MPI_LOR
+      use constants, only: I_ONE, pLOR, pLAND
+      use mpi,       only: MPI_LOGICAL, MPI_IN_PLACE, MPI_LOR, MPI_LAND
 
       implicit none
 
-      logical, intent(inout) :: lvar     !< logical that will be reduced
+      logical,         intent(inout) :: lvar      !< logical that will be reduced
+      integer(kind=4), intent(in)    :: reduction !< integer to mark a reduction type
+      integer, dimension(pLOR:pLAND), parameter :: mpiop = [MPI_LOR, MPI_LAND]
 
-      call MPI_Allreduce(MPI_IN_PLACE, lvar, I_ONE, MPI_LOGICAL, MPI_LOR, comm, mpi_err)
+      call MPI_Allreduce(MPI_IN_PLACE, lvar, I_ONE, MPI_LOGICAL, mpiop(reduction), comm, mpi_err)
    end subroutine MPI_Allreduce_single_logical
 !-----------------------------------------------------------------------------
 !>

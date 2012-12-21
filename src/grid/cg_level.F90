@@ -360,7 +360,7 @@ contains
 
    subroutine update_decomposition_properties(this)
 
-      use constants,  only: base_level_id
+      use constants,  only: base_level_id, pLOR
       use dataio_pub, only: warn
       use domain,     only: is_mpi_noncart, is_multicg, is_refined, is_uneven
       use mpisetup,   only: proc, master, piernik_MPI_Allreduce
@@ -370,7 +370,7 @@ contains
       class(cg_level_T), intent(inout) :: this   !< object invoking type bound procedure
 
       if (this%level_id > base_level_id) is_refined = .true.
-      call piernik_MPI_Allreduce(is_refined)
+      call piernik_MPI_Allreduce(is_refined, pLOR)
       if (is_refined) then
          is_mpi_noncart = .true.
          is_multicg = .true.
@@ -379,7 +379,7 @@ contains
       if (is_mpi_noncart) is_uneven = .true.
 
       is_multicg = is_multicg .or. (ubound(this%pse(proc)%c(:), dim=1) > 1)
-      call piernik_MPI_Allreduce(is_multicg)
+      call piernik_MPI_Allreduce(is_multicg, pLOR)
 
    end subroutine update_decomposition_properties
 

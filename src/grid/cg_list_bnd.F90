@@ -335,7 +335,7 @@ contains
    subroutine external_boundaries(this, ind, area_type, bnd_type)
 
       use cg_list,    only: cg_list_element
-      use constants,  only: ndims, xdim, ydim, zdim, LO, HI, AT_NO_B, I_ONE, I_TWO, I_THREE, &
+      use constants,  only: ndims, xdim, ydim, zdim, LO, HI, AT_NO_B, I_ONE, I_TWO, I_THREE, pLOR, &
            &                BND_PER, BND_MPI, BND_FC, BND_MPI_FC, BND_SHE, BND_COR, BND_REF, BND_NEGREF, BND_ZERO, BND_XTRAP, BND_NONE
       use dataio_pub, only: die, msg
       use domain,     only: dom
@@ -431,7 +431,7 @@ contains
          cgl => cgl%nxt
       enddo
 
-      call piernik_MPI_Allreduce(dodie)
+      call piernik_MPI_Allreduce(dodie, pLOR)
       if (dodie) call die(msg)
 
    end subroutine external_boundaries
