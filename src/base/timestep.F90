@@ -29,8 +29,7 @@
 
 !>
 !! \brief This module gathers all applicable timestep limits and computes next timestep.
-!! \deprecated remove "__INTEL_COMPILER" clauses as soon as Intel Compiler gets required
-!! features and/or bug fixes
+!! \deprecated remove "__INTEL_COMPILER" clauses as soon as Intel Compiler gets required features and/or bug fixes
 !<
 
 module timestep
@@ -40,15 +39,13 @@ module timestep
    private
    public :: time_step, cfl_manager
 #if defined(__INTEL_COMPILER)
-   !! \deprecated remove this clause as soon as Intel Compiler gets required
-   !! features and/or bug fixes
+   !! \deprecated remove this clause as soon as Intel Compiler gets required features and/or bug fixes
    public :: init_time_step
 #endif /* __INTEL_COMPILER */
 
    real :: c_all_old
 #if defined(__INTEL_COMPILER)
-   !! \deprecated remove this clause as soon as Intel Compiler gets required
-   !! features and/or bug fixes
+   !! \deprecated remove this clause as soon as Intel Compiler gets required features and/or bug fixes
    procedure(), pointer :: cfl_manager
 #else /* !__INTEL_COMPILER */
    procedure(), pointer :: cfl_manager => init_time_step
@@ -60,8 +57,7 @@ contains
 !! \brief Initialization routine
 !!
 !! \details This routine sets cfl_manager according to global::cflcontrol parameter.
-!! \deprecated remove "__INTEL_COMPILER" clause as soon as Intel Compiler gets required
-!! features and/or bug fixes
+!! \deprecated remove "__INTEL_COMPILER" clause as soon as Intel Compiler gets required features and/or bug fixes
 !<
 
    subroutine init_time_step
@@ -84,11 +80,14 @@ contains
          case default
             write(msg, '(3a)')"[timestep:init_time_step] Unknown cfl_manager '",trim(cflcontrol),"'. Assuming 'none'."
             call warn(msg)
+            if (associated(cfl_manager)) nullify(cfl_manager)
       end select
-      if (.not.associated(cfl_manager)) call die("[timestep:init_time_step] cfl_manager was not associated.")
+      if (.not.associated(cfl_manager)) then
+         call warn("[timestep:init_time_step] cfl_manager was not associated.")
+         return
+      endif
 #if !defined(__INTEL_COMPILER)
-      !! \deprecated remove this clause as soon as Intel Compiler gets required
-      !! features and/or bug fixes
+      !! \deprecated remove this clause as soon as Intel Compiler gets required features and/or bug fixes
       call cfl_manager
 #endif /* !__INTEL_COMPILER */
 
@@ -121,8 +120,8 @@ contains
       use resistivity,          only: dt_resist, timestep_resist
 #endif /* RESISTIVE */
 #ifdef DEBUG
-      use piernikdebug,         only: has_const_dt, constant_dt
       use dataio_pub,           only: printinfo
+      use piernikdebug,         only: has_const_dt, constant_dt
 #endif /* DEBUG */
 
       implicit none
