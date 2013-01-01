@@ -613,7 +613,7 @@ contains
    subroutine prolong_q_1var(this, iv, pos)
 
       use cg_list,          only: cg_list_element
-      use constants,        only: xdim, ydim, zdim, LO, HI, I_ZERO, I_ONE, I_TWO, BND_REF, O_INJ, O_LIN, O_D2, O_D3, O_D4, O_I2, O_I3, O_I4, VAR_CENTER
+      use constants,        only: xdim, ydim, zdim, LO, HI, I_ZERO, I_ONE, I_TWO, BND_REF, O_INJ, O_LIN, O_D2, O_D3, O_D4, O_I2, O_I3, O_I4, VAR_CENTER, ndims
       use dataio_pub,       only: msg, warn, die
       use domain,           only: dom
       use func,             only: f2c, c2f
@@ -641,6 +641,7 @@ contains
       real, dimension(:,:,:),           pointer          :: p3d
       logical, save                                      :: warned = .false.
       integer                                            :: position
+      integer(kind=8), dimension(ndims, LO:HI)           :: box_8   !< temporary storage
 
       position = qna%lst(iv)%position(I_ONE)
       if (present(pos)) position = pos
@@ -753,7 +754,8 @@ contains
 
             !! almost all occurrences of number "2" are in fact connected to refinement_factor
 
-            cse = f2c(int(cg%ijkse, kind=8))
+            box_8 = int(cg%ijkse, kind=8)
+            cse = f2c(box_8)
             fse = c2f(cse)
 
             where (dom%has_dir(:))

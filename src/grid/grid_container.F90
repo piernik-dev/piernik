@@ -411,7 +411,8 @@ contains
       if (allocated(this%prolong_) .or. allocated(this%prolong_x) .or. allocated(this%prolong_xy) ) call die("[grid_container:init] prolong_* arrays already allocated")
       ! size of coarsened grid with guardcells, additional cell is required only when even-sized grid has odd offset
 
-      rn = f2c(int(this%ijkse, kind=8))
+      rn = int(this%ijkse, kind=8)
+      rn = f2c(rn)
       where (dom%has_dir(:))
          rn(:, LO) = rn(:, LO) - dom%nb
          rn(:, HI) = rn(:, HI) + dom%nb
