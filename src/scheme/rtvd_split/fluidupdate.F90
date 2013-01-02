@@ -191,7 +191,7 @@ contains
       implicit none
 
       integer(kind=4), intent(in) :: dir      !< direction, one of xdim, ydim, zdim
-      logical, intent(in) :: forward  !< if .false. then reverse operation order in the sweep
+      logical,         intent(in) :: forward  !< if .false. then reverse operation order in the sweep
 
       if (dom%has_dir(dir)) then
          if (.not. forward) then

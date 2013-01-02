@@ -17,6 +17,6 @@
 #endif
 
 #define HDF5
-#if defined(I_KNOW_WHAT_I_AM_DOING) 
+#if defined(I_KNOW_WHAT_I_AM_DOING)
 #undef HDF5
 #endif
