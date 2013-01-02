@@ -37,6 +37,10 @@ module initproblem
    private
    public :: read_problem_par, init_prob, problem_pointers
 
+   enum, bind(C)
+      enumerator :: ADDED = 1, NOT_ADDED
+   end enum
+
    real                     :: d0, r_max, dout, alpha, r_in, r_out, f_in, f_out
    real                     :: dens_exp      !< exponent in profile density \f$\rho(R) = \rho_0 R^{-k}\f$
    real                     :: dens_amb      !< density of ambient medium (used for inner cutoff)
@@ -45,6 +49,8 @@ module initproblem
    real                     :: dens_max
    integer(kind=4)          :: cutoff_ncells !< width of cut-off profile
    real, save               :: T_inner = 0.0 !< Orbital period at the inner boundary, \todo save it to restart as an attribute
+   real, save               :: max_vy = -HUGE(1.0) !< Maximum tangential dust velocity
+   integer, save            :: noise_added = NOT_ADDED !< whether noise has been already added
    !>
    !! \f$\tau\f$ in \f$\frac{Du}{Dt} = - \frac{u-u_0}{\tau}f(R)
    !! when initproblem::problem_customize_solution is used
@@ -65,12 +71,27 @@ contains
 !-----------------------------------------------------------------------------
    subroutine problem_pointers
 
-      !use dataio_user, only: user_vars_hdf5, user_reg_var_restart
-      !use user_hooks,  only: finalize_problem, problem_customize_solution
+      use dataio_user,           only: user_reg_var_restart, user_attrs_wr, user_attrs_rd
+      use user_hooks,            only: problem_customize_solution, problem_grace_passed, problem_post_restart
+      use fluidboundaries_funcs, only: user_fluidbnd
+      use gravity,               only: grav_pot_3d
+#ifdef HDF5
+      use dataio_user,           only: user_vars_hdf5
+#endif HDF5
 
       implicit none
 
-      !user_reg_var_restart       => register_user_var
+      user_reg_var_restart       => register_user_var
+      user_attrs_wr => my_attrs_wr
+      user_attrs_rd => my_attrs_rd
+      problem_customize_solution => problem_customize_solution_kepler
+      problem_grace_passed => add_random_noise
+      problem_post_restart => kepler_problem_post_restart
+      user_fluidbnd => my_fbnd
+      grav_pot_3d => my_grav_pot_3d
+#ifdef HDF5
+      user_vars_hdf5 => prob_vars_hdf5
+#endif /* HDF5 */
 
    end subroutine problem_pointers
 !-----------------------------------------------------------------------------
@@ -91,17 +112,8 @@ contains
 !-----------------------------------------------------------------------------
    subroutine read_problem_par
 
-      use constants,             only: GEO_RPZ
       use dataio_pub,            only: nh      ! QA_WARN required for diff_nml
-#ifdef HDF5
-      use dataio_user,           only: user_vars_hdf5
-#endif HDF5
-      use dataio_user,           only: user_reg_var_restart
-      use domain,                only: dom
-      use fluidboundaries_funcs, only: user_fluidbnd
-      use gravity,               only: grav_pot_3d
       use mpisetup,              only: cbuff, rbuff, ibuff, lbuff, master, slave, piernik_MPI_Bcast
-      use user_hooks,            only: problem_customize_solution, problem_grace_passed, problem_post_restart
 
       implicit none
 
@@ -197,19 +209,6 @@ contains
 
       endif
 
-      if (dom%geometry_type == GEO_RPZ) then ! BEWARE: cannot move this to problem_pointers because dom%geometry_type is set up in init_domain
-         user_reg_var_restart       => register_user_var
-         problem_customize_solution => problem_customize_solution_kepler
-         user_fluidbnd => my_fbnd
-         grav_pot_3d => my_grav_pot_3d
-#ifdef HDF5
-         user_vars_hdf5 => prob_vars_hdf5
-#endif /* HDF5 */
-         problem_grace_passed => add_random_noise
-         problem_post_restart => kepler_problem_post_restart
-!         problem_grace_passed => add_sine
-      endif
-
    end subroutine read_problem_par
 !-----------------------------------------------------------------------------
    subroutine add_sine
@@ -230,6 +229,10 @@ contains
       type(cg_list_element), pointer :: cgl
       type(grid_container), pointer :: cg
 
+      if (amp_noise <= 0.0 .or. noise_added == ADDED) then
+         if (master) call printinfo("[initproblem:add_sine]: Noise has been added in previous run. Bailing out!")
+         return
+      endif
       if (.not. associated(flind%dst)) then
          if (master) call warn("[initproblem:add_sine]: Cannot add sine wave perturbation to dust, because there is no dust.")
          return
@@ -261,6 +264,8 @@ contains
          cgl => cgl%nxt
       enddo
 
+      noise_added = ADDED
+
    end subroutine add_sine
 !-----------------------------------------------------------------------------
    subroutine add_random_noise
@@ -281,7 +286,10 @@ contains
       type(cg_list_element), pointer        :: cgl
       type(grid_container),  pointer        :: cg
 
-      if (amp_noise <= 0.0) return
+      if (amp_noise <= 0.0 .or. noise_added == ADDED) then
+         if (master) call printinfo("[initproblem:add_random_noise]: Noise has been added in previous run. Bailing out!")
+         return
+      endif
       if (master) call printinfo("[initproblem:add_random_noise]: adding random noise to dust")
       call random_seed(size=n)
       allocate(seed(n))
@@ -305,13 +313,15 @@ contains
          cgl => cgl%nxt
       enddo
 
+      noise_added = ADDED
+
    end subroutine add_random_noise
 !-----------------------------------------------------------------------------
    subroutine init_prob
 
       use cg_leaves,          only: leaves
       use cg_list,            only: cg_list_element
-      use constants,          only: dpi, xdim, ydim, zdim, GEO_RPZ, DST, LO, HI
+      use constants,          only: dpi, xdim, ydim, zdim, GEO_RPZ, DST, LO, HI, pMAX
       use dataio_pub,         only: msg, printinfo, die
       use domain,             only: dom, is_multicg
       use fluidindex,         only: flind
@@ -319,7 +329,7 @@ contains
       use gravity,            only: r_smooth, ptmass, source_terms_grav, grav_pot2accel, grav_pot_3d
       use grid_cont,          only: grid_container
       use interactions,       only: epstein_factor
-      use mpisetup,           only: master
+      use mpisetup,           only: master, piernik_MPI_Allreduce
       use named_array_list,   only: wna
       use units,              only: newtong, gram, cm, kboltz, mH
 #ifdef FGSL
@@ -485,9 +495,11 @@ contains
          else
             call die("[initproblem:init_prob] I don't know what to do... :/")
          endif
-
+         max_vy = max(max_vy, maxval(abs(cg%u(flind%dst%imy,:,:,:))/cg%u(flind%dst%idn,:,:,:)) )
          cgl => cgl%nxt
       enddo
+
+      call piernik_MPI_Allreduce(max_vy, pMAX)
 
    end subroutine init_prob
 !-----------------------------------------------------------------------------
@@ -574,7 +586,7 @@ contains
       use constants,        only: xdim, ydim, zdim, LO, HI, pMAX
       use dataio_pub,       only: die!, warn, msg
       use domain,           only: is_multicg
-      use global,           only: dt, relax_time, smalld !, t, grace_period_passed
+      use global,           only: dt, smalld
       use grid_cont,        only: grid_container
       use fluidboundaries,  only: all_fluid_boundaries
       use fluidindex,       only: flind!, iarr_all_mz, iarr_all_dn
@@ -589,34 +601,18 @@ contains
       real, dimension(:,:), allocatable, save :: funcR
       logical, dimension(:,:,:), allocatable  :: adjust
       real, dimension(:,:,:), allocatable     :: vx_sign, vz_sign
-      real, save                              :: x0, x1, y0, y1, a, b
       real                                    :: max_vx, mean_vy
-      real, save                              :: max_vy = 100.0
       type(cg_list_element), pointer          :: cgl
       type(grid_container),  pointer          :: cg
 
       if (is_multicg) call die("[initproblem:problem_customize_solution_kepler] multiple grid pieces per procesor not implemented yet") !nontrivial
 
+      max_vx = -HUGE(1.0)
       cgl => leaves%first
       do while (associated(cgl))
          cg => cgl%cg
-         if (.not.allocated(adjust)) &
-            & allocate(adjust(cg%lhn(xdim, LO):cg%lhn(xdim, HI), &
-               & cg%lhn(ydim, LO):cg%lhn(ydim, HI), cg%lhn(zdim, LO):cg%lhn(zdim, HI)))
-         if (.not.allocated(vx_sign)) &
-            & allocate(vx_sign(cg%lhn(xdim, LO):cg%lhn(xdim, HI), &
-               & cg%lhn(ydim, LO):cg%lhn(ydim, HI), cg%lhn(zdim, LO):cg%lhn(zdim, HI)))
-         if (.not.allocated(vz_sign)) &
-            & allocate(vz_sign(cg%lhn(xdim, LO):cg%lhn(xdim, HI), &
-               & cg%lhn(ydim, LO):cg%lhn(ydim, HI), cg%lhn(zdim, LO):cg%lhn(zdim, HI)))
 
          if (frun) then
-            x0 = relax_time + 2.0
-            x1 = x0 + 30.0
-            y0 = drag_max
-            y1 = drag_min
-            a = (y0 - y1)/(x0 - x1)
-            b = y0 - a*x0
             allocate(funcR(size(cg%u,dim=1), cg%lhn(xdim, LO):cg%lhn(xdim, HI)) )
 
             funcR(1,:) = -tanh((cg%x(:)-r_in+1.0)**f_in) + 1.0 + max( tanh((cg%x(:)-r_out+1.0)**f_out), 0.0)
@@ -636,8 +632,6 @@ contains
             frun = .false.
             funcR(:,:) = spread(funcR(1,:),1,size(cg%u,dim=1))
 
-            max_vy = maxval( abs(cg%u(flind%dst%imy,:,:,:))/cg%u(flind%dst%idn,:,:,:) )
-            call piernik_MPI_Allreduce(max_vy, pMAX)
          endif
 
          do j = cg%lhn(ydim, LO), cg%lhn(ydim, HI)
@@ -650,8 +644,24 @@ contains
 !            cg%u(iarr_all_mz,:,:,:) = cg%u(iarr_all_mz,:,:,:)*0.1
 !         endwhere
 
-         max_vx = maxval( abs(cg%u(flind%neu%imx,:,:,:))/cg%u(flind%neu%idn,:,:,:) )
-         call piernik_MPI_Allreduce(max_vx, pMAX)
+         max_vx = max(max_vx, maxval( abs(cg%u(flind%neu%imx,:,:,:))/cg%u(flind%neu%idn,:,:,:) ))
+         cgl => cgl%nxt
+      enddo
+
+      call piernik_MPI_Allreduce(max_vx, pMAX)
+
+      cgl => leaves%first
+      do while (associated(cgl))
+         cg => cgl%cg
+         if (.not.allocated(adjust)) &
+            & allocate(adjust(cg%lhn(xdim, LO):cg%lhn(xdim, HI), &
+               & cg%lhn(ydim, LO):cg%lhn(ydim, HI), cg%lhn(zdim, LO):cg%lhn(zdim, HI)))
+         if (.not.allocated(vx_sign)) &
+            & allocate(vx_sign(cg%lhn(xdim, LO):cg%lhn(xdim, HI), &
+               & cg%lhn(ydim, LO):cg%lhn(ydim, HI), cg%lhn(zdim, LO):cg%lhn(zdim, HI)))
+         if (.not.allocated(vz_sign)) &
+            & allocate(vz_sign(cg%lhn(xdim, LO):cg%lhn(xdim, HI), &
+               & cg%lhn(ydim, LO):cg%lhn(ydim, HI), cg%lhn(zdim, LO):cg%lhn(zdim, HI)))
 
          where (abs(cg%u(flind%dst%imx,:,:,:))/cg%u(flind%dst%idn,:,:,:) >= max_vx)
             adjust = .true.
@@ -956,6 +966,41 @@ contains
       return
    end subroutine read_dens_profile
 #endif /* FGSL */
+!-----------------------------------------------------------------------------
+   subroutine my_attrs_wr(file_id)
+      use hdf5, only: HID_T, SIZE_T
+      use h5lt, only: h5ltset_attribute_double_f, h5ltset_attribute_int_f
+      implicit none
+      integer(HID_T), intent(in) :: file_id
+      integer(SIZE_T), parameter :: bufsize = 1
+      integer(kind=4)            :: error
+
+      call h5ltset_attribute_double_f(file_id, "/", "T_inner", [T_inner], bufsize, error)
+      call h5ltset_attribute_double_f(file_id, "/", "max_vy", [max_vy], bufsize, error)
+      call h5ltset_attribute_int_f(file_id, "/", "noise_added", [noise_added], bufsize, error)
+
+   end subroutine my_attrs_wr
+!-----------------------------------------------------------------------------
+   subroutine my_attrs_rd(file_id)
+      use hdf5, only: HID_T, SIZE_T
+      use h5lt, only: h5ltget_attribute_double_f, h5ltget_attribute_int_f
+      use constants, only: I_ONE
+      implicit none
+      integer(HID_T), intent(in) :: file_id
+      integer(SIZE_T), parameter :: bufsize = 1
+      integer(kind=4)            :: error
+      real, dimension(I_ONE)     :: rbuff
+      integer, dimension(I_ONE)  :: ibuff
+
+      call h5ltget_attribute_double_f(file_id, "/", "T_inner", rbuff, error)
+      T_inner = rbuff(1)
+      call h5ltget_attribute_double_f(file_id, "/", "max_vy", rbuff, error)
+      max_vy = rbuff(1)
+
+      call h5ltget_attribute_int_f(file_id, "/", "noise_added", ibuff, error)
+      noise_added = ibuff(1)
+
+   end subroutine my_attrs_rd
 !-----------------------------------------------------------------------------
    elemental function signum(a) result (b)
       implicit none
