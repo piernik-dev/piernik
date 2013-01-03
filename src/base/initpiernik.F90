@@ -124,11 +124,11 @@ contains
 
       call init_dataio_parameters            ! Required very early to call colormessage without side-effects
 
-      call problem_pointers                  ! set up problem-specific pointers as early as possible to allow implementation of problem-specific hacks also during the initialization
-
       call init_units
 
       call init_default_fluidboundaries
+
+      call problem_pointers                  ! set up problem-specific pointers as early as possible to allow implementation of problem-specific hacks also during the initialization
 
       call init_global
       code_progress = PIERNIK_INIT_GLOBAL    ! Global parameters are set up
