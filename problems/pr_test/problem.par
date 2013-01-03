@@ -20,7 +20,7 @@
 
  $MPI_BLOCKS
     psize = 2, 2, 1
-    bsize = 3*64
+    AMR_bsize = 3*64
     allow_uneven = .true.
     allow_noncart = .true.
     dd_unif_quality = 1.1

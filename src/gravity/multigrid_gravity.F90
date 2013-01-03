@@ -49,7 +49,7 @@ module multigrid_gravity
    implicit none
 
    private
-   public :: multigrid_grav_par, init_multigrid_grav, cleanup_multigrid_grav, multigrid_solve_grav, init_multigrid_grav_ext
+   public :: multigrid_grav_par, init_multigrid_grav, cleanup_multigrid_grav, multigrid_solve_grav, init_multigrid_grav_ext, residual
 
    include "fftw3.f"
    ! constants from fftw3.f
@@ -972,7 +972,21 @@ contains
 
    end subroutine vcycle_hg
 
-!> \brief Calculate the residuum for the Poisson equation.
+!>
+!! \brief Calculate the residuum for the Poisson equation.
+!!
+!! \details Different orders of the Laplace operator result in different quality of the approximation of potential
+!! * Second order (O_I2) is the simplest operator (3-point in 1D, 5-point in 2D and 7-point in 3D). Its error is proportional to cg%dx**2
+!! * Fourth order (O_I4) has width of 5 cells in each direction (5, 9 and 13-points in 1D, 2D and 3D, respectively). Its error is proportional to cg%dx**4.
+!!   The value of its coefficients depends on interpretation of variables (e.g. point values, integral over cell)
+!! * Fourth order Mehrstellen (-O_I4) is compact (takes 3, 9, and 27 solution values in 1D, 2D and 3D),
+!!   but requires values of adjacent source cells as well (3, 5 and 7 points in 1D, 2D and 3D).
+!!   Its error is proportional to cg%dx**4 and tends to be smaller than the error of simple fourth order operator by a factor of 3..4.
+!!   \todo check how the coefficients depend on interpretation of cell values (center point values vs integral over cell)
+!!
+!! Note that each kind of Laplace operator requires its own approximate solver (relaxation scheme, Green function for FFT) for optimal convergence.
+!! \warning Relaxation is implemented only for second order operator.
+!<
 
    subroutine residual(cg_llst, src, soln, def)
 
@@ -1348,6 +1362,9 @@ contains
 !!
 !! \details This is the most costly routine in a serial run. Try to find optimal values for nsmool and nsmoob.
 !! This routine also depends a lot on communication so it  may limit scalability of the multigrid.
+!!
+!! This implementation is suitable for 2nd order Laplace operator (routine residual2).
+!! 4th order operators (residual4 and residual_Mehrstellen) require different relaxation operators or the convergence rate will be severily limited.
 !<
 
    subroutine approximate_solution_rbgs(curl, src, soln)

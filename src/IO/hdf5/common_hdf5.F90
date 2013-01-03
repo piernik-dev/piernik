@@ -197,13 +197,14 @@ contains
 
    end subroutine init_hdf5
 
-!>
-!! \brief Procedure finalizing HDF5 module
-!<
+!> \brief Procedure finalizing HDF5 module
+
    subroutine cleanup_hdf5
+
       implicit none
 
-      if (allocated(hdf_vars)) deallocate(hdf_vars)
+      if (allocated(hdf_vars))       deallocate(hdf_vars)
+      if (allocated(hdf_vars_avail)) deallocate(hdf_vars_avail)
 
    end subroutine cleanup_hdf5
 

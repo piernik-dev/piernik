@@ -200,7 +200,7 @@ contains
 
 !> \brief Summarize all registered fields and their properties
 
-   subroutine print_vars(this)
+   subroutine print_vars(this, to_stdout)
 
       use constants,  only: INVALID
       use dataio_pub, only: printinfo, warn, msg
@@ -209,6 +209,7 @@ contains
       implicit none
 
       class(na_var_list), intent(inout) :: this
+      logical, optional,  intent(in)    :: to_stdout
 
       integer :: i, d3
 
@@ -218,11 +219,11 @@ contains
 
       if (d3 /= 0) then
          write(msg,'(a,i2,a)')"[named_array_list:print_vars] Found ",size(this%lst(:))," rank-3 arrays:"
-         call printinfo(msg)
+         call printinfo(msg, to_stdout)
       endif
       if (count(this%lst(:)%dim4 /= INVALID) /= 0) then
          write(msg,'(a,i2,a)')"[named_array_list:print_vars] Found ",size(this%lst(:))," rank-4 arrays:"
-         call printinfo(msg)
+         call printinfo(msg, to_stdout)
          if (d3 /=0) call warn("[named_array_list:print_vars] Both rank-3 and rank-4 named arrays are present in the same list!")
       endif
 
@@ -235,7 +236,7 @@ contains
                  &                                        ", multigrid=", this%lst(i)%multigrid, ", ord_prolong=", this%lst(i)%ord_prolong, &
                  &                                        ", components=", this%lst(i)%dim4, ", position=", this%lst(i)%position(:)
          endif
-         call printinfo(msg)
+         call printinfo(msg, to_stdout)
       enddo
 
    end subroutine print_vars

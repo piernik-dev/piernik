@@ -47,6 +47,7 @@ module cg_list_dataop
       procedure :: set_dirty                         !< Pollute selected array with an insane value dirtyH.
       procedure :: check_dirty                       !< Check for detectable traces of set_dirty calls.
       procedure :: check_for_dirt                    !< Check all named arrays for constants:big_float
+      procedure :: corners2wa                        !< Cut out a cross in the middle of the grid block and move the data to shov what is stored in corners and partially in edges and faces as well
 
       ! Arithmetic on the fields
       procedure :: set_q_value                       !< reset given field to the value
@@ -60,9 +61,9 @@ module cg_list_dataop
       procedure :: norm_sq                           !< calculate L2 norm
 
       ! Multigrid
-      generic,   public  :: reset_boundaries => zero_boundaries, dirty_boundaries
+      generic,   public  :: reset_boundaries => zero_boundaries, dirty_mg_boundaries
       procedure, private :: zero_boundaries                   !< Clear boundary values
-      procedure, private :: dirty_boundaries                  !< Set boundary values
+      procedure, private :: dirty_mg_boundaries               !< Set boundary values
 !> \todo merge lists
 
    end type cg_list_dataop_T
@@ -515,13 +516,13 @@ contains
 
       class(cg_list_dataop_T), intent(inout) :: this  !< list for which clear the boundary values (typically a single level)
 
-      call this%dirty_boundaries(0.)
+      call this%dirty_mg_boundaries(0.)
 
    end subroutine zero_boundaries
 
 !> \brief Mark boundary values with given value
 
-   subroutine dirty_boundaries(this, value)
+   subroutine dirty_mg_boundaries(this, value)
 
       use cg_list, only: cg_list_element
 
@@ -540,7 +541,7 @@ contains
          cgl => cgl%nxt
       enddo
 
-   end subroutine dirty_boundaries
+   end subroutine dirty_mg_boundaries
 
 !>
 !! \brief This routine pollutes selected array with an insane value dirtyH.
@@ -665,5 +666,52 @@ contains
       enddo
 
    end subroutine check_for_dirt
+
+!>
+!! \brief Cut out a cross in the middle of the grid block and move the data to shov what is stored in corners and partially in edges and faces as well.
+!! Put the result in cg%wa. Useful for debugging boundaries
+!<
+
+   subroutine corners2wa(this, ind)
+
+      use cg_list,   only: cg_list_element
+      use constants, only: xdim, ydim, zdim, LO, HI
+      use domain,    only: dom
+
+      implicit none
+
+      class(cg_list_dataop_T), intent(in) :: this  !< object invoking type-bound procedure
+      integer,                 intent(in) :: ind   !< index of variable in cg%q(:) which we want to pollute
+
+      type(cg_list_element), pointer :: cgl
+
+      cgl => this%first
+      do while (associated(cgl))
+
+         associate ( cg => cgl%cg )
+         cg%prolong_xyz = cg%q(ind)%arr
+
+         if (dom%has_dir(xdim)) then
+            cg%wa(cg%ijkse(xdim, LO):cg%ijkse(xdim, LO)+cg%n_b(xdim)/2-1, :, :) = cg%prolong_xyz(cg%lhn(xdim, LO):cg%lhn(xdim, LO)+cg%n_b(xdim)/2-1, :, :)
+            cg%wa(cg%ijkse(xdim, HI)-cg%n_b(xdim)/2+1:cg%ijkse(xdim, HI), :, :) = cg%prolong_xyz(cg%lhn(xdim, HI)-cg%n_b(xdim)/2+1:cg%lhn(xdim, HI), :, :)
+            cg%prolong_xyz = cg%wa
+         endif
+
+         if (dom%has_dir(ydim)) then
+            cg%wa(:, cg%ijkse(ydim, LO):cg%ijkse(ydim, LO)+cg%n_b(ydim)/2-1, :) = cg%prolong_xyz(:, cg%lhn(ydim, LO):cg%lhn(ydim, LO)+cg%n_b(ydim)/2-1, :)
+            cg%wa(:, cg%ijkse(ydim, HI)-cg%n_b(ydim)/2+1:cg%ijkse(ydim, HI), :) = cg%prolong_xyz(:, cg%lhn(ydim, HI)-cg%n_b(ydim)/2+1:cg%lhn(ydim, HI), :)
+            cg%prolong_xyz = cg%wa
+         endif
+
+         if (dom%has_dir(zdim)) then
+            cg%wa(:, :, cg%ijkse(zdim, LO):cg%ijkse(zdim, LO)+cg%n_b(zdim)/2-1) = cg%prolong_xyz(:, :, cg%lhn(zdim, LO):cg%lhn(zdim, LO)+cg%n_b(zdim)/2-1)
+            cg%wa(:, :, cg%ijkse(zdim, HI)-cg%n_b(zdim)/2+1:cg%ijkse(zdim, HI)) = cg%prolong_xyz(:, :, cg%lhn(zdim, HI)-cg%n_b(zdim)/2+1:cg%lhn(zdim, HI))
+         endif
+         end associate
+
+         cgl => cgl%nxt
+      enddo
+
+   end subroutine corners2wa
 
 end module cg_list_dataop

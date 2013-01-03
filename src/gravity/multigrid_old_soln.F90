@@ -178,7 +178,7 @@ contains
       select case (ordt)
          case (:INVALID)
             if (master .and. ord_time_extrap > ordt) then
-               write(msg, '(3a)')"[multigrid_gravity:init_solution] Clearing ",trim(prefix),"solution."
+               write(msg, '(3a)')"[multigrid_old_soln:init_solution] Clearing ",trim(prefix),"solution."
                call printinfo(msg, stdout)
             endif
             call all_cg%set_q_value(solution, 0.)
@@ -187,7 +187,7 @@ contains
             call leaves%check_dirty(this%old(p0)%i_hist, "history0")
             call leaves%q_copy(this%old(p0)%i_hist, solution)
             if (master .and. ord_time_extrap > ordt) then
-               write(msg, '(3a)')"[multigrid_gravity:init_solution] No extrapolation of ",trim(prefix),"solution."
+               write(msg, '(3a)')"[multigrid_old_soln:init_solution] No extrapolation of ",trim(prefix),"solution."
                call printinfo(msg, stdout)
             endif
          case (O_LIN)
@@ -197,7 +197,7 @@ contains
             call leaves%q_lin_comb( [ ind_val(this%old(p0)%i_hist, (1.+dt_fac(1))), &
                  &                    ind_val(this%old(p1)%i_hist,    -dt_fac(1) ) ], solution )
             if (master .and. ord_time_extrap > ordt) then
-               write(msg, '(3a)')"[multigrid_gravity:init_solution] Linear extrapolation of ",trim(prefix),"solution."
+               write(msg, '(3a)')"[multigrid_old_soln:init_solution] Linear extrapolation of ",trim(prefix),"solution."
                call printinfo(msg, stdout)
             endif
          case (O_I2)
@@ -209,7 +209,7 @@ contains
                  &                   ind_val(this%old(p1)%i_hist, -dt_fac(1)*dt_fac(3)), &
                  &                   ind_val(this%old(p2)%i_hist, -dt_fac(1)*dt_fac(2)) ], solution )
          case default
-            call die("[multigrid_gravity:init_solution] Extrapolation order not implemented")
+            call die("[multigrid_old_soln:init_solution] Extrapolation order not implemented")
       end select
 
       call leaves%check_dirty(solution, "init_soln")

@@ -16,7 +16,7 @@
 
  $MPI_BLOCKS
     psize = 1, 1, 1
-    bsize = 3*16
+    AMR_bsize = 3*16
     allow_uneven = .true.
     allow_noncart = .true.
     dd_unif_quality = 1.1
@@ -45,7 +45,7 @@
     dt_res  = 0.0
     dt_log  = 0.001
     dt_tsl  = 0.001
-    vars(1:) = 'dens', 'gpot', 'apot', 'errp', 'level', 'relerr', "source", "solution", "defect", "correction", "gp", "sgp", "wa"
+    vars(1:) = 'dens', 'gpot', 'apot', 'errp', 'level', 'relerr', "source", "solution", "defect", "correction", "gp", "sgp", "wa", "ares"
  /
 
  $FLUID_DUST

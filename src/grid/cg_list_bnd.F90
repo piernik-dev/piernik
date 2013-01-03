@@ -67,6 +67,7 @@ module cg_list_bnd
       procedure, private :: internal_boundaries        !< Exchanges guardcells for BND_MPI and BND_PER boundaries (internal and periodic external boundaries)
       procedure          :: external_boundaries        !< Set up external boundary values
       procedure          :: clear_boundaries           !< Clear (set to 0) all boundaries
+      procedure          :: dirty_boundaries           !< Put dirty values to all boundaries
       procedure          :: level_3d_boundaries        !< Perform internal boundary exchanges and external boundary extrapolations on 3D named arrays
       !> \todo move routines for external guardcells for rank-4 arrays here as well (fluidboundaries and magboundaries)
    end type cg_list_bnd_T
@@ -439,7 +440,7 @@ contains
 
 !> \brief Set zero to all boundaries (will defeat any attemts of use of dirty checks on boundaries)
 
-   subroutine clear_boundaries(this, ind)
+   subroutine clear_boundaries(this, ind, value)
 
       use cg_list,   only: cg_list_element
       use constants, only: ndims, xdim, zdim, LO, HI, I_TWO, BND_MPI, BND_FC, BND_MPI_FC
@@ -448,17 +449,21 @@ contains
 
       implicit none
 
-      class(cg_list_bnd_T), intent(in)        :: this !< the list on which to perform the boundary exchange
-      integer,              intent(in)        :: ind  !< Negative value: index of cg%q(:) 3d array
+      class(cg_list_bnd_T), intent(in)        :: this  !< the list on which to perform the boundary exchange
+      integer,              intent(in)        :: ind   !< Negative value: index of cg%q(:) 3d array
+      real, optional,       intent(in)        :: value !< Value to be put in the boundaries (could be dirty)
 
       integer(kind=4)                         :: lh, clh, d
       integer(kind=4), dimension(ndims,LO:HI) :: l
       type(cg_list_element),  pointer         :: cgl
       type(grid_container),   pointer         :: cg
       real, dimension(:,:,:), pointer         :: pa3d
+      real :: v
 
       !> \todo fill corners with big_float ?
 
+      v = 0.
+      if (present(value)) v=value
       cgl => this%first
       do while (associated(cgl))
          cg => cgl%cg
@@ -471,7 +476,7 @@ contains
                      l(d,HI) = ubound(cg%q(ind)%arr, dim=d, kind=4) ! restore after lh==LO case
                      l(d,clh) = cg%ijkse(d,lh) + I_TWO*lh-(LO+HI)
                      pa3d => cg%q(ind)%span(l)
-                     pa3d = 0.
+                     pa3d = v
                   endif
                enddo
             endif
@@ -480,6 +485,21 @@ contains
       enddo
 
    end subroutine clear_boundaries
+
+!> \brief Put dirty values to all boundaries
+
+   subroutine dirty_boundaries(this, ind)
+
+      use constants, only: dirtyH
+
+      implicit none
+
+      class(cg_list_bnd_T), intent(in) :: this  !< the list on which to perform the boundary exchange
+      integer,              intent(in) :: ind   !< Negative value: index of cg%q(:) 3d array
+
+      call this%clear_boundaries(ind, value=dirtyH)
+
+   end subroutine dirty_boundaries
 
 !>
 !! \brief This routine sets up all guardcells (internal and external) for given rank-3 arrays.

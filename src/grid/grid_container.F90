@@ -99,6 +99,8 @@ module grid_cont
    !> \brief Array of boundary segments to exchange
    type :: bnd_list
       type(segment), dimension(:), allocatable :: seg !< segments
+    contains
+       procedure :: add_seg !< Add an new segment, reallocate if necessary
    end type bnd_list
 
    !> \brief Everything required for autonomous computation of a single sweep on a portion of the domain on a single process
@@ -179,7 +181,7 @@ module grid_cont
       type(tgt_list) :: ro_tgt                                    !< description of outgoing restriction data
       type(tgt_list) :: pi_tgt                                    !< description of incoming prolongation data
       type(tgt_list) :: po_tgt                                    !< description of outgoing prolongation data
-      real, allocatable, dimension(:,:,:) :: prolong_, prolong_x, prolong_xy !< auxiliary prolongation arrays
+      real, allocatable, dimension(:,:,:) :: prolong_, prolong_x, prolong_xy, prolong_xyz !< auxiliary prolongation arrays
       logical, allocatable, dimension(:,:,:) :: leafmap           !< .true. when a cell is not covered by finer cells, .falase. otherwise
 
       ! Non-cartesian geometrical factors
@@ -408,7 +410,8 @@ contains
 
       this%dvol2 = this%dvol**2
 
-      if (allocated(this%prolong_) .or. allocated(this%prolong_x) .or. allocated(this%prolong_xy) ) call die("[grid_container:init] prolong_* arrays already allocated")
+      if (allocated(this%prolong_) .or. allocated(this%prolong_x) .or. allocated(this%prolong_xy) .or. allocated(this%prolong_xyz)) &
+           call die("[grid_container:init] prolong_* arrays already allocated")
       ! size of coarsened grid with guardcells, additional cell is required only when even-sized grid has odd offset
 
       rn = int(this%ijkse, kind=8)
@@ -418,15 +421,17 @@ contains
          rn(:, HI) = rn(:, HI) + dom%nb
          ! +1 is because of some simplifications in cg_level::prolong_q_1var in treating grids with odd offsets
       endwhere
-      allocate(this%prolong_  (      rn(xdim, LO):      rn(xdim, HI),       rn(ydim, LO):      rn(ydim, HI), rn(zdim, LO):rn(zdim, HI)), &
-           &   this%prolong_x (this%lhn(xdim, LO):this%lhn(xdim, HI),       rn(ydim, LO):      rn(ydim, HI), rn(zdim, LO):rn(zdim, HI)), &
-           &   this%prolong_xy(this%lhn(xdim, LO):this%lhn(xdim, HI), this%lhn(ydim, LO):this%lhn(ydim, HI), rn(zdim, LO):rn(zdim, HI)))
+      allocate(this%prolong_   (      rn(xdim, LO):      rn(xdim, HI),       rn(ydim, LO):      rn(ydim, HI),       rn(zdim, LO):      rn(zdim, HI)), &
+           &   this%prolong_x  (this%lhn(xdim, LO):this%lhn(xdim, HI),       rn(ydim, LO):      rn(ydim, HI),       rn(zdim, LO):      rn(zdim, HI)), &
+           &   this%prolong_xy (this%lhn(xdim, LO):this%lhn(xdim, HI), this%lhn(ydim, LO):this%lhn(ydim, HI),       rn(zdim, LO):      rn(zdim, HI)), &
+           &   this%prolong_xyz(this%lhn(xdim, LO):this%lhn(xdim, HI), this%lhn(ydim, LO):this%lhn(ydim, HI), this%lhn(zdim, LO):this%lhn(zdim, HI)))
       allocate(this%leafmap(this%ijkse(xdim, LO):this%ijkse(xdim, HI), this%ijkse(ydim, LO):this%ijkse(ydim, HI), this%ijkse(zdim, LO):this%ijkse(zdim, HI)))
 
-      this%prolong_  (:, :, :) = big_float
-      this%prolong_x (:, :, :) = big_float
-      this%prolong_xy(:, :, :) = big_float
-      this%leafmap   (:, :, :) = .true.
+      this%prolong_   (:, :, :) = big_float
+      this%prolong_x  (:, :, :) = big_float
+      this%prolong_xy (:, :, :) = big_float
+      this%prolong_xyz(:, :, :) = big_float
+      this%leafmap    (:, :, :) = .true.
 
       call this%add_all_na
 
@@ -555,10 +560,11 @@ contains
       endif
 
       ! arrays not handled through named_array feature
-      if (allocated(this%prolong_xy)) deallocate(this%prolong_xy)
-      if (allocated(this%prolong_x))  deallocate(this%prolong_x)
-      if (allocated(this%prolong_))   deallocate(this%prolong_)
-      if (allocated(this%leafmap))    deallocate(this%leafmap)
+      if (allocated(this%prolong_xyz)) deallocate(this%prolong_xyz)
+      if (allocated(this%prolong_xy))  deallocate(this%prolong_xy)
+      if (allocated(this%prolong_x))   deallocate(this%prolong_x)
+      if (allocated(this%prolong_))    deallocate(this%prolong_)
+      if (allocated(this%leafmap))     deallocate(this%leafmap)
 
    end subroutine cleanup
 
@@ -743,5 +749,34 @@ contains
       endif
 
    end subroutine update_leafmap
+
+!> \brief Add a new segment, reallocate if necessary
+
+   subroutine add_seg(this, proc, se, tag)
+      implicit none
+
+      class(bnd_list),                              intent(inout) :: this
+      integer,                                      intent(in)    :: proc
+      integer(kind=8), dimension(xdim:zdim, LO:HI), intent(in)    :: se
+      integer(kind=4),                              intent(in)    :: tag
+
+      type(segment), dimension(:), allocatable :: tmp
+      integer :: g
+
+      if (allocated(this%seg)) then
+         allocate(tmp(lbound(this%seg, dim=1):ubound(this%seg, dim=1)+1))
+         tmp(:ubound(this%seg, dim=1)) = this%seg
+         call move_alloc(from=tmp, to=this%seg)
+      else
+         allocate(this%seg(1))
+      endif
+
+      g = ubound(this%seg, dim=1)
+
+      this%seg(g)%proc = proc
+      this%seg(g)%se = se
+      this%seg(g)%tag = tag
+
+   end subroutine add_seg
 
 end module grid_cont

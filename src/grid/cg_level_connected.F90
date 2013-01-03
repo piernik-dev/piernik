@@ -48,22 +48,23 @@ module cg_level_connected
     contains
 
       ! Level management
-      procedure          :: init_level                               !< common initialization for base level and other levels
-      procedure          :: set                                      !< initialize the base level
+      procedure :: init_level                                 !< common initialization for base level and other levels
+      procedure :: set                                        !< initialize the base level
 
       ! Prolongation and restriction
-      procedure, private :: vertical_prep                            !< initialize prolongation and restriction targets
-      procedure          :: prolong                                  !< interpolate the grid data which has the flag vital set to this%finer level
-      procedure          :: restrict                                 !< interpolate the grid data which has the flag vital set from this%coarser level
-      procedure          :: prolong_q_1var                           !< interpolate the grid data in specified q field to this%finer level
-      procedure          :: restrict_q_1var                          !< interpolate the grid data in specified q field from this%coarser level
-      procedure          :: restrict_to_floor_q_1var                 !< restrict specified q field as much as possible
-      procedure          :: restrict_to_base_q_1var                  !< restrict specified q field to the base level
-      procedure          :: arr3d_boundaries                         !< Set up all guardcells (internal, external and fine-coarse) for given rank-3 arrays.
+      procedure :: vertical_prep                              !< initialize prolongation and restriction targets
+      procedure :: prolong                                    !< interpolate the grid data which has the flag vital set to this%finer level
+      procedure :: restrict                                   !< interpolate the grid data which has the flag vital set from this%coarser level
+      procedure :: restrict_to_base                           !< restrict all variables to the base level
+      procedure :: prolong_q_1var                             !< interpolate the grid data in specified q field to this%finer level
+      procedure :: restrict_q_1var                            !< interpolate the grid data in specified q field from this%coarser level
+      procedure :: restrict_to_floor_q_1var                   !< restrict specified q field as much as possible
+      procedure :: restrict_to_base_q_1var                    !< restrict specified q field to the base level
+      procedure :: arr3d_boundaries                           !< Set up all guardcells (internal, external and fine-coarse) for given rank-3 arrays.
       ! fine-coarse boundary exchanges may also belong to this type
    end type cg_level_connected_T
 
-   type(cg_level_connected_T), pointer  :: base_lev             !< base level grid containers
+   type(cg_level_connected_T), pointer  :: base_lev           !< base level grid containers
 
 contains
 
@@ -311,8 +312,6 @@ contains
 
             if (allocated(ps)) deallocate(ps)
 
-            call cg%update_leafmap
-
             cgl => cgl%nxt
          enddo
       endif
@@ -395,6 +394,20 @@ contains
 
    end subroutine restrict
 
+!> \brief Restrict all variables to the base level
+
+   recursive subroutine restrict_to_base(this)
+
+      implicit none
+
+      class(cg_level_connected_T), intent(inout) :: this !< object invoking type-bound procedure
+
+      if (this%level_id <= base_lev%level_id) return
+      call this%restrict
+      call this%coarser%restrict_to_base
+
+   end subroutine restrict_to_base
+
 !> \brief Restrict as much as possible
 
    recursive subroutine restrict_to_floor_q_1var(this, iv)
@@ -419,7 +432,7 @@ contains
       class(cg_level_connected_T), intent(inout) :: this !< object invoking type-bound procedure
       integer,                     intent(in)    :: iv   !< variable to be restricted
 
-      if (this%level_id == base_lev%level_id) return
+      if (this%level_id <= base_lev%level_id) return
       call this%restrict_q_1var(iv)
       call this%coarser%restrict_to_base_q_1var(iv)
 

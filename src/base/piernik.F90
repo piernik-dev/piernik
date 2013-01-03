@@ -41,7 +41,9 @@ program piernik
    use fluidupdate,       only: fluid_update
    use global,            only: t, nstep, dt, dtm, cfl_violated
    use initpiernik,       only: init_piernik
+   use list_of_cg_lists,  only: all_lists
    use mpisetup,          only: master, piernik_MPI_Barrier, piernik_MPI_Bcast
+   use named_array_list,  only: qna, wna
    use timer,             only: time_left, set_timer, tmr_fu
    use timestep,          only: time_step
    use user_hooks,        only: finalize_problem
@@ -49,13 +51,9 @@ program piernik
    use domain,            only: dom
    use timer,             only: timer_start, timer_stop
 #endif /* PERFMON */
-#ifdef DEBUG
-   use list_of_cg_lists,  only: all_lists
-   use named_array_list,  only: qna, wna
-#ifdef GRAV
+#if defined DEBUG && defined GRAV
    use particle_pub,      only: pset
-#endif /* GRAV */
-#endif /* DEBUG */
+#endif /* DEBUG && GRAV */
 
    implicit none
 
@@ -75,12 +73,9 @@ program piernik
 
    call all_cg%check_na
    !call all_cg%check_for_dirt
-#ifdef DEBUG
-   call all_lists%print
-#ifdef GRAV
+#if defined DEBUG && defined GRAV
    call pset%print
-#endif /* GRAV */
-#endif /* DEBUG */
+#endif /* DEBUG && GRAV */
 
    call piernik_MPI_Barrier
 !-------------------------------- MAIN LOOP ----------------------------------
@@ -95,6 +90,14 @@ program piernik
    if (master) then
       call printinfo("======================================================================================================", .false.)
       call printinfo("###############     Simulation     ###############", .false.)
+      call printinfo("Named arrays present at start:", to_stdout=.false.)
+      call qna%print_vars(to_stdout=.false.)
+      call wna%print_vars(to_stdout=.false.)
+      call printinfo("Grid lists present at start:", to_stdout=.false.)
+   endif
+   call all_lists%print(to_stdout = .false.)  ! needs all procs to participate
+   if (master) then
+      call printinfo("======================================================================================================", .false.)
    endif
 
    call print_progress(nstep)
@@ -167,10 +170,14 @@ program piernik
          call warn(msg)
       endif
 
-#ifdef DEBUG
-      call qna%print_vars
-      call wna%print_vars
-#endif /* DEBUG */
+      call printinfo("Named arrays present at finish:", to_stdout=.false.)
+      call qna%print_vars(to_stdout=.false.)
+      call wna%print_vars(to_stdout=.false.)
+      call printinfo("Grid lists present at finish:", to_stdout=.false.)
+   endif
+   call all_lists%print(to_stdout = .false.)  ! needs all procs to participate
+   if (master) then
+      call printinfo("======================================================================================================", .false.)
    endif
 
    if (associated(finalize_problem)) call finalize_problem

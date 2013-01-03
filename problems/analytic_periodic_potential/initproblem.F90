@@ -49,6 +49,9 @@ module initproblem
 
    ! private data
    character(len=dsetnamelen), parameter :: apot_n = "apot" !< name of the analytical potential field
+   character(len=dsetnamelen), parameter :: asrc_n = "asrc" !< name of the source fiels used for "ares" calculation (auxiliary space)
+   character(len=dsetnamelen), parameter :: ares_n = "ares" !< name of the numerical residuum with respect to analytical potential field
+
    !< recognized types of potential
    enum, bind(c)
       enumerator :: SIN_MUL
@@ -135,6 +138,8 @@ contains
       end select
 
       call all_cg%reg_var(apot_n)
+      call all_cg%reg_var(ares_n)
+      call all_cg%reg_var(asrc_n)
 
    end subroutine read_problem_par
 
@@ -142,14 +147,17 @@ contains
 
    subroutine init_prob
 
-      use cg_list,          only: cg_list_element
-      use cg_leaves,        only: leaves
-      use constants,        only: ndims, xdim, ydim, zdim
-      use dataio_pub,       only: die, msg
-      use domain,           only: dom
-      use grid_cont,        only: grid_container
-      use fluidindex,       only: iarr_all_dn, iarr_all_mx, iarr_all_my, iarr_all_mz
-      use units,            only: fpiG
+      use cg_list,           only: cg_list_element
+      use cg_leaves,         only: leaves
+      use constants,         only: ndims, xdim, ydim, zdim
+      use dataio_pub,        only: die, msg, printinfo
+      use domain,            only: dom
+      use fluidindex,        only: iarr_all_dn, iarr_all_mx, iarr_all_my, iarr_all_mz
+      use grid_cont,         only: grid_container
+      use named_array_list,  only: qna
+      use mpisetup,          only: master
+      use multigrid_gravity, only: residual
+      use units,             only: fpiG
 
       implicit none
 
@@ -203,9 +211,17 @@ contains
          cgl => cgl%nxt
       enddo
 
-!> \todo Make a direct comparision with the multigrid residual subroutine
-!      call residual(finest, source, solution, defect)
-!      norm_lhs = leaves%norm_sq(defect)
+      ! Compute residuum for anal;ytical solution and print its norm
+      cgl => leaves%first
+      do while (associated(cgl))
+         cg => cgl%cg
+         cg%q(qna%ind(asrc_n))%arr(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = fpiG * sum(cg%u(iarr_all_dn, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), dim=1)
+         cgl => cgl%nxt
+      enddo
+      call residual(leaves, qna%ind(asrc_n), qna%ind(apot_n), qna%ind(ares_n))
+
+      write(msg,'(a,f13.10)')"[initproblem:init_prob] Analytical norm residual/source= ",leaves%norm_sq(qna%ind(ares_n))/leaves%norm_sq(qna%ind(asrc_n))
+      if (master) call printinfo(msg)
 
    end subroutine init_prob
 

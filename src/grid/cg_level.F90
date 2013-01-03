@@ -189,14 +189,11 @@ contains
 
       class(cg_level_T), intent(inout) :: this   !< object invoking type bound procedure
 
-      integer                          :: i, ep, gr_id
+      integer                          :: i, ep
       type(grid_container), pointer    :: cg
 
       call this%distribute
       call this%mark_new
-
-      gr_id = 0
-      if (associated(this%last)) gr_id = this%last%cg%grid_id
 
       do i = lbound(this%pse(proc)%c(:), dim=1), ubound(this%pse(proc)%c(:), dim=1)
          if (this%pse(proc)%c(i)%is_new) then
@@ -210,9 +207,9 @@ contains
          endif
       enddo
 
-      call this%mpi_bnd_types                                                          ! require access to whole this%pse(:)%c(:)%se(:,:)
+      call this%mpi_bnd_types ! require access to whole this%pse(:)%c(:)%se(:,:)
 
-      call this%update_req ! Perhaps this%mpi_bnd_types added some new entries
+      call this%update_req    ! Perhaps this%mpi_bnd_types added some new entries
       call this%update_tot_se
       call this%print_segments
 
@@ -232,6 +229,10 @@ contains
 
       type(cg_list_element), pointer   :: cgl
       integer                          :: i, occured
+
+      do i = lbound(this%pse(proc)%c(:), dim=1), ubound(this%pse(proc)%c(:), dim=1)
+         this%pse(proc)%c(i)%is_new = .true.
+      enddo
 
       cgl => this%first
       do while (associated(cgl))
@@ -255,7 +256,23 @@ contains
 
    end subroutine mark_new
 
-!> \brief Get all decomposed patches and compute which pieces go to which process
+!>
+!! \brief Get all decomposed patches and compute which pieces go to which process
+!!
+!! \details This routine starts with two lists:
+!! * A list of blocks that survived derefinement attempts
+!! * A list of blocks due to requested refinement
+!! It has to decide if and how to do migration of grid pieces and to communicate this update global database of grid pieces.
+!!
+!! There are several strategies than can be implemented:
+!! * Local refinements go to local process. It is very simple, but for most simulations will build up load imbalance. Suitable for tests and global refinement.
+!! * Local refinements can be assigned to remote processes, existing blocks stays in place. Should keep good load balance, but the amount of inter-process
+!!   internal boundariem may grow significantly with time. Suitable for minor refinement updates and base level decomposition.
+!! * All blocks (existing and new) have recalculated assignment and can be migrated to other processes. Most advanced. Should be used after reading restart data.
+!!
+!! First startegy will be implemented first to get everything working. Second strategy will be used quite often. Third one do not need to be used on every refinement update.
+!! It can be called when some benchmark of grid disorder exceeds particuklar threshold.
+!<
 
    subroutine distribute(this)
 
@@ -397,8 +414,9 @@ contains
 
       this%tot_se = 0
       do p = FIRST, LAST
-         this%tot_se = this%tot_se + ubound(this%pse(p)%c(:), dim=1)
+         if (allocated(this%pse)) this%tot_se = this%tot_se + ubound(this%pse(p)%c(:), dim=1)
       enddo
+
    end subroutine update_tot_se
 
 !>
@@ -406,7 +424,10 @@ contains
 !!
 !! \details this type can be a member of grid container type if we pass this%pse(:)%c(:) as an argument.
 !! It would simplify dependencies and this%init_all_new_cg, but it could be quite a big object.
+!! Assume that cuboids don't collide (no overlapping grid pieces on same refinement level are allowed)
 !! \todo Put this%pse into a separate type and pass a pointer to it or even a pointer to pre-filtered segment list
+!!
+!! \todo Do not provide segments for each possible number of guardcells. Provide 1 layer, 1 layer with corners, all layers and all layers with cofrners instead.
 !<
 
    subroutine mpi_bnd_types(this)
@@ -603,7 +624,7 @@ contains
       endif
 
       if (.not. this%patches(ubound(this%patches(:), dim=1))%decompose_patch(n_d(:), off(:), n_pieces)) then
-         write(msg,'(a,i4)')"[cg_level:add_patch_detailed] Coarse domain decomposition failed at level ",this%level_id
+         write(msg,'(a,i4)')"[cg_level:add_patch_detailed] Decomposition failed at level ",this%level_id
          call die(msg)
       endif
 
