@@ -438,7 +438,7 @@ contains
       do while (associated(cgl))
          do dir = xdim, zdim
             emf = idm(etadir,dir) + 2_INT4
-            if (dom%has_dir(dir)) call bnd_emf(cgl%cg%q(wcu_i)%arr, emf, dir, cgl%cg)
+            if (dom%has_dir(dir)) call bnd_emf(wcu_i, emf, dir, cgl%cg)
          enddo
          cgl => cgl%nxt
       enddo

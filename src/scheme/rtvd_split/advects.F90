@@ -123,7 +123,7 @@ contains
          enddo
 
          do dir = xdim, zdim
-            if (dom%has_dir(dir)) call bnd_emf(cg%wa,emf(dir),dir, cg)
+            if (dom%has_dir(dir)) call bnd_emf(qna%wai,emf(dir),dir, cg)
          enddo
 
          deallocate(vv, vv0)
