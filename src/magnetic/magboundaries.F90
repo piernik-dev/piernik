@@ -41,11 +41,11 @@ contains
 
    subroutine bnd_a(A)
 
-      use cg_leaves,     only: leaves
-      use dataio_pub,    only: die
-      use domain,        only: is_mpi_noncart, is_multicg
-      use grid_cont,     only: grid_container
-      use mpisetup,      only: have_mpi
+      use cg_leaves,  only: leaves
+      use dataio_pub, only: die
+      use domain,     only: is_mpi_noncart, is_multicg
+      use grid_cont,  only: grid_container
+      use mpisetup,   only: have_mpi
 
       implicit none
 
@@ -71,9 +71,6 @@ contains
       use dataio_pub,    only: msg, warn, die
       use grid_cont,     only: grid_container
       use mpisetup,      only: master
-#ifdef SHEAR
-      use constants,     only: one
-#endif /* SHEAR */
 
       implicit none
 
@@ -81,9 +78,6 @@ contains
       type(grid_container), pointer, intent(inout) :: cg
 
       integer(kind=4)                              :: side
-#ifdef SHEAR
-      real, allocatable                            :: send_right(:,:,:,:),recv_right(:,:,:,:)
-#endif /* SHEAR */
       logical, save                                :: frun = .true.
       logical, save,   dimension(ndims,LO:HI)      :: bnd_not_provided = .false.
       integer(kind=4), dimension(ndims,LO:HI)      :: l, r
@@ -276,8 +270,8 @@ contains
 
    subroutine all_mag_boundaries
 
-      use cg_list,          only: cg_list_element
       use cg_leaves,        only: leaves
+      use cg_list,          only: cg_list_element
       use cg_list_global,   only: all_cg
       use constants,        only: xdim, zdim
       use domain,           only: dom
