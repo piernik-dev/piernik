@@ -100,7 +100,7 @@ define ECHO_CC
 endef
 endif
 
-all: env.dat $(PROG)
+all: env.dat print_setup $(PROG)
 
 $(PROG): $(OBJS)
 ifeq ("$(SILENT)","1")
@@ -119,6 +119,9 @@ endif
 \t\t$(ECHO);\\
 \tfi;\\
 \t$(RM) $$AO1 $$AO2
+
+print_setup:
+\t$(shell tail -n 1 .setup.call)
 
 env.dat: piernik.def *.h $(SRCS_V)
 '''
