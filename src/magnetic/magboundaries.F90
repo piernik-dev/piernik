@@ -149,7 +149,7 @@ contains
       logical                                      :: zndiff
       integer(kind=4), dimension(ndims,LO:HI)      :: l, r
       integer(kind=4), dimension(LO:HI)            :: sbase, edge, nbcells, sidebase
-      integer(kind=4)                              :: ssign, side, ib
+      integer(kind=4)                              :: ssign, side, ib, off
 
       if (frun) then
          bnd_not_provided(:, :)         = (cg%bnd(:,:) == BND_PER)       .or. (cg%bnd(:,         :) == BND_MPI)
@@ -168,7 +168,7 @@ contains
          call compute_bnd_indxs(emfdir, cg%n_b(dir),edge,nbcells,sidebase,bndsign,zndiff)
       endif
 
-      l = cg%lhn ; r = l
+      l = cg%lhn ; r = l ; off = cg%lhn(dir,LO) - I_ONE
 
       do side = LO, HI
          select case (cg%bnd(dir, side))
@@ -189,25 +189,25 @@ contains
             case (BND_REF)
                sbase(:)  = [nbcells(LO)+I_ONE, edge(HI)] ; ssign = int(2*side-3, kind=4)
                if (zndiff) then
-                  l(dir,:) = edge(side) ; p3 => cg%q(ivar)%span(l) ; p3 = 0.0
+                  l(dir,:) = edge(side) + off ; p3 => cg%q(ivar)%span(l) ; p3 = 0.0
                endif
                do ib=1,nbcells(side)
-                  l(dir,:) = sbase(side)+ssign*ib    ; p3  => cg%q(ivar)%span(l)
-                  r(dir,:) = sidebase(side)-ssign*ib ; p3a => cg%q(ivar)%span(r)
+                  l(dir,:) = sbase(side)+ssign*ib    + off ; p3  => cg%q(ivar)%span(l)
+                  r(dir,:) = sidebase(side)-ssign*ib + off ; p3a => cg%q(ivar)%span(r)
                   p3 = bndsign * p3a
                enddo
             case (BND_OUT, BND_OUTD, BND_OUTH, BND_OUTHD)
-               sbase(:)  = [I_ZERO, edge(HI)]
+               sbase(:)  = [I_ZERO, edge(HI)] + off
 #ifdef ZERO_BND_EMF
                l(dir,LO) = sbase(side)+I_ONE ; l(dir,HI) = sbase(side)+nbcells(side)
                p3 => cg%q(ivar)%span(l) ; p3 = 0.0
 #else /* !ZERO_BND_EMF */
-               l(dir,:) = 1 ; allocate(dvar(l(xdim,HI) ,l(ydim,HI), l(zdim,HI)))
+               l(dir,:) = 1 ; allocate(dvar(l(xdim,LO):l(xdim,HI) ,l(ydim,LO):l(ydim,HI), l(zdim,LO):l(zdim,HI)))
                edge(side) = edge(side) + HI - side ; nbcells(side) = nbcells(side) + HI - side
 !               l(dir,:) = sidebase(side)+HI-side ; r(dir,:) = l(dir,:)-1 original
-               l(dir,:) = edge(side)+HI-side ; r(dir,:) = l(dir,:) - I_ONE
+               l(dir,:) = edge(side)+HI-side + off ; r(dir,:) = l(dir,:) - I_ONE
                dvar(:,:,:) = cg%q(ivar)%span(l) - cg%q(ivar)%span(r)
-               r(dir,:) = edge(side) ; p3a => cg%q(ivar)%span(r)
+               r(dir,:) = edge(side) + off ; p3a => cg%q(ivar)%span(r)
                do ib=1,nbcells(side)
                   l(dir,:) = sbase(side) + ib ; p3 => cg%q(ivar)%span(l)
                   p3 = p3a + real(ib+sbase(side)-edge(side))*dvar
