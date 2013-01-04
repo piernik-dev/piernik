@@ -210,7 +210,7 @@ contains
                r(dir,:) = edge(side) + off ; p3a => cg%q(ivar)%span(r)
                do ib=1,nbcells(side)
                   l(dir,:) = sbase(side) + ib ; p3 => cg%q(ivar)%span(l)
-                  p3 = p3a + real(ib+sbase(side)-edge(side))*dvar
+                  p3 = p3a + real(ib+sbase(side)-off-edge(side))*dvar
                enddo
                deallocate(dvar)
 #endif /* ZERO_BND_EMF */
