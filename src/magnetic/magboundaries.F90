@@ -126,7 +126,7 @@ contains
 
    subroutine bnd_emf(ivar, emfdir, dir, cg)
 
-      use constants,  only: ndims, xdim, ydim, zdim, LO, HI, I_ZERO, I_ONE, &
+      use constants,  only: ndims, xdim, ydim, zdim, LO, HI, I_ONE, &
                             BND_MPI, BND_FC, BND_MPI_FC, BND_PER, BND_REF, BND_OUT, BND_OUTD, BND_OUTH, BND_OUTHD, BND_COR, BND_SHE
       use dataio_pub, only: msg, warn, die
       use grid_cont,  only: grid_container
@@ -166,9 +166,9 @@ contains
       if (any(cg%bnd(dir,LO) == [BND_REF, BND_OUT, BND_OUTD, BND_OUTH, BND_OUTHD]) .or. &
        &  any(cg%bnd(dir,HI) == [BND_REF, BND_OUT, BND_OUTD, BND_OUTH, BND_OUTHD])) then
          call compute_bnd_indxs(emfdir, cg%n_b(dir),edge,nbcells,sidebase,bndsign,zndiff)
+         l = cg%lhn ; r = l ; off = cg%lhn(dir,LO) - I_ONE
+         edge = edge + off  ; sidebase = sidebase + off
       endif
-
-      l = cg%lhn ; r = l ; off = cg%lhn(dir,LO) - I_ONE
 
       do side = LO, HI
          select case (cg%bnd(dir, side))
@@ -187,17 +187,17 @@ contains
                   if (master) call warn(msg)
                endif
             case (BND_REF)
-               sbase(:)  = [nbcells(LO)+I_ONE, edge(HI)] ; ssign = int(2*side-3, kind=4)
+               sbase(:)  = [nbcells(LO)+I_ONE+off, edge(HI)] ; ssign = int(2*side-3, kind=4)
                if (zndiff) then
-                  l(dir,:) = edge(side) + off ; p3 => cg%q(ivar)%span(l) ; p3 = 0.0
+                  l(dir,:) = edge(side) ; p3 => cg%q(ivar)%span(l) ; p3 = 0.0
                endif
                do ib=1,nbcells(side)
-                  l(dir,:) = sbase(side)+ssign*ib    + off ; p3  => cg%q(ivar)%span(l)
-                  r(dir,:) = sidebase(side)-ssign*ib + off ; p3a => cg%q(ivar)%span(r)
+                  l(dir,:) = sbase(side)+ssign*ib    ; p3  => cg%q(ivar)%span(l)
+                  r(dir,:) = sidebase(side)-ssign*ib ; p3a => cg%q(ivar)%span(r)
                   p3 = bndsign * p3a
                enddo
             case (BND_OUT, BND_OUTD, BND_OUTH, BND_OUTHD)
-               sbase(:)  = [I_ZERO, edge(HI)] + off
+               sbase(:)  = [off, edge(HI)]
 #ifdef ZERO_BND_EMF
                l(dir,LO) = sbase(side)+I_ONE ; l(dir,HI) = sbase(side)+nbcells(side)
                p3 => cg%q(ivar)%span(l) ; p3 = 0.0
@@ -205,12 +205,12 @@ contains
                l(dir,:) = 1 ; allocate(dvar(l(xdim,LO):l(xdim,HI) ,l(ydim,LO):l(ydim,HI), l(zdim,LO):l(zdim,HI)))
                edge(side) = edge(side) + HI - side ; nbcells(side) = nbcells(side) + HI - side
 !               l(dir,:) = sidebase(side)+HI-side ; r(dir,:) = l(dir,:)-1 original
-               l(dir,:) = edge(side)+HI-side + off ; r(dir,:) = l(dir,:) - I_ONE
+               l(dir,:) = edge(side)+HI-side ; r(dir,:) = l(dir,:) - I_ONE
                dvar(:,:,:) = cg%q(ivar)%span(l) - cg%q(ivar)%span(r)
-               r(dir,:) = edge(side) + off ; p3a => cg%q(ivar)%span(r)
+               r(dir,:) = edge(side) ; p3a => cg%q(ivar)%span(r)
                do ib=1,nbcells(side)
                   l(dir,:) = sbase(side) + ib ; p3 => cg%q(ivar)%span(l)
-                  p3 = p3a + real(ib+sbase(side)-off-edge(side))*dvar
+                  p3 = p3a + real(ib+sbase(side)-edge(side))*dvar
                enddo
                deallocate(dvar)
 #endif /* ZERO_BND_EMF */
