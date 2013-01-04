@@ -210,12 +210,14 @@ contains
 
    subroutine cancel_hdf_var(var)
 
+      use constants, only: I_ONE
+
       implicit none
 
       character(len=dsetnamelen), intent(in) :: var
       integer(kind=4)                        :: i
 
-      do i = 1, nhdf_vars
+      do i = I_ONE, int(nhdf_vars, kind=4) !> \todo: introduce integer(kind=4), parameter :: first_hdf_var = 1 in constants.h and use it everywhere instead
          if (hdf_vars(i) == var) hdf_vars_avail(i) = .false.
       enddo
 
