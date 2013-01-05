@@ -163,10 +163,11 @@ contains
       bndsign = huge(1.0); edge=huge(I_ONE); nbcells=huge(I_ONE); zndiff=.false.; sidebase=huge(I_ONE)
       ! the code below should not use these values and the compiler should not complain on possible use of uninitialized variables.
 
-      if (any(cg%bnd(dir,LO) == [BND_REF, BND_OUT, BND_OUTD, BND_OUTH, BND_OUTHD]) .or. &
-       &  any(cg%bnd(dir,HI) == [BND_REF, BND_OUT, BND_OUTD, BND_OUTH, BND_OUTHD])) then
+      off = cg%lhn(dir,LO) - I_ONE
+      if ( any(cg%bnd(dir,LO) == [BND_REF, BND_OUT, BND_OUTD, BND_OUTH, BND_OUTHD]) .or. &
+           any(cg%bnd(dir,HI) == [BND_REF, BND_OUT, BND_OUTD, BND_OUTH, BND_OUTHD])) then
          call compute_bnd_indxs(emfdir, cg%n_b(dir),edge,nbcells,sidebase,bndsign,zndiff)
-         l = cg%lhn ; r = l ; off = cg%lhn(dir,LO) - I_ONE
+         l = cg%lhn ; r = l
          edge = edge + off  ; sidebase = sidebase + off
       endif
 
