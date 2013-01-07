@@ -181,7 +181,7 @@ contains
             case (BND_MPI, BND_PER)
                ! Do nothing
             case (BND_USER)
-               call user_fluidbnd(dir, side, cg, qn=ivar)
+               call user_fluidbnd(dir, side, cg, qn=ivar, emfdir=emfdir)
             case (BND_FC, BND_MPI_FC)
                call die("[magboundaries:bnd_emf] fine-coarse interfaces not implemented yet")
             case (BND_COR)

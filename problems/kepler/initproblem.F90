@@ -806,7 +806,7 @@ contains
 
    end subroutine my_grav_pot_3d
 !-----------------------------------------------------------------------------
-   subroutine my_fbnd(dir, side, cg, wn, qn)
+   subroutine my_fbnd(dir, side, cg, wn, qn, emfdir)
 
       use constants,        only: xdim, LO
       use grid_cont,        only: grid_container
@@ -816,7 +816,7 @@ contains
 
       integer(kind=4),               intent(in)    :: dir, side
       type(grid_container), pointer, intent(inout) :: cg
-      integer(kind=4),     optional, intent(in)    :: wn, qn
+      integer(kind=4),     optional, intent(in)    :: wn, qn, emfdir
 
       if (.not.present(wn)) return
 
@@ -829,7 +829,7 @@ contains
       endif
 
       return
-      if (present(qn)) return
+      if (present(qn) .or. present(emfdir)) return
 
    end subroutine my_fbnd
 !-----------------------------------------------------------------------------
