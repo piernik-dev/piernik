@@ -106,6 +106,7 @@ contains
       use fluidboundaries_funcs, only: user_fluidbnd
       use fluidindex,            only: iarr_all_dn
       use grid_cont,             only: grid_container
+      use named_array_list,      only: wna
 #ifdef COSM_RAYS
       use initcosmicrays,        only: smallecr
       use fluidindex,            only: iarr_all_crs
@@ -143,7 +144,7 @@ contains
          case (BND_FC, BND_MPI_FC)
             call die("[fluidboundaries:bnd_u] fine-coarse interfaces not implemented yet")
          case (BND_USER)
-            call user_fluidbnd(dir,side,cg)
+            call user_fluidbnd(dir, side, cg, wn=wna%fi)
          case (BND_PER)
          case (BND_REF)
             ssign = 2_INT4*side-3_INT4

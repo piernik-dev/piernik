@@ -751,17 +751,21 @@ contains
 
    end subroutine my_grav_pot_3d
 !-----------------------------------------------------------------------------
-   subroutine my_fbnd(dir,side,cg)
+   subroutine my_fbnd(dir, side, cg, wn, qn)
 
-      use constants,  only: xdim, LO
-      use grid_cont,  only: grid_container
+      use constants,        only: xdim, LO
+      use grid_cont,        only: grid_container
+      use named_array_list, only: wna
 
       implicit none
 
       integer(kind=4),               intent(in)    :: dir, side
       type(grid_container), pointer, intent(inout) :: cg
+      integer(kind=4),     optional, intent(in)    :: wn, qn
 
-      if (dir == xdim) then
+      if (.not.present(wn)) return
+
+      if ((dir == xdim) .and. (wn == wna%fi)) then
          if (side == LO) then
             call my_bnd_xl(cg)
          else
@@ -769,13 +773,16 @@ contains
          endif
       endif
 
+      return
+      if (present(qn)) return
+
    end subroutine my_fbnd
 !-----------------------------------------------------------------------------
    subroutine my_bnd_xl(cg)
 
       use constants,  only: xdim, ydim, zdim, LO, HI
-      use grid_cont,  only: grid_container
       use fluidindex, only: iarr_all_dn, iarr_all_mx, iarr_all_my, iarr_all_mz, flind
+      use grid_cont,  only: grid_container
 #ifndef ISO
       use fluidindex, only: iarr_all_en
 #endif /* ISO */
@@ -864,8 +871,8 @@ contains
       use constants,   only: pi
       implicit none
       real, intent(in), dimension(:) :: x
-      real, intent(in) :: x0, a
-      real, dimension(size(x)) :: y
+      real, intent(in)               :: x0, a
+      real, dimension(size(x))       :: y
 
       y = atan(-(x-x0)*a)/pi + 0.5
 
@@ -873,7 +880,7 @@ contains
 !-----------------------------------------------------------------------------
    integer function get_ncells(x,k)
       implicit none
-      real, intent(in) :: k
+      real, intent(in)               :: k
       real, intent(in), dimension(:) :: x
       real, dimension(size(x))       :: y
       y = tanh(x*k)
@@ -882,16 +889,16 @@ contains
 !-----------------------------------------------------------------------------
    subroutine prob_vars_hdf5(var,tab, ierrh, cg)
 
-      use grid_cont,  only: grid_container
-      use interactions, only: epstein_factor
       use fluidindex,   only: flind
+      use grid_cont,    only: grid_container
+      use interactions, only: epstein_factor
 
       implicit none
 
-      character(len=*), intent(in)                    :: var
-      real(kind=4), dimension(:,:,:), intent(inout)   :: tab
-      integer, intent(inout)                          :: ierrh
-      type(grid_container), pointer, intent(in)       :: cg
+      character(len=*),               intent(in)    :: var
+      real(kind=4), dimension(:,:,:), intent(inout) :: tab
+      integer,                        intent(inout) :: ierrh
+      type(grid_container), pointer,  intent(in)    :: cg
 
       ierrh = 0
       select case (trim(var))
@@ -914,17 +921,17 @@ contains
 
       implicit none
 
-      character(len=*), intent(in)                   :: densfile
-      real, dimension(:), intent(out)                :: gdens
+      character(len=*),   intent(in)            :: densfile
+      real, dimension(:), intent(out)           :: gdens
 
-      type(fgsl_interp_accel) :: acc
-      type(fgsl_interp) :: a_interp
-      integer(fgsl_int) :: fstatus
+      type(fgsl_interp_accel)                   :: acc
+      type(fgsl_interp)                         :: a_interp
+      integer(fgsl_int)                         :: fstatus
       character(kind=fgsl_char,len=fgsl_strmax) :: fname
-      real, dimension(:), allocatable :: x,y
-      real                            :: xi
-      integer(fgsl_size_t)            :: n, nmax
-      integer(kind=4) :: i, nxd
+      real, dimension(:), allocatable           :: x,y
+      real                                      :: xi
+      integer(fgsl_size_t)                      :: n, nmax
+      integer(kind=4)                           :: i, nxd
 
       write(msg,*) "[initproblem:read_dens_profile] Reading ", trim(densfile)
       open(1,file=densfile, status="old", form='unformatted')
@@ -982,12 +989,11 @@ contains
    end subroutine my_attrs_wr
 !-----------------------------------------------------------------------------
    subroutine my_attrs_rd(file_id)
-      use hdf5, only: HID_T, SIZE_T
-      use h5lt, only: h5ltget_attribute_double_f, h5ltget_attribute_int_f
       use constants, only: I_ONE
+      use hdf5,      only: HID_T
+      use h5lt,      only: h5ltget_attribute_double_f, h5ltget_attribute_int_f
       implicit none
       integer(HID_T), intent(in) :: file_id
-      integer(SIZE_T), parameter :: bufsize = 1
       integer(kind=4)            :: error
       real, dimension(I_ONE)     :: rbuff
       integer, dimension(I_ONE)  :: ibuff
@@ -1005,7 +1011,7 @@ contains
    elemental function signum(a) result (b)
       implicit none
       real, intent(in) :: a
-      real :: b
+      real             :: b
       if (a > 0.0) then
          b = 1.0
       else

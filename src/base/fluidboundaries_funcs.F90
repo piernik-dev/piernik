@@ -40,7 +40,7 @@ module fluidboundaries_funcs
 
    interface
 
-      subroutine user_bnd(dir,side,cg)
+      subroutine user_bnd(dir, side, cg, wn, qn)
 
          use grid_cont, only: grid_container
 
@@ -48,6 +48,7 @@ module fluidboundaries_funcs
 
          integer(kind=4),               intent(in)    :: dir, side
          type(grid_container), pointer, intent(inout) :: cg
+         integer(kind=4),     optional, intent(in)    :: wn, qn
 
       end subroutine user_bnd
 
@@ -58,7 +59,7 @@ module fluidboundaries_funcs
 contains
 
 !--------------------------------------------------------------------------------------------------
-   subroutine default_bnd(dir,side,cg)
+   subroutine default_bnd(dir, side, cg, wn, qn)
 
       use grid_cont,  only: grid_container
       use dataio_pub, only: die
@@ -67,10 +68,12 @@ contains
 
       integer(kind=4),               intent(in)    :: dir, side
       type(grid_container), pointer, intent(inout) :: cg
+      integer(kind=4),     optional, intent(in)    :: wn, qn
 
       call die("User boundaries are not defined")
 
       if (.true. .or. cg%grid_id*dir*side >=0) return ! suppress compiler warnings
+      if (present(wn) .or. present(qn)) return ! suppress compiler warning
 
    end subroutine default_bnd
 !--------------------------------------------------------------------------------------------------

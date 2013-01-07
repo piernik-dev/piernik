@@ -66,11 +66,13 @@ contains
 
    subroutine bnd_b(dir, cg)
 
-      use constants,     only: ndims, xdim, ydim, zdim, LO, HI, I_TWO, I_THREE, &
-           &                   BND_MPI, BND_FC, BND_MPI_FC, BND_PER, BND_REF, BND_OUT, BND_OUTD, BND_OUTH, BND_OUTHD, BND_COR, BND_SHE
-      use dataio_pub,    only: msg, warn, die
-      use grid_cont,     only: grid_container
-      use mpisetup,      only: master
+      use constants,             only: ndims, xdim, ydim, zdim, LO, HI, I_TWO, I_THREE, &
+           &                           BND_MPI, BND_FC, BND_MPI_FC, BND_PER, BND_REF, BND_OUT, BND_OUTD, BND_OUTH, BND_OUTHD, BND_COR, BND_SHE, BND_USER
+      use dataio_pub,            only: msg, warn, die
+      use fluidboundaries_funcs, only: user_fluidbnd
+      use grid_cont,             only: grid_container
+      use mpisetup,              only: master
+      use named_array_list,      only: wna
 
       implicit none
 
@@ -97,6 +99,8 @@ contains
          select case (cg%bnd(dir, side))
             case (BND_MPI, BND_REF)
                ! Do nothing
+            case (BND_USER)
+               call user_fluidbnd(dir, side, cg, wn=wna%bi)
             case (BND_FC, BND_MPI_FC)
                call die("[magboundaries:bnd_b] fine-coarse interfaces not implemented yet")
             case (BND_COR)
@@ -126,11 +130,12 @@ contains
 
    subroutine bnd_emf(ivar, emfdir, dir, cg)
 
-      use constants,  only: ndims, xdim, ydim, zdim, LO, HI, I_ONE, &
-                            BND_MPI, BND_FC, BND_MPI_FC, BND_PER, BND_REF, BND_OUT, BND_OUTD, BND_OUTH, BND_OUTHD, BND_COR, BND_SHE
-      use dataio_pub, only: msg, warn, die
-      use grid_cont,  only: grid_container
-      use mpisetup,   only: master
+      use constants,             only: ndims, xdim, ydim, zdim, LO, HI, I_ONE, &
+                                       BND_MPI, BND_FC, BND_MPI_FC, BND_PER, BND_REF, BND_OUT, BND_OUTD, BND_OUTH, BND_OUTHD, BND_COR, BND_SHE, BND_USER
+      use dataio_pub,            only: msg, warn, die
+      use fluidboundaries_funcs, only: user_fluidbnd
+      use grid_cont,             only: grid_container
+      use mpisetup,              only: master
 
       implicit none
 
@@ -175,6 +180,8 @@ contains
          select case (cg%bnd(dir, side))
             case (BND_MPI, BND_PER)
                ! Do nothing
+            case (BND_USER)
+               call user_fluidbnd(dir, side, cg, qn=ivar)
             case (BND_FC, BND_MPI_FC)
                call die("[magboundaries:bnd_emf] fine-coarse interfaces not implemented yet")
             case (BND_COR)
