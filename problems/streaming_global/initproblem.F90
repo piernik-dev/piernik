@@ -213,21 +213,21 @@ contains
 !-----------------------------------------------------------------------------
    subroutine add_sine
 
-      use cg_leaves,   only: leaves
-      use cg_list,     only: cg_list_element
-      use constants,   only: dpi, xdim, zdim
-      use dataio_pub,  only: printinfo, warn
-      use domain,      only: dom
-      use fluidindex,  only: flind
-      use grid_cont,   only: grid_container
-      use mpisetup,    only: master
+      use cg_leaves,  only: leaves
+      use cg_list,    only: cg_list_element
+      use constants,  only: dpi, xdim, zdim
+      use dataio_pub, only: printinfo, warn
+      use domain,     only: dom
+      use fluidindex, only: flind
+      use grid_cont,  only: grid_container
+      use mpisetup,   only: master
 
       implicit none
 
-      real :: kx, kz
-      integer :: i, k
+      real                           :: kx, kz
+      integer                        :: i, k
       type(cg_list_element), pointer :: cgl
-      type(grid_container), pointer :: cg
+      type(grid_container),  pointer :: cg
 
       if (amp_noise <= 0.0 .or. noise_added == ADDED) then
          if (master) call printinfo("[initproblem:add_sine]: Noise has been added in previous run. Bailing out!")
@@ -270,13 +270,13 @@ contains
 !-----------------------------------------------------------------------------
    subroutine add_random_noise
 
-      use cg_leaves,   only: leaves
-      use cg_list,     only: cg_list_element
-      use constants,   only: xdim, ydim, zdim, LO, HI
-      use dataio_pub,  only: printinfo
-      use grid_cont,   only: grid_container
-      use fluidindex,  only: flind
-      use mpisetup,    only: proc, master
+      use cg_leaves,  only: leaves
+      use cg_list,    only: cg_list_element
+      use constants,  only: xdim, ydim, zdim, LO, HI
+      use dataio_pub, only: printinfo
+      use grid_cont,  only: grid_container
+      use fluidindex, only: flind
+      use mpisetup,   only: proc, master
 
       implicit none
 
@@ -530,8 +530,8 @@ contains
 
       type(cg_list_element), pointer :: cgl
 #ifdef TRACER
-      type(grid_container), pointer :: cg
-      integer :: i, j, k
+      type(grid_container),  pointer :: cg
+      integer                        :: i, j, k
 #endif /* TRACER */
 
       call my_grav_pot_3d   ! reset gp, to get right values on the boundaries
@@ -699,7 +699,7 @@ contains
 !           cg%u(flind%dst%imy,:,:,:) = cg%u(flind%neu%imy,:,:,:)/cg%u(flind%neu%idn,:,:,:) * cg%u(flind%dst%idn,:,:,:)
 !        endwhere
 
-         if (allocated(adjust)) deallocate(adjust)
+         if (allocated(adjust))  deallocate(adjust)
          if (allocated(vx_sign)) deallocate(vx_sign)
          if (allocated(vz_sign)) deallocate(vz_sign)
 
@@ -715,12 +715,12 @@ contains
 !-----------------------------------------------------------------------------
    subroutine my_grav_pot_3d
 
-      use cg_leaves,   only: leaves
-      use cg_list,     only: cg_list_element
-      use constants,   only: xdim, zdim, LO, HI
-      use gravity,     only: ptmass, sum_potential
-      use grid_cont,   only: grid_container
-      use units,       only: newtong
+      use cg_leaves, only: leaves
+      use cg_list,   only: cg_list_element
+      use constants, only: xdim, zdim, LO, HI
+      use gravity,   only: ptmass, sum_potential
+      use grid_cont, only: grid_container
+      use units,     only: newtong
 
       implicit none
 
@@ -842,11 +842,11 @@ contains
       integer(kind=4), intent(in) :: n      !< length of the profile array
       real,            intent(in) :: vmin   !< minimal value of the profile
       real,            intent(in) :: vmax   !< maximum value of the profile
-      real, dimension(n)  :: y, x
+      real, dimension(n)          :: y, x
 
-      real, parameter     :: kstep = 1.0 !< iteration step for tanh fit
-      real                :: dv, k
-      integer             :: nn, i
+      real, parameter             :: kstep = 1.0 !< iteration step for tanh fit
+      real                        :: dv, k
+      integer                     :: nn, i
 
       x = [(real(i), i=0,n-1)] / real(n) * 10.0 - 5.0
 
@@ -868,7 +868,7 @@ contains
    end function get_lcutoff
 
    function get_lcutoff2(x, x0, a) result (y)
-      use constants,   only: pi
+      use constants, only: pi
       implicit none
       real, intent(in), dimension(:) :: x
       real, intent(in)               :: x0, a

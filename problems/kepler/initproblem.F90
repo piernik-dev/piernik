@@ -806,23 +806,30 @@ contains
 
    end subroutine my_grav_pot_3d
 !-----------------------------------------------------------------------------
-   subroutine my_fbnd(dir,side,cg)
+   subroutine my_fbnd(dir, side, cg, wn, qn)
 
-      use constants, only: xdim, LO
-      use grid_cont, only: grid_container
+      use constants,        only: xdim, LO
+      use grid_cont,        only: grid_container
+      use named_array_list, only: wna
 
       implicit none
 
       integer(kind=4),               intent(in)    :: dir, side
       type(grid_container), pointer, intent(inout) :: cg
+      integer(kind=4),     optional, intent(in)    :: wn, qn
 
-      if (dir == xdim) then
+      if (.not.present(wn)) return
+
+      if ((dir == xdim) .and. (wn == wna%fi)) then
          if (side == LO) then
             call my_bnd_xl(cg)
          else
             call my_bnd_xr(cg)
          endif
       endif
+
+      return
+      if (present(qn)) return
 
    end subroutine my_fbnd
 !-----------------------------------------------------------------------------
@@ -937,7 +944,7 @@ contains
 !-----------------------------------------------------------------------------
    integer function get_ncells(x,k)
       implicit none
-      real, intent(in) :: k
+      real, intent(in)               :: k
       real, intent(in), dimension(:) :: x
       real, dimension(size(x))       :: y
       y = tanh(x*k)
