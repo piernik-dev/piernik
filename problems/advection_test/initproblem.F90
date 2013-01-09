@@ -75,7 +75,7 @@ contains
       use dataio_pub, only: warn
       use domain,     only: dom
       use fluidindex, only: flind
-      use global,     only: smalld, smallei, t
+      use global,     only: smalld, smallei
       use mpisetup,   only: rbuff, ibuff, master, slave, proc, have_mpi, LAST, piernik_MPI_Bcast
 
       implicit none
@@ -143,9 +143,6 @@ contains
       ! Create the initial density arrays (it is called before reading restart file, so there is no need to associate user_reg_var_restart)
       call register_user_var
 
-      ! Initialize the initial density arrays
-      call analytic_solution(t)
-
    end subroutine read_problem_par
 
 !-----------------------------------------------------------------------------
@@ -156,7 +153,7 @@ contains
       use cg_leaves,        only: leaves
       use constants,        only: xdim, ydim, zdim
       use fluidindex,       only: flind
-      use global,           only: smallei
+      use global,           only: smallei, t
       use grid_cont,        only: grid_container
       use named_array_list, only: qna
 
@@ -164,6 +161,8 @@ contains
 
       type(cg_list_element), pointer :: cgl
       type(grid_container), pointer :: cg
+
+      call analytic_solution(t)
 
       cgl => leaves%first
       do while (associated(cgl))

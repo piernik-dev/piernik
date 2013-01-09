@@ -78,7 +78,7 @@ contains
       ! Refinement lists will be added by iterating the initproblem::init_prob routine, in restart_hdf5::read_restart_hdf5 or in not_yet_implemented::refinement_update
       ! Underground levels will be added in multigrid::init_multigrid
 
-      call leaves%update
+      call leaves%update(" (base level) ")
 
 #ifdef VERBOSE
       call printinfo("[grid:init_grid]: cg finished. \o/")

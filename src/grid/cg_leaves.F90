@@ -83,7 +83,7 @@ contains
 
 !> \brief Select grids that should be included on leaves list
 
-   subroutine update(this)
+   subroutine update(this, str)
 
       use cg_level_connected, only: base_lev, cg_level_connected_T
       use cg_list,            only: cg_list_element
@@ -94,7 +94,8 @@ contains
 
       implicit none
 
-      class(cg_leaves_T), intent(inout)   :: this          !< object invoking type-bound procedure
+      class(cg_leaves_T),         intent(inout) :: this          !< object invoking type-bound procedure
+      character(len=*), optional, intent(in)    :: str           !< optional string identifier to show the progress of updating refinement
 
       type(cg_level_connected_T), pointer :: curl
       type(cg_list_element),      pointer :: cgl
@@ -106,6 +107,7 @@ contains
       call all_lists%register(this, "leaves")
 
       msg = "[cg_leaves:update] Leaves on levels: "
+      if (present(str)) msg(len_trim(msg)+1:) = str
       curl => base_lev
       this%coarsest_leaves => curl !> \todo Start from first not fully covered level
       do while (associated(curl))
