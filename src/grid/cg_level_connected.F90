@@ -337,15 +337,15 @@ contains
 
       class(cg_level_connected_T), target, intent(inout) :: this !< object invoking type-bound procedure
 
-      integer :: i, iw, iwa
+      integer(kind=4) :: i, iw, iwa
 
-      do i = lbound(qna%lst(:), dim=1), ubound(qna%lst(:), dim=1)
+      do i = lbound(qna%lst(:), dim=1, kind=4), ubound(qna%lst(:), dim=1, kind=4)
          if (qna%lst(i)%vital .and. (qna%lst(i)%multigrid .or. this%level_id >= base_level_id)) call this%prolong_q_1var(i)
       enddo
 
       iwa = qna%ind(wa_n)
 
-      do i = lbound(wna%lst(:), dim=1), ubound(wna%lst(:), dim=1)
+      do i = lbound(wna%lst(:), dim=1, kind=4), ubound(wna%lst(:), dim=1, kind=4)
          if (wna%lst(i)%vital .and. (wna%lst(i)%multigrid .or. this%level_id >= base_level_id)) then
             if (wna%lst(i)%multigrid) call warn("[cg_level_connected:prolong] mg set for cg%w ???")
             do iw = 1, wna%lst(i)%dim4
@@ -373,15 +373,15 @@ contains
 
       class(cg_level_connected_T), target, intent(inout) :: this !< object invoking type-bound procedure
 
-      integer :: i, iw, iwa
+      integer(kind=4) :: i, iw, iwa
 
-      do i = lbound(qna%lst(:), dim=1), ubound(qna%lst(:), dim=1)
+      do i = lbound(qna%lst(:), dim=1, kind=4), ubound(qna%lst(:), dim=1, kind=4)
          if (qna%lst(i)%vital .and. (qna%lst(i)%multigrid .or. this%level_id > base_level_id)) call this%restrict_q_1var(i)
       enddo
 
       iwa = qna%ind(wa_n)
 
-      do i = lbound(wna%lst(:), dim=1), ubound(wna%lst(:), dim=1)
+      do i = lbound(wna%lst(:), dim=1, kind=4), ubound(wna%lst(:), dim=1, kind=4)
          if (wna%lst(i)%vital .and. (wna%lst(i)%multigrid .or. this%level_id > base_level_id)) then
             if (wna%lst(i)%multigrid) call warn("[cg_level_connected:restrict] mg set for cg%w ???")
             do iw = 1, wna%lst(i)%dim4
@@ -415,7 +415,7 @@ contains
       implicit none
 
       class(cg_level_connected_T), intent(inout) :: this !< object invoking type-bound procedure
-      integer,                     intent(in)    :: iv   !< variable to be restricted
+      integer(kind=4),             intent(in)    :: iv   !< variable to be restricted
 
       if (.not. associated(this%coarser)) return
       call this%restrict_q_1var(iv)
@@ -430,7 +430,7 @@ contains
       implicit none
 
       class(cg_level_connected_T), intent(inout) :: this !< object invoking type-bound procedure
-      integer,                     intent(in)    :: iv   !< variable to be restricted
+      integer(kind=4),             intent(in)    :: iv   !< variable to be restricted
 
       if (this%level_id <= base_lev%level_id) return
       call this%restrict_q_1var(iv)
@@ -462,7 +462,7 @@ contains
       implicit none
 
       class(cg_level_connected_T), target, intent(inout) :: this !< object invoking type-bound procedure
-      integer,                             intent(in)    :: iv   !< variable to be restricted
+      integer(kind=4),                     intent(in)    :: iv   !< variable to be restricted
       integer(kind=4), optional,           intent(in)    :: pos  !< position of the variable within cell
 
       type(cg_level_connected_T), pointer                :: coarse
@@ -638,7 +638,7 @@ contains
       implicit none
 
       class(cg_level_connected_T), target, intent(inout) :: this !< object invoking type-bound procedure
-      integer,                             intent(in)    :: iv   !< variable to be prolonged
+      integer(kind=4),                     intent(in)    :: iv   !< variable to be prolonged
       integer(kind=4), optional,           intent(in)    :: pos  !< position of the variable within cell
 
       type(cg_level_connected_T), pointer                :: fine
@@ -896,7 +896,7 @@ contains
       implicit none
 
       class(cg_level_connected_T), intent(inout) :: this      !< the list on which to perform the boundary exchange
-      integer,                     intent(in)    :: ind       !< Negative value: index of cg%q(:) 3d array
+      integer(kind=4),             intent(in)    :: ind       !< Negative value: index of cg%q(:) 3d array
       integer(kind=4), optional,   intent(in)    :: area_type !< defines how do we treat boundaries
       integer(kind=4), optional,   intent(in)    :: bnd_type  !< Override default boundary type on external boundaries (useful in multigrid solver).
                                                               !< Note that BND_PER, BND_MPI, BND_SHE and BND_COR aren't external and cannot be overridden

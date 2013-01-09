@@ -51,7 +51,7 @@ module multigridvars
    character(len=dsetnamelen), parameter :: solution_n   = "solution"   !< iterated solution (potential) fields
    character(len=dsetnamelen), parameter :: defect_n     = "defect"     !< defect field (effectively the density not accounted in current solution)
    character(len=dsetnamelen), parameter :: correction_n = "correction" !< correction to the potential to be applied at the end of V-cycle
-   integer :: source, solution, defect, correction !< indices to the fields described above
+   integer(kind=4) :: source, solution, defect, correction !< indices to the fields described above
 
    ! namelist parameters
    integer(kind=4)    :: ord_prolong                                  !< Prolongation operator order; allowed values are -4 -2, 0 (default), 2 and 4; -2 is often fast

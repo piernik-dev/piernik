@@ -842,7 +842,7 @@ contains
       integer, parameter :: fmtlen = 32
       character(len=fmtlen)    :: fmt
       character(len=cbuff_len) :: dname
-      integer, dimension(4)    :: mg_fields
+      integer(kind=4), dimension(4)    :: mg_fields
       type(cg_level_connected_T), pointer :: curl
 
       inquire(file = "_dump_every_step_", EXIST=dump_every_step) ! use for debug only
@@ -997,9 +997,9 @@ contains
       implicit none
 
       class(cg_leaves_T), intent(in) :: cg_llst !< pointer to a level for which we approximate the solution
-      integer,            intent(in) :: src     !< index of source in cg%q(:)
-      integer,            intent(in) :: soln    !< index of solution in cg%q(:)
-      integer,            intent(in) :: def     !< index of defect in cg%q(:)
+      integer(kind=4),    intent(in) :: src     !< index of source in cg%q(:)
+      integer(kind=4),    intent(in) :: soln    !< index of solution in cg%q(:)
+      integer(kind=4),    intent(in) :: def     !< index of defect in cg%q(:)
 
       select case (ord_laplacian)
       case (O_I2)
@@ -1029,9 +1029,9 @@ contains
       implicit none
 
       class(cg_leaves_T), intent(in) :: cg_llst !< pointer to a level for which we approximate the solution
-      integer,            intent(in) :: src     !< index of source in cg%q(:)
-      integer,            intent(in) :: soln    !< index of solution in cg%q(:)
-      integer,            intent(in) :: def     !< index of defect in cg%q(:)
+      integer(kind=4),    intent(in) :: src     !< index of source in cg%q(:)
+      integer(kind=4),    intent(in) :: soln    !< index of solution in cg%q(:)
+      integer(kind=4),    intent(in) :: def     !< index of defect in cg%q(:)
 
       integer                         :: i, j, k
       real                            :: L0, Lx, Ly, Lz
@@ -1150,9 +1150,9 @@ contains
       implicit none
 
       class(cg_leaves_T), intent(in) :: cg_llst !< pointer to a level for which we approximate the solution
-      integer,            intent(in) :: src     !< index of source in cg%q(:)
-      integer,            intent(in) :: soln    !< index of solution in cg%q(:)
-      integer,            intent(in) :: def     !< index of defect in cg%q(:)
+      integer(kind=4),    intent(in) :: src     !< index of source in cg%q(:)
+      integer(kind=4),    intent(in) :: soln    !< index of solution in cg%q(:)
+      integer(kind=4),    intent(in) :: def     !< index of defect in cg%q(:)
 
       real, parameter     :: L4_scaling = 1./12. ! with L4_strength = 1. this gives an L4 approximation for finite differences approach
       integer, parameter  :: L2w = 2             ! #layers of boundary cells for L2 operator
@@ -1252,9 +1252,9 @@ contains
       implicit none
 
       class(cg_leaves_T), intent(in) :: cg_llst !< pointer to a level for which we approximate the solution
-      integer,            intent(in) :: src     !< index of source in cg%q(:)
-      integer,            intent(in) :: soln    !< index of solution in cg%q(:)
-      integer,            intent(in) :: def     !< index of defect in cg%q(:)
+      integer(kind=4),    intent(in) :: src     !< index of source in cg%q(:)
+      integer(kind=4),    intent(in) :: soln    !< index of solution in cg%q(:)
+      integer(kind=4),    intent(in) :: def     !< index of defect in cg%q(:)
 
       real                :: c21
       real                :: L0, Lx, Ly, Lz
@@ -1342,8 +1342,8 @@ contains
       implicit none
 
       type(cg_level_connected_T), pointer, intent(in) :: curl !< pointer to a level for which we approximate the solution
-      integer,                      intent(in) :: src  !< index of source in cg%q(:)
-      integer,                      intent(in) :: soln !< index of solution in cg%q(:)
+      integer(kind=4),                     intent(in) :: src  !< index of source in cg%q(:)
+      integer(kind=4),                     intent(in) :: soln !< index of solution in cg%q(:)
 
       call curl%check_dirty(src, "approx_soln src-")
 
@@ -1383,8 +1383,8 @@ contains
       implicit none
 
       type(cg_level_connected_T), pointer, intent(in) :: curl !< pointer to a level for which we approximate the solution
-      integer,                        intent(in) :: src  !< index of source in cg%q(:)
-      integer,                        intent(in) :: soln !< index of solution in cg%q(:)
+      integer(kind=4),                     intent(in) :: src  !< index of source in cg%q(:)
+      integer(kind=4),                     intent(in) :: soln !< index of solution in cg%q(:)
 
       integer, parameter :: RED_BLACK = 2 !< the checkerboard requires two sweeps
 

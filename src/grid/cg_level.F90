@@ -457,9 +457,9 @@ contains
 
       type(grid_container),  pointer                  :: cg      !< grid container that we are currently working on
       type(cg_list_element), pointer                  :: cgl
-      integer                                         :: j, b, id, ix, iy, iz, tag
+      integer                                         :: j, b, id, ix, iy, iz
       integer(kind=8)                                 :: n_lbnd_face_cells
-      integer(kind=4)                                 :: d, hl, lh
+      integer(kind=4)                                 :: d, hl, lh, tag
       integer(kind=8), dimension(xdim:zdim)           :: per
       integer(kind=8), dimension(xdim:zdim, LO:HI)    :: b_layer, poff
       type :: fmap

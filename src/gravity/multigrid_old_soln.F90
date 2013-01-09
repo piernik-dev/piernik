@@ -43,7 +43,7 @@ module multigrid_old_soln
    integer(kind=4), parameter :: nold_max=3                           !< maximum implemented extrapolation order
 
    type :: old_soln                                                   !< container for an old solution with its timestamp
-      integer :: i_hist                                               !< index to the old solution
+      integer(kind=4) :: i_hist                                       !< index to the old solution
       real :: time                                                    !< time of the old solution
    end type old_soln
 

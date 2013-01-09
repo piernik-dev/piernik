@@ -139,7 +139,7 @@ contains
 
       implicit none
 
-      integer,                       intent(in)    :: ivar      !< index in cg%q array
+      integer(kind=4),               intent(in)    :: ivar      !< index in cg%q array
       integer(kind=4),               intent(in)    :: emfdir
       integer(kind=4),               intent(in)    :: dir
       type(grid_container), pointer, intent(inout) :: cg

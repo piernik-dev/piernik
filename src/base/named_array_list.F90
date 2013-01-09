@@ -74,13 +74,13 @@ module named_array_list
 
    !> \brief the most commonly used 3D named array is wa, thus we add a shortcut here
    type, extends(na_var_list) :: na_var_list_q
-      integer :: wai                                   !< auxiliary array : cg%q(qna%wai)
+      integer(kind=4) :: wai                                   !< auxiliary array : cg%q(qna%wai)
    end type na_var_list_q
 
    !> \brief the most commonly used 4D named arraya are u and b, thus we add shortcuts here
    type, extends(na_var_list) :: na_var_list_w
-      integer :: fi                                    !< fluid           : cg%w(wna%fi)
-      integer :: bi                                    !< magnetic field  : cg%w(wna%bi)
+      integer(kind=4) :: fi                                    !< fluid           : cg%w(wna%fi)
+      integer(kind=4) :: bi                                    !< magnetic field  : cg%w(wna%bi)
    end type na_var_list_w
 
    type(na_var_list_q) :: qna !< list of registered 3D named arrays
@@ -102,12 +102,12 @@ contains
       class(na_var_list), intent(inout) :: this
       character(len=*),   intent(in)    :: name
 
-      integer :: rind, i
+      integer(kind=4) :: rind, i
 
       rind = 0
 
       if (allocated(this%lst)) then
-         do i = lbound(this%lst, dim=1), ubound(this%lst, dim=1)
+         do i = lbound(this%lst, dim=1, kind=4), ubound(this%lst, dim=1, kind=4)
             if (trim(name) == this%lst(i)%name) then
                if (rind /= 0) then
                   write(msg, '(2a)') "[named_array_list:ind] multiple entries with the same name: ", trim(name)
@@ -190,10 +190,10 @@ contains
 
       select type(this)
          type is (na_var_list_w)
-            if (element%name == fluid_n) this%fi  = ubound(this%lst(:), dim=1)
-            if (element%name == mag_n)   this%bi  = ubound(this%lst(:), dim=1)
+            if (element%name == fluid_n) this%fi  = ubound(this%lst(:), dim=1, kind=4)
+            if (element%name == mag_n)   this%bi  = ubound(this%lst(:), dim=1, kind=4)
          type is (na_var_list_q)
-            if (element%name == wa_n)    this%wai = ubound(this%lst(:), dim=1)
+            if (element%name == wa_n)    this%wai = ubound(this%lst(:), dim=1, kind=4)
       end select
 
    end subroutine add2lst

@@ -94,7 +94,7 @@ module particle_types
          import :: particle_set
          implicit none
          class(particle_set), intent(in)    :: this   !< an object invoking the type-bound procedure
-         integer,             intent(in)    :: iv     !< index in cg%q array, where we want the particles to be projected
+         integer(kind=4),     intent(in)    :: iv     !< index in cg%q array, where we want the particles to be projected
          real,                intent(in)    :: factor !< typically fpiG
       end subroutine map_scheme
    end interface
@@ -297,7 +297,7 @@ contains
       implicit none
 
       class(particle_set), intent(in)    :: this   !< an object invoking the type-bound procedure
-      integer,             intent(in)    :: iv     !< index in cg%q array, where we want the particles to be projected
+      integer(kind=4),     intent(in)    :: iv     !< index in cg%q array, where we want the particles to be projected
       real,                intent(in)    :: factor !< typically fpiG
 
       type(cg_list_element), pointer :: cgl
@@ -329,7 +329,7 @@ contains
       implicit none
 
       class(particle_set), intent(in)    :: this   !< an object invoking the type-bound procedure
-      integer,             intent(in)    :: iv     !< index in cg%q array, where we want the particles to be projected
+      integer(kind=4),     intent(in)    :: iv     !< index in cg%q array, where we want the particles to be projected
       real,                intent(in)    :: factor !< typically fpiG
 
       type(cg_list_element), pointer :: cgl
@@ -394,7 +394,7 @@ contains
       implicit none
 
       class(particle_set), intent(in)    :: this   !< an object invoking the type-bound procedure
-      integer,             intent(in)    :: iv     !< index in cg%q array, where we want the particles to be projected
+      integer(kind=4),     intent(in)    :: iv     !< index in cg%q array, where we want the particles to be projected
       real,                intent(in)    :: factor !< typically fpiG
 
       type(cg_list_element), pointer :: cgl

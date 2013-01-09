@@ -257,10 +257,10 @@ contains
 
       implicit none
 
-      class(cg_list_T),      intent(inout) :: this     !< list for which do the dump (usually all_cg)
-      integer, dimension(:), intent(in)    :: qlst     !< list of scalar fields to be printed
-      character(len=*),      intent(in)    :: basename !< first part of the filename
-      integer, optional,     intent(in)    :: a        !< additional number
+      class(cg_list_T),              intent(inout) :: this     !< list for which do the dump (usually all_cg)
+      integer(kind=4), dimension(:), intent(in)    :: qlst     !< list of scalar fields to be printed
+      character(len=*),              intent(in)    :: basename !< first part of the filename
+      integer, optional,             intent(in)    :: a        !< additional number
 
       integer                              :: l, n
 
@@ -296,9 +296,9 @@ contains
 
       implicit none
 
-      class(cg_list_T),      intent(inout) :: this     !< list for which do the dump (usually all_cg)
-      character(len=*),      intent(in)    :: filename !< name to write the emergency dump (should be different on each process)
-      integer, dimension(:), intent(in)    :: qlst     !< list of scalar fields to be printed
+      class(cg_list_T),              intent(inout) :: this     !< list for which do the dump (usually all_cg)
+      character(len=*),              intent(in)    :: filename !< name to write the emergency dump (should be different on each process)
+      integer(kind=4), dimension(:), intent(in)    :: qlst     !< list of scalar fields to be printed
 
       integer, parameter                   :: fu=30
       integer                              :: i, j, k, q

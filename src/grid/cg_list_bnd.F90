@@ -81,7 +81,7 @@ contains
       implicit none
 
       class(cg_list_bnd_T),      intent(in) :: this   !< the list on which to perform the boundary exchange
-      integer,                   intent(in) :: ind    !< index of cg%q(:) 3d array
+      integer(kind=4),           intent(in) :: ind    !< index of cg%q(:) 3d array
       integer(kind=4), optional, intent(in) :: dim    !< do the internal boundaries only in the specified dimension
 
       call internal_boundaries(this, ind, .true., dim)
@@ -95,7 +95,7 @@ contains
       implicit none
 
       class(cg_list_bnd_T),      intent(in) :: this !< the list on which to perform the boundary exchange
-      integer,                   intent(in) :: ind  !< index of cg%w(:) 4d array
+      integer(kind=4),           intent(in) :: ind  !< index of cg%w(:) 4d array
       integer(kind=4), optional, intent(in) :: dim  !< do the internal boundaries only in the specified dimension
 
       call internal_boundaries(this, ind, .false., dim)
@@ -134,7 +134,7 @@ contains
       implicit none
 
       class(cg_list_bnd_T),      intent(in)        :: this   !< the list on which to perform the boundary exchange
-      integer,                   intent(in)        :: ind    !< index of cg%q(:) 3d array or cg%w(:) 4d array
+      integer(kind=4),           intent(in)        :: ind    !< index of cg%q(:) 3d array or cg%w(:) 4d array
       logical,                   intent(in)        :: tgt3d  !< .true. for cg%q, .false. for cg%w
       integer(kind=4), optional, intent(in)        :: dim    !< do the internal boundaries only in the specified dimension
 
@@ -338,7 +338,7 @@ contains
       implicit none
 
       class(cg_list_bnd_T),      intent(in)   :: this       !< the list on which to perform the boundary exchange
-      integer,                   intent(in)   :: ind        !< Negative value: index of cg%q(:) 3d array
+      integer(kind=4),           intent(in)   :: ind        !< Negative value: index of cg%q(:) 3d array
       integer(kind=4), optional, intent(in)   :: area_type  !< defines how do we treat boundaries
       integer(kind=4), optional, intent(in)   :: bnd_type   !< Override default boundary type on external boundaries (useful in multigrid solver).
                                                             !< Note that BND_PER, BND_MPI, BND_SHE and BND_COR aren't external and cannot be overridden
@@ -441,7 +441,7 @@ contains
       implicit none
 
       class(cg_list_bnd_T), intent(in)        :: this  !< the list on which to perform the boundary exchange
-      integer,              intent(in)        :: ind   !< Negative value: index of cg%q(:) 3d array
+      integer(kind=4),      intent(in)        :: ind   !< Negative value: index of cg%q(:) 3d array
       real, optional,       intent(in)        :: value !< Value to be put in the boundaries (could be dirty)
 
       integer(kind=4)                         :: lh, clh, d
@@ -486,7 +486,7 @@ contains
       implicit none
 
       class(cg_list_bnd_T), intent(in) :: this  !< the list on which to perform the boundary exchange
-      integer,              intent(in) :: ind   !< Negative value: index of cg%q(:) 3d array
+      integer(kind=4),      intent(in) :: ind   !< Negative value: index of cg%q(:) 3d array
 
       call this%clear_boundaries(ind, value=dirtyH)
 
@@ -505,7 +505,7 @@ contains
       implicit none
 
       class(cg_list_bnd_T),      intent(in) :: this       !< the list on which to perform the boundary exchange
-      integer,                   intent(in) :: ind        !< Negative value: index of cg%q(:) 3d array
+      integer(kind=4),           intent(in) :: ind        !< Negative value: index of cg%q(:) 3d array
       integer(kind=4), optional, intent(in) :: area_type  !< defines how do we treat boundaries
       integer(kind=4), optional, intent(in) :: bnd_type   !< Override default boundary type on external boundaries (useful in multigrid solver).
                                                           !< Note that BND_PER, BND_MPI, BND_SHE and BND_COR aren't external and cannot be overridden
