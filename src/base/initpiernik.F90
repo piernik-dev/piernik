@@ -284,14 +284,14 @@ contains
 !            print '(2a)', 'cmdline version ', cmdlversion
             call init_version
             allocate(revision(nenv)) ; revision = 0_INT4
-            do j=2,nenv
-               read(env(j),'(a31,1x,i4)') aaa(1:31), revision(j)
+            do j = 2, nenv
+               read(env(j),'(a37,1x,i4)') aaa(1:37), revision(j)
             enddo
             write(stdout, '(a,i6)') 'code revision: ', maxval(revision)
             deallocate(revision)
             write(stdout, '(a,f5.2)') 'output version: ',piernik_hdf5_version
             write(stdout,'(a)') "###############     Source configuration     ###############"
-            do j=1,nenv
+            do j = 1, nenv
                write(stdout,'(a)') env(j)
             enddo
             stop
