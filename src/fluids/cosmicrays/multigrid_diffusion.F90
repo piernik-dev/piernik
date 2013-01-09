@@ -415,7 +415,7 @@ contains
       use cg_list,            only: cg_list_element
       use cg_list_dataop,     only: dirty_label
       use cg_list_global,     only: all_cg
-      use constants,          only: I_ONE, xdim, zdim, HI, LO, BND_REF
+      use constants,          only: xdim, zdim, HI, LO, BND_REF
       use domain,             only: dom
       use grid_cont,          only: grid_container
       use named_array,        only: p3, p4
@@ -447,7 +447,7 @@ contains
 
          curl => coarsest%level
          do while (associated(curl%finer)) ! from coarsest to one level below finest
-            call curl%arr3d_boundaries(idiffb(ib), nb = I_ONE, bnd_type = BND_REF, corners = .true.) !> \todo use global boundary type for B
+            call curl%arr3d_boundaries(idiffb(ib), bnd_type = BND_REF) !> \todo use global boundary type for B
             !>
             !! |deprecated BEWARE b is set on a staggered grid; corners should be properly set here (now they are not)
             !! the problem is that the cg%b(:,:,:,:) elements are face-centered so restriction and external boundaries should take this into account
@@ -571,7 +571,7 @@ contains
       norm_rhs = leaves%norm_sq(solution)
       norm_lhs = leaves%norm_sq(defect)
 !     Do we need to take care of boundaries here?
-!      call finest%level%arr3d_boundaries(solution, nb = I_ONE, bnd_type = diff_extbnd)
+!      call finest%level%arr3d_boundaries(solution, bnd_type = diff_extbnd)
 !      cg%u%span(iarr_crs(cr_id),cg%ijkse(:,LO)-dom%D_,cg%ijkse(:,HI)+dom%D_) = cg%q(solution)%span(cg%ijkse(:,LO)-dom%D_,cg%ijkse(:,HI)+dom%D_)
 
       call leaves%qw_copy(solution, wna%fi, int(iarr_crs(cr_id)))
@@ -658,7 +658,7 @@ contains
    subroutine residual(curl, src, soln, def, cr_id)
 
       use cg_level_connected,  only: cg_level_connected_T
-      use constants,      only: xdim, ydim, zdim, I_ONE, ndims, LO, HI
+      use constants,      only: xdim, ydim, zdim, ndims, LO, HI
       use domain,         only: dom
       use cg_list,        only: cg_list_element
       use cg_list_dataop, only: ind_val
@@ -681,7 +681,7 @@ contains
       type(cg_list_element), pointer :: cgl
       type(grid_container), pointer  :: cg
 
-      call curl%arr3d_boundaries(soln, nb = I_ONE, bnd_type = diff_extbnd, corners = .true.) ! corners are required for fluxes
+      call curl%arr3d_boundaries(soln, bnd_type = diff_extbnd)
 
       call curl%q_lin_comb([ ind_val(soln, 1.), ind_val(src, -1.) ], def)
 
@@ -724,7 +724,7 @@ contains
 
       use cg_level_coarsest,  only: coarsest
       use cg_level_connected, only: cg_level_connected_T
-      use constants,          only: xdim, ydim, zdim, one, half, I_ONE, ndims, BND_NONE, LO
+      use constants,          only: xdim, ydim, zdim, one, half, ndims, BND_NONE, LO
       use domain,             only: dom
       use cg_list,            only: cg_list_element
       use global,             only: dt
@@ -755,9 +755,9 @@ contains
 
       do n = 1, RED_BLACK*nsmoo
          if (mod(n,2) == 1) then
-            call curl%arr3d_boundaries(soln, nb = I_ONE, bnd_type = diff_extbnd, corners = .true.) ! corners are required for fluxes
+            call curl%arr3d_boundaries(soln, bnd_type = diff_extbnd)
          else
-            call curl%arr3d_boundaries(soln, nb = I_ONE, bnd_type = BND_NONE, corners = .true.)
+            call curl%arr3d_boundaries(soln, bnd_type = BND_NONE)
          endif
 
          cgl => curl%first

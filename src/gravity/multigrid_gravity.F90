@@ -1020,7 +1020,7 @@ contains
 
       use cg_list,       only: cg_list_element
       use cg_leaves,     only: cg_leaves_T
-      use constants,     only: xdim, ydim, zdim, ndims, GEO_XYZ, GEO_RPZ, half, I_ONE, BND_NEGREF
+      use constants,     only: xdim, ydim, zdim, ndims, GEO_XYZ, GEO_RPZ, half, BND_NEGREF
       use dataio_pub,    only: die
       use domain,        only: dom
       use grid_cont,     only: grid_container
@@ -1039,7 +1039,7 @@ contains
       type(cg_list_element), pointer  :: cgl
       type(grid_container),  pointer  :: cg
 
-      call cg_llst%arr3d_boundaries(soln, nb = I_ONE, bnd_type = BND_NEGREF, corners = .true.)
+      call cg_llst%arr3d_boundaries(soln, bnd_type = BND_NEGREF)
       ! corners are required for non-cartesian decompositions because current implementation of arr3d_boundaries may use overlapping buffers at triple points
 
       ! Possible optimization candidate: reduce cache misses (secondary importance, cache-aware implementation required)
@@ -1139,7 +1139,7 @@ contains
 
       use cg_list,       only: cg_list_element
       use cg_leaves,     only: cg_leaves_T
-      use constants,     only: I_TWO, ndims, idm2, xdim, ydim, zdim, BND_NEGREF
+      use constants,     only: ndims, idm2, xdim, ydim, zdim, BND_NEGREF
       use dataio_pub,    only: die, warn
       use domain,        only: dom
       use grid_cont,     only: grid_container
@@ -1172,7 +1172,7 @@ contains
          firstcall = .false.
       endif
 
-      call cg_llst%arr3d_boundaries(soln, nb = I_TWO, bnd_type = BND_NEGREF) ! no corners required
+      call cg_llst%arr3d_boundaries(soln, bnd_type = BND_NEGREF)
 
       c21 = 1.
       c42 = - L4_scaling * L4_strength
@@ -1241,7 +1241,7 @@ contains
 
       use cg_list,       only: cg_list_element
       use cg_leaves,     only: cg_leaves_T
-      use constants,     only: I_ONE, ndims, idm2, xdim, ydim, zdim, BND_NEGREF
+      use constants,     only: ndims, idm2, xdim, ydim, zdim, BND_NEGREF
       use dataio_pub,    only: die, warn
       use domain,        only: dom
       use grid_cont,     only: grid_container
@@ -1272,8 +1272,8 @@ contains
          firstcall = .false.
       endif
 
-      call cg_llst%arr3d_boundaries(soln, nb = I_ONE, bnd_type = BND_NEGREF, corners = .true.)
-      call cg_llst%arr3d_boundaries(src,  nb = I_ONE, bnd_type = BND_NEGREF, corners = .true.)
+      call cg_llst%arr3d_boundaries(soln, bnd_type = BND_NEGREF)
+      call cg_llst%arr3d_boundaries(src,  bnd_type = BND_NEGREF)
 
       c21 = 1.
 
@@ -1406,7 +1406,7 @@ contains
       if (dom%geometry_type == GEO_RPZ .and. .not. multidim_code_3D) call die("[multigrid_gravity:approximate_solution_rbgs] multidim_code_3D = .false. not implemented")
 
       do n = 1, RED_BLACK*nsmoo
-         call curl%arr3d_boundaries(soln, nb = I_ONE, bnd_type = BND_NEGREF, corners = .true.)
+         call curl%arr3d_boundaries(soln, bnd_type = BND_NEGREF)
          ! corners are required for non-cartesian decompositions because current implementation of arr3d_boundaries may use overlapping buffers at triple points
 
          if (dirty_debug) then
@@ -1419,9 +1419,9 @@ contains
 
             ! Possible optimization: this is the most costly part of the RBGS relaxation (instruction count, read and write data, L1 and L2 read cache miss)
             ! do n = 1, nsmoo
-            !    call curl%arr3d_boundaries(soln, nb = I_ONE, bnd_type = BND_NEGREF)
+            !    call curl%arr3d_boundaries(soln, bnd_type = BND_NEGREF)
             !    relax single layer of red cells at all faces
-            !    call curl%arr3d_boundaries(soln, nb = I_ONE, bnd_type = BND_NEGREF)
+            !    call curl%arr3d_boundaries(soln, bnd_type = BND_NEGREF)
             !    relax interior cells (except for single layer of cells at all faces), first red, then 1-cell behind black one.
             !    relax single layer of black cells at all faces
             ! enddo

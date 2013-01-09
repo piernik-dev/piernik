@@ -171,8 +171,8 @@ module grid_cont
       ! External boundary conditions and internal boundaries
 
       integer(kind=4), dimension(ndims, LO:HI)           :: bnd         !< type of boundary conditions coded in integers
-      type(bnd_list),  dimension(:,:),       allocatable :: i_bnd       !< description of incoming boundary data, the shape is (xdim:zdim, nb)
-      type(bnd_list),  dimension(:,:),       allocatable :: o_bnd       !< description of outgoing boundary data, the shape is (xdim:zdim, nb)
+      type(bnd_list),  dimension(:),         allocatable :: i_bnd       !< description of incoming boundary data, the shape is (xdim:zdim)
+      type(bnd_list),  dimension(:),         allocatable :: o_bnd       !< description of outgoing boundary data, the shape is (xdim:zdim)
       logical,         dimension(xdim:zdim, LO:HI)       :: ext_bnd     !< .false. for BND_PER and BND_MPI
 
       ! Prolongation and restriction
@@ -520,17 +520,13 @@ contains
 
       if (allocated(this%i_bnd)) then
          do d = xdim, zdim
-            do b = lbound(this%i_bnd, dim=2), ubound(this%i_bnd, dim=2)
-               if (allocated(this%i_bnd(d, b)%seg)) deallocate(this%i_bnd(d, b)%seg)
-            enddo
+            if (allocated(this%i_bnd(d)%seg)) deallocate(this%i_bnd(d)%seg)
          enddo
          deallocate(this%i_bnd)
       endif
       if (allocated(this%o_bnd)) then
          do d = xdim, zdim
-            do b = lbound(this%o_bnd, dim=2), ubound(this%o_bnd, dim=2)
-               if (allocated(this%o_bnd(d, b)%seg)) deallocate(this%o_bnd(d, b)%seg)
-            enddo
+            if (allocated(this%o_bnd(d)%seg)) deallocate(this%o_bnd(d)%seg)
          enddo
          deallocate(this%o_bnd)
       endif

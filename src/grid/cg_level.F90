@@ -425,6 +425,19 @@ contains
 !! \details this type can be a member of grid container type if we pass this%pse(:)%c(:) as an argument.
 !! It would simplify dependencies and this%init_all_new_cg, but it could be quite a big object.
 !! Assume that cuboids don't collide (no overlapping grid pieces on same refinement level are allowed)
+!!
+!! Current implementation (revision 7338) implies correct update of the corners, even on complicated refinement topologies (concave fine region - convect coarse region or
+!! fine regions touching each other only by corners). Previous implementation could correctly fill the corners only on uniform grid and when it was called for
+!! x, y and z dierctions separately. Warning: that change introduces measurable performance degradation! This is caused by the fact that in 3D it is required to make
+!! 26 separate exchanges to fill all guardcells (in cg_list_bnd::internal_boundaries), while in previous approach only 6 exchanges were required.
+!! Unfortunately the previous approach did not work properly for complicated refinements and I saw no easy solution for that.
+!! Possible strategies to achieve previous (or better) performance
+!! * provide separate communication pattern for calls where no corners are required,
+!! * do local exchanges directly, without calling MPI.
+!! * merge smaller blocks into larger ones,
+!! * implement totally noncartesian domain decomposition for uniform grid (with 12 neighbours instead of 26),
+!! * go back to directionally-split list and carefully supplement them by pieces that can not be correctly updated due to refinement topology.
+!!
 !! \todo Put this%pse into a separate type and pass a pointer to it or even a pointer to pre-filtered segment list
 !!
 !! \todo Do not provide segments for each possible number of guardcells. Provide 1 layer, 1 layer with corners, all layers and all layers with cofrners instead.
@@ -432,25 +445,29 @@ contains
 
    subroutine mpi_bnd_types(this)
 
-      use cg_list,          only: cg_list_element
-      use constants,        only: xdim, ydim, zdim, ndims, LO, HI, I_ONE, BND_MPI_FC, BND_FC
-      use domain,           only: dom
-      use grid_cont,        only: grid_container, is_overlap
-      use mpisetup,         only: FIRST, LAST, procmask
+      use cg_list,    only: cg_list_element
+      use constants,  only: xdim, ydim, zdim, LO, HI, BND_MPI_FC, BND_FC
+      use domain,     only: dom
+      use grid_cont,  only: grid_container, is_overlap
+      use mpisetup,   only: FIRST, LAST
 
       implicit none
 
-      class(cg_level_T), intent(inout)                 :: this    !< object invoking type bound procedure
+      class(cg_level_T), intent(inout)                :: this    !< object invoking type bound procedure
 
-      type(grid_container),  pointer                   :: cg      !< grid container that we are currently working on
-      type(cg_list_element), pointer                   :: cgl
-      integer                                          :: g, j, b
-      integer(kind=8)                                  :: n_tot_face_cells
-      integer(kind=8), dimension(LO:HI)                :: n_lbnd_face_cells
-      integer(kind=4)                                  :: d, dd, hl, lh, ib
-      integer(kind=8), dimension(xdim:zdim)            :: per
-      integer(kind=8), dimension(xdim:zdim, LO:HI)     :: b_layer, bp_layer, poff
-      logical,         dimension(:,:,:,:), allocatable :: facemap
+      type(grid_container),  pointer                  :: cg      !< grid container that we are currently working on
+      type(cg_list_element), pointer                  :: cgl
+      integer                                         :: j, b, id, ix, iy, iz, tag
+      integer(kind=8)                                 :: n_lbnd_face_cells
+      integer(kind=4)                                 :: d, hl, lh
+      integer(kind=8), dimension(xdim:zdim)           :: per
+      integer(kind=8), dimension(xdim:zdim, LO:HI)    :: b_layer, poff
+      type :: fmap
+         logical, dimension(:,:,:), allocatable       :: map
+         integer(kind=8), dimension(xdim:zdim, LO:HI) :: b_layer
+      end type fmap
+      type(fmap), dimension(xdim:zdim, LO:HI)         :: f
+      integer(kind=8), dimension(ndims, LO:HI)        :: box_8   !< temporary storage
 
       cgl => this%first
       do while (associated(cgl))
@@ -458,120 +475,140 @@ contains
 
          if (allocated(cg%i_bnd)) deallocate(cg%i_bnd)
          if (allocated(cg%o_bnd)) deallocate(cg%o_bnd)
-         allocate(cg%i_bnd(xdim:zdim, dom%nb), cg%o_bnd(xdim:zdim, dom%nb))
+         allocate(cg%i_bnd(xdim:zdim), cg%o_bnd(xdim:zdim))
 
-         ! assume that cuboids fill the domain and don't collide
          per(:) = 0
          where (dom%periodic(:)) per(:) = this%n_d(:)
 
+         ! Create maps to mark neighbouring face cells
          do d = xdim, zdim
+            if (.not. allocated(cg%i_bnd(d)%seg)) allocate(cg%i_bnd(d)%seg(0))
+            if (.not. allocated(cg%o_bnd(d)%seg)) allocate(cg%o_bnd(d)%seg(0))
             if (dom%has_dir(d)) then
-
-               ! identify processes with interesting neighbour data
-               procmask(:) = 0
                do lh = LO, HI
                   hl = LO+HI-lh ! HI for LO, LO for HI
-                  b_layer(:,:) = cg%my_se(:, :)
-                  b_layer(d, lh) = b_layer(d, lh) + lh-hl ! -1 for LO, +1 for HI
-                  b_layer(d, hl) = b_layer(d, lh) ! adjacent boundary layer, 1 cell wide, without corners
-                  do j = FIRST, LAST
-                     do b = lbound(this%pse(j)%c(:), dim=1), ubound(this%pse(j)%c(:), dim=1)
-                        if (is_overlap(b_layer(:,:), this%pse(j)%c(b)%se(:,:), per(:))) procmask(j) = procmask(j) + 1 ! count how many boundaries we share with that process
-                     enddo
-                  enddo
+                  f(d, lh)%b_layer(:,:) = cg%my_se(:, :)
+                  f(d, lh)%b_layer(d, hl) = f(d, lh)%b_layer(d, lh)          ! interior cell layer, 1 cell thick, without corners
+                  allocate(f(d, lh)%map(f(d, lh)%b_layer(xdim,LO):f(d, lh)%b_layer(xdim,HI), &
+                       &                f(d, lh)%b_layer(ydim,LO):f(d, lh)%b_layer(ydim,HI), &
+                       &                f(d, lh)%b_layer(zdim,LO):f(d, lh)%b_layer(zdim,HI)))
+                  f(d, lh)%map = .false.
                enddo
-               do ib = 1, dom%nb
-                  allocate(cg%i_bnd(d, ib)%seg(sum(procmask(:))), cg%o_bnd(d, ib)%seg(sum(procmask(:))))
-               enddo
+            endif
+         enddo
 
-               ! set up segments to be sent or received
-               g = 0
-               do j = FIRST, LAST
-                  if (procmask(j) /= 0) then
-                     do lh = LO, HI
-                        hl = LO+HI-lh
-                        do b = lbound(this%pse(j)%c(:), dim=1), ubound(this%pse(j)%c(:), dim=1)
-                           b_layer(:,:) = cg%my_se(:, :)
-                           b_layer(d, lh) = b_layer(d, lh) + lh-hl
-                           b_layer(d, hl) = b_layer(d, lh) ! adjacent boundary layer, 1 cell thick, without corners
-                           bp_layer(:, :) = b_layer(:, :)
-                           where (per(:) > 0)
-                              where (bp_layer(:, LO) < this%off(:)) bp_layer(:, LO) = bp_layer(:, LO) + per(:)
-                              where (bp_layer(:, HI) < this%off(:)) bp_layer(:, HI) = bp_layer(:, HI) + per(:)
-                              where (bp_layer(:, LO) >= this%off(:)+this%n_d(:)) bp_layer(:, LO) = bp_layer(:, LO) - per(:)
-                              where (bp_layer(:, HI) >= this%off(:)+this%n_d(:)) bp_layer(:, HI) = bp_layer(:, HI) - per(:)
-                           endwhere
-                           !> \todo save b_layer(:,:) and bp_layer(:,:) and move above calculations outside the b loop
+         do j = FIRST, LAST
+            do b = lbound(this%pse(j)%c(:), dim=1), ubound(this%pse(j)%c(:), dim=1)
+               box_8 = int(cg%lhn, kind=8)
+               if (is_overlap(box_8, this%pse(j)%c(b)%se(:,:), per(:))) then                ! identify processes with interesting neighbour data
 
-                           if (is_overlap(bp_layer(:,:), this%pse(j)%c(b)%se(:,:))) then
-                              poff(:,:) = bp_layer(:,:) - b_layer(:,:) ! displacement due to periodicity
-                              bp_layer(:, LO) = max(bp_layer(:, LO), this%pse(j)%c(b)%se(:, LO))
-                              bp_layer(:, HI) = min(bp_layer(:, HI), this%pse(j)%c(b)%se(:, HI))
-                              b_layer(:,:) = bp_layer(:,:) - poff(:,:)
-                              g = g + 1
-                              do ib = 1, dom%nb
-                                 cg%i_bnd(d, ib)%seg(g)%proc = j
-                                 cg%i_bnd(d, ib)%seg(g)%se(:,LO) = b_layer(:, LO)
-                                 cg%i_bnd(d, ib)%seg(g)%se(:,HI) = b_layer(:, HI)
-                                 if (any(cg%i_bnd(d, ib)%seg(g)%se(d, :) < cg%lhn(d, LO))) &
-                                      cg%i_bnd(d, ib)%seg(g)%se(d, :) = cg%i_bnd(d, ib)%seg(g)%se(d, :) + this%n_d(d)
-                                 if (any(cg%i_bnd(d, ib)%seg(g)%se(d, :) > cg%lhn(d, HI))) &
-                                      cg%i_bnd(d, ib)%seg(g)%se(d, :) = cg%i_bnd(d, ib)%seg(g)%se(d, :) - this%n_d(d)
+                  do d = xdim, zdim
+                     if (dom%has_dir(d)) then
+                        do lh = LO, HI
+                           hl = LO+HI-lh ! HI for LO, LO for HI
 
-                                 ! expand to cover corners (requires separate MPI_Waitall for each direction)
-                                 !! \warning edges and corners will be filled multiple times
-                                 do dd = xdim, zdim
-                                    if (dd /= d .and. dom%has_dir(dd)) then
-                                       cg%i_bnd(d, ib)%seg(g)%se(dd, LO) = cg%i_bnd(d, ib)%seg(g)%se(dd, LO) - ib
-                                       cg%i_bnd(d, ib)%seg(g)%se(dd, HI) = cg%i_bnd(d, ib)%seg(g)%se(dd, HI) + ib
+                           ! First, update the map of faces with neighbours
+
+                           ! create 1-layer thick map of neighbours
+                           b_layer = this%pse(j)%c(b)%se
+                           b_layer(d, hl) = b_layer(d, hl) - lh+hl  ! move the opposite boundary
+                           b_layer(d, lh) = b_layer(d, hl)
+
+                           do id = -1, 1 ! scan through periodic images of the domain
+                              if (id == 0 .or. per(d)>0) then
+                                 poff = b_layer
+                                 poff(d, :) = poff(d, :) + id*per(d)
+                                 poff(:, LO) = max(poff(:, LO), f(d, lh)%b_layer(:, LO))
+                                 poff(:, HI) = min(poff(:, HI), f(d, lh)%b_layer(:, HI))
+                                 ! construct the layer to be send to the _interior_ of neighbouring grid and set the flag map
+                                 if (is_overlap(f(d, lh)%b_layer, poff)) &
+                                      f(d, lh)%map(poff(xdim,LO):poff(xdim,HI), poff(ydim,LO):poff(ydim,HI), poff(zdim,LO):poff(zdim,HI)) = .true.
+                              endif
+                           enddo
+
+                           ! Second, describe incoming data
+                           b_layer = cg%my_se
+                           b_layer(d, hl) = b_layer(d, lh) + (lh-hl)
+                           b_layer(d, lh) = b_layer(d, lh) + (lh-hl)*dom%nb ! dom%nb thick layer without corners
+                           b_layer(:d-1, LO) = b_layer(:d-1, LO) - dom%nb*dom%D_(:d-1)
+                           b_layer(:d-1, HI) = b_layer(:d-1, HI) + dom%nb*dom%D_(:d-1) ! corners added in only one way
+                           ! faces and corners are included in y and z direction to minimize number of pieces in non-cartesian grid decompositions
+
+                           ! set up segments to be received
+                           do iz = -1, 1 ! scan through all periodic possibilities
+                              if (iz == 0 .or. per(zdim)>0) then
+                                 do iy = -1, 1
+                                    if (iy == 0 .or. per(ydim)>0) then
+                                       do ix = -1, 1
+                                          if (ix == 0 .or. per(xdim)>0) then
+                                             poff = this%pse(j)%c(b)%se
+                                             poff(:, LO) = poff(:, LO) + [ ix, iy, iz ] * per(:)
+                                             poff(:, HI) = poff(:, HI) + [ ix, iy, iz ] * per(:)
+                                             if (is_overlap(b_layer, poff)) then
+                                                poff(:, LO) = max(b_layer(:, LO), poff(:, LO))
+                                                poff(:, HI) = min(b_layer(:, HI), poff(:, HI))
+                                                tag = int(27*(HI*ndims*b + (HI*d+lh-LO))+ixyz(ix, iy, iz), kind=4)
+                                                call cg%i_bnd(d)%add_seg(j, poff, tag)
+                                             endif
+                                          endif
+                                       enddo
                                     endif
                                  enddo
-                                 cg%o_bnd(d, ib)%seg(g) = cg%i_bnd(d, ib)%seg(g)
-                                 cg%i_bnd(d, ib)%seg(g)%tag = int(HI*ndims*b          + (HI*d+lh-LO), kind=4) ! Assume that we won't mix communication with different ib
-                                 cg%o_bnd(d, ib)%seg(g)%tag = int(HI*ndims*cg%grid_id + (HI*d+hl-LO), kind=4)
-                                 select case (lh)
-                                    case (LO)
-                                       cg%i_bnd(d, ib)%seg(g)%se(d, LO) = cg%i_bnd(d, ib)%seg(g)%se(d, HI) - (ib - 1)
-                                       cg%o_bnd(d, ib)%seg(g)%se(d, LO) = cg%i_bnd(d, ib)%seg(g)%se(d, HI) + 1
-                                       cg%o_bnd(d, ib)%seg(g)%se(d, HI) = cg%o_bnd(d, ib)%seg(g)%se(d, LO) + (ib - 1)
-                                    case (HI)
-                                       cg%i_bnd(d, ib)%seg(g)%se(d, HI) = cg%i_bnd(d, ib)%seg(g)%se(d, LO) + (ib - 1)
-                                       cg%o_bnd(d, ib)%seg(g)%se(d, HI) = cg%i_bnd(d, ib)%seg(g)%se(d, LO) - 1
-                                       cg%o_bnd(d, ib)%seg(g)%se(d, LO) = cg%o_bnd(d, ib)%seg(g)%se(d, HI) - (ib - 1)
-                                 end select
+                              endif
+                           enddo
 
-                              enddo
-                           endif
+                           ! Third, describe outgoing data
+                           !> \warning replicated code, see above
+                           b_layer = this%pse(j)%c(b)%se
+                           b_layer(d, hl) = b_layer(d, lh) + (lh-hl)
+                           b_layer(d, lh) = b_layer(d, lh) + (lh-hl)*dom%nb ! dom%nb thick layer without corners
+                           b_layer(:d-1, LO) = b_layer(:d-1, LO) - dom%nb*dom%D_(:d-1)
+                           b_layer(:d-1, HI) = b_layer(:d-1, HI) + dom%nb*dom%D_(:d-1) ! corners added in only one way
+                           ! faces and corners are included in y and z direction to minimize number of pieces in non-cartesian grid decompositions
+
+                           ! set up segments to be send
+                           do iz = -1, 1 ! scan through all periodic possibilities
+                              if (iz == 0 .or. per(zdim)>0) then
+                                 do iy = -1, 1
+                                    if (iy == 0 .or. per(ydim)>0) then
+                                       do ix = -1, 1
+                                          if (ix == 0 .or. per(xdim)>0) then
+                                             poff = b_layer
+                                             poff(:, LO) = poff(:, LO) + [ ix, iy, iz ] * per(:)
+                                             poff(:, HI) = poff(:, HI) + [ ix, iy, iz ] * per(:)
+                                             if (is_overlap(poff(:,:), cg%my_se)) then
+                                                poff(:, LO) = max(cg%my_se(:, LO), poff(:, LO))
+                                                poff(:, HI) = min(cg%my_se(:, HI), poff(:, HI))
+                                                tag = int(27*(HI*ndims*cg%grid_id + (HI*d+lh-LO))+ixyz(-ix, -iy, -iz), kind=4)
+                                                call cg%o_bnd(d)%add_seg(j, poff, tag)
+                                             endif
+                                          endif
+                                       enddo
+                                    endif
+                                 enddo
+                              endif
+                           enddo
+
                         enddo
-                     enddo
+                     endif
+                  enddo
+
+               endif
+
+            enddo
+         enddo
+
+         ! Detect fine-coarse boundaries and update boundary types. When not all mapped cells are facing neighbours, then we may deal with fine/coarse boundary (full or partial)
+         do d = xdim, zdim
+            if (dom%has_dir(d)) then
+               do lh = LO, HI
+                  n_lbnd_face_cells = count(f(d,lh)%map(:,:,:))
+                  if (.not. cg%ext_bnd(d, lh)) then
+                     if (n_lbnd_face_cells < size(f(d,lh)%map(:,:,:))) cg%bnd(d, lh) = BND_MPI_FC
+                     if (n_lbnd_face_cells == 0)                       cg%bnd(d, lh) = BND_FC
                   endif
+                  deallocate(f(d,lh)%map)
                enddo
-
-               ! Detect fine-coarse boundaries and update boundary types
-
-               b_layer(:,:) = cg%my_se(:, :)
-               b_layer(d, HI) = b_layer(d, LO)
-               n_tot_face_cells = product( b_layer(:, HI) - b_layer(:, LO) + 1 )
-               allocate(facemap(b_layer(xdim,LO):b_layer(xdim,HI), b_layer(ydim,LO):b_layer(ydim,HI), b_layer(zdim,LO):b_layer(zdim,HI), LO:HI))
-
-               facemap = .false.
-               n_lbnd_face_cells = 0
-               do g = lbound(cg%o_bnd(d, I_ONE)%seg, dim=1), ubound(cg%o_bnd(d, I_ONE)%seg, dim=1)
-                  bp_layer(:, LO) = max(cg%o_bnd(d, I_ONE)%seg(g)%se(:, LO), cg%my_se(:, LO))
-                  bp_layer(:, HI) = min(cg%o_bnd(d, I_ONE)%seg(g)%se(:, HI), cg%my_se(:, HI))
-                  lh = LO
-                  if (cg%o_bnd(d, I_ONE)%seg(g)%se(d, HI) > cg%ijkse(d, LO)) lh = HI
-                  bp_layer(d, :) = b_layer(d, :)
-                  facemap(bp_layer(xdim,LO):bp_layer(xdim,HI), bp_layer(ydim,LO):bp_layer(ydim,HI), bp_layer(zdim,LO):bp_layer(zdim,HI), lh) = .true.
-               enddo
-               do g = LO, HI
-                  n_lbnd_face_cells(g) = count(facemap(:, :, :, g))
-               enddo
-               where (.not. cg%ext_bnd(d, :))
-                  where (n_lbnd_face_cells(:) <  n_tot_face_cells) cg%bnd(d, :) = BND_MPI_FC
-                  where (n_lbnd_face_cells(:) == 0)                cg%bnd(d, :) = BND_FC
-               endwhere
-               deallocate(facemap)
             endif
          enddo
 
@@ -580,7 +617,21 @@ contains
 
    end subroutine mpi_bnd_types
 
-!> \brief Add a whole level to the list of patches on current refinement level and decompose it
+   ! Create unique number from periodic offsets
+   ! Let's assume ix, iy and iz have values of -1, 0 or 1, then the output will belong to [0 .. 26] range
+   pure function ixyz(i1, i2, i3)
+
+      implicit none
+
+      integer, intent(in) :: i1, i2, i3
+
+      integer :: ixyz
+
+      ixyz = (1+i1) + 3*(1+i2 + 3*(1+i3))
+
+   end function ixyz
+
+ !> \brief Add a whole level to the list of patches on current refinement level and decompose it
 
    subroutine add_patch_fulllevel(this, n_pieces)
 

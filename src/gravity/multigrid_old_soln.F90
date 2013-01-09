@@ -230,7 +230,6 @@ contains
 
       use cg_leaves,     only: leaves
       use constants,     only: BND_XTRAP, BND_REF
-      use domain,        only: dom
       use global,        only: t
       use multigridvars, only: solution, grav_bnd, bnd_isolated, bnd_givenval
 
@@ -254,9 +253,9 @@ contains
       ! Update guardcells of the solution before leaving. This can be done in higher-level routines that collect all the gravity contributions, but would be less safe.
       ! Extrapolate isolated boundaries, remember that grav_bnd is messed up by multigrid_solve_*
       if (grav_bnd == bnd_isolated .or. grav_bnd == bnd_givenval) then
-         call leaves%arr3d_boundaries(solution, nb = dom%nb, bnd_type = BND_XTRAP)
+         call leaves%arr3d_boundaries(solution, bnd_type = BND_XTRAP)
       else
-         call leaves%arr3d_boundaries(solution, nb = dom%nb, bnd_type = BND_REF)
+         call leaves%arr3d_boundaries(solution, bnd_type = BND_REF)
       endif
 
    end subroutine store_solution

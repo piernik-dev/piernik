@@ -704,7 +704,7 @@ contains
 
       if (this%ord_prolong_set /= O_INJ) then
          !> \todo some variables may need special care on external boundaries
-         call this%arr3d_boundaries(iv, bnd_type = BND_REF, corners = .true.) ! nb =  int(stencil_range, kind=4) ! not needed for injection
+         call this%arr3d_boundaries(iv, bnd_type = BND_REF)
       endif
       call this%check_dirty(iv, "prolong-")
 
@@ -891,20 +891,18 @@ contains
 !! \warning No fine-to-coarse data transfer implemented yet
 !<
 
-   subroutine arr3d_boundaries(this, ind, nb, area_type, bnd_type, corners)
+   subroutine arr3d_boundaries(this, ind, area_type, bnd_type)
 
       implicit none
 
       class(cg_level_connected_T), intent(inout) :: this      !< the list on which to perform the boundary exchange
       integer,                     intent(in)    :: ind       !< Negative value: index of cg%q(:) 3d array
-      integer(kind=4), optional,   intent(in)    :: nb        !< number of grid cells to exchange
       integer(kind=4), optional,   intent(in)    :: area_type !< defines how do we treat boundaries
       integer(kind=4), optional,   intent(in)    :: bnd_type  !< Override default boundary type on external boundaries (useful in multigrid solver).
                                                               !< Note that BND_PER, BND_MPI, BND_SHE and BND_COR aren't external and cannot be overridden
-      logical,         optional,   intent(in)    :: corners   !< When present and .true. then call internal_boundaries_3d for each direction separately
 
       call this%clear_boundaries(ind) ! Apply BND_ZERO as long as there is no coarse-to-fine interpolation
-      call this%level_3d_boundaries(ind, nb, area_type, bnd_type, corners)
+      call this%level_3d_boundaries(ind, area_type, bnd_type)
 
    end subroutine arr3d_boundaries
 

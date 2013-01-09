@@ -76,31 +76,29 @@ contains
 
 !> \brief A wrapper that calls internal_boundaries for 3D arrays stored in cg%q(:)
 
-   subroutine internal_boundaries_3d(this, ind, nb, dim)
+   subroutine internal_boundaries_3d(this, ind, dim)
 
       implicit none
 
       class(cg_list_bnd_T),      intent(in) :: this   !< the list on which to perform the boundary exchange
       integer,                   intent(in) :: ind    !< index of cg%q(:) 3d array
-      integer(kind=4), optional, intent(in) :: nb     !< number of grid cells to exchange
       integer(kind=4), optional, intent(in) :: dim    !< do the internal boundaries only in the specified dimension
 
-      call internal_boundaries(this, ind, .true., nb, dim)
+      call internal_boundaries(this, ind, .true., dim)
 
    end subroutine internal_boundaries_3d
 
 !> \brief A wrapper that calls internal_boundaries for 4D arrays stored in cg%w(:)
 
-   subroutine internal_boundaries_4d(this, ind, nb, dim)
+   subroutine internal_boundaries_4d(this, ind, dim)
 
       implicit none
 
       class(cg_list_bnd_T),      intent(in) :: this !< the list on which to perform the boundary exchange
       integer,                   intent(in) :: ind  !< index of cg%w(:) 4d array
-      integer(kind=4), optional, intent(in) :: nb   !< number of grid cells to exchange
       integer(kind=4), optional, intent(in) :: dim  !< do the internal boundaries only in the specified dimension
 
-      call internal_boundaries(this, ind, .false., nb, dim)
+      call internal_boundaries(this, ind, .false., dim)
 
    end subroutine internal_boundaries_4d
 
@@ -117,11 +115,12 @@ contains
 !! \todo Try to define MPI_types for communication right before MPI_Isend/MPI_Irecv calls and release just after use. Then compare performance.
 !!
 !! \todo Check how much performance is lost due to using MPI calls even for local copies. Decide whether it is worth to convert local MPI calls to direct memory copies.
+!! For othes suggestions on performance optimisation see decription of cg_level::mpi_bnd_types.
 !!
 !! \warning this == leaves could be unsafe: need to figure out how to handle unneeded edges; this == all_cg or base_lev or other concatenation of whole levels should work well
 !<
 
-   subroutine internal_boundaries(this, ind, tgt3d, nb, dim)
+   subroutine internal_boundaries(this, ind, tgt3d, dim)
 
       use cg_list,          only: cg_list_element
       use constants,        only: xdim, ydim, zdim, LO, HI, I_ONE, I_TWO
@@ -137,10 +136,9 @@ contains
       class(cg_list_bnd_T),      intent(in)        :: this   !< the list on which to perform the boundary exchange
       integer,                   intent(in)        :: ind    !< index of cg%q(:) 3d array or cg%w(:) 4d array
       logical,                   intent(in)        :: tgt3d  !< .true. for cg%q, .false. for cg%w
-      integer(kind=4), optional, intent(in)        :: nb     !< number of grid cells to exchange
       integer(kind=4), optional, intent(in)        :: dim    !< do the internal boundaries only in the specified dimension
 
-      integer                                      :: g, d, n
+      integer                                      :: g, d
       integer(kind=4)                              :: nr     !< index of first free slot in req and status arrays
       logical, dimension(xdim:zdim)                :: dmask
       type(grid_container),     pointer            :: cg
@@ -157,12 +155,6 @@ contains
          dmask(dim) = dom%has_dir(dim)
       endif
 
-      n = dom%nb
-      if (present(nb)) then
-         n = nb
-         if (n<=0 .or. n>dom%nb) call die("[cg_list_bnd:internal_boundaries] wrong number of guardcell layers")
-      endif
-
       nr = 0
       cgl => this%first
       do while (associated(cgl))
@@ -177,15 +169,15 @@ contains
 
          do d = xdim, zdim
             if (dmask(d) .and. active) then
-               if (allocated(cg%i_bnd(d, n)%seg)) then
-                  if (.not. allocated(cg%o_bnd(d, n)%seg)) call die("[cg_list_bnd:internal_boundaries] cg%i_bnd without cg%o_bnd")
-                  if (ubound(cg%i_bnd(d, n)%seg(:), dim=1) /= ubound(cg%o_bnd(d, n)%seg(:), dim=1)) &
+               if (allocated(cg%i_bnd(d)%seg)) then
+                  if (.not. allocated(cg%o_bnd(d)%seg)) call die("[cg_list_bnd:internal_boundaries] cg%i_bnd without cg%o_bnd")
+                  if (ubound(cg%i_bnd(d)%seg(:), dim=1) /= ubound(cg%o_bnd(d)%seg(:), dim=1)) &
                        call die("[cg_list_bnd:internal_boundaries] cg%i_bnd differs in number of entries from cg%o_bnd")
-                  do g = lbound(cg%i_bnd(d, n)%seg(:), dim=1), ubound(cg%i_bnd(d, n)%seg(:), dim=1)
+                  do g = lbound(cg%i_bnd(d)%seg(:), dim=1), ubound(cg%i_bnd(d)%seg(:), dim=1)
 
                      if (nr+I_TWO >  ubound(req(:), dim=1)) call inflate_req
-                     i_seg => cg%i_bnd(d, n)%seg(g)
-                     o_seg => cg%o_bnd(d, n)%seg(g)
+                     i_seg => cg%i_bnd(d)%seg(g)
+                     o_seg => cg%o_bnd(d)%seg(g)
 
                      !> \deprecated: A lot of semi-duplicated code below
                      if (tgt3d) then
@@ -265,7 +257,7 @@ contains
                      nr = nr + I_TWO
                   enddo
                else
-                  if (allocated(cg%o_bnd(d, n)%seg)) call die("[cg_list_bnd:internal_boundaries] cg%o_bnd without cg%i_bnd")
+                  if (allocated(cg%o_bnd(d)%seg)) call die("[cg_list_bnd:internal_boundaries] cg%o_bnd without cg%i_bnd")
                endif
             endif
          enddo
@@ -290,12 +282,12 @@ contains
 
          do d = xdim, zdim
             if (dmask(d) .and. active) then
-               if (allocated(cg%i_bnd(d, n)%seg)) then
+               if (allocated(cg%i_bnd(d)%seg)) then
                   ! sanity checks are already done
-                  do g = lbound(cg%i_bnd(d, n)%seg(:), dim=1), ubound(cg%i_bnd(d, n)%seg(:), dim=1)
+                  do g = lbound(cg%i_bnd(d)%seg(:), dim=1), ubound(cg%i_bnd(d)%seg(:), dim=1)
 
-                     i_seg => cg%i_bnd(d, n)%seg(g)
-                     o_seg => cg%o_bnd(d, n)%seg(g)
+                     i_seg => cg%i_bnd(d)%seg(g)
+                     o_seg => cg%o_bnd(d)%seg(g)
 
                      if (tgt3d) then
                         pa3d => cg%q(ind)%span(i_seg%se(:,:))
@@ -437,7 +429,6 @@ contains
 
    end subroutine external_boundaries
 
-
 !> \brief Set zero to all boundaries (will defeat any attemts of use of dirty checks on boundaries)
 
    subroutine clear_boundaries(this, ind, value)
@@ -507,22 +498,19 @@ contains
 !! \details No fine-coarse exchanges can be done here, see cg_level_connested::arr3d_boundaries for that feature
 !<
 
-   subroutine level_3d_boundaries(this, ind, nb, area_type, bnd_type, corners)
+   subroutine level_3d_boundaries(this, ind, area_type, bnd_type)
 
-      use constants, only: xdim, zdim, AT_NO_B
+      use constants, only: AT_NO_B
 
       implicit none
 
       class(cg_list_bnd_T),      intent(in) :: this       !< the list on which to perform the boundary exchange
       integer,                   intent(in) :: ind        !< Negative value: index of cg%q(:) 3d array
-      integer(kind=4), optional, intent(in) :: nb         !< number of grid cells to exchange
       integer(kind=4), optional, intent(in) :: area_type  !< defines how do we treat boundaries
       integer(kind=4), optional, intent(in) :: bnd_type   !< Override default boundary type on external boundaries (useful in multigrid solver).
                                                           !< Note that BND_PER, BND_MPI, BND_SHE and BND_COR aren't external and cannot be overridden
-      logical,         optional, intent(in) :: corners    !< When present and .true. then call internal_boundaries_3d for each direction separately
 
-      integer(kind=4)                       :: d
-      logical                               :: do_permpi, do_cor
+      logical                               :: do_permpi
 
       !> \todo fill corners with big_float ?
 
@@ -531,17 +519,7 @@ contains
          if (area_type /= AT_NO_B) do_permpi = .false.
       endif
 
-      if (do_permpi) then
-         do_cor = .false.
-         if (present(corners)) do_cor = corners
-         if (do_cor) then
-            do d = xdim, zdim
-               call this%internal_boundaries_3d(ind, nb=nb, dim=d)
-            enddo
-         else
-            call this%internal_boundaries_3d(ind, nb=nb)
-         endif
-      endif
+      if (do_permpi) call this%internal_boundaries_3d(ind)
 
       call this%external_boundaries(ind, area_type, bnd_type)
 

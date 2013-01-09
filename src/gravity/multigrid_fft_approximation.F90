@@ -311,7 +311,7 @@ contains
 
       use cg_level_coarsest,  only: coarsest
       use cg_level_connected, only: cg_level_connected_T
-      use constants,     only: LO, HI, ndims, xdim, ydim, zdim, GEO_XYZ, half, I_ONE, idm2, BND_NEGREF, fft_none, fft_dst, dirtyL
+      use constants,     only: LO, HI, ndims, xdim, ydim, zdim, GEO_XYZ, half, idm2, BND_NEGREF, fft_none, fft_dst, dirtyL
       use dataio_pub,    only: die, warn
       use domain,        only: dom
       use cg_list,       only: cg_list_element
@@ -352,7 +352,7 @@ contains
             if (nf == 1 .and. .not. associated(curl, coarsest%level)) then
                call make_face_boundaries(curl, soln)
             else
-               call curl%arr3d_boundaries(soln, nb = I_ONE, bnd_type = BND_NEGREF)
+               call curl%arr3d_boundaries(soln, bnd_type = BND_NEGREF)
                cgl => curl%first
                do while (associated(cgl))
                   cg => cgl%cg
@@ -418,7 +418,7 @@ contains
 
          !relax the boundaries
          do n = 1, nsmoo
-            call curl%arr3d_boundaries(soln, nb = I_ONE, bnd_type = BND_NEGREF)
+            call curl%arr3d_boundaries(soln, bnd_type = BND_NEGREF)
             ! Possible optimization: This is a quite costly part of the local FFT solver
             cgl => curl%first
             do while (associated(cgl))
@@ -750,7 +750,7 @@ contains
          if (ord_prolong_face_norm < O_INJ) ord_prolong_face_norm = O_INJ
          b_rng = s_rng
          if (ord_prolong_face_norm > O_INJ) b_rng = max(b_rng, int(ord_prolong_face_norm+1, kind=4))
-         call coarse%arr3d_boundaries(soln, nb = b_rng, bnd_type = BND_NEGREF, corners = (ord_prolong_face_par/=0)) !> \deprecated BEWARE for higher prolongation order more guardcell are required
+         call coarse%arr3d_boundaries(soln, bnd_type = BND_NEGREF) !> \deprecated BEWARE for higher prolongation order more guardcell are required
          call coarse%check_dirty(soln, "prolong_faces", s_rng)
          associate ( &
             ffcg => fine%first%cg, &

@@ -128,7 +128,7 @@ contains
 
 !> \brief This routine sets up all guardcells (internal, external and fine-coarse) for given rank-3 arrays
 
-   subroutine arr3d_boundaries(this, ind, nb, area_type, bnd_type, corners)
+   subroutine arr3d_boundaries(this, ind, area_type, bnd_type)
 
       use cg_level_connected, only: cg_level_connected_T
 
@@ -136,17 +136,15 @@ contains
 
       class(cg_leaves_T),        intent(in) :: this       !< the list on which to perform the boundary exchange
       integer,                   intent(in) :: ind        !< Negative value: index of cg%q(:) 3d array
-      integer(kind=4), optional, intent(in) :: nb         !< number of grid cells to exchange
       integer(kind=4), optional, intent(in) :: area_type  !< defines how do we treat boundaries
       integer(kind=4), optional, intent(in) :: bnd_type   !< Override default boundary type on external boundaries (useful in multigrid solver).
                                                           !< Note that BND_PER, BND_MPI, BND_SHE and BND_COR aren't external and cannot be overridden
-      logical,         optional, intent(in) :: corners    !< When present and .true. then call internal_boundaries_3d for each direction separately
 
       type(cg_level_connected_T), pointer   :: curl
 
       curl => this%coarsest_leaves
       do while (associated(curl))
-         call curl%arr3d_boundaries(ind, nb, area_type, bnd_type, corners)
+         call curl%arr3d_boundaries(ind, area_type, bnd_type)
          curl => curl%finer
       enddo
 
@@ -187,7 +185,7 @@ contains
 !! \brief Wrapper routine to set up internal boundaries for for given rank-3 arrays
 !! \todo make it completed
 !<
-   subroutine internal_bnd_3d(this, ind, nb, dim)
+   subroutine internal_bnd_3d(this, ind, dim)
 
       use cg_level_connected, only: cg_level_connected_T
       use dataio_pub,         only: die
@@ -196,14 +194,13 @@ contains
 
       class(cg_leaves_T),        intent(in) :: this       !< the list on which to perform the boundary exchange
       integer,                   intent(in) :: ind        !< Negative value: index of cg%q(:) 3d array
-      integer(kind=4), optional, intent(in) :: nb         !< number of grid cells to exchange
       integer(kind=4), optional, intent(in) :: dim        !< do the internal boundaries only in the specified dimension
 
       type(cg_level_connected_T), pointer   :: curl
 
       curl => this%coarsest_leaves
       do while (associated(curl))
-         call curl%internal_boundaries_3d(ind, nb, dim)
+         call curl%internal_boundaries_3d(ind, dim)
          curl => curl%finer
          if (associated(curl)) call die("[cg_leaves::internal_bnd_3d] This routine does not work with finer levels yet")
       enddo
@@ -214,7 +211,7 @@ contains
 !! \brief Wrapper routine to set up internal boundaries for for given rank-4 arrays
 !! \todo make it completed
 !<
-   subroutine internal_bnd_4d(this, ind, nb, dim)
+   subroutine internal_bnd_4d(this, ind, dim)
 
       use cg_level_connected, only: cg_level_connected_T
       use dataio_pub,         only: die
@@ -223,14 +220,13 @@ contains
 
       class(cg_leaves_T),        intent(in) :: this       !< the list on which to perform the boundary exchange
       integer,                   intent(in) :: ind        !< Negative value: index of cg%q(:) 3d array
-      integer(kind=4), optional, intent(in) :: nb         !< number of grid cells to exchange
       integer(kind=4), optional, intent(in) :: dim        !< do the internal boundaries only in the specified dimension
 
       type(cg_level_connected_T), pointer   :: curl
 
       curl => this%coarsest_leaves
       do while (associated(curl))
-         call curl%internal_boundaries_4d(ind, nb, dim)
+         call curl%internal_boundaries_4d(ind, dim)
          curl => curl%finer
          if (associated(curl)) call die("[cg_leaves::internal_bnd_4d] This routine does not work with finer levels yet")
       enddo
