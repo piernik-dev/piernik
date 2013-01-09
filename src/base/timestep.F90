@@ -334,14 +334,16 @@ contains
       do k = cg%ks, cg%ke
          do j = cg%js, cg%je
             do i = cg%is, cg%ie
-               if (cg%u(fl%idn,i,j,k) > 0.0) then
-                  v(:) = abs(cg%u(fl%imx:fl%imz, i, j, k) / cg%u(fl%idn, i, j, k))
-               else
-                  v(:) = 0.0
-               endif
+               if (cg%leafmap(i, j, k)) then
+                  if (cg%u(fl%idn,i,j,k) > 0.0) then
+                     v(:) = abs(cg%u(fl%imx:fl%imz, i, j, k) / cg%u(fl%idn, i, j, k))
+                  else
+                     v(:) = 0.0
+                  endif
 
-               c(:) = max( c(:), v(:) + fl%get_cs(cg, i, j, k) )
-               c_fl = max(c_fl, maxval(c(:)))
+                  c(:) = max( c(:), v(:) + fl%get_cs(cg, i, j, k) )
+                  c_fl = max(c_fl, maxval(c(:)))
+               endif
             enddo
          enddo
       enddo
