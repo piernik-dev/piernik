@@ -516,12 +516,12 @@ contains
 
       use cg_leaves,        only: leaves
       use cg_list,          only: cg_list_element
-      use constants,        only: b0_n
+      use constants,        only: b0_n, fluid_n
       use fluidboundaries,  only: all_fluid_boundaries
       use named_array_list, only: wna
+      use grid_cont,        only: grid_container
 #ifdef TRACER
       use constants,        only: xdim, ydim, zdim
-      use grid_cont,        only: grid_container
       use func,             only: resample_gauss
       use fluidindex,       only: flind
 #endif /* TRACER */
@@ -529,8 +529,8 @@ contains
       implicit none
 
       type(cg_list_element), pointer :: cgl
-#ifdef TRACER
       type(grid_container),  pointer :: cg
+#ifdef TRACER
       integer                        :: i, j, k
 #endif /* TRACER */
 
@@ -538,17 +538,21 @@ contains
 
       cgl => leaves%first
       do while (associated(cgl))
-         cgl%cg%u  => cgl%cg%w(wna%ind(inid_n))%arr  ! BEWARE: Don't do things like that without parental supervision
-         cgl%cg%b = 0.0
-         cgl%cg%w(wna%ind(b0_n))%arr = 0.0
+         cg => cgl%cg
+         cg%u  => cg%w(wna%ind(inid_n))%arr  ! BEWARE: Don't do things like that without parental supervision
+         cg%b = 0.0
+         cg%w(wna%ind(b0_n))%arr = 0.0
          cgl => cgl%nxt
       enddo
 
-      call all_fluid_boundaries   ! all_fluid_boundaries properly set boundaries for %u pointer
+      wna%fi = wna%ind(inid_n)    ! BEWARE: or things like that...
+      call all_fluid_boundaries   ! all_fluid_boundaries properly set boundaries for %u pointer and %wna%fi
+      wna%fi = wna%ind(fluid_n)   ! revert first ugly hack
 
       cgl => leaves%first
       do while (associated(cgl))
-         cgl%cg%u  => cgl%cg%w(wna%fi)%arr ! Quick! Revert to sane state before anyone notices
+         cg => cgl%cg
+         cg%u  => cg%w(wna%fi)%arr ! Quick! Revert to sane state before anyone notices (2nd ugly hack)
          cgl => cgl%nxt
       enddo
 
