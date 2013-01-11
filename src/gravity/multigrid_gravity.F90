@@ -1233,8 +1233,31 @@ contains
 !>
 !! \brief Compute the residual using compact, 4th order Mehrstellen formula
 !!
-!! \warning The implementation is somehow incomplete - perhaps additional operations are required in RBGS relaxation
-!! and/or the data has to be interpreted in slightly different way.
+!! \details 2nd order Laplace operator contains some 4th order terms on the potential size. To improve accuracy we may add a little laplacian of the source on the RHS
+!! to match these 4th order terms. Careful calculation leads to such numerical operators:
+!!
+!!                     |   1   |                    | 1   4 1 |
+!! 2D: residuum = 1/12 | 1 8 1 | source - 1/6 h**-2 | 4 -20 4 | solution
+!!                     |   1   |                    | 1   4 1 |
+!!
+!!                     |       | |   1   | |       |                    |   1   | | 1   2 1 | |   1   |
+!! 3D: residuum = 1/12 |   1   | | 1 6 1 | |   1   | source - 1/6 h**-2 | 1 2 1 | | 2 -24 2 | | 1 2 1 | solution
+!!                     |       | |   1   | |       |                    |   1   | | 1   2 1 | |   1   |
+!!
+!! where h = cg%dx = cg%dy = cg%dz
+!! On an unequally spaced grid (cg%dx /= cg%dy /= cg%dz), the stencil convolved with the solution is a bit more complicated:
+!!
+!!                 |  1  -2  1 |               |  1  10  1 |
+!! 2D: 1/12 dx**-2 | 10 -20 10 | + 1/12 dy**-2 | -2 -20 -2 |
+!!                 |  1  -2  1 |               |  1  10  1 |
+!!
+!!                 |        | | 1  -2 1 | |        |               |   1   | |  1   8  1 | |   1   |               |   1   | |     -2    | |   1   |
+!! 3D: 1/12 dx**-2 | 1 -2 1 | | 8 -16 8 | | 1 -2 1 | + 1/12 dy**-2 |  -2   | | -2 -16 -2 | |  -2   | + 1/12 dz**-2 | 1 8 1 | | -2 -16 -2 | | 1 8 1 |
+!!                 |        | | 1  -2 1 | |        |               |   1   | |  1   8  1 | |   1   |               |   1   | |     -2    | |   1   |
+!!
+!! For even higher order of accuracy look for HODIE schemes which are more general then the one described above.
+!!
+!! \warning The implementation is somehow incomplete - different coefficients are required to do efficient RBGS relaxation
 !!
 !! \warning This implementation does not support cylindrical coordinates
 !<
@@ -1310,6 +1333,9 @@ contains
               &        cg%q(soln)%span(cg%ijkse+idm(xdim,:,:)-idm(zdim,:,:)) + cg%q(soln)%span(cg%ijkse+idm(xdim,:,:)+idm(zdim,:,:)) ) &
               - Lyz * (cg%q(soln)%span(cg%ijkse-idm(zdim,:,:)-idm(ydim,:,:)) + cg%q(soln)%span(cg%ijkse-idm(zdim,:,:)+idm(ydim,:,:)) + &
               &        cg%q(soln)%span(cg%ijkse+idm(zdim,:,:)-idm(ydim,:,:)) + cg%q(soln)%span(cg%ijkse+idm(zdim,:,:)+idm(ydim,:,:)) )
+         ! OPT: Perhaps in 3D this would be more efficient without ifs.
+         ! OPT: Try direct operations on cg%q(soln)%arr without calling span
+         ! 2D and 1D rns do not need too much optimization as they will be rarely used in production runs with selfgravity
 
          ! WARNING: not optimized
          if (grav_bnd == bnd_givenval) then ! probably also in some other cases
