@@ -1341,20 +1341,20 @@ contains
          if (grav_bnd == bnd_givenval) then ! probably also in some other cases
             ! Use L2 Laplacian in two layers of cells next to the boundary because L4 seems to be incompatible with present image mass construction
             !> \todo try to fix this
-            Lx = cg%idx2
-            Ly = cg%idy2
-            Lz = cg%idz2
+            Lx  = 0. ; if (dom%has_dir(xdim)) Lx = cg%idx2
+            Ly  = 0. ; if (dom%has_dir(ydim)) Ly = cg%idy2
+            Lz  = 0. ; if (dom%has_dir(zdim)) Lz = cg%idz2
             L0 = -2. * (Lx + Ly + Lz)
 
             do k = cg%ks, cg%ke
                do j = cg%js, cg%je
                   do i = cg%is, cg%ie
                      if ( i<cg%is+L2w .or. i>cg%ie-L2w .or. j<cg%js+L2w .or. j>cg%je-L2w .or. k<cg%ks+L2w .or. k>cg%ke-L2w) then
-                        cg%q(def)%arr        (i,   j,   k)   = cg%q(src)%arr (i,   j,   k)         - &
-                             ( cg%q(soln)%arr(i-1, j,   k)   + cg%q(soln)%arr(i+1, j,   k))   * Lx - &
-                             ( cg%q(soln)%arr(i,   j-1, k)   + cg%q(soln)%arr(i,   j+1, k))   * Ly - &
-                             ( cg%q(soln)%arr(i,   j,   k-1) + cg%q(soln)%arr(i,   j,   k+1)) * Lz - &
-                             & cg%q(soln)%arr(i,   j,   k)                                    * L0
+                        cg%q(def)%arr        (i,         j,         k)         = cg%q(src)%arr (i,         j,         k      )         - &
+                             ( cg%q(soln)%arr(i-dom%D_x, j,         k)         + cg%q(soln)%arr(i+dom%D_x, j,         k      ))   * Lx - &
+                             ( cg%q(soln)%arr(i,         j-dom%D_x, k)         + cg%q(soln)%arr(i,         j+dom%D_x, k      ))   * Ly - &
+                             ( cg%q(soln)%arr(i,         j,         k-dom%D_x) + cg%q(soln)%arr(i,         j,         k+dom%D_x)) * Lz - &
+                             & cg%q(soln)%arr(i,         j,         k)                                                            * L0
                      endif
                   enddo
                enddo
