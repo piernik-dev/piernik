@@ -1235,14 +1235,16 @@ contains
 !!
 !! \warning The implementation is somehow incomplete - perhaps additional operations are required in RBGS relaxation
 !! and/or the data has to be interpreted in slightly different way.
+!!
+!! \warning This implementation does not support cylindrical coordinates
 !<
 
    subroutine residual_Mehrstellen(cg_llst, src, soln, def)
 
       use cg_list,       only: cg_list_element
       use cg_leaves,     only: cg_leaves_T
-      use constants,     only: ndims, idm2, xdim, ydim, zdim, BND_NEGREF
-      use dataio_pub,    only: die, warn
+      use constants,     only: ndims, xdim, ydim, zdim, BND_NEGREF, LO, HI
+      use dataio_pub,    only: warn
       use domain,        only: dom
       use grid_cont,     only: grid_container
       use mpisetup,      only: master
@@ -1256,16 +1258,14 @@ contains
       integer(kind=4),    intent(in) :: soln    !< index of solution in cg%q(:)
       integer(kind=4),    intent(in) :: def     !< index of defect in cg%q(:)
 
-      real                :: c21
-      real                :: L0, Lx, Ly, Lz
+      real                :: L0, Lx, Ly, Lz, Lxy, Lxz, Lyz
       integer, parameter  :: L2w = 2             ! #layers of boundary cells for L2 operator
 
       logical, save       :: firstcall = .true.
       integer             :: i, j, k
       type(cg_list_element), pointer :: cgl
       type(grid_container),  pointer :: cg
-
-      if (dom%eff_dim<ndims) call die("[multigrid_gravity:residual_Mehrstellen] Only 3D is implemented")
+      integer(kind=4), dimension(ndims,ndims,LO:HI) :: idm
 
       if (firstcall) then
          if (master) call warn("[multigrid_gravity:residual_Mehrstellen] residual order 4 is experimental.")
@@ -1275,38 +1275,49 @@ contains
       call cg_llst%arr3d_boundaries(soln, bnd_type = BND_NEGREF)
       call cg_llst%arr3d_boundaries(src,  bnd_type = BND_NEGREF)
 
-      c21 = 1.
+      idm = 0
+      do i = xdim, zdim
+         if (dom%has_dir(i)) idm(i, i, :) = 1
+      enddo
 
       cgl => cg_llst%first
       do while (associated(cgl))
          cg => cgl%cg
 
-         if (any(cg%idx2 /= [ cg%idy2, cg%idz2 ])) call die("[multigrid_gravity:residual_Mehrstellen] No support for unequal grids yet")
+         Lxy = 0. ; if (dom%has_dir(xdim) .and. dom%has_dir(ydim)) Lxy = (cg%idx2 + cg%idy2) / 12.
+         Lxz = 0. ; if (dom%has_dir(xdim) .and. dom%has_dir(zdim)) Lxz = (cg%idx2 + cg%idz2) / 12.
+         Lyz = 0. ; if (dom%has_dir(ydim) .and. dom%has_dir(zdim)) Lyz = (cg%idy2 + cg%idz2) / 12.
+         Lx  = 0. ; if (dom%has_dir(xdim)) Lx = cg%idx2 - 2. * (Lxy + Lxz)
+         Ly  = 0. ; if (dom%has_dir(ydim)) Ly = cg%idy2 - 2. * (Lxy + Lyz)
+         Lz  = 0. ; if (dom%has_dir(zdim)) Lz = cg%idz2 - 2. * (Lxz + Lyz)
+         L0  = -2. * (Lx + Ly + Lz) - 4. * (Lxy + Lxz + Lyz)
 
-         !> \deprecated BEWARE: cylindrical factors go here
          p3 => cg%q(def)%span(cg%ijkse)
-         p3 = 1./12.* (6.*cg%q(src)%span(cg%ijkse) + &
-              &           cg%q(src)%span(cg%ijkse-idm2(xdim,:,:)) + cg%q(src)%span(cg%ijkse+idm2(xdim,:,:)) + &
-              &           cg%q(src)%span(cg%ijkse-idm2(ydim,:,:)) + cg%q(src)%span(cg%ijkse+idm2(ydim,:,:)) + &
-              &           cg%q(src)%span(cg%ijkse-idm2(zdim,:,:)) + cg%q(src)%span(cg%ijkse+idm2(zdim,:,:)) ) - &
-              & 1./6.* cg%idx2 *( -24. * cg%q(soln)%span(cg%ijkse) + &
-              &                     2. * ( cg%q(soln)%span(cg%ijkse-idm2(xdim,:,:)) + cg%q(soln)%span(cg%ijkse+idm2(xdim,:,:)) + &
-              &                            cg%q(soln)%span(cg%ijkse-idm2(ydim,:,:)) + cg%q(soln)%span(cg%ijkse+idm2(ydim,:,:)) + &
-              &                            cg%q(soln)%span(cg%ijkse-idm2(zdim,:,:)) + cg%q(soln)%span(cg%ijkse+idm2(zdim,:,:)) ) + &
-              &                     cg%q(soln)%span(cg%ijkse-idm2(xdim,:,:)-idm2(ydim,:,:)) + cg%q(soln)%span(cg%ijkse-idm2(xdim,:,:)+idm2(ydim,:,:)) + &
-              &                     cg%q(soln)%span(cg%ijkse+idm2(xdim,:,:)-idm2(ydim,:,:)) + cg%q(soln)%span(cg%ijkse+idm2(xdim,:,:)+idm2(ydim,:,:)) + &
-              &                     cg%q(soln)%span(cg%ijkse-idm2(zdim,:,:)-idm2(ydim,:,:)) + cg%q(soln)%span(cg%ijkse-idm2(zdim,:,:)+idm2(ydim,:,:)) + &
-              &                     cg%q(soln)%span(cg%ijkse+idm2(zdim,:,:)-idm2(ydim,:,:)) + cg%q(soln)%span(cg%ijkse+idm2(zdim,:,:)+idm2(ydim,:,:)) + &
-              &                     cg%q(soln)%span(cg%ijkse-idm2(xdim,:,:)-idm2(zdim,:,:)) + cg%q(soln)%span(cg%ijkse-idm2(xdim,:,:)+idm2(zdim,:,:)) + &
-              &                     cg%q(soln)%span(cg%ijkse+idm2(xdim,:,:)-idm2(zdim,:,:)) + cg%q(soln)%span(cg%ijkse+idm2(xdim,:,:)+idm2(zdim,:,:)) )
+
+         p3 = (12.-2*dom%eff_dim)/12.*cg%q(src)%span(cg%ijkse) - L0*cg%q(soln)%span(cg%ijkse)
+         if (dom%has_dir(xdim)) p3 = p3 + &
+              (cg%q(src)%span(cg%ijkse-idm(xdim,:,:)) + cg%q(src)%span(cg%ijkse+idm(xdim,:,:)))/12. &
+              - Lx * (cg%q(soln)%span(cg%ijkse-idm(xdim,:,:)) + cg%q(soln)%span(cg%ijkse+idm(xdim,:,:)))
+         if (dom%has_dir(ydim)) p3 = p3 + &
+              (cg%q(src)%span(cg%ijkse-idm(ydim,:,:)) + cg%q(src)%span(cg%ijkse+idm(ydim,:,:)))/12. &
+              - Ly * (cg%q(soln)%span(cg%ijkse-idm(ydim,:,:)) + cg%q(soln)%span(cg%ijkse+idm(ydim,:,:))) &
+              - Lxy * (cg%q(soln)%span(cg%ijkse-idm(xdim,:,:)-idm(ydim,:,:)) + cg%q(soln)%span(cg%ijkse-idm(xdim,:,:)+idm(ydim,:,:)) + &
+              &        cg%q(soln)%span(cg%ijkse+idm(xdim,:,:)-idm(ydim,:,:)) + cg%q(soln)%span(cg%ijkse+idm(xdim,:,:)+idm(ydim,:,:)) )
+         if (dom%has_dir(zdim)) p3 = p3 + &
+              (cg%q(src)%span(cg%ijkse-idm(zdim,:,:)) + cg%q(src)%span(cg%ijkse+idm(zdim,:,:)))/12. &
+              - Lz * (cg%q(soln)%span(cg%ijkse-idm(zdim,:,:)) + cg%q(soln)%span(cg%ijkse+idm(zdim,:,:))) &
+              - Lxz * (cg%q(soln)%span(cg%ijkse-idm(xdim,:,:)-idm(zdim,:,:)) + cg%q(soln)%span(cg%ijkse-idm(xdim,:,:)+idm(zdim,:,:)) + &
+              &        cg%q(soln)%span(cg%ijkse+idm(xdim,:,:)-idm(zdim,:,:)) + cg%q(soln)%span(cg%ijkse+idm(xdim,:,:)+idm(zdim,:,:)) ) &
+              - Lyz * (cg%q(soln)%span(cg%ijkse-idm(zdim,:,:)-idm(ydim,:,:)) + cg%q(soln)%span(cg%ijkse-idm(zdim,:,:)+idm(ydim,:,:)) + &
+              &        cg%q(soln)%span(cg%ijkse+idm(zdim,:,:)-idm(ydim,:,:)) + cg%q(soln)%span(cg%ijkse+idm(zdim,:,:)+idm(ydim,:,:)) )
 
          ! WARNING: not optimized
          if (grav_bnd == bnd_givenval) then ! probably also in some other cases
             ! Use L2 Laplacian in two layers of cells next to the boundary because L4 seems to be incompatible with present image mass construction
             !> \todo try to fix this
-            Lx = c21 * cg%idx2
-            Ly = c21 * cg%idy2
-            Lz = c21 * cg%idz2
+            Lx = cg%idx2
+            Ly = cg%idy2
+            Lz = cg%idz2
             L0 = -2. * (Lx + Ly + Lz)
 
             do k = cg%ks, cg%ke
