@@ -985,7 +985,7 @@ contains
 !!   \todo check how the coefficients depend on interpretation of cell values (center point values vs integral over cell)
 !!
 !! Note that each kind of Laplace operator requires its own approximate solver (relaxation scheme, Green function for FFT) for optimal convergence.
-!! \warning Relaxation is implemented only for second order operator.
+!! \warning Relaxation is not implemented for the fourth order operator.
 !<
 
    subroutine residual(cg_llst, src, soln, def)
@@ -1132,7 +1132,11 @@ contains
 !! For integrated face fluxes in the 4th order Laplacian estimate set L4_strength = 0.5
 !! For simple 5-point L4 set L4_strength = 1.0
 !!
-!! There also exists more compact Mehrstellen scheme.
+!! There also exists more compact Mehrstellen 4th order scheme which outperforms this one in terms of accuracy
+!!
+!! \warning For optimal convergence this Laplace operator requires specific relaxation scheme.
+!! As this operator is outperformed by the 4th order Mehrstellen operatow, we don't plan to implement it.
+!! It can be either deleted or left here for curious people.
 !<
 
    subroutine residual4(cg_llst, src, soln, def)
@@ -1257,9 +1261,7 @@ contains
 !!
 !! For even higher order of accuracy look for HODIE schemes which are more general then the one described above.
 !!
-!! \warning The implementation is somehow incomplete - different coefficients are required to do efficient RBGS relaxation
-!!
-!! \warning This implementation does not support cylindrical coordinates
+!! \warning This implementation does not support cylindrical coordinates yet
 !<
 
    subroutine residual_Mehrstellen(cg_llst, src, soln, def)
@@ -1400,8 +1402,10 @@ contains
 !! \details This is the most costly routine in a serial run. Try to find optimal values for nsmool and nsmoob.
 !! This routine also depends a lot on communication so it  may limit scalability of the multigrid.
 !!
-!! This implementation is suitable for 2nd order Laplace operator (routine residual2).
-!! 4th order operators (residual4 and residual_Mehrstellen) require different relaxation operators or the convergence rate will be severily limited.
+!! This implementation is suitable for Laplace operators implemented in residual2 and residual_Mehrstellen
+!! 4th order operator residual4 uses relaxation formula for residual2 which severily limits its convergence.
+!! For optimal convergence residual4 requires slightly different relaxation operator.
+!! It is not planned to be implemented anytime soon because residual_Mehrstellen is much better.
 !<
 
    subroutine approximate_solution_rbgs(curl, src, soln)
@@ -1532,6 +1536,7 @@ contains
                !    relax interior cells (except for single layer of cells at all faces), first red, then 1-cell behind black one.
                !    relax single layer of black cells at all faces
                ! enddo
+               ! OPT: try to relax without Red-Black and use cg%wa for temporary storage
 
                ! with explicit outer loops it is easier to describe a 3-D checkerboard :-)
 
