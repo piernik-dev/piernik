@@ -1469,14 +1469,14 @@ contains
 
             if (ord_laplacian == -O_I4) then
                if (dom%geometry_type == GEO_RPZ) call die("[multigrid_gravity:approximate_solution_rbgs] Relaxation for Mehrstellen not implemented for noncartesian grid")
+               Lxy = 0. ; if (dom%has_dir(xdim) .and. dom%has_dir(ydim)) Lxy = (cg%idx2 + cg%idy2) / 12.
+               Lxz = 0. ; if (dom%has_dir(xdim) .and. dom%has_dir(zdim)) Lxz = (cg%idx2 + cg%idz2) / 12.
+               Lyz = 0. ; if (dom%has_dir(ydim) .and. dom%has_dir(zdim)) Lyz = (cg%idy2 + cg%idz2) / 12.
+               Lx  = 0. ; if (dom%has_dir(xdim)) Lx = cg%idx2 - 2. * (Lxy + Lxz)
+               Ly  = 0. ; if (dom%has_dir(ydim)) Ly = cg%idy2 - 2. * (Lxy + Lyz)
+               Lz  = 0. ; if (dom%has_dir(zdim)) Lz = cg%idz2 - 2. * (Lxz + Lyz)
+               L0  = 2. * (Lx + Ly + Lz) + 4. * (Lxy + Lxz + Lyz)
                if (dom%eff_dim==ndims) then
-                  Lxy = 0. ; if (dom%has_dir(xdim) .and. dom%has_dir(ydim)) Lxy = (cg%idx2 + cg%idy2) / 12.
-                  Lxz = 0. ; if (dom%has_dir(xdim) .and. dom%has_dir(zdim)) Lxz = (cg%idx2 + cg%idz2) / 12.
-                  Lyz = 0. ; if (dom%has_dir(ydim) .and. dom%has_dir(zdim)) Lyz = (cg%idy2 + cg%idz2) / 12.
-                  Lx  = 0. ; if (dom%has_dir(xdim)) Lx = cg%idx2 - 2. * (Lxy + Lxz)
-                  Ly  = 0. ; if (dom%has_dir(ydim)) Ly = cg%idy2 - 2. * (Lxy + Lyz)
-                  Lz  = 0. ; if (dom%has_dir(zdim)) Lz = cg%idz2 - 2. * (Lxz + Lyz)
-                  L0  = 2. * (Lx + Ly + Lz) + 4. * (Lxy + Lxz + Lyz)
                   do k = cg%ks, cg%ke
                      do j = cg%js, cg%je
                         i1 = cg%is + int(mod(n+cg%is+j+k, int(RED_BLACK)), kind=4)
@@ -1500,7 +1500,47 @@ contains
                      enddo
                   enddo
                else
-                  call die("[multigrid_gravity:approximate_solution_rbgs] Relaxation for Mehrstellen implemented only in 3D")
+                  ! In 3D this variant significantly increases instruction count and also some data read
+                  i1 = cg%is; id = 1 ! mv to multigridvars, init_multigrid
+                  j1 = cg%js; jd = 1
+                  k1 = cg%ks; kd = 1
+                  if (dom%has_dir(xdim)) then
+                     id = RED_BLACK
+                  else if (dom%has_dir(ydim)) then
+                     jd = RED_BLACK
+                  else if (dom%has_dir(zdim)) then
+                     kd = RED_BLACK
+                  endif
+
+                  if (kd == RED_BLACK) k1 = cg%ks + int(mod(n+cg%ks, int(RED_BLACK)), kind=4)
+                  do k = k1, cg%ke, kd
+                     if (jd == RED_BLACK) j1 = cg%js + int(mod(n+cg%js+k, int(RED_BLACK)), kind=4)
+                     do j = j1, cg%je, jd
+                        if (id == RED_BLACK) i1 = cg%is + int(mod(n+cg%is+j+k, int(RED_BLACK)), kind=4)
+                        do i = i1, cg%ie, id
+                           if (id == RED_BLACK) i1 = cg%is + int(mod(n+cg%is+j+k, int(RED_BLACK)), kind=4)
+                           cg%q(soln)%arr(i1  :cg%ie  :2, j,   k) = - cg%q(src)%arr (i1  :cg%ie  :2, j,   k  ) / L0
+                           if (dom%has_dir(xdim)) cg%q(soln)%arr(i1  :cg%ie  :2, j,   k  ) = cg%q(soln)%arr(i1  :cg%ie  :2, j,   k  ) &
+                                &            +   (cg%q(soln)%arr(i1-1:cg%ie-1:2, j,   k  ) + cg%q(soln)%arr(i1+1:cg%ie+1:2, j,   k  ))*Lx / L0
+                           if (dom%has_dir(ydim)) cg%q(soln)%arr(i1  :cg%ie  :2, j,   k  ) = cg%q(soln)%arr(i1  :cg%ie  :2, j,   k  ) &
+                                &            +   (cg%q(soln)%arr(i1  :cg%ie  :2, j-1, k  ) + cg%q(soln)%arr(i1  :cg%ie  :2, j+1, k  ))*Ly / L0
+                           if (dom%has_dir(zdim)) cg%q(soln)%arr(i1  :cg%ie  :2, j,   k  ) = cg%q(soln)%arr(i1  :cg%ie  :2, j,   k  ) &
+                                &            +   (cg%q(soln)%arr(i1  :cg%ie  :2, j,   k-1) + cg%q(soln)%arr(i1  :cg%ie  :2, j,   k+1))*Lz / L0
+                           if (dom%has_dir(xdim) .and. dom%has_dir(ydim)) &
+                                &                 cg%q(soln)%arr(i1  :cg%ie  :2, j,   k  ) = cg%q(soln)%arr(i1  :cg%ie  :2, j,   k  ) &
+                                &            +  ((cg%q(soln)%arr(i1-1:cg%ie-1:2, j-1, k  ) + cg%q(soln)%arr(i1+1:cg%ie+1:2, j-1, k  ))         &
+                                &            +   (cg%q(soln)%arr(i1-1:cg%ie-1:2, j+1, k  ) + cg%q(soln)%arr(i1+1:cg%ie+1:2, j+1, k  )))*Lxy / L0
+                           if (dom%has_dir(ydim) .and. dom%has_dir(zdim)) &
+                                &                 cg%q(soln)%arr(i1  :cg%ie  :2, j,   k  ) = cg%q(soln)%arr(i1  :cg%ie  :2, j,   k  ) &
+                                &            +  ((cg%q(soln)%arr(i1  :cg%ie  :2, j-1, k-1) + cg%q(soln)%arr(i1  :cg%ie  :2, j+1, k-1))         &
+                                &            +   (cg%q(soln)%arr(i1  :cg%ie  :2, j-1, k+1) + cg%q(soln)%arr(i1  :cg%ie  :2, j+1, k+1)))*Lyz / L0
+                           if (dom%has_dir(xdim) .and. dom%has_dir(zdim)) &
+                                &                 cg%q(soln)%arr(i1  :cg%ie  :2, j,   k  ) = cg%q(soln)%arr(i1  :cg%ie  :2, j,   k  ) &
+                                &            +  ((cg%q(soln)%arr(i1-1:cg%ie-1:2, j,   k-1) + cg%q(soln)%arr(i1+1:cg%ie+1:2, j,   k-1))         &
+                                &            +   (cg%q(soln)%arr(i1-1:cg%ie-1:2, j,   k+1) + cg%q(soln)%arr(i1+1:cg%ie+1:2, j,   k+1)))*Lxz / L0
+                        enddo
+                     enddo
+                  enddo
                endif
             else
                if (dom%eff_dim==ndims .and. .not. multidim_code_3D) then
