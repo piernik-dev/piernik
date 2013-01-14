@@ -1410,7 +1410,7 @@ contains
       use cg_level_connected, only: cg_level_connected_T
       use cg_list,            only: cg_list_element
       use cg_list_dataop,     only: dirty_label
-      use constants,          only: xdim, ydim, zdim, ndims, GEO_XYZ, GEO_RPZ, I_ONE, BND_NEGREF
+      use constants,          only: xdim, ydim, zdim, ndims, GEO_XYZ, GEO_RPZ, I_ONE, BND_NEGREF, O_I4
       use dataio_pub,         only: die
       use domain,             only: dom
       use global,             only: dirty_debug
@@ -1427,7 +1427,7 @@ contains
 
       integer :: n, i, j, k, i1, j1, k1, id, jd, kd
       integer :: nsmoo
-      real    :: crx, crx1, cry, crz, cr
+      real    :: crx, crx1, cry, crz, cr, L0, Lx, Ly, Lz, Lxy, Lxz, Lyz
       type(cg_list_element), pointer :: cgl
       type(grid_container),  pointer :: cg
 
@@ -1442,9 +1442,11 @@ contains
 
       if (dom%geometry_type == GEO_RPZ .and. .not. multidim_code_3D) call die("[multigrid_gravity:approximate_solution_rbgs] multidim_code_3D = .false. not implemented")
 
+!      if (ord_laplacian == -O_I4) call curl%arr3d_boundaries(src, bnd_type = BND_NEGREF) ! required when we use 7-point source term, not just 1-point
+      ! Also required when we want to eliminate some communication of soln at a cost of expanding relaxated area into guardcells
+
       do n = 1, RED_BLACK*nsmoo
          call curl%arr3d_boundaries(soln, bnd_type = BND_NEGREF)
-         ! corners are required for non-cartesian decompositions because current implementation of arr3d_boundaries may use overlapping buffers at triple points
 
          if (dirty_debug) then
             write(dirty_label, '(a,i5)')"relax soln- smoo=", n
@@ -1465,92 +1467,129 @@ contains
 
             ! with explicit outer loops it is easier to describe a 3-D checkerboard :-)
 
-            if (dom%eff_dim==ndims .and. .not. multidim_code_3D) then
-               do k = cg%ks, cg%ke
-                  do j = cg%js, cg%je
-                     i1 = cg%is + int(mod(n+cg%is+j+k, int(RED_BLACK)), kind=4)
-                     if (dom%geometry_type == GEO_RPZ) then
+            if (ord_laplacian == -O_I4) then
+               if (dom%geometry_type == GEO_RPZ) call die("[multigrid_gravity:approximate_solution_rbgs] Relaxation for Mehrstellen not implemented for noncartesian grid")
+               if (dom%eff_dim==ndims) then
+                  Lxy = 0. ; if (dom%has_dir(xdim) .and. dom%has_dir(ydim)) Lxy = (cg%idx2 + cg%idy2) / 12.
+                  Lxz = 0. ; if (dom%has_dir(xdim) .and. dom%has_dir(zdim)) Lxz = (cg%idx2 + cg%idz2) / 12.
+                  Lyz = 0. ; if (dom%has_dir(ydim) .and. dom%has_dir(zdim)) Lyz = (cg%idy2 + cg%idz2) / 12.
+                  Lx  = 0. ; if (dom%has_dir(xdim)) Lx = cg%idx2 - 2. * (Lxy + Lxz)
+                  Ly  = 0. ; if (dom%has_dir(ydim)) Ly = cg%idy2 - 2. * (Lxy + Lyz)
+                  Lz  = 0. ; if (dom%has_dir(zdim)) Lz = cg%idz2 - 2. * (Lxz + Lyz)
+                  L0  = 2. * (Lx + Ly + Lz) + 4. * (Lxy + Lxz + Lyz)
+                  do k = cg%ks, cg%ke
+                     do j = cg%js, cg%je
+                        i1 = cg%is + int(mod(n+cg%is+j+k, int(RED_BLACK)), kind=4)
+                        cg%q(soln)%arr(i1  :cg%ie  :2, j,   k) = &
+                             &   (cg%q(soln)%arr(i1-1:cg%ie-1:2, j,   k  ) + cg%q(soln)%arr(i1+1:cg%ie+1:2, j,   k  ))*Lx/L0   &
+                             +   (cg%q(soln)%arr(i1  :cg%ie  :2, j-1, k  ) + cg%q(soln)%arr(i1  :cg%ie  :2, j+1, k  ))*Ly/L0   &
+                             +   (cg%q(soln)%arr(i1  :cg%ie  :2, j,   k-1) + cg%q(soln)%arr(i1  :cg%ie  :2, j,   k+1))*Lz/L0   &
+                             +  ((cg%q(soln)%arr(i1-1:cg%ie-1:2, j-1, k  ) + cg%q(soln)%arr(i1+1:cg%ie+1:2, j-1, k  ))         &
+                             +   (cg%q(soln)%arr(i1-1:cg%ie-1:2, j+1, k  ) + cg%q(soln)%arr(i1+1:cg%ie+1:2, j+1, k  )))*Lxy/L0 &
+                             +  ((cg%q(soln)%arr(i1  :cg%ie  :2, j-1, k-1) + cg%q(soln)%arr(i1  :cg%ie  :2, j+1, k-1))         &
+                             +   (cg%q(soln)%arr(i1  :cg%ie  :2, j-1, k+1) + cg%q(soln)%arr(i1  :cg%ie  :2, j+1, k+1)))*Lyz/L0 &
+                             +  ((cg%q(soln)%arr(i1-1:cg%ie-1:2, j,   k-1) + cg%q(soln)%arr(i1+1:cg%ie+1:2, j,   k-1))         &
+                             +   (cg%q(soln)%arr(i1-1:cg%ie-1:2, j,   k+1) + cg%q(soln)%arr(i1+1:cg%ie+1:2, j,   k+1)))*Lxz/L0 &
+                             -    cg%q(src)%arr (i1  :cg%ie  :2, j,   k  ) / L0
+! For some weird reasons the formula that comes directly from the Mehrstellen operator worsens convergence
+! Note that it requires enabling call curl%arr3d_boundaries(src, ...) above
+!!$                             - ((12-2*dom%eff_dim)*cg%q(src)%arr (i1  :cg%ie  :2, j,   k  )                                                     &
+!!$                             &  + cg%q(src)%arr (i1-1:cg%ie-1:2, j,   k  ) + cg%q(src)%arr (i1+1:cg%ie+1:2, j,   k  )          &
+!!$                             &  + cg%q(src)%arr (i1  :cg%ie  :2, j-1, k  ) + cg%q(src)%arr (i1  :cg%ie  :2, j+1, k  )          &
+!!$                             &  + cg%q(src)%arr (i1  :cg%ie  :2, j,   k-1) + cg%q(src)%arr (i1  :cg%ie  :2, j,   k+1))/(12. * L0)
+                     enddo
+                  enddo
+               else
+                  call die("[multigrid_gravity:approximate_solution_rbgs] Relaxation for Mehrstellen implemented only in 3D")
+               endif
+            else
+               if (dom%eff_dim==ndims .and. .not. multidim_code_3D) then
+                  do k = cg%ks, cg%ke
+                     do j = cg%js, cg%je
+                        i1 = cg%is + int(mod(n+cg%is+j+k, int(RED_BLACK)), kind=4)
+                        if (dom%geometry_type == GEO_RPZ) then
 !!$                  cg%q(soln)%arr(i1  :cg%ie  :2, j,   k) = &
 !!$                       cg%mg%rx * (cg%q(soln)%arr(i1-1:cg%ie-1:2, j,   k  ) + cg%q(soln)%arr(i1+1:cg%ie+1:2, j,   k))   + &
-!!$                       cg%mg%ry * (cg%q(soln)%arr(i1  :cg%ie  :2, j-1, k  ) + cg%q(soln)%arr(i1:  cg%ie:  2, j+1, k))   + &
-!!$                       cg%mg%rz * (cg%q(soln)%arr(i1  :cg%ie  :2, j,   k-1) + cg%q(soln)%arr(i1:  cg%ie:  2, j,   k+1)) - &
+!!$                       cg%mg%ry * (cg%q(soln)%arr(i1  :cg%ie  :2, j-1, k  ) + cg%q(soln)%arr(i1  :cg%ie  :2, j+1, k))   + &
+!!$                       cg%mg%rz * (cg%q(soln)%arr(i1  :cg%ie  :2, j,   k-1) + cg%q(soln)%arr(i1  :cg%ie  :2, j,   k+1)) - &
 !!$                       cg%mg%r  *  cg%q(src)%arr( i1  :cg%ie  :2, j,   k  )  + &
 !!$                       cg%mg%rx * (cg%q(soln)%arr(i1+1:cg%ie+1:2, j,   k  ) - cg%q(soln)%arr(i1-1:cg%ie-1:2, j,   k)) * fac(i1:cg%ie:2)
-                        call die("[multigrid_gravity:approximate_solution_rbgs] This variant of relaxation loop is not implemented for cylindrical coordinates.")
-                     else
-                        cg%q(soln)%arr(i1  :cg%ie  :2, j,   k) = &
-                             cg%mg%rx * (cg%q(soln)%arr(i1-1:cg%ie-1:2, j,   k)   + cg%q(soln)%arr(i1+1:cg%ie+1:2, j,   k))   + &
-                             cg%mg%ry * (cg%q(soln)%arr(i1  :cg%ie  :2, j-1, k)   + cg%q(soln)%arr(i1:  cg%ie:  2, j+1, k))   + &
-                             cg%mg%rz * (cg%q(soln)%arr(i1  :cg%ie  :2, j,   k-1) + cg%q(soln)%arr(i1:  cg%ie:  2, j,   k+1)) - &
-                             cg%mg%r  *  cg%q(src)%arr (i1  :cg%ie  :2, j,   k)
-                     endif
-                  enddo
-               enddo
-            else
-               ! In 3D this variant significantly increases instruction count and also some data read
-               i1 = cg%is; id = 1 ! mv to multigridvars, init_multigrid
-               j1 = cg%js; jd = 1
-               k1 = cg%ks; kd = 1
-               if (dom%has_dir(xdim)) then
-                  id = RED_BLACK
-               else if (dom%has_dir(ydim)) then
-                  jd = RED_BLACK
-               else if (dom%has_dir(zdim)) then
-                  kd = RED_BLACK
-               endif
-
-               if (kd == RED_BLACK) k1 = cg%ks + int(mod(n+cg%ks, int(RED_BLACK)), kind=4)
-               select case (dom%geometry_type)
-                  case (GEO_XYZ)
-                     do k = k1, cg%ke, kd
-                        if (jd == RED_BLACK) j1 = cg%js + int(mod(n+cg%js+k, int(RED_BLACK)), kind=4)
-                        do j = j1, cg%je, jd
-                           if (id == RED_BLACK) i1 = cg%is + int(mod(n+cg%is+j+k, int(RED_BLACK)), kind=4)
-                           cg%q(soln)%arr                           (i1:  cg%ie  :id, j,   k)   = &
-                                & (1. - Jacobi_damp)* cg%q(soln)%arr(i1  :cg%ie  :id, j,   k)   - &
-                                &       Jacobi_damp * cg%q(src)%arr (i1  :cg%ie  :id, j,   k)   * cg%mg%r
-                           if (dom%has_dir(xdim))     cg%q(soln)%arr(i1  :cg%ie  :id, j,   k)   = cg%q(soln)%arr(i1:  cg%ie:  id, j,   k)    + &
-                                &       Jacobi_damp *(cg%q(soln)%arr(i1-1:cg%ie-1:id, j,   k)   + cg%q(soln)%arr(i1+1:cg%ie+1:id, j,   k))   * cg%mg%rx
-                           if (dom%has_dir(ydim))     cg%q(soln)%arr(i1  :cg%ie  :id, j,   k)   = cg%q(soln)%arr(i1:  cg%ie:  id, j,   k)    + &
-                                &       Jacobi_damp *(cg%q(soln)%arr(i1  :cg%ie  :id, j-1, k)   + cg%q(soln)%arr(i1:  cg%ie:  id, j+1, k))   * cg%mg%ry
-                           if (dom%has_dir(zdim))     cg%q(soln)%arr(i1  :cg%ie  :id, j,   k)   = cg%q(soln)%arr(i1:  cg%ie:  id, j,   k)    + &
-                                &       Jacobi_damp *(cg%q(soln)%arr(i1  :cg%ie  :id, j,   k-1) + cg%q(soln)%arr(i1:  cg%ie:  id, j,   k+1)) * cg%mg%rz
-                        enddo
+                           call die("[multigrid_gravity:approximate_solution_rbgs] This variant of relaxation loop is not implemented for cylindrical coordinates.")
+                        else
+                           cg%q(soln)%arr(i1  :cg%ie  :2, j,   k) = &
+                                cg%mg%rx * (cg%q(soln)%arr(i1-1:cg%ie-1:2, j,   k)   + cg%q(soln)%arr(i1+1:cg%ie+1:2, j,   k))   + &
+                                cg%mg%ry * (cg%q(soln)%arr(i1  :cg%ie  :2, j-1, k)   + cg%q(soln)%arr(i1  :cg%ie  :2, j+1, k))   + &
+                                cg%mg%rz * (cg%q(soln)%arr(i1  :cg%ie  :2, j,   k-1) + cg%q(soln)%arr(i1  :cg%ie  :2, j,   k+1)) - &
+                                cg%mg%r  *  cg%q(src)%arr (i1  :cg%ie  :2, j,   k)
+                        endif
                      enddo
-                  case (GEO_RPZ)
-                     do k = k1, cg%ke, kd
-                        if (jd == RED_BLACK) j1 = cg%js + int(mod(n+cg%js+k, int(RED_BLACK)), kind=4)
-                        do j = j1, cg%je, jd
-                           if (id == RED_BLACK) i1 = cg%is + int(mod(n+cg%is+j+k, int(RED_BLACK)), kind=4)
-                           do i = i1, cg%ie, id
-                              cr  = overrelax / 2.
-                              crx = cg%dvol2 * cg%idx2 * cg%x(i)**2
-                              cry = cg%dvol2 * cg%idy2
-                              crz = cg%dvol2 * cg%idz2 * cg%x(i)**2
-                              cr  = cr / (crx + cry + crz)
-                              crx = overrelax_xyz(xdim)* crx * cr
-                              cry = overrelax_xyz(ydim)* cry * cr
-                              crz = overrelax_xyz(zdim)* crz * cr
-                              cr  = cr * cg%dvol2 * cg%x(i)**2
+                  enddo
+               else
+                  ! In 3D this variant significantly increases instruction count and also some data read
+                  i1 = cg%is; id = 1 ! mv to multigridvars, init_multigrid
+                  j1 = cg%js; jd = 1
+                  k1 = cg%ks; kd = 1
+                  if (dom%has_dir(xdim)) then
+                     id = RED_BLACK
+                  else if (dom%has_dir(ydim)) then
+                     jd = RED_BLACK
+                  else if (dom%has_dir(zdim)) then
+                     kd = RED_BLACK
+                  endif
 
-                              crx1 = 2. * cg%x(i) * cg%idx
-                              if (crx1 /= 0.) crx1 = 1./crx1
-                              cg%q(soln)%arr                           (i,   j,   k)   = &
-                                   & (1. - Jacobi_damp)* cg%q(soln)%arr(i,   j,   k)   - &
-                                   &       Jacobi_damp * cg%q(src)%arr (i,   j,   k)   * cr
-                              if (dom%has_dir(xdim))     cg%q(soln)%arr(i,   j,   k)   = cg%q(soln)%arr(i,   j,   k)    + &
-                                   &       Jacobi_damp *(cg%q(soln)%arr(i-1, j,   k)   + cg%q(soln)%arr(i+1, j,   k))   * crx + &
-                                   &       Jacobi_damp *(cg%q(soln)%arr(i+1, j,   k)   - cg%q(soln)%arr(i-1, j,   k))   * crx * crx1
-                              if (dom%has_dir(ydim))     cg%q(soln)%arr(i,   j,   k)   = cg%q(soln)%arr(i,   j,   k)    + &
-                                   &       Jacobi_damp *(cg%q(soln)%arr(i,   j-1, k)   + cg%q(soln)%arr(i,   j+1, k))   * cry
-                              if (dom%has_dir(zdim))     cg%q(soln)%arr(i,   j,   k)   = cg%q(soln)%arr(i,   j,   k)    + &
-                                   &       Jacobi_damp *(cg%q(soln)%arr(i,   j,   k-1) + cg%q(soln)%arr(i,   j,   k+1)) * crz
+                  if (kd == RED_BLACK) k1 = cg%ks + int(mod(n+cg%ks, int(RED_BLACK)), kind=4)
+                  select case (dom%geometry_type)
+                     case (GEO_XYZ)
+                        do k = k1, cg%ke, kd
+                           if (jd == RED_BLACK) j1 = cg%js + int(mod(n+cg%js+k, int(RED_BLACK)), kind=4)
+                           do j = j1, cg%je, jd
+                              if (id == RED_BLACK) i1 = cg%is + int(mod(n+cg%is+j+k, int(RED_BLACK)), kind=4)
+                              cg%q(soln)%arr                           (i1  :cg%ie  :id, j,   k)   = &
+                                   & (1. - Jacobi_damp)* cg%q(soln)%arr(i1  :cg%ie  :id, j,   k)   - &
+                                   &       Jacobi_damp * cg%q(src)%arr (i1  :cg%ie  :id, j,   k)   * cg%mg%r
+                              if (dom%has_dir(xdim))     cg%q(soln)%arr(i1  :cg%ie  :id, j,   k)   = cg%q(soln)%arr(i1  :cg%ie  :id, j,   k)    + &
+                                   &       Jacobi_damp *(cg%q(soln)%arr(i1-1:cg%ie-1:id, j,   k)   + cg%q(soln)%arr(i1+1:cg%ie+1:id, j,   k))   * cg%mg%rx
+                              if (dom%has_dir(ydim))     cg%q(soln)%arr(i1  :cg%ie  :id, j,   k)   = cg%q(soln)%arr(i1  :cg%ie  :id, j,   k)    + &
+                                   &       Jacobi_damp *(cg%q(soln)%arr(i1  :cg%ie  :id, j-1, k)   + cg%q(soln)%arr(i1  :cg%ie  :id, j+1, k))   * cg%mg%ry
+                              if (dom%has_dir(zdim))     cg%q(soln)%arr(i1  :cg%ie  :id, j,   k)   = cg%q(soln)%arr(i1  :cg%ie  :id, j,   k)    + &
+                                   &       Jacobi_damp *(cg%q(soln)%arr(i1  :cg%ie  :id, j,   k-1) + cg%q(soln)%arr(i1  :cg%ie  :id, j,   k+1)) * cg%mg%rz
                            enddo
                         enddo
-                     enddo
-                  case default
-                     call die("[multigrid_gravity:approximate_solution_rbgs] Unsupported geometry.")
-               end select
+                     case (GEO_RPZ)
+                        do k = k1, cg%ke, kd
+                           if (jd == RED_BLACK) j1 = cg%js + int(mod(n+cg%js+k, int(RED_BLACK)), kind=4)
+                           do j = j1, cg%je, jd
+                              if (id == RED_BLACK) i1 = cg%is + int(mod(n+cg%is+j+k, int(RED_BLACK)), kind=4)
+                              do i = i1, cg%ie, id
+                                 cr  = overrelax / 2.
+                                 crx = cg%dvol2 * cg%idx2 * cg%x(i)**2
+                                 cry = cg%dvol2 * cg%idy2
+                                 crz = cg%dvol2 * cg%idz2 * cg%x(i)**2
+                                 cr  = cr / (crx + cry + crz)
+                                 crx = overrelax_xyz(xdim)* crx * cr
+                                 cry = overrelax_xyz(ydim)* cry * cr
+                                 crz = overrelax_xyz(zdim)* crz * cr
+                                 cr  = cr * cg%dvol2 * cg%x(i)**2
+
+                                 crx1 = 2. * cg%x(i) * cg%idx
+                                 if (crx1 /= 0.) crx1 = 1./crx1
+                                 cg%q(soln)%arr                           (i,   j,   k)   = &
+                                      & (1. - Jacobi_damp)* cg%q(soln)%arr(i,   j,   k)   - &
+                                      &       Jacobi_damp * cg%q(src)%arr (i,   j,   k)   * cr
+                                 if (dom%has_dir(xdim))     cg%q(soln)%arr(i,   j,   k)   = cg%q(soln)%arr(i,   j,   k)    + &
+                                      &       Jacobi_damp *(cg%q(soln)%arr(i-1, j,   k)   + cg%q(soln)%arr(i+1, j,   k))   * crx + &
+                                      &       Jacobi_damp *(cg%q(soln)%arr(i+1, j,   k)   - cg%q(soln)%arr(i-1, j,   k))   * crx * crx1
+                                 if (dom%has_dir(ydim))     cg%q(soln)%arr(i,   j,   k)   = cg%q(soln)%arr(i,   j,   k)    + &
+                                      &       Jacobi_damp *(cg%q(soln)%arr(i,   j-1, k)   + cg%q(soln)%arr(i,   j+1, k))   * cry
+                                 if (dom%has_dir(zdim))     cg%q(soln)%arr(i,   j,   k)   = cg%q(soln)%arr(i,   j,   k)    + &
+                                      &       Jacobi_damp *(cg%q(soln)%arr(i,   j,   k-1) + cg%q(soln)%arr(i,   j,   k+1)) * crz
+                              enddo
+                           enddo
+                        enddo
+                     case default
+                        call die("[multigrid_gravity:approximate_solution_rbgs] Unsupported geometry.")
+                  end select
+               endif
             endif
             cgl => cgl%nxt
          enddo
