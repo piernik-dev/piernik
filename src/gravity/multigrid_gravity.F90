@@ -1416,6 +1416,7 @@ contains
       use global,             only: dirty_debug
       use grid_cont,          only: grid_container
       use multigridvars,      only: correction, multidim_code_3D, nsmool
+      use named_array_list,   only: qna
 
       implicit none
 
@@ -1442,32 +1443,21 @@ contains
 
       if (dom%geometry_type == GEO_RPZ .and. .not. multidim_code_3D) call die("[multigrid_gravity:approximate_solution_rbgs] multidim_code_3D = .false. not implemented")
 
-!      if (ord_laplacian == -O_I4) call curl%arr3d_boundaries(src, bnd_type = BND_NEGREF) ! required when we use 7-point source term, not just 1-point
       ! Also required when we want to eliminate some communication of soln at a cost of expanding relaxated area into guardcells
+      if (ord_laplacian == -O_I4) then
+!         call curl%arr3d_boundaries(src, bnd_type = BND_NEGREF) ! required when we use 7-point source term, not just 1-point
+         ! Cannot use Red-Black for 4th order Mehrstellen relaxation due to data dependencies even if in some cases Red-Black gives better convergence
+         do n = 1, nsmoo
+            call curl%arr3d_boundaries(soln, bnd_type = BND_NEGREF)
 
-      do n = 1, RED_BLACK*nsmoo
-         call curl%arr3d_boundaries(soln, bnd_type = BND_NEGREF)
+            if (dirty_debug) then
+               write(dirty_label, '(a,i5)')"relax4M soln- smoo=", n
+               call curl%check_dirty(soln, dirty_label, expand=I_ONE)
+            endif
+            cgl => curl%first
+            do while (associated(cgl))
+               cg => cgl%cg
 
-         if (dirty_debug) then
-            write(dirty_label, '(a,i5)')"relax soln- smoo=", n
-            call curl%check_dirty(soln, dirty_label, expand=I_ONE)
-         endif
-         cgl => curl%first
-         do while (associated(cgl))
-            cg => cgl%cg
-
-            ! Possible optimization: this is the most costly part of the RBGS relaxation (instruction count, read and write data, L1 and L2 read cache miss)
-            ! do n = 1, nsmoo
-            !    call curl%arr3d_boundaries(soln, bnd_type = BND_NEGREF)
-            !    relax single layer of red cells at all faces
-            !    call curl%arr3d_boundaries(soln, bnd_type = BND_NEGREF)
-            !    relax interior cells (except for single layer of cells at all faces), first red, then 1-cell behind black one.
-            !    relax single layer of black cells at all faces
-            ! enddo
-
-            ! with explicit outer loops it is easier to describe a 3-D checkerboard :-)
-
-            if (ord_laplacian == -O_I4) then
                if (dom%geometry_type == GEO_RPZ) call die("[multigrid_gravity:approximate_solution_rbgs] Relaxation for Mehrstellen not implemented for noncartesian grid")
                Lxy = 0. ; if (dom%has_dir(xdim) .and. dom%has_dir(ydim)) Lxy = (cg%idx2 + cg%idy2) / 12.
                Lxz = 0. ; if (dom%has_dir(xdim) .and. dom%has_dir(zdim)) Lxz = (cg%idx2 + cg%idz2) / 12.
@@ -1479,70 +1469,83 @@ contains
                if (dom%eff_dim==ndims) then
                   do k = cg%ks, cg%ke
                      do j = cg%js, cg%je
-                        i1 = cg%is + int(mod(n+cg%is+j+k, int(RED_BLACK)), kind=4)
-                        cg%q(soln)%arr(i1  :cg%ie  :2, j,   k) = &
-                             &   (cg%q(soln)%arr(i1-1:cg%ie-1:2, j,   k  ) + cg%q(soln)%arr(i1+1:cg%ie+1:2, j,   k  ))*Lx/L0   &
-                             +   (cg%q(soln)%arr(i1  :cg%ie  :2, j-1, k  ) + cg%q(soln)%arr(i1  :cg%ie  :2, j+1, k  ))*Ly/L0   &
-                             +   (cg%q(soln)%arr(i1  :cg%ie  :2, j,   k-1) + cg%q(soln)%arr(i1  :cg%ie  :2, j,   k+1))*Lz/L0   &
-                             +  ((cg%q(soln)%arr(i1-1:cg%ie-1:2, j-1, k  ) + cg%q(soln)%arr(i1+1:cg%ie+1:2, j-1, k  ))         &
-                             +   (cg%q(soln)%arr(i1-1:cg%ie-1:2, j+1, k  ) + cg%q(soln)%arr(i1+1:cg%ie+1:2, j+1, k  )))*Lxy/L0 &
-                             +  ((cg%q(soln)%arr(i1  :cg%ie  :2, j-1, k-1) + cg%q(soln)%arr(i1  :cg%ie  :2, j+1, k-1))         &
-                             +   (cg%q(soln)%arr(i1  :cg%ie  :2, j-1, k+1) + cg%q(soln)%arr(i1  :cg%ie  :2, j+1, k+1)))*Lyz/L0 &
-                             +  ((cg%q(soln)%arr(i1-1:cg%ie-1:2, j,   k-1) + cg%q(soln)%arr(i1+1:cg%ie+1:2, j,   k-1))         &
-                             +   (cg%q(soln)%arr(i1-1:cg%ie-1:2, j,   k+1) + cg%q(soln)%arr(i1+1:cg%ie+1:2, j,   k+1)))*Lxz/L0 &
-                             -    cg%q(src)%arr (i1  :cg%ie  :2, j,   k  ) / L0
+                        cg%wa(cg%is  :cg%ie  , j,   k) = &
+                             &   (cg%q(soln)%arr(cg%is-1:cg%ie-1, j,   k  ) + cg%q(soln)%arr(cg%is+1:cg%ie+1, j,   k  ))*Lx/L0   &
+                             +   (cg%q(soln)%arr(cg%is  :cg%ie  , j-1, k  ) + cg%q(soln)%arr(cg%is  :cg%ie  , j+1, k  ))*Ly/L0   &
+                             +   (cg%q(soln)%arr(cg%is  :cg%ie  , j,   k-1) + cg%q(soln)%arr(cg%is  :cg%ie  , j,   k+1))*Lz/L0   &
+                             +  ((cg%q(soln)%arr(cg%is-1:cg%ie-1, j-1, k  ) + cg%q(soln)%arr(cg%is+1:cg%ie+1, j-1, k  ))         &
+                             +   (cg%q(soln)%arr(cg%is-1:cg%ie-1, j+1, k  ) + cg%q(soln)%arr(cg%is+1:cg%ie+1, j+1, k  )))*Lxy/L0 &
+                             +  ((cg%q(soln)%arr(cg%is  :cg%ie  , j-1, k-1) + cg%q(soln)%arr(cg%is  :cg%ie  , j+1, k-1))         &
+                             +   (cg%q(soln)%arr(cg%is  :cg%ie  , j-1, k+1) + cg%q(soln)%arr(cg%is  :cg%ie  , j+1, k+1)))*Lyz/L0 &
+                             +  ((cg%q(soln)%arr(cg%is-1:cg%ie-1, j,   k-1) + cg%q(soln)%arr(cg%is+1:cg%ie+1, j,   k-1))         &
+                             +   (cg%q(soln)%arr(cg%is-1:cg%ie-1, j,   k+1) + cg%q(soln)%arr(cg%is+1:cg%ie+1, j,   k+1)))*Lxz/L0 &
+                             -    cg%q(src)%arr (cg%is  :cg%ie  , j,   k  ) / L0
 ! For some weird reasons the formula that comes directly from the Mehrstellen operator worsens convergence
 ! Note that it requires enabling call curl%arr3d_boundaries(src, ...) above
-!!$                             - ((12-2*dom%eff_dim)*cg%q(src)%arr (i1  :cg%ie  :2, j,   k  )                                                     &
-!!$                             &  + cg%q(src)%arr (i1-1:cg%ie-1:2, j,   k  ) + cg%q(src)%arr (i1+1:cg%ie+1:2, j,   k  )          &
-!!$                             &  + cg%q(src)%arr (i1  :cg%ie  :2, j-1, k  ) + cg%q(src)%arr (i1  :cg%ie  :2, j+1, k  )          &
-!!$                             &  + cg%q(src)%arr (i1  :cg%ie  :2, j,   k-1) + cg%q(src)%arr (i1  :cg%ie  :2, j,   k+1))/(12. * L0)
+!!$                             - ((12-2*dom%eff_dim)*cg%q(src)%arr (cg%is  :cg%ie  , j,   k  )                                     &
+!!$                             &  + cg%q(src)%arr (cg%is-1:cg%ie-1, j,   k  ) + cg%q(src)%arr (cg%is+1:cg%ie+1, j,   k  )          &
+!!$                             &  + cg%q(src)%arr (cg%is  :cg%ie  , j-1, k  ) + cg%q(src)%arr (cg%is  :cg%ie  , j+1, k  )          &
+!!$                             &  + cg%q(src)%arr (cg%is  :cg%ie  , j,   k-1) + cg%q(src)%arr (cg%is  :cg%ie  , j,   k+1))/(12. * L0)
                      enddo
                   enddo
                else
-                  ! In 3D this variant significantly increases instruction count and also some data read
-                  i1 = cg%is; id = 1 ! mv to multigridvars, init_multigrid
-                  j1 = cg%js; jd = 1
-                  k1 = cg%ks; kd = 1
-                  if (dom%has_dir(xdim)) then
-                     id = RED_BLACK
-                  else if (dom%has_dir(ydim)) then
-                     jd = RED_BLACK
-                  else if (dom%has_dir(zdim)) then
-                     kd = RED_BLACK
-                  endif
-
-                  if (kd == RED_BLACK) k1 = cg%ks + int(mod(n+cg%ks, int(RED_BLACK)), kind=4)
-                  do k = k1, cg%ke, kd
-                     if (jd == RED_BLACK) j1 = cg%js + int(mod(n+cg%js+k, int(RED_BLACK)), kind=4)
-                     do j = j1, cg%je, jd
-                        if (id == RED_BLACK) i1 = cg%is + int(mod(n+cg%is+j+k, int(RED_BLACK)), kind=4)
-                        do i = i1, cg%ie, id
-                           if (id == RED_BLACK) i1 = cg%is + int(mod(n+cg%is+j+k, int(RED_BLACK)), kind=4)
-                           cg%q(soln)%arr(i1  :cg%ie  :2, j,   k) = - cg%q(src)%arr (i1  :cg%ie  :2, j,   k  ) / L0
-                           if (dom%has_dir(xdim)) cg%q(soln)%arr(i1  :cg%ie  :2, j,   k  ) = cg%q(soln)%arr(i1  :cg%ie  :2, j,   k  ) &
-                                &            +   (cg%q(soln)%arr(i1-1:cg%ie-1:2, j,   k  ) + cg%q(soln)%arr(i1+1:cg%ie+1:2, j,   k  ))*Lx / L0
-                           if (dom%has_dir(ydim)) cg%q(soln)%arr(i1  :cg%ie  :2, j,   k  ) = cg%q(soln)%arr(i1  :cg%ie  :2, j,   k  ) &
-                                &            +   (cg%q(soln)%arr(i1  :cg%ie  :2, j-1, k  ) + cg%q(soln)%arr(i1  :cg%ie  :2, j+1, k  ))*Ly / L0
-                           if (dom%has_dir(zdim)) cg%q(soln)%arr(i1  :cg%ie  :2, j,   k  ) = cg%q(soln)%arr(i1  :cg%ie  :2, j,   k  ) &
-                                &            +   (cg%q(soln)%arr(i1  :cg%ie  :2, j,   k-1) + cg%q(soln)%arr(i1  :cg%ie  :2, j,   k+1))*Lz / L0
-                           if (dom%has_dir(xdim) .and. dom%has_dir(ydim)) &
-                                &                 cg%q(soln)%arr(i1  :cg%ie  :2, j,   k  ) = cg%q(soln)%arr(i1  :cg%ie  :2, j,   k  ) &
-                                &            +  ((cg%q(soln)%arr(i1-1:cg%ie-1:2, j-1, k  ) + cg%q(soln)%arr(i1+1:cg%ie+1:2, j-1, k  ))         &
-                                &            +   (cg%q(soln)%arr(i1-1:cg%ie-1:2, j+1, k  ) + cg%q(soln)%arr(i1+1:cg%ie+1:2, j+1, k  )))*Lxy / L0
-                           if (dom%has_dir(ydim) .and. dom%has_dir(zdim)) &
-                                &                 cg%q(soln)%arr(i1  :cg%ie  :2, j,   k  ) = cg%q(soln)%arr(i1  :cg%ie  :2, j,   k  ) &
-                                &            +  ((cg%q(soln)%arr(i1  :cg%ie  :2, j-1, k-1) + cg%q(soln)%arr(i1  :cg%ie  :2, j+1, k-1))         &
-                                &            +   (cg%q(soln)%arr(i1  :cg%ie  :2, j-1, k+1) + cg%q(soln)%arr(i1  :cg%ie  :2, j+1, k+1)))*Lyz / L0
-                           if (dom%has_dir(xdim) .and. dom%has_dir(zdim)) &
-                                &                 cg%q(soln)%arr(i1  :cg%ie  :2, j,   k  ) = cg%q(soln)%arr(i1  :cg%ie  :2, j,   k  ) &
-                                &            +  ((cg%q(soln)%arr(i1-1:cg%ie-1:2, j,   k-1) + cg%q(soln)%arr(i1+1:cg%ie+1:2, j,   k-1))         &
-                                &            +   (cg%q(soln)%arr(i1-1:cg%ie-1:2, j,   k+1) + cg%q(soln)%arr(i1+1:cg%ie+1:2, j,   k+1)))*Lxz / L0
-                        enddo
+                  do k = cg%ks, cg%ke
+                     do j = cg%js, cg%je
+                        cg%wa(cg%is  :cg%ie  , j,   k) = &
+                             - cg%q(src)%arr (cg%is  :cg%ie  :2, j,   k  ) / L0
+                        if (dom%has_dir(xdim)) cg%q(soln)%arr(cg%is  :cg%ie  , j,   k  ) = cg%q(soln)%arr(cg%is  :cg%ie  , j,   k  )          &
+                             &            +   (cg%q(soln)%arr(cg%is-1:cg%ie-1, j,   k  ) + cg%q(soln)%arr(cg%is+1:cg%ie+1, j,   k  ))*Lx / L0
+                        if (dom%has_dir(ydim)) cg%q(soln)%arr(cg%is  :cg%ie  , j,   k  ) = cg%q(soln)%arr(cg%is  :cg%ie  , j,   k  )          &
+                             &            +   (cg%q(soln)%arr(cg%is  :cg%ie  , j-1, k  ) + cg%q(soln)%arr(cg%is  :cg%ie  , j+1, k  ))*Ly / L0
+                        if (dom%has_dir(zdim)) cg%q(soln)%arr(cg%is  :cg%ie  , j,   k  ) = cg%q(soln)%arr(cg%is  :cg%ie  , j,   k  )          &
+                             &            +   (cg%q(soln)%arr(cg%is  :cg%ie  , j,   k-1) + cg%q(soln)%arr(cg%is  :cg%ie  , j,   k+1))*Lz / L0
+                        if (dom%has_dir(xdim) .and. dom%has_dir(ydim)) &
+                             &                 cg%q(soln)%arr(cg%is  :cg%ie  , j,   k  ) = cg%q(soln)%arr(cg%is  :cg%ie  , j,   k  )          &
+                             &            +  ((cg%q(soln)%arr(cg%is-1:cg%ie-1, j-1, k  ) + cg%q(soln)%arr(cg%is+1:cg%ie+1, j-1, k  ))         &
+                             &            +   (cg%q(soln)%arr(cg%is-1:cg%ie-1, j+1, k  ) + cg%q(soln)%arr(cg%is+1:cg%ie+1, j+1, k  )))*Lxy / L0
+                        if (dom%has_dir(ydim) .and. dom%has_dir(zdim)) &
+                             &                 cg%q(soln)%arr(cg%is  :cg%ie  , j,   k  ) = cg%q(soln)%arr(cg%is  :cg%ie  , j,   k  )          &
+                             &            +  ((cg%q(soln)%arr(cg%is  :cg%ie  , j-1, k-1) + cg%q(soln)%arr(cg%is  :cg%ie  , j+1, k-1))         &
+                             &            +   (cg%q(soln)%arr(cg%is  :cg%ie  , j-1, k+1) + cg%q(soln)%arr(cg%is  :cg%ie  , j+1, k+1)))*Lyz / L0
+                        if (dom%has_dir(xdim) .and. dom%has_dir(zdim)) &
+                             &                 cg%q(soln)%arr(cg%is  :cg%ie  , j,   k  ) = cg%q(soln)%arr(cg%is  :cg%ie  , j,   k  )          &
+                             &            +  ((cg%q(soln)%arr(cg%is-1:cg%ie-1, j,   k-1) + cg%q(soln)%arr(cg%is+1:cg%ie+1, j,   k-1))         &
+                             &            +   (cg%q(soln)%arr(cg%is-1:cg%ie-1, j,   k+1) + cg%q(soln)%arr(cg%is+1:cg%ie+1, j,   k+1)))*Lxz / L0
                      enddo
                   enddo
                endif
-            else
+               cgl => cgl%nxt
+            enddo
+            call curl%q_copy(qna%wai, soln)
+
+            if (dirty_debug) then
+               write(dirty_label, '(a,i5)')"relax4M soln+ smoo=", n
+               call curl%check_dirty(soln, dirty_label)
+            endif
+         enddo
+      else
+         do n = 1, RED_BLACK*nsmoo
+            call curl%arr3d_boundaries(soln, bnd_type = BND_NEGREF)
+
+            if (dirty_debug) then
+               write(dirty_label, '(a,i5)')"relax2 soln- smoo=", n
+               call curl%check_dirty(soln, dirty_label, expand=I_ONE)
+            endif
+            cgl => curl%first
+            do while (associated(cgl))
+               cg => cgl%cg
+
+               ! Possible optimization: this is the most costly part of the RBGS relaxation (instruction count, read and write data, L1 and L2 read cache miss)
+               ! do n = 1, nsmoo
+               !    call curl%arr3d_boundaries(soln, bnd_type = BND_NEGREF)
+               !    relax single layer of red cells at all faces
+               !    call curl%arr3d_boundaries(soln, bnd_type = BND_NEGREF)
+               !    relax interior cells (except for single layer of cells at all faces), first red, then 1-cell behind black one.
+               !    relax single layer of black cells at all faces
+               ! enddo
+
+               ! with explicit outer loops it is easier to describe a 3-D checkerboard :-)
+
                if (dom%eff_dim==ndims .and. .not. multidim_code_3D) then
                   do k = cg%ks, cg%ke
                      do j = cg%js, cg%je
@@ -1630,16 +1633,16 @@ contains
                         call die("[multigrid_gravity:approximate_solution_rbgs] Unsupported geometry.")
                   end select
                endif
+               cgl => cgl%nxt
+            enddo
+
+            if (dirty_debug) then
+               write(dirty_label, '(a,i5)')"relax2 soln+ smoo=", n
+               call curl%check_dirty(soln, dirty_label)
             endif
-            cgl => cgl%nxt
+
          enddo
-
-         if (dirty_debug) then
-            write(dirty_label, '(a,i5)')"relax soln+ smoo=", n
-            call curl%check_dirty(soln, dirty_label)
-         endif
-
-      enddo
+      endif
 
    end subroutine approximate_solution_rbgs
 
