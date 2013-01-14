@@ -1466,53 +1466,42 @@ contains
                Ly  = 0. ; if (dom%has_dir(ydim)) Ly = cg%idy2 - 2. * (Lxy + Lyz)
                Lz  = 0. ; if (dom%has_dir(zdim)) Lz = cg%idz2 - 2. * (Lxz + Lyz)
                L0  = 2. * (Lx + Ly + Lz) + 4. * (Lxy + Lxz + Lyz)
-               if (dom%eff_dim==ndims) then
-                  do k = cg%ks, cg%ke
-                     do j = cg%js, cg%je
-                        cg%wa(cg%is  :cg%ie  , j,   k) = &
-                             &   (cg%q(soln)%arr(cg%is-1:cg%ie-1, j,   k  ) + cg%q(soln)%arr(cg%is+1:cg%ie+1, j,   k  ))*Lx/L0   &
-                             +   (cg%q(soln)%arr(cg%is  :cg%ie  , j-1, k  ) + cg%q(soln)%arr(cg%is  :cg%ie  , j+1, k  ))*Ly/L0   &
-                             +   (cg%q(soln)%arr(cg%is  :cg%ie  , j,   k-1) + cg%q(soln)%arr(cg%is  :cg%ie  , j,   k+1))*Lz/L0   &
-                             +  ((cg%q(soln)%arr(cg%is-1:cg%ie-1, j-1, k  ) + cg%q(soln)%arr(cg%is+1:cg%ie+1, j-1, k  ))         &
-                             +   (cg%q(soln)%arr(cg%is-1:cg%ie-1, j+1, k  ) + cg%q(soln)%arr(cg%is+1:cg%ie+1, j+1, k  )))*Lxy/L0 &
-                             +  ((cg%q(soln)%arr(cg%is  :cg%ie  , j-1, k-1) + cg%q(soln)%arr(cg%is  :cg%ie  , j+1, k-1))         &
-                             +   (cg%q(soln)%arr(cg%is  :cg%ie  , j-1, k+1) + cg%q(soln)%arr(cg%is  :cg%ie  , j+1, k+1)))*Lyz/L0 &
-                             +  ((cg%q(soln)%arr(cg%is-1:cg%ie-1, j,   k-1) + cg%q(soln)%arr(cg%is+1:cg%ie+1, j,   k-1))         &
-                             +   (cg%q(soln)%arr(cg%is-1:cg%ie-1, j,   k+1) + cg%q(soln)%arr(cg%is+1:cg%ie+1, j,   k+1)))*Lxz/L0 &
-                             -    cg%q(src)%arr (cg%is  :cg%ie  , j,   k  ) / L0
-! For some weird reasons the formula that comes directly from the Mehrstellen operator worsens convergence
-! Note that it requires enabling call curl%arr3d_boundaries(src, ...) above
-!!$                             - ((12-2*dom%eff_dim)*cg%q(src)%arr (cg%is  :cg%ie  , j,   k  )                                     &
-!!$                             &  + cg%q(src)%arr (cg%is-1:cg%ie-1, j,   k  ) + cg%q(src)%arr (cg%is+1:cg%ie+1, j,   k  )          &
-!!$                             &  + cg%q(src)%arr (cg%is  :cg%ie  , j-1, k  ) + cg%q(src)%arr (cg%is  :cg%ie  , j+1, k  )          &
-!!$                             &  + cg%q(src)%arr (cg%is  :cg%ie  , j,   k-1) + cg%q(src)%arr (cg%is  :cg%ie  , j,   k+1))/(12. * L0)
-                     enddo
-                  enddo
+               if (dom%eff_dim == ndims) then
+                  cg%wa(cg%is  :cg%ie  , cg%js  :cg%je  ,   cg%ks:cg%ke) = &
+                       &  (cg%q(soln)%arr(cg%is-1:cg%ie-1, cg%js  :cg%je  , cg%ks  :cg%ke  ) + cg%q(soln)%arr(cg%is+1:cg%ie+1, cg%js  :cg%je  , cg%ks  :cg%ke  ))*Lx/L0   &
+                       +  (cg%q(soln)%arr(cg%is  :cg%ie  , cg%js-1:cg%je-1, cg%ks  :cg%ke  ) + cg%q(soln)%arr(cg%is  :cg%ie  , cg%js+1:cg%je+1, cg%ks  :cg%ke  ))*Ly/L0   &
+                       +  (cg%q(soln)%arr(cg%is  :cg%ie  , cg%js  :cg%je  , cg%ks-1:cg%ke-1) + cg%q(soln)%arr(cg%is  :cg%ie  , cg%js  :cg%je  , cg%ks+1:cg%ke+1))*Lz/L0   &
+                       + ((cg%q(soln)%arr(cg%is-1:cg%ie-1, cg%js-1:cg%je-1, cg%ks  :cg%ke  ) + cg%q(soln)%arr(cg%is+1:cg%ie+1, cg%js-1:cg%je-1, cg%ks  :cg%ke  ))         &
+                       +  (cg%q(soln)%arr(cg%is-1:cg%ie-1, cg%js+1:cg%je+1, cg%ks  :cg%ke  ) + cg%q(soln)%arr(cg%is+1:cg%ie+1, cg%js+1:cg%je+1, cg%ks  :cg%ke  )))*Lxy/L0 &
+                       + ((cg%q(soln)%arr(cg%is  :cg%ie  , cg%js-1:cg%je-1, cg%ks-1:cg%ke-1) + cg%q(soln)%arr(cg%is  :cg%ie  , cg%js+1:cg%je+1, cg%ks-1:cg%ke-1))         &
+                       +  (cg%q(soln)%arr(cg%is  :cg%ie  , cg%js-1:cg%je-1, cg%ks+1:cg%ke+1) + cg%q(soln)%arr(cg%is  :cg%ie  , cg%js+1:cg%je+1, cg%ks+1:cg%ke+1)))*Lyz/L0 &
+                       + ((cg%q(soln)%arr(cg%is-1:cg%ie-1, cg%js  :cg%je  , cg%ks-1:cg%ke-1) + cg%q(soln)%arr(cg%is+1:cg%ie+1, cg%js  :cg%je  , cg%ks-1:cg%ke-1))         &
+                       +  (cg%q(soln)%arr(cg%is-1:cg%ie-1, cg%js  :cg%je  , cg%ks+1:cg%ke+1) + cg%q(soln)%arr(cg%is+1:cg%ie+1, cg%js  :cg%je  , cg%ks+1:cg%ke+1)))*Lxz/L0 &
+                       -   cg%q(src )%arr(cg%is  :cg%ie  , cg%js  :cg%je  , cg%ks  :cg%ke  ) / L0
                else
-                  do k = cg%ks, cg%ke
-                     do j = cg%js, cg%je
-                        cg%wa(cg%is  :cg%ie  , j,   k) = &
-                             - cg%q(src)%arr (cg%is  :cg%ie  :2, j,   k  ) / L0
-                        if (dom%has_dir(xdim)) cg%q(soln)%arr(cg%is  :cg%ie  , j,   k  ) = cg%q(soln)%arr(cg%is  :cg%ie  , j,   k  )          &
-                             &            +   (cg%q(soln)%arr(cg%is-1:cg%ie-1, j,   k  ) + cg%q(soln)%arr(cg%is+1:cg%ie+1, j,   k  ))*Lx / L0
-                        if (dom%has_dir(ydim)) cg%q(soln)%arr(cg%is  :cg%ie  , j,   k  ) = cg%q(soln)%arr(cg%is  :cg%ie  , j,   k  )          &
-                             &            +   (cg%q(soln)%arr(cg%is  :cg%ie  , j-1, k  ) + cg%q(soln)%arr(cg%is  :cg%ie  , j+1, k  ))*Ly / L0
-                        if (dom%has_dir(zdim)) cg%q(soln)%arr(cg%is  :cg%ie  , j,   k  ) = cg%q(soln)%arr(cg%is  :cg%ie  , j,   k  )          &
-                             &            +   (cg%q(soln)%arr(cg%is  :cg%ie  , j,   k-1) + cg%q(soln)%arr(cg%is  :cg%ie  , j,   k+1))*Lz / L0
-                        if (dom%has_dir(xdim) .and. dom%has_dir(ydim)) &
-                             &                 cg%q(soln)%arr(cg%is  :cg%ie  , j,   k  ) = cg%q(soln)%arr(cg%is  :cg%ie  , j,   k  )          &
-                             &            +  ((cg%q(soln)%arr(cg%is-1:cg%ie-1, j-1, k  ) + cg%q(soln)%arr(cg%is+1:cg%ie+1, j-1, k  ))         &
-                             &            +   (cg%q(soln)%arr(cg%is-1:cg%ie-1, j+1, k  ) + cg%q(soln)%arr(cg%is+1:cg%ie+1, j+1, k  )))*Lxy / L0
-                        if (dom%has_dir(ydim) .and. dom%has_dir(zdim)) &
-                             &                 cg%q(soln)%arr(cg%is  :cg%ie  , j,   k  ) = cg%q(soln)%arr(cg%is  :cg%ie  , j,   k  )          &
-                             &            +  ((cg%q(soln)%arr(cg%is  :cg%ie  , j-1, k-1) + cg%q(soln)%arr(cg%is  :cg%ie  , j+1, k-1))         &
-                             &            +   (cg%q(soln)%arr(cg%is  :cg%ie  , j-1, k+1) + cg%q(soln)%arr(cg%is  :cg%ie  , j+1, k+1)))*Lyz / L0
-                        if (dom%has_dir(xdim) .and. dom%has_dir(zdim)) &
-                             &                 cg%q(soln)%arr(cg%is  :cg%ie  , j,   k  ) = cg%q(soln)%arr(cg%is  :cg%ie  , j,   k  )          &
-                             &            +  ((cg%q(soln)%arr(cg%is-1:cg%ie-1, j,   k-1) + cg%q(soln)%arr(cg%is+1:cg%ie+1, j,   k-1))         &
-                             &            +   (cg%q(soln)%arr(cg%is-1:cg%ie-1, j,   k+1) + cg%q(soln)%arr(cg%is+1:cg%ie+1, j,   k+1)))*Lxz / L0
-                     enddo
-                  enddo
+                  cg%wa(cg%is  :cg%ie  , cg%js:cg%je,   cg%ks:cg%ke) = &
+                       -     cg%q(src )%arr(cg%is  :cg%ie  , cg%js  :cg%je,   cg%ks  :cg%ke  ) / L0
+                  if (dom%has_dir(xdim)) &
+                       &     cg%wa         (cg%is  :cg%ie  , cg%js  :cg%je,   cg%ks  :cg%ke  ) = cg%wa         (cg%is  :cg%ie  , cg%js  :cg%je,   cg%ks  :cg%ke  )          &
+                       & +  (cg%q(soln)%arr(cg%is-1:cg%ie-1, cg%js  :cg%je,   cg%ks  :cg%ke  ) + cg%q(soln)%arr(cg%is+1:cg%ie+1, cg%js  :cg%je,   cg%ks  :cg%ke  ))*Lx/L0
+                  if (dom%has_dir(ydim)) &
+                       &     cg%wa         (cg%is  :cg%ie  , cg%js  :cg%je,   cg%ks  :cg%ke  ) = cg%wa         (cg%is  :cg%ie  , cg%js  :cg%je,   cg%ks  :cg%ke  )          &
+                       & +  (cg%q(soln)%arr(cg%is  :cg%ie  , cg%js-1:cg%je-1, cg%ks  :cg%ke  ) + cg%q(soln)%arr(cg%is  :cg%ie  , cg%js+1:cg%je+1, cg%ks  :cg%ke  ))*Ly/L0
+                  if (dom%has_dir(zdim)) &
+                       &     cg%wa         (cg%is  :cg%ie  , cg%js  :cg%je,   cg%ks  :cg%ke  ) = cg%wa         (cg%is  :cg%ie  , cg%js  :cg%je,   cg%ks  :cg%ke  )          &
+                       & +  (cg%q(soln)%arr(cg%is  :cg%ie  , cg%js  :cg%je,   cg%ks-1:cg%ke-1) + cg%q(soln)%arr(cg%is  :cg%ie  , cg%js  :cg%je,   cg%ks+1:cg%ke+1))*Lz/L0
+                  if (dom%has_dir(xdim) .and. dom%has_dir(ydim)) &
+                       &     cg%wa         (cg%is  :cg%ie  , cg%js  :cg%je,   cg%ks  :cg%ke  ) = cg%wa         (cg%is  :cg%ie  , cg%js  :cg%je,   cg%ks  :cg%ke  )          &
+                       & + ((cg%q(soln)%arr(cg%is-1:cg%ie-1, cg%js-1:cg%je-1, cg%ks  :cg%ke  ) + cg%q(soln)%arr(cg%is+1:cg%ie+1, cg%js-1:cg%je-1, cg%ks  :cg%ke  ))         &
+                       & + ( cg%q(soln)%arr(cg%is-1:cg%ie-1, cg%js+1:cg%je+1, cg%ks  :cg%ke  ) + cg%q(soln)%arr(cg%is+1:cg%ie+1, cg%js+1:cg%je+1, cg%ks  :cg%ke  )))*Lxy/L0
+                  if (dom%has_dir(ydim) .and. dom%has_dir(zdim)) &
+                       &     cg%wa         (cg%is  :cg%ie  , cg%js  :cg%je,   cg%ks  :cg%ke  ) = cg%wa         (cg%is  :cg%ie  , cg%js  :cg%je,   cg%ks  :cg%ke  )          &
+                       & + ((cg%q(soln)%arr(cg%is  :cg%ie  , cg%js-1:cg%je-1, cg%ks-1:cg%ke-1) + cg%q(soln)%arr(cg%is  :cg%ie  , cg%js+1:cg%je+1, cg%ks-1:cg%ke-1))         &
+                       & +  (cg%q(soln)%arr(cg%is  :cg%ie  , cg%js-1:cg%je-1, cg%ks+1:cg%ke+1) + cg%q(soln)%arr(cg%is  :cg%ie  , cg%js+1:cg%je+1, cg%ks+1:cg%ke+1)))*Lyz/L0
+                  if (dom%has_dir(xdim) .and. dom%has_dir(zdim)) &
+                       &     cg%wa         (cg%is  :cg%ie  , cg%js  :cg%je,   cg%ks  :cg%ke  ) = cg%wa         (cg%is  :cg%ie  , cg%js  :cg%je,   cg%ks  :cg%ke  )          &
+                       & + ((cg%q(soln)%arr(cg%is-1:cg%ie-1, cg%js  :cg%je,   cg%ks-1:cg%ke-1) + cg%q(soln)%arr(cg%is+1:cg%ie+1, cg%js  :cg%je,   cg%ks-1:cg%ke-1))         &
+                       & +  (cg%q(soln)%arr(cg%is-1:cg%ie-1, cg%js  :cg%je,   cg%ks+1:cg%ke+1) + cg%q(soln)%arr(cg%is+1:cg%ie+1, cg%js  :cg%je,   cg%ks+1:cg%ke+1)))*Lxz/L0
                endif
                cgl => cgl%nxt
             enddo
