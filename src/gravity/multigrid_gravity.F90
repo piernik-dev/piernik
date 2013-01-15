@@ -994,6 +994,7 @@ contains
       use multigrid_Laplace2,  only: residual2
       use multigrid_Laplace4,  only: residual4
       use multigrid_Laplace4M, only: residual_Mehrstellen
+      use multigridvars,       only: grav_bnd, bnd_givenval
 
       implicit none
 
@@ -1008,7 +1009,11 @@ contains
       case (O_I4)
          call residual4(cg_llst, src, soln, def)
       case (-O_I4)
-         call residual_Mehrstellen(cg_llst, src, soln, def)
+         if (grav_bnd == bnd_givenval) then
+            call residual2(cg_llst, src, soln, def)
+         else
+            call residual_Mehrstellen(cg_llst, src, soln, def)
+         endif
       case default
          call die("[multigrid_gravity:residual] The parameter 'ord_laplacian' must be 2 or 4 or -4")
       end select
@@ -1057,7 +1062,7 @@ contains
       use constants,           only: GEO_RPZ, O_I2, O_I4
       use dataio_pub,          only: die
       use domain,              only: dom
-      use multigridvars,       only: correction, multidim_code_3D, nsmool
+      use multigridvars,       only: correction, multidim_code_3D, nsmool, grav_bnd, bnd_givenval
       use multigrid_Laplace2,  only: approximate_solution_rbgs2
       use multigrid_Laplace4,  only: approximate_solution_rbgs4
       use multigrid_Laplace4M, only: approximate_solution_rbgs4M
@@ -1087,7 +1092,11 @@ contains
          case (O_I4)
             call approximate_solution_rbgs4 (curl, src, soln, nsmoo)
          case (-O_I4)
-            call approximate_solution_rbgs4M(curl, src, soln, nsmoo)
+            if (grav_bnd == bnd_givenval) then
+               call approximate_solution_rbgs2 (curl, src, soln, nsmoo)
+            else
+               call approximate_solution_rbgs4M(curl, src, soln, nsmoo)
+            endif
          case default
             call die("[multigrid_gravity:approximate_solution_rbgs] The parameter 'ord_laplacian' must be 2 or 4 or -4")
       end select
