@@ -42,7 +42,7 @@
 module multigrid_gravity
 ! pulled by MULTIGRID && GRAV
 
-   use constants,          only: cbuff_len, ndims
+   use constants,          only: cbuff_len
    use multigrid_vstats,   only: vcycle_stats
    use multigrid_old_soln, only: soln_history
 
@@ -58,11 +58,7 @@ module multigrid_gravity
 
    ! namelist parameters
    real               :: norm_tol                                     !< stop V-cycle iterations when the ratio of norms ||residual||/||source|| is below this value
-   real               :: overrelax                                    !< overrealaxation factor (if < 1. then works as underrelaxation), provided for tests
-   real, dimension(ndims) :: overrelax_xyz                            !< directional overrealaxation factor for fine tuning convergence ratio when cell spacing is not equal in all 3 directions. Use with care, patience and lots of hope.
-   real               :: Jacobi_damp                                  !< omega factor for damped Jacobi relaxation. Jacobi_damp == 1 gives undamped method. Try 0.5 in 1D.
    real               :: vcycle_abort                                 !< abort the V-cycle when lhs norm raises by this factor
-   real               :: L4_strength                                  !< strength of the 4th order terms in the Laplace operator; 0.: 2nd, 1.: 4th direct, 0.5: 4th integral
    integer(kind=4)    :: max_cycles                                   !< Maximum allowed number of V-cycles
    integer(kind=4)    :: nsmoob                                       !< smoothing cycles on coarsest level when cannot use FFT. (a convergence check would be much better)
    integer(kind=4)    :: ord_laplacian                                !< Laplace operator order; allowed values are 2 (default) and 4 (experimental, not fully implemented)
@@ -129,7 +125,8 @@ contains
       use dataio_pub,    only: msg, die, warn
       use domain,        only: dom, is_multicg !, is_uneven
       use mpisetup,      only: master, slave, ibuff, cbuff, rbuff, lbuff, nproc, piernik_MPI_Bcast
-      use multigridvars, only: single_base, bnd_invalid, bnd_isolated, bnd_periodic, bnd_dirichlet, grav_bnd, fft_full_relax, multidim_code_3D, nsmool, nsmoof
+      use multigridvars, only: single_base, bnd_invalid, bnd_isolated, bnd_periodic, bnd_dirichlet, grav_bnd, fft_full_relax, multidim_code_3D, nsmool, nsmoof, &
+           &                   overrelax, overrelax_xyz, Jacobi_damp, L4_strength
       use multigrid_old_soln, only: nold_max, ord_time_extrap
       use multipole,     only: use_point_monopole, lmax, mmax, ord_prolong_mpole, coarsen_multipole, interp_pt2mom, interp_mom2pot
 
@@ -503,6 +500,7 @@ contains
       use dataio_pub,         only: die
       use domain,             only: dom
       use grid_cont,          only: grid_container
+      use multigridvars,      only: overrelax, overrelax_xyz
 
       implicit none
 
@@ -990,9 +988,12 @@ contains
 
    subroutine residual(cg_llst, src, soln, def)
 
-      use cg_leaves,  only: cg_leaves_T
-      use constants,  only: O_I2, O_I4
-      use dataio_pub, only: die
+      use cg_leaves,           only: cg_leaves_T
+      use constants,           only: O_I2, O_I4
+      use dataio_pub,          only: die
+      use multigrid_Laplace2,  only: residual2
+      use multigrid_Laplace4,  only: residual4
+      use multigrid_Laplace4M, only: residual_Mehrstellen
 
       implicit none
 
@@ -1014,363 +1015,7 @@ contains
 
    end subroutine residual
 
-!> \brief 2nd order Laplacian
-
-   subroutine residual2(cg_llst, src, soln, def)
-
-      use cg_list,       only: cg_list_element
-      use cg_leaves,     only: cg_leaves_T
-      use constants,     only: xdim, ydim, zdim, ndims, GEO_XYZ, GEO_RPZ, half, BND_NEGREF
-      use dataio_pub,    only: die
-      use domain,        only: dom
-      use grid_cont,     only: grid_container
-      use multigridvars, only: multidim_code_3D
-
-      implicit none
-
-      class(cg_leaves_T), intent(in) :: cg_llst !< pointer to a level for which we approximate the solution
-      integer(kind=4),    intent(in) :: src     !< index of source in cg%q(:)
-      integer(kind=4),    intent(in) :: soln    !< index of solution in cg%q(:)
-      integer(kind=4),    intent(in) :: def     !< index of defect in cg%q(:)
-
-      integer                         :: i, j, k
-      real                            :: L0, Lx, Ly, Lz
-      real, dimension(:), allocatable :: Lx1, Ly_a, L0_a
-      type(cg_list_element), pointer  :: cgl
-      type(grid_container),  pointer  :: cg
-
-      call cg_llst%arr3d_boundaries(soln, bnd_type = BND_NEGREF)
-      ! corners are required for non-cartesian decompositions because current implementation of arr3d_boundaries may use overlapping buffers at triple points
-
-      ! Possible optimization candidate: reduce cache misses (secondary importance, cache-aware implementation required)
-      ! Explicit loop over k gives here better performance than array operation due to less cache misses (at least on 32^3 and 64^3 arrays)
-      cgl => cg_llst%first
-      do while (associated(cgl))
-         cg => cgl%cg
-
-         ! Coefficients for a simplest 3-point Laplacian operator: [ 1, -2, 1 ]
-         ! for 2D and 1D setups appropriate elements of [ Lx, Ly, Lz ] should be == 0.
-         Lx = cg%idx2
-         Ly = cg%idy2
-         Lz = cg%idz2
-         L0 = -2. * (Lx + Ly + Lz)
-
-         select case (dom%geometry_type)
-            case (GEO_XYZ)
-               if (dom%eff_dim == ndims .and. .not. multidim_code_3D) then
-                  do k = cg%ks, cg%ke
-                     cg%q(def)%arr        (cg%is  :cg%ie,   cg%js  :cg%je,   k)         = &
-                          & cg%q(src)%arr (cg%is  :cg%ie,   cg%js  :cg%je,   k)         - &
-                          ( cg%q(soln)%arr(cg%is-1:cg%ie-1, cg%js  :cg%je,   k)         + &
-                          & cg%q(soln)%arr(cg%is+1:cg%ie+1, cg%js  :cg%je,   k))   * Lx - &
-                          ( cg%q(soln)%arr(cg%is  :cg%ie,   cg%js-1:cg%je-1, k)         + &
-                          & cg%q(soln)%arr(cg%is  :cg%ie,   cg%js+1:cg%je+1, k))   * Ly - &
-                          ( cg%q(soln)%arr(cg%is  :cg%ie,   cg%js  :cg%je,   k-1)       + &
-                          & cg%q(soln)%arr(cg%is  :cg%ie,   cg%js  :cg%je,   k+1)) * Lz - &
-                          & cg%q(soln)%arr(cg%is  :cg%ie,   cg%js  :cg%je,   k)    * L0
-                  enddo
-               else
-                  ! In 3D this implementation can give a bit more cache misses, few times more writes and significantly more instructions executed than monolithic 3D above
-                  do k = cg%ks, cg%ke
-                     cg%q(def)%arr        (cg%is  :cg%ie,   cg%js  :cg%je,   k)    = &
-                          & cg%q(src)%arr (cg%is  :cg%ie,   cg%js  :cg%je,   k)    - &
-                          & cg%q(soln)%arr(cg%is  :cg%ie,   cg%js  :cg%je,   k)    * L0
-                     if (dom%has_dir(xdim)) &
-                          & cg%q(def)%arr (cg%is  :cg%ie,   cg%js  :cg%je,   k)    = &
-                          & cg%q(def)%arr (cg%is  :cg%ie,   cg%js  :cg%je,   k)    - &
-                          ( cg%q(soln)%arr(cg%is-1:cg%ie-1, cg%js  :cg%je,   k)    + &
-                          & cg%q(soln)%arr(cg%is+1:cg%ie+1, cg%js  :cg%je,   k))   * Lx
-                     if (dom%has_dir(ydim)) &
-                          & cg%q(def)%arr (cg%is  :cg%ie,   cg%js  :cg%je,   k)    = &
-                          & cg%q(def)%arr (cg%is  :cg%ie,   cg%js  :cg%je,   k)    - &
-                          ( cg%q(soln)%arr(cg%is  :cg%ie,   cg%js-1:cg%je-1, k)    + &
-                          & cg%q(soln)%arr(cg%is  :cg%ie,   cg%js+1:cg%je+1, k))   * Ly
-                     if (dom%has_dir(zdim)) &
-                          & cg%q(def)%arr (cg%is  :cg%ie,   cg%js  :cg%je,   k)    = &
-                          & cg%q(def)%arr (cg%is  :cg%ie,   cg%js  :cg%je,   k)    - &
-                          ( cg%q(soln)%arr(cg%is  :cg%ie,   cg%js  :cg%je,   k-1)  + &
-                          & cg%q(soln)%arr(cg%is  :cg%ie,   cg%js  :cg%je,   k+1)) * Lz
-                  enddo
-               endif
-            case (GEO_RPZ)
-!               Lx = cg%idx2 ! already set
-!               Lz = cg%idz2 ! already set
-               !> \todo convert Lx1, Ly_a and L0_a into precomputed arrays
-               allocate(Lx1(size(cg%inv_x)), Ly_a(size(cg%inv_x)), L0_a(size(cg%inv_x)))
-               Ly_a(cg%is:cg%ie) = cg%idy2 * cg%inv_x(cg%is:cg%ie)**2 ! cylindrical factor
-               Lx1 (cg%is:cg%ie) = half * (cg%idx * cg%inv_x(cg%is:cg%ie))
-               L0_a(cg%is:cg%ie) = -2. * (Lx + Ly_a(cg%is:cg%ie) + Lz)
-               do k = cg%ks, cg%ke
-                  do j = cg%js, cg%je
-                     do i = cg%is, cg%ie
-                        cg%q(def)%arr(i, j, k) = cg%q(src)%arr (i,   j,   k)   - cg%q(soln)%arr(i,   j,   k)    * L0_a(i)
-                        if (dom%has_dir(xdim))   cg%q(def)%arr (i,   j,   k)   = cg%q(def) %arr(i,   j,   k)         - &
-                             &                  (cg%q(soln)%arr(i+1, j,   k)   + cg%q(soln)%arr(i-1, j,   k))   * Lx - &
-                             &                  (cg%q(soln)%arr(i+1, j,   k)   - cg%q(soln)%arr(i-1, j,   k))   * Lx1(i)    ! cylindrical term
-                        if (dom%has_dir(ydim))   cg%q(def)%arr (i,   j,   k)   = cg%q(def) %arr(i,   j,   k)         - &
-                             &                  (cg%q(soln)%arr(i,   j+1, k)   + cg%q(soln)%arr(i,   j-1, k))   * Ly_a(i)
-                        if (dom%has_dir(zdim))   cg%q(def)%arr (i,   j,   k)   = cg%q(def) %arr(i,   j,   k)         - &
-                             &                  (cg%q(soln)%arr(i,   j,   k+1) + cg%q(soln)%arr(i,   j,   k-1)) * Lz
-                     enddo
-                  enddo
-               enddo
-               deallocate(Lx1, Ly_a, L0_a)
-            case default
-               call die("[multigrid_gravity:residual2] Unsupported geometry.")
-         end select
-         cgl => cgl%nxt
-      enddo
-
-   end subroutine residual2
-
-!>
-!! \brief 4th order Laplacian
-!!
-!! \details Significantly slows down convergence, does not seem to improve quality of solution in simple tests.
-!!
-!! L4 = [0, 1, -2, 1, 0] + L4_strength * 1./12. * [ -1, 4, -6, 4, -1 ]
-!! For integrated face fluxes in the 4th order Laplacian estimate set L4_strength = 0.5
-!! For simple 5-point L4 set L4_strength = 1.0
-!!
-!! There also exists more compact Mehrstellen 4th order scheme which outperforms this one in terms of accuracy
-!!
-!! \warning For optimal convergence this Laplace operator requires specific relaxation scheme.
-!! As this operator is outperformed by the 4th order Mehrstellen operatow, we don't plan to implement it.
-!! It can be either deleted or left here for curious people.
-!<
-
-   subroutine residual4(cg_llst, src, soln, def)
-
-      use cg_list,       only: cg_list_element
-      use cg_leaves,     only: cg_leaves_T
-      use constants,     only: ndims, idm2, xdim, ydim, zdim, BND_NEGREF
-      use dataio_pub,    only: die, warn
-      use domain,        only: dom
-      use grid_cont,     only: grid_container
-      use mpisetup,      only: master
-      use multigridvars, only: grav_bnd, bnd_givenval
-      use named_array,   only: p3
-
-      implicit none
-
-      class(cg_leaves_T), intent(in) :: cg_llst !< pointer to a level for which we approximate the solution
-      integer(kind=4),    intent(in) :: src     !< index of source in cg%q(:)
-      integer(kind=4),    intent(in) :: soln    !< index of solution in cg%q(:)
-      integer(kind=4),    intent(in) :: def     !< index of defect in cg%q(:)
-
-      real, parameter     :: L4_scaling = 1./12. ! with L4_strength = 1. this gives an L4 approximation for finite differences approach
-      integer, parameter  :: L2w = 2             ! #layers of boundary cells for L2 operator
-
-      real                :: c21, c41, c42 !, c20, c40
-      real                :: L0, Lx1, Lx2, Ly1, Ly2, Lz1, Lz2, Lx, Ly, Lz
-
-      logical, save       :: firstcall = .true.
-      integer             :: i, j, k
-      type(cg_list_element), pointer :: cgl
-      type(grid_container),  pointer :: cg
-
-      if (dom%eff_dim<ndims) call die("[multigrid_gravity:residual4] Only 3D is implemented")
-
-      if (firstcall) then
-         if (master) call warn("[multigrid_gravity:residual4] residual order 4 is experimental.")
-         firstcall = .false.
-      endif
-
-      call cg_llst%arr3d_boundaries(soln, bnd_type = BND_NEGREF)
-
-      c21 = 1.
-      c42 = - L4_scaling * L4_strength
-      c41 = c21 + 4. * L4_scaling * L4_strength
-      !c20 = -2.
-      !c40 = c20 - 6. * L4_strength
-
-      cgl => cg_llst%first
-      do while (associated(cgl))
-         cg => cgl%cg
-
-         Lx1 = c41 * cg%idx2
-         Ly1 = c41 * cg%idy2
-         Lz1 = c41 * cg%idz2
-         Lx2 = c42 * cg%idx2
-         Ly2 = c42 * cg%idy2
-         Lz2 = c42 * cg%idz2
-         ! L0  = c40 * (cg%idx2 + cg%idy2 + cg%idz2 )
-         L0 = -2. * (Lx1 + Lx2 + Ly1 + Ly2 + Lz1 + Lz2)
-
-         !> \deprecated BEWARE: cylindrical factors go here
-         p3 => cg%q(def)%span(cg%ijkse)
-         p3 = cg%q(src)%span(cg%ijkse) - &
-              cg%q(soln)%span(cg%ijkse-2*idm2(xdim,:,:)) * Lx2 - cg%q(soln)%span(cg%ijkse+2*idm2(xdim,:,:)) * Lx2 - &
-              cg%q(soln)%span(cg%ijkse-  idm2(xdim,:,:)) * Lx1 - cg%q(soln)%span(cg%ijkse+  idm2(xdim,:,:)) * Lx1 - &
-              cg%q(soln)%span(cg%ijkse-2*idm2(ydim,:,:)) * Ly2 - cg%q(soln)%span(cg%ijkse+2*idm2(ydim,:,:)) * Ly2 - &
-              cg%q(soln)%span(cg%ijkse-  idm2(ydim,:,:)) * Ly1 - cg%q(soln)%span(cg%ijkse+  idm2(ydim,:,:)) * Ly1 - &
-              cg%q(soln)%span(cg%ijkse-2*idm2(zdim,:,:)) * Lz2 - cg%q(soln)%span(cg%ijkse+2*idm2(zdim,:,:)) * Lz2 - &
-              cg%q(soln)%span(cg%ijkse-  idm2(zdim,:,:)) * Lz1 - cg%q(soln)%span(cg%ijkse+  idm2(zdim,:,:)) * Lz1 - cg%q(soln)%span(cg%ijkse)   * L0
-
-         ! WARNING: not optimized
-         if (grav_bnd == bnd_givenval) then ! probably also in some other cases
-            ! Use L2 Laplacian in two layers of cells next to the boundary because L4 seems to be incompatible with present image mass construction
-            Lx = c21 * cg%idx2
-            Ly = c21 * cg%idy2
-            Lz = c21 * cg%idz2
-            L0 = -2. * (Lx + Ly + Lz)
-
-            do k = cg%ks, cg%ke
-               do j = cg%js, cg%je
-                  do i = cg%is, cg%ie
-                     if ( i<cg%is+L2w .or. i>cg%ie-L2w .or. j<cg%js+L2w .or. j>cg%je-L2w .or. k<cg%ks+L2w .or. k>cg%ke-L2w) then
-                        cg%q(def)%arr        (i,   j,   k)   = cg%q(src)%arr (i,   j,   k)         - &
-                             ( cg%q(soln)%arr(i-1, j,   k)   + cg%q(soln)%arr(i+1, j,   k))   * Lx - &
-                             ( cg%q(soln)%arr(i,   j-1, k)   + cg%q(soln)%arr(i,   j+1, k))   * Ly - &
-                             ( cg%q(soln)%arr(i,   j,   k-1) + cg%q(soln)%arr(i,   j,   k+1)) * Lz - &
-                             & cg%q(soln)%arr(i,   j,   k)                                    * L0
-                     endif
-                  enddo
-               enddo
-            enddo
-         endif
-         cgl => cgl%nxt
-      enddo
-
-   end subroutine residual4
-
-!>
-!! \brief Compute the residual using compact, 4th order Mehrstellen formula
-!!
-!! \details 2nd order Laplace operator contains some 4th order terms on the potential size. To improve accuracy we may add a little laplacian of the source on the RHS
-!! to match these 4th order terms. Careful calculation leads to such numerical operators:
-!!
-!!                     |   1   |                    | 1   4 1 |
-!! 2D: residuum = 1/12 | 1 8 1 | source - 1/6 h**-2 | 4 -20 4 | solution
-!!                     |   1   |                    | 1   4 1 |
-!!
-!!                     |       | |   1   | |       |                    |   1   | | 1   2 1 | |   1   |
-!! 3D: residuum = 1/12 |   1   | | 1 6 1 | |   1   | source - 1/6 h**-2 | 1 2 1 | | 2 -24 2 | | 1 2 1 | solution
-!!                     |       | |   1   | |       |                    |   1   | | 1   2 1 | |   1   |
-!!
-!! where h = cg%dx = cg%dy = cg%dz
-!! On an unequally spaced grid (cg%dx /= cg%dy /= cg%dz), the stencil convolved with the solution is a bit more complicated:
-!!
-!!                 |  1  -2  1 |               |  1  10  1 |
-!! 2D: 1/12 dx**-2 | 10 -20 10 | + 1/12 dy**-2 | -2 -20 -2 |
-!!                 |  1  -2  1 |               |  1  10  1 |
-!!
-!!                 |        | | 1  -2 1 | |        |               |   1   | |  1   8  1 | |   1   |               |   1   | |     -2    | |   1   |
-!! 3D: 1/12 dx**-2 | 1 -2 1 | | 8 -16 8 | | 1 -2 1 | + 1/12 dy**-2 |  -2   | | -2 -16 -2 | |  -2   | + 1/12 dz**-2 | 1 8 1 | | -2 -16 -2 | | 1 8 1 |
-!!                 |        | | 1  -2 1 | |        |               |   1   | |  1   8  1 | |   1   |               |   1   | |     -2    | |   1   |
-!!
-!! For even higher order of accuracy look for HODIE schemes which are more general then the one described above.
-!!
-!! \warning This implementation does not support cylindrical coordinates yet
-!<
-
-   subroutine residual_Mehrstellen(cg_llst, src, soln, def)
-
-      use cg_list,       only: cg_list_element
-      use cg_leaves,     only: cg_leaves_T
-      use constants,     only: ndims, xdim, ydim, zdim, BND_NEGREF, LO, HI
-      use dataio_pub,    only: warn
-      use domain,        only: dom
-      use grid_cont,     only: grid_container
-      use mpisetup,      only: master
-      use multigridvars, only: grav_bnd, bnd_givenval
-      use named_array,   only: p3
-
-      implicit none
-
-      class(cg_leaves_T), intent(in) :: cg_llst !< pointer to a level for which we approximate the solution
-      integer(kind=4),    intent(in) :: src     !< index of source in cg%q(:)
-      integer(kind=4),    intent(in) :: soln    !< index of solution in cg%q(:)
-      integer(kind=4),    intent(in) :: def     !< index of defect in cg%q(:)
-
-      real                :: L0, Lx, Ly, Lz, Lxy, Lxz, Lyz
-      integer, parameter  :: L2w = 2             ! #layers of boundary cells for L2 operator
-
-      logical, save       :: firstcall = .true.
-      integer             :: i, j, k
-      type(cg_list_element), pointer :: cgl
-      type(grid_container),  pointer :: cg
-      integer(kind=4), dimension(ndims,ndims,LO:HI) :: idm
-
-      if (firstcall) then
-         if (master) call warn("[multigrid_gravity:residual_Mehrstellen] residual order 4 is experimental.")
-         firstcall = .false.
-      endif
-
-      call cg_llst%arr3d_boundaries(soln, bnd_type = BND_NEGREF)
-      call cg_llst%arr3d_boundaries(src,  bnd_type = BND_NEGREF)
-
-      idm = 0
-      do i = xdim, zdim
-         if (dom%has_dir(i)) idm(i, i, :) = 1
-      enddo
-
-      cgl => cg_llst%first
-      do while (associated(cgl))
-         cg => cgl%cg
-
-         Lxy = 0. ; if (dom%has_dir(xdim) .and. dom%has_dir(ydim)) Lxy = (cg%idx2 + cg%idy2) / 12.
-         Lxz = 0. ; if (dom%has_dir(xdim) .and. dom%has_dir(zdim)) Lxz = (cg%idx2 + cg%idz2) / 12.
-         Lyz = 0. ; if (dom%has_dir(ydim) .and. dom%has_dir(zdim)) Lyz = (cg%idy2 + cg%idz2) / 12.
-         Lx  = 0. ; if (dom%has_dir(xdim)) Lx = cg%idx2 - 2. * (Lxy + Lxz)
-         Ly  = 0. ; if (dom%has_dir(ydim)) Ly = cg%idy2 - 2. * (Lxy + Lyz)
-         Lz  = 0. ; if (dom%has_dir(zdim)) Lz = cg%idz2 - 2. * (Lxz + Lyz)
-         L0  = -2. * (Lx + Ly + Lz) - 4. * (Lxy + Lxz + Lyz)
-
-         p3 => cg%q(def)%span(cg%ijkse)
-
-         p3 = (12.-2*dom%eff_dim)/12.*cg%q(src)%span(cg%ijkse) - L0*cg%q(soln)%span(cg%ijkse)
-         if (dom%has_dir(xdim)) p3 = p3 + &
-              (cg%q(src)%span(cg%ijkse-idm(xdim,:,:)) + cg%q(src)%span(cg%ijkse+idm(xdim,:,:)))/12. &
-              - Lx * (cg%q(soln)%span(cg%ijkse-idm(xdim,:,:)) + cg%q(soln)%span(cg%ijkse+idm(xdim,:,:)))
-         if (dom%has_dir(ydim)) p3 = p3 + &
-              (cg%q(src)%span(cg%ijkse-idm(ydim,:,:)) + cg%q(src)%span(cg%ijkse+idm(ydim,:,:)))/12. &
-              - Ly * (cg%q(soln)%span(cg%ijkse-idm(ydim,:,:)) + cg%q(soln)%span(cg%ijkse+idm(ydim,:,:))) &
-              - Lxy * (cg%q(soln)%span(cg%ijkse-idm(xdim,:,:)-idm(ydim,:,:)) + cg%q(soln)%span(cg%ijkse-idm(xdim,:,:)+idm(ydim,:,:)) + &
-              &        cg%q(soln)%span(cg%ijkse+idm(xdim,:,:)-idm(ydim,:,:)) + cg%q(soln)%span(cg%ijkse+idm(xdim,:,:)+idm(ydim,:,:)) )
-         if (dom%has_dir(zdim)) p3 = p3 + &
-              (cg%q(src)%span(cg%ijkse-idm(zdim,:,:)) + cg%q(src)%span(cg%ijkse+idm(zdim,:,:)))/12. &
-              - Lz * (cg%q(soln)%span(cg%ijkse-idm(zdim,:,:)) + cg%q(soln)%span(cg%ijkse+idm(zdim,:,:))) &
-              - Lxz * (cg%q(soln)%span(cg%ijkse-idm(xdim,:,:)-idm(zdim,:,:)) + cg%q(soln)%span(cg%ijkse-idm(xdim,:,:)+idm(zdim,:,:)) + &
-              &        cg%q(soln)%span(cg%ijkse+idm(xdim,:,:)-idm(zdim,:,:)) + cg%q(soln)%span(cg%ijkse+idm(xdim,:,:)+idm(zdim,:,:)) ) &
-              - Lyz * (cg%q(soln)%span(cg%ijkse-idm(zdim,:,:)-idm(ydim,:,:)) + cg%q(soln)%span(cg%ijkse-idm(zdim,:,:)+idm(ydim,:,:)) + &
-              &        cg%q(soln)%span(cg%ijkse+idm(zdim,:,:)-idm(ydim,:,:)) + cg%q(soln)%span(cg%ijkse+idm(zdim,:,:)+idm(ydim,:,:)) )
-         ! OPT: Perhaps in 3D this would be more efficient without ifs.
-         ! OPT: Try direct operations on cg%q(soln)%arr without calling span
-         ! 2D and 1D rns do not need too much optimization as they will be rarely used in production runs with selfgravity
-
-         ! WARNING: not optimized
-         if (grav_bnd == bnd_givenval) then ! probably also in some other cases
-            ! Use L2 Laplacian in two layers of cells next to the boundary because L4 seems to be incompatible with present image mass construction
-            !> \todo try to fix this
-            Lx  = 0. ; if (dom%has_dir(xdim)) Lx = cg%idx2
-            Ly  = 0. ; if (dom%has_dir(ydim)) Ly = cg%idy2
-            Lz  = 0. ; if (dom%has_dir(zdim)) Lz = cg%idz2
-            L0 = -2. * (Lx + Ly + Lz)
-
-            do k = cg%ks, cg%ke
-               do j = cg%js, cg%je
-                  do i = cg%is, cg%ie
-                     if ( i<cg%is+L2w .or. i>cg%ie-L2w .or. j<cg%js+L2w .or. j>cg%je-L2w .or. k<cg%ks+L2w .or. k>cg%ke-L2w) then
-                        cg%q(def)%arr        (i,         j,         k)         = cg%q(src)%arr (i,         j,         k      )         - &
-                             ( cg%q(soln)%arr(i-dom%D_x, j,         k)         + cg%q(soln)%arr(i+dom%D_x, j,         k      ))   * Lx - &
-                             ( cg%q(soln)%arr(i,         j-dom%D_y, k)         + cg%q(soln)%arr(i,         j+dom%D_y, k      ))   * Ly - &
-                             ( cg%q(soln)%arr(i,         j,         k-dom%D_z) + cg%q(soln)%arr(i,         j,         k+dom%D_z)) * Lz - &
-                             & cg%q(soln)%arr(i,         j,         k)                                                            * L0
-                     endif
-                  enddo
-               enddo
-            enddo
-         endif
-         cgl => cgl%nxt
-      enddo
-
-   end subroutine residual_Mehrstellen
-
-!!$ ============================================================================
-!>
-!! \brief This routine has to find an approximate solution for given source field and implemented differential operator
-!<
+!> \brief This routine has to find an approximate solution for given source field and implemented differential operator
 
    subroutine approximate_solution(curl, src, soln)
 
@@ -1407,12 +1052,15 @@ contains
 
    subroutine approximate_solution_rbgs(curl, src, soln)
 
-      use cg_level_coarsest,  only: coarsest
-      use cg_level_connected, only: cg_level_connected_T
-      use constants,          only: GEO_RPZ, O_I2, O_I4
-      use dataio_pub,         only: die
-      use domain,             only: dom
-      use multigridvars,      only: correction, multidim_code_3D, nsmool
+      use cg_level_coarsest,   only: coarsest
+      use cg_level_connected,  only: cg_level_connected_T
+      use constants,           only: GEO_RPZ, O_I2, O_I4
+      use dataio_pub,          only: die
+      use domain,              only: dom
+      use multigridvars,       only: correction, multidim_code_3D, nsmool
+      use multigrid_Laplace2,  only: approximate_solution_rbgs2
+      use multigrid_Laplace4,  only: approximate_solution_rbgs4
+      use multigrid_Laplace4M, only: approximate_solution_rbgs4M
 
       implicit none
 
@@ -1437,7 +1085,7 @@ contains
          case (O_I2)
             call approximate_solution_rbgs2 (curl, src, soln, nsmoo)
          case (O_I4)
-            call approximate_solution_rbgs2 (curl, src, soln, nsmoo)
+            call approximate_solution_rbgs4 (curl, src, soln, nsmoo)
          case (-O_I4)
             call approximate_solution_rbgs4M(curl, src, soln, nsmoo)
          case default
@@ -1445,276 +1093,6 @@ contains
       end select
 
    end subroutine approximate_solution_rbgs
-
-!>
-!! \brief Red-Black Gauss-Seidel relaxation.
-!!
-!! \details  This implementation is suitable for Laplace operators implemented in residual2
-!! 4th order operator residual4 uses relaxation formula for residual2 which severily limits its convergence.
-!! For optimal convergence residual4 requires slightly different relaxation operator.
-!! It is not planned to be implemented anytime soon because residual_Mehrstellen is much better.
-!<
-
-   subroutine approximate_solution_rbgs2(curl, src, soln, nsmoo)
-
-      use cg_level_connected, only: cg_level_connected_T
-      use cg_list,            only: cg_list_element
-      use cg_list_dataop,     only: dirty_label
-      use constants,          only: xdim, ydim, zdim, ndims, GEO_XYZ, GEO_RPZ, I_ONE, BND_NEGREF
-      use dataio_pub,         only: die
-      use domain,             only: dom
-      use global,             only: dirty_debug
-      use grid_cont,          only: grid_container
-      use multigridvars,      only: multidim_code_3D
-
-      implicit none
-
-      type(cg_level_connected_T), pointer, intent(in) :: curl  !< pointer to a level for which we approximate the solution
-      integer(kind=4),                     intent(in) :: src   !< index of source in cg%q(:)
-      integer(kind=4),                     intent(in) :: soln  !< index of solution in cg%q(:)
-      integer,                             intent(in) :: nsmoo !< number of smoothing repetitions
-
-      integer, parameter :: RED_BLACK = 2 !< the checkerboard requires two sweeps
-
-      integer :: n, i, j, k, i1, j1, k1, id, jd, kd
-      real    :: crx, crx1, cry, crz, cr
-      type(cg_list_element), pointer :: cgl
-      type(grid_container),  pointer :: cg
-
-      ! call curl%arr3d_boundaries(src) required when we want to eliminate some communication of soln at a cost of expanding relaxated area into guardcells
-
-      do n = 1, RED_BLACK*nsmoo
-         call curl%arr3d_boundaries(soln, bnd_type = BND_NEGREF)
-
-         if (dirty_debug) then
-            write(dirty_label, '(a,i5)')"relax2 soln- smoo=", n
-            call curl%check_dirty(soln, dirty_label, expand=I_ONE)
-         endif
-         cgl => curl%first
-         do while (associated(cgl))
-            cg => cgl%cg
-
-            ! Possible optimization: this is the most costly part of the RBGS relaxation (instruction count, read and write data, L1 and L2 read cache miss)
-            ! do n = 1, nsmoo
-            !    call curl%arr3d_boundaries(soln, bnd_type = BND_NEGREF)
-            !    relax single layer of red cells at all faces
-            !    call curl%arr3d_boundaries(soln, bnd_type = BND_NEGREF)
-            !    relax interior cells (except for single layer of cells at all faces), first red, then 1-cell behind black one.
-            !    relax single layer of black cells at all faces
-            ! enddo
-            ! OPT: try to relax without Red-Black and use cg%wa for temporary storage
-
-            ! with explicit outer loops it is easier to describe a 3-D checkerboard :-)
-
-            if (dom%eff_dim==ndims .and. .not. multidim_code_3D) then
-               do k = cg%ks, cg%ke
-                  do j = cg%js, cg%je
-                     i1 = cg%is + int(mod(n+cg%is+j+k, int(RED_BLACK)), kind=4)
-                     if (dom%geometry_type == GEO_RPZ) then
-!!$                  cg%q(soln)%arr(i1  :cg%ie  :2, j,   k) = &
-!!$                       cg%mg%rx * (cg%q(soln)%arr(i1-1:cg%ie-1:2, j,   k  ) + cg%q(soln)%arr(i1+1:cg%ie+1:2, j,   k))   + &
-!!$                       cg%mg%ry * (cg%q(soln)%arr(i1  :cg%ie  :2, j-1, k  ) + cg%q(soln)%arr(i1  :cg%ie  :2, j+1, k))   + &
-!!$                       cg%mg%rz * (cg%q(soln)%arr(i1  :cg%ie  :2, j,   k-1) + cg%q(soln)%arr(i1  :cg%ie  :2, j,   k+1)) - &
-!!$                       cg%mg%r  *  cg%q(src)%arr( i1  :cg%ie  :2, j,   k  )  + &
-!!$                       cg%mg%rx * (cg%q(soln)%arr(i1+1:cg%ie+1:2, j,   k  ) - cg%q(soln)%arr(i1-1:cg%ie-1:2, j,   k)) * fac(i1:cg%ie:2)
-                        call die("[multigrid_gravity:approximate_solution_rbgs2] This variant of relaxation loop is not implemented for cylindrical coordinates.")
-                     else
-                        cg%q(soln)%arr(i1  :cg%ie  :2, j,   k) = &
-                             cg%mg%rx * (cg%q(soln)%arr(i1-1:cg%ie-1:2, j,   k)   + cg%q(soln)%arr(i1+1:cg%ie+1:2, j,   k))   + &
-                             cg%mg%ry * (cg%q(soln)%arr(i1  :cg%ie  :2, j-1, k)   + cg%q(soln)%arr(i1  :cg%ie  :2, j+1, k))   + &
-                             cg%mg%rz * (cg%q(soln)%arr(i1  :cg%ie  :2, j,   k-1) + cg%q(soln)%arr(i1  :cg%ie  :2, j,   k+1)) - &
-                             cg%mg%r  *  cg%q(src)%arr (i1  :cg%ie  :2, j,   k)
-                     endif
-                  enddo
-               enddo
-            else
-               ! In 3D this variant significantly increases instruction count and also some data read
-               i1 = cg%is; id = 1 ! mv to multigridvars, init_multigrid
-               j1 = cg%js; jd = 1
-               k1 = cg%ks; kd = 1
-               if (dom%has_dir(xdim)) then
-                  id = RED_BLACK
-               else if (dom%has_dir(ydim)) then
-                  jd = RED_BLACK
-               else if (dom%has_dir(zdim)) then
-                  kd = RED_BLACK
-               endif
-
-               if (kd == RED_BLACK) k1 = cg%ks + int(mod(n+cg%ks, int(RED_BLACK)), kind=4)
-               select case (dom%geometry_type)
-                  case (GEO_XYZ)
-                     do k = k1, cg%ke, kd
-                        if (jd == RED_BLACK) j1 = cg%js + int(mod(n+cg%js+k, int(RED_BLACK)), kind=4)
-                        do j = j1, cg%je, jd
-                           if (id == RED_BLACK) i1 = cg%is + int(mod(n+cg%is+j+k, int(RED_BLACK)), kind=4)
-                           cg%q(soln)%arr                           (i1  :cg%ie  :id, j,   k)   = &
-                                & (1. - Jacobi_damp)* cg%q(soln)%arr(i1  :cg%ie  :id, j,   k)   - &
-                                &       Jacobi_damp * cg%q(src)%arr (i1  :cg%ie  :id, j,   k)   * cg%mg%r
-                           if (dom%has_dir(xdim))     cg%q(soln)%arr(i1  :cg%ie  :id, j,   k)   = cg%q(soln)%arr(i1  :cg%ie  :id, j,   k)    + &
-                                &       Jacobi_damp *(cg%q(soln)%arr(i1-1:cg%ie-1:id, j,   k)   + cg%q(soln)%arr(i1+1:cg%ie+1:id, j,   k))   * cg%mg%rx
-                           if (dom%has_dir(ydim))     cg%q(soln)%arr(i1  :cg%ie  :id, j,   k)   = cg%q(soln)%arr(i1  :cg%ie  :id, j,   k)    + &
-                             &       Jacobi_damp *(cg%q(soln)%arr(i1  :cg%ie  :id, j-1, k)   + cg%q(soln)%arr(i1  :cg%ie  :id, j+1, k))   * cg%mg%ry
-                           if (dom%has_dir(zdim))     cg%q(soln)%arr(i1  :cg%ie  :id, j,   k)   = cg%q(soln)%arr(i1  :cg%ie  :id, j,   k)    + &
-                                &       Jacobi_damp *(cg%q(soln)%arr(i1  :cg%ie  :id, j,   k-1) + cg%q(soln)%arr(i1  :cg%ie  :id, j,   k+1)) * cg%mg%rz
-                        enddo
-                     enddo
-                  case (GEO_RPZ)
-                     do k = k1, cg%ke, kd
-                        if (jd == RED_BLACK) j1 = cg%js + int(mod(n+cg%js+k, int(RED_BLACK)), kind=4)
-                        do j = j1, cg%je, jd
-                           if (id == RED_BLACK) i1 = cg%is + int(mod(n+cg%is+j+k, int(RED_BLACK)), kind=4)
-                           do i = i1, cg%ie, id
-                              cr  = overrelax / 2.
-                              crx = cg%dvol2 * cg%idx2 * cg%x(i)**2
-                              cry = cg%dvol2 * cg%idy2
-                              crz = cg%dvol2 * cg%idz2 * cg%x(i)**2
-                              cr  = cr / (crx + cry + crz)
-                              crx = overrelax_xyz(xdim)* crx * cr
-                              cry = overrelax_xyz(ydim)* cry * cr
-                              crz = overrelax_xyz(zdim)* crz * cr
-                              cr  = cr * cg%dvol2 * cg%x(i)**2
-
-                              crx1 = 2. * cg%x(i) * cg%idx
-                              if (crx1 /= 0.) crx1 = 1./crx1
-                              cg%q(soln)%arr                           (i,   j,   k)   = &
-                                   & (1. - Jacobi_damp)* cg%q(soln)%arr(i,   j,   k)   - &
-                                   &       Jacobi_damp * cg%q(src)%arr (i,   j,   k)   * cr
-                              if (dom%has_dir(xdim))     cg%q(soln)%arr(i,   j,   k)   = cg%q(soln)%arr(i,   j,   k)    + &
-                                   &       Jacobi_damp *(cg%q(soln)%arr(i-1, j,   k)   + cg%q(soln)%arr(i+1, j,   k))   * crx + &
-                                   &       Jacobi_damp *(cg%q(soln)%arr(i+1, j,   k)   - cg%q(soln)%arr(i-1, j,   k))   * crx * crx1
-                              if (dom%has_dir(ydim))     cg%q(soln)%arr(i,   j,   k)   = cg%q(soln)%arr(i,   j,   k)    + &
-                                   &       Jacobi_damp *(cg%q(soln)%arr(i,   j-1, k)   + cg%q(soln)%arr(i,   j+1, k))   * cry
-                              if (dom%has_dir(zdim))     cg%q(soln)%arr(i,   j,   k)   = cg%q(soln)%arr(i,   j,   k)    + &
-                                   &       Jacobi_damp *(cg%q(soln)%arr(i,   j,   k-1) + cg%q(soln)%arr(i,   j,   k+1)) * crz
-                           enddo
-                        enddo
-                     enddo
-                  case default
-                     call die("[multigrid_gravity:approximate_solution_rbgs] Unsupported geometry.")
-               end select
-            endif
-            cgl => cgl%nxt
-         enddo
-
-         if (dirty_debug) then
-            write(dirty_label, '(a,i5)')"relax2 soln+ smoo=", n
-            call curl%check_dirty(soln, dirty_label)
-         endif
-
-      enddo
-
-   end subroutine approximate_solution_rbgs2
-
-!>
-!! \brief Red-Black Gauss-Seidel relaxation.
-!!
-!! \details This implementation is suitable for Laplace operators implemented in residual_Mehrstellen
-!<
-
-   subroutine approximate_solution_rbgs4M(curl, src, soln, nsmoo)
-
-      use cg_level_connected, only: cg_level_connected_T
-      use cg_list,            only: cg_list_element
-      use cg_list_dataop,     only: dirty_label
-      use constants,          only: xdim, ydim, zdim, ndims, GEO_RPZ, I_ONE, BND_NEGREF
-      use dataio_pub,         only: die
-      use domain,             only: dom
-      use global,             only: dirty_debug
-      use grid_cont,          only: grid_container
-      use multigridvars,      only: multidim_code_3D
-      use named_array_list,   only: qna
-
-      implicit none
-
-      type(cg_level_connected_T), pointer, intent(in) :: curl !< pointer to a level for which we approximate the solution
-      integer(kind=4),                     intent(in) :: src  !< index of source in cg%q(:)
-      integer(kind=4),                     intent(in) :: soln !< index of solution in cg%q(:)
-      integer,                             intent(in) :: nsmoo !< number of smoothing repetitions
-
-      integer :: n
-      real    :: L0, Lx, Ly, Lz, Lxy, Lxz, Lyz
-      type(cg_list_element), pointer :: cgl
-      type(grid_container),  pointer :: cg
-
-
-!     call curl%arr3d_boundaries(src, bnd_type = BND_NEGREF) ! required when we use 7-point source term, not just 1-point
-      ! Also required when we want to eliminate some communication of soln at a cost of expanding relaxated area into guardcells
-
-      ! Cannot use Red-Black for 4th order Mehrstellen relaxation due to data dependencies even if in some cases Red-Black gives better convergence
-      do n = 1, nsmoo
-         call curl%arr3d_boundaries(soln, bnd_type = BND_NEGREF)
-
-         if (dirty_debug) then
-            write(dirty_label, '(a,i5)')"relax4M soln- smoo=", n
-            call curl%check_dirty(soln, dirty_label, expand=I_ONE)
-         endif
-         cgl => curl%first
-         do while (associated(cgl))
-            cg => cgl%cg
-
-            if (dom%geometry_type == GEO_RPZ) call die("[multigrid_gravity:approximate_solution_rbgs4M] Relaxation for Mehrstellen not implemented for noncartesian grid")
-            Lxy = 0. ; if (dom%has_dir(xdim) .and. dom%has_dir(ydim)) Lxy = (cg%idx2 + cg%idy2) / 12.
-            Lxz = 0. ; if (dom%has_dir(xdim) .and. dom%has_dir(zdim)) Lxz = (cg%idx2 + cg%idz2) / 12.
-            Lyz = 0. ; if (dom%has_dir(ydim) .and. dom%has_dir(zdim)) Lyz = (cg%idy2 + cg%idz2) / 12.
-            Lx  = 0. ; if (dom%has_dir(xdim)) Lx = cg%idx2 - 2. * (Lxy + Lxz)
-            Ly  = 0. ; if (dom%has_dir(ydim)) Ly = cg%idy2 - 2. * (Lxy + Lyz)
-            Lz  = 0. ; if (dom%has_dir(zdim)) Lz = cg%idz2 - 2. * (Lxz + Lyz)
-            L0  = 2. * (Lx + Ly + Lz) + 4. * (Lxy + Lxz + Lyz)
-            if (dom%eff_dim == ndims .and. .not. multidim_code_3D) then
-               cg%wa(cg%is  :cg%ie  , cg%js  :cg%je  ,   cg%ks:cg%ke) = &
-                    &  (cg%q(soln)%arr(cg%is-1:cg%ie-1, cg%js  :cg%je  , cg%ks  :cg%ke  ) + cg%q(soln)%arr(cg%is+1:cg%ie+1, cg%js  :cg%je  , cg%ks  :cg%ke  ))*Lx/L0   &
-                    +  (cg%q(soln)%arr(cg%is  :cg%ie  , cg%js-1:cg%je-1, cg%ks  :cg%ke  ) + cg%q(soln)%arr(cg%is  :cg%ie  , cg%js+1:cg%je+1, cg%ks  :cg%ke  ))*Ly/L0   &
-                    +  (cg%q(soln)%arr(cg%is  :cg%ie  , cg%js  :cg%je  , cg%ks-1:cg%ke-1) + cg%q(soln)%arr(cg%is  :cg%ie  , cg%js  :cg%je  , cg%ks+1:cg%ke+1))*Lz/L0   &
-                    + ((cg%q(soln)%arr(cg%is-1:cg%ie-1, cg%js-1:cg%je-1, cg%ks  :cg%ke  ) + cg%q(soln)%arr(cg%is+1:cg%ie+1, cg%js-1:cg%je-1, cg%ks  :cg%ke  ))         &
-                    +  (cg%q(soln)%arr(cg%is-1:cg%ie-1, cg%js+1:cg%je+1, cg%ks  :cg%ke  ) + cg%q(soln)%arr(cg%is+1:cg%ie+1, cg%js+1:cg%je+1, cg%ks  :cg%ke  )))*Lxy/L0 &
-                    + ((cg%q(soln)%arr(cg%is  :cg%ie  , cg%js-1:cg%je-1, cg%ks-1:cg%ke-1) + cg%q(soln)%arr(cg%is  :cg%ie  , cg%js+1:cg%je+1, cg%ks-1:cg%ke-1))         &
-                    +  (cg%q(soln)%arr(cg%is  :cg%ie  , cg%js-1:cg%je-1, cg%ks+1:cg%ke+1) + cg%q(soln)%arr(cg%is  :cg%ie  , cg%js+1:cg%je+1, cg%ks+1:cg%ke+1)))*Lyz/L0 &
-                    + ((cg%q(soln)%arr(cg%is-1:cg%ie-1, cg%js  :cg%je  , cg%ks-1:cg%ke-1) + cg%q(soln)%arr(cg%is+1:cg%ie+1, cg%js  :cg%je  , cg%ks-1:cg%ke-1))         &
-                    +  (cg%q(soln)%arr(cg%is-1:cg%ie-1, cg%js  :cg%je  , cg%ks+1:cg%ke+1) + cg%q(soln)%arr(cg%is+1:cg%ie+1, cg%js  :cg%je  , cg%ks+1:cg%ke+1)))*Lxz/L0 &
-                    -   cg%q(src )%arr(cg%is  :cg%ie  , cg%js  :cg%je  , cg%ks  :cg%ke  ) / L0
-! For some weird reasons the formula that comes directly from the Mehrstellen operator worsens convergence
-! Note that it requires enabling call curl%arr3d_boundaries(src, ...) above
-!!$                 - ((12-2*dom%eff_dim)*cg%q(src)%arr (cg%is  :cg%ie  , j,   k  )                                     &
-!!$                 &  + cg%q(src)%arr (cg%is-1:cg%ie-1, j,   k  ) + cg%q(src)%arr (cg%is+1:cg%ie+1, j,   k  )          &
-!!$                 &  + cg%q(src)%arr (cg%is  :cg%ie  , j-1, k  ) + cg%q(src)%arr (cg%is  :cg%ie  , j+1, k  )          &
-!!$                 &  + cg%q(src)%arr (cg%is  :cg%ie  , j,   k-1) + cg%q(src)%arr (cg%is  :cg%ie  , j,   k+1))/(12. * L0)
-            else
-               ! it seems that (at least now) multidim_code_3D makes very little difference in 3D, so we may probably drop the 3D-code in favour of the multidimensional one
-               cg%wa(cg%is  :cg%ie  , cg%js:cg%je,   cg%ks:cg%ke) = &
-                    -     cg%q(src )%arr(cg%is  :cg%ie  , cg%js  :cg%je,   cg%ks  :cg%ke  ) / L0
-               if (dom%has_dir(xdim)) &
-                    &     cg%wa         (cg%is  :cg%ie  , cg%js  :cg%je,   cg%ks  :cg%ke  ) = cg%wa         (cg%is  :cg%ie  , cg%js  :cg%je,   cg%ks  :cg%ke  )          &
-                    & +  (cg%q(soln)%arr(cg%is-1:cg%ie-1, cg%js  :cg%je,   cg%ks  :cg%ke  ) + cg%q(soln)%arr(cg%is+1:cg%ie+1, cg%js  :cg%je,   cg%ks  :cg%ke  ))*Lx/L0
-               if (dom%has_dir(ydim)) &
-                    &     cg%wa         (cg%is  :cg%ie  , cg%js  :cg%je,   cg%ks  :cg%ke  ) = cg%wa         (cg%is  :cg%ie  , cg%js  :cg%je,   cg%ks  :cg%ke  )          &
-                    & +  (cg%q(soln)%arr(cg%is  :cg%ie  , cg%js-1:cg%je-1, cg%ks  :cg%ke  ) + cg%q(soln)%arr(cg%is  :cg%ie  , cg%js+1:cg%je+1, cg%ks  :cg%ke  ))*Ly/L0
-               if (dom%has_dir(zdim)) &
-                    &     cg%wa         (cg%is  :cg%ie  , cg%js  :cg%je,   cg%ks  :cg%ke  ) = cg%wa         (cg%is  :cg%ie  , cg%js  :cg%je,   cg%ks  :cg%ke  )          &
-                    & +  (cg%q(soln)%arr(cg%is  :cg%ie  , cg%js  :cg%je,   cg%ks-1:cg%ke-1) + cg%q(soln)%arr(cg%is  :cg%ie  , cg%js  :cg%je,   cg%ks+1:cg%ke+1))*Lz/L0
-               if (dom%has_dir(xdim) .and. dom%has_dir(ydim)) &
-                    &     cg%wa         (cg%is  :cg%ie  , cg%js  :cg%je,   cg%ks  :cg%ke  ) = cg%wa         (cg%is  :cg%ie  , cg%js  :cg%je,   cg%ks  :cg%ke  )          &
-                    & + ((cg%q(soln)%arr(cg%is-1:cg%ie-1, cg%js-1:cg%je-1, cg%ks  :cg%ke  ) + cg%q(soln)%arr(cg%is+1:cg%ie+1, cg%js-1:cg%je-1, cg%ks  :cg%ke  ))         &
-                    & + ( cg%q(soln)%arr(cg%is-1:cg%ie-1, cg%js+1:cg%je+1, cg%ks  :cg%ke  ) + cg%q(soln)%arr(cg%is+1:cg%ie+1, cg%js+1:cg%je+1, cg%ks  :cg%ke  )))*Lxy/L0
-               if (dom%has_dir(ydim) .and. dom%has_dir(zdim)) &
-                    &     cg%wa         (cg%is  :cg%ie  , cg%js  :cg%je,   cg%ks  :cg%ke  ) = cg%wa         (cg%is  :cg%ie  , cg%js  :cg%je,   cg%ks  :cg%ke  )          &
-                    & + ((cg%q(soln)%arr(cg%is  :cg%ie  , cg%js-1:cg%je-1, cg%ks-1:cg%ke-1) + cg%q(soln)%arr(cg%is  :cg%ie  , cg%js+1:cg%je+1, cg%ks-1:cg%ke-1))         &
-                    & +  (cg%q(soln)%arr(cg%is  :cg%ie  , cg%js-1:cg%je-1, cg%ks+1:cg%ke+1) + cg%q(soln)%arr(cg%is  :cg%ie  , cg%js+1:cg%je+1, cg%ks+1:cg%ke+1)))*Lyz/L0
-               if (dom%has_dir(xdim) .and. dom%has_dir(zdim)) &
-                    &     cg%wa         (cg%is  :cg%ie  , cg%js  :cg%je,   cg%ks  :cg%ke  ) = cg%wa         (cg%is  :cg%ie  , cg%js  :cg%je,   cg%ks  :cg%ke  )          &
-                    & + ((cg%q(soln)%arr(cg%is-1:cg%ie-1, cg%js  :cg%je,   cg%ks-1:cg%ke-1) + cg%q(soln)%arr(cg%is+1:cg%ie+1, cg%js  :cg%je,   cg%ks-1:cg%ke-1))         &
-                    & +  (cg%q(soln)%arr(cg%is-1:cg%ie-1, cg%js  :cg%je,   cg%ks+1:cg%ke+1) + cg%q(soln)%arr(cg%is+1:cg%ie+1, cg%js  :cg%je,   cg%ks+1:cg%ke+1)))*Lxz/L0
-            endif
-            cgl => cgl%nxt
-         enddo
-         call curl%q_copy(qna%wai, soln)
-
-         if (dirty_debug) then
-            write(dirty_label, '(a,i5)')"relax4M soln+ smoo=", n
-            call curl%check_dirty(soln, dirty_label)
-         endif
-      enddo
-
-   end subroutine approximate_solution_rbgs4M
 
 !> \brief Solve finest level if allowed (single cg and single thread)
 
