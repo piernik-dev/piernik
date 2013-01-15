@@ -1354,8 +1354,8 @@ contains
                      if ( i<cg%is+L2w .or. i>cg%ie-L2w .or. j<cg%js+L2w .or. j>cg%je-L2w .or. k<cg%ks+L2w .or. k>cg%ke-L2w) then
                         cg%q(def)%arr        (i,         j,         k)         = cg%q(src)%arr (i,         j,         k      )         - &
                              ( cg%q(soln)%arr(i-dom%D_x, j,         k)         + cg%q(soln)%arr(i+dom%D_x, j,         k      ))   * Lx - &
-                             ( cg%q(soln)%arr(i,         j-dom%D_x, k)         + cg%q(soln)%arr(i,         j+dom%D_x, k      ))   * Ly - &
-                             ( cg%q(soln)%arr(i,         j,         k-dom%D_x) + cg%q(soln)%arr(i,         j,         k+dom%D_x)) * Lz - &
+                             ( cg%q(soln)%arr(i,         j-dom%D_y, k)         + cg%q(soln)%arr(i,         j+dom%D_y, k      ))   * Ly - &
+                             ( cg%q(soln)%arr(i,         j,         k-dom%D_z) + cg%q(soln)%arr(i,         j,         k+dom%D_z)) * Lz - &
                              & cg%q(soln)%arr(i,         j,         k)                                                            * L0
                      endif
                   enddo
