@@ -519,7 +519,12 @@ contains
 !>
 !! \brief Convert potential into image mass. This way we reduce a 3D problem to a 2D one.
 !!
-!! \details There will be work imbalance here because different PEs may operate on different amount of external boundary data
+!! \details There will be work imbalance here because different PEs may operate on different amount of external boundary data.
+!!
+!! The value stored in bnd_[xyz] has the meaning of mass inside the cell next to the external boundary,
+!! divided by the surface of the cell projected onto the external boundary surface.
+!! The surface factors are taken into account in img_mass2moments routine.
+!! The exact position of the mass depends on choice of a1 and a2 parameters.
 !<
 
    subroutine potential2img_mass
