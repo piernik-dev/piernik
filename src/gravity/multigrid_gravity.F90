@@ -1621,6 +1621,7 @@ contains
       use domain,             only: dom
       use global,             only: dirty_debug
       use grid_cont,          only: grid_container
+      use multigridvars,      only: multidim_code_3D
       use named_array_list,   only: qna
 
       implicit none
@@ -1659,7 +1660,7 @@ contains
             Ly  = 0. ; if (dom%has_dir(ydim)) Ly = cg%idy2 - 2. * (Lxy + Lyz)
             Lz  = 0. ; if (dom%has_dir(zdim)) Lz = cg%idz2 - 2. * (Lxz + Lyz)
             L0  = 2. * (Lx + Ly + Lz) + 4. * (Lxy + Lxz + Lyz)
-            if (dom%eff_dim == ndims) then
+            if (dom%eff_dim == ndims .and. .not. multidim_code_3D) then
                cg%wa(cg%is  :cg%ie  , cg%js  :cg%je  ,   cg%ks:cg%ke) = &
                     &  (cg%q(soln)%arr(cg%is-1:cg%ie-1, cg%js  :cg%je  , cg%ks  :cg%ke  ) + cg%q(soln)%arr(cg%is+1:cg%ie+1, cg%js  :cg%je  , cg%ks  :cg%ke  ))*Lx/L0   &
                     +  (cg%q(soln)%arr(cg%is  :cg%ie  , cg%js-1:cg%je-1, cg%ks  :cg%ke  ) + cg%q(soln)%arr(cg%is  :cg%ie  , cg%js+1:cg%je+1, cg%ks  :cg%ke  ))*Ly/L0   &
@@ -1671,7 +1672,14 @@ contains
                     + ((cg%q(soln)%arr(cg%is-1:cg%ie-1, cg%js  :cg%je  , cg%ks-1:cg%ke-1) + cg%q(soln)%arr(cg%is+1:cg%ie+1, cg%js  :cg%je  , cg%ks-1:cg%ke-1))         &
                     +  (cg%q(soln)%arr(cg%is-1:cg%ie-1, cg%js  :cg%je  , cg%ks+1:cg%ke+1) + cg%q(soln)%arr(cg%is+1:cg%ie+1, cg%js  :cg%je  , cg%ks+1:cg%ke+1)))*Lxz/L0 &
                     -   cg%q(src )%arr(cg%is  :cg%ie  , cg%js  :cg%je  , cg%ks  :cg%ke  ) / L0
+! For some weird reasons the formula that comes directly from the Mehrstellen operator worsens convergence
+! Note that it requires enabling call curl%arr3d_boundaries(src, ...) above
+!!$                 - ((12-2*dom%eff_dim)*cg%q(src)%arr (cg%is  :cg%ie  , j,   k  )                                     &
+!!$                 &  + cg%q(src)%arr (cg%is-1:cg%ie-1, j,   k  ) + cg%q(src)%arr (cg%is+1:cg%ie+1, j,   k  )          &
+!!$                 &  + cg%q(src)%arr (cg%is  :cg%ie  , j-1, k  ) + cg%q(src)%arr (cg%is  :cg%ie  , j+1, k  )          &
+!!$                 &  + cg%q(src)%arr (cg%is  :cg%ie  , j,   k-1) + cg%q(src)%arr (cg%is  :cg%ie  , j,   k+1))/(12. * L0)
             else
+               ! it seems that (at least now) multidim_code_3D makes very little difference in 3D, so we may probably drop the 3D-code in favour of the multidimensional one
                cg%wa(cg%is  :cg%ie  , cg%js:cg%je,   cg%ks:cg%ke) = &
                     -     cg%q(src )%arr(cg%is  :cg%ie  , cg%js  :cg%je,   cg%ks  :cg%ke  ) / L0
                if (dom%has_dir(xdim)) &
