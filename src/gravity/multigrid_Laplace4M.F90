@@ -29,7 +29,12 @@
 #include "piernik.h"
 #include "macros.h"
 
-!> \brief Implementation of 4th order, compact, Mehrstellen-type Laplace operator
+!>
+!! \brief Implementation of 4th order, compact, Mehrstellen-type Laplace operator
+!!
+!! \warning It seems that for isolated boundaries some additional modifications need to be done in order to improve accuracy.
+!! Current implementation produces significant error in the first layer of cells next to the outer boundary
+!<
 
 module multigrid_Laplace4M
 ! pulled by MULTIGRID && GRAV
@@ -80,7 +85,6 @@ contains
       use domain,        only: dom
       use grid_cont,     only: grid_container
       use mpisetup,      only: master
-      use multigridvars, only: grav_bnd, bnd_givenval
       use named_array,   only: p3
 
       implicit none
@@ -91,10 +95,9 @@ contains
       integer(kind=4),    intent(in) :: def     !< index of defect in cg%q(:)
 
       real                :: L0, Lx, Ly, Lz, Lxy, Lxz, Lyz
-      integer, parameter  :: L2w = 2             ! #layers of boundary cells for L2 operator
 
       logical, save       :: firstcall = .true.
-      integer             :: i, j, k
+      integer             :: i
       type(cg_list_element), pointer :: cgl
       type(grid_container),  pointer :: cg
       integer(kind=4), dimension(ndims,ndims,LO:HI) :: idm
@@ -144,31 +147,8 @@ contains
               &        cg%q(soln)%span(cg%ijkse+idm(zdim,:,:)-idm(ydim,:,:)) + cg%q(soln)%span(cg%ijkse+idm(zdim,:,:)+idm(ydim,:,:)) )
          ! OPT: Perhaps in 3D this would be more efficient without ifs.
          ! OPT: Try direct operations on cg%q(soln)%arr without calling span
-         ! 2D and 1D rns do not need too much optimization as they will be rarely used in production runs with selfgravity
+         ! 2D and 1D runs do not need too much optimization as they will be rarely used in production runs with selfgravity
 
-         ! WARNING: not optimized
-         if (grav_bnd == bnd_givenval) then ! probably also in some other cases
-            ! Use L2 Laplacian in two layers of cells next to the boundary because L4 seems to be incompatible with present image mass construction
-            !> \todo try to fix this
-            Lx  = 0. ; if (dom%has_dir(xdim)) Lx = cg%idx2
-            Ly  = 0. ; if (dom%has_dir(ydim)) Ly = cg%idy2
-            Lz  = 0. ; if (dom%has_dir(zdim)) Lz = cg%idz2
-            L0 = -2. * (Lx + Ly + Lz)
-
-            do k = cg%ks, cg%ke
-               do j = cg%js, cg%je
-                  do i = cg%is, cg%ie
-                     if ( i<cg%is+L2w .or. i>cg%ie-L2w .or. j<cg%js+L2w .or. j>cg%je-L2w .or. k<cg%ks+L2w .or. k>cg%ke-L2w) then
-                        cg%q(def)%arr        (i,         j,         k)         = cg%q(src)%arr (i,         j,         k      )         - &
-                             ( cg%q(soln)%arr(i-dom%D_x, j,         k)         + cg%q(soln)%arr(i+dom%D_x, j,         k      ))   * Lx - &
-                             ( cg%q(soln)%arr(i,         j-dom%D_y, k)         + cg%q(soln)%arr(i,         j+dom%D_y, k      ))   * Ly - &
-                             ( cg%q(soln)%arr(i,         j,         k-dom%D_z) + cg%q(soln)%arr(i,         j,         k+dom%D_z)) * Lz - &
-                             & cg%q(soln)%arr(i,         j,         k)                                                            * L0
-                     endif
-                  enddo
-               enddo
-            enddo
-         endif
          cgl => cgl%nxt
       enddo
 
