@@ -522,9 +522,12 @@ contains
 !! \details There will be work imbalance here because different PEs may operate on different amount of external boundary data.
 !!
 !! The value stored in bnd_[xyz] has the meaning of mass inside the cell next to the external boundary,
-!! divided by the surface of the cell projected onto the external boundary surface.
+!! divided by the surface of the cell projected onto the external boundary surface (surface density).
 !! The surface factors are taken into account in img_mass2moments routine.
 !! The exact position of the mass depends on choice of a1 and a2 parameters.
+!! The surface density is estimated using gradient of potential.
+!! The Taylor expansion of the potential is done wrt. boundary position, normal direction points to the outside of the boundary
+!! with the assumption that the potential at the external boundary equals 0.
 !<
 
    subroutine potential2img_mass
@@ -542,9 +545,9 @@ contains
       type(cg_list_element), pointer :: cgl
       type(grid_container), pointer :: cg
       real, parameter :: a1 = -2., a2 = (-2. - a1)/3. ! interpolation parameters;   <---- a1=-2 => a2=0
-      ! a1 = -2. is the simplest, low order choice, gives best agreement of total mass and CoM location when compared to 3-D integration
+      ! a1 = -2. is the simplest, 1st order choice, gives best agreement of total mass and CoM location when compared to 3-D integration
       ! a1 = -1., a2 = -1./3. seems to do the best job,
-      !> \todo: find out how and why
+      ! a1 = -3./2., a2 = -1./6. seems to be 2nd order estimator
 
       cgl => leaves%first
       do while (associated(cgl))
