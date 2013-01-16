@@ -40,6 +40,9 @@ module initproblem
    enum, bind(C)
       enumerator :: ADDED = 1, NOT_ADDED
    end enum
+   enum, bind(C)
+      enumerator :: RANDOM = 1, SINE
+   end enum
 
    real                     :: d0, r_max, dout, alpha, r_in, r_out, f_in, f_out
    real                     :: dens_exp      !< exponent in profile density \f$\rho(R) = \rho_0 R^{-k}\f$
@@ -62,10 +65,11 @@ module initproblem
    character(len=cbuff_len) :: densfile
    real, dimension(:), allocatable :: taus, tauf
    character(len=dsetnamelen), parameter :: inid_n = "u_0"
+   integer                  :: amp_func  !< 1 - random, 2 - sine
 
    namelist /PROBLEM_CONTROL/  alpha, d0, dout, r_max, r_in, r_out, f_in, f_out, &
       & dens_exp, eps, dens_amb, x_cut, cutoff_ncells, dumping_coeff, use_inner_orbital_period, &
-      & drag_max, drag_min, densfile, amp_noise, gauss, a_cut, dens_max
+      & drag_max, drag_min, densfile, amp_noise, amp_func, gauss, a_cut, dens_max
 
 contains
 !-----------------------------------------------------------------------------
@@ -85,7 +89,7 @@ contains
       user_attrs_wr => my_attrs_wr
       user_attrs_rd => my_attrs_rd
       problem_customize_solution => problem_customize_solution_kepler
-      problem_grace_passed => add_random_noise
+      problem_grace_passed => si_grace_passed
       problem_post_restart => kepler_problem_post_restart
       user_fluidbnd => my_fbnd
       grav_pot_3d => my_grav_pot_3d
@@ -123,6 +127,7 @@ contains
       densfile         = ''
       alpha            = 1.0
       amp_noise        = 1.e-6
+      amp_func         = RANDOM
       gauss            = 0.0
 
       r_in             = 0.5
@@ -147,6 +152,7 @@ contains
          diff_nml(PROBLEM_CONTROL)
 
          ibuff(1) = cutoff_ncells
+         ibuff(2) = amp_func
 
          lbuff(1) = use_inner_orbital_period
 
@@ -182,6 +188,7 @@ contains
       if (slave) then
 
          cutoff_ncells    = ibuff(1)
+         amp_func         = ibuff(2)
 
          use_inner_orbital_period = lbuff(1)
 
@@ -210,6 +217,19 @@ contains
       endif
 
    end subroutine read_problem_par
+!-----------------------------------------------------------------------------
+   subroutine si_grace_passed
+
+      implicit none
+
+      select case (amp_func)
+         case (SINE)
+            call add_sine
+         case default
+            call add_random_noise
+      end select
+
+   end subroutine si_grace_passed
 !-----------------------------------------------------------------------------
    subroutine add_sine
 
