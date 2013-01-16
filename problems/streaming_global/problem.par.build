@@ -1,0 +1,121 @@
+ $BASE_DOMAIN
+    n_d = 256, 1, 32
+    nb  = 4
+    bnd_xl = 'ref'
+    bnd_xr = 'ref'
+    bnd_yl = 'per'
+    bnd_yr = 'per'
+    bnd_zl = 'per'
+    bnd_zr = 'per'
+    geometry = "cylindrical"
+    xmin   = 2.0
+    xmax   = 7.0
+    ymin   = 0.0
+    ymax   = 6.2831853071795862 
+    zmin   =-0.146484375
+    zmax   = 0.146484375
+ /
+
+ $MPI_BLOCKS
+    psize = 4, 1, 1
+    allow_uneven = .true.
+    allow_noncart = .false.
+ /
+
+ $UNITS
+   units_set = "pln"
+ /
+
+ $RESTART_CONTROL
+    restart  = 'last'
+    new_id   = 'foo'
+    nrestart = 0
+ /
+
+ $END_CONTROL
+    tend   = 50.0
+    nend   = 10000
+    wend   = 70.0
+ /
+
+ $OUTPUT_CONTROL
+    use_v2_io = .true.
+    nproc_io = 1
+    enable_compression = .false.
+    problem_name = 'si'
+    run_id  =  'gld'
+    dt_hdf  = 50.0
+    dt_res  = 50.0
+    dt_log  = 10.0
+    dt_tsl  = 10.0
+    vars(1) = 'dens'
+    vars(2) = 'velx'
+    vars(3) = 'vely'
+    vars(4) = 'velz'
+ /
+
+ $FLUID_NEUTRAL
+    gamma  = 1.0
+    cs_iso = 0.25 ! 0.05507   ! 150K for PLN
+ /
+
+ $FLUID_DUST
+    selfgrav = .false.
+ /
+
+ $NUMERICAL_SETUP
+    cfl    = 0.6
+    use_smalld = .true.
+    smalld = 5.e-7
+    relax_time = 5.0
+    integration_order = 2
+    limiter= 'vanleer'
+    cfr_smooth = 0.01
+    geometry25D = .true.
+ /
+
+ $GRAVITY
+    external_gp = "GRAV_PTMASS"
+    ptmass  = 1047.7
+    ptm_x   = 0.0
+    ptm_y   = 0.0
+    ptm_z   = 0.0
+    r_smooth= 0.0
+    user_grav = .true.
+ /
+
+ $PROBLEM_CONTROL
+    d0      = 1700.0  ! g/cm**2 Desch
+    dout    = 1e-6
+    r_max   = 11.5
+    r_in    = 2.4
+    r_out   = 6.8
+    f_out   = 11.0
+    f_in    = 10.0
+    use_inner_orbital_period = .false.
+    dumping_coeff = 2.8330710514442776
+    dens_exp = 1.5    ! Desch
+    dens_amb = 5.e-12
+    cutoff_ncells = 300
+    eps      = 1.0
+    densfile = ""
+    amp_noise = 1.0e-6
+    amp_func = 2
+ /
+
+ $PIERNIK_DEBUG
+   constant_dt = 0.0
+ /
+
+ $INTERACTIONS
+   collision_factor  = 1.0
+   dragc_gas_dust    = 1.0
+   cfl_interact      = 0.8
+   grain_size        = 50.0
+ /
+
+ $AMR
+ /
+
+ $FLUID_TRACER
+ /
