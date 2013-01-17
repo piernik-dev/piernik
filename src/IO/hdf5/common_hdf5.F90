@@ -64,6 +64,12 @@ module common_hdf5
       enumerator :: O_OUT
    end enum
 
+   enum, bind(c)
+      enumerator :: cg_le !< index list of left edges from all cgs/procs
+      enumerator :: cg_re !< index list of right edges from all cgs/procs
+      enumerator :: cg_dl !< index list of cell sizes from all cgs/procs
+   end enum
+
    type :: cg_output
       integer(HID_T), dimension(:), allocatable   :: cg_g_id
       integer(HID_T), dimension(:,:), allocatable :: dset_id
@@ -628,7 +634,6 @@ contains
    subroutine write_to_hdf5_v2(filename, otype, create_empty_cg_datasets, write_cg_to_hdf5)
 
       use cg_leaves,    only: leaves
-      use cg_list,      only: cg_list_element
       use constants,    only: cwdlen, dsetnamelen, xdim, zdim, ndims, I_ONE, I_TWO, I_THREE, INT4, LO, HI
       use dataio_pub,   only: die, nproc_io, can_i_write, domain_dump
       use domain,       only: dom
@@ -683,20 +688,14 @@ contains
       integer, parameter                            :: tag = I_ONE
       integer(kind=4),  dimension(:),   pointer     :: cg_n             !< offset for cg group numbering
       integer(kind=4),  dimension(:,:), pointer     :: cg_all_n_b       !< sizes of all cg
-      integer(kind=4),  dimension(:),   allocatable :: cg_rl            !< list of refinement levels from all cgs/procs
+      integer(kind=4),  dimension(:),   pointer     :: cg_rl            !< list of refinement levels from all cgs/procs
       integer(kind=4),  dimension(:,:), pointer     :: cg_n_b           !< list of n_b from all cgs/procs
-      integer(kind=8),  dimension(:,:), allocatable :: cg_off           !< list of offsets from all cgs/procs
+      integer(kind=8),  dimension(:,:), pointer     :: cg_off           !< list of offsets from all cgs/procs
 
-      enum, bind(c)
-         enumerator :: cg_le !< index list of left edges from all cgs/procs
-         enumerator :: cg_re !< index list of right edges from all cgs/procs
-         enumerator :: cg_dl !< index list of cell sizes from all cgs/procs
-      end enum
       !>
       !! auxiliary array for communication of {cg_le, cg_re, cg_dl} lists
       !<
-      real(kind=8), dimension(:,:,:), allocatable   :: dbuf
-      type(cg_list_element), pointer                :: cgl
+      real(kind=8), dimension(:,:,:), pointer       :: dbuf
       logical(kind=4)                               :: Z_avail !< .true. if HDF5 was compiled with zlib support
       character(len=dsetnamelen)                    :: d_label
       integer(kind=4)                               :: indx
@@ -762,20 +761,7 @@ contains
             allocate(cg_rl(cg_n(p)), cg_n_b(cg_n(p), ndims), cg_off(cg_n(p), ndims))
             if (otype == O_OUT) allocate(dbuf(cg_le:cg_dl, cg_n(p), ndims))
             if (p == FIRST) then
-               g = 1
-               cgl => leaves%first
-               do while (associated(cgl))
-                  cg_rl(g)     = int(cgl%cg%level_id, kind=4)
-                  cg_n_b(g, :) = cgl%cg%n_b
-                  cg_off(g, :) = cgl%cg%my_se(:, LO)
-                  if (otype == O_OUT) then
-                    dbuf(cg_le, g, :)  = cgl%cg%fbnd(:,LO)
-                    dbuf(cg_re, g, :)  = cgl%cg%fbnd(:,HI)
-                    dbuf(cg_dl, g, :)  = cgl%cg%dl
-                  endif
-                  g = g + 1
-                  cgl => cgl%nxt
-               enddo
+               call collect_cg_data(cg_rl, cg_n_b, cg_off, dbuf, otype)
             else
                call MPI_Recv(cg_rl,  size(cg_rl),  MPI_INTEGER,  p, tag,         comm, MPI_STATUS_IGNORE, mpi_err)
                call MPI_Recv(cg_n_b, size(cg_n_b), MPI_INTEGER,  p, tag+I_ONE,   comm, MPI_STATUS_IGNORE, mpi_err)
@@ -818,7 +804,7 @@ contains
             enddo
 
             deallocate(cg_rl, cg_n_b, cg_off)
-            if (allocated(dbuf)) deallocate(dbuf)
+            if (associated(dbuf)) deallocate(dbuf)
          enddo
          rd%grid_dimensions = cg_all_n_b
 
@@ -857,29 +843,15 @@ contains
 
          call rd%cleanup()
       else ! send all the necessary information to the master
-         !! \deprecated some duplicated code here
          allocate(cg_rl(leaves%cnt), cg_n_b(leaves%cnt, ndims), cg_off(leaves%cnt, ndims))
          if (otype == O_OUT) allocate(dbuf(cg_le:cg_dl, leaves%cnt, ndims))
-         g = 1
-         cgl => leaves%first
-         do while (associated(cgl))
-            cg_rl(g)     = int(cgl%cg%level_id, kind=4)
-            cg_n_b(g, :) = cgl%cg%n_b(:)
-            cg_off(g, :) = cgl%cg%my_se(:, LO)
-            if (otype == O_OUT) then
-               dbuf(cg_le, g, :)  = cgl%cg%fbnd(:,LO)
-               dbuf(cg_re, g, :)  = cgl%cg%fbnd(:,HI)
-               dbuf(cg_dl, g, :)  = cgl%cg%dl
-            endif
-            g = g + 1
-            cgl => cgl%nxt
-         enddo
+         call collect_cg_data(cg_rl, cg_n_b, cg_off, dbuf, otype)
          call MPI_Send(cg_rl,  size(cg_rl),  MPI_INTEGER,  FIRST, tag,         comm, mpi_err)
          call MPI_Send(cg_n_b, size(cg_n_b), MPI_INTEGER,  FIRST, tag+I_ONE,   comm, mpi_err)
          call MPI_Send(cg_off, size(cg_off), MPI_INTEGER8, FIRST, tag+I_TWO,   comm, mpi_err)
          if (otype == O_OUT) call MPI_Send(dbuf,   size(dbuf),   MPI_REAL8,    FIRST, tag+I_THREE, comm, mpi_err)
          deallocate(cg_rl, cg_n_b, cg_off)
-         if (allocated(dbuf)) deallocate(dbuf)
+         if (associated(dbuf)) deallocate(dbuf)
       endif
 
       call piernik_MPI_Bcast(cg_all_n_b)
@@ -906,6 +878,45 @@ contains
       deallocate(cg_n, cg_all_n_b)
 
    end subroutine write_to_hdf5_v2
+
+   subroutine collect_cg_data(cg_rl, cg_n_b, cg_off, dbuf, otype)
+
+      use cg_level_connected, only: base_lev, cg_level_connected_T
+      use cg_list,            only: cg_list_element
+      use constants,          only: LO, HI
+
+      implicit none
+
+      integer(kind=4), dimension(:),     pointer, intent(inout) :: cg_rl            !< list of refinement levels from all cgs/procs
+      integer(kind=4), dimension(:,:),   pointer, intent(inout) :: cg_n_b           !< list of n_b from all cgs/procs
+      integer(kind=8), dimension(:,:),   pointer, intent(inout) :: cg_off           !< list of offsets from all cgs/procs
+      real(kind=8),    dimension(:,:,:), pointer, intent(inout) :: dbuf
+      integer(kind=4),                            intent(in)    :: otype            !< Output type (restart, data)
+
+      type(cg_level_connected_T), pointer :: curl
+      type(cg_list_element), pointer :: cgl
+      integer :: g
+
+      g = 1
+      curl => base_lev
+      do while (associated(curl))
+         cgl => curl%first
+         do while (associated(cgl))
+            cg_rl (g   ) = int(cgl%cg%level_id, kind=4)
+            cg_n_b(g, :) = cgl%cg%n_b(:)
+            cg_off(g, :) = cgl%cg%my_se(:, LO) - curl%off(:)
+            if (otype == O_OUT) then
+               dbuf(cg_le, g, :)  = cgl%cg%fbnd(:, LO)
+               dbuf(cg_re, g, :)  = cgl%cg%fbnd(:, HI)
+               dbuf(cg_dl, g, :)  = cgl%cg%dl
+            endif
+            g = g + 1
+            cgl => cgl%nxt
+         enddo
+         curl => curl%finer
+      enddo
+
+   end subroutine collect_cg_data
 
    function set_h5_properties(h5p, nproc_io) result (plist_id)
       use hdf5,     only: HID_T, H5P_FILE_ACCESS_F, h5pcreate_f, h5pset_fapl_mpio_f, &

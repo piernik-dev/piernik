@@ -276,8 +276,8 @@ contains
 
       ! Inherit the boundaries from the domain, then set MPI or SHEAR boundaries where applicable
       this%bnd(:,:) = dom%bnd(:,:)
-      where (my_se(:, LO)   /= 0)      this%bnd(:, LO) = BND_MPI
-      where (this%h_cor1(:) /= n_d(:)) this%bnd(:, HI) = BND_MPI
+      where (my_se(:, LO)   /= off(:)         ) this%bnd(:, LO) = BND_MPI
+      where (this%h_cor1(:) /= off(:) + n_d(:)) this%bnd(:, HI) = BND_MPI
       ! For periodic boundaries do not set BND_MPI when local domain spans through the whole computational domain in given direction.
       where (dom%periodic(:) .and. this%h_cor1(:)    /= n_d(:)) this%bnd(:, LO) = BND_MPI
       where (dom%periodic(:) .and. this%my_se(:, LO) /= 0)      this%bnd(:, HI) = BND_MPI

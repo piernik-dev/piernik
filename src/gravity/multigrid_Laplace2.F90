@@ -159,7 +159,7 @@ contains
          cgl => cgl%nxt
       enddo
 
-   end subroutine residual2
+    end subroutine residual2
 
 !>
 !! \brief Red-Black Gauss-Seidel relaxation for Laplace operator implemented in residual2
@@ -173,7 +173,7 @@ contains
       use cg_level_connected, only: cg_level_connected_T
       use cg_list,            only: cg_list_element
       use cg_list_dataop,     only: dirty_label
-      use constants,          only: xdim, ydim, zdim, ndims, GEO_XYZ, GEO_RPZ, I_ONE, BND_NEGREF
+      use constants,          only: xdim, ydim, zdim, ndims, GEO_XYZ, GEO_RPZ, I_ONE, BND_NEGREF, LO
       use dataio_pub,         only: die
       use domain,             only: dom
       use global,             only: dirty_debug
@@ -190,6 +190,7 @@ contains
       integer, parameter :: RED_BLACK = 2 !< the checkerboard requires two sweeps
 
       integer :: n, i, j, k, i1, j1, k1, id, jd, kd
+      integer(kind=8) :: ijko
       real    :: crx, crx1, cry, crz, cr
       type(cg_list_element), pointer :: cgl
       type(grid_container),  pointer :: cg
@@ -219,10 +220,12 @@ contains
 
             ! with explicit outer loops it is easier to describe a 3-D checkerboard :-)
 
+            ijko = 0
+            if (any(cg%my_se(:, LO) < 0)) ijko = -ndims*RED_BLACK*minval(cg%my_se(:, LO))
             if (dom%eff_dim==ndims .and. .not. multidim_code_3D) then
                do k = cg%ks, cg%ke
                   do j = cg%js, cg%je
-                     i1 = cg%is + int(mod(n+cg%is+j+k, int(RED_BLACK)), kind=4)
+                     i1 = cg%is + int(mod(ijko+n+cg%is+j+k, int(RED_BLACK, kind=8)), kind=4)
                      if (dom%geometry_type == GEO_RPZ) then
 !!$                  cg%q(soln)%arr(i1  :cg%ie  :2, j,   k) = &
 !!$                       cg%mg%rx * (cg%q(soln)%arr(i1-1:cg%ie-1:2, j,   k  ) + cg%q(soln)%arr(i1+1:cg%ie+1:2, j,   k))   + &
@@ -253,13 +256,13 @@ contains
                   kd = RED_BLACK
                endif
 
-               if (kd == RED_BLACK) k1 = cg%ks + int(mod(n+cg%ks, int(RED_BLACK)), kind=4)
+               if (kd == RED_BLACK) k1 = cg%ks + int(mod(ijko+n+cg%ks, int(RED_BLACK, kind=8)), kind=4)
                select case (dom%geometry_type)
                   case (GEO_XYZ)
                      do k = k1, cg%ke, kd
-                        if (jd == RED_BLACK) j1 = cg%js + int(mod(n+cg%js+k, int(RED_BLACK)), kind=4)
+                        if (jd == RED_BLACK) j1 = cg%js + int(mod(ijko+n+cg%js+k, int(RED_BLACK, kind=8)), kind=4)
                         do j = j1, cg%je, jd
-                           if (id == RED_BLACK) i1 = cg%is + int(mod(n+cg%is+j+k, int(RED_BLACK)), kind=4)
+                           if (id == RED_BLACK) i1 = cg%is + int(mod(ijko+n+cg%is+j+k, int(RED_BLACK, kind=8)), kind=4)
                            cg%q(soln)%arr                           (i1  :cg%ie  :id, j,   k)   = &
                                 & (1. - Jacobi_damp)* cg%q(soln)%arr(i1  :cg%ie  :id, j,   k)   - &
                                 &       Jacobi_damp * cg%q(src)%arr (i1  :cg%ie  :id, j,   k)   * cg%mg%r
@@ -273,9 +276,9 @@ contains
                      enddo
                   case (GEO_RPZ)
                      do k = k1, cg%ke, kd
-                        if (jd == RED_BLACK) j1 = cg%js + int(mod(n+cg%js+k, int(RED_BLACK)), kind=4)
+                        if (jd == RED_BLACK) j1 = cg%js + int(mod(ijko+n+cg%js+k, int(RED_BLACK, kind=8)), kind=4)
                         do j = j1, cg%je, jd
-                           if (id == RED_BLACK) i1 = cg%is + int(mod(n+cg%is+j+k, int(RED_BLACK)), kind=4)
+                           if (id == RED_BLACK) i1 = cg%is + int(mod(ijko+n+cg%is+j+k, int(RED_BLACK, kind=8)), kind=4)
                            do i = i1, cg%ie, id
                               cr  = overrelax / 2.
                               crx = cg%dvol2 * cg%idx2 * cg%x(i)**2

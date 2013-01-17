@@ -56,8 +56,11 @@ contains
 
       implicit none
 
-      !> \todo Make Multigrid and refinement work properly with non-0, even offset. Odd offsets can remain illegal.
-      integer(kind=8), dimension(ndims), parameter :: base_level_offset = 0_LONG !< Offset of the base domain
+      ! Multigrid and refinement work properly with non-0, even offset.
+      ! Offset value equal to k*2**n, where k is odd will allow at most n levels of coarsening.
+      ! Odd offsets or domain sizes prevent creation of coarse levels.
+      integer(kind=8), dimension(ndims), parameter :: base_level_offset = 0_LONG !< Initial offset of the base domain.
+      ! Offset of the base domain may change after the domain gets expanded, shrinked or resized.
 
       if (code_progress < PIERNIK_INIT_DOMAIN) call die("[grid:init_grid] domain not initialized.")
 

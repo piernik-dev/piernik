@@ -1176,23 +1176,23 @@ contains
 
    subroutine read_restart_hdf5_v2(status_v2)
 
-      use cg_leaves,   only: leaves
-      use cg_list,     only: cg_list_element
-      use common_hdf5, only: d_gname, dir_pref, n_cg_name, d_size_aname, d_fc_aname, d_edge_apname, d_bnd_apname, &
-           &                 cg_size_aname, cg_offset_aname, cg_lev_aname, base_d_gname, cg_cnt_aname, data_gname, &
-           &                 output_fname
-      use constants,   only: cwdlen, dsetnamelen, cbuff_len, ndims, xdim, zdim, base_level_id, INVALID, RD, LO, HI
-      use dataio_pub,  only: die, warn, printio, msg, last_hdf_time, last_res_time, last_log_time, last_tsl_time, problem_name, new_id, domain_dump, &
-           &                 require_init_prob, piernik_hdf5_version2, nres, nhdf, fix_string
-      use dataio_user, only: user_reg_var_restart, user_attrs_rd
-      use domain,      only: dom
-      use fluidindex,  only: flind
-      use global,      only: t, dt, nstep
-      use grid_cont,   only: is_overlap
-      use hdf5,        only: HID_T, H5F_ACC_RDONLY_F, h5open_f, h5close_f, h5fopen_f, h5fclose_f, h5gopen_f, h5gclose_f
-      use h5lt,        only: h5ltget_attribute_double_f, h5ltget_attribute_int_f, h5ltget_attribute_string_f
-      use mass_defect, only: magic_mass
-      use mpisetup,    only: master, piernik_MPI_Barrier
+      use cg_level_connected, only: base_lev, cg_level_connected_T
+      use cg_list,            only: cg_list_element
+      use common_hdf5,        only: d_gname, dir_pref, n_cg_name, d_size_aname, d_fc_aname, d_edge_apname, d_bnd_apname, &
+           &                        cg_size_aname, cg_offset_aname, cg_lev_aname, base_d_gname, cg_cnt_aname, data_gname, &
+           &                        output_fname
+      use constants,          only: cwdlen, dsetnamelen, cbuff_len, ndims, xdim, zdim, base_level_id, INVALID, RD, LO, HI
+      use dataio_pub,         only: die, warn, printio, msg, last_hdf_time, last_res_time, last_log_time, last_tsl_time, problem_name, new_id, domain_dump, &
+           &                        require_init_prob, piernik_hdf5_version2, nres, nhdf, fix_string
+      use dataio_user,        only: user_reg_var_restart, user_attrs_rd
+      use domain,             only: dom
+      use fluidindex,         only: flind
+      use global,             only: t, dt, nstep
+      use grid_cont,          only: is_overlap
+      use hdf5,               only: HID_T, H5F_ACC_RDONLY_F, h5open_f, h5close_f, h5fopen_f, h5fclose_f, h5gopen_f, h5gclose_f
+      use h5lt,               only: h5ltget_attribute_double_f, h5ltget_attribute_int_f, h5ltget_attribute_string_f
+      use mass_defect,        only: magic_mass
+      use mpisetup,           only: master, piernik_MPI_Barrier
 
       implicit none
 
@@ -1218,6 +1218,7 @@ contains
       character(len=dsetnamelen)                        :: d_label
       type(cg_essentials), dimension(:), allocatable    :: cg_res
       type(cg_list_element), pointer                    :: cgl
+      type(cg_level_connected_T), pointer               :: curl
 
       if (master) call warn("[restart_hdf5:read_restart_hdf5_v2] Experimental implementation")
 
@@ -1422,11 +1423,16 @@ contains
       do ia = lbound(cg_res, dim=1), ubound(cg_res, dim=1)
          my_box(:,LO) = cg_res(ia)%off(:)
          my_box(:,HI) = cg_res(ia)%off(:) + cg_res(ia)%n_b(:) - 1
-         cgl => leaves%first
-         do while (associated(cgl))
-            other_box(:, :) = cgl%cg%my_se(:, :)
-            if (is_overlap(my_box, other_box)) call read_cg_from_restart(cgl%cg, cgl_g_id, ia, cg_res(ia))
-            cgl => cgl%nxt
+         curl => base_lev
+         do while (associated(curl))
+            cgl => curl%first
+            do while (associated(cgl))
+               other_box(:, LO) = cgl%cg%my_se(:, LO) - curl%off(:)
+               other_box(:, HI) = cgl%cg%my_se(:, HI) - curl%off(:)
+               if (is_overlap(my_box, other_box)) call read_cg_from_restart(cgl%cg, cgl_g_id, ia, cg_res(ia), curl%off)
+               cgl => cgl%nxt
+            enddo
+            curl => curl%finer
          enddo
       enddo
 
@@ -1445,10 +1451,10 @@ contains
    end subroutine read_restart_hdf5_v2
 
 !> \brief Read as much as possible from stored cg to own cg
-   subroutine read_cg_from_restart(cg, cgl_g_id, ncg, cg_r)
+   subroutine read_cg_from_restart(cg, cgl_g_id, ncg, cg_r, curl_off)
 
       use common_hdf5,      only: n_cg_name
-      use constants,        only: xdim, ydim, zdim, LO, HI, LONG
+      use constants,        only: xdim, ydim, zdim, ndims, LO, HI, LONG
       use dataio_pub,       only: die
       use domain,           only: dom
       use grid_cont,        only: grid_container, is_overlap
@@ -1458,10 +1464,11 @@ contains
 
       implicit none
 
-      type(grid_container), pointer, intent(inout) :: cg        !< Own grid container
-      integer(HID_T),                intent(in)    :: cgl_g_id  !< cg group identifier in the restart file
-      integer,                       intent(in)    :: ncg       !< number of cg in the restart file
-      type(cg_essentials),           intent(in)    :: cg_r      !< cg attributes that do not need to be reread
+      type(grid_container), pointer,     intent(inout) :: cg        !< Own grid container
+      integer(HID_T),                    intent(in)    :: cgl_g_id  !< cg group identifier in the restart file
+      integer,                           intent(in)    :: ncg       !< number of cg in the restart file
+      type(cg_essentials),               intent(in)    :: cg_r      !< cg attributes that do not need to be reread
+      integer(kind=8), dimension(ndims), intent(in)    :: curl_off  !< offset of the level
 
       integer(HID_T)                               :: cg_g_id !< cg group identifier
       integer(HID_T)                               :: dset_id
@@ -1477,8 +1484,8 @@ contains
 
       ! Find overlap between own cg and restart cg
       own_box(:, :) = cg%my_se(:, :)
-      restart_box(:, LO) = cg_r%off(:)
-      restart_box(:, HI) = cg_r%off(:) + cg_r%n_b(:) - 1
+      restart_box(:, LO) = curl_off(:) + cg_r%off(:)
+      restart_box(:, HI) = curl_off(:) + cg_r%off(:) + cg_r%n_b(:) - 1
       if (.not. is_overlap(own_box, restart_box)) call die("[restart_hdf5:read_cg_from_restart] No overlap found") ! this condition should never happen
 
       own_off(:) = 0
@@ -1513,8 +1520,8 @@ contains
             allocate(a3d(dims(xdim), dims(ydim), dims(zdim)))
             call h5dread_f(dset_id, H5T_NATIVE_DOUBLE, a3d, dims(:), error, file_space_id = filespace, mem_space_id = memspace)
             cg%q(qr_lst(i))%arr(cg%is+own_off(xdim):cg%is+own_off(xdim)+o_size(xdim)-1, &
-                 &             cg%js+own_off(ydim):cg%js+own_off(ydim)+o_size(ydim)-1, &
-                 &             cg%ks+own_off(zdim):cg%ks+own_off(zdim)+o_size(zdim)-1) = a3d(:,:,:)
+                 &              cg%js+own_off(ydim):cg%js+own_off(ydim)+o_size(ydim)-1, &
+                 &              cg%ks+own_off(zdim):cg%ks+own_off(zdim)+o_size(zdim)-1) = a3d(:,:,:)
             deallocate(a3d)
             call h5dclose_f(dset_id, error)
          enddo
@@ -1534,8 +1541,8 @@ contains
             allocate(a4d(dims(1), dims(1+xdim), dims(1+ydim), dims(1+zdim)))
             call h5dread_f(dset_id, H5T_NATIVE_DOUBLE, a4d, dims(:), error, file_space_id = filespace, mem_space_id = memspace)
             cg%w(wr_lst(i))%arr(:, cg%is+own_off(xdim):cg%is+own_off(xdim)+o_size(xdim)-1, &
-                 &                cg%js+own_off(ydim):cg%js+own_off(ydim)+o_size(ydim)-1, &
-                 &                cg%ks+own_off(zdim):cg%ks+own_off(zdim)+o_size(zdim)-1) = a4d(:,:,:,:)
+                 &                 cg%js+own_off(ydim):cg%js+own_off(ydim)+o_size(ydim)-1, &
+                 &                 cg%ks+own_off(zdim):cg%ks+own_off(zdim)+o_size(zdim)-1) = a4d(:,:,:,:)
             deallocate(a4d)
             call h5dclose_f(dset_id, error)
          enddo

@@ -741,6 +741,7 @@ contains
       integer, parameter              :: RED_BLACK = 2 !< the checkerboard requires two sweeps
 
       integer                         :: n, i, j, k, i1, j1, k1, id, jd, kd, nsmoo
+      integer(kind=8)                 :: ijko
       integer(kind=4)                 :: idir
       integer, dimension(ndims)       :: im, ih
       real                            :: Keff1, Keff2, dLdu, temp
@@ -775,11 +776,13 @@ contains
                kd = RED_BLACK
             endif
 
-            if (kd == RED_BLACK) k1 = cg%ks + int(mod(n+cg%my_se(zdim, LO), int(RED_BLACK, kind=8)), kind=4)
+            ijko = 0
+            if (any(cg%my_se(:, LO) < 0)) ijko = -ndims*RED_BLACK*minval(cg%my_se(:, LO))
+            if (kd == RED_BLACK) k1 = cg%ks + int(mod(ijko+n+cg%my_se(zdim, LO), int(RED_BLACK, kind=8)), kind=4)
             do k = k1, cg%ke, kd
-               if (jd == RED_BLACK) j1 = cg%js + int(mod(n+k+sum(cg%my_se(ydim:zdim, LO)), int(RED_BLACK, kind=8)), kind=4)
+               if (jd == RED_BLACK) j1 = cg%js + int(mod(ijko+n+k+sum(cg%my_se(ydim:zdim, LO)), int(RED_BLACK, kind=8)), kind=4)
                do j = j1, cg%je, jd
-                  if (id == RED_BLACK) i1 = cg%is + int(mod(n+j+k+sum(cg%my_se(xdim:zdim, LO)), int(RED_BLACK, kind=8)), kind=4)
+                  if (id == RED_BLACK) i1 = cg%is + int(mod(ijko+n+j+k+sum(cg%my_se(xdim:zdim, LO)), int(RED_BLACK, kind=8)), kind=4)
                   do i = i1, cg%ie, id
 
                      temp = cg%q(soln)%arr(i, j, k) - cg%q(src)%arr(i, j, k)
