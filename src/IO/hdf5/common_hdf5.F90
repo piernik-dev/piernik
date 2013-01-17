@@ -789,7 +789,7 @@ contains
                cg_all_n_b(:, sum(cg_n(:p))-cg_n(p)+g) = cg_n_b(g, :)
                if (otype == O_OUT) then
                   indx = int(sum(cg_n(:p))-cg_n(p)+g, kind=4)
-                  rd%grid_level(1, indx) = cg_rl(g)
+                  rd%grid_level(indx) = cg_rl(g)
                   rd%grid_left_index(:,indx) = cg_off(g,:)
                   rd%grid_parent_id(indx)     = -1
                   rd%grid_particle_count(1,indx) = 0

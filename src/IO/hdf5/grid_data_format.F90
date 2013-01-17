@@ -75,7 +75,7 @@ module gdf
       integer(kind=8),  dimension(:),   pointer :: grid_parent_id       !< optional, may only reference a single parent
       integer(kind=8),  dimension(:,:), pointer :: grid_left_index      !< global, relative to current level, and only the active region
       integer(kind=4),  dimension(:,:), pointer :: grid_dimensions      !< only the active regions
-      integer(kind=4),  dimension(:,:), pointer :: grid_level           !< level, indexed by zero
+      integer(kind=4),  dimension(:),   pointer :: grid_level           !< level, indexed by zero
       integer(kind=4),  dimension(:,:), pointer :: grid_particle_count  !< total number of particles.  (May change in subsequent versions.)
    contains
       procedure :: gdf_root_datasets_init_existing
@@ -187,14 +187,14 @@ contains
       implicit none
       class(gdf_root_datasets_T),                intent(inout) :: this
       integer(kind=4),  dimension(:,:), pointer, intent(in)    :: cg_all_n_b       !> sizes of all cg
-      integer(kind=4),  dimension(:,:), pointer, intent(in)    :: cg_all_rl        !> refinement levels of all cgs
+      integer(kind=4),  dimension(:),   pointer, intent(in)    :: cg_all_rl        !> refinement levels of all cgs
       integer(kind=8),  dimension(:,:), pointer, intent(in)    :: cg_all_off       !> offsets of all cgs
       integer(kind=8),  dimension(:),   pointer, intent(in)    :: cg_all_parents   !> parents IDs of all cgs
       integer(kind=4),  dimension(:,:), pointer, intent(in)    :: cg_all_particles !> particles counts in all cgs
 
       allocate(this%grid_dimensions(size(cg_all_n_b,1), size(cg_all_n_b, 2)), source=cg_all_n_b)
       allocate(this%grid_left_index(size(cg_all_off,1), size(cg_all_off, 2)), source=cg_all_off)
-      allocate(this%grid_level(size(cg_all_rl,1), size(cg_all_rl, 2)), source=cg_all_rl)
+      allocate(this%grid_level(size(cg_all_rl,1)), source=cg_all_rl)
       allocate(this%grid_particle_count(size(cg_all_particles,1), size(cg_all_particles, 2)), source=cg_all_particles)
       allocate(this%grid_parent_id(size(cg_all_parents,1)), source=cg_all_parents)
    end subroutine gdf_root_datasets_init_existing
@@ -206,7 +206,7 @@ contains
 
       allocate(this%grid_dimensions(3, n))
       allocate(this%grid_left_index(3, n))
-      allocate(this%grid_level(1, n))
+      allocate(this%grid_level(n))
       allocate(this%grid_particle_count(1, n))
       allocate(this%grid_parent_id(n))
    end subroutine gdf_root_datasets_init_new
