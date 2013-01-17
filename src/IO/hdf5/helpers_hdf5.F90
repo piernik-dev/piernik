@@ -61,6 +61,7 @@ module helpers_hdf5
    interface create_dataset
       module procedure create_dataset_int4_dim2
       module procedure create_dataset_int8_dim2
+      module procedure create_dataset_int4_dim1
       module procedure create_dataset_int8_dim1
    end interface
 
@@ -167,6 +168,37 @@ contains
       call h5sclose_f(space, hdferr)
 
    end subroutine create_dataset_int8_dim2
+
+!> \brief Create 32-bit integer dataset (rank-1 array) in the given place_id.
+!
+   subroutine create_dataset_int4_dim1(place, dname, ddata)
+
+      use hdf5,          only: HID_T, HSIZE_T, H5T_STD_I32LE, &
+          &                    h5dcreate_f, h5dclose_f, h5screate_simple_f, h5sclose_f, h5dwrite_f, &
+          &                    h5kind_to_type, H5_INTEGER_KIND
+      use iso_c_binding, only: c_ptr, c_loc
+
+      implicit none
+
+      integer(HID_T),                         intent(in) :: place !< object id where dataset will be created
+      character(len=*),                       intent(in) :: dname !< name of dataset
+      integer(kind=4), dimension(:), pointer, intent(in) :: ddata !< data used to create dataset
+
+      integer(HID_T)                                     :: dset, space, mem_type
+      integer(kind=4)                                    :: hdferr
+      integer(HSIZE_T), dimension(1)                     :: dims
+      type(c_ptr)                                        :: f_ptr
+
+      dims = shape(ddata)
+      call h5screate_simple_f(I_ONE, dims, space, hdferr)
+      call h5dcreate_f(place, dname, H5T_STD_I32LE, space, dset, hdferr)
+      f_ptr = c_loc(ddata(1))
+      mem_type = h5kind_to_type(int(KIND(ddata(1)), kind=4), H5_INTEGER_KIND)
+      call h5dwrite_f(dset, mem_type, f_ptr, hdferr)
+      call h5dclose_f(dset,  hdferr)
+      call h5sclose_f(space, hdferr)
+
+   end subroutine create_dataset_int4_dim1
 
 !> \brief Create 64-bit integer dataset (rank-1 array) in the given place_id.
 !
