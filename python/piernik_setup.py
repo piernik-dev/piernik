@@ -345,6 +345,10 @@ def setup_piernik(data=None):
 
     our_defs = [f.split(" ")[1] for f in filter(cpp_junk.match, defines)]
     our_defs.append("ANY")
+    # workaround the fact that we're using cpp and some of use clauses may
+    # depend on __INTEL_COMPILER
+    if re.match("ifort", compiler):
+        cppflags += " -D__INTEL_COMPILER"
     if(options.verbose):
         print "our_defs:"
         print our_defs
