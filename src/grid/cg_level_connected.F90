@@ -36,7 +36,7 @@ module cg_level_connected
    implicit none
 
    private
-   public :: cg_level_connected_T, base_lev
+   public :: cg_level_connected_T
 
    !! \brief A list of all cg of the same resolution with links to coarser and finer levels
    type, extends(cg_level_T) :: cg_level_connected_T
@@ -49,7 +49,6 @@ module cg_level_connected
 
       ! Level management
       procedure :: init_level                                 !< common initialization for base level and other levels
-      procedure :: set                                        !< initialize the base level
 
       ! Prolongation and restriction
       procedure :: vertical_prep                              !< initialize prolongation and restriction targets
@@ -63,8 +62,6 @@ module cg_level_connected
       procedure :: arr3d_boundaries                           !< Set up all guardcells (internal, external and fine-coarse) for given rank-3 arrays.
       ! fine-coarse boundary exchanges may also belong to this type
    end type cg_level_connected_T
-
-   type(cg_level_connected_T), pointer  :: base_lev           !< base level grid containers
 
 contains
 
@@ -85,41 +82,6 @@ contains
       this%fft_type = fft_none
 
    end subroutine init_level
-
-!> \brief Initialize the base level
-
-   subroutine set(this, n_d, offset)
-
-      use constants,        only: base_level_id, ndims
-      use dataio_pub,       only: die
-      use domain,           only: dom
-      use list_of_cg_lists, only: all_lists
-
-      implicit none
-
-      class(cg_level_connected_T),       intent(inout) :: this   !< object invoking type bound procedure
-      integer(kind=4), dimension(ndims), intent(in)    :: n_d    !< size of global base grid in cells
-      integer(kind=8), dimension(ndims), intent(in)    :: offset !< offset of global base grid in cells
-
-      if (any(n_d(:) < 1)) call die("[cg_level_connected:set] non-positive base grid sizes")
-      if (any(dom%has_dir(:) .neqv. (n_d(:) > 1))) call die("[cg_level_connected:set] base grid size incompatible with has_dir masks")
-
-      select type(this)
-         type is (cg_level_connected_T)
-            call this%init_level
-            this%level_id = base_level_id
-
-            this%n_d(:) = 1; this%off(:) = 0
-            where (dom%has_dir(:))
-               this%n_d(:) = n_d(:)
-               this%off(:) = offset(:)
-            endwhere
-            call all_lists%register(this, "Base level")
-         class default
-            call die("[cg_level_connected:set] cannot call this routine for derivatives of cg_level_connected")
-      end select
-
-   end subroutine set
 
 !>
 !! \brief Initialize prolongation and restriction targets. Called from init_multigrid.
@@ -398,11 +360,13 @@ contains
 
    recursive subroutine restrict_to_base(this)
 
+      use constants, only: base_level_id
+
       implicit none
 
       class(cg_level_connected_T), intent(inout) :: this !< object invoking type-bound procedure
 
-      if (this%level_id <= base_lev%level_id) return
+      if (this%level_id <= base_level_id) return
       call this%restrict
       call this%coarser%restrict_to_base
 
@@ -427,12 +391,14 @@ contains
 
    recursive subroutine restrict_to_base_q_1var(this, iv)
 
+      use constants, only: base_level_id
+
       implicit none
 
       class(cg_level_connected_T), intent(inout) :: this !< object invoking type-bound procedure
       integer(kind=4),             intent(in)    :: iv   !< variable to be restricted
 
-      if (this%level_id <= base_lev%level_id) return
+      if (this%level_id <= base_level_id) return
       call this%restrict_q_1var(iv)
       call this%coarser%restrict_to_base_q_1var(iv)
 

@@ -138,7 +138,8 @@ contains
 
    subroutine prepare_fld(lev, n_c)
 
-      use cg_level_connected, only: cg_level_connected_T, base_lev
+      use cg_level_base,      only: base
+      use cg_level_connected, only: cg_level_connected_T
       use dataio_pub,    only: printinfo, warn, msg
       use mpisetup,      only: master, proc
       use named_array_list, only: qna
@@ -164,7 +165,7 @@ contains
          call find_non_0_or_write_hdf5
       endif
 
-      curl => base_lev
+      curl => base%level
       do while (associated(curl) .and. curl%level_id /= lev)
          call clear_lev(curl)
          curl => curl%coarser
@@ -213,15 +214,16 @@ contains
 
    subroutine set_up_fld(lev)
 
-      use cg_list,        only: cg_list_element
-      use cg_level_connected,  only: cg_level_connected_T, base_lev
-      use constants,      only: xdim, ydim, zdim, ndims, LO, HI
-      use dataio_pub,     only: msg, warn
-      use domain,         only: dom
-      use fluidindex,     only: iarr_all_dn
-      use grid_cont,      only: grid_container
-      use mpisetup,       only: master
-      use named_array_list, only: qna, wna
+      use cg_list,            only: cg_list_element
+      use cg_level_base,      only: base
+      use cg_level_connected, only: cg_level_connected_T
+      use constants,          only: xdim, ydim, zdim, ndims, LO, HI
+      use dataio_pub,         only: msg, warn
+      use domain,             only: dom
+      use fluidindex,         only: iarr_all_dn
+      use grid_cont,          only: grid_container
+      use mpisetup,           only: master
+      use named_array_list,   only: qna, wna
 
       implicit none
 
@@ -236,7 +238,7 @@ contains
 
       if (point .or. checkerboard > 0) return
 
-      glev => base_lev
+      glev => base%level
       do while (associated(glev))
          if (glev%level_id == lev) exit
          glev => glev%coarser
@@ -276,7 +278,7 @@ contains
          cgl => cgl%nxt
       enddo
 
-      if (associated(glev, base_lev)) call glev%qw_copy(qna%ind(fld_n), wna%fi, iarr_all_dn(1))
+      if (associated(glev, base%level)) call glev%qw_copy(qna%ind(fld_n), wna%fi, iarr_all_dn(1))
 
    end subroutine set_up_fld
 

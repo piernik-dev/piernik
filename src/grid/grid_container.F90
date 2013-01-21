@@ -214,7 +214,7 @@ module grid_cont
       real :: vol                                                !< volume of the grid; BEWARE: for cylindrical geometry it needs to be integrated over x(:) to get real volume
       real :: dxmn                                               !< the smallest length of the %grid cell (among dx, dy, and dz)
       integer(kind=4) :: maxxyz                                  !< maximum number of %grid cells in any direction
-      integer :: grid_id                                         !< index of own segment in own level decomposition, e.g. my_se(:,:) = base_lev%pse(proc)%c(grid_id)%se(:,:)
+      integer :: grid_id                                         !< index of own segment in own level decomposition, e.g. my_se(:,:) = base%level%pse(proc)%c(grid_id)%se(:,:)
       integer :: membership                                      !< How many cg lists use this grid piece?
 
    contains

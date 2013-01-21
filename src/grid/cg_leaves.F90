@@ -85,7 +85,8 @@ contains
 
    subroutine update(this, str)
 
-      use cg_level_connected, only: base_lev, cg_level_connected_T
+      use cg_level_base,      only: base
+      use cg_level_connected, only: cg_level_connected_T
       use cg_list,            only: cg_list_element
       use constants,          only: pSUM
       use dataio_pub,         only: msg, printinfo
@@ -108,7 +109,7 @@ contains
 
       msg = "[cg_leaves:update] Leaves on levels: "
       if (present(str)) msg(len_trim(msg)+1:) = str
-      curl => base_lev
+      curl => base%level
       this%coarsest_leaves => curl !> \todo Start from first not fully covered level
       do while (associated(curl))
          cgl => curl%first
@@ -154,7 +155,7 @@ contains
 
 !>
 !! \brief This routine sets up all guardcells (internal, external and fine-coarse) for given rank-4 arrays
-!! \todo if there is any routine for base_lev then place it here as a wrapper
+!! \todo if there is any routine for base%level then place it here as a wrapper
 !<
    subroutine arr4d_boundaries(this) !, ind, nb, area_type, bnd_type, corners)
 

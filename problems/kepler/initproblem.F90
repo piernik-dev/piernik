@@ -325,7 +325,7 @@ contains
       use named_array_list,   only: wna
       use units,              only: newtong, gram, cm, kboltz, mH
 #ifdef FGSL
-      use cg_level_connected, only: base_lev
+      use cg_level_base,      only: base
       use mpisetup,           only: proc, piernik_MPI_Bcast
 #endif /* FGSL */
 
@@ -454,7 +454,7 @@ contains
                allocate(gdens(dom%n_d(xdim)+dom%nb*2))
                if (master) call read_dens_profile(densfile,gdens)
                call piernik_MPI_Bcast(gdens)
-               dens_prof(:) = gdens( base_lev%pse(proc)%c(cg%grid_id)%se(xdim, LO)+1:base_lev%pse(proc)%c(cg%grid_id)%se(xdim, HI)+1+dom%nb*2)
+               dens_prof(:) = gdens( base%level%pse(proc)%c(cg%grid_id)%se(xdim, LO)+1:base%level%pse(proc)%c(cg%grid_id)%se(xdim, HI)+1+dom%nb*2)
                deallocate(gdens)
             endif
 #endif /* FGSL */

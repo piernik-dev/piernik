@@ -117,7 +117,7 @@ contains
 !! \todo Check how much performance is lost due to using MPI calls even for local copies. Decide whether it is worth to convert local MPI calls to direct memory copies.
 !! For othes suggestions on performance optimisation see decription of cg_level::mpi_bnd_types.
 !!
-!! \warning this == leaves could be unsafe: need to figure out how to handle unneeded edges; this == all_cg or base_lev or other concatenation of whole levels should work well
+!! \warning this == leaves could be unsafe: need to figure out how to handle unneeded edges; this == all_cg or base%level or other concatenation of whole levels should work well
 !<
 
    subroutine internal_boundaries(this, ind, tgt3d, dim)

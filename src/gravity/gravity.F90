@@ -311,18 +311,19 @@ contains
 
    subroutine g_cg_init(cg)
 
-      use constants,        only: base_level_id, gp_n, gpot_n, hgpot_n
-      use grid_cont,        only: grid_container
-      use named_array_list, only: qna
+      use cg_level_base,      only: base
+      use constants,          only: gp_n, gpot_n, hgpot_n
+      use grid_cont,          only: grid_container
+      use named_array_list,   only: qna
 #ifdef SELF_GRAV
-      use constants,        only: sgp_n, sgpm_n
+      use constants,          only: sgp_n, sgpm_n
 #endif /* SELF_GRAV */
 
       implicit none
 
       type(grid_container), pointer,  intent(inout) :: cg
 
-      if (cg%level_id >= base_level_id) then
+      if (cg%level_id >= base%level%level_id) then
 
          cg%gpot  => cg%q(qna%ind( gpot_n))%arr
          cg%hgpot => cg%q(qna%ind(hgpot_n))%arr

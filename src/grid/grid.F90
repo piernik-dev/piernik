@@ -47,8 +47,8 @@ contains
    subroutine init_grid
 
       use cg_leaves,          only: leaves
+      use cg_level_base,      only: base
       use cg_level_coarsest,  only: coarsest
-      use cg_level_connected, only: base_lev
       use cg_level_finest,    only: finest
       use constants,          only: PIERNIK_INIT_DOMAIN, LONG, ndims
       use dataio_pub,         only: printinfo, die, code_progress
@@ -70,13 +70,12 @@ contains
 
       ! Create the empty main lists.with the base level
 
-      allocate(base_lev)
-      finest%level => base_lev
-      coarsest%level => base_lev
-
-      call base_lev%set(dom%n_d, base_level_offset)
-      call base_lev%add_patch
-      call base_lev%init_all_new_cg
+      allocate(base)
+      call base%set(dom%n_d, base_level_offset)
+      finest%level => base%level
+      coarsest%level => base%level
+      call base%level%add_patch
+      call base%level%init_all_new_cg
 
       ! Refinement lists will be added by iterating the initproblem::init_prob routine, in restart_hdf5::read_restart_hdf5 or in not_yet_implemented::refinement_update
       ! Underground levels will be added in multigrid::init_multigrid
@@ -93,6 +92,7 @@ contains
 
    subroutine cleanup_grid
 
+      use cg_level_base,      only: base
       use cg_level_coarsest,  only: coarsest
       use cg_level_connected, only: cg_level_connected_T
       use cg_list_global,     only: all_cg
@@ -119,6 +119,7 @@ contains
          curl => curl%finer
          deallocate(aux)
       enddo
+      deallocate(base)
 
       if (allocated(qna%lst)) deallocate(qna%lst)
       if (allocated(wna%lst)) deallocate(wna%lst)

@@ -881,7 +881,8 @@ contains
 
    subroutine collect_cg_data(cg_rl, cg_n_b, cg_off, dbuf, otype)
 
-      use cg_level_connected, only: base_lev, cg_level_connected_T
+      use cg_level_base,      only: base
+      use cg_level_connected, only: cg_level_connected_T
       use cg_list,            only: cg_list_element
       use constants,          only: LO, HI
 
@@ -898,7 +899,7 @@ contains
       integer :: g
 
       g = 1
-      curl => base_lev
+      curl => base%level
       do while (associated(curl))
          cgl => curl%first
          do while (associated(cgl))

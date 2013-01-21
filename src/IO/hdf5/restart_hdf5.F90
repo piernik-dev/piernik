@@ -1176,7 +1176,8 @@ contains
 
    subroutine read_restart_hdf5_v2(status_v2)
 
-      use cg_level_connected, only: base_lev, cg_level_connected_T
+      use cg_level_base,      only: base
+      use cg_level_connected, only: cg_level_connected_T
       use cg_list,            only: cg_list_element
       use common_hdf5,        only: d_gname, dir_pref, n_cg_name, d_size_aname, d_fc_aname, d_edge_apname, d_bnd_apname, &
            &                        cg_size_aname, cg_offset_aname, cg_lev_aname, base_d_gname, cg_cnt_aname, data_gname, &
@@ -1380,8 +1381,8 @@ contains
 
          allocate(ibuf(1))
          call read_attribute(cg_g_id, cg_lev_aname, ibuf)        ! open "/cg/cg_%08d/level"
-         if (ibuf(1) < base_lev%level_id) call die("[restart_hdf5:read_restart_hdf5_v2] Grids coarser than base level are not supported")
-         if (ibuf(1) > base_lev%level_id) call die("[restart_hdf5:read_restart_hdf5_v2] Refinements are not supported yet")
+         if (ibuf(1) < base%level%level_id) call die("[restart_hdf5:read_restart_hdf5_v2] Grids coarser than base level are not supported")
+         if (ibuf(1) > base%level%level_id) call die("[restart_hdf5:read_restart_hdf5_v2] Refinements are not supported yet")
          cg_res(ia)%level=ibuf(1)
          deallocate(ibuf)
 
@@ -1401,19 +1402,19 @@ contains
       outside = .false.
       overlapped = .false.
       do ia = lbound(cg_res, dim=1), ubound(cg_res, dim=1)
-         if (cg_res(ia)%level == base_lev%level_id) then
+         if (cg_res(ia)%level == base%level%level_id) then
             tot_cells = tot_cells + product(cg_res(ia)%n_b(:))
             my_box(:,LO) = cg_res(ia)%off(:)
             my_box(:,HI) = cg_res(ia)%off(:) + cg_res(ia)%n_b(:) - 1
             outside = outside .or. any(my_box(:,LO) < 0) .or. any(my_box(:,HI) >= dom%n_d(:) .and. dom%has_dir(:))
             do j = ia+1, ubound(cg_res, dim=1)
-               if (cg_res(j)%level == base_lev%level_id) then
+               if (cg_res(j)%level == base%level%level_id) then
                   other_box(:,LO) = cg_res(j)%off(:)
                   other_box(:,HI) = cg_res(j)%off(:) + cg_res(j)%n_b(:) - 1
                   overlapped = overlapped .or. is_overlap(my_box, other_box)
-               end if
+               endif
             enddo
-         end if
+         endif
       enddo
 
       if (tot_cells /= product(dom%n_d(:)) .or. outside .or. overlapped) call die("[restart_hdf5:read_restart_hdf5_v2] Improper coverage of base domain by available cg")
@@ -1428,7 +1429,7 @@ contains
       do ia = lbound(cg_res, dim=1), ubound(cg_res, dim=1)
          my_box(:,LO) = cg_res(ia)%off(:)
          my_box(:,HI) = cg_res(ia)%off(:) + cg_res(ia)%n_b(:) - 1
-         curl => base_lev
+         curl => base%level
          do while (associated(curl))
             cgl => curl%first
             do while (associated(cgl))
