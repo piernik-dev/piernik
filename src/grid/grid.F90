@@ -50,17 +50,11 @@ contains
       use cg_level_base,      only: base
       use cg_level_coarsest,  only: coarsest
       use cg_level_finest,    only: finest
-      use constants,          only: PIERNIK_INIT_DOMAIN, LONG, ndims
+      use constants,          only: PIERNIK_INIT_DOMAIN
       use dataio_pub,         only: printinfo, die, code_progress
       use domain,             only: dom
 
       implicit none
-
-      ! Multigrid and refinement work properly with non-0, even offset.
-      ! Offset value equal to k*2**n, where k is odd will allow at most n levels of coarsening.
-      ! Odd offsets or domain sizes prevent creation of coarse levels.
-      integer(kind=8), dimension(ndims), parameter :: base_level_offset = 0_LONG !< Initial offset of the base domain.
-      ! Offset of the base domain may change after the domain gets expanded, shrinked or resized.
 
       if (code_progress < PIERNIK_INIT_DOMAIN) call die("[grid:init_grid] domain not initialized.")
 
@@ -71,7 +65,7 @@ contains
       ! Create the empty main lists.with the base level
 
       allocate(base)
-      call base%set(dom%n_d, base_level_offset)
+      call base%set(dom%n_d)
       finest%level => base%level
       coarsest%level => base%level
       call base%level%add_patch

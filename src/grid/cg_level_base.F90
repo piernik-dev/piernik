@@ -52,9 +52,9 @@ contains
 
 !> \brief Initialize the base level
 
-   subroutine set(this, n_d, offset)
+   subroutine set(this, n_d)
 
-      use constants,        only: base_level_id, ndims
+      use constants,        only: base_level_id, ndims, LONG
       use dataio_pub,       only: die
       use domain,           only: dom
       use list_of_cg_lists, only: all_lists
@@ -63,7 +63,12 @@ contains
 
       class(cg_level_base_T),            intent(inout) :: this   !< object invoking type bound procedure
       integer(kind=4), dimension(ndims), intent(in)    :: n_d    !< size of global base grid in cells
-      integer(kind=8), dimension(ndims), intent(in)    :: offset !< offset of global base grid in cells
+
+      ! Multigrid and refinement work properly with non-0, even offset.
+      ! Offset value equal to k*2**n, where k is odd will allow at most n levels of coarsening.
+      ! Odd offsets or domain sizes prevent creation of coarse levels.
+      integer(kind=8), dimension(ndims), parameter :: base_level_offset = 0_LONG !< Initial offset of the base domain.
+      ! Offset of the base domain may change after the domain gets expanded, shrinked or resized.
 
       if (any(n_d(:) < 1)) call die("[cg_level_connected:set] non-positive base grid sizes")
       if (any(dom%has_dir(:) .neqv. (n_d(:) > 1))) call die("[cg_level_connected:set] base grid size incompatible with has_dir masks")
@@ -71,13 +76,13 @@ contains
       allocate(this%level)
       call this%level%init_level
       this%level%level_id = base_level_id
-      
+
       where (dom%has_dir(:))
          this%level%n_d(:) = n_d(:)
-         this%level%off(:) = offset(:)
+         this%level%off(:) = base_level_offset
       elsewhere
          this%level%n_d(:) = 1
-         this%level%off(:) = 0   
+         this%level%off(:) = 0
       endwhere
       call all_lists%register(this%level, "Base level")
 
