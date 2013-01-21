@@ -1181,7 +1181,7 @@ contains
       use common_hdf5,        only: d_gname, dir_pref, n_cg_name, d_size_aname, d_fc_aname, d_edge_apname, d_bnd_apname, &
            &                        cg_size_aname, cg_offset_aname, cg_lev_aname, base_d_gname, cg_cnt_aname, data_gname, &
            &                        output_fname
-      use constants,          only: cwdlen, dsetnamelen, cbuff_len, ndims, xdim, zdim, base_level_id, INVALID, RD, LO, HI
+      use constants,          only: cwdlen, dsetnamelen, cbuff_len, ndims, xdim, zdim, INVALID, RD, LO, HI
       use dataio_pub,         only: die, warn, printio, msg, last_hdf_time, last_res_time, last_log_time, last_tsl_time, problem_name, new_id, domain_dump, &
            &                        require_init_prob, piernik_hdf5_version2, nres, nhdf, fix_string
       use dataio_user,        only: user_reg_var_restart, user_attrs_rd
@@ -1380,7 +1380,8 @@ contains
 
          allocate(ibuf(1))
          call read_attribute(cg_g_id, cg_lev_aname, ibuf)        ! open "/cg/cg_%08d/level"
-         if (ibuf(1) /= base_level_id) call die("[restart_hdf5:read_restart_hdf5_v2] Only base level is supported")
+         if (ibuf(1) < base_lev%level_id) call die("[restart_hdf5:read_restart_hdf5_v2] Grids coarser than base level are not supported")
+         if (ibuf(1) > base_lev%level_id) call die("[restart_hdf5:read_restart_hdf5_v2] Refinements are not supported yet")
          cg_res(ia)%level=ibuf(1)
          deallocate(ibuf)
 
@@ -1395,20 +1396,24 @@ contains
          call h5gclose_f(cg_g_id, error)
       enddo
 
-      ! Check if all read cg cover entire base level (and only it) without any overlaps
+      ! Check if whole base level is covered without any overlaps
       tot_cells = 0
       outside = .false.
       overlapped = .false.
       do ia = lbound(cg_res, dim=1), ubound(cg_res, dim=1)
-         tot_cells = tot_cells + product(cg_res(ia)%n_b(:))
-         my_box(:,LO) = cg_res(ia)%off(:)
-         my_box(:,HI) = cg_res(ia)%off(:) + cg_res(ia)%n_b(:) - 1
-         outside = outside .or. any(my_box(:,LO) < 0) .or. any(my_box(:,HI) >= dom%n_d(:) .and. dom%has_dir(:))
-         do j = ia+1, ubound(cg_res, dim=1)
-            other_box(:,LO) = cg_res(j)%off(:)
-            other_box(:,HI) = cg_res(j)%off(:) + cg_res(j)%n_b(:) - 1
-            overlapped = overlapped .or. is_overlap(my_box, other_box)
-         enddo
+         if (cg_res(ia)%level == base_lev%level_id) then
+            tot_cells = tot_cells + product(cg_res(ia)%n_b(:))
+            my_box(:,LO) = cg_res(ia)%off(:)
+            my_box(:,HI) = cg_res(ia)%off(:) + cg_res(ia)%n_b(:) - 1
+            outside = outside .or. any(my_box(:,LO) < 0) .or. any(my_box(:,HI) >= dom%n_d(:) .and. dom%has_dir(:))
+            do j = ia+1, ubound(cg_res, dim=1)
+               if (cg_res(j)%level == base_lev%level_id) then
+                  other_box(:,LO) = cg_res(j)%off(:)
+                  other_box(:,HI) = cg_res(j)%off(:) + cg_res(j)%n_b(:) - 1
+                  overlapped = overlapped .or. is_overlap(my_box, other_box)
+               end if
+            enddo
+         end if
       enddo
 
       if (tot_cells /= product(dom%n_d(:)) .or. outside .or. overlapped) call die("[restart_hdf5:read_restart_hdf5_v2] Improper coverage of base domain by available cg")
@@ -1427,9 +1432,11 @@ contains
          do while (associated(curl))
             cgl => curl%first
             do while (associated(cgl))
-               other_box(:, LO) = cgl%cg%my_se(:, LO) - curl%off(:)
-               other_box(:, HI) = cgl%cg%my_se(:, HI) - curl%off(:)
-               if (is_overlap(my_box, other_box)) call read_cg_from_restart(cgl%cg, cgl_g_id, ia, cg_res(ia), curl%off)
+               if (cg_res(ia)%level == curl%level_id) then
+                  other_box(:, LO) = cgl%cg%my_se(:, LO) - curl%off(:)
+                  other_box(:, HI) = cgl%cg%my_se(:, HI) - curl%off(:)
+                  if (is_overlap(my_box, other_box)) call read_cg_from_restart(cgl%cg, cgl_g_id, ia, cg_res(ia), curl%off)
+               endif
                cgl => cgl%nxt
             enddo
             curl => curl%finer
