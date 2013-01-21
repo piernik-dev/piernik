@@ -788,6 +788,18 @@ contains
       if (associated(user_attrs_rd)) call user_attrs_rd(file_id)
       if (associated(user_reg_var_restart)) call user_reg_var_restart
 
+      ! Reset leafmap to allow checking if all existing grids were initialized
+      ! This does not check whether all data on the grids in the restart file were used to initialize anything
+      curl => base%level
+      do while (associated(curl))
+         cgl => curl%first
+         do while (associated(cgl))
+            cgl%cg%leafmap = .false.
+            cgl => cgl%nxt
+         enddo
+         curl => curl%finer
+      enddo
+
       ! On each process determine which parts of the restart cg have to be read and where
       do ia = lbound(cg_res, dim=1), ubound(cg_res, dim=1)
          my_box(:,LO) = cg_res(ia)%off(:)
@@ -805,6 +817,17 @@ contains
             enddo
             curl => curl%finer
          enddo
+      enddo
+
+      ! Use leafmap to check if all existing grids were initialized
+      curl => base%level
+      do while (associated(curl))
+         cgl => curl%first
+         do while (associated(cgl))
+            if (.not. all(cgl%cg%leafmap)) call die("[restart_hdf5:read_restart_hdf5_v2] Uninitialized grid found")
+            cgl => cgl%nxt
+         enddo
+         curl => curl%finer
       enddo
 
       !> \todo update boundaries
@@ -872,8 +895,11 @@ contains
 
       ! these conditions should never happen
       if (any(own_off(:) > cg%n_b(:))) call die("[restart_hdf5:read_cg_from_restart] own_off(:) > cg%n_b(:)")
-      if (any(restart_off(:) > cg_r%n_b(:)))call die("[restart_hdf5:read_cg_from_restart] restart_off(:) > cg_r%n_b(:)")
-      if (any(o_size(:) > cg%n_b(:)) .or. any(o_size(:) > cg_r%n_b(:)))call die("[restart_hdf5:read_cg_from_restart] o_size(:) > cg%n_b(:) or o_size(:) > cg_r%n_b(:)")
+      if (any(restart_off(:) > cg_r%n_b(:))) call die("[restart_hdf5:read_cg_from_restart] restart_off(:) > cg_r%n_b(:)")
+      if (any(o_size(:) > cg%n_b(:)) .or. any(o_size(:) > cg_r%n_b(:))) call die("[restart_hdf5:read_cg_from_restart] o_size(:) > cg%n_b(:) or o_size(:) > cg_r%n_b(:)")
+      if (any(cg%leafmap(cg%is+own_off(xdim):cg%is+own_off(xdim)+o_size(xdim)-1, &
+           &             cg%js+own_off(ydim):cg%js+own_off(ydim)+o_size(ydim)-1, &
+           &             cg%ks+own_off(zdim):cg%ks+own_off(zdim)+o_size(zdim)-1))) call die("[restart_hdf5:read_cg_from_restart] Trying to initialize same area twice.")
 
       call qw_lst(qr_lst, wr_lst)
       call h5gopen_f(cgl_g_id, n_cg_name(ncg), cg_g_id, error) ! open "/cg/cg_%08d, ncg"
@@ -922,6 +948,11 @@ contains
 
       call h5gclose_f(cg_g_id, error)
       deallocate(qr_lst, wr_lst)
+
+      ! Mark the area as initialized
+      cg%leafmap(cg%is+own_off(xdim):cg%is+own_off(xdim)+o_size(xdim)-1, &
+           &     cg%js+own_off(ydim):cg%js+own_off(ydim)+o_size(ydim)-1, &
+           &     cg%ks+own_off(zdim):cg%ks+own_off(zdim)+o_size(zdim)-1) = .true.
 
    end subroutine read_cg_from_restart
 
