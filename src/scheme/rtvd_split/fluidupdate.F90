@@ -282,13 +282,10 @@ contains
          wcu => cg%q(qna%ind(wcu_n))%arr
          if (is_multicg) call die("[fluidupdate:mag_add] multiple grid pieces per processor not implemented yet") ! not tested custom_emf_bnd
          if (associated(custom_emf_bnd)) call custom_emf_bnd(wcu)
-         cg%b(dim2,:,:,:) = cg%b(dim2,:,:,:) - wcu*cg%idl(dim1)
-         wcu = pshift(wcu,dim1)
-         cg%b(dim2,:,:,:) = cg%b(dim2,:,:,:) + wcu*cg%idl(dim1)
-         wcu = mshift(wcu,dim1)
-         cg%b(dim1,:,:,:) = cg%b(dim1,:,:,:) + wcu*cg%idl(dim2)
-         wcu = pshift(wcu,dim2)
-         cg%b(dim1,:,:,:) = cg%b(dim1,:,:,:) - wcu*cg%idl(dim2)
+         cg%b(dim2,:,:,:) = cg%b(dim2,:,:,:) -              wcu*cg%idl(dim1)
+         cg%b(dim2,:,:,:) = cg%b(dim2,:,:,:) + pshift(wcu,dim1)*cg%idl(dim1)
+         cg%b(dim1,:,:,:) = cg%b(dim1,:,:,:) +              wcu*cg%idl(dim2)
+         cg%b(dim1,:,:,:) = cg%b(dim1,:,:,:) - pshift(wcu,dim2)*cg%idl(dim2)
 #endif /* RESISTIVE */
 ! ADVECTION FULL STEP
          if (associated(custom_emf_bnd)) call custom_emf_bnd(cg%wa)
