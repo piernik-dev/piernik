@@ -52,9 +52,9 @@ contains
 
       use cg_leaves,        only: leaves
       use cg_list,          only: cg_list_element
-      use constants,        only: I_ONE, u0_n, b0_n
+      use constants,        only: u0_n, b0_n
       use dataio_pub,       only: warn
-      use global,           only: dt, dtm, t, cfl_violated, nstep, dt_max_grow, repeat_step
+      use global,           only: dt, dtm, t, t_saved, cfl_violated, nstep, nstep_saved, dt_max_grow, repeat_step
       use grid_cont,        only: grid_container
       use mpisetup,         only: master
       use named_array_list, only: wna
@@ -71,15 +71,17 @@ contains
          cg => cgl%cg
 
          if (cfl_violated) then
-            t = t-2.0*dtm
+            t = t_saved
             cg%u = cg%w(wna%ind(u0_n))%arr
             cg%b = cg%w(wna%ind(b0_n))%arr
             dt = dtm/dt_max_grow**2
-            nstep = nstep - I_ONE
+            nstep = nstep_saved
             if (master) call warn("[fluidupdate:fluid_update] Redoing previous step...")
          else
             cg%w(wna%ind(u0_n))%arr = cg%u
             cg%w(wna%ind(b0_n))%arr = cg%b
+            nstep_saved = nstep
+            t_saved = t
          endif
 
          cgl => cgl%nxt

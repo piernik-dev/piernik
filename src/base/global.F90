@@ -42,7 +42,7 @@ module global
    private
    public :: cleanup_global, init_global, &
         &    cfl, cfl_max, cflcontrol, cfl_violated, &
-        &    dt, dt_initial, dt_max_grow, dt_min, dt_old, dtm, t, nstep, &
+        &    dt, dt_initial, dt_max_grow, dt_min, dt_old, dtm, t, t_saved, nstep, nstep_saved, &
         &    integration_order, limiter, smalld, smallei, smallp, use_smalld, &
         &    relax_time, grace_period_passed, cfr_smooth, repeat_step, skip_sweep, geometry25D, &
         &    dirty_debug, do_ascii_dump, show_n_dirtys, no_dirty_checks
@@ -53,8 +53,8 @@ module global
    integer(kind=4) :: show_n_dirtys            !< use to limit the amount of printed messages on dirty values found
    logical         :: do_ascii_dump            !< to dump, or not to dump: that is a question (ascii)
    logical         :: no_dirty_checks          !< Temporarily disable dirty checks
-   integer(kind=4) :: nstep
-   real            :: t, dt, dt_old, dtm
+   integer(kind=4) :: nstep, nstep_saved
+   real            :: t, dt, dt_old, dtm, t_saved
 
    ! Namelist variables
 
