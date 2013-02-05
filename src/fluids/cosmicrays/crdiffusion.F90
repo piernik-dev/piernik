@@ -44,21 +44,20 @@ module crdiffusion
 
 contains
 
-   subroutine init_crdiffusion(crsall)
+   subroutine init_crdiffusion
 
       use cg_list_global, only: all_cg
       use constants,      only: wcr_n
       use crhelpers,      only: divv_n
       use dataio_pub,     only: warn
+      use fluidindex,     only: flind
 
       implicit none
 
-      integer(kind=4), intent(in) :: crsall
-
-      has_cr = (crsall > 0)
+      has_cr = (flind%crs%all > 0)
 
       if (has_cr) then
-         call all_cg%reg_var(wcr_n, dim4 = crsall)
+         call all_cg%reg_var(wcr_n, dim4 = flind%crs%all)
       else
          call warn("[crdiffusion:init_crdiffusion] No CR species to diffuse")
       endif

@@ -220,10 +220,11 @@ contains
 
 !> \brief Register all crucial fields, which we cannot live without
 
-   subroutine register_fluids(this, nfluids)
+   subroutine register_fluids(this)
 
       use constants,  only: wa_n, fluid_n, uh_n, mag_n, u0_n, b0_n, ndims, AT_NO_B, AT_OUT_B, VAR_XFACE, VAR_YFACE, VAR_ZFACE, PIERNIK_INIT_FLUIDS
       use dataio_pub, only: die, code_progress
+      use fluidindex, only: flind
       use global,     only: repeat_step
 #ifdef ISO
       use constants,  only: cs_i2_n
@@ -232,7 +233,6 @@ contains
       implicit none
 
       class(cg_list_global_T), intent(inout)          :: this          !< object invoking type-bound procedure
-      integer(kind=4),         intent(in)             :: nfluids       !< number of components in the main array of fluids (should be flind%all)
 
       integer(kind=4), save, dimension(ndims), target :: xyz_face = [ VAR_XFACE, VAR_YFACE, VAR_ZFACE ]
       integer(kind=4),       dimension(:), pointer    :: pia
@@ -243,8 +243,8 @@ contains
       if (code_progress < PIERNIK_INIT_FLUIDS) call die("[cg_list_global:register_fluids] Fluids are not yet initialized")
 
       call this%reg_var(wa_n,                                                           multigrid=.true.)  !! Auxiliary array. Multigrid required only for CR diffusion
-      call this%reg_var(fluid_n, vital = .true., restart_mode = AT_NO_B,  dim4 = nfluids)                  !! Main array of all fluids' components, "u"
-      call this%reg_var(uh_n,                                             dim4 = nfluids)                  !! Main array of all fluids' components (for t += dt/2)
+      call this%reg_var(fluid_n, vital = .true., restart_mode = AT_NO_B,  dim4 = flind%all)                !! Main array of all fluids' components, "u"
+      call this%reg_var(uh_n,                                             dim4 = flind%all)                !! Main array of all fluids' components (for t += dt/2)
 
 !> \todo Do not even allocate magnetic stuff if MAGNETIC is not declared
       call this%reg_var(mag_n,   vital = &
@@ -255,7 +255,7 @@ contains
 #endif /* MAGNETIC */
            restart_mode = AT_OUT_B, dim4 = ndims, position=pia)                                            !! Main array of magnetic field's components, "b"
       if (repeat_step) then
-         call this%reg_var(u0_n,                                          dim4 = nfluids)                  !! Copy of main array of all fluids' components
+         call this%reg_var(u0_n,                                          dim4 = flind%all)                !! Copy of main array of all fluids' components
          call this%reg_var(b0_n,                                          dim4 = ndims, position=pia)      !! Copy of main array of magnetic field's components
       endif
 #ifdef ISO

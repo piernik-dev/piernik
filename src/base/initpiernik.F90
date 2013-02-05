@@ -52,7 +52,6 @@ contains
       use domain,                only: init_domain
       use diagnostics,           only: diagnose_arrays, check_environment
       use fluidboundaries_funcs, only: init_default_fluidboundaries
-      use fluidindex,            only: flind
       use global,                only: init_global
       use grid,                  only: init_grid
       use grid_container_ext,    only: cg_extptrs
@@ -87,7 +86,6 @@ contains
       use coriolis,              only: init_coriolis
 #endif /* CORIOLIS */
 #ifdef COSM_RAYS
-      use fluidindex,            only: flind
       use crdiffusion,           only: init_crdiffusion
 #endif /* COSM_RAYS */
 #ifdef PIERNIK_OPENCL
@@ -136,7 +134,7 @@ contains
       call init_fluids
       code_progress = PIERNIK_INIT_FLUIDS    ! Fluid properties are set up
 
-      call all_cg%register_fluids(flind%all) ! Register named fields for u, b and wa
+      call all_cg%register_fluids            ! Register named fields for u, b and wa
       call all_cg%init
 
 #ifdef COSM_RAYS
@@ -144,7 +142,7 @@ contains
       !> \deprecated remove this clause as soon as Intel Compiler gets required features and/or bug fixes
       call init_div_v
 #endif /* __INTEL_COMPILER */
-      call init_crdiffusion(flind%crs%all)   ! depends on fluids
+      call init_crdiffusion                  ! depends on fluids
 #endif /* COSM_RAYS */
 
       call init_interactions                 ! requires flind and units
