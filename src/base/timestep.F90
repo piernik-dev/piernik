@@ -341,7 +341,7 @@ contains
                      v(:) = 0.0
                   endif
 
-                  c(:) = max( c(:), v(:) + fl%get_cs(cg, i, j, k) )
+                  c(:) = max( c(:), v(:) + fl%get_cs(i, j, k, cg%u, cg%b, cg%cs_iso2) )
                   c_fl = max(c_fl, maxval(c(:)))
                endif
             enddo

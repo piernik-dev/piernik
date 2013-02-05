@@ -136,13 +136,14 @@ module fluidtypes
       end subroutine pass_flind
 
       !> \todo try to remove dependency of this module on the grid_container
-      real function cs_get(this, cg, i, j, k)
-         use grid_cont, only: grid_container
+      real function cs_get(this, i, j, k, u, b, cs_iso2)
          import
          implicit none
-         class(component_fluid), intent(in) :: this
-         type(grid_container), pointer, intent(in) :: cg !< current grid container
-         integer, intent(in) :: i, j, k
+         class(component_fluid),            intent(in) :: this
+         integer,                           intent(in) :: i, j, k !< cell indices
+         real, dimension(:,:,:,:), pointer, intent(in) :: u       !< pointer to array of fluid properties
+         real, dimension(:,:,:,:), pointer, intent(in) :: b       !< pointer to array of magnetic fields (used for ionized fluid with MAGNETIC #defined)
+         real, dimension(:,:,:),   pointer, intent(in) :: cs_iso2 !< pointer to array of isothermal sound speeds (used when ISO was #defined)
       end function cs_get
 
       function tag()

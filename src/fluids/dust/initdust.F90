@@ -68,14 +68,15 @@ contains
 
    end subroutine initialize_dust_indices
 
-   real function dust_cs(this, cg, i, j, k)
-      use grid_cont, only: grid_container
+   real function dust_cs(this, i, j, k, u, b, cs_iso2)
       implicit none
-      class(dust_fluid),             intent(in) :: this
-      type(grid_container), pointer, intent(in) :: cg !< current grid container
-      integer,                       intent(in) :: i, j, k
+      class(dust_fluid),                 intent(in) :: this
+      integer,                           intent(in) :: i, j, k
+      real, dimension(:,:,:,:), pointer, intent(in) :: u       !< pointer to array of fluid properties
+      real, dimension(:,:,:,:), pointer, intent(in) :: b       !< pointer to array of magnetic fields (used for ionized fluid with MAGNETIC #defined)
+      real, dimension(:,:,:),   pointer, intent(in) :: cs_iso2 !< pointer to array of isothermal sound speeds (used when ISO was #defined)
       dust_cs = 0.0
-      if (.false.) print *, cg%u(:, i, j, k), this%cs
+      if (.false.) print *, u(:, i, j, k), b(:, i, j, k), cs_iso2(i, j, k), this%cs
    end function dust_cs
 
    function get_tag() result(tag)

@@ -78,26 +78,28 @@ contains
 
    end subroutine initialize_neu_indices
 
-   real function neu_cs(this, cg, i, j, k)
-      use grid_cont, only: grid_container
+   real function neu_cs(this, i, j, k, u, b, cs_iso2)
 #ifndef ISO
       use func,      only: ekin
 #endif /* !ISO */
       implicit none
-      class(neutral_fluid),          intent(in) :: this
-      type(grid_container), pointer, intent(in) :: cg !< current grid container
-      integer,                       intent(in) :: i, j, k
+      class(neutral_fluid),              intent(in) :: this
+      integer,                           intent(in) :: i, j, k
+      real, dimension(:,:,:,:), pointer, intent(in) :: u       !< pointer to array of fluid properties
+      real, dimension(:,:,:,:), pointer, intent(in) :: b       !< pointer to array of magnetic fields (used for ionized fluid with MAGNETIC #defined)
+      real, dimension(:,:,:),   pointer, intent(in) :: cs_iso2 !< pointer to array of isothermal sound speeds (used when ISO was #defined)
 
       real :: p
 #ifdef ISO
-      p  = cg%cs_iso2(i, j, k) * cg%u(this%idn, i, j, k)
-      neu_cs = sqrt(cg%cs_iso2(i, j, k))
+      p  = cs_iso2(i, j, k) * u(this%idn, i, j, k)
+      neu_cs = sqrt(cs_iso2(i, j, k))
 #else /* !ISO */
-      p  = (cg%u(this%ien, i, j, k) - &
-         &   ekin(cg%u(this%imx, i, j, k), cg%u(this%imy, i, j, k), cg%u(this%imz, i, j, k), cg%u(this%idn, i, j, k)) &
+      p  = (u(this%ien, i, j, k) - &
+         &   ekin(u(this%imx, i, j, k), u(this%imy, i, j, k), u(this%imz, i, j, k), u(this%idn, i, j, k)) &
          & ) * this%gam_1
-      neu_cs = sqrt(abs((this%gam * p) / cg%u(this%idn, i, j, k)))
+      neu_cs = sqrt(abs((this%gam * p) / u(this%idn, i, j, k)))
 #endif /* !ISO */
+      if (.false.) print *, u(:, i, j, k), b(:, i, j, k), cs_iso2(i, j, k), this%cs
    end function neu_cs
 
    function get_tag() result(tag)
