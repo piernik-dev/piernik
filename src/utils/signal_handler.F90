@@ -58,7 +58,7 @@ contains
       use ifport, only: signal
 #endif /* __INTEL_COMPILER */
       implicit none
-      integer, intent(in) :: signum
+      integer(kind=4), intent(in) :: signum
       procedure(signal_handler) :: func
       integer :: err
 
