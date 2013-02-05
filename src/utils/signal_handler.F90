@@ -63,7 +63,7 @@ contains
       integer :: err
 
 #ifdef __INTEL_COMPILER
-      err = signal(signum, func -1)
+      err = signal(signum, func, -1)
 #else /* !__INTEL_COMPILER */
       err = signal(signum, func)
 #endif /* ! __INTEL_COMPILER */
