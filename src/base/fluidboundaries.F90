@@ -139,13 +139,10 @@ contains
       do side = LO, HI
 
          select case (cg%bnd(dir, side))
-         case (BND_MPI, BND_COR, BND_SHE)
+         case (BND_MPI, BND_COR, BND_SHE, BND_FC, BND_MPI_FC, BND_PER)
             ! Do nothing
-         case (BND_FC, BND_MPI_FC)
-            call die("[fluidboundaries:bnd_u] fine-coarse interfaces not implemented yet")
          case (BND_USER)
             call user_fluidbnd(dir, side, cg, wn=wna%fi)
-         case (BND_PER)
          case (BND_REF)
             ssign = 2_INT4*side-3_INT4
             do ib=1_INT4, dom%nb
@@ -197,28 +194,32 @@ contains
 
    subroutine all_fluid_boundaries
 
-      use cg_leaves,        only: leaves
-      use cg_list,          only: cg_list_element
-      use cg_list_global,   only: all_cg
-      use constants,        only: xdim, zdim
-      use domain,           only: dom
-      use named_array_list, only: wna
+      use cg_level_base,      only: base
+      use cg_level_connected, only: cg_level_connected_T
+      use cg_list,            only: cg_list_element
+      use constants,          only: xdim, zdim
+      use domain,             only: dom
+      use named_array_list,   only: wna
 
       implicit none
 
+      type(cg_level_connected_T), pointer :: curl
       type(cg_list_element), pointer :: cgl
       integer(kind=4)                :: dir
 
-      do dir = xdim, zdim
-         if (dom%has_dir(dir)) call all_cg%internal_boundaries_4d(wna%fi, dim=dir) ! should be more selective (modified leaves?)
-      enddo
+      curl => base%level
 
-      cgl => leaves%first
-      do while (associated(cgl))
-         do dir = xdim, zdim
-            if (dom%has_dir(dir)) call bnd_u(dir, cgl%cg)
+      ! should be more selective (modified leaves?)
+      do while (associated(curl))
+         call curl%arr4d_boundaries(wna%fi)
+         cgl => curl%first
+         do while (associated(cgl))
+            do dir = xdim, zdim
+               if (dom%has_dir(dir)) call bnd_u(dir, cgl%cg)
+            enddo
+            cgl => cgl%nxt
          enddo
-         cgl => cgl%nxt
+         curl => curl%finer
       enddo
 
    end subroutine all_fluid_boundaries

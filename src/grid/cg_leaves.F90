@@ -138,7 +138,7 @@ contains
       implicit none
 
       class(cg_leaves_T),        intent(in) :: this       !< the list on which to perform the boundary exchange
-      integer(kind=4),           intent(in) :: ind        !< Negative value: index of cg%q(:) 3d array
+      integer(kind=4),           intent(in) :: ind        !< index of cg%q(:) 3d array
       integer(kind=4), optional, intent(in) :: area_type  !< defines how do we treat boundaries
       integer(kind=4), optional, intent(in) :: bnd_type   !< Override default boundary type on external boundaries (useful in multigrid solver).
                                                           !< Note that BND_PER, BND_MPI, BND_SHE and BND_COR aren't external and cannot be overridden
@@ -153,34 +153,25 @@ contains
 
    end subroutine arr3d_boundaries
 
-!>
-!! \brief This routine sets up all guardcells (internal, external and fine-coarse) for given rank-4 arrays
-!! \todo if there is any routine for base%level then place it here as a wrapper
-!<
-   subroutine arr4d_boundaries(this) !, ind, nb, area_type, bnd_type, corners)
+!> \brief This routine sets up all guardcells (internal, external and fine-coarse) for given rank-4 arrays
+
+   subroutine arr4d_boundaries(this, ind, area_type)
 
       use cg_level_connected, only: cg_level_connected_T
-      use dataio_pub,         only: die
 
       implicit none
 
       class(cg_leaves_T),        intent(in) :: this       !< the list on which to perform the boundary exchange
-!      integer(kind=4),           intent(in) :: ind        !< Negative value: index of cg%q(:) 3d array
-!      integer(kind=4), optional, intent(in) :: nb         !< number of grid cells to exchange
-!      integer(kind=4), optional, intent(in) :: area_type  !< defines how do we treat boundaries
-!      integer(kind=4), optional, intent(in) :: bnd_type   !< Override default boundary type on external boundaries (useful in multigrid solver).
-!                                                          !< Note that BND_PER, BND_MPI, BND_SHE and BND_COR aren't external and cannot be overridden
-!      logical,         optional, intent(in) :: corners    !< When present and .true. then call internal_boundaries_3d for each direction separately
+      integer(kind=4),           intent(in) :: ind        !< index of cg%w(:) 4d array
+      integer(kind=4), optional, intent(in) :: area_type  !< defines how do we treat boundaries
 
       type(cg_level_connected_T), pointer   :: curl
 
-      call die("[cg_leaves::arr4d_boundaries] This routine has not been implemented yet.")
-
       curl => this%coarsest_leaves
-!      do while (associated(curl))
-!         call curl%arr4d_boundaries(ind, nb, area_type, bnd_type, corners)
-!         curl => curl%finer
-!      enddo
+      do while (associated(curl))
+         call curl%arr4d_boundaries(ind, area_type)
+         curl => curl%finer
+      enddo
 
    end subroutine arr4d_boundaries
 

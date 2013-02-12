@@ -456,12 +456,14 @@ contains
          do k = cg%ks, cg%ke
             do j = cg%js, cg%je
                do i = cg%is, cg%ie
-                  potential = cg%q(apot_i)%arr(i, j, k)
-                  if (dom%geometry_type == GEO_RPZ) fac = cg%x(i)
-                  norm(1) = norm(1) + (potential - cg%sgp(i, j, k))**2 * fac
-                  norm(2) = norm(2) + potential**2 * fac
-                  dev(1) = min(dev(1), (potential - cg%sgp(i, j, k))/potential)
-                  dev(2) = max(dev(2), (potential - cg%sgp(i, j, k))/potential)
+                  if (cg%leafmap(i, j, k)) then
+                     potential = cg%q(apot_i)%arr(i, j, k)
+                     if (dom%geometry_type == GEO_RPZ) fac = cg%x(i)
+                     norm(1) = norm(1) + (potential - cg%sgp(i, j, k))**2 * fac
+                     norm(2) = norm(2) + potential**2 * fac
+                     dev(1) = min(dev(1), (potential - cg%sgp(i, j, k))/potential)
+                     dev(2) = max(dev(2), (potential - cg%sgp(i, j, k))/potential)
+                  endif
                enddo
             enddo
          enddo

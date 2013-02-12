@@ -69,6 +69,7 @@ module cg_list_bnd
       procedure          :: clear_boundaries           !< Clear (set to 0) all boundaries
       procedure          :: dirty_boundaries           !< Put dirty values to all boundaries
       procedure          :: level_3d_boundaries        !< Perform internal boundary exchanges and external boundary extrapolations on 3D named arrays
+      procedure          :: level_4d_boundaries        !< Perform internal boundary exchanges and external boundary extrapolations on 4D named arrays
       !> \todo move routines for external guardcells for rank-4 arrays here as well (fluidboundaries and magboundaries)
    end type cg_list_bnd_T
 
@@ -495,7 +496,7 @@ contains
 !>
 !! \brief This routine sets up all guardcells (internal and external) for given rank-3 arrays.
 !!
-!! \details No fine-coarse exchanges can be done here, see cg_level_connested::arr3d_boundaries for that feature
+!! \details No fine-coarse exchanges can be done here, see cg_level_connected::arr3d_boundaries for that feature
 !<
 
    subroutine level_3d_boundaries(this, ind, area_type, bnd_type)
@@ -505,7 +506,7 @@ contains
       implicit none
 
       class(cg_list_bnd_T),      intent(in) :: this       !< the list on which to perform the boundary exchange
-      integer(kind=4),           intent(in) :: ind        !< Negative value: index of cg%q(:) 3d array
+      integer(kind=4),           intent(in) :: ind        !< index of cg%q(:) 3d array
       integer(kind=4), optional, intent(in) :: area_type  !< defines how do we treat boundaries
       integer(kind=4), optional, intent(in) :: bnd_type   !< Override default boundary type on external boundaries (useful in multigrid solver).
                                                           !< Note that BND_PER, BND_MPI, BND_SHE and BND_COR aren't external and cannot be overridden
@@ -524,5 +525,36 @@ contains
       call this%external_boundaries(ind, area_type, bnd_type)
 
    end subroutine level_3d_boundaries
+
+!>
+!! \brief This routine sets up all guardcells (internal and external) for given rank-4 arrays.
+!!
+!! \details No fine-coarse exchanges can be done here, see cg_level_connected::arr4d_boundaries for that feature
+!<
+
+   subroutine level_4d_boundaries(this, ind, area_type)
+
+      use constants, only: AT_NO_B
+
+      implicit none
+
+      class(cg_list_bnd_T),      intent(in) :: this       !< the list on which to perform the boundary exchange
+      integer(kind=4),           intent(in) :: ind        !< index of cg%w(:) 4d array
+      integer(kind=4), optional, intent(in) :: area_type  !< defines how do we treat boundaries
+
+      logical                               :: do_permpi
+
+      !> \todo fill corners with big_float ?
+
+      do_permpi = .true.
+      if (present(area_type)) then
+         if (area_type /= AT_NO_B) do_permpi = .false.
+      endif
+
+      if (do_permpi) call this%internal_boundaries_4d(ind)
+
+!      call this%external_boundaries(ind, area_type, bnd_type) ! should call fluidboundaries:bnd_u, but that depends on hydrostatic too much
+
+   end subroutine level_4d_boundaries
 
 end module cg_list_bnd

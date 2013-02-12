@@ -44,6 +44,7 @@ module cg_level_connected
       type(cg_level_connected_T), pointer :: coarser          !< coarser level cg set or null()
       type(cg_level_connected_T), pointer :: finer            !< finer level cg set or null()
       integer(kind=4)                     :: ord_prolong_set  !< Number of boundary cells for prolongation used in last update of cg_level_connected_T%vertical_prep
+      logical                             :: need_vb_update   !< If .true. then execute vertical_b_prep
 
     contains
 
@@ -60,7 +61,10 @@ module cg_level_connected
       procedure :: restrict_to_floor_q_1var                   !< restrict specified q field as much as possible
       procedure :: restrict_to_base_q_1var                    !< restrict specified q field to the base level
       procedure :: arr3d_boundaries                           !< Set up all guardcells (internal, external and fine-coarse) for given rank-3 arrays.
+      procedure :: arr4d_boundaries                           !< Set up all guardcells (internal, external and fine-coarse) for given rank-4 arrays.
       ! fine-coarse boundary exchanges may also belong to this type
+      procedure :: sync_ru                                    !< Synchronize this%recently_changed and set flags for update requests
+
    end type cg_level_connected_T
 
 contains
@@ -80,6 +84,8 @@ contains
       this%tot_se = 0
       this%ord_prolong_set = INVALID
       this%fft_type = fft_none
+      this%need_vb_update = .true.
+      this%recently_changed = .false. ! this level was just created, but no grids were added yet, so no update is required.
 
    end subroutine init_level
 
@@ -291,7 +297,7 @@ contains
 !<
    subroutine prolong(this)
 
-      use constants,        only: base_level_id, wa_n
+      use constants,        only: base_level_id
       use dataio_pub,       only: warn
       use named_array_list, only: qna, wna
 
@@ -299,21 +305,20 @@ contains
 
       class(cg_level_connected_T), target, intent(inout) :: this !< object invoking type-bound procedure
 
-      integer(kind=4) :: i, iw, iwa
+      integer(kind=4) :: i, iw
 
       do i = lbound(qna%lst(:), dim=1, kind=4), ubound(qna%lst(:), dim=1, kind=4)
          if (qna%lst(i)%vital .and. (qna%lst(i)%multigrid .or. this%level_id >= base_level_id)) call this%prolong_q_1var(i)
       enddo
 
-      iwa = qna%ind(wa_n)
-
       do i = lbound(wna%lst(:), dim=1, kind=4), ubound(wna%lst(:), dim=1, kind=4)
          if (wna%lst(i)%vital .and. (wna%lst(i)%multigrid .or. this%level_id >= base_level_id)) then
             if (wna%lst(i)%multigrid) call warn("[cg_level_connected:prolong] mg set for cg%w ???")
             do iw = 1, wna%lst(i)%dim4
-               call this%wq_copy(i, iw, iwa)
-               call this%prolong_q_1var(iwa, wna%lst(i)%position(iw))
-               call this%finer%qw_copy(iwa, i, iw)
+               call this%wq_copy(i, iw, qna%wai)
+               call this%finer%wq_copy(i, iw, qna%wai) !> Quick and dirty fix for cases when cg%ignore_prolongation == .true.
+               call this%prolong_q_1var(qna%wai, wna%lst(i)%position(iw))
+               call this%finer%qw_copy(qna%wai, i, iw) !> \todo filter this through cg%ignore_prolongation
             enddo
          endif
       enddo
@@ -327,7 +332,7 @@ contains
 !<
    subroutine restrict(this)
 
-      use constants,        only: base_level_id, wa_n
+      use constants,        only: base_level_id
       use dataio_pub,       only: warn
       use named_array_list, only: qna, wna
 
@@ -335,21 +340,19 @@ contains
 
       class(cg_level_connected_T), target, intent(inout) :: this !< object invoking type-bound procedure
 
-      integer(kind=4) :: i, iw, iwa
+      integer(kind=4) :: i, iw
 
       do i = lbound(qna%lst(:), dim=1, kind=4), ubound(qna%lst(:), dim=1, kind=4)
          if (qna%lst(i)%vital .and. (qna%lst(i)%multigrid .or. this%level_id > base_level_id)) call this%restrict_q_1var(i)
       enddo
 
-      iwa = qna%ind(wa_n)
-
       do i = lbound(wna%lst(:), dim=1, kind=4), ubound(wna%lst(:), dim=1, kind=4)
          if (wna%lst(i)%vital .and. (wna%lst(i)%multigrid .or. this%level_id > base_level_id)) then
             if (wna%lst(i)%multigrid) call warn("[cg_level_connected:restrict] mg set for cg%w ???")
             do iw = 1, wna%lst(i)%dim4
-               call this%wq_copy(i, iw, iwa)
-               call this%restrict_q_1var(iwa, wna%lst(i)%position(iw))
-               call this%coarser%qw_copy(iwa, i, iw)
+               call this%wq_copy(i, iw, qna%wai)
+               call this%restrict_q_1var(qna%wai, wna%lst(i)%position(iw))
+               call this%coarser%qw_copy(qna%wai, i, iw)
             enddo
          endif
       enddo
@@ -862,14 +865,76 @@ contains
       implicit none
 
       class(cg_level_connected_T), intent(inout) :: this      !< the list on which to perform the boundary exchange
-      integer(kind=4),             intent(in)    :: ind       !< Negative value: index of cg%q(:) 3d array
+      integer(kind=4),             intent(in)    :: ind       !< index of cg%q(:) 3d array
       integer(kind=4), optional,   intent(in)    :: area_type !< defines how do we treat boundaries
       integer(kind=4), optional,   intent(in)    :: bnd_type  !< Override default boundary type on external boundaries (useful in multigrid solver).
                                                               !< Note that BND_PER, BND_MPI, BND_SHE and BND_COR aren't external and cannot be overridden
 
       call this%clear_boundaries(ind) ! Apply BND_ZERO as long as there is no coarse-to-fine interpolation
       call this%level_3d_boundaries(ind, area_type, bnd_type)
+!!$      call this%prolong_bnd_from_coarser(ind)
 
    end subroutine arr3d_boundaries
+
+!>
+!! \brief This routine sets up all guardcells (internal, external and fine-coarse) for given rank-4 arrays.
+!!
+!! \warning No fine-to-coarse data transfer implemented yet
+!<
+
+   subroutine arr4d_boundaries(this, ind, area_type)
+
+!!$      use constants,        only: base_level_id
+!!$      use named_array_list, only: qna, wna
+
+      implicit none
+
+      class(cg_level_connected_T), intent(inout) :: this      !< the list on which to perform the boundary exchange
+      integer(kind=4),             intent(in)    :: ind       !< index of cg%w(:) 4d array
+      integer(kind=4), optional,   intent(in)    :: area_type !< defines how do we treat boundaries
+
+!!$      integer(kind=4) :: iw
+
+!      call this%dirty_boundaries(ind)
+!      call this%clear_boundaries(ind, value=10.)
+      call this%level_4d_boundaries(ind, area_type)
+!!$      if (associated(this%coarser) .and. this%level_id > base_level_id) then
+!!$         do iw = 1, wna%lst(ind)%dim4
+!!$            call this%coarser%wq_copy(ind, iw, qna%wai)
+!!$            call this%wq_copy(ind, iw, qna%wai) !> Quick and dirty fix for cases when cg%ignore_prolongation == .true.
+!!$            call this%prolong_bnd_from_coarser(qna%wai)
+!!$            call this%qw_copy(qna%wai, ind, iw) !> \todo filter this through cg%ignore_prolongation
+!!$         enddo
+!!$      endif
+
+   end subroutine arr4d_boundaries
+
+!> \brief Synchronize this%recently_changed and set flags for update requests
+
+   subroutine sync_ru(this)
+
+      use constants, only: pLOR, INVALID
+      use mpisetup,  only: piernik_MPI_Allreduce
+
+      implicit none
+
+      class(cg_level_connected_T), intent(inout) :: this
+
+      call piernik_MPI_Allreduce(this%recently_changed, pLOR)
+      if (this%recently_changed) then
+         this%need_vb_update = .true.
+         this%ord_prolong_set = INVALID
+         if (associated(this%finer)) then
+            this%finer%need_vb_update = .true.
+            this%finer%ord_prolong_set = INVALID ! I don't quite understand why this is needed
+         endif
+         if (associated(this%coarser)) then
+            this%coarser%need_vb_update = .true.
+            this%coarser%ord_prolong_set = INVALID ! I don't quite understand why this is needed
+         endif
+         this%recently_changed = .false.
+      endif
+
+   end subroutine sync_ru
 
 end module cg_level_connected

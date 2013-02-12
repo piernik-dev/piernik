@@ -28,9 +28,8 @@
 
 #include "piernik.h"
 
-!>
-!! \brief Module that contains HDF5 I/O routines for reading and writing restart files.
-!<
+!> \brief Module that contains HDF5 I/O routines for reading and writing restart files.
+
 module restart_hdf5
 ! pulled by HDF5
 
@@ -724,7 +723,7 @@ contains
       ! Read refined patches
       allocate(ibuf(1))
       call read_attribute(doml_g_id, d_fc_aname, ibuf)         ! read "/domains/fine_count"
-      if (ibuf(1) > 0) call die("[restart_hdf5:read_restart_hdf5_v2] Refinement reading not implemented yet")
+      if (ibuf(1) > 0) call die("[restart_hdf5:read_restart_hdf5_v2] /domains/fine_count /= 0 not implemented yet")
       deallocate(ibuf)
 
       call h5gclose_f(doml_g_id, error)

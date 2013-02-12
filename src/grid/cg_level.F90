@@ -75,6 +75,7 @@ module cg_level
       integer                                    :: fft_type  !< type of FFT to employ in some multigrid solvers (depending on boundaries)
       type(box_T),     dimension(:), allocatable :: patches   !< list of patches that exist on the current level
       integer(kind=8), dimension(ndims)          :: off       !< offset of the level
+      logical                                    :: recently_changed !< .true. when anything was added to or deleted from this level
 
     contains
 
@@ -641,6 +642,7 @@ contains
       integer(kind=4), optional, intent(in)    :: n_pieces !< how many pieces the patch should be divided to?
 
       call this%add_patch_detailed(this%n_d, this%off, n_pieces)
+      this%recently_changed = .true. ! assume that tne new patches will change this level
 
    end subroutine add_patch_fulllevel
 

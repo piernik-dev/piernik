@@ -72,7 +72,9 @@ module cg_list
       procedure       :: numbered_ascii_dump               !< Construct name of emergency ASCII dump
       procedure       :: ascii_dump                        !< Emergency routine for quick ASCII dumps
       procedure       :: update_req                        !< Update mpisetup::req(:)
-
+      procedure       :: prevent_prolong                   !< Mark grids as untouchable for prolongation
+      procedure       :: enable_prolong                    !< Mark grids as eligible for prolongation
+      procedure       :: set_is_old                        !< Mark grids as existing in the previous timestep
 !> \todo merge lists
 
    end type cg_list_T
@@ -383,6 +385,61 @@ contains
       call inflate_req(nrq)
 
    end subroutine update_req
+
+!> \brief Mark grids as untouchable for prolongation
+
+   subroutine prevent_prolong(this)
+
+      implicit none
+
+      class(cg_list_T), intent(in)   :: this
+
+      type(cg_list_element), pointer :: cgl
+
+      cgl => this%first
+      do while (associated(cgl))
+         cgl%cg%ignore_prolongation = .true.
+         cgl => cgl%nxt
+      enddo
+
+   end subroutine prevent_prolong
+
+!> \brief Mark grids as eligible for prolongation
+
+   subroutine enable_prolong(this)
+
+      implicit none
+
+      class(cg_list_T), intent(in)   :: this
+
+      type(cg_list_element), pointer :: cgl
+
+      cgl => this%first
+      do while (associated(cgl))
+         cgl%cg%ignore_prolongation = .false.
+         cgl => cgl%nxt
+      enddo
+
+   end subroutine enable_prolong
+
+!> \brief Mark grids as existing in the previous timestep
+
+   subroutine set_is_old(this)
+
+      implicit none
+
+      class(cg_list_T), intent(in)   :: this
+
+      type(cg_list_element), pointer :: cgl
+
+      cgl => this%first
+      do while (associated(cgl))
+         cgl%cg%is_old = .true.
+         cgl => cgl%nxt
+      enddo
+
+   end subroutine set_is_old
+
 
 ! unused
 !!$!>

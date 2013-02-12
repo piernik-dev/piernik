@@ -32,10 +32,14 @@
 !! The implementation was based on TVD split MHD code by Pen et al. (2003).
 !<
 module rtvd ! split orig
+
 ! pulled by RTVD
+
    implicit none
+
    private
    public  :: tvdb, relaxing_tvd
+
 contains
 !/*
 !>
@@ -220,6 +224,8 @@ contains
 !! The monotone interpolation is used to avoid spurious oscillations in discrete solutions of higher order.
 !! The Total Variation Diminishing property of the numerical scheme is related to the measure of the overall amount
 !! of oscillations, called Total Variation.
+!!
+!! \todo Do not pass i1 and i2, pass optional pointer to gravacc instead
 !<
 !*/
 

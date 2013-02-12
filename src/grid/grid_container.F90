@@ -48,6 +48,7 @@ module grid_cont
       integer(kind=4) :: tag                              !< unique tag for data exchange
       real, allocatable, dimension(:,:,:)   :: buf        !< buffer for the 3D (scalar) data to be sent or received
       real, allocatable, dimension(:,:,:,:) :: buf4       !< buffer for the 4D (vector) data to be sent or received
+      integer(kind=4), pointer :: req                     !< request ID, used for most asynchronous communication, such as fine-coarse flux exchanges
    end type segment
 
    !> \brief coefficient-layer pair used for prolongation
@@ -63,8 +64,13 @@ module grid_cont
 
    !< \brief target list container for prolongations, restrictions and boundary exchanges
    type :: tgt_list
-      type(pr_segment), dimension(:), allocatable :: seg              !< a segment of data to be received or sent
+      type(segment), dimension(:), allocatable :: seg              !< a segment of data to be received or sent
    end type tgt_list
+
+   !< \brief target list container for some fine/coarse and boundary exchanges (see multigrid_fft_approximation module for details)
+   type :: tgtpr_list
+      type(pr_segment), dimension(:), allocatable :: seg              !< a segment of data to be received or sent
+   end type tgtpr_list
 
    !>
    !! \brief Multigrid-specific storage
@@ -92,7 +98,7 @@ module grid_cont
 
       ! prolongation and restriction
       !! \todo move to cg, should be initialized by cg_level_T procedure
-      type(tgt_list), dimension(xdim:zdim, LO:HI) :: pff_tgt, pfc_tgt !< description outgoing and incoming face prolongation data
+      type(tgtpr_list), dimension(xdim:zdim, LO:HI) :: pff_tgt, pfc_tgt !< description outgoing and incoming face prolongation data
 
    end type mg_arr
 
@@ -147,8 +153,8 @@ module grid_cont
 !      integer(kind=4) :: iln, ihn, jln, jhn, kln, khn            !< index of the n-th guardcell, furthest from the active interior of the grid, l for low/left, h for high/right side
       integer(kind=4), dimension(ndims, LO:HI)  :: ijkse         !< [[is,  js,  ks ], [ie,  je,  ke ]]
       integer(kind=4), dimension(ndims, LO:HI)  :: ijkseb        !< [[isb, jsb, ksb], [ieb, jeb, keb]]
-      integer(kind=4), dimension(ndims, LO:HI)  :: lh1        !< [[il1, jl1, kl1], [ih1, jh1, kh1]]
-      integer(kind=4), dimension(ndims, LO:HI)  :: lhn        !< [[iln, jln, kln], [ihn, jhn, khn]]
+      integer(kind=4), dimension(ndims, LO:HI)  :: lh1           !< [[il1, jl1, kl1], [ih1, jh1, kh1]]
+      integer(kind=4), dimension(ndims, LO:HI)  :: lhn           !< [[iln, jln, kln], [ihn, jhn, khn]]
       integer(kind=8), dimension(ndims)         :: h_cor1        !< offsets of the corner opposite to the one defined by off(:) + 1, a shortcut to be compared with dom%n_d(:) DEPRECATED will be equivalent to ijkse(:, HI)+1
       integer(kind=4), dimension(ndims)         :: n_            !< number of %grid cells in one block in x-, y- and z-directions (n_b(:) + 2 * nb)
       integer(kind=8), dimension(ndims, LO:HI) :: my_se          !< own segment. my_se(:,LO) = 0; my_se(:,HI) = dom%n_d(:) - 1 would cover entire domain on a base level
@@ -216,6 +222,9 @@ module grid_cont
       integer(kind=4) :: maxxyz                                  !< maximum number of %grid cells in any direction
       integer :: grid_id                                         !< index of own segment in own level decomposition, e.g. my_se(:,:) = base%level%pse(proc)%c(grid_id)%se(:,:)
       integer :: membership                                      !< How many cg lists use this grid piece?
+      logical :: ignore_prolongation                             !< When .true. do not upgrade interior with incoming prolonged values
+      logical :: is_old                                          !< .true. if a given grid existed prior to  upgrade_refinement call
+      logical :: processed                                       !< for use in sweeps.F90
 
    contains
 
@@ -432,6 +441,8 @@ contains
       this%prolong_xy (:, :, :) = big_float
       this%prolong_xyz(:, :, :) = big_float
       this%leafmap    (:, :, :) = .true.
+      this%ignore_prolongation = .false.
+      this%is_old = .false.
 
       call this%add_all_na
 

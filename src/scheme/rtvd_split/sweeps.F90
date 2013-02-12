@@ -95,7 +95,7 @@ contains
 
       use cg_leaves,        only: leaves
       use cg_list,          only: cg_list_element
-      use constants,        only: pdims, LO, HI, ydim, zdim, uh_n, cs_i2_n
+      use constants,        only: pdims, LO, HI, uh_n, cs_i2_n, I_TWO, I_THREE
       use domain,           only: dom
       use fluidboundaries,  only: all_fluid_boundaries
       use fluidindex,       only: flind, iarr_all_swp, nmag
@@ -132,7 +132,7 @@ contains
       full_dim = dom%has_dir(cdim)
       uhi = wna%ind(uh_n)
       if (qna%exists(cs_i2_n)) then
-         i_cs_iso2 = qna%ind(cs_i2_n) ! BEWARE: magic strings across multiple files
+         i_cs_iso2 = qna%ind(cs_i2_n)
       else
          i_cs_iso2 = -1
       endif
@@ -141,10 +141,6 @@ contains
          cgl => leaves%first
          do while (associated(cgl))
             cg => cgl%cg
-
-            if (allocated(b)) deallocate(b)
-            if (allocated(u)) deallocate(u)
-            if (allocated(u0)) deallocate(u0)
 
             allocate(b(nmag, cg%n_(cdim)), u(flind%all, cg%n_(cdim)), u0(flind%all, cg%n_(cdim)))
 
@@ -159,8 +155,8 @@ contains
             endif
 
             cs2 => null()
-            do i2 = cg%ijkse(pdims(cdim,zdim),LO), cg%ijkse(pdims(cdim,zdim),HI)
-               do i1 = cg%ijkse(pdims(cdim,ydim),LO), cg%ijkse(pdims(cdim,ydim),HI)
+            do i2 = cg%ijkse(pdims(cdim, I_THREE),LO), cg%ijkse(pdims(cdim, I_THREE),HI)! I_THREE means here: 2nd orthogonal direction
+               do i1 = cg%ijkse(pdims(cdim, I_TWO),LO), cg%ijkse(pdims(cdim, I_TWO),HI) ! I_TWO means here: 1st orthogonal direction
 
 #ifdef MAGNETIC
                   if (full_dim) then
@@ -189,16 +185,14 @@ contains
                enddo
             enddo
 
+            deallocate(b, u, u0)
+
             cgl => cgl%nxt
          enddo
 
-         if (full_dim) call all_fluid_boundaries    ! \todo : call only x for istep=1, call all for istep=2
+         if (full_dim) call all_fluid_boundaries    ! \todo : call only cdim for istep=1, call all for istep=2
       enddo
 
-      if (allocated(b)) deallocate(b)
-      if (allocated(u)) deallocate(u)
-      if (allocated(u0)) deallocate(u0)
-
    end subroutine sweep
-!------------------------------------------------------------------------------------------
+
 end module sweeps
