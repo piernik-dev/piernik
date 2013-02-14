@@ -1,8 +1,0 @@
-PROG       = piernik
-USE_GNUCPP = yes
-### GNU tres AMD64
-F90       = /usr/bin/mpif90
-F90FLAGS  = -fdefault-real-8 -O3 -funroll-loops -m3dnow -msse -msse2 -mfpmath=sse
-HDF_LIB  = . -lfftw3 -llapack -lgfortran -lc
-MHDF_LIB = /usr/include
-
