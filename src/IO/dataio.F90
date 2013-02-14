@@ -748,7 +748,7 @@ contains
 
       use cg_leaves,        only: leaves
       use cg_list,          only: cg_list_element
-      use constants,        only: cwdlen, xdim, ydim, zdim, DST, pSUM
+      use constants,        only: xdim, ydim, zdim, DST, pSUM
       use dataio_pub,       only: wd_wr, tsl_file, tsl_lun
 #if defined(__INTEL_COMPILER)
       use dataio_pub,       only: io_blocksize, io_buffered, io_buffno
@@ -781,8 +781,8 @@ contains
 
       implicit none
 
-      character(len=cwdlen)                               :: head_fmt
-      character(len=cbuff_len), dimension(:), allocatable :: tsl_names
+      integer, parameter                                  :: field_len=17 ! should match formats below
+      character(len=field_len), dimension(:), allocatable :: tsl_names
       real,                     dimension(:), allocatable :: tsl_vars
       real, dimension(:,:,:,:), pointer                   :: pu, pb
       type(phys_prop),          pointer                   :: sn
@@ -818,42 +818,41 @@ contains
          write(tsl_file,'(a,a1,a,a1,a3,a1,i3.3,a4)') trim(wd_wr),'/',trim(problem_name),'_', run_id,'_',nrestart,'.tsl'
 
          if (tsl_firstcall) then
-            call pop_vector(tsl_names, cbuff_len, ["nstep   ", "time    ", "timestep", "mass    "])
+            call pop_vector(tsl_names, field_len, ["nstep   ", "time    ", "timestep", "mass    "])
             if (tsl_with_mom) &
-          & call pop_vector(tsl_names, cbuff_len, ["momx", "momy", "momz"])
-            call pop_vector(tsl_names, cbuff_len, ["ener", "eint", "ekin"])
+          & call pop_vector(tsl_names, field_len, ["momx", "momy", "momz"])
+            call pop_vector(tsl_names, field_len, ["ener", "eint", "ekin"])
 #ifdef GRAV
-            call pop_vector(tsl_names, cbuff_len, ["epot"])
+            call pop_vector(tsl_names, field_len, ["epot"])
 #endif /* GRAV */
 #ifdef MAGNETIC
-            call pop_vector(tsl_names, cbuff_len, ["emag    ", "mflx    ", "mfly    ", "mflz    ", "vai_max ", "b_min   ", "b_max   ", "divb_max"])
+            call pop_vector(tsl_names, field_len, ["emag    ", "mflx    ", "mfly    ", "mflz    ", "vai_max ", "b_min   ", "b_max   ", "divb_max"])
 #ifdef RESISTIVE
-            if (eta1_active) call pop_vector(tsl_names, cbuff_len, ["eta_max"])
+            if (eta1_active) call pop_vector(tsl_names, field_len, ["eta_max"])
 #endif /* RESISTIVE */
 #endif /* MAGNETIC */
 #ifdef COSM_RAYS
-            call pop_vector(tsl_names, cbuff_len, ["encr_tot", "encr_min", "encr_max"])
+            call pop_vector(tsl_names, field_len, ["encr_tot", "encr_min", "encr_max"])
 #endif /* COSM_RAYS */
             ! \todo: replicated code, simplify me
             if (has_ion) then
-               call pop_vector(tsl_names, cbuff_len, ["deni_min", "deni_max", "vxi_max ", "vyi_max ", "vzi_max "])
+               call pop_vector(tsl_names, field_len, ["deni_min", "deni_max", "vxi_max ", "vyi_max ", "vzi_max "])
                if (tsl_with_ptc) &
-             & call pop_vector(tsl_names, cbuff_len, ["prei_min", "prei_max", "temi_min", "temi_max", "csi_max "])
-               call pop_vector(tsl_names, cbuff_len, ["ion_mmass_cur", "ion_mmass_cum"])
+             & call pop_vector(tsl_names, field_len, ["prei_min", "prei_max", "temi_min", "temi_max", "csi_max "])
+               call pop_vector(tsl_names, field_len, ["ion_mmass_cur", "ion_mmass_cum"])
             endif
             if (has_neu) then
-               call pop_vector(tsl_names, cbuff_len, ["denn_min", "denn_max", "vxn_max ", "vyn_max ", "vzn_max "])
+               call pop_vector(tsl_names, field_len, ["denn_min", "denn_max", "vxn_max ", "vyn_max ", "vzn_max "])
                if (tsl_with_ptc) &
-             & call pop_vector(tsl_names, cbuff_len, ["pren_min", "pren_max", "temn_min", "temn_max", "csn_max "])
-               call pop_vector(tsl_names, cbuff_len, ["neu_mmass_cur", "neu_mmass_cum"])
+             & call pop_vector(tsl_names, field_len, ["pren_min", "pren_max", "temn_min", "temn_max", "csn_max "])
+               call pop_vector(tsl_names, field_len, ["neu_mmass_cur", "neu_mmass_cum"])
             endif
             if (has_dst) then
-               call pop_vector(tsl_names, cbuff_len, ["dend_min", "dend_max", "vxd_max ", "vyd_max ", "vzd_max "])
-               call pop_vector(tsl_names, cbuff_len, ["dst_mmass_cur", "dst_mmass_cum"])
+               call pop_vector(tsl_names, field_len, ["dend_min", "dend_max", "vxd_max ", "vyd_max ", "vzd_max "])
+               call pop_vector(tsl_names, field_len, ["dst_mmass_cur", "dst_mmass_cum"])
             endif
 
             if (associated(user_tsl)) call user_tsl(tsl_vars, tsl_names)
-            write(head_fmt,'(A,I2,A)') "(a1,a8,",size(tsl_names)-1,"a16)"
 
 #if defined(__INTEL_COMPILER)
             open(newunit=tsl_lun, file=tsl_file, &
@@ -861,7 +860,7 @@ contains
 #else /* !__INTEL_COMPILER */
             open(newunit=tsl_lun, file=tsl_file)
 #endif /* !__INTEL_COMPILER */
-            write(tsl_lun,fmt=head_fmt) "#",tsl_names
+            write(tsl_lun, '(a1,a8,100(1x,a17))') "#",tsl_names(1),adjustr(tsl_names(2:)) ! should match format used below
             write(tsl_lun, '(a1)') '#'
             deallocate(tsl_names)
             tsl_firstcall = .false.
@@ -950,7 +949,7 @@ contains
       if (associated(user_tsl)) call user_tsl(tsl_vars)
 
       if (master) then
-         write(tsl_lun, '(1x,i8,100(1x,es17.8e3))') nstep, tsl_vars
+         write(tsl_lun, '(1x,i8,100(1x,es17.8e3))') nstep, tsl_vars ! should match format used above
          ! some quantities computed in "write_log".One can add more, or change.
          deallocate(tsl_vars)
       endif
