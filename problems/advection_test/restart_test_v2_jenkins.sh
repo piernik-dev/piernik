@@ -4,7 +4,7 @@ set -e
 rm -rf runs/advection_test
 
 echo "Compilation started"
-./setup advection_test -p problem.par.restart_test_v2 -c gnufast &> /dev/null
+./setup advection_test -p problem.par.restart_test_v2 -c gnu47 &> /dev/null
 echo "Compilation finished"
 
 cp problems/advection_test/*py runs/advection_test
