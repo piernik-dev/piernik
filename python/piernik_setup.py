@@ -437,6 +437,8 @@ def setup_piernik(data=None):
 
     files_to_build = remove_suf(stripped_files)
 
+    if options.piernik_debug:
+        m.write("PIERNIK_DEBUG=1\n")
     for f in makefile_head:
         m.write(f)
     for f in makefile_problem:
@@ -666,6 +668,8 @@ def piernik_parse_args(data=None):
     diagnostics ;-)")
     parser.add_option("-q", "--laconic", action="store_true", dest="laconic",
                       default=False, help="compress stdout from make process")
+    parser.add_option("--debug", action="store_true", dest="piernik_debug",
+                      default=False, help="Use debug set of compiler flags")
     parser.add_option(
         "-n", "--nocompile", action="store_true", dest="nocompile",
         default=False, help='''Create object directory, check for \

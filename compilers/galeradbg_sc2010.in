@@ -1,8 +1,0 @@
-PROG     = piernik
-
-LOCAL    = /users/kdm/xarth/sc2010
-F90      = ${LOCAL}/bin/mpif90
-F90FLAGS  = -g -fpe0 -check all -traceback -fp-stack-check -heap-arrays -r8
-STATIC   = -Bstatic
-DYNAMIC  = -Bdynamic
-
