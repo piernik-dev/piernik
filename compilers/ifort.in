@@ -1,11 +1,11 @@
 PROG      = piernik
 
-HDF5_DIR = /opt/intel/hd5
+HDF5_DIR = /opt/intel/hdf5
 ### INTEL
 F90       = mpif90
-F90FLAGS  = -g -traceback -r8 -heap-arrays -I${HDF5_DIR}/include
+F90FLAGS  = -g -traceback -r8 -heap-arrays -I$(HDF5_DIR)/include
 F90FLAGS += -assume realloc_lhs
-LDFLAGS   = -L${HDF5_DIR}/lib
+LDFLAGS   = -L$(HDF5_DIR)/lib
 
 ifeq ($(PIERNIK_DEBUG), 1)
    F90FLAGS += -fpe0 -check all -traceback -fp-stack-check
