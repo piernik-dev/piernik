@@ -92,7 +92,7 @@ contains
 !---------------------------------------------------------------------------
    subroutine sweep(cg,dt,ddim)
 
-      use constants,        only: pdims, xdim, zdim, cs_i2_n
+      use constants,        only: pdims, xdim, zdim, cs_i2_n, ORTHO1, ORTHO2
       use fluidboundaries,  only: all_fluid_boundaries
       use fluidindex,       only: iarr_all_swp
       use grid_cont,        only: grid_container
@@ -117,8 +117,8 @@ contains
          i_cs_iso2 = -1
       endif
 
-      do i2 = cg%lhn(pdims(ddim,3), LO), cg%lhn(pdims(ddim,3), HI)
-         do i1 = cg%lhn(pdims(ddim,2), LO), cg%lhn(pdims(ddim,2), HI)
+      do i2 = cg%lhn(pdims(ddim, ORTHO2), LO), cg%lhn(pdims(ddim, ORTHO2), HI)
+         do i1 = cg%lhn(pdims(ddim, ORTHO1), LO), cg%lhn(pdims(ddim, ORTHO1), HI)
             pu => cg%w(wna%fi)%get_sweep(ddim,i1,i2)
             if (i_cs_iso2 > 0) cs2 => cg%q(i_cs_iso2)%get_sweep(ddim,i1,i2)
 

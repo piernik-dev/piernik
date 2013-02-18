@@ -40,7 +40,7 @@ contains
 !------------------------------------------------------------------------------------------
    function interpolate_mag_field(cdim, cg, i1, i2) result (b)
 
-      use constants,        only: pdims, xdim, ydim, zdim, half
+      use constants,        only: pdims, xdim, ydim, zdim, half, ORTHO1, ORTHO2
       use domain,           only: dom
       use fluidindex,       only: iarr_mag_swp, nmag
       use grid_cont,        only: grid_container
@@ -63,8 +63,8 @@ contains
       iby = iarr_mag_swp(cdim,ydim)
       ibz = iarr_mag_swp(cdim,zdim)
 
-      i1p = i1+dom%D_(pdims(cdim,ydim))
-      i2p = i2+dom%D_(pdims(cdim,zdim))
+      i1p = i1+dom%D_(pdims(cdim, ORTHO1))
+      i2p = i2+dom%D_(pdims(cdim, ORTHO2))
 
       pb => cg%w(wna%bi)%get_sweep(cdim,ibx,i1,i2)
       b(ibx,1:cg%n_(cdim)-1) = half*( pb(1:cg%n_(cdim)-1)+pb(2:cg%n_(cdim)) )
@@ -95,7 +95,7 @@ contains
 
       use cg_leaves,        only: leaves
       use cg_list,          only: cg_list_element
-      use constants,        only: pdims, LO, HI, uh_n, cs_i2_n, I_TWO, I_THREE
+      use constants,        only: pdims, LO, HI, uh_n, cs_i2_n, ORTHO1, ORTHO2
       use domain,           only: dom
       use fluidboundaries,  only: all_fluid_boundaries
       use fluidindex,       only: flind, iarr_all_swp, nmag
@@ -155,8 +155,8 @@ contains
             endif
 
             cs2 => null()
-            do i2 = cg%ijkse(pdims(cdim, I_THREE),LO), cg%ijkse(pdims(cdim, I_THREE),HI)! I_THREE means here: 2nd orthogonal direction
-               do i1 = cg%ijkse(pdims(cdim, I_TWO),LO), cg%ijkse(pdims(cdim, I_TWO),HI) ! I_TWO means here: 1st orthogonal direction
+            do i2 = cg%ijkse(pdims(cdim, ORTHO2),LO), cg%ijkse(pdims(cdim, ORTHO2),HI)
+               do i1 = cg%ijkse(pdims(cdim, ORTHO1),LO), cg%ijkse(pdims(cdim, ORTHO1),HI)
 
 #ifdef MAGNETIC
                   if (full_dim) then

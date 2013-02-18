@@ -86,7 +86,12 @@ module constants
    !>
    !! array of all positive permutations of xyzdim
    !<
-   integer(kind=4), dimension(ndims, ndims) :: pdims = &
+   enum, bind(C)
+      enumerator :: NORMAL = 1    ! Normal direction
+      enumerator :: ORTHO1        ! First othogonal to the NORMAL (x -> y -> z -> x cycle)
+      enumerator :: ORTHO2        ! Second othogonal to the NORMAL
+   end enum
+   integer(kind=4), dimension(xdim:zdim, NORMAL:ORTHO2) :: pdims = &
       reshape([xdim, ydim, zdim, ydim, zdim, xdim, zdim, xdim, ydim], [ndims, ndims])
 
    enum, bind(C)
