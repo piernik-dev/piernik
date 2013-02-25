@@ -41,7 +41,7 @@ module domain
 
    private
    public :: cleanup_domain, init_domain, translate_ints_to_bnds, domain_container, dom, is_uneven, is_mpi_noncart, is_refined, is_multicg, &
-        &    psize, AMR_bsize, minsize, allow_noncart, allow_uneven, dd_unif_quality, dd_rect_quality, reorder! temporary export
+        &    psize, AMR_bsize, minsize, allow_noncart, allow_uneven, dd_unif_quality, dd_rect_quality! temporary export
 
 ! AMR: There will be at least one domain container for the base grid.
 !      It will be possible to host one or more refined domains on the base container and on the refined containers.
@@ -103,13 +103,12 @@ module domain
    integer(kind=4), dimension(ndims) :: minsize   !< minimum size of cg, default is dom$nb
    !! \todo Implement maximum size of a cg (in cells) for use with GPGPU kernels. The minimum size id nb**dom%eff_dim
 
-   logical :: reorder                 !< allows processes reordered for efficiency (a parameter of MPI_Cart_create and MPI_graph_create)
    logical :: allow_uneven            !< allows different values of n_b(:) on different processes
    logical :: allow_noncart           !< allows more than one neighbour on a boundary
    real    :: dd_unif_quality         !< uniform domain decomposition may be rejected it its quality is below this threshold (e.g. very elongated local domains are found)
    real    :: dd_rect_quality         !< rectilinear domain decomposition may be rejected it its quality is below this threshold (not used yet)
 
-   namelist /MPI_BLOCKS/ psize, AMR_bsize, minsize, reorder, allow_uneven, allow_noncart, dd_unif_quality, dd_rect_quality
+   namelist /MPI_BLOCKS/ psize, AMR_bsize, minsize, allow_uneven, allow_noncart, dd_unif_quality, dd_rect_quality
 
    integer(kind=4), dimension(ndims) :: n_d               !< number of %grid cells in physical domain without boundary cells (where  == 1 then that dimension is reduced to a point with no boundary cells)
    integer(kind=4), protected        :: nb                !< number of boundary cells surrounding the physical domain, same for all directions
@@ -167,7 +166,6 @@ contains
 !!   <tr><td>psize(3)       </td><td>1      </td><td>integer</td><td>\copydoc domain::psize          </td></tr>
 !!   <tr><td>AMR_bsize(3)   </td><td>0      </td><td>integer</td><td>\copydoc domain::AMR_bsize      </td></tr>
 !!   <tr><td>minsize(3)     </td><td>domain::nb </td><td>integer</td><td>\copydoc domain::minsize        </td></tr>
-!!   <tr><td>reorder        </td><td>.false.</td><td>logical</td><td>\copydoc domain::reorder        </td></tr>
 !!   <tr><td>allow_uneven   </td><td>.false.</td><td>logical</td><td>\copydoc domain::allow_uneven   </td></tr>
 !!   <tr><td>allow_noncart  </td><td>.false.</td><td>logical</td><td>\copydoc domain::allow_noncart  </td></tr>
 !!   <tr><td>dd_unif_quality</td><td>0.9    </td><td>real   </td><td>\copydoc domain::dd_unif_quality</td></tr>
@@ -199,7 +197,6 @@ contains
       zmin     = 0.; zmax = 1.
       geometry = "cartesian"
 
-      reorder       = .false.     !< \todo test it!
       allow_uneven  = .true.
       allow_noncart = .false.     !< experimental implementation
 
@@ -242,9 +239,8 @@ contains
          rbuff(7) = dd_unif_quality
          rbuff(8) = dd_rect_quality
 
-         lbuff(1) = reorder
-         lbuff(2) = allow_uneven
-         lbuff(3) = allow_noncart
+         lbuff(1) = allow_uneven
+         lbuff(2) = allow_noncart
 
       endif
 
@@ -255,9 +251,8 @@ contains
 
       if (slave) then
 
-         reorder       = lbuff(1)
-         allow_uneven  = lbuff(2)
-         allow_noncart = lbuff(3)
+         allow_uneven  = lbuff(1)
+         allow_noncart = lbuff(2)
 
          xmin            = rbuff(1)
          xmax            = rbuff(2)
