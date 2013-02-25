@@ -40,7 +40,7 @@ module cg_level_base
 
    !! \brief The pointer of the base level and a method to initialize it
    !> \todo Domainshrinking, expanding and crawling should also be implemented here
-   type, extends(cg_level_connected_T) :: cg_level_base_T
+   type :: cg_level_base_T
       type(cg_level_connected_T), pointer :: level            !< The base level
    contains
       procedure :: set                                        !< initialize the base level
