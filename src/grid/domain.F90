@@ -78,6 +78,7 @@ module domain
 
       logical, dimension(ndims) :: has_dir      !< .true. for existing directions
       integer                   :: eff_dim      !< effective dimensionality of the simulation
+      integer(kind=8), dimension(ndims) :: off  !< offset of the base level
 
     contains
 
@@ -118,17 +119,16 @@ module domain
    character(len=cbuff_len)          :: bnd_yr            !< type of boundary conditions for the right y-boundary
    character(len=cbuff_len)          :: bnd_zl            !< type of boundary conditions for the left  z-boundary
    character(len=cbuff_len)          :: bnd_zr            !< type of boundary conditions for the right z-boundary
-   character(len=cbuff_len), dimension(HI*ndims) :: bnds  !< Six strings, describing boundary conditions
-   character(len=cbuff_len)          :: geometry          !< define system of coordinates: "cartesian" or "cylindrical"
-   real, dimension(ndims, LO:HI)     :: edges
    real                              :: xmin              !< physical domain left x-boundary position
    real                              :: xmax              !< physical domain right x-boundary position
    real                              :: ymin              !< physical domain left y-boundary position
    real                              :: ymax              !< physical domain right y-boundary position
    real                              :: zmin              !< physical domain left z-boundary position
    real                              :: zmax              !< physical domain right z-boundary position
+   character(len=cbuff_len)          :: geometry          !< define system of coordinates: "cartesian" or "cylindrical"
+   integer(kind=8), dimension(ndims) :: dom_off           !< offset of the base level
 
-   namelist /BASE_DOMAIN/ n_d, nb, bnd_xl, bnd_xr, bnd_yl, bnd_yr, bnd_zl, bnd_zr, xmin, xmax, ymin, ymax, zmin, zmax, geometry
+   namelist /BASE_DOMAIN/ n_d, nb, bnd_xl, bnd_xr, bnd_yl, bnd_yr, bnd_zl, bnd_zr, xmin, xmax, ymin, ymax, zmin, zmax, geometry, dom_off
    !namelist /BASE_DOMAIN/ dom, geometry, nb
 
 contains
@@ -157,6 +157,7 @@ contains
 !!   <tr><td>zmin    </td><td>0.         </td><td>real                                      </td><td>\copydoc domain::zmin    </td></tr>
 !!   <tr><td>zmax    </td><td>1.         </td><td>real                                      </td><td>\copydoc domain::zmax    </td></tr>
 !!   <tr><td>geometry</td><td>"cartesian"</td><td>character(len=cbuff_len)                  </td><td>\copydoc domain::geometry</td></tr>
+!!   <tr><td>dom_off </td><td>0, 0, 0    </td><td>integer                                   </td><td>\copydoc domain::dom_off </td></tr>
 !! </table>
 !! \n \n
 !! @b MPI_BLOCKS
@@ -175,12 +176,15 @@ contains
 !<
    subroutine init_domain
 
-      use constants,  only: xdim, zdim, LO, HI, PIERNIK_INIT_MPI, I_ONE, I_ZERO, INVALID, big_float
+      use constants,  only: xdim, zdim, ndims, LO, HI, PIERNIK_INIT_MPI, I_ONE, I_ZERO, INVALID, big_float
       use dataio_pub, only: die, warn, code_progress
       use dataio_pub, only: nh  ! QA_WARN required for diff_nml
       use mpisetup,   only: cbuff, ibuff, lbuff, rbuff, master, slave, piernik_MPI_Bcast, have_mpi
 
       implicit none
+
+      character(len=cbuff_len), dimension(HI*ndims) :: bnds  !< Six strings, describing boundary conditions
+      real, dimension(ndims, LO:HI)     :: edges
 
       if (code_progress < PIERNIK_INIT_MPI) call die("[domain:init_domain] MPI not initialized.")
 
@@ -189,6 +193,7 @@ contains
       psize(:)     = I_ONE
       AMR_bsize(:) = I_ZERO
       minsize(:)   = INVALID
+      dom_off(:)   = I_ZERO
 
       n_d(:)   = I_ONE
       nb       = 4
@@ -228,7 +233,8 @@ contains
          ibuff(  zdim+xdim:2*zdim) = n_d(:)
          ibuff(2*zdim+xdim:3*zdim) = AMR_bsize(:)
          ibuff(3*zdim+xdim:4*zdim) = minsize(:)
-         ibuff(4*zdim+1)           = nb
+         ibuff(4*zdim+xdim:5*zdim) = int(dom_off(:), kind=4)
+         ibuff(5*zdim+1)           = nb
 
          rbuff(1) = xmin
          rbuff(2) = xmax
@@ -275,14 +281,15 @@ contains
          n_d(:)       = int(ibuff(  zdim+xdim:2*zdim), kind=4)
          AMR_bsize(:) = int(ibuff(2*zdim+xdim:3*zdim), kind=4)
          minsize(:)   = int(ibuff(3*zdim+xdim:4*zdim), kind=4)
-         nb           = int(ibuff(4*zdim+1),           kind=4)
+         dom_off(:)   = int(ibuff(4*zdim+xdim:5*zdim), kind=4)
+         nb           = int(ibuff(5*zdim+1),           kind=4)
 
       endif
 
       bnds = [bnd_xl, bnd_xr, bnd_yl, bnd_yr, bnd_zl, bnd_zr]
       edges = reshape( [xmin, ymin, zmin, xmax, ymax, zmax], shape=[ndims,HI-LO+I_ONE] )
 
-      call dom%init(nb, n_d, bnds, edges, geometry)
+      call dom%init(nb, n_d, bnds, edges, geometry, dom_off)
 
       where (dom%has_dir(:))
          minsize(:) = max(minsize(:), dom%nb)
@@ -426,7 +433,7 @@ contains
 
 !> \brief Initialize all variables of domain_container type
 
-   subroutine init(this, nb, n_d, bnds, edges, geometry)
+   subroutine init(this, nb, n_d, bnds, edges, geometry, off)
 
       use constants,  only: ndims, LO, HI, big_float, dpi, xdim, ydim, zdim, GEO_XYZ, GEO_RPZ, GEO_INVALID, BND_PER, BND_REF, BND_SHE, I_ONE, I_TWO
       use dataio_pub, only: die, warn, msg
@@ -439,6 +446,7 @@ contains
       character(len=*), dimension(HI*ndims),     intent(in)    :: bnds     !< Six strings, describing boundary conditions
       real,             dimension(ndims, LO:HI), intent(inout) :: edges    !< physical domain boundaries position
       character(len=*),                          intent(in)    :: geometry !< define system of coordinates: "cartesian" or "cylindrical"
+      integer(kind=8), dimension(ndims),         intent(in)    :: off      !< offset of the base level
 
       real    :: xmno, ymno, ymxo
       integer :: d
@@ -449,8 +457,10 @@ contains
       this%eff_dim = count(this%has_dir(:))
       where (this%has_dir(:))
          this%D_(:) = 1
+         this%off = off
       elsewhere
          this%D_(:) = 0
+         this%off = 0
       endwhere
 
       ! shortcuts
@@ -525,8 +535,6 @@ contains
       this%edge(:,:) = edges(:,:)
 
       ! finish up with the rest of domain_container members
-
-      this%has_dir(:) = this%n_d(:) > 1  ! redundant
 
       this%periodic(:) = .false.
       do d = xdim, zdim

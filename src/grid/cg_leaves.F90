@@ -85,10 +85,10 @@ contains
 
    subroutine update(this, str)
 
-      use cg_level_base,      only: base
+      use cg_level_finest,    only: finest
       use cg_level_connected, only: cg_level_connected_T
       use cg_list,            only: cg_list_element
-      use constants,          only: pSUM
+      use constants,          only: pSUM, base_level_id
       use dataio_pub,         only: msg, printinfo
       use list_of_cg_lists,   only: all_lists
       use mpisetup,           only: master, piernik_MPI_Allreduce
@@ -109,8 +109,12 @@ contains
 
       msg = "[cg_leaves:update] Leaves on levels: "
       if (present(str)) msg(len_trim(msg)+1:) = str
-      curl => base%level
-      this%coarsest_leaves => curl !> \todo Start from first not fully covered level
+      curl => finest%level
+      do while (associated(curl))
+         if (curl%level_id == base_level_id) this%coarsest_leaves => curl !> \todo Find first not fully covered level
+         curl => curl%coarser
+      enddo
+      curl => this%coarsest_leaves
       do while (associated(curl))
          cgl => curl%first
          do while (associated(cgl))

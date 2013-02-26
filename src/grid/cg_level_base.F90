@@ -54,7 +54,7 @@ contains
 
    subroutine set(this, n_d)
 
-      use constants,        only: base_level_id, ndims, LONG
+      use constants,        only: base_level_id, ndims
       use dataio_pub,       only: die
       use domain,           only: dom
       use list_of_cg_lists, only: all_lists
@@ -67,7 +67,7 @@ contains
       ! Multigrid and refinement work properly with non-0, even offset.
       ! Offset value equal to k*2**n, where k is odd will allow at most n levels of coarsening.
       ! Odd offsets or domain sizes prevent creation of coarse levels.
-      integer(kind=8), dimension(ndims), parameter :: base_level_offset = 0_LONG !< Initial offset of the base domain.
+      !> \todo Find the limit that comes from multigrid: maximum refinement should not depend on base level offset
       ! Offset of the base domain may change after the domain gets expanded, shrinked or resized.
 
       if (any(n_d(:) < 1)) call die("[cg_level_connected:set] non-positive base grid sizes")
@@ -79,7 +79,7 @@ contains
 
       where (dom%has_dir(:))
          this%level%n_d(:) = n_d(:)
-         this%level%off(:) = base_level_offset
+         this%level%off(:) = dom%off(:)
       elsewhere
          this%level%n_d(:) = 1
          this%level%off(:) = 0

@@ -137,6 +137,7 @@ contains
       use cg_list,    only: cg_list_element
       use constants,  only: ION, DST, xdim, ydim, zdim, LO, HI
       use dataio_pub, only: msg, die, printinfo
+      use domain,     only: dom
       use fluidindex, only: flind
       use fluidtypes, only: component_fluid
       use grid_cont,  only: grid_container
@@ -144,10 +145,12 @@ contains
 
       implicit none
 
-      integer                         :: i, j, k, p
+      integer, parameter              :: isub = 4
+      integer                         :: i, j, k, p, ii, jj, kk
       class(component_fluid), pointer :: fl
       type(cg_list_element),  pointer :: cgl
       type(grid_container),   pointer :: cg
+      real :: x, y, z
 
       if (flind%energ < flind%fluids) call die("[initproblem:init_prob] Not all fluids are adiabatic!")
 
@@ -186,7 +189,21 @@ contains
                do j = cg%lhn(ydim,LO), cg%lhn(ydim,HI)
                   do i = cg%lhn(xdim,LO), cg%lhn(xdim,HI)
                      r = sqrt( (cg%x(i)-x0)**2 + (cg%y(j)-y0)**2 + (cg%z(k)-z0)**2 )
-                     if ( r**2 < r0**2) cg%u(fl%ien,i,j,k)   = cg%u(fl%ien,i,j,k) + Eexpl
+                     if ( r**2 < r0**2+2*sum(cg%dl**2, mask=dom%has_dir)) then
+                        do ii = 1, isub
+                           x = cg%x(i)-x0
+                           if (dom%has_dir(xdim)) x = x + cg%dx*(2*ii -isub - 1)/real(2*isub)
+                           do jj = 1, isub
+                              y = cg%y(j)-y0
+                              if (dom%has_dir(ydim)) y = y + cg%dy*(2*jj -isub - 1)/real(2*isub)
+                              do kk = 1, isub
+                                 z = cg%z(k)-z0
+                                 if (dom%has_dir(zdim)) z = z + cg%dx*(2*kk -isub - 1)/real(2*isub)
+                                 if (x*x+y*y+z*z < r0**2) cg%u(fl%ien,i,j,k)   = cg%u(fl%ien,i,j,k) + Eexpl/isub**dom%eff_dim
+                              enddo
+                           enddo
+                        enddo
+                     endif
                   enddo
                enddo
             enddo

@@ -167,10 +167,10 @@ contains
             if (.not.skip_sweep(s)) call make_sweep(s, forward)
          enddo
       endif
-      if (associated(problem_customize_solution)) call problem_customize_solution(forward)
 #ifdef GRAV
       if (associated(psolver)) call pset%evolve(psolver, t-dt, dt)
 #endif /* GRAV */
+      if (associated(problem_customize_solution)) call problem_customize_solution(forward)
 
    end subroutine make_3sweeps
 
