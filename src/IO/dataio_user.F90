@@ -37,23 +37,6 @@ module dataio_user
 
 #ifdef HDF5
    interface
-      subroutine plt_hdf5(var, ij, xn, tab, ierrh, cg)
-
-         use grid_cont,  only: grid_container
-
-         implicit none
-
-         character(len=*),              intent(in)    :: var   !< quantity to be plotted
-         integer,                       intent(in)    :: ij    !< direction perpendicular to the plane of plot, xdim means "yz" plane and so on
-         integer(kind=8),               intent(in)    :: xn    !< no. of cell at which we are slicing the local block
-         integer,                       intent(inout) :: ierrh !< error handling
-         real, dimension(:,:),          intent(inout) :: tab   !< array containing given quantity
-         type(grid_container), pointer, intent(in)    :: cg    !< current grid container
-
-      end subroutine plt_hdf5
-   end interface
-
-   interface
       subroutine vars_hdf5(var, tab, ierrh, cg)
 
          use grid_cont,  only: grid_container
@@ -128,7 +111,6 @@ module dataio_user
    procedure(add_attr),  pointer :: user_attrs_rd         => Null()
    procedure(add_attr),  pointer :: user_attrs_wr         => Null()
    procedure(plt_attr),  pointer :: user_plt_attrs        => Null()
-   procedure(plt_hdf5),  pointer :: user_plt_hdf5         => Null()
    procedure(vars_hdf5), pointer :: user_vars_hdf5        => Null()
 #endif /* HDF5 */
    procedure(add_data),  pointer :: user_attrs_pre        => Null()

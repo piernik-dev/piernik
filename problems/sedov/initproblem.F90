@@ -50,13 +50,12 @@ contains
 
       use dataio_user, only: user_tsl
 #ifdef HDF5
-      use dataio_user, only: user_plt_hdf5, user_vars_hdf5
+      use dataio_user, only: user_vars_hdf5
 #endif /* HDF5 */
 
       implicit none
 
 #ifdef HDF5
-      user_plt_hdf5  => sedov_plt_hdf5
       user_vars_hdf5 => sedov_vars_hdf5
 #endif /* HDF5 */
       user_tsl       => sedov_tsl
@@ -241,33 +240,6 @@ contains
       enddo
 
    end subroutine init_prob
-!-----------------------------------------------------------------------------
-   subroutine sedov_plt_hdf5(var, ij, xn, tab, ierrh, cg)
-
-      use constants, only: xdim, ydim, zdim
-      use grid_cont, only: grid_container
-      use mpisetup,  only: proc
-
-      implicit none
-
-      character(len=*),              intent(in)    :: var   !< quantity to be plotted
-      integer,                       intent(in)    :: ij    !< plane of plot
-      integer(kind=8),               intent(in)    :: xn    !< no. of cell at which we are slicing the local block
-      integer,                       intent(inout) :: ierrh !< error handling
-      real, dimension(:,:),          intent(inout) :: tab   !< array  containing given quantity
-      type(grid_container), pointer, intent(in)    :: cg
-
-      ierrh = 0
-      select case (var)
-         case ("fooo")   ! Processor number, check if fancy domain division and user_vars_hdf5 works
-            if (ij==xdim) tab(:,:) = proc + 1e-10*cg%u(2, xn, cg%js:cg%je, cg%ks:cg%ke)
-            if (ij==ydim) tab(:,:) = proc + 1e-10*cg%u(2, cg%is:cg%ie, xn, cg%ks:cg%ke)
-            if (ij==zdim) tab(:,:) = proc + 1e-10*cg%u(2, cg%is:cg%ie, cg%js:cg%je, xn)
-         case default
-            ierrh = -1
-      end select
-
-   end subroutine sedov_plt_hdf5
 !-----------------------------------------------------------------------------
    subroutine sedov_vars_hdf5(var, tab, ierrh, cg)
 
