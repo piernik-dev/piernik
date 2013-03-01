@@ -64,6 +64,12 @@ contains
 
    end subroutine init_data
 
+!>
+!! \brief Set up unit labels and cgs coefficients for standard fields.
+!!
+!! \todo Provide user hook for defining unit labels and cgs coefficients.
+!<
+
    function datafields_descr(var) result(f)
 
       use gdf,   only: gdf_field_type
