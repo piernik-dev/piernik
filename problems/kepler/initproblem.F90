@@ -212,6 +212,8 @@ contains
 !         problem_grace_passed => add_sine
       endif
 
+      call register_user_var
+
    end subroutine read_problem_par
 !-----------------------------------------------------------------------------
    subroutine add_sine
@@ -345,8 +347,6 @@ contains
 #endif /* FGSL */
 
 !   Secondary parameters
-      call register_user_var
-
       cgl => leaves%first
       do while (associated(cgl))
          cg => cgl%cg
