@@ -48,7 +48,6 @@
     vars(6) = 'magx'
     vars(7) = 'magy'
     vars(8) = 'magz'
-    vars(9) = 'fooo'
  /
 
  $FLUID_IONIZED
