@@ -87,7 +87,7 @@ contains
 
       class(fluxpoint), intent(inout) :: this
 
-      if (allocated(this%uflx)) call die("[rtvd:fpinit] uflx already allocated")
+      if (allocated(this%uflx)) call die("[fluxtypes:fpinit] uflx already allocated")
       allocate(this%uflx(flind%all))
 
    end subroutine fpinit

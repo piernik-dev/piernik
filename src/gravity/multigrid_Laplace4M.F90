@@ -103,7 +103,7 @@ contains
       integer(kind=4), dimension(ndims,ndims,LO:HI) :: idm
 
       if (firstcall) then
-         if (master) call warn("[multigrid_gravity:residual_Mehrstellen] residual order 4 is experimental.")
+         if (master) call warn("[multigrid_Laplace4M:residual_Mehrstellen] residual order 4 is experimental.")
          firstcall = .false.
       endif
 
@@ -197,7 +197,7 @@ contains
          do while (associated(cgl))
             cg => cgl%cg
 
-            if (dom%geometry_type == GEO_RPZ) call die("[multigrid_gravity:approximate_solution_rbgs4M] Relaxation for Mehrstellen not implemented for noncartesian grid")
+            if (dom%geometry_type == GEO_RPZ) call die("[multigrid_Laplace4M:approximate_solution_rbgs4M] Relaxation for Mehrstellen not implemented for noncartesian grid")
             Lxy = 0. ; if (dom%has_dir(xdim) .and. dom%has_dir(ydim)) Lxy = (cg%idx2 + cg%idy2) / 12.
             Lxz = 0. ; if (dom%has_dir(xdim) .and. dom%has_dir(zdim)) Lxz = (cg%idx2 + cg%idz2) / 12.
             Lyz = 0. ; if (dom%has_dir(ydim) .and. dom%has_dir(zdim)) Lyz = (cg%idy2 + cg%idz2) / 12.

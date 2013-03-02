@@ -91,10 +91,10 @@ contains
             if (associated(at_user_dims_settings)) then
                call at_user_dims_settings(lleft, lright, chnk, loffs)
             else
-               call die("[restart_hdf5:set_dims_to_write] Routine at_user_dims_settings not associated")
+               call die("[restart_hdf5_v1:set_dims_to_write] Routine at_user_dims_settings not associated")
             endif
          case default
-            call die("[restart_hdf5:set_dims_for_restart] Non-recognized area_type.")
+            call die("[restart_hdf5_v1:set_dims_for_restart] Non-recognized area_type.")
       end select
 
    end subroutine set_dims_for_restart
@@ -128,10 +128,10 @@ contains
             if (associated(at_user_area_settings)) then
                call at_user_area_settings(area)
             else
-               call die("[restart_hdf5:set_area_for_restart] Routine at_user_area_settings not associated")
+               call die("[restart_hdf5_v1:set_area_for_restart] Routine at_user_area_settings not associated")
             endif
          case default
-            call die("[restart_hdf5:set_area_for_restart] Non-recognized area_type.")
+            call die("[restart_hdf5_v1:set_area_for_restart] Non-recognized area_type.")
             area(:) = 0 ! suppress compiler warnings
       end select
 
@@ -239,13 +239,13 @@ contains
       character(len=dsetnamelen)         :: dname
 
       if (tgt3d) then
-         if (ind < lbound(qna%lst(:), dim=1) .or. ind > ubound(qna%lst(:), dim=1)) call die("[restart_hdf5:write_arr_to_restart] Invalid 3D array")
+         if (ind < lbound(qna%lst(:), dim=1) .or. ind > ubound(qna%lst(:), dim=1)) call die("[restart_hdf5_v1:write_arr_to_restart] Invalid 3D array")
          dim1 = 1
          rank = ndims
          dname = qna%lst(ind)%name
          area_type = qna%lst(ind)%restart_mode
       else
-         if (ind < lbound(wna%lst(:), dim=1) .or. ind > ubound(wna%lst(:), dim=1)) call die("[restart_hdf5:write_arr_to_restart] Invalid 4D array")
+         if (ind < lbound(wna%lst(:), dim=1) .or. ind > ubound(wna%lst(:), dim=1)) call die("[restart_hdf5_v1:write_arr_to_restart] Invalid 4D array")
          dim1 = wna%lst(ind)%dim4
          rank = rank4
          dname = wna%lst(ind)%name
@@ -308,14 +308,14 @@ contains
             if (associated(pa3d)) then
                call h5dwrite_f(dset_id, H5T_NATIVE_DOUBLE, pa3d, dimsf(ir:), error, file_space_id = filespace, mem_space_id = memspace, xfer_prp = plist_id)
             else
-               call die("[restart_hdf5:write_arr_to_restart] unassociated 3D array pointer")
+               call die("[restart_hdf5_v1:write_arr_to_restart] unassociated 3D array pointer")
             endif
          else
             pa4d => cg%w(ind)%span(lleft, lright)
             if (associated(pa4d)) then
                call h5dwrite_f(dset_id, H5T_NATIVE_DOUBLE, pa4d, dimsf(:), error, file_space_id = filespace, mem_space_id = memspace, xfer_prp = plist_id)
             else
-               call die("[restart_hdf5:write_arr_to_restart] unassociated 4D array pointer")
+               call die("[restart_hdf5_v1:write_arr_to_restart] unassociated 4D array pointer")
             endif
          endif
 
@@ -380,13 +380,13 @@ contains
 
       !> \deprecated Duplicated code
       if (tgt3d) then
-         if (ind < lbound(qna%lst(:), dim=1) .or. ind > ubound(qna%lst(:), dim=1)) call die("[restart_hdf5:read_arr_from_restart] Invalid 3D array")
+         if (ind < lbound(qna%lst(:), dim=1) .or. ind > ubound(qna%lst(:), dim=1)) call die("[restart_hdf5_v1:read_arr_from_restart] Invalid 3D array")
          dim1 = 1
          rank = ndims
          cgname = qna%lst(ind)%name
          area_type = qna%lst(ind)%restart_mode
       else
-         if (ind < lbound(wna%lst(:), dim=1) .or. ind > ubound(wna%lst(:), dim=1)) call die("[restart_hdf5:read_arr_from_restart] Invalid 4D array")
+         if (ind < lbound(wna%lst(:), dim=1) .or. ind > ubound(wna%lst(:), dim=1)) call die("[restart_hdf5_v1:read_arr_from_restart] Invalid 4D array")
          dim1 = wna%lst(ind)%dim4
          rank = rank4
          cgname = wna%lst(ind)%name
@@ -405,14 +405,14 @@ contains
       if (present(alt_name)) dname = alt_name
       call h5dopen_f(file_id, dname, dset_id, error)
       if (error /= 0) then
-         write(msg, '(3a)') "[restart_hdf5:read_arr_from_restart] Opening dataset '", dname,"' failed."
+         write(msg, '(3a)') "[restart_hdf5_v1:read_arr_from_restart] Opening dataset '", dname,"' failed."
          call die(msg)
       endif
 
       call h5dget_space_f(dset_id, filespace, error)
       call h5sget_simple_extent_ndims_f (filespace, rankf, error)
       if (rank /= rankf) then
-         write(msg,'(3a,2(i2,a))')"[restart_hdf5:read_arr_from_restart] Rank mismatch in array '", dname, "' (", rank, " /= ", rankf, ")"
+         write(msg,'(3a,2(i2,a))')"[restart_hdf5_v1:read_arr_from_restart] Rank mismatch in array '", dname, "' (", rank, " /= ", rankf, ")"
          call die(msg)
       endif
 
@@ -455,7 +455,7 @@ contains
          endif
 
          if (error /= 0) then
-            write(msg, '(3a)') "[restart_hdf5:read_arr_from_restart] Reading dataset '", dname,"' failed."
+            write(msg, '(3a)') "[restart_hdf5_v1:read_arr_from_restart] Reading dataset '", dname,"' failed."
             call die(msg)
          endif
 
@@ -525,7 +525,7 @@ contains
 
       inquire(file = trim(filename), exist = file_exist)
       if (.not. file_exist) then
-         write(msg,'(3a)') '[restart_hdf5:read_restart_hdf5_v1]: Restart file: ', trim(filename),' does not exist'
+         write(msg,'(3a)') '[restart_hdf5_v1:read_restart_hdf5_v1]: Restart file: ', trim(filename),' does not exist'
          call die(msg)
       endif
 
@@ -534,43 +534,43 @@ contains
          call h5fopen_f(trim(filename), H5F_ACC_RDONLY_F, file_id, error)
 
          call h5ltget_attribute_double_f(file_id,"/","piernik", rbuf, error)
-         if (error /= 0) call die("[restart_hdf5:read_restart_hdf5_v1] Cannot read 'piernik' attribute from the restart file. The file may be either damaged or incompatible")
+         if (error /= 0) call die("[restart_hdf5_v1:read_restart_hdf5_v1] Cannot read 'piernik' attribute from the restart file. The file may be either damaged or incompatible")
          if (rbuf(1) > piernik_hdf5_version) then
-            write(msg,'(2(a,f5.2))')"[restart_hdf5:read_restart_hdf5_v1] Cannot read future versions of the restart file: ", rbuf(1)," > ", piernik_hdf5_version
+            write(msg,'(2(a,f5.2))')"[restart_hdf5_v1:read_restart_hdf5_v1] Cannot read future versions of the restart file: ", rbuf(1)," > ", piernik_hdf5_version
             call die(msg)
          else if (int(rbuf(1)) < int(piernik_hdf5_version)) then
-            write(msg,'(2(a,f5.2))')"[restart_hdf5:read_restart_hdf5_v1] The restart file is too ancient. It is unlikely that it could work correctly: ", rbuf(1)," << ", piernik_hdf5_version
+            write(msg,'(2(a,f5.2))')"[restart_hdf5_v1:read_restart_hdf5_v1] The restart file is too ancient. It is unlikely that it could work correctly: ", rbuf(1)," << ", piernik_hdf5_version
             call die(msg)
          else if (rbuf(1) < piernik_hdf5_version) then
-            write(msg,'(2(a,f5.2))')"[restart_hdf5:read_restart_hdf5_v1] Old versions of the restart file may not always work fully correctly: ", rbuf(1)," < ", piernik_hdf5_version
+            write(msg,'(2(a,f5.2))')"[restart_hdf5_v1:read_restart_hdf5_v1] Old versions of the restart file may not always work fully correctly: ", rbuf(1)," < ", piernik_hdf5_version
             call warn(msg)
          endif
 
          call h5ltget_attribute_int_f(file_id,"/","nxd", ibuf, error)
-         if (ibuf(1) /= dom%n_d(xdim) .or. error /= 0) call die("[restart_hdf5:read_restart_hdf5_v1] nxd does not match")
+         if (ibuf(1) /= dom%n_d(xdim) .or. error /= 0) call die("[restart_hdf5_v1:read_restart_hdf5_v1] nxd does not match")
          if (dom%has_dir(xdim)) then
             call h5ltget_attribute_double_f(file_id,"/","xmin", rbuf, error)
-            if (rbuf(1) /= dom%edge(xdim, LO) .or. error /= 0) call die("[restart_hdf5:read_restart_hdf5_v1] xmin does not match")
+            if (rbuf(1) /= dom%edge(xdim, LO) .or. error /= 0) call die("[restart_hdf5_v1:read_restart_hdf5_v1] xmin does not match")
             call h5ltget_attribute_double_f(file_id,"/","xmax", rbuf, error)
-            if (rbuf(1) /= dom%edge(xdim, HI) .or. error /= 0) call die("[restart_hdf5:read_restart_hdf5_v1] xmax does not match")
+            if (rbuf(1) /= dom%edge(xdim, HI) .or. error /= 0) call die("[restart_hdf5_v1:read_restart_hdf5_v1] xmax does not match")
          endif
 
          call h5ltget_attribute_int_f(file_id,"/","nyd", ibuf, error)
-         if (ibuf(1) /= dom%n_d(ydim) .or. error /= 0) call die("[restart_hdf5:read_restart_hdf5_v1] nyd does not match")
+         if (ibuf(1) /= dom%n_d(ydim) .or. error /= 0) call die("[restart_hdf5_v1:read_restart_hdf5_v1] nyd does not match")
          if (dom%has_dir(ydim)) then
             call h5ltget_attribute_double_f(file_id,"/","ymin", rbuf, error)
-            if (rbuf(1) /= dom%edge(ydim, LO) .or. error /= 0) call die("[restart_hdf5:read_restart_hdf5_v1] ymin does not match")
+            if (rbuf(1) /= dom%edge(ydim, LO) .or. error /= 0) call die("[restart_hdf5_v1:read_restart_hdf5_v1] ymin does not match")
             call h5ltget_attribute_double_f(file_id,"/","ymax", rbuf, error)
-            if (rbuf(1) /= dom%edge(ydim, HI) .or. error /= 0) call die("[restart_hdf5:read_restart_hdf5_v1] ymax does not match")
+            if (rbuf(1) /= dom%edge(ydim, HI) .or. error /= 0) call die("[restart_hdf5_v1:read_restart_hdf5_v1] ymax does not match")
          endif
 
          call h5ltget_attribute_int_f(file_id,"/","nzd", ibuf, error)
-         if (ibuf(1) /= dom%n_d(zdim) .or. error /= 0) call die("[restart_hdf5:read_restart_hdf5_v1] nzd does not match")
+         if (ibuf(1) /= dom%n_d(zdim) .or. error /= 0) call die("[restart_hdf5_v1:read_restart_hdf5_v1] nzd does not match")
          if (dom%has_dir(zdim)) then
             call h5ltget_attribute_double_f(file_id,"/","zmin", rbuf, error)
-            if (rbuf(1) /= dom%edge(zdim, LO) .or. error /= 0) call die("[restart_hdf5:read_restart_hdf5_v1] zmin does not match")
+            if (rbuf(1) /= dom%edge(zdim, LO) .or. error /= 0) call die("[restart_hdf5_v1:read_restart_hdf5_v1] zmin does not match")
             call h5ltget_attribute_double_f(file_id,"/","zmax", rbuf, error)
-            if (rbuf(1) /= dom%edge(zdim, HI) .or. error /= 0) call die("[restart_hdf5:read_restart_hdf5_v1] zmax does not match")
+            if (rbuf(1) /= dom%edge(zdim, HI) .or. error /= 0) call die("[restart_hdf5_v1:read_restart_hdf5_v1] zmax does not match")
          endif
 
          call h5fclose_f(file_id, error)

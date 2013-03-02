@@ -70,8 +70,8 @@ contains
       !> \todo Find the limit that comes from multigrid: maximum refinement should not depend on base level offset
       ! Offset of the base domain may change after the domain gets expanded, shrinked or resized.
 
-      if (any(n_d(:) < 1)) call die("[cg_level_connected:set] non-positive base grid sizes")
-      if (any(dom%has_dir(:) .neqv. (n_d(:) > 1))) call die("[cg_level_connected:set] base grid size incompatible with has_dir masks")
+      if (any(n_d(:) < 1)) call die("[cg_level_base:set] non-positive base grid sizes")
+      if (any(dom%has_dir(:) .neqv. (n_d(:) > 1))) call die("[cg_level_base:set] base grid size incompatible with has_dir masks")
 
       allocate(this%level)
       call this%level%init_level

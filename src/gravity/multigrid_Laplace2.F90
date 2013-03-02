@@ -154,7 +154,7 @@ contains
                enddo
                deallocate(Lx1, Ly_a, L0_a)
             case default
-               call die("[multigrid_gravity:residual2] Unsupported geometry.")
+               call die("[multigrid_Laplace2:residual2] Unsupported geometry.")
          end select
          cgl => cgl%nxt
       enddo
@@ -233,7 +233,7 @@ contains
 !!$                       cg%mg%rz * (cg%q(soln)%arr(i1  :cg%ie  :2, j,   k-1) + cg%q(soln)%arr(i1  :cg%ie  :2, j,   k+1)) - &
 !!$                       cg%mg%r  *  cg%q(src)%arr( i1  :cg%ie  :2, j,   k  )  + &
 !!$                       cg%mg%rx * (cg%q(soln)%arr(i1+1:cg%ie+1:2, j,   k  ) - cg%q(soln)%arr(i1-1:cg%ie-1:2, j,   k)) * fac(i1:cg%ie:2)
-                        call die("[multigrid_gravity:approximate_solution_rbgs2] This variant of relaxation loop is not implemented for cylindrical coordinates.")
+                        call die("[multigrid_Laplace2:approximate_solution_rbgs2] This variant of relaxation loop is not implemented for cylindrical coordinates.")
                      else
                         cg%q(soln)%arr(i1  :cg%ie  :2, j,   k) = &
                              cg%mg%rx * (cg%q(soln)%arr(i1-1:cg%ie-1:2, j,   k)   + cg%q(soln)%arr(i1+1:cg%ie+1:2, j,   k))   + &
@@ -306,7 +306,7 @@ contains
                         enddo
                      enddo
                   case default
-                     call die("[multigrid_gravity:approximate_solution_rbgs] Unsupported geometry.")
+                     call die("[multigrid_Laplace2:approximate_solution_rbgs] Unsupported geometry.")
                end select
             endif
             cgl => cgl%nxt

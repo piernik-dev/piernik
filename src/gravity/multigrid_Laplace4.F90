@@ -86,10 +86,10 @@ contains
       type(cg_list_element), pointer :: cgl
       type(grid_container),  pointer :: cg
 
-      if (dom%eff_dim<ndims) call die("[multigrid_gravity:residual4] Only 3D is implemented")
+      if (dom%eff_dim<ndims) call die("[multigrid_Laplace4:residual4] Only 3D is implemented")
 
       if (firstcall) then
-         if (master) call warn("[multigrid_gravity:residual4] residual order 4 is experimental.")
+         if (master) call warn("[multigrid_Laplace4:residual4] residual order 4 is experimental.")
          firstcall = .false.
       endif
 
