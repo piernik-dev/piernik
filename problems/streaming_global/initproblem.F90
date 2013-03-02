@@ -75,7 +75,7 @@ contains
 !-----------------------------------------------------------------------------
    subroutine problem_pointers
 
-      use dataio_user,           only: user_reg_var_restart, user_attrs_wr, user_attrs_rd
+      use dataio_user,           only: user_attrs_wr, user_attrs_rd
       use user_hooks,            only: problem_customize_solution, problem_grace_passed, problem_post_restart
       use fluidboundaries_funcs, only: user_fluidbnd
       use gravity,               only: grav_pot_3d
@@ -85,7 +85,6 @@ contains
 
       implicit none
 
-      user_reg_var_restart       => register_user_var
       user_attrs_wr => my_attrs_wr
       user_attrs_rd => my_attrs_rd
       problem_customize_solution => problem_customize_solution_kepler
