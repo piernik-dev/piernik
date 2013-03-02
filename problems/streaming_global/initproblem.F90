@@ -216,6 +216,8 @@ contains
 
       endif
 
+      call register_user_var
+
    end subroutine read_problem_par
 !-----------------------------------------------------------------------------
    subroutine si_grace_passed
@@ -374,7 +376,6 @@ contains
       integer :: xl, xr
 
 !   Secondary parameters
-      call register_user_var
 
       cgl => leaves%first
       do while (associated(cgl))
