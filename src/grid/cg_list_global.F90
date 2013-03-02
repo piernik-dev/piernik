@@ -67,6 +67,8 @@ module cg_list_global
       procedure :: register_fluids   !< Register all crucial fields, which we cannot live without
       procedure :: check_na          !< Check if all named arrays are consistently registered
       procedure :: delete_all        !< Delete the grid container from all lists
+      procedure :: mark_orphans      !< Find grid pieces that do not belong to any list except for all_cg
+      procedure :: clear_ref_flags   !< Clear refinement flags everywhere
    end type cg_list_global_T
 
    type(cg_list_global_T)                :: all_cg   !< all grid containers; \todo restore protected
@@ -332,5 +334,102 @@ contains
       enddo
 
    end subroutine check_na
+
+!> \brief Find grid pieces that do not belong to any list except for all_cg
+
+   subroutine mark_orphans(this)
+
+      use cg_list,          only: cg_list_element
+      use constants,        only: INVALID
+      use dataio_pub,       only: warn, msg
+      use list_of_cg_lists, only: all_lists
+
+      implicit none
+
+      class(cg_list_global_T), intent(in) :: this          !< object invoking type-bound procedure
+
+      type(cg_list_element), pointer :: cgl
+      integer ::i
+      integer, parameter :: VERY_INVALID = 2*INVALID
+
+      ! scan all lists except for all_cg and set their membership to a bogus value
+      do i = lbound(all_lists%entries(:), dim=1), ubound(all_lists%entries(:), dim=1)
+         cgl => all_lists%entries(i)%lp%first
+         if (all_lists%entries(i)%lp%label /= all_cg_n) then
+            do while (associated(cgl))
+               cgl%cg%membership = VERY_INVALID
+               cgl => cgl%nxt
+            enddo
+         endif
+      enddo
+
+      ! mark all cg's with INVALID. If some aren't listed on all_cg then they should have %membership set to VERY_INVALID
+      cgl => this%first
+      do while (associated(cgl))
+         if (associated(cgl%cg)) cgl%cg%membership = INVALID
+         cgl => cgl%nxt
+      enddo
+
+      ! scan all lists except for all_cg
+      do i = lbound(all_lists%entries(:), dim=1), ubound(all_lists%entries(:), dim=1)
+         if (all_lists%entries(i)%lp%label /= all_cg_n) then
+            cgl => all_lists%entries(i)%lp%first
+            do while (associated(cgl))
+               if (cgl%cg%membership == VERY_INVALID) then
+                  write(msg, '(a,i7,a,i3,a)')"[cg_list_global:mark_orphans] Grid #",cgl%cg%grid_id, " at level ",cgl%cg%level_id," is hidden."
+                  call warn(msg)
+                  cgl%cg%membership = 0
+               endif
+               if (cgl%cg%membership == INVALID) cgl%cg%membership = 0
+               cgl%cg%membership = cgl%cg%membership + 1
+               cgl => cgl%nxt
+            enddo
+         endif
+      enddo
+
+      ! Now search fon not associated grid containers
+      cgl => this%first
+      do while (associated(cgl))
+         if (associated(cgl%cg)) then
+            if (cgl%cg%membership < 1) then
+               call all_lists%forget(cgl%cg)
+            endif
+         endif
+         cgl => cgl%nxt
+      enddo
+
+      cgl => this%first
+      do while (associated(cgl))
+         if (associated(cgl%cg)) then
+            if (cgl%cg%membership < 1) then
+               write(msg, '(a,i7,a,i3,a)')"[cg_list_global:mark_orphans] Grid #",cgl%cg%grid_id, " at level ",cgl%cg%level_id," is orphaned."
+               call warn(msg)
+            endif
+         endif
+         cgl => cgl%nxt
+      enddo
+
+   end subroutine mark_orphans
+
+!> \brief Clear refinement flags everywhere
+
+   subroutine clear_ref_flags(this)
+
+      use cg_list,          only: cg_list_element
+
+      implicit none
+
+      class(cg_list_global_T), intent(in) :: this          !< object invoking type-bound procedure
+
+      type(cg_list_element), pointer :: cgl
+
+      cgl => this%first
+      do while (associated(cgl))
+         cgl%cg%refine_flags%refine   = .false.
+         cgl%cg%refine_flags%derefine = .false.
+         cgl => cgl%nxt
+      enddo
+
+   end subroutine clear_ref_flags
 
 end module cg_list_global

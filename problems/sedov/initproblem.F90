@@ -39,8 +39,10 @@ module initproblem
 
    integer(kind=4) :: n_sn
    real            :: d0, p0, bx0, by0, bz0, Eexpl, x0, y0, z0, r0, dt_sn, r, t_sn
+   real :: ref_thr !< refinement threshold
+   real :: deref_thr !< derefinement threshold
 
-   namelist /PROBLEM_CONTROL/ d0, p0, bx0, by0, bz0, Eexpl, x0, y0, z0, r0, n_sn, dt_sn
+   namelist /PROBLEM_CONTROL/ d0, p0, bx0, by0, bz0, Eexpl, x0, y0, z0, r0, n_sn, dt_sn, ref_thr, deref_thr
 
 contains
 
@@ -49,6 +51,7 @@ contains
    subroutine problem_pointers
 
       use dataio_user, only: user_tsl
+      use user_hooks,  only: problem_refine_derefine
 #ifdef HDF5
       use dataio_user, only: user_vars_hdf5
 #endif /* HDF5 */
@@ -59,6 +62,7 @@ contains
       user_vars_hdf5 => sedov_vars_hdf5
 #endif /* HDF5 */
       user_tsl       => sedov_tsl
+      problem_refine_derefine => mark_overdensity
 
    end subroutine problem_pointers
 
@@ -86,6 +90,8 @@ contains
       r0      = minval(dom%L_(:)/dom%n_d(:), mask=dom%has_dir(:))/2.
       n_sn    = 1
       dt_sn   = 0.0
+      ref_thr      = 3.    !< Refine if density is greater than this value
+      deref_thr    = 1.5    !< Derefine if density is smaller than this value
 
       if (master) then
 
@@ -102,6 +108,8 @@ contains
          rbuff(9) = z0
          rbuff(10)= r0
          rbuff(11)= dt_sn
+         rbuff(12)= ref_thr
+         rbuff(13)= deref_thr
 
          ibuff(1) = n_sn
 
@@ -123,6 +131,8 @@ contains
          z0           = rbuff(9)
          r0           = rbuff(10)
          dt_sn        = rbuff(11)
+         ref_thr      = rbuff(12)
+         deref_thr    = rbuff(13)
 
          n_sn         = ibuff(1)
 
@@ -244,7 +254,6 @@ contains
    subroutine sedov_vars_hdf5(var, tab, ierrh, cg)
 
       use grid_cont, only: grid_container
-      use mpisetup,  only: proc
 
       implicit none
 
@@ -255,8 +264,8 @@ contains
 
       ierrh = 0
       select case (trim(var))
-         case ("fooo")  ! Processor number, check if fancy domain division and user_vars_hdf5 works
-            tab(:,:,:) = proc
+         case ("gid")  ! Grid_id
+            tab(:,:,:) = cg%grid_id
          case default
             ierrh = -1
       end select
@@ -287,5 +296,42 @@ contains
       endif
 
    end subroutine sedov_tsl
-!-----------------------------------------------------------------------------
+
+!> \brief mark the wave
+
+   subroutine mark_overdensity
+
+      use cg_leaves,        only: leaves
+      use cg_list,          only: cg_list_element
+      use fluidindex,       only: iarr_all_dn, flind
+!      use named_array_list, only: wna
+      use refinement,       only: ref_flag
+
+      implicit none
+
+      type(cg_list_element), pointer :: cgl
+      real :: dmax
+      integer :: id
+
+!      call leaves%internal_boundaries_4d(wna%fi) !< enable it as soon as c2f and f2c routines will work
+
+      cgl => leaves%first
+      do while (associated(cgl))
+         if (any(cgl%cg%leafmap)) then
+            dmax = -huge(1.)
+            do id = lbound(iarr_all_dn, dim=1), ubound(iarr_all_dn, dim=1)
+               dmax = max(dmax, maxval(cgl%cg%u(id, cgl%cg%is:cgl%cg%ie, cgl%cg%js:cgl%cg%je, cgl%cg%ks:cgl%cg%ke), mask=cgl%cg%leafmap))
+            enddo
+            do id = 1, flind%energ
+               if ( maxval(cgl%cg%u(flind%all_fluids(id)%fl%ien, cgl%cg%is:cgl%cg%ie, cgl%cg%js:cgl%cg%je, cgl%cg%ks:cgl%cg%ke), mask=cgl%cg%leafmap) / &
+                    minval(cgl%cg%u(flind%all_fluids(id)%fl%ien, cgl%cg%is:cgl%cg%ie, cgl%cg%js:cgl%cg%je, cgl%cg%ks:cgl%cg%ke), mask=cgl%cg%leafmap) > ref_thr) &
+                    dmax = 2.*ref_thr*d0 !trick
+            enddo
+            cgl%cg%refine_flags = ref_flag( dmax >= ref_thr*d0, dmax < deref_thr*d0 )
+         endif
+         cgl => cgl%nxt
+      enddo
+
+   end subroutine mark_overdensity
+
 end module initproblem

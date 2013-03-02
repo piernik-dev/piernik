@@ -53,6 +53,7 @@ contains
       use initfluids,         only: cleanup_fluids
       use interactions,       only: cleanup_interactions
       use mpisetup,           only: cleanup_mpi
+      use sort_piece_list,    only: cleanup_piece_list
       use timer,              only: cleanup_timers
       use user_hooks,         only: cleanup_problem
 #ifdef MULTIGRID
@@ -80,6 +81,7 @@ contains
       call cleanup_multigrid;      call nextdot(.false.)
 #endif /* MULTIGRID */
       call cleanup_grid;           call nextdot(.false.)
+      call cleanup_piece_list;     call nextdot(.false.)
       call cleanup_fluids;         call nextdot(.false.)
 #ifdef GRAV
       call cleanup_particles;      call nextdot(.false.)

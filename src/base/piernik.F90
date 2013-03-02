@@ -44,6 +44,7 @@ program piernik
    use list_of_cg_lists,  only: all_lists
    use mpisetup,          only: master, piernik_MPI_Barrier, piernik_MPI_Bcast
    use named_array_list,  only: qna, wna
+   use refinement_update, only: update_refinement
    use timer,             only: time_left, set_timer, tmr_fu
    use timestep,          only: time_step
    use user_hooks,        only: finalize_problem
@@ -135,6 +136,7 @@ program piernik
       call write_data(output=CHK)
 
       call user_msg_handler(end_sim)
+      call update_refinement
 
       if (master) tleft = time_left()
       call piernik_MPI_Bcast(tleft)

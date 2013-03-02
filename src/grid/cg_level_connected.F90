@@ -62,7 +62,9 @@ module cg_level_connected
       procedure :: restrict_to_base_q_1var                    !< restrict specified q field to the base level
       procedure :: arr3d_boundaries                           !< Set up all guardcells (internal, external and fine-coarse) for given rank-3 arrays.
       procedure :: arr4d_boundaries                           !< Set up all guardcells (internal, external and fine-coarse) for given rank-4 arrays.
-      ! fine-coarse boundary exchanges may also belong to this type
+      procedure :: prolong_bnd_from_coarser                   !< Interpolate boundaries from coarse level at fine-coarse interfaces
+      procedure :: vertical_b_prep                            !< Initialize prolongation targets for fine-coarse boundary exchange
+      procedure, private :: vertical_bf_prep                  !< Initialize prolongation targets for fine->coarse flux exchange
       procedure :: sync_ru                                    !< Synchronize this%recently_changed and set flags for update requests
 
    end type cg_level_connected_T
@@ -351,6 +353,7 @@ contains
             if (wna%lst(i)%multigrid) call warn("[cg_level_connected:restrict] mg set for cg%w ???")
             do iw = 1, wna%lst(i)%dim4
                call this%wq_copy(i, iw, qna%wai)
+               call this%coarser%wq_copy(i, iw, qna%wai) ! this is required because we don't use (.not. cg%leafmap) mask in the this%coarser%qw_copy call below
                call this%restrict_q_1var(qna%wai, wna%lst(i)%position(iw))
                call this%coarser%qw_copy(qna%wai, i, iw)
             enddo
@@ -642,7 +645,7 @@ contains
       call this%vertical_prep
       call fine%vertical_prep
 
-      call fine%set_dirty(iv)
+!      call fine%set_dirty(iv) !> \todo filter this through cg%ignore_prolongation
 
       select case (qna%lst(iv)%ord_prolong)
          case (O_D4)
@@ -721,7 +724,7 @@ contains
       cgl => fine%first
       do while (associated(cgl))
          cg => cgl%cg
-         if (allocated(cg%pi_tgt%seg)) then
+         if (allocated(cg%pi_tgt%seg) .and. .not. cg%ignore_prolongation) then
 
             do g = lbound(cg%pi_tgt%seg(:), dim=1), ubound(cg%pi_tgt%seg(:), dim=1)
 
@@ -870,9 +873,10 @@ contains
       integer(kind=4), optional,   intent(in)    :: bnd_type  !< Override default boundary type on external boundaries (useful in multigrid solver).
                                                               !< Note that BND_PER, BND_MPI, BND_SHE and BND_COR aren't external and cannot be overridden
 
-      call this%clear_boundaries(ind) ! Apply BND_ZERO as long as there is no coarse-to-fine interpolation
+      call this%dirty_boundaries(ind)
+      call this%clear_boundaries(ind, value=10.)
       call this%level_3d_boundaries(ind, area_type, bnd_type)
-!!$      call this%prolong_bnd_from_coarser(ind)
+      call this%prolong_bnd_from_coarser(ind)
 
    end subroutine arr3d_boundaries
 
@@ -884,8 +888,8 @@ contains
 
    subroutine arr4d_boundaries(this, ind, area_type)
 
-!!$      use constants,        only: base_level_id
-!!$      use named_array_list, only: qna, wna
+      use constants,        only: base_level_id
+      use named_array_list, only: qna, wna
 
       implicit none
 
@@ -893,21 +897,600 @@ contains
       integer(kind=4),             intent(in)    :: ind       !< index of cg%w(:) 4d array
       integer(kind=4), optional,   intent(in)    :: area_type !< defines how do we treat boundaries
 
-!!$      integer(kind=4) :: iw
+      integer(kind=4) :: iw
 
 !      call this%dirty_boundaries(ind)
 !      call this%clear_boundaries(ind, value=10.)
       call this%level_4d_boundaries(ind, area_type)
-!!$      if (associated(this%coarser) .and. this%level_id > base_level_id) then
-!!$         do iw = 1, wna%lst(ind)%dim4
-!!$            call this%coarser%wq_copy(ind, iw, qna%wai)
-!!$            call this%wq_copy(ind, iw, qna%wai) !> Quick and dirty fix for cases when cg%ignore_prolongation == .true.
-!!$            call this%prolong_bnd_from_coarser(qna%wai)
-!!$            call this%qw_copy(qna%wai, ind, iw) !> \todo filter this through cg%ignore_prolongation
-!!$         enddo
-!!$      endif
+      if (associated(this%coarser) .and. this%level_id > base_level_id) then
+         do iw = 1, wna%lst(ind)%dim4
+            call this%coarser%wq_copy(ind, iw, qna%wai)
+            call this%wq_copy(ind, iw, qna%wai) !> Quick and dirty fix for cases when cg%ignore_prolongation == .true.
+            call this%prolong_bnd_from_coarser(qna%wai)
+            call this%qw_copy(qna%wai, ind, iw) !> \todo filter this through cg%ignore_prolongation
+         enddo
+      endif
 
    end subroutine arr4d_boundaries
+
+!>
+!! \brief Interpolate boundaries from coarse level at fine-coarse interfaces
+!!
+!! \details There are two possible approaches to the problem of prolongation of the data from coarse level to the fine guardcells on the fine-coarse interface
+!! * Interpolate the coarse data only
+!! * interpolate the coarse and fine data
+!! When the order of interpolation is 0 (injection) both methods degenerate into one.
+!! Both methods have their area of applicability amd both should be implemented.
+!! \warning This routine does only the first approach.
+!<
+
+   subroutine prolong_bnd_from_coarser(this, ind)
+
+      use cg_list,   only: cg_list_element
+      use constants, only: I_ONE, xdim, ydim, zdim, LO, HI, refinement_factor, ndims
+      use domain,    only: dom
+      use func,      only: f2c, c2f
+      use grid_cont, only: grid_container
+      use mpi,       only: MPI_DOUBLE_PRECISION
+      use mpisetup,  only: comm, mpi_err, req, status, inflate_req
+
+      implicit none
+
+      class(cg_level_connected_T), intent(inout) :: this !< the list on which to perform the boundary exchange
+      integer,                     intent(in)    :: ind  !< Negative value: index of cg%q(:) 3d array
+
+      type(cg_level_connected_T), pointer :: coarse
+      type(cg_list_element), pointer :: cgl
+      type(grid_container),  pointer :: cg            !< current grid container
+      integer(kind=4), dimension(:, :), pointer :: mpistatus
+      integer(kind=8), dimension(xdim:zdim, LO:HI) :: cse, fse ! shortcuts for fine segment and coarse segment
+      integer(kind=8), dimension(xdim:zdim) :: D, per
+      integer(kind=4) :: nr
+      integer :: g
+      logical, allocatable, dimension(:,:,:) :: updatemap
+      integer(kind=8), dimension(ndims, LO:HI)  :: box_8   !< temporary storage
+
+      coarse => this%coarser
+
+      if (.not. associated(coarse)) return
+
+      call this%vertical_b_prep
+      call coarse%vertical_b_prep
+
+      !call this%clear_boundaries(ind, dirtyH) ! not implemented yet
+
+      nr = 0
+      ! be ready to receive everything into right buffers
+      cgl => this%first
+      do while (associated(cgl))
+         associate ( seg => cgl%cg%pib_tgt%seg )
+         if (allocated(cgl%cg%pib_tgt%seg)) then
+            do g = lbound(seg(:), dim=1), ubound(seg(:), dim=1)
+               nr = nr + I_ONE
+               if (nr > size(req, dim=1)) call inflate_req
+               call MPI_Irecv(seg(g)%buf(1, 1, 1), size(seg(g)%buf(:, :, :)), MPI_DOUBLE_PRECISION, seg(g)%proc, seg(g)%tag, comm, req(nr), mpi_err)
+            enddo
+         endif
+         end associate
+         cgl => cgl%nxt
+      enddo
+
+      ! send coarse data
+      cgl => coarse%first
+      do while (associated(cgl))
+         associate( seg => cgl%cg%pob_tgt%seg )
+         if (allocated(cgl%cg%pob_tgt%seg)) then
+            do g = lbound(seg(:), dim=1), ubound(seg(:), dim=1)
+
+!               cse(:, LO) = seg(g)%se(:,LO) - cgl%cg%off(:) + cgl%cg%ijkse(:, LO)
+!               cse(:, HI) = seg(g)%se(:,HI) - cgl%cg%off(:) + cgl%cg%ijkse(:, LO)
+               cse = seg(g)%se
+
+               nr = nr + I_ONE
+               if (nr > size(req, dim=1)) call inflate_req
+               seg(g)%buf(:, :, :) = cgl%cg%q(ind)%arr(cse(xdim, LO):cse(xdim, HI), cse(ydim, LO):cse(ydim, HI), cse(zdim, LO):cse(zdim, HI))
+               call MPI_Isend(seg(g)%buf(1, 1, 1), size(seg(g)%buf(:, :, :)), MPI_DOUBLE_PRECISION, seg(g)%proc, seg(g)%tag, comm, req(nr), mpi_err)
+            enddo
+         endif
+         end associate
+         cgl => cgl%nxt
+      enddo
+
+      if (nr > 0) then
+         mpistatus => status(:, :nr)
+         call MPI_Waitall(nr, req(:nr), mpistatus, mpi_err)
+      endif
+
+      ! merge received coarse data into one array and interpolate it into the right place
+      per(:) = 0
+      where (dom%periodic(:)) per(:) = coarse%n_d(:)
+
+      cgl => this%first
+      do while (associated(cgl))
+         cg => cgl%cg
+
+         associate ( seg => cg%pib_tgt%seg )
+         if (allocated(cg%pib_tgt%seg)) then
+
+            !> \todo restore dirty checks when the implementation will be complete
+            cg%prolong_ = 3. !dirtyH
+            cg%prolong_x = 7.
+            cg%prolong_xy = 15.
+            cg%prolong_xyz = 31.
+
+            if (size(seg) > 0) then ! this if looks to be necessary to prevent polluting on the base level. Strange. \todo Check out why and fix it.
+
+               allocate(updatemap(cg%lhn(xdim, LO):cg%lhn(xdim, HI), cg%lhn(ydim, LO):cg%lhn(ydim, HI), cg%lhn(zdim, LO):cg%lhn(zdim, HI)))
+               updatemap = .false.
+
+               do g = lbound(seg(:), dim=1), ubound(seg(:), dim=1)
+
+                  cse = seg(g)%se
+                  cg%prolong_(cse(xdim, LO):cse(xdim, HI), cse(ydim, LO):cse(ydim, HI), cse(zdim, LO):cse(zdim, HI)) = seg(g)%buf(:,:,:)
+
+                  fse = c2f(cse)
+                  updatemap(fse(xdim, LO):fse(xdim, HI), fse(ydim, LO):fse(ydim, HI), fse(zdim, LO):fse(zdim, HI)) = .true.
+                  !> When this%ord_prolong_set /= O_INJ, the received seg(:)%buf(:,:,:) may overlap
+                  !! The incoming data thus must either contain valid guardcells (even if qna%lst(iv)%ord_prolong == O_INJ)
+                  !! or the guardcells must be zeroed before sending data and received buffer should be added to cg%prolong_(:,:,:) not just assigned
+
+               enddo
+
+               !! almost all occurrences of number "2" are in fact connected to refinement_factor
+
+               ! When the grid offset is odd, the coarse data is shifted by half coarse cell (or one fine cell)
+!               odd(:) = int(mod(cg%off(:), int(refinement_factor, kind=8)), kind=4)
+
+               ! When the grid offset is odd we need to apply mirrored prolongation stencil (swap even and odd stencils)
+
+               !> \warning when dom%nb is odd, one, most distant, layer of cells is not filled up
+               box_8 = int(cg%ijkse, kind=8)
+               cse = f2c(box_8)
+               cse(:, LO) = cse(:, LO) - dom%nb*dom%D_(:)/refinement_factor
+               cse(:, HI) = cse(:, HI) + dom%nb*dom%D_(:)/refinement_factor
+               fse = c2f(cse)
+
+               where (dom%has_dir(:))
+                  D(:) = 1 !- 2 * odd(:)
+               elsewhere
+                  D(:) = 0
+               endwhere
+
+               !> \deprecated OPT: prolong only those faces, which are relevant, not the whole block
+               ! Perform directional-split interpolation
+               if (dom%has_dir(xdim)) then
+                  cg%prolong_x    (fse(xdim, LO)        :fse(xdim, HI):2,         :, :) = &
+                       cg%prolong_(cse(xdim, LO)        :cse(xdim, HI),           :, :)
+                  cg%prolong_x    (fse(xdim, LO)+dom%D_x:fse(xdim, HI)+dom%D_x:2, :, :) = &
+                       cg%prolong_(cse(xdim, LO)        :cse(xdim, HI),           :, :)
+               else
+                  cg%prolong_x = cg%prolong_
+               endif
+               if (dom%has_dir(ydim)) then
+                  cg%prolong_xy    (fse(xdim, LO):fse(xdim, HI), fse(ydim, LO)        :fse(ydim, HI):2,         :) = &
+                       cg%prolong_x(fse(xdim, LO):fse(xdim, HI), cse(ydim, LO)        :cse(ydim, HI),           :)
+                  cg%prolong_xy    (fse(xdim, LO):fse(xdim, HI), fse(ydim, LO)+dom%D_y:fse(ydim, HI)+dom%D_y:2, :) = &
+                       cg%prolong_x(fse(xdim, LO):fse(xdim, HI), cse(ydim, LO)        :cse(ydim, HI),           :)
+               else
+                  cg%prolong_xy = cg%prolong_x
+               endif
+               if (dom%has_dir(zdim)) then
+                  cg%prolong_xyz    (fse(xdim, LO):fse(xdim, HI), fse(ydim, LO):fse(ydim, HI), fse(zdim, LO)        :fse(zdim, HI):2) = &
+                       cg%prolong_xy(fse(xdim, LO):fse(xdim, HI), fse(ydim, LO):fse(ydim, HI), cse(zdim, LO)        :cse(zdim, HI))
+                  cg%prolong_xyz    (fse(xdim, LO):fse(xdim, HI), fse(ydim, LO):fse(ydim, HI), fse(zdim, LO)+dom%D_z:fse(zdim, HI)+dom%D_z:2) = &
+                       cg%prolong_xy(fse(xdim, LO):fse(xdim, HI), fse(ydim, LO):fse(ydim, HI), cse(zdim, LO)        :cse(zdim, HI))
+               else
+                  cg%prolong_xyz= cg%prolong_xy
+               endif
+
+               where (updatemap) cg%q(ind)%arr = cg%prolong_xyz
+               deallocate(updatemap)
+            endif
+         endif
+         end associate
+         cgl => cgl%nxt
+      enddo
+
+   end subroutine prolong_bnd_from_coarser
+
+!>
+!! \brief Initialize prolongation targets for fine-coarse boundary exchange
+!!
+!! \details This routine allows prolongation of guardcells only from interior cells of coarser level.
+!! It means that no prolongation will happen on a 2-level step, even if it would be possible to interpolate on coarser level guardcells.
+!! While it is possible to implement such data transport, we don't want to rely on double- or multiple-times interpolated data.
+!<
+
+   subroutine vertical_b_prep(this)
+
+      use cg_list,    only: cg_list_element
+      use constants,  only: xdim, ydim, zdim, LO, HI, I_ONE, ndims
+      use dataio_pub, only: warn, msg, die
+      use domain,     only: dom
+      use func,       only: f2c
+      use grid_cont,  only: grid_container, is_overlap
+      use mergebox,   only: wmap
+      use mpi,        only: MPI_INTEGER, MPI_INTEGER8
+      use mpisetup,   only: FIRST, LAST, comm, mpi_err, proc
+
+      implicit none
+
+      class(cg_level_connected_T), intent(inout), target :: this !< the list on which to update connectivity data for fine-coarse boundary exchange
+
+      class(cg_level_connected_T), pointer :: curl
+      type(cg_level_connected_T), pointer :: coarse
+      type(cg_list_element), pointer :: cgl
+      type(grid_container),  pointer :: cg            !< current grid container
+      integer :: d, j, b, rp, ls, dd, ix, iy, iz
+      integer(kind=8), dimension(xdim:zdim, LO:HI) :: seg, segp, seg2, segp2, segf
+      integer(kind=8), dimension(xdim:zdim) :: per
+      integer :: mpifc_cnt
+      integer(kind=4) :: tag
+      type :: fc_seg !< the absolutely minimal set of data that defines the communication consists of [ grid_id, tag, and, seg ]. The proc numbers are for convenience only.
+         integer :: proc     ! it can be rewritten in a way that does not need this numbet to be explicitly stored, but it is easier to have it
+         integer :: grid_id
+         integer(kind=4) :: tag
+         integer :: src_proc ! this can be computed on destination process, but it is easier to have it
+         integer(kind=8), dimension(xdim:zdim, LO:HI) :: seg
+         integer(kind=8), dimension(xdim:zdim, LO:HI) :: seg2
+         integer(kind=8), dimension(xdim:zdim, LO:HI) :: fse
+         integer(kind=8), dimension(xdim:zdim, LO:HI) :: fse2
+      end type fc_seg
+      enum, bind(C) !< set of constants for converting between fc_seg type and crude integer(kind=8) tables
+         enumerator :: I_PROC = 1
+         enumerator :: I_GRID
+         enumerator :: I_TAG
+         enumerator :: I_SRC_PROC
+         enumerator :: I_SEG
+         enumerator :: I_SEG2 = I_SEG  + HI*zdim
+         enumerator :: I_LAST = I_SEG2 + HI*zdim - I_ONE
+         ! no need to create I_FSE at the moment
+      end enum
+      type(fc_seg), allocatable, dimension(:) :: seglist
+      integer(kind=4), dimension(FIRST:LAST) :: pscnt, prcnt, psdispl, prdispl, psind
+      integer(kind=4), dimension(FIRST:LAST) :: sendcounts, sdispls, recvcounts, rdispls
+      integer(kind=8), allocatable, dimension(:) :: sseg, rseg
+      type(wmap) :: cgmap
+      integer(kind=8), dimension(ndims, LO:HI)  :: box_8   !< temporary storage
+      logical :: found_flux
+      integer :: max_level
+
+      if (.not. this%need_vb_update) return
+
+      coarse => this%coarser
+      if (.not. associated(coarse)) return ! check is some null allocations are required
+
+      ! Unfortunately we can't use finest%level%level_id
+      curl => this
+      do while (associated(curl))
+         max_level = curl%level_id
+         curl => curl%finer
+      enddo
+
+      ! define areas on the fine side at BND_FC and BND_MPI_FC faces that require coarse data
+      per(:) = 0
+      where (dom%periodic(:)) per(:) = coarse%n_d(:)
+
+      mpifc_cnt = 0
+      allocate(seglist(0))
+      cgl => this%first
+      do while (associated(cgl))
+         cg => cgl%cg
+
+         ls = size(seglist)
+
+         box_8 = int(cg%lhn, kind=8)
+         call cgmap%init(box_8)
+         call cgmap%set
+         box_8 = int(cg%ijkse, kind=8)
+         call cgmap%clear(box_8)
+         do dd = xdim, zdim
+            do b = lbound(cg%i_bnd(dd)%seg, dim=1), ubound(cg%i_bnd(dd)%seg, dim=1)
+               call cgmap%clear(cg%i_bnd(dd)%seg(b)%se)
+            enddo
+         enddo
+         call cgmap%find_boxes
+         do j = FIRST, LAST !> \warning Antiparallel
+            do b = lbound(coarse%pse(j)%c(:), dim=1), ubound(coarse%pse(j)%c(:), dim=1)
+               do d = lbound(cgmap%blist%blist, dim=1), ubound(cgmap%blist%blist, dim=1)
+                  if (is_overlap(f2c(cgmap%blist%blist(d)%b), coarse%pse(j)%c(b)%se(:,:), per(:))) then
+                     do iz = -1, 1 ! scan through all periodic possibilities
+                        if (iz == 0 .or. per(zdim)>0) then
+                           do iy = -1, 1
+                              if (iy == 0 .or. per(ydim)>0) then
+                                 do ix = -1, 1
+                                    if (ix == 0 .or. per(xdim)>0) then
+                                       seg = f2c(cgmap%blist%blist(d)%b)
+                                       seg(:, LO) = seg(:, LO) + [ ix, iy, iz ] * per(:)
+                                       seg(:, HI) = seg(:, HI) + [ ix, iy, iz ] * per(:)  ! try variants corrected for periodicity
+                                       if (is_overlap(coarse%pse(j)%c(b)%se(:,:), seg)) then
+                                          seg(:, LO) = max( seg(:, LO), coarse%pse(j)%c(b)%se(:, LO))
+                                          seg(:, HI) = min( seg(:, HI), coarse%pse(j)%c(b)%se(:, HI)) ! this is what we want
+                                          tag = cg%level_id + max_level*(cg%grid_id + this%tot_se*(b + d*size(coarse%pse(j)%c(:))))
+                                          segp (:, LO) = seg  (:, LO) - [ ix, iy, iz ] * per(:)
+                                          segp (:, HI) = seg  (:, HI) - [ ix, iy, iz ] * per(:)
+                                          ! Find 1-layer thick areas which will be involved in fine->coarse flux exchanges
+                                          segp2(:, LO) = seg  (:, LO) - [ ix, iy, iz ] * per(:)
+                                          segp2(:, HI) = seg  (:, HI) - [ ix, iy, iz ] * per(:)
+                                          found_flux = .false.
+                                          do dd = xdim, zdim
+                                             if (dom%has_dir(dd)) then
+                                                segf = cg%my_se
+                                                segf(dd, :) = segf(dd, :) + [ -1, 1 ]
+                                                segf = f2c(segf)
+                                                if (is_overlap(segf,segp2)) then
+                                                   if (found_flux) call die("[cg_level_connected:vertical_b_prep] matches multiple directions")
+                                                   segf(:, LO) = max(segf(:, LO), segp2(:, LO))
+                                                   segf(:, HI) = min(segf(:, HI), segp2(:, HI))
+                                                   segp2 = segf
+                                                   found_flux = .true.
+                                                endif
+                                             endif
+                                          enddo
+                                          if (.not. found_flux) then
+                                             segp2(:, LO) = this%off(:)
+                                             segp2(:, HI) = this%off(:) - dom%D_(:)
+                                          endif
+                                          seg2 (:, LO) = segp2(:, LO) + [ ix, iy, iz ] * per(:)
+                                          seg2 (:, HI) = segp2(:, HI) + [ ix, iy, iz ] * per(:)
+                                          seglist = [ seglist, fc_seg(j, b, tag, proc, seg, seg2, segp, segp2) ]  ! LHS-realloc
+                                       endif
+                                    endif
+                                 enddo
+                              endif
+                           enddo
+                        endif
+                     enddo
+                  endif
+               enddo
+            enddo
+         enddo
+
+         if (allocated(cg%pib_tgt%seg)) deallocate(cg%pib_tgt%seg)
+         allocate(cg%pib_tgt%seg(size(seglist)-ls))
+         do j = ls+1, size(seglist)
+            associate ( se => cg%pib_tgt%seg(j-ls) )
+            se%proc = seglist(j)%proc
+            se%tag  = seglist(j)%tag
+            se%se   = seglist(j)%fse
+            se%se2  = seglist(j)%fse2
+            allocate(se%buf(seglist(j)%seg(xdim, HI)-seglist(j)%seg(xdim, LO) + 1, &
+                    &       seglist(j)%seg(ydim, HI)-seglist(j)%seg(ydim, LO) + 1, &
+                    &       seglist(j)%seg(zdim, HI)-seglist(j)%seg(zdim, LO) + 1))
+            end associate
+         enddo
+
+         call cgmap%cleanup
+
+         cgl => cgl%nxt
+      enddo
+      if (mpifc_cnt > 0) call warn("[cg_level_connected:vertical_b_prep] mixed MPI and fine-coarse boundary will be treated as FC here and then fixed in intenal_boundaries")
+      !> \warning OPT Try to exclude parts that will be overwritten by guardcell exchange on the same level
+
+      pscnt = 0
+      if (size(seglist) > 0) then
+         do j = lbound(seglist, dim=1), ubound(seglist, dim=1)
+            pscnt(seglist(j)%proc) = pscnt(seglist(j)%proc) + 1
+         enddo
+      endif
+
+      ! communicate to the processes with coarse data how many segments are required
+      call MPI_Alltoall(pscnt, I_ONE, MPI_INTEGER, prcnt, I_ONE, MPI_INTEGER, comm, mpi_err)
+
+      psdispl(FIRST) = 0; prdispl(FIRST) = 0
+      do j = FIRST+1, LAST
+         psdispl(j) = psdispl(j-1) + pscnt(j-1)
+         prdispl(j) = prdispl(j-1) + prcnt(j-1)
+      enddo
+
+      allocate(sseg(I_LAST*sum(pscnt)))
+      allocate(rseg(I_LAST*sum(prcnt)))
+      psind = 0
+      do j = lbound(seglist, dim=1), ubound(seglist, dim=1)
+         b = (psdispl(seglist(j)%proc) + psind(seglist(j)%proc)) * I_LAST
+         sseg(b+I_PROC:b+I_LAST) = [ int([seglist(j)%proc, seglist(j)%grid_id, seglist(j)%tag, seglist(j)%src_proc ], kind=8), seglist(j)%seg, seglist(j)%seg2 ]
+         psind(seglist(j)%proc) = psind(seglist(j)%proc) + 1
+      enddo
+      ! communicate to the processes with coarse data the segments that are required
+      sendcounts = I_LAST * pscnt
+      sdispls = I_LAST * psdispl
+      recvcounts = I_LAST * prcnt
+      rdispls = I_LAST * prdispl
+      call MPI_Alltoallv(sseg, sendcounts, sdispls, MPI_INTEGER8, rseg, recvcounts, rdispls, MPI_INTEGER8, comm, mpi_err)
+
+      ! define areas on the coarse side at fine BND_FC and BND_MPI_FC faces that have to be sent
+      cgl => coarse%first
+      do while (associated(cgl))
+         cg => cgl%cg
+         rp = FIRST
+         b = 0
+         do j = 1, sum(prcnt)
+            if (rp < LAST) then
+               do while (prdispl(rp+1) < j)  ! update remote process number
+                  rp = rp + 1
+                  if (rp == LAST) exit
+               enddo
+            endif
+            if (rseg(I_GRID + (j-1)*I_LAST) == cg%grid_id) then
+               if (rseg(I_PROC + (j-1)*I_LAST) /= proc) call warn("[clc:vbp] I_PROC /= proc")
+               if (rseg(I_SRC_PROC + (j-1)*I_LAST) /= rp) then
+                  write(msg,*)"[clc:vbp] I_SRC_PROC /= rp @",proc," @@",rp, rseg(I_SRC_PROC + (j-1)*I_LAST)
+                  call warn(msg)
+               endif
+               ! call warn("[clc:vbp] I_TAG: visited twice")
+               b = b + 1
+            endif
+         enddo
+         if (allocated(cg%pob_tgt%seg)) deallocate(cg%pob_tgt%seg)
+         allocate(cg%pob_tgt%seg(b))
+         b = 0
+         do j = 1, sum(prcnt)
+            if (rseg(I_GRID + (j-1)*I_LAST) == cg%grid_id) then
+               b = b + 1
+               associate ( se => cg%pob_tgt%seg(b) )
+               se%proc = int(rseg(I_SRC_PROC      + (j-1)*I_LAST), kind=4)
+               se%tag  = int(rseg(I_TAG           + (j-1)*I_LAST), kind=4)
+               se%se(:, LO) = rseg(I_SEG          + (j-1)*I_LAST:I_SEG  +   zdim - xdim + (j-1)*I_LAST)
+               se%se(:, HI) = rseg(I_SEG + zdim   + (j-1)*I_LAST:I_SEG  + 2*zdim - xdim + (j-1)*I_LAST)
+               se%se2(:, LO) = rseg(I_SEG2        + (j-1)*I_LAST:I_SEG2 +   zdim - xdim + (j-1)*I_LAST)
+               se%se2(:, HI) = rseg(I_SEG2 + zdim + (j-1)*I_LAST:I_SEG2 + 2*zdim - xdim + (j-1)*I_LAST)
+               allocate(se%buf(se%se(xdim, HI)-se%se(xdim, LO) + 1, &
+                    &          se%se(ydim, HI)-se%se(ydim, LO) + 1, &
+                    &          se%se(zdim, HI)-se%se(zdim, LO) + 1))
+               end associate
+            endif
+         enddo
+
+         cgl => cgl%nxt
+      enddo
+
+      deallocate(sseg)
+      deallocate(rseg)
+
+      deallocate(seglist)
+
+      call this%vertical_bf_prep
+
+      this%need_vb_update = .false.
+
+   end subroutine vertical_b_prep
+
+!>
+!! \brief Initialize targets for fine->coarse flux exchange
+!!
+!! \details This routine relies on the data generated by vertical_b_prep. Rejects corner locations, leaves only face layer.
+!<
+
+   subroutine vertical_bf_prep(this)
+
+      use cg_list,    only: cg_list_element
+      use constants,  only: LO, HI, pdims, ORTHO1, ORTHO2, xdim, zdim
+      use fluidindex, only: flind
+      use func,       only: c2f
+
+      implicit none
+
+      class(cg_level_connected_T), intent(inout) :: this !< the list on which to update connectivity data for fine->coarse flux exchange
+
+      type(cg_level_connected_T), pointer :: coarse
+      type(cg_list_element), pointer :: cgl
+      integer :: g, d, dd, lh
+
+      cgl => this%first
+      do while (associated(cgl))
+         associate ( seg => cgl%cg%pib_tgt%seg )
+         if (allocated(cgl%cg%rof_tgt%seg)) deallocate(cgl%cg%rof_tgt%seg)
+         do dd = xdim, zdim
+            cgl%cg%coarsebnd(dd, LO)%index(:, :) = cgl%cg%ijkse(dd, LO) - 1
+            cgl%cg%coarsebnd(dd, HI)%index(:, :) = cgl%cg%ijkse(dd, HI) + 1
+         enddo
+         if (allocated(cgl%cg%pib_tgt%seg)) then
+            d = 0
+            do g = lbound(seg(:), dim=1), ubound(seg(:), dim=1)
+               if (all(seg(g)%se2(:, HI)>=seg(g)%se2(:, LO))) d = d + 1
+            enddo
+            if (allocated(cgl%cg%rof_tgt%seg)) deallocate(cgl%cg%rof_tgt%seg)
+            allocate(cgl%cg%rof_tgt%seg(d))
+            d = 0
+            do g = lbound(seg(:), dim=1), ubound(seg(:), dim=1)
+               if (all(seg(g)%se2(:, HI)>=seg(g)%se2(:, LO))) then
+                  dd = guess_dir(seg(g)%se2)
+                  d = d + 1
+                  associate( seg2 => cgl%cg%rof_tgt%seg )
+                  seg2(d)%proc = seg(g)%proc
+                  seg2(d)%tag  = seg(g)%tag
+                  seg2(d)%se   = seg(g)%se2
+                  allocate(seg2(d)%buf(flind%all, seg2(d)%se(pdims(dd, ORTHO1), LO):seg2(d)%se(pdims(dd, ORTHO1), HI), &
+                       &                          seg2(d)%se(pdims(dd, ORTHO2), LO):seg2(d)%se(pdims(dd, ORTHO2), HI)))
+                  if (seg(g)%se(dd, LO) == seg2(d)%se(dd, LO)) then
+                     lh = HI
+                  else
+                     lh = LO
+                  endif
+                  seg2(d)%se(dd, lh) = seg2(d)%se(dd, lh) + LO + HI - 2*lh
+                  seg2(d)%se = c2f(seg2(d)%se)
+                  seg2(d)%se(dd, HI + LO - lh) = seg2(d)%se(dd, lh)
+                  cgl%cg%coarsebnd(dd, lh)%index(seg2(d)%se(pdims(dd, ORTHO1), LO):seg2(d)%se(pdims(dd, ORTHO1), HI), &
+                       &                         seg2(d)%se(pdims(dd, ORTHO2), LO):seg2(d)%se(pdims(dd, ORTHO2), HI)) = int(seg2(d)%se(dd, lh))
+                  end associate
+
+               endif
+            enddo
+         endif
+         end associate
+         cgl => cgl%nxt
+      enddo
+
+      coarse => this%coarser
+      if (associated(coarse)) then
+         cgl => coarse%first
+         do while (associated(cgl))
+            if (allocated(cgl%cg%rif_tgt%seg)) deallocate(cgl%cg%rif_tgt%seg)
+            do dd = xdim, zdim
+               cgl%cg%finebnd(dd, LO)%index(:, :) = cgl%cg%ijkse(dd, LO) - 1
+               cgl%cg%finebnd(dd, HI)%index(:, :) = cgl%cg%ijkse(dd, HI) + 1
+            enddo
+            associate( seg => cgl%cg%pob_tgt%seg )
+            if (allocated(cgl%cg%pob_tgt%seg)) then
+               d = 0
+               do g = lbound(seg(:), dim=1), ubound(seg(:), dim=1)
+                  if (all(seg(g)%se2(:, HI)>=seg(g)%se2(:, LO))) d = d + 1
+               enddo
+               if (allocated(cgl%cg%rif_tgt%seg)) deallocate(cgl%cg%rif_tgt%seg)
+               allocate(cgl%cg%rif_tgt%seg(d))
+               d = 0
+               do g = lbound(seg(:), dim=1), ubound(seg(:), dim=1)
+                  if (all(seg(g)%se2(:, HI)>=seg(g)%se2(:, LO))) then
+                     dd = guess_dir(seg(g)%se2)
+                     d = d + 1
+                     associate( seg2 => cgl%cg%rif_tgt%seg )
+                     seg2(d)%proc = seg(g)%proc
+                     seg2(d)%tag  = seg(g)%tag
+                     seg2(d)%se   = seg(g)%se2
+                     allocate(seg2(d)%buf(flind%all, seg2(d)%se(pdims(dd, ORTHO1), LO):seg2(d)%se(pdims(dd, ORTHO1), HI), &
+                          &                          seg2(d)%se(pdims(dd, ORTHO2), LO):seg2(d)%se(pdims(dd, ORTHO2), HI)))
+                     if (seg(g)%se(dd, LO) == seg2(d)%se(dd, LO)) then
+                        lh = HI
+                     else
+                        lh = LO
+                     endif
+                     cgl%cg%finebnd(dd, lh)%index(seg2(d)%se(pdims(dd, ORTHO1), LO):seg2(d)%se(pdims(dd, ORTHO1), HI), &
+                          &                       seg2(d)%se(pdims(dd, ORTHO2), LO):seg2(d)%se(pdims(dd, ORTHO2), HI)) = int(seg2(d)%se(dd, LO)) ! ? +1 for HI
+                     end associate
+                  endif
+               enddo
+            endif
+            end associate
+            cgl => cgl%nxt
+         enddo
+      endif
+
+    contains
+
+      integer function guess_dir(se) result(dir)
+
+        use constants,  only: LO, HI, xdim, zdim, INVALID
+        use dataio_pub, only: die
+        use domain,     only: dom
+
+        implicit none
+
+        integer(kind=8), dimension(xdim:zdim, LO:HI) :: se
+
+        integer :: d
+
+        dir = INVALID
+        do d = xdim, zdim
+           if (dom%has_dir(d) .and. se(d, HI) == se(d, LO)) then
+              if (dir /= INVALID) call die("[cg_level_connected:vertical_bf_prep] point-like?")
+              dir = d
+           endif
+        enddo
+        if (dir == INVALID) call die("[cg_level_connected:vertical_bf_prep] undefined direction?")
+
+      end function guess_dir
+
+   end subroutine vertical_bf_prep
 
 !> \brief Synchronize this%recently_changed and set flags for update requests
 

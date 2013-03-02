@@ -46,8 +46,11 @@ module initproblem
    real :: d0     !< density of the spheroid
    real :: a1     !< equatorial radius of the spheroid
    real :: e      !< polar eccentricity of the spheroid; e>0 gives oblate object, e<0 gives prolate object
+   real :: ref_thr !< refinement threshold
+   real :: deref_thr !< derefinement threshold
    integer(kind=4) :: nsub !< subsampling on the grid
-   namelist /PROBLEM_CONTROL/ x0, y0, z0, d0, a1, e, nsub
+
+   namelist /PROBLEM_CONTROL/ x0, y0, z0, d0, a1, e, ref_thr, deref_thr, nsub
 
    ! private data
    real :: d1 !< ambient density
@@ -62,13 +65,14 @@ contains
    subroutine problem_pointers
 
       use dataio_user, only: user_vars_hdf5, user_attrs_wr
-      use user_hooks,  only: finalize_problem
+      use user_hooks,  only: finalize_problem, problem_refine_derefine
 
       implicit none
 
       user_attrs_wr    => init_prob_attrs
       finalize_problem => finalize_problem_maclaurin
       user_vars_hdf5   => maclaurin_error_vars
+      problem_refine_derefine => mark_surface
 
    end subroutine problem_pointers
 
@@ -99,6 +103,9 @@ contains
       e            = 0.0                 !< Eccentricity; e>0 for flattened spheroids, e<0 for elongated spheroids
       nsub         = 3                   !< Subsampling factor
 
+      ref_thr      = max(1e-3, 2.*smalld/d0)    !< Refine if density difference is greater than this value
+      deref_thr    = max(ref_thr**2, smalld/d0) !< Derefine if density difference is smaller than this value
+
       if (master) then
 
          diff_nml(PROBLEM_CONTROL)
@@ -109,6 +116,8 @@ contains
          rbuff(4) = d0
          rbuff(5) = a1
          rbuff(6) = e
+         rbuff(7) = ref_thr
+         rbuff(8) = deref_thr
 
          ibuff(1) = nsub
 
@@ -125,6 +134,8 @@ contains
          d0           = rbuff(4)
          a1           = rbuff(5)
          e            = rbuff(6)
+         ref_thr      = rbuff(7)
+         deref_thr    = rbuff(8)
 
          nsub         = ibuff(1)
 
@@ -152,6 +163,8 @@ contains
          if (master)call warn("[initproblem:read_problem_par] too much subsampling.")
          nsub = maxsub
       endif
+
+      if (ref_thr <= deref_thr) call die("[initproblem:read_problem_par] ref_thr <= deref_thr")
 
       if (a1 == 0.) call pset%add(d0, [ x0, y0, z0 ], [0.0, 0.0, 0.0])
 
@@ -519,5 +532,41 @@ contains
       end select
 
    end subroutine maclaurin_error_vars
+
+!> \brief Request refinement along the surface of the ellipsoid. Derefine inside and outside the ellipsoid if possible.
+
+   subroutine mark_surface
+
+      use cg_leaves,        only: leaves
+      use cg_list,          only: cg_list_element
+      use fluidindex,       only: iarr_all_dn
+!      use named_array_list, only: wna
+      use refinement,       only: ref_flag
+
+      implicit none
+
+      type(cg_list_element), pointer :: cgl
+      real :: delta_dens, dmin, dmax
+      integer :: id
+
+!      call leaves%internal_boundaries_4d(wna%fi) !< enable it as soon as c2f and f2c routines will work
+
+      cgl => leaves%first
+      do while (associated(cgl))
+         if (any(cgl%cg%leafmap)) then
+            dmax = -huge(1.)
+            dmin =  huge(1.)
+            do id = lbound(iarr_all_dn, dim=1), ubound(iarr_all_dn, dim=1)
+               dmax = max(dmax, maxval(cgl%cg%u(id, cgl%cg%is:cgl%cg%ie, cgl%cg%js:cgl%cg%je, cgl%cg%ks:cgl%cg%ke), mask=cgl%cg%leafmap))
+               dmin = min(dmin, minval(cgl%cg%u(id, cgl%cg%is:cgl%cg%ie, cgl%cg%js:cgl%cg%je, cgl%cg%ks:cgl%cg%ke), mask=cgl%cg%leafmap))
+            enddo
+            delta_dens = dmax - dmin
+            !> \warning only selfgravitating fluids should be checked
+            cgl%cg%refine_flags = ref_flag( delta_dens >= ref_thr*d0, delta_dens < deref_thr*d0 )
+         endif
+         cgl => cgl%nxt
+      enddo
+
+   end subroutine mark_surface
 
 end module initproblem

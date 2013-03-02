@@ -196,6 +196,7 @@ contains
 
       use cg_level_base,      only: base
       use cg_level_connected, only: cg_level_connected_T
+!      use cg_level_finest,    only: finest
       use cg_list,            only: cg_list_element
       use constants,          only: xdim, zdim
       use domain,             only: dom
@@ -208,6 +209,8 @@ contains
       integer(kind=4)                :: dir
 
       curl => base%level
+
+!      call finest%level%restrict_to_base
 
       ! should be more selective (modified leaves?)
       do while (associated(curl))

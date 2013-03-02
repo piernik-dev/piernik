@@ -53,6 +53,7 @@ contains
       use constants,          only: PIERNIK_INIT_DOMAIN
       use dataio_pub,         only: printinfo, die, code_progress
       use domain,             only: dom
+      use mpisetup,           only: master
 
       implicit none
 
@@ -68,7 +69,7 @@ contains
       call base%set(dom%n_d)
       finest%level => base%level
       coarsest%level => base%level
-      call base%level%add_patch
+      if (master) call base%level%add_patch
       call base%level%init_all_new_cg
 
       ! Refinement lists will be added by iterating the initproblem::init_prob routine, in restart_hdf5::read_restart_hdf5 or in not_yet_implemented::refinement_update

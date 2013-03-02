@@ -84,13 +84,16 @@ module cg_level
       procedure          :: print_segments                    !< print detailed information about current level decomposition
       procedure, private :: update_decomposition_properties   !< Update some flags in domain module
       procedure, private :: distribute                        !< Get all decomposed patches and compute which pieces go to which process
-      procedure, private :: calc_ord_range                    !< Compute which id\'s should belong to which process
       procedure, private :: simple_ordering                   !< This is just counting, not ordering
       procedure, private :: mark_new                          !< Detect which grid containers are new
+      procedure, private :: update_pse                        !< Gather updated information about the level and overwrite it to this%pse
       procedure          :: update_tot_se                     !< count all cg on current level for computing tags in vertical_prep
       generic,   public  :: add_patch => add_patch_fulllevel, add_patch_detailed !< Add a new piece of grid to the current level and decompose it
       procedure, private :: add_patch_fulllevel               !< Add a whole level to the list of patches
       procedure, private :: add_patch_detailed                !< Add a new piece of grid to the list of patches
+      procedure, private :: add_patch_one_piece               !< Add a patch with only one grid piece
+      procedure, private :: expand_list                       !< Expand the patch list by one
+      procedure, private :: balance_new                       !< Routine for moving proposed grids between processes
 
    end type cg_level_T
 
@@ -102,8 +105,11 @@ contains
 
       use cg_list,    only: cg_list_element
       use constants,  only: LO, HI
-      use dataio_pub, only: printinfo, msg, warn
-      use mpisetup,   only: FIRST, LAST, master, nproc, proc
+      use dataio_pub, only: printinfo !, msg, warn
+      use mpisetup,   only: FIRST, LAST, master !, nproc, proc
+#ifdef VERBOSE
+      use dataio_pub, only: msg
+#endif /* VERBOSE */
 
       implicit none
 
@@ -123,18 +129,18 @@ contains
          i = i + 1
          cgl => cgl%nxt
       enddo
-      if (i /= this%cnt .or. this%cnt /= size(this%pse(proc)%c(:)) .or. size(this%pse(proc)%c(:)) /= i) then
-         write(msg, '(2(a,i4),a,3i7)')"[cg_level:print_segments] Uncertain number of grid pieces @PE ",proc," on level ", this%level_id, &
-              &                       " : ",i,this%cnt,size(this%pse(proc)%c(:))
-         call warn(msg)
-
-         cgl => this%first
-         do while (associated(cgl))
-            write(msg,'(2(a,i7),2(a,3i10),a)')" @",proc," #",cgl%cg%grid_id," : [", cgl%cg%my_se(:, LO), "] : [", cgl%cg%my_se(:, HI)," ]"
-            call printinfo(msg)
-            cgl => cgl%nxt
-         enddo
-      endif
+!!$      if (i /= this%cnt .or. this%cnt /= size(this%pse(proc)%c(:)) .or. size(this%pse(proc)%c(:)) /= i) then
+!!$         write(msg, '(2(a,i4),a,3i7)')"[cg_level:print_segments] Uncertain number of grid pieces @PE ",proc," on level ", this%level_id, &
+!!$              &                       " : ",i,this%cnt,size(this%pse(proc)%c(:))
+!!$         call warn(msg)
+!!$
+!!$         cgl => this%first
+!!$         do while (associated(cgl))
+!!$            write(msg,'(2(a,i7),2(a,3i10),a)')" @",proc," #",cgl%cg%grid_id," : [", cgl%cg%my_se(:, LO), "] : [", cgl%cg%my_se(:, HI)," ]"
+!!$            call printinfo(msg)
+!!$            cgl => cgl%nxt
+!!$         enddo
+!!$      endif
 
       if (.not. master) return
 
@@ -169,10 +175,10 @@ contains
          enddo
       enddo
 
-      write(msg, '(a,i3,a,f5.1,a,i5,a,f8.5)')"[cg_level:print_segments] Level ", this%level_id, " filled in ",(100.*sum(maxcnt(:)))/product(real(this%n_d(:))), &
-           &                                 "%, ",tot_cg," grid(s), load balance : ", sum(maxcnt(:))/(nproc*maxval(maxcnt(:)))
+!      write(msg, '(a,i3,a,f5.1,a,i5,a,f8.5)')"[cg_level:print_segments] Level ", this%level_id, " filled in ",(100.*sum(maxcnt(:)))/product(real(this%n_d(:))), &
+!           &                                 "%, ",tot_cg," grid(s), load balance : ", sum(maxcnt(:))/(nproc*maxval(maxcnt(:)))
       !> \todo add calculation of total internal boundary surface in cells
-      call printinfo(msg)
+!      call printinfo(msg)
       deallocate(maxcnt)
 
    end subroutine print_segments
@@ -193,11 +199,15 @@ contains
       integer                          :: i, ep
       type(grid_container), pointer    :: cg
 
+      call this%balance_new
+      call this%update_pse  ! required if anything was derefined
       call this%distribute
+!      call this%update_pse  ! communicate everything that was added !> \todo check if it is necessary to have it here
       call this%mark_new
 
       do i = lbound(this%pse(proc)%c(:), dim=1), ubound(this%pse(proc)%c(:), dim=1)
          if (this%pse(proc)%c(i)%is_new) then
+            this%pse(proc)%c(i)%is_new = .false.
             call this%add
             cg => this%last%cg
             call cg%init(this%n_d, this%off, this%pse(proc)%c(i)%se(:, :), i, this%level_id) ! we cannot pass "this" as an argument because of circular dependencies
@@ -208,6 +218,7 @@ contains
          endif
       enddo
 
+      call this%update_pse    ! communicate everything that was added above
       call this%mpi_bnd_types ! require access to whole this%pse(:)%c(:)%se(:,:)
 
       call this%update_req    ! Perhaps this%mpi_bnd_types added some new entries
@@ -215,6 +226,70 @@ contains
       call this%print_segments
 
    end subroutine init_all_new_cg
+
+!> \brief Gather information on cg's currently present on local level, and write new this%pse array
+
+   subroutine update_pse(this)
+
+      use cg_list,    only: cg_list_element
+      use constants,  only: I_ZERO, I_ONE, ndims, LO, HI
+      use dataio_pub, only: die
+      use mpi,        only: MPI_IN_PLACE, MPI_DATATYPE_NULL, MPI_INTEGER
+      use mpisetup,   only: FIRST, LAST, proc, comm, mpi_err !!$, master
+
+      implicit none
+
+      class(cg_level_T), intent(inout) :: this   !< object invoking type bound procedure
+
+      integer(kind=4), dimension(FIRST:LAST) :: allcnt, alloff, ncub_allcnt, ncub_alloff
+      integer(kind=4), allocatable, dimension(:) :: allse
+      type(cg_list_element), pointer :: cgl
+      integer :: i, p
+      integer, parameter :: ncub = ndims*HI ! the number of integers in each cuboid
+
+      ! get the count of grid pieces on each process
+      allcnt(:) = 0
+      allcnt(proc) = this%cnt ! Beware: this is not properly updated after calling this%distribute. Use size(this%pse(proc)%c) if you want to propagate pse before the grid
+                              ! containers are actually added to the level
+      call MPI_Allgather(MPI_IN_PLACE, I_ZERO, MPI_DATATYPE_NULL, allcnt, I_ONE, MPI_INTEGER, comm, mpi_err)
+
+      ! compute offsets for  a composite table of all grid pieces
+      alloff(FIRST) = I_ZERO
+      do i = FIRST+I_ONE, LAST
+         alloff(i) = alloff(i-1) + allcnt(i-1)
+      enddo
+
+      allocate(allse(ncub*sum(allcnt(:))))
+
+      ! Collect definitions of own grid pieces
+      allse = 0
+      cgl => this%first
+      do i = alloff(proc), alloff(proc) + allcnt(proc) - 1
+         if (.not. associated(cgl)) call die("[cg_level:update_pse] Run out of cg.")
+         allse(ncub*i      +1:ncub*i+   ndims) = int(cgl%cg%my_se(:, LO), kind=4)
+         allse(ncub*i+ndims+1:ncub*i+HI*ndims) = int(cgl%cg%my_se(:, HI), kind=4) ! we do it in low-level way here. Is it worth using reshape() or something?
+         if (any(cgl%cg%my_se > huge(allse(1)))) call die("[cg_level:update_pse] Implement 8-byter integers in MPI transactions for such huge refinements")
+         cgl => cgl%nxt
+      enddo
+      if (associated(cgl)) call die("[cg_level:update_pse] Not all cg were read.")
+
+      ! First use of MPI_Allgatherv in the Piernik Code!
+      ncub_allcnt(:) = ncub * allcnt(:)
+      ncub_alloff(:) = ncub * alloff(:)
+      call MPI_Allgatherv(MPI_IN_PLACE, I_ZERO, MPI_DATATYPE_NULL, allse, ncub_allcnt, ncub_alloff, MPI_INTEGER, comm, mpi_err)
+
+      ! Rewrite the pse array, forget about past.
+      if (.not. allocated(this%pse)) allocate(this%pse(FIRST:LAST))
+      do p = FIRST, LAST
+         if (allocated(this%pse(p)%c)) deallocate(this%pse(p)%c)
+         allocate(this%pse(p)%c(allcnt(p)))
+         do i = alloff(p), alloff(p) + allcnt(p) - 1
+            this%pse(p)%c(i-alloff(p)+1)%se(:, LO) = allse(ncub*i      +1:ncub*i+   ndims) ! we do it in low-level way here again.
+            this%pse(p)%c(i-alloff(p)+1)%se(:, HI) = allse(ncub*i+ndims+1:ncub*i+HI*ndims)
+         enddo
+      enddo
+
+   end subroutine update_pse
 
 !> \brief Detect which grid containers are new
 
@@ -277,24 +352,64 @@ contains
 
    subroutine distribute(this)
 
+      use cg_list,    only: cg_list_element
+      use constants,  only: INVALID, LONG
       use dataio_pub, only: die
-      use mpisetup,   only: FIRST, LAST
+      use mpisetup,   only: FIRST, LAST, proc
 
       implicit none
 
       class(cg_level_T), intent(inout)       :: this   !< object invoking type bound procedure
 
-      integer                                :: i, p, s
+      integer                                :: i, p
+      integer(kind=8)                        :: s
       integer(kind=8), dimension(FIRST:LAST) :: min_id, max_id, pieces, filled
+      type(cg_list_element), pointer :: cgl
+      type(cuboid), allocatable, dimension(:) :: new_c
+      logical :: found_id
+      integer(kind=8) :: how_many
 
-      call this%simple_ordering
-      call this%calc_ord_range(min_id, max_id, pieces)
+      ! Find where to add the new pieces
+      call this%simple_ordering(how_many)
+      pieces = 0
+      min_id = INVALID
+      max_id = INVALID
+      pieces(proc) = how_many
+      min_id(proc) = 0
+      max_id(proc) = how_many - 1
+
+      ! make room for new pieces in the pse array
+      filled = 0
       if (.not. allocated(this%pse)) allocate(this%pse(FIRST:LAST))
       do i = FIRST, LAST
-         if (allocated(this%pse(i)%c)) deallocate(this%pse(i)%c) !> \todo recycle previous list somehow?
-         allocate(this%pse(i)%c(pieces(i)))
+         if (allocated(this%pse(i)%c)) then
+            filled(i) = size(this%pse(i)%c)
+            allocate(new_c(pieces(i) + filled(i)))
+            new_c(:filled(i)) = this%pse(i)%c
+            do s = filled(i)+1_LONG, pieces(i) + filled(i)
+               new_c(s)%se = -huge(1)
+            enddo
+            call move_alloc(from=new_c, to=this%pse(i)%c)
+         else
+            if (filled(i) > 0) call die("[cg_level:distribute] filled /= 0 AND NOT allocated(this%pse(i)%c")
+            allocate(this%pse(i)%c(pieces(i)))
+         endif
       enddo
-      filled(:) = 0
+
+      ! fix grid_id
+      cgl => this%first
+      do while (associated(cgl))
+         found_id = .false.
+         do i = lbound(this%pse(proc)%c, dim=1), ubound(this%pse(proc)%c, dim=1)
+            if (all(this%pse(proc)%c(i)%se(:,:) == cgl%cg%my_se(:,:))) then
+               if (found_id) call die("[cg_level:distribute] multiple occurrences")
+               cgl%cg%grid_id = i
+               found_id = .true.
+            endif
+         enddo
+         if (.not. found_id) call die("[cg_level:distribute] no occurrences")
+         cgl => cgl%nxt
+      enddo
 
       ! write the new grid pieces description to the pse array
       if (allocated(this%patches)) then
@@ -304,56 +419,28 @@ contains
                   if (this%patches(p)%pse(s)%id >= min_id(i) .and. this%patches(p)%pse(s)%id <= max_id(i)) then
                      filled(i) = filled(i) + 1
                      if (filled(i) > size(this%pse(i)%c(:))) call die("[cg_level:distribute] overflow")
-                     this%pse(i)%c(filled(i)) = cuboid(this%patches(p)%pse(s)%se(:,:), .true.) ! The is_new flag will be fixed in mark_new subroutine
+                     this%pse(i)%c(filled(i))%se(:,:) = this%patches(p)%pse(s)%se(:,:)
                      exit
                   endif
                enddo
             enddo
          enddo
+         deallocate(this%patches)
       endif
 
       call this%update_decomposition_properties
 
    end subroutine distribute
 
-!>
-!! \brief Compute which id\'s should belong to which process
-!!
-!! \todo Reduce assumptions on the set of id only to uniqueness (i.e. some id might be absent, some might be <0 or >this%tot_se, perform partial sort (qsort? shell sort?))
-!<
-
-   subroutine calc_ord_range(this, min_id, max_id, pieces)
-
-      use mpisetup, only: nproc, FIRST, LAST
-
-      implicit none
-
-      class(cg_level_T),                      intent(inout) :: this   !< object invoking type bound procedure
-      integer(kind=8), dimension(FIRST:LAST), intent(out)   :: min_id !< \todo comment me
-      integer(kind=8), dimension(FIRST:LAST), intent(out)   :: max_id !< \todo comment me
-      integer(kind=8), dimension(FIRST:LAST), intent(out)   :: pieces !< \todo comment me
-
-      integer :: p
-
-      ! At the moment all id are in [0 .. this%tot_se-1] range. This will change in future
-      !> \todo implement different weights of pieces
-
-      do p = FIRST, LAST
-         min_id(p) = ( p      * this%tot_se) / nproc
-         max_id(p) = ((p + 1) * this%tot_se) / nproc - 1
-      enddo
-      pieces(:) = max_id(:) - min_id(:) + 1
-
-   end subroutine calc_ord_range
-
 !> \brief OMG! This is just counting, not ordering!
 !> \todo Implement anything better. Peano-Hilbert ordering will appear here sooner or later :-)
 
-   subroutine simple_ordering(this)
+   subroutine simple_ordering(this, max_id)
 
       implicit none
 
       class(cg_level_T), intent(inout) :: this   !< object invoking type bound procedure
+      integer(kind=8),   intent(out)   :: max_id !< count all new pieces
 
       integer                          :: p, s
       integer(kind=8)                  :: id
@@ -369,8 +456,7 @@ contains
             endif
          enddo
       endif
-
-      this%tot_se = int(id, kind=4) ! obsoletes update_tot_se ?
+      max_id = id
 
    end subroutine simple_ordering
 
@@ -385,6 +471,8 @@ contains
 
       implicit none
 
+      logical, save :: warned = .false.
+
       class(cg_level_T), intent(inout) :: this   !< object invoking type bound procedure
 
       if (this%level_id > base_level_id) is_refined = .true.
@@ -392,7 +480,10 @@ contains
       if (is_refined) then
          is_mpi_noncart = .true.
          is_multicg = .true.
-         if (master) call warn("[cg_level:update_decomposition_properties] Refinements are experimental")
+         if (master .and. .not. warned) then
+            call warn("[cg_level:update_decomposition_properties] Refinements are experimental")
+            warned = .true.
+         endif
       endif
       if (is_mpi_noncart) is_uneven = .true.
 
@@ -616,23 +707,25 @@ contains
          cgl => cgl%nxt
       enddo
 
+   contains
+
+      ! Create unique number from periodic offsets
+      ! Let's assume i[123] have values of -1, 0 or 1, then the output will belong to [0 .. 26] range
+      pure function ixyz(i1, i2, i3)
+
+         implicit none
+
+         integer, intent(in) :: i1, i2, i3
+
+         integer :: ixyz
+
+         ixyz = (1+i1) + 3*(1+i2 + 3*(1+i3))
+
+      end function ixyz
+
    end subroutine mpi_bnd_types
 
-   ! Create unique number from periodic offsets
-   ! Let's assume ix, iy and iz have values of -1, 0 or 1, then the output will belong to [0 .. 26] range
-   pure function ixyz(i1, i2, i3)
-
-      implicit none
-
-      integer, intent(in) :: i1, i2, i3
-
-      integer :: ixyz
-
-      ixyz = (1+i1) + 3*(1+i2 + 3*(1+i3))
-
-   end function ixyz
-
- !> \brief Add a whole level to the list of patches on current refinement level and decompose it
+!> \brief Add a whole level to the list of patches on current refinement level and decompose it.
 
    subroutine add_patch_fulllevel(this, n_pieces)
 
@@ -642,17 +735,19 @@ contains
       integer(kind=4), optional, intent(in)    :: n_pieces !< how many pieces the patch should be divided to?
 
       call this%add_patch_detailed(this%n_d, this%off, n_pieces)
-      this%recently_changed = .true. ! assume that tne new patches will change this level
 
    end subroutine add_patch_fulllevel
 
-!> \brief Add a new piece of grid to the list of patches on current refinement level and decompose it
+!>
+!! \brief Add a new piece of grid to the list of patches on current refinement level and decompose it
+!!
+!! \details Each patch should be added only once, i.e. the base level and multigrid coarse grids have to be added by the master and then redistributed in balance_new.
+!<
 
    subroutine add_patch_detailed(this, n_d, off, n_pieces)
 
       use constants,     only: ndims
       use dataio_pub,    only: msg, die
-      use decomposition, only: box_T
 
       implicit none
 
@@ -660,6 +755,43 @@ contains
       integer(kind=8), dimension(ndims), intent(in)    :: n_d      !< number of grid cells
       integer(kind=8), dimension(ndims), intent(in)    :: off      !< offset (with respect to the base level, counted on own level)
       integer(kind=4), optional,         intent(in)    :: n_pieces !< how many pieces the patch should be divided to?
+
+      this%recently_changed = .true. ! assume that the new patches will change this level
+      call this%expand_list
+      if (.not. this%patches(ubound(this%patches(:), dim=1))%decompose_patch(n_d(:), off(:), n_pieces)) then
+         write(msg,'(a,i4)')"[cg_level:add_patch_detailed] Decomposition failed at level ",this%level_id
+         call die(msg)
+      endif
+
+   end subroutine add_patch_detailed
+
+!> \brief Add a patch with only one grid piece
+
+   subroutine add_patch_one_piece(this, n_d, off)
+
+      use constants,     only: ndims
+
+      implicit none
+
+      class(cg_level_T), target,         intent(inout) :: this     !< current level
+      integer(kind=8), dimension(ndims), intent(in)    :: n_d      !< number of grid cells
+      integer(kind=8), dimension(ndims), intent(in)    :: off      !< offset (with respect to the base level, counted on own level)
+
+      this%recently_changed = .true. ! assume that the new patches will change this level
+      call this%expand_list
+      call this%patches(ubound(this%patches(:), dim=1))%one_piece_patch(n_d(:), off(:))
+
+   end subroutine add_patch_one_piece
+
+!> \brief Expand the patch list by one
+
+   subroutine expand_list(this)
+
+      use decomposition, only: box_T
+
+      implicit none
+
+      class(cg_level_T), target,         intent(inout) :: this     !< current level
 
       type(box_T), dimension(:), allocatable :: tmp
       integer :: i
@@ -676,11 +808,181 @@ contains
          call move_alloc(from=tmp, to=this%patches)
       endif
 
-      if (.not. this%patches(ubound(this%patches(:), dim=1))%decompose_patch(n_d(:), off(:), n_pieces)) then
-         write(msg,'(a,i4)')"[cg_level:add_patch_detailed] Decomposition failed at level ",this%level_id
-         call die(msg)
+   end subroutine expand_list
+
+!>
+!! \brief Routine for moving proposed grids between processes
+!!
+!! \details Starts with list of already allocated blocks and list of patches which are not yet turned into blocks on a given level
+!! Move the patches between processes to maintain best possible work balance.
+!!
+!! Note that this routine is not intended for moving existing blocks between processes.
+!! A separate routine, called from cg_leaves::update will do that task when allowed and found worth the effort.
+!!
+!! Current implementation does all the work on master process which might be quite antiparallel.
+!!
+!! This is truly parallel-sorting problem. Note that at we may ensure that the set of grid pieces has the following property:
+!! * there is sorted or nearly-sorted list of existing grid pieces on each process, that means for most pieces on process p maimum id on process p-1 is less than own id
+!!   and for process p+1 similarly
+!! * there is chaotic (in practice not so much) set of grid pieces to be created
+!! We may then sort iteratively:
+!! * do long-range moves of chaotic pieces, based on distribution estimate
+!! * iterate with short-range (+/-1 or at most +/-2 in process number) moves of all pieces until everything is sorted well enough
+!<
+
+   subroutine balance_new(this)
+
+      use constants,       only: pSUM, ndims, INVALID, LO, HI, I_ONE!, xdim, ydim, zdim
+      use dataio_pub,      only: die
+      use mpi,             only: MPI_INTEGER, MPI_INTEGER8, MPI_STATUS_IGNORE!, MPI_REQUEST_NULL
+      use mpisetup,        only: piernik_MPI_Allreduce, master, FIRST, LAST, comm, req, mpi_err, status, nproc, inflate_req
+      use sort_piece_list, only: grid_piece, grid_piece_list
+
+      implicit none
+
+      class(cg_level_T), intent(inout) :: this
+
+      type(grid_piece_list) :: gp
+      integer :: p, s, i
+      integer, dimension(FIRST:LAST+1) :: from
+      integer, dimension(FIRST:LAST) :: cnt_existing
+      integer(kind=4) :: ls
+      integer(kind=4), parameter :: tag_ls = 1, tag_gpt = tag_ls+1, tag_lsR = tag_gpt+1, tag_gptR = tag_lsR+1
+      enum, bind(C)
+         enumerator :: I_OFF
+         enumerator :: I_N_B = I_OFF + ndims
+         enumerator :: I_GID = I_N_B + ndims
+      end enum
+      integer(kind=8), dimension(:,:), allocatable :: gptemp
+      integer, parameter :: nreq = 1
+
+      ! collect existing and planned grids on a level
+
+      call inflate_req(nreq)
+
+      s = 0
+      if (allocated(this%patches)) then
+         do p = lbound(this%patches(:), dim=1), ubound(this%patches(:), dim=1)
+            s = s + size(this%patches(p)%pse, dim=1)
+         enddo
+      endif
+      ls = s
+      call piernik_MPI_Allreduce(s, pSUM) !> \warning overkill: MPI_reduce is enough here
+
+      if (s==0) return
+
+      if (master) then
+         call gp%init(s)
+         allocate(gptemp(I_OFF:I_GID,s))
+      else
+         allocate(gptemp(I_OFF:I_GID,ls))
+         call MPI_Isend(ls, I_ONE, MPI_INTEGER, FIRST, tag_ls, comm, req(nreq), mpi_err)
+      endif
+      call MPI_Gather(this%cnt, I_ONE, MPI_INTEGER, cnt_existing, I_ONE, MPI_INTEGER, FIRST, comm, mpi_err)
+      i = 0
+      if (allocated(this%patches)) then
+         do p = lbound(this%patches(:), dim=1), ubound(this%patches(:), dim=1)
+            do s = lbound(this%patches(p)%pse, dim=1), ubound(this%patches(p)%pse, dim=1)
+               i = i + 1
+               gptemp(:, i) = [ this%patches(p)%pse(s)%se(:, LO), this%patches(p)%pse(s)%se(:, HI) - this%patches(p)%pse(s)%se(:, LO) + 1, int(INVALID, kind=8) ]
+            enddo
+         enddo
+      endif
+      if (allocated(this%patches)) deallocate(this%patches)
+      if (master) then !> \warning Antiparallel
+         do s = 1, ls
+            gp%list(s) = grid_piece( gptemp(I_OFF:I_OFF+ndims-1, s), int(gptemp(I_N_B:I_N_B+ndims-1, s)), int(gptemp(I_GID, s)), INVALID, 0., 0.)
+         enddo
+         i = ls
+         deallocate(gptemp)
+         do p = FIRST + 1, LAST
+            call MPI_Recv(ls, I_ONE, MPI_INTEGER, p, tag_ls, comm, MPI_STATUS_IGNORE, mpi_err)
+            if (ls > 0) then
+               allocate(gptemp(I_OFF:I_GID,ls))
+               call MPI_Recv(gptemp, size(gptemp), MPI_INTEGER8, p, tag_gpt, comm, MPI_STATUS_IGNORE, mpi_err)
+               do s = 1, ls
+                  gp%list(i+s) = grid_piece( gptemp(I_OFF:I_OFF+ndims-1, s), int(gptemp(I_N_B:I_N_B+ndims-1, s)), int(gptemp(I_GID, s)), INVALID, 0., 0.)
+               enddo
+               i = i + ls
+               deallocate(gptemp)
+            endif
+         enddo
+
+         ! apply unique numbers to the grids and sort the list
+         call gp%set_id(this%off)
+         call gp%sort
+
+         ! measure their weight
+         call gp%set_weights
+
+         !> compute destination process corrected for current imbalance of existing grids as much as possible
+         !> \todo replace counting of blocks with counting of weights - it will be required for merged blocks
+         s = (size(gp%list) + sum(cnt_existing))/nproc
+         i = (size(gp%list) + sum(cnt_existing, mask=(cnt_existing <= s)))/(nproc - count(cnt_existing > s))
+         from(FIRST) = lbound(gp%list, dim=1)
+         do p = FIRST, LAST
+            from(p+1) = max(0, i - cnt_existing(p))
+         enddo
+         i = size(gp%list) - sum(from(FIRST+1:LAST+1))
+         if (i<0) call die("[cg_level:balance_new] i<0")
+         p = LAST
+         do while (p >= FIRST .and. i > 0)
+            !> \deprecated this approach may result in building a small imbalance in favour of process with low id.
+            if (cnt_existing(p) <= s) then
+               from(p+1) = from(p+1) + 1
+               i = i - 1
+            endif
+            p = p - 1
+         enddo
+         do p = FIRST, LAST
+            from(p+1) = from(p+1) + from(p)
+         enddo
+         do p = from(FIRST), from(FIRST+1)-1
+            call this%add_patch_one_piece(int(gp%list(p)%n_b, kind=8), gp%list(p)%off)
+         enddo
+
+         ! distribute proposed grids
+         do p = FIRST + 1, LAST
+            ls = from(p+1)-from(p)
+            ! call MPI_Isend(ls, I_ONE, MPI_INTEGER, p, tag_lsR, comm, req(p), mpi_err) !can't reuse ls before MPI_Waitall
+            call MPI_Send(ls, I_ONE, MPI_INTEGER, p, tag_lsR, comm, mpi_err)
+            if (ls>0) then
+               allocate(gptemp(I_OFF:I_GID-1,from(p):from(p+1)-1))
+               do s = lbound(gptemp, dim=2), ubound(gptemp, dim=2)
+                  gptemp(:, s) = [ gp%list(s)%off, int(gp%list(s)%n_b, kind=8) ]
+               enddo
+               ! call MPI_Isend(gptemp, size(gptemp), MPI_INTEGER8, p, tag_gptR, comm, req(LAST+p), mpi_err) !can't deallocate gptemp before MPI_Waitall
+               call MPI_Send(gptemp, size(gptemp), MPI_INTEGER8, p, tag_gptR, comm, mpi_err)
+               deallocate(gptemp)
+            else
+               ! req(LAST+p) = MPI_REQUEST_NULL
+            endif
+         enddo
+         ! call MPI_Waitall(2*LAST, req(:2*LAST), status(:,:2*LAST), mpi_err)
+      else
+         call MPI_Wait(req(nreq), status(:, 1), mpi_err)
+         if (ls > 0) call MPI_Send(gptemp, size(gptemp), MPI_INTEGER8, FIRST, tag_gpt, comm, mpi_err)
+         deallocate(gptemp)
+         call MPI_Recv(ls, I_ONE, MPI_INTEGER, FIRST, tag_lsR, comm, MPI_STATUS_IGNORE, mpi_err)
+         if (ls>0) then
+            allocate(gptemp(I_OFF:I_GID-1,ls))
+            call MPI_Recv(gptemp, size(gptemp), MPI_INTEGER8, FIRST, tag_gptR, comm, MPI_STATUS_IGNORE, mpi_err)
+            do s = lbound(gptemp, dim=2), ubound(gptemp, dim=2)
+               call this%add_patch_one_piece(gptemp(I_N_B:I_N_B+ndims-1, s), gptemp(I_OFF:I_OFF+ndims-1, s))
+            enddo
+            deallocate(gptemp)
+         endif
       endif
 
-   end subroutine add_patch_detailed
+      if (master) call gp%cleanup
+
+!!$      allocate(area(1:lmax))
+!!$      area = 0
+!!$      do i = lbound(cg_res(:), dim=1), ubound(cg_res(:), dim=1)
+!!$         if (cg_res(i)%level >= 1) area(cg_res(i)%level) = area(cg_res(i)%level) + product(cg_res(i)%n_b)
+!!$      enddo
+!!$      deallocate(area)
+
+   end subroutine balance_new
 
 end module cg_level

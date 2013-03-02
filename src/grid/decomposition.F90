@@ -59,8 +59,9 @@ module decomposition
     contains
 
       procedure :: decompose_patch                      !< Main wrapper for a block decomposer
-      procedure :: allocate_pse                         !< allocate the segment list
+      procedure :: one_piece_patch                      !< Do not try decomposing. Add as is.
 
+      procedure, private :: allocate_pse                !< allocate the segment list
       procedure, private :: decompose_patch_int         !< Compute allowed domain decomposition
       procedure, private :: cartesian_tiling            !< Decomposes the box into a topologically cartesian grid
       procedure, private :: choppy_tiling               !< Less structured box decomposition
@@ -727,5 +728,32 @@ contains
       enddo
 
    end subroutine allocate_pse
+
+!> \brief Do not try decomposing. Add as is.
+
+   subroutine one_piece_patch(this, n_d, off)
+
+      use constants, only: I_ONE, ndims
+      use domain,    only: dom
+
+      implicit none
+
+      class(box_T),                      intent(inout) :: this     !< the patch, which we want to be chopped into pieces
+      integer(kind=8), dimension(ndims), intent(in)    :: n_d      !< number of grid cells
+      integer(kind=8), dimension(ndims), intent(in)    :: off      !< offset (with respect to the base level, counted on own level), \todo make use of it
+
+      where (dom%has_dir(:))
+         this%n_d(:) = n_d(:)
+         this%off(:) = off(:)
+      elsewhere
+         this%n_d(:) = 1
+         this%off(:) = 0
+      endwhere
+
+      call this%allocate_pse(I_ONE)
+      this%pse(I_ONE)%se(:, LO) = this%off(:)
+      this%pse(I_ONE)%se(:, HI) = this%pse(I_ONE)%se(:, LO) + this%n_d(:) - 1
+
+   end subroutine one_piece_patch
 
 end module decomposition

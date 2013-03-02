@@ -44,8 +44,10 @@ module initproblem
    real                     :: a    !< proportionality constant
    real, dimension(ndims)   :: kx   !< wave number
    integer(kind=4)          :: n    !< exponent
+   real :: ref_thr                  !< refinement threshold
+   real :: deref_thr                !< derefinement threshold
 
-   namelist /PROBLEM_CONTROL/ type, a, n, kx
+   namelist /PROBLEM_CONTROL/ type, a, n, kx, ref_thr, deref_thr
 
    ! private data
    character(len=dsetnamelen), parameter :: apot_n = "apot" !< name of the analytical potential field
@@ -66,12 +68,13 @@ contains
    subroutine problem_pointers
 
       use dataio_user, only: user_vars_hdf5
-      use user_hooks,  only: finalize_problem
+      use user_hooks,  only: finalize_problem, problem_refine_derefine
 
       implicit none
 
       finalize_problem => finalize_problem_app
       user_vars_hdf5   => app_error_vars
+      problem_refine_derefine => mark_surface
 
    end subroutine problem_pointers
 
@@ -92,6 +95,8 @@ contains
       a          = 0.
       kx(:)      = pi
       n          = 0
+      ref_thr    = 1e-2     !< Refine if density difference is greater than this value
+      deref_thr  = 1e-4     !< Derefine if density difference is smaller than this value
 
       if (master) then
 
@@ -99,6 +104,8 @@ contains
 
          rbuff(1) = a
          rbuff(2:4) = kx(:)
+         rbuff(5) = ref_thr
+         rbuff(6) = deref_thr
 
          ibuff(1) = n
 
@@ -114,6 +121,8 @@ contains
 
          a         = rbuff(1)
          kx(:)     = rbuff(2:4)
+         ref_thr   = rbuff(5)
+         deref_thr = rbuff(6)
 
          n    = ibuff(1)
 
@@ -401,5 +410,34 @@ contains
       end select
 
    end subroutine app_error_vars
+
+!> \brief Request refinement along the surface of the ellipsoid. Derefine inside and outside the ellipsoid if possible.
+
+   subroutine mark_surface
+
+      use cg_leaves,        only: leaves
+      use cg_list,          only: cg_list_element
+      use named_array_list, only: qna
+      use refinement,       only: ref_flag
+
+      implicit none
+
+      type(cg_list_element), pointer :: cgl
+      real :: delta_pot
+
+!      call leaves%internal_boundaries_4d(wna%fi) !< enable it as soon as c2f and f2c routines will work
+
+      cgl => leaves%first
+      do while (associated(cgl))
+         if (any(cgl%cg%leafmap)) then
+            delta_pot = maxval(cgl%cg%q(qna%ind(apot_n))%span(cgl%cg%ijkse), mask=cgl%cg%leafmap) - minval(cgl%cg%q(qna%ind(apot_n))%span(cgl%cg%ijkse), mask=cgl%cg%leafmap)
+            cgl%cg%refine_flags = ref_flag( delta_pot >= ref_thr, delta_pot < deref_thr )
+         else
+            cgl%cg%refine_flags = ref_flag( .false., .false. )
+         endif
+         cgl => cgl%nxt
+      enddo
+
+   end subroutine mark_surface
 
 end module initproblem

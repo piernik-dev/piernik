@@ -540,6 +540,7 @@ contains
 
       use cg_level_base,      only: base
       use cg_level_connected, only: cg_level_connected_T
+      use cg_level_finest,    only: finest
       use cg_list,            only: cg_list_element
       use common_hdf5,        only: d_gname, dir_pref, n_cg_name, d_size_aname, d_fc_aname, d_edge_apname, d_bnd_apname, &
            &                        cg_size_aname, cg_offset_aname, cg_lev_aname, base_d_gname, cg_cnt_aname, data_gname, &
@@ -744,7 +745,6 @@ contains
          allocate(ibuf(1))
          call read_attribute(cg_g_id, cg_lev_aname, ibuf)        ! open "/cg/cg_%08d/level"
          if (ibuf(1) < base%level%level_id) call die("[restart_hdf5:read_restart_hdf5_v2] Grids coarser than base level are not supported")
-         if (ibuf(1) > base%level%level_id) call die("[restart_hdf5:read_restart_hdf5_v2] Refinements are not supported yet")
          cg_res(ia)%level=ibuf(1)
          deallocate(ibuf)
 
@@ -782,6 +782,7 @@ contains
       if (tot_cells /= product(dom%n_d(:)) .or. outside .or. overlapped) call die("[restart_hdf5:read_restart_hdf5_v2] Improper coverage of base domain by available cg")
 
       ! For AMR this will be more complicated: check if all restart cg cover leaf patches, do an additional domain decomposition
+      call set_refinement(cg_res)
 
       ! set up things such as register user rank-3 and rank-4 arrays to be read by read_arr_from_restart. Read also anything that is not read by all read_cg_from_restart calls
       if (associated(user_attrs_rd)) call user_attrs_rd(file_id)
@@ -826,8 +827,11 @@ contains
             if (.not. all(cgl%cg%leafmap)) call die("[restart_hdf5:read_restart_hdf5_v2] Uninitialized grid found")
             cgl => cgl%nxt
          enddo
+         call curl%sync_ru
          curl => curl%finer
       enddo
+
+      call finest%level%restrict_to_base ! implies update of leafmap
 
       !> \todo update boundaries
       status_v2 = STAT_OK
@@ -842,6 +846,55 @@ contains
       call piernik_MPI_Barrier
 
    end subroutine read_restart_hdf5_v2
+
+!> \brief Find all non-base level grids in the restart file and distribute empty grids across the processes
+
+   subroutine set_refinement(cg_res)
+
+      use cg_leaves,          only: leaves
+      use cg_level_base,      only: base
+      use cg_level_connected, only: cg_level_connected_T
+      use cg_level_finest,    only: finest
+      use mpisetup,           only: master
+
+      implicit none
+
+      type(cg_essentials), dimension(:) :: cg_res
+
+      integer :: lmax, i
+      type(cg_level_connected_T), pointer :: curl
+
+      lmax = base%level%level_id
+      do i = lbound(cg_res(:), dim=1), ubound(cg_res(:), dim=1)
+         if (cg_res(i)%level > lmax) lmax = cg_res(i)%level
+      enddo
+
+      if (lmax == base%level%level_id) return
+
+      do while (lmax > finest%level%level_id)
+         call finest%add_finer
+      enddo
+
+      ! Add all patches on master process and let the rebalancing routine do the work before the grids are created
+      if (master) then
+         curl => base%level%finer
+         do while (associated(curl))
+            do i = lbound(cg_res(:), dim=1), ubound(cg_res(:), dim=1)
+               if (cg_res(i)%level == curl%level_id) call curl%add_patch(int(cg_res(i)%n_b, kind=8), cg_res(i)%off)
+            enddo
+            curl => curl%finer
+         enddo
+      endif
+
+      curl => base%level%finer
+      do while (associated(curl))
+         call curl%init_all_new_cg
+         curl => curl%finer
+      enddo
+
+      call leaves%update(" ( restart  ) ")
+
+   end subroutine set_refinement
 
 !> \brief Read as much as possible from stored cg to own cg
    subroutine read_cg_from_restart(cg, cgl_g_id, ncg, cg_r, curl_off)

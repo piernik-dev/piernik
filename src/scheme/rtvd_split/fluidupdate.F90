@@ -66,6 +66,8 @@ contains
 
       if (.not.repeat_step) return
 
+      if (cfl_violated .and. master) call warn("[fluidupdate:fluid_update] Redoing previous step...")
+
       cgl => leaves%first
       do while (associated(cgl))
          cg => cgl%cg
@@ -76,7 +78,6 @@ contains
             cg%b = cg%w(wna%ind(b0_n))%arr
             dt = dtm/dt_max_grow**2
             nstep = nstep_saved
-            if (master) call warn("[fluidupdate:fluid_update] Redoing previous step...")
          else
             cg%w(wna%ind(u0_n))%arr = cg%u
             cg%w(wna%ind(b0_n))%arr = cg%b

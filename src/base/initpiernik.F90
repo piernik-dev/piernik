@@ -44,6 +44,7 @@ contains
    subroutine init_piernik
 
       use all_boundaries,        only: all_bnd
+      use cg_level_finest,       only: finest
       use cg_list_global,        only: all_cg
       use constants,             only: PIERNIK_INIT_MPI, PIERNIK_INIT_GLOBAL, PIERNIK_INIT_FLUIDS, PIERNIK_INIT_DOMAIN, PIERNIK_INIT_GRID, PIERNIK_INIT_IO_IC, INCEPTIVE
       use dataio,                only: init_dataio, init_dataio_parameters, write_data
@@ -60,6 +61,8 @@ contains
       use interactions,          only: init_interactions
       use initproblem,           only: init_prob, read_problem_par, problem_pointers
       use mpisetup,              only: init_mpi, master
+      use refinement,            only: init_refinement, level_max
+      use refinement_update,     only: update_refinement
       use units,                 only: init_units
       use user_hooks,            only: problem_post_restart
 #if defined MAGNETIC && defined RESISTIVE
@@ -100,6 +103,9 @@ contains
 #endif /* __INTEL_COMPILER */
 
       implicit none
+
+      integer :: nit
+      logical :: finished
 
       call parse_cmdline
       write(par_file,'(2a)') trim(wd_rd),'problem.par'
@@ -149,6 +155,7 @@ contains
 
       call init_domain
       code_progress = PIERNIK_INIT_DOMAIN    ! Base domain is known and initial domain decomposition is known
+      call init_refinement
 
       call init_decomposition
 #ifdef GRAV
@@ -228,13 +235,29 @@ contains
             call problem_post_restart
          endif
       else
-         call init_prob                      ! may depend on anything
-         call all_bnd                        !> \warning Never assume that init_prob set guardcells correctly
+
+         finished = .false.
+         call init_prob ! may depend on anything
+         do nit = 0, level_max + 2 ! + 2 is just in case, when refining grids affect previously refined region
+
+            call all_bnd !> \warning Never assume that init_prob set guardcells correctly
 #ifdef GRAV
-         call manage_grav_pot_3d(.false.)
-         call cleanup_hydrostatic
+            call manage_grav_pot_3d(.false.)
+            call cleanup_hydrostatic
 #endif /* GRAV */
+
+            call update_refinement
+            !> \todo set finished when grid structure has not changed
+            call init_prob ! reset initial conditions after possible changes of refinement structure
+            if (finished) exit
+
+         enddo
+
       endif
+
+      write(msg, '(a,3i8,a,i3)')"[initinitpiernik:init_piernik] Effective resolution is [", finest%level%n_d(:), " ] at level ", finest%level%level_id
+      !> \todo Do an MPI_Reduce in case the master process don't have any part of the globally finest level or ensure it is empty in such case
+      if (master) call printinfo(msg)
 
 #ifdef RESISTIVE
       call compute_resist                    ! etamax%val is required by timestep_resist

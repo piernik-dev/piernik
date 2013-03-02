@@ -1,0 +1,12 @@
+#undef IONIZED
+#undef MAGNETIC
+#define NEUTRAL
+#define LOCAL_FR_SPEED
+
+#define ISO
+
+#undef GRAV
+
+#if !(defined(HLLC))
+#define RTVD
+#endif

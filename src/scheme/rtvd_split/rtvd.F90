@@ -235,13 +235,14 @@ contains
 ! OPT: we may also try to work on bigger parts of the u(:,:,:,:) at a time , but the exact amount may depend on size of the L2 cache
 ! OPT: try an explicit loop over n to see if better pipelining can be achieved
 
-   subroutine relaxing_tvd(n, u, u0, bb, divv, cs_iso2, istep, sweep, i1, i2, dx, dt, cg)
+   subroutine relaxing_tvd(n, u, u0, bb, divv, cs_iso2, istep, sweep, i1, i2, dx, dt, cg, eflx)
 
-      use constants,        only: one, zero, half, GEO_XYZ
+      use constants,        only: one, zero, half, GEO_XYZ, LO
       use dataio_pub,       only: msg, die
       use domain,           only: dom
       use fluidindex,       only: iarr_all_dn, iarr_all_mx, flind, nmag
       use fluxes,           only: flimiter, all_fluxes
+      use fluxtypes,        only: ext_fluxes
       use global,           only: smalld, integration_order, use_smalld
       use grid_cont,        only: grid_container
       use gridgeometry,     only: gc, GC1, GC2, GC3, geometry_source_terms
@@ -294,6 +295,7 @@ contains
       real,                          intent(in)    :: dx                 !< cell length
       real,                          intent(in)    :: dt                 !< time step
       type(grid_container), pointer, intent(in)    :: cg                 !< current grid piece
+      type(ext_fluxes),              intent(inout) :: eflx               !< external fluxes
 
 #ifdef GRAV
       integer                                      :: ind                !< fluid index
@@ -388,6 +390,19 @@ contains
 
          ! u update
          fu = fr - fl
+
+         ! Setting uflx to 0 can be used to enforce reflecting boundary
+         ! To enforce diode boundaries one can either:
+         ! * Set fl or fr to 0 (depending on side)
+         ! or
+         ! * Set f0 to 0 only when it would produce incoming flux.
+         ! I don't remember which approach was already (unsuccesfully) tested
+         !> \todo Get rid of use of cg
+         if (associated(eflx%li)) fu(:, eflx%li%index - cg%lhn(sweep, LO) + 1) = eflx%li%uflx
+         if (associated(eflx%ri)) fu(:, eflx%ri%index - cg%lhn(sweep, LO)    ) = eflx%ri%uflx
+         if (associated(eflx%lo)) eflx%lo%uflx = fu(:, eflx%lo%index - cg%lhn(sweep, LO)    )
+         if (associated(eflx%ro)) eflx%ro%uflx = fu(:, eflx%ro%index - cg%lhn(sweep, LO) + 1)
+
          if (dom%geometry_type == GEO_XYZ) then
             u1(:,2:n) = u0(:,2:n) - rk2coef(integration_order,istep) *                 dtx * (               fu(:,2:n) -               fu(:,1:n-1) )
          else

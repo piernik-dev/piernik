@@ -95,13 +95,18 @@ contains
 
       use cg_leaves,        only: leaves
       use cg_list,          only: cg_list_element
-      use constants,        only: pdims, LO, HI, uh_n, cs_i2_n, ORTHO1, ORTHO2
+      use constants,        only: pdims, LO, HI, uh_n, cs_i2_n, ORTHO1, ORTHO2, I_ONE, INVALID
+      use dataio_pub,       only: die
       use domain,           only: dom
       use fluidboundaries,  only: all_fluid_boundaries
       use fluidindex,       only: flind, iarr_all_swp, nmag
+      use fluxtypes,        only: ext_fluxes
+      use func,             only: f2c_o
       use global,           only: dt, integration_order
       use grid_cont,        only: grid_container
       use gridgeometry,     only: set_geo_coeffs
+      use mpi,              only: MPI_DOUBLE_PRECISION, MPI_STATUS_IGNORE
+      use mpisetup,         only: comm, mpi_err, req, inflate_req, status
       use named_array_list, only: qna, wna
       use rtvd,             only: relaxing_tvd
 #ifdef COSM_RAYS
@@ -128,6 +133,13 @@ contains
       real, dimension(:),    pointer    :: div_v1d => null(), cs2
       type(cg_list_element), pointer    :: cgl
       type(grid_container),  pointer    :: cg
+      type(ext_fluxes)                  :: eflx
+      logical                           :: all_processed, all_received, received
+      integer                           :: blocks_done
+      integer                           :: g, nr, nr_recv, lh
+      integer(kind=8)                   :: j, k
+      integer(kind=8), dimension(LO:HI) :: j1, j2, jc
+      integer(kind=4), dimension(:, :), pointer :: mpistatus
 
       full_dim = dom%has_dir(cdim)
       uhi = wna%ind(uh_n)
@@ -137,58 +149,179 @@ contains
          i_cs_iso2 = -1
       endif
 
+      call eflx%init
+
       do istep = 1, integration_order
+         nr = 0
          cgl => leaves%first
          do while (associated(cgl))
-            cg => cgl%cg
-
-            allocate(b(nmag, cg%n_(cdim)), u(flind%all, cg%n_(cdim)), u0(flind%all, cg%n_(cdim)))
-
-            b(:,:) = 0.0
-            u(:,:) = 0.0
-
-            if (istep == 1) then
-#ifdef COSM_RAYS
-               call div_v(flind%ion%pos, cg)
-#endif /* COSM_RAYS */
-               cg%w(uhi)%arr = cg%u
-            endif
-
-            cs2 => null()
-            do i2 = cg%ijkse(pdims(cdim, ORTHO2),LO), cg%ijkse(pdims(cdim, ORTHO2),HI)
-               do i1 = cg%ijkse(pdims(cdim, ORTHO1),LO), cg%ijkse(pdims(cdim, ORTHO1),HI)
-
-#ifdef MAGNETIC
-                  if (full_dim) then
-                     b(:,:) = interpolate_mag_field(cdim, cg, i1, i2)
-                  else
-                     pb => cg%w(wna%bi)%get_sweep(cdim, i1, i2)   ! BEWARE: is it correct for 2.5D ?
-                     b(iarr_mag_swp(cdim,:),:)  = pb(:,:)
+            cgl%cg%processed = .false.
+            cgl%cg%finebnd(cdim, LO)%uflx(:, :, :) = 0. !> \warning overkill
+            cgl%cg%finebnd(cdim, HI)%uflx(:, :, :) = 0.
+            if (allocated(cgl%cg%rif_tgt%seg)) then
+               associate ( seg => cgl%cg%rif_tgt%seg )
+               do g = lbound(seg, dim=1), ubound(seg, dim=1)
+                  jc = seg(g)%se(cdim, :)
+                  if (jc(LO) == jc(HI)) then
+                     nr = nr + I_ONE
+                     if (nr > size(req, dim=1)) call inflate_req
+                     call MPI_Irecv(seg(g)%buf, size(seg(g)%buf(:, :, :)), MPI_DOUBLE_PRECISION, seg(g)%proc, seg(g)%tag, comm, req(nr), mpi_err)
+                     seg(g)%req => req(nr)
                   endif
-#endif /* MAGNETIC */
-
-                  call set_geo_coeffs(cdim, flind, i1, i2, cg)
-#ifdef COSM_RAYS
-                  call set_div_v1d(div_v1d, cdim, i1, i2, cg)
-#endif /* COSM_RAYS */
-
-                  pu  => cg%w(wna%fi)%get_sweep(cdim,i1,i2)
-                  pu0 => cg%w(uhi      )%get_sweep(cdim,i1,i2)
-                  if (i_cs_iso2 > 0) cs2 => cg%q(i_cs_iso2)%get_sweep(cdim,i1,i2)
-
-                  u (iarr_all_swp(cdim,:),:) = pu(:,:)
-                  u0(iarr_all_swp(cdim,:),:) = pu0(:,:)
-
-                  call relaxing_tvd(cg%n_(cdim), u, u0, b, div_v1d, cs2, istep, cdim, i1, i2, cg%dl(cdim), dt, cg)
-                  pu(:,:) = u(iarr_all_swp(cdim,:),:)
-                  nullify(pu,pu0,cs2)
                enddo
-            enddo
-
-            deallocate(b, u, u0)
-
+               end associate
+            endif
             cgl => cgl%nxt
          enddo
+         nr_recv = nr
+
+         all_processed = .false.
+         do while (.not. all_processed)
+            all_processed = .true.
+            blocks_done = 0
+            cgl => leaves%first
+            do while (associated(cgl))
+               cg => cgl%cg
+
+               if (.not. cg%processed) then
+
+                  all_received = .true.
+                  if (allocated(cgl%cg%rif_tgt%seg)) then
+                     associate ( seg => cgl%cg%rif_tgt%seg )
+                     do g = lbound(seg, dim=1), ubound(seg, dim=1)
+                        jc = seg(g)%se(cdim, :)
+                        if (jc(LO) == jc(HI)) then
+                           call MPI_Test(seg(g)%req, received, MPI_STATUS_IGNORE, mpi_err)
+                           if (received) then
+                              jc = seg(g)%se(cdim, :) !> \warning: partially duplicated code (see below)
+                              j1 = seg(g)%se(pdims(cdim, ORTHO1), :)
+                              j2 = seg(g)%se(pdims(cdim, ORTHO2), :)
+                              if (jc(LO) /= jc(HI)) call die("[sweeps:sweep] layer too thick (Recv)")
+                              if (all(cgl%cg%finebnd(cdim, LO)%index(j1(LO):j1(HI), j2(LO):j2(HI)) == jc(LO))) then
+                                 lh = LO
+                              else if (all(cgl%cg%finebnd(cdim, HI)%index(j1(LO):j1(HI), j2(LO):j2(HI)) == jc(LO))) then
+                                 lh = HI
+                              else
+                                 call die("[sweeps:sweep] Cannot determine side (Recv)")
+                                 lh = INVALID
+                              endif
+!                              cgl%cg%finebnd(cdim, lh)%uflx(:, j1(LO):j1(HI), j2(LO):j2(HI)) = cgl%cg%finebnd(cdim, lh)%uflx(:, j1(LO):j1(HI), j2(LO):j2(HI)) + seg(g)%buf(:, :, :)
+                              ! for more general decompositions with odd-offset patches it might be necessary to do sum, but it need to be debugged first
+                              cgl%cg%finebnd(cdim, lh)%uflx(:, j1(LO):j1(HI), j2(LO):j2(HI)) = seg(g)%buf(:, :, :)
+                           else
+                              all_received = .false.
+                           endif
+                        endif
+                     enddo
+                     end associate
+                  endif
+                  if (all_received) then
+
+                     allocate(b(nmag, cg%n_(cdim)), u(flind%all, cg%n_(cdim)), u0(flind%all, cg%n_(cdim)))
+
+                     b(:,:) = 0.0
+                     u(:,:) = 0.0
+
+                     if (istep == 1) then
+#ifdef COSM_RAYS
+                        call div_v(flind%ion%pos, cg)
+#endif /* COSM_RAYS */
+                        cg%w(uhi)%arr = cg%u
+                     endif
+
+                     !> \todo OPT: use cg%leafmap to skip lines fully covered by finer grids
+                     ! it should be also possible to compute only parts of lines that aren't covered by finer grids
+                     cs2 => null()
+                     do i2 = cg%ijkse(pdims(cdim, ORTHO2), LO), cg%ijkse(pdims(cdim, ORTHO2), HI)
+                        do i1 = cg%ijkse(pdims(cdim, ORTHO1), LO), cg%ijkse(pdims(cdim, ORTHO1), HI)
+
+#ifdef MAGNETIC
+                           if (full_dim) then
+                              b(:,:) = interpolate_mag_field(cdim, cg, i1, i2)
+                           else
+                              pb => cg%w(wna%bi)%get_sweep(cdim, i1, i2)   ! BEWARE: is it correct for 2.5D ?
+                              b(iarr_mag_swp(cdim,:),:)  = pb(:,:)
+                           endif
+#endif /* MAGNETIC */
+
+                           call set_geo_coeffs(cdim, flind, i1, i2, cg)
+#ifdef COSM_RAYS
+                           call set_div_v1d(div_v1d, cdim, i1, i2, cg)
+#endif /* COSM_RAYS */
+
+                           pu                     => cg%w(wna%fi   )%get_sweep(cdim,i1,i2)
+                           pu0                    => cg%w(uhi      )%get_sweep(cdim,i1,i2)
+                           if (i_cs_iso2 > 0) cs2 => cg%q(i_cs_iso2)%get_sweep(cdim,i1,i2)
+
+                           u (iarr_all_swp(cdim,:),:) = pu (:,:)
+                           u0(iarr_all_swp(cdim,:),:) = pu0(:,:)
+
+                           call cg%set_fluxpointers(cdim, i1, i2, eflx)
+                           call relaxing_tvd(cg%n_(cdim), u, u0, b, div_v1d, cs2, istep, cdim, i1, i2, cg%dl(cdim), dt, cg, eflx)
+                           call cg%save_outfluxes(cdim, i1, i2, eflx)
+
+                           pu(:,:) = u(iarr_all_swp(cdim,:),:)
+                           nullify(pu,pu0,cs2)
+                        enddo
+                     enddo
+
+                     if (allocated(cgl%cg%rof_tgt%seg)) then
+                        associate ( seg => cgl%cg%rof_tgt%seg )
+                        do g = lbound(seg, dim=1), ubound(seg, dim=1)
+                           jc = seg(g)%se(cdim, :) !> \warning: partially duplicated code (see above)
+                           if (jc(LO) == jc(HI)) then
+                              j1 = seg(g)%se(pdims(cdim, ORTHO1), :)
+                              j2 = seg(g)%se(pdims(cdim, ORTHO2), :)
+                              if (all(cgl%cg%coarsebnd(cdim, LO)%index(j1(LO):j1(HI), j2(LO):j2(HI)) == jc(LO))) then
+                                 lh = LO
+                              else if (all(cgl%cg%coarsebnd(cdim, HI)%index(j1(LO):j1(HI), j2(LO):j2(HI)) == jc(LO))) then
+                                 lh = HI
+                              else
+                                 call die("[sweeps:sweep] Cannot determine side (Send)")
+                                 lh = INVALID
+                              endif
+
+                              seg(g)%buf(:, :, :) = 0.
+                              do j = j1(LO), j1(HI)
+                                 do k = j2(LO), j2(HI)
+                                    seg(g)%buf(:, f2c_o(j), f2c_o(k)) = seg(g)%buf(:, f2c_o(j), f2c_o(k)) + cgl%cg%coarsebnd(cdim, lh)%uflx(:, j, k)
+                                 enddo
+                              enddo
+                              seg(g)%buf = 1/2.**(dom%eff_dim-1) * seg(g)%buf
+
+                              nr = nr + I_ONE
+                              if (nr > size(req, dim=1)) call inflate_req
+                              call MPI_Isend(seg(g)%buf, size(seg(g)%buf(:, :, :)), MPI_DOUBLE_PRECISION, seg(g)%proc, seg(g)%tag, comm, req(nr), mpi_err)
+                              seg(g)%req => req(nr)
+                           endif
+                        enddo
+                        end associate
+                     endif
+
+                     deallocate(b, u, u0)
+
+                     cg%processed = .true.
+                     blocks_done = blocks_done + 1
+                  else
+                     all_processed = .false.
+                  endif
+               endif
+
+               cgl => cgl%nxt
+            enddo
+
+            if (.not. all_processed .and. blocks_done == 0) then
+               if (nr_recv > 0) then
+                  mpistatus => status(:, :nr_recv)
+                  call MPI_Waitany(nr_recv, req(:nr_recv), g, mpistatus, mpi_err)
+               endif
+            endif
+         enddo
+
+         if (nr > 0) then
+            mpistatus => status(:, :nr)
+            call MPI_Waitall(nr, req(:nr), mpistatus, mpi_err)
+         endif
 
          if (full_dim) call all_fluid_boundaries    ! \todo : call only cdim for istep=1, call all for istep=2
       enddo

@@ -39,10 +39,15 @@ module initproblem
 
    ! namelist parameters
    real                   :: pulse_size  !< size of the density pulse as a fraction of the domain
+   real, dimension(ndims) :: pulse_off   !< offset of the pulse as a fraction of the domain
    real                   :: pulse_amp   !< amplitude of the density pulse compared to the ambient level
    real, dimension(ndims) :: pulse_vel   !< uniform velocity components
    integer(kind=4)        :: norm_step   !< how often to calculate the L2-norm
-   namelist /PROBLEM_CONTROL/  pulse_size, pulse_vel, pulse_amp, norm_step
+   integer                :: nflip       !< how often to call refine/derefine routine
+   real                   :: ref_thr     !< refinement threshold
+   real                   :: deref_thr   !< derefinement threshold
+
+   namelist /PROBLEM_CONTROL/  pulse_size, pulse_off, pulse_vel, pulse_amp, norm_step, nflip, ref_thr, deref_thr
 
    ! other private data
    real, dimension(ndims, LO:HI) :: pulse_edge
@@ -77,14 +82,19 @@ contains
       use fluidindex, only: flind
       use global,     only: smalld, smallei
       use mpisetup,   only: rbuff, ibuff, master, slave, proc, have_mpi, LAST, piernik_MPI_Bcast
+      use user_hooks, only: problem_refine_derefine
 
       implicit none
 
       ! namelist default parameter values
       pulse_size   = 0.5                   !< "fill factor" in each direction
+      pulse_off    = 0.0
       pulse_vel(:) = 0.0                   !< pulse velocity
       pulse_amp    = 2.0                   !< pulse relative amplitude
       norm_step    = 5
+      nflip        = 0
+      ref_thr      = 0.1
+      deref_thr    = 0.01
 
       if (master) then
 
@@ -92,9 +102,13 @@ contains
 
          rbuff(1)   = pulse_size
          rbuff(2)   = pulse_amp
-         rbuff(2+xdim:2+zdim) = pulse_vel(:)
+         rbuff(3)   = ref_thr
+         rbuff(4)   = deref_thr
+         rbuff(5+xdim:5+zdim) = pulse_vel(:)
+         rbuff(8+xdim:8+zdim) = pulse_off(:)
 
          ibuff(1)   = norm_step
+         ibuff(2)   = nflip
 
       endif
 
@@ -105,9 +119,13 @@ contains
 
          pulse_size = rbuff(1)
          pulse_amp  = rbuff(2)
-         pulse_vel  = rbuff(2+xdim:2+zdim)
+         ref_thr    = rbuff(3)
+         deref_thr  = rbuff(4)
+         pulse_vel  = rbuff(5+xdim:5+zdim)
+         pulse_off  = rbuff(8+xdim:8+zdim)
 
          norm_step  = int(ibuff(1), kind=4)
+         nflip      = ibuff(2)
 
       endif
 
@@ -127,8 +145,8 @@ contains
       endif
 
       where (dom%has_dir(:))
-         pulse_edge(:, LO) = dom%C_(:) - dom%L_(:) * pulse_size/2.
-         pulse_edge(:, HI) = dom%C_(:) + dom%L_(:) * pulse_size/2.
+         pulse_edge(:, LO) = dom%C_(:) + dom%L_(:) * ( pulse_off(:) - pulse_size/2. )
+         pulse_edge(:, HI) = dom%C_(:) + dom%L_(:) * ( pulse_off(:) + pulse_size/2. )
       elsewhere
          pulse_edge(:, LO) = -huge(1.)
          pulse_edge(:, HI) =  huge(1.)
@@ -142,6 +160,12 @@ contains
 
       ! Create the initial density arrays (it is called before reading restart file, so there is no need to associate user_reg_var_restart)
       call register_user_var
+
+      if (nflip > 0) then
+         problem_refine_derefine => flip_flop
+      else
+         problem_refine_derefine => mark_surface
+      endif
 
    end subroutine read_problem_par
 
@@ -372,5 +396,89 @@ contains
       enddo
 
    end subroutine analytic_solution
+
+!> \brief Periodically refine and derefine whole domain
+
+   subroutine flip_flop
+
+      use cg_leaves, only: leaves
+      use cg_list,   only: cg_list_element
+      use global,    only: nstep
+
+      implicit none
+
+      type(cg_list_element), pointer :: cgl
+
+      cgl => leaves%first
+      do while (associated(cgl))
+         cgl%cg%refine_flags%refine   = .false.
+         cgl%cg%refine_flags%derefine = .false.
+         if (mod(nstep, nflip) == 0) then
+            cgl%cg%refine_flags%refine   = (mod(nstep, 2*nflip) /= 0)
+            cgl%cg%refine_flags%derefine = .not. cgl%cg%refine_flags%refine
+         endif
+         cgl => cgl%nxt
+      enddo
+
+   end subroutine flip_flop
+
+!> \brief Request refinement along the surface of the pulse. Derefine inside and outside the pulse if possible.
+
+   subroutine mark_surface
+
+      use cg_leaves,        only: leaves
+      use cg_list,          only: cg_list_element
+      use constants,        only: LO, HI, xdim, ydim, zdim
+      use fluidindex,       only: iarr_all_dn
+      use named_array_list, only: wna, qna
+
+      implicit none
+
+      type(cg_list_element), pointer :: cgl
+      real :: dmin, dmax
+      integer :: id
+
+      ! make sure that density is communicated
+      !> \todo set up a flag that tells whether this is required or the data has been recently exchanged
+      call leaves%internal_boundaries_4d(wna%fi)
+
+      ! fill cg%wa with its guardcells with values corresponding to cgl%cg%leafmap
+      !> \todo Consider extending cgl%cg%leafmap into guardcells if it will be helpful in other places too
+      cgl => leaves%first
+      do while (associated(cgl))
+         cgl%cg%wa = 0.
+         where (cgl%cg%leafmap(:,:,:)) cgl%cg%wa(cgl%cg%is:cgl%cg%ie, cgl%cg%js:cgl%cg%je, cgl%cg%ks:cgl%cg%ke) = 1.
+         cgl => cgl%nxt
+      enddo
+      call leaves%internal_boundaries_3d(qna%wai)
+
+      ! Detect the edge of the density pulse using density values relative to initial values
+      !> \deprecated this method may refine the whole domain when the pulse gets diffused enough
+      !> \todo replace with some slope filter
+      cgl => leaves%first
+      do while (associated(cgl))
+         dmax = -huge(1.)
+         dmin =  huge(1.)
+         do id = lbound(iarr_all_dn, dim=1), ubound(iarr_all_dn, dim=1)
+            ! Look one cell beyond local boundary
+            dmax = max(dmax, maxval(cgl%cg%u(id, cgl%cg%lh1(xdim, LO):cgl%cg%lh1(xdim, HI), &
+                 &                               cgl%cg%lh1(ydim, LO):cgl%cg%lh1(ydim, HI), &
+                 &                               cgl%cg%lh1(zdim, LO):cgl%cg%lh1(zdim, HI)), mask = (cgl%cg%wa( &
+                 &                               cgl%cg%lh1(xdim, LO):cgl%cg%lh1(xdim, HI), &
+                 &                               cgl%cg%lh1(ydim, LO):cgl%cg%lh1(ydim, HI), &
+                 &                               cgl%cg%lh1(zdim, LO):cgl%cg%lh1(zdim, HI)) == 1)))
+            dmin = min(dmin, minval(cgl%cg%u(id, cgl%cg%lh1(xdim, LO):cgl%cg%lh1(xdim, HI), &
+                 &                               cgl%cg%lh1(ydim, LO):cgl%cg%lh1(ydim, HI), &
+                 &                               cgl%cg%lh1(zdim, LO):cgl%cg%lh1(zdim, HI)), mask = (cgl%cg%wa( &
+                 &                               cgl%cg%lh1(xdim, LO):cgl%cg%lh1(xdim, HI), &
+                 &                               cgl%cg%lh1(ydim, LO):cgl%cg%lh1(ydim, HI), &
+                 &                               cgl%cg%lh1(zdim, LO):cgl%cg%lh1(zdim, HI)) == 1)))
+         enddo
+         cgl%cg%refine_flags%derefine = (dmax < (1+deref_thr)*pulse_low_density .or.  dmin > pulse_low_density * (pulse_amp - deref_thr))
+         cgl%cg%refine_flags%refine   = (dmax > (1+  ref_thr)*pulse_low_density .and. dmin < pulse_low_density * (pulse_amp -   ref_thr))
+         cgl => cgl%nxt
+      enddo
+
+   end subroutine mark_surface
 
 end module initproblem

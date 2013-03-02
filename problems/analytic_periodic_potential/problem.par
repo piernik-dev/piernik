@@ -83,4 +83,5 @@
 
  $AMR
     level_max = 1
+    n_updAMR = 1
  /

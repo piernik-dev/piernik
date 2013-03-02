@@ -88,10 +88,10 @@ contains
       use cg_level_finest,    only: finest
       use cg_level_connected, only: cg_level_connected_T
       use cg_list,            only: cg_list_element
-      use constants,          only: pSUM, base_level_id
+      use constants,          only: pSUM, pMAX, base_level_id
       use dataio_pub,         only: msg, printinfo
       use list_of_cg_lists,   only: all_lists
-      use mpisetup,           only: master, piernik_MPI_Allreduce
+      use mpisetup,           only: master, piernik_MPI_Allreduce, nproc
 
       implicit none
 
@@ -101,7 +101,7 @@ contains
       type(cg_level_connected_T), pointer :: curl
       type(cg_list_element),      pointer :: cgl
 
-      integer :: g_cnt
+      integer :: g_cnt, g_max, sum_max
 
       call leaves%delete
 
@@ -109,6 +109,8 @@ contains
 
       msg = "[cg_leaves:update] Leaves on levels: "
       if (present(str)) msg(len_trim(msg)+1:) = str
+
+      sum_max = 0
       curl => finest%level
       do while (associated(curl))
          if (curl%level_id == base_level_id) this%coarsest_leaves => curl !> \todo Find first not fully covered level
@@ -121,14 +123,18 @@ contains
             call this%add(cgl%cg)
             cgl => cgl%nxt
          enddo
+         g_max = curl%cnt
+         call piernik_MPI_Allreduce(g_max, pMAX)
+         sum_max = sum_max + g_max * nproc
          g_cnt = curl%cnt
          call piernik_MPI_Allreduce(g_cnt, pSUM)
          write(msg(len_trim(msg)+1:),'(i6)') g_cnt
+         call curl%vertical_prep
          curl => curl%finer
       enddo
       g_cnt = leaves%cnt
       call piernik_MPI_Allreduce(g_cnt, pSUM)
-      write(msg(len_trim(msg)+1:), '(a,i7,a)')",      Total: ",g_cnt, " leaves"
+      write(msg(len_trim(msg)+1:), '(a,i7,a,f7.5)')",      Total: ",g_cnt, " leaves. Load balance: ",g_cnt/real(sum_max)
       if (master) call printinfo(msg)
 
    end subroutine update

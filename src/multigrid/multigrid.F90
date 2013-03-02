@@ -236,16 +236,7 @@ contains
       endif
 
       do while (coarsest%level%level_id > -level_max)
-
-         ! create coarser level:
          call coarsest%add_coarser
-         if (coarsest%level%level_id == -level_max .and. single_base) then
-            call coarsest%level%add_patch(n_pieces=I_ONE)
-         else
-            call coarsest%level%add_patch
-         endif
-         call coarsest%level%init_all_new_cg
-
       enddo
 
       curl => finest%level
@@ -270,6 +261,20 @@ contains
 #ifdef GRAV
       call init_multigrid_grav
 #endif /* GRAV */
+
+      curl => base%level%coarser
+      do while (associated(curl))
+         if (master) then
+            if (curl%level_id == -level_max .and. single_base) then
+               call curl%add_patch(n_pieces=I_ONE)
+            else
+               call curl%add_patch
+            endif
+         endif
+         call curl%init_all_new_cg
+
+         curl => curl%coarser
+      enddo
 
       ! summary
       if (master) then

@@ -33,13 +33,17 @@
 module grid_cont
 
    use constants,   only: xdim, zdim, ndims, LO, HI, CENTER, INV_CENTER
+   use fluxtypes,   only: fluxarray, fluxpoint
    use named_array, only: named_array4d, named_array3d
+   use refinement,  only: ref_flag
    use real_vector, only: real_vec_T
 
    implicit none
 
    private
    public :: grid_container, pr_segment, tgt_list, is_overlap, segment
+
+   type(fluxpoint), target :: fpl, fpr, cpl, cpr
 
    !> \brief Specification of segment of data for boundary exchange
    type :: segment
@@ -49,6 +53,7 @@ module grid_cont
       real, allocatable, dimension(:,:,:)   :: buf        !< buffer for the 3D (scalar) data to be sent or received
       real, allocatable, dimension(:,:,:,:) :: buf4       !< buffer for the 4D (vector) data to be sent or received
       integer(kind=4), pointer :: req                     !< request ID, used for most asynchronous communication, such as fine-coarse flux exchanges
+      integer(kind=8), dimension(xdim:zdim, LO:HI) :: se2 !< auxiliary range, used in cg_level_connected:vertical_bf_prep
    end type segment
 
    !> \brief coefficient-layer pair used for prolongation
@@ -180,6 +185,8 @@ module grid_cont
       type(bnd_list),  dimension(:),         allocatable :: i_bnd       !< description of incoming boundary data, the shape is (xdim:zdim)
       type(bnd_list),  dimension(:),         allocatable :: o_bnd       !< description of outgoing boundary data, the shape is (xdim:zdim)
       logical,         dimension(xdim:zdim, LO:HI)       :: ext_bnd     !< .false. for BND_PER and BND_MPI
+      type(fluxarray), dimension(xdim:zdim, LO:HI)       :: finebnd     !< indices and flux arrays for fine/coarse flux updates on coarse side
+      type(fluxarray), dimension(xdim:zdim, LO:HI)       :: coarsebnd   !< indices and flux arrays for fine/coarse flux updates on fine side
 
       ! Prolongation and restriction
 
@@ -187,6 +194,10 @@ module grid_cont
       type(tgt_list) :: ro_tgt                                    !< description of outgoing restriction data
       type(tgt_list) :: pi_tgt                                    !< description of incoming prolongation data
       type(tgt_list) :: po_tgt                                    !< description of outgoing prolongation data
+      type(tgt_list) :: pib_tgt                                   !< description of incoming boundary prolongation data
+      type(tgt_list) :: pob_tgt                                   !< description of outgoing boundary prolongation data
+      type(tgt_list) :: rif_tgt                                   !< description of fluxes incoming from fine grid
+      type(tgt_list) :: rof_tgt                                   !< description of fluxes outgoing to coarse grid
       real, allocatable, dimension(:,:,:) :: prolong_, prolong_x, prolong_xy, prolong_xyz !< auxiliary prolongation arrays
       logical, allocatable, dimension(:,:,:) :: leafmap           !< .true. when a cell is not covered by finer cells, .falase. otherwise
 
@@ -221,6 +232,7 @@ module grid_cont
       real :: dxmn                                               !< the smallest length of the %grid cell (among dx, dy, and dz)
       integer(kind=4) :: maxxyz                                  !< maximum number of %grid cells in any direction
       integer :: grid_id                                         !< index of own segment in own level decomposition, e.g. my_se(:,:) = base%level%pse(proc)%c(grid_id)%se(:,:)
+      type(ref_flag) :: refine_flags                             !< refine or derefine this grid container?
       integer :: membership                                      !< How many cg lists use this grid piece?
       logical :: ignore_prolongation                             !< When .true. do not upgrade interior with incoming prolonged values
       logical :: is_old                                          !< .true. if a given grid existed prior to  upgrade_refinement call
@@ -235,6 +247,8 @@ module grid_cont
       procedure          :: add_na                               !< Register a new 3D entry in current cg with given name.
       procedure          :: add_na_4d                            !< Register a new 4D entry in current cg with given name.
       procedure          :: update_leafmap                       !< Check if the grid container has any parts covered by finer grids and update appropriate map
+      procedure          :: set_fluxpointers
+      procedure          :: save_outfluxes
 
    end type grid_container
 
@@ -258,6 +272,7 @@ contains
       use dataio_pub,    only: die, warn, code_progress
       use domain,        only: dom
       use func,          only: f2c
+      use refinement,    only: ref_flag
 
       implicit none
 
@@ -441,8 +456,29 @@ contains
       this%prolong_xy (:, :, :) = big_float
       this%prolong_xyz(:, :, :) = big_float
       this%leafmap    (:, :, :) = .true.
+      this%refine_flags = ref_flag(.false., .false.)
       this%ignore_prolongation = .false.
       this%is_old = .false.
+
+      do i = LO, HI
+         call this%finebnd  (xdim, i)%fainit([ this%js, this%je ], [ this%ks, this%ke ])
+         call this%finebnd  (ydim, i)%fainit([ this%ks, this%ke ], [ this%is, this%ie ])
+         call this%finebnd  (zdim, i)%fainit([ this%is, this%ie ], [ this%js, this%je ])
+         call this%coarsebnd(xdim, i)%fainit([ this%js, this%je ], [ this%ks, this%ke ])
+         call this%coarsebnd(ydim, i)%fainit([ this%ks, this%ke ], [ this%is, this%ie ])
+         call this%coarsebnd(zdim, i)%fainit([ this%is, this%ie ], [ this%js, this%je ])
+      enddo
+      do i = xdim, zdim
+         this%finebnd  (i, LO)%index = this%lhn(i, LO) - 1
+         this%finebnd  (i, HI)%index = this%lhn(i, HI) + 1
+         this%coarsebnd(i, LO)%index = this%lhn(i, LO) - 1
+         this%coarsebnd(i, HI)%index = this%lhn(i, HI) + 1
+      enddo
+
+      if (.not. allocated(fpl%uflx)) call fpl%fpinit
+      if (.not. allocated(fpr%uflx)) call fpr%fpinit
+      if (.not. allocated(cpl%uflx)) call cpl%fpinit
+      if (.not. allocated(cpr%uflx)) call cpr%fpinit
 
       call this%add_all_na
 
@@ -504,13 +540,13 @@ contains
 
    subroutine cleanup(this)
 
-      use constants, only: xdim, zdim, CENTER, INV_CENTER
+      use constants, only: xdim, zdim, CENTER, INV_CENTER, LO, HI
 
       implicit none
 
       class(grid_container), intent(inout) :: this
       integer :: d, g, b, cdim
-      integer, parameter :: nseg = 2*2
+      integer, parameter :: nseg = 4*2
       type(tgt_list), dimension(nseg) :: rpio_tgt
 
       if (associated(this%x))     nullify(this%x)
@@ -542,7 +578,8 @@ contains
          deallocate(this%o_bnd)
       endif
 
-      rpio_tgt(1:nseg) = [ this%ri_tgt, this%ro_tgt, this%pi_tgt, this%po_tgt ]
+      rpio_tgt(1:nseg) = [ this%ri_tgt,  this%ro_tgt,  this%pi_tgt,  this%po_tgt, &
+           &               this%pib_tgt, this%pob_tgt, this%rif_tgt, this%rof_tgt ]
       do b = 1, nseg
          if (allocated(rpio_tgt(b)%seg)) then
             do g = lbound(rpio_tgt(b)%seg, dim=1), ubound(rpio_tgt(b)%seg, dim=1)
@@ -572,6 +609,17 @@ contains
       if (allocated(this%prolong_x))   deallocate(this%prolong_x)
       if (allocated(this%prolong_))    deallocate(this%prolong_)
       if (allocated(this%leafmap))     deallocate(this%leafmap)
+      do d = xdim, zdim
+         do g = LO, HI
+            call this%finebnd  (d, g)%facleanup
+            call this%coarsebnd(d, g)%facleanup
+         enddo
+      enddo
+
+      call fpl%fpcleanup
+      call fpr%fpcleanup
+      call cpl%fpcleanup
+      call cpr%fpcleanup
 
    end subroutine cleanup
 
@@ -785,5 +833,62 @@ contains
       this%seg(g)%tag = tag
 
    end subroutine add_seg
+
+   subroutine set_fluxpointers(this, cdim, i1, i2, eflx)
+
+      use constants,  only: LO, HI
+      use fluxtypes,  only: ext_fluxes
+
+      implicit none
+
+      class(grid_container), intent(in)    :: this
+      integer(kind=4),       intent(in)    :: cdim
+      integer,               intent(in)    :: i1, i2
+      type(ext_fluxes),      intent(inout) :: eflx
+
+      if (this%finebnd(cdim, LO)%index(i1, i2) >= this%ijkse(cdim, LO)) then
+         fpl = this%finebnd(cdim, LO)%fa2fp(i1, i2)
+         eflx%li => fpl
+      else
+         nullify(eflx%li)
+      endif
+      if (this%finebnd(cdim, HI)%index(i1, i2) <= this%ijkse(cdim, HI)) then
+         fpr = this%finebnd(cdim, HI)%fa2fp(i1, i2)
+         eflx%ri => fpr
+      else
+         nullify(eflx%ri)
+      endif
+
+      if (this%coarsebnd(cdim, LO)%index(i1, i2) >= this%ijkse(cdim, LO)) then
+         cpl%index = this%coarsebnd(cdim, LO)%index(i1, i2)
+         eflx%lo => cpl
+      else
+         nullify(eflx%lo)
+      endif
+      if (this%coarsebnd(cdim, HI)%index(i1, i2) <= this%ijkse(cdim, HI)) then
+         cpr%index = this%coarsebnd(cdim, HI)%index(i1, i2)
+         eflx%ro => cpr
+      else
+         nullify(eflx%ro)
+      endif
+
+   end subroutine set_fluxpointers
+
+   subroutine save_outfluxes(this, cdim, i1, i2, eflx)
+
+      use constants,  only: LO, HI
+      use fluxtypes,  only: ext_fluxes
+
+      implicit none
+
+      class(grid_container), intent(inout) :: this
+      integer(kind=4),       intent(in)    :: cdim
+      integer,               intent(in)    :: i1, i2
+      type(ext_fluxes),      intent(inout) :: eflx
+
+      if (associated(eflx%lo)) call this%coarsebnd(cdim, LO)%fp2fa(eflx%lo, i1, i2)
+      if (associated(eflx%ro)) call this%coarsebnd(cdim, HI)%fp2fa(eflx%ro, i1, i2)
+
+   end subroutine save_outfluxes
 
 end module grid_cont
