@@ -129,9 +129,9 @@ contains
 
       implicit none
 
-      class(fluxarray),          intent(inout) :: this
-      integer, dimension(LO:HI), intent(in)    :: i1 !< 1st range
-      integer, dimension(LO:HI), intent(in)    :: i2 !< 2nd range
+      class(fluxarray),                  intent(inout) :: this
+      integer(kind=4), dimension(LO:HI), intent(in)    :: i1 !< 1st range
+      integer(kind=4), dimension(LO:HI), intent(in)    :: i2 !< 2nd range
 
       if (allocated(this%index) .or. allocated(this%uflx)) call die("[fluxtypes:fainit] already allocated")
       allocate(this%index(i1(LO):i1(HI), i2(LO):i2(HI)), this%uflx(flind%all, i1(LO):i1(HI), i2(LO):i2(HI)))

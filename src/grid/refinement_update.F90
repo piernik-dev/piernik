@@ -356,7 +356,7 @@ contains
       use cg_list,          only: cg_list_element
       use cg_list_global,   only: all_cg
       use cg_leaves,        only: leaves
-      use constants,        only: xdim, ydim, zdim!, LO, HI
+      use constants,        only: xdim, ydim, zdim, I_ONE, I_TWO!, LO, HI
       use dataio_pub,       only: die!, printinfo
       use domain,           only: dom
       use refinement,       only: allow_face_rstep, allow_corner_rstep
@@ -400,7 +400,7 @@ contains
 !!$      enddo
       call leaves%arr3d_boundaries(qna%wai)
 
-      range = min((dom%nb+1)/2 + all_cg%ord_prolong_nb, dom%nb) ! (dom%nb+1)/2 + all_cg%ord_prolong_nb is a range of influence of coarse to fine levels
+      range = min((dom%nb+I_ONE)/I_TWO + all_cg%ord_prolong_nb, dom%nb) ! (dom%nb+1)/2 + all_cg%ord_prolong_nb is a range of influence of coarse to fine levels
       ! detect high refinements near leafmap and alter refinement flags appropriately
       cgl => leaves%first
       do while (associated(cgl))

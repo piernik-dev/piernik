@@ -937,7 +937,7 @@ contains
       implicit none
 
       class(cg_level_connected_T), intent(inout) :: this !< the list on which to perform the boundary exchange
-      integer,                     intent(in)    :: ind  !< Negative value: index of cg%q(:) 3d array
+      integer(kind=4),             intent(in)    :: ind  !< Negative value: index of cg%q(:) 3d array
 
       type(cg_level_connected_T), pointer :: coarse
       type(cg_list_element), pointer :: cgl
@@ -1206,7 +1206,7 @@ contains
                                        if (is_overlap(coarse%pse(j)%c(b)%se(:,:), seg)) then
                                           seg(:, LO) = max( seg(:, LO), coarse%pse(j)%c(b)%se(:, LO))
                                           seg(:, HI) = min( seg(:, HI), coarse%pse(j)%c(b)%se(:, HI)) ! this is what we want
-                                          tag = cg%level_id + max_level*(cg%grid_id + this%tot_se*(b + d*size(coarse%pse(j)%c(:))))
+                                          tag = int(cg%level_id + max_level*(cg%grid_id + this%tot_se*(b + d*size(coarse%pse(j)%c(:)))), kind=4)
                                           segp (:, LO) = seg  (:, LO) - [ ix, iy, iz ] * per(:)
                                           segp (:, HI) = seg  (:, HI) - [ ix, iy, iz ] * per(:)
                                           ! Find 1-layer thick areas which will be involved in fine->coarse flux exchanges
@@ -1270,7 +1270,7 @@ contains
       pscnt = 0
       if (size(seglist) > 0) then
          do j = lbound(seglist, dim=1), ubound(seglist, dim=1)
-            pscnt(seglist(j)%proc) = pscnt(seglist(j)%proc) + 1
+            pscnt(seglist(j)%proc) = pscnt(seglist(j)%proc) + I_ONE
          enddo
       endif
 
@@ -1288,8 +1288,8 @@ contains
       psind = 0
       do j = lbound(seglist, dim=1), ubound(seglist, dim=1)
          b = (psdispl(seglist(j)%proc) + psind(seglist(j)%proc)) * I_LAST
-         sseg(b+I_PROC:b+I_LAST) = [ int([seglist(j)%proc, seglist(j)%grid_id, seglist(j)%tag, seglist(j)%src_proc ], kind=8), seglist(j)%seg, seglist(j)%seg2 ]
-         psind(seglist(j)%proc) = psind(seglist(j)%proc) + 1
+         sseg(b+I_PROC:b+I_LAST) = [ int([seglist(j)%proc, seglist(j)%grid_id], kind=8), int(seglist(j)%tag, kind=8), int(seglist(j)%src_proc, kind=8) ]
+         psind(seglist(j)%proc) = psind(seglist(j)%proc) + I_ONE
       enddo
       ! communicate to the processes with coarse data the segments that are required
       sendcounts = I_LAST * pscnt

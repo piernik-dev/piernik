@@ -44,11 +44,11 @@ module refinement
       procedure :: sanitize
    end type ref_flag
 
-   integer, protected :: level_min          !< minimum allowed refinement
-   integer, protected :: level_max          !< maximum allowed refinement (don't need to be reached if not necessary)
-   integer, protected :: n_updAMR           !< how often to update the refinement structure
-   logical, protected :: allow_face_rstep   !< Allows >1 refinement step across faces (do not use it for any physical problems)
-   logical, protected :: allow_corner_rstep !< Allows >1 refinement step across edges and corners (do not use it for any physical problems)
+   integer(kind=4), protected :: level_min          !< minimum allowed refinement
+   integer(kind=4), protected :: level_max          !< maximum allowed refinement (don't need to be reached if not necessary)
+   integer(kind=4), protected :: n_updAMR           !< how often to update the refinement structure
+   logical,         protected :: allow_face_rstep   !< Allows >1 refinement step across faces (do not use it for any physical problems)
+   logical,         protected :: allow_corner_rstep !< Allows >1 refinement step across edges and corners (do not use it for any physical problems)
 
    namelist /AMR/ level_min, level_max, n_updAMR, allow_face_rstep, allow_corner_rstep
 
@@ -58,7 +58,7 @@ contains
 
    subroutine init_refinement
 
-      use constants,  only: base_level_id, PIERNIK_INIT_DOMAIN, xdim, zdim
+      use constants,  only: base_level_id, PIERNIK_INIT_DOMAIN, xdim, zdim, I_ONE
       use dataio_pub, only: nh      ! QA_WARN required for diff_nml
       use dataio_pub, only: die, code_progress, warn
       use domain,     only: AMR_bsize, dom
@@ -73,7 +73,7 @@ contains
 
       level_min = base_level_id
       level_max = level_min
-      n_updAMR  = huge(1)
+      n_updAMR  = huge(I_ONE)
       allow_face_rstep   = .false.
       allow_corner_rstep = .false.
       allow_AMR = .true.
@@ -102,7 +102,7 @@ contains
          else
             level_min = base_level_id
             level_max = base_level_id
-            n_updAMR  = huge(1)
+            n_updAMR  = huge(I_ONE)
          endif
 
          ibuff(1) = level_min

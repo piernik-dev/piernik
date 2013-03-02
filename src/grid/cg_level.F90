@@ -249,8 +249,8 @@ contains
 
       ! get the count of grid pieces on each process
       allcnt(:) = 0
-      allcnt(proc) = this%cnt ! Beware: this is not properly updated after calling this%distribute. Use size(this%pse(proc)%c) if you want to propagate pse before the grid
-                              ! containers are actually added to the level
+      allcnt(proc) = int(this%cnt, kind=4) ! Beware: this is not properly updated after calling this%distribute.
+                                           ! Use size(this%pse(proc)%c) if you want to propagate pse before the grid containers are actually added to the level
       call MPI_Allgather(MPI_IN_PLACE, I_ZERO, MPI_DATATYPE_NULL, allcnt, I_ONE, MPI_INTEGER, comm, mpi_err)
 
       ! compute offsets for  a composite table of all grid pieces
@@ -274,8 +274,8 @@ contains
       if (associated(cgl)) call die("[cg_level:update_pse] Not all cg were read.")
 
       ! First use of MPI_Allgatherv in the Piernik Code!
-      ncub_allcnt(:) = ncub * allcnt(:)
-      ncub_alloff(:) = ncub * alloff(:)
+      ncub_allcnt(:) = int(ncub * allcnt(:), kind=4)
+      ncub_alloff(:) = int(ncub * alloff(:), kind=4)
       call MPI_Allgatherv(MPI_IN_PLACE, I_ZERO, MPI_DATATYPE_NULL, allse, ncub_allcnt, ncub_alloff, MPI_INTEGER, comm, mpi_err)
 
       ! Rewrite the pse array, forget about past.
@@ -843,7 +843,7 @@ contains
       class(cg_level_T), intent(inout) :: this
 
       type(grid_piece_list) :: gp
-      integer :: p, s, i
+      integer :: p, i, s
       integer, dimension(FIRST:LAST+1) :: from
       integer, dimension(FIRST:LAST) :: cnt_existing
       integer(kind=4) :: ls
@@ -866,7 +866,7 @@ contains
             s = s + size(this%patches(p)%pse, dim=1)
          enddo
       endif
-      ls = s
+      ls = int(s, kind=4)
       call piernik_MPI_Allreduce(s, pSUM) !> \warning overkill: MPI_reduce is enough here
 
       if (s==0) return
@@ -943,7 +943,7 @@ contains
 
          ! distribute proposed grids
          do p = FIRST + 1, LAST
-            ls = from(p+1)-from(p)
+            ls = int(from(p+1) - from(p), kind=4)
             ! call MPI_Isend(ls, I_ONE, MPI_INTEGER, p, tag_lsR, comm, req(p), mpi_err) !can't reuse ls before MPI_Waitall
             call MPI_Send(ls, I_ONE, MPI_INTEGER, p, tag_lsR, comm, mpi_err)
             if (ls>0) then
