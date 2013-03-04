@@ -55,14 +55,12 @@ contains
       use constants,        only: u0_n, b0_n
       use dataio_pub,       only: warn
       use global,           only: dt, dtm, t, t_saved, cfl_violated, nstep, nstep_saved, dt_max_grow, repeat_step
-      use grid_cont,        only: grid_container
       use mpisetup,         only: master
       use named_array_list, only: wna
 
       implicit none
 
       type(cg_list_element), pointer :: cgl
-      type(grid_container),  pointer :: cg
 
       if (.not.repeat_step) return
 
@@ -78,16 +76,14 @@ contains
 
       cgl => leaves%first
       do while (associated(cgl))
-         cg => cgl%cg
-
+         ! No need to take care of any cgl%cg%q arrays as long as graity is extrapolated from the prefious timestep.
          if (cfl_violated) then
-            cg%u = cg%w(wna%ind(u0_n))%arr
-            cg%b = cg%w(wna%ind(b0_n))%arr
+            cgl%cg%u = cgl%cg%w(wna%ind(u0_n))%arr
+            cgl%cg%b = cgl%cg%w(wna%ind(b0_n))%arr
          else
-            cg%w(wna%ind(u0_n))%arr = cg%u
-            cg%w(wna%ind(b0_n))%arr = cg%b
+            cgl%cg%w(wna%ind(u0_n))%arr = cgl%cg%u
+            cgl%cg%w(wna%ind(b0_n))%arr = cgl%cg%b
          endif
-
          cgl => cgl%nxt
       enddo
 
