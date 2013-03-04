@@ -1288,7 +1288,7 @@ contains
       psind = 0
       do j = lbound(seglist, dim=1), ubound(seglist, dim=1)
          b = (psdispl(seglist(j)%proc) + psind(seglist(j)%proc)) * I_LAST
-         sseg(b+I_PROC:b+I_LAST) = [ int([seglist(j)%proc, seglist(j)%grid_id], kind=8), int(seglist(j)%tag, kind=8), int(seglist(j)%src_proc, kind=8) ]
+         sseg(b+I_PROC:b+I_LAST) = [ int([seglist(j)%proc, seglist(j)%grid_id], kind=8), int(seglist(j)%tag, kind=8), int(seglist(j)%src_proc, kind=8), seglist(j)%seg, seglist(j)%seg2 ]
          psind(seglist(j)%proc) = psind(seglist(j)%proc) + I_ONE
       enddo
       ! communicate to the processes with coarse data the segments that are required
