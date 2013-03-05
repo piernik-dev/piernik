@@ -35,7 +35,7 @@ module initproblem
    implicit none
 
    private
-   public  :: read_problem_par, init_prob, problem_pointers
+   public  :: read_problem_par, problem_initial_conditions, problem_pointers
 
    integer(kind=4) :: n_sn
    real            :: d0, p0, bx0, by0, bz0, Eexpl, x0, y0, z0, r0, dt_sn, r, t_sn
@@ -143,16 +143,16 @@ contains
 
       endif
 
-      if (flind%energ < flind%fluids) call die("[initproblem:init_prob] Not all fluids are adiabatic!")
+      if (flind%energ < flind%fluids) call die("[initproblem:problem_initial_conditions] Not all fluids are adiabatic!")
       do p = 1, flind%energ
-         if (flind%all_fluids(p)%fl%tag == DST) call die("[initproblem:init_prob] This setup is not suitable for dust!")
+         if (flind%all_fluids(p)%fl%tag == DST) call die("[initproblem:problem_initial_conditions] This setup is not suitable for dust!")
          write(msg, '(a,i2)')"Working with fluid#", flind%all_fluids(p)%fl%tag
          if (master) call printinfo(msg)
       enddo
 
    end subroutine read_problem_par
 !-----------------------------------------------------------------------------
-   subroutine init_prob
+   subroutine problem_initial_conditions
 
       use cg_leaves,  only: leaves
       use cg_list,    only: cg_list_element
@@ -253,7 +253,7 @@ contains
          end associate
       enddo
 
-   end subroutine init_prob
+   end subroutine problem_initial_conditions
 !-----------------------------------------------------------------------------
    subroutine sedov_vars_hdf5(var, tab, ierrh, cg)
 

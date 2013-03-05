@@ -35,7 +35,7 @@ module initproblem
    implicit none
 
    private
-   public :: read_problem_par, init_prob, problem_pointers
+   public :: read_problem_par, problem_initial_conditions, problem_pointers
 
    ! namelist parameters
    integer(kind=4) :: ord_prolong   !< Prolongation order used for working field
@@ -110,7 +110,7 @@ contains
 
 !-----------------------------------------------------------------------------
 
-   subroutine init_prob
+   subroutine problem_initial_conditions
 
       use constants,  only: base_level_id
       use dataio_pub, only: die
@@ -130,9 +130,9 @@ contains
          call prepare_fld(base_level_id, i)
       enddo
 
-      if (master) call die("[initproblem:init_prob] End of test")
+      if (master) call die("[initproblem:problem_initial_conditions] End of test")
 
-   end subroutine init_prob
+   end subroutine problem_initial_conditions
 
 !-----------------------------------------------------------------------------
 

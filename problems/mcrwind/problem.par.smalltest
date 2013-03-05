@@ -86,7 +86,7 @@
     K_cr_paral   = 1000.    ! wsp. dyfuzji CR wzdluz B
     K_cr_perp    = 100.     ! wsp. dyfuzji CR wpoprzek B
     beta_cr      = 1.0      ! okresla wklad CR w poczatkowej rownowadze (podobnie jak alfa dla B)
-    amp_cr       = 0.0      ! wybuch w init_problem w x0,y0,z0
+    amp_cr       = 0.0      ! wybuch w problem_initial_conditionslem w x0,y0,z0
     smallecr     = 1.e-2    ! lower limit & outflow boundary value for ecr
  /
 
@@ -114,7 +114,7 @@
     bzn          =  0.0     !
     x0           =  0.0     !
     y0           =  0.0     ! wspolrzedne pojedynczego wybuchu o ampl amp_cr
-    z0           =  0.0     ! zadawanego w init_prob (do celow testowych)
+    z0           =  0.0     ! zadawanego w problem_initial_conditions (do celow testowych)
  /
 
  $INTERACTIONS

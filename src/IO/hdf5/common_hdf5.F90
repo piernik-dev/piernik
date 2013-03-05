@@ -372,7 +372,7 @@ contains
 
       use cg_level_finest, only: finest
       use constants,       only: cbuff_len, xdim, ydim, zdim, I_ONE
-      use dataio_pub,      only: require_init_prob, piernik_hdf5_version, problem_name, run_id, last_hdf_time, &
+      use dataio_pub,      only: require_problem_IC, piernik_hdf5_version, problem_name, run_id, last_hdf_time, &
          &                       last_res_time, last_tsl_time, last_log_time, nres, nhdf, domain_dump
       use domain,          only: dom
       use fluidindex,      only: flind
@@ -427,7 +427,7 @@ contains
       !<
       ibuffer(5:7) = int(finest%level%n_d(:), kind=4) ; ibuffer_name(5:7) = [ "nxd", "nyd", "nzd" ] !rr1
       ibuffer(8)   = dom%nb                  ; ibuffer_name(8)   = "nb"
-      ibuffer(9)   = require_init_prob       ; ibuffer_name(9)   = "require_init_prob" !rr2
+      ibuffer(9)   = require_problem_IC      ; ibuffer_name(9)   = "require_problem_IC" !rr2
 
       i = 1
       do while (rbuffer_name(i) /= "")
@@ -460,7 +460,7 @@ contains
    subroutine set_common_attributes_v2(file_id)
 
       use constants,   only: cbuff_len, I_ONE
-      use dataio_pub,  only: require_init_prob, piernik_hdf5_version2, problem_name, run_id, last_hdf_time, &
+      use dataio_pub,  only: require_problem_IC, piernik_hdf5_version2, problem_name, run_id, last_hdf_time, &
          &                   last_res_time, last_log_time, last_tsl_time, nres, nhdf, domain_dump
       use fluidindex,  only: flind
       use global,      only: t, dt, nstep
@@ -499,7 +499,7 @@ contains
       ibuffer(2) = nres                  ; ibuffer_name(2) = "nres" !rr2
       ibuffer(3) = nhdf                  ; ibuffer_name(3) = "nhdf" !rr2
       ibuffer(4) = -1                    ; ibuffer_name(4) = "nimg" !rr2 !FIXME
-      ibuffer(5) = require_init_prob     ; ibuffer_name(5) = "require_init_prob" !rr2
+      ibuffer(5) = require_problem_IC     ; ibuffer_name(5) = "require_problem_IC" !rr2
 
       !> \todo  add number of pieces in the restart point/data dump
 

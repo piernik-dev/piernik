@@ -37,7 +37,7 @@ module initproblem
    implicit none
 
    private
-   public :: read_problem_par, init_prob, problem_pointers
+   public :: read_problem_par, problem_initial_conditions, problem_pointers
 
    ! namelist parameters
    character(len=cbuff_len) :: type !< type of potential
@@ -154,7 +154,7 @@ contains
 
 !> \brief Set up the initial conditions. Note that this routine can be called multiple times during initial iterations of refinement structure
 
-   subroutine init_prob
+   subroutine problem_initial_conditions
 
       use cg_list,           only: cg_list_element
       use cg_leaves,         only: leaves
@@ -199,7 +199,7 @@ contains
                         if (dom%has_dir(ydim)) dens = dens + kx(ydim)**2*fsinadd(kx(ydim)*cg%y(j))
                         if (dom%has_dir(zdim)) dens = dens + kx(zdim)**2*fsinadd(kx(zdim)*cg%z(k))
                      case default
-                        write(msg, '(3a)')"[initproblem:init_prob] unrecognized potential type '", type, "'."
+                        write(msg, '(3a)')"[initproblem:problem_initial_conditions] unrecognized potential type '", type, "'."
                         call die(msg)
                   end select
 
@@ -229,10 +229,10 @@ contains
       enddo
       call residual(leaves, qna%ind(asrc_n), qna%ind(apot_n), qna%ind(ares_n))
 
-      write(msg,'(a,f13.10)')"[initproblem:init_prob] Analytical norm residual/source= ",leaves%norm_sq(qna%ind(ares_n))/leaves%norm_sq(qna%ind(asrc_n))
+      write(msg,'(a,f13.10)')"[initproblem:problem_initial_conditions] Analytical norm residual/source= ",leaves%norm_sq(qna%ind(ares_n))/leaves%norm_sq(qna%ind(asrc_n))
       if (master) call printinfo(msg)
 
-   end subroutine init_prob
+   end subroutine problem_initial_conditions
 
    real function fsinadd(x)
 
@@ -294,7 +294,7 @@ contains
                         if (dom%has_dir(ydim)) pot = pot + sin(kx(ydim)*cg%y(j))**n
                         if (dom%has_dir(zdim)) pot = pot + sin(kx(zdim)*cg%z(k))**n
                      case default
-                        write(msg, '(3a)')"[initproblem:init_prob] unrecognized potential type '", type, "'."
+                        write(msg, '(3a)')"[initproblem:problem_initial_conditions] unrecognized potential type '", type, "'."
                         call die(msg)
                   end select
                   cg%q(apot_i)%arr(i, j, k) = pot

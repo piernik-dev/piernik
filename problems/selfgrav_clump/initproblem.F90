@@ -35,7 +35,7 @@ module initproblem
    implicit none
 
    private
-   public :: read_problem_par, init_prob, problem_pointers
+   public :: read_problem_par, problem_initial_conditions, problem_pointers
 
    real                   :: clump_mass, clump_vel_x, clump_vel_y, clump_vel_z, clump_K, clump_r, epsC, epsM
    real, dimension(ndims) :: clump_pos
@@ -145,7 +145,7 @@ contains
 !
 ! BEWARE: hardcoded numbers
 !
-   subroutine init_prob
+   subroutine problem_initial_conditions
 
       use cg_leaves,         only: leaves
       use cg_list,           only: cg_list_element
@@ -245,11 +245,11 @@ contains
       call piernik_MPI_Allreduce (iC,   pSUM)
       call piernik_MPI_Allreduce (Msph, pSUM)
       if (master .and. verbose) then
-         write(msg,'(a,es13.7,a,i7,a)')"[initproblem:init_prob] Starting with uniform sphere with M = ", Msph, " (", iC, " cells)"
+         write(msg,'(a,es13.7,a,i7,a)')"[initproblem:problem_initial_conditions] Starting with uniform sphere with M = ", Msph, " (", iC, " cells)"
          call printinfo(msg, .true.)
       endif
 
-      if (is_multicg) call die("[initproblem:init_prob] multiple grid pieces per procesor not implemented yet") !nontrivial
+      if (is_multicg) call die("[initproblem:problem_initial_conditions] multiple grid pieces per procesor not implemented yet") !nontrivial
       cg => leaves%first%cg
 
       ! Find C - the level of enthalpy at which density vanishes
@@ -308,7 +308,7 @@ contains
          endif
 
          if (master .and. verbose) then
-            write(msg,'(2(a,i4),2(a,2es15.7),2a)')"[initproblem:init_prob] iter = ",iC,"/",0," dM= ",totME-clump_mass, " C= ", Cint, " ind = ",ind
+            write(msg,'(2(a,i4),2(a,2es15.7),2a)')"[initproblem:problem_initial_conditions] iter = ",iC,"/",0," dM= ",totME-clump_mass, " C= ", Cint, " ind = ",ind
             call printinfo(msg, .true.)
          endif
 
@@ -356,7 +356,7 @@ contains
             endif
 
             if (master .and. verbose) then
-               write(msg,'(2(a,i4),2(a,2es15.7),2a)')"[initproblem:init_prob] iter = ",iC,"/",iM," dM= ",totME-clump_mass, " C= ", Cint, " ind = ",ind
+               write(msg,'(2(a,i4),2(a,2es15.7),2a)')"[initproblem:problem_initial_conditions] iter = ",iC,"/",iM," dM= ",totME-clump_mass, " C= ", Cint, " ind = ",ind
                call printinfo(msg, .true.)
             endif
             tt = LOW
@@ -366,9 +366,9 @@ contains
             iM = iM + 1
             if (iM > maxitM .and. .not. doneM) then
                if (crashNotConv) then
-                  call die("[initproblem:init_prob] M-iterations not converged.")
+                  call die("[initproblem:problem_initial_conditions] M-iterations not converged.")
                else
-                  if (master) call warn("[initproblem:init_prob] M-iterations not converged. Continue anyway.")
+                  if (master) call warn("[initproblem:problem_initial_conditions] M-iterations not converged. Continue anyway.")
                   doneM = .true.
                endif
             endif
@@ -381,7 +381,7 @@ contains
          Clast(NLIM) = Cint(tt)
          if (any(Clast(:) == 0.)) then
             if (master) then
-               write(msg,'(a,i4,2(a,es15.7),a)')"[initproblem:init_prob] iter = ",iC,"     M=",totME(tt), " C=", Cint(tt), Ccomment
+               write(msg,'(a,i4,2(a,es15.7),a)')"[initproblem:problem_initial_conditions] iter = ",iC,"     M=",totME(tt), " C=", Cint(tt), Ccomment
                call printinfo(msg, .true.)
             endif
          else
@@ -389,7 +389,7 @@ contains
             ! exponential estimate: \lim C \simeq \frac{C_{t} C_{t-2} - C_{t-1}^2}{C_{t} - 2 C_{t-1} + C{t-2}}
             Clim = (Clast(NLIM)*Clast(NLIM-2) - Clast(NLIM-1)**2)/(Clast(NLIM) - 2.*Clast(NLIM-1) + Clast(NLIM-2))
             if (master) then
-               write(msg, '(a,i4,4(a,es15.7))')"[initproblem:init_prob] iter = ",iC,"     M=",totME(tt), " C=", Cint(tt), " Clim=", Clim, " Clim-C=",Clim-Cint(tt)
+               write(msg, '(a,i4,4(a,es15.7))')"[initproblem:problem_initial_conditions] iter = ",iC,"     M=",totME(tt), " C=", Cint(tt), " Clim=", Clim, " Clim-C=",Clim-Cint(tt)
                call printinfo(msg, .true.)
             endif
          endif
@@ -401,9 +401,9 @@ contains
          iC = iC + 1
          if (iC > maxitC .and. .not. doneC) then
             if (crashNotConv) then
-               call die("[initproblem:init_prob] C-iterations not converged.")
+               call die("[initproblem:problem_initial_conditions] C-iterations not converged.")
             else
-               if (master) call warn("[initproblem:init_prob] C-iterations not converged. Continue anyway.")
+               if (master) call warn("[initproblem:problem_initial_conditions] C-iterations not converged. Continue anyway.")
                doneC = .true.
             endif
          endif
@@ -432,11 +432,11 @@ contains
       enddo
 
       if (master) then
-         write(msg, '(a,g13.7)')"[initproblem:init_prob] Relaxation finished. Largest orbital period: ",2.*pi*sqrt( (minval(dom%L_(:))/2.)**3/(newtong * clump_mass) )
+         write(msg, '(a,g13.7)')"[initproblem:problem_initial_conditions] Relaxation finished. Largest orbital period: ",2.*pi*sqrt( (minval(dom%L_(:))/2.)**3/(newtong * clump_mass) )
          call printinfo(msg, .true.)
       endif
 
-   end subroutine init_prob
+   end subroutine problem_initial_conditions
 
 !-------------------------------------------------------------------------------
 ! check the value of | 2T + W + 3P | / | W |. Should be small

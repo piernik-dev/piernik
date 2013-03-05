@@ -547,7 +547,7 @@ contains
            &                        output_fname
       use constants,          only: cwdlen, dsetnamelen, cbuff_len, ndims, xdim, zdim, INVALID, RD, LO, HI
       use dataio_pub,         only: die, warn, printio, msg, last_hdf_time, last_res_time, last_log_time, last_tsl_time, problem_name, new_id, domain_dump, &
-           &                        require_init_prob, piernik_hdf5_version2, nres, nhdf, fix_string
+           &                        require_problem_IC, piernik_hdf5_version2, nres, nhdf, fix_string
       use dataio_user,        only: user_reg_var_restart, user_attrs_rd
       use domain,             only: dom
       use fluidindex,         only: flind
@@ -575,7 +575,7 @@ contains
       character(len=cbuff_len)                          :: cbuf
       character(len=cbuff_len), dimension(7), parameter :: real_attrs = [ "time         ", "timestep     ", "last_hdf_time", "last_res_time", &
            &                                                              "last_log_time", "last_tsl_time", "magic_mass   " ]
-      character(len=cbuff_len), dimension(4), parameter :: int_attrs = [ "nstep            ", "nres             ", "nhdf             ", "require_init_prob" ]
+      character(len=cbuff_len), dimension(4), parameter :: int_attrs = [ "nstep             ", "nres              ", "nhdf              ", "require_problem_IC" ]
       character(len=cbuff_len), dimension(3), parameter :: str_attrs = [ "problem_name", "domain      ", "run_id      " ]
       !> \deprecated same strings are used independently in set_common_attributes*
       character(len=cwdlen)                             :: filename
@@ -667,8 +667,8 @@ contains
                nres = ibuf(1)
             case ("nhdf")
                nhdf = ibuf(1)
-            case ("require_init_prob")
-               require_init_prob = ibuf(1)
+            case ("require_problem_IC")
+               require_problem_IC = ibuf(1)
             case default
                write(msg,'(3a,i14,a)')"[restart_hdf5:read_restart_hdf5_v2] Integer attribute '",trim(real_attrs(ia)),"' with value = ",ibuf(1)," was ignored"
                call warn(msg)

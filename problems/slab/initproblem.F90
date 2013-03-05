@@ -33,7 +33,7 @@ module initproblem
    implicit none
 
    private
-   public :: read_problem_par, init_prob, problem_pointers
+   public :: read_problem_par, problem_initial_conditions, problem_pointers
 
    real               :: d0, r0, bx0, by0, bz0
    integer, parameter :: one = 1
@@ -88,7 +88,7 @@ contains
 
    end subroutine read_problem_par
 !-----------------------------------------------------------------------------
-   subroutine init_prob
+   subroutine problem_initial_conditions
 
       use cg_list,     only: cg_list_element
       use cg_leaves,   only: leaves
@@ -162,6 +162,6 @@ contains
          cgl => cgl%nxt
       enddo
 
-   end subroutine init_prob
+   end subroutine problem_initial_conditions
 !-----------------------------------------------------------------------------
 end module initproblem

@@ -357,7 +357,7 @@ contains
          endif
       else
 #ifdef VERBOSE
-         if (first_approach) call warn("[gravity:manage_grav_pot_3d] grav_pot_3d is not associated! Will try to call it once more after init_problem.")
+         if (first_approach) call warn("[gravity:manage_grav_pot_3d] grav_pot_3d is not associated! Will try to call it once more after problem_initial_conditionslem.")
 #endif /* VERBOSE */
          if (.not.(first_approach .or. grav_pot_3d_called)) call die("[gravity:manage_grav_pot_3d] grav_pot_3d failed for the 2nd time!")
       endif

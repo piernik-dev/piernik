@@ -3,7 +3,7 @@
 !!
 !! Each problem should provide a initproblem.F90 file with module initproblem and three subroutines:
 !!
-!! \par init_prob
+!! \par problem_initial_conditions
 !!
 !! This routine fills the grid with initial conditions, according to the parameters read in read_problem_par.
 !!

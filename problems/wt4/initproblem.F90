@@ -35,7 +35,7 @@ module initproblem
    implicit none
 
    private
-   public :: read_problem_par, init_prob, problem_pointers
+   public :: read_problem_par, problem_initial_conditions, problem_pointers
 
    !namelist parameters
    character(len=cbuff_len) :: input_file                     !< File with initial conditions
@@ -85,7 +85,7 @@ contains
       implicit none
 
       problem_customize_solution => problem_customize_solution_wt4
-      user_attrs_wr              => init_prob_attrs
+      user_attrs_wr              => problem_initial_conditions_attrs
       user_reg_var_restart       => register_initial_fld
 
    end subroutine problem_pointers
@@ -280,7 +280,7 @@ contains
 
 !-----------------------------------------------------------------------------
 
-   subroutine init_prob
+   subroutine problem_initial_conditions
 
       use cg_list,          only: cg_list_element
       use cg_leaves,        only: leaves
@@ -316,19 +316,19 @@ contains
 
          if (master) then
             if (maxval(cg%dl(:), mask=dom%has_dir(:)) > ic_dx) then
-               write(msg,'(a)')     "[initproblem:init_prob] Too low resolution"
+               write(msg,'(a)')     "[initproblem:problem_initial_conditions] Too low resolution"
                call warn(msg)
             endif
             if (abs(ic_dx/cg%dx-anint(ic_dx/cg%dx)) > beat_dx) then
-               write(msg,'(a,f8.4)')"[initproblem:init_prob] X-direction requires interpolation ic_dx/dx= ", ic_dx/cg%dx
+               write(msg,'(a,f8.4)')"[initproblem:problem_initial_conditions] X-direction requires interpolation ic_dx/dx= ", ic_dx/cg%dx
                call warn(msg)
             endif
             if (abs(ic_dx/cg%dy-anint(ic_dx/cg%dy)) > beat_dx) then
-               write(msg,'(a,f8.4)')"[initproblem:init_prob] Y-direction requires interpolation ic_dx/dy= ", ic_dx/cg%dy
+               write(msg,'(a,f8.4)')"[initproblem:problem_initial_conditions] Y-direction requires interpolation ic_dx/dy= ", ic_dx/cg%dy
                call warn(msg)
             endif
             if (abs(ic_dx/cg%dz-anint(ic_dx/cg%dz)) > beat_dx) then
-               write(msg,'(a,f8.4)')"[initproblem:init_prob] Z-direction requires interpolation ic_dx/dz= ", ic_dx/cg%dz
+               write(msg,'(a,f8.4)')"[initproblem:problem_initial_conditions] Z-direction requires interpolation ic_dx/dz= ", ic_dx/cg%dz
                call warn(msg)
             endif
          endif
@@ -384,9 +384,9 @@ contains
             cg%cs_iso2(:,:,cg%ke+i) = cg%cs_iso2(:,:, cg%ke)
          enddo
          if (master ) then
-            write(msg,'(2(a,g15.7))') '[initproblem:init_problem]: minval(dens)    = ', minval(cg%u(fl%idn,:,:,:)),      ' maxval(dens)    = ', maxval(cg%u(fl%idn,:,:,:))
+            write(msg,'(2(a,g15.7))') '[initproblem:problem_initial_conditionslem]: minval(dens)    = ', minval(cg%u(fl%idn,:,:,:)),      ' maxval(dens)    = ', maxval(cg%u(fl%idn,:,:,:))
             call printinfo(msg, .true.)
-            write(msg,'(2(a,g15.7))') '[initproblem:init_problem]: minval(cs_iso2) = ', minval(cg%cs_iso2(:,:,:)), ' maxval(cs_iso2) = ', maxval(cg%cs_iso2(:,:,:))
+            write(msg,'(2(a,g15.7))') '[initproblem:problem_initial_conditionslem]: minval(cs_iso2) = ', minval(cg%cs_iso2(:,:,:)), ' maxval(cs_iso2) = ', maxval(cg%cs_iso2(:,:,:))
             call printinfo(msg, .true.)
          endif
 
@@ -402,7 +402,7 @@ contains
                case (VY0)
                   q0 = cg%u(fl%imy,:,:,:) / cg%u(fl%idn,:,:,:)
                case default
-                  call die("[initproblem:init_problem] Illegal quantity")
+                  call die("[initproblem:problem_initial_conditionslem] Illegal quantity")
             end select
          enddo
          ! It would be cool to dump a restart file here but this would make a cyclic dependency
@@ -411,14 +411,14 @@ contains
       enddo
 
 #ifndef UMUSCL
-      if (master ) call warn("[initproblem:init_problem]: Without UMUSCL you'll likely get Monet-like density maps.")
+      if (master ) call warn("[initproblem:problem_initial_conditionslem]: Without UMUSCL you'll likely get Monet-like density maps.")
 #endif /* !UMUSCL */
 
-   end subroutine init_prob
+   end subroutine problem_initial_conditions
 
 !-----------------------------------------------------------------------------
 
-   subroutine init_prob_attrs(file_id)
+   subroutine problem_initial_conditions_attrs(file_id)
 
       use hdf5,  only: HID_T, SIZE_T
       use h5lt,  only: h5ltset_attribute_double_f
@@ -433,7 +433,7 @@ contains
       bufsize = 1
       call h5ltset_attribute_double_f(file_id, "/", "fpiG", [fpiG], bufsize, error)
 
-   end subroutine init_prob_attrs
+   end subroutine problem_initial_conditions_attrs
 
 !-----------------------------------------------------------------------------
 

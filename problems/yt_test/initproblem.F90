@@ -35,7 +35,7 @@ module initproblem
    implicit none
 
    private
-   public :: read_problem_par, init_prob, problem_pointers
+   public :: read_problem_par, problem_initial_conditions, problem_pointers
 
    ! namelist parameters
    real :: span  !< If > 0 then do 2 refinements; use span value to scale their distance
@@ -98,7 +98,7 @@ contains
 
 !> \brief Calculate the Mandelbrot iterations for all leaves
 
-   subroutine init_prob
+   subroutine problem_initial_conditions
 
       use cg_leaves,        only: leaves
       use cg_list,          only: cg_list_element
@@ -150,7 +150,7 @@ contains
 ! Why the statement below gives "Invalid writes" under valgrind?
 !      call leaves%qw_copy(qna%ind(const_n), wna%fi, iarr_all_dn(1)) ! prevent spurious FP exceptions
 
-   end subroutine init_prob
+   end subroutine problem_initial_conditions
 
 !> \brief Add fields for iteration count and real and imaginary coordinate of the point at the end of iterations
 

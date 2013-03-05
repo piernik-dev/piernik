@@ -34,7 +34,7 @@ module initproblem
    implicit none
 
    private
-   public :: read_problem_par, init_prob, problem_pointers
+   public :: read_problem_par, problem_initial_conditions, problem_pointers
 
    real   :: d_gas, p_gas, v_gas, d_dust, v_dust, x0, y0, z0, r0
 
@@ -105,7 +105,7 @@ contains
 
 !-----------------------------------------------------------------------------
 
-   subroutine init_prob
+   subroutine problem_initial_conditions
 
       use cg_leaves,  only: leaves
       use cg_list,    only: cg_list_element
@@ -164,7 +164,7 @@ contains
          cgl => cgl%nxt
       enddo
 
-   end subroutine init_prob
+   end subroutine problem_initial_conditions
 
 !------------------------------------------------------------------------------------------
 

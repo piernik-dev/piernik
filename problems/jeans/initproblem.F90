@@ -33,7 +33,7 @@ module initproblem
    implicit none
 
    private
-   public :: read_problem_par, init_prob, problem_pointers
+   public :: read_problem_par, problem_initial_conditions, problem_pointers
    public :: d0, mode
 
    ! Private variables
@@ -157,7 +157,7 @@ contains
          Tamp = (d0 * amp**2 * omg2 * dom%Vol)/(4.0 * kn**2)
       else
          Tamp = 0.
-         if (master) call warn("[initproblem:init_prob] No waves (kn == 0)")
+         if (master) call warn("[initproblem:problem_initial_conditions] No waves (kn == 0)")
       endif
       if (mode == 1) Tamp = Tamp / 4.
       if (Tamp > 0) then
@@ -248,7 +248,7 @@ contains
 
 !-----------------------------------------------------------------------------
 
-   subroutine init_prob
+   subroutine problem_initial_conditions
 
       use cg_list,     only: cg_list_element
       use cg_leaves,   only: leaves
@@ -305,6 +305,6 @@ contains
          cgl => cgl%nxt
       enddo
 
-   end subroutine init_prob
+   end subroutine problem_initial_conditions
 
 end module initproblem

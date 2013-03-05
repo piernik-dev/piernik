@@ -36,7 +36,7 @@ module initproblem
    implicit none
 
    private
-   public :: read_problem_par, init_prob, problem_pointers
+   public :: read_problem_par, problem_initial_conditions, problem_pointers
 
    integer(kind=4) :: norm_step
    real            :: t_sn
@@ -123,7 +123,7 @@ contains
 
    end subroutine read_problem_par
 !-----------------------------------------------------------------------------
-   subroutine init_prob
+   subroutine problem_initial_conditions
 
       use cg_leaves,      only: leaves
       use cg_list,        only: cg_list_element
@@ -163,7 +163,7 @@ contains
       endwhere
 
       if (sum(b0**2) == 0.0 .and. (any(K_crn_paral(:) /= 0.) .or. any(K_crn_perp(:) /= 0.))) then
-         call warn("[initproblem:init_prob] No magnetic field is set, K_crn_* also have to be 0.")
+         call warn("[initproblem:problem_initial_conditions] No magnetic field is set, K_crn_* also have to be 0.")
          K_crn_paral(:) = 0.
          K_crn_perp(:)  = 0.
       endif
@@ -240,7 +240,7 @@ contains
 
 #endif /* COSM_RAYS */
 
-   end subroutine init_prob
+   end subroutine problem_initial_conditions
 !-----------------------------------------------------------------------------
 !
 ! This routine provides the "dvel"  variable values to be dumped to the .h5 file

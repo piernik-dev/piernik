@@ -36,7 +36,7 @@ module initproblem
    implicit none
 
    private
-   public :: read_problem_par, init_prob, problem_pointers
+   public :: read_problem_par, problem_initial_conditions, problem_pointers
 
    integer(kind=4)    :: norm_step
    real               :: d0, p0, bx0, by0, bz0, x0, y0, z0, r0, beta_cr, amp_cr
@@ -140,7 +140,7 @@ contains
 
 !-----------------------------------------------------------------------------
 
-   subroutine init_prob
+   subroutine problem_initial_conditions
 
       use cg_leaves,      only: leaves
       use cg_list,        only: cg_list_element
@@ -168,7 +168,7 @@ contains
       if (ncrn+ncre >= icr) then
          iecr = iarr_crs(icr)
       else
-         call die("[initproblem:init_prob] No CR components defined.")
+         call die("[initproblem:problem_initial_conditions] No CR components defined.")
       endif
 
 ! Uniform equilibrium state
@@ -214,7 +214,7 @@ contains
 
       call check_norm
 
-   end subroutine init_prob
+   end subroutine problem_initial_conditions
 
 !-----------------------------------------------------------------------------
 

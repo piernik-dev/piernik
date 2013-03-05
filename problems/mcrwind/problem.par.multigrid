@@ -138,10 +138,10 @@
     byn          =  1.0     ! __direction__ of B field
     bzn          =  0.0     !
     x0           =  0.0     ! coordinates of single expl with amplitude
-    y0           =  0.0     ! that is set in init_prob (testing purpose)
+    y0           =  0.0     ! that is set in problem_initial_conditions (testing purpose)
     z0           =  100.0   !
     beta_cr      =  0.0     ! participation of CR in initial equil. (similar to alfa for B)
-    amp_cr       =  1000.0     ! amplitude of expl. (init_problem, x0,y0,z0)
+    amp_cr       =  1000.0     ! amplitude of expl. (problem_initial_conditionslem, x0,y0,z0)
     alpha        =  1.0
  /
 

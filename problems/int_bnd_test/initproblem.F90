@@ -35,7 +35,7 @@ module initproblem
    implicit none
 
    private
-   public :: read_problem_par, init_prob, problem_pointers
+   public :: read_problem_par, problem_initial_conditions, problem_pointers
 
    ! namelist parameters
 !   namelist /PROBLEM_CONTROL/
@@ -68,7 +68,7 @@ contains
 
 !-----------------------------------------------------------------------------
 
-   subroutine init_prob
+   subroutine problem_initial_conditions
 
       use cg_list_global,   only: all_cg
       use constants,        only: xdim, zdim
@@ -121,9 +121,9 @@ contains
 !!$         call clear_fld
 !!$      enddo
 
-      call die("[initproblem:init_prob] End of test")
+      call die("[initproblem:problem_initial_conditions] End of test")
 
-   end subroutine init_prob
+   end subroutine problem_initial_conditions
 
    subroutine set_up_ub
 

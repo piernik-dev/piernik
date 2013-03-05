@@ -35,7 +35,7 @@ module initproblem
    implicit none
 
    private
-   public :: read_problem_par, init_prob, problem_pointers
+   public :: read_problem_par, problem_initial_conditions, problem_pointers
 
    character(len=cbuff_len) :: fnoise
    real                     :: rhog, eps, amp, kx, kz
@@ -108,7 +108,7 @@ contains
 
 !-----------------------------------------------------------------------------
 
-   subroutine init_prob
+   subroutine problem_initial_conditions
 
       use cg_leaves,    only: leaves
       use cg_list,      only: cg_list_element
@@ -286,7 +286,7 @@ contains
       write(msg,*) 'linear = ',linear
       call printinfo(msg)
 
-   end subroutine init_prob
+   end subroutine problem_initial_conditions
 
 !-----------------------------------------------------------------------------------------------------------------------------------
 

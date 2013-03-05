@@ -482,7 +482,7 @@ contains
 
       use common_hdf5,      only: output_fname
       use constants,        only: cwdlen, cbuff_len, domlen, idlen, xdim, ydim, zdim, LO, HI, RD
-      use dataio_pub,       only: msg, warn, die, printio, require_init_prob, problem_name, piernik_hdf5_version, fix_string, &
+      use dataio_pub,       only: msg, warn, die, printio, require_problem_IC, problem_name, piernik_hdf5_version, fix_string, &
            &                      domain_dump, last_hdf_time, last_res_time, last_log_time, last_tsl_time, nhdf, nres, new_id
       use dataio_user,      only: user_reg_var_restart, user_attrs_rd
       use domain,           only: dom
@@ -620,8 +620,8 @@ contains
          call h5ltget_attribute_string_f(file_id,"/","run_id",       new_id,       error)
 
          if (restart_hdf5_version > 1.11) then
-            call h5ltget_attribute_int_f(file_id,"/","require_init_prob", ibuf, error)
-            require_init_prob = ibuf(1)
+            call h5ltget_attribute_int_f(file_id,"/","require_problem_IC", ibuf, error)
+            require_problem_IC = ibuf(1)
          endif
 
          problem_name = fix_string(problem_name)   !> \deprecated BEWARE: >=HDF5-1.8.4 has weird issues with strings
@@ -641,7 +641,7 @@ contains
          ibuff(1) = nstep
          ibuff(2) = nres
          ibuff(3) = nhdf
-         if (restart_hdf5_version > 1.11) ibuff(5) = require_init_prob
+         if (restart_hdf5_version > 1.11) ibuff(5) = require_problem_IC
 
          rbuff(1) = last_log_time
          rbuff(2) = last_tsl_time
@@ -663,7 +663,7 @@ contains
          nstep = ibuff(1)
          nres = ibuff(2)
          nhdf = ibuff(3)
-         if (restart_hdf5_version > 1.11) require_init_prob = ibuff(5)
+         if (restart_hdf5_version > 1.11) require_problem_IC = ibuff(5)
 
          last_log_time = rbuff(1)
          last_tsl_time = rbuff(2)

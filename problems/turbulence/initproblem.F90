@@ -8,7 +8,7 @@ module initproblem
    implicit none
 
    private
-   public :: read_problem_par, init_prob, problem_pointers
+   public :: read_problem_par, problem_initial_conditions, problem_pointers
 
    integer           :: n_sn
    real              :: d0, Mrms, t_sn, c_si
@@ -64,7 +64,7 @@ contains
 
 !-----------------------------------------------------------------------------
 
-   subroutine init_prob
+   subroutine problem_initial_conditions
 
       use cg_leaves,  only: leaves
       use cg_list,    only: cg_list_element
@@ -136,9 +136,9 @@ contains
             enddo
          endif
 
-         write(msg,'(2(a,g12.5),a,i4)')   "[initproblem:init_prob] cma = ", cma, " rms = ", rms, " on ", proc
+         write(msg,'(2(a,g12.5),a,i4)')   "[initproblem:problem_initial_conditions] cma = ", cma, " rms = ", rms, " on ", proc
          call printinfo(msg, .true.)
-         write(msg,'(2(a,g12.5),a,i4)')   "[initproblem:init_prob] c_si = ", c_si, " l = ", l, " on ", proc
+         write(msg,'(2(a,g12.5),a,i4)')   "[initproblem:problem_initial_conditions] c_si = ", c_si, " l = ", l, " on ", proc
          call printinfo(msg, .true.)
          do k = cg%lhn(zdim,LO), cg%lhn(zdim,HI)
             do j = cg%lhn(ydim,LO), cg%lhn(ydim,HI)
@@ -164,6 +164,6 @@ contains
          cgl => cgl%nxt
       enddo
 
-   end subroutine init_prob
+   end subroutine problem_initial_conditions
 
 end module initproblem

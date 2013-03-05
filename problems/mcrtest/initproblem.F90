@@ -34,7 +34,7 @@ module initproblem
    implicit none
 
    private
-   public :: read_problem_par, init_prob, problem_pointers
+   public :: read_problem_par, problem_initial_conditions, problem_pointers
 
    integer(kind=4)    :: norm_step
    real               :: t_sn
@@ -129,7 +129,7 @@ contains
 
 !-----------------------------------------------------------------------------
 
-   subroutine init_prob
+   subroutine problem_initial_conditions
 
       use cg_leaves,      only: leaves
       use cg_list,        only: cg_list_element
@@ -173,7 +173,7 @@ contains
       if (.not.dom%has_dir(zdim)) bz0 = 0.
 
       if ((bx0**2 + by0**2 + bz0**2 == 0.) .and. (any(K_crn_paral(:) /= 0.) .or. any(K_crn_perp(:) /= 0.))) then
-         call warn("[initproblem:init_prob] No magnetic field is set, K_crn_* also have to be 0.")
+         call warn("[initproblem:problem_initial_conditions] No magnetic field is set, K_crn_* also have to be 0.")
          K_crn_paral(:) = 0.
          K_crn_perp(:)  = 0.
       endif
@@ -237,18 +237,18 @@ contains
       enddo
 
       cg => leaves%first%cg
-      if (is_multicg) call die("[initproblem:init_prob] multiple grid pieces per procesor not implemented yet") !nontrivial maxv
+      if (is_multicg) call die("[initproblem:problem_initial_conditions] multiple grid pieces per procesor not implemented yet") !nontrivial maxv
 
       do icr = 1, flind%crs%all
          maxv = maxval(cg%u(iarr_crs(icr),:,:,:))
          call piernik_MPI_Allreduce(maxv, pMAX)
          if (master) then
-            write(msg,*) '[initproblem:init_prob] icr=',icr,' maxecr =',maxv
+            write(msg,*) '[initproblem:problem_initial_conditions] icr=',icr,' maxecr =',maxv
             call printinfo(msg)
          endif
       enddo
 #endif /* COSM_RAYS */
 
-   end subroutine init_prob
+   end subroutine problem_initial_conditions
 
 end module initproblem

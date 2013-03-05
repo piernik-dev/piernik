@@ -37,7 +37,7 @@ module initproblem
    implicit none
 
    private
-   public :: read_problem_par, init_prob, problem_pointers
+   public :: read_problem_par, problem_initial_conditions, problem_pointers
 
    ! namelist parameters
    real :: x0     !< X-position of the spheroid
@@ -69,7 +69,7 @@ contains
 
       implicit none
 
-      user_attrs_wr    => init_prob_attrs
+      user_attrs_wr    => problem_initial_conditions_attrs
       finalize_problem => finalize_problem_maclaurin
       user_vars_hdf5   => maclaurin_error_vars
       problem_refine_derefine => mark_surface
@@ -170,19 +170,19 @@ contains
 
       if (master) then
          if (a1 > 0.) then
-            write(msg, '(3(a,g12.5),a)')"[initproblem:init_prob] Set up spheroid with a1 and a3 axes = ", a1, ", ", a3, " (eccentricity = ", e, ")"
+            write(msg, '(3(a,g12.5),a)')"[initproblem:problem_initial_conditions] Set up spheroid with a1 and a3 axes = ", a1, ", ", a3, " (eccentricity = ", e, ")"
          else
-            write(msg, '(a)')"[initproblem:init_prob] Set up point-like mass"
+            write(msg, '(a)')"[initproblem:problem_initial_conditions] Set up point-like mass"
          endif
          call printinfo(msg, .true.)
-         if (x0-a1<dom%edge(xdim, LO) .or. x0+a1>dom%edge(xdim, HI)) call warn("[initproblem:init_prob] Part of the spheroid is outside the domain in the X-direction.")
+         if (x0-a1<dom%edge(xdim, LO) .or. x0+a1>dom%edge(xdim, HI)) call warn("[initproblem:problem_initial_conditions] Part of the spheroid is outside the domain in the X-direction.")
          if ( (dom%geometry_type == GEO_XYZ .and. (y0-a1<dom%edge(ydim, LO) .or. y0+a1>dom%edge(ydim, HI))) .or. &
               (dom%geometry_type == GEO_RPZ .and. (atan2(a1,x0) > minval([y0-dom%edge(ydim, LO), dom%edge(ydim, HI)-y0]))) ) & ! will fail when some one adds 2*k*pi to y0
-              call warn("[initproblem:init_prob] Part of the spheroid is outside the domain")
+              call warn("[initproblem:problem_initial_conditions] Part of the spheroid is outside the domain")
          if (a1 > 0.) then
-            write(msg,'(2(a,g12.5))')   "[initproblem:init_prob] Density = ", d0, " mass = ", 4./3.*pi * a1**2 * a3 * d0
+            write(msg,'(2(a,g12.5))')   "[initproblem:problem_initial_conditions] Density = ", d0, " mass = ", 4./3.*pi * a1**2 * a3 * d0
          else
-            write(msg,'(a,g12.5)')   "[initproblem:init_prob] Mass = ", d0
+            write(msg,'(a,g12.5)')   "[initproblem:problem_initial_conditions] Mass = ", d0
          endif
          call printinfo(msg, .true.)
       endif
@@ -193,7 +193,7 @@ contains
 
 !> \brief Set up the initial conditions. Note that this routine can be called multiple times during initial iterations of refinement structure
 
-   subroutine init_prob
+   subroutine problem_initial_conditions
 
       use cg_leaves,   only: leaves
       use cg_list,     only: cg_list_element
@@ -238,7 +238,7 @@ contains
                                     xx = cg%x(i) + ii*cg%dx/(2.*nsub)
                                     rr = (xx**2 + x0**2 - 2. * xx * x0 * cos(yy))/a1**2 + zz
                                  case default
-                                    call die("[initproblem:init_prob] Unsupported dom%geometry_type")
+                                    call die("[initproblem:problem_initial_conditions] Unsupported dom%geometry_type")
                                     rr = 0.
                               end select
 
@@ -273,11 +273,11 @@ contains
          cgl => cgl%nxt
       enddo
 
-   end subroutine init_prob
+   end subroutine problem_initial_conditions
 
 !> \brief Provides parameters useful for python/maclaurin.py in .h5 files
 
-   subroutine init_prob_attrs(file_id)
+   subroutine problem_initial_conditions_attrs(file_id)
 
       use hdf5,  only: HID_T, SIZE_T
       use h5lt,  only: h5ltset_attribute_double_f
@@ -298,7 +298,7 @@ contains
       call h5ltset_attribute_double_f(file_id, "/", "y0",   [y0],   bufsize, error)
       call h5ltset_attribute_double_f(file_id, "/", "z0",   [z0],   bufsize, error)
 
-   end subroutine init_prob_attrs
+   end subroutine problem_initial_conditions_attrs
 
 !>
 !! \brief Calculate analytical potential for given spheroid.

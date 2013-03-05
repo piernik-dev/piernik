@@ -35,7 +35,7 @@ module initproblem
    implicit none
 
    private
-   public :: read_problem_par, init_prob, problem_pointers
+   public :: read_problem_par, problem_initial_conditions, problem_pointers
 
    enum, bind(C)
       enumerator :: ADDED = 1, NOT_ADDED
@@ -338,7 +338,7 @@ contains
 
    end subroutine add_random_noise
 !-----------------------------------------------------------------------------
-   subroutine init_prob
+   subroutine problem_initial_conditions
 
       use cg_leaves,          only: leaves
       use cg_list,            only: cg_list_element
@@ -380,7 +380,7 @@ contains
       do while (associated(cgl))
          cg => cgl%cg
 
-         if (is_multicg) call die("[initproblem:init_prob] multiple grid pieces per procesor not implemented yet") !nontrivial kmid, allocate
+         if (is_multicg) call die("[initproblem:problem_initial_conditions] multiple grid pieces per procesor not implemented yet") !nontrivial kmid, allocate
 
          sqr_gm = sqrt(newtong*ptmass)
          do k = cg%lhn(zdim, LO), cg%lhn(zdim, HI)
@@ -513,7 +513,7 @@ contains
             close(123)
 #endif /* DEBUG */
          else
-            call die("[initproblem:init_prob] I don't know what to do... :/")
+            call die("[initproblem:problem_initial_conditions] I don't know what to do... :/")
          endif
          max_vy = max(max_vy, maxval(abs(cg%u(flind%dst%imy,:,:,:))/cg%u(flind%dst%idn,:,:,:)) )
          cgl => cgl%nxt
@@ -521,7 +521,7 @@ contains
 
       call piernik_MPI_Allreduce(max_vy, pMAX)
 
-   end subroutine init_prob
+   end subroutine problem_initial_conditions
 !-----------------------------------------------------------------------------
    real function mmsn_T(r)
       implicit none

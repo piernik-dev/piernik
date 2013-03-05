@@ -35,7 +35,7 @@ module initproblem
    implicit none
 
    private
-   public :: read_problem_par, init_prob, problem_pointers
+   public :: read_problem_par, problem_initial_conditions, problem_pointers
 
    ! namelist parameters
    real                   :: pulse_size  !< size of the density pulse as a fraction of the domain
@@ -171,7 +171,7 @@ contains
 
 !-----------------------------------------------------------------------------
 
-   subroutine init_prob
+   subroutine problem_initial_conditions
 
       use cg_list,          only: cg_list_element
       use cg_leaves,        only: leaves
@@ -207,7 +207,7 @@ contains
          cgl => cgl%nxt
       enddo
 
-   end subroutine init_prob
+   end subroutine problem_initial_conditions
 
 !-----------------------------------------------------------------------------
 
