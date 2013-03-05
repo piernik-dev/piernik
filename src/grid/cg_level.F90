@@ -836,7 +836,7 @@ contains
       use dataio_pub,      only: die
       use mpi,             only: MPI_INTEGER, MPI_INTEGER8, MPI_STATUS_IGNORE!, MPI_REQUEST_NULL
       use mpisetup,        only: piernik_MPI_Allreduce, master, FIRST, LAST, comm, req, mpi_err, status, nproc, inflate_req
-      use sort_piece_list, only: grid_piece, grid_piece_list
+      use sort_piece_list, only: grid_piece_list
 
       implicit none
 
@@ -851,7 +851,7 @@ contains
       enum, bind(C)
          enumerator :: I_OFF
          enumerator :: I_N_B = I_OFF + ndims
-         enumerator :: I_GID = I_N_B + ndims
+         enumerator :: I_END = I_N_B + ndims - I_ONE
       end enum
       integer(kind=8), dimension(:,:), allocatable :: gptemp
       integer, parameter :: nreq = 1
@@ -873,9 +873,9 @@ contains
 
       if (master) then
          call gp%init(s)
-         allocate(gptemp(I_OFF:I_GID,s))
+         allocate(gptemp(I_OFF:I_END,s))
       else
-         allocate(gptemp(I_OFF:I_GID,ls))
+         allocate(gptemp(I_OFF:I_END,ls))
          call MPI_Isend(ls, I_ONE, MPI_INTEGER, FIRST, tag_ls, comm, req(nreq), mpi_err)
       endif
       call MPI_Gather(this%cnt, I_ONE, MPI_INTEGER, cnt_existing, I_ONE, MPI_INTEGER, FIRST, comm, mpi_err)
@@ -884,24 +884,24 @@ contains
          do p = lbound(this%patches(:), dim=1), ubound(this%patches(:), dim=1)
             do s = lbound(this%patches(p)%pse, dim=1), ubound(this%patches(p)%pse, dim=1)
                i = i + 1
-               gptemp(:, i) = [ this%patches(p)%pse(s)%se(:, LO), this%patches(p)%pse(s)%se(:, HI) - this%patches(p)%pse(s)%se(:, LO) + 1, int(INVALID, kind=8) ]
+               gptemp(:, i) = [ this%patches(p)%pse(s)%se(:, LO), this%patches(p)%pse(s)%se(:, HI) - this%patches(p)%pse(s)%se(:, LO) + 1 ]
             enddo
          enddo
       endif
       if (allocated(this%patches)) deallocate(this%patches)
       if (master) then !> \warning Antiparallel
          do s = 1, ls
-            gp%list(s) = grid_piece( gptemp(I_OFF:I_OFF+ndims-1, s), int(gptemp(I_N_B:I_N_B+ndims-1, s)), int(gptemp(I_GID, s)), INVALID, 0., 0.)
+            call gp%list(s)%set_gp(gptemp(I_OFF:I_OFF+ndims-1, s), int(gptemp(I_N_B:I_N_B+ndims-1, s)), INVALID, FIRST)
          enddo
          i = ls
          deallocate(gptemp)
          do p = FIRST + 1, LAST
             call MPI_Recv(ls, I_ONE, MPI_INTEGER, p, tag_ls, comm, MPI_STATUS_IGNORE, mpi_err)
             if (ls > 0) then
-               allocate(gptemp(I_OFF:I_GID,ls))
+               allocate(gptemp(I_OFF:I_END,ls))
                call MPI_Recv(gptemp, size(gptemp), MPI_INTEGER8, p, tag_gpt, comm, MPI_STATUS_IGNORE, mpi_err)
                do s = 1, ls
-                  gp%list(i+s) = grid_piece( gptemp(I_OFF:I_OFF+ndims-1, s), int(gptemp(I_N_B:I_N_B+ndims-1, s)), int(gptemp(I_GID, s)), INVALID, 0., 0.)
+                  call gp%list(i+s)%set_gp(gptemp(I_OFF:I_OFF+ndims-1, s), int(gptemp(I_N_B:I_N_B+ndims-1, s)), INVALID, p)
                enddo
                i = i + ls
                deallocate(gptemp)
@@ -947,7 +947,7 @@ contains
             ! call MPI_Isend(ls, I_ONE, MPI_INTEGER, p, tag_lsR, comm, req(p), mpi_err) !can't reuse ls before MPI_Waitall
             call MPI_Send(ls, I_ONE, MPI_INTEGER, p, tag_lsR, comm, mpi_err)
             if (ls>0) then
-               allocate(gptemp(I_OFF:I_GID-1,from(p):from(p+1)-1))
+               allocate(gptemp(I_OFF:I_END,from(p):from(p+1)-1))
                do s = lbound(gptemp, dim=2), ubound(gptemp, dim=2)
                   gptemp(:, s) = [ gp%list(s)%off, int(gp%list(s)%n_b, kind=8) ]
                enddo
@@ -965,7 +965,7 @@ contains
          deallocate(gptemp)
          call MPI_Recv(ls, I_ONE, MPI_INTEGER, FIRST, tag_lsR, comm, MPI_STATUS_IGNORE, mpi_err)
          if (ls>0) then
-            allocate(gptemp(I_OFF:I_GID-1,ls))
+            allocate(gptemp(I_OFF:I_END,ls))
             call MPI_Recv(gptemp, size(gptemp), MPI_INTEGER8, FIRST, tag_gptR, comm, MPI_STATUS_IGNORE, mpi_err)
             do s = lbound(gptemp, dim=2), ubound(gptemp, dim=2)
                call this%add_patch_one_piece(gptemp(I_N_B:I_N_B+ndims-1, s), gptemp(I_OFF:I_OFF+ndims-1, s))

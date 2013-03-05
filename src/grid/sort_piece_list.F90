@@ -37,15 +37,18 @@ module sort_piece_list
    implicit none
 
    private
-   public :: grid_piece, grid_piece_list, cleanup_piece_list
+   public :: grid_piece_list, cleanup_piece_list
 
    type :: grid_piece
-      integer(kind=8), dimension(ndims) :: off       ! offset
-      integer, dimension(ndims)         :: n_b       ! size
-      integer                           :: cur_gid   ! current grid_id
-      integer(kind=8)                   :: id        ! unique number used to sort
-      real                              :: weight    ! number of cells relative to total number of cells on given level
-      real                              :: cweight   ! cumulative weight for id <= own id
+      integer(kind=8), dimension(ndims) :: off       !< offset
+      integer, dimension(ndims)         :: n_b       !< size
+      integer                           :: cur_gid   !< current grid_id (unused)
+      integer                           :: cur_proc  !< current process number (unused)
+      integer(kind=8)                   :: id        !< unique number used to sort
+      real                              :: weight    !< number of cells relative to total number of cells on given level (unused)
+      real                              :: cweight   !< cumulative weight for id <= own id (unused)
+   contains
+      procedure :: set_gp                            !< Set the primary properties, initialize derived properties with safe defaults
    end type grid_piece
 
    type :: grid_piece_list
@@ -61,6 +64,28 @@ module sort_piece_list
    integer, dimension(:), allocatable :: gaps ! Auxiliary array for the sorting routine. Can be expanded and reused, so it is detached from the type grid_piece_list
 
 contains
+
+   subroutine set_gp(this, off, n_b, gid, proc)
+
+      use constants, only: ndims, INVALID
+
+      implicit none
+
+      class(grid_piece),                 intent(inout) :: this
+      integer(kind=8), dimension(ndims), intent(in)    :: off   !< offset
+      integer, dimension(ndims),         intent(in)    :: n_b   !< size
+      integer,                           intent(in)    :: gid   !< current grid_id (unused)
+      integer,                           intent(in)    :: proc  !< current process number (unused)
+
+      this%off      = off
+      this%n_b      = n_b
+      this%cur_gid  = gid
+      this%cur_proc = proc
+      this%id       = INVALID
+      this%weight   = 0.
+      this%cweight  = 0.
+
+   end subroutine set_gp
 
    !> \brief deallocate everything locally allocated
 
@@ -199,7 +224,8 @@ contains
 
    end subroutine set_id
 
-!> \brief  Find estimates of the cost of the grids
+!> \brief Find estimates of the cost of the grids
+!> \todo Do we want to include count of cg%leafmap, when available?
 
    subroutine set_weights(this)
 
