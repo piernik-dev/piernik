@@ -846,7 +846,7 @@ contains
       type(grid_piece_list) :: gp
       integer :: i
       integer(kind=4), dimension(FIRST:LAST+1) :: from
-      integer, dimension(FIRST:LAST) :: cnt_existing
+      integer(kind=4), dimension(FIRST:LAST) :: cnt_existing
       integer(kind=4) :: ls, p, s
       integer(kind=4), parameter :: tag_ls = 1, tag_gpt = tag_ls+1, tag_lsR = tag_gpt+1, tag_gptR = tag_lsR+1
       enum, bind(C)
