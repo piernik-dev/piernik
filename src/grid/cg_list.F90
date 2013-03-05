@@ -54,7 +54,7 @@ module cg_list
 
       type(cg_list_element), pointer :: first !< first element of the chain of grid containers, the most important one
       type(cg_list_element), pointer :: last  !< last element of the chain - useful for quick expanding and merging lists
-      integer :: cnt                          !< number of chain links
+      integer(kind=4) :: cnt                  !< number of chain links
       character(len=dsetnamelen) :: label     !< name of the list for diagnostic and identification purposes
     contains
 
@@ -99,6 +99,7 @@ contains
 !> \brief add new element to the list
    subroutine add_new(this, cg)
 
+      use constants,  only: I_ONE
       use dataio_pub, only: die
       use grid_cont,  only: grid_container
 
@@ -132,7 +133,7 @@ contains
       endif
 
       this%last => new
-      this%cnt = this%cnt + 1
+      this%cnt = this%cnt + I_ONE
 
    end subroutine add_new
 
@@ -163,6 +164,7 @@ contains
 
    subroutine un_link(this, cgle)
 
+      use constants,  only: I_ONE
       use dataio_pub, only: die
 
       implicit none
@@ -179,7 +181,7 @@ contains
       if (associated(cgle%prv)) cgle%prv%nxt => cgle%nxt
       if (associated(cgle%nxt)) cgle%nxt%prv => cgle%prv
       deallocate(cgle)
-      this%cnt = this%cnt - 1
+      this%cnt = this%cnt - I_ONE
 
    end subroutine un_link
 

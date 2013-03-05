@@ -844,10 +844,10 @@ contains
       class(cg_level_T), intent(inout) :: this
 
       type(grid_piece_list) :: gp
-      integer :: p, i, s
-      integer, dimension(FIRST:LAST+1) :: from
+      integer :: i
+      integer(kind=4), dimension(FIRST:LAST+1) :: from
       integer, dimension(FIRST:LAST) :: cnt_existing
-      integer(kind=4) :: ls
+      integer(kind=4) :: ls, p, s
       integer(kind=4), parameter :: tag_ls = 1, tag_gpt = tag_ls+1, tag_lsR = tag_gpt+1, tag_gptR = tag_lsR+1
       enum, bind(C)
          enumerator :: I_OFF
@@ -863,8 +863,8 @@ contains
 
       s = 0
       if (allocated(this%patches)) then
-         do p = lbound(this%patches(:), dim=1), ubound(this%patches(:), dim=1)
-            s = s + size(this%patches(p)%pse, dim=1)
+         do p = lbound(this%patches(:), dim=1, kind=4), ubound(this%patches(:), dim=1, kind=4)
+            s = s + size(this%patches(p)%pse, dim=1, kind=4)
          enddo
       endif
       ls = int(s, kind=4)
@@ -881,8 +881,8 @@ contains
       call MPI_Gather(this%cnt, I_ONE, MPI_INTEGER, cnt_existing, I_ONE, MPI_INTEGER, FIRST, comm, mpi_err)
       i = 0
       if (allocated(this%patches)) then
-         do p = lbound(this%patches(:), dim=1), ubound(this%patches(:), dim=1)
-            do s = lbound(this%patches(p)%pse, dim=1), ubound(this%patches(p)%pse, dim=1)
+         do p = lbound(this%patches(:), dim=1, kind=4), ubound(this%patches(:), dim=1, kind=4)
+            do s = lbound(this%patches(p)%pse, dim=1, kind=4), ubound(this%patches(p)%pse, dim=1, kind=4)
                i = i + 1
                gptemp(:, i) = [ this%patches(p)%pse(s)%se(:, LO), this%patches(p)%pse(s)%se(:, HI) - this%patches(p)%pse(s)%se(:, LO) + 1 ]
             enddo
@@ -891,7 +891,7 @@ contains
       if (allocated(this%patches)) deallocate(this%patches)
       if (master) then !> \warning Antiparallel
          do s = 1, ls
-            call gp%list(s)%set_gp(gptemp(I_OFF:I_OFF+ndims-1, s), int(gptemp(I_N_B:I_N_B+ndims-1, s)), INVALID, FIRST)
+            call gp%list(s)%set_gp(gptemp(I_OFF:I_OFF+ndims-1, s), int(gptemp(I_N_B:I_N_B+ndims-1, s), kind=4), INVALID, FIRST)
          enddo
          i = ls
          deallocate(gptemp)
@@ -901,7 +901,7 @@ contains
                allocate(gptemp(I_OFF:I_END,ls))
                call MPI_Recv(gptemp, size(gptemp), MPI_INTEGER8, p, tag_gpt, comm, MPI_STATUS_IGNORE, mpi_err)
                do s = 1, ls
-                  call gp%list(i+s)%set_gp(gptemp(I_OFF:I_OFF+ndims-1, s), int(gptemp(I_N_B:I_N_B+ndims-1, s)), INVALID, p)
+                  call gp%list(i+s)%set_gp(gptemp(I_OFF:I_OFF+ndims-1, s), int(gptemp(I_N_B:I_N_B+ndims-1, s), kind=4), INVALID, p)
                enddo
                i = i + ls
                deallocate(gptemp)
@@ -917,11 +917,11 @@ contains
 
          !> compute destination process corrected for current imbalance of existing grids as much as possible
          !> \todo replace counting of blocks with counting of weights - it will be required for merged blocks
-         s = (size(gp%list) + sum(cnt_existing))/nproc
+         s = int((size(gp%list) + sum(cnt_existing))/real(nproc), kind=4)
          i = (size(gp%list) + sum(cnt_existing, mask=(cnt_existing <= s)))/(nproc - count(cnt_existing > s))
-         from(FIRST) = lbound(gp%list, dim=1)
+         from(FIRST) = lbound(gp%list, dim=1, kind=4)
          do p = FIRST, LAST
-            from(p+1) = max(0, i - cnt_existing(p))
+            from(p+1) = int(max(0, i - cnt_existing(p)), kind=4)
          enddo
          i = size(gp%list) - sum(from(FIRST+1:LAST+1))
          if (i<0) call die("[cg_level:balance_new] i<0")
@@ -929,26 +929,26 @@ contains
          do while (p >= FIRST .and. i > 0)
             !> \deprecated this approach may result in building a small imbalance in favour of process with low id.
             if (cnt_existing(p) <= s) then
-               from(p+1) = from(p+1) + 1
+               from(p+1) = from(p+1) + I_ONE
                i = i - 1
             endif
-            p = p - 1
+            p = p - I_ONE
          enddo
          do p = FIRST, LAST
             from(p+1) = from(p+1) + from(p)
          enddo
-         do p = from(FIRST), from(FIRST+1)-1
+         do p = from(FIRST), from(FIRST+1) - I_ONE
             call this%add_patch_one_piece(int(gp%list(p)%n_b, kind=8), gp%list(p)%off)
          enddo
 
          ! distribute proposed grids
-         do p = FIRST + 1, LAST
+         do p = FIRST + I_ONE, LAST
             ls = int(from(p+1) - from(p), kind=4)
             ! call MPI_Isend(ls, I_ONE, MPI_INTEGER, p, tag_lsR, comm, req(p), mpi_err) !can't reuse ls before MPI_Waitall
             call MPI_Send(ls, I_ONE, MPI_INTEGER, p, tag_lsR, comm, mpi_err)
             if (ls>0) then
                allocate(gptemp(I_OFF:I_END,from(p):from(p+1)-1))
-               do s = lbound(gptemp, dim=2), ubound(gptemp, dim=2)
+               do s = lbound(gptemp, dim=2, kind=4), ubound(gptemp, dim=2, kind=4)
                   gptemp(:, s) = [ gp%list(s)%off, int(gp%list(s)%n_b, kind=8) ]
                enddo
                ! call MPI_Isend(gptemp, size(gptemp), MPI_INTEGER8, p, tag_gptR, comm, req(LAST+p), mpi_err) !can't deallocate gptemp before MPI_Waitall
@@ -967,7 +967,7 @@ contains
          if (ls>0) then
             allocate(gptemp(I_OFF:I_END,ls))
             call MPI_Recv(gptemp, size(gptemp), MPI_INTEGER8, FIRST, tag_gptR, comm, MPI_STATUS_IGNORE, mpi_err)
-            do s = lbound(gptemp, dim=2), ubound(gptemp, dim=2)
+            do s = lbound(gptemp, dim=2, kind=4), ubound(gptemp, dim=2, kind=4)
                call this%add_patch_one_piece(gptemp(I_N_B:I_N_B+ndims-1, s), gptemp(I_OFF:I_OFF+ndims-1, s))
             enddo
             deallocate(gptemp)
@@ -991,13 +991,12 @@ contains
    subroutine balance_old(this)
 
       use cg_list,         only: cg_list_element
-      use constants,       only: ndims, LO, HI
+      use constants,       only: ndims, LO, HI, I_ONE
       use dataio_pub,      only: warn, msg
       use mpisetup,        only: master, FIRST, LAST, nproc
       use refinement,      only: oop_thr
       use sort_piece_list, only: grid_piece_list
 #ifdef DEBUG
-      use constants,       only: I_ONE
       use mpi,             only: MPI_INTEGER, MPI_INTEGER8, MPI_STATUS_IGNORE
       use mpisetup,        only: comm, mpi_err
 #endif /* DEBUG */
@@ -1006,10 +1005,11 @@ contains
 
       class(cg_level_T), intent(inout) :: this
 
-      integer, dimension(FIRST:LAST) :: cnt_existing
+      integer(kind=4), dimension(FIRST:LAST) :: cnt_existing
       type(grid_piece_list) :: gp
       type(cg_list_element), pointer :: cgl
-      integer :: i, p, s
+      integer :: s
+      integer(kind=4) :: i, p
       integer(kind=8), dimension(:,:), allocatable :: gptemp
       enum, bind(C)
          enumerator :: I_OFF
@@ -1020,15 +1020,15 @@ contains
 #ifdef DEBUG
       integer(kind=4), parameter :: tag_gpt = 1
 #else /* !DEBUG */
-      integer ii
+      integer(kind=4) :: ii
 #endif /* DEBUG */
 
       allocate(gptemp(I_OFF:I_END, this%cnt))
       i = 0
       cgl => this%first
       do while (associated(cgl))
-         i = i + 1
-         gptemp(:, i) = [ cgl%cg%my_se(:, LO), int( [ cgl%cg%n_b, cgl%cg%grid_id ], kind=8) ]
+         i = i + I_ONE
+         gptemp(:, i) = [ cgl%cg%my_se(:, LO), int(cgl%cg%n_b, kind=8), int(cgl%cg%grid_id, kind=8) ]
          cgl => cgl%nxt
       enddo
 #ifdef DEBUG
@@ -1036,8 +1036,8 @@ contains
       call MPI_Gather(this%cnt, I_ONE, MPI_INTEGER, cnt_existing, I_ONE, MPI_INTEGER, FIRST, comm, mpi_err)
       if (master) then
          call gp%init(sum(cnt_existing))
-         do i = 1, this%cnt
-            call gp%list(i)%set_gp(gptemp(I_OFF:I_OFF+ndims-1, i), int(gptemp(I_N_B:I_N_B+ndims-1, i)), int(gptemp(I_GID, i), kind=4), FIRST)
+         do i = I_ONE, this%cnt
+            call gp%list(i)%set_gp(gptemp(I_OFF:I_OFF+ndims-1, i), int(gptemp(I_N_B:I_N_B+ndims-1, i), kind=4), int(gptemp(I_GID, i), kind=4), FIRST)
             if (any(this%pse(FIRST)%c(i)%se(:, LO) /= gp%list(i)%off) .or. gp%list(i)%cur_gid /= i .or. &
                  any(this%pse(FIRST)%c(i)%se(:, HI) - this%pse(FIRST)%c(i)%se(:, LO) +1 /= gp%list(i)%n_b)) &
                  call warn("cl:bo this%pse(FIRST) /= gptemp")
@@ -1048,8 +1048,8 @@ contains
             if (cnt_existing(p) > 0) then
                allocate(gptemp(I_OFF:I_END, cnt_existing(p)))
                call MPI_Recv(gptemp, size(gptemp), MPI_INTEGER8, p, tag_gpt, comm, MPI_STATUS_IGNORE, mpi_err)
-               do i = 1, cnt_existing(p)
-                  call gp%list(i+s)%set_gp(gptemp(I_OFF:I_OFF+ndims-1, i), int(gptemp(I_N_B:I_N_B+ndims-1, i)), int(gptemp(I_GID, i), kind=4), p)
+               do i = I_ONE, cnt_existing(p)
+                  call gp%list(i+s)%set_gp(gptemp(I_OFF:I_OFF+ndims-1, i), int(gptemp(I_N_B:I_N_B+ndims-1, i), kind=4), int(gptemp(I_GID, i), kind=4), p)
                   if (any(this%pse(p)%c(i)%se(:, LO) /= gp%list(i+s)%off) .or. gp%list(i+s)%cur_gid /= i .or. &
                        any(this%pse(p)%c(i)%se(:, HI) - this%pse(p)%c(i)%se(:, LO) +1 /= gp%list(i+s)%n_b)) &
                        call warn("cl:bo this%pse(p) /= gptemp")
@@ -1073,8 +1073,8 @@ contains
             ii = i
             if (ii /= sum(cnt_existing(:p-1))) call warn("cl:bo ii /= sum(cnt_existing(:p-1))")
             do s = lbound(this%pse(p)%c, dim=1), ubound(this%pse(p)%c, dim=1)
-               i = i + 1
-               call gp%list(i)%set_gp(this%pse(p)%c(s)%se(:, LO), int(this%pse(p)%c(s)%se(:, HI) - this%pse(p)%c(s)%se(:, LO) +1), i - ii, p)
+               i = i + I_ONE
+               call gp%list(i)%set_gp(this%pse(p)%c(s)%se(:, LO), int(this%pse(p)%c(s)%se(:, HI) - this%pse(p)%c(s)%se(:, LO) +1, kind=4), i - ii, p)
             enddo
          enddo
       endif
@@ -1085,9 +1085,7 @@ contains
          call gp%set_id(this%off)
          call gp%sort
          do p = FIRST, LAST
-            i = p*size(gp%list)/nproc + 1
-            ii = (p+1)*size(gp%list)/nproc
-            s = s + count(gp%list(i:ii)%cur_proc /= p)
+            s = s + count(gp%list(p*size(gp%list)/nproc+1:(p+1)*size(gp%list)/nproc)%cur_proc /= p)
          enddo
          if (s/real(size(gp%list)) > oop_thr) then
             write(msg,'(a,i3,a,i6,a,100i5)')"[cg_level:balance_old] ^", this%level_id," oop:",s,"|",cnt_existing

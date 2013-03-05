@@ -41,9 +41,9 @@ module sort_piece_list
 
    type :: grid_piece
       integer(kind=8), dimension(ndims) :: off       !< offset
-      integer, dimension(ndims)         :: n_b       !< size
-      integer                           :: cur_gid   !< current grid_id (unused)
-      integer                           :: cur_proc  !< current process number (unused)
+      integer(kind=4), dimension(ndims) :: n_b       !< size
+      integer(kind=4)                   :: cur_gid   !< current grid_id (unused)
+      integer(kind=4)                   :: cur_proc  !< current process number (unused)
       integer(kind=8)                   :: id        !< unique number used to sort
       real                              :: weight    !< number of cells relative to total number of cells on given level (unused)
       real                              :: cweight   !< cumulative weight for id <= own id (unused)
@@ -73,9 +73,9 @@ contains
 
       class(grid_piece),                 intent(inout) :: this
       integer(kind=8), dimension(ndims), intent(in)    :: off   !< offset
-      integer, dimension(ndims),         intent(in)    :: n_b   !< size
-      integer,                           intent(in)    :: gid   !< current grid_id (unused)
-      integer,                           intent(in)    :: proc  !< current process number (unused)
+      integer(kind=4), dimension(ndims), intent(in)    :: n_b   !< size
+      integer(kind=4),                   intent(in)    :: gid   !< current grid_id (unused)
+      integer(kind=4),                   intent(in)    :: proc  !< current process number (unused)
 
       this%off      = off
       this%n_b      = n_b
@@ -104,7 +104,7 @@ contains
       implicit none
 
       class(grid_piece_list), intent(inout) :: this
-      integer,                intent(in)    :: size
+      integer(kind=4),        intent(in)    :: size
 
       allocate(this%list(size))
 
