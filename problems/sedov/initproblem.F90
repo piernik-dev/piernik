@@ -265,7 +265,7 @@ contains
       ierrh = 0
       select case (trim(var))
          case ("gid")  ! Grid_id
-            tab(:,:,:) = cg%grid_id
+            tab(:,:,:) = real(cg%grid_id, kind=4)
          case default
             ierrh = -1
       end select
