@@ -70,11 +70,16 @@ contains
 
    subroutine read_problem_par
 
+      use constants,  only: DST
       use dataio_pub, only: nh      ! QA_WARN required for diff_nml
+      use dataio_pub, only: msg, printinfo, die
       use domain,     only: dom
+      use fluidindex, only: flind
       use mpisetup,   only: ibuff, rbuff, master, slave, piernik_MPI_Bcast
 
       implicit none
+
+      integer :: p
 
       t_sn = 0.0
 
@@ -138,40 +143,38 @@ contains
 
       endif
 
+      if (flind%energ < flind%fluids) call die("[initproblem:init_prob] Not all fluids are adiabatic!")
+      do p = 1, flind%energ
+         if (flind%all_fluids(p)%fl%tag == DST) call die("[initproblem:init_prob] This setup is not suitable for dust!")
+         write(msg, '(a,i2)')"Working with fluid#", flind%all_fluids(p)%fl%tag
+         if (master) call printinfo(msg)
+      enddo
+
    end subroutine read_problem_par
 !-----------------------------------------------------------------------------
    subroutine init_prob
 
       use cg_leaves,  only: leaves
       use cg_list,    only: cg_list_element
-      use constants,  only: ION, DST, xdim, ydim, zdim, LO, HI
-      use dataio_pub, only: msg, die, printinfo
+      use constants,  only: ION, xdim, ydim, zdim, LO, HI
       use domain,     only: dom
       use fluidindex, only: flind
-      use fluidtypes, only: component_fluid
       use grid_cont,  only: grid_container
-      use mpisetup,   only: master
 
       implicit none
 
       integer, parameter              :: isub = 4
       integer                         :: i, j, k, p, ii, jj, kk
-      class(component_fluid), pointer :: fl
       type(cg_list_element),  pointer :: cgl
       type(grid_container),   pointer :: cg
       real :: x, y, z
-
-      if (flind%energ < flind%fluids) call die("[initproblem:init_prob] Not all fluids are adiabatic!")
 
       ! BEWARE:
       !  3 triple loop are completely unnecessary here, but this problem serves
       !  as an educational example
 
       do p = 1, flind%energ
-         fl => flind%all_fluids(p)%fl
-         if (fl%tag == DST) call die("[initproblem:init_prob] This setup is not suitable for dust!")
-         write(msg,*) "Working with ", fl%tag, " fluid."
-         if (master) call printinfo(msg)
+         associate(fl => flind%all_fluids(p)%fl)
 
 ! Uniform equilibrium state
 
@@ -247,6 +250,7 @@ contains
             enddo
          enddo
 #endif /* TRACER */
+         end associate
       enddo
 
    end subroutine init_prob
