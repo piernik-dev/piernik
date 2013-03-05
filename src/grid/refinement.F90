@@ -35,7 +35,7 @@ module refinement
    implicit none
 
    private
-   public :: init_refinement, ref_flag, level_max, level_min, n_updAMR, allow_face_rstep, allow_corner_rstep
+   public :: init_refinement, ref_flag, level_max, level_min, n_updAMR, allow_face_rstep, allow_corner_rstep, oop_thr
 
    type :: ref_flag
       logical :: refine   !> a request to refine
@@ -49,8 +49,9 @@ module refinement
    integer(kind=4), protected :: n_updAMR           !< how often to update the refinement structure
    logical,         protected :: allow_face_rstep   !< Allows >1 refinement step across faces (do not use it for any physical problems)
    logical,         protected :: allow_corner_rstep !< Allows >1 refinement step across edges and corners (do not use it for any physical problems)
+   real,            protected :: oop_thr            !< Maximum allowed ratio of Out-of-Place grid pieces (according to current ordering scheme)
 
-   namelist /AMR/ level_min, level_max, n_updAMR, allow_face_rstep, allow_corner_rstep
+   namelist /AMR/ level_min, level_max, n_updAMR, allow_face_rstep, allow_corner_rstep, oop_thr
 
 contains
 
@@ -62,7 +63,7 @@ contains
       use dataio_pub, only: nh      ! QA_WARN required for diff_nml
       use dataio_pub, only: die, code_progress, warn
       use domain,     only: AMR_bsize, dom
-      use mpisetup,   only: ibuff, lbuff, master, slave, piernik_MPI_Bcast
+      use mpisetup,   only: ibuff, lbuff, rbuff, master, slave, piernik_MPI_Bcast
 
       implicit none
 
@@ -77,6 +78,7 @@ contains
       allow_face_rstep   = .false.
       allow_corner_rstep = .false.
       allow_AMR = .true.
+      oop_thr = 0.1
       do d = xdim, zdim
          if (dom%has_dir(d))  then
             if (AMR_bsize(d) < dom%nb) then
@@ -113,6 +115,8 @@ contains
          lbuff(2) = allow_corner_rstep
          lbuff(3) = allow_AMR
 
+         rbuff(1) = oop_thr
+
       endif
 
       call piernik_MPI_Bcast(ibuff)
@@ -127,6 +131,8 @@ contains
          allow_face_rstep   = lbuff(1)
          allow_corner_rstep = lbuff(2)
          allow_AMR          = lbuff(3)
+
+         oop_thr = rbuff(1)
 
       endif
 

@@ -94,6 +94,7 @@ module cg_level
       procedure, private :: add_patch_one_piece               !< Add a patch with only one grid piece
       procedure, private :: expand_list                       !< Expand the patch list by one
       procedure, private :: balance_new                       !< Routine for moving proposed grids between processes
+      procedure          :: balance_old                       !< Routine for moving existing grids between processes
 
    end type cg_level_T
 
@@ -856,7 +857,7 @@ contains
       integer(kind=8), dimension(:,:), allocatable :: gptemp
       integer, parameter :: nreq = 1
 
-      ! collect existing and planned grids on a level
+      ! collect planned grids on a level
 
       call inflate_req(nreq)
 
@@ -871,11 +872,10 @@ contains
 
       if (s==0) return
 
+      allocate(gptemp(I_OFF:I_END,ls))
       if (master) then
          call gp%init(s)
-         allocate(gptemp(I_OFF:I_END,s))
       else
-         allocate(gptemp(I_OFF:I_END,ls))
          call MPI_Isend(ls, I_ONE, MPI_INTEGER, FIRST, tag_ls, comm, req(nreq), mpi_err)
       endif
       call MPI_Gather(this%cnt, I_ONE, MPI_INTEGER, cnt_existing, I_ONE, MPI_INTEGER, FIRST, comm, mpi_err)
@@ -912,8 +912,8 @@ contains
          call gp%set_id(this%off)
          call gp%sort
 
-         ! measure their weight
-         call gp%set_weights
+         ! measure their weight (unused yet)
+         ! call gp%set_weights
 
          !> compute destination process corrected for current imbalance of existing grids as much as possible
          !> \todo replace counting of blocks with counting of weights - it will be required for merged blocks
@@ -984,5 +984,117 @@ contains
 !!$      deallocate(area)
 
    end subroutine balance_new
+
+!> \brief Routine for moving existing grids between processes
+
+!#define DEBUG
+   subroutine balance_old(this)
+
+      use cg_list,         only: cg_list_element
+      use constants,       only: ndims, LO, HI
+      use dataio_pub,      only: warn, msg
+      use mpisetup,        only: master, FIRST, LAST, nproc
+      use refinement,      only: oop_thr
+      use sort_piece_list, only: grid_piece_list
+#ifdef DEBUG
+      use constants,       only: I_ONE
+      use mpi,             only: MPI_INTEGER, MPI_INTEGER8, MPI_STATUS_IGNORE
+      use mpisetup,        only: comm, mpi_err
+#endif /* DEBUG */
+
+      implicit none
+
+      class(cg_level_T), intent(inout) :: this
+
+      integer, dimension(FIRST:LAST) :: cnt_existing
+      type(grid_piece_list) :: gp
+      type(cg_list_element), pointer :: cgl
+      integer :: i, p, s
+      integer(kind=8), dimension(:,:), allocatable :: gptemp
+      enum, bind(C)
+         enumerator :: I_OFF
+         enumerator :: I_N_B = I_OFF + ndims
+         enumerator :: I_GID = I_N_B + ndims
+         enumerator :: I_END = I_GID
+      end enum
+#ifdef DEBUG
+      integer(kind=4), parameter :: tag_gpt = 1
+#else /* !DEBUG */
+      integer ii
+#endif /* DEBUG */
+
+      allocate(gptemp(I_OFF:I_END, this%cnt))
+      i = 0
+      cgl => this%first
+      do while (associated(cgl))
+         i = i + 1
+         gptemp(:, i) = [ cgl%cg%my_se(:, LO), int( [ cgl%cg%n_b, cgl%cg%grid_id ], kind=8) ]
+         cgl => cgl%nxt
+      enddo
+#ifdef DEBUG
+      ! Gather complete grid list and compare with this%pse
+      call MPI_Gather(this%cnt, I_ONE, MPI_INTEGER, cnt_existing, I_ONE, MPI_INTEGER, FIRST, comm, mpi_err)
+      if (master) then
+         call gp%init(sum(cnt_existing))
+         do i = 1, this%cnt
+            call gp%list(i)%set_gp(gptemp(I_OFF:I_OFF+ndims-1, i), int(gptemp(I_N_B:I_N_B+ndims-1, i)), int(gptemp(I_GID, i), kind=4), FIRST)
+            if (any(this%pse(FIRST)%c(i)%se(:, LO) /= gp%list(i)%off) .or. gp%list(i)%cur_gid /= i .or. &
+                 any(this%pse(FIRST)%c(i)%se(:, HI) - this%pse(FIRST)%c(i)%se(:, LO) +1 /= gp%list(i)%n_b)) &
+                 call warn("cl:bo this%pse(FIRST) /= gptemp")
+         enddo
+         deallocate(gptemp)
+         s = this%cnt
+         do p = FIRST + 1, LAST
+            if (cnt_existing(p) > 0) then
+               allocate(gptemp(I_OFF:I_END, cnt_existing(p)))
+               call MPI_Recv(gptemp, size(gptemp), MPI_INTEGER8, p, tag_gpt, comm, MPI_STATUS_IGNORE, mpi_err)
+               do i = 1, cnt_existing(p)
+                  call gp%list(i+s)%set_gp(gptemp(I_OFF:I_OFF+ndims-1, i), int(gptemp(I_N_B:I_N_B+ndims-1, i)), int(gptemp(I_GID, i), kind=4), p)
+                  if (any(this%pse(p)%c(i)%se(:, LO) /= gp%list(i+s)%off) .or. gp%list(i+s)%cur_gid /= i .or. &
+                       any(this%pse(p)%c(i)%se(:, HI) - this%pse(p)%c(i)%se(:, LO) +1 /= gp%list(i+s)%n_b)) &
+                       call warn("cl:bo this%pse(p) /= gptemp")
+               enddo
+               s = s + cnt_existing(p)
+               deallocate(gptemp)
+            endif
+         enddo
+      else
+         if (this%cnt > 0) call MPI_Send(gptemp, size(gptemp), MPI_INTEGER8, FIRST, tag_gpt, comm, mpi_err)
+      endif
+#else /* !DEBUG */
+      ! Trust that this%pse is updated
+      if (master) then
+         do p = FIRST, LAST
+            cnt_existing(p) = size(this%pse(p)%c)
+         enddo
+         call gp%init(sum(cnt_existing))
+         i = 0
+         do p = FIRST, LAST
+            ii = i
+            if (ii /= sum(cnt_existing(:p-1))) call warn("cl:bo ii /= sum(cnt_existing(:p-1))")
+            do s = lbound(this%pse(p)%c, dim=1), ubound(this%pse(p)%c, dim=1)
+               i = i + 1
+               call gp%list(i)%set_gp(this%pse(p)%c(s)%se(:, LO), int(this%pse(p)%c(s)%se(:, HI) - this%pse(p)%c(s)%se(:, LO) +1), i - ii, p)
+            enddo
+         enddo
+      endif
+#endif /* DEBUG */
+
+      s = 0
+      if (master) then
+         call gp%set_id(this%off)
+         call gp%sort
+         do p = FIRST, LAST
+            i = p*size(gp%list)/nproc + 1
+            ii = (p+1)*size(gp%list)/nproc
+            s = s + count(gp%list(i:ii)%cur_proc /= p)
+         enddo
+         if (s/real(size(gp%list)) > oop_thr) then
+            write(msg,'(a,i3,a,i6,a,100i5)')"[cg_level:balance_old] ^", this%level_id," oop:",s,"|",cnt_existing
+            call warn(msg)
+         endif
+      endif
+
+   end subroutine balance_old
 
 end module cg_level

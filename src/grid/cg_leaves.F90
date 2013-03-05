@@ -58,16 +58,17 @@ module cg_leaves
    type, extends(cg_list_bnd_T) :: cg_leaves_T
       type(cg_level_connected_T), pointer :: coarsest_leaves
    contains
-      procedure :: update           !< Select grids that should be included on leaves list
-      procedure :: arr3d_boundaries !< Wrapper routine to set up all guardcells (internal, external and fine-coarse) for given rank-3 arrays
-                                    !< \warning the name 'arr3d_boundaries' intentionally collides with cg_level_connested::arr3d_boundaries
-                                    !< \todo unite this routine with cg_level_connected::arr3d_boundaries somehow
+      procedure :: update             !< Select grids that should be included on leaves list
+      procedure :: balance_and_update !< Rebalance if required and update
+      procedure :: arr3d_boundaries   !< Wrapper routine to set up all guardcells (internal, external and fine-coarse) for given rank-3 arrays
+                                      !< \warning the name 'arr3d_boundaries' intentionally collides with cg_level_connested::arr3d_boundaries
+                                      !< \todo unite this routine with cg_level_connected::arr3d_boundaries somehow
       !< \todo fix bnd_routines contents for this type as soon as possible
-      procedure :: arr4d_boundaries !< Wrapper routine to set up all guardcells (internal, external and fine-coarse) for given rank-4 arrays
-      procedure :: internal_bnd_3d  !< Wrapper routine to set up internal boundaries for for given rank-3 arrays
-      procedure :: internal_bnd_4d  !< Wrapper routine to set up internal boundaries for for given rank-4 arrays
-      procedure :: external_bnd_3d  !< Wrapper routine to set up external boundaries for for given rank-3 arrays
-      procedure :: external_bnd_4d  !< Wrapper routine to set up external boundaries for for given rank-4 arrays
+      procedure :: arr4d_boundaries   !< Wrapper routine to set up all guardcells (internal, external and fine-coarse) for given rank-4 arrays
+      procedure :: internal_bnd_3d    !< Wrapper routine to set up internal boundaries for for given rank-3 arrays
+      procedure :: internal_bnd_4d    !< Wrapper routine to set up internal boundaries for for given rank-4 arrays
+      procedure :: external_bnd_3d    !< Wrapper routine to set up external boundaries for for given rank-3 arrays
+      procedure :: external_bnd_4d    !< Wrapper routine to set up external boundaries for for given rank-4 arrays
    end type cg_leaves_T
 
    !>
@@ -138,6 +139,30 @@ contains
       if (master) call printinfo(msg)
 
    end subroutine update
+
+!> \brief Rebalance if required and update.
+
+   subroutine balance_and_update(this, str)
+
+      use cg_level_finest,    only: finest
+      use cg_level_connected, only: cg_level_connected_T
+
+      implicit none
+
+      class(cg_leaves_T),         intent(inout) :: this          !< object invoking type-bound procedure
+      character(len=*), optional, intent(in)    :: str           !< optional string identifier to show the progress of updating refinement
+
+      type(cg_level_connected_T), pointer :: curl
+
+      curl => finest%level
+      do while (associated(curl)) ! perhaps it is worth to limit to the base level
+         call curl%balance_old
+         curl => curl%coarser
+      enddo
+
+      call this%update(str)
+
+   end subroutine balance_and_update
 
 !> \brief This routine sets up all guardcells (internal, external and fine-coarse) for given rank-3 arrays
 

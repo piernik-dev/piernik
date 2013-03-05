@@ -232,7 +232,7 @@ contains
          curl => curl%coarser
       enddo
       ! sync structure
-      call leaves%update(" ( derefine ) ")
+      call leaves%balance_and_update(" ( derefine ) ")
       call fix_refinement(correct)
       if (.not. correct) call die("[refinement_update:update_refinement] Refinement defects still present")
 
