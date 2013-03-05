@@ -42,8 +42,9 @@ module sort_piece_list
    type :: grid_piece
       integer(kind=8), dimension(ndims) :: off       !< offset
       integer(kind=4), dimension(ndims) :: n_b       !< size
-      integer(kind=4)                   :: cur_gid   !< current grid_id (unused)
-      integer(kind=4)                   :: cur_proc  !< current process number (unused)
+      integer(kind=4)                   :: cur_gid   !< current grid_id
+      integer(kind=4)                   :: cur_proc  !< current process number
+      integer(kind=4)                   :: dest_proc !< process number according to ideal ordering
       integer(kind=8)                   :: id        !< unique number used to sort
       real                              :: weight    !< number of cells relative to total number of cells on given level (unused)
       real                              :: cweight   !< cumulative weight for id <= own id (unused)
@@ -77,13 +78,14 @@ contains
       integer(kind=4),                   intent(in)    :: gid   !< current grid_id (unused)
       integer(kind=4),                   intent(in)    :: proc  !< current process number (unused)
 
-      this%off      = off
-      this%n_b      = n_b
-      this%cur_gid  = gid
-      this%cur_proc = proc
-      this%id       = INVALID
-      this%weight   = 0.
-      this%cweight  = 0.
+      this%off       = off
+      this%n_b       = n_b
+      this%cur_gid   = gid
+      this%cur_proc  = proc
+      this%dest_proc = INVALID
+      this%id        = INVALID
+      this%weight    = 0.
+      this%cweight   = 0.
 
    end subroutine set_gp
 
