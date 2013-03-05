@@ -233,7 +233,8 @@ contains
       enddo
       ! sync structure
       call leaves%update(" ( derefine ) ")
-      call check_refinement
+      call fix_refinement(correct)
+      if (.not. correct) call die("[refinement_update:update_refinement] Refinement defects still present")
 
       call all_bnd
 
@@ -483,30 +484,8 @@ contains
          cgl => cgl%nxt
       enddo
 
-      call leaves%corners2wa(qna%wai)
+!!$      call leaves%corners2wa(qna%wai)
 
    end subroutine fix_refinement
-
-!> \brief Detect refinement defects
-
-   subroutine check_refinement
-
-      use dataio_pub, only: warn
-      use refinement, only: allow_face_rstep, allow_corner_rstep
-      use mpisetup,   only: master
-
-      implicit none
-
-      logical, save :: warned = .false.
-
-      if (allow_face_rstep .and. allow_corner_rstep) return
-      !> \todo also check for excess or refinement levels
-
-      if (master .and. .not. warned) then
-         call warn("[refinement_update:check_refinement] not implemented yet")
-         warned = .true.
-      endif
-
-   end subroutine check_refinement
 
 end module refinement_update
