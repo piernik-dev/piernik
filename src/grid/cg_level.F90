@@ -1065,7 +1065,7 @@ contains
       ! Trust that this%pse is updated
       if (master) then
          do p = FIRST, LAST
-            cnt_existing(p) = size(this%pse(p)%c)
+            cnt_existing(p) = size(this%pse(p)%c, kind=4)
          enddo
          call gp%init(sum(cnt_existing))
          i = 0
