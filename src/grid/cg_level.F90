@@ -1115,12 +1115,12 @@ contains
       if (s>0) then ! do global reshuffling
 
          totfld = 0
-         do p = lbound(wna%lst, dim=1), ubound(wna%lst, dim=1)
+         do p = lbound(wna%lst, dim=1, kind=4), ubound(wna%lst, dim=1, kind=4)
             if (wna%lst(p)%vital) then
                totfld = totfld + wna%lst(p)%dim4
             endif
          enddo
-         do p = lbound(qna%lst, dim=1), ubound(qna%lst, dim=1)
+         do p = lbound(qna%lst, dim=1, kind=4), ubound(qna%lst, dim=1, kind=4)
             if (qna%lst(p)%vital) then
                totfld = totfld + 1
             endif
@@ -1132,9 +1132,9 @@ contains
          allocate(gptemp(I_OFF:I_D_P, s))
          if (master) then
             p = 0
-            do i = lbound(gp%list, dim=1), ubound(gp%list, dim=1)
+            do i = lbound(gp%list, dim=1, kind=4), ubound(gp%list, dim=1, kind=4)
                if (gp%list(i)%cur_proc /= gp%list(i)%dest_proc) then
-                  p = p + 1
+                  p = p + I_ONE
                   gptemp(:, p) = [ gp%list(i)%off, int( [ gp%list(i)%n_b, gp%list(i)%cur_gid, gp%list(i)%cur_proc, gp%list(i)%dest_proc ], kind=8) ]
                endif
             enddo
@@ -1145,7 +1145,7 @@ contains
          ! Irecv & Isend
          nr = 0
          allocate(cglepa(size(gptemp)))
-         do i = lbound(gptemp, dim=2), ubound(gptemp, dim=2)
+         do i = lbound(gptemp, dim=2, kind=4), ubound(gptemp, dim=2, kind=4)
             cglepa(i)%p => null()
             if (gptemp(I_C_P, i) == gptemp(I_D_P, i)) call die("[cg_level:balance_old] can not send to self")
             if (gptemp(I_C_P, i) == proc) then ! send
@@ -1157,13 +1157,13 @@ contains
                      cglepa(i)%p => cgl
                      allocate(cglepa(i)%tbuf(totfld, cgl%cg%n_b(xdim), cgl%cg%n_b(ydim), cgl%cg%n_b(zdim)))
                      s = lbound(cglepa(i)%tbuf, dim=1)
-                     do p = lbound(wna%lst, dim=1), ubound(wna%lst, dim=1)
+                     do p = lbound(wna%lst, dim=1, kind=4), ubound(wna%lst, dim=1, kind=4)
                         if (wna%lst(p)%vital) then
                            cglepa(i)%tbuf(s:s+wna%lst(p)%dim4-1, :, :, :) = cgl%cg%w(p)%arr(:, cgl%cg%is:cgl%cg%ie, cgl%cg%js:cgl%cg%je, cgl%cg%ks:cgl%cg%ke)
                            s = s + wna%lst(p)%dim4
                         endif
                      enddo
-                     do p = lbound(qna%lst, dim=1), ubound(qna%lst, dim=1)
+                     do p = lbound(qna%lst, dim=1, kind=4), ubound(qna%lst, dim=1, kind=4)
                         if (qna%lst(p)%vital) then
                            cglepa(i)%tbuf(s, :, :, :) = cgl%cg%q(p)%arr(cgl%cg%is:cgl%cg%ie, cgl%cg%js:cgl%cg%je, cgl%cg%ks:cgl%cg%ke)
                            s = s + 1
@@ -1189,7 +1189,7 @@ contains
                cgl => cglepa(i)%p
                call this%last%cg%init(this%n_d, this%off, se, n_gid, this%level_id) ! we cannot pass "this" as an argument because of circular dependencies
                allocate(cglepa(i)%tbuf(totfld, cgl%cg%n_b(xdim), cgl%cg%n_b(ydim), cgl%cg%n_b(zdim)))
-               do p = lbound(cg_extptrs%ext, dim=1), ubound(cg_extptrs%ext, dim=1)
+               do p = lbound(cg_extptrs%ext, dim=1, kind=4), ubound(cg_extptrs%ext, dim=1, kind=4)
                   if (associated(cg_extptrs%ext(p)%init))  call cg_extptrs%ext(p)%init(this%last%cg)
                enddo
                call all_cg%add(this%last%cg)
@@ -1203,7 +1203,7 @@ contains
             mpistatus => status(:, :nr)
             call MPI_Waitall(nr, req(:nr), mpistatus, mpi_err)
          endif
-         do i = lbound(gptemp, dim=2), ubound(gptemp, dim=2)
+         do i = lbound(gptemp, dim=2, kind=4), ubound(gptemp, dim=2, kind=4)
             cgl => cglepa(i)%p
             if (gptemp(I_C_P, i) == proc) then ! cleanup
                deallocate(cglepa(i)%tbuf)
@@ -1213,13 +1213,13 @@ contains
             endif
             if (gptemp(I_D_P, i) == proc) then ! copy received
                s = lbound(cglepa(i)%tbuf, dim=1)
-               do p = lbound(wna%lst, dim=1), ubound(wna%lst, dim=1)
+               do p = lbound(wna%lst, dim=1, kind=4), ubound(wna%lst, dim=1, kind=4)
                   if (wna%lst(p)%vital) then
                      cgl%cg%w(p)%arr(:, cgl%cg%is:cgl%cg%ie, cgl%cg%js:cgl%cg%je, cgl%cg%ks:cgl%cg%ke) = cglepa(i)%tbuf(s:s+wna%lst(p)%dim4-1, :, :, :)
                      s = s + wna%lst(p)%dim4
                   endif
                enddo
-               do p = lbound(qna%lst, dim=1), ubound(qna%lst, dim=1)
+               do p = lbound(qna%lst, dim=1, kind=4), ubound(qna%lst, dim=1, kind=4)
                   if (qna%lst(p)%vital) then
                      cgl%cg%q(p)%arr(cgl%cg%is:cgl%cg%ie, cgl%cg%js:cgl%cg%je, cgl%cg%ks:cgl%cg%ke) = cglepa(i)%tbuf(s, :, :, :)
                      s = s + 1
