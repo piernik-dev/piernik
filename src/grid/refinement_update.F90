@@ -228,6 +228,7 @@ contains
          enddo
          call piernik_MPI_Allreduce(derefined, pLOR)
          if (derefined) call curl%init_all_new_cg ! no new cg to really initialize, but some other routines need to be called to refresh datastructures
+         !> \todo replace call curl%init_all_new_cg by something cheaper
          call curl%sync_ru
          curl => curl%coarser
       enddo

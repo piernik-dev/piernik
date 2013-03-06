@@ -157,6 +157,7 @@ contains
       curl => finest%level
       do while (associated(curl)) ! perhaps it is worth to limit to the base level
          call curl%balance_old
+         call curl%sync_ru
          curl => curl%coarser
       enddo
 
