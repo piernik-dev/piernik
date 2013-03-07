@@ -116,7 +116,8 @@ contains
 
       class(cg_level_connected_T), intent(inout)   :: this   !< object invoking type bound procedure
 
-      integer                                      :: g, j, jf, fmax, tag
+      integer                                      :: g, j, jf, fmax
+      integer(kind=8)                              :: tag
       integer(kind=8), dimension(xdim:zdim, LO:HI) :: coarsened
       integer,         dimension(xdim:zdim, LO:HI) :: enlargement
       type(cg_list_element),      pointer          :: cgl
@@ -177,7 +178,7 @@ contains
                     &           seg%se(zdim, HI)-seg%se(zdim, LO) + 1))
                tag = cg%grid_id + this%tot_se * ps(g)%n_se
                seg%tag = int(tag, kind=4) ! assumed that there is only one piece to be communicated from grid to grid (i.e. grids are not periodically wrapped around)
-               if (tag /= int(seg%tag)) call die("[cg_level_connected:vertical_prep] tag overflow (ri)")
+               if (tag /= seg%tag) call die("[cg_level_connected:vertical_prep] tag overflow (ri)")
                end associate
             enddo
 
@@ -199,7 +200,7 @@ contains
                     &           seg%se(zdim, HI)-seg%se(zdim, LO) + 1))
                tag = cg%grid_id + this%tot_se * ps(g)%n_se
                seg%tag = int(tag, kind=4) ! assumed that there is only one piece to be communicated from grid to grid (i.e. grids are not periodically wrapped around)
-               if (tag /= int(seg%tag)) call die("[cg_level_connected:vertical_prep] tag overflow po)")
+               if (tag /= seg%tag) call die("[cg_level_connected:vertical_prep] tag overflow po)")
                end associate
             enddo
 
@@ -259,7 +260,7 @@ contains
                seg%se(:, HI) = min(cg%my_se(:, HI), coarsened(:, HI))
                tag = ps(g)%n_se + coarse%tot_se * cg%grid_id
                seg%tag = int(tag, kind=4)
-               if (tag /= int(seg%tag)) call die("[cg_level_connected:vertical_prep] tag overflow (ro)")
+               if (tag /= seg%tag) call die("[cg_level_connected:vertical_prep] tag overflow (ro)")
                end associate
             enddo
 
@@ -276,7 +277,7 @@ contains
                     &           seg%se(zdim, HI)-seg%se(zdim, LO) + 1))
                tag = ps(g)%n_se + coarse%tot_se * cg%grid_id
                seg%tag = int(tag, kind=4)
-               if (tag /= int(seg%tag)) call die("[cg_level_connected:vertical_prep] tag overflow (pi)")
+               if (tag /= seg%tag) call die("[cg_level_connected:vertical_prep] tag overflow (pi)")
                end associate
             enddo
 
@@ -1125,7 +1126,7 @@ contains
       integer(kind=8), dimension(xdim:zdim, LO:HI) :: seg, segp, seg2, segp2, segf
       integer(kind=8), dimension(xdim:zdim) :: per
       integer :: mpifc_cnt
-      integer(kind=4) :: tag
+      integer(kind=8) :: tag
       type :: fc_seg !< the absolutely minimal set of data that defines the communication consists of [ grid_id, tag, and, seg ]. The proc numbers are for convenience only.
          integer :: proc     ! it can be rewritten in a way that does not need this numbet to be explicitly stored, but it is easier to have it
          integer :: grid_id
@@ -1206,7 +1207,8 @@ contains
                                        if (is_overlap(coarse%pse(j)%c(b)%se(:,:), seg)) then
                                           seg(:, LO) = max( seg(:, LO), coarse%pse(j)%c(b)%se(:, LO))
                                           seg(:, HI) = min( seg(:, HI), coarse%pse(j)%c(b)%se(:, HI)) ! this is what we want
-                                          tag = int(cg%level_id + max_level*(cg%grid_id + this%tot_se*(b + d*size(coarse%pse(j)%c(:)))), kind=4)
+                                          tag = cg%level_id + max_level*(cg%grid_id + this%tot_se*(b + d*size(coarse%pse(j)%c(:))))
+                                          if (tag /= int(tag, kind=4)) call die("[cg_level_connected:vertical_b_prep] tag overflow")
                                           segp (:, LO) = seg  (:, LO) - [ ix, iy, iz ] * per(:)
                                           segp (:, HI) = seg  (:, HI) - [ ix, iy, iz ] * per(:)
                                           ! Find 1-layer thick areas which will be involved in fine->coarse flux exchanges
@@ -1233,7 +1235,7 @@ contains
                                           endif
                                           seg2 (:, LO) = segp2(:, LO) + [ ix, iy, iz ] * per(:)
                                           seg2 (:, HI) = segp2(:, HI) + [ ix, iy, iz ] * per(:)
-                                          seglist = [ seglist, fc_seg(j, b, tag, proc, seg, seg2, segp, segp2) ]  ! LHS-realloc
+                                          seglist = [ seglist, fc_seg(j, b, int(tag, kind=4), proc, seg, seg2, segp, segp2) ]  ! LHS-realloc
                                        endif
                                     endif
                                  enddo

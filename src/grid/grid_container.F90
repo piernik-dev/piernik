@@ -808,6 +808,9 @@ contains
 !> \brief Add a new segment, reallocate if necessary
 
    subroutine add_seg(this, proc, se, tag)
+
+      use dataio_pub, only: die
+
       implicit none
 
       class(bnd_list),                              intent(inout) :: this
@@ -817,6 +820,8 @@ contains
 
       type(segment), dimension(:), allocatable :: tmp
       integer :: g
+
+      if (tag <0) call die("[grid_container:add_seg] tag<0")
 
       if (allocated(this%seg)) then
          allocate(tmp(lbound(this%seg, dim=1):ubound(this%seg, dim=1)+1))
