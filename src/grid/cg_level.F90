@@ -992,12 +992,12 @@ contains
       use grid_container_ext, only: cg_extptrs
       use cg_list,            only: cg_list_element
       use cg_list_global,     only: all_cg
-      use constants,          only: ndims, LO, HI, I_ONE, xdim, ydim, zdim
+      use constants,          only: ndims, LO, HI, I_ONE, xdim, ydim, zdim, pMAX
       use dataio_pub,         only: warn, msg, die, printinfo
       use grid_cont,          only: grid_container
       use list_of_cg_lists,   only: all_lists
       use mpi,                only: MPI_DOUBLE_PRECISION
-      use mpisetup,           only: master, FIRST, LAST, nproc, piernik_MPI_Bcast, proc, comm, mpi_err, req, status, inflate_req
+      use mpisetup,           only: master, FIRST, LAST, nproc, piernik_MPI_Bcast, piernik_MPI_Allreduce, proc, comm, mpi_err, req, status, inflate_req
       use named_array_list,   only: qna, wna
       use refinement,         only: oop_thr
       use sort_piece_list,    only: grid_piece_list
@@ -1115,17 +1115,20 @@ contains
       if (s>0) then ! do global reshuffling
 
          totfld = 0
-         do p = lbound(wna%lst, dim=1, kind=4), ubound(wna%lst, dim=1, kind=4)
-            if (wna%lst(p)%vital) then
-               totfld = totfld + wna%lst(p)%dim4
-            endif
-         enddo
-         do p = lbound(qna%lst, dim=1, kind=4), ubound(qna%lst, dim=1, kind=4)
-            if (qna%lst(p)%vital) then
-               totfld = totfld + 1
-            endif
-         enddo
-
+         cgl => this%first
+         if (associated(cgl)) then
+            do p = lbound(wna%lst, dim=1, kind=4), ubound(wna%lst, dim=1, kind=4)
+               if (wna%lst(p)%vital .and. associated(cgl%cg%w(p)%arr)) then ! associated(cgl%cg%w(p)%arr)) .eqv. (this%level_id >= base_level_id) .or. wna%lst(p)%multigrid ?
+                  totfld = totfld + wna%lst(p)%dim4
+               endif
+            enddo
+            do p = lbound(qna%lst, dim=1, kind=4), ubound(qna%lst, dim=1, kind=4)
+               if (qna%lst(p)%vital .and. associated(cgl%cg%q(p)%arr)) then
+                  totfld = totfld + 1
+               endif
+            enddo
+         endif
+         call piernik_MPI_Allreduce(totfld, pMAX)
          ! communicate gp%list
          if (master) s = count(gp%list(:)%cur_proc /= gp%list(:)%dest_proc)
          call piernik_MPI_Bcast(s)
@@ -1158,13 +1161,13 @@ contains
                      allocate(cglepa(i)%tbuf(totfld, cgl%cg%n_b(xdim), cgl%cg%n_b(ydim), cgl%cg%n_b(zdim)))
                      s = lbound(cglepa(i)%tbuf, dim=1)
                      do p = lbound(wna%lst, dim=1, kind=4), ubound(wna%lst, dim=1, kind=4)
-                        if (wna%lst(p)%vital) then
+                        if (wna%lst(p)%vital .and. associated(cgl%cg%w(p)%arr)) then ! not associated for multigrid coarse levels
                            cglepa(i)%tbuf(s:s+wna%lst(p)%dim4-1, :, :, :) = cgl%cg%w(p)%arr(:, cgl%cg%is:cgl%cg%ie, cgl%cg%js:cgl%cg%je, cgl%cg%ks:cgl%cg%ke)
                            s = s + wna%lst(p)%dim4
                         endif
                      enddo
                      do p = lbound(qna%lst, dim=1, kind=4), ubound(qna%lst, dim=1, kind=4)
-                        if (qna%lst(p)%vital) then
+                        if (qna%lst(p)%vital .and. associated(cgl%cg%q(p)%arr)) then
                            cglepa(i)%tbuf(s, :, :, :) = cgl%cg%q(p)%arr(cgl%cg%is:cgl%cg%ie, cgl%cg%js:cgl%cg%je, cgl%cg%ks:cgl%cg%ke)
                            s = s + 1
                         endif
@@ -1214,13 +1217,13 @@ contains
             if (gptemp(I_D_P, i) == proc) then ! copy received
                s = lbound(cglepa(i)%tbuf, dim=1)
                do p = lbound(wna%lst, dim=1, kind=4), ubound(wna%lst, dim=1, kind=4)
-                  if (wna%lst(p)%vital) then
+                  if (wna%lst(p)%vital .and. associated(cgl%cg%w(p)%arr)) then
                      cgl%cg%w(p)%arr(:, cgl%cg%is:cgl%cg%ie, cgl%cg%js:cgl%cg%je, cgl%cg%ks:cgl%cg%ke) = cglepa(i)%tbuf(s:s+wna%lst(p)%dim4-1, :, :, :)
                      s = s + wna%lst(p)%dim4
                   endif
                enddo
                do p = lbound(qna%lst, dim=1, kind=4), ubound(qna%lst, dim=1, kind=4)
-                  if (qna%lst(p)%vital) then
+                  if (qna%lst(p)%vital .and. associated(cgl%cg%q(p)%arr)) then
                      cgl%cg%q(p)%arr(cgl%cg%is:cgl%cg%ie, cgl%cg%js:cgl%cg%je, cgl%cg%ks:cgl%cg%ke) = cglepa(i)%tbuf(s, :, :, :)
                      s = s + 1
                   endif
