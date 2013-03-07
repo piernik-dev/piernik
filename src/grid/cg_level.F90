@@ -1104,12 +1104,13 @@ contains
          do p = FIRST, LAST
             gp%list(p*size(gp%list)/nproc+1:(p+1)*size(gp%list)/nproc)%dest_proc = p
          enddo
-         s = count(gp%list(:)%cur_proc /= gp%list(:)%dest_proc)
-         if (s/real(size(gp%list)) > oop_thr) then
-            write(msg,'(a,i3,2(a,i6),a,100i5)')"[cg_level:balance_old] ^", this%level_id," Reshuffling OutOfPlace grids:",s, "/",size(gp%list),"|",cnt_existing
-            call printinfo(msg)
-         else
-            s = 0
+         s = 0
+         if (size(gp%list) > 0) then
+            s = count(gp%list(:)%cur_proc /= gp%list(:)%dest_proc)
+            if (s/real(size(gp%list)) > oop_thr) then
+               write(msg,'(a,i3,2(a,i6),a,100i5)')"[cg_level:balance_old] ^", this%level_id," Reshuffling OutOfPlace grids:",s, "/",size(gp%list),"|",cnt_existing
+               call printinfo(msg)
+            endif
          endif
       endif
 
