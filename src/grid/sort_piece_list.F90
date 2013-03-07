@@ -200,7 +200,7 @@ contains
 
          if (k < 1) call die("[sort_piece_list:sort:tokuda] k<1")
 
-         tokuda = ceiling((9**k-4**k)/(5.*4**(k-1)))
+         tokuda = ceiling(0.8 * (2.25**k - 1.)) ! == ceiling((9**k-4**k)/(5.*4**(k-1)))
 
       end function tokuda
 
