@@ -235,8 +235,7 @@ contains
       enddo
       ! sync structure
       call leaves%balance_and_update(" ( derefine ) ")
-      call fix_refinement(correct)
-      if (.not. correct) call die("[refinement_update:update_refinement] Refinement defects appeared after derefining")
+      call fix_refinement
 
       call all_bnd
 
@@ -360,7 +359,7 @@ contains
       use cg_list_global,   only: all_cg
       use cg_leaves,        only: leaves
       use constants,        only: xdim, ydim, zdim, I_ONE, I_TWO!, LO, HI
-      use dataio_pub,       only: die!, printinfo
+      use dataio_pub,       only: die, warn, msg!, printinfo
       use domain,           only: dom
       use refinement,       only: allow_face_rstep, allow_corner_rstep
 !      use mpisetup,         only: proc
@@ -369,18 +368,20 @@ contains
 
       implicit none
 
-      logical, intent(out) :: correct
+      logical, optional, intent(out) :: correct !< Flag to tell that corrections are required.
 
       type(cg_list_element), pointer :: cgl
       integer ::  i, j, k
       integer :: lleaf, lnear, range
+      logical :: failed
       enum, bind(C)
          enumerator :: INSIDE   = -1
          enumerator :: OUTSIDE  =  0
          enumerator :: BOUNDARY =  1
       end enum
 
-      correct = .true.
+      if (present(correct)) correct = .true.
+      failed = .false.
 
       if (allow_face_rstep .and. allow_corner_rstep) return
       !> \todo also check for excess or refinement levels
@@ -475,7 +476,13 @@ contains
                cgl%cg%refine_flags%derefine = .false.
                if (lnear > lleaf+1 .and. lnear <= finest%level%level_id) then
                   cgl%cg%refine_flags%refine = .true.
-                  correct = .false.
+                  if (present(correct)) then
+                     correct = .false.
+                  else
+                     write(msg,'(a,i3,a,6i5,a,i3)')"[refinement_update:fix_refinement] neighbour level ^",lnear," at [",cgl%cg%my_se,"] ^",cgl%cg%level_id
+                     call warn(msg)
+                     failed = .true.
+                  endif
                endif
             endif
 
@@ -486,6 +493,7 @@ contains
          cgl => cgl%nxt
       enddo
 
+      if (failed) call die("[refinement_update:fix_refinement] Refinement defects found.")
 !!$      call leaves%corners2wa(qna%wai)
 
    end subroutine fix_refinement
