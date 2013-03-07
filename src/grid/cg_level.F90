@@ -1024,6 +1024,8 @@ contains
          real, dimension(:,:,:,:), allocatable :: tbuf
       end type cglep
       type(cglep), allocatable, dimension(:) :: cglepa
+      logical, parameter :: only_vital = .false. ! set to true to minimize the amount of data to be transferred, may result in improper calculation of error in maclaurin test
+      !> \todo measure how much it costs in reality
       enum, bind(C)
          enumerator :: I_OFF
          enumerator :: I_N_B = I_OFF + ndims
@@ -1118,12 +1120,13 @@ contains
          cgl => this%first
          if (associated(cgl)) then
             do p = lbound(wna%lst, dim=1, kind=4), ubound(wna%lst, dim=1, kind=4)
-               if (wna%lst(p)%vital .and. associated(cgl%cg%w(p)%arr)) then ! associated(cgl%cg%w(p)%arr)) .eqv. (this%level_id >= base_level_id) .or. wna%lst(p)%multigrid ?
+               if ((.not. only_vital .or. wna%lst(p)%vital) .and. associated(cgl%cg%w(p)%arr)) then
+                  ! associated(cgl%cg%w(p)%arr)) .eqv. (this%level_id >= base_level_id) .or. wna%lst(p)%multigrid ?
                   totfld = totfld + wna%lst(p)%dim4
                endif
             enddo
             do p = lbound(qna%lst, dim=1, kind=4), ubound(qna%lst, dim=1, kind=4)
-               if (qna%lst(p)%vital .and. associated(cgl%cg%q(p)%arr)) then
+               if ((.not. only_vital .or. qna%lst(p)%vital) .and. associated(cgl%cg%q(p)%arr)) then
                   totfld = totfld + 1
                endif
             enddo
@@ -1161,13 +1164,13 @@ contains
                      allocate(cglepa(i)%tbuf(totfld, cgl%cg%n_b(xdim), cgl%cg%n_b(ydim), cgl%cg%n_b(zdim)))
                      s = lbound(cglepa(i)%tbuf, dim=1)
                      do p = lbound(wna%lst, dim=1, kind=4), ubound(wna%lst, dim=1, kind=4)
-                        if (wna%lst(p)%vital .and. associated(cgl%cg%w(p)%arr)) then ! not associated for multigrid coarse levels
+                        if ((.not. only_vital .or. wna%lst(p)%vital) .and. associated(cgl%cg%w(p)%arr)) then ! not associated for multigrid coarse levels
                            cglepa(i)%tbuf(s:s+wna%lst(p)%dim4-1, :, :, :) = cgl%cg%w(p)%arr(:, cgl%cg%is:cgl%cg%ie, cgl%cg%js:cgl%cg%je, cgl%cg%ks:cgl%cg%ke)
                            s = s + wna%lst(p)%dim4
                         endif
                      enddo
                      do p = lbound(qna%lst, dim=1, kind=4), ubound(qna%lst, dim=1, kind=4)
-                        if (qna%lst(p)%vital .and. associated(cgl%cg%q(p)%arr)) then
+                        if ((.not. only_vital .or. qna%lst(p)%vital) .and. associated(cgl%cg%q(p)%arr)) then
                            cglepa(i)%tbuf(s, :, :, :) = cgl%cg%q(p)%arr(cgl%cg%is:cgl%cg%ie, cgl%cg%js:cgl%cg%je, cgl%cg%ks:cgl%cg%ke)
                            s = s + 1
                         endif
@@ -1217,13 +1220,13 @@ contains
             if (gptemp(I_D_P, i) == proc) then ! copy received
                s = lbound(cglepa(i)%tbuf, dim=1)
                do p = lbound(wna%lst, dim=1, kind=4), ubound(wna%lst, dim=1, kind=4)
-                  if (wna%lst(p)%vital .and. associated(cgl%cg%w(p)%arr)) then
+                  if ((.not. only_vital .or. wna%lst(p)%vital) .and. associated(cgl%cg%w(p)%arr)) then
                      cgl%cg%w(p)%arr(:, cgl%cg%is:cgl%cg%ie, cgl%cg%js:cgl%cg%je, cgl%cg%ks:cgl%cg%ke) = cglepa(i)%tbuf(s:s+wna%lst(p)%dim4-1, :, :, :)
                      s = s + wna%lst(p)%dim4
                   endif
                enddo
                do p = lbound(qna%lst, dim=1, kind=4), ubound(qna%lst, dim=1, kind=4)
-                  if (qna%lst(p)%vital .and. associated(cgl%cg%q(p)%arr)) then
+                  if ((.not. only_vital .or. qna%lst(p)%vital) .and. associated(cgl%cg%q(p)%arr)) then
                      cgl%cg%q(p)%arr(cgl%cg%is:cgl%cg%ie, cgl%cg%js:cgl%cg%je, cgl%cg%ks:cgl%cg%ke) = cglepa(i)%tbuf(s, :, :, :)
                      s = s + 1
                   endif
