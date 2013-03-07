@@ -356,15 +356,19 @@ contains
 
       use cg_level_finest,  only: finest
       use cg_list,          only: cg_list_element
-      use cg_list_global,   only: all_cg
+!      use cg_list_global,   only: all_cg
       use cg_leaves,        only: leaves
-      use constants,        only: xdim, ydim, zdim, I_ONE, I_TWO!, LO, HI
+      use constants,        only: xdim, ydim, zdim!, I_ONE, I_TWO, LO, HI
       use dataio_pub,       only: die, warn, msg!, printinfo
       use domain,           only: dom
       use refinement,       only: allow_face_rstep, allow_corner_rstep
-!      use mpisetup,         only: proc
       use named_array_list, only: qna
 !      use cg_level_base, only: base
+#ifdef DEBUG_DUMPS
+      use constants,        only: pLOR
+      use mpisetup,         only: piernik_MPI_Allreduce
+      use data_hdf5,        only: write_hdf5
+#endif /* DEBUG_DUMPS */
 
       implicit none
 
@@ -404,7 +408,11 @@ contains
 !!$      enddo
       call leaves%arr3d_boundaries(qna%wai)
 
-      range = min((dom%nb+I_ONE)/I_TWO + all_cg%ord_prolong_nb, dom%nb) ! (dom%nb+1)/2 + all_cg%ord_prolong_nb is a range of influence of coarse to fine levels
+      range = 1
+      ! range = min((dom%nb+I_ONE)/I_TWO + all_cg%ord_prolong_nb, dom%nb)
+      ! (dom%nb+1)/2 + all_cg%ord_prolong_nb is a range of influence of coarse to fine levels - it can be suitable if we were looking fro too low levels in the neighbourhood
+      ! ATM we're looking for high levels, so range = 1 seems to be appropriate
+
       ! detect high refinements near leafmap and alter refinement flags appropriately
       cgl => leaves%first
       do while (associated(cgl))
@@ -493,7 +501,15 @@ contains
          cgl => cgl%nxt
       enddo
 
-      if (failed) call die("[refinement_update:fix_refinement] Refinement defects found.")
+#ifdef DEBUG_DUMPS
+      call piernik_MPI_Allreduce(failed, pLOR)
+#endif
+      if (failed) then
+#ifdef DEBUG_DUMPS
+         call write_hdf5
+#endif /* DEBUG_DUMPS */
+         call die("[refinement_update:fix_refinement] Refinement defects found.")
+      endif
 !!$      call leaves%corners2wa(qna%wai)
 
    end subroutine fix_refinement
