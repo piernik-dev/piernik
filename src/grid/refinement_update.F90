@@ -203,6 +203,7 @@ contains
       call all_cg%clear_ref_flags
       if (associated(problem_refine_derefine)) call problem_refine_derefine
       call fix_refinement(correct)
+      if (.not. correct) call die("[refinement_update:update_refinement] Refinement defects still present")
 
       ! Derefinement saves memory and CPU usage, but is not of highest priority.
       ! Just do it once and hope that any massive excess of refinement will be handled in next call to this routine
@@ -235,7 +236,7 @@ contains
       ! sync structure
       call leaves%balance_and_update(" ( derefine ) ")
       call fix_refinement(correct)
-      if (.not. correct) call die("[refinement_update:update_refinement] Refinement defects still present")
+      if (.not. correct) call die("[refinement_update:update_refinement] Refinement defects appeared after derefining")
 
       call all_bnd
 
