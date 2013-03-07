@@ -104,8 +104,9 @@ contains
 
       implicit none
 
-      integer :: nit
+      integer :: nit, ac
       logical :: finished
+      integer, parameter :: nit_over = 5 ! maximum number of auxiliary iterations after reaching level_max
 
       call parse_cmdline
       write(par_file,'(2a)') trim(wd_rd),'problem.par'
@@ -236,9 +237,10 @@ contains
          endif
       else
 
+         nit = 0
          finished = .false.
          call problem_initial_conditions ! may depend on anything
-         do nit = 0, level_max + 2 ! + 2 is just in case, when refining grids affect previously refined region
+         do while (.not. finished)
 
             call all_bnd !> \warning Never assume that problem_initial_conditions set guardcells correctly
 #ifdef GRAV
@@ -246,11 +248,11 @@ contains
             call cleanup_hydrostatic
 #endif /* GRAV */
 
-            call update_refinement
-            !> \todo set finished when grid structure has not changed
-            call problem_initial_conditions ! reset initial conditions after possible changes of refinement structure
-            if (finished) exit
+            call update_refinement(ac)
+            finished = (ac == 0) .or. (nit > 2*level_max + nit_over) ! level_max iterations for creating refinement levels + level_max iterations for derefining excess of blocks
 
+            call problem_initial_conditions ! reset initial conditions after possible changes of refinement structure
+            nit = nit + 1
          enddo
 
       endif

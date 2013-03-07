@@ -49,7 +49,7 @@ contains
 
 !#define DEBUG_DUMPS
 
-   subroutine update_refinement
+   subroutine update_refinement(act_count)
 
       use all_boundaries,     only: all_bnd
       use cg_leaves,          only: leaves
@@ -58,7 +58,7 @@ contains
       use cg_level_connected, only: cg_level_connected_T
       use cg_level_finest,    only: finest
       use cg_list_global,     only: all_cg
-      use constants,          only: pLOR, pLAND
+      use constants,          only: pLOR, pLAND, pSUM
       use dataio_pub,         only: warn, die
       use global,             only: nstep
       use grid_cont,          only: grid_container
@@ -72,6 +72,8 @@ contains
 
       implicit none
 
+      integer, optional, intent(out) :: act_count !< counts number of blocks refined or deleted
+
       integer :: nciter
       integer, parameter :: nciter_max = 100 ! should be more than refinement levels
       logical :: some_refined, derefined
@@ -79,6 +81,8 @@ contains
       type(cg_level_connected_T), pointer :: curl
       type(grid_container),  pointer :: cg
       logical :: correct
+
+      if (present(act_count)) act_count = 0
 
       call finest%level%restrict_to_base ! implies update of leafmap
 
@@ -110,6 +114,7 @@ contains
                call cgl%cg%refine_flags%sanitize(cgl%cg%level_id)
                if (cgl%cg%refine_flags%refine) then
                   call refine_one_grid(curl, cgl)
+                  act_count = act_count + 1
                   cgl%cg%refine_flags%refine = .false.
                endif
             endif
@@ -159,6 +164,7 @@ contains
 !                  write(msg,*)"addp ^",curl%level_id," ^^",curl%level_id+1," @[]",cgl%cg%my_se(:, LO)*refinement_factor, " []",cgl%cg%n_b(:)*refinement_factor
                   if (associated(curl%finer)) then
                      call refine_one_grid(curl, cgl)
+                     act_count = act_count + 1
                      some_refined = .true.
                   else
                      call warn("[refinement_update:update_refinement] nowhere to add!")
@@ -221,6 +227,7 @@ contains
                   if (all(aux%cg%leafmap)) then
                      cg => aux%cg
                      call all_lists%forget(cg)
+                     act_count = act_count + 1
                      curl%recently_changed = .true.
                      derefined = .true.
                   endif
@@ -240,6 +247,7 @@ contains
       call all_bnd
 
       call all_cg%enable_prolong
+      call piernik_MPI_Allreduce(act_count, pSUM)
 
 #ifdef DEBUG_DUMPS
       call write_hdf5
