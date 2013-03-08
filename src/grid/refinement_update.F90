@@ -114,7 +114,7 @@ contains
                call cgl%cg%refine_flags%sanitize(cgl%cg%level_id)
                if (cgl%cg%refine_flags%refine) then
                   call refine_one_grid(curl, cgl)
-                  act_count = act_count + 1
+                  if (present(act_count)) act_count = act_count + 1
                   cgl%cg%refine_flags%refine = .false.
                endif
             endif
@@ -164,7 +164,7 @@ contains
 !                  write(msg,*)"addp ^",curl%level_id," ^^",curl%level_id+1," @[]",cgl%cg%my_se(:, LO)*refinement_factor, " []",cgl%cg%n_b(:)*refinement_factor
                   if (associated(curl%finer)) then
                      call refine_one_grid(curl, cgl)
-                     act_count = act_count + 1
+                     if (present(act_count)) act_count = act_count + 1
                      some_refined = .true.
                   else
                      call warn("[refinement_update:update_refinement] nowhere to add!")
@@ -227,7 +227,7 @@ contains
                   if (all(aux%cg%leafmap)) then
                      cg => aux%cg
                      call all_lists%forget(cg)
-                     act_count = act_count + 1
+                     if (present(act_count)) act_count = act_count + 1
                      curl%recently_changed = .true.
                      derefined = .true.
                   endif
@@ -247,7 +247,7 @@ contains
       call all_bnd
 
       call all_cg%enable_prolong
-      call piernik_MPI_Allreduce(act_count, pSUM)
+      if (present(act_count)) call piernik_MPI_Allreduce(act_count, pSUM)
 
 #ifdef DEBUG_DUMPS
       call write_hdf5
