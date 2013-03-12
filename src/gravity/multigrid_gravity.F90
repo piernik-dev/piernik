@@ -120,7 +120,7 @@ contains
 !<
    subroutine multigrid_grav_par
 
-      use constants,     only: GEO_XYZ, GEO_RPZ, BND_PER, O_LIN, O_D2, O_I2, I_ONE
+      use constants,     only: GEO_XYZ, GEO_RPZ, BND_PER, O_LIN, O_D2, O_I2, O_D4, I_ONE
       use dataio_pub,    only: nh  ! QA_WARN required for diff_nml
       use dataio_pub,    only: msg, die, warn
       use domain,        only: dom, is_multicg !, is_uneven
@@ -160,7 +160,7 @@ contains
       nsmool                 = 4
       nsmoob                 = 100
       nsmoof                 = 1
-      ord_laplacian          = O_I2
+      ord_laplacian          = O_D4
       ord_prolong_mpole      = O_D2
       ord_time_extrap        = O_LIN
 
