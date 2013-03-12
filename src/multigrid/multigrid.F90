@@ -78,7 +78,7 @@ contains
    subroutine multigrid_par
 
       use cg_list_global,      only: all_cg
-      use constants,           only: PIERNIK_INIT_DOMAIN, O_INJ, O_LIN, O_I2
+      use constants,           only: PIERNIK_INIT_DOMAIN, O_INJ, O_LIN, O_I2, O_D3
       use dataio_pub,          only: nh  ! QA_WARN required for diff_nml
       use dataio_pub,          only: warn, die, code_progress
       use domain,              only: dom
@@ -108,7 +108,7 @@ contains
 
       ! Default values for namelist variables
       level_max             = level_incredible
-      ord_prolong           = O_INJ
+      ord_prolong           = O_D3
       ord_prolong_face_norm = O_I2
       ord_prolong_face_par  = O_INJ
       show_n_dirtys         = 16
