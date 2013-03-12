@@ -87,6 +87,7 @@ contains
       use dataio_pub,     only: nh      ! QA_WARN required for diff_nml
       use dataio_pub,     only: die, msg
       use mpisetup,       only: rbuff, ibuff, cbuff, master, slave, piernik_MPI_Bcast
+      use multigridvars,  only: ord_prolong
 
       implicit none
 
@@ -146,7 +147,7 @@ contains
             call die(msg)
       end select
 
-      call all_cg%reg_var(apot_n)
+      call all_cg%reg_var(apot_n, ord_prolong = ord_prolong)
       call all_cg%reg_var(ares_n)
       call all_cg%reg_var(asrc_n)
 
