@@ -650,6 +650,7 @@ contains
             box_8 = int(cg%ijkse, kind=8)
             cse = f2c(box_8)
             call cg%prolong(iv, cse)
+            cg%q(iv)%arr = cg%prolong_xyz ! OPT find a way to avoid doing this copy (see the usage of cg%prolong in prolong_bnd_from_coarser)
 
          endif
          cgl => cgl%nxt
@@ -730,7 +731,7 @@ contains
 
       use cg_list,        only: cg_list_element
       use cg_list_global, only: all_cg
-      use constants,      only: I_ONE, xdim, ydim, zdim, LO, HI, refinement_factor, ndims
+      use constants,      only: I_ONE, xdim, ydim, zdim, LO, HI, refinement_factor, ndims, O_INJ, base_level_id
       use domain,         only: dom
       use func,           only: f2c, c2f
       use grid_cont,      only: grid_container
@@ -740,14 +741,14 @@ contains
       implicit none
 
       class(cg_level_connected_T), intent(inout) :: this !< the list on which to perform the boundary exchange
-      integer(kind=4),             intent(in)    :: ind  !< Negative value: index of cg%q(:) 3d array
+      integer(kind=4),             intent(in)    :: ind
 
       type(cg_level_connected_T), pointer :: coarse
       type(cg_list_element), pointer :: cgl
       type(grid_container),  pointer :: cg            !< current grid container
       integer(kind=4), dimension(:, :), pointer :: mpistatus
       integer(kind=8), dimension(xdim:zdim, LO:HI) :: cse, fse ! shortcuts for fine segment and coarse segment
-      integer(kind=8), dimension(xdim:zdim) :: D, per, ext_buf
+      integer(kind=8), dimension(xdim:zdim) :: per, ext_buf
       integer(kind=4) :: nr
       integer :: g
       logical, allocatable, dimension(:,:,:) :: updatemap
@@ -756,12 +757,14 @@ contains
       coarse => this%coarser
 
       if (.not. associated(coarse)) return
+      if (this%level_id == base_level_id) return ! There are no fine/coarse boundaries on the base level by definition
 
       call this%vertical_b_prep
       call coarse%vertical_b_prep
 
       !call this%clear_boundaries(ind, dirtyH) ! not implemented yet
       ext_buf = dom%D_ * (abs(all_cg%ord_prolong_nb)+1)/2 ! extension of the buffers due to stencil range
+      if (all_cg%ord_prolong_nb /= O_INJ) call coarse%arr3d_boundaries(ind)
 
       nr = 0
       ! be ready to receive everything into right buffers
@@ -842,52 +845,12 @@ contains
 
                enddo
 
-               !! almost all occurrences of number "2" are in fact connected to refinement_factor
-
-               ! When the grid offset is odd, the coarse data is shifted by half coarse cell (or one fine cell)
-!               odd(:) = int(mod(cg%off(:), int(refinement_factor, kind=8)), kind=4)
-
-               ! When the grid offset is odd we need to apply mirrored prolongation stencil (swap even and odd stencils)
-
-               !> \warning when dom%nb is odd, one, most distant, layer of cells is not filled up
                box_8 = int(cg%ijkse, kind=8)
                cse = f2c(box_8)
                cse(:, LO) = cse(:, LO) - dom%nb*dom%D_(:)/refinement_factor
                cse(:, HI) = cse(:, HI) + dom%nb*dom%D_(:)/refinement_factor
-               fse = c2f(cse)
 
-               where (dom%has_dir(:))
-                  D(:) = 1 !- 2 * odd(:)
-               elsewhere
-                  D(:) = 0
-               endwhere
-
-               !> \deprecated OPT: prolong only those faces, which are relevant, not the whole block
-               ! Perform directional-split interpolation
-               if (dom%has_dir(xdim)) then
-                  cg%prolong_x    (fse(xdim, LO)        :fse(xdim, HI):2,         :, :) = &
-                       cg%prolong_(cse(xdim, LO)        :cse(xdim, HI),           :, :)
-                  cg%prolong_x    (fse(xdim, LO)+dom%D_x:fse(xdim, HI)+dom%D_x:2, :, :) = &
-                       cg%prolong_(cse(xdim, LO)        :cse(xdim, HI),           :, :)
-               else
-                  cg%prolong_x = cg%prolong_
-               endif
-               if (dom%has_dir(ydim)) then
-                  cg%prolong_xy    (fse(xdim, LO):fse(xdim, HI), fse(ydim, LO)        :fse(ydim, HI):2,         :) = &
-                       cg%prolong_x(fse(xdim, LO):fse(xdim, HI), cse(ydim, LO)        :cse(ydim, HI),           :)
-                  cg%prolong_xy    (fse(xdim, LO):fse(xdim, HI), fse(ydim, LO)+dom%D_y:fse(ydim, HI)+dom%D_y:2, :) = &
-                       cg%prolong_x(fse(xdim, LO):fse(xdim, HI), cse(ydim, LO)        :cse(ydim, HI),           :)
-               else
-                  cg%prolong_xy = cg%prolong_x
-               endif
-               if (dom%has_dir(zdim)) then
-                  cg%prolong_xyz    (fse(xdim, LO):fse(xdim, HI), fse(ydim, LO):fse(ydim, HI), fse(zdim, LO)        :fse(zdim, HI):2) = &
-                       cg%prolong_xy(fse(xdim, LO):fse(xdim, HI), fse(ydim, LO):fse(ydim, HI), cse(zdim, LO)        :cse(zdim, HI))
-                  cg%prolong_xyz    (fse(xdim, LO):fse(xdim, HI), fse(ydim, LO):fse(ydim, HI), fse(zdim, LO)+dom%D_z:fse(zdim, HI)+dom%D_z:2) = &
-                       cg%prolong_xy(fse(xdim, LO):fse(xdim, HI), fse(ydim, LO):fse(ydim, HI), cse(zdim, LO)        :cse(zdim, HI))
-               else
-                  cg%prolong_xyz= cg%prolong_xy
-               endif
+               call cg%prolong(ind, cse) ! OPT find a way to avoid unnecessary calculations where .not. updatemap
 
                where (updatemap) cg%q(ind)%arr = cg%prolong_xyz
                deallocate(updatemap)
