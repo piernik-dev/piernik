@@ -868,6 +868,9 @@ contains
 !! \details This routine allows prolongation of guardcells only from interior cells of coarser level.
 !! It means that no prolongation will happen on a 2-level step, even if it would be possible to interpolate on coarser level guardcells.
 !! While it is possible to implement such data transport, we don't want to rely on double- or multiple-times interpolated data.
+!!
+!! OPT: As prolong_bnd_from_coarser calls coarse%level_3d_boundaries in some cases (except for all_cg%ord_prolong_nb == O_INJ) it should be possible to reduce number
+!! of MPI messages by relying on corner data on the coarse level (corners can be obtained along with face values). Be careful as this may break things in vertical_bf_prep.
 !<
 
    subroutine vertical_b_prep(this)
