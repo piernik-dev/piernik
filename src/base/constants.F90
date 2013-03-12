@@ -197,6 +197,8 @@ module constants
       enumerator :: O_D2  = -2 !! direct quadratic
       enumerator :: O_D3  = -3 !! direct cubic
       enumerator :: O_D4  = -4 !! direct quartic
+      enumerator :: O_D5  = -5 !! direct quintic
+      enumerator :: O_D6  = -6 !! direct sextic
    end enum
 
    ! Fluid type index, used in flind%tag

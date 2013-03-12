@@ -129,7 +129,7 @@ contains
    subroutine reg_var(this, name, vital, restart_mode, ord_prolong, dim4, position, multigrid)
 
       use cg_list,          only: cg_list_element
-      use constants,        only: INVALID, VAR_CENTER, AT_NO_B, AT_IGNORE, I_ZERO, I_ONE, I_TWO, O_INJ, O_LIN, O_I2, O_D2, O_I3, O_I4, O_D3, O_D4
+      use constants,        only: INVALID, VAR_CENTER, AT_NO_B, AT_IGNORE, I_ZERO, I_ONE, I_TWO, I_THREE, O_INJ, O_LIN, O_I2, O_D2, O_I3, O_I4, O_D3, O_D4, O_D5, O_D6
       use dataio_pub,       only: die, warn, msg
       use domain,           only: dom
       use named_array_list, only: qna, wna, na_var
@@ -201,6 +201,10 @@ contains
             this%ord_prolong_nb = max(this%ord_prolong_nb, I_ONE)
          case (O_I3, O_I4, O_D3, O_D4)
             this%ord_prolong_nb = max(this%ord_prolong_nb, I_TWO)
+         case (O_D5, O_D6)
+            this%ord_prolong_nb = max(this%ord_prolong_nb, I_THREE)
+            if (dom%nb < I_TWO*this%ord_prolong_nb) &
+                 call warn("[cg_list_global:reg_var] WARNING at least 6 guardcells are required. Expect crash in cg_level_connected::prolong_bnd_from_coarser")
          case default
             call die("[cg_list_global:reg_var] Unknown prolongation order")
       end select
