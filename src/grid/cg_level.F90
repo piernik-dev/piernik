@@ -514,25 +514,30 @@ contains
 !>
 !! \brief Create MPI types for boundary exchanges
 !!
-!! \details this type can be a member of grid container type if we pass this%pse(:)%c(:) as an argument.
+!! \details this type can be a member of grid container type if we pass this%pse(:) as an argument.
 !! It would simplify dependencies and this%init_all_new_cg, but it could be quite a big object.
 !! Assume that cuboids don't collide (no overlapping grid pieces on same refinement level are allowed)
 !!
-!! Current implementation (revision 7338) implies correct update of the corners, even on complicated refinement topologies (concave fine region - convect coarse region or
+!! Current implementation (revision 7338) implies correct update of all corners, even on complicated refinement topologies (concave fine region - convect coarse region or
 !! fine regions touching each other only by corners). Previous implementation could correctly fill the corners only on uniform grid and when it was called for
 !! x, y and z dierctions separately. Warning: that change introduces measurable performance degradation! This is caused by the fact that in 3D it is required to make
 !! 26 separate exchanges to fill all guardcells (in cg_list_bnd::internal_boundaries), while in previous approach only 6 exchanges were required.
-!! Unfortunately the previous approach did not work properly for complicated refinements and I saw no easy solution for that.
-!! Possible strategies to achieve previous (or better) performance
-!! * provide separate communication pattern for calls where no corners are required,
+!! Unfortunately the previous approach did not work properly for complicated refinements.
+!!
+!! Possible improvemwnts of performance
 !! * do local exchanges directly, without calling MPI.
 !! * merge smaller blocks into larger ones,
-!! * implement totally noncartesian domain decomposition for uniform grid (with 12 neighbours instead of 26),
-!! * go back to directionally-split list and carefully supplement them by pieces that can not be correctly updated due to refinement topology.
 !!
 !! \todo Put this%pse into a separate type and pass a pointer to it or even a pointer to pre-filtered segment list
 !!
-!! \todo Do not provide segments for each possible number of guardcells. Provide 1 layer, 1 layer with corners, all layers and all layers with cofrners instead.
+!! \todo Rewrite this routine to achieve previous (pre-7338) performance and maintain correctness on corners on complicated topologies:
+!! * Divide the descriptions of communicated regions into 4 categories: X-faces, Y-faces + XY-corners, Z-faces + [XY]Z-corners, other corners.
+!!   The other corners would be non-empty only for some refinement local topologies, it would certainly be empty on an uniform grid.
+!! * When no corners are required, perform simultaneous exchange described by the three directional categories. Some corners might be set up correctly by a chance,
+!!   some might not.
+!! * When cornere are required, perform sequential exchange described by the three directional categories and supplement it with communication of "other corners".
+!!   The sequence of Isend/Irecv should be as follows: Isend X-faces, Irecv X-faces, Waitall, Isend Y-faces, Irecv Y-faces, Waitall, Isend Z-faces, Irecv Z-faces, Waitall
+!!   "Other corners" can be Isend at any time and must be Irecv after Z-faces are copied to the right place.
 !<
 
    subroutine mpi_bnd_types(this)
