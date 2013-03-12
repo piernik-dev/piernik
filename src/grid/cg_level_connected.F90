@@ -1484,11 +1484,11 @@ contains
         dir = INVALID
         do d = xdim, zdim
            if (dom%has_dir(d) .and. se(d, HI) == se(d, LO)) then
-              if (dir /= INVALID) call die("[cg_level_connected:vertical_bf_prep] point-like?")
+              if (dir /= INVALID) call die("[cg_level_connected:vertical_bf_prep:guess_dir] point-like?")
               dir = d
            endif
         enddo
-        if (dir == INVALID) call die("[cg_level_connected:vertical_bf_prep] undefined direction?")
+        if (dir == INVALID) call die("[cg_level_connected:vertical_bf_prep:guess_dir] undefined direction?")
 
       end function guess_dir
 

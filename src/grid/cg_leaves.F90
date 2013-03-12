@@ -128,13 +128,13 @@ contains
          sum_max = sum_max + g_max * nproc
          g_cnt = curl%cnt
          call piernik_MPI_Allreduce(g_cnt, pSUM)
-         write(msg(len_trim(msg)+1:),'(i5)') g_cnt
+         write(msg(len_trim(msg)+1:),'(i6)') g_cnt
          call curl%vertical_prep
          curl => curl%finer
       enddo
       g_cnt = leaves%cnt
       call piernik_MPI_Allreduce(g_cnt, pSUM)
-      write(msg(len_trim(msg)+1:), '(a,i6,a,f7.5)')",     Sum: ",g_cnt, ". Load balance: ",g_cnt/real(sum_max)
+      write(msg(len_trim(msg)+1:), '(a,i7,a,f5.3)')", Sum: ",g_cnt, ". Load balance: ",g_cnt/real(sum_max)
       if (master) call printinfo(msg)
 
    end subroutine update

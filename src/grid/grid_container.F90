@@ -199,7 +199,7 @@ module grid_cont
       type(tgt_list) :: rif_tgt                                   !< description of fluxes incoming from fine grid
       type(tgt_list) :: rof_tgt                                   !< description of fluxes outgoing to coarse grid
       real, allocatable, dimension(:,:,:) :: prolong_, prolong_x, prolong_xy, prolong_xyz !< auxiliary prolongation arrays
-      logical, allocatable, dimension(:,:,:) :: leafmap           !< .true. when a cell is not covered by finer cells, .falase. otherwise
+      logical, allocatable, dimension(:,:,:) :: leafmap           !< .true. when a cell is not covered by finer cells, .false. otherwise
 
       ! Non-cartesian geometrical factors
 
@@ -226,7 +226,6 @@ module grid_cont
       real, dimension(:,:,:,:), pointer :: b     => null()       !< Main array of magnetic field's components
 
       ! Misc
-
       type(mg_arr), pointer :: mg                                !< multigrid arrays
       real :: vol                                                !< volume of the grid; BEWARE: for cylindrical geometry it needs to be integrated over x(:) to get real volume
       real :: dxmn                                               !< the smallest length of the %grid cell (among dx, dy, and dz)
