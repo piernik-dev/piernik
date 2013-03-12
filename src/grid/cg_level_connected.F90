@@ -668,6 +668,8 @@ contains
 
    subroutine arr3d_boundaries(this, ind, area_type, bnd_type)
 
+      use constants, only: I_ONE
+
       implicit none
 
       class(cg_level_connected_T), intent(inout) :: this      !< the list on which to perform the boundary exchange
@@ -676,8 +678,8 @@ contains
       integer(kind=4), optional,   intent(in)    :: bnd_type  !< Override default boundary type on external boundaries (useful in multigrid solver).
                                                               !< Note that BND_PER, BND_MPI, BND_SHE and BND_COR aren't external and cannot be overridden
 
-      call this%dirty_boundaries(ind)
-      call this%clear_boundaries(ind, value=10.)
+!      call this%dirty_boundaries(ind)
+      call this%clear_boundaries(ind, value=0.1*(huge(I_ONE))) ! this value should be larger than refine::level_max because it is used in refinement_update::fix_refinement
       call this%level_3d_boundaries(ind, area_type, bnd_type)
       call this%prolong_bnd_from_coarser(ind)
 
