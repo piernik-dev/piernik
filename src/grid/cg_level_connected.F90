@@ -898,7 +898,7 @@ contains
       integer(kind=8), dimension(xdim:zdim, LO:HI) :: seg, segp, seg2, segp2, segf
       integer(kind=8), dimension(xdim:zdim) :: per, ext_buf
       integer :: mpifc_cnt
-      integer(kind=8) :: tag
+      integer(kind=4) :: tag
       type :: fc_seg !< the absolutely minimal set of data that defines the communication consists of [ grid_id, tag, and, seg ]. The proc numbers are for convenience only.
          integer :: proc     ! it can be rewritten in a way that does not need this numbet to be explicitly stored, but it is easier to have it
          integer :: grid_id
@@ -946,6 +946,7 @@ contains
       per(:) = 0
       where (dom%periodic(:)) per(:) = coarse%n_d(:)
 
+      tag = 0
       mpifc_cnt = 0
       allocate(seglist(0))
       cgl => this%first
@@ -981,10 +982,8 @@ contains
                                        if (is_overlap(coarse%pse(j)%c(b)%se(:,:), seg)) then
                                           seg(:, LO) = max( seg(:, LO), coarse%pse(j)%c(b)%se(:, LO))
                                           seg(:, HI) = min( seg(:, HI), coarse%pse(j)%c(b)%se(:, HI)) ! this is what we want
-                                          tag = cg%level_id + max_level*(cg%grid_id + this%tot_se*(b + d*size(coarse%pse(j)%c(:))))
-                                          ! this tag is very problematic and can easily overflow 4-byte integer when there is 10000+ grids per level
-                                          !> \todo Find smaller, still unique tag
-                                          if (tag /= int(tag, kind=4) .or. tag<0) call die("[cg_level_connected:vertical_b_prep] tag overflow")
+                                          tag = tag + 1
+                                          if (tag<0) call die("[cg_level_connected:vertical_b_prep] tag overflow")
                                           segp (:, LO) = seg  (:, LO) - [ ix, iy, iz ] * per(:)
                                           segp (:, HI) = seg  (:, HI) - [ ix, iy, iz ] * per(:)
                                           ! Find 1-layer thick areas which will be involved in fine->coarse flux exchanges
@@ -1011,7 +1010,7 @@ contains
                                           endif
                                           seg2 (:, LO) = segp2(:, LO) + [ ix, iy, iz ] * per(:)
                                           seg2 (:, HI) = segp2(:, HI) + [ ix, iy, iz ] * per(:)
-                                          seglist = [ seglist, fc_seg(j, b, int(tag, kind=4), proc, seg, seg2, segp, segp2) ]  ! LHS-realloc
+                                          seglist = [ seglist, fc_seg(j, b, tag, proc, seg, seg2, segp, segp2) ]  ! LHS-realloc
                                        endif
                                     endif
                                  enddo
