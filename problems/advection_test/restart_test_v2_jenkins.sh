@@ -1,6 +1,9 @@
 #!/bin/bash
 set -e
 
+export PYTHONPATH=/mnt/xarth/local/lib/python2.7/site-packages:$PYTHONPATH
+export PATH=/mnt/xarth/local/bin:$PATH
+
 rm -rf runs/advection_test
 
 echo "Compilation started"
