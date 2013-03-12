@@ -65,6 +65,17 @@ module cg_level
    !!
    !! \details For positive refinement levels the list may be composed of several disconnected subsets of cg ("islands: made of one or more cg: cg_list_patch).
    !! This type is not intended for direct use. It is extended in cg_level_connected into a functional object.
+   !!
+   !! OPT: Searching through this%pse for neighbours, prolongation/restriction overlaps etc is quite costly - O(this%cnt^2)
+   !! Provide a list, sorted according to Morton/Hilbert id's and do a bisection search instead of checking against all grids
+   !! It will result in massive speedups on cg_level_T%mpi_bnd_types and cg_level_connected_T%{vertical_prep,vertical_b_prep).
+   !! It may also simplify the process of fixing refinement structure in refinement_update::fix_refinement.
+   !! Grids which are larger than AMR_bsize (merged grids, non-block decompositions, both not implemented yet) may be referred by several id's that correspond
+   !! with AMR_bsize-d virtual grid pieces.
+   !!
+   !! Alternatively, construct a searchable binary tree or oct-tree and provide fast routines for searching grid pieces covering specified position.
+   !!
+   !! \todo Provide one of the structures described above
    !<
    type, extends(cg_list_bnd_T) :: cg_level_T
 
