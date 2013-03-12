@@ -927,13 +927,14 @@ contains
 
    subroutine prolong_bnd_from_coarser(this, ind)
 
-      use cg_list,   only: cg_list_element
-      use constants, only: I_ONE, xdim, ydim, zdim, LO, HI, refinement_factor, ndims
-      use domain,    only: dom
-      use func,      only: f2c, c2f
-      use grid_cont, only: grid_container
-      use mpi,       only: MPI_DOUBLE_PRECISION
-      use mpisetup,  only: comm, mpi_err, req, status, inflate_req
+      use cg_list,        only: cg_list_element
+      use cg_list_global, only: all_cg
+      use constants,      only: I_ONE, xdim, ydim, zdim, LO, HI, refinement_factor, ndims
+      use domain,         only: dom
+      use func,           only: f2c, c2f
+      use grid_cont,      only: grid_container
+      use mpi,            only: MPI_DOUBLE_PRECISION
+      use mpisetup,       only: comm, mpi_err, req, status, inflate_req
 
       implicit none
 
@@ -945,7 +946,7 @@ contains
       type(grid_container),  pointer :: cg            !< current grid container
       integer(kind=4), dimension(:, :), pointer :: mpistatus
       integer(kind=8), dimension(xdim:zdim, LO:HI) :: cse, fse ! shortcuts for fine segment and coarse segment
-      integer(kind=8), dimension(xdim:zdim) :: D, per
+      integer(kind=8), dimension(xdim:zdim) :: D, per, ext_buf
       integer(kind=4) :: nr
       integer :: g
       logical, allocatable, dimension(:,:,:) :: updatemap
@@ -959,6 +960,7 @@ contains
       call coarse%vertical_b_prep
 
       !call this%clear_boundaries(ind, dirtyH) ! not implemented yet
+      ext_buf = dom%D_ * (abs(all_cg%ord_prolong_nb)+1)/2 ! extension of the buffers due to stencil range
 
       nr = 0
       ! be ready to receive everything into right buffers
@@ -983,9 +985,9 @@ contains
          if (allocated(cgl%cg%pob_tgt%seg)) then
             do g = lbound(seg(:), dim=1), ubound(seg(:), dim=1)
 
-!               cse(:, LO) = seg(g)%se(:,LO) - cgl%cg%off(:) + cgl%cg%ijkse(:, LO)
-!               cse(:, HI) = seg(g)%se(:,HI) - cgl%cg%off(:) + cgl%cg%ijkse(:, LO)
                cse = seg(g)%se
+               cse(:, LO) = cse(:, LO) - ext_buf
+               cse(:, HI) = cse(:, HI) + ext_buf
 
                nr = nr + I_ONE
                if (nr > size(req, dim=1)) call inflate_req
@@ -1027,9 +1029,11 @@ contains
                do g = lbound(seg(:), dim=1), ubound(seg(:), dim=1)
 
                   cse = seg(g)%se
+                  cse(:, LO) = cse(:, LO) - ext_buf
+                  cse(:, HI) = cse(:, HI) + ext_buf
                   cg%prolong_(cse(xdim, LO):cse(xdim, HI), cse(ydim, LO):cse(ydim, HI), cse(zdim, LO):cse(zdim, HI)) = seg(g)%buf(:,:,:)
 
-                  fse = c2f(cse)
+                  fse = c2f(seg(g)%se)
                   updatemap(fse(xdim, LO):fse(xdim, HI), fse(ydim, LO):fse(ydim, HI), fse(zdim, LO):fse(zdim, HI)) = .true.
                   !> When this%ord_prolong_set /= O_INJ, the received seg(:)%buf(:,:,:) may overlap
                   !! The incoming data thus must either contain valid guardcells (even if qna%lst(iv)%ord_prolong == O_INJ)
@@ -1104,15 +1108,16 @@ contains
 
    subroutine vertical_b_prep(this)
 
-      use cg_list,    only: cg_list_element
-      use constants,  only: xdim, ydim, zdim, LO, HI, I_ONE, ndims
-      use dataio_pub, only: warn, msg, die
-      use domain,     only: dom
-      use func,       only: f2c
-      use grid_cont,  only: grid_container, is_overlap
-      use mergebox,   only: wmap
-      use mpi,        only: MPI_INTEGER, MPI_INTEGER8
-      use mpisetup,   only: FIRST, LAST, comm, mpi_err, proc
+      use cg_list,        only: cg_list_element
+      use cg_list_global, only: all_cg
+      use constants,      only: xdim, ydim, zdim, LO, HI, I_ONE, ndims
+      use dataio_pub,     only: warn, msg, die
+      use domain,         only: dom
+      use func,           only: f2c
+      use grid_cont,      only: grid_container, is_overlap
+      use mergebox,       only: wmap
+      use mpi,            only: MPI_INTEGER, MPI_INTEGER8
+      use mpisetup,       only: FIRST, LAST, comm, mpi_err, proc
 
       implicit none
 
@@ -1124,7 +1129,7 @@ contains
       type(grid_container),  pointer :: cg            !< current grid container
       integer :: d, j, b, rp, ls, dd, ix, iy, iz
       integer(kind=8), dimension(xdim:zdim, LO:HI) :: seg, segp, seg2, segp2, segf
-      integer(kind=8), dimension(xdim:zdim) :: per
+      integer(kind=8), dimension(xdim:zdim) :: per, ext_buf
       integer :: mpifc_cnt
       integer(kind=8) :: tag
       type :: fc_seg !< the absolutely minimal set of data that defines the communication consists of [ grid_id, tag, and, seg ]. The proc numbers are for convenience only.
@@ -1167,6 +1172,8 @@ contains
          max_level = curl%level_id
          curl => curl%finer
       enddo
+
+      ext_buf = dom%D_ * (abs(all_cg%ord_prolong_nb)+1)/2 ! extension of the buffers due to stencil range
 
       ! define areas on the fine side at BND_FC and BND_MPI_FC faces that require coarse data
       per(:) = 0
@@ -1258,9 +1265,9 @@ contains
             se%tag  = seglist(j)%tag
             se%se   = seglist(j)%fse
             se%se2  = seglist(j)%fse2
-            allocate(se%buf(seglist(j)%seg(xdim, HI)-seglist(j)%seg(xdim, LO) + 1, &
-                    &       seglist(j)%seg(ydim, HI)-seglist(j)%seg(ydim, LO) + 1, &
-                    &       seglist(j)%seg(zdim, HI)-seglist(j)%seg(zdim, LO) + 1))
+            allocate(se%buf(seglist(j)%seg(xdim, HI)-seglist(j)%seg(xdim, LO) + 1 + 2*ext_buf(xdim), &
+                    &       seglist(j)%seg(ydim, HI)-seglist(j)%seg(ydim, LO) + 1 + 2*ext_buf(ydim), &
+                    &       seglist(j)%seg(zdim, HI)-seglist(j)%seg(zdim, LO) + 1 + 2*ext_buf(zdim)))
             end associate
          enddo
 
@@ -1338,9 +1345,9 @@ contains
                se%se(:, HI) = rseg(I_SEG + zdim   + (j-1)*I_LAST:I_SEG  + 2*zdim - xdim + (j-1)*I_LAST)
                se%se2(:, LO) = rseg(I_SEG2        + (j-1)*I_LAST:I_SEG2 +   zdim - xdim + (j-1)*I_LAST)
                se%se2(:, HI) = rseg(I_SEG2 + zdim + (j-1)*I_LAST:I_SEG2 + 2*zdim - xdim + (j-1)*I_LAST)
-               allocate(se%buf(se%se(xdim, HI)-se%se(xdim, LO) + 1, &
-                    &          se%se(ydim, HI)-se%se(ydim, LO) + 1, &
-                    &          se%se(zdim, HI)-se%se(zdim, LO) + 1))
+               allocate(se%buf(se%se(xdim, HI)-se%se(xdim, LO) + 1 + 2*ext_buf(xdim), &
+                    &          se%se(ydim, HI)-se%se(ydim, LO) + 1 + 2*ext_buf(ydim), &
+                    &          se%se(zdim, HI)-se%se(zdim, LO) + 1 + 2*ext_buf(zdim)))
                end associate
             endif
          enddo
