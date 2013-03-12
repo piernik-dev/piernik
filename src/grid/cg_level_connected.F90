@@ -178,7 +178,7 @@ contains
                     &           seg%se(zdim, HI)-seg%se(zdim, LO) + 1))
                tag = cg%grid_id + this%tot_se * ps(g)%n_se
                seg%tag = int(tag, kind=4) ! assumed that there is only one piece to be communicated from grid to grid (i.e. grids are not periodically wrapped around)
-               if (tag /= seg%tag) call die("[cg_level_connected:vertical_prep] tag overflow (ri)")
+               if (tag /= seg%tag .or. tag<0) call die("[cg_level_connected:vertical_prep] tag overflow (ri)")
                end associate
             enddo
 
@@ -200,7 +200,7 @@ contains
                     &           seg%se(zdim, HI)-seg%se(zdim, LO) + 1))
                tag = cg%grid_id + this%tot_se * ps(g)%n_se
                seg%tag = int(tag, kind=4) ! assumed that there is only one piece to be communicated from grid to grid (i.e. grids are not periodically wrapped around)
-               if (tag /= seg%tag) call die("[cg_level_connected:vertical_prep] tag overflow po)")
+               if (tag /= seg%tag .or. tag<0) call die("[cg_level_connected:vertical_prep] tag overflow po)")
                end associate
             enddo
 
@@ -260,7 +260,7 @@ contains
                seg%se(:, HI) = min(cg%my_se(:, HI), coarsened(:, HI))
                tag = ps(g)%n_se + coarse%tot_se * cg%grid_id
                seg%tag = int(tag, kind=4)
-               if (tag /= seg%tag) call die("[cg_level_connected:vertical_prep] tag overflow (ro)")
+               if (tag /= seg%tag .or. tag<0) call die("[cg_level_connected:vertical_prep] tag overflow (ro)")
                end associate
             enddo
 
@@ -277,7 +277,7 @@ contains
                     &           seg%se(zdim, HI)-seg%se(zdim, LO) + 1))
                tag = ps(g)%n_se + coarse%tot_se * cg%grid_id
                seg%tag = int(tag, kind=4)
-               if (tag /= seg%tag) call die("[cg_level_connected:vertical_prep] tag overflow (pi)")
+               if (tag /= seg%tag .or. tag<0) call die("[cg_level_connected:vertical_prep] tag overflow (pi)")
                end associate
             enddo
 
@@ -1208,7 +1208,9 @@ contains
                                           seg(:, LO) = max( seg(:, LO), coarse%pse(j)%c(b)%se(:, LO))
                                           seg(:, HI) = min( seg(:, HI), coarse%pse(j)%c(b)%se(:, HI)) ! this is what we want
                                           tag = cg%level_id + max_level*(cg%grid_id + this%tot_se*(b + d*size(coarse%pse(j)%c(:))))
-                                          if (tag /= int(tag, kind=4)) call die("[cg_level_connected:vertical_b_prep] tag overflow")
+                                          ! this tag is very problematic and can easily overflow 4-byte integer when there is 10000+ grids per level
+                                          !> \todo Find smaller, still unique tag
+                                          if (tag /= int(tag, kind=4) .or. tag<0) call die("[cg_level_connected:vertical_b_prep] tag overflow")
                                           segp (:, LO) = seg  (:, LO) - [ ix, iy, iz ] * per(:)
                                           segp (:, HI) = seg  (:, HI) - [ ix, iy, iz ] * per(:)
                                           ! Find 1-layer thick areas which will be involved in fine->coarse flux exchanges
