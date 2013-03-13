@@ -768,7 +768,7 @@ contains
 
       !call this%clear_boundaries(ind, dirtyH) ! not implemented yet
       ext_buf = dom%D_ * all_cg%ord_prolong_nb ! extension of the buffers due to stencil range
-      if (all_cg%ord_prolong_nb /= O_INJ) call coarse%arr3d_boundaries(ind, bnd_type = bnd_type)
+      if (all_cg%ord_prolong_nb /= O_INJ) call coarse%level_3d_boundaries(ind, bnd_type = bnd_type)
       ! bnd_type = BND_NEGREF above is critical for convergence of multigrid with isolated boundaries.
 
       nr = 0
