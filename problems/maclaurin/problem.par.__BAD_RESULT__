@@ -1,5 +1,6 @@
  $BASE_DOMAIN
     n_d = 3*16
+    nb = 6
     bnd_xl = 'out'
     bnd_xr = 'out'
     bnd_yl = 'out'
@@ -39,6 +40,7 @@
  /
 
  $OUTPUT_CONTROL
+    nproc_io = -1
     problem_name ='maclaurin'
     run_id =  'sph'
     dt_hdf  = 10.0
@@ -48,7 +50,7 @@
     vars(1) = 'dens'
     vars(2) = 'gpot'
     vars(3) = 'apot'
-    vars(4:) = 'errp', 'source', 'solution', 'defect', 'correction', 'i-h-01', 'o-h-01'
+    vars(4:) = 'errp', 'source', 'solution', 'defect', 'correction', 'level', 'proc', 'i-h-01', 'o-h-01'
  /
 
  $FLUID_DUST
@@ -69,11 +71,11 @@
  /
 
  $PROBLEM_CONTROL
-    x0     = 1.5
-    y0     = 1.5
+    x0     = 1.
+    y0     = 1.
     z0     = 0.
     d0     = 1.
-    a1     = 0.2
+    a1     = .25
     e      = 0.
     nsub   = 3
  /
@@ -89,11 +91,15 @@
     norm_tol  = 1.e-6
     nsmool    = 4
     grav_bnd_str  = "isolated"
+    ord_laplacian = 2
+!    max_cycles = 10
+!    ord_time_extrap = -1
+!    vcycle_abort = 1e10
  /
 
  $INTERACTIONS
  /
 
  $AMR
-    level_max = 3
+    level_max = 2
  /
