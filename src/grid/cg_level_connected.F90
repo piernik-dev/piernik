@@ -681,7 +681,7 @@ contains
 !      call this%dirty_boundaries(ind)
       call this%clear_boundaries(ind, value=0.1*(huge(I_ONE))) ! this value should be larger than refine::level_max because it is used in refinement_update::fix_refinement
       call this%level_3d_boundaries(ind, area_type, bnd_type)
-      call this%prolong_bnd_from_coarser(ind)
+      call this%prolong_bnd_from_coarser(ind, bnd_type)
 
    end subroutine arr3d_boundaries
 
@@ -729,7 +729,7 @@ contains
 !! \warning This routine does only the first approach.
 !<
 
-   subroutine prolong_bnd_from_coarser(this, ind)
+   subroutine prolong_bnd_from_coarser(this, ind, bnd_type)
 
       use cg_list,        only: cg_list_element
       use cg_list_global, only: all_cg
@@ -744,6 +744,8 @@ contains
 
       class(cg_level_connected_T), intent(inout) :: this !< the list on which to perform the boundary exchange
       integer(kind=4),             intent(in)    :: ind
+      integer(kind=4), optional,   intent(in)    :: bnd_type  !< Override default boundary type on external boundaries (useful in multigrid solver).
+                                                              !< Note that BND_PER, BND_MPI, BND_SHE and BND_COR aren't external and cannot be overridden
 
       type(cg_level_connected_T), pointer :: coarse
       type(cg_list_element), pointer :: cgl
@@ -766,7 +768,8 @@ contains
 
       !call this%clear_boundaries(ind, dirtyH) ! not implemented yet
       ext_buf = dom%D_ * all_cg%ord_prolong_nb ! extension of the buffers due to stencil range
-      if (all_cg%ord_prolong_nb /= O_INJ) call coarse%level_3d_boundaries(ind)
+      if (all_cg%ord_prolong_nb /= O_INJ) call coarse%arr3d_boundaries(ind, bnd_type = bnd_type)
+      ! bnd_type = BND_NEGREF above is critical for convergence of multigrid with isolated boundaries.
 
       nr = 0
       ! be ready to receive everything into right buffers
