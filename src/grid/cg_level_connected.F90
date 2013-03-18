@@ -680,8 +680,9 @@ contains
 
 !      call this%dirty_boundaries(ind)
       call this%clear_boundaries(ind, value=0.1*(huge(I_ONE))) ! this value should be larger than refine::level_max because it is used in refinement_update::fix_refinement
-      call this%level_3d_boundaries(ind, area_type, bnd_type)
       call this%prolong_bnd_from_coarser(ind, bnd_type)
+      call this%level_3d_boundaries(ind, area_type, bnd_type)
+      ! The correctness ot the sequence of calls above may depend on the implementation of internal boundary exchange
 
    end subroutine arr3d_boundaries
 
@@ -706,7 +707,6 @@ contains
 
 !      call this%dirty_boundaries(ind)
 !      call this%clear_boundaries(ind, value=10.)
-      call this%level_4d_boundaries(ind, area_type)
       if (associated(this%coarser) .and. this%level_id > base_level_id) then
          do iw = 1, wna%lst(ind)%dim4
             call this%coarser%wq_copy(ind, iw, qna%wai)
@@ -715,6 +715,7 @@ contains
             call this%qw_copy(qna%wai, ind, iw) !> \todo filter this through cg%ignore_prolongation
          enddo
       endif
+      call this%level_4d_boundaries(ind, area_type)
 
    end subroutine arr4d_boundaries
 
