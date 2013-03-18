@@ -411,7 +411,6 @@ contains
             call die("[data_hdf5:write_cg_to_output] nproc != nproc_io not implemented yet")
             ! send (where?)
          endif
-         !call die("[data_hdf5:write_cg_to_output] Parallel v2 I/O not implemented yet")
       endif
 
       ! clean up

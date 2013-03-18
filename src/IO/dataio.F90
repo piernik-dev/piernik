@@ -27,12 +27,6 @@
 !
 #include "piernik.h"
 #include "macros.h"
-!=====================================================================
-!!
-!!  dataio module responsible for data output
-!!
-!=====================================================================
-!
 
 !>
 !! \brief Module containing all main routines  responsible for data output
@@ -156,7 +150,7 @@ contains
 !! <tr><td>system_message_file</td><td>'/tmp/piernik_msg' </td><td>string of characters similar to default value</td><td>\copydoc dataio::system_message_file</td></tr>
 !! <tr><td>multiple_h5files   </td><td>.false.            </td><td>logical   </td><td>\copydoc dataio_pub::multiple_h5files</td></tr>
 !! <tr><td>use_v2_io          </td><td>.true.             </td><td>logical   </td><td>\copydoc dataio_pub::use_v2_io    </td></tr>
-!! <tr><td>nproc_io           </td><td>1                  </td><td>integer   </td><td>\copydoc dataio_pub::nproc_io     </td></tr>
+!! <tr><td>nproc_io           </td><td>nproc              </td><td>integer   </td><td>\copydoc dataio_pub::nproc_io     </td></tr>
 !! <tr><td>enable_compression </td><td>.false.            </td><td>logical   </td><td>\copydoc dataio_pub::enable_compression</td></tr>
 !! <tr><td>gzip_level         </td><td>9                  </td><td>integer   </td><td>\copydoc dataio_pub::gzip_level   </td></tr>
 !! <tr><td>colormode          </td><td>.true.             </td><td>logical   </td><td>\copydoc dataio_pub::colormode    </td></tr>
@@ -165,15 +159,17 @@ contains
 !<
    subroutine init_dataio_parameters
 
-      use constants,  only: cwdlen, PIERNIK_INIT_MPI
+      use constants,  only: cwdlen, PIERNIK_INIT_MPI, I_ONE, INVALID
       use dataio_pub, only: nrestart, last_hdf_time, last_res_time, last_tsl_time, last_log_time, log_file_initialized, &
            &                tmp_log_file, printinfo, printio, warn, msg, die, code_progress, wd_wr, &
            &                move_file, parfile, parfilelines, log_file, maxparfilelines, can_i_write, ierrh, par_file
-      use mpisetup,   only: master, nproc, proc, piernik_MPI_Bcast, piernik_MPI_Barrier
+      use mpi,        only: MPI_LOGICAL
+      use mpisetup,   only: master, nproc, proc, piernik_MPI_Bcast, piernik_MPI_Barrier, FIRST, LAST, comm, mpi_err
 
       implicit none
 
-      integer              :: system_status, i, par_lun
+      integer              :: system_status, i, ip, par_lun
+      logical, allocatable, dimension(:) :: can_write
 
 #ifdef VERBOSE
       if (master) call printinfo("[dataio:init_dataio_parameters] Commencing dataio module initialization")
@@ -198,12 +194,26 @@ contains
          if (parfilelines == maxparfilelines) call warn("[dataio:init_dataio_parameters] problem.par has too many lines. The copy in the logfile and HDF dumps can be truncated.")
       endif
 
-
+      ! For 1 /= nproc_io /= nproc there should be choice between two strategies : nproc < nproc_io and the current one
       can_i_write = mod( proc*nproc_io, nproc) < nproc_io
-      if (can_i_write) then
-         write(msg,'(a,i6,a)')"Process ",proc," can write"
-         call printio(msg)
+      allocate(can_write(FIRST:LAST))
+      call MPI_Gather(can_i_write, I_ONE, MPI_LOGICAL, can_write, I_ONE, MPI_LOGICAL, FIRST, comm, mpi_err)
+      if (master) then
+         if (count(can_write) == 1) then
+            ip = INVALID
+            do i = lbound(can_write, dim=1), ubound(can_write, dim=1)
+               if (can_write(i)) ip = i
+            enddo
+            write(msg, '(a,i5)')"[dataio:init_dataio_parameters] Serial write by process #", ip
+            call printio(msg)
+         else if (all(can_write)) then
+            call printio("[dataio:init_dataio_parameters] Fully parallel write by all processes")
+         else
+            write(msg, '(2(a,i5),a)')"[dataio:init_dataio_parameters] Partially parallel write by ", count(can_write), " out of ", nproc," processes."
+            call printio(msg)
+         endif
       endif
+      deallocate(can_write)
 
       last_log_time = -dt_log
       last_tsl_time = -dt_tsl
@@ -271,7 +281,7 @@ contains
 
       tsl_firstcall      = .true.
       use_v2_io          = .true.
-      nproc_io           = 1
+      nproc_io           = nproc
       enable_compression = .false.
       gzip_level         = 9
 
@@ -293,8 +303,11 @@ contains
          if (use_v2_io) then
             if (nproc_io <= 0 .or. nproc_io > nproc) nproc_io = nproc ! fully parallel v2 I/O
 
-            if (nproc_io /= 1) &
-               call warn("[dataio:init_dataio_parameters] Parallel v2 I/O is experimental feature")
+            if (nproc_io /= 1 .and. nproc_io /= nproc) then
+               nproc_io = nproc
+               call warn("[dataio:init_dataio_parameters] nproc_io /= nproc not implemented yed. Defaulting to fully parrallel write.")
+            endif
+
          endif
 
          if (gzip_level < 1 .or. gzip_level > 9) then

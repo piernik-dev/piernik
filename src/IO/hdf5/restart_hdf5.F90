@@ -479,7 +479,6 @@ contains
             call die("[restart_hdf5:write_cg_to_restart] nproc != nproc_io not implemented yet")
             ! send (where?)
          endif
-         !call die("[restart_hdf5:write_cg_to_restart] Parallel v2 I/O not implemented yet")
       endif
 
       ! clean up
