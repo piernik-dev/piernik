@@ -844,6 +844,8 @@ contains
                   cg%prolong_(cse(xdim, LO):cse(xdim, HI), cse(ydim, LO):cse(ydim, HI), cse(zdim, LO):cse(zdim, HI)) = seg(g)%buf(:,:,:)
 
                   fse = c2f(seg(g)%se)
+                  fse(:, LO) = max(fse(:, LO), int(cg%lhn(:, LO), kind=8))
+                  fse(:, HI) = min(fse(:, HI), int(cg%lhn(:, HI), kind=8))
                   updatemap(fse(xdim, LO):fse(xdim, HI), fse(ydim, LO):fse(ydim, HI), fse(zdim, LO):fse(zdim, HI)) = .true.
                   !> When this%ord_prolong_set /= O_INJ, the received seg(:)%buf(:,:,:) may overlap
                   !! The incoming data thus must either contain valid guardcells (even if qna%lst(iv)%ord_prolong == O_INJ)
