@@ -300,6 +300,7 @@ contains
       call residual(leaves, qna%ind(asrc_n), qna%ind(apot_n), qna%ind(ares_n))
       call leaves%check_dirty(qna%ind(ares_n), "a-residual")
 
+      ! clear residual next to the external boundary as it is affected by the way the potential is extrapolated into the guardcells.
       cgl => leaves%first
       do while (associated(cgl))
          cg => cgl%cg
@@ -320,7 +321,7 @@ contains
                      case (HI + HI*zdim)
                         cg%q(qna%ind(ares_n))%arr(:, :, cg%ke) = 0.
                      case default
-                        call die("[initproblem:problem_initial_conditions] Bug")
+                        call die("[initproblem:problem_initial_conditions] Non-existing side.")
                   end select
                endif
             enddo
