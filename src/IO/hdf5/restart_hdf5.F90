@@ -314,6 +314,8 @@ contains
       integer, allocatable, dimension(:)                    :: qr_lst, wr_lst
       type(cg_output)                                       :: cg_desc
       character(len=dsetnamelen), dimension(:), allocatable :: dsets
+      real, target, dimension(0,0,0)                        :: null_r3d
+      real, target, dimension(0,0,0,0)                      :: null_r4d
 
       call qw_lst(qr_lst, wr_lst)
       tot_lst_n = size(qr_lst) + size(wr_lst)
@@ -429,13 +431,12 @@ contains
                cgl => cgl%nxt
             enddo
 
-            cgl => leaves%first
-            cg => cgl%cg
+            ! Parallel HDF calls have to be matched on each process, so we're doing some calls on non-existing data here.
             do ncg = 1, maxval(cg_n)-n
                ic = 0
                if (size(qr_lst) > 0) then
                   allocate(dims(rank3))
-                  dims(:) = cg%n_b
+                  dims(:) = 0
                   call h5screate_simple_f(rank3, dims, filespace_id, error)
                   call h5sselect_none_f(filespace_id, error)  ! empty filespace
                   call h5screate_simple_f(rank3, dims, memspace_id, error)
@@ -443,8 +444,8 @@ contains
 
                   do i = lbound(qr_lst, dim=1), ubound(qr_lst, dim=1)
                      ic = ic + 1
-                     pa3d => cg%q(qr_lst(i))%span(cg%ijkse) !< \todo use set_dims_for_restart
-                     dims(:) = cg%n_b
+                     pa3d => null_r3d !< \todo use set_dims_for_restart
+                     dims(:) = 0
                      call h5dwrite_f(cg_desc%dset_id(1, ic), H5T_NATIVE_DOUBLE, pa3d, dims, error, &
                         xfer_prp = cg_desc%xfer_prp, file_space_id = filespace_id, mem_space_id = memspace_id)
                   enddo
@@ -456,7 +457,7 @@ contains
                   allocate(dims(rank4))
                   do i = lbound(wr_lst, dim=1), ubound(wr_lst, dim=1)
                      ic = ic + 1
-                     dims(:) = [ wna%lst(wr_lst(i))%dim4, cg%n_b ]
+                     dims(:) = 0
                      ! dims can change so h5s* is here as well, I don't know it
                      ! it's really necessary though,
                      ! \todo check if it can be done only once...
@@ -465,7 +466,7 @@ contains
                      call h5screate_simple_f(rank4, dims, memspace_id, error)
                      call h5sselect_none_f(memspace_id, error)   ! empty memoryscape
 
-                     pa4d => cg%w(wr_lst(i))%span(cg%ijkse) !< \todo use set_dims_for_restart
+                     pa4d => null_r4d !< \todo use set_dims_for_restart
                      call h5dwrite_f(cg_desc%dset_id(1, ic), H5T_NATIVE_DOUBLE, pa4d, dims, error, &
                         xfer_prp = cg_desc%xfer_prp, file_space_id = filespace_id, mem_space_id = memspace_id)
                      call h5sclose_f(memspace_id, error)
