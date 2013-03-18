@@ -163,6 +163,7 @@ contains
       use dataio_pub,        only: die, msg, printinfo
       use domain,            only: dom
       use fluidindex,        only: iarr_all_dn, iarr_all_mx, iarr_all_my, iarr_all_mz
+      use global,            only: dirty_debug, no_dirty_checks
       use grid_cont,         only: grid_container
       use named_array_list,  only: qna
       use mpisetup,          only: master
@@ -225,10 +226,17 @@ contains
       cgl => leaves%first
       do while (associated(cgl))
          cg => cgl%cg
+         if (dirty_debug .and. .not. no_dirty_checks) then
+            cg%wa(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = cg%q(qna%ind(apot_n))%arr(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)
+            cg%q(qna%ind(apot_n))%arr = huge(1.)
+            cg%q(qna%ind(apot_n))%arr(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = cg%wa(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)
+            cg%q(qna%ind(asrc_n))%arr = huge(1.)
+         endif
          cg%q(qna%ind(asrc_n))%arr(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = fpiG * sum(cg%u(iarr_all_dn, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), dim=1)
          cgl => cgl%nxt
       enddo
       call residual(leaves, qna%ind(asrc_n), qna%ind(apot_n), qna%ind(ares_n))
+      call leaves%check_dirty(qna%ind(ares_n), "a-residual")
 
       write(msg,'(a,f13.10)')"[initproblem:problem_initial_conditions] Analytical norm residual/source= ",leaves%norm_sq(qna%ind(ares_n))/leaves%norm_sq(qna%ind(asrc_n))
       if (master) call printinfo(msg)
