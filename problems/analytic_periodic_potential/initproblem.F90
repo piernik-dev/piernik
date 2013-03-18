@@ -222,7 +222,7 @@ contains
          cgl => cgl%nxt
       enddo
 
-      ! Compute residuum for anal;ytical solution and print its norm
+      ! Compute residuum for analytical solution and print its norm
       cgl => leaves%first
       do while (associated(cgl))
          cg => cgl%cg

@@ -57,6 +57,8 @@ module initproblem
    real :: p0 !< pressure
    real :: a3 !< length of polar radius of the spheroid
    character(len=dsetnamelen), parameter :: apot_n = "apot" !< name of the analytical potential field
+   character(len=dsetnamelen), parameter :: asrc_n = "asrc" !< name of the source fiels used for "ares" calculation (auxiliary space)
+   character(len=dsetnamelen), parameter :: ares_n = "ares" !< name of the numerical residuum with respect to analytical potential field
 
 contains
 
@@ -87,6 +89,7 @@ contains
       use domain,         only: dom
       use global,         only: smalld
       use mpisetup,       only: rbuff, ibuff, master, slave, piernik_MPI_Bcast
+      use multigridvars,  only: ord_prolong
       use particle_pub,   only: pset
 
       implicit none
@@ -187,7 +190,9 @@ contains
          call printinfo(msg, .true.)
       endif
 
-      call all_cg%reg_var(apot_n)
+      call all_cg%reg_var(apot_n, ord_prolong = ord_prolong)
+      call all_cg%reg_var(ares_n)
+      call all_cg%reg_var(asrc_n)
 
    end subroutine read_problem_par
 
@@ -195,13 +200,18 @@ contains
 
    subroutine problem_initial_conditions
 
-      use cg_leaves,   only: leaves
-      use cg_list,     only: cg_list_element
-      use constants,   only: GEO_XYZ, GEO_RPZ
-      use dataio_pub,  only: die
-      use domain,      only: dom
-      use fluidindex,  only: iarr_all_dn, iarr_all_mx, iarr_all_my, iarr_all_mz
-      use grid_cont,   only: grid_container
+      use cg_leaves,         only: leaves
+      use cg_list,           only: cg_list_element
+      use constants,         only: GEO_XYZ, GEO_RPZ, xdim, ydim, zdim, LO, HI
+      use dataio_pub,        only: die, msg, printinfo
+      use domain,            only: dom
+      use fluidindex,        only: iarr_all_dn, iarr_all_mx, iarr_all_my, iarr_all_mz
+      use global,            only: dirty_debug, no_dirty_checks
+      use grid_cont,         only: grid_container
+      use named_array_list,  only: qna
+      use mpisetup,          only: master
+      use multigrid_gravity, only: residual
+      use units,             only: fpiG
 
       implicit none
 
@@ -272,6 +282,54 @@ contains
 
          cgl => cgl%nxt
       enddo
+
+      ! Compute residuum for analytical solution and print its norm
+      cgl => leaves%first
+      do while (associated(cgl))
+         cg => cgl%cg
+         if (dirty_debug .and. .not. no_dirty_checks) then
+            cg%wa(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = cg%q(qna%ind(apot_n))%arr(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)
+            cg%q(qna%ind(apot_n))%arr = huge(1.)
+            cg%q(qna%ind(apot_n))%arr(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = cg%wa(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)
+            cg%q(qna%ind(asrc_n))%arr = huge(1.)
+         endif
+         cg%q(qna%ind(asrc_n))%arr(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = fpiG * sum(cg%u(iarr_all_dn, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), dim=1)
+         cgl => cgl%nxt
+      enddo
+
+      call residual(leaves, qna%ind(asrc_n), qna%ind(apot_n), qna%ind(ares_n))
+      call leaves%check_dirty(qna%ind(ares_n), "a-residual")
+
+      cgl => leaves%first
+      do while (associated(cgl))
+         cg => cgl%cg
+         do i = xdim, zdim
+            do j = LO, HI
+               if (cg%ext_bnd(i, j)) then
+                  select case (j + HI*i)
+                     case (LO + HI*xdim)
+                        cg%q(qna%ind(ares_n))%arr(cg%is, :, :) = 0.
+                     case (HI + HI*xdim)
+                        cg%q(qna%ind(ares_n))%arr(cg%ie, :, :) = 0.
+                     case (LO + HI*ydim)
+                        cg%q(qna%ind(ares_n))%arr(:, cg%js, :) = 0.
+                     case (HI + HI*ydim)
+                        cg%q(qna%ind(ares_n))%arr(:, cg%je, :) = 0.
+                     case (LO + HI*zdim)
+                        cg%q(qna%ind(ares_n))%arr(:, :, cg%ks) = 0.
+                     case (HI + HI*zdim)
+                        cg%q(qna%ind(ares_n))%arr(:, :, cg%ke) = 0.
+                     case default
+                        call die("[initproblem:problem_initial_conditions] Bug")
+                  end select
+               endif
+            enddo
+         enddo
+         cgl => cgl%nxt
+      enddo
+
+      write(msg,'(a,f13.10)')"[initproblem:problem_initial_conditions] Analytical norm residual/source= ",leaves%norm_sq(qna%ind(ares_n))/leaves%norm_sq(qna%ind(asrc_n))
+      if (master) call printinfo(msg)
 
    end subroutine problem_initial_conditions
 
