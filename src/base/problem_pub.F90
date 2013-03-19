@@ -51,9 +51,11 @@ module problem_pub
 #ifdef MACLAURIN_PROBLEM
    real, dimension(ndims) :: xs ! position of the sphere
    real :: as ! factor used to calculate the potential
+#endif /* MACLAURIN_PROBLEM */
 
 contains
 
+#ifdef MACLAURIN_PROBLEM
 !> \brief Calculate point-like potential for the maclaurin problem
 
    real function ap_potential(x, y, z) result(phi)
@@ -117,7 +119,6 @@ contains
          endif
          cgl => cgl%nxt
       enddo
-
 
    end subroutine maclaurin2bnd_potential
 

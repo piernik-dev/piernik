@@ -10,4 +10,7 @@
 
 #define RTVD
 
+/*
+  The macro MACLAURIN_PROBLEM enables use of analytical potential from point-like source in calculations of correction due to isolated gravitational boundaries
+*/
 /* #define MACLAURIN_PROBLEM */
