@@ -320,6 +320,9 @@ contains
 !!$      use dataio_pub,         only: die
       use global,             only: dirty_debug
 !!$      use multigridvars,      only: solution
+#ifdef MACLAURIN_PROBLEM
+      use problem_pub,        only: maclaurin2bnd_potential
+#endif /* MACLAURIN_PROBLEM */
 
       implicit none
 
@@ -344,6 +347,7 @@ contains
 !!$      endif
       call potential2img_mass
 
+#ifndef MACLAURIN_PROBLEM
       if (use_point_monopole) then
          call find_img_CoM
          call isolated_monopole
@@ -353,6 +357,9 @@ contains
          call img_mass2moments
          call moments2bnd_potential
       endif
+#else /* MACLAURIN_PROBLEM */
+      call maclaurin2bnd_potential
+#endif /* ! MACLAURIN_PROBLEM */
 
       !> \todo The approach with lmpole should be reworked completely. With AMR use only current level and reinitialize some things if refinements have changed
 !!$      if (.not. associated(lmpole, finest)) then
