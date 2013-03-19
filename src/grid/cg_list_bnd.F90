@@ -390,7 +390,7 @@ contains
                                  r(d,:) = cg%ijkse(d,lh)+(i-I_ONE)*(I_THREE-I_TWO*lh)
                                  pa3d(l(xdim,LO):l(xdim,HI),l(ydim,LO):l(ydim,HI),l(zdim,LO):l(zdim,HI)) = pa3d(r(xdim,LO):r(xdim,HI),r(ydim,LO):r(ydim,HI),r(zdim,LO):r(zdim,HI))
                               enddo
-                           case (BND_NEGREF)  ! reflecting BC (e.g. homogeneous Neumamnn)
+                           case (BND_NEGREF)  ! reflecting BC (e.g. homogeneous Dirichlet BC with 0 at domain face)
                               do i = 1, dom%nb
                                  l(d,:) = cg%ijkse(d,lh)   -i     *(I_THREE-I_TWO*lh)
                                  r(d,:) = cg%ijkse(d,lh)+(i-I_ONE)*(I_THREE-I_TWO*lh)

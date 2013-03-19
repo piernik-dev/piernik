@@ -85,6 +85,7 @@ contains
       use domain,        only: dom
       use grid_cont,     only: grid_container
       use mpisetup,      only: master
+      use multigridvars, only: grav_bnd, bnd_givenval
       use named_array,   only: p3
 
       implicit none
@@ -101,14 +102,19 @@ contains
       type(cg_list_element), pointer :: cgl
       type(grid_container),  pointer :: cg
       integer(kind=4), dimension(ndims,ndims,LO:HI) :: idm
+      real :: src_lapl
 
       if (firstcall) then
          if (master) call warn("[multigrid_Laplace4M:residual_Mehrstellen] residual order 4 is experimental.")
          firstcall = .false.
       endif
 
+      src_lapl = 1./12.
+      if (grav_bnd == bnd_givenval) src_lapl = 0.
+      ! the contribution of outer potential is simulated by a single layer of cells with image of density and we don't want to operate on this structure with the Laplacian.
+      ! This image density is supposed to be infinitesimally thin, which we obviously can't reproduce, so we modify the operator instead
       call cg_llst%arr3d_boundaries(soln, bnd_type = BND_NEGREF)
-      call cg_llst%arr3d_boundaries(src,  bnd_type = BND_NEGREF)
+      if (src_lapl /= 0.) call cg_llst%arr3d_boundaries(src,  bnd_type = BND_NEGREF)
 
       idm = 0
       do i = xdim, zdim
@@ -128,18 +134,17 @@ contains
          L0  = -2. * (Lx + Ly + Lz) - 4. * (Lxy + Lxz + Lyz)
 
          p3 => cg%q(def)%span(cg%ijkse)
-
-         p3 = (12.-2*dom%eff_dim)/12.*cg%q(src)%span(cg%ijkse) - L0*cg%q(soln)%span(cg%ijkse)
+         p3 = (1.-src_lapl*2*dom%eff_dim)*cg%q(src)%span(cg%ijkse) - L0*cg%q(soln)%span(cg%ijkse)
          if (dom%has_dir(xdim)) p3 = p3 + &
-              (cg%q(src)%span(cg%ijkse-idm(xdim,:,:)) + cg%q(src)%span(cg%ijkse+idm(xdim,:,:)))/12. &
+              src_lapl*(cg%q(src)%span(cg%ijkse-idm(xdim,:,:)) + cg%q(src)%span(cg%ijkse+idm(xdim,:,:))) &
               - Lx * (cg%q(soln)%span(cg%ijkse-idm(xdim,:,:)) + cg%q(soln)%span(cg%ijkse+idm(xdim,:,:)))
          if (dom%has_dir(ydim)) p3 = p3 + &
-              (cg%q(src)%span(cg%ijkse-idm(ydim,:,:)) + cg%q(src)%span(cg%ijkse+idm(ydim,:,:)))/12. &
+              src_lapl*(cg%q(src)%span(cg%ijkse-idm(ydim,:,:)) + cg%q(src)%span(cg%ijkse+idm(ydim,:,:))) &
               - Ly * (cg%q(soln)%span(cg%ijkse-idm(ydim,:,:)) + cg%q(soln)%span(cg%ijkse+idm(ydim,:,:))) &
               - Lxy * (cg%q(soln)%span(cg%ijkse-idm(xdim,:,:)-idm(ydim,:,:)) + cg%q(soln)%span(cg%ijkse-idm(xdim,:,:)+idm(ydim,:,:)) + &
               &        cg%q(soln)%span(cg%ijkse+idm(xdim,:,:)-idm(ydim,:,:)) + cg%q(soln)%span(cg%ijkse+idm(xdim,:,:)+idm(ydim,:,:)) )
          if (dom%has_dir(zdim)) p3 = p3 + &
-              (cg%q(src)%span(cg%ijkse-idm(zdim,:,:)) + cg%q(src)%span(cg%ijkse+idm(zdim,:,:)))/12. &
+              src_lapl*(cg%q(src)%span(cg%ijkse-idm(zdim,:,:)) + cg%q(src)%span(cg%ijkse+idm(zdim,:,:))) &
               - Lz * (cg%q(soln)%span(cg%ijkse-idm(zdim,:,:)) + cg%q(soln)%span(cg%ijkse+idm(zdim,:,:))) &
               - Lxz * (cg%q(soln)%span(cg%ijkse-idm(xdim,:,:)-idm(zdim,:,:)) + cg%q(soln)%span(cg%ijkse-idm(xdim,:,:)+idm(zdim,:,:)) + &
               &        cg%q(soln)%span(cg%ijkse+idm(xdim,:,:)-idm(zdim,:,:)) + cg%q(soln)%span(cg%ijkse+idm(xdim,:,:)+idm(zdim,:,:)) ) &

@@ -163,7 +163,7 @@ contains
       nsmoob                 = 100
       nsmoof                 = 1
       ord_laplacian          = O_D4
-      ord_laplacian_outer    = O_I2
+      ord_laplacian_outer    = ord_laplacian
       ord_prolong_mpole      = O_D2
       ord_time_extrap        = O_LIN
 
@@ -196,6 +196,7 @@ contains
             base_no_fft = .true.
             prefer_rbgs_relaxation = .true.
             ord_laplacian = O_I2
+            ord_laplacian_outer = ord_laplacian
             L4_strength = 0.
             ! ord_prolong_mpole = O_INJ
          else if (dom%geometry_type /= GEO_XYZ) then
@@ -212,7 +213,7 @@ contains
             call warn("[multigrid_gravity:multigrid_grav_par] FFT local solver disabled for multithreaded runs due to unresolved incompatibilities with mew grid features")
          endif
 
-         if (ord_laplacian_outer /= O_I2) call warn("[multigrid_gravity:multigrid_grav_par] ord_laplacian_outer /= 2 may not work correctly")
+         if (ord_laplacian_outer /= ord_laplacian) call warn("[multigrid_gravity:multigrid_grav_par] ord_laplacian_outer /= ord_laplacian")
 
          rbuff(1) = norm_tol
          rbuff(2) = overrelax
@@ -664,7 +665,7 @@ contains
    subroutine init_source(i_all_dens)
 
       use cg_list_global, only: all_cg
-      use constants,      only: GEO_RPZ, LO, HI, xdim, ydim, zdim
+      use constants,      only: GEO_RPZ, LO, HI, xdim, ydim, zdim, O_I4
       use dataio_pub,     only: die
       use domain,         only: dom
       use cg_list,        only: cg_list_element
@@ -685,6 +686,7 @@ contains
       integer                        :: i, side
       type(cg_list_element), pointer :: cgl
       type(grid_container),  pointer :: cg
+      logical                        :: apply_src_Mcorrection
 
       call all_cg%set_dirty(source)
 
@@ -712,6 +714,10 @@ contains
             cgl => leaves%first
             do while (associated(cgl))
                cg => cgl%cg
+
+               apply_src_Mcorrection = any(cg%ext_bnd(:,:)) .and. (ord_laplacian_outer == -O_I4) ! an improvement for Mehrstellen Laplace operator
+
+               if (apply_src_Mcorrection) cg%wa(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = 0.
                do side = LO, HI
                   if (cg%ext_bnd(xdim, side)) then
                      fac = 2. * cg%idx2 / fpiG
@@ -719,6 +725,7 @@ contains
                      cg%q(source)%arr       (cg%ijkse(xdim,side), cg%js:cg%je, cg%ks:cg%ke) = &
                           & cg%q(source)%arr(cg%ijkse(xdim,side), cg%js:cg%je, cg%ks:cg%ke) - &
                           & cg%mg%bnd_x(                          cg%js:cg%je, cg%ks:cg%ke, side) * fac
+                     if (apply_src_Mcorrection) cg%wa(cg%ijkse(xdim,side), cg%js:cg%je, cg%ks:cg%ke) = cg%wa(cg%ijkse(xdim,side), cg%js:cg%je, cg%ks:cg%ke) + 1
                   endif
                enddo
                do side = LO, HI
@@ -734,13 +741,23 @@ contains
                            & cg%q(source)%arr(cg%is:cg%ie, cg%ijkse(ydim,side), cg%ks:cg%ke) - &
                            & cg%mg%bnd_y     (cg%is:cg%ie,                      cg%ks:cg%ke, side) * 2. * cg%idy2 / fpiG
                      endif
+                     if (apply_src_Mcorrection) cg%wa(cg%is:cg%ie, cg%ijkse(ydim,side), cg%ks:cg%ke) = cg%wa(cg%is:cg%ie, cg%ijkse(ydim,side), cg%ks:cg%ke) + 1
                   endif
                enddo
                do side = LO, HI
-                  if (cg%ext_bnd(zdim, side)) cg%q(source)%arr(cg%is:cg%ie, cg%js:cg%je, cg%ijkse(zdim,side)) = &
-                       &                      cg%q(source)%arr(cg%is:cg%ie, cg%js:cg%je, cg%ijkse(zdim,side)) - &
-                       &                      cg%mg%bnd_z     (cg%is:cg%ie, cg%js:cg%je, side) * 2. * cg%idz2 / fpiG
+                  if (cg%ext_bnd(zdim, side)) then
+                     cg%q(source)%arr       (cg%is:cg%ie, cg%js:cg%je, cg%ijkse(zdim,side)) = &
+                          & cg%q(source)%arr(cg%is:cg%ie, cg%js:cg%je, cg%ijkse(zdim,side)) - &
+                          & cg%mg%bnd_z     (cg%is:cg%ie, cg%js:cg%je, side) * 2. * cg%idz2 / fpiG
+                     if (apply_src_Mcorrection) cg%wa(cg%is:cg%ie, cg%js:cg%je, cg%ijkse(zdim,side)) = cg%wa(cg%is:cg%ie, cg%js:cg%je, cg%ijkse(zdim,side)) + 1
+                  endif
                enddo
+               if (apply_src_Mcorrection) then
+                  where (cg%wa(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) == 2.) &
+                       cg%q(source)%arr(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = cg%q(source)%arr(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) * 5./6.
+                  where (cg%wa(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) == 3.) &
+                       cg%q(source)%arr(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = cg%q(source)%arr(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) * 2./3.
+               endif
                cgl => cgl%nxt
             enddo
 
