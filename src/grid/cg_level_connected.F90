@@ -990,7 +990,7 @@ contains
                                        if (is_overlap(coarse%pse(j)%c(b)%se(:,:), seg)) then
                                           seg(:, LO) = max( seg(:, LO), coarse%pse(j)%c(b)%se(:, LO))
                                           seg(:, HI) = min( seg(:, HI), coarse%pse(j)%c(b)%se(:, HI)) ! this is what we want
-                                          tag = tag + 1
+                                          tag = tag + I_ONE
                                           if (tag<0) call die("[cg_level_connected:vertical_b_prep] tag overflow")
                                           segp (:, LO) = seg  (:, LO) - [ ix, iy, iz ] * per(:)
                                           segp (:, HI) = seg  (:, HI) - [ ix, iy, iz ] * per(:)
