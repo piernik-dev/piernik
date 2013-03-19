@@ -61,7 +61,8 @@ module multigrid_gravity
    real               :: vcycle_abort                                 !< abort the V-cycle when lhs norm raises by this factor
    integer(kind=4)    :: max_cycles                                   !< Maximum allowed number of V-cycles
    integer(kind=4)    :: nsmoob                                       !< smoothing cycles on coarsest level when cannot use FFT. (a convergence check would be much better)
-   integer(kind=4)    :: ord_laplacian                                !< Laplace operator order; allowed values are 2 (default) and 4 (experimental, not fully implemented)
+   integer(kind=4)    :: ord_laplacian                                !< Laplace operator order; allowed values are 2, -4 (default) and 4 (not fully implemented)
+   integer(kind=4)    :: ord_laplacian_outer                          !< Laplace operator order for isolated boundaries (useful as long as -4 is not fully implemented)
    logical            :: trust_fft_solution                           !< Bypass the V-cycle, when doing FFT on whole domain, make sure first that FFT is properly set up.
    logical            :: base_no_fft                                  !< Deny solving the coarsest level with FFT. Can be very slow.
    logical            :: prefer_rbgs_relaxation                       !< Prefer relaxation over FFT local solver. Typically faster.
@@ -98,7 +99,8 @@ contains
 !! <tr><td>Jacobi_damp           </td><td>1.     </td><td>real value     </td><td>\copydoc multigrid_gravity::jacobi_damp           </td></tr>
 !! <tr><td>L4_strength           </td><td>1.0    </td><td>real value     </td><td>\copydoc multigrid_gravity::l4_strength           </td></tr>
 !! <tr><td>nsmoof                </td><td>1      </td><td>integer value  </td><td>\copydoc multigridvars::nsmoof                    </td></tr>
-!! <tr><td>ord_laplacian         </td><td>2      </td><td>integer value  </td><td>\copydoc multigrid_gravity::ord_laplacian         </td></tr>
+!! <tr><td>ord_laplacian         </td><td>-4     </td><td>integer value  </td><td>\copydoc multigrid_gravity::ord_laplacian         </td></tr>
+!! <tr><td>ord_laplacian_outer   </td><td>2      </td><td>integer value  </td><td>\copydoc multigrid_gravity::ord_laplacian_outer   </td></tr>
 !! <tr><td>ord_time_extrap       </td><td>1      </td><td>integer value  </td><td>\copydoc multigrid_gravity::ord_time_extrap       </td></tr>
 !! <tr><td>prefer_rbgs_relaxation</td><td>.true. </td><td>logical        </td><td>\copydoc multigrid_gravity::prefer_rbgs_relaxation</td></tr>
 !! <tr><td>base_no_fft           </td><td>.false.</td><td>logical        </td><td>\copydoc multigrid_gravity::base_no_fft           </td></tr>
@@ -136,7 +138,7 @@ contains
       logical, save :: frun = .true.      !< First run flag
 
       namelist /MULTIGRID_GRAVITY/ norm_tol, vcycle_abort, max_cycles, nsmool, nsmoob, &
-           &                       overrelax, overrelax_xyz, Jacobi_damp, L4_strength, nsmoof, ord_laplacian, ord_time_extrap, &
+           &                       overrelax, overrelax_xyz, Jacobi_damp, L4_strength, nsmoof, ord_laplacian, ord_laplacian_outer, ord_time_extrap, &
            &                       prefer_rbgs_relaxation, base_no_fft, fft_full_relax, fft_patient, trust_fft_solution, &
            &                       coarsen_multipole, lmax, mmax, ord_prolong_mpole, use_point_monopole, interp_pt2mom, interp_mom2pot, multidim_code_3D, &
            &                       grav_bnd_str
@@ -161,6 +163,7 @@ contains
       nsmoob                 = 100
       nsmoof                 = 1
       ord_laplacian          = O_D4
+      ord_laplacian_outer    = O_I2
       ord_prolong_mpole      = O_D2
       ord_time_extrap        = O_LIN
 
@@ -209,6 +212,8 @@ contains
             call warn("[multigrid_gravity:multigrid_grav_par] FFT local solver disabled for multithreaded runs due to unresolved incompatibilities with mew grid features")
          endif
 
+         if (ord_laplacian_outer /= O_I2) call warn("[multigrid_gravity:multigrid_grav_par] ord_laplacian_outer /= 2 may not work correctly")
+
          rbuff(1) = norm_tol
          rbuff(2) = overrelax
          rbuff(3:5) = overrelax_xyz
@@ -226,6 +231,7 @@ contains
          ibuff( 8) = ord_laplacian
          ibuff( 9) = ord_prolong_mpole
          ibuff(10) = ord_time_extrap
+         ibuff(11) = ord_laplacian_outer
 
          lbuff(1) = use_point_monopole
          lbuff(2) = trust_fft_solution
@@ -265,6 +271,7 @@ contains
          ord_laplacian     = ibuff( 8)
          ord_prolong_mpole = ibuff( 9)
          ord_time_extrap   = ibuff(10)
+         ord_laplacian_outer = ibuff(11)
 
          use_point_monopole      = lbuff(1)
          trust_fft_solution      = lbuff(2)
@@ -1003,19 +1010,20 @@ contains
       integer(kind=4),    intent(in) :: soln    !< index of solution in cg%q(:)
       integer(kind=4),    intent(in) :: def     !< index of defect in cg%q(:)
 
-      select case (ord_laplacian)
-      case (O_I2)
-         call residual2(cg_llst, src, soln, def)
-      case (O_I4)
-         call residual4(cg_llst, src, soln, def)
-      case (-O_I4)
-         if (grav_bnd == bnd_givenval) then
+      integer :: ol
+
+      ol = ord_laplacian
+      if (grav_bnd == bnd_givenval) ol = ord_laplacian_outer
+
+      select case (ol)
+         case (O_I2)
             call residual2(cg_llst, src, soln, def)
-         else
+         case (O_I4)
+            call residual4(cg_llst, src, soln, def)
+         case (-O_I4)
             call residual_Mehrstellen(cg_llst, src, soln, def)
-         endif
-      case default
-         call die("[multigrid_gravity:residual] The parameter 'ord_laplacian' must be 2 or 4 or -4")
+         case default
+            call die("[multigrid_gravity:residual] The parameter 'ord_laplacian' must be 2 or 4 or -4")
       end select
 
    end subroutine residual
@@ -1073,7 +1081,7 @@ contains
       integer(kind=4),                     intent(in) :: src  !< index of source in cg%q(:)
       integer(kind=4),                     intent(in) :: soln !< index of solution in cg%q(:)
 
-      integer :: nsmoo
+      integer :: nsmoo, ol
 
       if (associated(curl, coarsest%level)) then
          nsmoo = nsmoob
@@ -1086,17 +1094,16 @@ contains
 
       if (dom%geometry_type == GEO_RPZ .and. .not. multidim_code_3D) call die("[multigrid_gravity:approximate_solution_rbgs] multidim_code_3D = .false. not implemented")
 
-      select case (ord_laplacian)
+      ol = ord_laplacian
+      if (grav_bnd == bnd_givenval) ol = ord_laplacian_outer
+
+      select case (ol)
          case (O_I2)
             call approximate_solution_rbgs2 (curl, src, soln, nsmoo)
          case (O_I4)
             call approximate_solution_rbgs4 (curl, src, soln, nsmoo)
          case (-O_I4)
-            if (grav_bnd == bnd_givenval) then
-               call approximate_solution_rbgs2 (curl, src, soln, nsmoo)
-            else
-               call approximate_solution_rbgs4M(curl, src, soln, nsmoo)
-            endif
+            call approximate_solution_rbgs4M(curl, src, soln, nsmoo)
          case default
             call die("[multigrid_gravity:approximate_solution_rbgs] The parameter 'ord_laplacian' must be 2 or 4 or -4")
       end select
