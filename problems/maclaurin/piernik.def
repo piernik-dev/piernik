@@ -9,3 +9,5 @@
 #define MULTIGRID
 
 #define RTVD
+
+/* #define MACLAURIN_PROBLEM */

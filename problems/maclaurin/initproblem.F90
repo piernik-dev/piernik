@@ -59,6 +59,9 @@ module initproblem
    character(len=dsetnamelen), parameter :: apot_n = "apot" !< name of the analytical potential field
    character(len=dsetnamelen), parameter :: asrc_n = "asrc" !< name of the source fiels used for "ares" calculation (auxiliary space)
    character(len=dsetnamelen), parameter :: ares_n = "ares" !< name of the numerical residuum with respect to analytical potential field
+#ifdef MACLAURIN_PROBLEM
+   character(len=dsetnamelen), parameter :: apt_n  = "apt"  !< name of the potential as it was due to point-like source
+#endif /* MACLAURIN_PROBLEM */
 
 contains
 
@@ -193,6 +196,9 @@ contains
       call all_cg%reg_var(apot_n, ord_prolong = ord_prolong)
       call all_cg%reg_var(ares_n)
       call all_cg%reg_var(asrc_n)
+#ifdef MACLAURIN_PROBLEM
+      call all_cg%reg_var(apt_n)
+#endif /* MACLAURIN_PROBLEM */
 
    end subroutine read_problem_par
 
@@ -376,6 +382,9 @@ contains
       use grid_cont,        only: grid_container
       use mpisetup,         only: master
       use named_array_list, only: qna
+#ifdef MACLAURIN_PROBLEM
+      use problem_pub,      only: xs, as, ap_potential
+#endif /* MACLAURIN_PROBLEM */
       use units,            only: newtong
 
       implicit none
@@ -486,6 +495,27 @@ contains
 
          cgl => cgl%nxt
       enddo
+#ifdef MACLAURIN_PROBLEM
+
+      xs = [ x0, y0, z0 ]
+      as = - 4./3. * a1**3 * pi * newtong * d0 !> \todo add correction for e /= 0
+
+      apot_i = qna%ind(apt_n)
+      cgl => leaves%first
+      do while (associated(cgl))
+         cg => cgl%cg
+
+         do k = cg%ks, cg%ke
+            do j = cg%js, cg%je
+               do i = cg%is, cg%ie
+                  cg%q(apot_i)%arr(i, j, k) = ap_potential(cg%x(i), cg%y(j), cg%z(k))
+               enddo
+            enddo
+         enddo
+
+         cgl => cgl%nxt
+      enddo
+#endif /* MACLAURIN_PROBLEM */
 
    end subroutine compute_maclaurin_potential
 
@@ -586,6 +616,10 @@ contains
             elsewhere
                tab(:,:,:) = 0.
             endwhere
+#ifdef MACLAURIN_PROBLEM
+         case ("a-pt")
+            tab(:,:,:) = real(cg%q(qna%ind(apot_n))%span(cg%ijkse) - cg%q(qna%ind(apt_n))%span(cg%ijkse), 4)
+#endif /* MACLAURIN_PROBLEM */
          case default
             ierrh = -1
       end select

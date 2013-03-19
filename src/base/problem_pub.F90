@@ -35,6 +35,10 @@
 
 module problem_pub
 
+#ifdef MACLAURIN_PROBLEM
+   use constants, only: ndims
+#endif /* MACLAURIN_PROBLEM */
+
    implicit none
 
    public  ! QA_WARN nothing to hide here
@@ -44,5 +48,26 @@ module problem_pub
    real :: jeans_d0
    integer :: jeans_mode
 #endif /* JEANS_PROBLEM */
+#ifdef MACLAURIN_PROBLEM
+   real, dimension(ndims) :: xs ! position of the sphere
+   real :: as ! factor used to calculate the potential
+
+contains
+
+!> \brief Calculate point-like potential for the maclaurin problem
+
+   real function ap_potential(x, y, z) result(phi)
+
+      use constants, only: xdim, ydim, zdim
+
+      implicit none
+
+      real, intent(in) :: x, y, z
+
+      phi = as / sqrt((x-xs(xdim))**2 + (y-xs(ydim))**2 + (z-xs(zdim))**2)
+
+   end function ap_potential
+
+#endif /* MACLAURIN_PROBLEM */
 
 end module problem_pub
