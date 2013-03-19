@@ -995,8 +995,8 @@ contains
             do j = cg%js, cg%je
                do k = cg%ks, cg%ke
                   if (cg%ext_bnd(xdim, LO) .and. (dom%geometry_type /= GEO_RPZ .or. .not. zaxis_inside)) &
-                       &                        call moments2pot(cg%mg%bnd_x(j, k, LO), cg%fbnd(xdim, LO)-CoM(xdim), cg%y(j)-CoM(ydim), cg%z(k)-CoM(zdim))
-                  if (cg%ext_bnd(xdim, HI)) call moments2pot(cg%mg%bnd_x(j, k, HI), cg%fbnd(xdim, HI)-CoM(xdim), cg%y(j)-CoM(ydim), cg%z(k)-CoM(zdim))
+                       &                    cg%mg%bnd_x(j, k, LO) = moments2pot(cg%fbnd(xdim, LO)-CoM(xdim), cg%y(j)-CoM(ydim), cg%z(k)-CoM(zdim))
+                  if (cg%ext_bnd(xdim, HI)) cg%mg%bnd_x(j, k, HI) = moments2pot(cg%fbnd(xdim, HI)-CoM(xdim), cg%y(j)-CoM(ydim), cg%z(k)-CoM(zdim))
                enddo
             enddo
          endif
@@ -1004,8 +1004,8 @@ contains
          if (any(cg%ext_bnd(ydim, :))) then
             do i = cg%is, cg%ie
                do k = cg%ks, cg%ke
-                  if (cg%ext_bnd(ydim, LO)) call moments2pot(cg%mg%bnd_y(i, k, LO), cg%x(i)-CoM(xdim), cg%fbnd(ydim, LO)-CoM(ydim), cg%z(k)-CoM(zdim))
-                  if (cg%ext_bnd(ydim, HI)) call moments2pot(cg%mg%bnd_y(i, k, HI), cg%x(i)-CoM(xdim), cg%fbnd(ydim, HI)-CoM(ydim), cg%z(k)-CoM(zdim))
+                  if (cg%ext_bnd(ydim, LO)) cg%mg%bnd_y(i, k, LO) = moments2pot(cg%x(i)-CoM(xdim), cg%fbnd(ydim, LO)-CoM(ydim), cg%z(k)-CoM(zdim))
+                  if (cg%ext_bnd(ydim, HI)) cg%mg%bnd_y(i, k, HI) = moments2pot(cg%x(i)-CoM(xdim), cg%fbnd(ydim, HI)-CoM(ydim), cg%z(k)-CoM(zdim))
                enddo
             enddo
          endif
@@ -1013,15 +1013,15 @@ contains
          if (any(cg%ext_bnd(zdim, :))) then
             do i = cg%is, cg%ie
                do j = cg%js, cg%je
-                  if (cg%ext_bnd(zdim, LO)) call moments2pot(cg%mg%bnd_z(i, j, LO), cg%x(i)-CoM(xdim), cg%y(j)-CoM(ydim), cg%fbnd(zdim, LO)-CoM(zdim))
-                  if (cg%ext_bnd(zdim, HI)) call moments2pot(cg%mg%bnd_z(i, j, HI), cg%x(i)-CoM(xdim), cg%y(j)-CoM(ydim), cg%fbnd(zdim, HI)-CoM(zdim))
+                  if (cg%ext_bnd(zdim, LO)) cg%mg%bnd_z(i, j, LO) = moments2pot(cg%x(i)-CoM(xdim), cg%y(j)-CoM(ydim), cg%fbnd(zdim, LO)-CoM(zdim))
+                  if (cg%ext_bnd(zdim, HI)) cg%mg%bnd_z(i, j, HI) = moments2pot(cg%x(i)-CoM(xdim), cg%y(j)-CoM(ydim), cg%fbnd(zdim, HI)-CoM(zdim))
                enddo
             enddo
          endif
          cgl => cgl%nxt
       enddo
 
-   end subroutine moments2bnd_potential
+   contains
 
 !>
 !! \brief Compute potential from multipole moments at a single point
@@ -1029,87 +1029,88 @@ contains
 !! \todo improve accuracy with linear interpolation over radius
 !<
 
-   subroutine moments2pot(potential, x, y, z)
+      real function moments2pot(x, y, z) result(potential)
 
-      use units, only: newtong
+         use units, only: newtong
 
-      implicit none
+         implicit none
 
-      real, intent(in)  :: x         !< x coordinate of the contributing point
-      real, intent(in)  :: y         !< y coordinate of the contributing point
-      real, intent(in)  :: z         !< z coordinate of the contributing point
-      real, intent(out) :: potential !< calculated potential at given point
+         real, intent(in)  :: x         !< x coordinate of the contributing point
+         real, intent(in)  :: y         !< y coordinate of the contributing point
+         real, intent(in)  :: z         !< z coordinate of the contributing point
 
-      real :: sin_th, cos_th, del
-      real :: Ql, Ql1, Ql2
-      integer :: l, m, ir, m2s, m2c
+         real :: sin_th, cos_th, del
+         real :: Ql, Ql1, Ql2
+         integer :: l, m, ir, m2s, m2c
 
-      call geomfac4moments(-newtong, x, y, z, sin_th, cos_th, ir, del)
+         call geomfac4moments(-newtong, x, y, z, sin_th, cos_th, ir, del)
 
-      if (.not. interp_mom2pot) del = 0.
+         if (.not. interp_mom2pot) del = 0.
 
-      ! monopole, the (0,0) moment; P_0 = 1.
-      potential = (1.-del) * ( &
-           Q(0, INSIDE,  ir)   * irn(0) + &
-           Q(0, OUTSIDE, ir+1) *  rn(0) )
-      if (del /= 0.) potential = potential + del * ( &
-           Q(0, INSIDE,  ir-1) * irn(0) + &
-           Q(0, OUTSIDE, ir)   *  rn(0) )
-      ! ir+1 to prevent duplicate accounting contributions from ir bin; alternatively one can modify radial integration
+         ! monopole, the (0,0) moment; P_0 = 1.
+         potential = (1.-del) * ( &
+              Q(0, INSIDE,  ir)   * irn(0) + &
+              Q(0, OUTSIDE, ir+1) *  rn(0) )
+         if (del /= 0.) potential = potential + del * ( &
+              Q(0, INSIDE,  ir-1) * irn(0) + &
+              Q(0, OUTSIDE, ir)   *  rn(0) )
+         ! ir+1 to prevent duplicate accounting contributions from ir bin; alternatively one can modify radial integration
 
-      ! axisymmetric (l,0) moments
-      Ql2 = 0.
-      Ql1 = 1.
-      do l = 1, lmax
-         Ql = cos_th * k12(1, l, 0) * Ql1 - k12(2, l, 0) * Ql2
-         potential = potential + Ql * (1.-del) * ( &
-              &      Q(l, INSIDE,  ir)   * irn(l) + &
-              &      Q(l, OUTSIDE, ir+1) *  rn(l) )
-         if (del /= 0.) potential = potential + Ql  * del * ( &
-              &      Q(l, INSIDE,  ir-1) * irn(l) + &
-              &      Q(l, OUTSIDE, ir)   *  rn(l) )
-         Ql2 = Ql1
-         Ql1 = Ql
-      enddo
-
-      ! non-axisymmetric (l,m) moments for 1 <= m <= mmax, m <= l <= lmax.
-      do m = 1, mmax
-         m2s = lm(0, 2*m-1)
-         m2c = lm(0, 2*m)
-         ! The (m,m) moment
-         Ql1 = sin_th ** m
-         potential = potential + Ql1 * (1.-del) * ( &
-              &      (Q(m2c+m, INSIDE,  ir)   * irn(m) + &
-              &       Q(m2c+m, OUTSIDE, ir+1) *  rn(m) ) * cfac(m) + &
-              &      (Q(m2s+m, INSIDE,  ir)   * irn(m) + &
-              &       Q(m2s+m, OUTSIDE, ir+1) *  rn(m) ) * sfac(m) )
-         if (del /= 0.) potential = potential + Ql1 * del * ( &
-              &      (Q(m2c+m, INSIDE,  ir-1) * irn(m) + &
-              &       Q(m2c+m, OUTSIDE, ir)   *  rn(m) ) * cfac(m) + &
-              &      (Q(m2s+m, INSIDE,  ir-1) * irn(m) + &
-              &       Q(m2s+m, OUTSIDE, ir)   *  rn(m) ) * sfac(m) )
-
-         !> \deprecated BEWARE: lots of computational cost of multipoles is here
-         ! from (m+1,m) to (lmax,m)
+         ! axisymmetric (l,0) moments
          Ql2 = 0.
-         do l = m+1, lmax
-            Ql = cos_th * k12(1, l, m) * Ql1 - k12(2, l, m) * Ql2
+         Ql1 = 1.
+         do l = 1, lmax
+            Ql = cos_th * k12(1, l, 0) * Ql1 - k12(2, l, 0) * Ql2
             potential = potential + Ql * (1.-del) * ( &
-                 &      (Q(m2c+l, INSIDE,  ir)   * irn(l) + &
-                 &       Q(m2c+l, OUTSIDE, ir+1) *  rn(l) ) * cfac(m) + &
-                 &      (Q(m2s+l, INSIDE,  ir)   * irn(l) + &
-                 &       Q(m2s+l, OUTSIDE, ir+1) *  rn(l) ) * sfac(m) )
-            if (del /= 0.) potential = potential + Ql * del * ( &
-                 &      (Q(m2c+l, INSIDE,  ir-1) * irn(l) + &
-                 &       Q(m2c+l, OUTSIDE, ir)   *  rn(l) ) * cfac(m) + &
-                 &      (Q(m2s+l, INSIDE,  ir-1) * irn(l) + &
-                 &       Q(m2s+l, OUTSIDE, ir)   *  rn(l) ) * sfac(m) )
+                 &      Q(l, INSIDE,  ir)   * irn(l) + &
+                 &      Q(l, OUTSIDE, ir+1) *  rn(l) )
+            if (del /= 0.) potential = potential + Ql  * del * ( &
+                 &      Q(l, INSIDE,  ir-1) * irn(l) + &
+              &      Q(l, OUTSIDE, ir)   *  rn(l) )
             Ql2 = Ql1
             Ql1 = Ql
          enddo
-      enddo
 
-   end subroutine moments2pot
+         ! non-axisymmetric (l,m) moments for 1 <= m <= mmax, m <= l <= lmax.
+         do m = 1, mmax
+            m2s = lm(0, 2*m-1)
+            m2c = lm(0, 2*m)
+            ! The (m,m) moment
+            Ql1 = sin_th ** m
+            potential = potential + Ql1 * (1.-del) * ( &
+                 &      (Q(m2c+m, INSIDE,  ir)   * irn(m) + &
+                 &       Q(m2c+m, OUTSIDE, ir+1) *  rn(m) ) * cfac(m) + &
+                 &      (Q(m2s+m, INSIDE,  ir)   * irn(m) + &
+                 &       Q(m2s+m, OUTSIDE, ir+1) *  rn(m) ) * sfac(m) )
+            if (del /= 0.) potential = potential + Ql1 * del * ( &
+                 &      (Q(m2c+m, INSIDE,  ir-1) * irn(m) + &
+                 &       Q(m2c+m, OUTSIDE, ir)   *  rn(m) ) * cfac(m) + &
+                 &      (Q(m2s+m, INSIDE,  ir-1) * irn(m) + &
+                 &       Q(m2s+m, OUTSIDE, ir)   *  rn(m) ) * sfac(m) )
+
+            !> \deprecated BEWARE: lots of computational cost of multipoles is here
+            ! from (m+1,m) to (lmax,m)
+            Ql2 = 0.
+            do l = m+1, lmax
+               Ql = cos_th * k12(1, l, m) * Ql1 - k12(2, l, m) * Ql2
+               potential = potential + Ql * (1.-del) * ( &
+                    &      (Q(m2c+l, INSIDE,  ir)   * irn(l) + &
+                    &       Q(m2c+l, OUTSIDE, ir+1) *  rn(l) ) * cfac(m) + &
+                    &      (Q(m2s+l, INSIDE,  ir)   * irn(l) + &
+                    &       Q(m2s+l, OUTSIDE, ir+1) *  rn(l) ) * sfac(m) )
+               if (del /= 0.) potential = potential + Ql * del * ( &
+                    &      (Q(m2c+l, INSIDE,  ir-1) * irn(l) + &
+                    &       Q(m2c+l, OUTSIDE, ir)   *  rn(l) ) * cfac(m) + &
+                    &      (Q(m2s+l, INSIDE,  ir-1) * irn(l) + &
+                    &       Q(m2s+l, OUTSIDE, ir)   *  rn(l) ) * sfac(m) )
+               Ql2 = Ql1
+               Ql1 = Ql
+            enddo
+         enddo
+
+      end function moments2pot
+
+   end subroutine moments2bnd_potential
 
 !>
 !! \brief This routine calculates various geometrical numbers required for multipole evaluation
