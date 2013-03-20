@@ -435,13 +435,13 @@ contains
    subroutine clear_boundaries(this, ind, value)
 
       use cg_list,   only: cg_list_element
-      use constants, only: ndims, xdim, zdim, LO, HI, I_TWO, BND_MPI, BND_FC, BND_MPI_FC
+      use constants, only: ndims, xdim, zdim, LO, HI
       use domain,    only: dom
       use grid_cont, only: grid_container
 
       implicit none
 
-      class(cg_list_bnd_T), intent(in)        :: this  !< the list on which to perform the boundary exchange
+      class(cg_list_bnd_T), intent(in)        :: this  !< the list on which to perform the action
       integer(kind=4),      intent(in)        :: ind   !< Negative value: index of cg%q(:) 3d array
       real, optional,       intent(in)        :: value !< Value to be put in the boundaries (could be dirty)
 
@@ -461,15 +461,12 @@ contains
          cg => cgl%cg
          do d = xdim, zdim
             if (dom%has_dir(d)) then
-               l = reshape([lbound(cg%q(ind)%arr, kind=4),ubound(cg%q(ind)%arr, kind=4)],shape=[ndims,HI])
                do lh = LO, HI
-                  if (any(cg%bnd(d, lh) == [ BND_MPI, BND_FC, BND_MPI_FC ])) then
-                     clh = LO + HI - lh
-                     l(d,HI) = ubound(cg%q(ind)%arr, dim=d, kind=4) ! restore after lh==LO case
-                     l(d,clh) = cg%ijkse(d,lh) + I_TWO*lh-(LO+HI)
-                     pa3d => cg%q(ind)%span(l)
-                     pa3d = v
-                  endif
+                  l = reshape([lbound(cg%q(ind)%arr, kind=4),ubound(cg%q(ind)%arr, kind=4)],shape=[ndims,HI])
+                  clh = LO + HI - lh
+                  l(d,clh) = cg%ijkse(d,lh) + HI*lh-(LO+HI) ! -1 for LO, +1 for HI
+                  pa3d => cg%q(ind)%span(l)
+                  pa3d = v
                enddo
             endif
          enddo
@@ -486,7 +483,7 @@ contains
 
       implicit none
 
-      class(cg_list_bnd_T), intent(in) :: this  !< the list on which to perform the boundary exchange
+      class(cg_list_bnd_T), intent(in) :: this  !< the list on which to perform the action
       integer(kind=4),      intent(in) :: ind   !< Negative value: index of cg%q(:) 3d array
 
       call this%clear_boundaries(ind, value=dirtyH)

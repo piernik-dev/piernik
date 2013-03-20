@@ -660,15 +660,9 @@ contains
 
    end subroutine prolong_q_1var
 
-!>
-!! \brief This routine sets up all guardcells (internal, external and fine-coarse) for given rank-3 arrays.
-!!
-!! \warning No fine-to-coarse data transfer implemented yet
-!<
+!> \brief This routine sets up all guardcells (internal, external and fine-coarse) for given rank-3 arrays.
 
    subroutine arr3d_boundaries(this, ind, area_type, bnd_type)
-
-      use constants, only: I_ONE
 
       implicit none
 
@@ -678,19 +672,14 @@ contains
       integer(kind=4), optional,   intent(in)    :: bnd_type  !< Override default boundary type on external boundaries (useful in multigrid solver).
                                                               !< Note that BND_PER, BND_MPI, BND_SHE and BND_COR aren't external and cannot be overridden
 
-!      call this%dirty_boundaries(ind)
-      call this%clear_boundaries(ind, value=0.1*(huge(I_ONE))) ! this value should be larger than refine::level_max because it is used in refinement_update::fix_refinement
+      call this%dirty_boundaries(ind)
       call this%prolong_bnd_from_coarser(ind, bnd_type)
       call this%level_3d_boundaries(ind, area_type, bnd_type)
       ! The correctness ot the sequence of calls above may depend on the implementation of internal boundary exchange
 
    end subroutine arr3d_boundaries
 
-!>
-!! \brief This routine sets up all guardcells (internal, external and fine-coarse) for given rank-4 arrays.
-!!
-!! \warning No fine-to-coarse data transfer implemented yet
-!<
+!> \brief This routine sets up all guardcells (internal, external and fine-coarse) for given rank-4 arrays.
 
    subroutine arr4d_boundaries(this, ind, area_type)
 

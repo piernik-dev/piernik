@@ -366,7 +366,7 @@ contains
       use cg_list,          only: cg_list_element
 !      use cg_list_global,   only: all_cg
       use cg_leaves,        only: leaves
-      use constants,        only: xdim, ydim, zdim!, I_ONE, I_TWO, LO, HI
+      use constants,        only: xdim, ydim, zdim, I_ONE!, I_TWO, LO, HI
       use dataio_pub,       only: die, warn, msg!, printinfo
       use domain,           only: dom
       use refinement,       only: allow_face_rstep, allow_corner_rstep
@@ -483,7 +483,7 @@ contains
                do j = lbound(cgl%cg%leafmap, dim=2), ubound(cgl%cg%leafmap, dim=2)
                   do i = lbound(cgl%cg%leafmap, dim=1), ubound(cgl%cg%leafmap, dim=1)
                      if (cgl%cg%prolong_xyz(i, j, k) == BOUNDARY) &
-                          lnear = max(lnear, int(maxval(cgl%cg%wa(i-range*dom%D_x:i+range*dom%D_x, j-range*dom%D_y:j+range*dom%D_y, k-range*dom%D_z:k+range*dom%D_z))))
+                          lnear = max(lnear, int(min(huge(I_ONE)/10.,maxval(cgl%cg%wa(i-range*dom%D_x:i+range*dom%D_x, j-range*dom%D_y:j+range*dom%D_y, k-range*dom%D_z:k+range*dom%D_z)))))
                   enddo
                enddo
             enddo
