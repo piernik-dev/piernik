@@ -306,7 +306,8 @@ contains
       call residual(leaves, qna%ind(asrc_n), qna%ind(apot_n), qna%ind(ares_n))
       call leaves%check_dirty(qna%ind(ares_n), "a-residual")
 
-      ! clear residual next to the external boundary as it is affected by the way the potential is extrapolated into the guardcells.
+      ! Clear residual next to the external boundary as it is affected by the way the potential is extrapolated into the guardcells.
+      ! When ord_prolong /= 0, there still will remain some artifacts at fine/coarse boundaries touching external boundary
       cgl => leaves%first
       do while (associated(cgl))
          cg => cgl%cg
