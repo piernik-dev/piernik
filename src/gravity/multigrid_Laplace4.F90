@@ -46,7 +46,7 @@ contains
 !!
 !! \details Significantly slows down convergence, does not seem to improve quality of solution in simple tests.
 !!
-!! L4 = [0, 1, -2, 1, 0] + L4_strength * 1./12. * [ -1, 4, -6, 4, -1 ]
+!! L4 = [0, 1, -2, 1, 0] + L4_strength * 1./12. * [ -1, 4, -6, 4, -1 ] = 1./12. * [ -1, 16, -30, 16, -1 ]
 !! For integrated face fluxes in the 4th order Laplacian estimate set L4_strength = 0.5
 !! For simple 5-point L4 set L4_strength = 1.0
 !!
@@ -54,6 +54,11 @@ contains
 !!
 !! As this operator is outperformed by the 4th order Mehrstellen operator, we don't plan any improvements here.
 !! It can be either deleted or left for curious people.
+!!
+!! For curious people:
+!! L6 = L4(L4_strength == 1.0) + L6_strength * 1./120. * [ 1, -6, 15, -20, 15, -6, 1 ] = 1./120. * [ 1, -16, 175, -320, 175, -16, 1 ]
+!! For simple 7-point L6 assume L6_strength = 1.0
+!! Don't expect much improvement by implementing any 6th order Laplacian unless other things in the code are similarly high order.
 !<
 
    subroutine residual4(cg_llst, src, soln, def)
