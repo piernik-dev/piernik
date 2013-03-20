@@ -98,7 +98,7 @@ contains
          firstcall = .false.
       endif
 
-      call cg_llst%arr3d_boundaries(soln, bnd_type = BND_NEGREF)
+      call cg_llst%leaf_arr3d_boundaries(soln, bnd_type = BND_NEGREF)
 
       c21 = 1.
       c42 = - L4_scaling * L4_strength

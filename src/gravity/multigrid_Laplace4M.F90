@@ -113,8 +113,8 @@ contains
       if (grav_bnd == bnd_givenval) src_lapl = 0.
       ! the contribution of outer potential is simulated by a single layer of cells with image of density and we don't want to operate on this structure with the Laplacian.
       ! This image density is supposed to be infinitesimally thin, which we obviously can't reproduce, so we modify the operator instead
-      call cg_llst%arr3d_boundaries(soln, bnd_type = BND_NEGREF)
-      if (src_lapl /= 0.) call cg_llst%arr3d_boundaries(src,  bnd_type = BND_NEGREF)
+      call cg_llst%leaf_arr3d_boundaries(soln, bnd_type = BND_NEGREF)
+      if (src_lapl /= 0.) call cg_llst%leaf_arr3d_boundaries(src,  bnd_type = BND_NEGREF)
 
       idm = 0
       do i = xdim, zdim

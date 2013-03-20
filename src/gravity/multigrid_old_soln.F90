@@ -253,9 +253,9 @@ contains
       ! Update guardcells of the solution before leaving. This can be done in higher-level routines that collect all the gravity contributions, but would be less safe.
       ! Extrapolate isolated boundaries, remember that grav_bnd is messed up by multigrid_solve_*
       if (grav_bnd == bnd_isolated .or. grav_bnd == bnd_givenval) then
-         call leaves%arr3d_boundaries(solution, bnd_type = BND_XTRAP)
+         call leaves%leaf_arr3d_boundaries(solution, bnd_type = BND_XTRAP)
       else
-         call leaves%arr3d_boundaries(solution, bnd_type = BND_REF)
+         call leaves%leaf_arr3d_boundaries(solution, bnd_type = BND_REF)
       endif
 
    end subroutine store_solution

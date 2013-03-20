@@ -414,7 +414,7 @@ contains
 !!$!         call curl%arr3d_boundaries(ind, nb, area_type, bnd_type, corners)
 !!$         curl => curl%finer
 !!$      enddo
-      call leaves%arr3d_boundaries(qna%wai)
+      call leaves%leaf_arr3d_boundaries(qna%wai)
 
       range = 1
       ! range = min((dom%nb+I_ONE)/I_TWO + all_cg%ord_prolong_nb, dom%nb)

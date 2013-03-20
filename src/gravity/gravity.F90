@@ -416,7 +416,7 @@ contains
       ! communicate boundary values for sgp(:, :, :) because multigrid solver gives at most 2 guardcells, while for hydro solver typically 4 is required.
 
 !> \warning An improper evaluation of guardcell potential may occur when the multigrid boundary conditions doesn't match /BOUNDARIES/ namelist (e.g. isolated on periodic domain).
-      call leaves%arr3d_boundaries(qna%ind(sgp_n))
+      call leaves%leaf_arr3d_boundaries(qna%ind(sgp_n))
 
       if (frun) then
          call leaves%q_copy(qna%ind(sgp_n), qna%ind(sgpm_n))

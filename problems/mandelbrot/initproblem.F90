@@ -257,7 +257,7 @@ contains
       type(cg_list_element), pointer :: cgl
       real :: nitd
 
-      !call leaves%arr3d_boundaries(qna%ind(mand_n))
+      !call leaves%leaf_arr3d_boundaries(qna%ind(mand_n))
 
       cgl => leaves%first
       do while (associated(cgl))
