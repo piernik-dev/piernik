@@ -543,7 +543,7 @@ contains
          curl => coarsest%level
          do while (associated(curl))
             call approximate_solution(curl, defect, correction, cr_id)
-            if (.not. associated(curl, finest%level)) call curl%prolong_q_1var(correction)
+            if (.not. associated(curl, finest%level)) call curl%prolong_q_1var(correction) ! In case of problems, consider enforcing bnd_type
             curl => curl%finer
          enddo
 

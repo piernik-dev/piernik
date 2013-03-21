@@ -180,7 +180,9 @@ contains
 
       curl => this%coarsest_leaves
       do while (associated(curl))
-         call curl%arr3d_boundaries(ind, area_type, bnd_type)
+         ! OPT this results in duplicated calls to level_3d_boundaries for levels from this%coarsest_leaves to finest%level%coarser
+         !> \todo implement it with lower level routines to remove this duplication
+         call curl%arr3d_boundaries(ind, area_type, bnd_type = bnd_type)
          curl => curl%finer
       enddo
 
@@ -202,7 +204,7 @@ contains
 
       curl => this%coarsest_leaves
       do while (associated(curl))
-         call curl%arr4d_boundaries(ind, area_type)
+         call curl%arr4d_boundaries(ind, area_type = area_type)
          curl => curl%finer
       enddo
 

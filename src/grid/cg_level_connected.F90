@@ -298,7 +298,7 @@ contains
 !!
 !! \todo implement it in a more efficient way (requires a lot more temporary buffers)
 !<
-   subroutine prolong(this)
+   subroutine prolong(this, bnd_type)
 
       use constants,        only: base_level_id
       use dataio_pub,       only: warn
@@ -306,12 +306,13 @@ contains
 
       implicit none
 
-      class(cg_level_connected_T), target, intent(inout) :: this !< object invoking type-bound procedure
+      class(cg_level_connected_T), target, intent(inout) :: this       !< object invoking type-bound procedure
+      integer(kind=4), optional,           intent(in)    :: bnd_type   !< Override default boundary type on external boundaries (useful in multigrid solver).
 
       integer(kind=4) :: i, iw
 
       do i = lbound(qna%lst(:), dim=1, kind=4), ubound(qna%lst(:), dim=1, kind=4)
-         if (qna%lst(i)%vital .and. (qna%lst(i)%multigrid .or. this%level_id >= base_level_id)) call this%prolong_q_1var(i)
+         if (qna%lst(i)%vital .and. (qna%lst(i)%multigrid .or. this%level_id >= base_level_id)) call this%prolong_q_1var(i, bnd_type = bnd_type)
       enddo
 
       do i = lbound(wna%lst(:), dim=1, kind=4), ubound(wna%lst(:), dim=1, kind=4)
@@ -320,7 +321,7 @@ contains
             do iw = 1, wna%lst(i)%dim4
                call this%wq_copy(i, iw, qna%wai)
                call this%finer%wq_copy(i, iw, qna%wai) !> Quick and dirty fix for cases when cg%ignore_prolongation == .true.
-               call this%prolong_q_1var(qna%wai, wna%lst(i)%position(iw))
+               call this%prolong_q_1var(qna%wai, wna%lst(i)%position(iw), bnd_type = bnd_type)
                call this%finer%qw_copy(qna%wai, i, iw) !> \todo filter this through cg%ignore_prolongation
             enddo
          endif
@@ -534,10 +535,10 @@ contains
 
 !> \brief perform prolongation of one field variable
 
-   subroutine prolong_q_1var(this, iv, pos)
+   subroutine prolong_q_1var(this, iv, pos, bnd_type)
 
       use cg_list,          only: cg_list_element
-      use constants,        only: xdim, ydim, zdim, LO, HI, I_ONE, BND_REF, O_INJ, VAR_CENTER, ndims
+      use constants,        only: xdim, ydim, zdim, LO, HI, I_ONE, O_INJ, VAR_CENTER, ndims
       use dataio_pub,       only: msg, warn
       use func,             only: f2c
       use grid_cont,        only: grid_container
@@ -550,6 +551,7 @@ contains
       class(cg_level_connected_T), target, intent(inout) :: this !< object invoking type-bound procedure
       integer(kind=4),                     intent(in)    :: iv   !< variable to be prolonged
       integer(kind=4), optional,           intent(in)    :: pos  !< position of the variable within cell
+      integer(kind=4), optional,           intent(in)    :: bnd_type   !< Override default boundary type on external boundaries (useful in multigrid solver).
 
       type(cg_level_connected_T), pointer                :: fine
       integer                                            :: g
@@ -584,7 +586,7 @@ contains
 
       if (this%ord_prolong_set /= O_INJ) then
          !> \todo some variables may need special care on external boundaries
-         call this%arr3d_boundaries(iv, bnd_type = BND_REF)
+         call this%arr3d_boundaries(iv, bnd_type = bnd_type)
       endif
       call this%check_dirty(iv, "prolong-")
 
@@ -673,8 +675,8 @@ contains
                                                               !< Note that BND_PER, BND_MPI, BND_SHE and BND_COR aren't external and cannot be overridden
 
       call this%dirty_boundaries(ind)
-      call this%prolong_bnd_from_coarser(ind, bnd_type)
-      call this%level_3d_boundaries(ind, area_type, bnd_type)
+      call this%prolong_bnd_from_coarser(ind, bnd_type = bnd_type)
+      call this%level_3d_boundaries(ind, area_type = area_type, bnd_type = bnd_type)
       ! The correctness ot the sequence of calls above may depend on the implementation of internal boundary exchange
 
    end subroutine arr3d_boundaries
@@ -704,7 +706,7 @@ contains
             call this%qw_copy(qna%wai, ind, iw) !> \todo filter this through cg%ignore_prolongation
          enddo
       endif
-      call this%level_4d_boundaries(ind, area_type)
+      call this%level_4d_boundaries(ind, area_type = area_type)
 
    end subroutine arr4d_boundaries
 

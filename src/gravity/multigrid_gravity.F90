@@ -1084,7 +1084,7 @@ contains
 
       use cg_level_coarsest,   only: coarsest
       use cg_level_connected,  only: cg_level_connected_T
-      use constants,           only: GEO_RPZ, O_I2, O_I4
+      use constants,           only: GEO_RPZ, O_I2, O_I4, BND_NEGREF
       use dataio_pub,          only: die
       use domain,              only: dom
       use multigridvars,       only: correction, multidim_code_3D, nsmool, grav_bnd, bnd_givenval
@@ -1105,7 +1105,7 @@ contains
          !> \todo Implement automatic convergence check on coarsest level (not very important when we have a FFT solver for coarsest level)
       else
          nsmoo = nsmool
-         if (soln == correction) call curl%coarser%prolong_q_1var(soln) ! make sure that prolongation is called only in ascending (coarse -> fine) part of V-cycle.
+         if (soln == correction) call curl%coarser%prolong_q_1var(soln, bnd_type = BND_NEGREF) ! make sure that prolongation is called only in ascending (coarse -> fine) part of V-cycle.
          !> \warning this may be incompatible with V-cycles other than Huang - Greengard
       endif
 

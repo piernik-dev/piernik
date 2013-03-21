@@ -522,7 +522,7 @@ contains
 
       if (do_permpi) call this%internal_boundaries_3d(ind)
 
-      call this%external_boundaries(ind, area_type, bnd_type)
+      call this%external_boundaries(ind, area_type = area_type, bnd_type = bnd_type)
 
    end subroutine level_3d_boundaries
 
