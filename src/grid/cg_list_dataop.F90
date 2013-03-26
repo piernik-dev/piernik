@@ -105,8 +105,7 @@ contains
       integer(kind=4), optional, intent(in)    :: dir     !< order the cell size in dir direction
 
 
-      type(grid_container),   pointer          :: cg_x => null()
-      type(grid_container),   pointer          :: cg => null()
+      type(grid_container),   pointer          :: cg_x
       type(cg_list_element),  pointer          :: cgl
       real, dimension(:,:,:), pointer          :: tab
       integer,                       parameter :: tag1 = 11, tag2 = tag1 + 1, tag3 = tag2 + 1
@@ -130,26 +129,26 @@ contains
             call warn(msg)
       end select
 
+      nullify(cg_x)
       if (associated(this%first)) then
          cgl => this%first
          if (ind > ubound(cgl%cg%q(:), dim=1) .or. ind < lbound(cgl%cg%q(:), dim=1)) call die("[cg_list_dataop:get_extremum] Wrong index")
          do while (associated(cgl))
-            cg => cgl%cg
 
-            tab => cg%q(ind)%span(cg%ijkse)
+            tab => cgl%cg%q(ind)%span(cgl%cg%ijkse)
             select case (minmax)
                case (MINL)
                   if (minval(tab) < prop%val) then
                      prop%val = minval(tab)
-                     prop%loc = minloc(tab) + cg%ijkse(:, LO) - 1
+                     prop%loc = minloc(tab) + cgl%cg%ijkse(:, LO) - 1
                      ! it isn't too much intiutive that minloc and maxloc return values as the array indexing start from 1, but here tab does so anyway
-                     cg_x => cg
+                     cg_x => cgl%cg
                   endif
                case (MAXL)
                   if (maxval(tab) > prop%val) then
                      prop%val = maxval(tab)
-                     prop%loc = maxloc(tab) + cg%ijkse(:, LO) - 1
-                     cg_x => cg
+                     prop%loc = maxloc(tab) + cgl%cg%ijkse(:, LO) - 1
+                     cg_x => cgl%cg
                   endif
             end select
             cgl => cgl%nxt
