@@ -884,6 +884,7 @@ contains
       use mergebox,       only: wmap
       use mpi,            only: MPI_INTEGER, MPI_INTEGER8
       use mpisetup,       only: FIRST, LAST, comm, mpi_err, proc
+      use tag_pool,       only: t_pool
 
       implicit none
 
@@ -897,7 +898,7 @@ contains
       integer(kind=8), dimension(xdim:zdim, LO:HI) :: seg, segp, seg2, segp2, segf
       integer(kind=8), dimension(xdim:zdim) :: per, ext_buf
       integer :: mpifc_cnt
-      integer(kind=4) :: tag
+      integer(kind=4) :: tag, tag_min, tag_max
       type :: fc_seg !< the absolutely minimal set of data that defines the communication consists of [ grid_id, tag, and, seg ]. The proc numbers are for convenience only.
          integer :: proc     ! it can be rewritten in a way that does not need this numbet to be explicitly stored, but it is easier to have it
          integer :: grid_id
@@ -945,7 +946,9 @@ contains
       per(:) = 0
       where (dom%periodic(:)) per(:) = coarse%n_d(:)
 
-      tag = 0
+      call t_pool%release(this%level_id)
+      call t_pool%get(this%level_id, tag_min, tag_max)
+      tag = tag_min
       mpifc_cnt = 0
       allocate(seglist(0))
       cgl => this%first
@@ -982,6 +985,10 @@ contains
                                           seg(:, LO) = max( seg(:, LO), coarse%pse(j)%c(b)%se(:, LO))
                                           seg(:, HI) = min( seg(:, HI), coarse%pse(j)%c(b)%se(:, HI)) ! this is what we want
                                           tag = tag + I_ONE
+                                          if (tag > tag_max) then
+                                             call t_pool%get(this%level_id, tag_min, tag_max)
+                                             tag = tag_min
+                                          endif
                                           if (tag<0) call die("[cg_level_connected:vertical_b_prep] tag overflow")
                                           segp (:, LO) = seg  (:, LO) - [ ix, iy, iz ] * per(:)
                                           segp (:, HI) = seg  (:, HI) - [ ix, iy, iz ] * per(:)

@@ -54,6 +54,7 @@ contains
       use interactions,       only: cleanup_interactions
       use mpisetup,           only: cleanup_mpi
       use sort_piece_list,    only: cleanup_piece_list
+      use tag_pool,           only: t_pool
       use timer,              only: cleanup_timers
       use user_hooks,         only: cleanup_problem
 #ifdef MULTIGRID
@@ -72,6 +73,7 @@ contains
       implicit none
 
       if (associated(cleanup_problem)) call cleanup_problem; call nextdot(.false.)
+      call t_pool%cleanup;         call nextdot(.false.)
       call cleanup_interactions;   call nextdot(.false.)
       call cleanup_dataio;         call nextdot(.false.)
 #ifdef RESISTIVE
