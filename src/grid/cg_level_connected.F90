@@ -36,7 +36,7 @@ module cg_level_connected
    implicit none
 
    private
-   public :: cg_level_connected_T
+   public :: cg_level_connected_T, base_level
 
    !! \brief A list of all cg of the same resolution with links to coarser and finer levels
    type, extends(cg_level_T) :: cg_level_connected_T
@@ -66,8 +66,11 @@ module cg_level_connected
       procedure :: vertical_b_prep                            !< Initialize prolongation targets for fine-coarse boundary exchange
       procedure, private :: vertical_bf_prep                  !< Initialize prolongation targets for fine->coarse flux exchange
       procedure :: sync_ru                                    !< Synchronize this%recently_changed and set flags for update requests
+      procedure :: free_all_cg                                !< Erase all data on the level, leave it empty
 
    end type cg_level_connected_T
+
+   type(cg_level_connected_T), pointer :: base_level !< The pointer to the base level. Do not use it unless referencing through base%level causes circular dependencies.
 
 contains
 
@@ -1302,5 +1305,35 @@ contains
       endif
 
    end subroutine sync_ru
+
+!> \brief Erase all data on the level, leave it empty
+
+   subroutine free_all_cg(this)
+
+      use cg_list,          only: cg_list_element
+      use grid_cont,        only: grid_container
+      use list_of_cg_lists, only: all_lists
+
+      implicit none
+
+      class(cg_level_connected_T), intent(inout) :: this
+
+      type(cg_list_element), pointer :: cgl, aux
+      type(grid_container),  pointer :: cg
+
+      if (allocated(this%pse)) deallocate(this%pse)        ! this%pse(:)%c should be deallocated automagically
+      if (allocated(this%patches)) deallocate(this%patches)! this%patches(:)%pse should be deallocated automagically
+
+      cgl => this%first
+      do while (associated(cgl))
+         aux => cgl
+         cgl => cgl%nxt
+         cg => aux%cg
+         call all_lists%forget(cg)
+      enddo
+      this%recently_changed = .true.
+      call this%sync_ru
+
+   end subroutine free_all_cg
 
 end module cg_level_connected

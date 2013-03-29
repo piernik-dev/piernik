@@ -35,7 +35,7 @@ module refinement
    implicit none
 
    private
-   public :: init_refinement, ref_flag, level_max, level_min, n_updAMR, allow_face_rstep, allow_corner_rstep, oop_thr
+   public :: init_refinement, ref_flag, level_max, level_min, n_updAMR, allow_face_rstep, allow_corner_rstep, oop_thr, emergency_fix
 
    type :: ref_flag
       logical :: refine   !> a request to refine
@@ -50,6 +50,8 @@ module refinement
    logical,         protected :: allow_face_rstep   !< Allows >1 refinement step across faces (do not use it for any physical problems)
    logical,         protected :: allow_corner_rstep !< Allows >1 refinement step across edges and corners (do not use it for any physical problems)
    real,            protected :: oop_thr            !< Maximum allowed ratio of Out-of-Place grid pieces (according to current ordering scheme)
+
+   logical :: emergency_fix !< set to .true. if you want to call update_refinement ASAP
 
    namelist /AMR/ level_min, level_max, n_updAMR, allow_face_rstep, allow_corner_rstep, oop_thr
 
@@ -140,6 +142,8 @@ contains
 
       ! Such large refinements may require additional work in I/O routines, visualization, computing MPI tags and so on.
       if (level_max > 40) call warn("[refinement:init_refinement] BEWARE: At such large refinements, integer overflows may happen under certain conditions.")
+
+      emergency_fix = .false.
 
    end subroutine init_refinement
 

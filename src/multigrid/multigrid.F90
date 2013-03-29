@@ -192,8 +192,7 @@ contains
 
       use cg_list,            only: cg_list_element
       use cg_level_coarsest,  only: coarsest
-      use cg_level_base,      only: base
-      use cg_level_connected, only: cg_level_connected_T
+      use cg_level_connected, only: cg_level_connected_T, base_level
       use cg_level_finest,    only: finest
       use constants,          only: PIERNIK_INIT_GRID, I_ONE, refinement_factor
       use dataio_pub,         only: printinfo, warn, die, code_progress, msg
@@ -223,8 +222,8 @@ contains
       endif
 
       do j = 0, level_incredible
-         if (any((mod(base%level%n_d(:), int(refinement_factor, kind=8)**(j+1)) /= 0 .or. base%level%n_d(:)/refinement_factor**(j+1) < minsize(:)) .and. dom%has_dir(:))) exit
-         if (any((mod(base%level%off(:), int(refinement_factor, kind=8)**(j+1)) /= 0 .and. dom%has_dir(:)))) exit
+         if (any((mod(base_level%n_d(:), int(refinement_factor, kind=8)**(j+1)) /= 0 .or. base_level%n_d(:)/refinement_factor**(j+1) < minsize(:)) .and. dom%has_dir(:))) exit
+         if (any((mod(base_level%off(:), int(refinement_factor, kind=8)**(j+1)) /= 0 .and. dom%has_dir(:)))) exit
       enddo
       if (level_max > j) then
          if (master) then
@@ -262,7 +261,7 @@ contains
       call init_multigrid_grav
 #endif /* GRAV */
 
-      curl => base%level%coarser
+      curl => base_level%coarser
       do while (associated(curl))
          if (master) then
             if (curl%level_id == -level_max .and. single_base) then

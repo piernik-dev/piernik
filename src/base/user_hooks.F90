@@ -35,7 +35,8 @@ module user_hooks
 
    private
    public :: problem_customize_solution, problem_grace_passed, finalize_problem, cleanup_problem, problem_refine_derefine, &
-        &    custom_emf_bnd, at_user_dims_settings, at_user_area_settings, problem_post_restart, user_vars_arr_in_restart
+        &    custom_emf_bnd, at_user_dims_settings, at_user_area_settings, problem_post_restart, user_vars_arr_in_restart, &
+        &    late_initial_conditions, problem_domain_update
 
    interface
 
@@ -67,13 +68,17 @@ module user_hooks
 
    end interface
 
-   procedure(logical_arg), pointer :: problem_customize_solution => NULL()
+   procedure(logical_arg), pointer :: problem_customize_solution => NULL() !< A routine that is called after each 3 sweeps. Intended to  enforce solution inside
+                                                                           !< computational domain (carefully!). Can be used to run checks for special events.
+   procedure(no_args),     pointer :: problem_domain_update      => NULL() !< A routine that is called at the beginning of time step. Intended to execute
+                                                                           !< domain reshaping (expansion, shrinking) if specified conditions are met.
+   procedure(no_args),     pointer :: late_initial_conditions    => NULL() !< When the domain is expanded, initialize new pieces of grid with this routine.
    procedure(no_args),     pointer :: problem_grace_passed       => NULL()
    procedure(no_args),     pointer :: user_vars_arr_in_restart   => NULL()
    procedure(no_args),     pointer :: problem_post_restart       => NULL()
-   procedure(no_args),     pointer :: finalize_problem           => NULL()
-   procedure(no_args),     pointer :: cleanup_problem            => NULL()
-   procedure(no_args),     pointer :: problem_refine_derefine    => NULL()
+   procedure(no_args),     pointer :: finalize_problem           => NULL() !< A routine called at the end of simulation before last output is written.
+   procedure(no_args),     pointer :: cleanup_problem            => NULL() !< A routine called at the end of run to deallocate arrays.
+   procedure(no_args),     pointer :: problem_refine_derefine    => NULL() !< Implementation of user refinement criteria.
    procedure(tab_args),    pointer :: custom_emf_bnd             => NULL()
    procedure(indx_args),   pointer :: at_user_dims_settings      => NULL()
    procedure(user_area),   pointer :: at_user_area_settings      => NULL()

@@ -383,13 +383,14 @@ contains
 
       type(cg_level_connected_T), pointer :: curl
       character(len=dsetnamelen) :: FFTn
+      logical, save :: firstcall = .true.
 
       if (coarsen_multipole /= 0) then
          coarsen_multipole = 0
          if (master) call warn("[multigrid_gravity:init_multigrid_grav] multipole coarsening temporarily disabled")
       endif
 
-      call leaves%set_q_value(qna%ind(sgp_n), 0.) !Initialize all the guardcells, even those which does not impact the solution
+      if (firstcall) call leaves%set_q_value(qna%ind(sgp_n), 0.) !Initialize all the guardcells, even those which does not impact the solution
 
       curl => coarsest%level
       do while (associated(curl))
@@ -460,7 +461,11 @@ contains
          trust_fft_solution = .false.
       endif
 
-      if (grav_bnd == bnd_isolated) call init_multipole
+      if (grav_bnd == bnd_isolated .and. firstcall) call init_multipole
+      firstcall = .false.
+
+      inner%valid = .false.
+      outer%valid = .false.
 
    end subroutine init_multigrid_grav
 

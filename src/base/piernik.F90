@@ -47,7 +47,7 @@ program piernik
    use refinement_update, only: update_refinement
    use timer,             only: time_left, set_timer, tmr_fu
    use timestep,          only: time_step
-   use user_hooks,        only: finalize_problem
+   use user_hooks,        only: finalize_problem, problem_domain_update
 #ifdef PERFMON
    use domain,            only: dom
    use timer,             only: timer_start, timer_stop
@@ -106,6 +106,7 @@ program piernik
    do while (t < tend .and. nstep < nend .and. .not.(end_sim)) ! main loop
 
       dump(:) = .false.
+      if (associated(problem_domain_update)) call problem_domain_update
 
       call all_cg%check_na
       !call all_cg%check_for_dirt

@@ -45,10 +45,11 @@ module list_of_cg_lists
    type all_cg_lists
       type(cg_list_pointer), dimension(:), allocatable :: entries
     contains
-      procedure :: print    !< Print all cg lists for diagnostic purposes
-      procedure :: register !< Reset (initialize) the given list and add it to the table if unique
-      procedure :: forget   !< Erase given cg from all known lists
-      procedure :: delete   !< Delete all lists
+      procedure :: print      !< Print all cg lists for diagnostic purposes
+      procedure :: register   !< Reset (initialize) the given list and add it to the table if unique
+      procedure :: unregister !< Remove given list
+      procedure :: forget     !< Erase given cg from all known lists
+      procedure :: delete     !< Delete all lists
    end type all_cg_lists
 
    type(all_cg_lists) :: all_lists
@@ -101,7 +102,7 @@ contains
       class(cg_list_T), target, intent(inout) :: cgl   !< a cg list to be created or reset
       character(len=*),         intent(in)    :: label !< name of the list
 
-      type(cg_list_pointer), dimension(:), allocatable :: new_lists
+      type(cg_list_pointer), dimension(:), allocatable :: new_list
       integer :: i
 
       call cgl%init_new(label)
@@ -113,14 +114,49 @@ contains
          do i = lbound(this%entries(:),dim=1), ubound(this%entries(:), dim=1)
             if (this%entries(i)%lp%label == label) return ! do not duplicate entries (e.g. leaves)
          enddo
-         allocate(new_lists(lbound(this%entries(:),dim=1):ubound(this%entries(:), dim=1) + 1))
-         new_lists(:ubound(this%entries(:), dim=1)) = this%entries(:)
-         call move_alloc(from=new_lists, to=this%entries)
+         allocate(new_list(lbound(this%entries(:),dim=1):ubound(this%entries(:), dim=1) + 1))
+         new_list(:ubound(this%entries(:), dim=1)) = this%entries(:)
+         call move_alloc(from=new_list, to=this%entries)
       endif
 
       this%entries(ubound(this%entries, dim=1))%lp => cgl
 
    end subroutine register
+
+!> \brief Remove given list
+
+   subroutine unregister(this, cgl)
+
+      use dataio_pub, only: die
+
+      implicit none
+
+      class(all_cg_lists),       intent(inout) :: this  !< object invoking type-bound procedure
+      class(cg_list_T), pointer, intent(inout) :: cgl   !< a cg list to be created or reset
+
+      type(cg_list_pointer), dimension(:), allocatable :: new_list
+      integer :: i, j
+      logical :: found
+
+      if (.not. allocated(this%entries)) call die("[list_of_cg_lists:unregister] Empty list")
+
+      allocate(new_list(lbound(this%entries(:),dim=1):ubound(this%entries(:), dim=1) - 1))
+      found = .false.
+      do i = lbound(this%entries(:),dim=1), ubound(this%entries(:), dim=1)
+         if (associated(cgl, this%entries(i)%lp)) then
+            if (found) call die("[list_of_cg_lists:unregister] Double occurence")
+            found = .true.
+         else
+            j = i
+            if (found) j = i - 1
+            new_list(j) = this%entries(i)
+         endif
+      enddo
+      call move_alloc(from=new_list, to=this%entries)
+
+      if (.not. found) call die("[list_of_cg_lists:unregister] No occurence")
+
+   end subroutine unregister
 
 !> \brief Erase given cg from all known lists
 

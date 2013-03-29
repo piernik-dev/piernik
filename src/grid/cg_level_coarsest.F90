@@ -65,7 +65,6 @@ contains
 
       class(cg_level_coarsest_T), intent(inout) :: this    !< object calling type-bound routine
 
-
       type(cg_level_connected_T), pointer       :: new_lev !< fresh refinement level to be added
 
       if (associated(this%level%coarser)) call die("[cg_level_coarsest:add_coarser] coarser level already exists")

@@ -79,13 +79,13 @@ module cg_level
    !<
    type, extends(cg_list_bnd_T) :: cg_level_T
 
-      integer(kind=4)                            :: level_id  !< level number (relative to base level). For printing, debug, and I/O use only. No arithmetic should depend on it.
-      integer(kind=8), dimension(ndims)          :: n_d       !< maximum number of grid cells in each direction (size of fully occupied level)
-      type(cuboids),   dimension(:), allocatable :: pse       !< lists of grid chunks on each process (FIRST:LAST); Use with care, because this is an antiparallel thing
-      integer                                    :: tot_se    !< global number of segments on the level
-      integer                                    :: fft_type  !< type of FFT to employ in some multigrid solvers (depending on boundaries)
-      type(box_T),     dimension(:), allocatable :: patches   !< list of patches that exist on the current level
-      integer(kind=8), dimension(ndims)          :: off       !< offset of the level
+      integer(kind=4)                            :: level_id         !< level number (relative to base level). No arithmetic should depend on it.
+      integer(kind=8), dimension(ndims)          :: n_d              !< maximum number of grid cells in each direction (size of fully occupied level)
+      type(cuboids),   dimension(:), allocatable :: pse              !< lists of grid chunks on each process (FIRST:LAST); Use with care, because this is an antiparallel thing
+      integer                                    :: tot_se           !< global number of segments on the level
+      integer                                    :: fft_type         !< type of FFT to employ in some multigrid solvers (depending on boundaries)
+      type(box_T),     dimension(:), allocatable :: patches          !< list of patches that exist on the current level
+      integer(kind=8), dimension(ndims)          :: off              !< offset of the level
       logical                                    :: recently_changed !< .true. when anything was added to or deleted from this level
 
     contains

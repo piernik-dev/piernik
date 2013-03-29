@@ -151,12 +151,11 @@ contains
       use cg_list,           only: cg_list_element
       use constants,         only: pi, xdim, ydim, zdim, pSUM, pMIN, pMAX
       use dataio_pub,        only: msg, die, warn, printinfo
-      use domain,            only: dom, is_multicg
+      use domain,            only: dom
       use fluidindex,        only: flind
       use fluidtypes,        only: component_fluid
       use func,              only: ekin, emag
       use global,            only: smalld, smallei, t
-      use grid_cont,         only: grid_container
       use mpisetup,          only: master, piernik_MPI_Allreduce
       use multigrid_gravity, only: multigrid_solve_grav
       use units,             only: newtong
@@ -179,7 +178,6 @@ contains
       real                            :: t_save
       real                            :: Msph
       type(cg_list_element),  pointer :: cgl
-      type(grid_container),   pointer :: cg
 
       fl => flind%ion
 
@@ -192,7 +190,7 @@ contains
       Msph = 0.
       cgl => leaves%first
       do while (associated(cgl))
-         cg => cgl%cg
+         associate (cg => cgl%cg)
 
          iC_cg = 0
          cg%b(:,    :, :, :) = 0.
@@ -239,6 +237,7 @@ contains
          iC = iC + iC_cg
          Msph = Msph + iC_cg * totME(1) * cg%dvol
 
+         end associate
          cgl => cgl%nxt
       enddo
 
@@ -248,9 +247,6 @@ contains
          write(msg,'(a,es13.7,a,i7,a)')"[initproblem:problem_initial_conditions] Starting with uniform sphere with M = ", Msph, " (", iC, " cells)"
          call printinfo(msg, .true.)
       endif
-
-      if (is_multicg) call die("[initproblem:problem_initial_conditions] multiple grid pieces per procesor not implemented yet") !nontrivial
-      cg => leaves%first%cg
 
       ! Find C - the level of enthalpy at which density vanishes
       iC = 1
@@ -263,19 +259,28 @@ contains
          t = iC * sqrt(tiny(1.0)) ! trick to allow solution extrapolation in multigrid_solve_grav
 
          call multigrid_solve_grav([fl%idn])
-         if (exp_speedup .and. Clim_old /= 0.) then ! extrapolate potential assuming exponential convergence (extremely risky)
-            if (abs(1. - Clim/Clim_old) < min(sqrt(epsC), 100.*epsC, 0.01)) then
-               cg%sgp = (cg%sgp*cg%hgpot - cg%gpot**2)/(cg%sgp + cg%hgpot - 2.*cg%gpot)
-               Ccomment = ' Exp warp'
-               Clast(:) = 0. ; Clim = 0.
-            else
-               Ccomment = ''
-            endif
-         endif
-         cg%hgpot = cg%gpot
-         cg%gpot  = cg%sgp
+         Cint = [ huge(1.), -huge(1.) ]
+         cgl => leaves%first
+         do while (associated(cgl))
+            associate (cg => cgl%cg)
 
-         Cint = [ minval(cg%sgp(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)), maxval(cg%sgp(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)) ] ! rotation will modify this
+            if (exp_speedup .and. Clim_old /= 0.) then ! extrapolate potential assuming exponential convergence (extremely risky)
+               if (abs(1. - Clim/Clim_old) < min(sqrt(epsC), 100.*epsC, 0.01)) then
+                  cg%sgp = (cg%sgp*cg%hgpot - cg%gpot**2)/(cg%sgp + cg%hgpot - 2.*cg%gpot)
+                  Ccomment = ' Exp warp'
+                  Clast(:) = 0. ; Clim = 0.
+               else
+                  Ccomment = ''
+               endif
+            endif
+            cg%hgpot = cg%gpot
+            cg%gpot  = cg%sgp
+
+            Cint = [ min(Cint(LOW),  minval(cg%sgp(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), mask=cg%leafmap)), &
+                 &   max(Cint(HIGH), maxval(cg%sgp(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), mask=cg%leafmap)) ] ! rotation will modify this
+            end associate
+            cgl => cgl%nxt
+         enddo
 
          call piernik_MPI_Allreduce (Cint(LOW),  pMIN)
          call piernik_MPI_Allreduce (Cint(HIGH), pMAX)
@@ -415,20 +420,29 @@ contains
       ! final touch
       t = t_save ! restore initial time
       call multigrid_solve_grav([fl%idn])
-      cg%gpot = cg%sgp
+      cgl => leaves%first
+      do while (associated(cgl))
+         associate (cg => cgl%cg)
+         cg%gpot = cg%sgp
 
-      where (cg%u(fl%idn, :, :, :) < smalld) cg%u(fl%idn, :, :, :) = smalld
-      cg%u(fl%imx, :, :, :) = clump_vel_x * cg%u(fl%idn,:,:,:)
-      cg%u(fl%imy, :, :, :) = clump_vel_y * cg%u(fl%idn,:,:,:)
-      cg%u(fl%imz, :, :, :) = clump_vel_z * cg%u(fl%idn,:,:,:)
-      do k = cg%ks, cg%ke
-         do j = cg%js, cg%je
-            do i = cg%is, cg%ie
-               cg%u(fl%ien,i,j,k) = max(smallei, presrho(cg%u(fl%idn, i, j, k)) / fl%gam_1                              + &
-                    &              ekin(cg%u(fl%imx,i,j,k), cg%u(fl%imy,i,j,k), cg%u(fl%imz,i,j,k), cg%u(fl%idn,i,j,k)) + &
-                    &              emag(cg%b(xdim,i,j,k), cg%b(ydim,i,j,k), cg%b(zdim,i,j,k)))
+         where (cg%u(fl%idn, :, :, :) < smalld) cg%u(fl%idn, :, :, :) = smalld
+         cg%u(fl%imx, :, :, :) = clump_vel_x * cg%u(fl%idn,:,:,:)
+         cg%u(fl%imy, :, :, :) = clump_vel_y * cg%u(fl%idn,:,:,:)
+         cg%u(fl%imz, :, :, :) = clump_vel_z * cg%u(fl%idn,:,:,:)
+         do k = cg%ks, cg%ke
+            do j = cg%js, cg%je
+               do i = cg%is, cg%ie
+                  cg%u(fl%ien,i,j,k) = max(smallei, presrho(cg%u(fl%idn, i, j, k)) / fl%gam_1                              + &
+                       &              ekin(cg%u(fl%imx,i,j,k), cg%u(fl%imy,i,j,k), cg%u(fl%imz,i,j,k), cg%u(fl%idn,i,j,k)) + &
+                       &              emag(cg%b(xdim,i,j,k), cg%b(ydim,i,j,k), cg%b(zdim,i,j,k)))
+               enddo
             enddo
          enddo
+
+         dmax = max(dmax, maxval(cg%u(fl%idn, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), mask=cg%leafmap))
+
+         end associate
+         cgl => cgl%nxt
       enddo
 
       if (master) then
@@ -473,9 +487,11 @@ contains
          do k = cg%ks, cg%ke
             do j = cg%js, cg%je
                do i = cg%is, cg%ie
-!               TWPcg(1) = TWPcg(1) + cg%u(flind%ion%idn, i, j, k) * 0.                !T, will be /= 0. for rotating clump
-                  TWPcg(2) = TWPcg(2) + cg%u(flind%ion%idn, i, j, k) * cg%sgp(i, j, k) * 0.5 !W
-                  TWPcg(3) = TWPcg(3) + presrho(cg%u(flind%ion%idn, i, j, k))             !P
+                  if (cg%leafmap(i, j, k)) then
+                     ! TWPcg(1) = TWPcg(1) + cg%u(flind%ion%idn, i, j, k) * 0.                !T, will be /= 0. for rotating clump
+                     TWPcg(2) = TWPcg(2) + cg%u(flind%ion%idn, i, j, k) * cg%sgp(i, j, k) * 0.5 !W
+                     TWPcg(3) = TWPcg(3) + presrho(cg%u(flind%ion%idn, i, j, k))             !P
+                  endif
                enddo
             enddo
          enddo
@@ -538,14 +554,16 @@ contains
          do k = cg%ks, cg%ke
             do j = cg%js, cg%je
                do i = cg%is, cg%ie
-                  select case (mode)
-                     case (REL_CALC)
-                        totMEcg = totMEcg + rhoH(h(C, cg%sgp(i,j,k)))
-                     case (REL_SET)
-                        rho = rhoH(h(C, cg%sgp(i,j,k)))
-                        cg%u(flind%ion%idn, i, j, k) = rho
-                        totMEcg = totME + rho
-                  end select
+                  if (cg%leafmap(i, j, k)) then
+                     select case (mode)
+                        case (REL_CALC)
+                           totMEcg = totMEcg + rhoH(h(C, cg%sgp(i,j,k)))
+                        case (REL_SET)
+                           rho = rhoH(h(C, cg%sgp(i,j,k)))
+                           cg%u(flind%ion%idn, i, j, k) = rho
+                           totMEcg = totMEcg + rho
+                     end select
+                  endif
                enddo
             enddo
          enddo

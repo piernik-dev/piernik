@@ -64,7 +64,7 @@ contains
       use grid_cont,          only: grid_container
       use list_of_cg_lists,   only: all_lists
       use mpisetup,           only: piernik_MPI_Allreduce!, proc
-      use refinement,         only: n_updAMR
+      use refinement,         only: n_updAMR, emergency_fix
       use user_hooks,         only: problem_refine_derefine
 #ifdef DEBUG_DUMPS
       use data_hdf5,    only: write_hdf5
@@ -87,7 +87,7 @@ contains
       call finest%level%restrict_to_base ! implies update of leafmap
 
       if (n_updAMR <= 0) return
-      if (mod(nstep, n_updAMR) /= 0) return
+      if (mod(nstep, n_updAMR) /= 0 .and. .not. emergency_fix) return
 
       call all_cg%prevent_prolong
       call all_cg%set_is_old
@@ -252,6 +252,8 @@ contains
 #ifdef DEBUG_DUMPS
       call write_hdf5
 #endif /* DEBUG_DUMPS */
+
+      emergency_fix = .false.
 
    end subroutine update_refinement
 

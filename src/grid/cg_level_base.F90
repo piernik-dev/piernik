@@ -54,10 +54,11 @@ contains
 
    subroutine set(this, n_d)
 
-      use constants,        only: base_level_id, ndims
-      use dataio_pub,       only: die
-      use domain,           only: dom
-      use list_of_cg_lists, only: all_lists
+      use constants,          only: base_level_id, ndims
+      use dataio_pub,         only: die
+      use domain,             only: dom
+      use list_of_cg_lists,   only: all_lists
+      use cg_level_connected, only: base_level
 
       implicit none
 
@@ -84,6 +85,8 @@ contains
          this%level%n_d(:) = 1
          this%level%off(:) = 0
       endwhere
+
+      base_level => this%level
       call all_lists%register(this%level, "Base level")
 
    end subroutine set
