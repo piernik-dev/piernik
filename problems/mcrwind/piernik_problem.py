@@ -65,3 +65,4 @@ for field in PF1.h.field_list:
 figure(1, (8,6))
 draw()
 savefig('diff.png')
+savefig('diff_bare.png')
