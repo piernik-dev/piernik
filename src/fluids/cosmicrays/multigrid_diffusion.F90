@@ -724,7 +724,7 @@ contains
 
       use cg_level_coarsest,  only: coarsest
       use cg_level_connected, only: cg_level_connected_T
-      use constants,          only: xdim, ydim, zdim, one, half, ndims, BND_NONE, LO
+      use constants,          only: xdim, ydim, zdim, one, half, ndims, LO
       use domain,             only: dom
       use cg_list,            only: cg_list_element
       use global,             only: dt
@@ -755,11 +755,7 @@ contains
       endif
 
       do n = 1, RED_BLACK*nsmoo
-         if (mod(n,2) == 1) then
-            call curl%arr3d_boundaries(soln, bnd_type = diff_extbnd)
-         else
-            call curl%arr3d_boundaries(soln, bnd_type = BND_NONE)
-         endif
+         call curl%arr3d_boundaries(soln, bnd_type = diff_extbnd)
 
          cgl => curl%first
          do while (associated(cgl))
