@@ -664,7 +664,7 @@ contains
       dmp = ((.not.(dmp)) .and. (output == FINAL)) !! dmp==.true. means that this dump is already done due to another conditions and is stopped by dmp=.not.(dmp); important only for FINAL output
       dmp = (dmp .or. (t-last_dump_time) >= dt_dump)
       dmp = (dmp .and. dt_dump > 0.0)
-      if (dmp) last_dump_time = last_dump_time + real(floor((t-last_dump_time)/dt_dump))*dt_dump
+      if (dmp) last_dump_time = t - mod(t-last_dump_time, dt_dump)
       dmp = (dmp .or. output == dumptype)
 
    end subroutine determine_dump
