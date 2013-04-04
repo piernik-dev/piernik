@@ -41,10 +41,11 @@ contains
 
    subroutine scan_for_refinements
 
-      use cg_level_connected, only: cg_level_connected_T
-      use cg_level_finest,    only: finest
-      use cg_list_global,     only: all_cg
-      use user_hooks,         only: problem_refine_derefine
+      use cg_level_connected,    only: cg_level_connected_T
+      use cg_level_finest,       only: finest
+      use cg_list_global,        only: all_cg
+      use refinement_primitives, only: mark_all_primitives
+      use user_hooks,            only: problem_refine_derefine
 
       implicit none
 
@@ -56,7 +57,10 @@ contains
          curl => curl%coarser
       enddo
       call all_cg%clear_ref_flags
-      if (associated(problem_refine_derefine)) call problem_refine_derefine
+
+      if (associated(problem_refine_derefine)) call problem_refine_derefine ! call user routine first, so it cannot alter flags set by automatic routines
+      ! call mark_shocks !> \todo implement automatic refinement criteria
+      call mark_all_primitives
 
    end subroutine scan_for_refinements
 

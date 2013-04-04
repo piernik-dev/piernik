@@ -32,15 +32,18 @@
 
 module refinement
 
+   use constants, only: ndims
+
    implicit none
 
    private
-   public :: init_refinement, ref_flag, level_max, level_min, n_updAMR, allow_face_rstep, allow_corner_rstep, oop_thr, emergency_fix
+   public :: level_max, level_min, n_updAMR, allow_face_rstep, allow_corner_rstep, oop_thr, refine_points, refine_boxes, &
+        &    init_refinement, ref_flag, emergency_fix
 
    type :: ref_flag
       logical :: refine   !> a request to refine
       logical :: derefine !> a request to derefine
-   contains
+    contains
       procedure :: sanitize
    end type ref_flag
 
@@ -51,9 +54,23 @@ module refinement
    logical,         protected :: allow_corner_rstep !< Allows >1 refinement step across edges and corners (do not use it for any physical problems)
    real,            protected :: oop_thr            !< Maximum allowed ratio of Out-of-Place grid pieces (according to current ordering scheme)
 
+   ! some refinement primitives
+   integer, parameter :: nshapes = 10
+   type :: ref_point
+      integer                :: level
+      real, dimension(ndims) :: coords
+   end type ref_point
+   type(ref_point), dimension(nshapes), protected :: refine_points
+   type :: ref_box
+      integer                :: level
+      real, dimension(ndims) :: lcoords
+      real, dimension(ndims) :: hcoords
+   end type ref_box
+   type(ref_box), dimension(nshapes), protected :: refine_boxes
+
    logical :: emergency_fix !< set to .true. if you want to call update_refinement ASAP
 
-   namelist /AMR/ level_min, level_max, n_updAMR, allow_face_rstep, allow_corner_rstep, oop_thr
+   namelist /AMR/ level_min, level_max, n_updAMR, allow_face_rstep, allow_corner_rstep, oop_thr, refine_points, refine_boxes
 
 contains
 
@@ -61,7 +78,7 @@ contains
 
    subroutine init_refinement
 
-      use constants,  only: base_level_id, PIERNIK_INIT_DOMAIN, xdim, zdim, I_ONE
+      use constants,  only: base_level_id, PIERNIK_INIT_DOMAIN, xdim, ydim, zdim, I_ONE
       use dataio_pub, only: nh      ! QA_WARN required for diff_nml
       use dataio_pub, only: die, code_progress, warn
       use domain,     only: AMR_bsize, dom
@@ -94,7 +111,10 @@ contains
             endif
          endif
       enddo
+      refine_points(:) = ref_point(base_level_id-1, [ 0., 0., 0.] )
+      refine_boxes (:) = ref_box  (base_level_id-1, [ 0., 0., 0.], [ 0., 0., 0.] )
 
+      if (1 + 9*nshapes > ubound(rbuff, dim=1)) call die("[refinement:init_refinement] increase rbuff size") ! should be detected at compile time but it is only a warning
       if (master) then
 
          diff_nml(AMR)
@@ -112,29 +132,52 @@ contains
          ibuff(1) = level_min
          ibuff(2) = level_max
          ibuff(3) = n_updAMR
+         ibuff(4        :3+  nshapes) = refine_points(:)%level
+         ibuff(4+nshapes:3+2*nshapes) = refine_boxes (:)%level
 
          lbuff(1) = allow_face_rstep
          lbuff(2) = allow_corner_rstep
          lbuff(3) = allow_AMR
 
          rbuff(1) = oop_thr
+         rbuff(2          :1+  nshapes) = refine_points(:)%coords(xdim)
+         rbuff(2+  nshapes:1+2*nshapes) = refine_points(:)%coords(ydim)
+         rbuff(2+2*nshapes:1+3*nshapes) = refine_points(:)%coords(zdim)
+         rbuff(2+3*nshapes:1+4*nshapes) = refine_boxes (:)%lcoords(xdim)
+         rbuff(2+4*nshapes:1+5*nshapes) = refine_boxes (:)%hcoords(xdim)
+         rbuff(2+5*nshapes:1+6*nshapes) = refine_boxes (:)%lcoords(ydim)
+         rbuff(2+6*nshapes:1+7*nshapes) = refine_boxes (:)%hcoords(ydim)
+         rbuff(2+7*nshapes:1+8*nshapes) = refine_boxes (:)%lcoords(zdim)
+         rbuff(2+8*nshapes:1+9*nshapes) = refine_boxes (:)%hcoords(zdim)
 
       endif
 
       call piernik_MPI_Bcast(ibuff)
       call piernik_MPI_Bcast(lbuff)
+      call piernik_MPI_Bcast(rbuff)
 
       if (slave) then
 
          level_min = ibuff(1)
          level_max = ibuff(2)
          n_updAMR  = ibuff(3)
+         refine_points(:)%level = ibuff(4        :3+  nshapes)
+         refine_boxes (:)%level = ibuff(4+nshapes:3+2*nshapes)
 
          allow_face_rstep   = lbuff(1)
          allow_corner_rstep = lbuff(2)
          allow_AMR          = lbuff(3)
 
          oop_thr = rbuff(1)
+         refine_points(:)%coords(xdim)  = rbuff(2          :1+  nshapes)
+         refine_points(:)%coords(ydim)  = rbuff(2+  nshapes:1+2*nshapes)
+         refine_points(:)%coords(zdim)  = rbuff(2+2*nshapes:1+3*nshapes)
+         refine_boxes (:)%lcoords(xdim) = rbuff(2+3*nshapes:1+4*nshapes)
+         refine_boxes (:)%hcoords(xdim) = rbuff(2+4*nshapes:1+5*nshapes)
+         refine_boxes (:)%lcoords(ydim) = rbuff(2+5*nshapes:1+6*nshapes)
+         refine_boxes (:)%hcoords(ydim) = rbuff(2+6*nshapes:1+7*nshapes)
+         refine_boxes (:)%lcoords(zdim) = rbuff(2+7*nshapes:1+8*nshapes)
+         refine_boxes (:)%hcoords(zdim) = rbuff(2+8*nshapes:1+9*nshapes)
 
       endif
 
