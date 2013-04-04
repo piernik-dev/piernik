@@ -39,6 +39,27 @@ module refinement_update
 
 contains
 
+   subroutine scan_for_refinements
+
+      use cg_level_connected, only: cg_level_connected_T
+      use cg_level_finest,    only: finest
+      use cg_list_global,     only: all_cg
+      use user_hooks,         only: problem_refine_derefine
+
+      implicit none
+
+      type(cg_level_connected_T), pointer :: curl
+
+      curl => finest%level
+      do while (associated(curl))
+         if (allocated(curl%patches)) deallocate(curl%patches)
+         curl => curl%coarser
+      enddo
+      call all_cg%clear_ref_flags
+      if (associated(problem_refine_derefine)) call problem_refine_derefine
+
+   end subroutine scan_for_refinements
+
 !>
 !! \brief Update the refinement topology
 !!
@@ -65,7 +86,6 @@ contains
       use list_of_cg_lists,   only: all_lists
       use mpisetup,           only: piernik_MPI_Allreduce!, proc
       use refinement,         only: n_updAMR, emergency_fix
-      use user_hooks,         only: problem_refine_derefine
 #ifdef DEBUG_DUMPS
       use data_hdf5,    only: write_hdf5
 #endif /* DEBUG_DUMPS */
@@ -97,13 +117,7 @@ contains
          curl => curl%coarser
       enddo
 
-      curl => finest%level
-      do while (associated(curl))
-         if (allocated(curl%patches)) deallocate(curl%patches)
-         curl => curl%coarser
-      enddo
-      call all_cg%clear_ref_flags
-      if (associated(problem_refine_derefine)) call problem_refine_derefine
+      call scan_for_refinements
 
       ! do the refinements first
       curl => base%level
@@ -200,14 +214,7 @@ contains
       enddo
 
       ! Now try to derefine any excess of refinement
-
-      curl => finest%level
-      do while (associated(curl))
-         if (allocated(curl%patches)) deallocate(curl%patches)
-         curl => curl%coarser
-      enddo
-      call all_cg%clear_ref_flags
-      if (associated(problem_refine_derefine)) call problem_refine_derefine
+      call scan_for_refinements
       call fix_refinement(correct)
       if (.not. correct) call die("[refinement_update:update_refinement] Refinement defects still present")
 
