@@ -236,6 +236,7 @@ module grid_cont
       logical :: ignore_prolongation                             !< When .true. do not upgrade interior with incoming prolonged values
       logical :: is_old                                          !< .true. if a given grid existed prior to  upgrade_refinement call
       logical :: processed                                       !< for use in sweeps.F90
+      logical :: has_previous_timestep                           !< used to prevent timestep retries on freshly created blocks
 
    contains
 
@@ -459,6 +460,7 @@ contains
       this%refine_flags = ref_flag(.false., .false.)
       this%ignore_prolongation = .false.
       this%is_old = .false.
+      this%has_previous_timestep = .false.
 
       do i = LO, HI
          call this%finebnd  (xdim, i)%fainit([ this%js, this%je ], [ this%ks, this%ke ])

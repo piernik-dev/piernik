@@ -194,8 +194,7 @@ contains
 
    subroutine all_fluid_boundaries
 
-      use cg_level_base,      only: base
-      use cg_level_connected, only: cg_level_connected_T
+      use cg_level_connected, only: cg_level_connected_T, base_level
 !      use cg_level_finest,    only: finest
       use cg_list,            only: cg_list_element
       use constants,          only: xdim, zdim
@@ -208,7 +207,7 @@ contains
       type(cg_list_element), pointer :: cgl
       integer(kind=4)                :: dir
 
-      curl => base%level
+      curl => base_level
 
 !      call finest%level%restrict_to_base
 

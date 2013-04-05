@@ -42,6 +42,8 @@ module initproblem
    real               :: d0, p0, bx0, by0, bz0, x0, y0, z0, r0, beta_cr, amp_cr
    character(len=dsetnamelen), parameter :: aecr1_n = "aecr"
 
+   integer, parameter :: icr = 1 !< Only first CR component is used in this test
+
    namelist /PROBLEM_CONTROL/ d0, p0, bx0, by0, bz0, x0, y0, z0, r0, beta_cr, amp_cr, norm_step
 
 contains
@@ -157,7 +159,6 @@ contains
 
       class(component_fluid), pointer :: fl
       integer                         :: i, j, k, iecr
-      integer, parameter              :: icr = 1 !< Only first CR component
       real                            :: cs_iso, r2
       type(cg_list_element),  pointer :: cgl
       type(grid_container),   pointer :: cg

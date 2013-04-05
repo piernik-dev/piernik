@@ -106,7 +106,10 @@ program piernik
    do while (t < tend .and. nstep < nend .and. .not.(end_sim)) ! main loop
 
       dump(:) = .false.
-      if (associated(problem_domain_update)) call problem_domain_update
+      if (associated(problem_domain_update)) then
+         call problem_domain_update
+         call update_refinement
+      endif
 
       call all_cg%check_na
       !call all_cg%check_for_dirt

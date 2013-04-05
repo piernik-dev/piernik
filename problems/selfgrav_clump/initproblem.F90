@@ -37,7 +37,7 @@ module initproblem
    private
    public :: read_problem_par, problem_initial_conditions, problem_pointers
 
-   real                   :: clump_mass, clump_vel_x, clump_vel_y, clump_vel_z, clump_K, clump_r, epsC, epsM
+   real                   :: clump_mass, clump_vel_x, clump_vel_y, clump_vel_z, clump_K, clump_r, epsC, epsM, dmax
    real, dimension(ndims) :: clump_pos
    logical                :: crashNotConv, exp_speedup, verbose
    integer(kind=4)        :: maxitC, maxitM
@@ -136,6 +136,8 @@ contains
 
       clump_pos(:) = dom%C_(:)
       clump_r = max(clump_r, maxval(dom%L_(:)/dom%n_d(:), mask=dom%has_dir(:)))
+
+      dmax = 0.
 
    end subroutine read_problem_par
 
@@ -448,6 +450,8 @@ contains
       if (master) then
          write(msg, '(a,g13.7)')"[initproblem:problem_initial_conditions] Relaxation finished. Largest orbital period: ",2.*pi*sqrt( (minval(dom%L_(:))/2.)**3/(newtong * clump_mass) )
          call printinfo(msg, .true.)
+         write(msg, '(a,g13.7)')"[initproblem:problem_initial_conditions] Peak density ", dmax
+         call printinfo(msg)
       endif
 
    end subroutine problem_initial_conditions

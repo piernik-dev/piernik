@@ -105,8 +105,8 @@ module cg_level
       procedure, private :: add_patch_one_piece               !< Add a patch with only one grid piece
       procedure, private :: expand_list                       !< Expand the patch list by one
       procedure, private :: balance_new                       !< Routine for moving proposed grids between processes
-      procedure          :: balance_old                       !< Routine for moving existing grids between processes
-
+      procedure          :: balance_old                       !< Routine for measuring disorder level in distribution of grids across processes
+      procedure, private :: reshuffle                         !< Routine for moving existing grids between processes
    end type cg_level_T
 
 contains
@@ -939,16 +939,24 @@ contains
             from(p+1) = int(max(0, i - cnt_existing(p)), kind=4)
          enddo
          i = size(gp%list) - sum(from(FIRST+1:LAST+1))
-         if (i<0) call die("[cg_level:balance_new] i<0")
          p = LAST
-         do while (p >= FIRST .and. i > 0)
-            !> \deprecated this approach may result in building a small imbalance in favour of process with low id.
-            if (cnt_existing(p) <= s) then
-               from(p+1) = from(p+1) + I_ONE
-               i = i - 1
+         do while (p >= FIRST .and. i /= 0)
+            if (i<0) then
+               if (from(p+1)>0) then
+                  from(p+1) = from(p+1) - I_ONE
+                  i = i + 1
+               endif
+            else if (i>0) then
+               !> \deprecated this approach may result in building a small imbalance in favour of process with low id.
+               if (cnt_existing(p) <= s) then
+                  from(p+1) = from(p+1) + I_ONE
+                  i = i - 1
+               endif
             endif
             p = p - I_ONE
          enddo
+         i = size(gp%list) - sum(from(FIRST+1:LAST+1))
+         if (i /= 0) call die("[cg_level:balance_new] i /= 0")
          do p = FIRST, LAST
             from(p+1) = from(p+1) + from(p)
          enddo
@@ -1000,21 +1008,15 @@ contains
 
    end subroutine balance_new
 
-!> \brief Routine for moving existing grids between processes
+!> \brief Routine for measuring disorder level in distribution of grids across processes
 
 !#define DEBUG
    subroutine balance_old(this)
 
-      use grid_container_ext, only: cg_extptrs
       use cg_list,            only: cg_list_element
-      use cg_list_global,     only: all_cg
-      use constants,          only: ndims, LO, HI, I_ONE, xdim, ydim, zdim, pMAX
-      use dataio_pub,         only: warn, msg, die, printinfo
-      use grid_cont,          only: grid_container
-      use list_of_cg_lists,   only: all_lists
-      use mpi,                only: MPI_DOUBLE_PRECISION
-      use mpisetup,           only: master, FIRST, LAST, nproc, piernik_MPI_Bcast, piernik_MPI_Allreduce, proc, comm, mpi_err, req, status, inflate_req
-      use named_array_list,   only: qna, wna
+      use constants,          only: ndims, LO, HI, I_ONE
+      use dataio_pub,         only: warn, msg, printinfo
+      use mpisetup,           only: master, FIRST, LAST, nproc, piernik_MPI_Bcast
       use refinement,         only: oop_thr
       use sort_piece_list,    only: grid_piece_list
 #ifdef DEBUG
@@ -1028,26 +1030,13 @@ contains
       integer(kind=4), dimension(FIRST:LAST) :: cnt_existing
       type(grid_piece_list) :: gp
       type(cg_list_element), pointer :: cgl
-      integer :: s, n_gid, totfld, nr
+      integer :: s
       integer(kind=4) :: i, p
       integer(kind=8), dimension(:,:), allocatable :: gptemp
-      integer(kind=8), dimension(ndims, LO:HI) :: se
-      logical :: found
-      type(grid_container),  pointer :: cg
-      integer(kind=4), dimension(:,:), pointer :: mpistatus
-      type :: cglep
-         type(cg_list_element), pointer :: p
-         real, dimension(:,:,:,:), allocatable :: tbuf
-      end type cglep
-      type(cglep), allocatable, dimension(:) :: cglepa
-      logical, parameter :: only_vital = .false. ! set to true to minimize the amount of data to be transferred, may result in improper calculation of error in maclaurin test
-      !> \todo measure how much it costs in reality
       enum, bind(C)
          enumerator :: I_OFF
          enumerator :: I_N_B = I_OFF + ndims
          enumerator :: I_GID = I_N_B + ndims
-         enumerator :: I_C_P = I_GID + I_ONE
-         enumerator :: I_D_P = I_C_P + I_ONE
       end enum
 #ifdef DEBUG
       integer(kind=4), parameter :: tag_gpt = 1
@@ -1126,152 +1115,201 @@ contains
             if (s/real(size(gp%list)) > oop_thr) then
                write(msg,'(a,i3,2(a,i6),a,100i5)')"[cg_level:balance_old] ^", this%level_id," Reshuffling OutOfPlace grids:",s, "/",size(gp%list),"|",cnt_existing
                call printinfo(msg)
+            else
+               s = 0
             endif
          endif
       endif
 
       call piernik_MPI_Bcast(s)
-      if (s>0) then ! do global reshuffling
-
-         totfld = 0
-         cgl => this%first
-         if (associated(cgl)) then
-            do p = lbound(wna%lst, dim=1, kind=4), ubound(wna%lst, dim=1, kind=4)
-               if ((.not. only_vital .or. wna%lst(p)%vital) .and. associated(cgl%cg%w(p)%arr)) then
-                  ! associated(cgl%cg%w(p)%arr)) .eqv. (this%level_id >= base_level_id) .or. wna%lst(p)%multigrid ?
-                  totfld = totfld + wna%lst(p)%dim4
-               endif
-            enddo
-            do p = lbound(qna%lst, dim=1, kind=4), ubound(qna%lst, dim=1, kind=4)
-               if ((.not. only_vital .or. qna%lst(p)%vital) .and. associated(cgl%cg%q(p)%arr)) then
-                  totfld = totfld + 1
-               endif
-            enddo
-         endif
-         call piernik_MPI_Allreduce(totfld, pMAX)
-         ! communicate gp%list
-         if (master) s = count(gp%list(:)%cur_proc /= gp%list(:)%dest_proc)
-         call piernik_MPI_Bcast(s)
-         allocate(gptemp(I_OFF:I_D_P, s))
-         if (master) then
-            p = 0
-            do i = lbound(gp%list, dim=1, kind=4), ubound(gp%list, dim=1, kind=4)
-               if (gp%list(i)%cur_proc /= gp%list(i)%dest_proc) then
-                  p = p + I_ONE
-                  gptemp(:, p) = [ gp%list(i)%off, int( [ gp%list(i)%n_b, gp%list(i)%cur_gid, gp%list(i)%cur_proc, gp%list(i)%dest_proc ], kind=8) ]
-               endif
-            enddo
-         endif
-         call piernik_MPI_Bcast(gptemp)
-
-         !> \deprecated partially copied code from init_all_new_cg
-         ! Irecv & Isend
-         nr = 0
-         allocate(cglepa(size(gptemp)))
-         do i = lbound(gptemp, dim=2, kind=4), ubound(gptemp, dim=2, kind=4)
-            cglepa(i)%p => null()
-            if (gptemp(I_C_P, i) == gptemp(I_D_P, i)) call die("[cg_level:balance_old] can not send to self")
-            if (gptemp(I_C_P, i) == proc) then ! send
-               found = .false.
-               cgl => this%first
-               do while (associated(cgl))
-                  if (cgl%cg%grid_id == gptemp(I_GID,i)) then
-                     found = .true.
-                     cglepa(i)%p => cgl
-                     allocate(cglepa(i)%tbuf(totfld, cgl%cg%n_b(xdim), cgl%cg%n_b(ydim), cgl%cg%n_b(zdim)))
-                     s = lbound(cglepa(i)%tbuf, dim=1)
-                     do p = lbound(wna%lst, dim=1, kind=4), ubound(wna%lst, dim=1, kind=4)
-                        if ((.not. only_vital .or. wna%lst(p)%vital) .and. associated(cgl%cg%w(p)%arr)) then ! not associated for multigrid coarse levels
-                           cglepa(i)%tbuf(s:s+wna%lst(p)%dim4-1, :, :, :) = cgl%cg%w(p)%arr(:, cgl%cg%is:cgl%cg%ie, cgl%cg%js:cgl%cg%je, cgl%cg%ks:cgl%cg%ke)
-                           s = s + wna%lst(p)%dim4
-                        endif
-                     enddo
-                     do p = lbound(qna%lst, dim=1, kind=4), ubound(qna%lst, dim=1, kind=4)
-                        if ((.not. only_vital .or. qna%lst(p)%vital) .and. associated(cgl%cg%q(p)%arr)) then
-                           cglepa(i)%tbuf(s, :, :, :) = cgl%cg%q(p)%arr(cgl%cg%is:cgl%cg%ie, cgl%cg%js:cgl%cg%je, cgl%cg%ks:cgl%cg%ke)
-                           s = s + 1
-                        endif
-                     enddo
-                     exit
-                  endif
-                  cgl => cgl%nxt
-               enddo
-               if (.not. found) call die("[cg_level:balance_old] Grid id not found")
-               nr = nr + 1
-               if (nr > size(req, dim=1)) call inflate_req
-               call MPI_Isend(cglepa(i)%tbuf, size(cglepa(i)%tbuf), MPI_DOUBLE_PRECISION, gptemp(I_D_P, i), i, comm, req(nr), mpi_err)
-            endif
-            if (gptemp(I_D_P, i) == proc) then ! receive
-               n_gid = 1
-               if (associated(this%last)) n_gid = this%last%cg%grid_id + 1
-               se(:, LO) = gptemp(I_OFF:I_OFF+zdim-1, i)
-               se(:, HI) = gptemp(I_OFF:I_OFF+zdim-1, i) + gptemp(I_N_B:I_N_B+zdim-1, i) - 1
-               this%recently_changed = .true.
-               call this%add
-               cglepa(i)%p => this%last
-               cgl => cglepa(i)%p
-               call this%last%cg%init(this%n_d, this%off, se, n_gid, this%level_id) ! we cannot pass "this" as an argument because of circular dependencies
-               allocate(cglepa(i)%tbuf(totfld, cgl%cg%n_b(xdim), cgl%cg%n_b(ydim), cgl%cg%n_b(zdim)))
-               do p = lbound(cg_extptrs%ext, dim=1, kind=4), ubound(cg_extptrs%ext, dim=1, kind=4)
-                  if (associated(cg_extptrs%ext(p)%init))  call cg_extptrs%ext(p)%init(this%last%cg)
-               enddo
-               call all_cg%add(this%last%cg)
-               nr = nr + 1
-               if (nr > size(req, dim=1)) call inflate_req
-               call MPI_Irecv(cglepa(i)%tbuf, size(cglepa(i)%tbuf), MPI_DOUBLE_PRECISION, gptemp(I_C_P, i), i, comm, req(nr), mpi_err)
-            endif
-         enddo
-
-         if (nr > 0) then
-            mpistatus => status(:, :nr)
-            call MPI_Waitall(nr, req(:nr), mpistatus, mpi_err)
-         endif
-         do i = lbound(gptemp, dim=2, kind=4), ubound(gptemp, dim=2, kind=4)
-            cgl => cglepa(i)%p
-            if (gptemp(I_C_P, i) == proc) then ! cleanup
-               deallocate(cglepa(i)%tbuf)
-               cg => cgl%cg
-               call all_lists%forget(cg)
-               this%recently_changed = .true.
-            endif
-            if (gptemp(I_D_P, i) == proc) then ! copy received
-               s = lbound(cglepa(i)%tbuf, dim=1)
-               do p = lbound(wna%lst, dim=1, kind=4), ubound(wna%lst, dim=1, kind=4)
-                  if ((.not. only_vital .or. wna%lst(p)%vital) .and. associated(cgl%cg%w(p)%arr)) then
-                     cgl%cg%w(p)%arr(:, cgl%cg%is:cgl%cg%ie, cgl%cg%js:cgl%cg%je, cgl%cg%ks:cgl%cg%ke) = cglepa(i)%tbuf(s:s+wna%lst(p)%dim4-1, :, :, :)
-                     s = s + wna%lst(p)%dim4
-                  endif
-               enddo
-               do p = lbound(qna%lst, dim=1, kind=4), ubound(qna%lst, dim=1, kind=4)
-                  if ((.not. only_vital .or. qna%lst(p)%vital) .and. associated(cgl%cg%q(p)%arr)) then
-                     cgl%cg%q(p)%arr(cgl%cg%is:cgl%cg%ie, cgl%cg%js:cgl%cg%je, cgl%cg%ks:cgl%cg%ke) = cglepa(i)%tbuf(s, :, :, :)
-                     s = s + 1
-                  endif
-               enddo
-               deallocate(cglepa(i)%tbuf)
-            endif
-         enddo
-         deallocate(cglepa)
-
-         s = 0
-         cgl => this%first
-         do while (associated(cgl))
-            s = s + 1
-            cgl%cg%grid_id = s
-            cgl => cgl%nxt
-         enddo
-
-         call this%update_pse
-         call this%mpi_bnd_types ! require access to whole this%pse(:)%c(:)%se(:,:)
-         call this%update_req    ! Perhaps this%mpi_bnd_types added some new entries
-         call this%update_tot_se
-         call this%print_segments
-
-         deallocate(gptemp)
-      endif
+      if (s>0) call this%reshuffle(gp)
 
       if (master) call gp%cleanup
 
    end subroutine balance_old
+
+!> \brief for moving existing grids between processes
+
+   subroutine reshuffle(this, gp)
+
+      use grid_container_ext, only: cg_extptrs
+      use cg_list,            only: cg_list_element
+      use cg_list_global,     only: all_cg
+      use constants,          only: ndims, LO, HI, I_ONE, xdim, ydim, zdim, pMAX
+      use dataio_pub,         only: die
+      use domain,             only: dom
+      use grid_cont,          only: grid_container
+      use list_of_cg_lists,   only: all_lists
+      use mpi,                only: MPI_DOUBLE_PRECISION
+      use mpisetup,           only: master, piernik_MPI_Bcast, piernik_MPI_Allreduce, proc, comm, mpi_err, req, status, inflate_req
+      use named_array_list,   only: qna, wna
+      use sort_piece_list,    only: grid_piece_list
+
+      implicit none
+
+      class(cg_level_T),     intent(inout) :: this
+      type(grid_piece_list), intent(in)    :: gp
+
+      type(cg_list_element), pointer :: cgl
+      integer :: s, n_gid, totfld, nr
+      integer(kind=4) :: i, p
+      integer(kind=8), dimension(:,:), allocatable :: gptemp
+      integer(kind=8), dimension(ndims, LO:HI) :: se
+      logical :: found
+      type(grid_container),  pointer :: cg
+      integer(kind=4), dimension(:,:), pointer :: mpistatus
+      type :: cglep
+         type(cg_list_element), pointer :: p
+         real, dimension(:,:,:,:), allocatable :: tbuf
+      end type cglep
+      type(cglep), allocatable, dimension(:) :: cglepa
+      logical, parameter :: only_vital = .false. ! set to true to minimize the amount of data to be transferred, may result in improper calculation of error in maclaurin test
+      !> \todo measure how much it costs in reality
+      enum, bind(C)
+         enumerator :: I_OFF
+         enumerator :: I_N_B = I_OFF + ndims
+         enumerator :: I_GID = I_N_B + ndims
+         enumerator :: I_C_P = I_GID + I_ONE
+         enumerator :: I_D_P = I_C_P + I_ONE
+      end enum
+
+      totfld = 0
+      cgl => this%first
+      if (associated(cgl)) then
+         do p = lbound(wna%lst, dim=1, kind=4), ubound(wna%lst, dim=1, kind=4)
+            if ((.not. only_vital .or. wna%lst(p)%vital) .and. associated(cgl%cg%w(p)%arr)) then
+               ! associated(cgl%cg%w(p)%arr)) .eqv. (this%level_id >= base_level_id) .or. wna%lst(p)%multigrid ?
+               totfld = totfld + wna%lst(p)%dim4
+            endif
+         enddo
+         do p = lbound(qna%lst, dim=1, kind=4), ubound(qna%lst, dim=1, kind=4)
+            if ((.not. only_vital .or. qna%lst(p)%vital) .and. associated(cgl%cg%q(p)%arr)) then
+               totfld = totfld + 1
+            endif
+         enddo
+      endif
+      call piernik_MPI_Allreduce(totfld, pMAX)
+      ! communicate gp%list
+      if (master) s = count(gp%list(:)%cur_proc /= gp%list(:)%dest_proc)
+      call piernik_MPI_Bcast(s)
+      allocate(gptemp(I_OFF:I_D_P, s))
+      if (master) then
+         p = 0
+         do i = lbound(gp%list, dim=1, kind=4), ubound(gp%list, dim=1, kind=4)
+            if (gp%list(i)%cur_proc /= gp%list(i)%dest_proc) then
+               p = p + I_ONE
+               gptemp(:, p) = [ gp%list(i)%off, int( [ gp%list(i)%n_b, gp%list(i)%cur_gid, gp%list(i)%cur_proc, gp%list(i)%dest_proc ], kind=8) ]
+            endif
+         enddo
+      endif
+      call piernik_MPI_Bcast(gptemp)
+
+      !> \deprecated partially copied code from init_all_new_cg
+      ! Irecv & Isend
+      nr = 0
+      allocate(cglepa(size(gptemp)))
+      do i = lbound(gptemp, dim=2, kind=4), ubound(gptemp, dim=2, kind=4)
+         cglepa(i)%p => null()
+         if (gptemp(I_C_P, i) == gptemp(I_D_P, i)) call die("[cg_level:balance_old] can not send to self")
+         if (gptemp(I_C_P, i) == proc) then ! send
+            found = .false.
+            cgl => this%first
+            do while (associated(cgl))
+               if (cgl%cg%grid_id == gptemp(I_GID,i)) then
+                  found = .true.
+                  cglepa(i)%p => cgl
+                  allocate(cglepa(i)%tbuf(totfld, cgl%cg%n_b(xdim)+dom%D_(xdim), cgl%cg%n_b(ydim)+dom%D_(ydim), cgl%cg%n_b(zdim)+dom%D_(zdim)))
+                  ! +dom_D_(:) above because we have also fields that are placed at faces
+                  s = lbound(cglepa(i)%tbuf, dim=1)
+                  do p = lbound(wna%lst, dim=1, kind=4), ubound(wna%lst, dim=1, kind=4)
+                     if ((.not. only_vital .or. wna%lst(p)%vital) .and. associated(cgl%cg%w(p)%arr)) then ! not associated for multigrid coarse levels
+                        cglepa(i)%tbuf(s:s+wna%lst(p)%dim4-1, :, :, :) = cgl%cg%w(p)%arr(:, cgl%cg%is:cgl%cg%ie+dom%D_(xdim), cgl%cg%js:cgl%cg%je+dom%D_(ydim), cgl%cg%ks:cgl%cg%ke+dom%D_(zdim))
+                        s = s + wna%lst(p)%dim4
+                     endif
+                  enddo
+                  do p = lbound(qna%lst, dim=1, kind=4), ubound(qna%lst, dim=1, kind=4)
+                     if ((.not. only_vital .or. qna%lst(p)%vital) .and. associated(cgl%cg%q(p)%arr)) then
+                        cglepa(i)%tbuf(s, :, :, :) = cgl%cg%q(p)%arr(cgl%cg%is:cgl%cg%ie+dom%D_(xdim), cgl%cg%js:cgl%cg%je+dom%D_(ydim), cgl%cg%ks:cgl%cg%ke+dom%D_(zdim))
+                        s = s + 1
+                     endif
+                  enddo
+                  exit
+               endif
+               cgl => cgl%nxt
+            enddo
+            if (.not. found) call die("[cg_level:balance_old] Grid id not found")
+            nr = nr + 1
+            if (nr > size(req, dim=1)) call inflate_req
+            call MPI_Isend(cglepa(i)%tbuf, size(cglepa(i)%tbuf), MPI_DOUBLE_PRECISION, gptemp(I_D_P, i), i, comm, req(nr), mpi_err)
+         endif
+         if (gptemp(I_D_P, i) == proc) then ! receive
+            n_gid = 1
+            if (associated(this%last)) n_gid = this%last%cg%grid_id + 1
+            se(:, LO) = gptemp(I_OFF:I_OFF+zdim-1, i)
+            se(:, HI) = gptemp(I_OFF:I_OFF+zdim-1, i) + gptemp(I_N_B:I_N_B+zdim-1, i) - 1
+            this%recently_changed = .true.
+            call this%add
+            cglepa(i)%p => this%last
+            cgl => cglepa(i)%p
+            call this%last%cg%init(this%n_d, this%off, se, n_gid, this%level_id) ! we cannot pass "this" as an argument because of circular dependencies
+            allocate(cglepa(i)%tbuf(totfld, cgl%cg%n_b(xdim)+dom%D_(xdim), cgl%cg%n_b(ydim)+dom%D_(ydim), cgl%cg%n_b(zdim)+dom%D_(zdim)))
+            do p = lbound(cg_extptrs%ext, dim=1, kind=4), ubound(cg_extptrs%ext, dim=1, kind=4)
+               if (associated(cg_extptrs%ext(p)%init))  call cg_extptrs%ext(p)%init(this%last%cg)
+            enddo
+            call all_cg%add(this%last%cg)
+            nr = nr + 1
+            if (nr > size(req, dim=1)) call inflate_req
+            call MPI_Irecv(cglepa(i)%tbuf, size(cglepa(i)%tbuf), MPI_DOUBLE_PRECISION, gptemp(I_C_P, i), i, comm, req(nr), mpi_err)
+         endif
+      enddo
+
+      if (nr > 0) then
+         mpistatus => status(:, :nr)
+         call MPI_Waitall(nr, req(:nr), mpistatus, mpi_err)
+      endif
+      do i = lbound(gptemp, dim=2, kind=4), ubound(gptemp, dim=2, kind=4)
+         cgl => cglepa(i)%p
+         if (gptemp(I_C_P, i) == proc) then ! cleanup
+            deallocate(cglepa(i)%tbuf)
+            cg => cgl%cg
+            call all_lists%forget(cg)
+            this%recently_changed = .true.
+         endif
+         if (gptemp(I_D_P, i) == proc) then ! copy received
+            s = lbound(cglepa(i)%tbuf, dim=1)
+            do p = lbound(wna%lst, dim=1, kind=4), ubound(wna%lst, dim=1, kind=4)
+               if ((.not. only_vital .or. wna%lst(p)%vital) .and. associated(cgl%cg%w(p)%arr)) then
+                  cgl%cg%w(p)%arr(:, cgl%cg%is:cgl%cg%ie+dom%D_(xdim), cgl%cg%js:cgl%cg%je+dom%D_(ydim), cgl%cg%ks:cgl%cg%ke+dom%D_(zdim)) = cglepa(i)%tbuf(s:s+wna%lst(p)%dim4-1, :, :, :)
+                  s = s + wna%lst(p)%dim4
+               endif
+            enddo
+            do p = lbound(qna%lst, dim=1, kind=4), ubound(qna%lst, dim=1, kind=4)
+               if ((.not. only_vital .or. qna%lst(p)%vital) .and. associated(cgl%cg%q(p)%arr)) then
+                  cgl%cg%q(p)%arr(cgl%cg%is:cgl%cg%ie+dom%D_(xdim), cgl%cg%js:cgl%cg%je+dom%D_(ydim), cgl%cg%ks:cgl%cg%ke+dom%D_(zdim)) = cglepa(i)%tbuf(s, :, :, :)
+                  s = s + 1
+               endif
+            enddo
+            deallocate(cglepa(i)%tbuf)
+         endif
+      enddo
+      deallocate(cglepa)
+
+      s = 0
+      cgl => this%first
+      do while (associated(cgl))
+         s = s + 1
+         cgl%cg%grid_id = s
+         cgl => cgl%nxt
+      enddo
+
+      call this%update_pse
+      call this%mpi_bnd_types ! require access to whole this%pse(:)%c(:)%se(:,:)
+      call this%update_req    ! Perhaps this%mpi_bnd_types added some new entries
+      call this%update_tot_se
+      call this%print_segments
+
+      deallocate(gptemp)
+
+   end subroutine reshuffle
 
 end module cg_level

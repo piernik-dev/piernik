@@ -52,15 +52,16 @@ contains
 
       use cg_leaves,        only: leaves
       use cg_list,          only: cg_list_element
-      use constants,        only: u0_n, b0_n
-      use dataio_pub,       only: warn
+      use constants,        only: u0_n, b0_n, pSUM
+      use dataio_pub,       only: warn, msg
       use global,           only: dt, dtm, t, t_saved, cfl_violated, nstep, nstep_saved, dt_max_grow, repeat_step
-      use mpisetup,         only: master
+      use mpisetup,         only: master, piernik_MPI_Allreduce
       use named_array_list, only: wna
 
       implicit none
 
       type(cg_list_element), pointer :: cgl
+      integer(kind=4) :: no_hist_count
 
       if (.not.repeat_step) return
 
@@ -74,18 +75,30 @@ contains
          t_saved = t
       endif
 
+      no_hist_count = 0
       cgl => leaves%first
       do while (associated(cgl))
          ! No need to take care of any cgl%cg%q arrays as long as graity is extrapolated from the prefious timestep.
          if (cfl_violated) then
-            cgl%cg%u = cgl%cg%w(wna%ind(u0_n))%arr
-            cgl%cg%b = cgl%cg%w(wna%ind(b0_n))%arr
+            if (cgl%cg%has_previous_timestep) then
+               cgl%cg%u = cgl%cg%w(wna%ind(u0_n))%arr
+               cgl%cg%b = cgl%cg%w(wna%ind(b0_n))%arr
+            else
+               no_hist_count = no_hist_count + 1
+            endif
          else
             cgl%cg%w(wna%ind(u0_n))%arr = cgl%cg%u
             cgl%cg%w(wna%ind(b0_n))%arr = cgl%cg%b
+            cgl%cg%has_previous_timestep = .true.
          endif
          cgl => cgl%nxt
       enddo
+      call piernik_MPI_Allreduce(no_hist_count, pSUM)
+      if (master .and. no_hist_count/=0) then
+         write(msg, '(a,i6,a)')"[fluidupdate:repeat_fluidstep] Warning: not reverted: ", no_hist_count, " grid pieces."
+         call warn(msg)
+      endif
+
 
    end subroutine repeat_fluidstep
 
