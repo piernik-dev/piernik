@@ -52,7 +52,7 @@ contains
 
       use cg_leaves,        only: leaves
       use cg_list,          only: cg_list_element
-      use constants,        only: u0_n, b0_n, pSUM
+      use constants,        only: u0_n, b0_n, pSUM, I_ONE
       use dataio_pub,       only: warn, msg
       use global,           only: dt, dtm, t, t_saved, cfl_violated, nstep, nstep_saved, dt_max_grow, repeat_step
       use mpisetup,         only: master, piernik_MPI_Allreduce
@@ -84,7 +84,7 @@ contains
                cgl%cg%u = cgl%cg%w(wna%ind(u0_n))%arr
                cgl%cg%b = cgl%cg%w(wna%ind(b0_n))%arr
             else
-               no_hist_count = no_hist_count + 1
+               no_hist_count = no_hist_count + I_ONE
             endif
          else
             cgl%cg%w(wna%ind(u0_n))%arr = cgl%cg%u

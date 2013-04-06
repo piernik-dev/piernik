@@ -36,8 +36,8 @@ module tag_pool
    private
    public :: t_pool
 
-   integer, parameter :: POOL_SIZE = 2**16  !< number of entries in a single pool. This one gives 2**15 pools. Try to make it smaller if you ever run out of pools.
-   integer, parameter :: FREE = -2147483647 !< -2**31+1, special id, that means a given pool is free
+   integer(kind=4), parameter :: POOL_SIZE = 2**16  !< number of entries in a single pool. This one gives 2**15 pools. Try to make it smaller if you ever run out of pools.
+   integer(kind=4), parameter :: FREE = -2147483647 !< -2**31+1, special id, that means a given pool is free
 
    type :: tag_pool_T
       integer(kind=4), dimension(:), allocatable :: t_map
@@ -67,7 +67,7 @@ contains
 
    subroutine get(this, id, t_start, t_end)
 
-      use constants,  only: INVALID
+      use constants,  only: INVALID, I_ONE
       use dataio_pub, only: die
 
       implicit none
@@ -77,7 +77,7 @@ contains
       integer(kind=4),   intent(out)   :: t_start
       integer(kind=4),   intent(out)   :: t_end
 
-      integer :: i
+      integer(kind=4) :: i
 
       if (id == FREE) call die("[tag_pool:get] reserved id")
 
@@ -89,10 +89,10 @@ contains
       t_start = INVALID
       t_end = INVALID
       if (.not. any(this%t_map == FREE)) this%t_map = [ this%t_map, FREE ] ! LHS realloc
-      do i = ubound(this%t_map, dim=1), lbound(this%t_map, dim=1), -1
+      do i = ubound(this%t_map, dim=1, kind=4), lbound(this%t_map, dim=1, kind=4), -1
          if (this%t_map(i) == FREE) then
-            t_start = (i-lbound(this%t_map, dim=1)) * POOL_SIZE
-            t_end = t_start + POOL_SIZE - 1
+            t_start = (i-lbound(this%t_map, dim=1, kind=4)) * POOL_SIZE
+            t_end = t_start + POOL_SIZE - I_ONE
             this%t_map(i) = id
             exit
          endif

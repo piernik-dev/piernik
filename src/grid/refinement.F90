@@ -57,12 +57,12 @@ module refinement
    ! some refinement primitives
    integer, parameter :: nshapes = 10
    type :: ref_point
-      integer                :: level
+      integer(kind=4)        :: level
       real, dimension(ndims) :: coords
    end type ref_point
    type(ref_point), dimension(nshapes), protected :: refine_points
    type :: ref_box
-      integer                :: level
+      integer(kind=4)        :: level
       real, dimension(ndims) :: lcoords
       real, dimension(ndims) :: hcoords
    end type ref_box
