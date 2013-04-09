@@ -191,8 +191,6 @@ contains
                         allocate(i_seg%buf(i_seg%se(xdim, HI) - i_seg%se(xdim, LO) + 1, &
                              &             i_seg%se(ydim, HI) - i_seg%se(ydim, LO) + 1, &
                              &             i_seg%se(zdim, HI) - i_seg%se(zdim, LO) + 1))
-                        pa3d => cg%q(ind)%span(i_seg%se(:,:))
-                        i_seg%buf(:,:,:) = pa3d(:,:,:)
                         call MPI_Irecv(i_seg%buf, size(i_seg%buf), MPI_DOUBLE_PRECISION, i_seg%proc, i_seg%tag, comm, req(nr+I_ONE), mpi_err)
 
                         if (allocated(o_seg%buf)) then
@@ -217,21 +215,6 @@ contains
                              &              i_seg%se(xdim, HI) - i_seg%se(xdim, LO) + 1, &
                              &              i_seg%se(ydim, HI) - i_seg%se(ydim, LO) + 1, &
                              &              i_seg%se(zdim, HI) - i_seg%se(zdim, LO) + 1))
-                        !>
-                        !! \todo optimize me
-                        !! Following 2 lines (along with other occurences of
-                        !! similar constructs) cause ~10% perfomance drop wrt
-                        !! in-place communication using MPI_Types.
-                        !! They can be optimized by using explicit loop over
-                        !! last index:
-                        !!    do ni = lbound(i_seg%buf4, 4), ubound(i_seg%buf4, 4)
-                        !!       hhi = i_seg%se(zdim,LO) - 1 + ni
-                        !!       i_seg%buf4(:,:,:,ni) = &
-                        !!          cg%w(ind)%arr(:,i_seg%se(xdim,LO):i_seg%se(xdim,HI),i_seg%se(ydim,LO):i_seg%se(ydim,HI),hhi)
-                        !!    enddo
-                        !<
-                        pa4d => cg%w(ind)%span(i_seg%se(:,:))
-                        i_seg%buf4(:,:,:,:) = pa4d(:,:,:,:)
                         call MPI_Irecv(i_seg%buf4, size(i_seg%buf4), MPI_DOUBLE_PRECISION, i_seg%proc, i_seg%tag, comm, req(nr+I_ONE), mpi_err)
 
                         if (allocated(o_seg%buf4)) then
