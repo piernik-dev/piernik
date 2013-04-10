@@ -103,7 +103,7 @@
 
  $MULTIGRID_SOLVER
 !    stdout = .true.
-    level_max = 3
+    level_depth = 3
  /
 
  $MULTIGRID_DIFFUSION

@@ -47,7 +47,7 @@ module multigrid
    public :: multigrid_par, init_multigrid, cleanup_multigrid, init_multigrid_ext
 
    integer, parameter    :: level_incredible = 50  !< Increase this value only if your base domain contains much more than 10^15 cells in any active direction ;-)
-   integer(kind=4)       :: level_max              !< Maximum allowed levels of base grid coarsening
+   integer(kind=4)       :: level_depth            !< Maximum allowed levels of base grid coarsening
 
 contains
 
@@ -63,7 +63,7 @@ contains
 !! \n \n
 !! <table border="+1">
 !! <tr><td width="150pt"><b>parameter</b></td><td width="135pt"><b>default value</b></td><td width="200pt"><b>possible values</b></td><td width="315pt"> <b>description</b></td></tr>
-!! <tr><td>level_max            </td><td>1      </td><td>integer value </td><td>\copydoc multigrid::init_multigrid::level_max</td></tr>
+!! <tr><td>level_depth          </td><td>1      </td><td>integer value </td><td>\copydoc multigrid::init_multigrid::level_depth</td></tr>
 !! <tr><td>ord_prolong          </td><td>0      </td><td>integer value </td><td>\copydoc multigridvars::ord_prolong          </td></tr>
 !! <tr><td>ord_prolong_face_norm</td><td>0      </td><td>integer value </td><td>\copydoc multigridvars::ord_prolong_face_norm</td></tr>
 !! <tr><td>ord_prolong_face_par </td><td>0      </td><td>integer value </td><td>\copydoc multigridvars::ord_prolong_face_par </td></tr>
@@ -98,7 +98,7 @@ contains
 
       logical, save         :: frun = .true.          !< First run flag
 
-      namelist /MULTIGRID_SOLVER/ level_max, ord_prolong, ord_prolong_face_norm, ord_prolong_face_par, stdout, verbose_vcycle, do_ascii_dump, dirty_debug, show_n_dirtys
+      namelist /MULTIGRID_SOLVER/ level_depth, ord_prolong, ord_prolong_face_norm, ord_prolong_face_par, stdout, verbose_vcycle, do_ascii_dump, dirty_debug, show_n_dirtys
 
       if (code_progress < PIERNIK_INIT_DOMAIN) call die("[multigrid:init_multigrid] grid, geometry, constants or arrays not initialized")
       ! This check is too weak (geometry), arrays are required only for multigrid_gravity
@@ -107,7 +107,7 @@ contains
       frun = .false.
 
       ! Default values for namelist variables
-      level_max             = level_incredible
+      level_depth           = level_incredible
       ord_prolong           = O_D3
       ord_prolong_face_norm = O_I2
       ord_prolong_face_par  = O_INJ
@@ -122,7 +122,7 @@ contains
 
          diff_nml(MULTIGRID_SOLVER)
 
-         ibuff(1) = level_max
+         ibuff(1) = level_depth
          ibuff(2) = ord_prolong
          ibuff(3) = ord_prolong_face_norm
          ibuff(4) = ord_prolong_face_par
@@ -140,7 +140,7 @@ contains
 
       if (slave) then
 
-         level_max             = ibuff(1)
+         level_depth           = ibuff(1)
          ord_prolong           = int(ibuff(2), kind=4)
          ord_prolong_face_norm = int(ibuff(3), kind=4)
          ord_prolong_face_par  = int(ibuff(4), kind=4)
@@ -216,25 +216,25 @@ contains
       ! This check is too weak (geometry), arrays are required only for multigrid_gravity
 
 
-      if (level_max <= 0) then
-         if (master) call warn("[multigrid:init_multigrid] level_max < 1: solving on a single grid may be extremely slow")
-         level_max = 0
+      if (level_depth <= 0) then
+         if (master) call warn("[multigrid:init_multigrid] level_depth < 1: solving on a single grid may be extremely slow")
+         level_depth = 0
       endif
 
       do j = 0, level_incredible
          if (any((mod(base_level%n_d(:), int(refinement_factor, kind=8)**(j+1)) /= 0 .or. base_level%n_d(:)/refinement_factor**(j+1) < minsize(:)) .and. dom%has_dir(:))) exit
          if (any((mod(base_level%off(:), int(refinement_factor, kind=8)**(j+1)) /= 0 .and. dom%has_dir(:)))) exit
       enddo
-      if (level_max > j) then
+      if (level_depth > j) then
          if (master) then
-            if (level_max /= level_incredible) call warn("[multigrid:init_multigrid] level_max is too big,")
-            write(msg,'(a,i3)')"[multigrid:init_multigrid] Automatically set level_max = ",j
+            if (level_depth /= level_incredible) call warn("[multigrid:init_multigrid] level_depth is too big,")
+            write(msg,'(a,i3)')"[multigrid:init_multigrid] Automatically set level_depth = ",j
             call printinfo(msg)
          endif
-         level_max = j
+         level_depth = j
       endif
 
-      do while (coarsest%level%level_id > -level_max)
+      do while (coarsest%level%level_id > -level_depth)
          call coarsest%add_coarser
       enddo
 
@@ -247,7 +247,7 @@ contains
 
             if (any(cg%n_b(:) < dom%nb .and. dom%has_dir(:))) then
                write(msg, '(a,i1,a,3i4,2(a,i2))')"[multigrid:init_multigrid] Number of guardcells exceeds number of interior cells: ", &
-                    dom%nb, " > ", cg%n_b(:), " at level ", curl%level_id, ". You may try to set level_max <=", -curl%level_id
+                    dom%nb, " > ", cg%n_b(:), " at level ", curl%level_id, ". You may try to set level_depth <=", -curl%level_id
                call die(msg)
             endif
 
@@ -264,7 +264,7 @@ contains
       curl => base_level%coarser
       do while (associated(curl))
          if (master) then
-            if (curl%level_id == -level_max .and. single_base) then
+            if (curl%level_id == -level_depth .and. single_base) then
                call curl%add_patch(n_pieces=I_ONE)
             else
                !> \todo When there is more AMR_bsize-pieces than processes, consider forcing cartesian or noncartesian decomposition

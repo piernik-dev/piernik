@@ -124,7 +124,7 @@
  /
 
  $MULTIGRID_SOLVER
-    level_max = 2
+    level_depth = 2
  /
 
  $MULTIGRID_DIFFUSION
