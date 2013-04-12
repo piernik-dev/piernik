@@ -37,13 +37,13 @@ module initproblem
    private
    public :: read_problem_par, problem_initial_conditions, problem_pointers
 
-   real                   :: clump_mass, clump_vel_x, clump_vel_y, clump_vel_z, clump_K, clump_r, epsC, epsM, dmax
+   real                   :: clump_mass, clump_vel_x, clump_vel_y, clump_vel_z, clump_K, clump_r, epsC, epsM, dtrig, dmax
    real, dimension(ndims) :: clump_pos
    logical                :: crashNotConv, exp_speedup, verbose
    integer(kind=4)        :: maxitC, maxitM
    integer, parameter     :: REL_CALC = 1, REL_SET = REL_CALC + 1
 
-   namelist /PROBLEM_CONTROL/  clump_mass, clump_vel_x, clump_vel_y, clump_vel_z, clump_K, clump_r, epsC, epsM, maxitC, maxitM, crashNotConv, exp_speedup, verbose
+   namelist /PROBLEM_CONTROL/  clump_mass, clump_vel_x, clump_vel_y, clump_vel_z, clump_K, clump_r, epsC, epsM, maxitC, maxitM, crashNotConv, exp_speedup, verbose, dtrig
 
 contains
 
@@ -51,7 +51,15 @@ contains
 
    subroutine problem_pointers
 
+      use dataio_user, only: user_attrs_wr, user_attrs_rd
+      use user_hooks,  only: late_initial_conditions, problem_domain_update
+
       implicit none
+
+      late_initial_conditions => sg_late_init
+      problem_domain_update => sg_dist_to_edge
+      user_attrs_wr => sg_attrs_wr
+      user_attrs_rd => sg_attrs_rd
 
    end subroutine problem_pointers
 
@@ -75,6 +83,7 @@ contains
       clump_r      = 0.                    !< initial radius of the clump
       epsC         = 1.e-5                 !< tolerance limit for energy level change
       epsM         = 1.e-10                !< tolerance limit for clump mass change
+      dtrig        = -0.001                !< fraction of dmax that causes extension of computational domain
       maxitC       = 100                   !< iteration limit for energy level
       maxitM       = 100                   !< iteration limit for clump mass
       crashNotConv = .true.                !< Crash if unable to converge initial conditions
@@ -94,6 +103,7 @@ contains
          rbuff(6) = clump_r
          rbuff(7) = epsC
          rbuff(8) = epsM
+         rbuff(9) = dtrig
 
          ibuff(1) = maxitC
          ibuff(2) = maxitM
@@ -118,6 +128,7 @@ contains
          clump_r      = rbuff(6)
          epsC         = rbuff(7)
          epsM         = rbuff(8)
+         dtrig        = rbuff(9)
 
          maxitC       = ibuff(1)
          maxitM       = ibuff(2)
@@ -643,5 +654,184 @@ contains
       hRho = clump_K * flind%ion%gam / flind%ion%gam_1 * rho ** flind%ion%gam_1
 
    end function hRho
+
+!> \brief Performa late initialization of the cg added after domain expansion
+
+   subroutine sg_late_init
+
+      use cg_list,       only: cg_list_element, expanded_domain
+      use constants,     only: xdim, ydim, zdim
+      use dataio_pub,    only: die
+      use fluidindex,    only: flind
+      use func,          only: ekin, emag
+      use global,        only: smalld, smallei
+
+      implicit none
+
+      type(cg_list_element),  pointer :: cgl
+
+      integer :: p, i, j, k
+
+      cgl => expanded_domain%first
+      do while (associated(cgl))
+         if (cgl%cg%is_old) call die("[initproblem:sg_late_init] Old piece on a new list")
+         do p = 1, flind%energ
+            associate ( fl => flind%ion )
+            cgl%cg%u(fl%idn, :, :, :) = smalld
+            cgl%cg%u(fl%imx, :, :, :) = clump_vel_x * cgl%cg%u(fl%idn,:,:,:)
+            cgl%cg%u(fl%imy, :, :, :) = clump_vel_y * cgl%cg%u(fl%idn,:,:,:)
+            cgl%cg%u(fl%imz, :, :, :) = clump_vel_z * cgl%cg%u(fl%idn,:,:,:)
+            cgl%cg%b(:,    :, :, :) = 0.
+            ! cgl%cg%sgp ?
+            do k = cgl%cg%ks, cgl%cg%ke
+               do j = cgl%cg%js, cgl%cg%je
+                  do i = cgl%cg%is, cgl%cg%ie
+                     cgl%cg%u(fl%ien, i, j, k) = max(smallei, presrho(cgl%cg%u(fl%idn, i, j, k)) / fl%gam_1                              + &
+                          &                     ekin(cgl%cg%u(fl%imx,i,j,k), cgl%cg%u(fl%imy,i,j,k), cgl%cg%u(fl%imz,i,j,k), cgl%cg%u(fl%idn,i,j,k)) + &
+                          &                     emag(cgl%cg%b(xdim,i,j,k), cgl%cg%b(ydim,i,j,k), cgl%cg%b(zdim,i,j,k)))
+                  enddo
+               enddo
+            enddo
+            end associate
+         enddo
+         cgl => cgl%nxt
+      enddo
+
+   end subroutine sg_late_init
+
+!> \brief Find hov close it the clump to the external edges and call expansion routine if necessary
+
+   subroutine sg_dist_to_edge
+
+      use cg_leaves,     only: leaves
+      use cg_level_base, only: base
+      use cg_list,       only: cg_list_element
+      use constants,     only: xdim, ydim, zdim, LO, HI
+      use domain,        only: dom
+      use fluidindex,    only: iarr_all_dn
+
+      implicit none
+
+      type(cg_list_element),  pointer :: cgl
+      real, dimension(xdim:zdim, LO:HI) :: ddist
+      integer :: i
+      integer, parameter :: iprox = 2
+
+      if (dtrig < 0.) return
+
+      ddist = huge(1.)
+      cgl => leaves%first
+      do while (associated(cgl))
+         if (any(cgl%cg%ext_bnd)) then
+            !> \todo roll it to a nested loop
+            if (dom%has_dir(xdim)) then
+               if (cgl%cg%ext_bnd(xdim, LO)) then
+                  do i = cgl%cg%is, cgl%cg%ie
+                     if (any(cgl%cg%u(iarr_all_dn, i, :, :) > dmax*dtrig)) then
+                        ddist(xdim, LO) = min(ddist(xdim, LO), (cgl%cg%x(i) - cgl%cg%fbnd(xdim, LO))/cgl%cg%dx)
+                        exit
+                     endif
+                  enddo
+               endif
+               if (cgl%cg%ext_bnd(xdim, HI)) then
+                  do i = cgl%cg%ie, cgl%cg%is, -1
+                     if (any(cgl%cg%u(iarr_all_dn, i, :, :) > dmax*dtrig)) then
+                        ddist(xdim, HI) = min(ddist(xdim, HI), (cgl%cg%fbnd(xdim, HI) - cgl%cg%x(i))/cgl%cg%dx)
+                        exit
+                     endif
+                  enddo
+               endif
+            endif
+
+            if (dom%has_dir(ydim)) then
+               if (cgl%cg%ext_bnd(ydim, LO)) then
+                  do i = cgl%cg%js, cgl%cg%je
+                     if (any(cgl%cg%u(iarr_all_dn, :, i, :) > dmax*dtrig)) then
+                        ddist(ydim, LO) = min(ddist(ydim, LO), (cgl%cg%y(i) - cgl%cg%fbnd(ydim, LO))/cgl%cg%dy)
+                        exit
+                     endif
+                  enddo
+               endif
+               if (cgl%cg%ext_bnd(ydim, HI)) then
+                  do i = cgl%cg%je, cgl%cg%js, -1
+                     if (any(cgl%cg%u(iarr_all_dn, :, i, :) > dmax*dtrig)) then
+                        ddist(ydim, HI) = min(ddist(ydim, HI), (cgl%cg%fbnd(ydim, HI) - cgl%cg%y(i))/cgl%cg%dy)
+                        exit
+                     endif
+                  enddo
+               endif
+            endif
+
+            if (dom%has_dir(zdim)) then
+               if (cgl%cg%ext_bnd(zdim, LO)) then
+                  do i = cgl%cg%ks, cgl%cg%ke
+                     if (any(cgl%cg%u(iarr_all_dn, :, :, i) > dmax*dtrig)) then
+                        ddist(zdim, LO) = min(ddist(zdim, LO), (cgl%cg%z(i) - cgl%cg%fbnd(zdim, LO))/cgl%cg%dz)
+                        exit
+                     endif
+                  enddo
+               endif
+               if (cgl%cg%ext_bnd(zdim, HI)) then
+                  do i = cgl%cg%ke, cgl%cg%ks, -1
+                     if (any(cgl%cg%u(iarr_all_dn, :, :, i) > dmax*dtrig)) then
+                        ddist(zdim, HI) = min(ddist(zdim, HI), (cgl%cg%fbnd(zdim, HI) - cgl%cg%z(i))/cgl%cg%dz)
+                        exit
+                     endif
+                  enddo
+               endif
+            endif
+         endif
+         cgl => cgl%nxt
+      enddo
+
+      !> \todo shrink the domain in the direction opposite to expansion (shift the domain in given direction)
+      call base%expand(ddist(:,:) < iprox)
+
+   end subroutine sg_dist_to_edge
+
+!> \brief Write dmax to the restart file
+
+   subroutine sg_attrs_wr(file_id)
+
+      use dataio_pub, only: die
+      use hdf5,       only: HID_T, SIZE_T
+      use h5lt,       only: h5ltset_attribute_double_f
+
+      implicit none
+
+      integer(HID_T), intent(in) :: file_id
+
+      integer(SIZE_T), parameter :: bufsize = 1
+      integer(kind=4)            :: error
+
+      call h5ltset_attribute_double_f(file_id, "/", "dmax", [dmax], bufsize, error)
+      if (error<0) call die("[initproblem:sg_attrs_rd] Error writing dmax attribute")
+
+   end subroutine sg_attrs_wr
+
+!> \brief Read dmax from the restart file
+
+   subroutine sg_attrs_rd(file_id)
+
+      use constants,  only: I_ONE
+      use dataio_pub, only: die
+      use global,     only: smalld
+      use hdf5,       only: HID_T
+      use h5lt,       only: h5ltget_attribute_double_f
+
+      implicit none
+
+      integer(HID_T), intent(in) :: file_id
+
+      integer(kind=4)        :: error
+      real, dimension(I_ONE) :: rbuff
+
+      call h5ltget_attribute_double_f(file_id, "/", "dmax", rbuff, error)
+      dmax = rbuff(1)
+
+      if (error<0) call die("[initproblem:sg_attrs_rd] Error reading dmax attribute")
+      if (dmax <= smalld) call die("[initproblem:sg_attrs_rd] dmax <= smalld")
+
+   end subroutine sg_attrs_rd
 
 end module initproblem

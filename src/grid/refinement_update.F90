@@ -74,7 +74,7 @@ contains
 
 !#define DEBUG_DUMPS
 
-   subroutine update_refinement(act_count)
+   subroutine update_refinement(act_count, refinement_fixup_only)
 
       use all_boundaries,     only: all_bnd
       use cg_leaves,          only: leaves
@@ -96,7 +96,8 @@ contains
 
       implicit none
 
-      integer, optional, intent(out) :: act_count !< counts number of blocks refined or deleted
+      integer, optional, intent(out) :: act_count             !< counts number of blocks refined or deleted
+      logical, optional, intent(in)  :: refinement_fixup_only !< When present and .true. then do not check refinement criteria, do only correction, if necessary.
 
       integer :: nciter
       integer, parameter :: nciter_max = 100 ! should be more than refinement levels
@@ -104,9 +105,12 @@ contains
       type(cg_list_element), pointer :: cgl, aux
       type(cg_level_connected_T), pointer :: curl
       type(grid_container),  pointer :: cg
-      logical :: correct
+      logical :: correct, full_update
 
       if (present(act_count)) act_count = 0
+
+      full_update = .true.
+      if (present(refinement_fixup_only)) full_update = .not. refinement_fixup_only
 
       call finest%level%restrict_to_base ! implies update of leafmap
 
@@ -121,42 +125,44 @@ contains
          curl => curl%coarser
       enddo
 
-      call scan_for_refinements
+      if (full_update) then
+         call scan_for_refinements
 
-      ! do the refinements first
-      curl => base%level
-      do while (associated(curl))
-         cgl => curl%first
-         do while (associated(cgl))
-            if (any(cgl%cg%leafmap)) then
-               call cgl%cg%refine_flags%sanitize(cgl%cg%level_id)
-               if (cgl%cg%refine_flags%refine) then
-                  call refine_one_grid(curl, cgl)
-                  if (present(act_count)) act_count = act_count + 1
-                  cgl%cg%refine_flags%refine = .false.
+         ! do the refinements first
+         curl => base%level
+         do while (associated(curl))
+            cgl => curl%first
+            do while (associated(cgl))
+               if (any(cgl%cg%leafmap)) then
+                  call cgl%cg%refine_flags%sanitize(cgl%cg%level_id)
+                  if (cgl%cg%refine_flags%refine) then
+                     call refine_one_grid(curl, cgl)
+                     if (present(act_count)) act_count = act_count + 1
+                     cgl%cg%refine_flags%refine = .false.
+                  endif
                endif
+               cgl => cgl%nxt
+            enddo
+
+            call finest%equalize !> \todo Try to split this loop here and place this call between the loops
+
+            !> \todo merge small blocks into larger ones
+            if (associated(curl%finer)) then
+               call curl%finer%init_all_new_cg
+               if (allocated(curl%finer%patches)) deallocate(curl%finer%patches)
+               call curl%finer%sync_ru
+               call curl%prolong
             endif
-            cgl => cgl%nxt
+
+            curl => curl%finer
          enddo
 
-         call finest%equalize !> \todo Try to split this loop here and place this call between the loops
+         call all_cg%mark_orphans
 
-         !> \todo merge small blocks into larger ones
-         if (associated(curl%finer)) then
-            call curl%finer%init_all_new_cg
-            if (allocated(curl%finer%patches)) deallocate(curl%finer%patches)
-            call curl%finer%sync_ru
-            call curl%prolong
-         endif
-
-         curl => curl%finer
-      enddo
-
-      call all_cg%mark_orphans
+         call leaves%update(" (  refine  ) ")
+      endif
 
       ! fix the structures, mark grids for refinement (and unmark derefinements) due to refinement restrictions
-      call leaves%update(" (  refine  ) ")
-
       call all_cg%clear_ref_flags
       call fix_refinement(correct)
       call piernik_MPI_Allreduce(correct, pLAND)
@@ -218,42 +224,45 @@ contains
       enddo
 
       ! Now try to derefine any excess of refinement
-      call scan_for_refinements
+      if (full_update) call scan_for_refinements
       call fix_refinement(correct)
       if (.not. correct) call die("[refinement_update:update_refinement] Refinement defects still present")
 
       ! Derefinement saves memory and CPU usage, but is not of highest priority.
       ! Just do it once and hope that any massive excess of refinement will be handled in next call to this routine
+      if (full_update) then
 
-      curl => finest%level
-      do while (associated(curl) .and. .not. associated(curl, base%level))
-         cgl => curl%first
-         derefined = .false.
-         do while (associated(cgl))
-            call cgl%cg%refine_flags%sanitize(cgl%cg%level_id)
-            aux => cgl ! Auxiliary pointer makes it easier to loop over the list of grids when some of the elements are disappearing
-            cgl => cgl%nxt
-            if (aux%cg%refine_flags%derefine) then
-               if (aux%cg%is_old) then ! forgetting fresh blocks is not good because their data hasn't been properly initialized yet
-                  if (all(aux%cg%leafmap)) then
-                     cg => aux%cg
-                     call all_lists%forget(cg)
-                     if (present(act_count)) act_count = act_count + 1
-                     curl%recently_changed = .true.
-                     derefined = .true.
+         curl => finest%level
+         do while (associated(curl) .and. .not. associated(curl, base%level))
+            cgl => curl%first
+            derefined = .false.
+            do while (associated(cgl))
+               call cgl%cg%refine_flags%sanitize(cgl%cg%level_id)
+               aux => cgl ! Auxiliary pointer makes it easier to loop over the list of grids when some of the elements are disappearing
+               cgl => cgl%nxt
+               if (aux%cg%refine_flags%derefine) then
+                  if (aux%cg%is_old) then ! forgetting fresh blocks is not good because their data hasn't been properly initialized yet
+                     if (all(aux%cg%leafmap)) then
+                        cg => aux%cg
+                        call all_lists%forget(cg)
+                        if (present(act_count)) act_count = act_count + 1
+                        curl%recently_changed = .true.
+                        derefined = .true.
+                     endif
                   endif
                endif
-            endif
+            enddo
+            call piernik_MPI_Allreduce(derefined, pLOR)
+            if (derefined) call curl%init_all_new_cg ! no new cg to really initialize, but some other routines need to be called to refresh datastructures
+            !> \todo replace call curl%init_all_new_cg by something cheaper
+            call curl%sync_ru
+            curl => curl%coarser
          enddo
-         call piernik_MPI_Allreduce(derefined, pLOR)
-         if (derefined) call curl%init_all_new_cg ! no new cg to really initialize, but some other routines need to be called to refresh datastructures
-         !> \todo replace call curl%init_all_new_cg by something cheaper
-         call curl%sync_ru
-         curl => curl%coarser
-      enddo
-      ! sync structure
-      call leaves%balance_and_update(" ( derefine ) ")
-      call fix_refinement
+         ! sync structure
+         call leaves%balance_and_update(" ( derefine ) ")
+         call fix_refinement
+
+      endif
 
       call all_bnd
 

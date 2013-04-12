@@ -1013,14 +1013,15 @@ contains
 !#define DEBUG
    subroutine balance_old(this)
 
-      use cg_list,            only: cg_list_element
-      use constants,          only: ndims, LO, HI, I_ONE
-      use dataio_pub,         only: warn, msg, printinfo
-      use mpisetup,           only: master, FIRST, LAST, nproc, piernik_MPI_Bcast
-      use refinement,         only: oop_thr
-      use sort_piece_list,    only: grid_piece_list
+      use cg_list,         only: cg_list_element, expanded_domain
+      use constants,       only: ndims, LO, HI, I_ONE, pSUM
+      use dataio_pub,      only: warn, msg, printinfo
+      use mpisetup,        only: master, FIRST, LAST, nproc, piernik_MPI_Bcast, piernik_MPI_Allreduce
+      use refinement,      only: oop_thr
+      use sort_piece_list, only: grid_piece_list
 #ifdef DEBUG
-      use mpi,                only: MPI_INTEGER, MPI_INTEGER8, MPI_STATUS_IGNORE
+      use mpi,             only: MPI_INTEGER, MPI_INTEGER8, MPI_STATUS_IGNORE
+      use mpisetup,        only: comm, mpi_err
 #endif /* DEBUG */
 
       implicit none
@@ -1122,7 +1123,16 @@ contains
       endif
 
       call piernik_MPI_Bcast(s)
-      if (s>0) call this%reshuffle(gp)
+      if (s>0) then
+         p = expanded_domain%cnt
+         call piernik_MPI_Allreduce(p, pSUM)
+         if (p /= 0) then
+            write(msg,'(a,i5,a)')"[cg_level:balance_old] Allreduce(expanded_domain%cnt) = ",p,", aborting reshuffling."
+            if (master) call warn(msg)
+         else
+            call this%reshuffle(gp)
+         endif
+      endif
 
       if (master) call gp%cleanup
 
@@ -1137,7 +1147,6 @@ contains
       use cg_list_global,     only: all_cg
       use constants,          only: ndims, LO, HI, I_ONE, xdim, ydim, zdim, pMAX
       use dataio_pub,         only: die
-      use domain,             only: dom
       use grid_cont,          only: grid_container
       use list_of_cg_lists,   only: all_lists
       use mpi,                only: MPI_DOUBLE_PRECISION
@@ -1204,7 +1213,6 @@ contains
       endif
       call piernik_MPI_Bcast(gptemp)
 
-      !> \deprecated partially copied code from init_all_new_cg
       ! Irecv & Isend
       nr = 0
       allocate(cglepa(size(gptemp)))
@@ -1218,18 +1226,19 @@ contains
                if (cgl%cg%grid_id == gptemp(I_GID,i)) then
                   found = .true.
                   cglepa(i)%p => cgl
-                  allocate(cglepa(i)%tbuf(totfld, cgl%cg%n_b(xdim)+dom%D_(xdim), cgl%cg%n_b(ydim)+dom%D_(ydim), cgl%cg%n_b(zdim)+dom%D_(zdim)))
-                  ! +dom_D_(:) above because we have also fields that are placed at faces
+                  allocate(cglepa(i)%tbuf(totfld, cgl%cg%n_(xdim), cgl%cg%n_(ydim), cgl%cg%n_(zdim)))
+                  ! We communicate blocks with guardcells because current implementation of magnetic field evolves external guardcells in a way that makes it impossible
+                  ! to reconstruct them from scratch. This results in much larger messages to communicate, but we won't need to call guardcell exchange afterwards.
                   s = lbound(cglepa(i)%tbuf, dim=1)
                   do p = lbound(wna%lst, dim=1, kind=4), ubound(wna%lst, dim=1, kind=4)
                      if ((.not. only_vital .or. wna%lst(p)%vital) .and. associated(cgl%cg%w(p)%arr)) then ! not associated for multigrid coarse levels
-                        cglepa(i)%tbuf(s:s+wna%lst(p)%dim4-1, :, :, :) = cgl%cg%w(p)%arr(:, cgl%cg%is:cgl%cg%ie+dom%D_(xdim), cgl%cg%js:cgl%cg%je+dom%D_(ydim), cgl%cg%ks:cgl%cg%ke+dom%D_(zdim))
+                        cglepa(i)%tbuf(s:s+wna%lst(p)%dim4-1, :, :, :) = cgl%cg%w(p)%arr(:, :, :, :)
                         s = s + wna%lst(p)%dim4
                      endif
                   enddo
                   do p = lbound(qna%lst, dim=1, kind=4), ubound(qna%lst, dim=1, kind=4)
                      if ((.not. only_vital .or. qna%lst(p)%vital) .and. associated(cgl%cg%q(p)%arr)) then
-                        cglepa(i)%tbuf(s, :, :, :) = cgl%cg%q(p)%arr(cgl%cg%is:cgl%cg%ie+dom%D_(xdim), cgl%cg%js:cgl%cg%je+dom%D_(ydim), cgl%cg%ks:cgl%cg%ke+dom%D_(zdim))
+                        cglepa(i)%tbuf(s, :, :, :) = cgl%cg%q(p)%arr(:, :, :)
                         s = s + 1
                      endif
                   enddo
@@ -1252,7 +1261,7 @@ contains
             cglepa(i)%p => this%last
             cgl => cglepa(i)%p
             call this%last%cg%init(this%n_d, this%off, se, n_gid, this%level_id) ! we cannot pass "this" as an argument because of circular dependencies
-            allocate(cglepa(i)%tbuf(totfld, cgl%cg%n_b(xdim)+dom%D_(xdim), cgl%cg%n_b(ydim)+dom%D_(ydim), cgl%cg%n_b(zdim)+dom%D_(zdim)))
+            allocate(cglepa(i)%tbuf(totfld, cgl%cg%n_(xdim), cgl%cg%n_(ydim), cgl%cg%n_(zdim)))
             do p = lbound(cg_extptrs%ext, dim=1, kind=4), ubound(cg_extptrs%ext, dim=1, kind=4)
                if (associated(cg_extptrs%ext(p)%init))  call cg_extptrs%ext(p)%init(this%last%cg)
             enddo
@@ -1279,13 +1288,13 @@ contains
             s = lbound(cglepa(i)%tbuf, dim=1)
             do p = lbound(wna%lst, dim=1, kind=4), ubound(wna%lst, dim=1, kind=4)
                if ((.not. only_vital .or. wna%lst(p)%vital) .and. associated(cgl%cg%w(p)%arr)) then
-                  cgl%cg%w(p)%arr(:, cgl%cg%is:cgl%cg%ie+dom%D_(xdim), cgl%cg%js:cgl%cg%je+dom%D_(ydim), cgl%cg%ks:cgl%cg%ke+dom%D_(zdim)) = cglepa(i)%tbuf(s:s+wna%lst(p)%dim4-1, :, :, :)
+                  cgl%cg%w(p)%arr(:, :, :, :) = cglepa(i)%tbuf(s:s+wna%lst(p)%dim4-1, :, :, :)
                   s = s + wna%lst(p)%dim4
                endif
             enddo
             do p = lbound(qna%lst, dim=1, kind=4), ubound(qna%lst, dim=1, kind=4)
                if ((.not. only_vital .or. qna%lst(p)%vital) .and. associated(cgl%cg%q(p)%arr)) then
-                  cgl%cg%q(p)%arr(cgl%cg%is:cgl%cg%ie+dom%D_(xdim), cgl%cg%js:cgl%cg%je+dom%D_(ydim), cgl%cg%ks:cgl%cg%ke+dom%D_(zdim)) = cglepa(i)%tbuf(s, :, :, :)
+                  cgl%cg%q(p)%arr(:, :, :) = cglepa(i)%tbuf(s, :, :, :)
                   s = s + 1
                endif
             enddo
@@ -1301,6 +1310,8 @@ contains
          cgl%cg%grid_id = s
          cgl => cgl%nxt
       enddo
+
+      !> \deprecated partially copied code from init_all_new_cg
 
       call this%update_pse
       call this%mpi_bnd_types ! require access to whole this%pse(:)%c(:)%se(:,:)

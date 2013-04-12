@@ -248,7 +248,7 @@ contains
             call cleanup_hydrostatic
 #endif /* GRAV */
 
-            call update_refinement(ac)
+            call update_refinement(act_count=ac)
             finished = (ac == 0) .or. (nit > 2*level_max + nit_over) ! level_max iterations for creating refinement levels + level_max iterations for derefining excess of blocks
 
             call problem_initial_conditions ! reset initial conditions after possible changes of refinement structure

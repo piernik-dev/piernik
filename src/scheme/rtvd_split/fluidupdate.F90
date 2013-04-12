@@ -133,6 +133,7 @@ contains
 !<
    subroutine make_3sweeps(forward)
 
+      use cg_list,             only: expanded_domain
       use constants,           only: xdim, zdim, I_ONE
       use global,              only: skip_sweep
       use user_hooks,          only: problem_customize_solution
@@ -171,6 +172,7 @@ contains
       endif
 #endif /* COSM_RAYS && MULTIGRID */
 
+      call expanded_domain%delete ! at this point everything should be initialized after domain expansion and we no longer need this list
       if (forward) then
          do s = xdim, zdim
             if (.not.skip_sweep(s)) call make_sweep(s, forward)

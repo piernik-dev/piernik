@@ -85,6 +85,7 @@ module domain
       procedure :: translate_bnds_to_ints     !< Convert strings to integer-coded boundary types
       procedure :: print_me                   !< Print computational domain details
       procedure :: init                       !< Initialize all variables of domain_container type
+      procedure :: modify_side                !< Required when base level changes
 
    end type domain_container
 
@@ -560,5 +561,68 @@ contains
       endwhere
 
    end subroutine init
+
+!> \brief Call this routine after you update base level shape, before you add new blocks
+
+   subroutine  modify_side(this, d, lh, n)
+
+      use constants,  only: cbuff_len, LO, HI, xdim, ydim, zdim, ndims, I_ONE
+      use dataio_pub, only: warn, die, msg
+      use mpisetup,   only: master
+
+      implicit none
+
+      class(domain_container), intent(in) :: this     !< object invoking type-bound procedure
+      integer,                 intent(in) :: d        !< direction to be updated
+      integer,                 intent(in) :: lh       !< side to be updated
+      integer,                 intent(in) :: n        !< how many dells are added/removed
+
+      character(len=cbuff_len), dimension(HI*ndims) :: bnds  !< Six strings, describing boundary conditions
+      real, dimension(ndims, LO:HI)     :: edges
+      real :: d_edge
+
+      if (n==0) then
+         call warn("[domain:modify_side] nothing to change")
+         return
+      endif
+
+      if (.not. this%has_dir(d)) call die("[domain:modify_side] Cannot increase dimenionality of the simulation")
+      if (this%periodic(d)) call die("[domain:modify_side] Cannot change periodic direction")
+      if (this%nb > this%n_d(d)+n) call die("[domain:modify_side] Cannot shrink that much")
+
+      bnds = [bnd_xl, bnd_xr, bnd_yl, bnd_yr, bnd_zl, bnd_zr]
+
+      d_edge = n/real(this%n_d(d))*this%L_(d)
+      select case (HI*(d-xdim)+lh)
+         case (HI*(xdim-xdim)+LO)
+            xmin = xmin - d_edge
+            write(msg, '(a,g15.7)')"New xmin = ", xmin
+         case (HI*(xdim-xdim)+HI)
+            xmax = xmax + d_edge
+            write(msg, '(a,g15.7)')"New xmax = ", xmax
+         case (HI*(ydim-xdim)+LO)
+            ymin = ymin - d_edge
+            write(msg, '(a,g15.7)')"New ymin = ", ymin
+         case (HI*(ydim-xdim)+HI)
+            ymax = ymax + d_edge
+            write(msg, '(a,g15.7)')"New ymax = ", ymax
+         case (HI*(zdim-xdim)+LO)
+            zmin = zmin - d_edge
+            write(msg, '(a,g15.7)')"New zmin = ", zmin
+         case (HI*(zdim-xdim)+HI)
+            zmax = zmax + d_edge
+            write(msg, '(a,g15.7)')"New zmax = ", zmax
+      end select
+      n_d(d) = n_d(d) + n
+      write(msg(len_trim(msg)+1:),'(a,3i6,a)')". New n_d = [",n_d,"]"
+      if (master) call warn(msg) ! As long as the restart file does not automagically recognize changed parameters, this message should be easily visible
+
+      if (lh==LO) dom_off(d) = dom_off(d) - n
+
+      edges = reshape( [xmin, ymin, zmin, xmax, ymax, zmax], shape=[ndims,HI-LO+I_ONE] )
+
+      call dom%init(nb, n_d, bnds, edges, geometry, dom_off)
+
+   end subroutine modify_side
 
 end module domain

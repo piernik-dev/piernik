@@ -370,7 +370,7 @@ contains
 
 #ifdef SELF_GRAV
       use cg_leaves,         only: leaves
-      use cg_list,           only: cg_list_element
+      use cg_list,           only: cg_list_element, expanded_domain
       use constants,         only: sgp_n, sgpm_n
       use dataio_pub,        only: die
       use fluidindex,        only: iarr_all_sg
@@ -387,10 +387,10 @@ contains
 
       implicit none
 
+      type(cg_list_element), pointer :: cgl
 #ifdef SELF_GRAV
       logical, save :: frun = .true.
 #ifdef POISSON_FFT
-      type(cg_list_element), pointer :: cgl
       type(grid_container),  pointer :: cg
 #endif /* POISSON_FFT */
 
@@ -421,6 +421,12 @@ contains
          call leaves%q_copy(qna%ind(sgp_n), qna%ind(sgpm_n))
          frun = .false.
       endif
+
+      cgl => expanded_domain%first
+      do while (associated(cgl))
+         cgl%cg%q(qna%ind(sgpm_n))%arr = cgl%cg%q(qna%ind(sgp_n))%arr
+         cgl => cgl%nxt
+      enddo
 #endif /* SELF_GRAV */
       if (variable_gp) call grav_pot_3d
 

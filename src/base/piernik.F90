@@ -32,6 +32,8 @@
 program piernik
 ! pulled by ANY
 
+   use all_boundaries,    only: all_bnd
+   use cg_leaves,         only: leaves
    use cg_list_global,    only: all_cg
    use constants,         only: PIERNIK_START, PIERNIK_INITIALIZED, PIERNIK_FINISHED, PIERNIK_CLEANUP, fplen, stdout, I_ONE, CHK, FINAL
    use dataio,            only: write_data, user_msg_handler, check_log, check_tsl, dump
@@ -44,6 +46,7 @@ program piernik
    use list_of_cg_lists,  only: all_lists
    use mpisetup,          only: master, piernik_MPI_Barrier, piernik_MPI_Bcast
    use named_array_list,  only: qna, wna
+   use refinement,        only: emergency_fix
    use refinement_update, only: update_refinement
    use timer,             only: time_left, set_timer, tmr_fu
    use timestep,          only: time_step
@@ -64,7 +67,9 @@ program piernik
    logical, save        :: first_step = .true.
    real                 :: ts                  !< Timestep wallclock
    real                 :: tlast
+   logical              :: try_rebalance
 
+   try_rebalance = .false.
    ts=set_timer(tmr_fu,.true.)
    tlast = 0.0
 
@@ -108,7 +113,9 @@ program piernik
       dump(:) = .false.
       if (associated(problem_domain_update)) then
          call problem_domain_update
-         call update_refinement
+         if (emergency_fix) try_rebalance = .true.
+         call update_refinement(refinement_fixup_only=.true.)
+         ! Full refinement here called rebalancing, which sometimes caused problems with initialization of expanded parts of the computational domain
       endif
 
       call all_cg%check_na
@@ -141,6 +148,12 @@ program piernik
 
       call user_msg_handler(end_sim)
       call update_refinement
+      if (try_rebalance) then
+         !> \todo try to rewrite this ugly chain of flags passed through global variables into something more fool-proof
+         call leaves%balance_and_update(" (re-balance) ")
+         call all_bnd ! For some strange reasons this call prevents MPI-deadlock
+         try_rebalance = .false.
+      endif
 
       if (master) tleft = time_left()
       call piernik_MPI_Bcast(tleft)

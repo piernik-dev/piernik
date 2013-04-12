@@ -38,11 +38,11 @@ module initproblem
    public  :: read_problem_par, problem_initial_conditions, problem_pointers
 
    integer(kind=4) :: n_sn
-   real            :: d0, p0, bx0, by0, bz0, Eexpl, x0, y0, z0, r0, dt_sn, r, t_sn
+   real            :: d0, p0, bx0, by0, bz0, Eexpl, x0, y0, z0, r0, dt_sn, r, t_sn, dtrig
    real :: ref_thr !< refinement threshold
    real :: deref_thr !< derefinement threshold
 
-   namelist /PROBLEM_CONTROL/ d0, p0, bx0, by0, bz0, Eexpl, x0, y0, z0, r0, n_sn, dt_sn, ref_thr, deref_thr
+   namelist /PROBLEM_CONTROL/ d0, p0, bx0, by0, bz0, Eexpl, x0, y0, z0, r0, n_sn, dt_sn, ref_thr, deref_thr, dtrig
 
 contains
 
@@ -51,7 +51,7 @@ contains
    subroutine problem_pointers
 
       use dataio_user, only: user_tsl
-      use user_hooks,  only: problem_refine_derefine
+      use user_hooks,  only: problem_refine_derefine, problem_domain_update, late_initial_conditions
 #ifdef HDF5
       use dataio_user, only: user_vars_hdf5
 #endif /* HDF5 */
@@ -63,6 +63,9 @@ contains
 #endif /* HDF5 */
       user_tsl       => sedov_tsl
       problem_refine_derefine => mark_overdensity
+
+      problem_domain_update => sedov_dist_to_edge
+      late_initial_conditions => sedov_late_init
 
    end subroutine problem_pointers
 
@@ -84,6 +87,7 @@ contains
       t_sn = 0.0
 
       d0      = 1.0
+      dtrig   = -1.5
       p0      = 1.e-3
       bx0     =   0.
       by0     =   0.
@@ -115,6 +119,7 @@ contains
          rbuff(11)= dt_sn
          rbuff(12)= ref_thr
          rbuff(13)= deref_thr
+         rbuff(14)= dtrig
 
          ibuff(1) = n_sn
 
@@ -138,6 +143,7 @@ contains
          dt_sn        = rbuff(11)
          ref_thr      = rbuff(12)
          deref_thr    = rbuff(13)
+         dtrig        = rbuff(14)
 
          n_sn         = ibuff(1)
 
@@ -300,6 +306,134 @@ contains
       endif
 
    end subroutine sedov_tsl
+
+!> \brief Find hov close it the shockwave to the external edges and call expansion routine if necessary
+
+   subroutine sedov_dist_to_edge
+
+      use cg_leaves,     only: leaves
+      use cg_level_base, only: base
+      use cg_list,       only: cg_list_element
+      use constants,     only: xdim, ydim, zdim, LO, HI
+      use domain,        only: dom
+      use fluidindex,    only: iarr_all_dn
+
+      implicit none
+
+      type(cg_list_element),  pointer :: cgl
+      real, dimension(xdim:zdim, LO:HI) :: ddist
+      integer :: i
+      integer, parameter :: iprox = 2
+
+      if (dtrig < 0.) return
+
+      ddist = huge(1.)
+      cgl => leaves%first
+      do while (associated(cgl))
+         if (any(cgl%cg%ext_bnd)) then
+            !> \todo roll it to a nested loop
+            if (dom%has_dir(xdim)) then
+               if (cgl%cg%ext_bnd(xdim, LO)) then
+                  do i = cgl%cg%is, cgl%cg%ie
+                     if (any(cgl%cg%u(iarr_all_dn, i, :, :) > d0*dtrig)) then
+                        ddist(xdim, LO) = min(ddist(xdim, LO), (cgl%cg%x(i) - cgl%cg%fbnd(xdim, LO))/cgl%cg%dx)
+                        exit
+                     endif
+                  enddo
+               endif
+               if (cgl%cg%ext_bnd(xdim, HI)) then
+                  do i = cgl%cg%ie, cgl%cg%is, -1
+                     if (any(cgl%cg%u(iarr_all_dn, i, :, :) > d0*dtrig)) then
+                        ddist(xdim, HI) = min(ddist(xdim, HI), (cgl%cg%fbnd(xdim, HI) - cgl%cg%x(i))/cgl%cg%dx)
+                        exit
+                     endif
+                  enddo
+               endif
+            endif
+
+            if (dom%has_dir(ydim)) then
+               if (cgl%cg%ext_bnd(ydim, LO)) then
+                  do i = cgl%cg%js, cgl%cg%je
+                     if (any(cgl%cg%u(iarr_all_dn, :, i, :) > d0*dtrig)) then
+                        ddist(ydim, LO) = min(ddist(ydim, LO), (cgl%cg%y(i) - cgl%cg%fbnd(ydim, LO))/cgl%cg%dy)
+                        exit
+                     endif
+                  enddo
+               endif
+               if (cgl%cg%ext_bnd(ydim, HI)) then
+                  do i = cgl%cg%je, cgl%cg%js, -1
+                     if (any(cgl%cg%u(iarr_all_dn, :, i, :) > d0*dtrig)) then
+                        ddist(ydim, HI) = min(ddist(ydim, HI), (cgl%cg%fbnd(ydim, HI) - cgl%cg%y(i))/cgl%cg%dy)
+                        exit
+                     endif
+                  enddo
+               endif
+            endif
+
+            if (dom%has_dir(zdim)) then
+               if (cgl%cg%ext_bnd(zdim, LO)) then
+                  do i = cgl%cg%ks, cgl%cg%ke
+                     if (any(cgl%cg%u(iarr_all_dn, :, :, i) > d0*dtrig)) then
+                        ddist(zdim, LO) = min(ddist(zdim, LO), (cgl%cg%z(i) - cgl%cg%fbnd(zdim, LO))/cgl%cg%dz)
+                        exit
+                     endif
+                  enddo
+               endif
+               if (cgl%cg%ext_bnd(zdim, HI)) then
+                  do i = cgl%cg%ke, cgl%cg%ks, -1
+                     if (any(cgl%cg%u(iarr_all_dn, :, :, i) > d0*dtrig)) then
+                        ddist(zdim, HI) = min(ddist(zdim, HI), (cgl%cg%fbnd(zdim, HI) - cgl%cg%z(i))/cgl%cg%dz)
+                        exit
+                     endif
+                  enddo
+               endif
+            endif
+         endif
+         cgl => cgl%nxt
+      enddo
+
+      call base%expand(ddist(:,:) < iprox)
+
+   end subroutine sedov_dist_to_edge
+
+!> \brief Performa late initialization of the cg added after domain expansion
+
+   subroutine sedov_late_init
+
+      use cg_list,       only: cg_list_element, expanded_domain
+      use constants,     only: xdim, ydim, zdim, ION
+      use dataio_pub,    only: die
+      use fluidindex,    only: flind
+      use func,          only: ekin, emag
+
+      implicit none
+
+      type(cg_list_element),  pointer :: cgl
+
+      integer :: p
+
+      cgl => expanded_domain%first
+      do while (associated(cgl))
+         if (cgl%cg%is_old) call die("[initproblem:sedov_late_init] Old piece on a new list")
+         do p = 1, flind%energ
+            associate (fl => flind%all_fluids(p)%fl)
+            cgl%cg%u(fl%idn, :, :, :) = d0
+            cgl%cg%u(fl%imx, :, :, :) = 0.
+            cgl%cg%u(fl%imy, :, :, :) = 0.
+            cgl%cg%u(fl%imz, :, :, :) = 0.
+            cgl%cg%u(fl%ien, :, :, :) = p0/(fl%gam_1) + ekin(cgl%cg%u(fl%imx, :, :, :), cgl%cg%u(fl%imy, :, :, :), cgl%cg%u(fl%imz, :, :, :), cgl%cg%u(fl%idn, :, :, :))
+            if (fl%tag == ION) then
+               cgl%cg%b(xdim, :, :, :) = bx0
+               cgl%cg%b(ydim, :, :, :) = by0
+               cgl%cg%b(zdim, :, :, :) = bz0
+               cgl%cg%u(fl%ien, :, :, :) = cgl%cg%u(fl%ien, :, :, :) + emag(cgl%cg%b(xdim, :, :, :), cgl%cg%b(ydim, :, :, :), cgl%cg%b(zdim, :, :, :)**2)
+            endif
+            end associate
+         enddo
+         cgl => cgl%nxt
+      enddo
+
+   end subroutine sedov_late_init
 
 !> \brief mark the wave
 

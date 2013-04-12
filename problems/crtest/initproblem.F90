@@ -39,12 +39,12 @@ module initproblem
    public :: read_problem_par, problem_initial_conditions, problem_pointers
 
    integer(kind=4)    :: norm_step
-   real               :: d0, p0, bx0, by0, bz0, x0, y0, z0, r0, beta_cr, amp_cr
+   real               :: d0, p0, bx0, by0, bz0, x0, y0, z0, r0, beta_cr, amp_cr, dtrig
    character(len=dsetnamelen), parameter :: aecr1_n = "aecr"
 
    integer, parameter :: icr = 1 !< Only first CR component is used in this test
 
-   namelist /PROBLEM_CONTROL/ d0, p0, bx0, by0, bz0, x0, y0, z0, r0, beta_cr, amp_cr, norm_step
+   namelist /PROBLEM_CONTROL/ d0, p0, bx0, by0, bz0, x0, y0, z0, r0, beta_cr, amp_cr, norm_step, dtrig
 
 contains
 
@@ -53,13 +53,15 @@ contains
    subroutine problem_pointers
 
       use dataio_user, only: user_vars_hdf5
-      use user_hooks,  only: problem_customize_solution, finalize_problem
+      use user_hooks,  only: problem_customize_solution, finalize_problem, late_initial_conditions, problem_domain_update
 
       implicit none
 
       problem_customize_solution => check_norm_wrapper
       finalize_problem           => check_norm
       user_vars_hdf5             => crtest_analytic_ecr1
+      late_initial_conditions    => cr_late_init
+      problem_domain_update      => cr_dist_to_edge
 
    end subroutine problem_pointers
 
@@ -85,6 +87,7 @@ contains
       y0           = 0.0       !< y-position of the blob
       z0           = 0.0       !< z-position of the blob
       r0           = 5.* minval(dom%L_(:)/dom%n_d) !< radius of the blob
+      dtrig        = -0.01     !< fraction of top density used to trigger domain expansion
 
       beta_cr      = 0.0       !< ambient level
       amp_cr       = 1.0       !< amplitude of the blob
@@ -106,6 +109,7 @@ contains
          rbuff(9)  = r0
          rbuff(10) = beta_cr
          rbuff(11) = amp_cr
+         rbuff(12) = dtrig
 
          ibuff(1)  = norm_step
 
@@ -127,6 +131,7 @@ contains
          r0        = rbuff(9)
          beta_cr   = rbuff(10)
          amp_cr    = rbuff(11)
+         dtrig     = rbuff(12)
 
          norm_step = int(ibuff(1), kind=4)
 
@@ -401,5 +406,141 @@ contains
       end select
 
    end subroutine crtest_analytic_ecr1
+
+!> \brief Performa late initialization of the cg added after domain expansion
+
+   subroutine cr_late_init
+
+      use cg_list,        only: cg_list_element, expanded_domain
+      use constants,      only: xdim, ydim, zdim
+      use dataio_pub,     only: die
+      use fluidindex,     only: flind
+      use func,           only: ekin, emag
+      use initcosmicrays, only: gamma_crs, iarr_crs
+
+      implicit none
+
+      type(cg_list_element),  pointer :: cgl
+
+      cgl => expanded_domain%first
+      do while (associated(cgl))
+         if (cgl%cg%is_old) call die("[initproblem:cr_late_init] Old piece on a new list")
+         associate (fl => flind%ion)
+         cgl%cg%b(xdim, :, :, :) = bx0
+         cgl%cg%b(ydim, :, :, :) = by0
+         cgl%cg%b(zdim, :, :, :) = bz0
+         cgl%cg%u(fl%idn, :, :, :) = d0
+         cgl%cg%u(fl%imx:fl%imz, :, :, :) = 0.0
+#ifndef ISO
+         cgl%cg%u(fl%ien,:,:,:) = p0/fl%gam_1 + emag(cgl%cg%b(xdim,:,:,:), cgl%cg%b(ydim,:,:,:), cgl%cg%b(zdim,:,:,:)) + &
+              &                   ekin(cgl%cg%u(fl%imx,:,:,:), cgl%cg%u(fl%imy,:,:,:), cgl%cg%u(fl%imz,:,:,:), cgl%cg%u(fl%idn,:,:,:))
+#endif /* !ISO */
+#ifdef COSM_RAYS
+         cgl%cg%u(iarr_crs(icr),:,:,:) = beta_cr*fl%cs2 * cgl%cg%u(fl%idn,:,:,:)/(gamma_crs(icr)-1.0)
+#endif /* COSM_RAYS */
+         end associate
+         cgl => cgl%nxt
+      enddo
+
+   end subroutine cr_late_init
+
+!> \brief Find hov close it the clump to the external edges and call expansion routine if necessary
+
+   subroutine cr_dist_to_edge
+
+      use cg_leaves,      only: leaves
+      use cg_level_base,  only: base
+      use cg_list,        only: cg_list_element
+      use constants,      only: xdim, ydim, zdim, LO, HI, pMAX
+      use domain,         only: dom
+      use initcosmicrays, only: iarr_crs
+      use mpisetup,       only: piernik_MPI_Allreduce
+
+      implicit none
+
+      type(cg_list_element),  pointer :: cgl
+      real, dimension(xdim:zdim, LO:HI) :: ddist
+      integer :: i
+      integer, parameter :: iprox = 2
+      real :: cmax
+
+      if (dtrig < 0.) return
+
+      cmax = 0.
+      cgl => leaves%first
+      do while (associated(cgl))
+         cmax = max(cmax, maxval(cgl%cg%u(iarr_crs(icr), cgl%cg%is:cgl%cg%ie, cgl%cg%js:cgl%cg%je, cgl%cg%ks:cgl%cg%ke), mask = cgl%cg%leafmap))
+         cgl => cgl%nxt
+      enddo
+      call piernik_MPI_Allreduce(cmax, pMAX)
+
+      ddist = huge(1.)
+      cgl => leaves%first
+      do while (associated(cgl))
+         if (any(cgl%cg%ext_bnd)) then
+            !> \todo roll it to a nested loop
+            if (dom%has_dir(xdim)) then
+               if (cgl%cg%ext_bnd(xdim, LO)) then
+                  do i = cgl%cg%is, cgl%cg%ie
+                     if (any(cgl%cg%u(iarr_crs(icr), i, :, :) > cmax*dtrig)) then
+                        ddist(xdim, LO) = min(ddist(xdim, LO), (cgl%cg%x(i) - cgl%cg%fbnd(xdim, LO))/cgl%cg%dx)
+                        exit
+                     endif
+                  enddo
+               endif
+               if (cgl%cg%ext_bnd(xdim, HI)) then
+                  do i = cgl%cg%ie, cgl%cg%is, -1
+                     if (any(cgl%cg%u(iarr_crs(icr), i, :, :) > cmax*dtrig)) then
+                        ddist(xdim, HI) = min(ddist(xdim, HI), (cgl%cg%fbnd(xdim, HI) - cgl%cg%x(i))/cgl%cg%dx)
+                        exit
+                     endif
+                  enddo
+               endif
+            endif
+
+            if (dom%has_dir(ydim)) then
+               if (cgl%cg%ext_bnd(ydim, LO)) then
+                  do i = cgl%cg%js, cgl%cg%je
+                     if (any(cgl%cg%u(iarr_crs(icr), :, i, :) > cmax*dtrig)) then
+                        ddist(ydim, LO) = min(ddist(ydim, LO), (cgl%cg%y(i) - cgl%cg%fbnd(ydim, LO))/cgl%cg%dy)
+                        exit
+                     endif
+                  enddo
+               endif
+               if (cgl%cg%ext_bnd(ydim, HI)) then
+                  do i = cgl%cg%je, cgl%cg%js, -1
+                     if (any(cgl%cg%u(iarr_crs(icr), :, i, :) > cmax*dtrig)) then
+                        ddist(ydim, HI) = min(ddist(ydim, HI), (cgl%cg%fbnd(ydim, HI) - cgl%cg%y(i))/cgl%cg%dy)
+                        exit
+                     endif
+                  enddo
+               endif
+            endif
+
+            if (dom%has_dir(zdim)) then
+               if (cgl%cg%ext_bnd(zdim, LO)) then
+                  do i = cgl%cg%ks, cgl%cg%ke
+                     if (any(cgl%cg%u(iarr_crs(icr), :, :, i) > cmax*dtrig)) then
+                        ddist(zdim, LO) = min(ddist(zdim, LO), (cgl%cg%z(i) - cgl%cg%fbnd(zdim, LO))/cgl%cg%dz)
+                        exit
+                     endif
+                  enddo
+               endif
+               if (cgl%cg%ext_bnd(zdim, HI)) then
+                  do i = cgl%cg%ke, cgl%cg%ks, -1
+                     if (any(cgl%cg%u(iarr_crs(icr), :, :, i) > cmax*dtrig)) then
+                        ddist(zdim, HI) = min(ddist(zdim, HI), (cgl%cg%fbnd(zdim, HI) - cgl%cg%z(i))/cgl%cg%dz)
+                        exit
+                     endif
+                  enddo
+               endif
+            endif
+         endif
+         cgl => cgl%nxt
+      enddo
+
+      call base%expand(ddist(:,:) < iprox)
+
+   end subroutine cr_dist_to_edge
 
 end module initproblem

@@ -37,7 +37,7 @@ module cg_list
    implicit none
 
    private
-   public :: cg_list_T, cg_list_element
+   public :: cg_list_T, cg_list_element, expanded_domain
 
    !>
    !! \brief A grid container with two links to other cg_list_elements
@@ -78,6 +78,8 @@ module cg_list
 !> \todo merge lists
 
    end type cg_list_T
+
+   type(cg_list_T):: expanded_domain                       !< grid pieces that were created in the area, where computational domain was recently expanded
 
 contains
 

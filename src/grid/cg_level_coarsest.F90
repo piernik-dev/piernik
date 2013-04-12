@@ -42,8 +42,10 @@ module cg_level_coarsest
    type :: cg_level_coarsest_T
       type(cg_level_connected_T), pointer :: level !< lowest refinement level
     contains
-      procedure :: add_coarser
-      !> \todo Provide delete_coarsest and use it in cleanup and perhaps also to make it easier for the domain to crawl.
+      procedure :: add_coarser                  !< add one level below current coarsest level
+      procedure :: delete_coarsest              !< delete coarsest level
+      procedure :: delete_coarser_than_base     !< delete all levels below base level (multigrid levels)
+      !> \todo use delete_coarsest in cleanup
    end type cg_level_coarsest_T
 
    type(cg_level_coarsest_T) :: coarsest             !< coarsest level of refinement
@@ -95,5 +97,50 @@ contains
       this%level => new_lev
 
    end subroutine add_coarser
+
+!> \brief delete coarsest level
+
+   subroutine delete_coarsest(this)
+
+      use cg_list,            only: cg_list_T
+      use constants,          only: base_level_id
+      use dataio_pub,         only: die
+      use list_of_cg_lists,   only: all_lists
+
+      implicit none
+
+      class(cg_level_coarsest_T), intent(inout) :: this    !< object calling type-bound routine
+
+      class(cg_list_T), pointer :: curl
+
+      if (this%level%level_id >= base_level_id) call die("[cg_level_coarsest:delete_coarsest] Attempted to operate on base level or above")
+
+      if (allocated(this%level%pse)) deallocate(this%level%pse)        ! this%level%pse(:)%c should be deallocated automagically
+      if (allocated(this%level%patches)) deallocate(this%level%patches)! this%level%patches(:)%pse should be deallocated automagically
+
+      call this%level%free_all_cg
+      curl => this%level
+      call all_lists%unregister(curl)
+      this%level => this%level%finer
+      nullify(this%level%coarser)
+      deallocate(curl)
+
+   end subroutine delete_coarsest
+
+!> \brief delete all levels below base level (multigrid levels)
+
+   subroutine delete_coarser_than_base(this)
+
+      use constants, only: base_level_id
+
+      implicit none
+
+      class(cg_level_coarsest_T), intent(inout) :: this    !< object calling type-bound routine
+
+      do while (this%level%level_id < base_level_id)
+         call this%delete_coarsest
+      enddo
+
+   end subroutine delete_coarser_than_base
 
 end module cg_level_coarsest

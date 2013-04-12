@@ -1,0 +1,115 @@
+ $BASE_DOMAIN
+    n_d = 64, 64, 1
+    bnd_xl = 'out'
+    bnd_xr = 'out'
+    bnd_yl = 'out'
+    bnd_yr = 'out'
+    bnd_zl = 'out'
+    bnd_zr = 'out'
+    xmin   =-256.0
+    xmax   = 256.0
+    ymin   =-256.0
+    ymax   = 256.0
+    zmin   =-256.0
+    zmax   = 256.0
+ /
+
+ $MPI_BLOCKS
+    AMR_bsize = 3*16
+    allow_uneven = .true.
+    allow_noncart = .true. 
+ /
+
+ $UNITS
+ /
+
+ $RESTART_CONTROL
+    restart  = 'last'
+    new_id   = ''
+    nrestart = 0
+ /
+
+ $END_CONTROL
+    tend   = 100.0
+    nend   = 10000
+ /
+
+ $OUTPUT_CONTROL
+    problem_name = 'cr'
+    run_id = 'tst'
+    dt_hdf  = 5.0
+    dt_res  = 0.0
+    dt_log  = 0.000
+    dt_tsl  = 0.000
+    vars(1) = 'dens'
+    vars(2) = 'velx'
+    vars(3) = 'vely'
+    vars(4) = 'velz'
+    vars(5) = 'ener'
+    vars(6) = 'magx'
+    vars(7) = 'magy'
+    vars(8) = 'magz'
+    vars(9) = 'encr'
+    vars(10) = 'acr1'
+    vars(11) = 'err1'
+ /
+
+ $NUMERICAL_SETUP
+    cfl    = 0.5
+    smalld = 1.e-3
+    smallei= 1.e-5
+    integration_order = 2
+    limiter= 'vanleer'
+ /
+
+ $FLUID_IONIZED
+    gamma  = 1.66666666666666666
+ /
+
+ $COSMIC_RAYS
+    cfl_cr      = 0.9
+    cr_active   = 1.0
+    ncrn        = 1
+    K_crn_paral = 200.0   ! anisotropic
+!    K_crn_perp  = 200.0 ! isotropic
+    use_split   = .false.
+ /
+
+ $MULTIGRID_SOLVER
+    stdout = .true.
+!    level_depth = 2
+    dirty_debug = .true.
+ /
+
+ $MULTIGRID_DIFFUSION
+!    diff_explicit = .true.
+    diff_theta     = 0.6
+    diff_tstep_fac = 43.402777777777777777777777 !86.805555555555555 !91.0222223 !91.0222223 !45.511112 !22.7555556
+    norm_tol = 1e-4
+    nsmool = 4
+    nsmoob = 4
+    max_cycles = 10
+    diff_bnd_str = "styrofoam"
+ /
+
+ $PROBLEM_CONTROL
+    d0     = 1.0e5
+    p0     = 1.0
+    bx0    = 5.0
+    by0    = 2.5
+    bz0    = 0.0
+    x0     = 0. !416.0
+    y0     = 0. !416.0
+    z0     = 0.0
+    r0     = 64.0
+    beta_cr= 0.0
+    amp_cr = 1.0
+    norm_step = 1
+    dtrig = 0.01 ! expand domain, when the pulse approaches outer edge
+ /
+
+ $INTERACTIONS
+ /
+
+ $AMR
+ /
