@@ -387,8 +387,8 @@ contains
 
       implicit none
 
-      type(cg_list_element), pointer :: cgl
 #ifdef SELF_GRAV
+      type(cg_list_element), pointer :: cgl
       logical, save :: frun = .true.
 #ifdef POISSON_FFT
       type(grid_container),  pointer :: cg
