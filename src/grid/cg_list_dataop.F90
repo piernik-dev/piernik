@@ -581,11 +581,11 @@ contains
 
       integer(kind=4) :: iv, iw
 
-      do iv = lbound(qna%lst, dim=1), ubound(qna%lst, dim=1)
+      do iv = lbound(qna%lst, dim=1, kind=4), ubound(qna%lst, dim=1, kind=4)
          call this%check_dirty(iv, label, expand=expand, warn_only=warn_only)
       enddo
 
-      do iw = lbound(wna%lst, dim=1), ubound(wna%lst, dim=1)
+      do iw = lbound(wna%lst, dim=1, kind=4), ubound(wna%lst, dim=1, kind=4)
          do iv = 1, wna%lst(iw)%dim4
             call this%check_dirty(iw, label, expand=expand, subfield=iv, warn_only=warn_only)
          enddo

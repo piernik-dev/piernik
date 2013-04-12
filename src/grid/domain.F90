@@ -575,7 +575,7 @@ contains
       class(domain_container), intent(in) :: this     !< object invoking type-bound procedure
       integer,                 intent(in) :: d        !< direction to be updated
       integer,                 intent(in) :: lh       !< side to be updated
-      integer,                 intent(in) :: n        !< how many dells are added/removed
+      integer(kind=4),         intent(in) :: n        !< how many dells are added/removed
 
       character(len=cbuff_len), dimension(HI*ndims) :: bnds  !< Six strings, describing boundary conditions
       real, dimension(ndims, LO:HI)     :: edges
