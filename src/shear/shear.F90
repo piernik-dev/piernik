@@ -378,6 +378,8 @@ contains
 
       call die("[shear:bnd_shear_u] Unimplemented")
 
+      if (.false.) cg%is_old = cg%is_old .or. (dir == -1) ! suppress compiler warnings
+
    end subroutine bnd_shear_u
 #endif /* SHEAR_BND */
 end module shear
