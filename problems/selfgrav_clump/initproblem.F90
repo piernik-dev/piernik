@@ -51,7 +51,7 @@ contains
 
    subroutine problem_pointers
 
-      use dataio_user, only: user_attrs_wr, user_attrs_rd
+      use dataio_user, only: user_vars_hdf5, user_attrs_wr, user_attrs_rd
       use user_hooks,  only: late_initial_conditions, problem_domain_update
 
       implicit none
@@ -60,6 +60,7 @@ contains
       problem_domain_update => sg_dist_to_edge
       user_attrs_wr => sg_attrs_wr
       user_attrs_rd => sg_attrs_rd
+      user_vars_hdf5 => sg_vars
 
    end subroutine problem_pointers
 
@@ -833,5 +834,63 @@ contains
       if (dmax <= smalld) call die("[initproblem:sg_attrs_rd] dmax <= smalld")
 
    end subroutine sg_attrs_rd
+
+!> \brief
+
+   subroutine sg_vars(var, tab, ierrh, cg)
+
+      use constants,  only: pi, xdim, zdim
+      use domain,     only: dom
+      use fluidindex, only: flind
+      use func,       only: ekin
+      use grid_cont,  only: grid_container
+      use units,      only: newtong
+
+      implicit none
+
+      character(len=*),               intent(in)    :: var
+      real(kind=4), dimension(:,:,:), intent(inout) :: tab
+      integer,                        intent(inout) :: ierrh
+      type(grid_container), pointer,  intent(in)    :: cg
+
+      real :: delx
+      integer :: d, i, j, k
+
+      ierrh = 0
+      select case (trim(var))
+         case ("nJ")
+            ! Jeans wavelength divided by longest cell dimension n_J = lambda_J/dz = c_sound * sqrt(pi/(G rho))/dx
+            delx = 0.
+            do d = xdim, zdim
+               if (dom%has_dir(d)) delx = max(delx, cg%dl(d))
+            enddo
+            do k = cg%ks, cg%ke
+               do j = cg%js, cg%je
+                  do i = cg%is, cg%ie
+                     tab(i-cg%is+1, j-cg%js+1, k-cg%ks+1) = real(sqrt(pi/newtong/cg%u(flind%ion%idn, i, j, k)) * flind%ion%get_cs(i, j, k, cg%u, cg%b, cg%cs_iso2)/delx, kind=4)
+                  enddo
+               enddo
+            enddo
+         case ("cs")
+            do k = cg%ks, cg%ke
+               do j = cg%js, cg%je
+                  do i = cg%is, cg%ie
+                     tab(i-cg%is+1, j-cg%js+1, k-cg%ks+1) = real(flind%ion%get_cs(i, j, k, cg%u, cg%b, cg%cs_iso2), kind=4)
+                  enddo
+               enddo
+            enddo
+         case ("mach")
+            do k = cg%ks, cg%ke
+               do j = cg%js, cg%je
+                  do i = cg%is, cg%ie
+                     tab(i-cg%is+1, j-cg%js+1, k-cg%ks+1) = real(sqrt(2*ekin(cg%u(flind%ion%imx, i, j, k), cg%u(flind%ion%imy, i, j, k), cg%u(flind%ion%imz, i, j, k), cg%u(flind%ion%idn, i, j, k)**2)) / flind%ion%get_cs(i, j, k, cg%u, cg%b, cg%cs_iso2), kind=4)
+                  enddo
+               enddo
+            enddo
+         case default
+            ierrh = -1
+      end select
+
+   end subroutine sg_vars
 
 end module initproblem
