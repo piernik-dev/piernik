@@ -80,6 +80,7 @@ contains
             if (curl%level_id <= refine_points(ip)%level) then
                cgl => curl%first
                do while (associated(cgl))
+                  cgl%cg%refine_flags%derefine = .true.
                   if (all((cgl%cg%fbnd(:, LO)<=refine_points(ip)%coords(:) .and. cgl%cg%fbnd(:, HI)>=refine_points(ip)%coords(:)) .or. .not. dom%has_dir(:))) then
                      if (curl%level_id < refine_points(ip)%level) then
                         ijk = cgl%cg%ijkse(:, LO)
@@ -125,6 +126,7 @@ contains
             if (curl%level_id <= refine_boxes(ip)%level) then
                cgl => curl%first
                do while (associated(cgl))
+                  cgl%cg%refine_flags%derefine = .true.
                   if (all((cgl%cg%fbnd(:, LO)<=refine_boxes(ip)%hcoords(:) .and. cgl%cg%fbnd(:, HI)>=refine_boxes(ip)%lcoords(:)) .or. .not. dom%has_dir(:))) then
                      if (curl%level_id < refine_boxes(ip)%level) then
                         ijk_l = cgl%cg%ijkse(:, LO)
