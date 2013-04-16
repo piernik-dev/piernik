@@ -1,0 +1,104 @@
+ $BASE_DOMAIN
+    n_d = 3*32
+    bnd_xl = 'per'
+    bnd_xr = 'per'
+    bnd_yl = 'per'
+    bnd_yr = 'per'
+    bnd_zl = 'per'
+    bnd_zr = 'per'
+    xmin   = -2.e5
+    xmax   =  2.e5
+    ymin   = -2.e5
+    ymax   =  2.e5
+    zmin   = -2.e5
+    zmax   =  2.e5
+ /
+
+ $MPI_BLOCKS
+    AMR_bsize = 3*16
+ /
+
+ $UNITS
+    units_set = "cgs"
+ /
+
+ $RESTART_CONTROL
+    restart  = 'last'
+    new_id   = ''
+    nrestart = 0
+ /
+
+ $END_CONTROL
+    tend   = 2.0
+    nend   = 1000
+ /
+
+ $OUTPUT_CONTROL
+    problem_name ='sg_clump_moving'
+    run_id =  'ts1'
+    dt_hdf  = 0.2
+    dt_res  = 1.0
+    dt_log  = 0.001
+    dt_tsl  = 0.001
+    vars(1) = 'dens'
+    vars(2) = 'velx'
+    vars(3) = 'vely'
+    vars(4) = 'velz'
+    vars(5) = 'ener'
+    vars(6:) = 'gpot', "mach", "cs", "nJ"
+ /
+
+ $FLUID_IONIZED
+    gamma  = 1.67
+    selfgrav = .true.
+ /
+
+ $FLUID_NEUTRAL
+    gamma = 1.67
+    selfgrav = .false.
+ /
+
+ $NUMERICAL_SETUP
+    cfl    = 0.7
+    smalld = 1.e5
+    smallei= 1.e14
+    limiter= 'vanleer'
+    cflcontrol = 'auto'
+    dt_initial = 1e-3
+ /
+
+ $GRAVITY
+ /
+
+ $RESISTIVITY
+ /
+
+ $PROBLEM_CONTROL
+    clump_mass = 1e23
+    clump_K = 10.0e4
+!    crashNotConv = .false.
+    clump_vel_x = 2e5
+    clump_r = 2.e4
+    maxitC = 1000
+!    verbose = .true.
+!    exp_speedup = .true.
+ /
+
+ $MULTIGRID_SOLVER
+    stdout    = .true.
+    dirty_debug = .true.
+ /
+
+ $MULTIGRID_GRAVITY
+    ord_time_extrap = 2
+    nsmool    = 4
+    grav_bnd_str  = "isolated"
+ /
+
+ $INTERACTIONS
+ /
+
+ $AMR
+    level_max = 1
+    refine_boxes(1) = 2, -.5e5, -.5e5, -.5e5, .5e5, .5e5, .5e5
+ /
