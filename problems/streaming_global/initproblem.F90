@@ -53,7 +53,7 @@ module initproblem
    integer(kind=4)          :: cutoff_ncells !< width of cut-off profile
    real, save               :: T_inner = 0.0 !< Orbital period at the inner boundary, \todo save it to restart as an attribute
    real, save               :: max_vy = -HUGE(1.0) !< Maximum tangential dust velocity
-   integer, save            :: noise_added = NOT_ADDED !< whether noise has been already added
+   integer(kind=4), save    :: noise_added = NOT_ADDED !< whether noise has been already added
    !>
    !! \f$\tau\f$ in \f$\frac{Du}{Dt} = - \frac{u-u_0}{\tau}f(R)
    !! when initproblem::problem_customize_solution is used
@@ -65,7 +65,7 @@ module initproblem
    character(len=cbuff_len) :: densfile
    real, dimension(:), allocatable :: taus, tauf
    character(len=dsetnamelen), parameter :: inid_n = "u_0"
-   integer                  :: amp_func  !< 1 - random, 2 - sine
+   integer(kind=4)          :: amp_func  !< 1 - random, 2 - sine
 
    namelist /PROBLEM_CONTROL/  alpha, d0, dout, r_max, r_in, r_out, f_in, f_out, &
       & dens_exp, eps, dens_amb, x_cut, cutoff_ncells, dumping_coeff, use_inner_orbital_period, &
@@ -1020,7 +1020,7 @@ contains
       integer(HID_T), intent(in) :: file_id
       integer(kind=4)            :: error
       real, dimension(I_ONE)     :: rbuff
-      integer, dimension(I_ONE)  :: ibuff
+      integer(kind=4), dimension(I_ONE) :: ibuff
 
       call h5ltget_attribute_double_f(file_id, "/", "T_inner", rbuff, error)
       T_inner = rbuff(1)

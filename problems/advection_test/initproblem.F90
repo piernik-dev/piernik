@@ -43,7 +43,7 @@ module initproblem
    real                   :: pulse_amp   !< amplitude of the density pulse compared to the ambient level
    real, dimension(ndims) :: pulse_vel   !< uniform velocity components
    integer(kind=4)        :: norm_step   !< how often to calculate the L2-norm
-   integer                :: nflip       !< how often to call refine/derefine routine
+   integer(kind=4)        :: nflip       !< how often to call refine/derefine routine
    real                   :: ref_thr     !< refinement threshold
    real                   :: deref_thr   !< derefinement threshold
 
@@ -403,6 +403,7 @@ contains
 
       use cg_leaves, only: leaves
       use cg_list,   only: cg_list_element
+      use constants, only: I_TWO
       use global,    only: nstep
 
       implicit none
@@ -414,7 +415,7 @@ contains
          cgl%cg%refine_flags%refine   = .false.
          cgl%cg%refine_flags%derefine = .false.
          if (mod(nstep, nflip) == 0) then
-            cgl%cg%refine_flags%refine   = (mod(nstep, 2*nflip) /= 0)
+            cgl%cg%refine_flags%refine   = (mod(nstep, I_TWO*nflip) /= 0)
             cgl%cg%refine_flags%derefine = .not. cgl%cg%refine_flags%refine
          endif
          cgl => cgl%nxt
