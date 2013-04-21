@@ -15,21 +15,17 @@
  /
 
  $MPI_BLOCKS
-    psize = 1, 1, 1
  /
 
  $UNITS
+    units_set = 'cgs' 
  /
 
  $RESTART_CONTROL
-    restart  = 'last'
-    new_id   = ''
-    nrestart = 0
  /
 
  $END_CONTROL
     tend   = 0.60
-    nend   = 90000
  /
 
  $OUTPUT_CONTROL
@@ -54,7 +50,9 @@
  /
 
  $FLUID_NEUTRAL
-    gammat = 1.666666666
+ /
+
+ $FLUID_DUST
  /
 
  $NUMERICAL_SETUP

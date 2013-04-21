@@ -19,27 +19,24 @@
  /
 
  $UNITS
+    units_set = 'cgs'
  /
 
  $RESTART_CONTROL
-    restart  = 'last'
-    new_id   = ''
-    nrestart = 0
  /
 
  $END_CONTROL
-    tend   = 0.0015
-    nend   = 4
+    tend   = 1.0e-3
  /
 
  $OUTPUT_CONTROL
     colormode = .false.
-    problem_name ='sedov'
+    problem_name = 'sedov'
     run_id =  'tst'
-    dt_hdf  = 0.1
+    dt_hdf  = 2.0e-4
     dt_res  = 0.0
-    dt_log  = 0.00001
-    dt_tsl  = 1.e-10
+    dt_log  = 1.0e-4
+    dt_tsl  = 1.0e-4
     vars(1) = 'dens'
     vars(2) = 'velx'
     vars(3) = 'vely'
@@ -62,8 +59,6 @@
     cfl    = 0.8
     smalld = 1.e-3
     smallei= 1.e-5
-    integration_order = 2
-    limiter= 'vanleer'
  /
 
  $GRAVITY

@@ -1,30 +1,38 @@
-import matplotlib
-matplotlib.use('cairo')
-import matplotlib.pyplot as plt
-from yt.mods import load, SlicePlot, parallel_objects
+import numpy as np
+from yt.mods import \
+    load, SlicePlot, parallel_objects, add_field, ValidateSpatial
 
-field = 'CurrentZ'
+FIELDS= ['curz']
+
+def _CurrentZ(field, data):
+    new_field = np.zeros(data["magy"].shape, dtype='float64')
+    new_field[1:-1,1:-1,:] = (data["magy"][1:-1,1:-1,:] -
+                              data["magy"][0:-2,1:-1,:]) \
+                              / data["dx"].flat[0]
+    new_field[1:-1,1:-1,:] -= (data["magx"][1:-1,1:-1,:] -
+                               data["magx"][1:-1,0:-2,:]) \
+                               / data["dy"].flat[0]
+    return new_field
+def _convertCurrent(data):
+    return 1.0 / data.convert("cm")
+add_field("curz", function=_CurrentZ, convert_function=_convertCurrent,
+          validators=[ValidateSpatial(1, ["magx", "magy", "magz"])],
+          units=r"\rm{g}/(\rm{cm}\,\rm{s}^{3}\,\rm{gauss})")
 
 def visualize(files):
     output = []
     for fn in parallel_objects(files, njobs=-1):
         pf = load(fn)
-        s = pf.h.slice(2, 0.0, fields=[field])
-        img = s.to_frb((1, 'unitary'), (512, 512))
-        vlim = abs(img[field]).max()
-        fig = plt.figure(0, figsize=(8, 6))
-        ax = plt.subplot(111)
-        ax.set_title(r"$j_z = (\nabla\times\mathbf{B})_z$")
-        img = ax.imshow(img[field], cmap='bwr', vmin=-vlim, vmax=vlim)
-        plt.colorbar(img)
-        plt.draw()
-        fn_out = fn.replace('.h5', '_%s.png' % field)
-        plt.savefig(fn_out)
-        plt.clf()
-        plt.close()
-        output.append(fn_out)
+        for field in FIELDS:
+            slc = SlicePlot(pf, 'z', field)
+            if field == 'curz':
+                slc.set_cmap(field, 'bwr')
+                maxabs = abs(slc._frb[field]).max()
+                slc.set_log(field, False)
+                slc.set_zlim(field, -maxabs, maxabs)
+            output.append(slc.save(fn.replace('.h5', '_%s.png' % field))[0])
     return output
 
 if __name__ == "__main__":
     import sys
-    visualize(sys.argv[1:])
+    print visualize(sys.argv[1:])

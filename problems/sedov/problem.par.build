@@ -37,7 +37,7 @@
  /
 
  $OUTPUT_CONTROL
-    problem_name ='sedov'
+    problem_name = 'sedov'
     run_id =  'tst'
     dt_hdf  = 0.1
     dt_res  = 0.1
