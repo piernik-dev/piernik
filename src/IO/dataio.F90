@@ -113,7 +113,7 @@ contains
 !! \n \n
 !! <table border="+1">
 !! <tr><td width="150pt"><b>parameter</b></td><td width="135pt"><b>default value</b></td><td width="200pt"><b>possible values</b></td><td width="315pt"> <b>description</b></td></tr>
-!! <tr><td>nend</td><td>1        </td><td>integer</td><td>\copydoc dataio_pub::nend</td></tr>
+!! <tr><td>nend</td><td>huge(1)  </td><td>integer</td><td>\copydoc dataio_pub::nend</td></tr>
 !! <tr><td>tend</td><td>-1.0     </td><td>real   </td><td>\copydoc dataio_pub::tend</td></tr>
 !! <tr><td>wend</td><td>huge(1.0)</td><td>real   </td><td>\copydoc dataio_pub::wend</td></tr>
 !! </table>
@@ -288,7 +288,7 @@ contains
       nhdf  = -1
       nres  = 0
 
-      nend = 1
+      nend = huge(1)
       tend = -1.0
       wend = huge(1.0)
 
