@@ -172,7 +172,9 @@ contains
 
       use cg_list,          only: cg_list_element
       use cg_leaves,        only: leaves
-      use constants,        only: xdim, ydim, zdim
+      use constants,        only: xdim, ydim, zdim, GEO_XYZ, GEO_RPZ
+      use dataio_pub,       only: die
+      use domain,           only: dom
       use fluidindex,       only: flind
       use global,           only: smallei, t
       use grid_cont,        only: grid_container
@@ -182,6 +184,8 @@ contains
 
       type(cg_list_element), pointer :: cgl
       type(grid_container), pointer :: cg
+
+      integer :: i, j, k
 
       call analytic_solution(t)
 
@@ -193,10 +197,25 @@ contains
 
          cg%u(flind%neu%idn, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = cg%q(qna%ind(inid_n))%arr(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)
 
-         ! Make uniform, completely boring flow
-         cg%u(flind%neu%imx, :, :, :) = pulse_vel(xdim) * cg%u(flind%neu%idn, :, :, :)
-         cg%u(flind%neu%imy, :, :, :) = pulse_vel(ydim) * cg%u(flind%neu%idn, :, :, :)
-         cg%u(flind%neu%imz, :, :, :) = pulse_vel(zdim) * cg%u(flind%neu%idn, :, :, :)
+         select case (dom%geometry_type)
+            case (GEO_XYZ)
+               ! Make uniform, completely boring flow
+               cg%u(flind%neu%imx, :, :, :) = pulse_vel(xdim) * cg%u(flind%neu%idn, :, :, :)
+               cg%u(flind%neu%imy, :, :, :) = pulse_vel(ydim) * cg%u(flind%neu%idn, :, :, :)
+               cg%u(flind%neu%imz, :, :, :) = pulse_vel(zdim) * cg%u(flind%neu%idn, :, :, :)
+            case (GEO_RPZ)
+               do k = cg%ks, cg%ke
+                  do j = cg%js, cg%je
+                     do i = cg%is, cg%ie
+                        cg%u(flind%neu%imx, i, j, k) = ( pulse_vel(xdim)*cos(cg%y(j)) + pulse_vel(ydim)*sin(cg%y(j))) * cg%u(flind%neu%idn, i, j, k)
+                        cg%u(flind%neu%imy, i, j, k) = (-pulse_vel(xdim)*sin(cg%y(j)) + pulse_vel(ydim)*cos(cg%y(j))) * cg%u(flind%neu%idn, i, j, k)
+                     enddo
+                  enddo
+               enddo
+               cg%u(flind%neu%imz, :, :, :) = pulse_vel(zdim) * cg%u(flind%neu%idn, :, :, :)
+            case default
+               call die("[initproblem:problem_initial_conditions] only cartesian and cylindrical geometries are supported")
+         end select
 
          ! Set up the internal energy
          cg%u(flind%neu%ien,:,:,:) = max(smallei, pulse_pressure / flind%neu%gam_1 + 0.5 * sum(cg%u(flind%neu%imx:flind%neu%imz,:,:,:)**2,1) / cg%u(flind%neu%idn,:,:,:))
@@ -329,8 +348,8 @@ contains
 
       use cg_list,          only: cg_list_element
       use cg_leaves,        only: leaves
-      use constants,        only: xdim, zdim, ndims
-      use dataio_pub,       only: warn
+      use constants,        only: xdim, zdim, ndims, GEO_XYZ, GEO_RPZ
+      use dataio_pub,       only: warn, die
       use domain,           only: dom
       use grid_cont,        only: grid_container
       use mpisetup,         only: master
@@ -347,6 +366,7 @@ contains
       real, dimension(:,:,:), pointer :: inid
       real, dimension(ndims)          :: pos
 
+      pos = 0. ! suppres compiler warning
       cgl => leaves%first
       do while (associated(cgl))
          cg => cgl%cg
@@ -361,9 +381,16 @@ contains
             do j = cg%js, cg%je
                do i = cg%is, cg%ie
 
-                  pos = [cg%x(i), cg%y(j), cg%z(k)] - t * pulse_vel(:)
+                  select case (dom%geometry_type)
+                     case (GEO_XYZ)
+                        pos = [cg%x(i), cg%y(j), cg%z(k)] - t * pulse_vel(:)
+                     case (GEO_RPZ)
+                        pos = [cg%x(i)*cos(cg%y(j)), cg%x(i)*sin(cg%y(j)), cg%z(k)] - t * pulse_vel(:)
+                     case default
+                        call die("[initproblem:analytic_solution] only cartesian and cylindrical geometries are supported")
+                  end select
                   do d = xdim, zdim
-                     if (dom%periodic(d)) then
+                     if ((dom%geometry_type == GEO_XYZ .or. (dom%geometry_type == GEO_RPZ .and. d == zdim)) .and. dom%periodic(d)) then
                         if (pos(d) < dom%edge(d, LO)) then
                            pos(d) = pos(d) + dom%L_(d) * ceiling((dom%edge(d, LO) - pos(d))/dom%L_(d))
                         else if (pos(d) > dom%edge(d, HI)) then
