@@ -38,8 +38,8 @@ module initproblem
    public :: read_problem_par, problem_initial_conditions, problem_pointers
 
    ! namelist parameters
-   real                   :: pulse_size  !< size of the density pulse as a fraction of the domain
-   real, dimension(ndims) :: pulse_off   !< offset of the pulse as a fraction of the domain
+   real, dimension(ndims) :: pulse_size  !< size of the density pulse
+   real, dimension(ndims) :: pulse_off   !< offset of the pulse
    real                   :: pulse_amp   !< amplitude of the density pulse compared to the ambient level
    real, dimension(ndims) :: pulse_vel   !< uniform velocity components
    integer(kind=4)        :: norm_step   !< how often to calculate the L2-norm
@@ -77,7 +77,7 @@ contains
 
       use constants,  only: I_ONE, xdim, zdim
       use dataio_pub, only: nh      ! QA_WARN required for diff_nml
-      use dataio_pub, only: warn
+      use dataio_pub, only: warn, die
       use domain,     only: dom
       use fluidindex, only: flind
       use global,     only: smalld, smallei
@@ -87,9 +87,9 @@ contains
       implicit none
 
       ! namelist default parameter values
-      pulse_size   = 0.5                   !< "fill factor" in each direction
-      pulse_off    = 0.0
-      pulse_vel(:) = 0.0                   !< pulse velocity
+      pulse_size(:) = 1.0                  !< size of the pulse
+      pulse_off(:)  = 0.0                  !< center of the pulse
+      pulse_vel(:)  = 0.0                  !< pulse velocity
       pulse_amp    = 2.0                   !< pulse relative amplitude
       norm_step    = 5
       nflip        = 0
@@ -100,12 +100,12 @@ contains
 
          diff_nml(PROBLEM_CONTROL)
 
-         rbuff(1)   = pulse_size
-         rbuff(2)   = pulse_amp
-         rbuff(3)   = ref_thr
-         rbuff(4)   = deref_thr
-         rbuff(5+xdim:5+zdim) = pulse_vel(:)
-         rbuff(8+xdim:8+zdim) = pulse_off(:)
+         rbuff(1)   = pulse_amp
+         rbuff(2)   = ref_thr
+         rbuff(3)   = deref_thr
+         rbuff( 4+xdim: 4+zdim) = pulse_size(:)
+         rbuff( 7+xdim: 7+zdim) = pulse_vel(:)
+         rbuff(10+xdim:10+zdim) = pulse_off(:)
 
          ibuff(1)   = norm_step
          ibuff(2)   = nflip
@@ -117,22 +117,19 @@ contains
 
       if (slave) then
 
-         pulse_size = rbuff(1)
-         pulse_amp  = rbuff(2)
-         ref_thr    = rbuff(3)
-         deref_thr  = rbuff(4)
-         pulse_vel  = rbuff(5+xdim:5+zdim)
-         pulse_off  = rbuff(8+xdim:8+zdim)
+         pulse_amp  = rbuff(1)
+         ref_thr    = rbuff(2)
+         deref_thr  = rbuff(3)
+         pulse_size = rbuff( 4+xdim: 4+zdim)
+         pulse_vel  = rbuff( 7+xdim: 7+zdim)
+         pulse_off  = rbuff(10+xdim:10+zdim)
 
          norm_step  = int(ibuff(1), kind=4)
          nflip      = ibuff(2)
 
       endif
 
-      if (pulse_size <= 0. .or. pulse_size >= 1.) then
-         pulse_size = 0.5
-         if (master) call warn("[initproblem:read_problem_par] Pulse width was invalid. Adjusted to 0.5.")
-      endif
+      if (any(pulse_size <= 0. .and. dom%has_dir)) call die("[initproblem:read_problem_par] Pulse size has to be positive")
 
       if (pulse_amp <= 0.) then
          if (have_mpi) then
@@ -145,8 +142,8 @@ contains
       endif
 
       where (dom%has_dir(:))
-         pulse_edge(:, LO) = dom%C_(:) + dom%L_(:) * ( pulse_off(:) - pulse_size/2. )
-         pulse_edge(:, HI) = dom%C_(:) + dom%L_(:) * ( pulse_off(:) + pulse_size/2. )
+         pulse_edge(:, LO) = pulse_off(:) - pulse_size/2.
+         pulse_edge(:, HI) = pulse_off(:) + pulse_size/2.
       elsewhere
          pulse_edge(:, LO) = -huge(1.)
          pulse_edge(:, HI) =  huge(1.)
