@@ -220,6 +220,11 @@ contains
          ! Set up the internal energy
          cg%u(flind%neu%ien,:,:,:) = max(smallei, pulse_pressure / flind%neu%gam_1 + 0.5 * sum(cg%u(flind%neu%imx:flind%neu%imz,:,:,:)**2,1) / cg%u(flind%neu%idn,:,:,:))
 
+         cg%u(flind%dst%idn, :, :, :) = cg%u(flind%neu%idn, :, :, :)
+         cg%u(flind%dst%imx, :, :, :) = cg%u(flind%neu%imx, :, :, :)
+         cg%u(flind%dst%imy, :, :, :) = cg%u(flind%neu%imy, :, :, :)
+         cg%u(flind%dst%imz, :, :, :) = cg%u(flind%neu%imz, :, :, :)
+
          cgl => cgl%nxt
       enddo
 
@@ -280,7 +285,7 @@ contains
 
       use cg_list,          only: cg_list_element
       use cg_leaves,        only: leaves
-      use constants,        only: PIERNIK_FINISHED, pSUM, pMIN, pMAX
+      use constants,        only: PIERNIK_FINISHED, pSUM, pMIN, pMAX, idlen
       use dataio_pub,       only: code_progress, halfstep, msg, printinfo, warn
       use fluidindex,       only: flind
       use global,           only: t, nstep
@@ -293,15 +298,20 @@ contains
       enum, bind(C)
          enumerator :: N_D, N_2
       end enum
-      real, dimension(N_D:N_2)        :: norm
-      real                            :: neg_err, pos_err
-      type(cg_list_element),  pointer :: cgl
-      type(grid_container),   pointer :: cg
-      real, dimension(:,:,:), pointer :: inid
+      enum, bind(C)
+         enumerator :: NEU, DST
+      end enum
+      real, dimension(N_D:N_2, NEU:DST) :: norm
+      real, dimension(NEU:DST)          :: neg_err, pos_err
+      type(cg_list_element),  pointer   :: cgl
+      type(grid_container),   pointer   :: cg
+      real, dimension(:,:,:), pointer   :: inid
+      integer                           :: i, j
+      character(len=idlen)              :: descr
 
       if (code_progress < PIERNIK_FINISHED .and. (mod(nstep, norm_step) /= 0 .or. halfstep)) return
 
-      norm(:) = 0.
+      norm = 0.
       neg_err = huge(1.0)
       pos_err = -neg_err
 
@@ -318,22 +328,40 @@ contains
          endif
 
          cg%wa(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = inid(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) - cg%u(flind%neu%idn, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)
+         norm(N_D, NEU) = norm(N_D, NEU) + sum(cg%wa(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)**2, mask=cg%leafmap)
+         norm(N_2, NEU) = norm(N_2, NEU) + sum(inid( cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)**2, mask=cg%leafmap)
+         neg_err(NEU) = min(neg_err(NEU), minval(cg%wa(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), mask=cg%leafmap))
+         pos_err(NEU) = max(pos_err(NEU), maxval(cg%wa(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), mask=cg%leafmap))
 
-         norm(N_D) = norm(N_D) + sum(cg%wa(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)**2, mask=cg%leafmap)
-         norm(N_2) = norm(N_2) + sum(inid( cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)**2, mask=cg%leafmap)
-         neg_err = min(neg_err, minval(cg%wa(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), mask=cg%leafmap))
-         pos_err = max(pos_err, maxval(cg%wa(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), mask=cg%leafmap))
+         cg%wa(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = inid(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) - cg%u(flind%dst%idn, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)
+         norm(N_D, DST) = norm(N_D, DST) + sum(cg%wa(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)**2, mask=cg%leafmap)
+         norm(N_2, DST) = norm(N_2, DST) + sum(inid( cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)**2, mask=cg%leafmap)
+         neg_err(DST) = min(neg_err(DST), minval(cg%wa(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), mask=cg%leafmap))
+         pos_err(DST) = max(pos_err(DST), maxval(cg%wa(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), mask=cg%leafmap))
 
          cgl => cgl%nxt
       enddo
 
-      call piernik_MPI_Allreduce(norm,    pSUM)
-      call piernik_MPI_Allreduce(neg_err, pMIN)
-      call piernik_MPI_Allreduce(pos_err, pMAX)
+      do i = NEU, DST
+         do j = N_D, N_2
+            call piernik_MPI_Allreduce(norm(j, i), pSUM)
+         enddo
+         call piernik_MPI_Allreduce(neg_err(i), pMIN)
+         call piernik_MPI_Allreduce(pos_err(i), pMAX)
+      enddo
 
       if (master) then
-         write(msg,'(a,f12.6,a,2f15.6)')"[initproblem:calculate_error_norm] L2 error norm = ", sqrt(norm(N_D)/norm(N_2)), ", min and max error = ", neg_err, pos_err
-         call printinfo(msg)
+         do i = NEU, DST
+            select case (i)
+               case (NEU)
+                  descr = "NEU"
+               case (DST)
+                  descr = "DST"
+            end select
+            write(msg,'(3a,f12.6,a,2f15.6)')"[initproblem:calculate_error_norm] L2 error norm (",descr,") = ", sqrt(norm(N_D, i)/norm(N_2, i)), &
+                 ", min and max error = ", neg_err(i), pos_err(i)
+            call printinfo(msg)
+         enddo
       endif
 
    end subroutine calculate_error_norm

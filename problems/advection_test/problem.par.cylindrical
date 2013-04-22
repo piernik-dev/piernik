@@ -52,12 +52,16 @@
     vars(2) = 'velx'
     vars(3) = 'vely'
     vars(4) = 'velz'
-    vars(5) = 'ener', "inid"
+    vars(5:) = 'ener', "inid"
  /
 
  $FLUID_NEUTRAL
-    gamma = 1.01 ! Nearly isothermal performs much better than gamma = 5./3.
+    gamma = 1.1 ! Nearly isothermal performs much better than gamma = 5./3.
     selfgrav = .false.
+ /
+
+ ! Dust has no temperature and thus has effective gamma = 1. and in cylindrical geometry performs better than non-isothermal fluids
+ $FLUID_DUST
  /
 
  $NUMERICAL_SETUP
