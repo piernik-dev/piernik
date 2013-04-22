@@ -765,7 +765,7 @@ contains
 
       use cg_leaves,        only: leaves
       use cg_list,          only: cg_list_element
-      use constants,        only: xdim, ydim, zdim, DST, pSUM
+      use constants,        only: xdim, ydim, zdim, DST, pSUM, GEO_XYZ, GEO_RPZ
       use dataio_pub,       only: wd_wr, tsl_file, tsl_lun
 #if defined(__INTEL_COMPILER)
       use dataio_pub,       only: io_blocksize, io_buffered, io_buffno
@@ -822,6 +822,8 @@ contains
       end enum
       real, dimension(T_MASS:T_LAST-1), save :: tot_q          !< array of total quantities
       integer(kind=4)                        :: ifl
+      integer                                :: i, ii
+      real                                   :: drvol
 
       if (has_ion) then
          cs_iso2 = flind%ion%cs2
@@ -836,8 +838,14 @@ contains
 
          if (tsl_firstcall) then
             call pop_vector(tsl_names, field_len, ["nstep   ", "time    ", "timestep", "mass    "])
-            if (tsl_with_mom) &
-          & call pop_vector(tsl_names, field_len, ["momx", "momy", "momz"])
+            if (tsl_with_mom) then
+               select case (dom%geometry_type)
+                  case (GEO_XYZ)
+                     call pop_vector(tsl_names, field_len, ["momx", "momy", "momz"])
+                  case (GEO_RPZ)
+                     call pop_vector(tsl_names, field_len, ["momr", "J_z ", "momz"])
+               end select
+            endif
             call pop_vector(tsl_names, field_len, ["ener", "eint", "ekin"])
 #ifdef GRAV
             call pop_vector(tsl_names, field_len, ["epot"])
@@ -892,30 +900,67 @@ contains
          pu => cg%w(wna%fi)%span(cg%ijkse)
          pb => cg%w(wna%bi)%span(cg%ijkse)
 
-         tot_q(T_MASS) = tot_q(T_MASS) + cg%dvol * sum(sum(pu(iarr_all_dn,:,:,:), dim=1), mask=cg%leafmap)
-         if (tsl_with_mom) then
-            tot_q(T_MOMX) = tot_q(T_MOMX) + cg%dvol * sum(sum(pu(iarr_all_mx,:,:,:), dim=1), mask=cg%leafmap)
-            tot_q(T_MOMY) = tot_q(T_MOMY) + cg%dvol * sum(sum(pu(iarr_all_my,:,:,:), dim=1), mask=cg%leafmap)
-            tot_q(T_MOMZ) = tot_q(T_MOMZ) + cg%dvol * sum(sum(pu(iarr_all_mz,:,:,:), dim=1), mask=cg%leafmap)
-         endif
+         select case (dom%geometry_type)
+
+            case (GEO_XYZ)
+               tot_q(T_MASS) = tot_q(T_MASS) + cg%dvol * sum(sum(pu(iarr_all_dn,:,:,:), dim=1), mask=cg%leafmap)
+               if (tsl_with_mom) then
+                  tot_q(T_MOMX) = tot_q(T_MOMX) + cg%dvol * sum(sum(pu(iarr_all_mx,:,:,:), dim=1), mask=cg%leafmap)
+                  tot_q(T_MOMY) = tot_q(T_MOMY) + cg%dvol * sum(sum(pu(iarr_all_my,:,:,:), dim=1), mask=cg%leafmap)
+                  tot_q(T_MOMZ) = tot_q(T_MOMZ) + cg%dvol * sum(sum(pu(iarr_all_mz,:,:,:), dim=1), mask=cg%leafmap)
+               endif
 #ifdef GRAV
-         tot_q(T_EPOT) = tot_q(T_EPOT) + cg%dvol * sum(sum(pu(iarr_all_dn(:),:,:,:),dim=1) * cg%q(qna%ind(gpot_n))%span(cg%ijkse), mask=cg%leafmap)
+               tot_q(T_EPOT) = tot_q(T_EPOT) + cg%dvol * sum(sum(pu(iarr_all_dn(:),:,:,:),dim=1) * cg%q(qna%ind(gpot_n))%span(cg%ijkse), mask=cg%leafmap)
 #endif /* GRAV */
 
-         tot_q(T_EKIN) = tot_q(T_EKIN) + cg%dvol * sum(sum(ekin(pu(iarr_all_mx(:),:,:,:), pu(iarr_all_my(:),:,:,:), pu(iarr_all_mz(:),:,:,:), max(pu(iarr_all_dn(:),:,:,:),smalld)), dim=1), mask=cg%leafmap)
-         tot_q(T_EMAG) = tot_q(T_EMAG) + cg%dvol * sum(emag(pb(xdim,:,:,:), pb(ydim,:,:,:), pb(zdim,:,:,:)), mask=cg%leafmap)
+               tot_q(T_EKIN) = tot_q(T_EKIN) + cg%dvol * sum(sum(ekin(pu(iarr_all_mx(:),:,:,:), pu(iarr_all_my(:),:,:,:), pu(iarr_all_mz(:),:,:,:), max(pu(iarr_all_dn(:),:,:,:),smalld)), dim=1), mask=cg%leafmap)
+               tot_q(T_EMAG) = tot_q(T_EMAG) + cg%dvol * sum(emag(pb(xdim,:,:,:), pb(ydim,:,:,:), pb(zdim,:,:,:)), mask=cg%leafmap)
 
-         tot_q(T_MFLX) = tot_q(T_MFLX) + cg%dvol/dom%L_(xdim) * sum(pb(xdim,:,:,:), mask=cg%leafmap) !cg%dy*cg%dz/dom%n_d(xdim)
-         tot_q(T_MFLY) = tot_q(T_MFLY) + cg%dvol/dom%L_(ydim) * sum(pb(ydim,:,:,:), mask=cg%leafmap) !cg%dx*cg%dz/dom%n_d(ydim)
-         tot_q(T_MFLZ) = tot_q(T_MFLZ) + cg%dvol/dom%L_(zdim) * sum(pb(zdim,:,:,:), mask=cg%leafmap) !cg%dx*cg%dy/dom%n_d(zdim)
+               tot_q(T_MFLX) = tot_q(T_MFLX) + cg%dvol/dom%L_(xdim) * sum(pb(xdim,:,:,:), mask=cg%leafmap) !cg%dy*cg%dz/dom%n_d(xdim)
+               tot_q(T_MFLY) = tot_q(T_MFLY) + cg%dvol/dom%L_(ydim) * sum(pb(ydim,:,:,:), mask=cg%leafmap) !cg%dx*cg%dz/dom%n_d(ydim)
+               tot_q(T_MFLZ) = tot_q(T_MFLZ) + cg%dvol/dom%L_(zdim) * sum(pb(zdim,:,:,:), mask=cg%leafmap) !cg%dx*cg%dy/dom%n_d(zdim)
 #ifndef ISO
-         tot_q(T_ENER) = tot_q(T_ENER) + cg%dvol * sum(sum(pu(iarr_all_en,:,:,:), dim=1), mask=cg%leafmap)
+               tot_q(T_ENER) = tot_q(T_ENER) + cg%dvol * sum(sum(pu(iarr_all_en,:,:,:), dim=1), mask=cg%leafmap)
 #endif /* !ISO */
 
 #ifdef COSM_RAYS
-         tot_q(T_ENCR) = tot_q(T_ENCR) + cg%dvol * sum(sum(pu(iarr_all_crs,:,:,:), dim=1), mask=cg%leafmap)
-         tot_q(T_ENER) = tot_q(T_ENER) + tot_q(T_ENCR)
+               tot_q(T_ENCR) = tot_q(T_ENCR) + cg%dvol * sum(sum(pu(iarr_all_crs,:,:,:), dim=1), mask=cg%leafmap)
+               tot_q(T_ENER) = tot_q(T_ENER) + tot_q(T_ENCR)
 #endif /* COSM_RAYS */
+
+            case (GEO_RPZ)
+               do i = cg%is, cg%ie
+                  drvol = cg%dvol * cg%x(i)
+                  ii = i - cg%is + 1
+                  tot_q(T_MASS) = tot_q(T_MASS) + drvol * sum(sum(pu(iarr_all_dn, ii, :, :), dim=1), mask=cg%leafmap(i, :, :))
+                  if (tsl_with_mom) then
+                     tot_q(T_MOMX) = tot_q(T_MOMX) + drvol * sum(sum(pu(iarr_all_mx, ii, :, :), dim=1), mask=cg%leafmap(i, :, :))
+                     tot_q(T_MOMY) = tot_q(T_MOMY) + drvol * sum(sum(pu(iarr_all_my, ii, :, :), dim=1), mask=cg%leafmap(i, :, :)) * cg%x(i) ! J_z
+                     tot_q(T_MOMZ) = tot_q(T_MOMZ) + drvol * sum(sum(pu(iarr_all_mz, ii, :, :), dim=1), mask=cg%leafmap(i, :, :))
+                  endif
+#ifdef GRAV
+                  tot_q(T_EPOT) = tot_q(T_EPOT) + drvol * sum(sum(pu(iarr_all_dn(:), ii, :, :),dim=1) * cg%q(qna%ind(gpot_n))%span(cg%ijkse), mask=cg%leafmap(i, :, :))
+#endif /* GRAV */
+
+                  tot_q(T_EKIN) = tot_q(T_EKIN) + drvol * sum(sum(ekin(pu(iarr_all_mx(:), ii, :, :), pu(iarr_all_my(:), ii, :, :), pu(iarr_all_mz(:), ii, :, :), &
+                       &                                               max(pu(iarr_all_dn(:), ii, :, :),smalld)), dim=1), mask=cg%leafmap(i, :, :))
+                  tot_q(T_EMAG) = tot_q(T_EMAG) + drvol * sum(emag(pb(xdim, ii, :, :), pb(ydim, ii, :, :), pb(zdim, ii, :, :)), mask=cg%leafmap(i, :, :))
+
+                  !> \todo Figure out the meaning of tot_q(T_MFL[XY]) and how to compute it properly or remove at all
+                  tot_q(T_MFLX) = 0. !tot_q(T_MFLX) + cg%dvol/dom%L_(xdim) * sum(pb(xdim, ii, :, :), mask=cg%leafmap(i, :, :)) !cg%dy*cg%dz/dom%n_d(xdim)
+                  tot_q(T_MFLY) = 0. !tot_q(T_MFLY) + cg%dvol/dom%L_(ydim) * sum(pb(ydim, ii, :, :), mask=cg%leafmap(i, :, :)) !cg%dx*cg%dz/dom%n_d(ydim)
+                  tot_q(T_MFLZ) = tot_q(T_MFLZ) + drvol/dom%L_(zdim) * sum(pb(zdim, ii, :, :), mask=cg%leafmap(i, :, :)) !cg%dx*cg%dy/dom%n_d(zdim)
+#ifndef ISO
+                  tot_q(T_ENER) = tot_q(T_ENER) + drvol * sum(sum(pu(iarr_all_en, ii, :, :), dim=1), mask=cg%leafmap(i, :, :))
+#endif /* !ISO */
+
+#ifdef COSM_RAYS
+                  tot_q(T_ENCR) = tot_q(T_ENCR) + drvol * sum(sum(pu(iarr_all_crs, ii, :, :), dim=1), mask=cg%leafmap(i, :, :))
+                  tot_q(T_ENER) = tot_q(T_ENER) + tot_q(T_ENCR)
+#endif /* COSM_RAYS */
+               enddo
+
+         end select
 
          cgl => cgl%nxt
       enddo

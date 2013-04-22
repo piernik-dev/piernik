@@ -269,7 +269,7 @@ contains
 
    subroutine init(this, n_d, off, my_se, grid_id, level_id)
 
-      use constants,     only: PIERNIK_INIT_DOMAIN, xdim, ydim, zdim, ndims, big_float, LO, HI, I_ONE, I_TWO, BND_MPI, BND_COR
+      use constants,     only: PIERNIK_INIT_DOMAIN, xdim, ydim, zdim, ndims, big_float, LO, HI, I_ONE, I_TWO, BND_MPI, BND_COR, GEO_XYZ, GEO_RPZ, dpi
       use dataio_pub,    only: die, warn, code_progress
       use domain,        only: dom
       use func,          only: f2c
@@ -370,8 +370,22 @@ contains
       this%ksb = this%ijkseb(zdim, LO)
       this%keb = this%ijkseb(zdim, HI)
 
-      this%vol = product(this%fbnd(:, HI)-this%fbnd(:, LO), mask=dom%has_dir(:))
-      this%dvol = product(this%dl(:), mask=dom%has_dir(:))
+      select case (dom%geometry_type)
+         case (GEO_XYZ)
+            this%vol = product(this%fbnd(:, HI)-this%fbnd(:, LO), mask=dom%has_dir(:))
+            this%dvol = product(this%dl(:), mask=dom%has_dir(:))
+         case (GEO_RPZ)
+            if (.not. dom%has_dir(ydim)) then
+               this%dl(ydim) = dpi
+               this%fbnd(ydim, :) = [ 0., dpi ]
+            endif
+            this%vol = 1.
+            if (dom%has_dir(xdim)) this%vol = this%vol * (this%fbnd(xdim, HI)**2 - this%fbnd(xdim, LO)**2)/2.
+            this%vol = this%vol * (this%fbnd(ydim, HI) - this%fbnd(ydim, LO))
+            if (dom%has_dir(zdim)) this%vol = this%vol * (this%fbnd(zdim, HI) - this%fbnd(zdim, LO))
+            this%dvol = product(this%dl(:), mask=(dom%has_dir(:) .or. [.false., .true., .false.])) ! multiply by actual radius to get true cell volume
+      end select
+      this%dvol2 = this%dvol**2
 
       this%maxxyz = maxval(this%n_(:), mask=dom%has_dir(:))
 
@@ -432,8 +446,6 @@ contains
       endif
 
       this%idl2 = [ this%idx2, this%idy2, this%idz2 ]
-
-      this%dvol2 = this%dvol**2
 
       if (allocated(this%prolong_) .or. allocated(this%prolong_x) .or. allocated(this%prolong_xy) .or. allocated(this%prolong_xyz)) &
            call die("[grid_container:init] prolong_* arrays already allocated")
