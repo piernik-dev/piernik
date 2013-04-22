@@ -298,11 +298,9 @@ contains
          minsize(:) = 1
       endwhere
 
-      if (master) then
-         if (have_mpi) then
-            if (allow_uneven) call warn("[domain:init_domain] Uneven domain decomposition is experimental.")
-            if (allow_noncart) call warn("[domain:init_domain] Non-cartesian domain decomposition is highly experimental.")
-         endif
+      if (have_mpi .and. master) then
+         if (allow_uneven) call warn("[domain:init_domain] Uneven domain decomposition is experimental.")
+         if (allow_noncart) call warn("[domain:init_domain] Non-cartesian domain decomposition is experimental.")
       endif
       is_uneven = .false.
       is_mpi_noncart = .false.

@@ -101,11 +101,11 @@ contains
       do d = xdim, zdim
          if (dom%has_dir(d))  then
             if (AMR_bsize(d) < dom%nb) then
-               if (allow_AMR) call warn("[refinement:init_refinement] Refinements disabled (AMR_bsize too small)")
+               if (allow_AMR .and. master) call warn("[refinement:init_refinement] Refinements disabled (AMR_bsize too small)")
                allow_AMR = .false.
             else
                if (mod(dom%n_d(d), AMR_bsize(d)) /= 0) then
-                  if (allow_AMR) call warn("[refinement:init_refinement] Refinements disabled (domain not divisible by AMR_bsize)")
+                  if (allow_AMR .and. master) call warn("[refinement:init_refinement] Refinements disabled (domain not divisible by AMR_bsize)")
                   allow_AMR = .false.
                endif
             endif
