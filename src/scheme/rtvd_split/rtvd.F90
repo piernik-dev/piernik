@@ -237,14 +237,18 @@ contains
 
    subroutine relaxing_tvd(n, u, u0, bb, divv, cs_iso2, istep, sweep, i1, i2, dx, dt, cg, eflx)
 
-      use constants,        only: one, zero, half, GEO_XYZ, LO
+      use constants,        only: one, zero, half, GEO_XYZ, LO, xdim, ydim, zdim
       use dataio_pub,       only: msg, die
       use domain,           only: dom
       use fluidindex,       only: iarr_all_dn, iarr_all_mx, flind, nmag
+#ifndef ISO
+      use fluidindex,       only: iarr_all_en
+#endif /* !ISO */
       use fluxes,           only: flimiter, all_fluxes
       use fluxtypes,        only: ext_fluxes
       use fluidtypes,       only: component_fluid
-      use global,           only: smalld, integration_order, use_smalld
+      use func,             only: emag, ekin
+      use global,           only: smalld, integration_order, use_smalld, smallei
       use grid_cont,        only: grid_container
       use gridgeometry,     only: gc, GC1, GC2, GC3, geometry_source_terms
       use mass_defect,      only: local_magic_mass
@@ -253,16 +257,6 @@ contains
 #else /* !BALSARA */
       use interactions,     only: fluid_interactions
 #endif /* !BALSARA */
-#ifndef ISO
-      use fluidindex,       only: iarr_all_en
-#if defined IONIZED || defined NEUTRAL
-      use fluidindex,       only: iarr_all_my, iarr_all_mz
-      use global,           only: smallei
-#endif /*  defined IONIZED || defined NEUTRAL  */
-#if defined IONIZED && defined MAGNETIC
-      use constants,        only: xdim, ydim, zdim
-#endif /* IONIZED && MAGNETIC */
-#endif /* !ISO */
 #ifdef GRAV
       use gravity,          only: grav_pot2accel
 #endif /* GRAV */
@@ -329,20 +323,12 @@ contains
 #endif /* COSM_RAYS_SOURCES */
 #endif /* COSM_RAYS */
 
-#ifndef ISO
-#if defined IONIZED || defined NEUTRAL
-      real, dimension(flind%fluids,n)              :: ekin, eint
-#endif /*  defined IONIZED || defined NEUTRAL  */
-#if defined IONIZED && defined MAGNETIC
-      real, dimension(n)                           :: emag
-#endif /* IONIZED && MAGNETIC */
-#endif /* !ISO */
+      real, dimension(n)              :: kin_ener, int_ener, mag_ener
 
       real, dimension(2,2), parameter              :: rk2coef = reshape( [ one, half, zero, one ], [ 2, 2 ] )
-#if !defined ISO && (defined IONIZED || defined NEUTRAL)
+
       class(component_fluid), pointer :: pfl
       integer :: ifl
-#endif /* !ISO && (IONIZED || NEUTRAL) */
 
 #if !(defined COSM_RAYS && defined IONIZED)
       integer                                      :: dummy
@@ -488,23 +474,23 @@ contains
 #endif /* COSM_RAYS_SOURCES */
 #endif /* COSM_RAYS && IONIZED */
 
-#if !defined ISO && (defined IONIZED || defined NEUTRAL)
-      ekin = half*( u1(iarr_all_mx,:)**2 + u1(iarr_all_my,:)**2 + u1(iarr_all_mz,:)**2 ) /u1(iarr_all_dn,:)
-      eint = u1(iarr_all_en,:) - ekin
-#if defined IONIZED && defined MAGNETIC
-      emag = half*(bb(xdim,:)*bb(xdim,:) + bb(ydim,:)*bb(ydim,:) + bb(zdim,:)*bb(zdim,:))
-      eint(flind%ion%pos,:) = eint(flind%ion%pos,:) - emag
-#endif /* IONIZED && MAGNETIC */
-      eint = max(eint,smallei)
-
       do ifl = 1, flind%fluids
          pfl => flind%all_fluids(ifl)%fl
-         if (pfl%has_energy) u1(pfl%ien, :) = eint(ifl, :) + ekin(ifl, :)
+         if (pfl%has_energy) then
+            kin_ener = ekin(u1(pfl%imx, :), u1(pfl%imy, :), u1(pfl%imz, :), u1(pfl%idn,:))
+            if (pfl%is_magnetized) then
+               mag_ener = emag(bb(xdim,:), bb(ydim,:), bb(zdim,:))
+               int_ener = u1(pfl%ien, :) - kin_ener - mag_ener
+            else
+               int_ener = u1(pfl%ien, :) - kin_ener
+            endif
+
+            int_ener = max(int_ener, smallei)
+
+            u1(pfl%ien, :) = int_ener + kin_ener
+            if (pfl%is_magnetized) u1(pfl%ien, :) = u1(pfl%ien, :) + mag_ener
+         endif
       enddo
-#if defined IONIZED && defined MAGNETIC
-      u1(iarr_all_en(flind%ion%pos),:) = u1(iarr_all_en(flind%ion%pos),:)+emag
-#endif /* IONIZED && MAGNETIC */
-#endif /* !ISO && (IONIZED || NEUTRAL)  */
 
       u(:,:) = u1(:,:)
 
