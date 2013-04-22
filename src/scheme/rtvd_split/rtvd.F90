@@ -243,6 +243,7 @@ contains
       use fluidindex,       only: iarr_all_dn, iarr_all_mx, flind, nmag
       use fluxes,           only: flimiter, all_fluxes
       use fluxtypes,        only: ext_fluxes
+      use fluidtypes,       only: component_fluid
       use global,           only: smalld, integration_order, use_smalld
       use grid_cont,        only: grid_container
       use gridgeometry,     only: gc, GC1, GC2, GC3, geometry_source_terms
@@ -338,6 +339,10 @@ contains
 #endif /* !ISO */
 
       real, dimension(2,2), parameter              :: rk2coef = reshape( [ one, half, zero, one ], [ 2, 2 ] )
+#if !defined ISO && (defined IONIZED || defined NEUTRAL)
+      class(component_fluid), pointer :: pfl
+      integer :: ifl
+#endif /* !ISO && (IONIZED || NEUTRAL) */
 
 #if !(defined COSM_RAYS && defined IONIZED)
       integer                                      :: dummy
@@ -490,16 +495,12 @@ contains
       emag = half*(bb(xdim,:)*bb(xdim,:) + bb(ydim,:)*bb(ydim,:) + bb(zdim,:)*bb(zdim,:))
       eint(flind%ion%pos,:) = eint(flind%ion%pos,:) - emag
 #endif /* IONIZED && MAGNETIC */
-
       eint = max(eint,smallei)
 
-#ifdef DUST
-      do ind= lbound(iarr_all_en, dim=1), ubound(iarr_all_en, dim=1)
-         u1(iarr_all_en(ind),:) = eint(ind, :)+ekin(ind, :) !> \warning BUGGY when dust comes before ionized or neutral
+      do ifl = 1, flind%fluids
+         pfl => flind%all_fluids(ifl)%fl
+         if (pfl%has_energy) u1(pfl%ien, :) = eint(ifl, :) + ekin(ifl, :)
       enddo
-#else /* !DUST */
-      u1(iarr_all_en,:) = eint+ekin
-#endif /* !DUST */
 #if defined IONIZED && defined MAGNETIC
       u1(iarr_all_en(flind%ion%pos),:) = u1(iarr_all_en(flind%ion%pos),:)+emag
 #endif /* IONIZED && MAGNETIC */
