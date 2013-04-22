@@ -298,10 +298,10 @@ contains
       type(ext_fluxes),              intent(inout) :: eflx               !< external fluxes
 
 #ifdef GRAV
-      integer                                      :: ind                !< fluid index
       real, dimension(n)                           :: gravacc            !< acceleration caused by gravitation
 #endif /* GRAV */
 
+      integer                                      :: ind                !< fluid index
       real                                         :: dtx                !< dt/dx
       real, dimension(flind%all,n)                 :: cfr                !< freezing speed
 !locals
@@ -493,7 +493,13 @@ contains
 
       eint = max(eint,smallei)
 
+#ifdef DUST
+      do ind= lbound(iarr_all_en, dim=1), ubound(iarr_all_en, dim=1)
+         u1(iarr_all_en(ind),:) = eint(ind, :)+ekin(ind, :) !> \warning BUGGY when dust comes before ionized or neutral
+      enddo
+#else /* !DUST */
       u1(iarr_all_en,:) = eint+ekin
+#endif /* !DUST */
 #if defined IONIZED && defined MAGNETIC
       u1(iarr_all_en(flind%ion%pos),:) = u1(iarr_all_en(flind%ion%pos),:)+emag
 #endif /* IONIZED && MAGNETIC */
