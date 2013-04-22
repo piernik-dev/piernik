@@ -1,9 +1,6 @@
  $BASE_DOMAIN
     n_d = 2*576, 1
     nb = 2
-    ! set n_d(:) to 3*64 if you want to have iy or iz /=0,
-    ! when prefer_rbgs_relaxation is .true.
-    ! or when parallel execution leads to nonconvergence
     bnd_xl = 'out'
     bnd_xr = 'out'
     bnd_yl = 'out'
