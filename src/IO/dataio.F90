@@ -765,7 +765,7 @@ contains
 
       use cg_leaves,        only: leaves
       use cg_list,          only: cg_list_element
-      use constants,        only: xdim, ydim, zdim, DST, pSUM, GEO_XYZ, GEO_RPZ
+      use constants,        only: xdim, ydim, zdim, DST, pSUM, GEO_XYZ, GEO_RPZ, ndims, LO, HI
       use dataio_pub,       only: wd_wr, tsl_file, tsl_lun
 #if defined(__INTEL_COMPILER)
       use dataio_pub,       only: io_blocksize, io_buffered, io_buffno
@@ -824,6 +824,7 @@ contains
       integer(kind=4)                        :: ifl
       integer                                :: i, ii
       real                                   :: drvol
+      integer(kind=4), dimension(ndims, LO:HI) :: ijkse
 
       if (has_ion) then
          cs_iso2 = flind%ion%cs2
@@ -932,6 +933,8 @@ contains
                do i = cg%is, cg%ie
                   drvol = cg%dvol * cg%x(i)
                   ii = i - cg%is + 1
+                  ijkse = cg%ijkse
+                  ijkse(xdim, :) = i
                   tot_q(T_MASS) = tot_q(T_MASS) + drvol * sum(sum(pu(iarr_all_dn, ii, :, :), dim=1), mask=cg%leafmap(i, :, :))
                   if (tsl_with_mom) then
                      tot_q(T_MOMX) = tot_q(T_MOMX) + drvol * sum(sum(pu(iarr_all_mx, ii, :, :), dim=1), mask=cg%leafmap(i, :, :))
@@ -939,7 +942,7 @@ contains
                      tot_q(T_MOMZ) = tot_q(T_MOMZ) + drvol * sum(sum(pu(iarr_all_mz, ii, :, :), dim=1), mask=cg%leafmap(i, :, :))
                   endif
 #ifdef GRAV
-                  tot_q(T_EPOT) = tot_q(T_EPOT) + drvol * sum(sum(pu(iarr_all_dn(:), ii, :, :),dim=1) * cg%q(qna%ind(gpot_n))%span(cg%ijkse), mask=cg%leafmap(i, :, :))
+                  tot_q(T_EPOT) = tot_q(T_EPOT) + drvol * sum(sum(pu(iarr_all_dn(:), ii:ii, :, :),dim=1) * cg%q(qna%ind(gpot_n))%span(ijkse), mask=cg%leafmap(i:i, :, :))
 #endif /* GRAV */
 
                   tot_q(T_EKIN) = tot_q(T_EKIN) + drvol * sum(sum(ekin(pu(iarr_all_mx(:), ii, :, :), pu(iarr_all_my(:), ii, :, :), pu(iarr_all_mz(:), ii, :, :), &
