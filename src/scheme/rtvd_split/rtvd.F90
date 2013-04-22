@@ -299,10 +299,10 @@ contains
       type(ext_fluxes),              intent(inout) :: eflx               !< external fluxes
 
 #ifdef GRAV
+      integer                                      :: ind                !< fluid index
       real, dimension(n)                           :: gravacc            !< acceleration caused by gravitation
 #endif /* GRAV */
 
-      integer                                      :: ind                !< fluid index
       real                                         :: dtx                !< dt/dx
       real, dimension(flind%all,n)                 :: cfr                !< freezing speed
 !locals
