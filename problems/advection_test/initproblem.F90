@@ -46,8 +46,9 @@ module initproblem
    integer(kind=4)        :: nflip       !< how often to call refine/derefine routine
    real                   :: ref_thr     !< refinement threshold
    real                   :: deref_thr   !< derefinement threshold
+   logical                :: usedust     !< If .false. then do not set velocity for dust
 
-   namelist /PROBLEM_CONTROL/  pulse_size, pulse_off, pulse_vel, pulse_amp, norm_step, nflip, ref_thr, deref_thr
+   namelist /PROBLEM_CONTROL/  pulse_size, pulse_off, pulse_vel, pulse_amp, norm_step, nflip, ref_thr, deref_thr, usedust
 
    ! other private data
    real, dimension(ndims, LO:HI) :: pulse_edge
@@ -81,7 +82,7 @@ contains
       use domain,     only: dom
       use fluidindex, only: flind
       use global,     only: smalld, smallei
-      use mpisetup,   only: rbuff, ibuff, master, slave, proc, have_mpi, LAST, piernik_MPI_Bcast
+      use mpisetup,   only: rbuff, ibuff, lbuff, master, slave, proc, have_mpi, LAST, piernik_MPI_Bcast
       use user_hooks, only: problem_refine_derefine
 
       implicit none
@@ -90,11 +91,12 @@ contains
       pulse_size(:) = 1.0                  !< size of the pulse
       pulse_off(:)  = 0.0                  !< center of the pulse
       pulse_vel(:)  = 0.0                  !< pulse velocity
-      pulse_amp    = 2.0                   !< pulse relative amplitude
-      norm_step    = 5
-      nflip        = 0
-      ref_thr      = 0.1
-      deref_thr    = 0.01
+      pulse_amp     = 2.0                  !< pulse relative amplitude
+      norm_step     = 5
+      nflip         = 0
+      ref_thr       = 0.1
+      deref_thr     = 0.01
+      usedust       = .false.
 
       if (master) then
 
@@ -110,9 +112,12 @@ contains
          ibuff(1)   = norm_step
          ibuff(2)   = nflip
 
+         lbuff(1)   = usedust
+
       endif
 
       call piernik_MPI_Bcast(ibuff)
+      call piernik_MPI_Bcast(lbuff)
       call piernik_MPI_Bcast(rbuff)
 
       if (slave) then
@@ -126,6 +131,8 @@ contains
 
          norm_step  = int(ibuff(1), kind=4)
          nflip      = ibuff(2)
+
+         usedust    = lbuff(1)
 
       endif
 
@@ -221,9 +228,13 @@ contains
          cg%u(flind%neu%ien,:,:,:) = max(smallei, pulse_pressure / flind%neu%gam_1 + 0.5 * sum(cg%u(flind%neu%imx:flind%neu%imz,:,:,:)**2,1) / cg%u(flind%neu%idn,:,:,:))
 
          cg%u(flind%dst%idn, :, :, :) = cg%u(flind%neu%idn, :, :, :)
-         cg%u(flind%dst%imx, :, :, :) = cg%u(flind%neu%imx, :, :, :)
-         cg%u(flind%dst%imy, :, :, :) = cg%u(flind%neu%imy, :, :, :)
-         cg%u(flind%dst%imz, :, :, :) = cg%u(flind%neu%imz, :, :, :)
+         if (usedust) then
+            cg%u(flind%dst%imx, :, :, :) = cg%u(flind%neu%imx, :, :, :)
+            cg%u(flind%dst%imy, :, :, :) = cg%u(flind%neu%imy, :, :, :)
+            cg%u(flind%dst%imz, :, :, :) = cg%u(flind%neu%imz, :, :, :)
+         else
+            cg%u(flind%dst%imx:flind%dst%imz, :, :, :) = 0.
+         endif
 
          cgl => cgl%nxt
       enddo
@@ -352,6 +363,7 @@ contains
 
       if (master) then
          do i = NEU, DST
+            if (i == DST .and. .not. usedust) exit
             select case (i)
                case (NEU)
                   descr = "NEU"
