@@ -220,12 +220,12 @@ contains
 
       use dataio_pub, only: printinfo, msg
       use global,     only: dt, t
-      use timer,      only: set_timer, tmr_fu
+      use timer,      only: set_timer, tmr_fu, get_timestamp
 
       implicit none
 
       integer(kind=4), intent(in) :: nstep
-      character(len=*), parameter :: fmt900 = "('   nstep = ',i7,'   dt = ',es23.16,'   t = ',es23.16,'   dWallClock = ',f10.2,' s')"
+      character(len=*), parameter :: fmt900 = "('   nstep = ',i7,'   dt = ',es23.16,'   t = ',es23.16,'   dWallClock = ',f10.2,' s ',a)"
       logical, save :: first_run = .true.
 
 
@@ -233,7 +233,7 @@ contains
          if (first_run) then
             first_run = (set_timer(tmr_fu) < 0.0)
          endif
-         write(msg, fmt900) nstep, dt, t, set_timer(tmr_fu)
+         write(msg, fmt900) nstep, dt, t, set_timer(tmr_fu), get_timestamp()
          call printinfo(msg, .true.)
       endif
 
