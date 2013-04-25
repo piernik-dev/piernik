@@ -36,7 +36,7 @@ module timer
    integer, parameter, private :: S_LEN = 30
 
    private
-   public :: cleanup_timers, time_left, set_timer, timer_start, timer_stop, tmr_fu
+   public :: cleanup_timers, time_left, set_timer, timer_start, timer_stop, tmr_fu, get_timestamp
 
    type, private :: timer_info
       character(len=S_LEN) :: key
@@ -334,5 +334,24 @@ contains
       endif
 
    end subroutine timer_stop
+
+!> \brief prints current timestamp
+   function get_timestamp() result (timestamp)
+
+      implicit none
+      integer, parameter :: ldate = 8
+      integer, parameter :: ltime = 10
+      integer, parameter :: lzone = 5
+      integer, parameter :: ltimestamp = 25
+
+      character(len=ldate) :: date
+      character(len=ltime) :: time
+      character(len=lzone) :: zone
+      character(len=ltimestamp) :: timestamp
+
+      call date_and_time(DATE=date, TIME=time, ZONE=zone)
+      write(timestamp, '("D",a8,"T",a10,a5)') date, time, zone
+   end function get_timestamp
+
 
 end module timer
