@@ -154,7 +154,8 @@ contains
 
 ! values of magnetic field computation in Runge-Kutta half step
 
-      b1(2:n) = b(2:n) -(vibj1(2:n)-vibj1(1:n-1))*dti*half;    b1(1) = b(2)
+      ! TODO: GEOFACTOR missing
+      b1(2:n) = b(2:n) - (vibj1(2:n) - vibj1(1:n-1)) * dti * half;    b1(1) = b(2)
 
       do i = 3, n-3
          ip  = i  + 1
@@ -165,20 +166,20 @@ contains
 ! recomputation of EMF components (w) with b1 and face centered EMF interpolation to cell-edges (dwp, dwm), depending on the sign of v.
 
          if (v > 0.0) then
-            w=vg(i)*b1(i)
-            dwp=(vg(ip)*b1(ip)-w)*half
-            dwm=(w-vg(im)*b1(im))*half
+            w   = vg(i) * b1(i)
+            dwp = (vg(ip) * b1(ip) - w) * half
+            dwm = (w - vg(im) * b1(im)) * half
          else
-            w=vg(ip)*b1(ip)
-            dwp=(w-vg(ipp)*b1(ipp))*half
-            dwm=(vg(i)*b1(i)-w)*half
+            w   = vg(ip) * b1(ip)
+            dwp = (w - vg(ipp) * b1(ipp)) * half
+            dwm = (vg(i) * b1(i) - w) * half
          endif
 
 ! the second-order corrections to the EMF components computation with the aid of the van Leer monotonic interpolation and 2nd order EMF computation
 
          dw=0.0
-         if (dwm*dwp > 0.0) dw=2.0*dwm*dwp/(dwm+dwp)
-         vibj(i)=(w+dw)*dt
+         if (dwm * dwp > 0.0) dw = 2.0 * dwm * dwp / (dwm + dwp)
+         vibj(i) = (w + dw) * dt
       enddo
       return
    end subroutine tvdb
@@ -336,7 +337,7 @@ contains
 #endif /* !(COSM_RAYS && IONIZED) */
 
       !OPT: try to avoid these explicit initializations of u1(:,:) and u0(:,:)
-      dtx       = dt / dx
+      dtx      = dt / dx
       full_dim = n > 1
 
       u1 = u
@@ -356,7 +357,7 @@ contains
          ! fr          = (cfr*u1 + w) * 0.5
          ! following is equivalent but faster
 
-         fl(:,1:n-1) = (u1(:,2:n)*cfr(:,2:n) - w(:,2:n))*half
+         fl(:,1:n-1) = (u1(:,2:n) * cfr(:,2:n) - w(:,2:n)) * half
          fl(:,n) = fl(:,n-1)
          fr(:,2:n) = fl(:,1:n-1) + w(:,2:n)
          fr(:,1) = fr(:,2)
@@ -364,16 +365,13 @@ contains
          if (istep == 2) then
 
             ! Second order flux corrections
-            dfp(:,1:n-1) = half*(fr(:,2:n) - fr(:,1:n-1)); dfp(:,n) = dfp(:,n-1)
-            dfm(:,2:n)   = dfp(:,1:n-1);                   dfm(:,1) = dfm(:,2)
-
+            dfp(:,1:n-1) = half * (fr(:,2:n) - fr(:,1:n-1)); dfp(:,n) = dfp(:,n-1)
+            dfm(:,2:n)   = dfp(:,1:n-1);                     dfm(:,1) = dfm(:,2)
             ! Flux limiter application
             call flimiter(fr,dfm,dfp)
 
-            !dflp(:,1:n-1) = half*(fl(:,1:n-1) - fl(:,2:n)); dflp(:,n) = dflp(:,n-1)
-            !dflm(:,2:n)   = dflp(:,1:n-1);                 dflm(:,1) = dflm(:,2)
-            dfp(:,1:n-1) = half*(fl(:,1:n-1) - fl(:,2:n)); dfp(:,n) = dfp(:,n-1)
-            dfm(:,2:n)   = dfp(:,1:n-1);                   dfm(:,1) = dfm(:,2)
+            dfp(:,1:n-1) = half * (fl(:,1:n-1) - fl(:,2:n)); dfp(:,n) = dfp(:,n-1)
+            dfm(:,2:n)   = dfp(:,1:n-1);                     dfm(:,1) = dfm(:,2)
             call flimiter(fl,dfm,dfp)
             !OPT 60% of D1mr and 40% D1mw occurred in few above lines (D1mr = 0.1% Dr, D1mw = 0.5% Dw)
             ! That ^^ should be fixed now, please confirm
@@ -408,10 +406,9 @@ contains
 
       if (use_smalld) then
          ! This is needed e.g. for outflow boundaries in presence of perp. gravity
-         local_magic_mass(:) = local_magic_mass(:) - sum(u1(iarr_all_dn,dom%nb+1:n-dom%nb),dim=2)*cg%dvol
+         local_magic_mass(:) = local_magic_mass(:) - sum(u1(iarr_all_dn,dom%nb+1:n-dom%nb),dim=2) * cg%dvol
          u1(iarr_all_dn,:) = max(u1(iarr_all_dn,:),smalld)
-!         local_magic_mass = local_magic_mass + sum( abs(u1(iarr_all_dn,dom%nb+1:n-dom%nb) - u0(iarr_all_dn,dom%nb+1:n-dom%nb)) )*cg%dvol
-         local_magic_mass(:) = local_magic_mass(:) + sum(u1(iarr_all_dn,dom%nb+1:n-dom%nb),dim=2)*cg%dvol
+         local_magic_mass(:) = local_magic_mass(:) + sum(u1(iarr_all_dn,dom%nb+1:n-dom%nb),dim=2) * cg%dvol
       else
          if (any(u1(iarr_all_dn,:) < 0.0)) then
             write(msg,'(3A,I4,1X,I4,A)') "[rtvd:relaxing_tvd] negative density in sweep ",sweep,"( ", i1, i2, " )"
