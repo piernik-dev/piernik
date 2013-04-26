@@ -30,13 +30,14 @@
 !! \brief Module for timers managements
 !<
 module timer
+   use dataio_pub, only: msglen
 
    implicit none
 
    integer, parameter, private :: S_LEN = 30
 
    private
-   public :: cleanup_timers, time_left, set_timer, timer_start, timer_stop, tmr_fu, get_timestamp
+   public :: cleanup_timers, walltime_end, set_timer, timer_start, timer_stop, tmr_fu, get_timestamp, wallclock
 
    type, private :: timer_info
       character(len=S_LEN) :: key
@@ -53,13 +54,21 @@ module timer
       type(timer_list) :: node
    end type timer_node
 
+   type :: wallclock
+      integer(kind=8)       :: clock_start, clock_end
+      character(len=msglen) :: description
+   contains
+      procedure :: time_left
+   end type wallclock
+
    type(timer_list), target, private, save :: timer_root
 
    integer :: cpuhours, cpumins, cpusecs, wchours, wcmins, wcsecs
    real    :: zcps, cputot, cpuallp, wctot, cpu_start, cpu_stop
    integer, dimension(3) :: iarray
    real(kind=4), dimension(2) :: tarray
-   integer(kind=8) :: clock_start, clock_end
+
+   type(wallclock) :: walltime_end = wallclock(0, 0, "end of simulation")
 
    character(len=*), parameter :: tmr_fu = "fluid_update"  !< main timer used to measure fluid_update step
 
@@ -215,14 +224,14 @@ contains
 
 !------------------------------------------------------------------------------------------
 
-   function time_left(wend) result (tf)
+   function time_left(this, wall_to_end) result (tf)
 
       use dataio_pub, only: msg, printinfo, die
       use mpisetup,   only: slave
 
       implicit none
-
-      real(kind=8), intent(in), optional :: wend
+      class(wallclock), intent(inout) :: this
+      real(kind=8), intent(in), optional :: wall_to_end
       logical :: tf
       integer(kind=8) :: clock, cnt_rate, cnt_max
       real(kind=8)    :: r_clk_end
@@ -233,44 +242,43 @@ contains
       if (slave) then
          call die("[timer:time_left] slaves are not supposed to call me. ABORT!")
          tf = .true. ! suppress complaints on possibly uninitialized value
-      else
+      endif
 
-         if (present(wend)) then
-            if (wend >= 0.0d0) then
-               call system_clock(clock_start, cnt_rate, cnt_max)
-               if (wend < 1e-4*huge(real(1.0, kind=8))) then
-                  r_clk_end = real(clock_start, kind=8) + wend*3600.0*real(cnt_rate, kind=8)
-                  if (r_clk_end < cnt_max) then
-                     clock_end = int(r_clk_end, kind=8)
-                  else
-                     clock_end = -cnt_max
-                  endif
+      if (present(wall_to_end)) then
+         if (wall_to_end >= 0.0d0) then
+            call system_clock(this%clock_start, cnt_rate, cnt_max)
+            if (wall_to_end < 1e-4*huge(real(1.0, kind=8))) then
+               r_clk_end = real(this%clock_start, kind=8) + wall_to_end*3600.0*real(cnt_rate, kind=8)
+               if (r_clk_end < cnt_max) then
+                  this%clock_end = int(r_clk_end, kind=8)
                else
-                  clock_end = -cnt_max
+                  this%clock_end = -cnt_max
                endif
+            else
+               this%clock_end = -cnt_max
             endif
          endif
+      endif
 !>
 !! \deprecated BEWARE: gfortran gives 1ms resolution, but ifort can offer 0.1ms, which will result in an integer overflow in less than 5 days
 !! Probably it is better to call date_and_time(VALUES) here
 !! if clock, cnt_rate, cnt_max are of kind=8 gfortran put results in 1 ns
 !<
-         call system_clock(clock, cnt_rate, cnt_max)
-         tf = .true.
-         if (clock_end /= -cnt_max) then
-            if ( clock_end - clock < 0 ) tf = .false.
-         endif
+      call system_clock(clock, cnt_rate, cnt_max)
+      tf = .true.
+      if (this%clock_end /= -cnt_max) then
+         if ( this%clock_end - clock < 0 ) tf = .false.
+      endif
 
-         if (present(wend)) then
-            if (wend < 0.0d0) then
-               ss = (clock_end - clock)/(3600.0*cnt_rate)
-               hh = int(ss,kind=8)
-               ss = (ss - hh)*60.0
-               mm = int(ss,kind=8)
-               ss = (ss - mm)*60.0
-               write(msg,'(A,I4,":",I2.2,":",F5.2)') "Walltime left until end of simulation: ", hh, mm, ss
-               call printinfo(msg)
-            endif
+      if (present(wall_to_end)) then
+         if (wall_to_end < 0.0d0) then
+            ss = (this%clock_end - clock)/(3600.0*cnt_rate)
+            hh = int(ss,kind=8)
+            ss = (ss - hh)*60.0
+            mm = int(ss,kind=8)
+            ss = (ss - mm)*60.0
+            write(msg,'("Walltime left until ",A,": ",I4,":",I2.2,":",F5.2)') trim(this%description), hh, mm, ss
+            call printinfo(msg)
          endif
       endif
 

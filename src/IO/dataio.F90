@@ -40,6 +40,7 @@ module dataio
 
    use dataio_pub, only: domain_dump, fmin, fmax, vizit, nend, tend, wend, new_id, nrestart, problem_name, run_id, multiple_h5files, use_v2_io, nproc_io, enable_compression, gzip_level
    use constants,  only: cwdlen, fmt_len, cbuff_len, dsetnamelen, RES, TSL
+   use timer,      only: wallclock
 
    implicit none
 
@@ -53,7 +54,8 @@ module dataio
    logical                  :: mag_center            !< choice to dump magnetic fields values from cell centers or not (if not then values from cell borders, unused)
    integer(kind=4)          :: resdel                !< number of recent restart dumps which should be saved; each n-resdel-1 restart file is supposed to be deleted while writing n restart file
    real                     :: dt_hdf                !< time between successive hdf dumps
-   real                     :: dt_res                !< time between successive restart file dumps
+   real                     :: dt_res                !< simulation time between successive restart file dumps
+   real                     :: wdt_res               !< walltime between successive restart file dumps
    real                     :: dt_tsl                !< time between successive timeslice dumps
    real                     :: dt_log                !< time between successive log dumps
    character(len=cwdlen)    :: user_message_file     !< path to possible user message file containing dt_xxx changes or orders to dump/stop/end simulation
@@ -79,6 +81,8 @@ module dataio
    character(len=fmt_len), protected, target :: fmt_loc, fmt_dtloc, fmt_vloc
    logical                  :: colormode             !< enable color messages using ANSI escape modes
 
+   type(wallclock)          :: walltime_nextres      !< wallclock used for dumping restarts every n hours
+
    type :: tsl_container
       logical :: dummy
 #ifdef COSM_RAYS
@@ -100,7 +104,7 @@ module dataio
    namelist /OUTPUT_CONTROL/  problem_name, run_id, dt_hdf, dt_res, dt_tsl, dt_log, tsl_with_mom, tsl_with_ptc, &
                               domain_dump, vars, mag_center, vizit, fmin, fmax, user_message_file, system_message_file, &
                               multiple_h5files, use_v2_io, nproc_io, enable_compression, gzip_level, initial_hdf_dump, &
-                              colormode
+                              colormode, wdt_res
 
 contains
 
@@ -136,6 +140,7 @@ contains
 !! <tr><td>run_id             </td><td>"___"              </td><td>real      </td><td>\copydoc dataio_pub::run_id       </td></tr>
 !! <tr><td>dt_hdf             </td><td>0.0                </td><td>real      </td><td>\copydoc dataio::dt_hdf           </td></tr>
 !! <tr><td>dt_res             </td><td>0.0                </td><td>real      </td><td>\copydoc dataio::dt_res           </td></tr>
+!! <tr><td>wdt_res            </td><td>0.0                </td><td>real      </td><td>\copydoc dataio::wdt_res          </td></tr>
 !! <tr><td>dt_tsl             </td><td>0.0                </td><td>real      </td><td>\copydoc dataio::dt_tsl           </td></tr>
 !! <tr><td>dt_log             </td><td>0.0                </td><td>real      </td><td>\copydoc dataio::dt_log           </td></tr>
 !! <tr><td>tsl_with_mom       </td><td>.true.             </td><td>logical   </td><td>\copydoc dataio::plt_with_mom     </td></tr>
@@ -268,6 +273,7 @@ contains
       dt_res       = 0.0
       dt_tsl       = 0.0
       dt_log       = 0.0
+      wdt_res      = 0.0
 
       tsl_with_mom     = .true.
 #ifdef ISO
@@ -336,7 +342,7 @@ contains
 !   namelist /OUTPUT_CONTROL/  problem_name, run_id, dt_hdf, dt_res, dt_tsl, dt_log, tsl_with_mom, tsl_with_ptc, &
 !                              domain_dump, vars, mag_center, vizit, fmin, fmax, user_message_file, system_message_file, &
 !                              multiple_h5files, use_v2_io, nproc_io, enable_compression, gzip_level, initial_hdf_dump, &
-!                              colormode
+!                              colormode, wdt_res
          ibuff(43) = nproc_io
          ibuff(44) = gzip_level
 
@@ -346,6 +352,7 @@ contains
          rbuff(43) = dt_log
          rbuff(45) = fmin
          rbuff(46) = fmax
+         rbuff(47) = wdt_res
 
          lbuff(1)  = vizit
          lbuff(2)  = multiple_h5files
@@ -392,7 +399,7 @@ contains
 !   namelist /OUTPUT_CONTROL/  problem_name, run_id, dt_hdf, dt_res, dt_tsl, dt_log, tsl_with_mom, tsl_with_ptc, &
 !                              domain_dump, vars, mag_center, vizit, fmin, fmax, user_message_file, system_message_file, &
 !                              multiple_h5files, use_v2_io, nproc_io, enable_compression, gzip_level, initial_hdf_dump, &
-!                              colormode
+!                              colormode, wdt_res
 
          nproc_io            = int(ibuff(43), kind=4)
          gzip_level          = int(ibuff(44), kind=4)
@@ -403,6 +410,7 @@ contains
          dt_log              = rbuff(43)
          fmin                = rbuff(45)
          fmax                = rbuff(46)
+         wdt_res             = rbuff(47)
 
          vizit               = lbuff(1)
          multiple_h5files    = lbuff(2)
@@ -438,7 +446,7 @@ contains
       use domain,       only: dom
       use global,       only: t, nstep
       use mpisetup,     only: master
-      use timer,        only: time_left
+      use timer,        only: walltime_end
       use user_hooks,   only: user_vars_arr_in_restart
       use version,      only: nenv,env, init_version
 #ifdef HDF5
@@ -458,7 +466,7 @@ contains
       write(fmt_dtloc,'(2(a,i1),a)') "(2x,a12,a3,'  = ',es16.9,'  dt=',es11.4, ",dom%eff_dim+1,"(1x,i4),",dom%eff_dim,"(1x,f12.4))"
       write(fmt_vloc, '(2(a,i1),a)') "(2x,a12,a3,'  = ',es16.9,'   v=',es11.4, ",dom%eff_dim+1,"(1x,i4),",dom%eff_dim,"(1x,f12.4))"
 
-      if (master) tn = time_left(wend)
+      if (master) tn = walltime_end%time_left(wend)
 
 #ifdef HDF5
       call init_hdf5(vars)
@@ -495,6 +503,8 @@ contains
       call printinfo("[dataio:init_dataio] finished. \o/")
 #endif /* VERBOSE */
 
+      walltime_nextres = wallclock(0, 0, "until next restart")
+
    end subroutine init_dataio
 
    subroutine cleanup_dataio
@@ -512,7 +522,7 @@ contains
 
       use dataio_pub,   only: msg, printinfo, warn
       use mpisetup,     only: master, piernik_MPI_Bcast
-      use timer,        only: time_left
+      use timer,        only: walltime_end
 #ifdef HDF5
       use data_hdf5,    only: write_hdf5
       use restart_hdf5, only: write_restart_hdf5
@@ -546,9 +556,14 @@ contains
                call write_timeslice
             case ('wend')
                wend = umsg_param
-               if (master) tn = time_left(wend)
+               if (master) tn = walltime_end%time_left(wend)
+            case ('wdtres')
+               wdt_res = umsg_param
+               if (master) tn = walltime_nextres%time_left(wdt_res)
             case ('wleft')
-               if (master) tn = time_left(-1.0)
+               if (master) tn = walltime_end%time_left(-1.0)
+            case ('wresleft')
+               if (master) tn = walltime_nextres%time_left(-1.0)
             case ('tend')
                tend   = umsg_param
             case ('nend')
@@ -577,8 +592,9 @@ contains
                   &"  log      - update logfile",char(10),&
                   &"  tsl      - write a timeslice",char(10),&
                   &"  wleft    - show how much walltime is left",char(10),&
+                  &"  wresleft - show how much walltime is left till next restart",char(10),&
                   &"  sleep <number> - wait <number> seconds",char(10),&
-                  &"  wend|tend|nend|dtres|dthdf|dtlog|dttsl <value> - update specified parameter with <value>",char(10),&
+                  &"  wend|wdtres|tend|nend|dtres|dthdf|dtlog|dttsl <value> - update specified parameter with <value>",char(10),&
                   &"Note that only one line at a time is read."
                   call printinfo(msg)
                endif
@@ -628,6 +644,7 @@ contains
       use constants,    only: FINAL, HDF, LOGF
       use dataio_pub,   only: last_res_time, last_hdf_time
       use dataio_user,  only: user_post_write_data
+      use mpisetup,     only: master, piernik_MPI_Bcast
 #ifdef HDF5
       use data_hdf5,    only: write_hdf5
       use restart_hdf5, only: write_restart_hdf5
@@ -636,6 +653,7 @@ contains
       implicit none
 
       integer(kind=4), intent(in) :: output
+      logical :: tleft
 
 !- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
@@ -644,6 +662,15 @@ contains
 #ifdef HDF5
       call determine_dump(dump(RES), last_res_time, dt_res, output, RES)
       if (dump(RES)) call write_restart_hdf5
+
+      if (wdt_res > 0.0) then
+         if (master) tleft = walltime_nextres%time_left()
+         call piernik_MPI_Bcast(tleft)
+         if (.not.tleft) then
+            call write_restart_hdf5
+            if (master) tleft = walltime_nextres%time_left(wdt_res)
+         endif
+      endif
 
       call determine_dump(dump(HDF), last_hdf_time, dt_hdf, output, HDF)
       call manage_hdf_dump(dump(HDF), output)

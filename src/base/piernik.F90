@@ -48,7 +48,7 @@ program piernik
    use named_array_list,  only: qna, wna
    use refinement,        only: emergency_fix
    use refinement_update, only: update_refinement
-   use timer,             only: time_left, set_timer, tmr_fu
+   use timer,             only: walltime_end, set_timer, tmr_fu
    use timestep,          only: time_step
    use user_hooks,        only: finalize_problem, problem_domain_update
 #ifdef PERFMON
@@ -155,7 +155,7 @@ program piernik
          try_rebalance = .false.
       endif
 
-      if (master) tleft = time_left()
+      if (master) tleft = walltime_end%time_left()
       call piernik_MPI_Bcast(tleft)
 
       if (.not.tleft) end_sim = .true.
