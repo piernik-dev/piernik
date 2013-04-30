@@ -254,7 +254,7 @@ contains
 
    subroutine dataio_par_io
 
-      use constants,  only: idlen, cbuff_len
+      use constants,  only: idlen, cbuff_len, INT4
       use dataio_pub, only: nres, nrestart, warn, nhdf, wd_rd, multiple_h5files, warn
       use dataio_pub, only: nh, set_colors  ! QA_WARN required for diff_nml
       use mpisetup,   only: lbuff, ibuff, rbuff, cbuff, master, slave, nproc, piernik_MPI_Bcast
@@ -298,7 +298,7 @@ contains
       nhdf  = -1
       nres  = 0
 
-      nend = huge(1)
+      nend = huge(1_INT4)
       tend = -1.0
       wend = huge(1.0)
 
@@ -792,7 +792,7 @@ contains
 
       use cg_leaves,        only: leaves
       use cg_list,          only: cg_list_element
-      use constants,        only: xdim, ydim, zdim, DST, pSUM, GEO_XYZ, GEO_RPZ, ndims, LO, HI
+      use constants,        only: xdim, ydim, zdim, DST, pSUM, GEO_XYZ, GEO_RPZ, ndims, LO, HI, I_ONE
       use dataio_pub,       only: wd_wr, tsl_file, tsl_lun
 #if defined(__INTEL_COMPILER)
       use dataio_pub,       only: io_blocksize, io_buffered, io_buffno
@@ -849,7 +849,7 @@ contains
       end enum
       real, dimension(T_MASS:T_LAST-1), save :: tot_q          !< array of total quantities
       integer(kind=4)                        :: ifl
-      integer                                :: i, ii
+      integer(kind=4)                        :: i, ii
       real                                   :: drvol
       integer(kind=4), dimension(ndims, LO:HI) :: ijkse
 
@@ -959,7 +959,7 @@ contains
             case (GEO_RPZ)
                do i = cg%is, cg%ie
                   drvol = cg%dvol * cg%x(i)
-                  ii = i - cg%is + 1
+                  ii = i - cg%is + I_ONE
                   ijkse = cg%ijkse
                   ijkse(xdim, :) = i
                   tot_q(T_MASS) = tot_q(T_MASS) + drvol * sum(sum(pu(iarr_all_dn, ii, :, :), dim=1), mask=cg%leafmap(i, :, :))
