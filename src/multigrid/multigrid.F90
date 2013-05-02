@@ -157,6 +157,7 @@ contains
 
       single_base = (nproc == 1)
 
+      if (dirty_debug .and. master) call warn("[multigrid:init_multigrid] dirty_debug is supposed to be set only in debugging runs. Remember to disable it in production runs")
       if (dom%eff_dim < 1 .or. dom%eff_dim > 3) call die("[multigrid:init_multigrid] Unsupported number of dimensions.")
 
 !! \todo Make an array of subroutine pointers
