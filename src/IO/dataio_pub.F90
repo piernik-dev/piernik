@@ -147,13 +147,15 @@ module dataio_pub
       character(len=msglen), pointer :: cmdl_nml   !< buffer for namelist supplied via commandline
       character(len=cwdlen), pointer :: par_file   !< path to the parameter file
       character(len=cwdlen), pointer :: errstr     !< string for storing error messages
+      character(len=cwdlen) :: tmp1
+      character(len=cwdlen) :: tmp2
       integer(kind=4), pointer       :: ierrh      !< variable for iostat error on reading namelists (see macros.h)
       integer, pointer               :: lun        !< current free logical unit
       procedure(namelist_errh_P), nopass, pointer    :: namelist_errh
-      procedure(compare_namelist_P), nopass, pointer :: compare_namelist
       logical :: initialized = .false.
       contains
          procedure :: init => namelist_handler_T_init
+         procedure :: compare_namelist
    end type namelist_handler_T
 
    type(namelist_handler_T) :: nh
@@ -163,6 +165,20 @@ contains
    subroutine namelist_handler_T_init(this)
       implicit none
       class(namelist_handler_T), intent(inout) :: this
+      character(len=cwdlen) :: tmpdir
+      integer :: lchar_tmpdir
+
+      call get_environment_variable("TMPDIR", tmpdir)
+      lchar_tmpdir = len_trim(tmpdir)
+      if (lchar_tmpdir == 0) then
+         tmpdir = "."
+         lchar_tmpdir = 1
+      else
+         if (tmpdir(lchar_tmpdir:lchar_tmpdir) == '/') lchar_tmpdir = lchar_tmpdir - 1
+      endif
+
+      write(this%tmp1, '(a,"/temp1.dat")') tmpdir(1:lchar_tmpdir)
+      write(this%tmp2, '(a,"/temp2.dat")') tmpdir(1:lchar_tmpdir)
 
       this%cmdl_nml => cmdl_nml
       this%par_file => par_file
@@ -171,7 +187,6 @@ contains
       this%lun => lun
 
       this%namelist_errh => namelist_errh
-      this%compare_namelist => compare_namelist
 
       this%initialized = .true.
    end subroutine namelist_handler_T_init
@@ -420,14 +435,13 @@ contains
 
    end subroutine namelist_errh
 !-----------------------------------------------------------------------------
-   subroutine compare_namelist(nml_bef, nml_aft)
+   subroutine compare_namelist(this)
 
       use constants, only: PIERNIK_INIT_IO_IC
       use mpi,       only: MPI_COMM_WORLD
 
       implicit none
-
-      character(len=*), intent(in)     :: nml_bef, nml_aft
+      class(namelist_handler_T), intent(inout) :: this
       integer                          :: io
       character(len=maxparfilelen)     :: sa, sb
       integer                          :: lun_bef, lun_aft
@@ -438,8 +452,8 @@ contains
 
       if (code_progress > PIERNIK_INIT_IO_IC) call warn("[dataio_pub:compare_namelist] Late namelist")
 
-      open(newunit=lun_bef, file=nml_bef, status='old')
-      open(newunit=lun_aft, file=nml_aft, status='old')
+      open(newunit=lun_bef, file=this%tmp1, status='old')
+      open(newunit=lun_aft, file=this%tmp2, status='old')
       io = 0
       do
          read(lun_bef,'(a)', iostat=io) sa

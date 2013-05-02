@@ -14,7 +14,7 @@
  */
 #define diff_nml(namelist)\
   if (.not.nh%initialized) call nh%init();\
-  open(newunit=nh%lun, file="temp1.dat", status="unknown");\
+  open(newunit=nh%lun, file=nh%tmp1, status="unknown");\
   write(nh%lun,nml=namelist);\
   close(nh%lun);\
   open(newunit=nh%lun, file=nh%par_file);\
@@ -24,7 +24,7 @@
   call nh%namelist_errh(nh%ierrh, #namelist);\
   read(nh%cmdl_nml,nml=namelist, iostat=nh%ierrh);\
   call nh%namelist_errh(nh%ierrh, #namelist, .true.);\
-  open(newunit=nh%lun, file="temp2.dat", status="unknown");\
+  open(newunit=nh%lun, file=nh%tmp2, status="unknown");\
   write(nh%lun,nml=namelist);\
   close(nh%lun);\
-  call nh%compare_namelist("temp1.dat", "temp2.dat")
+  call nh%compare_namelist()
