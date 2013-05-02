@@ -259,10 +259,9 @@ contains
       integer, parameter :: ncub = ndims*HI ! the number of integers in each cuboid
 
       ! get the count of grid pieces on each process
-      allcnt(:) = 0
-      allcnt(proc) = int(this%cnt, kind=4) ! Beware: this is not properly updated after calling this%distribute.
-                                           ! Use size(this%pse(proc)%c) if you want to propagate pse before the grid containers are actually added to the level
-      call MPI_Allgather(MPI_IN_PLACE, I_ZERO, MPI_DATATYPE_NULL, allcnt, I_ONE, MPI_INTEGER, comm, mpi_err)
+      ! Beware: int(this%cnt, kind=4) is not properly updated after calling this%distribute.
+      ! Use size(this%pse(proc)%c) if you want to propagate pse before the grid containers are actually added to the level
+      call MPI_Allgather(int(this%cnt, kind=4), I_ONE, MPI_INTEGER, allcnt, I_ONE, MPI_INTEGER, comm, mpi_err)
 
       ! compute offsets for  a composite table of all grid pieces
       alloff(FIRST) = I_ZERO
