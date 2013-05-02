@@ -458,6 +458,7 @@ contains
          end associate
          cgl => cgl%nxt
       enddo
+      call piernik_MPI_Allreduce(dmax, pMAX)
 
       if (master) then
          write(msg, '(a,g13.7)')"[initproblem:problem_initial_conditions] Relaxation finished. Largest orbital period: ",2.*pi*sqrt( (minval(dom%L_(:))/2.)**3/(newtong * clump_mass) )
