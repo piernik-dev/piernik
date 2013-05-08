@@ -394,11 +394,10 @@ contains
       integer(kind=4)                              :: ib, ssign, kb, kk
       integer                                      :: ksub, i, j, lksub
       integer                                      :: ifl
-      real, dimension(:,:,:), allocatable          :: db, csi2b, dbr
-      real, dimension(:,:),   allocatable          :: dprofs
-      real, dimension(flind%fluids)                :: factor
+      real, dimension(:,:), allocatable            :: dprofs
+      real, dimension(flind%fluids)                :: factor, db, dbr, csi2b
 #ifndef ISO
-      real, dimension(:,:,:), allocatable          :: ekb, eib
+      real, dimension(flind%fluids)                :: eib
 #endif /* !ISO */
 
       if (.not.associated(get_gprofs)) call die("[hydrostatic:outh_bnd] get_gprofs not associated")
@@ -407,99 +406,83 @@ contains
       nstot = int(3*nsub/2+1,kind=4)
       allocate(zs(nstot), gprofs(nstot), dprofs(flind%fluids,nstot))
 
-      if (any([allocated(db), allocated(csi2b), allocated(dbr)])) call die("[hydrostatic:outh_bnd] db, dbr or csi2b already allocated")
-      allocate(   db(flind%fluids, cg%lhn(xdim,LO):cg%lhn(xdim,HI), cg%lhn(ydim,LO):cg%lhn(ydim,HI)))
-      allocate(csi2b(flind%fluids, cg%lhn(xdim,LO):cg%lhn(xdim,HI), cg%lhn(ydim,LO):cg%lhn(ydim,HI)))
-      allocate(  dbr(flind%fluids, cg%lhn(xdim,LO):cg%lhn(xdim,HI), cg%lhn(ydim,LO):cg%lhn(ydim,HI)))
-#ifndef ISO
-      if (any([allocated(ekb), allocated(eib)])) call die("[hydrostatic:outh_bnd] ekb or eib already allocated")
-      allocate(  ekb(flind%fluids, cg%lhn(xdim,LO):cg%lhn(xdim,HI), cg%lhn(ydim,LO):cg%lhn(ydim,HI)))
-      allocate(  eib(flind%fluids, cg%lhn(xdim,LO):cg%lhn(xdim,HI), cg%lhn(ydim,LO):cg%lhn(ydim,HI)))
-#endif /* !ISO */
-
       ssign = 2_INT4*side - 3_INT4
       dzs = (cg%z(cg%ijkse(zdim,side)+ssign)-cg%z(cg%ijkse(zdim,side)))/real(nsub)
-      dbr = 1.0
-      do ib = 0_INT4, dom%nb
-         kb = cg%ijkse(zdim,side)+ssign*(ib-1_INT4)
-         kk = kb + ssign
-         zs(:) = cg%z(kb) + dzs*(real([(ksub,ksub=1,nstot)])+real(nsub-3)*half)
+      do j = cg%lhn(ydim,LO), cg%lhn(ydim,HI)
+         do i = cg%lhn(xdim,LO), cg%lhn(xdim,HI)
+            dbr = 1.0
 
-         db(:,:,:) = cg%u(iarr_all_dn,:,:,kb)
-         db(:,:,:) = max(db(:,:,:), smalld)
+            do ib = 0_INT4, dom%nb
+               kb = cg%ijkse(zdim,side)+ssign*(ib-1_INT4)
+               kk = kb + ssign
+               zs(:) = cg%z(kb) + dzs*(real([(ksub,ksub=1,nstot)])+real(nsub-3)*half)
+
+               db(:) = max(cg%u(iarr_all_dn,i,j,kb), smalld)
 #ifdef ISO
-!         csi2b = maxval(flind%all_fluids(:)%fl%cs2)   !> \deprecated BEWARE should be fluid dependent
-         csi2b = 0.0
-         do ifl = lbound(flind%all_fluids, dim=1), ubound(flind%all_fluids, dim=1)
-            csi2b(:,:,:) = max(csi2b(:,:,:), flind%all_fluids(ifl)%fl%cs2)
-         enddo
+!              csi2b = maxval(flind%all_fluids(:)%fl%cs2)   !> \deprecated BEWARE should be fluid dependent
+               csi2b = 0.0
+               do ifl = lbound(flind%all_fluids, dim=1), ubound(flind%all_fluids, dim=1)
+                  csi2b(:) = max(csi2b(:), flind%all_fluids(ifl)%fl%cs2)
+               enddo
 #else /* !ISO */
-         ekb(:,:,:) = ekin(cg%u(iarr_all_mx,:,:,kb),cg%u(iarr_all_my,:,:,kb),cg%u(iarr_all_mz,:,:,kb),db)
-         eib(:,:,:) = cg%u(iarr_all_en,:,:,kb) - ekb(:,:,:)
-         eib(:,:,:) = max(eib(:,:,:), smallei)
-         do ifl = lbound(flind%all_fluids, dim=1), ubound(flind%all_fluids, dim=1)
-            csi2b(ifl,:,:) = (flind%all_fluids(ifl)%fl%gam_1)*eib(ifl,:,:)/db(ifl,:,:)
-         enddo
+               eib(:) = cg%u(iarr_all_en,i,j,kb) - ekin(cg%u(iarr_all_mx,i,j,kb),cg%u(iarr_all_my,i,j,kb),cg%u(iarr_all_mz,i,j,kb),db(:))
+               eib(:) = max(eib(:), smallei)
+               do ifl = lbound(flind%all_fluids, dim=1), ubound(flind%all_fluids, dim=1)
+                  csi2b(ifl) = (flind%all_fluids(ifl)%fl%gam_1)*eib(ifl)/db(ifl)
+               enddo
 #endif /* !ISO */
-
-         do j = cg%lhn(ydim,LO), cg%lhn(ydim,HI)
-            do i = cg%lhn(xdim,LO), cg%lhn(xdim,HI)
 
                call get_gprofs(i,j)
                gprofs(:) = tune_zeq_bnd * gprofs(:)
-               dprofs(:,1) = dbr(:,i,j)
+               dprofs(:,1) = dbr(:)
                do ksub = 1, nstot-1
-                  factor = (2.0 + dzs*gprofs(ksub)/csi2b(:,i,j)) / (2.0 - dzs*gprofs(ksub)/csi2b(:,i,j))     !> \todo use hzeq_scheme here
+                  factor = (2.0 + dzs*gprofs(ksub)/csi2b(:)) / (2.0 - dzs*gprofs(ksub)/csi2b(:))     !> \todo use hzeq_scheme here
                   dprofs(:,ksub+1) = factor * dprofs(:,ksub)
                enddo
 
-               db(:,i,j) = 0.0
+               db(:) = 0.0
                lksub = 0
-               do ksub=1, nstot
+               do ksub = 1, nstot
                   if (zs(ksub) > cg%coord(LEFT, zdim)%r(kk) .and. zs(ksub) < cg%coord(RIGHT, zdim)%r(kk)) then
-                     db(:,i,j) = db(:,i,j) + dprofs(:,ksub)/real(nsub)
+                     db(:) = db(:) + dprofs(:,ksub)/real(nsub)
                      lksub = ksub
                   endif
                enddo
-               if (ib == 0_INT4) dprofs(:,lksub) = dprofs(:,lksub) * cg%u(iarr_all_dn,i,j,kk) / db(:,i,j)
-               dbr(:,i,j) = dprofs(:,lksub)
+               if (ib == 0_INT4) dprofs(:,lksub) = dprofs(:,lksub) * cg%u(iarr_all_dn,i,j,kk) / db(:)
+               dbr(:) = dprofs(:,lksub)
 
-               db(:,i,j)  = max(db(:,i,j), smalld)
+               db(:)  = max(db(:), smalld)
 #ifndef ISO
                do ifl = lbound(flind%all_fluids, dim=1), ubound(flind%all_fluids, dim=1)
-                  eib(ifl, i, j) = csi2b(ifl, i, j)*db(ifl, i, j) / (flind%all_fluids(ifl)%fl%gam_1)
+                  eib(ifl) = csi2b(ifl)*db(ifl) / (flind%all_fluids(ifl)%fl%gam_1)
                enddo
-               eib(:,i,j) = max(eib(:,i,j), smallei)
+               eib(:) = max(eib(:), smallei)
 #endif /* !ISO */
-            enddo
-         enddo
 
-         if (ib /= 0_INT4) then
-            cg%u(iarr_all_dn,:,:,kk) = db(:,:,:)
-            cg%u(iarr_all_mx,:,:,kk) = cg%u(iarr_all_mx,:,:,kb)
-            cg%u(iarr_all_my,:,:,kk) = cg%u(iarr_all_my,:,:,kb)
-            cg%u(iarr_all_mz,:,:,kk) = cg%u(iarr_all_mz,:,:,kb)
-            if (diode) then
-               if (side == HI) then
-                  cg%u(iarr_all_mz,:,:,kk) = max(cg%u(iarr_all_mz,:,:,kk),0.0)
-               else
-                  cg%u(iarr_all_mz,:,:,kk) = min(cg%u(iarr_all_mz,:,:,kk),0.0)
-               endif
-            endif
+               if (ib /= 0_INT4) then
+                  cg%u(iarr_all_dn,i,j,kk) = db(:)
+                  cg%u(iarr_all_mx,i,j,kk) = cg%u(iarr_all_mx,i,j,kb)
+                  cg%u(iarr_all_my,i,j,kk) = cg%u(iarr_all_my,i,j,kb)
+                  cg%u(iarr_all_mz,i,j,kk) = cg%u(iarr_all_mz,i,j,kb)
+                  if (diode) then
+                     if (side == HI) then
+                        cg%u(iarr_all_mz,i,j,kk) = max(cg%u(iarr_all_mz,i,j,kk),0.0)
+                     else
+                        cg%u(iarr_all_mz,i,j,kk) = min(cg%u(iarr_all_mz,i,j,kk),0.0)
+                     endif
+                  endif
 #ifndef ISO
-            ekb(:,:,:) = ekin(cg%u(iarr_all_mx,:,:,kk),cg%u(iarr_all_my,:,:,kk),cg%u(iarr_all_mz,:,:,kk),db)
-            cg%u(iarr_all_en,:,:,kk) = ekb(:,:,:) + eib(:,:,:)
+                  cg%u(iarr_all_en,i,j,kk) = eib(:) + ekin(cg%u(iarr_all_mx,i,j,kk),cg%u(iarr_all_my,i,j,kk),cg%u(iarr_all_mz,i,j,kk),db(:))
 #endif /* !ISO */
 #ifdef COSM_RAYS
-            cg%u(iarr_all_crs,:,:,kk) = smallecr
+                  cg%u(iarr_all_crs,i,j,kk) = smallecr
 #endif /* COSM_RAYS */
-         endif
+               endif
+            enddo
+         enddo
       enddo
 
-      deallocate(db,dbr,csi2b,zs,gprofs)
-#ifndef ISO
-      deallocate(ekb,eib)
-#endif /* !ISO */
+      deallocate(zs,gprofs)
 
    end subroutine outh_bnd
 
