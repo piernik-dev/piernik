@@ -99,7 +99,7 @@ contains
 
    subroutine bnd_u(dir, cg)
 
-      use constants,             only: ndims, xdim, ydim, zdim, LO, HI, INT4, &
+      use constants,             only: ndims, xdim, ydim, zdim, LO, HI, INT4, I_ONE, I_ZERO, &
            &                           BND_MPI, BND_FC, BND_MPI_FC, BND_PER, BND_REF, BND_OUT, BND_OUTD, BND_COR, BND_SHE, BND_USER
       use dataio_pub,            only: msg, warn, die
       use domain,                only: dom
@@ -113,7 +113,6 @@ contains
 #endif /* COSM_RAYS */
 #ifdef GRAV
       use constants,             only: BND_OUTH, BND_OUTHD
-      use hydrostatic,           only: outh_bnd
 #endif /* GRAV */
 
       implicit none
@@ -179,9 +178,9 @@ contains
             endif
 #ifdef GRAV
          case (BND_OUTH)
-            if (dir == zdim) call outh_bnd(side, cg, .false.)
+            call user_fluidbnd(dir, side, cg, wn=I_ZERO)
          case (BND_OUTHD)
-            if (dir == zdim) call outh_bnd(side, cg, .true.)
+            call user_fluidbnd(dir, side, cg, wn=I_ONE)
 #endif /* GRAV */
          case default
             write(msg,'("[fluidboundaries:bnd_u]: Unrecognized ",i1," boundary condition ",i3," not implemented in ",i1,"-direction")') side, cg%bnd(dir, side), dir

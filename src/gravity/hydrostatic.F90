@@ -42,7 +42,7 @@ module hydrostatic
 
    private
 #ifdef GRAV
-   public :: set_default_hsparams, hydrostatic_zeq_coldens, hydrostatic_zeq_densmid, cleanup_hydrostatic, outh_bnd
+   public :: set_default_hsparams, hydrostatic_zeq_coldens, hydrostatic_zeq_densmid, cleanup_hydrostatic, outh_bnd, init_hydrostatic
    public :: dprof, gprofs, nstot, zs, dzs, hsmin, hsbn, hsl, sdlim, hscg
 #endif /* GRAV */
 
@@ -155,6 +155,22 @@ contains
       hsl(hsbn(HI)+I_ONE)    = cg%coord(RIGHT, zdim)%r(hsbn(HI))
 
    end subroutine set_default_hsparams
+
+!>
+!! \brief Initialize hydrostatic module
+!<
+   subroutine init_hydrostatic
+
+      use fluidboundaries_funcs, only: user_fluidbnd
+
+      implicit none
+
+      ! BEWARE: This is a sweet little hack that allows to drop hydrostatic
+      ! dependency from fluidboundaries module. It's bad due to several reasons,
+      ! which I'll gracefully omit in this comment. It should be fixed asap...
+      user_fluidbnd => outh_bnd
+
+   end subroutine init_hydrostatic
 
 !>
 !! \brief Routine to clean up after the last usage of hydrostatic routines
@@ -366,9 +382,9 @@ contains
    !! \todo this procedure is incompatible with cg%cs_iso2
    !<
 
-   subroutine outh_bnd(side, cg, diode)
+   subroutine outh_bnd(dir, side, cg, wn, qn, emfdir)
 
-      use constants,      only: xdim, ydim, zdim, half, LO, HI, INT4, LEFT, RIGHT
+      use constants,      only: xdim, ydim, zdim, half, LO, HI, INT4, LEFT, RIGHT, I_ONE
       use dataio_pub,     only: die
       use domain,         only: dom
       use fluidindex,     only: flind, iarr_all_dn, iarr_all_mx, iarr_all_my, iarr_all_mz
@@ -386,10 +402,9 @@ contains
 #endif /* COSM_RAYS */
 
       implicit none
-
-      integer(kind=4),               intent(in)    :: side
+      integer(kind=4),               intent(in)    :: dir, side
       type(grid_container), pointer, intent(inout) :: cg
-      logical,                       intent(in)    :: diode
+      integer(kind=4),     optional, intent(in)    :: wn, qn, emfdir
 
       integer(kind=4)                              :: ib, ssign, kb, kk
       integer                                      :: ksub, i, j, lksub
@@ -400,6 +415,8 @@ contains
       real, dimension(flind%fluids)                :: eib
 #endif /* !ISO */
 
+      if (dir /= zdim) return
+      if (.not.present(wn)) call die("[hydrostatic:outh_bnd] unable to discern OUTH from OUTHD")
       if (.not.associated(get_gprofs)) call die("[hydrostatic:outh_bnd] get_gprofs not associated")
 
       hscg => cg
@@ -464,7 +481,7 @@ contains
                   cg%u(iarr_all_mx,i,j,kk) = cg%u(iarr_all_mx,i,j,kb)
                   cg%u(iarr_all_my,i,j,kk) = cg%u(iarr_all_my,i,j,kb)
                   cg%u(iarr_all_mz,i,j,kk) = cg%u(iarr_all_mz,i,j,kb)
-                  if (diode) then
+                  if (wn == I_ONE) then
                      if (side == HI) then
                         cg%u(iarr_all_mz,i,j,kk) = max(cg%u(iarr_all_mz,i,j,kk),0.0)
                      else

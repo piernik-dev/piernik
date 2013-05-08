@@ -73,7 +73,7 @@ contains
 #endif /* SHEAR */
 #ifdef GRAV
       use gravity,               only: init_grav, init_grav_ext, manage_grav_pot_3d, sum_potential
-      use hydrostatic,           only: cleanup_hydrostatic
+      use hydrostatic,           only: init_hydrostatic, cleanup_hydrostatic
 #endif /* GRAV */
 #ifdef MULTIGRID
       use multigrid,             only: init_multigrid, init_multigrid_ext, multigrid_par
@@ -183,6 +183,7 @@ contains
 
 #ifdef GRAV
       call manage_grav_pot_3d(.true.)        !> \deprecated It is only temporary solution, but grav_pot_3d must be called after problem_initial_conditions due to csim2,c_si,alpha clash!!!
+      call init_hydrostatic
 #endif /* GRAV */
 
 #ifdef CORIOLIS
