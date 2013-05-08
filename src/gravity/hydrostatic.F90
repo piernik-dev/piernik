@@ -368,7 +368,7 @@ contains
 
    subroutine outh_bnd(side, cg, diode)
 
-      use constants,      only: xdim, ydim, zdim, half, HI, INT4, LEFT, RIGHT
+      use constants,      only: xdim, ydim, zdim, half, LO, HI, INT4, LEFT, RIGHT
       use dataio_pub,     only: die
       use domain,         only: dom
       use fluidindex,     only: flind, iarr_all_dn, iarr_all_mx, iarr_all_my, iarr_all_mz
@@ -408,16 +408,19 @@ contains
       allocate(zs(nstot), gprofs(nstot), dprofs(flind%fluids,nstot))
 
       if (any([allocated(db), allocated(csi2b), allocated(dbr)])) call die("[hydrostatic:outh_bnd] db, dbr or csi2b already allocated")
-      allocate(db(flind%fluids, cg%n_(xdim), cg%n_(ydim)), csi2b(flind%fluids, cg%n_(xdim), cg%n_(ydim)), dbr(flind%fluids, cg%n_(xdim), cg%n_(ydim)))
+      allocate(   db(flind%fluids, cg%lhn(xdim,LO):cg%lhn(xdim,HI), cg%lhn(ydim,LO):cg%lhn(ydim,HI)))
+      allocate(csi2b(flind%fluids, cg%lhn(xdim,LO):cg%lhn(xdim,HI), cg%lhn(ydim,LO):cg%lhn(ydim,HI)))
+      allocate(  dbr(flind%fluids, cg%lhn(xdim,LO):cg%lhn(xdim,HI), cg%lhn(ydim,LO):cg%lhn(ydim,HI)))
 #ifndef ISO
       if (any([allocated(ekb), allocated(eib)])) call die("[hydrostatic:outh_bnd] ekb or eib already allocated")
-      allocate(ekb(flind%fluids, cg%n_(xdim), cg%n_(ydim)), eib(flind%fluids, cg%n_(xdim), cg%n_(ydim)))
+      allocate(  ekb(flind%fluids, cg%lhn(xdim,LO):cg%lhn(xdim,HI), cg%lhn(ydim,LO):cg%lhn(ydim,HI)))
+      allocate(  eib(flind%fluids, cg%lhn(xdim,LO):cg%lhn(xdim,HI), cg%lhn(ydim,LO):cg%lhn(ydim,HI)))
 #endif /* !ISO */
 
       ssign = 2_INT4*side - 3_INT4
       dzs = (cg%z(cg%ijkse(zdim,side)+ssign)-cg%z(cg%ijkse(zdim,side)))/real(nsub)
       dbr = 1.0
-      do ib=0_INT4, dom%nb
+      do ib = 0_INT4, dom%nb
          kb = cg%ijkse(zdim,side)+ssign*(ib-1_INT4)
          kk = kb + ssign
          zs(:) = cg%z(kb) + dzs*(real([(ksub,ksub=1,nstot)])+real(nsub-3)*half)
@@ -439,13 +442,13 @@ contains
          enddo
 #endif /* !ISO */
 
-         do j=1, cg%n_(ydim)
-            do i=1, cg%n_(xdim)
+         do j = cg%lhn(ydim,LO), cg%lhn(ydim,HI)
+            do i = cg%lhn(xdim,LO), cg%lhn(xdim,HI)
 
                call get_gprofs(i,j)
                gprofs(:) = tune_zeq_bnd * gprofs(:)
                dprofs(:,1) = dbr(:,i,j)
-               do ksub=1, nstot-1
+               do ksub = 1, nstot-1
                   factor = (2.0 + dzs*gprofs(ksub)/csi2b(:,i,j)) / (2.0 - dzs*gprofs(ksub)/csi2b(:,i,j))     !> \todo use hzeq_scheme here
                   dprofs(:,ksub+1) = factor * dprofs(:,ksub)
                enddo
@@ -493,7 +496,7 @@ contains
          endif
       enddo
 
-      deallocate(db, dbr,csi2b,zs,gprofs)
+      deallocate(db,dbr,csi2b,zs,gprofs)
 #ifndef ISO
       deallocate(ekb,eib)
 #endif /* !ISO */
