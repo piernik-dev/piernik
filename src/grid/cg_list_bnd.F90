@@ -51,7 +51,7 @@ module cg_list_bnd
    implicit none
 
    private
-   public :: cg_list_bnd_T, bnd_u
+   public :: cg_list_bnd_T, bnd_u, bnd_b
 
    !>
    !! \brief Lists of grid containers with boundary update
@@ -692,5 +692,67 @@ contains
       enddo
 
    end subroutine bnd_u
+
+   subroutine bnd_b(dir, cg)
+
+      use constants,             only: ndims, xdim, ydim, zdim, LO, HI, I_TWO, I_THREE, &
+           &                           BND_MPI, BND_FC, BND_MPI_FC, BND_PER, BND_REF, BND_OUT, BND_OUTD, BND_OUTH, BND_OUTHD, BND_COR, BND_SHE, BND_USER
+      use dataio_pub,            only: msg, warn, die
+      use fluidboundaries_funcs, only: user_fluidbnd
+      use grid_cont,             only: grid_container
+      use mpisetup,              only: master
+      use named_array_list,      only: wna
+
+      implicit none
+
+      integer(kind=4),               intent(in)    :: dir
+      type(grid_container), pointer, intent(inout) :: cg
+
+      integer(kind=4)                              :: side
+      logical, save                                :: frun = .true.
+      logical, save,   dimension(ndims,LO:HI)      :: bnd_not_provided = .false.
+      integer(kind=4), dimension(ndims,LO:HI)      :: l, r
+
+! Non-MPI boundary conditions
+      if (frun) then
+         bnd_not_provided(:,         :) = (cg%bnd(:,:) == BND_REF)       .or. (cg%bnd(:,         :) == BND_MPI)
+         bnd_not_provided(xdim:ydim, :) = bnd_not_provided(xdim:ydim, :) .or. (cg%bnd(xdim:ydim, :) == BND_COR)
+         bnd_not_provided(xdim,      :) = bnd_not_provided(xdim,      :) .or. (cg%bnd(xdim,      :) == BND_SHE)
+      endif
+
+      if (bnd_not_provided(dir,LO) .and. bnd_not_provided(dir,HI)) return  ! avoid triple case
+
+      l = cg%lhn ; r = l
+
+      do side = LO, HI
+         select case (cg%bnd(dir, side))
+            case (BND_MPI, BND_REF)
+               ! Do nothing
+            case (BND_USER)
+               call user_fluidbnd(dir, side, cg, wn=wna%bi)
+            case (BND_FC, BND_MPI_FC)
+               call die("[magboundaries:bnd_b] fine-coarse interfaces not implemented yet")
+            case (BND_COR)
+               if (dir == zdim) then
+                  write(msg,'(2(a,i3))') "[magboundaries:bnd_b]: Boundary condition ",cg%bnd(dir, side)," not implemented in ",dir
+                  if (master) call warn(msg)
+               endif
+            case (BND_SHE)
+               if (dir /= xdim) then
+                  write(msg,'(2(a,i3))') "[magboundaries:bnd_b]: Boundary condition ",cg%bnd(dir, side)," not implemented in ",dir
+                  if (master) call warn(msg)
+               endif
+            case (BND_PER)
+            case (BND_OUT, BND_OUTD, BND_OUTH, BND_OUTHD)
+                  l(dir,:) = cg%lhn(dir,side)
+                  r(dir,:) = cg%lhn(dir,side) + I_THREE - I_TWO*side
+                  cg%b(:,l(xdim,LO):l(xdim,HI),l(ydim,LO):l(ydim,HI),l(zdim,LO):l(zdim,HI)) = cg%b(:,r(xdim,LO):r(xdim,HI),r(ydim,LO):r(ydim,HI),r(zdim,LO):r(zdim,HI))
+            case default
+               write(msg,'(2(a,i3))') "[magboundaries:bnd_b]: Boundary condition ",cg%bnd(dir, side)," not implemented in ",dir
+               if (master) call warn(msg)
+         end select
+      enddo
+
+   end subroutine bnd_b
 
 end module cg_list_bnd

@@ -101,10 +101,10 @@ contains
 
       use cg_leaves,        only: leaves
       use cg_list,          only: cg_list_element
+      use cg_list_bnd,      only: bnd_b
       use cg_list_global,   only: all_cg
       use constants,        only: xdim, zdim
       use domain,           only: dom
-      use magboundaries,    only: bnd_b
       use named_array_list, only: wna
 
       implicit none
