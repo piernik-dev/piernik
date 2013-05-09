@@ -537,7 +537,7 @@ contains
       use cg_leaves,        only: leaves
       use cg_list,          only: cg_list_element
       use constants,        only: b0_n, fluid_n
-      use fluidboundaries,  only: all_fluid_boundaries
+      use all_boundaries,   only: all_fluid_boundaries
       use named_array_list, only: wna
       use grid_cont,        only: grid_container
 #ifdef TRACER
@@ -612,7 +612,7 @@ contains
       use domain,           only: is_multicg
       use global,           only: dt, smalld
       use grid_cont,        only: grid_container
-      use fluidboundaries,  only: all_fluid_boundaries
+      use all_boundaries,   only: all_fluid_boundaries
       use fluidindex,       only: flind!, iarr_all_mz, iarr_all_dn
       use mpisetup,         only: piernik_MPI_Allreduce
       use named_array_list, only: wna

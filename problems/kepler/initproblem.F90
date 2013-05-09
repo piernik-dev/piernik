@@ -561,10 +561,10 @@ contains
 !-----------------------------------------------------------------------------
    subroutine kepler_problem_post_restart
 
+      use all_boundaries,   only: all_fluid_boundaries
       use cg_leaves,        only: leaves
       use cg_list,          only: cg_list_element
       use constants,        only: b0_n
-      use fluidboundaries,  only: all_fluid_boundaries
       use named_array_list, only: wna
 #ifdef TRACER
       use constants,        only: xdim, ydim, zdim, LO, HI
@@ -635,7 +635,7 @@ contains
       use domain,           only: is_multicg
       use global,           only: dt, relax_time, smalld !, t, grace_period_passed
       use grid_cont,        only: grid_container
-      use fluidboundaries,  only: all_fluid_boundaries
+      use all_boundaries,   only: all_fluid_boundaries
       use fluidindex,       only: flind!, iarr_all_mz, iarr_all_dn
       use mpisetup,         only: piernik_MPI_Allreduce
       use named_array_list, only: wna
