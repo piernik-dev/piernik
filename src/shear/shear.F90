@@ -125,10 +125,10 @@ contains
    subroutine shear_3sweeps
 
       use cg_leaves,           only: leaves
+      use cg_list_bnd,         only: bnd_u
       use constants,           only: xdim, ydim
       use dataio_pub,          only: die
       use domain,              only: dom, is_multicg
-      use fluidboundaries,     only: bnd_u
       use global,              only: t, dt
       use grid_cont,           only: grid_container
 

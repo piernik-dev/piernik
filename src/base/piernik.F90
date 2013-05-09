@@ -244,12 +244,12 @@ contains
 !<
    subroutine grace_period
 
-      use dataio_pub,      only: printinfo
-      use global,          only: grace_period_passed, relax_time
-      use interactions,    only: interactions_grace_passed
-      use mpisetup,        only: master
-      use user_hooks,      only: problem_grace_passed
-      use fluidboundaries, only: all_fluid_boundaries
+      use all_boundaries, only: all_fluid_boundaries
+      use dataio_pub,     only: printinfo
+      use global,         only: grace_period_passed, relax_time
+      use interactions,   only: interactions_grace_passed
+      use mpisetup,       only: master
+      use user_hooks,     only: problem_grace_passed
 
       implicit none
 

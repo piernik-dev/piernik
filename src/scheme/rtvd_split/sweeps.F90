@@ -93,12 +93,12 @@ contains
 !------------------------------------------------------------------------------------------
    subroutine sweep(cdim)
 
+      use all_boundaries,   only: all_fluid_boundaries
       use cg_leaves,        only: leaves
       use cg_list,          only: cg_list_element
       use constants,        only: pdims, LO, HI, uh_n, cs_i2_n, ORTHO1, ORTHO2, I_ONE, INVALID
       use dataio_pub,       only: die
       use domain,           only: dom
-      use fluidboundaries,  only: all_fluid_boundaries
       use fluidindex,       only: flind, iarr_all_swp, nmag
       use fluxtypes,        only: ext_fluxes
       use func,             only: f2c_o

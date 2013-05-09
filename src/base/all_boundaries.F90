@@ -36,7 +36,7 @@ module all_boundaries
    implicit none
 
    private
-   public :: all_bnd
+   public :: all_bnd, all_fluid_boundaries
 
 contains
 
@@ -47,9 +47,8 @@ contains
 
    subroutine all_bnd
 
-      use fluidboundaries, only: all_fluid_boundaries
 #ifdef MAGNETIC
-      use magboundaries,   only: all_mag_boundaries
+      use magboundaries, only: all_mag_boundaries
 #endif /* MAGNETIC */
 
       implicit none
@@ -62,5 +61,40 @@ contains
 !      endif
 
    end subroutine all_bnd
+
+   subroutine all_fluid_boundaries
+
+      use cg_level_connected, only: cg_level_connected_T, base_level
+!      use cg_level_finest,    only: finest
+      use cg_list,            only: cg_list_element
+      use cg_list_bnd,        only: bnd_u
+      use constants,          only: xdim, zdim
+      use domain,             only: dom
+      use named_array_list,   only: wna
+
+      implicit none
+
+      type(cg_level_connected_T), pointer :: curl
+      type(cg_list_element), pointer :: cgl
+      integer(kind=4)                :: dir
+
+      curl => base_level
+
+!      call finest%level%restrict_to_base
+
+      ! should be more selective (modified leaves?)
+      do while (associated(curl))
+         call curl%arr4d_boundaries(wna%fi)
+         cgl => curl%first
+         do while (associated(cgl))
+            do dir = xdim, zdim
+               if (dom%has_dir(dir)) call bnd_u(dir, cgl%cg)
+            enddo
+            cgl => cgl%nxt
+         enddo
+         curl => curl%finer
+      enddo
+
+   end subroutine all_fluid_boundaries
 
 end module all_boundaries

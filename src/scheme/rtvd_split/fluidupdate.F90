@@ -143,8 +143,8 @@ contains
       use particle_pub,        only: pset, psolver
 #endif /* GRAV */
 #if defined(COSM_RAYS) && defined(MULTIGRID)
+      use all_boundaries,      only: all_fluid_boundaries
       use initcosmicrays,      only: use_split
-      use fluidboundaries,     only: all_fluid_boundaries
       use multigrid_diffusion, only: multigrid_solve_diff
 #endif /* COSM_RAYS && MULTIGRID */
 #ifdef SHEAR

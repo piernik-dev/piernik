@@ -103,10 +103,10 @@ contains
 
    subroutine expand(this, sides)
 
+      use all_boundaries,    only: all_fluid_boundaries
       use cg_level_coarsest, only: coarsest
       use constants,         only: xdim, zdim, LO, HI, pLOR
       use domain,            only: dom
-      use fluidboundaries,   only: all_fluid_boundaries
       use mpisetup,          only: piernik_MPI_Allreduce
 #ifdef MULTIGRID
       use multigrid,         only: init_multigrid
