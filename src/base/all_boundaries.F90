@@ -87,8 +87,6 @@ contains
    subroutine all_mag_boundaries
 
       use cg_leaves,        only: leaves
-      use cg_list,          only: cg_list_element
-      use cg_list_bnd,      only: bnd_b
       use cg_list_global,   only: all_cg
       use constants,        only: xdim, zdim
       use domain,           only: dom
@@ -96,19 +94,15 @@ contains
 
       implicit none
 
-      type(cg_list_element), pointer :: cgl
       integer(kind=4) :: dir
 
       do dir = xdim, zdim
          if (dom%has_dir(dir)) call all_cg%internal_boundaries_4d(wna%bi, dim=dir) ! should be more selective (modified leaves?)
       enddo
 
-      cgl => leaves%first
-      do while (associated(cgl))
-         do dir = xdim, zdim
-            if (dom%has_dir(dir)) call bnd_b(dir, cgl%cg)
-         enddo
-         cgl => cgl%nxt
+      ! Do not fuse these loops
+      do dir = xdim, zdim
+         if (dom%has_dir(dir)) call leaves%bnd_b(dir)
       enddo
 
    end subroutine all_mag_boundaries
