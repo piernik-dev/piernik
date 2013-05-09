@@ -270,21 +270,22 @@ contains
 
    subroutine mag_add(dim1, dim2)
 
-      use cg_leaves,     only: leaves
-      use cg_list,       only: cg_list_element
-      use grid_cont,     only: grid_container
-      use magboundaries, only: all_mag_boundaries
-      use user_hooks,    only: custom_emf_bnd
+      use cg_leaves,        only: leaves
+      use cg_list,          only: cg_list_element
+      use grid_cont,        only: grid_container
+      use all_boundaries,   only: all_mag_boundaries
+      use user_hooks,       only: custom_emf_bnd
 #ifdef RESISTIVE
-      use constants,     only: wcu_n
-      use dataio_pub,    only: die
-      use domain,        only: is_multicg
+      use constants,        only: wcu_n
+      use dataio_pub,       only: die
+      use domain,           only: is_multicg
       use named_array_list, only: qna
 #endif /* RESISTIVE */
 
       implicit none
 
       integer(kind=4), intent(in)    :: dim1, dim2
+
       type(cg_list_element), pointer :: cgl
       type(grid_container),  pointer :: cg
 #ifdef RESISTIVE

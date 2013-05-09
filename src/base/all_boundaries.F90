@@ -37,6 +37,9 @@ module all_boundaries
 
    private
    public :: all_bnd, all_fluid_boundaries
+#ifdef MAGNETIC
+   public :: all_mag_boundaries
+#endif /* MAGNETIC */
 
 contains
 
@@ -46,10 +49,6 @@ contains
 !<
 
    subroutine all_bnd
-
-#ifdef MAGNETIC
-      use magboundaries, only: all_mag_boundaries
-#endif /* MAGNETIC */
 
       implicit none
 
@@ -96,5 +95,36 @@ contains
       enddo
 
    end subroutine all_fluid_boundaries
+
+#ifdef MAGNETIC
+   subroutine all_mag_boundaries
+
+      use cg_leaves,        only: leaves
+      use cg_list,          only: cg_list_element
+      use cg_list_global,   only: all_cg
+      use constants,        only: xdim, zdim
+      use domain,           only: dom
+      use magboundaries,    only: bnd_b
+      use named_array_list, only: wna
+
+      implicit none
+
+      type(cg_list_element), pointer :: cgl
+      integer(kind=4) :: dir
+
+      do dir = xdim, zdim
+         if (dom%has_dir(dir)) call all_cg%internal_boundaries_4d(wna%bi, dim=dir) ! should be more selective (modified leaves?)
+      enddo
+
+      cgl => leaves%first
+      do while (associated(cgl))
+         do dir = xdim, zdim
+            if (dom%has_dir(dir)) call bnd_b(dir, cgl%cg)
+         enddo
+         cgl => cgl%nxt
+      enddo
+
+   end subroutine all_mag_boundaries
+#endif /* MAGNETIC */
 
 end module all_boundaries
