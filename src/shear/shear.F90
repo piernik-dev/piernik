@@ -125,22 +125,15 @@ contains
    subroutine shear_3sweeps
 
       use cg_leaves,           only: leaves
-      use cg_list_bnd,         only: bnd_u
       use constants,           only: xdim, ydim
-      use dataio_pub,          only: die
-      use domain,              only: dom, is_multicg
+      use domain,              only: dom
       use global,              only: t, dt
-      use grid_cont,           only: grid_container
 
       implicit none
-      type(grid_container), pointer :: cg
-
-      cg => leaves%first%cg
-      if (is_multicg) call die("[shear:shear_3sweeps] multiple grid pieces per processor not implemented yet") !nontrivial SHEAR
 
       if (dom%has_dir(ydim)) call yshift(t, dt)
-      if (dom%has_dir(xdim)) call bnd_u(xdim, cg)
-      if (dom%has_dir(ydim)) call bnd_u(ydim, cg)
+      if (dom%has_dir(xdim)) call leaves%bnd_u(xdim)
+      if (dom%has_dir(ydim)) call leaves%bnd_u(ydim)
 
    end subroutine shear_3sweeps
 

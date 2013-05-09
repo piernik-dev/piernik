@@ -70,6 +70,7 @@ module cg_list_bnd
       procedure          :: dirty_boundaries           !< Put dirty values to all boundaries
       procedure          :: level_3d_boundaries        !< Perform internal boundary exchanges and external boundary extrapolations on 3D named arrays
       procedure          :: level_4d_boundaries        !< Perform internal boundary exchanges and external boundary extrapolations on 4D named arrays
+      procedure          :: bnd_u                      !< External (Non-MPI) boundary conditions for the fluid array: cg%u
       !> \todo move routines for external guardcells for rank-4 arrays here as well (fluidboundaries and magboundaries)
    end type cg_list_bnd_T
 
@@ -595,10 +596,11 @@ contains
 
    end subroutine init_fluidboundaries
 
-!> \brief External boundary conditions for the fluid array: cg%u
+!> \brief External (Non-MPI) boundary conditions for the fluid array: cg%u
 
-   subroutine bnd_u(dir, cg)
+   subroutine bnd_u(this, dir)
 
+      use cg_list,               only: cg_list_element
       use constants,             only: ndims, xdim, ydim, zdim, LO, HI, INT4, &
            &                           BND_MPI, BND_FC, BND_MPI_FC, BND_PER, BND_REF, BND_OUT, BND_OUTD, BND_COR, BND_SHE, BND_USER
       use dataio_pub,            only: msg, warn, die
@@ -617,12 +619,14 @@ contains
 
       implicit none
 
-      integer(kind=4),               intent(in)    :: dir
-      type(grid_container), pointer, intent(inout) :: cg
+      class(cg_list_bnd_T), intent(in) :: this       !< the list on which to perform the boundary exchange
+      integer(kind=4),      intent(in) :: dir
 
-      integer(kind=4), dimension(ndims,LO:HI)      :: l, r
-      logical, save                                :: frun = .true.
-      integer(kind=4)                              :: side, ssign, ib
+      type(grid_container), pointer           :: cg
+      integer(kind=4), dimension(ndims,LO:HI) :: l, r
+      logical, save                           :: frun = .true.
+      integer(kind=4)                         :: side, ssign, ib
+      type(cg_list_element), pointer          :: cgl
 
       if (.not. any([xdim, ydim, zdim] == dir)) call die("[fluidboundaries:bnd_u] Invalid direction.")
 
@@ -631,62 +635,64 @@ contains
          frun = .false.
       endif
 
-!===============================================================
+      cgl => this%first
+      do while (associated(cgl))
+         cg => cgl%cg
+         l = cg%lhn ; r = l
+         do side = LO, HI
 
-! Non-MPI boundary conditions
-      l = cg%lhn ; r = l
-      do side = LO, HI
-
-         select case (cg%bnd(dir, side))
-         case (BND_MPI, BND_COR, BND_SHE, BND_FC, BND_MPI_FC, BND_PER)
-            ! Do nothing
-         case (BND_USER)
-            call user_fluidbnd(dir, side, cg, wn=wna%fi)
-         case (BND_REF)
-            ssign = 2_INT4*side-3_INT4
-            do ib=1_INT4, dom%nb
-               l(dir,:) = cg%ijkse(dir,side)+ssign*ib ; r(dir,:) = cg%ijkse(dir,side)+ssign*(1_INT4-ib)
-               cg%u(:,l(xdim,LO):l(xdim,HI),l(ydim,LO):l(ydim,HI),l(zdim,LO):l(zdim,HI)) = cg%u(:,r(xdim,LO):r(xdim,HI),r(ydim,LO):r(ydim,HI),r(zdim,LO):r(zdim,HI))
-               cg%u(iarr_all_dn+dir, l(xdim,LO):l(xdim,HI),l(ydim,LO):l(ydim,HI),l(zdim,LO):l(zdim,HI)) = -cg%u(iarr_all_dn+dir,l(xdim,LO):l(xdim,HI),l(ydim,LO):l(ydim,HI),l(zdim,LO):l(zdim,HI))
-            enddo
-         case (BND_OUT)
-            r(dir,:) = cg%ijkse(dir,side)
-            ssign = 2_INT4*side-3_INT4
-            do ib=1_INT4, dom%nb
-               l(dir,:) = cg%ijkse(dir,side)+ssign*ib
-               cg%u(:,l(xdim,LO):l(xdim,HI),l(ydim,LO):l(ydim,HI),l(zdim,LO):l(zdim,HI)) = cg%u(:,r(xdim,LO):r(xdim,HI),r(ydim,LO):r(ydim,HI),r(zdim,LO):r(zdim,HI))
+            select case (cg%bnd(dir, side))
+               case (BND_MPI, BND_COR, BND_SHE, BND_FC, BND_MPI_FC, BND_PER)
+                  ! Do nothing
+               case (BND_USER)
+                  call user_fluidbnd(dir, side, cg, wn=wna%fi)
+               case (BND_REF)
+                  ssign = 2_INT4*side-3_INT4
+                  do ib=1_INT4, dom%nb
+                     l(dir,:) = cg%ijkse(dir,side)+ssign*ib ; r(dir,:) = cg%ijkse(dir,side)+ssign*(1_INT4-ib)
+                     cg%u(:,l(xdim,LO):l(xdim,HI),l(ydim,LO):l(ydim,HI),l(zdim,LO):l(zdim,HI)) = cg%u(:,r(xdim,LO):r(xdim,HI),r(ydim,LO):r(ydim,HI),r(zdim,LO):r(zdim,HI))
+                     cg%u(iarr_all_dn+dir, l(xdim,LO):l(xdim,HI),l(ydim,LO):l(ydim,HI),l(zdim,LO):l(zdim,HI)) = -cg%u(iarr_all_dn+dir,l(xdim,LO):l(xdim,HI),l(ydim,LO):l(ydim,HI),l(zdim,LO):l(zdim,HI))
+                  enddo
+               case (BND_OUT)
+                  r(dir,:) = cg%ijkse(dir,side)
+                  ssign = 2_INT4*side-3_INT4
+                  do ib=1_INT4, dom%nb
+                     l(dir,:) = cg%ijkse(dir,side)+ssign*ib
+                     cg%u(:,l(xdim,LO):l(xdim,HI),l(ydim,LO):l(ydim,HI),l(zdim,LO):l(zdim,HI)) = cg%u(:,r(xdim,LO):r(xdim,HI),r(ydim,LO):r(ydim,HI),r(zdim,LO):r(zdim,HI))
 #ifdef COSM_RAYS
-               cg%u(iarr_all_crs,l(xdim,LO):l(xdim,HI),l(ydim,LO):l(ydim,HI),l(zdim,LO):l(zdim,HI)) = smallecr
+                     cg%u(iarr_all_crs,l(xdim,LO):l(xdim,HI),l(ydim,LO):l(ydim,HI),l(zdim,LO):l(zdim,HI)) = smallecr
 #endif /* COSM_RAYS */
-            enddo
-         case (BND_OUTD)
-            r(dir,:) = cg%ijkse(dir,side)
-            ssign = 2_INT4*side-3_INT4
-            do ib=1_INT4, dom%nb
-               l(dir,:) = cg%ijkse(dir,side)+ssign*ib
-               cg%u(:,l(xdim,LO):l(xdim,HI),l(ydim,LO):l(ydim,HI),l(zdim,LO):l(zdim,HI)) = cg%u(:,r(xdim,LO):r(xdim,HI),r(ydim,LO):r(ydim,HI),r(zdim,LO):r(zdim,HI))
-!> \deprecated BEWARE: use of uninitialized value on first call (a side effect of r1726)
+                  enddo
+               case (BND_OUTD)
+                  r(dir,:) = cg%ijkse(dir,side)
+                  ssign = 2_INT4*side-3_INT4
+                  do ib=1_INT4, dom%nb
+                     l(dir,:) = cg%ijkse(dir,side)+ssign*ib
+                     cg%u(:,l(xdim,LO):l(xdim,HI),l(ydim,LO):l(ydim,HI),l(zdim,LO):l(zdim,HI)) = cg%u(:,r(xdim,LO):r(xdim,HI),r(ydim,LO):r(ydim,HI),r(zdim,LO):r(zdim,HI))
+                     !> \deprecated BEWARE: use of uninitialized value on first call (a side effect of r1726)
 #ifdef COSM_RAYS
-               cg%u(iarr_all_crs,l(xdim,LO):l(xdim,HI),l(ydim,LO):l(ydim,HI),l(zdim,LO):l(zdim,HI)) = smallecr
+                     cg%u(iarr_all_crs,l(xdim,LO):l(xdim,HI),l(ydim,LO):l(ydim,HI),l(zdim,LO):l(zdim,HI)) = smallecr
 #endif /* COSM_RAYS */
-            enddo
-            l(dir,:) = [1_INT4, dom%nb] + cg%ijkse(dir,side)*(side-1_INT4)
-            if (side == LO) then
-               cg%u(iarr_all_dn+dir,l(xdim,LO):l(xdim,HI),l(ydim,LO):l(ydim,HI),l(zdim,LO):l(zdim,HI)) = min(cg%u(iarr_all_dn+dir,l(xdim,LO):l(xdim,HI),l(ydim,LO):l(ydim,HI),l(zdim,LO):l(zdim,HI)),0.0)
-            else
-               cg%u(iarr_all_dn+dir,l(xdim,LO):l(xdim,HI),l(ydim,LO):l(ydim,HI),l(zdim,LO):l(zdim,HI)) = max(cg%u(iarr_all_dn+dir,l(xdim,LO):l(xdim,HI),l(ydim,LO):l(ydim,HI),l(zdim,LO):l(zdim,HI)),0.0)
-            endif
+                  enddo
+                  l(dir,:) = [1_INT4, dom%nb] + cg%ijkse(dir,side)*(side-1_INT4)
+                  if (side == LO) then
+                     cg%u(iarr_all_dn+dir,l(xdim,LO):l(xdim,HI),l(ydim,LO):l(ydim,HI),l(zdim,LO):l(zdim,HI)) = min(cg%u(iarr_all_dn+dir,l(xdim,LO):l(xdim,HI),l(ydim,LO):l(ydim,HI),l(zdim,LO):l(zdim,HI)),0.0)
+                  else
+                     cg%u(iarr_all_dn+dir,l(xdim,LO):l(xdim,HI),l(ydim,LO):l(ydim,HI),l(zdim,LO):l(zdim,HI)) = max(cg%u(iarr_all_dn+dir,l(xdim,LO):l(xdim,HI),l(ydim,LO):l(ydim,HI),l(zdim,LO):l(zdim,HI)),0.0)
+                  endif
 #ifdef GRAV
-         case (BND_OUTH)
-            call user_fluidbnd(dir, side, cg, wn=I_ZERO)
-         case (BND_OUTHD)
-            call user_fluidbnd(dir, side, cg, wn=I_ONE)
+               case (BND_OUTH)
+                  call user_fluidbnd(dir, side, cg, wn=I_ZERO)
+               case (BND_OUTHD)
+                  call user_fluidbnd(dir, side, cg, wn=I_ONE)
 #endif /* GRAV */
-         case default
-            write(msg,'("[fluidboundaries:bnd_u]: Unrecognized ",i1," boundary condition ",i3," not implemented in ",i1,"-direction")') side, cg%bnd(dir, side), dir
-            call warn(msg)
-         end select
+               case default
+                  write(msg,'("[fluidboundaries:bnd_u]: Unrecognized ",i1," boundary condition ",i3," not implemented in ",i1,"-direction")') side, cg%bnd(dir, side), dir
+                  call warn(msg)
+            end select
 
+         enddo
+         cgl => cgl%nxt
       enddo
 
    end subroutine bnd_u
