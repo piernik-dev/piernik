@@ -63,7 +63,7 @@ contains
 
    subroutine all_fluid_boundaries
 
-      use cg_level_connected, only: cg_level_connected_T, base_level
+      use cg_leaves,          only: leaves
 !      use cg_level_finest,    only: finest
       use constants,          only: xdim, zdim
       use domain,             only: dom
@@ -71,20 +71,14 @@ contains
 
       implicit none
 
-      type(cg_level_connected_T), pointer :: curl
       integer(kind=4)                     :: dir
-
-      curl => base_level
 
 !      call finest%level%restrict_to_base
 
       ! should be more selective (modified leaves?)
-      do while (associated(curl))
-         call curl%arr4d_boundaries(wna%fi)
-         do dir = xdim, zdim
-            if (dom%has_dir(dir)) call curl%bnd_u(dir)
-         enddo
-         curl => curl%finer
+      call leaves%leaf_arr4d_boundaries(wna%fi)
+      do dir = xdim, zdim
+         if (dom%has_dir(dir)) call leaves%bnd_u(dir)
       enddo
 
    end subroutine all_fluid_boundaries
