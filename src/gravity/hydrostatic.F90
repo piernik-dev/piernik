@@ -501,6 +501,11 @@ contains
 
       deallocate(zs,gprofs)
 
+      if (.false.) then ! suppress compiler warnings on unused arguments
+         if (present(qn)) i = qn
+         if (present(emfdir)) i = emfdir
+      endif
+
    end subroutine outh_bnd
 
 #endif /* GRAV */
