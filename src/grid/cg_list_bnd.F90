@@ -702,6 +702,7 @@ contains
       use constants,             only: ndims, xdim, ydim, zdim, LO, HI, I_TWO, I_THREE, &
            &                           BND_MPI, BND_FC, BND_MPI_FC, BND_PER, BND_REF, BND_OUT, BND_OUTD, BND_OUTH, BND_OUTHD, BND_COR, BND_SHE, BND_USER
       use dataio_pub,            only: msg, warn, die
+      use domain,                only: dom
       use fluidboundaries_funcs, only: user_fluidbnd
       use grid_cont,             only: grid_container
       use mpisetup,              only: master
@@ -719,9 +720,10 @@ contains
 
 ! Non-MPI boundary conditions
       if (frun) then
-         bnd_not_provided(:,         :) = (cg%bnd(:,:) == BND_REF)       .or. (cg%bnd(:,         :) == BND_MPI)
-         bnd_not_provided(xdim:ydim, :) = bnd_not_provided(xdim:ydim, :) .or. (cg%bnd(xdim:ydim, :) == BND_COR)
-         bnd_not_provided(xdim,      :) = bnd_not_provided(xdim,      :) .or. (cg%bnd(xdim,      :) == BND_SHE)
+         !> \deprecated This may not work as intended when there are many grid containers per process. PLEASE CHECK IT
+         bnd_not_provided(:,         :) = (dom%bnd(:,:) == BND_REF)      .or. (dom%bnd(:,         :) == BND_MPI)
+         bnd_not_provided(xdim:ydim, :) = bnd_not_provided(xdim:ydim, :) .or. (dom%bnd(xdim:ydim, :) == BND_COR)
+         bnd_not_provided(xdim,      :) = bnd_not_provided(xdim,      :) .or. (dom%bnd(xdim,      :) == BND_SHE)
       endif
 
       if (bnd_not_provided(dir,LO) .and. bnd_not_provided(dir,HI)) return  ! avoid triple case
