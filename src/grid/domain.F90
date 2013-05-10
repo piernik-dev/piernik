@@ -436,6 +436,7 @@ contains
 
       use constants,  only: ndims, LO, HI, big_float, dpi, xdim, ydim, zdim, GEO_XYZ, GEO_RPZ, GEO_INVALID, BND_PER, BND_REF, BND_SHE, I_ONE, I_TWO
       use dataio_pub, only: die, warn, msg
+      use mpisetup,   only: master
 
       implicit none
 
