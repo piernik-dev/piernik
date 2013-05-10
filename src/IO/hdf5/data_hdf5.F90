@@ -487,7 +487,7 @@ contains
 
    subroutine create_empty_cg_datasets_in_output(cg_g_id, cg_n_b, Z_avail, g)
 
-      use common_hdf5, only: create_empty_cg_dataset, hdf_vars
+      use common_hdf5, only: create_empty_cg_dataset, hdf_vars, O_OUT
       use hdf5,        only: HID_T, HSIZE_T
 
       implicit none
@@ -500,7 +500,7 @@ contains
       integer                                              :: i
 
       do i = lbound(hdf_vars,1), ubound(hdf_vars,1)
-         call create_empty_cg_dataset(cg_g_id, hdf_vars(i), int(cg_n_b(g, :), kind=HSIZE_T), Z_avail)
+         call create_empty_cg_dataset(cg_g_id, hdf_vars(i), int(cg_n_b(g, :), kind=HSIZE_T), Z_avail, O_OUT)
       enddo
    end subroutine create_empty_cg_datasets_in_output
 

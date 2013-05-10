@@ -210,7 +210,7 @@ contains
 
    subroutine create_empty_cg_datasets_in_restart(cg_g_id, cg_n_b, Z_avail, g)
 
-      use common_hdf5,      only: create_empty_cg_dataset
+      use common_hdf5,      only: create_empty_cg_dataset, O_RES
       use constants,        only: ndims, I_ONE, AT_IGNORE
       use hdf5,             only: HID_T, HSIZE_T
       use named_array_list, only: qna, wna
@@ -231,7 +231,7 @@ contains
          allocate(ddims(drank))
          do i = lbound(qna%lst(:), dim=1), ubound(qna%lst(:), dim=1)
             if (qna%lst(i)%restart_mode /= AT_IGNORE) &                                ! create "/cg/cg_%08d/leaves.qna%lst(i_).name"
-                 call create_empty_cg_dataset(cg_g_id, qna%lst(i)%name, int(cg_n_b(g, :), kind=HSIZE_T), Z_avail)
+                 call create_empty_cg_dataset(cg_g_id, qna%lst(i)%name, int(cg_n_b(g, :), kind=HSIZE_T), Z_avail, O_RES)
          enddo
          deallocate(ddims)
       endif
@@ -241,7 +241,7 @@ contains
          allocate(ddims(drank))
          do i = lbound(wna%lst(:), dim=1), ubound(wna%lst(:), dim=1)
             if (wna%lst(i)%restart_mode /= AT_IGNORE) &                                ! create "/cg/cg_%08d/leaves.wna%lst(i_.name"
-                 call create_empty_cg_dataset(cg_g_id, wna%lst(i)%name, int([ wna%lst(i)%dim4, cg_n_b(g, :) ], kind=HSIZE_T), Z_avail)
+                 call create_empty_cg_dataset(cg_g_id, wna%lst(i)%name, int([ wna%lst(i)%dim4, cg_n_b(g, :) ], kind=HSIZE_T), Z_avail, O_RES)
          enddo
          deallocate(ddims)
       endif
