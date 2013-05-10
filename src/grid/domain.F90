@@ -487,14 +487,16 @@ contains
       ymxo = edges(ydim,HI)
       select case (this%geometry_type)
          case (GEO_XYZ)
-            if (edges(ydim,LO) <= -big_float .or. edges(ydim,HI) >= big_float) call warn("[domain:init_domain] y range not specified. Defaulting to [0..1]")
+            if (edges(ydim,LO) <= -big_float .or. edges(ydim,HI) >= big_float) then
+               if (master) call warn("[domain:init_domain] y range not specified. Defaulting to [0..1]")
+            endif
             if (edges(ydim,LO) <= -big_float) edges(ydim,LO) = 0.
             if (edges(ydim,HI) >= big_float) edges(ydim,HI) = 1.
          case (GEO_RPZ)
             if (edges(ydim,LO) <= -big_float) edges(ydim,LO) = 0.
             if (edges(ydim,HI) >= big_float) edges(ydim,HI) = dpi
             if (edges(ydim,HI)-edges(ydim,LO) > dpi) then
-               call warn("[domain:init_domain] Hyperbolic spaces are not implemented. Setting azimuthal span to 2pi.")
+               if (master) call warn("[domain:init_domain] Hyperbolic spaces are not implemented. Setting azimuthal span to 2pi.")
                if (abs(edges(ydim,LO)) < 1./epsilon(1.)) then
                   edges(ydim,HI) = edges(ydim,LO) + dpi
                else
@@ -504,7 +506,9 @@ contains
             endif
             if (edges(xdim,LO) <= 0.) then
                edges(xdim,LO) = 0.
-               if (this%bnd(xdim, LO) /= BND_REF) call warn("[domain:init_domain] Enforcing this%bnd(xdim, LO) = 'ref'.")
+               if (this%bnd(xdim, LO) /= BND_REF) then
+                  if (master) call warn("[domain:init_domain] Enforcing this%bnd(xdim, LO) = 'ref'.")
+               endif
                this%bnd(xdim, LO) = BND_REF
             endif
             if (this%bnd(xdim, HI) == BND_PER) call die("[domain:init_domain] Periodicity in radial direction is not allowed in cylindrical coordinates")
@@ -513,15 +517,15 @@ contains
       end select
       if (xmno /= edges(xdim,LO)) then
          write(msg,'(2(a,g20.12))')"[domain:init_domain] Sanitized edges(xdim,LO): ",xmno," -> ",edges(xdim,LO)
-         call warn(msg)
+         if (master) call warn(msg)
       endif
       if (ymno /= edges(ydim,LO) .and. ymno /= -big_float) then
          write(msg,'(2(a,g20.12))')"[domain:init_domain] Sanitized edges(ydim,LO): ",ymno," -> ",edges(ydim,LO)
-         call warn(msg)
+         if (master) call warn(msg)
       endif
       if (ymxo /= edges(ydim,HI) .and. ymxo /= big_float) then
          write(msg,'(2(a,g20.12))')"[domain:init_domain] Sanitized edges(ydim,HI): ",ymno," -> ",edges(ydim,HI)
-         call warn(msg)
+         if (master) call warn(msg)
       endif
       if (edges(xdim,LO) > edges(xdim,HI)) call die("[[domain:init_domain] Negative span in X-direction")
       if (edges(ydim,LO) > edges(ydim,HI)) call die("[[domain:init_domain] Negative span in Y-direction")
