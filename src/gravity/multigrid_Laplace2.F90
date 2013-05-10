@@ -134,7 +134,7 @@ contains
 !               Lx = cg%idx2 ! already set
 !               Lz = cg%idz2 ! already set
                !> \todo convert Lx1, Ly_a and L0_a into precomputed arrays
-               allocate(Lx1(size(cg%inv_x)), Ly_a(size(cg%inv_x)), L0_a(size(cg%inv_x)))
+               allocate(Lx1(cg%is:cg%ie), Ly_a(cg%is:cg%ie), L0_a(cg%is:cg%ie))
                Ly_a(cg%is:cg%ie) = cg%idy2 * cg%inv_x(cg%is:cg%ie)**2 ! cylindrical factor
                Lx1 (cg%is:cg%ie) = half * (cg%idx * cg%inv_x(cg%is:cg%ie))
                L0_a(cg%is:cg%ie) = -2. * (Lx + Ly_a(cg%is:cg%ie) + Lz)
