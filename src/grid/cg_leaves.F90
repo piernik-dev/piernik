@@ -132,7 +132,7 @@ contains
       enddo
       g_cnt = leaves%cnt
       call piernik_MPI_Allreduce(g_cnt, pSUM)
-      write(msg(len_trim(msg)+1:), '(a,i7,a,f5.3)')", Sum: ",g_cnt, ". Load balance: ",g_cnt/real(sum_max)
+      write(msg(len_trim(msg)+1:), '(a,i7,a,f6.3)')", Sum: ",g_cnt, ". Load balance: ",g_cnt/real(sum_max)
       if (master) call printinfo(msg)
 
    end subroutine update
