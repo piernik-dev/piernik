@@ -124,10 +124,11 @@ contains
 
    subroutine init_mpi
 
-      use constants,  only: cwdlen, I_ONE
-      use mpi,        only: MPI_COMM_WORLD, MPI_CHARACTER, MPI_INTEGER, MPI_COMM_NULL
-      use dataio_pub, only: die, printinfo, msg, ansi_white, ansi_black, tmp_log_file
-      use dataio_pub, only: par_file, lun
+      use constants,     only: cwdlen, I_ONE
+      use mpi,           only: MPI_COMM_WORLD, MPI_CHARACTER, MPI_INTEGER, MPI_COMM_NULL
+      use dataio_pub,    only: die, printinfo, msg, ansi_white, ansi_black, tmp_log_file
+      use dataio_pub,    only: par_file, lun
+      use signalhandler, only: SIGINT, register_sighandler
 
       implicit none
 
@@ -147,6 +148,8 @@ contains
 
       call MPI_Init( mpi_err )
       comm = MPI_COMM_WORLD
+
+      call register_sighandler(SIGINT, abort_sigint)
 
       call MPI_Comm_get_parent(intercomm, mpi_err)
       is_spawned = (intercomm /= MPI_COMM_NULL)
@@ -869,5 +872,16 @@ contains
       call MPI_Send(buf, I_ONE, MPI_INTEGER, FIRST, tag, intercomm, mpi_err)
       call MPI_Send(str, buf, MPI_CHARACTER, FIRST, tag, intercomm, mpi_err)
    end subroutine report_string_to_master
+
+   integer function abort_sigint(signum)
+
+      implicit none
+
+      integer, intent(in) :: signum
+
+      if (master) print *, "[mpisetup:abort_sigint] CTRL-C caught, calling abort"
+      call MPI_Abort(comm, signum)
+      abort_sigint = 0
+   end function abort_sigint
 
 end module mpisetup
