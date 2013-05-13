@@ -880,8 +880,10 @@ contains
       integer, intent(in) :: signum
 
       if (master) print *, "[mpisetup:abort_sigint] CTRL-C caught, calling abort"
-      call MPI_Abort(comm, signum)
-      abort_sigint = 0
+      ! As per MPI documentation for MPI_Abort():
+      !   "This routine should not be used from within a signal handler."
+      call MPI_Abort(comm, 0) ! "I too like to live dangerously." -- Austin Powers
+      abort_sigint = signum
    end function abort_sigint
 
 end module mpisetup
