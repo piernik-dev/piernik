@@ -67,6 +67,7 @@ module dataio_pub
    integer                     :: tsl_lun                        !< logical unit number for timeslice file
    integer                     :: log_lun                        !< logical unit number for log file
    integer(kind=4)             :: nend                           !< number of the step to end simulation
+   integer(kind=4), save       :: cbline = 1                     !< current buffer line
    integer                     :: nstep_start                    !< number of start timestep
    integer(kind=4)             :: nhdf                           !< current number of hdf file
    integer(kind=4)             :: nres                           !< current number of restart file
@@ -95,7 +96,9 @@ module dataio_pub
    ! storage for the problem.par
    integer, parameter          :: maxparfilelen   = 128          !< max length of line in problem.par file
    integer, parameter          :: maxparfilelines = 256          !< max number of lines in problem.par
+   integer, parameter          :: bufferlines = 128              !< max number of lines in problem.par
    character(len=maxparfilelen), dimension(maxparfilelines) :: parfile !< contents of the parameter file
+   character(len=msglen), dimension(bufferlines) :: logbuffer    !< buffer for log I/O
    integer, save               :: parfilelines = 0               !< number of lines in the parameter file
 
    logical, save               :: halfstep = .false.             !< true when X-Y-Z sweeps are done and Z-Y-X are not
@@ -288,7 +291,7 @@ contains
             open(newunit=log_lun, file=log_file, position='append', &
               &  blocksize=io_blocksize, buffered=io_buffered, buffercount=io_buffno)
 #else /* __INTEL_COMPILER */
-            open(newunit=log_lun, file=log_file, position='append')
+            open(newunit=log_lun, file=log_file, position='append', asynchronous='yes')
 #endif /* !__INTEL_COMPILER */
             log_file_opened = .true.
          endif
@@ -298,14 +301,32 @@ contains
          open(newunit=log_lun, file=tmp_log_file, status='unknown', position='append', &
            &  blocksize=io_blocksize, buffered=io_buffered, buffercount=io_buffno)
 #else /* __INTEL_COMPILER */
-         open(newunit=log_lun, file=tmp_log_file, status='unknown', position='append')
+         open(newunit=log_lun, file=tmp_log_file, status='unknown', position='append', asynchronous='yes')
 #endif /* !__INTEL_COMPILER */
       endif
       if (proc == 0 .and. mode == T_ERR) write(log_lun,'(/,a,/)')"###############     Crashing     ###############"
-      write(log_lun,'(2a,i5,2a)') msg_type_str," @", proc, ': ', trim(nm)
+      if (cbline <= bufferlines) then
+         write(logbuffer(cbline), '(2a,i5,2a)') msg_type_str," @", proc, ': ', trim(nm)
+         cbline = cbline + 1
+      else
+         call flush_to_log
+         cbline = 1
+      endif
+      if (mode == T_ERR) call flush_to_log
       if (.not. log_file_initialized) close(log_lun)
 
    end subroutine colormessage
+!-----------------------------------------------------------------------------
+   subroutine flush_to_log
+      implicit none
+      integer :: line
+
+      do line = 1, min(cbline, bufferlines)
+         write(log_lun, '(a)', asynchronous='yes') trim(logbuffer(line))
+      enddo
+      wait(log_lun)
+
+   end subroutine flush_to_log
 !-----------------------------------------------------------------------------
    subroutine printinfo(nm, to_stdout)
 
@@ -512,7 +533,7 @@ contains
 
    subroutine close_logs
       implicit none
-
+      call flush_to_log
       call close_txt_file(log_file, log_lun)
       call close_txt_file(tsl_file, tsl_lun)
    end subroutine close_logs
