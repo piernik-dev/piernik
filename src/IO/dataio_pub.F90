@@ -221,7 +221,7 @@ contains
       endif
 
    end subroutine set_colors
-
+!-----------------------------------------------------------------------------
    subroutine colormessage(nm, mode)
 
       use constants, only: stdout, stderr, idlen
@@ -322,7 +322,11 @@ contains
       integer :: line
 
       do line = 1, min(cbline, bufferlines)
+#if defined(__INTEL_COMPILER)
+         write(log_lun, '(a)') trim(logbuffer(line))
+#else /* __INTEL_COMPILER */
          write(log_lun, '(a)', asynchronous='yes') trim(logbuffer(line))
+#endif /* !__INTEL_COMPILER */
       enddo
       wait(log_lun)
 
