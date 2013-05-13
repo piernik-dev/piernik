@@ -48,6 +48,7 @@ program piernik
    use named_array_list,  only: qna, wna
    use refinement,        only: emergency_fix
    use refinement_update, only: update_refinement
+   use signalhandler,     only: SIGINT, register_sighandler
    use timer,             only: walltime_end, set_timer, tmr_fu
    use timestep,          only: time_step
    use user_hooks,        only: finalize_problem, problem_domain_update
@@ -76,6 +77,7 @@ program piernik
    code_progress = PIERNIK_START
 
    call init_piernik
+   call register_sighandler(SIGINT, abort_sigint)
 
    call all_cg%check_na
    !call all_cg%check_for_dirt
@@ -268,5 +270,16 @@ contains
          runned = .true.
       endif
    end subroutine grace_period
+
+   integer function abort_sigint(signum)
+
+      implicit none
+
+      integer, intent(in) :: signum
+
+      if (master) print *, "[mpisetup:abort_sigint] CTRL-C caught, calling abort"
+      call exit(0)
+      abort_sigint = signum
+   end function abort_sigint
 
 end program piernik
