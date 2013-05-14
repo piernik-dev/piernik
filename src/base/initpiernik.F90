@@ -156,6 +156,8 @@ contains
 
       call init_domain
       code_progress = PIERNIK_INIT_DOMAIN    ! Base domain is known and initial domain decomposition is known
+      call init_geometry                     ! depends on domain
+
       call init_refinement
 
       call init_decomposition
@@ -170,8 +172,6 @@ contains
 
       call init_grid                         ! Most of the cg's vars are now initialized, only arrays left
       code_progress = PIERNIK_INIT_GRID      ! Now we can initialize things that depend on all the above fundamental calls
-
-      call init_geometry                     ! depends on domain; \todo move this call to init_domain or init_grid
 
 #ifdef SHEAR
       call init_shear                        ! depends on fluids

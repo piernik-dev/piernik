@@ -171,7 +171,6 @@ contains
 
       use constants,  only: xdim, ydim, zdim, INV_CENTER, LEFT, RIGHT
       use dataio_pub, only: die, msg
-      use domain,     only: is_multicg
       use fluidtypes, only: var_numbers
       use grid_cont,  only: grid_container
 
@@ -183,12 +182,10 @@ contains
       type(grid_container), pointer :: cg
 
       integer                        :: i
-      logical, save                  :: frun = .true.
-
-      if (is_multicg) call die("[gridgeometry:set_cyl_coeffs] multiple grid pieces per procesor not implemented yet") ! move gc to grid_container%, fix initialization
 
       !> \todo This should be probably called from cg%init (beware of cyclic dependencies) or init_grid
-      if (frun) then
+      if (.not. allocated(cg%gc_xdim)) then ! assume allocated(cg%gc_xdim) .eqv. allocated(cg%gc_ydim) .eqv. allocated(cg%gc_zdim)
+
          call geo_coeffs_arrays(flind, cg)
 
          cg%gc_xdim(GC1,:,:) = spread( cg%coord(INV_CENTER, xdim)%r(:), 1, flind%all)
@@ -204,7 +201,6 @@ contains
 
          cg%gc_zdim(:,:,:) = 1.0           ! [ 1, 1, 1]
 
-         frun = .false.
       endif
 
       select case (sweep)
@@ -218,9 +214,8 @@ contains
          case default
             write(msg,'(a,i2)') "[gridgeometry:set_cyl_coeffs] Unknown sweep : ",sweep
             call die(msg)
-            if (.false.) frun = (i1==i2) ! suppress compiler warnings
+            if (.false.)  write(0,*) i1,i2 ! suppress compiler warnings
       end select
-      frun = .false.
 
    end subroutine set_cyl_coeffs
 !>
