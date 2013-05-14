@@ -489,11 +489,6 @@ contains
          this%coarsebnd(i, HI)%index = this%lhn(i, HI) + 1
       enddo
 
-      if (.not. allocated(fpl%uflx)) call fpl%fpinit
-      if (.not. allocated(fpr%uflx)) call fpr%fpinit
-      if (.not. allocated(cpl%uflx)) call cpl%fpinit
-      if (.not. allocated(cpr%uflx)) call cpr%fpinit
-
       call this%add_all_na
 
    end subroutine init
@@ -867,12 +862,14 @@ contains
 
       if (this%finebnd(cdim, LO)%index(i1, i2) >= this%ijkse(cdim, LO)) then
          fpl = this%finebnd(cdim, LO)%fa2fp(i1, i2)
+         if (.not. allocated(fpl%uflx)) call fpl%fpinit
          eflx%li => fpl
       else
          nullify(eflx%li)
       endif
       if (this%finebnd(cdim, HI)%index(i1, i2) <= this%ijkse(cdim, HI)) then
          fpr = this%finebnd(cdim, HI)%fa2fp(i1, i2)
+         if (.not. allocated(fpr%uflx)) call fpr%fpinit
          eflx%ri => fpr
       else
          nullify(eflx%ri)
@@ -880,12 +877,14 @@ contains
 
       if (this%coarsebnd(cdim, LO)%index(i1, i2) >= this%ijkse(cdim, LO)) then
          cpl%index = this%coarsebnd(cdim, LO)%index(i1, i2)
+         if (.not. allocated(cpl%uflx)) call cpl%fpinit
          eflx%lo => cpl
       else
          nullify(eflx%lo)
       endif
       if (this%coarsebnd(cdim, HI)%index(i1, i2) <= this%ijkse(cdim, HI)) then
          cpr%index = this%coarsebnd(cdim, HI)%index(i1, i2)
+         if (.not. allocated(cpr%uflx)) call cpr%fpinit
          eflx%ro => cpr
       else
          nullify(eflx%ro)
