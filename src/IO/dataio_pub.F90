@@ -285,35 +285,38 @@ contains
          endif
       endif
 
-      if (log_file_initialized) then
-         if (.not.log_file_opened) then
+      ! TODO: get msgs from other procs if necessary
+      if (proc == 0) then
+         if (log_file_initialized) then
+            if (.not.log_file_opened) then
 #if defined(__INTEL_COMPILER)
-            open(newunit=log_lun, file=log_file, position='append', &
+               open(newunit=log_lun, file=log_file, position='append', &
+                 &  blocksize=io_blocksize, buffered=io_buffered, buffercount=io_buffno)
+#else /* __INTEL_COMPILER */
+               open(newunit=log_lun, file=log_file, position='append', asynchronous='yes')
+#endif /* !__INTEL_COMPILER */
+               log_file_opened = .true.
+            endif
+         else
+            ! BEWARE: possible race condition
+#if defined(__INTEL_COMPILER)
+            open(newunit=log_lun, file=tmp_log_file, status='unknown', position='append', &
               &  blocksize=io_blocksize, buffered=io_buffered, buffercount=io_buffno)
 #else /* __INTEL_COMPILER */
-            open(newunit=log_lun, file=log_file, position='append', asynchronous='yes')
+            open(newunit=log_lun, file=tmp_log_file, status='unknown', position='append', asynchronous='yes')
 #endif /* !__INTEL_COMPILER */
-            log_file_opened = .true.
          endif
-      else
-         ! BEWARE: possible race condition
-#if defined(__INTEL_COMPILER)
-         open(newunit=log_lun, file=tmp_log_file, status='unknown', position='append', &
-           &  blocksize=io_blocksize, buffered=io_buffered, buffercount=io_buffno)
-#else /* __INTEL_COMPILER */
-         open(newunit=log_lun, file=tmp_log_file, status='unknown', position='append', asynchronous='yes')
-#endif /* !__INTEL_COMPILER */
+         if (proc == 0 .and. mode == T_ERR) write(log_lun,'(/,a,/)')"###############     Crashing     ###############"
+         if (cbline <= bufferlines) then
+            write(logbuffer(cbline), '(2a,i5,2a)') msg_type_str," @", proc, ': ', trim(nm)
+            cbline = cbline + 1
+         else
+            call flush_to_log
+            cbline = 1
+         endif
+         if (mode == T_ERR) call flush_to_log
+         if (.not. log_file_initialized) close(log_lun)
       endif
-      if (proc == 0 .and. mode == T_ERR) write(log_lun,'(/,a,/)')"###############     Crashing     ###############"
-      if (cbline <= bufferlines) then
-         write(logbuffer(cbline), '(2a,i5,2a)') msg_type_str," @", proc, ': ', trim(nm)
-         cbline = cbline + 1
-      else
-         call flush_to_log
-         cbline = 1
-      endif
-      if (mode == T_ERR) call flush_to_log
-      if (.not. log_file_initialized) close(log_lun)
 
    end subroutine colormessage
 !-----------------------------------------------------------------------------
