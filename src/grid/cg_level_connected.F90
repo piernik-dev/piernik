@@ -303,8 +303,10 @@ contains
 !<
    subroutine prolong(this, bnd_type)
 
-      use constants,        only: base_level_id
+      use constants,        only: base_level_id, GEO_RPZ
       use dataio_pub,       only: warn
+      use domain,           only: dom
+      use fluidindex,       only: iarr_all_my
       use named_array_list, only: qna, wna
 
       implicit none
@@ -323,8 +325,13 @@ contains
             if (wna%lst(i)%multigrid) call warn("[cg_level_connected:prolong] mg set for cg%w ???")
             do iw = 1, wna%lst(i)%dim4
                call this%wq_copy(i, iw, qna%wai)
-               call this%finer%wq_copy(i, iw, qna%wai) !> Quick and dirty fix for cases when cg%ignore_prolongation == .true.
+               if (dom%geometry_type == GEO_RPZ .and. i == wna%fi .and. any(iw == iarr_all_my)) call this%mul_by_r(qna%wai) ! angular momentum conservation
+               if (.true.) then  !> Quick and dirty fix for cases when cg%ignore_prolongation == .true.
+                  call this%finer%wq_copy(i, iw, qna%wai)
+                  if (dom%geometry_type == GEO_RPZ .and. i == wna%fi .and. any(iw == iarr_all_my)) call this%finer%mul_by_r(qna%wai)
+               endif
                call this%prolong_q_1var(qna%wai, wna%lst(i)%position(iw), bnd_type = bnd_type)
+               if (dom%geometry_type == GEO_RPZ .and. i == wna%fi .and. any(iw == iarr_all_my)) call this%finer%div_by_r(qna%wai) ! angular momentum conservation
                call this%finer%qw_copy(qna%wai, i, iw) !> \todo filter this through cg%ignore_prolongation
             enddo
          endif
@@ -339,8 +346,10 @@ contains
 !<
    subroutine restrict(this)
 
-      use constants,        only: base_level_id
+      use constants,        only: base_level_id, GEO_RPZ
       use dataio_pub,       only: warn
+      use domain,           only: dom
+      use fluidindex,       only: iarr_all_my
       use named_array_list, only: qna, wna
 
       implicit none
@@ -358,8 +367,13 @@ contains
             if (wna%lst(i)%multigrid) call warn("[cg_level_connected:restrict] mg set for cg%w ???")
             do iw = 1, wna%lst(i)%dim4
                call this%wq_copy(i, iw, qna%wai)
-               call this%coarser%wq_copy(i, iw, qna%wai) ! this is required because we don't use (.not. cg%leafmap) mask in the this%coarser%qw_copy call below
+               if (dom%geometry_type == GEO_RPZ .and. i == wna%fi .and. any(iw == iarr_all_my)) call this%mul_by_r(qna%wai) ! angular momentum conservation
+               if (.true.) then  ! this is required because we don't use (.not. cg%leafmap) mask in the this%coarser%qw_copy call below
+                  call this%coarser%wq_copy(i, iw, qna%wai)
+                  if (dom%geometry_type == GEO_RPZ .and. i == wna%fi .and. any(iw == iarr_all_my)) call this%coarser%mul_by_r(qna%wai)
+               endif
                call this%restrict_q_1var(qna%wai, wna%lst(i)%position(iw))
+               if (dom%geometry_type == GEO_RPZ .and. i == wna%fi .and. any(iw == iarr_all_my)) call this%coarser%div_by_r(qna%wai) ! angular momentum conservation
                call this%coarser%qw_copy(qna%wai, i, iw)
             enddo
          endif
@@ -426,8 +440,8 @@ contains
 
    subroutine restrict_q_1var(this, iv, pos)
 
-      use constants,        only: xdim, ydim, zdim, LO, HI, I_ONE, refinement_factor, VAR_CENTER
-      use dataio_pub,       only: msg, warn
+      use constants,        only: xdim, ydim, zdim, LO, HI, I_ONE, refinement_factor, VAR_CENTER, GEO_XYZ, GEO_RPZ
+      use dataio_pub,       only: msg, warn, die
       use domain,           only: dom
       use cg_list,          only: cg_list_element
       use grid_cont,        only: grid_container
@@ -503,7 +517,14 @@ contains
                   jc = (j-fse(ydim, LO)+off1(ydim))/refinement_factor + 1
                   do i = fse(xdim, LO), fse(xdim, HI)
                      ic = (i-fse(xdim, LO)+off1(xdim))/refinement_factor + 1
-                     cg%ro_tgt%seg(g)%buf(ic, jc, kc) = cg%ro_tgt%seg(g)%buf(ic, jc, kc) + cg%q(iv)%arr(i, j, k) * norm
+                     select case (dom%geometry_type)
+                        case (GEO_XYZ)
+                           cg%ro_tgt%seg(g)%buf(ic, jc, kc) = cg%ro_tgt%seg(g)%buf(ic, jc, kc) + cg%q(iv)%arr(i, j, k) * norm
+                        case (GEO_RPZ)
+                           cg%ro_tgt%seg(g)%buf(ic, jc, kc) = cg%ro_tgt%seg(g)%buf(ic, jc, kc) + cg%q(iv)%arr(i, j, k) * norm * cg%x(i)
+                        case default
+                           call die("[cg_level_connected:restrict_q_1var] Unknown geometry")
+                     end select
                   enddo
                enddo
             enddo
@@ -527,6 +548,16 @@ contains
             where (.not. cg%leafmap(:,:,:)) cg%q(iv)%arr(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = 0. ! disables check_dirty
             do g = lbound(cg%ri_tgt%seg(:), dim=1), ubound(cg%ri_tgt%seg(:), dim=1)
                cse(:,:) = cg%ri_tgt%seg(g)%se(:,:)
+               select case (dom%geometry_type)
+                  case (GEO_XYZ) ! do nothing
+                  case (GEO_RPZ)
+                     do i = lbound(cg%ri_tgt%seg(g)%buf, dim=1), ubound(cg%ri_tgt%seg(g)%buf, dim=1)
+                        ic = cse(xdim, LO) +i - lbound(cg%ri_tgt%seg(g)%buf, dim=1)
+                        cg%ri_tgt%seg(g)%buf(i, :, :) = cg%ri_tgt%seg(g)%buf(i, :, :) / cg%x(ic)
+                     enddo
+                  case default
+                     call die("[cg_level_connected:restrict_q_1var] Unknown geometry")
+               end select
                p3 => cg%q(iv)%span(cse)
                p3 = p3 + cg%ri_tgt%seg(g)%buf(:, :, :) !errors on overlap?
             enddo

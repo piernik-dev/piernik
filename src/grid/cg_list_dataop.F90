@@ -60,6 +60,8 @@ module cg_list_dataop
       procedure :: q_lin_comb                        !< assign linear combination of q fields
       procedure :: subtract_average                  !< subtract average value from the list
       procedure :: norm_sq                           !< calculate L2 norm
+      procedure :: mul_by_r                          !< multiply data by the r (first) coordinate
+      procedure :: div_by_r                          !< divide data by the r (first) coordinate
 
       ! Multigrid
       generic,   public  :: reset_boundaries => zero_boundaries, dirty_mg_boundaries
@@ -507,6 +509,56 @@ contains
       norm = sqrt(norm)
 
    end function norm_sq
+
+!< \brief multiply data by the r (first) coordinate (useful to convert phi-momentum into angular momentum)
+
+   subroutine mul_by_r(this, ind)
+
+      use cg_list,   only: cg_list_element
+
+      implicit none
+
+      class(cg_list_dataop_T), intent(in) :: this  !< object invoking type-bound procedure
+      integer(kind=4),         intent(in) :: ind   !< index of variable in cg%q(:) which we want to pollute
+
+      type(cg_list_element), pointer :: cgl
+      integer :: i
+
+      cgl => this%first
+      do while (associated(cgl))
+         do i = lbound(cgl%cg%q(ind)%arr, dim=1), ubound(cgl%cg%q(ind)%arr, dim=1)
+            cgl%cg%q(ind)%arr(i, :, :) = cgl%cg%q(ind)%arr(i, :, :) * cgl%cg%x(i)
+         enddo
+         cgl => cgl%nxt
+      enddo
+
+   end subroutine mul_by_r
+
+!> \brief divide data by the r (first) coordinate (useful to convert angular momentum into phi-momentum)
+
+   subroutine div_by_r(this, ind)
+
+      use cg_list,    only: cg_list_element
+      use dataio_pub, only: die
+
+      implicit none
+
+      class(cg_list_dataop_T), intent(in) :: this  !< object invoking type-bound procedure
+      integer(kind=4),         intent(in) :: ind   !< index of variable in cg%q(:) which we want to pollute
+
+      type(cg_list_element), pointer :: cgl
+      integer :: i
+
+      cgl => this%first
+      do while (associated(cgl))
+         do i = lbound(cgl%cg%q(ind)%arr, dim=1), ubound(cgl%cg%q(ind)%arr, dim=1)
+            if (cgl%cg%x(i) == 0) call die("[cg_list_dataop:div_by_r] cannot divide by radius == 0")
+            cgl%cg%q(ind)%arr(i, :, :) = cgl%cg%q(ind)%arr(i, :, :) / cgl%cg%x(i)
+         enddo
+         cgl => cgl%nxt
+      enddo
+
+   end subroutine div_by_r
 
 !> \brief Clear boundary values
 
