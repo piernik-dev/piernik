@@ -68,6 +68,7 @@ module named_array_list
       procedure :: exists                                        !< Check if a named array of given name is already registered
       procedure :: print_vars                                    !< Write a summary on registered fields. Can be useful for debugging
       procedure :: add2lst                                       !< Add a named array properties to the list
+      procedure :: get_reslst                                    !< List of fields that are stored in the restart file
    end type na_var_list
 
    ! types with indices of the most commonly used arrays stored in cg%w and cg%q
@@ -197,6 +198,34 @@ contains
       end select
 
    end subroutine add2lst
+
+!>
+!! \brief Find out which fields (cg%q and cg%w arrays) are stored in the restart file
+!!
+!! \details The result arrays qna, wna need to be deallocated separately
+!<
+
+   function get_reslst(this) result (lst)
+
+      use constants,        only: AT_IGNORE
+      use func,             only: append_int_to_array
+
+      implicit none
+
+      class(na_var_list), intent(inout)  :: this
+      integer, dimension(:), allocatable :: lst
+
+      integer                            :: i
+
+      if (allocated(this%lst)) then
+         do i = lbound(this%lst(:), dim=1, kind=4), ubound(this%lst(:), dim=1, kind=4)
+            if (this%lst(i)%restart_mode /= AT_IGNORE) call append_int_to_array(lst, i)
+         enddo
+      endif
+      if (.not.allocated(lst)) allocate(lst(0))  ! without it intrinsics like size, ubound, lbound return bogus values
+
+   end function get_reslst
+
 
 !> \brief Summarize all registered fields and their properties
 

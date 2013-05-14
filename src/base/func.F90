@@ -39,7 +39,8 @@ module func
    implicit none
 
    private
-   public :: ekin, emag, L2norm, sq_sum3, resample_gauss, piernik_fnum, f2c, c2f, f2c_o, c2f_o
+   public :: ekin, emag, L2norm, sq_sum3, resample_gauss, piernik_fnum, f2c, c2f, f2c_o, c2f_o, &
+      & append_int_to_array
 
 contains
 
@@ -234,5 +235,27 @@ contains
       o_coarse = floor(o_fine / real(refinement_factor))
 
    end function f2c_o
+
+!> \brief Expand given integer array by one and store the value i ni the last cell
+
+   subroutine append_int_to_array(arr, i)
+
+      implicit none
+
+      integer, dimension(:), allocatable, intent(inout) :: arr
+      integer,                            intent(in)    :: i
+
+      integer, allocatable, dimension(:)                :: tmp
+
+      if (allocated(arr)) then
+         allocate(tmp(lbound(arr(:), dim=1):ubound(arr(:), dim=1) + 1))
+         tmp(:ubound(arr(:), dim=1)) = arr(:)
+         call move_alloc(from=tmp, to=arr)
+      else
+         allocate(arr(1))
+      endif
+      arr(ubound(arr(:))) = i
+
+   end subroutine append_int_to_array
 
 end module func

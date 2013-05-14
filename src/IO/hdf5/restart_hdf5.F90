@@ -247,39 +247,6 @@ contains
       endif
    end subroutine create_empty_cg_datasets_in_restart
 
-!>
-!! \brief Find out which fields (cg%q and cg%w arrays) are stored in the restart file
-!!
-!! \details The result arrays qna, wna need to be deallocated separately
-!<
-
-   subroutine qw_lst(qr_lst, wr_lst)
-
-      use constants,        only: AT_IGNORE
-      use named_array_list, only: qna, wna
-
-      implicit none
-
-      integer, dimension(:), allocatable, intent(out) :: qr_lst, wr_lst
-
-      integer                                         :: i
-
-      if (allocated(qna%lst)) then
-         do i = lbound(qna%lst(:), dim=1, kind=4), ubound(qna%lst(:), dim=1, kind=4)
-            if (qna%lst(i)%restart_mode /= AT_IGNORE) call append_int_to_array(qr_lst, i)
-         enddo
-      endif
-      if (.not.allocated(qr_lst)) allocate(qr_lst(0))  ! without it intrinsics like size, ubound, lbound return bogus values
-
-      if (allocated(wna%lst)) then
-         do i = lbound(wna%lst(:), dim=1, kind=4), ubound(wna%lst(:), dim=1, kind=4)
-            if (wna%lst(i)%restart_mode /= AT_IGNORE) call append_int_to_array(wr_lst, i)
-         enddo
-      endif
-      if (.not.allocated(wr_lst)) allocate(wr_lst(0))  ! without it intrinsics like size, ubound, lbound return bogus values
-
-   end subroutine qw_lst
-
 !> \brief Write all grid containers to the file
 
    subroutine write_cg_to_restart(cgl_g_id, cg_n, cg_all_n_b)
@@ -317,7 +284,8 @@ contains
       real, target, dimension(0,0,0)                        :: null_r3d
       real, target, dimension(0,0,0,0)                      :: null_r4d
 
-      call qw_lst(qr_lst, wr_lst)
+      qr_lst = qna%get_reslst()
+      wr_lst = wna%get_reslst()
       tot_lst_n = size(qr_lst) + size(wr_lst)
       allocate(dsets(tot_lst_n))
       ic = 1
@@ -487,28 +455,6 @@ contains
       deallocate(qr_lst, wr_lst, dsets)
 
    end subroutine write_cg_to_restart
-
-!> \brief Expand given integer array by one and store the value i ni the last cell
-
-   subroutine append_int_to_array(arr, i)
-
-      implicit none
-
-      integer, dimension(:), allocatable, intent(inout) :: arr
-      integer,                            intent(in)    :: i
-
-      integer, allocatable, dimension(:)                :: tmp
-
-      if (allocated(arr)) then
-         allocate(tmp(lbound(arr(:), dim=1):ubound(arr(:), dim=1) + 1))
-         tmp(:ubound(arr(:), dim=1)) = arr(:)
-         call move_alloc(from=tmp, to=arr)
-      else
-         allocate(arr(1))
-      endif
-      arr(ubound(arr(:))) = i
-
-   end subroutine append_int_to_array
 
 !>
 !! \brief Read a multi-file, multi-domain restart file
@@ -953,7 +899,8 @@ contains
            &             cg%js+own_off(ydim):cg%js+own_off(ydim)+o_size(ydim)-1, &
            &             cg%ks+own_off(zdim):cg%ks+own_off(zdim)+o_size(zdim)-1))) call die("[restart_hdf5:read_cg_from_restart] Trying to initialize same area twice.")
 
-      call qw_lst(qr_lst, wr_lst)
+      qr_lst = qna%get_reslst()
+      wr_lst = wna%get_reslst()
       call h5gopen_f(cgl_g_id, n_cg_name(ncg), cg_g_id, error) ! open "/cg/cg_%08d, ncg"
 
       if (size(qr_lst) > 0) then
