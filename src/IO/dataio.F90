@@ -942,8 +942,9 @@ contains
 #endif /* GRAV */
 
                tot_q(T_EKIN) = tot_q(T_EKIN) + cg%dvol * sum(sum(ekin(pu(iarr_all_mx(:),:,:,:), pu(iarr_all_my(:),:,:,:), pu(iarr_all_mz(:),:,:,:), max(pu(iarr_all_dn(:),:,:,:),smalld)), dim=1), mask=cg%leafmap)
+#ifdef MAGNETIC
                tot_q(T_EMAG) = tot_q(T_EMAG) + cg%dvol * sum(emag(pb(xdim,:,:,:), pb(ydim,:,:,:), pb(zdim,:,:,:)), mask=cg%leafmap)
-
+#endif /* MAGNETIC */
                tot_q(T_MFLX) = tot_q(T_MFLX) + cg%dvol/dom%L_(xdim) * sum(pb(xdim,:,:,:), mask=cg%leafmap) !cg%dy*cg%dz/dom%n_d(xdim)
                tot_q(T_MFLY) = tot_q(T_MFLY) + cg%dvol/dom%L_(ydim) * sum(pb(ydim,:,:,:), mask=cg%leafmap) !cg%dx*cg%dz/dom%n_d(ydim)
                tot_q(T_MFLZ) = tot_q(T_MFLZ) + cg%dvol/dom%L_(zdim) * sum(pb(zdim,:,:,:), mask=cg%leafmap) !cg%dx*cg%dy/dom%n_d(zdim)
@@ -972,10 +973,11 @@ contains
                   tot_q(T_EPOT) = tot_q(T_EPOT) + drvol * sum(sum(pu(iarr_all_dn(:), ii:ii, :, :),dim=1) * cg%q(qna%ind(gpot_n))%span(ijkse), mask=cg%leafmap(i:i, :, :))
 #endif /* GRAV */
 
-                  tot_q(T_EKIN) = tot_q(T_EKIN) + drvol * sum(sum(ekin(pu(iarr_all_mx(:), ii, :, :), pu(iarr_all_my(:), ii, :, :), pu(iarr_all_mz(:), ii, :, :), &
+                  tot_q(T_EKIN) = tot_q(T_EKIN) + drvol * sum(sum(ekin(pu(iarr_all_mx(:), ii, :, :), pu(iarr_all_my(:), ii, :, :)*cg%x(i), pu(iarr_all_mz(:), ii, :, :), &
                        &                                               max(pu(iarr_all_dn(:), ii, :, :),smalld)), dim=1), mask=cg%leafmap(i, :, :))
+#ifdef MAGNETIC
                   tot_q(T_EMAG) = tot_q(T_EMAG) + drvol * sum(emag(pb(xdim, ii, :, :), pb(ydim, ii, :, :), pb(zdim, ii, :, :)), mask=cg%leafmap(i, :, :))
-
+#endif /* MAGNETIC */
                   !> \todo Figure out the meaning of tot_q(T_MFL[XY]) and how to compute it properly or remove at all
                   tot_q(T_MFLX) = 0. !tot_q(T_MFLX) + cg%dvol/dom%L_(xdim) * sum(pb(xdim, ii, :, :), mask=cg%leafmap(i, :, :)) !cg%dy*cg%dz/dom%n_d(xdim)
                   tot_q(T_MFLY) = 0. !tot_q(T_MFLY) + cg%dvol/dom%L_(ydim) * sum(pb(ydim, ii, :, :), mask=cg%leafmap(i, :, :)) !cg%dx*cg%dz/dom%n_d(ydim)
