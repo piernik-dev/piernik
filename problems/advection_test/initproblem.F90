@@ -83,6 +83,7 @@ contains
       use fluidindex, only: flind
       use global,     only: smalld, smallei
       use mpisetup,   only: rbuff, ibuff, lbuff, master, slave, proc, have_mpi, LAST, piernik_MPI_Bcast
+      use refinement, only: set_n_updAMR, n_updAMR
       use user_hooks, only: problem_refine_derefine
 
       implicit none
@@ -167,6 +168,8 @@ contains
 
       if (nflip > 0) then
          problem_refine_derefine => flip_flop
+         if (n_updAMR /= nflip .and. master) call warn("[initproblem:read_problem_par] Forcing n_updAMR == nflip")
+         call set_n_updAMR(nflip)
       else
          problem_refine_derefine => mark_surface
       endif

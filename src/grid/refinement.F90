@@ -38,7 +38,7 @@ module refinement
 
    private
    public :: level_max, level_min, n_updAMR, allow_face_rstep, allow_corner_rstep, oop_thr, refine_points, refine_boxes, &
-        &    init_refinement, ref_flag, emergency_fix
+        &    init_refinement, ref_flag, emergency_fix, set_n_updAMR
 
    type :: ref_flag
       logical :: refine   !> a request to refine
@@ -208,5 +208,25 @@ contains
       if (my_level <= level_min) this%derefine = .false.
 
    end subroutine sanitize
+
+!> \brief Change the protected parameter n_updAMR
+
+   subroutine set_n_updAMR(n)
+
+      use dataio_pub, only: die
+      use mpisetup,   only: piernik_MPI_Bcast
+
+      implicit none
+
+      integer(kind=4), intent(in) :: n
+
+      integer(kind=4) :: nn
+
+      nn = n
+      call piernik_MPI_Bcast(nn)
+      if (nn /= n) call die("[refinement:set_n_updAMR] n_updAMR goes out of sync")
+      n_updAMR = nn
+
+   end subroutine set_n_updAMR
 
 end module refinement
