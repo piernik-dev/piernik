@@ -44,11 +44,12 @@ module initproblem
    real, dimension(ndims) :: pulse_vel   !< uniform velocity components
    integer(kind=4)        :: norm_step   !< how often to calculate the L2-norm
    integer(kind=4)        :: nflip       !< how often to call refine/derefine routine
+   real                   :: flipratio   !< percentage of blocks on each level to be refined on flip
    real                   :: ref_thr     !< refinement threshold
    real                   :: deref_thr   !< derefinement threshold
    logical                :: usedust     !< If .false. then do not set velocity for dust
 
-   namelist /PROBLEM_CONTROL/  pulse_size, pulse_off, pulse_vel, pulse_amp, norm_step, nflip, ref_thr, deref_thr, usedust
+   namelist /PROBLEM_CONTROL/  pulse_size, pulse_off, pulse_vel, pulse_amp, norm_step, nflip, flipratio, ref_thr, deref_thr, usedust
 
    ! other private data
    real, dimension(ndims, LO:HI) :: pulse_edge
@@ -97,6 +98,7 @@ contains
       nflip         = 0
       ref_thr       = 0.1
       deref_thr     = 0.01
+      flipratio     = 1.
       usedust       = .false.
 
       if (master) then
@@ -106,9 +108,10 @@ contains
          rbuff(1)   = pulse_amp
          rbuff(2)   = ref_thr
          rbuff(3)   = deref_thr
-         rbuff( 4+xdim: 4+zdim) = pulse_size(:)
-         rbuff( 7+xdim: 7+zdim) = pulse_vel(:)
-         rbuff(10+xdim:10+zdim) = pulse_off(:)
+         rbuff(4)   = flipratio
+         rbuff(20+xdim:20+zdim) = pulse_size(:)
+         rbuff(23+xdim:23+zdim) = pulse_vel(:)
+         rbuff(26+xdim:26+zdim) = pulse_off(:)
 
          ibuff(1)   = norm_step
          ibuff(2)   = nflip
@@ -126,9 +129,10 @@ contains
          pulse_amp  = rbuff(1)
          ref_thr    = rbuff(2)
          deref_thr  = rbuff(3)
-         pulse_size = rbuff( 4+xdim: 4+zdim)
-         pulse_vel  = rbuff( 7+xdim: 7+zdim)
-         pulse_off  = rbuff(10+xdim:10+zdim)
+         flipratio  = rbuff(4)
+         pulse_size = rbuff(20+xdim:20+zdim)
+         pulse_vel  = rbuff(23+xdim:23+zdim)
+         pulse_off  = rbuff(26+xdim:26+zdim)
 
          norm_step  = int(ibuff(1), kind=4)
          nflip      = ibuff(2)
@@ -468,24 +472,36 @@ contains
 
    subroutine flip_flop
 
-      use cg_leaves, only: leaves
-      use cg_list,   only: cg_list_element
-      use constants, only: I_TWO
-      use global,    only: nstep
+      use cg_level_base,      only: base
+      use cg_level_connected, only: cg_level_connected_T
+      use cg_list,            only: cg_list_element
+      use constants,          only: I_TWO
+      use global,             only: nstep
 
       implicit none
 
-      type(cg_list_element), pointer :: cgl
+      type(cg_level_connected_T), pointer :: curl
+      type(cg_list_element),      pointer :: cgl
 
-      cgl => leaves%first
-      do while (associated(cgl))
-         cgl%cg%refine_flags%refine   = .false.
-         cgl%cg%refine_flags%derefine = .false.
-         if (mod(nstep, nflip) == 0) then
-            cgl%cg%refine_flags%refine   = (mod(nstep, I_TWO*nflip) /= 0)
-            cgl%cg%refine_flags%derefine = .not. cgl%cg%refine_flags%refine
-         endif
-         cgl => cgl%nxt
+      integer :: i
+
+      curl => base%level
+      do while (associated(curl))
+         cgl => curl%first
+         i = 0
+         do while (associated(cgl))
+            cgl%cg%refine_flags%refine   = .false.
+            cgl%cg%refine_flags%derefine = .false.
+            if (real(i)/curl%cnt <= flipratio) then
+               if (mod(nstep, nflip) == 0) then
+                  cgl%cg%refine_flags%refine   = (mod(nstep, I_TWO*nflip) /= 0)
+                  cgl%cg%refine_flags%derefine = .not. cgl%cg%refine_flags%refine
+               endif
+            endif
+            i = i + 1
+            cgl => cgl%nxt
+         enddo
+         curl => curl%finer
       enddo
 
    end subroutine flip_flop
