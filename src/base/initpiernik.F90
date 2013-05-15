@@ -138,10 +138,14 @@ contains
       call init_global
       code_progress = PIERNIK_INIT_GLOBAL    ! Global parameters are set up
 
+      call init_domain
+      code_progress = PIERNIK_INIT_DOMAIN    ! Base domain is known and initial domain decomposition is known
+      call init_geometry                     ! depends on domain
+
       call init_fluids
       code_progress = PIERNIK_INIT_FLUIDS    ! Fluid properties are set up
 
-      call all_cg%register_fluids            ! Register named fields for u, b and wa
+      call all_cg%register_fluids            ! Register named fields for u, b and wa, depends on fluids and domain
       call all_cg%init
 
 #ifdef COSM_RAYS
@@ -153,10 +157,6 @@ contains
 #endif /* COSM_RAYS */
 
       call init_interactions                 ! requires flind and units
-
-      call init_domain
-      code_progress = PIERNIK_INIT_DOMAIN    ! Base domain is known and initial domain decomposition is known
-      call init_geometry                     ! depends on domain
 
       call init_refinement
 
