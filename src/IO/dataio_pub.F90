@@ -539,10 +539,20 @@ contains
    end subroutine close_txt_file
 
    subroutine close_logs
+
+      use mpi,       only: MPI_COMM_WORLD
+
       implicit none
-      call flush_to_log
-      call close_txt_file(log_file, log_lun)
-      call close_txt_file(tsl_file, tsl_lun)
+
+      integer(kind=4)               :: proc
+
+      call MPI_Comm_rank(MPI_COMM_WORLD, proc, mpi_err)
+
+      if (proc == 0) then
+         call flush_to_log
+         call close_txt_file(log_file, log_lun)
+         call close_txt_file(tsl_file, tsl_lun)
+      endif
    end subroutine close_logs
 !>
 !! \brief Sanitize a file name
