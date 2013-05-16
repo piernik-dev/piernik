@@ -504,6 +504,7 @@ contains
 #endif /* VERBOSE */
 
       walltime_nextres = wallclock(0, 0, "until next restart")
+      if (master) tn = walltime_nextres%time_left(wdt_res)
 
    end subroutine init_dataio
 
