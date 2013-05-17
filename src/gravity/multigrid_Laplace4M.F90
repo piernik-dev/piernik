@@ -211,9 +211,9 @@ contains
             Ly  = 0. ; if (dom%has_dir(ydim)) Ly = cg%idy2 - 2. * (Lxy + Lyz)
             Lz  = 0. ; if (dom%has_dir(zdim)) Lz = cg%idz2 - 2. * (Lxz + Lyz)
             L0  = 2. * (Lx + Ly + Lz) + 4. * (Lxy + Lxz + Lyz)
-            is = cg%is-b; ie = cg%ie+b
-            js = cg%js-b; je = cg%je+b
-            ks = cg%ks-b; ke = cg%ke+b
+            is = cg%is-b*dom%D_(xdim); ie = cg%ie+b*dom%D_(xdim)
+            js = cg%js-b*dom%D_(ydim); je = cg%je+b*dom%D_(ydim)
+            ks = cg%ks-b*dom%D_(zdim); ke = cg%ke+b*dom%D_(zdim)
             if (dom%eff_dim == ndims .and. .not. multidim_code_3D) then
                ! Set multidim_code_3D to .true. if you want to see performance difference between these two variants of relaxation.
                ! Expect approximately 10-20% difference of the computational cost in favour of the 3D implementation
