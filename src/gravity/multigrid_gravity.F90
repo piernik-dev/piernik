@@ -159,7 +159,7 @@ contains
       lmax                   = 16
       mmax                   = -1 ! will be automatically set to lmax unless explicitly limited in problem.par
       max_cycles             = 20
-      nsmool                 = 4
+      nsmool                 = 4  ! best to set it to dom%nb or something*dom%nb
       nsmoob                 = 100
       nsmoof                 = 1
       ord_laplacian          = O_D4

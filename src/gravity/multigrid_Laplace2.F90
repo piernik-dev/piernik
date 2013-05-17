@@ -166,6 +166,8 @@ contains
 !!
 !! \details  This relaxation can also be used for some other implementations of the Laplace operators during development stage. In such cases you may expect poor convergence.
 !! 4th order operator residual4 uses this relaxation because it is not planned to implement specialized operator anytime soon.
+!!
+!! \todo Implement efficient use of guardcells in order to save some communication like in [7846]
 !<
 
    subroutine approximate_solution_rbgs2(curl, src, soln, nsmoo)
