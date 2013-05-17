@@ -914,7 +914,7 @@ contains
 #else /* !__INTEL_COMPILER */
             open(newunit=tsl_lun, file=tsl_file)
 #endif /* !__INTEL_COMPILER */
-            write(tsl_lun, '(a1,a8,100(1x,a17))') "#",tsl_names(1),adjustr(tsl_names(2:)) ! should match format used below
+            write(tsl_lun, '(a1,a8,100(1x,a20))') "#",tsl_names(1),adjustr(tsl_names(2:)) ! should match format used below
             write(tsl_lun, '(a1)') '#'
             deallocate(tsl_names)
             tsl_firstcall = .false.
@@ -1044,7 +1044,7 @@ contains
       if (associated(user_tsl)) call user_tsl(tsl_vars)
 
       if (master) then
-         write(tsl_lun, '(1x,i8,100(1x,es17.8e3))') nstep, tsl_vars ! should match format used above
+         write(tsl_lun, '(1x,i8,100(1x,es20.11e3))') nstep, tsl_vars ! should match format used above
          ! some quantities computed in "write_log".One can add more, or change.
          deallocate(tsl_vars)
       endif
