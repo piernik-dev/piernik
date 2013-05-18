@@ -43,6 +43,15 @@ def parse_mpisignals(fn='../src/base/mpi_signals.F90'):
     return mpi_signals
 
 
+def receive_string_from_slave(comm, status):
+    strlen = array('i', [0])
+    comm.Recv([strlen, MPI.INT], MPI.ANY_SOURCE, MPI.ANY_TAG, status)
+    if strlen < 1:
+        return ""
+    string = array('c', ['_']*strlen[0])
+    comm.Recv([string, MPI.CHAR], MPI.ANY_SOURCE, MPI.ANY_TAG, status)
+    return string.tostring().strip()
+
 if __name__ == "__main__":
     if have_argparse:
         parser = argparse.ArgumentParser(description='Run PIERNIK via MPI_Spawn')
@@ -84,6 +93,8 @@ if __name__ == "__main__":
         if signal[0] == mpi_signals['tsl_updated']:
             print "Python script: TSL was updated"
             print "GRID magic can happen here \o/"
+        elif signal[0] == mpi_signals['hdf_written']:
+            print "Got HDF5 %s" % receive_string_from_slave(piernik, status)
         elif signal[0] == mpi_signals['clean_exit']:
             print "It seems that Piernik finished execution gracefully \o/"
         #if status.Get_tag() == 1:
