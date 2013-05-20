@@ -75,7 +75,6 @@
  $MULTIGRID_SOLVER
 !    level_depth = 3
     stdout    = .true.
-    ord_prolong   = -2
     dirty_debug = .true.
  /
 
