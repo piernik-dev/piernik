@@ -85,7 +85,6 @@
 
  $MULTIGRID_SOLVER
     stdout = .true.
-    level_depth = 5
  /
 
  $MULTIGRID_DIFFUSION

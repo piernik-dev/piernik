@@ -84,7 +84,6 @@
  /
 
  $MULTIGRID_SOLVER
-    level_depth = 2
     stdout    = .true.
     dirty_debug = .true.
  /

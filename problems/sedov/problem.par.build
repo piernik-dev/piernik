@@ -89,7 +89,6 @@
  /
 
  $MULTIGRID_SOLVER
-    level_depth = 3
  /
 
  $INTERACTIONS
