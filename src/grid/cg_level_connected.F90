@@ -1113,6 +1113,7 @@ contains
       sdispls = I_LAST * psdispl
       recvcounts = I_LAST * prcnt
       rdispls = I_LAST * prdispl
+      ! OPT: this call can be quite long to complete
       call MPI_Alltoallv(sseg, sendcounts, sdispls, MPI_INTEGER8, rseg, recvcounts, rdispls, MPI_INTEGER8, comm, mpi_err)
 
       ! define areas on the coarse side at fine BND_FC and BND_MPI_FC faces that have to be sent

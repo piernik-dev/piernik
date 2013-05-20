@@ -261,6 +261,7 @@ contains
       ! get the count of grid pieces on each process
       ! Beware: int(this%cnt, kind=4) is not properly updated after calling this%distribute.
       ! Use size(this%pse(proc)%c) if you want to propagate pse before the grid containers are actually added to the level
+      ! OPT: this call can be quite long to complete
       call MPI_Allgather(int(this%cnt, kind=4), I_ONE, MPI_INTEGER, allcnt, I_ONE, MPI_INTEGER, comm, mpi_err)
 
       ! compute offsets for  a composite table of all grid pieces
@@ -1311,7 +1312,7 @@ contains
       enddo
 
       !> \deprecated partially copied code from init_all_new_cg
-
+      ! OPT: call this%update_pse can be quite long to complete
       call this%update_pse
       call this%mpi_bnd_types ! require access to whole this%pse(:)%c(:)%se(:,:)
       call this%update_req    ! Perhaps this%mpi_bnd_types added some new entries
