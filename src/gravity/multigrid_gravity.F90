@@ -92,7 +92,7 @@ contains
 !! <tr><td>norm_tol              </td><td>1.e-6  </td><td>real value     </td><td>\copydoc multigrid_gravity::norm_tol              </td></tr>
 !! <tr><td>vcycle_abort          </td><td>2.0    </td><td>real value     </td><td>\copydoc multigrid_gravity::vcycle_abort          </td></tr>
 !! <tr><td>max_cycles            </td><td>20     </td><td>integer value  </td><td>\copydoc multigrid_gravity::max_cycles            </td></tr>
-!! <tr><td>nsmool                </td><td>4      </td><td>integer value  </td><td>\copydoc multigridvars::nsmool                    </td></tr>
+!! <tr><td>nsmool                </td><td>dom%nb </td><td>integer value  </td><td>\copydoc multigridvars::nsmool                    </td></tr>
 !! <tr><td>nsmoob                </td><td>100    </td><td>integer value  </td><td>\copydoc multigrid_gravity::nsmoob                </td></tr>
 !! <tr><td>overrelax             </td><td>1.     </td><td>real value     </td><td>\copydoc multigrid_gravity::overrelax             </td></tr>
 !! <tr><td>overrelax_xxyz(ndims) </td><td>1.     </td><td>real value     </td><td>\copydoc multigrid_gravity::overrelax_xyz         </td></tr>
@@ -159,7 +159,7 @@ contains
       lmax                   = 16
       mmax                   = -1 ! will be automatically set to lmax unless explicitly limited in problem.par
       max_cycles             = 20
-      nsmool                 = 4  ! best to set it to dom%nb or something*dom%nb
+      nsmool                 = -1  ! best to set it to dom%nb or its multiply
       nsmoob                 = 100
       nsmoof                 = 1
       ord_laplacian          = O_D4
@@ -188,6 +188,8 @@ contains
       if (master) then
 
          diff_nml(MULTIGRID_GRAVITY)
+
+         if (nsmool < 0) nsmool = -nsmool * dom%nb
 
          ! FIXME when ready
          if (dom%geometry_type == GEO_RPZ) then

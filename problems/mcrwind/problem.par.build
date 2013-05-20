@@ -138,7 +138,6 @@
     diff_theta     = 0.6
     diff_tstep_fac = 30
     norm_tol = 1e-4
-    nsmool = 4
     nsmoob = 4
     max_cycles = 20
     diff_bnd_str = "zero"

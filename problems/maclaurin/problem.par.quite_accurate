@@ -88,7 +88,6 @@
 
  $MULTIGRID_GRAVITY
     norm_tol  = 1.e-6
-    nsmool    = 4
     ord_laplacian = 4
     L4_strength = 0.5
     grav_bnd_str  = "isolated"

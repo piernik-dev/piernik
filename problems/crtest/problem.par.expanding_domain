@@ -86,7 +86,6 @@
     diff_theta     = 0.6
     diff_tstep_fac = 43.402777777777777777777777 !86.805555555555555 !91.0222223 !91.0222223 !45.511112 !22.7555556
     norm_tol = 1e-4
-    nsmool = 4
     nsmoob = 4
     max_cycles = 10
     diff_bnd_str = "styrofoam"

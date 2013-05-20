@@ -74,7 +74,6 @@
 
  $MULTIGRID_GRAVITY
     norm_tol  = 1.e-6
-    nsmool    = 4
     grav_bnd_str  = "periodic"
     ord_time_extrap = -1  ! switch off history (prolongation of the initial states seems to be broken a bit
     vcycle_abort = 1e10   ! early implementation of the prolongation sometimes has poor convergence on coarse grids due to lack of proper subroutine for fine-to-coarse boundaries

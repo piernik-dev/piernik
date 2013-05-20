@@ -90,7 +90,6 @@
  /
 
  $MULTIGRID_GRAVITY
-    nsmool    = 4
     grav_bnd_str  = "dirichlet"
     gb_no_fft = .true.
     prefer_rbgs_relaxation = .true. ! ToDo: convert face prolongation for FFT
