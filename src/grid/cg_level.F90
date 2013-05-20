@@ -1114,7 +1114,7 @@ contains
          if (size(gp%list) > 0) then
             s = count(gp%list(:)%cur_proc /= gp%list(:)%dest_proc)
             if (s/real(size(gp%list)) > oop_thr) then
-               write(msg,'(a,i3,2(a,i6),a,100i5)')"[cg_level:balance_old] ^", this%level_id," Reshuffling OutOfPlace grids:",s, "/",size(gp%list),"|",cnt_existing
+               write(msg,'(a,i3,2(a,i6),a,f6.3,a)')"[cg_level:balance_old] ^", this%level_id," Reshuffling OutOfPlace grids:",s, "/",size(gp%list)," (load balance: ",sum(cnt_existing)/real(maxval(cnt_existing)*size(cnt_existing)),")"
                call printinfo(msg)
             else
                s = 0
