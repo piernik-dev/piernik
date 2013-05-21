@@ -140,7 +140,9 @@ contains
       integer(kind=8)                   :: j, k
       integer(kind=8), dimension(LO:HI) :: j1, j2, jc
       integer(kind=4), dimension(:, :), pointer :: mpistatus
+      integer :: cn_
 
+      cn_ = 0
       full_dim = dom%has_dir(cdim)
       uhi = wna%ind(uh_n)
       if (qna%exists(cs_i2_n)) then
@@ -217,7 +219,13 @@ contains
                   endif
                   if (all_received) then
 
-                     allocate(b(nmag, cg%n_(cdim)), u(flind%all, cg%n_(cdim)), u0(flind%all, cg%n_(cdim)))
+                     if (cn_ /= cg%n_(cdim)) then
+                        if (allocated(b))  deallocate(b)
+                        if (allocated(u))  deallocate(u)
+                        if (allocated(u0)) deallocate(u0)
+                     endif
+                     if (.not. allocated(u)) allocate(b(nmag, cg%n_(cdim)), u(flind%all, cg%n_(cdim)), u0(flind%all, cg%n_(cdim)))
+                     cn_ = cg%n_(cdim)
 
                      b(:,:) = 0.0
                      u(:,:) = 0.0
@@ -325,6 +333,10 @@ contains
 
          if (full_dim) call all_fluid_boundaries    ! \todo : call only cdim for istep=1, call all for istep=2
       enddo
+
+      if (allocated(b))  deallocate(b)
+      if (allocated(u))  deallocate(u)
+      if (allocated(u0)) deallocate(u0)
 
    end subroutine sweep
 
