@@ -48,7 +48,7 @@ contains
       use cg_list_global,        only: all_cg
       use constants,             only: PIERNIK_INIT_MPI, PIERNIK_INIT_GLOBAL, PIERNIK_INIT_FLUIDS, PIERNIK_INIT_DOMAIN, PIERNIK_INIT_GRID, PIERNIK_INIT_IO_IC, INCEPTIVE
       use dataio,                only: init_dataio, init_dataio_parameters, write_data
-      use dataio_pub,            only: nrestart, wd_wr, wd_rd, par_file, tmp_log_file, msg, printio, printinfo, require_problem_IC, problem_name, run_id, code_progress
+      use dataio_pub,            only: nrestart, wd_rd, par_file, tmp_log_file, msg, printio, printinfo, require_problem_IC, problem_name, run_id, code_progress, log_wr
       use decomposition,         only: init_decomposition
       use domain,                only: init_domain
       use diagnostics,           only: diagnose_arrays, check_environment
@@ -110,7 +110,7 @@ contains
 
       call parse_cmdline
       write(par_file,'(2a)') trim(wd_rd),'problem.par'
-      write(tmp_log_file,'(2a)') trim(wd_wr),'tmp.log'
+      write(tmp_log_file,'(2a)') trim(log_wr),'tmp.log'
 
       call init_mpi                          ! First, we must initialize the communication (and things that do not depend on init_mpi if there are any)
       code_progress = PIERNIK_INIT_MPI       ! Now we can initialize grid and everything that depends at most on init_mpi. All calls prior to PIERNIK_INIT_GRID can be reshuffled when necessary
@@ -278,7 +278,7 @@ contains
    subroutine parse_cmdline
 
       use constants,  only: stdout, cwdlen, INT4
-      use dataio_pub, only: cmdl_nml, wd_rd, wd_wr, piernik_hdf5_version
+      use dataio_pub, only: cmdl_nml, wd_rd, wd_wr, piernik_hdf5_version, log_wr
       use version,    only: nenv,env, init_version
 
       implicit none
@@ -327,6 +327,10 @@ contains
             call get_command_argument(i+1,arg)
             write(wd_wr,'(a)') arg
             skip_next = .true.
+         case ('-l', '--log')
+            call get_command_argument(i+1,arg)
+            write(log_wr,'(a)') arg
+            skip_next = .true.
          case ('-n', '--namelist')
             call get_command_argument(i+1,arg)
             write(cmdl_nml, '(3A)') cmdl_nml(1:len_trim(cmdl_nml)), " ", trim(arg)
@@ -369,6 +373,7 @@ contains
       print '(a)', '  -n, --namelist    read namelist from command line'
       print '(a)', '  -p, --param       path to the directory with problem.par and/or restarts (default: ".")'
       print '(a)', '  -w, --write       path to the directory where output will be written (default: ".")'
+      print '(a)', '  -l, --log         path to the directory where logs will be written (default: ".")'
       print '(a)', '  -h, --help        print usage information and exit'
       print '(a)', '  -t, --time        print time and exit'
 

@@ -166,7 +166,7 @@ contains
 
       use constants,  only: cwdlen, PIERNIK_INIT_MPI, I_ONE, INVALID
       use dataio_pub, only: nrestart, last_hdf_time, last_res_time, last_tsl_time, last_log_time, log_file_initialized, &
-           &                tmp_log_file, printinfo, printio, warn, msg, die, code_progress, wd_wr, &
+           &                tmp_log_file, printinfo, printio, warn, msg, die, code_progress, log_wr, &
            &                move_file, parfile, parfilelines, log_file, maxparfilelines, can_i_write, ierrh, par_file
       use mpi,        only: MPI_LOGICAL
       use mpisetup,   only: master, nproc, proc, piernik_MPI_Bcast, piernik_MPI_Barrier, FIRST, LAST, comm, mpi_err
@@ -236,7 +236,7 @@ contains
       call piernik_MPI_Bcast(nrestart)
 
       if (master) then
-         write(log_file,'(6a,i3.3,a)') trim(wd_wr),'/',trim(problem_name),'_',trim(run_id),'_',nrestart,'.log'
+         write(log_file,'(6a,i3.3,a)') trim(log_wr),'/',trim(problem_name),'_',trim(run_id),'_',nrestart,'.log'
 !> \todo if the simulation is restarted then save previous log_file (if exists) under a different, unique name
          system_status = move_file(trim(tmp_log_file), trim(log_file))
          if (system_status /= 0) then
@@ -794,7 +794,7 @@ contains
       use cg_leaves,        only: leaves
       use cg_list,          only: cg_list_element
       use constants,        only: xdim, ydim, zdim, DST, pSUM, GEO_XYZ, GEO_RPZ, ndims, LO, HI, I_ONE
-      use dataio_pub,       only: wd_wr, tsl_file, tsl_lun
+      use dataio_pub,       only: log_wr, tsl_file, tsl_lun
 #if defined(__INTEL_COMPILER)
       use dataio_pub,       only: io_blocksize, io_buffered, io_buffno
 #endif /* __INTEL_COMPILER */
@@ -863,7 +863,7 @@ contains
       endif
 
       if (master) then
-         write(tsl_file,'(a,a1,a,a1,a3,a1,i3.3,a4)') trim(wd_wr),'/',trim(problem_name),'_', run_id,'_',nrestart,'.tsl'
+         write(tsl_file,'(a,a1,a,a1,a3,a1,i3.3,a4)') trim(log_wr),'/',trim(problem_name),'_', run_id,'_',nrestart,'.tsl'
 
          if (tsl_firstcall) then
             call pop_vector(tsl_names, field_len, ["nstep   ", "time    ", "timestep", "mass    "])

@@ -77,6 +77,7 @@ module dataio_pub
    ! Buffers for global use
    character(len=cwdlen), save :: wd_rd = "./"                   !< path to problem.par and/or restarts
    character(len=cwdlen), save :: wd_wr = "./"                   !< path where output is written
+   character(len=cwdlen), save :: log_wr = "./"                  !< path where log is written
    character(len=msglen), save, target :: cmdl_nml =" "          !< buffer for namelist supplied via commandline
    character(len=cwdlen)       :: log_file                       !< path to the current log file
    character(len=cwdlen)       :: tsl_file                       !< path to the current tsl file
