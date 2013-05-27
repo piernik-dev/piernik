@@ -43,7 +43,7 @@ module initproblem
    integer(kind=4)        :: maxitC, maxitM
    integer, parameter     :: REL_CALC = 1, REL_SET = REL_CALC + 1
 
-   namelist /PROBLEM_CONTROL/  clump_mass, clump_vel, clump_K, clump_r, epsC, epsM, maxitC, maxitM, crashNotConv, exp_speedup, verbose, dtrig
+   namelist /PROBLEM_CONTROL/  clump_mass, clump_pos, clump_vel, clump_K, clump_r, epsC, epsM, maxitC, maxitM, crashNotConv, exp_speedup, verbose, dtrig
 
 contains
 
@@ -77,7 +77,8 @@ contains
 
       ! namelist default parameter values
       clump_mass   = 1.0e10                !< Mass of the clump
-      clump_vel(:) = 0.                    !< velocity in the domain
+      clump_pos(:) = dom%C_(:)             !< position of the clump
+      clump_vel(:) = 0.                    !< uniform velocity field
       clump_K      = 1.                    !< polytropic constant K for p = K rho**gamma formula
       clump_r      = 0.                    !< initial radius of the clump
       epsC         = 1.e-5                 !< tolerance limit for energy level change
@@ -101,6 +102,7 @@ contains
          rbuff(7) = epsC
          rbuff(8) = epsM
          rbuff(9) = dtrig
+         rbuff(10:12) = clump_pos
 
          ibuff(1) = maxitC
          ibuff(2) = maxitM
@@ -124,6 +126,7 @@ contains
          epsC         = rbuff(7)
          epsM         = rbuff(8)
          dtrig        = rbuff(9)
+         clump_pos    = rbuff(10:12)
 
          maxitC       = ibuff(1)
          maxitM       = ibuff(2)
@@ -140,7 +143,6 @@ contains
       call die("[initproblem:read_problem_par] Isothermal EOS not supported.")
 #endif /* ISO */
 
-      clump_pos(:) = dom%C_(:)
       clump_r = max(clump_r, maxval(dom%L_(:)/dom%n_d(:), mask=dom%has_dir(:)))
 
       dmax = 0.
