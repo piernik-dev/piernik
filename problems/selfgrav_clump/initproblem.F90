@@ -38,7 +38,7 @@ module initproblem
    public :: read_problem_par, problem_initial_conditions, problem_pointers
 
    real                   :: clump_mass, clump_K, clump_r, epsC, epsM, dtrig, dmax
-   real, dimension(ndims) :: clump_pos, clump_vel
+   real, dimension(ndims) :: clump_pos, clump_vel, clump_pos_xyz
    logical                :: crashNotConv, exp_speedup, verbose
    integer(kind=4)        :: maxitC, maxitM
    integer, parameter     :: REL_CALC = 1, REL_SET = REL_CALC + 1
@@ -68,8 +68,9 @@ contains
 
    subroutine read_problem_par
 
+      use constants,  only: GEO_XYZ, GEO_RPZ, xdim, ydim, zdim
       use dataio_pub, only: nh   ! QA_WARN required for diff_nml
-      use dataio_pub, only: die
+      use dataio_pub, only: die, warn
       use domain,     only: dom
       use mpisetup,   only: rbuff, ibuff, lbuff, master, slave, piernik_MPI_Bcast
 
@@ -147,6 +148,19 @@ contains
 
       dmax = 0.
 
+      select case (dom%geometry_type)
+         case (GEO_XYZ)
+            clump_pos_xyz = clump_pos
+         case (GEO_RPZ)
+            clump_pos_xyz = [ clump_pos(xdim)*cos(clump_pos(ydim)), clump_pos(xdim)*sin(clump_pos(ydim)), clump_pos(zdim) ]
+            if (any(clump_vel(xdim:ydim) /= 0.)) then
+               clump_vel(xdim:ydim) = 0.
+               if (master) call warn("[initproblem:read_problem_par] clump_vel(xdim:ydim) /= 0 not implemented for GEO_RPZ. Forced to 0.")
+            endif
+         case default
+            call die("[initproblem:read_problem_par] Unsupported geometry")
+      end select
+
    end subroutine read_problem_par
 
 !-----------------------------------------------------------------------------
@@ -159,7 +173,7 @@ contains
 
       use cg_leaves,         only: leaves
       use cg_list,           only: cg_list_element
-      use constants,         only: pi, xdim, ydim, zdim, pSUM, pMIN, pMAX
+      use constants,         only: pi, xdim, ydim, zdim, pSUM, pMIN, pMAX, GEO_XYZ, GEO_RPZ
       use dataio_pub,        only: msg, die, warn, printinfo
       use domain,            only: dom
       use fluidindex,        only: flind
@@ -173,7 +187,7 @@ contains
       implicit none
 
       class(component_fluid), pointer :: fl
-      real, parameter                 :: virial_tol = 0.01
+      real, parameter                 :: virial_tol = 0.02
       integer, parameter              :: LOW=1, HIGH=LOW+1, TRY=3, NLIM=3
       integer                         :: i, j, k, tt,tmax, iC, iC_cg, iM, il, ih, jl, jh, kl, kh
       logical                         :: doneC, doneM
@@ -219,10 +233,20 @@ contains
          jl = cg%je+1
          jh = cg%js-1
          do j = cg%js, cg%je
-            if (abs(cg%y(j) - clump_pos(ydim)) <= clump_r) then
-               jl = min(j, jl)
-               jh = max(j, jh)
-            endif
+            select case (dom%geometry_type)
+               case (GEO_XYZ)
+                  if (abs(cg%y(j) - clump_pos(ydim)) <= clump_r) then
+                     jl = min(j, jl)
+                     jh = max(j, jh)
+                  endif
+               case (GEO_RPZ)
+                  if (cg%x(cg%is-1)*abs(cg%y(j) - clump_pos(ydim)) <= clump_r) then
+                     jl = min(j, jl)
+                     jh = max(j, jh)
+                  endif
+               case default
+                  call die("[initproblem:problem_initial_conditions] Unsupported geometry")
+            end select
          enddo
          kl = cg%ke+1
          kh = cg%ks-1
@@ -236,10 +260,18 @@ contains
          do k = kl, kh
             do j = jl, jh
                do i = il, ih
-                  if (sum(([cg%x(i), cg%y(j), cg%z(k)] -clump_pos(:))**2) < clump_r**2) then
-                     cg%u(fl%idn, i, j, k) = totME(1)
-                     iC_cg = iC_cg + 1
-                  endif
+                  select case (dom%geometry_type)
+                     case (GEO_XYZ)
+                        if (sum(([cg%x(i), cg%y(j), cg%z(k)] -clump_pos(:))**2) < clump_r**2) then
+                           cg%u(fl%idn, i, j, k) = totME(1)
+                           iC_cg = iC_cg + 1
+                        endif
+                     case (GEO_RPZ)
+                        if (sum(([cg%x(i)*cos(cg%y(j)), cg%x(i)*sin(cg%y(j)), cg%z(k)] - clump_pos_xyz(:))**2) < clump_r**2) then
+                           cg%u(fl%idn, i, j, k) = totME(1)
+                           iC_cg = iC_cg + 1
+                        endif
+                  end select
                enddo
             enddo
          enddo
@@ -472,8 +504,9 @@ contains
 
       use cg_leaves,     only: leaves
       use cg_list,       only: cg_list_element
-      use constants,     only: pSUM
+      use constants,     only: pSUM, GEO_XYZ, GEO_RPZ
       use dataio_pub,    only: msg, die, warn, printinfo
+      use domain,        only: dom
       use fluidindex,    only: flind
       use grid_cont,     only: grid_container
       use mpisetup,      only: master, piernik_MPI_Allreduce
@@ -501,9 +534,18 @@ contains
             do j = cg%js, cg%je
                do i = cg%is, cg%ie
                   if (cg%leafmap(i, j, k)) then
-                     ! TWPcg(1) = TWPcg(1) + cg%u(flind%ion%idn, i, j, k) * 0.                !T, will be /= 0. for rotating clump
-                     TWPcg(2) = TWPcg(2) + cg%u(flind%ion%idn, i, j, k) * cg%sgp(i, j, k) * 0.5 !W
-                     TWPcg(3) = TWPcg(3) + presrho(cg%u(flind%ion%idn, i, j, k))             !P
+                     select case (dom%geometry_type)
+                        case (GEO_XYZ)
+                           ! TWPcg(1) = TWPcg(1) + cg%u(flind%ion%idn, i, j, k) * 0.                !T, will be /= 0. for rotating clump
+                           TWPcg(2) = TWPcg(2) + cg%u(flind%ion%idn, i, j, k) * cg%sgp(i, j, k) * 0.5 !W
+                           TWPcg(3) = TWPcg(3) + presrho(cg%u(flind%ion%idn, i, j, k))             !P
+                        case (GEO_RPZ)
+                           ! TWPcg(1) = TWPcg(1) + cg%u(flind%ion%idn, i, j, k) * 0. *cg%x(i)                 !T, will be /= 0. for rotating clump
+                           TWPcg(2) = TWPcg(2) + cg%u(flind%ion%idn, i, j, k) * cg%sgp(i, j, k) * 0.5 *cg%x(i) !W
+                           TWPcg(3) = TWPcg(3) + presrho(cg%u(flind%ion%idn, i, j, k)) *cg%x(i)              !P
+                        case default
+                           call die("[initproblem:virialCheck] Unsupported geometry")
+                     end select
                   endif
                enddo
             enddo
@@ -541,7 +583,9 @@ contains
 
       use cg_leaves,   only: leaves
       use cg_list,     only: cg_list_element
-      use constants,   only: pSUM
+      use constants,   only: pSUM, GEO_XYZ, GEO_RPZ
+      use dataio_pub,  only: die
+      use domain,      only: dom
       use fluidindex,  only: flind
       use grid_cont,   only: grid_container
       use mpisetup,    only: piernik_MPI_Allreduce
@@ -568,13 +612,27 @@ contains
             do j = cg%js, cg%je
                do i = cg%is, cg%ie
                   if (cg%leafmap(i, j, k)) then
-                     select case (mode)
-                        case (REL_CALC)
-                           totMEcg = totMEcg + rhoH(h(C, cg%sgp(i,j,k)))
-                        case (REL_SET)
-                           rho = rhoH(h(C, cg%sgp(i,j,k)))
-                           cg%u(flind%ion%idn, i, j, k) = rho
-                           totMEcg = totMEcg + rho
+                     select case (dom%geometry_type)
+                        case (GEO_XYZ)
+                           select case (mode)
+                              case (REL_CALC)
+                                 totMEcg = totMEcg + rhoH(h(C, cg%sgp(i,j,k)))
+                              case (REL_SET)
+                                 rho = rhoH(h(C, cg%sgp(i,j,k)))
+                                 cg%u(flind%ion%idn, i, j, k) = rho
+                                 totMEcg = totMEcg + rho
+                           end select
+                        case (GEO_RPZ)
+                           select case (mode)
+                              case (REL_CALC)
+                                 totMEcg = totMEcg + rhoH(h(C, cg%sgp(i,j,k))) *cg%x(i)
+                              case (REL_SET)
+                                 rho = rhoH(h(C, cg%sgp(i,j,k)))
+                                 cg%u(flind%ion%idn, i, j, k) = rho
+                                 totMEcg = totMEcg + rho *cg%x(i)
+                           end select
+                        case default
+                           call die("[initproblem:totalMEnthalpic] Unsupported geometry")
                      end select
                   endif
                enddo
