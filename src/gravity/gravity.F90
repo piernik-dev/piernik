@@ -829,8 +829,10 @@ contains
 !<
    subroutine grav_pot2accel(sweep, i1, i2, n, grav, istep, cg)
 
-      use constants, only: xdim, ydim, zdim, half, LO, HI
-      use grid_cont, only: grid_container
+      use constants,  only: xdim, ydim, zdim, half, LO, HI, GEO_XYZ, GEO_RPZ
+      use dataio_pub, only: die
+      use domain,     only: dom
+      use grid_cont,  only: grid_container
 
       implicit none
 
@@ -889,6 +891,15 @@ contains
       endif
 
       grav(1) = grav(2); grav(n) = grav(n-1)
+
+      select case (dom%geometry_type)
+         case (GEO_XYZ) ! Do nothing
+         case (GEO_RPZ)
+            if (sweep == ydim) grav = grav / cg%x(i2)
+         case default
+            call die("[gravity:grav_pot2accel] Unsupported geometry")
+      end select
+
    end subroutine grav_pot2accel
 
 !--------------------------------------------------------------------------
