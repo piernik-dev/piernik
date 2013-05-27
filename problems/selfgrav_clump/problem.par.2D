@@ -75,7 +75,7 @@
     clump_mass = 1e21
     clump_K = 1.33e6
     crashNotConv = .false.
-    clump_vel_x = 2e7
+    clump_vel(1) = 2e7
     clump_r = 1e2
     verbose = .true.
 !    exp_speedup = .true.

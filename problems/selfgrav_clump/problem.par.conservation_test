@@ -77,7 +77,7 @@
     clump_mass = 1e23
     clump_K = 10.0e4
 !    crashNotConv = .false.
-    clump_vel_x = 2e5
+    clump_vel(1) = 2e5
     clump_r = 2.e4
     maxitC = 1000
 !    verbose = .true.

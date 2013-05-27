@@ -37,13 +37,13 @@ module initproblem
    private
    public :: read_problem_par, problem_initial_conditions, problem_pointers
 
-   real                   :: clump_mass, clump_vel_x, clump_vel_y, clump_vel_z, clump_K, clump_r, epsC, epsM, dtrig, dmax
-   real, dimension(ndims) :: clump_pos
+   real                   :: clump_mass, clump_K, clump_r, epsC, epsM, dtrig, dmax
+   real, dimension(ndims) :: clump_pos, clump_vel
    logical                :: crashNotConv, exp_speedup, verbose
    integer(kind=4)        :: maxitC, maxitM
    integer, parameter     :: REL_CALC = 1, REL_SET = REL_CALC + 1
 
-   namelist /PROBLEM_CONTROL/  clump_mass, clump_vel_x, clump_vel_y, clump_vel_z, clump_K, clump_r, epsC, epsM, maxitC, maxitM, crashNotConv, exp_speedup, verbose, dtrig
+   namelist /PROBLEM_CONTROL/  clump_mass, clump_vel, clump_K, clump_r, epsC, epsM, maxitC, maxitM, crashNotConv, exp_speedup, verbose, dtrig
 
 contains
 
@@ -77,9 +77,7 @@ contains
 
       ! namelist default parameter values
       clump_mass   = 1.0e10                !< Mass of the clump
-      clump_vel_x  = 0.                    !< X-velocity in the domain
-      clump_vel_y  = 0.                    !< Y-velocity in the domain
-      clump_vel_z  = 0.                    !< Z-velocity in the domain
+      clump_vel(:) = 0.                    !< velocity in the domain
       clump_K      = 1.                    !< polytropic constant K for p = K rho**gamma formula
       clump_r      = 0.                    !< initial radius of the clump
       epsC         = 1.e-5                 !< tolerance limit for energy level change
@@ -97,9 +95,7 @@ contains
          diff_nml(PROBLEM_CONTROL)
 
          rbuff(1) = clump_mass
-         rbuff(2) = clump_vel_x
-         rbuff(3) = clump_vel_y
-         rbuff(4) = clump_vel_z
+         rbuff(2:4) = clump_vel
          rbuff(5) = clump_K
          rbuff(6) = clump_r
          rbuff(7) = epsC
@@ -122,9 +118,7 @@ contains
       if (slave) then
 
          clump_mass   = rbuff(1)
-         clump_vel_x  = rbuff(2)
-         clump_vel_y  = rbuff(3)
-         clump_vel_z  = rbuff(4)
+         clump_vel    = rbuff(2:4)
          clump_K      = rbuff(5)
          clump_r      = rbuff(6)
          epsC         = rbuff(7)
@@ -440,9 +434,9 @@ contains
          cg%gpot = cg%sgp
 
          where (cg%u(fl%idn, :, :, :) < smalld) cg%u(fl%idn, :, :, :) = smalld
-         cg%u(fl%imx, :, :, :) = clump_vel_x * cg%u(fl%idn,:,:,:)
-         cg%u(fl%imy, :, :, :) = clump_vel_y * cg%u(fl%idn,:,:,:)
-         cg%u(fl%imz, :, :, :) = clump_vel_z * cg%u(fl%idn,:,:,:)
+         cg%u(fl%imx, :, :, :) = clump_vel(xdim) * cg%u(fl%idn,:,:,:)
+         cg%u(fl%imy, :, :, :) = clump_vel(ydim) * cg%u(fl%idn,:,:,:)
+         cg%u(fl%imz, :, :, :) = clump_vel(zdim) * cg%u(fl%idn,:,:,:)
          do k = cg%ks, cg%ke
             do j = cg%js, cg%je
                do i = cg%is, cg%ie
@@ -680,9 +674,9 @@ contains
          do p = 1, flind%energ
             associate ( fl => flind%ion )
             cgl%cg%u(fl%idn, :, :, :) = smalld
-            cgl%cg%u(fl%imx, :, :, :) = clump_vel_x * cgl%cg%u(fl%idn,:,:,:)
-            cgl%cg%u(fl%imy, :, :, :) = clump_vel_y * cgl%cg%u(fl%idn,:,:,:)
-            cgl%cg%u(fl%imz, :, :, :) = clump_vel_z * cgl%cg%u(fl%idn,:,:,:)
+            cgl%cg%u(fl%imx, :, :, :) = clump_vel(xdim) * cgl%cg%u(fl%idn,:,:,:)
+            cgl%cg%u(fl%imy, :, :, :) = clump_vel(ydim) * cgl%cg%u(fl%idn,:,:,:)
+            cgl%cg%u(fl%imz, :, :, :) = clump_vel(zdim) * cgl%cg%u(fl%idn,:,:,:)
             cgl%cg%b(:,    :, :, :) = 0.
             ! cgl%cg%sgp ?
             do k = cgl%cg%ks, cgl%cg%ke
