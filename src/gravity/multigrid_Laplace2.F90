@@ -271,7 +271,7 @@ contains
                            if (dom%has_dir(xdim))     cg%q(soln)%arr(i1  :cg%ie  :id, j,   k)   = cg%q(soln)%arr(i1  :cg%ie  :id, j,   k)    + &
                                 &       Jacobi_damp *(cg%q(soln)%arr(i1-1:cg%ie-1:id, j,   k)   + cg%q(soln)%arr(i1+1:cg%ie+1:id, j,   k))   * cg%mg%rx
                            if (dom%has_dir(ydim))     cg%q(soln)%arr(i1  :cg%ie  :id, j,   k)   = cg%q(soln)%arr(i1  :cg%ie  :id, j,   k)    + &
-                             &       Jacobi_damp *(cg%q(soln)%arr(i1  :cg%ie  :id, j-1, k)   + cg%q(soln)%arr(i1  :cg%ie  :id, j+1, k))   * cg%mg%ry
+                                &       Jacobi_damp *(cg%q(soln)%arr(i1  :cg%ie  :id, j-1, k)   + cg%q(soln)%arr(i1  :cg%ie  :id, j+1, k))   * cg%mg%ry
                            if (dom%has_dir(zdim))     cg%q(soln)%arr(i1  :cg%ie  :id, j,   k)   = cg%q(soln)%arr(i1  :cg%ie  :id, j,   k)    + &
                                 &       Jacobi_damp *(cg%q(soln)%arr(i1  :cg%ie  :id, j,   k-1) + cg%q(soln)%arr(i1  :cg%ie  :id, j,   k+1)) * cg%mg%rz
                         enddo
@@ -283,14 +283,14 @@ contains
                            if (id == RED_BLACK) i1 = cg%is + int(mod(ijko+n+cg%is+j+k, int(RED_BLACK, kind=8)), kind=4)
                            do i = i1, cg%ie, id
                               cr  = overrelax / 2.
-                              crx = cg%dvol2 * cg%idx2 * cg%x(i)**2
-                              cry = cg%dvol2 * cg%idy2
-                              crz = cg%dvol2 * cg%idz2 * cg%x(i)**2
+                              crx = cg%dvol**2 * cg%idx2 * cg%x(i)**2
+                              cry = cg%dvol**2 * cg%idy2
+                              crz = cg%dvol**2 * cg%idz2 * cg%x(i)**2
                               cr  = cr / (crx + cry + crz)
                               crx = overrelax_xyz(xdim)* crx * cr
                               cry = overrelax_xyz(ydim)* cry * cr
                               crz = overrelax_xyz(zdim)* crz * cr
-                              cr  = cr * cg%dvol2 * cg%x(i)**2
+                              cr  = cr * cg%dvol**2 * cg%x(i)**2
 
                               crx1 = 2. * cg%x(i) * cg%idx
                               if (crx1 /= 0.) crx1 = 1./crx1

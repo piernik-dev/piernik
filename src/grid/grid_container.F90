@@ -134,7 +134,6 @@ module grid_cont
       real :: idz                                                !< inverted length of the %grid cell in z-direction
       real :: idx2, idy2, idz2                                   !< inverse of d{x,y,z} square
       real, dimension(ndims) :: idl2                             !< [ idx2, idy2, idz2 ]
-      real :: dvol2                                              !< square of one cell volume
 
       ! Grid properties
 
@@ -385,7 +384,6 @@ contains
             if (dom%has_dir(zdim)) this%vol = this%vol * (this%fbnd(zdim, HI) - this%fbnd(zdim, LO))
             this%dvol = product(this%dl(:), mask=(dom%has_dir(:) .or. [.false., .true., .false.])) ! multiply by actual radius to get true cell volume
       end select
-      this%dvol2 = this%dvol**2
 
       this%maxxyz = maxval(this%n_(:), mask=dom%has_dir(:))
 

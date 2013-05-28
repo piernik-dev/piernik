@@ -526,14 +526,14 @@ contains
 
       ! this should work correctly also when dom%eff_dim < 3
       cg%mg%r  = overrelax / 2.
-      cg%mg%rx = cg%dvol2 * cg%idx2
-      cg%mg%ry = cg%dvol2 * cg%idy2
-      cg%mg%rz = cg%dvol2 * cg%idz2
+      cg%mg%rx = cg%dvol**2 * cg%idx2
+      cg%mg%ry = cg%dvol**2 * cg%idy2
+      cg%mg%rz = cg%dvol**2 * cg%idz2
       cg%mg%r  = cg%mg%r / (cg%mg%rx + cg%mg%ry + cg%mg%rz)
       cg%mg%rx = overrelax_xyz(xdim) * cg%mg%rx * cg%mg%r
       cg%mg%ry = overrelax_xyz(ydim) * cg%mg%ry * cg%mg%r
       cg%mg%rz = overrelax_xyz(zdim) * cg%mg%rz * cg%mg%r
-      cg%mg%r  = cg%mg%r * cg%dvol2
+      cg%mg%r  = cg%mg%r * cg%dvol**2
       !>
       !! \deprecated BEWARE: some of the above invariants may be not optimally defined - the convergence ratio drops when dx /= dy or dy /= dz or dx /= dz
       !! and overrelaxation factors are required to get any convergence (often poor)
