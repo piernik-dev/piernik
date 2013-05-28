@@ -80,11 +80,10 @@ contains
 
       use cg_list,       only: cg_list_element
       use cg_leaves,     only: cg_leaves_T
-      use constants,     only: ndims, xdim, ydim, zdim, BND_NEGREF, LO, HI
-      use dataio_pub,    only: warn
+      use constants,     only: ndims, xdim, ydim, zdim, BND_NEGREF, LO, HI, GEO_XYZ
+      use dataio_pub,    only: die
       use domain,        only: dom
       use grid_cont,     only: grid_container
-      use mpisetup,      only: master
       use multigridvars, only: grav_bnd, bnd_givenval
       use named_array,   only: p3
 
@@ -97,17 +96,13 @@ contains
 
       real                :: L0, Lx, Ly, Lz, Lxy, Lxz, Lyz
 
-      logical, save       :: firstcall = .true.
       integer             :: i
       type(cg_list_element), pointer :: cgl
       type(grid_container),  pointer :: cg
       integer(kind=4), dimension(ndims,ndims,LO:HI) :: idm
       real :: src_lapl
 
-      if (firstcall) then
-         if (master) call warn("[multigrid_Laplace4M:residual_Mehrstellen] residual order 4 is experimental.")
-         firstcall = .false.
-      endif
+      if (dom%geometry_type /= GEO_XYZ) call die("[multigrid_Laplace4M:residual_Mehrstellen] Unsupported geometry")
 
       src_lapl = 1./12.
       if (grav_bnd == bnd_givenval) src_lapl = 0.
@@ -166,7 +161,7 @@ contains
       use cg_level_connected, only: cg_level_connected_T
       use cg_list,            only: cg_list_element
       use cg_list_dataop,     only: dirty_label
-      use constants,          only: xdim, ydim, zdim, ndims, GEO_RPZ, I_ONE, BND_NEGREF
+      use constants,          only: xdim, ydim, zdim, ndims, GEO_XYZ, I_ONE, BND_NEGREF
       use dataio_pub,         only: die
       use domain,             only: dom
       use global,             only: dirty_debug
@@ -187,10 +182,12 @@ contains
       type(grid_container),  pointer :: cg
       integer :: is, ie, js, je, ks, ke
 
+      if (dom%geometry_type /= GEO_XYZ) call die("[multigrid_Laplace4M:approximate_solution_rbgs4M] Relaxation for Mehrstellen not implemented for noncartesian grid")
 !     call curl%arr3d_boundaries(src, bnd_type = BND_NEGREF) ! required when we use 7-point source term, not just 1-point
       ! Also required when we want to eliminate some communication of soln at a cost of expanding relaxated area into guardcells
 
-      ! Cannot use Red-Black for 4th order Mehrstellen relaxation due to data dependencies even if in some cases Red-Black gives better convergence
+      ! Cannot use Red-Black for 4th order Mehrstellen relaxation due to data dependencies even if in some cases Red-Black gives better convergence.
+      !> \todo try 4- or 8-color scheme.
       if (dom%nb > 1) call curl%arr3d_boundaries(src, bnd_type = BND_NEGREF)
       do n = 1, nsmoo
          if (mod(n-1, int(dom%nb)) == 0) call curl%arr3d_boundaries(soln, bnd_type = BND_NEGREF)
@@ -203,7 +200,6 @@ contains
          do while (associated(cgl))
             cg => cgl%cg
 
-            if (dom%geometry_type == GEO_RPZ) call die("[multigrid_Laplace4M:approximate_solution_rbgs4M] Relaxation for Mehrstellen not implemented for noncartesian grid")
             Lxy = 0. ; if (dom%has_dir(xdim) .and. dom%has_dir(ydim)) Lxy = (cg%idx2 + cg%idy2) / 12.
             Lxz = 0. ; if (dom%has_dir(xdim) .and. dom%has_dir(zdim)) Lxz = (cg%idx2 + cg%idz2) / 12.
             Lyz = 0. ; if (dom%has_dir(ydim) .and. dom%has_dir(zdim)) Lyz = (cg%idy2 + cg%idz2) / 12.

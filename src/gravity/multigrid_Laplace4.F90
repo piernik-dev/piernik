@@ -44,14 +44,14 @@ contains
 !>
 !! \brief 4th order Laplacian
 !!
-!! \details Significantly slows down convergence, does not seem to improve quality of solution in simple tests.
+!! \details Simple 4th order discrete Laplace operator implemented for comparision with simplest, 2nd-order operator.
+!! Useful only for tests. Do not use it in production runs!
 !!
 !! L4 = [0, 1, -2, 1, 0] + L4_strength * 1./12. * [ -1, 4, -6, 4, -1 ] = 1./12. * [ -1, 16, -30, 16, -1 ]
 !! For integrated face fluxes in the 4th order Laplacian estimate set L4_strength = 0.5
 !! For simple 5-point L4 set L4_strength = 1.0
 !!
-!! There also exists more compact Mehrstellen 4th order scheme which outperforms this one in terms of accuracy
-!!
+!! There also exists more compact Mehrstellen 4th order scheme which outperforms this one in terms of accuracy.
 !! As this operator is outperformed by the 4th order Mehrstellen operator, we don't plan any improvements here.
 !! It can be either deleted or left for curious people.
 !!
@@ -59,13 +59,15 @@ contains
 !! L6 = L4(L4_strength == 1.0) + L6_strength * 1./120. * [ 1, -6, 15, -20, 15, -6, 1 ] = 1./120. * [ 1, -16, 175, -320, 175, -16, 1 ]
 !! For simple 7-point L6 assume L6_strength = 1.0
 !! Don't expect much improvement by implementing any 6th order Laplacian unless other things in the code are similarly high order.
+!!
+!! \warning Significantly slow convergence due to lack of appropriate 4th-order relaxator.
 !<
 
    subroutine residual4(cg_llst, src, soln, def)
 
       use cg_list,       only: cg_list_element
       use cg_leaves,     only: cg_leaves_T
-      use constants,     only: ndims, idm2, xdim, ydim, zdim, BND_NEGREF
+      use constants,     only: ndims, idm2, xdim, ydim, zdim, BND_NEGREF, GEO_XYZ
       use dataio_pub,    only: die, warn
       use domain,        only: dom
       use grid_cont,     only: grid_container
@@ -92,9 +94,10 @@ contains
       type(grid_container),  pointer :: cg
 
       if (dom%eff_dim<ndims) call die("[multigrid_Laplace4:residual4] Only 3D is implemented")
+      if (dom%geometry_type /= GEO_XYZ) call die("[multigrid_Laplace4M:residual_Mehrstellen] Unsupported geometry")
 
       if (firstcall) then
-         if (master) call warn("[multigrid_Laplace4:residual4] residual order 4 is experimental.")
+         if (master) call warn("[multigrid_Laplace4:residual4] residual order 4 is experimental and useful only for accuracy tests.")
          firstcall = .false.
       endif
 

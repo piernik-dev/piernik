@@ -122,7 +122,7 @@ contains
 !<
    subroutine multigrid_grav_par
 
-      use constants,     only: GEO_XYZ, GEO_RPZ, BND_PER, O_LIN, O_D2, O_I2, O_D4, I_ONE
+      use constants,     only: GEO_XYZ, GEO_RPZ, BND_PER, O_LIN, O_D2, O_I2, O_D4, I_ONE, INVALID
       use dataio_pub,    only: nh  ! QA_WARN required for diff_nml
       use dataio_pub,    only: msg, die, warn
       use domain,        only: dom, is_multicg !, is_uneven
@@ -162,7 +162,14 @@ contains
       nsmool                 = -1  ! best to set it to dom%nb or its multiply
       nsmoob                 = 100
       nsmoof                 = 1
-      ord_laplacian          = O_D4
+      select case (dom%geometry_type)
+         case (GEO_XYZ)
+            ord_laplacian    = O_D4
+         case (GEO_RPZ)
+            ord_laplacian    = O_I2
+         case default
+            ord_laplacian    = INVALID
+      end select
       ord_laplacian_outer    = ord_laplacian
       ord_prolong_mpole      = O_D2
       ord_time_extrap        = O_LIN
@@ -192,18 +199,20 @@ contains
          if (nsmool < 0) nsmool = -nsmool * dom%nb
 
          ! FIXME when ready
-         if (dom%geometry_type == GEO_RPZ) then
-            call warn("[multigrid_gravity:multigrid_grav_par] cylindrical geometry support is under development.")
-            ! switch off FFT-related bits
-            base_no_fft = .true.
-            prefer_rbgs_relaxation = .true.
-            ord_laplacian = O_I2
-            ord_laplacian_outer = ord_laplacian
-            L4_strength = 0.
-            ! ord_prolong_mpole = O_INJ
-         else if (dom%geometry_type /= GEO_XYZ) then
-            call die("[multigrid_gravity:multigrid_grav_par] non-cartesian geometry not implemented yet.")
-         endif
+         select case (dom%geometry_type)
+            case (GEO_XYZ) ! do nothing
+            case (GEO_RPZ)
+               ! switch off FFT-related bits
+               base_no_fft = .true.
+               prefer_rbgs_relaxation = .true.
+               if (any([ ord_laplacian, ord_laplacian_outer ] /= O_I2) .and. master) call warn("[multigrid_gravity:multigrid_grav_par] Laplacian order forced to 2]")
+               ord_laplacian = O_I2
+               ord_laplacian_outer = ord_laplacian
+               L4_strength = 0.
+               ! ord_prolong_mpole = O_INJ
+            case default
+               call die("[multigrid_gravity:multigrid_grav_par] Unsupported geometry.")
+         end select
 
          if (is_multicg .and. .not. base_no_fft) then
             call warn("[multigrid_gravity:multigrid_grav_par] base_no_fft set to .true. for multicg configuration")
