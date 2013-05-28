@@ -344,6 +344,7 @@ contains
       use cg_level_finest,    only: finest
       use cg_list_dataop,     only: ind_val, dirty_label
       use cg_list_global,     only: all_cg
+      use constants,          only: base_level_id
       use dataio_pub,         only: die
       use initcosmicrays,     only: iarr_crs
       use multigridvars,      only: source, defect, correction
@@ -352,6 +353,8 @@ contains
       implicit none
 
       integer, intent(in) :: cr_id !< CR component index
+
+      if (finest%level%level_id /= base_level_id) call die("[multigrid_diffusion:init_source] refinements not implemented yet")
 
       call all_cg%set_dirty(source)
       call all_cg%set_dirty(correction)
@@ -383,7 +386,6 @@ contains
 #if defined(__INTEL_COMPILER)
       use cg_level_connected, only: cg_level_connected_T  ! QA_WARN workaround for stupid INTEL compiler
 #endif /* __INTEL_COMPILER */
-      use cg_level_finest,  only: finest
       use cg_leaves,        only: leaves
       use initcosmicrays,   only: iarr_crs
       use multigridvars,    only: solution
@@ -395,7 +397,7 @@ contains
 
       call all_cg%set_dirty(solution)
       call leaves%wq_copy(wna%fi, iarr_crs(cr_id), solution)
-      call finest%level%check_dirty(solution, "init solution")
+      call leaves%check_dirty(solution, "init solution")
 
    end subroutine init_solution
 
@@ -473,7 +475,8 @@ contains
       use cg_level_finest,    only: finest
       use cg_list_dataop,     only: ind_val, dirty_label
       use cg_list_global,     only: all_cg
-      use dataio_pub,         only: msg, warn
+      use constants,          only: base_level_id
+      use dataio_pub,         only: msg, warn, die
       use global,             only: do_ascii_dump
       use initcosmicrays,     only: iarr_crs
       use mpisetup,           only: master
@@ -502,11 +505,13 @@ contains
       norm_rhs = leaves%norm_sq(solution)
       norm_old = norm_rhs
 
+      if (finest%level%level_id /= base_level_id) call die("[multigrid_diffusion:vcycle_hg] refinements not implemented yet")
+
       do v = 0, max_cycles
 
          call all_cg%set_dirty(defect)
 
-         call residual(finest%level, source, solution, defect, cr_id)
+         call residual(finest%level, source, solution, defect, cr_id) ! leaves?
          norm_lhs = leaves%norm_sq(defect)
          ts = set_timer("multigrid_diffusion")
          tot_ts = tot_ts + ts
