@@ -238,7 +238,7 @@ contains
 
    subroutine relaxing_tvd(n, u, u0, bb, divv, cs_iso2, istep, sweep, i1, i2, dx, dt, cg, eflx)
 
-      use constants,        only: one, zero, half, GEO_XYZ, LO, xdim, ydim, zdim
+      use constants,        only: one, zero, half, GEO_XYZ, GEO_RPZ, LO, xdim, ydim, zdim
       use dataio_pub,       only: msg, die
       use domain,           only: dom
       use fluidindex,       only: iarr_all_dn, iarr_all_mx, flind, nmag
@@ -406,9 +406,33 @@ contains
 
       if (use_smalld) then
          ! This is needed e.g. for outflow boundaries in presence of perp. gravity
-         local_magic_mass(:) = local_magic_mass(:) - sum(u1(iarr_all_dn,dom%nb+1:n-dom%nb),dim=2) * cg%dvol
-         u1(iarr_all_dn,:) = max(u1(iarr_all_dn,:),smalld)
-         local_magic_mass(:) = local_magic_mass(:) + sum(u1(iarr_all_dn,dom%nb+1:n-dom%nb),dim=2) * cg%dvol
+         select case (dom%geometry_type)
+            case (GEO_XYZ)
+               local_magic_mass(:) = local_magic_mass(:) - sum(u1(iarr_all_dn,dom%nb+1:n-dom%nb),dim=2) * cg%dvol
+               u1(iarr_all_dn,:) = max(u1(iarr_all_dn,:),smalld)
+               local_magic_mass(:) = local_magic_mass(:) + sum(u1(iarr_all_dn,dom%nb+1:n-dom%nb),dim=2) * cg%dvol
+            case (GEO_RPZ)
+               select case (sweep)
+                  case (xdim)
+                     do ifl = lbound(iarr_all_dn, dim=1), ubound(iarr_all_dn, dim=1)
+                        local_magic_mass(iarr_all_dn(ifl)) = local_magic_mass(iarr_all_dn(ifl)) - sum(u1(iarr_all_dn(ifl), dom%nb+1:n-dom%nb) * cg%x(cg%is:cg%ie)) * cg%dvol
+                     enddo
+                     u1(iarr_all_dn,:) = max(u1(iarr_all_dn,:),smalld)
+                     do ifl = lbound(iarr_all_dn, dim=1), ubound(iarr_all_dn, dim=1)
+                        local_magic_mass(iarr_all_dn(ifl)) = local_magic_mass(iarr_all_dn(ifl)) + sum(u1(iarr_all_dn(ifl), dom%nb+1:n-dom%nb) * cg%x(cg%is:cg%ie)) * cg%dvol
+                     enddo
+                  case (ydim)
+                     local_magic_mass(:) = local_magic_mass(:) - sum(u1(iarr_all_dn,dom%nb+1:n-dom%nb),dim=2) * cg%dvol * cg%x(i2)
+                     u1(iarr_all_dn,:) = max(u1(iarr_all_dn,:),smalld)
+                     local_magic_mass(:) = local_magic_mass(:) + sum(u1(iarr_all_dn,dom%nb+1:n-dom%nb),dim=2) * cg%dvol * cg%x(i2)
+                  case (zdim)
+                     local_magic_mass(:) = local_magic_mass(:) - sum(u1(iarr_all_dn,dom%nb+1:n-dom%nb),dim=2) * cg%dvol * cg%x(i1)
+                     u1(iarr_all_dn,:) = max(u1(iarr_all_dn,:),smalld)
+                     local_magic_mass(:) = local_magic_mass(:) + sum(u1(iarr_all_dn,dom%nb+1:n-dom%nb),dim=2) * cg%dvol * cg%x(i1)
+               end select
+            case default
+               call die("[rtvd:relaxing_tvd] Unsupported geometry")
+         end select
       else
          if (any(u1(iarr_all_dn,:) < 0.0)) then
             write(msg,'(3A,I4,1X,I4,A)') "[rtvd:relaxing_tvd] negative density in sweep ",sweep,"( ", i1, i2, " )"
