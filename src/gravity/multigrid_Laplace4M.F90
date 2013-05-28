@@ -193,8 +193,8 @@ contains
       ! Cannot use Red-Black for 4th order Mehrstellen relaxation due to data dependencies even if in some cases Red-Black gives better convergence
       if (dom%nb > 1) call curl%arr3d_boundaries(src, bnd_type = BND_NEGREF)
       do n = 1, nsmoo
-         if (mod(n-1, dom%nb) == 0) call curl%arr3d_boundaries(soln, bnd_type = BND_NEGREF)
-         b = dom%nb - 1 - mod(n-1, dom%nb)
+         if (mod(n-1, int(dom%nb)) == 0) call curl%arr3d_boundaries(soln, bnd_type = BND_NEGREF)
+         b = dom%nb - 1 - mod(n-1, int(dom%nb))
          if (dirty_debug) then
             write(dirty_label, '(a,i5)')"relax4M soln- smoo=", n
             call curl%check_dirty(soln, dirty_label, expand=I_ONE)

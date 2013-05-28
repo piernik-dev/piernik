@@ -41,8 +41,8 @@ module signalhandler
    private
    public :: SIGTERM, SIGINT, register_sighandler
 
-   integer, parameter :: SIGINT = 2
-   integer, parameter :: SIGTERM = 15
+   integer(kind=4), parameter :: SIGINT = 2
+   integer(kind=4), parameter :: SIGTERM = 15
 
    interface
       integer function signal_handler(signum)
