@@ -589,7 +589,8 @@ contains
 
    subroutine diff_flux(crdim, im, soln, cg, cr_id, Keff)
 
-      use constants,      only: xdim, ydim, zdim, ndims, oneq
+      use constants,      only: xdim, ydim, zdim, ndims, oneq, GEO_XYZ
+      use dataio_pub,     only: die
       use domain,         only: dom
       use grid_cont,      only: grid_container
       use initcosmicrays, only: K_crs_perp, K_crs_paral
@@ -608,6 +609,8 @@ contains
       integer, dimension(ndims)              :: ilm, imp, imm, ilmp, ilmm
       integer(kind=4)                        :: idir
       logical, dimension(ndims)              :: present_not_crdim
+
+      if (dom%geometry_type /= GEO_XYZ) call die("[multigrid_diffusion:diff_flux] Unsupported geometry")
 
       ilm(:) = im(:) ; ilm(crdim) = ilm(crdim) - 1
       present_not_crdim(:) = dom%has_dir(:) .and. ( [ xdim,ydim,zdim ] /= crdim )
@@ -657,15 +660,16 @@ contains
 
    subroutine residual(curl, src, soln, def, cr_id)
 
-      use cg_level_connected,  only: cg_level_connected_T
-      use constants,      only: xdim, ydim, zdim, ndims, LO, HI
-      use domain,         only: dom
-      use cg_list,        only: cg_list_element
-      use cg_list_dataop, only: ind_val
-      use global,         only: dt
-      use grid_cont,      only: grid_container
-      use named_array,    only: p3
-      use named_array_list, only: qna
+      use cg_level_connected, only: cg_level_connected_T
+      use constants,          only: xdim, ydim, zdim, ndims, LO, HI, GEO_XYZ
+      use dataio_pub,         only: die
+      use domain,             only: dom
+      use cg_list,            only: cg_list_element
+      use cg_list_dataop,     only: ind_val
+      use global,             only: dt
+      use grid_cont,          only: grid_container
+      use named_array,        only: p3
+      use named_array_list,  only: qna
 
       implicit none
 
@@ -680,6 +684,8 @@ contains
       integer, dimension(ndims)      :: iml, imh
       type(cg_list_element), pointer :: cgl
       type(grid_container), pointer  :: cg
+
+      if (dom%geometry_type /= GEO_XYZ) call die("[multigrid_diffusion:diff_flux] Unsupported geometry")
 
       call curl%arr3d_boundaries(soln, bnd_type = diff_extbnd)
 
@@ -724,7 +730,8 @@ contains
 
       use cg_level_coarsest,  only: coarsest
       use cg_level_connected, only: cg_level_connected_T
-      use constants,          only: xdim, ydim, zdim, one, half, ndims, LO
+      use constants,          only: xdim, ydim, zdim, one, half, ndims, LO, GEO_XYZ
+      use dataio_pub,         only: die
       use domain,             only: dom
       use cg_list,            only: cg_list_element
       use global,             only: dt
@@ -747,6 +754,8 @@ contains
       real                            :: Keff1, Keff2, dLdu, temp
       type(grid_container), pointer   :: cg
       type(cg_list_element), pointer  :: cgl
+
+      if (dom%geometry_type /= GEO_XYZ) call die("[multigrid_diffusion:diff_flux] Unsupported geometry")
 
       if (associated(curl, coarsest%level)) then
          nsmoo = nsmoob

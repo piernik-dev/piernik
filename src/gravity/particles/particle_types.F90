@@ -289,10 +289,11 @@ contains
 
    subroutine map_ngp(this, iv, factor)
 
-      use cg_leaves, only: leaves
-      use cg_list,   only: cg_list_element
-      use constants, only: xdim, ydim, zdim, ndims, LO, HI
-      use domain,    only: dom
+      use cg_leaves,  only: leaves
+      use cg_list,    only: cg_list_element
+      use constants,  only: xdim, ydim, zdim, ndims, LO, HI, GEO_XYZ
+      use dataio_pub, only: die
+      use domain,     only: dom
 
       implicit none
 
@@ -309,6 +310,7 @@ contains
 
          ijkp(:) = cgl%cg%ijkse(:,LO)
          do p = lbound(this%p, dim=1), ubound(this%p, dim=1)
+            if (dom%geometry_type /= GEO_XYZ) call die("[particle_types:map_ngp] Unsupported geometry")
             where (dom%has_dir(:)) ijkp(:) = floor((this%p(p)%pos(:)-cgl%cg%fbnd(:, LO))/cgl%cg%dl(:)) + cgl%cg%ijkse(:, LO)
             if (all(ijkp >= cgl%cg%ijkse(:,LO)) .and. all(ijkp <= cgl%cg%ijkse(:,HI))) &
                  cgl%cg%q(iv)%arr(ijkp(xdim), ijkp(ydim), ijkp(zdim)) = cgl%cg%q(iv)%arr(ijkp(xdim), ijkp(ydim), ijkp(zdim)) + factor * this%p(p)%mass / cgl%cg%dvol

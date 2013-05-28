@@ -184,7 +184,7 @@ contains
 
       use cg_leaves,        only: leaves
       use cg_list,          only: cg_list_element
-      use constants,        only: xdim, ydim, zdim, MAXL, oneq, LO, HI
+      use constants,        only: xdim, ydim, zdim, MAXL, oneq, LO, HI, GEO_XYZ
       use dataio_pub,       only: die
       use domain,           only: dom, is_multicg
       use func,             only: ekin, emag
@@ -205,6 +205,7 @@ contains
 
       if (.not.eta1_active) return
 !--- square current computing in cell corner step by step
+      if (dom%geometry_type /= GEO_XYZ) call die("[resistivity:compute_resist] Unsupported geometry")
 
       cgl => leaves%first
       do while (associated(cgl))

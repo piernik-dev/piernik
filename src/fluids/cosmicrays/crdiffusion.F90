@@ -136,7 +136,7 @@ contains
 
       use cg_leaves,        only: leaves
       use cg_list,          only: cg_list_element
-      use constants,        only: xdim, ydim, zdim, ndims, LO, HI, half, wcr_n, oneq
+      use constants,        only: xdim, ydim, zdim, ndims, LO, HI, half, wcr_n, oneq, GEO_XYZ
       use dataio_pub,       only: die
       use domain,           only: dom
       use fluidindex,       only: flind
@@ -164,6 +164,8 @@ contains
 
       if (.not. has_cr) return
       if (.not.dom%has_dir(crdim)) return
+
+      if (dom%geometry_type /= GEO_XYZ) call die("[crdiffusion:cr_diff] Unsupported geometry")
 
       idm        = 0              ;      idm(crdim) = 1
       decr(:,:)  = 0.             ;      bcomp(:)   = 0.                 ! essential where ( .not.dom%has_dir(dim) .and. (dim /= crdim) )
