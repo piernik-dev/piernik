@@ -58,6 +58,7 @@ contains
       use mass_defect,      only: downgrade_magic_mass
       use mpisetup,         only: master, piernik_MPI_Allreduce
       use named_array_list, only: wna
+      use user_hooks,       only: user_reaction_to_redo_step
 
       implicit none
 
@@ -88,6 +89,7 @@ contains
                no_hist_count = no_hist_count + I_ONE
             endif
             call downgrade_magic_mass
+            if (associated(user_reaction_to_redo_step)) call user_reaction_to_redo_step
          else
             cgl%cg%w(wna%ind(u0_n))%arr = cgl%cg%u
             cgl%cg%w(wna%ind(b0_n))%arr = cgl%cg%b

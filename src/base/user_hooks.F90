@@ -36,7 +36,7 @@ module user_hooks
    private
    public :: problem_customize_solution, problem_grace_passed, finalize_problem, cleanup_problem, problem_refine_derefine, &
         &    custom_emf_bnd, at_user_dims_settings, at_user_area_settings, problem_post_restart, user_vars_arr_in_restart, &
-        &    late_initial_conditions, problem_domain_update
+        &    user_reaction_to_redo_step, late_initial_conditions, problem_domain_update
 
    interface
 
@@ -73,6 +73,7 @@ module user_hooks
    procedure(no_args),     pointer :: problem_domain_update      => NULL() !< A routine that is called at the beginning of time step. Intended to execute
                                                                            !< domain reshaping (expansion, shrinking) if specified conditions are met.
    procedure(no_args),     pointer :: late_initial_conditions    => NULL() !< When the domain is expanded, initialize new pieces of grid with this routine.
+   procedure(no_args),     pointer :: user_reaction_to_redo_step => NULL()
    procedure(no_args),     pointer :: problem_grace_passed       => NULL()
    procedure(no_args),     pointer :: user_vars_arr_in_restart   => NULL()
    procedure(no_args),     pointer :: problem_post_restart       => NULL()
