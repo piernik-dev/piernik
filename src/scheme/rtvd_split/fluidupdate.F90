@@ -55,6 +55,7 @@ contains
       use constants,        only: u0_n, b0_n, pSUM, I_ONE
       use dataio_pub,       only: warn, msg
       use global,           only: dt, dtm, t, t_saved, cfl_violated, nstep, nstep_saved, dt_max_grow, repeat_step
+      use mass_defect,      only: downgrade_magic_mass
       use mpisetup,         only: master, piernik_MPI_Allreduce
       use named_array_list, only: wna
 
@@ -86,6 +87,7 @@ contains
             else
                no_hist_count = no_hist_count + I_ONE
             endif
+            call downgrade_magic_mass
          else
             cgl%cg%w(wna%ind(u0_n))%arr = cgl%cg%u
             cgl%cg%w(wna%ind(b0_n))%arr = cgl%cg%b
@@ -108,8 +110,9 @@ contains
 
    subroutine fluid_update
 
-      use dataio_pub, only: halfstep
-      use global,     only: dt, dtm, t
+      use dataio_pub,  only: halfstep
+      use global,      only: dt, dtm, t
+      use mass_defect, only: update_magic_mass
 
       implicit none
 
@@ -125,6 +128,7 @@ contains
       t=t+dt
       dtm = dt
       call make_3sweeps(.false.) ! Z -> Y -> X
+      call update_magic_mass
 
    end subroutine fluid_update
 

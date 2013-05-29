@@ -35,10 +35,10 @@ module mass_defect
    implicit none
 
    private
-   public :: magic_mass, local_magic_mass, recent_magic_mass, init_magic_mass, update_magic_mass, cleanup_magic_mass
+   public :: magic_mass, local_magic_mass, init_magic_mass, update_magic_mass, update_tsl_magic_mass, cleanup_magic_mass, downgrade_magic_mass
 
    real, dimension(:),   allocatable       :: magic_mass
-   real, dimension(:),   allocatable, save :: local_magic_mass, recent_magic_mass
+   real, dimension(:),   allocatable, save :: local_magic_mass, recent_tsl_magic_mass, magic_mass_step
 
 contains
 
@@ -49,9 +49,10 @@ contains
 
       implicit none
 
-      allocate(local_magic_mass(flind%fluids), recent_magic_mass(flind%fluids))
+      allocate(local_magic_mass(flind%fluids), recent_tsl_magic_mass(flind%fluids), magic_mass_step(flind%fluids))
       local_magic_mass  = 0.0
-      recent_magic_mass = 0.0
+      magic_mass_step   = 0.0
+      recent_tsl_magic_mass = 0.0
       if (master) then
          allocate(magic_mass(flind%fluids))
          magic_mass = 0.0
@@ -60,7 +61,7 @@ contains
 
    end subroutine init_magic_mass
 
-   subroutine update_magic_mass(tsl)
+   subroutine update_magic_mass
 
       use fluidindex,  only: flind
       use mpi,         only: MPI_DOUBLE_PRECISION, MPI_SUM
@@ -68,34 +69,49 @@ contains
 
       implicit none
 
-      logical, optional             :: tsl
-      real, dimension(flind%fluids) :: magic_mass0
-      integer(kind=4)               :: ifl, pos
-
-      call MPI_Reduce(local_magic_mass, magic_mass0, int(flind%fluids, kind=4), MPI_DOUBLE_PRECISION, MPI_SUM, FIRST, comm, mpi_err)
+      call MPI_Reduce(local_magic_mass, magic_mass_step, int(flind%fluids, kind=4), MPI_DOUBLE_PRECISION, MPI_SUM, FIRST, comm, mpi_err)
       local_magic_mass(:) = 0.0
 
-      if (master) then
-         magic_mass(:) = magic_mass(:) + magic_mass0(:)
-
-         if (present(tsl)) then
-            do ifl = 1, flind%fluids
-               pos = flind%all_fluids(ifl)%fl%pos
-               flind%all_fluids(ifl)%fl%snap%mmass_cum = magic_mass(pos)
-               flind%all_fluids(ifl)%fl%snap%mmass_cur = magic_mass(pos) - recent_magic_mass(pos)
-            enddo
-            recent_magic_mass(:) = magic_mass(:)
-         endif
-      endif
+      if (master) magic_mass(:) = magic_mass(:) + magic_mass_step(:)
 
    end subroutine update_magic_mass
+
+   subroutine downgrade_magic_mass
+
+      use mpisetup,    only: master
+
+      implicit none
+
+      if (master) magic_mass(:) = magic_mass(:) - magic_mass_step(:)
+
+   end subroutine downgrade_magic_mass
+
+   subroutine update_tsl_magic_mass
+
+      use fluidindex,  only: flind
+      use mpisetup,    only: master
+
+      implicit none
+
+      integer(kind=4) :: ifl, pos
+
+      if (master) then
+         do ifl = 1, flind%fluids
+            pos = flind%all_fluids(ifl)%fl%pos
+            flind%all_fluids(ifl)%fl%snap%mmass_cum = magic_mass(pos)
+            flind%all_fluids(ifl)%fl%snap%mmass_cur = magic_mass(pos) - recent_tsl_magic_mass(pos)
+         enddo
+         recent_tsl_magic_mass(:) = magic_mass(:)
+      endif
+
+   end subroutine update_tsl_magic_mass
 
    subroutine cleanup_magic_mass
 
       implicit none
 
       if (allocated(magic_mass)) deallocate(magic_mass)
-      deallocate(local_magic_mass, recent_magic_mass)
+      deallocate(local_magic_mass, recent_tsl_magic_mass)
 
    end subroutine cleanup_magic_mass
 

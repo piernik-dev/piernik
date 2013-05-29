@@ -286,7 +286,6 @@ contains
          & H5P_DATASET_CREATE_F, h5open_f, h5fcreate_f, h5fclose_f, H5Zfilter_avail_f, H5Pcreate_f, H5Pset_deflate_f, &
          & H5Pset_chunk_f, h5tcopy_f, h5tset_size_f, h5screate_simple_f, H5Dcreate_f, H5Dwrite_f, H5Dclose_f, &
          & H5Sclose_f, H5Tclose_f, H5Pclose_f, h5close_f
-      use mass_defect, only: update_magic_mass
       use mpisetup,    only: slave
       use version,     only: env, nenv
 
@@ -300,8 +299,6 @@ contains
       logical(kind=4)                :: Z_avail
       integer(SIZE_T)                :: maxlen
       integer(kind=4)                :: error
-
-      call update_magic_mass
 
       if (associated(user_attrs_pre)) call user_attrs_pre
 

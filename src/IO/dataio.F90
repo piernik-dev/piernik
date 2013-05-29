@@ -807,7 +807,7 @@ contains
       use func,             only: ekin, emag
       use global,           only: t, dt, smalld, nstep
       use grid_cont,        only: grid_container
-      use mass_defect,      only: update_magic_mass
+      use mass_defect,      only: update_tsl_magic_mass
       use mpisetup,         only: master, piernik_MPI_Allreduce
       use named_array_list, only: wna
 #ifdef GRAV
@@ -1011,7 +1011,7 @@ contains
       call piernik_MPI_Allreduce(tot_q, pSUM)
 
       call write_log(tsl)
-      call update_magic_mass(tsl=.true.)
+      call update_tsl_magic_mass
 
       if (master) then
          call pop_vector(tsl_vars, [t, dt, tot_q(T_MASS)])
