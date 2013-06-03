@@ -357,6 +357,9 @@ contains
       use cg_level_base,      only: base
       use mpisetup,           only: proc, piernik_MPI_Bcast
 #endif /* FGSL */
+#ifdef MULTIGRID
+      use multigrid_gravity,  only: invalidate_history
+#endif
 
       implicit none
 
@@ -406,7 +409,10 @@ contains
                endif
                call printinfo("------------------------------------------------------------------")
             endif
-            call grav_pot_3d
+            call grav_pot_3d ! this calls multigrid twice. Second call will get rubbish if there will be temporal extrapolation switched on
+#ifdef MULTIGRID
+            call invalidate_history
+#endif
 
             xl = cg%lhn(xdim, LO)
             xr = cg%lhn(xdim, HI)
