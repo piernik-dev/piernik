@@ -415,11 +415,11 @@ contains
                select case (sweep)
                   case (xdim)
                      do ifl = lbound(iarr_all_dn, dim=1), ubound(iarr_all_dn, dim=1)
-                        local_magic_mass(iarr_all_dn(ifl)) = local_magic_mass(iarr_all_dn(ifl)) - sum(u1(iarr_all_dn(ifl), dom%nb+1:n-dom%nb) * cg%x(cg%is:cg%ie)) * cg%dvol
+                        local_magic_mass(ifl) = local_magic_mass(ifl) - sum(u1(iarr_all_dn(ifl), dom%nb+1:n-dom%nb) * cg%x(cg%is:cg%ie)) * cg%dvol
                      enddo
                      u1(iarr_all_dn,:) = max(u1(iarr_all_dn,:),smalld)
                      do ifl = lbound(iarr_all_dn, dim=1), ubound(iarr_all_dn, dim=1)
-                        local_magic_mass(iarr_all_dn(ifl)) = local_magic_mass(iarr_all_dn(ifl)) + sum(u1(iarr_all_dn(ifl), dom%nb+1:n-dom%nb) * cg%x(cg%is:cg%ie)) * cg%dvol
+                        local_magic_mass(ifl) = local_magic_mass(ifl) + sum(u1(iarr_all_dn(ifl), dom%nb+1:n-dom%nb) * cg%x(cg%is:cg%ie)) * cg%dvol
                      enddo
                   case (ydim)
                      local_magic_mass(:) = local_magic_mass(:) - sum(u1(iarr_all_dn,dom%nb+1:n-dom%nb),dim=2) * cg%dvol * cg%x(i2)
