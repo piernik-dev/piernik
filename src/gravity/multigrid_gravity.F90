@@ -49,7 +49,7 @@ module multigrid_gravity
    implicit none
 
    private
-   public :: multigrid_grav_par, init_multigrid_grav, cleanup_multigrid_grav, multigrid_solve_grav, init_multigrid_grav_ext, residual
+   public :: multigrid_grav_par, init_multigrid_grav, cleanup_multigrid_grav, multigrid_solve_grav, init_multigrid_grav_ext, residual, invalidate_history
 
    include "fftw3.f"
    ! constants from fftw3.f
@@ -475,8 +475,7 @@ contains
       if (grav_bnd == bnd_isolated .and. firstcall) call init_multipole
       firstcall = .false.
 
-      inner%valid = .false.
-      outer%valid = .false.
+      call invalidate_history
 
    end subroutine init_multigrid_grav
 
@@ -669,6 +668,17 @@ contains
 !!$            enddo
 
    end subroutine mgg_cg_cleanup
+
+!> \brief Mark the historical solutions as invalid
+
+   subroutine invalidate_history
+
+      implicit none
+
+      inner%valid = .false.
+      outer%valid = .false.
+
+   end subroutine invalidate_history
 
 !>
 !! \brief Make a local copy of source (density) and multiply by 4 pi G
