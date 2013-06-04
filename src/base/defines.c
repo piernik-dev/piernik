@@ -95,7 +95,8 @@
 #endif
 
 #if !defined(HYDRO_SOLVER)
-#error no hydro solver defined, possible choices { RTVD, HLLC }
+#  define RTVD
+/* #  warning no hydro solver defined, possible choices { RTVD, HLLC }, defaulting to RTVD */
 #endif
 
 /*
