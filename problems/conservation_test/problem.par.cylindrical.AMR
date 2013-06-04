@@ -1,5 +1,7 @@
+! mass and J_z in moving_pulse_ts1_000.tsl should remain constant
+
  $BASE_DOMAIN
-    n_d = 32, 1, 32
+    n_d = 3*32
     bnd_xl = 'ref'
     bnd_xr = 'ref'
     bnd_yl = 'per'
@@ -16,12 +18,7 @@
  /
 
  $MPI_BLOCKS
-    psize = 1, 1, 1
     AMR_bsize = 3*16
-    allow_uneven = .true.
-    allow_noncart = .true.
-    dd_unif_quality = 1.1
-    dd_rect_quality = 1.1
  /
 
  $UNITS
@@ -35,17 +32,17 @@
  /
 
  $END_CONTROL
-    tend   = .055
-    nend   = 10 !1000
+    tend   = 1.0
+    nend   = 100 !1000
  /
 
  $OUTPUT_CONTROL
     problem_name ='moving_pulse'
     run_id =  'ts1'
-    dt_hdf  = 0.005
+    dt_hdf  = 0.1
     dt_res  = 0.0
     dt_log  = 0.001
-    dt_tsl  = 0.001
+    dt_tsl  = 0.00001
     vars(1) = 'dens'
     vars(2) = 'velx'
     vars(3) = 'vely'
@@ -54,24 +51,28 @@
  /
 
  $FLUID_NEUTRAL
-    gamma = 1.67
-    selfgrav = .false.
+ /
+
+ ! Dust has no temperature and thus has effective gamma = 1. and in cylindrical geometry performs better than non-isothermal fluids
+ $FLUID_DUST
  /
 
  $NUMERICAL_SETUP
     cfl    = 0.7
-    smalld = 1.e-5
-    smallei= 1.e-5
+    smalld = 1.e-25
     limiter= 'vanleer'
+    dt_max_grow = 1.1
+!    skip_sweep = T, F, T
  /
 
  $PROBLEM_CONTROL
-    pulse_vel = 1., 6., 1. !2., -2., 2.
+    pulse_vel = 1., 1., 1. !2., -2., 2.
 !    pulse_off = -2., -3., 0.
-    pulse_off = -3., -3., 0.
+    pulse_off = -3., 0., -0.1
     pulse_size = 1., 2., .5
-!    nflip = 3
-!    flipratio = 0.4
+    pulse_amp = 1000.
+    nflip = 3
+    flipratio = 0.2
     ref_thr = 1000.
  /
 
@@ -79,7 +80,9 @@
  /
 
  $AMR
-    level_max = 1
-!    refine_boxes(1)  = 1, 4., 3., -1, 5.0, 3.5, 1 !x f/c
-    refine_boxes(1)  = 1, 1., 3., -.1, 5.0, 3.5, 1 !z f/c
+    level_max = 2
+!   refine_boxes(1)  = 1, 4., 0., -1., 5.0, 7., 1 !x f/c
+!   refine_boxes(1)  = 1, 1., 0., -1., 5.0, 3., 1 !y f/c
+!   refine_boxes(1)  = 1, 1., 0.,  .1, 5.0, 7., 1 !z f/c
+    refine_boxes(1)  = 2, 4., 0.,  .1, 5.0, 3., 1
  /

@@ -15,11 +15,7 @@
  /
 
  $MPI_BLOCKS
-    psize = 1, 1, 1
-    allow_uneven = .true.
-    allow_noncart = .true.
-    dd_unif_quality = 1.1
-    dd_rect_quality = 1.1
+    AMR_bsize = 3*16
  /
 
  $UNITS
@@ -40,7 +36,7 @@
  $OUTPUT_CONTROL
     problem_name ='moving_pulse'
     run_id =  'ts1'
-    dt_hdf  = 1.0
+    dt_hdf  = 0.2
     dt_res  = 0.0
     dt_log  = 0.001
     dt_tsl  = 0.001
@@ -65,11 +61,13 @@
 
  $PROBLEM_CONTROL
     pulse_vel = 2., -2., 2.
-    pulse_size = 1., 1., 1.
+    pulse_size = 1., 1., 1.  
  /
 
  $INTERACTIONS
  /
 
  $AMR
+    level_max = 1
+    refine_boxes(1) = 2, -.45, -.45, -.45, .45, .45, .45
  /
