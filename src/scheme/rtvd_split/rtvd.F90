@@ -241,7 +241,7 @@ contains
       use constants,        only: one, zero, half, GEO_XYZ, GEO_RPZ, LO, xdim, ydim, zdim
       use dataio_pub,       only: msg, die
       use domain,           only: dom
-      use fluidindex,       only: iarr_all_dn, iarr_all_mx, flind, nmag
+      use fluidindex,       only: iarr_all_dn, iarr_all_mx, iarr_all_my, flind, nmag
 #ifndef ISO
       use fluidindex,       only: iarr_all_en
 #endif /* !ISO */
@@ -391,6 +391,20 @@ contains
          if (associated(eflx%ri)) fu(:, eflx%ri%index - cg%lhn(sweep, LO)    ) = eflx%ri%uflx
          if (associated(eflx%lo)) eflx%lo%uflx = fu(:, eflx%lo%index - cg%lhn(sweep, LO)    )
          if (associated(eflx%ro)) eflx%ro%uflx = fu(:, eflx%ro%index - cg%lhn(sweep, LO) + 1)
+
+         if (dom%geometry_type == GEO_RPZ) then
+            if (sweep == ydim) then
+!!$               if (associated(eflx%li)) fu(iarr_all_my, eflx%li%index - cg%lhn(sweep, LO) + 1) = eflx%li%uflx(iarr_all_my) / cg%x(i2)
+!!$               if (associated(eflx%ri)) fu(iarr_all_my, eflx%ri%index - cg%lhn(sweep, LO)    ) = eflx%ri%uflx(iarr_all_my) / cg%x(i2)
+!!$               if (associated(eflx%lo)) eflx%lo%uflx(iarr_all_my) = fu(iarr_all_my, eflx%lo%index - cg%lhn(sweep, LO)    ) * cg%x(i2)
+!!$               if (associated(eflx%ro)) eflx%ro%uflx(iarr_all_my) = fu(iarr_all_my, eflx%ro%index - cg%lhn(sweep, LO) + 1) * cg%x(i2)
+            else if (sweep == zdim) then
+               if (associated(eflx%li)) fu(iarr_all_my, eflx%li%index - cg%lhn(sweep, LO) + 1) = eflx%li%uflx(iarr_all_my) / cg%x(i1)**2
+               if (associated(eflx%ri)) fu(iarr_all_my, eflx%ri%index - cg%lhn(sweep, LO)    ) = eflx%ri%uflx(iarr_all_my) / cg%x(i1)**2
+               if (associated(eflx%lo)) eflx%lo%uflx(iarr_all_my) = fu(iarr_all_my, eflx%lo%index - cg%lhn(sweep, LO)    ) * cg%x(i1)**2
+               if (associated(eflx%ro)) eflx%ro%uflx(iarr_all_my) = fu(iarr_all_my, eflx%ro%index - cg%lhn(sweep, LO) + 1) * cg%x(i1)**2
+            endif
+         endif
 
          if (dom%geometry_type == GEO_XYZ) then
             u1(:,2:n) = u0(:,2:n) - rk2coef(integration_order,istep) *                 dtx * (               fu(:,2:n) -               fu(:,1:n-1) )
