@@ -47,13 +47,12 @@ module initproblem
    real                   :: flipratio   !< percentage of blocks on each level to be refined on flip
    real                   :: ref_thr     !< refinement threshold
    real                   :: deref_thr   !< derefinement threshold
-   logical                :: usedust     !< If .false. then do not set velocity for dust
 
-   namelist /PROBLEM_CONTROL/  pulse_size, pulse_off, pulse_vel, pulse_amp, norm_step, nflip, flipratio, ref_thr, deref_thr, usedust
+   namelist /PROBLEM_CONTROL/  pulse_size, pulse_off, pulse_vel, pulse_amp, norm_step, nflip, flipratio, ref_thr, deref_thr
 
    ! other private data
    real, dimension(ndims, LO:HI) :: pulse_edge
-   real :: pulse_low_density, pulse_pressure
+   real :: pulse_low_density
    character(len=dsetnamelen), parameter :: inid_n = "inid"
 
 contains
@@ -81,9 +80,8 @@ contains
       use dataio_pub, only: nh      ! QA_WARN required for diff_nml
       use dataio_pub, only: warn, die
       use domain,     only: dom
-      use fluidindex, only: flind
-      use global,     only: smalld, smallei
-      use mpisetup,   only: rbuff, ibuff, lbuff, master, slave, proc, have_mpi, LAST, piernik_MPI_Bcast
+      use global,     only: smalld
+      use mpisetup,   only: rbuff, ibuff, master, slave, proc, have_mpi, LAST, piernik_MPI_Bcast
       use refinement, only: set_n_updAMR, n_updAMR
       use user_hooks, only: problem_refine_derefine
 
@@ -99,7 +97,6 @@ contains
       ref_thr       = 0.1
       deref_thr     = 0.01
       flipratio     = 1.
-      usedust       = .false.
 
       if (master) then
 
@@ -116,12 +113,9 @@ contains
          ibuff(1)   = norm_step
          ibuff(2)   = nflip
 
-         lbuff(1)   = usedust
-
       endif
 
       call piernik_MPI_Bcast(ibuff)
-      call piernik_MPI_Bcast(lbuff)
       call piernik_MPI_Bcast(rbuff)
 
       if (slave) then
@@ -136,8 +130,6 @@ contains
 
          norm_step  = int(ibuff(1), kind=4)
          nflip      = ibuff(2)
-
-         usedust    = lbuff(1)
 
       endif
 
@@ -163,7 +155,6 @@ contains
 
       !BEWARE: hardcoded magic numbers
       pulse_low_density = smalld * 1e5
-      pulse_pressure = smallei * flind%neu%gam_1 * 1e2
 
       if (norm_step <= 0) norm_step = huge(I_ONE)
 
@@ -190,7 +181,7 @@ contains
       use dataio_pub,       only: die
       use domain,           only: dom
       use fluidindex,       only: flind
-      use global,           only: smallei, t
+      use global,           only: t
       use grid_cont,        only: grid_container
       use named_array_list, only: qna
 
@@ -209,40 +200,33 @@ contains
 
          cg%b(:, :, :, :) = 0.
 
-         cg%u(flind%neu%idn, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = cg%q(qna%ind(inid_n))%arr(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)
+         cg%u(flind%dst%idn, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = cg%q(qna%ind(inid_n))%arr(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)
 
          select case (dom%geometry_type)
             case (GEO_XYZ)
                ! Make uniform, completely boring flow
-               cg%u(flind%neu%imx, :, :, :) = pulse_vel(xdim) * cg%u(flind%neu%idn, :, :, :)
-               cg%u(flind%neu%imy, :, :, :) = pulse_vel(ydim) * cg%u(flind%neu%idn, :, :, :)
-               cg%u(flind%neu%imz, :, :, :) = pulse_vel(zdim) * cg%u(flind%neu%idn, :, :, :)
+               cg%u(flind%dst%imx, :, :, :) = pulse_vel(xdim) * cg%u(flind%dst%idn, :, :, :)
+               cg%u(flind%dst%imy, :, :, :) = pulse_vel(ydim) * cg%u(flind%dst%idn, :, :, :)
+               cg%u(flind%dst%imz, :, :, :) = pulse_vel(zdim) * cg%u(flind%dst%idn, :, :, :)
             case (GEO_RPZ)
                do k = cg%ks, cg%ke
                   do j = cg%js, cg%je
                      do i = cg%is, cg%ie
-                        cg%u(flind%neu%imx, i, j, k) = ( pulse_vel(xdim)*cos(cg%y(j)) + pulse_vel(ydim)*sin(cg%y(j))) * cg%u(flind%neu%idn, i, j, k)
-                        cg%u(flind%neu%imy, i, j, k) = (-pulse_vel(xdim)*sin(cg%y(j)) + pulse_vel(ydim)*cos(cg%y(j))) * cg%u(flind%neu%idn, i, j, k)
+                        cg%u(flind%dst%imx, i, j, k) = ( pulse_vel(xdim)*cos(cg%y(j)) + pulse_vel(ydim)*sin(cg%y(j))) * cg%u(flind%dst%idn, i, j, k)
+                        cg%u(flind%dst%imy, i, j, k) = (-pulse_vel(xdim)*sin(cg%y(j)) + pulse_vel(ydim)*cos(cg%y(j))) * cg%u(flind%dst%idn, i, j, k)
                      enddo
                   enddo
                enddo
-               cg%u(flind%neu%imz, :, :, :) = pulse_vel(zdim) * cg%u(flind%neu%idn, :, :, :)
+               cg%u(flind%dst%imz, :, :, :) = pulse_vel(zdim) * cg%u(flind%dst%idn, :, :, :)
             case default
                call die("[initproblem:problem_initial_conditions] only cartesian and cylindrical geometries are supported")
          end select
 
-         ! Set up the internal energy
-         cg%u(flind%neu%ien,:,:,:) = max(smallei, pulse_pressure / flind%neu%gam_1 + 0.5 * sum(cg%u(flind%neu%imx:flind%neu%imz,:,:,:)**2,1) / cg%u(flind%neu%idn,:,:,:))
-
-         cg%u(flind%dst%idn, :, :, :) = cg%u(flind%neu%idn, :, :, :)
-         if (usedust) then
-            cg%u(flind%dst%imx, :, :, :) = cg%u(flind%neu%imx, :, :, :)
-            cg%u(flind%dst%imy, :, :, :) = cg%u(flind%neu%imy, :, :, :)
-            cg%u(flind%dst%imz, :, :, :) = cg%u(flind%neu%imz, :, :, :)
-         else
-            cg%u(flind%dst%imx:flind%dst%imz, :, :, :) = 0.
-         endif
-
+         where (cg%u(flind%dst%idn, :, :, :) < 2.*pulse_low_density)
+            cg%u(flind%dst%imx, :, :, :) = 0.
+            cg%u(flind%dst%imy, :, :, :) = 0.
+            cg%u(flind%dst%imz, :, :, :) = 0.
+         endwhere
          cgl => cgl%nxt
       enddo
 
@@ -303,7 +287,7 @@ contains
 
       use cg_list,          only: cg_list_element
       use cg_leaves,        only: leaves
-      use constants,        only: PIERNIK_FINISHED, pSUM, pMIN, pMAX, idlen
+      use constants,        only: PIERNIK_FINISHED, pSUM, pMIN, pMAX
       use dataio_pub,       only: code_progress, halfstep, msg, printinfo, warn
       use fluidindex,       only: flind
       use global,           only: t, nstep
@@ -316,16 +300,11 @@ contains
       enum, bind(C)
          enumerator :: N_D, N_2
       end enum
-      enum, bind(C)
-         enumerator :: NEU, DST
-      end enum
-      real, dimension(N_D:N_2, NEU:DST) :: norm
-      real, dimension(NEU:DST)          :: neg_err, pos_err
+      real, dimension(N_D:N_2)          :: norm
+      real                              :: neg_err, pos_err
       type(cg_list_element),  pointer   :: cgl
       type(grid_container),   pointer   :: cg
       real, dimension(:,:,:), pointer   :: inid
-      integer                           :: i, j
-      character(len=idlen)              :: descr
 
       if (code_progress < PIERNIK_FINISHED .and. (mod(nstep, norm_step) /= 0 .or. halfstep)) return
 
@@ -345,42 +324,23 @@ contains
             return
          endif
 
-         cg%wa(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = inid(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) - cg%u(flind%neu%idn, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)
-         norm(N_D, NEU) = norm(N_D, NEU) + sum(cg%wa(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)**2, mask=cg%leafmap)
-         norm(N_2, NEU) = norm(N_2, NEU) + sum(inid( cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)**2, mask=cg%leafmap)
-         neg_err(NEU) = min(neg_err(NEU), minval(cg%wa(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), mask=cg%leafmap))
-         pos_err(NEU) = max(pos_err(NEU), maxval(cg%wa(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), mask=cg%leafmap))
-
          cg%wa(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = inid(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) - cg%u(flind%dst%idn, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)
-         norm(N_D, DST) = norm(N_D, DST) + sum(cg%wa(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)**2, mask=cg%leafmap)
-         norm(N_2, DST) = norm(N_2, DST) + sum(inid( cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)**2, mask=cg%leafmap)
-         neg_err(DST) = min(neg_err(DST), minval(cg%wa(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), mask=cg%leafmap))
-         pos_err(DST) = max(pos_err(DST), maxval(cg%wa(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), mask=cg%leafmap))
+         norm(N_D) = norm(N_D) + sum(cg%wa(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)**2, mask=cg%leafmap)
+         norm(N_2) = norm(N_2) + sum(inid( cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)**2, mask=cg%leafmap)
+         neg_err   = min(neg_err, minval(cg%wa(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), mask=cg%leafmap))
+         pos_err   = max(pos_err, maxval(cg%wa(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), mask=cg%leafmap))
 
          cgl => cgl%nxt
       enddo
 
-      do i = NEU, DST
-         do j = N_D, N_2
-            call piernik_MPI_Allreduce(norm(j, i), pSUM)
-         enddo
-         call piernik_MPI_Allreduce(neg_err(i), pMIN)
-         call piernik_MPI_Allreduce(pos_err(i), pMAX)
-      enddo
+      call piernik_MPI_Allreduce(norm(:), pSUM)
+      call piernik_MPI_Allreduce(neg_err, pMIN)
+      call piernik_MPI_Allreduce(pos_err, pMAX)
 
       if (master) then
-         do i = NEU, DST
-            if (i == DST .and. .not. usedust) exit
-            select case (i)
-               case (NEU)
-                  descr = "NEU"
-               case (DST)
-                  descr = "DST"
-            end select
-            write(msg,'(3a,f12.6,a,2f15.6)')"[initproblem:calculate_error_norm] L2 error norm (",descr,") = ", sqrt(norm(N_D, i)/norm(N_2, i)), &
-                 ", min and max error = ", neg_err(i), pos_err(i)
-            call printinfo(msg)
-         enddo
+         write(msg,'(a,f12.6,a,2f15.6)')"[initproblem:calculate_error_norm] L2 error norm (DST) = ", sqrt(norm(N_D)/norm(N_2)), &
+              ", min and max error = ", neg_err, pos_err
+         call printinfo(msg)
       endif
 
    end subroutine calculate_error_norm

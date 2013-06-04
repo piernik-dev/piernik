@@ -1,13 +1,9 @@
 #undef IONIZED
 #undef MAGNETIC
-#define NEUTRAL
+#undef NEUTRAL
 #define DUST
 #define LOCAL_FR_SPEED
 
 #undef ISO
 
 #undef GRAV
-
-#if !(defined(HLLC))
-#define RTVD
-#endif
