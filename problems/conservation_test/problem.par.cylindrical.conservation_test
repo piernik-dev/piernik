@@ -32,7 +32,7 @@
  /
 
  $END_CONTROL
-    tend   = 1.0
+    tend   = 0.5
     nend   = 1000
  /
 
@@ -61,8 +61,7 @@
 
  $NUMERICAL_SETUP
     cfl    = 0.7
-    smalld = 1.e-5
-    smallei= 1.e-5
+    smalld = 1.e-25
     limiter= 'vanleer'
     dt_max_grow = 1.1
  /
@@ -71,7 +70,8 @@
     pulse_vel = 0., 6., 0. !2., -2., 2.
     pulse_off = -2., -3., 0.
     pulse_size = 1., 2., 0.
-    norm_step = -1
+    pulse_amp = 1000.
+!    norm_step = -1
  /
 
  $INTERACTIONS
