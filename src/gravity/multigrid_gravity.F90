@@ -304,8 +304,6 @@ contains
 
       endif
 
-      if (dom%geometry_type == GEO_RPZ) multidim_code_3D = .true. ! temporarily
-
       ! boundaries
       grav_bnd = bnd_invalid
       select case (grav_bnd_str)
@@ -1122,10 +1120,9 @@ contains
 
       use cg_level_coarsest,   only: coarsest
       use cg_level_connected,  only: cg_level_connected_T
-      use constants,           only: GEO_RPZ, O_I2, O_I4, BND_NEGREF
+      use constants,           only: O_I2, O_I4, BND_NEGREF
       use dataio_pub,          only: die
-      use domain,              only: dom
-      use multigridvars,       only: correction, multidim_code_3D, nsmool, grav_bnd, bnd_givenval
+      use multigridvars,       only: correction, nsmool, grav_bnd, bnd_givenval
       use multigrid_Laplace2,  only: approximate_solution_rbgs2
       use multigrid_Laplace4,  only: approximate_solution_rbgs4
       use multigrid_Laplace4M, only: approximate_solution_rbgs4M
@@ -1146,8 +1143,6 @@ contains
          if (soln == correction) call curl%coarser%prolong_q_1var(soln, bnd_type = BND_NEGREF) ! make sure that prolongation is called only in ascending (coarse -> fine) part of V-cycle.
          !> \warning this may be incompatible with V-cycles other than Huang - Greengard
       endif
-
-      if (dom%geometry_type == GEO_RPZ .and. .not. multidim_code_3D) call die("[multigrid_gravity:approximate_solution_rbgs] multidim_code_3D = .false. not implemented")
 
       ol = ord_laplacian
       if (grav_bnd == bnd_givenval) ol = ord_laplacian_outer
