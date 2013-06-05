@@ -193,11 +193,13 @@ contains
 
       integer :: n, i, j, k, i1, j1, k1, id, jd, kd
       integer(kind=8) :: ijko
-      real    :: crx, crx1, cry, crz, cr
+      real, dimension(:), allocatable :: crx, crx1, cry, crz, cr
       type(cg_list_element), pointer :: cgl
       type(grid_container),  pointer :: cg
 
       ! call curl%arr3d_boundaries(src) required when we want to eliminate some communication of soln at a cost of expanding relaxated area into guardcells
+
+      allocate(crx(0), crx1(0), cry(0), crz(0), cr(0)) ! suppress compiler warnings
 
       do n = 1, RED_BLACK*nsmoo
          call curl%arr3d_boundaries(soln, bnd_type = BND_NEGREF)
@@ -209,6 +211,22 @@ contains
          cgl => curl%first
          do while (associated(cgl))
             cg => cgl%cg
+            if (dom%geometry_type == GEO_RPZ) then
+               deallocate(crx, crx1, cry, crz, cr)
+               allocate(crx(cg%is:cg%ie), crx1(cg%is:cg%ie), cry(cg%is:cg%ie), crz(cg%is:cg%ie), cr(cg%is:cg%ie))
+               cr  = overrelax / 2.
+               crx = cg%dvol**2 * cg%idx2 * cg%x(cg%is:cg%ie)**2
+               cry = cg%dvol**2 * cg%idy2
+               crz = cg%dvol**2 * cg%idz2 * cg%x(cg%is:cg%ie)**2
+               cr  = cr / (crx + cry + crz)
+               crx = overrelax_xyz(xdim)* crx * cr
+               cry = overrelax_xyz(ydim)* cry * cr
+               crz = overrelax_xyz(zdim)* crz * cr
+               cr  = cr * cg%dvol**2 * cg%x(cg%is:cg%ie)**2
+
+               crx1 = 2. * cg%x(cg%is:cg%ie) * cg%idx
+               where (crx1 /= 0.) crx1 = 1./crx1
+            endif
 
             ! Possible optimization: this is the most costly part of the RBGS relaxation (instruction count, read and write data, L1 and L2 read cache miss)
             ! do n = 1, nsmoo
@@ -282,28 +300,16 @@ contains
                         do j = j1, cg%je, jd
                            if (id == RED_BLACK) i1 = cg%is + int(mod(ijko+n+cg%is+j+k, int(RED_BLACK, kind=8)), kind=4)
                            do i = i1, cg%ie, id
-                              cr  = overrelax / 2.
-                              crx = cg%dvol**2 * cg%idx2 * cg%x(i)**2
-                              cry = cg%dvol**2 * cg%idy2
-                              crz = cg%dvol**2 * cg%idz2 * cg%x(i)**2
-                              cr  = cr / (crx + cry + crz)
-                              crx = overrelax_xyz(xdim)* crx * cr
-                              cry = overrelax_xyz(ydim)* cry * cr
-                              crz = overrelax_xyz(zdim)* crz * cr
-                              cr  = cr * cg%dvol**2 * cg%x(i)**2
-
-                              crx1 = 2. * cg%x(i) * cg%idx
-                              if (crx1 /= 0.) crx1 = 1./crx1
                               cg%q(soln)%arr                           (i,   j,   k)   = &
                                    & (1. - Jacobi_damp)* cg%q(soln)%arr(i,   j,   k)   - &
-                                   &       Jacobi_damp * cg%q(src)%arr (i,   j,   k)   * cr
+                                   &       Jacobi_damp * cg%q(src)%arr (i,   j,   k)   * cr(i)
                               if (dom%has_dir(xdim))     cg%q(soln)%arr(i,   j,   k)   = cg%q(soln)%arr(i,   j,   k)    + &
-                                   &       Jacobi_damp *(cg%q(soln)%arr(i-1, j,   k)   + cg%q(soln)%arr(i+1, j,   k))   * crx + &
-                                   &       Jacobi_damp *(cg%q(soln)%arr(i+1, j,   k)   - cg%q(soln)%arr(i-1, j,   k))   * crx * crx1
+                                   &       Jacobi_damp *(cg%q(soln)%arr(i-1, j,   k)   + cg%q(soln)%arr(i+1, j,   k))   * crx(i) + &
+                                   &       Jacobi_damp *(cg%q(soln)%arr(i+1, j,   k)   - cg%q(soln)%arr(i-1, j,   k))   * crx(i) * crx1(i)
                               if (dom%has_dir(ydim))     cg%q(soln)%arr(i,   j,   k)   = cg%q(soln)%arr(i,   j,   k)    + &
-                                   &       Jacobi_damp *(cg%q(soln)%arr(i,   j-1, k)   + cg%q(soln)%arr(i,   j+1, k))   * cry
+                                   &       Jacobi_damp *(cg%q(soln)%arr(i,   j-1, k)   + cg%q(soln)%arr(i,   j+1, k))   * cry(i)
                               if (dom%has_dir(zdim))     cg%q(soln)%arr(i,   j,   k)   = cg%q(soln)%arr(i,   j,   k)    + &
-                                   &       Jacobi_damp *(cg%q(soln)%arr(i,   j,   k-1) + cg%q(soln)%arr(i,   j,   k+1)) * crz
+                                   &       Jacobi_damp *(cg%q(soln)%arr(i,   j,   k-1) + cg%q(soln)%arr(i,   j,   k+1)) * crz(i)
                            enddo
                         enddo
                      enddo
@@ -311,6 +317,7 @@ contains
                      call die("[multigrid_Laplace2:approximate_solution_rbgs] Unsupported geometry.")
                end select
             endif
+
             cgl => cgl%nxt
          enddo
 
@@ -320,6 +327,8 @@ contains
          endif
 
       enddo
+
+      deallocate(crx, crx1, cry, crz, cr)
 
    end subroutine approximate_solution_rbgs2
 
