@@ -59,6 +59,7 @@ module multigrid_gravity
    ! namelist parameters
    real               :: norm_tol                                     !< stop V-cycle iterations when the ratio of norms ||residual||/||source|| is below this value
    real               :: vcycle_abort                                 !< abort the V-cycle when lhs norm raises by this factor
+   real               :: vcycle_giveup                                !< exit the V-cycle when convergence ratio drops below that level
    integer(kind=4)    :: max_cycles                                   !< Maximum allowed number of V-cycles
    integer(kind=4)    :: nsmoob                                       !< smoothing cycles on coarsest level when cannot use FFT. (a convergence check would be much better)
    integer(kind=4)    :: ord_laplacian                                !< Laplace operator order; allowed values are 2, -4 (default) and 4 (not fully implemented)
@@ -91,6 +92,7 @@ contains
 !! <tr><td width="150pt"><b>parameter</b></td><td width="135pt"><b>default value</b></td><td width="200pt"><b>possible values</b></td><td width="315pt"> <b>description</b></td></tr>
 !! <tr><td>norm_tol              </td><td>1.e-6  </td><td>real value     </td><td>\copydoc multigrid_gravity::norm_tol              </td></tr>
 !! <tr><td>vcycle_abort          </td><td>2.0    </td><td>real value     </td><td>\copydoc multigrid_gravity::vcycle_abort          </td></tr>
+!! <tr><td>vcycle_giveup         </td><td>1.5    </td><td>real value     </td><td>\copydoc multigrid_gravity::vcycle_giveup         </td></tr>
 !! <tr><td>max_cycles            </td><td>20     </td><td>integer value  </td><td>\copydoc multigrid_gravity::max_cycles            </td></tr>
 !! <tr><td>nsmool                </td><td>dom%nb </td><td>integer value  </td><td>\copydoc multigridvars::nsmool                    </td></tr>
 !! <tr><td>nsmoob                </td><td>100    </td><td>integer value  </td><td>\copydoc multigrid_gravity::nsmoob                </td></tr>
@@ -137,7 +139,7 @@ contains
       integer       :: periodic_bnd_cnt   !< counter of periodic boundaries in existing directions
       logical, save :: frun = .true.      !< First run flag
 
-      namelist /MULTIGRID_GRAVITY/ norm_tol, vcycle_abort, max_cycles, nsmool, nsmoob, &
+      namelist /MULTIGRID_GRAVITY/ norm_tol, vcycle_abort, vcycle_giveup, max_cycles, nsmool, nsmoob, &
            &                       overrelax, overrelax_xyz, Jacobi_damp, L4_strength, nsmoof, ord_laplacian, ord_laplacian_outer, ord_time_extrap, &
            &                       prefer_rbgs_relaxation, base_no_fft, fft_full_relax, fft_patient, trust_fft_solution, &
            &                       coarsen_multipole, lmax, mmax, ord_prolong_mpole, use_point_monopole, interp_pt2mom, interp_mom2pot, multidim_code_3D, &
@@ -152,6 +154,7 @@ contains
       overrelax_xyz(:)       = 1.
       Jacobi_damp            = 1.
       vcycle_abort           = 2.
+      vcycle_giveup          = 1.5
       L4_strength            = 1.0
 
       coarsen_multipole      = 0
@@ -231,7 +234,8 @@ contains
          rbuff(3:5) = overrelax_xyz
          rbuff(6) = Jacobi_damp
          rbuff(7) = vcycle_abort
-         rbuff(8) = L4_strength
+         rbuff(8) = vcycle_giveup
+         rbuff(9) = L4_strength
 
          ibuff( 1) = coarsen_multipole
          ibuff( 2) = lmax
@@ -271,7 +275,8 @@ contains
          overrelax_xyz  = rbuff(3:5)
          Jacobi_damp    = rbuff(6)
          vcycle_abort   = rbuff(7)
-         L4_strength    = rbuff(8)
+         vcycle_giveup  = rbuff(8)
+         L4_strength    = rbuff(9)
 
          coarsen_multipole = ibuff( 1)
          lmax              = ibuff( 2)
@@ -983,6 +988,10 @@ contains
             endif
          endif
 
+         if (v>0 .and. norm_old/norm_lhs <= vcycle_giveup) then
+            if (master) call warn("[multigrid_gravity:vcycle_hg] Poor convergence detected. Giving up.")
+            exit
+         endif
          norm_old = norm_lhs
 
          ! the Huang-Greengard V-cycle
