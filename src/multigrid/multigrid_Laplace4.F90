@@ -37,7 +37,7 @@ module multigrid_Laplace4
    implicit none
 
    private
-   public :: residual4, approximate_solution_rbgs4
+   public :: residual4, approximate_solution_relax4
 
 contains
 
@@ -168,7 +168,7 @@ contains
 !! It is not planned to be implemented anytime soon because 4th order Mehrstellen operator is much better.
 !<
 
-   subroutine approximate_solution_rbgs4(curl, src, soln, nsmoo)
+   subroutine approximate_solution_relax4(curl, src, soln, nsmoo)
 
       use cg_level_connected, only: cg_level_connected_T
       use multigrid_Laplace2, only: approximate_solution_rbgs2
@@ -182,6 +182,6 @@ contains
 
       call approximate_solution_rbgs2(curl, src, soln, nsmoo)
 
-   end subroutine approximate_solution_rbgs4
+   end subroutine approximate_solution_relax4
 
 end module multigrid_Laplace4

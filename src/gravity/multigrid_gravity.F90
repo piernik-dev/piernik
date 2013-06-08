@@ -1124,7 +1124,7 @@ contains
       use dataio_pub,          only: die
       use multigridvars,       only: correction, nsmool, grav_bnd, bnd_givenval
       use multigrid_Laplace2,  only: approximate_solution_rbgs2
-      use multigrid_Laplace4,  only: approximate_solution_rbgs4
+      use multigrid_Laplace4,  only: approximate_solution_relax4
       use multigrid_Laplace4M, only: approximate_solution_relax4M
 
       implicit none
@@ -1151,7 +1151,7 @@ contains
          case (O_I2)
             call approximate_solution_rbgs2 (curl, src, soln, nsmoo)
          case (O_I4)
-            call approximate_solution_rbgs4 (curl, src, soln, nsmoo)
+            call approximate_solution_relax4 (curl, src, soln, nsmoo)
          case (-O_I4)
             call approximate_solution_relax4M(curl, src, soln, nsmoo)
          case default
