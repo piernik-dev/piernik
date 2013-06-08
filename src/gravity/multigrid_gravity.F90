@@ -1125,7 +1125,7 @@ contains
       use multigridvars,       only: correction, nsmool, grav_bnd, bnd_givenval
       use multigrid_Laplace2,  only: approximate_solution_rbgs2
       use multigrid_Laplace4,  only: approximate_solution_rbgs4
-      use multigrid_Laplace4M, only: approximate_solution_rbgs4M
+      use multigrid_Laplace4M, only: approximate_solution_relax4M
 
       implicit none
 
@@ -1153,7 +1153,7 @@ contains
          case (O_I4)
             call approximate_solution_rbgs4 (curl, src, soln, nsmoo)
          case (-O_I4)
-            call approximate_solution_rbgs4M(curl, src, soln, nsmoo)
+            call approximate_solution_relax4M(curl, src, soln, nsmoo)
          case default
             call die("[multigrid_gravity:approximate_solution_rbgs] The parameter 'ord_laplacian' must be 2 or 4 or -4")
       end select

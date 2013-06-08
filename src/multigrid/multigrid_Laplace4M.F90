@@ -42,7 +42,7 @@ module multigrid_Laplace4M
    implicit none
 
    private
-   public :: residual_Mehrstellen, approximate_solution_rbgs4M
+   public :: residual_Mehrstellen, approximate_solution_relax4M
 
 contains
 
@@ -156,7 +156,7 @@ contains
 
 !> \brief Relaxation for Laplace operator implemented in residual_Mehrstellen
 
-   subroutine approximate_solution_rbgs4M(curl, src, soln, nsmoo)
+   subroutine approximate_solution_relax4M(curl, src, soln, nsmoo)
 
       use cg_level_connected, only: cg_level_connected_T
       use cg_list,            only: cg_list_element
@@ -182,7 +182,7 @@ contains
       type(grid_container),  pointer :: cg
       integer :: is, ie, js, je, ks, ke
 
-      if (dom%geometry_type /= GEO_XYZ) call die("[multigrid_Laplace4M:approximate_solution_rbgs4M] Relaxation for Mehrstellen not implemented for noncartesian grid")
+      if (dom%geometry_type /= GEO_XYZ) call die("[multigrid_Laplace4M:approximate_solution_relax4M] Relaxation for Mehrstellen not implemented for noncartesian grid")
 !     call curl%arr3d_boundaries(src, bnd_type = BND_NEGREF) ! required when we use 7-point source term, not just 1-point
       ! Also required when we want to eliminate some communication of soln at a cost of expanding relaxated area into guardcells
 
@@ -267,6 +267,6 @@ contains
          endif
       enddo
 
-   end subroutine approximate_solution_rbgs4M
+   end subroutine approximate_solution_relax4M
 
 end module multigrid_Laplace4M
