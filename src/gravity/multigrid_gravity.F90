@@ -42,7 +42,7 @@
 module multigrid_gravity
 ! pulled by MULTIGRID && GRAV
 
-   use constants,          only: cbuff_len
+   use constants,          only: cbuff_len, dsetnamelen
    use multigrid_vstats,   only: vcycle_stats
    use multigrid_old_soln, only: soln_history
 
@@ -71,7 +71,11 @@ module multigrid_gravity
    logical            :: fft_patient                                  !< Spend more time in init_multigrid to find faster fft plan
    character(len=cbuff_len) :: grav_bnd_str                           !< Type of gravitational boundary conditions.
    logical            :: require_FFT                                  !< .true. if we use FFT solver anywhere (and need face prolongation)
+
+   ! Conjugate gradients
    logical            :: use_CG                                       !< .true. if we want to use multigrid-preconditioned conjugate gradient iterations
+   character(len=dsetnamelen), parameter :: cg_corr_n   = "cg_correction" !< correction vector for CG
+   integer(kind=4) :: cg_corr                                         !< index of the cg-correction vector
 
    integer            :: fftw_flags = FFTW_MEASURE                    !< or FFTW_PATIENT on request
 
@@ -126,15 +130,17 @@ contains
 !<
    subroutine multigrid_grav_par
 
-      use constants,     only: GEO_XYZ, GEO_RPZ, BND_PER, O_LIN, O_D2, O_I2, O_D4, I_ONE, INVALID
-      use dataio_pub,    only: nh  ! QA_WARN required for diff_nml
-      use dataio_pub,    only: msg, die, warn
-      use domain,        only: dom, is_multicg !, is_uneven
-      use mpisetup,      only: master, slave, ibuff, cbuff, rbuff, lbuff, nproc, piernik_MPI_Bcast
-      use multigridvars, only: single_base, bnd_invalid, bnd_isolated, bnd_periodic, bnd_dirichlet, grav_bnd, fft_full_relax, multidim_code_3D, nsmool, nsmoof, &
-           &                   overrelax, overrelax_xyz, Jacobi_damp, L4_strength
+      use cg_list_global,     only: all_cg
+      use constants,          only: GEO_XYZ, GEO_RPZ, BND_PER, O_LIN, O_D2, O_I2, O_D4, I_ONE, INVALID
+      use dataio_pub,         only: nh  ! QA_WARN required for diff_nml
+      use dataio_pub,         only: msg, die, warn
+      use domain,             only: dom, is_multicg !, is_uneven
+      use mpisetup,           only: master, slave, ibuff, cbuff, rbuff, lbuff, nproc, piernik_MPI_Bcast
+      use multigridvars,      only: single_base, bnd_invalid, bnd_isolated, bnd_periodic, bnd_dirichlet, grav_bnd, fft_full_relax, multidim_code_3D, nsmool, nsmoof, &
+           &                        overrelax, overrelax_xyz, Jacobi_damp, L4_strength
       use multigrid_old_soln, only: nold_max, ord_time_extrap
-      use multipole,     only: use_point_monopole, lmax, mmax, ord_prolong_mpole, coarsen_multipole, interp_pt2mom, interp_mom2pot
+      use multipole,          only: use_point_monopole, lmax, mmax, ord_prolong_mpole, coarsen_multipole, interp_pt2mom, interp_mom2pot
+      use named_array_list,   only: qna
 
       implicit none
 
@@ -378,6 +384,11 @@ contains
       end associate
 
       call vstat%init(max_cycles)
+
+      if (use_CG) then
+         call all_cg%reg_var(cg_corr_n)
+         cg_corr   = qna%ind(cg_corr_n)
+      endif
 
    end subroutine multigrid_grav_par
 
@@ -884,23 +895,95 @@ contains
 
    end subroutine poisson_solver
 
-!> \brief Multigrid-preconditioned conjugate gradient solver
+!>
+!! \brief Multigrid-preconditioned conjugate gradient solver
+!!
+!! \details
+!!
+!! Note that forcing alpha = 1 and beta = 0 reduces this algorithm to bare multigrid
+!<
 
    subroutine mgpcg(history)
 
-      use dataio_pub,         only: warn
+      use cg_leaves,          only: leaves
+      use cg_list_dataop,     only: ind_val
+      use dataio_pub,         only: warn, msg, printinfo
       use mpisetup,           only: master
+      use multigrid_Laplace,  only: residual_order
       use multigrid_old_soln, only: soln_history
+      use multigridvars,      only: source, solution, defect, correction
 
       implicit none
 
       type(soln_history), intent(inout) :: history !< inner or outer potential history used for initializing first guess
 
+      real    :: alpha, beta
+      integer :: it
+      real    :: norm_rhs, norm_lhs, norm_old
+
       if (master) call warn("[multigrid_gravity:mgpcg] Multigrid-preconditioned conjugate gradient solver is experimental!")
-      ! MGPCG not implemented, just call MG
-      call vcycle_hg(history)
+
+      call history%init_solution(vstat%cprefix)
+      norm_rhs = leaves%norm_sq(source)
+      norm_old = norm_rhs
+
+      call residual_order(ordL(), leaves, source, solution, defect) !    {r}_0 := {b} - {A x}_0
+      call single_v_cycle(defect, correction) !     {z}_0 := {M}^{-1} {r}_0
+      call leaves%q_copy(correction, cg_corr) !   {p}_0 := {z}_0
+      do it = 0, max_cycles !    k := 0 \,     repeat
+
+        alpha = 1 !\alpha_k := {{r}_k^{T} {z}_k}/{{p}_k^{T} {A p}_k}
+        call leaves%q_lin_comb( [ ind_val(solution, 1.), ind_val(cg_corr, alpha) ], solution) !{x}_{k+1} := {x}_k + \alpha_k {p}_k
+        call residual_order(ordL(), leaves, source, solution, defect) ! {r}_{k+1} := {r}_k - \alpha_k {A p}_k
+        norm_lhs = leaves%norm_sq(defect)
+        if (master) write(msg,*)" MG-PCG: lhs/rhs= ",norm_lhs/norm_rhs, " improvement=",norm_old/norm_lhs
+        call printinfo(msg)
+        if (norm_lhs/norm_rhs <= norm_tol) exit ! if rk+1 is sufficiently small then exit loop endif
+        norm_old = norm_lhs
+        call single_v_cycle(defect, correction) ! {z}_{k+1} := {M}^{-1} {r}_{k+1}
+        beta = 0 ! \beta_k := {{z}_{k+1}^{T} {r}_{k+1}}/{{z}_k^{T} {r}_k}
+        call leaves%q_lin_comb( [ ind_val(correction, 1.), ind_val(cg_corr, beta) ], cg_corr ) ! {p}_{k+1} := {z}_{k+1} + \beta_k {p}_k
+
+      enddo !k := k + 1;    end repeat
+      !    The result is xk+1
+
+      call history%store_solution
 
    end subroutine mgpcg
+
+!> \brief A single Hueang-Greengard V-cycle
+
+   subroutine single_v_cycle(def, corr)
+
+!      use cg_leaves,          only: leaves
+      use cg_list_global,     only: all_cg
+      use cg_level_coarsest,  only: coarsest
+      use cg_level_connected, only: cg_level_connected_T
+      use cg_level_finest,    only: finest
+
+      implicit none
+
+      integer(kind=4), intent(in) :: def  !< Defect (source, residual)
+      integer(kind=4), intent(in) :: corr !< Approximate solution for the defect (correction)
+
+      type(cg_level_connected_T), pointer :: curl
+
+      !call leaves%q_copy(def, corr) ! non-preconditioned cg
+
+      ! the Huang-Greengard V-cycle
+      call finest%level%restrict_to_floor_q_1var(def)
+
+      call all_cg%set_dirty(corr)
+      call coarsest%level%set_q_value(corr, 0.)
+
+      curl => coarsest%level
+      do while (associated(curl))
+         call approximate_solution(curl, def, corr)
+         call curl%check_dirty(corr, "Vup1 relax+")
+         curl => curl%finer
+      enddo
+
+   end subroutine single_v_cycle
 
 !>
 !! \brief The solver. Here we choose an adaptation of the Huang-Greengard V-cycle.
@@ -909,19 +992,19 @@ contains
 
    subroutine vcycle_hg(history)
 
-      use cg_leaves,           only: leaves
-      use cg_list_global,      only: all_cg
-      use cg_level_coarsest,   only: coarsest
-      use cg_level_connected,  only: cg_level_connected_T
-      use cg_level_finest,     only: finest
-      use constants,           only: cbuff_len, fft_none
-      use dataio_pub,          only: msg, die, warn, printinfo
-      use global,              only: do_ascii_dump
-      use mpisetup,            only: master, nproc
-      use multigridvars,       only: source, solution, correction, defect, verbose_vcycle, stdout, tot_ts, ts, grav_bnd, bnd_periodic
-      use multigrid_Laplace,   only: residual_order
-      use multigrid_old_soln,  only: soln_history
-      use timer,               only: set_timer
+      use cg_leaves,          only: leaves
+      use cg_list_global,     only: all_cg
+      use cg_level_coarsest,  only: coarsest
+      use cg_level_connected, only: cg_level_connected_T
+      use cg_level_finest,    only: finest
+      use constants,          only: cbuff_len, fft_none
+      use dataio_pub,         only: msg, die, warn, printinfo
+      use global,             only: do_ascii_dump
+      use mpisetup,           only: master, nproc
+      use multigridvars,      only: source, solution, correction, defect, verbose_vcycle, stdout, tot_ts, ts, grav_bnd, bnd_periodic
+      use multigrid_Laplace,  only: residual_order
+      use multigrid_old_soln, only: soln_history
+      use timer,              only: set_timer
 
       implicit none
 
