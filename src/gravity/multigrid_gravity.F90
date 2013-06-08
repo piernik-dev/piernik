@@ -49,7 +49,7 @@ module multigrid_gravity
    implicit none
 
    private
-   public :: multigrid_grav_par, init_multigrid_grav, cleanup_multigrid_grav, multigrid_solve_grav, init_multigrid_grav_ext, residual, invalidate_history
+   public :: multigrid_grav_par, init_multigrid_grav, cleanup_multigrid_grav, multigrid_solve_grav, init_multigrid_grav_ext, ordL, invalidate_history
 
    include "fftw3.f"
    ! constants from fftw3.f
@@ -878,6 +878,7 @@ contains
       use global,              only: do_ascii_dump
       use mpisetup,            only: master, nproc
       use multigridvars,       only: source, solution, correction, defect, verbose_vcycle, stdout, tot_ts, ts, grav_bnd, bnd_periodic
+      use multigrid_Laplace,   only: residual_order
       use multigrid_old_soln,  only: soln_history
       use timer,               only: set_timer
 
@@ -941,7 +942,7 @@ contains
       do v = 0, max_cycles
 
          call all_cg%set_dirty(defect)
-         call residual(leaves, source, solution, defect)
+         call residual_order(ordL(), leaves, source, solution, defect)
          call leaves%check_dirty(defect, "residual")
          if (grav_bnd == bnd_periodic) call leaves%subtract_average(defect)
 
@@ -1014,7 +1015,7 @@ contains
       enddo
 
 #ifdef DEBUG
-      call residual(leaves, source, solution, defect)
+      call residual_order(ordL(), leaves, source, solution, defect)
 #endif /* DEBUG */
       if (v > max_cycles) then
          if (master .and. norm_lhs/norm_rhs > norm_tol) call warn("[multigrid_gravity:vcycle_hg] Not enough V-cycles to achieve convergence.")
@@ -1030,35 +1031,28 @@ contains
 
    end subroutine vcycle_hg
 
-!> \brief Calculate the residuum for the Poisson equation with appropriate order of discrete approximation.
+!> \brief Select appropriate order of laplacian, depending on which solve operation we're on
 
-   subroutine residual(cg_llst, src, soln, def)
+   integer function ordL()
 
-      use cg_leaves,         only: cg_leaves_T
-      use multigrid_Laplace, only: residual_order
-      use multigridvars,     only: grav_bnd, bnd_givenval
+      use multigridvars, only: grav_bnd, bnd_givenval
 
       implicit none
 
-      class(cg_leaves_T), intent(in) :: cg_llst !< pointer to a level for which we approximate the solution
-      integer(kind=4),    intent(in) :: src     !< index of source in cg%q(:)
-      integer(kind=4),    intent(in) :: soln    !< index of solution in cg%q(:)
-      integer(kind=4),    intent(in) :: def     !< index of defect in cg%q(:)
+      ordL = ord_laplacian
+      if (grav_bnd == bnd_givenval) ordL = ord_laplacian_outer
 
-      integer :: ol
-
-      ol = ord_laplacian
-      if (grav_bnd == bnd_givenval) ol = ord_laplacian_outer
-
-      call residual_order(ol, cg_llst, src, soln, def)
-
-   end subroutine residual
+   end function ordL
 
 !> \brief This routine has to find an approximate solution for given source field and implemented differential operator
 
    subroutine approximate_solution(curl, src, soln)
 
-      use cg_level_connected,  only: cg_level_connected_T
+      use cg_level_coarsest,  only: coarsest
+      use cg_level_connected, only: cg_level_connected_T
+      use constants,          only: BND_NEGREF
+      use multigridvars,      only: correction, nsmool
+      use multigrid_Laplace,  only: approximate_solution_order
 !!$      use constants,           only: fft_none
 !!$      use multigrid_fftapprox, only: approximate_solution_fft
 
@@ -1068,41 +1062,12 @@ contains
       integer(kind=4),                     intent(in) :: src  !< index of source in cg%q(:)
       integer(kind=4),                     intent(in) :: soln !< index of solution in cg%q(:)
 
-      call curl%check_dirty(src, "approx_soln src-")
+      integer :: nsmoo
 
+      call curl%check_dirty(src, "approx_soln src-")
 !!$      if (curl%fft_type /= fft_none) then
 !!$         call approximate_solution_fft(curl, src, soln)
 !!$      else
-         call approximate_solution_relax(curl, src, soln)
-!!$      endif
-
-      call curl%check_dirty(soln, "approx_soln soln+")
-
-   end subroutine approximate_solution
-
-!>
-!! \brief relaxation selector routine.
-!!
-!! \details This is the most costly routine in a serial run. Try to find optimal values for nsmool and nsmoob.
-!! This routine also depends a lot on communication so it may limit scalability of the multigrid.
-!<
-
-   subroutine approximate_solution_relax(curl, src, soln)
-
-      use cg_level_coarsest,  only: coarsest
-      use cg_level_connected, only: cg_level_connected_T
-      use constants,          only: BND_NEGREF
-      use multigridvars,      only: correction, nsmool, grav_bnd, bnd_givenval
-      use multigrid_Laplace,  only: approximate_solution_order
-
-      implicit none
-
-      type(cg_level_connected_T), pointer, intent(in) :: curl !< pointer to a level for which we approximate the solution
-      integer(kind=4),                     intent(in) :: src  !< index of source in cg%q(:)
-      integer(kind=4),                     intent(in) :: soln !< index of solution in cg%q(:)
-
-      integer :: nsmoo, ol
-
       if (associated(curl, coarsest%level)) then
          nsmoo = nsmoob
          !> \todo Implement automatic convergence check on coarsest level (not very important when we have a FFT solver for coarsest level)
@@ -1112,12 +1077,12 @@ contains
          !> \warning this may be incompatible with V-cycles other than Huang - Greengard
       endif
 
-      ol = ord_laplacian
-      if (grav_bnd == bnd_givenval) ol = ord_laplacian_outer
+      call approximate_solution_order(ordL(), curl, src, soln, nsmoo)
+!!$      endif
 
-      call approximate_solution_order(ol, curl, src, soln, nsmoo)
+      call curl%check_dirty(soln, "approx_soln soln+")
 
-   end subroutine approximate_solution_relax
+   end subroutine approximate_solution
 
 !> \brief Solve finest level if allowed (single cg and single thread)
 
