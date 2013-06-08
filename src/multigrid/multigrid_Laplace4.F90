@@ -94,7 +94,7 @@ contains
       type(grid_container),  pointer :: cg
 
       if (dom%eff_dim<ndims) call die("[multigrid_Laplace4:residual4] Only 3D is implemented")
-      if (dom%geometry_type /= GEO_XYZ) call die("[multigrid_Laplace4M:residual_Mehrstellen] Unsupported geometry")
+      if (dom%geometry_type /= GEO_XYZ) call die("[multigrid_Laplace4:residual4] Unsupported geometry")
 
       if (firstcall) then
          if (master) call warn("[multigrid_Laplace4:residual4] residual order 4 is experimental and useful only for accuracy tests.")

@@ -1030,31 +1030,13 @@ contains
 
    end subroutine vcycle_hg
 
-!>
-!! \brief Calculate the residuum for the Poisson equation.
-!!
-!! \details Different orders of the Laplace operator result in different quality of the approximation of potential
-!! * Second order (O_I2) is the simplest operator (3-point in 1D, 5-point in 2D and 7-point in 3D). Its error is proportional to cg%dx**2
-!! * Fourth order (O_I4) has width of 5 cells in each direction (5, 9 and 13-points in 1D, 2D and 3D, respectively). Its error is proportional to cg%dx**4.
-!!   The value of its coefficients depends on interpretation of variables (e.g. point values, integral over cell)
-!! * Fourth order Mehrstellen (-O_I4) is compact (takes 3, 9, and 27 solution values in 1D, 2D and 3D),
-!!   but requires values of adjacent source cells as well (3, 5 and 7 points in 1D, 2D and 3D).
-!!   Its error is proportional to cg%dx**4 and tends to be smaller than the error of simple fourth order operator by a factor of 3..4.
-!!   \todo check how the coefficients depend on interpretation of cell values (center point values vs integral over cell)
-!!
-!! Note that each kind of Laplace operator requires its own approximate solver (relaxation scheme, Green function for FFT) for optimal convergence.
-!! \warning Relaxation is not implemented for the fourth order operator.
-!<
+!> \brief Calculate the residuum for the Poisson equation with appropriate order of discrete approximation.
 
    subroutine residual(cg_llst, src, soln, def)
 
-      use cg_leaves,           only: cg_leaves_T
-      use constants,           only: O_I2, O_I4
-      use dataio_pub,          only: die
-      use multigrid_Laplace2,  only: residual2
-      use multigrid_Laplace4,  only: residual4
-      use multigrid_Laplace4M, only: residual_Mehrstellen
-      use multigridvars,       only: grav_bnd, bnd_givenval
+      use cg_leaves,         only: cg_leaves_T
+      use multigrid_Laplace, only: residual_order
+      use multigridvars,     only: grav_bnd, bnd_givenval
 
       implicit none
 
@@ -1068,16 +1050,7 @@ contains
       ol = ord_laplacian
       if (grav_bnd == bnd_givenval) ol = ord_laplacian_outer
 
-      select case (ol)
-         case (O_I2)
-            call residual2(cg_llst, src, soln, def)
-         case (O_I4)
-            call residual4(cg_llst, src, soln, def)
-         case (-O_I4)
-            call residual_Mehrstellen(cg_llst, src, soln, def)
-         case default
-            call die("[multigrid_gravity:residual] The parameter 'ord_laplacian' must be 2 or 4 or -4")
-      end select
+      call residual_order(ol, cg_llst, src, soln, def)
 
    end subroutine residual
 
@@ -1100,7 +1073,7 @@ contains
 !!$      if (curl%fft_type /= fft_none) then
 !!$         call approximate_solution_fft(curl, src, soln)
 !!$      else
-         call approximate_solution_rbgs(curl, src, soln)
+         call approximate_solution_relax(curl, src, soln)
 !!$      endif
 
       call curl%check_dirty(soln, "approx_soln soln+")
@@ -1108,24 +1081,19 @@ contains
    end subroutine approximate_solution
 
 !>
-!! \brief Red-Black Gauss-Seidel relaxation selector routine.
+!! \brief relaxation selector routine.
 !!
 !! \details This is the most costly routine in a serial run. Try to find optimal values for nsmool and nsmoob.
 !! This routine also depends a lot on communication so it may limit scalability of the multigrid.
-!!
-!! This implementation is suitable for Laplace operators implemented in residual2 and residual_Mehrstellen
 !<
 
-   subroutine approximate_solution_rbgs(curl, src, soln)
+   subroutine approximate_solution_relax(curl, src, soln)
 
-      use cg_level_coarsest,   only: coarsest
-      use cg_level_connected,  only: cg_level_connected_T
-      use constants,           only: O_I2, O_I4, BND_NEGREF
-      use dataio_pub,          only: die
-      use multigridvars,       only: correction, nsmool, grav_bnd, bnd_givenval
-      use multigrid_Laplace2,  only: approximate_solution_rbgs2
-      use multigrid_Laplace4,  only: approximate_solution_relax4
-      use multigrid_Laplace4M, only: approximate_solution_relax4M
+      use cg_level_coarsest,  only: coarsest
+      use cg_level_connected, only: cg_level_connected_T
+      use constants,          only: BND_NEGREF
+      use multigridvars,      only: correction, nsmool, grav_bnd, bnd_givenval
+      use multigrid_Laplace,  only: approximate_solution_order
 
       implicit none
 
@@ -1147,18 +1115,9 @@ contains
       ol = ord_laplacian
       if (grav_bnd == bnd_givenval) ol = ord_laplacian_outer
 
-      select case (ol)
-         case (O_I2)
-            call approximate_solution_rbgs2 (curl, src, soln, nsmoo)
-         case (O_I4)
-            call approximate_solution_relax4 (curl, src, soln, nsmoo)
-         case (-O_I4)
-            call approximate_solution_relax4M(curl, src, soln, nsmoo)
-         case default
-            call die("[multigrid_gravity:approximate_solution_rbgs] The parameter 'ord_laplacian' must be 2 or 4 or -4")
-      end select
+      call approximate_solution_order(ol, curl, src, soln, nsmoo)
 
-   end subroutine approximate_solution_rbgs
+   end subroutine approximate_solution_relax
 
 !> \brief Solve finest level if allowed (single cg and single thread)
 
