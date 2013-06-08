@@ -71,6 +71,7 @@ module multigrid_gravity
    logical            :: fft_patient                                  !< Spend more time in init_multigrid to find faster fft plan
    character(len=cbuff_len) :: grav_bnd_str                           !< Type of gravitational boundary conditions.
    logical            :: require_FFT                                  !< .true. if we use FFT solver anywhere (and need face prolongation)
+   logical            :: use_CG                                       !< .true. if we want to use multigrid-preconditioned conjugate gradient iterations
 
    integer            :: fftw_flags = FFTW_MEASURE                    !< or FFTW_PATIENT on request
 
@@ -117,6 +118,7 @@ contains
 !! <tr><td>interp_pt2mom         </td><td>.false.</td><td>logical        </td><td>\copydoc multipole::interp_pt2mom                 </td></tr>
 !! <tr><td>interp_mom2pot        </td><td>.false.</td><td>logical        </td><td>\copydoc multipole::interp_mom2pot                </td></tr>
 !! <tr><td>multidim_code_3D      </td><td>.false.</td><td>logical        </td><td>\copydoc multigridvars::multidim_code_3d          </td></tr>
+!! <tr><td>use_CG                </td><td>.false.</td><td>logical        </td><td>\copydoc multigrid_gravity::use_CG                </td></tr>
 !! <tr><td>grav_bnd_str          </td><td>"periodic"/"dirichlet"</td><td>string of chars</td><td>\copydoc multigrid_gravity::grav_bnd_str          </td></tr>
 !! </table>
 !! The list is active while \b "GRAV" and \b "MULTIGRID" are defined.
@@ -139,7 +141,7 @@ contains
       integer       :: periodic_bnd_cnt   !< counter of periodic boundaries in existing directions
       logical, save :: frun = .true.      !< First run flag
 
-      namelist /MULTIGRID_GRAVITY/ norm_tol, vcycle_abort, vcycle_giveup, max_cycles, nsmool, nsmoob, &
+      namelist /MULTIGRID_GRAVITY/ norm_tol, vcycle_abort, vcycle_giveup, max_cycles, nsmool, nsmoob, use_CG, &
            &                       overrelax, overrelax_xyz, Jacobi_damp, L4_strength, nsmoof, ord_laplacian, ord_laplacian_outer, ord_time_extrap, &
            &                       prefer_rbgs_relaxation, base_no_fft, fft_full_relax, fft_patient, trust_fft_solution, &
            &                       coarsen_multipole, lmax, mmax, ord_prolong_mpole, use_point_monopole, interp_pt2mom, interp_mom2pot, multidim_code_3D, &
@@ -186,6 +188,7 @@ contains
       interp_pt2mom          = .false.
       interp_mom2pot         = .false.
       multidim_code_3D       = .false.
+      use_CG                 = .false.
 
       periodic_bnd_cnt = count(dom%periodic(:) .and. dom%has_dir(:))
 
@@ -249,15 +252,16 @@ contains
          ibuff(10) = ord_time_extrap
          ibuff(11) = ord_laplacian_outer
 
-         lbuff(1) = use_point_monopole
-         lbuff(2) = trust_fft_solution
-         lbuff(3) = base_no_fft
-         lbuff(4) = prefer_rbgs_relaxation
-         lbuff(5) = fft_full_relax
-         lbuff(6) = fft_patient
-         lbuff(7) = interp_pt2mom
-         lbuff(8) = interp_mom2pot
-         lbuff(9) = multidim_code_3D
+         lbuff(1)  = use_point_monopole
+         lbuff(2)  = trust_fft_solution
+         lbuff(3)  = base_no_fft
+         lbuff(4)  = prefer_rbgs_relaxation
+         lbuff(5)  = fft_full_relax
+         lbuff(6)  = fft_patient
+         lbuff(7)  = interp_pt2mom
+         lbuff(8)  = interp_mom2pot
+         lbuff(9)  = multidim_code_3D
+         lbuff(10) = use_CG
 
          cbuff(1) = grav_bnd_str
 
@@ -299,6 +303,7 @@ contains
          interp_pt2mom           = lbuff(7)
          interp_mom2pot          = lbuff(8)
          multidim_code_3D        = lbuff(9)
+         use_CG                  = lbuff(10)
 
          grav_bnd_str   = cbuff(1)(1:len(grav_bnd_str))
 
@@ -838,7 +843,7 @@ contains
 
       call init_source(i_all_dens)
 
-      call vcycle_hg(inner)
+      call poisson_solver(inner)
 
       call leaves%q_copy(solution, qna%ind(sgp_n))
 
@@ -849,7 +854,7 @@ contains
          call multipole_solver
          call init_source(empty_array)
 
-         call vcycle_hg(outer)
+         call poisson_solver(outer)
 
          call leaves%q_add(solution, qna%ind(sgp_n)) ! add solution to sgp
 
@@ -860,6 +865,42 @@ contains
       tot_ts = tot_ts + ts
 
    end subroutine multigrid_solve_grav
+
+!> \brief Chose the desired poisson solver
+
+   subroutine poisson_solver(history)
+
+      use multigrid_old_soln,  only: soln_history
+
+      implicit none
+
+      type(soln_history), intent(inout) :: history !< inner or outer potential history used for initializing first guess
+
+      if (use_CG) then
+         call mgpcg(history)
+      else
+         call vcycle_hg(history)
+      endif
+
+   end subroutine poisson_solver
+
+!> \brief Multigrid-preconditioned conjugate gradient solver
+
+   subroutine mgpcg(history)
+
+      use dataio_pub,         only: warn
+      use mpisetup,           only: master
+      use multigrid_old_soln, only: soln_history
+
+      implicit none
+
+      type(soln_history), intent(inout) :: history !< inner or outer potential history used for initializing first guess
+
+      if (master) call warn("[multigrid_gravity:mgpcg] Multigrid-preconditioned conjugate gradient solver is experimental!")
+      ! MGPCG not implemented, just call MG
+      call vcycle_hg(history)
+
+   end subroutine mgpcg
 
 !>
 !! \brief The solver. Here we choose an adaptation of the Huang-Greengard V-cycle.
