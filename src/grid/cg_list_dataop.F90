@@ -62,6 +62,7 @@ module cg_list_dataop
       procedure :: norm_sq                           !< calculate L2 norm
       procedure :: mul_by_r                          !< multiply data by the r (first) coordinate
       procedure :: div_by_r                          !< divide data by the r (first) coordinate
+      procedure :: scalar_product                    !< return scalar product of the given fields
 
       ! Multigrid
       generic,   public  :: reset_boundaries => zero_boundaries, dirty_mg_boundaries
@@ -509,6 +510,34 @@ contains
       norm = sqrt(norm)
 
    end function norm_sq
+
+!< \brief Multiply two vectors and return the scalar result
+
+   real function scalar_product(this, var1, var2)
+
+      use cg_list,    only: cg_list_element
+      use constants,  only: pSUM
+      use mpisetup,   only: piernik_MPI_Allreduce
+
+      implicit none
+
+      class(cg_list_dataop_T), intent(in) :: this   !< list for which we want to calculate the scalar product
+      integer(kind=4),         intent(in) :: var1   !< first vector
+      integer(kind=4),         intent(in) :: var2   !< second vector
+
+      type(cg_list_element), pointer      :: cgl
+
+      scalar_product = 0.
+
+      cgl => this%first
+      do while (associated(cgl))
+         scalar_product = scalar_product + sum(cgl%cg%q(var1)%span(cgl%cg%ijkse)*cgl%cg%q(var2)%span(cgl%cg%ijkse), mask=cgl%cg%leafmap)
+         ! do we need any weighting by volume of elements?
+         cgl => cgl%nxt
+      enddo
+      call piernik_MPI_Allreduce(scalar_product, pSUM)
+
+   end function scalar_product
 
 !< \brief multiply data by the r (first) coordinate (useful to convert phi-momentum into angular momentum)
 
