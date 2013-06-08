@@ -536,7 +536,7 @@ contains
 
       if (do_permpi) call this%internal_boundaries_4d(ind)
 
-!      call this%external_boundaries(ind, area_type, bnd_type) ! should call fluidboundaries:bnd_u, but that depends on hydrostatic too much
+!      call this%external_boundaries(ind, area_type, bnd_type) ! should call cg_list_bnd:bnd_u, but that depends on hydrostatic too much
 
    end subroutine level_4d_boundaries
 
@@ -553,7 +553,7 @@ contains
 
       integer(kind=4) :: dir, side
 
-      if (code_progress < PIERNIK_INIT_DOMAIN) call die("[fluidboundaries:init_fluidboundaries] MPI not initialized.") ! bnd_xl, bnd_xr
+      if (code_progress < PIERNIK_INIT_DOMAIN) call die("[cg_list_bnd:init_fluidboundaries] MPI not initialized.") ! bnd_xl, bnd_xr
 
       do dir = xdim, zdim
          do side = LO, HI
@@ -562,33 +562,33 @@ contains
                case (BND_MPI, BND_REF, BND_OUT, BND_OUTD, BND_USER, BND_PER)
                   ! Do nothing
                case (BND_FC, BND_MPI_FC)
-                  call die("[fluidboundaries:init_fluidboundaries] fine-coarse interfaces not implemented yet")
+                  call die("[cg_list_bnd:init_fluidboundaries] fine-coarse interfaces not implemented yet")
                case (BND_COR)
                   if (dir == zdim) then
-                     write(msg,'("[fluidboundaries:init_fluidboundaries] corner ",i1," boundary condition ",i3," not implemented in ",i1,"-direction")') side, dom%bnd(dir, side), dir
+                     write(msg,'("[cg_list_bnd:init_fluidboundaries] corner ",i1," boundary condition ",i3," not implemented in ",i1,"-direction")') side, dom%bnd(dir, side), dir
                      call warn(msg)
                   endif
                case (BND_SHE)
                   if (dir /= xdim) then
-                     write(msg,'("[fluidboundaries:init_fluidboundaries] shear ",i1," boundary condition ",i3," not implemented in ",i1,"-direction")') side, dom%bnd(dir, side), dir
+                     write(msg,'("[cg_list_bnd:init_fluidboundaries] shear ",i1," boundary condition ",i3," not implemented in ",i1,"-direction")') side, dom%bnd(dir, side), dir
                      call warn(msg)
                   endif
                case (BND_OUTH)
                   if (dir == zdim) then
-                     if (is_multicg) call die("[fluidboundaries:init_fluidboundaries] hydrostatic:outh_bnd with multiple grid pieces per processor not implemented yet") !nontrivial not really checked
+                     if (is_multicg) call die("[cg_list_bnd:init_fluidboundaries] hydrostatic:outh_bnd with multiple grid pieces per processor not implemented yet") !nontrivial not really checked
                   else
-                     write(msg,'("[fluidboundaries:init_fluidboundaries] outflow hydrostatic ",i1," boundary condition ",i3," not implemented in ",i1,"-direction")') side, dom%bnd(dir, side), dir
+                     write(msg,'("[cg_list_bnd:init_fluidboundaries] outflow hydrostatic ",i1," boundary condition ",i3," not implemented in ",i1,"-direction")') side, dom%bnd(dir, side), dir
                      call warn(msg)
                   endif
                case (BND_OUTHD)
                   if (dir == zdim) then
-                     if (is_multicg) call die("[fluidboundaries:init_fluidboundaries] hydrostatic:outh_bnd with multiple grid pieces per processor not implemented yet") !nontrivial not really checked
+                     if (is_multicg) call die("[cg_list_bnd:init_fluidboundaries] hydrostatic:outh_bnd with multiple grid pieces per processor not implemented yet") !nontrivial not really checked
                   else
-                     write(msg,'("[fluidboundaries:init_fluidboundaries] outflow hydrostatic ",i1," boundary condition ",i3," not implemented in ",i1,"-direction")') side, dom%bnd(dir, side), dir
+                     write(msg,'("[cg_list_bnd:init_fluidboundaries] outflow hydrostatic ",i1," boundary condition ",i3," not implemented in ",i1,"-direction")') side, dom%bnd(dir, side), dir
                      call warn(msg)
                   endif
                case default
-                  write(msg,'("[fluidboundaries:init_fluidboundaries] unknown ",i1," boundary condition ",i3," not implemented in ",i1,"-direction")') side, dom%bnd(dir, side), dir
+                  write(msg,'("[cg_list_bnd:init_fluidboundaries] unknown ",i1," boundary condition ",i3," not implemented in ",i1,"-direction")') side, dom%bnd(dir, side), dir
                   call warn(msg)
             end select
          enddo
@@ -629,7 +629,7 @@ contains
       integer(kind=4)                         :: side, ssign, ib
       type(cg_list_element), pointer          :: cgl
 
-      if (.not. any([xdim, ydim, zdim] == dir)) call die("[fluidboundaries:bnd_u] Invalid direction.")
+      if (.not. any([xdim, ydim, zdim] == dir)) call die("[cg_list_bnd:bnd_u] Invalid direction.")
 
       if (frun) then
          call init_fluidboundaries
@@ -688,7 +688,7 @@ contains
                   call user_fluidbnd(dir, side, cg, wn=I_ONE)
 #endif /* GRAV */
                case default
-                  write(msg,'("[fluidboundaries:bnd_u]: Unrecognized ",i1," boundary condition ",i3," not implemented in ",i1,"-direction")') side, cg%bnd(dir, side), dir
+                  write(msg,'("[cg_list_bnd:bnd_u]: Unrecognized ",i1," boundary condition ",i3," not implemented in ",i1,"-direction")') side, cg%bnd(dir, side), dir
                   call warn(msg)
             end select
 
@@ -746,15 +746,15 @@ contains
                case (BND_USER)
                   call user_fluidbnd(dir, side, cg, wn=wna%bi)
                case (BND_FC, BND_MPI_FC)
-                  call die("[magboundaries:bnd_b] fine-coarse interfaces not implemented yet")
+                  call die("[cg_list_bnd:bnd_b] fine-coarse interfaces not implemented yet")
                case (BND_COR)
                   if (dir == zdim) then
-                     write(msg,'(2(a,i3))') "[magboundaries:bnd_b]: Boundary condition ",cg%bnd(dir, side)," not implemented in ",dir
+                     write(msg,'(2(a,i3))') "[cg_list_bnd:bnd_b]: Boundary condition ",cg%bnd(dir, side)," not implemented in ",dir
                      if (master) call warn(msg)
                   endif
                case (BND_SHE)
                   if (dir /= xdim) then
-                     write(msg,'(2(a,i3))') "[magboundaries:bnd_b]: Boundary condition ",cg%bnd(dir, side)," not implemented in ",dir
+                     write(msg,'(2(a,i3))') "[cg_list_bnd:bnd_b]: Boundary condition ",cg%bnd(dir, side)," not implemented in ",dir
                      if (master) call warn(msg)
                   endif
                case (BND_PER)
@@ -763,7 +763,7 @@ contains
                   r(dir,:) = cg%lhn(dir,side) + I_THREE - I_TWO*side
                   cg%b(:,l(xdim,LO):l(xdim,HI),l(ydim,LO):l(ydim,HI),l(zdim,LO):l(zdim,HI)) = cg%b(:,r(xdim,LO):r(xdim,HI),r(ydim,LO):r(ydim,HI),r(zdim,LO):r(zdim,HI))
                case default
-                  write(msg,'(2(a,i3))') "[magboundaries:bnd_b]: Boundary condition ",cg%bnd(dir, side)," not implemented in ",dir
+                  write(msg,'(2(a,i3))') "[cg_list_bnd:bnd_b]: Boundary condition ",cg%bnd(dir, side)," not implemented in ",dir
                   if (master) call warn(msg)
             end select
          enddo
