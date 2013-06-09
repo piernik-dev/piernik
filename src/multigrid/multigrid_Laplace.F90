@@ -128,10 +128,13 @@ contains
 
    real function vT_A_v_order(ord, var)
 
-      use constants,          only: O_I2
+      use cg_leaves,          only: leaves
+      use cg_list_global,     only: all_cg
+      use constants,          only: O_I2, GEO_XYZ, ndims, INVALID, dsetnamelen
       use dataio_pub,         only: warn
-      use mpisetup,           only: master
+      use domain,             only: dom
       use multigrid_Laplace2, only: vT_A_v_2
+      use named_array_list,   only: qna
 
       implicit none
 
@@ -139,11 +142,22 @@ contains
       integer(kind=4), intent(in) :: var
 
       logical, save :: firstcall = .true.
+      character(len=dsetnamelen), parameter :: cg_L_n = "cg_L"
+      integer(kind=4), save :: cg_L = INVALID
 
-      if (ord /= O_I2 .and. master .and. firstcall) call warn("[multigrid_Laplace:pT_A_p_order] Only order == 2 implemented as yet")
-
-      vT_A_v_order = vT_A_v_2(var)
-      firstcall = .false.
+      if (dom%geometry_type == GEO_XYZ .and. ord == O_I2 .and. dom%eff_dim == ndims) then
+         vT_A_v_order = vT_A_v_2(var)
+      else
+         if (firstcall) then
+            call warn("[multigrid_Laplace:vT_A_v_order] No direct support for v*Laplacian(v) operation. Using workaroun (slower).")
+            call all_cg%reg_var(cg_L_n)
+            cg_L = qna%ind(cg_L_n)
+         endif
+         firstcall = .false.
+         call leaves%set_q_value(qna%wai, 0.)
+         call residual_order(ord, leaves, qna%wai, var, cg_L)
+         vT_A_v_order = -leaves%scalar_product(var, cg_L)
+      endif
 
    end function vT_A_v_order
 

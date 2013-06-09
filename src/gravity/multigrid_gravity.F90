@@ -75,7 +75,7 @@ module multigrid_gravity
    ! Conjugate gradients
    logical            :: use_CG                                       !< .true. if we want to use multigrid-preconditioned conjugate gradient iterations
    logical            :: use_MGpreconditioning                        !< .true. if we want to use multigrid preconditioner
-   character(len=dsetnamelen), parameter :: cg_corr_n   = "cg_correction" !< correction vector for CG
+   character(len=dsetnamelen), parameter :: cg_corr_n = "cg_correction" !< correction vector for CG
    integer(kind=4)    :: cg_corr                                      !< index of the cg-correction vector
    integer            :: fftw_flags = FFTW_MEASURE                    !< or FFTW_PATIENT on request
 
