@@ -932,7 +932,8 @@ contains
       use mpisetup,           only: master
       use multigrid_Laplace,  only: residual_order, vT_A_v_order
       use multigrid_old_soln, only: soln_history
-      use multigridvars,      only: source, solution, defect, correction
+      use multigridvars,      only: source, solution, defect, correction, tot_ts, ts
+      use timer,              only: set_timer
 
       implicit none
 
@@ -958,7 +959,10 @@ contains
          call leaves%q_lin_comb( [ ind_val(solution, 1.), ind_val(cg_corr, alpha) ], solution) !{x}_{k+1} := {x}_k + \alpha_k {p}_k
          call residual_order(ordL(), leaves, source, solution, defect) ! {r}_{k+1} := {r}_k - \alpha_k {A p}_k
          norm_lhs = leaves%norm_sq(defect)
-         write(msg,'(a,i3,a,f12.8,a,f6.2,a,f11.7,g14.6)')" MG-PCG: ", it, " lhs/rhs= ",norm_lhs/norm_rhs, " improvement= ",norm_old/norm_lhs, " alpha= ", alpha, beta
+         ts = set_timer("multigrid")
+         tot_ts = tot_ts + ts
+         write(msg,'(a,i3,a,f12.8,a,f6.2,a,f11.7,g14.6,a,f8.3)')" MG-PCG: ", it, " lhs/rhs= ",norm_lhs/norm_rhs, " improvement= ",norm_old/norm_lhs, &
+              &                                                 " alpha= ", alpha, beta, " time=", ts
          if (master) call printinfo(msg)
          if (norm_lhs/norm_rhs <= norm_tol) exit ! if rk+1 is sufficiently small then exit loop endif
          norm_old = norm_lhs
