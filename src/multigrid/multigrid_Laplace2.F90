@@ -37,7 +37,7 @@ module multigrid_Laplace2
    implicit none
 
    private
-   public :: residual2, approximate_solution_rbgs2
+   public :: residual2, approximate_solution_rbgs2, vT_A_v_2
 
 contains
 
@@ -335,5 +335,60 @@ contains
 
    end subroutine approximate_solution_rbgs2
 
+!>
+!! \brief Compute var*Laplacian(var) for CG algotithm
+!!
+!! \details This implementation uses 2nf order approximation of the Laplace operator
+!!
+!! This is the first implementation that also serves for 4th order laplacians as well.
+!<
+
+   real function vT_A_v_2(var)
+
+      use cg_leaves,  only: leaves
+      use cg_list,    only: cg_list_element
+      use constants,  only: GEO_XYZ, BND_NEGREF, ndims, pSUM
+      use dataio_pub, only: die
+      use domain,     only: dom
+      use grid_cont,  only: grid_container
+      use mpisetup,   only: piernik_MPI_Allreduce
+
+      implicit none
+
+      integer(kind=4), intent(in) :: var !< variable, for which the operation is done
+
+      type(cg_list_element), pointer  :: cgl
+      type(grid_container),  pointer  :: cg
+      real                            :: L0, Lx, Ly, Lz
+
+      if (dom%geometry_type /= GEO_XYZ) call die("[multigrid_Laplace2:vT_A_v_2] Implemented only for cartesian coords as yet")
+      if (dom%eff_dim /= ndims) call die("[multigrid_Laplace2:vT_A_v_2] Implemented only for 3D")
+
+      call leaves%leaf_arr3d_boundaries(var, bnd_type = BND_NEGREF)
+
+      vT_A_v_2 = 0.
+      cgl => leaves%first
+      do while (associated(cgl))
+         cg => cgl%cg
+         Lx = cg%idx2
+         Ly = cg%idy2
+         Lz = cg%idz2
+         L0 = -2. * (Lx + Ly + Lz)
+
+         vT_A_v_2 = vT_A_v_2 + sum( &
+               & cg%q(var)%arr(cg%is  :cg%ie,   cg%js  :cg%je,   cg%ks  :cg%ke) * ( &
+               ( cg%q(var)%arr(cg%is-1:cg%ie-1, cg%js  :cg%je,   cg%ks  :cg%ke)         + &
+               & cg%q(var)%arr(cg%is+1:cg%ie+1, cg%js  :cg%je,   cg%ks  :cg%ke))   * Lx - &
+               ( cg%q(var)%arr(cg%is  :cg%ie,   cg%js-1:cg%je-1, cg%ks  :cg%ke)         + &
+               & cg%q(var)%arr(cg%is  :cg%ie,   cg%js+1:cg%je+1, cg%ks  :cg%ke))   * Ly - &
+               ( cg%q(var)%arr(cg%is  :cg%ie,   cg%js  :cg%je,   cg%ks-1:cg%ke-1)       + &
+               & cg%q(var)%arr(cg%is  :cg%ie,   cg%js  :cg%je,   cg%ks+1:cg%ke+1)) * Lz - &
+               & cg%q(var)%arr(cg%is  :cg%ie,   cg%js  :cg%je,   cg%ks  :cg%ke)    * L0), mask=cg%leafmap)
+         cgl => cgl%nxt
+      enddo
+
+      call piernik_MPI_Allreduce(vT_A_v_2, pSUM)
+
+   end function vT_A_v_2
 
 end module multigrid_Laplace2

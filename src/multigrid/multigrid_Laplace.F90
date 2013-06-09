@@ -37,7 +37,7 @@ module multigrid_Laplace
    implicit none
 
    private
-   public :: residual_order, approximate_solution_order
+   public :: residual_order, approximate_solution_order, vT_A_v_order
 
 contains
 
@@ -123,5 +123,28 @@ contains
       end select
 
    end subroutine approximate_solution_order
+
+!> \brief Selector for p*Laplacian(p) routine
+
+   real function vT_A_v_order(ord, var)
+
+      use constants,          only: O_I2
+      use dataio_pub,         only: warn
+      use mpisetup,           only: master
+      use multigrid_Laplace2, only: vT_A_v_2
+
+      implicit none
+
+      integer,         intent(in) :: ord   !< Order of the Laplace operator
+      integer(kind=4), intent(in) :: var
+
+      logical, save :: firstcall = .true.
+
+      if (ord /= O_I2 .and. master .and. firstcall) call warn("[multigrid_Laplace:pT_A_p_order] Only order == 2 implemented as yet")
+
+      vT_A_v_order = vT_A_v_2(var)
+      firstcall = .false.
+
+   end function vT_A_v_order
 
 end module multigrid_Laplace
