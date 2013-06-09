@@ -215,6 +215,8 @@ contains
                Lxy = Lxy * iL0
                Lxz = Lxz * iL0
                Lyz = Lyz * iL0
+            else
+               iL0 = 0. !should never happen but the compiler complains otherwise
             endif
             is = cg%is-b*dom%D_(xdim); ie = cg%ie+b*dom%D_(xdim)
             js = cg%js-b*dom%D_(ydim); je = cg%je+b*dom%D_(ydim)
