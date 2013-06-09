@@ -177,7 +177,7 @@ contains
       integer,                             intent(in) :: nsmoo !< number of smoothing repetitions
 
       integer :: n, b
-      eeal    :: L0, Lx, Ly, Lz, Lxy, Lxz, Lyz, iL0
+      real    :: L0, Lx, Ly, Lz, Lxy, Lxz, Lyz, iL0
       type(cg_list_element), pointer :: cgl
       type(grid_container),  pointer :: cg
       integer :: is, ie, js, je, ks, ke
