@@ -378,11 +378,11 @@ contains
          vT_A_v_2 = vT_A_v_2 + sum( &
                & cg%q(var)%arr(cg%is  :cg%ie,   cg%js  :cg%je,   cg%ks  :cg%ke) * ( &
                ( cg%q(var)%arr(cg%is-1:cg%ie-1, cg%js  :cg%je,   cg%ks  :cg%ke)         + &
-               & cg%q(var)%arr(cg%is+1:cg%ie+1, cg%js  :cg%je,   cg%ks  :cg%ke))   * Lx - &
+               & cg%q(var)%arr(cg%is+1:cg%ie+1, cg%js  :cg%je,   cg%ks  :cg%ke))   * Lx + &
                ( cg%q(var)%arr(cg%is  :cg%ie,   cg%js-1:cg%je-1, cg%ks  :cg%ke)         + &
-               & cg%q(var)%arr(cg%is  :cg%ie,   cg%js+1:cg%je+1, cg%ks  :cg%ke))   * Ly - &
+               & cg%q(var)%arr(cg%is  :cg%ie,   cg%js+1:cg%je+1, cg%ks  :cg%ke))   * Ly + &
                ( cg%q(var)%arr(cg%is  :cg%ie,   cg%js  :cg%je,   cg%ks-1:cg%ke-1)       + &
-               & cg%q(var)%arr(cg%is  :cg%ie,   cg%js  :cg%je,   cg%ks+1:cg%ke+1)) * Lz - &
+               & cg%q(var)%arr(cg%is  :cg%ie,   cg%js  :cg%je,   cg%ks+1:cg%ke+1)) * Lz + &
                & cg%q(var)%arr(cg%is  :cg%ie,   cg%js  :cg%je,   cg%ks  :cg%ke)    * L0), mask=cg%leafmap)
          cgl => cgl%nxt
       enddo
