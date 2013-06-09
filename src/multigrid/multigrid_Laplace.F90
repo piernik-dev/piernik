@@ -133,6 +133,7 @@ contains
       use constants,          only: O_I2, GEO_XYZ, ndims, INVALID, dsetnamelen
       use dataio_pub,         only: warn
       use domain,             only: dom
+      use mpisetup,           only: master
       use multigrid_Laplace2, only: vT_A_v_2
       use named_array_list,   only: qna
 
@@ -149,7 +150,7 @@ contains
          vT_A_v_order = vT_A_v_2(var)
       else
          if (firstcall) then
-            call warn("[multigrid_Laplace:vT_A_v_order] No direct support for v*Laplacian(v) operation. Using workaroun (slower).")
+            if (master) call warn("[multigrid_Laplace:vT_A_v_order] No direct support for v*Laplacian(v) operation. Using workaroun (slower).")
             call all_cg%reg_var(cg_L_n)
             cg_L = qna%ind(cg_L_n)
          endif
