@@ -113,7 +113,7 @@ contains
 
       select case (ord)
          case (O_I2)
-            call approximate_solution_rbgs2 (curl, src, soln, nsmoo)
+            call approximate_solution_rbgs2  (curl, src, soln, nsmoo)
          case (O_I4)
             call approximate_solution_relax4 (curl, src, soln, nsmoo)
          case (-O_I4)
@@ -124,7 +124,7 @@ contains
 
    end subroutine approximate_solution_order
 
-!> \brief Selector for p*Laplacian(p) routine
+!> \brief Selector for v*Laplacian(v) routine
 
    real function vT_A_v_order(ord, var)
 
@@ -140,7 +140,7 @@ contains
       implicit none
 
       integer(kind=4), intent(in) :: ord   !< Order of the Laplace operator
-      integer(kind=4), intent(in) :: var
+      integer(kind=4), intent(in) :: var   !< Variable on which we want to calculate the operation
 
       logical, save :: firstcall = .true.
       character(len=dsetnamelen), parameter :: cg_L_n = "cg_L"
@@ -150,7 +150,7 @@ contains
          vT_A_v_order = vT_A_v_2(var)
       else
          if (firstcall) then
-            if (master) call warn("[multigrid_Laplace:vT_A_v_order] No direct support for v*Laplacian(v) operation. Using workaroun (slower).")
+            if (master) call warn("[multigrid_Laplace:vT_A_v_order] No direct support for v*Laplacian(v) operation. Using workaround (a bit more expensive).")
             call all_cg%reg_var(cg_L_n)
             cg_L = qna%ind(cg_L_n)
          endif
