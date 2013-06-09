@@ -84,7 +84,7 @@ contains
       use dataio_pub,    only: die
       use domain,        only: dom
       use grid_cont,     only: grid_container
-      use multigridvars, only: grav_bnd, bnd_givenval
+      use multigridvars, only: grav_bnd, bnd_givenval, multidim_code_3D
       use named_array,   only: p3
 
       implicit none
@@ -94,7 +94,7 @@ contains
       integer(kind=4),    intent(in) :: soln    !< index of solution in cg%q(:)
       integer(kind=4),    intent(in) :: def     !< index of defect in cg%q(:)
 
-      real                :: L0, Lx, Ly, Lz, Lxy, Lxz, Lyz
+      real                :: L0, Lx, Ly, Lz, Lxy, Lxz, Lyz, fac
 
       integer             :: i
       type(cg_list_element), pointer :: cgl
@@ -123,32 +123,50 @@ contains
          Lxy = 0. ; if (dom%has_dir(xdim) .and. dom%has_dir(ydim)) Lxy = (cg%idx2 + cg%idy2) / 12.
          Lxz = 0. ; if (dom%has_dir(xdim) .and. dom%has_dir(zdim)) Lxz = (cg%idx2 + cg%idz2) / 12.
          Lyz = 0. ; if (dom%has_dir(ydim) .and. dom%has_dir(zdim)) Lyz = (cg%idy2 + cg%idz2) / 12.
-         Lx  = 0. ; if (dom%has_dir(xdim)) Lx = cg%idx2 - 2. * (Lxy + Lxz)
-         Ly  = 0. ; if (dom%has_dir(ydim)) Ly = cg%idy2 - 2. * (Lxy + Lyz)
-         Lz  = 0. ; if (dom%has_dir(zdim)) Lz = cg%idz2 - 2. * (Lxz + Lyz)
-         L0  = -2. * (Lx + Ly + Lz) - 4. * (Lxy + Lxz + Lyz)
+         Lx  = 0. ; if (dom%has_dir(xdim)) Lx = (cg%idx2 - 2. * (Lxy + Lxz))
+         Ly  = 0. ; if (dom%has_dir(ydim)) Ly = (cg%idy2 - 2. * (Lxy + Lyz))
+         Lz  = 0. ; if (dom%has_dir(zdim)) Lz = (cg%idz2 - 2. * (Lxz + Lyz))
+         L0  = -(-2. * (Lx + Ly + Lz) - 4. * (Lxy + Lxz + Lyz))
+         Lx = -Lx ; Ly = -Ly ; Lz = -Lz
+         Lxy = -Lxy; Lxz = -Lxz; Lyz = -Lyz
 
-         p3 => cg%q(def)%span(cg%ijkse)
-         p3 = (1.-src_lapl*2*dom%eff_dim)*cg%q(src)%span(cg%ijkse) - L0*cg%q(soln)%span(cg%ijkse)
-         if (dom%has_dir(xdim)) p3 = p3 + &
-              src_lapl*(cg%q(src)%span(cg%ijkse-idm(xdim,:,:)) + cg%q(src)%span(cg%ijkse+idm(xdim,:,:))) &
-              - Lx * (cg%q(soln)%span(cg%ijkse-idm(xdim,:,:)) + cg%q(soln)%span(cg%ijkse+idm(xdim,:,:)))
-         if (dom%has_dir(ydim)) p3 = p3 + &
-              src_lapl*(cg%q(src)%span(cg%ijkse-idm(ydim,:,:)) + cg%q(src)%span(cg%ijkse+idm(ydim,:,:))) &
-              - Ly * (cg%q(soln)%span(cg%ijkse-idm(ydim,:,:)) + cg%q(soln)%span(cg%ijkse+idm(ydim,:,:))) &
-              - Lxy * (cg%q(soln)%span(cg%ijkse-idm(xdim,:,:)-idm(ydim,:,:)) + cg%q(soln)%span(cg%ijkse-idm(xdim,:,:)+idm(ydim,:,:)) + &
-              &        cg%q(soln)%span(cg%ijkse+idm(xdim,:,:)-idm(ydim,:,:)) + cg%q(soln)%span(cg%ijkse+idm(xdim,:,:)+idm(ydim,:,:)) )
-         if (dom%has_dir(zdim)) p3 = p3 + &
-              src_lapl*(cg%q(src)%span(cg%ijkse-idm(zdim,:,:)) + cg%q(src)%span(cg%ijkse+idm(zdim,:,:))) &
-              - Lz * (cg%q(soln)%span(cg%ijkse-idm(zdim,:,:)) + cg%q(soln)%span(cg%ijkse+idm(zdim,:,:))) &
-              - Lxz * (cg%q(soln)%span(cg%ijkse-idm(xdim,:,:)-idm(zdim,:,:)) + cg%q(soln)%span(cg%ijkse-idm(xdim,:,:)+idm(zdim,:,:)) + &
-              &        cg%q(soln)%span(cg%ijkse+idm(xdim,:,:)-idm(zdim,:,:)) + cg%q(soln)%span(cg%ijkse+idm(xdim,:,:)+idm(zdim,:,:)) ) &
-              - Lyz * (cg%q(soln)%span(cg%ijkse-idm(zdim,:,:)-idm(ydim,:,:)) + cg%q(soln)%span(cg%ijkse-idm(zdim,:,:)+idm(ydim,:,:)) + &
-              &        cg%q(soln)%span(cg%ijkse+idm(zdim,:,:)-idm(ydim,:,:)) + cg%q(soln)%span(cg%ijkse+idm(zdim,:,:)+idm(ydim,:,:)) )
-         ! OPT: Perhaps in 3D this would be more efficient without ifs.
-         ! OPT: Try direct operations on cg%q(soln)%arr without calling span
-         ! 2D and 1D runs do not need too much optimization as they will be rarely used in production runs with selfgravity
-
+         if (dom%eff_dim == ndims .and. .not. multidim_code_3D) then
+            ! There's small speed up vs multidim_code_3D
+            fac = (1.0 - src_lapl * 2.0 * dom%eff_dim)
+            cg%q(def)%arr(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = &
+               fac * cg%q(src)%arr(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) + L0 * cg%q(soln)%arr(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) + &
+                    (cg%q(src)%arr(cg%is-1:cg%ie-1, cg%js:cg%je,     cg%ks:cg%ke    ) +  cg%q(src)%arr(cg%is+1:cg%ie+1, cg%js:cg%je,     cg%ks:cg%ke    )) * src_lapl  &
+                 + (cg%q(soln)%arr(cg%is-1:cg%ie-1, cg%js:cg%je,     cg%ks:cg%ke    ) + cg%q(soln)%arr(cg%is+1:cg%ie+1, cg%js:cg%je,     cg%ks:cg%ke    )) * Lx        &
+                 +  (cg%q(src)%arr(cg%is:cg%ie,     cg%js-1:cg%je-1, cg%ks:cg%ke    ) +  cg%q(src)%arr(cg%is:cg%ie,     cg%js+1:cg%je+1, cg%ks:cg%ke    )) * src_lapl  &
+                 + (cg%q(soln)%arr(cg%is:cg%ie,     cg%js-1:cg%je-1, cg%ks:cg%ke    ) + cg%q(soln)%arr(cg%is:cg%ie,     cg%js+1:cg%je+1, cg%ks:cg%ke    )) * Ly        &
+                 + (cg%q(soln)%arr(cg%is-1:cg%ie-1, cg%js-1:cg%je-1, cg%ks:cg%ke    ) + cg%q(soln)%arr(cg%is-1:cg%ie-1, cg%js+1:cg%je+1, cg%ks:cg%ke    ) + &
+                 &  cg%q(soln)%arr(cg%is+1:cg%ie+1, cg%js-1:cg%je-1, cg%ks:cg%ke    ) + cg%q(soln)%arr(cg%is+1:cg%ie+1, cg%js+1:cg%je+1, cg%ks:cg%ke    )) * Lxy       &
+                 +  (cg%q(src)%arr(cg%is:cg%ie,     cg%js:cg%je,     cg%ks-1:cg%ke-1) +  cg%q(src)%arr(cg%is:cg%ie,     cg%js:cg%je,     cg%ks+1:cg%ke+1)) * src_lapl  &
+                 + (cg%q(soln)%arr(cg%is:cg%ie,     cg%js:cg%je,     cg%ks-1:cg%ke-1) + cg%q(soln)%arr(cg%is:cg%ie,     cg%js:cg%je,     cg%ks+1:cg%ke+1)) * Lz        &
+                 + (cg%q(soln)%arr(cg%is-1:cg%ie-1, cg%js:cg%je,     cg%ks-1:cg%ke-1) + cg%q(soln)%arr(cg%is-1:cg%ie-1, cg%js:cg%je,     cg%ks+1:cg%ke+1) + &
+                 &  cg%q(soln)%arr(cg%is+1:cg%ie+1, cg%js:cg%je,     cg%ks-1:cg%ke-1) + cg%q(soln)%arr(cg%is+1:cg%ie+1, cg%js:cg%je,     cg%ks+1:cg%ke+1)) * Lxz       &
+                 + (cg%q(soln)%arr(cg%is:cg%ie,     cg%js-1:cg%je-1, cg%ks-1:cg%ke-1) + cg%q(soln)%arr(cg%is:cg%ie,     cg%js+1:cg%je+1, cg%ks-1:cg%ke-1) + &
+                 &  cg%q(soln)%arr(cg%is:cg%ie,     cg%js-1:cg%je-1, cg%ks+1:cg%ke+1) + cg%q(soln)%arr(cg%is:cg%ie,     cg%js+1:cg%je+1, cg%ks+1:cg%ke+1)) * Lyz
+         else
+            ! 2D and 1D runs do not need too much optimization as they will be rarely used in production runs with selfgravity
+            p3 => cg%q(def)%span(cg%ijkse)
+            p3 = (1.-src_lapl*2*dom%eff_dim)*cg%q(src)%span(cg%ijkse) + L0*cg%q(soln)%span(cg%ijkse)
+            if (dom%has_dir(xdim)) p3 = p3 + &
+                 src_lapl*(cg%q(src)%span(cg%ijkse-idm(xdim,:,:)) + cg%q(src)%span(cg%ijkse+idm(xdim,:,:))) &
+                 + Lx * (cg%q(soln)%span(cg%ijkse-idm(xdim,:,:)) + cg%q(soln)%span(cg%ijkse+idm(xdim,:,:)))
+            if (dom%has_dir(ydim)) p3 = p3 + &
+                 src_lapl*(cg%q(src)%span(cg%ijkse-idm(ydim,:,:)) + cg%q(src)%span(cg%ijkse+idm(ydim,:,:))) &
+                 + Ly * (cg%q(soln)%span(cg%ijkse-idm(ydim,:,:)) + cg%q(soln)%span(cg%ijkse+idm(ydim,:,:))) &
+                 + Lxy * (cg%q(soln)%span(cg%ijkse-idm(xdim,:,:)-idm(ydim,:,:)) + cg%q(soln)%span(cg%ijkse-idm(xdim,:,:)+idm(ydim,:,:)) + &
+                 &        cg%q(soln)%span(cg%ijkse+idm(xdim,:,:)-idm(ydim,:,:)) + cg%q(soln)%span(cg%ijkse+idm(xdim,:,:)+idm(ydim,:,:)) )
+            if (dom%has_dir(zdim)) p3 = p3 + &
+                 src_lapl*(cg%q(src)%span(cg%ijkse-idm(zdim,:,:)) + cg%q(src)%span(cg%ijkse+idm(zdim,:,:))) &
+                    + Lz * (cg%q(soln)%span(cg%ijkse-idm(zdim,:,:)) + cg%q(soln)%span(cg%ijkse+idm(zdim,:,:))) &
+                 + Lxz * (cg%q(soln)%span(cg%ijkse-idm(xdim,:,:)-idm(zdim,:,:)) + cg%q(soln)%span(cg%ijkse-idm(xdim,:,:)+idm(zdim,:,:)) + &
+                 &        cg%q(soln)%span(cg%ijkse+idm(xdim,:,:)-idm(zdim,:,:)) + cg%q(soln)%span(cg%ijkse+idm(xdim,:,:)+idm(zdim,:,:)) ) &
+                 + Lyz * (cg%q(soln)%span(cg%ijkse-idm(zdim,:,:)-idm(ydim,:,:)) + cg%q(soln)%span(cg%ijkse-idm(zdim,:,:)+idm(ydim,:,:)) + &
+                 &        cg%q(soln)%span(cg%ijkse+idm(zdim,:,:)-idm(ydim,:,:)) + cg%q(soln)%span(cg%ijkse+idm(zdim,:,:)+idm(ydim,:,:)) )
+         endif
          cgl => cgl%nxt
       enddo
 
