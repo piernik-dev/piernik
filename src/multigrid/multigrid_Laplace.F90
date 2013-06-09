@@ -135,7 +135,7 @@ contains
 
       implicit none
 
-      integer,         intent(in) :: ord   !< Order of the Laplace operator
+      integer(kind=4), intent(in) :: ord   !< Order of the Laplace operator
       integer(kind=4), intent(in) :: var
 
       logical, save :: firstcall = .true.
