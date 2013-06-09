@@ -76,8 +76,7 @@ module multigrid_gravity
    logical            :: use_CG                                       !< .true. if we want to use multigrid-preconditioned conjugate gradient iterations
    logical            :: use_MGpreconditioning                        !< .true. if we want to use multigrid preconditioner
    character(len=dsetnamelen), parameter :: cg_corr_n   = "cg_correction" !< correction vector for CG
-   integer(kind=4) :: cg_corr                                         !< index of the cg-correction vector
-
+   integer(kind=4)    :: cg_corr                                      !< index of the cg-correction vector
    integer            :: fftw_flags = FFTW_MEASURE                    !< or FFTW_PATIENT on request
 
    ! solution recycling
@@ -928,10 +927,7 @@ contains
       real    :: norm_rhs, norm_lhs, norm_old
 
       if (master) call warn("[multigrid_gravity:mgpcg] Multigrid-preconditioned conjugate gradient solver is experimental!")
-
-      ! alpha = 1.
       beta = 0.
-
       call history%init_solution(vstat%cprefix)
       norm_rhs = leaves%norm_sq(source)
       norm_old = norm_rhs
@@ -942,11 +938,11 @@ contains
       do it = 0, max_cycles !    k := 0 \,     repeat
 
          dc = leaves%scalar_product(defect, correction)
-         alpha = dc/vT_A_v_order(ord_laplacian, cg_corr) !\alpha_k := {{r}_k^{T} {z}_k}/{{p}_k^{T} {A p}_k}
+         alpha = dc/vT_A_v_order(ordL(), cg_corr) !\alpha_k := {{r}_k^{T} {z}_k}/{{p}_k^{T} {A p}_k}
          call leaves%q_lin_comb( [ ind_val(solution, 1.), ind_val(cg_corr, alpha) ], solution) !{x}_{k+1} := {x}_k + \alpha_k {p}_k
          call residual_order(ordL(), leaves, source, solution, defect) ! {r}_{k+1} := {r}_k - \alpha_k {A p}_k
          norm_lhs = leaves%norm_sq(defect)
-         write(msg,'(a,f12.8,a,f6.2,a,f11.7,g14.6)')" MG-PCG: lhs/rhs= ",norm_lhs/norm_rhs, " improvement= ",norm_old/norm_lhs, " alpha= ", alpha, beta
+         write(msg,'(a,i3,a,f12.8,a,f6.2,a,f11.7,g14.6)')" MG-PCG: ", it, " lhs/rhs= ",norm_lhs/norm_rhs, " improvement= ",norm_old/norm_lhs, " alpha= ", alpha, beta
          if (master)call printinfo(msg)
          if (norm_lhs/norm_rhs <= norm_tol) exit ! if rk+1 is sufficiently small then exit loop endif
          norm_old = norm_lhs
@@ -1169,11 +1165,13 @@ contains
 
 !> \brief Select appropriate order of laplacian, depending on which solve operation we're on
 
-   integer function ordL()
+   function ordL()
 
       use multigridvars, only: grav_bnd, bnd_givenval
 
       implicit none
+
+      integer(kind=4) :: ordL
 
       ordL = ord_laplacian
       if (grav_bnd == bnd_givenval) ordL = ord_laplacian_outer

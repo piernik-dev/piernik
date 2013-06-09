@@ -68,7 +68,7 @@ contains
 
       implicit none
 
-      integer,            intent(in) :: ord     !< Order of the Laplace operator
+      integer(kind=4),    intent(in) :: ord     !< Order of the Laplace operator
       class(cg_leaves_T), intent(in) :: cg_llst !< pointer to a list of grids for which we approximate the solution
       integer(kind=4),    intent(in) :: src     !< index of source in cg%q(:)
       integer(kind=4),    intent(in) :: soln    !< index of solution in cg%q(:)
@@ -105,7 +105,7 @@ contains
 
       implicit none
 
-      integer,                             intent(in) :: ord   !< Order of the Laplace operator
+      integer(kind=4),                     intent(in) :: ord   !< Order of the Laplace operator
       type(cg_level_connected_T), pointer, intent(in) :: curl  !< pointer to a level for which we approximate the solution
       integer(kind=4),                     intent(in) :: src   !< index of source in cg%q(:)
       integer(kind=4),                     intent(in) :: soln  !< index of solution in cg%q(:)
