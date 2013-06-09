@@ -902,9 +902,11 @@ contains
 !>
 !! \brief Multigrid-preconditioned conjugate gradient solver
 !!
-!! \details
+!! \details This solver can converge on domains that require high cell anisotropy e.g cg%dx >> cg%dy
 !!
 !! Note that forcing alpha = 1 and beta = 0 reduces this algorithm to bare multigrid
+!!
+!! \todo Find out why it converges so poorly for outer potential
 !<
 
    subroutine mgpcg(history)
@@ -944,7 +946,7 @@ contains
          call leaves%q_lin_comb( [ ind_val(solution, 1.), ind_val(cg_corr, alpha) ], solution) !{x}_{k+1} := {x}_k + \alpha_k {p}_k
          call residual_order(ordL(), leaves, source, solution, defect) ! {r}_{k+1} := {r}_k - \alpha_k {A p}_k
          norm_lhs = leaves%norm_sq(defect)
-         write(msg,*)" MG-PCG: lhs/rhs= ",norm_lhs/norm_rhs, " improvement=",norm_old/norm_lhs, " alpha=", alpha, beta
+         write(msg,'(a,f12.8,a,f6.2,a,f11.7,g14.6)')" MG-PCG: lhs/rhs= ",norm_lhs/norm_rhs, " improvement= ",norm_old/norm_lhs, " alpha= ", alpha, beta
          if (master)call printinfo(msg)
          if (norm_lhs/norm_rhs <= norm_tol) exit ! if rk+1 is sufficiently small then exit loop endif
          norm_old = norm_lhs
@@ -953,9 +955,8 @@ contains
          call leaves%q_lin_comb( [ ind_val(correction, 1.), ind_val(cg_corr, beta) ], cg_corr ) ! {p}_{k+1} := {z}_{k+1} + \beta_k {p}_k
 
       enddo !k := k + 1;    end repeat
-      !    The result is xk+1
 
-      call history%store_solution
+      call history%store_solution       !    The result is xk+1
 
    end subroutine mgpcg
 
