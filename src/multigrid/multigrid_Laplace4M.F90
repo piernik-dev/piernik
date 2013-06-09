@@ -177,7 +177,7 @@ contains
       integer,                             intent(in) :: nsmoo !< number of smoothing repetitions
 
       integer :: n, b
-      real    :: L0, Lx, Ly, Lz, Lxy, Lxz, Lyz
+      eeal    :: L0, Lx, Ly, Lz, Lxy, Lxz, Lyz, iL0
       type(cg_list_element), pointer :: cgl
       type(grid_container),  pointer :: cg
       integer :: is, ie, js, je, ks, ke
@@ -207,6 +207,15 @@ contains
             Ly  = 0. ; if (dom%has_dir(ydim)) Ly = cg%idy2 - 2. * (Lxy + Lyz)
             Lz  = 0. ; if (dom%has_dir(zdim)) Lz = cg%idz2 - 2. * (Lxz + Lyz)
             L0  = 2. * (Lx + Ly + Lz) + 4. * (Lxy + Lxz + Lyz)
+            if (L0 /= 0.0) then
+               iL0 = 1. / L0
+               Lx = Lx * iL0
+               Ly = Ly * iL0
+               Lz = Lz * iL0
+               Lxy = Lxy * iL0
+               Lxz = Lxz * iL0
+               Lyz = Lyz * iL0
+            endif
             is = cg%is-b*dom%D_(xdim); ie = cg%ie+b*dom%D_(xdim)
             js = cg%js-b*dom%D_(ydim); je = cg%je+b*dom%D_(ydim)
             ks = cg%ks-b*dom%D_(zdim); ke = cg%ke+b*dom%D_(zdim)
@@ -216,16 +225,16 @@ contains
                ! OPT: In AMR applications (multiple blocks on same process) the most costly part of this routine can be call curl%arr3d_boundaries(soln),
                ! not the relaxation itself
                cg%wa(is  :ie  , js  :je  ,   ks:ke) = &
-                    &  (cg%q(soln)%arr(is-1:ie-1, js  :je  , ks  :ke  ) + cg%q(soln)%arr(is+1:ie+1, js  :je  , ks  :ke  ))*Lx/L0   &
-                    +  (cg%q(soln)%arr(is  :ie  , js-1:je-1, ks  :ke  ) + cg%q(soln)%arr(is  :ie  , js+1:je+1, ks  :ke  ))*Ly/L0   &
-                    +  (cg%q(soln)%arr(is  :ie  , js  :je  , ks-1:ke-1) + cg%q(soln)%arr(is  :ie  , js  :je  , ks+1:ke+1))*Lz/L0   &
+                    &  (cg%q(soln)%arr(is-1:ie-1, js  :je  , ks  :ke  ) + cg%q(soln)%arr(is+1:ie+1, js  :je  , ks  :ke  ))*Lx      &
+                    +  (cg%q(soln)%arr(is  :ie  , js-1:je-1, ks  :ke  ) + cg%q(soln)%arr(is  :ie  , js+1:je+1, ks  :ke  ))*Ly      &
+                    +  (cg%q(soln)%arr(is  :ie  , js  :je  , ks-1:ke-1) + cg%q(soln)%arr(is  :ie  , js  :je  , ks+1:ke+1))*Lz      &
                     + ((cg%q(soln)%arr(is-1:ie-1, js-1:je-1, ks  :ke  ) + cg%q(soln)%arr(is+1:ie+1, js-1:je-1, ks  :ke  ))         &
-                    +  (cg%q(soln)%arr(is-1:ie-1, js+1:je+1, ks  :ke  ) + cg%q(soln)%arr(is+1:ie+1, js+1:je+1, ks  :ke  )))*Lxy/L0 &
+                    +  (cg%q(soln)%arr(is-1:ie-1, js+1:je+1, ks  :ke  ) + cg%q(soln)%arr(is+1:ie+1, js+1:je+1, ks  :ke  )))*Lxy    &
                     + ((cg%q(soln)%arr(is  :ie  , js-1:je-1, ks-1:ke-1) + cg%q(soln)%arr(is  :ie  , js+1:je+1, ks-1:ke-1))         &
-                    +  (cg%q(soln)%arr(is  :ie  , js-1:je-1, ks+1:ke+1) + cg%q(soln)%arr(is  :ie  , js+1:je+1, ks+1:ke+1)))*Lyz/L0 &
+                    +  (cg%q(soln)%arr(is  :ie  , js-1:je-1, ks+1:ke+1) + cg%q(soln)%arr(is  :ie  , js+1:je+1, ks+1:ke+1)))*Lyz    &
                     + ((cg%q(soln)%arr(is-1:ie-1, js  :je  , ks-1:ke-1) + cg%q(soln)%arr(is+1:ie+1, js  :je  , ks-1:ke-1))         &
-                    +  (cg%q(soln)%arr(is-1:ie-1, js  :je  , ks+1:ke+1) + cg%q(soln)%arr(is+1:ie+1, js  :je  , ks+1:ke+1)))*Lxz/L0 &
-                    -   cg%q(src )%arr(is  :ie  , js  :je  , ks  :ke  ) / L0
+                    +  (cg%q(soln)%arr(is-1:ie-1, js  :je  , ks+1:ke+1) + cg%q(soln)%arr(is+1:ie+1, js  :je  , ks+1:ke+1)))*Lxz    &
+                    -   cg%q(src )%arr(is  :ie  , js  :je  , ks  :ke  ) * iL0
 ! For some weird reasons the formula that comes directly from the Mehrstellen operator worsens convergence
 ! Note that it requires enabling call curl%arr3d_boundaries(src, ...) above
 !!$                 - ((12-2*dom%eff_dim)*cg%q(src)%arr (is  :ie  , j,   k  )                                     &
@@ -234,28 +243,28 @@ contains
 !!$                 &  + cg%q(src)%arr (is  :ie  , j,   k-1) + cg%q(src)%arr (is  :ie  , j,   k+1))/(12. * L0)
             else
                cg%wa(is  :ie  , js:je,   ks:ke) = &
-                    -     cg%q(src )%arr(is  :ie  , js  :je,   ks  :ke  ) / L0
+                    -     cg%q(src )%arr(is  :ie  , js  :je,   ks  :ke  ) * iL0
                if (dom%has_dir(xdim)) &
                     &     cg%wa         (is  :ie  , js  :je,   ks  :ke  ) = cg%wa         (is  :ie  , js  :je,   ks  :ke  )          &
-                    & +  (cg%q(soln)%arr(is-1:ie-1, js  :je,   ks  :ke  ) + cg%q(soln)%arr(is+1:ie+1, js  :je,   ks  :ke  ))*Lx/L0
+                    & +  (cg%q(soln)%arr(is-1:ie-1, js  :je,   ks  :ke  ) + cg%q(soln)%arr(is+1:ie+1, js  :je,   ks  :ke  ))*Lx
                if (dom%has_dir(ydim)) &
                     &     cg%wa         (is  :ie  , js  :je,   ks  :ke  ) = cg%wa         (is  :ie  , js  :je,   ks  :ke  )          &
-                    & +  (cg%q(soln)%arr(is  :ie  , js-1:je-1, ks  :ke  ) + cg%q(soln)%arr(is  :ie  , js+1:je+1, ks  :ke  ))*Ly/L0
+                    & +  (cg%q(soln)%arr(is  :ie  , js-1:je-1, ks  :ke  ) + cg%q(soln)%arr(is  :ie  , js+1:je+1, ks  :ke  ))*Ly
                if (dom%has_dir(zdim)) &
                     &     cg%wa         (is  :ie  , js  :je,   ks  :ke  ) = cg%wa         (is  :ie  , js  :je,   ks  :ke  )          &
-                    & +  (cg%q(soln)%arr(is  :ie  , js  :je,   ks-1:ke-1) + cg%q(soln)%arr(is  :ie  , js  :je,   ks+1:ke+1))*Lz/L0
+                    & +  (cg%q(soln)%arr(is  :ie  , js  :je,   ks-1:ke-1) + cg%q(soln)%arr(is  :ie  , js  :je,   ks+1:ke+1))*Lz
                if (dom%has_dir(xdim) .and. dom%has_dir(ydim)) &
                     &     cg%wa         (is  :ie  , js  :je,   ks  :ke  ) = cg%wa         (is  :ie  , js  :je,   ks  :ke  )          &
                     & + ((cg%q(soln)%arr(is-1:ie-1, js-1:je-1, ks  :ke  ) + cg%q(soln)%arr(is+1:ie+1, js-1:je-1, ks  :ke  ))         &
-                    & + ( cg%q(soln)%arr(is-1:ie-1, js+1:je+1, ks  :ke  ) + cg%q(soln)%arr(is+1:ie+1, js+1:je+1, ks  :ke  )))*Lxy/L0
+                    & + ( cg%q(soln)%arr(is-1:ie-1, js+1:je+1, ks  :ke  ) + cg%q(soln)%arr(is+1:ie+1, js+1:je+1, ks  :ke  )))*Lxy
                if (dom%has_dir(ydim) .and. dom%has_dir(zdim)) &
                     &     cg%wa         (is  :ie  , js  :je,   ks  :ke  ) = cg%wa         (is  :ie  , js  :je,   ks  :ke  )          &
                     & + ((cg%q(soln)%arr(is  :ie  , js-1:je-1, ks-1:ke-1) + cg%q(soln)%arr(is  :ie  , js+1:je+1, ks-1:ke-1))         &
-                    & +  (cg%q(soln)%arr(is  :ie  , js-1:je-1, ks+1:ke+1) + cg%q(soln)%arr(is  :ie  , js+1:je+1, ks+1:ke+1)))*Lyz/L0
+                    & +  (cg%q(soln)%arr(is  :ie  , js-1:je-1, ks+1:ke+1) + cg%q(soln)%arr(is  :ie  , js+1:je+1, ks+1:ke+1)))*Lyz
                if (dom%has_dir(xdim) .and. dom%has_dir(zdim)) &
                     &     cg%wa         (is  :ie  , js  :je,   ks  :ke  ) = cg%wa         (is  :ie  , js  :je,   ks  :ke  )          &
                     & + ((cg%q(soln)%arr(is-1:ie-1, js  :je,   ks-1:ke-1) + cg%q(soln)%arr(is+1:ie+1, js  :je,   ks-1:ke-1))         &
-                    & +  (cg%q(soln)%arr(is-1:ie-1, js  :je,   ks+1:ke+1) + cg%q(soln)%arr(is+1:ie+1, js  :je,   ks+1:ke+1)))*Lxz/L0
+                    & +  (cg%q(soln)%arr(is-1:ie-1, js  :je,   ks+1:ke+1) + cg%q(soln)%arr(is+1:ie+1, js  :je,   ks+1:ke+1)))*Lxz
             endif
             cgl => cgl%nxt
          enddo
