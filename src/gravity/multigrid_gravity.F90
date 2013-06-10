@@ -399,6 +399,9 @@ contains
          call all_cg%reg_var(cg_corr_n)
          cg_corr   = qna%ind(cg_corr_n)
       endif
+      if (use_CG .or. use_CG_outer) then
+         if (master) call warn("[multigrid_gravity:multigrid_grav_par] Multigrid-preconditioned conjugate gradient solver is experimental!")
+      endif
 
    end subroutine multigrid_grav_par
 
@@ -928,7 +931,7 @@ contains
 
       use cg_leaves,          only: leaves
       use cg_list_dataop,     only: ind_val
-      use dataio_pub,         only: warn, msg, printinfo
+      use dataio_pub,         only: msg, printinfo
       use mpisetup,           only: master
       use multigrid_Laplace,  only: residual_order, vT_A_v_order
       use multigrid_old_soln, only: soln_history
@@ -943,7 +946,6 @@ contains
       integer :: it
       real    :: norm_rhs, norm_lhs, norm_old
 
-      if (master) call warn("[multigrid_gravity:mgpcg] Multigrid-preconditioned conjugate gradient solver is experimental!")
       beta = 0.
       call history%init_solution(vstat%cprefix)
       norm_rhs = leaves%norm_sq(source)
@@ -961,7 +963,7 @@ contains
          norm_lhs = leaves%norm_sq(defect)
          ts = set_timer("multigrid")
          tot_ts = tot_ts + ts
-         write(msg,'(a,i3,a,f12.8,a,f6.2,a,f11.7,g14.6,a,f8.3)')" MG-PCG: ", it, " lhs/rhs= ",norm_lhs/norm_rhs, " improvement= ",norm_old/norm_lhs, &
+         write(msg,'(a,i3,a,f12.8,a,f9.2,a,f11.7,g14.6,a,f8.3)')" MG-PCG: ", it, " lhs/rhs= ",norm_lhs/norm_rhs, " improvement= ",norm_old/norm_lhs, &
               &                                                 " alpha= ", alpha, beta, " time=", ts
          if (master) call printinfo(msg)
          if (norm_lhs/norm_rhs <= norm_tol) exit ! if rk+1 is sufficiently small then exit loop endif
