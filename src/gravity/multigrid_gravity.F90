@@ -75,10 +75,10 @@ module multigrid_gravity
    ! Conjugate gradients
    logical            :: use_CG                                       !< .true. if we want to use multigrid-preconditioned conjugate gradient iterations
    logical            :: use_CG_outer                                 !< .true. if we want to use multigrid-preconditioned conjugate gradient iterations for outer potential
-   logical            :: use_MGpreconditioning                        !< .true. if we want to use multigrid preconditioner
    character(len=dsetnamelen), parameter :: cg_corr_n = "cg_correction" !< correction vector for CG
    integer(kind=4)    :: cg_corr                                      !< index of the cg-correction vector
-
+   character(len=cbuff_len) :: preconditioner                         !< Multigrid (Huang-Greengard V-cycle) by default
+   character(len=cbuff_len), parameter :: default_preconditioner = "HG_V-cycle"
    integer            :: fftw_flags = FFTW_MEASURE                    !< or FFTW_PATIENT on request
 
    ! solution recycling
@@ -126,8 +126,8 @@ contains
 !! <tr><td>multidim_code_3D      </td><td>.false.</td><td>logical        </td><td>\copydoc multigridvars::multidim_code_3d          </td></tr>
 !! <tr><td>use_CG                </td><td>.false.</td><td>logical        </td><td>\copydoc multigrid_gravity::use_CG                </td></tr>
 !! <tr><td>use_CG_outer          </td><td>.false.</td><td>logical        </td><td>\copydoc multigrid_gravity::use_CG_outer          </td></tr>
-!! <tr><td>use_MGpreconditioning </td><td>.true. </td><td>logical        </td><td>\copydoc multigrid_gravity::use_MGpreconditioning </td></tr>
 !! <tr><td>grav_bnd_str          </td><td>"periodic"/"dirichlet"</td><td>string of chars</td><td>\copydoc multigrid_gravity::grav_bnd_str          </td></tr>
+!! <tr><td>preconditioner        </td><td>"HG_V-cycle"</td><td>string of chars</td><td>\copydoc multigrid_gravity::preconditioner   </td></tr>
 !! </table>
 !! The list is active while \b "GRAV" and \b "MULTIGRID" are defined.
 !! \n \n
@@ -151,11 +151,11 @@ contains
       integer       :: periodic_bnd_cnt   !< counter of periodic boundaries in existing directions
       logical, save :: frun = .true.      !< First run flag
 
-      namelist /MULTIGRID_GRAVITY/ norm_tol, vcycle_abort, vcycle_giveup, max_cycles, nsmool, nsmoob, use_CG, use_CG_outer, use_MGpreconditioning, &
+      namelist /MULTIGRID_GRAVITY/ norm_tol, vcycle_abort, vcycle_giveup, max_cycles, nsmool, nsmoob, use_CG, use_CG_outer, &
            &                       overrelax, overrelax_xyz, Jacobi_damp, L4_strength, nsmoof, ord_laplacian, ord_laplacian_outer, ord_time_extrap, &
            &                       prefer_rbgs_relaxation, base_no_fft, fft_full_relax, fft_patient, trust_fft_solution, &
            &                       coarsen_multipole, lmax, mmax, ord_prolong_mpole, use_point_monopole, interp_pt2mom, interp_mom2pot, multidim_code_3D, &
-           &                       grav_bnd_str
+           &                       grav_bnd_str, preconditioner
 
       if (.not.frun) call die("[multigrid_gravity:multigrid_grav_par] Called more than once.")
       frun = .false.
@@ -200,7 +200,6 @@ contains
       multidim_code_3D       = .false.
       use_CG                 = .false.
       use_CG_outer           = .false.
-      use_MGpreconditioning  = .true.
 
       periodic_bnd_cnt = count(dom%periodic(:) .and. dom%has_dir(:))
 
@@ -209,6 +208,7 @@ contains
       else
          grav_bnd_str = "dirichlet"
       endif
+      preconditioner = default_preconditioner
 
       if (master) then
 
@@ -275,10 +275,9 @@ contains
          lbuff(9)  = multidim_code_3D
          lbuff(10) = use_CG
          lbuff(11) = use_CG_outer
-         lbuff(12) = use_MGpreconditioning
 
          cbuff(1) = grav_bnd_str
-
+         cbuff(2) = preconditioner
       endif
 
       call piernik_MPI_Bcast(cbuff, cbuff_len)
@@ -319,10 +318,9 @@ contains
          multidim_code_3D        = lbuff(9)
          use_CG                  = lbuff(10)
          use_CG_outer            = lbuff(11)
-         use_MGpreconditioning   = lbuff(12)
 
          grav_bnd_str   = cbuff(1)(1:len(grav_bnd_str))
-
+         preconditioner = cbuff(2)(1:len(preconditioner))
       endif
 
       ! boundaries
@@ -964,7 +962,7 @@ contains
       norm_old = norm_rhs
 
       call residual_order(ordL(), leaves, source, solution, defect)                               ! {r}_0 := {b} - {A x}_0
-      call single_v_cycle(defect, correction)                                                     ! {z}_0 := {M}^{-1} {r}_0
+      call precond(defect, correction)                                                            ! {z}_0 := {M}^{-1} {r}_0
       call leaves%q_copy(correction, cg_corr)                                                     ! {d}_0 := {z}_0
       dc_k = leaves%scalar_product(defect, correction)                                            ! dc_k := {r}_k^{T} {z}_k
       do k = 0, max_cycles
@@ -982,7 +980,7 @@ contains
          if (master) call printinfo(msg)
          if (norm_lhs/norm_rhs <= norm_tol) exit                                                  ! if {r}_{k+1} is sufficiently small then exit loop
          norm_old = norm_lhs
-         call single_v_cycle(defect, correction)                                                  ! {z}_{k+1} := {M}^{-1} {r}_{k+1}
+         call precond(defect, correction)                                                         ! {z}_{k+1} := {M}^{-1} {r}_{k+1}
          dc_k1 = leaves%scalar_product(defect, correction)                                        ! dc_k1 := {z}_{k+1}^{T} {r}_{k+1}
          beta = dc_k1/dc_k                                                                        ! \beta_{k+1} := {{z}_{k+1}^{T} {r}_{k+1}}/{{z}_k^{T} {r}_k}
          call leaves%q_lin_comb( [ ind_val(correction, 1.), ind_val(cg_corr, beta) ], cg_corr )   ! {d}_{k+1} := {z}_{k+1} + \beta_{k+1} {d}_k
@@ -994,11 +992,35 @@ contains
 
    end subroutine mgpcg
 
+!> Call selected preconditioner
+
+   subroutine precond(def, corr)
+
+      use cg_leaves,  only: leaves
+      use dataio_pub, only: die
+
+      implicit none
+
+      integer(kind=4), intent(in) :: def  !< Defect (source, residual)
+      integer(kind=4), intent(in) :: corr !< Approximate solution for the defect (correction)
+
+      select case (preconditioner)
+         case (default_preconditioner, "MG", "V-cycle")
+            call single_v_cycle(def, corr)
+         case ("smooth")
+            call smoother(def, corr)
+         case ("none")
+            call leaves%q_copy(def, corr) ! non-preconditioned cg
+         case default
+            call die("[multigrid_gravity:precond] Unknown preconditioner")
+      end select
+
+   end subroutine precond
+
 !> \brief A single Hueang-Greengard V-cycle
 
    subroutine single_v_cycle(def, corr)
 
-      use cg_leaves,          only: leaves
       use cg_list_global,     only: all_cg
       use cg_level_coarsest,  only: coarsest
       use cg_level_connected, only: cg_level_connected_T
@@ -1011,25 +1033,38 @@ contains
 
       type(cg_level_connected_T), pointer :: curl
 
+      ! the Huang-Greengard V-cycle
+      call finest%level%restrict_to_floor_q_1var(def)
 
-      if (use_MGpreconditioning) then
-         ! the Huang-Greengard V-cycle
-         call finest%level%restrict_to_floor_q_1var(def)
+      call all_cg%set_dirty(corr)
+      call coarsest%level%set_q_value(corr, 0.)
 
-         call all_cg%set_dirty(corr)
-         call coarsest%level%set_q_value(corr, 0.)
-
-         curl => coarsest%level
-         do while (associated(curl))
-            call approximate_solution(curl, def, corr)
-            call curl%check_dirty(corr, "Vup1 relax+")
-            curl => curl%finer
-         enddo
-      else
-         call leaves%q_copy(def, corr) ! non-preconditioned cg
-      endif
+      curl => coarsest%level
+      do while (associated(curl))
+         call approximate_solution(curl, def, corr)
+         call curl%check_dirty(corr, "Vup1 relax+")
+         curl => curl%finer
+      enddo
 
    end subroutine single_v_cycle
+
+!> \brief Smoother as a preconditioner
+
+   subroutine smoother(def, corr)
+
+      use cg_level_finest,   only: finest
+      use multigrid_Laplace, only: approximate_solution_order
+      use multigridvars,     only: nsmool
+
+      implicit none
+
+      integer(kind=4), intent(in) :: def  !< Defect (source, residual)
+      integer(kind=4), intent(in) :: corr !< Approximate solution for the defect (correction)
+
+      call finest%level%set_q_value(corr, 0.)
+      call approximate_solution_order(ordL(), finest%level, def, corr, nsmool)
+
+   end subroutine smoother
 
 !>
 !! \brief The solver. Here we choose an adaptation of the Huang-Greengard V-cycle.
