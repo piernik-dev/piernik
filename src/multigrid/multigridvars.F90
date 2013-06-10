@@ -68,10 +68,9 @@ module multigridvars
    integer(kind=4)         :: nsmool                                  !< smoothing cycles per call
    integer(kind=4)         :: nsmoof                                  !< FFT iterations per call
    logical                 :: multidim_code_3D                        !< prefer code written for any 1D and 2D configuration even in 3D for benchmarking and debugging
-   real                    :: overrelax                                    !< overrealaxation factor (if < 1. then works as underrelaxation), provided for tests
-   real, dimension(ndims)  :: overrelax_xyz                            !< directional overrealaxation factor for fine tuning convergence ratio when cell spacing is not equal in all 3 directions. Use with care, patience and lots of hope.
-   real                    :: Jacobi_damp                                  !< omega factor for damped Jacobi relaxation. Jacobi_damp == 1 gives undamped method. Try 0.5 in 1D.
-   real                    :: L4_strength                                  !< strength of the 4th order terms in the Laplace operator; 0.: 2nd, 1.: 4th direct, 0.5: 4th integral
+   real                    :: overrelax                               !< overrealaxation factor (if < 1. then works as underrelaxation), provided for tests
+   real, dimension(ndims)  :: overrelax_xyz                           !< directional overrealaxation factor for fine tuning convergence ratio when cell spacing is not equal in all 3 directions. Use with care, patience and lots of hope.
+   real                    :: Jacobi_damp                             !< omega factor for damped Jacobi relaxation. Jacobi_damp == 1 gives undamped method. Try 0.5 in 1D.
 
    ! boundaries
    enum, bind(C)                                                      !< constants for enumerating multigrid boundary types

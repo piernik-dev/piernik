@@ -37,7 +37,9 @@ module multigrid_Laplace4
    implicit none
 
    private
-   public :: residual4, approximate_solution_relax4
+   public :: residual4, approximate_solution_relax4, L4_strength
+
+   real :: L4_strength   !< strength of the 4th order terms in the Laplace operator; 0.: 2nd, 1.: 4th direct, 0.5: 4th integral
 
 contains
 
@@ -72,7 +74,7 @@ contains
       use domain,        only: dom
       use grid_cont,     only: grid_container
       use mpisetup,      only: master
-      use multigridvars, only: grav_bnd, bnd_givenval, L4_strength
+      use multigridvars, only: grav_bnd, bnd_givenval
       use named_array,   only: p3
 
       implicit none
