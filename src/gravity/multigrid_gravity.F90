@@ -42,7 +42,7 @@
 module multigrid_gravity
 ! pulled by MULTIGRID && GRAV
 
-   use constants,          only: cbuff_len, dsetnamelen
+   use constants,          only: cbuff_len
    use multigrid_vstats,   only: vcycle_stats
    use multigrid_old_soln, only: soln_history
 
@@ -68,14 +68,6 @@ module multigrid_gravity
    logical            :: fft_patient                                  !< Spend more time in init_multigrid to find faster fft plan
    character(len=cbuff_len) :: grav_bnd_str                           !< Type of gravitational boundary conditions.
    logical            :: require_FFT                                  !< .true. if we use FFT solver anywhere (and need face prolongation)
-
-   ! Conjugate gradients
-   logical            :: use_CG                                       !< .true. if we want to use multigrid-preconditioned conjugate gradient iterations
-   logical            :: use_CG_outer                                 !< .true. if we want to use multigrid-preconditioned conjugate gradient iterations for outer potential
-   character(len=dsetnamelen), parameter :: cg_corr_n = "cg_correction" !< correction vector for CG
-   integer(kind=4)    :: cg_corr                                      !< index of the cg-correction vector
-   character(len=cbuff_len) :: preconditioner                         !< Multigrid (Huang-Greengard V-cycle) by default
-   character(len=cbuff_len), parameter :: default_preconditioner = "HG_V-cycle"
    integer            :: fftw_flags = FFTW_MEASURE                    !< or FFTW_PATIENT on request
 
    ! solution recycling
@@ -131,7 +123,6 @@ contains
 !<
    subroutine multigrid_grav_par
 
-      use cg_list_global,     only: all_cg
       use constants,          only: GEO_XYZ, GEO_RPZ, BND_PER, O_LIN, O_D2, O_I2, O_D4, I_ONE, INVALID
       use dataio_pub,         only: nh  ! QA_WARN required for diff_nml
       use dataio_pub,         only: msg, die, warn
@@ -144,8 +135,7 @@ contains
       use multigrid_Laplace4, only: L4_strength
       use multigrid_old_soln, only: nold_max, ord_time_extrap
       use multipole,          only: use_point_monopole, lmax, mmax, ord_prolong_mpole, coarsen_multipole, interp_pt2mom, interp_mom2pot
-      use named_array_list,   only: qna
-      use pcg,                only: use_CG, use_CG_outer, preconditioner, default_preconditioner, cg_corr, pcg_init
+      use pcg,                only: use_CG, use_CG_outer, preconditioner, default_preconditioner, pcg_init
 
       implicit none
 
@@ -395,11 +385,6 @@ contains
       call vstat%init(max_cycles)
 
       call pcg_init ! Conjugate gradients
-      if (use_CG .or. use_CG_outer) then
-         call all_cg%reg_var(cg_corr_n)
-         cg_corr = qna%ind(cg_corr_n)
-         if (master) call warn("[multigrid_gravity:multigrid_grav_par] Multigrid-preconditioned conjugate gradient solver is experimental!")
-      endif
 
    end subroutine multigrid_grav_par
 
@@ -895,7 +880,7 @@ contains
 
       use multigrid_old_soln, only: soln_history
       use multigridvars,      only: grav_bnd, bnd_givenval
-      use pcg,                only: mgpcg
+      use pcg,                only: mgpcg, use_CG, use_CG_outer
 
       implicit none
 
