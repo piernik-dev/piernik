@@ -14,3 +14,4 @@
 /* gravity type choosing */
 #define GRAV
 #define RTVD
+#define MULTIGRID

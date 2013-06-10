@@ -395,11 +395,10 @@ contains
 
       call vstat%init(max_cycles)
 
-      if (use_CG) then
-         call all_cg%reg_var(cg_corr_n)
-         cg_corr   = qna%ind(cg_corr_n)
-      endif
+      ! Conjugate gradients
       if (use_CG .or. use_CG_outer) then
+         call all_cg%reg_var(cg_corr_n)
+         cg_corr = qna%ind(cg_corr_n)
          if (master) call warn("[multigrid_gravity:multigrid_grav_par] Multigrid-preconditioned conjugate gradient solver is experimental!")
       endif
 
