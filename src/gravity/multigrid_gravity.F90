@@ -923,6 +923,19 @@ contains
 !!
 !! Note that forcing alpha = 1 and beta = 0 reduces this algorithm to bare multigrid
 !!
+!! Meaning of the symbols in comments:
+!! {b}      - source (4 pi G * density)
+!! {A}      - operator matrix (discrete Laplacian of chosen order and representation)
+!! {x}_k    - solution (k-th approximation of the gravitational potential)
+!! {r}_k    - residual (defect of the current solution)
+!! {M}^{-1} - preconditioning matrix, approximation of A^{-1} (here we use multigrid with relaxation to cheaply obtain it)
+!! {z}_k    - approximate correction for the solution obtained with the help of M^{-1} acting on current defect (preconditioner)
+!! {d}_k    - the correction direction found by the conjugate gradient algorithm,
+!!
+!! For the derivation of the conjugate gradient method see:
+!! Jonathan Richard Shewchuk, An Introduction to the Conjugate Gradient Method Without the Agonizing Pain
+!! The algorithm of preconditioned conjugare gradient method is described in Ch. 12 of the above publication.
+!!
 !! \todo Find out why it converges so poorly for outer potential
 !<
 
@@ -941,8 +954,8 @@ contains
 
       type(soln_history), intent(inout) :: history !< inner or outer potential history used for initializing first guess
 
-      real    :: alpha, beta, dc
-      integer :: it
+      real    :: alpha, beta, dc_k, dc_k1
+      integer :: k
       real    :: norm_rhs, norm_lhs, norm_old
 
       beta = 0.
@@ -950,30 +963,34 @@ contains
       norm_rhs = leaves%norm_sq(source)
       norm_old = norm_rhs
 
-      call residual_order(ordL(), leaves, source, solution, defect) !    {r}_0 := {b} - {A x}_0
-      call single_v_cycle(defect, correction) !     {z}_0 := {M}^{-1} {r}_0
-      call leaves%q_copy(correction, cg_corr) !   {p}_0 := {z}_0
-      do it = 0, max_cycles !    k := 0 \,     repeat
+      call residual_order(ordL(), leaves, source, solution, defect)                               ! {r}_0 := {b} - {A x}_0
+      call single_v_cycle(defect, correction)                                                     ! {z}_0 := {M}^{-1} {r}_0
+      call leaves%q_copy(correction, cg_corr)                                                     ! {d}_0 := {z}_0
+      dc_k = leaves%scalar_product(defect, correction)                                            ! dc_k := {r}_k^{T} {z}_k
+      do k = 0, max_cycles
 
-         dc = leaves%scalar_product(defect, correction)
-         alpha = dc/vT_A_v_order(ordL(), cg_corr) !\alpha_k := {{r}_k^{T} {z}_k}/{{p}_k^{T} {A p}_k}
-         call leaves%q_lin_comb( [ ind_val(solution, 1.), ind_val(cg_corr, alpha) ], solution) !{x}_{k+1} := {x}_k + \alpha_k {p}_k
-         call residual_order(ordL(), leaves, source, solution, defect) ! {r}_{k+1} := {r}_k - \alpha_k {A p}_k
+         alpha = dc_k/vT_A_v_order(ordL(), cg_corr)                                               ! \alpha_k := {{r}_k^{T} {z}_k}/{{d}_k^{T} {A d}_k}
+         call leaves%q_lin_comb( [ ind_val(solution, 1.), ind_val(cg_corr, alpha) ], solution)    ! {x}_{k+1} := {x}_k + \alpha_k {d}_k
+         call residual_order(ordL(), leaves, source, solution, defect)                            ! {r}_{k+1} := {r}_k - \alpha_k {A d}_k = {b} - {A x}_{k+1}
+         !OPT: Use {A d}_k computed in vT_A_v_order to avoid communication required for residual_order (costs memory for storing one field, risk of drift due to boundary values)
+         !OPT: Alternatively pass a flag to the residual_order routine that effectively switches off guardcell update as they're already have been updated by vT_A_v_order
          norm_lhs = leaves%norm_sq(defect)
          ts = set_timer("multigrid")
          tot_ts = tot_ts + ts
-         write(msg,'(a,i3,a,f12.8,a,f9.2,a,f11.7,g14.6,a,f8.3)')" MG-PCG: ", it, " lhs/rhs= ",norm_lhs/norm_rhs, " improvement= ",norm_old/norm_lhs, &
-              &                                                 " alpha= ", alpha, beta, " time=", ts
+         write(msg,'(a,i3,a,f12.8,a,f9.2,a,f11.7,g14.6,a,f8.3)')"MG-PCG: ", k, " lhs/rhs= ",norm_lhs/norm_rhs, " improvement= ",norm_old/norm_lhs, &
+              &                                                 " a,b= ", alpha, beta, " time=", ts
          if (master) call printinfo(msg)
-         if (norm_lhs/norm_rhs <= norm_tol) exit ! if rk+1 is sufficiently small then exit loop endif
+         if (norm_lhs/norm_rhs <= norm_tol) exit                                                  ! if {r}_{k+1} is sufficiently small then exit loop
          norm_old = norm_lhs
-         call single_v_cycle(defect, correction) ! {z}_{k+1} := {M}^{-1} {r}_{k+1}
-         beta = leaves%scalar_product(defect, correction)/dc ! \beta_k := {{z}_{k+1}^{T} {r}_{k+1}}/{{z}_k^{T} {r}_k}
-         call leaves%q_lin_comb( [ ind_val(correction, 1.), ind_val(cg_corr, beta) ], cg_corr ) ! {p}_{k+1} := {z}_{k+1} + \beta_k {p}_k
+         call single_v_cycle(defect, correction)                                                  ! {z}_{k+1} := {M}^{-1} {r}_{k+1}
+         dc_k1 = leaves%scalar_product(defect, correction)                                        ! dc_k1 := {z}_{k+1}^{T} {r}_{k+1}
+         beta = dc_k1/dc_k                                                                        ! \beta_{k+1} := {{z}_{k+1}^{T} {r}_{k+1}}/{{z}_k^{T} {r}_k}
+         call leaves%q_lin_comb( [ ind_val(correction, 1.), ind_val(cg_corr, beta) ], cg_corr )   ! {d}_{k+1} := {z}_{k+1} + \beta_{k+1} {d}_k
+         dc_k = dc_k1
 
-      enddo !k := k + 1;    end repeat
+      enddo
 
-      call history%store_solution       !    The result is xk+1
+      call history%store_solution
 
    end subroutine mgpcg
 
