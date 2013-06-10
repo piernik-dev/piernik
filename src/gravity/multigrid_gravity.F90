@@ -1044,7 +1044,6 @@ contains
          call finest%level%restrict_to_floor_q_1var(defect)
 
          call all_cg%set_dirty(correction)
-         call coarsest%level%set_q_value(correction, 0.)
 
          curl => coarsest%level
          do while (associated(curl))

@@ -201,7 +201,6 @@ contains
       call finest%level%restrict_to_floor_q_1var(def)
 
       call all_cg%set_dirty(corr)
-      call coarsest%level%set_q_value(corr, 0.)
 
       curl => coarsest%level
       do while (associated(curl))

@@ -44,14 +44,23 @@ module multigrid_gravity_helper
 
 contains
 
-!> \brief This routine has to find an approximate solution for given source field and implemented differential operator
+!>
+!! \brief This routine has to find an approximate solution for given source field and implemented differential operator
+!!
+!! \details First, it initializes the solution. It means that the solution is:
+!! * set to 0 for coarsest level,
+!! * prolonged from coarser level otherwise.
+!! Then a relaxation is called. The number of relaxation passes is determined according to the level.
+!!
+!! If for some reason it is undesirable to initialize the solution, call approximate_solution_order directly.
+!<
 
    subroutine approximate_solution(curl, src, soln)
 
       use cg_level_coarsest,  only: coarsest
       use cg_level_connected, only: cg_level_connected_T
       use constants,          only: BND_NEGREF
-      use multigridvars,      only: correction, nsmool
+      use multigridvars,      only: nsmool
       use multigrid_Laplace,  only: approximate_solution_order
 !!$      use constants,           only: fft_none
 !!$      use multigrid_fftapprox, only: approximate_solution_fft
@@ -69,12 +78,14 @@ contains
 !!$         call approximate_solution_fft(curl, src, soln)
 !!$      else
       if (associated(curl, coarsest%level)) then
-         nsmoo = nsmoob
          !> \todo Implement automatic convergence check on coarsest level (not very important when we have a FFT solver for coarsest level)
+         !> \todo Implement alternative bottom-solvers
+         nsmoo = nsmoob
+         call coarsest%level%set_q_value(soln, 0.)
       else
          nsmoo = nsmool
-         if (soln == correction) call curl%coarser%prolong_q_1var(soln, bnd_type = BND_NEGREF) ! make sure that prolongation is called only in ascending (coarse -> fine) part of V-cycle.
-         !> \warning this may be incompatible with V-cycles other than Huang - Greengard
+         call curl%coarser%prolong_q_1var(soln, bnd_type = BND_NEGREF)
+         !> \warning when this is be incompatible with V-cycle or other scheme, use direct call to approximate_solution_order
       endif
 
       call approximate_solution_order(curl, src, soln, nsmoo)
