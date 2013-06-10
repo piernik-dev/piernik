@@ -27,16 +27,14 @@
 !
 
 #include "piernik.h"
-#include "macros.h"
 
 !>
-!! \brief Multigrid Poisson solver
+!! \brief Preconditioned conjugate gradient solver.
 !!
-!! \details This module contains routines and variables specific for multigrid self-gravity solver.
+!! \details
 !!
-!! Some code pieces (low-level FFT routines) here are not really gravity-related,
-!! but these are not needed for implicit CR-diffusion solver either.
-!! These parts of code can be moved to other multigrid files when any other multigrid solver uses them.
+!! Note that it is theoretically possible to use most of this module without multigrid.
+!! We decided to leave dependencies on multigrid to keep the code simplier.
 !<
 
 module pcg
@@ -50,12 +48,12 @@ module pcg
    public :: pcg_init, mgpcg, &
         &    use_CG, use_CG_outer, preconditioner, default_preconditioner, cg_corr
 
-   logical            :: use_CG                                       !< .true. if we want to use multigrid-preconditioned conjugate gradient iterations
-   logical            :: use_CG_outer                                 !< .true. if we want to use multigrid-preconditioned conjugate gradient iterations for outer potential
-   character(len=dsetnamelen), parameter :: cg_corr_n = "cg_correction" !< correction vector for CG
-   integer(kind=4)    :: cg_corr                                      !< index of the cg-correction vector
-   character(len=cbuff_len) :: preconditioner                         !< Multigrid (Huang-Greengard V-cycle) by default
-   character(len=cbuff_len), parameter :: default_preconditioner = "HG_V-cycle"
+   logical            :: use_CG                                                 !< .true. if we want to use multigrid-preconditioned conjugate gradient (MG-PCG) iterations
+   logical            :: use_CG_outer                                           !< .true. if we want to use MG-PCG iterations for outer potential
+   character(len=dsetnamelen), parameter :: cg_corr_n = "cg_correction"         !< correction vector for CG
+   integer(kind=4)    :: cg_corr                                                !< index of the cg-correction vector
+   character(len=cbuff_len) :: preconditioner                                   !< Multigrid (Huang-Greengard V-cycle) by default
+   character(len=cbuff_len), parameter :: default_preconditioner = "HG_V-cycle" !< default preconditioner
 
 contains
 
@@ -77,7 +75,7 @@ contains
    end subroutine pcg_init
 
 !>
-!! \brief Multigrid-preconditioned conjugate gradient solver
+!! \brief Preconditioned conjugate gradient solver
 !!
 !! \details This solver can converge on domains that require high cell anisotropy e.g cg%dx >> cg%dy
 !!
@@ -88,7 +86,7 @@ contains
 !! {A}      - operator matrix (discrete Laplacian of chosen order and representation)
 !! {x}_k    - solution (k-th approximation of the gravitational potential)
 !! {r}_k    - residual (defect of the current solution)
-!! {M}^{-1} - preconditioning matrix, approximation of A^{-1} (here we use multigrid with relaxation to cheaply obtain it)
+!! {M}^{-1} - preconditioning matrix, approximation of A^{-1} (here, by default, we use multigrid with relaxation to cheaply obtain it)
 !! {z}_k    - approximate correction for the solution obtained with the help of M^{-1} acting on current defect (preconditioner)
 !! {d}_k    - the correction direction found by the conjugate gradient algorithm,
 !!

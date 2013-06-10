@@ -27,7 +27,6 @@
 !
 
 #include "piernik.h"
-#include "macros.h"
 
 !> \brief Multigrid routines and parameters useful for various variants of the solver
 
