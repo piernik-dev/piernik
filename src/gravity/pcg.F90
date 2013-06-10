@@ -119,7 +119,9 @@ contains
       real    :: alpha, beta, dc_k, dc_k1
       integer :: k
       real    :: norm_rhs, norm_lhs, norm_old
+      real    :: loc_ts
 
+      loc_ts = 0
       beta = 0.
       norm_rhs = leaves%norm_sq(source)
       norm_old = norm_rhs
@@ -138,6 +140,7 @@ contains
          norm_lhs = leaves%norm_sq(defect)
          ts = set_timer("multigrid")
          tot_ts = tot_ts + ts
+         loc_ts = loc_ts + ts
          write(msg,'(a,i3,a,f12.8,a,f9.2,a,f11.7,g14.6,a,f8.3)')"MG-PCG: ", k, " lhs/rhs= ",norm_lhs/norm_rhs, " improvement= ",norm_old/norm_lhs, &
               &                                                 " a,b= ", alpha, beta, " time=", ts
          if (master) call printinfo(msg)
@@ -152,6 +155,12 @@ contains
       enddo
 
       call history%store_solution
+
+      ts = set_timer("multigrid")
+      tot_ts = tot_ts + ts
+      loc_ts = loc_ts + ts
+      write(msg, '(a,i4,a,f8.3)')"MG-PCG: ",k," iterations, total time spent =", loc_ts
+      if (master) call printinfo(msg)
 
    end subroutine mgpcg
 
@@ -168,7 +177,7 @@ contains
       integer(kind=4), intent(in) :: corr !< Approximate solution for the defect (correction)
 
       select case (preconditioner)
-         case (default_preconditioner, "MG", "V-cycle")
+         case (default_preconditioner, "MG", "V-cycle", "V")
             call single_v_cycle(def, corr)
          case ("smooth")
             call smoother(def, corr)
