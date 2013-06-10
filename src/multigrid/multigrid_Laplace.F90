@@ -125,7 +125,7 @@ contains
       type(cg_level_connected_T), pointer, intent(in) :: curl  !< pointer to a level for which we approximate the solution
       integer(kind=4),                     intent(in) :: src   !< index of source in cg%q(:)
       integer(kind=4),                     intent(in) :: soln  !< index of solution in cg%q(:)
-      integer,                             intent(in) :: nsmoo !< Number of smoothing operations to perform
+      integer(kind=4),                     intent(in) :: nsmoo !< Number of smoothing operations to perform
 
       select case (ordL())
          case (O_I2)

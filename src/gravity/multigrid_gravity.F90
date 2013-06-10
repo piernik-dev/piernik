@@ -61,7 +61,6 @@ module multigrid_gravity
    real               :: vcycle_abort                                 !< abort the V-cycle when lhs norm raises by this factor
    real               :: vcycle_giveup                                !< exit the V-cycle when convergence ratio drops below that level
    integer(kind=4)    :: max_cycles                                   !< Maximum allowed number of V-cycles
-   integer(kind=4)    :: nsmoob                                       !< smoothing cycles on coarsest level when cannot use FFT. (a convergence check would be much better)
    logical            :: trust_fft_solution                           !< Bypass the V-cycle, when doing FFT on whole domain, make sure first that FFT is properly set up.
    logical            :: base_no_fft                                  !< Deny solving the coarsest level with FFT. Can be very slow.
    logical            :: prefer_rbgs_relaxation                       !< Prefer relaxation over FFT local solver. Typically faster.
@@ -100,7 +99,7 @@ contains
 !! <tr><td>vcycle_giveup         </td><td>1.5    </td><td>real value     </td><td>\copydoc multigrid_gravity::vcycle_giveup         </td></tr>
 !! <tr><td>max_cycles            </td><td>20     </td><td>integer value  </td><td>\copydoc multigrid_gravity::max_cycles            </td></tr>
 !! <tr><td>nsmool                </td><td>dom%nb </td><td>integer value  </td><td>\copydoc multigridvars::nsmool                    </td></tr>
-!! <tr><td>nsmoob                </td><td>100    </td><td>integer value  </td><td>\copydoc multigrid_gravity::nsmoob                </td></tr>
+!! <tr><td>nsmoob                </td><td>100    </td><td>integer value  </td><td>\copydoc multigrid_gravity_helper::nsmoob         </td></tr>
 !! <tr><td>overrelax             </td><td>1.     </td><td>real value     </td><td>\copydoc multigrid_gravity::overrelax             </td></tr>
 !! <tr><td>overrelax_xxyz(ndims) </td><td>1.     </td><td>real value     </td><td>\copydoc multigrid_gravity::overrelax_xyz         </td></tr>
 !! <tr><td>Jacobi_damp           </td><td>1.     </td><td>real value     </td><td>\copydoc multigrid_gravity::jacobi_damp           </td></tr>
@@ -140,6 +139,7 @@ contains
       use mpisetup,           only: master, slave, ibuff, cbuff, rbuff, lbuff, nproc, piernik_MPI_Bcast
       use multigridvars,      only: single_base, bnd_invalid, bnd_isolated, bnd_periodic, bnd_dirichlet, grav_bnd, fft_full_relax, multidim_code_3D, nsmool, nsmoof, &
            &                        overrelax, overrelax_xyz, Jacobi_damp
+      use multigrid_gravity_helper, only: nsmoob
       use multigrid_Laplace,  only: ord_laplacian, ord_laplacian_outer
       use multigrid_Laplace4, only: L4_strength
       use multigrid_old_soln, only: nold_max, ord_time_extrap
@@ -1026,6 +1026,7 @@ contains
       use cg_level_coarsest,  only: coarsest
       use cg_level_connected, only: cg_level_connected_T
       use cg_level_finest,    only: finest
+      use multigrid_gravity_helper, only: approximate_solution
 
       implicit none
 
@@ -1084,6 +1085,7 @@ contains
       use global,             only: do_ascii_dump
       use mpisetup,           only: master, nproc
       use multigridvars,      only: source, solution, correction, defect, verbose_vcycle, stdout, tot_ts, ts, grav_bnd, bnd_periodic
+      use multigrid_gravity_helper, only: approximate_solution
       use multigrid_Laplace,  only: residual_order
       use multigrid_old_soln, only: soln_history
       use timer,              only: set_timer
@@ -1236,46 +1238,6 @@ contains
       call history%store_solution
 
    end subroutine vcycle_hg
-
-!> \brief This routine has to find an approximate solution for given source field and implemented differential operator
-
-   subroutine approximate_solution(curl, src, soln)
-
-      use cg_level_coarsest,  only: coarsest
-      use cg_level_connected, only: cg_level_connected_T
-      use constants,          only: BND_NEGREF
-      use multigridvars,      only: correction, nsmool
-      use multigrid_Laplace,  only: approximate_solution_order
-!!$      use constants,           only: fft_none
-!!$      use multigrid_fftapprox, only: approximate_solution_fft
-
-      implicit none
-
-      type(cg_level_connected_T), pointer, intent(in) :: curl !< pointer to a level for which we approximate the solution
-      integer(kind=4),                     intent(in) :: src  !< index of source in cg%q(:)
-      integer(kind=4),                     intent(in) :: soln !< index of solution in cg%q(:)
-
-      integer :: nsmoo
-
-      call curl%check_dirty(src, "approx_soln src-")
-!!$      if (curl%fft_type /= fft_none) then
-!!$         call approximate_solution_fft(curl, src, soln)
-!!$      else
-      if (associated(curl, coarsest%level)) then
-         nsmoo = nsmoob
-         !> \todo Implement automatic convergence check on coarsest level (not very important when we have a FFT solver for coarsest level)
-      else
-         nsmoo = nsmool
-         if (soln == correction) call curl%coarser%prolong_q_1var(soln, bnd_type = BND_NEGREF) ! make sure that prolongation is called only in ascending (coarse -> fine) part of V-cycle.
-         !> \warning this may be incompatible with V-cycles other than Huang - Greengard
-      endif
-
-      call approximate_solution_order(curl, src, soln, nsmoo)
-!!$      endif
-
-      call curl%check_dirty(soln, "approx_soln soln+")
-
-   end subroutine approximate_solution
 
 !> \brief Solve finest level if allowed (single cg and single thread)
 
