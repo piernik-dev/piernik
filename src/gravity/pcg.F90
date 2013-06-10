@@ -164,7 +164,14 @@ contains
 
    end subroutine mgpcg
 
-!> Call selected preconditioner
+!>
+!! \brief Call selected preconditioner
+!!
+!! \details The V-cycle seems to be the most efficient preconditioner as yet.
+!! It may be beneficial to increase nsmool from 4 to 8 or even 12 to get best convergence and minimize CPU time.
+!!
+!! Performing 2 V-cycles instead of 1 seems to cost more than it saves doe to improvements to convergence rate.
+!<
 
    subroutine precond(def, corr)
 
