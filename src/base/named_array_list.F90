@@ -64,6 +64,7 @@ module named_array_list
    type :: na_var_list
       type(na_var), dimension(:), allocatable :: lst
     contains
+      procedure, private ::  find_ind                            !< Get the index of a named array of given name. Don't die when can't find requested field.
       procedure :: ind                                           !< Get the index of a named array of given name.
       procedure :: exists                                        !< Check if a named array of given name is already registered
       procedure :: print_vars                                    !< Write a summary on registered fields. Can be useful for debugging
@@ -94,24 +95,24 @@ contains
 !!
 !! \warning OPT The indices aren't updated so cache them, whenever possible
 !<
-   function ind(this, name) result(rind)
+   function find_ind(this, name) result(rind)
 
-      use dataio_pub,  only: die, msg, warn
+      use constants,  only: INVALID
+      use dataio_pub, only: die, msg
 
       implicit none
 
-      class(na_var_list), intent(inout) :: this
-      character(len=*),   intent(in)    :: name
+      class(na_var_list), intent(in) :: this
+      character(len=*),   intent(in) :: name
 
       integer(kind=4) :: rind, i
 
-      rind = 0
-
+      rind = INVALID
       if (allocated(this%lst)) then
          do i = lbound(this%lst, dim=1, kind=4), ubound(this%lst, dim=1, kind=4)
             if (trim(name) == this%lst(i)%name) then
-               if (rind /= 0) then
-                  write(msg, '(2a)') "[named_array_list:ind] multiple entries with the same name: ", trim(name)
+               if (rind /= INVALID) then
+                  write(msg, '(3a)') "[named_array_list:find_ind] multiple entries with the same name '", trim(name),"'"
                   call die(msg)
                endif
                rind = i
@@ -119,40 +120,46 @@ contains
          enddo
       endif
 
-      if (rind == 0) then
-         write(msg, '(2a)') "[named_array_list:ind] requested entry not found: ", trim(name)
-         call warn(msg)
+   end function find_ind
+
+!>
+!! \brief Get the index of a named array of given name.
+!!
+!! \warning OPT The indices aren't updated so cache them, whenever possible
+!<
+   function ind(this, name) result(rind)
+
+      use constants,  only: INVALID
+      use dataio_pub, only: die, msg
+
+      implicit none
+
+      class(na_var_list), intent(in) :: this
+      character(len=*),   intent(in) :: name
+
+      integer(kind=4) :: rind
+
+      rind = this%find_ind(name)
+
+      if (rind == INVALID) then
+         write(msg, '(3a)') "[named_array_list:ind] requested entry not found: '", trim(name), "'"
+         call die(msg)
       endif
 
    end function ind
 
 !> \brief Check if a named array of given name is already registered
 
-   function exists(this, name)
+   logical function exists(this, name)
 
-      use dataio_pub,  only: die, msg
+      use constants, only: INVALID
 
       implicit none
 
-      class(na_var_list), intent(inout) :: this
-      character(len=*),   intent(in)    :: name
+      class(na_var_list), intent(in) :: this
+      character(len=*),   intent(in) :: name
 
-      logical :: exists
-      integer :: i
-
-      exists = .false.
-
-      if (allocated(this%lst)) then
-         do i = lbound(this%lst(:), dim=1), ubound(this%lst(:), dim=1)
-            if (trim(name) ==  this%lst(i)%name) then
-               if (exists) then
-                  write(msg, '(2a)') "[named_array_list:exists] multiple entries with the same name: ", trim(name)
-                  call die(msg)
-               endif
-               exists = .true.
-            endif
-         enddo
-      endif
+      exists = (this%find_ind(name) /= INVALID)
 
    end function exists
 
@@ -199,11 +206,8 @@ contains
 
    end subroutine add2lst
 
-!>
-!! \brief Find out which fields (cg%q and cg%w arrays) are stored in the restart file
-!!
-!! \details The result arrays qna, wna need to be deallocated separately
-!<
+!> \brief Find out which fields (cg%q and cg%w arrays) are stored in the restart file
+
 
    function get_reslst(this) result (lst)
 
@@ -212,9 +216,9 @@ contains
 
       implicit none
 
-      class(na_var_list), intent(inout)  :: this
-      integer, dimension(:), allocatable :: lst
+      class(na_var_list), intent(in) :: this
 
+      integer, dimension(:), allocatable :: lst
       integer                            :: i
 
       if (allocated(this%lst)) then
@@ -237,8 +241,8 @@ contains
 
       implicit none
 
-      class(na_var_list), intent(inout) :: this
-      logical, optional,  intent(in)    :: to_stdout
+      class(na_var_list), intent(in) :: this
+      logical, optional,  intent(in) :: to_stdout
 
       integer :: i, d3
 
