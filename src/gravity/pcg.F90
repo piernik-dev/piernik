@@ -48,14 +48,16 @@ module pcg
    public :: pcg_init, mgpcg, &
         &    use_CG, use_CG_outer, preconditioner, default_preconditioner, cg_corr
 
-   logical            :: use_CG                                                 !< .true. if we want to use multigrid-preconditioned conjugate gradient (MG-PCG) iterations
-   logical            :: use_CG_outer                                           !< .true. if we want to use MG-PCG iterations for outer potential
-   character(len=dsetnamelen), parameter :: cg_corr_n = "cg_correction"         !< correction vector for CG
-   integer(kind=4)    :: cg_corr                                                !< index of the cg-correction vector
-   character(len=cbuff_len) :: preconditioner                                   !< Multigrid (Huang-Greengard V-cycle) by default
-   character(len=cbuff_len), parameter :: default_preconditioner = "HG_V-cycle" !< default preconditioner
+   logical                               :: use_CG                                !< .true. if we want to use multigrid-preconditioned conjugate gradient (MG-PCG) iterations
+   logical                               :: use_CG_outer                          !< .true. if we want to use MG-PCG iterations for outer potential
+   character(len=dsetnamelen), parameter :: cg_corr_n = "cg_correction"           !< correction vector for CG
+   integer(kind=4)                       :: cg_corr                               !< index of the cg-correction vector
+   character(len=cbuff_len)              :: preconditioner                        !< Multigrid (Huang-Greengard V-cycle) by default
+   character(len=cbuff_len), parameter   :: default_preconditioner = "HG_V-cycle" !< default preconditioner
 
 contains
+
+!> \brief Register additional array required for PCG
 
    subroutine pcg_init
 
@@ -69,7 +71,7 @@ contains
       if (use_CG .or. use_CG_outer) then
          call all_cg%reg_var(cg_corr_n)
          cg_corr = qna%ind(cg_corr_n)
-         if (master) call warn("[multigrid_gravity:multigrid_grav_par] Multigrid-preconditioned conjugate gradient solver is experimental!")
+         if (master) call warn("[pcg:pcg_init] Multigrid-preconditioned conjugate gradient solver is experimental!")
       endif
 
    end subroutine pcg_init
@@ -173,7 +175,7 @@ contains
          case ("none")
             call leaves%q_copy(def, corr) ! non-preconditioned cg
          case default
-            call die("[multigrid_gravity:precond] Unknown preconditioner")
+            call die("[pcg:precond] Unknown preconditioner")
       end select
 
    end subroutine precond
