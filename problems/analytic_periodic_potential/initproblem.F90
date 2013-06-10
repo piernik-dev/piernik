@@ -167,7 +167,6 @@ contains
       use grid_cont,         only: grid_container
       use named_array_list,  only: qna
       use mpisetup,          only: master
-      use multigrid_gravity, only: ordL
       use multigrid_Laplace, only: residual_order
       use units,             only: fpiG
 
@@ -236,7 +235,7 @@ contains
          cg%q(qna%ind(asrc_n))%arr(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = fpiG * sum(cg%u(iarr_all_dn, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), dim=1)
          cgl => cgl%nxt
       enddo
-      call residual_order(ordL(), leaves, qna%ind(asrc_n), qna%ind(apot_n), qna%ind(ares_n))
+      call residual_order(leaves, qna%ind(asrc_n), qna%ind(apot_n), qna%ind(ares_n))
       call leaves%check_dirty(qna%ind(ares_n), "a-residual")
 
       write(msg,'(a,f13.10)')"[initproblem:problem_initial_conditions] Analytical norm residual/source= ",leaves%norm_sq(qna%ind(ares_n))/leaves%norm_sq(qna%ind(asrc_n))

@@ -37,9 +37,27 @@ module multigrid_Laplace
    implicit none
 
    private
-   public :: residual_order, approximate_solution_order, vT_A_v_order
+   public :: residual_order, approximate_solution_order, vT_A_v_order, ord_laplacian, ord_laplacian_outer
+
+   integer(kind=4) :: ord_laplacian          !< Laplace operator order; allowed values are 2, -4 (default) and 4 (not fully implemented)
+   integer(kind=4) :: ord_laplacian_outer    !< Laplace operator order for isolated boundaries (useful as long as -4 is not fully implemented)
 
 contains
+
+!> \brief Select appropriate order of laplacian, depending on which solve operation we're on
+
+   function ordL()
+
+      use multigridvars, only: grav_bnd, bnd_givenval
+
+      implicit none
+
+      integer(kind=4) :: ordL
+
+      ordL = ord_laplacian
+      if (grav_bnd == bnd_givenval) ordL = ord_laplacian_outer
+
+   end function ordL
 
 !>
 !! \brief Select requested routine for calculation of the residuum for the Poisson equation.
@@ -57,7 +75,7 @@ contains
 !! \warning Relaxation is not implemented for the fourth order operator.
 !<
 
-   subroutine residual_order(ord, cg_llst, src, soln, def)
+   subroutine residual_order(cg_llst, src, soln, def)
 
       use cg_leaves,           only: cg_leaves_T
       use constants,           only: O_I2, O_I4
@@ -68,13 +86,12 @@ contains
 
       implicit none
 
-      integer(kind=4),    intent(in) :: ord     !< Order of the Laplace operator
       class(cg_leaves_T), intent(in) :: cg_llst !< pointer to a list of grids for which we approximate the solution
       integer(kind=4),    intent(in) :: src     !< index of source in cg%q(:)
       integer(kind=4),    intent(in) :: soln    !< index of solution in cg%q(:)
       integer(kind=4),    intent(in) :: def     !< index of defect in cg%q(:)
 
-      select case (ord)
+      select case (ordL())
          case (O_I2)
             call residual2(cg_llst, src, soln, def)
          case (O_I4)
@@ -94,7 +111,7 @@ contains
 !! The relaxation routines also depends a lot on communication, which may limit scalability of the multigrid.
 !<
 
-   subroutine approximate_solution_order(ord, curl, src, soln, nsmoo)
+   subroutine approximate_solution_order(curl, src, soln, nsmoo)
 
       use cg_level_connected,  only: cg_level_connected_T
       use constants,           only: O_I2, O_I4
@@ -105,13 +122,12 @@ contains
 
       implicit none
 
-      integer(kind=4),                     intent(in) :: ord   !< Order of the Laplace operator
       type(cg_level_connected_T), pointer, intent(in) :: curl  !< pointer to a level for which we approximate the solution
       integer(kind=4),                     intent(in) :: src   !< index of source in cg%q(:)
       integer(kind=4),                     intent(in) :: soln  !< index of solution in cg%q(:)
       integer,                             intent(in) :: nsmoo !< Number of smoothing operations to perform
 
-      select case (ord)
+      select case (ordL())
          case (O_I2)
             call approximate_solution_rbgs2  (curl, src, soln, nsmoo)
          case (O_I4)
@@ -126,7 +142,7 @@ contains
 
 !> \brief Selector for v*Laplacian(v) routine
 
-   real function vT_A_v_order(ord, var)
+   real function vT_A_v_order(var)
 
       use cg_leaves,          only: leaves
       use cg_list_global,     only: all_cg
@@ -139,14 +155,13 @@ contains
 
       implicit none
 
-      integer(kind=4), intent(in) :: ord   !< Order of the Laplace operator
       integer(kind=4), intent(in) :: var   !< Variable on which we want to calculate the operation
 
       logical, save :: firstcall = .true.
       character(len=dsetnamelen), parameter :: cg_L_n = "cg_L"
       integer(kind=4), save :: cg_L = INVALID
 
-      if (dom%geometry_type == GEO_XYZ .and. ord == O_I2 .and. dom%eff_dim == ndims) then
+      if (dom%geometry_type == GEO_XYZ .and. ordL() == O_I2 .and. dom%eff_dim == ndims) then
          vT_A_v_order = vT_A_v_2(var)
       else
          if (firstcall) then
@@ -156,7 +171,7 @@ contains
          endif
          firstcall = .false.
          call leaves%set_q_value(qna%wai, 0.)
-         call residual_order(ord, leaves, qna%wai, var, cg_L)
+         call residual_order(leaves, qna%wai, var, cg_L)
          vT_A_v_order = -leaves%scalar_product(var, cg_L)
       endif
 

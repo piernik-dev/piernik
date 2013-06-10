@@ -49,7 +49,7 @@ module multigrid_gravity
    implicit none
 
    private
-   public :: multigrid_grav_par, init_multigrid_grav, cleanup_multigrid_grav, multigrid_solve_grav, init_multigrid_grav_ext, ordL, invalidate_history
+   public :: multigrid_grav_par, init_multigrid_grav, cleanup_multigrid_grav, multigrid_solve_grav, init_multigrid_grav_ext, invalidate_history
 
    include "fftw3.f"
    ! constants from fftw3.f
@@ -62,8 +62,6 @@ module multigrid_gravity
    real               :: vcycle_giveup                                !< exit the V-cycle when convergence ratio drops below that level
    integer(kind=4)    :: max_cycles                                   !< Maximum allowed number of V-cycles
    integer(kind=4)    :: nsmoob                                       !< smoothing cycles on coarsest level when cannot use FFT. (a convergence check would be much better)
-   integer(kind=4)    :: ord_laplacian                                !< Laplace operator order; allowed values are 2, -4 (default) and 4 (not fully implemented)
-   integer(kind=4)    :: ord_laplacian_outer                          !< Laplace operator order for isolated boundaries (useful as long as -4 is not fully implemented)
    logical            :: trust_fft_solution                           !< Bypass the V-cycle, when doing FFT on whole domain, make sure first that FFT is properly set up.
    logical            :: base_no_fft                                  !< Deny solving the coarsest level with FFT. Can be very slow.
    logical            :: prefer_rbgs_relaxation                       !< Prefer relaxation over FFT local solver. Typically faster.
@@ -108,8 +106,8 @@ contains
 !! <tr><td>Jacobi_damp           </td><td>1.     </td><td>real value     </td><td>\copydoc multigrid_gravity::jacobi_damp           </td></tr>
 !! <tr><td>L4_strength           </td><td>1.0    </td><td>real value     </td><td>\copydoc multigrid_gravity::l4_strength           </td></tr>
 !! <tr><td>nsmoof                </td><td>1      </td><td>integer value  </td><td>\copydoc multigridvars::nsmoof                    </td></tr>
-!! <tr><td>ord_laplacian         </td><td>-4     </td><td>integer value  </td><td>\copydoc multigrid_gravity::ord_laplacian         </td></tr>
-!! <tr><td>ord_laplacian_outer   </td><td>2      </td><td>integer value  </td><td>\copydoc multigrid_gravity::ord_laplacian_outer   </td></tr>
+!! <tr><td>ord_laplacian         </td><td>-4     </td><td>integer value  </td><td>\copydoc multigrid_Laplace::ord_laplacian         </td></tr>
+!! <tr><td>ord_laplacian_outer   </td><td>2      </td><td>integer value  </td><td>\copydoc multigrid_Laplace::ord_laplacian_outer   </td></tr>
 !! <tr><td>ord_time_extrap       </td><td>1      </td><td>integer value  </td><td>\copydoc multigrid_gravity::ord_time_extrap       </td></tr>
 !! <tr><td>prefer_rbgs_relaxation</td><td>.true. </td><td>logical        </td><td>\copydoc multigrid_gravity::prefer_rbgs_relaxation</td></tr>
 !! <tr><td>base_no_fft           </td><td>.false.</td><td>logical        </td><td>\copydoc multigrid_gravity::base_no_fft           </td></tr>
@@ -142,6 +140,7 @@ contains
       use mpisetup,           only: master, slave, ibuff, cbuff, rbuff, lbuff, nproc, piernik_MPI_Bcast
       use multigridvars,      only: single_base, bnd_invalid, bnd_isolated, bnd_periodic, bnd_dirichlet, grav_bnd, fft_full_relax, multidim_code_3D, nsmool, nsmoof, &
            &                        overrelax, overrelax_xyz, Jacobi_damp, L4_strength
+      use multigrid_Laplace,  only: ord_laplacian, ord_laplacian_outer
       use multigrid_old_soln, only: nold_max, ord_time_extrap
       use multipole,          only: use_point_monopole, lmax, mmax, ord_prolong_mpole, coarsen_multipole, interp_pt2mom, interp_mom2pot
       use named_array_list,   only: qna
@@ -727,6 +726,7 @@ contains
       use cg_leaves,      only: leaves
       use grid_cont,      only: grid_container
       use multigridvars,  only: source, bnd_periodic, bnd_dirichlet, bnd_givenval, grav_bnd
+      use multigrid_Laplace, only: ord_laplacian_outer
       use units,          only: fpiG
       use particle_pub,   only: pset
 #ifdef JEANS_PROBLEM
@@ -961,15 +961,15 @@ contains
       norm_rhs = leaves%norm_sq(source)
       norm_old = norm_rhs
 
-      call residual_order(ordL(), leaves, source, solution, defect)                               ! {r}_0 := {b} - {A x}_0
+      call residual_order(leaves, source, solution, defect)                                       ! {r}_0 := {b} - {A x}_0
       call precond(defect, correction)                                                            ! {z}_0 := {M}^{-1} {r}_0
       call leaves%q_copy(correction, cg_corr)                                                     ! {d}_0 := {z}_0
       dc_k = leaves%scalar_product(defect, correction)                                            ! dc_k := {r}_k^{T} {z}_k
       do k = 0, max_cycles
 
-         alpha = dc_k/vT_A_v_order(ordL(), cg_corr)                                               ! \alpha_k := {{r}_k^{T} {z}_k}/{{d}_k^{T} {A d}_k}
+         alpha = dc_k/vT_A_v_order(cg_corr)                                                       ! \alpha_k := {{r}_k^{T} {z}_k}/{{d}_k^{T} {A d}_k}
          call leaves%q_lin_comb( [ ind_val(solution, 1.), ind_val(cg_corr, alpha) ], solution)    ! {x}_{k+1} := {x}_k + \alpha_k {d}_k
-         call residual_order(ordL(), leaves, source, solution, defect)                            ! {r}_{k+1} := {r}_k - \alpha_k {A d}_k = {b} - {A x}_{k+1}
+         call residual_order(leaves, source, solution, defect)                                    ! {r}_{k+1} := {r}_k - \alpha_k {A d}_k = {b} - {A x}_{k+1}
          !OPT: Use {A d}_k computed in vT_A_v_order to avoid communication required for residual_order (costs memory for storing one field, risk of drift due to boundary values)
          !OPT: Alternatively pass a flag to the residual_order routine that effectively switches off guardcell update as they're already have been updated by vT_A_v_order
          norm_lhs = leaves%norm_sq(defect)
@@ -1062,7 +1062,7 @@ contains
       integer(kind=4), intent(in) :: corr !< Approximate solution for the defect (correction)
 
       call finest%level%set_q_value(corr, 0.)
-      call approximate_solution_order(ordL(), finest%level, def, corr, nsmool)
+      call approximate_solution_order(finest%level, def, corr, nsmool)
 
    end subroutine smoother
 
@@ -1147,7 +1147,7 @@ contains
       do v = 0, max_cycles
 
          call all_cg%set_dirty(defect)
-         call residual_order(ordL(), leaves, source, solution, defect)
+         call residual_order(leaves, source, solution, defect)
          call leaves%check_dirty(defect, "residual")
          if (grav_bnd == bnd_periodic) call leaves%subtract_average(defect)
 
@@ -1220,7 +1220,7 @@ contains
       enddo
 
 #ifdef DEBUG
-      call residual_order(ordL(), leaves, source, solution, defect)
+      call residual_order(leaves, source, solution, defect)
 #endif /* DEBUG */
       if (v > max_cycles) then
          if (master .and. norm_lhs/norm_rhs > norm_tol) call warn("[multigrid_gravity:vcycle_hg] Not enough V-cycles to achieve convergence.")
@@ -1235,21 +1235,6 @@ contains
       call history%store_solution
 
    end subroutine vcycle_hg
-
-!> \brief Select appropriate order of laplacian, depending on which solve operation we're on
-
-   function ordL()
-
-      use multigridvars, only: grav_bnd, bnd_givenval
-
-      implicit none
-
-      integer(kind=4) :: ordL
-
-      ordL = ord_laplacian
-      if (grav_bnd == bnd_givenval) ordL = ord_laplacian_outer
-
-   end function ordL
 
 !> \brief This routine has to find an approximate solution for given source field and implemented differential operator
 
@@ -1284,7 +1269,7 @@ contains
          !> \warning this may be incompatible with V-cycles other than Huang - Greengard
       endif
 
-      call approximate_solution_order(ordL(), curl, src, soln, nsmoo)
+      call approximate_solution_order(curl, src, soln, nsmoo)
 !!$      endif
 
       call curl%check_dirty(soln, "approx_soln soln+")
