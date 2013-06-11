@@ -93,7 +93,6 @@ contains
 !! <tr><td>nsmool                </td><td>dom%nb </td><td>integer value  </td><td>\copydoc multigridvars::nsmool                    </td></tr>
 !! <tr><td>nsmoob                </td><td>100    </td><td>integer value  </td><td>\copydoc multigrid_gravity_helper::nsmoob         </td></tr>
 !! <tr><td>overrelax             </td><td>1.     </td><td>real value     </td><td>\copydoc multigrid_gravity::overrelax             </td></tr>
-!! <tr><td>overrelax_xxyz(ndims) </td><td>1.     </td><td>real value     </td><td>\copydoc multigrid_gravity::overrelax_xyz         </td></tr>
 !! <tr><td>L4_strength           </td><td>1.0    </td><td>real value     </td><td>\copydoc multigrid_Laplace4::L4_strength          </td></tr>
 !! <tr><td>nsmoof                </td><td>1      </td><td>integer value  </td><td>\copydoc multigridvars::nsmoof                    </td></tr>
 !! <tr><td>ord_laplacian         </td><td>-4     </td><td>integer value  </td><td>\copydoc multigrid_Laplace::ord_laplacian         </td></tr>
@@ -128,7 +127,7 @@ contains
       use domain,             only: dom, is_multicg !, is_uneven
       use mpisetup,           only: master, slave, ibuff, cbuff, rbuff, lbuff, nproc, piernik_MPI_Bcast
       use multigridvars,      only: single_base, bnd_invalid, bnd_isolated, bnd_periodic, bnd_dirichlet, grav_bnd, fft_full_relax, multidim_code_3D, nsmool, nsmoof, &
-           &                        overrelax, overrelax_xyz
+           &                        overrelax
       use multigrid_gravity_helper, only: nsmoob
       use multigrid_Laplace,  only: ord_laplacian, ord_laplacian_outer
       use multigrid_Laplace4, only: L4_strength
@@ -142,7 +141,7 @@ contains
       logical, save :: frun = .true.      !< First run flag
 
       namelist /MULTIGRID_GRAVITY/ norm_tol, vcycle_abort, vcycle_giveup, max_cycles, nsmool, nsmoob, use_CG, use_CG_outer, &
-           &                       overrelax, overrelax_xyz, L4_strength, nsmoof, ord_laplacian, ord_laplacian_outer, ord_time_extrap, &
+           &                       overrelax, L4_strength, nsmoof, ord_laplacian, ord_laplacian_outer, ord_time_extrap, &
            &                       prefer_rbgs_relaxation, base_no_fft, fft_full_relax, fft_patient, trust_fft_solution, &
            &                       coarsen_multipole, lmax, mmax, ord_prolong_mpole, use_point_monopole, interp_pt2mom, interp_mom2pot, multidim_code_3D, &
            &                       grav_bnd_str, preconditioner
@@ -153,7 +152,6 @@ contains
       ! Default values for namelist variables
       norm_tol               = 1.e-6
       overrelax              = 1.
-      overrelax_xyz(:)       = 1.
       vcycle_abort           = 2.
       vcycle_giveup          = 1.5
       L4_strength            = 1.0
@@ -235,10 +233,9 @@ contains
 
          rbuff(1) = norm_tol
          rbuff(2) = overrelax
-         rbuff(3:5) = overrelax_xyz
-         rbuff(6) = vcycle_abort
-         rbuff(7) = vcycle_giveup
-         rbuff(8) = L4_strength
+         rbuff(3) = vcycle_abort
+         rbuff(4) = vcycle_giveup
+         rbuff(5) = L4_strength
 
          ibuff( 1) = coarsen_multipole
          ibuff( 2) = lmax
@@ -277,10 +274,9 @@ contains
 
          norm_tol       = rbuff(1)
          overrelax      = rbuff(2)
-         overrelax_xyz  = rbuff(3:5)
-         vcycle_abort   = rbuff(6)
-         vcycle_giveup  = rbuff(7)
-         L4_strength    = rbuff(8)
+         vcycle_abort   = rbuff(3)
+         vcycle_giveup  = rbuff(4)
+         L4_strength    = rbuff(5)
 
          coarsen_multipole = ibuff( 1)
          lmax              = ibuff( 2)
@@ -350,15 +346,15 @@ contains
 
       single_base = .not. base_no_fft
 
-      if (.not. prefer_rbgs_relaxation .and. any([ overrelax, overrelax_xyz(:) ] /= 1.)) then
+      if (.not. prefer_rbgs_relaxation .and. overrelax /= 1.) then
          if (master) call warn("[multigrid_gravity:multigrid_grav_par] Overrelaxation is disabled for FFT local solver.")
          overrelax = 1.
-         overrelax_xyz(:) = 1.
       endif
 
-      if (master .and. (overrelax /= 1. .or. any(overrelax_xyz(:) /= 1.))) then
-         write(msg, '(a,f8.5,a,3f8.5,a)')"[multigrid_gravity:multigrid_grav_par] Overrelaxation factors: global = ", overrelax, ", directional = [", overrelax_xyz(:), "]"
+      if (master .and. overrelax /= 1.) then
+         write(msg, '(a,f8.5)')"[multigrid_gravity:multigrid_grav_par] Overrelaxation factor = ", overrelax
          call warn(msg)
+         if (any([ord_laplacian, ord_laplacian_outer] /= O_I2)) call warn("[multigrid_gravity:multigrid_grav_par] Overrelaxation is implemented only for RBGS relaxation")
       endif
 
       if (fft_patient) fftw_flags = FFTW_PATIENT
@@ -524,11 +520,11 @@ contains
 
       use cg_level_coarsest,  only: coarsest
       use cg_level_connected, only: cg_level_connected_T
-      use constants,          only: fft_rcr, fft_dst, fft_none, pi, dpi, zero, half, one!, xdim, ydim, zdim
+      use constants,          only: fft_rcr, fft_dst, fft_none, pi, dpi, zero, half, one
       use dataio_pub,         only: die
       use domain,             only: dom
       use grid_cont,          only: grid_container
-      use multigridvars,      only: overrelax!, overrelax_xyz
+      use multigridvars,      only: overrelax
 
       implicit none
 

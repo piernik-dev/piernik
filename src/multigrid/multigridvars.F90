@@ -39,12 +39,12 @@
 module multigridvars
 ! pulled by MULTIGRID
 
-   use constants,   only: dsetnamelen, ndims
+   use constants,   only: dsetnamelen
 
    implicit none
 
    public ! QA_WARN no secrets are kept here
-   private :: dsetnamelen, ndims ! QA_WARN prevent re-exporting
+   private :: dsetnamelen ! QA_WARN prevent re-exporting
 
    ! these 4 variables are required for basic use of the multigrid solver
    character(len=dsetnamelen), parameter :: source_n     = "source"     !< density field
@@ -69,7 +69,6 @@ module multigridvars
    integer(kind=4)         :: nsmoof                                  !< FFT iterations per call
    logical                 :: multidim_code_3D                        !< prefer code written for any 1D and 2D configuration even in 3D for benchmarking and debugging
    real                    :: overrelax                               !< overrealaxation factor (if < 1. then works as underrelaxation), provided for tests
-   real, dimension(ndims)  :: overrelax_xyz                           !< directional overrealaxation factor for fine tuning convergence ratio when cell spacing is not equal in all 3 directions. Use with care, patience and lots of hope.
 
    ! boundaries
    enum, bind(C)                                                      !< constants for enumerating multigrid boundary types
