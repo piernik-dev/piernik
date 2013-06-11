@@ -250,7 +250,8 @@ contains
                      i1 = cg%is + int(mod(ijko+n+cg%is+j+k, int(RED_BLACK, kind=8)), kind=4)
                      select case (dom%geometry_type)
                         case (GEO_RPZ)
-                           cg%q(soln)%arr(i1  :cg%ie  :2, j,   k) = &
+                           cg%q(soln)%arr                         (i1  :cg%ie  :2, j,   k) = &
+                                cr0              *  cg%q(soln)%arr(i1  :cg%ie  :2, j,   k) + &
                                 crx( i1:cg%ie:2) * (cg%q(soln)%arr(i1-1:cg%ie-1:2, j,   k  ) + cg%q(soln)%arr(i1+1:cg%ie+1:2, j,   k))   + &
                                 cry( i1:cg%ie:2) * (cg%q(soln)%arr(i1  :cg%ie  :2, j-1, k  ) + cg%q(soln)%arr(i1  :cg%ie  :2, j+1, k))   + &
                                 crz( i1:cg%ie:2) * (cg%q(soln)%arr(i1  :cg%ie  :2, j,   k-1) + cg%q(soln)%arr(i1  :cg%ie  :2, j,   k+1)) - &
@@ -258,7 +259,8 @@ contains
                                 crx(i1:cg%ie:2) * crx1(i1:cg%ie:2) * &
                                 &                  (cg%q(soln)%arr(i1+1:cg%ie+1:2, j,   k  ) - cg%q(soln)%arr(i1-1:cg%ie-1:2, j,   k))
                         case (GEO_XYZ)
-                           cg%q(soln)%arr(i1  :cg%ie  :2, j,   k) = &
+                           cg%q(soln)%arr                 (i1  :cg%ie  :2, j,   k) = &
+                                cr0      *  cg%q(soln)%arr(i1  :cg%ie  :2, j,   k) + &
                                 cg%mg%rx * (cg%q(soln)%arr(i1-1:cg%ie-1:2, j,   k)   + cg%q(soln)%arr(i1+1:cg%ie+1:2, j,   k))   + &
                                 cg%mg%ry * (cg%q(soln)%arr(i1  :cg%ie  :2, j-1, k)   + cg%q(soln)%arr(i1  :cg%ie  :2, j+1, k))   + &
                                 cg%mg%rz * (cg%q(soln)%arr(i1  :cg%ie  :2, j,   k-1) + cg%q(soln)%arr(i1  :cg%ie  :2, j,   k+1)) - &
