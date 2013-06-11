@@ -89,7 +89,7 @@ contains
       use func,      only: ekin
 #endif /* !ISO */
 #ifdef MAGNETIC
-      use constants, only: xdim, ydim, zdim
+      use constants, only: xdim, ydim, zdim, half
       use domain,    only: dom
       use func,      only: emag
 #else /* !MAGNETIC */
@@ -109,9 +109,9 @@ contains
       real :: pmag, p, ps
 
 #ifdef MAGNETIC
-      bx = (b(xdim,i,j,k) + b(xdim, i+dom%D_x, j,         k        ))/(1.+dom%D_x)
-      by = (b(ydim,i,j,k) + b(ydim, i,         j+dom%D_y, k        ))/(1.+dom%D_y)
-      bz = (b(zdim,i,j,k) + b(zdim, i,         j,         k+dom%D_z))/(1.+dom%D_z)
+      bx = half*(b(xdim,i,j,k) + b(xdim, i+dom%D_x, j,         k        ))
+      by = half*(b(ydim,i,j,k) + b(ydim, i,         j+dom%D_y, k        ))
+      bz = half*(b(zdim,i,j,k) + b(zdim, i,         j,         k+dom%D_z))
 
       pmag = emag(bx, by, bz)
 #else /* !MAGNETIC */
