@@ -275,7 +275,7 @@ contains
    end subroutine cartesian_tiling
 
 !>
-!! \brief A domain decomposition that is less tructured than cartesian_tiling
+!! \brief A domain decomposition that is less structured than cartesian_tiling
 !!
 !! \details Each non-external boundary can be shared with one or more processes.
 !! When pieces == product(p_size(:)), the decomposition can be identical to the result of cartesian_tiling.
@@ -596,7 +596,7 @@ contains
 !! \todo convert it into a call to cartesian_decomposition
 !!
 !! Is it really important to us to have all pieces of equal size?
-!! The answer wil depend on how we implement load balancing and block redistribution
+!! The answer will depend on how we implement load balancing and block redistribution
 !<
 
    subroutine stamp_cg(patch)
@@ -649,7 +649,7 @@ contains
    end subroutine stamp_cg
 
 !>
-!! \brief Prevent domain decompositions into pieces that are narrower than allowed mimimum size
+!! \brief Prevent domain decompositions into pieces that are narrower than allowed minimum size
 !!
 !! \details When a piece of grid is narrower than number of guardcells we may expect the following problems:
 !!  * Complicated boundary exchange routines because a single neighbour cannot provide valid boundary data in one step.

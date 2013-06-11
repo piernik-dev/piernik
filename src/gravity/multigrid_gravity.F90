@@ -700,7 +700,7 @@ contains
 !!
 !! \details Typically i_all_dens is a copy of fluidindex::iarr_all_sg.
 !! Passing this as an argument allows for independent computation of the potential for several density fields if necessary.
-!! \todo compactify the following more (if possible)
+!! \todo compact the following more (if possible)
 !<
 
    subroutine init_source(i_all_dens)

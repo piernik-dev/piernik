@@ -34,7 +34,7 @@
 !! \details
 !!
 !! Note that it is theoretically possible to use most of this module without multigrid.
-!! We decided to leave dependencies on multigrid to keep the code simplier.
+!! We decided to leave dependencies on multigrid to keep the code simple.
 !<
 
 module pcg
@@ -94,7 +94,7 @@ contains
 !!
 !! For the derivation of the conjugate gradient method see:
 !! Jonathan Richard Shewchuk, An Introduction to the Conjugate Gradient Method Without the Agonizing Pain
-!! The algorithm of preconditioned conjugare gradient method is described in Ch. 12 of the above publication.
+!! The algorithm of preconditioned conjugate gradient method is described in Ch. 12 of the above publication.
 !!
 !! \todo Find out why it converges so poorly for outer potential
 !<
@@ -170,7 +170,7 @@ contains
 !! \details The V-cycle seems to be the most efficient preconditioner as yet.
 !! It may be beneficial to increase nsmool from 4 to 8 or even 12 to get best convergence and minimize CPU time.
 !!
-!! Performing 2 V-cycles instead of 1 seems to cost more than it saves doe to improvements to convergence rate.
+!! Performing 2 V-cycles instead of 1 seems to cost more than it saves due to improvements to convergence rate.
 !<
 
    subroutine precond(def, corr)

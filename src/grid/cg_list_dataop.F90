@@ -48,7 +48,7 @@ module cg_list_dataop
       procedure :: check_dirty                       !< Check for detectable traces of set_dirty calls.
       procedure :: check_all_dirty                   !< Check all registered arrays for detectable traces of set_dirty calls.
       procedure :: check_for_dirt                    !< Check all named arrays for constants:big_float
-      procedure :: corners2wa                        !< Cut out a cross in the middle of the grid block and move the data to shov what is stored in corners and partially in edges and faces as well
+      procedure :: corners2wa                        !< Cut out a cross in the middle of the grid block and move the data to show what is stored in corners and partially in edges and faces as well
 
       ! Arithmetic on the fields
       procedure :: set_q_value                       !< reset given field to the value

@@ -57,7 +57,7 @@ module cg_list_bnd
    !! \brief Lists of grid containers with boundary update
    !!
    !! \details Procedure internal_boundaries requires existence of matching mpi data structures, which is done in cg_level type.
-   !! Thus this type is usably only when the lost consist of one or moge full cg levels.
+   !! Thus this type is usable only when the lost?? consist of one or more full cg levels.
    !<
 
    type, extends(cg_list_dataop_T) :: cg_list_bnd_T
@@ -118,7 +118,7 @@ contains
 !! \todo Try to define MPI_types for communication right before MPI_Isend/MPI_Irecv calls and release just after use. Then compare performance.
 !!
 !! \todo Check how much performance is lost due to using MPI calls even for local copies. Decide whether it is worth to convert local MPI calls to direct memory copies.
-!! For othes suggestions on performance optimisation see decription of cg_level::mpi_bnd_types.
+!! For other suggestions on performance optimisation see description of cg_level::mpi_bnd_types.
 !!
 !! \warning this == leaves could be unsafe: need to figure out how to handle unneeded edges; this == all_cg or base%level or other concatenation of whole levels should work well
 !<

@@ -30,7 +30,7 @@
 !>
 !! \brief A library that converts a 3D logical map into a set of boxes
 !!
-!! \details We want to produce as smal set of nonoerlapping boxes that covers a given map.
+!! \details We want to produce as small set of non overlapping boxes that covers a given map.
 !! The map can be e.g a list of grid regions that is covered by intra-level communication. Then the boxes are the part that need to be prolonged from the coarse grid.
 !! Finding best (optimal) solution can be computationally expensive, so we  are satisfied by "good enough" solutions.
 !! In our approach we first look for all corners that are convex as some those for sure should belong to the biggest boxes that fit into the map.

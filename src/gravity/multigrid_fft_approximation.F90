@@ -32,7 +32,7 @@
 !>
 !! \brief Multigrid Poisson solver: Approximate local solver based on FFT
 !!
-!! \details Local solver based on FFT may reduce the amount of required communication because it relies only on proided boundary values
+!! \details Local solver based on FFT may reduce the amount of required communication because it relies only on provided boundary values
 !! (i.e. does not need the whole grid to be prolonged)
 !!
 !! \warning These routines need to be reimplemented in order to work properly in most general grid decompositions.
@@ -546,7 +546,7 @@ contains
 !! \details It looks that parallel prolongation order 0 is the best from range -2 .. 2. Quite good is also order 2.(tests were performed with the maclaurin problem at r4051).
 !! There were no experiments with higher order prolongation, but it seems there is not much room for any improvements.
 !! The tests were performed on uniform grid, where the interpolation affects only convergence factors.
-!! On a refinement step the interpolation type affects also sulution by influencing the way how fine and coarse grids are coupled.
+!! On a refinement step the interpolation type affects also solution by influencing the way how fine and coarse grids are coupled.
 !!
 !! \todo move to cg_level_connected_T or multigrid_gravity
 !!

@@ -632,7 +632,7 @@ contains
 !! \warning Partial implementation: Single-file, serial I/O works for non-AMR setups.
 !!
 !! \param create_empty_cg_datasets
-!!    Function resposinble for creating empty datasets, called by master
+!!    Function responsible for creating empty datasets, called by master
 !! \param write_cg_to_hdf5
 !!    Function that performs actual I/O, called by all
 !<
@@ -660,7 +660,7 @@ contains
       integer(kind=4),       intent(in) :: otype            !< Output type (restart, data)
       interface
          !>
-         !! Function resposinble for creating empty datasets, called by master
+         !! Function responsible for creating empty datasets, called by master
          !<
          subroutine create_empty_cg_datasets(cgl_g_id, cg_n_b, Z_avail, g)
             use hdf5, only: HID_T

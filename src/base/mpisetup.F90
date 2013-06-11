@@ -78,7 +78,7 @@ module mpisetup
       module procedure setsize_req
    end interface
 
-   !! \todo exapand this wrapper to make it more general, unlimited polimorphism will render this obsolete
+   !! \todo expand this wrapper to make it more general, unlimited polymorphism will render this obsolete
    interface piernik_MPI_Bcast
       module procedure MPI_Bcast_single_logical
       module procedure MPI_Bcast_single_string
@@ -319,7 +319,7 @@ contains
 !>
 !! \brief Wrapper for MPI_Bcast
 !! Broadcast single logical value from FIRST to all
-!! \todo unlimited polimorphism will obsolete me
+!! \todo unlimited polymorphism will obsolete me
 !<
    subroutine MPI_Bcast_single_logical(lvar)
 
@@ -336,7 +336,7 @@ contains
 !>
 !! \brief Wrapper for MPI_Bcast
 !! Broadcast logical vector from FIRST to all
-!! \todo unlimited polimorphism will obsolete me
+!! \todo unlimited polymorphism will obsolete me
 !<
    subroutine MPI_Bcast_vec_logical(lvar)
 
@@ -352,7 +352,7 @@ contains
 !>
 !! \brief Wrapper for MPI_Bcast
 !! Broadcast single string value from FIRST to all
-!! \todo unlimited polimorphism will obsolete me
+!! \todo unlimited polymorphism will obsolete me
 !<
    subroutine MPI_Bcast_single_string(cvar, clen)
 
@@ -369,7 +369,7 @@ contains
 !>
 !! \brief Wrapper for MPI_Bcast
 !! Broadcast vector of strings from FIRST to all
-!! \todo unlimited polimorphism will obsolete me
+!! \todo unlimited polymorphism will obsolete me
 !<
    subroutine MPI_Bcast_vec_string(cvar, clen)
 
@@ -386,7 +386,7 @@ contains
 !>
 !! \brief Wrapper for MPI_Bcast
 !! Broadcast single integer(kind=4) value from FIRST to all
-!! \todo unlimited polimorphism will obsolete me
+!! \todo unlimited polymorphism will obsolete me
 !<
    subroutine MPI_Bcast_single_int4(ivar4)
 
@@ -403,7 +403,7 @@ contains
 !>
 !! \brief Wrapper for MPI_Bcast
 !! Broadcast single integer(kind=8) value from FIRST to all
-!! \todo unlimited polimorphism will obsolete me
+!! \todo unlimited polymorphism will obsolete me
 !<
    subroutine MPI_Bcast_single_int8(ivar8)
 
@@ -420,7 +420,7 @@ contains
 !>
 !! \brief Wrapper for MPI_Bcast
 !! Broadcast single real(kind=4) value from FIRST to all
-!! \todo unlimited polimorphism will obsolete me
+!! \todo unlimited polymorphism will obsolete me
 !<
    subroutine MPI_Bcast_single_real4(rvar4)
 
@@ -437,7 +437,7 @@ contains
 !>
 !! \brief Wrapper for MPI_Bcast
 !! Broadcast single real(kind=8) value from FIRST to all
-!! \todo unlimited polimorphism will obsolete me
+!! \todo unlimited polymorphism will obsolete me
 !<
    subroutine MPI_Bcast_single_real8(rvar8)
 
@@ -454,7 +454,7 @@ contains
 !>
 !! \brief Wrapper for MPI_Bcast
 !! Broadcast real(kind=4) vector from FIRST to all
-!! \todo unlimited polimorphism will obsolete me
+!! \todo unlimited polymorphism will obsolete me
 !<
    subroutine MPI_Bcast_vec_real4(rvar4)
 
@@ -470,7 +470,7 @@ contains
 !>
 !! \brief Wrapper for MPI_Bcast
 !! Broadcast real(kind=8) vector from FIRST to all
-!! \todo unlimited polimorphism will obsolete me
+!! \todo unlimited polymorphism will obsolete me
 !<
    subroutine MPI_Bcast_vec_real8(rvar8)
 
@@ -486,7 +486,7 @@ contains
 !>
 !! \brief Wrapper for MPI_Bcast
 !! Broadcast integer(kind=4) vector from FIRST to all
-!! \todo unlimited polimorphism will obsolete me
+!! \todo unlimited polymorphism will obsolete me
 !<
    subroutine MPI_Bcast_vec_int4(ivar4)
 
@@ -502,7 +502,7 @@ contains
 !>
 !! \brief Wrapper for MPI_Bcast
 !! Broadcast integer(kind=8) vector from FIRST to all
-!! \todo unlimited polimorphism will obsolete me
+!! \todo unlimited polymorphism will obsolete me
 !<
    subroutine MPI_Bcast_vec_int8(ivar8)
 
@@ -518,7 +518,7 @@ contains
 !>
 !! \brief Wrapper for MPI_Bcast
 !! Broadcast real(kind=4) 2D array from FIRST to all
-!! \todo unlimited polimorphism will obsolete me
+!! \todo unlimited polymorphism will obsolete me
 !<
    subroutine MPI_Bcast_arr2d_real4(rvar4)
 
@@ -534,7 +534,7 @@ contains
 !>
 !! \brief Wrapper for MPI_Bcast
 !! Broadcast real(kind=8) 2D array from FIRST to all
-!! \todo unlimited polimorphism will obsolete me
+!! \todo unlimited polymorphism will obsolete me
 !<
    subroutine MPI_Bcast_arr2d_real8(rvar8)
 
@@ -550,7 +550,7 @@ contains
 !>
 !! \brief Wrapper for MPI_Bcast
 !! Broadcast integer(kind=4) 2D array from FIRST to all
-!! \todo unlimited polimorphism will obsolete me
+!! \todo unlimited polymorphism will obsolete me
 !<
    subroutine MPI_Bcast_arr2d_int4(ivar4)
 
@@ -566,7 +566,7 @@ contains
 !>
 !! \brief Wrapper for MPI_Bcast
 !! Broadcast integer(kind=8) 2D array from FIRST to all
-!! \todo unlimited polimorphism will obsolete me
+!! \todo unlimited polymorphism will obsolete me
 !<
    subroutine MPI_Bcast_arr2d_int8(ivar8)
 
@@ -582,7 +582,7 @@ contains
 !>
 !! \brief Wrapper for MPI_Bcast
 !! Broadcast real(kind=4) 3D array from FIRST to all
-!! \todo unlimited polimorphism will obsolete me
+!! \todo unlimited polymorphism will obsolete me
 !<
    subroutine MPI_Bcast_arr3d_real4(rvar4)
 
@@ -598,7 +598,7 @@ contains
 !>
 !! \brief Wrapper for MPI_Bcast
 !! Broadcast real(kind=8) 3D array from FIRST to all
-!! \todo unlimited polimorphism will obsolete me
+!! \todo unlimited polymorphism will obsolete me
 !<
    subroutine MPI_Bcast_arr3d_real8(rvar8)
 
@@ -614,7 +614,7 @@ contains
 !>
 !! \brief Wrapper for MPI_Bcast
 !! Broadcast integer(kind=4) 3D array from FIRST to all
-!! \todo unlimited polimorphism will obsolete me
+!! \todo unlimited polymorphism will obsolete me
 !<
    subroutine MPI_Bcast_arr3d_int4(ivar4)
 
@@ -630,7 +630,7 @@ contains
 !>
 !! \brief Wrapper for MPI_Bcast
 !! Broadcast integer(kind=8) 3D array from FIRST to all
-!! \todo unlimited polimorphism will obsolete me
+!! \todo unlimited polymorphism will obsolete me
 !<
    subroutine MPI_Bcast_arr3d_int8(ivar8)
 
@@ -645,7 +645,7 @@ contains
 !-----------------------------------------------------------------------------
 !>
 !! \brief Wrapper for MPI_Allreduce with MPI_IN_PLACE
-!! \todo unlimited polimorphism will obsolete me
+!! \todo unlimited polymorphism will obsolete me
 !<
    subroutine MPI_Allreduce_single_logical(lvar, reduction)
 
@@ -663,7 +663,7 @@ contains
 !-----------------------------------------------------------------------------
 !>
 !! \brief Wrapper for MPI_Allreduce with MPI_IN_PLACE
-!! \todo unlimited polimorphism will obsolete me
+!! \todo unlimited polymorphism will obsolete me
 !<
    subroutine MPI_Allreduce_single_int4(ivar4, reduction)
 
@@ -681,7 +681,7 @@ contains
 !-----------------------------------------------------------------------------
 !>
 !! \brief Wrapper for MPI_Allreduce with MPI_IN_PLACE
-!! \todo unlimited polimorphism will obsolete me
+!! \todo unlimited polymorphism will obsolete me
 !<
    subroutine MPI_Allreduce_single_int8(ivar8, reduction)
 
@@ -699,7 +699,7 @@ contains
 !-----------------------------------------------------------------------------
 !>
 !! \brief Wrapper for MPI_Allreduce with MPI_IN_PLACE
-!! \todo unlimited polimorphism will obsolete me
+!! \todo unlimited polymorphism will obsolete me
 !<
    subroutine MPI_Allreduce_vec_int4(ivar4, reduction)
 
@@ -717,7 +717,7 @@ contains
 !-----------------------------------------------------------------------------
 !>
 !! \brief Wrapper for MPI_Allreduce with MPI_IN_PLACE
-!! \todo unlimited polimorphism will obsolete me
+!! \todo unlimited polymorphism will obsolete me
 !<
    subroutine MPI_Allreduce_vec_int8(ivar8, reduction)
 
@@ -735,7 +735,7 @@ contains
 !-----------------------------------------------------------------------------
 !>
 !! \brief Wrapper for MPI_Allreduce with MPI_IN_PLACE
-!! \todo unlimited polimorphism will obsolete me
+!! \todo unlimited polymorphism will obsolete me
 !<
    subroutine MPI_Allreduce_single_real4(rvar4, reduction)
 
@@ -753,7 +753,7 @@ contains
 !-----------------------------------------------------------------------------
 !>
 !! \brief Wrapper for MPI_Allreduce with MPI_IN_PLACE
-!! \todo unlimited polimorphism will obsolete me
+!! \todo unlimited polymorphism will obsolete me
 !<
    subroutine MPI_Allreduce_single_real8(rvar8, reduction)
 
@@ -771,7 +771,7 @@ contains
 !-----------------------------------------------------------------------------
 !>
 !! \brief Wrapper for MPI_Allreduce with MPI_IN_PLACE
-!! \todo unlimited polimorphism will obsolete me
+!! \todo unlimited polymorphism will obsolete me
 !<
    subroutine MPI_Allreduce_vec_real4(rvar4, reduction)
 
@@ -789,7 +789,7 @@ contains
 !-----------------------------------------------------------------------------
 !>
 !! \brief Wrapper for MPI_Allreduce with MPI_IN_PLACE
-!! \todo unlimited polimorphism will obsolete me
+!! \todo unlimited polymorphism will obsolete me
 !<
    subroutine MPI_Allreduce_vec_real8(rvar8, reduction)
 
@@ -807,7 +807,7 @@ contains
 !-----------------------------------------------------------------------------
 !>
 !! \brief Wrapper for MPI_Allreduce with MPI_IN_PLACE
-!! \todo unlimited polimorphism will obsolete me
+!! \todo unlimited polymorphism will obsolete me
 !<
    subroutine MPI_Allreduce_arr3d_real8(rvar8, reduction)
 

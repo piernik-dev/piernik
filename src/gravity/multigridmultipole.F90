@@ -33,7 +33,7 @@
 !!
 !! \details This solver estimates gravitational potential on external (domain) boundaries, which allows to mimic \f$\Phi(\infty) = 0\f$.
 !! The calculated potential may then be used in second pass of the Poisson solver (this time run with an empty space) to calculate correction
-!! to be added to the first-pass solution obtained with homogenous Dirichlet boundary conditions.
+!! to be added to the first-pass solution obtained with homogeneous Dirichlet boundary conditions.
 !<
 
 module multipole
@@ -194,7 +194,7 @@ contains
 !!$      lmpole => finest
 !!$      !> \todo find finest grid at the external outer boundary (i.e. non-reflecting, not periodic, ...), which might be significantly coarser than the globally finest grid.
 !!$      do l = 1, coarsen_multipole
-!!$         call die("[multigridmultipole:refresh_multipole] multipole coarsening is temporrarily disabled")
+!!$         call die("[multigridmultipole:refresh_multipole] multipole coarsening is temporarily disabled")
 !!$         if (associated(lmpole%coarser)) then
 !!$            lmpole => lmpole%coarser
 !!$         else

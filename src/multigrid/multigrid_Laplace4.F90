@@ -46,7 +46,7 @@ contains
 !>
 !! \brief 4th order Laplacian
 !!
-!! \details Simple 4th order discrete Laplace operator implemented for comparision with simplest, 2nd-order operator.
+!! \details Simple 4th order discrete Laplace operator implemented for comparison with simplest, 2nd-order operator.
 !! Useful only for tests. Do not use it in production runs!
 !!
 !! L4 = [0, 1, -2, 1, 0] + L4_strength * 1./12. * [ -1, 4, -6, 4, -1 ] = 1./12. * [ -1, 16, -30, 16, -1 ]
@@ -166,7 +166,7 @@ contains
 !!
 !! \warning For optimal convergence this Laplace operator requires specific relaxation scheme.
 !!
-!! \details Call relaxation for the residual2 operator while specific relaxation scheme is not implemented and expect severily limited convergence.
+!! \details Call relaxation for the residual2 operator while specific relaxation scheme is not implemented and expect severely limited convergence.
 !! It is not planned to be implemented anytime soon because 4th order Mehrstellen operator is much better.
 !<
 

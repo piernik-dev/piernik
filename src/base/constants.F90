@@ -132,7 +132,7 @@ module constants
    ! boundary conditions type
    enum, bind(C)
       enumerator :: BND_MPI                   !! internal, processor-processor boundary on the same level (by default equal to 0)
-      enumerator :: BND_FC                    !! internal, processor-processor boundary with lowerrefinement level
+      enumerator :: BND_FC                    !! internal, processor-processor boundary with lower refinement level
       enumerator :: BND_MPI_FC                !! internal, processor-processor boundary partially on the same level, partially lower
       enumerator :: BND_PER                   !! periodic boundary
       enumerator :: BND_REF                   !! reflecting boundary

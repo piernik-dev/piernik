@@ -336,9 +336,9 @@ contains
    end subroutine approximate_solution_rbgs2
 
 !>
-!! \brief Compute var*Laplacian(var) for CG algotithm
+!! \brief Compute var*Laplacian(var) for CG algorithm
 !!
-!! \details This implementation uses 2nf order approximation of the Laplace operator
+!! \details This implementation uses 2nd order approximation of the Laplace operator
 !!
 !! This is the first implementation that also serves for 4th order laplacians as well.
 !<

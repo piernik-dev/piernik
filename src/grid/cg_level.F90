@@ -354,11 +354,11 @@ contains
 !! There are several strategies than can be implemented:
 !! * Local refinements go to local process. It is very simple, but for most simulations will build up load imbalance. Suitable for tests and global refinement.
 !! * Local refinements can be assigned to remote processes, existing blocks stays in place. Should keep good load balance, but the amount of inter-process
-!!   internal boundariem may grow significantly with time. Suitable for minor refinement updates and base level decomposition.
+!!   internal boundaries may grow significantly with time. Suitable for minor refinement updates and base level decomposition.
 !! * All blocks (existing and new) have recalculated assignment and can be migrated to other processes. Most advanced. Should be used after reading restart data.
 !!
-!! First startegy will be implemented first to get everything working. Second strategy will be used quite often. Third one do not need to be used on every refinement update.
-!! It can be called when some benchmark of grid disorder exceeds particuklar threshold.
+!! First strategy will be implemented first to get everything working. Second strategy will be used quite often. Third one do not need to be used on every refinement update.
+!! It can be called when some benchmark of grid disorder exceeds particular threshold.
 !<
 
    subroutine distribute(this)
@@ -531,11 +531,11 @@ contains
 !!
 !! Current implementation (revision 7338) implies correct update of all corners, even on complicated refinement topologies (concave fine region - convect coarse region or
 !! fine regions touching each other only by corners). Previous implementation could correctly fill the corners only on uniform grid and when it was called for
-!! x, y and z dierctions separately. Warning: that change introduces measurable performance degradation! This is caused by the fact that in 3D it is required to make
+!! x, y and z directions separately. Warning: that change introduces measurable performance degradation! This is caused by the fact that in 3D it is required to make
 !! 26 separate exchanges to fill all guardcells (in cg_list_bnd::internal_boundaries), while in previous approach only 6 exchanges were required.
 !! Unfortunately the previous approach did not work properly for complicated refinements.
 !!
-!! Possible improvemwnts of performance
+!! Possible improvements of performance
 !! * do local exchanges directly, without calling MPI.
 !! * merge smaller blocks into larger ones,
 !!
@@ -546,7 +546,7 @@ contains
 !!   The other corners would be non-empty only for some refinement local topologies, it would certainly be empty on an uniform grid.
 !! * When no corners are required, perform simultaneous exchange described by the three directional categories. Some corners might be set up correctly by a chance,
 !!   some might not.
-!! * When cornere are required, perform sequential exchange described by the three directional categories and supplement it with communication of "other corners".
+!! * When corners are required, perform sequential exchange described by the three directional categories and supplement it with communication of "other corners".
 !!   The sequence of Isend/Irecv should be as follows: Isend X-faces, Irecv X-faces, Waitall, Isend Y-faces, Irecv Y-faces, Waitall, Isend Z-faces, Irecv Z-faces, Waitall
 !!   "Other corners" can be Isend at any time and must be Irecv after Z-faces are copied to the right place.
 !<
@@ -838,7 +838,7 @@ contains
 !! Current implementation does all the work on master process which might be quite antiparallel.
 !!
 !! This is truly parallel-sorting problem. Note that at we may ensure that the set of grid pieces has the following property:
-!! * there is sorted or nearly-sorted list of existing grid pieces on each process, that means for most pieces on process p maimum id on process p-1 is less than own id
+!! * there is sorted or nearly-sorted list of existing grid pieces on each process, that means for most pieces on process p maximum id on process p-1 is less than own id
 !!   and for process p+1 similarly
 !! * there is chaotic (in practice not so much) set of grid pieces to be created
 !! We may then sort iteratively:

@@ -70,7 +70,7 @@ module cg_leaves
    end type cg_leaves_T
 
    !>
-   !! \deprecated A it is much easied to complete boundary exchanges on whole levels, the leaves list contains all grids from the base level upwards.
+   !! \deprecated A it is much easier to complete boundary exchanges on whole levels, the leaves list contains all grids from the base level upwards.
    !! Thus the variable name could be a bit misleading.
    !!
    !! \todo exclude base level and some higher levels if these are fully covered by finer grids (does it have side effects on visualization?)

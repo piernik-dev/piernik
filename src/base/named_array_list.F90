@@ -30,7 +30,7 @@
 !>
 !! \brief Lists of 3D and 4D named arrays and associated routines
 !!
-!! \details The qna(:) and wna(:) lists contain only descriptions of registeres named arrays.
+!! \details The qna(:) and wna(:) lists contain only descriptions of registers named arrays.
 !! Named arrays themselves are defined in "named_array" module.
 !!
 !! \todo Add array of names attributed to 4D array components and make it available for data dumps
