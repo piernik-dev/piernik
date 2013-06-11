@@ -204,7 +204,7 @@ contains
       allocate(crx(0), crx1(0), cry(0), crz(0), cr(0)) ! suppress compiler warnings
       cr0 = 1. - overrelax
 
-      call curl%internal_boundaries_3d(src)
+      if (dom%nb > 1) call curl%internal_boundaries_3d(src)
       do n = 1, RED_BLACK*nsmoo
          if (mod(n-1, int(dom%nb)) == 0) then
             call curl%arr3d_boundaries(soln, bnd_type = BND_NEGREF)
@@ -213,10 +213,10 @@ contains
          endif
          b = dom%nb - 1 - mod(n-1, int(dom%nb))
 
-!!$         if (dirty_debug) then
-!!$            write(dirty_label, '(a,i5)')"relax2 soln- smoo=", n
-!!$            call curl%check_dirty(soln, dirty_label, expand=b)
-!!$         endif
+         if (dirty_debug) then
+            write(dirty_label, '(a,i5)')"relax2 soln- smoo=", n
+            call curl%check_dirty(soln, dirty_label, expand=b)
+         endif
          cgl => curl%first
          do while (associated(cgl))
             cg => cgl%cg

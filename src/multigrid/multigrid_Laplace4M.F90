@@ -179,7 +179,7 @@ contains
       use cg_level_connected, only: cg_level_connected_T
       use cg_list,            only: cg_list_element
       use cg_list_dataop,     only: dirty_label
-      use constants,          only: xdim, ydim, zdim, ndims, GEO_XYZ, I_ONE, BND_NEGREF
+      use constants,          only: xdim, ydim, zdim, ndims, GEO_XYZ, BND_NEGREF, LO, HI
       use dataio_pub,         only: die
       use domain,             only: dom
       use global,             only: dirty_debug
@@ -206,13 +206,17 @@ contains
 
       ! Cannot use Red-Black for 4th order Mehrstellen relaxation due to data dependencies even if in some cases Red-Black gives better convergence.
       !> \todo try 4- or 8-color scheme.
-      if (dom%nb > 1) call curl%arr3d_boundaries(src, bnd_type = BND_NEGREF)
+      if (dom%nb > 1) call curl%internal_boundaries_3d(src)
       do n = 1, nsmoo
-         if (mod(n-1, int(dom%nb)) == 0) call curl%arr3d_boundaries(soln, bnd_type = BND_NEGREF)
+         if (mod(n-1, int(dom%nb)) == 0) then
+            call curl%arr3d_boundaries(soln, bnd_type = BND_NEGREF)
+         else
+            call curl%external_boundaries(soln, bnd_type = BND_NEGREF)
+         endif
          b = dom%nb - 1 - mod(n-1, int(dom%nb))
          if (dirty_debug) then
             write(dirty_label, '(a,i5)')"relax4M soln- smoo=", n
-            call curl%check_dirty(soln, dirty_label, expand=I_ONE)
+            call curl%check_dirty(soln, dirty_label, expand=b)
          endif
          cgl => curl%first
          do while (associated(cgl))
@@ -239,6 +243,12 @@ contains
             is = cg%is-b*dom%D_(xdim); ie = cg%ie+b*dom%D_(xdim)
             js = cg%js-b*dom%D_(ydim); je = cg%je+b*dom%D_(ydim)
             ks = cg%ks-b*dom%D_(zdim); ke = cg%ke+b*dom%D_(zdim)
+            if (cg%ext_bnd(xdim, LO)) is = cg%is
+            if (cg%ext_bnd(xdim, HI)) ie = cg%ie
+            if (cg%ext_bnd(ydim, LO)) js = cg%js
+            if (cg%ext_bnd(ydim, HI)) je = cg%je
+            if (cg%ext_bnd(zdim, LO)) ks = cg%ks
+            if (cg%ext_bnd(zdim, HI)) ke = cg%ke
             if (dom%eff_dim == ndims .and. .not. multidim_code_3D) then
                ! Set multidim_code_3D to .true. if you want to see performance difference between these two variants of relaxation.
                ! Expect approximately 10-20% difference of the computational cost in favour of the 3D implementation
