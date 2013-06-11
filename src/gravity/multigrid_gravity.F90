@@ -860,29 +860,56 @@ contains
 
    subroutine poisson_solver(history)
 
+      use cg_leaves,          only: leaves
+      use cg_level_finest,    only: finest
+      use cg_list_global,     only: all_cg
+      use constants,          only: BND_XTRAP, BND_REF, fft_none
+      use dataio_pub,         only: msg, printinfo
+      use mpisetup,           only: nproc
       use multigrid_old_soln, only: soln_history
-      use multigridvars,      only: grav_bnd, bnd_givenval
+      use multigridvars,      only: grav_bnd, bnd_givenval, bnd_isolated, stdout, solution
       use pcg,                only: mgpcg, use_CG, use_CG_outer
 
       implicit none
 
       type(soln_history), intent(inout) :: history !< inner or outer potential history used for initializing first guess
 
+      ! On single CPU use FFT if possible because it is faster. Can be disabled by prefer_rbgs_relaxation = .true.
+      if (nproc == 1 .and. finest%level%fft_type /= fft_none) then
+         call all_cg%set_dirty(solution)
+         call fft_solve_roof
+         if (trust_fft_solution) then
+            write(msg, '(3a)')"[multigrid_gravity:vcycle_hg] FFT solution trusted, skipping ", trim(vstat%cprefix), "cycle."
+            call printinfo(msg, stdout)
+            return
+         endif
+      else
+         call history%init_solution(vstat%cprefix)
+      endif
+
       if (grav_bnd == bnd_givenval) then
          if (use_CG_outer) then
-            call history%init_solution(vstat%cprefix)
-            call mgpcg(history, max_cycles, norm_tol)
+            call mgpcg(max_cycles, norm_tol)
          else
-            call vcycle_hg(history)
+            call vcycle_hg
          endif
       else
          if (use_CG) then
-            call history%init_solution(vstat%cprefix)
-            call mgpcg(history, max_cycles, norm_tol)
+            call mgpcg(max_cycles, norm_tol)
          else
-            call vcycle_hg(history)
+            call vcycle_hg
          endif
       endif
+
+      ! Update guardcells of the solution before leaving. This can be done in higher-level routines that collect all the gravity contributions, but would be less safe.
+      ! Extrapolate isolated boundaries, remember that grav_bnd is messed up by multigrid_solve_*
+      if (grav_bnd == bnd_isolated .or. grav_bnd == bnd_givenval) then
+         call leaves%leaf_arr3d_boundaries(solution, bnd_type = BND_XTRAP)
+      else
+         call leaves%leaf_arr3d_boundaries(solution, bnd_type = BND_REF)
+      endif
+
+      call history%store_solution
 
    end subroutine poisson_solver
 
@@ -891,26 +918,23 @@ contains
 !! For more difficult problems, like variable coefficient diffusion equation a more sophisticated V-cycle may be more effective.
 !<
 
-   subroutine vcycle_hg(history)
+   subroutine vcycle_hg
 
       use cg_leaves,          only: leaves
       use cg_list_global,     only: all_cg
       use cg_level_coarsest,  only: coarsest
       use cg_level_connected, only: cg_level_connected_T
       use cg_level_finest,    only: finest
-      use constants,          only: cbuff_len, fft_none
+      use constants,          only: cbuff_len
       use dataio_pub,         only: msg, die, warn, printinfo
       use global,             only: do_ascii_dump
-      use mpisetup,           only: master, nproc
+      use mpisetup,           only: master
       use multigridvars,      only: source, solution, correction, defect, verbose_vcycle, stdout, tot_ts, ts, grav_bnd, bnd_periodic
       use multigrid_gravity_helper, only: approximate_solution
       use multigrid_Laplace,  only: residual_order
-      use multigrid_old_soln, only: soln_history
       use timer,              only: set_timer
 
       implicit none
-
-      type(soln_history), intent(inout) :: history !< inner or outer potential history used for initializing first guess
 
       integer :: v
       real    :: norm_rhs, norm_lhs, norm_old, norm_lowest
@@ -930,19 +954,6 @@ contains
 
       do_ascii_dump = do_ascii_dump .or. dump_every_step .or. dump_result
 
-      ! On single CPU use FFT if possible because it is faster. Can be disabled by prefer_rbgs_relaxation = .true.
-      if (nproc == 1 .and. finest%level%fft_type /= fft_none) then
-         call all_cg%set_dirty(solution)
-         call fft_solve_roof
-         if (trust_fft_solution) then
-            write(msg, '(3a)')"[multigrid_gravity:vcycle_hg] FFT solution trusted, skipping ", trim(vstat%cprefix), "cycle."
-            call printinfo(msg, stdout)
-            return
-         endif
-      else
-         call history%init_solution(vstat%cprefix)
-      endif
-
       norm_lhs = 0.
       norm_rhs = leaves%norm_sq(source)
       norm_old = norm_rhs
@@ -951,18 +962,11 @@ contains
       if (norm_rhs == 0.) then ! empty domain => potential == 0.
          if (master .and. .not. norm_was_zero) call warn("[multigrid_gravity:vcycle_hg] No gravitational potential for an empty space.")
          norm_was_zero = .true.
-         call history%store_solution
          return
       else
          if (master .and. norm_was_zero) call warn("[multigrid_gravity:vcycle_hg] Spontaneous mass creation detected!")
          norm_was_zero = .false.
       endif
-
-      ! if (.not. history%valid .and. prefer_rbgs_relaxation) call approximate_solution(finest, source, solution)
-      ! not necessary when init_solution called FFT
-      ! In single-process run, the above call may often save one V-cycle, but it always costs almost like one V-cycle.
-      ! \todo test it in massively-parallel run (and most probably throw out for simplicity)
-      ! difficult statement: for approximate_solution_fft it requires to pass a flag to use guardcells instead of prolonging faces.
 
       ! iterations
       do v = 0, max_cycles
@@ -1051,8 +1055,6 @@ contains
       if (.not. verbose_vcycle) call vstat%brief_v_log
 
       call leaves%check_dirty(solution, "final_solution")
-
-      call history%store_solution
 
    end subroutine vcycle_hg
 

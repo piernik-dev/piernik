@@ -99,20 +99,18 @@ contains
 !! \todo Find out why it converges so poorly for outer potential
 !<
 
-   subroutine mgpcg(history, max_cycles, norm_tol)
+   subroutine mgpcg(max_cycles, norm_tol)
 
       use cg_leaves,          only: leaves
       use cg_list_dataop,     only: ind_val
       use dataio_pub,         only: msg, printinfo
       use mpisetup,           only: master
       use multigrid_Laplace,  only: residual_order, vT_A_v_order
-      use multigrid_old_soln, only: soln_history
       use multigridvars,      only: source, solution, defect, correction, tot_ts, ts
       use timer,              only: set_timer
 
       implicit none
 
-      type(soln_history), intent(inout) :: history     !< inner or outer potential history used for initializing first guess
       integer(kind=4),    intent(in)    :: max_cycles  !< Maximum allowed number of V-cycles
       real,               intent(in)    :: norm_tol    !< stop V-cycle iterations when the ratio of norms ||residual||/||source|| is below this value
 
@@ -153,8 +151,6 @@ contains
          dc_k = dc_k1
 
       enddo
-
-      call history%store_solution
 
       ts = set_timer("multigrid")
       tot_ts = tot_ts + ts

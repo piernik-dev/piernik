@@ -229,9 +229,8 @@ contains
    subroutine store_solution(this)
 
       use cg_leaves,     only: leaves
-      use constants,     only: BND_XTRAP, BND_REF
       use global,        only: t
-      use multigridvars, only: solution, grav_bnd, bnd_isolated, bnd_givenval
+      use multigridvars, only: solution
 
       implicit none
 
@@ -249,14 +248,6 @@ contains
       call leaves%q_copy(solution, this%old(this%last)%i_hist)
       this%old(this%last)%time = t
       this%valid = .true.
-
-      ! Update guardcells of the solution before leaving. This can be done in higher-level routines that collect all the gravity contributions, but would be less safe.
-      ! Extrapolate isolated boundaries, remember that grav_bnd is messed up by multigrid_solve_*
-      if (grav_bnd == bnd_isolated .or. grav_bnd == bnd_givenval) then
-         call leaves%leaf_arr3d_boundaries(solution, bnd_type = BND_XTRAP)
-      else
-         call leaves%leaf_arr3d_boundaries(solution, bnd_type = BND_REF)
-      endif
 
    end subroutine store_solution
 
