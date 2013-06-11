@@ -175,7 +175,7 @@ contains
       use cg_level_connected, only: cg_level_connected_T
       use cg_list,            only: cg_list_element
       use cg_list_dataop,     only: dirty_label
-      use constants,          only: xdim, ydim, zdim, ndims, GEO_XYZ, GEO_RPZ, I_ONE, BND_NEGREF, LO
+      use constants,          only: xdim, ydim, zdim, ndims, GEO_XYZ, GEO_RPZ, BND_NEGREF, LO, HI
       use dataio_pub,         only: die
       use domain,             only: dom
       use global,             only: dirty_debug
@@ -191,80 +191,90 @@ contains
 
       integer, parameter :: RED_BLACK = 2 !< the checkerboard requires two sweeps
 
-      integer :: n, i, j, k, i1, j1, k1, id, jd, kd
+      integer :: n, b, i, j, k, i1, j1, k1, id, jd, kd
       integer(kind=8) :: ijko
       real, dimension(:), allocatable :: crx, crx1, cry, crz, cr
       real :: cr0
       type(cg_list_element), pointer :: cgl
       type(grid_container),  pointer :: cg
+      integer :: is, ie, js, je, ks, ke
 
       ! call curl%arr3d_boundaries(src) required when we want to eliminate some communication of soln at a cost of expanding relaxated area into guardcells
 
       allocate(crx(0), crx1(0), cry(0), crz(0), cr(0)) ! suppress compiler warnings
       cr0 = 1. - overrelax
 
+      call curl%internal_boundaries_3d(src)
       do n = 1, RED_BLACK*nsmoo
-         call curl%arr3d_boundaries(soln, bnd_type = BND_NEGREF)
-
-         if (dirty_debug) then
-            write(dirty_label, '(a,i5)')"relax2 soln- smoo=", n
-            call curl%check_dirty(soln, dirty_label, expand=I_ONE)
+         if (mod(n-1, int(dom%nb)) == 0) then
+            call curl%arr3d_boundaries(soln, bnd_type = BND_NEGREF)
+         else
+            call curl%external_boundaries(soln, bnd_type = BND_NEGREF)
          endif
+         b = dom%nb - 1 - mod(n-1, int(dom%nb))
+
+!!$         if (dirty_debug) then
+!!$            write(dirty_label, '(a,i5)')"relax2 soln- smoo=", n
+!!$            call curl%check_dirty(soln, dirty_label, expand=b)
+!!$         endif
          cgl => curl%first
          do while (associated(cgl))
             cg => cgl%cg
             if (dom%geometry_type == GEO_RPZ) then
                deallocate(crx, crx1, cry, crz, cr)
-               allocate(crx(cg%is:cg%ie), crx1(cg%is:cg%ie), cry(cg%is:cg%ie), crz(cg%is:cg%ie), cr(cg%is:cg%ie))
+               is = lbound(cg%x, dim=1)
+               ie = ubound(cg%x, dim=1)
+               allocate(crx(is:ie), crx1(is:ie), cry(is:ie), crz(is:ie), cr(is:ie))
                cr  = overrelax / 2.
-               crx = cg%dvol**2 * cg%idx2 * cg%x(cg%is:cg%ie)**2
+               crx = cg%dvol**2 * cg%idx2 * cg%x**2
                cry = cg%dvol**2 * cg%idy2
-               crz = cg%dvol**2 * cg%idz2 * cg%x(cg%is:cg%ie)**2
+               crz = cg%dvol**2 * cg%idz2 * cg%x**2
                cr  = cr / (crx + cry + crz)
                crx = cr * crx
                cry = cr * cry
                crz = cr * crz
-               cr  = cr * cg%dvol**2 * cg%x(cg%is:cg%ie)**2
+               cr  = cr * cg%dvol**2 * cg%x**2
 
-               crx1 = 2. * cg%x(cg%is:cg%ie) * cg%idx
+               crx1 = 2. * cg%x(is:ie) * cg%idx
                where (crx1 /= 0.) crx1 = 1./crx1
             endif
+            is = cg%is-b*dom%D_(xdim); ie = cg%ie+b*dom%D_(xdim)
+            js = cg%js-b*dom%D_(ydim); je = cg%je+b*dom%D_(ydim)
+            ks = cg%ks-b*dom%D_(zdim); ke = cg%ke+b*dom%D_(zdim)
+            if (cg%ext_bnd(xdim, LO)) is = cg%is
+            if (cg%ext_bnd(xdim, HI)) ie = cg%ie
+            if (cg%ext_bnd(ydim, LO)) js = cg%js
+            if (cg%ext_bnd(ydim, HI)) je = cg%je
+            if (cg%ext_bnd(zdim, LO)) ks = cg%ks
+            if (cg%ext_bnd(zdim, HI)) ke = cg%ke
 
-            ! Possible optimization: this is the most costly part of the RBGS relaxation (instruction count, read and write data, L1 and L2 read cache miss)
-            ! do n = 1, nsmoo
-            !    call curl%arr3d_boundaries(soln, bnd_type = BND_NEGREF)
-            !    relax single layer of red cells at all faces
-            !    call curl%arr3d_boundaries(soln, bnd_type = BND_NEGREF)
-            !    relax interior cells (except for single layer of cells at all faces), first red, then 1-cell behind black one.
-            !    relax single layer of black cells at all faces
-            ! enddo
-            ! OPT: try to relax without Red-Black and use cg%wa for temporary storage
+            ! with explicit outer loops it is easier to describe a 3-D checkerboard. We can use "foreach" construct here as well
 
-            ! with explicit outer loops it is easier to describe a 3-D checkerboard :-)
-
+            ! This routine is really sensitive to tiny details such as which cells we do first (red or black).
+            ! Before you optimize anything, make sure it does not change the results
             ijko = 0
-            if (any(cg%my_se(:, LO) < 0)) ijko = -ndims*RED_BLACK*minval(cg%my_se(:, LO))
+            if (any(cg%lhn(:, LO) < 0)) ijko = -ndims*RED_BLACK*minval(cg%lhn(:, LO))
             if (dom%eff_dim==ndims .and. .not. multidim_code_3D) then
-               do k = cg%ks, cg%ke
-                  do j = cg%js, cg%je
-                     i1 = cg%is + int(mod(ijko+n+cg%is+j+k, int(RED_BLACK, kind=8)), kind=4)
+               do k = ks, ke
+                  do j = js, je
+                     i1 = is + int(mod(ijko+n+is+j+k, int(RED_BLACK, kind=8)), kind=4)
                      select case (dom%geometry_type)
                         case (GEO_RPZ)
-                           cg%q(soln)%arr                         (i1  :cg%ie  :2, j,   k) = &
-                                cr0              *  cg%q(soln)%arr(i1  :cg%ie  :2, j,   k) + &
-                                crx( i1:cg%ie:2) * (cg%q(soln)%arr(i1-1:cg%ie-1:2, j,   k  ) + cg%q(soln)%arr(i1+1:cg%ie+1:2, j,   k))   + &
-                                cry( i1:cg%ie:2) * (cg%q(soln)%arr(i1  :cg%ie  :2, j-1, k  ) + cg%q(soln)%arr(i1  :cg%ie  :2, j+1, k))   + &
-                                crz( i1:cg%ie:2) * (cg%q(soln)%arr(i1  :cg%ie  :2, j,   k-1) + cg%q(soln)%arr(i1  :cg%ie  :2, j,   k+1)) - &
-                                cr(  i1:cg%ie:2) *  cg%q(src)%arr( i1  :cg%ie  :2, j,   k  )  + &
-                                crx(i1:cg%ie:2) * crx1(i1:cg%ie:2) * &
-                                &                  (cg%q(soln)%arr(i1+1:cg%ie+1:2, j,   k  ) - cg%q(soln)%arr(i1-1:cg%ie-1:2, j,   k))
+                           cg%q(soln)%arr                      (i1  :ie  :2, j,   k) = &
+                                cr0           *  cg%q(soln)%arr(i1  :ie  :2, j,   k) + &
+                                crx( i1:ie:2) * (cg%q(soln)%arr(i1-1:ie-1:2, j,   k  ) + cg%q(soln)%arr(i1+1:ie+1:2, j,   k))   + &
+                                cry( i1:ie:2) * (cg%q(soln)%arr(i1  :ie  :2, j-1, k  ) + cg%q(soln)%arr(i1  :ie  :2, j+1, k))   + &
+                                crz( i1:ie:2) * (cg%q(soln)%arr(i1  :ie  :2, j,   k-1) + cg%q(soln)%arr(i1  :ie  :2, j,   k+1)) - &
+                                cr(  i1:ie:2) *  cg%q(src )%arr(i1  :ie  :2, j,   k  )  + &
+                                crx(i1:ie:2) * crx1(i1:ie:2) * &
+                                &               (cg%q(soln)%arr(i1+1:ie+1:2, j,   k  ) - cg%q(soln)%arr(i1-1:ie-1:2, j,   k))
                         case (GEO_XYZ)
-                           cg%q(soln)%arr                 (i1  :cg%ie  :2, j,   k) = &
-                                cr0      *  cg%q(soln)%arr(i1  :cg%ie  :2, j,   k) + &
-                                cg%mg%rx * (cg%q(soln)%arr(i1-1:cg%ie-1:2, j,   k)   + cg%q(soln)%arr(i1+1:cg%ie+1:2, j,   k))   + &
-                                cg%mg%ry * (cg%q(soln)%arr(i1  :cg%ie  :2, j-1, k)   + cg%q(soln)%arr(i1  :cg%ie  :2, j+1, k))   + &
-                                cg%mg%rz * (cg%q(soln)%arr(i1  :cg%ie  :2, j,   k-1) + cg%q(soln)%arr(i1  :cg%ie  :2, j,   k+1)) - &
-                                cg%mg%r  *  cg%q(src)%arr (i1  :cg%ie  :2, j,   k)
+                           cg%q(soln)%arr                 (i1  :ie  :2, j,   k) = &
+                                cr0      *  cg%q(soln)%arr(i1  :ie  :2, j,   k) + &
+                                cg%mg%rx * (cg%q(soln)%arr(i1-1:ie-1:2, j,   k)   + cg%q(soln)%arr(i1+1:ie+1:2, j,   k))   + &
+                                cg%mg%ry * (cg%q(soln)%arr(i1  :ie  :2, j-1, k)   + cg%q(soln)%arr(i1  :ie  :2, j+1, k))   + &
+                                cg%mg%rz * (cg%q(soln)%arr(i1  :ie  :2, j,   k-1) + cg%q(soln)%arr(i1  :ie  :2, j,   k+1)) - &
+                                cg%mg%r  *  cg%q(src )%arr(i1  :ie  :2, j,   k)
                         case default
                            call die("[multigrid_Laplace2:approximate_solution_rbgs] Unsupported geometry (3D).")
                      end select
@@ -272,9 +282,9 @@ contains
                enddo
             else
                ! In 3D this variant significantly increases instruction count and also some data read
-               i1 = cg%is; id = 1 ! mv to multigridvars, init_multigrid
-               j1 = cg%js; jd = 1
-               k1 = cg%ks; kd = 1
+               i1 = is; id = 1 ! mv to multigridvars, init_multigrid
+               j1 = js; jd = 1
+               k1 = ks; kd = 1
                if (dom%has_dir(xdim)) then
                   id = RED_BLACK
                else if (dom%has_dir(ydim)) then
@@ -283,33 +293,33 @@ contains
                   kd = RED_BLACK
                endif
 
-               if (kd == RED_BLACK) k1 = cg%ks + int(mod(ijko+n+cg%ks, int(RED_BLACK, kind=8)), kind=4)
+               if (kd == RED_BLACK) k1 = ks + int(mod(ijko+n+ks, int(RED_BLACK, kind=8)), kind=4)
                select case (dom%geometry_type)
                   case (GEO_XYZ)
-                     do k = k1, cg%ke, kd
-                        if (jd == RED_BLACK) j1 = cg%js + int(mod(ijko+n+cg%js+k, int(RED_BLACK, kind=8)), kind=4)
-                        do j = j1, cg%je, jd
-                           if (id == RED_BLACK) i1 = cg%is + int(mod(ijko+n+cg%is+j+k, int(RED_BLACK, kind=8)), kind=4)
-                           cg%q(soln)%arr                       (i1  :cg%ie  :id, j,   k)   = &
-                                &                 cg%q(soln)%arr(i1  :cg%ie  :id, j,   k)   * cr0 - &
-                                &                 cg%q(src)%arr (i1  :cg%ie  :id, j,   k)   * cg%mg%r
-                           if (dom%has_dir(xdim)) cg%q(soln)%arr(i1  :cg%ie  :id, j,   k)   = cg%q(soln)%arr(i1  :cg%ie  :id, j,   k)    + &
-                                &                (cg%q(soln)%arr(i1-1:cg%ie-1:id, j,   k)   + cg%q(soln)%arr(i1+1:cg%ie+1:id, j,   k))   * cg%mg%rx
-                           if (dom%has_dir(ydim)) cg%q(soln)%arr(i1  :cg%ie  :id, j,   k)   = cg%q(soln)%arr(i1  :cg%ie  :id, j,   k)    + &
-                                &                (cg%q(soln)%arr(i1  :cg%ie  :id, j-1, k)   + cg%q(soln)%arr(i1  :cg%ie  :id, j+1, k))   * cg%mg%ry
-                           if (dom%has_dir(zdim)) cg%q(soln)%arr(i1  :cg%ie  :id, j,   k)   = cg%q(soln)%arr(i1  :cg%ie  :id, j,   k)    + &
-                                &                (cg%q(soln)%arr(i1  :cg%ie  :id, j,   k-1) + cg%q(soln)%arr(i1  :cg%ie  :id, j,   k+1)) * cg%mg%rz
+                     do k = k1, ke, kd
+                        if (jd == RED_BLACK) j1 = js + int(mod(ijko+n+js+k, int(RED_BLACK, kind=8)), kind=4)
+                        do j = j1, je, jd
+                           if (id == RED_BLACK) i1 = is + int(mod(ijko+n+is+j+k, int(RED_BLACK, kind=8)), kind=4)
+                           cg%q(soln)%arr                       (i1  :ie  :id, j,   k)   = &
+                                &                 cg%q(soln)%arr(i1  :ie  :id, j,   k)   * cr0 - &
+                                &                 cg%q(src)%arr (i1  :ie  :id, j,   k)   * cg%mg%r
+                           if (dom%has_dir(xdim)) cg%q(soln)%arr(i1  :ie  :id, j,   k)   = cg%q(soln)%arr(i1  :ie  :id, j,   k)    + &
+                                &                (cg%q(soln)%arr(i1-1:ie-1:id, j,   k)   + cg%q(soln)%arr(i1+1:ie+1:id, j,   k))   * cg%mg%rx
+                           if (dom%has_dir(ydim)) cg%q(soln)%arr(i1  :ie  :id, j,   k)   = cg%q(soln)%arr(i1  :ie  :id, j,   k)    + &
+                                &                (cg%q(soln)%arr(i1  :ie  :id, j-1, k)   + cg%q(soln)%arr(i1  :ie  :id, j+1, k))   * cg%mg%ry
+                           if (dom%has_dir(zdim)) cg%q(soln)%arr(i1  :ie  :id, j,   k)   = cg%q(soln)%arr(i1  :ie  :id, j,   k)    + &
+                                &                (cg%q(soln)%arr(i1  :ie  :id, j,   k-1) + cg%q(soln)%arr(i1  :ie  :id, j,   k+1)) * cg%mg%rz
                         enddo
                      enddo
                   case (GEO_RPZ)
-                     do k = k1, cg%ke, kd
-                        if (jd == RED_BLACK) j1 = cg%js + int(mod(ijko+n+cg%js+k, int(RED_BLACK, kind=8)), kind=4)
-                        do j = j1, cg%je, jd
-                           if (id == RED_BLACK) i1 = cg%is + int(mod(ijko+n+cg%is+j+k, int(RED_BLACK, kind=8)), kind=4)
-                           do i = i1, cg%ie, id
+                     do k = k1, ke, kd
+                        if (jd == RED_BLACK) j1 = js + int(mod(ijko+n+js+k, int(RED_BLACK, kind=8)), kind=4)
+                        do j = j1, je, jd
+                           if (id == RED_BLACK) i1 = is + int(mod(ijko+n+is+j+k, int(RED_BLACK, kind=8)), kind=4)
+                           do i = i1, ie, id
                               cg%q(soln)%arr                       (i,   j,   k)   = &
                                    &                 cg%q(soln)%arr(i,   j,   k)   * cr0 - &
-                                   &                 cg%q(src)%arr (i,   j,   k)   * cr(i)
+                                   &                 cg%q(src )%arr(i,   j,   k)   * cr(i)
                               if (dom%has_dir(xdim)) cg%q(soln)%arr(i,   j,   k)   = cg%q(soln)%arr(i,   j,   k)    + &
                                    &                (cg%q(soln)%arr(i-1, j,   k)   + cg%q(soln)%arr(i+1, j,   k))   * crx(i) + &
                                    &                (cg%q(soln)%arr(i+1, j,   k)   - cg%q(soln)%arr(i-1, j,   k))   * crx(i) * crx1(i)
