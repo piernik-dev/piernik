@@ -99,7 +99,7 @@ module grid_cont
 
       ! geometrical factors
       !! \todo move to cg
-      real    :: r, rx, ry, rz                                        !< geometric factors for relaxation (diffusion) used in approximate_solution_rbgs
+      real    :: r, rx, ry, rz                                        !< geometric factors for relaxation (diffusion) used in approximate_solution_{rbgs,relax}*
 
       ! prolongation and restriction
       !! \todo move to cg, should be initialized by cg_level_T procedure

@@ -94,7 +94,6 @@ contains
 !! <tr><td>nsmoob                </td><td>100    </td><td>integer value  </td><td>\copydoc multigrid_gravity_helper::nsmoob         </td></tr>
 !! <tr><td>overrelax             </td><td>1.     </td><td>real value     </td><td>\copydoc multigrid_gravity::overrelax             </td></tr>
 !! <tr><td>overrelax_xxyz(ndims) </td><td>1.     </td><td>real value     </td><td>\copydoc multigrid_gravity::overrelax_xyz         </td></tr>
-!! <tr><td>Jacobi_damp           </td><td>1.     </td><td>real value     </td><td>\copydoc multigrid_gravity::jacobi_damp           </td></tr>
 !! <tr><td>L4_strength           </td><td>1.0    </td><td>real value     </td><td>\copydoc multigrid_Laplace4::L4_strength          </td></tr>
 !! <tr><td>nsmoof                </td><td>1      </td><td>integer value  </td><td>\copydoc multigridvars::nsmoof                    </td></tr>
 !! <tr><td>ord_laplacian         </td><td>-4     </td><td>integer value  </td><td>\copydoc multigrid_Laplace::ord_laplacian         </td></tr>
@@ -129,7 +128,7 @@ contains
       use domain,             only: dom, is_multicg !, is_uneven
       use mpisetup,           only: master, slave, ibuff, cbuff, rbuff, lbuff, nproc, piernik_MPI_Bcast
       use multigridvars,      only: single_base, bnd_invalid, bnd_isolated, bnd_periodic, bnd_dirichlet, grav_bnd, fft_full_relax, multidim_code_3D, nsmool, nsmoof, &
-           &                        overrelax, overrelax_xyz, Jacobi_damp
+           &                        overrelax, overrelax_xyz
       use multigrid_gravity_helper, only: nsmoob
       use multigrid_Laplace,  only: ord_laplacian, ord_laplacian_outer
       use multigrid_Laplace4, only: L4_strength
@@ -143,7 +142,7 @@ contains
       logical, save :: frun = .true.      !< First run flag
 
       namelist /MULTIGRID_GRAVITY/ norm_tol, vcycle_abort, vcycle_giveup, max_cycles, nsmool, nsmoob, use_CG, use_CG_outer, &
-           &                       overrelax, overrelax_xyz, Jacobi_damp, L4_strength, nsmoof, ord_laplacian, ord_laplacian_outer, ord_time_extrap, &
+           &                       overrelax, overrelax_xyz, L4_strength, nsmoof, ord_laplacian, ord_laplacian_outer, ord_time_extrap, &
            &                       prefer_rbgs_relaxation, base_no_fft, fft_full_relax, fft_patient, trust_fft_solution, &
            &                       coarsen_multipole, lmax, mmax, ord_prolong_mpole, use_point_monopole, interp_pt2mom, interp_mom2pot, multidim_code_3D, &
            &                       grav_bnd_str, preconditioner
@@ -155,7 +154,6 @@ contains
       norm_tol               = 1.e-6
       overrelax              = 1.
       overrelax_xyz(:)       = 1.
-      Jacobi_damp            = 1.
       vcycle_abort           = 2.
       vcycle_giveup          = 1.5
       L4_strength            = 1.0
@@ -238,10 +236,9 @@ contains
          rbuff(1) = norm_tol
          rbuff(2) = overrelax
          rbuff(3:5) = overrelax_xyz
-         rbuff(6) = Jacobi_damp
-         rbuff(7) = vcycle_abort
-         rbuff(8) = vcycle_giveup
-         rbuff(9) = L4_strength
+         rbuff(6) = vcycle_abort
+         rbuff(7) = vcycle_giveup
+         rbuff(8) = L4_strength
 
          ibuff( 1) = coarsen_multipole
          ibuff( 2) = lmax
@@ -281,10 +278,9 @@ contains
          norm_tol       = rbuff(1)
          overrelax      = rbuff(2)
          overrelax_xyz  = rbuff(3:5)
-         Jacobi_damp    = rbuff(6)
-         vcycle_abort   = rbuff(7)
-         vcycle_giveup  = rbuff(8)
-         L4_strength    = rbuff(9)
+         vcycle_abort   = rbuff(6)
+         vcycle_giveup  = rbuff(7)
+         L4_strength    = rbuff(8)
 
          coarsen_multipole = ibuff( 1)
          lmax              = ibuff( 2)
@@ -360,15 +356,9 @@ contains
          overrelax_xyz(:) = 1.
       endif
 
-      if (master) then
-         if ((Jacobi_damp <= 0. .or. Jacobi_damp>1.)) then
-            write(msg, '(a,g12.5,a)')"[multigrid_gravity:multigrid_grav_par] Jacobi_damp = ",Jacobi_damp," is outside (0, 1] interval."
-            call warn(msg)
-         endif
-         if (overrelax /= 1. .or. any(overrelax_xyz(:) /= 1.)) then
-            write(msg, '(a,f8.5,a,3f8.5,a)')"[multigrid_gravity:multigrid_grav_par] Overrelaxation factors: global = ", overrelax, ", directional = [", overrelax_xyz(:), "]"
-            call warn(msg)
-         endif
+      if (master .and. (overrelax /= 1. .or. any(overrelax_xyz(:) /= 1.))) then
+         write(msg, '(a,f8.5,a,3f8.5,a)')"[multigrid_gravity:multigrid_grav_par] Overrelaxation factors: global = ", overrelax, ", directional = [", overrelax_xyz(:), "]"
+         call warn(msg)
       endif
 
       if (fft_patient) fftw_flags = FFTW_PATIENT
@@ -534,11 +524,11 @@ contains
 
       use cg_level_coarsest,  only: coarsest
       use cg_level_connected, only: cg_level_connected_T
-      use constants,          only: xdim, ydim, zdim, fft_rcr, fft_dst, fft_none, pi, dpi, zero, half, one
+      use constants,          only: fft_rcr, fft_dst, fft_none, pi, dpi, zero, half, one!, xdim, ydim, zdim
       use dataio_pub,         only: die
       use domain,             only: dom
       use grid_cont,          only: grid_container
-      use multigridvars,      only: overrelax, overrelax_xyz
+      use multigridvars,      only: overrelax!, overrelax_xyz
 
       implicit none
 
@@ -553,14 +543,10 @@ contains
       cg%mg%ry = cg%dvol**2 * cg%idy2
       cg%mg%rz = cg%dvol**2 * cg%idz2
       cg%mg%r  = cg%mg%r / (cg%mg%rx + cg%mg%ry + cg%mg%rz)
-      cg%mg%rx = overrelax_xyz(xdim) * cg%mg%rx * cg%mg%r
-      cg%mg%ry = overrelax_xyz(ydim) * cg%mg%ry * cg%mg%r
-      cg%mg%rz = overrelax_xyz(zdim) * cg%mg%rz * cg%mg%r
+      cg%mg%rx = cg%mg%r * cg%mg%rx
+      cg%mg%ry = cg%mg%r * cg%mg%ry
+      cg%mg%rz = cg%mg%r * cg%mg%rz
       cg%mg%r  = cg%mg%r * cg%dvol**2
-      !>
-      !! \deprecated BEWARE: some of the above invariants may be not optimally defined - the convergence ratio drops when dx /= dy or dy /= dz or dx /= dz
-      !! and overrelaxation factors are required to get any convergence (often poor)
-      !<
 
       ! FFT solver storage and data
       curl => coarsest%level

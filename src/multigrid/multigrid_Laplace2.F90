@@ -180,7 +180,7 @@ contains
       use domain,             only: dom
       use global,             only: dirty_debug
       use grid_cont,          only: grid_container
-      use multigridvars,      only: multidim_code_3D, Jacobi_damp, overrelax, overrelax_xyz
+      use multigridvars,      only: multidim_code_3D, overrelax!, overrelax_xyz
 
       implicit none
 
@@ -194,12 +194,14 @@ contains
       integer :: n, i, j, k, i1, j1, k1, id, jd, kd
       integer(kind=8) :: ijko
       real, dimension(:), allocatable :: crx, crx1, cry, crz, cr
+      real :: cr0
       type(cg_list_element), pointer :: cgl
       type(grid_container),  pointer :: cg
 
       ! call curl%arr3d_boundaries(src) required when we want to eliminate some communication of soln at a cost of expanding relaxated area into guardcells
 
       allocate(crx(0), crx1(0), cry(0), crz(0), cr(0)) ! suppress compiler warnings
+      cr0 = 1. - overrelax
 
       do n = 1, RED_BLACK*nsmoo
          call curl%arr3d_boundaries(soln, bnd_type = BND_NEGREF)
@@ -219,9 +221,9 @@ contains
                cry = cg%dvol**2 * cg%idy2
                crz = cg%dvol**2 * cg%idz2 * cg%x(cg%is:cg%ie)**2
                cr  = cr / (crx + cry + crz)
-               crx = overrelax_xyz(xdim)* crx * cr
-               cry = overrelax_xyz(ydim)* cry * cr
-               crz = overrelax_xyz(zdim)* crz * cr
+               crx = cr * crx
+               cry = cr * cry
+               crz = cr * crz
                cr  = cr * cg%dvol**2 * cg%x(cg%is:cg%ie)**2
 
                crx1 = 2. * cg%x(cg%is:cg%ie) * cg%idx
@@ -286,15 +288,15 @@ contains
                         if (jd == RED_BLACK) j1 = cg%js + int(mod(ijko+n+cg%js+k, int(RED_BLACK, kind=8)), kind=4)
                         do j = j1, cg%je, jd
                            if (id == RED_BLACK) i1 = cg%is + int(mod(ijko+n+cg%is+j+k, int(RED_BLACK, kind=8)), kind=4)
-                           cg%q(soln)%arr                           (i1  :cg%ie  :id, j,   k)   = &
-                                & (1. - Jacobi_damp)* cg%q(soln)%arr(i1  :cg%ie  :id, j,   k)   - &
-                                &       Jacobi_damp * cg%q(src)%arr (i1  :cg%ie  :id, j,   k)   * cg%mg%r
-                           if (dom%has_dir(xdim))     cg%q(soln)%arr(i1  :cg%ie  :id, j,   k)   = cg%q(soln)%arr(i1  :cg%ie  :id, j,   k)    + &
-                                &       Jacobi_damp *(cg%q(soln)%arr(i1-1:cg%ie-1:id, j,   k)   + cg%q(soln)%arr(i1+1:cg%ie+1:id, j,   k))   * cg%mg%rx
-                           if (dom%has_dir(ydim))     cg%q(soln)%arr(i1  :cg%ie  :id, j,   k)   = cg%q(soln)%arr(i1  :cg%ie  :id, j,   k)    + &
-                                &       Jacobi_damp *(cg%q(soln)%arr(i1  :cg%ie  :id, j-1, k)   + cg%q(soln)%arr(i1  :cg%ie  :id, j+1, k))   * cg%mg%ry
-                           if (dom%has_dir(zdim))     cg%q(soln)%arr(i1  :cg%ie  :id, j,   k)   = cg%q(soln)%arr(i1  :cg%ie  :id, j,   k)    + &
-                                &       Jacobi_damp *(cg%q(soln)%arr(i1  :cg%ie  :id, j,   k-1) + cg%q(soln)%arr(i1  :cg%ie  :id, j,   k+1)) * cg%mg%rz
+                           cg%q(soln)%arr                       (i1  :cg%ie  :id, j,   k)   = &
+                                &                 cg%q(soln)%arr(i1  :cg%ie  :id, j,   k)   * cr0 - &
+                                &                 cg%q(src)%arr (i1  :cg%ie  :id, j,   k)   * cg%mg%r
+                           if (dom%has_dir(xdim)) cg%q(soln)%arr(i1  :cg%ie  :id, j,   k)   = cg%q(soln)%arr(i1  :cg%ie  :id, j,   k)    + &
+                                &                (cg%q(soln)%arr(i1-1:cg%ie-1:id, j,   k)   + cg%q(soln)%arr(i1+1:cg%ie+1:id, j,   k))   * cg%mg%rx
+                           if (dom%has_dir(ydim)) cg%q(soln)%arr(i1  :cg%ie  :id, j,   k)   = cg%q(soln)%arr(i1  :cg%ie  :id, j,   k)    + &
+                                &                (cg%q(soln)%arr(i1  :cg%ie  :id, j-1, k)   + cg%q(soln)%arr(i1  :cg%ie  :id, j+1, k))   * cg%mg%ry
+                           if (dom%has_dir(zdim)) cg%q(soln)%arr(i1  :cg%ie  :id, j,   k)   = cg%q(soln)%arr(i1  :cg%ie  :id, j,   k)    + &
+                                &                (cg%q(soln)%arr(i1  :cg%ie  :id, j,   k-1) + cg%q(soln)%arr(i1  :cg%ie  :id, j,   k+1)) * cg%mg%rz
                         enddo
                      enddo
                   case (GEO_RPZ)
@@ -303,16 +305,16 @@ contains
                         do j = j1, cg%je, jd
                            if (id == RED_BLACK) i1 = cg%is + int(mod(ijko+n+cg%is+j+k, int(RED_BLACK, kind=8)), kind=4)
                            do i = i1, cg%ie, id
-                              cg%q(soln)%arr                           (i,   j,   k)   = &
-                                   & (1. - Jacobi_damp)* cg%q(soln)%arr(i,   j,   k)   - &
-                                   &       Jacobi_damp * cg%q(src)%arr (i,   j,   k)   * cr(i)
-                              if (dom%has_dir(xdim))     cg%q(soln)%arr(i,   j,   k)   = cg%q(soln)%arr(i,   j,   k)    + &
-                                   &       Jacobi_damp *(cg%q(soln)%arr(i-1, j,   k)   + cg%q(soln)%arr(i+1, j,   k))   * crx(i) + &
-                                   &       Jacobi_damp *(cg%q(soln)%arr(i+1, j,   k)   - cg%q(soln)%arr(i-1, j,   k))   * crx(i) * crx1(i)
-                              if (dom%has_dir(ydim))     cg%q(soln)%arr(i,   j,   k)   = cg%q(soln)%arr(i,   j,   k)    + &
-                                   &       Jacobi_damp *(cg%q(soln)%arr(i,   j-1, k)   + cg%q(soln)%arr(i,   j+1, k))   * cry(i)
-                              if (dom%has_dir(zdim))     cg%q(soln)%arr(i,   j,   k)   = cg%q(soln)%arr(i,   j,   k)    + &
-                                   &       Jacobi_damp *(cg%q(soln)%arr(i,   j,   k-1) + cg%q(soln)%arr(i,   j,   k+1)) * crz(i)
+                              cg%q(soln)%arr                       (i,   j,   k)   = &
+                                   &                 cg%q(soln)%arr(i,   j,   k)   * cr0 - &
+                                   &                 cg%q(src)%arr (i,   j,   k)   * cr(i)
+                              if (dom%has_dir(xdim)) cg%q(soln)%arr(i,   j,   k)   = cg%q(soln)%arr(i,   j,   k)    + &
+                                   &                (cg%q(soln)%arr(i-1, j,   k)   + cg%q(soln)%arr(i+1, j,   k))   * crx(i) + &
+                                   &                (cg%q(soln)%arr(i+1, j,   k)   - cg%q(soln)%arr(i-1, j,   k))   * crx(i) * crx1(i)
+                              if (dom%has_dir(ydim)) cg%q(soln)%arr(i,   j,   k)   = cg%q(soln)%arr(i,   j,   k)    + &
+                                   &                (cg%q(soln)%arr(i,   j-1, k)   + cg%q(soln)%arr(i,   j+1, k))   * cry(i)
+                              if (dom%has_dir(zdim)) cg%q(soln)%arr(i,   j,   k)   = cg%q(soln)%arr(i,   j,   k)    + &
+                                   &                (cg%q(soln)%arr(i,   j,   k-1) + cg%q(soln)%arr(i,   j,   k+1)) * crz(i)
                            enddo
                         enddo
                      enddo
