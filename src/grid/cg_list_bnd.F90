@@ -57,7 +57,7 @@ module cg_list_bnd
    !! \brief Lists of grid containers with boundary update
    !!
    !! \details Procedure internal_boundaries requires existence of matching mpi data structures, which is done in cg_level type.
-   !! Thus this type is usable only when the lost?? consist of one or more full cg levels.
+   !! Thus this type is usable only when the list consist of one or more full cg levels.
    !<
 
    type, extends(cg_list_dataop_T) :: cg_list_bnd_T
