@@ -248,7 +248,8 @@ contains
             if (cg%ext_bnd(zdim, LO)) ks = cg%ks
             if (cg%ext_bnd(zdim, HI)) ke = cg%ke
 
-            ! The "forall" construct would give more clear code that is 4 times slower than implementation with explicit loops to describe a 3-D checkerboard.
+            ! OPT: The "forall" construct would give more clear code that is 4 times slower than implementation with explicit loops to describe a 3-D checkerboard.
+            ! OPT: The 8-colored implementation with loops replaced by array operations is ~20% slower
 
             ! This routine is really sensitive to tiny details such as which cells we do first (red or black).
             ! Before you optimize anything, make sure it does not change the results
