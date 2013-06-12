@@ -194,7 +194,8 @@ contains
       integer(kind=4),                     intent(in) :: soln  !< index of solution in cg%q(:)
       integer(kind=4),                     intent(in) :: nsmoo !< number of smoothing repetitions
 
-      integer :: n, b
+      integer :: n
+      integer(kind=4) :: b
       real    :: L0, Lx, Ly, Lz, Lxy, Lxz, Lyz, iL0
       type(cg_list_element), pointer :: cgl
       type(grid_container),  pointer :: cg

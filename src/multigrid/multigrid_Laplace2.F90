@@ -191,7 +191,8 @@ contains
 
       integer, parameter :: RED_BLACK = 2 !< the checkerboard requires two sweeps
 
-      integer :: n, b, i, j, k, i1, j1, k1, id, jd, kd
+      integer :: n, i, j, k, i1, j1, k1, id, jd, kd
+      integer(kind=4) :: b
       integer(kind=8) :: ijko
       real, dimension(:), allocatable :: crx, crx1, cry, crz, cr
       real :: cr0
@@ -211,7 +212,7 @@ contains
          else
             call curl%external_boundaries(soln, bnd_type = BND_NEGREF)
          endif
-         b = dom%nb - 1 - mod(n-1, int(dom%nb))
+         b = int(dom%nb - 1 - mod(n-1, int(dom%nb)), kind=4)
 
          if (dirty_debug) then
             write(dirty_label, '(a,i5)')"relax2 soln- smoo=", n
