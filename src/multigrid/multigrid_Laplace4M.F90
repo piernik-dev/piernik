@@ -214,7 +214,7 @@ contains
          else
             call curl%external_boundaries(soln, bnd_type = BND_NEGREF)
          endif
-         b = dom%nb - 1 - mod(n-1, int(dom%nb))
+         b = int(dom%nb - 1 - mod(n-1, int(dom%nb)), kind=4)
          if (dirty_debug) then
             write(dirty_label, '(a,i5)')"relax4M soln- smoo=", n
             call curl%check_dirty(soln, dirty_label, expand=b)
