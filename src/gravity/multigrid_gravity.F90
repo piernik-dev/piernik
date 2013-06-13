@@ -866,6 +866,7 @@ contains
       use constants,          only: BND_XTRAP, BND_REF, fft_none
       use dataio_pub,         only: msg, printinfo
       use mpisetup,           only: nproc
+      use multigrid_gravity_helper, only: fft_solve_level
       use multigrid_old_soln, only: soln_history
       use multigridvars,      only: grav_bnd, bnd_givenval, bnd_isolated, stdout, solution
       use pcg,                only: mgpcg, use_CG, use_CG_outer
@@ -1057,39 +1058,5 @@ contains
       call leaves%check_dirty(solution, "final_solution")
 
    end subroutine vcycle_hg
-
-!> \brief Solve finest level if allowed (single cg and single thread)
-
-   subroutine fft_solve_level(curl)
-
-      use cg_level_connected,  only: cg_level_connected_T
-      use constants,           only: fft_none
-      use dataio_pub,          only: die
-      use grid_cont,           only: grid_container
-      use multigrid_fftapprox, only: fft_convolve
-      use multigridvars,       only: source, solution
-      use named_array,         only: p3
-
-      implicit none
-
-      type(cg_level_connected_T), pointer, intent(inout) :: curl
-
-      type(grid_container), pointer :: cg
-
-      if (associated(curl%first)) then
-         if (associated(curl%first%nxt)) call die("[multigrid_gravity:fft_solve_level] multicg not possible")
-      endif
-      !> \todo Check if there is one and only one cg on app processes
-
-      if (curl%fft_type == fft_none) call die("[multigrid_gravity:fft_solve_level] FFT type not set")
-
-      cg => curl%first%cg
-      p3 => cg%q(source)%span(cg%ijkse)
-      cg%mg%src(:, :, :) = p3
-      call fft_convolve(curl)
-      p3 => cg%q(solution)%span(cg%ijkse)
-      p3 = cg%mg%src(:, :, :)
-
-   end subroutine fft_solve_level
 
 end module multigrid_gravity
