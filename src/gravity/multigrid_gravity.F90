@@ -877,7 +877,7 @@ contains
       ! On single CPU use FFT if possible because it is faster. Can be disabled by prefer_rbgs_relaxation = .true.
       if (nproc == 1 .and. finest%level%fft_type /= fft_none) then
          call all_cg%set_dirty(solution)
-         call fft_solve_roof
+         call fft_solve_level(finest%level)
          if (trust_fft_solution) then
             write(msg, '(3a)')"[multigrid_gravity:vcycle_hg] FFT solution trusted, skipping ", trim(vstat%cprefix), "cycle."
             call printinfo(msg, stdout)
@@ -1060,9 +1060,9 @@ contains
 
 !> \brief Solve finest level if allowed (single cg and single thread)
 
-   subroutine fft_solve_roof
+   subroutine fft_solve_level(curl)
 
-      use cg_level_finest,     only: finest
+      use cg_level_connected,  only: cg_level_connected_T
       use constants,           only: fft_none
       use dataio_pub,          only: die
       use grid_cont,           only: grid_container
@@ -1072,21 +1072,24 @@ contains
 
       implicit none
 
+      type(cg_level_connected_T), pointer, intent(inout) :: curl
+
       type(grid_container), pointer :: cg
 
-      if (associated(finest%level%first)) then
-         if (associated(finest%level%first%nxt)) call die("[multigrid_gravity:fft_solve_roof] multicg not possible")
+      if (associated(curl%first)) then
+         if (associated(curl%first%nxt)) call die("[multigrid_gravity:fft_solve_level] multicg not possible")
       endif
+      !> \todo Check if there is one and only one cg on app processes
 
-      if (finest%level%fft_type == fft_none) return
+      if (curl%fft_type == fft_none) call die("[multigrid_gravity:fft_solve_level] FFT type not set")
 
-      cg => finest%level%first%cg
+      cg => curl%first%cg
       p3 => cg%q(source)%span(cg%ijkse)
       cg%mg%src(:, :, :) = p3
-      call fft_convolve(finest%level)
+      call fft_convolve(curl)
       p3 => cg%q(solution)%span(cg%ijkse)
       p3 = cg%mg%src(:, :, :)
 
-   end subroutine fft_solve_roof
+   end subroutine fft_solve_level
 
 end module multigrid_gravity
