@@ -214,7 +214,7 @@ contains
 
          if (dirty_debug) then
             write(dirty_label, '(a,i5)')"relax2 soln- smoo=", n
-            call curl%check_dirty(soln, dirty_label, expand=b)
+            call curl%check_dirty(soln, dirty_label)
          endif
          cgl => curl%first
          do while (associated(cgl))

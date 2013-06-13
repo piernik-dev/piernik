@@ -215,7 +215,7 @@ contains
          b = int(dom%nb - 1 - mod(n-1, int(dom%nb)), kind=4)
          if (dirty_debug) then
             write(dirty_label, '(a,i5)')"relax4M soln- smoo=", n
-            call curl%check_dirty(soln, dirty_label, expand=b)
+            call curl%check_dirty(soln, dirty_label)
          endif
          cgl => curl%first
          do while (associated(cgl))
