@@ -316,7 +316,7 @@ contains
       use cg_list,    only: cg_list_element
       use constants,  only: ndims, xdim, ydim, zdim, LO, HI, AT_NO_B, I_ONE, I_TWO, I_THREE, &
            &                BND_PER, BND_MPI, BND_FC, BND_MPI_FC, BND_SHE, BND_COR, BND_REF, BND_NEGREF, BND_ZERO, BND_XTRAP, BND_NONE
-      use dataio_pub, only: die, msg
+      use dataio_pub, only: die
       use domain,     only: dom
       use grid_cont,  only: grid_container
 
@@ -330,12 +330,9 @@ contains
 
       integer(kind=4)                         :: lh, clh, d, b_type, i
       integer(kind=4), dimension(ndims,LO:HI) :: l, r, rh
-      logical                                 :: dodie
       type(cg_list_element),  pointer         :: cgl
       type(grid_container),   pointer         :: cg
       real, dimension(:,:,:), pointer         :: pa3d
-
-      dodie = .false.
 
       cgl => this%first
       do while (associated(cgl))
@@ -352,14 +349,12 @@ contains
                   select case (cg%bnd(d, lh))
                      case (BND_PER, BND_MPI, BND_FC, BND_MPI_FC) ! Already done in internal_bnd or arr3d_boundaries
                      case (BND_SHE) !> \todo move appropriate code from poissonsolver::poisson_solve or do nothing. or die until someone really needs SHEAR.
-                        write(msg,*) "[cg_list_bnd:external_boundaries] 'she' not implemented"
-                        dodie = .true.
+                        call die("[cg_list_bnd:external_boundaries] 'she' not implemented")
                      case (BND_COR)
                         if (present(area_type)) then
                            if (area_type /= AT_NO_B) cycle
                         endif
-                        write(msg,*) "[cg_list_bnd:external_boundaries] 'cor' not implemented"
-                        dodie = .true.
+                        call die("[cg_list_bnd:external_boundaries] 'cor' not implemented")
                      case default ! Set gradient == 0 on the external boundaries
                         if (present(area_type)) then
                            if (area_type /= AT_NO_B) cycle
@@ -408,8 +403,6 @@ contains
 
          cgl => cgl%nxt
       enddo
-
-      if (dodie) call die(msg)
 
    end subroutine external_boundaries
 
