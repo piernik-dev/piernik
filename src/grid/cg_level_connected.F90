@@ -440,7 +440,7 @@ contains
 
    subroutine restrict_q_1var(this, iv, pos)
 
-      use constants,        only: xdim, ydim, zdim, LO, HI, I_ONE, refinement_factor, VAR_CENTER, GEO_XYZ, GEO_RPZ
+      use constants,        only: xdim, ydim, zdim, ndims, LO, HI, I_ONE, refinement_factor, VAR_CENTER, GEO_XYZ, GEO_RPZ
       use dataio_pub,       only: msg, warn, die
       use domain,           only: dom
       use cg_list,          only: cg_list_element
@@ -511,23 +511,52 @@ contains
             cg%ro_tgt%seg(g)%buf(:, :, :) = 0.
             fse(:,:) = cg%ro_tgt%seg(g)%se(:,:)
             off1(:) = mod(cg%ro_tgt%seg(g)%se(:, LO), int(refinement_factor, kind=8))
-            do k = fse(zdim, LO), fse(zdim, HI)
-               kc = (k-fse(zdim, LO)+off1(zdim))/refinement_factor + 1
-               do j = fse(ydim, LO), fse(ydim, HI)
-                  jc = (j-fse(ydim, LO)+off1(ydim))/refinement_factor + 1
-                  do i = fse(xdim, LO), fse(xdim, HI)
-                     ic = (i-fse(xdim, LO)+off1(xdim))/refinement_factor + 1
-                     select case (dom%geometry_type)
-                        case (GEO_XYZ)
-                           cg%ro_tgt%seg(g)%buf(ic, jc, kc) = cg%ro_tgt%seg(g)%buf(ic, jc, kc) + cg%q(iv)%arr(i, j, k) * norm
-                        case (GEO_RPZ)
-                           cg%ro_tgt%seg(g)%buf(ic, jc, kc) = cg%ro_tgt%seg(g)%buf(ic, jc, kc) + cg%q(iv)%arr(i, j, k) * norm * cg%x(i)
-                        case default
-                           call die("[cg_level_connected:restrict_q_1var] Unknown geometry")
-                     end select
+            if (all(off1 == 0) .and. all(mod(fse(:, HI)-fse(:, LO), int(refinement_factor, kind=8)) == 1) .and. dom%eff_dim == ndims) then
+               ! This is the easy, even offset/even size case. Happens in AMR and when UG has regular cartesian decomposition.
+               ! It is few times faster than the code for odd cases below
+               select case (dom%geometry_type)
+                  case (GEO_XYZ)
+                     cg%ro_tgt%seg(g)%buf(1:1+fse(xdim, HI)/refinement_factor, 1:1+fse(ydim, HI)/refinement_factor, 1:1+fse(zdim, HI)/refinement_factor) = ( &
+                          cg%q(iv)%arr(fse(xdim, LO):fse(xdim, HI)-1:2, fse(ydim, LO):fse(ydim, HI)-1:2, fse(zdim, LO):fse(zdim, HI)-1:2) + &
+                          cg%q(iv)%arr(fse(xdim, LO)+1:fse(xdim, HI):2, fse(ydim, LO):fse(ydim, HI)-1:2, fse(zdim, LO):fse(zdim, HI)-1:2) + &
+                          cg%q(iv)%arr(fse(xdim, LO):fse(xdim, HI)-1:2, fse(ydim, LO)+1:fse(ydim, HI):2, fse(zdim, LO):fse(zdim, HI)-1:2) + &
+                          cg%q(iv)%arr(fse(xdim, LO)+1:fse(xdim, HI):2, fse(ydim, LO)+1:fse(ydim, HI):2, fse(zdim, LO):fse(zdim, HI)-1:2) + &
+                          cg%q(iv)%arr(fse(xdim, LO):fse(xdim, HI)-1:2, fse(ydim, LO):fse(ydim, HI)-1:2, fse(zdim, LO)+1:fse(zdim, HI):2) + &
+                          cg%q(iv)%arr(fse(xdim, LO)+1:fse(xdim, HI):2, fse(ydim, LO):fse(ydim, HI)-1:2, fse(zdim, LO)+1:fse(zdim, HI):2) + &
+                          cg%q(iv)%arr(fse(xdim, LO):fse(xdim, HI)-1:2, fse(ydim, LO)+1:fse(ydim, HI):2, fse(zdim, LO)+1:fse(zdim, HI):2) + &
+                          cg%q(iv)%arr(fse(xdim, LO)+1:fse(xdim, HI):2, fse(ydim, LO)+1:fse(ydim, HI):2, fse(zdim, LO)+1:fse(zdim, HI):2)) * norm
+                     case (GEO_RPZ)
+                        do i = fse(xdim, LO), fse(xdim, HI)
+                           cg%ro_tgt%seg(g)%buf(1+(i-fse(xdim, LO))/refinement_factor, 1:1+fse(ydim, HI)/refinement_factor, 1:1+fse(zdim, HI)/refinement_factor) = &
+                                cg%ro_tgt%seg(g)%buf(1+(i-fse(xdim, LO))/refinement_factor, 1:1+fse(ydim, HI)/refinement_factor, 1:1+fse(zdim, HI)/refinement_factor) + ( &
+                                cg%q(iv)%arr(i, fse(ydim, LO):fse(ydim, HI)-1:2, fse(zdim, LO):fse(zdim, HI)-1:2) + &
+                                cg%q(iv)%arr(i, fse(ydim, LO)+1:fse(ydim, HI):2, fse(zdim, LO):fse(zdim, HI)-1:2) + &
+                                cg%q(iv)%arr(i, fse(ydim, LO):fse(ydim, HI)-1:2, fse(zdim, LO)+1:fse(zdim, HI):2) + &
+                                cg%q(iv)%arr(i, fse(ydim, LO)+1:fse(ydim, HI):2, fse(zdim, LO)+1:fse(zdim, HI):2)) * norm * cg%x(i)
+                        enddo
+                  case default
+                     call die("[cg_level_connected:restrict_q_1var] Unknown geometry (1)")
+               end select
+            else
+               ! OPT: Split the problem into the core that can be done by array arithmetic and finish the edges whetre necessary
+               do k = fse(zdim, LO), fse(zdim, HI)
+                  kc = (k-fse(zdim, LO)+off1(zdim))/refinement_factor + 1
+                  do j = fse(ydim, LO), fse(ydim, HI)
+                     jc = (j-fse(ydim, LO)+off1(ydim))/refinement_factor + 1
+                     do i = fse(xdim, LO), fse(xdim, HI)
+                        ic = (i-fse(xdim, LO)+off1(xdim))/refinement_factor + 1
+                        select case (dom%geometry_type)
+                           case (GEO_XYZ)
+                              cg%ro_tgt%seg(g)%buf(ic, jc, kc) = cg%ro_tgt%seg(g)%buf(ic, jc, kc) + cg%q(iv)%arr(i, j, k) * norm
+                           case (GEO_RPZ)
+                              cg%ro_tgt%seg(g)%buf(ic, jc, kc) = cg%ro_tgt%seg(g)%buf(ic, jc, kc) + cg%q(iv)%arr(i, j, k) * norm * cg%x(i)
+                           case default
+                              call die("[cg_level_connected:restrict_q_1var] Unknown geometry (2)")
+                        end select
+                     enddo
                   enddo
                enddo
-            enddo
+            endif
             nr = nr + I_ONE
             if (nr > size(req, dim=1)) call inflate_req
             call MPI_Isend(cg%ro_tgt%seg(g)%buf(1, 1, 1), size(cg%ro_tgt%seg(g)%buf(:, :, :)), MPI_DOUBLE_PRECISION, cg%ro_tgt%seg(g)%proc, cg%ro_tgt%seg(g)%tag, comm, req(nr), mpi_err)
