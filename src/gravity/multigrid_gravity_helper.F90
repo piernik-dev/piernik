@@ -36,7 +36,7 @@ module multigrid_gravity_helper
    implicit none
 
    private
-   public :: approximate_solution, &
+   public :: approximate_solution, fft_solve_level, &
         &    nsmoob
 
    ! namelist parameters
@@ -59,40 +59,97 @@ contains
 
       use cg_level_coarsest,  only: coarsest
       use cg_level_connected, only: cg_level_connected_T
-      use constants,          only: BND_NEGREF
+      use constants,          only: BND_NEGREF, fft_none
       use multigridvars,      only: nsmool
       use multigrid_Laplace,  only: approximate_solution_order
-!!$      use constants,           only: fft_none
-!!$      use multigrid_fftapprox, only: approximate_solution_fft
 
       implicit none
 
-      type(cg_level_connected_T), pointer, intent(in) :: curl !< pointer to a level for which we approximate the solution
-      integer(kind=4),                     intent(in) :: src  !< index of source in cg%q(:)
-      integer(kind=4),                     intent(in) :: soln !< index of solution in cg%q(:)
+      type(cg_level_connected_T), pointer, intent(inout) :: curl !< pointer to a level for which we approximate the solution
+      integer(kind=4),                     intent(in)    :: src  !< index of source in cg%q(:)
+      integer(kind=4),                     intent(in)    :: soln !< index of solution in cg%q(:)
 
       integer(kind=4) :: nsmoo
 
       call curl%check_dirty(src, "approx_soln src-")
-!!$      if (curl%fft_type /= fft_none) then
-!!$         call approximate_solution_fft(curl, src, soln)
-!!$      else
-      if (associated(curl, coarsest%level)) then
-         !> \todo Implement automatic convergence check on coarsest level (not very important when we have a FFT solver for coarsest level)
-         !> \todo Implement alternative bottom-solvers
-         nsmoo = nsmoob
-         call coarsest%level%set_q_value(soln, 0.)
-      else
-         nsmoo = nsmool
-         call curl%coarser%prolong_q_1var(soln, bnd_type = BND_NEGREF)
-         !> \warning when this is be incompatible with V-cycle or other scheme, use direct call to approximate_solution_order
-      endif
 
-      call approximate_solution_order(curl, src, soln, nsmoo)
-!!$      endif
+      if (associated(curl, coarsest%level) .and. curl%fft_type /= fft_none) then
+         call fft_solve_level(curl, src, soln)
+      else
+         if (associated(curl, coarsest%level)) then
+            !> \todo Implement automatic convergence check on coarsest level (not very important when we have a FFT solver for coarsest level)
+            !> \todo Implement alternative bottom-solvers
+            nsmoo = nsmoob
+            call coarsest%level%set_q_value(soln, 0.)
+         else
+            nsmoo = nsmool
+            call curl%coarser%prolong_q_1var(soln, bnd_type = BND_NEGREF)
+            !> \warning when this is be incompatible with V-cycle or other scheme, use direct call to approximate_solution_order
+         endif
+
+         call approximate_solution_order(curl, src, soln, nsmoo)
+      endif
 
       call curl%check_dirty(soln, "approx_soln soln+")
 
    end subroutine approximate_solution
+
+!> \brief Solve given level if allowed using FFT 
+
+   subroutine fft_solve_level(curl, src, soln)
+
+      use cg_level_connected,  only: cg_level_connected_T
+      use cg_list,             only: cg_list_element
+      use constants,           only: fft_none, fft_rcr, fft_dst
+      use dataio_pub,          only: die
+      use grid_cont,           only: grid_container
+      use named_array,         only: p3
+
+      implicit none
+
+      type(cg_level_connected_T), pointer, intent(inout) :: curl
+      integer(kind=4),                     intent(in)    :: src  !< index of source in cg%q(:)
+      integer(kind=4),                     intent(in)    :: soln !< index of solution in cg%q(:)
+
+      type(cg_list_element), pointer :: cgl
+      type(grid_container), pointer :: cg
+
+      if (associated(curl%first)) then
+         if (associated(curl%first%nxt)) call die("[multigrid_gravity_helper:fft_solve_level] multicg not possible")
+      else
+         return
+      endif
+      !> \todo Check if there is one and only one cg on app processes, die if not
+
+      if (curl%fft_type == fft_none) call die("[multigrid_gravity_helper:fft_solve_level] FFT type not set")
+
+      cgl => curl%first
+      do while (associated(cgl))
+         cg => cgl%cg
+
+         p3 => cg%q(src)%span(cg%ijkse)
+         cg%mg%src(:, :, :) = p3
+
+         ! do the convolution in Fourier space; cg%mg%src(:,:,:) -> cg%mg%fft{r}(:,:,:)
+         call dfftw_execute(cg%mg%planf)
+
+         select case (curl%fft_type)
+            case (fft_rcr)
+               cg%mg%fft(:,:,:)  = cg%mg%fft(:,:,:)  * cg%mg%Green3D(:,:,:)
+            case (fft_dst)
+               cg%mg%fftr(:,:,:) = cg%mg%fftr(:,:,:) * cg%mg%Green3D(:,:,:)
+            case default
+               call die("[multigrid_fft_approximation:fft_convolve] Unknown FFT type.")
+         end select
+
+         call dfftw_execute(cg%mg%plani) ! cg%mg%fft{r}(:,:,:) -> cg%mg%src(:,:,:)
+
+         p3 => cg%q(soln)%span(cg%ijkse)
+         p3 = cg%mg%src(:, :, :)
+
+         cgl => cgl%nxt
+      enddo
+
+   end subroutine fft_solve_level
 
 end module multigrid_gravity_helper

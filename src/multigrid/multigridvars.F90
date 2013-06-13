@@ -122,7 +122,7 @@ module multigridvars
       type(grid_container), pointer, intent(inout) :: cg                     !< current grid container
       integer(kind=4),               intent(in)    :: ind                    !< index in cg%q(:)
       integer,                       intent(out)   :: is, ie, js, je, ks, ke !< indices in cg
-      integer,                       intent(in)    :: b                      !< how far we look into boundary layer
+      integer(kind=4),               intent(in)    :: b                      !< how far we look into boundary layer
       logical,                       intent(in)    :: need_bnd_upd           !< if .true. then update 1 layer of external boundaries
 
       ! calling curl%external_boundaries(ind, bnd_type = BND_NEGREF) is a bit overkill

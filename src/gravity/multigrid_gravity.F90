@@ -63,7 +63,6 @@ module multigrid_gravity
    integer(kind=4)    :: max_cycles                                   !< Maximum allowed number of V-cycles
    logical            :: trust_fft_solution                           !< Bypass the V-cycle, when doing FFT on whole domain, make sure first that FFT is properly set up.
    logical            :: base_no_fft                                  !< Deny solving the coarsest level with FFT. Can be very slow.
-   logical            :: prefer_rbgs_relaxation                       !< Prefer relaxation over FFT local solver. Typically faster.
    !> \todo allow to perform one or more V-cycles with FFT method, the switch to the RBGS (may save one V-cycle in some cases)
    logical            :: fft_patient                                  !< Spend more time in init_multigrid to find faster fft plan
    character(len=cbuff_len) :: grav_bnd_str                           !< Type of gravitational boundary conditions.
@@ -98,7 +97,6 @@ contains
 !! <tr><td>ord_laplacian         </td><td>-4     </td><td>integer value  </td><td>\copydoc multigrid_Laplace::ord_laplacian         </td></tr>
 !! <tr><td>ord_laplacian_outer   </td><td>2      </td><td>integer value  </td><td>\copydoc multigrid_Laplace::ord_laplacian_outer   </td></tr>
 !! <tr><td>ord_time_extrap       </td><td>1      </td><td>integer value  </td><td>\copydoc multigrid_gravity::ord_time_extrap       </td></tr>
-!! <tr><td>prefer_rbgs_relaxation</td><td>.true. </td><td>logical        </td><td>\copydoc multigrid_gravity::prefer_rbgs_relaxation</td></tr>
 !! <tr><td>base_no_fft           </td><td>.false.</td><td>logical        </td><td>\copydoc multigrid_gravity::base_no_fft           </td></tr>
 !! <tr><td>fft_full_relax        </td><td>.false.</td><td>logical        </td><td>\copydoc multigridvars::fft_full_relax            </td></tr>
 !! <tr><td>fft_patient           </td><td>.false.</td><td>logical        </td><td>\copydoc multigrid_gravity::fft_patient           </td></tr>
@@ -125,7 +123,7 @@ contains
       use dataio_pub,         only: nh  ! QA_WARN required for diff_nml
       use dataio_pub,         only: msg, die, warn
       use domain,             only: dom, is_multicg !, is_uneven
-      use mpisetup,           only: master, slave, ibuff, cbuff, rbuff, lbuff, nproc, piernik_MPI_Bcast
+      use mpisetup,           only: master, slave, ibuff, cbuff, rbuff, lbuff, piernik_MPI_Bcast
       use multigridvars,      only: single_base, bnd_invalid, bnd_isolated, bnd_periodic, bnd_dirichlet, grav_bnd, fft_full_relax, multidim_code_3D, nsmool, nsmoof, &
            &                        overrelax
       use multigrid_gravity_helper, only: nsmoob
@@ -142,7 +140,7 @@ contains
 
       namelist /MULTIGRID_GRAVITY/ norm_tol, vcycle_abort, vcycle_giveup, max_cycles, nsmool, nsmoob, use_CG, use_CG_outer, &
            &                       overrelax, L4_strength, nsmoof, ord_laplacian, ord_laplacian_outer, ord_time_extrap, &
-           &                       prefer_rbgs_relaxation, base_no_fft, fft_full_relax, fft_patient, trust_fft_solution, &
+           &                       base_no_fft, fft_full_relax, fft_patient, trust_fft_solution, &
            &                       coarsen_multipole, lmax, mmax, ord_prolong_mpole, use_point_monopole, interp_pt2mom, interp_mom2pot, multidim_code_3D, &
            &                       grav_bnd_str, preconditioner
 
@@ -178,8 +176,7 @@ contains
 
       use_point_monopole     = .false.
       trust_fft_solution     = .true.
-      base_no_fft            = .true. !> \todo restore .false. when it will be possible
-      prefer_rbgs_relaxation = .true. !> \warning it seems that FFT local solver is broken somewhere. \todo restore .false. as a default
+      base_no_fft            = .false.
       fft_full_relax         = .false.
       fft_patient            = .false.
       interp_pt2mom          = .false.
@@ -209,7 +206,6 @@ contains
             case (GEO_RPZ)
                ! switch off FFT-related bits
                base_no_fft = .true.
-               prefer_rbgs_relaxation = .true.
                if (any([ ord_laplacian, ord_laplacian_outer ] /= O_I2) .and. master) call warn("[multigrid_gravity:multigrid_grav_par] Laplacian order forced to 2]")
                ord_laplacian = O_I2
                ord_laplacian_outer = ord_laplacian
@@ -220,13 +216,8 @@ contains
          end select
 
          if (is_multicg .and. .not. base_no_fft) then
-            call warn("[multigrid_gravity:multigrid_grav_par] base_no_fft set to .true. for multicg configuration")
+            call warn("[multigrid_gravity:multigrid_grav_par] base_no_fft forced to .true. for multicg configuration")
             base_no_fft = .true.
-         endif
-
-         if (.not. prefer_rbgs_relaxation .and. nproc > 1) then
-            prefer_rbgs_relaxation = .true.
-            call warn("[multigrid_gravity:multigrid_grav_par] FFT local solver disabled for multithreaded runs due to unresolved incompatibilities with mew grid features")
          endif
 
          if (ord_laplacian_outer /= ord_laplacian) call warn("[multigrid_gravity:multigrid_grav_par] ord_laplacian_outer /= ord_laplacian")
@@ -252,14 +243,13 @@ contains
          lbuff(1)  = use_point_monopole
          lbuff(2)  = trust_fft_solution
          lbuff(3)  = base_no_fft
-         lbuff(4)  = prefer_rbgs_relaxation
-         lbuff(5)  = fft_full_relax
-         lbuff(6)  = fft_patient
-         lbuff(7)  = interp_pt2mom
-         lbuff(8)  = interp_mom2pot
-         lbuff(9)  = multidim_code_3D
-         lbuff(10) = use_CG
-         lbuff(11) = use_CG_outer
+         lbuff(4)  = fft_full_relax
+         lbuff(5)  = fft_patient
+         lbuff(6)  = interp_pt2mom
+         lbuff(7)  = interp_mom2pot
+         lbuff(8)  = multidim_code_3D
+         lbuff(9) = use_CG
+         lbuff(10) = use_CG_outer
 
          cbuff(1) = grav_bnd_str
          cbuff(2) = preconditioner
@@ -293,14 +283,13 @@ contains
          use_point_monopole      = lbuff(1)
          trust_fft_solution      = lbuff(2)
          base_no_fft             = lbuff(3)
-         prefer_rbgs_relaxation  = lbuff(4)
-         fft_full_relax          = lbuff(5)
-         fft_patient             = lbuff(6)
-         interp_pt2mom           = lbuff(7)
-         interp_mom2pot          = lbuff(8)
-         multidim_code_3D        = lbuff(9)
-         use_CG                  = lbuff(10)
-         use_CG_outer            = lbuff(11)
+         fft_full_relax          = lbuff(4)
+         fft_patient             = lbuff(5)
+         interp_pt2mom           = lbuff(6)
+         interp_mom2pot          = lbuff(7)
+         multidim_code_3D        = lbuff(8)
+         use_CG                  = lbuff(9)
+         use_CG_outer            = lbuff(10)
 
          grav_bnd_str   = cbuff(1)(1:len(grav_bnd_str))
          preconditioner = cbuff(2)(1:len(preconditioner))
@@ -326,7 +315,6 @@ contains
          grav_bnd = bnd_periodic
       else if (periodic_bnd_cnt > 0 .and. periodic_bnd_cnt < dom%eff_dim) then
          if (master) call warn("[multigrid_gravity:multigrid_grav_par] Mixing periodic and non-periodic boundary conditions for gravity is experimental.")
-         prefer_rbgs_relaxation = .true.
          base_no_fft = .true.
       endif
 !!$      select case (grav_bnd)
@@ -345,11 +333,6 @@ contains
       endif
 
       single_base = .not. base_no_fft
-
-      if (.not. prefer_rbgs_relaxation .and. overrelax /= 1.) then
-         if (master) call warn("[multigrid_gravity:multigrid_grav_par] Overrelaxation is disabled for FFT local solver.")
-         overrelax = 1.
-      endif
 
       if (master .and. overrelax /= 1.) then
          write(msg, '(a,f8.5)')"[multigrid_gravity:multigrid_grav_par] Overrelaxation factor = ", overrelax
@@ -382,11 +365,11 @@ contains
       use cg_level_coarsest,   only: coarsest
       use cg_level_connected,  only: cg_level_connected_T
       use cg_level_finest,     only: finest
-      use constants,           only: GEO_XYZ, sgp_n, fft_none, fft_dst, fft_rcr, dsetnamelen
+      use cg_list,             only: cg_list_element
+      use constants,           only: GEO_XYZ, sgp_n, fft_none, fft_dst, fft_rcr, dsetnamelen, pMAX
       use dataio_pub,          only: die, warn, printinfo, msg
       use domain,              only: dom
-      use mpisetup,            only: master, nproc
-      use multigrid_fftapprox, only: mpi_multigrid_prep_grav
+      use mpisetup,            only: master, FIRST, LAST, piernik_MPI_Allreduce
       use multigridvars,       only: bnd_periodic, bnd_dirichlet, bnd_isolated, grav_bnd
       use multipole,           only: init_multipole, coarsen_multipole
       use named_array_list,    only: qna
@@ -396,6 +379,8 @@ contains
       type(cg_level_connected_T), pointer :: curl
       character(len=dsetnamelen) :: FFTn
       logical, save :: firstcall = .true.
+      type(cg_list_element), pointer  :: cgl
+      integer :: p, cnt, cnt_max
 
       if (coarsen_multipole /= 0) then
          coarsen_multipole = 0
@@ -405,22 +390,19 @@ contains
       if (firstcall) call leaves%set_q_value(qna%ind(sgp_n), 0.) !Initialize all the guardcells, even those which does not impact the solution
 
       curl => coarsest%level
-      do while (associated(curl))
 
-         if (prefer_rbgs_relaxation) then
-            curl%fft_type = fft_none
-         else if (grav_bnd == bnd_periodic .and. nproc == 1) then
-            curl%fft_type = fft_rcr
-         else if (grav_bnd == bnd_periodic .or. grav_bnd == bnd_dirichlet .or. grav_bnd == bnd_isolated) then
-            curl%fft_type = fft_dst
-         else
-            curl%fft_type = fft_none
-         endif
-
-         curl => curl%finer
+      if (.not. allocated(curl%pse)) call die("[multigrid_gravity:init_multigrid_grav] cannot determine number of pieces on coaarsest level")
+      cnt = 0
+      do p = FIRST, LAST
+         if (allocated(curl%pse)) cnt = cnt + size(curl%pse(p)%c(:))
       enddo
 
-      base_no_fft = base_no_fft .or. (coarsest%level%tot_se /= 1)
+      if (base_no_fft .and. (cnt /= 1)) call warn("[multigrid_gravity:init_multigrid_grav] Cannot use FFT solver on coarsest level")
+      base_no_fft = base_no_fft .or. (cnt /= 1)
+
+      cnt_max = cnt
+      call piernik_MPI_Allreduce(cnt_max, pMAX)
+      if (cnt /= cnt_max) call die("[multigrid_gravity:init_multigrid_grav] Inconsistent number of pieces on coaarsest level")
 
       ! data related to local and global base-level FFT solver
       if (base_no_fft) then
@@ -466,7 +448,17 @@ contains
          curl => curl%finer
       enddo
 
-      if (require_FFT) call mpi_multigrid_prep_grav !supplement to mpi_multigrid_prep
+      if (require_FFT) then
+         curl => coarsest%level
+         do while (associated(curl))
+            cgl => curl%first
+            do while (associated(cgl))
+               call mgg_cg_init(cgl%cg) ! allocate FFT arrays on cg that are already created (dirty hack)
+               cgl => cgl%nxt
+            end do
+            curl => curl%finer
+         enddo
+      end if
 
       if (finest%level%fft_type == fft_none .and. trust_fft_solution) then
          if (master) call warn("[multigrid_gravity:init_multigrid_grav] cannot trust FFT solution on the finest level.")
@@ -635,15 +627,10 @@ contains
    subroutine mgg_cg_cleanup(cg)
 
       use grid_cont, only: grid_container
-!!$      use constants,     only: LO, HI, ndims
-!!$      use grid_cont,   only: tgt_list
 
       implicit none
 
       type(grid_container), pointer,  intent(inout) :: cg
-!!$      integer :: g, ib
-!!$      integer, parameter :: nseg = 2*(HI-LO+1)*ndims
-!!$      type(tgt_list), dimension(nseg) :: io_tgt
 
       if (allocated(cg%mg%fft))     deallocate(cg%mg%fft)
       if (allocated(cg%mg%fftr))    deallocate(cg%mg%fftr)
@@ -652,17 +639,6 @@ contains
 
       if (cg%mg%planf /= 0) call dfftw_destroy_plan(cg%mg%planf)
       if (cg%mg%plani /= 0) call dfftw_destroy_plan(cg%mg%plani)
-
-!!$         io_tgt(1:nseg) = [ cgl%cg%mg%pfc_tgt, cgl%cg%mg%pff_tgt ]
-!!$            do ib = 1, nseg
-!!$               if (allocated(io_tgt(ib)%seg)) then
-!!$                  do g = lbound(io_tgt(ib)%seg, dim=1), ubound(io_tgt(ib)%seg, dim=1)
-!!$                     if (allocated(io_tgt(ib)%seg(g)%buf)) deallocate(io_tgt(ib)%seg(g)%buf)
-!!$                     if (allocated(io_tgt(ib)%seg(g)%f_lay)) deallocate(io_tgt(ib)%seg(g)%f_lay)
-!!$                  enddo
-!!$                  deallocate(io_tgt(ib)%seg)
-!!$               endif
-!!$            enddo
 
    end subroutine mgg_cg_cleanup
 
@@ -866,18 +842,19 @@ contains
       use constants,          only: BND_XTRAP, BND_REF, fft_none
       use dataio_pub,         only: msg, printinfo
       use mpisetup,           only: nproc
+      use multigrid_gravity_helper, only: fft_solve_level
       use multigrid_old_soln, only: soln_history
-      use multigridvars,      only: grav_bnd, bnd_givenval, bnd_isolated, stdout, solution
+      use multigridvars,      only: grav_bnd, bnd_givenval, bnd_isolated, stdout, source, solution
       use pcg,                only: mgpcg, use_CG, use_CG_outer
 
       implicit none
 
       type(soln_history), intent(inout) :: history !< inner or outer potential history used for initializing first guess
 
-      ! On single CPU use FFT if possible because it is faster. Can be disabled by prefer_rbgs_relaxation = .true.
+      ! On single CPU use FFT if possible because it is faster. 
       if (nproc == 1 .and. finest%level%fft_type /= fft_none) then
          call all_cg%set_dirty(solution)
-         call fft_solve_roof
+         call fft_solve_level(finest%level, source, solution)
          if (trust_fft_solution) then
             write(msg, '(3a)')"[multigrid_gravity:vcycle_hg] FFT solution trusted, skipping ", trim(vstat%cprefix), "cycle."
             call printinfo(msg, stdout)
@@ -1057,36 +1034,5 @@ contains
       call leaves%check_dirty(solution, "final_solution")
 
    end subroutine vcycle_hg
-
-!> \brief Solve finest level if allowed (single cg and single thread)
-
-   subroutine fft_solve_roof
-
-      use cg_level_finest,     only: finest
-      use constants,           only: fft_none
-      use dataio_pub,          only: die
-      use grid_cont,           only: grid_container
-      use multigrid_fftapprox, only: fft_convolve
-      use multigridvars,       only: source, solution
-      use named_array,         only: p3
-
-      implicit none
-
-      type(grid_container), pointer :: cg
-
-      if (associated(finest%level%first)) then
-         if (associated(finest%level%first%nxt)) call die("[multigrid_gravity:fft_solve_roof] multicg not possible")
-      endif
-
-      if (finest%level%fft_type == fft_none) return
-
-      cg => finest%level%first%cg
-      p3 => cg%q(source)%span(cg%ijkse)
-      cg%mg%src(:, :, :) = p3
-      call fft_convolve(finest%level)
-      p3 => cg%q(solution)%span(cg%ijkse)
-      p3 = cg%mg%src(:, :, :)
-
-   end subroutine fft_solve_roof
 
 end module multigrid_gravity
