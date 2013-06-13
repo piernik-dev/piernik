@@ -175,12 +175,12 @@ contains
       use cg_level_connected, only: cg_level_connected_T
       use cg_list,            only: cg_list_element
       use cg_list_dataop,     only: dirty_label
-      use constants,          only: xdim, ydim, zdim, ndims, GEO_XYZ, GEO_RPZ, BND_NEGREF, LO, HI
+      use constants,          only: xdim, ydim, zdim, ndims, GEO_XYZ, GEO_RPZ, BND_NEGREF, LO
       use dataio_pub,         only: die
       use domain,             only: dom
       use global,             only: dirty_debug
       use grid_cont,          only: grid_container
-      use multigridvars,      only: multidim_code_3D, overrelax!, overrelax_xyz
+      use multigridvars,      only: multidim_code_3D, overrelax, set_relax_boundaries
 
       implicit none
 
@@ -199,6 +199,7 @@ contains
       type(cg_list_element), pointer :: cgl
       type(grid_container),  pointer :: cg
       integer :: is, ie, js, je, ks, ke
+      logical :: need_all_bnd_upd
 
       ! call curl%arr3d_boundaries(src) required when we want to eliminate some communication of soln at a cost of expanding relaxated area into guardcells
 
@@ -207,11 +208,8 @@ contains
 
       if (dom%nb > 1) call curl%internal_boundaries_3d(src)
       do n = 1, RED_BLACK*nsmoo
-         if (mod(n-1, int(dom%nb)) == 0) then
-            call curl%arr3d_boundaries(soln, bnd_type = BND_NEGREF)
-         else
-            call curl%external_boundaries(soln, bnd_type = BND_NEGREF)
-         endif
+         need_all_bnd_upd = (mod(n-1, int(dom%nb)) == 0)
+         if (need_all_bnd_upd) call curl%arr3d_boundaries(soln, bnd_type = BND_NEGREF)
          b = int(dom%nb - 1 - mod(n-1, int(dom%nb)), kind=4)
 
          if (dirty_debug) then
@@ -239,15 +237,7 @@ contains
                crx1 = 2. * cg%x(is:ie) * cg%idx
                where (crx1 /= 0.) crx1 = 1./crx1
             endif
-            is = cg%is-b*dom%D_(xdim); ie = cg%ie+b*dom%D_(xdim)
-            js = cg%js-b*dom%D_(ydim); je = cg%je+b*dom%D_(ydim)
-            ks = cg%ks-b*dom%D_(zdim); ke = cg%ke+b*dom%D_(zdim)
-            if (cg%ext_bnd(xdim, LO)) is = cg%is
-            if (cg%ext_bnd(xdim, HI)) ie = cg%ie
-            if (cg%ext_bnd(ydim, LO)) js = cg%js
-            if (cg%ext_bnd(ydim, HI)) je = cg%je
-            if (cg%ext_bnd(zdim, LO)) ks = cg%ks
-            if (cg%ext_bnd(zdim, HI)) ke = cg%ke
+            call set_relax_boundaries(cg, soln, is, ie, js, je, ks, ke, b, .not. need_all_bnd_upd)
 
             ! OPT: The "forall" construct would give more clear code that is 4 times slower than implementation with explicit loops to describe a 3-D checkerboard.
             ! OPT: The 8-colored implementation with loops replaced by array operations is ~20% slower

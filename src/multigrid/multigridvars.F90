@@ -109,4 +109,60 @@ module multigridvars
 
    end subroutine all_dirty
 
+!> \brief Take care of boundaries of relaxated grid
+
+   subroutine set_relax_boundaries(cg, ind, is, ie, js, je, ks, ke, b, need_bnd_upd)
+
+      use constants, only: xdim, ydim, zdim, LO, HI
+      use domain,    only: dom
+      use grid_cont, only: grid_container
+
+      implicit none
+
+      type(grid_container), pointer, intent(inout) :: cg                     !< current grid container
+      integer(kind=4),               intent(in)    :: ind                    !< index in cg%q(:)
+      integer,                       intent(out)   :: is, ie, js, je, ks, ke !< indices in cg
+      integer,                       intent(in)    :: b                      !< how far we look into boundary layer
+      logical,                       intent(in)    :: need_bnd_upd           !< if .true. then update 1 layer of external boundaries
+
+      ! calling curl%external_boundaries(ind, bnd_type = BND_NEGREF) is a bit overkill
+      if (cg%ext_bnd(xdim, LO)) then
+         is = cg%is
+         if (need_bnd_upd) cg%q(ind)%arr(is-1, :, :) = - cg%q(ind)%arr(is, :, :)
+      else
+         is = cg%is-b*dom%D_(xdim)
+      endif
+      if (cg%ext_bnd(xdim, HI)) then
+         ie = cg%ie
+         if (need_bnd_upd) cg%q(ind)%arr(ie+1, :, :) = - cg%q(ind)%arr(ie, :, :)
+      else
+         ie = cg%ie+b*dom%D_(xdim)
+      endif
+      if (cg%ext_bnd(ydim, LO)) then
+         js = cg%js
+         if (need_bnd_upd) cg%q(ind)%arr(:, js-1, :) = - cg%q(ind)%arr(:, js, :)
+      else
+         js = cg%js-b*dom%D_(ydim)
+      endif
+      if (cg%ext_bnd(ydim, HI)) then
+         je = cg%je
+         if (need_bnd_upd) cg%q(ind)%arr(:, je+1, :) = - cg%q(ind)%arr(:, je, :)
+      else
+         je = cg%je+b*dom%D_(ydim)
+      endif
+      if (cg%ext_bnd(zdim, LO)) then
+         ks = cg%ks
+         if (need_bnd_upd) cg%q(ind)%arr(:, :, ks-1) = - cg%q(ind)%arr(:, :, ks)
+      else
+         ks = cg%ks-b*dom%D_(zdim)
+      endif
+      if (cg%ext_bnd(zdim, HI)) then
+         ke = cg%ke
+         if (need_bnd_upd) cg%q(ind)%arr(:, :, ke+1) = - cg%q(ind)%arr(:, :, ke)
+      else
+         ke = cg%ke+b*dom%D_(zdim)
+      endif
+
+   end subroutine set_relax_boundaries
+
 end module multigridvars
