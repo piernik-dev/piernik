@@ -365,6 +365,7 @@ contains
       use cg_level_coarsest,   only: coarsest
       use cg_level_connected,  only: cg_level_connected_T
       use cg_level_finest,     only: finest
+      use cg_list,             only: cg_list_element
       use constants,           only: GEO_XYZ, sgp_n, fft_none, fft_dst, fft_rcr, dsetnamelen
       use dataio_pub,          only: die, warn, printinfo, msg
       use domain,              only: dom
@@ -378,6 +379,7 @@ contains
       type(cg_level_connected_T), pointer :: curl
       character(len=dsetnamelen) :: FFTn
       logical, save :: firstcall = .true.
+      type(cg_list_element), pointer  :: cgl
 
       if (coarsen_multipole /= 0) then
          coarsen_multipole = 0
@@ -400,7 +402,7 @@ contains
 !!$         curl => curl%finer
 !!$      enddo
 
-      base_no_fft = base_no_fft .or. (coarsest%level%tot_se /= 1)
+!      base_no_fft = base_no_fft .or. (coarsest%level%tot_se /= 1)
 
       ! data related to local and global base-level FFT solver
       if (base_no_fft) then
@@ -445,6 +447,18 @@ contains
 
          curl => curl%finer
       enddo
+
+      if (require_FFT) then
+         curl => coarsest%level
+         do while (associated(curl))
+            cgl => curl%first
+            do while (associated(cgl))
+               call mgg_cg_init(cgl%cg) ! allocate FFT arrays on cg that are already created (dirty hack)
+               cgl => cgl%nxt
+            end do
+            curl => curl%finer
+         enddo
+      end if
 
       if (finest%level%fft_type == fft_none .and. trust_fft_solution) then
          if (master) call warn("[multigrid_gravity:init_multigrid_grav] cannot trust FFT solution on the finest level.")
