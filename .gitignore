@@ -3,3 +3,4 @@ runs/
 *~
 .lastsetup
 python/DirWalk.pyc
+.setuprc
