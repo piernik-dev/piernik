@@ -366,10 +366,10 @@ contains
       use cg_level_connected,  only: cg_level_connected_T
       use cg_level_finest,     only: finest
       use cg_list,             only: cg_list_element
-      use constants,           only: GEO_XYZ, sgp_n, fft_none, fft_dst, fft_rcr, dsetnamelen
+      use constants,           only: GEO_XYZ, sgp_n, fft_none, fft_dst, fft_rcr, dsetnamelen, pMAX
       use dataio_pub,          only: die, warn, printinfo, msg
       use domain,              only: dom
-      use mpisetup,            only: master
+      use mpisetup,            only: master, FIRST, LAST, piernik_MPI_Allreduce
       use multigridvars,       only: bnd_periodic, bnd_dirichlet, bnd_isolated, grav_bnd
       use multipole,           only: init_multipole, coarsen_multipole
       use named_array_list,    only: qna
@@ -380,6 +380,7 @@ contains
       character(len=dsetnamelen) :: FFTn
       logical, save :: firstcall = .true.
       type(cg_list_element), pointer  :: cgl
+      integer :: p, cnt, cnt_max
 
       if (coarsen_multipole /= 0) then
          coarsen_multipole = 0
@@ -388,21 +389,20 @@ contains
 
       if (firstcall) call leaves%set_q_value(qna%ind(sgp_n), 0.) !Initialize all the guardcells, even those which does not impact the solution
 
-!!$      curl => coarsest%level
-!!$      do while (associated(curl))
-!!$
-!!$         if (grav_bnd == bnd_periodic .and. nproc == 1) then
-!!$            curl%fft_type = fft_rcr
-!!$         else if (grav_bnd == bnd_periodic .or. grav_bnd == bnd_dirichlet .or. grav_bnd == bnd_isolated) then
-!!$            curl%fft_type = fft_dst
-!!$         else
-!!$            curl%fft_type = fft_none
-!!$         endif
-!!$
-!!$         curl => curl%finer
-!!$      enddo
+      curl => coarsest%level
 
-!      base_no_fft = base_no_fft .or. (coarsest%level%tot_se /= 1)
+      if (.not. allocated(curl%pse)) call die("[multigrid_gravity:init_multigrid_grav] cannot determine number of pieces on coaarsest level")
+      cnt = 0
+      do p = FIRST, LAST
+         if (allocated(curl%pse)) cnt = cnt + size(curl%pse(p)%c(:))
+      enddo
+
+      if (base_no_fft .and. (cnt /= 1)) call warn("[multigrid_gravity:init_multigrid_grav] Cannot use FFT solver on coarsest level")
+      base_no_fft = base_no_fft .or. (cnt /= 1)
+
+      cnt_max = cnt
+      call piernik_MPI_Allreduce(cnt_max, pMAX)
+      if (cnt /= cnt_max) call die("[multigrid_gravity:init_multigrid_grav] Inconsistent number of pieces on coaarsest level")
 
       ! data related to local and global base-level FFT solver
       if (base_no_fft) then
