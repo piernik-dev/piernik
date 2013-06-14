@@ -72,11 +72,6 @@ module grid_cont
       type(segment), dimension(:), allocatable :: seg              !< a segment of data to be received or sent
    end type tgt_list
 
-   !< \brief target list container for some fine/coarse and boundary exchanges (see multigrid_fft_approximation module for details)
-   type :: tgtpr_list
-      type(pr_segment), dimension(:), allocatable :: seg              !< a segment of data to be received or sent
-   end type tgtpr_list
-
    !>
    !! \brief Multigrid-specific storage
    !!
@@ -100,10 +95,6 @@ module grid_cont
       ! geometrical factors
       !! \todo move to cg
       real    :: r, rx, ry, rz                                        !< geometric factors for relaxation (diffusion) used in approximate_solution_{rbgs,relax}*
-
-      ! prolongation and restriction
-      !! \todo move to cg, should be initialized by cg_level_T procedure
-      type(tgtpr_list), dimension(xdim:zdim, LO:HI) :: pff_tgt, pfc_tgt !< description outgoing and incoming face prolongation data
 
    end type mg_arr
 

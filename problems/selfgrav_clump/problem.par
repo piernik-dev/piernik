@@ -93,7 +93,6 @@
     ord_time_extrap = 2
 !    grav_bnd_str  = "isolated"
     grav_bnd_str = "periodic"
-!    prefer_rbgs_relaxation = .true.
  /
 
  $INTERACTIONS
