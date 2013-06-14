@@ -91,7 +91,6 @@
  $MULTIGRID_GRAVITY
     grav_bnd_str  = "dirichlet"
     gb_no_fft = .true.
-    prefer_rbgs_relaxation = .true. ! ToDo: convert face prolongation for FFT
     coarsen_multipole = 0 ! ToDo: fix multigridmultipole:prolong_ext_bnd0
  /
 
