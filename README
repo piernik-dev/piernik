@@ -1,5 +1,5 @@
 see http://piernik.astri.umk.pl/ for README
 
 For developers:
- 1) if you have access to openvpn there's an experimental git repo. See http://git.ladon.dev for details
- 2) experimental subgit
+ 1) Never commit directly to this repository. Fork and issue a PR
+ 2) Have fun with git repo!
