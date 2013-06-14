@@ -627,15 +627,10 @@ contains
    subroutine mgg_cg_cleanup(cg)
 
       use grid_cont, only: grid_container
-!!$      use constants,     only: LO, HI, ndims
-!!$      use grid_cont,   only: tgt_list
 
       implicit none
 
       type(grid_container), pointer,  intent(inout) :: cg
-!!$      integer :: g, ib
-!!$      integer, parameter :: nseg = 2*(HI-LO+1)*ndims
-!!$      type(tgt_list), dimension(nseg) :: io_tgt
 
       if (allocated(cg%mg%fft))     deallocate(cg%mg%fft)
       if (allocated(cg%mg%fftr))    deallocate(cg%mg%fftr)
@@ -644,17 +639,6 @@ contains
 
       if (cg%mg%planf /= 0) call dfftw_destroy_plan(cg%mg%planf)
       if (cg%mg%plani /= 0) call dfftw_destroy_plan(cg%mg%plani)
-
-!!$         io_tgt(1:nseg) = [ cgl%cg%mg%pfc_tgt, cgl%cg%mg%pff_tgt ]
-!!$            do ib = 1, nseg
-!!$               if (allocated(io_tgt(ib)%seg)) then
-!!$                  do g = lbound(io_tgt(ib)%seg, dim=1), ubound(io_tgt(ib)%seg, dim=1)
-!!$                     if (allocated(io_tgt(ib)%seg(g)%buf)) deallocate(io_tgt(ib)%seg(g)%buf)
-!!$                     if (allocated(io_tgt(ib)%seg(g)%f_lay)) deallocate(io_tgt(ib)%seg(g)%f_lay)
-!!$                  enddo
-!!$                  deallocate(io_tgt(ib)%seg)
-!!$               endif
-!!$            enddo
 
    end subroutine mgg_cg_cleanup
 
