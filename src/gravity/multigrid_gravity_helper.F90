@@ -114,13 +114,13 @@ contains
       type(grid_container), pointer :: cg
 
       if (associated(curl%first)) then
-         if (associated(curl%first%nxt)) call die("[multigrid_gravity:fft_solve_level] multicg not possible")
+         if (associated(curl%first%nxt)) call die("[multigrid_gravity_helper:fft_solve_level] multicg not possible")
       else
          return
       endif
       !> \todo Check if there is one and only one cg on app processes, die if not
 
-      if (curl%fft_type == fft_none) call die("[multigrid_gravity:fft_solve_level] FFT type not set")
+      if (curl%fft_type == fft_none) call die("[multigrid_gravity_helper:fft_solve_level] FFT type not set")
 
       cg => curl%first%cg
       p3 => cg%q(src)%span(cg%ijkse)
