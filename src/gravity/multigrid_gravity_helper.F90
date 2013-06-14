@@ -74,7 +74,7 @@ contains
       call curl%check_dirty(src, "approx_soln src-")
 
       if (associated(curl, coarsest%level) .and. curl%fft_type /= fft_none) then
-         call fft_solve_level(curl)
+         call fft_solve_level(curl, src, soln)
       else
          if (associated(curl, coarsest%level)) then
             !> \todo Implement automatic convergence check on coarsest level (not very important when we have a FFT solver for coarsest level)
@@ -96,34 +96,37 @@ contains
 
 !> \brief Solve finest level if allowed (single cg and single thread)
 
-   subroutine fft_solve_level(curl)
+   subroutine fft_solve_level(curl, src, soln)
 
       use cg_level_connected,  only: cg_level_connected_T
       use constants,           only: fft_none
       use dataio_pub,          only: die
       use grid_cont,           only: grid_container
       use multigrid_fftapprox, only: fft_convolve
-      use multigridvars,       only: source, solution
       use named_array,         only: p3
 
       implicit none
 
       type(cg_level_connected_T), pointer, intent(inout) :: curl
+      integer(kind=4),                     intent(in)    :: src  !< index of source in cg%q(:)
+      integer(kind=4),                     intent(in)    :: soln !< index of solution in cg%q(:)
 
       type(grid_container), pointer :: cg
 
       if (associated(curl%first)) then
          if (associated(curl%first%nxt)) call die("[multigrid_gravity:fft_solve_level] multicg not possible")
+      else
+         return
       endif
       !> \todo Check if there is one and only one cg on app processes, die if not
 
       if (curl%fft_type == fft_none) call die("[multigrid_gravity:fft_solve_level] FFT type not set")
 
       cg => curl%first%cg
-      p3 => cg%q(source)%span(cg%ijkse)
+      p3 => cg%q(src)%span(cg%ijkse)
       cg%mg%src(:, :, :) = p3
       call fft_convolve(curl)
-      p3 => cg%q(solution)%span(cg%ijkse)
+      p3 => cg%q(soln)%span(cg%ijkse)
       p3 = cg%mg%src(:, :, :)
 
    end subroutine fft_solve_level

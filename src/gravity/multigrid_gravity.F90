@@ -868,7 +868,7 @@ contains
       use mpisetup,           only: nproc
       use multigrid_gravity_helper, only: fft_solve_level
       use multigrid_old_soln, only: soln_history
-      use multigridvars,      only: grav_bnd, bnd_givenval, bnd_isolated, stdout, solution
+      use multigridvars,      only: grav_bnd, bnd_givenval, bnd_isolated, stdout, source, solution
       use pcg,                only: mgpcg, use_CG, use_CG_outer
 
       implicit none
@@ -878,7 +878,7 @@ contains
       ! On single CPU use FFT if possible because it is faster. Can be disabled by prefer_rbgs_relaxation = .true.
       if (nproc == 1 .and. finest%level%fft_type /= fft_none) then
          call all_cg%set_dirty(solution)
-         call fft_solve_level(finest%level)
+         call fft_solve_level(finest%level, source, solution)
          if (trust_fft_solution) then
             write(msg, '(3a)')"[multigrid_gravity:vcycle_hg] FFT solution trusted, skipping ", trim(vstat%cprefix), "cycle."
             call printinfo(msg, stdout)
