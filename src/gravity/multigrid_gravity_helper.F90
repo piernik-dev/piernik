@@ -94,15 +94,15 @@ contains
 
    end subroutine approximate_solution
 
-!> \brief Solve finest level if allowed (single cg and single thread)
+!> \brief Solve given level if allowed using FFT 
 
    subroutine fft_solve_level(curl, src, soln)
 
       use cg_level_connected,  only: cg_level_connected_T
-      use constants,           only: fft_none
+      use cg_list,             only: cg_list_element
+      use constants,           only: fft_none, fft_rcr, fft_dst
       use dataio_pub,          only: die
       use grid_cont,           only: grid_container
-      use multigrid_fftapprox, only: fft_convolve
       use named_array,         only: p3
 
       implicit none
@@ -111,6 +111,7 @@ contains
       integer(kind=4),                     intent(in)    :: src  !< index of source in cg%q(:)
       integer(kind=4),                     intent(in)    :: soln !< index of solution in cg%q(:)
 
+      type(cg_list_element), pointer :: cgl
       type(grid_container), pointer :: cg
 
       if (associated(curl%first)) then
@@ -122,12 +123,32 @@ contains
 
       if (curl%fft_type == fft_none) call die("[multigrid_gravity:fft_solve_level] FFT type not set")
 
-      cg => curl%first%cg
-      p3 => cg%q(src)%span(cg%ijkse)
-      cg%mg%src(:, :, :) = p3
-      call fft_convolve(curl)
-      p3 => cg%q(soln)%span(cg%ijkse)
-      p3 = cg%mg%src(:, :, :)
+      cgl => curl%first
+      do while (associated(cgl))
+         cg => cgl%cg
+
+         p3 => cg%q(src)%span(cg%ijkse)
+         cg%mg%src(:, :, :) = p3
+
+         ! do the convolution in Fourier space; cg%mg%src(:,:,:) -> cg%mg%fft{r}(:,:,:)
+         call dfftw_execute(cg%mg%planf)
+
+         select case (curl%fft_type)
+            case (fft_rcr)
+               cg%mg%fft(:,:,:)  = cg%mg%fft(:,:,:)  * cg%mg%Green3D(:,:,:)
+            case (fft_dst)
+               cg%mg%fftr(:,:,:) = cg%mg%fftr(:,:,:) * cg%mg%Green3D(:,:,:)
+            case default
+               call die("[multigrid_fft_approximation:fft_convolve] Unknown FFT type.")
+         end select
+
+         call dfftw_execute(cg%mg%plani) ! cg%mg%fft{r}(:,:,:) -> cg%mg%src(:,:,:)
+
+         p3 => cg%q(soln)%span(cg%ijkse)
+         p3 = cg%mg%src(:, :, :)
+
+         cgl => cgl%nxt
+      enddo
 
    end subroutine fft_solve_level
 

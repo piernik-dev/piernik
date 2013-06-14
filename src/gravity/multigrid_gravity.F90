@@ -386,7 +386,6 @@ contains
       use dataio_pub,          only: die, warn, printinfo, msg
       use domain,              only: dom
       use mpisetup,            only: master, nproc
-      use multigrid_fftapprox, only: mpi_multigrid_prep_grav
       use multigridvars,       only: bnd_periodic, bnd_dirichlet, bnd_isolated, grav_bnd
       use multipole,           only: init_multipole, coarsen_multipole
       use named_array_list,    only: qna
@@ -465,8 +464,6 @@ contains
 
          curl => curl%finer
       enddo
-
-      if (require_FFT) call mpi_multigrid_prep_grav !supplement to mpi_multigrid_prep
 
       if (finest%level%fft_type == fft_none .and. trust_fft_solution) then
          if (master) call warn("[multigrid_gravity:init_multigrid_grav] cannot trust FFT solution on the finest level.")
