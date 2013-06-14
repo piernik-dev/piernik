@@ -1,2 +1,5 @@
-obj/
+obj*/
 runs/
+*~
+.lastsetup
+python/DirWalk.pyc
