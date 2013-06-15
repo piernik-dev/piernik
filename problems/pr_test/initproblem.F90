@@ -41,7 +41,7 @@ module initproblem
    integer(kind=4) :: ord_prolong   !< Prolongation order used for working field
    logical :: point                 !< If .true. then IC contains just one non-zero value, some more complex pattern is used otherwise
    real, dimension(ndims) :: coords !< Coordinates of the point mentioned above
-   integer :: checkerboard          !< If > 0 and .not. point then paint a global checkerboard pattern of this length
+   integer(kind=4) :: checkerboard  !< If > 0 and .not. point then paint a global checkerboard pattern of this length
    namelist /PROBLEM_CONTROL/ ord_prolong, point, coords, checkerboard
 
    ! other private data
@@ -118,7 +118,7 @@ contains
 
       implicit none
 
-      integer :: i
+      integer(kind=4) :: i
       integer, parameter :: lmax = 3
 
       call fld_reg
@@ -127,7 +127,7 @@ contains
          call prepare_fld(base_level_id-i, 0)
       enddo
       do i = lmax, 0, -1
-         call prepare_fld(base_level_id, i)
+         call prepare_fld(base_level_id, int(i))
       enddo
 
       if (master) call die("[initproblem:problem_initial_conditions] End of test")
@@ -146,8 +146,8 @@ contains
 
       implicit none
 
-      integer, intent(in) :: lev !< which level to initialize
-      integer, intent(in) :: n_c !< how many times to coarsen the data
+      integer(kind=4), intent(in) :: lev !< which level to initialize
+      integer,         intent(in) :: n_c !< how many times to coarsen the data
 
       type(cg_level_connected_T), pointer :: curl
       integer :: c
@@ -157,7 +157,7 @@ contains
          call printinfo(msg)
       endif
 
-      call clear_fld(huge(1))
+      call clear_fld(huge(1_4))
       call set_up_fld(lev)
       if (point) then
          write(msg,*)"ip:pf set ^",lev
@@ -227,7 +227,7 @@ contains
 
       implicit none
 
-      integer, intent(in) :: lev
+      integer(kind=4), intent(in) :: lev
 
       type(cg_level_connected_T), pointer :: glev
       type(cg_list_element), pointer :: cgl
@@ -257,17 +257,17 @@ contains
          cg%q(qna%ind(fld_n))%arr(cg%is, cg%js, cg%ks) = cg%grid_id * 1.1
 
          if (all(cg%n_b > 3 .or. .not. dom%has_dir(:))) then
-            ijk = min( cg%ijkse(:, LO) + 3*dom%D_(:), cg%ijkse(:, HI) )
+            ijk = min( cg%ijkse(:, LO) + 3_4*dom%D_(:), cg%ijkse(:, HI) )
             cg%q(qna%ind(fld_n))%arr(ijk(xdim), ijk(ydim), ijk(zdim)) = cg%grid_id * 1.2
          endif
 
          if (all(cg%n_b > 7 .or. .not. dom%has_dir(:))) then
-            ijk = min( cg%ijkse(:, LO) + 7*dom%D_(:), cg%ijkse(:, HI) )
+            ijk = min( cg%ijkse(:, LO) + 7_4*dom%D_(:), cg%ijkse(:, HI) )
             cg%q(qna%ind(fld_n))%arr(ijk(xdim), ijk(ydim), cg%ks:cg%ke) = cg%grid_id * 1.4
          endif
 
          if (all(cg%n_b > 11 .or. .not. dom%has_dir(:))) then
-            ijk = min( cg%ijkse(:, LO) + 11*dom%D_(:), cg%ijkse(:, HI) )
+            ijk = min( cg%ijkse(:, LO) + 11_4*dom%D_(:), cg%ijkse(:, HI) )
             cg%q(qna%ind(fld_n))%arr(ijk(xdim), cg%js:cg%je, cg%ks:cg%ke) = cg%grid_id * 1.8
          endif
 
@@ -294,7 +294,7 @@ contains
 
       implicit none
 
-      integer, intent(in) :: lev
+      integer(kind=4), intent(in) :: lev
 
       type(cg_list_element), pointer :: cgl
       type(grid_container), pointer :: cg
@@ -319,7 +319,7 @@ contains
                            cg%q(i_fld)%arr(i, j, k) = 0.
                         endif
                      else if (checkerboard > 0) then
-                        cg%q(i_fld)%arr(i, j, k) = sum(mod([ i, j, k ], checkerboard))
+                        cg%q(i_fld)%arr(i, j, k) = sum(mod([ i, j, k ], int(checkerboard)))
                      else
                         cg%q(i_fld)%arr(i, j, k) = cg%grid_id * (1. + xab(i, cg%is, cg%ie) + xab(j, cg%js, cg%je) + xab(k, cg%ks, cg%ke))
                      endif
@@ -386,7 +386,8 @@ contains
 
       implicit none
 
-      integer, intent(in) :: x, a, b
+      integer,         intent(in) :: x
+      integer(kind=4), intent(in) :: a, b
 
       if (a /= b) then
          xab = real(2*x-a-b)/real(a-b)
