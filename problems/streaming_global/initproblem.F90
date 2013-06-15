@@ -378,7 +378,7 @@ contains
       integer :: xl, xr
 
 !   Secondary parameters
-
+      allocate(ln_dens_der(0)) ! suppress compiler warnings
       cgl => leaves%first
       do while (associated(cgl))
          cg => cgl%cg
