@@ -258,10 +258,6 @@ contains
          curl => curl%coarser ! descend until null() is encountered
       enddo
 
-#ifdef GRAV
-      call init_multigrid_grav
-#endif /* GRAV */
-
       curl => base_level%coarser
       do while (associated(curl))
          if (master) then
@@ -276,6 +272,10 @@ contains
 
          curl => curl%coarser
       enddo
+
+#ifdef GRAV
+      call init_multigrid_grav
+#endif /* GRAV */
 
       ! summary
       if (master) then
