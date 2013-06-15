@@ -12,7 +12,7 @@ trunk-mcrtest_new() {
 }
 
 trunk-mcrwind_validation() {
-   git checkout eac3979ea698936cd07efe67d4b24662d9e49b0b
+   git checkout 6ec66fb130bb9c7c7b3ca09416a98a6b27c2a681
    python setup mcrwind --param problem.par.build --compiler gnu47 --debug
    pushd runs/mcrwind &> /dev/null
    mpiexec --mca btl ^openib -n 4 ./piernik -n '&OUTPUT_CONTROL run_id="gld" use_v2_io= .true. /'
