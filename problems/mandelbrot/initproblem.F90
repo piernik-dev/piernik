@@ -40,11 +40,11 @@ module initproblem
    public :: read_problem_par, problem_initial_conditions, problem_pointers
 
    ! namelist parameters
-   integer :: order      !< Order of mandelbrot set
-   integer :: maxiter    !< Maximum number of iterations
-   logical :: smooth_map !< Try continuous colouring
-   real :: ref_thr       !< threshold for refining a grid
-   real :: deref_thr     !< threshold for derefining a grid
+   integer(kind=4) :: order   !< Order of mandelbrot set
+   integer(kind=4) :: maxiter !< Maximum number of iterations
+   logical :: smooth_map      !< Try continuous colouring
+   real :: ref_thr            !< threshold for refining a grid
+   real :: deref_thr          !< threshold for derefining a grid
 
    namelist /PROBLEM_CONTROL/  order, maxiter, smooth_map, ref_thr, deref_thr
 

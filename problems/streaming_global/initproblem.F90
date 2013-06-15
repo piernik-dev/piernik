@@ -378,7 +378,7 @@ contains
       integer :: xl, xr
 
 !   Secondary parameters
-
+      allocate(ln_dens_der(0)) ! suppress compiler warnings
       cgl => leaves%first
       do while (associated(cgl))
          cg => cgl%cg
@@ -417,7 +417,8 @@ contains
             xl = cg%lhn(xdim, LO)
             xr = cg%lhn(xdim, HI)
             if (.not.allocated(grav)) allocate(grav(xl:xr))
-            if (.not.allocated(ln_dens_der)) allocate(ln_dens_der(xl:xr))
+            if (size(ln_dens_der) /= xr-xl+1) deallocate(ln_dens_der)
+            allocate(ln_dens_der(xl:xr))
             if (.not.allocated(dens_prof)) allocate(dens_prof(xl:xr))
             if (.not.allocated(dens_cutoff)) allocate(dens_cutoff(xl:xr))
             if (.not.allocated(tauf)) allocate(tauf(xl:xr))
