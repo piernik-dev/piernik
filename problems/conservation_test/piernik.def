@@ -3,6 +3,7 @@
 #undef NEUTRAL
 #define DUST
 #define LOCAL_FR_SPEED
+#define RTVD
 
 #undef ISO
 
