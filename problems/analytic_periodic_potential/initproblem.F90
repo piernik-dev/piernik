@@ -277,7 +277,8 @@ contains
 
       implicit none
 
-      integer                        :: i, j, k, apot_i
+      integer                        :: i, j, k
+      integer(kind=4)                :: apot_i
       real                           :: pot
       type(cg_list_element), pointer :: cgl
       type(grid_container),  pointer :: cg
