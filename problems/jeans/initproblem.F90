@@ -115,9 +115,9 @@ contains
 
       endif
 
-#if !(defined(MULTIGRID) || defined(POISSON_FFT))
-      call die("You must define either MULTIGRID or POISSON_FFT for this problem")
-#endif /* !(MULTIGRID || POISSON_FFT) */
+#if !(defined(SELF_GRAV))
+      call die("You must define MULTIGRID for this problem")
+#endif /* !SELF_GRAV */
 
       if (mode < 0 .or. mode > 1)     call die("[initproblem:read_problem_par] Invalid mode.")
       if (d0 < 0. .or. abs(amp) > 1.) call die("[initproblem:read_problem_par] Negative average density or amplitude too high.")
