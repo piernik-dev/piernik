@@ -348,7 +348,7 @@ contains
 
                   select case (cg%bnd(d, lh))
                      case (BND_PER, BND_MPI, BND_FC, BND_MPI_FC) ! Already done in internal_bnd or arr3d_boundaries
-                     case (BND_SHE) !> \todo move appropriate code from poissonsolver::poisson_solve or do nothing. or die until someone really needs SHEAR.
+                     case (BND_SHE) !> die until someone really needs SHEAR.
                         call die("[cg_list_bnd:external_boundaries] 'she' not implemented")
                      case (BND_COR)
                         if (present(area_type)) then

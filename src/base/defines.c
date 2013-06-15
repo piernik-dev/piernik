@@ -100,16 +100,6 @@
 #endif
 
 /*
-  Gravity solvers
-
-  Exclusive: MULTIGRID, POISSON_FFT
-*/
-
-#if defined(MULTIGRID) && defined(POISSON_FFT)
-#error MULTIGRID and POISSON_FFT are not meant to work together.
-#endif
-
-/*
   Multigrid solver
 
   at least one of { GRAV, COSM_RAYS }

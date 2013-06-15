@@ -7,10 +7,7 @@
 
 #define GRAV
 
-#if !(defined(MULTIGRID) || defined(POISSON_FFT))
 #define MULTIGRID
-#warning You have not defined neither MULTIGRID nor POISSON_FFT gravity. Assuming MULTIGRID.
-#endif
 
 #if 0
   Dirty trick!

@@ -376,10 +376,6 @@ contains
       use fluidindex,        only: iarr_all_sg
       use grid_cont,         only: grid_container
       use named_array_list,  only: qna
-#ifdef POISSON_FFT
-      use domain,            only: is_multicg
-      use poissonsolver,     only: poisson_solve
-#endif /* POISSON_FFT */
 #ifdef MULTIGRID
       use multigrid_gravity, only: multigrid_solve_grav
 #endif /* MULTIGRID */
@@ -390,27 +386,12 @@ contains
 #ifdef SELF_GRAV
       type(cg_list_element), pointer :: cgl
       logical, save :: frun = .true.
-#ifdef POISSON_FFT
-      type(grid_container),  pointer :: cg
-#endif /* POISSON_FFT */
 
       call leaves%q_copy(qna%ind(sgp_n), qna%ind(sgpm_n))
 
 #ifdef MULTIGRID
       call multigrid_solve_grav(iarr_all_sg)
 #endif /* MULTIGRID */
-
-#ifdef POISSON_FFT
-      if (is_multicg) call die("[gravity:source_terms_grav] multiple grid pieces per procesor not implemented yet") !nontrivial all cg% must be solved at a time (nontrivial for multigrid, rarely possible for FFT poisson solver)
-
-      cgl => leaves%first
-      do while (associated(cgl))
-         cg => cgl%cg
-!! \todo prepare an array of procedure pointers to be called
-         call poisson_solve( sum(cg%u(iarr_all_sg,:,:,:),1) )
-         cgl => cgl%nxt
-      enddo
-#endif /* POISSON_FFT */
 
       ! communicate boundary values for sgp(:, :, :) because multigrid solver gives at most 2 guardcells, while for hydro solver typically 4 is required.
 

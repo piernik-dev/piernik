@@ -8,7 +8,7 @@
 
 #include "piernik.def"
 
-#if ( defined(MULTIGRID) || defined(POISSON_FFT) ) && defined(GRAV)
+#if defined(MULTIGRID) && defined(GRAV)
 #define SELF_GRAV
 #endif
 
