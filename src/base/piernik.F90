@@ -29,7 +29,7 @@
 !>
 !! Main program
 !<
-FAIL
+FAIL AGAIN
 program piernik
 ! pulled by ANY
 
