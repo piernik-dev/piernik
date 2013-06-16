@@ -31,9 +31,10 @@
 !>
 !! \brief Preconditioned conjugate gradient solver.
 !!
-!! \details
+!! \details Preconditioned conjugate gradient solver. By default it uses single V-cycle as a preconditioner as it is most efficient.
+!! Other possibilities are just smoothing and no preconditioning at all - both provided for academic interest only.
 !!
-!! Note that it is theoretically possible to use most of this module without multigrid.
+!! Note that it is theoretically possible to use most of this module without Piernik's multigrid module.
 !! We decided to leave dependencies on multigrid to keep the code simple.
 !<
 
@@ -79,7 +80,7 @@ contains
 !>
 !! \brief Preconditioned conjugate gradient solver
 !!
-!! \details This solver can converge on domains that require high cell anisotropy e.g cg%dx >> cg%dy
+!! \details This solver can converge faster than regular multigrid on domains that require high cell anisotropy e.g cg%dx >> cg%dy
 !!
 !! Note that forcing alpha = 1 and beta = 0 reduces this algorithm to bare multigrid
 !!
@@ -111,8 +112,8 @@ contains
 
       implicit none
 
-      integer(kind=4),    intent(in)    :: max_cycles  !< Maximum allowed number of V-cycles
-      real,               intent(in)    :: norm_tol    !< stop V-cycle iterations when the ratio of norms ||residual||/||source|| is below this value
+      integer(kind=4),    intent(in)    :: max_cycles  !< Maximum allowed number of iterations
+      real,               intent(in)    :: norm_tol    !< stop iterations when the ratio of norms ||residual||/||source|| is below this value
 
       real    :: alpha, beta, dc_k, dc_k1
       integer :: k
