@@ -214,7 +214,7 @@ def qa_checks(files, options):
     warns = []
     errors = []
     for f in f90files:
-        qa_check_id(errors, f)
+#        qa_check_id(errors, f)
         pfile = []
         lines = open(f, 'r').readlines()
         for line in lines:

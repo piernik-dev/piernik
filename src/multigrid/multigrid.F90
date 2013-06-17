@@ -280,7 +280,7 @@ contains
       ! summary
       if (master) then
          write(msg, '(a,i2,a,3i4,a)')"[multigrid:init_multigrid] Initialized ", finest%level%level_id - coarsest%level%level_id, &
-              &                      " coarse levels, coarse level resolution [ ", coarsest%level%n_d(:)," ]"
+              &                      " coarse levels, coarsest level resolution [ ", coarsest%level%n_d(:)," ]"
          call printinfo(msg)
       endif
 

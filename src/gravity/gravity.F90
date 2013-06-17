@@ -372,9 +372,7 @@ contains
       use cg_leaves,         only: leaves
       use cg_list,           only: cg_list_element, expanded_domain
       use constants,         only: sgp_n, sgpm_n
-      use dataio_pub,        only: die
       use fluidindex,        only: iarr_all_sg
-      use grid_cont,         only: grid_container
       use named_array_list,  only: qna
 #ifdef MULTIGRID
       use multigrid_gravity, only: multigrid_solve_grav
