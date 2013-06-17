@@ -187,7 +187,7 @@ contains
    !>
    !! TODO: comment me and change name if necessary
    !<
-   subroutine send_cg_coarsebnd(cdim, cg)
+   subroutine send_cg_coarsebnd(cdim, cg, nr)
       use constants,        only: pdims, LO, HI, ORTHO1, ORTHO2, I_ONE, INVALID
       use dataio_pub,       only: die
       use domain,           only: dom
@@ -199,8 +199,9 @@ contains
       implicit none
       integer(kind=4), intent(in)                  :: cdim
       type(grid_container), pointer, intent(inout) :: cg
+      integer, intent(inout)                       :: nr
 
-      integer :: g, lh, nr
+      integer :: g, lh
       integer(kind=8), dimension(LO:HI) :: j1, j2, jc
       integer(kind=8) :: j, k
 
@@ -298,8 +299,10 @@ contains
 
       call eflx%init
 
+      nr = 0
       do istep = 1, integration_order
          nr_recv = compute_nr_recv(cdim)
+         nr = nr_recv
          all_processed = .false.
          do while (.not. all_processed)
             all_processed = .true.
@@ -367,7 +370,7 @@ contains
                         enddo
                      enddo
 
-                     call send_cg_coarsebnd(cdim, cg)
+                     call send_cg_coarsebnd(cdim, cg, nr)
 
                      deallocate(b, u, u0)
 
