@@ -91,6 +91,46 @@ contains
 
    end function interpolate_mag_field
 !------------------------------------------------------------------------------------------
+   integer function compute_nr_recv(cdim) result(nr)
+
+      use constants,        only: LO, HI, I_ONE
+      use cg_leaves,        only: leaves
+      use cg_list,          only: cg_list_element
+      use grid_cont,        only: grid_container
+      use mpi,              only: MPI_DOUBLE_PRECISION
+      use mpisetup,         only: comm, mpi_err, req, inflate_req
+
+      implicit none
+      integer(kind=4), intent(in)       :: cdim
+
+      type(cg_list_element), pointer    :: cgl
+      type(grid_container),  pointer    :: cg
+      integer(kind=8), dimension(LO:HI) :: jc
+      integer :: g
+
+      nr = 0
+      cgl => leaves%first
+      do while (associated(cgl))
+         cgl%cg%processed = .false.
+         cgl%cg%finebnd(cdim, LO)%uflx(:, :, :) = 0. !> \warning overkill
+         cgl%cg%finebnd(cdim, HI)%uflx(:, :, :) = 0.
+         if (allocated(cgl%cg%rif_tgt%seg)) then
+            associate ( seg => cgl%cg%rif_tgt%seg )
+               do g = lbound(seg, dim=1), ubound(seg, dim=1)
+                  jc = seg(g)%se(cdim, :)
+                  if (jc(LO) == jc(HI)) then
+                     nr = nr + I_ONE
+                     if (nr > size(req, dim=1)) call inflate_req
+                     call MPI_Irecv(seg(g)%buf, size(seg(g)%buf(:, :, :)), MPI_DOUBLE_PRECISION, seg(g)%proc, seg(g)%tag, comm, req(nr), mpi_err)
+                     seg(g)%req => req(nr)
+                  endif
+               enddo
+            end associate
+         endif
+         cgl => cgl%nxt
+      enddo
+   end function compute_nr_recv
+!------------------------------------------------------------------------------------------
    subroutine sweep(cdim)
 
       use all_boundaries,   only: all_fluid_boundaries
@@ -154,29 +194,7 @@ contains
       call eflx%init
 
       do istep = 1, integration_order
-         nr = 0
-         cgl => leaves%first
-         do while (associated(cgl))
-            cgl%cg%processed = .false.
-            cgl%cg%finebnd(cdim, LO)%uflx(:, :, :) = 0. !> \warning overkill
-            cgl%cg%finebnd(cdim, HI)%uflx(:, :, :) = 0.
-            if (allocated(cgl%cg%rif_tgt%seg)) then
-               associate ( seg => cgl%cg%rif_tgt%seg )
-               do g = lbound(seg, dim=1), ubound(seg, dim=1)
-                  jc = seg(g)%se(cdim, :)
-                  if (jc(LO) == jc(HI)) then
-                     nr = nr + I_ONE
-                     if (nr > size(req, dim=1)) call inflate_req
-                     call MPI_Irecv(seg(g)%buf, size(seg(g)%buf(:, :, :)), MPI_DOUBLE_PRECISION, seg(g)%proc, seg(g)%tag, comm, req(nr), mpi_err)
-                     seg(g)%req => req(nr)
-                  endif
-               enddo
-               end associate
-            endif
-            cgl => cgl%nxt
-         enddo
-         nr_recv = nr
-
+         nr_recv = compute_nr_recv(cdim)
          all_processed = .false.
          do while (.not. all_processed)
             all_processed = .true.
