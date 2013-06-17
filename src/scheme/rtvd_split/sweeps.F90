@@ -280,11 +280,9 @@ contains
       type(cg_list_element), pointer    :: cgl
       type(grid_container),  pointer    :: cg
       type(ext_fluxes)                  :: eflx
-      logical                           :: all_processed, all_received, received
+      logical                           :: all_processed, all_received
       integer                           :: blocks_done
-      integer                           :: g, nr, nr_recv, lh
-      integer(kind=8)                   :: j, k
-      integer(kind=8), dimension(LO:HI) :: j1, j2, jc
+      integer                           :: g, nr, nr_recv
       integer(kind=4), dimension(:, :), pointer :: mpistatus
       integer :: cn_
 
