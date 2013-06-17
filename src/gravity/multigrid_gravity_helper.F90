@@ -94,7 +94,7 @@ contains
 
    end subroutine approximate_solution
 
-!> \brief Solve given level if allowed using FFT 
+!> \brief Solve given level if allowed using FFT
 
    subroutine fft_solve_level(curl, src, soln)
 
