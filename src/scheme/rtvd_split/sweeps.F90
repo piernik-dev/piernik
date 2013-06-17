@@ -91,12 +91,14 @@ contains
 
    end function interpolate_mag_field
 !------------------------------------------------------------------------------------------
+   !>
+   !! TODO: comment me and change name if necessary
+   !<
    integer function compute_nr_recv(cdim) result(nr)
 
       use constants,        only: LO, HI, I_ONE
       use cg_leaves,        only: leaves
       use cg_list,          only: cg_list_element
-      use grid_cont,        only: grid_container
       use mpi,              only: MPI_DOUBLE_PRECISION
       use mpisetup,         only: comm, mpi_err, req, inflate_req
 
@@ -104,7 +106,6 @@ contains
       integer(kind=4), intent(in)       :: cdim
 
       type(cg_list_element), pointer    :: cgl
-      type(grid_container),  pointer    :: cg
       integer(kind=8), dimension(LO:HI) :: jc
       integer :: g
 
@@ -130,6 +131,58 @@ contains
          cgl => cgl%nxt
       enddo
    end function compute_nr_recv
+!------------------------------------------------------------------------------------------
+   !>
+   !! TODO: comment me and change name if necessary
+   !<
+   subroutine set_cg_finebnd(cdim, cg, all_received)
+      use constants,        only: LO, HI, INVALID, ORTHO1, ORTHO2, pdims
+      use dataio_pub,       only: die
+      use grid_cont,        only: grid_container
+      use mpi,              only: MPI_STATUS_IGNORE
+      use mpisetup,         only: mpi_err
+      implicit none
+      integer(kind=4), intent(in)                  :: cdim
+      type(grid_container), pointer, intent(inout) :: cg
+      logical, intent(out)                         :: all_received
+
+      integer :: g, lh
+      logical :: received
+      integer(kind=8), dimension(LO:HI) :: j1, j2, jc
+
+      all_received = .true.
+      if (allocated(cg%rif_tgt%seg)) then
+         associate ( seg => cg%rif_tgt%seg )
+         do g = lbound(seg, dim=1), ubound(seg, dim=1)
+            jc = seg(g)%se(cdim, :)
+            if (jc(LO) == jc(HI)) then
+               call MPI_Test(seg(g)%req, received, MPI_STATUS_IGNORE, mpi_err)
+               if (received) then
+                  jc = seg(g)%se(cdim, :) !> \warning: partially duplicated code (see below)
+                  j1 = seg(g)%se(pdims(cdim, ORTHO1), :)
+                  j2 = seg(g)%se(pdims(cdim, ORTHO2), :)
+                  if (jc(LO) /= jc(HI)) call die("[sweeps:sweep] layer too thick (Recv)")
+                  if (all(cg%finebnd(cdim, LO)%index(j1(LO):j1(HI), j2(LO):j2(HI)) == jc(LO))) then
+                     lh = LO
+                  else if (all(cg%finebnd(cdim, HI)%index(j1(LO):j1(HI), j2(LO):j2(HI)) == jc(LO))) then
+                     lh = HI
+                  else
+                     call die("[sweeps:sweep] Cannot determine side (Recv)")
+                     lh = INVALID
+                  endif
+                  ! cg%finebnd(cdim, lh)%uflx(:, j1(LO):j1(HI), j2(LO):j2(HI)) = &
+                  !     cg%finebnd(cdim, lh)%uflx(:, j1(LO):j1(HI), j2(LO):j2(HI)) + seg(g)%buf(:, :, :)
+                  ! for more general decompositions with odd-offset patches it might be necessary to do sum, but it need to be debugged first
+                  cg%finebnd(cdim, lh)%uflx(:, j1(LO):j1(HI), j2(LO):j2(HI)) = seg(g)%buf(:, :, :)
+               else
+                  all_received = .false.
+               endif
+            endif
+         enddo
+         end associate
+      endif
+      return
+   end subroutine set_cg_finebnd
 !------------------------------------------------------------------------------------------
    subroutine sweep(cdim)
 
@@ -204,37 +257,8 @@ contains
                cg => cgl%cg
 
                if (.not. cg%processed) then
+                  call set_cg_finebnd(cdim, cg, all_received)
 
-                  all_received = .true.
-                  if (allocated(cgl%cg%rif_tgt%seg)) then
-                     associate ( seg => cgl%cg%rif_tgt%seg )
-                     do g = lbound(seg, dim=1), ubound(seg, dim=1)
-                        jc = seg(g)%se(cdim, :)
-                        if (jc(LO) == jc(HI)) then
-                           call MPI_Test(seg(g)%req, received, MPI_STATUS_IGNORE, mpi_err)
-                           if (received) then
-                              jc = seg(g)%se(cdim, :) !> \warning: partially duplicated code (see below)
-                              j1 = seg(g)%se(pdims(cdim, ORTHO1), :)
-                              j2 = seg(g)%se(pdims(cdim, ORTHO2), :)
-                              if (jc(LO) /= jc(HI)) call die("[sweeps:sweep] layer too thick (Recv)")
-                              if (all(cgl%cg%finebnd(cdim, LO)%index(j1(LO):j1(HI), j2(LO):j2(HI)) == jc(LO))) then
-                                 lh = LO
-                              else if (all(cgl%cg%finebnd(cdim, HI)%index(j1(LO):j1(HI), j2(LO):j2(HI)) == jc(LO))) then
-                                 lh = HI
-                              else
-                                 call die("[sweeps:sweep] Cannot determine side (Recv)")
-                                 lh = INVALID
-                              endif
-!                              cgl%cg%finebnd(cdim, lh)%uflx(:, j1(LO):j1(HI), j2(LO):j2(HI)) = cgl%cg%finebnd(cdim, lh)%uflx(:, j1(LO):j1(HI), j2(LO):j2(HI)) + seg(g)%buf(:, :, :)
-                              ! for more general decompositions with odd-offset patches it might be necessary to do sum, but it need to be debugged first
-                              cgl%cg%finebnd(cdim, lh)%uflx(:, j1(LO):j1(HI), j2(LO):j2(HI)) = seg(g)%buf(:, :, :)
-                           else
-                              all_received = .false.
-                           endif
-                        endif
-                     enddo
-                     end associate
-                  endif
                   if (all_received) then
 
                      if (cn_ /= cg%n_(cdim)) then
@@ -291,16 +315,16 @@ contains
                         enddo
                      enddo
 
-                     if (allocated(cgl%cg%rof_tgt%seg)) then
-                        associate ( seg => cgl%cg%rof_tgt%seg )
+                     if (allocated(cg%rof_tgt%seg)) then
+                        associate ( seg => cg%rof_tgt%seg )
                         do g = lbound(seg, dim=1), ubound(seg, dim=1)
                            jc = seg(g)%se(cdim, :) !> \warning: partially duplicated code (see above)
                            if (jc(LO) == jc(HI)) then
                               j1 = seg(g)%se(pdims(cdim, ORTHO1), :)
                               j2 = seg(g)%se(pdims(cdim, ORTHO2), :)
-                              if (all(cgl%cg%coarsebnd(cdim, LO)%index(j1(LO):j1(HI), j2(LO):j2(HI)) == jc(LO))) then
+                              if (all(cg%coarsebnd(cdim, LO)%index(j1(LO):j1(HI), j2(LO):j2(HI)) == jc(LO))) then
                                  lh = LO
-                              else if (all(cgl%cg%coarsebnd(cdim, HI)%index(j1(LO):j1(HI), j2(LO):j2(HI)) == jc(LO))) then
+                              else if (all(cg%coarsebnd(cdim, HI)%index(j1(LO):j1(HI), j2(LO):j2(HI)) == jc(LO))) then
                                  lh = HI
                               else
                                  call die("[sweeps:sweep] Cannot determine side (Send)")
@@ -310,7 +334,7 @@ contains
                               seg(g)%buf(:, :, :) = 0.
                               do j = j1(LO), j1(HI)
                                  do k = j2(LO), j2(HI)
-                                    seg(g)%buf(:, f2c_o(j), f2c_o(k)) = seg(g)%buf(:, f2c_o(j), f2c_o(k)) + cgl%cg%coarsebnd(cdim, lh)%uflx(:, j, k)
+                                    seg(g)%buf(:, f2c_o(j), f2c_o(k)) = seg(g)%buf(:, f2c_o(j), f2c_o(k)) + cg%coarsebnd(cdim, lh)%uflx(:, j, k)
                                  enddo
                               enddo
                               seg(g)%buf = 1/2.**(dom%eff_dim-1) * seg(g)%buf
