@@ -135,7 +135,7 @@ contains
    !>
    !! TODO: comment me and change name if necessary
    !<
-   subroutine set_cg_finebnd(cdim, cg, all_received)
+   subroutine recv_cg_finebnd(cdim, cg, all_received)
       use constants,        only: LO, HI, INVALID, ORTHO1, ORTHO2, pdims
       use dataio_pub,       only: die
       use grid_cont,        only: grid_container
@@ -182,24 +182,76 @@ contains
          end associate
       endif
       return
-   end subroutine set_cg_finebnd
+   end subroutine recv_cg_finebnd
+!------------------------------------------------------------------------------------------
+   !>
+   !! TODO: comment me and change name if necessary
+   !<
+   subroutine send_cg_coarsebnd(cdim, cg)
+      use constants,        only: pdims, LO, HI, ORTHO1, ORTHO2, I_ONE, INVALID
+      use dataio_pub,       only: die
+      use domain,           only: dom
+      use func,             only: f2c_o
+      use grid_cont,        only: grid_container
+      use mpi,              only: MPI_DOUBLE_PRECISION
+      use mpisetup,         only: comm, mpi_err, req, inflate_req
+
+      implicit none
+      integer(kind=4), intent(in)                  :: cdim
+      type(grid_container), pointer, intent(inout) :: cg
+
+      integer :: g, lh, nr
+      integer(kind=8), dimension(LO:HI) :: j1, j2, jc
+      integer(kind=8) :: j, k
+
+
+      if (allocated(cg%rof_tgt%seg)) then
+         associate ( seg => cg%rof_tgt%seg )
+         do g = lbound(seg, dim=1), ubound(seg, dim=1)
+            jc = seg(g)%se(cdim, :) !> \warning: partially duplicated code (see above)
+            if (jc(LO) == jc(HI)) then
+               j1 = seg(g)%se(pdims(cdim, ORTHO1), :)
+               j2 = seg(g)%se(pdims(cdim, ORTHO2), :)
+               if (all(cg%coarsebnd(cdim, LO)%index(j1(LO):j1(HI), j2(LO):j2(HI)) == jc(LO))) then
+                  lh = LO
+               else if (all(cg%coarsebnd(cdim, HI)%index(j1(LO):j1(HI), j2(LO):j2(HI)) == jc(LO))) then
+                  lh = HI
+               else
+                  call die("[sweeps:sweep] Cannot determine side (Send)")
+                  lh = INVALID
+               endif
+
+               seg(g)%buf(:, :, :) = 0.
+               do j = j1(LO), j1(HI)
+                  do k = j2(LO), j2(HI)
+                     seg(g)%buf(:, f2c_o(j), f2c_o(k)) = seg(g)%buf(:, f2c_o(j), f2c_o(k)) + cg%coarsebnd(cdim, lh)%uflx(:, j, k)
+                  enddo
+               enddo
+               seg(g)%buf = 1/2.**(dom%eff_dim-1) * seg(g)%buf
+
+               nr = nr + I_ONE
+               if (nr > size(req, dim=1)) call inflate_req
+               call MPI_Isend(seg(g)%buf, size(seg(g)%buf(:, :, :)), MPI_DOUBLE_PRECISION, seg(g)%proc, seg(g)%tag, comm, req(nr), mpi_err)
+               seg(g)%req => req(nr)
+            endif
+         enddo
+         end associate
+      endif
+   end subroutine send_cg_coarsebnd
 !------------------------------------------------------------------------------------------
    subroutine sweep(cdim)
 
       use all_boundaries,   only: all_fluid_boundaries
       use cg_leaves,        only: leaves
       use cg_list,          only: cg_list_element
-      use constants,        only: pdims, LO, HI, uh_n, cs_i2_n, ORTHO1, ORTHO2, I_ONE, INVALID
-      use dataio_pub,       only: die
+      use constants,        only: pdims, LO, HI, uh_n, cs_i2_n, ORTHO1, ORTHO2
       use domain,           only: dom
       use fluidindex,       only: flind, iarr_all_swp, nmag
       use fluxtypes,        only: ext_fluxes
-      use func,             only: f2c_o
       use global,           only: dt, integration_order
       use grid_cont,        only: grid_container
       use gridgeometry,     only: set_geo_coeffs
-      use mpi,              only: MPI_DOUBLE_PRECISION, MPI_STATUS_IGNORE
-      use mpisetup,         only: comm, mpi_err, req, inflate_req, status
+      use mpisetup,         only: mpi_err, req, status
       use named_array_list, only: qna, wna
       use rtvd,             only: relaxing_tvd
 #ifdef COSM_RAYS
@@ -257,7 +309,7 @@ contains
                cg => cgl%cg
 
                if (.not. cg%processed) then
-                  call set_cg_finebnd(cdim, cg, all_received)
+                  call recv_cg_finebnd(cdim, cg, all_received)
 
                   if (all_received) then
 
@@ -315,38 +367,7 @@ contains
                         enddo
                      enddo
 
-                     if (allocated(cg%rof_tgt%seg)) then
-                        associate ( seg => cg%rof_tgt%seg )
-                        do g = lbound(seg, dim=1), ubound(seg, dim=1)
-                           jc = seg(g)%se(cdim, :) !> \warning: partially duplicated code (see above)
-                           if (jc(LO) == jc(HI)) then
-                              j1 = seg(g)%se(pdims(cdim, ORTHO1), :)
-                              j2 = seg(g)%se(pdims(cdim, ORTHO2), :)
-                              if (all(cg%coarsebnd(cdim, LO)%index(j1(LO):j1(HI), j2(LO):j2(HI)) == jc(LO))) then
-                                 lh = LO
-                              else if (all(cg%coarsebnd(cdim, HI)%index(j1(LO):j1(HI), j2(LO):j2(HI)) == jc(LO))) then
-                                 lh = HI
-                              else
-                                 call die("[sweeps:sweep] Cannot determine side (Send)")
-                                 lh = INVALID
-                              endif
-
-                              seg(g)%buf(:, :, :) = 0.
-                              do j = j1(LO), j1(HI)
-                                 do k = j2(LO), j2(HI)
-                                    seg(g)%buf(:, f2c_o(j), f2c_o(k)) = seg(g)%buf(:, f2c_o(j), f2c_o(k)) + cg%coarsebnd(cdim, lh)%uflx(:, j, k)
-                                 enddo
-                              enddo
-                              seg(g)%buf = 1/2.**(dom%eff_dim-1) * seg(g)%buf
-
-                              nr = nr + I_ONE
-                              if (nr > size(req, dim=1)) call inflate_req
-                              call MPI_Isend(seg(g)%buf, size(seg(g)%buf(:, :, :)), MPI_DOUBLE_PRECISION, seg(g)%proc, seg(g)%tag, comm, req(nr), mpi_err)
-                              seg(g)%req => req(nr)
-                           endif
-                        enddo
-                        end associate
-                     endif
+                     call send_cg_coarsebnd(cdim, cg)
 
                      deallocate(b, u, u0)
 
