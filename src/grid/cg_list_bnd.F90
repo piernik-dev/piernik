@@ -176,7 +176,7 @@ contains
             active = associated(cg%w(ind)%arr)
          endif
 
-         do d = xdim, zdim ! cor_dim
+         do d = lbound(cg%i_bnd, dim=1), ubound(cg%i_bnd, dim=1)
             if (dmask(d) .and. active) then
                if (allocated(cg%i_bnd(d)%seg)) then
                   if (.not. allocated(cg%o_bnd(d)%seg)) call die("[cg_list_bnd:internal_boundaries] cg%i_bnd without cg%o_bnd")

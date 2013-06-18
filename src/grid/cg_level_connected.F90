@@ -1042,7 +1042,7 @@ contains
          call cgmap%set
          box_8 = int(cg%ijkse, kind=8)
          call cgmap%clear(box_8)
-         do dd = xdim, zdim
+         do dd = lbound(cg%i_bnd, dim=1), ubound(cg%i_bnd, dim=1)
             do b = lbound(cg%i_bnd(dd)%seg, dim=1), ubound(cg%i_bnd(dd)%seg, dim=1)
                call cgmap%clear(cg%i_bnd(dd)%seg(b)%se)
             enddo
