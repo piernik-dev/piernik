@@ -554,7 +554,7 @@ contains
    subroutine mpi_bnd_types(this)
 
       use cg_list,    only: cg_list_element
-      use constants,  only: xdim, ydim, zdim, LO, HI, BND_MPI_FC, BND_FC
+      use constants,  only: xdim, ydim, zdim, cor_dim, LO, HI, BND_MPI_FC, BND_FC
       use domain,     only: dom
       use grid_cont,  only: grid_container, is_overlap
       use mpisetup,   only: FIRST, LAST
@@ -583,7 +583,7 @@ contains
 
          if (allocated(cg%i_bnd)) deallocate(cg%i_bnd)
          if (allocated(cg%o_bnd)) deallocate(cg%o_bnd)
-         allocate(cg%i_bnd(xdim:zdim), cg%o_bnd(xdim:zdim))
+         allocate(cg%i_bnd(xdim:cor_dim), cg%o_bnd(xdim:cor_dim))
 
          per(:) = 0
          where (dom%periodic(:)) per(:) = this%n_d(:)
