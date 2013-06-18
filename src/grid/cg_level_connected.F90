@@ -1043,9 +1043,11 @@ contains
          box_8 = int(cg%ijkse, kind=8)
          call cgmap%clear(box_8)
          do dd = lbound(cg%i_bnd, dim=1), ubound(cg%i_bnd, dim=1)
-            do b = lbound(cg%i_bnd(dd)%seg, dim=1), ubound(cg%i_bnd(dd)%seg, dim=1)
-               call cgmap%clear(cg%i_bnd(dd)%seg(b)%se)
-            enddo
+            if (allocated(cg%i_bnd(dd)%seg)) then
+               do b = lbound(cg%i_bnd(dd)%seg, dim=1), ubound(cg%i_bnd(dd)%seg, dim=1)
+                  call cgmap%clear(cg%i_bnd(dd)%seg(b)%se)
+               enddo
+            end if
          enddo
          call cgmap%find_boxes
          do j = FIRST, LAST !> \warning Antiparallel
