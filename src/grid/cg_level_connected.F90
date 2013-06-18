@@ -748,7 +748,7 @@ contains
 
 !> \brief This routine sets up all guardcells (internal, external and fine-coarse) for given rank-4 arrays.
 
-   subroutine arr4d_boundaries(this, ind, area_type, dir)
+   subroutine arr4d_boundaries(this, ind, area_type, dir, nocorners)
 
       use constants,        only: base_level_id
       use named_array_list, only: qna, wna
@@ -759,6 +759,7 @@ contains
       integer(kind=4),             intent(in)    :: ind       !< index of cg%w(:) 4d array
       integer(kind=4), optional,   intent(in)    :: area_type !< defines how do we treat boundaries
       integer(kind=4), optional,   intent(in)    :: dir       !< select only this direction
+      logical,         optional,   intent(in)    :: nocorners !< .when .true. then don't care about proper edge and corner update
 
       integer(kind=4) :: iw
 
@@ -768,11 +769,11 @@ contains
          do iw = 1, wna%lst(ind)%dim4
             call this%coarser%wq_copy(ind, iw, qna%wai)
             call this%wq_copy(ind, iw, qna%wai) !> Quick and dirty fix for cases when cg%ignore_prolongation == .true.
-            call this%prolong_bnd_from_coarser(qna%wai, dir=dir)
+            call this%prolong_bnd_from_coarser(qna%wai, dir=dir, nocorners=nocorners)
             call this%qw_copy(qna%wai, ind, iw) !> \todo filter this through cg%ignore_prolongation
          enddo
       endif
-      call this%level_4d_boundaries(ind, area_type = area_type, dir=dir)
+      call this%level_4d_boundaries(ind, area_type = area_type, dir=dir, nocorners=nocorners)
 
    end subroutine arr4d_boundaries
 
@@ -787,7 +788,7 @@ contains
 !! \warning This routine does only the first approach.
 !<
 
-   subroutine prolong_bnd_from_coarser(this, ind, bnd_type, dir)
+   subroutine prolong_bnd_from_coarser(this, ind, bnd_type, dir, nocorners)
 
       use cg_list,        only: cg_list_element
       use cg_list_global, only: all_cg
@@ -806,6 +807,7 @@ contains
       integer(kind=4), optional,   intent(in)    :: bnd_type  !< Override default boundary type on external boundaries (useful in multigrid solver).
                                                               !< Note that BND_PER, BND_MPI, BND_SHE and BND_COR aren't external and cannot be overridden
       integer(kind=4), optional,   intent(in)    :: dir       !< select only this direction
+      logical,         optional,   intent(in)    :: nocorners !< .when .true. then don't care about proper edge and corner update
 
       type(cg_level_connected_T), pointer :: coarse
       type(cg_list_element), pointer :: cgl
@@ -821,8 +823,12 @@ contains
 
       if (present(dir)) then
          if (firstcall) call warn("[cg_level_connected:prolong_bnd_from_coarser] dir present but not implemented yet")
-         firstcall = .false.
       endif
+      if (present(nocorners)) then
+         if (firstcall) call warn("[cg_level_connected:prolong_bnd_from_coarser] nocorners present but not implemented yet")
+      endif
+
+      firstcall = .false.
 
       coarse => this%coarser
 

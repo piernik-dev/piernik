@@ -61,7 +61,7 @@ contains
 
    end subroutine all_bnd
 
-   subroutine all_fluid_boundaries(dir)
+   subroutine all_fluid_boundaries(dir, nocorners)
 
       use cg_leaves,          only: leaves
 !      use cg_level_finest,    only: finest
@@ -71,7 +71,8 @@ contains
 
       implicit none
 
-      integer(kind=4), optional, intent(in) :: dir !< select only this direction
+      integer(kind=4), optional, intent(in) :: dir       !< select only this direction
+      logical,         optional, intent(in) :: nocorners !< .when .true. then don't care about proper edge and corner update
 
       integer(kind=4)                     :: d
 
@@ -82,7 +83,7 @@ contains
 !      call finest%level%restrict_to_base
 
       ! should be more selective (modified leaves?)
-      call leaves%leaf_arr4d_boundaries(wna%fi, dir=dir)
+      call leaves%leaf_arr4d_boundaries(wna%fi, dir=dir, nocorners=nocorners)
       if (present(dir)) then
          call leaves%bnd_u(dir)
       else

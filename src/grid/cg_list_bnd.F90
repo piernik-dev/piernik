@@ -79,29 +79,31 @@ contains
 
 !> \brief A wrapper that calls internal_boundaries for 3D arrays stored in cg%q(:)
 
-   subroutine internal_boundaries_3d(this, ind, dir)
+   subroutine internal_boundaries_3d(this, ind, dir, nocorners)
 
       implicit none
 
-      class(cg_list_bnd_T),      intent(in) :: this   !< the list on which to perform the boundary exchange
-      integer(kind=4),           intent(in) :: ind    !< index of cg%q(:) 3d array
-      integer(kind=4), optional, intent(in) :: dir    !< do the internal boundaries only in the specified dimension
+      class(cg_list_bnd_T),      intent(in) :: this      !< the list on which to perform the boundary exchange
+      integer(kind=4),           intent(in) :: ind       !< index of cg%q(:) 3d array
+      integer(kind=4), optional, intent(in) :: dir       !< do the internal boundaries only in the specified dimension
+      logical,         optional, intent(in) :: nocorners !< .when .true. then don't care about proper edge and corner update
 
-      call internal_boundaries(this, ind, .true., dir)
+      call internal_boundaries(this, ind, .true., dir=dir, nocorners=nocorners)
 
    end subroutine internal_boundaries_3d
 
 !> \brief A wrapper that calls internal_boundaries for 4D arrays stored in cg%w(:)
 
-   subroutine internal_boundaries_4d(this, ind, dir)
+   subroutine internal_boundaries_4d(this, ind, dir, nocorners)
 
       implicit none
 
-      class(cg_list_bnd_T),      intent(in) :: this !< the list on which to perform the boundary exchange
-      integer(kind=4),           intent(in) :: ind  !< index of cg%w(:) 4d array
-      integer(kind=4), optional, intent(in) :: dir  !< do the internal boundaries only in the specified dimension
+      class(cg_list_bnd_T),      intent(in) :: this      !< the list on which to perform the boundary exchange
+      integer(kind=4),           intent(in) :: ind       !< index of cg%w(:) 4d array
+      integer(kind=4), optional, intent(in) :: dir       !< do the internal boundaries only in the specified dimension
+      logical,         optional, intent(in) :: nocorners !< .when .true. then don't care about proper edge and corner update
 
-      call internal_boundaries(this, ind, .false., dir)
+      call internal_boundaries(this, ind, .false., dir=dir, nocorners=nocorners)
 
    end subroutine internal_boundaries_4d
 
@@ -123,7 +125,7 @@ contains
 !! \warning this == leaves could be unsafe: need to figure out how to handle unneeded edges; this == all_cg or base%level or other concatenation of whole levels should work well
 !<
 
-   subroutine internal_boundaries(this, ind, tgt3d, dir)
+   subroutine internal_boundaries(this, ind, tgt3d, dir, nocorners)
 
       use cg_list,          only: cg_list_element
       use constants,        only: xdim, ydim, zdim, LO, HI, I_ONE, I_TWO
@@ -136,14 +138,16 @@ contains
 
       implicit none
 
-      class(cg_list_bnd_T),      intent(in)        :: this   !< the list on which to perform the boundary exchange
-      integer(kind=4),           intent(in)        :: ind    !< index of cg%q(:) 3d array or cg%w(:) 4d array
-      logical,                   intent(in)        :: tgt3d  !< .true. for cg%q, .false. for cg%w
-      integer(kind=4), optional, intent(in)        :: dir    !< do the internal boundaries only in the specified dimension
+      class(cg_list_bnd_T),      intent(in)        :: this      !< the list on which to perform the boundary exchange
+      integer(kind=4),           intent(in)        :: ind       !< index of cg%q(:) 3d array or cg%w(:) 4d array
+      logical,                   intent(in)        :: tgt3d     !< .true. for cg%q, .false. for cg%w
+      integer(kind=4), optional, intent(in)        :: dir       !< do the internal boundaries only in the specified dimension
+      logical,         optional, intent(in)        :: nocorners !< .when .true. then don't care about proper edge and corner update
 
       integer                                      :: g, d
       integer(kind=4)                              :: nr     !< index of first free slot in req and status arrays
-      logical, dimension(xdim:zdim)                :: dmask
+      integer(kind=4), parameter                   :: cor_dim = zdim+1
+      logical, dimension(xdim:cor_dim)             :: dmask
       type(grid_container),     pointer            :: cg
       type(cg_list_element),    pointer            :: cgl
       real, dimension(:,:,:),   pointer            :: pa3d
@@ -152,11 +156,14 @@ contains
       type(segment), pointer                       :: i_seg, o_seg !< shortcuts
       integer(kind=4), allocatable, dimension(:,:) :: mpistatus !< status array for MPI_Waitall
 
-      dmask(:) = dom%has_dir(:)
+      dmask(xdim:zdim) = dom%has_dir
       if (present(dir)) then
-         dmask(:) = .false.
+         dmask(xdim:zdim) = .false.
          dmask(dir) = dom%has_dir(dir)
       endif
+
+      dmask(cor_dim) = .true.
+      if (present(nocorners)) dmask(cor_dim) = .not. nocorners
 
       nr = 0
       cgl => this%first
@@ -170,7 +177,7 @@ contains
             active = associated(cg%w(ind)%arr)
          endif
 
-         do d = xdim, zdim
+         do d = xdim, zdim ! cor_dim
             if (dmask(d) .and. active) then
                if (allocated(cg%i_bnd(d)%seg)) then
                   if (.not. allocated(cg%o_bnd(d)%seg)) call die("[cg_list_bnd:internal_boundaries] cg%i_bnd without cg%o_bnd")
@@ -508,7 +515,7 @@ contains
 !! \details No fine-coarse exchanges can be done here, see cg_level_connected::arr4d_boundaries for that feature
 !<
 
-   subroutine level_4d_boundaries(this, ind, area_type, dir)
+   subroutine level_4d_boundaries(this, ind, area_type, dir, nocorners)
 
       use constants, only: AT_NO_B
 
@@ -518,6 +525,7 @@ contains
       integer(kind=4),           intent(in) :: ind        !< index of cg%w(:) 4d array
       integer(kind=4), optional, intent(in) :: area_type  !< defines how do we treat boundaries
       integer(kind=4), optional, intent(in) :: dir        !< select only this direction
+      logical,         optional, intent(in) :: nocorners  !< .when .true. then don't care about proper edge and corner update
 
       logical                               :: do_permpi
 
@@ -528,7 +536,7 @@ contains
          if (area_type /= AT_NO_B) do_permpi = .false.
       endif
 
-      if (do_permpi) call this%internal_boundaries_4d(ind, dir=dir)
+      if (do_permpi) call this%internal_boundaries_4d(ind, dir=dir, nocorners=nocorners)
 
 !      call this%external_boundaries(ind, area_type, bnd_type) ! should call cg_list_bnd:bnd_u, but that depends on hydrostatic too much
 

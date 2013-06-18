@@ -190,7 +190,7 @@ contains
 
 !> \brief This routine sets up all guardcells (internal, external and fine-coarse) for given rank-4 arrays
 
-   subroutine leaf_arr4d_boundaries(this, ind, area_type, dir)
+   subroutine leaf_arr4d_boundaries(this, ind, area_type, dir, nocorners)
 
       use cg_level_connected, only: cg_level_connected_T
 
@@ -200,12 +200,13 @@ contains
       integer(kind=4),           intent(in) :: ind        !< index of cg%w(:) 4d array
       integer(kind=4), optional, intent(in) :: area_type  !< defines how do we treat boundaries
       integer(kind=4), optional, intent(in) :: dir        !< select only this direction
+      logical,         optional, intent(in) :: nocorners  !< .when .true. then don't care about proper edge and corner update
 
       type(cg_level_connected_T), pointer   :: curl
 
       curl => this%coarsest_leaves
       do while (associated(curl))
-         call curl%arr4d_boundaries(ind, area_type = area_type, dir = dir)
+         call curl%arr4d_boundaries(ind, area_type=area_type, dir=dir, nocorners=nocorners)
          curl => curl%finer
       enddo
 
