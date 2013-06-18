@@ -604,6 +604,7 @@ contains
                enddo
             endif
          enddo
+         allocate(cg%i_bnd(cor_dim)%seg(0), cg%o_bnd(cor_dim)%seg(0))
 
          do j = FIRST, LAST
             do b = lbound(this%pse(j)%c(:), dim=1), ubound(this%pse(j)%c(:), dim=1)
