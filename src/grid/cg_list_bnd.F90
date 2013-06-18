@@ -79,29 +79,29 @@ contains
 
 !> \brief A wrapper that calls internal_boundaries for 3D arrays stored in cg%q(:)
 
-   subroutine internal_boundaries_3d(this, ind, dim)
+   subroutine internal_boundaries_3d(this, ind, dir)
 
       implicit none
 
       class(cg_list_bnd_T),      intent(in) :: this   !< the list on which to perform the boundary exchange
       integer(kind=4),           intent(in) :: ind    !< index of cg%q(:) 3d array
-      integer(kind=4), optional, intent(in) :: dim    !< do the internal boundaries only in the specified dimension
+      integer(kind=4), optional, intent(in) :: dir    !< do the internal boundaries only in the specified dimension
 
-      call internal_boundaries(this, ind, .true., dim)
+      call internal_boundaries(this, ind, .true., dir)
 
    end subroutine internal_boundaries_3d
 
 !> \brief A wrapper that calls internal_boundaries for 4D arrays stored in cg%w(:)
 
-   subroutine internal_boundaries_4d(this, ind, dim)
+   subroutine internal_boundaries_4d(this, ind, dir)
 
       implicit none
 
       class(cg_list_bnd_T),      intent(in) :: this !< the list on which to perform the boundary exchange
       integer(kind=4),           intent(in) :: ind  !< index of cg%w(:) 4d array
-      integer(kind=4), optional, intent(in) :: dim  !< do the internal boundaries only in the specified dimension
+      integer(kind=4), optional, intent(in) :: dir  !< do the internal boundaries only in the specified dimension
 
-      call internal_boundaries(this, ind, .false., dim)
+      call internal_boundaries(this, ind, .false., dir)
 
    end subroutine internal_boundaries_4d
 
@@ -123,7 +123,7 @@ contains
 !! \warning this == leaves could be unsafe: need to figure out how to handle unneeded edges; this == all_cg or base%level or other concatenation of whole levels should work well
 !<
 
-   subroutine internal_boundaries(this, ind, tgt3d, dim)
+   subroutine internal_boundaries(this, ind, tgt3d, dir)
 
       use cg_list,          only: cg_list_element
       use constants,        only: xdim, ydim, zdim, LO, HI, I_ONE, I_TWO
@@ -139,7 +139,7 @@ contains
       class(cg_list_bnd_T),      intent(in)        :: this   !< the list on which to perform the boundary exchange
       integer(kind=4),           intent(in)        :: ind    !< index of cg%q(:) 3d array or cg%w(:) 4d array
       logical,                   intent(in)        :: tgt3d  !< .true. for cg%q, .false. for cg%w
-      integer(kind=4), optional, intent(in)        :: dim    !< do the internal boundaries only in the specified dimension
+      integer(kind=4), optional, intent(in)        :: dir    !< do the internal boundaries only in the specified dimension
 
       integer                                      :: g, d
       integer(kind=4)                              :: nr     !< index of first free slot in req and status arrays
@@ -153,9 +153,9 @@ contains
       integer(kind=4), allocatable, dimension(:,:) :: mpistatus !< status array for MPI_Waitall
 
       dmask(:) = dom%has_dir(:)
-      if (present(dim)) then
+      if (present(dir)) then
          dmask(:) = .false.
-         dmask(dim) = dom%has_dir(dim)
+         dmask(dir) = dom%has_dir(dir)
       endif
 
       nr = 0
@@ -508,7 +508,7 @@ contains
 !! \details No fine-coarse exchanges can be done here, see cg_level_connected::arr4d_boundaries for that feature
 !<
 
-   subroutine level_4d_boundaries(this, ind, area_type)
+   subroutine level_4d_boundaries(this, ind, area_type, dir)
 
       use constants, only: AT_NO_B
 
@@ -517,6 +517,7 @@ contains
       class(cg_list_bnd_T),      intent(in) :: this       !< the list on which to perform the boundary exchange
       integer(kind=4),           intent(in) :: ind        !< index of cg%w(:) 4d array
       integer(kind=4), optional, intent(in) :: area_type  !< defines how do we treat boundaries
+      integer(kind=4), optional, intent(in) :: dir        !< select only this direction
 
       logical                               :: do_permpi
 
@@ -527,7 +528,7 @@ contains
          if (area_type /= AT_NO_B) do_permpi = .false.
       endif
 
-      if (do_permpi) call this%internal_boundaries_4d(ind)
+      if (do_permpi) call this%internal_boundaries_4d(ind, dir=dir)
 
 !      call this%external_boundaries(ind, area_type, bnd_type) ! should call cg_list_bnd:bnd_u, but that depends on hydrostatic too much
 
