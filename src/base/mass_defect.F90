@@ -111,7 +111,7 @@ contains
       implicit none
 
       if (allocated(magic_mass)) deallocate(magic_mass)
-      deallocate(local_magic_mass, recent_tsl_magic_mass)
+      deallocate(local_magic_mass, recent_tsl_magic_mass, magic_mass_step)
 
    end subroutine cleanup_magic_mass
 
