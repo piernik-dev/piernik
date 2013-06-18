@@ -272,7 +272,7 @@ contains
             active = associated(cg%w(ind)%arr)
          endif
 
-         do d = xdim, zdim
+         do d = lbound(cg%i_bnd, dim=1), ubound(cg%i_bnd, dim=1)
             if (dmask(d) .and. active) then
                if (allocated(cg%i_bnd(d)%seg)) then
                   ! sanity checks are already done

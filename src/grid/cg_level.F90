@@ -567,9 +567,9 @@ contains
       type(cg_list_element), pointer                  :: cgl
       integer                                         :: j, b, id, ix, iy, iz
       integer(kind=8)                                 :: n_lbnd_face_cells
-      integer(kind=4)                                 :: d, hl, lh, tag
+      integer(kind=4)                                 :: d, dd, hl, lh, tag
       integer(kind=8), dimension(xdim:zdim)           :: per
-      integer(kind=8), dimension(xdim:zdim, LO:HI)    :: b_layer, poff
+      integer(kind=8), dimension(xdim:zdim, LO:HI)    :: b_layer, poff, aux
       type :: fmap
          logical, dimension(:,:,:), allocatable       :: map
          integer(kind=8), dimension(xdim:zdim, LO:HI) :: b_layer
@@ -657,7 +657,14 @@ contains
                                                 poff(:, LO) = max(b_layer(:, LO), poff(:, LO))
                                                 poff(:, HI) = min(b_layer(:, HI), poff(:, HI))
                                                 tag = int(27*(HI*ndims*b + (HI*d+lh-LO))+ixyz(ix, iy, iz), kind=4)
-                                                call cg%i_bnd(d)%add_seg(j, poff, tag)
+                                                aux = poff
+                                                aux(d, :) = aux(d, :) + [ -1, 1 ]
+                                                if (is_overlap(cg%my_se, aux)) then
+                                                   dd = d
+                                                else
+                                                   dd = cor_dim
+                                                end if
+                                                call cg%i_bnd(dd)%add_seg(j, poff, tag)
                                              endif
                                           endif
                                        enddo
@@ -689,7 +696,16 @@ contains
                                                 poff(:, LO) = max(cg%my_se(:, LO), poff(:, LO))
                                                 poff(:, HI) = min(cg%my_se(:, HI), poff(:, HI))
                                                 tag = int(27*(HI*ndims*cg%grid_id + (HI*d+lh-LO))+ixyz(-ix, -iy, -iz), kind=4)
-                                                call cg%o_bnd(d)%add_seg(j, poff, tag)
+                                                aux = poff
+                                                aux(:, LO) = aux(:, LO) - [ ix, iy, iz ] * per(:)
+                                                aux(:, HI) = aux(:, HI) - [ ix, iy, iz ] * per(:)
+                                                aux(d, :) = aux(d, :) + [ -1, 1 ]
+                                                if (is_overlap(this%pse(j)%c(b)%se, aux)) then
+                                                   dd = d
+                                                else
+                                                   dd = cor_dim
+                                                end if
+                                                call cg%o_bnd(dd)%add_seg(j, poff, tag)
                                              endif
                                           endif
                                        enddo
