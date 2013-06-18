@@ -164,12 +164,11 @@ contains
 !<
    subroutine init_dataio_parameters
 
-      use constants,  only: cwdlen, PIERNIK_INIT_MPI, I_ONE, INVALID
+      use constants,  only: cwdlen, PIERNIK_INIT_MPI, INVALID
       use dataio_pub, only: nrestart, last_hdf_time, last_res_time, last_tsl_time, last_log_time, log_file_initialized, &
            &                tmp_log_file, printinfo, printio, warn, msg, die, code_progress, log_wr, &
            &                move_file, parfile, parfilelines, log_file, maxparfilelines, can_i_write, ierrh, par_file
-      use mpi,        only: MPI_LOGICAL
-      use mpisetup,   only: master, nproc, proc, piernik_MPI_Bcast, piernik_MPI_Barrier, FIRST, LAST, comm, mpi_err
+      use mpisetup,   only: master, nproc, proc, piernik_MPI_Bcast, piernik_MPI_Barrier, FIRST, LAST
 
       implicit none
 
@@ -204,10 +203,11 @@ contains
       endif
 
       ! For 1 /= nproc_io /= nproc there should be choice between two strategies : nproc < nproc_io and the current one
-      can_i_write = mod( proc*nproc_io, nproc) < nproc_io
-      allocate(can_write(FIRST:LAST))
-      call MPI_Gather(can_i_write, I_ONE, MPI_LOGICAL, can_write, I_ONE, MPI_LOGICAL, FIRST, comm, mpi_err)
+      can_i_write = (mod( proc*nproc_io, nproc) < nproc_io)
+      !For some weird reasons MPI_Gather did not work properly here
       if (master) then
+         allocate(can_write(FIRST:LAST))
+         can_write=(mod( [(i, i=FIRST, LAST)]*nproc_io, int(nproc)) < nproc_io)
          if (count(can_write) == 1) then
             ip = INVALID
             do i = lbound(can_write, dim=1), ubound(can_write, dim=1)
@@ -221,8 +221,8 @@ contains
             write(msg, '(2(a,i5),a)')"[dataio:init_dataio_parameters] Partially parallel write by ", count(can_write), " out of ", nproc," processes."
             call printio(msg)
          endif
+         deallocate(can_write)
       endif
-      deallocate(can_write)
 
       last_log_time = -dt_log
       last_tsl_time = -dt_tsl
