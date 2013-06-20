@@ -666,7 +666,7 @@ contains
                                                    dd = d
                                                 else
                                                    dd = cor_dim
-                                                end if
+                                                endif
                                                 call cg%i_bnd(dd)%add_seg(j, poff, tag)
                                              endif
                                           endif
@@ -710,7 +710,7 @@ contains
                                                    dd = d
                                                 else
                                                    dd = cor_dim
-                                                end if
+                                                endif
                                                 call cg%o_bnd(dd)%add_seg(j, poff, tag)
                                              endif
                                           endif
@@ -789,8 +789,8 @@ contains
                r(d) = RIGHT
             else
                r(d) = FACE
-            end if
-         end do
+            endif
+         enddo
          uniq_tag = int(((grid_id*N_POS+r(zdim))*N_POS+r(ydim))*N_POS+r(xdim), kind=4)
 
       end function uniq_tag

@@ -1047,7 +1047,7 @@ contains
                do b = lbound(cg%i_bnd(dd)%seg, dim=1), ubound(cg%i_bnd(dd)%seg, dim=1)
                   call cgmap%clear(cg%i_bnd(dd)%seg(b)%se)
                enddo
-            end if
+            endif
          enddo
          call cgmap%find_boxes
          do j = FIRST, LAST !> \warning Antiparallel
