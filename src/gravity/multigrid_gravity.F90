@@ -821,15 +821,14 @@ contains
 
    subroutine poisson_solver(history)
 
-      use cg_leaves,          only: leaves
       use cg_level_finest,    only: finest
       use cg_list_global,     only: all_cg
-      use constants,          only: BND_XTRAP, BND_REF, fft_none
+      use constants,          only: fft_none
       use dataio_pub,         only: printinfo
       use mpisetup,           only: nproc
       use multigrid_gravity_helper, only: fft_solve_level
       use multigrid_old_soln, only: soln_history
-      use multigridvars,      only: grav_bnd, bnd_givenval, bnd_isolated, stdout, source, solution
+      use multigridvars,      only: grav_bnd, bnd_givenval, stdout, source, solution
       use pcg,                only: mgpcg, use_CG, use_CG_outer
 
       implicit none
@@ -863,14 +862,6 @@ contains
                call vcycle_hg
             endif
          endif
-      endif
-
-      ! Update guardcells of the solution before leaving. This can be done in higher-level routines that collect all the gravity contributions, but would be less safe.
-      ! Extrapolate isolated boundaries, remember that grav_bnd is messed up by multigrid_solve_*
-      if (grav_bnd == bnd_isolated .or. grav_bnd == bnd_givenval) then
-         call leaves%leaf_arr3d_boundaries(solution, bnd_type = BND_XTRAP)
-      else
-         call leaves%leaf_arr3d_boundaries(solution, bnd_type = BND_REF)
       endif
 
       call history%store_solution
