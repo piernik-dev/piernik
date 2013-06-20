@@ -94,7 +94,6 @@ contains
 !! <tr><td>nsmoob                </td><td>100    </td><td>integer value  </td><td>\copydoc multigrid_gravity_helper::nsmoob         </td></tr>
 !! <tr><td>overrelax             </td><td>1.     </td><td>real value     </td><td>\copydoc multigrid_gravity::overrelax             </td></tr>
 !! <tr><td>L4_strength           </td><td>1.0    </td><td>real value     </td><td>\copydoc multigrid_Laplace4::L4_strength          </td></tr>
-!! <tr><td>nsmoof                </td><td>1      </td><td>integer value  </td><td>\copydoc multigridvars::nsmoof                    </td></tr>
 !! <tr><td>ord_laplacian         </td><td>-4     </td><td>integer value  </td><td>\copydoc multigrid_Laplace::ord_laplacian         </td></tr>
 !! <tr><td>ord_laplacian_outer   </td><td>2      </td><td>integer value  </td><td>\copydoc multigrid_Laplace::ord_laplacian_outer   </td></tr>
 !! <tr><td>ord_time_extrap       </td><td>1      </td><td>integer value  </td><td>\copydoc multigrid_gravity::ord_time_extrap       </td></tr>
@@ -124,7 +123,7 @@ contains
       use dataio_pub,         only: msg, die, warn
       use domain,             only: dom, is_multicg !, is_uneven
       use mpisetup,           only: master, slave, ibuff, cbuff, rbuff, lbuff, piernik_MPI_Bcast
-      use multigridvars,      only: single_base, bnd_invalid, bnd_isolated, bnd_periodic, bnd_dirichlet, grav_bnd, fft_full_relax, multidim_code_3D, nsmool, nsmoof, &
+      use multigridvars,      only: single_base, bnd_invalid, bnd_isolated, bnd_periodic, bnd_dirichlet, grav_bnd, fft_full_relax, multidim_code_3D, nsmool, &
            &                        overrelax
       use multigrid_gravity_helper, only: nsmoob
       use multigrid_Laplace,  only: ord_laplacian, ord_laplacian_outer
@@ -139,7 +138,7 @@ contains
       logical, save :: frun = .true.      !< First run flag
 
       namelist /MULTIGRID_GRAVITY/ norm_tol, vcycle_abort, vcycle_giveup, max_cycles, nsmool, nsmoob, use_CG, use_CG_outer, &
-           &                       overrelax, L4_strength, nsmoof, ord_laplacian, ord_laplacian_outer, ord_time_extrap, &
+           &                       overrelax, L4_strength, ord_laplacian, ord_laplacian_outer, ord_time_extrap, &
            &                       base_no_fft, fft_full_relax, fft_patient, &
            &                       coarsen_multipole, lmax, mmax, ord_prolong_mpole, use_point_monopole, interp_pt2mom, interp_mom2pot, multidim_code_3D, &
            &                       grav_bnd_str, preconditioner
@@ -161,7 +160,6 @@ contains
       max_cycles             = 20
       nsmool                 = -1  ! best to set it to dom%nb or its multiply
       nsmoob                 = 100
-      nsmoof                 = 1
       select case (dom%geometry_type)
          case (GEO_XYZ)
             ord_laplacian    = O_D4
@@ -233,11 +231,10 @@ contains
          ibuff( 4) = max_cycles
          ibuff( 5) = nsmool
          ibuff( 6) = nsmoob
-         ibuff( 7) = nsmoof
-         ibuff( 8) = ord_laplacian
-         ibuff( 9) = ord_prolong_mpole
-         ibuff(10) = ord_time_extrap
-         ibuff(11) = ord_laplacian_outer
+         ibuff( 7) = ord_laplacian
+         ibuff( 8) = ord_prolong_mpole
+         ibuff( 9) = ord_time_extrap
+         ibuff(10) = ord_laplacian_outer
 
          lbuff(1)  = use_point_monopole
          lbuff(2)  = base_no_fft
@@ -272,11 +269,10 @@ contains
          max_cycles        = ibuff( 4)
          nsmool            = ibuff( 5)
          nsmoob            = ibuff( 6)
-         nsmoof            = ibuff( 7)
-         ord_laplacian     = ibuff( 8)
-         ord_prolong_mpole = ibuff( 9)
-         ord_time_extrap   = ibuff(10)
-         ord_laplacian_outer = ibuff(11)
+         ord_laplacian     = ibuff( 7)
+         ord_prolong_mpole = ibuff( 8)
+         ord_time_extrap   = ibuff( 9)
+         ord_laplacian_outer = ibuff(10)
 
          use_point_monopole = lbuff(1)
          base_no_fft        = lbuff(2)
