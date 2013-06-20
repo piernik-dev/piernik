@@ -81,7 +81,6 @@
  /
 
  $MULTIGRID_GRAVITY
-    norm_tol  = 1.e-6
     grav_bnd_str  = "isolated"
  /
 

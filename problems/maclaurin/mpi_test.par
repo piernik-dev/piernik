@@ -85,7 +85,6 @@
  /
 
  $MULTIGRID_GRAVITY
-    norm_tol  = 1.e-6
     nsmool    = 8
     grav_bnd_str  = "isolated"
     max_cycles = 100
