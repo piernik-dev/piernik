@@ -391,10 +391,9 @@ contains
       call multigrid_solve_grav(iarr_all_sg)
 #endif /* MULTIGRID */
 
-      ! communicate boundary values for sgp(:, :, :) because multigrid solver gives at most 2 guardcells, while for hydro solver typically 4 is required.
-
-!> \warning An improper evaluation of guardcell potential may occur when the multigrid boundary conditions doesn't match /BOUNDARIES/ namelist (e.g. isolated on periodic domain).
-      call leaves%leaf_arr3d_boundaries(qna%ind(sgp_n))
+      ! Assume that no solver requires corner values for the potential
+      !> \todo Perhaps it should be called after call sum_potential but that may depend on grav_pot_3d and its potential dependency on selfgravity results
+      call leaves%leaf_arr3d_boundaries(qna%ind(sgp_n), nocorners=.true.)
 
       if (frun) then
          call leaves%q_copy(qna%ind(sgp_n), qna%ind(sgpm_n))
