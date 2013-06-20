@@ -83,6 +83,7 @@ module constants
       enumerator :: xdim = 1, ydim, zdim                 !! parameters assigned to the x-, y- and z-direction
    end enum
    integer(kind=4), parameter :: ndims   = zdim - xdim + 1 !< We live in a 3-dimensional world
+   integer(kind=4), parameter :: cor_dim = zdim+1        !< corner "direction", useful for selecting guardcell exchanges
    !>
    !! array of all positive permutations of xyzdim
    !<

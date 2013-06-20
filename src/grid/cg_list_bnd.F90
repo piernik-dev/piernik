@@ -62,14 +62,14 @@ module cg_list_bnd
 
    type, extends(cg_list_dataop_T) :: cg_list_bnd_T
     contains
+      procedure          :: level_3d_boundaries        !< Perform internal boundary exchanges and external boundary extrapolations on 3D named arrays
+      procedure          :: level_4d_boundaries        !< Perform internal boundary exchanges and external boundary extrapolations on 4D named arrays
       procedure          :: internal_boundaries_3d     !< A wrapper that calls internal_boundaries for 3D arrays stored in cg%q(:)
       procedure          :: internal_boundaries_4d     !< A wrapper that calls internal_boundaries for 4D arrays stored in cg%w(:)
       procedure, private :: internal_boundaries        !< Exchanges guardcells for BND_MPI and BND_PER boundaries (internal and periodic external boundaries)
-      procedure          :: external_boundaries        !< Set up external boundary values
       procedure          :: clear_boundaries           !< Clear (set to 0) all boundaries
       procedure          :: dirty_boundaries           !< Put dirty values to all boundaries
-      procedure          :: level_3d_boundaries        !< Perform internal boundary exchanges and external boundary extrapolations on 3D named arrays
-      procedure          :: level_4d_boundaries        !< Perform internal boundary exchanges and external boundary extrapolations on 4D named arrays
+      procedure          :: external_boundaries        !< Set up external boundary values
       procedure          :: bnd_u                      !< External (Non-MPI) boundary conditions for the fluid array: cg%u
       procedure          :: bnd_b                      !< External (Non-MPI) boundary conditions for the magnetic field array: cg%b
       !> \todo move routines for external guardcells for rank-4 arrays here as well (fluidboundaries and magboundaries)
@@ -77,31 +77,101 @@ module cg_list_bnd
 
 contains
 
-!> \brief A wrapper that calls internal_boundaries for 3D arrays stored in cg%q(:)
+!>
+!! \brief This routine sets up all guardcells (internal and external) for given rank-3 arrays.
+!!
+!! \details No fine-coarse exchanges can be done here, see cg_level_connected::arr3d_boundaries for that feature
+!<
 
-   subroutine internal_boundaries_3d(this, ind, dim)
+   subroutine level_3d_boundaries(this, ind, area_type, bnd_type, dir, nocorners)
+
+      use constants, only: AT_NO_B
 
       implicit none
 
-      class(cg_list_bnd_T),      intent(in) :: this   !< the list on which to perform the boundary exchange
-      integer(kind=4),           intent(in) :: ind    !< index of cg%q(:) 3d array
-      integer(kind=4), optional, intent(in) :: dim    !< do the internal boundaries only in the specified dimension
+      class(cg_list_bnd_T),      intent(in) :: this       !< the list on which to perform the boundary exchange
+      integer(kind=4),           intent(in) :: ind        !< index of cg%q(:) 3d array
+      integer(kind=4), optional, intent(in) :: area_type  !< defines how do we treat boundaries
+      integer(kind=4), optional, intent(in) :: bnd_type   !< Override default boundary type on external boundaries (useful in multigrid solver).
+                                                          !< Note that BND_PER, BND_MPI, BND_SHE and BND_COR aren't external and cannot be overridden
+      integer(kind=4), optional, intent(in) :: dir        !< select only this direction
+      logical,         optional, intent(in) :: nocorners  !< .when .true. then don't care about proper edge and corner update
 
-      call internal_boundaries(this, ind, .true., dim)
+      logical                               :: do_permpi
+
+      !> \todo fill corners with big_float ?
+
+      do_permpi = .true.
+      if (present(area_type)) then
+         if (area_type /= AT_NO_B) do_permpi = .false.
+      endif
+
+      if (do_permpi) call this%internal_boundaries_3d(ind, dir=dir, nocorners=nocorners)
+
+      call this%external_boundaries(ind, area_type=area_type, bnd_type=bnd_type)
+
+   end subroutine level_3d_boundaries
+
+!>
+!! \brief This routine sets up all guardcells (internal and external) for given rank-4 arrays.
+!!
+!! \details No fine-coarse exchanges can be done here, see cg_level_connected::arr4d_boundaries for that feature
+!<
+
+   subroutine level_4d_boundaries(this, ind, area_type, dir, nocorners)
+
+      use constants, only: AT_NO_B
+
+      implicit none
+
+      class(cg_list_bnd_T),      intent(in) :: this       !< the list on which to perform the boundary exchange
+      integer(kind=4),           intent(in) :: ind        !< index of cg%w(:) 4d array
+      integer(kind=4), optional, intent(in) :: area_type  !< defines how do we treat boundaries
+      integer(kind=4), optional, intent(in) :: dir        !< select only this direction
+      logical,         optional, intent(in) :: nocorners  !< .when .true. then don't care about proper edge and corner update
+
+      logical                               :: do_permpi
+
+      !> \todo fill corners with big_float ?
+
+      do_permpi = .true.
+      if (present(area_type)) then
+         if (area_type /= AT_NO_B) do_permpi = .false.
+      endif
+
+      if (do_permpi) call this%internal_boundaries_4d(ind, dir=dir, nocorners=nocorners)
+
+!      call this%external_boundaries(ind, area_type=area_type, bnd_type=bnd_type) ! should call cg_list_bnd:bnd_u, but that depends on hydrostatic too much
+
+   end subroutine level_4d_boundaries
+
+!> \brief A wrapper that calls internal_boundaries for 3D arrays stored in cg%q(:)
+
+   subroutine internal_boundaries_3d(this, ind, dir, nocorners)
+
+      implicit none
+
+      class(cg_list_bnd_T),      intent(in) :: this      !< the list on which to perform the boundary exchange
+      integer(kind=4),           intent(in) :: ind       !< index of cg%q(:) 3d array
+      integer(kind=4), optional, intent(in) :: dir       !< do the internal boundaries only in the specified dimension
+      logical,         optional, intent(in) :: nocorners !< .when .true. then don't care about proper edge and corner update
+
+      call internal_boundaries(this, ind, .true., dir=dir, nocorners=nocorners)
 
    end subroutine internal_boundaries_3d
 
 !> \brief A wrapper that calls internal_boundaries for 4D arrays stored in cg%w(:)
 
-   subroutine internal_boundaries_4d(this, ind, dim)
+   subroutine internal_boundaries_4d(this, ind, dir, nocorners)
 
       implicit none
 
-      class(cg_list_bnd_T),      intent(in) :: this !< the list on which to perform the boundary exchange
-      integer(kind=4),           intent(in) :: ind  !< index of cg%w(:) 4d array
-      integer(kind=4), optional, intent(in) :: dim  !< do the internal boundaries only in the specified dimension
+      class(cg_list_bnd_T),      intent(in) :: this      !< the list on which to perform the boundary exchange
+      integer(kind=4),           intent(in) :: ind       !< index of cg%w(:) 4d array
+      integer(kind=4), optional, intent(in) :: dir       !< do the internal boundaries only in the specified dimension
+      logical,         optional, intent(in) :: nocorners !< .when .true. then don't care about proper edge and corner update
 
-      call internal_boundaries(this, ind, .false., dim)
+      call internal_boundaries(this, ind, .false., dir=dir, nocorners=nocorners)
 
    end subroutine internal_boundaries_4d
 
@@ -123,10 +193,10 @@ contains
 !! \warning this == leaves could be unsafe: need to figure out how to handle unneeded edges; this == all_cg or base%level or other concatenation of whole levels should work well
 !<
 
-   subroutine internal_boundaries(this, ind, tgt3d, dim)
+   subroutine internal_boundaries(this, ind, tgt3d, dir, nocorners)
 
       use cg_list,          only: cg_list_element
-      use constants,        only: xdim, ydim, zdim, LO, HI, I_ONE, I_TWO
+      use constants,        only: xdim, ydim, zdim, cor_dim, LO, HI, I_ONE, I_TWO
       use dataio_pub,       only: die, warn
       use domain,           only: dom
       use grid_cont,        only: grid_container, segment
@@ -136,14 +206,15 @@ contains
 
       implicit none
 
-      class(cg_list_bnd_T),      intent(in)        :: this   !< the list on which to perform the boundary exchange
-      integer(kind=4),           intent(in)        :: ind    !< index of cg%q(:) 3d array or cg%w(:) 4d array
-      logical,                   intent(in)        :: tgt3d  !< .true. for cg%q, .false. for cg%w
-      integer(kind=4), optional, intent(in)        :: dim    !< do the internal boundaries only in the specified dimension
+      class(cg_list_bnd_T),      intent(in)        :: this      !< the list on which to perform the boundary exchange
+      integer(kind=4),           intent(in)        :: ind       !< index of cg%q(:) 3d array or cg%w(:) 4d array
+      logical,                   intent(in)        :: tgt3d     !< .true. for cg%q, .false. for cg%w
+      integer(kind=4), optional, intent(in)        :: dir       !< do the internal boundaries only in the specified dimension
+      logical,         optional, intent(in)        :: nocorners !< .when .true. then don't care about proper edge and corner update
 
       integer                                      :: g, d
       integer(kind=4)                              :: nr     !< index of first free slot in req and status arrays
-      logical, dimension(xdim:zdim)                :: dmask
+      logical, dimension(xdim:cor_dim)             :: dmask
       type(grid_container),     pointer            :: cg
       type(cg_list_element),    pointer            :: cgl
       real, dimension(:,:,:),   pointer            :: pa3d
@@ -152,11 +223,14 @@ contains
       type(segment), pointer                       :: i_seg, o_seg !< shortcuts
       integer(kind=4), allocatable, dimension(:,:) :: mpistatus !< status array for MPI_Waitall
 
-      dmask(:) = dom%has_dir(:)
-      if (present(dim)) then
-         dmask(:) = .false.
-         dmask(dim) = dom%has_dir(dim)
+      dmask(xdim:zdim) = dom%has_dir
+      if (present(dir)) then
+         dmask(xdim:zdim) = .false.
+         dmask(dir) = dom%has_dir(dir)
       endif
+
+      dmask(cor_dim) = .true.
+      if (present(nocorners)) dmask(cor_dim) = .not. nocorners
 
       nr = 0
       cgl => this%first
@@ -170,7 +244,7 @@ contains
             active = associated(cg%w(ind)%arr)
          endif
 
-         do d = xdim, zdim
+         do d = lbound(cg%i_bnd, dim=1), ubound(cg%i_bnd, dim=1)
             if (dmask(d) .and. active) then
                if (allocated(cg%i_bnd(d)%seg)) then
                   if (.not. allocated(cg%o_bnd(d)%seg)) call die("[cg_list_bnd:internal_boundaries] cg%i_bnd without cg%o_bnd")
@@ -266,7 +340,7 @@ contains
             active = associated(cg%w(ind)%arr)
          endif
 
-         do d = xdim, zdim
+         do d = lbound(cg%i_bnd, dim=1), ubound(cg%i_bnd, dim=1)
             if (dmask(d) .and. active) then
                if (allocated(cg%i_bnd(d)%seg)) then
                   ! sanity checks are already done
@@ -303,6 +377,69 @@ contains
       enddo
 
    end subroutine internal_boundaries
+
+!> \brief Set zero to all boundaries (will defeat any attemts of use of dirty checks on boundaries)
+
+   subroutine clear_boundaries(this, ind, value)
+
+      use cg_list,   only: cg_list_element
+      use constants, only: ndims, xdim, zdim, LO, HI, BND_MPI, BND_FC, BND_MPI_FC
+      use domain,    only: dom
+      use grid_cont, only: grid_container
+
+      implicit none
+
+      class(cg_list_bnd_T), intent(in)        :: this  !< the list on which to perform the action
+      integer(kind=4),      intent(in)        :: ind   !< Negative value: index of cg%q(:) 3d array
+      real, optional,       intent(in)        :: value !< Value to be put in the boundaries (could be dirty)
+
+      integer(kind=4)                         :: lh, clh, d
+      integer(kind=4), dimension(ndims,LO:HI) :: l
+      type(cg_list_element),  pointer         :: cgl
+      type(grid_container),   pointer         :: cg
+      real, dimension(:,:,:), pointer         :: pa3d
+      real :: v
+
+      !> \todo fill corners with big_float ?
+
+      v = 0.
+      if (present(value)) v=value
+      cgl => this%first
+      do while (associated(cgl))
+         cg => cgl%cg
+         do d = xdim, zdim
+            if (dom%has_dir(d)) then
+               do lh = LO, HI
+                  if (any(cg%bnd(d, lh) == [ BND_MPI, BND_FC, BND_MPI_FC ])) then !> \warning there should be no exceptions but something in crtest still needs this
+                     !> \todo Find out what is the problem with crtest
+                     l = reshape([lbound(cg%q(ind)%arr, kind=4),ubound(cg%q(ind)%arr, kind=4)],shape=[ndims,HI])
+                     clh = LO + HI - lh
+                     l(d,clh) = cg%ijkse(d,lh) + HI*lh-(LO+HI) ! -1 for LO, +1 for HI
+                     pa3d => cg%q(ind)%span(l)
+                     pa3d = v
+                  endif
+               enddo
+            endif
+         enddo
+         cgl => cgl%nxt
+      enddo
+
+   end subroutine clear_boundaries
+
+!> \brief Put dirty values to all boundaries
+
+   subroutine dirty_boundaries(this, ind)
+
+      use constants, only: dirtyH
+
+      implicit none
+
+      class(cg_list_bnd_T), intent(in) :: this  !< the list on which to perform the action
+      integer(kind=4),      intent(in) :: ind   !< Negative value: index of cg%q(:) 3d array
+
+      call this%clear_boundaries(ind, value=dirtyH)
+
+   end subroutine dirty_boundaries
 
 !>
 !! \brief Set up external boundary values
@@ -406,190 +543,6 @@ contains
 
    end subroutine external_boundaries
 
-!> \brief Set zero to all boundaries (will defeat any attemts of use of dirty checks on boundaries)
-
-   subroutine clear_boundaries(this, ind, value)
-
-      use cg_list,   only: cg_list_element
-      use constants, only: ndims, xdim, zdim, LO, HI, BND_MPI, BND_FC, BND_MPI_FC
-      use domain,    only: dom
-      use grid_cont, only: grid_container
-
-      implicit none
-
-      class(cg_list_bnd_T), intent(in)        :: this  !< the list on which to perform the action
-      integer(kind=4),      intent(in)        :: ind   !< Negative value: index of cg%q(:) 3d array
-      real, optional,       intent(in)        :: value !< Value to be put in the boundaries (could be dirty)
-
-      integer(kind=4)                         :: lh, clh, d
-      integer(kind=4), dimension(ndims,LO:HI) :: l
-      type(cg_list_element),  pointer         :: cgl
-      type(grid_container),   pointer         :: cg
-      real, dimension(:,:,:), pointer         :: pa3d
-      real :: v
-
-      !> \todo fill corners with big_float ?
-
-      v = 0.
-      if (present(value)) v=value
-      cgl => this%first
-      do while (associated(cgl))
-         cg => cgl%cg
-         do d = xdim, zdim
-            if (dom%has_dir(d)) then
-               do lh = LO, HI
-                  if (any(cg%bnd(d, lh) == [ BND_MPI, BND_FC, BND_MPI_FC ])) then !> \warning there should be no exceptions but something in crtest still needs this
-                     !> \todo Find out what is the problem with crtest
-                     l = reshape([lbound(cg%q(ind)%arr, kind=4),ubound(cg%q(ind)%arr, kind=4)],shape=[ndims,HI])
-                     clh = LO + HI - lh
-                     l(d,clh) = cg%ijkse(d,lh) + HI*lh-(LO+HI) ! -1 for LO, +1 for HI
-                     pa3d => cg%q(ind)%span(l)
-                     pa3d = v
-                  endif
-               enddo
-            endif
-         enddo
-         cgl => cgl%nxt
-      enddo
-
-   end subroutine clear_boundaries
-
-!> \brief Put dirty values to all boundaries
-
-   subroutine dirty_boundaries(this, ind)
-
-      use constants, only: dirtyH
-
-      implicit none
-
-      class(cg_list_bnd_T), intent(in) :: this  !< the list on which to perform the action
-      integer(kind=4),      intent(in) :: ind   !< Negative value: index of cg%q(:) 3d array
-
-      call this%clear_boundaries(ind, value=dirtyH)
-
-   end subroutine dirty_boundaries
-
-!>
-!! \brief This routine sets up all guardcells (internal and external) for given rank-3 arrays.
-!!
-!! \details No fine-coarse exchanges can be done here, see cg_level_connected::arr3d_boundaries for that feature
-!<
-
-   subroutine level_3d_boundaries(this, ind, area_type, bnd_type)
-
-      use constants, only: AT_NO_B
-
-      implicit none
-
-      class(cg_list_bnd_T),      intent(in) :: this       !< the list on which to perform the boundary exchange
-      integer(kind=4),           intent(in) :: ind        !< index of cg%q(:) 3d array
-      integer(kind=4), optional, intent(in) :: area_type  !< defines how do we treat boundaries
-      integer(kind=4), optional, intent(in) :: bnd_type   !< Override default boundary type on external boundaries (useful in multigrid solver).
-                                                          !< Note that BND_PER, BND_MPI, BND_SHE and BND_COR aren't external and cannot be overridden
-
-      logical                               :: do_permpi
-
-      !> \todo fill corners with big_float ?
-
-      do_permpi = .true.
-      if (present(area_type)) then
-         if (area_type /= AT_NO_B) do_permpi = .false.
-      endif
-
-      if (do_permpi) call this%internal_boundaries_3d(ind)
-
-      call this%external_boundaries(ind, area_type = area_type, bnd_type = bnd_type)
-
-   end subroutine level_3d_boundaries
-
-!>
-!! \brief This routine sets up all guardcells (internal and external) for given rank-4 arrays.
-!!
-!! \details No fine-coarse exchanges can be done here, see cg_level_connected::arr4d_boundaries for that feature
-!<
-
-   subroutine level_4d_boundaries(this, ind, area_type)
-
-      use constants, only: AT_NO_B
-
-      implicit none
-
-      class(cg_list_bnd_T),      intent(in) :: this       !< the list on which to perform the boundary exchange
-      integer(kind=4),           intent(in) :: ind        !< index of cg%w(:) 4d array
-      integer(kind=4), optional, intent(in) :: area_type  !< defines how do we treat boundaries
-
-      logical                               :: do_permpi
-
-      !> \todo fill corners with big_float ?
-
-      do_permpi = .true.
-      if (present(area_type)) then
-         if (area_type /= AT_NO_B) do_permpi = .false.
-      endif
-
-      if (do_permpi) call this%internal_boundaries_4d(ind)
-
-!      call this%external_boundaries(ind, area_type, bnd_type) ! should call cg_list_bnd:bnd_u, but that depends on hydrostatic too much
-
-   end subroutine level_4d_boundaries
-
-!> \brief Perform some checks
-
-   subroutine init_fluidboundaries
-
-      use constants,  only: PIERNIK_INIT_DOMAIN, xdim, zdim, LO, HI, &
-           &                BND_MPI, BND_FC, BND_MPI_FC, BND_PER, BND_REF, BND_OUT, BND_OUTD, BND_OUTH, BND_OUTHD, BND_COR, BND_SHE, BND_USER
-      use dataio_pub, only: msg, warn, die, code_progress
-      use domain,     only: dom, is_multicg
-
-      implicit none
-
-      integer(kind=4) :: dir, side
-
-      if (code_progress < PIERNIK_INIT_DOMAIN) call die("[cg_list_bnd:init_fluidboundaries] MPI not initialized.") ! bnd_xl, bnd_xr
-
-      do dir = xdim, zdim
-         do side = LO, HI
-
-            select case (dom%bnd(dir, side))
-               case (BND_MPI, BND_REF, BND_OUT, BND_OUTD, BND_USER, BND_PER)
-                  ! Do nothing
-               case (BND_FC, BND_MPI_FC)
-                  call die("[cg_list_bnd:init_fluidboundaries] fine-coarse interfaces not implemented yet")
-               case (BND_COR)
-                  if (dir == zdim) then
-                     write(msg,'("[cg_list_bnd:init_fluidboundaries] corner ",i1," boundary condition ",i3," not implemented in ",i1,"-direction")') side, dom%bnd(dir, side), dir
-                     call warn(msg)
-                  endif
-               case (BND_SHE)
-                  if (dir /= xdim) then
-                     write(msg,'("[cg_list_bnd:init_fluidboundaries] shear ",i1," boundary condition ",i3," not implemented in ",i1,"-direction")') side, dom%bnd(dir, side), dir
-                     call warn(msg)
-                  endif
-               case (BND_OUTH)
-                  if (dir == zdim) then
-                     if (is_multicg) call die("[cg_list_bnd:init_fluidboundaries] hydrostatic:outh_bnd with multiple grid pieces per processor not implemented yet") !nontrivial not really checked
-                  else
-                     write(msg,'("[cg_list_bnd:init_fluidboundaries] outflow hydrostatic ",i1," boundary condition ",i3," not implemented in ",i1,"-direction")') side, dom%bnd(dir, side), dir
-                     call warn(msg)
-                  endif
-               case (BND_OUTHD)
-                  if (dir == zdim) then
-                     if (is_multicg) call die("[cg_list_bnd:init_fluidboundaries] hydrostatic:outh_bnd with multiple grid pieces per processor not implemented yet") !nontrivial not really checked
-                  else
-                     write(msg,'("[cg_list_bnd:init_fluidboundaries] outflow hydrostatic ",i1," boundary condition ",i3," not implemented in ",i1,"-direction")') side, dom%bnd(dir, side), dir
-                     call warn(msg)
-                  endif
-               case default
-                  write(msg,'("[cg_list_bnd:init_fluidboundaries] unknown ",i1," boundary condition ",i3," not implemented in ",i1,"-direction")') side, dom%bnd(dir, side), dir
-                  call warn(msg)
-            end select
-         enddo
-      enddo
-
-
-   end subroutine init_fluidboundaries
-
 !> \brief External (Non-MPI) boundary conditions for the fluid array: cg%u
 
    subroutine bnd_u(this, dir)
@@ -688,6 +641,71 @@ contains
          enddo
          cgl => cgl%nxt
       enddo
+
+   contains
+
+!> \brief Perform some checks
+
+      subroutine init_fluidboundaries
+
+         use constants,  only: PIERNIK_INIT_DOMAIN, xdim, zdim, LO, HI, &
+              &                BND_MPI, BND_FC, BND_MPI_FC, BND_PER, BND_REF, BND_OUT, BND_OUTD, BND_OUTH, BND_OUTHD, BND_COR, BND_SHE, BND_USER
+         use dataio_pub, only: msg, warn, die, code_progress
+         use domain,     only: dom, is_multicg
+
+         implicit none
+
+         integer(kind=4) :: dir, side
+
+         if (code_progress < PIERNIK_INIT_DOMAIN) call die("[cg_list_bnd:init_fluidboundaries] MPI not initialized.") ! bnd_xl, bnd_xr
+
+         do dir = xdim, zdim
+            do side = LO, HI
+
+               select case (dom%bnd(dir, side))
+                  case (BND_MPI, BND_REF, BND_OUT, BND_OUTD, BND_USER, BND_PER)
+                     ! Do nothing
+                  case (BND_FC, BND_MPI_FC)
+                     call die("[cg_list_bnd:init_fluidboundaries] fine-coarse interfaces not implemented yet")
+                  case (BND_COR)
+                     if (dir == zdim) then
+                        write(msg,'("[cg_list_bnd:init_fluidboundaries] corner ",i1," boundary condition ",i3," not implemented in ",i1,"-direction")') &
+                             side, dom%bnd(dir, side), dir
+                        call warn(msg)
+                     endif
+                  case (BND_SHE)
+                     if (dir /= xdim) then
+                        write(msg,'("[cg_list_bnd:init_fluidboundaries] shear ",i1," boundary condition ",i3," not implemented in ",i1,"-direction")') &
+                             side, dom%bnd(dir, side), dir
+                        call warn(msg)
+                     endif
+                  case (BND_OUTH)
+                     if (dir == zdim) then
+                        if (is_multicg) call die("[cg_list_bnd:init_fluidboundaries] hydrostatic:outh_bnd with multiple grid pieces per processor not implemented yet")
+                        !nontrivial not really checked
+                     else
+                        write(msg,'("[cg_list_bnd:init_fluidboundaries] outflow hydrostatic ",i1," boundary condition ",i3," not implemented in ",i1,"-direction")') &
+                             side, dom%bnd(dir, side), dir
+                        call warn(msg)
+                     endif
+                  case (BND_OUTHD)
+                     if (dir == zdim) then
+                        if (is_multicg) call die("[cg_list_bnd:init_fluidboundaries] hydrostatic:outh_bnd with multiple grid pieces per processor not implemented yet")
+                        !nontrivial not really checked
+                     else
+                        write(msg,'("[cg_list_bnd:init_fluidboundaries] outflow hydrostatic ",i1," boundary condition ",i3," not implemented in ",i1,"-direction")') &
+                             side, dom%bnd(dir, side), dir
+                        call warn(msg)
+                     endif
+                  case default
+                     write(msg,'("[cg_list_bnd:init_fluidboundaries] unknown ",i1," boundary condition ",i3," not implemented in ",i1,"-direction")') &
+                          side, dom%bnd(dir, side), dir
+                     call warn(msg)
+               end select
+            enddo
+         enddo
+
+      end subroutine init_fluidboundaries
 
    end subroutine bnd_u
 
