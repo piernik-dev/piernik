@@ -15,7 +15,6 @@
  /
 
  $MPI_BLOCKS
-    psize = 1, 1, 1
     allow_uneven = .true.
     allow_noncart = .true.
     dd_unif_quality = 1.1
@@ -44,11 +43,7 @@
     dt_res  = 0.0
     dt_log  = 0.001
     dt_tsl  = 0.001
-    vars(1) = 'dens'
-    vars(2) = 'velx'
-    vars(3) = 'vely'
-    vars(4) = 'velz'
-    vars(5) = 'ener'
+    vars(1:) = 'ener', 'dens', 'velx', 'vely', 'velz'
  /
 
  $FLUID_NEUTRAL

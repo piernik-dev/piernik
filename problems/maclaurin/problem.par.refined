@@ -15,7 +15,6 @@
  /
 
  $MPI_BLOCKS
-    psize = 1, 1, 1
     AMR_bsize = 3*8
     allow_uneven = .true.
     allow_noncart = .true.
@@ -76,13 +75,11 @@
  /
 
  $MULTIGRID_SOLVER
-!    level_max = 3
     stdout    = .true.
     dirty_debug = .true.
  /
 
  $MULTIGRID_GRAVITY
-    norm_tol  = 1.e-6
     grav_bnd_str  = "isolated"
  /
 
