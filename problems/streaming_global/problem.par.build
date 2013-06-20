@@ -48,10 +48,7 @@
     dt_res  = 50.0
     dt_log  = 10.0
     dt_tsl  = 10.0
-    vars(1) = 'dens'
-    vars(2) = 'velx'
-    vars(3) = 'vely'
-    vars(4) = 'velz'
+    vars(1:) = 'dens', 'velx', 'vely', 'velz'
  /
 
  $FLUID_NEUTRAL

@@ -46,8 +46,7 @@
     dt_res  = 0.0
     dt_log  = 0.001
     dt_tsl  = 0.001
-    vars(1) = 'fld'
-    vars(2) = 'denn'
+    vars(1:) = 'fld', 'denn'
  /
 
  $FLUID_NEUTRAL

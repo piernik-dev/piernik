@@ -16,7 +16,6 @@
  /
 
  $MPI_BLOCKS
-    psize = 1, 1, 1
  /
 
  $UNITS
@@ -40,13 +39,7 @@
     dt_res       = 0.0
     dt_log       = 1.0e-1
     dt_tsl       = 1.0e-1
-    vars(1)      = 'dens'
-    vars(2)      = 'velx'
-    vars(3)      = 'vely'
-    vars(4)      = 'velz'
-    vars(5)      = 'magx'
-    vars(6)      = 'magy'
-    vars(7)      = 'magz'
+    vars(1:) = 'magx', 'dens', 'magy', 'magz', 'velx', 'vely', 'velz'
  /
 
  $FLUID_IONIZED

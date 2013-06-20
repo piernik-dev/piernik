@@ -15,7 +15,6 @@
  /
 
  $MPI_BLOCKS
-    psize = 1, 1, 1
  /
 
  $UNITS
@@ -40,10 +39,7 @@
     dt_res  = 0.0
     dt_log  = 0.001
     dt_tsl  = 0.001
-    vars(1) = 'dens'
-    vars(2) = 'gpot'
-    vars(3) = 'apot'
-    vars(4) = 'errp'
+    vars(1:) = 'dens', 'gpot', 'apot', 'errp'
  /
 
  $FLUID_IONIZED
@@ -85,7 +81,6 @@
  /
 
  $MULTIGRID_GRAVITY
-    norm_tol  = 1.e-6
     ord_laplacian = 4
     L4_strength = 0.5
     grav_bnd_str  = "isolated"

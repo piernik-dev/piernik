@@ -17,7 +17,6 @@
 
  $MPI_BLOCKS
     AMR_bsize = 3*8
-    psize = 1, 1, 1
     allow_uneven = .true.
     allow_noncart = .true.
     dd_unif_quality = 1.1
@@ -46,10 +45,7 @@
     dt_res  = 0.0
     dt_log  = 0.001
     dt_tsl  = 0.001
-    vars(1) = 'dens'
-    vars(2) = 'gpot'
-    vars(3) = 'apot'
-    vars(4:) = 'errp', 'source', 'solution', 'defect', 'correction', 'level', 'proc', 'i-h-01', 'o-h-01', 'ares'
+    vars(1:) = 'dens', 'gpot', 'apot', 'errp', 'source', 'solution', 'defect', 'correction', 'level', 'proc', 'i-h-01', 'o-h-01', 'ares'
  /
 
  $FLUID_DUST
@@ -80,13 +76,11 @@
  /
 
  $MULTIGRID_SOLVER
-!    level_max = 3
     stdout    = .true.
     dirty_debug = .true.
  /
 
  $MULTIGRID_GRAVITY
-    norm_tol  = 1.e-6
     grav_bnd_str  = "isolated"
  /
 
