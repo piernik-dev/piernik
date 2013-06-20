@@ -47,11 +47,7 @@
     dt_tsl  = 0.05   ! lnA
 !    dt_log  = 5.0    ! lnB
 !    dt_tsl  = 1.0    ! lnB
-    vars(1) = 'dens'
-    vars(2) = 'velx'
-    vars(3) = 'vely'
-    vars(4) = 'velz'
-    vars(5) = 'ener'
+    vars(1:) = 'ener', 'dens', 'velx', 'vely', 'velz'
  /
 
  $FLUID_NEUTRAL

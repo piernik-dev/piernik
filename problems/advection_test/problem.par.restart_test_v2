@@ -45,8 +45,7 @@
     dt_res  = 1.0
     dt_log  = 0.00
     dt_tsl  = 0.00
-    vars(1) = 'dens'
-    vars(2) = 'inid'
+    vars(1:) = 'dens', 'inid'
  /
 
  $FLUID_NEUTRAL

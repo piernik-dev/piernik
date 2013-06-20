@@ -39,15 +39,7 @@
     dt_res  = 0.0
     dt_log  = 0.00001
     dt_tsl  = 0.00001
-    vars(1) = 'dens'
-    vars(2) = 'velx'
-    vars(3) = 'vely'
-    vars(4) = 'velz'
-    vars(5) = 'ener'
-    vars(6) = 'magx'
-    vars(7) = 'magy'
-    vars(8) = 'magz'
-    vars(9) = 'encr'
+    vars(1:) = 'ener', 'dens', 'magx', 'magy', 'magz', 'encr', 'velx', 'vely', 'velz'
  /
 
  $NUMERICAL_SETUP

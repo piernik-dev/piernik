@@ -39,14 +39,7 @@
     dt_res       = 20.0
     dt_log       = 1.0e-6
     dt_tsl       = 1.0e-6
-    vars(1)      = 'dens'
-    vars(2)      = 'velx'
-    vars(3)      = 'vely'
-    vars(4)      = 'velz'
-    vars(5)      = 'encr'
-    vars(6)      = 'magx'
-    vars(7)      = 'magy'
-    vars(8)      = 'magz'
+    vars(1:) = 'encr', 'dens', 'magx', 'magy', 'magz', 'velx', 'vely', 'velz'
  /
 
  $FLUID_IONIZED
