@@ -77,8 +77,7 @@ contains
       type(cg_list_element), pointer  :: cgl
       type(grid_container),  pointer  :: cg
 
-      call cg_llst%leaf_arr3d_boundaries(soln, bnd_type = BND_NEGREF)
-      ! corners are required for non-cartesian decompositions because current implementation of arr3d_boundaries may use overlapping buffers at triple points
+      call cg_llst%leaf_arr3d_boundaries(soln, bnd_type=BND_NEGREF, nocorners=.true.)
 
       ! Possible optimization candidate: reduce cache misses (secondary importance, cache-aware implementation required)
       ! Explicit loop over k gives here better performance than array operation due to less cache misses (at least on 32^3 and 64^3 arrays)
