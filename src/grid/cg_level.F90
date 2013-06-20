@@ -569,7 +569,7 @@ contains
       integer(kind=8)                                 :: n_lbnd_face_cells
       integer(kind=4)                                 :: d, hl, lh, tag
       integer(kind=8), dimension(xdim:zdim)           :: per
-      integer(kind=8), dimension(xdim:zdim, LO:HI)    :: b_layer, poff
+      integer(kind=8), dimension(xdim:zdim, LO:HI)    :: b_layer, poff, aux
       type :: fmap
          logical, dimension(:,:,:), allocatable       :: map
          integer(kind=8), dimension(xdim:zdim, LO:HI) :: b_layer
@@ -655,7 +655,10 @@ contains
                                              if (is_overlap(b_layer, poff)) then
                                                 poff(:, LO) = max(b_layer(:, LO), poff(:, LO))
                                                 poff(:, HI) = min(b_layer(:, HI), poff(:, HI))
-                                                tag = int(27*(HI*ndims*b + (HI*d+lh-LO))+ixyz(ix, iy, iz), kind=4)
+                                                aux = this%pse(j)%c(b)%se
+                                                aux(:, LO) = aux(:, LO) + [ ix, iy, iz ] * per(:)
+                                                aux(:, HI) = aux(:, HI) + [ ix, iy, iz ] * per(:)
+                                                tag = uniq_tag(cg%my_se, aux, b)
                                                 call cg%i_bnd(d)%add_seg(j, poff, tag)
                                              endif
                                           endif
@@ -687,7 +690,10 @@ contains
                                              if (is_overlap(poff(:,:), cg%my_se)) then
                                                 poff(:, LO) = max(cg%my_se(:, LO), poff(:, LO))
                                                 poff(:, HI) = min(cg%my_se(:, HI), poff(:, HI))
-                                                tag = int(27*(HI*ndims*cg%grid_id + (HI*d+lh-LO))+ixyz(-ix, -iy, -iz), kind=4)
+                                                aux = cg%my_se
+                                                aux(:, LO) = aux(:, LO) - [ ix, iy, iz ] * per(:)
+                                                aux(:, HI) = aux(:, HI) - [ ix, iy, iz ] * per(:)
+                                                tag = uniq_tag(this%pse(j)%c(b)%se, aux, cg%grid_id)
                                                 call cg%o_bnd(d)%add_seg(j, poff, tag)
                                              endif
                                           endif
@@ -725,19 +731,52 @@ contains
 
    contains
 
-      ! Create unique number from periodic offsets
-      ! Let's assume i[123] have values of -1, 0 or 1, then the output will belong to [0 .. 26] range
-      pure function ixyz(i1, i2, i3)
+      !>
+      !! \brief Create unique tag for cg - cg exchange
+      !!
+      !! \details If we put a constraint that a grid piece can not be smaller than dom%nb, then total number of neighbours that affect local guardcells is
+      !! * 3 for cartesian decomposition (including AMR with equal-size blocks)
+      !! * 2 to 4 for noncartesian decomposition
+      !! * more for AMR with consolidated blocks (unimplemented yet, not compatible with current approach)
+      !! Thus, in each direction we can describe realtive position as one of four cases, or a bit easier one of five cases:
+      !! * FAR_LEFT, FAR_RIGHT - corner neighbours, either touching corner or a bit further away
+      !! * LEFT, RIGHT - partially face, partially corner neighbours
+      !! * FACE - face neighbour (may cover also some corners)
+      !<
+      pure function uniq_tag(se, nb_se, grid_id)
+
+         use constants, only: LO, HI, xdim, ydim, zdim, INVALID
 
          implicit none
 
-         integer, intent(in) :: i1, i2, i3
+         integer(kind=8), dimension(xdim:zdim, LO:HI), intent(in) :: se       ! a grid piece
+         integer(kind=8), dimension(xdim:zdim, LO:HI), intent(in) :: nb_se    ! neighboring grid piece
+         integer,                                      intent(in) :: grid_id  ! grid piece id
 
-         integer :: ixyz
+         integer(kind=4) :: uniq_tag
+         integer, dimension(xdim:zdim) :: r
+         integer :: d
+         enum, bind(C)
+            enumerator :: FAR_LEFT=0, LEFT, FACE, RIGHT, FAR_RIGHT, N_POS
+         end enum
 
-         ixyz = (1+i1) + 3*(1+i2 + 3*(1+i3))
+         r = INVALID
+         do d = xdim, zdim
+            if (nb_se(d, LO) > se(d, HI)) then
+               r(d) = FAR_RIGHT
+            else if (nb_se(d, HI) < se(d, LO)) then
+               r(d) = FAR_LEFT
+            else if ((nb_se(d, LO) < se(d, LO)) .and. (nb_se(d, HI) < se(d, HI)) .and. (nb_se(d, HI) >= se(d, LO))) then
+               r(d) = LEFT
+            else if ((nb_se(d, HI) > se(d, HI)) .and. (nb_se(d, LO) > se(d, LO)) .and. (nb_se(d, LO) <= se(d, HI))) then
+               r(d) = RIGHT
+            else
+               r(d) = FACE
+            end if
+         end do
+         uniq_tag = int(((grid_id*N_POS+r(zdim))*N_POS+r(ydim))*N_POS+r(xdim), kind=4)
 
-      end function ixyz
+      end function uniq_tag
 
    end subroutine mpi_bnd_types
 
