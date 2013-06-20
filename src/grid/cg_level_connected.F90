@@ -729,7 +729,7 @@ contains
 
 !> \brief This routine sets up all guardcells (internal, external and fine-coarse) for given rank-3 arrays.
 
-   subroutine arr3d_boundaries(this, ind, area_type, bnd_type)
+   subroutine arr3d_boundaries(this, ind, area_type, bnd_type, dir, nocorners)
 
       implicit none
 
@@ -738,10 +738,12 @@ contains
       integer(kind=4), optional,   intent(in)    :: area_type !< defines how do we treat boundaries
       integer(kind=4), optional,   intent(in)    :: bnd_type  !< Override default boundary type on external boundaries (useful in multigrid solver).
                                                               !< Note that BND_PER, BND_MPI, BND_SHE and BND_COR aren't external and cannot be overridden
+      integer(kind=4), optional,   intent(in)    :: dir       !< select only this direction
+      logical,         optional,   intent(in)    :: nocorners !< .when .true. then don't care about proper edge and corner update
 
       call this%dirty_boundaries(ind)
-      call this%prolong_bnd_from_coarser(ind, bnd_type = bnd_type)
-      call this%level_3d_boundaries(ind, area_type = area_type, bnd_type = bnd_type)
+      call this%prolong_bnd_from_coarser(ind, bnd_type=bnd_type, dir=dir, nocorners=nocorners)
+      call this%level_3d_boundaries(ind, area_type=area_type, bnd_type=bnd_type, dir=dir, nocorners=nocorners)
       ! The correctness ot the sequence of calls above may depend on the implementation of internal boundary exchange
 
    end subroutine arr3d_boundaries
@@ -773,7 +775,7 @@ contains
             call this%qw_copy(qna%wai, ind, iw) !> \todo filter this through cg%ignore_prolongation
          enddo
       endif
-      call this%level_4d_boundaries(ind, area_type = area_type, dir=dir, nocorners=nocorners)
+      call this%level_4d_boundaries(ind, area_type=area_type, dir=dir, nocorners=nocorners)
 
    end subroutine arr4d_boundaries
 

@@ -164,7 +164,7 @@ contains
 
 !> \brief This routine sets up all guardcells (internal, external and fine-coarse) for given rank-3 arrays
 
-   subroutine leaf_arr3d_boundaries(this, ind, area_type, bnd_type)
+   subroutine leaf_arr3d_boundaries(this, ind, area_type, bnd_type, dir, nocorners)
 
       use cg_level_connected, only: cg_level_connected_T
 
@@ -175,6 +175,8 @@ contains
       integer(kind=4), optional, intent(in) :: area_type  !< defines how do we treat boundaries
       integer(kind=4), optional, intent(in) :: bnd_type   !< Override default boundary type on external boundaries (useful in multigrid solver).
                                                           !< Note that BND_PER, BND_MPI, BND_SHE and BND_COR aren't external and cannot be overridden
+      integer(kind=4), optional, intent(in) :: dir        !< select only this direction
+      logical,         optional, intent(in) :: nocorners  !< .when .true. then don't care about proper edge and corner update
 
       type(cg_level_connected_T), pointer   :: curl
 
@@ -182,7 +184,7 @@ contains
       do while (associated(curl))
          ! OPT this results in duplicated calls to level_3d_boundaries for levels from this%coarsest_leaves to finest%level%coarser
          !> \todo implement it with lower level routines to remove this duplication
-         call curl%arr3d_boundaries(ind, area_type=area_type, bnd_type=bnd_type)
+         call curl%arr3d_boundaries(ind, area_type=area_type, bnd_type=bnd_type, dir=dir, nocorners=nocorners)
          curl => curl%finer
       enddo
 

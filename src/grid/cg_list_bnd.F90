@@ -481,7 +481,7 @@ contains
 !! \details No fine-coarse exchanges can be done here, see cg_level_connected::arr3d_boundaries for that feature
 !<
 
-   subroutine level_3d_boundaries(this, ind, area_type, bnd_type)
+   subroutine level_3d_boundaries(this, ind, area_type, bnd_type, dir, nocorners)
 
       use constants, only: AT_NO_B
 
@@ -492,6 +492,8 @@ contains
       integer(kind=4), optional, intent(in) :: area_type  !< defines how do we treat boundaries
       integer(kind=4), optional, intent(in) :: bnd_type   !< Override default boundary type on external boundaries (useful in multigrid solver).
                                                           !< Note that BND_PER, BND_MPI, BND_SHE and BND_COR aren't external and cannot be overridden
+      integer(kind=4), optional, intent(in) :: dir        !< select only this direction
+      logical,         optional, intent(in) :: nocorners  !< .when .true. then don't care about proper edge and corner update
 
       logical                               :: do_permpi
 
@@ -502,9 +504,9 @@ contains
          if (area_type /= AT_NO_B) do_permpi = .false.
       endif
 
-      if (do_permpi) call this%internal_boundaries_3d(ind)
+      if (do_permpi) call this%internal_boundaries_3d(ind, dir=dir, nocorners=nocorners)
 
-      call this%external_boundaries(ind, area_type = area_type, bnd_type = bnd_type)
+      call this%external_boundaries(ind, area_type=area_type, bnd_type=bnd_type)
 
    end subroutine level_3d_boundaries
 
@@ -537,7 +539,7 @@ contains
 
       if (do_permpi) call this%internal_boundaries_4d(ind, dir=dir, nocorners=nocorners)
 
-!      call this%external_boundaries(ind, area_type, bnd_type) ! should call cg_list_bnd:bnd_u, but that depends on hydrostatic too much
+!      call this%external_boundaries(ind, area_type=area_type, bnd_type=bnd_type) ! should call cg_list_bnd:bnd_u, but that depends on hydrostatic too much
 
    end subroutine level_4d_boundaries
 
