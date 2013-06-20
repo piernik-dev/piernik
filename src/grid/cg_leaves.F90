@@ -182,7 +182,7 @@ contains
       do while (associated(curl))
          ! OPT this results in duplicated calls to level_3d_boundaries for levels from this%coarsest_leaves to finest%level%coarser
          !> \todo implement it with lower level routines to remove this duplication
-         call curl%arr3d_boundaries(ind, area_type, bnd_type = bnd_type)
+         call curl%arr3d_boundaries(ind, area_type=area_type, bnd_type=bnd_type)
          curl => curl%finer
       enddo
 
@@ -216,7 +216,7 @@ contains
 !! \brief Wrapper routine to set up internal boundaries for for given rank-3 arrays
 !! \todo make it completed
 !<
-   subroutine internal_bnd_3d(this, ind, dim)
+   subroutine internal_bnd_3d(this, ind, dir)
 
       use cg_level_connected, only: cg_level_connected_T
       use dataio_pub,         only: die
@@ -225,13 +225,13 @@ contains
 
       class(cg_leaves_T),        intent(in) :: this       !< the list on which to perform the boundary exchange
       integer(kind=4),           intent(in) :: ind        !< Negative value: index of cg%q(:) 3d array
-      integer(kind=4), optional, intent(in) :: dim        !< do the internal boundaries only in the specified dimension
+      integer(kind=4), optional, intent(in) :: dir        !< do the internal boundaries only in the specified dimension
 
       type(cg_level_connected_T), pointer   :: curl
 
       curl => this%coarsest_leaves
       do while (associated(curl))
-         call curl%internal_boundaries_3d(ind, dim)
+         call curl%internal_boundaries_3d(ind, dir=dir)
          curl => curl%finer
          if (associated(curl)) call die("[cg_leaves::internal_bnd_3d] This routine does not work with finer levels yet")
       enddo
@@ -242,7 +242,7 @@ contains
 !! \brief Wrapper routine to set up internal boundaries for for given rank-4 arrays
 !! \todo make it completed
 !<
-   subroutine internal_bnd_4d(this, ind, dim)
+   subroutine internal_bnd_4d(this, ind, dir)
 
       use cg_level_connected, only: cg_level_connected_T
       use dataio_pub,         only: die
@@ -251,13 +251,13 @@ contains
 
       class(cg_leaves_T),        intent(in) :: this       !< the list on which to perform the boundary exchange
       integer(kind=4),           intent(in) :: ind        !< Negative value: index of cg%q(:) 3d array
-      integer(kind=4), optional, intent(in) :: dim        !< do the internal boundaries only in the specified dimension
+      integer(kind=4), optional, intent(in) :: dir        !< do the internal boundaries only in the specified dimension
 
       type(cg_level_connected_T), pointer   :: curl
 
       curl => this%coarsest_leaves
       do while (associated(curl))
-         call curl%internal_boundaries_4d(ind, dim)
+         call curl%internal_boundaries_4d(ind, dir=dir)
          curl => curl%finer
          if (associated(curl)) call die("[cg_leaves::internal_bnd_4d] This routine does not work with finer levels yet")
       enddo
@@ -284,7 +284,7 @@ contains
 
       curl => this%coarsest_leaves
       do while (associated(curl))
-         call curl%external_boundaries(ind, area_type, bnd_type)
+         call curl%external_boundaries(ind, area_type=area_type, bnd_type=bnd_type)
          curl => curl%finer
          if (associated(curl)) call die("[cg_leaves::external_bnd_3d] This routine does not work with finer levels yet")
       enddo
@@ -312,7 +312,7 @@ contains
       call die("[cg_leaves::external_bnd_4d] This routine has not been implemented yet.")
       curl => this%coarsest_leaves
 !      do while (associated(curl))
-!         call curl%external_boundaries(ind, area_type, bnd_type)
+!         call curl%external_boundaries(ind, area_type=area_type, bnd_type=bnd_type)
 !         curl => curl%finer
 !      enddo
 
