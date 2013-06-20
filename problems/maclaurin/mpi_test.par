@@ -86,7 +86,6 @@
     grav_bnd_str  = "isolated"
     max_cycles = 100
     vcycle_abort  = 100.
-    fft_full_relax = .true.
     lmax = 16
 !    use_point_monopole = .true.
  /

@@ -64,7 +64,6 @@ module multigridvars
    real                    :: ts                                      !< time for runtime profiling
    real                    :: tot_ts                                  !< total multigrid time
    logical                 :: single_base                             !< .true. when the whole base level is located on a single cpu
-   logical                 :: fft_full_relax                          !< Perform full or boundary relaxation after local FFT solve
    integer(kind=4)         :: nsmool                                  !< smoothing cycles per call
    logical                 :: multidim_code_3D                        !< prefer code written for any 1D and 2D configuration even in 3D for benchmarking and debugging
    real                    :: overrelax                               !< overrealaxation factor (if < 1. then works as underrelaxation), provided for tests

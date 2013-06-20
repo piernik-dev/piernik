@@ -98,7 +98,6 @@ contains
 !! <tr><td>ord_laplacian_outer   </td><td>2      </td><td>integer value  </td><td>\copydoc multigrid_Laplace::ord_laplacian_outer   </td></tr>
 !! <tr><td>ord_time_extrap       </td><td>1      </td><td>integer value  </td><td>\copydoc multigrid_gravity::ord_time_extrap       </td></tr>
 !! <tr><td>base_no_fft           </td><td>.false.</td><td>logical        </td><td>\copydoc multigrid_gravity::base_no_fft           </td></tr>
-!! <tr><td>fft_full_relax        </td><td>.false.</td><td>logical        </td><td>\copydoc multigridvars::fft_full_relax            </td></tr>
 !! <tr><td>fft_patient           </td><td>.false.</td><td>logical        </td><td>\copydoc multigrid_gravity::fft_patient           </td></tr>
 !! <tr><td>coarsen_multipole     </td><td>1      </td><td>integer value  </td><td>\copydoc multipole::coarsen_multipole             </td></tr>
 !! <tr><td>lmax                  </td><td>16     </td><td>integer value  </td><td>\copydoc multipole::lmax                          </td></tr>
@@ -123,7 +122,7 @@ contains
       use dataio_pub,         only: msg, die, warn
       use domain,             only: dom, is_multicg !, is_uneven
       use mpisetup,           only: master, slave, ibuff, cbuff, rbuff, lbuff, piernik_MPI_Bcast
-      use multigridvars,      only: single_base, bnd_invalid, bnd_isolated, bnd_periodic, bnd_dirichlet, grav_bnd, fft_full_relax, multidim_code_3D, nsmool, &
+      use multigridvars,      only: single_base, bnd_invalid, bnd_isolated, bnd_periodic, bnd_dirichlet, grav_bnd, multidim_code_3D, nsmool, &
            &                        overrelax
       use multigrid_gravity_helper, only: nsmoob
       use multigrid_Laplace,  only: ord_laplacian, ord_laplacian_outer
@@ -139,7 +138,7 @@ contains
 
       namelist /MULTIGRID_GRAVITY/ norm_tol, vcycle_abort, vcycle_giveup, max_cycles, nsmool, nsmoob, use_CG, use_CG_outer, &
            &                       overrelax, L4_strength, ord_laplacian, ord_laplacian_outer, ord_time_extrap, &
-           &                       base_no_fft, fft_full_relax, fft_patient, &
+           &                       base_no_fft, fft_patient, &
            &                       coarsen_multipole, lmax, mmax, ord_prolong_mpole, use_point_monopole, interp_pt2mom, interp_mom2pot, multidim_code_3D, &
            &                       grav_bnd_str, preconditioner
 
@@ -174,7 +173,6 @@ contains
 
       use_point_monopole     = .false.
       base_no_fft            = .false.
-      fft_full_relax         = .false.
       fft_patient            = .false.
       interp_pt2mom          = .false.
       interp_mom2pot         = .false.
@@ -238,13 +236,12 @@ contains
 
          lbuff(1)  = use_point_monopole
          lbuff(2)  = base_no_fft
-         lbuff(3)  = fft_full_relax
-         lbuff(4)  = fft_patient
-         lbuff(5)  = interp_pt2mom
-         lbuff(6)  = interp_mom2pot
-         lbuff(7)  = multidim_code_3D
-         lbuff(8)  = use_CG
-         lbuff(9)  = use_CG_outer
+         lbuff(3)  = fft_patient
+         lbuff(4)  = interp_pt2mom
+         lbuff(5)  = interp_mom2pot
+         lbuff(6)  = multidim_code_3D
+         lbuff(7)  = use_CG
+         lbuff(8)  = use_CG_outer
 
          cbuff(1)  = grav_bnd_str
          cbuff(2)  = preconditioner
@@ -276,13 +273,12 @@ contains
 
          use_point_monopole = lbuff(1)
          base_no_fft        = lbuff(2)
-         fft_full_relax     = lbuff(3)
-         fft_patient        = lbuff(4)
-         interp_pt2mom      = lbuff(5)
-         interp_mom2pot     = lbuff(6)
-         multidim_code_3D   = lbuff(7)
-         use_CG             = lbuff(8)
-         use_CG_outer       = lbuff(9)
+         fft_patient        = lbuff(3)
+         interp_pt2mom      = lbuff(4)
+         interp_mom2pot     = lbuff(5)
+         multidim_code_3D   = lbuff(6)
+         use_CG             = lbuff(7)
+         use_CG_outer       = lbuff(8)
 
          grav_bnd_str   = cbuff(1)(1:len(grav_bnd_str))
          preconditioner = cbuff(2)(1:len(preconditioner))
