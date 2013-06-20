@@ -218,7 +218,7 @@ contains
 !! \brief Wrapper routine to set up internal boundaries for for given rank-3 arrays
 !! \todo make it completed
 !<
-   subroutine internal_bnd_3d(this, ind, dir)
+   subroutine internal_bnd_3d(this, ind, dir, nocorners)
 
       use cg_level_connected, only: cg_level_connected_T
       use dataio_pub,         only: die
@@ -228,12 +228,13 @@ contains
       class(cg_leaves_T),        intent(in) :: this       !< the list on which to perform the boundary exchange
       integer(kind=4),           intent(in) :: ind        !< Negative value: index of cg%q(:) 3d array
       integer(kind=4), optional, intent(in) :: dir        !< do the internal boundaries only in the specified dimension
+      logical,         optional, intent(in) :: nocorners  !< .when .true. then don't care about proper edge and corner update
 
       type(cg_level_connected_T), pointer   :: curl
 
       curl => this%coarsest_leaves
       do while (associated(curl))
-         call curl%internal_boundaries_3d(ind, dir=dir)
+         call curl%internal_boundaries_3d(ind, dir=dir, nocorners=nocorners)
          curl => curl%finer
          if (associated(curl)) call die("[cg_leaves::internal_bnd_3d] This routine does not work with finer levels yet")
       enddo
@@ -244,7 +245,7 @@ contains
 !! \brief Wrapper routine to set up internal boundaries for for given rank-4 arrays
 !! \todo make it completed
 !<
-   subroutine internal_bnd_4d(this, ind, dir)
+   subroutine internal_bnd_4d(this, ind, dir, nocorners)
 
       use cg_level_connected, only: cg_level_connected_T
       use dataio_pub,         only: die
@@ -254,12 +255,13 @@ contains
       class(cg_leaves_T),        intent(in) :: this       !< the list on which to perform the boundary exchange
       integer(kind=4),           intent(in) :: ind        !< Negative value: index of cg%q(:) 3d array
       integer(kind=4), optional, intent(in) :: dir        !< do the internal boundaries only in the specified dimension
+      logical,         optional, intent(in) :: nocorners  !< .when .true. then don't care about proper edge and corner update
 
       type(cg_level_connected_T), pointer   :: curl
 
       curl => this%coarsest_leaves
       do while (associated(curl))
-         call curl%internal_boundaries_4d(ind, dir=dir)
+         call curl%internal_boundaries_4d(ind, dir=dir, nocorners=nocorners)
          curl => curl%finer
          if (associated(curl)) call die("[cg_leaves::internal_bnd_4d] This routine does not work with finer levels yet")
       enddo
