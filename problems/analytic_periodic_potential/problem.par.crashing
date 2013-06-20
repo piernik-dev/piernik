@@ -15,7 +15,6 @@
  /
 
  $MPI_BLOCKS
-    psize = 1, 1, 1
     AMR_bsize = 3*5            ! it seems odd offsets are momewhat incompatible with coarse-to-fine prolongation. Also occurs for allow_uneven and allow_noncart
 !    allow_uneven = .true.
 !    allow_noncart = .true.
