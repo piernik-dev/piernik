@@ -564,13 +564,13 @@ contains
       if (allocated(this%gc_zdim)) deallocate(this%gc_zdim)
 
       if (allocated(this%i_bnd)) then
-         do d = xdim, zdim
+         do d = lbound(this%i_bnd, dim=1), ubound(this%i_bnd, dim=1)
             if (allocated(this%i_bnd(d)%seg)) deallocate(this%i_bnd(d)%seg)
          enddo
          deallocate(this%i_bnd)
       endif
       if (allocated(this%o_bnd)) then
-         do d = xdim, zdim
+         do d = lbound(this%o_bnd, dim=1), ubound(this%o_bnd, dim=1)
             if (allocated(this%o_bnd(d)%seg)) deallocate(this%o_bnd(d)%seg)
          enddo
          deallocate(this%o_bnd)

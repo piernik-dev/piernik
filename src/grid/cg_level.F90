@@ -554,7 +554,7 @@ contains
    subroutine mpi_bnd_types(this)
 
       use cg_list,    only: cg_list_element
-      use constants,  only: xdim, ydim, zdim, LO, HI, BND_MPI_FC, BND_FC
+      use constants,  only: xdim, ydim, zdim, cor_dim, LO, HI, BND_MPI_FC, BND_FC
       use domain,     only: dom
       use grid_cont,  only: grid_container, is_overlap
       use mpisetup,   only: FIRST, LAST
@@ -567,7 +567,7 @@ contains
       type(cg_list_element), pointer                  :: cgl
       integer                                         :: j, b, id, ix, iy, iz
       integer(kind=8)                                 :: n_lbnd_face_cells
-      integer(kind=4)                                 :: d, hl, lh, tag
+      integer(kind=4)                                 :: d, dd, hl, lh, tag
       integer(kind=8), dimension(xdim:zdim)           :: per
       integer(kind=8), dimension(xdim:zdim, LO:HI)    :: b_layer, poff, aux
       type :: fmap
@@ -583,7 +583,7 @@ contains
 
          if (allocated(cg%i_bnd)) deallocate(cg%i_bnd)
          if (allocated(cg%o_bnd)) deallocate(cg%o_bnd)
-         allocate(cg%i_bnd(xdim:zdim), cg%o_bnd(xdim:zdim))
+         allocate(cg%i_bnd(xdim:cor_dim), cg%o_bnd(xdim:cor_dim))
 
          per(:) = 0
          where (dom%periodic(:)) per(:) = this%n_d(:)
@@ -604,6 +604,7 @@ contains
                enddo
             endif
          enddo
+         allocate(cg%i_bnd(cor_dim)%seg(0), cg%o_bnd(cor_dim)%seg(0))
 
          do j = FIRST, LAST
             do b = lbound(this%pse(j)%c(:), dim=1), ubound(this%pse(j)%c(:), dim=1)
@@ -659,7 +660,14 @@ contains
                                                 aux(:, LO) = aux(:, LO) + [ ix, iy, iz ] * per(:)
                                                 aux(:, HI) = aux(:, HI) + [ ix, iy, iz ] * per(:)
                                                 tag = uniq_tag(cg%my_se, aux, b)
-                                                call cg%i_bnd(d)%add_seg(j, poff, tag)
+                                                aux = poff
+                                                aux(d, :) = aux(d, :) + [ -1, 1 ]
+                                                if (is_overlap(cg%my_se, aux)) then
+                                                   dd = d
+                                                else
+                                                   dd = cor_dim
+                                                endif
+                                                call cg%i_bnd(dd)%add_seg(j, poff, tag)
                                              endif
                                           endif
                                        enddo
@@ -694,7 +702,16 @@ contains
                                                 aux(:, LO) = aux(:, LO) - [ ix, iy, iz ] * per(:)
                                                 aux(:, HI) = aux(:, HI) - [ ix, iy, iz ] * per(:)
                                                 tag = uniq_tag(this%pse(j)%c(b)%se, aux, cg%grid_id)
-                                                call cg%o_bnd(d)%add_seg(j, poff, tag)
+                                                aux = poff
+                                                aux(:, LO) = aux(:, LO) - [ ix, iy, iz ] * per(:)
+                                                aux(:, HI) = aux(:, HI) - [ ix, iy, iz ] * per(:)
+                                                aux(d, :) = aux(d, :) + [ -1, 1 ]
+                                                if (is_overlap(this%pse(j)%c(b)%se, aux)) then
+                                                   dd = d
+                                                else
+                                                   dd = cor_dim
+                                                endif
+                                                call cg%o_bnd(dd)%add_seg(j, poff, tag)
                                              endif
                                           endif
                                        enddo
@@ -772,8 +789,8 @@ contains
                r(d) = RIGHT
             else
                r(d) = FACE
-            end if
-         end do
+            endif
+         enddo
          uniq_tag = int(((grid_id*N_POS+r(zdim))*N_POS+r(ydim))*N_POS+r(xdim), kind=4)
 
       end function uniq_tag

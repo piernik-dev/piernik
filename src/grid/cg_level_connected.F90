@@ -729,7 +729,7 @@ contains
 
 !> \brief This routine sets up all guardcells (internal, external and fine-coarse) for given rank-3 arrays.
 
-   subroutine arr3d_boundaries(this, ind, area_type, bnd_type)
+   subroutine arr3d_boundaries(this, ind, area_type, bnd_type, dir, nocorners)
 
       implicit none
 
@@ -738,17 +738,19 @@ contains
       integer(kind=4), optional,   intent(in)    :: area_type !< defines how do we treat boundaries
       integer(kind=4), optional,   intent(in)    :: bnd_type  !< Override default boundary type on external boundaries (useful in multigrid solver).
                                                               !< Note that BND_PER, BND_MPI, BND_SHE and BND_COR aren't external and cannot be overridden
+      integer(kind=4), optional,   intent(in)    :: dir       !< select only this direction
+      logical,         optional,   intent(in)    :: nocorners !< .when .true. then don't care about proper edge and corner update
 
       call this%dirty_boundaries(ind)
-      call this%prolong_bnd_from_coarser(ind, bnd_type = bnd_type)
-      call this%level_3d_boundaries(ind, area_type = area_type, bnd_type = bnd_type)
+      call this%prolong_bnd_from_coarser(ind, bnd_type=bnd_type, dir=dir, nocorners=nocorners)
+      call this%level_3d_boundaries(ind, area_type=area_type, bnd_type=bnd_type, dir=dir, nocorners=nocorners)
       ! The correctness ot the sequence of calls above may depend on the implementation of internal boundary exchange
 
    end subroutine arr3d_boundaries
 
 !> \brief This routine sets up all guardcells (internal, external and fine-coarse) for given rank-4 arrays.
 
-   subroutine arr4d_boundaries(this, ind, area_type)
+   subroutine arr4d_boundaries(this, ind, area_type, dir, nocorners)
 
       use constants,        only: base_level_id
       use named_array_list, only: qna, wna
@@ -758,6 +760,8 @@ contains
       class(cg_level_connected_T), intent(inout) :: this      !< the list on which to perform the boundary exchange
       integer(kind=4),             intent(in)    :: ind       !< index of cg%w(:) 4d array
       integer(kind=4), optional,   intent(in)    :: area_type !< defines how do we treat boundaries
+      integer(kind=4), optional,   intent(in)    :: dir       !< select only this direction
+      logical,         optional,   intent(in)    :: nocorners !< .when .true. then don't care about proper edge and corner update
 
       integer(kind=4) :: iw
 
@@ -767,11 +771,11 @@ contains
          do iw = 1, wna%lst(ind)%dim4
             call this%coarser%wq_copy(ind, iw, qna%wai)
             call this%wq_copy(ind, iw, qna%wai) !> Quick and dirty fix for cases when cg%ignore_prolongation == .true.
-            call this%prolong_bnd_from_coarser(qna%wai)
+            call this%prolong_bnd_from_coarser(qna%wai, dir=dir, nocorners=nocorners)
             call this%qw_copy(qna%wai, ind, iw) !> \todo filter this through cg%ignore_prolongation
          enddo
       endif
-      call this%level_4d_boundaries(ind, area_type = area_type)
+      call this%level_4d_boundaries(ind, area_type=area_type, dir=dir, nocorners=nocorners)
 
    end subroutine arr4d_boundaries
 
@@ -786,11 +790,12 @@ contains
 !! \warning This routine does only the first approach.
 !<
 
-   subroutine prolong_bnd_from_coarser(this, ind, bnd_type)
+   subroutine prolong_bnd_from_coarser(this, ind, bnd_type, dir, nocorners)
 
       use cg_list,        only: cg_list_element
       use cg_list_global, only: all_cg
       use constants,      only: I_ONE, xdim, ydim, zdim, LO, HI, refinement_factor, ndims, O_INJ, base_level_id
+      use dataio_pub,     only: warn
       use domain,         only: dom
       use func,           only: f2c, c2f
       use grid_cont,      only: grid_container
@@ -803,6 +808,8 @@ contains
       integer(kind=4),             intent(in)    :: ind
       integer(kind=4), optional,   intent(in)    :: bnd_type  !< Override default boundary type on external boundaries (useful in multigrid solver).
                                                               !< Note that BND_PER, BND_MPI, BND_SHE and BND_COR aren't external and cannot be overridden
+      integer(kind=4), optional,   intent(in)    :: dir       !< select only this direction
+      logical,         optional,   intent(in)    :: nocorners !< .when .true. then don't care about proper edge and corner update
 
       type(cg_level_connected_T), pointer :: coarse
       type(cg_list_element), pointer :: cgl
@@ -814,6 +821,16 @@ contains
       integer :: g
       logical, allocatable, dimension(:,:,:) :: updatemap
       integer(kind=8), dimension(ndims, LO:HI)  :: box_8   !< temporary storage
+      logical, save :: firstcall = .true.
+
+      if (present(dir)) then
+         if (firstcall) call warn("[cg_level_connected:prolong_bnd_from_coarser] dir present but not implemented yet")
+      endif
+      if (present(nocorners)) then
+         if (firstcall) call warn("[cg_level_connected:prolong_bnd_from_coarser] nocorners present but not implemented yet")
+      endif
+
+      firstcall = .false.
 
       coarse => this%coarser
 
@@ -825,7 +842,7 @@ contains
 
       !call this%clear_boundaries(ind, dirtyH) ! not implemented yet
       ext_buf = dom%D_ * all_cg%ord_prolong_nb ! extension of the buffers due to stencil range
-      if (all_cg%ord_prolong_nb /= O_INJ) call coarse%level_3d_boundaries(ind, bnd_type = bnd_type)
+      if (all_cg%ord_prolong_nb /= O_INJ) call coarse%level_3d_boundaries(ind, bnd_type = bnd_type) ! it is really hard to determine which exchanges can be omitted
       ! bnd_type = BND_NEGREF above is critical for convergence of multigrid with isolated boundaries.
 
       nr = 0
@@ -1027,10 +1044,12 @@ contains
          call cgmap%set
          box_8 = int(cg%ijkse, kind=8)
          call cgmap%clear(box_8)
-         do dd = xdim, zdim
-            do b = lbound(cg%i_bnd(dd)%seg, dim=1), ubound(cg%i_bnd(dd)%seg, dim=1)
-               call cgmap%clear(cg%i_bnd(dd)%seg(b)%se)
-            enddo
+         do dd = lbound(cg%i_bnd, dim=1), ubound(cg%i_bnd, dim=1)
+            if (allocated(cg%i_bnd(dd)%seg)) then
+               do b = lbound(cg%i_bnd(dd)%seg, dim=1), ubound(cg%i_bnd(dd)%seg, dim=1)
+                  call cgmap%clear(cg%i_bnd(dd)%seg(b)%se)
+               enddo
+            endif
          enddo
          call cgmap%find_boxes
          do j = FIRST, LAST !> \warning Antiparallel

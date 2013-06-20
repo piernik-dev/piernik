@@ -61,7 +61,7 @@ contains
 
    end subroutine all_bnd
 
-   subroutine all_fluid_boundaries
+   subroutine all_fluid_boundaries(dir, nocorners)
 
       use cg_leaves,          only: leaves
 !      use cg_level_finest,    only: finest
@@ -71,15 +71,26 @@ contains
 
       implicit none
 
-      integer(kind=4)                     :: dir
+      integer(kind=4), optional, intent(in) :: dir       !< select only this direction
+      logical,         optional, intent(in) :: nocorners !< .when .true. then don't care about proper edge and corner update
+
+      integer(kind=4)                     :: d
+
+      if (present(dir)) then
+         if (.not. dom%has_dir(dir)) return
+      endif
 
 !      call finest%level%restrict_to_base
 
       ! should be more selective (modified leaves?)
-      call leaves%leaf_arr4d_boundaries(wna%fi)
-      do dir = xdim, zdim
-         if (dom%has_dir(dir)) call leaves%bnd_u(dir)
-      enddo
+      call leaves%leaf_arr4d_boundaries(wna%fi, dir=dir, nocorners=nocorners)
+      if (present(dir)) then
+         call leaves%bnd_u(dir)
+      else
+         do d = xdim, zdim
+            if (dom%has_dir(d)) call leaves%bnd_u(d)
+         enddo
+      endif
 
    end subroutine all_fluid_boundaries
 
@@ -97,7 +108,7 @@ contains
       integer(kind=4) :: dir
 
       do dir = xdim, zdim
-         if (dom%has_dir(dir)) call all_cg%internal_boundaries_4d(wna%bi, dim=dir) ! should be more selective (modified leaves?)
+         if (dom%has_dir(dir)) call all_cg%internal_boundaries_4d(wna%bi, dir=dir) ! should be more selective (modified leaves?)
       enddo
 
       ! Do not fuse these loops

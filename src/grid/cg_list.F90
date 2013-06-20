@@ -347,7 +347,6 @@ contains
 
    subroutine update_req(this)
 
-      use constants, only: xdim, zdim
       use mpisetup,  only: inflate_req
 
       implicit none
@@ -362,7 +361,7 @@ contains
       cgl => this%first
       do while (associated(cgl))
 
-         do d = xdim, zdim
+         do d = lbound(cgl%cg%i_bnd, dim=1), ubound(cgl%cg%i_bnd, dim=1)
             if (allocated(cgl%cg%i_bnd(d)%seg)) nrq = nrq + 2 * size(cgl%cg%i_bnd(d)%seg)
          enddo
 
