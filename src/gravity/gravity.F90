@@ -391,9 +391,10 @@ contains
       call multigrid_solve_grav(iarr_all_sg)
 #endif /* MULTIGRID */
 
-      ! Assume that no solver requires corner values for the potential
       !> \todo Perhaps it should be called after call sum_potential but that may depend on grav_pot_3d and its potential dependency on selfgravity results
-      call leaves%leaf_arr3d_boundaries(qna%ind(sgp_n), nocorners=.true.)
+      call leaves%leaf_arr3d_boundaries(qna%ind(sgp_n)) !, nocorners=.true.)
+      ! No solvers should requires corner values for the potential. Unfortunately some problems may relay on it indirectly (e.g. streaming_instability).
+      !> \todo OPT: identify what relies on corner values of the popential and change it to work without corners. Then enable nocorners in the above call for some speedup.
 
       if (frun) then
          call leaves%q_copy(qna%ind(sgp_n), qna%ind(sgpm_n))
