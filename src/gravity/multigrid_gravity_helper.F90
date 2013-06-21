@@ -139,7 +139,7 @@ contains
             case (fft_dst)
                cg%mg%fftr(:,:,:) = cg%mg%fftr(:,:,:) * cg%mg%Green3D(:,:,:)
             case default
-               call die("[multigrid_fft_approximation:fft_convolve] Unknown FFT type.")
+               call die("[multigrid_gravity_helper:fft_solve_level] Unknown FFT type.")
          end select
 
          call dfftw_execute(cg%mg%plani) ! cg%mg%fft{r}(:,:,:) -> cg%mg%src(:,:,:)
