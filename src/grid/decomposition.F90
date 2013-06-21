@@ -242,6 +242,11 @@ contains
          ml = maxloc(p_size(:), dim=1)
          if (p_size(ml) > 1) p_size(ml) = p_size(ml) - I_ONE
       enddo
+      if (master) then
+         write(msg,'(a,i3,a,3i4,a,f7.4)')"[decomposition:decompose_patch_int]        Level ",level_id,": grid divided to [",p_size(:), &
+              &                          " ] pieces, balance = ", product(p_size(:))/real(nproc) ! rough esitmate, this might be nonuniform decomposition
+         call printinfo(msg)
+      endif
       call patch%cartesian_tiling(p_size(:), product(p_size(:)), level_id)
       patch_divided = patch%is_not_too_small("decompose_patch_cartesian_less_than_nproc")
       if (patch_divided) return
@@ -431,7 +436,7 @@ contains
          enddo
       enddo
 
-      if (any(ldom(:) < dom%nb .and. dom%has_dir(:)) .or. n /= 1) then
+      if (any(ldom(:) < dom%nb .and. dom%has_dir(zdim:xdim:-1)) .or. n /= 1) then
          if (master) then
             write(msg, '(a,i3,a)')"[decomposition:decompose_patch_uniform]    Level ",level_id,": I am not that intelligent" ! pieces has too big prime factors
             call warn(msg)
