@@ -830,7 +830,7 @@ contains
 
       this%recently_changed = .true. ! assume that the new patches will change this level
       call this%expand_list
-      if (.not. this%patches(ubound(this%patches(:), dim=1))%decompose_patch(n_d(:), off(:), n_pieces)) then
+      if (.not. this%patches(ubound(this%patches(:), dim=1))%decompose_patch(n_d(:), off(:), this%level_id, n_pieces=n_pieces)) then
          write(msg,'(a,i4)')"[cg_level:add_patch_detailed] Decomposition failed at level ",this%level_id
          call die(msg)
       endif
