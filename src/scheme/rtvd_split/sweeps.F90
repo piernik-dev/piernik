@@ -395,7 +395,7 @@ contains
             call MPI_Waitall(nr, req(:nr), mpistatus, mpi_err)
          endif
 
-         if (full_dim) call all_fluid_boundaries    ! \todo : call only cdim for istep=1, call all for istep=2
+         if (full_dim) call all_fluid_boundaries(nocorners = .true.)    ! \todo : call only cdim for istep=1, call all for istep=2
       enddo
 
       if (allocated(b))  deallocate(b)
