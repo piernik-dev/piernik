@@ -1,0 +1,33 @@
+#!/usr/bin/python
+
+import h5py as h5
+import numpy as np
+import sys
+
+
+def read_all_gdf_data(fname):
+    h5f = h5.File(fname, 'r')
+    n_d = h5f['simulation_parameters'].attrs['domain_dimensions'][:]
+    fields = h5f['/data']['grid_0000000000'].keys()
+
+    output = {}
+
+    for field in fields:
+        output[field] = np.zeros(n_d, dtype=np.float64)
+        for igrid, dname in enumerate(h5f['/data'].keys()):
+            li = h5f['grid_left_index'][igrid]
+            nd = h5f['grid_dimensions'][igrid]
+            ri = li + nd
+            output[field][li[0]:ri[0], li[1]:ri[1], li[2]:ri[2]] = \
+                h5f['data'][dname][field][:].T
+    return output
+
+data1 = read_all_gdf_data(sys.argv[1])
+data2 = read_all_gdf_data(sys.argv[2])
+
+for key in data1.keys():
+    if key in data2:
+        print "L2 norm for field %s = %f" \
+            % (key, np.linalg.norm(data1[key] - data2[key]))
+    else:
+        print "Field %s is not present in 2nd file" % key
