@@ -99,7 +99,7 @@ contains
 
 !> \brief Main wrapper for a block decomposer
 
-   logical function decompose_patch(this, n_d, off, n_pieces) result(patch_divided)
+   logical function decompose_patch(this, n_d, off, level_id, n_pieces) result(patch_divided)
 
       use domain, only: dom
 
@@ -108,6 +108,7 @@ contains
       class(box_T),                      intent(inout) :: this     !< the patch, which we want to be chopped into pieces
       integer(kind=8), dimension(ndims), intent(in)    :: n_d      !< number of grid cells
       integer(kind=8), dimension(ndims), intent(in)    :: off      !< offset (with respect to the base level, counted on own level), \todo make use of it
+      integer(kind=4),                   intent(in)    :: level_id !< level identifier (for informational use only)
       integer(kind=4), optional,         intent(in)    :: n_pieces !< how many pieces the patch should be divided to?
 
       where (dom%has_dir(:))
@@ -118,14 +119,14 @@ contains
          this%off(:) = 0
       endwhere
 
-      call this%decompose_patch_int(patch_divided, n_pieces)
+      call this%decompose_patch_int(patch_divided, level_id, n_pieces=n_pieces)
       if (patch_divided) patch_divided = this%is_not_too_small("not catched anywhere")
 
    end function decompose_patch
 
 !> \brief This routine computes (hopefully close-to-optimal) allowed domain decomposition
 
-   subroutine decompose_patch_int(patch, patch_divided, n_pieces)
+   subroutine decompose_patch_int(patch, patch_divided, level_id, n_pieces)
 
       use constants,  only: ndims, I_ONE
       use dataio_pub, only: warn, printinfo, msg
@@ -136,6 +137,7 @@ contains
 
       class(box_T),              intent(inout) :: patch         !< the patch, which we want to be chopped into pieces
       logical,                   intent(out)   :: patch_divided !< Set to .true. after a successful decomposition
+      integer(kind=4),           intent(in)    :: level_id      !< level identifier (for informational use only)
       integer(kind=4), optional, intent(in)    :: n_pieces      !< how many pieces the patch should be divided to?
 
       real                                     :: quality
@@ -161,14 +163,16 @@ contains
       if (product(psize(:)) == pieces) then
          if (all(mod(patch%n_d(:), int(psize(:), kind=8)) == 0)) then
             if (master .and. have_mpi) then
-               write(msg,'(a,3i4,a,3i6,a)')"[decomposition:decompose_patch_int] Domain divided to [",psize(:)," ] pieces, each of [",patch%n_d(:)/psize(:)," ] cells."
+               write(msg,'(a,i3,a,3i4,a,3i6,a)')"[decomposition:decompose_patch_int] Grid at level ",level_id," divided to [",psize(:), &
+                    &                           " ] pieces, each of [",patch%n_d(:)/psize(:)," ] cells."
                call printinfo(msg)
             endif
-            call patch%cartesian_tiling(psize(:), pieces)
+            call patch%cartesian_tiling(psize(:), pieces, level_id)
             patch_divided = patch%is_not_too_small("cartesian_tiling")
             if (patch_divided) return
          else
-            write(msg,'(a,3i6,a,3i4,a)')"[decomposition:decompose_patch_int] Cannot divide domain with [",patch%n_d(:)," ] cells to [",psize(:)," ] piecess. "
+            write(msg,'(a,i3,a,3i6,a,3i4,a)')"[decomposition:decompose_patch_int] Cannot divide grid at level ",level_id," with [",patch%n_d(:),&
+                 &                           " ] cells to [",psize(:)," ] piecess. "
             if (master) call warn(msg)
          endif
       endif
@@ -177,46 +181,59 @@ contains
       ideal_bsize = dom%eff_dim * (pieces * product(real(patch%n_d(:)))**(dom%eff_dim-1))**(1./dom%eff_dim)
 
       ! Try to find a close-to-optimal cartesian decomposition into same-sized blocks
-      call decompose_patch_uniform(p_size(:), patch%n_d, pieces)
+      call decompose_patch_uniform(p_size(:), patch%n_d, pieces, level_id)
       if (product(p_size(:)) == pieces) then
          quality = ideal_bsize / sum(p_size(:)/real(patch%n_d(:)) * product(real(patch%n_d(:))), MASK = patch%n_d(:) > 1)
          if (quality >= dd_unif_quality .or. .not. (allow_uneven .or. allow_noncart)) then
-            call patch%cartesian_tiling(p_size(:), pieces)
+            call patch%cartesian_tiling(p_size(:), pieces, level_id)
             patch_divided = patch%is_not_too_small("decompose_patch_uniform")
             if (patch_divided) return
          else
-            write(msg,'(2(a,f6.3),a)')"[decomposition:decompose_patch_int] Quality of uniform division = ",quality," is below threshold ",dd_unif_quality, ", trying harder ..."
+            write(msg,'(a,i3,2(a,f6.3),a)')"[decomposition:decompose_patch_int]        Level ",level_id,": quality of uniform division = ",quality, &
+                 &                         " is below threshold ",dd_unif_quality, ", trying harder ..."
             if (master) call warn(msg)
          endif
       endif
 
       ! Try to find a close-to-optimal cartesian decomposition into similar-sized blocks
       if (allow_uneven) then
-         call decompose_patch_rectlinear(p_size(:), patch%n_d, pieces)
+         call decompose_patch_rectlinear(p_size(:), patch%n_d, pieces, level_id)
          quality = 1 !< \todo make an estimate
          if (product(p_size(:)) == pieces) then
             if (quality > dd_rect_quality .or. .not. allow_noncart) then
-               call patch%cartesian_tiling(p_size(:), pieces)
+               call patch%cartesian_tiling(p_size(:), pieces, level_id)
                patch_divided = patch%is_not_too_small("decompose_patch_rectlinear")
                if (patch_divided) return
             endif
          endif
-         if (master) call warn("[decomposition:decompose_patch_int] decompose_patch_rectlinear failed")
+         if (master) then
+            write(msg,'(a,i3,a)')"[decomposition:decompose_patch_int]        Level ",level_id,": decompose_patch_rectlinear failed"
+            call warn(msg)
+         endif
       else
-         if (master) call warn("[decomposition:decompose_patch_int] Did not try uneven domain division")
+         if (master) then
+            write(msg,'(a,i3,a)')"[decomposition:decompose_patch_int]        Level ",level_id,": did not try uneven domain division"
+            call warn(msg)
+         endif
       endif
 
       ! Try to find a close-to-optimal decomposition into similar-volume blocks, minimize the boundary area
       if (allow_noncart) then
          p_size(:) = psize(:)
-         call decompose_patch_slices(p_size(:), patch%n_d, pieces)
+         call decompose_patch_slices(p_size(:), patch%n_d, pieces, level_id)
          ! if good_enough then return
-         call patch%choppy_tiling(p_size(:), pieces)
+         call patch%choppy_tiling(p_size(:), pieces, level_id)
          patch_divided = patch%is_not_too_small("decompose_patch_slices")
          if (patch_divided) return
-         if (master) call warn("[decomposition:decompose_patch_int] decompose_patch_slices failed")
+         if (master) then
+            write(msg,'(a,i3,a)')"[decomposition:decompose_patch_int]        Level ",level_id,": decompose_patch_slices failed"
+            call warn(msg)
+         endif
       else
-         if (master) call warn("[decomposition:decompose_patch_int] Did not try non-cartesian domain division")
+         if (master) then
+            write(msg,'(a,i3,a)')"[decomposition:decompose_patch_int]        Level ",level_id,": did not try non-cartesian domain division"
+            call warn(msg)
+         endif
       endif
 
       ! The domain is probably too small for given number of processes, decompose the domain into smallest possible pieces and leave some processes unemployed
@@ -225,12 +242,12 @@ contains
          ml = maxloc(p_size(:), dim=1)
          if (p_size(ml) > 1) p_size(ml) = p_size(ml) - I_ONE
       enddo
-      call patch%cartesian_tiling(p_size(:), product(p_size(:)))
+      call patch%cartesian_tiling(p_size(:), product(p_size(:)), level_id)
       patch_divided = patch%is_not_too_small("decompose_patch_cartesian_less_than_nproc")
       if (patch_divided) return
 
       ! Everything failed
-      write(msg,'(a,3i6,a,i4,a)') "[decomposition:decompose_patch_int] Cannot divide domain with [",patch%n_d(:)," ] cells to ",pieces," piecess. "
+      write(msg,'(a,i3,a,3i6,a,i4,a)') "[decomposition:decompose_patch_int] Cannot divide grid at level ",level_id," with [",patch%n_d(:)," ] cells to ",pieces," piecess."
       if (master) call warn(msg) ! should die
 
    end subroutine decompose_patch_int
@@ -241,28 +258,38 @@ contains
 !! \details Produce specified number of pieces of the grid. On each piece boundary there is either external boundary or a neighbour (another piece)
 !<
 
-   subroutine cartesian_tiling(patch, p_size, pieces)
+   subroutine cartesian_tiling(patch, p_size, pieces, level_id)
 
       use constants,  only: xdim, ydim, ndims, LO, HI, I_ZERO, I_ONE
-      use dataio_pub, only: printinfo, die
+      use dataio_pub, only: printinfo, die, msg
       use domain,     only: dom
       use mpisetup,   only: master, nproc
 
       implicit none
 
-      class(box_T),                      intent(inout) :: patch   !< the patch, which we want to be chopped into pieces
-      integer(kind=4), dimension(ndims), intent(in)    :: p_size  !< number of pieces in each direction
-      integer(kind=4),                   intent(in)    :: pieces  !< number of pieces
+      class(box_T),                      intent(inout) :: patch    !< the patch, which we want to be chopped into pieces
+      integer(kind=4), dimension(ndims), intent(in)    :: p_size   !< number of pieces in each direction
+      integer(kind=4),                   intent(in)    :: pieces   !< number of pieces
+      integer(kind=4),                   intent(in)    :: level_id !< level identifier (for informational use only)
 
       integer(kind=4)                                  :: p
       integer(kind=4), dimension(ndims)                :: pc
 
-      if (product(p_size(:)) /= pieces) call die("[decomposition:cartesian_tiling] product(p_size(:)) /= pieces")
+      if (product(p_size(:)) /= pieces) then
+         write(msg, '(a,i3,a)')"[decomposition:cartesian_tiling]           Level ",level_id,": product(p_size(:)) /= pieces"
+         call die(msg)
+      endif
 
-      if (pieces > nproc) call die("[decomposition:cartesian_tiling] cartesian decomposition into more pieces than processes not implemented yet")
+      if (pieces > nproc) then
+         write(msg, '(a,i3,a)')"[decomposition:cartesian_tiling]           Level ",level_id,": cartesian decomposition into more pieces than processes not implemented yet"
+         call die(msg)
+      endif
       call patch%allocate_pse(pieces)
 
-      if (master) call printinfo("[decomposition:cartesian_tiling] Cartesian decomposition")
+      if (master) then
+         write(msg, '(a,i3,a)')"[decomposition:cartesian_tiling]           Level ",level_id,": cartesian decomposition"
+         call printinfo(msg)
+      endif
 
       do p = I_ZERO, pieces-I_ONE
          pc(:) = [ mod(p, p_size(xdim)), mod(p/p_size(xdim), p_size(ydim)), p/product(p_size(xdim:ydim)) ]
@@ -281,24 +308,28 @@ contains
 !! When pieces == product(p_size(:)), the decomposition can be identical to the result of cartesian_tiling.
 !>
 
-   subroutine choppy_tiling(patch, p_size, pieces)
+   subroutine choppy_tiling(patch, p_size, pieces, level_id)
 
       use constants,  only: ndims, xdim, ydim, zdim, LO, HI, I_ZERO, I_ONE
-      use dataio_pub, only: printinfo
+      use dataio_pub, only: printinfo, msg
       use mpisetup,   only: master
 
       implicit none
 
-      class(box_T),                      intent(inout) :: patch   !< the patch, which we want to be chopped into pieces
-      integer(kind=4), dimension(ndims), intent(in)    :: p_size  !< number of pieces in each direction
-      integer(kind=4),                   intent(in)    :: pieces      !< number of pieces
+      class(box_T),                      intent(inout) :: patch    !< the patch, which we want to be chopped into pieces
+      integer(kind=4), dimension(ndims), intent(in)    :: p_size   !< number of pieces in each direction
+      integer(kind=4),                   intent(in)    :: pieces   !< number of pieces
+      integer(kind=4),                   intent(in)    :: level_id !< level identifier (for informational use only)
 
       integer(kind=4)                                  :: p, px, py
       integer(kind=4), dimension(:), allocatable       :: pz_slab, py_slab
 
       call patch%allocate_pse
 
-      if (master) call printinfo("[decomposition:choppy_tiling] Non-cartesian decomposition")
+      if (master) then
+         write(msg, '(a,i3,a)')"[decomposition:choppy_tiling]              Level ",level_id,": non-cartesian decomposition"
+         call printinfo(msg)
+      endif
       allocate(pz_slab(p_size(zdim) + 1))
       pz_slab(1) = I_ZERO
       do p = I_ONE, p_size(zdim)
@@ -343,7 +374,7 @@ contains
 !!
 !! \attention Must be called by all procs to avoid communication and ensure that every proc has proper psize
 !<
-   subroutine decompose_patch_uniform(p_size, n_d, pieces)
+   subroutine decompose_patch_uniform(p_size, n_d, pieces, level_id)
 
       use constants,  only: xdim, zdim, ndims
       use dataio_pub, only: warn, printinfo, msg
@@ -355,6 +386,7 @@ contains
       integer(kind=4), dimension(ndims), intent(out) :: p_size    !< number of pieces in each direction
       integer(kind=8), dimension(ndims), intent(in)  :: n_d       !< size of the box to be divided
       integer(kind=4),                   intent(in)  :: pieces    !< number of pieces
+      integer(kind=4),                   intent(in)  :: level_id  !< level identifier (for informational use only)
 
       integer(kind=4)                                :: n
       integer                                        :: j1, j2, j3, jj, p
@@ -384,7 +416,10 @@ contains
             endif
 
             if (jj == 0) then
-               if (master) call warn("[decomposition:decompose_patch_uniform]: Can't find divisible edge")
+               if (master) then
+                  write(msg, '(a,i3,a)')"[decomposition:decompose_patch_uniform]    Level ",level_id,": can't find divisible edge"
+                  call warn(msg)
+               endif
                p_size(:) = 1
                return
             else
@@ -397,7 +432,10 @@ contains
       enddo
 
       if (any(ldom(:) < dom%nb .and. dom%has_dir(:)) .or. n /= 1) then
-         if (master) call warn("[decomposition:decompose_patch_uniform]: I am not that intelligent") ! pieces has too big prime factors
+         if (master) then
+            write(msg, '(a,i3,a)')"[decomposition:decompose_patch_uniform]    Level ",level_id,": I am not that intelligent" ! pieces has too big prime factors
+            call warn(msg)
+         end if
          p_size(:) = 1
          return
       endif
@@ -406,7 +444,8 @@ contains
       p_size(:) = tmp(:)
 
       if (master) then
-         write(msg,'(a,3i4,a,3i6,a)')"[decomposition:decompose_patch_uniform] Domain divided to [",p_size(:)," ] pieces, each of [",ldom(zdim:xdim:-1)," ] cells."
+         write(msg,'(a,i3,a,3i4,a,3i6,a)')"[decomposition:decompose_patch_uniform]    Level ",level_id,": grid divided to [",p_size(:), &
+              &                           " ] pieces, each of [",ldom(zdim:xdim:-1)," ] cells."
          call printinfo(msg)
       endif
 
@@ -416,7 +455,7 @@ contains
 !! \brief Divide the computational domain into local domains. Allow their size to change by +/- 1 depending on CPU rank (this will introduce some load imbalance)
 !! if it is not possible to divide an edge evenly. Try to minimize the imbalance and total internal boundaries size.
 !<
-   subroutine decompose_patch_rectlinear(p_size, n_d, pieces)
+   subroutine decompose_patch_rectlinear(p_size, n_d, pieces, level_id)
 
       use constants,  only: xdim, ydim, ndims, I_ZERO, I_ONE
       use dataio_pub, only: printinfo, msg
@@ -428,6 +467,7 @@ contains
       integer(kind=4), dimension(ndims), intent(out) :: p_size   !< number of pieces in each direction
       integer(kind=8), dimension(ndims), intent(in)  :: n_d      !< size of the box to be divided
       integer(kind=4),                   intent(in)  :: pieces   !< number of pieces
+      integer(kind=4),                   intent(in)  :: level_id !< level identifier (for informational use only)
 
       real, parameter                                :: b_load_fac = 0.25 ! estimated increase of execution time after doubling the total size of internal boundaries.
                                                                           ! \todo estimate this factor for massively parallel runs and for Intel processors
@@ -521,14 +561,16 @@ contains
          write(msg,'(a,3f10.2,a,i10)')"m:ddr id p_size = [",(pieces/product(real(n_d(:), kind=8)))**(1./dom%eff_dim)*n_d(:),"], bcells= ", int(ideal_bsize)
          call printinfo(msg)
 #endif /* DEBUG */
-         write(msg,'(a,3i4,a)')      "[decomposition:decompose_patch_rectlinear] Domain divided to [",p_size(:)," ] pieces"
+         write(msg,'(a,i3,a,3i4,a)') "[decomposition:decompose_patch_rectlinear] Level ",level_id,": grid divided to [",p_size(:)," ] pieces"
          call printinfo(msg)
          if (is_uneven) then
-            write(msg,'(2(a,3i5),a)')"                                         Sizes are from [", int(n_d(:)/p_size(:))," ] to [",int((n_d(:)-1)/p_size(:))+1," ] cells."
+            write(msg,'(2(a,3i5),a)')"                                                      Sizes are from [", int(n_d(:)/p_size(:))," ] to [", &
+                 &                   int((n_d(:)-1)/p_size(:))+1," ] cells."
             call printinfo(msg)
-            write(msg,'(a,f8.5)')    "                                         Load balance is ",product(int(n_d(:), kind=8)) / ( real(pieces, kind=8) * product( int((n_d(:)-1)/p_size(:)) + 1 ) )
+            write(msg,'(a,f8.5)')    "                                                      Load balance is ", &
+                 &                   product(int(n_d(:), kind=8)) / ( real(pieces, kind=8) * product( int((n_d(:)-1)/p_size(:)) + 1 ) )
          else
-            write(msg,'(a,3i5,a)')   "                                         Size is [", int(n_d(:)/p_size(:))," ] cells."
+            write(msg,'(a,3i5,a)')   "                                                      Size is [", int(n_d(:)/p_size(:))," ] cells."
          endif
          call printinfo(msg)
       endif
@@ -539,7 +581,7 @@ contains
 !! \brief Divide the computational domain into local domains. Allow their size to depend significantly on CPU rank and allow for more than one neighbour on a single boundary.
 !! Try to minimize the imbalance and total internal boundaries size.
 !<
-   subroutine decompose_patch_slices(p_size, n_d, pieces)
+   subroutine decompose_patch_slices(p_size, n_d, pieces, level_id)
 
       use constants,  only: xdim, ydim, zdim, ndims, I_ONE
       use dataio_pub, only: msg, printinfo, warn
@@ -551,6 +593,7 @@ contains
       integer(kind=4), dimension(ndims), intent(inout) :: p_size      !< number of pieces in each direction
       integer(kind=8), dimension(ndims), intent(in)    :: n_d         !< size of the box to be divided
       integer(kind=4),                   intent(in)    :: pieces      !< number of pieces
+      integer(kind=4),                   intent(in)    :: level_id    !< level identifier (for informational use only)
 
       real, parameter                                  :: minfac = 1.3 ! prevent domain division to halves if cell count in a given direction is too low. (not verified for optimality)
       real                                             :: optc
@@ -575,7 +618,7 @@ contains
 
       where (.not. dom%has_dir(:)) p_size(:) = 1 ! just in case
       do while (product(p_size(:)) < pieces)
-         write(msg,'(a,3i4,a)') "[decomposition:decompose_patch_slices] imperfect noncartesian division to [",p_size(:)," ] pieces"
+         write(msg,'(a,i3,a,3i4,a)') "[decomposition:decompose_patch_slices]     Level ",level_id,": imperfect noncartesian division to [",p_size(:)," ] pieces"
          if (master) call warn(msg)
          if (dom%has_dir(xdim)) then
             p_size(xdim) = p_size(xdim) + I_ONE
@@ -585,7 +628,7 @@ contains
             p_size(zdim) = p_size(zdim) + I_ONE
          endif
       enddo
-      write(msg,'(a,3i4,a)') "[decomposition:decompose_patch_slices] performed noncartesian division to [",p_size(:)," ] pieces"
+      write(msg,'(a,i3,a,3i4,a)') "[decomposition:decompose_patch_slices]     Level ",level_id,": performed noncartesian division to [",p_size(:)," ] pieces"
       if (master) call printinfo(msg)
 
    end subroutine decompose_patch_slices
