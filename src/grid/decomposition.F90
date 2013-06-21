@@ -189,7 +189,7 @@ contains
             patch_divided = patch%is_not_too_small("decompose_patch_uniform")
             if (patch_divided) return
          else
-            write(msg,'(a,i3,2(a,f6.3),a)')"[decomposition:decompose_patch_int] Level ",level_id,": quality of uniform division = ",quality, &
+            write(msg,'(a,i3,2(a,f6.3),a)')"[decomposition:decompose_patch_int]        Level ",level_id,": quality of uniform division = ",quality, &
                  &                         " is below threshold ",dd_unif_quality, ", trying harder ..."
             if (master) call warn(msg)
          endif
@@ -207,12 +207,12 @@ contains
             endif
          endif
          if (master) then
-            write(msg,'(a,i3,a)')"[decomposition:decompose_patch_int] Level ",level_id,": decompose_patch_rectlinear failed"
+            write(msg,'(a,i3,a)')"[decomposition:decompose_patch_int]        Level ",level_id,": decompose_patch_rectlinear failed"
             call warn(msg)
          endif
       else
          if (master) then
-            write(msg,'(a,i3,a)')"[decomposition:decompose_patch_int] Level ",level_id,": did not try uneven domain division"
+            write(msg,'(a,i3,a)')"[decomposition:decompose_patch_int]        Level ",level_id,": did not try uneven domain division"
             call warn(msg)
          endif
       endif
@@ -226,12 +226,12 @@ contains
          patch_divided = patch%is_not_too_small("decompose_patch_slices")
          if (patch_divided) return
          if (master) then
-            write(msg,'(a,i3,a)')"[decomposition:decompose_patch_int] Level ",level_id,": decompose_patch_slices failed"
+            write(msg,'(a,i3,a)')"[decomposition:decompose_patch_int]        Level ",level_id,": decompose_patch_slices failed"
             call warn(msg)
          endif
       else
          if (master) then
-            write(msg,'(a,i3,a)')"[decomposition:decompose_patch_int] Level ",level_id,": did not try non-cartesian domain division"
+            write(msg,'(a,i3,a)')"[decomposition:decompose_patch_int]        Level ",level_id,": did not try non-cartesian domain division"
             call warn(msg)
          endif
       endif
@@ -276,18 +276,18 @@ contains
       integer(kind=4), dimension(ndims)                :: pc
 
       if (product(p_size(:)) /= pieces) then
-         write(msg, '(a,i3,a)')"[decomposition:cartesian_tiling] Level: ",level_id,": product(p_size(:)) /= pieces"
+         write(msg, '(a,i3,a)')"[decomposition:cartesian_tiling]           Level ",level_id,": product(p_size(:)) /= pieces"
          call die(msg)
       endif
 
       if (pieces > nproc) then
-         write(msg, '(a,i3,a)')"[decomposition:cartesian_tiling] Level: ",level_id,": cartesian decomposition into more pieces than processes not implemented yet"
+         write(msg, '(a,i3,a)')"[decomposition:cartesian_tiling]           Level ",level_id,": cartesian decomposition into more pieces than processes not implemented yet"
          call die(msg)
       endif
       call patch%allocate_pse(pieces)
 
       if (master) then
-         write(msg, '(a,i3,a)')"[decomposition:cartesian_tiling] Level: ",level_id,": cartesian decomposition"
+         write(msg, '(a,i3,a)')"[decomposition:cartesian_tiling]           Level ",level_id,": cartesian decomposition"
          call printinfo(msg)
       endif
 
@@ -327,7 +327,7 @@ contains
       call patch%allocate_pse
 
       if (master) then
-         write(msg, '(a,i3,a)')"[decomposition:choppy_tiling] Level: ",level_id,": non-cartesian decomposition"
+         write(msg, '(a,i3,a)')"[decomposition:choppy_tiling]              Level ",level_id,": non-cartesian decomposition"
          call printinfo(msg)
       endif
       allocate(pz_slab(p_size(zdim) + 1))
@@ -417,7 +417,7 @@ contains
 
             if (jj == 0) then
                if (master) then
-                  write(msg, '(a,i3,a)')"[decomposition:decompose_patch_uniform]: Level: ",level_id,": can't find divisible edge"
+                  write(msg, '(a,i3,a)')"[decomposition:decompose_patch_uniform]    Level ",level_id,": can't find divisible edge"
                   call warn(msg)
                endif
                p_size(:) = 1
@@ -433,7 +433,7 @@ contains
 
       if (any(ldom(:) < dom%nb .and. dom%has_dir(:)) .or. n /= 1) then
          if (master) then
-            write(msg, '(a,i3,a)')"[decomposition:decompose_patch_uniform]: Level: ",level_id,": I am not that intelligent" ! pieces has too big prime factors
+            write(msg, '(a,i3,a)')"[decomposition:decompose_patch_uniform]    Level ",level_id,": I am not that intelligent" ! pieces has too big prime factors
             call warn(msg)
          end if
          p_size(:) = 1
@@ -444,7 +444,7 @@ contains
       p_size(:) = tmp(:)
 
       if (master) then
-         write(msg,'(a,i3,a,3i4,a,3i6,a)')"[decomposition:decompose_patch_uniform] Level: ",level_id,": grid divided to [",p_size(:), &
+         write(msg,'(a,i3,a,3i4,a,3i6,a)')"[decomposition:decompose_patch_uniform]    Level ",level_id,": grid divided to [",p_size(:), &
               &                           " ] pieces, each of [",ldom(zdim:xdim:-1)," ] cells."
          call printinfo(msg)
       endif
@@ -561,14 +561,16 @@ contains
          write(msg,'(a,3f10.2,a,i10)')"m:ddr id p_size = [",(pieces/product(real(n_d(:), kind=8)))**(1./dom%eff_dim)*n_d(:),"], bcells= ", int(ideal_bsize)
          call printinfo(msg)
 #endif /* DEBUG */
-         write(msg,'(a,i3,a,3i4,a)') "[decomposition:decompose_patch_rectlinear] Level: ",level_id,": grid divided to [",p_size(:)," ] pieces"
+         write(msg,'(a,i3,a,3i4,a)') "[decomposition:decompose_patch_rectlinear] Level ",level_id,": grid divided to [",p_size(:)," ] pieces"
          call printinfo(msg)
          if (is_uneven) then
-            write(msg,'(2(a,3i5),a)')"                                           Sizes are from [", int(n_d(:)/p_size(:))," ] to [",int((n_d(:)-1)/p_size(:))+1," ] cells."
+            write(msg,'(2(a,3i5),a)')"                                                      Sizes are from [", int(n_d(:)/p_size(:))," ] to [", &
+                 &                   int((n_d(:)-1)/p_size(:))+1," ] cells."
             call printinfo(msg)
-            write(msg,'(a,f8.5)')    "                                           Load balance is ",product(int(n_d(:), kind=8)) / ( real(pieces, kind=8) * product( int((n_d(:)-1)/p_size(:)) + 1 ) )
+            write(msg,'(a,f8.5)')    "                                                      Load balance is ", &
+                 &                   product(int(n_d(:), kind=8)) / ( real(pieces, kind=8) * product( int((n_d(:)-1)/p_size(:)) + 1 ) )
          else
-            write(msg,'(a,3i5,a)')   "                                           Size is [", int(n_d(:)/p_size(:))," ] cells."
+            write(msg,'(a,3i5,a)')   "                                                      Size is [", int(n_d(:)/p_size(:))," ] cells."
          endif
          call printinfo(msg)
       endif
@@ -616,7 +618,7 @@ contains
 
       where (.not. dom%has_dir(:)) p_size(:) = 1 ! just in case
       do while (product(p_size(:)) < pieces)
-         write(msg,'(a,i3,a,3i4,a)') "[decomposition:decompose_patch_slices] Level: ",level_id,": imperfect noncartesian division to [",p_size(:)," ] pieces"
+         write(msg,'(a,i3,a,3i4,a)') "[decomposition:decompose_patch_slices]     Level ",level_id,": imperfect noncartesian division to [",p_size(:)," ] pieces"
          if (master) call warn(msg)
          if (dom%has_dir(xdim)) then
             p_size(xdim) = p_size(xdim) + I_ONE
@@ -626,7 +628,7 @@ contains
             p_size(zdim) = p_size(zdim) + I_ONE
          endif
       enddo
-      write(msg,'(a,i3,a,3i4,a)') "[decomposition:decompose_patch_slices] Level: ",level_id,": performed noncartesian division to [",p_size(:)," ] pieces"
+      write(msg,'(a,i3,a,3i4,a)') "[decomposition:decompose_patch_slices]     Level ",level_id,": performed noncartesian division to [",p_size(:)," ] pieces"
       if (master) call printinfo(msg)
 
    end subroutine decompose_patch_slices
