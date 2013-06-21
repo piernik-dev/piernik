@@ -431,7 +431,7 @@ contains
          enddo
       enddo
 
-      if (any(ldom(:) < dom%nb .and. dom%has_dir(:)) .or. n /= 1) then
+      if (any(ldom(:) < dom%nb .and. dom%has_dir(zdim:xdim:-1)) .or. n /= 1) then
          if (master) then
             write(msg, '(a,i3,a)')"[decomposition:decompose_patch_uniform]    Level ",level_id,": I am not that intelligent" ! pieces has too big prime factors
             call warn(msg)
