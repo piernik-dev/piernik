@@ -383,7 +383,7 @@ contains
          if (allocated(coarsest%level%pse)) cnt = cnt + size(coarsest%level%pse(p)%c(:))
       enddo
 
-      if (base_no_fft .and. (cnt /= 1)) call warn("[multigrid_gravity:init_multigrid_grav] Cannot use FFT solver on coarsest level")
+      if (base_no_fft .and. (cnt /= 1) .and. master) call warn("[multigrid_gravity:init_multigrid_grav] Cannot use FFT solver on coarsest level")
       base_no_fft = base_no_fft .or. (cnt /= 1)
 
       cnt_max = cnt
