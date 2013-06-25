@@ -804,7 +804,7 @@ contains
       use func,           only: f2c, c2f
       use grid_cont,      only: grid_container
       use mpi,            only: MPI_DOUBLE_PRECISION
-      use mpisetup,       only: comm, mpi_err, req, status, inflate_req
+      use mpisetup,       only: comm, mpi_err, req, status, inflate_req, master
 
       implicit none
 
@@ -828,10 +828,10 @@ contains
       logical, save :: firstcall = .true.
 
       if (present(dir)) then
-         if (firstcall) call warn("[cg_level_connected:prolong_bnd_from_coarser] dir present but not implemented yet")
+         if (firstcall .and. master) call warn("[cg_level_connected:prolong_bnd_from_coarser] dir present but not implemented yet")
       endif
       if (present(nocorners)) then
-         if (firstcall) call warn("[cg_level_connected:prolong_bnd_from_coarser] nocorners present but not implemented yet")
+         if (firstcall .and. master) call warn("[cg_level_connected:prolong_bnd_from_coarser] nocorners present but not implemented yet")
       endif
 
       firstcall = .false.
