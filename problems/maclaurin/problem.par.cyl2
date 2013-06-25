@@ -1,0 +1,89 @@
+ $BASE_DOMAIN
+    n_d = 64, 64, 64
+    bnd_xl = 'out'
+    bnd_xr = 'out'
+    bnd_yl = 'out'
+    bnd_yr = 'out'
+    bnd_zl = 'out'
+    bnd_zr = 'out'
+    xmin   =  1.0
+    xmax   =  3.0
+    ymin   = -.5 !0.
+    ymax   =  .5 !7.
+    zmin   = -1.
+    zmax   =  1.
+    geometry = "cylindrical"
+ /
+
+ $MPI_BLOCKS
+ /
+
+ $UNITS
+    units_set = "cgs"
+ /
+
+ $RESTART_CONTROL
+    restart  = 'none'
+    new_id   = ''
+    nrestart = 0
+ /
+
+ $END_CONTROL
+    tend   = 0.0
+    nend   = 1 ! we can set here 0 as weel, but this would issue a warning
+ /
+
+ $OUTPUT_CONTROL
+    problem_name ='maclaurin'
+    run_id =  'sph'
+    dt_hdf  = 10.0
+    dt_res  = 0.0
+    dt_log  = 0.001
+    dt_tsl  = 0.001
+    vars(1:) = 'dens', 'gpot', 'apot', 'ares', 'errp'
+ /
+
+ $FLUID_DUST
+    selfgrav = .true.
+ /
+
+ $NUMERICAL_SETUP
+    cfl    = 0.7
+    smalld = 1.e-20
+    smallei= 1.e-20
+    limiter= 'vanleer'
+ /
+
+ $GRAVITY
+ /
+
+ $RESISTIVITY
+ /
+
+ $PROBLEM_CONTROL
+    x0     = 2.
+    y0     = 0. !3.1415926535897
+    z0     = 0.
+    d0     = 1.
+    a1     = 0.5
+    e      = 0.
+    nsub   = 3
+ /
+
+ $MULTIGRID_SOLVER
+    stdout    = .true.
+    dirty_debug = .true.
+ /
+
+ $MULTIGRID_GRAVITY
+    grav_bnd_str  = "isolated"
+ /
+
+ $INTERACTIONS
+ /
+
+ $PIERNIK_DEBUG
+ /
+
+ $AMR
+ /
