@@ -529,8 +529,12 @@ contains
                           cg%q(iv)%arr(fse(xdim, LO)+1:fse(xdim, HI):2, fse(ydim, LO)+1:fse(ydim, HI):2, fse(zdim, LO)+1:fse(zdim, HI):2)) * norm
                      case (GEO_RPZ)
                         do i = fse(xdim, LO), fse(xdim, HI)
-                           cg%ro_tgt%seg(g)%buf(1+(i-fse(xdim, LO))/refinement_factor, 1:1+fse(ydim, HI)/refinement_factor, 1:1+fse(zdim, HI)/refinement_factor) = &
-                                cg%ro_tgt%seg(g)%buf(1+(i-fse(xdim, LO))/refinement_factor, 1:1+fse(ydim, HI)/refinement_factor, 1:1+fse(zdim, HI)/refinement_factor) + ( &
+                           cg%ro_tgt%seg(g)%buf     (  1+(i            -fse(xdim, LO))/refinement_factor, &
+                                &                    1:1+(fse(ydim, HI)-fse(ydim, LO))/refinement_factor, &
+                                &                    1:1+(fse(zdim, HI)-fse(zdim, LO))/refinement_factor) = &
+                                cg%ro_tgt%seg(g)%buf(  1+(i            -fse(xdim, LO))/refinement_factor, &
+                                &                    1:1+(fse(ydim, HI)-fse(ydim, LO))/refinement_factor, &
+                                &                    1:1+(fse(zdim, HI)-fse(zdim, LO))/refinement_factor) + ( &
                                 cg%q(iv)%arr(i, fse(ydim, LO):fse(ydim, HI)-1:2, fse(zdim, LO):fse(zdim, HI)-1:2) + &
                                 cg%q(iv)%arr(i, fse(ydim, LO)+1:fse(ydim, HI):2, fse(zdim, LO):fse(zdim, HI)-1:2) + &
                                 cg%q(iv)%arr(i, fse(ydim, LO):fse(ydim, HI)-1:2, fse(zdim, LO)+1:fse(zdim, HI):2) + &
