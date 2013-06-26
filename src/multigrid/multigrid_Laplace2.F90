@@ -135,7 +135,7 @@ contains
                !> \todo convert Lx1, Ly_a and L0_a into precomputed arrays
                allocate(Lx1(cg%is:cg%ie), Ly_a(cg%is:cg%ie), L0_a(cg%is:cg%ie))
                Ly_a(cg%is:cg%ie) = cg%idy2 * cg%inv_x(cg%is:cg%ie)**2 ! cylindrical factor
-               Lx1 (cg%is:cg%ie) = half * (cg%idx * cg%inv_x(cg%is:cg%ie))
+               Lx1 (cg%is:cg%ie) = half * (cg%idx * cg%inv_x(cg%is:cg%ie)) ! cylindrical term coefficient. Factor half comes from the way we're differentiating
                L0_a(cg%is:cg%ie) = -2. * (Lx + Ly_a(cg%is:cg%ie) + Lz)
                do k = cg%ks, cg%ke
                   do j = cg%js, cg%je
@@ -233,7 +233,7 @@ contains
                crz = cr * crz
                cr  = cr * cg%dvol**2 * cg%x**2
 
-               crx1 = 2. * cg%x(is:ie) * cg%idx
+               crx1 = 2. * cg%x(is:ie) * cg%idx ! cylindrical term coefficient. Factor 2. comes from the way we're differentiating
                where (crx1 /= 0.) crx1 = 1./crx1
             endif
             call set_relax_boundaries(cg, soln, is, ie, js, je, ks, ke, b, .not. need_all_bnd_upd)
