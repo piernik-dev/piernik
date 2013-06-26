@@ -770,16 +770,55 @@ contains
                   endif
                case (BND_PER)
                case (BND_OUT, BND_OUTD, BND_OUTH, BND_OUTHD)
-                  l(dir,:) = cg%lhn(dir,side)
-                  r(dir,:) = cg%lhn(dir,side) + I_THREE - I_TWO*side
-                  cg%b(:,l(xdim,LO):l(xdim,HI),l(ydim,LO):l(ydim,HI),l(zdim,LO):l(zdim,HI)) = cg%b(:,r(xdim,LO):r(xdim,HI),r(ydim,LO):r(ydim,HI),r(zdim,LO):r(zdim,HI))
-               case default
-                  write(msg,'(2(a,i3))') "[cg_list_bnd:bnd_b]: Boundary condition ",cg%bnd(dir, side)," not implemented in ",dir
-                  if (master) call warn(msg)
-            end select
-         enddo
-         cgl => cgl%nxt
+                  call outflow_b(cg, dir, side)
+               case default 
+                  write(msg,'(2(a,i3))') "[cg_list_bnd:bnd_b]: Boundary condition ",cg%bnd(dir, side)," not implemented in ",dir 
+                  if (master) call warn(msg) 
+            end select 
+         enddo 
+         cgl => cgl%nxt 
       enddo
+
+      contains
+
+         subroutine outflow_b(cg, dir, side)
+            use grid_cont,             only: grid_container
+            implicit none
+            type(grid_container), pointer    :: cg
+            integer(kind=4),      intent(in) :: dir
+            integer(kind=4),      intent(in) :: side
+
+            integer :: i, it
+            integer :: pm_one   !< +1 for LO and -1 for HI
+            integer :: pm_two   !< +2 for LO and -2 for HI
+
+            pm_one = I_THREE - I_TWO * side
+            pm_two = 2 * pm_one
+
+            select case(dir)
+               case (xdim)
+                  do i = 1, dom%nb
+                     it = cg%ijkse(dir, side) - pm_one * i
+                     cg%b(xdim, it, :, :) = 2.0 * cg%b(xdim, it + pm_one, :, :) - cg%b(xdim, it + pm_two, :, :)
+                     cg%b(ydim, it, :, :) = cg%b(ydim, it + pm_one, :, :)
+                     cg%b(zdim, it, :, :) = cg%b(zdim, it + pm_one, :, :)
+                  enddo
+               case (ydim)
+                  do i = 1, dom%nb
+                     it = cg%ijkse(dir, side) - pm_one * i
+                     cg%b(ydim, :, it, :) = 2.0 * cg%b(ydim, :, it + pm_one, :) - cg%b(ydim, :, it + pm_two, :)
+                     cg%b(xdim, :, it, :) = cg%b(xdim, :, it + pm_one, :)
+                     cg%b(zdim, :, it, :) = cg%b(zdim, :, it + pm_one, :)
+                  enddo
+               case (zdim)
+                  do i = 1, dom%nb
+                     it = cg%ijkse(dir, side) - pm_one * i
+                     cg%b(zdim, :, :, it) = 2.0 * cg%b(zdim, :, :, it + pm_one) - cg%b(zdim, :, :, it + pm_two)
+                     cg%b(xdim, :, :, it) = cg%b(xdim, :, :, it + pm_one)
+                     cg%b(ydim, :, :, it) = cg%b(ydim, :, :, it + pm_one)
+                  enddo
+            end select
+         end subroutine outflow_b
 
    end subroutine bnd_b
 
