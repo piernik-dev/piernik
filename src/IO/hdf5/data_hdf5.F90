@@ -72,8 +72,9 @@ contains
 
    function datafields_descr(var) result(f)
 
-      use gdf,   only: gdf_field_type
-      use units, only: cm, gram, sek
+      use constants, only: fpi
+      use gdf,       only: gdf_field_type
+      use units,     only: cm, gram, sek, miu0
 
       implicit none
 
@@ -98,6 +99,8 @@ contains
             f%fu = "\rm{g}/\rm{cm}/\rm{s}^2"
             f%f2cgs = gram/cm/sek**2
          case ("magx", "magy", "magz")
+            f%fu = "\rm{Gs}"
+            f%f2cgs = fpi * sqrt(cm / (miu0 * gram)) * sek
             f%stag = 1
          case ("cr1" : "cr9")
          case ("gpot")
