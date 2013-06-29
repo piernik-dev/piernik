@@ -83,8 +83,6 @@
 
  $PROBLEM_CONTROL
     d0      = 1700.0  ! g/cm**2 Desch
-    dout    = 1e-6
-    r_max   = 11.5
     r_in    = 2.4
     r_out   = 11.5
     f_out   = 11.0
@@ -92,11 +90,7 @@
     use_inner_orbital_period = .false.
     dumping_coeff = 2.8330710514442776
     dens_exp = 1.5    ! Desch
-    dens_amb = 5.e-12
-    cutoff_ncells = 300
-    x_cut    = 7.0
     eps      = 1.0
-    densfile = ""
     amp_noise = 1.0e-6
  /
 
