@@ -30,7 +30,7 @@
 
 module initproblem
 
-   use constants,    only: cbuff_len, dsetnamelen
+   use constants,    only: dsetnamelen
 
    implicit none
 
@@ -44,40 +44,34 @@ module initproblem
       enumerator :: RANDOM = 1, SINE
    end enum
 
-   real                     :: d0, r_max, dout, alpha, r_in, r_out, f_in, f_out
+   real                     :: d0, r_in, r_out, f_in, f_out
    real                     :: dens_exp      !< exponent in profile density \f$\rho(R) = \rho_0 R^{-k}\f$
-   real                     :: dens_amb      !< density of ambient medium (used for inner cutoff)
    real                     :: eps           !< dust to gas ratio
-   real                     :: x_cut, a_cut  !< radius of inner disk cut-off
-   real                     :: dens_max
    integer(kind=4)          :: cutoff_ncells !< width of cut-off profile
-   real, save               :: T_inner = 0.0 !< Orbital period at the inner boundary, \todo save it to restart as an attribute
+   real, save               :: T_inner = 0.0 !< Orbital period at the inner boundary
    real, save               :: max_vy = -HUGE(1.0) !< Maximum tangential dust velocity
    integer(kind=4), save    :: noise_added = NOT_ADDED !< whether noise has been already added
    !>
    !! \f$\tau\f$ in \f$\frac{Du}{Dt} = - \frac{u-u_0}{\tau}f(R)
    !! when initproblem::problem_customize_solution is used
    !<
-   real                     :: dumping_coeff, drag_max, drag_min, amp_noise
+   real                     :: dumping_coeff, amp_noise
    logical                  :: use_inner_orbital_period  !< use 1./T_inner as dumping_coeff
-   integer(kind=4), parameter :: ngauss = 4
-   real, dimension(ngauss)  :: gauss
-   character(len=cbuff_len) :: densfile
-   real, dimension(:), allocatable :: taus, tauf
-   character(len=dsetnamelen), parameter :: inid_n = "u_0"
    integer(kind=4)          :: amp_func  !< 1 - random, 2 - sine
 
-   namelist /PROBLEM_CONTROL/  alpha, d0, dout, r_max, r_in, r_out, f_in, f_out, &
-      & dens_exp, eps, dens_amb, x_cut, cutoff_ncells, dumping_coeff, use_inner_orbital_period, &
-      & drag_max, drag_min, densfile, amp_noise, amp_func, gauss, a_cut, dens_max
+   integer(kind=4), parameter :: ngauss = 4
+   real, dimension(ngauss)  :: gauss
+   character(len=dsetnamelen), parameter :: inid_n = "u_0"
+
+   namelist /PROBLEM_CONTROL/  d0, r_in, r_out, f_in, f_out, dens_exp, eps, dumping_coeff, use_inner_orbital_period, &
+      & amp_noise, amp_func, gauss
 
 contains
-!-----------------------------------------------------------------------------
+!-----------------------------------------------------------------------------------------------------------------------
    subroutine problem_pointers
 
       use dataio_user,           only: user_attrs_wr, user_attrs_rd
       use user_hooks,            only: problem_customize_solution, problem_grace_passed, problem_post_restart
-      use fluidboundaries_funcs, only: user_fluidbnd
       use gravity,               only: grav_pot_3d
 #ifdef HDF5
       use dataio_user,           only: user_vars_hdf5
@@ -90,14 +84,13 @@ contains
       problem_customize_solution => problem_customize_solution_kepler
       problem_grace_passed => si_grace_passed
       problem_post_restart => kepler_problem_post_restart
-      user_fluidbnd => my_fbnd
       grav_pot_3d => my_grav_pot_3d
 #ifdef HDF5
       user_vars_hdf5 => prob_vars_hdf5
 #endif /* HDF5 */
 
    end subroutine problem_pointers
-!-----------------------------------------------------------------------------
+!-----------------------------------------------------------------------------------------------------------------------
    subroutine register_user_var
 
       use cg_list_global,   only: all_cg
@@ -112,19 +105,15 @@ contains
       call all_cg%reg_var(inid_n, restart_mode = AT_NO_B, dim4 = dim4)
 
    end subroutine register_user_var
-!-----------------------------------------------------------------------------
+!-----------------------------------------------------------------------------------------------------------------------
    subroutine read_problem_par
 
       use dataio_pub,            only: nh      ! QA_WARN required for diff_nml
-      use mpisetup,              only: cbuff, rbuff, ibuff, lbuff, master, slave, piernik_MPI_Bcast
+      use mpisetup,              only: rbuff, ibuff, lbuff, master, slave, piernik_MPI_Bcast
 
       implicit none
 
       d0               = 1.0
-      dout             = 1.0e-4
-      r_max            = 1.0
-      densfile         = ''
-      alpha            = 1.0
       amp_noise        = 1.e-6
       amp_func         = RANDOM
       gauss            = 0.0
@@ -135,13 +124,8 @@ contains
       f_out            = 0.0
 
       dens_exp         = 0.0
-      dens_amb         = 1.e-3
       eps              = 1.0
-      x_cut            = 2.5
-      a_cut            = 15.0
-      dens_max         = 500.0
 
-      cutoff_ncells    = 8
       dumping_coeff    = 1.0
 
       use_inner_orbital_period = .false.
@@ -150,75 +134,50 @@ contains
 
          diff_nml(PROBLEM_CONTROL)
 
-         ibuff(1) = cutoff_ncells
-         ibuff(2) = amp_func
+         ibuff(1) = amp_func
 
          lbuff(1) = use_inner_orbital_period
 
-         cbuff(1) = densfile
-
          rbuff(1) = d0
-         rbuff(2) = dout
-         rbuff(3) = r_max
-         rbuff(4) = alpha
-         rbuff(5) = r_in
-         rbuff(6) = r_out
-         rbuff(7) = f_in
-         rbuff(8) = f_out
-         rbuff(9)  = dens_exp
-         rbuff(10) = eps
-         rbuff(11) = dens_amb
-         rbuff(12) = x_cut
-         rbuff(13) = dumping_coeff
-         rbuff(14) = drag_max
-         rbuff(15) = drag_min
-         rbuff(16) = amp_noise
-         rbuff(17:20) = gauss
-         rbuff(21) = a_cut
-         rbuff(22) = dens_max
+         rbuff(2) = r_in
+         rbuff(3) = r_out
+         rbuff(4) = f_in
+         rbuff(5) = f_out
+         rbuff(6) = dens_exp
+         rbuff(7) = eps
+         rbuff(8) = dumping_coeff
+         rbuff(9) = amp_noise
+         rbuff(10:13) = gauss
 
       endif
 
-      call piernik_MPI_Bcast(cbuff, cbuff_len)
       call piernik_MPI_Bcast(rbuff)
       call piernik_MPI_Bcast(ibuff)
       call piernik_MPI_Bcast(lbuff)
 
       if (slave) then
 
-         cutoff_ncells    = ibuff(1)
-         amp_func         = ibuff(2)
+         amp_func         = ibuff(1)
 
          use_inner_orbital_period = lbuff(1)
 
-         densfile         = cbuff(1)
-
          d0               = rbuff(1)
-         dout             = rbuff(2)
-         r_max            = rbuff(3)
-         alpha            = rbuff(4)
-         r_in             = rbuff(5)
-         r_out            = rbuff(6)
-         f_in             = rbuff(7)
-         f_out            = rbuff(8)
-         dens_exp         = rbuff(9)
-         eps              = rbuff(10)
-         dens_amb         = rbuff(11)
-         x_cut            = rbuff(12)
-         dumping_coeff    = rbuff(13)
-         drag_max         = rbuff(14)
-         drag_min         = rbuff(15)
-         amp_noise        = rbuff(16)
-         gauss            = rbuff(17:20)
-         a_cut            = rbuff(21)
-         dens_max         = rbuff(22)
+         r_in             = rbuff(2)
+         r_out            = rbuff(3)
+         f_in             = rbuff(4)
+         f_out            = rbuff(5)
+         dens_exp         = rbuff(6)
+         eps              = rbuff(7)
+         dumping_coeff    = rbuff(8)
+         amp_noise        = rbuff(9)
+         gauss            = rbuff(10:13)
 
       endif
 
       call register_user_var
 
    end subroutine read_problem_par
-!-----------------------------------------------------------------------------
+!-----------------------------------------------------------------------------------------------------------------------
    subroutine si_grace_passed
 
       implicit none
@@ -231,7 +190,7 @@ contains
       end select
 
    end subroutine si_grace_passed
-!-----------------------------------------------------------------------------
+!-----------------------------------------------------------------------------------------------------------------------
    subroutine add_sine
 
       use cg_leaves,  only: leaves
@@ -274,13 +233,6 @@ contains
                cg%u(flind%dst%imz,i,:,k) = cg%u(flind%dst%imz,i,:,k) + amp_noise*sin(kx*cg%x(i) + kz*cg%z(k)) * cg%u(flind%dst%idn,i,:,k)
             enddo
          enddo
-#ifdef DEBUG
-         open(456, file="perturbation.dat", status="unknown")
-         do k = cg%ks, cg%ke
-            write(456,*) cg%z(k), sin(kz*cg%z(k))
-         enddo
-         close(456)
-#endif /* DEBUG */
 
          cgl => cgl%nxt
       enddo
@@ -288,7 +240,7 @@ contains
       noise_added = ADDED
 
    end subroutine add_sine
-!-----------------------------------------------------------------------------
+!-----------------------------------------------------------------------------------------------------------------------
    subroutine add_random_noise
 
       use cg_leaves,  only: leaves
@@ -337,7 +289,7 @@ contains
       noise_added = ADDED
 
    end subroutine add_random_noise
-!-----------------------------------------------------------------------------
+!-----------------------------------------------------------------------------------------------------------------------
    subroutine problem_initial_conditions
 
       use cg_leaves,          only: leaves
@@ -347,19 +299,11 @@ contains
       use domain,             only: dom, is_multicg
       use fluidindex,         only: flind
       use fluidtypes,         only: component_fluid
-      use gravity,            only: r_smooth, ptmass, source_terms_grav, grav_pot2accel, grav_pot_3d
+      use gravity,            only: r_smooth, ptmass
       use grid_cont,          only: grid_container
-      use interactions,       only: epstein_factor
       use mpisetup,           only: master, piernik_MPI_Allreduce
       use named_array_list,   only: wna
       use units,              only: newtong, gram, cm, kboltz, mH
-#ifdef FGSL
-      use cg_level_base,      only: base
-      use mpisetup,           only: proc, piernik_MPI_Bcast
-#endif /* FGSL */
-#ifdef MULTIGRID
-      use multigrid_gravity,  only: invalidate_history
-#endif
 
       implicit none
 
@@ -367,10 +311,7 @@ contains
       real                            :: xi, yj, zk, rc, vz, sqr_gm, vr, vphi
       real                            :: gprim, H2
 
-      real, dimension(:), allocatable :: grav, dens_prof, dens_cutoff, ln_dens_der
-#ifdef FGSL
-      real, dimension(:), allocatable :: gdens
-#endif /* FGSL */
+      real, dimension(:), allocatable :: grav, dens_prof, ln_dens_der
       class(component_fluid), pointer :: fl
       type(cg_list_element),  pointer :: cgl
       type(grid_container),   pointer :: cg
@@ -409,10 +350,6 @@ contains
                endif
                call printinfo("------------------------------------------------------------------")
             endif
-            call grav_pot_3d ! this calls multigrid twice. Second call will get rubbish if there will be temporal extrapolation switched on
-#ifdef MULTIGRID
-            call invalidate_history
-#endif
 
             xl = cg%lhn(xdim, LO)
             xr = cg%lhn(xdim, HI)
@@ -420,27 +357,9 @@ contains
             if (size(ln_dens_der) /= xr-xl+1) deallocate(ln_dens_der)
             allocate(ln_dens_der(xl:xr))
             if (.not.allocated(dens_prof)) allocate(dens_prof(xl:xr))
-            if (.not.allocated(dens_cutoff)) allocate(dens_cutoff(xl:xr))
-            if (.not.allocated(tauf)) allocate(tauf(xl:xr))
-            if (.not.allocated(taus)) allocate(taus(xl:xr)) ! not deallocated
 
-            call source_terms_grav
-            call grav_pot2accel(xdim, int(cg%lhn(ydim, LO)), int(cg%lhn(zdim, LO)), int(size(grav), kind=4), grav, 1, cg)
-
+            grav = compute_gravaccelR(cg)
             dens_prof(:) = d0 * cg%x(:)**(-dens_exp)  * gram / cm**2
-
-            tauf(:) = epstein_factor(flind%neu%pos)/dens_prof(:)
-#ifdef FGSL
-            if (densfile /= "") then
-               allocate(gdens(dom%n_d(xdim)+dom%nb*2))
-               if (master) call read_dens_profile(densfile,gdens)
-               call piernik_MPI_Bcast(gdens)
-               dens_prof(:) = gdens( base%level%pse(proc)%c(cg%grid_id)%se(xdim, LO)+1:base%level%pse(proc)%c(cg%grid_id)%se(xdim, HI)+1+dom%nb*2)
-               deallocate(gdens)
-            endif
-#endif /* FGSL */
-!           dens_prof = get_lcutoff2(cg%x(:), x_cut, a_cut)
-!           dens_prof = dens_prof(:)*(1.0-get_lcutoff2(cg%x(:), x_cut, a_cut)) + dens_max*get_lcutoff2(cg%x(:), x_cut, a_cut)
 
             !! \f$ v_\phi = \sqrt{R\left(c_s^2 \partial_R \ln\rho + \partial_R \Phi \right)} \f$
             ln_dens_der  = log(dens_prof)
@@ -451,14 +370,6 @@ contains
             if (master) call printinfo(msg)
             write(msg,*) "III Kepler Law gives T = ", sqr_gm/dpi , " yr at 1 AU"
             if (master) call printinfo(msg)
-#ifdef DEBUG
-            open(143,file="dens_prof.dat",status="unknown")
-               do p = cg%lhn(xdim, LO), cg%lhn(xdim, HI)
-                  write(143,'(4(ES14.4,1X))') cg%x(p), dens_prof(p), sqrt( max(cg%x(p)*(flind%neu%cs2*ln_dens_der(p) + abs(grav(p))),0.0) ), &
-                       sqrt( max(abs(grav(p)) * cg%x(p) - flind%neu%cs2*dens_exp,0.0))
-               enddo
-            close(143)
-#endif /* DEBUG */
 
             do p = 1, flind%fluids
                fl => flind%all_fluids(p)%fl
@@ -503,7 +414,6 @@ contains
                            cg%u(fl%ien,i,j,k) = cg%u(fl%ien,i,j,k) + 0.5*(vr**2+vphi**2+vz**2)*cg%u(fl%idn,i,j,k)
                         endif
                      enddo
-                     taus(i) = vphi/cg%x(i)*tauf(i) ! compiler complains that vphi may be used uninitialized here
                   enddo
                enddo
 
@@ -512,13 +422,7 @@ contains
             cg%b(:,:,:,:) = 0.0
             if (allocated(grav)) deallocate(grav)
             if (allocated(dens_prof)) deallocate(dens_prof)
-#ifdef DEBUG
-            open(123,file="tau.dat",status="unknown")
-            do i = cg%lhn(xdim, LO), cg%lhn(xdim, HI)
-               write(123,*) cg%x(i), tauf(i), taus(i)
-            enddo
-            close(123)
-#endif /* DEBUG */
+            if (allocated(ln_dens_der)) deallocate(ln_dens_der)
          else
             call die("[initproblem:problem_initial_conditions] I don't know what to do... :/")
          endif
@@ -529,7 +433,7 @@ contains
       call piernik_MPI_Allreduce(max_vy, pMAX)
 
    end subroutine problem_initial_conditions
-!-----------------------------------------------------------------------------
+!-----------------------------------------------------------------------------------------------------------------------
    real function mmsn_T(r)
       implicit none
       real, intent(in) :: r         ! [AU]
@@ -538,7 +442,7 @@ contains
 
       mmsn_T = T_0 * r**(-k)
    end function mmsn_T
-!-----------------------------------------------------------------------------
+!-----------------------------------------------------------------------------------------------------------------------
    subroutine kepler_problem_post_restart
 
       use cg_leaves,        only: leaves
@@ -609,7 +513,7 @@ contains
 #endif /* TRACER */
 
    end subroutine kepler_problem_post_restart
-!-----------------------------------------------------------------------------
+!-----------------------------------------------------------------------------------------------------------------------
    subroutine problem_customize_solution_kepler(forward)
 
       use cg_leaves,        only: leaves
@@ -653,13 +557,6 @@ contains
             else
                funcR(1,:) = funcR(1,:) * dumping_coeff
             endif
-#ifdef DEBUG
-            open(212,file="funcR.dat",status="unknown")
-            do j = cg%lhn(xdim, LO), cg%lhn(xdim, HI)
-               write(212,*) cg%x(j),funcR(1,j)
-            enddo
-            close(212)
-#endif /* DEBUG */
             frun = .false.
             funcR(:,:) = spread(funcR(1,:),1,size(cg%u,dim=1))
 
@@ -743,13 +640,13 @@ contains
       if (forward) i = j ! suppress compiler warnings on unused arguments
 
    end subroutine problem_customize_solution_kepler
-!-----------------------------------------------------------------------------
+!-----------------------------------------------------------------------------------------------------------------------
    subroutine my_grav_pot_3d
 
       use cg_leaves, only: leaves
       use cg_list,   only: cg_list_element
       use constants, only: xdim, zdim, LO, HI
-      use gravity,   only: ptmass, sum_potential
+      use gravity,   only: ptmass
       use grid_cont, only: grid_container
       use units,     only: newtong
 
@@ -778,146 +675,33 @@ contains
       endif
 
       frun = .false.
-      call sum_potential
 
    end subroutine my_grav_pot_3d
-!-----------------------------------------------------------------------------
-   subroutine my_fbnd(dir, side, cg, wn, qn, emfdir)
+!-----------------------------------------------------------------------------------------------------------------------
+   !>
+   !! This function is a redundant code that does exactly what grav_pot2accel
+   !! is supposed to. However, it allows to get rid of chicken-egg problem of
+   !! density and gpot and fugly magic that used to do it in init_prob.
+   !<
+   function compute_gravaccelR(cg) result (grav)
 
-      use constants,        only: xdim, LO
+      use constants,        only: xdim, LO, HI, half
+      use gravity,          only: ptmass
       use grid_cont,        only: grid_container
-      use named_array_list, only: wna
+      use units,            only: newtong
 
       implicit none
 
-      integer(kind=4),               intent(in)    :: dir, side
-      type(grid_container), pointer, intent(inout) :: cg
-      integer(kind=4),     optional, intent(in)    :: wn, qn, emfdir
+      type(grid_container),  pointer, intent(in)          :: cg
+      real, dimension(cg%lhn(xdim, LO):cg%lhn(xdim, HI))  :: grav, gpot
 
-      if (.not.present(wn)) return
-
-      if ((dir == xdim) .and. (wn == wna%fi)) then
-         if (side == LO) then
-            call my_bnd_xl(cg)
-         else
-            call my_bnd_xr(cg)
-         endif
-      endif
-
-      return
-      if (present(qn) .or. present(emfdir)) return
-
-   end subroutine my_fbnd
-!-----------------------------------------------------------------------------
-   subroutine my_bnd_xl(cg)
-
-      use constants,  only: xdim, ydim, zdim, LO, HI
-      use fluidindex, only: iarr_all_dn, iarr_all_mx, iarr_all_my, iarr_all_mz, flind
-      use grid_cont,  only: grid_container
-#ifndef ISO
-      use fluidindex, only: iarr_all_en
-#endif /* ISO */
-
-      implicit none
-
-      type(grid_container), pointer, intent(inout) :: cg
-
-      integer :: i
-      real, dimension(size(iarr_all_my), cg%lhn(ydim, LO):cg%lhn(ydim, HI), cg%lhn(zdim, LO):cg%lhn(zdim, HI)) :: vy, vym
-      real, dimension(size(flind%all_fluids))    :: cs2_arr
-      integer, dimension(size(flind%all_fluids)) :: ind_cs2
-
-      do i = 1, size(flind%all_fluids)
-         ind_cs2    = i
-         cs2_arr(i) = flind%all_fluids(i)%fl%cs2
-      enddo
-
-      do i = cg%lhn(xdim, LO), cg%lh1(xdim, LO)
-         cg%u(iarr_all_dn,i,:,:) = cg%u(iarr_all_dn, cg%is,:,:)
-         cg%u(iarr_all_mx,i,:,:) = min(0.0,cg%u(iarr_all_mx, cg%is,:,:))
-         cg%u(iarr_all_my,i,:,:) = cg%u(iarr_all_my, cg%is,:,:)
-         cg%u(iarr_all_mz,i,:,:) = cg%u(iarr_all_mz, cg%is,:,:)
-#ifndef ISO
-         cg%u(iarr_all_en,i,:,:) = cg%u(iarr_all_en, cg%is,:,:)
-#endif /* !ISO */
-      enddo
-
-      do i = cg%lh1(xdim, LO), cg%lhn(xdim, LO), -1
-         vym(:,:,:) = cg%u(iarr_all_my,i+2,:,:)/cg%u(iarr_all_dn,i+1,:,:)
-         vy(:,:,:)  = cg%u(iarr_all_my,i+1,:,:)/cg%u(iarr_all_dn,i+1,:,:)
-!         cg%u(iarr_all_my,i,:,:) = (vym(:,:,:) + (cg%x(i) - cg%x(i+2)) / (cg%x(i+1) - cg%x(i+2)) * (vy - vym))*cg%u(iarr_all_dn,i,:,:)
-      enddo
-
-   end subroutine my_bnd_xl
-!-----------------------------------------------------------------------------
-   subroutine my_bnd_xr(cg)
-
-      use constants,        only: xdim, HI
-      use grid_cont,        only: grid_container
-      use named_array_list, only: wna
-
-      implicit none
-
-      type(grid_container), pointer, intent(inout) :: cg
-
-      cg%u(:, cg%lh1(xdim, HI):cg%lhn(xdim, HI), :, :) = &
-         cg%w(wna%ind(inid_n))%arr(:, cg%lh1(xdim, HI):cg%lhn(xdim, HI), :, :)
-   end subroutine my_bnd_xr
-!-----------------------------------------------------------------------------
-   function get_lcutoff(width, dist, n, vmin, vmax) result(y)
-
-      implicit none
-
-      integer(kind=4), intent(in) :: width  !< width of tanh profile [cells]
-      integer(kind=4), intent(in) :: dist   !< distance between the expected position of the profile and the middle cell of the domain [cells]
-      integer(kind=4), intent(in) :: n      !< length of the profile array
-      real,            intent(in) :: vmin   !< minimal value of the profile
-      real,            intent(in) :: vmax   !< maximum value of the profile
-      real, dimension(n)          :: y, x
-
-      real, parameter             :: kstep = 1.0 !< iteration step for tanh fit
-      real                        :: dv, k
-      integer                     :: nn, i
-
-      x = [(real(i), i=0,n-1)] / real(n) * 10.0 - 5.0
-
-      dv = vmax - vmin
-      nn = huge(1) ; k = 0.0
-
-      do while (width < nn)
-         k = k + kstep
-         nn = get_ncells(x,k)
-      enddo
-
-      y = 0.5*dv*(tanh(x*k) + 1.0) + vmin
-
-      if (dist < 0) then
-         y = eoshift(y,dim=1,shift=dist-width/2,boundary=vmin)
-      else
-         y = eoshift(y,dim=1,shift=dist+width/2,boundary=vmax)
-      endif
-   end function get_lcutoff
-
-   function get_lcutoff2(x, x0, a) result (y)
-      use constants, only: pi
-      implicit none
-      real, intent(in), dimension(:) :: x
-      real, intent(in)               :: x0, a
-      real, dimension(size(x))       :: y
-
-      y = atan(-(x-x0)*a)/pi + 0.5
-
-   end function get_lcutoff2
-!-----------------------------------------------------------------------------
-   integer function get_ncells(x,k)
-      implicit none
-      real, intent(in)               :: k
-      real, intent(in), dimension(:) :: x
-      real, dimension(size(x))       :: y
-      y = tanh(x*k)
-      get_ncells = count(y > -0.99 .and. y < 0.99)
-   end function get_ncells
-!-----------------------------------------------------------------------------
+      gpot = - newtong * ptmass / sqrt(cg%x(:)**2)
+      grav(cg%lhn(xdim, LO)+1:cg%lhn(xdim, HI)-1) = &
+         half*(gpot(cg%lhn(xdim, LO):cg%lhn(xdim, HI)-2) - gpot(cg%lhn(xdim, LO)+2:cg%lhn(xdim, HI))) / cg%dl(xdim)
+      grav(cg%lhn(xdim, LO)) = grav(cg%lhn(xdim, LO)+1)
+      grav(cg%lhn(xdim, HI)) = grav(cg%lhn(xdim, HI)-1)
+   end function compute_gravaccelR
+!-----------------------------------------------------------------------------------------------------------------------
    subroutine prob_vars_hdf5(var,tab, ierrh, cg)
 
       use fluidindex,   only: flind
@@ -940,71 +724,7 @@ contains
       end select
 
    end subroutine prob_vars_hdf5
-!-----------------------------------------------------------------------------
-#ifdef FGSL
-   subroutine read_dens_profile(densfile,gdens)
-
-      use dataio_pub, only: printinfo, msg, warn
-      use domain,     only: dom
-      use fgsl,       only: fgsl_size_t, fgsl_interp_accel, fgsl_interp, fgsl_int, fgsl_char, fgsl_strmax, fgsl_interp_cspline, &
-           &                fgsl_interp_accel_alloc, fgsl_interp_alloc, fgsl_interp_name, fgsl_interp_init, fgsl_interp_eval, fgsl_interp_free, fgsl_interp_accel_free
-      !, fgsl_spline
-
-      implicit none
-
-      character(len=*),   intent(in)            :: densfile
-      real, dimension(:), intent(out)           :: gdens
-
-      type(fgsl_interp_accel)                   :: acc
-      type(fgsl_interp)                         :: a_interp
-      integer(fgsl_int)                         :: fstatus
-      character(kind=fgsl_char,len=fgsl_strmax) :: fname
-      real, dimension(:), allocatable           :: x,y
-      real                                      :: xi
-      integer(fgsl_size_t)                      :: n, nmax
-      integer(kind=4)                           :: i, nxd
-
-      write(msg,*) "[initproblem:read_dens_profile] Reading ", trim(densfile)
-      open(1,file=densfile, status="old", form='unformatted')
-         read(1) i
-         n = i
-         allocate(y(n), x(n))
-         read(1) x
-         read(1) y
-      close(1)
-
-      nmax = n
-      nxd = int(size(gdens) - 2*dom%nb, kind=4)
-
-      if (nxd == n) then
-         call printinfo("[initproblem:read_dens_profile] Saved profile has required dimension \o/")
-         gdens(dom%nb+1:dom%nb+nxd) = y(:)
-      else
-         call warn("[initproblem:read_dens_profile] Saved profile has different dimension :/")
-         write(msg,'(A,I5,A,I5,A)') "[initproblem:read_dens_profile] Performing spline interpolation from",n," to ",nxd," cells."
-         call printinfo(msg)
-         acc = fgsl_interp_accel_alloc()
-         a_interp = fgsl_interp_alloc(fgsl_interp_cspline,nmax)
-         fname = fgsl_interp_name(a_interp)
-         fstatus = fgsl_interp_init(a_interp,x,y,nmax)
-         do i = 1, nxd
-            xi = (1-i /real(nxd))*x(1) + (i/real(nxd))*x(n)
-            gdens(dom%nb+i) = fgsl_interp_eval(a_interp, x, y, xi, acc)
-         enddo
-
-         call fgsl_interp_free(a_interp)
-         call fgsl_interp_accel_free(acc)
-      endif
-
-      do i = 1, dom%nb
-         gdens(i)           = gdens(dom%nb+1)
-         gdens(nxd+dom%nb+i) = gdens(nxd+dom%nb)
-      enddo
-      deallocate(x,y)
-      return
-   end subroutine read_dens_profile
-#endif /* FGSL */
-!-----------------------------------------------------------------------------
+!-----------------------------------------------------------------------------------------------------------------------
    subroutine my_attrs_wr(file_id)
       use hdf5, only: HID_T, SIZE_T
       use h5lt, only: h5ltset_attribute_double_f, h5ltset_attribute_int_f
@@ -1018,7 +738,7 @@ contains
       call h5ltset_attribute_int_f(file_id, "/", "noise_added", [noise_added], bufsize, error)
 
    end subroutine my_attrs_wr
-!-----------------------------------------------------------------------------
+!-----------------------------------------------------------------------------------------------------------------------
    subroutine my_attrs_rd(file_id)
       use constants, only: I_ONE
       use hdf5,      only: HID_T
@@ -1038,7 +758,7 @@ contains
       noise_added = ibuff(1)
 
    end subroutine my_attrs_rd
-!-----------------------------------------------------------------------------
+!-----------------------------------------------------------------------------------------------------------------------
    elemental function signum(a) result (b)
       implicit none
       real, intent(in) :: a
@@ -1049,5 +769,6 @@ contains
          b = -1.0
       endif
    end function signum
+!-----------------------------------------------------------------------------------------------------------------------
 end module initproblem
 ! vim: set tw=120:
