@@ -48,7 +48,7 @@ module initproblem
    real                     :: dens_exp      !< exponent in profile density \f$\rho(R) = \rho_0 R^{-k}\f$
    real                     :: eps           !< dust to gas ratio
    integer(kind=4)          :: cutoff_ncells !< width of cut-off profile
-   real, save               :: T_inner = 0.0 !< Orbital period at the inner boundary, \todo save it to restart as an attribute
+   real, save               :: T_inner = 0.0 !< Orbital period at the inner boundary
    real, save               :: max_vy = -HUGE(1.0) !< Maximum tangential dust velocity
    integer(kind=4), save    :: noise_added = NOT_ADDED !< whether noise has been already added
    !>
@@ -67,7 +67,7 @@ module initproblem
       & amp_noise, amp_func, gauss
 
 contains
-!-----------------------------------------------------------------------------
+!-----------------------------------------------------------------------------------------------------------------------
    subroutine problem_pointers
 
       use dataio_user,           only: user_attrs_wr, user_attrs_rd
@@ -90,7 +90,7 @@ contains
 #endif /* HDF5 */
 
    end subroutine problem_pointers
-!-----------------------------------------------------------------------------
+!-----------------------------------------------------------------------------------------------------------------------
    subroutine register_user_var
 
       use cg_list_global,   only: all_cg
@@ -105,7 +105,7 @@ contains
       call all_cg%reg_var(inid_n, restart_mode = AT_NO_B, dim4 = dim4)
 
    end subroutine register_user_var
-!-----------------------------------------------------------------------------
+!-----------------------------------------------------------------------------------------------------------------------
    subroutine read_problem_par
 
       use dataio_pub,            only: nh      ! QA_WARN required for diff_nml
@@ -134,20 +134,20 @@ contains
 
          diff_nml(PROBLEM_CONTROL)
 
-         ibuff(2) = amp_func
+         ibuff(1) = amp_func
 
          lbuff(1) = use_inner_orbital_period
 
          rbuff(1) = d0
-         rbuff(5) = r_in
-         rbuff(6) = r_out
-         rbuff(7) = f_in
-         rbuff(8) = f_out
-         rbuff(9)  = dens_exp
-         rbuff(10) = eps
-         rbuff(13) = dumping_coeff
-         rbuff(16) = amp_noise
-         rbuff(17:20) = gauss
+         rbuff(2) = r_in
+         rbuff(3) = r_out
+         rbuff(4) = f_in
+         rbuff(5) = f_out
+         rbuff(6) = dens_exp
+         rbuff(7) = eps
+         rbuff(8) = dumping_coeff
+         rbuff(9) = amp_noise
+         rbuff(10:12) = gauss
 
       endif
 
@@ -157,27 +157,27 @@ contains
 
       if (slave) then
 
-         amp_func         = ibuff(2)
+         amp_func         = ibuff(1)
 
          use_inner_orbital_period = lbuff(1)
 
          d0               = rbuff(1)
-         r_in             = rbuff(5)
-         r_out            = rbuff(6)
-         f_in             = rbuff(7)
-         f_out            = rbuff(8)
-         dens_exp         = rbuff(9)
-         eps              = rbuff(10)
-         dumping_coeff    = rbuff(13)
-         amp_noise        = rbuff(16)
-         gauss            = rbuff(17:20)
+         r_in             = rbuff(2)
+         r_out            = rbuff(3)
+         f_in             = rbuff(4)
+         f_out            = rbuff(5)
+         dens_exp         = rbuff(6)
+         eps              = rbuff(7)
+         dumping_coeff    = rbuff(8)
+         amp_noise        = rbuff(9)
+         gauss            = rbuff(10:12)
 
       endif
 
       call register_user_var
 
    end subroutine read_problem_par
-!-----------------------------------------------------------------------------
+!-----------------------------------------------------------------------------------------------------------------------
    subroutine si_grace_passed
 
       implicit none
@@ -190,7 +190,7 @@ contains
       end select
 
    end subroutine si_grace_passed
-!-----------------------------------------------------------------------------
+!-----------------------------------------------------------------------------------------------------------------------
    subroutine add_sine
 
       use cg_leaves,  only: leaves
@@ -240,7 +240,7 @@ contains
       noise_added = ADDED
 
    end subroutine add_sine
-!-----------------------------------------------------------------------------
+!-----------------------------------------------------------------------------------------------------------------------
    subroutine add_random_noise
 
       use cg_leaves,  only: leaves
@@ -289,7 +289,7 @@ contains
       noise_added = ADDED
 
    end subroutine add_random_noise
-!-----------------------------------------------------------------------------
+!-----------------------------------------------------------------------------------------------------------------------
    subroutine problem_initial_conditions
 
       use cg_leaves,          only: leaves
@@ -433,7 +433,7 @@ contains
       call piernik_MPI_Allreduce(max_vy, pMAX)
 
    end subroutine problem_initial_conditions
-!-----------------------------------------------------------------------------
+!-----------------------------------------------------------------------------------------------------------------------
    real function mmsn_T(r)
       implicit none
       real, intent(in) :: r         ! [AU]
@@ -442,7 +442,7 @@ contains
 
       mmsn_T = T_0 * r**(-k)
    end function mmsn_T
-!-----------------------------------------------------------------------------
+!-----------------------------------------------------------------------------------------------------------------------
    subroutine kepler_problem_post_restart
 
       use cg_leaves,        only: leaves
@@ -513,7 +513,7 @@ contains
 #endif /* TRACER */
 
    end subroutine kepler_problem_post_restart
-!-----------------------------------------------------------------------------
+!-----------------------------------------------------------------------------------------------------------------------
    subroutine problem_customize_solution_kepler(forward)
 
       use cg_leaves,        only: leaves
@@ -640,7 +640,7 @@ contains
       if (forward) i = j ! suppress compiler warnings on unused arguments
 
    end subroutine problem_customize_solution_kepler
-!-----------------------------------------------------------------------------
+!-----------------------------------------------------------------------------------------------------------------------
    subroutine my_grav_pot_3d
 
       use cg_leaves, only: leaves
@@ -678,7 +678,7 @@ contains
       call sum_potential
 
    end subroutine my_grav_pot_3d
-!-----------------------------------------------------------------------------
+!-----------------------------------------------------------------------------------------------------------------------
    !>
    !! This function is a redundant code that does exactly what grav_pot2accel
    !! is supposed to. However, it allows to get rid of chicken-egg problem of
@@ -702,7 +702,7 @@ contains
       grav(cg%lhn(xdim, LO)) = grav(cg%lhn(xdim, LO)+1)
       grav(cg%lhn(xdim, HI)) = grav(cg%lhn(xdim, HI)-1)
    end function compute_gravaccelR
-!-----------------------------------------------------------------------------
+!-----------------------------------------------------------------------------------------------------------------------
    subroutine prob_vars_hdf5(var,tab, ierrh, cg)
 
       use fluidindex,   only: flind
@@ -725,7 +725,7 @@ contains
       end select
 
    end subroutine prob_vars_hdf5
-!-----------------------------------------------------------------------------
+!-----------------------------------------------------------------------------------------------------------------------
    subroutine my_attrs_wr(file_id)
       use hdf5, only: HID_T, SIZE_T
       use h5lt, only: h5ltset_attribute_double_f, h5ltset_attribute_int_f
@@ -739,7 +739,7 @@ contains
       call h5ltset_attribute_int_f(file_id, "/", "noise_added", [noise_added], bufsize, error)
 
    end subroutine my_attrs_wr
-!-----------------------------------------------------------------------------
+!-----------------------------------------------------------------------------------------------------------------------
    subroutine my_attrs_rd(file_id)
       use constants, only: I_ONE
       use hdf5,      only: HID_T
@@ -759,7 +759,7 @@ contains
       noise_added = ibuff(1)
 
    end subroutine my_attrs_rd
-!-----------------------------------------------------------------------------
+!-----------------------------------------------------------------------------------------------------------------------
    elemental function signum(a) result (b)
       implicit none
       real, intent(in) :: a
@@ -770,5 +770,6 @@ contains
          b = -1.0
       endif
    end function signum
+!-----------------------------------------------------------------------------------------------------------------------
 end module initproblem
 ! vim: set tw=120:
