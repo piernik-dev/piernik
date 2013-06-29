@@ -47,7 +47,6 @@ module initproblem
    real                     :: d0, r_in, r_out, f_in, f_out
    real                     :: dens_exp      !< exponent in profile density \f$\rho(R) = \rho_0 R^{-k}\f$
    real                     :: eps           !< dust to gas ratio
-   real                     :: dens_max
    integer(kind=4)          :: cutoff_ncells !< width of cut-off profile
    real, save               :: T_inner = 0.0 !< Orbital period at the inner boundary, \todo save it to restart as an attribute
    real, save               :: max_vy = -HUGE(1.0) !< Maximum tangential dust velocity
@@ -65,7 +64,7 @@ module initproblem
    character(len=dsetnamelen), parameter :: inid_n = "u_0"
 
    namelist /PROBLEM_CONTROL/  d0, r_in, r_out, f_in, f_out, dens_exp, eps, dumping_coeff, use_inner_orbital_period, &
-      & amp_noise, amp_func, gauss, dens_max
+      & amp_noise, amp_func, gauss
 
 contains
 !-----------------------------------------------------------------------------
@@ -126,7 +125,6 @@ contains
 
       dens_exp         = 0.0
       eps              = 1.0
-      dens_max         = 500.0
 
       dumping_coeff    = 1.0
 
@@ -150,7 +148,6 @@ contains
          rbuff(13) = dumping_coeff
          rbuff(16) = amp_noise
          rbuff(17:20) = gauss
-         rbuff(22) = dens_max
 
       endif
 
@@ -174,7 +171,6 @@ contains
          dumping_coeff    = rbuff(13)
          amp_noise        = rbuff(16)
          gauss            = rbuff(17:20)
-         dens_max         = rbuff(22)
 
       endif
 
