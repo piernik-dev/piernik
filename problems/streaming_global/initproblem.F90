@@ -58,14 +58,13 @@ module initproblem
    !<
    real                     :: dumping_coeff, amp_noise
    logical                  :: use_inner_orbital_period  !< use 1./T_inner as dumping_coeff
-   integer(kind=4), parameter :: ngauss = 4
-   real, dimension(ngauss)  :: gauss
-   real, dimension(:), allocatable :: taus, tauf
-   character(len=dsetnamelen), parameter :: inid_n = "u_0"
    integer(kind=4)          :: amp_func  !< 1 - random, 2 - sine
 
-   namelist /PROBLEM_CONTROL/  d0, r_in, r_out, f_in, f_out, &
-      & dens_exp, eps, dumping_coeff, use_inner_orbital_period, &
+   integer(kind=4), parameter :: ngauss = 4
+   real, dimension(ngauss)  :: gauss
+   character(len=dsetnamelen), parameter :: inid_n = "u_0"
+
+   namelist /PROBLEM_CONTROL/  d0, r_in, r_out, f_in, f_out, dens_exp, eps, dumping_coeff, use_inner_orbital_period, &
       & amp_noise, amp_func, gauss, dens_max
 
 contains
@@ -238,13 +237,6 @@ contains
                cg%u(flind%dst%imz,i,:,k) = cg%u(flind%dst%imz,i,:,k) + amp_noise*sin(kx*cg%x(i) + kz*cg%z(k)) * cg%u(flind%dst%idn,i,:,k)
             enddo
          enddo
-#ifdef DEBUG
-         open(456, file="perturbation.dat", status="unknown")
-         do k = cg%ks, cg%ke
-            write(456,*) cg%z(k), sin(kz*cg%z(k))
-         enddo
-         close(456)
-#endif /* DEBUG */
 
          cgl => cgl%nxt
       enddo
@@ -311,15 +303,11 @@ contains
       use domain,             only: dom, is_multicg
       use fluidindex,         only: flind
       use fluidtypes,         only: component_fluid
-      use gravity,            only: r_smooth, ptmass, source_terms_grav, grav_pot2accel, grav_pot_3d
+      use gravity,            only: r_smooth, ptmass
       use grid_cont,          only: grid_container
-      use interactions,       only: epstein_factor
       use mpisetup,           only: master, piernik_MPI_Allreduce
       use named_array_list,   only: wna
       use units,              only: newtong, gram, cm, kboltz, mH
-#ifdef MULTIGRID
-      use multigrid_gravity,  only: invalidate_history
-#endif
 
       implicit none
 
@@ -366,10 +354,6 @@ contains
                endif
                call printinfo("------------------------------------------------------------------")
             endif
-            call grav_pot_3d ! this calls multigrid twice. Second call will get rubbish if there will be temporal extrapolation switched on
-#ifdef MULTIGRID
-            call invalidate_history
-#endif
 
             xl = cg%lhn(xdim, LO)
             xr = cg%lhn(xdim, HI)
@@ -377,15 +361,9 @@ contains
             if (size(ln_dens_der) /= xr-xl+1) deallocate(ln_dens_der)
             allocate(ln_dens_der(xl:xr))
             if (.not.allocated(dens_prof)) allocate(dens_prof(xl:xr))
-            if (.not.allocated(tauf)) allocate(tauf(xl:xr))
-            if (.not.allocated(taus)) allocate(taus(xl:xr)) ! not deallocated
 
-            call source_terms_grav
-            call grav_pot2accel(xdim, int(cg%lhn(ydim, LO)), int(cg%lhn(zdim, LO)), int(size(grav), kind=4), grav, 1, cg)
-
+            grav = compute_gravaccelR(cg)
             dens_prof(:) = d0 * cg%x(:)**(-dens_exp)  * gram / cm**2
-
-            tauf(:) = epstein_factor(flind%neu%pos)/dens_prof(:)
 
             !! \f$ v_\phi = \sqrt{R\left(c_s^2 \partial_R \ln\rho + \partial_R \Phi \right)} \f$
             ln_dens_der  = log(dens_prof)
@@ -396,14 +374,6 @@ contains
             if (master) call printinfo(msg)
             write(msg,*) "III Kepler Law gives T = ", sqr_gm/dpi , " yr at 1 AU"
             if (master) call printinfo(msg)
-#ifdef DEBUG
-            open(143,file="dens_prof.dat",status="unknown")
-               do p = cg%lhn(xdim, LO), cg%lhn(xdim, HI)
-                  write(143,'(4(ES14.4,1X))') cg%x(p), dens_prof(p), sqrt( max(cg%x(p)*(flind%neu%cs2*ln_dens_der(p) + abs(grav(p))),0.0) ), &
-                       sqrt( max(abs(grav(p)) * cg%x(p) - flind%neu%cs2*dens_exp,0.0))
-               enddo
-            close(143)
-#endif /* DEBUG */
 
             do p = 1, flind%fluids
                fl => flind%all_fluids(p)%fl
@@ -448,7 +418,6 @@ contains
                            cg%u(fl%ien,i,j,k) = cg%u(fl%ien,i,j,k) + 0.5*(vr**2+vphi**2+vz**2)*cg%u(fl%idn,i,j,k)
                         endif
                      enddo
-                     taus(i) = vphi/cg%x(i)*tauf(i) ! compiler complains that vphi may be used uninitialized here
                   enddo
                enddo
 
@@ -457,13 +426,7 @@ contains
             cg%b(:,:,:,:) = 0.0
             if (allocated(grav)) deallocate(grav)
             if (allocated(dens_prof)) deallocate(dens_prof)
-#ifdef DEBUG
-            open(123,file="tau.dat",status="unknown")
-            do i = cg%lhn(xdim, LO), cg%lhn(xdim, HI)
-               write(123,*) cg%x(i), tauf(i), taus(i)
-            enddo
-            close(123)
-#endif /* DEBUG */
+            if (allocated(ln_dens_der)) deallocate(ln_dens_der)
          else
             call die("[initproblem:problem_initial_conditions] I don't know what to do... :/")
          endif
@@ -598,13 +561,6 @@ contains
             else
                funcR(1,:) = funcR(1,:) * dumping_coeff
             endif
-#ifdef DEBUG
-            open(212,file="funcR.dat",status="unknown")
-            do j = cg%lhn(xdim, LO), cg%lhn(xdim, HI)
-               write(212,*) cg%x(j),funcR(1,j)
-            enddo
-            close(212)
-#endif /* DEBUG */
             frun = .false.
             funcR(:,:) = spread(funcR(1,:),1,size(cg%u,dim=1))
 
@@ -726,6 +682,30 @@ contains
       call sum_potential
 
    end subroutine my_grav_pot_3d
+!-----------------------------------------------------------------------------
+   !>
+   !! This function is a redundant code that does exactly what grav_pot2accel
+   !! is supposed to. However, it allows to get rid of chicken-egg problem of
+   !! density and gpot and fugly magic that used to do it in init_prob.
+   !<
+   function compute_gravaccelR(cg) result (grav)
+
+      use constants,        only: xdim, LO, HI, half
+      use gravity,          only: ptmass
+      use grid_cont,        only: grid_container
+      use units,            only: newtong
+
+      implicit none
+
+      type(grid_container),  pointer, intent(in)          :: cg
+      real, dimension(cg%lhn(xdim, LO):cg%lhn(xdim, HI))  :: grav, gpot
+
+      gpot = - newtong * ptmass / sqrt(cg%x(:)**2)
+      grav(cg%lhn(xdim, LO)+1:cg%lhn(xdim, HI)-1) = &
+         half*(gpot(cg%lhn(xdim, LO):cg%lhn(xdim, HI)-2) - gpot(cg%lhn(xdim, LO)+2:cg%lhn(xdim, HI))) / cg%dl(xdim)
+      grav(cg%lhn(xdim, LO)) = grav(cg%lhn(xdim, LO)+1)
+      grav(cg%lhn(xdim, HI)) = grav(cg%lhn(xdim, HI)-1)
+   end function compute_gravaccelR
 !-----------------------------------------------------------------------------
    subroutine prob_vars_hdf5(var,tab, ierrh, cg)
 
