@@ -95,7 +95,6 @@
     dens_amb = 5.e-12
     cutoff_ncells = 300
     eps      = 1.0
-    densfile = ""
     amp_noise = 1.0e-6
     amp_func = 2
  /

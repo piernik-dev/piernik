@@ -30,7 +30,7 @@
 
 module initproblem
 
-   use constants,    only: cbuff_len, dsetnamelen
+   use constants,    only: dsetnamelen
 
    implicit none
 
@@ -62,14 +62,13 @@ module initproblem
    logical                  :: use_inner_orbital_period  !< use 1./T_inner as dumping_coeff
    integer(kind=4), parameter :: ngauss = 4
    real, dimension(ngauss)  :: gauss
-   character(len=cbuff_len) :: densfile
    real, dimension(:), allocatable :: taus, tauf
    character(len=dsetnamelen), parameter :: inid_n = "u_0"
    integer(kind=4)          :: amp_func  !< 1 - random, 2 - sine
 
    namelist /PROBLEM_CONTROL/  alpha, d0, dout, r_max, r_in, r_out, f_in, f_out, &
       & dens_exp, eps, dens_amb, x_cut, cutoff_ncells, dumping_coeff, use_inner_orbital_period, &
-      & drag_max, drag_min, densfile, amp_noise, amp_func, gauss, a_cut, dens_max
+      & drag_max, drag_min, amp_noise, amp_func, gauss, a_cut, dens_max
 
 contains
 !-----------------------------------------------------------------------------
@@ -116,14 +115,13 @@ contains
    subroutine read_problem_par
 
       use dataio_pub,            only: nh      ! QA_WARN required for diff_nml
-      use mpisetup,              only: cbuff, rbuff, ibuff, lbuff, master, slave, piernik_MPI_Bcast
+      use mpisetup,              only: rbuff, ibuff, lbuff, master, slave, piernik_MPI_Bcast
 
       implicit none
 
       d0               = 1.0
       dout             = 1.0e-4
       r_max            = 1.0
-      densfile         = ''
       alpha            = 1.0
       amp_noise        = 1.e-6
       amp_func         = RANDOM
@@ -155,8 +153,6 @@ contains
 
          lbuff(1) = use_inner_orbital_period
 
-         cbuff(1) = densfile
-
          rbuff(1) = d0
          rbuff(2) = dout
          rbuff(3) = r_max
@@ -179,7 +175,6 @@ contains
 
       endif
 
-      call piernik_MPI_Bcast(cbuff, cbuff_len)
       call piernik_MPI_Bcast(rbuff)
       call piernik_MPI_Bcast(ibuff)
       call piernik_MPI_Bcast(lbuff)
@@ -190,8 +185,6 @@ contains
          amp_func         = ibuff(2)
 
          use_inner_orbital_period = lbuff(1)
-
-         densfile         = cbuff(1)
 
          d0               = rbuff(1)
          dout             = rbuff(2)
@@ -353,10 +346,6 @@ contains
       use mpisetup,           only: master, piernik_MPI_Allreduce
       use named_array_list,   only: wna
       use units,              only: newtong, gram, cm, kboltz, mH
-#ifdef FGSL
-      use cg_level_base,      only: base
-      use mpisetup,           only: proc, piernik_MPI_Bcast
-#endif /* FGSL */
 #ifdef MULTIGRID
       use multigrid_gravity,  only: invalidate_history
 #endif
@@ -368,9 +357,6 @@ contains
       real                            :: gprim, H2
 
       real, dimension(:), allocatable :: grav, dens_prof, dens_cutoff, ln_dens_der
-#ifdef FGSL
-      real, dimension(:), allocatable :: gdens
-#endif /* FGSL */
       class(component_fluid), pointer :: fl
       type(cg_list_element),  pointer :: cgl
       type(grid_container),   pointer :: cg
@@ -430,15 +416,6 @@ contains
             dens_prof(:) = d0 * cg%x(:)**(-dens_exp)  * gram / cm**2
 
             tauf(:) = epstein_factor(flind%neu%pos)/dens_prof(:)
-#ifdef FGSL
-            if (densfile /= "") then
-               allocate(gdens(dom%n_d(xdim)+dom%nb*2))
-               if (master) call read_dens_profile(densfile,gdens)
-               call piernik_MPI_Bcast(gdens)
-               dens_prof(:) = gdens( base%level%pse(proc)%c(cg%grid_id)%se(xdim, LO)+1:base%level%pse(proc)%c(cg%grid_id)%se(xdim, HI)+1+dom%nb*2)
-               deallocate(gdens)
-            endif
-#endif /* FGSL */
 !           dens_prof = get_lcutoff2(cg%x(:), x_cut, a_cut)
 !           dens_prof = dens_prof(:)*(1.0-get_lcutoff2(cg%x(:), x_cut, a_cut)) + dens_max*get_lcutoff2(cg%x(:), x_cut, a_cut)
 
@@ -940,70 +917,6 @@ contains
       end select
 
    end subroutine prob_vars_hdf5
-!-----------------------------------------------------------------------------
-#ifdef FGSL
-   subroutine read_dens_profile(densfile,gdens)
-
-      use dataio_pub, only: printinfo, msg, warn
-      use domain,     only: dom
-      use fgsl,       only: fgsl_size_t, fgsl_interp_accel, fgsl_interp, fgsl_int, fgsl_char, fgsl_strmax, fgsl_interp_cspline, &
-           &                fgsl_interp_accel_alloc, fgsl_interp_alloc, fgsl_interp_name, fgsl_interp_init, fgsl_interp_eval, fgsl_interp_free, fgsl_interp_accel_free
-      !, fgsl_spline
-
-      implicit none
-
-      character(len=*),   intent(in)            :: densfile
-      real, dimension(:), intent(out)           :: gdens
-
-      type(fgsl_interp_accel)                   :: acc
-      type(fgsl_interp)                         :: a_interp
-      integer(fgsl_int)                         :: fstatus
-      character(kind=fgsl_char,len=fgsl_strmax) :: fname
-      real, dimension(:), allocatable           :: x,y
-      real                                      :: xi
-      integer(fgsl_size_t)                      :: n, nmax
-      integer(kind=4)                           :: i, nxd
-
-      write(msg,*) "[initproblem:read_dens_profile] Reading ", trim(densfile)
-      open(1,file=densfile, status="old", form='unformatted')
-         read(1) i
-         n = i
-         allocate(y(n), x(n))
-         read(1) x
-         read(1) y
-      close(1)
-
-      nmax = n
-      nxd = int(size(gdens) - 2*dom%nb, kind=4)
-
-      if (nxd == n) then
-         call printinfo("[initproblem:read_dens_profile] Saved profile has required dimension \o/")
-         gdens(dom%nb+1:dom%nb+nxd) = y(:)
-      else
-         call warn("[initproblem:read_dens_profile] Saved profile has different dimension :/")
-         write(msg,'(A,I5,A,I5,A)') "[initproblem:read_dens_profile] Performing spline interpolation from",n," to ",nxd," cells."
-         call printinfo(msg)
-         acc = fgsl_interp_accel_alloc()
-         a_interp = fgsl_interp_alloc(fgsl_interp_cspline,nmax)
-         fname = fgsl_interp_name(a_interp)
-         fstatus = fgsl_interp_init(a_interp,x,y,nmax)
-         do i = 1, nxd
-            xi = (1-i /real(nxd))*x(1) + (i/real(nxd))*x(n)
-            gdens(dom%nb+i) = fgsl_interp_eval(a_interp, x, y, xi, acc)
-         enddo
-
-         call fgsl_interp_free(a_interp)
-         call fgsl_interp_accel_free(acc)
-      endif
-
-      do i = 1, dom%nb
-         gdens(i)           = gdens(dom%nb+1)
-         gdens(nxd+dom%nb+i) = gdens(nxd+dom%nb)
-      enddo
-      deallocate(x,y)
-      return
-   end subroutine read_dens_profile
-#endif /* FGSL */
 !-----------------------------------------------------------------------------
    subroutine my_attrs_wr(file_id)
       use hdf5, only: HID_T, SIZE_T
