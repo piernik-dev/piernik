@@ -93,8 +93,6 @@
     dumping_coeff = 2.8330710514442776
     dens_exp = 1.5    ! Desch
     dens_amb = 5.e-12
-    cutoff_ncells = 300
-    x_cut    = 7.0
     eps      = 1.0
     amp_noise = 1.0e-6
  /

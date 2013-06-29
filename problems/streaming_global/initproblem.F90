@@ -48,7 +48,6 @@ module initproblem
    real                     :: dens_exp      !< exponent in profile density \f$\rho(R) = \rho_0 R^{-k}\f$
    real                     :: dens_amb      !< density of ambient medium (used for inner cutoff)
    real                     :: eps           !< dust to gas ratio
-   real                     :: x_cut, a_cut  !< radius of inner disk cut-off
    real                     :: dens_max
    integer(kind=4)          :: cutoff_ncells !< width of cut-off profile
    real, save               :: T_inner = 0.0 !< Orbital period at the inner boundary, \todo save it to restart as an attribute
@@ -67,8 +66,8 @@ module initproblem
    integer(kind=4)          :: amp_func  !< 1 - random, 2 - sine
 
    namelist /PROBLEM_CONTROL/  alpha, d0, dout, r_max, r_in, r_out, f_in, f_out, &
-      & dens_exp, eps, dens_amb, x_cut, cutoff_ncells, dumping_coeff, use_inner_orbital_period, &
-      & drag_max, drag_min, amp_noise, amp_func, gauss, a_cut, dens_max
+      & dens_exp, eps, dens_amb, dumping_coeff, use_inner_orbital_period, &
+      & drag_max, drag_min, amp_noise, amp_func, gauss, dens_max
 
 contains
 !-----------------------------------------------------------------------------
@@ -133,11 +132,8 @@ contains
       dens_exp         = 0.0
       dens_amb         = 1.e-3
       eps              = 1.0
-      x_cut            = 2.5
-      a_cut            = 15.0
       dens_max         = 500.0
 
-      cutoff_ncells    = 8
       dumping_coeff    = 1.0
 
       use_inner_orbital_period = .false.
@@ -146,7 +142,6 @@ contains
 
          diff_nml(PROBLEM_CONTROL)
 
-         ibuff(1) = cutoff_ncells
          ibuff(2) = amp_func
 
          lbuff(1) = use_inner_orbital_period
@@ -162,13 +157,11 @@ contains
          rbuff(9)  = dens_exp
          rbuff(10) = eps
          rbuff(11) = dens_amb
-         rbuff(12) = x_cut
          rbuff(13) = dumping_coeff
          rbuff(14) = drag_max
          rbuff(15) = drag_min
          rbuff(16) = amp_noise
          rbuff(17:20) = gauss
-         rbuff(21) = a_cut
          rbuff(22) = dens_max
 
       endif
@@ -179,7 +172,6 @@ contains
 
       if (slave) then
 
-         cutoff_ncells    = ibuff(1)
          amp_func         = ibuff(2)
 
          use_inner_orbital_period = lbuff(1)
@@ -195,13 +187,11 @@ contains
          dens_exp         = rbuff(9)
          eps              = rbuff(10)
          dens_amb         = rbuff(11)
-         x_cut            = rbuff(12)
          dumping_coeff    = rbuff(13)
          drag_max         = rbuff(14)
          drag_min         = rbuff(15)
          amp_noise        = rbuff(16)
          gauss            = rbuff(17:20)
-         a_cut            = rbuff(21)
          dens_max         = rbuff(22)
 
       endif
@@ -354,7 +344,7 @@ contains
       real                            :: xi, yj, zk, rc, vz, sqr_gm, vr, vphi
       real                            :: gprim, H2
 
-      real, dimension(:), allocatable :: grav, dens_prof, dens_cutoff, ln_dens_der
+      real, dimension(:), allocatable :: grav, dens_prof, ln_dens_der
       class(component_fluid), pointer :: fl
       type(cg_list_element),  pointer :: cgl
       type(grid_container),   pointer :: cg
@@ -404,7 +394,6 @@ contains
             if (size(ln_dens_der) /= xr-xl+1) deallocate(ln_dens_der)
             allocate(ln_dens_der(xl:xr))
             if (.not.allocated(dens_prof)) allocate(dens_prof(xl:xr))
-            if (.not.allocated(dens_cutoff)) allocate(dens_cutoff(xl:xr))
             if (.not.allocated(tauf)) allocate(tauf(xl:xr))
             if (.not.allocated(taus)) allocate(taus(xl:xr)) ! not deallocated
 
@@ -414,8 +403,6 @@ contains
             dens_prof(:) = d0 * cg%x(:)**(-dens_exp)  * gram / cm**2
 
             tauf(:) = epstein_factor(flind%neu%pos)/dens_prof(:)
-!           dens_prof = get_lcutoff2(cg%x(:), x_cut, a_cut)
-!           dens_prof = dens_prof(:)*(1.0-get_lcutoff2(cg%x(:), x_cut, a_cut)) + dens_max*get_lcutoff2(cg%x(:), x_cut, a_cut)
 
             !! \f$ v_\phi = \sqrt{R\left(c_s^2 \partial_R \ln\rho + \partial_R \Phi \right)} \f$
             ln_dens_der  = log(dens_prof)
@@ -756,60 +743,6 @@ contains
       call sum_potential
 
    end subroutine my_grav_pot_3d
-!-----------------------------------------------------------------------------
-   function get_lcutoff(width, dist, n, vmin, vmax) result(y)
-
-      implicit none
-
-      integer(kind=4), intent(in) :: width  !< width of tanh profile [cells]
-      integer(kind=4), intent(in) :: dist   !< distance between the expected position of the profile and the middle cell of the domain [cells]
-      integer(kind=4), intent(in) :: n      !< length of the profile array
-      real,            intent(in) :: vmin   !< minimal value of the profile
-      real,            intent(in) :: vmax   !< maximum value of the profile
-      real, dimension(n)          :: y, x
-
-      real, parameter             :: kstep = 1.0 !< iteration step for tanh fit
-      real                        :: dv, k
-      integer                     :: nn, i
-
-      x = [(real(i), i=0,n-1)] / real(n) * 10.0 - 5.0
-
-      dv = vmax - vmin
-      nn = huge(1) ; k = 0.0
-
-      do while (width < nn)
-         k = k + kstep
-         nn = get_ncells(x,k)
-      enddo
-
-      y = 0.5*dv*(tanh(x*k) + 1.0) + vmin
-
-      if (dist < 0) then
-         y = eoshift(y,dim=1,shift=dist-width/2,boundary=vmin)
-      else
-         y = eoshift(y,dim=1,shift=dist+width/2,boundary=vmax)
-      endif
-   end function get_lcutoff
-
-   function get_lcutoff2(x, x0, a) result (y)
-      use constants, only: pi
-      implicit none
-      real, intent(in), dimension(:) :: x
-      real, intent(in)               :: x0, a
-      real, dimension(size(x))       :: y
-
-      y = atan(-(x-x0)*a)/pi + 0.5
-
-   end function get_lcutoff2
-!-----------------------------------------------------------------------------
-   integer function get_ncells(x,k)
-      implicit none
-      real, intent(in)               :: k
-      real, intent(in), dimension(:) :: x
-      real, dimension(size(x))       :: y
-      y = tanh(x*k)
-      get_ncells = count(y > -0.99 .and. y < 0.99)
-   end function get_ncells
 !-----------------------------------------------------------------------------
    subroutine prob_vars_hdf5(var,tab, ierrh, cg)
 
