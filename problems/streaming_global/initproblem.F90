@@ -44,9 +44,8 @@ module initproblem
       enumerator :: RANDOM = 1, SINE
    end enum
 
-   real                     :: d0, r_max, dout, alpha, r_in, r_out, f_in, f_out
+   real                     :: d0, r_in, r_out, f_in, f_out
    real                     :: dens_exp      !< exponent in profile density \f$\rho(R) = \rho_0 R^{-k}\f$
-   real                     :: dens_amb      !< density of ambient medium (used for inner cutoff)
    real                     :: eps           !< dust to gas ratio
    real                     :: dens_max
    integer(kind=4)          :: cutoff_ncells !< width of cut-off profile
@@ -57,7 +56,7 @@ module initproblem
    !! \f$\tau\f$ in \f$\frac{Du}{Dt} = - \frac{u-u_0}{\tau}f(R)
    !! when initproblem::problem_customize_solution is used
    !<
-   real                     :: dumping_coeff, drag_max, drag_min, amp_noise
+   real                     :: dumping_coeff, amp_noise
    logical                  :: use_inner_orbital_period  !< use 1./T_inner as dumping_coeff
    integer(kind=4), parameter :: ngauss = 4
    real, dimension(ngauss)  :: gauss
@@ -65,9 +64,9 @@ module initproblem
    character(len=dsetnamelen), parameter :: inid_n = "u_0"
    integer(kind=4)          :: amp_func  !< 1 - random, 2 - sine
 
-   namelist /PROBLEM_CONTROL/  alpha, d0, dout, r_max, r_in, r_out, f_in, f_out, &
-      & dens_exp, eps, dens_amb, dumping_coeff, use_inner_orbital_period, &
-      & drag_max, drag_min, amp_noise, amp_func, gauss, dens_max
+   namelist /PROBLEM_CONTROL/  d0, r_in, r_out, f_in, f_out, &
+      & dens_exp, eps, dumping_coeff, use_inner_orbital_period, &
+      & amp_noise, amp_func, gauss, dens_max
 
 contains
 !-----------------------------------------------------------------------------
@@ -117,9 +116,6 @@ contains
       implicit none
 
       d0               = 1.0
-      dout             = 1.0e-4
-      r_max            = 1.0
-      alpha            = 1.0
       amp_noise        = 1.e-6
       amp_func         = RANDOM
       gauss            = 0.0
@@ -130,7 +126,6 @@ contains
       f_out            = 0.0
 
       dens_exp         = 0.0
-      dens_amb         = 1.e-3
       eps              = 1.0
       dens_max         = 500.0
 
@@ -147,19 +142,13 @@ contains
          lbuff(1) = use_inner_orbital_period
 
          rbuff(1) = d0
-         rbuff(2) = dout
-         rbuff(3) = r_max
-         rbuff(4) = alpha
          rbuff(5) = r_in
          rbuff(6) = r_out
          rbuff(7) = f_in
          rbuff(8) = f_out
          rbuff(9)  = dens_exp
          rbuff(10) = eps
-         rbuff(11) = dens_amb
          rbuff(13) = dumping_coeff
-         rbuff(14) = drag_max
-         rbuff(15) = drag_min
          rbuff(16) = amp_noise
          rbuff(17:20) = gauss
          rbuff(22) = dens_max
@@ -177,19 +166,13 @@ contains
          use_inner_orbital_period = lbuff(1)
 
          d0               = rbuff(1)
-         dout             = rbuff(2)
-         r_max            = rbuff(3)
-         alpha            = rbuff(4)
          r_in             = rbuff(5)
          r_out            = rbuff(6)
          f_in             = rbuff(7)
          f_out            = rbuff(8)
          dens_exp         = rbuff(9)
          eps              = rbuff(10)
-         dens_amb         = rbuff(11)
          dumping_coeff    = rbuff(13)
-         drag_max         = rbuff(14)
-         drag_min         = rbuff(15)
          amp_noise        = rbuff(16)
          gauss            = rbuff(17:20)
          dens_max         = rbuff(22)
