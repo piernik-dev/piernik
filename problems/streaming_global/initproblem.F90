@@ -147,7 +147,7 @@ contains
          rbuff(7) = eps
          rbuff(8) = dumping_coeff
          rbuff(9) = amp_noise
-         rbuff(10:12) = gauss
+         rbuff(10:13) = gauss
 
       endif
 
@@ -170,7 +170,7 @@ contains
          eps              = rbuff(7)
          dumping_coeff    = rbuff(8)
          amp_noise        = rbuff(9)
-         gauss            = rbuff(10:12)
+         gauss            = rbuff(10:13)
 
       endif
 
