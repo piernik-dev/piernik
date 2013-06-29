@@ -76,7 +76,6 @@ contains
 
       use dataio_user,           only: user_attrs_wr, user_attrs_rd
       use user_hooks,            only: problem_customize_solution, problem_grace_passed, problem_post_restart
-      use fluidboundaries_funcs, only: user_fluidbnd
       use gravity,               only: grav_pot_3d
 #ifdef HDF5
       use dataio_user,           only: user_vars_hdf5
@@ -89,7 +88,6 @@ contains
       problem_customize_solution => problem_customize_solution_kepler
       problem_grace_passed => si_grace_passed
       problem_post_restart => kepler_problem_post_restart
-      user_fluidbnd => my_fbnd
       grav_pot_3d => my_grav_pot_3d
 #ifdef HDF5
       user_vars_hdf5 => prob_vars_hdf5
@@ -758,88 +756,6 @@ contains
       call sum_potential
 
    end subroutine my_grav_pot_3d
-!-----------------------------------------------------------------------------
-   subroutine my_fbnd(dir, side, cg, wn, qn, emfdir)
-
-      use constants,        only: xdim, LO
-      use grid_cont,        only: grid_container
-      use named_array_list, only: wna
-
-      implicit none
-
-      integer(kind=4),               intent(in)    :: dir, side
-      type(grid_container), pointer, intent(inout) :: cg
-      integer(kind=4),     optional, intent(in)    :: wn, qn, emfdir
-
-      if (.not.present(wn)) return
-
-      if ((dir == xdim) .and. (wn == wna%fi)) then
-         if (side == LO) then
-            call my_bnd_xl(cg)
-         else
-            call my_bnd_xr(cg)
-         endif
-      endif
-
-      return
-      if (present(qn) .or. present(emfdir)) return
-
-   end subroutine my_fbnd
-!-----------------------------------------------------------------------------
-   subroutine my_bnd_xl(cg)
-
-      use constants,  only: xdim, ydim, zdim, LO, HI
-      use fluidindex, only: iarr_all_dn, iarr_all_mx, iarr_all_my, iarr_all_mz, flind
-      use grid_cont,  only: grid_container
-#ifndef ISO
-      use fluidindex, only: iarr_all_en
-#endif /* ISO */
-
-      implicit none
-
-      type(grid_container), pointer, intent(inout) :: cg
-
-      integer :: i
-      real, dimension(size(iarr_all_my), cg%lhn(ydim, LO):cg%lhn(ydim, HI), cg%lhn(zdim, LO):cg%lhn(zdim, HI)) :: vy, vym
-      real, dimension(size(flind%all_fluids))    :: cs2_arr
-      integer, dimension(size(flind%all_fluids)) :: ind_cs2
-
-      do i = 1, size(flind%all_fluids)
-         ind_cs2    = i
-         cs2_arr(i) = flind%all_fluids(i)%fl%cs2
-      enddo
-
-      do i = cg%lhn(xdim, LO), cg%lh1(xdim, LO)
-         cg%u(iarr_all_dn,i,:,:) = cg%u(iarr_all_dn, cg%is,:,:)
-         cg%u(iarr_all_mx,i,:,:) = min(0.0,cg%u(iarr_all_mx, cg%is,:,:))
-         cg%u(iarr_all_my,i,:,:) = cg%u(iarr_all_my, cg%is,:,:)
-         cg%u(iarr_all_mz,i,:,:) = cg%u(iarr_all_mz, cg%is,:,:)
-#ifndef ISO
-         cg%u(iarr_all_en,i,:,:) = cg%u(iarr_all_en, cg%is,:,:)
-#endif /* !ISO */
-      enddo
-
-      do i = cg%lh1(xdim, LO), cg%lhn(xdim, LO), -1
-         vym(:,:,:) = cg%u(iarr_all_my,i+2,:,:)/cg%u(iarr_all_dn,i+1,:,:)
-         vy(:,:,:)  = cg%u(iarr_all_my,i+1,:,:)/cg%u(iarr_all_dn,i+1,:,:)
-!         cg%u(iarr_all_my,i,:,:) = (vym(:,:,:) + (cg%x(i) - cg%x(i+2)) / (cg%x(i+1) - cg%x(i+2)) * (vy - vym))*cg%u(iarr_all_dn,i,:,:)
-      enddo
-
-   end subroutine my_bnd_xl
-!-----------------------------------------------------------------------------
-   subroutine my_bnd_xr(cg)
-
-      use constants,        only: xdim, HI
-      use grid_cont,        only: grid_container
-      use named_array_list, only: wna
-
-      implicit none
-
-      type(grid_container), pointer, intent(inout) :: cg
-
-      cg%u(:, cg%lh1(xdim, HI):cg%lhn(xdim, HI), :, :) = &
-         cg%w(wna%ind(inid_n))%arr(:, cg%lh1(xdim, HI):cg%lhn(xdim, HI), :, :)
-   end subroutine my_bnd_xr
 !-----------------------------------------------------------------------------
    function get_lcutoff(width, dist, n, vmin, vmax) result(y)
 
