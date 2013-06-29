@@ -646,7 +646,7 @@ contains
       use cg_leaves, only: leaves
       use cg_list,   only: cg_list_element
       use constants, only: xdim, zdim, LO, HI
-      use gravity,   only: ptmass, sum_potential
+      use gravity,   only: ptmass
       use grid_cont, only: grid_container
       use units,     only: newtong
 
@@ -675,7 +675,6 @@ contains
       endif
 
       frun = .false.
-      call sum_potential
 
    end subroutine my_grav_pot_3d
 !-----------------------------------------------------------------------------------------------------------------------
