@@ -138,7 +138,11 @@ contains
       repeat_step = .true.
       geometry25D = .false.
       no_dirty_checks = .false.
+#ifdef MAGNETIC
       sweeps_mgu  = .false.
+#else /* !MAGNETIC */
+      sweeps_mgu  = .true.
+#endif /* !MAGNETIC */
 
       cfl         = 0.7
       cfl_max     = 0.9
