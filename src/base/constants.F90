@@ -154,7 +154,6 @@ module constants
    ! 3D and 4D array names
    ! fluids
    character(len=dsetnamelen), parameter :: fluid_n = "fluid"   !< main array
-   character(len=dsetnamelen), parameter :: uh_n    = "uh"      !< auxiliary array for half-step values
    character(len=dsetnamelen), parameter :: u0_n    = "u0"      !< backup copy for timestep retrying
    ! magnetic field
    character(len=dsetnamelen), parameter :: mag_n   = "mag"     !< main array

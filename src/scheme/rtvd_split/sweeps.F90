@@ -245,7 +245,7 @@ contains
       use all_boundaries,   only: all_fluid_boundaries
       use cg_leaves,        only: leaves
       use cg_list,          only: cg_list_element
-      use constants,        only: pdims, LO, HI, uh_n, cs_i2_n, ORTHO1, ORTHO2
+      use constants,        only: pdims, LO, HI, cs_i2_n, ORTHO1, ORTHO2
       use domain,           only: dom
       use fluidindex,       only: flind, iarr_all_swp, nmag
       use fluxtypes,        only: ext_fluxes
@@ -266,13 +266,13 @@ contains
 
       integer(kind=4), intent(in)       :: cdim
 
-      integer                           :: i1, i2, uhi
+      integer                           :: i1, i2
       integer                           :: istep
       integer                           :: i_cs_iso2
       logical                           :: full_dim
       real, dimension(:,:), allocatable :: b
-      real, dimension(:,:), allocatable :: u, u0
-      real, dimension(:,:),  pointer    :: pu, pu0
+      real, dimension(:,:), allocatable :: u
+      real, dimension(:,:),  pointer    :: pu
 #ifdef MAGNETIC
       real, dimension(:,:),  pointer    :: pb
 #endif /* MAGNETIC */
@@ -288,7 +288,6 @@ contains
 
       cn_ = 0
       full_dim = dom%has_dir(cdim)
-      uhi = wna%ind(uh_n)
       if (qna%exists(cs_i2_n)) then
          i_cs_iso2 = qna%ind(cs_i2_n)
       else
@@ -298,7 +297,6 @@ contains
       call eflx%init
 
       nr = 0
-      do istep = 1, integration_order
          nr_recv = compute_nr_recv(cdim)
          nr = nr_recv
          all_processed = .false.
@@ -317,20 +315,16 @@ contains
                      if (cn_ /= cg%n_(cdim)) then
                         if (allocated(b))  deallocate(b)
                         if (allocated(u))  deallocate(u)
-                        if (allocated(u0)) deallocate(u0)
                      endif
-                     if (.not. allocated(u)) allocate(b(nmag, cg%n_(cdim)), u(flind%all, cg%n_(cdim)), u0(flind%all, cg%n_(cdim)))
+                     if (.not. allocated(u)) allocate(b(nmag, cg%n_(cdim)), u(flind%all, cg%n_(cdim)))
                      cn_ = cg%n_(cdim)
 
                      b(:,:) = 0.0
                      u(:,:) = 0.0
 
-                     if (istep == 1) then
 #ifdef COSM_RAYS
-                        call div_v(flind%ion%pos, cg)
+                     call div_v(flind%ion%pos, cg)
 #endif /* COSM_RAYS */
-                        cg%w(uhi)%arr = cg%u
-                     endif
 
                      !> \todo OPT: use cg%leafmap to skip lines fully covered by finer grids
                      ! it should be also possible to compute only parts of lines that aren't covered by finer grids
@@ -353,24 +347,22 @@ contains
 #endif /* COSM_RAYS */
 
                            pu                     => cg%w(wna%fi   )%get_sweep(cdim,i1,i2)
-                           pu0                    => cg%w(uhi      )%get_sweep(cdim,i1,i2)
                            if (i_cs_iso2 > 0) cs2 => cg%q(i_cs_iso2)%get_sweep(cdim,i1,i2)
 
                            u (iarr_all_swp(cdim,:),:) = pu (:,:)
-                           u0(iarr_all_swp(cdim,:),:) = pu0(:,:)
 
                            call cg%set_fluxpointers(cdim, i1, i2, eflx)
-                           call relaxing_tvd(cg%n_(cdim), u, u0, b, div_v1d, cs2, istep, cdim, i1, i2, cg%dl(cdim), dt, cg, eflx)
+                           call relaxing_tvd(cg%n_(cdim), u, b, div_v1d, cs2, cdim, i1, i2, cg%dl(cdim), dt, cg, eflx)
                            call cg%save_outfluxes(cdim, i1, i2, eflx)
 
                            pu(:,:) = u(iarr_all_swp(cdim,:),:)
-                           nullify(pu,pu0,cs2)
+                           nullify(pu, cs2)
                         enddo
                      enddo
 
                      call send_cg_coarsebnd(cdim, cg, nr)
 
-                     deallocate(b, u, u0)
+                     deallocate(b, u)
 
                      cg%processed = .true.
                      blocks_done = blocks_done + 1
@@ -397,26 +389,14 @@ contains
 
          if (full_dim) then
             if (sweeps_mgu) then
-               if (istep == 1) then
-                  call all_fluid_boundaries(nocorners = .true., dir = cdim)
-                  ! For some reasons dir=cdim here affect mcrwind tests. \todo Find out why. Is it related to position of magnetic field components?
-               else
-                  call all_fluid_boundaries(nocorners = .true.)
-                  ! For some reasons nocorners here affect mcrwind tests. \todo Find out why. Is it related to position of magnetic field components?
-               end if
+               call all_fluid_boundaries(nocorners = .true.)
             else
-               if (istep == 1) then
-                  call all_fluid_boundaries(nocorners = .true.)
-               else
-                  call all_fluid_boundaries
-               endif
+               call all_fluid_boundaries
             endif
          endif
-      enddo
 
       if (allocated(b))  deallocate(b)
       if (allocated(u))  deallocate(u)
-      if (allocated(u0)) deallocate(u0)
 
    end subroutine sweep
 
