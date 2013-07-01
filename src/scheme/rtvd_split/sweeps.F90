@@ -249,7 +249,7 @@ contains
       use domain,           only: dom
       use fluidindex,       only: flind, iarr_all_swp, nmag
       use fluxtypes,        only: ext_fluxes
-      use global,           only: dt, integration_order
+      use global,           only: dt, integration_order, sweeps_mgu
       use grid_cont,        only: grid_container
       use gridgeometry,     only: set_geo_coeffs
       use mpisetup,         only: mpi_err, req, status
@@ -396,14 +396,22 @@ contains
          endif
 
          if (full_dim) then
-            if (istep == 1) then
-               call all_fluid_boundaries(nocorners = .true.) !dir = cdim)
-               ! For some weird reasons dir=cdim here affect mcrwind tests. \todo Find out why.
+            if (sweeps_mgu) then
+               if (istep == 1) then
+                  call all_fluid_boundaries(nocorners = .true., dir = cdim)
+                  ! For some reasons dir=cdim here affect mcrwind tests. \todo Find out why. Is it related to position of magnetic field components?
+               else
+                  call all_fluid_boundaries(nocorners = .true.)
+                  ! For some reasons nocorners here affect mcrwind tests. \todo Find out why. Is it related to position of magnetic field components?
+               end if
             else
-               call all_fluid_boundaries!(nocorners = .true.)
-               ! For some weird reasons nocorners here affect mcrwind tests. \todo Find out why.
-            end if
-         end if
+               if (istep == 1) then
+                  call all_fluid_boundaries(nocorners = .true.)
+               else
+                  call all_fluid_boundaries
+               endif
+            endif
+         endif
       enddo
 
       if (allocated(b))  deallocate(b)
