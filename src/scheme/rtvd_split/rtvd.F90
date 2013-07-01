@@ -236,7 +236,7 @@ contains
 ! OPT: we may also try to work on bigger parts of the u(:,:,:,:) at a time , but the exact amount may depend on size of the L2 cache
 ! OPT: try an explicit loop over n to see if better pipelining can be achieved
 
-   subroutine relaxing_tvd(n, u, u0, bb, divv, cs_iso2, istep, sweep, i1, i2, dx, dt, cg, eflx)
+   subroutine relaxing_tvd(n, u, bb, divv, cs_iso2, sweep, i1, i2, dx, dt, cg, eflx)
 
       use constants,        only: one, zero, half, GEO_XYZ, GEO_RPZ, LO, xdim, ydim, zdim
       use dataio_pub,       only: msg, die
@@ -280,11 +280,9 @@ contains
 
       integer(kind=4),               intent(in)    :: n                  !< array size
       real, dimension(flind%all,n),  intent(inout) :: u                  !< vector of conservative variables
-      real, dimension(flind%all,n),  intent(in)    :: u0                 !< vector of conservative variables
       real, dimension(nmag,n),       intent(in)    :: bb                 !< local copy of magnetic field
       real, dimension(:), pointer,   intent(in)    :: divv               !< vector of velocity divergence used in cosmic ray advection
       real, dimension(:), pointer,   intent(in)    :: cs_iso2            !< square of local isothermal sound speed
-      integer,                       intent(in)    :: istep              !< step number in the time integration scheme
       integer(kind=4),               intent(in)    :: sweep              !< direction (x, y or z) we are doing calculations for
       integer,                       intent(in)    :: i1                 !< coordinate of sweep in the 1st remaining direction
       integer,                       intent(in)    :: i2                 !< coordinate of sweep in the 2nd remaining direction
@@ -309,6 +307,7 @@ contains
       real, dimension(flind%all,n)                 :: dfp                !< second order correction of left/right-moving waves flux on the right cell boundary
       real, dimension(flind%all,n)                 :: dfm                !< second order correction of left/right-moving waves flux on the left cell boundary
       real, dimension(flind%all,n)                 :: u1                 !< updated vector of conservative variables (after one timestep in second order scheme)
+      real, dimension(flind%all,n)                 :: u0                 !< initial vector of conservative variables
       real, dimension(flind%fluids,n)              :: geosrc             !< source terms caused by geometry of coordinate system
       real, dimension(flind%fluids,n), target      :: pressure           !< gas pressure
       real, dimension(flind%fluids,n), target      :: density            !< gas density
@@ -329,7 +328,7 @@ contains
       real, dimension(2,2), parameter              :: rk2coef = reshape( [ one, half, zero, one ], [ 2, 2 ] )
 
       class(component_fluid), pointer :: pfl
-      integer :: ifl
+      integer :: ifl, istep
 
 #if !(defined COSM_RAYS && defined IONIZED)
       integer                                      :: dummy
@@ -341,6 +340,9 @@ contains
       full_dim = n > 1
 
       u1 = u
+      u0 = u
+
+      do istep = 1, integration_order
 
       vx   => vel_sweep
       dens => density
@@ -533,6 +535,8 @@ contains
       enddo
 
       u(:,:) = u1(:,:)
+
+      enddo ! istep
 
    end subroutine relaxing_tvd
 
