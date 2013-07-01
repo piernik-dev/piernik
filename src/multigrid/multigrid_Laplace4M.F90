@@ -208,7 +208,7 @@ contains
 
       ! Cannot use Red-Black for 4th order Mehrstellen relaxation due to data dependencies even if in some cases Red-Black gives better convergence.
       !> \todo try 4- or 8-color scheme.
-      if (dom%nb > 1) call curl%internal_boundaries_3d(src)
+      if (dom%nb > 1) call curl%arr3d_boundaries(src, bnd_type = BND_NEGREF)
       do n = 1, nsmoo
          need_all_bnd_upd = (mod(n-1, int(dom%nb)) == 0)
          if (need_all_bnd_upd) call curl%arr3d_boundaries(soln, bnd_type = BND_NEGREF)
