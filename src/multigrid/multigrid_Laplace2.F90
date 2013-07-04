@@ -181,7 +181,8 @@ contains
       use global,             only: dirty_debug
       use grid_cont,          only: grid_container
       use mpisetup,           only: piernik_MPI_Allreduce, master
-      use multigridvars,      only: multidim_code_3D, overrelax, set_relax_boundaries, coarsest_tol, nc_growth, copy_and_max
+      use multigrid_helpers,  only: set_relax_boundaries, copy_and_max
+      use multigridvars,      only: multidim_code_3D, overrelax, coarsest_tol, nc_growth
 
       implicit none
 

@@ -760,12 +760,13 @@ contains
 
    subroutine multigrid_solve_grav(i_all_dens)
 
-      use cg_leaves,        only: leaves
-      use constants,        only: sgp_n
-      use multigridvars,    only: solution, tot_ts, ts, grav_bnd, bnd_dirichlet, bnd_givenval, bnd_isolated, all_dirty
-      use multipole,        only: multipole_solver
-      use named_array_list, only: qna
-      use timer,            only: set_timer
+      use cg_leaves,         only: leaves
+      use constants,         only: sgp_n
+      use multigrid_helpers, only: all_dirty
+      use multigridvars,     only: solution, tot_ts, ts, grav_bnd, bnd_dirichlet, bnd_givenval, bnd_isolated
+      use multipole,         only: multipole_solver
+      use named_array_list,  only: qna
+      use timer,             only: set_timer
 
       implicit none
 

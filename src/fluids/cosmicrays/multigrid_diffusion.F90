@@ -259,14 +259,15 @@ contains
 
    subroutine multigrid_solve_diff
 
-      use constants,     only: xdim, ydim, zdim
-      use crdiffusion,   only: cr_diff
-      use dataio_pub,    only: halfstep, warn, printinfo, msg
-      use fluidindex,    only: flind
-      use global,        only: dt
-      use mpisetup,      only: master
-      use multigridvars, only: ts, tot_ts, stdout, all_dirty
-      use timer,         only: set_timer
+      use constants,         only: xdim, ydim, zdim
+      use crdiffusion,       only: cr_diff
+      use dataio_pub,        only: halfstep, warn, printinfo, msg
+      use fluidindex,        only: flind
+      use global,            only: dt
+      use mpisetup,          only: master
+      use multigrid_helpers, only: all_dirty
+      use multigridvars,     only: ts, tot_ts, stdout
+      use timer,             only: set_timer
 
       implicit none
 
