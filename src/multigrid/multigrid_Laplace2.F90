@@ -176,11 +176,11 @@ contains
       use cg_list,            only: cg_list_element
       use cg_list_dataop,     only: dirty_label
       use constants,          only: xdim, ydim, zdim, ndims, GEO_XYZ, GEO_RPZ, BND_NEGREF, LO, pMAX
-      use dataio_pub,         only: die
+      use dataio_pub,         only: die, warn
       use domain,             only: dom
       use global,             only: dirty_debug
       use grid_cont,          only: grid_container
-      use mpisetup,           only: piernik_MPI_Allreduce
+      use mpisetup,           only: piernik_MPI_Allreduce, master
       use multigridvars,      only: multidim_code_3D, overrelax, set_relax_boundaries, coarsest_tol
 
       implicit none
@@ -368,6 +368,9 @@ contains
          end if
 
       enddo
+
+      if (associated(curl, coarsest%level) .and. n > nsmoo .and. master) &
+           call warn("[multigrid_Laplace2:approximate_solution_rbgs2] relaxation on coarsest level did not converge, consider increasing nsmoob")
 
       deallocate(crx, crx1, cry, crz, cr)
 

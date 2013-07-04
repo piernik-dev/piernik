@@ -181,11 +181,11 @@ contains
       use cg_list,            only: cg_list_element
       use cg_list_dataop,     only: dirty_label
       use constants,          only: xdim, ydim, zdim, ndims, GEO_XYZ, BND_NEGREF, pMAX
-      use dataio_pub,         only: die
+      use dataio_pub,         only: die, warn
       use domain,             only: dom
       use global,             only: dirty_debug
       use grid_cont,          only: grid_container
-      use mpisetup,           only: piernik_MPI_Allreduce
+      use mpisetup,           only: piernik_MPI_Allreduce, master
       use multigridvars,      only: multidim_code_3D, set_relax_boundaries, coarsest_tol
       use named_array_list,   only: qna
 
@@ -331,6 +331,9 @@ contains
          end if
 
       enddo
+
+      if (associated(curl, coarsest%level) .and. n > nsmoo .and. master) &
+           call warn("[multigrid_Laplace4M:approximate_solution_relax4M] relaxation on coarsest level did not converge, consider increasing nsmoob")
 
    end subroutine approximate_solution_relax4M
 
