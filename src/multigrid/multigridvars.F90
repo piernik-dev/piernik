@@ -67,6 +67,7 @@ module multigridvars
    integer(kind=4)         :: nsmool                                  !< smoothing cycles per call
    logical                 :: multidim_code_3D                        !< prefer code written for any 1D and 2D configuration even in 3D for benchmarking and debugging
    real                    :: overrelax                               !< overrealaxation factor (if < 1. then works as underrelaxation), provided for tests
+   real                    :: coarsest_tol                            !< criterion for automagic coarsest level relaxation
 
    ! boundaries
    enum, bind(C)                                                      !< constants for enumerating multigrid boundary types

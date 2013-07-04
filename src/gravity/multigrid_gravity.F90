@@ -87,6 +87,7 @@ contains
 !! <table border="+1">
 !! <tr><td width="150pt"><b>parameter</b></td><td width="135pt"><b>default value</b></td><td width="200pt"><b>possible values</b></td><td width="315pt"> <b>description</b></td></tr>
 !! <tr><td>norm_tol              </td><td>1.e-6  </td><td>real value     </td><td>\copydoc multigrid_gravity::norm_tol              </td></tr>
+!! <tr><td>coarsest_tol          </td><td>1.e-2  </td><td>real value     </td><td>\copydoc multigrid_gravity::coarsest_tol          </td></tr>
 !! <tr><td>vcycle_abort          </td><td>2.0    </td><td>real value     </td><td>\copydoc multigrid_gravity::vcycle_abort          </td></tr>
 !! <tr><td>vcycle_giveup         </td><td>1.5    </td><td>real value     </td><td>\copydoc multigrid_gravity::vcycle_giveup         </td></tr>
 !! <tr><td>max_cycles            </td><td>20     </td><td>integer value  </td><td>\copydoc multigrid_gravity::max_cycles            </td></tr>
@@ -123,7 +124,7 @@ contains
       use domain,             only: dom, is_multicg !, is_uneven
       use mpisetup,           only: master, slave, ibuff, cbuff, rbuff, lbuff, piernik_MPI_Bcast
       use multigridvars,      only: single_base, bnd_invalid, bnd_isolated, bnd_periodic, bnd_dirichlet, grav_bnd, multidim_code_3D, nsmool, &
-           &                        overrelax
+           &                        overrelax, coarsest_tol
       use multigrid_gravity_helper, only: nsmoob
       use multigrid_Laplace,  only: ord_laplacian, ord_laplacian_outer
       use multigrid_Laplace4, only: L4_strength
@@ -136,7 +137,7 @@ contains
       integer       :: periodic_bnd_cnt   !< counter of periodic boundaries in existing directions
       logical, save :: frun = .true.      !< First run flag
 
-      namelist /MULTIGRID_GRAVITY/ norm_tol, vcycle_abort, vcycle_giveup, max_cycles, nsmool, nsmoob, use_CG, use_CG_outer, &
+      namelist /MULTIGRID_GRAVITY/ norm_tol, coarsest_tol, vcycle_abort, vcycle_giveup, max_cycles, nsmool, nsmoob, use_CG, use_CG_outer, &
            &                       overrelax, L4_strength, ord_laplacian, ord_laplacian_outer, ord_time_extrap, &
            &                       base_no_fft, fft_patient, &
            &                       coarsen_multipole, lmax, mmax, ord_prolong_mpole, use_point_monopole, interp_pt2mom, interp_mom2pot, multidim_code_3D, &
@@ -147,6 +148,7 @@ contains
 
       ! Default values for namelist variables
       norm_tol               = 1.e-6
+      coarsest_tol           = 1.e-3
       overrelax              = 1.
       vcycle_abort           = 2.
       vcycle_giveup          = 1.5
@@ -222,6 +224,7 @@ contains
          rbuff(3)  = vcycle_abort
          rbuff(4)  = vcycle_giveup
          rbuff(5)  = L4_strength
+         rbuff(6)  = coarsest_tol
 
          ibuff( 1) = coarsen_multipole
          ibuff( 2) = lmax
@@ -259,6 +262,7 @@ contains
          vcycle_abort   = rbuff(3)
          vcycle_giveup  = rbuff(4)
          L4_strength    = rbuff(5)
+         coarsest_tol   = rbuff(6)
 
          coarsen_multipole = ibuff( 1)
          lmax              = ibuff( 2)
