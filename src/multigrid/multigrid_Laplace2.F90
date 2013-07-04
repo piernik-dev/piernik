@@ -226,7 +226,7 @@ contains
          if (associated(curl, coarsest%level) .and. n==ncheck) then
             max_in = copy_and_max(curl, soln)
             max_out = 0
-         end if
+         endif
 
          cgl => curl%first
          do while (associated(cgl))
@@ -356,8 +356,8 @@ contains
             ncheck = int(ncheck * nc_growth)
             do while (mod(ncheck, RED_BLACK) == 0)
                ncheck = ncheck + 1
-            end do
-         end if
+            enddo
+         endif
 
       enddo
 

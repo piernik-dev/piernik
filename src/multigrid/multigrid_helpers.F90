@@ -37,7 +37,7 @@ module multigrid_helpers
    implicit none
 
    public :: all_dirty, set_relax_boundaries, copy_and_max
-   private 
+   private
 
  contains
 

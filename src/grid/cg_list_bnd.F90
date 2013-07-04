@@ -771,12 +771,12 @@ contains
                case (BND_PER)
                case (BND_OUT, BND_OUTD, BND_OUTH, BND_OUTHD)
                   call outflow_b(cg, dir, side)
-               case default 
-                  write(msg,'(2(a,i3))') "[cg_list_bnd:bnd_b]: Boundary condition ",cg%bnd(dir, side)," not implemented in ",dir 
-                  if (master) call warn(msg) 
-            end select 
-         enddo 
-         cgl => cgl%nxt 
+               case default
+                  write(msg,'(2(a,i3))') "[cg_list_bnd:bnd_b]: Boundary condition ",cg%bnd(dir, side)," not implemented in ",dir
+                  if (master) call warn(msg)
+            end select
+         enddo
+         cgl => cgl%nxt
       enddo
 
       contains
@@ -795,7 +795,7 @@ contains
             pm_one = I_THREE - I_TWO * side
             pm_two = 2 * pm_one
 
-            select case(dir)
+            select case (dir)
                case (xdim)
                   do i = 1, dom%nb
                      it = cg%ijkse(dir, side) - pm_one * i

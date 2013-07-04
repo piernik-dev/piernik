@@ -440,7 +440,7 @@ contains
          if (master) then
             write(msg, '(a,i3,a)')"[decomposition:decompose_patch_uniform]    Level ",level_id,": I am not that intelligent" ! pieces has too big prime factors
             call warn(msg)
-         end if
+         endif
          p_size(:) = 1
          return
       endif

@@ -230,7 +230,7 @@ contains
          if (associated(curl, coarsest%level) .and. n==ncheck) then
             max_in = copy_and_max(curl, soln)
             max_out = 0.
-         end if
+         endif
 
          cgl => curl%first
          do while (associated(cgl))
@@ -320,7 +320,7 @@ contains
             call piernik_MPI_Allreduce(max_out, pMAX)
             if (coarsest_tol*max_in-max_out > 0.) exit
             ncheck = int(ncheck * nc_growth)
-         end if
+         endif
 
       enddo
 
