@@ -64,7 +64,6 @@ module multigrid_gravity
    real               :: vcycle_giveup                                !< exit the V-cycle when convergence ratio drops below that level
    integer(kind=4)    :: max_cycles                                   !< Maximum allowed number of V-cycles
    logical            :: base_no_fft                                  !< Deny solving the coarsest level with FFT. Can be very slow.
-   !> \todo allow to perform one or more V-cycles with FFT method, the switch to the RBGS (may save one V-cycle in some cases)
    logical            :: fft_patient                                  !< Spend more time in init_multigrid to find faster fft plan
    character(len=cbuff_len) :: grav_bnd_str                           !< Type of gravitational boundary conditions.
    logical            :: require_FFT                                  !< .true. if we use FFT solver anywhere (and need face prolongation)
@@ -412,7 +411,7 @@ contains
             case default
                coarsest%level%fft_type = fft_none
                FFTn="none"
-               if (master) call warn("[multigrid_gravity:init_multigrid_grav] base_no_fft unset but no suitable boundary conditions found. Reverting to RBGS relaxation.")
+               if (master) call warn("[multigrid_gravity:init_multigrid_grav] base_no_fft unset but no suitable boundary conditions found. Reverting to relaxation.")
          end select
          if (trim(FFTn) /= "none" .and. master) then
             write(msg,'(a,i3,2a)')"[multigrid_gravity:init_multigrid_grav] Coarsest level (",coarsest%level%level_id,"), FFT solver: ", trim(FFTn)
@@ -420,7 +419,7 @@ contains
          endif
       endif
       if (coarsest%level%fft_type == fft_none .and. master) then
-         write(msg,'(a,i3,a)')"[multigrid_gravity:init_multigrid_grav] Coarsest level (",coarsest%level%level_id,"), RBGS relaxation solver"
+         write(msg,'(a,i3,a)')"[multigrid_gravity:init_multigrid_grav] Coarsest level (",coarsest%level%level_id,"), relaxation solver"
          call printinfo(msg)
       endif
 
