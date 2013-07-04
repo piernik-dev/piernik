@@ -165,4 +165,34 @@ module multigridvars
 
    end subroutine set_relax_boundaries
 
+!> \brief Copy solution to a temporary place and compute maximum value
+
+   function copy_and_max(curl, soln) result(max_in)
+
+      use cg_level_connected, only: cg_level_connected_T
+      use cg_list,            only: cg_list_element
+      use constants,          only: pMAX
+      use mpisetup,           only: piernik_MPI_Allreduce
+
+      implicit none
+
+      type(cg_level_connected_T), pointer, intent(in) :: curl  !< pointer to a level for which we approximate the solution
+      integer(kind=4),                     intent(in) :: soln  !< index of solution in cg%q(:)
+
+      type(cg_list_element), pointer :: cgl
+      real :: max_in
+
+      max_in = 0.
+      cgl => curl%first
+      do while (associated(cgl))
+         associate (cg => cgl%cg)
+         cg%prolong_xyz(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = cg%q(soln)%arr(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)
+         max_in = max(max_in, maxval(abs(cg%prolong_xyz( cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke))))
+         end associate
+         cgl => cgl%nxt
+      enddo
+      call piernik_MPI_Allreduce(max_in, pMAX)
+
+   end function copy_and_max
+
 end module multigridvars

@@ -186,7 +186,7 @@ contains
       use global,             only: dirty_debug
       use grid_cont,          only: grid_container
       use mpisetup,           only: piernik_MPI_Allreduce, master
-      use multigridvars,      only: multidim_code_3D, set_relax_boundaries, coarsest_tol, nc_growth
+      use multigridvars,      only: multidim_code_3D, set_relax_boundaries, coarsest_tol, nc_growth, copy_and_max
       use named_array_list,   only: qna
 
       implicit none
@@ -211,6 +211,7 @@ contains
       ! Also required when we want to eliminate some communication of soln at a cost of expanding relaxated area into guardcells
 
       ncheck = 2*dom%nb ! first check for sonvergence of relaxation on coarsest level will be done at this n
+      max_in = 0.
 
       ! Cannot use Red-Black for 4th order Mehrstellen relaxation due to data dependencies even if in some cases Red-Black gives better convergence.
       !> \todo try 4- or 8-color scheme.
@@ -226,17 +227,8 @@ contains
          endif
 
          if (associated(curl, coarsest%level) .and. n==ncheck) then
-            max_in = 0.
-            cgl => curl%first
-            do while (associated(cgl))
-               associate (cg => cgl%cg)
-               cg%prolong_xyz(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = cg%q(soln)%arr(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)
-               max_in = max(max_in, maxval(abs(cg%prolong_xyz( cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke))))
-               end associate
-               cgl => cgl%nxt
-            enddo
-            call piernik_MPI_Allreduce(max_in, pMAX)
-            max_out = 0
+            max_in = copy_and_max(curl, soln)
+            max_out = 0.
          end if
 
          cgl => curl%first
