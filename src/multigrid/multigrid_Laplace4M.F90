@@ -176,15 +176,18 @@ contains
 
    subroutine approximate_solution_relax4M(curl, src, soln, nsmoo)
 
+      use cg_level_coarsest,  only: coarsest
       use cg_level_connected, only: cg_level_connected_T
       use cg_list,            only: cg_list_element
       use cg_list_dataop,     only: dirty_label
-      use constants,          only: xdim, ydim, zdim, ndims, GEO_XYZ, BND_NEGREF
-      use dataio_pub,         only: die
+      use constants,          only: xdim, ydim, zdim, ndims, GEO_XYZ, BND_NEGREF, pMAX
+      use dataio_pub,         only: die, warn
       use domain,             only: dom
       use global,             only: dirty_debug
       use grid_cont,          only: grid_container
-      use multigridvars,      only: multidim_code_3D, set_relax_boundaries
+      use mpisetup,           only: piernik_MPI_Allreduce, master
+      use multigrid_helpers,  only: set_relax_boundaries, copy_and_max
+      use multigridvars,      only: multidim_code_3D, coarsest_tol, nc_growth
       use named_array_list,   only: qna
 
       implicit none
@@ -201,10 +204,15 @@ contains
       type(grid_container),  pointer :: cg
       integer :: is, ie, js, je, ks, ke
       logical :: need_all_bnd_upd
+      real :: max_in, max_out
+      integer :: ncheck
 
       if (dom%geometry_type /= GEO_XYZ) call die("[multigrid_Laplace4M:approximate_solution_relax4M] Relaxation for Mehrstellen not implemented for noncartesian grid")
 !     call curl%arr3d_boundaries(src, bnd_type = BND_NEGREF) ! required when we use 7-point source term, not just 1-point
       ! Also required when we want to eliminate some communication of soln at a cost of expanding relaxated area into guardcells
+
+      ncheck = 2*dom%nb ! first check for convergence of relaxation on coarsest level will be done at this n
+      max_in = 0.
 
       ! Cannot use Red-Black for 4th order Mehrstellen relaxation due to data dependencies even if in some cases Red-Black gives better convergence.
       !> \todo try 4- or 8-color scheme.
@@ -213,10 +221,17 @@ contains
          need_all_bnd_upd = (mod(n-1, int(dom%nb)) == 0)
          if (need_all_bnd_upd) call curl%arr3d_boundaries(soln, bnd_type = BND_NEGREF)
          b = int(dom%nb - 1 - mod(n-1, int(dom%nb)), kind=4)
+
          if (dirty_debug) then
             write(dirty_label, '(a,i5)')"relax4M soln- smoo=", n
             call curl%check_dirty(soln, dirty_label)
          endif
+
+         if (associated(curl, coarsest%level) .and. n==ncheck) then
+            max_in = copy_and_max(curl, soln)
+            max_out = 0.
+         endif
+
          cgl => curl%first
          do while (associated(cgl))
             cg => cgl%cg
@@ -288,6 +303,10 @@ contains
                     & + ((cg%q(soln)%arr(is-1:ie-1, js  :je,   ks-1:ke-1) + cg%q(soln)%arr(is+1:ie+1, js  :je,   ks-1:ke-1))         &
                     & +  (cg%q(soln)%arr(is-1:ie-1, js  :je,   ks+1:ke+1) + cg%q(soln)%arr(is+1:ie+1, js  :je,   ks+1:ke+1)))*Lxz
             endif
+
+            if (associated(curl, coarsest%level) .and. n == ncheck) &
+                 max_out = max(max_out, maxval(abs(cg%prolong_xyz( cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) - cg%wa(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke))))
+
             cgl => cgl%nxt
          enddo
          call curl%q_copy(qna%wai, soln)
@@ -296,7 +315,17 @@ contains
             write(dirty_label, '(a,i5)')"relax4M soln+ smoo=", n
             call curl%check_dirty(soln, dirty_label)
          endif
+
+         if (associated(curl, coarsest%level) .and. n == ncheck) then
+            call piernik_MPI_Allreduce(max_out, pMAX)
+            if (coarsest_tol*max_in-max_out > 0.) exit
+            ncheck = int(ncheck * nc_growth)
+         endif
+
       enddo
+
+      if (associated(curl, coarsest%level) .and. n > nsmoo .and. master) &
+           call warn("[multigrid_Laplace4M:approximate_solution_relax4M] relaxation on coarsest level did not converge, consider increasing nsmoob")
 
    end subroutine approximate_solution_relax4M
 

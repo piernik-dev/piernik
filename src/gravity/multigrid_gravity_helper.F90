@@ -40,7 +40,7 @@ module multigrid_gravity_helper
         &    nsmoob
 
    ! namelist parameters
-   integer(kind=4)    :: nsmoob                                       !< smoothing cycles on coarsest level when cannot use FFT. (a convergence check would be much better)
+   integer(kind=4)    :: nsmoob      !< maximum number of smoothing cycles on coarsest level when cannot use FFT.
 
 contains
 
@@ -77,7 +77,6 @@ contains
          call fft_solve_level(curl, src, soln)
       else
          if (associated(curl, coarsest%level)) then
-            !> \todo Implement automatic convergence check on coarsest level (not very important when we have a FFT solver for coarsest level)
             !> \todo Implement alternative bottom-solvers
             nsmoo = nsmoob
             call coarsest%level%set_q_value(soln, 0.)

@@ -64,7 +64,6 @@ module multigrid_gravity
    real               :: vcycle_giveup                                !< exit the V-cycle when convergence ratio drops below that level
    integer(kind=4)    :: max_cycles                                   !< Maximum allowed number of V-cycles
    logical            :: base_no_fft                                  !< Deny solving the coarsest level with FFT. Can be very slow.
-   !> \todo allow to perform one or more V-cycles with FFT method, the switch to the RBGS (may save one V-cycle in some cases)
    logical            :: fft_patient                                  !< Spend more time in init_multigrid to find faster fft plan
    character(len=cbuff_len) :: grav_bnd_str                           !< Type of gravitational boundary conditions.
    logical            :: require_FFT                                  !< .true. if we use FFT solver anywhere (and need face prolongation)
@@ -87,6 +86,7 @@ contains
 !! <table border="+1">
 !! <tr><td width="150pt"><b>parameter</b></td><td width="135pt"><b>default value</b></td><td width="200pt"><b>possible values</b></td><td width="315pt"> <b>description</b></td></tr>
 !! <tr><td>norm_tol              </td><td>1.e-6  </td><td>real value     </td><td>\copydoc multigrid_gravity::norm_tol              </td></tr>
+!! <tr><td>coarsest_tol          </td><td>1.e-2  </td><td>real value     </td><td>\copydoc multigrid_gravity::coarsest_tol          </td></tr>
 !! <tr><td>vcycle_abort          </td><td>2.0    </td><td>real value     </td><td>\copydoc multigrid_gravity::vcycle_abort          </td></tr>
 !! <tr><td>vcycle_giveup         </td><td>1.5    </td><td>real value     </td><td>\copydoc multigrid_gravity::vcycle_giveup         </td></tr>
 !! <tr><td>max_cycles            </td><td>20     </td><td>integer value  </td><td>\copydoc multigrid_gravity::max_cycles            </td></tr>
@@ -123,7 +123,7 @@ contains
       use domain,             only: dom, is_multicg !, is_uneven
       use mpisetup,           only: master, slave, ibuff, cbuff, rbuff, lbuff, piernik_MPI_Bcast
       use multigridvars,      only: single_base, bnd_invalid, bnd_isolated, bnd_periodic, bnd_dirichlet, grav_bnd, multidim_code_3D, nsmool, &
-           &                        overrelax
+           &                        overrelax, coarsest_tol
       use multigrid_gravity_helper, only: nsmoob
       use multigrid_Laplace,  only: ord_laplacian, ord_laplacian_outer
       use multigrid_Laplace4, only: L4_strength
@@ -136,7 +136,7 @@ contains
       integer       :: periodic_bnd_cnt   !< counter of periodic boundaries in existing directions
       logical, save :: frun = .true.      !< First run flag
 
-      namelist /MULTIGRID_GRAVITY/ norm_tol, vcycle_abort, vcycle_giveup, max_cycles, nsmool, nsmoob, use_CG, use_CG_outer, &
+      namelist /MULTIGRID_GRAVITY/ norm_tol, coarsest_tol, vcycle_abort, vcycle_giveup, max_cycles, nsmool, nsmoob, use_CG, use_CG_outer, &
            &                       overrelax, L4_strength, ord_laplacian, ord_laplacian_outer, ord_time_extrap, &
            &                       base_no_fft, fft_patient, &
            &                       coarsen_multipole, lmax, mmax, ord_prolong_mpole, use_point_monopole, interp_pt2mom, interp_mom2pot, multidim_code_3D, &
@@ -147,6 +147,7 @@ contains
 
       ! Default values for namelist variables
       norm_tol               = 1.e-6
+      coarsest_tol           = 1.e-3
       overrelax              = 1.
       vcycle_abort           = 2.
       vcycle_giveup          = 1.5
@@ -158,7 +159,7 @@ contains
       mmax                   = -1 ! will be automatically set to lmax unless explicitly limited in problem.par
       max_cycles             = 20
       nsmool                 = -1  ! best to set it to dom%nb or its multiply
-      nsmoob                 = 100
+      nsmoob                 = 10000
       select case (dom%geometry_type)
          case (GEO_XYZ)
             ord_laplacian    = O_D4
@@ -222,6 +223,7 @@ contains
          rbuff(3)  = vcycle_abort
          rbuff(4)  = vcycle_giveup
          rbuff(5)  = L4_strength
+         rbuff(6)  = coarsest_tol
 
          ibuff( 1) = coarsen_multipole
          ibuff( 2) = lmax
@@ -259,6 +261,7 @@ contains
          vcycle_abort   = rbuff(3)
          vcycle_giveup  = rbuff(4)
          L4_strength    = rbuff(5)
+         coarsest_tol   = rbuff(6)
 
          coarsen_multipole = ibuff( 1)
          lmax              = ibuff( 2)
@@ -408,7 +411,7 @@ contains
             case default
                coarsest%level%fft_type = fft_none
                FFTn="none"
-               if (master) call warn("[multigrid_gravity:init_multigrid_grav] base_no_fft unset but no suitable boundary conditions found. Reverting to RBGS relaxation.")
+               if (master) call warn("[multigrid_gravity:init_multigrid_grav] base_no_fft unset but no suitable boundary conditions found. Reverting to relaxation.")
          end select
          if (trim(FFTn) /= "none" .and. master) then
             write(msg,'(a,i3,2a)')"[multigrid_gravity:init_multigrid_grav] Coarsest level (",coarsest%level%level_id,"), FFT solver: ", trim(FFTn)
@@ -416,7 +419,7 @@ contains
          endif
       endif
       if (coarsest%level%fft_type == fft_none .and. master) then
-         write(msg,'(a,i3,a)')"[multigrid_gravity:init_multigrid_grav] Coarsest level (",coarsest%level%level_id,"), RBGS relaxation solver"
+         write(msg,'(a,i3,a)')"[multigrid_gravity:init_multigrid_grav] Coarsest level (",coarsest%level%level_id,"), relaxation solver"
          call printinfo(msg)
       endif
 
@@ -757,12 +760,13 @@ contains
 
    subroutine multigrid_solve_grav(i_all_dens)
 
-      use cg_leaves,        only: leaves
-      use constants,        only: sgp_n
-      use multigridvars,    only: solution, tot_ts, ts, grav_bnd, bnd_dirichlet, bnd_givenval, bnd_isolated, all_dirty
-      use multipole,        only: multipole_solver
-      use named_array_list, only: qna
-      use timer,            only: set_timer
+      use cg_leaves,         only: leaves
+      use constants,         only: sgp_n
+      use multigrid_helpers, only: all_dirty
+      use multigridvars,     only: solution, tot_ts, ts, grav_bnd, bnd_dirichlet, bnd_givenval, bnd_isolated
+      use multipole,         only: multipole_solver
+      use named_array_list,  only: qna
+      use timer,             only: set_timer
 
       implicit none
 
