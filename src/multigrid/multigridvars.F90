@@ -68,6 +68,7 @@ module multigridvars
    logical                 :: multidim_code_3D                        !< prefer code written for any 1D and 2D configuration even in 3D for benchmarking and debugging
    real                    :: overrelax                               !< overrealaxation factor (if < 1. then works as underrelaxation), provided for tests
    real                    :: coarsest_tol                            !< criterion for automagic coarsest level relaxation
+   real, parameter         :: nc_growth = 1.3                         !< how much ncheck grows between checks in relaxation
 
    ! boundaries
    enum, bind(C)                                                      !< constants for enumerating multigrid boundary types

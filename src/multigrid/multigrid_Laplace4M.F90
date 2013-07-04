@@ -186,7 +186,7 @@ contains
       use global,             only: dirty_debug
       use grid_cont,          only: grid_container
       use mpisetup,           only: piernik_MPI_Allreduce, master
-      use multigridvars,      only: multidim_code_3D, set_relax_boundaries, coarsest_tol
+      use multigridvars,      only: multidim_code_3D, set_relax_boundaries, coarsest_tol, nc_growth
       use named_array_list,   only: qna
 
       implicit none
@@ -205,7 +205,6 @@ contains
       logical :: need_all_bnd_upd
       real :: max_in, max_out
       integer :: ncheck
-      real, parameter :: nc_growth = 1.3 ! how much ncheck grows between checks
 
       if (dom%geometry_type /= GEO_XYZ) call die("[multigrid_Laplace4M:approximate_solution_relax4M] Relaxation for Mehrstellen not implemented for noncartesian grid")
 !     call curl%arr3d_boundaries(src, bnd_type = BND_NEGREF) ! required when we use 7-point source term, not just 1-point

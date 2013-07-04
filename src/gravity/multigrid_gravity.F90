@@ -159,7 +159,7 @@ contains
       mmax                   = -1 ! will be automatically set to lmax unless explicitly limited in problem.par
       max_cycles             = 20
       nsmool                 = -1  ! best to set it to dom%nb or its multiply
-      nsmoob                 = 100
+      nsmoob                 = 10000
       select case (dom%geometry_type)
          case (GEO_XYZ)
             ord_laplacian    = O_D4

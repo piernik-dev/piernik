@@ -181,7 +181,7 @@ contains
       use global,             only: dirty_debug
       use grid_cont,          only: grid_container
       use mpisetup,           only: piernik_MPI_Allreduce, master
-      use multigridvars,      only: multidim_code_3D, overrelax, set_relax_boundaries, coarsest_tol
+      use multigridvars,      only: multidim_code_3D, overrelax, set_relax_boundaries, coarsest_tol, nc_growth
 
       implicit none
 
@@ -203,7 +203,6 @@ contains
       logical :: need_all_bnd_upd
       real :: max_in, max_out
       integer :: ncheck
-      real, parameter :: nc_growth = 1.3 ! how much ncheck grows between checks
 
       ! call curl%arr3d_boundaries(src) required when we want to eliminate some communication of soln at a cost of expanding relaxated area into guardcells
 
