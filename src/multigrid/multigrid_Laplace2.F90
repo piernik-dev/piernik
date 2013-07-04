@@ -165,8 +165,6 @@ contains
 !!
 !! \details  This relaxation can also be used for some other implementations of the Laplace operators during development stage. In such cases you may expect poor convergence.
 !! 4th order operator residual4 uses this relaxation because it is not planned to implement specialized operator anytime soon.
-!!
-!! \todo Implement efficient use of guardcells in order to save some communication like in [7846]
 !<
 
    subroutine approximate_solution_rbgs2(curl, src, soln, nsmoo)
@@ -209,7 +207,7 @@ contains
 
       allocate(crx(0), crx1(0), cry(0), crz(0), cr(0)) ! suppress compiler warnings
       cr0 = 1. - overrelax
-      ncheck = 2*dom%nb*RED_BLACK ! first check for sonvergence of relaxation on coarsest level will be done at this n
+      ncheck = 2*dom%nb*RED_BLACK ! first check for convergence of relaxation on coarsest level will be done at this n
       max_in = 0.
 
       if (dom%nb > 1) call curl%arr3d_boundaries(src, bnd_type = BND_NEGREF)

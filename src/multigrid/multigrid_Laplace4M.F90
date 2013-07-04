@@ -211,7 +211,7 @@ contains
 !     call curl%arr3d_boundaries(src, bnd_type = BND_NEGREF) ! required when we use 7-point source term, not just 1-point
       ! Also required when we want to eliminate some communication of soln at a cost of expanding relaxated area into guardcells
 
-      ncheck = 2*dom%nb ! first check for sonvergence of relaxation on coarsest level will be done at this n
+      ncheck = 2*dom%nb ! first check for convergence of relaxation on coarsest level will be done at this n
       max_in = 0.
 
       ! Cannot use Red-Black for 4th order Mehrstellen relaxation due to data dependencies even if in some cases Red-Black gives better convergence.
