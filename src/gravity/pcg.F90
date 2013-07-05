@@ -229,7 +229,7 @@ contains
    subroutine smoother(def, corr)
 
       use cg_level_finest,   only: finest
-      use multigrid_Laplace, only: approximate_solution_order
+      use multigrid_Laplace, only: approximate_solution_relax
       use multigridvars,     only: nsmool
 
       implicit none
@@ -238,7 +238,7 @@ contains
       integer(kind=4), intent(in) :: corr !< Approximate solution for the defect (correction)
 
       call finest%level%set_q_value(corr, 0.)
-      call approximate_solution_order(finest%level, def, corr, nsmool)
+      call approximate_solution_relax(finest%level, def, corr, nsmool)
 
    end subroutine smoother
 

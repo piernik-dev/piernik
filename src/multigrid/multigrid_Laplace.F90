@@ -37,7 +37,7 @@ module multigrid_Laplace
    implicit none
 
    private
-   public :: residual, approximate_solution_order, vT_A_v_order, ord_laplacian, ord_laplacian_outer
+   public :: residual, approximate_solution_relax, vT_A_v_order, ord_laplacian, ord_laplacian_outer
 
    integer(kind=4) :: ord_laplacian          !< Laplace operator order; allowed values are 2, -4 (default) and 4 (not fully implemented)
    integer(kind=4) :: ord_laplacian_outer    !< Laplace operator order for isolated boundaries (useful as long as -4 is not fully implemented)
@@ -111,7 +111,7 @@ contains
 !! The relaxation routines also depends a lot on communication, which may limit scalability of the multigrid.
 !<
 
-   subroutine approximate_solution_order(curl, src, soln, nsmoo)
+   subroutine approximate_solution_relax(curl, src, soln, nsmoo)
 
       use cg_level_connected,  only: cg_level_connected_T
       use constants,           only: O_I2, O_I4
@@ -135,10 +135,10 @@ contains
          case (-O_I4)
             call approximate_solution_relax4M(curl, src, soln, nsmoo)
          case default
-            call die("[multigrid_Laplace:approximate_solution_order] The order of Laplacian must be equal to 2, 4 or -4")
+            call die("[multigrid_Laplace:approximate_solution_relax] The order of Laplacian must be equal to 2, 4 or -4")
       end select
 
-   end subroutine approximate_solution_order
+   end subroutine approximate_solution_relax
 
 !> \brief Selector for v*Laplacian(v) routine
 

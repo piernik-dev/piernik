@@ -52,7 +52,7 @@ contains
 !! * prolonged from coarser level otherwise.
 !! Then a relaxation is called. The number of relaxation passes is determined according to the level.
 !!
-!! If for some reason it is undesirable to initialize the solution, call approximate_solution_order directly.
+!! If for some reason it is undesirable to initialize the solution, call approximate_solution_relax directly.
 !<
 
    subroutine approximate_solution(curl, src, soln)
@@ -61,7 +61,7 @@ contains
       use cg_level_connected, only: cg_level_connected_T
       use constants,          only: BND_NEGREF, fft_none
       use multigridvars,      only: nsmool
-      use multigrid_Laplace,  only: approximate_solution_order
+      use multigrid_Laplace,  only: approximate_solution_relax
 
       implicit none
 
@@ -83,10 +83,10 @@ contains
          else
             nsmoo = nsmool
             call curl%coarser%prolong_q_1var(soln, bnd_type = BND_NEGREF)
-            !> \warning when this is be incompatible with V-cycle or other scheme, use direct call to approximate_solution_order
+            !> \warning when this is be incompatible with V-cycle or other scheme, use direct call to approximate_solution_relax
          endif
 
-         call approximate_solution_order(curl, src, soln, nsmoo)
+         call approximate_solution_relax(curl, src, soln, nsmoo)
       endif
 
       call curl%check_dirty(soln, "approx_soln soln+")
