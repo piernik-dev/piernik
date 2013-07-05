@@ -67,22 +67,24 @@ contains
 
    subroutine residual4(cg_llst, src, soln, def)
 
-      use cg_list,       only: cg_list_element
-      use cg_leaves,     only: cg_leaves_T
-      use constants,     only: ndims, idm2, xdim, ydim, zdim, BND_NEGREF, GEO_XYZ
-      use dataio_pub,    only: die, warn
-      use domain,        only: dom
-      use grid_cont,     only: grid_container
-      use mpisetup,      only: master
-      use multigridvars, only: grav_bnd, bnd_givenval
-      use named_array,   only: p3
+      use cg_leaves,          only: cg_leaves_T
+      use cg_level_connected, only: cg_level_connected_T
+      use cg_list,            only: cg_list_element
+      use cg_list_bnd,        only: cg_list_bnd_T
+      use constants,          only: ndims, idm2, xdim, ydim, zdim, BND_NEGREF, GEO_XYZ
+      use dataio_pub,         only: die, warn
+      use domain,             only: dom
+      use grid_cont,          only: grid_container
+      use mpisetup,           only: master
+      use multigridvars,      only: grav_bnd, bnd_givenval
+      use named_array,        only: p3
 
       implicit none
 
-      class(cg_leaves_T), intent(in) :: cg_llst !< pointer to a level for which we approximate the solution
-      integer(kind=4),    intent(in) :: src     !< index of source in cg%q(:)
-      integer(kind=4),    intent(in) :: soln    !< index of solution in cg%q(:)
-      integer(kind=4),    intent(in) :: def     !< index of defect in cg%q(:)
+      class(cg_list_bnd_T), intent(in) :: cg_llst !< pointer to a level for which we approximate the solution
+      integer(kind=4),      intent(in) :: src     !< index of source in cg%q(:)
+      integer(kind=4),      intent(in) :: soln    !< index of solution in cg%q(:)
+      integer(kind=4),      intent(in) :: def     !< index of defect in cg%q(:)
 
       real, parameter     :: L4_scaling = 1./12. ! with L4_strength = 1. this gives an L4 approximation for finite differences approach
       integer, parameter  :: L2w = 2             ! #layers of boundary cells for L2 operator
@@ -103,7 +105,14 @@ contains
          firstcall = .false.
       endif
 
-      call cg_llst%leaf_arr3d_boundaries(soln, bnd_type=BND_NEGREF, nocorners=.true.)
+      select type(cg_llst)
+         type is (cg_leaves_T)
+            call cg_llst%leaf_arr3d_boundaries(soln, bnd_type=BND_NEGREF, nocorners=.true.)
+         type is(cg_level_connected_T)
+            call cg_llst%arr3d_boundaries(soln, bnd_type=BND_NEGREF, nocorners=.true.)
+         class default
+             call die("[multigrid_Laplace4:residual4] Unknown type")
+      end select
 
       c21 = 1.
       c42 = - L4_scaling * L4_strength

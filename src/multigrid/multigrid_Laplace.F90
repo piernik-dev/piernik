@@ -77,7 +77,7 @@ contains
 
    subroutine residual(cg_llst, src, soln, def)
 
-      use cg_leaves,           only: cg_leaves_T
+      use cg_list_bnd,         only: cg_list_bnd_T
       use constants,           only: O_I2, O_I4
       use dataio_pub,          only: die
       use multigrid_Laplace2,  only: residual2
@@ -86,10 +86,10 @@ contains
 
       implicit none
 
-      class(cg_leaves_T), intent(in) :: cg_llst !< pointer to a list of grids for which we approximate the solution
-      integer(kind=4),    intent(in) :: src     !< index of source in cg%q(:)
-      integer(kind=4),    intent(in) :: soln    !< index of solution in cg%q(:)
-      integer(kind=4),    intent(in) :: def     !< index of defect in cg%q(:)
+      class(cg_list_bnd_T), intent(in) :: cg_llst !< pointer to a list of grids for which we approximate the solution
+      integer(kind=4),      intent(in) :: src     !< index of source in cg%q(:)
+      integer(kind=4),      intent(in) :: soln    !< index of solution in cg%q(:)
+      integer(kind=4),      intent(in) :: def     !< index of defect in cg%q(:)
 
       select case (ordL())
          case (O_I2)

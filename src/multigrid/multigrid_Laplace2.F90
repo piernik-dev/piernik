@@ -56,20 +56,22 @@ contains
 
    subroutine residual2(cg_llst, src, soln, def)
 
-      use cg_list,       only: cg_list_element
-      use cg_leaves,     only: cg_leaves_T
-      use constants,     only: xdim, ydim, zdim, ndims, GEO_XYZ, GEO_RPZ, half, BND_NEGREF
-      use dataio_pub,    only: die
-      use domain,        only: dom
-      use grid_cont,     only: grid_container
-      use multigridvars, only: multidim_code_3D
+      use cg_leaves,          only: cg_leaves_T
+      use cg_level_connected, only: cg_level_connected_T
+      use cg_list,            only: cg_list_element
+      use cg_list_bnd,        only: cg_list_bnd_T
+      use constants,          only: xdim, ydim, zdim, ndims, GEO_XYZ, GEO_RPZ, half, BND_NEGREF
+      use dataio_pub,         only: die
+      use domain,             only: dom
+      use grid_cont,          only: grid_container
+      use multigridvars,      only: multidim_code_3D
 
       implicit none
 
-      class(cg_leaves_T), intent(in) :: cg_llst !< pointer to a level for which we approximate the solution
-      integer(kind=4),    intent(in) :: src     !< index of source in cg%q(:)
-      integer(kind=4),    intent(in) :: soln    !< index of solution in cg%q(:)
-      integer(kind=4),    intent(in) :: def     !< index of defect in cg%q(:)
+      class(cg_list_bnd_T), intent(in) :: cg_llst !< pointer to a level for which we approximate the solution
+      integer(kind=4),      intent(in) :: src     !< index of source in cg%q(:)
+      integer(kind=4),      intent(in) :: soln    !< index of solution in cg%q(:)
+      integer(kind=4),      intent(in) :: def     !< index of defect in cg%q(:)
 
       integer                         :: i, j, k
       real                            :: L0, Lx, Ly, Lz
@@ -77,7 +79,14 @@ contains
       type(cg_list_element), pointer  :: cgl
       type(grid_container),  pointer  :: cg
 
-      call cg_llst%leaf_arr3d_boundaries(soln, bnd_type=BND_NEGREF, nocorners=.true.)
+      select type(cg_llst)
+         type is (cg_leaves_T)
+            call cg_llst%leaf_arr3d_boundaries(soln, bnd_type=BND_NEGREF, nocorners=.true.)
+         type is(cg_level_connected_T)
+            call cg_llst%arr3d_boundaries(soln, bnd_type=BND_NEGREF, nocorners=.true.)
+         class default
+             call die("[multigrid_Laplace2:residual2] Unknown type")
+      end select
 
       ! Possible optimization candidate: reduce cache misses (secondary importance, cache-aware implementation required)
       ! Explicit loop over k gives here better performance than array operation due to less cache misses (at least on 32^3 and 64^3 arrays)
