@@ -67,6 +67,8 @@ module multigridvars
    integer(kind=4)         :: nsmool                                  !< smoothing cycles per call
    logical                 :: multidim_code_3D                        !< prefer code written for any 1D and 2D configuration even in 3D for benchmarking and debugging
    real                    :: overrelax                               !< overrealaxation factor (if < 1. then works as underrelaxation), provided for tests
+   real                    :: coarsest_tol                            !< criterion for automagic coarsest level relaxation
+   real, parameter         :: nc_growth = 1.3                         !< how much ncheck grows between checks in relaxation
 
    ! boundaries
    enum, bind(C)                                                      !< constants for enumerating multigrid boundary types
@@ -78,89 +80,5 @@ module multigridvars
       enumerator :: bnd_invalid = bnd_periodic - 1                    !< invalid
    end enum
    integer            :: grav_bnd                                     !< boundary type for computational domain
-
- contains
-
-!>
-!! \brief Put insane FP values into all multigrid working arrays
-!!
-!! \details If there are any uninitialized values used in the solver under certain circumstances, the dirtyH will most likely propagate and be easily detectable.
-!! \deprecated remove this clause as soon as Intel Compiler gets required features and/or bug fixes
-!<
-
-   subroutine all_dirty
-#if defined(__INTEL_COMPILER)
-      use cg_list_bnd,    only: cg_list_bnd_T  ! QA_WARN intel
-#endif /* __INTEL_COMPILER */
-      use cg_list_global, only: all_cg
-      use constants,      only: dirtyH
-      use global,         only: dirty_debug
-
-      implicit none
-
-      call all_cg%set_dirty(source)
-      call all_cg%set_dirty(solution)
-      call all_cg%set_dirty(defect)
-      call all_cg%set_dirty(correction)
-
-      if (dirty_debug) call all_cg%reset_boundaries(dirtyH)
-
-   end subroutine all_dirty
-
-!> \brief Take care of boundaries of relaxated grid
-
-   subroutine set_relax_boundaries(cg, ind, is, ie, js, je, ks, ke, b, need_bnd_upd)
-
-      use constants, only: xdim, ydim, zdim, LO, HI
-      use domain,    only: dom
-      use grid_cont, only: grid_container
-
-      implicit none
-
-      type(grid_container), pointer, intent(inout) :: cg                     !< current grid container
-      integer(kind=4),               intent(in)    :: ind                    !< index in cg%q(:)
-      integer,                       intent(out)   :: is, ie, js, je, ks, ke !< indices in cg
-      integer(kind=4),               intent(in)    :: b                      !< how far we look into boundary layer
-      logical,                       intent(in)    :: need_bnd_upd           !< if .true. then update 1 layer of external boundaries
-
-      ! calling curl%external_boundaries(ind, bnd_type = BND_NEGREF) is a bit overkill
-      if (cg%ext_bnd(xdim, LO)) then
-         is = cg%is
-         if (need_bnd_upd) cg%q(ind)%arr(is-1, :, :) = - cg%q(ind)%arr(is, :, :)
-      else
-         is = cg%is-b*dom%D_(xdim)
-      endif
-      if (cg%ext_bnd(xdim, HI)) then
-         ie = cg%ie
-         if (need_bnd_upd) cg%q(ind)%arr(ie+1, :, :) = - cg%q(ind)%arr(ie, :, :)
-      else
-         ie = cg%ie+b*dom%D_(xdim)
-      endif
-      if (cg%ext_bnd(ydim, LO)) then
-         js = cg%js
-         if (need_bnd_upd) cg%q(ind)%arr(:, js-1, :) = - cg%q(ind)%arr(:, js, :)
-      else
-         js = cg%js-b*dom%D_(ydim)
-      endif
-      if (cg%ext_bnd(ydim, HI)) then
-         je = cg%je
-         if (need_bnd_upd) cg%q(ind)%arr(:, je+1, :) = - cg%q(ind)%arr(:, je, :)
-      else
-         je = cg%je+b*dom%D_(ydim)
-      endif
-      if (cg%ext_bnd(zdim, LO)) then
-         ks = cg%ks
-         if (need_bnd_upd) cg%q(ind)%arr(:, :, ks-1) = - cg%q(ind)%arr(:, :, ks)
-      else
-         ks = cg%ks-b*dom%D_(zdim)
-      endif
-      if (cg%ext_bnd(zdim, HI)) then
-         ke = cg%ke
-         if (need_bnd_upd) cg%q(ind)%arr(:, :, ke+1) = - cg%q(ind)%arr(:, :, ke)
-      else
-         ke = cg%ke+b*dom%D_(zdim)
-      endif
-
-   end subroutine set_relax_boundaries
 
 end module multigridvars

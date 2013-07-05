@@ -165,21 +165,22 @@ contains
 !!
 !! \details  This relaxation can also be used for some other implementations of the Laplace operators during development stage. In such cases you may expect poor convergence.
 !! 4th order operator residual4 uses this relaxation because it is not planned to implement specialized operator anytime soon.
-!!
-!! \todo Implement efficient use of guardcells in order to save some communication like in [7846]
 !<
 
    subroutine approximate_solution_rbgs2(curl, src, soln, nsmoo)
 
+      use cg_level_coarsest,  only: coarsest
       use cg_level_connected, only: cg_level_connected_T
       use cg_list,            only: cg_list_element
       use cg_list_dataop,     only: dirty_label
-      use constants,          only: xdim, ydim, zdim, ndims, GEO_XYZ, GEO_RPZ, BND_NEGREF, LO
-      use dataio_pub,         only: die
+      use constants,          only: xdim, ydim, zdim, ndims, GEO_XYZ, GEO_RPZ, BND_NEGREF, LO, pMAX
+      use dataio_pub,         only: die, warn
       use domain,             only: dom
       use global,             only: dirty_debug
       use grid_cont,          only: grid_container
-      use multigridvars,      only: multidim_code_3D, overrelax, set_relax_boundaries
+      use mpisetup,           only: piernik_MPI_Allreduce, master
+      use multigrid_helpers,  only: set_relax_boundaries, copy_and_max
+      use multigridvars,      only: multidim_code_3D, overrelax, coarsest_tol, nc_growth
 
       implicit none
 
@@ -199,11 +200,15 @@ contains
       type(grid_container),  pointer :: cg
       integer :: is, ie, js, je, ks, ke
       logical :: need_all_bnd_upd
+      real :: max_in, max_out
+      integer :: ncheck
 
       ! call curl%arr3d_boundaries(src) required when we want to eliminate some communication of soln at a cost of expanding relaxated area into guardcells
 
       allocate(crx(0), crx1(0), cry(0), crz(0), cr(0)) ! suppress compiler warnings
       cr0 = 1. - overrelax
+      ncheck = 2*dom%nb*RED_BLACK ! first check for convergence of relaxation on coarsest level will be done at this n
+      max_in = 0.
 
       if (dom%nb > 1) call curl%arr3d_boundaries(src, bnd_type = BND_NEGREF)
       do n = 1, RED_BLACK*nsmoo
@@ -215,6 +220,12 @@ contains
             write(dirty_label, '(a,i5)')"relax2 soln- smoo=", n
             call curl%check_dirty(soln, dirty_label)
          endif
+
+         if (associated(curl, coarsest%level) .and. n==ncheck) then
+            max_in = copy_and_max(curl, soln)
+            max_out = 0
+         endif
+
          cgl => curl%first
          do while (associated(cgl))
             cg => cgl%cg
@@ -326,6 +337,9 @@ contains
                end select
             endif
 
+            if (associated(curl, coarsest%level) .and. n == ncheck) &
+                 max_out = max(max_out, maxval(abs(cg%prolong_xyz( cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) - cg%q(soln)%arr(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke))))
+
             cgl => cgl%nxt
          enddo
 
@@ -334,7 +348,19 @@ contains
             call curl%check_dirty(soln, dirty_label)
          endif
 
+         if (associated(curl, coarsest%level) .and. n == ncheck) then
+            call piernik_MPI_Allreduce(max_out, pMAX)
+            if (coarsest_tol*max_in-max_out > 0.) exit
+            ncheck = int(ncheck * nc_growth)
+            do while (mod(ncheck, RED_BLACK) == 0)
+               ncheck = ncheck + 1
+            enddo
+         endif
+
       enddo
+
+      if (associated(curl, coarsest%level) .and. n > nsmoo .and. master) &
+           call warn("[multigrid_Laplace2:approximate_solution_rbgs2] relaxation on coarsest level did not converge, consider increasing nsmoob")
 
       deallocate(crx, crx1, cry, crz, cr)
 

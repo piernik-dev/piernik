@@ -403,7 +403,7 @@ contains
                else
                   call all_fluid_boundaries(nocorners = .true.)
                   ! For some reasons nocorners here affect mcrwind tests. \todo Find out why. Is it related to position of magnetic field components?
-               end if
+               endif
             else
                if (istep == 1) then
                   call all_fluid_boundaries(nocorners = .true.)
