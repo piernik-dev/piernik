@@ -198,14 +198,14 @@ contains
       nm = n-1
 
       ps(:)  = 0.0
-      vx(RNG)=uu(imx,RNG)/uu(idn,RNG) ; vx(1) = vx(2); vx(n) = vx(nm)
+      vx(RNG)=uu(RNG, imx)/uu(RNG, idn) ; vx(1) = vx(2); vx(n) = vx(nm)
 
-      flux(idn,RNG)=uu(imx,RNG)
-      flux(imx,RNG)=uu(imx,RNG)*vx(RNG)
-      flux(imy,RNG)=uu(imy,RNG)*vx(RNG)
-      flux(imz,RNG)=uu(imz,RNG)*vx(RNG)
+      flux(RNG, idn)=uu(RNG, imx)
+      flux(RNG, imx)=uu(RNG, imx)*vx(RNG)
+      flux(RNG, imy)=uu(RNG, imy)*vx(RNG)
+      flux(RNG, imz)=uu(RNG, imz)*vx(RNG)
 
-      flux(:,1) = flux(:,2); flux(:,n) = flux(:,nm)
+      flux(1, :) = flux(2, :); flux(n, :) = flux(nm, :)
 
 #ifdef LOCAL_FR_SPEED
 
@@ -215,15 +215,15 @@ contains
 !     minvx = minval(vx(RNG))
 !     maxvx = maxval(vx(RNG))
 !     amp   = (maxvx-minvx)*half
-!      cfr(1,RNG) = max(sqrt(vx(RNG)**2+cfr_smooth*amp),small)
+!      cfr(RNG, 1) = max(sqrt(vx(RNG)**2+cfr_smooth*amp),small)
       absvx = abs(vx)
-      cfr(idn,RNG) = max( absvx(1:n-2), absvx(2:nm), absvx(3:n) )
+      cfr(RNG, idn) = max( absvx(1:n-2), absvx(2:nm), absvx(3:n) )
 
-      cfr(idn,1) = cfr(idn,2); cfr(idn,n) = cfr(idn,nm)
+      cfr(1, idn) = cfr(2, idn); cfr(n, idn) = cfr(nm, idn)
 
-      cfr(imx,:) = cfr(idn,:)
-      cfr(imy,:) = cfr(idn,:)
-      cfr(imz,:) = cfr(idn,:)
+      cfr(:, imx) = cfr(:, idn)
+      cfr(:, imy) = cfr(:, idn)
+      cfr(:, imz) = cfr(:, idn)
 
 #endif /* LOCAL_FR_SPEED */
 

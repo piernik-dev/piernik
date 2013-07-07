@@ -139,9 +139,9 @@ contains
       if ( any( [allocated(cg%gc_xdim), allocated(cg%gc_ydim), allocated(cg%gc_zdim)] ) ) then
          call die("[gridgeometry:geo_coeffs_arrays] double allocation")
       else
-         allocate(cg%gc_xdim(GC1:GC3, flind%all, cg%n_(xdim)))
-         allocate(cg%gc_ydim(GC1:GC3, flind%all, cg%n_(ydim)))
-         allocate(cg%gc_zdim(GC1:GC3, flind%all, cg%n_(zdim)))
+         allocate(cg%gc_xdim(GC1:GC3, cg%n_(xdim), flind%all))
+         allocate(cg%gc_ydim(GC1:GC3, cg%n_(ydim), flind%all))
+         allocate(cg%gc_zdim(GC1:GC3, cg%n_(zdim), flind%all))
       endif
 
    end subroutine geo_coeffs_arrays
@@ -188,14 +188,16 @@ contains
 
          call geo_coeffs_arrays(flind, cg)
 
-         cg%gc_xdim(GC1,:,:) = spread( cg%coord(INV_CENTER, xdim)%r(:), 1, flind%all)
-         cg%gc_xdim(GC2,:,:) = spread( cg%coord(RIGHT, xdim)%r(:),      1, flind%all)
-         cg%gc_xdim(GC3,:,:) = spread( cg%coord(LEFT, xdim)%r(:),       1, flind%all)
+         do i = 1, flind%all
+            cg%gc_xdim(GC1,:,i) = cg%coord(INV_CENTER, xdim)%r(:)
+            cg%gc_xdim(GC2,:,i) = cg%coord(RIGHT, xdim)%r(:)
+            cg%gc_xdim(GC3,:,i) = cg%coord(LEFT, xdim)%r(:)
+         enddo
 
          do i = lbound(flind%all_fluids,1), ubound(flind%all_fluids,1)
-            cg%gc_xdim(GC1, flind%all_fluids(i)%fl%imy, :) = cg%gc_xdim(GC1, flind%all_fluids(i)%fl%imy, :) * cg%coord(INV_CENTER, xdim)%r(:)
-            cg%gc_xdim(GC2, flind%all_fluids(i)%fl%imy, :) = cg%gc_xdim(GC2, flind%all_fluids(i)%fl%imy, :) * cg%coord(RIGHT, xdim)%r(:)
-            cg%gc_xdim(GC3, flind%all_fluids(i)%fl%imy, :) = cg%gc_xdim(GC3, flind%all_fluids(i)%fl%imy, :) * cg%coord(LEFT, xdim)%r(:)
+            cg%gc_xdim(GC1, :, flind%all_fluids(i)%fl%imy) = cg%gc_xdim(GC1, :, flind%all_fluids(i)%fl%imy) * cg%coord(INV_CENTER, xdim)%r(:)
+            cg%gc_xdim(GC2, :, flind%all_fluids(i)%fl%imy) = cg%gc_xdim(GC2, :, flind%all_fluids(i)%fl%imy) * cg%coord(RIGHT, xdim)%r(:)
+            cg%gc_xdim(GC3, :, flind%all_fluids(i)%fl%imy) = cg%gc_xdim(GC3, :, flind%all_fluids(i)%fl%imy) * cg%coord(LEFT, xdim)%r(:)
          enddo
          cg%gc_ydim(GC2:GC3,:,:) = 1.0     ! [ 1/r , 1 , 1]
 
@@ -258,7 +260,7 @@ contains
 
       if (sweep == xdim) then
          do i = 1, size(iarr_all_dn)
-            res(i,:) = cg%inv_x(:) * (u(iarr_all_my(i),:)**2 / u(iarr_all_dn(i),:) + p(i,:))
+            res(:, i) = cg%inv_x(:) * (u(:, iarr_all_my(i))**2 / u(:, iarr_all_dn(i)) + p(:, i))
          enddo
       else
          ! Note that there's no additional source term for angular momentum since we're using
