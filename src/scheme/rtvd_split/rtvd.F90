@@ -279,9 +279,9 @@ contains
       implicit none
 
       integer(kind=4),               intent(in)    :: n                  !< array size
-      real, dimension(flind%all,n),  intent(inout) :: u                  !< vector of conservative variables
-      real, dimension(flind%all,n),  intent(in)    :: u0                 !< vector of conservative variables
-      real, dimension(nmag,n),       intent(in)    :: bb                 !< local copy of magnetic field
+      real, dimension(n, flind%all),  intent(inout) :: u                  !< vector of conservative variables
+      real, dimension(n, flind%all),  intent(in)    :: u0                 !< vector of conservative variables
+      real, dimension(n, nmag),       intent(in)    :: bb                 !< local copy of magnetic field
       real, dimension(:), pointer,   intent(in)    :: divv               !< vector of velocity divergence used in cosmic ray advection
       real, dimension(:), pointer,   intent(in)    :: cs_iso2            !< square of local isothermal sound speed
       integer,                       intent(in)    :: istep              !< step number in the time integration scheme
@@ -299,28 +299,28 @@ contains
 #endif /* GRAV */
 
       real                                         :: dtx                !< dt/dx
-      real, dimension(flind%all,n)                 :: cfr                !< freezing speed
+      real, dimension(n, flind%all)                 :: cfr                !< freezing speed
 !locals
-      real, dimension(flind%fluids,n)              :: acc                !< acceleration
-      real, dimension(flind%all,n)                 :: w                  !< auxiliary vector to calculate fluxes
-      real, dimension(flind%all,n)                 :: fr                 !< flux of the right-moving waves
-      real, dimension(flind%all,n)                 :: fl                 !< flux of the left-moving waves
-      real, dimension(flind%all,n)                 :: fu                 !< sum of fluxes of right- and left-moving waves
-      real, dimension(flind%all,n)                 :: dfp                !< second order correction of left/right-moving waves flux on the right cell boundary
-      real, dimension(flind%all,n)                 :: dfm                !< second order correction of left/right-moving waves flux on the left cell boundary
-      real, dimension(flind%all,n)                 :: u1                 !< updated vector of conservative variables (after one timestep in second order scheme)
-      real, dimension(flind%fluids,n)              :: geosrc             !< source terms caused by geometry of coordinate system
-      real, dimension(flind%fluids,n), target      :: pressure           !< gas pressure
-      real, dimension(flind%fluids,n), target      :: density            !< gas density
-      real, dimension(flind%fluids,n), target      :: vel_sweep          !< velocity in the direction of current sweep
+      real, dimension(n, flind%fluids)              :: acc                !< acceleration
+      real, dimension(n, flind%all)                 :: w                  !< auxiliary vector to calculate fluxes
+      real, dimension(n, flind%all)                 :: fr                 !< flux of the right-moving waves
+      real, dimension(n, flind%all)                 :: fl                 !< flux of the left-moving waves
+      real, dimension(n, flind%all)                 :: fu                 !< sum of fluxes of right- and left-moving waves
+      real, dimension(n, flind%all)                 :: dfp                !< second order correction of left/right-moving waves flux on the right cell boundary
+      real, dimension(n, flind%all)                 :: dfm                !< second order correction of left/right-moving waves flux on the left cell boundary
+      real, dimension(n, flind%all)                 :: u1                 !< updated vector of conservative variables (after one timestep in second order scheme)
+      real, dimension(n, flind%fluids)              :: geosrc             !< source terms caused by geometry of coordinate system
+      real, dimension(n, flind%fluids), target      :: pressure           !< gas pressure
+      real, dimension(n, flind%fluids), target      :: density            !< gas density
+      real, dimension(n, flind%fluids), target      :: vel_sweep          !< velocity in the direction of current sweep
       real, dimension(:,:),            pointer     :: dens, vx
       logical                                      :: full_dim
 
 #ifdef COSM_RAYS
       real, dimension(n)                           :: grad_pcr
-      real, dimension(flind%crs%all,n)             :: decr
+      real, dimension(n, flind%crs%all)             :: decr
 #ifdef COSM_RAYS_SOURCES
-      real, dimension(flind%crn%all,n)             :: srccrn
+      real, dimension(n, flind%crn%all)             :: srccrn
 #endif /* COSM_RAYS_SOURCES */
 #endif /* COSM_RAYS */
 
@@ -345,7 +345,7 @@ contains
       vx   => vel_sweep
       dens => density
 
-      density(:,:) = u(iarr_all_dn,:)
+      density(:,:) = u(:, iarr_all_dn)
 
       if (full_dim) then
          ! Fluxes calculation for cells centers
@@ -353,26 +353,26 @@ contains
          ! Right and left fluxes decoupling
 
          ! original code
-         ! fl(:,1:n-1) = (cfr(:,2:n)*u1(:,2:n) - wl(:,2:n)) * 0.5
+         ! fl(1:n-1, :) = (cfr(2:n, :)*u1(2:n, :) - wl(2:n, :)) * 0.5
          ! fr          = (cfr*u1 + w) * 0.5
          ! following is equivalent but faster
 
-         fl(:,1:n-1) = (u1(:,2:n) * cfr(:,2:n) - w(:,2:n)) * half
-         fl(:,n) = fl(:,n-1)
-         fr(:,2:n) = fl(:,1:n-1) + w(:,2:n)
-         fr(:,1) = fr(:,2)
+         fl(1:n-1, :) = (u1(2:n, :) * cfr(2:n, :) - w(2:n, :)) * half
+         fl(n, :) = fl(n-1, :)
+         fr(2:n, :) = fl(1:n-1, :) + w(2:n, :)
+         fr(1, :) = fr(2, :)
 
          if (istep == 2) then
 
             ! Second order flux corrections
-            dfp(:,1:n-1) = half * (fr(:,2:n) - fr(:,1:n-1)); dfp(:,n) = dfp(:,n-1)
-            dfm(:,2:n)   = dfp(:,1:n-1);                     dfm(:,1) = dfm(:,2)
+            dfp(1:n-1, :) = half * (fr(2:n, :) - fr(1:n-1, :)); dfp(n, :) = dfp(n-1, :)
+            dfm(2:n, :)   = dfp(1:n-1, :);                      dfm(1, :) = dfm(2, :)
             ! Flux limiter application
-            call flimiter(fr,dfm,dfp)
+            call flimiter(fr, dfm, dfp)
 
-            dfp(:,1:n-1) = half * (fl(:,1:n-1) - fl(:,2:n)); dfp(:,n) = dfp(:,n-1)
-            dfm(:,2:n)   = dfp(:,1:n-1);                     dfm(:,1) = dfm(:,2)
-            call flimiter(fl,dfm,dfp)
+            dfp(1:n-1, :) = half * (fl(1:n-1, :) - fl(2:n, :)); dfp(n, :) = dfp(n-1, :)
+            dfm(2:n, :)   = dfp(1:n-1, :);                      dfm(1, :) = dfm(2, :)
+            call flimiter(fl, dfm, dfp)
             !OPT 60% of D1mr and 40% D1mw occurred in few above lines (D1mr = 0.1% Dr, D1mw = 0.5% Dw)
             ! That ^^ should be fixed now, please confirm
          endif
@@ -386,74 +386,75 @@ contains
          ! or
          ! * Set f0 to 0 only when it would produce incoming flux.
          ! I don't remember which approach was already (unsuccesfully) tested
-         !> \todo Get rid of use of cg
-         if (associated(eflx%li)) fu(:, eflx%li%index - cg%lhn(sweep, LO) + 1) = eflx%li%uflx
-         if (associated(eflx%ri)) fu(:, eflx%ri%index - cg%lhn(sweep, LO)    ) = eflx%ri%uflx
-         if (associated(eflx%lo)) eflx%lo%uflx = fu(:, eflx%lo%index - cg%lhn(sweep, LO)    )
-         if (associated(eflx%ro)) eflx%ro%uflx = fu(:, eflx%ro%index - cg%lhn(sweep, LO) + 1)
+         ! \todo Get rid of use of cg
+         ! \todo remove transpositions by changing index order in eflx 
+         if (associated(eflx%li)) fu(eflx%li%index - cg%lhn(sweep, LO) + 1, :) = eflx%li%uflx
+         if (associated(eflx%ri)) fu(eflx%ri%index - cg%lhn(sweep, LO)    , :) = eflx%ri%uflx
+         if (associated(eflx%lo)) eflx%lo%uflx = fu(eflx%lo%index - cg%lhn(sweep, LO),     :)
+         if (associated(eflx%ro)) eflx%ro%uflx = fu(eflx%ro%index - cg%lhn(sweep, LO) + 1, :)
 
          if (dom%geometry_type == GEO_RPZ) then
             if (sweep == ydim) then
                !> BEWARE: iarr_all_mx points to the y-momentum in y-sweep
-               if (associated(eflx%li)) fu(iarr_all_mx, eflx%li%index - cg%lhn(sweep, LO) + 1) = eflx%li%uflx(iarr_all_mx) / cg%x(i2)
-               if (associated(eflx%ri)) fu(iarr_all_mx, eflx%ri%index - cg%lhn(sweep, LO)    ) = eflx%ri%uflx(iarr_all_mx) / cg%x(i2)
-               if (associated(eflx%lo)) eflx%lo%uflx(iarr_all_mx) = fu(iarr_all_mx, eflx%lo%index - cg%lhn(sweep, LO)    ) * cg%x(i2)
-               if (associated(eflx%ro)) eflx%ro%uflx(iarr_all_mx) = fu(iarr_all_mx, eflx%ro%index - cg%lhn(sweep, LO) + 1) * cg%x(i2)
+               if (associated(eflx%li)) fu(eflx%li%index - cg%lhn(sweep, LO) + 1, iarr_all_mx) = eflx%li%uflx(iarr_all_mx) / cg%x(i2)
+               if (associated(eflx%ri)) fu(eflx%ri%index - cg%lhn(sweep, LO),     iarr_all_mx) = eflx%ri%uflx(iarr_all_mx) / cg%x(i2)
+               if (associated(eflx%lo)) eflx%lo%uflx(iarr_all_mx) = fu(eflx%lo%index - cg%lhn(sweep, LO),     iarr_all_mx) * cg%x(i2)
+               if (associated(eflx%ro)) eflx%ro%uflx(iarr_all_mx) = fu(eflx%ro%index - cg%lhn(sweep, LO) + 1, iarr_all_mx) * cg%x(i2)
             else if (sweep == zdim) then
-               if (associated(eflx%li)) fu(:, eflx%li%index - cg%lhn(sweep, LO) + 1) = eflx%li%uflx / cg%x(i1)
-               if (associated(eflx%ri)) fu(:, eflx%ri%index - cg%lhn(sweep, LO)    ) = eflx%ri%uflx / cg%x(i1)
-               if (associated(eflx%lo)) eflx%lo%uflx = fu(:, eflx%lo%index - cg%lhn(sweep, LO)    ) * cg%x(i1)
-               if (associated(eflx%ro)) eflx%ro%uflx = fu(:, eflx%ro%index - cg%lhn(sweep, LO) + 1) * cg%x(i1)
-               if (associated(eflx%li)) fu(iarr_all_my, eflx%li%index - cg%lhn(sweep, LO) + 1) = eflx%li%uflx(iarr_all_my) / cg%x(i1)**2
-               if (associated(eflx%ri)) fu(iarr_all_my, eflx%ri%index - cg%lhn(sweep, LO)    ) = eflx%ri%uflx(iarr_all_my) / cg%x(i1)**2
-               if (associated(eflx%lo)) eflx%lo%uflx(iarr_all_my) = fu(iarr_all_my, eflx%lo%index - cg%lhn(sweep, LO)    ) * cg%x(i1)**2
-               if (associated(eflx%ro)) eflx%ro%uflx(iarr_all_my) = fu(iarr_all_my, eflx%ro%index - cg%lhn(sweep, LO) + 1) * cg%x(i1)**2
+               if (associated(eflx%li)) fu(eflx%li%index - cg%lhn(sweep, LO) + 1, :) = eflx%li%uflx / cg%x(i1)
+               if (associated(eflx%ri)) fu(eflx%ri%index - cg%lhn(sweep, LO),     :) = eflx%ri%uflx / cg%x(i1)
+               if (associated(eflx%lo)) eflx%lo%uflx = fu(eflx%lo%index - cg%lhn(sweep, LO),     :) * cg%x(i1)
+               if (associated(eflx%ro)) eflx%ro%uflx = fu(eflx%ro%index - cg%lhn(sweep, LO) + 1, :) * cg%x(i1)
+               if (associated(eflx%li)) fu(eflx%li%index - cg%lhn(sweep, LO) + 1, iarr_all_my) = eflx%li%uflx(iarr_all_my) / cg%x(i1)**2
+               if (associated(eflx%ri)) fu(eflx%ri%index - cg%lhn(sweep, LO),     iarr_all_my) = eflx%ri%uflx(iarr_all_my) / cg%x(i1)**2
+               if (associated(eflx%lo)) eflx%lo%uflx(iarr_all_my) = fu(eflx%lo%index - cg%lhn(sweep, LO),     iarr_all_my) * cg%x(i1)**2
+               if (associated(eflx%ro)) eflx%ro%uflx(iarr_all_my) = fu(eflx%ro%index - cg%lhn(sweep, LO) + 1, iarr_all_my) * cg%x(i1)**2
             endif
          endif
 
          if (dom%geometry_type == GEO_XYZ) then
-            u1(:,2:n) = u0(:,2:n) - rk2coef(integration_order,istep) *                 dtx * (               fu(:,2:n) -               fu(:,1:n-1) )
+            u1(2:n, :) = u0(2:n, :) - rk2coef(integration_order,istep) *                  dtx * (                fu(2:n, :) -                fu(1:n-1, :) )
          else
-            u1(:,2:n) = u0(:,2:n) - rk2coef(integration_order,istep) * gc(GC1,:,2:n) * dtx * ( gc(GC2,:,2:n)*fu(:,2:n) - gc(GC3,:,2:n)*fu(:,1:n-1) )
+            u1(2:n, :) = u0(2:n, :) - rk2coef(integration_order,istep) * gc(GC1,2:n, :) * dtx * ( gc(GC2,2:n, :)*fu(2:n, :) - gc(GC3,2:n, :)*fu(1:n-1, :) )
          endif
-         u1(:,1)   = u1(:,2)
+         u1(1, :)   = u1(2, :)
       else
          ! normally vx => vel_sweep is calculated in fluxes, since we don't go
          ! there we need to do it manually here
-         vel_sweep = u1(iarr_all_mx,:)/u1(iarr_all_dn,:)
+         vel_sweep = u1(:, iarr_all_mx) / u1(:, iarr_all_dn)
       endif ! (n > 1)
 
       if (use_smalld) then
          ! This is needed e.g. for outflow boundaries in presence of perp. gravity
          select case (dom%geometry_type)
             case (GEO_XYZ)
-               local_magic_mass(:) = local_magic_mass(:) - sum(u1(iarr_all_dn,dom%nb+1:n-dom%nb),dim=2) * cg%dvol
-               u1(iarr_all_dn,:) = max(u1(iarr_all_dn,:),smalld)
-               local_magic_mass(:) = local_magic_mass(:) + sum(u1(iarr_all_dn,dom%nb+1:n-dom%nb),dim=2) * cg%dvol
+               local_magic_mass(:) = local_magic_mass(:) - sum(u1(dom%nb+1:n-dom%nb, iarr_all_dn), dim=1) * cg%dvol
+               u1(:, iarr_all_dn) = max(u1(:, iarr_all_dn),smalld)
+               local_magic_mass(:) = local_magic_mass(:) + sum(u1(dom%nb+1:n-dom%nb, iarr_all_dn), dim=1) * cg%dvol
             case (GEO_RPZ)
                select case (sweep)
                   case (xdim)
                      do ifl = lbound(iarr_all_dn, dim=1), ubound(iarr_all_dn, dim=1)
-                        local_magic_mass(ifl) = local_magic_mass(ifl) - sum(u1(iarr_all_dn(ifl), dom%nb+1:n-dom%nb) * cg%x(cg%is:cg%ie)) * cg%dvol
+                        local_magic_mass(ifl) = local_magic_mass(ifl) - sum(u1(dom%nb+1:n-dom%nb, iarr_all_dn(ifl)) * cg%x(cg%is:cg%ie)) * cg%dvol
                      enddo
-                     u1(iarr_all_dn,:) = max(u1(iarr_all_dn,:),smalld)
+                     u1(:, iarr_all_dn) = max(u1(:, iarr_all_dn),smalld)
                      do ifl = lbound(iarr_all_dn, dim=1), ubound(iarr_all_dn, dim=1)
-                        local_magic_mass(ifl) = local_magic_mass(ifl) + sum(u1(iarr_all_dn(ifl), dom%nb+1:n-dom%nb) * cg%x(cg%is:cg%ie)) * cg%dvol
+                        local_magic_mass(ifl) = local_magic_mass(ifl) + sum(u1(dom%nb+1:n-dom%nb, iarr_all_dn(ifl)) * cg%x(cg%is:cg%ie)) * cg%dvol
                      enddo
                   case (ydim)
-                     local_magic_mass(:) = local_magic_mass(:) - sum(u1(iarr_all_dn,dom%nb+1:n-dom%nb),dim=2) * cg%dvol * cg%x(i2)
-                     u1(iarr_all_dn,:) = max(u1(iarr_all_dn,:),smalld)
-                     local_magic_mass(:) = local_magic_mass(:) + sum(u1(iarr_all_dn,dom%nb+1:n-dom%nb),dim=2) * cg%dvol * cg%x(i2)
+                     local_magic_mass(:) = local_magic_mass(:) - sum(u1(dom%nb+1:n-dom%nb, iarr_all_dn), dim=1) * cg%dvol * cg%x(i2)
+                     u1(:, iarr_all_dn) = max(u1(:, iarr_all_dn),smalld)
+                     local_magic_mass(:) = local_magic_mass(:) + sum(u1(dom%nb+1:n-dom%nb, iarr_all_dn), dim=1) * cg%dvol * cg%x(i2)
                   case (zdim)
-                     local_magic_mass(:) = local_magic_mass(:) - sum(u1(iarr_all_dn,dom%nb+1:n-dom%nb),dim=2) * cg%dvol * cg%x(i1)
-                     u1(iarr_all_dn,:) = max(u1(iarr_all_dn,:),smalld)
-                     local_magic_mass(:) = local_magic_mass(:) + sum(u1(iarr_all_dn,dom%nb+1:n-dom%nb),dim=2) * cg%dvol * cg%x(i1)
+                     local_magic_mass(:) = local_magic_mass(:) - sum(u1(dom%nb+1:n-dom%nb, iarr_all_dn), dim=1) * cg%dvol * cg%x(i1)
+                     u1(:, iarr_all_dn) = max(u1(:, iarr_all_dn),smalld)
+                     local_magic_mass(:) = local_magic_mass(:) + sum(u1(dom%nb+1:n-dom%nb, iarr_all_dn), dim=1) * cg%dvol * cg%x(i1)
                end select
             case default
                call die("[rtvd:relaxing_tvd] Unsupported geometry")
          end select
       else
-         if (any(u1(iarr_all_dn,:) < 0.0)) then
+         if (any(u1(:, iarr_all_dn) < 0.0)) then
             write(msg,'(3A,I4,1X,I4,A)') "[rtvd:relaxing_tvd] negative density in sweep ",sweep,"( ", i1, i2, " )"
             call die(msg)
          endif
@@ -463,7 +464,7 @@ contains
 
       geosrc = geometry_source_terms(u, pressure, sweep, cg)  ! n safe
 
-      u1(iarr_all_mx,:) = u1(iarr_all_mx,:) + rk2coef(integration_order,istep)*geosrc(:,:)*dt ! n safe
+      u1(:, iarr_all_mx) = u1(:, iarr_all_mx) + rk2coef(integration_order,istep)*geosrc(:,:)*dt ! n safe
 
       acc = 0.0
 #ifndef BALSARA
@@ -483,17 +484,17 @@ contains
          call grav_pot2accel(sweep, i1, i2, n, gravacc, istep, cg)
 
          do ind = 1, flind%fluids
-            acc(ind,:) =  acc(ind,:) + gravacc(:)
+            acc(:, ind) =  acc(:, ind) + gravacc(:)
          enddo
 #endif /* !GRAV */
 
-         acc(:,n) = acc(:,n-1)
-         acc(:,1) = acc(:,2)
+         acc(n, :) = acc(n-1, :)
+         acc(1, :) = acc(2, :)
       endif
 
-      u1(iarr_all_mx,:) = u1(iarr_all_mx,:) + rk2coef(integration_order,istep)*acc(:,:)*u(iarr_all_dn,:)*dt
+      u1(:, iarr_all_mx) = u1(:, iarr_all_mx) + rk2coef(integration_order,istep)*acc(:,:)*u(:, iarr_all_dn)*dt
 #ifndef ISO
-      u1(iarr_all_en,:) = u1(iarr_all_en,:) + rk2coef(integration_order,istep)*acc(:,:)*u(iarr_all_mx,:)*dt
+      u1(:, iarr_all_en) = u1(:, iarr_all_en) + rk2coef(integration_order,istep)*acc(:,:)*u(:, iarr_all_mx)*dt
 #endif /* !ISO */
 
 ! --------------------------------------------------
@@ -501,34 +502,34 @@ contains
 #if defined COSM_RAYS && defined IONIZED
       if (full_dim) then
          call src_gpcr(u, n, dx, divv, decr, grad_pcr)
-         u1(iarr_crs(:),               :) = u1(iarr_crs(:),               :) + rk2coef(integration_order,istep)*decr(:,:)*dt
-         u1(iarr_crs(:),               :) = max(smallecr, u1(iarr_crs(:),:))
-         u1(iarr_all_mx(flind%ion%pos),:) = u1(iarr_all_mx(flind%ion%pos),:) + rk2coef(integration_order,istep)*grad_pcr*dt
+         u1(:,                iarr_crs(:)) = u1(:,               iarr_crs(:)) + rk2coef(integration_order,istep) * decr(:,:) * dt
+         u1(:,                iarr_crs(:)) = max(smallecr, u1(:, iarr_crs(:)))
+         u1(:, iarr_all_mx(flind%ion%pos)) = u1(:, iarr_all_mx(flind%ion%pos)) + rk2coef(integration_order,istep) * grad_pcr * dt
 #ifndef ISO
-         u1(iarr_all_en(flind%ion%pos),:) = u1(iarr_all_en(flind%ion%pos),:) + rk2coef(integration_order,istep)*vx(flind%ion%pos,:)*grad_pcr*dt
+         u1(:, iarr_all_en(flind%ion%pos)) = u1(:, iarr_all_en(flind%ion%pos)) + rk2coef(integration_order,istep) * vx(:, flind%ion%pos) * grad_pcr * dt
 #endif /* !ISO */
       endif
 #ifdef COSM_RAYS_SOURCES
       call src_crn(u, n, srccrn, rk2coef(integration_order, istep) * dt) ! n safe
-      u1(iarr_crn,:) = u1(iarr_crn,:) +  rk2coef(integration_order, istep)*srccrn(:,:)*dt
+      u1(:, iarr_crn) = u1(:, iarr_crn) +  rk2coef(integration_order, istep)*srccrn(:,:)*dt
 #endif /* COSM_RAYS_SOURCES */
 #endif /* COSM_RAYS && IONIZED */
 
       do ifl = 1, flind%fluids
          pfl => flind%all_fluids(ifl)%fl
          if (pfl%has_energy) then
-            kin_ener = ekin(u1(pfl%imx, :), u1(pfl%imy, :), u1(pfl%imz, :), u1(pfl%idn,:))
+            kin_ener = ekin(u1(:, pfl%imx), u1(:, pfl%imy), u1(:, pfl%imz), u1(:, pfl%idn))
             if (pfl%is_magnetized) then
-               mag_ener = emag(bb(xdim,:), bb(ydim,:), bb(zdim,:))
-               int_ener = u1(pfl%ien, :) - kin_ener - mag_ener
+               mag_ener = emag(bb(:, xdim), bb(:, ydim), bb(:, zdim))
+               int_ener = u1(:, pfl%ien) - kin_ener - mag_ener
             else
-               int_ener = u1(pfl%ien, :) - kin_ener
+               int_ener = u1(:, pfl%ien) - kin_ener
             endif
 
             int_ener = max(int_ener, smallei)
 
-            u1(pfl%ien, :) = int_ener + kin_ener
-            if (pfl%is_magnetized) u1(pfl%ien, :) = u1(pfl%ien, :) + mag_ener
+            u1(:, pfl%ien) = int_ener + kin_ener
+            if (pfl%is_magnetized) u1(:, pfl%ien) = u1(:, pfl%ien) + mag_ener
          endif
       enddo
 

@@ -56,22 +56,22 @@ contains
 
       implicit none
 
-      integer(kind=4),                   intent(in)  :: nn                 !< array size
-      real, dimension(flind%all,nn),     intent(in)  :: uu                 !< vector of conservative variables
-      real, dimension(:), pointer,       intent(in)  :: divv               !< vector of velocity divergence used in cosmic ray advection
-      real,                              intent(in)  :: dx                 !< cell length
-      real, dimension(nn),               intent(out) :: grad_pcr
-      real, dimension(flind%crs%all,nn), intent(out) :: decr
-      integer                                        :: icr, jcr
+      integer(kind=4),                    intent(in)  :: nn                 !< array size
+      real, dimension(nn, flind%all),     intent(in)  :: uu                 !< vector of conservative variables
+      real, dimension(:), pointer,        intent(in)  :: divv               !< vector of velocity divergence used in cosmic ray advection
+      real,                               intent(in)  :: dx                 !< cell length
+      real, dimension(nn),                intent(out) :: grad_pcr
+      real, dimension(nn, flind%crs%all), intent(out) :: decr
+      integer                                         :: icr, jcr
 
       do icr = 1, flind%crs%all
          ! 1/eff_dim is because we compute the p_cr*dv in every sweep (3 times in 3D, twice in 2D and once in 1D experiments)
-         decr(icr,:)      = -1./real(dom%eff_dim)*(gamma_crs(icr)-1.)*uu(iarr_crs(icr),:)*divv(:)
+         decr(:, icr)      = -1. / real(dom%eff_dim) * (gamma_crs(icr)-1.0) * uu(:, iarr_crs(icr))*divv(:)
       enddo
       grad_pcr(:) = 0.0
       do icr = 1, size(gpcr_essential)
          jcr = gpcr_essential(icr)
-         grad_pcr(2:nn-1) = grad_pcr(2:nn-1) + cr_active*(gamma_crs(jcr)-1.)*(uu(iarr_crs(jcr),1:nn-2)-uu(iarr_crs(jcr),3:nn))/(2.*dx)
+         grad_pcr(2:nn-1) = grad_pcr(2:nn-1) + cr_active*(gamma_crs(jcr)-1.)*(uu(1:nn-2, iarr_crs(jcr)) - uu(3:nn, iarr_crs(jcr)))/(2.*dx)
       enddo
       grad_pcr(1:2) = 0.0 ; grad_pcr(nn-1:nn) = 0.0
 
@@ -92,10 +92,10 @@ contains
 
       implicit none
 
-      integer(kind=4),                  intent(in)  :: n
-      real, dimension(flind%all,n),     intent(in)  :: uu
-      real,                             intent(in)  :: rk_coeff   !< coeffecient used in RK step, while computing source term
-      real, dimension(flind%crn%all,n), intent(out) :: decrn
+      integer(kind=4),                   intent(in)  :: n
+      real, dimension(n, flind%all),     intent(in)  :: uu
+      real,                              intent(in)  :: rk_coeff   !< coeffecient used in RK step, while computing source term
+      real, dimension(n, flind%crn%all), intent(out) :: decrn
 
 ! locals
       real, dimension(n)      :: dgas
@@ -109,15 +109,15 @@ contains
       integer               :: i, j
 
       dgas = 0.0
-      if (has_ion) dgas = dgas + uu(flind%ion%idn,:)
-      if (has_neu) dgas = dgas + uu(flind%neu%idn,:)
+      if (has_ion) dgas = dgas + uu(:, flind%ion%idn)
+      if (has_neu) dgas = dgas + uu(:, flind%neu%idn)
       dgas = c_n*dgas
 
       decrn(:,:) = 0.0
 
       if (eCRSP(icr_Be10)) then
-         decrn(cr_table(icr_Be10), :) = decrn(cr_table(icr_Be10), :) - &
-            & gn * uu(flind%crn%beg - 1 + cr_table(icr_Be10), :) / cr_tau(cr_table(icr_Be10))
+         decrn(:, cr_table(icr_Be10)) = decrn(:, cr_table(icr_Be10)) - &
+            & gn * uu(:, flind%crn%beg - 1 + cr_table(icr_Be10)) / cr_tau(cr_table(icr_Be10))
       endif
 
       do i = lbound(icrH, 1), ubound(icrH, 1)
@@ -129,10 +129,10 @@ contains
                   idx => flind%crn%beg - 1 + cr_table(Hi) &
                )
                   if (eCRSP(Lj)) then
-                     dcr = cr_sigma(cr_table(Hi), cr_table(Lj)) * dgas * uu(idx, :)
-                     dcr = min(uu(idx,:)/rk_coeff, dcr)  ! Don't decay more elements than available
-                     decrn(cr_table(Hi), :) = decrn(cr_table(Hi), :) - dcr
-                     decrn(cr_table(Lj), :) = decrn(cr_table(Lj), :) + dcr
+                     dcr = cr_sigma(cr_table(Hi), cr_table(Lj)) * dgas * uu(:, idx)
+                     dcr = min(uu(:, idx)/rk_coeff, dcr)  ! Don't decay more elements than available
+                     decrn(:, cr_table(Hi)) = decrn(:, cr_table(Hi)) - dcr
+                     decrn(:, cr_table(Lj)) = decrn(:, cr_table(Lj)) + dcr
                   endif
                end associate
                enddo
