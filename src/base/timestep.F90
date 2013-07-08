@@ -331,8 +331,6 @@ contains
       integer                :: i, j, k, d
 
       real, dimension(cg%is:cg%ie) :: vphi_mean
-      real :: vphi_cr
-      integer :: nshift
 
       c(:) = 0.0
       c_fl = 0.0
