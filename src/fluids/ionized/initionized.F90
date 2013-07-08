@@ -276,35 +276,35 @@ contains
 
       nm = n-1
 #ifdef MAGNETIC
-      pmag(RNG)= emag(bb(xdim,RNG),bb(ydim,RNG),bb(zdim,RNG));  pmag(1) = pmag(2); pmag(n) = pmag(nm)
+      pmag(RNG)= emag(bb(RNG, xdim), bb(RNG, ydim), bb(RNG, zdim));  pmag(1) = pmag(2); pmag(n) = pmag(nm)
 #else /* !MAGNETIC */
       pmag(:) = 0.0
 #endif /* !MAGNETIC */
-      vx(RNG)=uu(imx,RNG)/uu(idn,RNG); vx(1) = vx(2); vx(n) = vx(nm)
+      vx(RNG)=uu(RNG, imx)/uu(RNG, idn); vx(1) = vx(2); vx(n) = vx(nm)
 
 #ifndef ISO
       if (associated(cs_iso2)) call die("[initionized:flux_ion] cs_iso2 should not be present")
 #endif /* !ISO */
 
 #ifdef ISO
-      p(RNG)  = cs_iso2(RNG) * uu(idn,RNG)
+      p(RNG)  = cs_iso2(RNG) * uu(RNG, idn)
       ps(RNG) = p(RNG) + pmag(RNG)
 #else /* !ISO */
-      ps(RNG) = (uu(ien,RNG) - ekin(uu(imx,RNG),uu(imy,RNG),uu(imz,RNG),uu(idn,RNG)) )*(this%gam_1) &
+      ps(RNG) = (uu(RNG, ien) - ekin(uu(RNG, imx),uu(RNG, imy),uu(RNG, imz),uu(RNG, idn)) )*(this%gam_1) &
            & + (2.0 - this%gam)*pmag(RNG)
       p(RNG) = ps(RNG)- pmag(RNG);  p(1) = p(2); p(n) = p(nm)
 #endif /* !ISO */
       ps(1) = ps(2); ps(n) = ps(nm)
 
-      flux(idn,RNG)=uu(imx,RNG)
-      flux(imx,RNG)=uu(imx,RNG)*vx(RNG)+ps(RNG) - bb(xdim,RNG)**2
-      flux(imy,RNG)=uu(imy,RNG)*vx(RNG)-bb(ydim,RNG)*bb(xdim,RNG)
-      flux(imz,RNG)=uu(imz,RNG)*vx(RNG)-bb(zdim,RNG)*bb(xdim,RNG)
+      flux(RNG, idn)=uu(RNG, imx)
+      flux(RNG, imx)=uu(RNG, imx)*vx(RNG)+ps(RNG) - bb(RNG, xdim)**2
+      flux(RNG, imy)=uu(RNG, imy)*vx(RNG)-bb(RNG, ydim)*bb(RNG, xdim)
+      flux(RNG, imz)=uu(RNG, imz)*vx(RNG)-bb(RNG, zdim)*bb(RNG, xdim)
 #ifndef ISO
-      flux(ien,RNG)=(uu(ien,RNG)+ps(RNG))*vx(RNG)-bb(xdim,RNG)*(bb(xdim,RNG)*uu(imx,RNG) &
-                +bb(ydim,RNG)*uu(imy,RNG)+bb(zdim,RNG)*uu(imz,RNG))/uu(idn,RNG)
+      flux(RNG, ien)=(uu(RNG, ien)+ps(RNG))*vx(RNG)-bb(RNG, xdim)*(bb(RNG, xdim)*uu(RNG, imx) &
+                +bb(RNG, ydim)*uu(RNG, imy)+bb(RNG, zdim)*uu(RNG, imz))/uu(RNG, idn)
 #endif /* !ISO */
-      flux(:,1) = flux(:,2) ; flux(:,n) = flux(:,nm)
+      flux(1, :) = flux(2, :) ; flux(n, :) = flux(nm, :)
 
 #ifdef LOCAL_FR_SPEED
 
@@ -315,9 +315,9 @@ contains
       maxvx = maxval(vx(RNG))
       amp   = half*(maxvx-minvx)
 #ifdef ISO
-      cfr(1,RNG) = sqrt(vx(RNG)**2+cfr_smooth*amp) + max(sqrt( abs(2.0*pmag(RNG) +          p(RNG))/uu(idn,RNG)),small)
+      cfr(RNG, 1) = sqrt(vx(RNG)**2+cfr_smooth*amp) + max(sqrt( abs(2.0*pmag(RNG) +          p(RNG))/uu(RNG, idn)),small)
 #else /* !ISO */
-      cfr(1,RNG) = sqrt(vx(RNG)**2+cfr_smooth*amp) + max(sqrt( abs(2.0*pmag(RNG) + this%gam*p(RNG))/uu(idn,RNG)),small)
+      cfr(RNG, 1) = sqrt(vx(RNG)**2+cfr_smooth*amp) + max(sqrt( abs(2.0*pmag(RNG) + this%gam*p(RNG))/uu(RNG, idn)),small)
 #endif /* !ISO */
       !> \deprecated BEWARE: that is the cause of fast decreasing of timestep in galactic disk problem
       !>
@@ -328,9 +328,9 @@ contains
       !!    enddo
       !<
 
-      cfr(1,1) = cfr(1,2);  cfr(1,n) = cfr(1,nm)
+      cfr(1,1) = cfr(2,1);  cfr(n, 1) = cfr(nm, 1)
       do i = 2, this%all
-         cfr(i,:) = cfr(1,:)
+         cfr(:, i) = cfr(:, 1)
       enddo
 #endif /* LOCAL_FR_SPEED */
 

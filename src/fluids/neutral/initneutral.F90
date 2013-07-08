@@ -249,22 +249,22 @@ contains
 #endif /* LOCAL_FR_SPEED */
 
       nm = n-1
-      vx(RNG) = uu(imx,RNG)/uu(idn,RNG) ; vx(1) = vx(2); vx(n) = vx(nm)
+      vx(RNG) = uu(RNG, imx)/uu(RNG, idn) ; vx(1) = vx(2); vx(n) = vx(nm)
 #ifdef ISO
-      ps(RNG) = cs_iso2(RNG) * uu(idn,RNG) ; ps(1) = ps(2); ps(n) = ps(nm)
+      ps(RNG) = cs_iso2(RNG) * uu(RNG, idn) ; ps(1) = ps(2); ps(n) = ps(nm)
 #else /* !ISO */
-      ps(RNG) = (uu(ien,RNG) - ekin(uu(imx,RNG),uu(imy,RNG),uu(imz,RNG),uu(idn,RNG)) )*(this%gam_1)
+      ps(RNG) = (uu(RNG, ien) - ekin(uu(RNG, imx),uu(RNG, imy),uu(RNG, imz),uu(RNG, idn)) )*(this%gam_1)
       ps(RNG) = max(ps(RNG), smallp)
 #endif /* !ISO */
 
-      flux(idn,RNG)=uu(imx,RNG)
-      flux(imx,RNG)=uu(imx,RNG)*vx(RNG)+ps(RNG)
-      flux(imy,RNG)=uu(imy,RNG)*vx(RNG)
-      flux(imz,RNG)=uu(imz,RNG)*vx(RNG)
+      flux(RNG, idn)=uu(RNG, imx)
+      flux(RNG, imx)=uu(RNG, imx)*vx(RNG)+ps(RNG)
+      flux(RNG, imy)=uu(RNG, imy)*vx(RNG)
+      flux(RNG, imz)=uu(RNG, imz)*vx(RNG)
 #ifndef ISO
-      flux(ien,RNG)=(uu(ien,RNG)+ps(RNG))*vx(RNG)
+      flux(RNG, ien)=(uu(RNG, ien)+ps(RNG))*vx(RNG)
 #endif /* !ISO */
-      flux(:,1) = flux(:,2) ; flux(:,n) = flux(:,nm)
+      flux(1, :) = flux(2, :) ; flux(n, :) = flux(nm, :)
 
 #ifdef LOCAL_FR_SPEED
 
@@ -276,9 +276,9 @@ contains
       amp   = half*(maxvx-minvx)
       !    c_fr  = 0.0
 #ifdef ISO
-      cfr(1,RNG) = sqrt(vx(RNG)**2+cfr_smooth*amp) + max(sqrt( abs(         ps(RNG))/uu(idn,RNG)),small)
+      cfr(RNG, 1) = sqrt(vx(RNG)**2+cfr_smooth*amp) + max(sqrt( abs(         ps(RNG))/uu(RNG, idn)),small)
 #else /* !ISO */
-      cfr(1,RNG) = sqrt(vx(RNG)**2+cfr_smooth*amp) + max(sqrt( abs(this%gam*ps(RNG))/uu(idn,RNG)),small)
+      cfr(RNG, 1) = sqrt(vx(RNG)**2+cfr_smooth*amp) + max(sqrt( abs(this%gam*ps(RNG))/uu(RNG, idn)),small)
 #endif /* !ISO */
       !> \deprecated BEWARE: that is the cause of fast decreasing of timestep in galactic disk problem
       !>
@@ -289,9 +289,9 @@ contains
       !!    enddo
       !<
 
-      cfr(1,1) = cfr(1,2);  cfr(1,n) = cfr(1,nm)
+      cfr(1,1) = cfr(2,1);  cfr(n, 1) = cfr(nm, 1)
       do i = 2, this%all
-         cfr(i,:) = cfr(1,:)
+         cfr(:, i) = cfr(:, 1)
       enddo
 #endif /* LOCAL_FR_SPEED */
 

@@ -53,10 +53,13 @@ contains
       real, dimension(n),   intent(in)             :: vion
       real, dimension(:,:), intent(in),    pointer :: uuc
       real, dimension(:,:), intent(inout), pointer :: fluxc
+      integer :: i
 
       fluxc   = 0.0
 
-      fluxc(:,RNG)= uuc(:,RNG)*spread(vion(RNG),1,flind%crs%all)
+      do i = 1, flind%crs%all
+         fluxc(RNG, i) = uuc(RNG, i)*vion(RNG)
+      enddo
 
    end subroutine flux_crs
 
