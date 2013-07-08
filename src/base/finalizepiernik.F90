@@ -46,6 +46,7 @@ contains
       use decomposition,      only: cleanup_decomposition
       use diagnostics,        only: cleanup_diagnostics
       use domain,             only: cleanup_domain
+      use fargo,              only: cleanup_fargo
       use fluidindex,         only: cleanup_fluidindex
       use global,             only: cleanup_global
       use grid,               only: cleanup_grid
@@ -76,6 +77,7 @@ contains
       call t_pool%cleanup;         call nextdot(.false.)
       call cleanup_interactions;   call nextdot(.false.)
       call cleanup_dataio;         call nextdot(.false.)
+      call cleanup_fargo;          call nextdot(.false.)
 #ifdef RESISTIVE
       call cleanup_resistivity;    call nextdot(.false.)
 #endif /* RESISTIVE */
