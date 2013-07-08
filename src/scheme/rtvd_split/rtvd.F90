@@ -350,7 +350,7 @@ contains
 
       if (full_dim) then
          ! Fluxes calculation for cells centers
-         call all_fluxes(n, w, cfr, u1, bb, pressure, vel_sweep, cs_iso2)
+         call all_fluxes(n, w, cfr, u1, bb, pressure, vel_sweep, cs_iso2, .false.)
          ! Right and left fluxes decoupling
 
          ! original code
