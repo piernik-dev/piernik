@@ -361,7 +361,7 @@ contains
                            u0(:, iarr_all_swp(cdim,:)) = transpose(pu0(:,:))
 
                            call cg%set_fluxpointers(cdim, i1, i2, eflx)
-                           call relaxing_tvd(cg%n_(cdim), u, u0, b, div_v1d, cs2, istep, cdim, i1, i2, cg%dl(cdim), dt, cg, eflx)
+                           call relaxing_tvd(cg%n_(cdim), u, u0, b, div_v1d, cs2, istep, cdim, i1, i2, cg%dl(cdim), dt, cg, eflx, .true.)
                            call cg%save_outfluxes(cdim, i1, i2, eflx)
 
                            pu(:,:) = transpose(u(:, iarr_all_swp(cdim,:)))
