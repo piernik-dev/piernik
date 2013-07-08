@@ -43,7 +43,7 @@ module fargo
    integer, dimension(:, :, :),  allocatable :: nshift
 
    private
-   public :: init_fargo, cleanup_fargo, vphi_mean, vphi_cr, nshift, subtract_mean, timestep_fargo
+   public :: init_fargo, cleanup_fargo, vphi_mean, vphi_cr, nshift, get_fargo_vels, timestep_fargo, int_shift
 
 contains
 
@@ -73,7 +73,7 @@ contains
 
    end subroutine cleanup_fargo
 
-   subroutine subtract_mean(dt)
+   subroutine get_fargo_vels(dt)
 
       use constants,        only: xdim, ydim, LO, HI
       use cg_leaves,        only: leaves
@@ -117,9 +117,9 @@ contains
          icg = icg + 1
       enddo
 
-      !if (maxval(nshift) > dom%nb) call die("[fargo:subtract_mean] FARGO does not support domain division in ydim yet")
+      !if (maxval(nshift) > dom%nb) call die("[fargo:get_fargo_vels] FARGO does not support domain division in ydim yet")
 
-   end subroutine subtract_mean
+   end subroutine get_fargo_vels
 
    real function timestep_fargo(cg, dt_min) result(dt)
 
@@ -177,5 +177,35 @@ contains
 !     dt = min(dt, cfl * dt_res)
 
    end function timestep_fargo
+
+   subroutine int_shift
+      use cg_leaves,        only: leaves
+      use cg_list,          only: cg_list_element
+      use constants,        only: xdim, LO, HI
+      use fluidindex,       only: flind
+      use fluidtypes,       only: component_fluid
+      use grid_cont,        only: grid_container
+
+      implicit none
+
+      type(cg_list_element), pointer    :: cgl
+      type(grid_container),  pointer    :: cg
+      class(component_fluid), pointer   :: pfl
+      integer :: icg, ifl, i
+
+      cgl => leaves%first
+      icg = 1
+      do while (associated(cgl))
+         ! shift nint
+         do i = cg%lhn(xdim, LO), cg%lhn(xdim, HI)
+            do ifl = 1, flind%fluids
+               pfl   => flind%all_fluids(ifl)%fl
+               cg%u(pfl%beg:pfl%end, i, :, :) = cshift(cg%u(pfl%beg:pfl%end, i, :, :), -nshift(i, ifl, icg), dim=2)
+            enddo
+         enddo
+         cgl => cgl%nxt
+         icg = icg + 1
+      enddo
+   end subroutine int_shift
 
 end module fargo

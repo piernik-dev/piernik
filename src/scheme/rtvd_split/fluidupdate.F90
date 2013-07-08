@@ -140,8 +140,10 @@ contains
    subroutine make_3sweeps(forward)
 
       use cg_list,             only: expanded_domain
-      use constants,           only: xdim, zdim, I_ONE
-      use global,              only: skip_sweep
+      use constants,           only: xdim, ydim, zdim, I_ONE, VEL_CR, VEL_RES
+      use global,              only: skip_sweep, use_fargo
+      use fargo,               only: get_fargo_vels, int_shift
+      use sweeps,              only: sweep
       use user_hooks,          only: problem_customize_solution
 #ifdef GRAV
       use global,              only: t, dt
@@ -179,14 +181,27 @@ contains
 #endif /* COSM_RAYS && MULTIGRID */
 
       call expanded_domain%delete ! at this point everything should be initialized after domain expansion and we no longer need this list
-      if (forward) then
-         do s = xdim, zdim
-            if (.not.skip_sweep(s)) call make_sweep(s, forward)
-         enddo
+      if (use_fargo) then
+         if (.not.skip_sweep(zdim)) call make_sweep(zdim, forward)
+         if (.not.skip_sweep(xdim)) call make_sweep(xdim, forward)
+
+         ! TODO we are omitting B and cr update, but FARGO does not work with them yet...
+         if (.not.skip_sweep(ydim)) then
+            call get_fargo_vels(dt)
+            call sweep(ydim, VEL_RES)
+            call sweep(ydim, VEL_CR)
+            call int_shift
+         endif
       else
-         do s = zdim, xdim, -I_ONE
-            if (.not.skip_sweep(s)) call make_sweep(s, forward)
-         enddo
+         if (forward) then
+            do s = xdim, zdim
+               if (.not.skip_sweep(s)) call make_sweep(s, forward)
+            enddo
+         else
+            do s = zdim, xdim, -I_ONE
+               if (.not.skip_sweep(s)) call make_sweep(s, forward)
+            enddo
+         endif
       endif
 #ifdef GRAV
       if (associated(psolver)) call pset%evolve(psolver, t-dt, dt)
