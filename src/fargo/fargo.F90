@@ -133,9 +133,9 @@ contains
       type(grid_container), pointer, intent(in) :: cg
       real, intent(in) :: dt_min
 
-      real :: dt_shear, dt_res
-      real :: v_mean, v_cr, nshft, c_fl
-      real :: vphi, vphip, dphi, dphip
+      real :: dt_shear!, dt_res
+      !real :: v_mean, v_cr, nshft, c_fl
+      real :: vphi, vphip, dphi
       integer :: i, j, k, ifl
       class(component_fluid), pointer :: pfl
 
@@ -175,6 +175,7 @@ contains
 !     enddo
 !
 !     dt = min(dt, cfl * dt_res)
+      if (.false.) print *, dt_min
 
    end function timestep_fargo
 
@@ -196,7 +197,7 @@ contains
       cgl => leaves%first
       icg = 1
       do while (associated(cgl))
-         ! shift nint
+         cg => cgl%cg
          do i = cg%lhn(xdim, LO), cg%lhn(xdim, HI)
             do ifl = 1, flind%fluids
                pfl   => flind%all_fluids(ifl)%fl
