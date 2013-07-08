@@ -336,7 +336,7 @@ contains
 
       c(:) = 0.0
       c_fl = 0.0
-     
+
       if (use_fargo) then
          do i = cg%is, cg%ie
             vphi_mean(i) = sum(cg%u(fl%imy, i, :, :) / cg%u(fl%idn, i, :, :)) / size(cg%u(fl%idn, i, :, :))
