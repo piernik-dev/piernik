@@ -388,7 +388,7 @@ contains
          ! * Set f0 to 0 only when it would produce incoming flux.
          ! I don't remember which approach was already (unsuccesfully) tested
          ! \todo Get rid of use of cg
-         ! \todo remove transpositions by changing index order in eflx 
+         ! \todo remove transpositions by changing index order in eflx
          if (associated(eflx%li)) fu(eflx%li%index - cg%lhn(sweep, LO) + 1, :) = eflx%li%uflx
          if (associated(eflx%ri)) fu(eflx%ri%index - cg%lhn(sweep, LO)    , :) = eflx%ri%uflx
          if (associated(eflx%lo)) eflx%lo%uflx = fu(eflx%lo%index - cg%lhn(sweep, LO),     :)
