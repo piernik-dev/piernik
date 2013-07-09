@@ -50,7 +50,7 @@ contains
    subroutine init_fargo
 
       use constants,    only: GEO_RPZ
-      use dataio_pub,   only: die
+      use dataio_pub,   only: die, warn
       use domain,       only: dom
       use global,       only: use_fargo
 
@@ -59,6 +59,8 @@ contains
       if (.not. use_fargo) return
 
       if (dom%geometry_type /= GEO_RPZ) call die("[fargo:init_fargo] FARGO works only for cylindrical geometry")
+
+      call warn("[fargo:init_fargo] BEWARE: Fast eulerian transport is an experimental feature")
 
       ! TODO: Check if we have domain division in ydim
 
@@ -75,12 +77,15 @@ contains
 
    subroutine get_fargo_vels(dt)
 
-      use constants,        only: xdim, ydim, LO, HI
+      use constants,        only: xdim, ydim, LO, HI, pMAX
       use cg_leaves,        only: leaves
       use cg_list,          only: cg_list_element
+      use dataio_pub,       only: die, warn, msg
+      use domain,           only: dom
       use grid_cont,        only: grid_container
       use fluidindex,       only: flind
       use fluidtypes,       only: component_fluid
+      use mpisetup,         only: master, piernik_MPI_Allreduce
 
       implicit none
 
@@ -88,7 +93,7 @@ contains
 
       type(cg_list_element), pointer    :: cgl
       type(grid_container),  pointer    :: cg
-      integer :: ifl, icg, i
+      integer :: ifl, icg, i, max_nshift
       class(component_fluid), pointer :: pfl
 
       cgl => leaves%first
@@ -116,8 +121,13 @@ contains
          cgl => cgl%nxt
          icg = icg + 1
       enddo
-
-      !if (maxval(nshift) > dom%nb) call die("[fargo:get_fargo_vels] FARGO does not support domain division in ydim yet")
+      max_nshift = maxval(nshift)
+      call piernik_MPI_Allreduce(max_nshift, pMAX)
+      if (master .and. max_nshift > dom%nb) then
+         write(msg, '(a,I2,a)') "[fargo:get_fargo_vels] FARGO would require ", max_nshift, " ghostcells to work."
+         call warn(msg)
+         call die("[fargo:get_fargo_vels] FARGO does not support domain division in ydim yet")
+      endif
 
    end subroutine get_fargo_vels
 
