@@ -139,7 +139,6 @@ contains
 !<
    subroutine make_3sweeps(forward)
 
-      use all_boundaries,      only: all_fluid_boundaries
       use cg_list,             only: expanded_domain
       use constants,           only: xdim, ydim, zdim, I_ONE, VEL_CR, VEL_RES
       use global,              only: skip_sweep, use_fargo
@@ -152,6 +151,7 @@ contains
       use particle_pub,        only: pset, psolver
 #endif /* GRAV */
 #if defined(COSM_RAYS) && defined(MULTIGRID)
+      use all_boundaries,      only: all_fluid_boundaries
       use initcosmicrays,      only: use_split
       use multigrid_diffusion, only: multigrid_solve_diff
 #endif /* COSM_RAYS && MULTIGRID */
@@ -191,7 +191,6 @@ contains
             call sweep(ydim, VEL_RES)
             call sweep(ydim, VEL_CR)
             call int_shift
-            call all_fluid_boundaries(nocorners = .true., dir = ydim)
          endif
       else
          if (forward) then

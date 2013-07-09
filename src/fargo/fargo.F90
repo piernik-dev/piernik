@@ -190,12 +190,14 @@ contains
    end function timestep_fargo
 
    subroutine int_shift
+      use all_boundaries,   only: all_fluid_boundaries
       use cg_leaves,        only: leaves
       use cg_list,          only: cg_list_element
-      use constants,        only: xdim, LO, HI
+      use constants,        only: xdim, ydim, LO, HI, sgp_n
       use fluidindex,       only: flind
       use fluidtypes,       only: component_fluid
       use grid_cont,        only: grid_container
+      use named_array_list, only: qna
 
       implicit none
 
@@ -213,10 +215,17 @@ contains
                pfl   => flind%all_fluids(ifl)%fl
                cg%u(pfl%beg:pfl%end, i, :, :) = cshift(cg%u(pfl%beg:pfl%end, i, :, :), -nshift(i, ifl, icg), dim=2)
             enddo
+#ifdef SELF_GRAV
+            cg%sgp(i, :, :) = cshift(cg%sgp(i, :, :), -nshift(i, 1, icg), dim=1) ! TODO: what about ifl?
+#endif /* SELF_GRAV */
          enddo
          cgl => cgl%nxt
          icg = icg + 1
       enddo
+      call all_fluid_boundaries(nocorners = .true., dir = ydim)
+#ifdef SELF_GRAV
+      call leaves%leaf_arr3d_boundaries(qna%ind(sgp_n)) !, nocorners=.true.)
+#endif /* SELF_GRAV */
    end subroutine int_shift
 
 end module fargo
