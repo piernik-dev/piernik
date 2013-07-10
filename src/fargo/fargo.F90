@@ -43,7 +43,7 @@ module fargo
    integer, dimension(:, :, :),  allocatable :: nshift
 
    private
-   public :: init_fargo, cleanup_fargo, vphi_mean, vphi_cr, nshift, get_fargo_vels, timestep_fargo, int_shift
+   public :: init_fargo, cleanup_fargo, vphi_mean, vphi_cr, nshift, make_fargosweep, timestep_fargo
 
 contains
 
@@ -53,6 +53,7 @@ contains
       use dataio_pub,   only: die, warn
       use domain,       only: dom
       use global,       only: use_fargo
+      use mpisetup,     only: master
 
       implicit none
 
@@ -60,9 +61,8 @@ contains
 
       if (dom%geometry_type /= GEO_RPZ) call die("[fargo:init_fargo] FARGO works only for cylindrical geometry")
 
-      call warn("[fargo:init_fargo] BEWARE: Fast eulerian transport is an experimental feature")
+      if (master) call warn("[fargo:init_fargo] BEWARE: Fast eulerian transport is an experimental feature")
 
-      ! TODO: Check if we have domain division in ydim
 
    end subroutine init_fargo
 
@@ -75,17 +75,30 @@ contains
 
    end subroutine cleanup_fargo
 
+   subroutine make_fargosweep
+      use constants,   only: VEL_RES, VEL_CR, ydim
+      use global,      only: dt, skip_sweep
+      use sweeps,      only: sweep
+
+      implicit none
+
+      ! TODO we are omitting B and cr update, but FARGO does not work with them yet...
+      if (.not.skip_sweep(ydim)) then
+         call get_fargo_vels(dt)
+         call sweep(ydim, VEL_RES)
+         call sweep(ydim, VEL_CR)
+         call int_shift
+      endif
+   end subroutine make_fargosweep
+
    subroutine get_fargo_vels(dt)
 
-      use constants,        only: xdim, ydim, LO, HI, pMAX
+      use constants,        only: xdim, ydim, LO, HI
       use cg_leaves,        only: leaves
       use cg_list,          only: cg_list_element
-      use dataio_pub,       only: die, warn, msg
-      use domain,           only: dom
       use grid_cont,        only: grid_container
       use fluidindex,       only: flind
       use fluidtypes,       only: component_fluid
-      use mpisetup,         only: master, piernik_MPI_Allreduce
 
       implicit none
 
@@ -121,13 +134,6 @@ contains
          cgl => cgl%nxt
          icg = icg + 1
       enddo
-      max_nshift = maxval(nshift)
-      call piernik_MPI_Allreduce(max_nshift, pMAX)
-      if (master .and. max_nshift > dom%nb) then
-         write(msg, '(a,I2,a)') "[fargo:get_fargo_vels] FARGO would require ", max_nshift, " ghostcells to work."
-         call warn(msg)
-         call die("[fargo:get_fargo_vels] FARGO does not support domain division in ydim yet")
-      endif
 
    end subroutine get_fargo_vels
 
@@ -193,10 +199,12 @@ contains
       use all_boundaries,   only: all_fluid_boundaries
       use cg_leaves,        only: leaves
       use cg_list,          only: cg_list_element
-      use constants,        only: xdim, ydim, LO, HI, sgp_n
+      use constants,        only: xdim, ydim, LO, HI, sgp_n, pMAX
+      use domain,           only: dom
       use fluidindex,       only: flind
       use fluidtypes,       only: component_fluid
       use grid_cont,        only: grid_container
+      use mpisetup,         only: piernik_MPI_Allreduce
       use named_array_list, only: qna
 
       implicit none
@@ -204,28 +212,35 @@ contains
       type(cg_list_element), pointer    :: cgl
       type(grid_container),  pointer    :: cg
       class(component_fluid), pointer   :: pfl
-      integer :: icg, ifl, i
+      integer :: icg, ifl, i, max_nshift, iter
 
-      cgl => leaves%first
-      icg = 1
-      do while (associated(cgl))
-         cg => cgl%cg
-         do i = cg%lhn(xdim, LO), cg%lhn(xdim, HI)
-            do ifl = 1, flind%fluids
-               pfl   => flind%all_fluids(ifl)%fl
-               cg%u(pfl%beg:pfl%end, i, :, :) = cshift(cg%u(pfl%beg:pfl%end, i, :, :), -nshift(i, ifl, icg), dim=2)
+      max_nshift = maxval(nshift)
+      call piernik_MPI_Allreduce(max_nshift, pMAX)
+
+      do iter = 1, max(ceiling(float(max_nshift) / float(dom%nb)), 1)
+         cgl => leaves%first
+         icg = 1
+         do while (associated(cgl))
+            cg => cgl%cg
+            do i = cg%lhn(xdim, LO), cg%lhn(xdim, HI)
+               if (all(nshift(i, :, icg) == 0)) cycle
+               do ifl = 1, flind%fluids
+                  pfl   => flind%all_fluids(ifl)%fl
+                  cg%u(pfl%beg:pfl%end, i, :, :) = cshift(cg%u(pfl%beg:pfl%end, i, :, :), -min(nshift(i, ifl, icg), dom%nb), dim=2)
+               enddo
+#ifdef SELF_GRAV
+               cg%sgp(i, :, :) = cshift(cg%sgp(i, :, :), -min(nshift(i, 1, icg), dom%nb), dim=1) ! TODO: what about ifl?
+#endif /* SELF_GRAV */
             enddo
-#ifdef SELF_GRAV
-            cg%sgp(i, :, :) = cshift(cg%sgp(i, :, :), -nshift(i, 1, icg), dim=1) ! TODO: what about ifl?
-#endif /* SELF_GRAV */
+            nshift(:, :, icg) = max(nshift(:, :, icg) - dom%nb, 0)
+            cgl => cgl%nxt
+            icg = icg + 1
          enddo
-         cgl => cgl%nxt
-         icg = icg + 1
-      enddo
-      call all_fluid_boundaries(nocorners = .true., dir = ydim)
+         call all_fluid_boundaries(nocorners = .true., dir = ydim)
 #ifdef SELF_GRAV
-      call leaves%leaf_arr3d_boundaries(qna%ind(sgp_n)) !, nocorners=.true.)
+         call leaves%leaf_arr3d_boundaries(qna%ind(sgp_n)) !, nocorners=.true.)
 #endif /* SELF_GRAV */
+      enddo
    end subroutine int_shift
 
 end module fargo

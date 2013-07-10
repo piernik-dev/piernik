@@ -142,7 +142,7 @@ contains
       use cg_list,             only: expanded_domain
       use constants,           only: xdim, ydim, zdim, I_ONE, VEL_CR, VEL_RES
       use global,              only: skip_sweep, use_fargo
-      use fargo,               only: get_fargo_vels, int_shift
+      use fargo,               only: make_fargosweep
       use sweeps,              only: sweep
       use user_hooks,          only: problem_customize_solution
 #ifdef GRAV
@@ -184,14 +184,7 @@ contains
       if (use_fargo) then
          if (.not.skip_sweep(zdim)) call make_sweep(zdim, forward)
          if (.not.skip_sweep(xdim)) call make_sweep(xdim, forward)
-
-         ! TODO we are omitting B and cr update, but FARGO does not work with them yet...
-         if (.not.skip_sweep(ydim)) then
-            call get_fargo_vels(dt)
-            call sweep(ydim, VEL_RES)
-            call sweep(ydim, VEL_CR)
-            call int_shift
-         endif
+         if (.not.skip_sweep(ydim)) call make_fargosweep
       else
          if (forward) then
             do s = xdim, zdim
