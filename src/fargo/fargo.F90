@@ -28,9 +28,9 @@
 #include "piernik.h"
 #include "macros.h"
 !>
-!! Implementation of a fast eulerian transport algorithm for differentially rotating disks (Masset 2000)
+!! \brief Implementation of a fast eulerian transport algorithm for differentially rotating disks (Masset 2000)
 !!
-!! See also:
+!! \details See also:
 !!   1. Masset, F. "FARGO: A fast eulerian transport algorithm for differentially rotating disks" (2000) A&A, 141:165-173, arXiv:astro-ph/9910390
 !!   2. Kley, W., Bitsch, B., Klahr, H. "Planet migration in three-dimensional radiative discs" (2009) A&A, 506:971-987, arXiv:0908.1863
 !!
@@ -38,17 +38,21 @@
 module fargo
 ! pulled by ANY
    implicit none
-   real,    dimension(:, :, :),  allocatable :: vphi_mean
-   real,    dimension(:, :, :),  allocatable :: vphi_cr
-   integer, dimension(:, :, :),  allocatable :: nshift
+   real,    dimension(:, :, :),  allocatable :: vphi_mean     !< mean angular velocity for each fluid and each cg
+   real,    dimension(:, :, :),  allocatable :: vphi_cr       !< constant residual angular velocity for each fluid and each cg
+   integer, dimension(:, :, :),  allocatable :: nshift        !< number of cells that need to be shifted due to %vphi_mean for each fluid and each cg
 
    private
    public :: init_fargo, cleanup_fargo, vphi_mean, vphi_cr, nshift, make_fargosweep, timestep_fargo
 
 contains
 
+!>
+!! \brief FARGO initialization
+!!
+!! \details Basic sanity checks are performed here
+!<
    subroutine init_fargo
-
       use constants,    only: GEO_RPZ
       use dataio_pub,   only: die, warn
       use domain,       only: dom
@@ -58,23 +62,32 @@ contains
       implicit none
 
       if (.not. use_fargo) return
-
       if (dom%geometry_type /= GEO_RPZ) call die("[fargo:init_fargo] FARGO works only for cylindrical geometry")
-
       if (master) call warn("[fargo:init_fargo] BEWARE: Fast eulerian transport is an experimental feature")
-
-
    end subroutine init_fargo
 
+!>
+!! \brief FARGO finalization
+!!
+!! \details Deallocating all module related arrays during cleanup phase
+!<
    subroutine cleanup_fargo
       implicit none
 
       if (allocated(vphi_mean)) deallocate(vphi_mean)
       if (allocated(vphi_cr)) deallocate(vphi_cr)
       if (allocated(nshift)) deallocate(nshift)
-
    end subroutine cleanup_fargo
 
+!>
+!! \brief Perform azimuthal integration steep using FARGO
+!!
+!! \details As per Masset (2000) we need to split azimuthal integration step
+!!    into several phases:
+!!    1. source terms and transport with the residual velocity
+!!    2. transport with constant residual velocity
+!!    3. transport with mean velocity
+!<
    subroutine make_fargosweep
       use constants,   only: VEL_RES, VEL_CR, ydim
       use global,      only: dt, skip_sweep
@@ -85,12 +98,17 @@ contains
       ! TODO we are omitting B and cr update, but FARGO does not work with them yet...
       if (.not.skip_sweep(ydim)) then
          call get_fargo_vels(dt)
-         call sweep(ydim, VEL_RES)
-         call sweep(ydim, VEL_CR)
-         call int_shift
+         call sweep(ydim, VEL_RES)  ! 1.
+         call sweep(ydim, VEL_CR)   ! 2.
+         call int_shift             ! 3.
       endif
    end subroutine make_fargosweep
 
+!>
+!! \brief Compute shift, constant residual and residual azimuthal velocity
+!!
+!! \details This routines fills FARGO auxiliary arrays with valid data
+!<
    subroutine get_fargo_vels(dt)
 
       use constants,        only: xdim, ydim, LO, HI
@@ -137,6 +155,13 @@ contains
 
    end subroutine get_fargo_vels
 
+!>
+!! \brief Compute FARGO time constraint
+!!
+!! \details "An additional time step limitation is given by the requirement that
+!!    the shift should not disconnect two neighbouring grid cells in radial and
+!!    in the vertical direction" -- Kley et al. 2009
+!<
    real function timestep_fargo(cg, dt_min) result(dt)
 
       use fluidindex,   only: flind
@@ -195,6 +220,12 @@ contains
 
    end function timestep_fargo
 
+!>
+!! \brief Perform integer part of azimuthal transport step
+!!
+!! \details Routine that shifts data for an integer number of cells.
+!! \todo reduce MPI communication
+!<
    subroutine int_shift
       use all_boundaries,   only: all_fluid_boundaries
       use cg_leaves,        only: leaves
