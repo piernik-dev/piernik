@@ -51,7 +51,7 @@ contains
       integer(kind=4),               intent(in)    :: cdim
       type(grid_container), pointer, intent(inout) :: cg
       integer,                       intent(in)    :: i1, i2
-      real, dimension(nmag, cg%n_(cdim))           :: b
+      real, dimension(cg%n_(cdim), nmag)           :: b
 
       real, dimension(:), pointer                  :: pb, pb1
       integer(kind=4)                              :: ibx, iby, ibz
@@ -67,8 +67,8 @@ contains
       i2p = i2+dom%D_(pdims(cdim, ORTHO2))
 
       pb => cg%w(wna%bi)%get_sweep(cdim,ibx,i1,i2)
-      b(ibx,1:cg%n_(cdim)-1) = half*( pb(1:cg%n_(cdim)-1)+pb(2:cg%n_(cdim)) )
-      b(ibx,  cg%n_(cdim)  ) = b(ibx,  cg%n_(cdim)-1)
+      b(1:cg%n_(cdim)-1, ibx) = half*( pb(1:cg%n_(cdim)-1)+pb(2:cg%n_(cdim)) )
+      b(cg%n_(cdim),     ibx) = b(cg%n_(cdim)-1, ibx)
 
       pb  => cg%w(wna%bi)%get_sweep(cdim,iby,i1,i2)
       if (cdim == xdim) then
@@ -76,7 +76,7 @@ contains
       else
          pb1 => cg%w(wna%bi)%get_sweep(cdim,iby,i1,i2p)
       endif
-      b(iby,:) = half*(pb + pb1)
+      b(:, iby) = half*(pb + pb1)
 
       pb  => cg%w(wna%bi)%get_sweep(cdim,ibz,i1,i2)
       if (cdim == xdim) then
@@ -84,9 +84,9 @@ contains
       else
          pb1 => cg%w(wna%bi)%get_sweep(cdim,ibz,i1p,i2)
       endif
-      b(ibz,:) = half*(pb + pb1)
+      b(:, ibz) = half*(pb + pb1)
 
-      b( iarr_mag_swp(cdim,:),:) = b(:,:)
+      b(:, iarr_mag_swp(cdim,:)) = b(:,:)
       nullify(pb,pb1)
 
    end function interpolate_mag_field
@@ -319,7 +319,7 @@ contains
                         if (allocated(u))  deallocate(u)
                         if (allocated(u0)) deallocate(u0)
                      endif
-                     if (.not. allocated(u)) allocate(b(nmag, cg%n_(cdim)), u(flind%all, cg%n_(cdim)), u0(flind%all, cg%n_(cdim)))
+                     if (.not. allocated(u)) allocate(b(cg%n_(cdim), nmag), u(cg%n_(cdim), flind%all), u0(cg%n_(cdim), flind%all))
                      cn_ = cg%n_(cdim)
 
                      b(:,:) = 0.0
@@ -343,7 +343,7 @@ contains
                               b(:,:) = interpolate_mag_field(cdim, cg, i1, i2)
                            else
                               pb => cg%w(wna%bi)%get_sweep(cdim, i1, i2)   ! BEWARE: is it correct for 2.5D ?
-                              b(iarr_mag_swp(cdim,:),:)  = pb(:,:)
+                              b(:, iarr_mag_swp(cdim,:))  = transpose(pb(:,:))
                            endif
 #endif /* MAGNETIC */
 
@@ -356,14 +356,15 @@ contains
                            pu0                    => cg%w(uhi      )%get_sweep(cdim,i1,i2)
                            if (i_cs_iso2 > 0) cs2 => cg%q(i_cs_iso2)%get_sweep(cdim,i1,i2)
 
-                           u (iarr_all_swp(cdim,:),:) = pu (:,:)
-                           u0(iarr_all_swp(cdim,:),:) = pu0(:,:)
+
+                           u (:, iarr_all_swp(cdim,:)) = transpose(pu (:,:))
+                           u0(:, iarr_all_swp(cdim,:)) = transpose(pu0(:,:))
 
                            call cg%set_fluxpointers(cdim, i1, i2, eflx)
                            call relaxing_tvd(cg%n_(cdim), u, u0, b, div_v1d, cs2, istep, cdim, i1, i2, cg%dl(cdim), dt, cg, eflx)
                            call cg%save_outfluxes(cdim, i1, i2, eflx)
 
-                           pu(:,:) = u(iarr_all_swp(cdim,:),:)
+                           pu(:,:) = transpose(u(:, iarr_all_swp(cdim,:)))
                            nullify(pu,pu0,cs2)
                         enddo
                      enddo

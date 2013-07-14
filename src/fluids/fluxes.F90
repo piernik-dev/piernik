@@ -87,22 +87,22 @@ contains
 
       implicit none
 
-      integer(kind=4), intent(in)                           :: n        !< size of input arrays
-      real, dimension(flind%all,n),    target,  intent(out) :: flux     !< array storing all fluxes
-      real, dimension(flind%all,n),    target,  intent(out) :: cfr      !< array storing all freezing speeds
-      real, dimension(flind%all,n),    target,  intent(out) :: uu       !< array with current fluid state
-      real, dimension(nmag,n),         target,  intent(in)  :: bb       !< array with current magnetic field state
-      real, dimension(flind%fluids,n), target,  intent(out) :: vx       !< array storing velocity in current sweep direction (reused later)
-      real, dimension(flind%fluids,n), target,  intent(out) :: pp       !< array storing pressure in current sweep (reused later)
-      real, dimension(:),              pointer, intent(in)  :: cs_iso2  !< array with current sound speed squared
+      integer(kind=4), intent(in)                            :: n        !< size of input arrays
+      real, dimension(n, flind%all),    target,  intent(out) :: flux     !< array storing all fluxes
+      real, dimension(n, flind%all),    target,  intent(out) :: cfr      !< array storing all freezing speeds
+      real, dimension(n, flind%all),    target,  intent(out) :: uu       !< array with current fluid state
+      real, dimension(n, nmag),         target,  intent(in)  :: bb       !< array with current magnetic field state
+      real, dimension(n, flind%fluids), target,  intent(out) :: vx       !< array storing velocity in current sweep direction (reused later)
+      real, dimension(n, flind%fluids), target,  intent(out) :: pp       !< array storing pressure in current sweep (reused later)
+      real, dimension(:),               pointer, intent(in)  :: cs_iso2  !< array with current sound speed squared
 
-      real, dimension(:,:),            pointer              :: pflux, pcfr, puu, pbb
-      real, dimension(:),              pointer              :: pvx, ppp
+      real, dimension(:,:),             pointer              :: pflux, pcfr, puu, pbb
+      real, dimension(:),               pointer              :: pvx, ppp
 #ifdef TRACER
-      real, dimension(:),              pointer              :: pu1d, pfl1d
+      real, dimension(:),               pointer              :: pu1d, pfl1d
 #endif /* TRACER */
-      class(component_fluid),          pointer              :: pfl
-      integer                                               :: p
+      class(component_fluid),           pointer              :: pfl
+      integer                                                :: p
 !>
 !! \todo pbb may need more careful treatment
 !!  currently it doesn't matter for dst and neu and
@@ -112,32 +112,32 @@ contains
 
       do p = 1, flind%fluids
          pfl   => flind%all_fluids(p)%fl
-         puu   =>   uu(pfl%beg:pfl%end,:)
-         pcfr  =>  cfr(pfl%beg:pfl%end,:)
-         pflux => flux(pfl%beg:pfl%end,:)
-         pvx   =>   vx(pfl%pos,:)
-         ppp   =>   pp(pfl%pos,:)
+         puu   =>   uu(:, pfl%beg:pfl%end)
+         pcfr  =>  cfr(:, pfl%beg:pfl%end)
+         pflux => flux(:, pfl%beg:pfl%end)
+         pvx   =>   vx(:, pfl%pos)
+         ppp   =>   pp(:, pfl%pos)
 
          call pfl%compute_flux(pflux, pcfr, puu, n, pvx, ppp, pbb, cs_iso2)
       enddo
 
 #ifdef COSM_RAYS
-      puu   => uu(flind%crs%beg:flind%crs%end,:)
-      pflux => flux(flind%crs%beg:flind%crs%end,:)
-      pvx   => vx(flind%ion%pos,:)
+      puu   => uu(:, flind%crs%beg:flind%crs%end)
+      pflux => flux(:, flind%crs%beg:flind%crs%end)
+      pvx   => vx(:, flind%ion%pos)
 
       call flux_crs(pflux,pvx,puu,n)
 
-      cfr(flind%crs%beg:flind%crs%end,:)  = spread(cfr(flind%ion%iarr(1),:),1,flind%crs%all)
+      cfr(:, flind%crs%beg:flind%crs%end)  = spread(cfr(:, flind%ion%iarr(1)), 2, flind%crs%all)
 #endif /* COSM_RAYS */
 
 #ifdef TRACER
       do p = 1, size(trace_fluid)
-         pu1d  => uu(flind%trc%beg + p - 1, :)
-         pfl1d => flux(flind%trc%beg + p - 1, :)
-         pvx   => vx(flind%all_fluids(trace_fluid(p))%fl%pos, :)
+         pu1d  => uu(:, flind%trc%beg + p - 1)
+         pfl1d => flux(:, flind%trc%beg + p - 1)
+         pvx   => vx(:, flind%all_fluids(trace_fluid(p))%fl%pos)
          call flux_tracer(pfl1d, pu1d, pvx)
-         cfr(flind%trc%beg + p - 1,:)  = cfr(flind%all_fluids(trace_fluid(p))%fl%iarr(1),:)
+         cfr(:, flind%trc%beg + p - 1)  = cfr(:, flind%all_fluids(trace_fluid(p))%fl%iarr(1))
       enddo
 #endif /* TRACER */
 

@@ -198,10 +198,10 @@ contains
       if (dragc_gas_dust > 0.0 .or. collision_factor > 0.0) then
          if (associated(flind%dst)) then
             if (master) call printinfo("[interactions:interactions_grace_passed] Initializing aerodynamical drag")
-            allocate(collfaq(flind%fluids,flind%fluids))
+            allocate(collfaq(flind%fluids, flind%fluids))
             collfaq = collision_factor
-            collfaq(flind%dst%pos,:) = dragc_gas_dust
-            collfaq(:,flind%dst%pos) = dragc_gas_dust
+            collfaq(:, flind%dst%pos) = dragc_gas_dust
+            collfaq(flind%dst%pos, :) = dragc_gas_dust
 
             select case (interactions_type)
                case ('none')
@@ -252,9 +252,9 @@ contains
       real, dimension(:,:), intent(in), pointer  :: velx
       real, dimension(size(dens,1),size(dens,2)) :: acc
 
-      acc(flind%dst%pos,:) = -dragc_gas_dust * (velx(flind%dst%pos,:) - velx(flind%neu%pos,:))
-      acc(flind%neu%pos,:) = -acc(flind%dst%pos,:) * dens(flind%dst%pos,:) / dens(flind%neu%pos,:)
-!      acc(flind%neu%pos,:) = -dragc_gas_dust * dens(flind%dst%pos,:) / dens(flind%neu%pos,:) * ( velx(flind%neu%pos,:) - velx(flind%dst%pos,:) )
+      acc(:, flind%dst%pos) = -dragc_gas_dust * (velx(:, flind%dst%pos) - velx(:, flind%neu%pos))
+      acc(:, flind%neu%pos) = -acc(:, flind%dst%pos) * dens(:, flind%dst%pos) / dens(:, flind%neu%pos)
+!      acc(:, flind%neu%pos) = -dragc_gas_dust * dens(:, flind%dst%pos) / dens(:, flind%neu%pos) * ( velx(:, flind%neu%pos) - velx(:, flind%dst%pos) )
 
    end function fluid_interactions_aero_drag
 
@@ -268,8 +268,8 @@ contains
       real, dimension(:,:), intent(in), pointer  :: velx
       real, dimension(size(dens,1),size(dens,2)) :: acc
 
-      acc(flind%dst%pos,:) = -dens(flind%neu%pos,:) / epstein_factor(flind%neu%pos) * (velx(flind%dst%pos,:) - velx(flind%neu%pos,:))
-      acc(flind%neu%pos,:) = -acc(flind%dst%pos,:) * dens(flind%dst%pos,:) / dens(flind%neu%pos,:)
+      acc(:, flind%dst%pos) = -dens(:, flind%neu%pos) / epstein_factor(flind%neu%pos) * (velx(:, flind%dst%pos) - velx(:, flind%neu%pos))
+      acc(:, flind%neu%pos) = -acc(:, flind%dst%pos) * dens(:, flind%dst%pos) / dens(:, flind%neu%pos)
 
    end function fluid_interactions_aero_drag_ep
 
@@ -292,8 +292,8 @@ contains
       real, intent(in)                         :: dt
       integer, intent(in)                      :: istep
 
-      real, dimension(flind%fluids,size(u1,2)) :: vprim
-      real, dimension(size(u1,2))              :: delta, drag
+      real, dimension(size(u1, 1), flind%fluids) :: vprim
+      real, dimension(size(u1, 1))               :: delta, drag
       !>
       !! \deprecated BEWARE: this bit assumes that we have 2 fluids and \f$u_1 \equiv u_0 - \nabla F\f$
       !! \todo 2) half-time step should be \f$\le \frac{1}{2}\frac{c_s}{drag * \rho'_? |v'_d - v'_g|}\f$
@@ -301,23 +301,23 @@ contains
       !! \todo 4) remove hardcoded integers
       !<
       if (epstein_factor(flind%neu%pos) <= zero) return
-      drag(:) = dt*half / grain_dens_x_size * sqrt( cs_iso2(:) + abs( vx(1,:) - vx(2,:) )**2)
+      drag(:) = dt * half / grain_dens_x_size * sqrt( cs_iso2(:) + abs( vx(:, 1) - vx(:, 2) )**2)
 
-      delta(:) = one + drag(:) * (u1(iarr_all_dn(1),:) + u1(iarr_all_dn(2),:))
+      delta(:) = one + drag(:) * (u1(:, iarr_all_dn(1)) + u1(:, iarr_all_dn(2)))
       delta(:) = one/delta(:)
 
       if (istep == 1) then
-         vprim(1,:) =  delta(:)*( (1./u1(iarr_all_dn(1),:) + drag(:))*u1(iarr_all_mx(1),:) + drag(:)*u1(iarr_all_mx(2),:) )
-         vprim(2,:) =  delta(:)*( (1./u1(iarr_all_dn(2),:) + drag(:))*u1(iarr_all_mx(2),:) + drag(:)*u1(iarr_all_mx(1),:) )
+         vprim(:, 1) =  delta(:)*( (1./u1(:, iarr_all_dn(1)) + drag(:))*u1(:, iarr_all_mx(1)) + drag(:)*u1(:, iarr_all_mx(2)) )
+         vprim(:, 2) =  delta(:)*( (1./u1(:, iarr_all_dn(2)) + drag(:))*u1(:, iarr_all_mx(2)) + drag(:)*u1(:, iarr_all_mx(1)) )
       else
-         vprim(2,:) =  delta(:)*(  &
-            drag(:)*( u0(iarr_all_dn(2),:)/u1(iarr_all_dn(2),:)*u0(iarr_all_mx(1),:) - u0(iarr_all_dn(1),:)/u1(iarr_all_dn(2),:)*u0(iarr_all_mx(2),:) &
-                    + u1(iarr_all_mx(1),:) ) + u1(iarr_all_mx(2),:) * ( 1./u1(iarr_all_dn(2),:) + drag(:) )  )
-         vprim(1,:) =  delta(:)*(  &
-            drag(:)*( u0(iarr_all_dn(1),:)/u1(iarr_all_dn(1),:)*u0(iarr_all_mx(2),:) - u0(iarr_all_dn(2),:)/u1(iarr_all_dn(1),:)*u0(iarr_all_mx(1),:) &
-                    + u1(iarr_all_mx(2),:) ) + u1(iarr_all_mx(1),:) * ( 1./u1(iarr_all_dn(1),:) + drag(:) )  )
+         vprim(:, 2) =  delta(:)*(  &
+            drag(:)*( u0(:, iarr_all_dn(2))/u1(:, iarr_all_dn(2))*u0(:, iarr_all_mx(1)) - u0(:, iarr_all_dn(1))/u1(:, iarr_all_dn(2))*u0(:, iarr_all_mx(2)) &
+                    + u1(:, iarr_all_mx(1)) ) + u1(:, iarr_all_mx(2)) * ( 1./u1(:, iarr_all_dn(2)) + drag(:) )  )
+         vprim(:, 1) =  delta(:)*(  &
+            drag(:)*( u0(:, iarr_all_dn(1))/u1(:, iarr_all_dn(1))*u0(:, iarr_all_mx(2)) - u0(:, iarr_all_dn(2))/u1(:, iarr_all_dn(1))*u0(:, iarr_all_mx(1)) &
+                    + u1(:, iarr_all_mx(2)) ) + u1(:, iarr_all_mx(1)) * ( 1./u1(:, iarr_all_dn(1)) + drag(:) )  )
       endif
-      u1(iarr_all_mx,:) = u1(iarr_all_dn,:) * vprim(:,:)
+      u1(:, iarr_all_mx) = u1(:, iarr_all_dn) * vprim(:,:)
       return
    end subroutine balsara_implicit_interactions
 
@@ -361,7 +361,7 @@ contains
 !-----collisions between fluids------
       do ifl=1,flind%fluids
          do jfl=1,flind%fluids
-            if (ifl /= jfl) acc(ifl,:) = acc(ifl,:) + collfaq(ifl,jfl) * dens(ifl,:) * dens(jfl,:) * (velx(jfl,:) - velx(ifl,:)) ! / dens(ifl,:) ?
+            if (ifl /= jfl) acc(:, ifl) = acc(:, ifl) + collfaq(ifl,jfl) * dens(:, ifl) * dens(:, jfl) * (velx(:, jfl) - velx(:, ifl)) ! / dens(:, ifl) ?
          enddo
       enddo
 
