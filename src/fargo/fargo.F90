@@ -38,12 +38,9 @@
 module fargo
 ! pulled by ANY
    implicit none
-   real,    dimension(:, :, :),  allocatable :: vphi_mean     !< mean angular velocity for each fluid and each cg
-   real,    dimension(:, :, :),  allocatable :: vphi_cr       !< constant residual angular velocity for each fluid and each cg
-   integer, dimension(:, :, :),  allocatable :: nshift        !< number of cells that need to be shifted due to %vphi_mean for each fluid and each cg
 
    private
-   public :: init_fargo, cleanup_fargo, vphi_mean, vphi_cr, nshift, make_fargosweep, timestep_fargo
+   public :: init_fargo, cleanup_fargo, make_fargosweep, timestep_fargo
 
 contains
 
@@ -68,15 +65,9 @@ contains
 
 !>
 !! \brief FARGO finalization
-!!
-!! \details Deallocating all module related arrays during cleanup phase
 !<
    subroutine cleanup_fargo
       implicit none
-
-      if (allocated(vphi_mean)) deallocate(vphi_mean)
-      if (allocated(vphi_cr)) deallocate(vphi_cr)
-      if (allocated(nshift)) deallocate(nshift)
    end subroutine cleanup_fargo
 
 !>
@@ -124,33 +115,31 @@ contains
 
       type(cg_list_element), pointer    :: cgl
       type(grid_container),  pointer    :: cg
-      integer :: ifl, icg, i, max_nshift
+      integer :: ifl, i, max_nshift
       class(component_fluid), pointer :: pfl
 
       cgl => leaves%first
-      cg => cgl%cg
-      if (.not. allocated(vphi_mean)) allocate(vphi_mean(cg%lhn(xdim, LO):cg%lhn(xdim, HI), flind%fluids, leaves%cnt))
-      if (.not. allocated(vphi_cr)) allocate(vphi_cr(cg%lhn(xdim, LO):cg%lhn(xdim, HI), flind%fluids, leaves%cnt))
-      if (.not. allocated(nshift)) allocate(nshift(cg%lhn(xdim, LO):cg%lhn(xdim, HI), flind%fluids, leaves%cnt))
-
-      icg = 1
       do while (associated(cgl))
          cg => cgl%cg
+         ! TODO: should be moved to cg%init, but I wanted to avoid fluidindex
+         ! dependency
+         if (.not. allocated(cg%vphi_mean)) allocate(cg%vphi_mean(cg%lhn(xdim, LO):cg%lhn(xdim, HI), flind%fluids))
+         if (.not. allocated(cg%vphi_cr)) allocate(cg%vphi_cr(cg%lhn(xdim, LO):cg%lhn(xdim, HI), flind%fluids))
+         if (.not. allocated(cg%nshift)) allocate(cg%nshift(cg%lhn(xdim, LO):cg%lhn(xdim, HI), flind%fluids))
          do i = cg%lhn(xdim, LO), cg%lhn(xdim, HI)
             do ifl = 1, flind%fluids
                pfl => flind%all_fluids(ifl)%fl
-               vphi_mean(i, ifl, icg) = sum(cg%u(pfl%imy, i, :, :) / cg%u(pfl%idn, i, :, :))  / size(cg%u(pfl%idn, i, :, :))
+               cg%vphi_mean(i, ifl) = sum(cg%u(pfl%imy, i, :, :) / cg%u(pfl%idn, i, :, :))  / size(cg%u(pfl%idn, i, :, :))
             enddo
          enddo
 
          do ifl = 1, flind%fluids
             pfl => flind%all_fluids(ifl)%fl
-            nshift(:, ifl, icg) = nint(vphi_mean(:, ifl, icg) * dt / (cg%x(:) * cg%dl(ydim)))
-            vphi_cr(:, ifl, icg) = vphi_mean(:, ifl, icg) - nshift(:, ifl, icg) * (cg%x(:) * cg%dl(ydim)) / dt
+            cg%nshift(:, ifl) = nint(cg%vphi_mean(:, ifl) * dt / (cg%x(:) * cg%dl(ydim)))
+            cg%vphi_cr(:, ifl) = cg%vphi_mean(:, ifl) - cg%nshift(:, ifl) * (cg%x(:) * cg%dl(ydim)) / dt
          enddo
 
          cgl => cgl%nxt
-         icg = icg + 1
       enddo
 
    end subroutine get_fargo_vels
@@ -243,29 +232,33 @@ contains
       type(cg_list_element), pointer    :: cgl
       type(grid_container),  pointer    :: cg
       class(component_fluid), pointer   :: pfl
-      integer :: icg, ifl, i, max_nshift, iter
+      integer :: ifl, i, max_nshift, iter
 
-      max_nshift = maxval(nshift)
+      max_nshift = 0
+      cgl => leaves%first
+      do while (associated(cgl))
+         cg => cgl%cg
+         max_nshift = max(max_nshift, maxval(cg%nshift))
+         cgl => cgl%nxt
+      enddo
       call piernik_MPI_Allreduce(max_nshift, pMAX)
 
       do iter = 1, max(ceiling(float(max_nshift) / float(dom%nb)), 1)
          cgl => leaves%first
-         icg = 1
          do while (associated(cgl))
             cg => cgl%cg
             do i = cg%lhn(xdim, LO), cg%lhn(xdim, HI)
-               if (all(nshift(i, :, icg) == 0)) cycle
+               if (all(cg%nshift(i, :) == 0)) cycle
                do ifl = 1, flind%fluids
                   pfl   => flind%all_fluids(ifl)%fl
-                  cg%u(pfl%beg:pfl%end, i, :, :) = cshift(cg%u(pfl%beg:pfl%end, i, :, :), -min(nshift(i, ifl, icg), dom%nb), dim=2)
+                  cg%u(pfl%beg:pfl%end, i, :, :) = cshift(cg%u(pfl%beg:pfl%end, i, :, :), -min(cg%nshift(i, ifl), dom%nb), dim=2)
                enddo
 #ifdef SELF_GRAV
-               cg%sgp(i, :, :) = cshift(cg%sgp(i, :, :), -min(nshift(i, 1, icg), dom%nb), dim=1) ! TODO: what about ifl?
+               cg%sgp(i, :, :) = cshift(cg%sgp(i, :, :), -min(cg%nshift(i, 1), dom%nb), dim=1) ! TODO: what about ifl?
 #endif /* SELF_GRAV */
             enddo
-            nshift(:, :, icg) = max(nshift(:, :, icg) - dom%nb, 0)
+            cg%nshift(:, :) = max(cg%nshift(:, :) - dom%nb, 0)
             cgl => cgl%nxt
-            icg = icg + 1
          enddo
          call all_fluid_boundaries(nocorners = .true., dir = ydim)
 #ifdef SELF_GRAV

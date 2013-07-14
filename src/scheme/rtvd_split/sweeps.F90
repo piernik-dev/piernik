@@ -248,7 +248,6 @@ contains
       use constants,        only: pdims, LO, HI, uh_n, cs_i2_n, ORTHO1, ORTHO2, VEL_CR, VEL_RES, ydim
       use domain,           only: dom
       use dataio_pub,       only: die
-      use fargo,            only: vphi_mean, vphi_cr
       use fluidindex,       only: flind, iarr_all_swp, nmag, iarr_all_dn, iarr_all_mx
       use fluxtypes,        only: ext_fluxes
       use global,           only: dt, integration_order, sweeps_mgu, use_fargo
@@ -375,12 +374,12 @@ contains
                            if (use_fargo .and. cdim == ydim) then
                               if (fargo_vel == VEL_RES) then
                                  do ifl = 1, flind%fluids
-                                    vx(:, ifl) = u(:, iarr_all_mx(ifl)) / u(:, iarr_all_dn(ifl)) - vphi_mean(i2, ifl, icg)
+                                    vx(:, ifl) = u(:, iarr_all_mx(ifl)) / u(:, iarr_all_dn(ifl)) - cg%vphi_mean(i2, ifl)
                                  enddo
                                  sources = .true.
                               elseif (fargo_vel == VEL_CR) then
                                  do ifl = 1, flind%fluids
-                                    vx(:, ifl) = vphi_cr(i2, ifl, icg)
+                                    vx(:, ifl) = cg%vphi_cr(i2, ifl)
                                  enddo
                                  sources = .false.
                               else
