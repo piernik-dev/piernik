@@ -156,8 +156,8 @@ contains
       use fluidindex,   only: flind
       use grid_cont,    only: grid_container
       use global,       only: cfl
-      use constants,    only: ydim
-      use fluidtypes,       only: component_fluid
+      use constants,    only: ydim, big, small, half
+      use fluidtypes,   only: component_fluid
 
       implicit none
       type(grid_container), pointer, intent(in) :: cg
@@ -170,19 +170,19 @@ contains
       class(component_fluid), pointer :: pfl
 
 
-      dt_shear = huge(real(1.0,4))
-      do ifl = 1, flind%fluids
+      dt_shear = big
+      do ifl = lbound(flind%all_fluids, 1), ubound(flind%all_fluids, 1)
          pfl   => flind%all_fluids(ifl)%fl
          do k = cg%ks, cg%ke
             do j = cg%js, cg%je
                do i = cg%is, cg%ie
                   if (cg%leafmap(i, j, k)) then
                      vphi  = cg%u(pfl%imy, i, j, k) / cg%u(pfl%idn, i, j, k) - cg%u(pfl%imy, i-1, j, k) / cg%u(pfl%idn, i-1, j, k)
-                     vphi  = max(abs(vphi), 1e-8)
+                     vphi  = max(abs(vphi), small)
                      vphip = cg%u(pfl%imy, i, j, k) / cg%u(pfl%idn, i, j, k) - cg%u(pfl%imy, i, j-1, K) / cg%u(pfl%idn, i, j-1, k)
-                     vphip = max(abs(vphip), 1e-8)
+                     vphip = max(abs(vphip), small)
                      dphi = cg%x(i) * cg%dl(ydim)
-                     dt_shear = min(dt_shear, 0.5*min(dphi / abs(vphi), dphi / abs(vphip)))
+                     dt_shear = min(dt_shear, half*min(dphi / abs(vphi), dphi / abs(vphip)))
                   endif
                enddo
             enddo
