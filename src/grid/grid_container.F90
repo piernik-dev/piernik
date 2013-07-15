@@ -567,7 +567,7 @@ contains
       if (allocated(this%gc_xdim)) deallocate(this%gc_xdim)
       if (allocated(this%gc_ydim)) deallocate(this%gc_ydim)
       if (allocated(this%gc_zdim)) deallocate(this%gc_zdim)
-      
+
       if (allocated(this%vphi_mean)) deallocate(this%vphi_mean)
       if (allocated(this%vphi_cr)) deallocate(this%vphi_cr)
       if (allocated(this%nshift)) deallocate(this%nshift)
