@@ -886,7 +886,7 @@ contains
       use mpisetup,           only: master
       use multigridvars,      only: source, solution, correction, defect, verbose_vcycle, stdout, tot_ts, ts, grav_bnd, bnd_periodic
       use multigrid_gravity_helper, only: approximate_solution
-      use multigrid_Laplace,  only: residual_order
+      use multigrid_Laplace,  only: residual
       use timer,              only: set_timer
 
       implicit none
@@ -927,7 +927,7 @@ contains
       do v = 0, max_cycles
 
          call all_cg%set_dirty(defect)
-         call residual_order(leaves, source, solution, defect)
+         call residual(leaves, source, solution, defect)
          call leaves%check_dirty(defect, "residual")
          if (grav_bnd == bnd_periodic) call leaves%subtract_average(defect)
 
@@ -999,7 +999,7 @@ contains
       enddo
 
 #ifdef DEBUG
-      call residual_order(leaves, source, solution, defect)
+      call residual(leaves, source, solution, defect)
 #endif /* DEBUG */
       if (v > max_cycles) then
          if (master .and. norm_lhs/norm_rhs > norm_tol) call warn("[multigrid_gravity:vcycle_hg] Not enough V-cycles to achieve convergence.")

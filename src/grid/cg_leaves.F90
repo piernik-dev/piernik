@@ -55,7 +55,7 @@ module cg_leaves
    !! \todo Exclude also non-multigrid levels when fully covered
    !<
 
-   type, extends(cg_list_bnd_T) :: cg_leaves_T
+   type, extends(cg_list_bnd_T) :: cg_leaves_T ! cg_list_bnd_T is required for calling bnd_u and bnd_b
       type(cg_level_connected_T), pointer :: coarsest_leaves
    contains
       procedure :: update                  !< Select grids that should be included on leaves list
