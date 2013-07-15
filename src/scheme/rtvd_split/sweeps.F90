@@ -292,6 +292,7 @@ contains
       if (use_fargo .and. cdim == ydim .and. .not. present(fargo_vel)) then
          call die("[sweeps:sweep] FARGO velocity keyword not present in y sweep")
       endif
+      allocate(vx(0, 0)) ! suppress compiler warnings
 
       cn_ = 0
       full_dim = dom%has_dir(cdim)
@@ -330,7 +331,8 @@ contains
                      endif
                      if (.not. allocated(u)) allocate(b(cg%n_(cdim), nmag), u(cg%n_(cdim), flind%all), u0(cg%n_(cdim), flind%all))
                      if (use_fargo .and. cdim == ydim) then
-                        if (.not. allocated(vx)) allocate(vx(cg%n_(cdim), flind%fluids))
+                        if (allocated(vx)) deallocate(vx)
+                        allocate(vx(cg%n_(cdim), flind%fluids))
                      endif
 
                      cn_ = cg%n_(cdim)
