@@ -30,7 +30,7 @@ trunk-resist() {
 }
 
 trunk-si() {
-   git checkout 1a944b96f840531f51dc638a302da42666841369
+   git checkout ad5849fbafb94b393efca0e7219367a7198fc07e
    python setup streaming_global --param problem.par.build --compiler gnu47
    pushd runs/streaming_global &> /dev/null
    mpiexec --mca btl ^openib -n 4 ./piernik -n '&OUTPUT_CONTROL run_id="gld" use_v2_io=.true. /'
