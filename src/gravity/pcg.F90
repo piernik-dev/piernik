@@ -106,7 +106,7 @@ contains
       use cg_list_dataop,     only: ind_val
       use dataio_pub,         only: msg, printinfo
       use mpisetup,           only: master
-      use multigrid_Laplace,  only: residual_order, vT_A_v_order
+      use multigrid_Laplace,  only: residual, vT_A_v_order
       use multigridvars,      only: source, solution, defect, correction, tot_ts, ts
       use timer,              only: set_timer
 
@@ -125,7 +125,7 @@ contains
       norm_rhs = leaves%norm_sq(source)
       norm_old = norm_rhs
 
-      call residual_order(leaves, source, solution, defect)                                       ! {r}_0 := {b} - {A x}_0
+      call residual(leaves, source, solution, defect)                                             ! {r}_0 := {b} - {A x}_0
       call precond(defect, correction)                                                            ! {z}_0 := {M}^{-1} {r}_0
       call leaves%q_copy(correction, cg_corr)                                                     ! {d}_0 := {z}_0
       dc_k = leaves%scalar_product(defect, correction)                                            ! dc_k := {r}_k^{T} {z}_k
@@ -133,9 +133,9 @@ contains
 
          alpha = dc_k/vT_A_v_order(cg_corr)                                                       ! \alpha_k := {{r}_k^{T} {z}_k}/{{d}_k^{T} {A d}_k}
          call leaves%q_lin_comb( [ ind_val(solution, 1.), ind_val(cg_corr, alpha) ], solution)    ! {x}_{k+1} := {x}_k + \alpha_k {d}_k
-         call residual_order(leaves, source, solution, defect)                                    ! {r}_{k+1} := {r}_k - \alpha_k {A d}_k = {b} - {A x}_{k+1}
-         !OPT: Use {A d}_k computed in vT_A_v_order to avoid communication required for residual_order (costs memory for storing one field, risk of drift due to boundary values)
-         !OPT: Alternatively pass a flag to the residual_order routine that effectively switches off guardcell update as they're already have been updated by vT_A_v_order
+         call residual(leaves, source, solution, defect)                                          ! {r}_{k+1} := {r}_k - \alpha_k {A d}_k = {b} - {A x}_{k+1}
+         !OPT: Use {A d}_k computed in vT_A_v_order to avoid communication required for residual (costs memory for storing one field, risk of drift due to boundary values)
+         !OPT: Alternatively pass a flag to the residual routine that effectively switches off guardcell update as they're already have been updated by vT_A_v_order
          norm_lhs = leaves%norm_sq(defect)
          ts = set_timer("multigrid")
          tot_ts = tot_ts + ts

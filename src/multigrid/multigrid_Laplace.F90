@@ -37,7 +37,7 @@ module multigrid_Laplace
    implicit none
 
    private
-   public :: residual_order, approximate_solution_order, vT_A_v_order, ord_laplacian, ord_laplacian_outer
+   public :: residual, approximate_solution_order, vT_A_v_order, ord_laplacian, ord_laplacian_outer
 
    integer(kind=4) :: ord_laplacian          !< Laplace operator order; allowed values are 2, -4 (default) and 4 (not fully implemented)
    integer(kind=4) :: ord_laplacian_outer    !< Laplace operator order for isolated boundaries (useful as long as -4 is not fully implemented)
@@ -75,7 +75,7 @@ contains
 !! \warning Relaxation is not implemented for the fourth order operator.
 !<
 
-   subroutine residual_order(cg_llst, src, soln, def)
+   subroutine residual(cg_llst, src, soln, def)
 
       use cg_leaves,           only: cg_leaves_T
       use constants,           only: O_I2, O_I4
@@ -99,10 +99,10 @@ contains
          case (-O_I4)
             call residual_Mehrstellen(cg_llst, src, soln, def)
          case default
-            call die("[multigrid_Laplace:residual_order] The order of Laplacian must be equal to 2, 4 or -4")
+            call die("[multigrid_Laplace:residual] The order of Laplacian must be equal to 2, 4 or -4")
       end select
 
-   end subroutine residual_order
+   end subroutine residual
 
 !>
 !! \brief Relaxation selector routine.
@@ -171,7 +171,7 @@ contains
          endif
          firstcall = .false.
          call leaves%set_q_value(qna%wai, 0.)
-         call residual_order(leaves, qna%wai, var, cg_L)
+         call residual(leaves, qna%wai, var, cg_L)
          vT_A_v_order = -leaves%scalar_product(var, cg_L)
       endif
 
