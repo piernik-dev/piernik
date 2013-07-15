@@ -52,6 +52,7 @@ contains
       use decomposition,         only: init_decomposition
       use domain,                only: init_domain
       use diagnostics,           only: diagnose_arrays, check_environment
+      use fargo,                 only: init_fargo
       use fluidboundaries_funcs, only: init_default_fluidboundaries
       use global,                only: init_global
       use grid,                  only: init_grid
@@ -202,6 +203,8 @@ contains
       !> \deprecated remove this clause as soon as Intel Compiler gets required features and/or bug fixes
       call init_time_step
 #endif /* __INTEL_COMPILER */
+
+      call init_fargo
 
       code_progress = PIERNIK_INIT_IO_IC     ! Almost everything is initialized: do problem-related stuff here, set-up I/O and create or read the initial conditions.
 
