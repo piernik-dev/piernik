@@ -236,7 +236,7 @@ contains
 ! OPT: we may also try to work on bigger parts of the u(:,:,:,:) at a time , but the exact amount may depend on size of the L2 cache
 ! OPT: try an explicit loop over n to see if better pipelining can be achieved
 
-   subroutine relaxing_tvd(n, u, u0, bb, divv, cs_iso2, istep, sweep, i1, i2, dx, dt, cg, eflx)
+   subroutine relaxing_tvd(n, u, u0, bb, divv, cs_iso2, istep, sweep, i1, i2, dx, dt, cg, eflx, sources, adv_vel)
 
       use constants,        only: one, zero, half, GEO_XYZ, GEO_RPZ, LO, xdim, ydim, zdim
       use dataio_pub,       only: msg, die
@@ -279,9 +279,9 @@ contains
       implicit none
 
       integer(kind=4),               intent(in)    :: n                  !< array size
-      real, dimension(n, flind%all),  intent(inout) :: u                  !< vector of conservative variables
-      real, dimension(n, flind%all),  intent(in)    :: u0                 !< vector of conservative variables
-      real, dimension(n, nmag),       intent(in)    :: bb                 !< local copy of magnetic field
+      real, dimension(n, flind%all), intent(inout) :: u                  !< vector of conservative variables
+      real, dimension(n, flind%all), intent(in)    :: u0                 !< vector of conservative variables
+      real, dimension(n, nmag),      intent(in)    :: bb                 !< local copy of magnetic field
       real, dimension(:), pointer,   intent(in)    :: divv               !< vector of velocity divergence used in cosmic ray advection
       real, dimension(:), pointer,   intent(in)    :: cs_iso2            !< square of local isothermal sound speed
       integer,                       intent(in)    :: istep              !< step number in the time integration scheme
@@ -292,6 +292,8 @@ contains
       real,                          intent(in)    :: dt                 !< time step
       type(grid_container), pointer, intent(in)    :: cg                 !< current grid piece
       type(ext_fluxes),              intent(inout) :: eflx               !< external fluxes
+      logical,                       intent(in)    :: sources            !< apply source terms
+      real, dimension(n, flind%fluids), intent(in), optional :: adv_vel  !< advection velocity
 
 #ifdef GRAV
       integer                                      :: ind                !< fluid index
@@ -313,11 +315,11 @@ contains
       real, dimension(n, flind%fluids), target      :: pressure           !< gas pressure
       real, dimension(n, flind%fluids), target      :: density            !< gas density
       real, dimension(n, flind%fluids), target      :: vel_sweep          !< velocity in the direction of current sweep
-      real, dimension(:,:),            pointer     :: dens, vx
-      logical                                      :: full_dim
+      real, dimension(:,:),            pointer      :: dens, vx
+      logical                                       :: full_dim
 
 #ifdef COSM_RAYS
-      real, dimension(n)                           :: grad_pcr
+      real, dimension(n)                            :: grad_pcr
       real, dimension(n, flind%crs%all)             :: decr
 #ifdef COSM_RAYS_SOURCES
       real, dimension(n, flind%crn%all)             :: srccrn
@@ -342,6 +344,7 @@ contains
 
       u1 = u
 
+      if (present(adv_vel)) vel_sweep = adv_vel !TODO can be done better
       vx   => vel_sweep
       dens => density
 
@@ -349,7 +352,7 @@ contains
 
       if (full_dim) then
          ! Fluxes calculation for cells centers
-         call all_fluxes(n, w, cfr, u1, bb, pressure, vel_sweep, cs_iso2)
+         call all_fluxes(n, w, cfr, u1, bb, pressure, vel_sweep, cs_iso2, present(adv_vel))
          ! Right and left fluxes decoupling
 
          ! original code
@@ -387,7 +390,7 @@ contains
          ! * Set f0 to 0 only when it would produce incoming flux.
          ! I don't remember which approach was already (unsuccesfully) tested
          ! \todo Get rid of use of cg
-         ! \todo remove transpositions by changing index order in eflx 
+         ! \todo remove transpositions by changing index order in eflx
          if (associated(eflx%li)) fu(eflx%li%index - cg%lhn(sweep, LO) + 1, :) = eflx%li%uflx
          if (associated(eflx%ri)) fu(eflx%ri%index - cg%lhn(sweep, LO)    , :) = eflx%ri%uflx
          if (associated(eflx%lo)) eflx%lo%uflx = fu(eflx%lo%index - cg%lhn(sweep, LO),     :)
@@ -461,59 +464,60 @@ contains
       endif
 
 ! Source terms -------------------------------------
+      if (sources) then
+         geosrc = geometry_source_terms(u, pressure, sweep, cg)  ! n safe
 
-      geosrc = geometry_source_terms(u, pressure, sweep, cg)  ! n safe
+         u1(:, iarr_all_mx) = u1(:, iarr_all_mx) + rk2coef(integration_order,istep)*geosrc(:,:)*dt ! n safe
 
-      u1(:, iarr_all_mx) = u1(:, iarr_all_mx) + rk2coef(integration_order,istep)*geosrc(:,:)*dt ! n safe
-
-      acc = 0.0
+         acc = 0.0
 #ifndef BALSARA
-      acc = acc + fluid_interactions(dens, vx)  ! n safe
+         acc = acc + fluid_interactions(dens, vx)  ! n safe
 #else /* !BALSARA */
-      call balsara_implicit_interactions(u1, u0, vx, cs_iso2, dt, istep) ! n safe
+         call balsara_implicit_interactions(u1, u0, vx, cs_iso2, dt, istep) ! n safe
 #endif /* !BALSARA */
 #ifdef SHEAR
-      acc = acc + shear_acc(sweep,u) ! n safe
+         acc = acc + shear_acc(sweep,u) ! n safe
 #endif /* SHEAR */
 #ifdef CORIOLIS
-      acc = acc + coriolis_force(sweep,u) ! n safe
+         acc = acc + coriolis_force(sweep,u) ! n safe
 #endif /* CORIOLIS */
 
-      if (full_dim) then
+         if (full_dim) then
 #ifdef GRAV
-         call grav_pot2accel(sweep, i1, i2, n, gravacc, istep, cg)
+            call grav_pot2accel(sweep, i1, i2, n, gravacc, istep, cg)
 
-         do ind = 1, flind%fluids
-            acc(:, ind) =  acc(:, ind) + gravacc(:)
-         enddo
+            do ind = 1, flind%fluids
+               acc(:, ind) =  acc(:, ind) + gravacc(:)
+            enddo
 #endif /* !GRAV */
 
-         acc(n, :) = acc(n-1, :)
-         acc(1, :) = acc(2, :)
-      endif
+            acc(n, :) = acc(n-1, :)
+            acc(1, :) = acc(2, :)
+         endif
 
-      u1(:, iarr_all_mx) = u1(:, iarr_all_mx) + rk2coef(integration_order,istep)*acc(:,:)*u(:, iarr_all_dn)*dt
+         u1(:, iarr_all_mx) = u1(:, iarr_all_mx) + rk2coef(integration_order,istep)*acc(:,:)*u(:, iarr_all_dn)*dt
 #ifndef ISO
-      u1(:, iarr_all_en) = u1(:, iarr_all_en) + rk2coef(integration_order,istep)*acc(:,:)*u(:, iarr_all_mx)*dt
+         u1(:, iarr_all_en) = u1(:, iarr_all_en) + rk2coef(integration_order,istep)*acc(:,:)*u(:, iarr_all_mx)*dt
 #endif /* !ISO */
 
 ! --------------------------------------------------
 
 #if defined COSM_RAYS && defined IONIZED
-      if (full_dim) then
-         call src_gpcr(u, n, dx, divv, decr, grad_pcr)
-         u1(:,                iarr_crs(:)) = u1(:,               iarr_crs(:)) + rk2coef(integration_order,istep) * decr(:,:) * dt
-         u1(:,                iarr_crs(:)) = max(smallecr, u1(:, iarr_crs(:)))
-         u1(:, iarr_all_mx(flind%ion%pos)) = u1(:, iarr_all_mx(flind%ion%pos)) + rk2coef(integration_order,istep) * grad_pcr * dt
+         if (full_dim) then
+            call src_gpcr(u, n, dx, divv, decr, grad_pcr)
+            u1(:,                iarr_crs(:)) = u1(:,               iarr_crs(:)) + rk2coef(integration_order,istep) * decr(:,:) * dt
+            u1(:,                iarr_crs(:)) = max(smallecr, u1(:, iarr_crs(:)))
+            u1(:, iarr_all_mx(flind%ion%pos)) = u1(:, iarr_all_mx(flind%ion%pos)) + rk2coef(integration_order,istep) * grad_pcr * dt
 #ifndef ISO
-         u1(:, iarr_all_en(flind%ion%pos)) = u1(:, iarr_all_en(flind%ion%pos)) + rk2coef(integration_order,istep) * vx(:, flind%ion%pos) * grad_pcr * dt
+            u1(:, iarr_all_en(flind%ion%pos)) = u1(:, iarr_all_en(flind%ion%pos)) + rk2coef(integration_order,istep) * vx(:, flind%ion%pos) * grad_pcr * dt
 #endif /* !ISO */
-      endif
+         endif
 #ifdef COSM_RAYS_SOURCES
-      call src_crn(u, n, srccrn, rk2coef(integration_order, istep) * dt) ! n safe
-      u1(:, iarr_crn) = u1(:, iarr_crn) +  rk2coef(integration_order, istep)*srccrn(:,:)*dt
+         call src_crn(u, n, srccrn, rk2coef(integration_order, istep) * dt) ! n safe
+         u1(:, iarr_crn) = u1(:, iarr_crn) +  rk2coef(integration_order, istep)*srccrn(:,:)*dt
 #endif /* COSM_RAYS_SOURCES */
 #endif /* COSM_RAYS && IONIZED */
+      endif ! sources
 
       do ifl = 1, flind%fluids
          pfl => flind%all_fluids(ifl)%fl

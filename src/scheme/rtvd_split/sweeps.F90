@@ -240,16 +240,17 @@ contains
       endif
    end subroutine send_cg_coarsebnd
 !------------------------------------------------------------------------------------------
-   subroutine sweep(cdim)
+   subroutine sweep(cdim, fargo_vel)
 
       use all_boundaries,   only: all_fluid_boundaries
       use cg_leaves,        only: leaves
       use cg_list,          only: cg_list_element
-      use constants,        only: pdims, LO, HI, uh_n, cs_i2_n, ORTHO1, ORTHO2
+      use constants,        only: pdims, LO, HI, uh_n, cs_i2_n, ORTHO1, ORTHO2, VEL_CR, VEL_RES, ydim
       use domain,           only: dom
-      use fluidindex,       only: flind, iarr_all_swp, nmag
+      use dataio_pub,       only: die
+      use fluidindex,       only: flind, iarr_all_swp, nmag, iarr_all_dn, iarr_all_mx
       use fluxtypes,        only: ext_fluxes
-      use global,           only: dt, integration_order, sweeps_mgu
+      use global,           only: dt, integration_order, sweeps_mgu, use_fargo
       use grid_cont,        only: grid_container
       use gridgeometry,     only: set_geo_coeffs
       use mpisetup,         only: mpi_err, req, status
@@ -264,14 +265,15 @@ contains
 
       implicit none
 
-      integer(kind=4), intent(in)       :: cdim
+      integer(kind=4), intent(in)           :: cdim
+      integer(kind=4), intent(in), optional :: fargo_vel
 
       integer                           :: i1, i2, uhi
       integer                           :: istep
       integer                           :: i_cs_iso2
       logical                           :: full_dim
       real, dimension(:,:), allocatable :: b
-      real, dimension(:,:), allocatable :: u, u0
+      real, dimension(:,:), allocatable :: u, u0, vx
       real, dimension(:,:),  pointer    :: pu, pu0
 #ifdef MAGNETIC
       real, dimension(:,:),  pointer    :: pb
@@ -282,9 +284,15 @@ contains
       type(ext_fluxes)                  :: eflx
       logical                           :: all_processed, all_received
       integer                           :: blocks_done
-      integer                           :: g, nr, nr_recv
+      integer                           :: g, nr, nr_recv, ifl, icg
       integer(kind=4), dimension(:, :), pointer :: mpistatus
       integer :: cn_
+      logical :: sources
+
+      if (use_fargo .and. cdim == ydim .and. .not. present(fargo_vel)) then
+         call die("[sweeps:sweep] FARGO velocity keyword not present in y sweep")
+      endif
+      allocate(vx(0, 0)) ! suppress compiler warnings
 
       cn_ = 0
       full_dim = dom%has_dir(cdim)
@@ -302,10 +310,12 @@ contains
          nr_recv = compute_nr_recv(cdim)
          nr = nr_recv
          all_processed = .false.
+
          do while (.not. all_processed)
             all_processed = .true.
             blocks_done = 0
             cgl => leaves%first
+            icg = 1
             do while (associated(cgl))
                cg => cgl%cg
 
@@ -320,6 +330,11 @@ contains
                         if (allocated(u0)) deallocate(u0)
                      endif
                      if (.not. allocated(u)) allocate(b(cg%n_(cdim), nmag), u(cg%n_(cdim), flind%all), u0(cg%n_(cdim), flind%all))
+                     if (use_fargo .and. cdim == ydim) then
+                        if (allocated(vx)) deallocate(vx)
+                        allocate(vx(cg%n_(cdim), flind%fluids))
+                     endif
+
                      cn_ = cg%n_(cdim)
 
                      b(:,:) = 0.0
@@ -356,12 +371,32 @@ contains
                            pu0                    => cg%w(uhi      )%get_sweep(cdim,i1,i2)
                            if (i_cs_iso2 > 0) cs2 => cg%q(i_cs_iso2)%get_sweep(cdim,i1,i2)
 
-
                            u (:, iarr_all_swp(cdim,:)) = transpose(pu (:,:))
                            u0(:, iarr_all_swp(cdim,:)) = transpose(pu0(:,:))
+                           if (use_fargo .and. cdim == ydim) then
+                              if (fargo_vel == VEL_RES) then
+                                 do ifl = 1, flind%fluids
+                                    vx(:, ifl) = u(:, iarr_all_mx(ifl)) / u(:, iarr_all_dn(ifl)) - cg%vphi_mean(i2, ifl)
+                                 enddo
+                                 sources = .true.
+                              elseif (fargo_vel == VEL_CR) then
+                                 do ifl = 1, flind%fluids
+                                    vx(:, ifl) = cg%vphi_cr(i2, ifl)
+                                 enddo
+                                 sources = .false.
+                              else
+                                 call die("[sweeps:sweep] Unknown FARGO_VEL")
+                              endif
+                           else
+                              sources = .true.
+                           endif
 
                            call cg%set_fluxpointers(cdim, i1, i2, eflx)
-                           call relaxing_tvd(cg%n_(cdim), u, u0, b, div_v1d, cs2, istep, cdim, i1, i2, cg%dl(cdim), dt, cg, eflx)
+                           if (use_fargo .and. cdim == ydim) then
+                              call relaxing_tvd(cg%n_(cdim), u, u0, b, div_v1d, cs2, istep, cdim, i1, i2, cg%dl(cdim), dt, cg, eflx, sources, vx)
+                           else
+                              call relaxing_tvd(cg%n_(cdim), u, u0, b, div_v1d, cs2, istep, cdim, i1, i2, cg%dl(cdim), dt, cg, eflx, sources)
+                           endif
                            call cg%save_outfluxes(cdim, i1, i2, eflx)
 
                            pu(:,:) = transpose(u(:, iarr_all_swp(cdim,:)))
@@ -379,7 +414,7 @@ contains
                      all_processed = .false.
                   endif
                endif
-
+               icg = icg + 1
                cgl => cgl%nxt
             enddo
 

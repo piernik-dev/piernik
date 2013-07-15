@@ -251,6 +251,11 @@ module constants
       enumerator :: pSUM = 1, pMIN, pMAX, pLOR, pLAND
    end enum
 
+   ! different velocities used by fargo algorithm
+   enum, bind(C)
+      enumerator :: VEL_RES, VEL_CR
+   end enum
+
    ! misc
    enum, bind(C)
       enumerator :: MINL, MAXL                           !< constants for func::get_extremum
