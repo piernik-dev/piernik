@@ -37,7 +37,7 @@ module multigrid_Laplace
    implicit none
 
    private
-   public :: residual, approximate_solution_relax, vT_A_v_order, ord_laplacian, ord_laplacian_outer
+   public :: residual, approximate_solution_relax, vT_A_v, ord_laplacian, ord_laplacian_outer
 
    integer(kind=4) :: ord_laplacian          !< Laplace operator order; allowed values are 2, -4 (default) and 4 (not fully implemented)
    integer(kind=4) :: ord_laplacian_outer    !< Laplace operator order for isolated boundaries (useful as long as -4 is not fully implemented)
@@ -142,7 +142,7 @@ contains
 
 !> \brief Selector for v*Laplacian(v) routine
 
-   real function vT_A_v_order(var)
+   real function vT_A_v(var)
 
       use cg_leaves,          only: leaves
       use cg_list_global,     only: all_cg
@@ -162,19 +162,19 @@ contains
       integer(kind=4), save :: cg_L = INVALID
 
       if (dom%geometry_type == GEO_XYZ .and. ordL() == O_I2 .and. dom%eff_dim == ndims) then
-         vT_A_v_order = vT_A_v_2(var)
+         vT_A_v = vT_A_v_2(var)
       else
          if (firstcall) then
-            if (master) call warn("[multigrid_Laplace:vT_A_v_order] No direct support for v*Laplacian(v) operation. Using workaround (a bit more expensive).")
+            if (master) call warn("[multigrid_Laplace:vT_A_v] No direct support for v*Laplacian(v) operation. Using workaround (a bit more expensive).")
             call all_cg%reg_var(cg_L_n)
             cg_L = qna%ind(cg_L_n)
          endif
          firstcall = .false.
          call leaves%set_q_value(qna%wai, 0.)
          call residual(leaves, qna%wai, var, cg_L)
-         vT_A_v_order = -leaves%scalar_product(var, cg_L)
+         vT_A_v = -leaves%scalar_product(var, cg_L)
       endif
 
-   end function vT_A_v_order
+   end function vT_A_v
 
 end module multigrid_Laplace
