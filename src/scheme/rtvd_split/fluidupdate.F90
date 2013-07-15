@@ -140,7 +140,7 @@ contains
    subroutine make_3sweeps(forward)
 
       use cg_list,             only: expanded_domain
-      use constants,           only: xdim, ydim, zdim, I_ONE, VEL_CR, VEL_RES
+      use constants,           only: xdim, ydim, zdim, I_ONE
       use global,              only: skip_sweep, use_fargo
       use fargo,               only: make_fargosweep
       use sweeps,              only: sweep

@@ -115,7 +115,7 @@ contains
 
       type(cg_list_element), pointer    :: cgl
       type(grid_container),  pointer    :: cg
-      integer :: ifl, i, max_nshift
+      integer :: ifl, i
       class(component_fluid), pointer :: pfl
 
       cgl => leaves%first
@@ -216,16 +216,20 @@ contains
 !! \todo reduce MPI communication
 !<
    subroutine int_shift
+
       use all_boundaries,   only: all_fluid_boundaries
       use cg_leaves,        only: leaves
       use cg_list,          only: cg_list_element
-      use constants,        only: xdim, ydim, LO, HI, sgp_n, pMAX
+      use constants,        only: xdim, ydim, LO, HI, pMAX
       use domain,           only: dom
       use fluidindex,       only: flind
       use fluidtypes,       only: component_fluid
       use grid_cont,        only: grid_container
       use mpisetup,         only: piernik_MPI_Allreduce
+#ifdef SELF_GRAV
+      use constants,        only: sgp_n
       use named_array_list, only: qna
+#endif /* SELF_GRAV */
 
       implicit none
 
