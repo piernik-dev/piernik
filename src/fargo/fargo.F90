@@ -247,7 +247,7 @@ contains
       enddo
       call piernik_MPI_Allreduce(max_nshift, pMAX)
 
-      do iter = 1, max(ceiling(float(max_nshift) / float(dom%nb)), 1)
+      do iter = 1, max(ceiling(float(max_nshift) / float(int(dom%nb))), 1)
          cgl => leaves%first
          do while (associated(cgl))
             cg => cgl%cg
@@ -255,10 +255,10 @@ contains
                if (all(cg%nshift(i, :) == 0)) cycle
                do ifl = 1, flind%fluids
                   pfl   => flind%all_fluids(ifl)%fl
-                  cg%u(pfl%beg:pfl%end, i, :, :) = cshift(cg%u(pfl%beg:pfl%end, i, :, :), -min(cg%nshift(i, ifl), dom%nb), dim=2)
+                  cg%u(pfl%beg:pfl%end, i, :, :) = cshift(cg%u(pfl%beg:pfl%end, i, :, :), -min(cg%nshift(i, ifl), int(dom%nb)), dim=2)
                enddo
 #ifdef SELF_GRAV
-               cg%sgp(i, :, :) = cshift(cg%sgp(i, :, :), -min(cg%nshift(i, 1), dom%nb), dim=1) ! TODO: what about ifl?
+               cg%sgp(i, :, :) = cshift(cg%sgp(i, :, :), -min(cg%nshift(i, 1), int(dom%nb)), dim=1) ! TODO: what about ifl?
 #endif /* SELF_GRAV */
             enddo
             cg%nshift(:, :) = max(cg%nshift(:, :) - dom%nb, 0)
