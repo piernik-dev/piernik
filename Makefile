@@ -28,7 +28,7 @@ ALLOBJ = $(wildcard obj*)
 
 ECHO ?= /bin/echo
 
-.PHONY: $(ALLOBJ) check
+.PHONY: $(ALLOBJ) check dep
 
 all: $(ALLOBJ)
 
@@ -72,3 +72,16 @@ check:
 	TMPDIR=$$(mktemp -d /dev/shm/test_XXXXXX);\
 	bitten-slave -d . --build-dir $$TMPDIR -k bitten/trunk.mcrtest.xml ;\
 	rm -rf $$TMPDIR
+
+dep:
+	TMPDIR=$$(mktemp XXXXXX);\
+	rm $$TMPDIR ;\
+	OTMPDIR="obj_"$$TMPDIR ;\
+	PROBLEM="mcrwind" ;\
+	GRAPH="dep.png" ;\
+	./setup $$PROBLEM -n -o $$TMPDIR | grep -v "skipped";\
+	$(MAKE) -k -C $$OTMPDIR $$GRAPH ;\
+	mv $$OTMPDIR"/"$$GRAPH . ;\
+	rm -r $$OTMPDIR "runs/"$${PROBLEM}"_"$$TMPDIR;\
+	which display > /dev/null 2> /dev/null && display $$GRAPH ;\
+	$(ECHO) "Dependency graph for the "$$PROBLEM" problem stored in "$$GRAPH
