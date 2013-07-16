@@ -15,6 +15,8 @@
 #   'make allsetup'        # creates object directories for all valid problems,
 #                            but does not compile them
 #   'make ctags'           # recreate ctags for {src,problems}
+#   'make dep [P=problem]  # create and show dependency graph
+#                            $P defaults to mcrwind
 #
 # Resetup will also call make for the object directories, unless you've 
 # specified --nocompile either in your .setuprc* files or it was stored in 
@@ -73,15 +75,25 @@ check:
 	bitten-slave -d . --build-dir $$TMPDIR -k bitten/trunk.mcrtest.xml ;\
 	rm -rf $$TMPDIR
 
+ifndef P
+P = "mcrwind"
+endif
 dep:
-	TMPDIR=$$(mktemp XXXXXX);\
+	TMPDIR=$$(mktemp XXXXXX) ;\
 	rm $$TMPDIR ;\
 	OTMPDIR="obj_"$$TMPDIR ;\
-	PROBLEM="mcrwind" ;\
+	PROBLEM=$P ;\
 	GRAPH="dep.png" ;\
-	./setup $$PROBLEM -n -o $$TMPDIR | grep -v "skipped";\
-	$(MAKE) -k -C $$OTMPDIR $$GRAPH ;\
-	mv $$OTMPDIR"/"$$GRAPH . ;\
-	rm -r $$OTMPDIR "runs/"$${PROBLEM}"_"$$TMPDIR;\
-	which display > /dev/null 2> /dev/null && display $$GRAPH ;\
-	$(ECHO) "Dependency graph for the "$$PROBLEM" problem stored in "$$GRAPH
+	rm $$GRAPH 2> /dev/null ;\
+	./setup $$PROBLEM -n -o $$TMPDIR | grep -v "skipped" ;\
+	if [ -e $$OTMPDIR ] ; then \
+		$(MAKE) -k -C $$OTMPDIR $$GRAPH ;\
+		mv $$OTMPDIR"/"$$GRAPH . ;\
+		rm -r $$OTMPDIR "runs/"$${PROBLEM}"_"$$TMPDIR ;\
+	fi ;\
+	which display > /dev/null 2> /dev/null && [ -e $$GRAPH ] && display $$GRAPH ;\
+	if [ -e $$GRAPH ] ; then \
+		$(ECHO) "Dependency graph for the "$$PROBLEM" problem stored in "$$GRAPH ;\
+	else \
+		$(ECHO) "Cannot create dependency graph" ;\
+	fi
