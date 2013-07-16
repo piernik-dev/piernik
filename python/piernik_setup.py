@@ -552,6 +552,7 @@ def setup_piernik(data=None):
     # write the connectivity file
     dd = open(objdir + '/dep.dot', "w")
     dd.write("digraph piernik {\n")
+    dd.write("\t label=\"Dependency graph for the \'" + args[0] + "\' problem\"\n")
     for m in dep:
         for mod in dep_s[m].difference(dep[m]):
             try:
