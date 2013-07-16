@@ -12,9 +12,12 @@
 #   'RS=1 make obj_abc'    # calls setup only for obj_abc directory
 #   'make obj_abc RS=1'    # same as above
 #   'make clean'           # calls make clean for all obj* directories
+#   'make obj_abc CL=1'    # calls make clean for specified directories
 #   'make allsetup'        # creates object directories for all valid problems,
 #                            but does not compile them
 #   'make ctags'           # recreate ctags for {src,problems}
+#   'make dep [P=problem]  # create and show dependency graph
+#                            $P defaults to mcrwind
 #
 # Resetup will also call make for the object directories, unless you've 
 # specified --nocompile either in your .setuprc* files or it was stored in 
@@ -28,7 +31,7 @@ ALLOBJ = $(wildcard obj*)
 
 ECHO ?= /bin/echo
 
-.PHONY: $(ALLOBJ) check
+.PHONY: $(ALLOBJ) check dep
 
 all: $(ALLOBJ)
 
@@ -72,3 +75,26 @@ check:
 	TMPDIR=$$(mktemp -d /dev/shm/test_XXXXXX);\
 	bitten-slave -d . --build-dir $$TMPDIR -k bitten/trunk.mcrtest.xml ;\
 	rm -rf $$TMPDIR
+
+ifndef P
+P = "mcrwind"
+endif
+dep:
+	TMPDIR=$$(mktemp XXXXXX) ;\
+	rm $$TMPDIR ;\
+	OTMPDIR="obj_"$$TMPDIR ;\
+	PROBLEM=$P ;\
+	GRAPH="dep.png" ;\
+	rm $$GRAPH 2> /dev/null ;\
+	./setup $$PROBLEM -n -o $$TMPDIR | grep -v "skipped" ;\
+	if [ -e $$OTMPDIR ] ; then \
+		$(MAKE) -k -C $$OTMPDIR $$GRAPH ;\
+		mv $$OTMPDIR"/"$$GRAPH . ;\
+		rm -r $$OTMPDIR "runs/"$${PROBLEM}"_"$$TMPDIR ;\
+	fi ;\
+	which display > /dev/null 2> /dev/null && [ -e $$GRAPH ] && display $$GRAPH ;\
+	if [ -e $$GRAPH ] ; then \
+		$(ECHO) "Dependency graph for the "$$PROBLEM" problem stored in "$$GRAPH ;\
+	else \
+		$(ECHO) "Cannot create dependency graph" ;\
+	fi
