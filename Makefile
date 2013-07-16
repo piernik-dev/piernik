@@ -12,6 +12,7 @@
 #   'RS=1 make obj_abc'    # calls setup only for obj_abc directory
 #   'make obj_abc RS=1'    # same as above
 #   'make clean'           # calls make clean for all obj* directories
+#   'make obj_abc CL=1'    # calls make clean for specified directories
 #   'make allsetup'        # creates object directories for all valid problems,
 #                            but does not compile them
 #   'make ctags'           # recreate ctags for {src,problems}
