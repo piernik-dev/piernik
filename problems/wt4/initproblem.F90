@@ -285,7 +285,7 @@ contains
       use cg_list,          only: cg_list_element
       use cg_leaves,        only: leaves
       use cg_list_global,   only: all_cg
-      use constants,        only: small, xdim, ydim, zdim, AT_NO_B
+      use constants,        only: small, AT_NO_B
       use dataio_pub,       only: warn, printinfo, msg, die
       use domain,           only: dom
       use global,           only: smalld
@@ -368,19 +368,19 @@ contains
          endif
 
          do i = 1, dom%nb
-            cg%u(:,i,:,:)           = cg%u(:, cg%is,:,:)
+            cg%u(:, cg%is-i,:,:)    = cg%u(:, cg%is,:,:)
             cg%u(:, cg%ie+i,:,:)    = cg%u(:, cg%ie,:,:)
-            cg%cs_iso2(i,:,:)       = cg%cs_iso2(cg%is,:,:)
+            cg%cs_iso2(cg%is-i,:,:) = cg%cs_iso2(cg%is,:,:)
             cg%cs_iso2(cg%ie+i,:,:) = cg%cs_iso2(cg%ie,:,:)
 
-            cg%u(:,:,i,:)           = cg%u(:,:, cg%js,:)
+            cg%u(:,:,cg%js-i,:)     = cg%u(:,:, cg%js,:)
             cg%u(:,:,cg%je+i,:)     = cg%u(:,:, cg%je,:)
-            cg%cs_iso2(:,i,:)       = cg%cs_iso2(:, cg%js,:)
+            cg%cs_iso2(:,cg%js-i,:) = cg%cs_iso2(:, cg%js,:)
             cg%cs_iso2(:,cg%je+i,:) = cg%cs_iso2(:, cg%je,:)
 
-            cg%u(:,:,:,i)           = cg%u(:,:,:, cg%ks)
+            cg%u(:,:,:, cg%ks-i)    = cg%u(:,:,:, cg%ks)
             cg%u(:,:,:, cg%ke+i)    = cg%u(:,:,:, cg%ke)
-            cg%cs_iso2(:,:,i)       = cg%cs_iso2(:,:, cg%ks)
+            cg%cs_iso2(:,:,cg%ks-i) = cg%cs_iso2(:,:, cg%ks)
             cg%cs_iso2(:,:,cg%ke+i) = cg%cs_iso2(:,:, cg%ke)
          enddo
          if (master ) then
@@ -390,7 +390,7 @@ contains
             call printinfo(msg, .true.)
          endif
 
-         cg%b(:, 1:cg%n_(xdim), 1:cg%n_(ydim), 1:cg%n_(zdim)) = 0.0
+         cg%b(:, :, :, :) = 0.0
 
          do i = D0, VY0
             q0 => cg%q(qna%ind(q_n(i)))%arr
@@ -460,7 +460,7 @@ contains
 
       use cg_list,          only: cg_list_element
       use cg_leaves,        only: leaves
-      use constants,        only: xdim, ydim, zdim
+      use constants,        only: xdim, ydim, zdim, LO, HI
       use dataio_pub,       only: warn
       use fluidindex,       only: flind
       use fluidtypes,       only: component_fluid
@@ -528,15 +528,15 @@ contains
                den0 => cg%q(qna%ind(q_n(D0)))%arr
                vlx0 => cg%q(qna%ind(q_n(VX0)))%arr
                vly0 => cg%q(qna%ind(q_n(VY0)))%arr
-               allocate(alf(cg%n_(xdim), cg%n_(ydim)))
-               do i = 1, cg%n_(xdim)
-                  do j = 1, cg%n_(ydim)
+               allocate(alf(cg%lhn(xdim, LO):cg%lhn(xdim, HI), cg%lhn(ydim, LO):cg%lhn(ydim, HI)))
+               do j = cg%lhn(ydim, LO), cg%lhn(ydim, HI)
+                  do i = cg%lhn(xdim, LO), cg%lhn(xdim, HI)
                      rc = sqrt(cg%x(i)**2 + cg%y(j)**2)
                      alf(i,j) = -alfasupp*0.5*(tanh((rc-r_in)/r_in*f_in)-1.)
                      alf(i,j) = alf(i,j) + alfasupp*0.5*(tanh((rc-r_out)/r_out*f_out) + 1.)
                   enddo
                enddo
-               do k = 1, cg%n_(zdim)
+               do k =  cg%lhn(zdim, LO), cg%lhn(zdim, HI)
                   cg%u(fl%idn, :, :, k) = (1. - alf(:,:))*cg%u(fl%idn, :, :, k) + alf*den0(:, :, k)
                   cg%u(fl%imx, :, :, k) = (1. - alf(:,:))*cg%u(fl%imx, :, :, k) + alf*den0(:, :, k) * vlx0(:, :, k)
                   cg%u(fl%imy, :, :, k) = (1. - alf(:,:))*cg%u(fl%imy, :, :, k) + alf*den0(:, :, k) * vly0(:, :, k)
