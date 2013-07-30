@@ -61,7 +61,6 @@ module initproblem
 
    ! private data
    integer, parameter :: ic_nx = 512, ic_ny = 512, ic_nz = 52 !< initial conditions size
-   integer, parameter :: ic_vars = 5                          !< number of quantities in the IC
    real, parameter    :: ic_xysize = 8.                       !< X- and Y- size of the domain covered by the IC
    real, parameter    :: ic_zsize = (ic_xysize*ic_nz)/ic_nx   !< Z-size of the domain covered by the IC
    real, parameter    :: ic_dx = ic_xysize/ic_nx              !< dx=dy=dz in the IC
@@ -201,7 +200,7 @@ contains
    subroutine read_IC_file
 
       use cg_leaves,   only: leaves
-      use constants,   only: xdim, ydim, zdim , LO, HI
+      use constants,   only: xdim, ydim, zdim, ndims, LO, HI
       use dataio_pub,  only: msg, die
       use domain,      only: is_multicg
       use grid_cont,   only: grid_container
@@ -216,6 +215,9 @@ contains
       integer, parameter                  :: NDIM = 3
       integer, dimension(2*NDIM)          :: ic_rng
       type(grid_container), pointer       :: cg
+      enum, bind(C)
+         enumerator :: DEN0 = 1, VELX0, VELZ0 = VELX0+ndims-1, ENER0
+      end enum
 
       cg => leaves%first%cg
       if (is_multicg) call die("[initproblem:read_IC_file] multiple grid pieces per procesor not implemented yet") !nontrivial ic_[ijk[se], allocate
@@ -229,7 +231,7 @@ contains
       ic_ke = max(1,     min(ic_nz, ceiling((cg%fbnd(zdim, HI) + ic_zsize/2. )/ic_dx) + margin) )
 
       if (allocated(ic_data)) call die("[initproblem:read_IC_file] ic_data already allocated")
-      allocate(ic_data(ic_is:ic_ie, ic_js:ic_je, ic_ks:ic_ke, ic_vars))
+      allocate(ic_data(ic_is:ic_ie, ic_js:ic_je, ic_ks:ic_ke, DEN0:ENER0))
 
       if (master) then
          open(1, file=input_file, status='old', iostat=ostat)
@@ -241,7 +243,7 @@ contains
          allocate(ic_v(ic_nx, ic_ny, ic_nz))
       endif
 
-      do v = 1, ic_vars
+      do v = DEN0, ENER0
          if (master) then ! read the quantities, then send to everyone interested
             do k = 1, ic_nz
                do j = 1, ic_ny
@@ -268,22 +270,22 @@ contains
       if (allocated(ic_v)) deallocate(ic_v)
       if (master) close(1)
 
-      if (mass_mul /= 1.0) ic_data(:, :, :, 1) = ic_data(:, :, :, 1) * mass_mul
+      if (mass_mul /= 1.0) ic_data(:, :, :, DEN0) = ic_data(:, :, :, DEN0) * mass_mul
 
-      do v = 2, 4 ! convert velocity to momentum
-         ic_data(:, :, :, v) = ic_data(:, :, :, v) * ic_data(:, :, :, 1)
+      do v = VELX0, VELZ0 ! convert velocity to momentum
+         ic_data(:, :, :, v) = ic_data(:, :, :, v) * ic_data(:, :, :, DEN0)
       enddo
 
       ! U = ( kB * T ) / (mean_mol_weight * (gamma - 1))
       ! cs2 = (gamma) * kB * T / mean_mol_weight.
       !   => cs2 = U * (gamma) * (gamma - 1)
-      ic_data(:, :, :, 5) = ic_data(:, :, :, 5) * (gamma_loc - 1.0) * cs_mul ! * gamma_loc
+      ic_data(:, :, :, ENER0) = ic_data(:, :, :, ENER0) * (gamma_loc - 1.0) * cs_mul ! * gamma_loc
 
       ! BEWARE: Until we have decent hdf5 restart that would be problem
       ! dependent, i.e. >=gcc-4.5 / >=ifort 10.1, things like
       ! that must be present in problem.par
-      !mincs2 = minval(ic_data(:, :, :, 5))
-      !maxcs2 = maxval(ic_data(:, :, :, 5))
+      !mincs2 = minval(ic_data(:, :, :, ENER0))
+      !maxcs2 = maxval(ic_data(:, :, :, ENER0))
 
    end subroutine read_IC_file
 
