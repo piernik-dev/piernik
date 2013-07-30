@@ -94,11 +94,14 @@ contains
 
    subroutine read_problem_par
 
-      use dataio_pub, only: nh      ! QA_WARN required for diff_nml
-      use mpisetup,   only: rbuff, cbuff, ibuff, lbuff, master, slave, piernik_MPI_Bcast
+      use cg_list_global, only: all_cg
+      use constants,      only: AT_NO_B
+      use dataio_pub,     only: nh      ! QA_WARN required for diff_nml
+      use mpisetup,       only: rbuff, cbuff, ibuff, lbuff, master, slave, piernik_MPI_Bcast
 
       implicit none
 
+      integer :: i
 !      integer, parameter :: maxsub = 10  !< upper limit for subsampling
 
       ! namelist default parameter values
@@ -184,6 +187,10 @@ contains
       endif
 
       if (mass_mul < 0.) mass_mul = 1.
+
+      do i = D0, VY0
+         call all_cg%reg_var(q_n(i), restart_mode = AT_NO_B)
+      enddo
 
    end subroutine read_problem_par
 
@@ -284,8 +291,7 @@ contains
 
       use cg_list,          only: cg_list_element
       use cg_leaves,        only: leaves
-      use cg_list_global,   only: all_cg
-      use constants,        only: small, AT_NO_B
+      use constants,        only: small
       use dataio_pub,       only: warn, printinfo, msg, die
       use domain,           only: dom
       use global,           only: smalld
@@ -304,10 +310,6 @@ contains
       type(grid_container),   pointer :: cg
       class(component_fluid), pointer :: fl
       real, dimension(:,:,:), pointer :: q0
-
-      do i = D0, VY0
-         call all_cg%reg_var(q_n(i), restart_mode = AT_NO_B)
-      enddo
 
       fl => flind%neu
       cgl => leaves%first
