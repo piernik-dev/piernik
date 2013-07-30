@@ -61,7 +61,6 @@ module initproblem
 
    ! private data
    integer, parameter :: ic_nx = 512, ic_ny = 512, ic_nz = 52 !< initial conditions size
-   integer, parameter :: ic_vars = 5                          !< number of quantities in the IC
    real, parameter    :: ic_xysize = 8.                       !< X- and Y- size of the domain covered by the IC
    real, parameter    :: ic_zsize = (ic_xysize*ic_nz)/ic_nx   !< Z-size of the domain covered by the IC
    real, parameter    :: ic_dx = ic_xysize/ic_nx              !< dx=dy=dz in the IC
@@ -80,13 +79,14 @@ contains
    subroutine problem_pointers
 
       use dataio_user, only: user_attrs_wr, user_reg_var_restart
-      use user_hooks,  only: problem_customize_solution
+      use user_hooks,  only: problem_customize_solution, cleanup_problem
 
       implicit none
 
       problem_customize_solution => problem_customize_solution_wt4
       user_attrs_wr              => problem_initial_conditions_attrs
       user_reg_var_restart       => register_initial_fld
+      cleanup_problem            => cleanup_wt4
 
    end subroutine problem_pointers
 
@@ -94,11 +94,14 @@ contains
 
    subroutine read_problem_par
 
-      use dataio_pub, only: nh      ! QA_WARN required for diff_nml
-      use mpisetup,   only: rbuff, cbuff, ibuff, lbuff, master, slave, piernik_MPI_Bcast
+      use cg_list_global, only: all_cg
+      use constants,      only: AT_NO_B
+      use dataio_pub,     only: nh      ! QA_WARN required for diff_nml
+      use mpisetup,       only: rbuff, cbuff, ibuff, lbuff, master, slave, piernik_MPI_Bcast
 
       implicit none
 
+      integer :: i
 !      integer, parameter :: maxsub = 10  !< upper limit for subsampling
 
       ! namelist default parameter values
@@ -185,6 +188,12 @@ contains
 
       if (mass_mul < 0.) mass_mul = 1.
 
+      do i = D0, VY0
+         call all_cg%reg_var(q_n(i), restart_mode = AT_NO_B)
+      enddo
+
+      if (.not. fake_ic) call read_IC_file
+
    end subroutine read_problem_par
 
 !-----------------------------------------------------------------------------
@@ -192,7 +201,7 @@ contains
    subroutine read_IC_file
 
       use cg_leaves,   only: leaves
-      use constants,   only: xdim, ydim, zdim , LO, HI
+      use constants,   only: xdim, ydim, zdim, ndims, LO, HI
       use dataio_pub,  only: msg, die
       use domain,      only: is_multicg
       use grid_cont,   only: grid_container
@@ -207,6 +216,9 @@ contains
       integer, parameter                  :: NDIM = 3
       integer, dimension(2*NDIM)          :: ic_rng
       type(grid_container), pointer       :: cg
+      enum, bind(C)
+         enumerator :: DEN0 = 1, VELX0, VELZ0 = VELX0+ndims-1, ENER0
+      end enum
 
       cg => leaves%first%cg
       if (is_multicg) call die("[initproblem:read_IC_file] multiple grid pieces per procesor not implemented yet") !nontrivial ic_[ijk[se], allocate
@@ -220,7 +232,7 @@ contains
       ic_ke = max(1,     min(ic_nz, ceiling((cg%fbnd(zdim, HI) + ic_zsize/2. )/ic_dx) + margin) )
 
       if (allocated(ic_data)) call die("[initproblem:read_IC_file] ic_data already allocated")
-      allocate(ic_data(ic_is:ic_ie, ic_js:ic_je, ic_ks:ic_ke, ic_vars))
+      allocate(ic_data(ic_is:ic_ie, ic_js:ic_je, ic_ks:ic_ke, DEN0:ENER0))
 
       if (master) then
          open(1, file=input_file, status='old', iostat=ostat)
@@ -232,7 +244,7 @@ contains
          allocate(ic_v(ic_nx, ic_ny, ic_nz))
       endif
 
-      do v = 1, ic_vars
+      do v = DEN0, ENER0
          if (master) then ! read the quantities, then send to everyone interested
             do k = 1, ic_nz
                do j = 1, ic_ny
@@ -259,24 +271,34 @@ contains
       if (allocated(ic_v)) deallocate(ic_v)
       if (master) close(1)
 
-      if (mass_mul /= 1.0) ic_data(:, :, :, 1) = ic_data(:, :, :, 1) * mass_mul
+      if (mass_mul /= 1.0) ic_data(:, :, :, DEN0) = ic_data(:, :, :, DEN0) * mass_mul
 
-      do v = 2, 4 ! convert velocity to momentum
-         ic_data(:, :, :, v) = ic_data(:, :, :, v) * ic_data(:, :, :, 1)
+      do v = VELX0, VELZ0 ! convert velocity to momentum
+         ic_data(:, :, :, v) = ic_data(:, :, :, v) * ic_data(:, :, :, DEN0)
       enddo
 
       ! U = ( kB * T ) / (mean_mol_weight * (gamma - 1))
       ! cs2 = (gamma) * kB * T / mean_mol_weight.
       !   => cs2 = U * (gamma) * (gamma - 1)
-      ic_data(:, :, :, 5) = ic_data(:, :, :, 5) * (gamma_loc - 1.0) * cs_mul ! * gamma_loc
+      ic_data(:, :, :, ENER0) = ic_data(:, :, :, ENER0) * (gamma_loc - 1.0) * cs_mul ! * gamma_loc
 
       ! BEWARE: Until we have decent hdf5 restart that would be problem
       ! dependent, i.e. >=gcc-4.5 / >=ifort 10.1, things like
       ! that must be present in problem.par
-      !mincs2 = minval(ic_data(:, :, :, 5))
-      !maxcs2 = maxval(ic_data(:, :, :, 5))
+      !mincs2 = minval(ic_data(:, :, :, ENER0))
+      !maxcs2 = maxval(ic_data(:, :, :, ENER0))
 
    end subroutine read_IC_file
+
+!> \brief deallocate working arrays
+
+   subroutine cleanup_wt4
+
+      implicit none
+
+      if (allocated(ic_data)) deallocate(ic_data)
+
+   end subroutine cleanup_wt4
 
 !-----------------------------------------------------------------------------
 
@@ -284,8 +306,7 @@ contains
 
       use cg_list,          only: cg_list_element
       use cg_leaves,        only: leaves
-      use cg_list_global,   only: all_cg
-      use constants,        only: small, AT_NO_B
+      use constants,        only: small
       use dataio_pub,       only: warn, printinfo, msg, die
       use domain,           only: dom
       use global,           only: smalld
@@ -304,10 +325,6 @@ contains
       type(grid_container),   pointer :: cg
       class(component_fluid), pointer :: fl
       real, dimension(:,:,:), pointer :: q0
-
-      do i = D0, VY0
-         call all_cg%reg_var(q_n(i), restart_mode = AT_NO_B)
-      enddo
 
       fl => flind%neu
       cgl => leaves%first
@@ -340,7 +357,6 @@ contains
             cg%u(fl%imz, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = 0.
             cg%cs_iso2(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = 1e-2
          else
-            call read_IC_file
             do k = cg%ks, cg%ke
                kic = nint((cg%z(k) + ic_zsize/2.)/ic_dx)
                do j = cg%js, cg%je
@@ -364,7 +380,6 @@ contains
                   enddo
                enddo
             enddo
-            if (allocated(ic_data)) deallocate(ic_data)
          endif
 
          do i = 1, dom%nb

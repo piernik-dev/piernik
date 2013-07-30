@@ -10,8 +10,8 @@
     xmax   =  4.
     ymin   = -4.
     ymax   =  4.
-    zmin   = -0.4
-    zmax   =  0.4
+    zmin   = -0.40625
+    zmax   =  0.40625
  /
 
  $MPI_BLOCKS
@@ -39,7 +39,7 @@
     dt_res  = 1.0
     dt_log  = 0.01
     dt_tsl  = 0.01
-    vars(1:) = 'velz', 'dens', 'mgso', 'gpot', 'velx', 'vely'
+    vars(1:) = 'velz', 'dens', 'gpot', 'velx', 'vely'
  /
 
  $FLUID_IONIZED
@@ -75,7 +75,7 @@
  /
 
  $PROBLEM_CONTROL
-    input_file   = '/raid_hum/old/wengen4/test4-512.alt'
+    input_file   = 'test4-512.alt' !'/raid_hum/old/wengen4/test4-512.alt'
     mincs2       = 8.725322e-4
     maxcs2       = 5.8168972e-3
     r_in         = 0.55
