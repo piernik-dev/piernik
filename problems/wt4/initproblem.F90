@@ -192,6 +192,8 @@ contains
          call all_cg%reg_var(q_n(i), restart_mode = AT_NO_B)
       enddo
 
+      if (.not. fake_ic) call read_IC_file
+
    end subroutine read_problem_par
 
 !-----------------------------------------------------------------------------
@@ -342,7 +344,6 @@ contains
             cg%u(fl%imz, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = 0.
             cg%cs_iso2(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = 1e-2
          else
-            call read_IC_file
             do k = cg%ks, cg%ke
                kic = nint((cg%z(k) + ic_zsize/2.)/ic_dx)
                do j = cg%js, cg%je
@@ -366,7 +367,6 @@ contains
                   enddo
                enddo
             enddo
-            if (allocated(ic_data)) deallocate(ic_data)
          endif
 
          do i = 1, dom%nb
