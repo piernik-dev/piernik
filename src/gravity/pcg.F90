@@ -197,10 +197,10 @@ contains
 
    subroutine single_v_cycle(def, corr)
 
-      use cg_list_global,     only: all_cg
-      use cg_level_coarsest,  only: coarsest
-      use cg_level_connected, only: cg_level_connected_T
-      use cg_level_finest,    only: finest
+      use cg_level_coarsest,        only: coarsest
+      use cg_level_connected,       only: cg_level_connected_T
+      use cg_level_finest,          only: finest
+      use cg_list_global,           only: all_cg
       use multigrid_gravity_helper, only: approximate_solution
 
       implicit none
