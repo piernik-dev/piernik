@@ -79,13 +79,14 @@ contains
    subroutine problem_pointers
 
       use dataio_user, only: user_attrs_wr, user_reg_var_restart
-      use user_hooks,  only: problem_customize_solution
+      use user_hooks,  only: problem_customize_solution, cleanup_problem
 
       implicit none
 
       problem_customize_solution => problem_customize_solution_wt4
       user_attrs_wr              => problem_initial_conditions_attrs
       user_reg_var_restart       => register_initial_fld
+      cleanup_problem            => cleanup_wt4
 
    end subroutine problem_pointers
 
@@ -288,6 +289,16 @@ contains
       !maxcs2 = maxval(ic_data(:, :, :, ENER0))
 
    end subroutine read_IC_file
+
+!> \brief deallocate working arrays
+
+   subroutine cleanup_wt4
+
+      implicit none
+
+      if (allocated(ic_data)) deallocate(ic_data)
+
+   end subroutine cleanup_wt4
 
 !-----------------------------------------------------------------------------
 
