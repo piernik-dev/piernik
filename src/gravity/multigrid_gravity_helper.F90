@@ -83,7 +83,7 @@ contains
          else
             nsmoo = nsmool
             call curl%coarser%prolong_q_1var(soln, bnd_type = BND_NEGREF)
-            !> \warning when this is be incompatible with V-cycle or other scheme, use direct call to approximate_solution_relax
+            !> \warning when this is incompatible with V-cycle or other scheme, use direct call to approximate_solution_relax
          endif
 
          call approximate_solution_relax(curl, src, soln, nsmoo)

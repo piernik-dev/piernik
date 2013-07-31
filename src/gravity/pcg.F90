@@ -202,7 +202,7 @@ contains
 
    end subroutine precond
 
-!> \brief A single Hueang-Greengard V-cycle
+!> \brief A single Huang-Greengard V-cycle
 
    subroutine single_v_cycle(def, corr)
 
