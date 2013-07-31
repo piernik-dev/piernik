@@ -91,6 +91,7 @@ contains
       integer(kind=4),      intent(in) :: soln    !< index of solution in cg%q(:)
       integer(kind=4),      intent(in) :: def     !< index of defect in cg%q(:)
 
+      if (any(def == [ src, soln ])) call die("[multigrid_Laplace:residual] Cannot put the result into one of the input fields.") ! Use %q_copy method in such case
       select case (ordL())
          case (O_I2)
             call residual2(cg_llst, src, soln, def)
