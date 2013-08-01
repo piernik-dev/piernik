@@ -470,7 +470,7 @@ contains
 
       class(cg_list_dataop_T), intent(in) :: this   !< list for which we want to calculate the L2 norm
       integer(kind=4),         intent(in) :: iv     !< index of variable in cg%q(:) for which we want to find the norm
-      logical, optional,       intent(in) :: nomask !<Treat the list as a complete level and do not use leafmask
+      logical, optional,       intent(in) :: nomask !< Treat the list as a complete level and do not use leafmask
 
       integer                             :: i
       type(cg_list_element), pointer      :: cgl
