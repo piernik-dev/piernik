@@ -63,16 +63,25 @@ contains
    subroutine pcg_init
 
       use cg_list_global,   only: all_cg
+      use constants,        only: base_level_id
       use dataio_pub,       only: warn
+      use domain,           only: AMR_bsize
       use mpisetup,         only: master
       use named_array_list, only: qna
+      use refinement,       only: level_max
 
       implicit none
 
       if (use_CG .or. use_CG_outer) then
          call all_cg%reg_var(cg_corr_n)
          cg_corr = qna%ind(cg_corr_n)
-         if (master) call warn("[pcg:pcg_init] Multigrid-preconditioned conjugate gradient solver is experimental!")
+         if (master) then
+            call warn("[pcg:pcg_init] Multigrid-preconditioned conjugate gradient solver is experimental!")
+            if (use_CG_outer) &
+                 call warn("[pcg:pcg_init] Current implementation of Multigrid-Preconditioned Conjugate Gradient Method is known to converge poorly for outer potential.")
+            if (level_max > base_level_id .and. any(AMR_bsize > 0)) &
+                 call warn("[pcg:pcg_init] Current implementation of Multigrid-Preconditioned Conjugate Gradient Method is known to converge poorly on refined grids.")
+         endif
       endif
 
    end subroutine pcg_init
@@ -193,14 +202,14 @@ contains
 
    end subroutine precond
 
-!> \brief A single Hueang-Greengard V-cycle
+!> \brief A single Huang-Greengard V-cycle
 
    subroutine single_v_cycle(def, corr)
 
-      use cg_list_global,     only: all_cg
-      use cg_level_coarsest,  only: coarsest
-      use cg_level_connected, only: cg_level_connected_T
-      use cg_level_finest,    only: finest
+      use cg_level_coarsest,        only: coarsest
+      use cg_level_connected,       only: cg_level_connected_T
+      use cg_level_finest,          only: finest
+      use cg_list_global,           only: all_cg
       use multigrid_gravity_helper, only: approximate_solution
 
       implicit none
