@@ -1,17 +1,18 @@
  $BASE_DOMAIN
-    n_d = 512, 512, 52
+    n_d = 224, 768, 52
     bnd_xl = 'out'
     bnd_xr = 'out'
-    bnd_yl = 'out'
-    bnd_yr = 'out'
+    bnd_yl = 'per'
+    bnd_yr = 'per'
     bnd_zl = 'outd'
     bnd_zr = 'outd'
-    xmin   = -4.
+    xmin   =  0.5
     xmax   =  4.
-    ymin   = -4.
-    ymax   =  4.
+    ymin   =  0
+    ymax   =  7.
     zmin   = -0.40625
     zmax   =  0.40625
+    geometry = "cylindrical"
  /
 
  $MPI_BLOCKS
@@ -34,7 +35,7 @@
 
  $OUTPUT_CONTROL
     problem_name = 'wengen4'
-    run_id       = 'tst'
+    run_id       = 'cyl'
     dt_hdf  = 0.1
     dt_res  = 1.0
     dt_log  = 0.01
