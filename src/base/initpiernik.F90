@@ -364,13 +364,17 @@ contains
 !-----------------------------------------------------------------------------
    subroutine print_help
 
+      use constants, only: cwdlen
+
       implicit none
 
-      print '(a)', 'usage: cmdline [OPTIONS]'
+      character(len=cwdlen) :: calledname
+
+      call get_command_argument(0, calledname)
+
+      print '(3a)','usage: ',trim(calledname),' [OPTIONS]'
       print '(a)', ''
-      print '(a)', 'Without further options, cmdline prints the date and exits.'
-      print '(a)', ''
-      print '(a)', 'cmdline options:'
+      print '(a)', 'Recognized options:'
       print '(a)', ''
       print '(a)', '  -v, --version     print version information and exit'
       print '(a)', '  -n, --namelist    read namelist from command line'
