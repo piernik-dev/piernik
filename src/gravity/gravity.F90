@@ -673,7 +673,7 @@ contains
    subroutine grav_ptmass_stiff(gp, ax, lhn, flatten)
 
       use axes_M,     only: axes
-      use constants,  only: ndims, LO, HI, xdim, ydim, zdim, half, GEO_XYZ
+      use constants,  only: ndims, LO, HI, xdim, ydim, zdim, half, GEO_XYZ, GEO_RPZ
       use dataio_pub, only: die
       use domain,     only: dom
       use units,      only: newtong
@@ -685,10 +685,8 @@ contains
       integer(kind=4), dimension(ndims,LO:HI), intent(in) :: lhn
       logical,                       optional, intent(in) :: flatten
 
-      integer                                             :: i, j, k
-      real                                                :: r_smooth2, r2, gmr, gm, z2, yz2
-
-      if (dom%geometry_type /= GEO_XYZ) call die("[gravity:grav_ptmass_stiff] Non-cartesian geometry is not implemented yet.")
+      integer                                             :: j, k
+      real                                                :: r_smooth2, gmr, gm, z2, yz2, ptx_cos
 
       r_smooth2 = r_smooth**2
       gm =  - newtong * ptmass
@@ -696,20 +694,39 @@ contains
 
       do k = lhn(zdim,LO), lhn(zdim,HI)
          z2 = (ax%z(k) - ptm_z)**2
-         do j = lhn(ydim,LO), lhn(ydim,HI)
-            yz2 = z2 + (ax%y(j) - ptm_y)**2
-            do i = lhn(xdim,LO), lhn(xdim,HI)
-               r2 = yz2 + (ax%x(i) - ptm_x)**2
-               if (r2 < r_smooth2) then
-                  gp(i,j,k) = gmr * (3. - r2/r_smooth2)
-               else
-                  gp(i,j,k) = gm / sqrt(r2)
-               endif
-            enddo
-         enddo
+         select case (dom%geometry_type)
+            case (GEO_XYZ)
+               do j = lhn(ydim,LO), lhn(ydim,HI)
+                  yz2 = z2 + (ax%y(j) - ptm_y)**2
+                  gp(lhn(xdim,LO):lhn(xdim,HI), j, k) = potstiff(yz2 + (ax%x(lhn(xdim,LO):lhn(xdim,HI)) - ptm_x)**2)
+               enddo
+            case (GEO_RPZ)
+               do j = lhn(ydim,LO), lhn(ydim,HI)
+                  ptx_cos = 2*ptm_x*cos(ax%y(j) - ptm_y)
+                  gp(lhn(xdim,LO):lhn(xdim,HI), j, k) = potstiff(z2 + ax%x(lhn(xdim,LO):lhn(xdim,HI))**2 + ptm_x**2 - ax%x(lhn(xdim,LO):lhn(xdim,HI))*ptx_cos)
+               enddo
+            case default
+               call die("[gravity:grav_ptmass_stiff] Non-cartesian geometry is not implemented yet.")
+         end select
       enddo
 
-      if (.false. .and. flatten) i=0 ! suppress compiler warnings on unused arguments
+      if (.false. .and. flatten) j=0 ! suppress compiler warnings on unused arguments
+
+   contains
+
+      real elemental function potstiff(r2)
+
+         implicit none
+
+         real, intent(in) :: r2
+
+         if (r2 < r_smooth2) then
+            potstiff = gmr * (3. - r2/r_smooth2)
+         else
+            potstiff = gm / sqrt(r2)
+         endif
+
+      end function potstiff
 
    end subroutine grav_ptmass_stiff
 
