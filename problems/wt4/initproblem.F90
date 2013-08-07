@@ -201,9 +201,9 @@ contains
    subroutine read_IC_file
 
       use cg_leaves,   only: leaves
-      use constants,   only: xdim, ydim, zdim, ndims, LO, HI
+      use constants,   only: xdim, ydim, zdim, ndims, LO, HI, GEO_XYZ
       use dataio_pub,  only: msg, die
-      use domain,      only: is_multicg
+      use domain,      only: is_multicg, dom
       use grid_cont,   only: grid_container
       use mpi,         only: MPI_INTEGER, MPI_DOUBLE_PRECISION
       use mpisetup,    only: proc, master, FIRST, LAST, comm, status, mpi_err
@@ -219,6 +219,8 @@ contains
       enum, bind(C)
          enumerator :: DEN0 = 1, VELX0, VELZ0 = VELX0+ndims-1, ENER0
       end enum
+
+      if (dom%geometry_type /= GEO_XYZ) call die("[initproblem:read_IC_file] Non-cartesian geometry not supported.") !should store whole file on all processes
 
       cg => leaves%first%cg
       if (is_multicg) call die("[initproblem:read_IC_file] multiple grid pieces per procesor not implemented yet") !nontrivial ic_[ijk[se], allocate
@@ -306,7 +308,7 @@ contains
 
       use cg_list,          only: cg_list_element
       use cg_leaves,        only: leaves
-      use constants,        only: small
+      use constants,        only: small, GEO_XYZ
       use dataio_pub,       only: warn, printinfo, msg, die
       use domain,           only: dom
       use global,           only: smalld
@@ -325,6 +327,8 @@ contains
       type(grid_container),   pointer :: cg
       class(component_fluid), pointer :: fl
       real, dimension(:,:,:), pointer :: q0
+
+      if (dom%geometry_type /= GEO_XYZ) call die("[initproblem:problem_initial_conditions] Non-cartesian geometry not supported.") ! remapping required
 
       fl => flind%neu
       cgl => leaves%first
@@ -475,8 +479,9 @@ contains
 
       use cg_list,          only: cg_list_element
       use cg_leaves,        only: leaves
-      use constants,        only: xdim, ydim, zdim, LO, HI
-      use dataio_pub,       only: warn
+      use constants,        only: xdim, ydim, zdim, LO, HI, GEO_XYZ
+      use dataio_pub,       only: warn, die
+      use domain,           only: dom
       use fluidindex,       only: flind
       use fluidtypes,       only: component_fluid
       use grid_cont,        only: grid_container
@@ -504,6 +509,7 @@ contains
 
          select case (divine_intervention_type)
             case (1)                                                                                ! crude
+               if (dom%geometry_type /= GEO_XYZ) call die("[initproblem:problem_customize_solution_wt4] Non-cartesian geometry not supported (divine_intervention_type=1).")! remapping required
                where (cg%u(fl%idn, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) < ambient_density)
                   cg%u(fl%imx, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = (1. - damp_factor) * cg%u(fl%imx, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)
                   cg%u(fl%imy, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = (1. - damp_factor) * cg%u(fl%imy, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)
@@ -513,6 +519,7 @@ contains
                   cg%cs_iso2(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = maxcs2
                endwhere
             case (2)                                                                                ! smooth
+               if (dom%geometry_type /= GEO_XYZ) call die("[initproblem:problem_customize_solution_wt4] Non-cartesian geometry not supported (divine_intervention_type=2).")
                ambient_density_min = ambient_density / max_ambient
                do k = cg%ks, cg%ke
                   do j = cg%js, cg%je
@@ -540,6 +547,7 @@ contains
                   enddo
                enddo
             case (3)
+               if (dom%geometry_type /= GEO_XYZ) call die("[initproblem:problem_customize_solution_wt4] Non-cartesian geometry not supported (divine_intervention_type=3).")
                den0 => cg%q(qna%ind(q_n(D0)))%arr
                vlx0 => cg%q(qna%ind(q_n(VX0)))%arr
                vly0 => cg%q(qna%ind(q_n(VY0)))%arr
