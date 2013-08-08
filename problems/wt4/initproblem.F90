@@ -28,6 +28,12 @@
 #include "piernik.h"
 #include "macros.h"
 
+!>
+!! \brief DEfinition of the Wengen 4 test problem.
+!!
+!! \details Look here: http://users.camk.edu.pl/gawrysz/test4/ for detailed description of initial conditions and a catalogue of results.
+!<
+
 module initproblem
 
    use constants,    only: dsetnamelen, cbuff_len, ndims
@@ -73,7 +79,7 @@ module initproblem
 
 contains
 
-!-----------------------------------------------------------------------------
+!> \brief Pointers to user-provided routines
 
    subroutine problem_pointers
 
@@ -89,7 +95,7 @@ contains
 
    end subroutine problem_pointers
 
-!-----------------------------------------------------------------------------
+!> \brief Read problem parameters
 
    subroutine read_problem_par
 
@@ -195,7 +201,13 @@ contains
 
    end subroutine read_problem_par
 
-!-----------------------------------------------------------------------------
+!>
+!! \brief Read the file with initial conditions.
+!!
+!! \details Read the initial conditions on the master process and send it to all other processes.
+!! The data is quite large in size and should be kept in memory because it is not possible how many times the problem_initial_conditions will be called 
+!! (especially in setups employing AMR).
+!<
 
    subroutine read_IC_file
 
@@ -275,7 +287,7 @@ contains
 
    end subroutine cleanup_wt4
 
-!-----------------------------------------------------------------------------
+!> \bried initialize fluids with the initial conditions data
 
    subroutine problem_initial_conditions
 
@@ -410,7 +422,7 @@ contains
 
    end subroutine problem_initial_conditions
 
-!-----------------------------------------------------------------------------
+!> \brief Add some attributes to the datafiles
 
    subroutine problem_initial_conditions_attrs(file_id)
 
@@ -429,7 +441,7 @@ contains
 
    end subroutine problem_initial_conditions_attrs
 
-!-----------------------------------------------------------------------------
+!> \brief refister some fields required for problem_customize_solution_wt4
 
    subroutine register_initial_fld
 
@@ -448,7 +460,7 @@ contains
 
    end subroutine register_initial_fld
 
-!-----------------------------------------------------------------------------
+!> \brief modify the density and velocity fields to provide kind of boundary conditions enforced far from domain boundaries
 
    subroutine problem_customize_solution_wt4(forward)
 
