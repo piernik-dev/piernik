@@ -66,7 +66,6 @@ module initproblem
    real, parameter    :: ic_dx = ic_xysize/ic_nx              !< dx=dy=dz in the IC
    real, dimension(ndims) :: starpos, starvel                 !< the primary star initial position and velocity
    real, allocatable, dimension(:, :, :, :) :: ic_data        !< Storage for local part of the IC file
-   integer :: ic_is, ic_ie, ic_js, ic_je, ic_ks, ic_ke        !< range  of IC file covering local domain
    enum, bind(C)
       enumerator :: D0, VX0, VY0
    end enum
@@ -201,40 +200,24 @@ contains
    subroutine read_IC_file
 
       use cg_leaves,   only: leaves
-      use constants,   only: xdim, ydim, zdim, ndims, LO, HI, GEO_XYZ
+      use constants,   only: ndims
       use dataio_pub,  only: msg, die
-      use domain,      only: is_multicg, dom
       use grid_cont,   only: grid_container
-      use mpi,         only: MPI_INTEGER, MPI_DOUBLE_PRECISION
+      use mpi,         only: MPI_DOUBLE_PRECISION
       use mpisetup,    only: proc, master, FIRST, LAST, comm, status, mpi_err
 
       implicit none
 
-      integer, parameter                  :: margin = 1
       integer                             :: i, j, k, v, pe, ostat
-      real, allocatable, dimension(:,:,:) :: ic_v
-      integer, parameter                  :: NDIM = 3
-      integer, dimension(2*NDIM)          :: ic_rng
       type(grid_container), pointer       :: cg
       enum, bind(C)
          enumerator :: DEN0 = 1, VELX0, VELZ0 = VELX0+ndims-1, ENER0
       end enum
 
-      if (dom%geometry_type /= GEO_XYZ) call die("[initproblem:read_IC_file] Non-cartesian geometry not supported.") !should store whole file on all processes
-
       cg => leaves%first%cg
-      if (is_multicg) call die("[initproblem:read_IC_file] multiple grid pieces per procesor not implemented yet") !nontrivial ic_[ijk[se], allocate
-
-      ! calculate index ranges for the subset of IC file covering local domain with a safety margin for interpolation
-      ic_is = min(ic_nx, max(1,     1+floor((cg%fbnd(xdim, LO) + ic_xysize/2.)/ic_dx) - margin) )
-      ic_ie = max(1,     min(ic_nx, ceiling((cg%fbnd(xdim, HI) + ic_xysize/2.)/ic_dx) + margin) )
-      ic_js = min(ic_ny, max(1,     1+floor((cg%fbnd(ydim, LO) + ic_xysize/2.)/ic_dx) - margin) )
-      ic_je = max(1,     min(ic_ny, ceiling((cg%fbnd(ydim, HI) + ic_xysize/2.)/ic_dx) + margin) )
-      ic_ks = min(ic_nz, max(1,     1+floor((cg%fbnd(zdim, LO) + ic_zsize/2. )/ic_dx) - margin) )
-      ic_ke = max(1,     min(ic_nz, ceiling((cg%fbnd(zdim, HI) + ic_zsize/2. )/ic_dx) + margin) )
 
       if (allocated(ic_data)) call die("[initproblem:read_IC_file] ic_data already allocated")
-      allocate(ic_data(ic_is:ic_ie, ic_js:ic_je, ic_ks:ic_ke, DEN0:ENER0))
+      allocate(ic_data(ic_nx, ic_ny, ic_nz, DEN0:ENER0))
 
       if (master) then
          open(1, file=input_file, status='old', iostat=ostat)
@@ -242,8 +225,6 @@ contains
             write(msg,'(3a,i4)')"[initproblem:read_IC_file] cannot read ic_data from file '",input_file,"' at PE#",proc
             call die(msg)
          endif
-         if (allocated(ic_v)) deallocate(ic_v)
-         allocate(ic_v(ic_nx, ic_ny, ic_nz))
       endif
 
       do v = DEN0, ENER0
@@ -251,26 +232,18 @@ contains
             do k = 1, ic_nz
                do j = 1, ic_ny
                   do i = 1, ic_nx
-                     read(1,*) ic_v(i,j,k)
+                     read(1,*) ic_data(i, j, k, v)
                   enddo
                enddo
             enddo
-            ic_data(ic_is:ic_ie, ic_js:ic_je, ic_ks:ic_ke, v) = ic_v(ic_is:ic_ie, ic_js:ic_je, ic_ks:ic_ke)
             do pe = FIRST+1, LAST
-               call MPI_Recv( ic_rng, 2*NDIM, MPI_INTEGER, pe, pe, comm, status, mpi_err)
-               call MPI_Send(      ic_v(ic_rng(1):ic_rng(2), ic_rng(3):ic_rng(4), ic_rng(5):ic_rng(6)), &
-                    &         size(ic_v(ic_rng(1):ic_rng(2), ic_rng(3):ic_rng(4), ic_rng(5):ic_rng(6))), &
-                    &         MPI_DOUBLE_PRECISION, pe, pe, comm, mpi_err)
+               call MPI_Send(ic_data, size(ic_data), MPI_DOUBLE_PRECISION, pe, pe, comm, mpi_err)
             enddo
          else
-            call MPI_Send( [ ic_is, ic_ie, ic_js, ic_je, ic_ks, ic_ke ], 2*NDIM, MPI_INTEGER, FIRST, proc, comm, mpi_err)
-            call MPI_Recv(      ic_data(ic_is:ic_ie, ic_js:ic_je, ic_ks:ic_ke, v), &
-                 &         size(ic_data(ic_is:ic_ie, ic_js:ic_je, ic_ks:ic_ke, v)), &
-                 &         MPI_DOUBLE_PRECISION, FIRST, proc, comm, status, mpi_err)
+            call MPI_Recv(ic_data, size(ic_data), MPI_DOUBLE_PRECISION, FIRST, proc, comm, status, mpi_err)
          endif
       enddo
 
-      if (allocated(ic_v)) deallocate(ic_v)
       if (master) close(1)
 
       if (mass_mul /= 1.0) ic_data(:, :, :, DEN0) = ic_data(:, :, :, DEN0) * mass_mul
@@ -367,7 +340,9 @@ contains
                   jic = nint((cg%y(j) + ic_xysize/2.)/ic_dx)
                   do i = cg%is, cg%ie
                      iic = nint((cg%x(i) + ic_xysize/2.)/ic_dx)
-                     if (iic >= ic_is .and. iic <= ic_ie .and. jic >= ic_js .and. jic <= ic_je .and. kic >= ic_ks .and. kic <= ic_ke) then
+                     if ( iic >= lbound(ic_data, dim=1) .and. iic <= ubound(ic_data, dim=1) .and. &
+                          jic >= lbound(ic_data, dim=2) .and. jic <= ubound(ic_data, dim=2) .and. &
+                          kic >= lbound(ic_data, dim=3) .and. kic <= ubound(ic_data, dim=3) ) then
                         cg%u(fl%idn, i, j, k)     = ic_data(iic, jic, kic, 1) ! simple injection
                         cg%u(fl%imx, i, j, k)     = ic_data(iic, jic, kic, 2)
                         cg%u(fl%imy, i, j, k)     = ic_data(iic, jic, kic, 3)
