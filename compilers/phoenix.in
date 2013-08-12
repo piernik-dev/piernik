@@ -1,22 +1,14 @@
-###############################################################################
-#
-# Make definitions for phoenix (Fedora 8, x86)
-#
-# System packages:
-#   fftw-devel-3.1.2
-#
-# User-compiled:
-#   gcc-4.4.3    (required for some language constructs)
-#   szip-2.1     (optional)
-#   mpich2-1.0.7 (CC=gcc F77=gfortran F90=gfortran, --enable-f90 --with-pm=mpd --with-device=ch3:sock)
-#   hdf5-1.8.4   (CC=mpicc FC=mpif90, --enable-fortran --enable-parallel)
-#
-
-PROG     = piernik
-F90      = h5pfc
-F90FLAGS = -O3 -funroll-loops -fdefault-real-8 -Wall -W -pedantic-errors -std=gnu -fimplicit-none -ffree-line-length-none -fbacktrace -ggdb
-#F90FLAGS += -fbounds-check -Wsurprising -Wcharacter-truncation -ffpe-trap=invalid,zero,overflow,denormal
-LIBS    += -lfftw3
-
-MAKEFLAGS += -j2
+PROG      = piernik
 USE_GNUCPP = yes
+
+### gcc >= 4.8, openmpi >= 1.6.5, hdf5 >= 1.8.11
+F90       = /opt/hdf5/bin/h5pfc
+F90FLAGS  = -fdefault-real-8 -ffree-form -std=gnu -fimplicit-none -ffree-line-length-none -I/usr/include
+LDFLAGS   = -Wl,--as-needed -Wl,-O1
+
+ifeq ($(PIERNIK_DEBUG), 1)
+   F90FLAGS += -g -ggdb -O0 -ffpe-trap=zero,overflow,invalid -fcheck=all -fno-omit-frame-pointer
+   F90FLAGS += -Wall -W -Wextra -pedantic-errors
+else
+   F90FLAGS += -O2 -funroll-loops
+endif
