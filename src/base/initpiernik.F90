@@ -364,16 +364,20 @@ contains
 !-----------------------------------------------------------------------------
    subroutine print_help
 
+      use constants, only: cwdlen
+
       implicit none
 
-      print '(a)', 'usage: cmdline [OPTIONS]'
+      character(len=cwdlen) :: calledname
+
+      call get_command_argument(0, calledname)
+
+      print '(3a)','usage: ',trim(calledname),' [OPTIONS]'
       print '(a)', ''
-      print '(a)', 'Without further options, cmdline prints the date and exits.'
-      print '(a)', ''
-      print '(a)', 'cmdline options:'
+      print '(a)', 'Recognized options:'
       print '(a)', ''
       print '(a)', '  -v, --version     print version information and exit'
-      print '(a)', '  -n, --namelist    read namelist from command line'
+      print '(6a)','  -n, --namelist    read namelist from command line, e.g. ',trim(calledname)," -n '",achar(38),'OUTPUT_CONTROL run_id="t22" /',"'"
       print '(a)', '  -p, --param       path to the directory with problem.par and/or restarts (default: ".")'
       print '(a)', '  -w, --write       path to the directory where output will be written (default: ".")'
       print '(a)', '  -l, --log         path to the directory where logs will be written (default: ".")'
