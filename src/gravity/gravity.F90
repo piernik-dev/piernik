@@ -793,7 +793,7 @@ contains
                case ("user", "grav_user", "GRAV_USER")
                   ! The User knows what he/she is doing ...
                case default ! standard cases do not support cylindrical geometry yet
-                  call warn("[gravity:default_grav_pot_3d] Non-cartesian geometry may or may not be implemented correctly.")
+                  if (master) call warn("[gravity:default_grav_pot_3d] Non-cartesian geometry may or may not be implemented correctly.")
             end select
          endif
 
