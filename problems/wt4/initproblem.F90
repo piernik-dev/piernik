@@ -29,7 +29,7 @@
 #include "macros.h"
 
 !>
-!! \brief DEfinition of the Wengen 4 test problem.
+!! \brief Definition of the Wengen 4 test problem.
 !!
 !! \details Look here: http://users.camk.edu.pl/gawrysz/test4/ for detailed description of initial conditions and a catalogue of results.
 !<
