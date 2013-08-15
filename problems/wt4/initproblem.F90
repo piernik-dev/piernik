@@ -205,7 +205,7 @@ contains
 !! \brief Read the file with initial conditions.
 !!
 !! \details Read the initial conditions on the master process and send it to all other processes.
-!! The data is quite large in size and should be kept in memory because it is not possible how many times the problem_initial_conditions will be called 
+!! The data is quite large in size and should be kept in memory because it is not possible to determine how many times the problem_initial_conditions will be called
 !! (especially in setups employing AMR).
 !<
 
@@ -293,7 +293,7 @@ contains
 
       use cg_list,          only: cg_list_element
       use cg_leaves,        only: leaves
-      use constants,        only: small, GEO_XYZ
+      use constants,        only: small, GEO_XYZ, GEO_RPZ
       use dataio_pub,       only: warn, printinfo, msg, die
       use domain,           only: dom
       use global,           only: smalld
@@ -312,8 +312,6 @@ contains
       type(grid_container),   pointer :: cg
       class(component_fluid), pointer :: fl
       real, dimension(:,:,:), pointer :: q0
-
-      if (dom%geometry_type /= GEO_XYZ) call die("[initproblem:problem_initial_conditions] Non-cartesian geometry not supported.") ! remapping required
 
       fl => flind%neu
       cgl => leaves%first
@@ -348,28 +346,26 @@ contains
          else
             do k = cg%ks, cg%ke
                kic = nint((cg%z(k) + ic_zsize/2.)/ic_dx)
-               do j = cg%js, cg%je
-                  jic = nint((cg%y(j) + ic_xysize/2.)/ic_dx)
-                  do i = cg%is, cg%ie
-                     iic = nint((cg%x(i) + ic_xysize/2.)/ic_dx)
-                     if ( iic >= lbound(ic_data, dim=1) .and. iic <= ubound(ic_data, dim=1) .and. &
-                          jic >= lbound(ic_data, dim=2) .and. jic <= ubound(ic_data, dim=2) .and. &
-                          kic >= lbound(ic_data, dim=3) .and. kic <= ubound(ic_data, dim=3) ) then
-                        cg%u(fl%idn, i, j, k)     = ic_data(iic, jic, kic, 1) ! simple injection
-                        cg%u(fl%imx, i, j, k)     = ic_data(iic, jic, kic, 2)
-                        cg%u(fl%imy, i, j, k)     = ic_data(iic, jic, kic, 3)
-                        cg%u(fl%imz, i, j, k)     = ic_data(iic, jic, kic, 4)
-      !               cs_iso2_arr(i, j, k) = ic_data(iic, jic, kic, 5)
-                        cg%cs_iso2(i, j, k) = (gamma_loc) * kboltz * T_disk / mean_mol_weight / mH
-                     else
-                        cg%u(fl%idn, i, j, k)     = smalld
-                        cg%u(fl%imx, i, j, k)     = small
-                        cg%u(fl%imy, i, j, k)     = small
-                        cg%u(fl%imz, i, j, k)     = small
-                        cg%cs_iso2(i, j, k)     = mincs2
-                     endif
-                  enddo
-               enddo
+               select case (dom%geometry_type)
+                  case (GEO_XYZ)
+                     do j = cg%js, cg%je
+                        jic = nint((cg%y(j) + ic_xysize/2.)/ic_dx)
+                        do i = cg%is, cg%ie
+                           iic = nint((cg%x(i) + ic_xysize/2.)/ic_dx)
+                           call set_point(i, j, k, iic, jic, kic)
+                        enddo
+                     enddo
+                  case (GEO_RPZ)
+                     do j = cg%js, cg%je
+                        do i = cg%is, cg%ie
+                           iic = nint((cg%x(i)*cos(cg%y(j)) + ic_xysize/2.)/ic_dx)
+                           jic = nint((cg%x(i)*sin(cg%y(j)) + ic_xysize/2.)/ic_dx)
+                           call set_point(i, j, k, iic, jic, kic)
+                        enddo
+                     enddo
+                  case default
+                     call die("[initproblem:problem_initial_conditions] geometry not supported.")
+               end select
             enddo
          endif
 
@@ -419,6 +415,33 @@ contains
 #ifndef UMUSCL
       if (master ) call warn("[initproblem:problem_initial_conditionslem]: Without UMUSCL you'll likely get Monet-like density maps.")
 #endif /* !UMUSCL */
+
+   contains
+
+      subroutine set_point(i, j, k, iic, jic, kic)
+
+         implicit none
+
+         integer, intent(in) :: i, j, k, iic, jic, kic
+
+         if ( iic >= lbound(ic_data, dim=1) .and. iic <= ubound(ic_data, dim=1) .and. &
+              jic >= lbound(ic_data, dim=2) .and. jic <= ubound(ic_data, dim=2) .and. &
+              kic >= lbound(ic_data, dim=3) .and. kic <= ubound(ic_data, dim=3) ) then
+            cg%u(fl%idn, i, j, k) = ic_data(iic, jic, kic, 1) ! simple injection
+            cg%u(fl%imx, i, j, k) = ic_data(iic, jic, kic, 2)
+            cg%u(fl%imy, i, j, k) = ic_data(iic, jic, kic, 3)
+            cg%u(fl%imz, i, j, k) = ic_data(iic, jic, kic, 4)
+            ! cs_iso2_arr(i, j, k) = ic_data(iic, jic, kic, 5)
+            cg%cs_iso2(  i, j, k) = (gamma_loc) * kboltz * T_disk / mean_mol_weight / mH
+         else
+            cg%u(fl%idn, i, j, k)     = smalld
+            cg%u(fl%imx, i, j, k)     = small
+            cg%u(fl%imy, i, j, k)     = small
+            cg%u(fl%imz, i, j, k)     = small
+            cg%cs_iso2(  i, j, k)     = mincs2
+         endif
+
+      end subroutine set_point
 
    end subroutine problem_initial_conditions
 
