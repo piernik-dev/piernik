@@ -196,8 +196,6 @@ contains
          call all_cg%reg_var(q_n(i), restart_mode = AT_NO_B)
       enddo
 
-      if (.not. fake_ic) call read_IC_file
-
    end subroutine read_problem_par
 
 !>
@@ -311,6 +309,8 @@ contains
       type(grid_container),   pointer :: cg
       class(component_fluid), pointer :: fl
       real, dimension(:,:,:), pointer :: q0
+
+      if (.not. allocated(ic_data) .and. .not. fake_ic) call read_IC_file
 
       fl => flind%neu
       cgl => leaves%first
