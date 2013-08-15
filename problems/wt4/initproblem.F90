@@ -469,7 +469,7 @@ contains
 
       use cg_list,          only: cg_list_element
       use cg_leaves,        only: leaves
-      use constants,        only: xdim, ydim, zdim, LO, HI, GEO_XYZ
+      use constants,        only: xdim, ydim, zdim, LO, HI, GEO_XYZ, GEO_RPZ
       use dataio_pub,       only: warn, die
       use domain,           only: dom
       use fluidindex,       only: flind
@@ -537,14 +537,21 @@ contains
                   enddo
                enddo
             case (3)
-               if (dom%geometry_type /= GEO_XYZ) call die("[initproblem:problem_customize_solution_wt4] Non-cartesian geometry not supported (divine_intervention_type=3).")
                den0 => cg%q(qna%ind(q_n(D0)))%arr
                vlx0 => cg%q(qna%ind(q_n(VX0)))%arr
                vly0 => cg%q(qna%ind(q_n(VY0)))%arr
                allocate(alf(cg%lhn(xdim, LO):cg%lhn(xdim, HI), cg%lhn(ydim, LO):cg%lhn(ydim, HI)))
                do j = cg%lhn(ydim, LO), cg%lhn(ydim, HI)
                   do i = cg%lhn(xdim, LO), cg%lhn(xdim, HI)
-                     rc = sqrt(cg%x(i)**2 + cg%y(j)**2)
+                     select case (dom%geometry_type)
+                        case (GEO_XYZ)
+                           rc = sqrt(cg%x(i)**2 + cg%y(j)**2)
+                        case (GEO_RPZ)
+                           rc = cg%x(i)
+                        case default
+                           rc = 0 ! suppress compiler warning
+                           call die("[initproblem:problem_customize_solution_wt4] geometry not supported (divine_intervention_type=3).")
+                     end select
                      alf(i,j) = -alfasupp*0.5*(tanh((rc-r_in)/r_in*f_in)-1.)
                      alf(i,j) = alf(i,j) + alfasupp*0.5*(tanh((rc-r_out)/r_out*f_out) + 1.)
                   enddo
