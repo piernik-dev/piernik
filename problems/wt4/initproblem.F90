@@ -83,14 +83,13 @@ contains
 
    subroutine problem_pointers
 
-      use dataio_user, only: user_attrs_wr, user_reg_var_restart
+      use dataio_user, only: user_attrs_wr
       use user_hooks,  only: problem_customize_solution, cleanup_problem
 
       implicit none
 
       problem_customize_solution => problem_customize_solution_wt4
       user_attrs_wr              => problem_initial_conditions_attrs
-      user_reg_var_restart       => register_initial_fld
       cleanup_problem            => cleanup_wt4
 
    end subroutine problem_pointers
@@ -463,25 +462,6 @@ contains
       call h5ltset_attribute_double_f(file_id, "/", "fpiG", [fpiG], bufsize, error)
 
    end subroutine problem_initial_conditions_attrs
-
-!> \brief refister some fields required for problem_customize_solution_wt4
-
-   subroutine register_initial_fld
-
-      use cg_list_global, only: all_cg
-      use constants,      only: AT_NO_B
-
-      implicit none
-
-      integer :: i
-
-      if (divine_intervention_type == 3) then
-         do i = D0, VY0
-            call all_cg%reg_var(q_n(i), restart_mode = AT_NO_B)
-         enddo
-      endif
-
-   end subroutine register_initial_fld
 
 !> \brief modify the density and velocity fields to provide kind of boundary conditions enforced far from domain boundaries
 
