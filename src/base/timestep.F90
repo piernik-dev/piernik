@@ -330,14 +330,14 @@ contains
       real, dimension(ndims) :: dt_proc                   !< timestep for the current cg
       integer                :: i, j, k, d
 
-      real, dimension(cg%is:cg%ie) :: vphi_mean
+      real, dimension(cg%is:cg%ie) :: omega_mean
 
       c(:) = 0.0
       c_fl = 0.0
 
       if (use_fargo) then
          do i = cg%is, cg%ie
-            vphi_mean(i) = sum(cg%u(fl%imy, i, :, :) / cg%u(fl%idn, i, :, :)) / size(cg%u(fl%idn, i, :, :))
+            omega_mean(i) = sum(cg%u(fl%imy, i, :, :) / cg%u(fl%idn, i, :, :) / cg%x(i)) / size(cg%u(fl%idn, i, :, :))
          enddo
       endif
 
@@ -348,7 +348,7 @@ contains
                   if (cg%u(fl%idn,i,j,k) > 0.0) then
                      v(:) = abs(cg%u(fl%imx:fl%imz, i, j, k) / cg%u(fl%idn, i, j, k))
                      if (use_fargo) &
-                        & v(ydim) = abs(cg%u(fl%imy, i, j, k) / cg%u(fl%idn, i, j, k) - vphi_mean(i))
+                        & v(ydim) = abs(cg%u(fl%imy, i, j, k) / cg%u(fl%idn, i, j, k) - omega_mean(i) * cg%x(i))
                   else
                      v(:) = 0.0
                   endif

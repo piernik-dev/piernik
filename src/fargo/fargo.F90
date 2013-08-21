@@ -123,20 +123,20 @@ contains
          cg => cgl%cg
          ! TODO: should be moved to cg%init, but I wanted to avoid fluidindex
          ! dependency
-         if (.not. allocated(cg%vphi_mean)) allocate(cg%vphi_mean(cg%lhn(xdim, LO):cg%lhn(xdim, HI), flind%fluids))
-         if (.not. allocated(cg%vphi_cr)) allocate(cg%vphi_cr(cg%lhn(xdim, LO):cg%lhn(xdim, HI), flind%fluids))
+         if (.not. allocated(cg%omega_mean)) allocate(cg%omega_mean(cg%lhn(xdim, LO):cg%lhn(xdim, HI), flind%fluids))
+         if (.not. allocated(cg%omega_cr)) allocate(cg%omega_cr(cg%lhn(xdim, LO):cg%lhn(xdim, HI), flind%fluids))
          if (.not. allocated(cg%nshift)) allocate(cg%nshift(cg%lhn(xdim, LO):cg%lhn(xdim, HI), flind%fluids))
          do i = cg%lhn(xdim, LO), cg%lhn(xdim, HI)
             do ifl = 1, flind%fluids
                pfl => flind%all_fluids(ifl)%fl
-               cg%vphi_mean(i, ifl) = sum(cg%u(pfl%imy, i, :, :) / cg%u(pfl%idn, i, :, :))  / size(cg%u(pfl%idn, i, :, :))
+               cg%omega_mean(i, ifl) = sum(cg%u(pfl%imy, i, :, :) / cg%u(pfl%idn, i, :, :) / cg%x(i))  / size(cg%u(pfl%idn, i, :, :))
             enddo
          enddo
 
          do ifl = 1, flind%fluids
             pfl => flind%all_fluids(ifl)%fl
-            cg%nshift(:, ifl) = nint(cg%vphi_mean(:, ifl) * dt / (cg%x(:) * cg%dl(ydim)))
-            cg%vphi_cr(:, ifl) = cg%vphi_mean(:, ifl) - cg%nshift(:, ifl) * (cg%x(:) * cg%dl(ydim)) / dt
+            cg%nshift(:, ifl) = nint(cg%omega_mean(:, ifl) * dt / cg%dl(ydim))
+            cg%omega_cr(:, ifl) = cg%omega_mean(:, ifl) - cg%nshift(:, ifl) * cg%dl(ydim) / dt
          enddo
 
          cgl => cgl%nxt
@@ -165,7 +165,7 @@ contains
 
       real :: dt_shear!, dt_res
       !real :: v_mean, v_cr, nshft, c_fl
-      real :: vphi, vphip, dphi
+      real :: omega, omegap, dphi
       integer :: i, j, k, ifl
       class(component_fluid), pointer :: pfl
 
@@ -177,12 +177,12 @@ contains
             do j = cg%js, cg%je
                do i = cg%is, cg%ie
                   if (cg%leafmap(i, j, k)) then
-                     vphi  = cg%u(pfl%imy, i, j, k) / cg%u(pfl%idn, i, j, k) - cg%u(pfl%imy, i-1, j, k) / cg%u(pfl%idn, i-1, j, k)
-                     vphi  = max(abs(vphi), small)
-                     vphip = cg%u(pfl%imy, i, j, k) / cg%u(pfl%idn, i, j, k) - cg%u(pfl%imy, i, j-1, K) / cg%u(pfl%idn, i, j-1, k)
-                     vphip = max(abs(vphip), small)
-                     dphi = cg%x(i) * cg%dl(ydim)
-                     dt_shear = min(dt_shear, half*min(dphi / abs(vphi), dphi / abs(vphip)))
+                     omega  = cg%u(pfl%imy, i, j, k) / cg%u(pfl%idn, i, j, k) / cg%x(i) - cg%u(pfl%imy, i-1, j, k) / cg%u(pfl%idn, i-1, j, k) / cg%x(i-1)
+                     omega  = max(abs(omega), small)
+                     omegap = (cg%u(pfl%imy, i, j, k) / cg%u(pfl%idn, i, j, k) - cg%u(pfl%imy, i, j-1, K) / cg%u(pfl%idn, i, j-1, k)) / cg%x(i)
+                     omegap = max(abs(omegap), small)
+                     dphi = cg%dl(ydim)
+                     dt_shear = min(dt_shear, half*min(dphi / abs(omega), dphi / abs(omegap)))
                   endif
                enddo
             enddo
