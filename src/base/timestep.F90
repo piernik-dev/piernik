@@ -155,12 +155,12 @@ contains
 
 #ifdef COSM_RAYS
          call timestep_crs(cg)
-         dt = min(dt,dt_crs)
+         dt = min(dt, dt_crs)
 #endif /* COSM_RAYS */
 
 #ifdef RESISTIVE
          call timestep_resist(cg)
-         dt = min(dt,dt_resist)
+         dt = min(dt, dt_resist)
 #endif /* RESISTIVE */
 
 #ifndef BALSARA
@@ -311,7 +311,7 @@ contains
 
    subroutine timestep_fluid(cg, fl, dt, c_fl)
 
-      use constants,  only: big, xdim, ydim, zdim, ndims, GEO_RPZ, LO, ndims
+      use constants,  only: big, xdim, ydim, zdim, ndims, GEO_RPZ, LO, ndims, small
       use domain,     only: dom
       use fluidtypes, only: component_fluid
       use global,     only: cfl, use_fargo
@@ -332,8 +332,8 @@ contains
 
       real, dimension(cg%is:cg%ie) :: omega_mean
 
-      c(:) = 0.0
-      c_fl = 0.0
+      c_fl = small
+      dt_proc(:) = big
 
       if (use_fargo) then
          do i = cg%is, cg%ie
@@ -352,21 +352,25 @@ contains
                   else
                      v(:) = 0.0
                   endif
+                  
+                  c(:) = max(v(:) + fl%get_cs(i, j, k, cg%u, cg%b, cg%cs_iso2), small)
+                  c_fl = max(c_fl, maxval(c))
 
-                  c(:) = max( c(:), v(:) + fl%get_cs(i, j, k, cg%u, cg%b, cg%cs_iso2) )
-                  c_fl = max(c_fl, maxval(c(:)))
+                  do d = xdim, zdim
+                     if (dom%has_dir(d) .and. c(d) > 0.0) then
+                        if (dom%geometry_type == GEO_RPZ .and. d == ydim) then
+                           dt_proc(d) = min(dt_proc(d), cg%dl(d) * cg%x(i) / c(d))
+                        else
+                           dt_proc(d) = min(dt_proc(d), cg%dl(d) / c(d))
+                        endif
+                     else
+                        dt_proc(d) = big
+                     endif
+                  enddo
+
                endif
             enddo
          enddo
-      enddo
-
-      do d = xdim, zdim
-         if (dom%has_dir(d) .and. c(d) /= 0.) then
-            dt_proc(d) = cg%dl(d)/c(d)
-            if (dom%geometry_type == GEO_RPZ .and. d == ydim) dt_proc(d) = dt_proc(d) * dom%edge(xdim, LO)
-         else
-            dt_proc(d) = big
-         endif
       enddo
 
       dt = cfl * minval(dt_proc)
