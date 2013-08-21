@@ -155,12 +155,12 @@ contains
 
 #ifdef COSM_RAYS
          call timestep_crs(cg)
-         dt = min(dt,dt_crs)
+         dt = min(dt, dt_crs)
 #endif /* COSM_RAYS */
 
 #ifdef RESISTIVE
          call timestep_resist(cg)
-         dt = min(dt,dt_resist)
+         dt = min(dt, dt_resist)
 #endif /* RESISTIVE */
 
 #ifndef BALSARA
@@ -311,7 +311,7 @@ contains
 
    subroutine timestep_fluid(cg, fl, dt, c_fl)
 
-      use constants,  only: big, xdim, ydim, zdim, ndims, GEO_RPZ, LO, ndims
+      use constants,  only: big, xdim, ydim, zdim, ndims, GEO_RPZ, ndims, small
       use domain,     only: dom
       use fluidtypes, only: component_fluid
       use global,     only: cfl, use_fargo
@@ -330,14 +330,14 @@ contains
       real, dimension(ndims) :: dt_proc                   !< timestep for the current cg
       integer                :: i, j, k, d
 
-      real, dimension(cg%is:cg%ie) :: vphi_mean
+      real, dimension(cg%is:cg%ie) :: omega_mean
 
-      c(:) = 0.0
-      c_fl = 0.0
+      c_fl = small
+      dt_proc(:) = big
 
       if (use_fargo) then
          do i = cg%is, cg%ie
-            vphi_mean(i) = sum(cg%u(fl%imy, i, :, :) / cg%u(fl%idn, i, :, :)) / size(cg%u(fl%idn, i, :, :))
+            omega_mean(i) = sum(cg%u(fl%imy, i, :, :) / cg%u(fl%idn, i, :, :) / cg%x(i)) / size(cg%u(fl%idn, i, :, :))
          enddo
       endif
 
@@ -348,25 +348,29 @@ contains
                   if (cg%u(fl%idn,i,j,k) > 0.0) then
                      v(:) = abs(cg%u(fl%imx:fl%imz, i, j, k) / cg%u(fl%idn, i, j, k))
                      if (use_fargo) &
-                        & v(ydim) = abs(cg%u(fl%imy, i, j, k) / cg%u(fl%idn, i, j, k) - vphi_mean(i))
+                        & v(ydim) = abs(cg%u(fl%imy, i, j, k) / cg%u(fl%idn, i, j, k) - omega_mean(i) * cg%x(i))
                   else
                      v(:) = 0.0
                   endif
+                  
+                  c(:) = max(v(:) + fl%get_cs(i, j, k, cg%u, cg%b, cg%cs_iso2), small)
+                  c_fl = max(c_fl, maxval(c))
 
-                  c(:) = max( c(:), v(:) + fl%get_cs(i, j, k, cg%u, cg%b, cg%cs_iso2) )
-                  c_fl = max(c_fl, maxval(c(:)))
+                  do d = xdim, zdim
+                     if (dom%has_dir(d) .and. c(d) > 0.0) then
+                        if (dom%geometry_type == GEO_RPZ .and. d == ydim) then
+                           dt_proc(d) = min(dt_proc(d), cg%dl(d) * cg%x(i) / c(d))
+                        else
+                           dt_proc(d) = min(dt_proc(d), cg%dl(d) / c(d))
+                        endif
+                     else
+                        dt_proc(d) = big
+                     endif
+                  enddo
+
                endif
             enddo
          enddo
-      enddo
-
-      do d = xdim, zdim
-         if (dom%has_dir(d) .and. c(d) /= 0.) then
-            dt_proc(d) = cg%dl(d)/c(d)
-            if (dom%geometry_type == GEO_RPZ .and. d == ydim) dt_proc(d) = dt_proc(d) * dom%edge(xdim, LO)
-         else
-            dt_proc(d) = big
-         endif
       enddo
 
       dt = cfl * minval(dt_proc)

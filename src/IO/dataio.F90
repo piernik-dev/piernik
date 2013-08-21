@@ -1055,6 +1055,7 @@ contains
 
       use domain,      only: is_multicg
       use fluidtypes,  only: phys_prop
+      use global,      only: use_fargo
 
       implicit none
 
@@ -1077,10 +1078,11 @@ contains
       call cmnlog_l(fmt_dtloc, 'max(|vy|)   ', fluid, pr%vely_max)
       call cmnlog_l(fmt_dtloc, 'max(|vz|)   ', fluid, pr%velz_max)
       if (cs_tn) call cmnlog_l(fmt_dtloc, 'max(c_s)    ', fluid, pr%cs_max)
+      if (use_fargo) call cmnlog_l(fmt_dtloc, 'max(shear)  ', fluid, pr%shear_max)
 
+      call cmnlog_l(fmt_vloc, 'min(dt_vy)   ', fluid, pr%dtvy_min)
       if (is_multicg) then
          call cmnlog_l(fmt_vloc, 'min(dt_vx)   ', fluid, pr%dtvx_min)
-         call cmnlog_l(fmt_vloc, 'min(dt_vy)   ', fluid, pr%dtvy_min)
          call cmnlog_l(fmt_vloc, 'min(dt_vz)   ', fluid, pr%dtvz_min)
          if (cs_tn) call cmnlog_l(fmt_vloc, 'min(dt_cs)   ', fluid, pr%dtcs_min)
       endif
@@ -1124,11 +1126,11 @@ contains
       use types,            only: value                          !QA_WARN: used by get_extremum (intel compiler)
       use cg_leaves,        only: leaves
       use cg_list,          only: cg_list_element
-      use constants,        only: MINL, MAXL, small, xdim, ydim, zdim
-      use domain,           only: is_multicg
+      use constants,        only: MINL, MAXL, small, xdim, ydim, zdim, GEO_RPZ
+      use domain,           only: is_multicg, dom
       use fluidtypes,       only: phys_prop, component_fluid
       use func,             only: ekin
-      use global,           only: cfl
+      use global,           only: cfl, use_fargo
       use mpisetup,         only: master
       use named_array_list, only: qna
       use units,            only: mH, kboltz
@@ -1143,6 +1145,8 @@ contains
 
       type(phys_prop),       pointer :: pr
       type(cg_list_element), pointer :: cgl
+      integer :: i, j, k
+      real :: omega_mean
 #ifndef ISO
       real :: dxmn_safe
 #endif /* !ISO */
@@ -1171,34 +1175,58 @@ contains
       if (is_multicg) then
          cgl => leaves%first
          do while (associated(cgl))
-            cgl%cg%wa = cfl * cgl%cg%dx / (cgl%cg%wa +small)
+            cgl%cg%wa = cgl%cg%dx / (cgl%cg%wa +small)
             cgl => cgl%nxt
          enddo
          call leaves%get_extremum(qna%wai, MINL, pr%dtvx_min, xdim)
          if (master) pr%dtvx_min%assoc = cfl * pr%dtvx_min%assoc / (pr%dtvx_min%val + small)
       endif
 
+      ! --- VEL Y ----
+
       cgl => leaves%first
       do while (associated(cgl))
-         where (cgl%cg%u(fl%idn,:, :, :) /= 0.)
-            cgl%cg%wa = abs(cgl%cg%u(fl%imy,:, :, :)/cgl%cg%u(fl%idn,:, :, :))
-         elsewhere
-            cgl%cg%wa = 0.
-         endwhere
+         if (use_fargo) then
+            do i = cgl%cg%is, cgl%cg%ie
+               omega_mean = sum(cgl%cg%u(fl%imy, i, :, :) / cgl%cg%u(fl%idn, i, :, :) / cgl%cg%x(i)) / size(cgl%cg%u(fl%idn, i, :, :))
+               cgl%cg%wa(i, :, :) = abs(cgl%cg%u(fl%imy, i, :, :) / cgl%cg%u(fl%idn, i, :, :)  - omega_mean * cgl%cg%x(i))
+            enddo
+         else
+            where (cgl%cg%u(fl%idn,:, :, :) > 0.0)
+               cgl%cg%wa = abs(cgl%cg%u(fl%imy,:, :, :) / cgl%cg%u(fl%idn,:, :, :))
+            elsewhere
+               cgl%cg%wa = 0.0
+            endwhere
+         endif
+         do k = cgl%cg%ks, cgl%cg%ke
+            do j = cgl%cg%js, cgl%cg%je
+               do i = cgl%cg%is, cgl%cg%ie
+                  cgl%cg%wa(i, j, k) = cgl%cg%wa(i, j, k) + fl%get_cs(i, j, k, cgl%cg%u, cgl%cg%b, cgl%cg%cs_iso2)
+               enddo
+            enddo
+         enddo
          cgl => cgl%nxt
       enddo
       call leaves%get_extremum(qna%wai, MAXL, pr%vely_max, ydim)
-      if (master) pr%vely_max%assoc = cfl * pr%vely_max%assoc / (pr%vely_max%val + small)
-
-      if (is_multicg) then
-         cgl => leaves%first
-         do while (associated(cgl))
-            cgl%cg%wa = cfl * cgl%cg%dy / (cgl%cg%wa +small)
-            cgl => cgl%nxt
-         enddo
-         call leaves%get_extremum(qna%wai, MINL, pr%dtvy_min, ydim)
-         if (master) pr%dtvy_min%assoc = cfl * pr%dtvy_min%assoc / (pr%dtvy_min%val + small)
+      if (master) then
+         pr%vely_max%assoc = cfl * pr%vely_max%assoc / (pr%vely_max%val + small)
+         if (dom%geometry_type == GEO_RPZ) pr%vely_max%assoc = pr%vely_max%assoc * pr%vely_max%coords(xdim) 
       endif
+
+      cgl => leaves%first
+      do while (associated(cgl))
+         cgl%cg%wa = cgl%cg%dy / (cgl%cg%wa +small)
+         if (dom%geometry_type == GEO_RPZ) then
+            do i = cgl%cg%is, cgl%cg%ie
+               cgl%cg%wa(i, :, :) = cgl%cg%wa(i, :, :) * cgl%cg%x(i)
+            enddo 
+         endif
+         cgl => cgl%nxt
+      enddo
+      call leaves%get_extremum(qna%wai, MINL, pr%dtvy_min, ydim)
+      if (master) pr%dtvy_min%assoc = cfl * pr%dtvy_min%val
+
+      ! -------------
 
       cgl => leaves%first
       do while (associated(cgl))
@@ -1212,10 +1240,26 @@ contains
       call leaves%get_extremum(qna%wai, MAXL, pr%velz_max, zdim)
       if (master) pr%velz_max%assoc = cfl * pr%velz_max%assoc / (pr%velz_max%val + small)
 
+      if (use_fargo) then
+         cgl => leaves%first
+         do while (associated(cgl))
+            do i = cgl%cg%is, cgl%cg%ie
+               cgl%cg%wa(i, : ,:) = &
+                  abs( &
+                     cgl%cg%u(fl%imy, i,   :, :) / cgl%cg%u(fl%idn, i,   :, :) / cgl%cg%x(i  ) - &
+                     cgl%cg%u(fl%imy, i-1, :, :) / cgl%cg%u(fl%idn, i-1, :, :) / cgl%cg%x(i-1)   &
+                  )
+            enddo
+            cgl => cgl%nxt
+         enddo
+         call leaves%get_extremum(qna%wai, MAXL, pr%shear_max, ydim)
+         if (master) pr%shear_max%assoc = cfl * 0.5 * pr%shear_max%assoc / (pr%shear_max%val + small)
+      endif
+
       if (is_multicg) then
          cgl => leaves%first
          do while (associated(cgl))
-            cgl%cg%wa = cfl * cgl%cg%dz / (cgl%cg%wa +small)
+            cgl%cg%wa = cgl%cg%dz / (cgl%cg%wa +small)
             cgl => cgl%nxt
          enddo
          call leaves%get_extremum(qna%wai, MINL, pr%dtvz_min, zdim)

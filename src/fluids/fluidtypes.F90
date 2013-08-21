@@ -44,6 +44,7 @@ module fluidtypes
       type(value) :: velx_max
       type(value) :: vely_max
       type(value) :: velz_max
+      type(value) :: shear_max
       type(value) :: pres_max
       type(value) :: pres_min
       type(value) :: temp_max
