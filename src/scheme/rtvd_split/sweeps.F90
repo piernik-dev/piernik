@@ -376,12 +376,12 @@ contains
                            if (use_fargo .and. cdim == ydim) then
                               if (fargo_vel == VEL_RES) then
                                  do ifl = 1, flind%fluids
-                                    vx(:, ifl) = u(:, iarr_all_mx(ifl)) / u(:, iarr_all_dn(ifl)) - cg%vphi_mean(i2, ifl)
+                                    vx(:, ifl) = u(:, iarr_all_mx(ifl)) / u(:, iarr_all_dn(ifl)) - cg%omega_mean(i2, ifl) * cg%x(i2)
                                  enddo
                                  sources = .true.
                               elseif (fargo_vel == VEL_CR) then
                                  do ifl = 1, flind%fluids
-                                    vx(:, ifl) = cg%vphi_cr(i2, ifl)
+                                    vx(:, ifl) = cg%omega_cr(i2, ifl) * cg%x(i2)
                                  enddo
                                  sources = .false.
                               else
