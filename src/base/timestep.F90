@@ -311,7 +311,7 @@ contains
 
    subroutine timestep_fluid(cg, fl, dt, c_fl)
 
-      use constants,  only: big, xdim, ydim, zdim, ndims, GEO_RPZ, LO, ndims, small
+      use constants,  only: big, xdim, ydim, zdim, ndims, GEO_RPZ, ndims, small
       use domain,     only: dom
       use fluidtypes, only: component_fluid
       use global,     only: cfl, use_fargo

@@ -165,7 +165,7 @@ contains
 
       real :: dt_shear!, dt_res
       !real :: v_mean, v_cr, nshft, c_fl
-      real :: omega, omegap, dphi
+      real :: omega!, omegap, dphi
       integer :: i, j, k, ifl
       class(component_fluid), pointer :: pfl
 
