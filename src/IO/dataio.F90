@@ -1187,7 +1187,7 @@ contains
       cgl => leaves%first
       do while (associated(cgl))
          if (use_fargo) then
-            do i = lbound(cgl%cg%wa, 1), ubound(cgl%cg%wa, 1)
+            do i = cgl%cg%is, cgl%cg%ie
                omega_mean = sum(cgl%cg%u(fl%imy, i, :, :) / cgl%cg%u(fl%idn, i, :, :) / cgl%cg%x(i)) / size(cgl%cg%u(fl%idn, i, :, :))
                cgl%cg%wa(i, :, :) = abs(cgl%cg%u(fl%imy, i, :, :) / cgl%cg%u(fl%idn, i, :, :)  - omega_mean * cgl%cg%x(i))
             enddo
@@ -1198,9 +1198,9 @@ contains
                cgl%cg%wa = 0.0
             endwhere
          endif
-         do k = lbound(cgl%cg%wa, 3), ubound(cgl%cg%wa, 3)
-            do j = lbound(cgl%cg%wa, 2), ubound(cgl%cg%wa, 2)
-               do i = lbound(cgl%cg%wa, 1), ubound(cgl%cg%wa, 1)
+         do k = cgl%cg%ks, cgl%cg%ke
+            do j = cgl%cg%js, cgl%cg%je
+               do i = cgl%cg%is, cgl%cg%ie
                   cgl%cg%wa(i, j, k) = cgl%cg%wa(i, j, k) + fl%get_cs(i, j, k, cgl%cg%u, cgl%cg%b, cgl%cg%cs_iso2)
                enddo
             enddo
@@ -1217,7 +1217,7 @@ contains
       do while (associated(cgl))
          cgl%cg%wa = cgl%cg%dy / (cgl%cg%wa +small)
          if (dom%geometry_type == GEO_RPZ) then
-            do i = lbound(cgl%cg%wa, 1), ubound(cgl%cg%wa, 1)
+            do i = cgl%cg%is, cgl%cg%ie
                cgl%cg%wa(i, :, :) = cgl%cg%wa(i, :, :) * cgl%cg%x(i)
             enddo 
          endif
