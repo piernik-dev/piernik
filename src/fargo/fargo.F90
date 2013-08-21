@@ -179,10 +179,11 @@ contains
                   if (cg%leafmap(i, j, k)) then
                      omega  = cg%u(pfl%imy, i, j, k) / cg%u(pfl%idn, i, j, k) / cg%x(i) - cg%u(pfl%imy, i-1, j, k) / cg%u(pfl%idn, i-1, j, k) / cg%x(i-1)
                      omega  = max(abs(omega), small)
-                     omegap = (cg%u(pfl%imy, i, j, k) / cg%u(pfl%idn, i, j, k) - cg%u(pfl%imy, i, j-1, K) / cg%u(pfl%idn, i, j-1, k)) / cg%x(i)
-                     omegap = max(abs(omegap), small)
-                     dphi = cg%dl(ydim)
-                     dt_shear = min(dt_shear, half*min(dphi / abs(omega), dphi / abs(omegap)))
+                     !omegap = (cg%u(pfl%imy, i, j, k) / cg%u(pfl%idn, i, j, k) - cg%u(pfl%imy, i, j-1, K) / cg%u(pfl%idn, i, j-1, k)) / cg%x(i)
+                     !omegap = max(abs(omegap), small)
+                     !dphi = cg%dl(ydim)
+                     !dt_shear = min(dt_shear, half*min(dphi / abs(omega), dphi / abs(omegap)))
+                     dt_shear = min(dt_shear, half * cg%dl(ydim) / omega)
                   endif
                enddo
             enddo
