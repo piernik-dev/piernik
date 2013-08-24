@@ -41,6 +41,7 @@
     dt_log       = 1.0e-1
     dt_tsl       = 1.0e-1
     vars(1:) = 'encr', 'dens', 'magx', 'magy', 'magz', 'velx', 'vely', 'velz'
+    gdf_strict = .true.
  /
 
  $FLUID_IONIZED

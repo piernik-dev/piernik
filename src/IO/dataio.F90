@@ -38,7 +38,7 @@
 
 module dataio
 
-   use dataio_pub, only: domain_dump, fmin, fmax, vizit, nend, tend, wend, new_id, nrestart, problem_name, run_id, multiple_h5files, use_v2_io, nproc_io, enable_compression, gzip_level
+   use dataio_pub, only: domain_dump, fmin, fmax, vizit, nend, tend, wend, new_id, nrestart, problem_name, run_id, multiple_h5files, use_v2_io, nproc_io, enable_compression, gzip_level, gdf_strict
    use constants,  only: cwdlen, fmt_len, cbuff_len, dsetnamelen, RES, TSL
    use timer,      only: wallclock
 
@@ -104,7 +104,7 @@ module dataio
    namelist /OUTPUT_CONTROL/  problem_name, run_id, dt_hdf, dt_res, dt_tsl, dt_log, tsl_with_mom, tsl_with_ptc, &
                               domain_dump, vars, mag_center, vizit, fmin, fmax, user_message_file, system_message_file, &
                               multiple_h5files, use_v2_io, nproc_io, enable_compression, gzip_level, initial_hdf_dump, &
-                              colormode, wdt_res
+                              colormode, wdt_res, gdf_strict
 
 contains
 
@@ -155,6 +155,7 @@ contains
 !! <tr><td>system_message_file</td><td>'/tmp/piernik_msg' </td><td>string of characters similar to default value</td><td>\copydoc dataio::system_message_file</td></tr>
 !! <tr><td>multiple_h5files   </td><td>.false.            </td><td>logical   </td><td>\copydoc dataio_pub::multiple_h5files</td></tr>
 !! <tr><td>use_v2_io          </td><td>.true.             </td><td>logical   </td><td>\copydoc dataio_pub::use_v2_io    </td></tr>
+!! <tr><td>gdf_strict         </td><td>.true.             </td><td>logical   </td><td>\copydoc dataio_pub::gdf_strict   </td></tr>
 !! <tr><td>nproc_io           </td><td>nproc              </td><td>integer   </td><td>\copydoc dataio_pub::nproc_io     </td></tr>
 !! <tr><td>enable_compression </td><td>.false.            </td><td>logical   </td><td>\copydoc dataio_pub::enable_compression</td></tr>
 !! <tr><td>gzip_level         </td><td>9                  </td><td>integer   </td><td>\copydoc dataio_pub::gzip_level   </td></tr>
@@ -291,6 +292,7 @@ contains
 
       tsl_firstcall      = .true.
       use_v2_io          = .true.
+      gdf_strict         = .false.
       nproc_io           = nproc
       enable_compression = .false.
       gzip_level         = 9
@@ -342,7 +344,7 @@ contains
 !   namelist /OUTPUT_CONTROL/  problem_name, run_id, dt_hdf, dt_res, dt_tsl, dt_log, tsl_with_mom, tsl_with_ptc, &
 !                              domain_dump, vars, mag_center, vizit, fmin, fmax, user_message_file, system_message_file, &
 !                              multiple_h5files, use_v2_io, nproc_io, enable_compression, gzip_level, initial_hdf_dump, &
-!                              colormode, wdt_res
+!                              colormode, wdt_res, gdf_strict
          ibuff(43) = nproc_io
          ibuff(44) = gzip_level
 
@@ -362,6 +364,7 @@ contains
          lbuff(6)  = tsl_with_mom
          lbuff(7)  = tsl_with_ptc
          lbuff(8)  = colormode
+         lbuff(9)  = gdf_strict
 
          cbuff(31) = problem_name
          cbuff(32) = run_id
@@ -399,7 +402,7 @@ contains
 !   namelist /OUTPUT_CONTROL/  problem_name, run_id, dt_hdf, dt_res, dt_tsl, dt_log, tsl_with_mom, tsl_with_ptc, &
 !                              domain_dump, vars, mag_center, vizit, fmin, fmax, user_message_file, system_message_file, &
 !                              multiple_h5files, use_v2_io, nproc_io, enable_compression, gzip_level, initial_hdf_dump, &
-!                              colormode, wdt_res
+!                              colormode, wdt_res, gdf_strict
 
          nproc_io            = int(ibuff(43), kind=4)
          gzip_level          = int(ibuff(44), kind=4)
@@ -420,6 +423,7 @@ contains
          tsl_with_mom        = lbuff(6)
          tsl_with_ptc        = lbuff(7)
          colormode           = lbuff(8)
+         gdf_strict          = lbuff(9)
 
          problem_name        = cbuff(31)
          run_id              = cbuff(32)(1:idlen)
