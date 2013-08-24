@@ -108,6 +108,36 @@ contains
       end select
    end function datafields_descr
 
+   elemental function gdf_translate(var) result(newname)
+
+      use constants,    only: dsetnamelen
+      use dataio_pub,   only: gdf_strict
+
+      implicit none
+
+      character(len=*), intent(in) :: var
+      character(len=dsetnamelen)   :: newname
+
+      if (gdf_strict) then
+         select case (trim(var))
+            case ("dend", "deni", "denn")
+               newname = "density"
+            case ("vlxd", "vlxn", "vlxi", "vlyd", "vlyn", "vlyi", "vlzd", "vlzn", "vlzi")
+               write(newname, '("velocity_",A1)') var(3:3)
+            case ("enen", "enei")
+               newname = "specific_energy"
+            case ("pren", "prei")
+               newname = "pressure"
+            case ("magx", "magy", "magz")
+               write(newname, '("mag_field_",A1)') var(4:4)
+            case default
+               write(newname, '(A)') trim(var)
+         end select
+      else
+         write(newname, '(A)') trim(var)
+      endif
+   end function gdf_translate
+
    subroutine create_datafields_descrs(place)
 
       use common_hdf5,  only: hdf_vars
@@ -129,7 +159,7 @@ contains
       allocate(ibuf(1))
       do i = lbound(hdf_vars,1), ubound(hdf_vars,1)
          f = datafields_descr(hdf_vars(i))
-         call h5gcreate_f(place, hdf_vars(i), g_id, error)
+         call h5gcreate_f(place, gdf_translate(hdf_vars(i)), g_id, error)
          call create_attribute(g_id, 'field_to_cgs', [f%f2cgs])
          ibuf = f%stag
          call create_attribute(g_id, 'staggering',   ibuf)
@@ -322,7 +352,7 @@ contains
       real(kind=4), dimension(:,:,:),  pointer             :: data
       type(cg_output)                                      :: cg_desc
 
-      call cg_desc%init(cgl_g_id, cg_n, nproc_io, hdf_vars)
+      call cg_desc%init(cgl_g_id, cg_n, nproc_io, gdf_translate(hdf_vars))
 
       if (cg_desc%tot_cg_n < 1) call die("[data_hdf5:write_cg_to_output] no cg available!")
 
@@ -503,7 +533,7 @@ contains
       integer                                              :: i
 
       do i = lbound(hdf_vars,1), ubound(hdf_vars,1)
-         call create_empty_cg_dataset(cg_g_id, hdf_vars(i), int(cg_n_b(g, :), kind=HSIZE_T), Z_avail, O_OUT)
+         call create_empty_cg_dataset(cg_g_id, gdf_translate(hdf_vars(i)), int(cg_n_b(g, :), kind=HSIZE_T), Z_avail, O_OUT)
       enddo
    end subroutine create_empty_cg_datasets_in_output
 
@@ -567,7 +597,7 @@ contains
          ! Cannot use in multiblock
          ! if (.not. is_uneven) call h5pset_chunk_f(plist_id, rank, chunk_dims, error) !> \todo check how much performance it gives (massively parallel I/O is required)
 
-         call h5dcreate_f(file_id, hdf_vars(i), H5T_NATIVE_REAL, filespace, dset_id, error, plist_id)
+         call h5dcreate_f(file_id, gdf_translate(hdf_vars(i)), H5T_NATIVE_REAL, filespace, dset_id, error, plist_id)
          call h5sclose_f(filespace, error)
 
          call h5dget_space_f(dset_id, filespace, error)
