@@ -309,6 +309,7 @@ contains
       type(grid_container),   pointer :: cg
       class(component_fluid), pointer :: fl
       real, dimension(:,:,:), pointer :: q0
+      real                            :: vr, vphi
 
       if (.not. allocated(ic_data) .and. .not. fake_ic) call read_IC_file
 
@@ -360,6 +361,10 @@ contains
                            iic = nint((cg%x(i)*cos(cg%y(j)) + ic_xysize/2.)/ic_dx)
                            jic = nint((cg%x(i)*sin(cg%y(j)) + ic_xysize/2.)/ic_dx)
                            call set_point(i, j, k, iic, jic, kic)
+                           vr   =  cg%u(fl%imx, i, j, k)*cos(cg%y(j)) + cg%u(fl%imy, i, j, k)*sin(cg%y(j))
+                           vphi = -cg%u(fl%imx, i, j, k)*sin(cg%y(j)) + cg%u(fl%imy, i, j, k)*cos(cg%y(j))
+                           cg%u(fl%imx, i, j, k) = vr
+                           cg%u(fl%imy, i, j, k) = vphi
                         enddo
                      enddo
                   case default
