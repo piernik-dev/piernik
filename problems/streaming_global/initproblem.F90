@@ -75,7 +75,7 @@ contains
       use gravity,               only: grav_pot_3d
 #ifdef HDF5
       use dataio_user,           only: user_vars_hdf5
-#endif HDF5
+#endif /* HDF5 */
 
       implicit none
 
