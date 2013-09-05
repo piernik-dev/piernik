@@ -71,8 +71,8 @@ module particle_types
       procedure :: evolve => particle_set_evolve !< perform time integration with n-body solver
       procedure :: add_using_basic_types   !< add a particle
       procedure :: add_using_derived_type  !< add a particle
-      generic, public :: exists => particle_with_id_exists
       procedure :: particle_with_id_exists  !< Check if particle no. "i" exists
+      generic, public :: exists => particle_with_id_exists
       generic, public :: add => add_using_basic_types, add_using_derived_type
    end type particle_set
 
