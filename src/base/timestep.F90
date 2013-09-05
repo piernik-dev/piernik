@@ -38,18 +38,18 @@ module timestep
 
    private
    public :: time_step, cfl_manager
-#if defined(__INTEL_COMPILER)
+#if defined(__INTEL_COMPILER) || defined(_CRAYFTN)
    !! \deprecated remove this clause as soon as Intel Compiler gets required features and/or bug fixes
    public :: init_time_step
-#endif /* __INTEL_COMPILER */
+#endif /* __INTEL_COMPILER || _CRAYFTN */
 
    real :: c_all_old
-#if defined(__INTEL_COMPILER)
+#if defined(__INTEL_COMPILER) || defined(_CRAYFTN)
    !! \deprecated remove this clause as soon as Intel Compiler gets required features and/or bug fixes
    procedure(), pointer :: cfl_manager
-#else /* !__INTEL_COMPILER */
+#else /* ! (__INTEL_COMPILER || _CRAYFTN) */
    procedure(), pointer :: cfl_manager => init_time_step
-#endif /* !__INTEL_COMPILER */
+#endif /* !(__INTEL_COMPILER || _CRAYFTN) */
 
 contains
 
@@ -86,10 +86,10 @@ contains
          call warn("[timestep:init_time_step] cfl_manager was not associated.")
          return
       endif
-#if !defined(__INTEL_COMPILER)
+#if !(defined(__INTEL_COMPILER) || defined(_CRAYFTN))
       !! \deprecated remove this clause as soon as Intel Compiler gets required features and/or bug fixes
       call cfl_manager
-#endif /* !__INTEL_COMPILER */
+#endif /* !__INTEL_COMPILER && !_CRAYFTN */
 
    end subroutine init_time_step
 
