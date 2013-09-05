@@ -801,15 +801,8 @@ contains
 
       use common_hdf5,   only: output_fname
       use constants,     only: RD
-#if defined(__INTEL_COMPILER)
-      use ifport,        only: unlink
-#endif /* __INTEL_COMPILER */
 
       implicit none
-
-#if defined(__PGI)
-      include "lib3f.h"
-#endif /* __PGI */
 
       integer(kind=4), intent(out) :: restart_number
 
@@ -819,7 +812,8 @@ contains
 
       restart_number = 0
 
-      unlink_stat = unlink('restart_list.tmp')
+      open(newunit=unlink_stat, file='restart_list.tmp', status='unknown')
+      close(unlink_stat, status='delete')
 
       do nres = 999, 0, -1
          inquire(file = trim(output_fname(RD,'.res', nres)), exist = exist)
@@ -1636,7 +1630,7 @@ contains
       use dataio_pub,    only: msg, printinfo, warn
       use mpisetup,      only: master
 #if defined(__INTEL_COMPILER)
-      use ifport,        only: unlink, stat
+      use ifport,        only: pxfstat
 #endif /* __INTEL_COMPILER */
 
       implicit none
@@ -1665,7 +1659,11 @@ contains
          if (ex .and. sz<=0) then ! process only one message file at a time, user_message_file first
             ! I think system file is more important, but current logic prevents reading user_message_file when system_message_file is present
 
-            sts = stat(fname(i), stat_buff)
+#ifdef __GFORTRAN__
+            sts = stat(fname(i), stat_buff)  ! old way to do stat
+#else /* !__GFORTRAN__ */
+            call pxfstat(fname(i), 0, stat_buff, sts)
+#endif /* !__GFORTRAN__ */
             if (last_msg_stamp(i) == stat_buff(10)) exit
             last_msg_stamp(i) = stat_buff(10)
 
@@ -1690,8 +1688,10 @@ contains
             if (len_trim(msg) > 0 .and. master) call printinfo(msg)
 
             sz = len_trim(msg)
-            if (fname(i) == user_message_file) unlink_stat = unlink(user_message_file)
-
+            if (fname(i) == user_message_file) then
+               open(newunit=unlink_stat, file=user_message_file, status='unknown')
+               close(unlink_stat, status='delete')
+            endif
          endif
       enddo
 
