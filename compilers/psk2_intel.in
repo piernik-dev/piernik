@@ -12,7 +12,6 @@ F90FLAGS = -O3 -r8 -implicitnone -g -traceback -fpe0 -heap-arrays
 F90FLAGS += -ftrapuv -check all -check noarg_temp_created -debug all -WB
 
 CPPFLAGS += -D __INTEL_COMPILER
-USE_GNUCPP = yes
 HDF_LIB  = . 
 LDFLAGS += -limf -lm
 

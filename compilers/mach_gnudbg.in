@@ -2,7 +2,6 @@ PROG      = piernik
 
 ### gcc-4.5 debug
 
-USE_GNUCPP = yes
 PRECOMP    =  /opt/gcc/4.5/bin/cpp
 
 

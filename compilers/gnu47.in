@@ -1,5 +1,4 @@
 PROG      = piernik
-USE_GNUCPP = yes
 
 ### gcc-4.7
 F90       = mpif90

@@ -12,5 +12,4 @@ PROG     = piernik
 F90      = h5pfc
 F90FLAGS = -O3 -f free -N 255  -s real64 -s integer32 #-s default64
 #F90FLAGS += -em -G0 -e cC -R bcps -rl
-USE_GNUCPP = yes
 MAKEFLAGS += -j2
