@@ -218,7 +218,7 @@ contains
                dn     => cg%w(wna%fi)%get_sweep(dir, iarr_all_dn(ifluid)    , i2, i3)
                associate( &
 #ifndef _CRAYFTN
-                  vv => mom(:) / dens(:), &
+                  vv => mom(:) / dn(:), &
 #endif /* _CRAYFTN */
                   nn => cg%n_(dir), &
                   idl => cg%idl(dir) &
@@ -226,7 +226,7 @@ contains
 #ifndef _CRAYFTN
                   divvel(2:nn-1) = divvel(2:nn-1) + (vv(3:nn) - vv(1:nn-2)) * (half * idl)
 #else /* _CRAYFTN */
-                  divvel(2:nn-1) = divvel(2:nn-1) + (mom(3:nn)/dn(3:nn) - mom(1:nn-2)/dn(1:nn-2)) * (half * idl)
+                  divvel(2:nn-1) = divvel(2:nn-1) + (mom(3:nn) / dn(3:nn) - mom(1:nn-2) / dn(1:nn-2)) * (half * idl)
 #endif /* _CRAYFTN */
                   divvel(1) = divvel(2)
                   divvel(nn) = divvel(nn-1) ! for sanity
