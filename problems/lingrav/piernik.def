@@ -1,19 +1,13 @@
-/* choosing fluids */
 #define IONIZED
 #undef MAGNETIC
 
-/* adiabatic or isothermal */
 #define ISO
 
-/* choosing freezing speed */
 #define GLOBAL_FR_SPEED
 
-/* physics including */
 #undef RESISTIVE
 
-/* gravity type choosing */
 #define GRAV
 
-/* numerical solutions and limitations */
 #undef SHEAR
 #define RTVD
