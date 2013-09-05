@@ -485,7 +485,7 @@ contains
       implicit none
 
       character(len=*),                        intent(in)    :: hdf_var
-      type(grid_container),           pointer, intent(in)    :: cg
+      type(grid_container),           pointer, intent(inout) :: cg
       real(kind=4), dimension(:,:,:), pointer, intent(inout) :: tab
 
       integer                                                :: ierrh
