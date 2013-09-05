@@ -70,7 +70,21 @@ contains
       interpolation_scheme = default_is
 
       if (master) then
-         diff_nml(PARTICLES)
+         if (.not.nh%initialized) call nh%init()
+         open(newunit=nh%lun, file=nh%tmp1, status="unknown")
+         write(nh%lun,nml=PARTICLES)
+         close(nh%lun)
+         open(newunit=nh%lun, file=nh%par_file)
+         nh%errstr=""
+         read(unit=nh%lun, nml=PARTICLES, iostat=nh%ierrh, iomsg=nh%errstr)
+         close(nh%lun)
+         call nh%namelist_errh(nh%ierrh, "PARTICLES")
+         read(nh%cmdl_nml,nml=PARTICLES, iostat=nh%ierrh)
+         call nh%namelist_errh(nh%ierrh, "PARTICLES", .true.)
+         open(newunit=nh%lun, file=nh%tmp2, status="unknown")
+         write(nh%lun,nml=PARTICLES)
+         close(nh%lun)
+         call nh%compare_namelist()
 
          cbuff(1) = time_integrator
          cbuff(2) = interpolation_scheme
@@ -85,9 +99,11 @@ contains
 
       psolver => null()
       select case (trim(time_integrator))
+#ifndef _CRAYFTN
          case ('hermit4')
             psolver => hermit4
          case (default_ti) ! be quiet
+#endif /* !_CRAYFTN */
          case default
             write(msg, '(3a)')"[particle_pub:init_particles] Unknown integrator '",trim(time_integrator),"'"
             call die(msg)

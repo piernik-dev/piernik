@@ -1,5 +1,4 @@
 PROG      = piernik
-USE_GNUCPP = yes
 
 ### gcc >= 4.8, openmpi >= 1.6.5, hdf5 >= 1.8.11
 F90       = /opt/hdf5/bin/h5pfc

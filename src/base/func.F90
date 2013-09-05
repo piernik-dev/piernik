@@ -157,11 +157,11 @@ contains
       integer, intent(in) :: lunit  !< Fortran logical unit
       integer(kind=4) :: piernik_fnum
 
-#if defined(__INTEL_COMPILER)
+#if defined(__INTEL_COMPILER) || defined(_CRAYFTN)
       integer :: fd, ierror
       call pxffileno(lunit, fd, ierror)
       piernik_fnum = fd
-#else /* __INTEL_COMPILER */
+#else /* __INTEL_COMPILER || _CRAYFTN */
       piernik_fnum = int(fnum(lunit), kind=4)
 #endif /* !__INTEL_COMPILER */
    end function piernik_fnum

@@ -152,7 +152,21 @@ contains
 
       if (master) then
 
-         diff_nml(COSMIC_RAYS) ! Do not use one-line if here!
+         if (.not.nh%initialized) call nh%init()
+         open(newunit=nh%lun, file=nh%tmp1, status="unknown")
+         write(nh%lun,nml=COSMIC_RAYS)
+         close(nh%lun)
+         open(newunit=nh%lun, file=nh%par_file)
+         nh%errstr=""
+         read(unit=nh%lun, nml=COSMIC_RAYS, iostat=nh%ierrh, iomsg=nh%errstr)
+         close(nh%lun)
+         call nh%namelist_errh(nh%ierrh, "COSMIC_RAYS")
+         read(nh%cmdl_nml,nml=COSMIC_RAYS, iostat=nh%ierrh)
+         call nh%namelist_errh(nh%ierrh, "COSMIC_RAYS", .true.)
+         open(newunit=nh%lun, file=nh%tmp2, status="unknown")
+         write(nh%lun,nml=COSMIC_RAYS)
+         close(nh%lun)
+         call nh%compare_namelist() ! Do not use one-line if here!
 
       endif
 

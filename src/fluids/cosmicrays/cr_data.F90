@@ -161,7 +161,21 @@ contains
 
       if (master) then
 
-         diff_nml(CR_SPECIES) ! Do not use one-line if here!
+         if (.not.nh%initialized) call nh%init()
+         open(newunit=nh%lun, file=nh%tmp1, status="unknown")
+         write(nh%lun,nml=CR_SPECIES)
+         close(nh%lun)
+         open(newunit=nh%lun, file=nh%par_file)
+         nh%errstr=""
+         read(unit=nh%lun, nml=CR_SPECIES, iostat=nh%ierrh, iomsg=nh%errstr)
+         close(nh%lun)
+         call nh%namelist_errh(nh%ierrh, "CR_SPECIES")
+         read(nh%cmdl_nml,nml=CR_SPECIES, iostat=nh%ierrh)
+         call nh%namelist_errh(nh%ierrh, "CR_SPECIES", .true.)
+         open(newunit=nh%lun, file=nh%tmp2, status="unknown")
+         write(nh%lun,nml=CR_SPECIES)
+         close(nh%lun)
+         call nh%compare_namelist() ! Do not use one-line if here!
 
          lbuff(icr_H1   VS icr_H1  )   = eH1
          lbuff(icr_C12  VS icr_C12 )  = eC12

@@ -144,7 +144,21 @@ contains
 
       if (master) then
 
-         diff_nml(MULTIGRID_DIFFUSION)
+         if (.not.nh%initialized) call nh%init()
+         open(newunit=nh%lun, file=nh%tmp1, status="unknown")
+         write(nh%lun,nml=MULTIGRID_DIFFUSION)
+         close(nh%lun)
+         open(newunit=nh%lun, file=nh%par_file)
+         nh%errstr=""
+         read(unit=nh%lun, nml=MULTIGRID_DIFFUSION, iostat=nh%ierrh, iomsg=nh%errstr)
+         close(nh%lun)
+         call nh%namelist_errh(nh%ierrh, "MULTIGRID_DIFFUSION")
+         read(nh%cmdl_nml,nml=MULTIGRID_DIFFUSION, iostat=nh%ierrh)
+         call nh%namelist_errh(nh%ierrh, "MULTIGRID_DIFFUSION", .true.)
+         open(newunit=nh%lun, file=nh%tmp2, status="unknown")
+         write(nh%lun,nml=MULTIGRID_DIFFUSION)
+         close(nh%lun)
+         call nh%compare_namelist()
 
          rbuff(1) = norm_tol
          rbuff(2) = vcycle_abort
@@ -603,12 +617,12 @@ contains
 
       implicit none
 
-      integer(kind=4),               intent(in)  :: crdim        !< direction in which we calculate flux
-      integer, dimension(:),         intent(in)  :: im           !< [first cell index, second cell index, third cell index]
-      integer(kind=4),               intent(in)  :: soln         !< multigrid variable to differentiate
-      type(grid_container), pointer, intent(in)  :: cg           !< level on which differentiate
-      integer,                       intent(in)  :: cr_id        !< CR component index
-      real, optional,                intent(out) :: Keff         !< effective diffusion coefficient for relaxation
+      integer(kind=4),               intent(in)    :: crdim        !< direction in which we calculate flux
+      integer, dimension(:),         intent(in)    :: im           !< [first cell index, second cell index, third cell index]
+      integer(kind=4),               intent(in)    :: soln         !< multigrid variable to differentiate
+      type(grid_container), pointer, intent(inout) :: cg           !< level on which differentiate
+      integer,                       intent(in)    :: cr_id        !< CR component index
+      real, optional,                intent(out)   :: Keff         !< effective diffusion coefficient for relaxation
 
       real                                   :: magb, fcrdif, kbm
       real                                   :: b_par, b_perp, d_par, db
@@ -679,11 +693,11 @@ contains
 
       implicit none
 
-      type(cg_level_connected_T), pointer, intent(in) :: curl !< level for which approximate the solution
-      integer(kind=4),                     intent(in) :: src   !< index of source in cg%q(:)
-      integer(kind=4),                     intent(in) :: soln  !< index of solution in cg%q(:)
-      integer(kind=4),                     intent(in) :: def   !< index of defect in cg%q(:)
-      integer,                             intent(in) :: cr_id !< CR component index
+      type(cg_level_connected_T), pointer, intent(inout) :: curl !< level for which approximate the solution
+      integer(kind=4),                     intent(in)    :: src   !< index of source in cg%q(:)
+      integer(kind=4),                     intent(in)    :: soln  !< index of solution in cg%q(:)
+      integer(kind=4),                     intent(in)    :: def   !< index of defect in cg%q(:)
+      integer,                             intent(in)    :: cr_id !< CR component index
 
       integer                        :: i, j, k
       integer(kind=4)                :: idir
@@ -746,10 +760,10 @@ contains
 
       implicit none
 
-      type(cg_level_connected_T), pointer, intent(in) :: curl  !< level for which approximate the solution
-      integer(kind=4),                     intent(in) :: src   !< index of source in cg%q(:)
-      integer(kind=4),                     intent(in) :: soln  !< index of solution in cg%q(:)
-      integer,                             intent(in) :: cr_id !< CR component index
+      type(cg_level_connected_T), pointer, intent(inout) :: curl  !< level for which approximate the solution
+      integer(kind=4),                     intent(in)    :: src   !< index of source in cg%q(:)
+      integer(kind=4),                     intent(in)    :: soln  !< index of solution in cg%q(:)
+      integer,                             intent(in)    :: cr_id !< CR component index
 
       integer, parameter              :: RED_BLACK = 2 !< the checkerboard requires two sweeps
 

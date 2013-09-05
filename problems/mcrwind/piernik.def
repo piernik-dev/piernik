@@ -1,28 +1,18 @@
-/* choosing fluids */
 #define IONIZED
 #define COSM_RAYS
 #define COSM_RAYS_SOURCES
 
-/* adiabatic or isothermal */
 #define ISO
 
-/* choosing freezing speed */
 #define GLOBAL_FR_SPEED
 
-/* physics including */
 #define MAGNETIC
 #define RESISTIVE
 
-/* gravity type choosing */
 #define GRAV
 
-/* structure features including */
-/* #define GALAXY */
 #define SN_SRC
 
-/* numerical solutions and limitations */
-/* #undef SHEAR */
 
-/* include multigrid for diffusion */
 #define MULTIGRID
 #define RTVD

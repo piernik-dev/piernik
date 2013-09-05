@@ -37,11 +37,11 @@ module crhelpers
 
    private
    public :: div_v, set_div_v1d, divv_n
-#if defined(__INTEL_COMPILER)
+#if defined(__INTEL_COMPILER) || defined(_CRAYFTN)
       !! \deprecated remove this clause as soon as Intel Compiler gets required
       !! features and/or bug fixes
    public :: init_div_v
-#endif /* __INTEL_COMPILER */
+#endif /* __INTEL_COMPILER || _CRAYFTN */
 
    interface
       subroutine div_v_func(ifluid, cg)
@@ -54,17 +54,17 @@ module crhelpers
 
    character(len=dsetnamelen), parameter :: divv_n = "divvel" !< divergence of velocity
 
-#if defined(__INTEL_COMPILER)
+#if defined(__INTEL_COMPILER) || defined(_CRAYFTN)
       !! \deprecated remove this clause as soon as Intel Compiler gets required
       !! features and/or bug fixes
    procedure(div_v_func), pointer :: div_v
-#else /* !__INTEL_COMPILER */
+#else /* !__INTEL_COMPILER && !_CRAYFTN */
    procedure(div_v_func), pointer :: div_v => init_divv
-#endif /* !__INTEL_COMPILER */
+#endif /* !__INTEL_COMPILER && !_CRAYFTN */
 
 contains
 
-#if defined(__INTEL_COMPILER)
+#if defined(__INTEL_COMPILER) || defined(_CRAYFTN)
    !! \deprecated remove this clause as soon as Intel Compiler gets required
    !! features and/or bug fixes
    subroutine init_div_v
@@ -82,7 +82,7 @@ contains
 
       return
    end subroutine init_div_v
-#endif /* __INTEL_COMPILER */
+#endif /* __INTEL_COMPILER || _CRAYFTN */
 
    subroutine init_divv(ifluid, cg)
 
@@ -116,7 +116,7 @@ contains
       integer(kind=4),               intent(in)    :: dir
       integer,                       intent(in)    :: i1, i2
       real, dimension(:),   pointer, intent(inout) :: p
-      type(grid_container), pointer, intent(in)    :: cg
+      type(grid_container), pointer, intent(inout) :: cg
 
       if (.not. qna%exists(divv_n)) call die("[crhelpers:set_div_v1d] cannot get divvel")
       p => cg%q(qna%ind(divv_n))%get_sweep(dir, i1, i2)
@@ -162,13 +162,21 @@ contains
                mom  => cg%w(wna%fi)%get_sweep(dir, iarr_all_dn(ifluid) + dir, i2, i3)
                dens => cg%w(wna%fi)%get_sweep(dir, iarr_all_dn(ifluid)      , i2, i3)
                associate( &
+#ifndef _CRAYFTN
                   vv => mom(:) / dens(:), &
+#endif /* _CRAYFTN */
                   nn => cg%n_(dir), &
                   idl => cg%idl(dir) &
                )
+#ifndef _CRAYFTN
                   divvel(4:nn-3)  = divvel(4:nn-3) + (vv(5:nn-2) - vv(3:nn-4)) * (p3_4  * idl)
                   divvel(4:nn-3)  = divvel(4:nn-3) + (vv(6:nn-1) - vv(2:nn-5)) * (m3_20 * idl)
                   divvel(4:nn-3)  = divvel(4:nn-3) + (vv(7:nn  ) - vv(1:nn-6)) * (p1_60 * idl)
+#else /* _CRAFTN */
+                  divvel(4:nn-3)  = divvel(4:nn-3) + (mom(5:nn-2)/dens(5:nn-2) - mom(3:nn-4)/dens(3:nn-4)) * (p3_4  * idl)
+                  divvel(4:nn-3)  = divvel(4:nn-3) + (mom(6:nn-1)/dens(6:nn-1) - mom(2:nn-5)/dens(2:nn-5)) * (m3_20 * idl)
+                  divvel(4:nn-3)  = divvel(4:nn-3) + (mom(7:nn  )/dens(7:nn  ) - mom(1:nn-6)/dens(1:nn-6)) * (p1_60 * idl)
+#endif /* _CRAYFTN */
                   divvel(1:3)     = big
                   divvel(nn-2:nn) = big
                end associate
@@ -209,11 +217,17 @@ contains
                mom    => cg%w(wna%fi)%get_sweep(dir, iarr_all_dn(ifluid)+dir, i2, i3)
                dn     => cg%w(wna%fi)%get_sweep(dir, iarr_all_dn(ifluid)    , i2, i3)
                associate( &
-                  vv => (mom(:) / dn(:)), &
+#ifndef _CRAYFTN
+                  vv => mom(:) / dn(:), &
+#endif /* _CRAYFTN */
                   nn => cg%n_(dir), &
                   idl => cg%idl(dir) &
                )
+#ifndef _CRAYFTN
                   divvel(2:nn-1) = divvel(2:nn-1) + (vv(3:nn) - vv(1:nn-2)) * (half * idl)
+#else /* _CRAYFTN */
+                  divvel(2:nn-1) = divvel(2:nn-1) + (mom(3:nn) / dn(3:nn) - mom(1:nn-2) / dn(1:nn-2)) * (half * idl)
+#endif /* _CRAYFTN */
                   divvel(1) = divvel(2)
                   divvel(nn) = divvel(nn-1) ! for sanity
                end associate

@@ -117,7 +117,21 @@ contains
       if (1 + 9*nshapes > ubound(rbuff, dim=1)) call die("[refinement:init_refinement] increase rbuff size") ! should be detected at compile time but it is only a warning
       if (master) then
 
-         diff_nml(AMR)
+         if (.not.nh%initialized) call nh%init()
+         open(newunit=nh%lun, file=nh%tmp1, status="unknown")
+         write(nh%lun,nml=AMR)
+         close(nh%lun)
+         open(newunit=nh%lun, file=nh%par_file)
+         nh%errstr=""
+         read(unit=nh%lun, nml=AMR, iostat=nh%ierrh, iomsg=nh%errstr)
+         close(nh%lun)
+         call nh%namelist_errh(nh%ierrh, "AMR")
+         read(nh%cmdl_nml,nml=AMR, iostat=nh%ierrh)
+         call nh%namelist_errh(nh%ierrh, "AMR", .true.)
+         open(newunit=nh%lun, file=nh%tmp2, status="unknown")
+         write(nh%lun,nml=AMR)
+         close(nh%lun)
+         call nh%compare_namelist()
 
          ! sanitizing
          if (allow_AMR) then

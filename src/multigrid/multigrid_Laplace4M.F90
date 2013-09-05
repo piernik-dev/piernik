@@ -202,9 +202,9 @@ contains
 
       implicit none
 
-      type(cg_level_connected_T), pointer, intent(in) :: curl  !< pointer to a level for which we approximate the solution
-      integer(kind=4),                     intent(in) :: src   !< index of source in cg%q(:)
-      integer(kind=4),                     intent(in) :: soln  !< index of solution in cg%q(:)
+      type(cg_level_connected_T), pointer, intent(inout) :: curl  !< pointer to a level for which we approximate the solution
+      integer(kind=4),                     intent(in)    :: src   !< index of source in cg%q(:)
+      integer(kind=4),                     intent(in)    :: soln  !< index of solution in cg%q(:)
       integer(kind=4),                     intent(in) :: nsmoo !< number of smoothing repetitions
 
       integer :: n

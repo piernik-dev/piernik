@@ -385,7 +385,21 @@ contains
 
       if (master) then
 
-         diff_nml(UNITS)
+         if (.not.nh%initialized) call nh%init()
+         open(newunit=nh%lun, file=nh%tmp1, status="unknown")
+         write(nh%lun,nml=UNITS)
+         close(nh%lun)
+         open(newunit=nh%lun, file=nh%par_file)
+         nh%errstr=""
+         read(unit=nh%lun, nml=UNITS, iostat=nh%ierrh, iomsg=nh%errstr)
+         close(nh%lun)
+         call nh%namelist_errh(nh%ierrh, "UNITS")
+         read(nh%cmdl_nml,nml=UNITS, iostat=nh%ierrh)
+         call nh%namelist_errh(nh%ierrh, "UNITS", .true.)
+         open(newunit=nh%lun, file=nh%tmp2, status="unknown")
+         write(nh%lun,nml=UNITS)
+         close(nh%lun)
+         call nh%compare_namelist()
 
          cbuff(1) = units_set
          cbuff(2) = s_len_u

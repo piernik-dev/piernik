@@ -1,17 +1,12 @@
-/* choosing fluids */
 #define NEUTRAL
 #define DUST
 
-/* adiabatic or isothermal */
 #define ISO
 
-/* choosing freezing speed */
 #define LOCAL_FR_SPEED
 
-/* physics including */
 #undef MAGNETIC
 #define FLUID_INTERACTIONS
 
-/* gravity type choosing */
 #define GRAV
 #define RTVD
