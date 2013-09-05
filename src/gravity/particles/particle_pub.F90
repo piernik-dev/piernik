@@ -99,9 +99,11 @@ contains
 
       psolver => null()
       select case (trim(time_integrator))
+#ifndef _CRAYFTN
          case ('hermit4')
             psolver => hermit4
          case (default_ti) ! be quiet
+#endif /* !_CRAYFTN */
          case default
             write(msg, '(3a)')"[particle_pub:init_particles] Unknown integrator '",trim(time_integrator),"'"
             call die(msg)
