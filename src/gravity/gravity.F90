@@ -199,7 +199,21 @@ contains
 
       if (master) then
 
-         diff_nml(GRAVITY)
+         if (.not.nh%initialized) call nh%init()
+         open(newunit=nh%lun, file=nh%tmp1, status="unknown")
+         write(nh%lun,nml=GRAVITY)
+         close(nh%lun)
+         open(newunit=nh%lun, file=nh%par_file)
+         nh%errstr=""
+         read(unit=nh%lun, nml=GRAVITY, iostat=nh%ierrh, iomsg=nh%errstr)
+         close(nh%lun)
+         call nh%namelist_errh(nh%ierrh, "GRAVITY")
+         read(nh%cmdl_nml,nml=GRAVITY, iostat=nh%ierrh)
+         call nh%namelist_errh(nh%ierrh, "GRAVITY", .true.)
+         open(newunit=nh%lun, file=nh%tmp2, status="unknown")
+         write(nh%lun,nml=GRAVITY)
+         close(nh%lun)
+         call nh%compare_namelist()
 
          ibuff(1)   = nsub
          ibuff(2)   = n_gravr

@@ -111,7 +111,21 @@ contains
 
       if (master) then
 
-         diff_nml(RESISTIVITY)
+         if (.not.nh%initialized) call nh%init()
+         open(newunit=nh%lun, file=nh%tmp1, status="unknown")
+         write(nh%lun,nml=RESISTIVITY)
+         close(nh%lun)
+         open(newunit=nh%lun, file=nh%par_file)
+         nh%errstr=""
+         read(unit=nh%lun, nml=RESISTIVITY, iostat=nh%ierrh, iomsg=nh%errstr)
+         close(nh%lun)
+         call nh%namelist_errh(nh%ierrh, "RESISTIVITY")
+         read(nh%cmdl_nml,nml=RESISTIVITY, iostat=nh%ierrh)
+         call nh%namelist_errh(nh%ierrh, "RESISTIVITY", .true.)
+         open(newunit=nh%lun, file=nh%tmp2, status="unknown")
+         write(nh%lun,nml=RESISTIVITY)
+         close(nh%lun)
+         call nh%compare_namelist()
 
          ibuff(1) = eta_scale
 

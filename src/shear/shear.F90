@@ -92,7 +92,21 @@ contains
       csvk    = 1.0
 
       if (master) then
-         diff_nml(SHEARING)
+         if (.not.nh%initialized) call nh%init()
+         open(newunit=nh%lun, file=nh%tmp1, status="unknown")
+         write(nh%lun,nml=SHEARING)
+         close(nh%lun)
+         open(newunit=nh%lun, file=nh%par_file)
+         nh%errstr=""
+         read(unit=nh%lun, nml=SHEARING, iostat=nh%ierrh, iomsg=nh%errstr)
+         close(nh%lun)
+         call nh%namelist_errh(nh%ierrh, "SHEARING")
+         read(nh%cmdl_nml,nml=SHEARING, iostat=nh%ierrh)
+         call nh%namelist_errh(nh%ierrh, "SHEARING", .true.)
+         open(newunit=nh%lun, file=nh%tmp2, status="unknown")
+         write(nh%lun,nml=SHEARING)
+         close(nh%lun)
+         call nh%compare_namelist()
 
          rbuff(1) = omega
          rbuff(2) = qshear

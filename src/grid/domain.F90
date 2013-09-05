@@ -217,8 +217,36 @@ contains
       dd_rect_quality = 0.9
 
       if (master) then
-         diff_nml(MPI_BLOCKS)
-         diff_nml(BASE_DOMAIN)
+         if (.not.nh%initialized) call nh%init()
+         open(newunit=nh%lun, file=nh%tmp1, status="unknown")
+         write(nh%lun,nml=MPI_BLOCKS)
+         close(nh%lun)
+         open(newunit=nh%lun, file=nh%par_file)
+         nh%errstr=""
+         read(unit=nh%lun, nml=MPI_BLOCKS, iostat=nh%ierrh, iomsg=nh%errstr)
+         close(nh%lun)
+         call nh%namelist_errh(nh%ierrh, "MPI_BLOCKS")
+         read(nh%cmdl_nml,nml=MPI_BLOCKS, iostat=nh%ierrh)
+         call nh%namelist_errh(nh%ierrh, "MPI_BLOCKS", .true.)
+         open(newunit=nh%lun, file=nh%tmp2, status="unknown")
+         write(nh%lun,nml=MPI_BLOCKS)
+         close(nh%lun)
+         call nh%compare_namelist()
+         if (.not.nh%initialized) call nh%init()
+         open(newunit=nh%lun, file=nh%tmp1, status="unknown")
+         write(nh%lun,nml=BASE_DOMAIN)
+         close(nh%lun)
+         open(newunit=nh%lun, file=nh%par_file)
+         nh%errstr=""
+         read(unit=nh%lun, nml=BASE_DOMAIN, iostat=nh%ierrh, iomsg=nh%errstr)
+         close(nh%lun)
+         call nh%namelist_errh(nh%ierrh, "BASE_DOMAIN")
+         read(nh%cmdl_nml,nml=BASE_DOMAIN, iostat=nh%ierrh)
+         call nh%namelist_errh(nh%ierrh, "BASE_DOMAIN", .true.)
+         open(newunit=nh%lun, file=nh%tmp2, status="unknown")
+         write(nh%lun,nml=BASE_DOMAIN)
+         close(nh%lun)
+         call nh%compare_namelist()
 
          if (any(AMR_bsize(:) > 0 .and. AMR_bsize(:) < nb .and. n_d(:) > 1)) call die("[domain:init_domain] AMR_bsize(:) is too small.")
 

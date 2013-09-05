@@ -93,7 +93,21 @@ contains
       r_sn       = 0.0
 
       if (master) then
-         diff_nml(SN_SOURCES)
+         if (.not.nh%initialized) call nh%init()
+         open(newunit=nh%lun, file=nh%tmp1, status="unknown")
+         write(nh%lun,nml=SN_SOURCES)
+         close(nh%lun)
+         open(newunit=nh%lun, file=nh%par_file)
+         nh%errstr=""
+         read(unit=nh%lun, nml=SN_SOURCES, iostat=nh%ierrh, iomsg=nh%errstr)
+         close(nh%lun)
+         call nh%namelist_errh(nh%ierrh, "SN_SOURCES")
+         read(nh%cmdl_nml,nml=SN_SOURCES, iostat=nh%ierrh)
+         call nh%namelist_errh(nh%ierrh, "SN_SOURCES", .true.)
+         open(newunit=nh%lun, file=nh%tmp2, status="unknown")
+         write(nh%lun,nml=SN_SOURCES)
+         close(nh%lun)
+         call nh%compare_namelist()
 !         rbuff(1)   = amp_ecr_sn
 !         rbuff(2)   = f_sn
          rbuff(3)   = h_sn

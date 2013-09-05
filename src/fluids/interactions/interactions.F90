@@ -113,7 +113,21 @@ contains
 
       if (master) then
 
-         diff_nml(INTERACTIONS)
+         if (.not.nh%initialized) call nh%init()
+         open(newunit=nh%lun, file=nh%tmp1, status="unknown")
+         write(nh%lun,nml=INTERACTIONS)
+         close(nh%lun)
+         open(newunit=nh%lun, file=nh%par_file)
+         nh%errstr=""
+         read(unit=nh%lun, nml=INTERACTIONS, iostat=nh%ierrh, iomsg=nh%errstr)
+         close(nh%lun)
+         call nh%namelist_errh(nh%ierrh, "INTERACTIONS")
+         read(nh%cmdl_nml,nml=INTERACTIONS, iostat=nh%ierrh)
+         call nh%namelist_errh(nh%ierrh, "INTERACTIONS", .true.)
+         open(newunit=nh%lun, file=nh%tmp2, status="unknown")
+         write(nh%lun,nml=INTERACTIONS)
+         close(nh%lun)
+         call nh%compare_namelist()
 
          rbuff(1)  = collision_factor
          rbuff(2)  = cfl_interact

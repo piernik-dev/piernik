@@ -192,7 +192,21 @@ contains
 
       if (master) then
 
-         diff_nml(MULTIGRID_GRAVITY)
+         if (.not.nh%initialized) call nh%init()
+         open(newunit=nh%lun, file=nh%tmp1, status="unknown")
+         write(nh%lun,nml=MULTIGRID_GRAVITY)
+         close(nh%lun)
+         open(newunit=nh%lun, file=nh%par_file)
+         nh%errstr=""
+         read(unit=nh%lun, nml=MULTIGRID_GRAVITY, iostat=nh%ierrh, iomsg=nh%errstr)
+         close(nh%lun)
+         call nh%namelist_errh(nh%ierrh, "MULTIGRID_GRAVITY")
+         read(nh%cmdl_nml,nml=MULTIGRID_GRAVITY, iostat=nh%ierrh)
+         call nh%namelist_errh(nh%ierrh, "MULTIGRID_GRAVITY", .true.)
+         open(newunit=nh%lun, file=nh%tmp2, status="unknown")
+         write(nh%lun,nml=MULTIGRID_GRAVITY)
+         close(nh%lun)
+         call nh%compare_namelist()
 
          if (nsmool < 0) nsmool = -nsmool * dom%nb
 

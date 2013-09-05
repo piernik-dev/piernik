@@ -77,7 +77,21 @@ contains
       tracers(:) = 0_INT4; tracers(1) = 1_INT4 ! activate only first tracer fluid by default
 
       if (master) then
-         diff_nml(FLUID_TRACER)
+         if (.not.nh%initialized) call nh%init()
+         open(newunit=nh%lun, file=nh%tmp1, status="unknown")
+         write(nh%lun,nml=FLUID_TRACER)
+         close(nh%lun)
+         open(newunit=nh%lun, file=nh%par_file)
+         nh%errstr=""
+         read(unit=nh%lun, nml=FLUID_TRACER, iostat=nh%ierrh, iomsg=nh%errstr)
+         close(nh%lun)
+         call nh%namelist_errh(nh%ierrh, "FLUID_TRACER")
+         read(nh%cmdl_nml,nml=FLUID_TRACER, iostat=nh%ierrh)
+         call nh%namelist_errh(nh%ierrh, "FLUID_TRACER", .true.)
+         open(newunit=nh%lun, file=nh%tmp2, status="unknown")
+         write(nh%lun,nml=FLUID_TRACER)
+         close(nh%lun)
+         call nh%compare_namelist()
 
          ibuff(1:tracers_max)   = tracers
       endif
