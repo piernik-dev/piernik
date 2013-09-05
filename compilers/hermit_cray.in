@@ -1,0 +1,14 @@
+###############################################################################
+#
+# Make definitions for Franklin at NERSC
+#
+# To activate the h5pfc wrapper, do the following:
+#   module load tools/hdf5-parallel/1.8.11
+#   module load fftw/3.3.0.2
+#
+
+PROG     = piernik
+F90      = ftn
+F90FLAGS = -O3 -f free -N 255  -s real64 -s integer32 #-s default64
+#F90FLAGS += -em -G0 -e cC -R bcps -rl
+MAKEFLAGS += -j4
