@@ -74,7 +74,21 @@ contains
       if (code_progress < PIERNIK_INIT_MPI) call die("[io_debug:init_piernikdebug] MPI not initialized.")
 
       if (master) then
-         diff_nml(PIERNIK_IO_DEBUG)
+         if (.not.nh%initialized) call nh%init()
+         open(newunit=nh%lun, file=nh%tmp1, status="unknown")
+         write(nh%lun,nml=PIERNIK_IO_DEBUG)
+         close(nh%lun)
+         open(newunit=nh%lun, file=nh%par_file)
+         nh%errstr=""
+         read(unit=nh%lun, nml=PIERNIK_IO_DEBUG, iostat=nh%ierrh, iomsg=nh%errstr)
+         close(nh%lun)
+         call nh%namelist_errh(nh%ierrh, "PIERNIK_IO_DEBUG")
+         read(nh%cmdl_nml,nml=PIERNIK_IO_DEBUG, iostat=nh%ierrh)
+         call nh%namelist_errh(nh%ierrh, "PIERNIK_IO_DEBUG", .true.)
+         open(newunit=nh%lun, file=nh%tmp2, status="unknown")
+         write(nh%lun,nml=PIERNIK_IO_DEBUG)
+         close(nh%lun)
+         call nh%compare_namelist()
 
          lbuff(1) = force_hdf5_dump
          lbuff(2) = force_log_dump

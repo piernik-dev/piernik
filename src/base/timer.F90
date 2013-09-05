@@ -37,7 +37,10 @@ module timer
    integer, parameter, private :: S_LEN = 30
 
    private
-   public :: cleanup_timers, walltime_end, set_timer, timer_start, timer_stop, tmr_fu, get_timestamp, wallclock
+   public :: cleanup_timers, walltime_end, set_timer, tmr_fu, get_timestamp, wallclock
+#ifdef PERFMON
+   public :: timer_start, timer_stop
+#endif /* PERFMON */
 
    type, private :: timer_info
       character(len=S_LEN) :: key
@@ -207,20 +210,20 @@ contains
 !! \details "cputot" will be the total cpu time (in seconds) consumed by this job.
 !! "wctot" will be the total elapsed wall clock time (in seconds) since the job began.
 !<
+#ifdef PERFMON
    subroutine timer_start
 
       implicit none
 
       real(kind=4) :: dtime
 
-#ifdef PERFMON
       call itime ( iarray )
-#endif /* PERFMON */
       wctot  = iarray(1) * 3600. + iarray(2) * 60. + iarray(3)
       cputot  = dtime ( tarray )
       cpu_start = tarray(1) +tarray(2)
 
    end subroutine timer_start
+#endif /* PERFMON */
 
 !------------------------------------------------------------------------------------------
 
@@ -289,6 +292,7 @@ contains
 !! \details Final wall clock time, expressed in hours, minutes, and seconds.
 !!          cpu usage, expressed in hours, minutes, and seconds.
 !<
+#ifdef PERFMON
    subroutine timer_stop(nstep, total_ncells)
 
       use constants,  only: I_ONE, half
@@ -304,9 +308,7 @@ contains
 
 !      Final wall clock time, expressed in hours, minutes, and seconds.
 !
-#ifdef PERFMON
       call itime ( iarray )
-#endif /* PERFMON */
       wctot  = iarray(1) * 3600. + iarray(2) * 60. + iarray(3) - wctot
       wchours  =  int ( wctot / 3600.0 )
       wcmins   =  int ( wctot / 60.0   ) - 60   * wchours
@@ -342,6 +344,7 @@ contains
       endif
 
    end subroutine timer_stop
+#endif /* PERFMON */
 
 !> \brief prints current timestamp
    function get_timestamp() result (timestamp)

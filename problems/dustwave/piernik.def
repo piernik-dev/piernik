@@ -1,17 +1,11 @@
-/* choosing fluids */
 #define DUST
 
-/* adiabatic or isothermal */
 #define ISO
 
-/* choosing freezing speed */
 #define LOCAL_FR_SPEED
 
-/* physics including */
 
-/* gravity type choosing */
 #undef GRAV
 
-/* numerical solutions and limitations */
 #define ANY_LIMITS
 #define RTVD

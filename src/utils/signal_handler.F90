@@ -62,11 +62,13 @@ contains
       procedure(signal_handler) :: func
       integer :: err
 
-#ifdef __INTEL_COMPILER
+#if defined(__INTEL_COMPILER)
       err = signal(signum, func, -1)
-#else /* !__INTEL_COMPILER */
+#elif defined(__GFORTRAN__)
       err = signal(signum, func)
-#endif /* ! __INTEL_COMPILER */
+#else /* !(__INTEL_COMPILER || __GFORTRAN__) */
+      err = -1
+#endif /* !(__INTEL_COMPILER || __GFORTRAN__) */
 
    end subroutine register_sighandler
 

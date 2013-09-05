@@ -128,7 +128,9 @@ contains
       use mpi,           only: MPI_COMM_WORLD, MPI_CHARACTER, MPI_INTEGER, MPI_COMM_NULL
       use dataio_pub,    only: die, printinfo, msg, ansi_white, ansi_black, tmp_log_file
       use dataio_pub,    only: par_file, lun
+#if defined(__INTEL_COMPILER) || defined(__GFORTRAN__)
       use signalhandler, only: SIGINT, register_sighandler
+#endif /* ! __INTEL_COMPILER || __GFORTRAN__ */
 
       implicit none
 
@@ -149,7 +151,9 @@ contains
       call MPI_Init( mpi_err )
       comm = MPI_COMM_WORLD
 
+#if defined(__INTEL_COMPILER) || defined(__GFORTRAN__)
       call register_sighandler(SIGINT, abort_sigint)
+#endif /* ! __INTEL_COMPILER || __GFORTRAN__ */
 
       call MPI_Comm_get_parent(intercomm, mpi_err)
       is_spawned = (intercomm /= MPI_COMM_NULL)

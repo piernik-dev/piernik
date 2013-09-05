@@ -1,17 +1,12 @@
-/* choosing fluids */
 #define NEUTRAL
 #define DUST
 
-/* adiabatic or isothermal */
 #define ISO
 
-/* choosing freezing speed */
 #define LOCAL_FR_SPEED
 
-/* physics including */
 #define BALSARA
 
-/* gravity type choosing */
 #define GRAV
 #define RTVD
 #define MULTIGRID

@@ -162,7 +162,21 @@ contains
       use_fargo   = .false.
 
       if (master) then
-         diff_nml(NUMERICAL_SETUP)
+         if (.not.nh%initialized) call nh%init()
+         open(newunit=nh%lun, file=nh%tmp1, status="unknown")
+         write(nh%lun,nml=NUMERICAL_SETUP)
+         close(nh%lun)
+         open(newunit=nh%lun, file=nh%par_file)
+         nh%errstr=""
+         read(unit=nh%lun, nml=NUMERICAL_SETUP, iostat=nh%ierrh, iomsg=nh%errstr)
+         close(nh%lun)
+         call nh%namelist_errh(nh%ierrh, "NUMERICAL_SETUP")
+         read(nh%cmdl_nml,nml=NUMERICAL_SETUP, iostat=nh%ierrh)
+         call nh%namelist_errh(nh%ierrh, "NUMERICAL_SETUP", .true.)
+         open(newunit=nh%lun, file=nh%tmp2, status="unknown")
+         write(nh%lun,nml=NUMERICAL_SETUP)
+         close(nh%lun)
+         call nh%compare_namelist()
 
          ! Sanitize input parameters, if possible
          if (cfl <= 0. .or. cfl >1.0) call die("[global:init_global] CFL value should be >0. and <=1.")

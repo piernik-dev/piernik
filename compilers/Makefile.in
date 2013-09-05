@@ -1,5 +1,4 @@
 PROG       = piernik
-USE_GNUCPP = yes
 ### GNU hydra AMD64
 F90       = /opt/gcc-4.3/hdf5/bin/h5pfc
 F90FLAGS  = -g -fdefault-real-8 -Wall -W -pedantic-errors -ffree-form -std=gnu -fimplicit-none

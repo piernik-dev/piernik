@@ -63,9 +63,9 @@ module grid_container_ext
    contains
       procedure :: epa_init    !< Allocate zero elements so we can safely count from lbound to ubound
       procedure :: epa_cleanup !< Deallocate
-      generic, public :: extend => extend_independent, extend_dependent
       procedure :: extend_independent !< Add a new entry that does not depend on another entries
       procedure :: extend_dependent   !< Add a new entry that must be called after an existing one
+      generic, public :: extend => extend_independent, extend_dependent
    end type ext_ptr_array
 
    type(ext_ptr_array) :: cg_extptrs
