@@ -120,13 +120,13 @@ contains
       integer :: ifl, i
       class(component_fluid), pointer :: pfl
 
-      if (.not.allocated(local_omega)) allocate(local_omega(-dom%nb:dom%n_d(xdim) + dom%nb - I_ONE, flind%fluids))
+      if (.not.allocated(local_omega)) allocate(local_omega(dom%off(xdim):dom%off(xdim)+dom%n_d(xdim)-I_ONE, flind%fluids))
       local_omega(:, :) = 0.0
 
       cgl => leaves%first
       do while (associated(cgl))
          cg => cgl%cg
-         do i = cg%lhn(xdim, LO), cg%lhn(xdim, HI)
+         do i = cg%is, cg%ie
             do ifl = 1, flind%fluids
                pfl => flind%all_fluids(ifl)%fl
                local_omega(i, ifl) = local_omega(i, ifl) + sum(cg%u(pfl%imy, i, cg%js:cg%je, cg%ks:cg%ke) / cg%u(pfl%idn, i, cg%js:cg%je, cg%ks:cg%ke) / cg%x(i))
@@ -168,13 +168,13 @@ contains
       cgl => leaves%first
       do while (associated(cgl))
          cg => cgl%cg
-         if (.not. allocated(cg%omega_mean)) allocate(cg%omega_mean(cg%lhn(xdim, LO):cg%lhn(xdim, HI), flind%fluids))
-         if (.not. allocated(cg%omega_cr)) allocate(cg%omega_cr(cg%lhn(xdim, LO):cg%lhn(xdim, HI), flind%fluids))
-         if (.not. allocated(cg%nshift)) allocate(cg%nshift(cg%lhn(xdim, LO):cg%lhn(xdim, HI), flind%fluids))
+         if (.not. allocated(cg%omega_mean)) allocate(cg%omega_mean(cg%is:cg%ie, flind%fluids))
+         if (.not. allocated(cg%omega_cr)) allocate(cg%omega_cr(cg%is:cg%ie, flind%fluids))
+         if (.not. allocated(cg%nshift)) allocate(cg%nshift(cg%is:cg%ie, flind%fluids))
 
          do ifl = 1, flind%fluids
             pfl => flind%all_fluids(ifl)%fl
-            cg%omega_mean(:, ifl) = local_omega(cg%lhn(xdim, LO):cg%lhn(xdim, HI), ifl)
+            cg%omega_mean(:, ifl) = local_omega(cg%is:cg%ie, ifl)
             cg%nshift(:, ifl) = nint(cg%omega_mean(:, ifl) * dt / cg%dl(ydim))
             cg%omega_cr(:, ifl) = cg%omega_mean(:, ifl) - cg%nshift(:, ifl) * cg%dl(ydim) / dt
          enddo
@@ -294,7 +294,7 @@ contains
          cgl => leaves%first
          do while (associated(cgl))
             cg => cgl%cg
-            do i = cg%lhn(xdim, LO), cg%lhn(xdim, HI)
+            do i = cg%is, cg%ie
                if (all(cg%nshift(i, :) == 0)) cycle
                do ifl = 1, flind%fluids
                   pfl   => flind%all_fluids(ifl)%fl
