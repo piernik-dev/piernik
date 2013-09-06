@@ -147,7 +147,7 @@ contains
 !<
    subroutine get_fargo_vels(dt)
 
-      use constants,        only: xdim, ydim, LO, HI, I_ONE
+      use constants,        only: xdim, ydim, LO, HI
       use cg_leaves,        only: leaves
       use cg_list,          only: cg_list_element
       use grid_cont,        only: grid_container
@@ -160,7 +160,7 @@ contains
       real, dimension(:, :), allocatable :: local_omega
       type(cg_list_element), pointer    :: cgl
       type(grid_container),  pointer    :: cg
-      integer :: ifl, i
+      integer :: ifl
       class(component_fluid), pointer :: pfl
 
       call fargo_mean_omega(local_omega)
