@@ -112,6 +112,8 @@ module mpisetup
       module procedure MPI_Allreduce_vec_real8
       module procedure MPI_Allreduce_vec_int4
       module procedure MPI_Allreduce_vec_int8
+      module procedure MPI_Allreduce_arr2d_real4
+      module procedure MPI_Allreduce_arr2d_real8
       module procedure MPI_Allreduce_arr3d_real8
    end interface piernik_MPI_Allreduce
 
@@ -826,6 +828,42 @@ contains
 
       call MPI_Allreduce(MPI_IN_PLACE, rvar8, size(rvar8), MPI_DOUBLE_PRECISION, mpiop(reduction), comm, mpi_err)
    end subroutine MPI_Allreduce_arr3d_real8
+!-----------------------------------------------------------------------------
+!>
+!! \brief Wrapper for MPI_Allreduce with MPI_IN_PLACE
+!! \todo unlimited polymorphism will obsolete me
+!<
+   subroutine MPI_Allreduce_arr2d_real8(rvar8, reduction)
+
+      use constants, only: pSUM, pMAX
+      use mpi,       only: MPI_DOUBLE_PRECISION, MPI_IN_PLACE, MPI_SUM, MPI_MIN, MPI_MAX
+
+      implicit none
+
+      real(kind=8), dimension(:,:), intent(inout) :: rvar8     !< int8 that will be reduced
+      integer(kind=4),              intent(in)    :: reduction !< integer to mark a reduction type
+      integer, dimension(pSUM:pMAX), parameter    :: mpiop = [MPI_SUM, MPI_MIN, MPI_MAX]
+
+      call MPI_Allreduce(MPI_IN_PLACE, rvar8, size(rvar8), MPI_DOUBLE_PRECISION, mpiop(reduction), comm, mpi_err)
+   end subroutine MPI_Allreduce_arr2d_real8
+!-----------------------------------------------------------------------------
+!>
+!! \brief Wrapper for MPI_Allreduce with MPI_IN_PLACE
+!! \todo unlimited polymorphism will obsolete me
+!<
+   subroutine MPI_Allreduce_arr2d_real4(rvar4, reduction)
+
+      use constants, only: pSUM, pMAX
+      use mpi,       only: MPI_REAL, MPI_IN_PLACE, MPI_SUM, MPI_MIN, MPI_MAX
+
+      implicit none
+
+      real(kind=4), dimension(:,:), intent(inout) :: rvar4     !< int8 that will be reduced
+      integer(kind=4),              intent(in)    :: reduction !< integer to mark a reduction type
+      integer, dimension(pSUM:pMAX), parameter    :: mpiop = [MPI_SUM, MPI_MIN, MPI_MAX]
+
+      call MPI_Allreduce(MPI_IN_PLACE, rvar4, size(rvar4), MPI_REAL, mpiop(reduction), comm, mpi_err)
+   end subroutine MPI_Allreduce_arr2d_real4
 !-----------------------------------------------------------------------------
 !>
 !! \brief Routine used to communicate events to master Python script

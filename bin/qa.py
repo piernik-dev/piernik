@@ -1,5 +1,4 @@
 #!/usr/bin/python
-import pysvn
 import re
 import sys
 import hashlib

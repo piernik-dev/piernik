@@ -40,7 +40,7 @@ module fargo
    implicit none
 
    private
-   public :: init_fargo, cleanup_fargo, make_fargosweep, timestep_fargo
+   public :: init_fargo, cleanup_fargo, make_fargosweep, timestep_fargo, fargo_mean_omega
 
 contains
 
@@ -96,6 +96,51 @@ contains
    end subroutine make_fargosweep
 
 !>
+!! \brief Compute mean omega for each radius globally
+!!
+!! \details This routines allocates array, which should be deallocated externally. All procs must call this.
+!<
+   subroutine fargo_mean_omega(local_omega)
+
+      use constants,        only: xdim, ydim, zdim, I_ONE, pSUM, LO, HI
+      use cg_leaves,        only: leaves
+      use cg_list,          only: cg_list_element
+      use domain,           only: dom
+      use grid_cont,        only: grid_container
+      use fluidindex,       only: flind
+      use fluidtypes,       only: component_fluid
+      use mpisetup,         only: piernik_MPI_Allreduce
+
+      implicit none
+
+      real, dimension(:, :), allocatable, intent(inout) :: local_omega
+
+      type(cg_list_element), pointer    :: cgl
+      type(grid_container),  pointer    :: cg
+      integer :: ifl, i
+      class(component_fluid), pointer :: pfl
+
+      if (.not.allocated(local_omega)) allocate(local_omega(-dom%nb:dom%n_d(xdim) + dom%nb - I_ONE, flind%fluids))
+      local_omega(:, :) = 0.0
+
+      cgl => leaves%first
+      do while (associated(cgl))
+         cg => cgl%cg
+         do i = cg%lhn(xdim, LO), cg%lhn(xdim, HI)
+            do ifl = 1, flind%fluids
+               pfl => flind%all_fluids(ifl)%fl
+               local_omega(i, ifl) = local_omega(i, ifl) + sum(cg%u(pfl%imy, i, cg%js:cg%je, cg%ks:cg%ke) / cg%u(pfl%idn, i, cg%js:cg%je, cg%ks:cg%ke) / cg%x(i))
+            enddo
+         enddo
+         cgl => cgl%nxt
+      enddo
+
+      call piernik_MPI_Allreduce(local_omega, pSUM)
+      local_omega(:, :) = local_omega(:, :) / (dom%n_d(ydim) * dom%n_d(zdim))
+      return
+   end subroutine fargo_mean_omega
+
+!>
 !! \brief Compute shift, constant residual and residual azimuthal velocity
 !!
 !! \details This routines fills FARGO auxiliary arrays with valid data
@@ -112,35 +157,32 @@ contains
       implicit none
 
       real, intent(in) :: dt
-
+      real, dimension(:, :), allocatable :: local_omega
       type(cg_list_element), pointer    :: cgl
       type(grid_container),  pointer    :: cg
-      integer :: ifl, i
+      integer :: ifl
       class(component_fluid), pointer :: pfl
+
+      call fargo_mean_omega(local_omega)
 
       cgl => leaves%first
       do while (associated(cgl))
          cg => cgl%cg
-         ! TODO: should be moved to cg%init, but I wanted to avoid fluidindex
-         ! dependency
          if (.not. allocated(cg%omega_mean)) allocate(cg%omega_mean(cg%lhn(xdim, LO):cg%lhn(xdim, HI), flind%fluids))
          if (.not. allocated(cg%omega_cr)) allocate(cg%omega_cr(cg%lhn(xdim, LO):cg%lhn(xdim, HI), flind%fluids))
          if (.not. allocated(cg%nshift)) allocate(cg%nshift(cg%lhn(xdim, LO):cg%lhn(xdim, HI), flind%fluids))
-         do i = cg%lhn(xdim, LO), cg%lhn(xdim, HI)
-            do ifl = 1, flind%fluids
-               pfl => flind%all_fluids(ifl)%fl
-               cg%omega_mean(i, ifl) = sum(cg%u(pfl%imy, i, :, :) / cg%u(pfl%idn, i, :, :) / cg%x(i))  / size(cg%u(pfl%idn, i, :, :))
-            enddo
-         enddo
 
          do ifl = 1, flind%fluids
             pfl => flind%all_fluids(ifl)%fl
+            cg%omega_mean(:, ifl) = local_omega(cg%lhn(xdim, LO):cg%lhn(xdim, HI), ifl)
             cg%nshift(:, ifl) = nint(cg%omega_mean(:, ifl) * dt / cg%dl(ydim))
             cg%omega_cr(:, ifl) = cg%omega_mean(:, ifl) - cg%nshift(:, ifl) * cg%dl(ydim) / dt
          enddo
 
          cgl => cgl%nxt
       enddo
+
+      if (allocated(local_omega)) deallocate(local_omega)
 
    end subroutine get_fargo_vels
 

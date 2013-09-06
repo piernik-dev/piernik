@@ -314,6 +314,7 @@ contains
       use constants,  only: big, xdim, ydim, zdim, ndims, GEO_RPZ, ndims, small
       use domain,     only: dom
       use fluidtypes, only: component_fluid
+      use fargo,      only: fargo_mean_omega
       use global,     only: cfl, use_fargo
       use grid_cont,  only: grid_container
 
@@ -330,16 +331,12 @@ contains
       real, dimension(ndims) :: dt_proc                   !< timestep for the current cg
       integer                :: i, j, k, d
 
-      real, dimension(cg%is:cg%ie) :: omega_mean
+      real, dimension(:, :), allocatable :: omega_mean
 
       c_fl = small
       dt_proc(:) = big
 
-      if (use_fargo) then
-         do i = cg%is, cg%ie
-            omega_mean(i) = sum(cg%u(fl%imy, i, :, :) / cg%u(fl%idn, i, :, :) / cg%x(i)) / size(cg%u(fl%idn, i, :, :))
-         enddo
-      endif
+      if (use_fargo) call fargo_mean_omega(omega_mean)
 
       do k = cg%ks, cg%ke
          do j = cg%js, cg%je
@@ -348,11 +345,11 @@ contains
                   if (cg%u(fl%idn,i,j,k) > 0.0) then
                      v(:) = abs(cg%u(fl%imx:fl%imz, i, j, k) / cg%u(fl%idn, i, j, k))
                      if (use_fargo) &
-                        & v(ydim) = abs(cg%u(fl%imy, i, j, k) / cg%u(fl%idn, i, j, k) - omega_mean(i) * cg%x(i))
+                        & v(ydim) = abs(cg%u(fl%imy, i, j, k) / cg%u(fl%idn, i, j, k) - omega_mean(i, fl%pos) * cg%x(i))
                   else
                      v(:) = 0.0
                   endif
-                  
+
                   c(:) = max(v(:) + fl%get_cs(i, j, k, cg%u, cg%b, cg%cs_iso2), small)
                   c_fl = max(c_fl, maxval(c))
 
@@ -375,6 +372,7 @@ contains
 
       dt = cfl * minval(dt_proc)
       call fl%set_c(c_fl)
+      if (allocated(omega_mean)) deallocate(omega_mean)
 
    end subroutine timestep_fluid
 
