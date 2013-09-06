@@ -336,10 +336,7 @@ contains
       c_fl = small
       dt_proc(:) = big
 
-      if (use_fargo) then
-         call fargo_mean_omega(omega_mean)
-         omega_mean(:, fl%pos) = omega_mean(:, fl%pos) / omega_mean(:, ubound(omega_mean, 2))
-      endif
+      if (use_fargo) call fargo_mean_omega(omega_mean)
 
       do k = cg%ks, cg%ke
          do j = cg%js, cg%je

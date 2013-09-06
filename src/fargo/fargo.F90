@@ -120,7 +120,7 @@ contains
       integer :: ifl, i
       class(component_fluid), pointer :: pfl
 
-      if (.not.allocated(local_omega)) allocate(local_omega(-dom%nb:dom%n_d(xdim) + dom%nb - I_ONE, flind%fluids + I_ONE))
+      if (.not.allocated(local_omega)) allocate(local_omega(-dom%nb:dom%n_d(xdim) + dom%nb - I_ONE, flind%fluids))
       local_omega(:, :) = 0.0
 
       cgl => leaves%first
@@ -129,14 +129,14 @@ contains
          do i = cg%lhn(xdim, LO), cg%lhn(xdim, HI)
             do ifl = 1, flind%fluids
                pfl => flind%all_fluids(ifl)%fl
-               local_omega(i, ifl) = sum(cg%u(pfl%imy, i, :, :) / cg%u(pfl%idn, i, :, :) / cg%x(i))
+               local_omega(i, ifl) = local_omega(i, ifl) + sum(cg%u(pfl%imy, i, cg%js:cg%je, cg%ks:cg%ke) / cg%u(pfl%idn, i, cg%js:cg%je, cg%ks:cg%ke) / cg%x(i))
             enddo
          enddo
-         local_omega(cg%lhn(xdim, LO):cg%lhn(xdim, HI), flind%fluids + I_ONE) = real(cg%n_b(ydim) * cg%n_b(zdim))
          cgl => cgl%nxt
       enddo
 
       call piernik_MPI_Allreduce(local_omega, pSUM)
+      local_omega(:, :) = local_omega(:, :) / (dom%n_d(ydim) * dom%n_d(zdim))
       return
    end subroutine fargo_mean_omega
 
@@ -174,7 +174,7 @@ contains
 
          do ifl = 1, flind%fluids
             pfl => flind%all_fluids(ifl)%fl
-            cg%omega_mean(:, ifl) = local_omega(cg%lhn(xdim, LO):cg%lhn(xdim, HI), ifl) / local_omega(cg%lhn(xdim, LO):cg%lhn(xdim, HI), flind%fluids + I_ONE)
+            cg%omega_mean(:, ifl) = local_omega(cg%lhn(xdim, LO):cg%lhn(xdim, HI), ifl)
             cg%nshift(:, ifl) = nint(cg%omega_mean(:, ifl) * dt / cg%dl(ydim))
             cg%omega_cr(:, ifl) = cg%omega_mean(:, ifl) - cg%nshift(:, ifl) * cg%dl(ydim) / dt
          enddo
