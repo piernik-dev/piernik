@@ -431,7 +431,8 @@ contains
 
       use cg_leaves,        only: leaves
       use cg_list_dataop,   only: ind_val
-      use constants,        only: gp_n, gpot_n, hgpot_n
+      use constants,        only: gp_n, gpot_n, hgpot_n, zero
+      use func,             only: operator(.notequals.)
       use named_array_list, only: qna
 #ifdef SELF_GRAV
       use constants,        only: one, half, sgp_n, sgpm_n
@@ -443,7 +444,7 @@ contains
 #ifdef SELF_GRAV
       real :: h
 
-      if (dtm /= 0) then
+      if (dtm .notequals. zero) then
          h = dt/dtm
       else
          h = 0.0

@@ -112,6 +112,7 @@ contains
       use dataio_pub,       only: die, warn, msg
       use domain,           only: dom
       use fluidindex,       only: flind
+      use func,             only: operator(.notequals.)
       use mpisetup,         only: master, slave, nproc, ibuff, rbuff, lbuff, cbuff, piernik_MPI_Bcast
       use multigridvars,    only: single_base
       use named_array_list, only: qna
@@ -224,7 +225,7 @@ contains
          ! for diff_theta < 0.5 stable diff_tstep_fac rises by 1./(1.-2.*diff_theta)
       endif
 
-      if (overrelax /= 1 .and. master) then
+      if ((overrelax .notequals. 1.0) .and. master) then
          write(msg, '(a,f8.5)')"[multigrid_diffusion:multigrid_diff_par] Overrelaxation factor = ", overrelax
          call warn(msg)
       endif
@@ -273,11 +274,12 @@ contains
 
    subroutine multigrid_solve_diff
 
-      use constants,         only: xdim, ydim, zdim
+      use constants,         only: xdim, ydim, zdim, zero
       use crdiffusion,       only: cr_diff
       use dataio_pub,        only: halfstep, warn, printinfo, msg
       use fluidindex,        only: flind
       use global,            only: dt
+      use func,              only: operator(.notequals.)
       use mpisetup,          only: master
       use multigrid_helpers, only: all_dirty
       use multigridvars,     only: ts, tot_ts, stdout
@@ -319,7 +321,7 @@ contains
 
          do cr_id = 1, flind%crs%all
             call init_source(cr_id)
-            if (vstat%norm_rhs /= 0) then
+            if (vstat%norm_rhs .notequals. zero) then
                if (norm_was_zero(cr_id) .and. master) then
                   write(msg,'(a,i2,a)')"[multigrid_diffusion:multigrid_solve_diff] CR-fluid #",cr_id," is now available in measurable quantities."
                   call printinfo(msg)
@@ -359,8 +361,9 @@ contains
       use cg_level_finest,    only: finest
       use cg_list_dataop,     only: ind_val, dirty_label
       use cg_list_global,     only: all_cg
-      use constants,          only: base_level_id
+      use constants,          only: base_level_id, zero
       use dataio_pub,         only: die
+      use func,               only: operator(.notequals.)
       use initcosmicrays,     only: iarr_crs
       use multigridvars,      only: source, defect, correction
       use named_array_list,   only: qna, wna
@@ -375,7 +378,7 @@ contains
       call all_cg%set_dirty(correction)
       call all_cg%set_dirty(defect)
       ! Trick residual subroutine to initialize with: u + (1-theta) dt grad (c grad u)
-      if (diff_theta /= 0.) then
+      if (diff_theta .notequals. zero) then
          call leaves%wq_copy(wna%fi, iarr_crs(cr_id), qna%wai)
          call leaves%q_lin_comb( [ ind_val(qna%wai, (1. -1./diff_theta)) ], correction)
          call leaves%q_lin_comb( [ ind_val(qna%wai,     -1./diff_theta ) ], defect)
@@ -490,9 +493,10 @@ contains
       use cg_level_finest,    only: finest
       use cg_list_dataop,     only: ind_val, dirty_label
       use cg_list_global,     only: all_cg
-      use constants,          only: base_level_id
+      use constants,          only: base_level_id, zero
       use dataio_pub,         only: msg, warn, die
       use global,             only: do_ascii_dump
+      use func,               only: operator(.notequals.)
       use initcosmicrays,     only: iarr_crs
       use mpisetup,           only: master
       use multigridvars,      only: source, defect, solution, correction, ts, tot_ts
@@ -532,7 +536,7 @@ contains
          tot_ts = tot_ts + ts
 
          vstat%count = v
-         if (norm_lhs /= 0) then
+         if (norm_lhs .notequals. zero) then
             vstat%factor(vstat%count) = norm_old/norm_lhs
          else
             vstat%factor(vstat%count) = huge(1.0)
@@ -609,10 +613,11 @@ contains
 
    subroutine diff_flux(crdim, im, soln, cg, cr_id, Keff)
 
-      use constants,      only: xdim, ydim, zdim, ndims, oneq, GEO_XYZ
+      use constants,      only: xdim, ydim, zdim, ndims, oneq, GEO_XYZ, zero
       use dataio_pub,     only: die
       use domain,         only: dom
       use grid_cont,      only: grid_container
+      use func,           only: operator(.notequals.)
       use initcosmicrays, only: K_crs_perp, K_crs_paral
 
       implicit none
@@ -641,7 +646,7 @@ contains
       fcrdif = K_crs_perp(cr_id) * d_par
       if (present(Keff)) Keff = K_crs_perp(cr_id)
 
-      if (K_crs_paral(cr_id) /= 0.) then
+      if (K_crs_paral(cr_id) .notequals. zero) then
 
          b_perp = 0.
          b_par = cg%q(idiffb(crdim))%point(im)
@@ -659,7 +664,7 @@ contains
             endif
          enddo
 
-         if (magb /= 0.) then
+         if (magb .notequals. zero) then
             kbm = K_crs_paral(cr_id) * b_par / magb
             fcrdif = fcrdif + kbm * db
             if (present(Keff)) Keff = Keff + kbm * b_par

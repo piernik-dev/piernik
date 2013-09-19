@@ -59,12 +59,13 @@ contains
 
    subroutine read_problem_par
 
-      use constants,   only: xdim, ydim, zdim, pi
+      use constants,   only: xdim, ydim, zdim, pi, zero
       use dataio_pub,  only: nh    ! QA_WARN required for diff_nml
       use dataio_pub,  only: tend, msg, die, warn, printinfo
       use domain,      only: dom
       use fluidindex,  only: flind
       use fluidtypes,  only: component_fluid
+      use func,        only: operator(.notequals.)
       use mpisetup,    only: rbuff, ibuff, master, slave, piernik_MPI_Bcast
       use problem_pub, only: jeans_d0, jeans_mode
       use units,       only: fpiG, newtong
@@ -91,7 +92,7 @@ contains
          write(nh%lun,nml=PROBLEM_CONTROL)
          close(nh%lun)
          open(newunit=nh%lun, file=nh%par_file)
-         nh%errstr=""
+         nh%errstr=''
          read(unit=nh%lun, nml=PROBLEM_CONTROL, iostat=nh%ierrh, iomsg=nh%errstr)
          close(nh%lun)
          call nh%namelist_errh(nh%ierrh, "PROBLEM_CONTROL")
@@ -227,7 +228,7 @@ contains
          write(g_lun,'(a)') 'set title "Jeans oscillations (FFT)"'
 #endif /* !MULTIGRID */
          write(g_lun,'(3(a,/),a)') 'set ylabel "E_int"', 'set xtics 1', 'set mxtics 2', 'set mytics 2'
-         if (Tamp_rounded /= 0 .and. Tamp >0) then
+         if ((Tamp_rounded .notequals. zero) .and. (Tamp > zero)) then
             write(g_lun,'(a,g11.3)')'set ytics ',Tamp_rounded/2.
             write(g_lun,'(2(a,g11.3),a)')'set yrange [ ',Tamp_rounded/(-4.),':',Tamp_rounded,']'
          else
