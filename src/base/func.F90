@@ -40,7 +40,15 @@ module func
 
    private
    public :: ekin, emag, L2norm, sq_sum3, resample_gauss, piernik_fnum, f2c, c2f, f2c_o, c2f_o, &
-      & append_int_to_array
+      & append_int_to_array, operator(.equals.), operator(.notequals.) 
+
+   interface operator (.equals.)
+      module procedure float_equals
+   end interface
+   
+   interface operator (.notequals.)
+      module procedure float_notequals
+   end interface
 
 contains
 
@@ -257,5 +265,18 @@ contains
       arr(ubound(arr(:))) = i
 
    end subroutine append_int_to_array
+
+   pure elemental function float_equals(x1, x2) result (tf)
+      real, intent(in) :: x1, x2
+      logical :: tf
+
+      tf = abs(x1 - x2) <= epsilon(x1)
+   end function float_equals
+   
+   pure elemental function float_notequals(x1, x2) result (tf)
+      real, intent(in) :: x1, x2
+      logical :: tf
+      tf = .not.(x1.equals.x2)
+   end function float_notequals
 
 end module func
