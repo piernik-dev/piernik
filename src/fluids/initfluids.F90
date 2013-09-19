@@ -111,6 +111,7 @@ contains
       use fluidindex,     only: fluid_index, flind
       use fluids_pub,     only: has_dst, has_ion, has_neu, cs2_max
       use fluxes,         only: set_limiter
+      use func,           only: operator(.notequals.)
       use global,         only: limiter
       use initdust,       only: init_dust
       use initionized,    only: init_ionized
@@ -156,7 +157,7 @@ contains
       !call piernik_MPI_Allreduce(cs_max, pMAX)
 
       if (has_neu .and. has_ion) then
-         if (flind%ion%cs2 /= flind%neu%cs2) &
+         if (flind%ion%cs2.notequals.flind%neu%cs2) &
             call warn("[initfluids:init_fluids]: flind%neu%cs2 and flind%ion%cs should be equal")
       endif
 

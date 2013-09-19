@@ -59,7 +59,7 @@ contains
       use constants,        only: INVALID, I_ONE, refinement_factor
       use dataio_pub,       only: die, msg
       use domain,           only: dom
-      use func,             only: f2c_o, c2f_o
+      use grid_helpers,     only: f2c_o, c2f_o
       use list_of_cg_lists, only: all_lists
       use mpisetup,         only: master
 

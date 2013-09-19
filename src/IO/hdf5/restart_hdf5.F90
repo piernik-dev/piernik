@@ -497,6 +497,7 @@ contains
       use dataio_user,        only: user_reg_var_restart, user_attrs_rd
       use domain,             only: dom
       use fluidindex,         only: flind
+      use func,               only: operator(.notequals.)
       use global,             only: t, dt, nstep
       use grid_cont,          only: is_overlap
       use hdf5,               only: HID_T, H5F_ACC_RDONLY_F, h5open_f, h5close_f, h5fopen_f, h5fclose_f, h5gopen_f, h5gclose_f
@@ -654,7 +655,7 @@ contains
       do ia = xdim, zdim
          write(d_label, '(2a)') dir_pref(ia), d_edge_apname
          call read_attribute(dom_g_id, d_label, rbuf)          ! read "/domains/base/[xyz]-edge_position"
-         if (any(rbuf(:) /= dom%edge(ia, :))) call die("[restart_hdf5:read_restart_hdf5_v2] edge position doesn't match")
+         if (any(rbuf(:).notequals.dom%edge(ia, :))) call die("[restart_hdf5:read_restart_hdf5_v2] edge position doesn't match")
          write(d_label, '(2a)') dir_pref(ia), d_bnd_apname
          call read_attribute(dom_g_id, d_label, ibuf)          ! read "/domains/base/[xyz]-boundary_type"
          if (any(ibuf(:) /= dom%bnd(ia, :))) then
@@ -965,6 +966,7 @@ contains
 
       use constants,  only: I_ONE
       use dataio_pub, only: die
+      use func,       only: operator(.notequals.)
       use mpi,        only: MPI_DOUBLE_PRECISION, MPI_STATUS_IGNORE
       use mpisetup,   only: slave, LAST, comm, proc, mpi_err
 
@@ -980,7 +982,7 @@ contains
       if (proc /= LAST) call MPI_Send(arr(:), size(arr(:), kind=4), MPI_DOUBLE_PRECISION, proc+I_ONE, tag, comm, mpi_err)
       if (slave) then
          call MPI_Recv(aux(:), size(aux(:), kind=4), MPI_DOUBLE_PRECISION, proc-I_ONE, tag, comm, MPI_STATUS_IGNORE, mpi_err)
-         if (any(aux(:) /= arr(:))) call die("[restart_hdf5:compare_real_array1D] Inconsistency found.")
+         if (any(aux(:).notequals.arr(:))) call die("[restart_hdf5:compare_real_array1D] Inconsistency found.")
       endif
 
       deallocate(aux)

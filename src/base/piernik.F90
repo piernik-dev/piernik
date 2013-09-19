@@ -41,6 +41,7 @@ program piernik
    use finalizepiernik,   only: cleanup_piernik
    use fluidindex,        only: flind
    use fluidupdate,       only: fluid_update
+   use func,              only: operator(.equals.)
    use global,            only: t, nstep, dt, dtm, cfl_violated
    use initpiernik,       only: init_piernik
    use list_of_cg_lists,  only: all_lists
@@ -140,7 +141,7 @@ program piernik
       nstep = nstep + I_ONE
       call print_progress(nstep)
 
-      if (t == tlast .and. .not. first_step .and. .not. cfl_violated) call die("[piernik] timestep is too small: t == t + 2 * dt")
+      if ((t .equals. tlast) .and. .not. first_step .and. .not. cfl_violated) call die("[piernik] timestep is too small: t == t + 2 * dt")
 
       call piernik_MPI_Barrier
 

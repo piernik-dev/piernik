@@ -82,10 +82,11 @@ contains
       use cg_level_connected, only: cg_level_connected_T
       use cg_list,            only: cg_list_element
       use cg_list_bnd,        only: cg_list_bnd_T
-      use constants,          only: ndims, xdim, ydim, zdim, BND_NEGREF, LO, HI, GEO_XYZ
+      use constants,          only: ndims, xdim, ydim, zdim, BND_NEGREF, LO, HI, GEO_XYZ, zero
       use dataio_pub,         only: die
       use domain,             only: dom
       use grid_cont,          only: grid_container
+      use func,               only: operator(.notequals.)
       use multigridvars,      only: grav_bnd, bnd_givenval, multidim_code_3D
       use named_array,        only: p3
 
@@ -113,10 +114,10 @@ contains
       select type(cg_llst)
          type is (cg_leaves_T)
             call cg_llst%leaf_arr3d_boundaries(soln, bnd_type=BND_NEGREF)
-            if (src_lapl /= 0.) call cg_llst%leaf_arr3d_boundaries(src, bnd_type=BND_NEGREF, nocorners=.true.)
+            if (src_lapl.notequals.zero) call cg_llst%leaf_arr3d_boundaries(src, bnd_type=BND_NEGREF, nocorners=.true.)
          type is(cg_level_connected_T)
             call cg_llst%arr3d_boundaries(soln, bnd_type=BND_NEGREF)
-            if (src_lapl /= 0.) call cg_llst%arr3d_boundaries(src, bnd_type=BND_NEGREF, nocorners=.true.)
+            if (src_lapl.notequals.zero) call cg_llst%arr3d_boundaries(src, bnd_type=BND_NEGREF, nocorners=.true.)
          class default
              call die("[multigrid_Laplace4M:residual_Mehrstellen] Unknown type")
       end select
@@ -190,11 +191,12 @@ contains
       use cg_level_connected, only: cg_level_connected_T
       use cg_list,            only: cg_list_element
       use cg_list_dataop,     only: dirty_label
-      use constants,          only: xdim, ydim, zdim, ndims, GEO_XYZ, BND_NEGREF, pMAX
+      use constants,          only: xdim, ydim, zdim, ndims, GEO_XYZ, BND_NEGREF, pMAX, zero
       use dataio_pub,         only: die, warn
       use domain,             only: dom
       use global,             only: dirty_debug
       use grid_cont,          only: grid_container
+      use func,               only: operator(.notequals.)
       use mpisetup,           only: piernik_MPI_Allreduce, master
       use multigrid_helpers,  only: set_relax_boundaries, copy_and_max
       use multigridvars,      only: multidim_code_3D, coarsest_tol, nc_growth
@@ -253,7 +255,7 @@ contains
             Ly  = 0. ; if (dom%has_dir(ydim)) Ly = cg%idy2 - 2. * (Lxy + Lyz)
             Lz  = 0. ; if (dom%has_dir(zdim)) Lz = cg%idz2 - 2. * (Lxz + Lyz)
             L0  = 2. * (Lx + Ly + Lz) + 4. * (Lxy + Lxz + Lyz)
-            if (L0 /= 0.0) then
+            if (L0.notequals.zero) then
                iL0 = 1. / L0
                Lx = Lx * iL0
                Ly = Ly * iL0

@@ -86,10 +86,11 @@ contains
       use cg_leaves,        only: leaves
       use cg_list,          only: cg_list_element
       use cg_list_global,   only: all_cg
-      use constants,        only: PIERNIK_INIT_GRID, zdim, xdim, ydim, wcu_n
+      use constants,        only: PIERNIK_INIT_GRID, zdim, xdim, ydim, wcu_n, zero
       use dataio_pub,       only: nh  ! QA_WARN required for diff_nml
       use dataio_pub,       only: die, code_progress
       use domain,           only: dom
+      use func,             only: operator(.equals.)
       use mpisetup,         only: rbuff, ibuff, master, slave, piernik_MPI_Bcast
       use named_array_list, only: qna
 
@@ -162,7 +163,7 @@ contains
       call all_cg%reg_var(dby_n)
       call all_cg%reg_var(dbz_n)
 #ifdef ISO
-      if (eta_1 == 0.) then
+      if (eta_1 .equals. zero) then
          cgl => leaves%first
          do while (associated(cgl))
             cgl%cg%q(qna%ind(eta_n))%arr = eta_0
@@ -322,15 +323,16 @@ contains
 
    subroutine timestep_resist(cg)
 
-      use constants, only: big, pMIN
+      use constants, only: big, pMIN, zero
       use grid_cont, only: grid_container
+      use func,      only: operator(.notequals.)
       use mpisetup,  only: piernik_MPI_Allreduce
 
       implicit none
 
       type(grid_container), pointer, intent(in) :: cg
 
-      if (etamax%val /= 0.) then
+      if (etamax%val .notequals. zero) then
          dt_resist = cfl_resist * cg%dxmn**2 / (2. * etamax%val)
 #ifndef ISO
          dt_resist = min(dt_resist,dt_eint)

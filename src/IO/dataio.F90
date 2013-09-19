@@ -1202,7 +1202,7 @@ contains
 
       cgl => leaves%first
       do while (associated(cgl))
-         where (cgl%cg%u(fl%idn,:, :, :) /= 0.)
+         where (cgl%cg%u(fl%idn,:, :, :) > 0.0)
             cgl%cg%wa = abs(cgl%cg%u(fl%imx,:, :, :)/cgl%cg%u(fl%idn,:, :, :))
          elsewhere
             cgl%cg%wa = 0.
@@ -1270,7 +1270,7 @@ contains
 
       cgl => leaves%first
       do while (associated(cgl))
-         where (cgl%cg%u(fl%idn,:, :, :) /= 0.)
+         where (cgl%cg%u(fl%idn,:, :, :) > 0.0)
             cgl%cg%wa = abs(cgl%cg%u(fl%imz,:, :, :)/cgl%cg%u(fl%idn,:, :, :))
          elsewhere
             cgl%cg%wa = 0.

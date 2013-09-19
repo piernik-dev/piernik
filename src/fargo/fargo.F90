@@ -102,7 +102,7 @@ contains
 !<
    subroutine fargo_mean_omega(local_omega)
 
-      use constants,        only: xdim, ydim, zdim, I_ONE, pSUM, LO, HI
+      use constants,        only: xdim, ydim, zdim, I_ONE, pSUM
       use cg_leaves,        only: leaves
       use cg_list,          only: cg_list_element
       use domain,           only: dom
@@ -147,7 +147,7 @@ contains
 !<
    subroutine get_fargo_vels(dt)
 
-      use constants,        only: xdim, ydim, LO, HI
+      use constants,        only: ydim
       use cg_leaves,        only: leaves
       use cg_list,          only: cg_list_element
       use grid_cont,        only: grid_container
@@ -263,7 +263,7 @@ contains
       use all_boundaries,   only: all_fluid_boundaries
       use cg_leaves,        only: leaves
       use cg_list,          only: cg_list_element
-      use constants,        only: xdim, ydim, LO, HI, pMAX
+      use constants,        only: ydim, pMAX
       use domain,           only: dom
       use fluidindex,       only: flind
       use fluidtypes,       only: component_fluid
