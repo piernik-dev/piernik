@@ -568,7 +568,9 @@ contains
    subroutine div_by_r(this, ind)
 
       use cg_list,    only: cg_list_element
+      use constants,  only: zero
       use dataio_pub, only: die
+      use func,       only: operator(.equals.)
 
       implicit none
 
@@ -581,7 +583,7 @@ contains
       cgl => this%first
       do while (associated(cgl))
          do i = lbound(cgl%cg%q(ind)%arr, dim=1), ubound(cgl%cg%q(ind)%arr, dim=1)
-            if (cgl%cg%x(i) == 0) call die("[cg_list_dataop:div_by_r] cannot divide by radius == 0")
+            if (cgl%cg%x(i).equals.zero) call die("[cg_list_dataop:div_by_r] cannot divide by radius == 0")
             cgl%cg%q(ind)%arr(i, :, :) = cgl%cg%q(ind)%arr(i, :, :) / cgl%cg%x(i)
          enddo
          cgl => cgl%nxt

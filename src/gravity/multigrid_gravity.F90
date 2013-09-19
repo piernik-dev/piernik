@@ -121,6 +121,7 @@ contains
       use dataio_pub,         only: nh  ! QA_WARN required for diff_nml
       use dataio_pub,         only: msg, die, warn
       use domain,             only: dom, is_multicg !, is_uneven
+      use func,               only: operator(.notequals.)
       use mpisetup,           only: master, slave, ibuff, cbuff, rbuff, lbuff, piernik_MPI_Bcast
       use multigridvars,      only: single_base, bnd_invalid, bnd_isolated, bnd_periodic, bnd_dirichlet, grav_bnd, multidim_code_3D, nsmool, &
            &                        overrelax, coarsest_tol
@@ -344,7 +345,7 @@ contains
 
       single_base = .not. base_no_fft
 
-      if (master .and. overrelax /= 1.) then
+      if (master .and. (overrelax.notequals.1.0)) then
          write(msg, '(a,f8.5)')"[multigrid_gravity:multigrid_grav_par] Overrelaxation factor = ", overrelax
          call warn(msg)
          if (any([ord_laplacian, ord_laplacian_outer] /= O_I2)) call warn("[multigrid_gravity:multigrid_grav_par] Overrelaxation is implemented only for RBGS relaxation")
@@ -514,6 +515,7 @@ contains
       use dataio_pub,         only: die
       use domain,             only: dom
       use grid_cont,          only: grid_container
+      use func,               only: operator(.notequals.)
       use multigridvars,      only: overrelax
 
       implicit none
@@ -608,7 +610,7 @@ contains
          ! compute Green's function for 7-point 3D discrete laplacian
          do i = 1, cg%mg%nxc
             do j = 1, cg%nyb
-               where ( (kx(i) + ky(j) + kz(:)) /= 0 )
+               where ((kx(i) + ky(j) + kz(:)).notequals.zero)
                   cg%mg%Green3D(i,j,:) = half * cg%mg%fft_norm / (kx(i) + ky(j) + kz(:))
                elsewhere
                   cg%mg%Green3D(i,j,:) = zero
@@ -662,12 +664,13 @@ contains
    subroutine init_source(i_all_dens)
 
       use cg_list_global, only: all_cg
-      use constants,      only: GEO_RPZ, LO, HI, xdim, ydim, zdim, O_I4
+      use constants,      only: GEO_RPZ, LO, HI, xdim, ydim, zdim, O_I4, zero
       use dataio_pub,     only: die
       use domain,         only: dom
       use cg_list,        only: cg_list_element
       use cg_leaves,      only: leaves
       use grid_cont,      only: grid_container
+      use func,           only: operator(.notequals.), operator(.equals.)
       use multigridvars,  only: source, bnd_periodic, bnd_dirichlet, bnd_givenval, grav_bnd
       use multigrid_Laplace, only: ord_laplacian_outer
       use units,          only: fpiG
@@ -719,7 +722,8 @@ contains
                do side = LO, HI
                   if (cg%ext_bnd(xdim, side)) then
                      fac = 2. * cg%idx2 / fpiG
-                     if (dom%geometry_type == GEO_RPZ .and. cg%x(cg%ijkse(xdim,side)) /= 0.) fac = fac - 1./(cg%dx * cg%x(cg%ijkse(xdim,side)) * fpiG) !> BEWARE is it cg%x(ie), cg%x(ie+1) or something in the middle?
+                     if (dom%geometry_type == GEO_RPZ .and. (cg%x(cg%ijkse(xdim,side)).notequals.zero)) &
+                          & fac = fac - 1./(cg%dx * cg%x(cg%ijkse(xdim,side)) * fpiG) !> BEWARE is it cg%x(ie), cg%x(ie+1) or something in the middle?
                      cg%q(source)%arr       (cg%ijkse(xdim,side), cg%js:cg%je, cg%ks:cg%ke) = &
                           & cg%q(source)%arr(cg%ijkse(xdim,side), cg%js:cg%je, cg%ks:cg%ke) - &
                           & cg%mg%bnd_x(                          cg%js:cg%je, cg%ks:cg%ke, side) * fac
@@ -730,9 +734,9 @@ contains
                   if (cg%ext_bnd(ydim, side)) then
                      if (dom%geometry_type == GEO_RPZ) then
                         do i = cg%is, cg%ie
-                           if (cg%x(i) /= 0.) cg%q(source)%arr(i, cg%ijkse(ydim,side), cg%ks:cg%ke) = &
-                                &             cg%q(source)%arr(i, cg%ijkse(ydim,side), cg%ks:cg%ke) - &
-                                &             cg%mg%bnd_y     (i,                      cg%ks:cg%ke, side) * 2. * cg%idy2 / fpiG / cg%x(i)**2
+                           if (cg%x(i).notequals.zero) cg%q(source)%arr(i, cg%ijkse(ydim,side), cg%ks:cg%ke) = &
+                                &                      cg%q(source)%arr(i, cg%ijkse(ydim,side), cg%ks:cg%ke) - &
+                                &                      cg%mg%bnd_y     (i,                      cg%ks:cg%ke, side) * 2. * cg%idy2 / fpiG / cg%x(i)**2
                         enddo
                      else
                         cg%q(source)%arr     (cg%is:cg%ie, cg%ijkse(ydim,side), cg%ks:cg%ke) = &
@@ -751,9 +755,9 @@ contains
                   endif
                enddo
                if (apply_src_Mcorrection) then
-                  where (cg%wa(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) == 2.) &
+                  where (cg%wa(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke).equals.2.0) &
                        cg%q(source)%arr(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = cg%q(source)%arr(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) * 5./6.
-                  where (cg%wa(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) == 3.) &
+                  where (cg%wa(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke).equals.3.0) &
                        cg%q(source)%arr(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = cg%q(source)%arr(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) * 2./3.
                endif
                cgl => cgl%nxt
@@ -894,9 +898,10 @@ contains
       use cg_level_coarsest,  only: coarsest
       use cg_level_connected, only: cg_level_connected_T
       use cg_level_finest,    only: finest
-      use constants,          only: cbuff_len
+      use constants,          only: cbuff_len, zero
       use dataio_pub,         only: msg, die, warn, printinfo
       use global,             only: do_ascii_dump
+      use func,               only: operator(.equals.), operator(.notequals.)
       use mpisetup,           only: master
       use multigridvars,      only: source, solution, correction, defect, verbose_vcycle, stdout, tot_ts, ts, grav_bnd, bnd_periodic
       use multigrid_gravity_helper, only: approximate_solution
@@ -928,7 +933,7 @@ contains
       norm_old = norm_rhs
       norm_lowest = norm_rhs
 
-      if (norm_rhs == 0.) then ! empty domain => potential == 0.
+      if (norm_rhs.equals.zero) then ! empty domain => potential == 0.
          if (master .and. .not. norm_was_zero) call warn("[multigrid_gravity:vcycle_hg] No gravitational potential for an empty space.")
          norm_was_zero = .true.
          return
@@ -959,7 +964,7 @@ contains
          endif
 
          vstat%count = v
-         if (norm_lhs /= 0) then
+         if (norm_lhs.notequals.zero) then
             vstat%factor(vstat%count) = norm_old/norm_lhs
          else
             vstat%factor(vstat%count) = huge(1.0)

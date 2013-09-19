@@ -494,6 +494,7 @@ contains
       use constants,  only: LO, HI, half, one, zero, xdim, ydim, zdim, CENTER, LEFT, RIGHT, INV_CENTER
       use dataio_pub, only: die
       use domain,     only: dom
+      use func,       only: operator(.notequals.)
 
       implicit none
 
@@ -516,7 +517,7 @@ contains
          this%coord(LEFT,  d)%r(:) = this%coord(CENTER, d)%r(:) - half*this%dl(d)
          this%coord(RIGHT, d)%r(:) = this%coord(CENTER, d)%r(:) + half*this%dl(d)
 
-         where ( this%coord(CENTER, d)%r(:) /= zero )
+         where ( this%coord(CENTER, d)%r(:).notequals.zero )
             this%coord(INV_CENTER, d)%r(:) = one/this%coord(CENTER, d)%r(:)
          elsewhere
             this%coord(INV_CENTER, d)%r(:) = zero
@@ -969,10 +970,10 @@ contains
 
    subroutine prolong(this, ind, cse)
 
-      use constants,  only: xdim, ydim, zdim, LO, HI, I_ZERO, I_ONE, I_TWO, I_THREE, O_INJ, O_LIN, O_D2, O_D3, O_D4, O_D5, O_D6, O_I2, O_I3, O_I4
+      use constants,  only: xdim, ydim, zdim, zero, LO, HI, I_ZERO, I_ONE, I_TWO, I_THREE, O_INJ, O_LIN, O_D2, O_D3, O_D4, O_D5, O_D6, O_I2, O_I3, O_I4
       use dataio_pub, only: die
       use domain,     only: dom
-      use func,       only: c2f
+      use func,       only: c2f, operator(.notequals.)
       use named_array_list, only: qna
 
       implicit none
@@ -1014,9 +1015,9 @@ contains
 
       ! this is just for optimization. Setting stencil_range = I_THREE should work correctly for all interpolations.
       stencil_range = I_ZERO
-      if (P_1 /= 0. .or. P1 /= 0.) stencil_range = I_ONE
-      if (P_2 /= 0. .or. P2 /= 0.) stencil_range = I_TWO
-      if (P_3 /= 0. .or. P3 /= 0.) stencil_range = I_THREE
+      if ((P_1.notequals.zero).or.(P1.notequals.zero)) stencil_range = I_ONE
+      if ((P_2.notequals.zero).or.(P2.notequals.zero)) stencil_range = I_TWO
+      if ((P_3.notequals.zero).or.(P3.notequals.zero)) stencil_range = I_THREE
 
       where (dom%has_dir(:))
          D(:) = 1
