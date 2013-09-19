@@ -267,7 +267,7 @@ contains
       use constants,     only: PIERNIK_INIT_DOMAIN, xdim, ydim, zdim, ndims, big_float, LO, HI, I_ONE, I_TWO, BND_MPI, BND_COR, GEO_XYZ, GEO_RPZ, dpi
       use dataio_pub,    only: die, warn, code_progress
       use domain,        only: dom
-      use func,          only: f2c
+      use grid_helpers,  only: f2c
       use refinement,    only: ref_flag
 
       implicit none
@@ -970,11 +970,12 @@ contains
 
    subroutine prolong(this, ind, cse)
 
-      use constants,  only: xdim, ydim, zdim, zero, LO, HI, I_ZERO, I_ONE, I_TWO, I_THREE, O_INJ, O_LIN, O_D2, O_D3, O_D4, O_D5, O_D6, O_I2, O_I3, O_I4
-      use dataio_pub, only: die
-      use domain,     only: dom
-      use func,       only: c2f, operator(.notequals.)
-      use named_array_list, only: qna
+      use constants,          only: xdim, ydim, zdim, zero, LO, HI, I_ZERO, I_ONE, I_TWO, I_THREE, O_INJ, O_LIN, O_D2, O_D3, O_D4, O_D5, O_D6, O_I2, O_I3, O_I4
+      use dataio_pub,         only: die
+      use domain,             only: dom
+      use func,               only: operator(.notequals.)
+      use grid_helpers,       only: c2f
+      use named_array_list,   only: qna
 
       implicit none
 

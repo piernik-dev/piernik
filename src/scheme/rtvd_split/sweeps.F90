@@ -191,8 +191,8 @@ contains
       use constants,        only: pdims, LO, HI, ORTHO1, ORTHO2, I_ONE, INVALID
       use dataio_pub,       only: die
       use domain,           only: dom
-      use func,             only: f2c_o
       use grid_cont,        only: grid_container
+      use grid_helpers,     only: f2c_o
       use mpi,              only: MPI_DOUBLE_PRECISION
       use mpisetup,         only: comm, mpi_err, req, inflate_req
 

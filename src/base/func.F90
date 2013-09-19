@@ -39,7 +39,7 @@ module func
    implicit none
 
    private
-   public :: ekin, emag, L2norm, sq_sum3, resample_gauss, piernik_fnum, f2c, c2f, f2c_o, c2f_o, &
+   public :: ekin, emag, L2norm, sq_sum3, resample_gauss, piernik_fnum, &
       & append_int_to_array, operator(.equals.), operator(.notequals.) 
 
    interface operator (.equals.)
@@ -173,76 +173,6 @@ contains
       piernik_fnum = int(fnum(lunit), kind=4)
 #endif /* !__INTEL_COMPILER */
    end function piernik_fnum
-
-!> \brief Calculate minimal fine grid that completely covers given coarse grid
-
-   pure function c2f(coarse) result (fine)
-
-      use constants, only: xdim, zdim, LO, HI, refinement_factor
-      use domain,    only: dom
-
-      implicit none
-
-      integer(kind=8), dimension(xdim:zdim, LO:HI), intent(in) :: coarse
-
-      integer(kind=8), dimension(xdim:zdim, LO:HI) :: fine
-
-      fine(:, LO) = c2f_o(coarse(:, LO))
-      where (dom%has_dir(:))
-         fine(:, HI) = c2f_o(coarse(:, HI)) + refinement_factor - 1
-      elsewhere
-         fine(:, HI) = c2f_o(coarse(:, HI))
-      endwhere
-
-   end function c2f
-
-!> \brief Calculate minimal coarse grid that completely embeds given fine grid
-
-   pure function f2c(fine) result (coarse)
-
-      use constants, only: xdim, zdim, LO, HI
-
-      implicit none
-
-      integer(kind=8), dimension(xdim:zdim, LO:HI), intent(in) :: fine
-
-      integer(kind=8), dimension(xdim:zdim, LO:HI) :: coarse
-
-      coarse = f2c_o(fine)
-
-   end function f2c
-
-!> \brief Calculate refined offset
-
-   elemental function c2f_o(o_coarse) result (o_fine)
-
-      use constants, only: refinement_factor
-
-      implicit none
-
-      integer(kind=8), intent(in) :: o_coarse
-
-      integer(kind=8) :: o_fine
-
-      o_fine = o_coarse * refinement_factor
-
-   end function c2f_o
-
-!> \brief Calculate coarsened offset
-
-   elemental function f2c_o(o_fine) result (o_coarse)
-
-      use constants, only: refinement_factor
-
-      implicit none
-
-      integer(kind=8), intent(in) :: o_fine
-
-      integer(kind=8) :: o_coarse
-
-      o_coarse = floor(o_fine / real(refinement_factor))
-
-   end function f2c_o
 
 !> \brief Expand given integer array by one and store the value i ni the last cell
 
