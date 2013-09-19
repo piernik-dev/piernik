@@ -226,7 +226,7 @@ contains
                CoM(ydim) = 0.
             else
 !!$               CoM(xdim) = 2./3. * (dom%edge(xdim, HI)**3-dom%edge(xdim, LO)**3)/(dom%edge(xdim, HI)**2-dom%edge(xdim, LO)**2)
-!!$               if (dom%L_(ydim) /= 0.) CoM(xdim) = CoM(xdim) * sin(dom%L_(ydim)/2.)/(dom%L_(ydim)/2.)
+!!$               if (dom%L_(ydim).notequals.zero) CoM(xdim) = CoM(xdim) * sin(dom%L_(ydim)/2.)/(dom%L_(ydim)/2.)
 !!$               CoM(ydim) = dom%C_(ydim)
                CoM(xdim) = 0.
                CoM(ydim) = 0.
@@ -442,10 +442,11 @@ contains
 
       use cg_leaves,    only: leaves
       use cg_list,      only: cg_list_element
-      use constants,    only: ndims, xdim, ydim, zdim, LO, HI, GEO_XYZ, pSUM !, GEO_RPZ
+      use constants,    only: ndims, xdim, ydim, zdim, LO, HI, GEO_XYZ, pSUM, zero !, GEO_RPZ
       use dataio_pub,   only: die
       use domain,       only: dom
       use grid_cont,    only: grid_container
+      use func,         only: operator(.notequals.)
       use mpisetup,     only: piernik_MPI_Allreduce
       use particle_pub, only: pset
 #ifdef DEBUG
@@ -509,7 +510,7 @@ contains
       CoM(imass:ndims) = lsum(imass:ndims)
       call piernik_MPI_Allreduce(CoM(imass:ndims), pSUM)
 
-      if (CoM(imass) /= 0.) then
+      if (CoM(imass).notequals.zero) then
          CoM(xdim:zdim) = CoM(xdim:zdim) / CoM(imass)
       else
          call die("[multigridmultipole:find_img_CoM] Total mass == 0")
@@ -788,10 +789,11 @@ contains
 
       use cg_leaves,    only: leaves
       use cg_list,      only: cg_list_element
-      use constants,    only: xdim, ydim, zdim, GEO_XYZ, GEO_RPZ, LO, HI, pSUM, pMIN, pMAX
+      use constants,    only: xdim, ydim, zdim, GEO_XYZ, GEO_RPZ, LO, HI, pSUM, pMIN, pMAX, zero
       use dataio_pub,   only: die
       use domain,       only: dom
       use grid_cont,    only: grid_container
+      use func,         only: operator(.notequals.)
       use mpisetup,     only: piernik_MPI_Allreduce
       use particle_pub, only: pset
       use units,        only: fpiG
@@ -803,7 +805,7 @@ contains
       type(cg_list_element), pointer :: cgl
       type(grid_container), pointer :: cg
 
-      if (dom%geometry_type /= GEO_XYZ .and. any(CoM(xdim:zdim) /= 0.)) call die("[multigridmultipole:img_mass2moments] CoM not allowed for non-cartesian geometry")
+      if (dom%geometry_type /= GEO_XYZ .and. any(CoM(xdim:zdim).notequals.zero)) call die("[multigridmultipole:img_mass2moments] CoM not allowed for non-cartesian geometry")
 
       ! reset the multipole data
       Q(:, :, :) = 0.
@@ -886,6 +888,9 @@ contains
 
    subroutine point2moments(mass, x, y, z)
 
+      use constants,    only: zero
+      use func,         only: operator(.notequals.)
+
       implicit none
 
       real, intent(in) :: mass    !< mass of the contributing point
@@ -904,7 +909,7 @@ contains
       ! monopole, the (0,0) moment; P_0 = 1.
       Q(0, INSIDE,  ir)   = Q(0, INSIDE,  ir)   +  rn(0) * (1.-del)
       Q(0, OUTSIDE, ir)   = Q(0, OUTSIDE, ir)   + irn(0) * (1.-del)
-      if (del /= 0.) then
+      if (del.notequals.zero) then
          Q(0, INSIDE,  ir+1) = Q(0, INSIDE,  ir+1) +  rn(0) * del
          Q(0, OUTSIDE, ir+1) = Q(0, OUTSIDE, ir+1) + irn(0) * del
       endif
@@ -917,7 +922,7 @@ contains
          Ql = cos_th * k12(1, l, 0) * Ql1 - k12(2, l, 0) * Ql2
          Q(l, INSIDE,  ir)   = Q(l, INSIDE,  ir)   +  rn(l) * Ql * (1.-del)
          Q(l, OUTSIDE, ir)   = Q(l, OUTSIDE, ir)   + irn(l) * Ql * (1.-del)
-         if (del /= 0.) then
+         if (del.notequals.zero) then
             Q(l, INSIDE,  ir+1) = Q(l, INSIDE,  ir+1) +  rn(l) * Ql * del
             Q(l, OUTSIDE, ir+1) = Q(l, OUTSIDE, ir+1) + irn(l) * Ql * del
          endif
@@ -938,7 +943,7 @@ contains
          Q(m2c+m, INSIDE,  ir)   = Q(m2c+m, INSIDE,  ir)   +  rn(m) * Ql1 * cfac(m) * (1.-del)
          Q(m2s+m, OUTSIDE, ir)   = Q(m2s+m, OUTSIDE, ir)   + irn(m) * Ql1 * sfac(m) * (1.-del)
          Q(m2c+m, OUTSIDE, ir)   = Q(m2c+m, OUTSIDE, ir)   + irn(m) * Ql1 * cfac(m) * (1.-del)
-         if (del /= 0.) then
+         if (del.notequals.zero) then
             Q(m2s+m, INSIDE,  ir+1) = Q(m2s+m, INSIDE,  ir+1) +  rn(m) * Ql1 * sfac(m) * del
             Q(m2c+m, INSIDE,  ir+1) = Q(m2c+m, INSIDE,  ir+1) +  rn(m) * Ql1 * cfac(m) * del
             Q(m2s+m, OUTSIDE, ir+1) = Q(m2s+m, OUTSIDE, ir+1) + irn(m) * Ql1 * sfac(m) * del
@@ -958,7 +963,7 @@ contains
             Q(m2c+l, INSIDE,  ir)   = Q(m2c+l, INSIDE,  ir)   +  rn(l) * Ql * cfac(m) * (1.-del)
             Q(m2s+l, OUTSIDE, ir)   = Q(m2s+l, OUTSIDE, ir)   + irn(l) * Ql * sfac(m) * (1.-del)
             Q(m2c+l, OUTSIDE, ir)   = Q(m2c+l, OUTSIDE, ir)   + irn(l) * Ql * cfac(m) * (1.-del)
-            if (del /= 0.) then
+            if (del.notequals.zero) then
                Q(m2s+l, INSIDE,  ir+1) = Q(m2s+l, INSIDE,  ir+1) +  rn(l) * Ql * sfac(m) * del
                Q(m2c+l, INSIDE,  ir+1) = Q(m2c+l, INSIDE,  ir+1) +  rn(l) * Ql * cfac(m) * del
                Q(m2s+l, OUTSIDE, ir+1) = Q(m2s+l, OUTSIDE, ir+1) + irn(l) * Ql * sfac(m) * del
@@ -982,10 +987,11 @@ contains
 
       use cg_leaves,  only: leaves
       use cg_list,    only: cg_list_element
-      use constants,  only: xdim, ydim, zdim, GEO_XYZ, GEO_RPZ, LO, HI
+      use constants,  only: xdim, ydim, zdim, GEO_XYZ, GEO_RPZ, LO, HI, zero
       use dataio_pub, only: die
       use domain,     only: dom
       use grid_cont,  only: grid_container
+      use func,       only: operator(.notequals.)
 
       implicit none
 
@@ -993,7 +999,7 @@ contains
       type(cg_list_element), pointer :: cgl
       type(grid_container), pointer :: cg
 
-      if (dom%geometry_type /= GEO_XYZ .and. any(CoM(xdim:zdim) /= 0.)) call die("[multigridmultipole:img_mass2moments] CoM not allowed for non-cartesian geometry")
+      if (dom%geometry_type /= GEO_XYZ .and. any(CoM(xdim:zdim).notequals.zero)) call die("[multigridmultipole:img_mass2moments] CoM not allowed for non-cartesian geometry")
 
       cgl => leaves%first
       do while (associated(cgl))
@@ -1038,7 +1044,9 @@ contains
 
       real function moments2pot(x, y, z) result(potential)
 
-         use units, only: newtong
+         use constants,    only: zero
+         use func,         only: operator(.notequals.)
+         use units,        only: newtong
 
          implicit none
 
@@ -1058,7 +1066,7 @@ contains
          potential = (1.-del) * ( &
               Q(0, INSIDE,  ir)   * irn(0) + &
               Q(0, OUTSIDE, ir+1) *  rn(0) )
-         if (del /= 0.) potential = potential + del * ( &
+         if (del.notequals.zero) potential = potential + del * ( &
               Q(0, INSIDE,  ir-1) * irn(0) + &
               Q(0, OUTSIDE, ir)   *  rn(0) )
          ! ir+1 to prevent duplicate accounting contributions from ir bin; alternatively one can modify radial integration
@@ -1071,7 +1079,7 @@ contains
             potential = potential + Ql * (1.-del) * ( &
                  &      Q(l, INSIDE,  ir)   * irn(l) + &
                  &      Q(l, OUTSIDE, ir+1) *  rn(l) )
-            if (del /= 0.) potential = potential + Ql  * del * ( &
+            if (del.notequals.zero) potential = potential + Ql  * del * ( &
                  &      Q(l, INSIDE,  ir-1) * irn(l) + &
               &      Q(l, OUTSIDE, ir)   *  rn(l) )
             Ql2 = Ql1
@@ -1089,7 +1097,7 @@ contains
                  &       Q(m2c+m, OUTSIDE, ir+1) *  rn(m) ) * cfac(m) + &
                  &      (Q(m2s+m, INSIDE,  ir)   * irn(m) + &
                  &       Q(m2s+m, OUTSIDE, ir+1) *  rn(m) ) * sfac(m) )
-            if (del /= 0.) potential = potential + Ql1 * del * ( &
+            if (del.notequals.zero) potential = potential + Ql1 * del * ( &
                  &      (Q(m2c+m, INSIDE,  ir-1) * irn(m) + &
                  &       Q(m2c+m, OUTSIDE, ir)   *  rn(m) ) * cfac(m) + &
                  &      (Q(m2s+m, INSIDE,  ir-1) * irn(m) + &
@@ -1105,7 +1113,7 @@ contains
                     &       Q(m2c+l, OUTSIDE, ir+1) *  rn(l) ) * cfac(m) + &
                     &      (Q(m2s+l, INSIDE,  ir)   * irn(l) + &
                     &       Q(m2s+l, OUTSIDE, ir+1) *  rn(l) ) * sfac(m) )
-               if (del /= 0.) potential = potential + Ql * del * ( &
+               if (del.notequals.zero) potential = potential + Ql * del * ( &
                     &      (Q(m2c+l, INSIDE,  ir-1) * irn(l) + &
                     &       Q(m2c+l, OUTSIDE, ir)   *  rn(l) ) * cfac(m) + &
                     &      (Q(m2s+l, INSIDE,  ir-1) * irn(l) + &
@@ -1127,9 +1135,10 @@ contains
 
    subroutine geomfac4moments(factor, x, y, z, sin_th, cos_th, ir, delta)
 
-      use constants,  only: GEO_XYZ, GEO_RPZ
+      use constants,  only: GEO_XYZ, GEO_RPZ, zero
       use dataio_pub, only: die, msg
       use domain,     only: dom
+      use func,       only: operator(.notequals.)
 
       implicit none
 
@@ -1158,7 +1167,7 @@ contains
       end select
       r    = sqrt(rxy + z**2)
       rxy  = sqrt(rxy)
-      if (r /= 0.) then
+      if (r.notequals.zero) then
          rinv = 1. / r
       else
          rinv = 0.
@@ -1181,7 +1190,7 @@ contains
       ! azimuthal angle sine and cosine tables
       ! ph = atan2(y, x); cfac(m) = cos(m * ph); sfac(m) = sin(m * ph)
       ! cfac(0) and sfac(0) are set in init_multigrid
-      if (rxy /= 0.) then
+      if (rxy.notequals.zero) then
          select case (dom%geometry_type)
             case (GEO_XYZ)
                cos_ph = x / rxy

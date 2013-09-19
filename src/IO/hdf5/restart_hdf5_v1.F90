@@ -487,6 +487,7 @@ contains
       use dataio_user,      only: user_reg_var_restart, user_attrs_rd
       use domain,           only: dom
       use fluidindex,       only: flind
+      use func,             only: operator(.notequals.)
       use global,           only: t, dt, nstep
       use hdf5,             only: HID_T, H5P_FILE_ACCESS_F, H5F_ACC_RDONLY_F, &
            &                      h5open_f, h5pcreate_f, h5pset_fapl_mpio_f, h5fopen_f, h5pclose_f, h5fclose_f, h5close_f
@@ -550,27 +551,27 @@ contains
          if (ibuf(1) /= dom%n_d(xdim) .or. error /= 0) call die("[restart_hdf5_v1:read_restart_hdf5_v1] nxd does not match")
          if (dom%has_dir(xdim)) then
             call h5ltget_attribute_double_f(file_id,"/","xmin", rbuf, error)
-            if (rbuf(1) /= dom%edge(xdim, LO) .or. error /= 0) call die("[restart_hdf5_v1:read_restart_hdf5_v1] xmin does not match")
+            if ((rbuf(1) .notequals. dom%edge(xdim, LO)) .or. error /= 0) call die("[restart_hdf5_v1:read_restart_hdf5_v1] xmin does not match")
             call h5ltget_attribute_double_f(file_id,"/","xmax", rbuf, error)
-            if (rbuf(1) /= dom%edge(xdim, HI) .or. error /= 0) call die("[restart_hdf5_v1:read_restart_hdf5_v1] xmax does not match")
+            if ((rbuf(1) .notequals. dom%edge(xdim, HI)) .or. error /= 0) call die("[restart_hdf5_v1:read_restart_hdf5_v1] xmax does not match")
          endif
 
          call h5ltget_attribute_int_f(file_id,"/","nyd", ibuf, error)
          if (ibuf(1) /= dom%n_d(ydim) .or. error /= 0) call die("[restart_hdf5_v1:read_restart_hdf5_v1] nyd does not match")
          if (dom%has_dir(ydim)) then
             call h5ltget_attribute_double_f(file_id,"/","ymin", rbuf, error)
-            if (rbuf(1) /= dom%edge(ydim, LO) .or. error /= 0) call die("[restart_hdf5_v1:read_restart_hdf5_v1] ymin does not match")
+            if ((rbuf(1) .notequals. dom%edge(ydim, LO)) .or. error /= 0) call die("[restart_hdf5_v1:read_restart_hdf5_v1] ymin does not match")
             call h5ltget_attribute_double_f(file_id,"/","ymax", rbuf, error)
-            if (rbuf(1) /= dom%edge(ydim, HI) .or. error /= 0) call die("[restart_hdf5_v1:read_restart_hdf5_v1] ymax does not match")
+            if ((rbuf(1) .notequals. dom%edge(ydim, HI)) .or. error /= 0) call die("[restart_hdf5_v1:read_restart_hdf5_v1] ymax does not match")
          endif
 
          call h5ltget_attribute_int_f(file_id,"/","nzd", ibuf, error)
          if (ibuf(1) /= dom%n_d(zdim) .or. error /= 0) call die("[restart_hdf5_v1:read_restart_hdf5_v1] nzd does not match")
          if (dom%has_dir(zdim)) then
             call h5ltget_attribute_double_f(file_id,"/","zmin", rbuf, error)
-            if (rbuf(1) /= dom%edge(zdim, LO) .or. error /= 0) call die("[restart_hdf5_v1:read_restart_hdf5_v1] zmin does not match")
+            if ((rbuf(1) .notequals. dom%edge(zdim, LO)) .or. error /= 0) call die("[restart_hdf5_v1:read_restart_hdf5_v1] zmin does not match")
             call h5ltget_attribute_double_f(file_id,"/","zmax", rbuf, error)
-            if (rbuf(1) /= dom%edge(zdim, HI) .or. error /= 0) call die("[restart_hdf5_v1:read_restart_hdf5_v1] zmax does not match")
+            if ((rbuf(1) .notequals. dom%edge(zdim, HI)) .or. error /= 0) call die("[restart_hdf5_v1:read_restart_hdf5_v1] zmax does not match")
          endif
 
          call h5fclose_f(file_id, error)

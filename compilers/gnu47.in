@@ -2,12 +2,12 @@ PROG      = piernik
 
 ### gcc-4.7
 F90       = mpif90
-F90FLAGS  = -fdefault-real-8 -ffree-form -std=gnu -fimplicit-none -ffree-line-length-none
+F90FLAGS  = -fdefault-real-8 -ffree-form -std=gnu -fimplicit-none -ffree-line-length-none -g
 LDFLAGS   = -Wl,--as-needed -Wl,-O1
 
 ifeq ($(PIERNIK_DEBUG), 1)
-   F90FLAGS += -g -ggdb -O0 -ffpe-trap=zero,overflow,invalid -fcheck=all -fno-omit-frame-pointer
-   F90FLAGS += -Wall -W -Wextra -pedantic-errors
+   F90FLAGS += -ggdb -O0 -ffpe-trap=zero,overflow,invalid -fcheck=all -fno-omit-frame-pointer
+   F90FLAGS += -Wall -W -Wextra -pedantic-errors -Wno-unused-function
 else
    F90FLAGS += -O2 -fstack-arrays -funroll-loops
 endif

@@ -262,7 +262,8 @@ contains
 
    subroutine calcCoM(this)
 
-      use constants, only: xdim, zdim, LONG
+      use constants, only: xdim, zdim, LONG, zero
+      use func,      only: operator(.notequals.)
 
       implicit none
 
@@ -283,7 +284,7 @@ contains
          enddo
       enddo
 
-      if (mx(MASS) /= 0) then
+      if (mx(MASS).notequals.zero) then
          this%CoM(xdim:zdim) = mx(xdim:zdim) / mx(MASS)
       else
          mx = -huge(1.)

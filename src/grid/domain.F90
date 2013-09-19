@@ -464,6 +464,7 @@ contains
 
       use constants,  only: ndims, LO, HI, big_float, dpi, xdim, ydim, zdim, GEO_XYZ, GEO_RPZ, GEO_INVALID, BND_PER, BND_REF, BND_SHE, I_ONE, I_TWO
       use dataio_pub, only: die, warn, msg
+      use func,       only: operator(.notequals.)
       use mpisetup,   only: master
 
       implicit none
@@ -544,15 +545,15 @@ contains
          case default
             call die("[domain:init_domain] Invalid geometry type.")
       end select
-      if (xmno /= edges(xdim,LO)) then
+      if (xmno .notequals. edges(xdim,LO)) then
          write(msg,'(2(a,g20.12))')"[domain:init_domain] Sanitized edges(xdim,LO): ",xmno," -> ",edges(xdim,LO)
          if (master) call warn(msg)
       endif
-      if (ymno /= edges(ydim,LO) .and. ymno /= -big_float) then
+      if ((ymno .notequals. edges(ydim,LO)) .and. (ymno .notequals. -big_float)) then
          write(msg,'(2(a,g20.12))')"[domain:init_domain] Sanitized edges(ydim,LO): ",ymno," -> ",edges(ydim,LO)
          if (master) call warn(msg)
       endif
-      if (ymxo /= edges(ydim,HI) .and. ymxo /= big_float) then
+      if ((ymxo .notequals. edges(ydim,HI)) .and. (ymno .notequals. -big_float)) then
          write(msg,'(2(a,g20.12))')"[domain:init_domain] Sanitized edges(ydim,HI): ",ymno," -> ",edges(ydim,HI)
          if (master) call warn(msg)
       endif

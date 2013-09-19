@@ -111,8 +111,8 @@ contains
       use constants,      only: xdim, ydim, zdim, LO, HI
       use dataio_pub,     only: die
       use domain,         only: dom
-      use func,           only: f2c, c2f
       use grid_cont,      only: grid_container, is_overlap
+      use grid_helpers,   only: f2c, c2f
       use mpisetup,       only: FIRST, LAST
 
       implicit none
@@ -609,8 +609,8 @@ contains
       use cg_list,          only: cg_list_element
       use constants,        only: xdim, ydim, zdim, LO, HI, I_ONE, O_INJ, VAR_CENTER, ndims
       use dataio_pub,       only: msg, warn
-      use func,             only: f2c
       use grid_cont,        only: grid_container
+      use grid_helpers,     only: f2c
       use mpisetup,         only: comm, mpi_err, req, status, inflate_req, master
       use mpi,              only: MPI_DOUBLE_PRECISION
       use named_array_list, only: qna
@@ -801,8 +801,8 @@ contains
       use constants,      only: I_ONE, xdim, ydim, zdim, LO, HI, refinement_factor, ndims, O_INJ, base_level_id
       use dataio_pub,     only: warn
       use domain,         only: dom
-      use func,           only: f2c, c2f
       use grid_cont,      only: grid_container
+      use grid_helpers,   only: f2c, c2f
       use mpi,            only: MPI_DOUBLE_PRECISION
       use mpisetup,       only: comm, mpi_err, req, status, inflate_req, master
 
@@ -965,8 +965,8 @@ contains
       use constants,      only: xdim, ydim, zdim, LO, HI, I_ONE, ndims
       use dataio_pub,     only: warn, msg, die
       use domain,         only: dom
-      use func,           only: f2c
       use grid_cont,      only: grid_container, is_overlap
+      use grid_helpers,   only: f2c
       use mergebox,       only: wmap
       use mpi,            only: MPI_INTEGER, MPI_INTEGER8
       use mpisetup,       only: FIRST, LAST, comm, mpi_err, proc
@@ -1235,10 +1235,10 @@ contains
 
    subroutine vertical_bf_prep(this)
 
-      use cg_list,    only: cg_list_element
-      use constants,  only: LO, HI, pdims, ORTHO1, ORTHO2, xdim, zdim
-      use fluidindex, only: flind
-      use func,       only: c2f
+      use cg_list,      only: cg_list_element
+      use constants,    only: LO, HI, pdims, ORTHO1, ORTHO2, xdim, zdim
+      use fluidindex,   only: flind
+      use grid_helpers, only: c2f
 
       implicit none
 
