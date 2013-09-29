@@ -61,6 +61,7 @@ module gravity
    integer(kind=4)            :: nsub                  !< number of subcells while additionally cell division in z-direction is present during establishment of hydrostatic equilibrium
    integer(kind=4)            :: n_gravh               !< index of hyperbolic-cosinusoidal cutting of acceleration; used when set to non-zero
    integer(kind=4)            :: n_gravr               !< index of hyperbolic-cosinusoidal cutting of gravitational potential used by GRAV_PTMASS, GRAV_PTFLAT type of %gravity
+   integer(kind=4)            :: ord_pot2accel         !< Gradient operator order for gravitational potential
    real                       :: h_grav                !< altitude of acceleration cut used when n_gravh is set to non-zero
    real                       :: r_grav                !< radius of gravitational potential cut used by GRAV_PTMASS, GRAV_PTFLAT type of %gravity
    real                       :: tune_zeq              !< z-component of %gravity tuning factor used by hydrostatic_zeq
@@ -106,6 +107,18 @@ module gravity
          real, dimension(n),intent(in)  :: xsw              !< COMMENT ME
          real, dimension(n),intent(out) :: grav             !< COMMENT ME
       end subroutine user_grav_accel
+   
+      subroutine grav_pot2accel_T(sweep, i1, i2, n, grav, istep, cg)
+         use grid_cont,          only: grid_container
+         implicit none
+         integer(kind=4),               intent(in)  :: sweep      !< string of characters that points out the current sweep direction
+         integer,                       intent(in)  :: i1         !< number of column in the first direction after one pointed out by sweep
+         integer,                       intent(in)  :: i2         !< number of column in the second direction after one pointed out by sweep
+         integer(kind=4),               intent(in)  :: n          !< number of elements of returned array grav \todo OPT: would size(grav) be faster a bit?
+         real, dimension(n),            intent(out) :: grav       !< 1D array of gravitational acceleration values computed for positions from %xsw and returned by the routine
+         integer,                       intent(in)  :: istep      !< istep=1 for halfstep, istep=2 for fullstep
+         type(grid_container), pointer, intent(in)  :: cg         !< current grid_container
+      end subroutine grav_pot2accel_T
 
    end interface
 
@@ -113,6 +126,7 @@ module gravity
    procedure(user_grav_accel),  pointer :: grav_accel  => NULL()
    procedure(gprofs_default),   pointer :: get_gprofs  => NULL()
    procedure(grav_types),       pointer :: grav_type   => NULL()
+   procedure(grav_pot2accel_T), pointer :: grav_pot2accel => NULL()
 
 contains
 
@@ -149,7 +163,7 @@ contains
    subroutine init_grav
 
       use cg_list_global, only: all_cg
-      use constants,      only: PIERNIK_INIT_MPI, AT_OUT_B, gp_n, gpot_n, hgpot_n
+      use constants,      only: PIERNIK_INIT_MPI, AT_OUT_B, gp_n, gpot_n, hgpot_n, O_I2, O_I4
       use dataio_pub,     only: nh    ! QA_WARN required for diff_nml
       use dataio_pub,     only: printinfo, warn, die, code_progress
       use mpisetup,       only: ibuff, rbuff, cbuff, master, slave, lbuff, piernik_MPI_Bcast
@@ -165,7 +179,7 @@ contains
       implicit none
 
       namelist /GRAVITY/ g_dir, r_gc, ptmass, ptm_x, ptm_y, ptm_z, r_smooth, external_gp, ptmass2, ptm2_x, &
-                         nsub, tune_zeq, tune_zeq_bnd, h_grav, r_grav, n_gravr, n_gravh, user_grav, gprofs_target, variable_gp
+                         nsub, tune_zeq, tune_zeq_bnd, h_grav, r_grav, n_gravr, n_gravh, user_grav, gprofs_target, variable_gp, ord_pot2accel
 
       if (code_progress < PIERNIK_INIT_MPI) call die("[gravity:init_grav] mpi not initialized.")
 
@@ -190,6 +204,7 @@ contains
 
       n_gravr       = 0
       n_gravh       = 0
+      ord_pot2accel = O_I2
 
       gprofs_target = 'extgp'
       external_gp   = 'null'
@@ -204,7 +219,7 @@ contains
          write(nh%lun,nml=GRAVITY)
          close(nh%lun)
          open(newunit=nh%lun, file=nh%par_file)
-         nh%errstr=""
+         nh%errstr=''
          read(unit=nh%lun, nml=GRAVITY, iostat=nh%ierrh, iomsg=nh%errstr)
          close(nh%lun)
          call nh%namelist_errh(nh%ierrh, "GRAVITY")
@@ -218,6 +233,7 @@ contains
          ibuff(1)   = nsub
          ibuff(2)   = n_gravr
          ibuff(3)   = n_gravh
+         ibuff(4)   = ord_pot2accel
 
          rbuff(1:3) = g_dir
          rbuff(4)   = r_gc
@@ -251,6 +267,7 @@ contains
          nsub          = int(ibuff(1), kind=4)
          n_gravr       = ibuff(2)
          n_gravh       = ibuff(3)
+         ord_pot2accel = ibuff(4)
 
          g_dir         = rbuff(1:3)
          r_gc          = rbuff(4)
@@ -300,6 +317,15 @@ contains
          if (master) call warn("[gravity:init_grav] user_grav is set to false. Using default grav_pot_3d.")
 #endif /* VERBOSE */
       endif
+
+      select case (ord_pot2accel)
+         case(O_I2)
+            grav_pot2accel => grav_pot2accel_ord2
+         case(O_I4)
+            grav_pot2accel => grav_pot2accel_ord4
+         case default
+            call die("[gravity:init_grav] Unknown gradient operator")
+      end select
 
       call init_particles
 
@@ -862,7 +888,7 @@ contains
 !! \brief Routine that compute values of gravitational acceleration using gravitational potential array gp
 !! \todo offer high order gradient as an option in parameter file
 !<
-   subroutine grav_pot2accel(sweep, i1, i2, n, grav, istep, cg)
+   subroutine grav_pot2accel_ord2(sweep, i1, i2, n, grav, istep, cg)
 
       use constants,  only: xdim, ydim, zdim, half, LO, HI, GEO_XYZ, GEO_RPZ
       use dataio_pub, only: die
@@ -879,31 +905,8 @@ contains
       integer,                       intent(in)  :: istep      !< istep=1 for halfstep, istep=2 for fullstep
       type(grid_container), pointer, intent(in)  :: cg         !< current grid_container
 
-!      real, parameter :: onetw = 1./12.
+      ! Gravitational acceleration is computed on right cell boundaries
 
-! Gravitational acceleration is computed on right cell boundaries
-
-!      if (istep==1) then
-!         select case (sweep)
-!            case (xdim)
-!               grav(3:n-2) = onetw*(cg%hgpot(5:n,i1,i2) - 8.*cg%hgpot(4:n-1,i1,i2) + 8.*cg%hgpot(2:n-3,i1,i2) - cg%hgpot(1:n-4,i1,i2) )/dl(xdim)
-!            case (ydim)
-!               grav(3:n-2) = onetw*(cg%hgpot(i2,5:n,i1) - 8.*cg%hgpot(i2,4:n-1,i1) + 8.*cg%hgpot(i2,2:n-3,i1) - cg%hgpot(i2,1:n-4,i1) )/dl(xdim)
-!            case (zdim)
-!               grav(3:n-2) = onetw*(cg%hgpot(i1,i2,5:n) - 8.*cg%hgpot(i1,i2,4:n-1) + 8.*cg%hgpot(i1,i2,2:n-3) - cg%hgpot(i1,i2,1:n-4) )/dl(xdim)
-!         end select
-!      else
-!         select case (sweep)
-!            case (xdim)
-!               grav(3:n-2) = onetw*(cg%gpot(5:n,i1,i2) - 8.*cg%gpot(4:n-1,i1,i2) + 8.*cg%gpot(2:n-3,i1,i2) - cg%gpot(1:n-4,i1,i2) )/dl(xdim)
-!            case (ydim)
-!               grav(3:n-2) = onetw*(cg%gpot(i2,5:n,i1) - 8.*cg%gpot(i2,4:n-1,i1) + 8.*cg%gpot(i2,2:n-3,i1) - cg%gpot(i2,1:n-4,i1) )/dl(xdim)
-!            case (zdim)
-!               grav(3:n-2) = onetw*(cg%gpot(i1,i2,5:n) - 8.*cg%gpot(i1,i2,4:n-1) + 8.*cg%gpot(i1,i2,2:n-3) - cg%gpot(i1,i2,1:n-4) )/dl(xdim)
-!         end select
-!      endif
-!      grav(2) = grav(3); grav(n-1) = grav(n-2)
-!      grav(1) = grav(2); grav(n) = grav(n-1)
       if (istep==1) then
          select case (sweep)
             case (xdim)
@@ -935,7 +938,66 @@ contains
             call die("[gravity:grav_pot2accel] Unsupported geometry")
       end select
 
-   end subroutine grav_pot2accel
+   end subroutine grav_pot2accel_ord2
+
+   subroutine grav_pot2accel_ord4(sweep, i1, i2, n, grav, istep, cg)
+
+      use constants,  only: xdim, ydim, zdim, LO, HI, GEO_XYZ, GEO_RPZ
+      use dataio_pub, only: die
+      use domain,     only: dom
+      use grid_cont,  only: grid_container
+
+      implicit none
+
+      integer(kind=4),               intent(in)  :: sweep      !< string of characters that points out the current sweep direction
+      integer,                       intent(in)  :: i1         !< number of column in the first direction after one pointed out by sweep
+      integer,                       intent(in)  :: i2         !< number of column in the second direction after one pointed out by sweep
+      integer(kind=4),               intent(in)  :: n          !< number of elements of returned array grav \todo OPT: would size(grav) be faster a bit?
+      real, dimension(n),            intent(out) :: grav       !< 1D array of gravitational acceleration values computed for positions from %xsw and returned by the routine
+      integer,                       intent(in)  :: istep      !< istep=1 for halfstep, istep=2 for fullstep
+      type(grid_container), pointer, intent(in)  :: cg         !< current grid_container
+
+      real, parameter :: onetw = 1./12.
+
+      ! Gravitational acceleration is computed on right cell boundaries
+
+      if (istep==1) then
+         select case (sweep)
+            case (xdim)
+               grav(3:n-2) = onetw*(cg%hgpot(cg%lhn(xdim, LO)+4:cg%lhn(xdim, HI),i1,i2) - 8.*cg%hgpot(cg%lhn(xdim, LO)+3:cg%lhn(xdim, HI)-1,i1,i2) + &
+                                    8.*cg%hgpot(cg%lhn(xdim, LO)+1:cg%lhn(xdim, HI)-3,i1,i2) - cg%hgpot(cg%lhn(xdim, LO):cg%lhn(xdim, HI)-4,i1,i2)) / cg%dl(xdim)
+            case (ydim)
+               grav(3:n-2) = onetw*(cg%hgpot(i2,cg%lhn(ydim, LO)+4:cg%lhn(ydim, HI),i1) - 8.*cg%hgpot(i2,cg%lhn(ydim, LO)+3:cg%lhn(ydim, HI)-1,i1) + &
+                                    8.*cg%hgpot(i2,cg%lhn(ydim, LO)+1:cg%lhn(ydim, HI)-3,i1) - cg%hgpot(i2,cg%lhn(ydim, LO):cg%lhn(ydim, HI)-4,i1)) / cg%dl(ydim)
+            case (zdim)
+               grav(3:n-2) = onetw*(cg%hgpot(i1,i2,cg%lhn(zdim, LO)+4:cg%lhn(zdim, HI)) - 8.*cg%hgpot(i1,i2,cg%lhn(zdim, LO)+3:cg%lhn(zdim, HI)-1) + &
+                                    8.*cg%hgpot(i1,i2,cg%lhn(zdim, LO)+1:cg%lhn(zdim, HI)-3) - cg%hgpot(i1,i2,cg%lhn(zdim, LO):cg%lhn(zdim, HI)-4)) / cg%dl(zdim)
+         end select
+      else
+         select case (sweep)
+            case (xdim)
+               grav(3:n-2) = onetw*(cg%gpot(cg%lhn(xdim, LO)+4:cg%lhn(xdim, HI),i1,i2) - 8.*cg%gpot(cg%lhn(xdim, LO)+3:cg%lhn(xdim, HI)-1,i1,i2) + &
+                                    8.*cg%gpot(cg%lhn(xdim, LO)+1:cg%lhn(xdim, HI)-3,i1,i2) - cg%gpot(cg%lhn(xdim, LO):cg%lhn(xdim, HI)-4,i1,i2)) / cg%dl(xdim)
+            case (ydim)
+               grav(3:n-2) = onetw*(cg%gpot(i2,cg%lhn(ydim, LO)+4:cg%lhn(ydim, HI),i1) - 8.*cg%gpot(i2,cg%lhn(ydim, LO)+3:cg%lhn(ydim, HI)-1,i1) + &
+                                    8.*cg%gpot(i2,cg%lhn(ydim, LO)+1:cg%lhn(ydim, HI)-3,i1) - cg%gpot(i2,cg%lhn(ydim, LO):cg%lhn(ydim, HI)-4,i1)) / cg%dl(ydim)
+            case (zdim)
+               grav(3:n-2) = onetw*(cg%gpot(i1,i2,cg%lhn(zdim, LO)+4:cg%lhn(zdim, HI)) - 8.*cg%gpot(i1,i2,cg%lhn(zdim, LO)+3:cg%lhn(zdim, HI)-1) + &
+                                    8.*cg%gpot(i1,i2,cg%lhn(zdim, LO)+1:cg%lhn(zdim, HI)-3) - cg%gpot(i1,i2,cg%lhn(zdim, LO):cg%lhn(zdim, HI)-4)) / cg%dl(zdim)
+         end select
+      endif
+      grav(2) = grav(3); grav(n-1) = grav(n-2)
+      grav(1) = grav(2); grav(n) = grav(n-1)
+
+      select case (dom%geometry_type)
+         case (GEO_XYZ) ! Do nothing
+         case (GEO_RPZ)
+            if (sweep == ydim) grav = grav / cg%x(i2)
+         case default
+            call die("[gravity:grav_pot2accel] Unsupported geometry")
+      end select
+
+   end subroutine grav_pot2accel_ord4
 
 !--------------------------------------------------------------------------
 !>
