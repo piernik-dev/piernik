@@ -99,7 +99,7 @@ contains
 
       call set_up_ub
       do dir = xdim, zdim
-         call all_cg%internal_boundaries_4d(wna%fi, dim=dir)
+         call all_cg%internal_boundaries_4d(wna%fi, dir=dir)
          write(msg, '(a,i1)')"ip:ip ub+diff+ib:",dir
          if (master) call printinfo(msg)
       enddo
