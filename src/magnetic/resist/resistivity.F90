@@ -86,13 +86,16 @@ contains
       use cg_leaves,        only: leaves
       use cg_list,          only: cg_list_element
       use cg_list_global,   only: all_cg
-      use constants,        only: PIERNIK_INIT_GRID, zdim, xdim, ydim, wcu_n, zero
+      use constants,        only: PIERNIK_INIT_GRID, zdim, xdim, ydim, wcu_n
       use dataio_pub,       only: nh  ! QA_WARN required for diff_nml
       use dataio_pub,       only: die, code_progress
       use domain,           only: dom
       use func,             only: operator(.equals.)
       use mpisetup,         only: rbuff, ibuff, master, slave, piernik_MPI_Bcast
       use named_array_list, only: qna
+#ifdef ISO
+      use constants,        only: zero
+#endif /* ISO */
 
       implicit none
 
