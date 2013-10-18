@@ -50,9 +50,10 @@ contains
 !! \details Basic sanity checks are performed here
 !<
    subroutine init_fargo
-      use constants,    only: GEO_RPZ
+
+      use constants,    only: GEO_RPZ, ydim
       use dataio_pub,   only: die, warn
-      use domain,       only: dom
+      use domain,       only: dom, AMR_bsize
       use global,       only: use_fargo
       use mpisetup,     only: master
 
@@ -61,6 +62,11 @@ contains
       if (.not. use_fargo) return
       if (dom%geometry_type /= GEO_RPZ) call die("[fargo:init_fargo] FARGO works only for cylindrical geometry")
       if (master) call warn("[fargo:init_fargo] BEWARE: Fast eulerian transport is an experimental feature")
+
+      if (AMR_bsize(ydim) /= 0 .and. AMR_bsize(ydim) /= dom%n_d(ydim)) &
+           call die("[fargo:init_fargo] AMR is not allowed in the azimuthal direction. You must set AMR_bsize(ydim) == dom%n_d(ydim) AND make sure that there will be no azimuthal refinement steps on higher levels")
+      !> \todo Implement proper checks (or even refinement fixups) and do not impose restrictions on AMR_bsize(ydim)
+
    end subroutine init_fargo
 
 !>
