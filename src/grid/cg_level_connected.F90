@@ -36,7 +36,7 @@ module cg_level_connected
    implicit none
 
    private
-   public :: cg_level_connected_T, base_level
+   public :: cg_level_connected_T, base_level, find_level
 
    !! \brief A list of all cg of the same resolution with links to coarser and finer levels
    type, extends(cg_level_T) :: cg_level_connected_T
@@ -1421,5 +1421,41 @@ contains
       call this%sync_ru
 
    end subroutine free_all_cg
+
+!> \brief Find pointer to a level given by level_id
+
+   function find_level(level_id) result(lev_p)
+
+      use dataio_pub, only: die
+
+      implicit none
+
+      integer(kind=4), intent(in) :: level_id         !< level number (relative to base level)
+
+      type(cg_level_connected_T), pointer :: lev_p, curl
+
+      nullify(lev_p)
+      curl => base_level
+      if (level_id >= base_level%level_id) then
+         do while (associated(curl))
+            if (curl%level_id == level_id) then
+               lev_p => curl
+               exit
+            endif
+            curl => curl%finer
+         enddo
+      else
+         do while (associated(curl))
+            if (curl%level_id == level_id) then
+               lev_p => curl
+               exit
+            endif
+            curl => curl%coarser
+         enddo
+      endif
+
+      if (.not. associated(lev_p)) call die("[cg_level_connected:find_level] Cannot find level")
+
+   end function find_level
 
 end module cg_level_connected

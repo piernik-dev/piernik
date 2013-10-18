@@ -244,8 +244,7 @@ contains
 
       use all_boundaries,     only: all_fluid_boundaries
       use cg_leaves,          only: leaves
-      use cg_level_finest,    only: finest
-      use cg_level_connected, only: cg_level_connected_T
+      use cg_level_connected, only: cg_level_connected_T, find_level
       use cg_list,            only: cg_list_element
       use constants,          only: pdims, LO, HI, uh_n, cs_i2_n, ORTHO1, ORTHO2, VEL_CR, VEL_RES, ydim
       use domain,             only: dom
@@ -352,11 +351,7 @@ contains
 
                      !> \todo OPT: use cg%leafmap to skip lines fully covered by finer grids
                      ! it should be also possible to compute only parts of lines that aren't covered by finer grids
-                     curl => finest%level
-                     do while (associated(curl))
-                        if (curl%level_id == cg%level_id) exit
-                        curl => curl%coarser
-                     enddo
+                     curl => find_level(cg%level_id)
 
                      cs2 => null()
                      do i2 = cg%ijkse(pdims(cdim, ORTHO2), LO), cg%ijkse(pdims(cdim, ORTHO2), HI)

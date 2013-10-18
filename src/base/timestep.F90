@@ -313,12 +313,10 @@ contains
 
    subroutine timestep_fluid(cg, fl, dt, c_fl)
 
-      use cg_level_finest,    only: finest
-      use cg_level_connected, only: cg_level_connected_T
+      use cg_level_connected, only: cg_level_connected_T, find_level
       use constants,          only: big, xdim, ydim, zdim, ndims, GEO_RPZ, ndims, small
       use domain,             only: dom
       use fluidtypes,         only: component_fluid
-      use fargo,              only: fargo_mean_omega
       use global,             only: cfl, use_fargo
       use grid_cont,          only: grid_container
 
@@ -336,11 +334,7 @@ contains
       integer                :: i, j, k, d
       type(cg_level_connected_T), pointer :: curl
 
-      curl => finest%level
-      do while (associated(curl))
-         if (curl%level_id == cg%level_id) exit
-         curl => curl%coarser
-      enddo
+      curl => find_level(cg%level_id)
 
       c_fl = small
       dt_proc(:) = big
