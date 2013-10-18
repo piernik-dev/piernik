@@ -211,7 +211,7 @@ contains
       implicit none
 
       class(ref_flag), intent(inout) :: this     ! object invoking this procedure
-      integer,         intent(in)    :: my_level ! refinement level at which the flag has to be sanitized
+      integer(kind=4), intent(in)    :: my_level ! refinement level at which the flag has to be sanitized
 
       if (my_level >= level_max) this%refine   = .false.
       if (my_level <  level_min) this%refine   = .true.
