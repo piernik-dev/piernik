@@ -310,7 +310,7 @@ contains
       use cg_list,            only: cg_list_element
       use constants,          only: dpi, xdim, ydim, zdim, GEO_RPZ, DST, LO, HI, pMAX
       use dataio_pub,         only: msg, printinfo, die
-      use domain,             only: dom, is_multicg
+      use domain,             only: dom
       use fluidindex,         only: flind
       use fluidtypes,         only: component_fluid
       use gravity,            only: r_smooth, ptmass
@@ -338,12 +338,10 @@ contains
       do while (associated(cgl))
          cg => cgl%cg
 
-         if (is_multicg) call die("[initproblem:problem_initial_conditions] multiple grid pieces per procesor not implemented yet") !nontrivial allocate
-
          sqr_gm = sqrt(newtong*ptmass)
 
          if (dom%geometry_type == GEO_RPZ) then
-            if (master) then
+            if (master .and. associated(cgl, leaves%first)) then
                call printinfo("------------------------------------------------------------------")
                call printinfo(" Assuming temperature profile for MMSN ")
                call printinfo(" T(R) = 150 ( R / 1 AU )^(-0.429) K")
@@ -378,13 +376,13 @@ contains
             ln_dens_der(xl)       = ln_dens_der(xl+1)
             T_inner               = dpi*cg%x(cg%is) / sqrt( abs(grav(cg%is)) * cg%x(cg%is) )
             write(msg,*) "T_inner = ", T_inner
-            if (master) call printinfo(msg)
+            if (master .and. associated(cgl, leaves%first)) call printinfo(msg)
             write(msg,*) "III Kepler Law gives T = ", sqr_gm/dpi , " yr at 1 AU"
-            if (master) call printinfo(msg)
+            if (master .and. associated(cgl, leaves%first)) call printinfo(msg)
 
             do p = 1, flind%fluids
                fl => flind%all_fluids(p)%fl
-               if (fl%tag /= DST .and. master) then
+               if (fl%tag /= DST .and. master .and. associated(cgl, leaves%first)) then
                   write(msg,'(A,F9.5)') "[initproblem:initprob] cs2 used = ", fl%cs2
                   call printinfo(msg)
                endif
@@ -531,7 +529,6 @@ contains
       use cg_list,          only: cg_list_element
       use constants,        only: xdim, ydim, zdim, LO, HI, pMAX
       use dataio_pub,       only: die!, warn, msg
-      use domain,           only: is_multicg
       use global,           only: dt, smalld
       use grid_cont,        only: grid_container
       use all_boundaries,   only: all_fluid_boundaries
@@ -543,41 +540,37 @@ contains
 
       logical, intent(in)                     :: forward
       integer                                 :: i, j, k
-      logical, save                           :: frun = .true.
-      real, dimension(:,:), allocatable, save :: funcR
+      real, dimension(:,:), allocatable       :: funcR
       logical, dimension(:,:,:), allocatable  :: adjust
       real, dimension(:,:,:), allocatable     :: vx_sign, vz_sign
       real                                    :: max_vx, mean_vy
       type(cg_list_element), pointer          :: cgl
       type(grid_container),  pointer          :: cg
 
-      if (is_multicg) call die("[initproblem:problem_customize_solution_kepler] multiple grid pieces per procesor not implemented yet") !nontrivial
-
       max_vx = -HUGE(1.0)
       cgl => leaves%first
       do while (associated(cgl))
          cg => cgl%cg
 
-         if (frun) then
-            allocate(funcR(size(cg%u,dim=1), cg%lhn(xdim, LO):cg%lhn(xdim, HI)) )
+         allocate(funcR(size(cg%u,dim=1), cg%lhn(xdim, LO):cg%lhn(xdim, HI)) )
 
-            funcR(1,:) = -tanh((cg%x(:)-r_in+1.0)**f_in) + 1.0 + max( tanh((cg%x(:)-r_out+1.0)**f_out), 0.0)
+         funcR(1,:) = -tanh((cg%x(:)-r_in+1.0)**f_in) + 1.0 + max( tanh((cg%x(:)-r_out+1.0)**f_out), 0.0)
 
-            if (use_inner_orbital_period) then
-               funcR(1,:) = funcR(1,:) / T_inner
-            else
-               funcR(1,:) = funcR(1,:) * dumping_coeff
-            endif
-            frun = .false.
-            funcR(:,:) = spread(funcR(1,:),1,size(cg%u,dim=1))
-
+         if (use_inner_orbital_period) then
+            funcR(1,:) = funcR(1,:) / T_inner
+         else
+            funcR(1,:) = funcR(1,:) * dumping_coeff
          endif
+         funcR(:,:) = spread(funcR(1,:),1,size(cg%u,dim=1))
 
          do j = cg%lhn(ydim, LO), cg%lhn(ydim, HI)
             do k = cg%lhn(zdim, LO), cg%lhn(zdim, HI)
                cg%u(:,:,j,k) = cg%u(:,:,j,k) - dt*(cg%u(:,:,j,k) - cg%w(wna%ind(inid_n))%arr(:,:,j,k))*funcR(:,:)
             enddo
          enddo
+
+         deallocate(funcR)
+         !OPT: funcR can be calculated only once, but it must be recalculated for new blockcs (after refinement changes or growing domain)
 
 !         where ( cg%u(iarr_all_dn,:,:,:) < 2.0*smalld )
 !            cg%u(iarr_all_mz,:,:,:) = cg%u(iarr_all_mz,:,:,:)*0.1
