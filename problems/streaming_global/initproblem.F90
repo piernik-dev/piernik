@@ -321,7 +321,7 @@ contains
 
       implicit none
 
-      integer                         :: i, j, k, kmid, p
+      integer                         :: i, j, k, p
       real                            :: xi, yj, zk, rc, vz, sqr_gm, vr, vphi
       real                            :: gprim, H2
 
@@ -338,12 +338,9 @@ contains
       do while (associated(cgl))
          cg => cgl%cg
 
-         if (is_multicg) call die("[initproblem:problem_initial_conditions] multiple grid pieces per procesor not implemented yet") !nontrivial kmid, allocate
+         if (is_multicg) call die("[initproblem:problem_initial_conditions] multiple grid pieces per procesor not implemented yet") !nontrivial allocate
 
          sqr_gm = sqrt(newtong*ptmass)
-         do k = cg%lhn(zdim, LO), cg%lhn(zdim, HI)
-            if (cg%z(k) < 0.0) kmid = k       ! the midplane is in between ksmid and ksmid+1
-         enddo
 
          if (dom%geometry_type == GEO_RPZ) then
             if (master) then
