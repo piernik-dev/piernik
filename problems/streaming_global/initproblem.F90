@@ -528,7 +528,6 @@ contains
       use cg_leaves,        only: leaves
       use cg_list,          only: cg_list_element
       use constants,        only: xdim, ydim, zdim, LO, HI, pMAX
-      use dataio_pub,       only: die!, warn, msg
       use global,           only: dt, smalld
       use grid_cont,        only: grid_container
       use all_boundaries,   only: all_fluid_boundaries
