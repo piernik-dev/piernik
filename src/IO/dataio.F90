@@ -1250,7 +1250,7 @@ contains
       call leaves%get_extremum(qna%wai, MAXL, pr%vely_max, ydim)
       if (master) then
          pr%vely_max%assoc = cfl * pr%vely_max%assoc / (pr%vely_max%val + small)
-         if (dom%geometry_type == GEO_RPZ) pr%vely_max%assoc = pr%vely_max%assoc * pr%vely_max%coords(xdim) 
+         if (dom%geometry_type == GEO_RPZ) pr%vely_max%assoc = pr%vely_max%assoc * pr%vely_max%coords(xdim)
       endif
 
       cgl => leaves%first
@@ -1259,7 +1259,7 @@ contains
          if (dom%geometry_type == GEO_RPZ) then
             do i = cgl%cg%is, cgl%cg%ie
                cgl%cg%wa(i, :, :) = cgl%cg%wa(i, :, :) * cgl%cg%x(i)
-            enddo 
+            enddo
          endif
          cgl => cgl%nxt
       enddo

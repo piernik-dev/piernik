@@ -1,5 +1,5 @@
 ################################################################################
-# 
+#
 # This Makefile can be used to rebuild one or more object directories at a time.
 #
 # Usage:
@@ -7,7 +7,7 @@
 #   'make'                 # rebuilds all obj*/piernik executables calling make
 #                            for all obj* directories
 #   'make obj_abc obj_xyz' # rebuilds just the two specified directories
-#   'make resetup'         # calls setup for all obj* directories, relying on 
+#   'make resetup'         # calls setup for all obj* directories, relying on
 #                            obj*/.setup.call and current .setuprc file.
 #   'RS=1 make obj_abc'    # calls setup only for obj_abc directory
 #   'make obj_abc RS=1'    # same as above
@@ -19,8 +19,8 @@
 #   'make dep [P=problem]  # create and show dependency graph
 #                            $P defaults to mcrwind
 #
-# Resetup will also call make for the object directories, unless you've 
-# specified --nocompile either in your .setuprc* files or it was stored in 
+# Resetup will also call make for the object directories, unless you've
+# specified --nocompile either in your .setuprc* files or it was stored in
 # .setup.call file.
 #
 ################################################################################

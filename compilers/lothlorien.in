@@ -15,11 +15,11 @@
 
 PROG     = piernik
 F90      = h5pfc -shlib
-F90FLAGS  = -fdefault-real-8 -ffree-form -std=gnu -fimplicit-none -ffree-line-length-none 
+F90FLAGS  = -fdefault-real-8 -ffree-form -std=gnu -fimplicit-none -ffree-line-length-none
 F90FLAGS += -O3 -funroll-loops -fstack-arrays
 F90FLAGS += -Wall -Wextra -W -fbacktrace -ggdb -pedantic
 F90FLAGS += -fbounds-check -frange-check -Wsurprising -Wcharacter-truncation
-#F90FLAGS +=  -ffpe-trap=invalid,zero,overflow,denormal 
+#F90FLAGS +=  -ffpe-trap=invalid,zero,overflow,denormal
 ## denormal causes weird problems since gcc 4.7.0
 F90FLAGS +=  -ffpe-trap=invalid,zero,overflow
 LDFLAGS   = -Wl,--as-needed -Wl,-O1

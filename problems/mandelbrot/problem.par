@@ -1,5 +1,5 @@
  $BASE_DOMAIN
-    n_d = 2*64, 1 
+    n_d = 2*64, 1
     xmin   = -2.25
     xmax   =  0.75
     ymin   = -1.5

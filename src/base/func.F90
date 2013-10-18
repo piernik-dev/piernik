@@ -40,12 +40,12 @@ module func
 
    private
    public :: ekin, emag, L2norm, sq_sum3, resample_gauss, piernik_fnum, &
-      & append_int_to_array, operator(.equals.), operator(.notequals.) 
+      & append_int_to_array, operator(.equals.), operator(.notequals.)
 
    interface operator (.equals.)
       module procedure float_equals
    end interface
-   
+
    interface operator (.notequals.)
       module procedure float_notequals
    end interface
@@ -202,7 +202,7 @@ contains
 
       tf = abs(x1 - x2) <= epsilon(x1)
    end function float_equals
-   
+
    pure elemental function float_notequals(x1, x2) result (tf)
       real, intent(in) :: x1, x2
       logical :: tf

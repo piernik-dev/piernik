@@ -3,8 +3,8 @@ everything that is necessary for compiling Piernik setups on a Fedora 17 and
 later.  To install an environment for using the Piernik code on a Fedora,
 use the following command (or equivalent):
 
-sudo yum localinstall piernik-mpich2-0-fedora.noarch.rpm 
- 
+sudo yum localinstall piernik-mpich2-0-fedora.noarch.rpm
+
 It is possible to use this meta-package on Fedora 16, but some problems must
 be resolved manually.  Since r5385 the Piernik code requires HDF5 libraries
 >= 1.8.8 which aren't availabe in main Fedora 16 repositories.  You may

@@ -9,5 +9,5 @@ fi
 
 for i in $* ; do
         cp "$i" "$i".backup
-	sed -i 's/\$CONSTANTS/$UNITS/;s/constants_set/units_set/' "$i" 
+	sed -i 's/\$CONSTANTS/$UNITS/;s/constants_set/units_set/' "$i"
 done

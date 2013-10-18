@@ -107,7 +107,7 @@ module gravity
          real, dimension(n),intent(in)  :: xsw              !< COMMENT ME
          real, dimension(n),intent(out) :: grav             !< COMMENT ME
       end subroutine user_grav_accel
-   
+
       subroutine grav_pot2accel_T(sweep, i1, i2, n, grav, istep, cg)
          use grid_cont,          only: grid_container
          implicit none

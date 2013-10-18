@@ -16,9 +16,9 @@
 
  $MPI_BLOCKS
     allow_uneven = .true.
-    allow_noncart = .true. 
-    dd_unif_quality = 1.1  
-    dd_rect_quality = 1.1 
+    allow_noncart = .true.
+    dd_unif_quality = 1.1
+    dd_rect_quality = 1.1
  /
 
  $UNITS
