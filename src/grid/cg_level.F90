@@ -88,6 +88,13 @@ module cg_level
       integer(kind=8), dimension(ndims)          :: off              !< offset of the level
       logical                                    :: recently_changed !< .true. when anything was added to or deleted from this level
 
+      ! FARGO
+      real,    dimension(:, :), allocatable      :: omega_mean       !< mean angular velocity for each fluid
+      real,    dimension(:, :), allocatable      :: omega_cr         !< constant residual angular velocity for each fluid
+      integer, dimension(:, :), allocatable      :: nshift           !< number of cells that need to be shifted due to %omega_mean for each fluid
+      real,    dimension(:, :), allocatable      :: local_omega      !< auxiliary array
+      integer(kind=8), dimension(:), allocatable :: cell_count       !< auxiliary counter
+
     contains
 
       procedure          :: init_all_new_cg                   !< initialize newest grid container

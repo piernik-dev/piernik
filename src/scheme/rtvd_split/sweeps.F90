@@ -242,25 +242,27 @@ contains
 !------------------------------------------------------------------------------------------
    subroutine sweep(cdim, fargo_vel)
 
-      use all_boundaries,   only: all_fluid_boundaries
-      use cg_leaves,        only: leaves
-      use cg_list,          only: cg_list_element
-      use constants,        only: pdims, LO, HI, uh_n, cs_i2_n, ORTHO1, ORTHO2, VEL_CR, VEL_RES, ydim
-      use domain,           only: dom
-      use dataio_pub,       only: die
-      use fluidindex,       only: flind, iarr_all_swp, nmag, iarr_all_dn, iarr_all_mx
-      use fluxtypes,        only: ext_fluxes
-      use global,           only: dt, integration_order, sweeps_mgu, use_fargo
-      use grid_cont,        only: grid_container
-      use gridgeometry,     only: set_geo_coeffs
-      use mpisetup,         only: mpi_err, req, status
-      use named_array_list, only: qna, wna
-      use rtvd,             only: relaxing_tvd
+      use all_boundaries,     only: all_fluid_boundaries
+      use cg_leaves,          only: leaves
+      use cg_level_finest,    only: finest
+      use cg_level_connected, only: cg_level_connected_T
+      use cg_list,            only: cg_list_element
+      use constants,          only: pdims, LO, HI, uh_n, cs_i2_n, ORTHO1, ORTHO2, VEL_CR, VEL_RES, ydim
+      use domain,             only: dom
+      use dataio_pub,         only: die
+      use fluidindex,         only: flind, iarr_all_swp, nmag, iarr_all_dn, iarr_all_mx
+      use fluxtypes,          only: ext_fluxes
+      use global,             only: dt, integration_order, sweeps_mgu, use_fargo
+      use grid_cont,          only: grid_container
+      use gridgeometry,       only: set_geo_coeffs
+      use mpisetup,           only: mpi_err, req, status
+      use named_array_list,   only: qna, wna
+      use rtvd,               only: relaxing_tvd
 #ifdef COSM_RAYS
-      use crhelpers,        only: div_v, set_div_v1d
+      use crhelpers,          only: div_v, set_div_v1d
 #endif /* COSM_RAYS */
 #ifdef MAGNETIC
-      use fluidindex,       only: iarr_mag_swp
+      use fluidindex,         only: iarr_mag_swp
 #endif /* MAGNETIC */
 
       implicit none
@@ -288,6 +290,7 @@ contains
       integer(kind=4), dimension(:, :), pointer :: mpistatus
       integer :: cn_
       logical :: sources
+      type(cg_level_connected_T), pointer :: curl
 
       if (use_fargo .and. cdim == ydim .and. .not. present(fargo_vel)) then
          call die("[sweeps:sweep] FARGO velocity keyword not present in y sweep")
@@ -349,6 +352,12 @@ contains
 
                      !> \todo OPT: use cg%leafmap to skip lines fully covered by finer grids
                      ! it should be also possible to compute only parts of lines that aren't covered by finer grids
+                     curl => finest%level
+                     do while (associated(curl))
+                        if (curl%level_id == cg%level_id) exit
+                        curl => curl%coarser
+                     enddo
+
                      cs2 => null()
                      do i2 = cg%ijkse(pdims(cdim, ORTHO2), LO), cg%ijkse(pdims(cdim, ORTHO2), HI)
                         do i1 = cg%ijkse(pdims(cdim, ORTHO1), LO), cg%ijkse(pdims(cdim, ORTHO1), HI)
@@ -376,12 +385,12 @@ contains
                            if (use_fargo .and. cdim == ydim) then
                               if (fargo_vel == VEL_RES) then
                                  do ifl = 1, flind%fluids
-                                    vx(:, ifl) = u(:, iarr_all_mx(ifl)) / u(:, iarr_all_dn(ifl)) - cg%omega_mean(i2, ifl) * cg%x(i2)
+                                    vx(:, ifl) = u(:, iarr_all_mx(ifl)) / u(:, iarr_all_dn(ifl)) - curl%omega_mean(i2, ifl) * cg%x(i2)
                                  enddo
                                  sources = .true.
                               elseif (fargo_vel == VEL_CR) then
                                  do ifl = 1, flind%fluids
-                                    vx(:, ifl) = cg%omega_cr(i2, ifl) * cg%x(i2)
+                                    vx(:, ifl) = curl%omega_cr(i2, ifl) * cg%x(i2)
                                  enddo
                                  sources = .false.
                               else

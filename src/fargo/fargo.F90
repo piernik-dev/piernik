@@ -103,47 +103,62 @@ contains
 
 !>
 !! \brief Compute mean omega for each radius globally
-!!
-!! \details This routines allocates array, which should be deallocated externally. All procs must call this.
 !<
-   subroutine fargo_mean_omega(local_omega)
+   subroutine fargo_mean_omega
 
-      use constants,        only: xdim, ydim, zdim, I_ONE, pSUM
-      use cg_leaves,        only: leaves
-      use cg_list,          only: cg_list_element
-      use domain,           only: dom
-      use grid_cont,        only: grid_container
-      use fluidindex,       only: flind
-      use fluidtypes,       only: component_fluid
-      use mpisetup,         only: piernik_MPI_Allreduce
+      use constants,          only: xdim, ydim, zdim, I_ONE, pSUM
+      use cg_level_base,      only: base
+      use cg_level_connected, only: cg_level_connected_T
+      use cg_list,            only: cg_list_element
+      use global,             only: use_fargo
+      use grid_cont,          only: grid_container
+      use fluidindex,         only: flind
+      use fluidtypes,         only: component_fluid
+      use mpisetup,           only: piernik_MPI_Allreduce
 
       implicit none
-
-      real, dimension(:, :), allocatable, intent(inout) :: local_omega
 
       type(cg_list_element), pointer    :: cgl
       type(grid_container),  pointer    :: cg
       integer :: ifl, i
       class(component_fluid), pointer :: pfl
+      type(cg_level_connected_T), pointer :: curl
 
-      if (.not.allocated(local_omega)) allocate(local_omega(dom%off(xdim):dom%off(xdim)+dom%n_d(xdim)-I_ONE, flind%fluids))
-      local_omega(:, :) = 0.0
+      curl => base%level
+      do while (associated(curl))
 
-      cgl => leaves%first
-      do while (associated(cgl))
-         cg => cgl%cg
-         do i = cg%is, cg%ie
-            do ifl = 1, flind%fluids
-               pfl => flind%all_fluids(ifl)%fl
-               local_omega(i, ifl) = local_omega(i, ifl) + sum(cg%u(pfl%imy, i, cg%js:cg%je, cg%ks:cg%ke) / cg%u(pfl%idn, i, cg%js:cg%je, cg%ks:cg%ke) / cg%x(i))
+         if (.not.allocated(curl%local_omega)) allocate(curl%local_omega(curl%off(xdim):curl%off(xdim)+curl%n_d(xdim)-I_ONE, flind%fluids))
+         if (.not.allocated(curl%cell_count)) allocate(curl%cell_count(curl%off(xdim):curl%off(xdim)+curl%n_d(xdim)-I_ONE))
+         curl%local_omega(:,:) = 0.0
+         curl%cell_count(:) = 0
+
+         if (use_fargo) then
+            cgl => curl%first
+            do while (associated(cgl))
+               cg => cgl%cg
+               do i = cg%is, cg%ie
+                  do ifl = 1, flind%fluids
+                     pfl => flind%all_fluids(ifl)%fl
+                     curl%local_omega(i, ifl) = curl%local_omega(i, ifl) + sum(cg%u(pfl%imy, i, cg%js:cg%je, cg%ks:cg%ke) / cg%u(pfl%idn, i, cg%js:cg%je, cg%ks:cg%ke) / cg%x(i))
+                  enddo
+                  curl%cell_count(i) = curl%cell_count(i) + product(cg%n_b(ydim:zdim))
+               enddo
+               cgl => cgl%nxt
             enddo
-         enddo
-         cgl => cgl%nxt
+         endif
+
+         if (use_fargo) then
+            call piernik_MPI_Allreduce(curl%local_omega, pSUM)
+            call piernik_MPI_Allreduce(curl%cell_count, pSUM)
+            do i = lbound(curl%cell_count, dim=1), ubound(curl%cell_count, dim=1)
+               curl%local_omega(i, :) = curl%local_omega(i, :) / curl%cell_count(i)
+            end do
+         end if
+
+         curl => curl%finer
+
       enddo
 
-      call piernik_MPI_Allreduce(local_omega, pSUM)
-      local_omega(:, :) = local_omega(:, :) / (dom%n_d(ydim) * dom%n_d(zdim))
-      return
    end subroutine fargo_mean_omega
 
 !>
@@ -153,42 +168,40 @@ contains
 !<
    subroutine get_fargo_vels(dt)
 
-      use constants,        only: ydim
-      use cg_leaves,        only: leaves
-      use cg_list,          only: cg_list_element
-      use grid_cont,        only: grid_container
-      use fluidindex,       only: flind
-      use fluidtypes,       only: component_fluid
+      use constants,          only: xdim, ydim, I_ONE
+      use cg_level_base,      only: base
+      use cg_level_connected, only: cg_level_connected_T
+      use domain,             only: dom
+      use fluidindex,         only: flind
 
       implicit none
 
       real, intent(in) :: dt
-      real, dimension(:, :), allocatable :: local_omega
-      type(cg_list_element), pointer    :: cgl
-      type(grid_container),  pointer    :: cg
       integer :: ifl
-      class(component_fluid), pointer :: pfl
+      type(cg_level_connected_T), pointer :: curl
+      real :: dl_ydim
 
-      call fargo_mean_omega(local_omega)
+      call fargo_mean_omega
 
-      cgl => leaves%first
-      do while (associated(cgl))
-         cg => cgl%cg
-         if (.not. allocated(cg%omega_mean)) allocate(cg%omega_mean(cg%is:cg%ie, flind%fluids))
-         if (.not. allocated(cg%omega_cr)) allocate(cg%omega_cr(cg%is:cg%ie, flind%fluids))
-         if (.not. allocated(cg%nshift)) allocate(cg%nshift(cg%is:cg%ie, flind%fluids))
+      curl => base%level
+      do while (associated(curl))
+
+         if (.not. allocated(curl%omega_mean)) allocate(curl%omega_mean(curl%off(xdim):curl%off(xdim)+curl%n_d(xdim)-I_ONE, flind%fluids))
+         if (.not. allocated(curl%omega_cr))   allocate(curl%omega_cr  (curl%off(xdim):curl%off(xdim)+curl%n_d(xdim)-I_ONE, flind%fluids))
+         if (.not. allocated(curl%nshift))     allocate(curl%nshift    (curl%off(xdim):curl%off(xdim)+curl%n_d(xdim)-I_ONE, flind%fluids))
+
+         dl_ydim = dom%L_(ydim)/curl%n_d(ydim)
 
          do ifl = 1, flind%fluids
-            pfl => flind%all_fluids(ifl)%fl
-            cg%omega_mean(:, ifl) = local_omega(cg%is:cg%ie, ifl)
-            cg%nshift(:, ifl) = nint(cg%omega_mean(:, ifl) * dt / cg%dl(ydim))
-            cg%omega_cr(:, ifl) = cg%omega_mean(:, ifl) - cg%nshift(:, ifl) * cg%dl(ydim) / dt
+            curl%omega_mean(:, ifl) = curl%local_omega(:, ifl)
+            curl%nshift(:, ifl) = nint(curl%omega_mean(:, ifl) * dt / dl_ydim)
+            curl%omega_cr(:, ifl) = curl%omega_mean(:, ifl) - curl%nshift(:, ifl) * dl_ydim / dt
          enddo
 
-         cgl => cgl%nxt
-      enddo
+         if (allocated(curl%local_omega)) deallocate(curl%local_omega)
 
-      if (allocated(local_omega)) deallocate(local_omega)
+         curl => curl%finer
+      enddo
 
    end subroutine get_fargo_vels
 
@@ -266,18 +279,19 @@ contains
 !<
    subroutine int_shift
 
-      use all_boundaries,   only: all_fluid_boundaries
-      use cg_leaves,        only: leaves
-      use cg_list,          only: cg_list_element
-      use constants,        only: ydim, pMAX
-      use domain,           only: dom
-      use fluidindex,       only: flind
-      use fluidtypes,       only: component_fluid
-      use grid_cont,        only: grid_container
-      use mpisetup,         only: piernik_MPI_Allreduce
+      use all_boundaries,     only: all_fluid_boundaries
+      use cg_level_base,      only: base
+      use cg_level_connected, only: cg_level_connected_T
+      use cg_list,            only: cg_list_element
+      use constants,          only: ydim
+      use domain,             only: dom
+      use fluidindex,         only: flind
+      use fluidtypes,         only: component_fluid
+      use grid_cont,          only: grid_container
+      use named_array_list,   only: wna
 #ifdef SELF_GRAV
-      use constants,        only: sgp_n
-      use named_array_list, only: qna
+      use constants,          only: sgp_n
+      use named_array_list,   only: qna
 #endif /* SELF_GRAV */
 
       implicit none
@@ -286,38 +300,39 @@ contains
       type(grid_container),  pointer    :: cg
       class(component_fluid), pointer   :: pfl
       integer :: ifl, i, max_nshift, iter
+      type(cg_level_connected_T), pointer :: curl
 
-      max_nshift = 0
-      cgl => leaves%first
-      do while (associated(cgl))
-         cg => cgl%cg
-         max_nshift = max(max_nshift, maxval(cg%nshift))
-         cgl => cgl%nxt
-      enddo
-      call piernik_MPI_Allreduce(max_nshift, pMAX)
+      curl => base%level
+      do while (associated(curl))
+         max_nshift = maxval(curl%nshift)
 
-      do iter = 1, max(ceiling(float(max_nshift) / float(int(dom%nb))), 1)
-         cgl => leaves%first
-         do while (associated(cgl))
-            cg => cgl%cg
-            do i = cg%is, cg%ie
-               if (all(cg%nshift(i, :) == 0)) cycle
-               do ifl = 1, flind%fluids
-                  pfl   => flind%all_fluids(ifl)%fl
-                  cg%u(pfl%beg:pfl%end, i, :, :) = cshift(cg%u(pfl%beg:pfl%end, i, :, :), -min(cg%nshift(i, ifl), int(dom%nb)), dim=2)
+         do iter = 1, max(ceiling(float(max_nshift) / float(int(dom%nb))), 1)
+            cgl => curl%first
+            do while (associated(cgl))
+               cg => cgl%cg
+               do i = cg%is, cg%ie
+                  if (all(curl%nshift(i, :) == 0)) cycle
+                  do ifl = 1, flind%fluids
+                     pfl   => flind%all_fluids(ifl)%fl
+                     cg%u(pfl%beg:pfl%end, i, :, :) = cshift(cg%u(pfl%beg:pfl%end, i, :, :), -min(curl%nshift(i, ifl), int(dom%nb)), dim=2)
+                  enddo
+#ifdef SELF_GRAV
+                  cg%sgp(i, :, :) = cshift(cg%sgp(i, :, :), -min(curl%nshift(i, 1), int(dom%nb)), dim=1) ! TODO: what about ifl?
+#endif /* SELF_GRAV */
                enddo
-#ifdef SELF_GRAV
-               cg%sgp(i, :, :) = cshift(cg%sgp(i, :, :), -min(cg%nshift(i, 1), int(dom%nb)), dim=1) ! TODO: what about ifl?
-#endif /* SELF_GRAV */
+               curl%nshift(:, :) = max(curl%nshift(:, :) - dom%nb, 0)
+               cgl => cgl%nxt
             enddo
-            cg%nshift(:, :) = max(cg%nshift(:, :) - dom%nb, 0)
-            cgl => cgl%nxt
-         enddo
-         call all_fluid_boundaries(nocorners = .true., dir = ydim)
+            call curl%arr4d_boundaries(wna%fi, dir=ydim, nocorners=.true.)
+            call curl%bnd_u(ydim)
 #ifdef SELF_GRAV
-         call leaves%leaf_arr3d_boundaries(qna%ind(sgp_n)) !, nocorners=.true.)
+            call curl%arr3d_boundaries(qna%ind(sgp_n))!, dir=ydim) !, nocorners=.true.)
 #endif /* SELF_GRAV */
+         enddo
+
+         curl => curl%finer
       enddo
+
    end subroutine int_shift
 
 end module fargo
