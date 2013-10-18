@@ -319,9 +319,9 @@ contains
       endif
 
       select case (ord_pot2accel)
-         case(O_I2)
+         case (O_I2)
             grav_pot2accel => grav_pot2accel_ord2
-         case(O_I4)
+         case (O_I4)
             grav_pot2accel => grav_pot2accel_ord4
          case default
             call die("[gravity:init_grav] Unknown gradient operator")

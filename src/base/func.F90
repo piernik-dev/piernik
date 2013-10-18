@@ -197,16 +197,25 @@ contains
    end subroutine append_int_to_array
 
    pure elemental function float_equals(x1, x2) result (tf)
+
+      implicit none
+
       real, intent(in) :: x1, x2
       logical :: tf
 
       tf = abs(x1 - x2) <= epsilon(x1)
+
    end function float_equals
 
    pure elemental function float_notequals(x1, x2) result (tf)
+
+      implicit none
+
       real, intent(in) :: x1, x2
       logical :: tf
+
       tf = .not.(x1.equals.x2)
+
    end function float_notequals
 
 end module func
