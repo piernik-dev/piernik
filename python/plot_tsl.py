@@ -30,7 +30,7 @@ for fn in args.files:
       field = args.f[0]
       fno = np.where(header == field)[0][0]
 
-   tab = np.array([ 
+   tab = np.array([
       map(np.float64, line.split()) for line in filter(remove_comments.match, tab)
       ])
    data.append(tab)

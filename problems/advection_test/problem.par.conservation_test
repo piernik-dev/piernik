@@ -57,7 +57,7 @@
 
  $PROBLEM_CONTROL
     pulse_vel = 2., -2., 2.
-    pulse_size = 1., 1., 1.  
+    pulse_size = 1., 1., 1.
  /
 
  $INTERACTIONS

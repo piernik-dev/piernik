@@ -149,8 +149,13 @@ contains
          ts = set_timer("multigrid")
          tot_ts = tot_ts + ts
          loc_ts = loc_ts + ts
-         write(msg,'(a,i3,a,f12.8,a,f9.2,a,f11.7,g14.6,a,f8.3)')"MG-PCG: ", k, " lhs/rhs= ",norm_lhs/norm_rhs, " improvement= ",norm_old/norm_lhs, &
-              &                                                 " a,b= ", alpha, beta, " time=", ts
+         if (norm_old/norm_lhs < 1e6) then
+            write(msg,'(a,i3,a,f12.8,a,f9.2,a,f11.7,g14.6,a,f8.3)')"MG-PCG: ", k, " lhs/rhs= ",norm_lhs/norm_rhs, " improvement= ",norm_old/norm_lhs, &
+                 &                                                 " a,b= ", alpha, beta, " time=", ts
+         else
+            write(msg,'(a,i3,a,f12.8,a,es9.3,a,f11.7,g14.6,a,f8.3)')"MG-PCG: ", k, " lhs/rhs= ",norm_lhs/norm_rhs, " improvement= ",norm_old/norm_lhs, &
+                 &                                                 " a,b= ", alpha, beta, " time=", ts
+         endif
          if (master) call printinfo(msg)
          if (norm_lhs/norm_rhs <= norm_tol) exit                                                  ! if {r}_{k+1} is sufficiently small then exit loop
          norm_old = norm_lhs

@@ -12,7 +12,7 @@ PROG      = piernik
 
 ### INTEL
 F90       = ftn -c
-F90FLAGS   = -r8 -no-ipo -heap-arrays 
+F90FLAGS   = -r8 -no-ipo -heap-arrays
 F90FLAGS  += -xHost -O3
 F90FLAGS  += -assume realloc_lhs
 

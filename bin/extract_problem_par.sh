@@ -15,7 +15,7 @@ for i in $* ; do
 			echo "$o already exists. Aborting."
 			exit 3
 		fi
-		$H5DUMP -d "problem.par" "$i" |  grep ":" | sed 's/ *([0-9]*): "\(.*\)",*/\1/;s/ *$//' > "$o" 
+		$H5DUMP -d "problem.par" "$i" |  grep ":" | sed 's/ *([0-9]*): "\(.*\)",*/\1/;s/ *$//' > "$o"
 		if [ -s "$o" ]; then
 			echo "Succesfully extracted parameters to '$o' file."
 		else

@@ -107,7 +107,7 @@ module gravity
          real, dimension(n),intent(in)  :: xsw              !< COMMENT ME
          real, dimension(n),intent(out) :: grav             !< COMMENT ME
       end subroutine user_grav_accel
-   
+
       subroutine grav_pot2accel_T(sweep, i1, i2, n, grav, istep, cg)
          use grid_cont,          only: grid_container
          implicit none
@@ -319,9 +319,9 @@ contains
       endif
 
       select case (ord_pot2accel)
-         case(O_I2)
+         case (O_I2)
             grav_pot2accel => grav_pot2accel_ord2
-         case(O_I4)
+         case (O_I4)
             grav_pot2accel => grav_pot2accel_ord4
          case default
             call die("[gravity:init_grav] Unknown gradient operator")
@@ -457,11 +457,11 @@ contains
 
       use cg_leaves,        only: leaves
       use cg_list_dataop,   only: ind_val
-      use constants,        only: gp_n, gpot_n, hgpot_n, zero
+      use constants,        only: gp_n, gpot_n, hgpot_n
       use func,             only: operator(.notequals.)
       use named_array_list, only: qna
 #ifdef SELF_GRAV
-      use constants,        only: one, half, sgp_n, sgpm_n
+      use constants,        only: one, half, sgp_n, sgpm_n, zero
       use global,           only: dt, dtm
 #endif /* SELF_GRAV */
 
