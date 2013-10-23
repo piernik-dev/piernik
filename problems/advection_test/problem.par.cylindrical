@@ -1,4 +1,4 @@
-! The dense rectangle should traver throug the disk unperturbed. 
+! The dense rectangle should traver throug the disk unperturbed.
 ! Unfortunately this is not the case. Te rectangle is not only diffused (as expected) but also some ripples are forming.
 ! The amplitude of the ripples is proportional to the value of gamma. Gamma = 1 produces relatively small, but still visible ripples.
 

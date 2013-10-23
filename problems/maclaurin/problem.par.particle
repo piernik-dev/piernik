@@ -65,9 +65,9 @@
 
  $PROBLEM_CONTROL
     x0     = 2.03125 ! center of the cell gives least errors
-    y0     = 2.03125 
+    y0     = 2.03125
     z0     = 1.03125
-    d0     = 1.49828895401452e7 ! 1./newton_cgs 
+    d0     = 1.49828895401452e7 ! 1./newton_cgs
     a1     = 0.  ! force  point-like mass
  /
 

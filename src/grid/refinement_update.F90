@@ -458,7 +458,7 @@ contains
                         if (lleaf == -huge(1)) then
                            lleaf = int(cgl%cg%wa(i, j, k))
                         else
-                           if (lleaf /= cgl%cg%wa(i, j, k) .or. lleaf /= cgl%cg%level_id) call die("[refinement_update:fix_refinement] Inconsistent level map")
+                           if (lleaf /= int(cgl%cg%wa(i, j, k)) .or. lleaf /= cgl%cg%level_id) call die("[refinement_update:fix_refinement] Inconsistent level map")
                         endif
                         cgl%cg%prolong_xyz(i,j,k) = INSIDE
                      endif
@@ -470,18 +470,18 @@ contains
             do k = lbound(cgl%cg%leafmap, dim=3)-dom%D_z, ubound(cgl%cg%leafmap, dim=3)+dom%D_z
                do j = lbound(cgl%cg%leafmap, dim=2)-dom%D_y, ubound(cgl%cg%leafmap, dim=2)+dom%D_y
                   do i = lbound(cgl%cg%leafmap, dim=1)-dom%D_x, ubound(cgl%cg%leafmap, dim=1)+dom%D_x
-                     if (cgl%cg%prolong_xyz(i, j, k) == OUTSIDE) then
+                     if (int(cgl%cg%prolong_xyz(i, j, k)) == OUTSIDE) then
                         if (dom%has_dir(xdim)) then
-                           if (cgl%cg%prolong_xyz(i+1, j, k) /= 0) cgl%cg%prolong_xyz(i+1, j, k) = BOUNDARY
-                           if (cgl%cg%prolong_xyz(i-1, j, k) /= 0) cgl%cg%prolong_xyz(i-1, j, k) = BOUNDARY
+                           if (int(cgl%cg%prolong_xyz(i+1, j, k)) /= 0) cgl%cg%prolong_xyz(i+1, j, k) = BOUNDARY
+                           if (int(cgl%cg%prolong_xyz(i-1, j, k)) /= 0) cgl%cg%prolong_xyz(i-1, j, k) = BOUNDARY
                         endif
                         if (dom%has_dir(ydim)) then
-                           if (cgl%cg%prolong_xyz(i, j+1, k) /= 0) cgl%cg%prolong_xyz(i, j+1, k) = BOUNDARY
-                           if (cgl%cg%prolong_xyz(i, j-1, k) /= 0) cgl%cg%prolong_xyz(i, j-1, k) = BOUNDARY
+                           if (int(cgl%cg%prolong_xyz(i, j+1, k)) /= 0) cgl%cg%prolong_xyz(i, j+1, k) = BOUNDARY
+                           if (int(cgl%cg%prolong_xyz(i, j-1, k)) /= 0) cgl%cg%prolong_xyz(i, j-1, k) = BOUNDARY
                         endif
                         if (dom%has_dir(zdim)) then
-                           if (cgl%cg%prolong_xyz(i, j, k+1) /= 0) cgl%cg%prolong_xyz(i, j, k+1) = BOUNDARY
-                           if (cgl%cg%prolong_xyz(i, j, k-1) /= 0) cgl%cg%prolong_xyz(i, j, k-1) = BOUNDARY
+                           if (int(cgl%cg%prolong_xyz(i, j, k+1)) /= 0) cgl%cg%prolong_xyz(i, j, k+1) = BOUNDARY
+                           if (int(cgl%cg%prolong_xyz(i, j, k-1)) /= 0) cgl%cg%prolong_xyz(i, j, k-1) = BOUNDARY
                         endif
                      endif
                   enddo
@@ -504,7 +504,7 @@ contains
             do k = lbound(cgl%cg%leafmap, dim=3), ubound(cgl%cg%leafmap, dim=3)
                do j = lbound(cgl%cg%leafmap, dim=2), ubound(cgl%cg%leafmap, dim=2)
                   do i = lbound(cgl%cg%leafmap, dim=1), ubound(cgl%cg%leafmap, dim=1)
-                     if (cgl%cg%prolong_xyz(i, j, k) == BOUNDARY) &
+                     if (int(cgl%cg%prolong_xyz(i, j, k)) == BOUNDARY) &
                           lnear = max(lnear, int(min(huge(I_ONE)/10.,maxval(cgl%cg%wa(i-range*dom%D_x:i+range*dom%D_x, j-range*dom%D_y:j+range*dom%D_y, k-range*dom%D_z:k+range*dom%D_z)))))
                   enddo
                enddo

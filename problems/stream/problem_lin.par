@@ -14,11 +14,11 @@
     zmax   =  0.005236 ! lnA
 
 !    xmin   = -0.026180 ! lnB
-!    xmax   =  0.026180 ! lnB   
+!    xmax   =  0.026180 ! lnB
 !    ymin   = -0.026180 ! lnB
-!    ymax   =  0.026180 ! lnB   
+!    ymax   =  0.026180 ! lnB
 !    zmin   = -0.026180 ! lnB
-!    zmax   =  0.026180 ! lnB   
+!    zmax   =  0.026180 ! lnB
  /
 
  $MPI_BLOCKS

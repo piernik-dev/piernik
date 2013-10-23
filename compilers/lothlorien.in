@@ -1,13 +1,8 @@
 ###############################################################################
 #
-# Make definitions for lothlorien (Fedora 14, x86)
+# Make definitions for lothlorien (Fedora 17..19, x86)
 #
-# System packages:
-#   gcc-4.6.0-0.11.fc15.i686, fftw-devel
-#
-# User-compiled packages:
-#   openmpi --enable-memchecker --with-valgrind --enable-branch-probabilities
-#   hdf5 --enable-fortran --enable-using-memchecker --enable-parallel
+# System packages only
 #
 # ~/.bashrc:
 #   export HDF5_USE_SHLIB=yes
@@ -15,16 +10,17 @@
 
 PROG     = piernik
 F90      = h5pfc -shlib
-F90FLAGS  = -fdefault-real-8 -ffree-form -std=gnu -fimplicit-none -ffree-line-length-none 
+F90FLAGS  = -fdefault-real-8 -ffree-form -std=gnu -fimplicit-none -ffree-line-length-none
 F90FLAGS += -O3 -funroll-loops -fstack-arrays
 F90FLAGS += -Wall -Wextra -W -fbacktrace -ggdb -pedantic
-F90FLAGS += -fbounds-check -frange-check -Wsurprising -Wcharacter-truncation
-#F90FLAGS +=  -ffpe-trap=invalid,zero,overflow,denormal 
+F90FLAGS += -fbounds-check -frange-check -Wsurprising -Wcharacter-truncation -Wno-unused-function
+#F90FLAGS +=  -ffpe-trap=invalid,zero,overflow,denormal
 ## denormal causes weird problems since gcc 4.7.0
 F90FLAGS +=  -ffpe-trap=invalid,zero,overflow
 LDFLAGS   = -Wl,--as-needed -Wl,-O1
 MAKEFLAGS += -j4
+F90FLAGS += -I/usr/include
 
 # for the kepler problem
-F90FLAGS += -I/home/gawrysz/usr/include/gfortran -I/usr/include
-LDFLAGS += -L/home/gawrysz/usr/lib/
+#F90FLAGS += -I/home/gawrysz/usr/include/gfortran
+#LDFLAGS += -L/home/gawrysz/usr/lib/
