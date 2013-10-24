@@ -61,6 +61,7 @@ contains
       use dataio_pub, only: nh ! QA_WARN required for diff_nml
       use dataio_pub, only: die
       use domain,     only: dom
+      use func,       only: operator(.equals.)
       use mpisetup,   only: ibuff, rbuff, master, slave, piernik_MPI_Bcast
 
       implicit none
@@ -137,7 +138,7 @@ contains
 
       endif
 
-      if (r0 == 0.) call die("[initproblem:read_problem_par] r0 == 0")
+      if (r0 .equals. 0.) call die("[initproblem:read_problem_par] r0 == 0")
 
    end subroutine read_problem_par
 
@@ -152,7 +153,7 @@ contains
       use domain,         only: dom, is_multicg
       use fluidindex,     only: flind
       use fluidtypes,     only: component_fluid
-      use func,           only: ekin, emag
+      use func,           only: ekin, emag, operator(.equals.), operator(.notequals.)
       use grid_cont,      only: grid_container
       use initcosmicrays, only: iarr_crn, iarr_crs, gamma_crn, K_crn_paral, K_crn_perp
       use mpisetup,       only: master, piernik_MPI_Allreduce
@@ -186,7 +187,7 @@ contains
       if (.not.dom%has_dir(ydim)) by0 = 0.
       if (.not.dom%has_dir(zdim)) bz0 = 0.
 
-      if ((bx0**2 + by0**2 + bz0**2 == 0.) .and. (any(K_crn_paral(:) /= 0.) .or. any(K_crn_perp(:) /= 0.))) then
+      if ((bx0**2 + by0**2 + bz0**2 .equals. 0.) .and. (any(K_crn_paral(:) .notequals. 0.) .or. any(K_crn_perp(:) .notequals. 0.))) then
          call warn("[initproblem:problem_initial_conditions] No magnetic field is set, K_crn_* also have to be 0.")
          K_crn_paral(:) = 0.
          K_crn_perp(:)  = 0.

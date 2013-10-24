@@ -225,6 +225,7 @@ contains
       use cg_leaves,   only: leaves
       use constants,   only: ndims
       use dataio_pub,  only: msg, die
+      use func,        only: operator(.notequals.)
       use grid_cont,   only: grid_container
       use mpi,         only: MPI_DOUBLE_PRECISION
       use mpisetup,    only: proc, master, FIRST, LAST, comm, status, mpi_err
@@ -269,7 +270,7 @@ contains
 
       if (master) close(1)
 
-      if (mass_mul /= 1.0) ic_data(:, :, :, DEN0) = ic_data(:, :, :, DEN0) * mass_mul
+      if (mass_mul .notequals. 1.0) ic_data(:, :, :, DEN0) = ic_data(:, :, :, DEN0) * mass_mul
 
       do v = VELX0, VELZ0 ! convert velocity to momentum
          ic_data(:, :, :, v) = ic_data(:, :, :, v) * ic_data(:, :, :, DEN0)

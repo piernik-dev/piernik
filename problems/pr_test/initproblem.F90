@@ -355,6 +355,7 @@ contains
       use constants,      only: stdout
       use data_hdf5,      only: write_hdf5
       use dataio_pub,     only: msg, printinfo
+      use func,           only: operator(.notequals.)
       use grid_cont,      only: grid_container
       use mpisetup,       only: proc, comm, mpi_err
       use named_array_list, only: qna
@@ -375,7 +376,7 @@ contains
             do i = cg%is, cg%ie
                do j = cg%js, cg%je
                   do k = cg%ks, cg%ke
-                     if (cg%q(i_fld)%arr(i, j, k) /= 0.) then
+                     if (cg%q(i_fld)%arr(i, j, k) .notequals. 0.) then
                         write(msg,'(a,i5.5,2(a,i5),a,3f10.5,a,i3,a,g15.7)')"fn",n," @",proc," #",cg%grid_id," [",cg%x(i),cg%y(j),cg%z(k),"]^",cg%level_id," =",cg%q(i_fld)%arr(i, j, k)
                         call printinfo(msg)
                      endif

@@ -72,6 +72,7 @@ contains
       use dataio_pub, only: nh   ! QA_WARN required for diff_nml
       use dataio_pub, only: die, warn
       use domain,     only: dom
+      use func,       only: operator(.notequals.)
       use mpisetup,   only: rbuff, ibuff, lbuff, master, slave, piernik_MPI_Bcast
 
       implicit none
@@ -167,7 +168,7 @@ contains
             clump_pos_xyz = clump_pos
          case (GEO_RPZ)
             clump_pos_xyz = [ clump_pos(xdim)*cos(clump_pos(ydim)), clump_pos(xdim)*sin(clump_pos(ydim)), clump_pos(zdim) ]
-            if (any(clump_vel(xdim:ydim) /= 0.)) then
+            if (any(clump_vel(xdim:ydim) .notequals. 0.)) then
                clump_vel(xdim:ydim) = 0.
                if (master) call warn("[initproblem:read_problem_par] clump_vel(xdim:ydim) /= 0 not implemented for GEO_RPZ. Forced to 0.")
             endif
@@ -192,7 +193,7 @@ contains
       use domain,            only: dom
       use fluidindex,        only: flind
       use fluidtypes,        only: component_fluid
-      use func,              only: ekin, emag
+      use func,              only: ekin, emag, operator(.equals.), operator(.notequals.)
       use global,            only: smalld, smallei, t
       use mpisetup,          only: master, piernik_MPI_Allreduce
       use multigrid_gravity, only: multigrid_solve_grav
@@ -320,7 +321,7 @@ contains
          do while (associated(cgl))
             associate (cg => cgl%cg)
 
-            if (exp_speedup .and. Clim_old /= 0.) then ! extrapolate potential assuming exponential convergence (extremely risky)
+            if (exp_speedup .and. (Clim_old .notequals. 0.)) then ! extrapolate potential assuming exponential convergence (extremely risky)
                if (abs(1. - Clim/Clim_old) < min(sqrt(epsC), 100.*epsC, 0.01)) then
                   cg%sgp = (cg%sgp*cg%hgpot - cg%gpot**2)/(cg%sgp + cg%hgpot - 2.*cg%gpot)
                   Ccomment = ' Exp warp'
@@ -440,13 +441,13 @@ contains
 
          Clast(1:NLIM-1) = Clast(2:NLIM)
          Clast(NLIM) = Cint(tt)
-         if (any(Clast(:) == 0.)) then
+         if (any(Clast(:) .equals. 0.)) then
             if (master) then
                write(msg,'(a,i4,2(a,es15.7),a)')"[initproblem:problem_initial_conditions] iter = ",iC,"     M=",totME(tt), " C=", Cint(tt), Ccomment
                call printinfo(msg, .true.)
             endif
          else
-            if (Clim /= 0.) Clim_old = Clim
+            if (Clim .notequals. 0.) Clim_old = Clim
             ! exponential estimate: \lim C \simeq \frac{C_{t} C_{t-2} - C_{t-1}^2}{C_{t} - 2 C_{t-1} + C{t-2}}
             Clim = (Clast(NLIM)*Clast(NLIM-2) - Clast(NLIM-1)**2)/(Clast(NLIM) - 2.*Clast(NLIM-1) + Clast(NLIM-2))
             if (master) then
