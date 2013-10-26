@@ -64,6 +64,7 @@ contains
       use dataio_pub, only: nh ! QA_WARN required for diff_nml
       use dataio_pub, only: die
       use domain,     only: dom
+      use func,       only: operator(.equals.)
       use mpisetup,   only: ibuff, rbuff, master, slave, piernik_MPI_Bcast
 
       implicit none
@@ -133,7 +134,7 @@ contains
          norm_step = int(ibuff(1), kind=4)
       endif
 
-      if (r0 == 0.0) call die("[initproblem:read_problem_par] r0 == 0")
+      if (r0 .equals. 0.0) call die("[initproblem:read_problem_par] r0 == 0")
 
    end subroutine read_problem_par
 !-----------------------------------------------------------------------------
@@ -147,7 +148,7 @@ contains
       use domain,         only: dom
       use fluidindex,     only: flind
       use fluidtypes,     only: component_fluid
-      use func,           only: emag, ekin
+      use func,           only: emag, ekin, operator(.equals.), operator(.notequals.)
       use grid_cont,      only: grid_container
       use initcosmicrays, only: iarr_crn, iarr_crs, gamma_crn, K_crn_paral, K_crn_perp
 #ifdef COSM_RAYS_SOURCES
@@ -176,7 +177,7 @@ contains
          b0 = 0.0  ! ignore B field in nonexistent direction
       endwhere
 
-      if (sum(b0**2) == 0.0 .and. (any(K_crn_paral(:) /= 0.) .or. any(K_crn_perp(:) /= 0.))) then
+      if ((sum(b0**2) .equals. 0.) .and. (any(K_crn_paral(:) .notequals. 0.) .or. any(K_crn_perp(:) .notequals. 0.))) then
          call warn("[initproblem:problem_initial_conditions] No magnetic field is set, K_crn_* also have to be 0.")
          K_crn_paral(:) = 0.
          K_crn_perp(:)  = 0.

@@ -1,9 +1,14 @@
-The meta-package piernik-mpich2-0-fedora.noarch.rpm contains dependencies on
-everything that is necessary for compiling Piernik setups on a Fedora 17 and
-later.  To install an environment for using the Piernik code on a Fedora,
-use the following command (or equivalent):
+The meta-packages piernik-{mpich2,openmpi}-*-fedora.noarch.rpm contain
+dependencies on everything that is necessary for compiling Piernik setups on
+a Fedora 17 and later.  To install an environment for using the Piernik code
+on a Fedora, use the following command (or equivalent):
 
 sudo yum localinstall piernik-mpich2-0-fedora.noarch.rpm
+
+Since Fedora 18, the default version of mpich changed to mpich 3.0x which
+differs in behavior when one oversubscribes existing CPU cores. Openmpi
+behaves much better in such conditions, so it is recommended to use
+piernik-openmpi-*.noarch.rpm package at least for development.
 
 It is possible to use this meta-package on Fedora 16, but some problems must
 be resolved manually.  Since r5385 the Piernik code requires HDF5 libraries

@@ -1,4 +1,4 @@
 
 # Problem-specific make definitions. Included right after compiler definitions.
-LIBS += -lfgsl -lgsl
+#LIBS += -lfgsl -lgsl
 

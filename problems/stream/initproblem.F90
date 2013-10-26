@@ -304,7 +304,7 @@ contains
 
 !-----------------------------------------------------------------------------------------------------------------------------------
 
-   subroutine compare(t)
+   subroutine compare
 
       use constants,  only: dpi, xdim, zdim
       use dataio_pub, only: run_id
@@ -312,10 +312,7 @@ contains
 
       implicit none
 
-      real, intent(in) :: t
       complex(kind=8), dimension(8) :: coeff
-
-      if (t==0) coeff(4) = (0,0) ! suppress compiler warnings
 
       if (run_id == 'lnA') then
          coeff(4) = (-0.1691398, 0.0361553 ) ! u_x

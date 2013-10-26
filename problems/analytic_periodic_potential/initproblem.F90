@@ -408,6 +408,7 @@ contains
 
       use dataio_pub,       only: die
       use grid_cont,        only: grid_container
+      use func,             only: operator(.notequals.)
       use named_array_list, only: qna
 
       implicit none
@@ -424,7 +425,7 @@ contains
          case ("errp")
             tab(:,:,:) = real(cg%q(qna%ind(apot_n))%span(cg%ijkse) - cg%sgp(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), 4)
          case ("relerr")
-            where (cg%q(qna%ind(apot_n))%span(cg%ijkse) /= 0.)
+            where (cg%q(qna%ind(apot_n))%span(cg%ijkse) .notequals. 0.)
                tab(:,:,:) = real(cg%sgp(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)/cg%q(qna%ind(apot_n))%span(cg%ijkse) -1., 4)
             elsewhere
                tab(:,:,:) = 0.
