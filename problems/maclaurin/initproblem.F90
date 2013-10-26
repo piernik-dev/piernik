@@ -91,6 +91,7 @@ contains
       use dataio_pub,     only: die, warn, msg, printinfo
       use domain,         only: dom
       use global,         only: smalld
+      use func,           only: operator(.equals.)
       use mpisetup,       only: rbuff, ibuff, master, slave, piernik_MPI_Bcast
       use multigridvars,  only: ord_prolong
       use particle_pub,   only: pset
@@ -186,7 +187,7 @@ contains
 
       if (ref_thr <= deref_thr) call die("[initproblem:read_problem_par] ref_thr <= deref_thr")
 
-      if (a1 == 0.) call pset%add(d0, [ x0, y0, z0 ], [0.0, 0.0, 0.0])
+      if (a1 .equals. 0.) call pset%add(d0, [ x0, y0, z0 ], [0.0, 0.0, 0.0])
 
       if (master) then
          if (a1 > 0.) then
@@ -395,6 +396,7 @@ contains
       use dataio_pub,       only: warn, die
       use domain,           only: dom
       use grid_cont,        only: grid_container
+      use func,             only: operator(.equals.), operator(.notequals.)
       use mpisetup,         only: master
       use named_array_list, only: qna
 #ifdef MACLAURIN_PROBLEM
@@ -438,7 +440,7 @@ contains
             z02 = (cg%z(k)-z0)**2
             do j = cg%js, cg%je
                do i = cg%is, cg%ie
-                  if (a12 /= 0.) then
+                  if (a12 .notequals. 0.) then
                      select case (dom%geometry_type)
                         case (GEO_XYZ)
                            y02 = (cg%y(j)-y0)**2
@@ -484,8 +486,8 @@ contains
                              &      (2.*(a32 - a12) + x02 + y02 - 2.*z02)/sqrt(a32 - a12) * log(h + sqrt(1. + h**2)) - &
                              &      (x02 + y02) * sqrt(a32 + lam)/(a12 + lam) + 2.*z02 / sqrt(a32 + lam) )
                      else
-                        if (a1 == 0.) then
-                           if (rr /= 0) then
+                        if (a1 .equals. 0.) then
+                           if (rr .notequals. 0.) then
                               potential = - 1. / (pi * sqrt(rr)) ! A bit dirty: we interpret d0 as a mass for point-like sources
                            else
                               potential = - sqrt(sum(cg%idl2))*0.5
@@ -610,6 +612,7 @@ contains
 
       use dataio_pub,       only: die
       use grid_cont,        only: grid_container
+      use func,             only: operator(.notequals.)
       use named_array_list, only: qna
 
       implicit none
@@ -626,7 +629,7 @@ contains
          case ("errp")
             tab(:,:,:) = real(cg%q(qna%ind(apot_n))%span(cg%ijkse) - cg%sgp(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), 4)
          case ("relerr")
-            where (cg%q(qna%ind(apot_n))%span(cg%ijkse) /= 0.)
+            where (cg%q(qna%ind(apot_n))%span(cg%ijkse) .notequals. 0.)
                tab(:,:,:) = real(cg%sgp(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)/cg%q(qna%ind(apot_n))%span(cg%ijkse) -1., 4)
             elsewhere
                tab(:,:,:) = 0.

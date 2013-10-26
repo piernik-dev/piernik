@@ -74,6 +74,7 @@ contains
       use dataio_pub,     only: nh      ! QA_WARN required for diff_nml
       use dataio_pub,     only: die
       use domain,         only: dom
+      use func,           only: operator(.equals.)
       use mpisetup,       only: ibuff, rbuff, master, slave, piernik_MPI_Bcast
 
       implicit none
@@ -151,7 +152,7 @@ contains
 
       endif
 
-      if (r0 == 0.) call die("[initproblem:read_problem_par] r0 == 0")
+      if (r0 .equals. 0.) call die("[initproblem:read_problem_par] r0 == 0")
 
       call all_cg%reg_var(aecr1_n, restart_mode = AT_NO_B)
 
@@ -243,6 +244,7 @@ contains
       use cg_leaves,        only: leaves
       use cg_list,          only: cg_list_element
       use dataio_pub,       only: die
+      use func,             only: operator(.equals.)
       use global,           only: t
       use grid_cont,        only: grid_container
       use initcosmicrays,   only: iarr_crs, ncrn, ncre, K_crn_paral, K_crn_perp
@@ -278,7 +280,7 @@ contains
       r0_par2  = r0**2 + 4 * (K_crn_paral(icr) + K_crn_perp(icr)) * t
       r0_perp2 = r0**2 + 4 * K_crn_perp(icr) * t
 
-      if (r0_par2 == 0. .or. r0_perp2 == 0.) call die("[initproblem:compute_analytic_ecr1] r0_par2 == 0. .or. r0_perp2 == 0.")
+      if ((r0_par2 .equals. 0.) .or. (r0_perp2 .equals. 0.)) call die("[initproblem:compute_analytic_ecr1] r0_par2 == 0. .or. r0_perp2 == 0.")
 
       ampt     = amp_cr * r0**2 / sqrt(r0_par2 * r0_perp2)
 
@@ -325,6 +327,7 @@ contains
       use cg_list,          only: cg_list_element
       use constants,        only: PIERNIK_FINISHED, pSUM, pMIN, pMAX
       use dataio_pub,       only: code_progress, halfstep, msg, die, printinfo
+      use func,             only: operator(.notequals.)
       use global,           only: nstep
       use grid_cont,        only: grid_container
       use initcosmicrays,   only: iarr_crs, ncrn, ncre
@@ -379,7 +382,7 @@ contains
       call piernik_MPI_Allreduce(dev(2), pMAX)
 
       if (master) then
-         if (norm(2) /= 0) then
+         if (norm(2) .notequals. 0.) then
             write(msg,'(a,f12.5,a,2f12.5)')"[initproblem:check_norm] L2 error norm = ", sqrt(norm(1)/norm(2)), " min and max error = ", dev(1:2)
          else
             write(msg,'(a,2f12.5)')"[initproblem:check_norm] Cannot compute L2 error norm, min and max error = ", dev(1:2)
