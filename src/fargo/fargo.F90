@@ -51,7 +51,7 @@ contains
 !<
    subroutine init_fargo
 
-      use constants,    only: GEO_RPZ, ydim
+      use constants,    only: GEO_RPZ
       use dataio_pub,   only: die, warn
       use domain,       only: dom, AMR_bsize
       use global,       only: use_fargo
@@ -63,10 +63,6 @@ contains
       if (dom%geometry_type /= GEO_RPZ) call die("[fargo:init_fargo] FARGO works only for cylindrical geometry")
       if (master) call warn("[fargo:init_fargo] BEWARE: Fast eulerian transport is an experimental feature")
 
-      if (AMR_bsize(ydim) /= 0 .and. AMR_bsize(ydim) /= dom%n_d(ydim)) &
-           call die("[fargo:init_fargo] AMR is not allowed in the azimuthal direction. You must set AMR_bsize(ydim) == dom%n_d(ydim) AND make sure that there will be no azimuthal refinement steps on higher levels")
-      !> \todo Implement proper checks (or even refinement fixups) and do not impose restrictions on AMR_bsize(ydim)
-
    end subroutine init_fargo
 
 !>
@@ -75,6 +71,34 @@ contains
    subroutine cleanup_fargo
       implicit none
    end subroutine cleanup_fargo
+
+!> \brief Check for azimuthar refinement steps and die if any have been detected
+
+   subroutine check_yref
+
+      use cg_level_base,      only: base
+      use cg_level_connected, only: cg_level_connected_T
+      use cg_list,            only: cg_list_element
+      use constants,          only: ydim, BND_FC, BND_MPI_FC
+      use dataio_pub,         only: die
+
+      implicit none
+
+      type(cg_level_connected_T), pointer :: curl
+      type(cg_list_element), pointer :: cgl
+
+      curl => base%level%finer
+      do while (associated(curl))
+         cgl => curl%first
+         do while (associated(cgl))
+            if (any(cgl%cg%bnd(ydim, :) == BND_FC) .or. any(cgl%cg%bnd(ydim, :) == BND_MPI_FC)) &
+                 call die("[fargo:check_yref] Refinement steps are not allowed in azimuthal direction")
+            cgl => cgl%nxt
+         enddo
+        curl => curl%finer
+      enddo
+
+   end subroutine check_yref
 
 !>
 !! \brief Perform azimuthal integration steep using FARGO
@@ -86,6 +110,7 @@ contains
 !!    3. transport with mean velocity
 !<
    subroutine make_fargosweep
+
       use constants,   only: VEL_RES, VEL_CR, ydim
       use global,      only: dt, skip_sweep
       use sweeps,      only: sweep
@@ -123,6 +148,8 @@ contains
       integer :: ifl, i
       class(component_fluid), pointer :: pfl
       type(cg_level_connected_T), pointer :: curl
+
+      call check_yref
 
       curl => base%level
       do while (associated(curl))
