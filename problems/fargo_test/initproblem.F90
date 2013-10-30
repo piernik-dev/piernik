@@ -687,12 +687,14 @@ contains
          do while (associated(cgl))
             cg => cgl%cg
 
-            do i = cg%lhn(xdim, LO), cg%lhn(xdim, HI)
-               do k = cg%lhn(zdim, LO), cg%lhn(zdim, HI)
-                  r2 = cg%x(i)**2! + cg%z(k)**2
-                  cg%gp(i,:,k) = -newtong*ptmass / sqrt(r2)
+            if (.not. cg%is_old) then
+               do i = cg%lhn(xdim, LO), cg%lhn(xdim, HI)
+                  do k = cg%lhn(zdim, LO), cg%lhn(zdim, HI)
+                     r2 = cg%x(i)**2! + cg%z(k)**2
+                     cg%gp(i,:,k) = -newtong*ptmass / sqrt(r2)
+                  enddo
                enddo
-            enddo
+            endif
 
             cgl => cgl%nxt
          enddo
