@@ -43,6 +43,7 @@ program piernik
    use fluidupdate,       only: fluid_update
    use func,              only: operator(.equals.)
    use global,            only: t, nstep, dt, dtm, cfl_violated
+   use gravity,           only: manage_grav_pot_3d
    use initpiernik,       only: init_piernik
    use list_of_cg_lists,  only: all_lists
    use mpisetup,          only: master, piernik_MPI_Barrier, piernik_MPI_Bcast
@@ -149,6 +150,9 @@ program piernik
 
       call user_msg_handler(end_sim)
       call update_refinement
+#ifdef GRAV
+      call manage_grav_pot_3d(.false., update_gp = .true.)
+#endif /* GRAV */
       if (try_rebalance) then
          !> \todo try to rewrite this ugly chain of flags passed through global variables into something more fool-proof
          call leaves%balance_and_update(" (re-balance) ")

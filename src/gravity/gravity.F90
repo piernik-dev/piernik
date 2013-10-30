@@ -368,7 +368,7 @@ contains
 
    end subroutine g_cg_init
 
-   subroutine manage_grav_pot_3d(first_approach)
+   subroutine manage_grav_pot_3d(first_approach, update_gp)
 
       use dataio_pub, only: die
 #ifdef VERBOSE
@@ -377,16 +377,17 @@ contains
 
       implicit none
 
-      logical, intent(in) :: first_approach
+      logical, intent(in)           :: first_approach
+      logical, optional, intent(in) :: update_gp
 
       if (associated(grav_pot_3d)) then
-         if (first_approach .or. .not.grav_pot_3d_called) then
+         if (first_approach .or. .not. grav_pot_3d_called .or. update_gp) then
             call grav_pot_3d
             grav_pot_3d_called = .true.
          endif
       else
 #ifdef VERBOSE
-         if (first_approach) call warn("[gravity:manage_grav_pot_3d] grav_pot_3d is not associated! Will try to call it once more after problem_initial_conditionslem.")
+         if (first_approach) call warn("[gravity:manage_grav_pot_3d] grav_pot_3d is not associated! Will try to call it once more after problem_initial_conditions.")
 #endif /* VERBOSE */
          if (.not.(first_approach .or. grav_pot_3d_called)) call die("[gravity:manage_grav_pot_3d] grav_pot_3d failed for the 2nd time!")
       endif

@@ -248,7 +248,7 @@ contains
 
             call all_bnd !> \warning Never assume that problem_initial_conditions set guardcells correctly
 #ifdef GRAV
-            call manage_grav_pot_3d(.false.)
+            call manage_grav_pot_3d(.false., update_gp = (nit /= 0))
             call cleanup_hydrostatic
 #endif /* GRAV */
 
