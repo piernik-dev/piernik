@@ -299,7 +299,8 @@ contains
 !>
 !! \brief interpolate the grid data which has the flag vital set to this%finer level
 !!
-!! \todo implement it in a more efficient way (requires a lot more temporary buffers)
+!! The communication is done on 3D arrays. This means that there are as many communication events as there are "vital" arrays present.
+!! \todo Implement it in a more efficient way (requires a lot more temporary buffers for 4D array).
 !<
    subroutine prolong(this, bnd_type)
 
@@ -602,7 +603,13 @@ contains
 
    end subroutine restrict_q_1var
 
-!> \brief perform prolongation of one field variable
+!>
+!! \brief Perform prolongation of one 3D variable
+!!
+!! \details This routine communicates selected 3D array from coarse to fine grid.
+!! The prolonged data is then copied to the destination if the cg%ignore_prolongation allows it.
+!! OPT: Find a way to prolong only what is really needed.
+!<
 
    subroutine prolong_q_1var(this, iv, pos, bnd_type)
 
@@ -617,22 +624,22 @@ contains
 
       implicit none
 
-      class(cg_level_connected_T), target, intent(inout) :: this !< object invoking type-bound procedure
-      integer(kind=4),                     intent(in)    :: iv   !< variable to be prolonged
-      integer(kind=4), optional,           intent(in)    :: pos  !< position of the variable within cell
-      integer(kind=4), optional,           intent(in)    :: bnd_type   !< Override default boundary type on external boundaries (useful in multigrid solver).
+      class(cg_level_connected_T), target, intent(inout) :: this     !< object invoking type-bound procedure
+      integer(kind=4),                     intent(in)    :: iv       !< variable to be prolonged
+      integer(kind=4), optional,           intent(in)    :: pos      !< position of the variable within cell
+      integer(kind=4), optional,           intent(in)    :: bnd_type !< Override default boundary type on external boundaries (useful in multigrid solver).
 
       type(cg_level_connected_T), pointer                :: fine
       integer                                            :: g
-      integer(kind=8), dimension(xdim:zdim, LO:HI)       :: cse ! shortcut for coarse segment
+      integer(kind=8), dimension(xdim:zdim, LO:HI)       :: cse              !< shortcut for coarse segment
       integer(kind=4)                                    :: nr
       integer(kind=4), dimension(:, :), pointer          :: mpistatus
       type(cg_list_element),            pointer          :: cgl
-      type(grid_container),             pointer          :: cg            !< current grid container
+      type(grid_container),             pointer          :: cg               !< current grid container
       real, dimension(:,:,:),           pointer          :: p3d
       logical, save                                      :: warned = .false.
       integer                                            :: position
-      integer(kind=8), dimension(ndims, LO:HI)           :: box_8   !< temporary storage
+      integer(kind=8), dimension(ndims, LO:HI)           :: box_8            !< temporary storage
 
       position = qna%lst(iv)%position(I_ONE)
       if (present(pos)) position = pos
