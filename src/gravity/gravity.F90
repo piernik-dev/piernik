@@ -811,65 +811,68 @@ contains
       cgl => leaves%first
       do while (associated(cgl))
          cg => cgl%cg
-         call ax%allocate_axes(cg%lhn)
-         ax%x(:) = cg%x(:)
-         ax%y(:) = cg%y(:)
-         ax%z(:) = cg%z(:)
+         if (.not. cg%is_old) then
 
-         gp_status = ''
+            call ax%allocate_axes(cg%lhn)
+            ax%x(:) = cg%x(:)
+            ax%y(:) = cg%y(:)
+            ax%z(:) = cg%z(:)
 
-         if (dom%geometry_type /= GEO_XYZ) then
+            gp_status = ''
+
+            if (dom%geometry_type /= GEO_XYZ) then
+               select case (external_gp)
+                  case ("null", "grav_null", "GRAV_NULL")
+                     ! No gravity - no problem, selfgravity has to check the geometry during initialization
+                  case ("user", "grav_user", "GRAV_USER")
+                     ! The User knows what he/she is doing ...
+                  case default ! standard cases do not support cylindrical geometry yet
+                     if (master) call warn("[gravity:default_grav_pot_3d] Non-cartesian geometry may or may not be implemented correctly.")
+               end select
+            endif
+
             select case (external_gp)
                case ("null", "grav_null", "GRAV_NULL")
-                  ! No gravity - no problem, selfgravity has to check the geometry during initialization
-               case ("user", "grav_user", "GRAV_USER")
-                  ! The User knows what he/she is doing ...
-               case default ! standard cases do not support cylindrical geometry yet
-                  if (master) call warn("[gravity:default_grav_pot_3d] Non-cartesian geometry may or may not be implemented correctly.")
-            end select
-         endif
-
-         select case (external_gp)
-            case ("null", "grav_null", "GRAV_NULL")
-               call grav_null(cg%gp, ax, cg%lhn)                     ; grav_type => grav_null
-            case ("linear", "grav_lin", "GRAV_LINEAR")
-               call grav_linear(cg%gp, ax, cg%lhn)                   ; grav_type => grav_linear
-            case ("uniform", "grav_unif", "GRAV_UNIFORM")
-               call grav_uniform(cg%gp, ax, cg%lhn)                  ; grav_type => grav_uniform
-            case ("softened ptmass", "ptmass_soft", "GRAV_PTMASS")
-               call grav_ptmass_softened(cg%gp, ax, cg%lhn, .false.) ; grav_type => grav_ptmass_softened
-            case ("stiff ptmass", "ptmass_stiff", "GRAV_PTMASSSTIFF")
-               call grav_ptmass_stiff(cg%gp, ax, cg%lhn)             ; grav_type => grav_ptmass_stiff
-            case ("ptmass", "ptmass_pure", "GRAV_PTMASSPURE")
-               call grav_ptmass_pure(cg%gp, ax, cg%lhn, .false.)     ; grav_type => grav_ptmass_pure
-            case ("flat softened ptmass", "flat_ptmass_soft", "GRAV_PTFLAT")
-               call grav_ptmass_softened(cg%gp, ax, cg%lhn, .true.)  ; grav_type => grav_ptmass_softened
-            case ("flat ptmass", "flat_ptmass")
-               call grav_ptmass_pure(cg%gp, ax, cg%lhn, .true.)      ; grav_type => grav_ptmass_pure
-            case ("roche", "grav_roche", "GRAV_ROCHE")
+                  call grav_null(cg%gp, ax, cg%lhn)                     ; grav_type => grav_null
+               case ("linear", "grav_lin", "GRAV_LINEAR")
+                  call grav_linear(cg%gp, ax, cg%lhn)                   ; grav_type => grav_linear
+               case ("uniform", "grav_unif", "GRAV_UNIFORM")
+                  call grav_uniform(cg%gp, ax, cg%lhn)                  ; grav_type => grav_uniform
+               case ("softened ptmass", "ptmass_soft", "GRAV_PTMASS")
+                  call grav_ptmass_softened(cg%gp, ax, cg%lhn, .false.) ; grav_type => grav_ptmass_softened
+               case ("stiff ptmass", "ptmass_stiff", "GRAV_PTMASSSTIFF")
+                  call grav_ptmass_stiff(cg%gp, ax, cg%lhn)             ; grav_type => grav_ptmass_stiff
+               case ("ptmass", "ptmass_pure", "GRAV_PTMASSPURE")
+                  call grav_ptmass_pure(cg%gp, ax, cg%lhn, .false.)     ; grav_type => grav_ptmass_pure
+               case ("flat softened ptmass", "flat_ptmass_soft", "GRAV_PTFLAT")
+                  call grav_ptmass_softened(cg%gp, ax, cg%lhn, .true.)  ; grav_type => grav_ptmass_softened
+               case ("flat ptmass", "flat_ptmass")
+                  call grav_ptmass_pure(cg%gp, ax, cg%lhn, .true.)      ; grav_type => grav_ptmass_pure
+               case ("roche", "grav_roche", "GRAV_ROCHE")
 #ifndef CORIOLIS
-               call die("[gravity:default_grav_pot_3d] define CORIOLIS in piernik.def for Roche potential")
+                  call die("[gravity:default_grav_pot_3d] define CORIOLIS in piernik.def for Roche potential")
 #endif /* !CORIOLIS */
-               call grav_roche(cg%gp, ax, cg%lhn)                    ; grav_type => grav_roche
-            case ("user", "grav_user", "GRAV_USER")
-               call die("[gravity:default_grav_pot_3d] user 'grav_pot_3d' should be defined in initprob!")
-            case default
-               gp_status = 'undefined'
-         end select
+                  call grav_roche(cg%gp, ax, cg%lhn)                    ; grav_type => grav_roche
+               case ("user", "grav_user", "GRAV_USER")
+                  call die("[gravity:default_grav_pot_3d] user 'grav_pot_3d' should be defined in initprob!")
+               case default
+                  gp_status = 'undefined'
+            end select
 
 !-----------------------
 
-         if (gp_status == 'undefined') then
-            if (associated(grav_accel)) then
-               if (master) call warn("[gravity:default_grav_pot_3d]: using 'grav_accel' defined by user")
-               call grav_accel2pot
-            else
-               call die("[gravity:default_grav_pot_3d]: GRAV is defined, but 'gp' is not initialized")
+            if (gp_status == 'undefined') then
+               if (associated(grav_accel)) then
+                  if (master) call warn("[gravity:default_grav_pot_3d]: using 'grav_accel' defined by user")
+                  call grav_accel2pot
+               else
+                  call die("[gravity:default_grav_pot_3d]: GRAV is defined, but 'gp' is not initialized")
+               endif
             endif
+
+            call ax%deallocate_axes
+
          endif
-
-         call ax%deallocate_axes
-
          cgl => cgl%nxt
       enddo
 
