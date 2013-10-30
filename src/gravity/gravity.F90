@@ -44,7 +44,7 @@ module gravity
 
    private
    public :: init_grav, init_grav_ext, grav_accel, source_terms_grav, grav_pot2accel, grav_pot_3d, grav_type, get_gprofs, grav_accel2pot, sum_potential, manage_grav_pot_3d
-   public :: r_gc, ptmass, ptm_x, ptm_y, ptm_z, r_smooth, nsub, tune_zeq, tune_zeq_bnd, h_grav, r_grav, n_gravr, n_gravh, user_grav, gprofs_target, ptm2_x
+   public :: r_gc, ptmass, ptm_x, ptm_y, ptm_z, r_smooth, nsub, tune_zeq, tune_zeq_bnd, r_grav, n_gravr, user_grav, gprofs_target, ptm2_x
 
    integer, parameter         :: gp_stat_len   = 9
    integer, parameter         :: gproft_len    = 5
@@ -59,10 +59,8 @@ module gravity
    real                       :: ptm_z                 !< point mass position z-component
    real                       :: r_smooth              !< smoothing radius in point mass %types of %gravity
    integer(kind=4)            :: nsub                  !< number of subcells while additionally cell division in z-direction is present during establishment of hydrostatic equilibrium
-   integer(kind=4)            :: n_gravh               !< index of hyperbolic-cosinusoidal cutting of acceleration; used when set to non-zero
    integer(kind=4)            :: n_gravr               !< index of hyperbolic-cosinusoidal cutting of gravitational potential used by GRAV_PTMASS, GRAV_PTFLAT type of %gravity
    integer(kind=4)            :: ord_pot2accel         !< Gradient operator order for gravitational potential
-   real                       :: h_grav                !< altitude of acceleration cut used when n_gravh is set to non-zero
    real                       :: r_grav                !< radius of gravitational potential cut used by GRAV_PTMASS, GRAV_PTFLAT type of %gravity
    real                       :: tune_zeq              !< z-component of %gravity tuning factor used by hydrostatic_zeq
    real                       :: tune_zeq_bnd          !< z-component of %gravity tuning factor supposed to be used in boundaries
@@ -149,10 +147,8 @@ contains
 !! <tr><td>nsub         </td><td>10     </td><td>integer > 0      </td><td>\copydoc gravity::nsub         </td></tr>
 !! <tr><td>tune_zeq     </td><td>1.0    </td><td>real             </td><td>\copydoc gravity::tune_zeq     </td></tr>
 !! <tr><td>tune_zeq_bnd </td><td>1.0    </td><td>real             </td><td>\copydoc gravity::tune_zeq_bnd </td></tr>
-!! <tr><td>h_grav       </td><td>1.e6   </td><td>real             </td><td>\copydoc gravity::h_grav       </td></tr>
 !! <tr><td>r_grav       </td><td>1.e6   </td><td>real             </td><td>\copydoc gravity::r_grav       </td></tr>
 !! <tr><td>n_gravr      </td><td>0      </td><td>real             </td><td>\copydoc gravity::n_gravr      </td></tr>
-!! <tr><td>n_gravh      </td><td>0      </td><td>real             </td><td>\copydoc gravity::n_gravh      </td></tr>
 !! <tr><td>user_grav    </td><td>.false.</td><td>logical          </td><td>\copydoc gravity::user_grav    </td></tr>
 !! <tr><td>variable_gp  </td><td>.false.</td><td>logical          </td><td>\copydoc gravity::variable_gp  </td></tr>
 !! <tr><td>gprofs_target</td><td>'extgp'</td><td>string of chars  </td><td>\copydoc gravity::gprofs_target</td></tr>
@@ -179,7 +175,7 @@ contains
       implicit none
 
       namelist /GRAVITY/ g_dir, r_gc, ptmass, ptm_x, ptm_y, ptm_z, r_smooth, external_gp, ptmass2, ptm2_x, &
-                         nsub, tune_zeq, tune_zeq_bnd, h_grav, r_grav, n_gravr, n_gravh, user_grav, gprofs_target, variable_gp, ord_pot2accel
+                         nsub, tune_zeq, tune_zeq_bnd, r_grav, n_gravr, user_grav, gprofs_target, variable_gp, ord_pot2accel
 
       if (code_progress < PIERNIK_INIT_MPI) call die("[gravity:init_grav] mpi not initialized.")
 
@@ -197,13 +193,11 @@ contains
       nsub          = 10
       tune_zeq      = 1.0
       tune_zeq_bnd  = 1.0
-      h_grav        = 1.e6
       r_grav        = 1.e6
       ptmass2       = 0.0
       ptm2_x        = -1.0
 
       n_gravr       = 0
-      n_gravh       = 0
       ord_pot2accel = O_I2
 
       gprofs_target = 'extgp'
@@ -232,8 +226,7 @@ contains
 
          ibuff(1)   = nsub
          ibuff(2)   = n_gravr
-         ibuff(3)   = n_gravh
-         ibuff(4)   = ord_pot2accel
+         ibuff(3)   = ord_pot2accel
 
          rbuff(1:3) = g_dir
          rbuff(4)   = r_gc
@@ -244,10 +237,9 @@ contains
          rbuff(9)   = tune_zeq
          rbuff(10)  = tune_zeq_bnd
          rbuff(11)  = r_smooth
-         rbuff(12)  = h_grav
-         rbuff(13)  = r_grav
-         rbuff(14)  = ptmass2
-         rbuff(15)  = ptm2_x
+         rbuff(12)  = r_grav
+         rbuff(13)  = ptmass2
+         rbuff(14)  = ptm2_x
 
          lbuff(1)   = user_grav
          lbuff(2)   = variable_gp
@@ -266,8 +258,7 @@ contains
 
          nsub          = int(ibuff(1), kind=4)
          n_gravr       = ibuff(2)
-         n_gravh       = ibuff(3)
-         ord_pot2accel = ibuff(4)
+         ord_pot2accel = ibuff(3)
 
          g_dir         = rbuff(1:3)
          r_gc          = rbuff(4)
@@ -278,10 +269,9 @@ contains
          tune_zeq      = rbuff(9)
          tune_zeq_bnd  = rbuff(10)
          r_smooth      = rbuff(11)
-         h_grav        = rbuff(12)
-         r_grav        = rbuff(13)
-         ptmass2       = rbuff(14)
-         ptm2_x        = rbuff(15)
+         r_grav        = rbuff(12)
+         ptmass2       = rbuff(13)
+         ptm2_x        = rbuff(14)
 
          user_grav     = lbuff(1)
          variable_gp   = lbuff(2)
