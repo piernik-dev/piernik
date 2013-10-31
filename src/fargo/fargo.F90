@@ -80,12 +80,15 @@ contains
       use cg_level_connected, only: cg_level_connected_T
       use cg_list,            only: cg_list_element
       use constants,          only: ydim, BND_FC, BND_MPI_FC
-      use dataio_pub,         only: die
+      use dataio_pub,         only: die, warn
+      use global,             only: use_fargo
 
       implicit none
 
       type(cg_level_connected_T), pointer :: curl
       type(cg_list_element), pointer :: cgl
+
+      if (.not. use_fargo) call warn("[fargo:check_yref] There's no reason to call this routine when not using FARGO!")
 
       curl => base%level%finer
       do while (associated(curl))
@@ -135,6 +138,7 @@ contains
       use cg_level_base,      only: base
       use cg_level_connected, only: cg_level_connected_T
       use cg_list,            only: cg_list_element
+      use dataio_pub,         only: die
       use global,             only: use_fargo
       use grid_cont,          only: grid_container
       use fluidindex,         only: flind
@@ -149,6 +153,8 @@ contains
       class(component_fluid), pointer :: pfl
       type(cg_level_connected_T), pointer :: curl
 
+      if (.not. use_fargo) call die("[fargo:fargo_mean_omega] Not using FARGO")
+
       call check_yref
 
       curl => base%level
@@ -159,28 +165,24 @@ contains
          curl%local_omega(:,:) = 0.0
          curl%cell_count(:) = 0
 
-         if (use_fargo) then
-            cgl => curl%first
-            do while (associated(cgl))
-               cg => cgl%cg
-               do i = cg%is, cg%ie
-                  do ifl = 1, flind%fluids
-                     pfl => flind%all_fluids(ifl)%fl
-                     curl%local_omega(i, ifl) = curl%local_omega(i, ifl) + sum(cg%u(pfl%imy, i, cg%js:cg%je, cg%ks:cg%ke) / cg%u(pfl%idn, i, cg%js:cg%je, cg%ks:cg%ke) / cg%x(i))
-                  enddo
-                  curl%cell_count(i) = curl%cell_count(i) + product(cg%n_b(ydim:zdim))
+         cgl => curl%first
+         do while (associated(cgl))
+            cg => cgl%cg
+            do i = cg%is, cg%ie
+               do ifl = 1, flind%fluids
+                  pfl => flind%all_fluids(ifl)%fl
+                  curl%local_omega(i, ifl) = curl%local_omega(i, ifl) + sum(cg%u(pfl%imy, i, cg%js:cg%je, cg%ks:cg%ke) / cg%u(pfl%idn, i, cg%js:cg%je, cg%ks:cg%ke) / cg%x(i))
                enddo
-               cgl => cgl%nxt
+               curl%cell_count(i) = curl%cell_count(i) + product(cg%n_b(ydim:zdim))
             enddo
-         endif
+            cgl => cgl%nxt
+         enddo
 
-         if (use_fargo) then
-            call piernik_MPI_Allreduce(curl%local_omega, pSUM)
-            call piernik_MPI_Allreduce(curl%cell_count, pSUM)
-            do i = lbound(curl%cell_count, dim=1), ubound(curl%cell_count, dim=1)
-               curl%local_omega(i, :) = curl%local_omega(i, :) / curl%cell_count(i)
-            enddo
-         endif
+         call piernik_MPI_Allreduce(curl%local_omega, pSUM)
+         call piernik_MPI_Allreduce(curl%cell_count, pSUM)
+         do i = lbound(curl%cell_count, dim=1), ubound(curl%cell_count, dim=1)
+            curl%local_omega(i, :) = curl%local_omega(i, :) / curl%cell_count(i)
+         enddo
 
          curl => curl%finer
 

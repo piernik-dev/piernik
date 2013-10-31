@@ -142,7 +142,7 @@ contains
       c_all = zero
       dt = huge(one)
 
-      call fargo_mean_omega
+      if (use_fargo) call fargo_mean_omega
 
       cgl => leaves%first
       do while (associated(cgl))
