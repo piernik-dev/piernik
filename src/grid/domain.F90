@@ -177,7 +177,7 @@ contains
 !<
    subroutine init_domain
 
-      use constants,  only: xdim, zdim, ndims, LO, HI, PIERNIK_INIT_MPI, I_ONE, I_ZERO, INVALID, big_float
+      use constants,  only: xdim, zdim, ndims, LO, HI, PIERNIK_INIT_MPI, I_ONE, I_ZERO, INVALID
       use dataio_pub, only: die, warn, code_progress
       use dataio_pub, only: nh  ! QA_WARN required for diff_nml
       use mpisetup,   only: cbuff, ibuff, lbuff, rbuff, master, slave, piernik_MPI_Bcast, have_mpi
@@ -199,7 +199,7 @@ contains
       n_d(:)   = I_ONE
       nb       = 4
       xmin     = 0.; xmax = 1.
-      ymin     = -big_float; ymax = big_float
+      ymin     = -huge(1.); ymax = huge(1.) ! required for detection of problems in cylindrical coordinates
       zmin     = 0.; zmax = 1.
       geometry = "cartesian"
 
@@ -517,11 +517,11 @@ contains
       ymxo = edges(ydim,HI)
       select case (this%geometry_type)
          case (GEO_XYZ)
-            if (edges(ydim,LO) <= -big_float .or. edges(ydim,HI) >= big_float) then
+            if (edges(ydim,LO) <= -0.99*huge(1.) .or. edges(ydim,HI) >= 0.99*huge(1.)) then
                if (master) call warn("[domain:init_domain] y range not specified. Defaulting to [0..1]")
+               if (edges(ydim,LO) <= -0.99*huge(1.)) edges(ydim,LO) = 0.
+               if (edges(ydim,HI) >=  0.99*huge(1.)) edges(ydim,HI) = 1.
             endif
-            if (edges(ydim,LO) <= -big_float) edges(ydim,LO) = 0.
-            if (edges(ydim,HI) >= big_float) edges(ydim,HI) = 1.
          case (GEO_RPZ)
             if (edges(ydim,LO) <= -big_float) edges(ydim,LO) = 0.
             if (edges(ydim,HI) >= big_float) edges(ydim,HI) = dpi
