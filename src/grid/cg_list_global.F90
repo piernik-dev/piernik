@@ -69,6 +69,7 @@ module cg_list_global
       procedure :: delete_all        !< Delete the grid container from all lists
       procedure :: mark_orphans      !< Find grid pieces that do not belong to any list except for all_cg
       procedure :: clear_ref_flags   !< Clear refinement flags everywhere
+      procedure :: count_ref_flags   !< Count refinement flags
    end type cg_list_global_T
 
    type(cg_list_global_T)                :: all_cg   !< all grid containers; \todo restore protected
@@ -435,5 +436,27 @@ contains
       enddo
 
    end subroutine clear_ref_flags
+
+!> \brief Count refinement flags everywhere
+
+   function count_ref_flags(this) result(cnt)
+
+      use cg_list,          only: cg_list_element
+
+      implicit none
+
+      class(cg_list_global_T), intent(in) :: this !< object invoking type-bound procedure
+      integer :: cnt                              !< returned counter
+
+      type(cg_list_element), pointer :: cgl
+
+      cnt = 0
+      cgl => this%first
+      do while (associated(cgl))
+         if (cgl%cg%refine_flags%refine) cnt = cnt + 1
+         cgl => cgl%nxt
+      enddo
+
+   end function count_ref_flags
 
 end module cg_list_global
