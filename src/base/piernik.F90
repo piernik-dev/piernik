@@ -43,7 +43,6 @@ program piernik
    use fluidupdate,       only: fluid_update
    use func,              only: operator(.equals.)
    use global,            only: t, nstep, dt, dtm, cfl_violated
-   use gravity,           only: manage_grav_pot_3d
    use initpiernik,       only: init_piernik
    use list_of_cg_lists,  only: all_lists
    use mpisetup,          only: master, piernik_MPI_Barrier, piernik_MPI_Bcast
@@ -53,6 +52,9 @@ program piernik
    use timer,             only: walltime_end, set_timer, tmr_fu
    use timestep,          only: time_step
    use user_hooks,        only: finalize_problem, problem_domain_update
+#ifdef GRAV
+   use gravity,           only: manage_grav_pot_3d
+#endif /* GRAV */
 #ifdef PERFMON
    use domain,            only: dom
    use timer,             only: timer_start, timer_stop
