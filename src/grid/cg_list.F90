@@ -73,8 +73,11 @@ module cg_list
       procedure       :: ascii_dump                        !< Emergency routine for quick ASCII dumps
       procedure       :: update_req                        !< Update mpisetup::req(:)
       procedure       :: prevent_prolong                   !< Mark grids as untouchable for prolongation
-      procedure       :: enable_prolong                    !< Mark grids as eligible for prolongation
+      procedure       :: enable_prolong                    !< Mark grids eligible for prolongation
       procedure       :: set_is_old                        !< Mark grids as existing in the previous timestep
+      procedure       :: clear_ref_flags                   !< Clear refinement flags everywhere
+      procedure       :: count_ref_flags                   !< Count refinement flags
+
 !> \todo merge lists
 
    end type cg_list_T
@@ -443,6 +446,44 @@ contains
 
    end subroutine set_is_old
 
+!> \brief Clear refinement flags everywhere
+
+   subroutine clear_ref_flags(this)
+
+      implicit none
+
+      class(cg_list_T), intent(in) :: this !< object invoking type-bound procedure
+
+      type(cg_list_element), pointer :: cgl
+
+      cgl => this%first
+      do while (associated(cgl))
+         cgl%cg%refine_flags%refine   = .false.
+         cgl%cg%refine_flags%derefine = .false.
+         cgl => cgl%nxt
+      enddo
+
+   end subroutine clear_ref_flags
+
+!> \brief Count refinement flags everywhere
+
+   function count_ref_flags(this) result(cnt)
+
+      implicit none
+
+      class(cg_list_T), intent(in) :: this !< object invoking type-bound procedure
+      integer :: cnt                       !< returned counter
+
+      type(cg_list_element), pointer :: cgl
+
+      cnt = 0
+      cgl => this%first
+      do while (associated(cgl))
+         if (cgl%cg%refine_flags%refine) cnt = cnt + 1
+         cgl => cgl%nxt
+      enddo
+
+   end function count_ref_flags
 
 ! unused
 !!$!>
