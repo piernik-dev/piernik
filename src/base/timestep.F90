@@ -140,7 +140,7 @@ contains
       dt_old = dt
 
       c_all = zero
-      dt = huge(one)
+      dt = huge(1.)
 
       if (use_fargo) call fargo_mean_omega
 
@@ -314,7 +314,7 @@ contains
    subroutine timestep_fluid(cg, fl, dt, c_fl)
 
       use cg_level_connected, only: cg_level_connected_T, find_level
-      use constants,          only: big, xdim, ydim, zdim, ndims, GEO_RPZ, ndims, small
+      use constants,          only: xdim, ydim, zdim, ndims, GEO_RPZ, ndims, small
       use domain,             only: dom
       use fluidtypes,         only: component_fluid
       use global,             only: cfl, use_fargo
@@ -337,7 +337,7 @@ contains
       curl => find_level(cg%level_id)
 
       c_fl = small
-      dt_proc(:) = big
+      dt_proc(:) = huge(1.)
 
       do k = cg%ks, cg%ke
          do j = cg%js, cg%je
@@ -362,7 +362,7 @@ contains
                            dt_proc(d) = min(dt_proc(d), cg%dl(d) / c(d))
                         endif
                      else
-                        dt_proc(d) = big
+                        dt_proc(d) = huge(1.)
                      endif
                   enddo
 

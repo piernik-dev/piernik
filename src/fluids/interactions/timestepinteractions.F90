@@ -73,7 +73,7 @@ contains
          call piernik_MPI_Bcast(dt_interact_all)
          dt = cfl_interact*dt_interact_all
       else
-         dt = huge(real(1.0,4))
+         dt = huge(1.)
       endif
 
    end function timestep_interactions
