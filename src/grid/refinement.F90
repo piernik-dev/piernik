@@ -32,7 +32,7 @@
 
 module refinement
 
-   use constants, only: ndims
+   use constants, only: ndims, LO, HI
 
    implicit none
 
@@ -56,15 +56,18 @@ module refinement
 
    ! some refinement primitives
    integer, parameter :: nshapes = 10
+
+   !> \brief Refinement point
    type :: ref_point
-      integer(kind=4)        :: level
-      real, dimension(ndims) :: coords
+      integer(kind=4)        :: level  !> desired level of refinement
+      real, dimension(ndims) :: coords !> coordinates, where to refine
    end type ref_point
    type(ref_point), dimension(nshapes), protected :: refine_points
+
+   !> \brief Refinement box
    type :: ref_box
-      integer(kind=4)        :: level
-      real, dimension(ndims) :: lcoords
-      real, dimension(ndims) :: hcoords
+      integer(kind=4)               :: level  !> desired level of refinement
+      real, dimension(ndims, LO:HI) :: coords !> coordinates, where to refine
    end type ref_box
    type(ref_box), dimension(nshapes), protected :: refine_boxes
 
@@ -78,7 +81,7 @@ contains
 
    subroutine init_refinement
 
-      use constants,  only: base_level_id, PIERNIK_INIT_DOMAIN, xdim, ydim, zdim, I_ONE
+      use constants,  only: base_level_id, PIERNIK_INIT_DOMAIN, xdim, ydim, zdim, I_ONE, LO, HI
       use dataio_pub, only: nh      ! QA_WARN required for diff_nml
       use dataio_pub, only: die, code_progress, warn
       use domain,     only: AMR_bsize, dom
@@ -112,7 +115,7 @@ contains
          endif
       enddo
       refine_points(:) = ref_point(base_level_id-1, [ 0., 0., 0.] )
-      refine_boxes (:) = ref_box  (base_level_id-1, [ 0., 0., 0.], [ 0., 0., 0.] )
+      refine_boxes (:) = ref_box  (base_level_id-1, reshape([ 0., 0., 0., 0., 0., 0.], [ndims, HI-LO+I_ONE] ) )
 
       if (1 + 9*nshapes > ubound(rbuff, dim=1)) call die("[refinement:init_refinement] increase rbuff size") ! should be detected at compile time but it is only a warning
       if (master) then
@@ -157,12 +160,12 @@ contains
          rbuff(2          :1+  nshapes) = refine_points(:)%coords(xdim)
          rbuff(2+  nshapes:1+2*nshapes) = refine_points(:)%coords(ydim)
          rbuff(2+2*nshapes:1+3*nshapes) = refine_points(:)%coords(zdim)
-         rbuff(2+3*nshapes:1+4*nshapes) = refine_boxes (:)%lcoords(xdim)
-         rbuff(2+4*nshapes:1+5*nshapes) = refine_boxes (:)%hcoords(xdim)
-         rbuff(2+5*nshapes:1+6*nshapes) = refine_boxes (:)%lcoords(ydim)
-         rbuff(2+6*nshapes:1+7*nshapes) = refine_boxes (:)%hcoords(ydim)
-         rbuff(2+7*nshapes:1+8*nshapes) = refine_boxes (:)%lcoords(zdim)
-         rbuff(2+8*nshapes:1+9*nshapes) = refine_boxes (:)%hcoords(zdim)
+         rbuff(2+3*nshapes:1+4*nshapes) = refine_boxes (:)%coords(xdim, LO)
+         rbuff(2+4*nshapes:1+5*nshapes) = refine_boxes (:)%coords(xdim, HI)
+         rbuff(2+5*nshapes:1+6*nshapes) = refine_boxes (:)%coords(ydim, LO)
+         rbuff(2+6*nshapes:1+7*nshapes) = refine_boxes (:)%coords(ydim, HI)
+         rbuff(2+7*nshapes:1+8*nshapes) = refine_boxes (:)%coords(zdim, LO)
+         rbuff(2+8*nshapes:1+9*nshapes) = refine_boxes (:)%coords(zdim, HI)
 
       endif
 
@@ -183,15 +186,15 @@ contains
          allow_AMR          = lbuff(3)
 
          oop_thr = rbuff(1)
-         refine_points(:)%coords(xdim)  = rbuff(2          :1+  nshapes)
-         refine_points(:)%coords(ydim)  = rbuff(2+  nshapes:1+2*nshapes)
-         refine_points(:)%coords(zdim)  = rbuff(2+2*nshapes:1+3*nshapes)
-         refine_boxes (:)%lcoords(xdim) = rbuff(2+3*nshapes:1+4*nshapes)
-         refine_boxes (:)%hcoords(xdim) = rbuff(2+4*nshapes:1+5*nshapes)
-         refine_boxes (:)%lcoords(ydim) = rbuff(2+5*nshapes:1+6*nshapes)
-         refine_boxes (:)%hcoords(ydim) = rbuff(2+6*nshapes:1+7*nshapes)
-         refine_boxes (:)%lcoords(zdim) = rbuff(2+7*nshapes:1+8*nshapes)
-         refine_boxes (:)%hcoords(zdim) = rbuff(2+8*nshapes:1+9*nshapes)
+         refine_points(:)%coords(xdim)     = rbuff(2          :1+  nshapes)
+         refine_points(:)%coords(ydim)     = rbuff(2+  nshapes:1+2*nshapes)
+         refine_points(:)%coords(zdim)     = rbuff(2+2*nshapes:1+3*nshapes)
+         refine_boxes (:)%coords(xdim, LO) = rbuff(2+3*nshapes:1+4*nshapes)
+         refine_boxes (:)%coords(xdim, HI) = rbuff(2+4*nshapes:1+5*nshapes)
+         refine_boxes (:)%coords(ydim, LO) = rbuff(2+5*nshapes:1+6*nshapes)
+         refine_boxes (:)%coords(ydim, HI) = rbuff(2+6*nshapes:1+7*nshapes)
+         refine_boxes (:)%coords(zdim, LO) = rbuff(2+7*nshapes:1+8*nshapes)
+         refine_boxes (:)%coords(zdim, HI) = rbuff(2+8*nshapes:1+9*nshapes)
 
       endif
 

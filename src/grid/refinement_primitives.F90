@@ -71,22 +71,24 @@ contains
       type(cg_level_connected_T), pointer :: curl
       type(cg_list_element), pointer :: cgl
       integer :: ip
-      integer, dimension(ndims) :: ijk
+      integer(kind=8), dimension(ndims) :: ip_ijk
 
       do ip = lbound(refine_points, dim=1), ubound(refine_points, dim=1)
 
          curl => finest%level
          do while (associated(curl) .and. curl%level_id>=base%level%level_id)
             if (curl%level_id <= refine_points(ip)%level) then
+
+               ip_ijk(:) = curl%off(:)
+               where (dom%has_dir) ip_ijk(:) = curl%off(:) + floor((refine_points(ip)%coords(:) - dom%edge(:, LO))/dom%L_(:)*curl%n_d)
+               !BEWARE: ip_ijk can contain indices outside the domain
+
                cgl => curl%first
                do while (associated(cgl))
                   cgl%cg%refine_flags%derefine = .true.
-                  if (all((cgl%cg%fbnd(:, LO)<=refine_points(ip)%coords(:) .and. cgl%cg%fbnd(:, HI)>=refine_points(ip)%coords(:)) .or. .not. dom%has_dir(:))) then
+                  if (all(ip_ijk >= cgl%cg%ijkse(:, LO)) .and. all(ip_ijk <= cgl%cg%ijkse(:, HI))) then
                      if (curl%level_id < refine_points(ip)%level) then
-                        ijk = cgl%cg%ijkse(:, LO)
-                        where (dom%has_dir) ijk = cgl%cg%ijkse(:, LO) + int((refine_points(ip)%coords(:) - cgl%cg%fbnd(:, LO)) / cgl%cg%dl(:))
-                        where (ijk > cgl%cg%ijkse(:, HI)) ijk = cgl%cg%ijkse(:, HI)
-                        if (cgl%cg%leafmap(ijk(xdim), ijk(ydim), ijk(zdim))) cgl%cg%refine_flags%refine = .true.
+                        if (cgl%cg%leafmap(ip_ijk(xdim), ip_ijk(ydim), ip_ijk(zdim))) cgl%cg%refine_flags%refine = .true.
                      endif
                      cgl%cg%refine_flags%derefine = .false.
                   endif
@@ -117,29 +119,33 @@ contains
       type(cg_level_connected_T), pointer :: curl
       type(cg_list_element), pointer :: cgl
       integer :: ip
-      integer, dimension(ndims) :: ijk_l, ijk_h
+      integer(kind=8), dimension(ndims, LO:HI) :: ip_ijk, cg_ijk  ! cell coordinates of given box on current level
 
       do ip = lbound(refine_boxes, dim=1), ubound(refine_boxes, dim=1)
 
          curl => finest%level
          do while (associated(curl) .and. curl%level_id>=base%level%level_id)
+
             if (curl%level_id <= refine_boxes(ip)%level) then
+
+               ip_ijk(:, LO) = curl%off(:)
+               ip_ijk(:, HI) = curl%off(:)
+               where (dom%has_dir)
+                  ip_ijk(:, LO) = curl%off(:) + floor((refine_boxes(ip)%coords(:, LO) - dom%edge(:, LO))/dom%L_(:)*curl%n_d)
+                  ip_ijk(:, HI) = curl%off(:) + floor((refine_boxes(ip)%coords(:, HI) - dom%edge(:, LO))/dom%L_(:)*curl%n_d)
+               end where
+               !BEWARE: ip_ijk can contain indices outside the domain
+
                cgl => curl%first
                do while (associated(cgl))
                   cgl%cg%refine_flags%derefine = .true.
-                  if (all((cgl%cg%fbnd(:, LO)<=refine_boxes(ip)%hcoords(:) .and. cgl%cg%fbnd(:, HI)>=refine_boxes(ip)%lcoords(:)) .or. .not. dom%has_dir(:))) then
+                  if (all(ip_ijk(:, HI) >= cgl%cg%ijkse(:, LO)) .and. all(ip_ijk(:, LO) <= cgl%cg%ijkse(:, HI))) then
                      if (curl%level_id < refine_boxes(ip)%level) then
-                        ijk_l = cgl%cg%ijkse(:, LO)
-                        ijk_h = cgl%cg%ijkse(:, HI)
-                        where (dom%has_dir)
-                           ijk_l = cgl%cg%ijkse(:, LO) + int((refine_boxes(ip)%lcoords(:) - cgl%cg%fbnd(:, LO)) / cgl%cg%dl(:))
-                           ijk_h = cgl%cg%ijkse(:, LO) + int((refine_boxes(ip)%hcoords(:) - cgl%cg%fbnd(:, LO)) / cgl%cg%dl(:))
-                        endwhere
-                        where (ijk_l > cgl%cg%ijkse(:, HI)) ijk_l = cgl%cg%ijkse(:, HI)
-                        where (ijk_h > cgl%cg%ijkse(:, HI)) ijk_h = cgl%cg%ijkse(:, HI)
-                        where (ijk_l < cgl%cg%ijkse(:, LO)) ijk_l = cgl%cg%ijkse(:, LO)
-                        where (ijk_h < cgl%cg%ijkse(:, LO)) ijk_h = cgl%cg%ijkse(:, LO)
-                        if (any(cgl%cg%leafmap(ijk_l(xdim):ijk_h(xdim), ijk_l(ydim):ijk_h(ydim), ijk_l(zdim):ijk_h(zdim)))) cgl%cg%refine_flags%refine = .true.
+                        cg_ijk(:, LO) = min(max(int(ip_ijk(:, LO), kind=4), cgl%cg%ijkse(:, LO)), cgl%cg%ijkse(:, HI))
+                        cg_ijk(:, HI) = min(max(int(ip_ijk(:, HI), kind=4), cgl%cg%ijkse(:, LO)), cgl%cg%ijkse(:, HI))
+                        if (any(cgl%cg%leafmap(cg_ijk(xdim, LO):cg_ijk(xdim, HI), &
+                             &                 cg_ijk(ydim, LO):cg_ijk(ydim, HI), &
+                             &                 cg_ijk(zdim, LO):cg_ijk(zdim, HI)))) cgl%cg%refine_flags%refine = .true.
                      endif
                      cgl%cg%refine_flags%derefine = .false.
                   endif
