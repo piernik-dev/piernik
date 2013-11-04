@@ -43,7 +43,7 @@ module gravity
    implicit none
 
    private
-   public :: init_grav, init_grav_ext, grav_accel, source_terms_grav, grav_pot2accel, grav_pot_3d, grav_type, get_gprofs, grav_accel2pot, sum_potential, manage_grav_pot_3d
+   public :: init_grav, init_grav_ext, grav_accel, source_terms_grav, grav_pot2accel, grav_pot_3d, grav_type, get_gprofs, grav_accel2pot, sum_potential, manage_grav_pot_3d, update_gp
    public :: r_gc, ptmass, ptm_x, ptm_y, ptm_z, r_smooth, nsub, tune_zeq, tune_zeq_bnd, r_grav, n_gravr, user_grav, gprofs_target, ptm2_x
 
    integer, parameter         :: gp_stat_len   = 9
@@ -443,6 +443,19 @@ contains
       call sum_potential
 
    end subroutine source_terms_grav
+
+!> \brief update static potential (gp field) in case of grid changes. Assume multigrid has been called
+
+   subroutine update_gp
+
+      implicit none
+
+      if (associated(grav_pot_3d)) then
+         call grav_pot_3d
+         call sum_potential
+      endif
+
+   end subroutine update_gp
 
    subroutine sum_potential
 
