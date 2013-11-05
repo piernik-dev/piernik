@@ -35,7 +35,7 @@ program piernik
    use all_boundaries,    only: all_bnd
    use cg_leaves,         only: leaves
    use cg_list_global,    only: all_cg
-   use constants,         only: PIERNIK_START, PIERNIK_INITIALIZED, PIERNIK_FINISHED, PIERNIK_CLEANUP, fplen, stdout, I_ONE, CHK, FINAL
+   use constants,         only: PIERNIK_START, PIERNIK_INITIALIZED, PIERNIK_FINISHED, PIERNIK_CLEANUP, fplen, stdout, I_ONE, CHK, FINAL_DUMP
    use dataio,            only: write_data, user_msg_handler, check_log, check_tsl, dump
    use dataio_pub,        only: nend, tend, msg, printinfo, warn, die, code_progress
    use finalizepiernik,   only: cleanup_piernik
@@ -211,7 +211,7 @@ program piernik
 #ifdef PERFMON
    call timer_stop(nstep, dom%total_ncells)
 #endif /* PERFMON */
-   call write_data(output=FINAL)
+   call write_data(output=FINAL_DUMP)
 !---------------------------- END OF MAIN LOOP ----------------------------------
 
    call piernik_MPI_Barrier

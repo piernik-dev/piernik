@@ -663,7 +663,7 @@ contains
 !
    subroutine write_crashed(msg)
 
-      use constants,  only: FINAL
+      use constants,  only: FINAL_DUMP
       use dataio_pub, only: nres, die
 
       implicit none
@@ -674,7 +674,7 @@ contains
       problem_name = "crash"
       dt_hdf = tiny(1.0)
       nres = 1
-      call write_data(output=FINAL)
+      call write_data(output=FINAL_DUMP)
 
       call die(msg)
 
@@ -688,7 +688,7 @@ contains
 !
    subroutine write_data(output)
 
-      use constants,    only: FINAL, HDF, LOGF
+      use constants,    only: FINAL_DUMP, HDF, LOGF
       use dataio_pub,   only: last_res_time, last_hdf_time
       use dataio_user,  only: user_post_write_data
       use mpisetup,     only: master, piernik_MPI_Bcast
@@ -704,8 +704,8 @@ contains
 
 !- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-      dump(LOGF) = (output == LOGF .or. output == FINAL) ; if (dump(LOGF)) call write_log
-      dump(TSL)  = (output == TSL  .or. output == FINAL) ; if (dump(TSL))  call write_timeslice
+      dump(LOGF) = (output == LOGF .or. output == FINAL_DUMP) ; if (dump(LOGF)) call write_log
+      dump(TSL)  = (output == TSL  .or. output == FINAL_DUMP) ; if (dump(TSL))  call write_timeslice
 #ifdef HDF5
       call determine_dump(dump(RES), last_res_time, dt_res, output, RES)
       if (dump(RES)) call write_restart_hdf5
@@ -729,7 +729,7 @@ contains
 
    subroutine determine_dump(dmp, last_dump_time, dt_dump, output, dumptype)
 
-      use constants, only: FINAL
+      use constants, only: FINAL_DUMP
       use global,    only: t
 
       implicit none
@@ -739,7 +739,7 @@ contains
       real,            intent(inout) :: last_dump_time
       logical,         intent(inout) :: dmp
 
-      dmp = ((.not.(dmp)) .and. (output == FINAL)) !! dmp==.true. means that this dump is already done due to another conditions and is stopped by dmp=.not.(dmp); important only for FINAL output
+      dmp = ((.not.(dmp)) .and. (output == FINAL_DUMP)) !! dmp==.true. means that this dump is already done due to another conditions and is stopped by dmp=.not.(dmp); important only for FINAL_DUMP output
       dmp = (dmp .or. (t-last_dump_time) >= dt_dump)
       dmp = (dmp .and. dt_dump > 0.0)
       if (dmp) last_dump_time = t - mod(t-last_dump_time, dt_dump)
@@ -749,14 +749,14 @@ contains
 
    subroutine manage_hdf_dump(dmp, output)
 
-      use constants,    only: FINAL, INCEPTIVE
+      use constants,    only: FINAL_DUMP, INCEPTIVE
 
       implicit none
 
       integer(kind=4), intent(in)    :: output  !< type of output
       logical,         intent(inout) :: dmp     !< perform I/O if True
 
-      if (output == FINAL .and. trim(problem_name) /= 'crash') write(problem_name, '(a,a6)') trim(problem_name), '_final'
+      if (output == FINAL_DUMP .and. trim(problem_name) /= 'crash') write(problem_name, '(a,a6)') trim(problem_name), '_final'
       if ((output == INCEPTIVE) .and. initial_hdf_dump) dmp = .true.  !< \todo problem_name may be enhanced by '_initial', but this and nhdf should be reverted just after write_hdf5 is called
 
    end subroutine manage_hdf_dump

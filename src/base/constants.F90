@@ -209,7 +209,7 @@ module constants
 
    ! Output type
    enum, bind(C)
-      enumerator :: RES = 1, HDF, LOGF, TSL, INCEPTIVE, FINAL, CHK
+      enumerator :: RES = 1, HDF, LOGF, TSL, INCEPTIVE, FINAL_DUMP, CHK
    end enum
 
    ! base level
