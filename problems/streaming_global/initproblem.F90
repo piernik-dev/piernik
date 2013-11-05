@@ -644,6 +644,14 @@ contains
 
    end subroutine problem_customize_solution_kepler
 !-----------------------------------------------------------------------------------------------------------------------
+!>
+!! \brief problem-specific gravity potential field
+!!
+!! \details This routine is called during initialization and after refinement updates
+!!
+!! \todo Consider changing these routines in a way that they would not replace gravity::default_grav_pot_3d
+!! but would be called from there instead. This would greatly simplify user-provided routines.
+!<
    subroutine my_grav_pot_3d
 
       use cg_leaves, only: leaves
