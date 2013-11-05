@@ -116,12 +116,13 @@ contains
       use cg_level_connected, only: cg_level_connected_T
       use cg_level_finest,    only: finest
       use cg_list_global,     only: all_cg
-      use constants,          only: pLOR, pLAND, pSUM
+      use constants,          only: pLOR, pLAND, pSUM, cs_i2_n
       use dataio_pub,         only: warn, die
       use global,             only: nstep
       use grid_cont,          only: grid_container
       use list_of_cg_lists,   only: all_lists
       use mpisetup,           only: piernik_MPI_Allreduce!, proc
+      use named_array_list,   only: qna
       use refinement,         only: n_updAMR, emergency_fix
 #ifdef DEBUG_DUMPS
       use data_hdf5,    only: write_hdf5
@@ -298,6 +299,9 @@ contains
       endif
 
       call all_bnd
+      !> \todo call the update of cs_i2 if and only if something has changed
+      !> \todo add another flag to named_array_list::na_var so the user can also specify fields that need boundary updates on fine/coarse boundaries
+      if (qna%exists(cs_i2_n)) call leaves%leaf_arr3d_boundaries(qna%ind(cs_i2_n))
 
       call all_cg%enable_prolong
       if (present(act_count)) call piernik_MPI_Allreduce(act_count, pSUM)
