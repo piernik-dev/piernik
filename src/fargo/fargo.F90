@@ -181,7 +181,11 @@ contains
          call piernik_MPI_Allreduce(curl%local_omega, pSUM)
          call piernik_MPI_Allreduce(curl%cell_count, pSUM)
          do i = lbound(curl%cell_count, dim=1), ubound(curl%cell_count, dim=1)
-            curl%local_omega(i, :) = curl%local_omega(i, :) / curl%cell_count(i)
+            if (curl%cell_count(i) /= 0) then
+               curl%local_omega(i, :) = curl%local_omega(i, :) / curl%cell_count(i)
+            else
+               curl%local_omega(i, :) = 0.
+            end if
          enddo
 
          curl => curl%finer
