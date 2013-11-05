@@ -366,6 +366,8 @@ contains
 
       endif
 
+      !> \todo Place a call to initialize gp here, not in default_grav_pot_3d
+
    end subroutine g_cg_init
 
    subroutine manage_grav_pot_3d(first_approach, update_gp)
