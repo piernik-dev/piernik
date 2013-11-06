@@ -53,7 +53,7 @@ contains
 
       use constants,    only: GEO_RPZ
       use dataio_pub,   only: die, warn
-      use domain,       only: dom, AMR_bsize
+      use domain,       only: dom
       use global,       only: use_fargo
       use mpisetup,     only: master
 
@@ -185,7 +185,7 @@ contains
                curl%local_omega(i, :) = curl%local_omega(i, :) / curl%cell_count(i)
             else
                curl%local_omega(i, :) = 0.
-            end if
+            endif
          enddo
 
          curl => curl%finer

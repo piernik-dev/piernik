@@ -133,7 +133,7 @@ contains
                where (dom%has_dir)
                   ip_ijk(:, LO) = curl%off(:) + floor((refine_boxes(ip)%coords(:, LO) - dom%edge(:, LO))/dom%L_(:)*curl%n_d)
                   ip_ijk(:, HI) = curl%off(:) + floor((refine_boxes(ip)%coords(:, HI) - dom%edge(:, LO))/dom%L_(:)*curl%n_d)
-               end where
+               endwhere
                !BEWARE: ip_ijk can contain indices outside the domain
 
                cgl => curl%first
