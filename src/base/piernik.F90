@@ -52,9 +52,6 @@ program piernik
    use timer,             only: walltime_end, set_timer, tmr_fu
    use timestep,          only: time_step
    use user_hooks,        only: finalize_problem, problem_domain_update
-#ifdef GRAV
-   use gravity,           only: update_gp
-#endif /* GRAV */
 #ifdef PERFMON
    use domain,            only: dom
    use timer,             only: timer_start, timer_stop
@@ -152,9 +149,6 @@ program piernik
 
       call user_msg_handler(end_sim)
       call update_refinement
-#ifdef GRAV
-      call update_gp
-#endif /* GRAV */
       if (try_rebalance) then
          !> \todo try to rewrite this ugly chain of flags passed through global variables into something more fool-proof
          call leaves%balance_and_update(" (re-balance) ")

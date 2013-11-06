@@ -124,8 +124,11 @@ contains
       use mpisetup,           only: piernik_MPI_Allreduce!, proc
       use named_array_list,   only: qna
       use refinement,         only: n_updAMR, emergency_fix
+#ifdef GRAV
+      use gravity,            only: update_gp
+#endif /* GRAV */
 #ifdef DEBUG_DUMPS
-      use data_hdf5,    only: write_hdf5
+      use data_hdf5,          only: write_hdf5
 #endif /* DEBUG_DUMPS */
 
       implicit none
@@ -302,6 +305,9 @@ contains
       !> \todo call the update of cs_i2 if and only if something has changed
       !> \todo add another flag to named_array_list::na_var so the user can also specify fields that need boundary updates on fine/coarse boundaries
       if (qna%exists(cs_i2_n)) call leaves%leaf_arr3d_boundaries(qna%ind(cs_i2_n))
+#ifdef GRAV
+      call update_gp
+#endif /* GRAV */
 
       call all_cg%enable_prolong
       if (present(act_count)) call piernik_MPI_Allreduce(act_count, pSUM)
