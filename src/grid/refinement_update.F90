@@ -347,7 +347,7 @@ contains
 
       if (.not. associated(curl%finer)) call finest%add_finer
 
-      if (.not. all(cgl%cg%leafmap)) then ! decompose the parially refined grid container into boxes that contain all leafcells
+      if (.not. all(cgl%cg%leafmap)) then ! decompose the partially refined grid container into boxes that contain all leafcells
          box_8 = int(cgl%cg%ijkse, kind=8)
          call lmap%init(box_8)
          lmap%map(cgl%cg%is:cgl%cg%ie, cgl%cg%js:cgl%cg%je, cgl%cg%ks:cgl%cg%ke) = cgl%cg%leafmap(:,:,:)
@@ -426,7 +426,7 @@ contains
 
       range = 1
       ! range = min((dom%nb+I_ONE)/I_TWO + all_cg%ord_prolong_nb, dom%nb)
-      ! (dom%nb+1)/2 + all_cg%ord_prolong_nb is a range of influence of coarse to fine levels - it can be suitable if we were looking fro too low levels in the neighbourhood
+      ! (dom%nb+1)/2 + all_cg%ord_prolong_nb is a range of influence of coarse to fine levels - it can be suitable if we were looking for too low levels in the neighbourhood
       ! ATM we're looking for high levels, so range = 1 seems to be appropriate
 
       ! detect high refinements near leafmap and alter refinement flags appropriately
