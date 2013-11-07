@@ -140,6 +140,7 @@ contains
          call init_multigrid
 #endif /* MULTIGRID */
          call all_fluid_boundaries
+         ! the cg%gp and cg%cs_iso2 are updated in refinement_update::update_refinement which should be called right after domain expansion to fix refinement structure
       endif
 
    end subroutine expand
