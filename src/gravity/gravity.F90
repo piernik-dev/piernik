@@ -403,7 +403,7 @@ contains
 
 #ifdef SELF_GRAV
       use cg_leaves,         only: leaves
-      use cg_list,           only: cg_list_element, expanded_domain
+      use cg_list_dataop,    only: expanded_domain
       use constants,         only: sgp_n, sgpm_n
       use fluidindex,        only: iarr_all_sg
       use named_array_list,  only: qna
@@ -415,7 +415,6 @@ contains
       implicit none
 
 #ifdef SELF_GRAV
-      type(cg_list_element), pointer :: cgl
       logical, save :: frun = .true.
 
       call leaves%q_copy(qna%ind(sgp_n), qna%ind(sgpm_n))
@@ -434,11 +433,7 @@ contains
          frun = .false.
       endif
 
-      cgl => expanded_domain%first
-      do while (associated(cgl))
-         cgl%cg%q(qna%ind(sgpm_n))%arr = cgl%cg%q(qna%ind(sgp_n))%arr
-         cgl => cgl%nxt
-      enddo
+      call expanded_domain%q_copy(qna%ind(sgp_n), qna%ind(sgpm_n)) ! add fake history for selfgravitating potential: pretend that nothing was changing there until domain expanded
 #endif /* SELF_GRAV */
       if (variable_gp) call grav_pot_3d
 

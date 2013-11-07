@@ -1076,7 +1076,8 @@ contains
 !#define DEBUG
    subroutine balance_old(this)
 
-      use cg_list,         only: cg_list_element, expanded_domain
+      use cg_list,         only: cg_list_element
+      use cg_list_dataop,  only: expanded_domain
       use constants,       only: ndims, LO, HI, I_ONE, pSUM
       use dataio_pub,      only: warn, msg, printinfo
       use mpisetup,        only: master, FIRST, LAST, nproc, piernik_MPI_Bcast, piernik_MPI_Allreduce
