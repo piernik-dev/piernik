@@ -63,7 +63,7 @@ module cg_level
    !>
    !! \brief A list of all cg of the same resolution.
    !!
-   !! \details For positive refinement levels the list may be composed of several disconnected subsets of cg ("islands: made of one or more cg: cg_list_patch).
+   !! \details For positive refinement levels the list may be composed of several disconnected subsets of cg (islands: made of one or more cg's).
    !! This type is not intended for direct use. It is extended in cg_level_connected into a functional object.
    !!
    !! OPT: Searching through this%pse for neighbours, prolongation/restriction overlaps etc is quite costly - O(this%cnt^2)
@@ -97,23 +97,23 @@ module cg_level
 
     contains
 
-      procedure          :: init_all_new_cg                   !< initialize newest grid container
-      procedure, private :: mpi_bnd_types                     !< create MPI types for boundary exchanges
-      procedure          :: print_segments                    !< print detailed information about current level decomposition
-      procedure, private :: update_decomposition_properties   !< Update some flags in domain module
-      procedure, private :: distribute                        !< Get all decomposed patches and compute which pieces go to which process
-      procedure, private :: simple_ordering                   !< This is just counting, not ordering
-      procedure, private :: mark_new                          !< Detect which grid containers are new
-      procedure, private :: update_pse                        !< Gather updated information about the level and overwrite it to this%pse
-      procedure          :: update_tot_se                     !< count all cg on current level for computing tags in vertical_prep
+      procedure          :: init_all_new_cg                                      !< initialize newest grid container
+      procedure, private :: mpi_bnd_types                                        !< create MPI types for boundary exchanges
+      procedure          :: print_segments                                       !< print detailed information about current level decomposition
+      procedure, private :: update_decomposition_properties                      !< Update some flags in domain module
+      procedure, private :: distribute                                           !< Get all decomposed patches and compute which pieces go to which process
+      procedure, private :: simple_ordering                                      !< This is just counting, not ordering
+      procedure, private :: mark_new                                             !< Detect which grid containers are new
+      procedure, private :: update_pse                                           !< Gather updated information about the level and overwrite it to this%pse
+      procedure          :: update_tot_se                                        !< count all cg on current level for computing tags in vertical_prep
       generic,   public  :: add_patch => add_patch_fulllevel, add_patch_detailed !< Add a new piece of grid to the current level and decompose it
-      procedure, private :: add_patch_fulllevel               !< Add a whole level to the list of patches
-      procedure, private :: add_patch_detailed                !< Add a new piece of grid to the list of patches
-      procedure, private :: add_patch_one_piece               !< Add a patch with only one grid piece
-      procedure, private :: expand_list                       !< Expand the patch list by one
-      procedure, private :: balance_new                       !< Routine for moving proposed grids between processes
-      procedure          :: balance_old                       !< Routine for measuring disorder level in distribution of grids across processes
-      procedure, private :: reshuffle                         !< Routine for moving existing grids between processes
+      procedure, private :: add_patch_fulllevel                                  !< Add a whole level to the list of patches
+      procedure, private :: add_patch_detailed                                   !< Add a new piece of grid to the list of patches
+      procedure, private :: add_patch_one_piece                                  !< Add a patch with only one grid piece
+      procedure, private :: expand_list                                          !< Expand the patch list by one
+      procedure, private :: balance_new                                          !< Routine for moving proposed grids between processes
+      procedure          :: balance_old                                          !< Routine for measuring disorder level in distribution of grids across processes
+      procedure, private :: reshuffle                                            !< Routine for moving existing grids between processes
    end type cg_level_T
 
 contains
@@ -356,7 +356,7 @@ contains
 !! \details This routine starts with two lists:
 !! * A list of blocks that survived derefinement attempts
 !! * A list of blocks due to requested refinement
-!! It has to decide if and how to do migration of grid pieces and to communicate this update global database of grid pieces.
+!! It has to decide if and how to do migration of grid pieces and to communicate this update to global database of grid pieces.
 !!
 !! There are several strategies than can be implemented:
 !! * Local refinements go to local process. It is very simple, but for most simulations will build up load imbalance. Suitable for tests and global refinement.
