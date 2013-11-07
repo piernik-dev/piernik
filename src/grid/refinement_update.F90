@@ -362,63 +362,6 @@ contains
 
    end subroutine refine_one_grid
 
-!> \brief Add a new level - refine whole domain
-
-   subroutine refine_domain
-
-#if defined(__INTEL_COMPILER)
-   !! \deprecated remove this clause as soon as Intel Compiler gets required
-   !! features and/or bug fixes
-      use cg_level_connected, only: cg_level_connected_T  ! QA_WARN INTEL
-#endif /* __INTEL_COMPILER */
-      use cg_level_finest, only: finest
-      use dataio_pub,      only: msg, printinfo
-      use mpisetup,        only: master
-
-      implicit none
-
-      if (master) then
-         write(msg, '(a,i3)')"[refinement_update:refine_domain] refining level ",finest%level%level_id
-         call printinfo(msg)
-      endif
-
-      !> \todo Check if finest is a complete level first
-
-      call finest%add_finer
-      call finest%level%add_patch
-      call finest%level%init_all_new_cg
-      call finest%level%coarser%prolong
-
-   end subroutine refine_domain
-
-!> \brief Mark finest level for derefinement
-
-   subroutine derefine_domain
-
-      use cg_level_finest, only: finest
-      use cg_list,         only: cg_list_element
-      use dataio_pub,      only: msg, printinfo
-      use mpisetup,        only: master
-
-      implicit none
-
-      type(cg_list_element), pointer :: cgl
-
-      if (master) then
-         write(msg, '(a,i3)')"[refinement_update:derefine_domain] derefining level ",finest%level%level_id
-         call printinfo(msg)
-      endif
-      call finest%level%restrict
-
-      cgl => finest%level%first
-      do while (associated(cgl))
-         cgl%cg%refine_flags%refine   = .false.
-         cgl%cg%refine_flags%derefine = .true.
-         cgl => cgl%nxt
-      enddo
-
-   end subroutine derefine_domain
-
 !>
 !! \brief Apply some rules to fix refinement defects
 !!
@@ -588,3 +531,60 @@ contains
    end subroutine fix_refinement
 
 end module refinement_update
+
+!!$!> \brief Add a new level - refine whole domain
+!!$
+!!$   subroutine refine_domain
+!!$
+!!$#if defined(__INTEL_COMPILER)
+!!$   !! \deprecated remove this clause as soon as Intel Compiler gets required
+!!$   !! features and/or bug fixes
+!!$      use cg_level_connected, only: cg_level_connected_T  ! QA_WARN INTEL
+!!$#endif /* __INTEL_COMPILER */
+!!$      use cg_level_finest, only: finest
+!!$      use dataio_pub,      only: msg, printinfo
+!!$      use mpisetup,        only: master
+!!$
+!!$      implicit none
+!!$
+!!$      if (master) then
+!!$         write(msg, '(a,i3)')"[refinement_update:refine_domain] refining level ",finest%level%level_id
+!!$         call printinfo(msg)
+!!$      endif
+!!$
+!!$      !> \todo Check if finest is a complete level first
+!!$
+!!$      call finest%add_finer
+!!$      call finest%level%add_patch
+!!$      call finest%level%init_all_new_cg
+!!$      call finest%level%coarser%prolong
+!!$
+!!$   end subroutine refine_domain
+!!$
+!!$!> \brief Mark finest level for derefinement
+!!$
+!!$   subroutine derefine_domain
+!!$
+!!$      use cg_level_finest, only: finest
+!!$      use cg_list,         only: cg_list_element
+!!$      use dataio_pub,      only: msg, printinfo
+!!$      use mpisetup,        only: master
+!!$
+!!$      implicit none
+!!$
+!!$      type(cg_list_element), pointer :: cgl
+!!$
+!!$      if (master) then
+!!$         write(msg, '(a,i3)')"[refinement_update:derefine_domain] derefining level ",finest%level%level_id
+!!$         call printinfo(msg)
+!!$      endif
+!!$      call finest%level%restrict
+!!$
+!!$      cgl => finest%level%first
+!!$      do while (associated(cgl))
+!!$         cgl%cg%refine_flags%refine   = .false.
+!!$         cgl%cg%refine_flags%derefine = .true.
+!!$         cgl => cgl%nxt
+!!$      enddo
+!!$
+!!$   end subroutine derefine_domain
