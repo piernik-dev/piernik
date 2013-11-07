@@ -429,7 +429,9 @@ contains
       !> \todo OPT: identify what relies on corner values of the popential and change it to work without corners. Then enable nocorners in the above call for some speedup.
 
       if (frun) then
-         call leaves%q_copy(qna%ind(sgp_n), qna%ind(sgpm_n))
+         call leaves%q_copy(qna%ind(sgp_n), qna%ind(sgpm_n)) ! add fake history for selfgravitating potential: pretend that nothing was changing there until domain was created
+         !> \deprecated: restarted rund wil be slightly affected as the previous selfgravitating potential was forgotten
+         !> \todo find a way to properly restore previous potential from scratch
          frun = .false.
       endif
 
