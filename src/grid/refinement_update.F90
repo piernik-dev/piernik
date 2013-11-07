@@ -99,10 +99,6 @@ contains
 
 !>
 !! \brief Update the refinement topology
-!!
-!! \deprecated Now it works only on whole domains
-!!
-!! \deprecated lot of duplicated code with grid::dom2cg and grid::init_grid
 !<
 
 !#define DEBUG_DUMPS
