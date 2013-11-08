@@ -905,6 +905,12 @@ contains
 !! \details Starts with list of already allocated blocks and list of patches which are not yet turned into blocks on a given level
 !! Move the patches between processes to maintain best possible work balance.
 !!
+!! First, all planned patches are gathered in an array on the master process, and deallocated locally.
+!! Then, the patches are sorted according to Space-Filling Curve index and distributed among the prosesses.
+!! The processes with least workload will get more patches.
+!! After the distribution most processes should have roughly equal number of patches (+/- 1) with the possible exception
+!! of few processes that were initially heavily loaded.
+!!
 !! Note that this routine is not intended for moving existing blocks between processes.
 !! A separate routine, called from cg_leaves::update will do that task when allowed and found worth the effort.
 !!
@@ -949,6 +955,7 @@ contains
 
       call inflate_req(nreq)
 
+      ! count how many patches were requested on each process
       s = 0
       if (allocated(this%patches)) then
          do p = lbound(this%patches(:), dim=1, kind=4), ubound(this%patches(:), dim=1, kind=4)
@@ -958,8 +965,9 @@ contains
       ls = int(s, kind=4)
       call piernik_MPI_Allreduce(s, pSUM) !> \warning overkill: MPI_reduce is enough here
 
-      if (s==0) return
+      if (s==0) return ! nihil novi
 
+      ! copy the patches data to a temporary array to be sent to the master
       allocate(gptemp(I_OFF:I_END,ls))
       if (master) then
          call gp%init(s)
@@ -977,7 +985,10 @@ contains
          enddo
       endif
       if (allocated(this%patches)) deallocate(this%patches)
+
       if (master) then !> \warning Antiparallel
+
+         ! put all the patches (own and obtained from slaves) on a list gp%list
          do s = 1, ls
             call gp%list(s)%set_gp(gptemp(I_OFF:I_OFF+ndims-1, s), int(gptemp(I_N_B:I_N_B+ndims-1, s), kind=4), INVALID, FIRST)
          enddo
@@ -1037,7 +1048,7 @@ contains
             call this%add_patch_one_piece(int(gp%list(p)%n_b, kind=8), gp%list(p)%off)
          enddo
 
-         ! distribute proposed grids
+         ! distribute proposed grids according to limits computed above
          do p = FIRST + I_ONE, LAST
             ls = int(from(p+1) - from(p), kind=4)
             ! call MPI_Isend(ls, I_ONE, MPI_INTEGER, p, tag_lsR, comm, req(p), mpi_err) !can't reuse ls before MPI_Waitall
@@ -1056,9 +1067,13 @@ contains
          enddo
          ! call MPI_Waitall(2*LAST, req(:2*LAST), status(:,:2*LAST), mpi_err)
       else
+
+         ! send patches to master
          call MPI_Wait(req(nreq), status(:, nreq), mpi_err)
          if (ls > 0) call MPI_Send(gptemp, size(gptemp), MPI_INTEGER8, FIRST, tag_gpt, comm, mpi_err)
          deallocate(gptemp)
+
+         ! receive new, perhaps more balanced patches
          call MPI_Recv(ls, I_ONE, MPI_INTEGER, FIRST, tag_lsR, comm, MPI_STATUS_IGNORE, mpi_err)
          if (ls>0) then
             allocate(gptemp(I_OFF:I_END,ls))
