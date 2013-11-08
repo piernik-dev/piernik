@@ -112,6 +112,8 @@ contains
       integer :: i
       integer(kind=8) :: mask
 
+      if (any(off < 0)) call die("[ordering:Morton_id] only non-negative offsets are allowed")
+
       allocate(o(size(off)))
       o = off
       id = 0
