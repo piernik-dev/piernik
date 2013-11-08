@@ -1056,7 +1056,7 @@ contains
          enddo
          ! call MPI_Waitall(2*LAST, req(:2*LAST), status(:,:2*LAST), mpi_err)
       else
-         call MPI_Wait(req(nreq), status(:, 1), mpi_err)
+         call MPI_Wait(req(nreq), status(:, nreq), mpi_err)
          if (ls > 0) call MPI_Send(gptemp, size(gptemp), MPI_INTEGER8, FIRST, tag_gpt, comm, mpi_err)
          deallocate(gptemp)
          call MPI_Recv(ls, I_ONE, MPI_INTEGER, FIRST, tag_lsR, comm, MPI_STATUS_IGNORE, mpi_err)
