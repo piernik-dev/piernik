@@ -202,7 +202,11 @@ contains
 
    end subroutine print_segments
 
-!> \brief Initialize all grid containers on a new grid level
+!>
+!! \brief Initialize all grid containers on a new grid level
+!!
+!! \todo automagically rebalance existing grids unless it is explicitly forbidden
+!<
 
    subroutine init_all_new_cg(this)
 
@@ -218,12 +222,14 @@ contains
       integer                          :: i, ep
       type(grid_container), pointer    :: cg
 
+      ! First: do the balancing of new grids, update this%pse database
       call this%balance_new
       call this%update_pse  ! required if anything was derefined
       call this%distribute
 !      call this%update_pse  ! communicate everything that was added !> \todo check if it is necessary to have it here
       call this%mark_new
 
+      ! Second: create new grids
       do i = lbound(this%pse(proc)%c(:), dim=1), ubound(this%pse(proc)%c(:), dim=1)
          if (this%pse(proc)%c(i)%is_new) then
             this%pse(proc)%c(i)%is_new = .false.
@@ -237,6 +243,8 @@ contains
          endif
       enddo
 
+      ! Third: update all information on refinement structure and intra-level communication.
+      ! Remember that the communication between levels has to be updated as well, but we cannot do this here due to cyclic dependencies
       call this%update_pse    ! communicate everything that was added above
       call this%mpi_bnd_types ! require access to whole this%pse(:)%c(:)%se(:,:)
       call this%update_req    ! Perhaps this%mpi_bnd_types added some new entries
@@ -357,6 +365,8 @@ contains
 !! * A list of blocks that survived derefinement attempts
 !! * A list of blocks due to requested refinement
 !! It has to decide if and how to do migration of grid pieces and to communicate this update to global database of grid pieces.
+!!
+!! \deprecated: I have an impression that the most challenging work was moved to balance_new routine
 !!
 !! There are several strategies than can be implemented:
 !! * Local refinements go to local process. It is very simple, but for most simulations will build up load imbalance. Suitable for tests and global refinement.
@@ -900,7 +910,7 @@ contains
 !!
 !! Current implementation does all the work on master process which might be quite antiparallel.
 !!
-!! This is truly parallel-sorting problem. Note that at we may ensure that the set of grid pieces has the following property:
+!! This is truly parallel-sorting problem. Note that the set of grid pieces has the following property:
 !! * there is sorted or nearly-sorted list of existing grid pieces on each process, that means for most pieces on process p maximum id on process p-1 is less than own id
 !!   and for process p+1 similarly
 !! * there is chaotic (in practice not so much) set of grid pieces to be created
