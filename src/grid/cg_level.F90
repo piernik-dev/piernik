@@ -381,48 +381,40 @@ contains
    subroutine distribute(this)
 
       use cg_list,    only: cg_list_element
-      use constants,  only: INVALID, LONG
+      use constants,  only: LONG
       use dataio_pub, only: die
       use mpisetup,   only: FIRST, LAST, proc
 
       implicit none
 
-      class(cg_level_T), intent(inout)       :: this   !< object invoking type bound procedure
+      class(cg_level_T), intent(inout)        :: this   !< object invoking type bound procedure
 
-      integer                                :: i, p
-      integer(kind=8)                        :: s
-      integer(kind=8), dimension(FIRST:LAST) :: min_id, max_id, pieces, filled
-      type(cg_list_element), pointer :: cgl
+      integer                                 :: i, p
+      integer(kind=8)                         :: s
+      integer(kind=8)                         :: min_id, max_id, pieces, filled
+      type(cg_list_element), pointer          :: cgl
       type(cuboid), allocatable, dimension(:) :: new_c
-      logical :: found_id
-      integer(kind=8) :: how_many
+      logical                                 :: found_id
+      integer(kind=8)                         :: how_many
 
       ! Find where to add the new pieces
       call this%simple_ordering(how_many)
-      pieces = 0
-      min_id = INVALID
-      max_id = INVALID
-      pieces(proc) = how_many
-      min_id(proc) = 0
-      max_id(proc) = how_many - 1
+      pieces = how_many
+      min_id = 0
+      max_id = how_many - 1
 
       ! make room for new pieces in the pse array
       filled = 0
       if (.not. allocated(this%pse)) allocate(this%pse(FIRST:LAST))
-      do i = FIRST, LAST
-         if (allocated(this%pse(i)%c)) then
-            filled(i) = size(this%pse(i)%c)
-            allocate(new_c(pieces(i) + filled(i)))
-            new_c(:filled(i)) = this%pse(i)%c
-            do s = filled(i)+1_LONG, pieces(i) + filled(i)
-               new_c(s)%se = -huge(1)
-            enddo
-            call move_alloc(from=new_c, to=this%pse(i)%c)
-         else
-            if (filled(i) > 0) call die("[cg_level:distribute] filled /= 0 AND NOT allocated(this%pse(i)%c")
-            allocate(this%pse(i)%c(pieces(i)))
-         endif
-      enddo
+      if (allocated(this%pse(proc)%c)) then
+         filled = size(this%pse(proc)%c)
+         allocate(new_c(pieces + filled))
+         new_c(:filled) = this%pse(proc)%c
+         do s = filled+1_LONG, pieces + filled
+            new_c(s)%se = -huge(1)
+         enddo
+         call move_alloc(from=new_c, to=this%pse(proc)%c)
+      endif
 
       ! fix grid_id
       cgl => this%first
@@ -443,14 +435,11 @@ contains
       if (allocated(this%patches)) then
          do p = lbound(this%patches(:), dim=1), ubound(this%patches(:), dim=1)
             do s = lbound(this%patches(p)%pse, dim=1), ubound(this%patches(p)%pse, dim=1)
-               do i = FIRST, LAST
-                  if (this%patches(p)%pse(s)%id >= min_id(i) .and. this%patches(p)%pse(s)%id <= max_id(i)) then
-                     filled(i) = filled(i) + 1
-                     if (filled(i) > size(this%pse(i)%c(:))) call die("[cg_level:distribute] overflow")
-                     this%pse(i)%c(filled(i))%se(:,:) = this%patches(p)%pse(s)%se(:,:)
-                     exit
-                  endif
-               enddo
+               if (this%patches(p)%pse(s)%id >= min_id .and. this%patches(p)%pse(s)%id <= max_id) then
+                  filled = filled + 1
+                  if (filled > size(this%pse(proc)%c(:))) call die("[cg_level:distribute] overflow")
+                  this%pse(proc)%c(filled)%se(:,:) = this%patches(p)%pse(s)%se(:,:)
+               endif
             enddo
          enddo
          deallocate(this%patches)
