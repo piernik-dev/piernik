@@ -106,6 +106,7 @@ module cg_level
       procedure, private :: balance_new                                          !< Routine for moving proposed grids between processes
       procedure          :: balance_old                                          !< Routine for measuring disorder level in distribution of grids across processes
       procedure, private :: reshuffle                                            !< Routine for moving existing grids between processes
+      procedure, private :: update_everything                                    !< Update all information on refinement structure and intra-level communication
    end type cg_level_T
 
 contains
@@ -214,14 +215,26 @@ contains
 
       ! Third: update all information on refinement structure and intra-level communication.
       ! Remember that the communication between levels has to be updated as well, but we cannot do this here due to cyclic dependencies
+      call this%update_everything
+
+   end subroutine init_all_new_cg
+
+!> \brief update all information on refinement structure and intra-level communication.
+
+   subroutine update_everything(this)
+
+      implicit none
+
+      class(cg_level_T), intent(inout) :: this   !< object invoking type bound procedure
+
       call this%update_decomposition_properties
-      call this%update_pse    ! communicate everything that was added above
+      call this%update_pse    ! communicate everything that was added before
       call this%mpi_bnd_types ! require access to whole this%pse(:)%c(:)%se(:,:)
       call this%update_req    ! Perhaps this%mpi_bnd_types added some new entries
       call this%update_tot_se
       call this%print_segments
 
-   end subroutine init_all_new_cg
+   end subroutine update_everything
 
 !> \brief Gather information on cg's currently present on local level, and write new this%pse array
 
@@ -1305,13 +1318,8 @@ contains
          cgl => cgl%nxt
       enddo
 
-      !> \deprecated partially copied code from init_all_new_cg
-      ! OPT: call this%update_pse can be quite long to complete
-      call this%update_pse
-      call this%mpi_bnd_types ! require access to whole this%pse(:)%c(:)%se(:,:)
-      call this%update_req    ! Perhaps this%mpi_bnd_types added some new entries
-      call this%update_tot_se
-      call this%print_segments
+      ! OPT: call this%update_pse inside this%update_everything can be quite long to complete
+      call this%update_everything
 
       deallocate(gptemp)
 
