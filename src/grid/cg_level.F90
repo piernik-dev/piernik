@@ -202,14 +202,15 @@ contains
 !! \todo automagically rebalance existing grids unless it is explicitly forbidden
 !<
 
-   subroutine init_all_new_cg(this)
+   subroutine init_all_new_cg(this, prevent_rebalancing)
 
       implicit none
 
-      class(cg_level_T), intent(inout) :: this   !< object invoking type bound procedure
+      class(cg_level_T), intent(inout) :: this                !< object invoking type bound procedure
+      logical, optional, intent(in)    :: prevent_rebalancing !< if present and .true. then do not allow rebalancing during addition of new grids
 
       ! First: do the balancing of new grids, update this%pse database
-      call this%balance_new
+      call this%balance_new(prevent_rebalancing)
 
       ! Second: create new grids
       call this%create
@@ -827,14 +828,17 @@ contains
 !! * All blocks (existing and new) have recalculated assignment and can be migrated to other processes. Most advanced. Should be used after reading restart data.
 !<
 
-   subroutine balance_new(this)
+   subroutine balance_new(this, prevent_rebalancing)
 
       implicit none
 
       class(cg_level_T), intent(inout) :: this
+      logical, optional, intent(in)    :: prevent_rebalancing !< if present and .true. then do not allow rebalancing during addition of new grids
 
       ! The only available strategy ATM
       call this%balance_fill_lowest
+
+      if (.false. .and. present(prevent_rebalancing)) print *,prevent_rebalancing ! suppress compiler warnings
 
    end subroutine balance_new
 
