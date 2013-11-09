@@ -101,6 +101,7 @@ module cg_level
       procedure, private :: add_patch_fulllevel                                  !< Add a whole level to the list of patches
       procedure, private :: add_patch_detailed                                   !< Add a new piece of grid to the list of patches
       procedure, private :: add_patch_one_piece                                  !< Add a patch with only one grid piece
+      procedure, private :: count_patches                                        !< Count local patches
       procedure, private :: expand_list                                          !< Expand the patch list by one
       procedure, private :: balance_new                                          !< Routine for moving proposed grids between processes
       procedure          :: balance_old                                          !< Routine for measuring disorder level in distribution of grids across processes
@@ -316,12 +317,7 @@ contains
       type(grid_container), pointer           :: cg
 
       ! Find how many pieces are to be added
-      pieces = 0
-      if (allocated(this%patches)) then
-         do p = lbound(this%patches(:), dim=1), ubound(this%patches(:), dim=1)
-            if (allocated(this%patches(p)%pse)) pieces = pieces + size(this%patches(p)%pse, dim=1)
-         enddo
-      endif
+      pieces = this%count_patches()
 
       ! recreate local pse in case anything was derefined, refresh grid_id and make room for new pieces in the pse array
       if (.not. allocated(this%pse)) allocate(this%pse(FIRST:LAST))
@@ -760,6 +756,26 @@ contains
 
    end subroutine add_patch_one_piece
 
+!> \brief Count local patches
+
+   function count_patches(this)
+
+      implicit none
+
+      class(cg_level_T), intent(in) :: this
+
+      integer :: count_patches
+      integer :: p
+
+      count_patches = 0
+      if (allocated(this%patches)) then
+         do p = lbound(this%patches(:), dim=1), ubound(this%patches(:), dim=1)
+            count_patches = count_patches + size(this%patches(p)%pse, dim=1)
+         enddo
+      endif
+
+   end function count_patches
+
 !> \brief Expand the patch list by one
 
    subroutine expand_list(this)
@@ -850,12 +866,7 @@ contains
       call inflate_req(nreq)
 
       ! count how many patches were requested on each process
-      s = 0
-      if (allocated(this%patches)) then
-         do p = lbound(this%patches(:), dim=1, kind=4), ubound(this%patches(:), dim=1, kind=4)
-            s = s + size(this%patches(p)%pse, dim=1, kind=4)
-         enddo
-      endif
+      s = int(this%count_patches(), kind=4)
       ls = int(s, kind=4)
       call piernik_MPI_Allreduce(s, pSUM) !> \warning overkill: MPI_reduce is enough here
 
