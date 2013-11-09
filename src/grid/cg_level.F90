@@ -102,7 +102,6 @@ module cg_level
       procedure          :: print_segments                                       !< print detailed information about current level decomposition
       procedure, private :: update_decomposition_properties                      !< Update some flags in domain module
       procedure, private :: distribute                                           !< Get all decomposed patches and compute which pieces go to which process
-      procedure, private :: simple_ordering                                      !< This is just counting, not ordering
       procedure, private :: mark_new                                             !< Detect which grid containers are new
       procedure, private :: update_pse                                           !< Gather updated information about the level and overwrite it to this%pse
       procedure          :: update_tot_se                                        !< count all cg on current level for computing tags in vertical_prep
@@ -391,17 +390,18 @@ contains
 
       integer                                 :: i, p
       integer(kind=8)                         :: s
-      integer(kind=8)                         :: min_id, max_id, pieces, filled
+      integer(kind=8)                         :: pieces, filled
       type(cg_list_element), pointer          :: cgl
       type(cuboid), allocatable, dimension(:) :: new_c
       logical                                 :: found_id
-      integer(kind=8)                         :: how_many
 
-      ! Find where to add the new pieces
-      call this%simple_ordering(how_many)
-      pieces = how_many
-      min_id = 0
-      max_id = how_many - 1
+      ! Find how many pieces are to be added
+      pieces = 0
+      if (allocated(this%patches)) then
+         do p = lbound(this%patches(:), dim=1), ubound(this%patches(:), dim=1)
+            if (allocated(this%patches(p)%pse)) pieces = pieces + size(this%patches(p)%pse, dim=1)
+         enddo
+      endif
 
       ! make room for new pieces in the pse array
       filled = 0
@@ -435,11 +435,9 @@ contains
       if (allocated(this%patches)) then
          do p = lbound(this%patches(:), dim=1), ubound(this%patches(:), dim=1)
             do s = lbound(this%patches(p)%pse, dim=1), ubound(this%patches(p)%pse, dim=1)
-               if (this%patches(p)%pse(s)%id >= min_id .and. this%patches(p)%pse(s)%id <= max_id) then
-                  filled = filled + 1
-                  if (filled > size(this%pse(proc)%c(:))) call die("[cg_level:distribute] overflow")
-                  this%pse(proc)%c(filled)%se(:,:) = this%patches(p)%pse(s)%se(:,:)
-               endif
+               filled = filled + 1
+               if (filled > size(this%pse(proc)%c(:))) call die("[cg_level:distribute] overflow")
+               this%pse(proc)%c(filled)%se(:,:) = this%patches(p)%pse(s)%se(:,:)
             enddo
          enddo
          deallocate(this%patches)
@@ -448,34 +446,6 @@ contains
       call this%update_decomposition_properties
 
    end subroutine distribute
-
-!> \brief OMG! This is just counting, not ordering!
-!> \todo Implement anything better. Peano-Hilbert ordering will appear here sooner or later :-)
-
-   subroutine simple_ordering(this, max_id)
-
-      implicit none
-
-      class(cg_level_T), intent(inout) :: this   !< object invoking type bound procedure
-      integer(kind=8),   intent(out)   :: max_id !< count all new pieces
-
-      integer                          :: p, s
-      integer(kind=8)                  :: id
-
-      id = 0
-      if (allocated(this%patches)) then
-         do p = lbound(this%patches(:), dim=1), ubound(this%patches(:), dim=1)
-            if (allocated(this%patches(p)%pse)) then
-               do s = lbound(this%patches(p)%pse, dim=1), ubound(this%patches(p)%pse, dim=1)
-                  this%patches(p)%pse(s)%id = id
-                  id = id + 1
-               enddo
-            endif
-         enddo
-      endif
-      max_id = id
-
-   end subroutine simple_ordering
 
 !> \brief Update some flags in domain module [ is_uneven, is_mpi_noncart, is_refined, is_multicg ]
 

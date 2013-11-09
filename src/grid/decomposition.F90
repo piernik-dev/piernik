@@ -47,7 +47,6 @@ module decomposition
    !> \deprecated not to be confused with cg_level::cuboid
    type :: cuboid
       integer(kind=8), dimension(xdim:zdim, LO:HI) :: se !< grid piece
-      integer(kind=8)                              :: id !< piece number (set e.g. by Hilbert ordering)
    end type cuboid
 
    !> \brief A box (or rectangle) within a certain refinement level to be decomposed into smaller pieces
