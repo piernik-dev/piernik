@@ -221,6 +221,7 @@ contains
 
       ! Third: update all information on refinement structure and intra-level communication.
       ! Remember that the communication between levels has to be updated as well, but we cannot do this here due to cyclic dependencies
+      call this%update_decomposition_properties
       call this%update_pse    ! communicate everything that was added above
       call this%mpi_bnd_types ! require access to whole this%pse(:)%c(:)%se(:,:)
       call this%update_req    ! Perhaps this%mpi_bnd_types added some new entries
@@ -420,8 +421,6 @@ contains
          enddo
          deallocate(this%patches)
       endif
-
-      call this%update_decomposition_properties
 
       call this%mark_new
 
