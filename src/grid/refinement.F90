@@ -38,7 +38,7 @@ module refinement
 
    private
    public :: level_max, level_min, n_updAMR, allow_face_rstep, allow_corner_rstep, oop_thr, refine_points, refine_boxes, &
-        &    init_refinement, ref_flag, emergency_fix, set_n_updAMR
+        &    init_refinement, ref_flag, emergency_fix, set_n_updAMR, strict_SFC_ordering
 
    type :: ref_flag
       logical :: refine   !> a request to refine
@@ -47,12 +47,13 @@ module refinement
       procedure :: sanitize
    end type ref_flag
 
-   integer(kind=4), protected :: level_min          !< minimum allowed refinement
-   integer(kind=4), protected :: level_max          !< maximum allowed refinement (don't need to be reached if not necessary)
-   integer(kind=4), protected :: n_updAMR           !< how often to update the refinement structure
-   logical,         protected :: allow_face_rstep   !< Allows >1 refinement step across faces (do not use it for any physical problems)
-   logical,         protected :: allow_corner_rstep !< Allows >1 refinement step across edges and corners (do not use it for any physical problems)
-   real,            protected :: oop_thr            !< Maximum allowed ratio of Out-of-Place grid pieces (according to current ordering scheme)
+   integer(kind=4), protected :: level_min           !< minimum allowed refinement
+   integer(kind=4), protected :: level_max           !< maximum allowed refinement (don't need to be reached if not necessary)
+   integer(kind=4), protected :: n_updAMR            !< how often to update the refinement structure
+   logical,         protected :: allow_face_rstep    !< Allows >1 refinement step across faces (do not use it for any physical problems)
+   logical,         protected :: allow_corner_rstep  !< Allows >1 refinement step across edges and corners (do not use it for any physical problems)
+   logical,         protected :: strict_SFC_ordering !< Enforce strict SFC ordering to allow optimized neighbour search
+   real,            protected :: oop_thr             !< Maximum allowed ratio of Out-of-Place grid pieces (according to current ordering scheme)
 
    ! some refinement primitives
    integer, parameter :: nshapes = 10
@@ -73,7 +74,7 @@ module refinement
 
    logical :: emergency_fix !< set to .true. if you want to call update_refinement ASAP
 
-   namelist /AMR/ level_min, level_max, n_updAMR, allow_face_rstep, allow_corner_rstep, oop_thr, refine_points, refine_boxes
+   namelist /AMR/ level_min, level_max, n_updAMR, allow_face_rstep, allow_corner_rstep, strict_SFC_ordering, oop_thr, refine_points, refine_boxes
 
 contains
 
@@ -97,8 +98,9 @@ contains
       level_min = base_level_id
       level_max = level_min
       n_updAMR  = huge(I_ONE)
-      allow_face_rstep   = .false.
-      allow_corner_rstep = .false.
+      allow_face_rstep    = .false.
+      allow_corner_rstep  = .false.
+      strict_SFC_ordering = .false.
       allow_AMR = .true.
       oop_thr = 0.1
       do d = xdim, zdim
@@ -155,6 +157,7 @@ contains
          lbuff(1) = allow_face_rstep
          lbuff(2) = allow_corner_rstep
          lbuff(3) = allow_AMR
+         lbuff(4) = strict_SFC_ordering
 
          rbuff(1) = oop_thr
          rbuff(2          :1+  nshapes) = refine_points(:)%coords(xdim)
@@ -181,9 +184,10 @@ contains
          refine_points(:)%level = ibuff(4        :3+  nshapes)
          refine_boxes (:)%level = ibuff(4+nshapes:3+2*nshapes)
 
-         allow_face_rstep   = lbuff(1)
-         allow_corner_rstep = lbuff(2)
-         allow_AMR          = lbuff(3)
+         allow_face_rstep    = lbuff(1)
+         allow_corner_rstep  = lbuff(2)
+         allow_AMR           = lbuff(3)
+         strict_SFC_ordering = lbuff(4)
 
          oop_thr = rbuff(1)
          refine_points(:)%coords(xdim)     = rbuff(2          :1+  nshapes)

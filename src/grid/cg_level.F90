@@ -104,7 +104,8 @@ module cg_level
       procedure, private :: count_patches                                        !< Count local patches
       procedure, private :: expand_list                                          !< Expand the patch list by one
       procedure, private :: balance_new                                          !< Routine selector for moving proposed grids between processes
-      procedure, private :: balance_fill_lowest                                  !< Routine for moving proposed grids between processes
+      procedure, private :: balance_fill_lowest                                  !< Routine for moving proposed grids between processes: add load to lightly-loaded processes
+      procedure, private :: balance_strict_SFC                                   !< Routine for moving proposed grids between processes: keep strict SFC ordering
       procedure          :: balance_old                                          !< Routine for measuring disorder level in distribution of grids across processes
       procedure, private :: reshuffle                                            !< Routine for moving existing grids between processes
       procedure, private :: update_everything                                    !< Update all information on refinement structure and intra-level communication
@@ -830,22 +831,51 @@ contains
 
    subroutine balance_new(this, prevent_rebalancing)
 
+      use refinement, only: strict_SFC_ordering
+
       implicit none
 
       class(cg_level_T), intent(inout) :: this
       logical, optional, intent(in)    :: prevent_rebalancing !< if present and .true. then do not allow rebalancing during addition of new grids
 
       ! The only available strategy ATM
-      call this%balance_fill_lowest
-
-      if (.false. .and. present(prevent_rebalancing)) print *,prevent_rebalancing ! suppress compiler warnings
+      if (strict_SFC_ordering) then
+         call this%balance_strict_SFC(prevent_rebalancing)
+      else
+         call this%balance_fill_lowest ! never rebalances
+      end if
 
    end subroutine balance_new
 
 !>
-!! \brief Routine for moving proposed grids between processes
+!! \brief Routine for moving proposed grids between processes: keep strict SFC ordering
 !!
-!! \details Starts with list of already allocated blocks and list of patches which are not yet turned into blocks on a given level
+!! \details Starts with list of already allocated blocks and list of patches which are not yet turned into blocks on a given level.
+!! Assume that the existing blocks are distributed according to Space-Filling curve ordering: maximum id for process p is always lower than minimum id for process p+1.
+!! Add new grids in a way that keeps the strict SFC ordering property even if it may introduce imbalance
+!!
+!! \todo do a global rebalance if it is allowed and worth the effort
+!<
+
+   subroutine balance_strict_SFC(this, prevent_rebalancing)
+
+      use dataio_pub, only: die
+
+      implicit none
+
+      class(cg_level_T), intent(inout) :: this
+      logical, optional, intent(in)    :: prevent_rebalancing !< if present and .true. then do not allow rebalancing during addition of new grids
+
+      call die("[cg_level:balance_strict_SFC] Not implemented yet")
+
+      if (.false. .and. present(prevent_rebalancing)) print *,prevent_rebalancing ! suppress compiler warnings
+
+   end subroutine balance_strict_SFC
+
+!>
+!! \brief Routine for moving proposed grids between processes: add load to lightly-loaded processes
+!!
+!! \details Starts with list of already allocated blocks and list of patches which are not yet turned into blocks on a given level.
 !! Move the patches between processes to maintain best possible work balance.
 !!
 !! First, all planned patches are gathered in an array on the master process, and deallocated locally.
@@ -853,6 +883,7 @@ contains
 !! The processes with least workload will get more patches.
 !! After the distribution most processes should have roughly equal number of patches (+/- 1) with the possible exception
 !! of few processes that were initially heavily loaded.
+!! The load is counted only on current level, so the load imbalance may add up across several levels.
 !!
 !! Note that this routine is not intended for moving existing blocks between processes.
 !! A separate routine, called from cg_leaves::update will do that task when allowed and found worth the effort.
