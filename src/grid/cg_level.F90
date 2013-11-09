@@ -320,9 +320,9 @@ contains
 
       class(cg_level_T), intent(inout)        :: this   !< object invoking type bound procedure
 
-      integer                                 :: i, p
+      integer                                 :: i, p, ep
       integer(kind=8)                         :: s
-      integer(kind=8)                         :: pieces, filled
+      integer(kind=8)                         :: pieces
       type(cg_list_element), pointer          :: cgl
       logical                                 :: found_id
       type(grid_container), pointer           :: cg
@@ -367,27 +367,24 @@ contains
       enddo
 
       ! write the new grid pieces description to the pse array
-      filled = this%cnt
+      i = this%cnt
       if (allocated(this%patches)) then
          do p = lbound(this%patches(:), dim=1), ubound(this%patches(:), dim=1)
             do s = lbound(this%patches(p)%pse, dim=1), ubound(this%patches(p)%pse, dim=1)
-               filled = filled + 1
-               if (filled > size(this%pse(proc)%c(:))) call die("[cg_level:create] overflow")
-               this%pse(proc)%c(filled)%se(:,:) = this%patches(p)%pse(s)%se(:,:)
+               i = i + 1
+               if (i > size(this%pse(proc)%c(:))) call die("[cg_level:create] overflow")
+               this%pse(proc)%c(i)%se(:,:) = this%patches(p)%pse(s)%se(:,:)
+               call this%add
+               cg => this%last%cg
+               call cg%init(this%n_d, this%off, this%pse(proc)%c(i)%se(:, :), i, this%level_id) ! we cannot pass "this" as an argument because of circular dependencies
+               do ep = lbound(cg_extptrs%ext, dim=1), ubound(cg_extptrs%ext, dim=1)
+                  if (associated(cg_extptrs%ext(ep)%init))  call cg_extptrs%ext(ep)%init(cg)
+               enddo
+               call all_cg%add(cg)
             enddo
          enddo
          deallocate(this%patches)
       endif
-
-      do i = lbound(this%pse(proc)%c(:), dim=1) + this%cnt, ubound(this%pse(proc)%c(:), dim=1)
-         call this%add
-         cg => this%last%cg
-         call cg%init(this%n_d, this%off, this%pse(proc)%c(i)%se(:, :), i, this%level_id) ! we cannot pass "this" as an argument because of circular dependencies
-         do p = lbound(cg_extptrs%ext, dim=1), ubound(cg_extptrs%ext, dim=1)
-            if (associated(cg_extptrs%ext(p)%init))  call cg_extptrs%ext(p)%init(cg)
-         enddo
-         call all_cg%add(cg)
-      enddo
 
    end subroutine create
 
