@@ -103,7 +103,8 @@ module cg_level
       procedure, private :: add_patch_one_piece                                  !< Add a patch with only one grid piece
       procedure, private :: count_patches                                        !< Count local patches
       procedure, private :: expand_list                                          !< Expand the patch list by one
-      procedure, private :: balance_new                                          !< Routine for moving proposed grids between processes
+      procedure, private :: balance_new                                          !< Routine selector for moving proposed grids between processes
+      procedure, private :: balance_fill_lowest                                  !< Routine for moving proposed grids between processes
       procedure          :: balance_old                                          !< Routine for measuring disorder level in distribution of grids across processes
       procedure, private :: reshuffle                                            !< Routine for moving existing grids between processes
       procedure, private :: update_everything                                    !< Update all information on refinement structure and intra-level communication
@@ -817,6 +818,27 @@ contains
    end subroutine expand_list
 
 !>
+!! \brief Routine selector for moving proposed grids between processes
+!!
+!! There are several strategies that can be implemented:
+!! * Local refinements go to local process. It is very simple, but for most simulations will build up load imbalance. Suitable for tests and global refinement.
+!! * Local refinements can be assigned to remote processes, existing blocks stays in place. Should keep good load balance, but the amount of inter-process
+!!   internal boundaries may grow significantly with time. Suitable for minor refinement updates and base level decomposition. This is the current implementation of balance_fill_lowest.
+!! * All blocks (existing and new) have recalculated assignment and can be migrated to other processes. Most advanced. Should be used after reading restart data.
+!<
+
+   subroutine balance_new(this)
+
+      implicit none
+
+      class(cg_level_T), intent(inout) :: this
+
+      ! The only available strategy ATM
+      call this%balance_fill_lowest
+
+   end subroutine balance_new
+
+!>
 !! \brief Routine for moving proposed grids between processes
 !!
 !! \details Starts with list of already allocated blocks and list of patches which are not yet turned into blocks on a given level
@@ -840,15 +862,9 @@ contains
 !! We may then sort iteratively:
 !! * do long-range moves of chaotic pieces, based on distribution estimate
 !! * iterate with short-range (+/-1 or at most +/-2 in process number) moves of all pieces until everything is sorted well enough
-!!
-!! There are several strategies that can be implemented:
-!! * Local refinements go to local process. It is very simple, but for most simulations will build up load imbalance. Suitable for tests and global refinement.
-!! * Local refinements can be assigned to remote processes, existing blocks stays in place. Should keep good load balance, but the amount of inter-process
-!!   internal boundaries may grow significantly with time. Suitable for minor refinement updates and base level decomposition. This is the current implementation.
-!! * All blocks (existing and new) have recalculated assignment and can be migrated to other processes. Most advanced. Should be used after reading restart data.
 !<
 
-   subroutine balance_new(this)
+   subroutine balance_fill_lowest(this)
 
       use constants,       only: pSUM, ndims, INVALID, LO, HI, I_ONE
       use dataio_pub,      only: die
@@ -958,7 +974,7 @@ contains
             p = p - I_ONE
          enddo
          i = size(gp%list) - sum(from(FIRST+1:LAST+1))
-         if (i /= 0) call die("[cg_level:balance_new] i /= 0")
+         if (i /= 0) call die("[cg_level:balance_fill_lowest] i /= 0")
          do p = FIRST, LAST
             from(p+1) = from(p+1) + from(p)
          enddo
@@ -1012,7 +1028,7 @@ contains
 !!$      enddo
 !!$      deallocate(area)
 
-   end subroutine balance_new
+   end subroutine balance_fill_lowest
 
 !> \brief Routine for measuring disorder level in distribution of grids across processes
 
