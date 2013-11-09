@@ -812,7 +812,7 @@ contains
 !! * do long-range moves of chaotic pieces, based on distribution estimate
 !! * iterate with short-range (+/-1 or at most +/-2 in process number) moves of all pieces until everything is sorted well enough
 !!
-!! There are several strategies than can be implemented:
+!! There are several strategies that can be implemented:
 !! * Local refinements go to local process. It is very simple, but for most simulations will build up load imbalance. Suitable for tests and global refinement.
 !! * Local refinements can be assigned to remote processes, existing blocks stays in place. Should keep good load balance, but the amount of inter-process
 !!   internal boundaries may grow significantly with time. Suitable for minor refinement updates and base level decomposition. This is the current implementation.
