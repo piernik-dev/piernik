@@ -354,7 +354,6 @@ contains
 
       use cg_list_global,     only: all_cg
       use cg_list,            only: cg_list_element
-      use constants,          only: LONG
       use grid_cont,          only: grid_container
       use grid_container_ext, only: cg_extptrs
       use dataio_pub,         only: die
@@ -368,36 +367,8 @@ contains
       integer(kind=8)                         :: s
       integer(kind=8)                         :: pieces, filled
       type(cg_list_element), pointer          :: cgl
-      type(cuboid), allocatable, dimension(:) :: new_c
       logical                                 :: found_id
       type(grid_container), pointer           :: cg
-
-      ! recreate local pse in case anything was derefined
-      if (.not. allocated(this%pse)) allocate(this%pse(FIRST:LAST))
-      if (allocated(this%pse(proc)%c)) deallocate(this%pse(proc)%c)
-      allocate(this%pse(proc)%c(this%cnt))
-      i = 0
-      cgl => this%first
-      do while (associated(cgl))
-         i = i + 1
-         this%pse(proc)%c(i)%se(:,:) = cgl%cg%my_se(:,:)
-         cgl%cg%grid_id = i
-         cgl => cgl%nxt
-      enddo
-
-      ! check local consistency
-      cgl => this%first
-      do while (associated(cgl))
-         found_id = .false.
-         do i = lbound(this%pse(proc)%c, dim=1), ubound(this%pse(proc)%c, dim=1)
-            if (all(this%pse(proc)%c(i)%se(:,:) == cgl%cg%my_se(:,:))) then
-               if (found_id) call die("[cg_level:create] multiple occurrences")
-               found_id = .true.
-            endif
-         enddo
-         if (.not. found_id) call die("[cg_level:create] no occurrences")
-         cgl => cgl%nxt
-      enddo
 
       ! Find how many pieces are to be added
       pieces = 0
@@ -407,20 +378,39 @@ contains
          enddo
       endif
 
-      ! make room for new pieces in the pse array
-      filled = 0
+      ! recreate local pse in case anything was derefined and make room for new pieces in the pse array
       if (.not. allocated(this%pse)) allocate(this%pse(FIRST:LAST))
-      if (allocated(this%pse(proc)%c)) then
-         filled = size(this%pse(proc)%c)
-         allocate(new_c(pieces + filled))
-         new_c(:filled) = this%pse(proc)%c
-         do s = filled+1_LONG, pieces + filled
-            new_c(s)%se = -huge(1)
+      if (allocated(this%pse(proc)%c)) deallocate(this%pse(proc)%c)
+      allocate(this%pse(proc)%c(this%cnt + pieces))
+      i = 0
+      cgl => this%first
+      do while (associated(cgl))
+         i = i + 1
+         this%pse(proc)%c(i)%se(:,:) = cgl%cg%my_se(:,:)
+         cgl%cg%grid_id = i
+         cgl => cgl%nxt
+      enddo
+      do while (i<ubound(this%pse(proc)%c, dim=1))
+         i = i + 1
+         this%pse(proc)%c(i)%se = -huge(1)
+      end do
+
+      ! check local consistency
+      cgl => this%first
+      do while (associated(cgl))
+         found_id = .false.
+         do i = lbound(this%pse(proc)%c, dim=1), lbound(this%pse(proc)%c, dim=1) + this%cnt - 1
+            if (all(this%pse(proc)%c(i)%se(:,:) == cgl%cg%my_se(:,:))) then
+               if (found_id) call die("[cg_level:create] multiple occurrences")
+               found_id = .true.
+            endif
          enddo
-         call move_alloc(from=new_c, to=this%pse(proc)%c)
-      endif
+         if (.not. found_id) call die("[cg_level:create] no occurrences")
+         cgl => cgl%nxt
+      enddo
 
       ! write the new grid pieces description to the pse array
+      filled = this%cnt
       if (allocated(this%patches)) then
          do p = lbound(this%patches(:), dim=1), ubound(this%patches(:), dim=1)
             do s = lbound(this%patches(p)%pse, dim=1), ubound(this%patches(p)%pse, dim=1)
