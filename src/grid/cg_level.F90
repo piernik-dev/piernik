@@ -101,7 +101,7 @@ module cg_level
       procedure, private :: mpi_bnd_types                                        !< create MPI types for boundary exchanges
       procedure          :: print_segments                                       !< print detailed information about current level decomposition
       procedure, private :: update_decomposition_properties                      !< Update some flags in domain module
-      procedure, private :: distribute                                           !< Get all decomposed patches and compute which pieces go to which process
+      procedure, private :: create                                               !< Get all decomposed patches and turn them into local grid containers
       procedure, private :: mark_new                                             !< Detect which grid containers are new
       procedure, private :: update_pse                                           !< Gather updated information about the level and overwrite it to this%pse
       procedure          :: update_tot_se                                        !< count all cg on current level for computing tags in vertical_prep
@@ -209,38 +209,15 @@ contains
 
    subroutine init_all_new_cg(this)
 
-      use cg_list_global,     only: all_cg
-      use grid_cont,          only: grid_container
-      use grid_container_ext, only: cg_extptrs
-      use mpisetup,           only: proc
-
       implicit none
 
       class(cg_level_T), intent(inout) :: this   !< object invoking type bound procedure
 
-      integer                          :: i, ep
-      type(grid_container), pointer    :: cg
-
       ! First: do the balancing of new grids, update this%pse database
       call this%balance_new
-      call this%update_pse  ! required if anything was derefined
-      call this%distribute
-!      call this%update_pse  ! communicate everything that was added !> \todo check if it is necessary to have it here
-      call this%mark_new
 
       ! Second: create new grids
-      do i = lbound(this%pse(proc)%c(:), dim=1), ubound(this%pse(proc)%c(:), dim=1)
-         if (this%pse(proc)%c(i)%is_new) then
-            this%pse(proc)%c(i)%is_new = .false.
-            call this%add
-            cg => this%last%cg
-            call cg%init(this%n_d, this%off, this%pse(proc)%c(i)%se(:, :), i, this%level_id) ! we cannot pass "this" as an argument because of circular dependencies
-            do ep = lbound(cg_extptrs%ext, dim=1), ubound(cg_extptrs%ext, dim=1)
-               if (associated(cg_extptrs%ext(ep)%init))  call cg_extptrs%ext(ep)%init(cg)
-            enddo
-            call all_cg%add(cg)
-         endif
-      enddo
+      call this%create
 
       ! Third: update all information on refinement structure and intra-level communication.
       ! Remember that the communication between levels has to be updated as well, but we cannot do this here due to cyclic dependencies
@@ -358,31 +335,29 @@ contains
    end subroutine mark_new
 
 !>
-!! \brief Get all decomposed patches and compute which pieces go to which process
+!! \brief Get all decomposed patches and turn them into local grid containers
 !!
 !! \details This routine starts with two lists:
 !! * A list of blocks that survived derefinement attempts
-!! * A list of blocks due to requested refinement
+!! * A list of blocks to be created due to requested refinement
 !! It has to decide if and how to do migration of grid pieces and to communicate this update to global database of grid pieces.
 !!
 !! \deprecated: I have an impression that the most challenging work was moved to balance_new routine
 !!
-!! There are several strategies than can be implemented:
-!! * Local refinements go to local process. It is very simple, but for most simulations will build up load imbalance. Suitable for tests and global refinement.
-!! * Local refinements can be assigned to remote processes, existing blocks stays in place. Should keep good load balance, but the amount of inter-process
-!!   internal boundaries may grow significantly with time. Suitable for minor refinement updates and base level decomposition.
-!! * All blocks (existing and new) have recalculated assignment and can be migrated to other processes. Most advanced. Should be used after reading restart data.
 !!
 !! First strategy will be implemented first to get everything working. Second strategy will be used quite often. Third one do not need to be used on every refinement update.
 !! It can be called when some benchmark of grid disorder exceeds particular threshold.
 !<
 
-   subroutine distribute(this)
+   subroutine create(this)
 
-      use cg_list,    only: cg_list_element
-      use constants,  only: LONG
-      use dataio_pub, only: die
-      use mpisetup,   only: FIRST, LAST, proc
+      use cg_list_global,     only: all_cg
+      use cg_list,            only: cg_list_element
+      use constants,          only: LONG
+      use grid_cont,          only: grid_container
+      use grid_container_ext, only: cg_extptrs
+      use dataio_pub,         only: die
+      use mpisetup,           only: FIRST, LAST, proc
 
       implicit none
 
@@ -394,6 +369,9 @@ contains
       type(cg_list_element), pointer          :: cgl
       type(cuboid), allocatable, dimension(:) :: new_c
       logical                                 :: found_id
+      type(grid_container), pointer           :: cg
+
+      call this%update_pse  ! required if anything was derefined
 
       ! Find how many pieces are to be added
       pieces = 0
@@ -422,12 +400,12 @@ contains
          found_id = .false.
          do i = lbound(this%pse(proc)%c, dim=1), ubound(this%pse(proc)%c, dim=1)
             if (all(this%pse(proc)%c(i)%se(:,:) == cgl%cg%my_se(:,:))) then
-               if (found_id) call die("[cg_level:distribute] multiple occurrences")
+               if (found_id) call die("[cg_level:create] multiple occurrences")
                cgl%cg%grid_id = i
                found_id = .true.
             endif
          enddo
-         if (.not. found_id) call die("[cg_level:distribute] no occurrences")
+         if (.not. found_id) call die("[cg_level:create] no occurrences")
          cgl => cgl%nxt
       enddo
 
@@ -436,7 +414,7 @@ contains
          do p = lbound(this%patches(:), dim=1), ubound(this%patches(:), dim=1)
             do s = lbound(this%patches(p)%pse, dim=1), ubound(this%patches(p)%pse, dim=1)
                filled = filled + 1
-               if (filled > size(this%pse(proc)%c(:))) call die("[cg_level:distribute] overflow")
+               if (filled > size(this%pse(proc)%c(:))) call die("[cg_level:create] overflow")
                this%pse(proc)%c(filled)%se(:,:) = this%patches(p)%pse(s)%se(:,:)
             enddo
          enddo
@@ -445,7 +423,22 @@ contains
 
       call this%update_decomposition_properties
 
-   end subroutine distribute
+      call this%mark_new
+
+      do i = lbound(this%pse(proc)%c(:), dim=1), ubound(this%pse(proc)%c(:), dim=1)
+         if (this%pse(proc)%c(i)%is_new) then
+            this%pse(proc)%c(i)%is_new = .false.
+            call this%add
+            cg => this%last%cg
+            call cg%init(this%n_d, this%off, this%pse(proc)%c(i)%se(:, :), i, this%level_id) ! we cannot pass "this" as an argument because of circular dependencies
+            do p = lbound(cg_extptrs%ext, dim=1), ubound(cg_extptrs%ext, dim=1)
+               if (associated(cg_extptrs%ext(p)%init))  call cg_extptrs%ext(p)%init(cg)
+            enddo
+            call all_cg%add(cg)
+         endif
+      enddo
+
+   end subroutine create
 
 !> \brief Update some flags in domain module [ is_uneven, is_mpi_noncart, is_refined, is_multicg ]
 
@@ -882,6 +875,12 @@ contains
 !! We may then sort iteratively:
 !! * do long-range moves of chaotic pieces, based on distribution estimate
 !! * iterate with short-range (+/-1 or at most +/-2 in process number) moves of all pieces until everything is sorted well enough
+!!
+!! There are several strategies than can be implemented:
+!! * Local refinements go to local process. It is very simple, but for most simulations will build up load imbalance. Suitable for tests and global refinement.
+!! * Local refinements can be assigned to remote processes, existing blocks stays in place. Should keep good load balance, but the amount of inter-process
+!!   internal boundaries may grow significantly with time. Suitable for minor refinement updates and base level decomposition. This is the current implementation.
+!! * All blocks (existing and new) have recalculated assignment and can be migrated to other processes. Most advanced. Should be used after reading restart data.
 !<
 
    subroutine balance_new(this)
