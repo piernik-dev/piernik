@@ -52,7 +52,6 @@ module cg_level
    !> \deprecated not to be confused with decomposition::cuboid
    type :: cuboid
       integer(kind=8), dimension(ndims, LO:HI) :: se     !< absolute index of grid segmenent on its refinement level wrt [0,0,0]
-      logical                                  :: is_new !< a flag that marks newly added grid pieces
    end type cuboid
 
    !> \brief A list of grid pieces (typically used as a list of all grids residing on a given process)
@@ -102,7 +101,6 @@ module cg_level
       procedure          :: print_segments                                       !< print detailed information about current level decomposition
       procedure, private :: update_decomposition_properties                      !< Update some flags in domain module
       procedure, private :: create                                               !< Get all decomposed patches and turn them into local grid containers
-      procedure, private :: mark_new                                             !< Detect which grid containers are new
       procedure, private :: update_pse                                           !< Gather updated information about the level and overwrite it to this%pse
       procedure          :: update_tot_se                                        !< count all cg on current level for computing tags in vertical_prep
       generic,   public  :: add_patch => add_patch_fulllevel, add_patch_detailed !< Add a new piece of grid to the current level and decompose it
@@ -294,47 +292,6 @@ contains
 
    end subroutine update_pse
 
-!> \brief Detect which grid containers are new
-
-   subroutine mark_new(this)
-
-      use cg_list,    only: cg_list_element
-      use dataio_pub, only: warn
-      use mpisetup,   only: proc
-
-      implicit none
-
-      class(cg_level_T), intent(inout) :: this   !< object invoking type bound procedure
-
-      type(cg_list_element), pointer   :: cgl
-      integer                          :: i, occured
-
-      do i = lbound(this%pse(proc)%c(:), dim=1), ubound(this%pse(proc)%c(:), dim=1)
-         this%pse(proc)%c(i)%is_new = .true.
-      enddo
-
-      cgl => this%first
-      do while (associated(cgl))
-
-         occured = 0
-         do i = lbound(this%pse(proc)%c(:), dim=1), ubound(this%pse(proc)%c(:), dim=1)
-            if (all(this%pse(proc)%c(i)%se(:,:) == cgl%cg%my_se(:,:))) then
-               this%pse(proc)%c(i)%is_new = .false.
-               occured = occured + 1
-            endif
-         enddo
-
-         if (occured <= 0) then
-            call warn("[cg_level:mark_new] Existing cg not found in new list")
-         else if (occured > 1) then
-            call warn("[cg_level:mark_new] Existing cg found multiple times in new list")
-         endif
-
-         cgl => cgl%nxt
-      enddo
-
-   end subroutine mark_new
-
 !>
 !! \brief Get all decomposed patches and turn them into local grid containers
 !!
@@ -422,19 +379,14 @@ contains
          deallocate(this%patches)
       endif
 
-      call this%mark_new
-
-      do i = lbound(this%pse(proc)%c(:), dim=1), ubound(this%pse(proc)%c(:), dim=1)
-         if (this%pse(proc)%c(i)%is_new) then
-            this%pse(proc)%c(i)%is_new = .false.
-            call this%add
-            cg => this%last%cg
-            call cg%init(this%n_d, this%off, this%pse(proc)%c(i)%se(:, :), i, this%level_id) ! we cannot pass "this" as an argument because of circular dependencies
-            do p = lbound(cg_extptrs%ext, dim=1), ubound(cg_extptrs%ext, dim=1)
-               if (associated(cg_extptrs%ext(p)%init))  call cg_extptrs%ext(p)%init(cg)
-            enddo
-            call all_cg%add(cg)
-         endif
+      do i = lbound(this%pse(proc)%c(:), dim=1) + this%cnt, ubound(this%pse(proc)%c(:), dim=1)
+         call this%add
+         cg => this%last%cg
+         call cg%init(this%n_d, this%off, this%pse(proc)%c(i)%se(:, :), i, this%level_id) ! we cannot pass "this" as an argument because of circular dependencies
+         do p = lbound(cg_extptrs%ext, dim=1), ubound(cg_extptrs%ext, dim=1)
+            if (associated(cg_extptrs%ext(p)%init))  call cg_extptrs%ext(p)%init(cg)
+         enddo
+         call all_cg%add(cg)
       enddo
 
    end subroutine create
