@@ -40,19 +40,13 @@ module cg_level
    use cg_list,       only: cg_list_T   ! QA_WARN intel
 #endif /* __INTEL_COMPILER */
    use cg_list_bnd,   only: cg_list_bnd_T
-   use constants,     only: ndims, LO, HI
-   use decomposition, only: box_T
+   use constants,     only: ndims
+   use decomposition, only: box_T, cuboid
 
    implicit none
 
    private
    public :: cg_level_T
-
-   !> \brief A single grid piece plus auxiliary data
-   !> \deprecated not to be confused with decomposition::cuboid
-   type :: cuboid
-      integer(kind=8), dimension(ndims, LO:HI) :: se     !< absolute index of grid segmenent on its refinement level wrt [0,0,0]
-   end type cuboid
 
    !> \brief A list of grid pieces (typically used as a list of all grids residing on a given process)
    type :: cuboids

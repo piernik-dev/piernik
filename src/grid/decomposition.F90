@@ -44,7 +44,6 @@ module decomposition
    private
    public :: cleanup_decomposition, init_decomposition, box_T, cuboid
 
-   !> \deprecated not to be confused with cg_level::cuboid
    type :: cuboid
       integer(kind=8), dimension(xdim:zdim, LO:HI) :: se !< grid piece
    end type cuboid
