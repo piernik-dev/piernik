@@ -298,13 +298,7 @@ contains
 !! \details This routine starts with two lists:
 !! * A list of blocks that survived derefinement attempts
 !! * A list of blocks to be created due to requested refinement
-!! It has to decide if and how to do migration of grid pieces and to communicate this update to global database of grid pieces.
-!!
-!! \deprecated: I have an impression that the most challenging work was moved to balance_new routine
-!!
-!!
-!! First strategy will be implemented first to get everything working. Second strategy will be used quite often. Third one do not need to be used on every refinement update.
-!! It can be called when some benchmark of grid disorder exceeds particular threshold.
+!! The goal is to merge the two lists, create grid containers for the new grids and fix things such as cg%grid_id if anything was derefined
 !<
 
    subroutine create(this)
@@ -335,7 +329,7 @@ contains
          enddo
       endif
 
-      ! recreate local pse in case anything was derefined and make room for new pieces in the pse array
+      ! recreate local pse in case anything was derefined, refresh grid_id and make room for new pieces in the pse array
       if (.not. allocated(this%pse)) allocate(this%pse(FIRST:LAST))
       if (allocated(this%pse(proc)%c)) deallocate(this%pse(proc)%c)
       allocate(this%pse(proc)%c(this%cnt + pieces))
