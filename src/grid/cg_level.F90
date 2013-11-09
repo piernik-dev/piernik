@@ -372,7 +372,32 @@ contains
       logical                                 :: found_id
       type(grid_container), pointer           :: cg
 
-      call this%update_pse  ! required if anything was derefined
+      ! recreate local pse in case anything was derefined
+      if (.not. allocated(this%pse)) allocate(this%pse(FIRST:LAST))
+      if (allocated(this%pse(proc)%c)) deallocate(this%pse(proc)%c)
+      allocate(this%pse(proc)%c(this%cnt))
+      i = 0
+      cgl => this%first
+      do while (associated(cgl))
+         i = i + 1
+         this%pse(proc)%c(i)%se(:,:) = cgl%cg%my_se(:,:)
+         cgl%cg%grid_id = i
+         cgl => cgl%nxt
+      enddo
+
+      ! check local consistency
+      cgl => this%first
+      do while (associated(cgl))
+         found_id = .false.
+         do i = lbound(this%pse(proc)%c, dim=1), ubound(this%pse(proc)%c, dim=1)
+            if (all(this%pse(proc)%c(i)%se(:,:) == cgl%cg%my_se(:,:))) then
+               if (found_id) call die("[cg_level:create] multiple occurrences")
+               found_id = .true.
+            endif
+         enddo
+         if (.not. found_id) call die("[cg_level:create] no occurrences")
+         cgl => cgl%nxt
+      enddo
 
       ! Find how many pieces are to be added
       pieces = 0
@@ -394,21 +419,6 @@ contains
          enddo
          call move_alloc(from=new_c, to=this%pse(proc)%c)
       endif
-
-      ! fix grid_id
-      cgl => this%first
-      do while (associated(cgl))
-         found_id = .false.
-         do i = lbound(this%pse(proc)%c, dim=1), ubound(this%pse(proc)%c, dim=1)
-            if (all(this%pse(proc)%c(i)%se(:,:) == cgl%cg%my_se(:,:))) then
-               if (found_id) call die("[cg_level:create] multiple occurrences")
-               cgl%cg%grid_id = i
-               found_id = .true.
-            endif
-         enddo
-         if (.not. found_id) call die("[cg_level:create] no occurrences")
-         cgl => cgl%nxt
-      enddo
 
       ! write the new grid pieces description to the pse array
       if (allocated(this%patches)) then
