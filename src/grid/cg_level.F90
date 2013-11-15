@@ -72,21 +72,22 @@ module cg_level
    !<
    type, extends(cg_list_bnd_T) :: cg_level_T
 
-      integer(kind=4)                            :: level_id         !< level number (relative to base level). No arithmetic should depend on it.
-      integer(kind=8), dimension(ndims)          :: n_d              !< maximum number of grid cells in each direction (size of fully occupied level)
-      type(cuboids),   dimension(:), allocatable :: pse              !< lists of grid chunks on each process (FIRST:LAST); Use with care, because this is an antiparallel thing
-      integer                                    :: tot_se           !< global number of segments on the level
-      integer                                    :: fft_type         !< type of FFT to employ in some multigrid solvers (depending on boundaries)
-      type(box_T),     dimension(:), allocatable :: patches          !< list of patches that exist on the current level
-      integer(kind=8), dimension(ndims)          :: off              !< offset of the level
-      logical                                    :: recently_changed !< .true. when anything was added to or deleted from this level
+      integer(kind=4)                              :: level_id         !< level number (relative to base level). No arithmetic should depend on it.
+      integer(kind=8), dimension(ndims)            :: n_d              !< maximum number of grid cells in each direction (size of fully occupied level)
+      type(cuboids),   dimension(:), allocatable   :: pse              !< lists of grid chunks on each process (FIRST:LAST); Use with care, because this is an antiparallel thing
+      integer                                      :: tot_se           !< global number of segments on the level
+      integer                                      :: fft_type         !< type of FFT to employ in some multigrid solvers (depending on boundaries)
+      type(box_T),     dimension(:), allocatable   :: patches          !< list of patches that exist on the current level
+      integer(kind=8), dimension(ndims)            :: off              !< offset of the level
+      logical                                      :: recently_changed !< .true. when anything was added to or deleted from this level
+      integer(kind=8), dimension(:,:), allocatable :: SFC_id_range     !< min and max SFC id on processes
 
       ! FARGO
-      real,    dimension(:, :), allocatable      :: omega_mean       !< mean angular velocity for each fluid
-      real,    dimension(:, :), allocatable      :: omega_cr         !< constant residual angular velocity for each fluid
-      integer, dimension(:, :), allocatable      :: nshift           !< number of cells that need to be shifted due to %omega_mean for each fluid
-      real,    dimension(:, :), allocatable      :: local_omega      !< auxiliary array
-      integer(kind=8), dimension(:), allocatable :: cell_count       !< auxiliary counter
+      real,    dimension(:, :), allocatable        :: omega_mean       !< mean angular velocity for each fluid
+      real,    dimension(:, :), allocatable        :: omega_cr         !< constant residual angular velocity for each fluid
+      integer, dimension(:, :), allocatable        :: nshift           !< number of cells that need to be shifted due to %omega_mean for each fluid
+      real,    dimension(:, :), allocatable        :: local_omega      !< auxiliary array
+      integer(kind=8), dimension(:), allocatable   :: cell_count       !< auxiliary counter
 
     contains
 
@@ -109,6 +110,7 @@ module cg_level
       procedure          :: balance_old                                          !< Routine for measuring disorder level in distribution of grids across processes
       procedure, private :: reshuffle                                            !< Routine for moving existing grids between processes
       procedure, private :: update_everything                                    !< Update all information on refinement structure and intra-level communication
+      procedure, private :: update_SFC_id_range                                  !< Update SFC_id_range array
    end type cg_level_T
 
 contains
@@ -230,6 +232,7 @@ contains
 
       class(cg_level_T), intent(inout) :: this   !< object invoking type bound procedure
 
+      !call this%update_SFC_id_range
       call this%update_decomposition_properties
       call this%update_pse    ! communicate everything that was added before
       call this%mpi_bnd_types ! require access to whole this%pse(:)%c(:)%se(:,:)
@@ -1386,5 +1389,46 @@ contains
       deallocate(gptemp)
 
    end subroutine reshuffle
+
+!> \brief Update SFC_id_range array
+
+   subroutine update_SFC_id_range(this)
+
+      use cg_list,    only: cg_list_element
+      use constants,  only: LO, HI
+      use dataio_pub, only: die
+      use mpi,        only: MPI_INTEGER8
+      use mpisetup,   only: FIRST, LAST, proc, comm, mpi_err
+      use ordering,   only: SFC_order
+
+      implicit none
+
+      class(cg_level_T), intent(inout) :: this   !< object invoking type bound procedure
+
+      type(cg_list_element), pointer :: cgl
+      integer(kind=8) :: SFC_id
+      integer(kind=8), dimension(:), allocatable :: id_buf
+
+      if (.not. allocated(this%SFC_id_range)) allocate(this%SFC_id_range(FIRST:LAST, LO:HI))
+      if (any(lbound(this%SFC_id_range) /= [ FIRST, LO ]) .or. any(ubound(this%SFC_id_range) /= [ LAST, HI ])) &
+           call die("[cg_level:update_SFC_id_range] bogus this%SFC_id_range dimensions")
+
+      this%SFC_id_range(proc, :) = [ huge(1), -huge(1) ]
+      cgl => this%first
+      do while (associated(cgl))
+         SFC_id = SFC_order(cgl%cg%my_se(:, LO)-this%off)
+         if (this%SFC_id_range(proc, LO) > SFC_id) this%SFC_id_range(proc, LO) = SFC_id
+         if (this%SFC_id_range(proc, HI) < SFC_id) this%SFC_id_range(proc, HI) = SFC_id
+         cgl => cgl%nxt
+      enddo
+
+      allocate(id_buf(size(this%SFC_id_range)))
+      call MPI_Allgather(this%SFC_id_range(proc, :), HI-LO+1, MPI_INTEGER8, id_buf, HI-LO+1, MPI_INTEGER8, comm, mpi_err)
+      this%SFC_id_range(:, LO) = id_buf(1::2)
+      this%SFC_id_range(:, HI) = id_buf(2::2)
+
+      deallocate(id_buf)
+
+   end subroutine update_SFC_id_range
 
 end module cg_level
