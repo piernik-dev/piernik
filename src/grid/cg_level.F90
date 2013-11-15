@@ -109,6 +109,7 @@ module cg_level
       procedure, private :: balance_strict_SFC                                   !< Routine for moving proposed grids between processes: keep strict SFC ordering
       procedure, private :: balance_fill_lowest                                  !< Routine for moving proposed grids between processes: add load to lightly-loaded processes
       procedure, private :: patches_to_list                                      !< Collect local proposed patches into an array on the master process
+      procedure, private :: distribute_patches                                   !< Send balanced set patches from master to slaves and re-register them
       procedure          :: balance_old                                          !< Routine for measuring disorder level in distribution of grids across processes
       procedure, private :: reshuffle                                            !< Routine for moving existing grids between processes
       procedure, private :: update_everything                                    !< Update all information on refinement structure and intra-level communication
@@ -920,7 +921,9 @@ contains
 
       ! calculate patch distribution
       ! if (rebalance) call reshuffle(distribution)
-      ! send to slaves
+
+     ! send to slaves
+!!$      call this%distribute_patches(gp, from)
 
       if (.not. this%check_SFC()) call die("[cg_level:balance_strict_SFC] messed up grid distribution.")
 
@@ -984,9 +987,9 @@ contains
 
    subroutine balance_fill_lowest(this)
 
-      use constants,       only: pSUM, ndims, I_ONE
+      use constants,       only: pSUM, I_ONE
       use dataio_pub,      only: die
-      use mpi,             only: MPI_INTEGER, MPI_INTEGER8, MPI_STATUS_IGNORE
+      use mpi,             only: MPI_INTEGER
       use mpisetup,        only: piernik_MPI_Allreduce, master, FIRST, LAST, comm, mpi_err, nproc
       use sort_piece_list, only: grid_piece_list
 
@@ -999,13 +1002,6 @@ contains
       integer(kind=4), dimension(FIRST:LAST+1) :: from
       integer(kind=4), dimension(FIRST:LAST) :: cnt_existing
       integer(kind=4) :: ls, p, s
-      integer(kind=4), parameter :: tag_lsR = 3, tag_gptR = tag_lsR+1
-      enum, bind(C)
-         enumerator :: I_OFF
-         enumerator :: I_N_B = I_OFF + ndims
-         enumerator :: I_END = I_N_B + ndims - I_ONE
-      end enum
-      integer(kind=8), dimension(:,:), allocatable :: gptemp
 
       ! count how many patches were requested on each process
       s = int(this%count_patches(), kind=4)
@@ -1017,6 +1013,7 @@ contains
       call this%patches_to_list(gp, ls)
 
       call MPI_Gather(this%cnt, I_ONE, MPI_INTEGER, cnt_existing, I_ONE, MPI_INTEGER, FIRST, comm, mpi_err)
+
       if (master) then !> \warning Antiparallel
          ! apply unique numbers to the grids and sort the list
          call gp%set_id(this%off)
@@ -1055,41 +1052,9 @@ contains
          do p = FIRST, LAST
             from(p+1) = from(p+1) + from(p)
          enddo
-         do p = from(FIRST), from(FIRST+1) - I_ONE
-            call this%add_patch_one_piece(int(gp%list(p)%n_b, kind=8), gp%list(p)%off)
-         enddo
-
-         ! distribute proposed grids according to limits computed above
-         do p = FIRST + I_ONE, LAST
-            ls = int(from(p+1) - from(p), kind=4)
-            ! call MPI_Isend(ls, I_ONE, MPI_INTEGER, p, tag_lsR, comm, req(p), mpi_err) !can't reuse ls before MPI_Waitall
-            call MPI_Send(ls, I_ONE, MPI_INTEGER, p, tag_lsR, comm, mpi_err)
-            if (ls>0) then
-               allocate(gptemp(I_OFF:I_END,from(p):from(p+1)-1))
-               do s = lbound(gptemp, dim=2, kind=4), ubound(gptemp, dim=2, kind=4)
-                  gptemp(:, s) = [ gp%list(s)%off, int(gp%list(s)%n_b, kind=8) ]
-               enddo
-               ! call MPI_Isend(gptemp, size(gptemp), MPI_INTEGER8, p, tag_gptR, comm, req(LAST+p), mpi_err) !can't deallocate gptemp before MPI_Waitall
-               call MPI_Send(gptemp, size(gptemp), MPI_INTEGER8, p, tag_gptR, comm, mpi_err)
-               deallocate(gptemp)
-            else
-               ! req(LAST+p) = MPI_REQUEST_NULL
-            endif
-         enddo
-         ! call MPI_Waitall(2*LAST, req(:2*LAST), status(:,:2*LAST), mpi_err)
-      else
-
-         ! receive new, perhaps more balanced patches
-         call MPI_Recv(ls, I_ONE, MPI_INTEGER, FIRST, tag_lsR, comm, MPI_STATUS_IGNORE, mpi_err)
-         if (ls>0) then
-            allocate(gptemp(I_OFF:I_END,ls))
-            call MPI_Recv(gptemp, size(gptemp), MPI_INTEGER8, FIRST, tag_gptR, comm, MPI_STATUS_IGNORE, mpi_err)
-            do s = lbound(gptemp, dim=2, kind=4), ubound(gptemp, dim=2, kind=4)
-               call this%add_patch_one_piece(gptemp(I_N_B:I_N_B+ndims-1, s), gptemp(I_OFF:I_OFF+ndims-1, s))
-            enddo
-            deallocate(gptemp)
-         endif
       endif
+
+      call this%distribute_patches(gp, from)
 
       if (master) call gp%cleanup
 
@@ -1143,7 +1108,6 @@ contains
             enddo
          enddo
       endif
-      if (allocated(this%patches)) deallocate(this%patches)
 
       if (master) then !> \warning Antiparallel
 
@@ -1175,6 +1139,64 @@ contains
       endif
 
    end subroutine patches_to_list
+
+!> \brief send balanced set patches from master to slaves and re-register them
+
+   subroutine distribute_patches(this, gp, from)
+
+      use constants,       only: ndims, I_ONE
+      use mpi,             only: MPI_INTEGER, MPI_INTEGER8, MPI_STATUS_IGNORE
+      use mpisetup,        only: master, FIRST, LAST, comm, mpi_err
+      use sort_piece_list, only: grid_piece_list
+
+      implicit none
+
+      class(cg_level_T),                        intent(inout) :: this !< object invoking type bound procedure
+      type(grid_piece_list),                    intent(in)    :: gp   !< list of grid pieces to be filled
+      integer(kind=4), dimension(FIRST:LAST+1), intent(in)    :: from !< indices that mark ranges in gp to be sent to processes
+
+      integer(kind=8), dimension(:,:), allocatable :: gptemp
+      integer(kind=4) :: ls, p, s
+      integer(kind=4), parameter :: tag_lsR = 3, tag_gptR = tag_lsR+1
+      enum, bind(C)
+         enumerator :: I_OFF
+         enumerator :: I_N_B = I_OFF + ndims
+         enumerator :: I_END = I_N_B + ndims - I_ONE
+      end enum
+
+      if (allocated(this%patches)) deallocate(this%patches)
+      if (master) then
+         do p = from(FIRST), from(FIRST+1) - I_ONE
+            call this%add_patch_one_piece(int(gp%list(p)%n_b, kind=8), gp%list(p)%off)
+         enddo
+
+         ! distribute proposed grids according to limits computed above
+         do p = FIRST + I_ONE, LAST
+            ls = int(from(p+1) - from(p), kind=4)
+            call MPI_Send(ls, I_ONE, MPI_INTEGER, p, tag_lsR, comm, mpi_err)
+            if (ls>0) then
+               allocate(gptemp(I_OFF:I_END,from(p):from(p+1)-1))
+               do s = lbound(gptemp, dim=2, kind=4), ubound(gptemp, dim=2, kind=4)
+                  gptemp(:, s) = [ gp%list(s)%off, int(gp%list(s)%n_b, kind=8) ]
+               enddo
+               call MPI_Send(gptemp, size(gptemp), MPI_INTEGER8, p, tag_gptR, comm, mpi_err)
+               deallocate(gptemp)
+            endif
+         enddo
+      else
+         ! receive new, perhaps more balanced patches
+         call MPI_Recv(ls, I_ONE, MPI_INTEGER, FIRST, tag_lsR, comm, MPI_STATUS_IGNORE, mpi_err)
+         if (ls>0) then
+            allocate(gptemp(I_OFF:I_END,ls))
+            call MPI_Recv(gptemp, size(gptemp), MPI_INTEGER8, FIRST, tag_gptR, comm, MPI_STATUS_IGNORE, mpi_err)
+            do s = lbound(gptemp, dim=2, kind=4), ubound(gptemp, dim=2, kind=4)
+               call this%add_patch_one_piece(gptemp(I_N_B:I_N_B+ndims-1, s), gptemp(I_OFF:I_OFF+ndims-1, s))
+            enddo
+            deallocate(gptemp)
+         endif
+      endif
+
+   end subroutine distribute_patches
 
 !> \brief Routine for measuring disorder level in distribution of grids across processes
 
