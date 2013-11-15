@@ -866,9 +866,20 @@ contains
       class(cg_level_T), intent(inout) :: this
       logical, optional, intent(in)    :: prevent_rebalancing !< if present and .true. then do not allow rebalancing during addition of new grids
 
+      logical :: rebalance
+
       call die("[cg_level:balance_strict_SFC] Not implemented yet")
 
-      if (.false. .and. present(prevent_rebalancing)) print *,prevent_rebalancing ! suppress compiler warnings
+      rebalance = .true.
+      if (present(prevent_rebalancing)) rebalance = .not. prevent_rebalancing
+
+      ! check sfc
+      ! gather patches id
+      ! if (rebalance) gather existing grids id
+      ! sort id
+      ! calculate patch distribution
+      ! if (rebalance) call reshuffle(distribution)
+      ! send to slaves
 
    end subroutine balance_strict_SFC
 
