@@ -89,8 +89,9 @@ module cg_level
       real,    dimension(:, :), allocatable        :: local_omega      !< auxiliary array
       integer(kind=8), dimension(:), allocatable   :: cell_count       !< auxiliary counter
 
-    contains
+   contains
 
+      procedure          :: cleanup                                              !< deallocate arrays
       procedure          :: init_all_new_cg                                      !< initialize newest grid container
       procedure, private :: mpi_bnd_types                                        !< create MPI types for boundary exchanges
       procedure          :: print_segments                                       !< print detailed information about current level decomposition
@@ -114,6 +115,24 @@ module cg_level
    end type cg_level_T
 
 contains
+
+!> \brief deallocate arrays
+
+   subroutine cleanup(this)
+
+      implicit none
+
+      class(cg_level_T), intent(inout) :: this !< object invoking type bound procedure
+
+      if (allocated(this%pse))          deallocate(this%pse)        ! this%pse(:)%c should be deallocated automagically
+      if (allocated(this%patches))      deallocate(this%patches)    ! this%patches(:)%pse should be deallocated automagically
+      if (allocated(this%omega_mean))   deallocate(this%omega_mean)
+      if (allocated(this%omega_cr))     deallocate(this%omega_cr)
+      if (allocated(this%nshift))       deallocate(this%nshift)
+      if (allocated(this%local_omega))  deallocate(this%local_omega)
+      if (allocated(this%SFC_id_range)) deallocate(this%SFC_id_range)
+
+   end subroutine cleanup
 
 !> \brief Print detailed information about current level decomposition
 
