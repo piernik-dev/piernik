@@ -210,7 +210,7 @@ contains
 
    subroutine set_id(this, off)
 
-      use ordering, only: Morton_order
+      use ordering, only: SFC_order
 
       implicit none
 
@@ -221,7 +221,7 @@ contains
 
       do s = lbound(this%list, dim=1), ubound(this%list, dim=1)
          !> \todo use Hilbert ordering
-         this%list(s)%id = Morton_order(this%list(s)%off-off)
+         this%list(s)%id = SFC_order(this%list(s)%off-off)
       enddo
 
    end subroutine set_id
