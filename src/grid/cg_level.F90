@@ -106,8 +106,9 @@ module cg_level
       procedure, private :: count_patches                                        !< Count local patches
       procedure, private :: expand_list                                          !< Expand the patch list by one
       procedure, private :: balance_new                                          !< Routine selector for moving proposed grids between processes
-      procedure, private :: balance_fill_lowest                                  !< Routine for moving proposed grids between processes: add load to lightly-loaded processes
       procedure, private :: balance_strict_SFC                                   !< Routine for moving proposed grids between processes: keep strict SFC ordering
+      procedure, private :: balance_fill_lowest                                  !< Routine for moving proposed grids between processes: add load to lightly-loaded processes
+      procedure, private :: patches_to_list                                      !< Collect local proposed patches into an array on the master process
       procedure          :: balance_old                                          !< Routine for measuring disorder level in distribution of grids across processes
       procedure, private :: reshuffle                                            !< Routine for moving existing grids between processes
       procedure, private :: update_everything                                    !< Update all information on refinement structure and intra-level communication
@@ -373,7 +374,7 @@ contains
       do while (i<ubound(this%pse(proc)%c, dim=1))
          i = i + 1
          this%pse(proc)%c(i)%se = -huge(1)
-      end do
+      enddo
 
       ! check local consistency
       cgl => this%first
@@ -866,7 +867,7 @@ contains
          call this%balance_strict_SFC(prevent_rebalancing)
       else
          call this%balance_fill_lowest ! never rebalances
-      end if
+      endif
 
    end subroutine balance_new
 
@@ -901,8 +902,22 @@ contains
       endif
 
       ! gather patches id
+!!$      s = int(this%count_patches(), kind=4)
+!!$      ls = int(s, kind=4)
+!!$      call piernik_MPI_Allreduce(s, pSUM) !> \warning overkill: MPI_reduce is enough here
+!!$      if (s==0) return ! nihil novi
+!!$
+!!$      if (master) call gp%init(s)
+!!$      call this%patches_to_list(gp, ls)
+
       ! if (rebalance) gather existing grids id
+
       ! sort id
+!!$      if (master) then !> \warning Antiparallel
+!!$         ! apply unique numbers to the grids and sort the list
+!!$         call gp%set_id(this%off)
+!!$         call gp%sort
+
       ! calculate patch distribution
       ! if (rebalance) call reshuffle(distribution)
       ! send to slaves
@@ -969,10 +984,10 @@ contains
 
    subroutine balance_fill_lowest(this)
 
-      use constants,       only: pSUM, ndims, INVALID, LO, HI, I_ONE
+      use constants,       only: pSUM, ndims, I_ONE
       use dataio_pub,      only: die
-      use mpi,             only: MPI_INTEGER, MPI_INTEGER8, MPI_STATUS_IGNORE!, MPI_REQUEST_NULL
-      use mpisetup,        only: piernik_MPI_Allreduce, master, FIRST, LAST, comm, req, mpi_err, status, nproc, inflate_req
+      use mpi,             only: MPI_INTEGER, MPI_INTEGER8, MPI_STATUS_IGNORE
+      use mpisetup,        only: piernik_MPI_Allreduce, master, FIRST, LAST, comm, mpi_err, nproc
       use sort_piece_list, only: grid_piece_list
 
       implicit none
@@ -984,66 +999,25 @@ contains
       integer(kind=4), dimension(FIRST:LAST+1) :: from
       integer(kind=4), dimension(FIRST:LAST) :: cnt_existing
       integer(kind=4) :: ls, p, s
-      integer(kind=4), parameter :: tag_ls = 1, tag_gpt = tag_ls+1, tag_lsR = tag_gpt+1, tag_gptR = tag_lsR+1
+      integer(kind=4), parameter :: tag_lsR = 3, tag_gptR = tag_lsR+1
       enum, bind(C)
          enumerator :: I_OFF
          enumerator :: I_N_B = I_OFF + ndims
          enumerator :: I_END = I_N_B + ndims - I_ONE
       end enum
       integer(kind=8), dimension(:,:), allocatable :: gptemp
-      integer, parameter :: nreq = 1
-
-      ! collect planned grids on a level
-
-      call inflate_req(nreq)
 
       ! count how many patches were requested on each process
       s = int(this%count_patches(), kind=4)
       ls = int(s, kind=4)
       call piernik_MPI_Allreduce(s, pSUM) !> \warning overkill: MPI_reduce is enough here
-
       if (s==0) return ! nihil novi
 
-      ! copy the patches data to a temporary array to be sent to the master
-      allocate(gptemp(I_OFF:I_END,ls))
-      if (master) then
-         call gp%init(s)
-      else
-         call MPI_Isend(ls, I_ONE, MPI_INTEGER, FIRST, tag_ls, comm, req(nreq), mpi_err)
-      endif
+      if (master) call gp%init(s)
+      call this%patches_to_list(gp, ls)
+
       call MPI_Gather(this%cnt, I_ONE, MPI_INTEGER, cnt_existing, I_ONE, MPI_INTEGER, FIRST, comm, mpi_err)
-      i = 0
-      if (allocated(this%patches)) then
-         do p = lbound(this%patches(:), dim=1, kind=4), ubound(this%patches(:), dim=1, kind=4)
-            do s = lbound(this%patches(p)%pse, dim=1, kind=4), ubound(this%patches(p)%pse, dim=1, kind=4)
-               i = i + 1
-               gptemp(:, i) = [ this%patches(p)%pse(s)%se(:, LO), this%patches(p)%pse(s)%se(:, HI) - this%patches(p)%pse(s)%se(:, LO) + 1 ]
-            enddo
-         enddo
-      endif
-      if (allocated(this%patches)) deallocate(this%patches)
-
       if (master) then !> \warning Antiparallel
-
-         ! put all the patches (own and obtained from slaves) on a list gp%list
-         do s = 1, ls
-            call gp%list(s)%set_gp(gptemp(I_OFF:I_OFF+ndims-1, s), int(gptemp(I_N_B:I_N_B+ndims-1, s), kind=4), INVALID, FIRST)
-         enddo
-         i = ls
-         deallocate(gptemp)
-         do p = FIRST + 1, LAST
-            call MPI_Recv(ls, I_ONE, MPI_INTEGER, p, tag_ls, comm, MPI_STATUS_IGNORE, mpi_err)
-            if (ls > 0) then
-               allocate(gptemp(I_OFF:I_END,ls))
-               call MPI_Recv(gptemp, size(gptemp), MPI_INTEGER8, p, tag_gpt, comm, MPI_STATUS_IGNORE, mpi_err)
-               do s = 1, ls
-                  call gp%list(i+s)%set_gp(gptemp(I_OFF:I_OFF+ndims-1, s), int(gptemp(I_N_B:I_N_B+ndims-1, s), kind=4), INVALID, p)
-               enddo
-               i = i + ls
-               deallocate(gptemp)
-            endif
-         enddo
-
          ! apply unique numbers to the grids and sort the list
          call gp%set_id(this%off)
          call gp%sort
@@ -1105,11 +1079,6 @@ contains
          ! call MPI_Waitall(2*LAST, req(:2*LAST), status(:,:2*LAST), mpi_err)
       else
 
-         ! send patches to master
-         call MPI_Wait(req(nreq), status(:, nreq), mpi_err)
-         if (ls > 0) call MPI_Send(gptemp, size(gptemp), MPI_INTEGER8, FIRST, tag_gpt, comm, mpi_err)
-         deallocate(gptemp)
-
          ! receive new, perhaps more balanced patches
          call MPI_Recv(ls, I_ONE, MPI_INTEGER, FIRST, tag_lsR, comm, MPI_STATUS_IGNORE, mpi_err)
          if (ls>0) then
@@ -1132,6 +1101,80 @@ contains
 !!$      deallocate(area)
 
    end subroutine balance_fill_lowest
+
+!> \brief collect local proposed patches on a given level into an array on the master process
+
+   subroutine patches_to_list(this, gp, ls)
+
+      use constants,       only: ndims, INVALID, LO, HI, I_ONE
+      use mpi,             only: MPI_INTEGER, MPI_INTEGER8, MPI_STATUS_IGNORE
+      use mpisetup,        only: master, slave, FIRST, LAST, comm, req, mpi_err, status, inflate_req
+      use sort_piece_list, only: grid_piece_list
+
+      implicit none
+
+      class(cg_level_T),                      intent(inout) :: this !< object invoking type bound procedure
+      type(grid_piece_list),                  intent(inout) :: gp   !< list of grid pieces to be filled
+      integer(kind=4),                        intent(in)    :: ls   !< local number of patches
+
+      integer(kind=8), dimension(:,:), allocatable :: gptemp
+      integer :: i
+      integer(kind=4) :: p, ss
+      integer, parameter :: nreq = 1
+      integer(kind=4), parameter :: tag_ls = 1, tag_gpt = tag_ls+1
+      enum, bind(C)
+         enumerator :: I_OFF
+         enumerator :: I_N_B = I_OFF + ndims
+         enumerator :: I_END = I_N_B + ndims - I_ONE
+      end enum
+
+      call inflate_req(nreq)
+
+      ! copy the patches data to a temporary array to be sent to the master
+      if (slave) call MPI_Isend(ls, I_ONE, MPI_INTEGER, FIRST, tag_ls, comm, req(nreq), mpi_err)
+
+      allocate(gptemp(I_OFF:I_END, ls))
+      i = 0
+      if (allocated(this%patches)) then
+         do p = lbound(this%patches(:), dim=1, kind=4), ubound(this%patches(:), dim=1, kind=4)
+            do ss = lbound(this%patches(p)%pse, dim=1, kind=4), ubound(this%patches(p)%pse, dim=1, kind=4)
+               i = i + 1
+               gptemp(:, i) = [ this%patches(p)%pse(ss)%se(:, LO), this%patches(p)%pse(ss)%se(:, HI) - this%patches(p)%pse(ss)%se(:, LO) + 1 ]
+            enddo
+         enddo
+      endif
+      if (allocated(this%patches)) deallocate(this%patches)
+
+      if (master) then !> \warning Antiparallel
+
+         ! put all the patches (own and obtained from slaves) on a list gp%list
+         do ss = 1, ls
+            call gp%list(ss)%set_gp(gptemp(I_OFF:I_OFF+ndims-1, ss), int(gptemp(I_N_B:I_N_B+ndims-1, ss), kind=4), INVALID, FIRST)
+         enddo
+         i = ls
+         deallocate(gptemp)
+         do p = FIRST + 1, LAST
+            call MPI_Recv(ls, I_ONE, MPI_INTEGER, p, tag_ls, comm, MPI_STATUS_IGNORE, mpi_err)
+            if (ls > 0) then
+               allocate(gptemp(I_OFF:I_END,ls))
+               call MPI_Recv(gptemp, size(gptemp), MPI_INTEGER8, p, tag_gpt, comm, MPI_STATUS_IGNORE, mpi_err)
+               do ss = 1, ls
+                  call gp%list(i+ss)%set_gp(gptemp(I_OFF:I_OFF+ndims-1, ss), int(gptemp(I_N_B:I_N_B+ndims-1, ss), kind=4), INVALID, p)
+               enddo
+               i = i + ls
+               deallocate(gptemp)
+            endif
+         enddo
+      else
+
+         ! send patches to master
+         call MPI_Wait(req(nreq), status(:, nreq), mpi_err)
+         if (ls > 0) call MPI_Send(gptemp, size(gptemp), MPI_INTEGER8, FIRST, tag_gpt, comm, mpi_err)
+         deallocate(gptemp)
+
+      endif
+
+   end subroutine patches_to_list
 
 !> \brief Routine for measuring disorder level in distribution of grids across processes
 
