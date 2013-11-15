@@ -100,8 +100,13 @@ contains
 
       curl => coarsest%level
       do while (associated(curl))
-         if (allocated(curl%pse)) deallocate(curl%pse)        ! curl%pse(:)%c should be deallocated automagically
-         if (allocated(curl%patches)) deallocate(curl%patches)! curl%patches(:)%pse should be deallocated automagically
+         !> \warning: these deallocations should go to some routine in cg_level_T
+         if (allocated(curl%pse))         deallocate(curl%pse)        ! curl%pse(:)%c should be deallocated automagically
+         if (allocated(curl%patches))     deallocate(curl%patches)! curl%patches(:)%pse should be deallocated automagically
+         if (allocated(curl%omega_mean))  deallocate(curl%omega_mean)
+         if (allocated(curl%omega_cr))    deallocate(curl%omega_cr)
+         if (allocated(curl%nshift))      deallocate(curl%nshift)
+         if (allocated(curl%local_omega)) deallocate(curl%local_omega)
          curl => curl%finer
       enddo
 

@@ -676,29 +676,26 @@ contains
 
       implicit none
 
-      logical, save                  :: frun = .true.
       real                           :: r2
       integer                        :: i, k
       type(cg_list_element), pointer :: cgl
       type(grid_container),  pointer :: cg
 
-      if (frun) then
-         cgl => leaves%first
-         do while (associated(cgl))
-            cg => cgl%cg
+      cgl => leaves%first
+      do while (associated(cgl))
+         cg => cgl%cg
 
+         if (.not. cg%is_old) then
             do i = cg%lhn(xdim, LO), cg%lhn(xdim, HI)
                do k = cg%lhn(zdim, LO), cg%lhn(zdim, HI)
                   r2 = cg%x(i)**2! + cg%z(k)**2
                   cg%gp(i,:,k) = -newtong*ptmass / sqrt(r2)
                enddo
             enddo
+         endif
 
-            cgl => cgl%nxt
-         enddo
-      endif
-
-      frun = .false.
+         cgl => cgl%nxt
+      enddo
 
    end subroutine my_grav_pot_3d
 !-----------------------------------------------------------------------------------------------------------------------

@@ -380,18 +380,22 @@ contains
       type(cg_list_element), pointer :: cgl
       type(grid_container),  pointer :: cg
 
+      grav_type => galactic_grav_pot
+
       cgl => leaves%first
       do while (associated(cgl))
          cg => cgl%cg
-         call ax%allocate_axes(cg%lhn)
-         ax%x(:) = cg%x(:)
-         ax%y(:) = cg%y(:)
-         ax%z(:) = cg%z(:)
 
-         call galactic_grav_pot(cg%gp, ax, cg%lhn)
-         grav_type => galactic_grav_pot
+         if (.not. cg%is_old) then
+            call ax%allocate_axes(cg%lhn)
+            ax%x(:) = cg%x(:)
+            ax%y(:) = cg%y(:)
+            ax%z(:) = cg%z(:)
 
-         call ax%deallocate_axes
+            call galactic_grav_pot(cg%gp, ax, cg%lhn)
+
+            call ax%deallocate_axes
+         endif
 
          cgl => cgl%nxt
       enddo

@@ -43,8 +43,8 @@ module gravity
    implicit none
 
    private
-   public :: init_grav, init_grav_ext, grav_accel, source_terms_grav, grav_pot2accel, grav_pot_3d, grav_pot_3d_called, grav_type, get_gprofs, grav_accel2pot, sum_potential, manage_grav_pot_3d
-   public :: g_dir, r_gc, ptmass, ptm_x, ptm_y, ptm_z, r_smooth, nsub, tune_zeq, tune_zeq_bnd, h_grav, r_grav, n_gravr, n_gravh, user_grav, gp_status, gprofs_target, ptmass2, ptm2_x, variable_gp
+   public :: init_grav, init_grav_ext, grav_accel, source_terms_grav, grav_pot2accel, grav_pot_3d, grav_type, get_gprofs, grav_accel2pot, sum_potential, manage_grav_pot_3d, update_gp
+   public :: r_gc, ptmass, ptm_x, ptm_y, ptm_z, r_smooth, nsub, tune_zeq, tune_zeq_bnd, r_grav, n_gravr, user_grav, gprofs_target, ptm2_x
 
    integer, parameter         :: gp_stat_len   = 9
    integer, parameter         :: gproft_len    = 5
@@ -59,10 +59,8 @@ module gravity
    real                       :: ptm_z                 !< point mass position z-component
    real                       :: r_smooth              !< smoothing radius in point mass %types of %gravity
    integer(kind=4)            :: nsub                  !< number of subcells while additionally cell division in z-direction is present during establishment of hydrostatic equilibrium
-   integer(kind=4)            :: n_gravh               !< index of hyperbolic-cosinusoidal cutting of acceleration; used when set to non-zero
    integer(kind=4)            :: n_gravr               !< index of hyperbolic-cosinusoidal cutting of gravitational potential used by GRAV_PTMASS, GRAV_PTFLAT type of %gravity
    integer(kind=4)            :: ord_pot2accel         !< Gradient operator order for gravitational potential
-   real                       :: h_grav                !< altitude of acceleration cut used when n_gravh is set to non-zero
    real                       :: r_grav                !< radius of gravitational potential cut used by GRAV_PTMASS, GRAV_PTFLAT type of %gravity
    real                       :: tune_zeq              !< z-component of %gravity tuning factor used by hydrostatic_zeq
    real                       :: tune_zeq_bnd          !< z-component of %gravity tuning factor supposed to be used in boundaries
@@ -149,10 +147,8 @@ contains
 !! <tr><td>nsub         </td><td>10     </td><td>integer > 0      </td><td>\copydoc gravity::nsub         </td></tr>
 !! <tr><td>tune_zeq     </td><td>1.0    </td><td>real             </td><td>\copydoc gravity::tune_zeq     </td></tr>
 !! <tr><td>tune_zeq_bnd </td><td>1.0    </td><td>real             </td><td>\copydoc gravity::tune_zeq_bnd </td></tr>
-!! <tr><td>h_grav       </td><td>1.e6   </td><td>real             </td><td>\copydoc gravity::h_grav       </td></tr>
 !! <tr><td>r_grav       </td><td>1.e6   </td><td>real             </td><td>\copydoc gravity::r_grav       </td></tr>
 !! <tr><td>n_gravr      </td><td>0      </td><td>real             </td><td>\copydoc gravity::n_gravr      </td></tr>
-!! <tr><td>n_gravh      </td><td>0      </td><td>real             </td><td>\copydoc gravity::n_gravh      </td></tr>
 !! <tr><td>user_grav    </td><td>.false.</td><td>logical          </td><td>\copydoc gravity::user_grav    </td></tr>
 !! <tr><td>variable_gp  </td><td>.false.</td><td>logical          </td><td>\copydoc gravity::variable_gp  </td></tr>
 !! <tr><td>gprofs_target</td><td>'extgp'</td><td>string of chars  </td><td>\copydoc gravity::gprofs_target</td></tr>
@@ -179,7 +175,7 @@ contains
       implicit none
 
       namelist /GRAVITY/ g_dir, r_gc, ptmass, ptm_x, ptm_y, ptm_z, r_smooth, external_gp, ptmass2, ptm2_x, &
-                         nsub, tune_zeq, tune_zeq_bnd, h_grav, r_grav, n_gravr, n_gravh, user_grav, gprofs_target, variable_gp, ord_pot2accel
+                         nsub, tune_zeq, tune_zeq_bnd, r_grav, n_gravr, user_grav, gprofs_target, variable_gp, ord_pot2accel
 
       if (code_progress < PIERNIK_INIT_MPI) call die("[gravity:init_grav] mpi not initialized.")
 
@@ -197,13 +193,11 @@ contains
       nsub          = 10
       tune_zeq      = 1.0
       tune_zeq_bnd  = 1.0
-      h_grav        = 1.e6
       r_grav        = 1.e6
       ptmass2       = 0.0
       ptm2_x        = -1.0
 
       n_gravr       = 0
-      n_gravh       = 0
       ord_pot2accel = O_I2
 
       gprofs_target = 'extgp'
@@ -232,8 +226,7 @@ contains
 
          ibuff(1)   = nsub
          ibuff(2)   = n_gravr
-         ibuff(3)   = n_gravh
-         ibuff(4)   = ord_pot2accel
+         ibuff(3)   = ord_pot2accel
 
          rbuff(1:3) = g_dir
          rbuff(4)   = r_gc
@@ -244,10 +237,9 @@ contains
          rbuff(9)   = tune_zeq
          rbuff(10)  = tune_zeq_bnd
          rbuff(11)  = r_smooth
-         rbuff(12)  = h_grav
-         rbuff(13)  = r_grav
-         rbuff(14)  = ptmass2
-         rbuff(15)  = ptm2_x
+         rbuff(12)  = r_grav
+         rbuff(13)  = ptmass2
+         rbuff(14)  = ptm2_x
 
          lbuff(1)   = user_grav
          lbuff(2)   = variable_gp
@@ -266,8 +258,7 @@ contains
 
          nsub          = int(ibuff(1), kind=4)
          n_gravr       = ibuff(2)
-         n_gravh       = ibuff(3)
-         ord_pot2accel = ibuff(4)
+         ord_pot2accel = ibuff(3)
 
          g_dir         = rbuff(1:3)
          r_gc          = rbuff(4)
@@ -278,10 +269,9 @@ contains
          tune_zeq      = rbuff(9)
          tune_zeq_bnd  = rbuff(10)
          r_smooth      = rbuff(11)
-         h_grav        = rbuff(12)
-         r_grav        = rbuff(13)
-         ptmass2       = rbuff(14)
-         ptm2_x        = rbuff(15)
+         r_grav        = rbuff(12)
+         ptmass2       = rbuff(13)
+         ptm2_x        = rbuff(14)
 
          user_grav     = lbuff(1)
          variable_gp   = lbuff(2)
@@ -376,9 +366,11 @@ contains
 
       endif
 
+      !> \todo Place a call to initialize gp here, not in default_grav_pot_3d
+
    end subroutine g_cg_init
 
-   subroutine manage_grav_pot_3d(first_approach)
+   subroutine manage_grav_pot_3d(first_approach, update_gp)
 
       use dataio_pub, only: die
 #ifdef VERBOSE
@@ -387,16 +379,17 @@ contains
 
       implicit none
 
-      logical, intent(in) :: first_approach
+      logical, intent(in)           :: first_approach
+      logical, optional, intent(in) :: update_gp
 
       if (associated(grav_pot_3d)) then
-         if (first_approach .or. .not.grav_pot_3d_called) then
+         if (first_approach .or. .not. grav_pot_3d_called .or. update_gp) then
             call grav_pot_3d
             grav_pot_3d_called = .true.
          endif
       else
 #ifdef VERBOSE
-         if (first_approach) call warn("[gravity:manage_grav_pot_3d] grav_pot_3d is not associated! Will try to call it once more after problem_initial_conditionslem.")
+         if (first_approach) call warn("[gravity:manage_grav_pot_3d] grav_pot_3d is not associated! Will try to call it once more after problem_initial_conditions.")
 #endif /* VERBOSE */
          if (.not.(first_approach .or. grav_pot_3d_called)) call die("[gravity:manage_grav_pot_3d] grav_pot_3d failed for the 2nd time!")
       endif
@@ -452,6 +445,19 @@ contains
       call sum_potential
 
    end subroutine source_terms_grav
+
+!> \brief update static potential (gp field) in case of grid changes. Assume multigrid has been called
+
+   subroutine update_gp
+
+      implicit none
+
+      if (associated(grav_pot_3d)) then
+         call grav_pot_3d
+         call sum_potential
+      endif
+
+   end subroutine update_gp
 
    subroutine sum_potential
 
@@ -820,65 +826,68 @@ contains
       cgl => leaves%first
       do while (associated(cgl))
          cg => cgl%cg
-         call ax%allocate_axes(cg%lhn)
-         ax%x(:) = cg%x(:)
-         ax%y(:) = cg%y(:)
-         ax%z(:) = cg%z(:)
+         if (.not. cg%is_old) then
 
-         gp_status = ''
+            call ax%allocate_axes(cg%lhn)
+            ax%x(:) = cg%x(:)
+            ax%y(:) = cg%y(:)
+            ax%z(:) = cg%z(:)
 
-         if (dom%geometry_type /= GEO_XYZ) then
+            gp_status = ''
+
+            if (dom%geometry_type /= GEO_XYZ) then
+               select case (external_gp)
+                  case ("null", "grav_null", "GRAV_NULL")
+                     ! No gravity - no problem, selfgravity has to check the geometry during initialization
+                  case ("user", "grav_user", "GRAV_USER")
+                     ! The User knows what he/she is doing ...
+                  case default ! standard cases do not support cylindrical geometry yet
+                     if (master) call warn("[gravity:default_grav_pot_3d] Non-cartesian geometry may or may not be implemented correctly.")
+               end select
+            endif
+
             select case (external_gp)
                case ("null", "grav_null", "GRAV_NULL")
-                  ! No gravity - no problem, selfgravity has to check the geometry during initialization
-               case ("user", "grav_user", "GRAV_USER")
-                  ! The User knows what he/she is doing ...
-               case default ! standard cases do not support cylindrical geometry yet
-                  if (master) call warn("[gravity:default_grav_pot_3d] Non-cartesian geometry may or may not be implemented correctly.")
-            end select
-         endif
-
-         select case (external_gp)
-            case ("null", "grav_null", "GRAV_NULL")
-               call grav_null(cg%gp, ax, cg%lhn)                     ; grav_type => grav_null
-            case ("linear", "grav_lin", "GRAV_LINEAR")
-               call grav_linear(cg%gp, ax, cg%lhn)                   ; grav_type => grav_linear
-            case ("uniform", "grav_unif", "GRAV_UNIFORM")
-               call grav_uniform(cg%gp, ax, cg%lhn)                  ; grav_type => grav_uniform
-            case ("softened ptmass", "ptmass_soft", "GRAV_PTMASS")
-               call grav_ptmass_softened(cg%gp, ax, cg%lhn, .false.) ; grav_type => grav_ptmass_softened
-            case ("stiff ptmass", "ptmass_stiff", "GRAV_PTMASSSTIFF")
-               call grav_ptmass_stiff(cg%gp, ax, cg%lhn)             ; grav_type => grav_ptmass_stiff
-            case ("ptmass", "ptmass_pure", "GRAV_PTMASSPURE")
-               call grav_ptmass_pure(cg%gp, ax, cg%lhn, .false.)     ; grav_type => grav_ptmass_pure
-            case ("flat softened ptmass", "flat_ptmass_soft", "GRAV_PTFLAT")
-               call grav_ptmass_softened(cg%gp, ax, cg%lhn, .true.)  ; grav_type => grav_ptmass_softened
-            case ("flat ptmass", "flat_ptmass")
-               call grav_ptmass_pure(cg%gp, ax, cg%lhn, .true.)      ; grav_type => grav_ptmass_pure
-            case ("roche", "grav_roche", "GRAV_ROCHE")
+                  call grav_null(cg%gp, ax, cg%lhn)                     ; grav_type => grav_null
+               case ("linear", "grav_lin", "GRAV_LINEAR")
+                  call grav_linear(cg%gp, ax, cg%lhn)                   ; grav_type => grav_linear
+               case ("uniform", "grav_unif", "GRAV_UNIFORM")
+                  call grav_uniform(cg%gp, ax, cg%lhn)                  ; grav_type => grav_uniform
+               case ("softened ptmass", "ptmass_soft", "GRAV_PTMASS")
+                  call grav_ptmass_softened(cg%gp, ax, cg%lhn, .false.) ; grav_type => grav_ptmass_softened
+               case ("stiff ptmass", "ptmass_stiff", "GRAV_PTMASSSTIFF")
+                  call grav_ptmass_stiff(cg%gp, ax, cg%lhn)             ; grav_type => grav_ptmass_stiff
+               case ("ptmass", "ptmass_pure", "GRAV_PTMASSPURE")
+                  call grav_ptmass_pure(cg%gp, ax, cg%lhn, .false.)     ; grav_type => grav_ptmass_pure
+               case ("flat softened ptmass", "flat_ptmass_soft", "GRAV_PTFLAT")
+                  call grav_ptmass_softened(cg%gp, ax, cg%lhn, .true.)  ; grav_type => grav_ptmass_softened
+               case ("flat ptmass", "flat_ptmass")
+                  call grav_ptmass_pure(cg%gp, ax, cg%lhn, .true.)      ; grav_type => grav_ptmass_pure
+               case ("roche", "grav_roche", "GRAV_ROCHE")
 #ifndef CORIOLIS
-               call die("[gravity:default_grav_pot_3d] define CORIOLIS in piernik.def for Roche potential")
+                  call die("[gravity:default_grav_pot_3d] define CORIOLIS in piernik.def for Roche potential")
 #endif /* !CORIOLIS */
-               call grav_roche(cg%gp, ax, cg%lhn)                    ; grav_type => grav_roche
-            case ("user", "grav_user", "GRAV_USER")
-               call die("[gravity:default_grav_pot_3d] user 'grav_pot_3d' should be defined in initprob!")
-            case default
-               gp_status = 'undefined'
-         end select
+                  call grav_roche(cg%gp, ax, cg%lhn)                    ; grav_type => grav_roche
+               case ("user", "grav_user", "GRAV_USER")
+                  call die("[gravity:default_grav_pot_3d] user 'grav_pot_3d' should be defined in initprob!")
+               case default
+                  gp_status = 'undefined'
+            end select
 
 !-----------------------
 
-         if (gp_status == 'undefined') then
-            if (associated(grav_accel)) then
-               if (master) call warn("[gravity:default_grav_pot_3d]: using 'grav_accel' defined by user")
-               call grav_accel2pot
-            else
-               call die("[gravity:default_grav_pot_3d]: GRAV is defined, but 'gp' is not initialized")
+            if (gp_status == 'undefined') then
+               if (associated(grav_accel)) then
+                  if (master) call warn("[gravity:default_grav_pot_3d]: using 'grav_accel' defined by user")
+                  call grav_accel2pot
+               else
+                  call die("[gravity:default_grav_pot_3d]: GRAV is defined, but 'gp' is not initialized")
+               endif
             endif
+
+            call ax%deallocate_axes
+
          endif
-
-         call ax%deallocate_axes
-
          cgl => cgl%nxt
       enddo
 

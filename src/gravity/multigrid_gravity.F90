@@ -509,8 +509,7 @@ contains
 
    subroutine mgg_cg_init(cg)
 
-      use cg_level_coarsest,  only: coarsest
-      use cg_level_connected, only: cg_level_connected_T
+      use cg_level_connected, only: cg_level_connected_T, find_level
       use constants,          only: fft_rcr, fft_dst, fft_none, pi, dpi, zero, half, one
       use dataio_pub,         only: die
       use domain,             only: dom
@@ -537,11 +536,7 @@ contains
       cg%mg%r  = cg%mg%r * cg%dvol**2
 
       ! FFT solver storage and data
-      curl => coarsest%level
-      do while (associated(curl))
-         if (cg%level_id == curl%level_id) exit
-         curl => curl%finer
-      enddo
+      curl => find_level(cg%level_id)
 
       if (.not. associated(curl)) call die("[multigrid_gravity:mgg_cg_init] level not found")
       if (cg%level_id /= curl%level_id) call die("[multigrid_gravity:mgg_cg_init] wrong level found")

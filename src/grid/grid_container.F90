@@ -133,7 +133,7 @@ module grid_cont
       integer(kind=4) :: nxb                                     !< number of %grid cells in one block (without boundary cells) in x-direction
       integer(kind=4) :: nyb                                     !< number of %grid cells in one block (without boundary cells) in y-direction
       integer(kind=4) :: nzb                                     !< number of %grid cells in one block (without boundary cells) in z-direction
-      integer :: level_id                                        !< level id (number); do not use it without a good reason, use cg_level_T%lev where possible instead
+      integer(kind=4) :: level_id                                !< level id (number); do not use it without a good reason, use cg_level_T%lev where possible instead
 
       ! shortcuts
       !> \todo Change kind from 4 to 8 to allow really deep refinements (effective resolution > 2**31, perhaps the other requirement will be default integer  kind = 8)
@@ -214,11 +214,6 @@ module grid_cont
       ! handy shortcuts to some entries in w(:)
       real, dimension(:,:,:,:), pointer :: u     => null()       !< Main array of all fluids' components
       real, dimension(:,:,:,:), pointer :: b     => null()       !< Main array of magnetic field's components
-
-      ! FARGO
-      real,    dimension(:, :),  allocatable :: omega_mean       !< mean angular velocity for each fluid
-      real,    dimension(:, :),  allocatable :: omega_cr         !< constant residual angular velocity for each fluid
-      integer, dimension(:, :),  allocatable :: nshift           !< number of cells that need to be shifted due to %omega_mean for each fluid
 
       ! Misc
       type(mg_arr), pointer :: mg                                !< multigrid arrays
@@ -568,10 +563,6 @@ contains
       if (allocated(this%gc_xdim)) deallocate(this%gc_xdim)
       if (allocated(this%gc_ydim)) deallocate(this%gc_ydim)
       if (allocated(this%gc_zdim)) deallocate(this%gc_zdim)
-
-      if (allocated(this%omega_mean)) deallocate(this%omega_mean)
-      if (allocated(this%omega_cr)) deallocate(this%omega_cr)
-      if (allocated(this%nshift)) deallocate(this%nshift)
 
       if (allocated(this%i_bnd)) then
          do d = lbound(this%i_bnd, dim=1), ubound(this%i_bnd, dim=1)

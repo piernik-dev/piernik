@@ -68,7 +68,6 @@ module cg_list_global
       procedure :: check_na          !< Check if all named arrays are consistently registered
       procedure :: delete_all        !< Delete the grid container from all lists
       procedure :: mark_orphans      !< Find grid pieces that do not belong to any list except for all_cg
-      procedure :: clear_ref_flags   !< Clear refinement flags everywhere
    end type cg_list_global_T
 
    type(cg_list_global_T)                :: all_cg   !< all grid containers; \todo restore protected
@@ -414,26 +413,5 @@ contains
       enddo
 
    end subroutine mark_orphans
-
-!> \brief Clear refinement flags everywhere
-
-   subroutine clear_ref_flags(this)
-
-      use cg_list,          only: cg_list_element
-
-      implicit none
-
-      class(cg_list_global_T), intent(in) :: this          !< object invoking type-bound procedure
-
-      type(cg_list_element), pointer :: cgl
-
-      cgl => this%first
-      do while (associated(cgl))
-         cgl%cg%refine_flags%refine   = .false.
-         cgl%cg%refine_flags%derefine = .false.
-         cgl => cgl%nxt
-      enddo
-
-   end subroutine clear_ref_flags
 
 end module cg_list_global

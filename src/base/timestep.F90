@@ -107,7 +107,7 @@ contains
       use constants,            only: one, two, zero, half, pMIN, pMAX
       use dataio,               only: write_crashed
       use dataio_pub,           only: tend, msg, warn
-      use fargo,                only: timestep_fargo
+      use fargo,                only: timestep_fargo, fargo_mean_omega
       use fluidtypes,           only: var_numbers
       use global,               only: t, dt_old, dt_max_grow, dt_initial, dt_min, nstep, use_fargo
       use grid_cont,            only: grid_container
@@ -140,7 +140,9 @@ contains
       dt_old = dt
 
       c_all = zero
-      dt = huge(one)
+      dt = huge(1.)
+
+      if (use_fargo) call fargo_mean_omega
 
       cgl => leaves%first
       do while (associated(cgl))
@@ -311,12 +313,12 @@ contains
 
    subroutine timestep_fluid(cg, fl, dt, c_fl)
 
-      use constants,  only: big, xdim, ydim, zdim, ndims, GEO_RPZ, ndims, small
-      use domain,     only: dom
-      use fluidtypes, only: component_fluid
-      use fargo,      only: fargo_mean_omega
-      use global,     only: cfl, use_fargo
-      use grid_cont,  only: grid_container
+      use cg_level_connected, only: cg_level_connected_T, find_level
+      use constants,          only: xdim, ydim, zdim, ndims, GEO_RPZ, ndims, small
+      use domain,             only: dom
+      use fluidtypes,         only: component_fluid
+      use global,             only: cfl, use_fargo
+      use grid_cont,          only: grid_container
 
       implicit none
 
@@ -330,13 +332,12 @@ contains
       real, dimension(ndims) :: v                         !< maximum velocity of fluid in all directions
       real, dimension(ndims) :: dt_proc                   !< timestep for the current cg
       integer                :: i, j, k, d
+      type(cg_level_connected_T), pointer :: curl
 
-      real, dimension(:, :), allocatable :: omega_mean
+      curl => find_level(cg%level_id)
 
       c_fl = small
-      dt_proc(:) = big
-
-      if (use_fargo) call fargo_mean_omega(omega_mean)
+      dt_proc(:) = huge(1.)
 
       do k = cg%ks, cg%ke
          do j = cg%js, cg%je
@@ -345,7 +346,7 @@ contains
                   if (cg%u(fl%idn,i,j,k) > 0.0) then
                      v(:) = abs(cg%u(fl%imx:fl%imz, i, j, k) / cg%u(fl%idn, i, j, k))
                      if (use_fargo) &
-                        & v(ydim) = abs(cg%u(fl%imy, i, j, k) / cg%u(fl%idn, i, j, k) - omega_mean(i, fl%pos) * cg%x(i))
+                        & v(ydim) = abs(cg%u(fl%imy, i, j, k) / cg%u(fl%idn, i, j, k) - curl%local_omega(i, fl%pos) * cg%x(i))
                   else
                      v(:) = 0.0
                   endif
@@ -361,7 +362,7 @@ contains
                            dt_proc(d) = min(dt_proc(d), cg%dl(d) / c(d))
                         endif
                      else
-                        dt_proc(d) = big
+                        dt_proc(d) = huge(1.)
                      endif
                   enddo
 
@@ -372,7 +373,6 @@ contains
 
       dt = cfl * minval(dt_proc)
       call fl%set_c(c_fl)
-      if (allocated(omega_mean)) deallocate(omega_mean)
 
    end subroutine timestep_fluid
 

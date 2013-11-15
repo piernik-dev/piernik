@@ -46,10 +46,21 @@ contains
       use cg_list_global,        only: all_cg
       use refinement_primitives, only: mark_all_primitives
       use user_hooks,            only: problem_refine_derefine
+#ifdef VERBOSE
+      use constants,             only: pSUM
+      use dataio_pub,            only: msg, printinfo
+      use mpisetup,              only: master, piernik_MPI_Allreduce
+#endif
 
       implicit none
 
       type(cg_level_connected_T), pointer :: curl
+      enum, bind(C)
+         enumerator :: PROBLEM
+         !enumerator :: SHOCKS
+         enumerator :: PRIMITIVES
+      end enum
+      integer, dimension(PROBLEM:PRIMITIVES) :: cnt
 
       curl => finest%level
       do while (associated(curl))
@@ -57,10 +68,32 @@ contains
          curl => curl%coarser
       enddo
       call all_cg%clear_ref_flags
+      cnt = 0
 
       if (associated(problem_refine_derefine)) call problem_refine_derefine ! call user routine first, so it cannot alter flags set by automatic routines
+
+#ifdef VERBOSE
+      cnt(PROBLEM) = all_cg%count_ref_flags()
+      call piernik_MPI_Allreduce(cnt(PROBLEM), pSUM)
+#endif
+
       ! call mark_shocks !> \todo implement automatic refinement criteria
+#ifdef VERBOSE
+!      cnt(SHOCKS) = all_cg%count_ref_flags()
+!      call piernik_MPI_Allreduce(cnt(SHOCKS), pSUM)
+#endif
+
       call mark_all_primitives
+#ifdef VERBOSE
+      cnt(PRIMITIVES) = all_cg%count_ref_flags()
+      call piernik_MPI_Allreduce(cnt(PRIMITIVES), pSUM)
+      if (cnt(ubound(cnt, dim=1)) > 0) then
+         write(msg,'(2(a,i6),a)')"[refinement_update:scan_for_refinements] User-defined routine marked ", cnt(PROBLEM), " block(s) for refinement, primitives marked ",cnt(PRIMITIVES)," block(s)"
+      else
+         write(msg,'(a)')"[refinement_update:scan_for_refinements] No blocks marked for refinement"
+      endif
+      if (master) call printinfo(msg)
+#endif
 
    end subroutine scan_for_refinements
 
@@ -83,15 +116,19 @@ contains
       use cg_level_connected, only: cg_level_connected_T
       use cg_level_finest,    only: finest
       use cg_list_global,     only: all_cg
-      use constants,          only: pLOR, pLAND, pSUM
+      use constants,          only: pLOR, pLAND, pSUM, cs_i2_n
       use dataio_pub,         only: warn, die
       use global,             only: nstep
       use grid_cont,          only: grid_container
       use list_of_cg_lists,   only: all_lists
       use mpisetup,           only: piernik_MPI_Allreduce!, proc
+      use named_array_list,   only: qna
       use refinement,         only: n_updAMR, emergency_fix
+#ifdef GRAV
+      use gravity,            only: update_gp
+#endif /* GRAV */
 #ifdef DEBUG_DUMPS
-      use data_hdf5,    only: write_hdf5
+      use data_hdf5,          only: write_hdf5
 #endif /* DEBUG_DUMPS */
 
       implicit none
@@ -265,6 +302,12 @@ contains
       endif
 
       call all_bnd
+      !> \todo call the update of cs_i2 if and only if something has changed
+      !> \todo add another flag to named_array_list::na_var so the user can also specify fields that need boundary updates on fine/coarse boundaries
+      if (qna%exists(cs_i2_n)) call leaves%leaf_arr3d_boundaries(qna%ind(cs_i2_n))
+#ifdef GRAV
+      call update_gp
+#endif /* GRAV */
 
       call all_cg%enable_prolong
       if (present(act_count)) call piernik_MPI_Allreduce(act_count, pSUM)
