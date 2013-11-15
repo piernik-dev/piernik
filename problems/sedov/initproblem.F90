@@ -52,15 +52,9 @@ contains
 
       use dataio_user, only: user_tsl
       use user_hooks,  only: problem_refine_derefine, problem_domain_update, late_initial_conditions
-#ifdef HDF5
-      use dataio_user, only: user_vars_hdf5
-#endif /* HDF5 */
 
       implicit none
 
-#ifdef HDF5
-      user_vars_hdf5 => sedov_vars_hdf5
-#endif /* HDF5 */
       user_tsl       => sedov_tsl
       problem_refine_derefine => mark_overdensity
 
@@ -274,29 +268,6 @@ contains
       enddo
 
    end subroutine problem_initial_conditions
-!-----------------------------------------------------------------------------
-   subroutine sedov_vars_hdf5(var, tab, ierrh, cg)
-
-      use grid_cont, only: grid_container
-
-      implicit none
-
-      character(len=*),               intent(in)    :: var
-      real(kind=4), dimension(:,:,:), intent(inout) :: tab
-      integer,                        intent(inout) :: ierrh
-      type(grid_container), pointer,  intent(in)    :: cg
-
-      ierrh = 0
-      select case (trim(var))
-         case ("gid")  ! Grid_id
-            tab(:,:,:) = real(cg%grid_id, kind=4)
-         case default
-            ierrh = -1
-      end select
-
-      if (.true. .or. cg%grid_id > 0) return ! suppress compiler warnings
-
-   end subroutine sedov_vars_hdf5
 !-----------------------------------------------------------------------------
    subroutine sedov_tsl(user_vars, tsl_names)
 
