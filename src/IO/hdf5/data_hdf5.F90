@@ -512,10 +512,11 @@ contains
 
       if (ierrh>=0) ok_var = .true.
       if (.not.ok_var) then
-         write(msg,'(3a)') "[data_hdf5:get_data_from_cg]: ", hdf_var," is not defined in datafields_hdf5, neither in user_vars_hdf5."
+         write(msg,'(3a)') "[data_hdf5:get_data_from_cg]: ", hdf_var," is not recognized as a name of defined variables/fields, not defined in datafields_hdf5 and not found in user_vars_hdf5."
          call warn(msg)
          call cancel_hdf_var(hdf_var)
       endif
+
    end subroutine get_data_from_cg
 
    subroutine create_empty_cg_datasets_in_output(cg_g_id, cg_n_b, Z_avail, g)

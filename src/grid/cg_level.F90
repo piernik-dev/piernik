@@ -63,7 +63,7 @@ module cg_level
    !>
    !! \brief A list of all cg of the same resolution.
    !!
-   !! \details For positive refinement levels the list may be composed of several disconnected subsets of cg ("islands: made of one or more cg: cg_list_patch).
+   !! \details For positive refinement levels the list may be composed of several disconnected subsets of cg (islands: made of one or more cg's).
    !! This type is not intended for direct use. It is extended in cg_level_connected into a functional object.
    !!
    !! OPT: Searching through this%pse for neighbours, prolongation/restriction overlaps etc is quite costly - O(this%cnt^2)
@@ -97,23 +97,23 @@ module cg_level
 
     contains
 
-      procedure          :: init_all_new_cg                   !< initialize newest grid container
-      procedure, private :: mpi_bnd_types                     !< create MPI types for boundary exchanges
-      procedure          :: print_segments                    !< print detailed information about current level decomposition
-      procedure, private :: update_decomposition_properties   !< Update some flags in domain module
-      procedure, private :: distribute                        !< Get all decomposed patches and compute which pieces go to which process
-      procedure, private :: simple_ordering                   !< This is just counting, not ordering
-      procedure, private :: mark_new                          !< Detect which grid containers are new
-      procedure, private :: update_pse                        !< Gather updated information about the level and overwrite it to this%pse
-      procedure          :: update_tot_se                     !< count all cg on current level for computing tags in vertical_prep
+      procedure          :: init_all_new_cg                                      !< initialize newest grid container
+      procedure, private :: mpi_bnd_types                                        !< create MPI types for boundary exchanges
+      procedure          :: print_segments                                       !< print detailed information about current level decomposition
+      procedure, private :: update_decomposition_properties                      !< Update some flags in domain module
+      procedure, private :: distribute                                           !< Get all decomposed patches and compute which pieces go to which process
+      procedure, private :: simple_ordering                                      !< This is just counting, not ordering
+      procedure, private :: mark_new                                             !< Detect which grid containers are new
+      procedure, private :: update_pse                                           !< Gather updated information about the level and overwrite it to this%pse
+      procedure          :: update_tot_se                                        !< count all cg on current level for computing tags in vertical_prep
       generic,   public  :: add_patch => add_patch_fulllevel, add_patch_detailed !< Add a new piece of grid to the current level and decompose it
-      procedure, private :: add_patch_fulllevel               !< Add a whole level to the list of patches
-      procedure, private :: add_patch_detailed                !< Add a new piece of grid to the list of patches
-      procedure, private :: add_patch_one_piece               !< Add a patch with only one grid piece
-      procedure, private :: expand_list                       !< Expand the patch list by one
-      procedure, private :: balance_new                       !< Routine for moving proposed grids between processes
-      procedure          :: balance_old                       !< Routine for measuring disorder level in distribution of grids across processes
-      procedure, private :: reshuffle                         !< Routine for moving existing grids between processes
+      procedure, private :: add_patch_fulllevel                                  !< Add a whole level to the list of patches
+      procedure, private :: add_patch_detailed                                   !< Add a new piece of grid to the list of patches
+      procedure, private :: add_patch_one_piece                                  !< Add a patch with only one grid piece
+      procedure, private :: expand_list                                          !< Expand the patch list by one
+      procedure, private :: balance_new                                          !< Routine for moving proposed grids between processes
+      procedure          :: balance_old                                          !< Routine for measuring disorder level in distribution of grids across processes
+      procedure, private :: reshuffle                                            !< Routine for moving existing grids between processes
    end type cg_level_T
 
 contains
@@ -202,7 +202,11 @@ contains
 
    end subroutine print_segments
 
-!> \brief Initialize all grid containers on a new grid level
+!>
+!! \brief Initialize all grid containers on a new grid level
+!!
+!! \todo automagically rebalance existing grids unless it is explicitly forbidden
+!<
 
    subroutine init_all_new_cg(this)
 
@@ -218,12 +222,14 @@ contains
       integer                          :: i, ep
       type(grid_container), pointer    :: cg
 
+      ! First: do the balancing of new grids, update this%pse database
       call this%balance_new
       call this%update_pse  ! required if anything was derefined
       call this%distribute
 !      call this%update_pse  ! communicate everything that was added !> \todo check if it is necessary to have it here
       call this%mark_new
 
+      ! Second: create new grids
       do i = lbound(this%pse(proc)%c(:), dim=1), ubound(this%pse(proc)%c(:), dim=1)
          if (this%pse(proc)%c(i)%is_new) then
             this%pse(proc)%c(i)%is_new = .false.
@@ -237,6 +243,8 @@ contains
          endif
       enddo
 
+      ! Third: update all information on refinement structure and intra-level communication.
+      ! Remember that the communication between levels has to be updated as well, but we cannot do this here due to cyclic dependencies
       call this%update_pse    ! communicate everything that was added above
       call this%mpi_bnd_types ! require access to whole this%pse(:)%c(:)%se(:,:)
       call this%update_req    ! Perhaps this%mpi_bnd_types added some new entries
@@ -356,7 +364,9 @@ contains
 !! \details This routine starts with two lists:
 !! * A list of blocks that survived derefinement attempts
 !! * A list of blocks due to requested refinement
-!! It has to decide if and how to do migration of grid pieces and to communicate this update global database of grid pieces.
+!! It has to decide if and how to do migration of grid pieces and to communicate this update to global database of grid pieces.
+!!
+!! \deprecated: I have an impression that the most challenging work was moved to balance_new routine
 !!
 !! There are several strategies than can be implemented:
 !! * Local refinements go to local process. It is very simple, but for most simulations will build up load imbalance. Suitable for tests and global refinement.
@@ -895,12 +905,18 @@ contains
 !! \details Starts with list of already allocated blocks and list of patches which are not yet turned into blocks on a given level
 !! Move the patches between processes to maintain best possible work balance.
 !!
+!! First, all planned patches are gathered in an array on the master process, and deallocated locally.
+!! Then, the patches are sorted according to Space-Filling Curve index and distributed among the prosesses.
+!! The processes with least workload will get more patches.
+!! After the distribution most processes should have roughly equal number of patches (+/- 1) with the possible exception
+!! of few processes that were initially heavily loaded.
+!!
 !! Note that this routine is not intended for moving existing blocks between processes.
 !! A separate routine, called from cg_leaves::update will do that task when allowed and found worth the effort.
 !!
 !! Current implementation does all the work on master process which might be quite antiparallel.
 !!
-!! This is truly parallel-sorting problem. Note that at we may ensure that the set of grid pieces has the following property:
+!! This is truly parallel-sorting problem. Note that the set of grid pieces has the following property:
 !! * there is sorted or nearly-sorted list of existing grid pieces on each process, that means for most pieces on process p maximum id on process p-1 is less than own id
 !!   and for process p+1 similarly
 !! * there is chaotic (in practice not so much) set of grid pieces to be created
@@ -939,6 +955,7 @@ contains
 
       call inflate_req(nreq)
 
+      ! count how many patches were requested on each process
       s = 0
       if (allocated(this%patches)) then
          do p = lbound(this%patches(:), dim=1, kind=4), ubound(this%patches(:), dim=1, kind=4)
@@ -948,8 +965,9 @@ contains
       ls = int(s, kind=4)
       call piernik_MPI_Allreduce(s, pSUM) !> \warning overkill: MPI_reduce is enough here
 
-      if (s==0) return
+      if (s==0) return ! nihil novi
 
+      ! copy the patches data to a temporary array to be sent to the master
       allocate(gptemp(I_OFF:I_END,ls))
       if (master) then
          call gp%init(s)
@@ -967,7 +985,10 @@ contains
          enddo
       endif
       if (allocated(this%patches)) deallocate(this%patches)
+
       if (master) then !> \warning Antiparallel
+
+         ! put all the patches (own and obtained from slaves) on a list gp%list
          do s = 1, ls
             call gp%list(s)%set_gp(gptemp(I_OFF:I_OFF+ndims-1, s), int(gptemp(I_N_B:I_N_B+ndims-1, s), kind=4), INVALID, FIRST)
          enddo
@@ -1027,7 +1048,7 @@ contains
             call this%add_patch_one_piece(int(gp%list(p)%n_b, kind=8), gp%list(p)%off)
          enddo
 
-         ! distribute proposed grids
+         ! distribute proposed grids according to limits computed above
          do p = FIRST + I_ONE, LAST
             ls = int(from(p+1) - from(p), kind=4)
             ! call MPI_Isend(ls, I_ONE, MPI_INTEGER, p, tag_lsR, comm, req(p), mpi_err) !can't reuse ls before MPI_Waitall
@@ -1046,9 +1067,13 @@ contains
          enddo
          ! call MPI_Waitall(2*LAST, req(:2*LAST), status(:,:2*LAST), mpi_err)
       else
-         call MPI_Wait(req(nreq), status(:, 1), mpi_err)
+
+         ! send patches to master
+         call MPI_Wait(req(nreq), status(:, nreq), mpi_err)
          if (ls > 0) call MPI_Send(gptemp, size(gptemp), MPI_INTEGER8, FIRST, tag_gpt, comm, mpi_err)
          deallocate(gptemp)
+
+         ! receive new, perhaps more balanced patches
          call MPI_Recv(ls, I_ONE, MPI_INTEGER, FIRST, tag_lsR, comm, MPI_STATUS_IGNORE, mpi_err)
          if (ls>0) then
             allocate(gptemp(I_OFF:I_END,ls))
@@ -1076,7 +1101,8 @@ contains
 !#define DEBUG
    subroutine balance_old(this)
 
-      use cg_list,         only: cg_list_element, expanded_domain
+      use cg_list,         only: cg_list_element
+      use cg_list_dataop,  only: expanded_domain
       use constants,       only: ndims, LO, HI, I_ONE, pSUM
       use dataio_pub,      only: warn, msg, printinfo
       use mpisetup,        only: master, FIRST, LAST, nproc, piernik_MPI_Bcast, piernik_MPI_Allreduce

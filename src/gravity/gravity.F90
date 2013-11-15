@@ -403,7 +403,7 @@ contains
 
 #ifdef SELF_GRAV
       use cg_leaves,         only: leaves
-      use cg_list,           only: cg_list_element, expanded_domain
+      use cg_list_dataop,    only: expanded_domain
       use constants,         only: sgp_n, sgpm_n
       use fluidindex,        only: iarr_all_sg
       use named_array_list,  only: qna
@@ -415,30 +415,29 @@ contains
       implicit none
 
 #ifdef SELF_GRAV
-      type(cg_list_element), pointer :: cgl
       logical, save :: frun = .true.
 
       call leaves%q_copy(qna%ind(sgp_n), qna%ind(sgpm_n))
 
 #ifdef MULTIGRID
       call multigrid_solve_grav(iarr_all_sg)
+#else /* !MULTIGRID */
+#error [gravity:source_terms_grav] SELF_GRAV without MULTIGRID gives uninitialized gravitational potential
 #endif /* MULTIGRID */
 
       !> \todo Perhaps it should be called after call sum_potential but that may depend on grav_pot_3d and its potential dependency on selfgravity results
       call leaves%leaf_arr3d_boundaries(qna%ind(sgp_n)) !, nocorners=.true.)
       ! No solvers should requires corner values for the potential. Unfortunately some problems may relay on it indirectly (e.g. streaming_instability).
-      !> \todo OPT: identify what relies on corner values of the popential and change it to work without corners. Then enable nocorners in the above call for some speedup.
+      !> \todo OPT: identify what relies on corner values of the potential and change it to work without corners. Then enable nocorners in the above call for some speedup.
 
       if (frun) then
-         call leaves%q_copy(qna%ind(sgp_n), qna%ind(sgpm_n))
+         call leaves%q_copy(qna%ind(sgp_n), qna%ind(sgpm_n)) ! add fake history for selfgravitating potential: pretend that nothing was changing there until domain was created
+         !> \deprecated: restarted rund wil be slightly affected as the previous selfgravitating potential was forgotten
+         !> \todo find a way to properly restore previous potential from scratch
          frun = .false.
       endif
 
-      cgl => expanded_domain%first
-      do while (associated(cgl))
-         cgl%cg%q(qna%ind(sgpm_n))%arr = cgl%cg%q(qna%ind(sgp_n))%arr
-         cgl => cgl%nxt
-      enddo
+      call expanded_domain%q_copy(qna%ind(sgp_n), qna%ind(sgpm_n)) ! add fake history for selfgravitating potential: pretend that nothing was changing there until domain expanded
 #endif /* SELF_GRAV */
       if (variable_gp) call grav_pot_3d
 

@@ -140,6 +140,7 @@ contains
          call init_multigrid
 #endif /* MULTIGRID */
          call all_fluid_boundaries
+         ! the cg%gp and cg%cs_iso2 are updated in refinement_update::update_refinement which should be called right after domain expansion to fix refinement structure
       endif
 
    end subroutine expand
@@ -150,7 +151,8 @@ contains
 
       use cg_leaves,          only: leaves
       use cg_level_connected, only: cg_level_connected_T
-      use cg_list,            only: cg_list_element, expanded_domain
+      use cg_list,            only: cg_list_element
+      use cg_list_dataop,     only: expanded_domain
       use constants,          only: xdim, zdim, LO, HI, BND_MPI, BND_FC, refinement_factor
       use dataio_pub,         only: die
       use domain,             only: dom, AMR_bsize

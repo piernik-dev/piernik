@@ -49,11 +49,10 @@ contains
 
    subroutine problem_pointers
 
-      use dataio_user, only: user_vars_hdf5, user_reg_var_restart
+      use dataio_user, only: user_reg_var_restart
 
       implicit none
 
-      user_vars_hdf5       => fld_var
       user_reg_var_restart => fld_reg
 
    end subroutine problem_pointers
@@ -215,28 +214,6 @@ contains
       enddo
 
    end subroutine clear_fld
-
-   subroutine fld_var(var, tab, ierrh, cg)
-
-      use grid_cont,   only: grid_container
-      use named_array_list, only: qna
-
-      implicit none
-
-      character(len=*), intent(in)                    :: var
-      real(kind=4), dimension(:,:,:), intent(inout)   :: tab
-      integer, intent(inout)                          :: ierrh
-      type(grid_container), pointer, intent(in)       :: cg
-
-      ierrh = 0
-      select case (trim(var))
-         case ("fld")
-            tab(:,:,:) = real(cg%q(qna%ind(fld_n))%span(cg%ijkse), 4)
-         case default
-            ierrh = -1
-      end select
-
-   end subroutine fld_var
 
    subroutine fld_reg
 

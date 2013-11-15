@@ -139,7 +139,7 @@ contains
 !<
    subroutine make_3sweeps(forward)
 
-      use cg_list,             only: expanded_domain
+      use cg_list_dataop,      only: expanded_domain
       use constants,           only: xdim, ydim, zdim, I_ONE
       use global,              only: skip_sweep, use_fargo
       use fargo,               only: make_fargosweep

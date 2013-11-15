@@ -428,7 +428,8 @@ contains
 
    subroutine cr_late_init
 
-      use cg_list,        only: cg_list_element, expanded_domain
+      use cg_list,        only: cg_list_element
+      use cg_list_dataop, only: expanded_domain
       use constants,      only: xdim, ydim, zdim
       use dataio_pub,     only: die
       use fluidindex,     only: flind

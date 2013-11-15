@@ -51,11 +51,7 @@ contains
 !-----------------------------------------------------------------------------
    subroutine problem_pointers
 
-      use dataio_user, only: user_vars_hdf5
-
       implicit none
-
-      user_vars_hdf5             => dvel_var_hdf5
 
    end subroutine problem_pointers
 !-----------------------------------------------------------------------------
@@ -256,34 +252,5 @@ contains
 #endif /* COSM_RAYS */
 
    end subroutine problem_initial_conditions
-!-----------------------------------------------------------------------------
-!
-! This routine provides the "dvel"  variable values to be dumped to the .h5 file
-! "dvel" is the velocity divergence
-!
-   subroutine dvel_var_hdf5(var, tab, ierrh, cg)
 
-      use constants,   only: dsetnamelen
-      use crhelpers,   only: divv_n
-      use grid_cont,   only: grid_container
-      use named_array_list, only: qna
-
-      implicit none
-
-      character(len=*), intent(in)                    :: var
-      real(kind=4), dimension(:,:,:), intent(inout)   :: tab
-      integer, intent(inout)                          :: ierrh
-      type(grid_container), pointer, intent(in)       :: cg
-      character(len=dsetnamelen), parameter :: dvel_n = "dvel"
-
-      ierrh = 0
-      select case (trim(var))
-         case (dvel_n, divv_n)
-            tab(:,:,:) = real(cg%q(qna%ind(divv_n))%span(cg%ijkse), 4)
-         case default
-            ierrh = -1
-      end select
-
-   end subroutine dvel_var_hdf5
-!-----------------------------------------------------------------------------
 end module initproblem

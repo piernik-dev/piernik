@@ -36,7 +36,7 @@ module cg_list_dataop
    implicit none
 
    private
-   public :: cg_list_dataop_T, ind_val, dirty_label
+   public :: cg_list_dataop_T, ind_val, dirty_label, expanded_domain
 
    !> \brief Arbitrary list of grid containers
    type, extends(cg_list_T) :: cg_list_dataop_T
@@ -80,6 +80,8 @@ module cg_list_dataop
 
    integer, parameter    :: dl_len = 64 !< length of label buffer
    character(len=dl_len) :: dirty_label !< buffer for label for check_dirty subroutine
+
+   type(cg_list_dataop_T):: expanded_domain !< grid pieces that were created in the area, where computational domain was recently expanded
 
 contains
 

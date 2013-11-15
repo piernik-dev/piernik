@@ -99,10 +99,6 @@ contains
 
 !>
 !! \brief Update the refinement topology
-!!
-!! \deprecated Now it works only on whole domains
-!!
-!! \deprecated lot of duplicated code with grid::dom2cg and grid::init_grid
 !<
 
 !#define DEBUG_DUMPS
@@ -347,7 +343,7 @@ contains
 
       if (.not. associated(curl%finer)) call finest%add_finer
 
-      if (.not. all(cgl%cg%leafmap)) then ! decompose the parially refined grid container into boxes that contain all leafcells
+      if (.not. all(cgl%cg%leafmap)) then ! decompose the partially refined grid container into boxes that contain all leafcells
          box_8 = int(cgl%cg%ijkse, kind=8)
          call lmap%init(box_8)
          lmap%map(cgl%cg%is:cgl%cg%ie, cgl%cg%js:cgl%cg%je, cgl%cg%ks:cgl%cg%ke) = cgl%cg%leafmap(:,:,:)
@@ -361,63 +357,6 @@ contains
       endif
 
    end subroutine refine_one_grid
-
-!> \brief Add a new level - refine whole domain
-
-   subroutine refine_domain
-
-#if defined(__INTEL_COMPILER)
-   !! \deprecated remove this clause as soon as Intel Compiler gets required
-   !! features and/or bug fixes
-      use cg_level_connected, only: cg_level_connected_T  ! QA_WARN INTEL
-#endif /* __INTEL_COMPILER */
-      use cg_level_finest, only: finest
-      use dataio_pub,      only: msg, printinfo
-      use mpisetup,        only: master
-
-      implicit none
-
-      if (master) then
-         write(msg, '(a,i3)')"[refinement_update:refine_domain] refining level ",finest%level%level_id
-         call printinfo(msg)
-      endif
-
-      !> \todo Check if finest is a complete level first
-
-      call finest%add_finer
-      call finest%level%add_patch
-      call finest%level%init_all_new_cg
-      call finest%level%coarser%prolong
-
-   end subroutine refine_domain
-
-!> \brief Mark finest level for derefinement
-
-   subroutine derefine_domain
-
-      use cg_level_finest, only: finest
-      use cg_list,         only: cg_list_element
-      use dataio_pub,      only: msg, printinfo
-      use mpisetup,        only: master
-
-      implicit none
-
-      type(cg_list_element), pointer :: cgl
-
-      if (master) then
-         write(msg, '(a,i3)')"[refinement_update:derefine_domain] derefining level ",finest%level%level_id
-         call printinfo(msg)
-      endif
-      call finest%level%restrict
-
-      cgl => finest%level%first
-      do while (associated(cgl))
-         cgl%cg%refine_flags%refine   = .false.
-         cgl%cg%refine_flags%derefine = .true.
-         cgl => cgl%nxt
-      enddo
-
-   end subroutine derefine_domain
 
 !>
 !! \brief Apply some rules to fix refinement defects
@@ -483,7 +422,7 @@ contains
 
       range = 1
       ! range = min((dom%nb+I_ONE)/I_TWO + all_cg%ord_prolong_nb, dom%nb)
-      ! (dom%nb+1)/2 + all_cg%ord_prolong_nb is a range of influence of coarse to fine levels - it can be suitable if we were looking fro too low levels in the neighbourhood
+      ! (dom%nb+1)/2 + all_cg%ord_prolong_nb is a range of influence of coarse to fine levels - it can be suitable if we were looking for too low levels in the neighbourhood
       ! ATM we're looking for high levels, so range = 1 seems to be appropriate
 
       ! detect high refinements near leafmap and alter refinement flags appropriately
@@ -588,3 +527,60 @@ contains
    end subroutine fix_refinement
 
 end module refinement_update
+
+!!$!> \brief Add a new level - refine whole domain
+!!$
+!!$   subroutine refine_domain
+!!$
+!!$#if defined(__INTEL_COMPILER)
+!!$   !! \deprecated remove this clause as soon as Intel Compiler gets required
+!!$   !! features and/or bug fixes
+!!$      use cg_level_connected, only: cg_level_connected_T  ! QA_WARN INTEL
+!!$#endif /* __INTEL_COMPILER */
+!!$      use cg_level_finest, only: finest
+!!$      use dataio_pub,      only: msg, printinfo
+!!$      use mpisetup,        only: master
+!!$
+!!$      implicit none
+!!$
+!!$      if (master) then
+!!$         write(msg, '(a,i3)')"[refinement_update:refine_domain] refining level ",finest%level%level_id
+!!$         call printinfo(msg)
+!!$      endif
+!!$
+!!$      !> \todo Check if finest is a complete level first
+!!$
+!!$      call finest%add_finer
+!!$      call finest%level%add_patch
+!!$      call finest%level%init_all_new_cg
+!!$      call finest%level%coarser%prolong
+!!$
+!!$   end subroutine refine_domain
+!!$
+!!$!> \brief Mark finest level for derefinement
+!!$
+!!$   subroutine derefine_domain
+!!$
+!!$      use cg_level_finest, only: finest
+!!$      use cg_list,         only: cg_list_element
+!!$      use dataio_pub,      only: msg, printinfo
+!!$      use mpisetup,        only: master
+!!$
+!!$      implicit none
+!!$
+!!$      type(cg_list_element), pointer :: cgl
+!!$
+!!$      if (master) then
+!!$         write(msg, '(a,i3)')"[refinement_update:derefine_domain] derefining level ",finest%level%level_id
+!!$         call printinfo(msg)
+!!$      endif
+!!$      call finest%level%restrict
+!!$
+!!$      cgl => finest%level%first
+!!$      do while (associated(cgl))
+!!$         cgl%cg%refine_flags%refine   = .false.
+!!$         cgl%cg%refine_flags%derefine = .true.
+!!$         cgl => cgl%nxt
+!!$      enddo
+!!$
+!!$   end subroutine derefine_domain

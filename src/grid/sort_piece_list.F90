@@ -89,7 +89,7 @@ contains
 
    end subroutine set_gp
 
-   !> \brief deallocate everything locally allocated
+!> \brief deallocate everything locally allocated
 
    subroutine cleanup_piece_list
 

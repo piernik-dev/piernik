@@ -31,6 +31,8 @@
 !>
 !! \brief Functions that convert coordinates into single integer (position on a Z/Morton space-filling curve)
 !!
+!! \todo implement inverse functions: convert id to offsets
+!!
 !! \todo implement also Hilbert ordering
 !<
 
@@ -86,7 +88,16 @@ contains
 
    end function Morton_order
 
-!> \brief Convert contigous vector of coordinates into its Morton identifier
+!>
+!! \brief Convert contigous vector of coordinates into its Morton identifier
+!!
+!! \details 64-bit integers are in use so offsets up to 2**21 in 3D and up to 2**31 in 2D should be supported.
+!! For a 64**3 domain that corresponds to a 15 levels of refinement.
+!! If more levels are required one can:
+!! * use AMR_bsize divisible by some 2*k and ignore lowest k bits of offset. This way additional k levels of refinement can be supported.
+!! * use 128-bit integers (if they're available) to increase allowed range by 21 levels of refinement
+!! * emulate 128-bit integer in two 64-bit integers (note that we don't need arithmetic here, just bitwise operations and comparision)
+!<
 
    function Morton_id(off) result(id)
 
@@ -100,6 +111,8 @@ contains
       integer(kind=8), allocatable, dimension(:) :: o
       integer :: i
       integer(kind=8) :: mask
+
+      if (any(off < 0)) call die("[ordering:Morton_id] only non-negative offsets are allowed")
 
       allocate(o(size(off)))
       o = off
