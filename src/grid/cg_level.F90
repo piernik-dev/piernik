@@ -112,6 +112,8 @@ module cg_level
       procedure, private :: reshuffle                                            !< Routine for moving existing grids between processes
       procedure, private :: update_everything                                    !< Update all information on refinement structure and intra-level communication
       procedure, private :: update_SFC_id_range                                  !< Update SFC_id_range array
+      procedure, private :: check_SFC                                            !< Check if level is decomposed into processes strictly along currently used space-filling curve
+
    end type cg_level_T
 
 contains
@@ -251,7 +253,6 @@ contains
 
       class(cg_level_T), intent(inout) :: this   !< object invoking type bound procedure
 
-      !call this%update_SFC_id_range
       call this%update_decomposition_properties
       call this%update_pse    ! communicate everything that was added before
       call this%mpi_bnd_types ! require access to whole this%pse(:)%c(:)%se(:,:)
@@ -890,12 +891,15 @@ contains
 
       logical :: rebalance
 
-      call die("[cg_level:balance_strict_SFC] Not implemented yet")
-
       rebalance = .true.
       if (present(prevent_rebalancing)) rebalance = .not. prevent_rebalancing
 
-      ! check sfc
+      if (.not. this%check_SFC()) then
+         if (.not. rebalance) call die("[cg_level:balance_strict_SFC] Cannot rebalence messy grid distribution.")
+         ! call reshuffle
+         call die("[cg_level:balance_strict_SFC] reshuffling not implemented.")
+      endif
+
       ! gather patches id
       ! if (rebalance) gather existing grids id
       ! sort id
@@ -903,7 +907,38 @@ contains
       ! if (rebalance) call reshuffle(distribution)
       ! send to slaves
 
+      if (.not. this%check_SFC()) call die("[cg_level:balance_strict_SFC] messed up grid distribution.")
+
+      call die("[cg_level:balance_strict_SFC] Not implemented yet")
+
    end subroutine balance_strict_SFC
+
+!> \brief Check if level is decomposed into processes strictly along currently used space-filling curve
+
+   logical function check_SFC(this)
+
+      use constants, only: LO, HI
+      use mpisetup,  only: FIRST, LAST
+
+      implicit none
+
+      class(cg_level_T), intent(inout) :: this
+
+      integer :: i
+      integer(kind=8) :: last_id
+
+      call this%update_SFC_id_range
+
+      last_id = -huge(1)
+      check_SFC = .true.
+      do i = FIRST, LAST
+         if (this%SFC_id_range(i, LO) < huge(1)) then ! skip processes that have no grids
+            check_SFC = check_SFC .and. (last_id < this%SFC_id_range(i, LO))
+            last_id = this%SFC_id_range(i, HI)
+         endif
+      enddo
+
+   end function check_SFC
 
 !>
 !! \brief Routine for moving proposed grids between processes: add load to lightly-loaded processes
