@@ -884,9 +884,9 @@ contains
 
    subroutine balance_strict_SFC(this, prevent_rebalancing)
 
-      use constants,       only: pSUM
-      use dataio_pub,      only: die
-      use mpisetup,        only: piernik_MPI_Allreduce, master, FIRST, LAST
+      use constants,       only: pSUM, LO, HI
+      use dataio_pub,      only: warn
+      use mpisetup,        only: piernik_MPI_Allreduce, master, FIRST, LAST, nproc
       use sort_piece_list, only: grid_piece_list
 
       implicit none
@@ -896,17 +896,19 @@ contains
 
       logical :: rebalance
       type(grid_piece_list) :: gp
-      integer(kind=4) :: ls, s
+      integer :: i
+      integer(kind=4) :: ls, s, p
       integer(kind=4), dimension(FIRST:LAST+1) :: from
 
       rebalance = .true.
       if (present(prevent_rebalancing)) rebalance = .not. prevent_rebalancing
 
-!!$      if (.not. this%check_SFC()) then
+      if (.not. this%check_SFC()) then
 !!$         if (.not. rebalance) call die("[cg_level:balance_strict_SFC] Cannot rebalence messy grid distribution.")
 !!$         ! call reshuffle
 !!$         call die("[cg_level:balance_strict_SFC] reshuffling not implemented.")
-!!$      endif
+         if (master) call warn("[cg_level:balance_strict_SFC] non-SFC ordering!") ! May happen after resizing domain on the left sides
+      endif
 
       ! gather patches id
       s = int(this%count_patches(), kind=4)
@@ -926,17 +928,48 @@ contains
          call gp%sort
 
          ! calculate patch distribution
-         from(FIRST) = lbound(gp%list, dim=1, kind=4)
-         from(FIRST+1:LAST+1) = ubound(gp%list, dim=1, kind=4)+1
-      end if
+         if (all(this%SFC_id_range(:, HI) < this%SFC_id_range(:, LO))) then !special case: empty level, huge values in this%SFC_id_range(:,:)
+            do p = FIRST, LAST
+               from(p) = int(lbound(gp%list, dim=1) + (p*size(gp%list))/nproc, kind=4)
+            enddo
+            from(LAST+1) = ubound(gp%list, dim=1, kind=4)+1
+!!$            do p = FIRST, LAST
+!!$               gp%list(from(p):from(p+1)-1)%dest_proc = p
+!!$            enddo
+         else
+            ! just keep SFC ordering, no attempts to balance things here
+            !> \todo OPT try to do as much balance as possible
+            p = FIRST
+            do i = lbound(gp%list, dim=1), ubound(gp%list, dim=1)
+               do while (this%SFC_id_range(p, HI) < this%SFC_id_range(p, LO)) ! skip processes with no grids for the sake of simplicity
+                  p = p + 1
+                  if (p > LAST) exit
+               enddo
+               if (p > LAST) p = LAST
+               do while (gp%list(i)%id > this%SFC_id_range(p, HI) .and. p < LAST)
+                  p = p + 1
+                  if (p > LAST) exit
+               enddo
+               gp%list(i)%dest_proc = p
+            enddo
+
+            p = FIRST
+            from(FIRST)  = lbound(gp%list, dim=1, kind=4)
+            from(FIRST+1:LAST+1) = ubound(gp%list, dim=1, kind=4)+1
+            do i = lbound(gp%list, dim=1), ubound(gp%list, dim=1)
+               if (gp%list(i)%dest_proc /= p) then
+                  from(p+1:gp%list(i)%dest_proc) = i
+                  p = gp%list(i)%dest_proc
+               endif
+            enddo
+         endif
+      endif
       ! if (rebalance) call reshuffle(distribution)
 
-     ! send to slaves
+      ! send to slaves
       call this%distribute_patches(gp, from)
 
       if (master) call gp%cleanup
-
-!!$      if (.not. this%check_SFC()) call die("[cg_level:balance_strict_SFC] messed up grid distribution.")
 
    end subroutine balance_strict_SFC
 
@@ -1149,7 +1182,11 @@ contains
 
    end subroutine patches_to_list
 
-!> \brief send balanced set patches from master to slaves and re-register them
+!>
+!! \brief Send balanced set patches from master to slaves and re-register them
+!!
+!! \todo Try to utilize gp%list(:)%dest_proc and not rely on from(:)
+!<
 
    subroutine distribute_patches(this, gp, from)
 
@@ -1308,7 +1345,7 @@ contains
          call gp%set_id(this%off)
          call gp%sort
          do p = FIRST, LAST
-            gp%list(p*size(gp%list)/nproc+1:(p+1)*size(gp%list)/nproc)%dest_proc = p
+            gp%list(p*size(gp%list)/nproc+1 : ((p+1)*size(gp%list))/nproc)%dest_proc = p
          enddo
          s = 0
          if (size(gp%list) > 0) then
