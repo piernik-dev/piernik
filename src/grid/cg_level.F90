@@ -884,7 +884,10 @@ contains
 
    subroutine balance_strict_SFC(this, prevent_rebalancing)
 
-      use dataio_pub, only: die
+      use constants,       only: pSUM
+      use dataio_pub,      only: die
+      use mpisetup,        only: piernik_MPI_Allreduce, master, FIRST, LAST
+      use sort_piece_list, only: grid_piece_list
 
       implicit none
 
@@ -892,42 +895,48 @@ contains
       logical, optional, intent(in)    :: prevent_rebalancing !< if present and .true. then do not allow rebalancing during addition of new grids
 
       logical :: rebalance
+      type(grid_piece_list) :: gp
+      integer(kind=4) :: ls, s
+      integer(kind=4), dimension(FIRST:LAST+1) :: from
 
       rebalance = .true.
       if (present(prevent_rebalancing)) rebalance = .not. prevent_rebalancing
 
-      if (.not. this%check_SFC()) then
-         if (.not. rebalance) call die("[cg_level:balance_strict_SFC] Cannot rebalence messy grid distribution.")
-         ! call reshuffle
-         call die("[cg_level:balance_strict_SFC] reshuffling not implemented.")
-      endif
+!!$      if (.not. this%check_SFC()) then
+!!$         if (.not. rebalance) call die("[cg_level:balance_strict_SFC] Cannot rebalence messy grid distribution.")
+!!$         ! call reshuffle
+!!$         call die("[cg_level:balance_strict_SFC] reshuffling not implemented.")
+!!$      endif
 
       ! gather patches id
-!!$      s = int(this%count_patches(), kind=4)
-!!$      ls = int(s, kind=4)
-!!$      call piernik_MPI_Allreduce(s, pSUM) !> \warning overkill: MPI_reduce is enough here
-!!$      if (s==0) return ! nihil novi
-!!$
-!!$      if (master) call gp%init(s)
-!!$      call this%patches_to_list(gp, ls)
+      s = int(this%count_patches(), kind=4)
+      ls = int(s, kind=4)
+      call piernik_MPI_Allreduce(s, pSUM) !> \warning overkill: MPI_reduce is enough here
+      if (s==0) return ! nihil novi
+
+      if (master) call gp%init(s)
+      call this%patches_to_list(gp, ls)
 
       ! if (rebalance) gather existing grids id
 
       ! sort id
-!!$      if (master) then !> \warning Antiparallel
-!!$         ! apply unique numbers to the grids and sort the list
-!!$         call gp%set_id(this%off)
-!!$         call gp%sort
+      if (master) then !> \warning Antiparallel
+         ! apply unique numbers to the grids and sort the list
+         call gp%set_id(this%off)
+         call gp%sort
 
-      ! calculate patch distribution
+         ! calculate patch distribution
+         from(FIRST) = lbound(gp%list, dim=1, kind=4)
+         from(FIRST+1:LAST+1) = ubound(gp%list, dim=1, kind=4)+1
+      end if
       ! if (rebalance) call reshuffle(distribution)
 
      ! send to slaves
-!!$      call this%distribute_patches(gp, from)
+      call this%distribute_patches(gp, from)
 
-      if (.not. this%check_SFC()) call die("[cg_level:balance_strict_SFC] messed up grid distribution.")
+      if (master) call gp%cleanup
 
-      call die("[cg_level:balance_strict_SFC] Not implemented yet")
+!!$      if (.not. this%check_SFC()) call die("[cg_level:balance_strict_SFC] messed up grid distribution.")
 
    end subroutine balance_strict_SFC
 
