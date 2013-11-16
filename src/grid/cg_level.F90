@@ -884,7 +884,7 @@ contains
 
    subroutine balance_strict_SFC(this, prevent_rebalancing)
 
-      use constants,       only: pSUM, LO, HI
+      use constants,       only: pSUM, LO, HI, I_ONE
       use dataio_pub,      only: warn
       use mpisetup,        only: piernik_MPI_Allreduce, master, FIRST, LAST, nproc
       use sort_piece_list, only: grid_piece_list
@@ -896,8 +896,7 @@ contains
 
       logical :: rebalance
       type(grid_piece_list) :: gp
-      integer :: i
-      integer(kind=4) :: ls, s, p
+      integer(kind=4) :: ls, s, i, p
       integer(kind=4), dimension(FIRST:LAST+1) :: from
 
       rebalance = .true.
@@ -932,7 +931,7 @@ contains
             do p = FIRST, LAST
                from(p) = int(lbound(gp%list, dim=1) + (p*size(gp%list))/nproc, kind=4)
             enddo
-            from(LAST+1) = ubound(gp%list, dim=1, kind=4)+1
+            from(LAST+1) = ubound(gp%list, dim=1, kind=4) + I_ONE
 !!$            do p = FIRST, LAST
 !!$               gp%list(from(p):from(p+1)-1)%dest_proc = p
 !!$            enddo
@@ -940,14 +939,14 @@ contains
             ! just keep SFC ordering, no attempts to balance things here
             !> \todo OPT try to do as much balance as possible
             p = FIRST
-            do i = lbound(gp%list, dim=1), ubound(gp%list, dim=1)
+            do i = lbound(gp%list, dim=1, kind=4), ubound(gp%list, dim=1, kind=4)
                do while (this%SFC_id_range(p, HI) < this%SFC_id_range(p, LO)) ! skip processes with no grids for the sake of simplicity
-                  p = p + 1
+                  p = p + I_ONE
                   if (p > LAST) exit
                enddo
                if (p > LAST) p = LAST
                do while (gp%list(i)%id > this%SFC_id_range(p, HI) .and. p < LAST)
-                  p = p + 1
+                  p = p + I_ONE
                   if (p > LAST) exit
                enddo
                gp%list(i)%dest_proc = p
@@ -955,8 +954,8 @@ contains
 
             p = FIRST
             from(FIRST)  = lbound(gp%list, dim=1, kind=4)
-            from(FIRST+1:LAST+1) = ubound(gp%list, dim=1, kind=4)+1
-            do i = lbound(gp%list, dim=1), ubound(gp%list, dim=1)
+            from(FIRST+1:LAST+1) = ubound(gp%list, dim=1, kind=4) + I_ONE
+            do i = lbound(gp%list, dim=1, kind=4), ubound(gp%list, dim=1, kind=4)
                if (gp%list(i)%dest_proc /= p) then
                   from(p+1:gp%list(i)%dest_proc) = i
                   p = gp%list(i)%dest_proc
