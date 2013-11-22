@@ -56,17 +56,20 @@ module cg_level
    !>
    !! \brief A list of all cg of the same resolution.
    !!
-   !! \details For positive refinement levels the list may be composed of several disconnected subsets of cg (islands: made of one or more cg's).
+   !! \details For positive refinement levels the list may be composed of several disconnected subsets of cg
+   !! (islands: made of one or more cg's).
    !! This type is not intended for direct use. It is extended in cg_level_connected into a functional object.
    !!
-   !! OPT: Searching through this%pse for neighbours, prolongation/restriction overlaps etc is quite costly - O(this%cnt^2)
-   !! Provide a list, sorted according to Morton/Hilbert id's and do a bisection search instead of checking against all grids
-   !! It will result in massive speedups on cg_level_T%mpi_bnd_types and cg_level_connected_T%{vertical_prep,vertical_b_prep).
-   !! It may also simplify the process of fixing refinement structure in refinement_update::fix_refinement.
-   !! Grids which are larger than AMR_bsize (merged grids, non-block decompositions, both not implemented yet) may be referred by several id's that correspond
-   !! with AMR_bsize-d virtual grid pieces.
+   !! OPT: Searching through this%pse for neighbours, prolongation/restriction overlaps etc is quite costly.
+   !! The cost is O(this%cnt^2). Provide a list, sorted according to Morton/Hilbert id's and do a bisection search
+   !! instead of checking against all grids. It will result in massive speedups on cg_level_T%find_neighbors and
+   !! cg_level_connected_T%{vertical_prep,vertical_b_prep). It may also simplify the process of fixing refinement
+   !! structure in refinement_update::fix_refinement. Grids which are larger than AMR_bsize (merged grids,
+   !! non-block decompositions, both not implemented yet) may be referred by several id's that correspond with
+   !! AMR_bsize-d virtual grid pieces.
    !!
-   !! Alternatively, construct a searchable binary tree or oct-tree and provide fast routines for searching grid pieces covering specified position.
+   !! Alternatively, construct a searchable binary tree or oct-tree and provide fast routines for searching grid
+   !! pieces covering specified position.
    !!
    !! \todo Provide one of the structures described above
    !<
@@ -93,7 +96,7 @@ module cg_level
 
       procedure          :: cleanup                                              !< deallocate arrays
       procedure          :: init_all_new_cg                                      !< initialize newest grid container
-      procedure, private :: mpi_bnd_types                                        !< create MPI types for boundary exchanges
+      procedure, private :: find_neighbors                                       !< Make full description of intra-level communication with neighbors
       procedure          :: print_segments                                       !< print detailed information about current level decomposition
       procedure, private :: update_decomposition_properties                      !< Update some flags in domain module
       procedure, private :: create                                               !< Get all decomposed patches and turn them into local grid containers
@@ -256,9 +259,9 @@ contains
       class(cg_level_T), intent(inout) :: this   !< object invoking type bound procedure
 
       call this%update_decomposition_properties
-      call this%update_pse    ! communicate everything that was added before
-      call this%mpi_bnd_types ! require access to whole this%pse(:)%c(:)%se(:,:)
-      call this%update_req    ! Perhaps this%mpi_bnd_types added some new entries
+      call this%update_pse     ! communicate everything that was added before
+      call this%find_neighbors ! require access to whole this%pse(:)%c(:)%se(:,:)
+      call this%update_req     ! Perhaps this%find_neighbors added some new entries
       call this%update_tot_se
       call this%print_segments
 
@@ -465,17 +468,18 @@ contains
    end subroutine update_tot_se
 
 !>
-!! \brief Create MPI types for boundary exchanges
+!! \brief Make full description of intra-level communication with neighbors
 !!
-!! \details this type can be a member of grid container type if we pass this%pse(:) as an argument.
-!! It would simplify dependencies and this%init_all_new_cg, but it could be quite a big object.
+!! \details
 !! Assume that cuboids don't collide (no overlapping grid pieces on same refinement level are allowed)
 !!
-!! Current implementation (revision 7338) implies correct update of all corners, even on complicated refinement topologies (concave fine region - convect coarse region or
-!! fine regions touching each other only by corners). Previous implementation could correctly fill the corners only on uniform grid and when it was called for
-!! x, y and z directions separately. Warning: that change introduces measurable performance degradation! This is caused by the fact that in 3D it is required to make
-!! 26 separate exchanges to fill all guardcells (in cg_list_bnd::internal_boundaries), while in previous approach only 6 exchanges were required.
-!! Unfortunately the previous approach did not work properly for complicated refinements.
+!! Current implementation (revision 7338) implies correct update of all corners, even on complicated refinement
+!! topologies (concave fine region - convect coarse region or fine regions touching each other only by corners).
+!! Previous implementation could correctly fill the corners only on uniform grid and when boundary exchange was
+!! called for x, y and z directions separately. Warning: that change introduces measurable performance degradation!
+!! This is caused by the fact that in 3D it is required to make 26 separate exchanges to fill all guardcells (in
+!! cg_list_bnd::internal_boundaries), while in previous approach only 6 exchanges were required. Unfortunately
+!! the previous approach did not work properly for complicated refinements.
 !!
 !! Possible improvements of performance
 !! * do local exchanges directly, without calling MPI.
@@ -483,17 +487,20 @@ contains
 !!
 !! \todo Put this%pse into a separate type and pass a pointer to it or even a pointer to pre-filtered segment list
 !!
-!! \todo Rewrite this routine to achieve previous (pre-7338) performance and maintain correctness on corners on complicated topologies:
-!! * Divide the descriptions of communicated regions into 4 categories: X-faces, Y-faces + XY-corners, Z-faces + [XY]Z-corners, other corners.
-!!   The other corners would be non-empty only for some refinement local topologies, it would certainly be empty on an uniform grid.
-!! * When no corners are required, perform simultaneous exchange described by the three directional categories. Some corners might be set up correctly by a chance,
-!!   some might not.
-!! * When corners are required, perform sequential exchange described by the three directional categories and supplement it with communication of "other corners".
-!!   The sequence of Isend/Irecv should be as follows: Isend X-faces, Irecv X-faces, Waitall, Isend Y-faces, Irecv Y-faces, Waitall, Isend Z-faces, Irecv Z-faces, Waitall
+!! \todo Rewrite this routine to achieve previous (pre-7338) performance and maintain correctness on corners on
+!! complicated topologies:
+!! * Divide the descriptions of communicated regions into 4 categories: X-faces, Y-faces + XY-corners, Z-faces +
+!!   [XY]Z-corners, other corners. The other corners would be non-empty only for some refinement local topologies,
+!!   it would certainly be empty on an uniform grid.
+!! * When no corners are required, perform simultaneous exchange described by the three directional categories.
+!!   Some corners might be set up correctly by a chance, some might not.
+!! * When corners are required, perform sequential exchange described by the three directional categories and
+!!   supplement it with communication of "other corners". The sequence of Isend/Irecv should be as follows: Isend
+!!   X-faces, Irecv X-faces, Waitall, Isend Y-faces, Irecv Y-faces, Waitall, Isend Z-faces, Irecv Z-faces, Waitall
 !!   "Other corners" can be Isend at any time and must be Irecv after Z-faces are copied to the right place.
 !<
 
-   subroutine mpi_bnd_types(this)
+   subroutine find_neighbors(this)
 
       use cg_list,    only: cg_list_element
       use constants,  only: xdim, ydim, zdim, cor_dim, LO, HI, BND_MPI_FC, BND_FC
@@ -737,7 +744,7 @@ contains
 
       end function uniq_tag
 
-   end subroutine mpi_bnd_types
+   end subroutine find_neighbors
 
 !> \brief Add a whole level to the list of patches on current refinement level and decompose it.
 
