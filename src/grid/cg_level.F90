@@ -84,6 +84,7 @@ module cg_level
       integer(kind=8), dimension(ndims)            :: off              !< offset of the level
       logical                                      :: recently_changed !< .true. when anything was added to or deleted from this level
       integer(kind=8), dimension(:,:), allocatable :: SFC_id_range     !< min and max SFC id on processes
+      logical                                      :: is_blocky        !< .true. when all grid pieces on this level on all processes have same shape and size
 
       ! FARGO
       real,    dimension(:, :), allocatable        :: omega_mean       !< mean angular velocity for each fluid
@@ -96,7 +97,8 @@ module cg_level
 
       procedure          :: cleanup                                              !< deallocate arrays
       procedure          :: init_all_new_cg                                      !< initialize newest grid container
-      procedure, private :: find_neighbors                                       !< Make full description of intra-level communication with neighbors
+      procedure, private :: find_neighbors                                       !< Choose between more general nad fast routine for neighbor searching
+      procedure, private :: find_neighbors_bruteforce                            !< Make full description of intra-level communication with neighbors
       procedure          :: print_segments                                       !< print detailed information about current level decomposition
       procedure, private :: update_decomposition_properties                      !< Update some flags in domain module
       procedure, private :: create                                               !< Get all decomposed patches and turn them into local grid containers
@@ -420,16 +422,22 @@ contains
 
    subroutine update_decomposition_properties(this)
 
-      use constants,  only: base_level_id, pLOR
+      use cg_list,    only: cg_list_element
+      use constants,  only: base_level_id, pLOR,  pLAND, ndims, I_ONE
       use dataio_pub, only: warn
       use domain,     only: is_mpi_noncart, is_multicg, is_refined, is_uneven
-      use mpisetup,   only: proc, master, piernik_MPI_Allreduce
+      use mpi,        only: MPI_INTEGER, MPI_REQUEST_NULL
+      use mpisetup,   only: proc, master, slave, piernik_MPI_Allreduce, proc, req, status, comm, mpi_err, LAST, inflate_req
 
       implicit none
 
       logical, save :: warned = .false.
 
       class(cg_level_T), intent(inout) :: this   !< object invoking type bound procedure
+      type(cg_list_element), pointer :: cgl
+      integer(kind=4), dimension(ndims) :: shape, shape1
+      integer(kind=4), parameter :: sh_tag = 7
+      integer, parameter :: nr = 2
 
       if (this%level_id > base_level_id) is_refined = .true.
       call piernik_MPI_Allreduce(is_refined, pLOR)
@@ -445,6 +453,29 @@ contains
 
       is_multicg = is_multicg .or. (ubound(this%pse(proc)%c(:), dim=1) > 1)
       call piernik_MPI_Allreduce(is_multicg, pLOR)
+
+      ! check if all blocks in the domain have same size and shape
+      call inflate_req(nr)
+      this%is_blocky = .true.
+      shape = 0
+      shape1 = 0
+      cgl => this%first
+      if (associated(cgl)) then
+         shape = cgl%cg%n_b
+         cgl => cgl%nxt
+         do while (associated(cgl))
+            if (any(cgl%cg%n_b /= shape)) this%is_blocky = .false.
+            cgl => cgl%nxt
+         enddo
+      endif
+      req = MPI_REQUEST_NULL
+      if (slave)     call MPI_Irecv(shape1, size(shape1), MPI_INTEGER, proc-I_ONE, sh_tag, comm, req(1), mpi_err)
+      if (proc<LAST) call MPI_Isend(shape,  size(shape),  MPI_INTEGER, proc+I_ONE, sh_tag, comm, req(nr), mpi_err)
+      call MPI_Waitall(nr, req(:nr), status(:, :nr), mpi_err)
+      if (any(shape /= 0) .and. any(shape1 /= 0)) then
+         if (any(shape /= shape1)) this%is_blocky = .false.
+      endif
+      call piernik_MPI_Allreduce(this%is_blocky, pLAND)
 
    end subroutine update_decomposition_properties
 
@@ -468,18 +499,9 @@ contains
    end subroutine update_tot_se
 
 !>
-!! \brief Make full description of intra-level communication with neighbors
+!! \brief Choose between more general nad fast routine for neighbor searching
 !!
 !! \details
-!! Assume that cuboids don't collide (no overlapping grid pieces on same refinement level are allowed)
-!!
-!! Current implementation (revision 7338) implies correct update of all corners, even on complicated refinement
-!! topologies (concave fine region - convect coarse region or fine regions touching each other only by corners).
-!! Previous implementation could correctly fill the corners only on uniform grid and when boundary exchange was
-!! called for x, y and z directions separately. Warning: that change introduces measurable performance degradation!
-!! This is caused by the fact that in 3D it is required to make 26 separate exchanges to fill all guardcells (in
-!! cg_list_bnd::internal_boundaries), while in previous approach only 6 exchanges were required. Unfortunately
-!! the previous approach did not work properly for complicated refinements.
 !!
 !! Possible improvements of performance
 !! * do local exchanges directly, without calling MPI.
@@ -487,8 +509,8 @@ contains
 !!
 !! \todo Put this%pse into a separate type and pass a pointer to it or even a pointer to pre-filtered segment list
 !!
-!! \todo Rewrite this routine to achieve previous (pre-7338) performance and maintain correctness on corners on
-!! complicated topologies:
+!! \todo Write variant of find_neighbors_* routine to achieve previous (pre-a27c945a) performance and maintain
+!! correctness on corners on complicated topologies:
 !! * Divide the descriptions of communicated regions into 4 categories: X-faces, Y-faces + XY-corners, Z-faces +
 !!   [XY]Z-corners, other corners. The other corners would be non-empty only for some refinement local topologies,
 !!   it would certainly be empty on an uniform grid.
@@ -501,6 +523,35 @@ contains
 !<
 
    subroutine find_neighbors(this)
+
+      implicit none
+
+      class(cg_level_T), intent(inout) :: this !< object invoking type bound procedure
+
+      !if (this%is_blocky) then
+      ! call this%find_neighbors_SFC
+      ! else
+      call this%find_neighbors_bruteforce
+      !endif
+
+   end subroutine find_neighbors
+
+!>
+!! \brief Make full description of intra-level communication with neighbors
+!!
+!! \details
+!! Assume that cuboids don't collide (no overlapping grid pieces on same refinement level are allowed)
+!!
+!! Current implementation (commit a27c945a) implies correct update of all corners, even on complicated refinement
+!! topologies (concave fine region - convect coarse region or fine regions touching each other only by corners).
+!! Previous implementation could correctly fill the corners only on uniform grid and when boundary exchange was
+!! called for x, y and z directions separately. Warning: that change introduces measurable performance degradation!
+!! This is caused by the fact that in 3D it is required to make 26 separate exchanges to fill all guardcells (in
+!! cg_list_bnd::internal_boundaries), while in previous approach only 6 exchanges were required. Unfortunately
+!! the previous approach did not work properly for complicated refinements.
+!<
+
+   subroutine find_neighbors_bruteforce(this)
 
       use cg_list,    only: cg_list_element
       use constants,  only: xdim, ydim, zdim, cor_dim, LO, HI, BND_MPI_FC, BND_FC
@@ -744,7 +795,7 @@ contains
 
       end function uniq_tag
 
-   end subroutine find_neighbors
+   end subroutine find_neighbors_bruteforce
 
 !> \brief Add a whole level to the list of patches on current refinement level and decompose it.
 
