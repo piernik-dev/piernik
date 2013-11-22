@@ -29,11 +29,11 @@
 #include "piernik.h"
 
 !>
-!! \brief Functions that convert coordinates into single integer (position on a Z/Morton space-filling curve)
+!! \brief Functions that convert coordinates into single integer (position on a space-filling curve)
 !!
 !! \todo implement inverse functions: convert id to offsets
 !!
-!! \todo implement also Hilbert ordering
+!! \todo implement also Hilbert or Peano-Hilbert ordering
 !<
 
 module ordering
@@ -41,13 +41,18 @@ module ordering
    implicit none
 
    private
-   public :: Morton_order
+   public :: SFC_order
 
 contains
 
-!> \brief Wrapper for Morton_id
+!>
+!! \brief Wrapper for space-filling curve ID routine
+!!
+!! \details Currently only Morton_id is implemented, but in the future we may implement also Hilbert or Peano-Hilbert curve.
+!! When we implement other SFC, change call to Morton_id with a call to pointer that is set to the right type of SFC.
+!<
 
-   function Morton_order(off) result(id)
+   function SFC_order(off) result(id)
 
       use constants,  only: ndims, xdim, ydim, zdim, INVALID
       use dataio_pub, only: die
@@ -81,12 +86,12 @@ contains
          case (3) ! just do the conversion
             id = Morton_id(off)
          case default
-            call die("[ordering:Morton_order] invalid dimensionality")
+            call die("[ordering:SFC_order] invalid dimensionality")
       end select
 
-      if (id == INVALID) call die("[ordering:Morton_order] invalid id")
+      if (id == INVALID .or. id < 0) call die("[ordering:SFC_order] invalid id")
 
-   end function Morton_order
+   end function SFC_order
 
 !>
 !! \brief Convert contigous vector of coordinates into its Morton identifier
