@@ -98,7 +98,8 @@ module cg_level
       procedure          :: cleanup                                              !< deallocate arrays
       procedure          :: init_all_new_cg                                      !< initialize newest grid container
       procedure, private :: find_neighbors                                       !< Choose between more general nad fast routine for neighbor searching
-      procedure, private :: find_neighbors_bruteforce                            !< Make full description of intra-level communication with neighbors
+      procedure, private :: find_neighbors_SFC                                   !< Make full description of intra-level communication with neighbors. Approach exploiting strict SFC distribution.
+      procedure, private :: find_neighbors_bruteforce                            !< Make full description of intra-level communication with neighbors. Brute-force approach.
       procedure          :: print_segments                                       !< print detailed information about current level decomposition
       procedure, private :: update_decomposition_properties                      !< Update some flags in domain module
       procedure, private :: create                                               !< Get all decomposed patches and turn them into local grid containers
@@ -528,19 +529,73 @@ contains
 
       class(cg_level_T), intent(inout) :: this !< object invoking type bound procedure
 
-      !if (this%is_blocky) then
-      ! call this%find_neighbors_SFC
-      ! else
-      call this%find_neighbors_bruteforce
-      !endif
+      if (this%is_blocky) then
+         call this%find_neighbors_SFC
+      else
+         call this%find_neighbors_bruteforce
+      endif
 
    end subroutine find_neighbors
 
 !>
-!! \brief Make full description of intra-level communication with neighbors
+!! \brief Make full description of intra-level communication with neighbors. Approach exploiting strict SFC distribution.
 !!
-!! \details
-!! Assume that cuboids don't collide (no overlapping grid pieces on same refinement level are allowed)
+!! \details Assume that cuboids don't collide (no overlapping grid pieces on same refinement level are allowed)
+!! Should produce the same set of blocks to be communicated as find_neighbors_bruteforce, but should be way faster,
+!! especially in massively parallel runs.
+!!
+!! This approach works if and only if the grid containers are distributing strictly according to the SFC curve.
+!! If each of p processes has g grid containers on current level (giving n = p * g grids on the level),
+!! the cost should be proportional to (log_2(p)+log_2(g))*g, assuming that we have already sorted array
+!! containing most critical information from this%pse
+!<
+
+   subroutine find_neighbors_SFC(this)
+
+      use cg_list,    only: cg_list_element
+      use constants,  only: xdim, cor_dim
+      use dataio_pub, only: warn
+      use grid_cont,  only: grid_container
+      use mpisetup,   only: master
+      use refinement, only: strict_SFC_ordering
+
+      implicit none
+
+      class(cg_level_T), intent(inout)                :: this    !< object invoking type bound procedure
+
+      type(grid_container),  pointer                  :: cg      !< grid container that we are currently working on
+      type(cg_list_element), pointer                  :: cgl
+
+      cgl => this%first
+      do while (associated(cgl))
+         cg => cgl%cg
+
+         if (allocated(cg%i_bnd)) deallocate(cg%i_bnd)
+         if (allocated(cg%o_bnd)) deallocate(cg%o_bnd)
+         allocate(cg%i_bnd(xdim:cor_dim), cg%o_bnd(xdim:cor_dim))
+
+         ! for all potential neighbors:
+         ! find their SFC_id (take care about periodicity)
+         ! find on what process they may reside
+         ! find if they really occur on that process
+         ! if it not occurs set cg%bnd(d, lh) to BND_FC or BND_MPI_FC
+         ! if it occurs call cg%[io]_bnd(?)%add_seg(?, ?, ?)
+
+         cgl => cgl%nxt
+      enddo
+
+      if (strict_SFC_ordering .and. master) call warn("[cg_level:find_neighbors_SFC] not implemented yet. Redirected to find_neighbors_bruteforce")
+      call this%find_neighbors_bruteforce
+
+   end subroutine find_neighbors_SFC
+
+!>
+!! \brief Make full description of intra-level communication with neighbors. Brute-force approach.
+!!
+!! \details Assume that cuboids don't collide (no overlapping grid pieces on same refinement level are allowed)
+!!
+!! This is very general but also quite slow approach. If each of p processes has g grid containers on current level
+!! (giving n = p * g grids on the level), the cost is proportional to p*p*g or n*n/p.
 !!
 !! Current implementation (commit a27c945a) implies correct update of all corners, even on complicated refinement
 !! topologies (concave fine region - convect coarse region or fine regions touching each other only by corners).
