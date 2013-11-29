@@ -39,7 +39,7 @@ module cg_level
    !! latter is broken and we cannot use it yet
    use cg_list,           only: cg_list_T   ! QA_WARN intel
 #endif /* __INTEL_COMPILER */
-   use cg_list_rebalance, only: cg_list_rebalance_T
+   use cg_list_neighbors, only: cg_list_neighbors_T
 
    implicit none
 
@@ -68,7 +68,7 @@ module cg_level
    !!
    !! \todo split this type into two smaller types
    !<
-   type, extends(cg_list_rebalance_T), abstract :: cg_level_T
+   type, extends(cg_list_neighbors_T), abstract :: cg_level_T
 
       integer                                    :: tot_se       !< global number of segments on the level
       integer                                    :: fft_type     !< type of FFT to employ in some multigrid solvers (depending on boundaries)
