@@ -50,6 +50,7 @@ module patch_list
       procedure :: p_deallocate !< Throw out patches list
       procedure :: expand       !< Expand the patch list by one
       procedure :: p_count      !< Count local patches
+      procedure :: p2a          !< Copy patches to an array
    end type patch_list_T
 
 contains
@@ -62,7 +63,7 @@ contains
 
       class(patch_list_T), intent(inout) :: this !< object invoking type bound procedure
 
-      if (allocated(this%patches)) deallocate(this%patches) 
+      if (allocated(this%patches)) deallocate(this%patches)
       ! this%patches(:)%pse should be deallocated automagically
 
    end subroutine p_deallocate
@@ -112,5 +113,31 @@ contains
       endif
 
    end function p_count
+
+!> Copy patches to an array
+
+   subroutine p2a(this, gptemp)
+
+      use constants, only: LO, HI
+
+      implicit none
+
+      class(patch_list_T),             intent(in)    :: this
+      integer(kind=8), dimension(:,:), intent(inout) :: gptemp
+
+      integer :: i
+      integer(kind=4) :: p, ss
+
+      i = 0
+      if (allocated(this%patches)) then
+         do p = lbound(this%patches(:), dim=1, kind=4), ubound(this%patches(:), dim=1, kind=4)
+            do ss = lbound(this%patches(p)%pse, dim=1, kind=4), ubound(this%patches(p)%pse, dim=1, kind=4)
+               i = i + 1
+               gptemp(:, i) = [ this%patches(p)%pse(ss)%se(:, LO), this%patches(p)%pse(ss)%se(:, HI) - this%patches(p)%pse(ss)%se(:, LO) + 1 ]
+            enddo
+         enddo
+      endif
+
+   end subroutine p2a
 
 end module patch_list

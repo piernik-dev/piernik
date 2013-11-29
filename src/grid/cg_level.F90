@@ -40,8 +40,8 @@ module cg_level
    use cg_list,       only: cg_list_T   ! QA_WARN intel
 #endif /* __INTEL_COMPILER */
    use cg_list_bnd,   only: cg_list_bnd_T
-   use constants,     only: ndims
-   use decomposition, only: box_T, cuboid
+   use constants,     only: ndims, I_ONE
+   use decomposition, only: cuboid
    use patch_list,    only: patch_list_T
 
    implicit none
@@ -123,6 +123,12 @@ module cg_level
       procedure, private :: check_SFC                                            !< Check if level is decomposed into processes strictly along currently used space-filling curve
 
    end type cg_level_T
+
+   enum, bind(C)
+      enumerator :: I_OFF
+      enumerator :: I_N_B = I_OFF + ndims
+      enumerator :: I_END = I_N_B + ndims - I_ONE
+   end enum
 
 contains
 
@@ -1218,7 +1224,7 @@ contains
 
    subroutine patches_to_list(this, gp, ls)
 
-      use constants,       only: ndims, INVALID, LO, HI, I_ONE
+      use constants,       only: ndims, INVALID, I_ONE
       use mpi,             only: MPI_INTEGER, MPI_INTEGER8, MPI_STATUS_IGNORE
       use mpisetup,        only: master, slave, FIRST, LAST, comm, req, mpi_err, status, inflate_req
       use sort_piece_list, only: grid_piece_list
@@ -1234,11 +1240,6 @@ contains
       integer(kind=4) :: p, ss
       integer, parameter :: nreq = 1
       integer(kind=4), parameter :: tag_ls = 1, tag_gpt = tag_ls+1
-      enum, bind(C)
-         enumerator :: I_OFF
-         enumerator :: I_N_B = I_OFF + ndims
-         enumerator :: I_END = I_N_B + ndims - I_ONE
-      end enum
 
       call inflate_req(nreq)
 
@@ -1246,15 +1247,7 @@ contains
       if (slave) call MPI_Isend(ls, I_ONE, MPI_INTEGER, FIRST, tag_ls, comm, req(nreq), mpi_err)
 
       allocate(gptemp(I_OFF:I_END, ls))
-      i = 0
-      if (allocated(this%plist%patches)) then
-         do p = lbound(this%plist%patches(:), dim=1, kind=4), ubound(this%plist%patches(:), dim=1, kind=4)
-            do ss = lbound(this%plist%patches(p)%pse, dim=1, kind=4), ubound(this%plist%patches(p)%pse, dim=1, kind=4)
-               i = i + 1
-               gptemp(:, i) = [ this%plist%patches(p)%pse(ss)%se(:, LO), this%plist%patches(p)%pse(ss)%se(:, HI) - this%plist%patches(p)%pse(ss)%se(:, LO) + 1 ]
-            enddo
-         enddo
-      endif
+      call this%plist%p2a(gptemp)
 
       if (master) then !> \warning Antiparallel
 
@@ -1309,11 +1302,6 @@ contains
       integer(kind=8), dimension(:,:), allocatable :: gptemp
       integer(kind=4) :: ls, p, s
       integer(kind=4), parameter :: tag_lsR = 3, tag_gptR = tag_lsR+1
-      enum, bind(C)
-         enumerator :: I_OFF
-         enumerator :: I_N_B = I_OFF + ndims
-         enumerator :: I_END = I_N_B + ndims - I_ONE
-      end enum
 
       call this%deallocate_patches
       if (master) then
@@ -1356,7 +1344,7 @@ contains
 
       use cg_list,         only: cg_list_element
       use cg_list_dataop,  only: expanded_domain
-      use constants,       only: ndims, LO, HI, I_ONE, pSUM
+      use constants,       only: LO, HI, I_ONE, pSUM
       use dataio_pub,      only: warn, msg, printinfo
       use mpisetup,        only: master, FIRST, LAST, nproc, piernik_MPI_Bcast, piernik_MPI_Allreduce
       use refinement,      only: oop_thr
@@ -1377,8 +1365,6 @@ contains
       integer(kind=4) :: i, p
       integer(kind=8), dimension(:,:), allocatable :: gptemp
       enum, bind(C)
-         enumerator :: I_OFF
-         enumerator :: I_N_B = I_OFF + ndims
          enumerator :: I_GID = I_N_B + ndims
       end enum
 #ifdef DEBUG
