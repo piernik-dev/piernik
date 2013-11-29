@@ -60,8 +60,8 @@ module cg_list_bnd
    !! Thus this type is usable only when the list consist of one or more full cg levels.
    !<
 
-   type, extends(cg_list_dataop_T) :: cg_list_bnd_T
-    contains
+   type, extends(cg_list_dataop_T), abstract :: cg_list_bnd_T
+   contains
       procedure          :: level_3d_boundaries        !< Perform internal boundary exchanges and external boundary extrapolations on 3D named arrays
       procedure          :: level_4d_boundaries        !< Perform internal boundary exchanges and external boundary extrapolations on 4D named arrays
       procedure          :: internal_boundaries_3d     !< A wrapper that calls internal_boundaries for 3D arrays stored in cg%q(:)

@@ -73,7 +73,7 @@ module cg_level
    !!
    !! \todo Provide one of the structures described above
    !<
-   type, extends(cg_list_bnd_T) :: cg_level_T
+   type, extends(cg_list_bnd_T), abstract :: cg_level_T
 
       integer(kind=4)                              :: level_id         !< level number (relative to base level). No arithmetic should depend on it.
       integer(kind=8), dimension(ndims)            :: n_d              !< maximum number of grid cells in each direction (size of fully occupied level)

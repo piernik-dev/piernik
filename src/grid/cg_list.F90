@@ -49,8 +49,8 @@ module cg_list
       type(cg_list_element), pointer :: prv, nxt !< pointers to previous and next grid container or null() at the end of the list
    end type cg_list_element
 
-   !> \brief Arbitrary list of grid containers
-   type cg_list_T
+   !> \brief Arbitrary list of grid containers, not for direct use.
+   type, abstract :: cg_list_T
 
       type(cg_list_element), pointer :: first !< first element of the chain of grid containers, the most important one
       type(cg_list_element), pointer :: last  !< last element of the chain - useful for quick expanding and merging lists
