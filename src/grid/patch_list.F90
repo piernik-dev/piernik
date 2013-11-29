@@ -28,11 +28,7 @@
 
 #include "piernik.h"
 
-!>
-!! \brief List of patches to be decomposed and then turned into grid containers
-!!
-!! \details Don't forget to describe your stuff
-!<
+!> \brief List of patches to be decomposed and then turned into grid containers
 
 module patch_list
 
@@ -45,7 +41,6 @@ module patch_list
 
    type :: patch_list_T
       type(box_T), dimension(:), allocatable :: patches  !< list of patches
-      !> \todo make it private
    contains
       procedure :: p_deallocate !< Throw out patches list
       procedure :: expand       !< Expand the patch list by one
@@ -125,13 +120,12 @@ contains
       class(patch_list_T),             intent(in)    :: this
       integer(kind=8), dimension(:,:), intent(inout) :: gptemp
 
-      integer :: i
-      integer(kind=4) :: p, ss
+      integer :: i, p, ss
 
       i = 0
       if (allocated(this%patches)) then
-         do p = lbound(this%patches(:), dim=1, kind=4), ubound(this%patches(:), dim=1, kind=4)
-            do ss = lbound(this%patches(p)%pse, dim=1, kind=4), ubound(this%patches(p)%pse, dim=1, kind=4)
+         do p = lbound(this%patches(:), dim=1), ubound(this%patches(:), dim=1)
+            do ss = lbound(this%patches(p)%pse, dim=1), ubound(this%patches(p)%pse, dim=1)
                i = i + 1
                gptemp(:, i) = [ this%patches(p)%pse(ss)%se(:, LO), this%patches(p)%pse(ss)%se(:, HI) - this%patches(p)%pse(ss)%se(:, LO) + 1 ]
             enddo
