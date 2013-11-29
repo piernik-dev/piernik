@@ -40,13 +40,20 @@ module cg_level
    use cg_list,       only: cg_list_T   ! QA_WARN intel
 #endif /* __INTEL_COMPILER */
    use cg_list_bnd,   only: cg_list_bnd_T
-   use constants,     only: ndims
-   use decomposition, only: box_T, cuboid
+   use constants,     only: ndims, I_ONE
+   use decomposition, only: cuboid
+   use patch_list,    only: patch_list_T
 
    implicit none
 
    private
    public :: cg_level_T
+
+   enum, bind(C)
+      enumerator :: I_OFF
+      enumerator :: I_N_B = I_OFF + ndims
+      enumerator :: I_END = I_N_B + ndims - I_ONE
+   end enum
 
    !> \brief A list of grid pieces (typically used as a list of all grids residing on a given process)
    type :: cuboids
@@ -82,7 +89,7 @@ module cg_level
       type(cuboids),   dimension(:), allocatable   :: pse              !< lists of grid chunks on each process (FIRST:LAST); Use with care, because this is an antiparallel thing
       integer                                      :: tot_se           !< global number of segments on the level
       integer                                      :: fft_type         !< type of FFT to employ in some multigrid solvers (depending on boundaries)
-      type(box_T),     dimension(:), allocatable, private :: patches   !< list of patches that exist on the current level
+      type(patch_list_T), private                  :: plist            !< list of patches that exist on the current level
       integer(kind=8), dimension(ndims)            :: off              !< offset of the level
       logical                                      :: recently_changed !< .true. when anything was added to or deleted from this level
       integer(kind=8), dimension(:,:), allocatable :: SFC_id_range     !< min and max SFC id on processes
@@ -112,8 +119,6 @@ module cg_level
       procedure, private :: add_patch_detailed                                   !< Add a new piece of grid to the list of patches
       procedure, private :: add_patch_one_piece                                  !< Add a patch with only one grid piece
       procedure          :: deallocate_patches                                   !< Throw out patches list
-      procedure, private :: count_patches                                        !< Count local patches
-      procedure, private :: expand_list                                          !< Expand the patch list by one
       procedure, private :: balance_new                                          !< Routine selector for moving proposed grids between processes
       procedure, private :: balance_strict_SFC                                   !< Routine for moving proposed grids between processes: keep strict SFC ordering
       procedure, private :: balance_fill_lowest                                  !< Routine for moving proposed grids between processes: add load to lightly-loaded processes
@@ -137,7 +142,7 @@ contains
 
       class(cg_level_T), intent(inout) :: this !< object invoking type bound procedure
 
-      call this%deallocate_patches
+      call this%plist%p_deallocate
       if (allocated(this%pse))          deallocate(this%pse)        ! this%pse(:)%c should be deallocated automagically
       if (allocated(this%omega_mean))   deallocate(this%omega_mean)
       if (allocated(this%omega_cr))     deallocate(this%omega_cr)
@@ -159,7 +164,7 @@ contains
 
       class(cg_level_T), intent(inout) :: this !< object invoking type bound procedure
 
-      if (allocated(this%patches)) deallocate(this%patches) ! this%patches(:)%pse should be deallocated automagically
+      call this%plist%p_deallocate
 
    end subroutine deallocate_patches
 
@@ -383,7 +388,7 @@ contains
       type(grid_container), pointer           :: cg
 
       ! Find how many pieces are to be added
-      pieces = this%count_patches()
+      pieces = this%plist%p_count()
 
       ! recreate local pse in case anything was derefined, refresh grid_id and make room for new pieces in the pse array
       if (.not. allocated(this%pse)) allocate(this%pse(FIRST:LAST))
@@ -418,12 +423,12 @@ contains
 
       ! write the new grid pieces description to the pse array
       i = this%cnt
-      if (allocated(this%patches)) then
-         do p = lbound(this%patches(:), dim=1), ubound(this%patches(:), dim=1)
-            do s = lbound(this%patches(p)%pse, dim=1), ubound(this%patches(p)%pse, dim=1)
+      if (allocated(this%plist%patches)) then
+         do p = lbound(this%plist%patches(:), dim=1), ubound(this%plist%patches(:), dim=1)
+            do s = lbound(this%plist%patches(p)%pse, dim=1), ubound(this%plist%patches(p)%pse, dim=1)
                i = i + 1
                if (i > size(this%pse(proc)%c(:))) call die("[cg_level:create] overflow")
-               this%pse(proc)%c(i)%se(:,:) = this%patches(p)%pse(s)%se(:,:)
+               this%pse(proc)%c(i)%se(:,:) = this%plist%patches(p)%pse(s)%se(:,:)
                call this%add
                cg => this%last%cg
                call cg%init(this%n_d, this%off, this%pse(proc)%c(i)%se(:, :), i, this%level_id) ! we cannot pass "this" as an argument because of circular dependencies
@@ -433,7 +438,7 @@ contains
                call all_cg%add(cg)
             enddo
          enddo
-         deallocate(this%patches)
+         call this%plist%p_deallocate
       endif
 
    end subroutine create
@@ -927,8 +932,8 @@ contains
       integer(kind=4), optional,         intent(in)    :: n_pieces !< how many pieces the patch should be divided to?
 
       this%recently_changed = .true. ! assume that the new patches will change this level
-      call this%expand_list
-      if (.not. this%patches(ubound(this%patches(:), dim=1))%decompose_patch(n_d(:), off(:), this%level_id, n_pieces=n_pieces)) then
+      call this%plist%expand
+      if (.not. this%plist%patches(ubound(this%plist%patches(:), dim=1))%decompose_patch(n_d(:), off(:), this%level_id, n_pieces=n_pieces)) then
          write(msg,'(a,i4)')"[cg_level:add_patch_detailed] Decomposition failed at level ",this%level_id
          call die(msg)
       endif
@@ -948,57 +953,10 @@ contains
       integer(kind=8), dimension(ndims), intent(in)    :: off      !< offset (with respect to the base level, counted on own level)
 
       this%recently_changed = .true. ! assume that the new patches will change this level
-      call this%expand_list
-      call this%patches(ubound(this%patches(:), dim=1))%one_piece_patch(n_d(:), off(:))
+      call this%plist%expand
+      call this%plist%patches(ubound(this%plist%patches(:), dim=1))%one_piece_patch(n_d(:), off(:))
 
    end subroutine add_patch_one_piece
-
-!> \brief Count local patches
-
-   function count_patches(this)
-
-      implicit none
-
-      class(cg_level_T), intent(in) :: this
-
-      integer :: count_patches
-      integer :: p
-
-      count_patches = 0
-      if (allocated(this%patches)) then
-         do p = lbound(this%patches(:), dim=1), ubound(this%patches(:), dim=1)
-            count_patches = count_patches + size(this%patches(p)%pse, dim=1)
-         enddo
-      endif
-
-   end function count_patches
-
-!> \brief Expand the patch list by one
-
-   subroutine expand_list(this)
-
-      use decomposition, only: box_T
-
-      implicit none
-
-      class(cg_level_T), target,         intent(inout) :: this     !< current level
-
-      type(box_T), dimension(:), allocatable :: tmp
-      integer :: i
-
-      if (.not. allocated(this%patches)) then
-         allocate(this%patches(1))
-      else
-         allocate(tmp(lbound(this%patches(:),dim=1):ubound(this%patches(:), dim=1) + 1))
-         tmp(:ubound(this%patches(:), dim=1)) = this%patches(:)
-         ! manually deallocate arrays inside user-types, as it seems that move_alloc is unable to do that
-         do i = lbound(this%patches(:), dim=1), ubound(this%patches(:), dim=1)
-            if (allocated(this%patches(i)%pse)) deallocate(this%patches(i)%pse)
-         enddo
-         call move_alloc(from=tmp, to=this%patches)
-      endif
-
-   end subroutine expand_list
 
 !>
 !! \brief Routine selector for moving proposed grids between processes
@@ -1066,7 +1024,7 @@ contains
       endif
 
       ! gather patches id
-      s = int(this%count_patches(), kind=4)
+      s = int(this%plist%p_count(), kind=4)
       ls = int(s, kind=4)
       call piernik_MPI_Allreduce(s, pSUM) !> \warning overkill: MPI_reduce is enough here
       if (s==0) return ! nihil novi
@@ -1201,7 +1159,7 @@ contains
       integer(kind=4) :: ls, p, s
 
       ! count how many patches were requested on each process
-      s = int(this%count_patches(), kind=4)
+      s = int(this%plist%p_count(), kind=4)
       ls = int(s, kind=4)
       call piernik_MPI_Allreduce(s, pSUM) !> \warning overkill: MPI_reduce is enough here
       if (s==0) return ! nihil novi
@@ -1268,7 +1226,7 @@ contains
 
    subroutine patches_to_list(this, gp, ls)
 
-      use constants,       only: ndims, INVALID, LO, HI, I_ONE
+      use constants,       only: ndims, INVALID, I_ONE
       use mpi,             only: MPI_INTEGER, MPI_INTEGER8, MPI_STATUS_IGNORE
       use mpisetup,        only: master, slave, FIRST, LAST, comm, req, mpi_err, status, inflate_req
       use sort_piece_list, only: grid_piece_list
@@ -1284,11 +1242,6 @@ contains
       integer(kind=4) :: p, ss
       integer, parameter :: nreq = 1
       integer(kind=4), parameter :: tag_ls = 1, tag_gpt = tag_ls+1
-      enum, bind(C)
-         enumerator :: I_OFF
-         enumerator :: I_N_B = I_OFF + ndims
-         enumerator :: I_END = I_N_B + ndims - I_ONE
-      end enum
 
       call inflate_req(nreq)
 
@@ -1296,15 +1249,7 @@ contains
       if (slave) call MPI_Isend(ls, I_ONE, MPI_INTEGER, FIRST, tag_ls, comm, req(nreq), mpi_err)
 
       allocate(gptemp(I_OFF:I_END, ls))
-      i = 0
-      if (allocated(this%patches)) then
-         do p = lbound(this%patches(:), dim=1, kind=4), ubound(this%patches(:), dim=1, kind=4)
-            do ss = lbound(this%patches(p)%pse, dim=1, kind=4), ubound(this%patches(p)%pse, dim=1, kind=4)
-               i = i + 1
-               gptemp(:, i) = [ this%patches(p)%pse(ss)%se(:, LO), this%patches(p)%pse(ss)%se(:, HI) - this%patches(p)%pse(ss)%se(:, LO) + 1 ]
-            enddo
-         enddo
-      endif
+      call this%plist%p2a(gptemp)
 
       if (master) then !> \warning Antiparallel
 
@@ -1359,11 +1304,6 @@ contains
       integer(kind=8), dimension(:,:), allocatable :: gptemp
       integer(kind=4) :: ls, p, s
       integer(kind=4), parameter :: tag_lsR = 3, tag_gptR = tag_lsR+1
-      enum, bind(C)
-         enumerator :: I_OFF
-         enumerator :: I_N_B = I_OFF + ndims
-         enumerator :: I_END = I_N_B + ndims - I_ONE
-      end enum
 
       call this%deallocate_patches
       if (master) then
@@ -1406,7 +1346,7 @@ contains
 
       use cg_list,         only: cg_list_element
       use cg_list_dataop,  only: expanded_domain
-      use constants,       only: ndims, LO, HI, I_ONE, pSUM
+      use constants,       only: LO, HI, I_ONE, pSUM
       use dataio_pub,      only: warn, msg, printinfo
       use mpisetup,        only: master, FIRST, LAST, nproc, piernik_MPI_Bcast, piernik_MPI_Allreduce
       use refinement,      only: oop_thr
@@ -1427,8 +1367,6 @@ contains
       integer(kind=4) :: i, p
       integer(kind=8), dimension(:,:), allocatable :: gptemp
       enum, bind(C)
-         enumerator :: I_OFF
-         enumerator :: I_N_B = I_OFF + ndims
          enumerator :: I_GID = I_N_B + ndims
       end enum
 #ifdef DEBUG
