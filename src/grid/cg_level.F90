@@ -80,7 +80,7 @@ module cg_level
       type(cuboids),   dimension(:), allocatable   :: pse              !< lists of grid chunks on each process (FIRST:LAST); Use with care, because this is an antiparallel thing
       integer                                      :: tot_se           !< global number of segments on the level
       integer                                      :: fft_type         !< type of FFT to employ in some multigrid solvers (depending on boundaries)
-      type(box_T),     dimension(:), allocatable   :: patches          !< list of patches that exist on the current level
+      type(box_T),     dimension(:), allocatable, private :: patches   !< list of patches that exist on the current level
       integer(kind=8), dimension(ndims)            :: off              !< offset of the level
       logical                                      :: recently_changed !< .true. when anything was added to or deleted from this level
       integer(kind=8), dimension(:,:), allocatable :: SFC_id_range     !< min and max SFC id on processes
@@ -109,6 +109,7 @@ module cg_level
       procedure, private :: add_patch_fulllevel                                  !< Add a whole level to the list of patches
       procedure, private :: add_patch_detailed                                   !< Add a new piece of grid to the list of patches
       procedure, private :: add_patch_one_piece                                  !< Add a patch with only one grid piece
+      procedure          :: deallocate_patches                                   !< Throw out patches list
       procedure, private :: count_patches                                        !< Count local patches
       procedure, private :: expand_list                                          !< Expand the patch list by one
       procedure, private :: balance_new                                          !< Routine selector for moving proposed grids between processes
@@ -134,8 +135,8 @@ contains
 
       class(cg_level_T), intent(inout) :: this !< object invoking type bound procedure
 
+      call this%deallocate_patches
       if (allocated(this%pse))          deallocate(this%pse)        ! this%pse(:)%c should be deallocated automagically
-      if (allocated(this%patches))      deallocate(this%patches)    ! this%patches(:)%pse should be deallocated automagically
       if (allocated(this%omega_mean))   deallocate(this%omega_mean)
       if (allocated(this%omega_cr))     deallocate(this%omega_cr)
       if (allocated(this%nshift))       deallocate(this%nshift)
@@ -143,6 +144,22 @@ contains
       if (allocated(this%SFC_id_range)) deallocate(this%SFC_id_range)
 
    end subroutine cleanup
+
+!>
+!! \brief Throw out patches list
+!!
+!! \todo check if it is really necessary to call this from remote routines
+!<
+
+   subroutine deallocate_patches(this)
+
+      implicit none
+
+      class(cg_level_T), intent(inout) :: this !< object invoking type bound procedure
+
+      if (allocated(this%patches)) deallocate(this%patches) ! this%patches(:)%pse should be deallocated automagically
+
+   end subroutine deallocate_patches
 
 !> \brief Print detailed information about current level decomposition
 
@@ -1346,7 +1363,7 @@ contains
          enumerator :: I_END = I_N_B + ndims - I_ONE
       end enum
 
-      if (allocated(this%patches)) deallocate(this%patches)
+      call this%deallocate_patches
       if (master) then
          do p = from(FIRST), from(FIRST+1) - I_ONE
             call this%add_patch_one_piece(int(gp%list(p)%n_b, kind=8), gp%list(p)%off)

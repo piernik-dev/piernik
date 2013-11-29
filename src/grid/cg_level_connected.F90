@@ -1415,9 +1415,7 @@ contains
       type(cg_list_element), pointer :: cgl, aux
       type(grid_container),  pointer :: cg
 
-      if (allocated(this%pse)) deallocate(this%pse)        ! this%pse(:)%c should be deallocated automagically
-      if (allocated(this%patches)) deallocate(this%patches)! this%patches(:)%pse should be deallocated automagically
-
+      call this%cleanup
       cgl => this%first
       do while (associated(cgl))
          aux => cgl

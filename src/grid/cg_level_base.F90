@@ -221,7 +221,7 @@ contains
 
       call this%level%sync_ru
       call leaves%update(" (  expand  ) ") !cannot call balance here as it will mess up the expanded_domain list
-      if (allocated(this%level%patches)) deallocate(this%level%patches)
+      call this%level%deallocate_patches
       call late_initial_conditions
       emergency_fix = .true.
 

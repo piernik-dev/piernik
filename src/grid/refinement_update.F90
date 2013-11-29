@@ -64,7 +64,7 @@ contains
 
       curl => finest%level
       do while (associated(curl))
-         if (allocated(curl%patches)) deallocate(curl%patches)
+         call curl%deallocate_patches
          curl => curl%coarser
       enddo
       call all_cg%clear_ref_flags
@@ -182,7 +182,7 @@ contains
             !> \todo merge small blocks into larger ones
             if (associated(curl%finer)) then
                call curl%finer%init_all_new_cg
-               if (allocated(curl%finer%patches)) deallocate(curl%finer%patches)
+               call curl%finer%deallocate_patches
                call curl%finer%sync_ru
                call curl%prolong
             endif
@@ -206,7 +206,7 @@ contains
 
          curl => finest%level
          do while (associated(curl))
-            if (allocated(curl%patches)) deallocate(curl%patches)
+            call curl%deallocate_patches
             curl => curl%coarser
          enddo
 
@@ -235,7 +235,7 @@ contains
             if (some_refined) then
                call curl%finer%init_all_new_cg
                call curl%finer%sync_ru
-               if (allocated(curl%patches)) deallocate(curl%patches)
+               call curl%deallocate_patches
                !call finest%equalize
                call curl%prolong
                call all_cg%mark_orphans
