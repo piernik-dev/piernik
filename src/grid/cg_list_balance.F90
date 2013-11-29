@@ -28,7 +28,7 @@
 
 #include "piernik.h"
 
-!> \brief An abstract type created to take out some load-balance related code from cg_level
+!> \brief An abstract type created to take out some load-balance related code from cg_level (new grids)
 
 module cg_list_balance
 

@@ -37,11 +37,11 @@ module cg_level
    !! \deprecated remove this clause as soon as Intel Compiler gets required
    !! features and/or bug fixes, it's needed for 12.1, fixed in 13.0 but the
    !! latter is broken and we cannot use it yet
-   use cg_list,         only: cg_list_T   ! QA_WARN intel
+   use cg_list,           only: cg_list_T   ! QA_WARN intel
 #endif /* __INTEL_COMPILER */
-   use cg_list_balance, only: cg_list_balance_T
-   use constants,       only: ndims
-   use decomposition,   only: cuboid
+   use cg_list_rebalance, only: cg_list_rebalance_T
+   use constants,         only: ndims
+   use decomposition,     only: cuboid
 
    implicit none
 
@@ -75,7 +75,7 @@ module cg_level
    !!
    !! \todo split this type into two smaller types
    !<
-   type, extends(cg_list_balance_T), abstract :: cg_level_T
+   type, extends(cg_list_rebalance_T), abstract :: cg_level_T
 
       integer(kind=4)                              :: level_id         !< level number (relative to base level). No arithmetic should depend on it.
       integer(kind=8), dimension(ndims)            :: n_d              !< maximum number of grid cells in each direction (size of fully occupied level)
