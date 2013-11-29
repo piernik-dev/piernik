@@ -49,6 +49,12 @@ module cg_level
    private
    public :: cg_level_T
 
+   enum, bind(C)
+      enumerator :: I_OFF
+      enumerator :: I_N_B = I_OFF + ndims
+      enumerator :: I_END = I_N_B + ndims - I_ONE
+   end enum
+
    !> \brief A list of grid pieces (typically used as a list of all grids residing on a given process)
    type :: cuboids
       type(cuboid), allocatable, dimension(:) :: c !< an array of grid piece
@@ -124,12 +130,6 @@ module cg_level
 
    end type cg_level_T
 
-   enum, bind(C)
-      enumerator :: I_OFF
-      enumerator :: I_N_B = I_OFF + ndims
-      enumerator :: I_END = I_N_B + ndims - I_ONE
-   end enum
-
 contains
 
 !> \brief deallocate arrays
@@ -140,7 +140,7 @@ contains
 
       class(cg_level_T), intent(inout) :: this !< object invoking type bound procedure
 
-      call this%deallocate_patches
+      call this%plist%p_deallocate
       if (allocated(this%pse))          deallocate(this%pse)        ! this%pse(:)%c should be deallocated automagically
       if (allocated(this%omega_mean))   deallocate(this%omega_mean)
       if (allocated(this%omega_cr))     deallocate(this%omega_cr)
@@ -436,7 +436,7 @@ contains
                call all_cg%add(cg)
             enddo
          enddo
-         deallocate(this%plist%patches)
+         call this%plist%p_deallocate
       endif
 
    end subroutine create
