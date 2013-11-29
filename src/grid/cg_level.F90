@@ -111,7 +111,6 @@ module cg_level
       procedure, private :: add_patch_detailed                                   !< Add a new piece of grid to the list of patches
       procedure, private :: add_patch_one_piece                                  !< Add a patch with only one grid piece
       procedure          :: deallocate_patches                                   !< Throw out patches list
-      procedure, private :: count_patches                                        !< Count local patches
       procedure, private :: balance_new                                          !< Routine selector for moving proposed grids between processes
       procedure, private :: balance_strict_SFC                                   !< Routine for moving proposed grids between processes: keep strict SFC ordering
       procedure, private :: balance_fill_lowest                                  !< Routine for moving proposed grids between processes: add load to lightly-loaded processes
@@ -381,7 +380,7 @@ contains
       type(grid_container), pointer           :: cg
 
       ! Find how many pieces are to be added
-      pieces = this%count_patches()
+      pieces = this%plist%p_count()
 
       ! recreate local pse in case anything was derefined, refresh grid_id and make room for new pieces in the pse array
       if (.not. allocated(this%pse)) allocate(this%pse(FIRST:LAST))
@@ -951,26 +950,6 @@ contains
 
    end subroutine add_patch_one_piece
 
-!> \brief Count local patches
-
-   function count_patches(this)
-
-      implicit none
-
-      class(cg_level_T), intent(in) :: this
-
-      integer :: count_patches
-      integer :: p
-
-      count_patches = 0
-      if (allocated(this%plist%patches)) then
-         do p = lbound(this%plist%patches(:), dim=1), ubound(this%plist%patches(:), dim=1)
-            count_patches = count_patches + size(this%plist%patches(p)%pse, dim=1)
-         enddo
-      endif
-
-   end function count_patches
-
 !>
 !! \brief Routine selector for moving proposed grids between processes
 !!
@@ -1037,7 +1016,7 @@ contains
       endif
 
       ! gather patches id
-      s = int(this%count_patches(), kind=4)
+      s = int(this%plist%p_count(), kind=4)
       ls = int(s, kind=4)
       call piernik_MPI_Allreduce(s, pSUM) !> \warning overkill: MPI_reduce is enough here
       if (s==0) return ! nihil novi
@@ -1172,7 +1151,7 @@ contains
       integer(kind=4) :: ls, p, s
 
       ! count how many patches were requested on each process
-      s = int(this%count_patches(), kind=4)
+      s = int(this%plist%p_count(), kind=4)
       ls = int(s, kind=4)
       call piernik_MPI_Allreduce(s, pSUM) !> \warning overkill: MPI_reduce is enough here
       if (s==0) return ! nihil novi

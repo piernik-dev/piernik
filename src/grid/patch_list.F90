@@ -49,6 +49,7 @@ module patch_list
    contains
       procedure :: p_deallocate !< Throw out patches list
       procedure :: expand       !< Expand the patch list by one
+      procedure :: p_count      !< Count local patches
    end type patch_list_T
 
 contains
@@ -92,5 +93,24 @@ contains
       endif
 
    end subroutine expand
+
+!> \brief Count local patches
+
+   integer function p_count(this)
+
+      implicit none
+
+      class(patch_list_T), intent(in) :: this
+
+      integer :: p
+
+      p_count = 0
+      if (allocated(this%patches)) then
+         do p = lbound(this%patches(:), dim=1), ubound(this%patches(:), dim=1)
+            p_count = p_count + size(this%patches(p)%pse, dim=1)
+         enddo
+      endif
+
+   end function p_count
 
 end module patch_list
