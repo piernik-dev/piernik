@@ -44,19 +44,18 @@ module cg_list
    !!
    !! \details the prv and nxt pointers are not elements of the grid_container type to allow membership in several lists simultaneously
    !<
-   type cg_list_element
+   type :: cg_list_element
       type(grid_container),  pointer :: cg       !< the current grid container
       type(cg_list_element), pointer :: prv, nxt !< pointers to previous and next grid container or null() at the end of the list
    end type cg_list_element
 
    !> \brief Arbitrary list of grid containers, not for direct use.
    type, abstract :: cg_list_T
-
       type(cg_list_element), pointer :: first !< first element of the chain of grid containers, the most important one
       type(cg_list_element), pointer :: last  !< last element of the chain - useful for quick expanding and merging lists
       integer(kind=4) :: cnt                  !< number of chain links
       character(len=dsetnamelen) :: label     !< name of the list for diagnostic and identification purposes
-    contains
+   contains
 
       ! List management
 !      procedure       :: init_el

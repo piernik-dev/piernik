@@ -108,7 +108,7 @@ contains
       select type(cg_llst)
          type is (cg_leaves_T)
             call cg_llst%leaf_arr3d_boundaries(soln, bnd_type=BND_NEGREF, nocorners=.true.)
-         type is(cg_level_connected_T)
+         type is (cg_level_connected_T)
             call cg_llst%arr3d_boundaries(soln, bnd_type=BND_NEGREF, nocorners=.true.)
          class default
              call die("[multigrid_Laplace4:residual4] Unknown type")

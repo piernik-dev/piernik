@@ -63,7 +63,7 @@ module named_array_list
    !> \brief the generic list of named arrays with supporting routines
    type, abstract :: na_var_list
       type(na_var), dimension(:), allocatable :: lst
-    contains
+   contains
       procedure, private ::  find_ind                            !< Get the index of a named array of given name. Don't die when can't find requested field.
       procedure :: ind                                           !< Get the index of a named array of given name.
       procedure :: exists                                        !< Check if a named array of given name is already registered

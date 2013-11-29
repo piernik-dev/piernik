@@ -40,7 +40,7 @@ module cg_list_dataop
 
    !> \brief Arbitrary list of grid containers
    type, extends(cg_list_T) :: cg_list_dataop_T
-    contains
+   contains
 
       ! Misc
       procedure :: get_extremum                      !< Find minimum or maximum value over a s list
@@ -73,7 +73,7 @@ module cg_list_dataop
    end type cg_list_dataop_T
 
    !> \brief Index - value pairs for calling arithmetic on the grids with q_lin_comb
-   type ind_val
+   type :: ind_val
       integer :: ind  !< index in cg%q
       real    :: val  !< value for multiplication
    end type ind_val
