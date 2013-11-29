@@ -42,6 +42,7 @@ module cg_level
    use cg_list_bnd,   only: cg_list_bnd_T
    use constants,     only: ndims
    use decomposition, only: box_T, cuboid
+   use patch_list,    only: patch_list_T
 
    implicit none
 
@@ -80,7 +81,7 @@ module cg_level
       type(cuboids),   dimension(:), allocatable   :: pse              !< lists of grid chunks on each process (FIRST:LAST); Use with care, because this is an antiparallel thing
       integer                                      :: tot_se           !< global number of segments on the level
       integer                                      :: fft_type         !< type of FFT to employ in some multigrid solvers (depending on boundaries)
-      type(box_T),     dimension(:), allocatable, private :: patches   !< list of patches that exist on the current level
+      type(patch_list_T), private                  :: plist            !< list of patches that exist on the current level
       integer(kind=8), dimension(ndims)            :: off              !< offset of the level
       logical                                      :: recently_changed !< .true. when anything was added to or deleted from this level
       integer(kind=8), dimension(:,:), allocatable :: SFC_id_range     !< min and max SFC id on processes
@@ -157,7 +158,7 @@ contains
 
       class(cg_level_T), intent(inout) :: this !< object invoking type bound procedure
 
-      if (allocated(this%patches)) deallocate(this%patches) ! this%patches(:)%pse should be deallocated automagically
+      call this%plist%p_deallocate
 
    end subroutine deallocate_patches
 
@@ -416,12 +417,12 @@ contains
 
       ! write the new grid pieces description to the pse array
       i = this%cnt
-      if (allocated(this%patches)) then
-         do p = lbound(this%patches(:), dim=1), ubound(this%patches(:), dim=1)
-            do s = lbound(this%patches(p)%pse, dim=1), ubound(this%patches(p)%pse, dim=1)
+      if (allocated(this%plist%patches)) then
+         do p = lbound(this%plist%patches(:), dim=1), ubound(this%plist%patches(:), dim=1)
+            do s = lbound(this%plist%patches(p)%pse, dim=1), ubound(this%plist%patches(p)%pse, dim=1)
                i = i + 1
                if (i > size(this%pse(proc)%c(:))) call die("[cg_level:create] overflow")
-               this%pse(proc)%c(i)%se(:,:) = this%patches(p)%pse(s)%se(:,:)
+               this%pse(proc)%c(i)%se(:,:) = this%plist%patches(p)%pse(s)%se(:,:)
                call this%add
                cg => this%last%cg
                call cg%init(this%n_d, this%off, this%pse(proc)%c(i)%se(:, :), i, this%level_id) ! we cannot pass "this" as an argument because of circular dependencies
@@ -431,7 +432,7 @@ contains
                call all_cg%add(cg)
             enddo
          enddo
-         deallocate(this%patches)
+         deallocate(this%plist%patches)
       endif
 
    end subroutine create
@@ -926,7 +927,7 @@ contains
 
       this%recently_changed = .true. ! assume that the new patches will change this level
       call this%expand_list
-      if (.not. this%patches(ubound(this%patches(:), dim=1))%decompose_patch(n_d(:), off(:), this%level_id, n_pieces=n_pieces)) then
+      if (.not. this%plist%patches(ubound(this%plist%patches(:), dim=1))%decompose_patch(n_d(:), off(:), this%level_id, n_pieces=n_pieces)) then
          write(msg,'(a,i4)')"[cg_level:add_patch_detailed] Decomposition failed at level ",this%level_id
          call die(msg)
       endif
@@ -947,7 +948,7 @@ contains
 
       this%recently_changed = .true. ! assume that the new patches will change this level
       call this%expand_list
-      call this%patches(ubound(this%patches(:), dim=1))%one_piece_patch(n_d(:), off(:))
+      call this%plist%patches(ubound(this%plist%patches(:), dim=1))%one_piece_patch(n_d(:), off(:))
 
    end subroutine add_patch_one_piece
 
@@ -963,9 +964,9 @@ contains
       integer :: p
 
       count_patches = 0
-      if (allocated(this%patches)) then
-         do p = lbound(this%patches(:), dim=1), ubound(this%patches(:), dim=1)
-            count_patches = count_patches + size(this%patches(p)%pse, dim=1)
+      if (allocated(this%plist%patches)) then
+         do p = lbound(this%plist%patches(:), dim=1), ubound(this%plist%patches(:), dim=1)
+            count_patches = count_patches + size(this%plist%patches(p)%pse, dim=1)
          enddo
       endif
 
@@ -984,16 +985,16 @@ contains
       type(box_T), dimension(:), allocatable :: tmp
       integer :: i
 
-      if (.not. allocated(this%patches)) then
-         allocate(this%patches(1))
+      if (.not. allocated(this%plist%patches)) then
+         allocate(this%plist%patches(1))
       else
-         allocate(tmp(lbound(this%patches(:),dim=1):ubound(this%patches(:), dim=1) + 1))
-         tmp(:ubound(this%patches(:), dim=1)) = this%patches(:)
+         allocate(tmp(lbound(this%plist%patches(:),dim=1):ubound(this%plist%patches(:), dim=1) + 1))
+         tmp(:ubound(this%plist%patches(:), dim=1)) = this%plist%patches(:)
          ! manually deallocate arrays inside user-types, as it seems that move_alloc is unable to do that
-         do i = lbound(this%patches(:), dim=1), ubound(this%patches(:), dim=1)
-            if (allocated(this%patches(i)%pse)) deallocate(this%patches(i)%pse)
+         do i = lbound(this%plist%patches(:), dim=1), ubound(this%plist%patches(:), dim=1)
+            if (allocated(this%plist%patches(i)%pse)) deallocate(this%plist%patches(i)%pse)
          enddo
-         call move_alloc(from=tmp, to=this%patches)
+         call move_alloc(from=tmp, to=this%plist%patches)
       endif
 
    end subroutine expand_list
@@ -1295,11 +1296,11 @@ contains
 
       allocate(gptemp(I_OFF:I_END, ls))
       i = 0
-      if (allocated(this%patches)) then
-         do p = lbound(this%patches(:), dim=1, kind=4), ubound(this%patches(:), dim=1, kind=4)
-            do ss = lbound(this%patches(p)%pse, dim=1, kind=4), ubound(this%patches(p)%pse, dim=1, kind=4)
+      if (allocated(this%plist%patches)) then
+         do p = lbound(this%plist%patches(:), dim=1, kind=4), ubound(this%plist%patches(:), dim=1, kind=4)
+            do ss = lbound(this%plist%patches(p)%pse, dim=1, kind=4), ubound(this%plist%patches(p)%pse, dim=1, kind=4)
                i = i + 1
-               gptemp(:, i) = [ this%patches(p)%pse(ss)%se(:, LO), this%patches(p)%pse(ss)%se(:, HI) - this%patches(p)%pse(ss)%se(:, LO) + 1 ]
+               gptemp(:, i) = [ this%plist%patches(p)%pse(ss)%se(:, LO), this%plist%patches(p)%pse(ss)%se(:, HI) - this%plist%patches(p)%pse(ss)%se(:, LO) + 1 ]
             enddo
          enddo
       endif
