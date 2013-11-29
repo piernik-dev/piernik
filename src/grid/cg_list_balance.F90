@@ -28,7 +28,7 @@
 
 #include "piernik.h"
 
-!> \brief An abstract type created to take out some load-balance related code from cg_level (new grids)
+!> \brief A module with an abstract type created to take out some load-balance related code from cg_level (new grids)
 
 module cg_list_balance
 
@@ -46,6 +46,8 @@ module cg_list_balance
       enumerator :: I_N_B = I_OFF + ndims
       enumerator :: I_END = I_N_B + ndims - I_ONE
    end enum
+
+   !> An abstract type created to take out some load-balance related code from cg_level (new grids)
 
    type, extends(cg_list_bnd_T), abstract :: cg_list_balance_T
       type(patch_list_T)                           :: plist            !< list of patches that exist on the current level
