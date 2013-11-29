@@ -112,7 +112,6 @@ module cg_level
       procedure, private :: add_patch_one_piece                                  !< Add a patch with only one grid piece
       procedure          :: deallocate_patches                                   !< Throw out patches list
       procedure, private :: count_patches                                        !< Count local patches
-      procedure, private :: expand_list                                          !< Expand the patch list by one
       procedure, private :: balance_new                                          !< Routine selector for moving proposed grids between processes
       procedure, private :: balance_strict_SFC                                   !< Routine for moving proposed grids between processes: keep strict SFC ordering
       procedure, private :: balance_fill_lowest                                  !< Routine for moving proposed grids between processes: add load to lightly-loaded processes
@@ -926,7 +925,7 @@ contains
       integer(kind=4), optional,         intent(in)    :: n_pieces !< how many pieces the patch should be divided to?
 
       this%recently_changed = .true. ! assume that the new patches will change this level
-      call this%expand_list
+      call this%plist%expand
       if (.not. this%plist%patches(ubound(this%plist%patches(:), dim=1))%decompose_patch(n_d(:), off(:), this%level_id, n_pieces=n_pieces)) then
          write(msg,'(a,i4)')"[cg_level:add_patch_detailed] Decomposition failed at level ",this%level_id
          call die(msg)
@@ -947,7 +946,7 @@ contains
       integer(kind=8), dimension(ndims), intent(in)    :: off      !< offset (with respect to the base level, counted on own level)
 
       this%recently_changed = .true. ! assume that the new patches will change this level
-      call this%expand_list
+      call this%plist%expand
       call this%plist%patches(ubound(this%plist%patches(:), dim=1))%one_piece_patch(n_d(:), off(:))
 
    end subroutine add_patch_one_piece
@@ -971,33 +970,6 @@ contains
       endif
 
    end function count_patches
-
-!> \brief Expand the patch list by one
-
-   subroutine expand_list(this)
-
-      use decomposition, only: box_T
-
-      implicit none
-
-      class(cg_level_T), target,         intent(inout) :: this     !< current level
-
-      type(box_T), dimension(:), allocatable :: tmp
-      integer :: i
-
-      if (.not. allocated(this%plist%patches)) then
-         allocate(this%plist%patches(1))
-      else
-         allocate(tmp(lbound(this%plist%patches(:),dim=1):ubound(this%plist%patches(:), dim=1) + 1))
-         tmp(:ubound(this%plist%patches(:), dim=1)) = this%plist%patches(:)
-         ! manually deallocate arrays inside user-types, as it seems that move_alloc is unable to do that
-         do i = lbound(this%plist%patches(:), dim=1), ubound(this%plist%patches(:), dim=1)
-            if (allocated(this%plist%patches(i)%pse)) deallocate(this%plist%patches(i)%pse)
-         enddo
-         call move_alloc(from=tmp, to=this%plist%patches)
-      endif
-
-   end subroutine expand_list
 
 !>
 !! \brief Routine selector for moving proposed grids between processes

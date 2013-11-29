@@ -48,6 +48,7 @@ module patch_list
       !> \todo make it private
    contains
       procedure :: p_deallocate !< Throw out patches list
+      procedure :: expand       !< Expand the patch list by one
    end type patch_list_T
 
 contains
@@ -64,5 +65,32 @@ contains
       ! this%patches(:)%pse should be deallocated automagically
 
    end subroutine p_deallocate
+
+!> \brief Expand the patch list by one
+
+   subroutine expand(this)
+
+      use decomposition, only: box_T
+
+      implicit none
+
+      class(patch_list_T), target, intent(inout) :: this !< current level
+
+      type(box_T), dimension(:), allocatable :: tmp
+      integer :: i
+
+      if (.not. allocated(this%patches)) then
+         allocate(this%patches(1))
+      else
+         allocate(tmp(lbound(this%patches(:),dim=1):ubound(this%patches(:), dim=1) + 1))
+         tmp(:ubound(this%patches(:), dim=1)) = this%patches(:)
+         ! manually deallocate arrays inside user-types, as it seems that move_alloc is unable to do that
+         do i = lbound(this%patches(:), dim=1), ubound(this%patches(:), dim=1)
+            if (allocated(this%patches(i)%pse)) deallocate(this%patches(i)%pse)
+         enddo
+         call move_alloc(from=tmp, to=this%patches)
+      endif
+
+   end subroutine expand
 
 end module patch_list
