@@ -553,10 +553,12 @@ contains
    subroutine find_neighbors_SFC(this)
 
       use cg_list,    only: cg_list_element
-      use constants,  only: xdim, cor_dim
-      use dataio_pub, only: warn
+      use constants,  only: xdim, cor_dim, ndims, LO, INVALID
+      use dataio_pub, only: warn, die
+      use domain,     only: dom
       use grid_cont,  only: grid_container
       use mpisetup,   only: master
+      use ordering,   only: SFC_order
       use refinement, only: strict_SFC_ordering
 
       implicit none
@@ -565,6 +567,11 @@ contains
 
       type(grid_container),  pointer                  :: cg      !< grid container that we are currently working on
       type(cg_list_element), pointer                  :: cgl
+      integer                                         :: ix, iy, iz
+      integer(kind=8), dimension(ndims)               :: n_off   !< neighbor's offset
+      integer(kind=8)                                 :: n_id    !< neighbor's id
+
+      if (.not. this%is_blocky) call die("[cg_level:find_neighbors_SFC] Can work only on regular cartesian cecompositions")
 
       cgl => this%first
       do while (associated(cgl))
@@ -575,11 +582,28 @@ contains
          allocate(cg%i_bnd(xdim:cor_dim), cg%o_bnd(xdim:cor_dim))
 
          ! for all potential neighbors:
-         ! find their SFC_id (take care about periodicity)
-         ! find on what process they may reside
-         ! find if they really occur on that process
-         ! if it not occurs set cg%bnd(d, lh) to BND_FC or BND_MPI_FC
-         ! if it occurs call cg%[io]_bnd(?)%add_seg(?, ?, ?)
+         do iz = -dom%D_z, dom%D_z
+            do iy = -dom%D_y, dom%D_y
+               do ix = -dom%D_x, dom%D_x
+                  if (any( [ ix, iy, iz ] /= 0)) then
+                     ! find their SFC_id (take care about periodicity)
+                     n_off = cg%my_se(:, LO) + [ ix, iy, iz ] * cg%n_b
+                     where (dom%periodic) n_off = mod(n_off + this%n_d + this%off, this%n_d) - this%off
+                     n_id = INVALID
+                     if ( all(n_off >= this%off          .or. .not. dom%has_dir) .and. &
+                          all(n_off <  this%off+this%n_d .or. .not. dom%has_dir)) then
+                        n_id = SFC_order(n_off-this%off)
+                        ! find on what process they may reside
+                        ! find if they really occur on that process
+                        ! if it not occurs set cg%bnd(d, lh) to BND_FC or BND_MPI_FC
+                        ! if it occurs call cg%[io]_bnd(?)%add_seg(?, ?, ?)
+                     else
+                        ! its external boundary
+                     endif
+                  endif
+               enddo
+            enddo
+         enddo
 
          cgl => cgl%nxt
       enddo
