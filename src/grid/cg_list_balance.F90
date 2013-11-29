@@ -126,10 +126,10 @@ contains
       if (present(prevent_rebalancing)) rebalance = .not. prevent_rebalancing
 
       if (.not. this%check_SFC()) then
-!!$         if (.not. rebalance) call die("[cg_level:balance_strict_SFC] Cannot rebalence messy grid distribution.")
+!!$         if (.not. rebalance) call die("[cg_list_balance:balance_strict_SFC] Cannot rebalence messy grid distribution.")
 !!$         ! call reshuffle
-!!$         call die("[cg_level:balance_strict_SFC] reshuffling not implemented.")
-         if (master) call warn("[cg_level:balance_strict_SFC] non-SFC ordering!") ! May happen after resizing domain on the left sides
+!!$         call die("[cg_list_balance:balance_strict_SFC] reshuffling not implemented.")
+         if (master) call warn("[cg_list_balance:balance_strict_SFC] non-SFC ordering!") ! May happen after resizing domain on the left sides
       endif
 
       ! gather patches id
@@ -285,7 +285,7 @@ contains
             p = p - I_ONE
          enddo
          i = size(gp%list) - sum(from(FIRST+1:LAST+1))
-         if (i /= 0) call die("[cg_level:balance_fill_lowest] i /= 0")
+         if (i /= 0) call die("[cg_list_balance:balance_fill_lowest] i /= 0")
          do p = FIRST, LAST
             from(p+1) = from(p+1) + from(p)
          enddo
@@ -487,7 +487,7 @@ contains
 
       if (.not. allocated(this%SFC_id_range)) allocate(this%SFC_id_range(FIRST:LAST, LO:HI))
       if (any(lbound(this%SFC_id_range) /= [ FIRST, LO ]) .or. any(ubound(this%SFC_id_range) /= [ LAST, HI ])) &
-           call die("[cg_level:update_SFC_id_range] bogus this%SFC_id_range dimensions")
+           call die("[cg_list_balance:update_SFC_id_range] bogus this%SFC_id_range dimensions")
 
       this%SFC_id_range(proc, :) = [ huge(1), -huge(1) ]
       cgl => this%first

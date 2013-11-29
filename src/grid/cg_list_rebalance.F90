@@ -166,7 +166,7 @@ contains
          if (size(gp%list) > 0) then
             s = count(gp%list(:)%cur_proc /= gp%list(:)%dest_proc)
             if (s/real(size(gp%list)) > oop_thr) then
-               write(msg,'(a,i3,2(a,i6),a,f6.3,a)')"[cg_level:balance_old] ^", this%level_id," Reshuffling OutOfPlace grids:",s, "/",size(gp%list)," (load balance: ",sum(cnt_existing)/real(maxval(cnt_existing)*size(cnt_existing)),")"
+               write(msg,'(a,i3,2(a,i6),a,f6.3,a)')"[cg_list_rebalance:balance_old] ^", this%level_id," Reshuffling OutOfPlace grids:",s, "/",size(gp%list)," (load balance: ",sum(cnt_existing)/real(maxval(cnt_existing)*size(cnt_existing)),")"
                call printinfo(msg)
             else
                s = 0
@@ -179,7 +179,7 @@ contains
          p = expanded_domain%cnt
          call piernik_MPI_Allreduce(p, pSUM)
          if (p /= 0) then
-            write(msg,'(a,i5,a)')"[cg_level:balance_old] Allreduce(expanded_domain%cnt) = ",p,", aborting reshuffling."
+            write(msg,'(a,i5,a)')"[cg_list_rebalance:balance_old] Allreduce(expanded_domain%cnt) = ",p,", aborting reshuffling."
             if (master) call warn(msg)
          else
             call this%reshuffle(gp)
@@ -270,7 +270,7 @@ contains
       allocate(cglepa(size(gptemp)))
       do i = lbound(gptemp, dim=2, kind=4), ubound(gptemp, dim=2, kind=4)
          cglepa(i)%p => null()
-         if (gptemp(I_C_P, i) == gptemp(I_D_P, i)) call die("[cg_level:balance_old] can not send to self")
+         if (gptemp(I_C_P, i) == gptemp(I_D_P, i)) call die("[cg_list_rebalance:balance_old] can not send to self")
          if (gptemp(I_C_P, i) == proc) then ! send
             found = .false.
             cgl => this%first
@@ -298,7 +298,7 @@ contains
                endif
                cgl => cgl%nxt
             enddo
-            if (.not. found) call die("[cg_level:balance_old] Grid id not found")
+            if (.not. found) call die("[cg_list_rebalance:balance_old] Grid id not found")
             nr = nr + 1
             if (nr > size(req, dim=1)) call inflate_req
             call MPI_Isend(cglepa(i)%tbuf, size(cglepa(i)%tbuf), MPI_DOUBLE_PRECISION, gptemp(I_D_P, i), i, comm, req(nr), mpi_err)

@@ -123,7 +123,7 @@ contains
       integer(kind=8), dimension(ndims)               :: n_off   !< neighbor's offset
       integer(kind=8)                                 :: n_id    !< neighbor's id
 
-      if (.not. this%is_blocky) call die("[cg_level:find_neighbors_SFC] Can work only on regular cartesian cecompositions")
+      if (.not. this%is_blocky) call die("[cg_list_neighbors:find_neighbors_SFC] Can work only on regular cartesian cecompositions")
 
       cgl => this%first
       do while (associated(cgl))
@@ -160,7 +160,7 @@ contains
          cgl => cgl%nxt
       enddo
 
-      if (strict_SFC_ordering .and. master) call warn("[cg_level:find_neighbors_SFC] not implemented yet. Redirected to find_neighbors_bruteforce")
+      if (strict_SFC_ordering .and. master) call warn("[cg_list_neighbors:find_neighbors_SFC] not implemented yet. Redirected to find_neighbors_bruteforce")
       call this%find_neighbors_bruteforce
 
    end subroutine find_neighbors_SFC
