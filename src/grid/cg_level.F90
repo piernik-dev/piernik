@@ -72,6 +72,8 @@ module cg_level
    !! pieces covering specified position.
    !!
    !! \todo Provide one of the structures described above
+   !!
+   !! \todo split this type into two smaller types
    !<
    type, extends(cg_list_bnd_T), abstract :: cg_level_T
 
