@@ -72,7 +72,7 @@ module cg_level
       procedure          :: print_segments                                       !< print detailed information about current level decomposition
       procedure, private :: update_decomposition_properties                      !< Update some flags in domain module
       procedure, private :: create                                               !< Get all decomposed patches and turn them into local grid containers
-      procedure, private :: update_pse                                           !< Gather updated information about the level and overwrite it to this%pse
+      procedure, private :: update_gse                                           !< Gather updated information about the level and overwrite it to this%gse
       procedure          :: update_tot_se                                        !< count all cg on current level for computing tags in vertical_prep
       generic,   public  :: add_patch => add_patch_fulllevel, add_patch_detailed !< Add a new piece of grid to the current level and decompose it
       procedure, private :: add_patch_fulllevel                                  !< Add a whole level to the list of patches
@@ -94,7 +94,7 @@ contains
       class(cg_level_T), intent(inout) :: this !< object invoking type bound procedure
 
       call this%plist%p_deallocate
-      if (allocated(this%pse))          deallocate(this%pse)        ! this%pse(:)%c should be deallocated automagically
+      if (allocated(this%gse))          deallocate(this%gse)        ! this%gse(:)%c should be deallocated automagically
       if (allocated(this%omega_mean))   deallocate(this%omega_mean)
       if (allocated(this%omega_cr))     deallocate(this%omega_cr)
       if (allocated(this%nshift))       deallocate(this%nshift)
@@ -149,9 +149,9 @@ contains
          i = i + 1
          cgl => cgl%nxt
       enddo
-!!$      if (i /= this%cnt .or. this%cnt /= size(this%pse(proc)%c(:)) .or. size(this%pse(proc)%c(:)) /= i) then
+!!$      if (i /= this%cnt .or. this%cnt /= size(this%gse(proc)%c(:)) .or. size(this%gse(proc)%c(:)) /= i) then
 !!$         write(msg, '(2(a,i4),a,3i7)')"[cg_level:print_segments] Uncertain number of grid pieces @PE ",proc," on level ", this%level_id, &
-!!$              &                       " : ",i,this%cnt,size(this%pse(proc)%c(:))
+!!$              &                       " : ",i,this%cnt,size(this%gse(proc)%c(:))
 !!$         call warn(msg)
 !!$
 !!$         cgl => this%first
@@ -172,9 +172,9 @@ contains
       tot_cg = 0
       do p = FIRST, LAST
          hl = 0
-         tot_cg = tot_cg + size(this%pse(p)%c(:))
-         do i = lbound(this%pse(p)%c(:), dim=1), ubound(this%pse(p)%c(:), dim=1)
-            ccnt = product(this%pse(p)%c(i)%se(:, HI) - this%pse(p)%c(i)%se(:, LO) + 1)
+         tot_cg = tot_cg + size(this%gse(p)%c(:))
+         do i = lbound(this%gse(p)%c(:), dim=1), ubound(this%gse(p)%c(:), dim=1)
+            ccnt = product(this%gse(p)%c(i)%se(:, HI) - this%gse(p)%c(i)%se(:, LO) + 1)
             maxcnt(p) = maxcnt(p) + ccnt
 #ifdef VERBOSE
             if (i == 1) then
@@ -184,11 +184,11 @@ contains
                header = repeat(" ", hl)
             endif
             if (maxval(this%n_d(:)) < 1000000) then
-               write(msg,'(2a,2(3i7,a),i8,a)') header(:hl), " : [", this%pse(p)%c(i)%se(:, LO), "] : [", this%pse(p)%c(i)%se(:, HI), "] #", ccnt, " cells"
+               write(msg,'(2a,2(3i7,a),i8,a)') header(:hl), " : [", this%gse(p)%c(i)%se(:, LO), "] : [", this%gse(p)%c(i)%se(:, HI), "] #", ccnt, " cells"
             else if (maxval(this%n_d(:)) < 1000000000) then
-               write(msg,'(2a,2(3i10,a),i8,a)') header(:hl), " : [", this%pse(p)%c(i)%se(:, LO), "] : [", this%pse(p)%c(i)%se(:, HI), "] #", ccnt, " cells"
+               write(msg,'(2a,2(3i10,a),i8,a)') header(:hl), " : [", this%gse(p)%c(i)%se(:, LO), "] : [", this%gse(p)%c(i)%se(:, HI), "] #", ccnt, " cells"
             else
-               write(msg,'(2a,2(3i18,a),i8,a)') header(:hl), " : [", this%pse(p)%c(i)%se(:, LO), "] : [", this%pse(p)%c(i)%se(:, HI), "] #", ccnt, " cells"
+               write(msg,'(2a,2(3i18,a),i8,a)') header(:hl), " : [", this%gse(p)%c(i)%se(:, LO), "] : [", this%gse(p)%c(i)%se(:, HI), "] #", ccnt, " cells"
             endif
             call printinfo(msg)
 #endif /* VERBOSE */
@@ -219,10 +219,10 @@ contains
       ! First: do the balancing of new grids
       call this%balance_new(prevent_rebalancing)
 
-      ! Second: create new grids, invalidate most of this%pse database
+      ! Second: create new grids, invalidate most of this%gse database
       call this%create
 
-      ! Third: update all information on refinement structure and intra-level communication, update this%pse database
+      ! Third: update all information on refinement structure and intra-level communication, update this%gse database
       ! Remember that the communication between levels has to be updated as well, but we cannot do this here due to cyclic dependencies
       call this%update_everything
 
@@ -237,17 +237,17 @@ contains
       class(cg_level_T), intent(inout) :: this   !< object invoking type bound procedure
 
       call this%update_decomposition_properties
-      call this%update_pse     ! communicate everything that was added before
-      call this%find_neighbors ! requires access to whole this%pse(:)%c(:)%se(:,:)
+      call this%update_gse     ! communicate everything that was added before
+      call this%find_neighbors ! requires access to whole this%gse(:)%c(:)%se(:,:)
       call this%update_req     ! Perhaps this%find_neighbors added some new entries
       call this%update_tot_se
       call this%print_segments
 
    end subroutine update_everything
 
-!> \brief Gather information on cg's currently present on local level, and write new this%pse array
+!> \brief Gather information on cg's currently present on local level, and write new this%gse array
 
-   subroutine update_pse(this)
+   subroutine update_gse(this)
 
       use cg_list,    only: cg_list_element
       use constants,  only: I_ZERO, I_ONE, ndims, LO, HI
@@ -267,7 +267,7 @@ contains
 
       ! get the count of grid pieces on each process
       ! Beware: int(this%cnt, kind=4) is not properly updated after calling this%distribute.
-      ! Use size(this%pse(proc)%c) if you want to propagate pse before the grid containers are actually added to the level
+      ! Use size(this%gse(proc)%c) if you want to propagate gse before the grid containers are actually added to the level
       ! OPT: this call can be quite long to complete
       call MPI_Allgather(int(this%cnt, kind=4), I_ONE, MPI_INTEGER, allcnt, I_ONE, MPI_INTEGER, comm, mpi_err)
 
@@ -283,31 +283,31 @@ contains
       allse = 0
       cgl => this%first
       do i = alloff(proc), alloff(proc) + allcnt(proc) - 1
-         if (.not. associated(cgl)) call die("[cg_level:update_pse] Run out of cg.")
+         if (.not. associated(cgl)) call die("[cg_level:update_gse] Run out of cg.")
          allse(ncub*i      +1:ncub*i+   ndims) = int(cgl%cg%my_se(:, LO), kind=4)
          allse(ncub*i+ndims+1:ncub*i+HI*ndims) = int(cgl%cg%my_se(:, HI), kind=4) ! we do it in low-level way here. Is it worth using reshape() or something?
-         if (any(cgl%cg%my_se > huge(allse(1)))) call die("[cg_level:update_pse] Implement 8-byter integers in MPI transactions for such huge refinements")
+         if (any(cgl%cg%my_se > huge(allse(1)))) call die("[cg_level:update_gse] Implement 8-byter integers in MPI transactions for such huge refinements")
          cgl => cgl%nxt
       enddo
-      if (associated(cgl)) call die("[cg_level:update_pse] Not all cg were read.")
+      if (associated(cgl)) call die("[cg_level:update_gse] Not all cg were read.")
 
       ! First use of MPI_Allgatherv in the Piernik Code!
       ncub_allcnt(:) = int(ncub * allcnt(:), kind=4)
       ncub_alloff(:) = int(ncub * alloff(:), kind=4)
       call MPI_Allgatherv(MPI_IN_PLACE, I_ZERO, MPI_DATATYPE_NULL, allse, ncub_allcnt, ncub_alloff, MPI_INTEGER, comm, mpi_err)
 
-      ! Rewrite the pse array, forget about past.
-      if (.not. allocated(this%pse)) allocate(this%pse(FIRST:LAST))
+      ! Rewrite the gse array, forget about past.
+      if (.not. allocated(this%gse)) allocate(this%gse(FIRST:LAST))
       do p = FIRST, LAST
-         if (allocated(this%pse(p)%c)) deallocate(this%pse(p)%c)
-         allocate(this%pse(p)%c(allcnt(p)))
+         if (allocated(this%gse(p)%c)) deallocate(this%gse(p)%c)
+         allocate(this%gse(p)%c(allcnt(p)))
          do i = alloff(p), alloff(p) + allcnt(p) - 1
-            this%pse(p)%c(i-alloff(p)+1)%se(:, LO) = allse(ncub*i      +1:ncub*i+   ndims) ! we do it in low-level way here again.
-            this%pse(p)%c(i-alloff(p)+1)%se(:, HI) = allse(ncub*i+ndims+1:ncub*i+HI*ndims)
+            this%gse(p)%c(i-alloff(p)+1)%se(:, LO) = allse(ncub*i      +1:ncub*i+   ndims) ! we do it in low-level way here again.
+            this%gse(p)%c(i-alloff(p)+1)%se(:, HI) = allse(ncub*i+ndims+1:ncub*i+HI*ndims)
          enddo
       enddo
 
-   end subroutine update_pse
+   end subroutine update_gse
 
 !>
 !! \brief Get all decomposed patches and turn them into local grid containers
@@ -341,29 +341,29 @@ contains
       ! Find how many pieces are to be added
       pieces = this%plist%p_count()
 
-      ! recreate local pse in case anything was derefined, refresh grid_id and make room for new pieces in the pse array
-      if (.not. allocated(this%pse)) allocate(this%pse(FIRST:LAST))
-      if (allocated(this%pse(proc)%c)) deallocate(this%pse(proc)%c)
-      allocate(this%pse(proc)%c(this%cnt + pieces))
+      ! recreate local gse in case anything was derefined, refresh grid_id and make room for new pieces in the gse array
+      if (.not. allocated(this%gse)) allocate(this%gse(FIRST:LAST))
+      if (allocated(this%gse(proc)%c)) deallocate(this%gse(proc)%c)
+      allocate(this%gse(proc)%c(this%cnt + pieces))
       i = 0
       cgl => this%first
       do while (associated(cgl))
          i = i + 1
-         this%pse(proc)%c(i)%se(:,:) = cgl%cg%my_se(:,:)
+         this%gse(proc)%c(i)%se(:,:) = cgl%cg%my_se(:,:)
          cgl%cg%grid_id = i
          cgl => cgl%nxt
       enddo
-      do while (i<ubound(this%pse(proc)%c, dim=1))
+      do while (i<ubound(this%gse(proc)%c, dim=1))
          i = i + 1
-         this%pse(proc)%c(i)%se = -huge(1)
+         this%gse(proc)%c(i)%se = -huge(1)
       enddo
 
       ! check local consistency
       cgl => this%first
       do while (associated(cgl))
          found_id = .false.
-         do i = lbound(this%pse(proc)%c, dim=1), lbound(this%pse(proc)%c, dim=1) + this%cnt - 1
-            if (all(this%pse(proc)%c(i)%se(:,:) == cgl%cg%my_se(:,:))) then
+         do i = lbound(this%gse(proc)%c, dim=1), lbound(this%gse(proc)%c, dim=1) + this%cnt - 1
+            if (all(this%gse(proc)%c(i)%se(:,:) == cgl%cg%my_se(:,:))) then
                if (found_id) call die("[cg_level:create] multiple occurrences")
                found_id = .true.
             endif
@@ -372,17 +372,17 @@ contains
          cgl => cgl%nxt
       enddo
 
-      ! write the new grid pieces description to the pse array
+      ! write the new grid pieces description to the gse array
       i = this%cnt
       if (allocated(this%plist%patches)) then
          do p = lbound(this%plist%patches(:), dim=1), ubound(this%plist%patches(:), dim=1)
             do s = lbound(this%plist%patches(p)%pse, dim=1), ubound(this%plist%patches(p)%pse, dim=1)
                i = i + 1
-               if (i > size(this%pse(proc)%c(:))) call die("[cg_level:create] overflow")
-               this%pse(proc)%c(i)%se(:,:) = this%plist%patches(p)%pse(s)%se(:,:)
+               if (i > size(this%gse(proc)%c(:))) call die("[cg_level:create] overflow")
+               this%gse(proc)%c(i)%se(:,:) = this%plist%patches(p)%pse(s)%se(:,:)
                call this%add
                cg => this%last%cg
-               call cg%init(this%n_d, this%off, this%pse(proc)%c(i)%se(:, :), i, this%level_id) ! we cannot pass "this" as an argument because of circular dependencies
+               call cg%init(this%n_d, this%off, this%gse(proc)%c(i)%se(:, :), i, this%level_id) ! we cannot pass "this" as an argument because of circular dependencies
                do ep = lbound(cg_extptrs%ext, dim=1), ubound(cg_extptrs%ext, dim=1)
                   if (associated(cg_extptrs%ext(ep)%init))  call cg_extptrs%ext(ep)%init(cg)
                enddo
@@ -427,7 +427,7 @@ contains
       endif
       if (is_mpi_noncart) is_uneven = .true.
 
-      is_multicg = is_multicg .or. (ubound(this%pse(proc)%c(:), dim=1) > 1)
+      is_multicg = is_multicg .or. (ubound(this%gse(proc)%c(:), dim=1) > 1)
       call piernik_MPI_Allreduce(is_multicg, pLOR)
 
       ! check if all blocks in the domain have same size and shape
@@ -469,7 +469,7 @@ contains
 
       this%tot_se = 0
       do p = FIRST, LAST
-         if (allocated(this%pse)) this%tot_se = this%tot_se + ubound(this%pse(p)%c(:), dim=1)
+         if (allocated(this%gse)) this%tot_se = this%tot_se + ubound(this%gse(p)%c(:), dim=1)
       enddo
 
    end subroutine update_tot_se
@@ -526,7 +526,7 @@ contains
       class(cg_level_T), intent(inout) :: this
 
       call this%rebalance_old
-      ! OPT: call this%update_pse inside this%update_everything can be quite long to complete
+      ! OPT: call this%update_gse inside this%update_everything can be quite long to complete
       call piernik_MPI_Allreduce(this%recently_changed, pLOR)
       if (this%recently_changed) call this%update_everything
 

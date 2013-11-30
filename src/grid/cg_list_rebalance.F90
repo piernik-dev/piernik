@@ -50,7 +50,7 @@ module cg_list_rebalance
    !> \brief An abstract type created to take out some load-balance related code from cg_level (old grids)
 
    type, extends(cg_list_balance_T), abstract :: cg_list_rebalance_T
-      type(cuboids), dimension(:), allocatable :: pse       !< lists of grid chunks on each process (FIRST:LAST); Use with care, because this is an antiparallel thing
+      type(cuboids), dimension(:), allocatable :: gse       !< lists of grid chunks on each process (FIRST:LAST); Use with care, because this is an antiparallel thing
       integer(kind=4)                          :: level_id  !< level number (relative to base level). No arithmetic should depend on it.
       integer(kind=8), dimension(ndims)        :: n_d       !< maximum number of grid cells in each direction (size of fully occupied level)
    contains
@@ -107,15 +107,15 @@ contains
          cgl => cgl%nxt
       enddo
 #ifdef DEBUG
-      ! Gather complete grid list and compare with this%pse
+      ! Gather complete grid list and compare with this%gse
       call MPI_Gather(this%cnt, I_ONE, MPI_INTEGER, cnt_existing, I_ONE, MPI_INTEGER, FIRST, comm, mpi_err)
       if (master) then
          call gp%init(sum(cnt_existing))
          do i = I_ONE, this%cnt
             call gp%list(i)%set_gp(gptemp(I_OFF:I_OFF+ndims-1, i), int(gptemp(I_N_B:I_N_B+ndims-1, i), kind=4), int(gptemp(I_GID, i), kind=4), FIRST)
-            if (any(this%pse(FIRST)%c(i)%se(:, LO) /= gp%list(i)%off) .or. gp%list(i)%cur_gid /= i .or. &
-                 any(this%pse(FIRST)%c(i)%se(:, HI) - this%pse(FIRST)%c(i)%se(:, LO) +1 /= gp%list(i)%n_b)) &
-                 call warn("cl:bo this%pse(FIRST) /= gptemp")
+            if (any(this%gse(FIRST)%c(i)%se(:, LO) /= gp%list(i)%off) .or. gp%list(i)%cur_gid /= i .or. &
+                 any(this%gse(FIRST)%c(i)%se(:, HI) - this%gse(FIRST)%c(i)%se(:, LO) +1 /= gp%list(i)%n_b)) &
+                 call warn("cl:bo this%gse(FIRST) /= gptemp")
          enddo
          deallocate(gptemp)
          s = this%cnt
@@ -125,9 +125,9 @@ contains
                call MPI_Recv(gptemp, size(gptemp), MPI_INTEGER8, p, tag_gpt, comm, MPI_STATUS_IGNORE, mpi_err)
                do i = I_ONE, cnt_existing(p)
                   call gp%list(i+s)%set_gp(gptemp(I_OFF:I_OFF+ndims-1, i), int(gptemp(I_N_B:I_N_B+ndims-1, i), kind=4), int(gptemp(I_GID, i), kind=4), p)
-                  if (any(this%pse(p)%c(i)%se(:, LO) /= gp%list(i+s)%off) .or. gp%list(i+s)%cur_gid /= i .or. &
-                       any(this%pse(p)%c(i)%se(:, HI) - this%pse(p)%c(i)%se(:, LO) +1 /= gp%list(i+s)%n_b)) &
-                       call warn("cl:bo this%pse(p) /= gptemp")
+                  if (any(this%gse(p)%c(i)%se(:, LO) /= gp%list(i+s)%off) .or. gp%list(i+s)%cur_gid /= i .or. &
+                       any(this%gse(p)%c(i)%se(:, HI) - this%gse(p)%c(i)%se(:, LO) +1 /= gp%list(i+s)%n_b)) &
+                       call warn("cl:bo this%gse(p) /= gptemp")
                enddo
                s = s + cnt_existing(p)
                deallocate(gptemp)
@@ -137,19 +137,19 @@ contains
          if (this%cnt > 0) call MPI_Send(gptemp, size(gptemp), MPI_INTEGER8, FIRST, tag_gpt, comm, mpi_err)
       endif
 #else /* !DEBUG */
-      ! Trust that this%pse is updated
+      ! Trust that this%gse is updated
       if (master) then
          do p = FIRST, LAST
-            cnt_existing(p) = size(this%pse(p)%c, kind=4)
+            cnt_existing(p) = size(this%gse(p)%c, kind=4)
          enddo
          call gp%init(sum(cnt_existing))
          i = 0
          do p = FIRST, LAST
             ii = i
             if (ii /= sum(cnt_existing(:p-1))) call warn("cl:bo ii /= sum(cnt_existing(:p-1))")
-            do s = lbound(this%pse(p)%c, dim=1), ubound(this%pse(p)%c, dim=1)
+            do s = lbound(this%gse(p)%c, dim=1), ubound(this%gse(p)%c, dim=1)
                i = i + I_ONE
-               call gp%list(i)%set_gp(this%pse(p)%c(s)%se(:, LO), int(this%pse(p)%c(s)%se(:, HI) - this%pse(p)%c(s)%se(:, LO) +1, kind=4), i - ii, p)
+               call gp%list(i)%set_gp(this%gse(p)%c(s)%se(:, LO), int(this%gse(p)%c(s)%se(:, HI) - this%gse(p)%c(s)%se(:, LO) +1, kind=4), i - ii, p)
             enddo
          enddo
       endif
