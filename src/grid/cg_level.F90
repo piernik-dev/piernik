@@ -216,13 +216,13 @@ contains
       class(cg_level_T), intent(inout) :: this                !< object invoking type bound procedure
       logical, optional, intent(in)    :: prevent_rebalancing !< if present and .true. then do not allow rebalancing during addition of new grids
 
-      ! First: do the balancing of new grids, update this%pse database
+      ! First: do the balancing of new grids
       call this%balance_new(prevent_rebalancing)
 
-      ! Second: create new grids
+      ! Second: create new grids, invalidate most of this%pse database
       call this%create
 
-      ! Third: update all information on refinement structure and intra-level communication.
+      ! Third: update all information on refinement structure and intra-level communication, update this%pse database
       ! Remember that the communication between levels has to be updated as well, but we cannot do this here due to cyclic dependencies
       call this%update_everything
 
@@ -238,7 +238,7 @@ contains
 
       call this%update_decomposition_properties
       call this%update_pse     ! communicate everything that was added before
-      call this%find_neighbors ! require access to whole this%pse(:)%c(:)%se(:,:)
+      call this%find_neighbors ! requires access to whole this%pse(:)%c(:)%se(:,:)
       call this%update_req     ! Perhaps this%find_neighbors added some new entries
       call this%update_tot_se
       call this%print_segments
