@@ -39,8 +39,23 @@ module cg_list_neighbors
    private
    public :: cg_list_neighbors_T
 
-   !> \brief An abstract type created to take out neighbor finding code from cg_level
-
+   !>
+   !! \brief An abstract type created to take out neighbor finding code from cg_level
+   !!
+   !! \details
+   !! OPT: Searching through this%pse for neighbours, prolongation/restriction overlaps etc is quite costly.
+   !! The cost is O(this%cnt^2). Provide a list, sorted according to Morton/Hilbert id's and do a bisection search
+   !! instead of checking against all grids. It will result in massive speedups on
+   !! cg_list_neighbors_T%find_neighbors and cg_level_connected_T%{vertical_prep,vertical_b_prep). It may also
+   !! simplify the process of fixing refinement structure in refinement_update::fix_refinement. Grids which are
+   !! larger than AMR_bsize (merged grids, non-block decompositions, both not implemented yet) may be referred by
+   !! several id's that correspond with AMR_bsize-d virtual grid pieces.
+   !!
+   !! Alternatively, construct a searchable binary tree or oct-tree and provide fast routines for searching grid
+   !! pieces covering specified position.
+   !!
+   !! \todo Provide one of the structures described above
+   !<
    type, extends(cg_list_rebalance_T), abstract :: cg_list_neighbors_T
       logical :: is_blocky  !< .true. when all grid pieces on this level on all processes have same shape and size
    contains
