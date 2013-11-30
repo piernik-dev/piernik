@@ -245,7 +245,12 @@ contains
 
    end subroutine update_everything
 
-!> \brief Gather information on cg's currently present on local level, and write new this%gse array
+!>
+!! \brief Gather information on cg's currently present on local level, and write new this%gse array
+!!
+!! OPT: For strict SFC distribution it is possible to determine complete list of neighbors (on the same level and
+!! also one level up and down) and exchange only that data. It might be a bit faster for massively parallel runs.
+!<
 
    subroutine update_gse(this)
 
@@ -286,7 +291,7 @@ contains
          if (.not. associated(cgl)) call die("[cg_level:update_gse] Run out of cg.")
          allse(ncub*i      +1:ncub*i+   ndims) = int(cgl%cg%my_se(:, LO), kind=4)
          allse(ncub*i+ndims+1:ncub*i+HI*ndims) = int(cgl%cg%my_se(:, HI), kind=4) ! we do it in low-level way here. Is it worth using reshape() or something?
-         if (any(cgl%cg%my_se > huge(allse(1)))) call die("[cg_level:update_gse] Implement 8-byter integers in MPI transactions for such huge refinements")
+         if (any(cgl%cg%my_se > huge(allse(1)))) call die("[cg_level:update_gse] Implement 8-byte integers in MPI transactions for such huge refinements")
          cgl => cgl%nxt
       enddo
       if (associated(cgl)) call die("[cg_level:update_gse] Not all cg were read.")
