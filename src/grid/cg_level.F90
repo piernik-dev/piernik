@@ -260,7 +260,7 @@ contains
       use grid_cont,          only: grid_container
       use grid_container_ext, only: cg_extptrs
       use dataio_pub,         only: die
-      use mpisetup,           only: FIRST, LAST, proc
+      use mpisetup,           only: proc
 
       implicit none
 
@@ -268,30 +268,12 @@ contains
 
       integer                                 :: i, p, ep
       integer(kind=8)                         :: s
-      integer(kind=8)                         :: pieces
       type(cg_list_element), pointer          :: cgl
       logical                                 :: found_id
       type(grid_container), pointer           :: cg
 
-      ! Find how many pieces are to be added
-      pieces = this%plist%p_count()
-
-      ! recreate local gse in case anything was derefined, refresh grid_id and make room for new pieces in the gse array
-      if (.not. allocated(this%dot%gse)) allocate(this%dot%gse(FIRST:LAST))
-      if (allocated(this%dot%gse(proc)%c)) deallocate(this%dot%gse(proc)%c)
-      allocate(this%dot%gse(proc)%c(this%cnt + pieces))
-      i = 0
-      cgl => this%first
-      do while (associated(cgl))
-         i = i + 1
-         this%dot%gse(proc)%c(i)%se(:,:) = cgl%cg%my_se(:,:)
-         cgl%cg%grid_id = i
-         cgl => cgl%nxt
-      enddo
-      do while (i<ubound(this%dot%gse(proc)%c, dim=1))
-         i = i + 1
-         this%dot%gse(proc)%c(i)%se = -huge(1)
-      enddo
+      ! Find how many pieces are to be added and recreate local gse and make room for new pieces in the gse array
+      call this%dot%update_local(this%first, int(this%cnt + this%plist%p_count(), kind=4))
 
       ! check local consistency
       cgl => this%first
@@ -307,7 +289,7 @@ contains
          cgl => cgl%nxt
       enddo
 
-      ! write the new grid pieces description to the gse array
+      ! create the new grid pieces
       i = this%cnt
       if (allocated(this%plist%patches)) then
          do p = lbound(this%plist%patches(:), dim=1), ubound(this%plist%patches(:), dim=1)

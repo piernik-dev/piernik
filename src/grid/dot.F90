@@ -54,7 +54,8 @@ module dot
       type(cuboids), dimension(:), allocatable :: gse !< lists of grid chunks on each process (FIRST:LAST)
    contains
       procedure :: cleanup        !< Deallocate everything
-      procedure :: update_global  !< Gather updated information about the level and overwrite it to this%dot%gse
+      procedure :: update_global  !< Gather updated information about the level and overwrite it to this%gse
+      procedure :: update_local   !< Copy info on local blocks from list of blocks to this%gse
    end type dot_T
 
 contains
@@ -141,5 +142,43 @@ contains
       enddo
 
    end subroutine update_global
+
+!>
+!! \brief Copy info on local blocks from list of blocks to this%gse
+!!
+!! \details Recreate local gse in case anything was derefined, refresh grid_id and make room for new pieces in the
+!! gse array
+!<
+
+   subroutine update_local(this, first_cgl, cnt)
+
+      use cg_list,            only: cg_list_element
+      use mpisetup,           only: FIRST, LAST, proc
+
+      implicit none
+
+      class(dot_T),                   intent(inout) :: this       !< object invoking type bound procedure
+      type(cg_list_element), pointer, intent(in)    :: first_cgl  !< first grid on the list belonging to given level
+      integer(kind=4),                intent(in)    :: cnt        !< number of grids on given level to be initialized
+      integer                        :: i
+      type(cg_list_element), pointer :: cgl
+
+      if (.not. allocated(this%gse)) allocate(this%gse(FIRST:LAST))
+      if (allocated(this%gse(proc)%c)) deallocate(this%gse(proc)%c)
+      allocate(this%gse(proc)%c(cnt))
+      i = 0
+      cgl => first_cgl
+      do while (associated(cgl))
+         i = i + 1
+         this%gse(proc)%c(i)%se(:,:) = cgl%cg%my_se(:,:)
+         cgl%cg%grid_id = i
+         cgl => cgl%nxt
+      enddo
+      do while (i<ubound(this%gse(proc)%c, dim=1))
+         i = i + 1
+         this%gse(proc)%c(i)%se = -huge(1)
+      enddo
+
+   end subroutine update_local
 
 end module dot
