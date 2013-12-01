@@ -34,6 +34,7 @@ module cg_list_balance
 
    use cg_list_bnd, only: cg_list_bnd_T
    use constants,   only: ndims, I_ONE
+   use dot,         only: dot_T
    use patch_list,  only: patch_list_T
 
    implicit none
@@ -50,19 +51,17 @@ module cg_list_balance
    !> An abstract type created to take out some load-balance related code from cg_level (new grids)
 
    type, extends(cg_list_bnd_T), abstract :: cg_list_balance_T
-      type(patch_list_T)                           :: plist            !< list of patches that exist on the current level
-      integer(kind=8), dimension(ndims)            :: off              !< offset of the level
-      integer(kind=8), dimension(:,:), allocatable :: SFC_id_range     !< min and max SFC id on processes
-      logical                                      :: recently_changed !< .true. when anything was added to or deleted from this level
+      type(patch_list_T)                :: plist            !< list of patches that exist on the current level
+      type(dot_T)                       :: dot              !< depiction of topology
+      integer(kind=8), dimension(ndims) :: off              !< offset of the level
+      logical                           :: recently_changed !< .true. when anything was added to or deleted from this level
    contains
       procedure          :: balance_new          !< Routine selector for moving proposed grids between processes
       procedure, private :: balance_strict_SFC   !< Routine for moving proposed grids between processes: keep strict SFC ordering
       procedure, private :: balance_fill_lowest  !< Routine for moving proposed grids between processes: add load to lightly-loaded processes
       procedure, private :: patches_to_list      !< Collect local proposed patches into an array on the master process
       procedure, private :: distribute_patches   !< Send balanced set patches from master to slaves and re-register them
-      procedure, private :: check_SFC            !< Check if level is decomposed into processes strictly along currently used space-filling curve
       procedure, private :: add_patch_one_piece  !< Add a patch with only one grid piece
-      procedure, private :: update_SFC_id_range  !< Update SFC_id_range array
    end type cg_list_balance_T
 
 contains
@@ -125,7 +124,7 @@ contains
       rebalance = .true.
       if (present(prevent_rebalancing)) rebalance = .not. prevent_rebalancing
 
-      if (.not. this%check_SFC()) then
+      if (.not. this%dot%check_SFC(this%off)) then
 !!$         if (.not. rebalance) call die("[cg_list_balance:balance_strict_SFC] Cannot rebalence messy grid distribution.")
 !!$         ! call reshuffle
 !!$         call die("[cg_list_balance:balance_strict_SFC] reshuffling not implemented.")
@@ -150,7 +149,7 @@ contains
          call gp%sort
 
          ! calculate patch distribution
-         if (all(this%SFC_id_range(:, HI) < this%SFC_id_range(:, LO))) then !special case: empty level, huge values in this%SFC_id_range(:,:)
+         if (all(this%dot%SFC_id_range(:, HI) < this%dot%SFC_id_range(:, LO))) then !special case: empty level, huge values in this%dot%SFC_id_range(:,:)
             do p = FIRST, LAST
                from(p) = int(lbound(gp%list, dim=1) + (p*size(gp%list))/nproc, kind=4)
             enddo
@@ -163,12 +162,12 @@ contains
             !> \todo OPT try to do as much balance as possible
             p = FIRST
             do i = lbound(gp%list, dim=1, kind=4), ubound(gp%list, dim=1, kind=4)
-               do while (this%SFC_id_range(p, HI) < this%SFC_id_range(p, LO)) ! skip processes with no grids for the sake of simplicity
+               do while (this%dot%SFC_id_range(p, HI) < this%dot%SFC_id_range(p, LO)) ! skip processes with no grids for the sake of simplicity
                   p = p + I_ONE
                   if (p > LAST) exit
                enddo
                if (p > LAST) p = LAST
-               do while (gp%list(i)%id > this%SFC_id_range(p, HI) .and. p < LAST)
+               do while (gp%list(i)%id > this%dot%SFC_id_range(p, HI) .and. p < LAST)
                   p = p + I_ONE
                   if (p > LAST) exit
                enddo
@@ -421,33 +420,6 @@ contains
 
    end subroutine distribute_patches
 
-!> \brief Check if level is decomposed into processes strictly along currently used space-filling curve
-
-   logical function check_SFC(this)
-
-      use constants, only: LO, HI
-      use mpisetup,  only: FIRST, LAST
-
-      implicit none
-
-      class(cg_list_balance_T), intent(inout) :: this
-
-      integer :: i
-      integer(kind=8) :: last_id
-
-      call this%update_SFC_id_range
-
-      last_id = -huge(1)
-      check_SFC = .true.
-      do i = FIRST, LAST
-         if (this%SFC_id_range(i, LO) < huge(1)) then ! skip processes that have no grids
-            check_SFC = check_SFC .and. (last_id < this%SFC_id_range(i, LO))
-            last_id = this%SFC_id_range(i, HI)
-         endif
-      enddo
-
-   end function check_SFC
-
 !> \brief Add a patch with only one grid piece
 
    subroutine add_patch_one_piece(this, n_d, off)
@@ -465,46 +437,5 @@ contains
       call this%plist%patches(ubound(this%plist%patches(:), dim=1))%one_piece_patch(n_d(:), off(:))
 
    end subroutine add_patch_one_piece
-
-!> \brief Update SFC_id_range array
-
-   subroutine update_SFC_id_range(this)
-
-      use cg_list,    only: cg_list_element
-      use constants,  only: LO, HI
-      use dataio_pub, only: die
-      use mpi,        only: MPI_INTEGER8
-      use mpisetup,   only: FIRST, LAST, proc, comm, mpi_err
-      use ordering,   only: SFC_order
-
-      implicit none
-
-      class(cg_list_balance_T), intent(inout) :: this !< object invoking type bound procedure
-
-      type(cg_list_element), pointer :: cgl
-      integer(kind=8) :: SFC_id
-      integer(kind=8), dimension(:), allocatable :: id_buf
-
-      if (.not. allocated(this%SFC_id_range)) allocate(this%SFC_id_range(FIRST:LAST, LO:HI))
-      if (any(lbound(this%SFC_id_range) /= [ FIRST, LO ]) .or. any(ubound(this%SFC_id_range) /= [ LAST, HI ])) &
-           call die("[cg_list_balance:update_SFC_id_range] bogus this%SFC_id_range dimensions")
-
-      this%SFC_id_range(proc, :) = [ huge(1), -huge(1) ]
-      cgl => this%first
-      do while (associated(cgl))
-         SFC_id = SFC_order(cgl%cg%my_se(:, LO)-this%off)
-         if (this%SFC_id_range(proc, LO) > SFC_id) this%SFC_id_range(proc, LO) = SFC_id
-         if (this%SFC_id_range(proc, HI) < SFC_id) this%SFC_id_range(proc, HI) = SFC_id
-         cgl => cgl%nxt
-      enddo
-
-      allocate(id_buf(size(this%SFC_id_range)))
-      call MPI_Allgather(this%SFC_id_range(proc, :), HI-LO+1, MPI_INTEGER8, id_buf, HI-LO+1, MPI_INTEGER8, comm, mpi_err)
-      this%SFC_id_range(:, LO) = id_buf(1::2)
-      this%SFC_id_range(:, HI) = id_buf(2::2)
-
-      deallocate(id_buf)
-
-   end subroutine update_SFC_id_range
 
 end module cg_list_balance

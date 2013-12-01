@@ -34,7 +34,6 @@ module cg_list_rebalance
 
    use cg_list_balance, only: cg_list_balance_T
    use constants,       only: ndims
-   use dot,             only: dot_T
 
    implicit none
 
@@ -46,7 +45,6 @@ module cg_list_rebalance
    type, extends(cg_list_balance_T), abstract :: cg_list_rebalance_T
       integer(kind=4)                   :: level_id  !< level number (relative to base level). No arithmetic should depend on it.
       integer(kind=8), dimension(ndims) :: n_d       !< maximum number of grid cells in each direction (size of fully occupied level)
-      type(dot_T)                       :: dot       !< description of topology
    contains
       procedure          :: rebalance_old  !< Routine for measuring disorder level in distribution of grids across processes
       procedure, private :: reshuffle      !< Routine for moving existing grids between processes

@@ -51,16 +51,19 @@ module dot
 
    !> \brief Depiction of global Topology of a level. Use with care, because this is an antiparallel thing
    type :: dot_T
-      type(cuboids), dimension(:), allocatable :: gse        !< lists of grid chunks on each process (FIRST:LAST)
-      integer                                  :: tot_se     !< global number of grids on the level
-      logical                                  :: is_blocky  !< .true. when all grid pieces on this level on all processes have same shape and size
+      type(cuboids),   dimension(:),   allocatable :: gse          !< lists of grid chunks on each process (FIRST:LAST)
+      integer(kind=8), dimension(:,:), allocatable :: SFC_id_range !< min and max SFC id on processes
+      integer                                      :: tot_se       !< global number of grids on the level
+      logical                                      :: is_blocky    !< .true. when all grid pieces on this level on all processes have same shape and size
    contains
-      procedure :: cleanup        !< Deallocate everything
-      procedure :: update_global  !< Gather updated information about the level and overwrite it to this%gse
-      procedure :: update_local   !< Copy info on local blocks from list of blocks to this%gse
-      procedure :: update_tot_se  !< Count all cg on current level for computing tags in vertical_prep
-      procedure :: is_consitent   !< Check local consistency
-      procedure :: check_blocky   !< Check if all blocks in the domain have same size and shape
+      procedure          :: cleanup              !< Deallocate everything
+      procedure          :: update_global        !< Gather updated information about the level and overwrite it to this%gse
+      procedure          :: update_local         !< Copy info on local blocks from list of blocks to this%gse
+      procedure          :: update_tot_se        !< Count all cg on current level for computing tags in vertical_prep
+      procedure          :: is_consitent         !< Check local consistency
+      procedure          :: check_blocky         !< Check if all blocks in the domain have same size and shape
+      procedure, private :: update_SFC_id_range  !< Update SFC_id_range array
+      procedure          :: check_SFC            !< Check if level is decomposed into processes strictly along currently used space-filling curve
    end type dot_T
 
 contains
@@ -74,6 +77,7 @@ contains
       class(dot_T), intent(inout) :: this
 
       if (allocated(this%gse)) deallocate(this%gse) ! this%gse(:)%c should be deallocated automagically
+      if (allocated(this%SFC_id_range)) deallocate(this%SFC_id_range)
 
    end subroutine cleanup
 
@@ -277,5 +281,78 @@ contains
       call piernik_MPI_Allreduce(this%is_blocky, pLAND)
 
    end subroutine check_blocky
+
+!> \brief Update SFC_id_range array
+
+   subroutine update_SFC_id_range(this, off)
+
+      use constants,  only: LO, HI, ndims
+      use dataio_pub, only: die
+      use mpi,        only: MPI_INTEGER8
+      use mpisetup,   only: FIRST, LAST, proc, comm, mpi_err
+      use ordering,   only: SFC_order
+
+      implicit none
+
+      class(dot_T),                      intent(inout) :: this !< object invoking type bound procedure
+      integer(kind=8), dimension(ndims), intent(in)    :: off  !< offset of the level
+
+      integer(kind=8) :: SFC_id
+      integer(kind=8), dimension(:), allocatable :: id_buf
+      integer :: i
+
+      if (.not. allocated(this%SFC_id_range)) allocate(this%SFC_id_range(FIRST:LAST, LO:HI))
+      if (any(lbound(this%SFC_id_range) /= [ FIRST, LO ]) .or. any(ubound(this%SFC_id_range) /= [ LAST, HI ])) &
+           call die("[dot:update_SFC_id_range] bogus this%SFC_id_range dimensions")
+
+      this%SFC_id_range(proc, :) = [ huge(1), -huge(1) ]
+      if (allocated(this%gse)) then
+         if (allocated(this%gse(proc)%c)) then
+            if (size(this%gse(proc)%c, dim=1) > 0) then
+               do i = lbound(this%gse(proc)%c, dim=1), ubound(this%gse(proc)%c, dim=1)-1
+                  SFC_id = SFC_order(this%gse(proc)%c(i)%se(:, LO)-off)
+                  if (this%SFC_id_range(proc, LO) > SFC_id) this%SFC_id_range(proc, LO) = SFC_id
+                  if (this%SFC_id_range(proc, HI) < SFC_id) this%SFC_id_range(proc, HI) = SFC_id
+               enddo
+            endif
+         endif
+      endif
+
+      allocate(id_buf(size(this%SFC_id_range)))
+      call MPI_Allgather(this%SFC_id_range(proc, :), HI-LO+1, MPI_INTEGER8, id_buf, HI-LO+1, MPI_INTEGER8, comm, mpi_err)
+      this%SFC_id_range(:, LO) = id_buf(1::2)
+      this%SFC_id_range(:, HI) = id_buf(2::2)
+
+      deallocate(id_buf)
+
+   end subroutine update_SFC_id_range
+
+!> \brief Check if level is decomposed into processes strictly along currently used space-filling curve
+
+   logical function check_SFC(this, off)
+
+      use constants, only: LO, HI, ndims
+      use mpisetup,  only: FIRST, LAST
+
+      implicit none
+
+      class(dot_T),                      intent(inout) :: this
+      integer(kind=8), dimension(ndims), intent(in)    :: off  !< offset of the level
+
+      integer :: i
+      integer(kind=8) :: last_id
+
+      call this%update_SFC_id_range(off)
+
+      last_id = -huge(1)
+      check_SFC = .true.
+      do i = FIRST, LAST
+         if (this%SFC_id_range(i, LO) < huge(1)) then ! skip processes that have no grids
+            check_SFC = check_SFC .and. (last_id < this%SFC_id_range(i, LO))
+            last_id = this%SFC_id_range(i, HI)
+         endif
+      enddo
+
+   end function check_SFC
 
 end module dot
