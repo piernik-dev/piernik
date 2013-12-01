@@ -72,7 +72,6 @@ module cg_level
       procedure          :: print_segments                                       !< print detailed information about current level decomposition
       procedure, private :: update_decomposition_properties                      !< Update some flags in domain module
       procedure, private :: create                                               !< Get all decomposed patches and turn them into local grid containers
-      procedure, private :: update_gse                                           !< Gather updated information about the level and overwrite it to this%dot%gse
       procedure          :: update_tot_se                                        !< count all cg on current level for computing tags in vertical_prep
       generic,   public  :: add_patch => add_patch_fulllevel, add_patch_detailed !< Add a new piece of grid to the current level and decompose it
       procedure, private :: add_patch_fulllevel                                  !< Add a whole level to the list of patches
@@ -237,82 +236,13 @@ contains
       class(cg_level_T), intent(inout) :: this   !< object invoking type bound procedure
 
       call this%update_decomposition_properties
-      call this%update_gse     ! communicate everything that was added before
+      call this%dot%update_global(this%first, this%cnt) ! communicate everything that was added before
       call this%find_neighbors ! requires access to whole this%dot%gse(:)%c(:)%se(:,:)
       call this%update_req     ! Perhaps this%find_neighbors added some new entries
       call this%update_tot_se
       call this%print_segments
 
    end subroutine update_everything
-
-!>
-!! \brief Gather information on cg's currently present on local level, and write new this%dot%gse array
-!!
-!! OPT: For strict SFC distribution it is possible to determine complete list of neighbors (on the same level and
-!! also one level up and down) and exchange only that data. It might be a bit faster for massively parallel runs.
-!<
-
-   subroutine update_gse(this)
-
-      use cg_list,    only: cg_list_element
-      use constants,  only: I_ZERO, I_ONE, ndims, LO, HI
-      use dataio_pub, only: die
-      use mpi,        only: MPI_IN_PLACE, MPI_DATATYPE_NULL, MPI_INTEGER
-      use mpisetup,   only: FIRST, LAST, proc, comm, mpi_err !!$, master
-
-      implicit none
-
-      class(cg_level_T), intent(inout) :: this   !< object invoking type bound procedure
-
-      integer(kind=4), dimension(FIRST:LAST) :: allcnt, alloff, ncub_allcnt, ncub_alloff
-      integer(kind=4), allocatable, dimension(:) :: allse
-      type(cg_list_element), pointer :: cgl
-      integer :: i, p
-      integer, parameter :: ncub = ndims*HI ! the number of integers in each cuboid
-
-      ! get the count of grid pieces on each process
-      ! Beware: int(this%cnt, kind=4) is not properly updated after calling this%distribute.
-      ! Use size(this%dot%gse(proc)%c) if you want to propagate gse before the grid containers are actually added to the level
-      ! OPT: this call can be quite long to complete
-      call MPI_Allgather(int(this%cnt, kind=4), I_ONE, MPI_INTEGER, allcnt, I_ONE, MPI_INTEGER, comm, mpi_err)
-
-      ! compute offsets for  a composite table of all grid pieces
-      alloff(FIRST) = I_ZERO
-      do i = FIRST+I_ONE, LAST
-         alloff(i) = alloff(i-1) + allcnt(i-1)
-      enddo
-
-      allocate(allse(ncub*sum(allcnt(:))))
-
-      ! Collect definitions of own grid pieces
-      allse = 0
-      cgl => this%first
-      do i = alloff(proc), alloff(proc) + allcnt(proc) - 1
-         if (.not. associated(cgl)) call die("[cg_level:update_gse] Run out of cg.")
-         allse(ncub*i      +1:ncub*i+   ndims) = int(cgl%cg%my_se(:, LO), kind=4)
-         allse(ncub*i+ndims+1:ncub*i+HI*ndims) = int(cgl%cg%my_se(:, HI), kind=4) ! we do it in low-level way here. Is it worth using reshape() or something?
-         if (any(cgl%cg%my_se > huge(allse(1)))) call die("[cg_level:update_gse] Implement 8-byte integers in MPI transactions for such huge refinements")
-         cgl => cgl%nxt
-      enddo
-      if (associated(cgl)) call die("[cg_level:update_gse] Not all cg were read.")
-
-      ! First use of MPI_Allgatherv in the Piernik Code!
-      ncub_allcnt(:) = int(ncub * allcnt(:), kind=4)
-      ncub_alloff(:) = int(ncub * alloff(:), kind=4)
-      call MPI_Allgatherv(MPI_IN_PLACE, I_ZERO, MPI_DATATYPE_NULL, allse, ncub_allcnt, ncub_alloff, MPI_INTEGER, comm, mpi_err)
-
-      ! Rewrite the gse array, forget about past.
-      if (.not. allocated(this%dot%gse)) allocate(this%dot%gse(FIRST:LAST))
-      do p = FIRST, LAST
-         if (allocated(this%dot%gse(p)%c)) deallocate(this%dot%gse(p)%c)
-         allocate(this%dot%gse(p)%c(allcnt(p)))
-         do i = alloff(p), alloff(p) + allcnt(p) - 1
-            this%dot%gse(p)%c(i-alloff(p)+1)%se(:, LO) = allse(ncub*i      +1:ncub*i+   ndims) ! we do it in low-level way here again.
-            this%dot%gse(p)%c(i-alloff(p)+1)%se(:, HI) = allse(ncub*i+ndims+1:ncub*i+HI*ndims)
-         enddo
-      enddo
-
-   end subroutine update_gse
 
 !>
 !! \brief Get all decomposed patches and turn them into local grid containers
