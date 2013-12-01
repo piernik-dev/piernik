@@ -254,7 +254,6 @@ contains
    subroutine create(this)
 
       use cg_list_global,     only: all_cg
-      use cg_list,            only: cg_list_element
       use grid_cont,          only: grid_container
       use grid_container_ext, only: cg_extptrs
       use dataio_pub,         only: die
@@ -266,26 +265,12 @@ contains
 
       integer                                 :: i, p, ep
       integer(kind=8)                         :: s
-      type(cg_list_element), pointer          :: cgl
-      logical                                 :: found_id
       type(grid_container), pointer           :: cg
 
       ! Find how many pieces are to be added and recreate local gse and make room for new pieces in the gse array
       call this%dot%update_local(this%first, int(this%cnt + this%plist%p_count(), kind=4))
 
-      ! check local consistency
-      cgl => this%first
-      do while (associated(cgl))
-         found_id = .false.
-         do i = lbound(this%dot%gse(proc)%c, dim=1), lbound(this%dot%gse(proc)%c, dim=1) + this%cnt - 1
-            if (all(this%dot%gse(proc)%c(i)%se(:,:) == cgl%cg%my_se(:,:))) then
-               if (found_id) call die("[cg_level:create] multiple occurrences")
-               found_id = .true.
-            endif
-         enddo
-         if (.not. found_id) call die("[cg_level:create] no occurrences")
-         cgl => cgl%nxt
-      enddo
+      call this%dot%is_consitent(this%first) ! check local consistency
 
       ! create the new grid pieces
       i = this%cnt

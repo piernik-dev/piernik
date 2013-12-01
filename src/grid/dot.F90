@@ -57,7 +57,8 @@ module dot
       procedure :: cleanup        !< Deallocate everything
       procedure :: update_global  !< Gather updated information about the level and overwrite it to this%gse
       procedure :: update_local   !< Copy info on local blocks from list of blocks to this%gse
-      procedure :: update_tot_se  !< count all cg on current level for computing tags in vertical_prep
+      procedure :: update_tot_se  !< Count all cg on current level for computing tags in vertical_prep
+      procedure :: is_consitent   !< Check local consistency
    end type dot_T
 
 contains
@@ -154,8 +155,8 @@ contains
 
    subroutine update_local(this, first_cgl, cnt)
 
-      use cg_list,            only: cg_list_element
-      use mpisetup,           only: FIRST, LAST, proc
+      use cg_list,  only: cg_list_element
+      use mpisetup, only: FIRST, LAST, proc
 
       implicit none
 
@@ -201,5 +202,37 @@ contains
       enddo
 
    end subroutine update_tot_se
+
+!> \brief Check local consistency
+
+   subroutine is_consitent(this, first_cgl)
+
+      use cg_list,    only: cg_list_element
+      use dataio_pub, only: die
+      use mpisetup,   only: proc
+
+      implicit none
+
+      class(dot_T),                   intent(inout) :: this       !< object invoking type bound procedure
+      type(cg_list_element), pointer, intent(in)    :: first_cgl  !< first grid on the list belonging to given level
+
+      type(cg_list_element), pointer :: cgl
+      logical                        :: found_id
+      integer                        :: i
+
+      cgl => first_cgl
+      do while (associated(cgl))
+         found_id = .false.
+         do i = lbound(this%gse(proc)%c, dim=1), ubound(this%gse(proc)%c, dim=1)
+            if (all(this%gse(proc)%c(i)%se(:,:) == cgl%cg%my_se(:,:))) then
+               if (found_id) call die("[dot:is_consitent] multiple occurrences")
+               found_id = .true.
+            endif
+         enddo
+         if (.not. found_id) call die("[dot:is_consitent] no occurrences")
+         cgl => cgl%nxt
+      enddo
+
+   end subroutine is_consitent
 
 end module dot
