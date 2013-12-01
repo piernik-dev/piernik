@@ -57,7 +57,6 @@ module cg_list_neighbors
    !! \todo Provide one of the structures described above
    !<
    type, extends(cg_list_rebalance_T), abstract :: cg_list_neighbors_T
-      logical :: is_blocky  !< .true. when all grid pieces on this level on all processes have same shape and size
    contains
       procedure          :: find_neighbors            !< Choose between more general nad fast routine for neighbor searching
       procedure, private :: find_neighbors_SFC        !< Make full description of intra-level communication with neighbors. Approach exploiting strict SFC distribution.
@@ -96,7 +95,7 @@ contains
 
       class(cg_list_neighbors_T), intent(inout) :: this !< object invoking type bound procedure
 
-      if (this%is_blocky) then
+      if (this%dot%is_blocky) then
          call this%find_neighbors_SFC
       else
          call this%find_neighbors_bruteforce
@@ -138,7 +137,7 @@ contains
       integer(kind=8), dimension(ndims)               :: n_off   !< neighbor's offset
       integer(kind=8)                                 :: n_id    !< neighbor's id
 
-      if (.not. this%is_blocky) call die("[cg_list_neighbors:find_neighbors_SFC] Can work only on regular cartesian cecompositions")
+      if (.not. this%dot%is_blocky) call die("[cg_list_neighbors:find_neighbors_SFC] Can work only on regular cartesian cecompositions")
 
       cgl => this%first
       do while (associated(cgl))

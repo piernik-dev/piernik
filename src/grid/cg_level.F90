@@ -298,22 +298,16 @@ contains
 
    subroutine update_decomposition_properties(this)
 
-      use cg_list,    only: cg_list_element
-      use constants,  only: base_level_id, pLOR,  pLAND, ndims, I_ONE
+      use constants,  only: base_level_id, pLOR
       use dataio_pub, only: warn
       use domain,     only: is_mpi_noncart, is_multicg, is_refined, is_uneven
-      use mpi,        only: MPI_INTEGER, MPI_REQUEST_NULL
-      use mpisetup,   only: proc, master, slave, piernik_MPI_Allreduce, proc, req, status, comm, mpi_err, LAST, inflate_req
+      use mpisetup,   only: proc, master, piernik_MPI_Allreduce, proc
 
       implicit none
 
       logical, save :: warned = .false.
 
       class(cg_level_T), intent(inout) :: this   !< object invoking type bound procedure
-      type(cg_list_element), pointer :: cgl
-      integer(kind=4), dimension(ndims) :: shape, shape1
-      integer(kind=4), parameter :: sh_tag = 7
-      integer, parameter :: nr = 2
 
       if (this%level_id > base_level_id) is_refined = .true.
       call piernik_MPI_Allreduce(is_refined, pLOR)
@@ -330,28 +324,7 @@ contains
       is_multicg = is_multicg .or. (ubound(this%dot%gse(proc)%c(:), dim=1) > 1)
       call piernik_MPI_Allreduce(is_multicg, pLOR)
 
-      ! check if all blocks in the domain have same size and shape
-      call inflate_req(nr)
-      this%is_blocky = .true.
-      shape = 0
-      shape1 = 0
-      cgl => this%first
-      if (associated(cgl)) then
-         shape = cgl%cg%n_b
-         cgl => cgl%nxt
-         do while (associated(cgl))
-            if (any(cgl%cg%n_b /= shape)) this%is_blocky = .false.
-            cgl => cgl%nxt
-         enddo
-      endif
-      req = MPI_REQUEST_NULL
-      if (slave)     call MPI_Irecv(shape1, size(shape1), MPI_INTEGER, proc-I_ONE, sh_tag, comm, req(1 ), mpi_err)
-      if (proc<LAST) call MPI_Isend(shape,  size(shape),  MPI_INTEGER, proc+I_ONE, sh_tag, comm, req(nr), mpi_err)
-      call MPI_Waitall(nr, req(:nr), status(:, :nr), mpi_err)
-      if (any(shape /= 0) .and. any(shape1 /= 0)) then
-         if (any(shape /= shape1)) this%is_blocky = .false.
-      endif
-      call piernik_MPI_Allreduce(this%is_blocky, pLAND)
+      call this%dot%check_blocky ! check if all blocks in the domain have same size and shape
 
    end subroutine update_decomposition_properties
 

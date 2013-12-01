@@ -91,7 +91,7 @@ contains
       this%fft_type = fft_none
       this%need_vb_update = .true.
       this%recently_changed = .false. ! this level was just created, but no grids were added yet, so no update is required.
-      this%is_blocky = .false.
+      this%dot%is_blocky = .false.
 
    end subroutine init_level
 

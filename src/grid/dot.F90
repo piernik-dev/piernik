@@ -51,14 +51,16 @@ module dot
 
    !> \brief Depiction of global Topology of a level. Use with care, because this is an antiparallel thing
    type :: dot_T
-      type(cuboids), dimension(:), allocatable :: gse    !< lists of grid chunks on each process (FIRST:LAST)
-      integer                                  :: tot_se !< global number of grids on the level
+      type(cuboids), dimension(:), allocatable :: gse        !< lists of grid chunks on each process (FIRST:LAST)
+      integer                                  :: tot_se     !< global number of grids on the level
+      logical                                  :: is_blocky  !< .true. when all grid pieces on this level on all processes have same shape and size
    contains
       procedure :: cleanup        !< Deallocate everything
       procedure :: update_global  !< Gather updated information about the level and overwrite it to this%gse
       procedure :: update_local   !< Copy info on local blocks from list of blocks to this%gse
       procedure :: update_tot_se  !< Count all cg on current level for computing tags in vertical_prep
       procedure :: is_consitent   !< Check local consistency
+      procedure :: check_blocky   !< Check if all blocks in the domain have same size and shape
    end type dot_T
 
 contains
@@ -234,5 +236,46 @@ contains
       enddo
 
    end subroutine is_consitent
+
+   subroutine check_blocky(this)
+
+      use constants,  only: ndims, LO, HI, pLAND, I_ONE
+      use mpi,        only: MPI_INTEGER, MPI_REQUEST_NULL
+      use mpisetup,   only: proc, req, status, comm, mpi_err, LAST, inflate_req, slave, piernik_MPI_Allreduce
+
+      implicit none
+
+      class(dot_T), intent(inout) :: this       !< object invoking type bound procedure
+
+      integer(kind=4), dimension(ndims) :: shape, shape1
+      integer(kind=4), parameter :: sh_tag = 7
+      integer, parameter :: nr = 2
+      integer :: i
+
+      call inflate_req(nr)
+      this%is_blocky = .true.
+      shape = 0
+      shape1 = 0
+
+      if (allocated(this%gse(proc)%c)) then
+         if (size(this%gse(proc)%c, dim=1) > 0) then
+            i = lbound(this%gse(proc)%c, dim=1)
+            shape = int(this%gse(proc)%c(i)%se(:, HI) - this%gse(proc)%c(i)%se(:, LO), kind=4)
+            do i = lbound(this%gse(proc)%c, dim=1) + 1, ubound(this%gse(proc)%c, dim=1)-1
+               if (any((this%gse(proc)%c(i)%se(:, HI) - this%gse(proc)%c(i)%se(:, LO)) /= shape)) &
+                    this%is_blocky = .false.
+            enddo
+         endif
+      endif
+      req = MPI_REQUEST_NULL
+      if (slave)     call MPI_Irecv(shape1, size(shape1), MPI_INTEGER, proc-I_ONE, sh_tag, comm, req(1 ), mpi_err)
+      if (proc<LAST) call MPI_Isend(shape,  size(shape),  MPI_INTEGER, proc+I_ONE, sh_tag, comm, req(nr), mpi_err)
+      call MPI_Waitall(nr, req(:nr), status(:, :nr), mpi_err)
+      if (any(shape /= 0) .and. any(shape1 /= 0)) then
+         if (any(shape /= shape1)) this%is_blocky = .false.
+      endif
+      call piernik_MPI_Allreduce(this%is_blocky, pLAND)
+
+   end subroutine check_blocky
 
 end module dot
