@@ -53,8 +53,21 @@ module dot
    type :: dot_T
       type(cuboids), dimension(:), allocatable :: gse !< lists of grid chunks on each process (FIRST:LAST)
    contains
+      procedure :: cleanup !< Deallocate everything
    end type dot_T
 
 contains
+
+!> \brief Deallocate everything
+
+   subroutine cleanup(this)
+
+      implicit none
+
+      class(dot_T), intent(inout) :: this
+
+      if (allocated(this%gse)) deallocate(this%gse) ! this%gse(:)%c should be deallocated automagically
+
+   end subroutine cleanup
 
 end module dot

@@ -94,7 +94,7 @@ contains
       class(cg_level_T), intent(inout) :: this !< object invoking type bound procedure
 
       call this%plist%p_deallocate
-      if (allocated(this%dot%gse))      deallocate(this%dot%gse)        ! this%dot%gse(:)%c should be deallocated automagically
+      call this%dot%cleanup
       if (allocated(this%omega_mean))   deallocate(this%omega_mean)
       if (allocated(this%omega_cr))     deallocate(this%omega_cr)
       if (allocated(this%nshift))       deallocate(this%nshift)
