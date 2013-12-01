@@ -55,7 +55,6 @@ module cg_level
    !<
    type, extends(cg_list_neighbors_T), abstract :: cg_level_T
 
-      integer                                    :: tot_se       !< global number of segments on the level
       integer                                    :: fft_type     !< type of FFT to employ in some multigrid solvers (depending on boundaries)
 
       ! FARGO
@@ -72,7 +71,6 @@ module cg_level
       procedure          :: print_segments                                       !< print detailed information about current level decomposition
       procedure, private :: update_decomposition_properties                      !< Update some flags in domain module
       procedure, private :: create                                               !< Get all decomposed patches and turn them into local grid containers
-      procedure          :: update_tot_se                                        !< count all cg on current level for computing tags in vertical_prep
       generic,   public  :: add_patch => add_patch_fulllevel, add_patch_detailed !< Add a new piece of grid to the current level and decompose it
       procedure, private :: add_patch_fulllevel                                  !< Add a whole level to the list of patches
       procedure, private :: add_patch_detailed                                   !< Add a new piece of grid to the list of patches
@@ -239,7 +237,7 @@ contains
       call this%dot%update_global(this%first, this%cnt) ! communicate everything that was added before
       call this%find_neighbors ! requires access to whole this%dot%gse(:)%c(:)%se(:,:)
       call this%update_req     ! Perhaps this%find_neighbors added some new entries
-      call this%update_tot_se
+      call this%dot%update_tot_se
       call this%print_segments
 
    end subroutine update_everything
@@ -371,25 +369,6 @@ contains
       call piernik_MPI_Allreduce(this%is_blocky, pLAND)
 
    end subroutine update_decomposition_properties
-
-!> \brief Count all cg on current level. Useful for computing tags in vertical_prep
-
-   subroutine update_tot_se(this)
-
-      use mpisetup, only: FIRST, LAST
-
-      implicit none
-
-      class(cg_level_T), intent(inout) :: this   !< object invoking type bound procedure
-
-      integer :: p
-
-      this%tot_se = 0
-      do p = FIRST, LAST
-         if (allocated(this%dot%gse)) this%tot_se = this%tot_se + ubound(this%dot%gse(p)%c(:), dim=1)
-      enddo
-
-   end subroutine update_tot_se
 
 !> \brief Add a whole level to the list of patches on current refinement level and decompose it.
 

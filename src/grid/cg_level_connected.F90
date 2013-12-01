@@ -86,7 +86,7 @@ contains
 
       this%coarser => null()
       this%finer => null()
-      this%tot_se = 0
+      this%dot%tot_se = 0
       this%ord_prolong_set = INVALID
       this%fft_type = fft_none
       this%need_vb_update = .true.
@@ -133,7 +133,7 @@ contains
       end type int_pair
       type(int_pair), dimension(:), allocatable    :: ps
 
-      call this%update_tot_se
+      call this%dot%update_tot_se
 
       if (all_cg%ord_prolong_nb == this%ord_prolong_set) return ! no need to update vertical communication on this level
 
@@ -180,7 +180,7 @@ contains
                allocate(seg%buf(seg%se(xdim, HI)-seg%se(xdim, LO) + 1, &
                     &           seg%se(ydim, HI)-seg%se(ydim, LO) + 1, &
                     &           seg%se(zdim, HI)-seg%se(zdim, LO) + 1))
-               tag = cg%grid_id + this%tot_se * ps(g)%n_se
+               tag = cg%grid_id + this%dot%tot_se * ps(g)%n_se
                seg%tag = int(tag, kind=4) ! assumed that there is only one piece to be communicated from grid to grid (i.e. grids are not periodically wrapped around)
                if (tag /= seg%tag .or. tag<0) call die("[cg_level_connected:vertical_prep] tag overflow (ri)")
                end associate
@@ -202,7 +202,7 @@ contains
                allocate(seg%buf(seg%se(xdim, HI)-seg%se(xdim, LO) + 1, &
                     &           seg%se(ydim, HI)-seg%se(ydim, LO) + 1, &
                     &           seg%se(zdim, HI)-seg%se(zdim, LO) + 1))
-               tag = cg%grid_id + this%tot_se * ps(g)%n_se
+               tag = cg%grid_id + this%dot%tot_se * ps(g)%n_se
                seg%tag = int(tag, kind=4) ! assumed that there is only one piece to be communicated from grid to grid (i.e. grids are not periodically wrapped around)
                if (tag /= seg%tag .or. tag<0) call die("[cg_level_connected:vertical_prep] tag overflow po)")
                end associate
@@ -221,7 +221,7 @@ contains
       coarse => this%coarser
       if (associated(coarse)) then
 
-         call coarse%update_tot_se
+         call coarse%dot%update_tot_se
 
          cgl => this%first
          do while (associated(cgl))
@@ -262,7 +262,7 @@ contains
                coarsened(:,:) = c2f(coarse%dot%gse(seg%proc)%c(ps(g)%n_se)%se(:,:)) ! should be renamed to refined(:,:)
                seg%se(:, LO) = max(cg%my_se(:, LO), coarsened(:, LO))
                seg%se(:, HI) = min(cg%my_se(:, HI), coarsened(:, HI))
-               tag = ps(g)%n_se + coarse%tot_se * cg%grid_id
+               tag = ps(g)%n_se + coarse%dot%tot_se * cg%grid_id
                seg%tag = int(tag, kind=4)
                if (tag /= seg%tag .or. tag<0) call die("[cg_level_connected:vertical_prep] tag overflow (ro)")
                end associate
@@ -279,7 +279,7 @@ contains
                allocate(seg%buf(seg%se(xdim, HI)-seg%se(xdim, LO) + 1, &
                     &           seg%se(ydim, HI)-seg%se(ydim, LO) + 1, &
                     &           seg%se(zdim, HI)-seg%se(zdim, LO) + 1))
-               tag = ps(g)%n_se + coarse%tot_se * cg%grid_id
+               tag = ps(g)%n_se + coarse%dot%tot_se * cg%grid_id
                seg%tag = int(tag, kind=4)
                if (tag /= seg%tag .or. tag<0) call die("[cg_level_connected:vertical_prep] tag overflow (pi)")
                end associate

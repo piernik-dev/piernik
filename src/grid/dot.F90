@@ -51,11 +51,13 @@ module dot
 
    !> \brief Depiction of global Topology of a level. Use with care, because this is an antiparallel thing
    type :: dot_T
-      type(cuboids), dimension(:), allocatable :: gse !< lists of grid chunks on each process (FIRST:LAST)
+      type(cuboids), dimension(:), allocatable :: gse    !< lists of grid chunks on each process (FIRST:LAST)
+      integer                                  :: tot_se !< global number of grids on the level
    contains
       procedure :: cleanup        !< Deallocate everything
       procedure :: update_global  !< Gather updated information about the level and overwrite it to this%gse
       procedure :: update_local   !< Copy info on local blocks from list of blocks to this%gse
+      procedure :: update_tot_se  !< count all cg on current level for computing tags in vertical_prep
    end type dot_T
 
 contains
@@ -180,5 +182,24 @@ contains
       enddo
 
    end subroutine update_local
+
+!> \brief Count all cg on current level. Useful for computing tags in vertical_prep
+
+   subroutine update_tot_se(this)
+
+      use mpisetup, only: FIRST, LAST
+
+      implicit none
+
+      class(dot_T), intent(inout) :: this  !< object invoking type bound procedure
+
+      integer :: p
+
+      this%tot_se = 0
+      do p = FIRST, LAST
+         if (allocated(this%gse)) this%tot_se = this%tot_se + ubound(this%gse(p)%c(:), dim=1)
+      enddo
+
+   end subroutine update_tot_se
 
 end module dot
