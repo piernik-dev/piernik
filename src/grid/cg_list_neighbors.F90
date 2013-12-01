@@ -43,7 +43,7 @@ module cg_list_neighbors
    !! \brief An abstract type created to take out neighbor finding code from cg_level
    !!
    !! \details
-   !! OPT: Searching through this%gse for neighbours, prolongation/restriction overlaps etc is quite costly.
+   !! OPT: Searching through this%dot%gse for neighbours, prolongation/restriction overlaps etc is quite costly.
    !! The cost is O(this%cnt^2). Provide a list, sorted according to Morton/Hilbert id's and do a bisection search
    !! instead of checking against all grids. It will result in massive speedups on
    !! cg_list_neighbors_T%find_neighbors and cg_level_connected_T%{vertical_prep,vertical_b_prep). It may also
@@ -75,7 +75,7 @@ contains
 !! * do local exchanges directly, without calling MPI.
 !! * merge smaller blocks into larger ones,
 !!
-!! \todo Put this%gse into a separate type and pass a pointer to it or even a pointer to pre-filtered segment list
+!! \todo Put this%dot%gse into a separate type and pass a pointer to it or even a pointer to pre-filtered segment list
 !!
 !! \todo Write variant of find_neighbors_* routine to achieve previous (pre-a27c945a) performance and maintain
 !! correctness on corners on complicated topologies:
@@ -114,7 +114,7 @@ contains
 !! This approach works if and only if the grid containers are distributing strictly according to the SFC curve.
 !! If each of p processes has g grid containers on current level (giving n = p * g grids on the level),
 !! the cost should be proportional to (log_2(p)+log_2(g))*g, assuming that we have already sorted array
-!! containing most critical information from this%gse
+!! containing most critical information from this%dot%gse
 !<
 
    subroutine find_neighbors_SFC(this)
@@ -253,9 +253,9 @@ contains
          allocate(cg%i_bnd(cor_dim)%seg(0), cg%o_bnd(cor_dim)%seg(0))
 
          do j = FIRST, LAST
-            do b = lbound(this%gse(j)%c(:), dim=1), ubound(this%gse(j)%c(:), dim=1)
+            do b = lbound(this%dot%gse(j)%c(:), dim=1), ubound(this%dot%gse(j)%c(:), dim=1)
                box_8 = int(cg%lhn, kind=8)
-               if (is_overlap(box_8, this%gse(j)%c(b)%se(:,:), per(:))) then                ! identify processes with interesting neighbour data
+               if (is_overlap(box_8, this%dot%gse(j)%c(b)%se(:,:), per(:))) then                ! identify processes with interesting neighbour data
 
                   do d = xdim, zdim
                      if (dom%has_dir(d)) then
@@ -265,7 +265,7 @@ contains
                            ! First, update the map of faces with neighbours
 
                            ! create 1-layer thick map of neighbours
-                           b_layer = this%gse(j)%c(b)%se
+                           b_layer = this%dot%gse(j)%c(b)%se
                            b_layer(d, hl) = b_layer(d, hl) - lh+hl  ! move the opposite boundary
                            b_layer(d, lh) = b_layer(d, hl)
 
@@ -296,13 +296,13 @@ contains
                                     if (iy == 0 .or. per(ydim)>0) then
                                        do ix = -1, 1
                                           if (ix == 0 .or. per(xdim)>0) then
-                                             poff = this%gse(j)%c(b)%se
+                                             poff = this%dot%gse(j)%c(b)%se
                                              poff(:, LO) = poff(:, LO) + [ ix, iy, iz ] * per(:)
                                              poff(:, HI) = poff(:, HI) + [ ix, iy, iz ] * per(:)
                                              if (is_overlap(b_layer, poff)) then
                                                 poff(:, LO) = max(b_layer(:, LO), poff(:, LO))
                                                 poff(:, HI) = min(b_layer(:, HI), poff(:, HI))
-                                                aux = this%gse(j)%c(b)%se
+                                                aux = this%dot%gse(j)%c(b)%se
                                                 aux(:, LO) = aux(:, LO) + [ ix, iy, iz ] * per(:)
                                                 aux(:, HI) = aux(:, HI) + [ ix, iy, iz ] * per(:)
                                                 tag = uniq_tag(cg%my_se, aux, b)
@@ -324,7 +324,7 @@ contains
 
                            ! Third, describe outgoing data
                            !> \warning replicated code, see above
-                           b_layer = this%gse(j)%c(b)%se
+                           b_layer = this%dot%gse(j)%c(b)%se
                            b_layer(d, hl) = b_layer(d, lh) + (lh-hl)
                            b_layer(d, lh) = b_layer(d, lh) + (lh-hl)*dom%nb ! dom%nb thick layer without corners
                            b_layer(:d-1, LO) = b_layer(:d-1, LO) - dom%nb*dom%D_(:d-1)
@@ -347,12 +347,12 @@ contains
                                                 aux = cg%my_se
                                                 aux(:, LO) = aux(:, LO) - [ ix, iy, iz ] * per(:)
                                                 aux(:, HI) = aux(:, HI) - [ ix, iy, iz ] * per(:)
-                                                tag = uniq_tag(this%gse(j)%c(b)%se, aux, cg%grid_id)
+                                                tag = uniq_tag(this%dot%gse(j)%c(b)%se, aux, cg%grid_id)
                                                 aux = poff
                                                 aux(:, LO) = aux(:, LO) - [ ix, iy, iz ] * per(:)
                                                 aux(:, HI) = aux(:, HI) - [ ix, iy, iz ] * per(:)
                                                 aux(d, :) = aux(d, :) + [ -1, 1 ]
-                                                if (is_overlap(this%gse(j)%c(b)%se, aux)) then
+                                                if (is_overlap(this%dot%gse(j)%c(b)%se, aux)) then
                                                    dd = d
                                                 else
                                                    dd = cor_dim

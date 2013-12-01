@@ -151,7 +151,7 @@ contains
             if (allocated(ps)) call die("cll:vp f a ps")
             fmax = 0
             do j = FIRST, LAST
-               fmax = fmax + size(fine%gse(j)%c(:))
+               fmax = fmax + size(fine%dot%gse(j)%c(:))
             enddo
             allocate(ps(fmax))
 
@@ -159,8 +159,8 @@ contains
             if (allocated(cg%po_tgt%seg)) deallocate(cg%po_tgt%seg)
             g = 0
             do j = FIRST, LAST
-               do jf = lbound(fine%gse(j)%c(:), dim=1), ubound(fine%gse(j)%c(:), dim=1)
-                  if (is_overlap(c2f(cg%my_se(:, :)), fine%gse(j)%c(jf)%se(:,:))) then
+               do jf = lbound(fine%dot%gse(j)%c(:), dim=1), ubound(fine%dot%gse(j)%c(:), dim=1)
+                  if (is_overlap(c2f(cg%my_se(:, :)), fine%dot%gse(j)%c(jf)%se(:,:))) then
                      g = g + 1
                      ps(g) = int_pair(j, jf)
                   endif
@@ -174,7 +174,7 @@ contains
                if (allocated(seg%buf)) call die("cll:vp fr seg%buf a a")
                seg%proc = ps(g)%proc
                ! find cross-section of own segment with coarsened fine segment
-               coarsened(:,:) = f2c(fine%gse(seg%proc)%c(ps(g)%n_se)%se(:,:))
+               coarsened(:,:) = f2c(fine%dot%gse(seg%proc)%c(ps(g)%n_se)%se(:,:))
                seg%se(:, LO) = max(cg%my_se(:, LO), coarsened(:, LO))
                seg%se(:, HI) = min(cg%my_se(:, HI), coarsened(:, HI))
                allocate(seg%buf(seg%se(xdim, HI)-seg%se(xdim, LO) + 1, &
@@ -196,7 +196,7 @@ contains
                if (allocated(seg%buf)) call die("cll:vp fp seg%buf a a")
                seg%proc = ps(g)%proc
                ! find cross-section of own segment with enlarged coarsened fine segment
-               coarsened(:,:) = f2c(fine%gse(seg%proc)%c(ps(g)%n_se)%se(:,:)) + enlargement(:,:)
+               coarsened(:,:) = f2c(fine%dot%gse(seg%proc)%c(ps(g)%n_se)%se(:,:)) + enlargement(:,:)
                seg%se(:, LO) = max(cg%my_se(:, LO) + enlargement(:, LO), coarsened(:, LO))
                seg%se(:, HI) = min(cg%my_se(:, HI) + enlargement(:, HI), coarsened(:, HI))
                allocate(seg%buf(seg%se(xdim, HI)-seg%se(xdim, LO) + 1, &
@@ -230,7 +230,7 @@ contains
             if (allocated(ps)) call die("cll:vp c a ps")
             fmax = 0
             do j = FIRST, LAST
-               fmax = fmax + size(coarse%gse(j)%c(:))
+               fmax = fmax + size(coarse%dot%gse(j)%c(:))
             enddo
             allocate(ps(fmax))
 
@@ -238,8 +238,8 @@ contains
             if (allocated(cg%pi_tgt%seg)) deallocate(cg%pi_tgt%seg)
             g = 0
             do j = FIRST, LAST
-               do jf = lbound(coarse%gse(j)%c(:), dim=1), ubound(coarse%gse(j)%c(:), dim=1)
-                  if (is_overlap(cg%my_se(:, :), c2f(coarse%gse(j)%c(jf)%se(:,:)))) then
+               do jf = lbound(coarse%dot%gse(j)%c(:), dim=1), ubound(coarse%dot%gse(j)%c(:), dim=1)
+                  if (is_overlap(cg%my_se(:, :), c2f(coarse%dot%gse(j)%c(jf)%se(:,:)))) then
                      g = g + 1
                      ps(g) = int_pair(j, jf)
                   endif
@@ -254,12 +254,12 @@ contains
                seg%proc = ps(g)%proc
                ! find cross-section of coarsened own segment with coarse segment
                coarsened(:,:) = f2c(cg%my_se(:,:))
-               seg%se(:, LO) = max(coarsened(:, LO), coarse%gse(seg%proc)%c(ps(g)%n_se)%se(:, LO))
-               seg%se(:, HI) = min(coarsened(:, HI), coarse%gse(seg%proc)%c(ps(g)%n_se)%se(:, HI))
+               seg%se(:, LO) = max(coarsened(:, LO), coarse%dot%gse(seg%proc)%c(ps(g)%n_se)%se(:, LO))
+               seg%se(:, HI) = min(coarsened(:, HI), coarse%dot%gse(seg%proc)%c(ps(g)%n_se)%se(:, HI))
                allocate(seg%buf(seg%se(xdim, HI)-seg%se(xdim, LO) + 1, &
                     &           seg%se(ydim, HI)-seg%se(ydim, LO) + 1, &
                     &           seg%se(zdim, HI)-seg%se(zdim, LO) + 1))
-               coarsened(:,:) = c2f(coarse%gse(seg%proc)%c(ps(g)%n_se)%se(:,:)) ! should be renamed to refined(:,:)
+               coarsened(:,:) = c2f(coarse%dot%gse(seg%proc)%c(ps(g)%n_se)%se(:,:)) ! should be renamed to refined(:,:)
                seg%se(:, LO) = max(cg%my_se(:, LO), coarsened(:, LO))
                seg%se(:, HI) = min(cg%my_se(:, HI), coarsened(:, HI))
                tag = ps(g)%n_se + coarse%tot_se * cg%grid_id
@@ -274,8 +274,8 @@ contains
                seg%proc = ps(g)%proc
                ! find cross-section of coarsened own segment with enlarged coarse segment
                coarsened(:,:) = f2c(cg%my_se(:,:)) + enlargement(:,:)
-               seg%se(:, LO) = max(coarsened(:, LO), coarse%gse(seg%proc)%c(ps(g)%n_se)%se(:, LO) + enlargement(:, LO))
-               seg%se(:, HI) = min(coarsened(:, HI), coarse%gse(seg%proc)%c(ps(g)%n_se)%se(:, HI) + enlargement(:, HI))
+               seg%se(:, LO) = max(coarsened(:, LO), coarse%dot%gse(seg%proc)%c(ps(g)%n_se)%se(:, LO) + enlargement(:, LO))
+               seg%se(:, HI) = min(coarsened(:, HI), coarse%dot%gse(seg%proc)%c(ps(g)%n_se)%se(:, HI) + enlargement(:, HI))
                allocate(seg%buf(seg%se(xdim, HI)-seg%se(xdim, LO) + 1, &
                     &           seg%se(ydim, HI)-seg%se(ydim, LO) + 1, &
                     &           seg%se(zdim, HI)-seg%se(zdim, LO) + 1))
@@ -1065,9 +1065,9 @@ contains
          enddo
          call cgmap%find_boxes
          do j = FIRST, LAST !> \warning Antiparallel
-            do b = lbound(coarse%gse(j)%c(:), dim=1), ubound(coarse%gse(j)%c(:), dim=1)
+            do b = lbound(coarse%dot%gse(j)%c(:), dim=1), ubound(coarse%dot%gse(j)%c(:), dim=1)
                do d = lbound(cgmap%blist%blist, dim=1), ubound(cgmap%blist%blist, dim=1)
-                  if (is_overlap(f2c(cgmap%blist%blist(d)%b), coarse%gse(j)%c(b)%se(:,:), per(:))) then
+                  if (is_overlap(f2c(cgmap%blist%blist(d)%b), coarse%dot%gse(j)%c(b)%se(:,:), per(:))) then
                      do iz = -1, 1 ! scan through all periodic possibilities
                         if (iz == 0 .or. per(zdim)>0) then
                            do iy = -1, 1
@@ -1077,9 +1077,9 @@ contains
                                        seg = f2c(cgmap%blist%blist(d)%b)
                                        seg(:, LO) = seg(:, LO) + [ ix, iy, iz ] * per(:)
                                        seg(:, HI) = seg(:, HI) + [ ix, iy, iz ] * per(:)  ! try variants corrected for periodicity
-                                       if (is_overlap(coarse%gse(j)%c(b)%se(:,:), seg)) then
-                                          seg(:, LO) = max( seg(:, LO), coarse%gse(j)%c(b)%se(:, LO))
-                                          seg(:, HI) = min( seg(:, HI), coarse%gse(j)%c(b)%se(:, HI)) ! this is what we want
+                                       if (is_overlap(coarse%dot%gse(j)%c(b)%se(:,:), seg)) then
+                                          seg(:, LO) = max( seg(:, LO), coarse%dot%gse(j)%c(b)%se(:, LO))
+                                          seg(:, HI) = min( seg(:, HI), coarse%dot%gse(j)%c(b)%se(:, HI)) ! this is what we want
                                           tag = tag + I_ONE
                                           if (tag > tag_max) then
                                              call t_pool%get(this%level_id, tag_min, tag_max)
