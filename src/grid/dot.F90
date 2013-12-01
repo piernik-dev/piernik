@@ -44,9 +44,16 @@ module dot
    private
    public :: dot_T
 
+   !> \brief cuboid with SFC_id
+   type, extends(cuboid) :: c_id
+      integer(kind=8) :: SFC_id
+   end type C_id
+
    !> \brief A list of grid pieces (typically used as a list of all grids residing on a given process)
    type :: cuboids
-      type(cuboid), allocatable, dimension(:) :: c !< an array of grid piece
+      type(c_id),  allocatable, dimension(:) :: c      !< an array of grid piece
+      logical                                :: sorted !< .true. when this%c%SFC_id was sorted
+      !> \todo consider adding some integer translation array that allows use of unsorted this%c arrays
    end type cuboids
 
    !> \brief Depiction of global Topology of a level. Use with care, because this is an antiparallel thing
@@ -175,6 +182,7 @@ contains
       if (.not. allocated(this%gse)) allocate(this%gse(FIRST:LAST))
       if (allocated(this%gse(proc)%c)) deallocate(this%gse(proc)%c)
       allocate(this%gse(proc)%c(cnt))
+      this%gse(proc)%sorted = .false.
       i = 0
       cgl => first_cgl
       do while (associated(cgl))
