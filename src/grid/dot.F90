@@ -31,7 +31,7 @@
 !>
 !! \brief Depiction of Topology
 !!
-!! \details The structure that contains most important information of all blocks on all processes on a given level 
+!! \details The structure that contains most important information of all blocks on all processes on a given level
 !! and information on decomposition as well.
 !<
 

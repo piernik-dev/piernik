@@ -261,11 +261,11 @@ contains
 
       implicit none
 
-      class(cg_level_T), intent(inout)        :: this   !< object invoking type bound procedure
+      class(cg_level_T), intent(inout) :: this   !< object invoking type bound procedure
 
-      integer                                 :: i, p, ep
-      integer(kind=8)                         :: s
-      type(grid_container), pointer           :: cg
+      integer                       :: i, p, ep
+      integer(kind=8)               :: s
+      type(grid_container), pointer :: cg
 
       ! Find how many pieces are to be added and recreate local gse and make room for new pieces in the gse array
       call this%dot%update_local(this%first, int(this%cnt + this%plist%p_count(), kind=4))
@@ -345,7 +345,7 @@ contains
          enddo
       endif
       req = MPI_REQUEST_NULL
-      if (slave)     call MPI_Irecv(shape1, size(shape1), MPI_INTEGER, proc-I_ONE, sh_tag, comm, req(1), mpi_err)
+      if (slave)     call MPI_Irecv(shape1, size(shape1), MPI_INTEGER, proc-I_ONE, sh_tag, comm, req(1 ), mpi_err)
       if (proc<LAST) call MPI_Isend(shape,  size(shape),  MPI_INTEGER, proc+I_ONE, sh_tag, comm, req(nr), mpi_err)
       call MPI_Waitall(nr, req(:nr), status(:, :nr), mpi_err)
       if (any(shape /= 0) .and. any(shape1 /= 0)) then
@@ -376,8 +376,8 @@ contains
 
    subroutine add_patch_detailed(this, n_d, off, n_pieces)
 
-      use constants,     only: ndims
-      use dataio_pub,    only: msg, die
+      use constants,  only: ndims
+      use dataio_pub, only: msg, die
 
       implicit none
 
