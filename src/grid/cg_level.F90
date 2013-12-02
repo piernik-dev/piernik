@@ -281,7 +281,7 @@ contains
                this%dot%gse(proc)%c(i)%se(:,:) = this%plist%patches(p)%pse(s)%se(:,:)
                call this%add
                cg => this%last%cg
-               call cg%init(this%n_d, this%off, this%dot%gse(proc)%c(i)%se(:, :), i, this%level_id) ! we cannot pass "this" as an argument because of circular dependencies
+               call cg%init_gc(this%n_d, this%off, this%dot%gse(proc)%c(i)%se(:, :), i, this%level_id) ! we cannot pass "this" as an argument because of circular dependencies
                do ep = lbound(cg_extptrs%ext, dim=1), ubound(cg_extptrs%ext, dim=1)
                   if (associated(cg_extptrs%ext(ep)%init))  call cg_extptrs%ext(ep)%init(cg)
                enddo
