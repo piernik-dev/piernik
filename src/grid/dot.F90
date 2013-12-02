@@ -71,6 +71,7 @@ module dot
       procedure          :: check_blocky         !< Check if all blocks in the domain have same size and shape
       procedure, private :: update_SFC_id_range  !< Update SFC_id_range array
       procedure          :: check_SFC            !< Check if level is decomposed into processes strictly along currently used space-filling curve
+      procedure          :: find_grid            !< Find process and grid_id using SFC_id
    end type dot_T
 
 contains
@@ -362,5 +363,23 @@ contains
       enddo
 
    end function check_SFC
+
+!> \brief Find process and grid_id using SFC_id
+
+   subroutine find_grid(this, SFC_id, p, grid_id)
+
+      use constants, only: INVALID
+
+      implicit none
+
+      class(dot_T),    intent(inout) :: this
+      integer(kind=8), intent(in)    :: SFC_id
+      integer,         intent(out)   :: p
+      integer,         intent(out)   :: grid_id
+
+      p = INVALID
+      grid_id = INVALID
+
+   end subroutine find_grid
 
 end module dot

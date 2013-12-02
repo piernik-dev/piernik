@@ -134,9 +134,10 @@ contains
       type(grid_container),  pointer                  :: cg      !< grid container that we are currently working on
       type(cg_list_element), pointer                  :: cgl
       integer                                         :: ix, iy, iz
-      integer(kind=8), dimension(ndims)               :: n_off   !< neighbor's offset
-      integer(kind=8)                                 :: n_id    !< neighbor's id
-
+      integer(kind=8), dimension(ndims)               :: n_off     !< neighbor's offset
+      integer(kind=8)                                 :: n_id      !< neighbor's id
+      integer                                         :: n_p       !< neighbor's process
+      integer                                         :: n_grid_id !< neighbor's grid_id on n_p
       if (.not. this%dot%is_blocky) call die("[cg_list_neighbors:find_neighbors_SFC] Can work only on regular cartesian cecompositions")
 
       cgl => this%first
@@ -159,10 +160,12 @@ contains
                      if ( all(n_off >= this%off          .or. .not. dom%has_dir) .and. &
                           all(n_off <  this%off+this%n_d .or. .not. dom%has_dir)) then
                         n_id = SFC_order(n_off-this%off)
-                        ! find on what process they may reside
-                        ! find if they really occur on that process
-                        ! if it not occurs set cg%bnd(d, lh) to BND_FC or BND_MPI_FC
-                        ! if it occurs call cg%[io]_bnd(?)%add_seg(?, ?, ?)
+                        call this%dot%find_grid(n_id, n_p, n_grid_id) ! find on what process they may reside
+                        if (n_grid_id == INVALID) then ! find if they really occur on that process
+                           ! if it not occurs set cg%bnd(d, lh) to BND_FC or BND_MPI_FC
+                        else
+                           ! if it occurs call cg%[io]_bnd(?)%add_seg(?, ?, ?)
+                        endif
                      else
                         ! its external boundary
                      endif
