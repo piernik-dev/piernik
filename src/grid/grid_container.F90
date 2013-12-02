@@ -221,6 +221,7 @@ module grid_cont
       real :: dxmn                                               !< the smallest length of the %grid cell (among dx, dy, and dz)
       integer(kind=4) :: maxxyz                                  !< maximum number of %grid cells in any direction
       integer :: grid_id                                         !< index of own segment in own level decomposition, e.g. my_se(:,:) = base%level%dot%gse(proc)%c(grid_id)%se(:,:)
+      integer(kind=8) :: SFC_id                                  !< position of the grid on space-filling curve
       type(ref_flag) :: refine_flags                             !< refine or derefine this grid container?
       integer :: membership                                      !< How many cg lists use this grid piece?
       logical :: ignore_prolongation                             !< When .true. do not upgrade interior with incoming prolonged values
@@ -263,6 +264,7 @@ contains
       use dataio_pub,    only: die, warn, code_progress
       use domain,        only: dom
       use grid_helpers,  only: f2c
+      use ordering,      only: SFC_order
       use refinement,    only: ref_flag
 
       implicit none
@@ -286,6 +288,7 @@ contains
       this%h_cor1(:)  = this%my_se(:, HI) + I_ONE
       this%n_b(:)     = int(this%my_se(:, HI) - this%my_se(:, LO) + I_ONE, 4) ! Block 'physical' grid sizes
       this%level_id   = level_id
+      this%SFC_id     = SFC_order(this%my_se(:, LO) - off)
 
       if (any(this%n_b(:) <= 0)) call die("[grid_container:init_gc] Mixed positive and non-positive grid sizes")
 
