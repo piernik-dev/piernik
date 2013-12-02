@@ -291,6 +291,8 @@ contains
          call this%plist%p_deallocate
       endif
 
+      call this%sort_SFC
+
    end subroutine create
 
 !> \brief Update some flags in domain module [ is_uneven, is_mpi_noncart, is_refined, is_multicg ]

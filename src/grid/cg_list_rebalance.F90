@@ -347,13 +347,7 @@ contains
       enddo
       deallocate(cglepa)
 
-      s = 0
-      cgl => this%first
-      do while (associated(cgl))
-         s = s + 1
-         cgl%cg%grid_id = s
-         cgl => cgl%nxt
-      enddo
+      call this%sort_SFC
 
       deallocate(gptemp)
 
