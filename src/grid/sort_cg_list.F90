@@ -71,7 +71,7 @@ contains
       implicit none
 
       class(sort_cg_list_T), intent(inout) :: this
-      integer(kind=4),        intent(in)    :: size
+      integer(kind=4),       intent(in)    :: size
 
       allocate(this%list(size))
 
@@ -101,7 +101,7 @@ contains
       implicit none
 
       class(sort_cg_list_T), intent(inout) :: this
-      integer,                intent(in)    :: a, b
+      integer,               intent(in)    :: a, b
 
       if (a == b) then
          compare_elements = .false.
@@ -129,7 +129,7 @@ contains
       implicit none
 
       class(sort_cg_list_T), intent(inout) :: this
-      integer,                intent(in)    :: a, b
+      integer,               intent(in)    :: a, b
 
       if (a == b) return
 
