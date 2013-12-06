@@ -443,7 +443,8 @@ contains
 
    subroutine sort_SFC(this)
 
-      use cg_list, only: cg_list_element
+      use cg_list,      only: cg_list_element
+      use sort_cg_list, only: sort_cg_list_T
 
       implicit none
 
@@ -451,16 +452,37 @@ contains
 
       type(cg_list_element), pointer :: cgl
       integer :: s
+      type(sort_cg_list_T) :: l
 
-      !> \todo sort the list here
-
-      s = 0
+      ! Create auxiliary array of pointers and sort them
+      call l%init(this%cnt)
+      s = lbound(l%list, dim=1)
       cgl => this%first
       do while (associated(cgl))
+         l%list(s)%cgl => cgl
          s = s + 1
-         cgl%cg%grid_id = s
          cgl => cgl%nxt
       enddo
+      call l%sort
+
+      ! relink all cg_list_elements and refresh cg%grid_id
+      do s = lbound(l%list, dim=1), ubound(l%list, dim=1)
+         if (s > lbound(l%list, dim=1)) then
+            l%list(s)%cgl%prv => l%list(s-1)%cgl
+         else
+            l%list(s)%cgl%prv => null()
+         end if
+         if (s < ubound(l%list, dim=1)) then
+            l%list(s)%cgl%nxt => l%list(s+1)%cgl
+         else
+            l%list(s)%cgl%nxt => null()
+         end if
+         l%list(s)%cgl%cg%grid_id = s
+      end do
+      this%first => l%list(lbound(l%list, dim=1))%cgl
+      this%last  => l%list(ubound(l%list, dim=1))%cgl
+
+      call l%cleanup
 
    end subroutine sort_SFC
 
