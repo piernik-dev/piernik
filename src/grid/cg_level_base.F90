@@ -204,6 +204,7 @@ contains
       do while (associated(curl))
          curl%n_d(d) = curl%n_d(d) + AMR_bsize(d)*refinement_factor**(curl%level_id-this%level%level_id)
          curl%off(d) = min(curl%off(d),  e_off(d)*refinement_factor**(curl%level_id-this%level%level_id))
+         call curl%refresh_SFC_id
          curl => curl%finer
       enddo
       ! multigrid levels are destroyed and re-created in this%expand

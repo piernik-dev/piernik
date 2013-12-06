@@ -62,6 +62,7 @@ module cg_list_balance
       procedure, private :: patches_to_list      !< Collect local proposed patches into an array on the master process
       procedure, private :: distribute_patches   !< Send balanced set patches from master to slaves and re-register them
       procedure, private :: add_patch_one_piece  !< Add a patch with only one grid piece
+      procedure          :: sort_SFC             !< Sort list according to SFC id
    end type cg_list_balance_T
 
 contains
@@ -437,5 +438,52 @@ contains
       call this%plist%patches(ubound(this%plist%patches(:), dim=1))%one_piece_patch(n_d(:), off(:))
 
    end subroutine add_patch_one_piece
+
+!> \brief Sort list according to SFC id
+
+   subroutine sort_SFC(this)
+
+      use cg_list,      only: cg_list_element
+      use sort_cg_list, only: sort_cg_list_T
+
+      implicit none
+
+      class(cg_list_balance_T), intent(inout) :: this !< object invoking type-bound procedure
+
+      type(cg_list_element), pointer :: cgl
+      integer :: s
+      type(sort_cg_list_T) :: l
+
+      ! Create auxiliary array of pointers and sort them
+      call l%init(this%cnt)
+      s = lbound(l%list, dim=1)
+      cgl => this%first
+      do while (associated(cgl))
+         l%list(s)%cgl => cgl
+         s = s + 1
+         cgl => cgl%nxt
+      enddo
+      call l%sort
+
+      ! relink all cg_list_elements and refresh cg%grid_id
+      do s = lbound(l%list, dim=1), ubound(l%list, dim=1)
+         if (s > lbound(l%list, dim=1)) then
+            l%list(s)%cgl%prv => l%list(s-1)%cgl
+         else
+            l%list(s)%cgl%prv => null()
+         end if
+         if (s < ubound(l%list, dim=1)) then
+            l%list(s)%cgl%nxt => l%list(s+1)%cgl
+         else
+            l%list(s)%cgl%nxt => null()
+         end if
+         l%list(s)%cgl%cg%grid_id = s
+      end do
+      this%first => l%list(lbound(l%list, dim=1))%cgl
+      this%last  => l%list(ubound(l%list, dim=1))%cgl
+
+      call l%cleanup
+
+   end subroutine sort_SFC
 
 end module cg_list_balance

@@ -221,6 +221,7 @@ module grid_cont
       real :: dxmn                                               !< the smallest length of the %grid cell (among dx, dy, and dz)
       integer(kind=4) :: maxxyz                                  !< maximum number of %grid cells in any direction
       integer :: grid_id                                         !< index of own segment in own level decomposition, e.g. my_se(:,:) = base%level%dot%gse(proc)%c(grid_id)%se(:,:)
+      integer(kind=8) :: SFC_id                                  !< position of the grid on space-filling curve
       type(ref_flag) :: refine_flags                             !< refine or derefine this grid container?
       integer :: membership                                      !< How many cg lists use this grid piece?
       logical :: ignore_prolongation                             !< When .true. do not upgrade interior with incoming prolonged values
@@ -230,7 +231,7 @@ module grid_cont
 
    contains
 
-      procedure          :: init                                 !< Initialization
+      procedure          :: init_gc                              !< Initialization
       procedure          :: cleanup                              !< Deallocate all internals
       procedure, private :: set_coords                           !< Calculate arrays of coordinates along a given direction
       procedure, private :: add_all_na                           !< Register all known named arrays for this cg, sey up shortcuts to the crucial fields
@@ -257,12 +258,13 @@ contains
 !! Things that are related to communication with other grid containers or global properties are set up in cg_level::init_all_new_cg.
 !<
 
-   subroutine init(this, n_d, off, my_se, grid_id, level_id)
+   subroutine init_gc(this, n_d, off, my_se, grid_id, level_id)
 
       use constants,     only: PIERNIK_INIT_DOMAIN, xdim, ydim, zdim, ndims, big_float, LO, HI, I_ONE, I_TWO, BND_MPI, BND_COR, GEO_XYZ, GEO_RPZ, dpi
       use dataio_pub,    only: die, warn, code_progress
       use domain,        only: dom
       use grid_helpers,  only: f2c
+      use ordering,      only: SFC_order
       use refinement,    only: ref_flag
 
       implicit none
@@ -278,7 +280,7 @@ contains
       integer :: i
       integer(kind=8), dimension(ndims, LO:HI) :: rn
 
-      if (code_progress < PIERNIK_INIT_DOMAIN) call die("[grid_container:init] MPI not initialized.")
+      if (code_progress < PIERNIK_INIT_DOMAIN) call die("[grid_container:init_gc] MPI not initialized.")
 
       this%membership = 1
       this%grid_id    = grid_id
@@ -286,8 +288,9 @@ contains
       this%h_cor1(:)  = this%my_se(:, HI) + I_ONE
       this%n_b(:)     = int(this%my_se(:, HI) - this%my_se(:, LO) + I_ONE, 4) ! Block 'physical' grid sizes
       this%level_id   = level_id
+      this%SFC_id     = SFC_order(this%my_se(:, LO) - off)
 
-      if (any(this%n_b(:) <= 0)) call die("[grid_container:init] Mixed positive and non-positive grid sizes")
+      if (any(this%n_b(:) <= 0)) call die("[grid_container:init_gc] Mixed positive and non-positive grid sizes")
 
       ! Inherit the boundaries from the domain, then set MPI or SHEAR boundaries where applicable
       this%bnd(:,:) = dom%bnd(:,:)
@@ -310,18 +313,18 @@ contains
 !      call inflate_req
       ! write_plot_hdf5 requires nproc entries for the status array
 
-      if (any(dom%bnd(xdim:ydim, :) == BND_COR)) call die("[grid_container:init] BND_COR unimplemented")
-      if (any(dom%bnd(zdim, :) == BND_COR)) call die("[grid_container:init] Corner BC not allowed for z-direction")
+      if (any(dom%bnd(xdim:ydim, :) == BND_COR)) call die("[grid_container:init_gc] BND_COR unimplemented")
+      if (any(dom%bnd(zdim, :) == BND_COR)) call die("[grid_container:init_gc] Corner BC not allowed for z-direction")
 
 #ifdef SHEAR_BND
-      call die("[grid_container:initmpi] Shear-pediodic boundary conditions unimplemented")
+      call die("[grid_container:init_gc] Shear-pediodic boundary conditions unimplemented")
       ! This is possible to be implemented
 #endif /* SHEAR_BND */
 
       do i = xdim, zdim
          if (dom%has_dir(i)) then
-            if (this%n_b(i) < 1) call die("[grid_init] Too many CPUs for such a small grid.")
-            if (this%n_b(i) < dom%nb) call warn("[grid_init] domain size in some directions is < nb, which may result in incomplete boundary cell update")
+            if (this%n_b(i) < 1) call die("[grid_init_gc] Too many CPUs for such a small grid.")
+            if (this%n_b(i) < dom%nb) call warn("[grid_init_gc] domain size in some directions is < nb, which may result in incomplete boundary cell update")
          endif
       enddo
 
@@ -437,7 +440,7 @@ contains
       this%idl2 = [ this%idx2, this%idy2, this%idz2 ]
 
       if (allocated(this%prolong_) .or. allocated(this%prolong_x) .or. allocated(this%prolong_xy) .or. allocated(this%prolong_xyz)) &
-           call die("[grid_container:init] prolong_* arrays already allocated")
+           call die("[grid_container:init_gc] prolong_* arrays already allocated")
       ! size of coarsened grid with guardcells, additional cell is required only when even-sized grid has odd offset
 
       rn = int(this%ijkse, kind=8)
@@ -480,7 +483,7 @@ contains
 
       call this%add_all_na
 
-   end subroutine init
+   end subroutine init_gc
 
 !> \brief Calculate arrays of coordinates along a given direction
 

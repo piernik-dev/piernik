@@ -77,6 +77,7 @@ module cg_level
       procedure          :: deallocate_patches                                   !< Throw out patches list
       procedure, private :: update_everything                                    !< Update all information on refinement structure and intra-level communication
       procedure          :: balance_old                                          !< Wrapper for rebalance_old
+      procedure          :: refresh_SFC_id                                       !< Recalculate SFC_id for grids, useful after domain expansion
 
    end type cg_level_T
 
@@ -281,7 +282,7 @@ contains
                this%dot%gse(proc)%c(i)%se(:,:) = this%plist%patches(p)%pse(s)%se(:,:)
                call this%add
                cg => this%last%cg
-               call cg%init(this%n_d, this%off, this%dot%gse(proc)%c(i)%se(:, :), i, this%level_id) ! we cannot pass "this" as an argument because of circular dependencies
+               call cg%init_gc(this%n_d, this%off, this%dot%gse(proc)%c(i)%se(:, :), i, this%level_id) ! we cannot pass "this" as an argument because of circular dependencies
                do ep = lbound(cg_extptrs%ext, dim=1), ubound(cg_extptrs%ext, dim=1)
                   if (associated(cg_extptrs%ext(ep)%init))  call cg_extptrs%ext(ep)%init(cg)
                enddo
@@ -290,6 +291,8 @@ contains
          enddo
          call this%plist%p_deallocate
       endif
+
+      call this%sort_SFC
 
    end subroutine create
 
@@ -384,5 +387,27 @@ contains
       if (this%recently_changed) call this%update_everything
 
    end subroutine balance_old
+
+!> \brief Recalculate SFC_id for grids, useful after domain expansion
+
+   subroutine refresh_SFC_id(this)
+
+      use cg_list,   only: cg_list_element
+      use constants, only: LO
+      use ordering,  only: SFC_order
+
+      implicit none
+
+      class(cg_level_T), intent(inout) :: this
+
+      type(cg_list_element), pointer  :: cgl
+
+      cgl => this%first
+      do while (associated(cgl))
+         cgl%cg%SFC_id = SFC_order(cgl%cg%my_se(:, LO) - this%off)
+         cgl => cgl%nxt
+      enddo
+
+   end subroutine refresh_SFC_id
 
 end module cg_level
