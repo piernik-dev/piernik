@@ -65,7 +65,6 @@ module cg_list
       procedure       :: del_lst                           !< Destroy the list
       procedure       :: un_link                           !< Un-link the element
       generic, public :: delete => un_link, del_lst        !< All methods of destroying
-      procedure       :: sort_SFC                          !< Sort list according to SFC id
 
       ! Misc
       procedure       :: print_list                        !< Print the list and associated cg ID
@@ -162,29 +161,6 @@ contains
       this%cnt = 0
 
    end subroutine del_lst
-
-!> \brief Sort list according to SFC id
-
-   subroutine sort_SFC(this)
-
-      implicit none
-
-      class(cg_list_T), intent(inout) :: this !< object invoking type-bound procedure
-
-      type(cg_list_element), pointer :: cgl
-      integer :: s
-
-      !> \todo sort the list here
-
-      s = 0
-      cgl => this%first
-      do while (associated(cgl))
-         s = s + 1
-         cgl%cg%grid_id = s
-         cgl => cgl%nxt
-      enddo
-
-   end subroutine sort_SFC
 
 !> \brief Remove the element from the list, keep its contents
 

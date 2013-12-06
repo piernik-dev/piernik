@@ -62,6 +62,7 @@ module cg_list_balance
       procedure, private :: patches_to_list      !< Collect local proposed patches into an array on the master process
       procedure, private :: distribute_patches   !< Send balanced set patches from master to slaves and re-register them
       procedure, private :: add_patch_one_piece  !< Add a patch with only one grid piece
+      procedure          :: sort_SFC             !< Sort list according to SFC id
    end type cg_list_balance_T
 
 contains
@@ -437,5 +438,30 @@ contains
       call this%plist%patches(ubound(this%plist%patches(:), dim=1))%one_piece_patch(n_d(:), off(:))
 
    end subroutine add_patch_one_piece
+
+!> \brief Sort list according to SFC id
+
+   subroutine sort_SFC(this)
+
+      use cg_list, only: cg_list_element
+
+      implicit none
+
+      class(cg_list_balance_T), intent(inout) :: this !< object invoking type-bound procedure
+
+      type(cg_list_element), pointer :: cgl
+      integer :: s
+
+      !> \todo sort the list here
+
+      s = 0
+      cgl => this%first
+      do while (associated(cgl))
+         s = s + 1
+         cgl%cg%grid_id = s
+         cgl => cgl%nxt
+      enddo
+
+   end subroutine sort_SFC
 
 end module cg_list_balance
