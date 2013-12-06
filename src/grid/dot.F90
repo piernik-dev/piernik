@@ -63,15 +63,15 @@ module dot
       integer                                      :: tot_se       !< global number of grids on the level
       logical                                      :: is_blocky    !< .true. when all grid pieces on this level on all processes have same shape and size
    contains
-      procedure          :: cleanup              !< Deallocate everything
-      procedure          :: update_global        !< Gather updated information about the level and overwrite it to this%gse
-      procedure          :: update_local         !< Copy info on local blocks from list of blocks to this%gse
-      procedure          :: update_tot_se        !< Count all cg on current level for computing tags in vertical_prep
-      procedure          :: is_consitent         !< Check local consistency
-      procedure          :: check_blocky         !< Check if all blocks in the domain have same size and shape
-      procedure, private :: update_SFC_id_range  !< Update SFC_id_range array
-      procedure          :: check_SFC            !< Check if level is decomposed into processes strictly along currently used space-filling curve
-      procedure          :: find_grid            !< Find process and grid_id using SFC_id
+      procedure :: cleanup              !< Deallocate everything
+      procedure :: update_global        !< Gather updated information about the level and overwrite it to this%gse
+      procedure :: update_local         !< Copy info on local blocks from list of blocks to this%gse
+      procedure :: update_tot_se        !< Count all cg on current level for computing tags in vertical_prep
+      procedure :: is_consitent         !< Check local consistency
+      procedure :: check_blocky         !< Check if all blocks in the domain have same size and shape
+      procedure :: update_SFC_id_range  !< Update SFC_id_range array
+      procedure :: check_SFC            !< Check if level is decomposed into processes strictly along currently used space-filling curve
+      procedure :: find_grid            !< Find process and grid_id using SFC_id
    end type dot_T
 
 contains
@@ -361,7 +361,7 @@ contains
 
       call this%update_SFC_id_range(off)
 
-      last_id = -huge(1)
+      last_id = -huge(1_8)
       check_SFC = .true.
       do i = FIRST, LAST
          if (this%SFC_id_range(i, LO) < huge(1)) then ! skip processes that have no grids
