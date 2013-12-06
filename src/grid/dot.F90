@@ -96,25 +96,28 @@ contains
 !! also one level up and down) and exchange only that data. It might be a bit faster for massively parallel runs.
 !<
 
-   subroutine update_global(this, first_cgl, cnt)
+   subroutine update_global(this, first_cgl, cnt, off)
 
       use cg_list,    only: cg_list_element
       use constants,  only: I_ZERO, I_ONE, ndims, LO, HI
       use dataio_pub, only: die
       use mpi,        only: MPI_IN_PLACE, MPI_DATATYPE_NULL, MPI_INTEGER
       use mpisetup,   only: FIRST, LAST, proc, comm, mpi_err
+      use ordering,   only: SFC_order
 
       implicit none
 
-      class(dot_T),                   intent(inout) :: this       !< object invoking type bound procedure
-      type(cg_list_element), pointer, intent(in)    :: first_cgl  !< first grid on the list belonging to given level
-      integer(kind=4),                intent(in)    :: cnt        !< number of grids on given level
+      class(dot_T),                      intent(inout) :: this       !< object invoking type bound procedure
+      type(cg_list_element), pointer,    intent(in)    :: first_cgl  !< first grid on the list belonging to given level
+      integer(kind=4),                   intent(in)    :: cnt        !< number of grids on given level
+      integer(kind=8), dimension(ndims), intent(in)    :: off        !< offset of the level
 
       integer(kind=4), dimension(FIRST:LAST) :: allcnt, alloff, ncub_allcnt, ncub_alloff
       integer(kind=4), allocatable, dimension(:) :: allse
       type(cg_list_element), pointer :: cgl
       integer :: i, p
       integer, parameter :: ncub = ndims*HI ! the number of integers in each cuboid
+      integer(kind=8) :: prev_id, cur_id
 
       ! get the count of grid pieces on each process
       ! Beware: int(this%cnt, kind=4) is not properly updated after calling this%distribute.
@@ -152,9 +155,14 @@ contains
       do p = FIRST, LAST
          if (allocated(this%gse(p)%c)) deallocate(this%gse(p)%c)
          allocate(this%gse(p)%c(allcnt(p)))
+         this%gse(p)%sorted = .true.
+         prev_id = -huge(1_8)
          do i = alloff(p), alloff(p) + allcnt(p) - 1
             this%gse(p)%c(i-alloff(p)+1)%se(:, LO) = allse(ncub*i      +1:ncub*i+   ndims) ! we do it in low-level way here again.
             this%gse(p)%c(i-alloff(p)+1)%se(:, HI) = allse(ncub*i+ndims+1:ncub*i+HI*ndims)
+            cur_id = SFC_order(this%gse(p)%c(i-alloff(p)+1)%se(:, LO) - off)
+            if (prev_id > cur_id) this%gse(p)%sorted = .false.
+            prev_id = cur_id
          enddo
       enddo
 
