@@ -360,7 +360,8 @@ contains
 
    subroutine find_grid(this, SFC_id, p, grid_id)
 
-      use constants, only: INVALID
+      use constants, only: INVALID, LO, HI
+      use mpisetup,  only: FIRST, LAST
 
       implicit none
 
@@ -369,8 +370,57 @@ contains
       integer,         intent(out)   :: p
       integer,         intent(out)   :: grid_id
 
+      integer, dimension(:), allocatable :: pp
+      integer :: ip, il, iu, j
+
       p = INVALID
-      grid_id = INVALID
+      ! search for p
+      if (this%is_strict_SFC) then
+         ! binary search
+         allocate(pp(1))
+         pp = INVALID
+         il = lbound(this%SFC_id_range, dim=1)
+         iu = ubound(this%SFC_id_range, dim=1)
+         do while (iu-il > 1)
+            j = (il+iu)/2
+            if (this%SFC_id_range(j, LO) <= SFC_id) then
+               il = j
+            else
+               iu = j
+            endif
+         enddo
+         do j = il, iu
+            if (this%SFC_id_range(j, LO) <= SFC_id .and. this%SFC_id_range(j, HI) >= SFC_id) pp(1) = j
+         end do
+      else
+         ! sequential search, return many possible p's
+         allocate(pp(FIRST:LAST))
+         pp = INVALID
+         il = lbound(pp, dim=1)
+         do ip = lbound(pp, dim=1), ubound(pp, dim=1)
+            if (this%SFC_id_range(ip, LO) <= SFC_id .and. this%SFC_id_range(ip, HI) >= SFC_id) then
+               pp(il) = ip
+               il = il + 1
+            endif
+         enddo
+      endif
+
+      do ip = lbound(pp, dim=1), ubound(pp, dim=1)
+         if (pp(ip) /= INVALID) then
+            grid_id = INVALID
+            ! search for grid_id
+            if (this%gse(pp(ip))%sorted) then
+               ! binary search
+            else
+               ! sequential
+            endif
+         else
+            exit
+         endif
+      enddo
+
+      if (grid_id == INVALID) p = INVALID
+      deallocate(pp)
 
    end subroutine find_grid
 
