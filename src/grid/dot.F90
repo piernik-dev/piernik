@@ -46,7 +46,7 @@ module dot
 
    !> \brief cuboid with SFC_id
    type, extends(cuboid) :: c_id
-      integer(kind=8) :: SFC_id
+      integer(kind=8) :: SFCid
    end type C_id
 
    !> \brief A list of grid pieces (typically used as a list of all grids residing on a given process)
@@ -301,7 +301,7 @@ contains
 
 !>
 !! \brief Update SFC_id_range array and check if the level is decomposed into processes strictly along currently
-!! used space-filling curve
+!! used space-filling curve. Update this%gse(:)%c(:)%SFCid as well.
 !<
 
    subroutine update_SFC_id_range(this, off)
@@ -330,9 +330,9 @@ contains
          if (allocated(this%gse(proc)%c)) then
             if (size(this%gse(proc)%c, dim=1) > 0) then
                do i = lbound(this%gse(proc)%c, dim=1), ubound(this%gse(proc)%c, dim=1)-1
-                  SFC_id = SFC_order(this%gse(proc)%c(i)%se(:, LO)-off)
-                  if (this%SFC_id_range(proc, LO) > SFC_id) this%SFC_id_range(proc, LO) = SFC_id
-                  if (this%SFC_id_range(proc, HI) < SFC_id) this%SFC_id_range(proc, HI) = SFC_id
+                  this%gse(proc)%c(i)%SFCid = SFC_order(this%gse(proc)%c(i)%se(:, LO)-off)
+                  if (this%SFC_id_range(proc, LO) > this%gse(proc)%c(i)%SFCid) this%SFC_id_range(proc, LO) = this%gse(proc)%c(i)%SFCid
+                  if (this%SFC_id_range(proc, HI) < this%gse(proc)%c(i)%SFCid) this%SFC_id_range(proc, HI) = this%gse(proc)%c(i)%SFCid
                enddo
             endif
          endif
