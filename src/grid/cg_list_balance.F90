@@ -125,7 +125,8 @@ contains
       rebalance = .true.
       if (present(prevent_rebalancing)) rebalance = .not. prevent_rebalancing
 
-      if (.not. this%dot%check_SFC(this%off)) then
+      call this%dot%update_SFC_id_range(this%off)
+      if (.not. this%dot%is_strict_SFC) then
 !!$         if (.not. rebalance) call die("[cg_list_balance:balance_strict_SFC] Cannot rebalence messy grid distribution.")
 !!$         ! call reshuffle
 !!$         call die("[cg_list_balance:balance_strict_SFC] reshuffling not implemented.")

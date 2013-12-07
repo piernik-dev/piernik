@@ -58,10 +58,11 @@ module dot
 
    !> \brief Depiction of global Topology of a level. Use with care, because this is an antiparallel thing
    type :: dot_T
-      type(cuboids),   dimension(:),   allocatable :: gse          !< lists of grid chunks on each process (FIRST:LAST)
-      integer(kind=8), dimension(:,:), allocatable :: SFC_id_range !< min and max SFC id on processes
-      integer                                      :: tot_se       !< global number of grids on the level
-      logical                                      :: is_blocky    !< .true. when all grid pieces on this level on all processes have same shape and size
+      type(cuboids),   dimension(:),   allocatable :: gse           !< lists of grid chunks on each process (FIRST:LAST)
+      integer(kind=8), dimension(:,:), allocatable :: SFC_id_range  !< min and max SFC id on processes
+      integer                                      :: tot_se        !< global number of grids on the level
+      logical                                      :: is_blocky     !< .true. when all grid pieces on this level on all processes have same shape and size
+      logical                                      :: is_strict_SFC !< .true. when all grid pieces are distributd along SFC curve
    contains
       procedure :: cleanup              !< Deallocate everything
       procedure :: update_global        !< Gather updated information about the level and overwrite it to this%gse
@@ -69,8 +70,7 @@ module dot
       procedure :: update_tot_se        !< Count all cg on current level for computing tags in vertical_prep
       procedure :: is_consitent         !< Check local consistency
       procedure :: check_blocky         !< Check if all blocks in the domain have same size and shape
-      procedure :: update_SFC_id_range  !< Update SFC_id_range array
-      procedure :: check_SFC            !< Check if level is decomposed into processes strictly along currently used space-filling curve
+      procedure :: update_SFC_id_range  !< Update SFC_id_range array and set this%is_strict_SFC
       procedure :: find_grid            !< Find process and grid_id using SFC_id
    end type dot_T
 
@@ -299,7 +299,10 @@ contains
 
    end subroutine check_blocky
 
-!> \brief Update SFC_id_range array
+!>
+!! \brief Update SFC_id_range array and check if the level is decomposed into processes strictly along currently
+!! used space-filling curve
+!<
 
    subroutine update_SFC_id_range(this, off)
 
@@ -342,35 +345,16 @@ contains
 
       deallocate(id_buf)
 
-   end subroutine update_SFC_id_range
-
-!> \brief Check if level is decomposed into processes strictly along currently used space-filling curve
-
-   logical function check_SFC(this, off)
-
-      use constants, only: LO, HI, ndims
-      use mpisetup,  only: FIRST, LAST
-
-      implicit none
-
-      class(dot_T),                      intent(inout) :: this
-      integer(kind=8), dimension(ndims), intent(in)    :: off  !< offset of the level
-
-      integer :: i
-      integer(kind=8) :: last_id
-
-      call this%update_SFC_id_range(off)
-
-      last_id = -huge(1_8)
-      check_SFC = .true.
+      SFC_id = -huge(1_8)
+      this%is_strict_SFC = .true.
       do i = FIRST, LAST
          if (this%SFC_id_range(i, LO) < huge(1)) then ! skip processes that have no grids
-            check_SFC = check_SFC .and. (last_id < this%SFC_id_range(i, LO))
-            last_id = this%SFC_id_range(i, HI)
+            this%is_strict_SFC = this%is_strict_SFC .and. (SFC_id < this%SFC_id_range(i, LO))
+            SFC_id = this%SFC_id_range(i, HI)
          endif
       enddo
 
-   end function check_SFC
+   end subroutine update_SFC_id_range
 
 !> \brief Find process and grid_id using SFC_id
 
