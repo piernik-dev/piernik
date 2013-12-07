@@ -391,7 +391,7 @@ contains
          enddo
          do j = il, iu
             if (this%SFC_id_range(j, LO) <= SFC_id .and. this%SFC_id_range(j, HI) >= SFC_id) pp(1) = j
-         end do
+         enddo
       else
          ! sequential search, return many possible p's
          allocate(pp(FIRST:LAST))

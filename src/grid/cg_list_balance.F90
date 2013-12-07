@@ -474,14 +474,14 @@ contains
             l%list(s)%cgl%prv => l%list(s-1)%cgl
          else
             l%list(s)%cgl%prv => null()
-         end if
+         endif
          if (s < ubound(l%list, dim=1)) then
             l%list(s)%cgl%nxt => l%list(s+1)%cgl
          else
             l%list(s)%cgl%nxt => null()
-         end if
+         endif
          l%list(s)%cgl%cg%grid_id = s
-      end do
+      enddo
       this%first => l%list(lbound(l%list, dim=1))%cgl
       this%last  => l%list(ubound(l%list, dim=1))%cgl
 
