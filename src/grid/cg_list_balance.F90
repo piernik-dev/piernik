@@ -455,6 +455,8 @@ contains
       integer :: s
       type(sort_cg_list_T) :: l
 
+      if (this%cnt <= 0) return ! nothing to sort or renumber
+
       ! Create auxiliary array of pointers and sort them
       call l%init(this%cnt)
       s = lbound(l%list, dim=1)
