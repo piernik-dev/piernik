@@ -373,8 +373,8 @@ contains
       integer, dimension(:), allocatable :: pp
       integer :: ip, il, iu, j
 
-      p = INVALID
       ! search for p
+      p = INVALID
       if (this%is_strict_SFC) then
          ! binary search
          allocate(pp(1))
@@ -405,22 +405,53 @@ contains
          enddo
       endif
 
+      ! search for grid_id
+      grid_id = INVALID
       do ip = lbound(pp, dim=1), ubound(pp, dim=1)
          if (pp(ip) /= INVALID) then
-            grid_id = INVALID
-            ! search for grid_id
             if (this%gse(pp(ip))%sorted) then
                ! binary search
+               il = lbound(this%gse(pp(ip))%c, dim=1)
+               iu = ubound(this%gse(pp(ip))%c, dim=1)
+               do while (iu-il > 1)
+                  j = (il+iu)/2
+                  if (this%gse(pp(ip))%c(j)%SFCid <= SFC_id) then
+                     il = j
+                  else
+                     iu = j
+                  endif
+               enddo
+               call seq_search_g(il, iu)
             else
-               ! sequential
+               ! sequential search
+               call seq_search_g(lbound(this%gse(pp(ip))%c, dim=1), ubound(this%gse(pp(ip))%c, dim=1))
             endif
          else
             exit
          endif
+         if (grid_id /= INVALID) exit
       enddo
 
       if (grid_id == INVALID) p = INVALID
       deallocate(pp)
+
+   contains
+
+      subroutine seq_search_g(i1, i2)
+
+         implicit none
+
+         integer, intent(in) :: i1, i2
+
+         do j = i1, i2
+            if (this%gse(pp(ip))%c(j)%SFCid == SFC_id) then
+               grid_id = j
+               p = pp(ip)
+               exit
+            endif
+         enddo
+
+      end subroutine seq_search_g
 
    end subroutine find_grid
 
