@@ -104,7 +104,8 @@ contains
    end subroutine find_neighbors
 
 !>
-!! \brief Make full description of intra-level communication with neighbors. Approach exploiting strict SFC distribution.
+!! \brief Make full description of intra-level communication with neighbors. Approach exploiting strict SFC
+!!  distribution.
 !!
 !! \details Assume that cuboids don't collide (no overlapping grid pieces on same refinement level are allowed)
 !! Should produce the same set of blocks to be communicated as find_neighbors_bruteforce, but should be way faster,
@@ -114,6 +115,16 @@ contains
 !! If each of p processes has g grid containers on current level (giving n = p * g grids on the level),
 !! the cost should be proportional to (log_2(p)+log_2(g))*g, assuming that we have already sorted array
 !! containing most critical information from this%dot%gse
+!!
+!! OPT: there is an easy way to determine here if the corner updates can be performed by face updates done in a
+!! sequence of "sweeps" or not. It is possible even to isolate only those corners that can't be updated with face
+!! communication. The question is: will it really matter for AMR communication, when we manage to aggregate separate
+!! messages for pairs of processes to a single message? IMO not that much.
+!!
+!! OPT: To achieve pre-a27c945a performance in uniform-grid simulations we may also implement another variant of
+!! find_neighbors_* that looks only for face neighbors (typically 6, in worst case 12, still far less than 26) for
+!! levels that are fully covered (or even for levels that are covered by strictly convect, well separated groups of
+!! grids).
 !<
 
    subroutine find_neighbors_SFC(this)
