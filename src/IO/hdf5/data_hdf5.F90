@@ -88,19 +88,19 @@ contains
       select case (trim(var))
          case ("dend", "deni", "denn")
             f%fu = "\rm{g}/\rm{cm}^3"
-            f%f2cgs = gram/cm**3
+            f%f2cgs = 1.0 / (gram/cm**3)
          case ("vlxd", "vlxn", "vlxi", "vlyd", "vlyn", "vlyi", "vlzd", "vlzn", "vlzi")
             f%fu = "\rm{cm}/\rm{s}"
-            f%f2cgs = cm/sek
+            f%f2cgs = 1.0 / (cm/sek)
          case ("enen", "enei")
             f%fu = "\rm{g}*\rm{cm}^2/\rm{s}^2"
-            f%f2cgs = gram*cm**2/sek**2
+            f%f2cgs = 1.0 / (gram*cm**2/sek**2)
          case ("pren", "prei")
             f%fu = "\rm{g}/\rm{cm}/\rm{s}^2"
-            f%f2cgs = gram/cm/sek**2
+            f%f2cgs = 1.0 / (gram/cm/sek**2)
          case ("magx", "magy", "magz")
             f%fu = "\rm{Gs}"
-            f%f2cgs = fpi * sqrt(cm / (miu0 * gram)) * sek
+            f%f2cgs = 1.0 / (fpi * sqrt(cm / (miu0 * gram)) * sek)
             f%stag = 1
          case ("cr1" : "cr9")
          case ("gpot")
