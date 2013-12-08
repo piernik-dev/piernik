@@ -130,7 +130,7 @@ contains
    subroutine find_neighbors_SFC(this)
 
       use cg_list,    only: cg_list_element
-      use constants,  only: xdim, cor_dim, ndims, LO, INVALID
+      use constants,  only: xdim, ydim, zdim, cor_dim, ndims, LO, INVALID
       use dataio_pub, only: warn, die
       use domain,     only: dom
       use grid_cont,  only: grid_container
@@ -142,13 +142,15 @@ contains
 
       class(cg_list_neighbors_T), intent(inout) :: this !< object invoking type bound procedure
 
-      type(grid_container),  pointer                  :: cg      !< grid container that we are currently working on
-      type(cg_list_element), pointer                  :: cgl
-      integer                                         :: ix, iy, iz
-      integer(kind=8), dimension(ndims)               :: n_off     !< neighbor's offset
-      integer(kind=8)                                 :: n_id      !< neighbor's id
-      integer                                         :: n_p       !< neighbor's process
-      integer                                         :: n_grid_id !< neighbor's grid_id on n_p
+      type(grid_container),  pointer    :: cg      !< grid container that we are currently working on
+      type(cg_list_element), pointer    :: cgl
+      integer                           :: ix, iy, iz
+      integer(kind=8), dimension(ndims) :: n_off     !< neighbor's offset
+      integer(kind=8)                   :: n_id      !< neighbor's id
+      integer                           :: n_p       !< neighbor's process
+      integer                           :: n_grid_id !< neighbor's grid_id on n_p
+      integer                           :: n_dd      !< neighbor's direction
+
       if (.not. this%dot%is_blocky) call die("[cg_list_neighbors:find_neighbors_SFC] Can work only on regular cartesian cecompositions")
 
       cgl => this%first
@@ -175,7 +177,18 @@ contains
                         if (n_grid_id == INVALID) then ! find if they really occur on that process
                            ! if it not occurs set cg%bnd(d, lh) to BND_FC or BND_MPI_FC
                         else
-                           ! if it occurs call cg%[io]_bnd(?)%add_seg(?, ?, ?)
+                           n_dd = INVALID
+                           if (count([ix, iy, iz] /= 0) > 1) then
+                              n_dd = cor_dim
+                           else if (ix /= 0) then
+                              n_dd = xdim
+                           else if (iy /= 0) then
+                              n_dd = ydim
+                           else if (iz /= 0) then
+                              n_dd = zdim
+                           endif
+                           if (n_dd == INVALID) call die("[cg_list_neighbors:find_neighbors_SFC] undefined direction")
+                           ! if it occurs call cg%[io]_bnd(n_dd)%add_seg(?, ?, ?)
                         endif
                      else
                         ! its external boundary
