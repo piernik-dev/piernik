@@ -300,7 +300,9 @@ contains
 !! \brief interpolate the grid data which has the flag vital set to this%finer level
 !!
 !! The communication is done on 3D arrays. This means that there are as many communication events as there are "vital" arrays present.
-!! \todo Implement it in a more efficient way (requires a lot more temporary buffers for 4D array).
+!!
+!! \todo Implement a more efficient alternative to this%restrict_q_1var that would restrict all fields at once
+!! (requires a lot more temporary buffers for a 4D array).
 !<
    subroutine prolong(this, bnd_type)
 
@@ -343,7 +345,9 @@ contains
 !>
 !! \brief interpolate the grid data which has the flag vital set from this%coarser level
 !!
-!! \todo implement it in a more efficient way (requires a lot more temporary buffers)
+!! \todo Implement a more efficient alternative to this%restrict_q_1var that would restrict all fields at once
+!! (requires a lot more temporary buffers for a 4D array).
+!!
 !<
    subroutine restrict(this)
 
@@ -437,6 +441,10 @@ contains
 !!
 !! \details Some data can be locally copied without MPI, but this seems to have really little impact on the performance.
 !! Some tests show that purely MPI code without local copies is marginally faster.
+!!
+!! OPT Usually there ara many messages that ate sent between the same pairs of processes
+!! \todo Sort all messages according to e.g. tag and send/receive aggregated message with everything
+!!
 !<
 
    subroutine restrict_q_1var(this, iv, pos)
@@ -609,6 +617,9 @@ contains
 !! \details This routine communicates selected 3D array from coarse to fine grid.
 !! The prolonged data is then copied to the destination if the cg%ignore_prolongation allows it.
 !! OPT: Find a way to prolong only what is really needed.
+!!
+!! OPT Usually there ara many messages that ate sent between the same pairs of processes
+!! \todo Sort all messages according to e.g. tag and send/receive aggregated message with everything
 !<
 
    subroutine prolong_q_1var(this, iv, pos, bnd_type)
