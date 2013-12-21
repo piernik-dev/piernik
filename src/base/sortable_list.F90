@@ -157,9 +157,9 @@ contains
 
 #ifdef DEBUG
       fail = .false.
-      do i = lbound(this%list, dim=1), this%u_bound() - 1
-         if (this%list(i+1)%id < this%list(i)%id) then
-            write(msg,*)"this%list(",i+1,")%id = ",this%list(i+1)%id ," < ", this%list(i)%id," = this%list(",i,")%id"
+      do i = this%l_bound(), this%u_bound() - 1
+         if (this%compare_elements(i, i+1)) then
+            write(msg,*)"this%list(",i+1,") < this%list(",i,")%id"
             call warn(msg)
             fail = .true.
          endif
