@@ -196,7 +196,7 @@ contains
    subroutine internal_boundaries(this, ind, tgt3d, dir, nocorners)
 
       use cg_list,          only: cg_list_element
-      use constants,        only: xdim, ydim, zdim, cor_dim, LO, HI, I_ONE, I_TWO
+      use constants,        only: xdim, ydim, zdim, cor_dim, LO, HI, I_ONE, I_TWO, INVALID
       use dataio_pub,       only: die, warn
       use domain,           only: dom
       use grid_cont,        only: grid_container, segment
@@ -212,13 +212,13 @@ contains
       integer(kind=4), optional, intent(in)        :: dir       !< do the internal boundaries only in the specified dimension
       logical,         optional, intent(in)        :: nocorners !< .when .true. then don't care about proper edge and corner update
 
-      integer                                      :: g, d
+      integer                                      :: g, d, g_o, i
       integer(kind=4)                              :: nr     !< index of first free slot in req and status arrays
       logical, dimension(xdim:cor_dim)             :: dmask
       type(grid_container),     pointer            :: cg
       type(cg_list_element),    pointer            :: cgl
-      real, dimension(:,:,:),   pointer            :: pa3d
-      real, dimension(:,:,:,:), pointer            :: pa4d
+      real, dimension(:,:,:),   pointer            :: pa3d, pa3d_o
+      real, dimension(:,:,:,:), pointer            :: pa4d, pa4d_o
       logical                                      :: active
       type(segment), pointer                       :: i_seg, o_seg !< shortcuts
       integer(kind=4), allocatable, dimension(:,:) :: mpistatus !< status array for MPI_Waitall
@@ -254,7 +254,27 @@ contains
 
                      if (associated(cg%i_bnd(d)%seg(g)%local)) then
                         call die("[cg_list_bnd:internal_boundaries] local, non-MPI exchanges not implemented yet")
-                     else
+                        i_seg => cg%i_bnd(d)%seg(g)
+                        ! find the right segment on the other grid container. OPT: can be done while searching for the pointer i_seg%local
+                        g_o = INVALID
+                        do i = lbound(i_seg%local%o_bnd(d)%seg, dim=1), ubound(i_seg%local%o_bnd(d)%seg, dim=1)
+                           if (i_seg%tag == i_seg%local%o_bnd(d)%seg(i)%tag) then
+                              g_o = i
+                              exit
+                           endif
+                        enddo
+                        if (g_o == INVALID) call die("[cg_list_bnd:internal_boundaries] cannot find the other grid chunk")
+                        o_seg => i_seg%local%o_bnd(d)%seg(g_o)
+                        if (tgt3d) then
+                           pa3d   =>          cg%q(ind)%span(i_seg%se(:,:))
+                           pa3d_o => i_seg%local%q(ind)%span(o_seg%se(:,:))
+                           pa3d(:,:,:) = pa3d_o(:,:,:)
+                        else
+                           pa4d   =>          cg%w(ind)%span(i_seg%se(:,:))
+                           pa4d_o => i_seg%local%w(ind)%span(o_seg%se(:,:))
+                           pa4d(:,:,:,:) = pa4d_o(:,:,:,:)
+                        endif
+                    else
                         if (nr+I_TWO >  ubound(req(:), dim=1)) call inflate_req
                         i_seg => cg%i_bnd(d)%seg(g)
                         o_seg => cg%o_bnd(d)%seg(g)
