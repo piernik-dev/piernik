@@ -187,9 +187,6 @@ contains
 !! Note that some of them were never used.
 !! \todo Try to define MPI_types for communication right before MPI_Isend/MPI_Irecv calls and release just after use. Then compare performance.
 !!
-!! \todo Check how much performance is lost due to using MPI calls even for local copies. Decide whether it is worth to convert local MPI calls to direct memory copies.
-!! For other suggestions on performance optimisation see description of cg_level::mpi_bnd_types.
-!!
 !! \warning this == leaves could be unsafe: need to figure out how to handle unneeded edges; this == all_cg or base%level or other concatenation of whole levels should work well
 !<
 

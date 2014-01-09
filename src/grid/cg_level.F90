@@ -478,7 +478,6 @@ contains
 !! Unfortunately the previous approach did not work properly for complicated refinements.
 !!
 !! Possible improvements of performance
-!! * do local exchanges directly, without calling MPI.
 !! * merge smaller blocks into larger ones,
 !!
 !! \todo Put this%pse into a separate type and pass a pointer to it or even a pointer to pre-filtered segment list
@@ -522,7 +521,7 @@ contains
       type :: gcp
          type(grid_container), pointer :: p
       end type gcp
-      type(gcp), dimension(:), allocatable :: l_pse
+      type(gcp), dimension(:), allocatable :: l_pse ! auxiliary array used to convert entries in this%pse into pointers to grid containers for local exchanges
 
       allocate(l_pse(lbound(this%pse(proc)%c(:), dim=1):ubound(this%pse(proc)%c(:), dim=1)))
       ! OPT: the this%pse is sorted, so the setting of l_pse can be done in a bit faster, less safe way. Or do it fast first, then try the safe way to fill up, what is missing, if anything

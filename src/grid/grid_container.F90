@@ -54,7 +54,7 @@ module grid_cont
       real, allocatable, dimension(:,:,:,:) :: buf4       !< buffer for the 4D (vector) data to be sent or received
       integer(kind=4), pointer :: req                     !< request ID, used for most asynchronous communication, such as fine-coarse flux exchanges
       integer(kind=8), dimension(xdim:zdim, LO:HI) :: se2 !< auxiliary range, used in cg_level_connected:vertical_bf_prep
-      type(grid_container), pointer :: local
+      type(grid_container), pointer :: local              !< set this pointer to non-null when the exchange is local
    end type segment
 
    !> \brief coefficient-layer pair used for prolongation
