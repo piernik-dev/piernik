@@ -71,7 +71,6 @@ contains
 !! \details
 !!
 !! Possible improvements of performance
-!! * do local exchanges directly, without calling MPI.
 !! * merge smaller blocks into larger ones,
 !!
 !! \todo Put this%dot%gse into a separate type and pass a pointer to it or even a pointer to pre-filtered segment list
@@ -227,9 +226,10 @@ contains
 
       use cg_list,    only: cg_list_element
       use constants,  only: xdim, ydim, zdim, cor_dim, ndims, LO, HI, BND_MPI_FC, BND_FC
+      use dataio_pub, only: die
       use domain,     only: dom
       use grid_cont,  only: grid_container, is_overlap
-      use mpisetup,   only: FIRST, LAST
+      use mpisetup,   only: FIRST, LAST, proc
 
       implicit none
 
@@ -248,6 +248,26 @@ contains
       end type fmap
       type(fmap), dimension(xdim:zdim, LO:HI)         :: f
       integer(kind=8), dimension(ndims, LO:HI)        :: box_8   !< temporary storage
+      type :: gcp
+         type(grid_container), pointer :: p
+      end type gcp
+      type(gcp), dimension(:), allocatable :: l_pse ! auxiliary array used to convert entries in this%pse into pointers to grid containers for local exchanges
+
+      allocate(l_pse(lbound(this%dot%gse(proc)%c(:), dim=1):ubound(this%dot%gse(proc)%c(:), dim=1)))
+      ! OPT: the this%dot%gse is sorted, so the setting of l_pse can be done in a bit faster, less safe way. Or do it fast first, then try the safe way to fill up, what is missing, if anything
+      do b = lbound(l_pse, dim=1), ubound(l_pse, dim=1)
+         l_pse(b)%p => null()
+         cgl => this%first
+         do while (associated(cgl))
+            cg => cgl%cg
+            if (all(cg%my_se == this%dot%gse(proc)%c(b)%se)) then
+               l_pse(b)%p => cg
+               exit
+            endif
+            cgl => cgl%nxt
+         enddo
+         if (.not. associated(l_pse(b)%p)) call die("[cg_level:mpi_bnd_types] l_pse pointer not set")
+      enddo
 
       cgl => this%first
       do while (associated(cgl))
@@ -340,6 +360,7 @@ contains
                                                    dd = cor_dim
                                                 endif
                                                 call cg%i_bnd(dd)%add_seg(j, poff, tag)
+                                                if (j == proc) cg%i_bnd(dd)%seg(ubound(cg%i_bnd(dd)%seg, dim=1))%local => l_pse(b)%p
                                              endif
                                           endif
                                        enddo
@@ -417,6 +438,8 @@ contains
 
          cgl => cgl%nxt
       enddo
+
+      deallocate(l_pse)
 
    contains
 
