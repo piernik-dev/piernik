@@ -497,9 +497,10 @@ contains
 
       use cg_list,    only: cg_list_element
       use constants,  only: xdim, ydim, zdim, cor_dim, LO, HI, BND_MPI_FC, BND_FC
+      use dataio_pub, only: die
       use domain,     only: dom
       use grid_cont,  only: grid_container, is_overlap
-      use mpisetup,   only: FIRST, LAST
+      use mpisetup,   only: FIRST, LAST, proc
 
       implicit none
 
@@ -518,6 +519,26 @@ contains
       end type fmap
       type(fmap), dimension(xdim:zdim, LO:HI)         :: f
       integer(kind=8), dimension(ndims, LO:HI)        :: box_8   !< temporary storage
+      type :: gcp
+         type(grid_container), pointer :: p
+      end type gcp
+      type(gcp), dimension(:), allocatable :: l_pse
+
+      allocate(l_pse(lbound(this%pse(proc)%c(:), dim=1):ubound(this%pse(proc)%c(:), dim=1)))
+      ! OPT: the this%pse is sorted, so the setting of l_pse can be done in a bit faster, less safe way. Or do it fast first, then try the safe way to fill up, what is missing, if anything
+      do b = lbound(l_pse, dim=1), ubound(l_pse, dim=1)
+         l_pse(b)%p => null()
+         cgl => this%first
+         do while (associated(cgl))
+            cg => cgl%cg
+            if (all(cg%my_se == this%pse(proc)%c(b)%se)) then
+               l_pse(b)%p => cg
+               exit
+            endif
+            cgl => cgl%nxt
+         enddo
+         if (.not. associated(l_pse(b)%p)) call die("[cg_level:mpi_bnd_types] l_pse pointer not set")
+      enddo
 
       cgl => this%first
       do while (associated(cgl))
@@ -610,6 +631,7 @@ contains
                                                    dd = cor_dim
                                                 endif
                                                 call cg%i_bnd(dd)%add_seg(j, poff, tag)
+                                                if (j == proc) cg%i_bnd(dd)%seg(ubound(cg%i_bnd(dd)%seg, dim=1))%local => l_pse(b)%p
                                              endif
                                           endif
                                        enddo
@@ -687,6 +709,8 @@ contains
 
          cgl => cgl%nxt
       enddo
+
+      deallocate(l_pse)
 
    contains
 

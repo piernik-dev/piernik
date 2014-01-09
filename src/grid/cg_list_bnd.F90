@@ -253,7 +253,6 @@ contains
                   do g = lbound(cg%i_bnd(d)%seg(:), dim=1), ubound(cg%i_bnd(d)%seg(:), dim=1)
 
                      if (associated(cg%i_bnd(d)%seg(g)%local)) then
-                        call die("[cg_list_bnd:internal_boundaries] local, non-MPI exchanges not implemented yet")
                         i_seg => cg%i_bnd(d)%seg(g)
                         ! find the right segment on the other grid container. OPT: can be done while searching for the pointer i_seg%local
                         g_o = INVALID
