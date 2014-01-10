@@ -27,7 +27,17 @@
 !
 #include "piernik.h"
 
-module sweeps     ! split sweeps
+!>
+!! \brief Module that implements a single sweep
+!!
+!! \details This one is the most difficult to aggregate messages carrying flux data on fine/coarse interfaces as
+!! there are complicated dependencies between grids. It is possible to calculate which fine grids should be
+!! computed first in ourder to make critical fluxes available as early as possible.
+!!
+!! OPT: some fluxes can be copied locally without invoking MPI
+!<
+
+module sweeps
 
 ! pulled by RTVD
 
