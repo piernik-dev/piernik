@@ -740,8 +740,7 @@ contains
 
             box_8 = int(cg%ijkse, kind=8)
             cse = f2c(box_8)
-            call cg%prolong(iv, cse)
-            cg%q(iv)%arr = cg%prolong_xyz ! OPT find a way to avoid doing this copy (see the usage of cg%prolong in prolong_bnd_from_coarser)
+            call cg%prolong(iv, cse, p_xyz = .false.) ! prolong directly to cg%q(iv)%arr
 
          endif
          cgl => cgl%nxt
@@ -957,7 +956,7 @@ contains
                cse(:, LO) = cse(:, LO) - dom%nb*dom%D_(:)/refinement_factor
                cse(:, HI) = cse(:, HI) + dom%nb*dom%D_(:)/refinement_factor
 
-               call cg%prolong(ind, cse) ! OPT find a way to avoid unnecessary calculations where .not. updatemap
+               call cg%prolong(ind, cse, p_xyz = .true.) ! prolong to auxiliary array cg%prolong_xyz. OPT find a way to avoid unnecessary calculations where .not. updatemap
 
                where (updatemap) cg%q(ind)%arr = cg%prolong_xyz
                deallocate(updatemap)
