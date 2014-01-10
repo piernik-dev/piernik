@@ -150,7 +150,7 @@ contains
       integer                           :: n_grid_id !< neighbor's grid_id on n_p
       integer                           :: n_dd      !< neighbor's direction
 
-      if (.not. this%dot%is_blocky) call die("[cg_list_neighbors:find_neighbors_SFC] Can work only on regular cartesian cecompositions")
+      if (.not. this%dot%is_blocky) call die("[cg_list_neighbors:find_neighbors_SFC] Can work only on regular cartesian decompositions")
 
       cgl => this%first
       do while (associated(cgl))
@@ -167,7 +167,7 @@ contains
                   if (any( [ ix, iy, iz ] /= 0)) then
                      ! find their SFC_id (take care about periodicity)
                      n_off = cg%my_se(:, LO) + [ ix, iy, iz ] * cg%n_b
-                     where (dom%periodic) n_off = mod(n_off + this%n_d + this%off, this%n_d) - this%off
+                     where (dom%periodic) n_off = mod(n_off + this%n_d - this%off, this%n_d) + this%off
                      n_id = INVALID
                      if ( all(n_off >= this%off          .or. .not. dom%has_dir) .and. &
                           all(n_off <  this%off+this%n_d .or. .not. dom%has_dir)) then
