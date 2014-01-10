@@ -301,7 +301,9 @@ contains
 !! \brief interpolate the grid data which has the flag vital set to this%finer level
 !!
 !! The communication is done on 3D arrays. This means that there are as many communication events as there are "vital" arrays present.
-!! \todo Implement it in a more efficient way (requires a lot more temporary buffers for 4D array).
+!!
+!! \todo Implement a more efficient alternative to this%prolong_q_1var that would restrict all fields at once
+!! (requires a lot more temporary buffers for a 4D array).
 !<
    subroutine prolong(this, bnd_type)
 
@@ -344,7 +346,9 @@ contains
 !>
 !! \brief interpolate the grid data which has the flag vital set from this%coarser level
 !!
-!! \todo implement it in a more efficient way (requires a lot more temporary buffers)
+!! \todo Implement a more efficient alternative to this%restrict_q_1var that would restrict all fields at once
+!! (requires a lot more temporary buffers for a 4D array).
+!!
 !<
    subroutine restrict(this)
 
@@ -438,6 +442,9 @@ contains
 !!
 !! \details Some data can be locally copied without MPI, but this seems to have really little impact on the performance.
 !! Some tests show that purely MPI code without local copies is marginally faster.
+!!
+!! OPT Usually there ara many messages that ate sent between the same pairs of processes
+!! \todo Sort all messages according to e.g. tag and send/receive aggregated message with everything
 !!
 !! \todo implement local copies without MPI anyway
 !<
@@ -613,6 +620,8 @@ contains
 !! The prolonged data is then copied to the destination if the cg%ignore_prolongation allows it.
 !! OPT: Find a way to prolong only what is really needed.
 !!
+!! OPT Usually there ara many messages that ate sent between the same pairs of processes
+!! \todo Sort all messages according to e.g. tag and send/receive aggregated message with everything
 !! \todo implement local copies without MPI
 !<
 
@@ -732,8 +741,7 @@ contains
 
             box_8 = int(cg%ijkse, kind=8)
             cse = f2c(box_8)
-            call cg%prolong(iv, cse)
-            cg%q(iv)%arr = cg%prolong_xyz ! OPT find a way to avoid doing this copy (see the usage of cg%prolong in prolong_bnd_from_coarser)
+            call cg%prolong(iv, cse, p_xyz = .false.) ! prolong directly to cg%q(iv)%arr
 
          endif
          cgl => cgl%nxt
@@ -949,7 +957,7 @@ contains
                cse(:, LO) = cse(:, LO) - dom%nb*dom%D_(:)/refinement_factor
                cse(:, HI) = cse(:, HI) + dom%nb*dom%D_(:)/refinement_factor
 
-               call cg%prolong(ind, cse) ! OPT find a way to avoid unnecessary calculations where .not. updatemap
+               call cg%prolong(ind, cse, p_xyz = .true.) ! prolong to auxiliary array cg%prolong_xyz. OPT find a way to avoid unnecessary calculations where .not. updatemap
 
                where (updatemap) cg%q(ind)%arr = cg%prolong_xyz
                deallocate(updatemap)

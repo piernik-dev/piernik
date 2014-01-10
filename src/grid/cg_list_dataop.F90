@@ -221,7 +221,11 @@ contains
 
    end subroutine set_q_value
 
-!> \brief copy a given field to another
+!>
+!! \brief copy a given field to another
+!!
+!! \todo OPT: this is quite often used routine. Find when the guardcells can be omitted and save some memory copying.
+!<
 
    subroutine q_copy(this, i_from, i_to)
 
