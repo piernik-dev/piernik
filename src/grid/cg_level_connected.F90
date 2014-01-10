@@ -301,7 +301,7 @@ contains
 !!
 !! The communication is done on 3D arrays. This means that there are as many communication events as there are "vital" arrays present.
 !!
-!! \todo Implement a more efficient alternative to this%restrict_q_1var that would restrict all fields at once
+!! \todo Implement a more efficient alternative to this%prolong_q_1var that would restrict all fields at once
 !! (requires a lot more temporary buffers for a 4D array).
 !<
    subroutine prolong(this, bnd_type)
