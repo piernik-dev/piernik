@@ -190,7 +190,6 @@ contains
 !! OPT In AMR runs usually there ara many messages that ate sent between the same pairs of processes
 !! \todo Sort all messages according to e.g. tag and send/receive aggregated message with everything
 !!
-!! \todo Check how much performance is lost due to using MPI calls even for local copies. Decide whether it is worth to convert local MPI calls to direct memory copies.
 !! For other suggestions on performance optimisation see description of cg_level::mpi_bnd_types.
 !!
 !! \warning this == leaves could be unsafe: need to figure out how to handle unneeded edges; this == all_cg or base%level or other concatenation of whole levels should work well
@@ -199,7 +198,7 @@ contains
    subroutine internal_boundaries(this, ind, tgt3d, dir, nocorners)
 
       use cg_list,          only: cg_list_element
-      use constants,        only: xdim, ydim, zdim, cor_dim, LO, HI, I_ONE, I_TWO
+      use constants,        only: xdim, ydim, zdim, cor_dim, LO, HI, I_ONE, I_TWO, INVALID
       use dataio_pub,       only: die, warn
       use domain,           only: dom
       use grid_cont,        only: grid_container, segment
@@ -215,13 +214,13 @@ contains
       integer(kind=4), optional, intent(in)        :: dir       !< do the internal boundaries only in the specified dimension
       logical,         optional, intent(in)        :: nocorners !< .when .true. then don't care about proper edge and corner update
 
-      integer                                      :: g, d
+      integer                                      :: g, d, g_o, i
       integer(kind=4)                              :: nr     !< index of first free slot in req and status arrays
       logical, dimension(xdim:cor_dim)             :: dmask
       type(grid_container),     pointer            :: cg
       type(cg_list_element),    pointer            :: cgl
-      real, dimension(:,:,:),   pointer            :: pa3d
-      real, dimension(:,:,:,:), pointer            :: pa4d
+      real, dimension(:,:,:),   pointer            :: pa3d, pa3d_o
+      real, dimension(:,:,:,:), pointer            :: pa4d, pa4d_o
       logical                                      :: active
       type(segment), pointer                       :: i_seg, o_seg !< shortcuts
       integer(kind=4), allocatable, dimension(:,:) :: mpistatus !< status array for MPI_Waitall
@@ -255,69 +254,92 @@ contains
                        call die("[cg_list_bnd:internal_boundaries] cg%i_bnd differs in number of entries from cg%o_bnd")
                   do g = lbound(cg%i_bnd(d)%seg(:), dim=1), ubound(cg%i_bnd(d)%seg(:), dim=1)
 
-                     if (nr+I_TWO >  ubound(req(:), dim=1)) call inflate_req
-                     i_seg => cg%i_bnd(d)%seg(g)
-                     o_seg => cg%o_bnd(d)%seg(g)
-
-                     !> \deprecated: A lot of semi-duplicated code below
-                     if (tgt3d) then
-                        if (ind > ubound(cg%q(:), dim=1) .or. ind < lbound(cg%q(:), dim=1)) call die("[cg_list_bnd:internal_boundaries] wrong 3d index")
-
-                        if (allocated(i_seg%buf)) then
-                           call warn("clb:ib allocated i-buf")
-                           deallocate(i_seg%buf) !> \todo check shape and recycle if possible
+                     if (associated(cg%i_bnd(d)%seg(g)%local)) then
+                        i_seg => cg%i_bnd(d)%seg(g)
+                        ! find the right segment on the other grid container. OPT: can be done while searching for the pointer i_seg%local
+                        g_o = INVALID
+                        do i = lbound(i_seg%local%o_bnd(d)%seg, dim=1), ubound(i_seg%local%o_bnd(d)%seg, dim=1)
+                           if (i_seg%tag == i_seg%local%o_bnd(d)%seg(i)%tag) then
+                              g_o = i
+                              exit
+                           endif
+                        enddo
+                        if (g_o == INVALID) call die("[cg_list_bnd:internal_boundaries] cannot find the other grid chunk")
+                        o_seg => i_seg%local%o_bnd(d)%seg(g_o)
+                        if (tgt3d) then
+                           pa3d   =>          cg%q(ind)%span(i_seg%se(:,:))
+                           pa3d_o => i_seg%local%q(ind)%span(o_seg%se(:,:))
+                           pa3d(:,:,:) = pa3d_o(:,:,:)
+                        else
+                           pa4d   =>          cg%w(ind)%span(i_seg%se(:,:))
+                           pa4d_o => i_seg%local%w(ind)%span(o_seg%se(:,:))
+                           pa4d(:,:,:,:) = pa4d_o(:,:,:,:)
                         endif
-                        allocate(i_seg%buf(i_seg%se(xdim, HI) - i_seg%se(xdim, LO) + 1, &
-                             &             i_seg%se(ydim, HI) - i_seg%se(ydim, LO) + 1, &
-                             &             i_seg%se(zdim, HI) - i_seg%se(zdim, LO) + 1))
-                        call MPI_Irecv(i_seg%buf, size(i_seg%buf), MPI_DOUBLE_PRECISION, i_seg%proc, i_seg%tag, comm, req(nr+I_ONE), mpi_err)
+                    else
+                        if (nr+I_TWO >  ubound(req(:), dim=1)) call inflate_req
+                        i_seg => cg%i_bnd(d)%seg(g)
+                        o_seg => cg%o_bnd(d)%seg(g)
 
-                        if (allocated(o_seg%buf)) then
-                           call warn("clb:ib allocated o-buf")
-                           deallocate(o_seg%buf) !> \todo check shape and recycle if possible
+                        !> \deprecated: A lot of semi-duplicated code below
+                        if (tgt3d) then
+                           if (ind > ubound(cg%q(:), dim=1) .or. ind < lbound(cg%q(:), dim=1)) call die("[cg_list_bnd:internal_boundaries] wrong 3d index")
+
+                           if (allocated(i_seg%buf)) then
+                              call warn("clb:ib allocated i-buf")
+                              deallocate(i_seg%buf) !> \todo check shape and recycle if possible
+                           endif
+                           allocate(i_seg%buf(i_seg%se(xdim, HI) - i_seg%se(xdim, LO) + 1, &
+                                &             i_seg%se(ydim, HI) - i_seg%se(ydim, LO) + 1, &
+                                &             i_seg%se(zdim, HI) - i_seg%se(zdim, LO) + 1))
+                           call MPI_Irecv(i_seg%buf, size(i_seg%buf), MPI_DOUBLE_PRECISION, i_seg%proc, i_seg%tag, comm, req(nr+I_ONE), mpi_err)
+
+                           if (allocated(o_seg%buf)) then
+                              call warn("clb:ib allocated o-buf")
+                              deallocate(o_seg%buf) !> \todo check shape and recycle if possible
+                           endif
+                           allocate(o_seg%buf(o_seg%se(xdim, HI) - o_seg%se(xdim, LO) + 1, &
+                                &             o_seg%se(ydim, HI) - o_seg%se(ydim, LO) + 1, &
+                                &             o_seg%se(zdim, HI) - o_seg%se(zdim, LO) + 1))
+                           pa3d => cg%q(ind)%span(o_seg%se(:,:))
+                           o_seg%buf(:,:,:) = pa3d(:,:,:)
+                           call MPI_Isend(o_seg%buf, size(o_seg%buf), MPI_DOUBLE_PRECISION, o_seg%proc, o_seg%tag, comm, req(nr+I_TWO), mpi_err)
+
+                        else
+                           if (ind > ubound(cg%w(:), dim=1) .or. ind < lbound(cg%w(:), dim=1)) call die("[cg_list_bnd:internal_boundaries] wrong 4d index")
+
+                           if (allocated(i_seg%buf4)) then
+                              call warn("clb:ib allocated i-buf")
+                              deallocate(i_seg%buf4) !> \todo check shape and recycle if possible
+                           endif
+                           allocate(i_seg%buf4(wna%lst(ind)%dim4, &
+                                &              i_seg%se(xdim, HI) - i_seg%se(xdim, LO) + 1, &
+                                &              i_seg%se(ydim, HI) - i_seg%se(ydim, LO) + 1, &
+                                &              i_seg%se(zdim, HI) - i_seg%se(zdim, LO) + 1))
+                           call MPI_Irecv(i_seg%buf4, size(i_seg%buf4), MPI_DOUBLE_PRECISION, i_seg%proc, i_seg%tag, comm, req(nr+I_ONE), mpi_err)
+
+                           if (allocated(o_seg%buf4)) then
+                              call warn("clb:ib allocated o-buf")
+                              deallocate(o_seg%buf4) !> \todo check shape and recycle if possible
+                           endif
+                           allocate(o_seg%buf4(wna%lst(ind)%dim4, &
+                                &              o_seg%se(xdim, HI) - o_seg%se(xdim, LO) + 1, &
+                                &              o_seg%se(ydim, HI) - o_seg%se(ydim, LO) + 1, &
+                                &              o_seg%se(zdim, HI) - o_seg%se(zdim, LO) + 1))
+                           !>
+                           !! \todo optimize me
+                           !! do ni = lbound(o_seg%buf4, 4), ubound(o_seg%buf4, 4)
+                           !!    hhi = o_seg%se(zdim,LO) - 1 + ni
+                           !!    o_seg%buf4(:,:,:,ni) = &
+                           !!       cg%w(ind)%arr(:,o_seg%se(xdim,LO):o_seg%se(xdim,HI),o_seg%se(ydim,LO):o_seg%se(ydim,HI),hhi)
+                           !! enddo
+                           !<
+                           pa4d => cg%w(ind)%span(o_seg%se(:,:))
+                           o_seg%buf4(:,:,:,:) = pa4d(:,:,:,:)
+                           call MPI_Isend(o_seg%buf4, size(o_seg%buf4), MPI_DOUBLE_PRECISION, o_seg%proc, o_seg%tag, comm, req(nr+I_TWO), mpi_err)
+
                         endif
-                        allocate(o_seg%buf(o_seg%se(xdim, HI) - o_seg%se(xdim, LO) + 1, &
-                             &             o_seg%se(ydim, HI) - o_seg%se(ydim, LO) + 1, &
-                             &             o_seg%se(zdim, HI) - o_seg%se(zdim, LO) + 1))
-                        pa3d => cg%q(ind)%span(o_seg%se(:,:))
-                        o_seg%buf(:,:,:) = pa3d(:,:,:)
-                        call MPI_Isend(o_seg%buf, size(o_seg%buf), MPI_DOUBLE_PRECISION, o_seg%proc, o_seg%tag, comm, req(nr+I_TWO), mpi_err)
-
-                     else
-                        if (ind > ubound(cg%w(:), dim=1) .or. ind < lbound(cg%w(:), dim=1)) call die("[cg_list_bnd:internal_boundaries] wrong 4d index")
-
-                        if (allocated(i_seg%buf4)) then
-                           call warn("clb:ib allocated i-buf")
-                           deallocate(i_seg%buf4) !> \todo check shape and recycle if possible
-                        endif
-                        allocate(i_seg%buf4(wna%lst(ind)%dim4, &
-                             &              i_seg%se(xdim, HI) - i_seg%se(xdim, LO) + 1, &
-                             &              i_seg%se(ydim, HI) - i_seg%se(ydim, LO) + 1, &
-                             &              i_seg%se(zdim, HI) - i_seg%se(zdim, LO) + 1))
-                        call MPI_Irecv(i_seg%buf4, size(i_seg%buf4), MPI_DOUBLE_PRECISION, i_seg%proc, i_seg%tag, comm, req(nr+I_ONE), mpi_err)
-
-                        if (allocated(o_seg%buf4)) then
-                           call warn("clb:ib allocated o-buf")
-                           deallocate(o_seg%buf4) !> \todo check shape and recycle if possible
-                        endif
-                        allocate(o_seg%buf4(wna%lst(ind)%dim4, &
-                             &              o_seg%se(xdim, HI) - o_seg%se(xdim, LO) + 1, &
-                             &              o_seg%se(ydim, HI) - o_seg%se(ydim, LO) + 1, &
-                             &              o_seg%se(zdim, HI) - o_seg%se(zdim, LO) + 1))
-                        !>
-                        !! \todo optimize me
-                        !! do ni = lbound(o_seg%buf4, 4), ubound(o_seg%buf4, 4)
-                        !!    hhi = o_seg%se(zdim,LO) - 1 + ni
-                        !!    o_seg%buf4(:,:,:,ni) = &
-                        !!       cg%w(ind)%arr(:,o_seg%se(xdim,LO):o_seg%se(xdim,HI),o_seg%se(ydim,LO):o_seg%se(ydim,HI),hhi)
-                        !! enddo
-                        !<
-                        pa4d => cg%w(ind)%span(o_seg%se(:,:))
-                        o_seg%buf4(:,:,:,:) = pa4d(:,:,:,:)
-                        call MPI_Isend(o_seg%buf4, size(o_seg%buf4), MPI_DOUBLE_PRECISION, o_seg%proc, o_seg%tag, comm, req(nr+I_TWO), mpi_err)
-
+                        nr = nr + I_TWO
                      endif
-                     nr = nr + I_TWO
                   enddo
                else
                   if (allocated(cg%o_bnd(d)%seg)) call die("[cg_list_bnd:internal_boundaries] cg%o_bnd without cg%i_bnd")
@@ -349,28 +371,31 @@ contains
                   ! sanity checks are already done
                   do g = lbound(cg%i_bnd(d)%seg(:), dim=1), ubound(cg%i_bnd(d)%seg(:), dim=1)
 
-                     i_seg => cg%i_bnd(d)%seg(g)
-                     o_seg => cg%o_bnd(d)%seg(g)
+                     if (.not. associated(cg%i_bnd(d)%seg(g)%local)) then
+                        i_seg => cg%i_bnd(d)%seg(g)
+                        o_seg => cg%o_bnd(d)%seg(g)
 
-                     if (tgt3d) then
-                        pa3d => cg%q(ind)%span(i_seg%se(:,:))
-                        pa3d(:,:,:) = i_seg%buf(:,:,:)
-                        deallocate(i_seg%buf)
-                        deallocate(o_seg%buf)
-                     else
-                        !>
-                        !! \todo optimize me
-                        !! do ni = lbound(i_seg%buf4, 4), ubound(i_seg%buf4, 4)
-                        !!    hhi = i_seg%se(zdim,LO) - 1 + ni
-                        !!    cg%w(ind)%arr(:,i_seg%se(xdim,LO):i_seg%se(xdim,HI),i_seg%se(ydim,LO):i_seg%se(ydim,HI),hhi) = &
-                        !!       i_seg%buf4(:,:,:,ni)
-                        !! enddo
-                        !<
-                        pa4d => cg%w(ind)%span(i_seg%se(:,:))
-                        pa4d(:,:,:,:) = i_seg%buf4(:,:,:,:)
-                        deallocate(i_seg%buf4)
-                        deallocate(o_seg%buf4)
+                        if (tgt3d) then
+                           pa3d => cg%q(ind)%span(i_seg%se(:,:))
+                           pa3d(:,:,:) = i_seg%buf(:,:,:)
+                           deallocate(i_seg%buf)
+                           deallocate(o_seg%buf)
+                        else
+                           !>
+                           !! \todo optimize me
+                           !! do ni = lbound(i_seg%buf4, 4), ubound(i_seg%buf4, 4)
+                           !!    hhi = i_seg%se(zdim,LO) - 1 + ni
+                           !!    cg%w(ind)%arr(:,i_seg%se(xdim,LO):i_seg%se(xdim,HI),i_seg%se(ydim,LO):i_seg%se(ydim,HI),hhi) = &
+                           !!       i_seg%buf4(:,:,:,ni)
+                           !! enddo
+                           !<
+                           pa4d => cg%w(ind)%span(i_seg%se(:,:))
+                           pa4d(:,:,:,:) = i_seg%buf4(:,:,:,:)
+                           deallocate(i_seg%buf4)
+                           deallocate(o_seg%buf4)
+                        endif
                      endif
+
                   enddo
                endif
             endif

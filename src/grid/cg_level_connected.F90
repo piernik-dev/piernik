@@ -445,6 +445,7 @@ contains
 !! OPT Usually there ara many messages that ate sent between the same pairs of processes
 !! \todo Sort all messages according to e.g. tag and send/receive aggregated message with everything
 !!
+!! \todo implement local copies without MPI anyway
 !<
 
    subroutine restrict_q_1var(this, iv, pos)
@@ -620,6 +621,7 @@ contains
 !!
 !! OPT Usually there ara many messages that ate sent between the same pairs of processes
 !! \todo Sort all messages according to e.g. tag and send/receive aggregated message with everything
+!! \todo implement local copies without MPI
 !<
 
    subroutine prolong_q_1var(this, iv, pos, bnd_type)
@@ -810,6 +812,8 @@ contains
 !! When the order of interpolation is 0 (injection) both methods degenerate into one.
 !! Both methods have their area of applicability amd both should be implemented.
 !! \warning This routine does only the first approach.
+!!
+!! \todo implement local copies without MPI
 !<
 
    subroutine prolong_bnd_from_coarser(this, ind, bnd_type, dir, nocorners)
@@ -974,6 +978,8 @@ contains
 !!
 !! OPT: As prolong_bnd_from_coarser calls coarse%level_3d_boundaries in some cases (except for all_cg%ord_prolong_nb == O_INJ) it should be possible to reduce number
 !! of MPI messages by relying on corner data on the coarse level (corners can be obtained along with face values). Be careful as this may break things in vertical_bf_prep.
+!!
+!! \todo implement local copies without MPI (provide appropriate pointers)
 !<
 
    subroutine vertical_b_prep(this)
