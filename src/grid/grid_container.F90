@@ -190,7 +190,7 @@ module grid_cont
       type(tgt_list) :: rif_tgt                                   !< description of fluxes incoming from fine grid
       type(tgt_list) :: rof_tgt                                   !< description of fluxes outgoing to coarse grid
       real, allocatable, dimension(:,:,:) :: prolong_, prolong_x, prolong_xy !< auxiliary prolongation arrays for intermediate results
-      real, dimension(:,:,:), pointer ::  prolong_xyz             !< auxiliary prolongation array for final result
+      real, dimension(:,:,:), pointer ::  prolong_xyz             !< auxiliary prolongation array for final result. OPT: Valgrind indicates that operations on array allocated on pointer might be slower than on ordinary arrays due to poorer L2 cache utilization
       logical, allocatable, dimension(:,:,:) :: leafmap           !< .true. when a cell is not covered by finer cells, .false. otherwise
 
       ! Non-cartesian geometrical factors
