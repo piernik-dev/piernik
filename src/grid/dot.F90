@@ -309,7 +309,7 @@ contains
       if (allocated(this%gse)) then
          if (allocated(this%gse(proc)%c)) then
             if (size(this%gse(proc)%c, dim=1) > 0) then
-               do i = lbound(this%gse(proc)%c, dim=1), ubound(this%gse(proc)%c, dim=1)-1
+               do i = lbound(this%gse(proc)%c, dim=1), ubound(this%gse(proc)%c, dim=1)
                   SFC_id = SFC_order(this%gse(proc)%c(i)%se(:, LO)-off)
                   if (this%SFC_id_range(proc, LO) > SFC_id) this%SFC_id_range(proc, LO) = SFC_id
                   if (this%SFC_id_range(proc, HI) < SFC_id) this%SFC_id_range(proc, HI) = SFC_id
