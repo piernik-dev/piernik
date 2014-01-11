@@ -129,11 +129,10 @@ contains
    subroutine find_neighbors_SFC(this)
 
       use cg_list,    only: cg_list_element
-      use constants,  only: xdim, ydim, zdim, cor_dim, ndims, LO, INVALID
+      use constants,  only: xdim, ydim, zdim, cor_dim, ndims, LO, HI, INVALID, BND_FC
       use dataio_pub, only: warn, die
       use domain,     only: dom
       use grid_cont,  only: grid_container
-      use mpisetup,   only: master
       use ordering,   only: SFC_order
       use refinement, only: strict_SFC_ordering
 
@@ -144,11 +143,14 @@ contains
       type(grid_container),  pointer    :: cg      !< grid container that we are currently working on
       type(cg_list_element), pointer    :: cgl
       integer                           :: ix, iy, iz
+      integer                           :: lh
       integer(kind=8), dimension(ndims) :: n_off     !< neighbor's offset
       integer(kind=8)                   :: n_id      !< neighbor's id
       integer                           :: n_p       !< neighbor's process
       integer                           :: n_grid_id !< neighbor's grid_id on n_p
       integer                           :: n_dd      !< neighbor's direction
+      integer(kind=4)                   :: tag
+      integer(kind=8), dimension(xdim:zdim, LO:HI) :: overlap
 
       if (.not. this%dot%is_blocky) call die("[cg_list_neighbors:find_neighbors_SFC] Can work only on regular cartesian decompositions")
 
@@ -170,27 +172,41 @@ contains
                      where (dom%periodic) n_off = mod(n_off + this%n_d - this%off, this%n_d) + this%off
                      n_id = INVALID
                      if ( all(n_off >= this%off          .or. .not. dom%has_dir) .and. &
-                          all(n_off <  this%off+this%n_d .or. .not. dom%has_dir)) then
+                          all(n_off <  this%off+this%n_d .or. .not. dom%has_dir)) then ! it is internal boundary
+
+                        n_dd = INVALID
+                        if (count([ix, iy, iz] /= 0) > 1) then
+                           n_dd = cor_dim
+                        else if (ix /= 0) then
+                           n_dd = xdim
+                        else if (iy /= 0) then
+                           n_dd = ydim
+                        else if (iz /= 0) then
+                           n_dd = zdim
+                        endif
+                        if (n_dd == INVALID) call die("[cg_list_neighbors:find_neighbors_SFC] undefined direction")
+
                         n_id = SFC_order(n_off-this%off)
                         call this%dot%find_grid(n_id, n_p, n_grid_id) ! find on what process they may reside
                         if (n_grid_id == INVALID) then ! find if they really occur on that process
                            ! if it not occurs set cg%bnd(d, lh) to BND_FC or BND_MPI_FC
+                           lh = LO + (ix + iy + iz + 1)/2 ! -1 => LO, +1 => HI, only valid for count([ix, iy, iz] /= 0) == 1) which implies n_dd /= cor_dim
+                           if (n_dd >=xdim .and. n_dd <=zdim) cg%bnd(n_dd, lh) = BND_FC
                         else
-                           n_dd = INVALID
-                           if (count([ix, iy, iz] /= 0) > 1) then
-                              n_dd = cor_dim
-                           else if (ix /= 0) then
-                              n_dd = xdim
-                           else if (iy /= 0) then
-                              n_dd = ydim
-                           else if (iz /= 0) then
-                              n_dd = zdim
-                           endif
-                           if (n_dd == INVALID) call die("[cg_list_neighbors:find_neighbors_SFC] undefined direction")
-                           ! if it occurs call cg%[io]_bnd(n_dd)%add_seg(?, ?, ?)
+                           ! incoming part:
+                           tag = uniq_tag([-ix, -iy, -iz], n_grid_id)
+                           overlap(:, LO) = max(cg%lhn(:, LO), cg%ijkse(:, LO) + [ ix, iy, iz ] * cg%n_b)
+                           overlap(:, HI) = min(cg%lhn(:, HI), cg%ijkse(:, HI) + [ ix, iy, iz ] * cg%n_b)
+                           call cg%i_bnd(n_dd)%add_seg(n_p, overlap, tag)
+                           !if (n_p == proc) cg%i_bnd(n_dd)%seg(ubound(cg%i_bnd(n_dd)%seg, dim=1))%local => l_pse(b)%p
+
+                           ! outgoing part:
+                           tag = uniq_tag([ix, iy, iz], cg%grid_id)
+                           overlap(:, LO) = max(cg%ijkse(:, LO), cg%lhn(:, LO) + [ ix, iy, iz ] * cg%n_b)
+                           overlap(:, HI) = min(cg%ijkse(:, HI), cg%lhn(:, HI) + [ ix, iy, iz ] * cg%n_b)
+                           call cg%o_bnd(n_dd)%add_seg(n_p, overlap, tag)
+
                         endif
-                     else
-                        ! its external boundary
                      endif
                   endif
                enddo
@@ -200,8 +216,35 @@ contains
          cgl => cgl%nxt
       enddo
 
-      if (strict_SFC_ordering .and. master) call warn("[cg_list_neighbors:find_neighbors_SFC] not implemented yet. Redirected to find_neighbors_bruteforce")
-      call this%find_neighbors_bruteforce
+   contains
+
+      !>
+      !! \brief Create unique tag for cg - cg exchange
+      !!
+      !! \details If we put a constraint that a grid piece can not be smaller than dom%nb, then total number of
+      !! neighbours that affect local guardcells is exactly 3 for AMR, cartesian decomposition with equal-size
+      !! blocks
+      !! Thus, in each direction we can describe realtive position as one of four cases, or a bit easier one of five cases:
+      !! * LEFT, RIGHT - corner neighbours
+      !! * FACE - face neighbour
+      !<
+      pure function uniq_tag(ixyz, grid_id)
+
+         use constants, only: xdim, ydim, zdim
+
+         implicit none
+
+         integer, dimension(xdim:zdim), intent(in) :: ixyz    ! offset in whole grid blocks
+         integer,                       intent(in) :: grid_id ! grid piece id
+
+         integer(kind=4) :: uniq_tag
+         integer, dimension(xdim:zdim) :: r
+         integer(kind=4), parameter :: N_POS=3 ! -1, 0, +1
+
+         r = ixyz + 1 ! -1 => LEFT, 0 => FACE, +1 => RIGHT
+         uniq_tag = int(((grid_id*N_POS+r(zdim))*N_POS+r(ydim))*N_POS+r(xdim), kind=4)
+
+      end function uniq_tag
 
    end subroutine find_neighbors_SFC
 
