@@ -161,6 +161,7 @@ contains
             this%gse(p)%c(i-alloff(p)+1)%se(:, LO) = allse(ncub*i      +1:ncub*i+   ndims) ! we do it in low-level way here again.
             this%gse(p)%c(i-alloff(p)+1)%se(:, HI) = allse(ncub*i+ndims+1:ncub*i+HI*ndims)
             cur_id = SFC_order(this%gse(p)%c(i-alloff(p)+1)%se(:, LO) - off)
+            this%gse(p)%c(i-alloff(p)+1)%SFCid = cur_id
             if (prev_id > cur_id) this%gse(p)%sorted = .false.
             prev_id = cur_id
          enddo
