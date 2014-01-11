@@ -384,6 +384,8 @@ contains
          iu = ubound(this%SFC_id_range, dim=1)
          do while (iu-il > 1)
             j = (il+iu)/2
+            if (this%SFC_id_range(j, LO)  == huge(1)) exit ! stop bisection when some processes don't own anything
+            ! OPT: this may require somewhat better solution for massively parallel runs.
             if (this%SFC_id_range(j, LO) <= SFC_id) then
                il = j
             else
