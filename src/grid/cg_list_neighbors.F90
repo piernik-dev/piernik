@@ -195,6 +195,7 @@ contains
       use dataio_pub, only: warn, die
       use domain,     only: dom
       use grid_cont,  only: grid_container
+      use mpisetup,   only: proc
       use ordering,   only: SFC_order
       use refinement, only: strict_SFC_ordering
 
@@ -213,8 +214,11 @@ contains
       integer                           :: n_dd      !< neighbor's direction
       integer(kind=4)                   :: tag
       integer(kind=8), dimension(xdim:zdim, LO:HI) :: overlap
+      type(gcpa_T) :: l_pse
 
       if (.not. this%dot%is_blocky) call die("[cg_list_neighbors:find_neighbors_SFC] Can work only on regular cartesian decompositions")
+
+      call l_pse%init(this)
 
       cgl => this%first
       do while (associated(cgl))
@@ -260,7 +264,7 @@ contains
                            overlap(:, LO) = max(cg%lhn(:, LO), cg%ijkse(:, LO) + [ ix, iy, iz ] * cg%n_b)
                            overlap(:, HI) = min(cg%lhn(:, HI), cg%ijkse(:, HI) + [ ix, iy, iz ] * cg%n_b)
                            call cg%i_bnd(n_dd)%add_seg(n_p, overlap, tag)
-                           !if (n_p == proc) cg%i_bnd(n_dd)%seg(ubound(cg%i_bnd(n_dd)%seg, dim=1))%local => l_pse(n_grid_id)%p
+                           if (n_p == proc) cg%i_bnd(n_dd)%seg(ubound(cg%i_bnd(n_dd)%seg, dim=1))%local => l_pse%l_pse(n_grid_id)%p
 
                            ! outgoing part:
                            tag = uniq_tag([ix, iy, iz], cg%grid_id)
@@ -277,6 +281,8 @@ contains
 
          cgl => cgl%nxt
       enddo
+
+      call l_pse%cleanup
 
    contains
 
