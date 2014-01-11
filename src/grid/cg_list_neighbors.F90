@@ -132,13 +132,12 @@ contains
 
       use cg_list,    only: cg_list_element
       use constants,  only: xdim, ydim, zdim, cor_dim, ndims, LO, HI, INVALID, BND_FC
-      use dataio_pub, only: warn, die
+      use dataio_pub, only: die
       use domain,     only: dom
       use gcpa,       only: gcpa_T
       use grid_cont,  only: grid_container
       use mpisetup,   only: proc
       use ordering,   only: SFC_order
-      use refinement, only: strict_SFC_ordering
 
       implicit none
 
@@ -146,7 +145,7 @@ contains
 
       type(grid_container),  pointer    :: cg      !< grid container that we are currently working on
       type(cg_list_element), pointer    :: cgl
-      integer                           :: ix, iy, iz
+      integer(kind=4)                   :: ix, iy, iz
       integer                           :: lh
       integer(kind=8), dimension(ndims) :: n_off     !< neighbor's offset
       integer(kind=8)                   :: n_id      !< neighbor's id
@@ -239,18 +238,18 @@ contains
       !<
       pure function uniq_tag(ixyz, grid_id)
 
-         use constants, only: xdim, ydim, zdim
+         use constants, only: xdim, ydim, zdim, I_ONE
 
          implicit none
 
-         integer, dimension(xdim:zdim), intent(in) :: ixyz    ! offset in whole grid blocks
-         integer,                       intent(in) :: grid_id ! grid piece id
+         integer(kind=4), dimension(xdim:zdim), intent(in) :: ixyz    ! offset in whole grid blocks
+         integer,                               intent(in) :: grid_id ! grid piece id
 
          integer(kind=4) :: uniq_tag
-         integer, dimension(xdim:zdim) :: r
+         integer(kind=4), dimension(xdim:zdim) :: r
          integer(kind=4), parameter :: N_POS=3 ! -1, 0, +1
 
-         r = ixyz + 1 ! -1 => LEFT, 0 => FACE, +1 => RIGHT
+         r = ixyz + I_ONE ! -1 => LEFT, 0 => FACE, +1 => RIGHT
          uniq_tag = int(((grid_id*N_POS+r(zdim))*N_POS+r(ydim))*N_POS+r(xdim), kind=4)
 
       end function uniq_tag
@@ -278,7 +277,6 @@ contains
 
       use cg_list,    only: cg_list_element
       use constants,  only: xdim, ydim, zdim, cor_dim, ndims, LO, HI, BND_MPI_FC, BND_FC
-      use dataio_pub, only: die
       use domain,     only: dom
       use gcpa,       only: gcpa_T
       use grid_cont,  only: grid_container, is_overlap

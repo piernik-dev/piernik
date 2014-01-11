@@ -991,7 +991,7 @@ contains
          pa3d => this%prolong_xyz
       else
          pa3d => this%q(ind)%arr
-      end if
+      endif
 
       select case (qna%lst(ind)%ord_prolong)
          case (O_D6)

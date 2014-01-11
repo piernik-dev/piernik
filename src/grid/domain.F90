@@ -70,9 +70,9 @@ module domain
 
       integer(kind=8) :: total_ncells           !< total number of %grid cells
       integer         :: geometry_type          !< the type of geometry: cartesian: GEO_XYZ, cylindrical: GEO_RPZ, other: GEO_INVALID
-      integer         :: D_x                    !< set to 1 when x-direction exists, 0 otherwise
-      integer         :: D_y                    !< set to 1 when y-direction exists, 0 otherwise.
-      integer         :: D_z                    !< set to 1 when z-direction exists, 0 otherwise.
+      integer(kind=4) :: D_x                    !< set to 1 when x-direction exists, 0 otherwise
+      integer(kind=4) :: D_y                    !< set to 1 when y-direction exists, 0 otherwise.
+      integer(kind=4) :: D_z                    !< set to 1 when z-direction exists, 0 otherwise.
 
       integer(kind=4), dimension(ndims) :: D_   !< set to 1 for existing directions, 0 otherwise. Useful for dimensionally-safe indices for difference operators on arrays,
 
