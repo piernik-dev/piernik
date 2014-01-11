@@ -33,7 +33,6 @@
 module cg_list_neighbors
 
    use cg_list_rebalance, only: cg_list_rebalance_T
-   use grid_cont,         only: grid_container
 
    implicit none
 
@@ -64,68 +63,7 @@ module cg_list_neighbors
       procedure, private :: find_neighbors_bruteforce !< Make full description of intra-level communication with neighbors. Brute-force approach.
    end type cg_list_neighbors_T
 
-   !> a pointer to a grid container
-   type :: gcp
-      type(grid_container), pointer :: p
-   end type gcp
-
-   !> an array of pointers to local grid containers
-   type :: gcpa_T
-      type(gcp), dimension(:), allocatable :: l_pse ! auxiliary array used to convert entries in this%dot%gse into pointers to grid containers for local exchanges
-   contains
-      procedure :: init
-      procedure :: cleanup
-   end type gcpa_T
-
 contains
-
-!> \brief Set up an array to be able to convert from local grid_id to pointers to cg
-
-   subroutine init(this, curl)
-
-      use cg_list,    only: cg_list_element
-      use dataio_pub, only: die
-      use grid_cont,  only: grid_container
-      use mpisetup,   only: proc
-
-      implicit none
-
-      class(gcpa_T),              intent(inout) :: this !< object invoking type bound procedure
-      class(cg_list_neighbors_T), intent(inout) :: curl !< current level
-
-      type(grid_container),  pointer :: cg      !< grid container that we are currently working on
-      type(cg_list_element), pointer :: cgl
-      integer                        :: b
-
-      allocate(this%l_pse(lbound(curl%dot%gse(proc)%c(:), dim=1):ubound(curl%dot%gse(proc)%c(:), dim=1)))
-      ! OPT: the curl%dot%gse is sorted, so the setting of this%l_pse can be done in a bit faster, less safe way. Or do it fast first, then try the safe way to fill up, what is missing, if anything
-      do b = lbound(this%l_pse, dim=1), ubound(this%l_pse, dim=1)
-         this%l_pse(b)%p => null()
-         cgl => curl%first
-         do while (associated(cgl))
-            cg => cgl%cg
-            if (all(cg%my_se == curl%dot%gse(proc)%c(b)%se)) then
-               this%l_pse(b)%p => cg
-               exit
-            endif
-            cgl => cgl%nxt
-         enddo
-         if (.not. associated(this%l_pse(b)%p)) call die("[cg_list_neighbors:init] this%l_pse pointer not set")
-      enddo
-
-   end subroutine init
-
-!> \brief deallocate
-
-   subroutine cleanup(this)
-
-      implicit none
-
-      class(gcpa_T), intent(inout) :: this !< object invoking type bound procedure
-
-      if (allocated(this%l_pse)) deallocate(this%l_pse)
-
-   end subroutine cleanup
 
 !>
 !! \brief Choose between more general and fast routine for neighbor searching
@@ -196,6 +134,7 @@ contains
       use constants,  only: xdim, ydim, zdim, cor_dim, ndims, LO, HI, INVALID, BND_FC
       use dataio_pub, only: warn, die
       use domain,     only: dom
+      use gcpa,       only: gcpa_T
       use grid_cont,  only: grid_container
       use mpisetup,   only: proc
       use ordering,   only: SFC_order
@@ -341,6 +280,7 @@ contains
       use constants,  only: xdim, ydim, zdim, cor_dim, ndims, LO, HI, BND_MPI_FC, BND_FC
       use dataio_pub, only: die
       use domain,     only: dom
+      use gcpa,       only: gcpa_T
       use grid_cont,  only: grid_container, is_overlap
       use mpisetup,   only: FIRST, LAST, proc
 
