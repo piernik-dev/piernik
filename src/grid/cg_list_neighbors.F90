@@ -33,6 +33,7 @@
 module cg_list_neighbors
 
    use cg_list_rebalance, only: cg_list_rebalance_T
+   use grid_cont,         only: grid_container
 
    implicit none
 
@@ -63,10 +64,71 @@ module cg_list_neighbors
       procedure, private :: find_neighbors_bruteforce !< Make full description of intra-level communication with neighbors. Brute-force approach.
    end type cg_list_neighbors_T
 
+   !> a pointer to a grid container
+   type :: gcp
+      type(grid_container), pointer :: p
+   end type gcp
+
+   !> an array of pointers to local grid containers
+   type :: gcpa_T
+      type(gcp), dimension(:), allocatable :: l_pse ! auxiliary array used to convert entries in this%dot%gse into pointers to grid containers for local exchanges
+   contains
+      procedure :: init
+      procedure :: cleanup
+   end type gcpa_T
+
 contains
 
+!> \brief Set up an array to be able to convert from local grid_id to pointers to cg
+
+   subroutine init(this, curl)
+
+      use cg_list,    only: cg_list_element
+      use dataio_pub, only: die
+      use grid_cont,  only: grid_container
+      use mpisetup,   only: proc
+
+      implicit none
+
+      class(gcpa_T),              intent(inout) :: this !< object invoking type bound procedure
+      class(cg_list_neighbors_T), intent(inout) :: curl !< current level
+
+      type(grid_container),  pointer :: cg      !< grid container that we are currently working on
+      type(cg_list_element), pointer :: cgl
+      integer                        :: b
+
+      allocate(this%l_pse(lbound(curl%dot%gse(proc)%c(:), dim=1):ubound(curl%dot%gse(proc)%c(:), dim=1)))
+      ! OPT: the curl%dot%gse is sorted, so the setting of this%l_pse can be done in a bit faster, less safe way. Or do it fast first, then try the safe way to fill up, what is missing, if anything
+      do b = lbound(this%l_pse, dim=1), ubound(this%l_pse, dim=1)
+         this%l_pse(b)%p => null()
+         cgl => curl%first
+         do while (associated(cgl))
+            cg => cgl%cg
+            if (all(cg%my_se == curl%dot%gse(proc)%c(b)%se)) then
+               this%l_pse(b)%p => cg
+               exit
+            endif
+            cgl => cgl%nxt
+         enddo
+         if (.not. associated(this%l_pse(b)%p)) call die("[cg_list_neighbors:init] this%l_pse pointer not set")
+      enddo
+
+   end subroutine init
+
+!> \brief deallocate
+
+   subroutine cleanup(this)
+
+      implicit none
+
+      class(gcpa_T), intent(inout) :: this !< object invoking type bound procedure
+
+      if (allocated(this%l_pse)) deallocate(this%l_pse)
+
+   end subroutine cleanup
+
 !>
-!! \brief Choose between more general nad fast routine for neighbor searching
+!! \brief Choose between more general and fast routine for neighbor searching
 !!
 !! \details
 !!
@@ -198,7 +260,7 @@ contains
                            overlap(:, LO) = max(cg%lhn(:, LO), cg%ijkse(:, LO) + [ ix, iy, iz ] * cg%n_b)
                            overlap(:, HI) = min(cg%lhn(:, HI), cg%ijkse(:, HI) + [ ix, iy, iz ] * cg%n_b)
                            call cg%i_bnd(n_dd)%add_seg(n_p, overlap, tag)
-                           !if (n_p == proc) cg%i_bnd(n_dd)%seg(ubound(cg%i_bnd(n_dd)%seg, dim=1))%local => l_pse(b)%p
+                           !if (n_p == proc) cg%i_bnd(n_dd)%seg(ubound(cg%i_bnd(n_dd)%seg, dim=1))%local => l_pse(n_grid_id)%p
 
                            ! outgoing part:
                            tag = uniq_tag([ix, iy, iz], cg%grid_id)
@@ -291,26 +353,9 @@ contains
       end type fmap
       type(fmap), dimension(xdim:zdim, LO:HI)         :: f
       integer(kind=8), dimension(ndims, LO:HI)        :: box_8   !< temporary storage
-      type :: gcp
-         type(grid_container), pointer :: p
-      end type gcp
-      type(gcp), dimension(:), allocatable :: l_pse ! auxiliary array used to convert entries in this%pse into pointers to grid containers for local exchanges
+      type(gcpa_T) :: l_pse
 
-      allocate(l_pse(lbound(this%dot%gse(proc)%c(:), dim=1):ubound(this%dot%gse(proc)%c(:), dim=1)))
-      ! OPT: the this%dot%gse is sorted, so the setting of l_pse can be done in a bit faster, less safe way. Or do it fast first, then try the safe way to fill up, what is missing, if anything
-      do b = lbound(l_pse, dim=1), ubound(l_pse, dim=1)
-         l_pse(b)%p => null()
-         cgl => this%first
-         do while (associated(cgl))
-            cg => cgl%cg
-            if (all(cg%my_se == this%dot%gse(proc)%c(b)%se)) then
-               l_pse(b)%p => cg
-               exit
-            endif
-            cgl => cgl%nxt
-         enddo
-         if (.not. associated(l_pse(b)%p)) call die("[cg_level:mpi_bnd_types] l_pse pointer not set")
-      enddo
+      call l_pse%init(this)
 
       cgl => this%first
       do while (associated(cgl))
@@ -403,7 +448,7 @@ contains
                                                    dd = cor_dim
                                                 endif
                                                 call cg%i_bnd(dd)%add_seg(j, poff, tag)
-                                                if (j == proc) cg%i_bnd(dd)%seg(ubound(cg%i_bnd(dd)%seg, dim=1))%local => l_pse(b)%p
+                                                if (j == proc) cg%i_bnd(dd)%seg(ubound(cg%i_bnd(dd)%seg, dim=1))%local => l_pse%l_pse(b)%p
                                              endif
                                           endif
                                        enddo
@@ -482,7 +527,7 @@ contains
          cgl => cgl%nxt
       enddo
 
-      deallocate(l_pse)
+      call l_pse%cleanup
 
    contains
 
