@@ -303,6 +303,9 @@ contains
 !>
 !! \brief Update SFC_id_range array and check if the level is decomposed into processes strictly along currently
 !! used space-filling curve. Update this%gse(:)%c(:)%SFCid as well.
+!!
+!! \details OPT: Calling MPI here is not necessary when this routine is called from update_everything.
+!! SFC_id's are already computed in that case
 !<
 
    subroutine update_SFC_id_range(this, off)
