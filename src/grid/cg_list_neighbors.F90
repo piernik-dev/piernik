@@ -152,11 +152,13 @@ contains
 
    subroutine find_neighbors(this)
 
+      use refinement, only: prefer_n_bruteforce
+
       implicit none
 
       class(cg_list_neighbors_T), intent(inout) :: this !< object invoking type bound procedure
 
-      if (this%dot%is_blocky) then
+      if (this%dot%is_blocky .and. .not. prefer_n_bruteforce) then
          call this%find_neighbors_SFC
       else
          call this%find_neighbors_bruteforce

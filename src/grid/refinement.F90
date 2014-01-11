@@ -38,7 +38,7 @@ module refinement
 
    private
    public :: level_max, level_min, n_updAMR, allow_face_rstep, allow_corner_rstep, oop_thr, refine_points, refine_boxes, &
-        &    init_refinement, ref_flag, emergency_fix, set_n_updAMR, strict_SFC_ordering
+        &    init_refinement, ref_flag, emergency_fix, set_n_updAMR, strict_SFC_ordering, prefer_n_bruteforce
 
    type :: ref_flag
       logical :: refine   !> a request to refine
@@ -54,6 +54,7 @@ module refinement
    logical,         protected :: allow_corner_rstep  !< Allows >1 refinement step across edges and corners (do not use it for any physical problems)
    logical,         protected :: strict_SFC_ordering !< Enforce strict SFC ordering to allow optimized neighbour search
    real,            protected :: oop_thr             !< Maximum allowed ratio of Out-of-Place grid pieces (according to current ordering scheme)
+   logical,         protected :: prefer_n_bruteforce !< if .false. then try DFC algorithms for neighbor searches
 
    ! some refinement primitives
    integer, parameter :: nshapes = 10
@@ -74,7 +75,8 @@ module refinement
 
    logical :: emergency_fix !< set to .true. if you want to call update_refinement ASAP
 
-   namelist /AMR/ level_min, level_max, n_updAMR, allow_face_rstep, allow_corner_rstep, strict_SFC_ordering, oop_thr, refine_points, refine_boxes
+   namelist /AMR/ level_min, level_max, n_updAMR, allow_face_rstep, allow_corner_rstep, strict_SFC_ordering, &
+        &         prefer_n_bruteforce, oop_thr, refine_points, refine_boxes
 
 contains
 
@@ -102,6 +104,7 @@ contains
       allow_corner_rstep  = .false.
       strict_SFC_ordering = .false.
       allow_AMR = .true.
+      prefer_n_bruteforce = .false.
       oop_thr = 0.1
       do d = xdim, zdim
          if (dom%has_dir(d))  then
@@ -158,6 +161,7 @@ contains
          lbuff(2) = allow_corner_rstep
          lbuff(3) = allow_AMR
          lbuff(4) = strict_SFC_ordering
+         lbuff(5) = prefer_n_bruteforce
 
          rbuff(1) = oop_thr
          rbuff(2          :1+  nshapes) = refine_points(:)%coords(xdim)
@@ -188,6 +192,7 @@ contains
          allow_corner_rstep  = lbuff(2)
          allow_AMR           = lbuff(3)
          strict_SFC_ordering = lbuff(4)
+         prefer_n_bruteforce = lbuff(5)
 
          oop_thr = rbuff(1)
          refine_points(:)%coords(xdim)     = rbuff(2          :1+  nshapes)
