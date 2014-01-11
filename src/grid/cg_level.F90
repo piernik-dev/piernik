@@ -234,8 +234,8 @@ contains
       class(cg_level_T), intent(inout) :: this   !< object invoking type bound procedure
 
       call this%update_decomposition_properties
-      call this%dot%update_SFC_id_range(this%off)
       call this%dot%update_global(this%first, this%cnt, this%off) ! communicate everything that was added before
+      call this%dot%update_SFC_id_range(this%off)
       call this%find_neighbors ! requires access to whole this%dot%gse(:)%c(:)%se(:,:)
       call this%update_req     ! Perhaps this%find_neighbors added some new entries
       call this%dot%update_tot_se
