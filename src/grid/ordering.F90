@@ -100,6 +100,7 @@ contains
 !! For a 64**3 domain that corresponds to a 15 levels of refinement.
 !! If more levels are required one can:
 !! * use AMR_bsize divisible by some 2*k and ignore lowest k bits of offset. This way additional k levels of refinement can be supported.
+!! * divide off by AMR_bsize to increase maximum effective resolution to AMR_bsize*2**21 in 3D
 !! * use 128-bit integers (if they're available) to increase allowed range by 21 levels of refinement
 !! * emulate 128-bit integer in two 64-bit integers (note that we don't need arithmetic here, just bitwise operations and comparision)
 !<
