@@ -9,5 +9,5 @@ ifeq ($(PIERNIK_DEBUG), 1)
    F90FLAGS += -ggdb -O0 -ffpe-trap=zero,overflow,invalid -fcheck=all -fno-omit-frame-pointer
    F90FLAGS += -Wall -W -Wextra -pedantic-errors -Wno-unused-function
 else
-   F90FLAGS += -O2 -fstack-arrays -funroll-loops
+   F90FLAGS += -O2 -fstack-arrays
 endif
