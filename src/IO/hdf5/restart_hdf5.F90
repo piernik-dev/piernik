@@ -45,7 +45,7 @@ module restart_hdf5
       enumerator :: STAT_INV = -1
    end enum
 
-   type cg_essentials                            !< All vital attributes of a cg in one place
+   type :: cg_essentials                            !< All vital attributes of a cg in one place
       integer(kind=4), dimension(ndims) :: n_b
       integer(kind=8), dimension(ndims) :: off
       integer(kind=4)                   :: level

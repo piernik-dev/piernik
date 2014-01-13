@@ -38,13 +38,13 @@ module list_of_cg_lists
    private
    public :: all_lists
 
-   type cg_list_pointer
+   type :: cg_list_pointer
       class(cg_list_T), pointer  :: lp
    end type cg_list_pointer
 
-   type all_cg_lists
+   type :: all_cg_lists
       type(cg_list_pointer), dimension(:), allocatable :: entries
-    contains
+   contains
       procedure :: print      !< Print all cg lists for diagnostic purposes
       procedure :: register   !< Reset (initialize) the given list and add it to the table if unique
       procedure :: unregister !< Remove given list

@@ -399,10 +399,10 @@ contains
 
       if (firstcall) call leaves%set_q_value(qna%ind(sgp_n), 0.) !Initialize all the guardcells, even those which does not impact the solution
 
-      if (.not. allocated(coarsest%level%pse)) call die("[multigrid_gravity:init_multigrid_grav] cannot determine number of pieces on coaarsest level")
+      if (.not. allocated(coarsest%level%dot%gse)) call die("[multigrid_gravity:init_multigrid_grav] cannot determine number of pieces on coaarsest level")
       cnt = 0
       do p = FIRST, LAST
-         if (allocated(coarsest%level%pse)) cnt = cnt + size(coarsest%level%pse(p)%c(:))
+         if (allocated(coarsest%level%dot%gse)) cnt = cnt + size(coarsest%level%dot%gse(p)%c(:))
       enddo
 
       if (base_no_fft .and. (cnt /= 1) .and. master) call warn("[multigrid_gravity:init_multigrid_grav] Cannot use FFT solver on coarsest level")

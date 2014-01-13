@@ -28,43 +28,51 @@
 
 #include "piernik.h"
 
-!> \brief Module that contains a definition of sortable list of grid pieces, a sorting routine and other useful small routines
+!> \brief Module that contains a definition of sortable list of grid pieces, together with definition required by abstract type sortable_list_T
 
 module sort_piece_list
 
    use constants, only: ndims
+   use sortable_list, only: sortable_list_T
 
    implicit none
 
    private
-   public :: grid_piece_list, cleanup_piece_list
+   public :: grid_piece_list
 
    type :: grid_piece
+      integer(kind=8)                   :: id        !< unique number used to sort
       integer(kind=8), dimension(ndims) :: off       !< offset
       integer(kind=4), dimension(ndims) :: n_b       !< size
       integer(kind=4)                   :: cur_gid   !< current grid_id
       integer(kind=4)                   :: cur_proc  !< current process number
       integer(kind=4)                   :: dest_proc !< process number according to ideal ordering
-      integer(kind=8)                   :: id        !< unique number used to sort
       real                              :: weight    !< number of cells relative to total number of cells on given level (unused)
       real                              :: cweight   !< cumulative weight for id <= own id (unused)
    contains
       procedure :: set_gp                            !< Set the primary properties, initialize derived properties with safe defaults
    end type grid_piece
 
-   type :: grid_piece_list
+   type, extends(sortable_list_T) :: grid_piece_list
       type(grid_piece), dimension(:), allocatable :: list !< the list itself
+      type(grid_piece) :: temp
    contains
-      procedure :: init                                   !< Allocate the list
-      procedure :: cleanup                                !< Deallocate the list
-      procedure :: sort                                   !< Sorting routine (currently shellsort)
-      procedure :: set_id                                 !< Find grid id using a space-filling curve
-      procedure :: set_weights                            !< Find estimates of the cost of the grids
+      ! override abstract interface routines
+      procedure :: init             !< Allocate the list
+      procedure :: cleanup          !< Deallocate the list
+      procedure :: l_bound          !< Get lower bound of the list
+      procedure :: u_bound          !< Get upper bound of the list
+      procedure :: assign_element   !< Make an assignment
+      procedure :: compare_elements !< Make a comparision
+
+      ! own routines
+      procedure :: set_id           !< Find grid id using a space-filling curve
+      procedure :: set_weights      !< Find estimates of the cost of the grids
    end type grid_piece_list
 
-   integer, dimension(:), allocatable :: gaps ! Auxiliary array for the sorting routine. Can be expanded and reused, so it is detached from the type grid_piece_list
-
 contains
+
+!> \brief initialize an element of the list to be sorted
 
    subroutine set_gp(this, off, n_b, gid, proc)
 
@@ -75,8 +83,8 @@ contains
       class(grid_piece),                 intent(inout) :: this
       integer(kind=8), dimension(ndims), intent(in)    :: off   !< offset
       integer(kind=4), dimension(ndims), intent(in)    :: n_b   !< size
-      integer(kind=4),                   intent(in)    :: gid   !< current grid_id (unused)
-      integer(kind=4),                   intent(in)    :: proc  !< current process number (unused)
+      integer(kind=4),                   intent(in)    :: gid   !< current grid_id
+      integer(kind=4),                   intent(in)    :: proc  !< current process number
 
       this%off       = off
       this%n_b       = n_b
@@ -88,16 +96,6 @@ contains
       this%cweight   = 0.
 
    end subroutine set_gp
-
-!> \brief deallocate everything locally allocated
-
-   subroutine cleanup_piece_list
-
-      implicit none
-
-      if (allocated(gaps)) deallocate(gaps)
-
-   end subroutine cleanup_piece_list
 
 !> \brief Allocate the list
 
@@ -123,88 +121,6 @@ contains
       if (allocated(this%list)) deallocate(this%list)
 
    end subroutine cleanup
-
-!>
-!! \brief Shell sort with nontrivial coefficients
-!!
-!! \details Gap sequence according to:
-!! Tokuda, Naoyuki (1992). "An Improved Shellsort". In van Leeuven, Jan. Proceedings of the IFIP 12th World Computer Congress on Algorithms, Software, Architecture.
-!! Alternatively one can use gaps provided by M. Ciura  "Best Increments for the Average Case of Shellsort".
-!! Proceedings of the 13th International Symposium on Fundamentals of Computation Theory. London: pp. 106~117. ISBN 3-540-42487-3.
-!! The Tokuda's gaps were chosen here due to their algebraic prescription.
-!! Ciura's gaps are: [ 1, 4, 10, 23, 57, 132, 301, 701 ] and were obtained by numerical searching of optimal average sorting time of the algorithm
-!! Larger Ciura's gaps can be obtained approximately with multiplier 2.25
-!!
-!! \todo Consider rewriting to mergesort if this routine consumes too much CPU power
-!<
-
-   subroutine sort(this)
-
-#ifdef DEBUG
-      use dataio_pub, only: msg, warn, die
-#endif /* DEBUG */
-
-      implicit none
-
-      class(grid_piece_list), intent(inout) :: this
-
-      integer :: g, i, j
-      type(grid_piece) :: temp
-#ifdef DEBUG
-      logical :: fail
-#endif /* DEBUG */
-
-      if (.not. allocated(gaps)) then
-         allocate(gaps(1))
-         gaps(1) = 1
-      endif
-
-      do while (gaps(ubound(gaps, dim=1)) < ubound(this%list, dim=1))
-         gaps = [ gaps, tokuda(ubound(gaps, dim=1)+1) ]
-      enddo
-
-      do g = ubound(gaps, dim=1), lbound(gaps, dim=1), -1
-         do i = gaps(g)+1, ubound(this%list, dim=1)
-            temp = this%list(i)
-            j = i
-            do while (j > gaps(g) .and. this%list(max(j - gaps(g), lbound(this%list, dim=1)))%id > temp%id)
-               ! Either use max() here, or put this%list(j - gaps(g)) with an "if" inside the while loop
-               this%list(j) = this%list(j - gaps(g))
-               j = j - gaps(g)
-            enddo
-            this%list(j) = temp
-         enddo
-      enddo
-
-#ifdef DEBUG
-      fail = .false.
-      do i = lbound(this%list, dim=1), ubound(this%list, dim=1) - 1
-         if (this%list(i+1)%id < this%list(i)%id) then
-            write(msg,*)"this%list(",i+1,")%id = ",this%list(i+1)%id ," < ", this%list(i)%id," = this%list(",i,")%id"
-            call warn(msg)
-            fail = .true.
-         endif
-      enddo
-      if (fail) call die("[sort_piece_list:sort] failed")
-#endif /* DEBUG */
-
-   contains
-
-      integer function tokuda(k)
-
-         use dataio_pub, only: die
-
-         implicit none
-
-         integer, intent(in) :: k
-
-         if (k < 1) call die("[sort_piece_list:sort:tokuda] k<1")
-
-         tokuda = ceiling(0.8 * (2.25**k - 1.)) ! == ceiling((9**k-4**k)/(5.*4**(k-1)))
-
-      end function tokuda
-
-   end subroutine sort
 
 !> \brief Find grid id using a space-filling curve.
 
@@ -233,7 +149,7 @@ contains
 
       implicit none
 
-      class(grid_piece_list),            intent(inout) :: this
+      class(grid_piece_list), intent(inout) :: this
 
       integer :: s
       integer(kind=8) :: cc, c
@@ -250,5 +166,83 @@ contains
       enddo
 
    end subroutine set_weights
+
+!>
+!! \brief Tell if element at position a is greater than element at position b.
+!! When the position equals temp_index, use temporary storage.
+!<
+
+   logical function compare_elements(this, a, b)
+
+      use sortable_list, only: temp_index
+
+      implicit none
+
+      class(grid_piece_list), intent(inout) :: this
+      integer,                intent(in)    :: a, b
+
+      if (a == b) then
+         compare_elements = .false.
+         return
+      endif
+
+      if (b == temp_index) then ! this is the only case occuring in sortable_list::sort
+         compare_elements = this%list(a)%id > this%temp%id
+      else if (a == temp_index) then
+         compare_elements = this%temp%id > this%list(b)%id
+      else
+         compare_elements = this%list(a)%id > this%list(b)%id
+      endif
+
+   end function compare_elements
+!>
+!! \brief Copy element at position b to position a.
+!! When the position equals temp_index, use temporary storage.
+!<
+
+   subroutine assign_element(this, a, b)
+
+      use sortable_list, only: temp_index
+
+      implicit none
+
+      class(grid_piece_list), intent(inout) :: this
+      integer,                intent(in)    :: a, b
+
+      if (a == b) return
+
+      if (a == temp_index) then
+         this%temp = this%list(b)
+      else if (b == temp_index) then
+         this%list(a) = this%temp
+      else
+         this%list(a) = this%list(b)
+      endif
+
+   end subroutine assign_element
+
+!> \brief Get lower bound of the element list
+
+   integer function l_bound(this)
+
+      implicit none
+
+      class(grid_piece_list), intent(in) :: this
+
+      l_bound = lbound(this%list, dim=1)
+
+   end function l_bound
+
+!> \brief Get upper bound of the element list
+
+   integer function u_bound(this)
+
+      implicit none
+
+      class(grid_piece_list), intent(in) :: this
+
+      u_bound = ubound(this%list, dim=1)
+
+   end function u_bound
 
 end module sort_piece_list

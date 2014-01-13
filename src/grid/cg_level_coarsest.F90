@@ -115,9 +115,6 @@ contains
 
       if (this%level%level_id >= base_level_id) call die("[cg_level_coarsest:delete_coarsest] Attempted to operate on base level or above")
 
-      if (allocated(this%level%pse)) deallocate(this%level%pse)        ! this%level%pse(:)%c should be deallocated automagically
-      if (allocated(this%level%patches)) deallocate(this%level%patches)! this%level%patches(:)%pse should be deallocated automagically
-
       call this%level%free_all_cg
       curl => this%level
       call all_lists%unregister(curl)
