@@ -74,6 +74,8 @@ module dot
       procedure :: find_grid            !< Find process and grid_id using SFC_id
    end type dot_T
 
+   integer(kind=8), parameter :: huge_SFC = huge(1_8)
+
 contains
 
 !> \brief Deallocate everything
@@ -156,7 +158,7 @@ contains
          if (allocated(this%gse(p)%c)) deallocate(this%gse(p)%c)
          allocate(this%gse(p)%c(allcnt(p)))
          this%gse(p)%sorted = .true.
-         prev_id = -huge(1_8)
+         prev_id = -huge_SFC
          do i = alloff(p), alloff(p) + allcnt(p) - 1
             this%gse(p)%c(i-alloff(p)+1)%se(:, LO) = allse(ncub*i      +1:ncub*i+   ndims) ! we do it in low-level way here again.
             this%gse(p)%c(i-alloff(p)+1)%se(:, HI) = allse(ncub*i+ndims+1:ncub*i+HI*ndims)
@@ -329,7 +331,7 @@ contains
       if (any(lbound(this%SFC_id_range) /= [ FIRST, LO ]) .or. any(ubound(this%SFC_id_range) /= [ LAST, HI ])) &
            call die("[dot:update_SFC_id_range] bogus this%SFC_id_range dimensions")
 
-      this%SFC_id_range(proc, :) = [ huge(1), -huge(1) ]
+      this%SFC_id_range(proc, :) = [ huge_SFC, -huge_SFC ]
       if (allocated(this%gse)) then
          if (allocated(this%gse(proc)%c)) then
             if (size(this%gse(proc)%c, dim=1) > 0) then
@@ -349,10 +351,10 @@ contains
 
       deallocate(id_buf)
 
-      SFC_id = -huge(1_8)
+      SFC_id = -huge_SFC
       this%is_strict_SFC = .true.
       do i = FIRST, LAST
-         if (this%SFC_id_range(i, LO) < huge(1)) then ! skip processes that have no grids
+         if (this%SFC_id_range(i, LO) < huge_SFC) then ! skip processes that have no grids
             this%is_strict_SFC = this%is_strict_SFC .and. (SFC_id < this%SFC_id_range(i, LO))
             SFC_id = this%SFC_id_range(i, HI)
          endif
@@ -387,7 +389,7 @@ contains
          iu = ubound(this%SFC_id_range, dim=1)
          do while (iu-il > 1)
             j = (il+iu)/2
-            if (this%SFC_id_range(j, LO)  == huge(1)) exit ! stop bisection when some processes don't own anything
+            if (this%SFC_id_range(j, LO)  == huge_SFC) exit ! stop bisection when some processes don't own anything
             ! OPT: this may require somewhat better solution for massively parallel runs.
             if (this%SFC_id_range(j, LO) <= SFC_id) then
                il = j
