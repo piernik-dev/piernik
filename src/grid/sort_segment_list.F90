@@ -45,7 +45,7 @@ module sort_segment_list
    implicit none
 
    private
-   public :: sort_segment_list_T
+   public :: sort_segment_list_T, seg
 
    ! prepare type to gather information on segments to be exchanged with one process
    type :: seg
@@ -57,7 +57,7 @@ module sort_segment_list
       type(seg), dimension(:), allocatable :: list !< the list itself
       type(seg) :: temp
    contains
-      procedure :: init             !< Allocate the list
+      procedure :: add              !< Add a piece to the list
       procedure :: cleanup          !< Deallocate the list
 
       ! override abstract interface routines
@@ -71,16 +71,26 @@ contains
 
 !> \brief Allocate the list
 
-   subroutine init(this, size)
+   subroutine add(this, s)
 
       implicit none
 
       class(sort_segment_list_T), intent(inout) :: this
-      integer(kind=4),            intent(in)    :: size
+      type(seg),                  intent(in)    :: s
 
-      allocate(this%list(size))
+      type(seg), dimension(:), allocatable :: tmp
 
-   end subroutine init
+      !> \warning a lot of duplicated code with some othe rroutines such as named_array_list::add2lst
+      if (.not. allocated(this%list)) then
+         allocate(this%list(1))
+      else
+         allocate(tmp(lbound(this%list(:),dim=1):ubound(this%list(:), dim=1) + 1))
+         tmp(:ubound(this%list(:), dim=1)) = this%list(:)
+         call move_alloc(from=tmp, to=this%list)
+      endif
+      this%list(ubound(this%list(:), dim=1)) = s
+
+   end subroutine add
 
 !> \brief Deallocate the list
 

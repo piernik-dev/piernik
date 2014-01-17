@@ -40,11 +40,16 @@ module merge_segments
    public :: merge_segments_T
 
    type :: merge_segments_T
-      type(sort_segment_list_T), dimension(:), allocatable :: sl ! segment list (FIRST:LAST)
+      type(sort_segment_list_T), dimension(:, :), allocatable :: sl ! segment list (FIRST:LAST, IN:OUT)
       logical :: valid
    contains
-      procedure :: merge ! Merge segments
+      procedure          :: merge     ! Merge segments
+      procedure, private :: populate  ! Initialize segment list with fresh data
    end type merge_segments_T
+
+   enum, bind(C)
+      enumerator :: IN, OUT
+   end enum
 
 contains
 
@@ -52,15 +57,57 @@ contains
 
    subroutine merge(this, list)
 
-      use cg_list, only: cg_list_T
+      use cg_list,  only: cg_list_T
+      use mpisetup, only: FIRST, LAST
 
       implicit none
 
       class(merge_segments_T), intent(inout) :: this
       class(cg_list_T),        intent(in)    :: list
 
+      if (allocated(this%sl)) deallocate(this%sl) !> \todo check if it properly frees this%sl(:)%list
+      allocate(this%sl(FIRST:LAST, IN:OUT))
+
+      call this%populate(list)
+
       !this%valid = .true.
 
    end subroutine merge
+
+!> \brief Initialize segment list with fresh data
+
+   subroutine populate(this, list)
+
+      use cg_list,           only: cg_list_T, cg_list_element
+      use constants,         only: xdim, cor_dim
+      use sort_segment_list, only: seg
+
+      implicit none
+
+      class(merge_segments_T), intent(inout) :: this
+      class(cg_list_T),        intent(in)    :: list
+
+      type(cg_list_element), pointer :: cgl
+      integer :: d, i
+
+      cgl => list%first
+      do while (associated(cgl))
+         do d = xdim, cor_dim
+            if (allocated(cgl%cg%i_bnd(d)%seg)) then
+               do i = lbound(cgl%cg%i_bnd(d)%seg, dim=1), ubound(cgl%cg%i_bnd(d)%seg, dim=1)
+                  call this%sl(cgl%cg%i_bnd(d)%seg(i)%proc, IN)%add(seg(cgl%cg%i_bnd(d)%seg(i)%tag, cgl%cg%i_bnd(d)%seg(i)%se))
+               enddo
+            endif
+
+            if (allocated(cgl%cg%o_bnd(d)%seg)) then
+               do i = lbound(cgl%cg%o_bnd(d)%seg, dim=1), ubound(cgl%cg%o_bnd(d)%seg, dim=1)
+                  call this%sl(cgl%cg%o_bnd(d)%seg(i)%proc, OUT)%add(seg(cgl%cg%o_bnd(d)%seg(i)%tag, cgl%cg%o_bnd(d)%seg(i)%se))
+               enddo
+            endif
+         enddo
+         cgl => cgl%nxt
+      enddo
+
+   end subroutine populate
 
 end module merge_segments
