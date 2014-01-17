@@ -45,7 +45,7 @@ module sort_segment_list
    implicit none
 
    private
-   public :: sort_segment_list_T, seg
+   public :: sort_segment_list_T
 
    ! prepare type to gather information on segments to be exchanged with one process
    type :: seg
@@ -71,12 +71,13 @@ contains
 
 !> \brief Allocate the list
 
-   subroutine add(this, s)
+   subroutine add(this, tag, se)
 
       implicit none
 
-      class(sort_segment_list_T), intent(inout) :: this
-      type(seg),                  intent(in)    :: s
+      class(sort_segment_list_T),                   intent(inout) :: this
+      integer(kind=4),                              intent(in)    :: tag
+      integer(kind=8), dimension(xdim:zdim, LO:HI), intent(in)    :: se
 
       type(seg), dimension(:), allocatable :: tmp
 
@@ -88,7 +89,8 @@ contains
          tmp(:ubound(this%list(:), dim=1)) = this%list(:)
          call move_alloc(from=tmp, to=this%list)
       endif
-      this%list(ubound(this%list(:), dim=1)) = s
+      this%list(ubound(this%list(:), dim=1))%tag = tag
+      this%list(ubound(this%list(:), dim=1))%se  = se
 
    end subroutine add
 
