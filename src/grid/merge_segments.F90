@@ -70,19 +70,22 @@ contains
       if (allocated(this%sl)) deallocate(this%sl) !> \todo check if it properly frees this%sl(:)%list
       allocate(this%sl(FIRST:LAST, IN:OUT))
 
-      call this%populate(list)
-      do p = FIRST, LAST
-         do i = IN, OUT
-            ! technically we don't need to aggregate on p==proc, but it is safer to do it anyway
-            call this%sl(p, i)%sort
-            !> \todo OPT: we can avoid one call to sort if we put both incoming and outgoing segments in
-            !! this%sl(p)%list(:). Note that in this%populate we cannot assume that o_bnd will be sorted in the same
-            !! way as i_bnd was. Then we'll be able to drop the IN|OUT index as well.
-            call this%sl(p, i)%find_offsets
-         enddo
-      enddo
-
       this%valid = .true.
+      call this%populate(list)
+      if (this%valid) then
+         do p = FIRST, LAST
+            do i = IN, OUT
+               ! technically we don't need to aggregate on p==proc, but it is safer to do it anyway
+               call this%sl(p, i)%sort
+               !> \todo OPT: we can avoid one call to sort if we put both incoming and outgoing segments in
+               !! this%sl(p)%list(:). Note that in this%populate we cannot assume that o_bnd will be sorted in the same
+               !! way as i_bnd was. Then we'll be able to drop the IN|OUT index as well.
+               call this%sl(p, i)%find_offsets
+            enddo
+         enddo
+      else
+         deallocate(this%sl)
+      endif
 
    end subroutine merge
 
@@ -90,8 +93,10 @@ contains
 
    subroutine populate(this, list)
 
-      use cg_list,           only: cg_list_T, cg_list_element
-      use constants,         only: xdim, cor_dim
+      use cg_list,    only: cg_list_T, cg_list_element
+      use constants,  only: xdim, cor_dim
+      use dataio_pub, only: warn
+      use mpisetup,   only: proc
 
       implicit none
 
@@ -106,13 +111,21 @@ contains
          do d = xdim, cor_dim
             if (allocated(cgl%cg%i_bnd(d)%seg)) then
                do i = lbound(cgl%cg%i_bnd(d)%seg, dim=1), ubound(cgl%cg%i_bnd(d)%seg, dim=1)
-                  call this%sl(cgl%cg%i_bnd(d)%seg(i)%proc, IN)%add(cgl%cg%i_bnd(d)%seg(i)%tag, cgl%cg%i_bnd(d)%seg(i)%se, cgl%cg)
+                  call this%sl(cgl%cg%i_bnd(d)%seg(i)%proc, IN)%add( &
+                       &       cgl%cg%i_bnd(d)%seg(i)%tag, &
+                       &       cgl%cg%i_bnd(d)%seg(i)%se, cgl%cg)
+                  if (cgl%cg%i_bnd(d)%seg(i)%proc == proc .and. .not. associated(cgl%cg%i_bnd(d)%seg(i)%local)) then
+                     this%valid = .false.
+                     call warn("[merge_segments:populate] local i_bnd without pointer set. Cannot safely use merged messages.") ! Or perhaps it is better to die here?
+                  endif
                enddo
             endif
 
             if (allocated(cgl%cg%o_bnd(d)%seg)) then
                do i = lbound(cgl%cg%o_bnd(d)%seg, dim=1), ubound(cgl%cg%o_bnd(d)%seg, dim=1)
-                  call this%sl(cgl%cg%o_bnd(d)%seg(i)%proc, OUT)%add(cgl%cg%o_bnd(d)%seg(i)%tag, cgl%cg%o_bnd(d)%seg(i)%se, cgl%cg)
+                  call this%sl(cgl%cg%o_bnd(d)%seg(i)%proc, OUT)%add( &
+                       &       cgl%cg%o_bnd(d)%seg(i)%tag, &
+                       &       cgl%cg%o_bnd(d)%seg(i)%se, cgl%cg)
                enddo
             endif
          enddo
