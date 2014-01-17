@@ -33,6 +33,7 @@
 module cg_list_neighbors
 
    use cg_list_rebalance, only: cg_list_rebalance_T
+   use merge_segments,    only: merge_segments_T
 
    implicit none
 
@@ -58,6 +59,7 @@ module cg_list_neighbors
    !! pieces covering specified position.
    !<
    type, extends(cg_list_rebalance_T), abstract :: cg_list_neighbors_T
+      type(merge_segments_T) :: ms                    !< merged segments
    contains
       procedure          :: find_neighbors            !< Choose between more general nad fast routine for neighbor searching
       procedure, private :: find_neighbors_SFC        !< Make full description of intra-level communication with neighbors. Approach exploiting strict SFC distribution.
@@ -98,8 +100,10 @@ contains
 
       class(cg_list_neighbors_T), intent(inout) :: this !< object invoking type bound procedure
 
+      this%ms%valid = .false.
       if (this%dot%is_blocky .and. .not. prefer_n_bruteforce) then
          call this%find_neighbors_SFC
+         call this%ms%merge(this)
       else
          call this%find_neighbors_bruteforce
       endif
