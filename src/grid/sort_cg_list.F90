@@ -28,11 +28,7 @@
 
 #include "piernik.h"
 
-!>
-!! \brief Stub module
-!!
-!! \details Don't forget to describe your stuff
-!<
+!> \brief Module that contains a definition of sortable list of pointers to cg_list_elements
 
 module sort_cg_list
 
