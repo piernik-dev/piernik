@@ -106,6 +106,8 @@ contains
          call this%ms%merge(this)
       else
          call this%find_neighbors_bruteforce
+         ! calling this%ms%merge(this) here makes sense only for such setups, so in periodic boundaries 2 blocks
+         ! covers the domain in at least one direction.
       endif
 
    end subroutine find_neighbors
