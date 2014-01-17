@@ -57,9 +57,10 @@ module sort_segment_list
       type(seg), dimension(:), allocatable :: list !< the list itself
       type(seg) :: temp
    contains
-      ! override abstract interface routines
       procedure :: init             !< Allocate the list
       procedure :: cleanup          !< Deallocate the list
+
+      ! override abstract interface routines
       procedure :: l_bound          !< Get lower bound of the list
       procedure :: u_bound          !< Get upper bound of the list
       procedure :: assign_element   !< Make an assignment
