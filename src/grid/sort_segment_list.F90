@@ -40,6 +40,7 @@
 module sort_segment_list
 
    use constants,     only: xdim, zdim, LO, HI
+   use grid_cont,     only: grid_container
    use sortable_list, only: sortable_list_T
 
    implicit none
@@ -52,6 +53,7 @@ module sort_segment_list
       integer(kind=4) :: tag                              !< unique tag for data exchange, used for sorting
       integer(kind=8), dimension(xdim:zdim, LO:HI) :: se  !< range
       integer(kind=8) :: offset                           !< offset within the chunk
+      type(grid_container), pointer :: cg                 !< source/target grid container
    end type seg
 
    type, extends(sortable_list_T) :: sort_segment_list_T
@@ -74,13 +76,16 @@ contains
 
 !> \brief Allocate the list
 
-   subroutine add(this, tag, se)
+   subroutine add(this, tag, se, cg)
+
+      use grid_cont, only: grid_container
 
       implicit none
 
       class(sort_segment_list_T),                   intent(inout) :: this
       integer(kind=4),                              intent(in)    :: tag
       integer(kind=8), dimension(xdim:zdim, LO:HI), intent(in)    :: se
+      type(grid_container), pointer,                intent(in)    :: cg
 
       type(seg), dimension(:), allocatable :: tmp
 
@@ -94,6 +99,7 @@ contains
       endif
       this%list(ubound(this%list(:), dim=1))%tag = tag
       this%list(ubound(this%list(:), dim=1))%se  = se
+      this%list(ubound(this%list(:), dim=1))%cg => cg
 
    end subroutine add
 

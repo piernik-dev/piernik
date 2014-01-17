@@ -106,13 +106,13 @@ contains
          do d = xdim, cor_dim
             if (allocated(cgl%cg%i_bnd(d)%seg)) then
                do i = lbound(cgl%cg%i_bnd(d)%seg, dim=1), ubound(cgl%cg%i_bnd(d)%seg, dim=1)
-                  call this%sl(cgl%cg%i_bnd(d)%seg(i)%proc, IN)%add(cgl%cg%i_bnd(d)%seg(i)%tag, cgl%cg%i_bnd(d)%seg(i)%se)
+                  call this%sl(cgl%cg%i_bnd(d)%seg(i)%proc, IN)%add(cgl%cg%i_bnd(d)%seg(i)%tag, cgl%cg%i_bnd(d)%seg(i)%se, cgl%cg)
                enddo
             endif
 
             if (allocated(cgl%cg%o_bnd(d)%seg)) then
                do i = lbound(cgl%cg%o_bnd(d)%seg, dim=1), ubound(cgl%cg%o_bnd(d)%seg, dim=1)
-                  call this%sl(cgl%cg%o_bnd(d)%seg(i)%proc, OUT)%add(cgl%cg%o_bnd(d)%seg(i)%tag, cgl%cg%o_bnd(d)%seg(i)%se)
+                  call this%sl(cgl%cg%o_bnd(d)%seg(i)%proc, OUT)%add(cgl%cg%o_bnd(d)%seg(i)%tag, cgl%cg%o_bnd(d)%seg(i)%se, cgl%cg)
                enddo
             endif
          enddo
