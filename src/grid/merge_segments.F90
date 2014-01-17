@@ -40,7 +40,7 @@ module merge_segments
    public :: merge_segments_T
 
    type :: merge_segments_T
-      type(sort_segment_list_T), dimension(:, :), allocatable :: sl ! segment list (FIRST:LAST, IN:OUT)
+      type(sort_segment_list_T), dimension(:, :), allocatable :: sl ! array of sortable segment lists (FIRST:LAST, IN:OUT)
       logical :: valid
    contains
       procedure          :: merge     ! Merge segments
@@ -65,22 +65,24 @@ contains
       class(merge_segments_T), intent(inout) :: this
       class(cg_list_T),        intent(in)    :: list
 
-      integer :: p
+      integer :: p, i
 
       if (allocated(this%sl)) deallocate(this%sl) !> \todo check if it properly frees this%sl(:)%list
       allocate(this%sl(FIRST:LAST, IN:OUT))
 
       call this%populate(list)
       do p = FIRST, LAST
-         ! technically we don't need to aggregate on p==proc, but it is safer to do it anyway
-         call this%sl(p, IN )%sort
-         call this%sl(p, OUT)%sort
-         !> \todo OPT: we can avoid one call to sort if we put both incoming and outgoing segments in
-         !! this%sl(p)%list(:). Note that in this%populate we cannot assume that o_bnd will be sorted in the same
-         !! way as i_bnd was. Then we'll be able to drop the IN|OUT index as well.
+         do i = IN, OUT
+            ! technically we don't need to aggregate on p==proc, but it is safer to do it anyway
+            call this%sl(p, i)%sort
+            !> \todo OPT: we can avoid one call to sort if we put both incoming and outgoing segments in
+            !! this%sl(p)%list(:). Note that in this%populate we cannot assume that o_bnd will be sorted in the same
+            !! way as i_bnd was. Then we'll be able to drop the IN|OUT index as well.
+            call this%sl(p, i)%find_offsets
+         enddo
       enddo
 
-      !this%valid = .true.
+      this%valid = .true.
 
    end subroutine merge
 

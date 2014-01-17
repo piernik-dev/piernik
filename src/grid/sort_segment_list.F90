@@ -51,14 +51,17 @@ module sort_segment_list
    type :: seg
       integer(kind=4) :: tag                              !< unique tag for data exchange, used for sorting
       integer(kind=8), dimension(xdim:zdim, LO:HI) :: se  !< range
+      integer(kind=8) :: offset                           !< offset within the chunk
    end type seg
 
    type, extends(sortable_list_T) :: sort_segment_list_T
       type(seg), dimension(:), allocatable :: list !< the list itself
       type(seg) :: temp
+      integer(kind=8) :: total_size                !< offset of the last segment data + its size
    contains
       procedure :: add              !< Add a piece to the list
       procedure :: cleanup          !< Deallocate the list
+      procedure :: find_offsets     !< Set up offsets
 
       ! override abstract interface routines
       procedure :: l_bound          !< Get lower bound of the list
@@ -93,6 +96,32 @@ contains
       this%list(ubound(this%list(:), dim=1))%se  = se
 
    end subroutine add
+
+!< \brief Set up offsets
+
+   subroutine find_offsets(this)
+
+      use constants, only: LO, HI, I_ONE
+
+      implicit none
+
+      class(sort_segment_list_T), intent(inout) :: this
+
+      integer :: i
+
+      if (allocated(this%list)) then
+         this%list(lbound(this%list, dim=1))%offset = 0
+         do i = lbound(this%list, dim=1)+1, ubound(this%list, dim=1)
+            this%list(i)%offset = this%list(i-1)%offset + product(this%list(i-1)%se(:, HI) - this%list(i-1)%se(:, LO) + I_ONE)
+         enddo
+         this%total_size = this%list(ubound(this%list, dim=1))%offset + &
+              &    product(this%list(ubound(this%list, dim=1))%se(:, HI) - &
+              &            this%list(ubound(this%list, dim=1))%se(:, LO) + I_ONE)
+      else
+         this%total_size = 0
+      endif
+
+   end subroutine find_offsets
 
 !> \brief Deallocate the list
 
