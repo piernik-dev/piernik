@@ -166,7 +166,11 @@ contains
 
       class(sort_segment_list_T), intent(in) :: this
 
-      l_bound = lbound(this%list, dim=1)
+      if (allocated(this%list)) then
+         l_bound = lbound(this%list, dim=1)
+      else
+         l_bound = huge(1) ! safe default; should bail out from sorting
+      endif
 
    end function l_bound
 
@@ -178,7 +182,11 @@ contains
 
       class(sort_segment_list_T), intent(in) :: this
 
-      u_bound = ubound(this%list, dim=1)
+      if (allocated(this%list)) then
+         u_bound = ubound(this%list, dim=1)
+      else
+         u_bound = -huge(1) ! safe default; should bail out from sorting
+      endif
 
    end function u_bound
 
