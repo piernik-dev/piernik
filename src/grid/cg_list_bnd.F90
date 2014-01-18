@@ -47,6 +47,7 @@ module cg_list_bnd
 ! pulled by ANY
 
    use cg_list_dataop, only: cg_list_dataop_T
+   use merge_segments, only: merge_segments_T
 
    implicit none
 
@@ -61,6 +62,7 @@ module cg_list_bnd
    !<
 
    type, extends(cg_list_dataop_T), abstract :: cg_list_bnd_T
+      type(merge_segments_T) :: ms                         !< merged segments
    contains
       procedure          :: level_3d_boundaries          !< Perform internal boundary exchanges and external boundary extrapolations on 3D named arrays
       procedure          :: level_4d_boundaries          !< Perform internal boundary exchanges and external boundary extrapolations on 4D named arrays
