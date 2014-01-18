@@ -54,12 +54,14 @@ module sort_segment_list
       integer(kind=8), dimension(xdim:zdim, LO:HI) :: se  !< range
       integer(kind=8) :: offset                           !< offset within the chunk
       type(grid_container), pointer :: cg                 !< source/target grid container
+      integer :: dir                                      !< direction of the boundary segment
    end type seg
 
    type, extends(sortable_list_T) :: sort_segment_list_T
       type(seg), dimension(:), allocatable :: list !< the list itself
       type(seg) :: temp
       integer(kind=8) :: total_size                !< offset of the last segment data + its size
+      real, allocatable, dimension(:) :: buf       !< buffer for the data to be sent or received (total_size)
    contains
       procedure :: add              !< Add a piece to the list
       procedure :: cleanup          !< Deallocate the list
@@ -76,7 +78,7 @@ contains
 
 !> \brief Allocate the list
 
-   subroutine add(this, tag, se, cg)
+   subroutine add(this, tag, se, cg, dir)
 
       use grid_cont, only: grid_container
 
@@ -86,6 +88,7 @@ contains
       integer(kind=4),                              intent(in)    :: tag
       integer(kind=8), dimension(xdim:zdim, LO:HI), intent(in)    :: se
       type(grid_container), pointer,                intent(in)    :: cg
+      integer,                                      intent(in)    :: dir
 
       type(seg), dimension(:), allocatable :: tmp
 
@@ -97,9 +100,10 @@ contains
          tmp(:ubound(this%list(:), dim=1)) = this%list(:)
          call move_alloc(from=tmp, to=this%list)
       endif
-      this%list(ubound(this%list(:), dim=1))%tag = tag
-      this%list(ubound(this%list(:), dim=1))%se  = se
-      this%list(ubound(this%list(:), dim=1))%cg => cg
+      this%list(ubound(this%list(:), dim=1))%tag =  tag
+      this%list(ubound(this%list(:), dim=1))%se  =  se
+      this%list(ubound(this%list(:), dim=1))%cg  => cg
+      this%list(ubound(this%list(:), dim=1))%dir =  dir
 
    end subroutine add
 

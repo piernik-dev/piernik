@@ -113,7 +113,7 @@ contains
                do i = lbound(cgl%cg%i_bnd(d)%seg, dim=1), ubound(cgl%cg%i_bnd(d)%seg, dim=1)
                   call this%sl(cgl%cg%i_bnd(d)%seg(i)%proc, IN)%add( &
                        &       cgl%cg%i_bnd(d)%seg(i)%tag, &
-                       &       cgl%cg%i_bnd(d)%seg(i)%se, cgl%cg)
+                       &       cgl%cg%i_bnd(d)%seg(i)%se, cgl%cg, d)
                   if (cgl%cg%i_bnd(d)%seg(i)%proc == proc .and. .not. associated(cgl%cg%i_bnd(d)%seg(i)%local)) then
                      this%valid = .false.
                      call warn("[merge_segments:populate] local i_bnd without pointer set. Cannot safely use merged messages.") ! Or perhaps it is better to die here?
@@ -125,7 +125,7 @@ contains
                do i = lbound(cgl%cg%o_bnd(d)%seg, dim=1), ubound(cgl%cg%o_bnd(d)%seg, dim=1)
                   call this%sl(cgl%cg%o_bnd(d)%seg(i)%proc, OUT)%add( &
                        &       cgl%cg%o_bnd(d)%seg(i)%tag, &
-                       &       cgl%cg%o_bnd(d)%seg(i)%se, cgl%cg)
+                       &       cgl%cg%o_bnd(d)%seg(i)%se, cgl%cg, d)
                enddo
             endif
          enddo
