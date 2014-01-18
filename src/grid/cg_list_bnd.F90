@@ -64,18 +64,19 @@ module cg_list_bnd
    type, extends(cg_list_dataop_T), abstract :: cg_list_bnd_T
       type(merge_segments_T) :: ms                         !< merged segments
    contains
-      procedure          :: level_3d_boundaries          !< Perform internal boundary exchanges and external boundary extrapolations on 3D named arrays
-      procedure          :: level_4d_boundaries          !< Perform internal boundary exchanges and external boundary extrapolations on 4D named arrays
-      procedure          :: internal_boundaries_3d       !< A wrapper that calls internal_boundaries for 3D arrays stored in cg%q(:)
-      procedure          :: internal_boundaries_4d       !< A wrapper that calls internal_boundaries for 4D arrays stored in cg%w(:)
-      procedure, private :: internal_boundaries          !< Exchanges guardcells for BND_MPI and BND_PER boundaries (internal and periodic external boundaries)
-      procedure, private :: internal_boundaries_local    !< Exchanges guardcells between local grid containers
-      procedure, private :: internal_boundaries_MPI_1by1 !< Exchanges guardcells with remote grid containers, one-by-one
-      procedure          :: clear_boundaries             !< Clear (set to 0) all boundaries
-      procedure          :: dirty_boundaries             !< Put dirty values to all boundaries
-      procedure          :: external_boundaries          !< Set up external boundary values
-      procedure          :: bnd_u                        !< External (Non-MPI) boundary conditions for the fluid array: cg%u
-      procedure          :: bnd_b                        !< External (Non-MPI) boundary conditions for the magnetic field array: cg%b
+      procedure          :: level_3d_boundaries            !< Perform internal boundary exchanges and external boundary extrapolations on 3D named arrays
+      procedure          :: level_4d_boundaries            !< Perform internal boundary exchanges and external boundary extrapolations on 4D named arrays
+      procedure          :: internal_boundaries_3d         !< A wrapper that calls internal_boundaries for 3D arrays stored in cg%q(:)
+      procedure          :: internal_boundaries_4d         !< A wrapper that calls internal_boundaries for 4D arrays stored in cg%w(:)
+      procedure, private :: internal_boundaries            !< Exchanges guardcells for BND_MPI and BND_PER boundaries (internal and periodic external boundaries)
+      procedure, private :: internal_boundaries_local      !< Exchanges guardcells between local grid containers
+      procedure, private :: internal_boundaries_MPI_1by1   !< Exchanges guardcells with remote grid containers, one-by-one
+      procedure, private :: internal_boundaries_MPI_merged !< Exchanges guardcells with remote grid containers with merged MPI messages
+      procedure          :: clear_boundaries               !< Clear (set to 0) all boundaries
+      procedure          :: dirty_boundaries               !< Put dirty values to all boundaries
+      procedure          :: external_boundaries            !< Set up external boundary values
+      procedure          :: bnd_u                          !< External (Non-MPI) boundary conditions for the fluid array: cg%u
+      procedure          :: bnd_b                          !< External (Non-MPI) boundary conditions for the magnetic field array: cg%b
       !> \todo move routines for external guardcells for rank-4 arrays here as well (fluidboundaries and magboundaries)
    end type cg_list_bnd_T
 
@@ -224,7 +225,11 @@ contains
       if (present(nocorners)) dmask(cor_dim) = .not. nocorners
 
       call internal_boundaries_local(this, ind, tgt3d, dmask)
-      call internal_boundaries_MPI_1by1(this, ind, tgt3d, dmask)
+!!$      if (this%ms%valid) then
+!!$         call internal_boundaries_MPI_merged(this, ind, tgt3d, dir, nocorners)
+!!$      else
+         call internal_boundaries_MPI_1by1(this, ind, tgt3d, dmask)
+!!$      end if
 
    end subroutine internal_boundaries
 
@@ -304,6 +309,23 @@ contains
       enddo
 
    end subroutine internal_boundaries_local
+!>
+!! \brief This routine exchanges guardcells with remote blocks for BND_MPI and BND_PER boundaries on rank-3 and
+!! rank-4 arrays. Pieces of boundaries that have to be sent between same pair of processes are merged
+!<
+
+   subroutine internal_boundaries_MPI_merged(this, ind, tgt3d, dmask)
+
+      use constants, only: xdim, cor_dim
+
+      implicit none
+
+      class(cg_list_bnd_T),             intent(in) :: this  !< the list on which to perform the boundary exchange
+      integer(kind=4),                  intent(in) :: ind   !< index of cg%q(:) 3d array or cg%w(:) 4d array
+      logical,                          intent(in) :: tgt3d !< .true. for cg%q, .false. for cg%w
+      logical, dimension(xdim:cor_dim), intent(in) :: dmask !< .true. for the directions we want to exchange
+
+   end subroutine internal_boundaries_MPI_merged
 
 !>
 !! \brief This routine exchanges guardcells with remote blocks for BND_MPI and BND_PER boundaries on rank-3 and
