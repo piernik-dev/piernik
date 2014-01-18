@@ -62,16 +62,18 @@ module cg_list_bnd
 
    type, extends(cg_list_dataop_T), abstract :: cg_list_bnd_T
    contains
-      procedure          :: level_3d_boundaries        !< Perform internal boundary exchanges and external boundary extrapolations on 3D named arrays
-      procedure          :: level_4d_boundaries        !< Perform internal boundary exchanges and external boundary extrapolations on 4D named arrays
-      procedure          :: internal_boundaries_3d     !< A wrapper that calls internal_boundaries for 3D arrays stored in cg%q(:)
-      procedure          :: internal_boundaries_4d     !< A wrapper that calls internal_boundaries for 4D arrays stored in cg%w(:)
-      procedure, private :: internal_boundaries        !< Exchanges guardcells for BND_MPI and BND_PER boundaries (internal and periodic external boundaries)
-      procedure          :: clear_boundaries           !< Clear (set to 0) all boundaries
-      procedure          :: dirty_boundaries           !< Put dirty values to all boundaries
-      procedure          :: external_boundaries        !< Set up external boundary values
-      procedure          :: bnd_u                      !< External (Non-MPI) boundary conditions for the fluid array: cg%u
-      procedure          :: bnd_b                      !< External (Non-MPI) boundary conditions for the magnetic field array: cg%b
+      procedure          :: level_3d_boundaries          !< Perform internal boundary exchanges and external boundary extrapolations on 3D named arrays
+      procedure          :: level_4d_boundaries          !< Perform internal boundary exchanges and external boundary extrapolations on 4D named arrays
+      procedure          :: internal_boundaries_3d       !< A wrapper that calls internal_boundaries for 3D arrays stored in cg%q(:)
+      procedure          :: internal_boundaries_4d       !< A wrapper that calls internal_boundaries for 4D arrays stored in cg%w(:)
+      procedure, private :: internal_boundaries          !< Exchanges guardcells for BND_MPI and BND_PER boundaries (internal and periodic external boundaries)
+      procedure, private :: internal_boundaries_local    !< Exchanges guardcells between local grid containers
+      procedure, private :: internal_boundaries_MPI_1by1 !< Exchanges guardcells with remote grid containers, one-by-one
+      procedure          :: clear_boundaries             !< Clear (set to 0) all boundaries
+      procedure          :: dirty_boundaries             !< Put dirty values to all boundaries
+      procedure          :: external_boundaries          !< Set up external boundary values
+      procedure          :: bnd_u                        !< External (Non-MPI) boundary conditions for the fluid array: cg%u
+      procedure          :: bnd_b                        !< External (Non-MPI) boundary conditions for the magnetic field array: cg%b
       !> \todo move routines for external guardcells for rank-4 arrays here as well (fluidboundaries and magboundaries)
    end type cg_list_bnd_T
 
@@ -197,8 +199,119 @@ contains
 
    subroutine internal_boundaries(this, ind, tgt3d, dir, nocorners)
 
+      implicit none
+
+      class(cg_list_bnd_T),      intent(in)        :: this      !< the list on which to perform the boundary exchange
+      integer(kind=4),           intent(in)        :: ind       !< index of cg%q(:) 3d array or cg%w(:) 4d array
+      logical,                   intent(in)        :: tgt3d     !< .true. for cg%q, .false. for cg%w
+      integer(kind=4), optional, intent(in)        :: dir       !< do the internal boundaries only in the specified dimension
+      logical,         optional, intent(in)        :: nocorners !< .when .true. then don't care about proper edge and corner update
+
+      call internal_boundaries_local(this, ind, tgt3d, dir, nocorners)
+      call internal_boundaries_MPI_1by1(this, ind, tgt3d, dir, nocorners)
+
+   end subroutine internal_boundaries
+
+!> \brief This routine exchanges guardcells between local blocks for BND_MPI and BND_PER boundaries on rank-3 and rank-4 arrays.
+
+   subroutine internal_boundaries_local(this, ind, tgt3d, dir, nocorners)
+
       use cg_list,          only: cg_list_element
-      use constants,        only: xdim, ydim, zdim, cor_dim, LO, HI, I_ONE, I_TWO, INVALID
+      use constants,        only: xdim, zdim, cor_dim, INVALID
+      use dataio_pub,       only: die
+      use domain,           only: dom
+      use grid_cont,        only: grid_container, segment
+
+      implicit none
+
+      class(cg_list_bnd_T),      intent(in)        :: this      !< the list on which to perform the boundary exchange
+      integer(kind=4),           intent(in)        :: ind       !< index of cg%q(:) 3d array or cg%w(:) 4d array
+      logical,                   intent(in)        :: tgt3d     !< .true. for cg%q, .false. for cg%w
+      integer(kind=4), optional, intent(in)        :: dir       !< do the internal boundaries only in the specified dimension
+      logical,         optional, intent(in)        :: nocorners !< .when .true. then don't care about proper edge and corner update
+
+      integer                                      :: g, d, g_o, i
+      logical, dimension(xdim:cor_dim)             :: dmask
+      type(grid_container),     pointer            :: cg
+      type(cg_list_element),    pointer            :: cgl
+      real, dimension(:,:,:),   pointer            :: pa3d, pa3d_o
+      real, dimension(:,:,:,:), pointer            :: pa4d, pa4d_o
+      logical                                      :: active
+      type(segment), pointer                       :: i_seg, o_seg !< shortcuts
+
+      dmask(xdim:zdim) = dom%has_dir
+      if (present(dir)) then
+         dmask(xdim:zdim) = .false.
+         dmask(dir) = dom%has_dir(dir)
+      endif
+
+      dmask(cor_dim) = .true.
+      if (present(nocorners)) dmask(cor_dim) = .not. nocorners
+
+      cgl => this%first
+      do while (associated(cgl))
+         cg => cgl%cg
+
+         ! exclude non-multigrid variables below base level
+         if (tgt3d) then
+            active = associated(cg%q(ind)%arr)
+         else
+            active = associated(cg%w(ind)%arr)
+         endif
+
+         do d = lbound(cg%i_bnd, dim=1), ubound(cg%i_bnd, dim=1)
+            if (dmask(d) .and. active) then
+               if (allocated(cg%i_bnd(d)%seg)) then
+                  if (.not. allocated(cg%o_bnd(d)%seg)) call die("[cg_list_bnd:internal_boundaries_local] cg%i_bnd without cg%o_bnd")
+                  if (ubound(cg%i_bnd(d)%seg(:), dim=1) /= ubound(cg%o_bnd(d)%seg(:), dim=1)) &
+                       call die("[cg_list_bnd:internal_boundaries_local] cg%i_bnd differs in number of entries from cg%o_bnd")
+                  do g = lbound(cg%i_bnd(d)%seg(:), dim=1), ubound(cg%i_bnd(d)%seg(:), dim=1)
+
+                     if (associated(cg%i_bnd(d)%seg(g)%local)) then
+                        i_seg => cg%i_bnd(d)%seg(g)
+                        ! find the right segment on the other grid container. OPT: can be done while searching for the pointer i_seg%local
+                        g_o = INVALID
+                        do i = lbound(i_seg%local%o_bnd(d)%seg, dim=1), ubound(i_seg%local%o_bnd(d)%seg, dim=1)
+                           if (i_seg%tag == i_seg%local%o_bnd(d)%seg(i)%tag) then
+                              g_o = i
+                              exit
+                           endif
+                        enddo
+                        if (g_o == INVALID) call die("[cg_list_bnd:internal_boundaries_local] cannot find the other grid chunk")
+                        o_seg => i_seg%local%o_bnd(d)%seg(g_o)
+                        if (tgt3d) then
+                           pa3d   =>          cg%q(ind)%span(i_seg%se(:,:))
+                           pa3d_o => i_seg%local%q(ind)%span(o_seg%se(:,:))
+                           pa3d(:,:,:) = pa3d_o(:,:,:)
+                        else
+                           pa4d   =>          cg%w(ind)%span(i_seg%se(:,:))
+                           pa4d_o => i_seg%local%w(ind)%span(o_seg%se(:,:))
+                           pa4d(:,:,:,:) = pa4d_o(:,:,:,:)
+                        endif
+                     endif
+                  enddo
+               else
+                  if (allocated(cg%o_bnd(d)%seg)) call die("[cg_list_bnd:internal_boundaries_local] cg%o_bnd without cg%i_bnd")
+               endif
+            endif
+         enddo
+
+         cgl => cgl%nxt
+      enddo
+
+   end subroutine internal_boundaries_local
+
+!>
+!! \brief This routine exchanges guardcells with remote blocks for BND_MPI and BND_PER boundaries on rank-3 and rank-4 arrays.
+!!
+!! \detail This routine will exchange local blocks as well (which would degrade the performance a bit) where the
+!! pointer in cg%i_bnd(:)%seg(:)%local is not set.
+!<
+
+   subroutine internal_boundaries_MPI_1by1(this, ind, tgt3d, dir, nocorners)
+
+      use cg_list,          only: cg_list_element
+      use constants,        only: xdim, ydim, zdim, cor_dim, LO, HI, I_ONE, I_TWO
       use dataio_pub,       only: die, warn
       use domain,           only: dom
       use grid_cont,        only: grid_container, segment
@@ -214,13 +327,13 @@ contains
       integer(kind=4), optional, intent(in)        :: dir       !< do the internal boundaries only in the specified dimension
       logical,         optional, intent(in)        :: nocorners !< .when .true. then don't care about proper edge and corner update
 
-      integer                                      :: g, d, g_o, i
+      integer                                      :: g, d
       integer(kind=4)                              :: nr     !< index of first free slot in req and status arrays
       logical, dimension(xdim:cor_dim)             :: dmask
       type(grid_container),     pointer            :: cg
       type(cg_list_element),    pointer            :: cgl
-      real, dimension(:,:,:),   pointer            :: pa3d, pa3d_o
-      real, dimension(:,:,:,:), pointer            :: pa4d, pa4d_o
+      real, dimension(:,:,:),   pointer            :: pa3d
+      real, dimension(:,:,:,:), pointer            :: pa4d
       logical                                      :: active
       type(segment), pointer                       :: i_seg, o_seg !< shortcuts
       integer(kind=4), allocatable, dimension(:,:) :: mpistatus !< status array for MPI_Waitall
@@ -249,40 +362,19 @@ contains
          do d = lbound(cg%i_bnd, dim=1), ubound(cg%i_bnd, dim=1)
             if (dmask(d) .and. active) then
                if (allocated(cg%i_bnd(d)%seg)) then
-                  if (.not. allocated(cg%o_bnd(d)%seg)) call die("[cg_list_bnd:internal_boundaries] cg%i_bnd without cg%o_bnd")
+                  if (.not. allocated(cg%o_bnd(d)%seg)) call die("[cg_list_bnd:internal_boundaries_MPI_1by1] cg%i_bnd without cg%o_bnd")
                   if (ubound(cg%i_bnd(d)%seg(:), dim=1) /= ubound(cg%o_bnd(d)%seg(:), dim=1)) &
-                       call die("[cg_list_bnd:internal_boundaries] cg%i_bnd differs in number of entries from cg%o_bnd")
+                       call die("[cg_list_bnd:internal_boundaries_MPI_1by1] cg%i_bnd differs in number of entries from cg%o_bnd")
                   do g = lbound(cg%i_bnd(d)%seg(:), dim=1), ubound(cg%i_bnd(d)%seg(:), dim=1)
 
-                     if (associated(cg%i_bnd(d)%seg(g)%local)) then
-                        i_seg => cg%i_bnd(d)%seg(g)
-                        ! find the right segment on the other grid container. OPT: can be done while searching for the pointer i_seg%local
-                        g_o = INVALID
-                        do i = lbound(i_seg%local%o_bnd(d)%seg, dim=1), ubound(i_seg%local%o_bnd(d)%seg, dim=1)
-                           if (i_seg%tag == i_seg%local%o_bnd(d)%seg(i)%tag) then
-                              g_o = i
-                              exit
-                           endif
-                        enddo
-                        if (g_o == INVALID) call die("[cg_list_bnd:internal_boundaries] cannot find the other grid chunk")
-                        o_seg => i_seg%local%o_bnd(d)%seg(g_o)
-                        if (tgt3d) then
-                           pa3d   =>          cg%q(ind)%span(i_seg%se(:,:))
-                           pa3d_o => i_seg%local%q(ind)%span(o_seg%se(:,:))
-                           pa3d(:,:,:) = pa3d_o(:,:,:)
-                        else
-                           pa4d   =>          cg%w(ind)%span(i_seg%se(:,:))
-                           pa4d_o => i_seg%local%w(ind)%span(o_seg%se(:,:))
-                           pa4d(:,:,:,:) = pa4d_o(:,:,:,:)
-                        endif
-                    else
+                     if (.not. associated(cg%i_bnd(d)%seg(g)%local)) then
                         if (nr+I_TWO >  ubound(req(:), dim=1)) call inflate_req
                         i_seg => cg%i_bnd(d)%seg(g)
                         o_seg => cg%o_bnd(d)%seg(g)
 
                         !> \deprecated: A lot of semi-duplicated code below
                         if (tgt3d) then
-                           if (ind > ubound(cg%q(:), dim=1) .or. ind < lbound(cg%q(:), dim=1)) call die("[cg_list_bnd:internal_boundaries] wrong 3d index")
+                           if (ind > ubound(cg%q(:), dim=1) .or. ind < lbound(cg%q(:), dim=1)) call die("[cg_list_bnd:internal_boundaries_MPI_1by1] wrong 3d index")
 
                            if (allocated(i_seg%buf)) then
                               call warn("clb:ib allocated i-buf")
@@ -305,7 +397,7 @@ contains
                            call MPI_Isend(o_seg%buf, size(o_seg%buf), MPI_DOUBLE_PRECISION, o_seg%proc, o_seg%tag, comm, req(nr+I_TWO), mpi_err)
 
                         else
-                           if (ind > ubound(cg%w(:), dim=1) .or. ind < lbound(cg%w(:), dim=1)) call die("[cg_list_bnd:internal_boundaries] wrong 4d index")
+                           if (ind > ubound(cg%w(:), dim=1) .or. ind < lbound(cg%w(:), dim=1)) call die("[cg_list_bnd:internal_boundaries_MPI_1by1] wrong 4d index")
 
                            if (allocated(i_seg%buf4)) then
                               call warn("clb:ib allocated i-buf")
@@ -342,7 +434,7 @@ contains
                      endif
                   enddo
                else
-                  if (allocated(cg%o_bnd(d)%seg)) call die("[cg_list_bnd:internal_boundaries] cg%o_bnd without cg%i_bnd")
+                  if (allocated(cg%o_bnd(d)%seg)) call die("[cg_list_bnd:internal_boundaries_MPI_1by1] cg%o_bnd without cg%i_bnd")
                endif
             endif
          enddo
@@ -404,7 +496,7 @@ contains
          cgl => cgl%nxt
       enddo
 
-   end subroutine internal_boundaries
+   end subroutine internal_boundaries_MPI_1by1
 
 !> \brief Set zero to all boundaries (will defeat any attemts of use of dirty checks on boundaries)
 
