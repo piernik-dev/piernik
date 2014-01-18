@@ -199,45 +199,18 @@ contains
 
    subroutine internal_boundaries(this, ind, tgt3d, dir, nocorners)
 
-      implicit none
-
-      class(cg_list_bnd_T),      intent(in)        :: this      !< the list on which to perform the boundary exchange
-      integer(kind=4),           intent(in)        :: ind       !< index of cg%q(:) 3d array or cg%w(:) 4d array
-      logical,                   intent(in)        :: tgt3d     !< .true. for cg%q, .false. for cg%w
-      integer(kind=4), optional, intent(in)        :: dir       !< do the internal boundaries only in the specified dimension
-      logical,         optional, intent(in)        :: nocorners !< .when .true. then don't care about proper edge and corner update
-
-      call internal_boundaries_local(this, ind, tgt3d, dir, nocorners)
-      call internal_boundaries_MPI_1by1(this, ind, tgt3d, dir, nocorners)
-
-   end subroutine internal_boundaries
-
-!> \brief This routine exchanges guardcells between local blocks for BND_MPI and BND_PER boundaries on rank-3 and rank-4 arrays.
-
-   subroutine internal_boundaries_local(this, ind, tgt3d, dir, nocorners)
-
-      use cg_list,          only: cg_list_element
-      use constants,        only: xdim, zdim, cor_dim, INVALID
-      use dataio_pub,       only: die
-      use domain,           only: dom
-      use grid_cont,        only: grid_container, segment
+      use constants, only: xdim, zdim, cor_dim
+      use domain,    only: dom
 
       implicit none
 
-      class(cg_list_bnd_T),      intent(in)        :: this      !< the list on which to perform the boundary exchange
-      integer(kind=4),           intent(in)        :: ind       !< index of cg%q(:) 3d array or cg%w(:) 4d array
-      logical,                   intent(in)        :: tgt3d     !< .true. for cg%q, .false. for cg%w
-      integer(kind=4), optional, intent(in)        :: dir       !< do the internal boundaries only in the specified dimension
-      logical,         optional, intent(in)        :: nocorners !< .when .true. then don't care about proper edge and corner update
+      class(cg_list_bnd_T),      intent(in) :: this      !< the list on which to perform the boundary exchange
+      integer(kind=4),           intent(in) :: ind       !< index of cg%q(:) 3d array or cg%w(:) 4d array
+      logical,                   intent(in) :: tgt3d     !< .true. for cg%q, .false. for cg%w
+      integer(kind=4), optional, intent(in) :: dir       !< do the internal boundaries only in the specified dimension
+      logical,         optional, intent(in) :: nocorners !< .when .true. then don't care about proper edge and corner update
 
-      integer                                      :: g, d, g_o, i
-      logical, dimension(xdim:cor_dim)             :: dmask
-      type(grid_container),     pointer            :: cg
-      type(cg_list_element),    pointer            :: cgl
-      real, dimension(:,:,:),   pointer            :: pa3d, pa3d_o
-      real, dimension(:,:,:,:), pointer            :: pa4d, pa4d_o
-      logical                                      :: active
-      type(segment), pointer                       :: i_seg, o_seg !< shortcuts
+      logical, dimension(xdim:cor_dim) :: dmask
 
       dmask(xdim:zdim) = dom%has_dir
       if (present(dir)) then
@@ -247,6 +220,35 @@ contains
 
       dmask(cor_dim) = .true.
       if (present(nocorners)) dmask(cor_dim) = .not. nocorners
+
+      call internal_boundaries_local(this, ind, tgt3d, dmask)
+      call internal_boundaries_MPI_1by1(this, ind, tgt3d, dmask)
+
+   end subroutine internal_boundaries
+
+!> \brief This routine exchanges guardcells between local blocks for BND_MPI and BND_PER boundaries on rank-3 and rank-4 arrays.
+
+   subroutine internal_boundaries_local(this, ind, tgt3d, dmask)
+
+      use cg_list,          only: cg_list_element
+      use constants,        only: xdim, cor_dim, INVALID
+      use dataio_pub,       only: die
+      use grid_cont,        only: grid_container, segment
+
+      implicit none
+
+      class(cg_list_bnd_T),             intent(in) :: this  !< the list on which to perform the boundary exchange
+      integer(kind=4),                  intent(in) :: ind   !< index of cg%q(:) 3d array or cg%w(:) 4d array
+      logical,                          intent(in) :: tgt3d !< .true. for cg%q, .false. for cg%w
+      logical, dimension(xdim:cor_dim), intent(in) :: dmask !< .true. for the directions we want to exchange
+
+      integer                           :: g, d, g_o, i
+      type(grid_container),     pointer :: cg
+      type(cg_list_element),    pointer :: cgl
+      real, dimension(:,:,:),   pointer :: pa3d, pa3d_o
+      real, dimension(:,:,:,:), pointer :: pa4d, pa4d_o
+      logical                           :: active
+      type(segment), pointer            :: i_seg, o_seg !< shortcuts
 
       cgl => this%first
       do while (associated(cgl))
@@ -302,18 +304,18 @@ contains
    end subroutine internal_boundaries_local
 
 !>
-!! \brief This routine exchanges guardcells with remote blocks for BND_MPI and BND_PER boundaries on rank-3 and rank-4 arrays.
+!! \brief This routine exchanges guardcells with remote blocks for BND_MPI and BND_PER boundaries on rank-3 and
+!! rank-4 arrays. There is one message per each piece of boundary.
 !!
 !! \detail This routine will exchange local blocks as well (which would degrade the performance a bit) where the
 !! pointer in cg%i_bnd(:)%seg(:)%local is not set.
 !<
 
-   subroutine internal_boundaries_MPI_1by1(this, ind, tgt3d, dir, nocorners)
+   subroutine internal_boundaries_MPI_1by1(this, ind, tgt3d, dmask)
 
       use cg_list,          only: cg_list_element
       use constants,        only: xdim, ydim, zdim, cor_dim, LO, HI, I_ONE, I_TWO
       use dataio_pub,       only: die, warn
-      use domain,           only: dom
       use grid_cont,        only: grid_container, segment
       use mpi,              only: MPI_DOUBLE_PRECISION, MPI_STATUS_SIZE
       use mpisetup,         only: comm, mpi_err, req, inflate_req
@@ -321,15 +323,13 @@ contains
 
       implicit none
 
-      class(cg_list_bnd_T),      intent(in)        :: this      !< the list on which to perform the boundary exchange
-      integer(kind=4),           intent(in)        :: ind       !< index of cg%q(:) 3d array or cg%w(:) 4d array
-      logical,                   intent(in)        :: tgt3d     !< .true. for cg%q, .false. for cg%w
-      integer(kind=4), optional, intent(in)        :: dir       !< do the internal boundaries only in the specified dimension
-      logical,         optional, intent(in)        :: nocorners !< .when .true. then don't care about proper edge and corner update
+      class(cg_list_bnd_T),             intent(in) :: this  !< the list on which to perform the boundary exchange
+      integer(kind=4),                  intent(in) :: ind   !< index of cg%q(:) 3d array or cg%w(:) 4d array
+      logical,                          intent(in) :: tgt3d !< .true. for cg%q, .false. for cg%w
+      logical, dimension(xdim:cor_dim), intent(in) :: dmask !< .true. for the directions we want to exchange
 
       integer                                      :: g, d
       integer(kind=4)                              :: nr     !< index of first free slot in req and status arrays
-      logical, dimension(xdim:cor_dim)             :: dmask
       type(grid_container),     pointer            :: cg
       type(cg_list_element),    pointer            :: cgl
       real, dimension(:,:,:),   pointer            :: pa3d
@@ -337,15 +337,6 @@ contains
       logical                                      :: active
       type(segment), pointer                       :: i_seg, o_seg !< shortcuts
       integer(kind=4), allocatable, dimension(:,:) :: mpistatus !< status array for MPI_Waitall
-
-      dmask(xdim:zdim) = dom%has_dir
-      if (present(dir)) then
-         dmask(xdim:zdim) = .false.
-         dmask(dir) = dom%has_dir(dir)
-      endif
-
-      dmask(cor_dim) = .true.
-      if (present(nocorners)) dmask(cor_dim) = .not. nocorners
 
       nr = 0
       cgl => this%first
