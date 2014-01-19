@@ -25,7 +25,6 @@
 !    For full list of developers see $PIERNIK_HOME/license/pdt.txt
 !
 #include "piernik.h"
-#include "macros.h"
 
 !> \brief This module serves an array of prime numbers. Used primarily in decomposition module.
 

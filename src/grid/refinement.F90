@@ -25,7 +25,6 @@
 !    For full list of developers see $PIERNIK_HOME/license/pdt.txt
 !
 #include "piernik.h"
-#include "macros.h"
 
 !> \brief This module contains variables and initialization routines related to refinement
 

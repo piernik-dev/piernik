@@ -1,6 +1,5 @@
 
 #include "piernik.h"
-#include "macros.h"
 
 module initproblem
 

@@ -25,7 +25,6 @@
 !    For full list of developers see $PIERNIK_HOME/license/pdt.txt
 !
 #include "piernik.h"
-#include "macros.h"
 !>
 !! \brief A place for global constants and parameters related to cosmic rays species
 !!

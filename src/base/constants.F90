@@ -25,7 +25,6 @@
 !    For full list of developers see $PIERNIK_HOME/license/pdt.txt
 !
 #include "piernik.h"
-#include "macros.h"
 !>
 !! \brief Module containing numerical %constants, enumerations, string lengths, etc.
 !! \details Module constants contains numerical %constants, enumerations, string lengths, etc.

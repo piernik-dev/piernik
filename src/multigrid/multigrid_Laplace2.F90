@@ -26,7 +26,6 @@
 !
 
 #include "piernik.h"
-#include "macros.h"
 
 !> \brief Implementation of 2nd order, simplest Laplace operator
 

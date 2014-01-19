@@ -25,7 +25,6 @@
 !    For full list of developers see $PIERNIK_HOME/license/pdt.txt
 !
 #include "piernik.h"
-#include "macros.h"
 !>
 !! \brief Module containing subroutines and functions that govern supernovae insert
 !<

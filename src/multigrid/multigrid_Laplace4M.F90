@@ -26,7 +26,6 @@
 !
 
 #include "piernik.h"
-#include "macros.h"
 
 !>
 !! \brief Implementation of 4th order, compact, Mehrstellen-type Laplace operator

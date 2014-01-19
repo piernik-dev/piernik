@@ -25,7 +25,6 @@
 !    For full list of developers see $PIERNIK_HOME/license/pdt.txt
 !
 #include "piernik.h"
-#include "macros.h"
 !>
 !! \brief This module provides global simulation variables such as t or nstep and some numerical parameters, like cfl
 !!

@@ -25,7 +25,6 @@
 !    For full list of developers see $PIERNIK_HOME/license/pdt.txt
 !
 #include "piernik.h"
-#include "macros.h"
 !>
 !! \brief Implementation of a fast eulerian transport algorithm for differentially rotating disks (Masset 2000)
 !!
