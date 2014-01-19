@@ -1,4 +1,3 @@
-! $Id$
 !
 ! PIERNIK Code Copyright (C) 2006 Michal Hanasz
 !
@@ -26,7 +25,6 @@
 !    For full list of developers see $PIERNIK_HOME/license/pdt.txt
 !
 #include "piernik.h"
-#include "macros.h"
 
 !> \brief Implementation of selfgravitating spheroid, for which an analytical solution of the gravitational potential is known.
 

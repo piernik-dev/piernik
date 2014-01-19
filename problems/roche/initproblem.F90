@@ -1,4 +1,3 @@
-! $Id: initproblem.F90 3071 2010-11-05 12:25:40Z xarth $
 !
 ! PIERNIK Code Copyright (C) 2006 Michal Hanasz
 !
@@ -26,7 +25,6 @@
 !    For full list of developers see $PIERNIK_HOME/license/pdt.txt
 !
 #include "piernik.h"
-#include "macros.h"
 
 module initproblem
 

@@ -1,4 +1,3 @@
-! $Id$
 !
 ! PIERNIK Code Copyright (C) 2006 Michal Hanasz
 !
@@ -85,7 +84,7 @@ module dataio_pub
    character(len=cwdlen)       :: tmp_log_file                   !< path to the temporary log file
    character(len=cwdlen), target :: par_file                     !< path to the parameter file
    ! Handy variables
-   integer(kind=4), target     :: ierrh                          !< variable for iostat error on reading namelists (see macros.h)
+   integer(kind=4), target     :: ierrh                          !< variable for iostat error on reading namelists
    integer(kind=4)             :: mpi_err                        !< variable for error code in MPI calls (should we export it to mpisetup?)
    character(len=cwdlen), target :: errstr                       !< string for storing error messages
 
@@ -154,7 +153,7 @@ module dataio_pub
       character(len=cwdlen), pointer :: errstr     !< string for storing error messages
       character(len=cwdlen) :: tmp1
       character(len=cwdlen) :: tmp2
-      integer(kind=4), pointer       :: ierrh      !< variable for iostat error on reading namelists (see macros.h)
+      integer(kind=4), pointer       :: ierrh      !< variable for iostat error on reading namelists
       integer, pointer               :: lun        !< current free logical unit
       procedure(namelist_errh_P), nopass, pointer    :: namelist_errh
       logical :: initialized = .false.

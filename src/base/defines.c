@@ -1,4 +1,3 @@
-/* $Id$ */
 /*
    This file is not meant to be included anywhere. We just check if all declarations in the piernik.def file are consistent.
 

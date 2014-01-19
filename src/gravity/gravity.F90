@@ -1,4 +1,3 @@
-! $Id$
 !
 ! PIERNIK Code Copyright (C) 2006 Michal Hanasz
 !
@@ -26,7 +25,6 @@
 !    For full list of developers see $PIERNIK_HOME/license/pdt.txt
 !
 #include "piernik.h"
-#include "macros.h"
 
 !>
 !! \brief Module containing all main subroutines and functions that govern %gravity force in the code

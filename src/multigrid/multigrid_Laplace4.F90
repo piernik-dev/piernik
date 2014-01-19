@@ -1,4 +1,3 @@
-! $Id$
 !
 ! PIERNIK Code Copyright (C) 2006 Michal Hanasz
 !
@@ -27,7 +26,6 @@
 !
 
 #include "piernik.h"
-#include "macros.h"
 
 !> \brief Implementation of 4th order, non-compact (5 cell wide) Laplace operator
 

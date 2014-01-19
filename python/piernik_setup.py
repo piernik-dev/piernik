@@ -27,7 +27,6 @@ is_f90 = re.compile("f90$", re.IGNORECASE)
 is_header = re.compile("h$", re.IGNORECASE)
 not_svn_junk = re.compile(".*(?!pro).*", re.IGNORECASE)
 test = re.compile(r'pulled by', re.IGNORECASE).search
-test2 = re.compile(r"\$Id", re.IGNORECASE).search
 have_use = re.compile(r"^\s{0,9}use\s", re.IGNORECASE).search
 have_inc = re.compile(r"^#include\s", re.IGNORECASE).search
 have_mod = re.compile(r"^\s*module\s+(?!procedure)", re.IGNORECASE).search
@@ -127,10 +126,9 @@ env.dat: piernik.def *.h $(SRCS_V)
 '''
 
 head_block2 = '''
-\tawk -F"$$" '/Id:/ {print $$2}' *.h $(SRCS_V) | column -t; \\
 \tawk '{print}' piernik.def | sed -e '/^$$/ d' -e "/^\// d" ) > env.dat
-\t@( $(ECHO) "Top revision =" \\
-\t`awk 'BEGIN {max = 0} {if ($$1=="Id:" && $$3>max) max=$$3} END {print max}' env.dat` ) >> env.dat
+\t@$(ECHO) "Recent history:" >> env.dat
+\t@git log -5 --decorate --graph >> env.dat
 
 version.F90: env.dat
 \t@( $(ECHO) -e "module version\\n   implicit none\\n   public\\n"; \\
@@ -348,7 +346,6 @@ def setup_piernik(data=None):
         print our_defs
 
     files = ['src/base/defines.c']
-    tags = ['']   # BEWARE missing tag for defines.c
     uses = [[]]
     incl = ['']
     module = dict()
@@ -361,7 +358,6 @@ def setup_piernik(data=None):
     for f in f90files:
         keys_logic1 = False
         keys_logic2 = False
-        tag = ""
         keys = []
         luse = []
         linc = []
@@ -385,15 +381,12 @@ def setup_piernik(data=None):
         if(keys_logic1 or keys_logic2):
             cmd = "cpp %s -I%s -I%s %s" % (cppflags, probdir, 'src/base', f)
             for line in get_stdout(cmd).split('\n'):    # Scan preprocessed files
-                if test2(line):
-                    tag = line.strip()
                 if have_use(line):
                     luse.append(line.split()[1].rstrip(","))
                 if have_mod(line):
                     module.setdefault(line.split()[1],
                                       remove_suf(strip_leading_path([f]))[0])
             files.append(f)
-            tags.append(tag)
             uses.append(list(set(luse)))
             incl.append(list(set(linc)))
 
