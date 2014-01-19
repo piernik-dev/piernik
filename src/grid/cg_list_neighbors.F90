@@ -85,9 +85,6 @@ contains
 !!   supplement it with communication of "other corners". The sequence of Isend/Irecv should be as follows: Isend
 !!   X-faces, Irecv X-faces, Waitall, Isend Y-faces, Irecv Y-faces, Waitall, Isend Z-faces, Irecv Z-faces, Waitall
 !!   "Other corners" can be Isend at any time and must be Irecv after Z-faces are copied to the right place.
-!!
-!! \todo Provide a way to merge single-boundary messages into large clumps. On AMR grids it may outperform current
-!! cartesian decompositions of uniform grids and may get close to pre-a27c945a performance.
 !<
 
    subroutine find_neighbors(this)

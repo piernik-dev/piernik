@@ -192,9 +192,6 @@ contains
 !! Note that some of them were never used.
 !! \todo Try to define MPI_types for communication right before MPI_Isend/MPI_Irecv calls and release just after use. Then compare performance.
 !!
-!! OPT In AMR runs usually there ara many messages that ate sent between the same pairs of processes
-!! \todo Sort all messages according to e.g. tag and send/receive aggregated message with everything
-!!
 !! For other suggestions on performance optimisation see description of cg_level::mpi_bnd_types.
 !!
 !! \warning this == leaves could be unsafe: need to figure out how to handle unneeded edges; this == all_cg or base%level or other concatenation of whole levels should work well
