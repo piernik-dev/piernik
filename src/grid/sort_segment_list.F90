@@ -53,6 +53,7 @@ module sort_segment_list
       integer(kind=4) :: tag                              !< unique tag for data exchange, used for sorting
       integer(kind=8), dimension(xdim:zdim, LO:HI) :: se  !< range
       integer(kind=8) :: offset                           !< offset within the chunk
+      integer(kind=8) :: off_ceil                         !< offset of last element within the chunk
       type(grid_container), pointer :: cg                 !< source/target grid container
       integer :: dir                                      !< direction of the boundary segment
    end type seg
@@ -122,13 +123,15 @@ contains
       integer(kind=8) :: off
 
       if (allocated(this%list)) then
-         off = 0
+         off = 1
          do i = lbound(this%list, dim=1), ubound(this%list, dim=1)
             this%list(i)%offset = off
+            if (i>lbound(this%list, dim=1)) this%list(i-1)%off_ceil = off-1
             if (dmask(this%list(i)%dir)) &
                  off = off + product(this%list(i)%se(:, HI) - this%list(i)%se(:, LO) + I_ONE)
          enddo
-         this%total_size = off
+         this%total_size = off-1
+         this%list(ubound(this%list, dim=1))%off_ceil = off-1
       else
          this%total_size = 0
       endif

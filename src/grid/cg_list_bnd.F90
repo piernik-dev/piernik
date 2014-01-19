@@ -225,11 +225,11 @@ contains
       if (present(nocorners)) dmask(cor_dim) = .not. nocorners
 
       call internal_boundaries_local(this, ind, tgt3d, dmask)
-!!$      if (this%ms%valid) then
-!!$         call internal_boundaries_MPI_merged(this, ind, tgt3d, dir, nocorners)
-!!$      else
+      if (this%ms%valid) then
+         call internal_boundaries_MPI_merged(this, ind, tgt3d, dmask)
+      else
          call internal_boundaries_MPI_1by1(this, ind, tgt3d, dmask)
-!!$      end if
+      endif
 
    end subroutine internal_boundaries
 
@@ -316,7 +316,7 @@ contains
 
    subroutine internal_boundaries_MPI_merged(this, ind, tgt3d, dmask)
 
-      use constants,        only: xdim, cor_dim, I_ONE, I_TWO
+      use constants,        only: xdim, ydim, zdim, cor_dim, I_ONE, I_TWO, LO, HI
       use dataio_pub,       only: die
       use merge_segments,   only: IN, OUT
       use mpi,              only: MPI_DOUBLE_PRECISION, MPI_STATUS_SIZE
@@ -330,7 +330,7 @@ contains
       logical,                          intent(in)    :: tgt3d !< .true. for cg%q, .false. for cg%w
       logical, dimension(xdim:cor_dim), intent(in)    :: dmask !< .true. for the directions we want to exchange
 
-      integer :: p
+      integer :: p, i
       integer(kind=4) :: nr !< index of first free slot in req and status arrays
       integer(kind=4), allocatable, dimension(:,:) :: mpistatus !< status array for MPI_Waitall
 
@@ -348,10 +348,42 @@ contains
                if (tgt3d) then
                   allocate(this%ms%sl(p, IN )%buf(this%ms%sl(p, IN )%total_size))
                   allocate(this%ms%sl(p, OUT)%buf(this%ms%sl(p, OUT)%total_size))
-
+                  do i = lbound(this%ms%sl(p, OUT)%list, dim=1), ubound(this%ms%sl(p, OUT)%list, dim=1)
+                     if (dmask( this%ms%sl(p, OUT)%list(i)%dir)) then
+                        this     %ms%sl(p, OUT)%buf( &
+                             this%ms%sl(p, OUT)%list(i)%offset: &
+                             this%ms%sl(p, OUT)%list(i)%off_ceil) = reshape( &
+                             this%ms%sl(p, OUT)%list(i)%cg%q(ind)%arr( &
+                             this%ms%sl(p, OUT)%list(i)%se(xdim, LO): &
+                             this%ms%sl(p, OUT)%list(i)%se(xdim, HI), &
+                             this%ms%sl(p, OUT)%list(i)%se(ydim, LO): &
+                             this%ms%sl(p, OUT)%list(i)%se(ydim, HI), &
+                             this%ms%sl(p, OUT)%list(i)%se(zdim, LO): &
+                             this%ms%sl(p, OUT)%list(i)%se(zdim, HI)), [ &
+                             this%ms%sl(p, OUT)%list(i)%off_ceil - &
+                             this%ms%sl(p, OUT)%list(i)%offset + I_ONE ] )
+                     endif
+                  enddo
                else
                   allocate(this%ms%sl(p, IN )%buf(this%ms%sl(p, IN )%total_size*wna%lst(ind)%dim4))
                   allocate(this%ms%sl(p, OUT)%buf(this%ms%sl(p, OUT)%total_size*wna%lst(ind)%dim4))
+                  do i = lbound(this%ms%sl(p, OUT)%list, dim=1), ubound(this%ms%sl(p, OUT)%list, dim=1)
+                     if (dmask( this%ms%sl(p, OUT)%list(i)%dir)) then
+                        this     %ms%sl(p, OUT)%buf( &
+                            (this%ms%sl(p, OUT)%list(i)%offset - I_ONE) * wna%lst(ind)%dim4 + I_ONE : &
+                             this%ms%sl(p, OUT)%list(i)%off_ceil        * wna%lst(ind)%dim4 ) = reshape( &
+                             this%ms%sl(p, OUT)%list(i)%cg%w(ind)%arr( &
+                             1:wna%lst(ind)%dim4, &
+                             this%ms%sl(p, OUT)%list(i)%se(xdim, LO): &
+                             this%ms%sl(p, OUT)%list(i)%se(xdim, HI), &
+                             this%ms%sl(p, OUT)%list(i)%se(ydim, LO): &
+                             this%ms%sl(p, OUT)%list(i)%se(ydim, HI), &
+                             this%ms%sl(p, OUT)%list(i)%se(zdim, LO): &
+                             this%ms%sl(p, OUT)%list(i)%se(zdim, HI)), [ &
+                            (this%ms%sl(p, OUT)%list(i)%off_ceil - &
+                             this%ms%sl(p, OUT)%list(i)%offset + I_ONE) * wna%lst(ind)%dim4 ] )
+                     endif
+                  enddo
                endif
                if (nr+I_TWO >  ubound(req(:), dim=1)) call inflate_req
                call MPI_Irecv(this%ms%sl(p, IN )%buf, size(this%ms%sl(p, IN )%buf), MPI_DOUBLE_PRECISION, p, p,    comm, req(nr+I_ONE), mpi_err)
@@ -370,7 +402,49 @@ contains
          if (p /= proc) then
             if (this%ms%sl(p, IN)%total_size /= 0) then ! we have something received from process p
                if (tgt3d) then
+                  do i = lbound(this%ms%sl(p, IN)%list, dim=1), ubound(this%ms%sl(p, IN)%list, dim=1)
+                     if (dmask( this%ms%sl(p, IN)%list(i)%dir)) then
+                        this     %ms%sl(p, IN)%list(i)%cg%q(ind)%arr( &
+                             this%ms%sl(p, IN)%list(i)%se(xdim, LO): &
+                             this%ms%sl(p, IN)%list(i)%se(xdim, HI), &
+                             this%ms%sl(p, IN)%list(i)%se(ydim, LO): &
+                             this%ms%sl(p, IN)%list(i)%se(ydim, HI), &
+                             this%ms%sl(p, IN)%list(i)%se(zdim, LO): &
+                             this%ms%sl(p, IN)%list(i)%se(zdim, HI)) = reshape ( &
+                             this%ms%sl(p, IN)%buf( &
+                             this%ms%sl(p, IN)%list(i)%offset: &
+                             this%ms%sl(p, IN)%list(i)%off_ceil), [ &
+                             this%ms%sl(p, IN)%list(i)%se(xdim, HI) - &
+                             this%ms%sl(p, IN)%list(i)%se(xdim, LO) + I_ONE, &
+                             this%ms%sl(p, IN)%list(i)%se(ydim, HI) - &
+                             this%ms%sl(p, IN)%list(i)%se(ydim, LO) + I_ONE, &
+                             this%ms%sl(p, IN)%list(i)%se(zdim, HI) - &
+                             this%ms%sl(p, IN)%list(i)%se(zdim, LO) + I_ONE ] )
+                     endif
+                  enddo
                else
+                  do i = lbound(this%ms%sl(p, IN)%list, dim=1), ubound(this%ms%sl(p, IN)%list, dim=1)
+                     if (dmask( this%ms%sl(p, IN)%list(i)%dir)) then
+                        this     %ms%sl(p, IN)%list(i)%cg%w(ind)%arr( &
+                             1:wna%lst(ind)%dim4, &
+                             this%ms%sl(p, IN)%list(i)%se(xdim, LO): &
+                             this%ms%sl(p, IN)%list(i)%se(xdim, HI), &
+                             this%ms%sl(p, IN)%list(i)%se(ydim, LO): &
+                             this%ms%sl(p, IN)%list(i)%se(ydim, HI), &
+                             this%ms%sl(p, IN)%list(i)%se(zdim, LO): &
+                             this%ms%sl(p, IN)%list(i)%se(zdim, HI)) = reshape ( &
+                             this%ms%sl(p, IN)%buf( &
+                            (this%ms%sl(p, IN)%list(i)%offset - I_ONE) * wna%lst(ind)%dim4 + I_ONE : &
+                             this%ms%sl(p, IN)%list(i)%off_ceil * wna%lst(ind)%dim4 ), [ &
+                             int(wna%lst(ind)%dim4, kind=8), &
+                             this%ms%sl(p, IN)%list(i)%se(xdim, HI) - &
+                             this%ms%sl(p, IN)%list(i)%se(xdim, LO) + I_ONE, &
+                             this%ms%sl(p, IN)%list(i)%se(ydim, HI) - &
+                             this%ms%sl(p, IN)%list(i)%se(ydim, LO) + I_ONE, &
+                             this%ms%sl(p, IN)%list(i)%se(zdim, HI) - &
+                             this%ms%sl(p, IN)%list(i)%se(zdim, LO) + I_ONE ] )
+                     endif
+                  enddo
                endif
             endif
             if (allocated(this%ms%sl(p, IN )%buf)) deallocate(this%ms%sl(p, IN )%buf)
