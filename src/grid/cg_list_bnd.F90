@@ -316,10 +316,12 @@ contains
 
    subroutine internal_boundaries_MPI_merged(this, ind, tgt3d, dmask)
 
-      use constants,      only: xdim, cor_dim
-      use dataio_pub,     only: die
-      use merge_segments, only: IN, OUT
-      use mpisetup,       only: FIRST, LAST, proc
+      use constants,        only: xdim, cor_dim, I_ONE, I_TWO
+      use dataio_pub,       only: die
+      use merge_segments,   only: IN, OUT
+      use mpi,              only: MPI_DOUBLE_PRECISION, MPI_STATUS_SIZE
+      use mpisetup,         only: FIRST, LAST, proc, comm, mpi_err, req, inflate_req
+      use named_array_list, only: wna
 
       implicit none
 
@@ -329,15 +331,50 @@ contains
       logical, dimension(xdim:cor_dim), intent(in)    :: dmask !< .true. for the directions we want to exchange
 
       integer :: p
+      integer(kind=4) :: nr !< index of first free slot in req and status arrays
+      integer(kind=4), allocatable, dimension(:,:) :: mpistatus !< status array for MPI_Waitall
 
       if (.not. this%ms%valid) call die("[cg_list_bnd:internal_boundaries_MPI_merged] this%ms%valid .eqv. .false.")
 
+      nr = 0
       do p = FIRST, LAST
          if (p /= proc) then
             call this%ms%sl(p, IN )%find_offsets(dmask)
             call this%ms%sl(p, OUT)%find_offsets(dmask)
             if (this%ms%sl(p, IN)%total_size /= this%ms%sl(p, OUT)%total_size) &
                  call die("[cg_list_bnd:internal_boundaries_MPI_merged] this%ms%sl(p, :)%total_size /=")
+
+            if (this%ms%sl(p, IN)%total_size /= 0) then ! we have something to communicate with process p
+               if (tgt3d) then
+                  allocate(this%ms%sl(p, IN )%buf(this%ms%sl(p, IN )%total_size))
+                  allocate(this%ms%sl(p, OUT)%buf(this%ms%sl(p, OUT)%total_size))
+
+               else
+                  allocate(this%ms%sl(p, IN )%buf(this%ms%sl(p, IN )%total_size*wna%lst(ind)%dim4))
+                  allocate(this%ms%sl(p, OUT)%buf(this%ms%sl(p, OUT)%total_size*wna%lst(ind)%dim4))
+               endif
+               if (nr+I_TWO >  ubound(req(:), dim=1)) call inflate_req
+               call MPI_Irecv(this%ms%sl(p, IN )%buf, size(this%ms%sl(p, IN )%buf), MPI_DOUBLE_PRECISION, p, p,    comm, req(nr+I_ONE), mpi_err)
+               call MPI_Isend(this%ms%sl(p, OUT)%buf, size(this%ms%sl(p, OUT)%buf), MPI_DOUBLE_PRECISION, p, proc, comm, req(nr+I_TWO), mpi_err)
+               nr = nr + I_TWO
+            endif
+
+         endif
+      enddo
+
+      allocate(mpistatus(MPI_STATUS_SIZE, nr))
+      call MPI_Waitall(nr, req(:nr), mpistatus, mpi_err)
+      deallocate(mpistatus)
+
+      do p = FIRST, LAST
+         if (p /= proc) then
+            if (this%ms%sl(p, IN)%total_size /= 0) then ! we have something received from process p
+               if (tgt3d) then
+               else
+               endif
+            endif
+            if (allocated(this%ms%sl(p, IN )%buf)) deallocate(this%ms%sl(p, IN )%buf)
+            if (allocated(this%ms%sl(p, OUT)%buf)) deallocate(this%ms%sl(p, OUT)%buf)
          endif
       enddo
 
