@@ -1,4 +1,3 @@
-#define _PIERNIK_H_VERSION_STR '$Id'
 
 #include "piernik.def"
 
