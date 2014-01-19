@@ -57,14 +57,14 @@ module sort_piece_list
       type(grid_piece) :: temp
    contains
       ! override abstract interface routines
-      procedure :: init             !< Allocate the list
-      procedure :: cleanup          !< Deallocate the list
       procedure :: l_bound          !< Get lower bound of the list
       procedure :: u_bound          !< Get upper bound of the list
       procedure :: assign_element   !< Make an assignment
       procedure :: compare_elements !< Make a comparision
 
       ! own routines
+      procedure :: init             !< Allocate the list
+      procedure :: cleanup          !< Deallocate the list
       procedure :: set_id           !< Find grid id using a space-filling curve
       procedure :: set_weights      !< Find estimates of the cost of the grids
    end type grid_piece_list

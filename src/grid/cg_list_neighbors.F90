@@ -44,16 +44,17 @@ module cg_list_neighbors
    !! \details
    !! OPT: Searching through this%dot%gse for neighbours, prolongation/restriction overlaps etc is quite costly.
    !! The cost is O(this%cnt^2). Provide a list, sorted according to Morton/Hilbert id's and do a bisection search
-   !! instead of checking against all grids. It will result in massive speedups on
-   !! cg_list_neighbors_T%find_neighbors and cg_level_connected_T%{vertical_prep,vertical_b_prep). It may also
-   !! simplify the process of fixing refinement structure in refinement_update::fix_refinement. Grids which are
-   !! larger than AMR_bsize (merged grids, non-block decompositions, both not implemented yet) may be referred by
-   !! several id's that correspond with AMR_bsize-d virtual grid pieces.
-   !!
+   !! instead of checking against all grids on AMR-style 'blocky' grids or cartesian decomposition with equal-sized
+   !! grids. It will result in massive speedups on cg_list_neighbors_T%find_neighbors and
+   !! cg_level_connected_T%{vertical_prep,vertical_b_prep). It may also simplify the process of fixing refinement
+   !! structure in refinement_update::fix_refinement. Grids which are larger than AMR_bsize (merged grids, non-block
+   !! decompositions, both not implemented yet) may be referred by several id's that correspond with AMR_bsize-d virtual
+   !! grid pieces. Non-cartesian decompositions should be handled with the bruteforce way. It is possible to optimize
+   !! them slightly if we save the numbers found during decomposition, but I don't think it is really important.
+   !! Unequal cartesian decompositions should be handled with the bruteforce way. It can be optimized too, but the
+   !! impact of optimization would be similar to optimization of non-cartesian decompositions.
    !! Alternatively, construct a searchable binary tree or oct-tree and provide fast routines for searching grid
    !! pieces covering specified position.
-   !!
-   !! \todo Provide one of the structures described above
    !<
    type, extends(cg_list_rebalance_T), abstract :: cg_list_neighbors_T
    contains
@@ -71,8 +72,6 @@ contains
 !!
 !! Possible improvements of performance
 !! * merge smaller blocks into larger ones,
-!!
-!! \todo Put this%dot%gse into a separate type and pass a pointer to it or even a pointer to pre-filtered segment list
 !!
 !! \todo Write variant of find_neighbors_* routine to achieve previous (pre-a27c945a) performance and maintain
 !! correctness on corners on complicated topologies:
@@ -95,23 +94,27 @@ contains
 
       class(cg_list_neighbors_T), intent(inout) :: this !< object invoking type bound procedure
 
+      this%ms%valid = .false.
       if (this%dot%is_blocky .and. .not. prefer_n_bruteforce) then
          call this%find_neighbors_SFC
+         call this%ms%merge(this)
       else
          call this%find_neighbors_bruteforce
+         ! calling this%ms%merge(this) here makes sense only for such setups, so in periodic boundaries 2 blocks
+         ! covers the domain in at least one direction.
       endif
 
    end subroutine find_neighbors
 
 !>
 !! \brief Make full description of intra-level communication with neighbors. Approach exploiting strict SFC
-!!  distribution.
+!! distribution.
 !!
 !! \details Assume that cuboids don't collide (no overlapping grid pieces on same refinement level are allowed)
 !! Should produce the same set of blocks to be communicated as find_neighbors_bruteforce, but should be way faster,
 !! especially in massively parallel runs.
 !!
-!! This approach works if and only if the grid containers are distributing strictly according to the SFC curve.
+!! This approach works best if the grid containers are distributing strictly according to the SFC curve and are sorted.
 !! If each of p processes has g grid containers on current level (giving n = p * g grids on the level),
 !! the cost should be proportional to (log_2(p)+log_2(g))*g, assuming that we have already sorted array
 !! containing most critical information from this%dot%gse
@@ -231,7 +234,7 @@ contains
       !! \details If we put a constraint that a grid piece can not be smaller than dom%nb, then total number of
       !! neighbours that affect local guardcells is exactly 3 for AMR, cartesian decomposition with equal-size
       !! blocks
-      !! Thus, in each direction we can describe realtive position as one of four cases, or a bit easier one of five cases:
+      !! Thus, in each direction we can describe realtive position as one of three cases:
       !! * LEFT, RIGHT - corner neighbours
       !! * FACE - face neighbour
       !<
@@ -265,11 +268,14 @@ contains
 !!
 !! Current implementation (commit a27c945a) implies correct update of all corners, even on complicated refinement
 !! topologies (concave fine region - convect coarse region or fine regions touching each other only by corners).
-!! Previous implementation could correctly fill the corners only on uniform grid and when boundary exchange was
+!! Previous implementation could correctly fill the corners only on an uniform grid and when boundary exchange was
 !! called for x, y and z directions separately. Warning: that change introduces measurable performance degradation!
 !! This is caused by the fact that in 3D it is required to make 26 separate exchanges to fill all guardcells (in
 !! cg_list_bnd::internal_boundaries), while in previous approach only 6 exchanges were required. Unfortunately
 !! the previous approach did not work properly for complicated refinements.
+!!
+!! \todo consider going back to sweeped boundary exchanges (only 6 neighbours to communicate with) as soon as
+!! find_neighbors_SFC is tested enough to be chosen as the only option for AMR 'blocky' grids.
 !<
 
    subroutine find_neighbors_bruteforce(this)

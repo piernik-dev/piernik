@@ -46,8 +46,6 @@ module sortable_list
    !<
    type, abstract :: sortable_list_T
    contains
-      procedure(init_list),    deferred :: init             !< Allocate the list
-      procedure(cleanup_list), deferred :: cleanup          !< Deallocate the list
       procedure(lubound_list), deferred :: l_bound          !< Get lower bound of the list
       procedure(lubound_list), deferred :: u_bound          !< Get upper bound of the list
       procedure(assign_list),  deferred :: assign_element   !< Make an assignment
@@ -68,17 +66,6 @@ module sortable_list
          class(sortable_list_T), intent(inout) :: this
          integer,                intent(in)    :: a, b
       end function compare_list
-
-      subroutine init_list(this, size)
-         import sortable_list_T
-         class(sortable_list_T), intent(inout) :: this
-         integer(kind=4),        intent(in)    :: size
-      end subroutine init_list
-
-      subroutine cleanup_list(this)
-         import sortable_list_T
-         class(sortable_list_T), intent(inout) :: this
-      end subroutine cleanup_list
 
       integer function lubound_list(this)
          import sortable_list_T
