@@ -1,4 +1,3 @@
-! $Id: initproblem.F90 4543 2011-06-21 13:01:45Z gawrysz $
 !
 ! PIERNIK Code Copyright (C) 2006 Michal Hanasz
 !
