@@ -37,7 +37,7 @@ module merge_segments
    implicit none
 
    private
-   public :: merge_segments_T
+   public :: merge_segments_T, IN, OUT
 
    type :: merge_segments_T
       type(sort_segment_list_T), dimension(:, :), allocatable :: sl ! array of sortable segment lists (FIRST:LAST, IN:OUT)
@@ -78,9 +78,8 @@ contains
                ! technically we don't need to aggregate on p==proc, but it is safer to do it anyway
                call this%sl(p, i)%sort
                !> \todo OPT: we can avoid one call to sort if we put both incoming and outgoing segments in
-               !! this%sl(p)%list(:). Note that in this%populate we cannot assume that o_bnd will be sorted in the same
-               !! way as i_bnd was. Then we'll be able to drop the IN|OUT index as well.
-               call this%sl(p, i)%find_offsets
+               !! this%sl(p)%list(:). Note that in this%populate we cannot assume that o_bnd will be sorted in the
+               !! same way as i_bnd was. Then we'll be able to drop the IN|OUT index as well.
             enddo
          enddo
       else

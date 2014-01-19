@@ -94,15 +94,15 @@ contains
 
       implicit none
 
-      class(cg_list_bnd_T),      intent(in) :: this       !< the list on which to perform the boundary exchange
-      integer(kind=4),           intent(in) :: ind        !< index of cg%q(:) 3d array
-      integer(kind=4), optional, intent(in) :: area_type  !< defines how do we treat boundaries
-      integer(kind=4), optional, intent(in) :: bnd_type   !< Override default boundary type on external boundaries (useful in multigrid solver).
+      class(cg_list_bnd_T),      intent(inout) :: this       !< the list on which to perform the boundary exchange
+      integer(kind=4),           intent(in)    :: ind        !< index of cg%q(:) 3d array
+      integer(kind=4), optional, intent(in)    :: area_type  !< defines how do we treat boundaries
+      integer(kind=4), optional, intent(in)    :: bnd_type   !< Override default boundary type on external boundaries (useful in multigrid solver).
                                                           !< Note that BND_PER, BND_MPI, BND_SHE and BND_COR aren't external and cannot be overridden
-      integer(kind=4), optional, intent(in) :: dir        !< select only this direction
-      logical,         optional, intent(in) :: nocorners  !< .when .true. then don't care about proper edge and corner update
+      integer(kind=4), optional, intent(in)    :: dir        !< select only this direction
+      logical,         optional, intent(in)    :: nocorners  !< .when .true. then don't care about proper edge and corner update
 
-      logical                               :: do_permpi
+      logical :: do_permpi
 
       !> \todo fill corners with big_float ?
 
@@ -129,13 +129,13 @@ contains
 
       implicit none
 
-      class(cg_list_bnd_T),      intent(in) :: this       !< the list on which to perform the boundary exchange
-      integer(kind=4),           intent(in) :: ind        !< index of cg%w(:) 4d array
-      integer(kind=4), optional, intent(in) :: area_type  !< defines how do we treat boundaries
-      integer(kind=4), optional, intent(in) :: dir        !< select only this direction
-      logical,         optional, intent(in) :: nocorners  !< .when .true. then don't care about proper edge and corner update
+      class(cg_list_bnd_T),      intent(inout) :: this       !< the list on which to perform the boundary exchange
+      integer(kind=4),           intent(in)    :: ind        !< index of cg%w(:) 4d array
+      integer(kind=4), optional, intent(in)    :: area_type  !< defines how do we treat boundaries
+      integer(kind=4), optional, intent(in)    :: dir        !< select only this direction
+      logical,         optional, intent(in)    :: nocorners  !< .when .true. then don't care about proper edge and corner update
 
-      logical                               :: do_permpi
+      logical :: do_permpi
 
       !> \todo fill corners with big_float ?
 
@@ -156,10 +156,10 @@ contains
 
       implicit none
 
-      class(cg_list_bnd_T),      intent(in) :: this      !< the list on which to perform the boundary exchange
-      integer(kind=4),           intent(in) :: ind       !< index of cg%q(:) 3d array
-      integer(kind=4), optional, intent(in) :: dir       !< do the internal boundaries only in the specified dimension
-      logical,         optional, intent(in) :: nocorners !< .when .true. then don't care about proper edge and corner update
+      class(cg_list_bnd_T),      intent(inout) :: this      !< the list on which to perform the boundary exchange
+      integer(kind=4),           intent(in)    :: ind       !< index of cg%q(:) 3d array
+      integer(kind=4), optional, intent(in)    :: dir       !< do the internal boundaries only in the specified dimension
+      logical,         optional, intent(in)    :: nocorners !< .when .true. then don't care about proper edge and corner update
 
       call internal_boundaries(this, ind, .true., dir=dir, nocorners=nocorners)
 
@@ -171,10 +171,10 @@ contains
 
       implicit none
 
-      class(cg_list_bnd_T),      intent(in) :: this      !< the list on which to perform the boundary exchange
-      integer(kind=4),           intent(in) :: ind       !< index of cg%w(:) 4d array
-      integer(kind=4), optional, intent(in) :: dir       !< do the internal boundaries only in the specified dimension
-      logical,         optional, intent(in) :: nocorners !< .when .true. then don't care about proper edge and corner update
+      class(cg_list_bnd_T),      intent(inout) :: this      !< the list on which to perform the boundary exchange
+      integer(kind=4),           intent(in)    :: ind       !< index of cg%w(:) 4d array
+      integer(kind=4), optional, intent(in)    :: dir       !< do the internal boundaries only in the specified dimension
+      logical,         optional, intent(in)    :: nocorners !< .when .true. then don't care about proper edge and corner update
 
       call internal_boundaries(this, ind, .false., dir=dir, nocorners=nocorners)
 
@@ -207,11 +207,11 @@ contains
 
       implicit none
 
-      class(cg_list_bnd_T),      intent(in) :: this      !< the list on which to perform the boundary exchange
-      integer(kind=4),           intent(in) :: ind       !< index of cg%q(:) 3d array or cg%w(:) 4d array
-      logical,                   intent(in) :: tgt3d     !< .true. for cg%q, .false. for cg%w
-      integer(kind=4), optional, intent(in) :: dir       !< do the internal boundaries only in the specified dimension
-      logical,         optional, intent(in) :: nocorners !< .when .true. then don't care about proper edge and corner update
+      class(cg_list_bnd_T),      intent(inout) :: this      !< the list on which to perform the boundary exchange
+      integer(kind=4),           intent(in)    :: ind       !< index of cg%q(:) 3d array or cg%w(:) 4d array
+      logical,                   intent(in)    :: tgt3d     !< .true. for cg%q, .false. for cg%w
+      integer(kind=4), optional, intent(in)    :: dir       !< do the internal boundaries only in the specified dimension
+      logical,         optional, intent(in)    :: nocorners !< .when .true. then don't care about proper edge and corner update
 
       logical, dimension(xdim:cor_dim) :: dmask
 
@@ -316,14 +316,30 @@ contains
 
    subroutine internal_boundaries_MPI_merged(this, ind, tgt3d, dmask)
 
-      use constants, only: xdim, cor_dim
+      use constants,      only: xdim, cor_dim
+      use dataio_pub,     only: die
+      use merge_segments, only: IN, OUT
+      use mpisetup,       only: FIRST, LAST, proc
 
       implicit none
 
-      class(cg_list_bnd_T),             intent(in) :: this  !< the list on which to perform the boundary exchange
-      integer(kind=4),                  intent(in) :: ind   !< index of cg%q(:) 3d array or cg%w(:) 4d array
-      logical,                          intent(in) :: tgt3d !< .true. for cg%q, .false. for cg%w
-      logical, dimension(xdim:cor_dim), intent(in) :: dmask !< .true. for the directions we want to exchange
+      class(cg_list_bnd_T),             intent(inout) :: this  !< the list on which to perform the boundary exchange
+      integer(kind=4),                  intent(in)    :: ind   !< index of cg%q(:) 3d array or cg%w(:) 4d array
+      logical,                          intent(in)    :: tgt3d !< .true. for cg%q, .false. for cg%w
+      logical, dimension(xdim:cor_dim), intent(in)    :: dmask !< .true. for the directions we want to exchange
+
+      integer :: p
+
+      if (.not. this%ms%valid) call die("[cg_list_bnd:internal_boundaries_MPI_merged] this%ms%valid .eqv. .false.")
+
+      do p = FIRST, LAST
+         if (p /= proc) then
+            call this%ms%sl(p, IN )%find_offsets(dmask)
+            call this%ms%sl(p, OUT)%find_offsets(dmask)
+            if (this%ms%sl(p, IN)%total_size /= this%ms%sl(p, OUT)%total_size) &
+                 call die("[cg_list_bnd:internal_boundaries_MPI_merged] this%ms%sl(p, :)%total_size /=")
+         endif
+      enddo
 
    end subroutine internal_boundaries_MPI_merged
 

@@ -109,24 +109,26 @@ contains
 
 !< \brief Set up offsets
 
-   subroutine find_offsets(this)
+   subroutine find_offsets(this, dmask)
 
-      use constants, only: LO, HI, I_ONE
+      use constants, only: xdim, cor_dim, LO, HI, I_ONE
 
       implicit none
 
-      class(sort_segment_list_T), intent(inout) :: this
+      class(sort_segment_list_T),       intent(inout) :: this
+      logical, dimension(xdim:cor_dim), intent(in)    :: dmask !< .true. for the directions we want to include
 
       integer :: i
+      integer(kind=8) :: off
 
       if (allocated(this%list)) then
-         this%list(lbound(this%list, dim=1))%offset = 0
-         do i = lbound(this%list, dim=1)+1, ubound(this%list, dim=1)
-            this%list(i)%offset = this%list(i-1)%offset + product(this%list(i-1)%se(:, HI) - this%list(i-1)%se(:, LO) + I_ONE)
+         off = 0
+         do i = lbound(this%list, dim=1), ubound(this%list, dim=1)
+            this%list(i)%offset = off
+            if (dmask(this%list(i)%dir)) &
+                 off = off + product(this%list(i)%se(:, HI) - this%list(i)%se(:, LO) + I_ONE)
          enddo
-         this%total_size = this%list(ubound(this%list, dim=1))%offset + &
-              &    product(this%list(ubound(this%list, dim=1))%se(:, HI) - &
-              &            this%list(ubound(this%list, dim=1))%se(:, LO) + I_ONE)
+         this%total_size = off
       else
          this%total_size = 0
       endif
