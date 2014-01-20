@@ -633,7 +633,7 @@ contains
 
    logical function is_overlap_per(this, other, periods) result(share)
 
-      use constants,  only: xdim, ydim, zdim, ndims, LO, HI
+      use constants,  only: xdim, ydim, zdim, LO, HI
       use domain,     only: dom
 
       implicit none
@@ -648,11 +648,13 @@ contains
       share = .false.
       do i = -1, 1
          if ((dom%has_dir(xdim) .or. periods(xdim)>0) .or. i==0) then
+            oth(xdim, :) = other(xdim, :) + i*periods(xdim)
             do j = -1, 1
                if ((dom%has_dir(ydim) .or. periods(ydim)>0) .or. j==0) then
+                  oth(ydim, :) = other(ydim, :) + j*periods(ydim)
                   do k = -1, 1
                      if ((dom%has_dir(zdim) .or. periods(zdim)>0) .or. k==0) then
-                        oth(:,:) = other(:,:) + reshape([i*periods(xdim), j*periods(ydim), k*periods(zdim), i*periods(xdim), j*periods(ydim), k*periods(zdim)], [ndims, HI])
+                        oth(zdim, :) = other(zdim, :) + k*periods(zdim)
                         share = is_overlap_simple(this, oth) .or. share
                      endif
                   enddo
