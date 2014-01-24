@@ -1,0 +1,78 @@
+ $BASE_DOMAIN
+    n_d = 4, 1, 1
+    bnd_xl = 'per'
+    bnd_xr = 'per'
+    bnd_yl = 'per'
+    bnd_yr = 'per'
+    bnd_zl = 'per'
+    bnd_zr = 'per'
+    xmin   =-10.0
+    xmax   = 10.0
+    ymin   =-10.0
+    ymax   = 10.0
+    zmin   =-10.0
+    zmax   = 10.0
+ /
+
+ $MPI_BLOCKS
+ /
+
+ $UNITS
+ /
+
+ $RESTART_CONTROL
+    restart  = 'last'
+    new_id   = ''
+    nrestart = 0
+ /
+
+ $END_CONTROL
+    tend   = 10.0
+    nend   = 100
+ /
+
+ $OUTPUT_CONTROL
+    problem_name ='3body'
+    run_id =  'tst'
+    dt_hdf  = 0.0
+    dt_res  = 0.0
+    dt_log  = 0.0
+    dt_tsl  = 0.0
+    vars(1:) = 'dens'
+ /
+
+ $FLUID_IONIZED
+ /
+
+ $FLUID_NEUTRAL
+ /
+
+ $NUMERICAL_SETUP
+    cfl    = 0.8
+    smalld = 1.e-3
+    smallei= 1.e-5
+    integration_order = 2
+    limiter= 'vanleer'
+ /
+
+ $GRAVITY
+ /
+
+ $PROBLEM_CONTROL
+ /
+
+ $MULTIGRID_SOLVER
+ /
+
+ $INTERACTIONS
+ /
+
+ $FLUID_TRACER
+ /
+
+ $AMR
+ /
+
+ $PARTICLES
+   time_integrator = 'hermit4'
+ /
