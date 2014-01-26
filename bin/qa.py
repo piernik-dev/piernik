@@ -26,7 +26,7 @@ test_for_interfaces = re.compile('''
 #       ^(?!\s{0,9}!).*(subroutine|function|type(,|\s::))
 #   ''',re.VERBOSE)
 module_body = re.compile(
-    '''^\s{0,3}(module|contains|program)''', re.VERBOSE)
+    '''^(module|contains|program)''', re.VERBOSE)
 just_end = re.compile('''^\s{0,9}end''', re.IGNORECASE)
 
 have_implicit = re.compile('''implicit\snone''', re.IGNORECASE)
