@@ -38,7 +38,7 @@ module multigrid_helpers
    public :: all_dirty, set_relax_boundaries, copy_and_max
    private
 
- contains
+contains
 
 !>
 !! \brief Put insane FP values into all multigrid working arrays

@@ -89,16 +89,16 @@ module fluidtypes
 
       real :: c !< COMMENT ME (this quantity was previously a member of phys_prop, but is used in completely different way than other phys_prop% members
 
-      contains
-         procedure :: set_fluid_index
-         procedure :: set_cs  => update_sound_speed
-         procedure :: set_gam => update_adiabatic_index
-         procedure :: set_c   => update_freezing_speed
-         procedure :: info    => printinfo_component_fluid
-         procedure(tag),          nopass, deferred :: get_tag
-         procedure(cs_get),         pass, deferred :: get_cs
-         procedure(flux_interface), pass, deferred :: compute_flux
-         procedure(pass_flind),     pass, deferred :: initialize_indices
+   contains
+      procedure :: set_fluid_index
+      procedure :: set_cs  => update_sound_speed
+      procedure :: set_gam => update_adiabatic_index
+      procedure :: set_c   => update_freezing_speed
+      procedure :: info    => printinfo_component_fluid
+      procedure(tag),          nopass, deferred :: get_tag
+      procedure(cs_get),         pass, deferred :: get_cs
+      procedure(flux_interface), pass, deferred :: compute_flux
+      procedure(pass_flind),     pass, deferred :: initialize_indices
    end type component_fluid
 
    type :: fluid_arr
@@ -168,7 +168,7 @@ module fluidtypes
       end subroutine flux_interface
    end interface
 
-   contains
+contains
 
       subroutine update_adiabatic_index(this,new_gamma)
          use dataio_pub, only: warn
