@@ -390,6 +390,13 @@ def qa_false_refs(lines, name, store, fname):
         to_check = [f.strip() for f in item.split("only:")[1].split(',')]
         to_check = [re.sub('&', '', f).lstrip(
         ) for f in to_check]     # additional sanitization
+        # remove operator keyword from import
+        for ino, item in enumerate(to_check):
+            try:
+                new_item = re.search('operator\((.+?)\)', item).group(1)
+            except AttributeError:
+                new_item = item
+            to_check[ino] = new_item
         for func in to_check:
             pattern = re.compile(func, re.IGNORECASE)
             # stupid but seems to work
