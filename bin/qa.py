@@ -22,7 +22,7 @@ test_for_interfaces = re.compile('''
       ^\s{0,12}(|end|abstract)\s
       interface
    ''', re.VERBOSE)
-#test_for_routines  = re.compile('''
+# test_for_routines  = re.compile('''
 #       ^(?!\s{0,9}!).*(subroutine|function|type(,|\s::))
 #   ''',re.VERBOSE)
 module_body = re.compile(
@@ -152,8 +152,10 @@ def parse_f90file(lines, fname, store):
             if (debug):
                 print "[parse_f90file] f, cur_sub = ", f, cur_sub
             for index in range(0, len(cur_sub)):
-                if just_end.match(cur_sub[index]) and \
-                    cur_sub[index][-len(f):] == f: break
+                if just_end.match(cur_sub[index]):
+                    if cur_sub[index].split()[1] == subs_types[-1] and \
+                            cur_sub[index][-len(f):] == f:
+                        break
         else:
             index = 1
         obj = (f, line_num(lines, cur_sub[index - 1]), line_num(
@@ -230,7 +232,7 @@ def qa_checks(files, options):
                 fp.write(line + '\n')
             fp.close()
 
-        #f = f.split('/')[-1]
+        # f = f.split('/')[-1]
         # checks for f90 file as whole
         qa_nonconforming_tabs(np.array(pfile), '', errors, f)
         qa_labels(np.array(pfile), '', errors, f)
