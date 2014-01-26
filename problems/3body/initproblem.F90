@@ -68,6 +68,7 @@ contains
 
       integer                         :: i, j, k, p
       type(cg_list_element),  pointer :: cgl
+      logical, save                   :: first_run = .true.
 
       do p = lbound(flind%all_fluids, dim=1), ubound(flind%all_fluids, dim=1)
          cgl => leaves%first
@@ -90,10 +91,13 @@ contains
          enddo
       enddo
 
-      call pset%add(1.0, [ 0.9700436,  -0.24308753,  0.0], [ 0.466203685,  0.43236573, 0.0])
-      call pset%add(1.0, [-0.9700436,   0.24308753,  0.0], [ 0.466203685,  0.43236573, 0.0])
-      call pset%add(1.0, [ 0.0,         0.0,         0.0], [-0.932407370, -0.86473146, 0.0])
-      call printinfo('To see results type: gnuplot -p -e ''plot "nbody_out.log" u 2:3'' ')
+      if (first_run) then
+         call pset%add(1.0, [ 0.9700436,  -0.24308753,  0.0], [ 0.466203685,  0.43236573, 0.0])
+         call pset%add(1.0, [-0.9700436,   0.24308753,  0.0], [ 0.466203685,  0.43236573, 0.0])
+         call pset%add(1.0, [ 0.0,         0.0,         0.0], [-0.932407370, -0.86473146, 0.0])
+         call printinfo('To see results type: gnuplot -p -e ''plot "nbody_out.log" u 2:3'' ')
+         first_run = .false.
+      endif
 
    end subroutine problem_initial_conditions
 !-----------------------------------------------------------------------------
