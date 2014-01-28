@@ -75,8 +75,8 @@ contains
       do ip = lbound(refine_points, dim=1), ubound(refine_points, dim=1)
 
          curl => finest%level
-         do while (associated(curl) .and. curl%level_id>=base%level%level_id)
-            if (curl%level_id <= refine_points(ip)%level) then
+         do while (associated(curl))
+            if (curl%level_id <= refine_points(ip)%level .and. curl%level_id>=base%level%level_id) then
 
                ip_ijk(:) = curl%off(:)
                where (dom%has_dir) ip_ijk(:) = curl%off(:) + floor((refine_points(ip)%coords(:) - dom%edge(:, LO))/dom%L_(:)*curl%n_d)
