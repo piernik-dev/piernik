@@ -123,9 +123,9 @@ contains
       do ip = lbound(refine_boxes, dim=1), ubound(refine_boxes, dim=1)
 
          curl => finest%level
-         do while (associated(curl) .and. curl%level_id>=base%level%level_id)
+         do while (associated(curl))
 
-            if (curl%level_id <= refine_boxes(ip)%level) then
+            if (curl%level_id <= refine_boxes(ip)%level .and. curl%level_id>=base%level%level_id) then
 
                ip_ijk(:, LO) = curl%off(:)
                ip_ijk(:, HI) = curl%off(:)
