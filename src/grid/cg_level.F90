@@ -205,15 +205,14 @@ contains
 !! \todo automagically rebalance existing grids unless it is explicitly forbidden
 !<
 
-   subroutine init_all_new_cg(this, prevent_rebalancing)
+   subroutine init_all_new_cg(this)
 
       implicit none
 
-      class(cg_level_T), intent(inout) :: this                !< object invoking type bound procedure
-      logical, optional, intent(in)    :: prevent_rebalancing !< if present and .true. then do not allow rebalancing during addition of new grids
+      class(cg_level_T), intent(inout) :: this !< object invoking type bound procedure
 
       ! First: do the balancing of new grids
-      call this%balance_new(prevent_rebalancing)
+      call this%balance_new
 
       ! Second: create new grids, invalidate most of this%dot%gse database
       call this%create

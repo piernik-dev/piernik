@@ -76,18 +76,17 @@ contains
 !! * All blocks (existing and new) have recalculated assignment and can be migrated to other processes. Most advanced. Should be used after reading restart data.
 !<
 
-   subroutine balance_new(this, prevent_rebalancing)
+   subroutine balance_new(this)
 
       use refinement, only: strict_SFC_ordering
 
       implicit none
 
       class(cg_list_balance_T), intent(inout) :: this
-      logical, optional,        intent(in)    :: prevent_rebalancing !< if present and .true. then do not allow rebalancing during addition of new grids
 
       ! The only available strategy ATM
       if (strict_SFC_ordering) then
-         call this%balance_strict_SFC(prevent_rebalancing)
+         call this%balance_strict_SFC
       else
          call this%balance_fill_lowest ! never rebalances
       endif
@@ -97,14 +96,15 @@ contains
 !>
 !! \brief Routine for moving proposed grids between processes: keep strict SFC ordering
 !!
-!! \details Starts with list of already allocated blocks and list of patches which are not yet turned into blocks on a given level.
-!! Assume that the existing blocks are distributed according to Space-Filling curve ordering: maximum id for process p is always lower than minimum id for process p+1.
-!! Add new grids in a way that keeps the strict SFC ordering property even if it may introduce imbalance
+!! \details Starts with list of already allocated blocks and list of patches which are not yet turned into blocks
+!! on a given level. Assume that the existing blocks are distributed according to Space-Filling curve ordering:
+!! maximum id for process p is always lower than minimum id for process p+1. Add new grids in a way that keeps the
+!! strict SFC ordering property even if it may introduce imbalance.
 !!
-!! \todo do a global rebalance if it is allowed and worth the effort
+!! \todo Do a global rebalance if it is allowed and worth the effort.
 !<
 
-   subroutine balance_strict_SFC(this, prevent_rebalancing)
+   subroutine balance_strict_SFC(this)
 
       use constants,       only: pSUM, LO, HI, I_ONE
       use dataio_pub,      only: warn
@@ -114,19 +114,13 @@ contains
       implicit none
 
       class(cg_list_balance_T), intent(inout) :: this
-      logical, optional,        intent(in)    :: prevent_rebalancing !< if present and .true. then do not allow rebalancing during addition of new grids
 
-      logical :: rebalance
       type(grid_piece_list) :: gp
       integer(kind=4) :: ls, s, i, p
       integer(kind=4), dimension(FIRST:LAST+1) :: from
 
-      rebalance = .true.
-      if (present(prevent_rebalancing)) rebalance = .not. prevent_rebalancing
-
       call this%dot%update_SFC_id_range(this%off)
       if (.not. this%dot%is_strict_SFC) then
-!!$         if (.not. rebalance) call die("[cg_list_balance:balance_strict_SFC] Cannot rebalence messy grid distribution.")
 !!$         ! call reshuffle
 !!$         call die("[cg_list_balance:balance_strict_SFC] reshuffling not implemented.")
          if (master) call warn("[cg_list_balance:balance_strict_SFC] non-SFC ordering!") ! May happen after resizing domain on the left sides
@@ -140,8 +134,6 @@ contains
 
       if (master) call gp%init(s)
       call this%patches_to_list(gp, ls)
-
-      ! if (rebalance) gather existing grids id
 
       ! sort id
       if (master) then !> \warning Antiparallel
@@ -186,7 +178,6 @@ contains
             enddo
          endif
       endif
-      ! if (rebalance) call reshuffle(distribution)
 
       ! send to slaves
       call this%distribute_patches(gp, from)
