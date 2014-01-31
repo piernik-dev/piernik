@@ -66,7 +66,7 @@ contains
 
       implicit none
 
-      class(cg_list_bnd_T), intent(in) :: cg_llst !< pointer to a level for which we approximate the solution
+      class(cg_list_bnd_T), intent(inout) :: cg_llst !< pointer to a level for which we approximate the solution
       integer(kind=4),      intent(in) :: src     !< index of source in cg%q(:)
       integer(kind=4),      intent(in) :: soln    !< index of solution in cg%q(:)
       integer(kind=4),      intent(in) :: def     !< index of defect in cg%q(:)
