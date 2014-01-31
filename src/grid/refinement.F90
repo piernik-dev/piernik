@@ -50,6 +50,7 @@ module refinement
       type(SFC_candidate), allocatable, dimension(:) :: SFC_refine_list
    contains
       procedure :: init      !> Initialize: (.false. , .false., allocate 0 elements)
+      procedure :: add       !> Appends one element to SFC_refine_list
       procedure :: sanitize  !> Sanitize the refinement flags
    end type ref_flag
 
@@ -274,5 +275,19 @@ contains
       n_updAMR = nn
 
    end subroutine set_n_updAMR
+
+!> \brief Appends one element to SFC_refine_list
+
+   subroutine add(this, level, SFC_id)
+
+      implicit none
+
+      class(ref_flag), intent(inout) :: this   ! object invoking this procedure
+      integer(kind=4), intent(in)    :: level  ! level at which we want to put grid block
+      integer(kind=8), intent(in)    :: SFC_id ! position at which we want to put grid block
+
+      this%SFC_refine_list = [ this%SFC_refine_list, SFC_candidate(int(level, kind=8), SFC_id) ] !lhs reallocation
+
+   end subroutine add
 
 end module refinement

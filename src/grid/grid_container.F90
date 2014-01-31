@@ -154,6 +154,7 @@ module grid_cont
       integer(kind=8), dimension(ndims, LO:HI) :: my_se          !< own segment. my_se(:,LO) = 0; my_se(:,HI) = dom%n_d(:) - 1 would cover entire domain on a base level
                                                                  !! my_se(:,LO) = 0; my_se(:,HI) = finest%level%n_d(:) -1 would cover entire domain on the most refined level
                                                                  !! DEPRECATED: will be equivalent to ijkse(:,:)
+      integer(kind=8), dimension(ndims) :: level_off             !< offset of own level
 
       ! Physical size and coordinates
 
@@ -242,6 +243,7 @@ module grid_cont
       procedure          :: set_fluxpointers
       procedure          :: save_outfluxes
       procedure          :: prolong                              !< perform prolongation of the data stored in this%prolong_
+      procedure          :: refinemap2SFC_list                   !< create list of SFC indices to be created from refine flags
 
    end type grid_container
 
@@ -282,6 +284,7 @@ contains
 
       if (code_progress < PIERNIK_INIT_DOMAIN) call die("[grid_container:init_gc] MPI not initialized.")
 
+      this%level_off  = off
       this%membership = 1
       this%grid_id    = grid_id
       this%my_se(:,:) = my_se(:, :)
@@ -1195,5 +1198,41 @@ contains
       ! Alternatively, an FFT convolution may be employed after injection. No idea at what stencil size the FFT is faster. It is finite size for sure :-)
 
    end subroutine prolong
+
+!< \brief Create list of SFC indices to be created from refine flags
+
+   subroutine refinemap2SFC_list(this)
+
+      use constants,    only: refinement_factor, xdim, ydim, zdim, I_ONE
+      use domain,       only: AMR_bsize
+      use grid_helpers, only: c2f_o
+      use ordering,     only: SFC_order
+
+      implicit none
+
+      class(grid_container), intent(inout) :: this
+
+      integer :: i, j, k, ifs, ife, jfs, jfe, kfs, kfe
+
+      do i = int(((this%is - this%level_off(xdim))*refinement_factor) / AMR_bsize(xdim)), int(((this%ie - this%level_off(xdim))*refinement_factor + I_ONE) / AMR_bsize(xdim))
+         ifs = max(this%is, (i*AMR_bsize(xdim))/refinement_factor)
+         ife = min(this%ie, ((i+I_ONE)*AMR_bsize(xdim)-I_ONE)/refinement_factor)
+
+         do j = int(((this%is - this%level_off(ydim))*refinement_factor) / AMR_bsize(ydim)), int(((this%je - this%level_off(ydim))*refinement_factor + I_ONE) / AMR_bsize(ydim))
+            jfs = max(this%js, (j*AMR_bsize(ydim))/refinement_factor)
+            jfe = min(this%je, ((j+I_ONE)*AMR_bsize(ydim)-I_ONE)/refinement_factor)
+
+            do k = int(((this%ks - this%level_off(zdim))*refinement_factor) / AMR_bsize(zdim)), int(((this%ke - this%level_off(zdim))*refinement_factor + I_ONE) / AMR_bsize(zdim))
+               kfs = max(this%ks, (k*AMR_bsize(zdim))/refinement_factor)
+               kfe = min(this%ke, ((k+I_ONE)*AMR_bsize(zdim)-I_ONE)/refinement_factor)
+
+               if (any(this%refinemap(ifs:ife, jfs:jfe, kfs:kfe))) call this%refine_flags%add(this%level_id+1, SFC_order(c2f_o([i, j, k]*AMR_bsize-this%level_off)))
+
+            end do
+         end do
+      end do
+      this%refinemap = .false.
+
+   end subroutine refinemap2SFC_list
 
 end module grid_cont
