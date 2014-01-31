@@ -86,7 +86,9 @@ contains
       cnt(PRIMITIVES) = all_cg%count_ref_flags()
       call piernik_MPI_Allreduce(cnt(PRIMITIVES), pSUM)
       if (cnt(ubound(cnt, dim=1)) > 0) then
-         write(msg,'(2(a,i6),a)')"[refinement_update:scan_for_refinements] User-defined routine marked ", cnt(PROBLEM), " block(s) for refinement, primitives marked ",cnt(PRIMITIVES)," block(s)"
+         write(msg,'(2(a,i6),a)')"[refinement_update:scan_for_refinements] User-defined routine marked ", &
+              &                  cnt(PROBLEM), " block(s) for refinement, primitives marked additional ", &
+              &                  cnt(PRIMITIVES)-cnt(PROBLEM)," block(s)"
       else
          write(msg,'(a)')"[refinement_update:scan_for_refinements] No blocks marked for refinement"
       endif
