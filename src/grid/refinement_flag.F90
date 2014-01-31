@@ -79,6 +79,8 @@ contains
       class(ref_flag), intent(inout) :: this     ! object invoking this procedure
       integer(kind=4), intent(in)    :: my_level ! refinement level at which the flag has to be sanitized
 
+      if (size(this%SFC_refine_list) > 0) this%refine = .true.
+
       if (my_level >= level_max) this%refine   = .false.
       if (my_level <  level_min) this%refine   = .true.
 
