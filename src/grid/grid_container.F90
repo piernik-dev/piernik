@@ -190,6 +190,7 @@ module grid_cont
       real, allocatable, dimension(:,:,:) :: prolong_, prolong_x, prolong_xy !< auxiliary prolongation arrays for intermediate results
       real, dimension(:,:,:), pointer ::  prolong_xyz             !< auxiliary prolongation array for final result. OPT: Valgrind indicates that operations on array allocated on pointer might be slower than on ordinary arrays due to poorer L2 cache utilization
       logical, allocatable, dimension(:,:,:) :: leafmap           !< .true. when a cell is not covered by finer cells, .false. otherwise
+      logical, allocatable, dimension(:,:,:) :: refinemap         !< .true. when a cell triggers refinement criteria, .false. otherwise
 
       ! Non-cartesian geometrical factors
 
@@ -453,13 +454,15 @@ contains
            &   this%prolong_x  (this%lhn(xdim, LO):this%lhn(xdim, HI),       rn(ydim, LO):      rn(ydim, HI),       rn(zdim, LO):      rn(zdim, HI)), &
            &   this%prolong_xy (this%lhn(xdim, LO):this%lhn(xdim, HI), this%lhn(ydim, LO):this%lhn(ydim, HI),       rn(zdim, LO):      rn(zdim, HI)), &
            &   this%prolong_xyz(this%lhn(xdim, LO):this%lhn(xdim, HI), this%lhn(ydim, LO):this%lhn(ydim, HI), this%lhn(zdim, LO):this%lhn(zdim, HI)))
-      allocate(this%leafmap(this%ijkse(xdim, LO):this%ijkse(xdim, HI), this%ijkse(ydim, LO):this%ijkse(ydim, HI), this%ijkse(zdim, LO):this%ijkse(zdim, HI)))
+      allocate(this%leafmap  (this%ijkse(xdim, LO):this%ijkse(xdim, HI), this%ijkse(ydim, LO):this%ijkse(ydim, HI), this%ijkse(zdim, LO):this%ijkse(zdim, HI)), &
+           &   this%refinemap(this%ijkse(xdim, LO):this%ijkse(xdim, HI), this%ijkse(ydim, LO):this%ijkse(ydim, HI), this%ijkse(zdim, LO):this%ijkse(zdim, HI)))
 
       this%prolong_   (:, :, :) = big_float
       this%prolong_x  (:, :, :) = big_float
       this%prolong_xy (:, :, :) = big_float
       this%prolong_xyz(:, :, :) = big_float
       this%leafmap    (:, :, :) = .true.
+      this%refinemap  (:, :, :) = .false.
       call this%refine_flags%init
       this%ignore_prolongation = .false.
       this%is_old = .false.
@@ -610,6 +613,7 @@ contains
       if (allocated(this%prolong_x))    deallocate(this%prolong_x)
       if (allocated(this%prolong_))     deallocate(this%prolong_)
       if (allocated(this%leafmap))      deallocate(this%leafmap)
+      if (allocated(this%refinemap))    deallocate(this%refinemap)
       do d = xdim, zdim
          do g = LO, HI
             call this%finebnd  (d, g)%facleanup
