@@ -1218,7 +1218,7 @@ contains
          ifs = max(this%is, (i*AMR_bsize(xdim))/refinement_factor)
          ife = min(this%ie, ((i+I_ONE)*AMR_bsize(xdim)-I_ONE)/refinement_factor)
 
-         do j = int(((this%is - this%level_off(ydim))*refinement_factor) / AMR_bsize(ydim)), int(((this%je - this%level_off(ydim))*refinement_factor + I_ONE) / AMR_bsize(ydim))
+         do j = int(((this%js - this%level_off(ydim))*refinement_factor) / AMR_bsize(ydim)), int(((this%je - this%level_off(ydim))*refinement_factor + I_ONE) / AMR_bsize(ydim))
             jfs = max(this%js, (j*AMR_bsize(ydim))/refinement_factor)
             jfe = min(this%je, ((j+I_ONE)*AMR_bsize(ydim)-I_ONE)/refinement_factor)
 
