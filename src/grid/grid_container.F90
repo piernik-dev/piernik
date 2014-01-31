@@ -30,11 +30,11 @@
 
 module grid_cont
 
-   use constants,   only: xdim, zdim, ndims, LO, HI, CENTER, INV_CENTER
-   use fluxtypes,   only: fluxarray, fluxpoint
-   use named_array, only: named_array4d, named_array3d
-   use refinement,  only: ref_flag
-   use real_vector, only: real_vec_T
+   use constants,       only: xdim, zdim, ndims, LO, HI, CENTER, INV_CENTER
+   use fluxtypes,       only: fluxarray, fluxpoint
+   use named_array,     only: named_array4d, named_array3d
+   use refinement_flag, only: ref_flag
+   use real_vector,     only: real_vec_T
 
    implicit none
 
