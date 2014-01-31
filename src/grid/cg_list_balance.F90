@@ -312,7 +312,7 @@ contains
 
       integer(kind=8), dimension(:,:), allocatable :: gptemp
       integer :: i
-      integer(kind=4) :: p, ss
+      integer(kind=4) :: p, ss, rls
       integer, parameter :: nreq = 1
       integer(kind=4), parameter :: tag_ls = 1, tag_gpt = tag_ls+1
 
@@ -333,14 +333,14 @@ contains
          i = ls
          deallocate(gptemp)
          do p = FIRST + 1, LAST
-            call MPI_Recv(ls, I_ONE, MPI_INTEGER, p, tag_ls, comm, MPI_STATUS_IGNORE, mpi_err)
-            if (ls > 0) then
-               allocate(gptemp(I_OFF:I_END,ls))
+            call MPI_Recv(rls, I_ONE, MPI_INTEGER, p, tag_ls, comm, MPI_STATUS_IGNORE, mpi_err)
+            if (rls > 0) then
+               allocate(gptemp(I_OFF:I_END, rls))
                call MPI_Recv(gptemp, size(gptemp), MPI_INTEGER8, p, tag_gpt, comm, MPI_STATUS_IGNORE, mpi_err)
-               do ss = 1, ls
+               do ss = 1, rls
                   call gp%list(i+ss)%set_gp(gptemp(I_OFF:I_OFF+ndims-1, ss), int(gptemp(I_N_B:I_N_B+ndims-1, ss), kind=4), INVALID, p)
                enddo
-               i = i + ls
+               i = i + rls
                deallocate(gptemp)
             endif
          enddo
