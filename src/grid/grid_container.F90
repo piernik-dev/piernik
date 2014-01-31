@@ -1206,13 +1206,14 @@ contains
       use constants,    only: refinement_factor, xdim, ydim, zdim, I_ONE
       use domain,       only: AMR_bsize
       use grid_helpers, only: c2f_o
-      use ordering,     only: SFC_order
 
       implicit none
 
       class(grid_container), intent(inout) :: this
 
       integer :: i, j, k, ifs, ife, jfs, jfe, kfs, kfe
+
+      this%refinemap = this%refinemap .and. this%leafmap
 
       do i = int(((this%is - this%level_off(xdim))*refinement_factor) / AMR_bsize(xdim)), int(((this%ie - this%level_off(xdim))*refinement_factor + I_ONE) / AMR_bsize(xdim))
          ifs = max(this%is, (i*AMR_bsize(xdim))/refinement_factor)
@@ -1226,7 +1227,7 @@ contains
                kfs = max(this%ks, (k*AMR_bsize(zdim))/refinement_factor)
                kfe = min(this%ke, ((k+I_ONE)*AMR_bsize(zdim)-I_ONE)/refinement_factor)
 
-               if (any(this%refinemap(ifs:ife, jfs:jfe, kfs:kfe))) call this%refine_flags%add(this%level_id+1, SFC_order(c2f_o([i, j, k]*AMR_bsize-this%level_off)))
+               if (any(this%refinemap(ifs:ife, jfs:jfe, kfs:kfe))) call this%refine_flags%add(this%level_id+1, c2f_o([i, j, k]*AMR_bsize-this%level_off))
 
             end do
          end do

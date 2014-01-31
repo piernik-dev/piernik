@@ -30,6 +30,8 @@
 
 module refinement_flag
 
+   use constants, only: ndims
+
    implicit none
 
    private
@@ -39,6 +41,7 @@ module refinement_flag
    type :: SFC_candidate
       integer(kind=8) :: level  ! level at which we want to put grid block
       integer(kind=8) :: SFC_id ! position at which we want to put grid block
+      integer(kind=8), dimension(ndims) :: off  ! offset of grid block (formally can be obtained from SFC_id)
    end type SFC_candidate
 
    type :: ref_flag
@@ -94,15 +97,18 @@ contains
 
 !> \brief Appends one element to SFC_refine_list
 
-   subroutine add(this, level, SFC_id)
+   subroutine add(this, level, off)
+
+      use constants, only: ndims
+      use ordering,  only: SFC_order
 
       implicit none
 
-      class(ref_flag), intent(inout) :: this   ! object invoking this procedure
-      integer(kind=4), intent(in)    :: level  ! level at which we want to put grid block
-      integer(kind=8), intent(in)    :: SFC_id ! position at which we want to put grid block
+      class(ref_flag),                   intent(inout) :: this   ! object invoking this procedure
+      integer(kind=4),                   intent(in)    :: level  ! level at which we want to put grid block
+      integer(kind=8), dimension(ndims), intent(in)    :: off    ! offset of grid block
 
-      this%SFC_refine_list = [ this%SFC_refine_list, SFC_candidate(int(level, kind=8), SFC_id) ] !lhs reallocation
+      this%SFC_refine_list = [ this%SFC_refine_list, SFC_candidate(int(level, kind=8), SFC_order(off), off) ] !lhs reallocation
 
    end subroutine add
 
