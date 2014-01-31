@@ -427,7 +427,6 @@ contains
       use cg_list,          only: cg_list_element
       use fluidindex,       only: iarr_all_dn, flind
 !      use named_array_list, only: wna
-      use refinement,       only: ref_flag
 
       implicit none
 
@@ -449,7 +448,8 @@ contains
                     minval(cgl%cg%u(flind%all_fluids(id)%fl%ien, cgl%cg%is:cgl%cg%ie, cgl%cg%js:cgl%cg%je, cgl%cg%ks:cgl%cg%ke), mask=cgl%cg%leafmap) > ref_thr) &
                     dmax = 2.*ref_thr*d0 !trick
             enddo
-            cgl%cg%refine_flags = ref_flag( dmax >= ref_thr*d0, dmax < deref_thr*d0 )
+            cgl%cg%refine_flags%refine   = (dmax >= ref_thr*d0  )
+            cgl%cg%refine_flags%derefine = (dmax <  deref_thr*d0)
          endif
          cgl => cgl%nxt
       enddo

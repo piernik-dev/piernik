@@ -260,12 +260,11 @@ contains
 
    subroutine init_gc(this, n_d, off, my_se, grid_id, level_id)
 
-      use constants,     only: PIERNIK_INIT_DOMAIN, xdim, ydim, zdim, ndims, big_float, LO, HI, I_ONE, I_TWO, BND_MPI, BND_COR, GEO_XYZ, GEO_RPZ, dpi
-      use dataio_pub,    only: die, warn, code_progress
-      use domain,        only: dom
-      use grid_helpers,  only: f2c
-      use ordering,      only: SFC_order
-      use refinement,    only: ref_flag
+      use constants,    only: PIERNIK_INIT_DOMAIN, xdim, ydim, zdim, ndims, big_float, LO, HI, I_ONE, I_TWO, BND_MPI, BND_COR, GEO_XYZ, GEO_RPZ, dpi
+      use dataio_pub,   only: die, warn, code_progress
+      use domain,       only: dom
+      use grid_helpers, only: f2c
+      use ordering,     only: SFC_order
 
       implicit none
 
@@ -461,7 +460,7 @@ contains
       this%prolong_xy (:, :, :) = big_float
       this%prolong_xyz(:, :, :) = big_float
       this%leafmap    (:, :, :) = .true.
-      this%refine_flags = ref_flag(.false., .false.)
+      call this%refine_flags%init
       this%ignore_prolongation = .false.
       this%is_old = .false.
       this%has_previous_timestep = .false.

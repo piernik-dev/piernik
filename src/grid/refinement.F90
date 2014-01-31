@@ -38,11 +38,19 @@ module refinement
    public :: level_max, level_min, n_updAMR, allow_face_rstep, allow_corner_rstep, oop_thr, refine_points, refine_boxes, &
         &    init_refinement, ref_flag, emergency_fix, set_n_updAMR, strict_SFC_ordering, prefer_n_bruteforce
 
+   ! A candidate for refinement
+   type :: SFC_candidate
+      integer(kind=8) :: level  ! level at which we want to put grid block
+      integer(kind=8) :: SFC_id ! position at which we want to put grid block
+   end type SFC_candidate
+
    type :: ref_flag
       logical :: refine   !> a request to refine
       logical :: derefine !> a request to derefine
-    contains
-      procedure :: sanitize
+      type(SFC_candidate), allocatable, dimension(:) :: SFC_refine_list
+   contains
+      procedure :: init      !> Initialize: (.false. , .false., allocate 0 elements)
+      procedure :: sanitize  !> Sanitize the refinement flags
    end type ref_flag
 
    integer(kind=4), protected :: level_min           !< minimum allowed refinement
@@ -214,7 +222,21 @@ contains
 
    end subroutine init_refinement
 
-!> \brief sanitize the refinement flags
+!> \brief Initialize to (.false. , .false., allocate 0 elements)
+
+   subroutine init(this)
+
+      implicit none
+
+      class(ref_flag), intent(inout) :: this     ! object invoking this procedure
+
+      this%refine = .false.
+      this%derefine = .false.
+      allocate(this%SFC_refine_list(0))
+
+   end subroutine init
+
+!> \brief Sanitize the refinement flags
 
    subroutine sanitize(this, my_level)
 

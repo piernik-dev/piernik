@@ -650,7 +650,6 @@ contains
       use cg_list,          only: cg_list_element
       use fluidindex,       only: iarr_all_dn
 !      use named_array_list, only: wna
-      use refinement,       only: ref_flag
 
       implicit none
 
@@ -671,7 +670,8 @@ contains
             enddo
             delta_dens = dmax - dmin
             !> \warning only selfgravitating fluids should be checked
-            cgl%cg%refine_flags = ref_flag( delta_dens >= ref_thr*d0, delta_dens < deref_thr*d0 )
+            cgl%cg%refine_flags%refine =   (delta_dens >= ref_thr*d0  )
+            cgl%cg%refine_flags%derefine = (delta_dens <  deref_thr*d0)
          endif
          cgl => cgl%nxt
       enddo
