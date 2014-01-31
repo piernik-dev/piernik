@@ -66,6 +66,7 @@ contains
 
       this%refine = .false.
       this%derefine = .false.
+      if (allocated(this%SFC_refine_list)) deallocate(this%SFC_refine_list)
       allocate(this%SFC_refine_list(0))
 
    end subroutine init
