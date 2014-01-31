@@ -649,15 +649,15 @@ contains
       use cg_leaves,        only: leaves
       use cg_list,          only: cg_list_element
       use fluidindex,       only: iarr_all_dn
-!      use named_array_list, only: wna
+      use named_array_list, only: wna
 
       implicit none
 
       type(cg_list_element), pointer :: cgl
       real :: delta_dens, dmin, dmax
-      integer :: id
+      integer :: id, i, j, k
 
-!      call leaves%internal_boundaries_4d(wna%fi) !< enable it as soon as c2f and f2c routines will work
+      call leaves%internal_boundaries_4d(wna%fi) !< enable it as soon as c2f and f2c routines will work
 
       cgl => leaves%first
       do while (associated(cgl))
@@ -667,10 +667,22 @@ contains
             do id = lbound(iarr_all_dn, dim=1), ubound(iarr_all_dn, dim=1)
                dmax = max(dmax, maxval(cgl%cg%u(id, cgl%cg%is:cgl%cg%ie, cgl%cg%js:cgl%cg%je, cgl%cg%ks:cgl%cg%ke), mask=cgl%cg%leafmap))
                dmin = min(dmin, minval(cgl%cg%u(id, cgl%cg%is:cgl%cg%ie, cgl%cg%js:cgl%cg%je, cgl%cg%ks:cgl%cg%ke), mask=cgl%cg%leafmap))
+               do k = cgl%cg%ks, cgl%cg%ke
+                  do j = cgl%cg%js, cgl%cg%je
+                     do i = cgl%cg%is, cgl%cg%ie
+                        cgl%cg%refinemap(i, j, k) = cgl%cg%leafmap(i, j, k) .and. &
+                             (6*cgl%cg%u(id, i,   j, k) - &
+                             &  cgl%cg%u(id, i-1, j, k) - cgl%cg%u(id, i+1, j, k) - &
+                             &  cgl%cg%u(id, i, j-1, k) - cgl%cg%u(id, i, j+1, k) - &
+                             &  cgl%cg%u(id, i, j, k-1) - cgl%cg%u(id, i, j, k+1) >= ref_thr*d0)
+                     end do
+                  end do
+               end do
             enddo
             delta_dens = dmax - dmin
             !> \warning only selfgravitating fluids should be checked
-            cgl%cg%refine_flags%refine =   (delta_dens >= ref_thr*d0  )
+            cgl%cg%refine_flags%refine   = any(cgl%cg%refinemap) !.false. !(delta_dens >= ref_thr*d0  )
+            cgl%cg%refinemap = .false.
             cgl%cg%refine_flags%derefine = (delta_dens <  deref_thr*d0)
          endif
          cgl => cgl%nxt
