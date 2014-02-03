@@ -475,7 +475,9 @@ contains
       cnt = 0
       cgl => this%first
       do while (associated(cgl))
-         if (cgl%cg%refine_flags%refine) cnt = cnt + 1
+         if ( cgl%cg%refine_flags%refine .or. &
+              any(cgl%cg%refinemap .and. cgl%cg%leafmap) .or. &
+              size(cgl%cg%refine_flags%SFC_refine_list) > 0) cnt = cnt + 1
          cgl => cgl%nxt
       enddo
 
