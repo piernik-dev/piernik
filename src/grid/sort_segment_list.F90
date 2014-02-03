@@ -76,7 +76,7 @@ module sort_segment_list
 
 contains
 
-!> \brief Allocate the list
+!> \brief Allocate the list, and add new elements
 
    subroutine add(this, tag, se, cg, dir)
 
@@ -92,11 +92,14 @@ contains
 
       type(seg), dimension(:), allocatable :: tmp
 
-      !> \warning a lot of duplicated code with some othe rroutines such as named_array_list::add2lst
+      !> \warning a lot of duplicated code with some othe routines such as named_array_list::add2lst
       if (.not. allocated(this%list)) then
          allocate(this%list(1))
       else
          allocate(tmp(lbound(this%list(:),dim=1):ubound(this%list(:), dim=1) + 1))
+         ! OPT the assignment below is quite costly, its cost is O(final_length^2)
+         ! consider starting from larger value (historic average?)
+         ! consider doubling the length of the list, not enlarging one by one (be careful with loops to ubound)
          tmp(:ubound(this%list(:), dim=1)) = this%list(:)
          call move_alloc(from=tmp, to=this%list)
       endif
@@ -104,6 +107,10 @@ contains
       this%list(ubound(this%list(:), dim=1))%se  =  se
       this%list(ubound(this%list(:), dim=1))%cg  => cg
       this%list(ubound(this%list(:), dim=1))%dir =  dir
+
+      !OPT: the code below is way simpler, but seems to be twice slower (at least according to valgrind --tool=callgrind)
+      !if (.not. allocated(this%list)) allocate(this%list(0))
+      !this%list = [ this%list, seg(tag, se, int(0, kind=8), int(0, kind=8), cg, dir) ] ! lhs realloc
 
    end subroutine add
 
