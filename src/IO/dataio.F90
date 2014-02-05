@@ -1628,7 +1628,7 @@ contains
       use dataio_pub,    only: msg, printinfo, warn
       use mpisetup,      only: master
 #if defined(__INTEL_COMPILER)
-      use ifport,        only: pxfstat
+      use ifposix,       only: pxfstat, pxfstructcreate, pxfintget, pxfstructfree
 #endif /* __INTEL_COMPILER */
 
       implicit none
@@ -1646,6 +1646,9 @@ contains
       integer, dimension(13)                               :: stat_buff
       logical                                              :: msg_param_read = .false., ex
       integer, dimension(n_msg_origin), save               :: last_msg_stamp
+#if defined(__INTEL_COMPILER)
+      integer(kind=4) :: jhandle, ierror
+#endif /* __INTEL_COMPILER */
 
       umsg=''
       umsg_param = 0.0
@@ -1660,7 +1663,10 @@ contains
 #ifdef __GFORTRAN__
             sts = stat(fname(i), stat_buff)  ! old way to do stat
 #else /* !__GFORTRAN__ */
-            call pxfstat(fname(i), 0, stat_buff, sts)
+            call pxfstructcreate("stat", jhandle, ierror)
+            call pxfstat(fname(i), cwdlen, jhandle, ierror)
+            call pxfintget(jhandle, "st_ctime", stat_buff(10), ierror)
+            call pxfstructfree(jhandle, ierror)
 #endif /* !__GFORTRAN__ */
             if (last_msg_stamp(i) == stat_buff(10)) exit
             last_msg_stamp(i) = stat_buff(10)

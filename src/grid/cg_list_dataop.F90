@@ -494,16 +494,16 @@ contains
          select case (dom%geometry_type)
             case (GEO_XYZ)
                if (mask) then
-                  norm = norm + sum(cg%q(iv)%span(cg%ijkse)**2, mask=cg%leafmap) * cg%dvol
+                  norm = norm + sum(cgl%cg%q(iv)%span(cg%ijkse)**2, mask=cg%leafmap) * cg%dvol
                else
-                  norm = norm + sum(cg%q(iv)%span(cg%ijkse)**2) * cg%dvol
+                  norm = norm + sum(cgl%cg%q(iv)%span(cg%ijkse)**2) * cg%dvol
                endif
             case (GEO_RPZ)
                do i = cg%is, cg%ie
                   if (mask) then
-                     norm = norm + sum(cg%q(iv)%arr(i, cg%js:cg%je, cg%ks:cg%ke)**2, mask=cg%leafmap(i, :, :)) * cg%dvol * cg%x(i)
+                     norm = norm + sum(cgl%cg%q(iv)%arr(i, cg%js:cg%je, cg%ks:cg%ke)**2, mask=cg%leafmap(i, :, :)) * cg%dvol * cg%x(i)
                   else
-                     norm = norm + sum(cg%q(iv)%arr(i, cg%js:cg%je, cg%ks:cg%ke)**2) * cg%dvol * cg%x(i)
+                     norm = norm + sum(cgl%cg%q(iv)%arr(i, cg%js:cg%je, cg%ks:cg%ke)**2) * cg%dvol * cg%x(i)
                   endif
                enddo
             case default
