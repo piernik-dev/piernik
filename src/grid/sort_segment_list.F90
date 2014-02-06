@@ -59,6 +59,7 @@ module sort_segment_list
 
    type, extends(sortable_list_T) :: sort_segment_list_T
       type(seg), dimension(:), allocatable :: list !< the list itself
+      integer :: cur_last                          !< last used entry in the list
       type(seg) :: temp
       integer(kind=8) :: total_size                !< offset of the last segment data + its size
       real, allocatable, dimension(:) :: buf       !< buffer for the data to be sent or received (total_size)
@@ -80,6 +81,7 @@ contains
 
    subroutine add(this, tag, se, cg, dir)
 
+      use constants, only: INVALID
       use grid_cont, only: grid_container
 
       implicit none
@@ -91,22 +93,23 @@ contains
       integer,                                      intent(in)    :: dir
 
       type(seg), dimension(:), allocatable :: tmp
+      integer, parameter :: initial_size = 16
+      real, parameter :: grow_ratio = 2.
 
-      !> \warning a lot of duplicated code with some othe routines such as named_array_list::add2lst
       if (.not. allocated(this%list)) then
-         allocate(this%list(1))
-      else
-         allocate(tmp(lbound(this%list(:),dim=1):ubound(this%list(:), dim=1) + 1))
-         ! OPT the assignment below is quite costly, its cost is O(final_length^2)
-         ! consider starting from larger value (historic average?)
-         ! consider doubling the length of the list, not enlarging one by one (be careful with loops to ubound)
+         allocate(this%list(initial_size))
+         this%cur_last = lbound(this%list, dim=1) - 1
+      else if (this%cur_last == ubound(this%list(:), dim=1)) then
+         allocate(tmp(lbound(this%list(:),dim=1):int(abs(grow_ratio*ubound(this%list(:), dim=1)))))
          tmp(:ubound(this%list(:), dim=1)) = this%list(:)
+         tmp(ubound(this%list(:), dim=1)+1:)%dir = INVALID
          call move_alloc(from=tmp, to=this%list)
       endif
-      this%list(ubound(this%list(:), dim=1))%tag =  tag
-      this%list(ubound(this%list(:), dim=1))%se  =  se
-      this%list(ubound(this%list(:), dim=1))%cg  => cg
-      this%list(ubound(this%list(:), dim=1))%dir =  dir
+      this%cur_last = this%cur_last + 1
+      this%list(this%cur_last)%tag =  tag
+      this%list(this%cur_last)%se  =  se
+      this%list(this%cur_last)%cg  => cg
+      this%list(this%cur_last)%dir =  dir
 
       !OPT: the code below is way simpler, but seems to be twice slower (at least according to valgrind --tool=callgrind)
       !if (.not. allocated(this%list)) allocate(this%list(0))
@@ -130,14 +133,14 @@ contains
 
       if (allocated(this%list)) then
          off = 1
-         do i = lbound(this%list, dim=1), ubound(this%list, dim=1)
+         do i = lbound(this%list, dim=1), this%cur_last !ubound(this%list, dim=1)
             this%list(i)%offset = off
             if (i>lbound(this%list, dim=1)) this%list(i-1)%off_ceil = off-1
             if (dmask(this%list(i)%dir)) &
                  off = off + product(this%list(i)%se(:, HI) - this%list(i)%se(:, LO) + I_ONE)
          enddo
          this%total_size = off-1
-         this%list(ubound(this%list, dim=1))%off_ceil = off-1
+         this%list(this%cur_last)%off_ceil = off-1
       else
          this%total_size = 0
       endif
@@ -235,7 +238,7 @@ contains
       class(sort_segment_list_T), intent(in) :: this
 
       if (allocated(this%list)) then
-         u_bound = ubound(this%list, dim=1)
+         u_bound = this%cur_last !ubound(this%list, dim=1)
       else
          u_bound = -huge(1) ! safe default; should bail out from sorting
       endif
