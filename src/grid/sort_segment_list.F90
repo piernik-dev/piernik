@@ -111,7 +111,8 @@ contains
       this%list(this%cur_last)%cg  => cg
       this%list(this%cur_last)%dir =  dir
 
-      !OPT: the code below is way simpler, but seems to be twice slower (at least according to valgrind --tool=callgrind)
+      !OPT: the code below is way simpler, but it is O(list_length**2),
+      !     and twice slower than explicit variant with move_alloc done for each element
       !if (.not. allocated(this%list)) allocate(this%list(0))
       !this%list = [ this%list, seg(tag, se, int(0, kind=8), int(0, kind=8), cg, dir) ] ! lhs realloc
 
