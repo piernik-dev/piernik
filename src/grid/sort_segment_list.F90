@@ -134,7 +134,7 @@ contains
 
       if (allocated(this%list)) then
          off = 1
-         do i = lbound(this%list, dim=1), this%cur_last !ubound(this%list, dim=1)
+         do i = lbound(this%list, dim=1), this%cur_last
             this%list(i)%offset = off
             if (i>lbound(this%list, dim=1)) this%list(i-1)%off_ceil = off-1
             if (dmask(this%list(i)%dir)) &
@@ -239,7 +239,7 @@ contains
       class(sort_segment_list_T), intent(in) :: this
 
       if (allocated(this%list)) then
-         u_bound = this%cur_last !ubound(this%list, dim=1)
+         u_bound = this%cur_last
       else
          u_bound = -huge(1) ! safe default; should bail out from sorting
       endif
