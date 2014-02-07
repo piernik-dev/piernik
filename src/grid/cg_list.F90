@@ -454,8 +454,7 @@ contains
 
       cgl => this%first
       do while (associated(cgl))
-         cgl%cg%refine_flags%refine   = .false.
-         cgl%cg%refine_flags%derefine = .false.
+         call cgl%cg%refine_flags%init
          cgl => cgl%nxt
       enddo
 
