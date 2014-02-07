@@ -120,6 +120,8 @@ contains
       do while (associated(curl))
          cgl => curl%first
          do while (associated(cgl))
+            cgl%cg%refine_flags%refine = cgl%cg%refine_flags%refine .or. &
+                 &                       any(cgl%cg%refinemap .and. cgl%cg%leafmap)
             call cgl%cg%refine_flags%sanitize(cgl%cg%level_id)
             cgl => cgl%nxt
          enddo

@@ -657,7 +657,7 @@ contains
       real :: delta_dens, dmin, dmax
       integer :: id, i, j, k
 
-      call leaves%internal_boundaries_4d(wna%fi) !< enable it as soon as c2f and f2c routines will work
+      call leaves%internal_boundaries_4d(wna%fi)
 
       cgl => leaves%first
       do while (associated(cgl))
@@ -670,8 +670,7 @@ contains
                do k = cgl%cg%ks, cgl%cg%ke
                   do j = cgl%cg%js, cgl%cg%je
                      do i = cgl%cg%is, cgl%cg%ie
-                        cgl%cg%refinemap(i, j, k) = cgl%cg%leafmap(i, j, k) .and. &
-                             (6*cgl%cg%u(id, i,   j, k) - &
+                        cgl%cg%refinemap(i, j, k) = ( 6 * cgl%cg%u(id, i,   j, k) - &
                              &  cgl%cg%u(id, i-1, j, k) - cgl%cg%u(id, i+1, j, k) - &
                              &  cgl%cg%u(id, i, j-1, k) - cgl%cg%u(id, i, j+1, k) - &
                              &  cgl%cg%u(id, i, j, k-1) - cgl%cg%u(id, i, j, k+1) >= ref_thr*d0)
@@ -681,9 +680,8 @@ contains
             enddo
             delta_dens = dmax - dmin
             !> \warning only selfgravitating fluids should be checked
-            cgl%cg%refine_flags%refine   = any(cgl%cg%refinemap) !.false. !(delta_dens >= ref_thr*d0  )
-            cgl%cg%refinemap = .false.
             cgl%cg%refine_flags%derefine = (delta_dens <  deref_thr*d0)
+            ! no need to set cgl%cg%refine_flags%refine when we have cgl%cg%refinemap
          endif
          cgl => cgl%nxt
       enddo
