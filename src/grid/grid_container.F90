@@ -1203,10 +1203,9 @@ contains
 
    subroutine refinemap2SFC_list(this)
 
-      use constants,    only: refinement_factor, xdim, ydim, zdim, I_ONE
-      use dataio_pub,   only: die
-      use domain,       only: AMR_bsize
-      use grid_helpers, only: c2f_o
+      use constants,  only: refinement_factor, xdim, ydim, zdim, I_ONE
+      use dataio_pub, only: die
+      use domain,     only: AMR_bsize
 
       implicit none
 
@@ -1242,10 +1241,10 @@ contains
 
                select case (type)
                   case (REFINE)
-                     if (any(this%refinemap(ifs:ife, jfs:jfe, kfs:kfe))) call this%refine_flags%add(this%level_id+1, c2f_o([i, j, k]*AMR_bsize-this%level_off))
+                     if (any(this%refinemap(ifs:ife, jfs:jfe, kfs:kfe))) call this%refine_flags%add(this%level_id+1, [i, j, k]*AMR_bsize-this%level_off)
                   case (LEAF)
                      if (all(this%leafmap(ifs:ife, jfs:jfe, kfs:kfe))) then
-                        call this%refine_flags%add(this%level_id+1, c2f_o([i, j, k]*AMR_bsize-this%level_off))
+                        call this%refine_flags%add(this%level_id+1,[i, j, k]*AMR_bsize-this%level_off)
                      else if (any(this%leafmap(ifs:ife, jfs:jfe, kfs:kfe))) then
                         call die("[grid_container:refinemap2SFC_list] cannot refine partially leaf parf of the grid")
                      end if
