@@ -114,25 +114,29 @@ contains
       class(sortable_list_T), intent(inout) :: this
 
       integer :: g, i, j
+      integer :: lb, ub
 #ifdef DEBUG
       logical :: fail
 #endif /* DEBUG */
+
+      lb = this%l_bound()
+      ub = this%u_bound()
 
       if (.not. allocated(gaps)) then
          allocate(gaps(1))
          gaps(1) = 1
       endif
 
-      do while (gaps(ubound(gaps, dim=1)) < this%u_bound())
+      do while (gaps(ubound(gaps, dim=1)) < ub)
          gaps = [ gaps, tokuda(ubound(gaps, dim=1)+1) ]
       enddo
 
       do g = ubound(gaps, dim=1), lbound(gaps, dim=1), -1
-         do i = gaps(g)+1, this%u_bound()
+         do i = gaps(g)+1, ub
             call this%assign_element(temp_index, i) !this%temp = this%list(i)
             j = i
 !            do while (j > gaps(g) .and. this%list(max(j - gaps(g), lbound(this%list, dim=1)))%id > temp%id)
-            do while (j > gaps(g) .and. this%compare_elements(max(j - gaps(g), this%l_bound()), temp_index))
+            do while (j > gaps(g) .and. this%compare_elements(max(j - gaps(g), lb), temp_index))
                ! Either use max() here, or put this%list(j - gaps(g)) with an "if" inside the while loop
                call this%assign_element(j, j-gaps(g)) !this%list(j) = this%list(j - gaps(g))
                j = j - gaps(g)
@@ -143,7 +147,7 @@ contains
 
 #ifdef DEBUG
       fail = .false.
-      do i = this%l_bound(), this%u_bound() - 1
+      do i = lb, ub - 1
          if (this%compare_elements(i, i+1)) then
             write(msg,*)"this%list(",i+1,") < this%list(",i,")%id"
             call warn(msg)

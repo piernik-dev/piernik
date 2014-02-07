@@ -688,7 +688,7 @@ contains
          cgl => leaves%first
          do while (associated(cgl))
             cg => cgl%cg
-            cg%q(source)%arr(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = fpiG * sum(cg%u(i_all_dens, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), dim=1)
+            cgl%cg%q(source)%arr(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = fpiG * sum(cg%u(i_all_dens, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), dim=1)
             cgl => cgl%nxt
          enddo
          call pset%map(source, fpiG)
@@ -717,8 +717,8 @@ contains
                      fac = 2. * cg%idx2 / fpiG
                      if (dom%geometry_type == GEO_RPZ .and. (cg%x(cg%ijkse(xdim,side)).notequals.zero)) &
                           & fac = fac - 1./(cg%dx * cg%x(cg%ijkse(xdim,side)) * fpiG) !> BEWARE is it cg%x(ie), cg%x(ie+1) or something in the middle?
-                     cg%q(source)%arr       (cg%ijkse(xdim,side), cg%js:cg%je, cg%ks:cg%ke) = &
-                          & cg%q(source)%arr(cg%ijkse(xdim,side), cg%js:cg%je, cg%ks:cg%ke) - &
+                     cgl%cg%q(source)%arr       (cg%ijkse(xdim,side), cg%js:cg%je, cg%ks:cg%ke) = &
+                          & cgl%cg%q(source)%arr(cg%ijkse(xdim,side), cg%js:cg%je, cg%ks:cg%ke) - &
                           & cg%mg%bnd_x(                          cg%js:cg%je, cg%ks:cg%ke, side) * fac
                      if (apply_src_Mcorrection) cg%wa(cg%ijkse(xdim,side), cg%js:cg%je, cg%ks:cg%ke) = cg%wa(cg%ijkse(xdim,side), cg%js:cg%je, cg%ks:cg%ke) + 1
                   endif
