@@ -45,7 +45,7 @@ module refinement_flag
    end type SFC_candidate
 
    type :: ref_flag
-      logical :: refine   !> a request to refine
+      logical :: refine   !> a request to refine, deprecated: use cg%refinemap whenever possible
       logical :: derefine !> a request to derefine
       type(SFC_candidate), allocatable, dimension(:) :: SFC_refine_list
    contains

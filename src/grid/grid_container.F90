@@ -1204,7 +1204,7 @@ contains
    subroutine refinemap2SFC_list(this)
 
       use constants,  only: refinement_factor, xdim, ydim, zdim, I_ONE
-      use dataio_pub, only: die
+      use dataio_pub, only: die, warn
       use domain,     only: AMR_bsize
 
       implicit none
@@ -1216,6 +1216,7 @@ contains
          enumerator :: NONE, REFINE, LEAF
       end enum
       integer :: type
+      logical, save :: warned = .false.
 
       this%refinemap = this%refinemap .and. this%leafmap
       type = NONE
@@ -1223,6 +1224,10 @@ contains
          type = REFINE
       else if (this%refine_flags%refine) then
          type = LEAF
+         if (.not. warned) then
+            warned = .true.
+            call warn("[grid_container:refinemap2SFC_list] direct use og cg%refine_flags%refine is deprecated")
+         end if
       end if
 
       if (type ==NONE) return
