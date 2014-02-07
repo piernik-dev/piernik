@@ -551,7 +551,10 @@ contains
 !!$               enddo
 !!$            endif
 
-            call cgl%cg%refine_flags%init
+            if (allocated(cgl%cg%refine_flags%SFC_refine_list)) then
+               deallocate(cgl%cg%refine_flags%SFC_refine_list)
+               allocate(cgl%cg%refine_flags%SFC_refine_list(0))
+            endif
             cgl%cg%refinemap = .false.
             do k = lbound(cgl%cg%leafmap, dim=3), ubound(cgl%cg%leafmap, dim=3)
                do j = lbound(cgl%cg%leafmap, dim=2), ubound(cgl%cg%leafmap, dim=2)
