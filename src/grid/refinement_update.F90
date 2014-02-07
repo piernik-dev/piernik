@@ -383,7 +383,8 @@ contains
       use cg_level_finest,    only: finest
       use cg_list,            only: cg_list_element
       use constants,          only: refinement_factor, LO, HI, ndims
-      use dataio_pub,         only: warn
+      use domain,             only: AMR_bsize
+      use dataio_pub,         only: warn, die
       use mergebox,           only: wmap
 
       implicit none
@@ -401,19 +402,28 @@ contains
       endif
 
       if (.not. associated(curl%finer)) call finest%add_finer
-
-      if (.not. all(cgl%cg%leafmap)) then ! decompose the partially refined grid container into boxes that contain all leafcells
-         box_8 = int(cgl%cg%ijkse, kind=8)
-         call lmap%init(box_8)
-         lmap%map(cgl%cg%is:cgl%cg%ie, cgl%cg%js:cgl%cg%je, cgl%cg%ks:cgl%cg%ke) = cgl%cg%leafmap(:,:,:)
-         call lmap%find_boxes
-         do b = lbound(lmap%blist%blist, dim=1), ubound(lmap%blist%blist, dim=1)
-            call curl%finer%add_patch(int((lmap%blist%blist(b)%b(:,HI)-lmap%blist%blist(b)%b(:,LO)+1)*refinement_factor, kind=8), lmap%blist%blist(b)%b(:,LO)*refinement_factor)
-         enddo
-         call lmap%cleanup
+      if (size(cgl%cg%refine_flags%SFC_refine_list) > 0) then ! we've got detailed map!
+         do b = lbound(cgl%cg%refine_flags%SFC_refine_list, dim=1), ubound(cgl%cg%refine_flags%SFC_refine_list, dim=1)
+            if (cgl%cg%refine_flags%SFC_refine_list(b)%level == curl%finer%level_id) then
+               call curl%finer%add_patch(int(AMR_bsize, kind=8), cgl%cg%refine_flags%SFC_refine_list(b)%off)
+            else
+               call die("[refinement_update:refine_one_grid] wrong level!")
+            end if
+         end do
       else
-         call curl%finer%add_patch(int(cgl%cg%n_b(:)*refinement_factor, kind=8), cgl%cg%my_se(:, LO)*refinement_factor)
-      endif
+         if (.not. all(cgl%cg%leafmap)) then ! decompose the partially refined grid container into boxes that contain all leafcells
+            box_8 = int(cgl%cg%ijkse, kind=8)
+            call lmap%init(box_8)
+            lmap%map(cgl%cg%is:cgl%cg%ie, cgl%cg%js:cgl%cg%je, cgl%cg%ks:cgl%cg%ke) = cgl%cg%leafmap(:,:,:)
+            call lmap%find_boxes
+            do b = lbound(lmap%blist%blist, dim=1), ubound(lmap%blist%blist, dim=1)
+               call curl%finer%add_patch(int((lmap%blist%blist(b)%b(:,HI)-lmap%blist%blist(b)%b(:,LO)+1)*refinement_factor, kind=8), lmap%blist%blist(b)%b(:,LO)*refinement_factor)
+            enddo
+            call lmap%cleanup
+         else
+            call curl%finer%add_patch(int(cgl%cg%n_b(:)*refinement_factor, kind=8), cgl%cg%my_se(:, LO)*refinement_factor)
+         endif
+      end if
 
    end subroutine refine_one_grid
 
