@@ -101,6 +101,8 @@ contains
       endif
 #endif
 
+      call ref_flags_to_ref_list
+
    end subroutine scan_for_refinements
 
 !> \brief Sanitize refinement requests
@@ -129,6 +131,31 @@ contains
       enddo
 
    end subroutine sanitize_all_ref_flags
+
+!> \brief Convert refinement requests to list of blocks
+
+   subroutine ref_flags_to_ref_list
+
+      use cg_list,            only: cg_list_element
+      use cg_level_base,      only: base
+      use cg_level_connected, only: cg_level_connected_T
+
+      implicit none
+
+      type(cg_list_element), pointer :: cgl
+      type(cg_level_connected_T), pointer :: curl
+
+      curl => base%level
+      do while (associated(curl))
+         cgl => curl%first
+         do while (associated(cgl))
+            call cgl%cg%refinemap2SFC_list ! assumed that it is called only once and the blocks aren't doubly added
+            cgl => cgl%nxt
+         enddo
+         curl => curl%finer
+      enddo
+
+   end subroutine ref_flags_to_ref_list
 
 !>
 !! \brief Update the refinement topology
