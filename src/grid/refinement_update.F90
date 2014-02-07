@@ -37,6 +37,7 @@ module refinement_update
 
 contains
 
+#define VERBOSE
    subroutine scan_for_refinements
 
       use cg_level_connected,    only: cg_level_connected_T
@@ -68,7 +69,12 @@ contains
       call all_cg%clear_ref_flags
       cnt = 0
 
-      if (associated(problem_refine_derefine)) call problem_refine_derefine ! call user routine first, so it cannot alter flags set by automatic routines
+      if (associated(problem_refine_derefine)) then
+         call problem_refine_derefine ! call user routine first, so it cannot alter flags set by automatic routines
+#ifdef VERBOSE
+         call sanitize_all_ref_flags
+#endif
+      endif
 
 #ifdef VERBOSE
       cnt(PROBLEM) = all_cg%count_ref_flags()
@@ -77,11 +83,13 @@ contains
 
       ! call mark_shocks !> \todo implement automatic refinement criteria
 #ifdef VERBOSE
+!      call sanitize_all_ref_flags
 !      cnt(SHOCKS) = all_cg%count_ref_flags()
 !      call piernik_MPI_Allreduce(cnt(SHOCKS), pSUM)
 #endif
 
       call mark_all_primitives
+      call sanitize_all_ref_flags
 #ifdef VERBOSE
       cnt(PRIMITIVES) = all_cg%count_ref_flags()
       call piernik_MPI_Allreduce(cnt(PRIMITIVES), pSUM)
@@ -89,13 +97,36 @@ contains
          write(msg,'(2(a,i6),a)')"[refinement_update:scan_for_refinements] User-defined routine marked ", &
               &                  cnt(PROBLEM), " block(s) for refinement, primitives marked additional ", &
               &                  cnt(PRIMITIVES)-cnt(PROBLEM)," block(s)"
-      else
-         write(msg,'(a)')"[refinement_update:scan_for_refinements] No blocks marked for refinement"
+         if (master) call printinfo(msg)
       endif
-      if (master) call printinfo(msg)
 #endif
 
    end subroutine scan_for_refinements
+
+!> \brief Sanitize refinement requests
+
+   subroutine sanitize_all_ref_flags
+
+      use cg_list,            only: cg_list_element
+      use cg_level_base,      only: base
+      use cg_level_connected, only: cg_level_connected_T
+
+      implicit none
+
+      type(cg_list_element), pointer :: cgl
+      type(cg_level_connected_T), pointer :: curl
+
+      curl => base%level
+      do while (associated(curl))
+         cgl => curl%first
+         do while (associated(cgl))
+            call cgl%cg%refine_flags%sanitize(cgl%cg%level_id)
+            cgl => cgl%nxt
+         enddo
+         curl => curl%finer
+      enddo
+
+   end subroutine sanitize_all_ref_flags
 
 !>
 !! \brief Update the refinement topology
@@ -167,7 +198,6 @@ contains
             cgl => curl%first
             do while (associated(cgl))
                if (any(cgl%cg%leafmap)) then
-                  call cgl%cg%refine_flags%sanitize(cgl%cg%level_id)
                   if (cgl%cg%refine_flags%refine) then
                      call refine_one_grid(curl, cgl)
                      if (present(act_count)) act_count = act_count + 1
