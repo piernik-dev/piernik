@@ -408,8 +408,8 @@ contains
                call curl%finer%add_patch(int(AMR_bsize, kind=8), cgl%cg%refine_flags%SFC_refine_list(b)%off)
             else
                call die("[refinement_update:refine_one_grid] wrong level!")
-            end if
-         end do
+            endif
+         enddo
       else
          if (.not. all(cgl%cg%leafmap)) then ! decompose the partially refined grid container into boxes that contain all leafcells
             box_8 = int(cgl%cg%ijkse, kind=8)
@@ -423,7 +423,7 @@ contains
          else
             call curl%finer%add_patch(int(cgl%cg%n_b(:)*refinement_factor, kind=8), cgl%cg%my_se(:, LO)*refinement_factor)
          endif
-      end if
+      endif
 
    end subroutine refine_one_grid
 
@@ -540,7 +540,6 @@ contains
             enddo
 
             !find highest refinement level witin a "range" cells from the border of the leaf map
-            lnear = -huge(1)
 ! dirty check
 !!$            if (maxval(cgl%cg%wa) > 10) then
 !!$               do k = lbound(cgl%cg%wa, dim=3), ubound(cgl%cg%wa, dim=3)
@@ -552,27 +551,31 @@ contains
 !!$               enddo
 !!$            endif
 
+            call cgl%cg%refine_flags%init
+            cgl%cg%refinemap = .false.
             do k = lbound(cgl%cg%leafmap, dim=3), ubound(cgl%cg%leafmap, dim=3)
                do j = lbound(cgl%cg%leafmap, dim=2), ubound(cgl%cg%leafmap, dim=2)
                   do i = lbound(cgl%cg%leafmap, dim=1), ubound(cgl%cg%leafmap, dim=1)
-                     if (int(cgl%cg%prolong_xyz(i, j, k)) == BOUNDARY) &
-                          lnear = max(lnear, int(min(huge(I_ONE)/10.,maxval(cgl%cg%wa(i-range*dom%D_x:i+range*dom%D_x, j-range*dom%D_y:j+range*dom%D_y, k-range*dom%D_z:k+range*dom%D_z)))))
+                     if (int(cgl%cg%prolong_xyz(i, j, k)) == BOUNDARY) then
+                        lnear = int(min(huge(I_ONE)/10.,maxval(cgl%cg%wa(i-range*dom%D_x:i+range*dom%D_x, j-range*dom%D_y:j+range*dom%D_y, k-range*dom%D_z:k+range*dom%D_z))))
+                        if (lnear > lleaf) then
+                           cgl%cg%refine_flags%derefine = .false.
+                           if (lnear > lleaf+1 .and. lnear <= finest%level%level_id) then
+                              cgl%cg%refinemap(i, j, k) = .true.
+                              if (present(correct)) correct = .false.
+                           endif
+                        endif
+
+                     endif
                   enddo
                enddo
             enddo
+            call cgl%cg%refinemap2SFC_list
 
-            if (lnear > lleaf) then
-               cgl%cg%refine_flags%derefine = .false.
-               if (lnear > lleaf+1 .and. lnear <= finest%level%level_id) then
-                  cgl%cg%refine_flags%refine = .true.
-                  if (present(correct)) then
-                     correct = .false.
-                  else
-                     write(msg,'(a,i3,a,6i5,a,i3)')"[refinement_update:fix_refinement] neighbour level ^",lnear," at [",cgl%cg%my_se,"] ^",cgl%cg%level_id
-                     call warn(msg)
-                     failed = .true.
-                  endif
-               endif
+            if (any(cgl%cg%refinemap) .and. .not. present(correct)) then
+               write(msg,'(a,i3,a,6i5,a,i3)')"[refinement_update:fix_refinement] neighbour level ^",lnear," at [",cgl%cg%my_se,"] ^",cgl%cg%level_id
+               call warn(msg)
+               failed = .true.
             endif
 
          else
