@@ -344,7 +344,7 @@ contains
                if (tgt3d) then
                   allocate(this%ms%sl(p, IN )%buf(this%ms%sl(p, IN )%total_size))
                   allocate(this%ms%sl(p, OUT)%buf(this%ms%sl(p, OUT)%total_size))
-                  do i = lbound(this%ms%sl(p, OUT)%list, dim=1), ubound(this%ms%sl(p, OUT)%list, dim=1)
+                  do i = lbound(this%ms%sl(p, OUT)%list, dim=1), this%ms%sl(p, OUT)%cur_last
                      if (dmask( this%ms%sl(p, OUT)%list(i)%dir)) then
                         this     %ms%sl(p, OUT)%buf( &
                              this%ms%sl(p, OUT)%list(i)%offset: &
@@ -363,7 +363,7 @@ contains
                else
                   allocate(this%ms%sl(p, IN )%buf(this%ms%sl(p, IN )%total_size*wna%lst(ind)%dim4))
                   allocate(this%ms%sl(p, OUT)%buf(this%ms%sl(p, OUT)%total_size*wna%lst(ind)%dim4))
-                  do i = lbound(this%ms%sl(p, OUT)%list, dim=1), ubound(this%ms%sl(p, OUT)%list, dim=1)
+                  do i = lbound(this%ms%sl(p, OUT)%list, dim=1), this%ms%sl(p, OUT)%cur_last
                      if (dmask( this%ms%sl(p, OUT)%list(i)%dir)) then
                         this     %ms%sl(p, OUT)%buf( &
                             (this%ms%sl(p, OUT)%list(i)%offset - I_ONE) * wna%lst(ind)%dim4 + I_ONE : &
@@ -398,7 +398,7 @@ contains
          if (p /= proc) then
             if (this%ms%sl(p, IN)%total_size /= 0) then ! we have something received from process p
                if (tgt3d) then
-                  do i = lbound(this%ms%sl(p, IN)%list, dim=1), ubound(this%ms%sl(p, IN)%list, dim=1)
+                  do i = lbound(this%ms%sl(p, IN)%list, dim=1), this%ms%sl(p, IN)%cur_last
                      if (dmask( this%ms%sl(p, IN)%list(i)%dir)) then
                         this     %ms%sl(p, IN)%list(i)%cg%q(ind)%arr( &
                              this%ms%sl(p, IN)%list(i)%se(xdim, LO): &
@@ -419,7 +419,7 @@ contains
                      endif
                   enddo
                else
-                  do i = lbound(this%ms%sl(p, IN)%list, dim=1), ubound(this%ms%sl(p, IN)%list, dim=1)
+                  do i = lbound(this%ms%sl(p, IN)%list, dim=1), this%ms%sl(p, IN)%cur_last
                      if (dmask( this%ms%sl(p, IN)%list(i)%dir)) then
                         this     %ms%sl(p, IN)%list(i)%cg%w(ind)%arr( &
                              1:wna%lst(ind)%dim4, &
