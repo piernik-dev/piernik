@@ -441,7 +441,6 @@ contains
       use cg_leaves,        only: leaves
       use cg_list,          only: cg_list_element
       use named_array_list, only: qna
-      use refinement,       only: ref_flag
 
       implicit none
 
@@ -454,9 +453,10 @@ contains
       do while (associated(cgl))
          if (any(cgl%cg%leafmap)) then
             delta_pot = maxval(cgl%cg%q(qna%ind(apot_n))%span(cgl%cg%ijkse), mask=cgl%cg%leafmap) - minval(cgl%cg%q(qna%ind(apot_n))%span(cgl%cg%ijkse), mask=cgl%cg%leafmap)
-            cgl%cg%refine_flags = ref_flag( delta_pot >= ref_thr, delta_pot < deref_thr )
+            cgl%cg%refine_flags%refine   = (delta_pot >= ref_thr  )
+            cgl%cg%refine_flags%derefine = (delta_pot <  deref_thr)
          else
-            cgl%cg%refine_flags = ref_flag( .false., .false. )
+            call cgl%cg%refine_flags%init
          endif
          cgl => cgl%nxt
       enddo

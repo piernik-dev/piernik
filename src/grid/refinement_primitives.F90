@@ -86,9 +86,7 @@ contains
                do while (associated(cgl))
                   cgl%cg%refine_flags%derefine = .true.
                   if (all(ip_ijk >= cgl%cg%ijkse(:, LO)) .and. all(ip_ijk <= cgl%cg%ijkse(:, HI))) then
-                     if (curl%level_id < refine_points(ip)%level) then
-                        if (cgl%cg%leafmap(ip_ijk(xdim), ip_ijk(ydim), ip_ijk(zdim))) cgl%cg%refine_flags%refine = .true.
-                     endif
+                     if (curl%level_id < refine_points(ip)%level) cgl%cg%refinemap(ip_ijk(xdim), ip_ijk(ydim), ip_ijk(zdim)) = .true.
                      cgl%cg%refine_flags%derefine = .false.
                   endif
                   cgl => cgl%nxt
@@ -142,9 +140,9 @@ contains
                      if (curl%level_id < refine_boxes(ip)%level) then
                         cg_ijk(:, LO) = min(max(int(ip_ijk(:, LO), kind=4), cgl%cg%ijkse(:, LO)), cgl%cg%ijkse(:, HI))
                         cg_ijk(:, HI) = min(max(int(ip_ijk(:, HI), kind=4), cgl%cg%ijkse(:, LO)), cgl%cg%ijkse(:, HI))
-                        if (any(cgl%cg%leafmap(cg_ijk(xdim, LO):cg_ijk(xdim, HI), &
-                             &                 cg_ijk(ydim, LO):cg_ijk(ydim, HI), &
-                             &                 cg_ijk(zdim, LO):cg_ijk(zdim, HI)))) cgl%cg%refine_flags%refine = .true.
+                        cgl%cg%refinemap(cg_ijk(xdim, LO):cg_ijk(xdim, HI), &
+                             &           cg_ijk(ydim, LO):cg_ijk(ydim, HI), &
+                             &           cg_ijk(zdim, LO):cg_ijk(zdim, HI)) = .true.
                      endif
                      cgl%cg%refine_flags%derefine = .false.
                   endif

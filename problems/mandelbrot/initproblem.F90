@@ -262,7 +262,6 @@ contains
       use cg_leaves,        only: leaves
       use fluidindex,       only: iarr_all_dn
       use named_array_list, only: wna
-      use refinement,       only: ref_flag
 
       implicit none
 
@@ -283,7 +282,8 @@ contains
 !!$                 & exp(minval(cgl%cg%q(qna%ind(mand_n))%span(cgl%cg%ijkse), mask=cgl%cg%leafmap))
              nitd = exp(maxval(cgl%cg%w(wna%fi)%arr(iarr_all_dn(1), cgl%cg%is:cgl%cg%ie, cgl%cg%js:cgl%cg%je, cgl%cg%ks:cgl%cg%ke), mask=cgl%cg%leafmap)) - &
                   & exp(minval(cgl%cg%w(wna%fi)%arr(iarr_all_dn(1), cgl%cg%is:cgl%cg%ie, cgl%cg%js:cgl%cg%je, cgl%cg%ks:cgl%cg%ke), mask=cgl%cg%leafmap))
-            cgl%cg%refine_flags = ref_flag( nitd >= ref_thr, nitd < deref_thr )
+            cgl%cg%refine_flags%refine   = (nitd >= ref_thr  )
+            cgl%cg%refine_flags%derefine = (nitd <  deref_thr)
          endif
          cgl => cgl%nxt
       enddo

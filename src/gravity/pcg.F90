@@ -67,7 +67,7 @@ contains
       use domain,           only: AMR_bsize
       use mpisetup,         only: master
       use named_array_list, only: qna
-      use refinement,       only: level_max
+      use refinement_flag,  only: level_max
 
       implicit none
 

@@ -61,7 +61,8 @@ contains
       use interactions,          only: init_interactions
       use initproblem,           only: problem_initial_conditions, read_problem_par, problem_pointers
       use mpisetup,              only: init_mpi, master
-      use refinement,            only: init_refinement, level_max
+      use refinement,            only: init_refinement
+      use refinement_flag,       only: level_max
       use refinement_update,     only: update_refinement
       use units,                 only: init_units
       use user_hooks,            only: problem_post_restart
