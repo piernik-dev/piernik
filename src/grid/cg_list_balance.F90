@@ -262,7 +262,7 @@ contains
          p = LAST
          do while (p >= FIRST .and. i /= 0)
             if (i<0) then
-               do while (from(p+1)>0)
+               do while (from(p+1)>0 .and. i<0)
                   from(p+1) = from(p+1) - I_ONE
                   i = i + 1
                enddo
