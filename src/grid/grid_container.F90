@@ -1232,6 +1232,8 @@ contains
 
       if (type == NONE) return
 
+      if (any(AMR_bsize == 0)) return ! this routine works only with blocky AMR
+
       do i = int(((this%is - this%level_off(xdim))*refinement_factor) / AMR_bsize(xdim)), int(((this%ie - this%level_off(xdim))*refinement_factor + I_ONE) / AMR_bsize(xdim))
          ifs = max(int(this%is), (i*AMR_bsize(xdim))/refinement_factor)
          ife = min(int(this%ie), ((i+I_ONE)*AMR_bsize(xdim)-I_ONE)/refinement_factor)
