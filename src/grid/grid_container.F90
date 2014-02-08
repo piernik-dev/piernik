@@ -1214,6 +1214,8 @@ contains
 
       integer :: i, j, k, ifs, ife, jfs, jfe, kfs, kfe
 
+      if (any(AMR_bsize == 0)) return ! this routine works only with blocky AMR
+
       do i = int(((this%is - this%level_off(xdim))*refinement_factor) / AMR_bsize(xdim)), int(((this%ie - this%level_off(xdim))*refinement_factor + I_ONE) / AMR_bsize(xdim))
          ifs = max(this%is, (i*AMR_bsize(xdim))/refinement_factor)
          ife = min(this%ie, ((i+I_ONE)*AMR_bsize(xdim)-I_ONE)/refinement_factor)
