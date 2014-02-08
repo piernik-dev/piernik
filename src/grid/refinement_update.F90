@@ -410,6 +410,7 @@ contains
                call die("[refinement_update:refine_one_grid] wrong level!")
             endif
          enddo
+         call cgl%cg%refine_flags%init ! it is safer to forget it now
       else
          if (.not. all(cgl%cg%leafmap)) then ! decompose the partially refined grid container into boxes that contain all leafcells
             box_8 = int(cgl%cg%ijkse, kind=8)
