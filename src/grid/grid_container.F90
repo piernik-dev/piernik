@@ -1226,11 +1226,11 @@ contains
          type = LEAF
          if (.not. warned) then
             warned = .true.
-            call warn("[grid_container:refinemap2SFC_list] direct use og cg%refine_flags%refine is deprecated")
+            call warn("[grid_container:refinemap2SFC_list] direct use of cg%refine_flags%refine is deprecated")
          endif
       endif
 
-      if (type ==NONE) return
+      if (type == NONE) return
 
       do i = int(((this%is - this%level_off(xdim))*refinement_factor) / AMR_bsize(xdim)), int(((this%ie - this%level_off(xdim))*refinement_factor + I_ONE) / AMR_bsize(xdim))
          ifs = max(int(this%is), (i*AMR_bsize(xdim))/refinement_factor)
