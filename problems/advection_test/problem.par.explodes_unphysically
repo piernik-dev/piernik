@@ -1,3 +1,8 @@
+! This setup begins to behave in weird way at about 110th (12k+ timesteps) cycle on the periodic domain with LOCAL_FR_SPEED.
+! It should just diffuse, but at some point bubbles form and explode/expand, messing up all the initial structure.
+! This effect does not occur on 64x64, at least not within first 1000 cycles.
+! With GLOBAL_FR_SPEED the simulation gets disturbed after only 10 cycles.
+
  $BASE_DOMAIN
     n_d = 128, 128, 1
     bnd_xl = 'per'
