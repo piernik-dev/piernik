@@ -1245,13 +1245,12 @@ contains
             do k = int(((this%ks - this%level_off(zdim))*refinement_factor) / AMR_bsize(zdim)), int(((this%ke - this%level_off(zdim))*refinement_factor + I_ONE) / AMR_bsize(zdim))
                kfs = max(int(this%ks), int(this%level_off(zdim)) + (k*AMR_bsize(zdim))/refinement_factor)
                kfe = min(int(this%ke), int(this%level_off(zdim)) + ((k+I_ONE)*AMR_bsize(zdim)-I_ONE)/refinement_factor)
-
                select case (type)
                   case (REFINE)
-                     if (any(this%refinemap(ifs:ife, jfs:jfe, kfs:kfe))) call this%refine_flags%add(this%level_id+I_ONE, [i, j, k]*AMR_bsize-this%level_off)
+                     if (any(this%refinemap(ifs:ife, jfs:jfe, kfs:kfe))) call this%refine_flags%add(this%level_id+I_ONE, int([i, j, k]*AMR_bsize, kind=8)+refinement_factor*this%level_off, refinement_factor*this%level_off)
                   case (LEAF)
                      if (all(this%leafmap(ifs:ife, jfs:jfe, kfs:kfe))) then
-                        call this%refine_flags%add(this%level_id+I_ONE, [i, j, k]*AMR_bsize-this%level_off)
+                        call this%refine_flags%add(this%level_id+I_ONE, int([i, j, k]*AMR_bsize, kind=8)+refinement_factor*this%level_off, refinement_factor*this%level_off)
                      else if (any(this%leafmap(ifs:ife, jfs:jfe, kfs:kfe))) then
                         call die("[grid_container:refinemap2SFC_list] cannot refine partially leaf parf of the grid")
                      endif

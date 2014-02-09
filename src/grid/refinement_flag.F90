@@ -97,7 +97,7 @@ contains
 
 !> \brief Appends one element to SFC_refine_list
 
-   subroutine add(this, level, off)
+   subroutine add(this, level, off, l_off)
 
       use constants, only: ndims
       use ordering,  only: SFC_order
@@ -107,8 +107,9 @@ contains
       class(ref_flag),                   intent(inout) :: this   ! object invoking this procedure
       integer(kind=4),                   intent(in)    :: level  ! level at which we want to put grid block
       integer(kind=8), dimension(ndims), intent(in)    :: off    ! offset of grid block
+      integer(kind=8), dimension(ndims), intent(in)    :: l_off  ! offset of the level
 
-      this%SFC_refine_list = [ this%SFC_refine_list, SFC_candidate(int(level, kind=8), SFC_order(off), off) ] !lhs reallocation
+      this%SFC_refine_list = [ this%SFC_refine_list, SFC_candidate(int(level, kind=8), SFC_order(off-l_off), off) ] !lhs reallocation
 
    end subroutine add
 
