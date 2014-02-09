@@ -30,23 +30,15 @@
 
 module refinement
 
-   use constants, only: ndims, LO, HI
+   use constants,       only: ndims, LO, HI
+   use refinement_flag, only: level_min, level_max
 
    implicit none
 
    private
-   public :: level_max, level_min, n_updAMR, allow_face_rstep, allow_corner_rstep, oop_thr, refine_points, refine_boxes, &
-        &    init_refinement, ref_flag, emergency_fix, set_n_updAMR, strict_SFC_ordering, prefer_n_bruteforce
+   public :: n_updAMR, allow_face_rstep, allow_corner_rstep, oop_thr, refine_points, &
+        &    refine_boxes, init_refinement, emergency_fix, set_n_updAMR, strict_SFC_ordering, prefer_n_bruteforce
 
-   type :: ref_flag
-      logical :: refine   !> a request to refine
-      logical :: derefine !> a request to derefine
-    contains
-      procedure :: sanitize
-   end type ref_flag
-
-   integer(kind=4), protected :: level_min           !< minimum allowed refinement
-   integer(kind=4), protected :: level_max           !< maximum allowed refinement (don't need to be reached if not necessary)
    integer(kind=4), protected :: n_updAMR            !< how often to update the refinement structure
    logical,         protected :: allow_face_rstep    !< Allows >1 refinement step across faces (do not use it for any physical problems)
    logical,         protected :: allow_corner_rstep  !< Allows >1 refinement step across edges and corners (do not use it for any physical problems)
@@ -214,25 +206,6 @@ contains
       emergency_fix = .false.
 
    end subroutine init_refinement
-
-!> \brief sanitize the refinement flags
-
-   subroutine sanitize(this, my_level)
-
-      implicit none
-
-      class(ref_flag), intent(inout) :: this     ! object invoking this procedure
-      integer(kind=4), intent(in)    :: my_level ! refinement level at which the flag has to be sanitized
-
-      if (my_level >= level_max) this%refine   = .false.
-      if (my_level <  level_min) this%refine   = .true.
-
-      if (this%refine) this%derefine = .false.
-
-      if (my_level >  level_max) this%derefine = .true.
-      if (my_level <= level_min) this%derefine = .false.
-
-   end subroutine sanitize
 
 !> \brief Change the protected parameter n_updAMR
 

@@ -188,7 +188,7 @@ contains
       use cg_list,            only: cg_list_element
       use constants,          only: refinement_factor, xdim, ydim, zdim, LO
       use dataio_pub,         only: printinfo
-      use refinement,         only: level_max
+      use refinement_flag,    only: level_max
 
       implicit none
 

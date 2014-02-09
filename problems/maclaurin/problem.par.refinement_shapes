@@ -72,8 +72,9 @@
     a1     = 0.75
     e      = 0.
     nsub   = 3
-    deref_thr = 1.9
-    ref_thr = 2.
+    ! switch off problem's refinement criteria
+    deref_thr = 199.
+    ref_thr = 200.
  /
 
  $MULTIGRID_SOLVER
@@ -89,7 +90,7 @@
  /
 
  $AMR
-    level_max = 2
-    refine_points(1) = 2, -0.1, -0.1, 0.
-    refine_boxes(1)  = 2, .1, .5, -.1, 1.0, .9, .1
+    level_max = 4
+    refine_points(1) = 4, -0.1, -0.1, 0.
+    refine_boxes(1)  = 2, .1, .5, -.1, 1.1, .7, .1
  /

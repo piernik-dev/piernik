@@ -454,8 +454,7 @@ contains
 
       cgl => this%first
       do while (associated(cgl))
-         cgl%cg%refine_flags%refine   = .false.
-         cgl%cg%refine_flags%derefine = .false.
+         call cgl%cg%refine_flags%init
          cgl => cgl%nxt
       enddo
 
@@ -475,7 +474,7 @@ contains
       cnt = 0
       cgl => this%first
       do while (associated(cgl))
-         if (cgl%cg%refine_flags%refine) cnt = cnt + 1
+         if ( cgl%cg%refine_flags%refine .or. size(cgl%cg%refine_flags%SFC_refine_list) > 0) cnt = cnt + 1
          cgl => cgl%nxt
       enddo
 

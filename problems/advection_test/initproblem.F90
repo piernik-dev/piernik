@@ -522,58 +522,48 @@ contains
 
    subroutine mark_surface
 
-      use cg_leaves,        only: leaves
-      use cg_list,          only: cg_list_element
-      use constants,        only: LO, HI, xdim, ydim, zdim
-      use fluidindex,       only: iarr_all_dn
-      use func,             only: operator(.equals.)
-      use named_array_list, only: wna, qna
+      use all_boundaries, only: all_bnd
+      use cg_leaves,      only: leaves
+      use cg_list,        only: cg_list_element
+      use domain,         only: dom
+      use fluidindex,     only: iarr_all_dn
 
       implicit none
 
       type(cg_list_element), pointer :: cgl
-      real :: dmin, dmax
-      integer :: id
-      real, parameter :: flag = 1.
+      integer :: id, i, j, k
+      real :: diff, diffmax
 
       ! make sure that density is communicated
       !> \todo set up a flag that tells whether this is required or the data has been recently exchanged
-      call leaves%internal_boundaries_4d(wna%fi)
+      call all_bnd
 
-      ! fill cg%wa with its guardcells with values corresponding to cgl%cg%leafmap
-      !> \todo Consider extending cgl%cg%leafmap into guardcells if it will be helpful in other places too
-      cgl => leaves%first
-      do while (associated(cgl))
-         cgl%cg%wa = 0.
-         where (cgl%cg%leafmap(:,:,:)) cgl%cg%wa(cgl%cg%is:cgl%cg%ie, cgl%cg%js:cgl%cg%je, cgl%cg%ks:cgl%cg%ke) = flag
-         cgl => cgl%nxt
-      enddo
-      call leaves%internal_boundaries_3d(qna%wai)
-
-      ! Detect the edge of the density pulse using density values relative to initial values
+      ! Detect the edge of the density pulse
       !> \deprecated this method may refine the whole domain when the pulse gets diffused enough
-      !> \todo replace with some slope filter
       cgl => leaves%first
       do while (associated(cgl))
-         dmax = -huge(1.)
-         dmin =  huge(1.)
-         do id = lbound(iarr_all_dn, dim=1), ubound(iarr_all_dn, dim=1)
-            ! Look one cell beyond local boundary
-            dmax = max(dmax, maxval(cgl%cg%u(id, cgl%cg%lh1(xdim, LO):cgl%cg%lh1(xdim, HI), &
-                 &                               cgl%cg%lh1(ydim, LO):cgl%cg%lh1(ydim, HI), &
-                 &                               cgl%cg%lh1(zdim, LO):cgl%cg%lh1(zdim, HI)), mask = (cgl%cg%wa( &
-                 &                               cgl%cg%lh1(xdim, LO):cgl%cg%lh1(xdim, HI), &
-                 &                               cgl%cg%lh1(ydim, LO):cgl%cg%lh1(ydim, HI), &
-                 &                               cgl%cg%lh1(zdim, LO):cgl%cg%lh1(zdim, HI)) .equals. flag)))
-            dmin = min(dmin, minval(cgl%cg%u(id, cgl%cg%lh1(xdim, LO):cgl%cg%lh1(xdim, HI), &
-                 &                               cgl%cg%lh1(ydim, LO):cgl%cg%lh1(ydim, HI), &
-                 &                               cgl%cg%lh1(zdim, LO):cgl%cg%lh1(zdim, HI)), mask = (cgl%cg%wa( &
-                 &                               cgl%cg%lh1(xdim, LO):cgl%cg%lh1(xdim, HI), &
-                 &                               cgl%cg%lh1(ydim, LO):cgl%cg%lh1(ydim, HI), &
-                 &                               cgl%cg%lh1(zdim, LO):cgl%cg%lh1(zdim, HI)) .equals. flag)))
-         enddo
-         cgl%cg%refine_flags%derefine = (dmax < (1+deref_thr)*pulse_low_density .or.  dmin > pulse_low_density * (pulse_amp - deref_thr))
-         cgl%cg%refine_flags%refine   = (dmax > (1+  ref_thr)*pulse_low_density .and. dmin < pulse_low_density * (pulse_amp -   ref_thr))
+         if (any(cgl%cg%leafmap)) then
+            diffmax = -huge(1.)
+            do id = lbound(iarr_all_dn, dim=1), ubound(iarr_all_dn, dim=1)
+               ! Look one cell beyond local boundary
+               do i = cgl%cg%is, cgl%cg%ie
+                  do j = cgl%cg%js, cgl%cg%je
+                     do k = cgl%cg%ks, cgl%cg%ke
+                        diff = maxval(abs(cgl%cg%u(id, i, j, k) - [ &
+                             &            cgl%cg%u(id, i+dom%D_x, j, k), &
+                             &            cgl%cg%u(id, i-dom%D_x, j, k), &
+                             &            cgl%cg%u(id, i, j+dom%D_y, k), &
+                             &            cgl%cg%u(id, i, j-dom%D_y, k), &
+                             &            cgl%cg%u(id, i, j, k+dom%D_z), &
+                             &            cgl%cg%u(id, i, j, k-dom%D_z) ] ) )
+                        cgl%cg%refinemap(i, j, k) = (diff > ref_thr * pulse_amp)
+                        diffmax = max(diffmax, diff)
+                     enddo
+                  enddo
+               enddo
+            enddo
+            cgl%cg%refine_flags%derefine = (diffmax < deref_thr * pulse_amp)
+         endif
          cgl => cgl%nxt
       enddo
 

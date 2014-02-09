@@ -646,32 +646,43 @@ contains
 
    subroutine mark_surface
 
-      use cg_leaves,        only: leaves
-      use cg_list,          only: cg_list_element
-      use fluidindex,       only: iarr_all_dn
-!      use named_array_list, only: wna
-      use refinement,       only: ref_flag
+      use all_boundaries, only: all_bnd
+      use cg_leaves,      only: leaves
+      use cg_list,        only: cg_list_element
+      use domain,         only: dom
+      use fluidindex,     only: iarr_all_dn
 
       implicit none
 
       type(cg_list_element), pointer :: cgl
-      real :: delta_dens, dmin, dmax
-      integer :: id
+      real :: ld, ldmax
+      integer :: id, i, j, k
+      integer , parameter :: dro = 1 ! derefine reach out
 
-!      call leaves%internal_boundaries_4d(wna%fi) !< enable it as soon as c2f and f2c routines will work
+      call all_bnd
 
       cgl => leaves%first
       do while (associated(cgl))
          if (any(cgl%cg%leafmap)) then
-            dmax = -huge(1.)
-            dmin =  huge(1.)
+            ldmax = -huge(1.)
             do id = lbound(iarr_all_dn, dim=1), ubound(iarr_all_dn, dim=1)
-               dmax = max(dmax, maxval(cgl%cg%u(id, cgl%cg%is:cgl%cg%ie, cgl%cg%js:cgl%cg%je, cgl%cg%ks:cgl%cg%ke), mask=cgl%cg%leafmap))
-               dmin = min(dmin, minval(cgl%cg%u(id, cgl%cg%is:cgl%cg%ie, cgl%cg%js:cgl%cg%je, cgl%cg%ks:cgl%cg%ke), mask=cgl%cg%leafmap))
+               do k = cgl%cg%ks-dro*dom%D_z, cgl%cg%ke+dro*dom%D_z
+                  do j = cgl%cg%js-dro*dom%D_y, cgl%cg%je+dro*dom%D_y
+                     do i = cgl%cg%is-dro*dom%D_x, cgl%cg%ie+dro*dom%D_x
+                        ld = 6 * cgl%cg%u(id, i,   j, k) - &
+                             &   cgl%cg%u(id, i-1, j, k) - cgl%cg%u(id, i+1, j, k) - &
+                             &   cgl%cg%u(id, i, j-1, k) - cgl%cg%u(id, i, j+1, k) - &
+                             &   cgl%cg%u(id, i, j, k-1) - cgl%cg%u(id, i, j, k+1)
+                        if (i >= cgl%cg%is .and. i <= cgl%cg%ie .and. j >= cgl%cg%js .and. j <= cgl%cg%je .and. k >= cgl%cg%ks .and. k <= cgl%cg%ke) &
+                             cgl%cg%refinemap(i, j, k) = ( abs(ld) >= ref_thr*d0 )
+                        ldmax = max(ldmax, abs(ld))
+                     end do
+                  end do
+               end do
             enddo
-            delta_dens = dmax - dmin
             !> \warning only selfgravitating fluids should be checked
-            cgl%cg%refine_flags = ref_flag( delta_dens >= ref_thr*d0, delta_dens < deref_thr*d0 )
+            cgl%cg%refine_flags%derefine = (ldmax <  deref_thr*d0)
+            ! no need to set cgl%cg%refine_flags%refine when we have cgl%cg%refinemap
          endif
          cgl => cgl%nxt
       enddo

@@ -30,11 +30,11 @@
 
 module grid_cont
 
-   use constants,   only: xdim, zdim, ndims, LO, HI, CENTER, INV_CENTER
-   use fluxtypes,   only: fluxarray, fluxpoint
-   use named_array, only: named_array4d, named_array3d
-   use refinement,  only: ref_flag
-   use real_vector, only: real_vec_T
+   use constants,       only: xdim, zdim, ndims, LO, HI, CENTER, INV_CENTER
+   use fluxtypes,       only: fluxarray, fluxpoint
+   use named_array,     only: named_array4d, named_array3d
+   use refinement_flag, only: ref_flag
+   use real_vector,     only: real_vec_T
 
    implicit none
 
@@ -154,6 +154,7 @@ module grid_cont
       integer(kind=8), dimension(ndims, LO:HI) :: my_se          !< own segment. my_se(:,LO) = 0; my_se(:,HI) = dom%n_d(:) - 1 would cover entire domain on a base level
                                                                  !! my_se(:,LO) = 0; my_se(:,HI) = finest%level%n_d(:) -1 would cover entire domain on the most refined level
                                                                  !! DEPRECATED: will be equivalent to ijkse(:,:)
+      integer(kind=8), dimension(ndims) :: level_off             !< offset of own level
 
       ! Physical size and coordinates
 
@@ -190,6 +191,7 @@ module grid_cont
       real, allocatable, dimension(:,:,:) :: prolong_, prolong_x, prolong_xy !< auxiliary prolongation arrays for intermediate results
       real, dimension(:,:,:), pointer ::  prolong_xyz             !< auxiliary prolongation array for final result. OPT: Valgrind indicates that operations on array allocated on pointer might be slower than on ordinary arrays due to poorer L2 cache utilization
       logical, allocatable, dimension(:,:,:) :: leafmap           !< .true. when a cell is not covered by finer cells, .false. otherwise
+      logical, allocatable, dimension(:,:,:) :: refinemap         !< .true. when a cell triggers refinement criteria, .false. otherwise
 
       ! Non-cartesian geometrical factors
 
@@ -241,6 +243,7 @@ module grid_cont
       procedure          :: set_fluxpointers
       procedure          :: save_outfluxes
       procedure          :: prolong                              !< perform prolongation of the data stored in this%prolong_
+      procedure          :: refinemap2SFC_list                   !< create list of SFC indices to be created from refine flags
 
    end type grid_container
 
@@ -260,12 +263,11 @@ contains
 
    subroutine init_gc(this, n_d, off, my_se, grid_id, level_id)
 
-      use constants,     only: PIERNIK_INIT_DOMAIN, xdim, ydim, zdim, ndims, big_float, LO, HI, I_ONE, I_TWO, BND_MPI, BND_COR, GEO_XYZ, GEO_RPZ, dpi
-      use dataio_pub,    only: die, warn, code_progress
-      use domain,        only: dom
-      use grid_helpers,  only: f2c
-      use ordering,      only: SFC_order
-      use refinement,    only: ref_flag
+      use constants,    only: PIERNIK_INIT_DOMAIN, xdim, ydim, zdim, ndims, big_float, LO, HI, I_ONE, I_TWO, BND_MPI, BND_COR, GEO_XYZ, GEO_RPZ, dpi
+      use dataio_pub,   only: die, warn, code_progress
+      use domain,       only: dom
+      use grid_helpers, only: f2c
+      use ordering,     only: SFC_order
 
       implicit none
 
@@ -282,6 +284,7 @@ contains
 
       if (code_progress < PIERNIK_INIT_DOMAIN) call die("[grid_container:init_gc] MPI not initialized.")
 
+      this%level_off  = off
       this%membership = 1
       this%grid_id    = grid_id
       this%my_se(:,:) = my_se(:, :)
@@ -454,14 +457,16 @@ contains
            &   this%prolong_x  (this%lhn(xdim, LO):this%lhn(xdim, HI),       rn(ydim, LO):      rn(ydim, HI),       rn(zdim, LO):      rn(zdim, HI)), &
            &   this%prolong_xy (this%lhn(xdim, LO):this%lhn(xdim, HI), this%lhn(ydim, LO):this%lhn(ydim, HI),       rn(zdim, LO):      rn(zdim, HI)), &
            &   this%prolong_xyz(this%lhn(xdim, LO):this%lhn(xdim, HI), this%lhn(ydim, LO):this%lhn(ydim, HI), this%lhn(zdim, LO):this%lhn(zdim, HI)))
-      allocate(this%leafmap(this%ijkse(xdim, LO):this%ijkse(xdim, HI), this%ijkse(ydim, LO):this%ijkse(ydim, HI), this%ijkse(zdim, LO):this%ijkse(zdim, HI)))
+      allocate(this%leafmap  (this%ijkse(xdim, LO):this%ijkse(xdim, HI), this%ijkse(ydim, LO):this%ijkse(ydim, HI), this%ijkse(zdim, LO):this%ijkse(zdim, HI)), &
+           &   this%refinemap(this%ijkse(xdim, LO):this%ijkse(xdim, HI), this%ijkse(ydim, LO):this%ijkse(ydim, HI), this%ijkse(zdim, LO):this%ijkse(zdim, HI)))
 
       this%prolong_   (:, :, :) = big_float
       this%prolong_x  (:, :, :) = big_float
       this%prolong_xy (:, :, :) = big_float
       this%prolong_xyz(:, :, :) = big_float
       this%leafmap    (:, :, :) = .true.
-      this%refine_flags = ref_flag(.false., .false.)
+      this%refinemap  (:, :, :) = .false.
+      call this%refine_flags%init
       this%ignore_prolongation = .false.
       this%is_old = .false.
       this%has_previous_timestep = .false.
@@ -611,6 +616,7 @@ contains
       if (allocated(this%prolong_x))    deallocate(this%prolong_x)
       if (allocated(this%prolong_))     deallocate(this%prolong_)
       if (allocated(this%leafmap))      deallocate(this%leafmap)
+      if (allocated(this%refinemap))    deallocate(this%refinemap)
       do d = xdim, zdim
          do g = LO, HI
             call this%finebnd  (d, g)%facleanup
@@ -1192,5 +1198,71 @@ contains
       ! Alternatively, an FFT convolution may be employed after injection. No idea at what stencil size the FFT is faster. It is finite size for sure :-)
 
    end subroutine prolong
+
+!< \brief Create list of SFC indices to be created from refine flags
+
+   subroutine refinemap2SFC_list(this)
+
+      use constants,  only: refinement_factor, xdim, ydim, zdim, I_ONE
+      use dataio_pub, only: die, warn
+      use domain,     only: AMR_bsize
+
+      implicit none
+
+      class(grid_container), intent(inout) :: this
+
+      integer :: i, j, k, ifs, ife, jfs, jfe, kfs, kfe
+      enum, bind(C)
+         enumerator :: NONE, REFINE, LEAF
+      end enum
+      integer :: type
+      logical, save :: warned = .false.
+
+      this%refinemap = this%refinemap .and. this%leafmap
+      type = NONE
+      if (any(this%refinemap)) then
+         type = REFINE
+      else if (this%refine_flags%refine) then
+         type = LEAF
+         if (.not. warned) then
+            warned = .true.
+            call warn("[grid_container:refinemap2SFC_list] direct use of cg%refine_flags%refine is deprecated")
+         endif
+      endif
+
+      if (type == NONE) return
+
+      if (any(AMR_bsize == 0)) return ! this routine works only with blocky AMR
+
+      do i = int(((this%is - this%level_off(xdim))*refinement_factor) / AMR_bsize(xdim)), int(((this%ie - this%level_off(xdim))*refinement_factor + I_ONE) / AMR_bsize(xdim))
+         ifs = max(int(this%is), (i*AMR_bsize(xdim))/refinement_factor)
+         ife = min(int(this%ie), ((i+I_ONE)*AMR_bsize(xdim)-I_ONE)/refinement_factor)
+
+         do j = int(((this%js - this%level_off(ydim))*refinement_factor) / AMR_bsize(ydim)), int(((this%je - this%level_off(ydim))*refinement_factor + I_ONE) / AMR_bsize(ydim))
+            jfs = max(int(this%js), (j*AMR_bsize(ydim))/refinement_factor)
+            jfe = min(int(this%je), ((j+I_ONE)*AMR_bsize(ydim)-I_ONE)/refinement_factor)
+
+            do k = int(((this%ks - this%level_off(zdim))*refinement_factor) / AMR_bsize(zdim)), int(((this%ke - this%level_off(zdim))*refinement_factor + I_ONE) / AMR_bsize(zdim))
+               kfs = max(int(this%ks), (k*AMR_bsize(zdim))/refinement_factor)
+               kfe = min(int(this%ke), ((k+I_ONE)*AMR_bsize(zdim)-I_ONE)/refinement_factor)
+
+               select case (type)
+                  case (REFINE)
+                     if (any(this%refinemap(ifs:ife, jfs:jfe, kfs:kfe))) call this%refine_flags%add(this%level_id+I_ONE, [i, j, k]*AMR_bsize-this%level_off)
+                  case (LEAF)
+                     if (all(this%leafmap(ifs:ife, jfs:jfe, kfs:kfe))) then
+                        call this%refine_flags%add(this%level_id+I_ONE, [i, j, k]*AMR_bsize-this%level_off)
+                     else if (any(this%leafmap(ifs:ife, jfs:jfe, kfs:kfe))) then
+                        call die("[grid_container:refinemap2SFC_list] cannot refine partially leaf parf of the grid")
+                     endif
+                  case default
+                     call die("[grid_container:refinemap2SFC_list] invalid type")
+               end select
+            enddo
+         enddo
+      enddo
+      this%refinemap = .false.
+
+   end subroutine refinemap2SFC_list
 
 end module grid_cont
