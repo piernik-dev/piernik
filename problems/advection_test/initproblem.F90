@@ -536,7 +536,7 @@ contains
 
       ! make sure that density is communicated
       !> \todo set up a flag that tells whether this is required or the data has been recently exchanged
-      call all_bnd
+      call all_bnd ! pretty likely overkill. \todo find a way to minimize calling this - perhaps manage a flag that says whether the boundaries are up to date or not
 
       ! Detect the edge of the density pulse
       !> \deprecated this method may refine the whole domain when the pulse gets diffused enough

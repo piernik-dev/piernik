@@ -659,7 +659,7 @@ contains
       integer :: id, i, j, k
       integer , parameter :: dro = 1 ! derefine reach out
 
-      call all_bnd
+      call all_bnd ! pretty likely overkill. \todo find a way to minimize calling this - perhaps manage a flag that says whether the boundaries are up to date or not
 
       cgl => leaves%first
       do while (associated(cgl))
