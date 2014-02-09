@@ -423,32 +423,58 @@ contains
 
    subroutine mark_overdensity
 
-      use cg_leaves,        only: leaves
-      use cg_list,          only: cg_list_element
-      use fluidindex,       only: iarr_all_dn, flind
-!      use named_array_list, only: wna
+      use all_boundaries, only: all_bnd
+      use cg_leaves,      only: leaves
+      use cg_list,        only: cg_list_element
+      use domain,         only: dom
+      use fluidindex,     only: iarr_all_dn, flind
 
       implicit none
 
       type(cg_list_element), pointer :: cgl
-      real :: dmax
-      integer :: id
+      real :: dmax, diff
+      integer :: id, i, j, k
 
-!      call leaves%internal_boundaries_4d(wna%fi) !< enable it as soon as c2f and f2c routines will work
+      call all_bnd ! pretty likely overkill. \todo find a way to minimize calling this - perhaps manage a flag that says whether the boundaries are up to date or not
 
       cgl => leaves%first
       do while (associated(cgl))
          if (any(cgl%cg%leafmap)) then
             dmax = -huge(1.)
             do id = lbound(iarr_all_dn, dim=1), ubound(iarr_all_dn, dim=1)
-               dmax = max(dmax, maxval(cgl%cg%u(id, cgl%cg%is:cgl%cg%ie, cgl%cg%js:cgl%cg%je, cgl%cg%ks:cgl%cg%ke), mask=cgl%cg%leafmap))
+               do i = cgl%cg%is, cgl%cg%ie
+                  do j = cgl%cg%js, cgl%cg%je
+                     do k = cgl%cg%ks, cgl%cg%ke
+                        diff = maxval(abs(cgl%cg%u(id, i, j, k) - [ &
+                             &            cgl%cg%u(id, i+dom%D_x, j, k), &
+                             &            cgl%cg%u(id, i-dom%D_x, j, k), &
+                             &            cgl%cg%u(id, i, j+dom%D_y, k), &
+                             &            cgl%cg%u(id, i, j-dom%D_y, k), &
+                             &            cgl%cg%u(id, i, j, k+dom%D_z), &
+                             &            cgl%cg%u(id, i, j, k-dom%D_z) ] ) )
+                        cgl%cg%refinemap(i, j, k) = (diff > ref_thr * d0)
+                        dmax = max(dmax, diff)
+                     enddo
+                  enddo
+               enddo
             enddo
             do id = 1, flind%energ
-               if ( maxval(cgl%cg%u(flind%all_fluids(id)%fl%ien, cgl%cg%is:cgl%cg%ie, cgl%cg%js:cgl%cg%je, cgl%cg%ks:cgl%cg%ke), mask=cgl%cg%leafmap) / &
-                    minval(cgl%cg%u(flind%all_fluids(id)%fl%ien, cgl%cg%is:cgl%cg%ie, cgl%cg%js:cgl%cg%je, cgl%cg%ks:cgl%cg%ke), mask=cgl%cg%leafmap) > ref_thr) &
-                    dmax = 2.*ref_thr*d0 !trick
+               do i = cgl%cg%is, cgl%cg%ie
+                  do j = cgl%cg%js, cgl%cg%je
+                     do k = cgl%cg%ks, cgl%cg%ke
+                        diff = maxval(abs(cgl%cg%u(flind%all_fluids(id)%fl%ien, i, j, k) / [ &
+                             &            cgl%cg%u(flind%all_fluids(id)%fl%ien, i+dom%D_x, j, k), &
+                             &            cgl%cg%u(flind%all_fluids(id)%fl%ien, i-dom%D_x, j, k), &
+                             &            cgl%cg%u(flind%all_fluids(id)%fl%ien, i, j+dom%D_y, k), &
+                             &            cgl%cg%u(flind%all_fluids(id)%fl%ien, i, j-dom%D_y, k), &
+                             &            cgl%cg%u(flind%all_fluids(id)%fl%ien, i, j, k+dom%D_z), &
+                             &            cgl%cg%u(flind%all_fluids(id)%fl%ien, i, j, k-dom%D_z) ] ) )
+                        cgl%cg%refinemap(i, j, k) = cgl%cg%refinemap(i, j, k) .or. (diff > ref_thr)
+                        dmax = max(dmax, diff)
+                     enddo
+                  enddo
+               enddo
             enddo
-            cgl%cg%refine_flags%refine   = (dmax >= ref_thr*d0  )
             cgl%cg%refine_flags%derefine = (dmax <  deref_thr*d0)
          endif
          cgl => cgl%nxt
