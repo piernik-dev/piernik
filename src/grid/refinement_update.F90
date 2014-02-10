@@ -117,6 +117,8 @@ contains
       type(cg_list_element), pointer :: cgl
       type(cg_level_connected_T), pointer :: curl
 
+      !> \todo communicate refines from coarse to fine blocks to prevent oscillations that might occur when there is derefinement request on fine, when coarse requests refinement
+
       curl => base%level
       do while (associated(curl))
          cgl => curl%first
@@ -314,7 +316,7 @@ contains
       enddo
 
       ! Now try to derefine any excess of refinement
-      if (full_update) call scan_for_refinements
+      if (full_update) call scan_for_refinements !> \todo only first scan_for_refinements should be necessary. Remove this one ASAP - it was required when we weren't able to refine partially.
       call fix_refinement(correct)
       if (.not. correct) call die("[refinement_update:update_refinement] Refinement defects still present")
 
