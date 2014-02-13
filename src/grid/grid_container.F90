@@ -1235,23 +1235,22 @@ contains
       if (any(AMR_bsize == 0)) return ! this routine works only with blocky AMR
 
       do i = int(((this%is - this%level_off(xdim))*refinement_factor) / AMR_bsize(xdim)), int(((this%ie - this%level_off(xdim))*refinement_factor + I_ONE) / AMR_bsize(xdim))
-         ifs = max(int(this%is), (i*AMR_bsize(xdim))/refinement_factor)
-         ife = min(int(this%ie), ((i+I_ONE)*AMR_bsize(xdim)-I_ONE)/refinement_factor)
+         ifs = max(int(this%is), int(this%level_off(xdim)) + (i*AMR_bsize(xdim))/refinement_factor)
+         ife = min(int(this%ie), int(this%level_off(xdim)) + ((i+I_ONE)*AMR_bsize(xdim)-I_ONE)/refinement_factor)
 
          do j = int(((this%js - this%level_off(ydim))*refinement_factor) / AMR_bsize(ydim)), int(((this%je - this%level_off(ydim))*refinement_factor + I_ONE) / AMR_bsize(ydim))
-            jfs = max(int(this%js), (j*AMR_bsize(ydim))/refinement_factor)
-            jfe = min(int(this%je), ((j+I_ONE)*AMR_bsize(ydim)-I_ONE)/refinement_factor)
+            jfs = max(int(this%js), int(this%level_off(ydim)) + (j*AMR_bsize(ydim))/refinement_factor)
+            jfe = min(int(this%je), int(this%level_off(ydim)) + ((j+I_ONE)*AMR_bsize(ydim)-I_ONE)/refinement_factor)
 
             do k = int(((this%ks - this%level_off(zdim))*refinement_factor) / AMR_bsize(zdim)), int(((this%ke - this%level_off(zdim))*refinement_factor + I_ONE) / AMR_bsize(zdim))
-               kfs = max(int(this%ks), (k*AMR_bsize(zdim))/refinement_factor)
-               kfe = min(int(this%ke), ((k+I_ONE)*AMR_bsize(zdim)-I_ONE)/refinement_factor)
-
+               kfs = max(int(this%ks), int(this%level_off(zdim)) + (k*AMR_bsize(zdim))/refinement_factor)
+               kfe = min(int(this%ke), int(this%level_off(zdim)) + ((k+I_ONE)*AMR_bsize(zdim)-I_ONE)/refinement_factor)
                select case (type)
                   case (REFINE)
-                     if (any(this%refinemap(ifs:ife, jfs:jfe, kfs:kfe))) call this%refine_flags%add(this%level_id+I_ONE, [i, j, k]*AMR_bsize-this%level_off)
+                     if (any(this%refinemap(ifs:ife, jfs:jfe, kfs:kfe))) call this%refine_flags%add(this%level_id+I_ONE, int([i, j, k]*AMR_bsize, kind=8)+refinement_factor*this%level_off, refinement_factor*this%level_off)
                   case (LEAF)
                      if (all(this%leafmap(ifs:ife, jfs:jfe, kfs:kfe))) then
-                        call this%refine_flags%add(this%level_id+I_ONE, [i, j, k]*AMR_bsize-this%level_off)
+                        call this%refine_flags%add(this%level_id+I_ONE, int([i, j, k]*AMR_bsize, kind=8)+refinement_factor*this%level_off, refinement_factor*this%level_off)
                      else if (any(this%leafmap(ifs:ife, jfs:jfe, kfs:kfe))) then
                         call die("[grid_container:refinemap2SFC_list] cannot refine partially leaf parf of the grid")
                      endif
