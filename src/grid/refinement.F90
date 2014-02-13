@@ -140,7 +140,7 @@ contains
             level_max = base_level_id
             n_updAMR  = huge(I_ONE)
          endif
-         where (.not. dom%has_dir(:)) AMR_bsize(:) = huge(1)
+         where (.not. dom%has_dir(:)) AMR_bsize(:) = huge(I_ONE)
 
          ibuff(1) = level_min
          ibuff(2) = level_max

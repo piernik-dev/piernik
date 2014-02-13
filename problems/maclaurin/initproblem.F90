@@ -676,9 +676,9 @@ contains
                         if (i >= cgl%cg%is .and. i <= cgl%cg%ie .and. j >= cgl%cg%js .and. j <= cgl%cg%je .and. k >= cgl%cg%ks .and. k <= cgl%cg%ke) &
                              cgl%cg%refinemap(i, j, k) = ( abs(ld) >= ref_thr*d0 )
                         ldmax = max(ldmax, abs(ld))
-                     end do
-                  end do
-               end do
+                     enddo
+                  enddo
+               enddo
             enddo
             !> \warning only selfgravitating fluids should be checked
             cgl%cg%refine_flags%derefine = (ldmax <  deref_thr*d0)

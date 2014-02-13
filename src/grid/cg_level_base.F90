@@ -104,9 +104,11 @@ contains
 
       use all_boundaries,    only: all_fluid_boundaries
       use cg_level_coarsest, only: coarsest
+      use cg_level_finest,   only: finest
       use constants,         only: xdim, zdim, LO, HI, pLOR
+      use dataio_pub,        only: msg, warn
       use domain,            only: dom
-      use mpisetup,          only: piernik_MPI_Allreduce
+      use mpisetup,          only: piernik_MPI_Allreduce, master
 #ifdef MULTIGRID
       use multigrid,         only: init_multigrid
 #endif /* MULTIGRID */
@@ -134,6 +136,10 @@ contains
       enddo
 
       if (changed) then
+         if (master) then
+            write(msg, '(a,3i8,a,i3)')"[cg_level_base:expand] Effective resolution is [", finest%level%n_d(:), " ] at level ", finest%level%level_id
+            call warn(msg) ! As long as the restart file does not automagically recognize changed parameters, this message should be easily visible
+         endif
          call coarsest%delete_coarser_than_base
 #ifdef MULTIGRID
          call init_multigrid
