@@ -30,7 +30,7 @@
 
 module refinement
 
-   use constants,       only: ndims, LO, HI
+   use constants,       only: ndims, LO, HI, cbuff_len
    use refinement_flag, only: level_min, level_max
 
    implicit none
@@ -63,10 +63,21 @@ module refinement
    end type ref_box
    type(ref_box), dimension(nshapes), protected :: refine_boxes
 
+   !> \brief Parameters of automagic refinement
+   type :: ref_auto
+      character(len=cbuff_len) :: rvar  !< name of the refinement variable
+      character(len=cbuff_len) :: rname !< name of the refinement routine
+      real :: ref_thr                   !< refinement threshold
+      real :: deref_thr                 !< derefinement threshold
+      real :: aux                       !< auxiliary parameter (can be smoother or filter strength)
+   end type ref_auto
+   integer, parameter :: n_ref_auto = 10
+   type(ref_auto), dimension(10), protected :: refine_vars
+
    logical :: emergency_fix !< set to .true. if you want to call update_refinement ASAP
 
    namelist /AMR/ level_min, level_max, n_updAMR, allow_face_rstep, allow_corner_rstep, strict_SFC_ordering, &
-        &         prefer_n_bruteforce, oop_thr, refine_points, refine_boxes
+        &         prefer_n_bruteforce, oop_thr, refine_points, refine_boxes, refine_vars
 
 contains
 
@@ -74,11 +85,11 @@ contains
 
    subroutine init_refinement
 
-      use constants,  only: base_level_id, PIERNIK_INIT_DOMAIN, xdim, ydim, zdim, I_ONE, LO, HI
+      use constants,  only: base_level_id, PIERNIK_INIT_DOMAIN, xdim, ydim, zdim, I_ONE, LO, HI, cbuff_len
       use dataio_pub, only: nh      ! QA_WARN required for diff_nml
       use dataio_pub, only: die, code_progress, warn
       use domain,     only: AMR_bsize, dom
-      use mpisetup,   only: ibuff, lbuff, rbuff, master, slave, piernik_MPI_Bcast
+      use mpisetup,   only: cbuff, ibuff, lbuff, rbuff, master, slave, piernik_MPI_Bcast
 
       implicit none
 
@@ -111,8 +122,10 @@ contains
       enddo
       refine_points(:) = ref_point(base_level_id-1, [ 0., 0., 0.] )
       refine_boxes (:) = ref_box  (base_level_id-1, reshape([ 0., 0., 0., 0., 0., 0.], [ndims, HI-LO+I_ONE] ) )
+      refine_vars  (:) = ref_auto ("none", "none", 0., 0., 0.)
 
-      if (1 + 9*nshapes > ubound(rbuff, dim=1)) call die("[refinement:init_refinement] increase rbuff size") ! should be detected at compile time but it is only a warning
+      if (1 + 9*nshapes +3*n_ref_auto > ubound(rbuff, dim=1)) call die("[refinement:init_refinement] increase rbuff size") ! should be detected at compile time but it is only a warning
+      if (2*n_ref_auto > ubound(cbuff, dim=1)) call die("[refinement:init_refinement] increase cbuff size")
       if (master) then
 
          if (.not.nh%initialized) call nh%init()
@@ -142,6 +155,9 @@ contains
          endif
          where (.not. dom%has_dir(:)) AMR_bsize(:) = huge(1)
 
+         cbuff(1           :  n_ref_auto) = refine_vars(:)%rvar
+         cbuff(1+n_ref_auto:2*n_ref_auto) = refine_vars(:)%rname
+
          ibuff(1) = level_min
          ibuff(2) = level_max
          ibuff(3) = n_updAMR
@@ -164,14 +180,21 @@ contains
          rbuff(2+6*nshapes:1+7*nshapes) = refine_boxes (:)%coords(ydim, HI)
          rbuff(2+7*nshapes:1+8*nshapes) = refine_boxes (:)%coords(zdim, LO)
          rbuff(2+8*nshapes:1+9*nshapes) = refine_boxes (:)%coords(zdim, HI)
+         rbuff(2+9*nshapes             :1+9*nshapes+  n_ref_auto) = refine_vars(:)%ref_thr
+         rbuff(2+9*nshapes+  n_ref_auto:1+9*nshapes+2*n_ref_auto) = refine_vars(:)%deref_thr
+         rbuff(2+9*nshapes+2*n_ref_auto:1+9*nshapes+3*n_ref_auto) = refine_vars(:)%aux
 
       endif
 
+      call piernik_MPI_Bcast(cbuff, cbuff_len)
       call piernik_MPI_Bcast(ibuff)
       call piernik_MPI_Bcast(lbuff)
       call piernik_MPI_Bcast(rbuff)
 
       if (slave) then
+
+         refine_vars(:)%rvar  = cbuff(1           :  n_ref_auto)
+         refine_vars(:)%rname = cbuff(1+n_ref_auto:2*n_ref_auto)
 
          level_min = ibuff(1)
          level_max = ibuff(2)
@@ -195,6 +218,9 @@ contains
          refine_boxes (:)%coords(ydim, HI) = rbuff(2+6*nshapes:1+7*nshapes)
          refine_boxes (:)%coords(zdim, LO) = rbuff(2+7*nshapes:1+8*nshapes)
          refine_boxes (:)%coords(zdim, HI) = rbuff(2+8*nshapes:1+9*nshapes)
+         refine_vars  (:)%ref_thr          = rbuff(2+9*nshapes             :1+9*nshapes+  n_ref_auto)
+         refine_vars  (:)%deref_thr        = rbuff(2+9*nshapes+  n_ref_auto:1+9*nshapes+2*n_ref_auto)
+         refine_vars  (:)%aux              = rbuff(2+9*nshapes+2*n_ref_auto:1+9*nshapes+3*n_ref_auto)
 
       endif
 
