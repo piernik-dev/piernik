@@ -157,9 +157,9 @@ module dataio_pub
       integer, pointer               :: lun        !< current free logical unit
       procedure(namelist_errh_P), nopass, pointer    :: namelist_errh
       logical :: initialized = .false.
-      contains
-         procedure :: init => namelist_handler_T_init
-         procedure :: compare_namelist
+   contains
+      procedure :: init => namelist_handler_T_init
+      procedure :: compare_namelist
    end type namelist_handler_T
 
    type(namelist_handler_T) :: nh
