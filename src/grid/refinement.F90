@@ -36,7 +36,7 @@ module refinement
    implicit none
 
    private
-   public :: n_updAMR, allow_face_rstep, allow_corner_rstep, oop_thr, refine_points, &
+   public :: n_updAMR, allow_face_rstep, allow_corner_rstep, oop_thr, refine_points, auto_refine_derefine, &
         &    refine_boxes, init_refinement, emergency_fix, set_n_updAMR, strict_SFC_ordering, prefer_n_bruteforce
 
    integer(kind=4), protected :: n_updAMR            !< how often to update the refinement structure
@@ -73,6 +73,7 @@ module refinement
    end type ref_auto
    integer, parameter :: n_ref_auto = 10
    type(ref_auto), dimension(10), protected :: refine_vars
+   character(len=cbuff_len), parameter :: inactive_name = "none"
 
    logical :: emergency_fix !< set to .true. if you want to call update_refinement ASAP
 
@@ -122,7 +123,7 @@ contains
       enddo
       refine_points(:) = ref_point(base_level_id-1, [ 0., 0., 0.] )
       refine_boxes (:) = ref_box  (base_level_id-1, reshape([ 0., 0., 0., 0., 0., 0.], [ndims, HI-LO+I_ONE] ) )
-      refine_vars  (:) = ref_auto ("none", "none", 0., 0., 0.)
+      refine_vars  (:) = ref_auto (inactive_name, inactive_name, 0., 0., 0.)
 
       if (1 + 9*nshapes +3*n_ref_auto > ubound(rbuff, dim=1)) call die("[refinement:init_refinement] increase rbuff size") ! should be detected at compile time but it is only a warning
       if (2*n_ref_auto > ubound(cbuff, dim=1)) call die("[refinement:init_refinement] increase cbuff size")
@@ -252,5 +253,134 @@ contains
       n_updAMR = nn
 
    end subroutine set_n_updAMR
+
+!> \brief Apply automatic refinement citeria
+
+   subroutine auto_refine_derefine
+
+      use cg_leaves,        only: leaves
+      use cg_list,          only: cg_list_element
+      use constants,        only: INVALID
+      use dataio_pub,       only: die
+      use named_array_list, only: qna, wna
+
+      implicit none
+
+      integer :: i, iv, ic
+      logical :: var3d
+      type(cg_list_element), pointer :: cgl
+      real, dimension(:,:,:), pointer :: p3d
+
+      do i = 1, n_ref_auto
+         call identify_field(refine_vars(i)%rvar, iv, ic)
+         if (iv /= INVALID) then
+            var3d = (ic == INVALID)
+            if (var3d) then
+               if (iv<lbound(qna%lst, dim=1) .or. iv>ubound(qna%lst, dim=1)) &
+                    call die("[refinement:auto_refine_derefine] 3D index out of range")
+            else
+               if (iv<lbound(wna%lst, dim=1) .or. iv>ubound(wna%lst, dim=1)) &
+                    call die("[refinement:auto_refine_derefine] 4D index out of range")
+               if (ic <= 0 .or. ic > wna%lst(iv)%dim4) &
+                    call die("[refinement:auto_refine_derefine] component out of range")
+            endif
+
+            cgl => leaves%first
+            do while (associated(cgl))
+               if (any(cgl%cg%leafmap)) then
+                  if (var3d) then
+                     p3d => cgl%cg%q(iv)%arr
+                  else
+                     p3d => cgl%cg%w(iv)%arr(ic, :, :, :)
+                  endif
+                  select case (trim(refine_vars(i)%rname))
+                     case ("grad")
+                        call refine_on_gradient(cgl%cg, p3d, refine_vars(i)%ref_thr, refine_vars(i)%deref_thr)
+
+!> \todo Implement ||grad u|| normalized by average(|u|)
+
+!> \todo Implement Richardson extrapolation method, as described in M. Berger papers
+
+!>
+!! \todo Implement Loechner criteria
+!! Original paper: https://www.researchgate.net/publication/222452974_An_adaptive_finite_element_scheme_for_transient_problems_in_CFD
+!! Cartesian grid implementation: http://flash.uchicago.edu/~jbgallag/2012/flash4_ug/node14.html#SECTION05163100000000000000 (note that some indices in the left part of denominator are slightly messed up)
+!<
+                     case (trim(inactive_name)) ! do nothing
+                     case default
+                        call die("[refinement:auto_refine_derefine] unknown refinement detection routine")
+                  end select
+               endif
+               cgl => cgl%nxt
+            enddo
+         endif
+      enddo
+
+   end subroutine auto_refine_derefine
+
+!> \brief Identify field name and return indices to cg%q or cg%w arrays
+
+   subroutine identify_field(vname, iv, ic)
+
+      use constants,        only: INVALID, cbuff_len
+      use dataio_pub,       only: msg, warn
+      use named_array_list, only: qna
+
+      implicit none
+
+      character(len=cbuff_len), intent(in)  :: vname !< string specifying the field on
+      integer,                  intent(out) :: iv    !< field index in cg%q or cg%w array
+      integer,                  intent(out) :: ic    !< component index (cg%w(iv)%arr(ic,:,:,:)) or INVALID for 3D arrays
+      iv = INVALID
+      ic = INVALID
+
+      if (trim(vname) == trim(inactive_name)) return ! ignore this
+
+      iv = qna%ind(trim(vname))
+      if (iv /= INVALID) return ! this is a 3d array name
+
+      !> \todo identify here all {den,vl[xyz],ene}{d,n,i}
+      !> \todo interpret dens, vel[xyz], ener as multiple components to be checked
+
+      write(msg,'(3a)')"[refinement:identify_field] Unidentified refinement variable: '",trim(vname),"'"
+
+   end subroutine identify_field
+
+!>
+!! \brief Refine/derefine based on ||grad u||
+!! This is sensitive to gradients, but the thresholds must be rescaled, when you change units of the problem.
+!<
+
+   subroutine refine_on_gradient(cg, p3d, ref_thr, deref_thr)
+
+      use domain,           only: dom
+      use grid_cont,        only: grid_container
+
+      implicit none
+
+      type(grid_container), pointer,   intent(inout) :: cg        !< current grid piece
+      real, dimension(:,:,:), pointer, intent(in)    :: p3d       !< pointer to array to be examined for (de)refinement needs (should contain at least one layer of updated guardcells)
+      real,                            intent(in)    :: ref_thr   !< refinement threshold
+      real,                            intent(in)    :: deref_thr !< derefinement threshold
+
+      integer :: i, j, k
+      real :: r, max_r
+
+      max_r = -huge(1.)
+      do k = cg%ks, cg%ke
+         do j = cg%js, cg%je
+            do i = cg%is, cg%ie
+               r =  (p3d(i+dom%D_x, j, k) - p3d(i-dom%D_x, j, k))**2 + &
+                    (p3d(i, j+dom%D_y, k) - p3d(i, j-dom%D_y, k))**2 + &
+                    (p3d(i, j, k+dom%D_z) - p3d(i, j, k-dom%D_z))**2
+               max_r = max(max_r, r)
+               cg%refinemap(i, j, k) = cg%refinemap(i, j, k) .or. (r >= ref_thr**2)
+               ! we can avoid calculating square root here
+            enddo
+         enddo
+      enddo
+      cg%refine_flags%derefine = cg%refine_flags%derefine .or. (max_r < deref_thr**2)
+
+   end subroutine refine_on_gradient
 
 end module refinement

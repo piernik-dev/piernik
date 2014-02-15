@@ -43,6 +43,7 @@ contains
       use cg_level_connected,    only: cg_level_connected_T
       use cg_level_finest,       only: finest
       use cg_list_global,        only: all_cg
+      use refinement,            only: auto_refine_derefine
       use refinement_primitives, only: mark_all_primitives
       use user_hooks,            only: problem_refine_derefine
 #ifdef VERBOSE
@@ -56,7 +57,7 @@ contains
       type(cg_level_connected_T), pointer :: curl
       enum, bind(C)
          enumerator :: PROBLEM
-         !enumerator :: SHOCKS
+         enumerator :: AUTO
          enumerator :: PRIMITIVES
       end enum
       integer, dimension(PROBLEM:PRIMITIVES) :: cnt
@@ -68,6 +69,8 @@ contains
       enddo
       call all_cg%clear_ref_flags
       cnt = 0
+
+      ! call all_bnd?
 
       if (associated(problem_refine_derefine)) then
          call problem_refine_derefine ! call user routine first, so it cannot alter flags set by automatic routines
@@ -81,11 +84,11 @@ contains
       call piernik_MPI_Allreduce(cnt(PROBLEM), pSUM)
 #endif
 
-      ! call mark_shocks !> \todo implement automatic refinement criteria
+      call auto_refine_derefine
 #ifdef VERBOSE
-!      call sanitize_all_ref_flags
-!      cnt(SHOCKS) = all_cg%count_ref_flags()
-!      call piernik_MPI_Allreduce(cnt(SHOCKS), pSUM)
+      call sanitize_all_ref_flags
+      cnt(AUTO) = all_cg%count_ref_flags()
+      call piernik_MPI_Allreduce(cnt(AUTO), pSUM)
 #endif
 
       call mark_all_primitives
@@ -94,9 +97,9 @@ contains
       cnt(PRIMITIVES) = all_cg%count_ref_flags()
       call piernik_MPI_Allreduce(cnt(PRIMITIVES), pSUM)
       if (cnt(ubound(cnt, dim=1)) > 0) then
-         write(msg,'(2(a,i6),a)')"[refinement_update:scan_for_refinements] User-defined routine marked ", &
-              &                  cnt(PROBLEM), " block(s) for refinement, primitives marked additional ", &
-              &                  cnt(PRIMITIVES)-cnt(PROBLEM)," block(s)"
+         write(msg,'(3(a,i6),a)')"[refinement_update:scan_for_refinements] User-defined routine marked ", &
+              &                  cnt(PROBLEM), " block(s) for refinement, automatic criteria and primitives marked additional ", &
+              &                  cnt(AUTO)-cnt(PROBLEM)," and ", cnt(PRIMITIVES)-cnt(AUTO)," block(s)"
          if (master) call printinfo(msg)
       endif
 #endif
