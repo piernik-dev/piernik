@@ -168,7 +168,7 @@ contains
       real, dimension(:), allocatable :: mass
       real, dimension(:, :), allocatable :: pos, vel, acc, jerk
       
-      real :: t_dia, t_out, t_end, einit, dt, t
+      real :: t_dia, t_out, t_end, einit, dt, t, eta
       integer :: nsteps, n, ndim, lun_out, lun_err, i
       
       n = size(pset%p, dim=1)
@@ -181,6 +181,47 @@ contains
          vel(:, ndim) = pset%p(:)%vel(ndim)
       enddo
       
+      
+      t=0.0
+      !eta=35.0
+      !dt=
+      !dth=dt/2.0
+      
+      !main loop
+      do while (t<tend)
+         !1.kick(dth)
+         !2.drift(dt)
+         
+         !3.acceleration + |a|
+         !4.kick(dth)
+         !5.t=t+dt
+         !6.dt=sqrt(2.0*eta*eps/a)		!dt[n+1]
+         !7.dth=dt/2.0
+      end do
+      
+      contains
+         
+         !Kick
+	     subroutine kick(vel,acc,t,n)
+	        use constants, only: ndims
+	        implicit none
+		    real :: t
+		    integer :: n
+		    real, dimension(n, ndims) :: vel,acc
+		    
+            vel(:,:)=vel(:,:)+acc(:,:)*t
+	     end subroutine kick
+
+        !Drift
+	    function drift(pos,vel,t,n)
+	       use constants, only: ndims
+	       implicit none
+	       real :: x,y,vx,vy,t
+	       integer :: n
+           real ,dimension(n,ndims) :: drift,pos,vel
+           
+           pos(:,:)=pos(:,:)+vel(:,:)*t
+	end function drift
       
    end subroutine leapfrog2ord
 
