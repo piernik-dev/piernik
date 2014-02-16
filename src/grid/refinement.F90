@@ -64,15 +64,15 @@ module refinement
    type(ref_box), dimension(nshapes), protected :: refine_boxes
 
    !> \brief Parameters of automagic refinement
-   type :: ref_auto
+   type :: ref_auto_param
       character(len=cbuff_len) :: rvar  !< name of the refinement variable
       character(len=cbuff_len) :: rname !< name of the refinement routine
       real :: ref_thr                   !< refinement threshold
       real :: deref_thr                 !< derefinement threshold
       real :: aux                       !< auxiliary parameter (can be smoother or filter strength)
-   end type ref_auto
-   integer, parameter :: n_ref_auto = 10
-   type(ref_auto), dimension(10), protected :: refine_vars
+   end type ref_auto_param
+   integer, parameter :: n_ref_auto_param = 10
+   type(ref_auto_param), dimension(10), protected :: refine_vars
    character(len=cbuff_len), parameter :: inactive_name = "none"
 
    logical :: emergency_fix !< set to .true. if you want to call update_refinement ASAP
@@ -123,10 +123,10 @@ contains
       enddo
       refine_points(:) = ref_point(base_level_id-1, [ 0., 0., 0.] )
       refine_boxes (:) = ref_box  (base_level_id-1, reshape([ 0., 0., 0., 0., 0., 0.], [ndims, HI-LO+I_ONE] ) )
-      refine_vars  (:) = ref_auto (inactive_name, inactive_name, 0., 0., 0.)
+      refine_vars  (:) = ref_auto_param (inactive_name, inactive_name, 0., 0., 0.)
 
-      if (1 + 9*nshapes +3*n_ref_auto > ubound(rbuff, dim=1)) call die("[refinement:init_refinement] increase rbuff size") ! should be detected at compile time but it is only a warning
-      if (2*n_ref_auto > ubound(cbuff, dim=1)) call die("[refinement:init_refinement] increase cbuff size")
+      if (1 + 9*nshapes +3*n_ref_auto_param > ubound(rbuff, dim=1)) call die("[refinement:init_refinement] increase rbuff size") ! should be detected at compile time but it is only a warning
+      if (2*n_ref_auto_param > ubound(cbuff, dim=1)) call die("[refinement:init_refinement] increase cbuff size")
       if (master) then
 
          if (.not.nh%initialized) call nh%init()
@@ -156,8 +156,8 @@ contains
          endif
          where (.not. dom%has_dir(:)) AMR_bsize(:) = huge(1)
 
-         cbuff(1           :  n_ref_auto) = refine_vars(:)%rvar
-         cbuff(1+n_ref_auto:2*n_ref_auto) = refine_vars(:)%rname
+         cbuff(1                 :  n_ref_auto_param) = refine_vars(:)%rvar
+         cbuff(1+n_ref_auto_param:2*n_ref_auto_param) = refine_vars(:)%rname
 
          ibuff(1) = level_min
          ibuff(2) = level_max
@@ -181,9 +181,9 @@ contains
          rbuff(2+6*nshapes:1+7*nshapes) = refine_boxes (:)%coords(ydim, HI)
          rbuff(2+7*nshapes:1+8*nshapes) = refine_boxes (:)%coords(zdim, LO)
          rbuff(2+8*nshapes:1+9*nshapes) = refine_boxes (:)%coords(zdim, HI)
-         rbuff(2+9*nshapes             :1+9*nshapes+  n_ref_auto) = refine_vars(:)%ref_thr
-         rbuff(2+9*nshapes+  n_ref_auto:1+9*nshapes+2*n_ref_auto) = refine_vars(:)%deref_thr
-         rbuff(2+9*nshapes+2*n_ref_auto:1+9*nshapes+3*n_ref_auto) = refine_vars(:)%aux
+         rbuff(2+9*nshapes                   :1+9*nshapes+  n_ref_auto_param) = refine_vars(:)%ref_thr
+         rbuff(2+9*nshapes+  n_ref_auto_param:1+9*nshapes+2*n_ref_auto_param) = refine_vars(:)%deref_thr
+         rbuff(2+9*nshapes+2*n_ref_auto_param:1+9*nshapes+3*n_ref_auto_param) = refine_vars(:)%aux
 
       endif
 
@@ -194,8 +194,8 @@ contains
 
       if (slave) then
 
-         refine_vars(:)%rvar  = cbuff(1           :  n_ref_auto)
-         refine_vars(:)%rname = cbuff(1+n_ref_auto:2*n_ref_auto)
+         refine_vars(:)%rvar  = cbuff(1                 :  n_ref_auto_param)
+         refine_vars(:)%rname = cbuff(1+n_ref_auto_param:2*n_ref_auto_param)
 
          level_min = ibuff(1)
          level_max = ibuff(2)
@@ -219,9 +219,9 @@ contains
          refine_boxes (:)%coords(ydim, HI) = rbuff(2+6*nshapes:1+7*nshapes)
          refine_boxes (:)%coords(zdim, LO) = rbuff(2+7*nshapes:1+8*nshapes)
          refine_boxes (:)%coords(zdim, HI) = rbuff(2+8*nshapes:1+9*nshapes)
-         refine_vars  (:)%ref_thr          = rbuff(2+9*nshapes             :1+9*nshapes+  n_ref_auto)
-         refine_vars  (:)%deref_thr        = rbuff(2+9*nshapes+  n_ref_auto:1+9*nshapes+2*n_ref_auto)
-         refine_vars  (:)%aux              = rbuff(2+9*nshapes+2*n_ref_auto:1+9*nshapes+3*n_ref_auto)
+         refine_vars  (:)%ref_thr          = rbuff(2+9*nshapes                   :1+9*nshapes+  n_ref_auto_param)
+         refine_vars  (:)%deref_thr        = rbuff(2+9*nshapes+  n_ref_auto_param:1+9*nshapes+2*n_ref_auto_param)
+         refine_vars  (:)%aux              = rbuff(2+9*nshapes+2*n_ref_auto_param:1+9*nshapes+3*n_ref_auto_param)
 
       endif
 
@@ -271,7 +271,7 @@ contains
       type(cg_list_element), pointer :: cgl
       real, dimension(:,:,:), pointer :: p3d
 
-      do i = 1, n_ref_auto
+      do i = 1, n_ref_auto_param
          call identify_field(refine_vars(i)%rvar, iv, ic)
          if (iv /= INVALID) then
             var3d = (ic == INVALID)
