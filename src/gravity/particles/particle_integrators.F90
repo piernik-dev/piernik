@@ -157,6 +157,36 @@ contains
 
    end subroutine hermit_4ord
 
+
+   subroutine leapfrog2ord(pset, t_glob, dt_tot)
+      use constants, only: ndims, xdim, zdim
+      use particle_types, only: particle_set
+      implicit none
+      class(particle_set), intent(inout) :: pset  !< particle list
+      real, intent(in) :: t_glob, dt_tot
+      
+      real, dimension(:), allocatable :: mass
+      real, dimension(:, :), allocatable :: pos, vel, acc, jerk
+      
+      real :: t_dia, t_out, t_end, einit, dt, t
+      integer :: nsteps, n, ndim, lun_out, lun_err, i
+      
+      n = size(pset%p, dim=1)
+      t = t_glob
+      allocate(mass(n), pos(n, ndims), vel(n, ndims), acc(n, ndims), jerk(n, ndims))
+      
+      mass(:) = pset%p(:)%mass
+      do ndim = xdim, zdim
+         pos(:, ndim) = pset%p(:)%pos(ndim)
+         vel(:, ndim) = pset%p(:)%vel(ndim)
+      enddo
+      
+      
+   end subroutine leapfrog2ord
+
+
+
+
    subroutine evolve_step(mass, pos, vel, acc, jerk, n, t, dt, epot, coll_time)
       use constants, only: ndims
       implicit none
