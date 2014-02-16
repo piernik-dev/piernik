@@ -183,7 +183,7 @@ contains
       use list_of_cg_lists,   only: all_lists
       use mpisetup,           only: piernik_MPI_Allreduce!, proc
       use named_array_list,   only: qna
-      use refinement,         only: n_updAMR, emergency_fix
+      use refinement,         only: n_updAMR, emergency_fix, refines2list
 #ifdef GRAV
       use gravity,            only: update_gp
 #endif /* GRAV */
@@ -203,6 +203,12 @@ contains
       type(cg_level_connected_T), pointer :: curl
       type(grid_container),  pointer :: cg
       logical :: correct, full_update
+      logical, save :: first_run = .true.
+
+      if (first_run) then
+         first_run = .false.
+         call refines2list
+      endif
 
       if (present(act_count)) act_count = 0
 
