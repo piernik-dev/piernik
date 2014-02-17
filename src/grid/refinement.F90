@@ -273,12 +273,37 @@ contains
 
       do i = 1, n_ref_auto_param
          call identify_field(refine_vars(i)%rvar, iv, ic)
-         if (iv /= INVALID .and. trim(refine_vars(i)%rname) /= trim(inactive_name)) then
-            if (.not. allocated(ref_crit_list)) allocate(ref_crit_list(0))
-            ref_crit_list = [ ref_crit_list, ref_crit(iv, ic, refine_vars(i)%ref_thr, refine_vars(i)%deref_thr, refine_vars(i)%aux, null()) ]
-            select case (trim(refine_vars(i)%rname))
-               case ("grad")
-                  ref_crit_list(ubound(ref_crit_list, dim=1))%refine => refine_on_gradient
+         if (iv /= INVALID .and. trim(refine_vars(i)%rname) /= trim(inactive_name)) &
+              call user_ref2list(iv, ic, refine_vars(i)%ref_thr, refine_vars(i)%deref_thr, refine_vars(i)%aux, refine_vars(i)%rname)
+      enddo
+
+   end subroutine refines2list
+
+!> \brief Add a user-defined criteria to the list
+
+   subroutine user_ref2list(iv, ic, ref_thr, deref_thr, aux, rname)
+
+      use constants,  only: cbuff_len, INVALID
+      use dataio_pub, only: warn, die
+
+      implicit none
+
+      integer,                  intent(in) :: iv        !< field index in cg%q or cg%w array
+      integer,                  intent(in) :: ic        !< component index of 4D array or INVALID for 3D arrays
+      real,                     intent(in) :: ref_thr   !< refinement threshold
+      real,                     intent(in) :: deref_thr !< derefinement threshold
+      real,                     intent(in) :: aux       !< auxiliary parameter
+      character(len=cbuff_len), intent(in) :: rname     !< name of the refinement routine
+
+      if (iv == INVALID) then
+         call warn("[refinement:user_ref2list] invalid field. Ignored.")
+         return
+      endif
+      if (.not. allocated(ref_crit_list)) allocate(ref_crit_list(0))
+      ref_crit_list = [ ref_crit_list, ref_crit(iv, ic, ref_thr, deref_thr, aux, null()) ]
+      select case (trim(rname))
+         case ("grad")
+            ref_crit_list(ubound(ref_crit_list, dim=1))%refine => refine_on_gradient
 !> \todo Implement ||grad u|| normalized by average(|u|)
 
 !> \todo Implement Richardson extrapolation method, as described in M. Berger papers
@@ -288,15 +313,13 @@ contains
 !! Original paper: https://www.researchgate.net/publication/222452974_An_adaptive_finite_element_scheme_for_transient_problems_in_CFD
 !! Cartesian grid implementation: http://flash.uchicago.edu/~jbgallag/2012/flash4_ug/node14.html#SECTION05163100000000000000 (note that some indices in the left part of denominator are slightly messed up)
 !<
-               case (trim(inactive_name)) ! do nothing
-               case default
-                  call die("[refinement:refines2list] unknown refinement detection routine")
-            end select
-            !> \todo try to detect doubled criteria
-         end if
-      enddo
+         case (trim(inactive_name)) ! do nothing
+         case default
+            call die("[refinement:user_ref2list] unknown refinement detection routine")
+      end select
+      !> \todo try to detect doubled criteria
 
-   end subroutine refines2list
+   end subroutine user_ref2list
 
 !> \brief Change the protected parameter n_updAMR
 
