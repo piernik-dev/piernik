@@ -35,14 +35,20 @@ module particle_integrators
    implicit none
 
    private
-   public :: hermit4
+   public :: hermit4, leapfrog2
 
    type, extends(particle_solver_T) :: hermit4_T
    contains
       procedure, nopass :: evolve => hermit_4ord
    end type hermit4_T
+   
+   type, extends(particle_solver_T) :: leapfrog2_T
+   contains
+      procedure, nopass :: evolve => 
+   end type leapfrog2_T
 
    type(hermit4_T), target :: hermit4
+   type(leapfrog2_T), target :: leapfrog2
 
 contains
 
@@ -166,14 +172,14 @@ contains
       real, intent(in) :: t_glob, dt_tot
       
       real, dimension(:), allocatable :: mass
-      real, dimension(:, :), allocatable :: pos, vel, acc, jerk
+      real, dimension(:, :), allocatable :: pos, vel, acc, vel_h
       
-      real :: t_dia, t_out, t_end, einit, dt, t, eta
+      real :: t_dia, t_out, t_end, einit, dt, t, eta, eps, a1, a2
       integer :: nsteps, n, ndim, lun_out, lun_err, i
       
       n = size(pset%p, dim=1)
       t = t_glob
-      allocate(mass(n), pos(n, ndims), vel(n, ndims), acc(n, ndims), jerk(n, ndims))
+      allocate(mass(n), pos(n, ndims), vel(n, ndims), acc(n, ndims), vel_h(n, ndims)
       
       mass(:) = pset%p(:)%mass
       do ndim = xdim, zdim
@@ -182,51 +188,101 @@ contains
       enddo
       
       
-      t=0.0
-      !eta=35.0
-      !dt=
-      !dth=dt/2.0
+      t = 0.0
+      eta = 35.0
+      eps = 1.0e-5
+      t_end=t+dt_tot
+      
+      call get_acc(mass, pos, vel, acc, n)
+      
+      !a tu trzeba policzyć przyspieszenia
+      dt = sqrt(2.0*eta*eps/a)	
+      dth=dt/2.0
       
       !main loop
-      do while (t<tend)
+      do while (t<t_end)
          !1.kick(dth)
+         vel_h = kick(vel,acc,dth,n)
          !2.drift(dt)
-         
+         pos = drift(pos,vel_h,dt,n)
          !3.acceleration + |a|
+         call get_acc(mass, pos, vel, acc, n)
+         a =
          !4.kick(dth)
+         vel = kick(vel,acc,dth,n)
          !5.t=t+dt
+         t = t + dt
          !6.dt=sqrt(2.0*eta*eps/a)		!dt[n+1]
+         dt	= sqrt(2.0*eta*eps/a)
          !7.dth=dt/2.0
+			dth =	0.5*dt
+         
       end do
       
       contains
          
          !Kick
-	     subroutine kick(vel,acc,t,n)
-	        use constants, only: ndims
-	        implicit none
-		    real :: t
-		    integer :: n
-		    real, dimension(n, ndims) :: vel,acc
+         subroutine kick(vel,acc,t,n)
+            use constants, only: ndims
+            implicit none
+            real :: t
+            integer :: n
+            real, dimension(n, ndims) :: vel,acc
 		    
             vel(:,:)=vel(:,:)+acc(:,:)*t
-	     end subroutine kick
+            return vel
+         end subroutine kick
 
-        !Drift
-	    function drift(pos,vel,t,n)
-	       use constants, only: ndims
-	       implicit none
-	       real :: x,y,vx,vy,t
-	       integer :: n
-           real ,dimension(n,ndims) :: drift,pos,vel
+         !Drift
+         subroutine drift(pos,vel,t,n)
+            use constants, only: ndims
+            implicit none
+            real :: x,y,vx,vy,t
+            integer :: n
+            real ,dimension(n,ndims) :: drift,pos,vel
            
-           pos(:,:)=pos(:,:)+vel(:,:)*t
-	end function drift
+            pos(:,:)=pos(:,:)+vel(:,:)*t
+            return pos
+         end subroutine drift
       
    end subroutine leapfrog2ord
 
 
+   subroutine get_acc(mass, pos, vel, acc, n)
+      use constants, only: ndims
+      implicit none
+      integer, intent(in) :: n
+      real, dimension(n), intent(in) :: mass
+      real, dimension(n,ndims), intent(in) :: pos
+      real, dimension(n,ndims), intent(in) :: vel
+      real, dimension(n,ndims), intent(out) :: acc
+      
+      acc(:,:) = 0.0
+      
+      do i = 1, n
+         do j = i+1, n
+            rji(:) = pos(j, :) - pos(i, :)
+            vji(:) = vel(j, :) - vel(i, :)
 
+            r2 = sum(rji**2)
+            v2 = sum(vji**2)
+            rv_r2 = sum(rji*vji) / r2
+
+            r = sqrt(r2)
+            r3 = r * r2
+
+            ! add the {i,j} contribution to the total potential energy for the
+            ! system
+            !epot = epot - mass(i) * mass(j) / r
+
+            da(:) = rji(:) / r3
+            dj(:) = (vji(:) - 3.0 * rv_r2 * rji(:)) / r3
+
+            acc(i,:) = acc(i,:) + mass(j) * da(:)
+            acc(j,:) = acc(j,:) - mass(i) * da(:)
+         enddo
+      enddo
+   end subroutine get_acc
 
    subroutine evolve_step(mass, pos, vel, acc, jerk, n, t, dt, epot, coll_time)
       use constants, only: ndims
