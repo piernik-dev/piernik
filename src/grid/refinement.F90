@@ -441,16 +441,44 @@ contains
       do k = cg%ks, cg%ke
          do j = cg%js, cg%je
             do i = cg%is, cg%ie
-               r =  (p3d(i+dom%D_x, j, k) - p3d(i-dom%D_x, j, k))**2 + &
-                    (p3d(i, j+dom%D_y, k) - p3d(i, j-dom%D_y, k))**2 + &
-                    (p3d(i, j, k+dom%D_z) - p3d(i, j, k-dom%D_z))**2
+               r = grad2(i, j, k)
                max_r = max(max_r, r)
                cg%refinemap(i, j, k) = cg%refinemap(i, j, k) .or. (r >= this%ref_thr**2)
                ! we can avoid calculating square root here
             enddo
          enddo
       enddo
+
+      ! check additional 1 perimeter of cells for derefinement
+      max_r = max(max_r, &
+           &      maxval(grad2([cg%is-2*dom%D_x, cg%is-dom%D_x, cg%ie+dom%D_x, cg%ie+2*dom%D_x], &
+           &                   [(j, j=cg%js-2*dom%D_y, cg%je+2*dom%D_y)], &
+           &                   [(k, k=cg%ks-2*dom%D_z, cg%ke+2*dom%D_z)])), &
+           &      maxval(grad2([(i, i=cg%is, cg%ie)], &
+           &                   [cg%js-2*dom%D_y, cg%js-dom%D_y, cg%je+dom%D_y, cg%je+2*dom%D_y], &
+           &                   [(k, k=cg%ks-2*dom%D_z, cg%ke+2*dom%D_z)])), &
+           &      maxval(grad2([(i, i=cg%is, cg%ie)], &
+           &                   [(j, j=cg%js, cg%je)], &
+           &                   [cg%ks-2*dom%D_z, cg%ks-dom%D_z, cg%ke+dom%D_z, cg%ke+2*dom%D_z])) )
+
       cg%refine_flags%derefine = cg%refine_flags%derefine .or. (max_r < this%deref_thr**2)
+
+   contains
+
+      elemental real function grad2(i, j, k)
+
+         use domain, only: dom
+
+         implicit none
+
+         integer,                         intent(in) :: i, j, k !< indices
+!         real, dimension(:,:,:), pointer, intent(in) :: p3d     !< pointer to array
+
+         grad2 = (p3d(i+dom%D_x, j, k) - p3d(i-dom%D_x, j, k))**2 + &
+              &  (p3d(i, j+dom%D_y, k) - p3d(i, j-dom%D_y, k))**2 + &
+              &  (p3d(i, j, k+dom%D_z) - p3d(i, j, k-dom%D_z))**2
+
+      end function grad2
 
    end subroutine refine_on_gradient
 
