@@ -44,7 +44,7 @@ module particle_integrators
    
    type, extends(particle_solver_T) :: leapfrog2_T
    contains
-      procedure, nopass :: evolve => 
+      procedure, nopass :: evolve => leapfrog2ord
    end type leapfrog2_T
 
    type(hermit4_T), target :: hermit4
@@ -172,14 +172,14 @@ contains
       real, intent(in) :: t_glob, dt_tot
       
       real, dimension(:), allocatable :: mass
-      real, dimension(:, :), allocatable :: pos, vel, acc, vel_h
+      real, dimension(:, :), allocatable :: pos, vel, acc, vel_h, acc2
       
-      real :: t_dia, t_out, t_end, einit, dt, t, eta, eps, a1, a2
+      real :: t_dia, t_out, t_end, einit, dt, t, dth, eta, eps, a
       integer :: nsteps, n, ndim, lun_out, lun_err, i
       
       n = size(pset%p, dim=1)
       t = t_glob
-      allocate(mass(n), pos(n, ndims), vel(n, ndims), acc(n, ndims), vel_h(n, ndims)
+      allocate(mass(n), pos(n, ndims), vel(n, ndims), acc(n, ndims), vel_h(n, ndims), acc2(n,ndims))
       
       mass(:) = pset%p(:)%mass
       do ndim = xdim, zdim
@@ -195,21 +195,24 @@ contains
       
       call get_acc(mass, pos, vel, acc, n)
       
+      call get_acc_mod(acc, n, a)
+      
+      
       !a tu trzeba policzyć przyspieszenia
       dt = sqrt(2.0*eta*eps/a)	
-      dth=dt/2.0
+      dth = dt/2.0
       
       !main loop
       do while (t<t_end)
          !1.kick(dth)
-         vel_h = kick(vel,acc,dth,n)
+         vel_h = kick(vel, acc, dth, n)
          !2.drift(dt)
-         pos = drift(pos,vel_h,dt,n)
+         call drift(pos,vel_h,dt,n)
          !3.acceleration + |a|
          call get_acc(mass, pos, vel, acc, n)
-         a =
+         call get_acc_mod(acc, n, a)
          !4.kick(dth)
-         vel = kick(vel,acc,dth,n)
+         call kick(vel, acc, dth, n)
          !5.t=t+dt
          t = t + dt
          !6.dt=sqrt(2.0*eta*eps/a)		!dt[n+1]
@@ -222,27 +225,28 @@ contains
       contains
          
          !Kick
-         subroutine kick(vel,acc,t,n)
+         subroutine kick(vel, acc, t, n)
             use constants, only: ndims
             implicit none
-            real :: t
-            integer :: n
-            real, dimension(n, ndims) :: vel,acc
+            real, intent(in) :: t
+            integer, intent(in) :: n
+            real, dimension(n, ndims), intent(in) :: acc
+            real, dimension(n, ndims), intent(out) :: vel
 		    
-            vel(:,:)=vel(:,:)+acc(:,:)*t
-            return vel
+            vel = vel + acc*t
+            
          end subroutine kick
 
          !Drift
-         subroutine drift(pos,vel,t,n)
+         subroutine drift(pos, vel, t, n)
             use constants, only: ndims
             implicit none
-            real :: x,y,vx,vy,t
-            integer :: n
-            real ,dimension(n,ndims) :: drift,pos,vel
+            real, intent(in) :: t
+            integer, intent(in) :: n
+            real, dimension(n, ndims), intent(out) :: pos
+            real, dimension(n, ndims), intent(in) :: vel
            
-            pos(:,:)=pos(:,:)+vel(:,:)*t
-            return pos
+            pos = pos + vel*t
          end subroutine drift
       
    end subroutine leapfrog2ord
@@ -257,6 +261,13 @@ contains
       real, dimension(n,ndims), intent(in) :: vel
       real, dimension(n,ndims), intent(out) :: acc
       
+      integer ::i, j
+      real, dimension(ndims) :: rji, vji, da
+      
+      real :: r   ! | rji |
+      real :: r2  ! | rji |^2
+      real :: r3  ! | rji |^3
+      
       acc(:,:) = 0.0
       
       do i = 1, n
@@ -265,9 +276,7 @@ contains
             vji(:) = vel(j, :) - vel(i, :)
 
             r2 = sum(rji**2)
-            v2 = sum(vji**2)
-            rv_r2 = sum(rji*vji) / r2
-
+            
             r = sqrt(r2)
             r3 = r * r2
 
@@ -276,13 +285,33 @@ contains
             !epot = epot - mass(i) * mass(j) / r
 
             da(:) = rji(:) / r3
-            dj(:) = (vji(:) - 3.0 * rv_r2 * rji(:)) / r3
+            
 
             acc(i,:) = acc(i,:) + mass(j) * da(:)
             acc(j,:) = acc(j,:) - mass(i) * da(:)
          enddo
       enddo
    end subroutine get_acc
+
+   subroutine get_acc_mod(acc, n, a)
+      use constants, only: ndims
+      implicit none
+      integer, intent(in) :: n
+      integer  :: i, j
+      real, dimension(n, ndims), intent(in) :: acc
+      real, dimension(n) :: acc2
+      real, intent(out)  :: a
+      
+      acc2 = 0.0
+      
+      do i = 1, n
+         do j = 1, ndims
+            acc2(i) = acc2(i) + acc(i,j)**2
+         enddo
+      enddo
+      a = sqrt(maxval(acc2))
+         
+   end subroutine get_acc_mod
 
    subroutine evolve_step(mass, pos, vel, acc, jerk, n, t, dt, epot, coll_time)
       use constants, only: ndims
