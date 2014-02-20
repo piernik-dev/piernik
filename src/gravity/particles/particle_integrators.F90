@@ -230,7 +230,7 @@ contains
          pset%p(:)%vel(ndim) = vel(:, ndim)
       enddo
 
-      deallocate (mass, pos, vel, acc, jerk)
+      deallocate (mass, pos, vel, acc)
       close(lun_out)
       
       contains
