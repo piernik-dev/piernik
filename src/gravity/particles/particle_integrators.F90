@@ -177,6 +177,8 @@ contains
       real :: t_dia, t_out, t_end, einit, dt, t, dth, eta, eps, a
       integer :: nsteps, n, ndim, lun_out, lun_err, i
       
+      open(newunit=lun_out, file='nbody_out.log', status='unknown',  position='append')
+      
       n = size(pset%p, dim=1)
       t = t_glob
       allocate(mass(n), pos(n, ndims), vel(n, ndims), acc(n, ndims), vel_h(n, ndims), acc2(n,ndims))
@@ -205,14 +207,15 @@ contains
       !main loop
       do while (t<t_end)
          !1.kick(dth)
-         vel_h = kick(vel, acc, dth, n)
+         vel_h=vel
+         call kick(vel_h, acc, dth, n) !velocity
          !2.drift(dt)
-         call drift(pos,vel_h,dt,n)
+         call drift(pos,vel_h,dt,n) !position
          !3.acceleration + |a|
          call get_acc(mass, pos, vel, acc, n)
          call get_acc_mod(acc, n, a)
          !4.kick(dth)
-         call kick(vel, acc, dth, n)
+         call kick(vel, acc, dth, n)   !velocity
          !5.t=t+dt
          t = t + dt
          !6.dt=sqrt(2.0*eta*eps/a)		!dt[n+1]
@@ -221,6 +224,14 @@ contains
 			dth =	0.5*dt
          
       end do
+      
+      do ndim = xdim, zdim
+         pset%p(:)%pos(ndim) = pos(:, ndim)
+         pset%p(:)%vel(ndim) = vel(:, ndim)
+      enddo
+
+      deallocate (mass, pos, vel, acc, jerk)
+      close(lun_out)
       
       contains
          
@@ -261,7 +272,7 @@ contains
       real, dimension(n,ndims), intent(in) :: vel
       real, dimension(n,ndims), intent(out) :: acc
       
-      integer ::i, j
+      integer :: i, j
       real, dimension(ndims) :: rji, vji, da
       
       real :: r   ! | rji |
@@ -271,7 +282,7 @@ contains
       acc(:,:) = 0.0
       
       do i = 1, n
-         do j = i+1, n
+         do j = i+1, ndims
             rji(:) = pos(j, :) - pos(i, :)
             vji(:) = vel(j, :) - vel(i, :)
 
