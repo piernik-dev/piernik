@@ -40,6 +40,7 @@ contains
 #define VERBOSE
    subroutine scan_for_refinements
 
+      use cg_leaves,             only: leaves
       use cg_level_connected,    only: cg_level_connected_T
       use cg_level_finest,       only: finest
       use cg_list_global,        only: all_cg
@@ -84,7 +85,7 @@ contains
       call piernik_MPI_Allreduce(cnt(PROBLEM), pSUM)
 #endif
 
-      call auto_refine_derefine
+      call auto_refine_derefine(leaves)
 #ifdef VERBOSE
       call sanitize_all_ref_flags
       cnt(AUTO) = all_cg%count_ref_flags()
