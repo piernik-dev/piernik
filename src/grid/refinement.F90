@@ -256,15 +256,16 @@ contains
 
 !> \brief Apply automatic refinement citeria
 
-   subroutine auto_refine_derefine
+   subroutine auto_refine_derefine(leaves)
 
-      use cg_leaves,        only: leaves
-      use cg_list,          only: cg_list_element
+      use cg_list,          only: cg_list_element, cg_list_T
       use constants,        only: INVALID
       use dataio_pub,       only: die
       use named_array_list, only: qna, wna
 
       implicit none
+
+      class(cg_list_T), intent(inout) :: leaves
 
       integer :: i, iv, ic
       logical :: var3d
