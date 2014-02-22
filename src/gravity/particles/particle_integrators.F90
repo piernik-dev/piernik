@@ -174,7 +174,7 @@ contains
       real, intent(in) :: t_glob, dt_tot
       
       real, dimension(:), allocatable :: mass
-      real, dimension(:, :), allocatable :: pos, vel, acc, vel_h, acc2
+      real, dimension(:, :), allocatable :: pos, vel, acc, vel_h
       
       real :: t_dia, t_out, t_end, einit, dt, t, dth, eta, eps, a
       integer :: nsteps, n, ndim, lun_out, lun_err, i
@@ -183,7 +183,7 @@ contains
       
       n = size(pset%p, dim=1)
       t = t_glob
-      allocate(mass(n), pos(n, ndims), vel(n, ndims), acc(n, ndims), vel_h(n, ndims), acc2(n,ndims))
+      allocate(mass(n), pos(n, ndims), vel(n, ndims), acc(n, ndims), vel_h(n, ndims))
       
       mass(:) = pset%p(:)%mass
 
@@ -191,13 +191,14 @@ contains
          pos(:, ndim) = pset%p(:)%pos(ndim)
          vel(:, ndim) = pset%p(:)%vel(ndim)
       enddo
-      print *, "-petla: vel=", vel(1,:)
-      print *, "-petla: pset%pos=", pset%p(1)%pos(:)
+      !print *, "-petla: vel=", vel(1,:)
+      !print *, "-petla: pset%pos=", pset%p(1)%pos(:)
       
       t = 0.0
-      eta = 35.0
+      eta = 1.0
       !eta = 3.0
-      eps = 1.0e-4
+      !eps = 1.0e-6
+      eps = 5.0e-7
       t_end = t + dt_tot
       print *, "leafrog: t_end= ", t_end
       call get_acc(mass, pos, acc, n)
@@ -215,15 +216,11 @@ contains
       do while (t<t_end)
          !1.kick(dth)
          vel_h = vel
-         print *, "size (vel)=", size(vel)
-         print *, "size (vel_h)=", size(vel_h)
-         print *, vel_h(1,:), vel(1,:)
          call kick(vel_h, acc, dth, n) !velocity
          !2.drift(dt)
          call drift(pos, vel_h, dt, n) !position
          !3.acceleration + |a|
          call get_acc(mass, pos, acc, n)
-         print *, "a=", a
          call get_acc_mod(acc, n, a)
          !4.kick(dth)
          call kick(vel, acc, dth, n)   !velocity
@@ -246,10 +243,10 @@ contains
          pset%p(:)%vel(ndim) = vel(:, ndim)
       enddo
 
-      deallocate (mass, pos, vel, acc, vel_h, acc2)
+      deallocate (mass, pos, vel, acc, vel_h)
       close(lun_out)
       
-      return
+      !return
       contains
          
          !Kick
@@ -297,7 +294,7 @@ contains
       real :: r2  ! | rji |^2
       real :: r3  ! | rji |^3
       
-      eps=1.0e-4
+      !eps=1.0e-4
       acc(:,:) = 0.0
       do i = 1, n
          do j = i+1, n
@@ -305,7 +302,7 @@ contains
             !vji(:) = vel(j, :) - vel(i, :)
 
             r2 = sum(rji**2)
-            r = sqrt(r2+eps**2)
+            r = sqrt(r2)
             r3 = r * r2
 
             ! add the {i,j} contribution to the total potential energy for the
@@ -318,7 +315,6 @@ contains
             acc(i,:) = acc(i,:) + mass(j) * da(:)
             acc(j,:) = acc(j,:) - mass(i) * da(:)
          enddo
-         print *, "get acc: r2= ", r2
       enddo
    end subroutine get_acc
 
@@ -339,7 +335,7 @@ contains
          enddo
       enddo
       a = sqrt(maxval(acc2))
-      print *, "mod a: a=", a
+      !print *, "mod a: a=", a
          
    end subroutine get_acc_mod
 
