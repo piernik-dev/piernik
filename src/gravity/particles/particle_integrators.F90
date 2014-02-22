@@ -106,9 +106,11 @@ contains
       do
          do while (t < t_dia .and. t < t_out .and. t < t_end)
             dt = dt_param * coll_time
+            print *, "Hermit dt=", dt
             call evolve_step(mass, pos, vel, acc, jerk, n, t, dt, epot, coll_time)
             nsteps = nsteps + 1
          enddo
+         print *, "Hermit nsteps=", nsteps
          if (t >= t_dia) then
             call write_diagnostics(mass, pos, vel, acc, jerk, n, t, epot, nsteps, einit, .False.)
             t_dia = t_dia + dt_dia
@@ -177,42 +179,51 @@ contains
       real :: t_dia, t_out, t_end, einit, dt, t, dth, eta, eps, a
       integer :: nsteps, n, ndim, lun_out, lun_err, i
       
-      open(newunit=lun_out, file='nbody_out.log', status='unknown',  position='append')
+      open(newunit=lun_out, file='leapfrog_out.log', status='unknown',  position='append')
       
       n = size(pset%p, dim=1)
       t = t_glob
       allocate(mass(n), pos(n, ndims), vel(n, ndims), acc(n, ndims), vel_h(n, ndims), acc2(n,ndims))
       
       mass(:) = pset%p(:)%mass
+
       do ndim = xdim, zdim
          pos(:, ndim) = pset%p(:)%pos(ndim)
          vel(:, ndim) = pset%p(:)%vel(ndim)
       enddo
-      
+      print *, "-petla: vel=", vel(1,:)
+      print *, "-petla: pset%pos=", pset%p(1)%pos(:)
       
       t = 0.0
       eta = 35.0
-      eps = 1.0e-5
-      t_end=t+dt_tot
-      
-      call get_acc(mass, pos, vel, acc, n)
+      !eta = 3.0
+      eps = 1.0e-4
+      t_end = t + dt_tot
+      print *, "leafrog: t_end= ", t_end
+      call get_acc(mass, pos, acc, n)
       
       call get_acc_mod(acc, n, a)
-      
+      print *, "a=", a
       
       !a tu trzeba policzyć przyspieszenia
-      dt = sqrt(2.0*eta*eps/a)	
+      dt = sqrt(2.0*eta*eps/a)
+      !dt = 0.007
+      print *, "Leapfrog dt=", dt
       dth = dt/2.0
-      
+      nsteps = 0
       !main loop
       do while (t<t_end)
          !1.kick(dth)
-         vel_h=vel
+         vel_h = vel
+         print *, "size (vel)=", size(vel)
+         print *, "size (vel_h)=", size(vel_h)
+         print *, vel_h(1,:), vel(1,:)
          call kick(vel_h, acc, dth, n) !velocity
          !2.drift(dt)
-         call drift(pos,vel_h,dt,n) !position
+         call drift(pos, vel_h, dt, n) !position
          !3.acceleration + |a|
-         call get_acc(mass, pos, vel, acc, n)
+         call get_acc(mass, pos, acc, n)
+         print *, "a=", a
          call get_acc_mod(acc, n, a)
          !4.kick(dth)
          call kick(vel, acc, dth, n)   !velocity
@@ -222,17 +233,23 @@ contains
          dt	= sqrt(2.0*eta*eps/a)
          !7.dth=dt/2.0
 			dth =	0.5*dt
-         
+         nsteps = nsteps + 1
+         do i = 1, n
+            write(lun_out, '(7(E13.6,1X))') mass(i), pos(i,:), vel(i,:)
+         enddo
       end do
+      
+      print *, "Leapfrog nsteps=", nsteps
       
       do ndim = xdim, zdim
          pset%p(:)%pos(ndim) = pos(:, ndim)
          pset%p(:)%vel(ndim) = vel(:, ndim)
       enddo
 
-      deallocate (mass, pos, vel, acc)
+      deallocate (mass, pos, vel, acc, vel_h, acc2)
       close(lun_out)
       
+      return
       contains
          
          !Kick
@@ -263,14 +280,15 @@ contains
    end subroutine leapfrog2ord
 
 
-   subroutine get_acc(mass, pos, vel, acc, n)
+   subroutine get_acc(mass, pos, acc, n)
       use constants, only: ndims
       implicit none
       integer, intent(in) :: n
       real, dimension(n), intent(in) :: mass
-      real, dimension(n,ndims), intent(in) :: pos
-      real, dimension(n,ndims), intent(in) :: vel
-      real, dimension(n,ndims), intent(out) :: acc
+      real, dimension(n, ndims), intent(in) :: pos
+      !real, dimension(n,ndims), intent(in) :: vel
+      real, dimension(n, ndims), intent(out) :: acc
+      real  :: eps
       
       integer :: i, j
       real, dimension(ndims) :: rji, vji, da
@@ -279,21 +297,20 @@ contains
       real :: r2  ! | rji |^2
       real :: r3  ! | rji |^3
       
+      eps=1.0e-4
       acc(:,:) = 0.0
-      
       do i = 1, n
-         do j = i+1, ndims
+         do j = i+1, n
             rji(:) = pos(j, :) - pos(i, :)
-            vji(:) = vel(j, :) - vel(i, :)
+            !vji(:) = vel(j, :) - vel(i, :)
 
             r2 = sum(rji**2)
-            
-            r = sqrt(r2)
+            r = sqrt(r2+eps**2)
             r3 = r * r2
 
             ! add the {i,j} contribution to the total potential energy for the
             ! system
-            !epot = epot - mass(i) * mass(j) / r
+            
 
             da(:) = rji(:) / r3
             
@@ -301,6 +318,7 @@ contains
             acc(i,:) = acc(i,:) + mass(j) * da(:)
             acc(j,:) = acc(j,:) - mass(i) * da(:)
          enddo
+         print *, "get acc: r2= ", r2
       enddo
    end subroutine get_acc
 
@@ -321,6 +339,7 @@ contains
          enddo
       enddo
       a = sqrt(maxval(acc2))
+      print *, "mod a: a=", a
          
    end subroutine get_acc_mod
 
