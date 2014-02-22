@@ -54,7 +54,7 @@ contains
       use dataio_pub,            only: nh  ! QA_WARN required for diff_nml
       use dataio_pub,            only: msg, die
       use mpisetup,              only: master, slave, cbuff, piernik_mpi_bcast
-      use particle_integrators,  only: hermit4
+      use particle_integrators,  only: hermit4, leapfrog2
 
       implicit none
       character(len=cbuff_len) :: time_integrator
@@ -100,6 +100,8 @@ contains
 #ifndef _CRAYFTN
          case ('hermit4')
             psolver => hermit4
+         case ('leapfrog2')
+            psolver => leapfrog2
          case (default_ti) ! be quiet
 #endif /* !_CRAYFTN */
          case default
