@@ -365,6 +365,7 @@ contains
       type(cg_list_element), pointer :: cgl
       real, dimension(:,:,:), pointer :: p3d
 
+      if (.not. allocated(ref_crit_list)) return
       do i = lbound(ref_crit_list, dim=1), ubound(ref_crit_list, dim=1)
          var3d = (ref_crit_list(i)%ic == INVALID)
 
@@ -384,7 +385,9 @@ contains
                if (var3d) then
                   p3d => cgl%cg%q(ref_crit_list(i)%iv)%arr
                else
-                  p3d => cgl%cg%w(ref_crit_list(i)%iv)%arr(ref_crit_list(i)%ic, :, :, :)
+                  associate (a=>cgl%cg%w(ref_crit_list(i)%iv)%arr)
+                     p3d(lbound(a, dim=2):, lbound(a, dim=3):, lbound(a, dim=4):) => cgl%cg%w(ref_crit_list(i)%iv)%arr(ref_crit_list(i)%ic, :, :, :)
+                  end associate
                endif
                call ref_crit_list(i)%refine(cgl%cg, p3d)
             endif
