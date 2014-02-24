@@ -38,7 +38,7 @@ module refinement
    private
    public :: n_updAMR, allow_face_rstep, allow_corner_rstep, oop_thr, refine_points, auto_refine_derefine, &
         &    refine_boxes, init_refinement, emergency_fix, set_n_updAMR, strict_SFC_ordering, prefer_n_bruteforce, &
-        &    refines2list
+        &    refines2list, user_ref2list
 
    integer(kind=4), protected :: n_updAMR            !< how often to update the refinement structure
    logical,         protected :: allow_face_rstep    !< Allows >1 refinement step across faces (do not use it for any physical problems)
@@ -283,17 +283,17 @@ contains
 
    subroutine user_ref2list(iv, ic, ref_thr, deref_thr, aux, rname)
 
-      use constants,  only: cbuff_len, INVALID
+      use constants,  only: INVALID
       use dataio_pub, only: warn, die
 
       implicit none
 
-      integer,                  intent(in) :: iv        !< field index in cg%q or cg%w array
-      integer,                  intent(in) :: ic        !< component index of 4D array or INVALID for 3D arrays
-      real,                     intent(in) :: ref_thr   !< refinement threshold
-      real,                     intent(in) :: deref_thr !< derefinement threshold
-      real,                     intent(in) :: aux       !< auxiliary parameter
-      character(len=cbuff_len), intent(in) :: rname     !< name of the refinement routine
+      integer,          intent(in) :: iv        !< field index in cg%q or cg%w array
+      integer,          intent(in) :: ic        !< component index of 4D array or INVALID for 3D arrays
+      real,             intent(in) :: ref_thr   !< refinement threshold
+      real,             intent(in) :: deref_thr !< derefinement threshold
+      real,             intent(in) :: aux       !< auxiliary parameter
+      character(len=*), intent(in) :: rname     !< name of the refinement routine
 
       if (iv == INVALID) then
          call warn("[refinement:user_ref2list] invalid field. Ignored.")
