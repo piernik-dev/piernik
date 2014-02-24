@@ -335,6 +335,7 @@ contains
       type(cg_list_element), pointer :: cgl
       real, dimension(:,:,:), pointer :: p3d
 
+      if (.not. allocated(ref_crit_list)) return
       do i = lbound(ref_crit_list, dim=1), ubound(ref_crit_list, dim=1)
          var3d = (ref_crit_list(i)%ic == INVALID)
 
