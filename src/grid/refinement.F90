@@ -451,19 +451,36 @@ contains
 
       ! check additional 1 perimeter of cells for derefinement
       max_r = max(max_r, &
-           &      maxval(grad2([cg%is-2*dom%D_x, cg%is-dom%D_x, cg%ie+dom%D_x, cg%ie+2*dom%D_x], &
-           &                   [(j, j=cg%js-2*dom%D_y, cg%je+2*dom%D_y)], &
-           &                   [(k, k=cg%ks-2*dom%D_z, cg%ke+2*dom%D_z)])), &
-           &      maxval(grad2([(i, i=cg%is, cg%ie)], &
-           &                   [cg%js-2*dom%D_y, cg%js-dom%D_y, cg%je+dom%D_y, cg%je+2*dom%D_y], &
-           &                   [(k, k=cg%ks-2*dom%D_z, cg%ke+2*dom%D_z)])), &
-           &      maxval(grad2([(i, i=cg%is, cg%ie)], &
-           &                   [(j, j=cg%js, cg%je)], &
-           &                   [cg%ks-2*dom%D_z, cg%ks-dom%D_z, cg%ke+dom%D_z, cg%ke+2*dom%D_z])) )
+           maxgradoverarea(cg%is-dom%D_x, cg%is-dom%D_x, cg%js-dom%D_y, cg%je+dom%D_y, cg%ks-dom%D_z, cg%ke+dom%D_z), &
+           maxgradoverarea(cg%ie+dom%D_x, cg%ie+dom%D_x, cg%js-dom%D_y, cg%je+dom%D_y, cg%ks-dom%D_z, cg%ke+dom%D_z), &
+           maxgradoverarea(cg%is, cg%ie, cg%js-dom%D_y, cg%js-dom%D_y, cg%ks-dom%D_z, cg%ke+dom%D_z), &
+           maxgradoverarea(cg%is, cg%ie, cg%je+dom%D_y, cg%je+dom%D_y, cg%ks-dom%D_z, cg%ke+dom%D_z), &
+           maxgradoverarea(cg%is, cg%ie, cg%js, cg%je, cg%ks-dom%D_z, cg%ks-dom%D_z), &
+           maxgradoverarea(cg%is, cg%ie, cg%js, cg%je, cg%ke+dom%D_z, cg%ke+dom%D_z) )
 
       cg%refine_flags%derefine = cg%refine_flags%derefine .or. (max_r < this%deref_thr**2)
 
    contains
+
+      elemental real function maxgradoverarea(i1, i2, j1, j2, k1, k2)
+
+         implicit none
+
+         integer, intent(in) :: i1, i2, j1, j2, k1, k2
+
+         integer :: i, j, k
+
+         maxgradoverarea = -huge(1.)
+
+         do k = k1, k2
+            do j = j1, j2
+               do i = i1, i2
+                  maxgradoverarea = max(maxgradoverarea, grad2(i, j, k))
+               enddo
+            enddo
+         enddo
+
+      end function maxgradoverarea
 
       elemental real function grad2(i, j, k)
 
