@@ -15,3 +15,5 @@ LDFLAGS   = -Wl,--as-needed -Wl,-O1
 F90FLAGS += -O2 -funroll-loops -fstack-arrays
 F90FLAGS += -ggdb -ffpe-trap=zero,overflow,invalid -fbounds-check -frange-check -Wsurprising -Wcharacter-truncation -Wno-unused-function
 F90FLAGS += -Wall -W -Wextra -pedantic-errors -fbacktrace -pedantic
+
+MAKEFLAGS += -j2
