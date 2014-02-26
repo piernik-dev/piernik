@@ -343,6 +343,7 @@ contains
       !> \todo interpret dens, vel[xyz], ener as multiple components to be checked
 
       write(msg,'(3a)')"[refinement:identify_field] Unidentified refinement variable: '",trim(vname),"'"
+      call warn(msg)
 
    end subroutine identify_field
 
