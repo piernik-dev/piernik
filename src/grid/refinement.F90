@@ -269,12 +269,18 @@ contains
 
       implicit none
 
-      integer :: i, iv, ic
+      integer :: i, c, iv
+      integer, dimension(:), allocatable :: ic
 
       do i = 1, n_ref_auto_param
          call identify_field(refine_vars(i)%rvar, iv, ic)
-         if (iv /= INVALID .and. trim(refine_vars(i)%rname) /= trim(inactive_name)) &
-              call user_ref2list(iv, ic, refine_vars(i)%ref_thr, refine_vars(i)%deref_thr, refine_vars(i)%aux, refine_vars(i)%rname)
+         if (iv /= INVALID .and. trim(refine_vars(i)%rname) /= trim(inactive_name)) then
+            if (.not. allocated(ic)) call die("[refinement:refines2list] .not. allocated(ic))")
+            do c = lbound(ic, dim=1), ubound(ic, dim=1)
+               call user_ref2list(iv, ic(c), refine_vars(i)%ref_thr, refine_vars(i)%deref_thr, refine_vars(i)%aux, refine_vars(i)%rname)
+            end do
+         endif
+         if (allocated(ic)) deallocate(ic)
       enddo
 
    end subroutine refines2list
@@ -403,23 +409,56 @@ contains
 
       use constants,        only: INVALID, cbuff_len
       use dataio_pub,       only: msg, warn
-      use named_array_list, only: qna
+      use fluidindex,       only: iarr_all_dn, iarr_all_mx, iarr_all_my, iarr_all_mz, iarr_all_en
+      use named_array_list, only: qna, wna
 
       implicit none
 
-      character(len=cbuff_len), intent(in)  :: vname !< string specifying the field on
-      integer,                  intent(out) :: iv    !< field index in cg%q or cg%w array
-      integer,                  intent(out) :: ic    !< component index (cg%w(iv)%arr(ic,:,:,:)) or INVALID for 3D arrays
+      character(len=cbuff_len),           intent(in)  :: vname !< string specifying the field on
+      integer,                            intent(out) :: iv    !< field index in cg%q or cg%w array
+      integer, dimension(:), allocatable, intent(out) :: ic    !< component index array (cg%w(iv)%arr(ic,:,:,:)) or INVALID for 3D arrays
+
       iv = INVALID
-      ic = INVALID
 
       if (trim(vname) == trim(inactive_name)) return ! ignore this
 
-      iv = qna%ind(trim(vname))
-      if (iv /= INVALID) return ! this is a 3d array name
+      if (qna%exists(trim(vname))) then
+         iv = qna%ind(trim(vname))
+         if (iv /= INVALID) then
+            allocate(ic(1))
+            ic = INVALID
+            return ! this is a 3d array name
+         endif
+      endif
 
+      if (trim(vname) == "dens") then
+         allocate(ic(lbound(iarr_all_dn, dim=1):ubound(iarr_all_dn, dim=1)))
+         iv = wna%fi
+         ic = iarr_all_dn
+         return
+      else if (trim(vname) == "velx") then
+         allocate(ic(lbound(iarr_all_mx, dim=1):ubound(iarr_all_mx, dim=1)))
+         iv = wna%fi
+         ic = iarr_all_mx
+         return
+      else if (trim(vname) == "vely") then
+         allocate(ic(lbound(iarr_all_my, dim=1):ubound(iarr_all_my, dim=1)))
+         iv = wna%fi
+         ic = iarr_all_my
+         return
+      else if (trim(vname) == "velz") then
+         allocate(ic(lbound(iarr_all_mz, dim=1):ubound(iarr_all_mz, dim=1)))
+         iv = wna%fi
+         ic = iarr_all_mz
+         return
+      else if (trim(vname) == "ener") then
+         allocate(ic(lbound(iarr_all_en, dim=1):ubound(iarr_all_en, dim=1)))
+         iv = wna%fi
+         ic = iarr_all_en
+         return
+      end if
       !> \todo identify here all {den,vl[xyz],ene}{d,n,i}
-      !> \todo interpret dens, vel[xyz], ener as multiple components to be checked
+      !> \todo introduce possibility to operate on pressure or other indirect fields
 
       write(msg,'(3a)')"[refinement:identify_field] Unidentified refinement variable: '",trim(vname),"'"
 
