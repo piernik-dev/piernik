@@ -36,13 +36,11 @@ module refinement
    implicit none
 
    private
-   public :: n_updAMR, allow_face_rstep, allow_corner_rstep, oop_thr, refine_points, auto_refine_derefine, &
+   public :: n_updAMR, oop_thr, refine_points, auto_refine_derefine, &
         &    refine_boxes, init_refinement, emergency_fix, set_n_updAMR, strict_SFC_ordering, prefer_n_bruteforce, &
         &    refines2list, user_ref2list
 
    integer(kind=4), protected :: n_updAMR            !< how often to update the refinement structure
-   logical,         protected :: allow_face_rstep    !< Allows >1 refinement step across faces (do not use it for any physical problems)
-   logical,         protected :: allow_corner_rstep  !< Allows >1 refinement step across edges and corners (do not use it for any physical problems)
    logical,         protected :: strict_SFC_ordering !< Enforce strict SFC ordering to allow optimized neighbour search
    real,            protected :: oop_thr             !< Maximum allowed ratio of Out-of-Place grid pieces (according to current ordering scheme)
    logical,         protected :: prefer_n_bruteforce !< if .false. then try DFC algorithms for neighbor searches
@@ -103,7 +101,7 @@ module refinement
 
    logical :: emergency_fix !< set to .true. if you want to call update_refinement ASAP
 
-   namelist /AMR/ level_min, level_max, n_updAMR, allow_face_rstep, allow_corner_rstep, strict_SFC_ordering, &
+   namelist /AMR/ level_min, level_max, n_updAMR, strict_SFC_ordering, &
         &         prefer_n_bruteforce, oop_thr, refine_points, refine_boxes, refine_vars
 
 contains
@@ -128,8 +126,6 @@ contains
       level_min = base_level_id
       level_max = level_min
       n_updAMR  = huge(I_ONE)
-      allow_face_rstep    = .false.
-      allow_corner_rstep  = .false.
       strict_SFC_ordering = .false.
       allow_AMR = .true.
       prefer_n_bruteforce = .false.
@@ -191,11 +187,9 @@ contains
          ibuff(4        :3+  nshapes) = refine_points(:)%level
          ibuff(4+nshapes:3+2*nshapes) = refine_boxes (:)%level
 
-         lbuff(1) = allow_face_rstep
-         lbuff(2) = allow_corner_rstep
-         lbuff(3) = allow_AMR
-         lbuff(4) = strict_SFC_ordering
-         lbuff(5) = prefer_n_bruteforce
+         lbuff(1) = allow_AMR
+         lbuff(2) = strict_SFC_ordering
+         lbuff(3) = prefer_n_bruteforce
 
          rbuff(1) = oop_thr
          rbuff(2          :1+  nshapes) = refine_points(:)%coords(xdim)
@@ -229,11 +223,9 @@ contains
          refine_points(:)%level = ibuff(4        :3+  nshapes)
          refine_boxes (:)%level = ibuff(4+nshapes:3+2*nshapes)
 
-         allow_face_rstep    = lbuff(1)
-         allow_corner_rstep  = lbuff(2)
-         allow_AMR           = lbuff(3)
-         strict_SFC_ordering = lbuff(4)
-         prefer_n_bruteforce = lbuff(5)
+         allow_AMR           = lbuff(1)
+         strict_SFC_ordering = lbuff(2)
+         prefer_n_bruteforce = lbuff(3)
 
          oop_thr = rbuff(1)
          refine_points(:)%coords(xdim)     = rbuff(2          :1+  nshapes)

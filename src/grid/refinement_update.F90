@@ -457,7 +457,6 @@ contains
       use constants,        only: xdim, ydim, zdim, I_ONE!, I_TWO, LO, HI
       use dataio_pub,       only: die, warn, msg!, printinfo
       use domain,           only: dom
-      use refinement,       only: allow_face_rstep, allow_corner_rstep
       use named_array_list, only: qna
 !      use cg_level_base, only: base
 #ifdef DEBUG_DUMPS
@@ -483,8 +482,7 @@ contains
       if (present(correct)) correct = .true.
       failed = .false.
 
-      if (allow_face_rstep .and. allow_corner_rstep) return
-      !> \todo also check for excess or refinement levels
+      !> \todo check for excess or refinement levels
 
       ! Put a level number to the working array, restrict it and exchange internal boundaries
       cgl => leaves%first

@@ -53,7 +53,5 @@
 
  $AMR
     level_max = 5
-    allow_face_rstep   = .true.
-    allow_corner_rstep = .true.
     n_updAMR = 1
  /
