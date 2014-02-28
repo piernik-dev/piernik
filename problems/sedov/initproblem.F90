@@ -423,19 +423,16 @@ contains
 
    subroutine mark_overdensity
 
-      use all_boundaries, only: all_bnd
-      use cg_leaves,      only: leaves
-      use cg_list,        only: cg_list_element
-      use domain,         only: dom
-      use fluidindex,     only: iarr_all_dn, flind
+      use cg_leaves,  only: leaves
+      use cg_list,    only: cg_list_element
+      use domain,     only: dom
+      use fluidindex, only: iarr_all_dn, flind
 
       implicit none
 
       type(cg_list_element), pointer :: cgl
       real :: dmax, diff
       integer :: id, i, j, k
-
-      call all_bnd ! pretty likely overkill. \todo find a way to minimize calling this - perhaps manage a flag that says whether the boundaries are up to date or not
 
       cgl => leaves%first
       do while (associated(cgl))

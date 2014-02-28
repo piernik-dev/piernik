@@ -38,8 +38,12 @@ module refinement_update
 contains
 
 #define VERBOSE
+
+!> \brief Apply all (de)refinement criteria: user, automatic and by primitive geometric shapes
+
    subroutine scan_for_refinements
 
+      use all_boundaries,   only: all_bnd
       use cg_leaves,             only: leaves
       use cg_level_connected,    only: cg_level_connected_T
       use cg_level_finest,       only: finest
@@ -71,7 +75,7 @@ contains
       call all_cg%clear_ref_flags
       cnt = 0
 
-      ! call all_bnd?
+      call all_bnd ! \todo find a way to minimize calling this - perhaps manage a flag that says whether the boundaries are up to date or not
 
       if (associated(problem_refine_derefine)) then
          call problem_refine_derefine ! call user routine first, so it cannot alter flags set by automatic routines
