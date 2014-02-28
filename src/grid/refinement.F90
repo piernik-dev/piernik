@@ -257,7 +257,7 @@ contains
    subroutine refines2list
 
       use constants,  only: INVALID
-      use dataio_pub, only: die
+      use dataio_pub, only: die, msg
 
       implicit none
 
@@ -268,9 +268,14 @@ contains
          call identify_field(refine_vars(i)%rvar, iv, ic)
          if (iv /= INVALID .and. trim(refine_vars(i)%rname) /= trim(inactive_name)) then
             if (.not. allocated(ic)) call die("[refinement:refines2list] .not. allocated(ic))")
-            do c = lbound(ic, dim=1), ubound(ic, dim=1)
-               call user_ref2list(iv, ic(c), refine_vars(i)%ref_thr, refine_vars(i)%deref_thr, refine_vars(i)%aux, refine_vars(i)%rname)
-            end do
+            if (size(ic) <= 0) then
+               write(msg,'(3a)')"[refinement:refines2list] iv /= INVALID and  unrecognized field name '",trim(refine_vars(i)%rname),"'"
+               call die(msg)
+            else
+               do c = lbound(ic, dim=1), ubound(ic, dim=1)
+                  call user_ref2list(iv, ic(c), refine_vars(i)%ref_thr, refine_vars(i)%deref_thr, refine_vars(i)%aux, refine_vars(i)%rname)
+               end do
+            end if
          endif
          if (allocated(ic)) deallocate(ic)
       enddo
