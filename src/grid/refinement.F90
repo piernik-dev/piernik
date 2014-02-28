@@ -455,6 +455,8 @@ contains
       write(msg,'(3a)')"[refinement:identify_field] Unidentified refinement variable: '",trim(vname),"'"
       call warn(msg)
 
+      allocate(ic(0))
+
    end subroutine identify_field
 
 !>
