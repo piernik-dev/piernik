@@ -64,7 +64,7 @@ contains
       class(particle_set), intent(inout) :: pset  !< particle list
       real, intent(in) :: t_glob, dt_tot
 
-      real, parameter :: dt_param = 0.03        ! control parameter to determine time step size
+      real, parameter :: dt_param = 0.003        ! control parameter to determine time step size
       real, parameter :: dt_dia = 1             ! time interval between diagnostics output
       real, parameter :: dt_out = 0.01          ! time interval between output of snapshots
 
@@ -209,7 +209,7 @@ contains
       
       !a tu trzeba policzyć przyspieszenia
       dt = sqrt(2.0*eta*eps/a)
-      !dt = 0.007
+      !dt = 0.00003
       print *, "Leapfrog dt=", dt
       dth = dt/2.0
       nsteps = 0
@@ -230,7 +230,7 @@ contains
          !6.dt=sqrt(2.0*eta*eps/a)		!dt[n+1]
          dt	= sqrt(2.0*eta*eps/a)
          !7.dth=dt/2.0
-			dth =	0.5*dt
+	 dth =	0.5*dt
          nsteps = nsteps + 1
          do i = 1, n
             write(lun_out, '(7(E13.6,1X))') mass(i), pos(i,:), vel(i,:)
