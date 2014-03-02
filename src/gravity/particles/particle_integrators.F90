@@ -105,7 +105,7 @@ contains
 
       do
          do while (t < t_dia .and. t < t_out .and. t < t_end)
-            dt = dt_param * coll_time
+            dt = dt_param! * coll_time
             call evolve_step(mass, pos, vel, acc, jerk, n, t, dt, epot, coll_time)
             nsteps = nsteps + 1
          enddo
