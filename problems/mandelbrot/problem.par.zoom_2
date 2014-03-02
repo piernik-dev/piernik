@@ -1,9 +1,9 @@
  $BASE_DOMAIN
     n_d = 2*64, 1
-    xmin   = -2.25
-    xmax   =  0.75
-    ymin   = -1.5
-    ymax   =  1.5
+    xmin   = -0.760
+    xmax   = -0.756
+    ymin   =  0.070
+    ymax   =  0.074
     bnd_xl = "outd"
     bnd_xr = "outd"
     bnd_yl = "outd"
@@ -31,7 +31,7 @@
 
  $OUTPUT_CONTROL
     problem_name = 'mandelbrot'
-    run_id =  'ts0'
+    run_id =  'ts2'
     use_v2_io = .true.
     dt_hdf  = 0.5
     vars(1:) = 'mand', 'dist', 'ang', 'level'
@@ -44,7 +44,7 @@
  /
 
  $PROBLEM_CONTROL
-    maxiter = 1000
+    maxiter = 10000
 !    smooth_map = .false.
     deref_thr = 0.
  /
