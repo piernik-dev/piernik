@@ -106,11 +106,10 @@ contains
       do
          do while (t < t_dia .and. t < t_out .and. t < t_end)
             dt = dt_param * coll_time
-            print *, "Hermit dt=", dt
             call evolve_step(mass, pos, vel, acc, jerk, n, t, dt, epot, coll_time)
             nsteps = nsteps + 1
          enddo
-         print *, "Hermit nsteps=", nsteps
+         
          if (t >= t_dia) then
             call write_diagnostics(mass, pos, vel, acc, jerk, n, t, epot, nsteps, einit, .False.)
             t_dia = t_dia + dt_dia
@@ -123,7 +122,9 @@ contains
             t_out = t_out + dt_out
          endif
          if (t >= t_end) exit
+         print *, "Hermit dt=", dt
       enddo
+      print *, "Hermit nsteps=", nsteps
 
       do ndim = xdim, zdim
          pset%p(:)%pos(ndim) = pos(:, ndim)
