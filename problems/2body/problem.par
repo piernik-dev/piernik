@@ -27,7 +27,7 @@
  /
 
  $END_CONTROL
-    tend   = 10.0
+    tend   = 20.0
     nend   = 100
  /
 
@@ -45,10 +45,11 @@
  /
 
  $FLUID_NEUTRAL
+ cs_iso = 0.001
  /
 
  $NUMERICAL_SETUP
-    cfl    = 0.8
+    cfl    = 1.0
     smalld = 1.e-3
     smallei= 1.e-5
     integration_order = 2
@@ -75,4 +76,5 @@
 
  $PARTICLES
    time_integrator = 'hermit4'
+   !time_integrator = 'leapfrog2'
  /
