@@ -45,7 +45,7 @@
  /
 
  $FLUID_NEUTRAL
- cs_iso = 0.001
+ !cs_iso = 0.001
  /
 
  $NUMERICAL_SETUP
@@ -75,6 +75,6 @@
  /
 
  $PARTICLES
-   time_integrator = 'hermit4'
-   !time_integrator = 'leapfrog2'
+   !time_integrator = 'hermit4'
+   time_integrator = 'leapfrog2'
  /
