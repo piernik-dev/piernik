@@ -183,7 +183,7 @@ contains
       open(newunit=lun_out, file='leapfrog_out.log', status='unknown',  position='append')
       
       n = size(pset%p, dim=1)
-      t = t_glob
+      
       allocate(mass(n), pos(n, ndims), vel(n, ndims), acc(n, ndims), vel_h(n, ndims))
       
       mass(:) = pset%p(:)%mass
@@ -195,13 +195,13 @@ contains
       !print *, "-petla: vel=", vel(1,:)
       !print *, "-petla: pset%pos=", pset%p(1)%pos(:)
       
-      t = 0.0
+      t = t_glob
       eta = 1.0
       !eta = 3.0
       !eps = 1.0e-6
-      eps = 5.0e-7
+      eps = 1.0e-6
       t_end = t + dt_tot
-      print *, "leafrog: t_end= ", t_end
+      print *, "Leafrog: t_end= ", t_end
       call get_acc(mass, pos, acc, n)
       
       call get_acc_mod(acc, n, a)
@@ -209,14 +209,14 @@ contains
       
       !a tu trzeba policzyć przyspieszenia
       dt = sqrt(2.0*eta*eps/a)
-      !dt = 0.00003
-      print *, "Leapfrog dt=", dt
+      !dt = 0.0001
+      print *, "Leapfrog: dt=", dt
       dth = dt/2.0
       nsteps = 0
       !main loop
       do while (t<t_end)
          !1.kick(dth)
-         vel_h = vel
+         vel_h(:,:) = vel
          call kick(vel_h, acc, dth, n) !velocity
          !2.drift(dt)
          call drift(pos, vel_h, dt, n) !position
@@ -224,6 +224,7 @@ contains
          call get_acc(mass, pos, acc, n)
          call get_acc_mod(acc, n, a)
          !4.kick(dth)
+         vel(:,:)=vel_h
          call kick(vel, acc, dth, n)   !velocity
          !5.t=t+dt
          t = t + dt
@@ -257,7 +258,7 @@ contains
             real, intent(in) :: t
             integer, intent(in) :: n
             real, dimension(n, ndims), intent(in) :: acc
-            real, dimension(n, ndims), intent(out) :: vel
+            real, dimension(n, ndims), intent(inout) :: vel
 		    
             vel = vel + acc*t
             
@@ -269,7 +270,7 @@ contains
             implicit none
             real, intent(in) :: t
             integer, intent(in) :: n
-            real, dimension(n, ndims), intent(out) :: pos
+            real, dimension(n, ndims), intent(inout) :: pos
             real, dimension(n, ndims), intent(in) :: vel
            
             pos = pos + vel*t
