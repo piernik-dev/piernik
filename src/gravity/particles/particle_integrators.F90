@@ -303,12 +303,11 @@ contains
       real :: r2  ! | rji |^2
       real :: r3  ! | rji |^3
       
-      !eps=1.0e-4
+      
       acc(:,:) = 0.0
       do i = 1, n
          do j = i+1, n
             rji(:) = pos(j, :) - pos(i, :)
-            !vji(:) = vel(j, :) - vel(i, :)
 
             r2 = sum(rji**2)
             r = sqrt(r2)
