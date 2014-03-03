@@ -64,7 +64,7 @@ contains
       class(particle_set), intent(inout) :: pset  !< particle list
       real, intent(in) :: t_glob, dt_tot
 
-      real, parameter :: dt_param = 0.003        ! control parameter to determine time step size
+      real, parameter :: dt_param = 0.03        ! control parameter to determine time step size
       real, parameter :: dt_dia = 1             ! time interval between diagnostics output
       real, parameter :: dt_out = 0.01          ! time interval between output of snapshots
 
@@ -192,27 +192,32 @@ contains
          pos(:, ndim) = pset%p(:)%pos(ndim)
          vel(:, ndim) = pset%p(:)%vel(ndim)
       enddo
-      !print *, "-petla: vel=", vel(1,:)
-      !print *, "-petla: pset%pos=", pset%p(1)%pos(:)
+
       
       t = t_glob
-      eta = 1.0
-      !eta = 3.0
-      !eps = 1.0e-6
-      eps = 1.0e-6
       t_end = t + dt_tot
       print *, "Leafrog: t_end= ", t_end
+
+
+      eta = 1.0
+      eps = 1.0e-6
+
+
+      !initial acceleration
       call get_acc(mass, pos, acc, n)
       
       call get_acc_mod(acc, n, a)
       print *, "a=", a
       
-      !a tu trzeba policzyć przyspieszenia
-      dt = sqrt(2.0*eta*eps/a)
-      !dt = 0.0001
+      !timestep
+      !dt = sqrt(2.0*eta*eps/a)            !variable
+      dt = 0.03                            !constant
       print *, "Leapfrog: dt=", dt
       dth = dt/2.0
+      
+
       nsteps = 0
+
       !main loop
       do while (t<t_end)
          !1.kick(dth)
@@ -226,19 +231,21 @@ contains
          !4.kick(dth)
          vel(:,:)=vel_h
          call kick(vel, acc, dth, n)   !velocity
-         !5.t=t+dt
+         !5.t
          t = t + dt
-         !6.dt=sqrt(2.0*eta*eps/a)		!dt[n+1]
-         dt	= sqrt(2.0*eta*eps/a)
-         !7.dth=dt/2.0
-	 dth =	0.5*dt
+         !6.dt		!dt[n+1]
+         !dt	= sqrt(2.0*eta*eps/a)
+         !7.dth
+	 !dth =	0.5*dt
          nsteps = nsteps + 1
+
          do i = 1, n
             write(lun_out, '(7(E13.6,1X))') mass(i), pos(i,:), vel(i,:)
          enddo
+
       end do
       
-      print *, "Leapfrog nsteps=", nsteps
+      print *, "Leapfrog: nsteps=", nsteps
       
       do ndim = xdim, zdim
          pset%p(:)%pos(ndim) = pos(:, ndim)
