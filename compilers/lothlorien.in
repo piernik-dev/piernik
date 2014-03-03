@@ -18,7 +18,7 @@ F90FLAGS += -fbounds-check -frange-check -Wsurprising -Wcharacter-truncation -Wn
 ## denormal causes weird problems since gcc 4.7.0
 F90FLAGS +=  -ffpe-trap=invalid,zero,overflow
 LDFLAGS   = -Wl,--as-needed -Wl,-O1
-MAKEFLAGS += -j4
+MAKEFLAGS += -j6
 F90FLAGS += -I/usr/include
 
 # for the kepler problem

@@ -176,7 +176,7 @@ contains
             level_max = base_level_id
             n_updAMR  = huge(I_ONE)
          endif
-         where (.not. dom%has_dir(:)) AMR_bsize(:) = huge(1)
+         where (.not. dom%has_dir(:)) AMR_bsize(:) = huge(I_ONE)
 
          cbuff(1                 :  n_ref_auto_param) = refine_vars(:)%rvar
          cbuff(1+n_ref_auto_param:2*n_ref_auto_param) = refine_vars(:)%rname

@@ -263,7 +263,7 @@ contains
 
       endif
 
-      write(msg, '(a,3i8,a,i3)')"[initinitpiernik:init_piernik] Effective resolution is [", finest%level%n_d(:), " ] at level ", finest%level%level_id
+      write(msg, '(a,3i8,a,i3)')"[initpiernik:init_piernik] Effective resolution is [", finest%level%n_d(:), " ] at level ", finest%level%level_id
       !> \todo Do an MPI_Reduce in case the master process don't have any part of the globally finest level or ensure it is empty in such case
       if (master) call printinfo(msg)
 

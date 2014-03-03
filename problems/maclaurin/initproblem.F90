@@ -40,7 +40,7 @@ module initproblem
    ! namelist parameters
    real :: x0     !< X-position of the spheroid
    real :: y0     !< Y-position of the spheroid
-   real :: z0     !< Z-position of the spherodi
+   real :: z0     !< Z-position of the spheroid
    real :: d0     !< density of the spheroid
    real :: a1     !< equatorial radius of the spheroid
    real :: e      !< polar eccentricity of the spheroid; e>0 gives oblate object, e<0 gives prolate object
@@ -55,7 +55,7 @@ module initproblem
    real :: p0 !< pressure
    real :: a3 !< length of polar radius of the spheroid
    character(len=dsetnamelen), parameter :: apot_n = "apot" !< name of the analytical potential field
-   character(len=dsetnamelen), parameter :: asrc_n = "asrc" !< name of the source fiels used for "ares" calculation (auxiliary space)
+   character(len=dsetnamelen), parameter :: asrc_n = "asrc" !< name of the source field used for "ares" calculation (auxiliary space)
    character(len=dsetnamelen), parameter :: ares_n = "ares" !< name of the numerical residuum with respect to analytical potential field
 #ifdef MACLAURIN_PROBLEM
    character(len=dsetnamelen), parameter :: apt_n  = "apt"  !< name of the potential as it was due to point-like source
