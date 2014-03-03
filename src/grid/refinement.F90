@@ -274,8 +274,8 @@ contains
             else
                do c = lbound(ic, dim=1), ubound(ic, dim=1)
                   call user_ref2list(iv, ic(c), refine_vars(i)%ref_thr, refine_vars(i)%deref_thr, refine_vars(i)%aux, refine_vars(i)%rname)
-               end do
-            end if
+               enddo
+            endif
          endif
          if (allocated(ic)) deallocate(ic)
       enddo
@@ -349,7 +349,7 @@ contains
 !! \brief Apply automatic refinement citeria
 !!
 !! \details The leaves argument should normally be cg_leaves::leaves. W cannot use it directly here because of circular dependencies
-!! Note that if you pass only subset of leaves (i.e. single level or somehow filtered cg list), the (de)refinement will be marked only on that list. 
+!! Note that if you pass only subset of leaves (i.e. single level or somehow filtered cg list), the (de)refinement will be marked only on that list.
 !! The rest of the domain will stay unaffected or be corrected for refinement defects.
 !<
 
@@ -454,7 +454,7 @@ contains
          iv = wna%fi
          ic = iarr_all_en
          return
-      end if
+      endif
       !> \todo identify here all {den,vl[xyz],ene}{d,n,i}
       !> \todo introduce possibility to operate on pressure or other indirect fields
 
@@ -677,7 +677,7 @@ contains
             rel_grad_1pair = abs(a-b) / (abs(a) + abs(b))
          else
             rel_grad_1pair = 0.
-         end if
+         endif
 
       end function rel_grad_1pair
 
