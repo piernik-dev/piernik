@@ -426,7 +426,7 @@ contains
       use cg_leaves,  only: leaves
       use cg_list,    only: cg_list_element
       use domain,     only: dom
-      use fluidindex, only: iarr_all_dn, flind
+      use fluidindex, only: flind
 
       implicit none
 
@@ -438,23 +438,6 @@ contains
       do while (associated(cgl))
          if (any(cgl%cg%leafmap)) then
             dmax = -huge(1.)
-            do id = lbound(iarr_all_dn, dim=1), ubound(iarr_all_dn, dim=1)
-               do i = cgl%cg%is, cgl%cg%ie
-                  do j = cgl%cg%js, cgl%cg%je
-                     do k = cgl%cg%ks, cgl%cg%ke
-                        diff = maxval(abs(cgl%cg%u(id, i, j, k) - [ &
-                             &            cgl%cg%u(id, i+dom%D_x, j, k), &
-                             &            cgl%cg%u(id, i-dom%D_x, j, k), &
-                             &            cgl%cg%u(id, i, j+dom%D_y, k), &
-                             &            cgl%cg%u(id, i, j-dom%D_y, k), &
-                             &            cgl%cg%u(id, i, j, k+dom%D_z), &
-                             &            cgl%cg%u(id, i, j, k-dom%D_z) ] ) )
-                        cgl%cg%refinemap(i, j, k) = (diff > ref_thr * d0)
-                        dmax = max(dmax, diff)
-                     enddo
-                  enddo
-               enddo
-            enddo
             do id = 1, flind%energ
                do i = cgl%cg%is, cgl%cg%ie
                   do j = cgl%cg%js, cgl%cg%je
@@ -472,7 +455,7 @@ contains
                   enddo
                enddo
             enddo
-            cgl%cg%refine_flags%derefine = (dmax <  deref_thr*d0)
+            cgl%cg%refine_flags%derefine = (dmax <  deref_thr)
          endif
          cgl => cgl%nxt
       enddo
