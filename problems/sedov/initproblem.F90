@@ -49,14 +49,12 @@ contains
    subroutine problem_pointers
 
       use dataio_user, only: user_tsl
-      use user_hooks,  only: problem_refine_derefine, problem_domain_update, late_initial_conditions
+      use user_hooks,  only: problem_domain_update, late_initial_conditions
 
       implicit none
 
-      user_tsl       => sedov_tsl
-      problem_refine_derefine => mark_overdensity
-
-      problem_domain_update => sedov_dist_to_edge
+      user_tsl                => sedov_tsl
+      problem_domain_update   => sedov_dist_to_edge
       late_initial_conditions => sedov_late_init
 
    end subroutine problem_pointers
@@ -65,16 +63,18 @@ contains
 
    subroutine read_problem_par
 
-      use constants,  only: DST
-      use dataio_pub, only: nh      ! QA_WARN required for diff_nml
-      use dataio_pub, only: msg, printinfo, die
-      use domain,     only: dom
-      use fluidindex, only: flind
-      use mpisetup,   only: ibuff, rbuff, master, slave, piernik_MPI_Bcast
+      use constants,        only: DST
+      use dataio_pub,       only: nh      ! QA_WARN required for diff_nml
+      use dataio_pub,       only: msg, printinfo, die
+      use domain,           only: dom
+      use fluidindex,       only: flind
+      use mpisetup,         only: ibuff, rbuff, master, slave, piernik_MPI_Bcast
+      use named_array_list, only: wna
+      use refinement,       only: user_ref2list
 
       implicit none
 
-      integer :: p
+      integer :: p, id
 
       t_sn = 0.0
 
@@ -91,8 +91,8 @@ contains
       r0      = minval(dom%L_(:)/dom%n_d(:), mask=dom%has_dir(:))/2.
       n_sn    = 1
       dt_sn   = 0.0
-      ref_thr      = 3.    !< Refine if density is greater than this value
-      deref_thr    = 1.5    !< Derefine if density is smaller than this value
+      ref_thr      = 0.3 ! Lower these values if you want to track the shock wave as it gets weaker
+      deref_thr    = 0.1
 
       if (master) then
 
@@ -161,6 +161,11 @@ contains
          write(msg, '(a,i2)')"Working with fluid#", flind%all_fluids(p)%fl%tag
          if (master) call printinfo(msg)
       enddo
+
+      do id = 1, flind%energ
+         call user_ref2list(wna%fi, flind%all_fluids(id)%fl%ien, ref_thr, deref_thr, 0., "relgrad")
+      enddo
+
 
    end subroutine read_problem_par
 !-----------------------------------------------------------------------------
@@ -418,48 +423,5 @@ contains
       enddo
 
    end subroutine sedov_late_init
-
-!> \brief mark the wave
-
-   subroutine mark_overdensity
-
-      use cg_leaves,  only: leaves
-      use cg_list,    only: cg_list_element
-      use domain,     only: dom
-      use fluidindex, only: flind
-
-      implicit none
-
-      type(cg_list_element), pointer :: cgl
-      real :: dmax, diff
-      integer :: id, i, j, k
-
-      cgl => leaves%first
-      do while (associated(cgl))
-         if (any(cgl%cg%leafmap)) then
-            dmax = -huge(1.)
-            do id = 1, flind%energ
-               do i = cgl%cg%is, cgl%cg%ie
-                  do j = cgl%cg%js, cgl%cg%je
-                     do k = cgl%cg%ks, cgl%cg%ke
-                        diff = maxval(abs(cgl%cg%u(flind%all_fluids(id)%fl%ien, i, j, k) / [ &
-                             &            cgl%cg%u(flind%all_fluids(id)%fl%ien, i+dom%D_x, j, k), &
-                             &            cgl%cg%u(flind%all_fluids(id)%fl%ien, i-dom%D_x, j, k), &
-                             &            cgl%cg%u(flind%all_fluids(id)%fl%ien, i, j+dom%D_y, k), &
-                             &            cgl%cg%u(flind%all_fluids(id)%fl%ien, i, j-dom%D_y, k), &
-                             &            cgl%cg%u(flind%all_fluids(id)%fl%ien, i, j, k+dom%D_z), &
-                             &            cgl%cg%u(flind%all_fluids(id)%fl%ien, i, j, k-dom%D_z) ] ) )
-                        cgl%cg%refinemap(i, j, k) = cgl%cg%refinemap(i, j, k) .or. (diff > ref_thr)
-                        dmax = max(dmax, diff)
-                     enddo
-                  enddo
-               enddo
-            enddo
-            cgl%cg%refine_flags%derefine = (dmax <  deref_thr)
-         endif
-         cgl => cgl%nxt
-      enddo
-
-   end subroutine mark_overdensity
 
 end module initproblem
