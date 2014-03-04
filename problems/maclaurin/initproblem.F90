@@ -68,14 +68,13 @@ contains
    subroutine problem_pointers
 
       use dataio_user, only: user_vars_hdf5, user_attrs_wr
-      use user_hooks,  only: finalize_problem, problem_refine_derefine
+      use user_hooks,  only: finalize_problem
 
       implicit none
 
       user_attrs_wr    => problem_initial_conditions_attrs
       finalize_problem => finalize_problem_maclaurin
       user_vars_hdf5   => maclaurin_error_vars
-      problem_refine_derefine => mark_surface
 
    end subroutine problem_pointers
 
@@ -83,20 +82,25 @@ contains
 
    subroutine read_problem_par
 
-      use cg_list_global, only: all_cg
-      use constants,      only: pi, GEO_XYZ, GEO_RPZ, xdim, ydim, LO, HI
-      use dataio_pub,     only: nh      ! QA_WARN required for diff_nml
-      use dataio_pub,     only: die, warn, msg, printinfo
-      use domain,         only: dom
-      use global,         only: smalld
-      use func,           only: operator(.equals.)
-      use mpisetup,       only: rbuff, ibuff, master, slave, piernik_MPI_Bcast
-      use multigridvars,  only: ord_prolong
-      use particle_pub,   only: pset
+      use cg_list_global,   only: all_cg
+      use constants,        only: pi, GEO_XYZ, GEO_RPZ, xdim, ydim, LO, HI
+      use dataio_pub,       only: nh      ! QA_WARN required for diff_nml
+      use dataio_pub,       only: die, warn, msg, printinfo
+      use domain,           only: dom
+      use fluidindex,       only: iarr_all_dn
+      use global,           only: smalld
+      use func,             only: operator(.equals.)
+      use mpisetup,         only: rbuff, ibuff, master, slave, piernik_MPI_Bcast
+      use multigridvars,    only: ord_prolong
+      use named_array_list, only: wna
+      use particle_pub,     only: pset
+      use refinement,       only: user_ref2list
 
       implicit none
 
       integer, parameter :: maxsub = 10  !< upper limit for subsampling
+      integer :: id
+
       d1 = smalld                  ! ambient density
 
       ! namelist default parameter values
@@ -212,6 +216,12 @@ contains
 #ifdef MACLAURIN_PROBLEM
       call all_cg%reg_var(apt_n)
 #endif /* MACLAURIN_PROBLEM */
+
+      ! Set up automatic refinement criteria on densities
+      do id = lbound(iarr_all_dn, dim=1), ubound(iarr_all_dn, dim=1)
+         !> \warning only selfgravitating fluids should be added
+         call user_ref2list(wna%fi, id, ref_thr*d0, deref_thr*d0, 0., "grad")
+      enddo
 
    end subroutine read_problem_par
 
@@ -641,52 +651,5 @@ contains
       end select
 
    end subroutine maclaurin_error_vars
-
-!> \brief Request refinement along the surface of the ellipsoid. Derefine inside and outside the ellipsoid if possible.
-
-   subroutine mark_surface
-
-      use all_boundaries, only: all_bnd
-      use cg_leaves,      only: leaves
-      use cg_list,        only: cg_list_element
-      use domain,         only: dom
-      use fluidindex,     only: iarr_all_dn
-
-      implicit none
-
-      type(cg_list_element), pointer :: cgl
-      real :: ld, ldmax
-      integer :: id, i, j, k
-      integer , parameter :: dro = 1 ! derefine reach out
-
-      call all_bnd
-
-      cgl => leaves%first
-      do while (associated(cgl))
-         if (any(cgl%cg%leafmap)) then
-            ldmax = -huge(1.)
-            do id = lbound(iarr_all_dn, dim=1), ubound(iarr_all_dn, dim=1)
-               do k = cgl%cg%ks-dro*dom%D_z, cgl%cg%ke+dro*dom%D_z
-                  do j = cgl%cg%js-dro*dom%D_y, cgl%cg%je+dro*dom%D_y
-                     do i = cgl%cg%is-dro*dom%D_x, cgl%cg%ie+dro*dom%D_x
-                        ld = 6 * cgl%cg%u(id, i,   j, k) - &
-                             &   cgl%cg%u(id, i-1, j, k) - cgl%cg%u(id, i+1, j, k) - &
-                             &   cgl%cg%u(id, i, j-1, k) - cgl%cg%u(id, i, j+1, k) - &
-                             &   cgl%cg%u(id, i, j, k-1) - cgl%cg%u(id, i, j, k+1)
-                        if (i >= cgl%cg%is .and. i <= cgl%cg%ie .and. j >= cgl%cg%js .and. j <= cgl%cg%je .and. k >= cgl%cg%ks .and. k <= cgl%cg%ke) &
-                             cgl%cg%refinemap(i, j, k) = ( abs(ld) >= ref_thr*d0 )
-                        ldmax = max(ldmax, abs(ld))
-                     enddo
-                  enddo
-               enddo
-            enddo
-            !> \warning only selfgravitating fluids should be checked
-            cgl%cg%refine_flags%derefine = (ldmax <  deref_thr*d0)
-            ! no need to set cgl%cg%refine_flags%refine when we have cgl%cg%refinemap
-         endif
-         cgl => cgl%nxt
-      enddo
-
-   end subroutine mark_surface
 
 end module initproblem

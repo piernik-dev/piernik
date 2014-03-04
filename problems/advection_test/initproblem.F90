@@ -75,17 +75,20 @@ contains
 
    subroutine read_problem_par
 
-      use constants,  only: I_ONE, xdim, zdim
-      use dataio_pub, only: nh      ! QA_WARN required for diff_nml
-      use dataio_pub, only: warn, die
-      use domain,     only: dom
-      use fluidindex, only: flind
-      use global,     only: smalld, smallei
-      use mpisetup,   only: rbuff, ibuff, lbuff, master, slave, proc, have_mpi, LAST, piernik_MPI_Bcast
-      use refinement, only: set_n_updAMR, n_updAMR
-      use user_hooks, only: problem_refine_derefine
+      use constants,        only: I_ONE, xdim, zdim
+      use dataio_pub,       only: nh      ! QA_WARN required for diff_nml
+      use dataio_pub,       only: warn, die
+      use domain,           only: dom
+      use fluidindex,       only: flind, iarr_all_dn
+      use global,           only: smalld, smallei
+      use mpisetup,         only: rbuff, ibuff, lbuff, master, slave, proc, have_mpi, LAST, piernik_MPI_Bcast
+      use named_array_list, only: wna
+      use refinement,       only: set_n_updAMR, n_updAMR, user_ref2list
+      use user_hooks,       only: problem_refine_derefine
 
       implicit none
+
+      integer :: id
 
       ! namelist default parameter values
       pulse_size(:) = 1.0                  !< size of the pulse
@@ -187,7 +190,10 @@ contains
          if (n_updAMR /= nflip .and. master) call warn("[initproblem:read_problem_par] Forcing n_updAMR == nflip")
          call set_n_updAMR(nflip)
       else
-         problem_refine_derefine => mark_surface
+         ! Automatic refinement criteria
+         do id = lbound(iarr_all_dn, dim=1), ubound(iarr_all_dn, dim=1)
+            call user_ref2list(wna%fi, id, ref_thr*pulse_amp, deref_thr*pulse_amp, 0., "grad")
+         enddo
       endif
 
    end subroutine read_problem_par
@@ -517,56 +523,5 @@ contains
       enddo
 
    end subroutine flip_flop
-
-!> \brief Request refinement along the surface of the pulse. Derefine inside and outside the pulse if possible.
-
-   subroutine mark_surface
-
-      use all_boundaries, only: all_bnd
-      use cg_leaves,      only: leaves
-      use cg_list,        only: cg_list_element
-      use domain,         only: dom
-      use fluidindex,     only: iarr_all_dn
-
-      implicit none
-
-      type(cg_list_element), pointer :: cgl
-      integer :: id, i, j, k
-      real :: diff, diffmax
-
-      ! make sure that density is communicated
-      !> \todo set up a flag that tells whether this is required or the data has been recently exchanged
-      call all_bnd
-
-      ! Detect the edge of the density pulse
-      !> \deprecated this method may refine the whole domain when the pulse gets diffused enough
-      cgl => leaves%first
-      do while (associated(cgl))
-         if (any(cgl%cg%leafmap)) then
-            diffmax = -huge(1.)
-            do id = lbound(iarr_all_dn, dim=1), ubound(iarr_all_dn, dim=1)
-               ! Look one cell beyond local boundary
-               do i = cgl%cg%is, cgl%cg%ie
-                  do j = cgl%cg%js, cgl%cg%je
-                     do k = cgl%cg%ks, cgl%cg%ke
-                        diff = maxval(abs(cgl%cg%u(id, i, j, k) - [ &
-                             &            cgl%cg%u(id, i+dom%D_x, j, k), &
-                             &            cgl%cg%u(id, i-dom%D_x, j, k), &
-                             &            cgl%cg%u(id, i, j+dom%D_y, k), &
-                             &            cgl%cg%u(id, i, j-dom%D_y, k), &
-                             &            cgl%cg%u(id, i, j, k+dom%D_z), &
-                             &            cgl%cg%u(id, i, j, k-dom%D_z) ] ) )
-                        cgl%cg%refinemap(i, j, k) = (diff > ref_thr * pulse_amp)
-                        diffmax = max(diffmax, diff)
-                     enddo
-                  enddo
-               enddo
-            enddo
-            cgl%cg%refine_flags%derefine = (diffmax < deref_thr * pulse_amp)
-         endif
-         cgl => cgl%nxt
-      enddo
-
-   end subroutine mark_surface
 
 end module initproblem

@@ -38,11 +38,17 @@ module refinement_update
 contains
 
 #define VERBOSE
+
+!> \brief Apply all (de)refinement criteria: user, automatic and by primitive geometric shapes
+
    subroutine scan_for_refinements
 
+      use all_boundaries,   only: all_bnd
+      use cg_leaves,             only: leaves
       use cg_level_connected,    only: cg_level_connected_T
       use cg_level_finest,       only: finest
       use cg_list_global,        only: all_cg
+      use refinement,            only: auto_refine_derefine
       use refinement_primitives, only: mark_all_primitives
       use user_hooks,            only: problem_refine_derefine
 #ifdef VERBOSE
@@ -56,7 +62,7 @@ contains
       type(cg_level_connected_T), pointer :: curl
       enum, bind(C)
          enumerator :: PROBLEM
-         !enumerator :: SHOCKS
+         enumerator :: AUTO
          enumerator :: PRIMITIVES
       end enum
       integer, dimension(PROBLEM:PRIMITIVES) :: cnt
@@ -68,6 +74,8 @@ contains
       enddo
       call all_cg%clear_ref_flags
       cnt = 0
+
+      call all_bnd ! \todo find a way to minimize calling this - perhaps manage a flag that says whether the boundaries are up to date or not
 
       if (associated(problem_refine_derefine)) then
          call problem_refine_derefine ! call user routine first, so it cannot alter flags set by automatic routines
@@ -81,11 +89,11 @@ contains
       call piernik_MPI_Allreduce(cnt(PROBLEM), pSUM)
 #endif
 
-      ! call mark_shocks !> \todo implement automatic refinement criteria
+      call auto_refine_derefine(leaves)
 #ifdef VERBOSE
-!      call sanitize_all_ref_flags
-!      cnt(SHOCKS) = all_cg%count_ref_flags()
-!      call piernik_MPI_Allreduce(cnt(SHOCKS), pSUM)
+      call sanitize_all_ref_flags
+      cnt(AUTO) = all_cg%count_ref_flags()
+      call piernik_MPI_Allreduce(cnt(AUTO), pSUM)
 #endif
 
       call mark_all_primitives
@@ -94,9 +102,9 @@ contains
       cnt(PRIMITIVES) = all_cg%count_ref_flags()
       call piernik_MPI_Allreduce(cnt(PRIMITIVES), pSUM)
       if (cnt(ubound(cnt, dim=1)) > 0) then
-         write(msg,'(2(a,i6),a)')"[refinement_update:scan_for_refinements] User-defined routine marked ", &
-              &                  cnt(PROBLEM), " block(s) for refinement, primitives marked additional ", &
-              &                  cnt(PRIMITIVES)-cnt(PROBLEM)," block(s)"
+         write(msg,'(3(a,i6),a)')"[refinement_update:scan_for_refinements] User-defined routine marked ", &
+              &                  cnt(PROBLEM), " block(s) for refinement, automatic criteria and primitives marked additional ", &
+              &                  cnt(AUTO)-cnt(PROBLEM)," and ", cnt(PRIMITIVES)-cnt(AUTO)," block(s)"
          if (master) call printinfo(msg)
       endif
 #endif
@@ -116,6 +124,8 @@ contains
 
       type(cg_list_element), pointer :: cgl
       type(cg_level_connected_T), pointer :: curl
+
+      !> \todo communicate refines from coarse to fine blocks to prevent oscillations that might occur when there is derefinement request on fine, when coarse requests refinement
 
       curl => base%level
       do while (associated(curl))
@@ -178,7 +188,7 @@ contains
       use list_of_cg_lists,   only: all_lists
       use mpisetup,           only: piernik_MPI_Allreduce!, proc
       use named_array_list,   only: qna
-      use refinement,         only: n_updAMR, emergency_fix
+      use refinement,         only: n_updAMR, emergency_fix, refines2list
 #ifdef GRAV
       use gravity,            only: update_gp
 #endif /* GRAV */
@@ -198,6 +208,12 @@ contains
       type(cg_level_connected_T), pointer :: curl
       type(grid_container),  pointer :: cg
       logical :: correct, full_update
+      logical, save :: first_run = .true.
+
+      if (first_run) then
+         first_run = .false.
+         call refines2list
+      endif
 
       if (present(act_count)) act_count = 0
 
@@ -314,7 +330,7 @@ contains
       enddo
 
       ! Now try to derefine any excess of refinement
-      if (full_update) call scan_for_refinements
+      if (full_update) call scan_for_refinements !> \todo only first scan_for_refinements should be necessary. Remove this one ASAP - it was required when we weren't able to refine partially.
       call fix_refinement(correct)
       if (.not. correct) call die("[refinement_update:update_refinement] Refinement defects still present")
 
@@ -445,7 +461,6 @@ contains
       use constants,        only: xdim, ydim, zdim, I_ONE!, I_TWO, LO, HI
       use dataio_pub,       only: die, warn, msg!, printinfo
       use domain,           only: dom
-      use refinement,       only: allow_face_rstep, allow_corner_rstep
       use named_array_list, only: qna
 !      use cg_level_base, only: base
 #ifdef DEBUG_DUMPS
@@ -471,8 +486,7 @@ contains
       if (present(correct)) correct = .true.
       failed = .false.
 
-      if (allow_face_rstep .and. allow_corner_rstep) return
-      !> \todo also check for excess or refinement levels
+      !> \todo check for excess or refinement levels
 
       ! Put a level number to the working array, restrict it and exchange internal boundaries
       cgl => leaves%first

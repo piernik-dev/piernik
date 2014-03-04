@@ -81,8 +81,8 @@ contains
       order = 2
       maxiter = 100
       smooth_map = .true.
-      ref_thr = 5.
-      deref_thr = 2.
+      ref_thr = 1.
+      deref_thr = .2
 
       if (master) then
 
@@ -258,17 +258,16 @@ contains
 
    subroutine mark_the_set
 
-      use cg_list,          only: cg_list_element
-      use cg_leaves,        only: leaves
-      use fluidindex,       only: iarr_all_dn
-      use named_array_list, only: wna
+      use cg_list,    only: cg_list_element
+      use cg_leaves,  only: leaves
+      use domain,     only: dom
+      use fluidindex, only: iarr_all_dn
 
       implicit none
 
       type(cg_list_element), pointer :: cgl
-      real :: nitd
-
-      !call leaves%leaf_arr3d_boundaries(qna%ind(mand_n))
+      real :: nitd, diffmax
+      integer :: i, j, k
 
       cgl => leaves%first
       do while (associated(cgl))
@@ -280,10 +279,28 @@ contains
             ! * do not call problem_refine_derefine twice in update_refinement
 !!$            nitd = exp(maxval(cgl%cg%q(qna%ind(mand_n))%span(cgl%cg%ijkse), mask=cgl%cg%leafmap)) - &
 !!$                 & exp(minval(cgl%cg%q(qna%ind(mand_n))%span(cgl%cg%ijkse), mask=cgl%cg%leafmap))
-             nitd = exp(maxval(cgl%cg%w(wna%fi)%arr(iarr_all_dn(1), cgl%cg%is:cgl%cg%ie, cgl%cg%js:cgl%cg%je, cgl%cg%ks:cgl%cg%ke), mask=cgl%cg%leafmap)) - &
-                  & exp(minval(cgl%cg%w(wna%fi)%arr(iarr_all_dn(1), cgl%cg%is:cgl%cg%ie, cgl%cg%js:cgl%cg%je, cgl%cg%ks:cgl%cg%ke), mask=cgl%cg%leafmap))
-            cgl%cg%refine_flags%refine   = (nitd >= ref_thr  )
-            cgl%cg%refine_flags%derefine = (nitd <  deref_thr)
+
+            diffmax = -huge(1.)
+            ! Look one cell beyond boundary to prevent unnecessary derefinements
+            do i = cgl%cg%is-dom%D_x, cgl%cg%ie+dom%D_x
+               do j = cgl%cg%js-dom%D_y, cgl%cg%je+dom%D_y
+                  do k = cgl%cg%ks-dom%D_z, cgl%cg%ke+dom%D_z
+                     nitd = maxval(abs(exp(cgl%cg%u(iarr_all_dn(1), i, j, k)) - [ &
+                          &            exp(cgl%cg%u(iarr_all_dn(1), i+dom%D_x, j, k)), &
+                          &            exp(cgl%cg%u(iarr_all_dn(1), i-dom%D_x, j, k)), &
+                          &            exp(cgl%cg%u(iarr_all_dn(1), i, j+dom%D_y, k)), &
+                          &            exp(cgl%cg%u(iarr_all_dn(1), i, j-dom%D_y, k)), &
+                          &            exp(cgl%cg%u(iarr_all_dn(1), i, j, k+dom%D_z)), &
+                          &            exp(cgl%cg%u(iarr_all_dn(1), i, j, k-dom%D_z)) ] ) )
+                     if ( i >= cgl%cg%is .and. i <= cgl%cg%ie .and. &
+                          j >= cgl%cg%js .and. j <= cgl%cg%je .and. &
+                          k >= cgl%cg%ks .and. k <= cgl%cg%ke) cgl%cg%refinemap(i, j, k) = (nitd >= ref_thr)
+                     diffmax = max(diffmax, nitd)
+                  enddo
+               enddo
+            enddo
+            cgl%cg%refine_flags%derefine = (diffmax <  deref_thr)
+
          endif
          cgl => cgl%nxt
       enddo

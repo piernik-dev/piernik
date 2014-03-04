@@ -53,6 +53,7 @@ contains
       use initfluids,         only: cleanup_fluids
       use interactions,       only: cleanup_interactions
       use mpisetup,           only: cleanup_mpi
+      use refinement,         only: cleanup_refinement
       use sortable_list,      only: cleanup_sortable_list
       use tag_pool,           only: t_pool
       use timer,              only: cleanup_timers
@@ -73,6 +74,7 @@ contains
       implicit none
 
       if (associated(cleanup_problem)) call cleanup_problem; call nextdot(.false.)
+      call cleanup_refinement;     call nextdot(.false.)
       call t_pool%cleanup;         call nextdot(.false.)
       call cleanup_interactions;   call nextdot(.false.)
       call cleanup_dataio;         call nextdot(.false.)

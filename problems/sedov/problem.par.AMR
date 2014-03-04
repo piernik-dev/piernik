@@ -87,4 +87,5 @@
  $AMR
     level_max = 3
     n_updAMR = 3
+!    refine_vars(1) = "ener", "relgrad", 0.3, 0.1 ! equivalent to the default problem criteria
  /

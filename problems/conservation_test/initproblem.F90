@@ -74,16 +74,20 @@ contains
 
    subroutine read_problem_par
 
-      use constants,  only: I_ONE, xdim, zdim
-      use dataio_pub, only: nh      ! QA_WARN required for diff_nml
-      use dataio_pub, only: warn, die
-      use domain,     only: dom
-      use global,     only: smalld
-      use mpisetup,   only: rbuff, ibuff, master, slave, proc, have_mpi, LAST, piernik_MPI_Bcast
-      use refinement, only: set_n_updAMR, n_updAMR
-      use user_hooks, only: problem_refine_derefine
+      use constants,        only: I_ONE, xdim, zdim
+      use dataio_pub,       only: nh      ! QA_WARN required for diff_nml
+      use dataio_pub,       only: warn, die
+      use domain,           only: dom
+      use fluidindex,       only: iarr_all_dn
+      use global,           only: smalld
+      use mpisetup,         only: rbuff, ibuff, master, slave, proc, have_mpi, LAST, piernik_MPI_Bcast
+      use named_array_list, only: wna
+      use refinement,       only: set_n_updAMR, n_updAMR, user_ref2list
+      use user_hooks,       only: problem_refine_derefine
 
       implicit none
+
+      integer :: id
 
       ! namelist default parameter values
       pulse_size(:) = 1.0                  !< size of the pulse
@@ -178,7 +182,9 @@ contains
          if (n_updAMR /= nflip .and. master) call warn("[initproblem:read_problem_par] Forcing n_updAMR == nflip")
          call set_n_updAMR(nflip)
       else
-         problem_refine_derefine => mark_surface
+         do id = lbound(iarr_all_dn, dim=1), ubound(iarr_all_dn, dim=1)
+            call user_ref2list(wna%fi, id, ref_thr*pulse_low_density, deref_thr*pulse_low_density, 0., "grad")
+         enddo
       endif
 
    end subroutine read_problem_par
@@ -477,66 +483,5 @@ contains
       enddo
 
    end subroutine flip_flop
-
-!> \brief Request refinement along the surface of the pulse. Derefine inside and outside the pulse if possible.
-
-   subroutine mark_surface
-
-      use cg_leaves,        only: leaves
-      use cg_list,          only: cg_list_element
-      use constants,        only: LO, HI, xdim, ydim, zdim
-      use fluidindex,       only: iarr_all_dn
-      use func,             only: operator(.equals.)
-      use named_array_list, only: wna, qna
-
-      implicit none
-
-      type(cg_list_element), pointer :: cgl
-      real :: dmin, dmax
-      integer :: id
-      real, parameter :: flag = 1.
-
-      ! make sure that density is communicated
-      !> \todo set up a flag that tells whether this is required or the data has been recently exchanged
-      call leaves%internal_boundaries_4d(wna%fi)
-
-      ! fill cg%wa with its guardcells with values corresponding to cgl%cg%leafmap
-      !> \todo Consider extending cgl%cg%leafmap into guardcells if it will be helpful in other places too
-      cgl => leaves%first
-      do while (associated(cgl))
-         cgl%cg%wa = 0.
-         where (cgl%cg%leafmap(:,:,:)) cgl%cg%wa(cgl%cg%is:cgl%cg%ie, cgl%cg%js:cgl%cg%je, cgl%cg%ks:cgl%cg%ke) = flag
-         cgl => cgl%nxt
-      enddo
-      call leaves%internal_boundaries_3d(qna%wai)
-
-      ! Detect the edge of the density pulse using density values relative to initial values
-      !> \deprecated this method may refine the whole domain when the pulse gets diffused enough
-      !> \todo replace with some slope filter
-      cgl => leaves%first
-      do while (associated(cgl))
-         dmax = -huge(1.)
-         dmin =  huge(1.)
-         do id = lbound(iarr_all_dn, dim=1), ubound(iarr_all_dn, dim=1)
-            ! Look one cell beyond local boundary
-            dmax = max(dmax, maxval(cgl%cg%u(id, cgl%cg%lh1(xdim, LO):cgl%cg%lh1(xdim, HI), &
-                 &                               cgl%cg%lh1(ydim, LO):cgl%cg%lh1(ydim, HI), &
-                 &                               cgl%cg%lh1(zdim, LO):cgl%cg%lh1(zdim, HI)), mask = (cgl%cg%wa( &
-                 &                               cgl%cg%lh1(xdim, LO):cgl%cg%lh1(xdim, HI), &
-                 &                               cgl%cg%lh1(ydim, LO):cgl%cg%lh1(ydim, HI), &
-                 &                               cgl%cg%lh1(zdim, LO):cgl%cg%lh1(zdim, HI)) .equals. flag)))
-            dmin = min(dmin, minval(cgl%cg%u(id, cgl%cg%lh1(xdim, LO):cgl%cg%lh1(xdim, HI), &
-                 &                               cgl%cg%lh1(ydim, LO):cgl%cg%lh1(ydim, HI), &
-                 &                               cgl%cg%lh1(zdim, LO):cgl%cg%lh1(zdim, HI)), mask = (cgl%cg%wa( &
-                 &                               cgl%cg%lh1(xdim, LO):cgl%cg%lh1(xdim, HI), &
-                 &                               cgl%cg%lh1(ydim, LO):cgl%cg%lh1(ydim, HI), &
-                 &                               cgl%cg%lh1(zdim, LO):cgl%cg%lh1(zdim, HI)) .equals. flag)))
-         enddo
-         cgl%cg%refine_flags%derefine = (dmax < (1+deref_thr)*pulse_low_density .or.  dmin > pulse_low_density * (pulse_amp - deref_thr))
-         cgl%cg%refine_flags%refine   = (dmax > (1+  ref_thr)*pulse_low_density .and. dmin < pulse_low_density * (pulse_amp -   ref_thr))
-         cgl => cgl%nxt
-      enddo
-
-   end subroutine mark_surface
 
 end module initproblem
