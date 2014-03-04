@@ -114,7 +114,7 @@ contains
 
          implicit none
 
-         integer, intent(in) :: i1, i2, j1, j2, k1, k2
+         integer(kind=4), intent(in) :: i1, i2, j1, j2, k1, k2
 
          integer :: i, j, k
 
@@ -205,7 +205,7 @@ contains
 
          implicit none
 
-         integer, intent(in) :: i1, i2, j1, j2, k1, k2
+         integer(kind=4), intent(in) :: i1, i2, j1, j2, k1, k2
 
          integer :: i, j, k
 
