@@ -37,7 +37,7 @@ module refinement
    implicit none
 
    private
-   public :: n_updAMR, oop_thr, refine_points, auto_refine_derefine, &
+   public :: n_updAMR, oop_thr, refine_points, auto_refine_derefine, cleanup_refinement, &
         &    refine_boxes, init_refinement, emergency_fix, set_n_updAMR, strict_SFC_ordering, prefer_n_bruteforce, &
         &    refines2list, user_ref2list
 
@@ -230,7 +230,17 @@ contains
 
    end subroutine init_refinement
 
-!> convert refinement criteria parameters to a list
+!> \brief free the memory
+
+   subroutine cleanup_refinement
+
+     implicit none
+
+     if (allocated(ref_crit_list)) deallocate(ref_crit_list)
+
+   end subroutine cleanup_refinement
+
+!> \brief convert refinement criteria parameters to a list
 
    subroutine refines2list
 
