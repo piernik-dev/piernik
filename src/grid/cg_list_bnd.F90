@@ -806,7 +806,7 @@ contains
    subroutine bnd_u(this, dir)
 
       use cg_list,               only: cg_list_element
-      use constants,             only: ndims, xdim, ydim, zdim, LO, HI, INT4, &
+      use constants,             only: ndims, xdim, ydim, zdim, LO, HI, INT4, I_ONE, &
            &                           BND_MPI, BND_FC, BND_MPI_FC, BND_PER, BND_REF, BND_OUT, BND_OUTD, BND_COR, BND_SHE, BND_USER
       use dataio_pub,            only: msg, warn, die
       use domain,                only: dom
@@ -819,7 +819,7 @@ contains
       use fluidindex,            only: iarr_all_crs
 #endif /* COSM_RAYS */
 #ifdef GRAV
-      use constants,             only: BND_OUTH, BND_OUTHD, I_ONE, I_ZERO
+      use constants,             only: BND_OUTH, BND_OUTHD, I_ZERO
 #endif /* GRAV */
 
       implicit none
@@ -838,6 +838,7 @@ contains
       if (frun) then
          call init_fluidboundaries
          frun = .false.
+         if (HI-LO /= I_ONE) call die("[cg_list_bnd:bnd_u] HI-LO /= I_ONE")
       endif
 
       cgl => this%first
@@ -852,7 +853,7 @@ contains
                case (BND_USER)
                   call user_fluidbnd(dir, side, cg, wn=wna%fi)
                case (BND_REF)
-                  ssign = 2_INT4*side-3_INT4
+                  ssign = lh_2_pm1(side)
                   do ib=1_INT4, dom%nb
                      l(dir,:) = cg%ijkse(dir,side)+ssign*ib ; r(dir,:) = cg%ijkse(dir,side)+ssign*(1_INT4-ib)
                      cg%u(:,l(xdim,LO):l(xdim,HI),l(ydim,LO):l(ydim,HI),l(zdim,LO):l(zdim,HI)) = cg%u(:,r(xdim,LO):r(xdim,HI),r(ydim,LO):r(ydim,HI),r(zdim,LO):r(zdim,HI))
@@ -860,7 +861,7 @@ contains
                   enddo
                case (BND_OUT)
                   r(dir,:) = cg%ijkse(dir,side)
-                  ssign = 2_INT4*side-3_INT4
+                  ssign = lh_2_pm1(side)
                   do ib=1_INT4, dom%nb
                      l(dir,:) = cg%ijkse(dir,side)+ssign*ib
                      cg%u(:,l(xdim,LO):l(xdim,HI),l(ydim,LO):l(ydim,HI),l(zdim,LO):l(zdim,HI)) = cg%u(:,r(xdim,LO):r(xdim,HI),r(ydim,LO):r(ydim,HI),r(zdim,LO):r(zdim,HI))
@@ -870,7 +871,7 @@ contains
                   enddo
                case (BND_OUTD)
                   r(dir,:) = cg%ijkse(dir,side)
-                  ssign = 2_INT4*side-3_INT4
+                  ssign = lh_2_pm1(side)
                   do ib=1_INT4, dom%nb
                      l(dir,:) = cg%ijkse(dir,side)+ssign*ib
                      cg%u(:,l(xdim,LO):l(xdim,HI),l(ydim,LO):l(ydim,HI),l(zdim,LO):l(zdim,HI)) = cg%u(:,r(xdim,LO):r(xdim,HI),r(ydim,LO):r(ydim,HI),r(zdim,LO):r(zdim,HI))
@@ -901,6 +902,22 @@ contains
       enddo
 
    contains
+
+!> \brief convert [ LO, HI ] to [ -1, 1 ]. Assumes HI-LO == 1
+
+      elemental function lh_2_pm1(lh)
+
+         use constants, only: LO, HI, I_TWO
+
+         implicit none
+
+         integer(kind=4), intent(in) :: lh
+
+         integer(kind=4) :: lh_2_pm1
+
+         lh_2_pm1 = I_TWO*lh - (LO+HI)
+
+      end function lh_2_pm1
 
 !> \brief Perform some checks
 
