@@ -64,7 +64,7 @@ contains
       class(particle_set), intent(inout) :: pset  !< particle list
       real, intent(in) :: t_glob, dt_tot
 
-      real, parameter :: dt_param = 0.03        ! control parameter to determine time step size
+      real, parameter :: dt_param = 0.0001        ! control parameter to determine time step size
       real, parameter :: dt_dia = 1             ! time interval between diagnostics output
       real, parameter :: dt_out = 0.01          ! time interval between output of snapshots
 
@@ -105,8 +105,8 @@ contains
 
       do
          do while (t < t_dia .and. t < t_out .and. t < t_end)
-            dt = dt_param * coll_time  !variable timestep
-            !dt = dt_param              !constant timestep
+            !dt = dt_param * coll_time  !variable timestep
+            dt = dt_param              !constant timestep
             call evolve_step(mass, pos, vel, acc, jerk, n, t, dt, epot, coll_time)
             nsteps = nsteps + 1
          enddo
@@ -208,12 +208,10 @@ contains
       call get_acc(mass, pos, acc, n)
       
       call get_acc_mod(acc, n, a)
-      print *, "a=", a
       
       !timestep
       !dt = sqrt(2.0*eta*eps/a)            !variable
-      dt = 0.01                            !constant
-      print *, "Leapfrog: dt=", dt
+      dt = 0.0001                            !constant
       dth = dt/2.0
       
 
