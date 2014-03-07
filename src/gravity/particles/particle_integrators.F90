@@ -212,7 +212,7 @@ contains
       
       !timestep
       !dt = sqrt(2.0*eta*eps/a)            !variable
-      dt = 0.1                            !constant
+      dt = 0.01                            !constant
       print *, "Leapfrog: dt=", dt
       dth = dt/2.0
       
@@ -237,7 +237,7 @@ contains
          !6.dt		!dt[n+1]
          !dt	= sqrt(2.0*eta*eps/a)
          !7.dth
-	 !dth =	0.5*dt
+         !dth =	0.5*dt
          nsteps = nsteps + 1
 
          do i = 1, n
@@ -344,7 +344,6 @@ contains
          enddo
       enddo
       a = sqrt(maxval(acc2))
-      !print *, "mod a: a=", a
          
    end subroutine get_acc_mod
 
