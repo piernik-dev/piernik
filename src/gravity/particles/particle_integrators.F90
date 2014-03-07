@@ -105,7 +105,8 @@ contains
 
       do
          do while (t < t_dia .and. t < t_out .and. t < t_end)
-            dt = dt_param * coll_time
+            dt = dt_param * coll_time  !variable timestep
+            !dt = dt_param              !constant timestep
             call evolve_step(mass, pos, vel, acc, jerk, n, t, dt, epot, coll_time)
             nsteps = nsteps + 1
          enddo
@@ -211,7 +212,7 @@ contains
       
       !timestep
       !dt = sqrt(2.0*eta*eps/a)            !variable
-      dt = 0.03                            !constant
+      dt = 0.1                            !constant
       print *, "Leapfrog: dt=", dt
       dth = dt/2.0
       
