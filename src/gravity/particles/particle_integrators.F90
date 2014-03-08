@@ -178,7 +178,7 @@ contains
       real, dimension(:), allocatable :: mass
       real, dimension(:, :), allocatable :: pos, vel, acc, vel_h
       
-      real :: t_dia, t_out, t_end, einit, dt, t, dth, eta, eps, a
+      real :: t_dia, t_out, t_end, einit, dt, t, dth, eta, eps, a, epot
       integer :: nsteps, n, ndim, lun_out, lun_err, i
       
       open(newunit=lun_out, file='leapfrog_out.log', status='unknown',  position='append')
@@ -205,7 +205,7 @@ contains
 
 
       !initial acceleration
-      call get_acc(mass, pos, acc, n)
+      call get_acc_pot(mass, pos, acc, n, epot)
       
       call get_acc_mod(acc, n, a)
       
@@ -225,8 +225,8 @@ contains
          !2.drift(dt)
          call drift(pos, vel_h, dt, n) !position
          !3.acceleration + |a|
-         call get_acc(mass, pos, acc, n)
-         call get_acc_mod(acc, n, a)
+         call get_acc_pot(mass, pos, acc, n, epot)
+         !call get_acc_mod(acc, n, a)
          !4.kick(dth)
          vel(:,:)=vel_h
          call kick(vel, acc, dth, n)   !velocity
@@ -285,15 +285,15 @@ contains
    end subroutine leapfrog2ord
 
 
-   subroutine get_acc(mass, pos, acc, n)
+   subroutine get_acc_pot(mass, pos, acc, n, epot)
       use constants, only: ndims
       implicit none
       integer, intent(in) :: n
       real, dimension(n), intent(in) :: mass
       real, dimension(n, ndims), intent(in) :: pos
-      !real, dimension(n,ndims), intent(in) :: vel
       real, dimension(n, ndims), intent(out) :: acc
       real  :: eps
+      real, intent(out) :: epot
       
       integer :: i, j
       real, dimension(ndims) :: rji, vji, da
@@ -302,8 +302,9 @@ contains
       real :: r2  ! | rji |^2
       real :: r3  ! | rji |^3
       
-      
       acc(:,:) = 0.0
+      epot = 0.0
+      
       do i = 1, n
          do j = i+1, n
             rji(:) = pos(j, :) - pos(i, :)
@@ -315,6 +316,7 @@ contains
             ! add the {i,j} contribution to the total potential energy for the
             ! system
             
+            epot = epot - mass(i) * mass(j)/r
 
             da(:) = rji(:) / r3
             
@@ -323,7 +325,7 @@ contains
             acc(j,:) = acc(j,:) - mass(i) * da(:)
          enddo
       enddo
-   end subroutine get_acc
+   end subroutine get_acc_pot
 
    subroutine get_acc_mod(acc, n, a)
       use constants, only: ndims
