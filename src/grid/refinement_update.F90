@@ -270,7 +270,6 @@ contains
       endif
 
       ! fix the structures, mark grids for refinement (and unmark derefinements) due to refinement restrictions
-      call all_cg%clear_ref_flags
       call fix_refinement(correct)
       call piernik_MPI_Allreduce(correct, pLAND)
       nciter = 0
@@ -330,10 +329,6 @@ contains
       enddo
 
       ! Now try to derefine any excess of refinement
-      if (full_update) call scan_for_refinements !> \todo only first scan_for_refinements should be necessary. Remove this one ASAP - it was required when we weren't able to refine partially.
-      call fix_refinement(correct)
-      if (.not. correct) call die("[refinement_update:update_refinement] Refinement defects still present")
-
       ! Derefinement saves memory and CPU usage, but is not of highest priority.
       ! Just do it once and hope that any massive excess of refinement will be handled in next call to this routine
       if (full_update) then
@@ -368,6 +363,10 @@ contains
          call fix_refinement
 
       endif
+
+      ! Check refinement topology and crash if anything got broken
+      call fix_refinement(correct)
+      if (.not. correct) call die("[refinement_update:update_refinement] Refinement defects still present")
 
       call all_bnd
       !> \todo call the update of cs_i2 if and only if something has changed
@@ -602,7 +601,6 @@ contains
 
          else
             cgl%cg%refine_flags%refine = .false.
-            cgl%cg%refine_flags%derefine = .false.
          endif
          cgl => cgl%nxt
       enddo
