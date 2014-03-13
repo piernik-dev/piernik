@@ -102,9 +102,8 @@ contains
       cnt(PRIMITIVES) = all_cg%count_ref_flags()
       call piernik_MPI_Allreduce(cnt(PRIMITIVES), pSUM)
       if (cnt(ubound(cnt, dim=1)) > 0) then
-         write(msg,'(3(a,i6),a)')"[refinement_update:scan_for_refinements] User-defined routine marked ", &
-              &                  cnt(PROBLEM), " block(s) for refinement, automatic criteria and primitives marked additional ", &
-              &                  cnt(AUTO)-cnt(PROBLEM)," and ", cnt(PRIMITIVES)-cnt(AUTO)," block(s)"
+         write(msg,'(a,3i6,a)')"[refinement_update:scan_for_refinements] User routine, automatic criteria and primitives marked ", &
+              &                cnt(PROBLEM), cnt(AUTO)-cnt(PROBLEM), cnt(PRIMITIVES)-cnt(AUTO)," block(s) for refinement, respectively."
          if (master) call printinfo(msg)
       endif
 #endif
