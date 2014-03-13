@@ -269,7 +269,9 @@ contains
          call leaves%update(" (  refine  ) ")
       endif
 
-      ! fix the structures, mark grids for refinement (and unmark derefinements) due to refinement restrictions
+      ! fix the structures, mark grids for refinement (and unmark derefinements) due to refinement restrictions.
+      ! With clever use of SFC properties this part can be done together with refine stage above - everything can be determined in sanitize_all_ref_flags for regular refinement update.
+      ! For refinement update due to domain expansion, everything can be fixed in the expansion routine.
       call fix_refinement(correct)
       call piernik_MPI_Allreduce(correct, pLAND)
       nciter = 0
@@ -328,9 +330,11 @@ contains
          endif
       enddo
 
-      ! Now try to derefine any excess of refinement
-      ! Derefinement saves memory and CPU usage, but is not of highest priority.
-      ! Just do it once and hope that any massive excess of refinement will be handled in next call to this routine
+      ! Now try to derefine any excess of refinement.
+      ! Derefinement saves memory and CPU usage, but it is of lowest priority here.
+      ! Note that it may happen that some grids scheduled to be derefined have triggered refinement topology corrections in the code above - it is not a big issue.
+      ! Just go through derefinement stage once and don't try to do too much here at once.
+      ! Any excess of refinement will be handled in next call to this routine anyway.
       if (full_update) then
 
          curl => finest%level
