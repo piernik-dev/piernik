@@ -102,9 +102,8 @@ contains
       cnt(PRIMITIVES) = all_cg%count_ref_flags()
       call piernik_MPI_Allreduce(cnt(PRIMITIVES), pSUM)
       if (cnt(ubound(cnt, dim=1)) > 0) then
-         write(msg,'(3(a,i6),a)')"[refinement_update:scan_for_refinements] User-defined routine marked ", &
-              &                  cnt(PROBLEM), " block(s) for refinement, automatic criteria and primitives marked additional ", &
-              &                  cnt(AUTO)-cnt(PROBLEM)," and ", cnt(PRIMITIVES)-cnt(AUTO)," block(s)"
+         write(msg,'(a,3i6,a)')"[refinement_update:scan_for_refinements] User routine, automatic criteria and primitives marked ", &
+              &                cnt(PROBLEM), cnt(AUTO)-cnt(PROBLEM), cnt(PRIMITIVES)-cnt(AUTO)," block(s) for refinement, respectively."
          if (master) call printinfo(msg)
       endif
 #endif
@@ -269,8 +268,9 @@ contains
          call leaves%update(" (  refine  ) ")
       endif
 
-      ! fix the structures, mark grids for refinement (and unmark derefinements) due to refinement restrictions
-      call all_cg%clear_ref_flags
+      ! fix the structures, mark grids for refinement (and unmark derefinements) due to refinement restrictions.
+      ! With clever use of SFC properties this part can be done together with refine stage above - everything can be determined in sanitize_all_ref_flags for regular refinement update.
+      ! For refinement update due to domain expansion, everything can be fixed in the expansion routine.
       call fix_refinement(correct)
       call piernik_MPI_Allreduce(correct, pLAND)
       nciter = 0
@@ -329,13 +329,11 @@ contains
          endif
       enddo
 
-      ! Now try to derefine any excess of refinement
-      if (full_update) call scan_for_refinements !> \todo only first scan_for_refinements should be necessary. Remove this one ASAP - it was required when we weren't able to refine partially.
-      call fix_refinement(correct)
-      if (.not. correct) call die("[refinement_update:update_refinement] Refinement defects still present")
-
-      ! Derefinement saves memory and CPU usage, but is not of highest priority.
-      ! Just do it once and hope that any massive excess of refinement will be handled in next call to this routine
+      ! Now try to derefine any excess of refinement.
+      ! Derefinement saves memory and CPU usage, but it is of lowest priority here.
+      ! Note that it may happen that some grids scheduled to be derefined have triggered refinement topology corrections in the code above - it is not a big issue.
+      ! Just go through derefinement stage once and don't try to do too much here at once.
+      ! Any excess of refinement will be handled in next call to this routine anyway.
       if (full_update) then
 
          curl => finest%level
@@ -368,6 +366,10 @@ contains
          call fix_refinement
 
       endif
+
+      ! Check refinement topology and crash if anything got broken
+      call fix_refinement(correct)
+      if (.not. correct) call die("[refinement_update:update_refinement] Refinement defects still present")
 
       call all_bnd
       !> \todo call the update of cs_i2 if and only if something has changed
@@ -602,7 +604,6 @@ contains
 
          else
             cgl%cg%refine_flags%refine = .false.
-            cgl%cg%refine_flags%derefine = .false.
          endif
          cgl => cgl%nxt
       enddo
