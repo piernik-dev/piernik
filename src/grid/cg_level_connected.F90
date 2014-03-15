@@ -1387,7 +1387,15 @@ contains
 
    end subroutine vertical_bf_prep
 
-!> \brief Synchronize this%recently_changed and set flags for update requests
+!>
+!! \brief Synchronize this%recently_changed and set flags for update requests
+!!
+!! \details Enforce update on all levels of refinement.
+!! This is a bit overkill in most cases, but if refinement happens right after domain expansion, some grid_id may change due to radical change of SFC indices.
+!! After change of grid_id, some tags for vertical exchanges change (in cg_level::create after call to dot%update local), so everything requires update.
+!!
+!! Possible solution: keep grid_id constant through
+!<
 
    subroutine sync_ru(this)
 
@@ -1396,20 +1404,26 @@ contains
 
       implicit none
 
-      class(cg_level_connected_T), intent(inout) :: this
+      class(cg_level_connected_T), target, intent(inout) :: this
+
+      class(cg_level_connected_T), pointer :: curl
 
       call piernik_MPI_Allreduce(this%recently_changed, pLOR)
       if (this%recently_changed) then
          this%need_vb_update = .true.
          this%ord_prolong_set = INVALID
-         if (associated(this%finer)) then
-            this%finer%need_vb_update = .true.
-            this%finer%ord_prolong_set = INVALID ! I don't quite understand why this is needed
-         endif
-         if (associated(this%coarser)) then
-            this%coarser%need_vb_update = .true.
-            this%coarser%ord_prolong_set = INVALID ! I don't quite understand why this is needed
-         endif
+         curl => this
+         do while (associated(curl%finer))
+            curl%finer%need_vb_update = .true.
+            curl%finer%ord_prolong_set = INVALID
+            curl => curl%finer
+         enddo
+         curl => this
+         do while (associated(curl%coarser))
+            curl%coarser%need_vb_update = .true.
+            curl%coarser%ord_prolong_set = INVALID
+            curl => curl%coarser
+         enddo
          this%recently_changed = .false.
       endif
 
