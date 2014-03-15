@@ -1,4 +1,5 @@
-#deadlock after 105th time step even on single process.
+#before d6dbc9543a6a4036d1e89cb6a7dd9870183f0f33: deadlock after 105th time step even on single process.
+#this file is a good candidate for routine checks
 
  $BASE_DOMAIN
     n_d = 2*32, 1
@@ -31,7 +32,7 @@
 
  $END_CONTROL
     tend   = 0.5
-    nend   = 1000
+    nend   = 120
  /
 
  $OUTPUT_CONTROL
