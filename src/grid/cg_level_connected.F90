@@ -1394,7 +1394,8 @@ contains
 !! This is a bit overkill in most cases, but if refinement happens right after domain expansion, some grid_id may change due to radical change of SFC indices.
 !! After change of grid_id, some tags for vertical exchanges change (in cg_level::create after call to dot%update local), so everything requires update.
 !!
-!! Possible solution: keep grid_id constant through
+!! Possible solution: keep grid_id constant (but allow recycling old values)
+!! Also important: implement SFC searching for vertical communication to cut costs.
 !<
 
    subroutine sync_ru(this)
