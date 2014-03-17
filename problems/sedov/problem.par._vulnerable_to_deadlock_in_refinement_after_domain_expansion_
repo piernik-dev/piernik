@@ -1,0 +1,96 @@
+#before d6dbc9543a6a4036d1e89cb6a7dd9870183f0f33: deadlock after 105th time step even on single process.
+#this file is a good candidate for routine checks
+
+ $BASE_DOMAIN
+    n_d = 2*32, 1
+    bnd_xl = 'out'
+    bnd_xr = 'out'
+    bnd_yl = 'out'
+    bnd_yr = 'out'
+    bnd_zl = 'out'
+    bnd_zr = 'out'
+    xmin   =-0.4
+    xmax   = 0.6
+    ymin   =-0.7
+    ymax   = 0.3
+    zmin   =-1.0
+    zmax   = 1.0
+ /
+
+ $MPI_BLOCKS
+    AMR_bsize = 3*16
+ /
+
+ $UNITS
+ /
+
+ $RESTART_CONTROL
+    restart  = 'last'
+    new_id   = ''
+    nrestart = 0
+ /
+
+ $END_CONTROL
+    tend   = 0.5
+    nend   = 120
+ /
+
+ $OUTPUT_CONTROL
+    problem_name = 'sedov'
+    run_id =  'tst'
+    dt_hdf  = 0.005
+    dt_res  = 0.06
+    dt_log  = 0.00001
+    dt_tsl  = 1.e-10
+    vars(1:) = 'ener', 'dens', 'level', 'velx', 'vely'
+ /
+
+ $FLUID_IONIZED
+    gamma  = 1.666666666
+ /
+
+ $FLUID_NEUTRAL
+    gamma = 1.666666666
+ /
+
+ $NUMERICAL_SETUP
+    cfl    = 0.7
+    smalld = 1.e-3
+    smallei= 1.e-5
+    integration_order = 2
+    limiter= 'vanleer'
+ /
+
+ $GRAVITY
+ /
+
+ $PROBLEM_CONTROL
+    d0     = 1.0
+    p0     = 1.0
+    Eexpl  = 1.e2
+    bx0    = 1.0
+    by0    = 1.0
+    bz0    = 1.0
+    x0     = -0.0
+    y0     = -0.0
+    z0     = -0.0
+    r0     = 0.25
+    dtrig  = 1.5
+    ref_thr = 0.9
+    deref_thr = 0.4
+ /
+
+ $MULTIGRID_SOLVER
+ /
+
+ $INTERACTIONS
+ /
+
+
+ $FLUID_TRACER
+ /
+
+ $AMR
+    level_max = 2
+    n_updAMR = 3
+ /
