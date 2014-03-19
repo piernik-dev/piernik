@@ -150,6 +150,7 @@ contains
             level_min = max(level_min, base_level_id)
             level_max = max(level_max, level_min)
          else
+            if (level_max > base_level_id .and. n_updAMR < huge(I_ONE)) call die("[refinement:init_refinement] AMR not allowed for current parameters.")
             level_min = base_level_id
             level_max = base_level_id
             n_updAMR  = huge(I_ONE)
