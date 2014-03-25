@@ -649,12 +649,12 @@ contains
 !>
 !! \brief Make a local copy of source (density) and multiply by 4 pi G
 !!
-!! \details Typically i_all_dens is a copy of fluidindex::iarr_all_sg.
+!! \details Typically i_sg_dens is a copy of fluidindex::iarr_all_sg.
 !! Passing this as an argument allows for independent computation of the potential for several density fields if necessary.
 !! \todo compact the following more (if possible)
 !<
 
-   subroutine init_source(i_all_dens)
+   subroutine init_source(i_sg_dens)
 
       use cg_list_global, only: all_cg
       use constants,      only: GEO_RPZ, LO, HI, xdim, ydim, zdim, O_I4, zero
@@ -674,7 +674,7 @@ contains
 
       implicit none
 
-      integer(kind=4), dimension(:), intent(in) :: i_all_dens !< indices to selfgravitating fluids
+      integer(kind=4), dimension(:), intent(in) :: i_sg_dens !< indices to selfgravitating fluids
 
       real                           :: fac
       integer                        :: i, side
@@ -684,11 +684,11 @@ contains
 
       call all_cg%set_dirty(source)
 
-      if (size(i_all_dens) > 0) then
+      if (size(i_sg_dens) > 0) then
          cgl => leaves%first
          do while (associated(cgl))
             cg => cgl%cg
-            cgl%cg%q(source)%arr(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = fpiG * sum(cg%u(i_all_dens, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), dim=1)
+            cgl%cg%q(source)%arr(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = fpiG * sum(cg%u(i_sg_dens, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), dim=1)
             cgl => cgl%nxt
          enddo
          call pset%map(source, fpiG)
@@ -769,7 +769,7 @@ contains
 !! This routine is also responsible for communicating the solution to the rest of world via sgp array.
 !<
 
-   subroutine multigrid_solve_grav(i_all_dens)
+   subroutine multigrid_solve_grav(i_sg_dens)
 
       use cg_leaves,         only: leaves
       use constants,         only: sgp_n
@@ -781,10 +781,10 @@ contains
 
       implicit none
 
-      integer(kind=4), dimension(:), intent(in) :: i_all_dens !< indices to selfgravitating fluids
+      integer(kind=4), dimension(:), intent(in) :: i_sg_dens !< indices to selfgravitating fluids
 
       integer :: grav_bnd_global
-      integer(kind=4), dimension(0) :: empty_array !< trick to avoid compiler warnings on possibly uninitialized i_all_dens.0 in init_source
+      integer(kind=4), dimension(0) :: empty_array !< trick to avoid compiler warnings on possibly uninitialized i_sg_dens.0 in init_source
 
       ts =  set_timer("multigrid", .true.)
 
@@ -803,7 +803,7 @@ contains
 #endif /* !COSM_RAYS */
       endif
 
-      call init_source(i_all_dens)
+      call init_source(i_sg_dens)
 
       call poisson_solver(inner)
 
