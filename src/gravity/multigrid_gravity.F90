@@ -772,7 +772,7 @@ contains
    subroutine multigrid_solve_grav(i_sg_dens)
 
       use cg_leaves,         only: leaves
-      use constants,         only: sgp_n
+      use constants,         only: sgp_n, tmr_mg
       use multigrid_helpers, only: all_dirty
       use multigridvars,     only: solution, tot_ts, ts, grav_bnd, bnd_dirichlet, bnd_givenval, bnd_isolated
       use multipole,         only: multipole_solver
@@ -786,7 +786,7 @@ contains
       integer :: grav_bnd_global
       integer(kind=4), dimension(0) :: empty_array !< trick to avoid compiler warnings on possibly uninitialized i_sg_dens.0 in init_source
 
-      ts =  set_timer("multigrid", .true.)
+      ts =  set_timer(tmr_mg, .true.)
 
       call all_dirty
 
@@ -823,7 +823,7 @@ contains
       endif
 
       grav_bnd = grav_bnd_global
-      ts = set_timer("multigrid")
+      ts = set_timer(tmr_mg)
       tot_ts = tot_ts + ts
 
    end subroutine multigrid_solve_grav
@@ -891,7 +891,7 @@ contains
       use cg_level_coarsest,  only: coarsest
       use cg_level_connected, only: cg_level_connected_T
       use cg_level_finest,    only: finest
-      use constants,          only: cbuff_len, zero
+      use constants,          only: cbuff_len, zero, tmr_mg
       use dataio_pub,         only: msg, die, warn, printinfo
       use global,             only: do_ascii_dump
       use func,               only: operator(.equals.), operator(.notequals.)
@@ -944,7 +944,7 @@ contains
          if (grav_bnd == bnd_periodic) call leaves%subtract_average(defect)
 
          norm_lhs = leaves%norm_sq(defect)
-         ts = set_timer("multigrid")
+         ts = set_timer(tmr_mg)
          tot_ts = tot_ts + ts
          if (master .and. verbose_vcycle) then
             if (norm_old/norm_lhs < 1.e5) then
