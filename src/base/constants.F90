@@ -170,8 +170,8 @@ module constants
    character(len=dsetnamelen), parameter :: wa_n    = "wa"      !< general-purpose auxiliary 3D array
 
    ! timer names
-
    character(len=*), parameter :: tmr_fu = "fluid_update"  !< main timer used to measure fluid_update step
+   character(len=*), parameter :: tmr_hdf = "hdf_dump"     !< timer for I/O operations
 
    ! Handling boundary cells in the output
    enum, bind(C)

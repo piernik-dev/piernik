@@ -264,8 +264,8 @@ contains
    subroutine h5_write_to_single_file
 
       use common_hdf5, only: set_common_attributes
-      use constants,   only: cwdlen, I_ONE
-      use dataio_pub,  only: printio, printinfo, nhdf, thdf, tmr_hdf, wd_wr, piernik_hdf5_version, piernik_hdf5_version2, &
+      use constants,   only: cwdlen, I_ONE, tmr_hdf
+      use dataio_pub,  only: printio, printinfo, nhdf, thdf, wd_wr, piernik_hdf5_version, piernik_hdf5_version2, &
          &                   msg, run_id, problem_name, use_v2_io, last_hdf_time
       use mpisetup,    only: master, piernik_MPI_Bcast, report_to_master, report_string_to_master
       use mpisignals,  only: sig
@@ -666,8 +666,8 @@ contains
       use cg_leaves,   only: leaves
       use cg_list,     only: cg_list_element
       use common_hdf5, only: nhdf_vars, hdf_vars
-      use constants,   only: dsetnamelen, fnamelen, xdim, ydim, zdim, I_ONE
-      use dataio_pub,  only: msg, printio, printinfo, tmr_hdf, thdf, last_hdf_time, piernik_hdf5_version
+      use constants,   only: dsetnamelen, fnamelen, xdim, ydim, zdim, I_ONE, tmr_hdf
+      use dataio_pub,  only: msg, printio, printinfo, thdf, last_hdf_time, piernik_hdf5_version
       use grid_cont,   only: grid_container
       use h5lt,        only: h5ltmake_dataset_float_f, h5ltmake_dataset_double_f
       use hdf5,        only: H5F_ACC_TRUNC_F, h5fcreate_f, h5open_f, h5fclose_f, h5close_f, HID_T, h5gcreate_f, &
