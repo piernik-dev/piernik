@@ -36,7 +36,7 @@ module timer
    integer, parameter, private :: S_LEN = 30
 
    private
-   public :: cleanup_timers, walltime_end, set_timer, tmr_fu, get_timestamp, wallclock
+   public :: cleanup_timers, walltime_end, set_timer, get_timestamp, wallclock
 #ifdef PERFMON
    public :: timer_start, timer_stop
 #endif /* PERFMON */
@@ -71,8 +71,6 @@ module timer
    real(kind=4), dimension(2) :: tarray
 
    type(wallclock) :: walltime_end = wallclock(0, 0, "end of simulation")
-
-   character(len=*), parameter :: tmr_fu = "fluid_update"  !< main timer used to measure fluid_update step
 
 contains
 
