@@ -985,7 +985,7 @@ contains
 
       use cg_list,        only: cg_list_element
       use cg_list_global, only: all_cg
-      use constants,      only: xdim, ydim, zdim, LO, HI, I_ONE, ndims
+      use constants,      only: xdim, ydim, zdim, LO, HI, I_ONE, ndims, INVALID
       use dataio_pub,     only: warn, msg, die
       use domain,         only: dom
       use grid_cont,      only: grid_container, is_overlap
@@ -1028,7 +1028,7 @@ contains
          enumerator :: I_LAST = I_SEG2 + HI*zdim - I_ONE
          ! no need to create I_FSE at the moment
       end enum
-      type(fc_seg), allocatable, dimension(:) :: seglist
+      type(fc_seg), allocatable, dimension(:) :: seglist, tmp
       integer(kind=4), dimension(FIRST:LAST) :: pscnt, prcnt, psdispl, prdispl, psind
       integer(kind=4), dimension(FIRST:LAST) :: sendcounts, sdispls, recvcounts, rdispls
       integer(kind=8), allocatable, dimension(:) :: sseg, rseg
@@ -1036,6 +1036,9 @@ contains
       integer(kind=8), dimension(ndims, LO:HI)  :: box_8   !< temporary storage
       logical :: found_flux
       integer :: max_level
+      integer, parameter :: initial_size = 16 ! for seglist
+      real, parameter :: grow_ratio = 2.      ! for seglist
+      integer :: isl                          ! current position in seglist
 
       if (.not. this%need_vb_update) return
 
@@ -1059,12 +1062,13 @@ contains
       call t_pool%get(this%level_id, tag_min, tag_max)
       tag = tag_min
       mpifc_cnt = 0
-      allocate(seglist(0))
+      allocate(seglist(initial_size))
+      isl = 0
       cgl => this%first
       do while (associated(cgl))
          cg => cgl%cg
 
-         ls = size(seglist)
+         ls = isl
 
          box_8 = int(cg%lhn, kind=8)
          call cgmap%init(box_8)
@@ -1127,7 +1131,14 @@ contains
                                           endif
                                           seg2 (:, LO) = segp2(:, LO) + [ ix, iy, iz ] * per(:)
                                           seg2 (:, HI) = segp2(:, HI) + [ ix, iy, iz ] * per(:)
-                                          seglist = [ seglist, fc_seg(j, b, tag, proc, seg, seg2, segp, segp2) ]  ! LHS-realloc
+                                          isl = isl + 1
+                                          if (isl > ubound(seglist, dim=1)) then
+                                             allocate(tmp(lbound(seglist(:),dim=1):int(abs(grow_ratio*ubound(seglist(:), dim=1)))))
+                                             tmp(:ubound(seglist(:), dim=1)) = seglist(:)
+                                             tmp(ubound(seglist(:), dim=1)+1:)%proc = INVALID
+                                             call move_alloc(from=tmp, to=seglist)
+                                          endif
+                                          seglist(isl) = fc_seg(j, b, tag, proc, seg, seg2, segp, segp2)
                                        endif
                                     endif
                                  enddo
@@ -1141,8 +1152,8 @@ contains
          enddo
 
          if (allocated(cg%pib_tgt%seg)) deallocate(cg%pib_tgt%seg)
-         allocate(cg%pib_tgt%seg(size(seglist)-ls))
-         do j = ls+1, size(seglist)
+         allocate(cg%pib_tgt%seg(isl-ls))
+         do j = ls+1, isl
             associate ( se => cg%pib_tgt%seg(j-ls) )
             se%proc = seglist(j)%proc
             se%tag  = seglist(j)%tag
@@ -1162,8 +1173,8 @@ contains
       !> \warning OPT Try to exclude parts that will be overwritten by guardcell exchange on the same level
 
       pscnt = 0
-      if (size(seglist) > 0) then
-         do j = lbound(seglist, dim=1), ubound(seglist, dim=1)
+      if (isl > 0) then
+         do j = lbound(seglist, dim=1), isl
             pscnt(seglist(j)%proc) = pscnt(seglist(j)%proc) + I_ONE
          enddo
       endif
@@ -1180,7 +1191,7 @@ contains
       allocate(sseg(I_LAST*sum(pscnt)))
       allocate(rseg(I_LAST*sum(prcnt)))
       psind = 0
-      do j = lbound(seglist, dim=1), ubound(seglist, dim=1)
+      do j = lbound(seglist, dim=1), isl
          b = (psdispl(seglist(j)%proc) + psind(seglist(j)%proc)) * I_LAST
          sseg(b+I_PROC:b+I_LAST) = [ int([seglist(j)%proc, seglist(j)%grid_id], kind=8), int(seglist(j)%tag, kind=8), int(seglist(j)%src_proc, kind=8), seglist(j)%seg, seglist(j)%seg2 ]
          psind(seglist(j)%proc) = psind(seglist(j)%proc) + I_ONE
