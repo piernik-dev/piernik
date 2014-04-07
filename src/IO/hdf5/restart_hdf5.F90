@@ -72,8 +72,8 @@ contains
    subroutine write_restart_hdf5
 
       use common_hdf5,     only: set_common_attributes, output_fname
-      use constants,       only: I_ONE, cwdlen, WR
-      use dataio_pub,      only: msg, printio, printinfo, tmr_hdf, thdf, use_v2_io, nres, piernik_hdf5_version, piernik_hdf5_version2, last_res_time
+      use constants,       only: I_ONE, cwdlen, WR, tmr_hdf
+      use dataio_pub,      only: msg, printio, printinfo, thdf, use_v2_io, nres, piernik_hdf5_version, piernik_hdf5_version2, last_res_time
       use mpisetup,        only: master, piernik_MPI_Barrier
       use restart_hdf5_v1, only: write_restart_hdf5_v1
       use timer,           only: set_timer

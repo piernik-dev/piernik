@@ -45,7 +45,7 @@ contains
       use all_boundaries,        only: all_bnd
       use cg_level_finest,       only: finest
       use cg_list_global,        only: all_cg
-      use constants,             only: PIERNIK_INIT_MPI, PIERNIK_INIT_GLOBAL, PIERNIK_INIT_FLUIDS, PIERNIK_INIT_DOMAIN, PIERNIK_INIT_GRID, PIERNIK_INIT_IO_IC, INCEPTIVE
+      use constants,             only: PIERNIK_INIT_MPI, PIERNIK_INIT_GLOBAL, PIERNIK_INIT_FLUIDS, PIERNIK_INIT_DOMAIN, PIERNIK_INIT_GRID, PIERNIK_INIT_IO_IC, INCEPTIVE, tmr_fu
       use dataio,                only: init_dataio, init_dataio_parameters, write_data
       use dataio_pub,            only: nrestart, wd_rd, par_file, tmp_log_file, msg, printio, printinfo, warn, require_problem_IC, problem_name, run_id, code_progress, log_wr
       use decomposition,         only: init_decomposition
@@ -64,6 +64,7 @@ contains
       use refinement,            only: init_refinement
       use refinement_flag,       only: level_max
       use refinement_update,     only: update_refinement
+      use timer,                 only: set_timer
       use units,                 only: init_units
       use user_hooks,            only: problem_post_restart
 #if defined MAGNETIC && defined RESISTIVE
@@ -244,6 +245,10 @@ contains
          nit = 0
          finished = .false.
          call problem_initial_conditions ! may depend on anything
+
+         write(msg, '(a,f10.2)')"[initpiernik] IC on base level, time elapsed: ",set_timer(tmr_fu)
+         if (master) call printinfo(msg)
+
          do while (.not. finished)
 
             call all_bnd !> \warning Never assume that problem_initial_conditions set guardcells correctly
@@ -257,6 +262,8 @@ contains
 
             call problem_initial_conditions ! reset initial conditions after possible changes of refinement structure
             nit = nit + 1
+            write(msg, '(2(a,i3),a,f10.2)')"[initpiernik] IC iteration: ",nit,", finest level:",finest%level%level_id,", time elapsed: ",set_timer(tmr_fu)
+            if (master) call printinfo(msg)
          enddo
 
          if (ac /= 0 .and. master) call warn("[initpiernik:init_piernik] The refinement structure does not seem to converge. Your refinement criteria may lead to oscillations of refinement structure. Bailing out.")

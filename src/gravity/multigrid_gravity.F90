@@ -649,12 +649,12 @@ contains
 !>
 !! \brief Make a local copy of source (density) and multiply by 4 pi G
 !!
-!! \details Typically i_all_dens is a copy of fluidindex::iarr_all_sg.
+!! \details Typically i_sg_dens is a copy of fluidindex::iarr_all_sg.
 !! Passing this as an argument allows for independent computation of the potential for several density fields if necessary.
 !! \todo compact the following more (if possible)
 !<
 
-   subroutine init_source(i_all_dens)
+   subroutine init_source(i_sg_dens)
 
       use cg_list_global, only: all_cg
       use constants,      only: GEO_RPZ, LO, HI, xdim, ydim, zdim, O_I4, zero
@@ -674,7 +674,7 @@ contains
 
       implicit none
 
-      integer(kind=4), dimension(:), intent(in) :: i_all_dens !< indices to selfgravitating fluids
+      integer(kind=4), dimension(:), intent(in) :: i_sg_dens !< indices to selfgravitating fluids
 
       real                           :: fac
       integer                        :: i, side
@@ -684,11 +684,11 @@ contains
 
       call all_cg%set_dirty(source)
 
-      if (size(i_all_dens) > 0) then
+      if (size(i_sg_dens) > 0) then
          cgl => leaves%first
          do while (associated(cgl))
             cg => cgl%cg
-            cgl%cg%q(source)%arr(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = fpiG * sum(cg%u(i_all_dens, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), dim=1)
+            cgl%cg%q(source)%arr(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = fpiG * sum(cg%u(i_sg_dens, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), dim=1)
             cgl => cgl%nxt
          enddo
          call pset%map(source, fpiG)
@@ -769,10 +769,10 @@ contains
 !! This routine is also responsible for communicating the solution to the rest of world via sgp array.
 !<
 
-   subroutine multigrid_solve_grav(i_all_dens)
+   subroutine multigrid_solve_grav(i_sg_dens)
 
       use cg_leaves,         only: leaves
-      use constants,         only: sgp_n
+      use constants,         only: sgp_n, tmr_mg
       use multigrid_helpers, only: all_dirty
       use multigridvars,     only: solution, tot_ts, ts, grav_bnd, bnd_dirichlet, bnd_givenval, bnd_isolated
       use multipole,         only: multipole_solver
@@ -781,12 +781,12 @@ contains
 
       implicit none
 
-      integer(kind=4), dimension(:), intent(in) :: i_all_dens !< indices to selfgravitating fluids
+      integer(kind=4), dimension(:), intent(in) :: i_sg_dens !< indices to selfgravitating fluids
 
       integer :: grav_bnd_global
-      integer(kind=4), dimension(0) :: empty_array !< trick to avoid compiler warnings on possibly uninitialized i_all_dens.0 in init_source
+      integer(kind=4), dimension(0) :: empty_array !< trick to avoid compiler warnings on possibly uninitialized i_sg_dens.0 in init_source
 
-      ts =  set_timer("multigrid", .true.)
+      ts =  set_timer(tmr_mg, .true.)
 
       call all_dirty
 
@@ -803,7 +803,7 @@ contains
 #endif /* !COSM_RAYS */
       endif
 
-      call init_source(i_all_dens)
+      call init_source(i_sg_dens)
 
       call poisson_solver(inner)
 
@@ -823,7 +823,7 @@ contains
       endif
 
       grav_bnd = grav_bnd_global
-      ts = set_timer("multigrid")
+      ts = set_timer(tmr_mg)
       tot_ts = tot_ts + ts
 
    end subroutine multigrid_solve_grav
@@ -891,7 +891,7 @@ contains
       use cg_level_coarsest,  only: coarsest
       use cg_level_connected, only: cg_level_connected_T
       use cg_level_finest,    only: finest
-      use constants,          only: cbuff_len, zero
+      use constants,          only: cbuff_len, zero, tmr_mg
       use dataio_pub,         only: msg, die, warn, printinfo
       use global,             only: do_ascii_dump
       use func,               only: operator(.equals.), operator(.notequals.)
@@ -944,7 +944,7 @@ contains
          if (grav_bnd == bnd_periodic) call leaves%subtract_average(defect)
 
          norm_lhs = leaves%norm_sq(defect)
-         ts = set_timer("multigrid")
+         ts = set_timer(tmr_mg)
          tot_ts = tot_ts + ts
          if (master .and. verbose_vcycle) then
             if (norm_old/norm_lhs < 1.e5) then

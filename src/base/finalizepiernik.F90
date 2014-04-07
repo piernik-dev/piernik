@@ -111,8 +111,8 @@ contains
    subroutine nextdot(advance, print_t)
 
       use mpisetup,  only: master
-      use constants, only: stdout
-      use timer,     only: set_timer, tmr_fu
+      use constants, only: stdout, tmr_fu
+      use timer,     only: set_timer
 
       implicit none
 

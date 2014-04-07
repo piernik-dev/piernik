@@ -34,7 +34,7 @@ program piernik
    use all_boundaries,    only: all_bnd
    use cg_leaves,         only: leaves
    use cg_list_global,    only: all_cg
-   use constants,         only: PIERNIK_START, PIERNIK_INITIALIZED, PIERNIK_FINISHED, PIERNIK_CLEANUP, fplen, stdout, I_ONE, CHK, FINAL_DUMP
+   use constants,         only: PIERNIK_START, PIERNIK_INITIALIZED, PIERNIK_FINISHED, PIERNIK_CLEANUP, fplen, stdout, I_ONE, CHK, FINAL_DUMP, tmr_fu
    use dataio,            only: write_data, user_msg_handler, check_log, check_tsl, dump
    use dataio_pub,        only: nend, tend, msg, printinfo, warn, die, code_progress
    use finalizepiernik,   only: cleanup_piernik
@@ -48,7 +48,7 @@ program piernik
    use named_array_list,  only: qna, wna
    use refinement,        only: emergency_fix
    use refinement_update, only: update_refinement
-   use timer,             only: walltime_end, set_timer, tmr_fu
+   use timer,             only: walltime_end, set_timer
    use timestep,          only: time_step
    use user_hooks,        only: finalize_problem, problem_domain_update
 #ifdef PERFMON
@@ -218,9 +218,10 @@ contains
 
    subroutine print_progress(nstep)
 
+      use constants,  only: tmr_fu
       use dataio_pub, only: printinfo, msg
       use global,     only: dt, t
-      use timer,      only: set_timer, tmr_fu, get_timestamp
+      use timer,      only: set_timer, get_timestamp
 
       implicit none
 

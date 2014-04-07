@@ -169,6 +169,12 @@ module constants
    character(len=dsetnamelen), parameter :: wcr_n   = "wcr"     !< auxiliary array for CR diffusion
    character(len=dsetnamelen), parameter :: wa_n    = "wa"      !< general-purpose auxiliary 3D array
 
+   ! timer names
+   character(len=*), parameter :: tmr_fu  = "fluid_update"   !< main timer used to measure fluid_update step
+   character(len=*), parameter :: tmr_hdf = "hdf_dump"       !< timer for I/O operations
+   character(len=*), parameter :: tmr_mg  = "multigrid"      !< timer for gravity multigrid solver
+   character(len=*), parameter :: tmr_mgd = "multigrid_diff" !< timer for gravityCR diffusion multigrid solver
+
    ! Handling boundary cells in the output
    enum, bind(C)
       enumerator :: AT_IGNORE       !! no output

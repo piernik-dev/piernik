@@ -272,7 +272,7 @@ contains
 
    subroutine multigrid_solve_diff
 
-      use constants,         only: xdim, ydim, zdim, zero
+      use constants,         only: xdim, ydim, zdim, zero, tmr_mgd
       use crdiffusion,       only: cr_diff
       use dataio_pub,        only: halfstep, warn, printinfo, msg
       use fluidindex,        only: flind
@@ -288,7 +288,7 @@ contains
       logical, save :: frun = .true.
       integer       :: cr_id         ! maybe we should make this variable global in the module and do not pass it as an argument?
 
-      ts =  set_timer("multigrid_diffusion", .true.)
+      ts =  set_timer(tmr_mgd, .true.)
       call all_dirty
 
       if (diff_explicit .or. (allow_explicit .and. dt/diff_dt_crs_orig<1)) then
@@ -340,7 +340,7 @@ contains
          enddo
 
       endif
-      ts = set_timer("multigrid_diffusion")
+      ts = set_timer(tmr_mgd)
       tot_ts = tot_ts + ts
 
    end subroutine multigrid_solve_diff
@@ -491,7 +491,7 @@ contains
       use cg_level_finest,    only: finest
       use cg_list_dataop,     only: ind_val, dirty_label
       use cg_list_global,     only: all_cg
-      use constants,          only: base_level_id, zero
+      use constants,          only: base_level_id, zero, tmr_mgd
       use dataio_pub,         only: msg, warn, die
       use global,             only: do_ascii_dump
       use func,               only: operator(.notequals.)
@@ -530,7 +530,7 @@ contains
 
          call residual(finest%level, source, solution, defect, cr_id) ! leaves?
          norm_lhs = leaves%norm_sq(defect)
-         ts = set_timer("multigrid_diffusion")
+         ts = set_timer(tmr_mgd)
          tot_ts = tot_ts + ts
 
          vstat%count = v
