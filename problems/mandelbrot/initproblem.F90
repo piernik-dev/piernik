@@ -167,45 +167,47 @@ contains
       cgl => leaves%first
       do while (associated(cgl))
          cg => cgl%cg
+         if (.not. cg%is_old) then
 
-         cg%b(:, :, :, :) = 0.
-         cg%u(:, :, :, :) = 0.
+            cg%b(:, :, :, :) = 0.
+            cg%u(:, :, :, :) = 0.
 
-         mand => cg%q(qna%ind(mand_n))%arr
-         r__l => cg%q(qna%ind(re_n  ))%arr
-         imag => cg%q(qna%ind(imag_n))%arr
-         if (.not. associated(mand) .or. .not. associated(r__l) .or. .not. associated(imag)) then
-            if (master) call warn("[initproblem:analytic_solution] Cannot store the set")
-            return
-         endif
+            mand => cg%q(qna%ind(mand_n))%arr
+            r__l => cg%q(qna%ind(re_n  ))%arr
+            imag => cg%q(qna%ind(imag_n))%arr
+            if (.not. associated(mand) .or. .not. associated(r__l) .or. .not. associated(imag)) then
+               if (master) call warn("[initproblem:analytic_solution] Cannot store the set")
+               return
+            endif
 
-         do k = cg%ks, cg%ke
-            do j = cg%js, cg%je
-               cy = cg%y(j)
-               do i = cg%is, cg%ie
-                  cx = cg%x(i)
+            do k = cg%ks, cg%ke
+               do j = cg%js, cg%je
+                  cy = cg%y(j)
+                  do i = cg%is, cg%ie
+                     cx = cg%x(i)
 
-                  zx = cx
-                  zy = cy
-                  nit = 0
-                  do while (zx*zx + zy*zy < bailout2 .and. nit < maxiter)
-                     zt = zx*zx - zy*zy + cx
-                     zy = 2*zx*zy + cy
-                     zx = zt
-                     nit = nit + 1
+                     zx = cx
+                     zy = cy
+                     nit = 0
+                     do while (zx*zx + zy*zy < bailout2 .and. nit < maxiter)
+                        zt = zx*zx - zy*zy + cx
+                        zy = 2*zx*zy + cy
+                        zx = zt
+                        nit = nit + 1
+                     enddo
+
+                     rnit = nit
+                     if (smooth_map .and. zx*zx + zy*zy > bailout2) rnit = rnit + 1 - log(log(sqrt(zx*zx + zy*zy)))/log(2.)
+
+                     mand(i, j, k) = log(rnit)
+                     r__l(i, j, k) = zx
+                     imag(i, j, k) = zy
+
                   enddo
-
-                  rnit = nit
-                  if (smooth_map .and. zx*zx + zy*zy > bailout2) rnit = rnit + 1 - log(log(sqrt(zx*zx + zy*zy)))/log(2.)
-
-                  mand(i, j, k) = log(rnit)
-                  r__l(i, j, k) = zx
-                  imag(i, j, k) = zy
-
                enddo
             enddo
-         enddo
 
+         endif
          cgl => cgl%nxt
       enddo
 
