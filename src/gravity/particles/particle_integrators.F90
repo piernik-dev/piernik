@@ -179,7 +179,7 @@ contains
       real, dimension(:, :), allocatable :: pos, vel, acc, vel_h
       
       real :: t_dia, t_out, t_end, einit, dt, t, dth, eta, eps, a, epot
-      integer :: nsteps, n, ndim, lun_out, lun_err, i
+      integer :: nsteps, n, ndim, lun_out, lun_err, i, j, k, orbita, nx_cell, ny_cell, nz_cell, order
       
       open(newunit=lun_out, file='leapfrog_out.log', status='unknown',  position='append')
       
