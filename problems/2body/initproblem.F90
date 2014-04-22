@@ -38,6 +38,7 @@ module initproblem
 
    integer(kind=4) :: n_sn
    real            :: d0, p0, bx0, by0, bz0, Eexpl, x0, y0, z0, r0, dt_sn, r, t_sn
+   
 
    namelist /PROBLEM_CONTROL/ d0, p0, bx0, by0, bz0, Eexpl, x0, y0, z0, r0, n_sn, dt_sn
 
@@ -66,10 +67,14 @@ contains
 
       implicit none
 
-      integer                         :: i, j, k, p
+      integer                          :: i, j, k, p, n_particles, particles
+      real                              :: x, y, z, dtheta, e
+      real,dimension(3)                :: pos_init
+      real, parameter :: pi2=6.283185307
       logical, save                   :: first_run = .true.
       type(cg_list_element),  pointer :: cgl
-
+      n_particles=1
+      
       do p = lbound(flind%all_fluids, dim=1), ubound(flind%all_fluids, dim=1)
          cgl => leaves%first
          do while (associated(cgl))
@@ -91,16 +96,57 @@ contains
          enddo
       enddo
 
+
+      e = 0.9
+
+      particles = 12
+      dtheta = pi2/particles
+      write(*,*) "dtheta: ",dtheta
+
+      pos_init(1)=1.0
+      pos_init(2)=0.0
+      pos_init(3)=0.0
+
+
       if (first_run) then
-         call pset%add(1.0, [ 0.9700436,  -0.24308753,  0.0], [ 0.466203685,  0.43236573, 0.0])
-         call pset%add(1.0, [-0.9700436,   0.24308753,  0.0], [ 0.466203685,  0.43236573, 0.0])
-         call pset%add(1.0, [ 0.0,         0.0,         0.0], [-0.932407370, -0.86473146, 0.0])
-         !call pset%add(0.01, [ 2.0,         0.0,         0.0], [0.0, 0.81294617, 0.0])
-         !call pset%add(10.0, [ 0.0,         0.0,         0.0], [0.0, 0.0, 0.0])
+         do i=1, particles, 1
+            
+            call pset%add(1.0, pos_init, vel_init(pos_init, e))
+            pos_init = positions(dtheta, pos_init)
+            
+         enddo
          !call printinfo('To see results type: gnuplot -p -e ''plot "nbody_out.log" u 2:3'' ')
          first_run = .false.
       endif
 
+      contains
+
+      function positions(dtheta, pos_init)
+         implicit none
+            real, dimension(3) :: positions, pos_init
+            real :: dtheta, x,y!,z
+               x = pos_init(1)
+               y = pos_init(2)
+               !z = pos_init(3)
+               positions(1) = x*cos(dtheta) - y*sin(dtheta)
+               positions(2) = x*sin(dtheta) + y*cos(dtheta)
+               positions(3) = pos_init(3) 
+      end function positions
+
+
+      function vel_init(pos_init, e)
+         implicit none
+            real, dimension(3) :: pos_init, vel_init
+            real :: e
+            real, parameter:: mu=1.0, v=0.56509096
+            real(kind=8) ::r, vx, vy, vz
+            r = sqrt(pos_init(1)**2 + pos_init(2)**2 + pos_init(3)**2)
+            vy = sqrt( (2.0 * mu * (1 - e**2) ) / (r * (r**2 + (1 - e**2) ) ) )
+            vx = sqrt(v**2 - vy**2)
+            vel_init(1) = vx
+            vel_init(2) = vy
+            vel_init(3) = 0.0            
+      end function vel_init
    end subroutine problem_initial_conditions
 !-----------------------------------------------------------------------------
 end module initproblem
