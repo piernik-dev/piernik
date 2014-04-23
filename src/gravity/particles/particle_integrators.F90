@@ -271,7 +271,7 @@ contains
       integer, dimension(:), allocatable :: n_cells
       real :: t_dia, t_out, t_end, einit, dt, t, dth, eta, eps, a, epot
       integer, dimension(3) :: n_cell
-      integer :: nsteps, n, ndim, lun_out, lun_err, i, j, k, orbita, nx, ny, nz, order
+      integer :: nsteps, n, ndim, lun_out, lun_err, i, j, k, nx, ny, nz, order
       real :: eps2, xmin, xmax, ymin, ymax, zmin, zmax, n_orbit, tend, dx, dy, dz, ax, ay, az, axx, ayy, azz, energy, energia_poczatkowa, denergy, L, dL, L_poczatkowe, zero
       
       procedure(df_dx),pointer :: df_dx_p
@@ -304,65 +304,65 @@ contains
       t = t_glob
       t_end = t + dt_tot
       print *, "Leafrog: t_end= ", t_end
-      
-      
-!interpolacja
-xmin=-3.0
-xmax=3.0
-ymin=-3.0
-ymax=3.0
-zmin=-3.0
-zmax=3.0
-
-l_borders(1)=xmin
-l_borders(2)=ymin
-l_borders(3)=zmin
-
-r_borders(1)=xmax
-r_borders(2)=ymax
-r_borders(3)=zmax
-write(*,*) "Granice"
-
-mins(:)=l_borders
-maxs(:)=r_borders
-
-zero = 0.0
-order = 4
-
-nx = 300 
-ny = 300
-nz = 300
-
-n_cell(1)=nx
-n_cell(2)=ny
-n_cell(3)=nz
 
 
-n_cells(:)=n_cell
-      
-      
+      !interpolacja
+      xmin = -3.0
+      xmax = 3.0
+      ymin = -3.0
+      ymax = 3.0
+      zmin = -3.0
+      zmax = 3.0
+
+      l_borders(1) = xmin
+      l_borders(2) = ymin
+      l_borders(3) = zmin
+
+      r_borders(1) = xmax
+      r_borders(2) = ymax
+      r_borders(3) = zmax
+
+      mins(:) = l_borders
+      maxs(:) = r_borders
+
+      zero = 0.0
+      order = 4
+
+      nx = 300 
+      ny = 300
+      nz = 300
+
+      n_cell(1)=nx
+      n_cell(2)=ny
+      n_cell(3)=nz
+
+
+      n_cells(:)=n_cell
+
+
       eta = 1.0
       eps = 1.0e-6
-eps2  =  0.00
-
-!alokacja potencjalu
-allocate( pot(nx, ny, nz) )
-write(*,*) "Zaalokowano potencjal"
-!obliczenie potencjalu na siatce
-call pot_grid(pot, mins, maxs, n_cells, delta_cells, ndims,eps2)
-
-call cell_nr(pos, cells, mins, delta_cells, n, ndims)
-
-call check_ord(order, df_dx_p, d2f_dx2_p, df_dy_p, d2f_dy2_p,& 
-                  df_dz_p, d2f_dz2_p, d2f_dxdy_p, d2f_dxdz_p, d2f_dydz_p)
+      eps2 = 0.00
 
 
-call get_acc(cells, pos, acc, pot, n_cells, mins, delta_cells,n)
+
+      !alokacja potencjalu
+      allocate( pot(nx, ny, nz) )
+      write(*,*) "Zaalokowano potencjal"
+
+      !obliczenie potencjalu na siatce
+      call pot_grid(pot, mins, maxs, n_cells, delta_cells, ndims,eps2)
+
+      call cell_nr(pos, cells, mins, delta_cells, n, ndims)
+
+      call check_ord(order, df_dx_p, d2f_dx2_p, df_dy_p, d2f_dy2_p,& 
+                        df_dz_p, d2f_dz2_p, d2f_dxdy_p, d2f_dxdz_p, d2f_dydz_p)
+
+
       !initial acceleration
-      !call get_acc_pot(mass, pos, acc, n, epot)
-      
-      !call get_acc_mod(acc, n, a)
-      
+      call get_acc(cells, pos, acc, pot, n_cells, mins, delta_cells,n)
+
+
       !timestep
       !dt = sqrt(2.0*eta*eps/a)            !variable
       dt = 0.001                            !constant
@@ -370,7 +370,7 @@ call get_acc(cells, pos, acc, pot, n_cells, mins, delta_cells,n)
       
 
       nsteps = 0
-      orbita = 1
+
 
       !main loop
       do while (t<t_end)
@@ -437,557 +437,543 @@ call get_acc(cells, pos, acc, pot, n_cells, mins, delta_cells,n)
            
             pos = pos + vel*t
          end subroutine drift
-      
- 
 
-function phi_pm(x, y, z, eps)
-         implicit none
-            real(kind=8) :: x, y, z, r, phi_pm, eps, G,M
-               G=1.0
-               M=1.0
-               r = sqrt(x**2 + y**2 + z**2)
-               phi_pm = -G*M / (sqrt(r**2 + eps**2))
-end function phi_pm
 
-subroutine pot_grid(pot, mins, maxs, n_cells, delta_cells, ndims,eps2)
-         implicit none
-            integer :: i, j, k
-            integer,intent(in) :: ndims
-            integer, dimension(ndims), intent(in) :: n_cells
-            real,dimension(ndims),intent(in) :: mins,maxs
-            real,dimension(ndims),intent(out) :: delta_cells
-            real, intent(in) :: eps2
 
-            real,dimension(n_cells(1), n_cells(2), n_cells(3)),intent(out) :: pot
-            write(*,*) "Grid"
-            delta_cells = (maxs-mins)/n_cells
-              ! dx_cell = (xmax - xmin) / (float(nx_cell))
-              ! dy_cell = (ymax - ymin) / (float(ny_cell))
-              ! dz_cell = (zmax - zmin) / (float(nz_cell))
+         function phi_pm(x, y, z, eps)
+            implicit none
+               real(kind=8) :: x, y, z, r, phi_pm, eps, G,M
+                  G=1.0
+                  M=1.0
+                  r = sqrt(x**2 + y**2 + z**2)
+                  phi_pm = -G*M / (sqrt(r**2 + eps**2))
+         end function phi_pm
 
-               do i = 1, n_cells(1), 1
-                  do j = 1, n_cells(2), 1
-                     do k = 1, n_cells(3), 1
-                        pot(i, j, k) = phi_pm(mins(1) + i*delta_cells(1), mins(2) + j*delta_cells(2), mins(3) + k*delta_cells(3), eps2)
+
+         subroutine pot_grid(pot, mins, maxs, n_cells, delta_cells, ndims,eps2)
+            implicit none
+               integer :: i, j, k
+               integer,intent(in) :: ndims
+               integer, dimension(ndims), intent(in) :: n_cells
+               real,dimension(ndims),intent(in) :: mins,maxs
+               real,dimension(ndims),intent(out) :: delta_cells
+               real, intent(in) :: eps2
+               real,dimension(n_cells(1), n_cells(2), n_cells(3)),intent(out) :: pot
+
+               write(*,*) "Grid"
+
+               delta_cells = (maxs - mins) / n_cells
+
+                  do i = 1, n_cells(1), 1
+                     do j = 1, n_cells(2), 1
+                        do k = 1, n_cells(3), 1
+                           pot(i, j, k) = phi_pm(mins(1) + i*delta_cells(1), mins(2) + j*delta_cells(2), mins(3) + k*delta_cells(3), eps2)
+                        enddo
                      enddo
                   enddo
-               enddo
                
-end subroutine pot_grid
-      
-subroutine check_ord(order, df_dx_p, d2f_dx2_p, df_dy_p, d2f_dy2_p,& 
+         end subroutine pot_grid
+
+         subroutine check_ord(order, df_dx_p, d2f_dx2_p, df_dy_p, d2f_dy2_p,& 
                   df_dz_p, d2f_dz2_p, d2f_dxdy_p, d2f_dxdz_p, d2f_dydz_p)
-         implicit none
-            integer,intent(in) :: order
-            procedure(df_dx),pointer :: df_dx_p
-            procedure(df_dy),pointer :: df_dy_p
-            procedure(df_dz),pointer :: df_dz_p
-            procedure(d2f_dx2),pointer :: d2f_dx2_p
-            procedure(d2f_dy2),pointer :: d2f_dy2_p
-            procedure(d2f_dz2),pointer :: d2f_dz2_p
-            procedure(d2f_dxdy),pointer :: d2f_dxdy_p
-            procedure(d2f_dxdz),pointer :: d2f_dxdz_p
-            procedure(d2f_dydz),pointer :: d2f_dydz_p
-               if(.not.((order==2) .or. (order==4) ) ) then
-                  write(*,*) "#Wybrano zla dokladnosc pochodnych: ", order
-                  write(*,*) "#Dostepna dokladnosc: 2 lub 4."
-                  write(*,*) "#Koniec dzialania programu. Nic nie zrobiono."
-                  stop
-               else
-               write(*,*) "Check_ord"
-                  select case (order)
-                     case(2)
-                        df_dx_p => df_dx_o2
-                        df_dy_p => df_dy_o2
-                        df_dz_p => df_dz_o2
-                        d2f_dx2_p => d2f_dx2_o2
-                        d2f_dy2_p => d2f_dy2_o2
-                        d2f_dz2_p => d2f_dz2_o2
-                        d2f_dxdy_p => d2f_dxdy_o2
-                        d2f_dxdz_p => d2f_dxdz_o2
-                        d2f_dydz_p => d2f_dydz_o2
-                     case(4)
-                        df_dx_p => df_dx_o4
-                        df_dy_p => df_dy_o4
-                        df_dz_p => df_dz_o4
-                        d2f_dx2_p => d2f_dx2_o4
-                        d2f_dy2_p => d2f_dy2_o4
-                        d2f_dz2_p => d2f_dz2_o4
-                        d2f_dxdy_p => d2f_dxdy_o4
-                        d2f_dxdz_p => d2f_dxdz_o4
-                        d2f_dydz_p => d2f_dydz_o4
-                  end select
-               endif
-end subroutine check_ord
-      
-subroutine get_acc(cells, pos, acc, pot, n_cells, mins, delta_cells,n)
-         use constants, only : ndims
-         implicit none
-            integer:: i
-            real:: dx_cell, dy_cell, dz_cell
-            integer, intent(in):: n
-            integer,dimension(n,ndims)::cells
-            real,dimension(n,ndims),intent(in) :: pos
-            real,dimension(n,ndims),intent(out) :: acc
-            integer,dimension(ndims),intent(in) :: n_cells
-            real, dimension(ndims)::mins,delta_cells
-            real,dimension(n_cells(1),n_cells(2),n_cells(3)),intent(in) :: pot
-            real,dimension(n, ndims) :: delta
-            real,dimension(n) :: ax,ay,az
-!TUTAJ
-               !dx = -(cells(*,1)*delta_cells(1) + mins(1) - pos(*,1))
-               !dy = -(cells(*,2)*delta_cells(2) + mins(2) - pos(*,2))
-               !dz = -(cells(*,3)*delta_cells(3) + zmin - polozenie(1,3))
-         do i=1,ndims,1
-            delta(:,i)=-(cells(:,i)*delta_cells(i)+mins(i) - pos(:,i))
-         enddo
-         dx_cell=delta_cells(1)
-         dy_cell=delta_cells(2)
-         dz_cell=delta_cells(3)
+            implicit none
+               integer,intent(in) :: order
+               procedure(df_dx),pointer :: df_dx_p
+               procedure(df_dy),pointer :: df_dy_p
+               procedure(df_dz),pointer :: df_dz_p
+               procedure(d2f_dx2),pointer :: d2f_dx2_p
+               procedure(d2f_dy2),pointer :: d2f_dy2_p
+               procedure(d2f_dz2),pointer :: d2f_dz2_p
+               procedure(d2f_dxdy),pointer :: d2f_dxdy_p
+               procedure(d2f_dxdz),pointer :: d2f_dxdz_p
+               procedure(d2f_dydz),pointer :: d2f_dydz_p
+                  if(.not.((order==2) .or. (order==4) ) ) then
+                     write(*,*) "#Wybrano zla dokladnosc pochodnych: ", order
+                     write(*,*) "#Dostepna dokladnosc: 2 lub 4."
+                     write(*,*) "#Koniec dzialania programu. Nic nie zrobiono."
+                     stop
+                  else
+                  write(*,*) "Check_ord"
+                     select case (order)
+                        case(2)
+                           df_dx_p => df_dx_o2
+                           df_dy_p => df_dy_o2
+                           df_dz_p => df_dz_o2
+                           d2f_dx2_p => d2f_dx2_o2
+                           d2f_dy2_p => d2f_dy2_o2
+                           d2f_dz2_p => d2f_dz2_o2
+                           d2f_dxdy_p => d2f_dxdy_o2
+                           d2f_dxdz_p => d2f_dxdz_o2
+                           d2f_dydz_p => d2f_dydz_o2
+                        case(4)
+                           df_dx_p => df_dx_o4
+                           df_dy_p => df_dy_o4
+                           df_dz_p => df_dz_o4
+                           d2f_dx2_p => d2f_dx2_o4
+                           d2f_dy2_p => d2f_dy2_o4
+                           d2f_dz2_p => d2f_dz2_o4
+                           d2f_dxdy_p => d2f_dxdy_o4
+                           d2f_dxdz_p => d2f_dxdz_o4
+                           d2f_dydz_p => d2f_dydz_o4
+                     end select
+                  endif
+         end subroutine check_ord
 
-               ax = -( df_dx_p(cells, pot, n_cells, dx_cell, n, ndims) + &
-                  d2f_dx2_p(cells, pot, n_cells, dx_cell, n, ndims) * delta(:,1) + &
-                  d2f_dxdy_p(cells, pot, n_cells, dx_cell, dy_cell, n, ndims) * delta(:,2) + &
-                  d2f_dxdz_p(cells, pot, n_cells, dx_cell, dz_cell, n, ndims) * delta(:,3))
-               ay = -( df_dy_p(cells, pot, n_cells, dy_cell, n, ndims) + &
-                  d2f_dy2_p(cells, pot, n_cells, dy_cell, n, ndims) * delta(:,2) + &
-                  d2f_dxdy_p(cells, pot, n_cells, dx_cell, dy_cell, n, ndims) * delta(:,1) + &
-                  d2f_dydz_p(cells, pot, n_cells, dy_cell, dz_cell, n, ndims) * delta(:,3))
-               az = -( df_dz_p(cells, pot, n_cells, dz_cell, n, ndims) + &
-                  d2f_dz2_p(cells, pot, n_cells, dz_cell, n, ndims) * delta(:,3) + &
-                  d2f_dxdz_p(cells, pot, n_cells, dx_cell, dz_cell, n, ndims) * delta(:,1) +&
-                  d2f_dydz_p(cells, pot, n_cells, dy_cell, dz_cell, n, ndims) * delta(:,2))
-               acc(:,1)=ax
-               acc(:,2)=ay
-               acc(:,3)=az
-end subroutine get_acc
-      
+         subroutine get_acc(cells, pos, acc, pot, n_cells, mins, delta_cells,n)
+            use constants, only : ndims
+            implicit none
+               integer:: i
+               real:: dx_cell, dy_cell, dz_cell
+               integer, intent(in):: n
+               integer,dimension(n,ndims)::cells
+               real,dimension(n,ndims),intent(in) :: pos
+               real,dimension(n,ndims),intent(out) :: acc
+               integer,dimension(ndims),intent(in) :: n_cells
+               real, dimension(ndims)::mins,delta_cells
+               real,dimension(n_cells(1),n_cells(2),n_cells(3)),intent(in) :: pot
+               real,dimension(n, ndims) :: delta
+               real,dimension(n) :: ax,ay,az
 
-subroutine cell_nr(pos, cells, mins, delta_cells, n, ndims)
-         implicit none
-            integer :: i
-            integer, intent(in) :: n, ndims
-            integer,dimension(n, ndims),intent(out) :: cells
-            real,dimension(n, ndims),intent(in) :: pos
-            real, dimension(ndims), intent(in)  :: mins, delta_cells
-            
+                  do i = 1, ndims, 1
+                     delta(:,i) = - ( cells(:,i) * delta_cells(i) + mins(i) - pos(:,i) )
+                  enddo
+
+                  dx_cell = delta_cells(1)
+                  dy_cell = delta_cells(2)
+                  dz_cell = delta_cells(3)
+
+                  ax = -( df_dx_p(cells, pot, n_cells, dx_cell, n, ndims) + &
+                     d2f_dx2_p(cells, pot, n_cells, dx_cell, n, ndims) * delta(:,1) + &
+                     d2f_dxdy_p(cells, pot, n_cells, dx_cell, dy_cell, n, ndims) * delta(:,2) + &
+                     d2f_dxdz_p(cells, pot, n_cells, dx_cell, dz_cell, n, ndims) * delta(:,3))
+                  ay = -( df_dy_p(cells, pot, n_cells, dy_cell, n, ndims) + &
+                     d2f_dy2_p(cells, pot, n_cells, dy_cell, n, ndims) * delta(:,2) + &
+                     d2f_dxdy_p(cells, pot, n_cells, dx_cell, dy_cell, n, ndims) * delta(:,1) + &
+                     d2f_dydz_p(cells, pot, n_cells, dy_cell, dz_cell, n, ndims) * delta(:,3))
+                  az = -( df_dz_p(cells, pot, n_cells, dz_cell, n, ndims) + &
+                     d2f_dz2_p(cells, pot, n_cells, dz_cell, n, ndims) * delta(:,3) + &
+                     d2f_dxdz_p(cells, pot, n_cells, dx_cell, dz_cell, n, ndims) * delta(:,1) +&
+                     d2f_dydz_p(cells, pot, n_cells, dy_cell, dz_cell, n, ndims) * delta(:,2))
+                  acc(:,1) = ax
+                  acc(:,2) = ay
+                  acc(:,3) = az
+         end subroutine get_acc
+
+         subroutine cell_nr(pos, cells, mins, delta_cells, n, ndims)
+            implicit none
+               integer :: i
+               integer, intent(in) :: n, ndims
+               integer,dimension(n, ndims),intent(out) :: cells
+               real,dimension(n, ndims),intent(in) :: pos
+               real, dimension(ndims), intent(in)  :: mins, delta_cells
+               
                do i=1, ndims
                   cells(:,i) = floor( (pos(:,i) - mins(i) - 0.5*delta_cells(i)) / delta_cells(i) ) + 1
                enddo
-
-      end subroutine cell_nr
-
-function df_dx_o2(cells, pot, n_cells, dx_cell, n, ndims)
-         implicit none
-            integer, intent(in) :: n, ndims
-            integer,dimension(n, ndims),intent(in) :: cells
-            integer, dimension(ndims), intent(in):: n_cells
-            integer :: i, p,q,r
-            real,dimension(n_cells(1), n_cells(2), n_cells(3)),intent(in) :: pot
-            real,intent(in) :: dx_cell
-            real,dimension(n),target :: df_dx_o2
-
-         do i=1,n,1
-            p = cells(i, 1)
-            q = cells(i, 2)
-            r = cells(i, 3)
-
-            !o(R^2)
-            df_dx_o2(i)= ( pot(p+1, q, r) - pot(p-1, q, r) ) / (2.0*dx_cell)
-         enddo 
-      end function df_dx_o2
-
-
-      function df_dx_o4(cells, pot, n_cells, dx_cell,n,ndims)
-         implicit none
-            integer, intent(in) :: n, ndims
-            integer,dimension(n, ndims),intent(in) :: cells
-            integer, dimension(ndims), intent(in):: n_cells
-            integer :: i, p,q,r
-            real,dimension(n_cells(1), n_cells(2), n_cells(3)),intent(in) :: pot
-            real,intent(in) :: dx_cell
-            real,dimension(n),target :: df_dx_o4
-
-               do i=1,n,1
-               p = cells(i, 1)
-               q = cells(i, 2)
-               r = cells(i, 3)
-
-            !o(R^4)
-            df_dx_o4(i) = ( 2.0* (pot(p+1, q, r) - pot(p-1, q, r) ) ) / (3.0*dx_cell) - &
-                     ( pot(p+2, q, r) - pot(p-2, q, r) ) / (12.0*dx_cell)
-            enddo
-      end function df_dx_o4
-
-
-function df_dy_o2(cells, pot, n_cells, dy_cell, n, ndims)
-         implicit none
-            integer, intent(in) :: n, ndims
-            integer,dimension(n, ndims),intent(in) :: cells
-            integer, dimension(ndims), intent(in):: n_cells
-            integer :: i, p,q,r
-            real,dimension(n_cells(1), n_cells(2), n_cells(3)),intent(in) :: pot
-            real,intent(in) :: dy_cell
-            real,dimension(n),target ::df_dy_o2
-
-            do i=1,n,1
-               p = cells(i, 1)
-               q = cells(i, 2)
-               r = cells(i, 3)
-
-               !o(R^2)
-               df_dy_o2(i) = (pot(p, q+1, r) - pot(p, q-1, r) ) / (2.0*dy_cell)
-            enddo
-      end function df_dy_o2
-
-
-      function df_dy_o4(cells, pot, n_cells, dy_cell,n,ndims)
-         implicit none
-            integer, intent(in) :: n, ndims
-            integer,dimension(n, ndims),intent(in) :: cells
-            integer, dimension(ndims), intent(in):: n_cells
-            integer :: i, p,q,r
-            real,dimension(n_cells(1), n_cells(2), n_cells(3)),intent(in) :: pot
-            real,intent(in) :: dy_cell
-            real, dimension(n), target :: df_dy_o4
-
-            do i=1,n,1
-               p = cells(i, 1)
-               q = cells(i, 2)
-               r = cells(i, 3)
-
-               !o(R^4)
-               df_dy_o4(i) = ( 2.0 * ( pot(p, q+1, r) - pot(p, q-1, r) ) ) / (3.0*dy_cell) - &
-                     ( pot(p, q+2, r) - pot(p, q-2, r) ) / (12.0*dy_cell)
-            enddo
-
-      end function df_dy_o4
-
- function df_dz_o2(cells, pot, n_cells, dz_cell, n, ndims)
-         implicit none
-            integer, intent(in) :: n, ndims
-            integer,dimension(n, ndims),intent(in) :: cells
-            integer, dimension(ndims), intent(in):: n_cells
-            integer :: i, p,q,r
-            real,dimension(n_cells(1), n_cells(2), n_cells(3)),intent(in) :: pot
-            real,intent(in) :: dz_cell
-            real, dimension(n), target :: df_dz_o2
-
-            do i=1,n,1
-               p = cells(i, 1)
-               q = cells(i, 2)
-               r = cells(i, 3)
-
-               !o(R^2)
-               df_dz_o2(i) = ( pot(p, q, r+1) - pot(p, q, r-1) ) / (2.0*dz_cell)
-            enddo
-
-      end function df_dz_o2
-
-
-      function df_dz_o4(cells, pot, n_cells, dz_cell,n,ndims)
-         implicit none
-            integer, intent(in) :: n, ndims
-            integer,dimension(n, ndims),intent(in) :: cells
-            integer, dimension(ndims), intent(in):: n_cells
-            integer :: i, p,q,r
-            real,dimension(n_cells(1), n_cells(2), n_cells(3)),intent(in) :: pot
-            real,intent(in) :: dz_cell
-            real, dimension(n), target :: df_dz_o4
-
-            do i=1,n,1
-               p = cells(i, 1)
-               q = cells(i, 2)
-               r = cells(i, 3)
-
-               !o(R^4)
-               df_dz_o4(i) = ( 2.0* (pot(p, q, r+1) - pot(p, q, r-1) ) ) / (3.0*dz_cell) - &
-                        ( pot(p, q, r+2) - pot(p, q, r-2) ) / (12.0*dz_cell)
-            enddo
-
-      end function df_dz_o4 
-
-
-function d2f_dx2_o2(cells, pot, n_cells, dx_cell, n, ndims)
-         implicit none
-            integer, intent(in) :: n, ndims
-            integer,dimension(n, ndims),intent(in) :: cells
-            integer, dimension(ndims), intent(in):: n_cells
-            integer :: i, p,q,r
-            real,dimension(n_cells(1), n_cells(2), n_cells(3)),intent(in) :: pot
-            real,intent(in) :: dx_cell
-            real,dimension(n),target :: d2f_dx2_o2
-
-            do i=1,n,1
-               p = cells(i, 1)
-               q = cells(i, 2)
-               r = cells(i, 3)
-            
-               !o(R^2)
-               d2f_dx2_o2(i) = (pot(p+1, q, r) - 2.0*pot(p, q, r) + pot(p-1, q, r) ) / (dx_cell**2)
-            enddo
-
-end function d2f_dx2_o2
-
-
-function d2f_dx2_o4(cells, pot, n_cells, dx_cell,n,ndims)
-         implicit none
-            integer, intent(in) :: n, ndims
-            integer,dimension(n, ndims),intent(in) :: cells
-            integer, dimension(ndims), intent(in):: n_cells
-            integer :: i, p,q,r
-            real,dimension(n_cells(1), n_cells(2), n_cells(3)),intent(in) :: pot
-            real,intent(in) :: dx_cell
-            real,dimension(n),target :: d2f_dx2_o4
-
-            do i=1,n,1
-               p = cells(i, 1)
-               q = cells(i, 2)
-               r = cells(i, 3)
-
-               !o(R^4)
-               d2f_dx2_o4(i) = 4.0 * ( pot(p+1, q, r) + pot(p-1, q, r) - &
-                        2.0 * pot(p, q, r) ) / (3.0*dx_cell**2) - &
-                        ( pot(p+2, q, r) + pot(p-2, q, r) - 2.0 * pot(p, q, r) ) / (12.0*dx_cell**2)
-            enddo
-
-end function d2f_dx2_o4
-
-
-function d2f_dy2_o2(cells, pot, n_cells, dy_cell, n, ndims)
-         implicit none
-            integer, intent(in) :: n, ndims
-            integer,dimension(n, ndims),intent(in) :: cells
-            integer, dimension(ndims), intent(in):: n_cells
-            integer :: i, p,q,r
-            real,dimension(n_cells(1), n_cells(2), n_cells(3)),intent(in) :: pot
-            real,intent(in) :: dy_cell
-            real,dimension(n),target :: d2f_dy2_o2
-
-            do i=1,n,1
-               p = cells(i, 1)
-               q = cells(i, 2)
-               r = cells(i, 3)
-
-               !o(R^2)
-               d2f_dy2_o2(i) = ( pot(p, q+1, r) - 2.0*pot(p, q, r) + pot(p, q-1, r) ) / (dy_cell**2)
-            enddo
-
-end function d2f_dy2_o2
-
-
-function d2f_dy2_o4(cells, pot, n_cells, dy_cell,n,ndims)
-         implicit none
-            integer, intent(in) :: n, ndims
-            integer,dimension(n, ndims),intent(in) :: cells
-            integer, dimension(ndims), intent(in):: n_cells
-            integer :: i, p,q,r
-            real,dimension(n_cells(1), n_cells(2), n_cells(3)),intent(in) :: pot
-            real,intent(in) :: dy_cell
-            real,dimension(n),target :: d2f_dy2_o4
-
-            do i=1,n,1
-               p = cells(i, 1)
-               q = cells(i, 2)
-               r = cells(i, 3)
-
-               !o(R^4)
-               d2f_dy2_o4(i) = 4.0*( pot(p, q+1, r) + pot(p, q-1, r) - &
-                     2.0*pot(p, q, r) ) / (3.0*dy_cell**2) - &
-                     ( pot(p, q+2, r) + pot(p, q-2, r) - 2.0*pot(p, q, r) ) / (12.0*dy_cell**2)
-            enddo
-
-end function d2f_dy2_o4
-
-
-function d2f_dz2_o2(cells, pot, n_cells, dz_cell, n, ndims)
-         implicit none
-            integer, intent(in) :: n, ndims
-            integer,dimension(n, ndims),intent(in) :: cells
-            integer, dimension(ndims), intent(in):: n_cells
-            integer :: i, p,q,r
-            real,dimension(n_cells(1), n_cells(2), n_cells(3)),intent(in) :: pot
-            real,intent(in) :: dz_cell
-            real,dimension(n),target :: d2f_dz2_o2
-
-            do i=1,n,1
-               p = cells(i, 1)
-               q = cells(i, 2)
-               r = cells(i, 3)
-
-               !o(R^2)
-               d2f_dz2_o2(i) = ( pot(p, q, r+1) - 2.0*pot(p, q, r) + pot(p, q, r-1) ) / (dz_cell**2)
-            enddo
-
-end function d2f_dz2_o2
-
-
-function d2f_dz2_o4(cells, pot, n_cells, dz_cell,n,ndims)
-         implicit none
-            integer, intent(in) :: n, ndims
-            integer,dimension(n, ndims),intent(in) :: cells
-            integer, dimension(ndims), intent(in):: n_cells
-            integer :: i, p, q, r
-            real,dimension(n_cells(1), n_cells(2), n_cells(3)),intent(in) :: pot
-            real,intent(in) :: dz_cell
-            real,dimension(n),target :: d2f_dz2_o4
-
-            do i=1,n,1
-               p = cells(i, 1)
-               q = cells(i, 2)
-               r = cells(i, 3)
-
-
-               !o(R^4)
-               d2f_dz2_o4(i) = 4.0*( pot(p, q, r+1) + pot(p, q, r-1) - &
-                        2.0*pot(p, q, r) ) / (3.0*dz_cell**2) - &
-                        ( pot(p, q, r+2) + pot(p, q, r-2) - 2.0*pot(p, q, r) ) / (12.0*dz_cell**2)
-            enddo
-
-      end function d2f_dz2_o4
-      
-function d2f_dxdy_o2(cells, pot, n_cells, dx_cell, dy_cell, n, ndims)
-         implicit none
-         integer, intent(in) :: n, ndims
-            integer,dimension(n, ndims),intent(in) :: cells
-            integer, dimension(ndims), intent(in):: n_cells
-            integer :: i, p, q, r
-            real,dimension(n_cells(1), n_cells(2), n_cells(3)),intent(in) :: pot
-            real,intent(in) :: dx_cell, dy_cell
-            real,dimension(n),target :: d2f_dxdy_o2
-           
-            do i=1,n,1
-               p = cells(i, 1)
-               q = cells(i, 2)
-               r = cells(i, 3)
-            
-               !o(R^2)
-               d2f_dxdy_o2(i) = ( pot(p+1, q+1, r) - pot(p+1, q-1, r) - &
-                           pot(p-1, q+1, r) + pot(p-1, q-1, r) ) / (4.0*dx_cell*dy_cell)
-            enddo
-
-      end function d2f_dxdy_o2
-
-
-      function d2f_dxdy_o4(cells, pot, n_cells, dx_cell, dy_cell,n,ndims)
-         implicit none
-         integer, intent(in) :: n, ndims
-            integer,dimension(n, ndims),intent(in) :: cells
-            integer, dimension(ndims), intent(in):: n_cells
-            integer :: i, p, q, r
-            real,dimension(n_cells(1), n_cells(2), n_cells(3)),intent(in) :: pot
-            real,intent(in) :: dx_cell, dy_cell
-            real,dimension(n),target :: d2f_dxdy_o4
-
-            do i=1,n,1
-               p = cells(i, 1)
-               q = cells(i, 2)
-               r = cells(i, 3)
-
-               !o(R^4)
-               d2f_dxdy_o4(i) = ( pot(p+1, q+1, r) + pot(p-1, q-1, r) - pot(p+1, q-1, r) - &
-                           pot(p-1, q+1, r) ) / (3.0*dx_cell*dy_cell) - &
-                           ( pot(p+2, q+2, r) + pot(p-2, q-2, r) - pot(p+2, q-2, r) - &
-                           pot(p-2, q+2, r) ) / (48.0*dx_cell*dy_cell)
-            enddo
-
-      end function d2f_dxdy_o4
-
-
-function d2f_dxdz_o2(cells, pot, n_cells, dx_cell, dz_cell, n, ndims)
-         implicit none
-            integer, intent(in) :: n, ndims
-            integer,dimension(n, ndims),intent(in) :: cells
-            integer, dimension(ndims), intent(in):: n_cells
-            integer :: i, p, q, r
-            real,dimension(n_cells(1), n_cells(2), n_cells(3)),intent(in) :: pot
-            real,intent(in) :: dx_cell, dz_cell
-            real,dimension(n),target :: d2f_dxdz_o2
-           
-            do i=1,n,1
-               p = cells(i, 1)
-               q = cells(i, 2)
-               r = cells(i, 3)
-            
-               !o(R^2)
-               d2f_dxdz_o2(i) = ( pot(p+1, q, r+1) - pot(p+1, q, r-1) - &
-                              pot(p-1, q, r+1) + pot(p-1, q, r-1) ) / (4.0*dx_cell*dz_cell)
-            enddo
-
-end function d2f_dxdz_o2
-
-
-      function d2f_dxdz_o4(cells, pot, n_cells, dx_cell, dz_cell,n,ndims)
-         implicit none
-            integer, intent(in) :: n, ndims
-            integer,dimension(n, ndims),intent(in) :: cells
-            integer, dimension(ndims), intent(in):: n_cells
-            integer :: i, p, q, r
-            real,dimension(n_cells(1), n_cells(2), n_cells(3)),intent(in) :: pot
-            real,intent(in) :: dx_cell, dz_cell
-            real,dimension(n),target :: d2f_dxdz_o4
-           
-            do i=1,n,1
-               p = cells(i, 1)
-               q = cells(i, 2)
-               r = cells(i, 3)
-
-               !o(R^4)
-               d2f_dxdz_o4(i) = ( pot(p+1, q, r+1) + pot(p-1, q, r-1) - pot(p+1, q, r-1) - &
-                           pot(p-1, q, r+1) ) / (3.0*dx_cell*dz_cell) - &
-                           ( pot(p+2, q, r+2) + pot(p-2, q, r-2) - pot(p+2, q, r-2) - &
-                           pot(p-2, q, r+2) ) / (48.0*dx_cell*dz_cell)
-            enddo
-
-      end function d2f_dxdz_o4
+         end subroutine cell_nr
+
+         function df_dx_o2(cells, pot, n_cells, dx_cell, n, ndims)
+            implicit none
+               integer, intent(in) :: n, ndims
+               integer,dimension(n, ndims),intent(in) :: cells
+               integer, dimension(ndims), intent(in):: n_cells
+               integer :: i, p,q,r
+               real,dimension(n_cells(1), n_cells(2), n_cells(3)),intent(in) :: pot
+               real,intent(in) :: dx_cell
+               real,dimension(n),target :: df_dx_o2
+
+               do i=1, n, 1
+                  p = cells(i, 1)
+                  q = cells(i, 2)
+                  r = cells(i, 3)
+
+                  !o(R^2)
+                  df_dx_o2(i) = ( pot(p+1, q, r) - pot(p-1, q, r) ) / (2.0*dx_cell)
+               enddo 
+         end function df_dx_o2
+
+         function df_dx_o4(cells, pot, n_cells, dx_cell,n,ndims)
+            implicit none
+               integer, intent(in) :: n, ndims
+               integer,dimension(n, ndims),intent(in) :: cells
+               integer, dimension(ndims), intent(in):: n_cells
+               integer :: i, p,q,r
+               real,dimension(n_cells(1), n_cells(2), n_cells(3)),intent(in) :: pot
+               real,intent(in) :: dx_cell
+               real,dimension(n),target :: df_dx_o4
+
+               do i = 1, n, 1
+                  p = cells(i, 1)
+                  q = cells(i, 2)
+                  r = cells(i, 3)
+
+                  !o(R^4)
+                  df_dx_o4(i) = ( 2.0* (pot(p+1, q, r) - pot(p-1, q, r) ) ) / (3.0*dx_cell) - &
+                              ( pot(p+2, q, r) - pot(p-2, q, r) ) / (12.0*dx_cell)
+               enddo
+         end function df_dx_o4
+
+         function df_dy_o2(cells, pot, n_cells, dy_cell, n, ndims)
+            implicit none
+               integer, intent(in) :: n, ndims
+               integer,dimension(n, ndims),intent(in) :: cells
+               integer, dimension(ndims), intent(in):: n_cells
+               integer :: i, p,q,r
+               real,dimension(n_cells(1), n_cells(2), n_cells(3)),intent(in) :: pot
+               real,intent(in) :: dy_cell
+               real,dimension(n),target ::df_dy_o2
+
+               do i = 1, n, 1
+                  p = cells(i, 1)
+                  q = cells(i, 2)
+                  r = cells(i, 3)
+
+                  !o(R^2)
+                  df_dy_o2(i) = (pot(p, q+1, r) - pot(p, q-1, r) ) / (2.0*dy_cell)
+               enddo
+         end function df_dy_o2
+
+
+         function df_dy_o4(cells, pot, n_cells, dy_cell,n,ndims)
+            implicit none
+               integer, intent(in) :: n, ndims
+               integer,dimension(n, ndims),intent(in) :: cells
+               integer, dimension(ndims), intent(in):: n_cells
+               integer :: i, p,q,r
+               real,dimension(n_cells(1), n_cells(2), n_cells(3)),intent(in) :: pot
+               real,intent(in) :: dy_cell
+               real, dimension(n), target :: df_dy_o4
+
+               do i = 1, n, 1
+                  p = cells(i, 1)
+                  q = cells(i, 2)
+                  r = cells(i, 3)
+
+                  !o(R^4)
+                  df_dy_o4(i) = ( 2.0 * ( pot(p, q+1, r) - pot(p, q-1, r) ) ) / (3.0*dy_cell) - &
+                        ( pot(p, q+2, r) - pot(p, q-2, r) ) / (12.0*dy_cell)
+               enddo
+
+         end function df_dy_o4
+
+         function df_dz_o2(cells, pot, n_cells, dz_cell, n, ndims)
+            implicit none
+               integer, intent(in) :: n, ndims
+               integer,dimension(n, ndims),intent(in) :: cells
+               integer, dimension(ndims), intent(in):: n_cells
+               integer :: i, p,q,r
+               real,dimension(n_cells(1), n_cells(2), n_cells(3)),intent(in) :: pot
+               real,intent(in) :: dz_cell
+               real, dimension(n), target :: df_dz_o2
+
+               do i = 1, n, 1
+                  p = cells(i, 1)
+                  q = cells(i, 2)
+                  r = cells(i, 3)
+
+                  !o(R^2)
+                  df_dz_o2(i) = ( pot(p, q, r+1) - pot(p, q, r-1) ) / (2.0*dz_cell)
+               enddo
+
+         end function df_dz_o2
+
+
+         function df_dz_o4(cells, pot, n_cells, dz_cell,n,ndims)
+            implicit none
+               integer, intent(in) :: n, ndims
+               integer,dimension(n, ndims),intent(in) :: cells
+               integer, dimension(ndims), intent(in):: n_cells
+               integer :: i, p,q,r
+               real,dimension(n_cells(1), n_cells(2), n_cells(3)),intent(in) :: pot
+               real,intent(in) :: dz_cell
+               real, dimension(n), target :: df_dz_o4
+
+               do i = 1, n, 1
+                  p = cells(i, 1)
+                  q = cells(i, 2)
+                  r = cells(i, 3)
+
+                  !o(R^4)
+                  df_dz_o4(i) = ( 2.0* (pot(p, q, r+1) - pot(p, q, r-1) ) ) / (3.0*dz_cell) - &
+                           ( pot(p, q, r+2) - pot(p, q, r-2) ) / (12.0*dz_cell)
+               enddo
+
+         end function df_dz_o4 
+
+         function d2f_dx2_o2(cells, pot, n_cells, dx_cell, n, ndims)
+                  implicit none
+                     integer, intent(in) :: n, ndims
+                     integer,dimension(n, ndims),intent(in) :: cells
+                     integer, dimension(ndims), intent(in):: n_cells
+                     integer :: i, p,q,r
+                     real,dimension(n_cells(1), n_cells(2), n_cells(3)),intent(in) :: pot
+                     real,intent(in) :: dx_cell
+                     real,dimension(n),target :: d2f_dx2_o2
+
+                     do i = 1, n, 1
+                        p = cells(i, 1)
+                        q = cells(i, 2)
+                        r = cells(i, 3)
+                     
+                        !o(R^2)
+                        d2f_dx2_o2(i) = (pot(p+1, q, r) - 2.0*pot(p, q, r) + pot(p-1, q, r) ) / (dx_cell**2)
+                     enddo
+
+         end function d2f_dx2_o2
+
+         function d2f_dx2_o4(cells, pot, n_cells, dx_cell,n,ndims)
+            implicit none
+               integer, intent(in) :: n, ndims
+               integer,dimension(n, ndims),intent(in) :: cells
+               integer, dimension(ndims), intent(in):: n_cells
+               integer :: i, p,q,r
+               real,dimension(n_cells(1), n_cells(2), n_cells(3)),intent(in) :: pot
+               real,intent(in) :: dx_cell
+               real,dimension(n),target :: d2f_dx2_o4
+
+               do i = 1, n, 1
+                  p = cells(i, 1)
+                  q = cells(i, 2)
+                  r = cells(i, 3)
+
+                  !o(R^4)
+                  d2f_dx2_o4(i) = 4.0 * ( pot(p+1, q, r) + pot(p-1, q, r) - &
+                           2.0 * pot(p, q, r) ) / (3.0*dx_cell**2) - &
+                           ( pot(p+2, q, r) + pot(p-2, q, r) - 2.0 * pot(p, q, r) ) / (12.0*dx_cell**2)
+               enddo
+
+         end function d2f_dx2_o4
+
+         function d2f_dy2_o2(cells, pot, n_cells, dy_cell, n, ndims)
+            implicit none
+               integer, intent(in) :: n, ndims
+               integer,dimension(n, ndims),intent(in) :: cells
+               integer, dimension(ndims), intent(in):: n_cells
+               integer :: i, p,q,r
+               real,dimension(n_cells(1), n_cells(2), n_cells(3)),intent(in) :: pot
+               real,intent(in) :: dy_cell
+               real,dimension(n),target :: d2f_dy2_o2
+
+               do i = 1, n, 1
+                  p = cells(i, 1)
+                  q = cells(i, 2)
+                  r = cells(i, 3)
+
+                  !o(R^2)
+                  d2f_dy2_o2(i) = ( pot(p, q+1, r) - 2.0*pot(p, q, r) + pot(p, q-1, r) ) / (dy_cell**2)
+               enddo
+
+         end function d2f_dy2_o2
+
+
+         function d2f_dy2_o4(cells, pot, n_cells, dy_cell,n,ndims)
+            implicit none
+               integer, intent(in) :: n, ndims
+               integer,dimension(n, ndims),intent(in) :: cells
+               integer, dimension(ndims), intent(in):: n_cells
+               integer :: i, p,q,r
+               real,dimension(n_cells(1), n_cells(2), n_cells(3)),intent(in) :: pot
+               real,intent(in) :: dy_cell
+               real,dimension(n),target :: d2f_dy2_o4
+
+               do i = 1, n, 1
+                  p = cells(i, 1)
+                  q = cells(i, 2)
+                  r = cells(i, 3)
+
+                  !o(R^4)
+                  d2f_dy2_o4(i) = 4.0*( pot(p, q+1, r) + pot(p, q-1, r) - &
+                        2.0*pot(p, q, r) ) / (3.0*dy_cell**2) - &
+                        ( pot(p, q+2, r) + pot(p, q-2, r) - 2.0*pot(p, q, r) ) / (12.0*dy_cell**2)
+               enddo
+
+         end function d2f_dy2_o4
+
+         function d2f_dz2_o2(cells, pot, n_cells, dz_cell, n, ndims)
+               implicit none
+                  integer, intent(in) :: n, ndims
+                  integer,dimension(n, ndims),intent(in) :: cells
+                  integer, dimension(ndims), intent(in):: n_cells
+                  integer :: i, p,q,r
+                  real,dimension(n_cells(1), n_cells(2), n_cells(3)),intent(in) :: pot
+                  real,intent(in) :: dz_cell
+                  real,dimension(n),target :: d2f_dz2_o2
+
+                  do i = 1, n, 1
+                     p = cells(i, 1)
+                     q = cells(i, 2)
+                     r = cells(i, 3)
+
+                     !o(R^2)
+                     d2f_dz2_o2(i) = ( pot(p, q, r+1) - 2.0*pot(p, q, r) + pot(p, q, r-1) ) / (dz_cell**2)
+                  enddo
+
+         end function d2f_dz2_o2
+
+
+         function d2f_dz2_o4(cells, pot, n_cells, dz_cell,n,ndims)
+            implicit none
+               integer, intent(in) :: n, ndims
+               integer,dimension(n, ndims),intent(in) :: cells
+               integer, dimension(ndims), intent(in):: n_cells
+               integer :: i, p, q, r
+               real,dimension(n_cells(1), n_cells(2), n_cells(3)),intent(in) :: pot
+               real,intent(in) :: dz_cell
+               real,dimension(n),target :: d2f_dz2_o4
+
+               do i = 1, n, 1
+                  p = cells(i, 1)
+                  q = cells(i, 2)
+                  r = cells(i, 3)
+
+                  !o(R^4)
+                  d2f_dz2_o4(i) = 4.0*( pot(p, q, r+1) + pot(p, q, r-1) - &
+                           2.0*pot(p, q, r) ) / (3.0*dz_cell**2) - &
+                           ( pot(p, q, r+2) + pot(p, q, r-2) - 2.0*pot(p, q, r) ) / (12.0*dz_cell**2)
+               enddo
+
+         end function d2f_dz2_o4
+
+         function d2f_dxdy_o2(cells, pot, n_cells, dx_cell, dy_cell, n, ndims)
+            implicit none
+               integer, intent(in) :: n, ndims
+               integer,dimension(n, ndims),intent(in) :: cells
+               integer, dimension(ndims), intent(in):: n_cells
+               integer :: i, p, q, r
+               real,dimension(n_cells(1), n_cells(2), n_cells(3)),intent(in) :: pot
+               real,intent(in) :: dx_cell, dy_cell
+               real,dimension(n),target :: d2f_dxdy_o2
+
+               do i = 1, n, 1
+                  p = cells(i, 1)
+                  q = cells(i, 2)
+                  r = cells(i, 3)
+
+                  !o(R^2)
+                  d2f_dxdy_o2(i) = ( pot(p+1, q+1, r) - pot(p+1, q-1, r) - &
+                              pot(p-1, q+1, r) + pot(p-1, q-1, r) ) / (4.0*dx_cell*dy_cell)
+               enddo
+
+         end function d2f_dxdy_o2
+
+
+         function d2f_dxdy_o4(cells, pot, n_cells, dx_cell, dy_cell,n,ndims)
+            implicit none
+               integer, intent(in) :: n, ndims
+               integer,dimension(n, ndims),intent(in) :: cells
+               integer, dimension(ndims), intent(in):: n_cells
+               integer :: i, p, q, r
+               real,dimension(n_cells(1), n_cells(2), n_cells(3)),intent(in) :: pot
+               real,intent(in) :: dx_cell, dy_cell
+               real,dimension(n),target :: d2f_dxdy_o4
+
+               do i = 1, n, 1
+                  p = cells(i, 1)
+                  q = cells(i, 2)
+                  r = cells(i, 3)
+
+                  !o(R^4)
+                  d2f_dxdy_o4(i) = ( pot(p+1, q+1, r) + pot(p-1, q-1, r) - pot(p+1, q-1, r) - &
+                              pot(p-1, q+1, r) ) / (3.0*dx_cell*dy_cell) - &
+                              ( pot(p+2, q+2, r) + pot(p-2, q-2, r) - pot(p+2, q-2, r) - &
+                              pot(p-2, q+2, r) ) / (48.0*dx_cell*dy_cell)
+               enddo
+
+         end function d2f_dxdy_o4
+
+         function d2f_dxdz_o2(cells, pot, n_cells, dx_cell, dz_cell, n, ndims)
+            implicit none
+               integer, intent(in) :: n, ndims
+               integer,dimension(n, ndims),intent(in) :: cells
+               integer, dimension(ndims), intent(in):: n_cells
+               integer :: i, p, q, r
+               real,dimension(n_cells(1), n_cells(2), n_cells(3)),intent(in) :: pot
+               real,intent(in) :: dx_cell, dz_cell
+               real,dimension(n),target :: d2f_dxdz_o2
+
+               do i = 1, n, 1
+                  p = cells(i, 1)
+                  q = cells(i, 2)
+                  r = cells(i, 3)
+
+                  !o(R^2)
+                  d2f_dxdz_o2(i) = ( pot(p+1, q, r+1) - pot(p+1, q, r-1) - &
+                                 pot(p-1, q, r+1) + pot(p-1, q, r-1) ) / (4.0*dx_cell*dz_cell)
+               enddo
+
+         end function d2f_dxdz_o2
+
+
+         function d2f_dxdz_o4(cells, pot, n_cells, dx_cell, dz_cell,n,ndims)
+            implicit none
+               integer, intent(in) :: n, ndims
+               integer,dimension(n, ndims),intent(in) :: cells
+               integer, dimension(ndims), intent(in):: n_cells
+               integer :: i, p, q, r
+               real,dimension(n_cells(1), n_cells(2), n_cells(3)),intent(in) :: pot
+               real,intent(in) :: dx_cell, dz_cell
+               real,dimension(n),target :: d2f_dxdz_o4
+
+               do i = 1, n, 1
+                  p = cells(i, 1)
+                  q = cells(i, 2)
+                  r = cells(i, 3)
+
+                  !o(R^4)
+                  d2f_dxdz_o4(i) = ( pot(p+1, q, r+1) + pot(p-1, q, r-1) - pot(p+1, q, r-1) - &
+                              pot(p-1, q, r+1) ) / (3.0*dx_cell*dz_cell) - &
+                              ( pot(p+2, q, r+2) + pot(p-2, q, r-2) - pot(p+2, q, r-2) - &
+                              pot(p-2, q, r+2) ) / (48.0*dx_cell*dz_cell)
+               enddo
+
+         end function d2f_dxdz_o4
       
       
-      function d2f_dydz_o2(cells, pot, n_cells, dy_cell, dz_cell, n, ndims)
-         implicit none
-            integer, intent(in) :: n, ndims
-            integer,dimension(n, ndims),intent(in) :: cells
-            integer, dimension(ndims), intent(in):: n_cells
-            integer :: i, p, q, r
-            real,dimension(n_cells(1), n_cells(2), n_cells(3)),intent(in) :: pot
-            real,intent(in) :: dy_cell, dz_cell
-            real,dimension(n),target :: d2f_dydz_o2
-           
-            do i=1,n,1
-               p = cells(i, 1)
-               q = cells(i, 2)
-               r = cells(i, 3)
-            
-               !o(R^2)
-               d2f_dydz_o2(i) = ( pot(p, q+1, r+1) - pot(p, q+1, r-1) - &
-                              pot(p, q-1, r+1) + pot(p, q-1, r-1) ) / (4.0*dy_cell*dz_cell)
-            enddo
+         function d2f_dydz_o2(cells, pot, n_cells, dy_cell, dz_cell, n, ndims)
+            implicit none
+               integer, intent(in) :: n, ndims
+               integer,dimension(n, ndims),intent(in) :: cells
+               integer, dimension(ndims), intent(in):: n_cells
+               integer :: i, p, q, r
+               real,dimension(n_cells(1), n_cells(2), n_cells(3)),intent(in) :: pot
+               real,intent(in) :: dy_cell, dz_cell
+               real,dimension(n),target :: d2f_dydz_o2
 
-      end function d2f_dydz_o2
+               do i = 1, n, 1
+                  p = cells(i, 1)
+                  q = cells(i, 2)
+                  r = cells(i, 3)
 
+                  !o(R^2)
+                  d2f_dydz_o2(i) = ( pot(p, q+1, r+1) - pot(p, q+1, r-1) - &
+                                 pot(p, q-1, r+1) + pot(p, q-1, r-1) ) / (4.0*dy_cell*dz_cell)
+               enddo
 
-      function d2f_dydz_o4(cells, pot, n_cells, dy_cell, dz_cell,n,ndims)
-         implicit none
-            integer, intent(in) :: n, ndims
-            integer,dimension(n, ndims),intent(in) :: cells
-            integer, dimension(ndims), intent(in):: n_cells
-            integer :: i, p, q, r
-            real,dimension(n_cells(1), n_cells(2), n_cells(3)),intent(in) :: pot
-            real,intent(in) :: dy_cell, dz_cell
-            real,dimension(n),target :: d2f_dydz_o4
-           
-            do i=1,n,1
-               p = cells(i, 1)
-               q = cells(i, 2)
-               r = cells(i, 3)
+         end function d2f_dydz_o2
 
-               !o(R^4)
-               d2f_dydz_o4(i) = ( pot(p, q+1, r+1) + pot(p, q-1, r-1) - pot(p, q+1, r-1) - &
-                           pot(p, q-1, r+1) ) / (3.0*dy_cell*dz_cell) - &
-                           ( pot(p, q+2, r+2) + pot(p, q-2, r-2) - pot(p, q+2, r-2) - &
-                           pot(p, q-2, r+2) ) / (48.0*dy_cell*dz_cell)
-            enddo
+         function d2f_dydz_o4(cells, pot, n_cells, dy_cell, dz_cell,n,ndims)
+            implicit none
+               integer, intent(in) :: n, ndims
+               integer,dimension(n, ndims),intent(in) :: cells
+               integer, dimension(ndims), intent(in):: n_cells
+               integer :: i, p, q, r
+               real,dimension(n_cells(1), n_cells(2), n_cells(3)),intent(in) :: pot
+               real,intent(in) :: dy_cell, dz_cell
+               real,dimension(n),target :: d2f_dydz_o4
 
-      end function d2f_dydz_o4
+               do i = 1, n, 1
+                  p = cells(i, 1)
+                  q = cells(i, 2)
+                  r = cells(i, 3)
+
+                  !o(R^4)
+                  d2f_dydz_o4(i) = ( pot(p, q+1, r+1) + pot(p, q-1, r-1) - pot(p, q+1, r-1) - &
+                              pot(p, q-1, r+1) ) / (3.0*dy_cell*dz_cell) - &
+                              ( pot(p, q+2, r+2) + pot(p, q-2, r-2) - pot(p, q+2, r-2) - &
+                              pot(p, q-2, r+2) ) / (48.0*dy_cell*dz_cell)
+               enddo
+
+         end function d2f_dydz_o4
   end subroutine leapfrog2ord      
       
    subroutine get_acc_pot(mass, pos, acc, n, epot)
