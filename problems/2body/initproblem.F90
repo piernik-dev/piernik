@@ -69,7 +69,7 @@ contains
 
       integer                          :: i, j, k, p, n_particles, particles
       real                              :: x, y, z, dtheta, e
-      real,dimension(3)                :: pos_init
+      real,dimension(3)                :: pos_init, vel_init
       real, parameter :: pi2=6.283185307
       logical, save                   :: first_run = .true.
       type(cg_list_element),  pointer :: cgl
@@ -99,20 +99,22 @@ contains
 
       e = 0.9
 
-      particles = 12
+      particles = 3
       dtheta = pi2/particles
       write(*,*) "dtheta: ",dtheta
 
       pos_init(1)=1.0
       pos_init(2)=0.0
       pos_init(3)=0.0
-
+      
+      vel_init = velocities(pos_init, e)
 
       if (first_run) then
          do i=1, particles, 1
             
-            call pset%add(1.0, pos_init, vel_init(pos_init, e))
+            call pset%add(1.0, pos_init, vel_init)
             pos_init = positions(dtheta, pos_init)
+            vel_init = rotate(dtheta, vel_init)
             
          enddo
          !call printinfo('To see results type: gnuplot -p -e ''plot "nbody_out.log" u 2:3'' ')
@@ -124,29 +126,33 @@ contains
       function positions(dtheta, pos_init)
          implicit none
             real, dimension(3) :: positions, pos_init
-            real :: dtheta, x,y!,z
-               x = pos_init(1)
-               y = pos_init(2)
-               !z = pos_init(3)
-               positions(1) = x*cos(dtheta) - y*sin(dtheta)
-               positions(2) = x*sin(dtheta) + y*cos(dtheta)
-               positions(3) = pos_init(3) 
+            real :: dtheta
+               positions = rotate(dtheta, pos_init)
       end function positions
 
 
-      function vel_init(pos_init, e)
+      function velocities(pos_init, e)
          implicit none
-            real, dimension(3) :: pos_init, vel_init
-            real :: e
-            real, parameter:: mu=1.0, v=0.56509096
-            real(kind=8) ::r, vx, vy, vz
+            real, dimension(3) :: pos_init, velocities
+            real :: e, r, v, vx, vy
+            real, parameter:: mu=1.0
+            
             r = sqrt(pos_init(1)**2 + pos_init(2)**2 + pos_init(3)**2)
             vy = sqrt( (2.0 * mu * (1 - e**2) ) / (r * (r**2 + (1 - e**2) ) ) )
-            vx = sqrt(v**2 - vy**2)
-            vel_init(1) = vx
-            vel_init(2) = vy
-            vel_init(3) = 0.0            
-      end function vel_init
+            vx = 0.0!-sqrt(v**2 - vy**2)
+            velocities(1) = vx
+            velocities(2) = vy
+            velocities(3) = 0.0            
+      end function velocities
+      
+      function rotate (theta, vector)
+         implicit none
+            real, dimension(3) :: vector, rotate
+            real :: theta
+               rotate(1) = vector(1)*cos(theta) - vector(2)*sin(theta)
+               rotate(2) = vector(1)*sin(theta) + vector(2)*cos(theta)
+               rotate(3) = vector(3)
+      end function rotate
    end subroutine problem_initial_conditions
 !-----------------------------------------------------------------------------
 end module initproblem
