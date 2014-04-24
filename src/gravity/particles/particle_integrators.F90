@@ -393,7 +393,7 @@ contains
          call get_acc(cells, pos, acc, pot, n_cells, mins, delta_cells, n)
          !call get_acc_mod(acc, n, a)
          !4.kick(dth)
-         vel(:,:)=vel_h
+         vel(:,:) = vel_h
          call kick(vel, acc, dth, n)   !velocity
          !5.t
          t = t + dt
@@ -667,7 +667,6 @@ contains
                   df_dy_o4(i) = ( 2.0 * ( pot(p, q+1, r) - pot(p, q-1, r) ) ) / (3.0*dy_cell) - &
                         ( pot(p, q+2, r) - pot(p, q-2, r) ) / (12.0*dy_cell)
                enddo
-
          end function df_dy_o4
 
          function df_dz_o2(cells, pot, n_cells, dz_cell, n)
@@ -689,7 +688,6 @@ contains
                   !o(R^2)
                   df_dz_o2(i) = ( pot(p, q, r+1) - pot(p, q, r-1) ) / (2.0*dz_cell)
                enddo
-
          end function df_dz_o2
 
 
@@ -713,7 +711,6 @@ contains
                   df_dz_o4(i) = ( 2.0* (pot(p, q, r+1) - pot(p, q, r-1) ) ) / (3.0*dz_cell) - &
                            ( pot(p, q, r+2) - pot(p, q, r-2) ) / (12.0*dz_cell)
                enddo
-
          end function df_dz_o4 
 
          function d2f_dx2_o2(cells, pot, n_cells, dx_cell, n)
@@ -735,7 +732,6 @@ contains
                   !o(R^2)
                   d2f_dx2_o2(i) = (pot(p+1, q, r) - 2.0*pot(p, q, r) + pot(p-1, q, r) ) / (dx_cell**2)
                enddo
-
          end function d2f_dx2_o2
 
          function d2f_dx2_o4(cells, pot, n_cells, dx_cell, n)
@@ -759,7 +755,6 @@ contains
                            2.0 * pot(p, q, r) ) / (3.0*dx_cell**2) - &
                            ( pot(p+2, q, r) + pot(p-2, q, r) - 2.0 * pot(p, q, r) ) / (12.0*dx_cell**2)
                enddo
-
          end function d2f_dx2_o4
 
          function d2f_dy2_o2(cells, pot, n_cells, dy_cell, n)
@@ -781,7 +776,6 @@ contains
                   !o(R^2)
                   d2f_dy2_o2(i) = ( pot(p, q+1, r) - 2.0*pot(p, q, r) + pot(p, q-1, r) ) / (dy_cell**2)
                enddo
-
          end function d2f_dy2_o2
 
          function d2f_dy2_o4(cells, pot, n_cells, dy_cell, n)
@@ -805,7 +799,6 @@ contains
                         2.0*pot(p, q, r) ) / (3.0*dy_cell**2) - &
                         ( pot(p, q+2, r) + pot(p, q-2, r) - 2.0*pot(p, q, r) ) / (12.0*dy_cell**2)
                enddo
-
          end function d2f_dy2_o4
 
          function d2f_dz2_o2(cells, pot, n_cells, dz_cell, n)
@@ -827,9 +820,7 @@ contains
                   !o(R^2)
                   d2f_dz2_o2(i) = ( pot(p, q, r+1) - 2.0*pot(p, q, r) + pot(p, q, r-1) ) / (dz_cell**2)
                enddo
-
          end function d2f_dz2_o2
-
 
          function d2f_dz2_o4(cells, pot, n_cells, dz_cell, n)
             use constants, only: ndims
@@ -852,7 +843,6 @@ contains
                            2.0*pot(p, q, r) ) / (3.0*dz_cell**2) - &
                            ( pot(p, q, r+2) + pot(p, q, r-2) - 2.0*pot(p, q, r) ) / (12.0*dz_cell**2)
                enddo
-
          end function d2f_dz2_o4
 
          function d2f_dxdy_o2(cells, pot, n_cells, dx_cell, dy_cell, n)
@@ -875,7 +865,6 @@ contains
                   d2f_dxdy_o2(i) = ( pot(p+1, q+1, r) - pot(p+1, q-1, r) - &
                               pot(p-1, q+1, r) + pot(p-1, q-1, r) ) / (4.0*dx_cell*dy_cell)
                enddo
-
          end function d2f_dxdy_o2
 
 
@@ -901,7 +890,6 @@ contains
                               ( pot(p+2, q+2, r) + pot(p-2, q-2, r) - pot(p+2, q-2, r) - &
                               pot(p-2, q+2, r) ) / (48.0*dx_cell*dy_cell)
                enddo
-
          end function d2f_dxdy_o4
 
          function d2f_dxdz_o2(cells, pot, n_cells, dx_cell, dz_cell, n)
@@ -924,9 +912,7 @@ contains
                   d2f_dxdz_o2(i) = ( pot(p+1, q, r+1) - pot(p+1, q, r-1) - &
                                  pot(p-1, q, r+1) + pot(p-1, q, r-1) ) / (4.0*dx_cell*dz_cell)
                enddo
-
          end function d2f_dxdz_o2
-
 
          function d2f_dxdz_o4(cells, pot, n_cells, dx_cell, dz_cell, n)
             use constants, only: ndims
@@ -950,7 +936,6 @@ contains
                               ( pot(p+2, q, r+2) + pot(p-2, q, r-2) - pot(p+2, q, r-2) - &
                               pot(p-2, q, r+2) ) / (48.0*dx_cell*dz_cell)
                enddo
-
          end function d2f_dxdz_o4
       
       
@@ -974,7 +959,6 @@ contains
                   d2f_dydz_o2(i) = ( pot(p, q+1, r+1) - pot(p, q+1, r-1) - &
                                  pot(p, q-1, r+1) + pot(p, q-1, r-1) ) / (4.0*dy_cell*dz_cell)
                enddo
-
          end function d2f_dydz_o2
 
          function d2f_dydz_o4(cells, pot, n_cells, dy_cell, dz_cell, n)
@@ -999,7 +983,6 @@ contains
                               ( pot(p, q+2, r+2) + pot(p, q-2, r-2) - pot(p, q+2, r-2) - &
                               pot(p, q-2, r+2) ) / (48.0*dy_cell*dz_cell)
                enddo
-
          end function d2f_dydz_o4
          
   end subroutine leapfrog2ord      
@@ -1063,7 +1046,7 @@ contains
          enddo
       enddo
       a = sqrt(maxval(acc2))
-         
+
    end subroutine get_acc_mod
 
 
