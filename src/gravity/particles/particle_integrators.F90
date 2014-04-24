@@ -534,7 +534,7 @@ contains
                integer:: i
                real:: dx_cell, dy_cell, dz_cell
                integer, intent(in) :: n
-               integer,dimension(n, ndims) : :cells
+               integer,dimension(n, ndims) :: cells
                real,dimension(n, ndims),intent(in) :: pos
                real,dimension(n, ndims),intent(out) :: acc
                integer,dimension(ndims),intent(in) :: n_cells
