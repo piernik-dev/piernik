@@ -281,8 +281,8 @@ contains
       real :: t_dia, t_out, t_end, einit, dt, t, dth, eta, eps, a, epot
       integer, dimension(3) :: n_cell
       integer :: nsteps, n, ndim, lun_out, lun_err, i, j, k, nx, ny, nz, order
-      real :: eps2, xmin, xmax, ymin, ymax, zmin, zmax, n_orbit, tend, dx, dy, dz, ax, ay, az, axx, ayy, azz, energy, energia_poczatkowa, denergy, L, dL, L_poczatkowe, zero
-      
+      real :: eps2, xmin, xmax, ymin, ymax, zmin, zmax, n_orbit, tend, dx, dy, dz, ax, ay, az, axx, ayy, azz, energy, init_energy, d_energy, ang_momentum, init_ang_mom, d_ang_momentum, zero
+
       procedure(df_dx),pointer :: df_dx_p
       procedure(df_dy),pointer :: df_dy_p
       procedure(df_dz),pointer :: df_dz_p
@@ -360,7 +360,9 @@ contains
       write(*,*) "Zaalokowano potencjal"
 
       !obliczenie potencjalu na siatce
-      call pot_grid(pot, mins, maxs, n_cells, delta_cells, ndims,eps2)
+      call pot_grid(pot, mins, maxs, n_cells, delta_cells, ndims, eps2)
+      
+      init_ang_mom = get_ang_momentum(pos, vel, mass, n)
 
       call cell_nr(pos, cells, mins, delta_cells, n)
 
@@ -402,9 +404,10 @@ contains
          !7.dth
          !dth =	0.5*dt
          nsteps = nsteps + 1
+         d_ang_momentum = log(abs((get_ang_momentum(pos, vel, mass, n) - init_ang_mom)/init_ang_mom))
 
          do i = 1, n
-            write(lun_out, '(I3,1X,7(E13.6,1X))') i, mass(i), pos(i,:), vel(i,:)
+            write(lun_out, '(I3,1X,8(E13.6,1X))') i, mass(i), pos(i,:), vel(i,:), d_ang_momentum
          enddo
 
       end do
@@ -984,7 +987,31 @@ contains
                               pot(p, q-2, r+2) ) / (48.0*dy_cell*dz_cell)
                enddo
          end function d2f_dydz_o4
-         
+
+         function get_ang_momentum(pos, vel, mass, n)
+            use constants, only : ndims
+            implicit none
+               integer :: i, j
+               integer, intent(in) :: n
+               real, dimension(n, ndims), intent(in) :: pos, vel
+               real, dimension(n) :: mass
+               real :: ang_mom = 0.0, get_ang_momentum, r2, p2, r, p, rp
+
+               do i = 1, n, 1
+                  r2 = 0.0
+                  p2 = 0.0
+                  rp = 0.0
+                  do j = 1, ndims
+                     r2 = r2 + pos(i, j)**2
+                     p2 = p2 + mass(i)**2 * vel(i, j)**2
+                     rp = rp + pos(i, j) * mass(i) * vel(i, j)
+                  enddo
+                  !write(*,*) "r2, p2, rp: ", r2, p2, rp
+                  ang_mom = ang_mom + sqrt( r2 * p2 * ( 1.0 - ( rp / sqrt(r2*p2) )**2 ) )
+               enddo
+               get_ang_momentum = ang_mom
+         end function get_ang_momentum
+
   end subroutine leapfrog2ord      
       
    subroutine get_acc_pot(mass, pos, acc, n, epot)
