@@ -99,18 +99,19 @@ contains
 
       e = 0.9
 
-      particles = 3
+      particles = 1
+      write(*,*) "Particles: ", particles
       dtheta = pi2/particles
-      write(*,*) "dtheta: ",dtheta
+      write(*,*) "dtheta: ", dtheta
 
-      pos_init(1)=1.0
-      pos_init(2)=0.0
-      pos_init(3)=0.0
+      pos_init(1) = 1.0
+      pos_init(2) = 0.0
+      pos_init(3) = 0.0
       
       vel_init = velocities(pos_init, e)
 
       if (first_run) then
-         do i=1, particles, 1
+         do i = 1, particles, 1
             
             call pset%add(1.0, pos_init, vel_init)
             pos_init = positions(dtheta, pos_init)
@@ -134,15 +135,15 @@ contains
       function velocities(pos_init, e)
          implicit none
             real, dimension(3) :: pos_init, velocities
-            real :: e, r, v, vx, vy
+            real :: e, r, vx, vy
             real, parameter:: mu=1.0
             
             r = sqrt(pos_init(1)**2 + pos_init(2)**2 + pos_init(3)**2)
+            vx = 0.0
             vy = sqrt( (2.0 * mu * (1 - e**2) ) / (r * (r**2 + (1 - e**2) ) ) )
-            vx = 0.0!-sqrt(v**2 - vy**2)
             velocities(1) = vx
             velocities(2) = vy
-            velocities(3) = 0.0            
+            velocities(3) = 0.0
       end function velocities
       
       function rotate (theta, vector)
