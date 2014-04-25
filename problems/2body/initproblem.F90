@@ -136,7 +136,7 @@ contains
          implicit none
             real, dimension(3) :: pos_init, velocities
             real :: e, r, vx, vy
-            real, parameter:: mu=1.0
+            real, parameter :: mu = 1.0
             
             r = sqrt(pos_init(1)**2 + pos_init(2)**2 + pos_init(3)**2)
             vx = 0.0
