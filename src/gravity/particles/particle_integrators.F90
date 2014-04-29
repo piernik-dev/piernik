@@ -406,9 +406,9 @@ contains
          nsteps = nsteps + 1
          d_ang_momentum = log(abs((get_ang_momentum(pos, vel, mass, n) - init_ang_mom)/init_ang_mom))
 
-         do i = 1, n
-            write(lun_out, '(I3,1X,8(E13.6,1X))') i, mass(i), pos(i,:), vel(i,:), d_ang_momentum
-         enddo
+         !do i = 1, n
+         !   write(lun_out, '(I3,1X,8(E13.6,1X))') i, mass(i), pos(i,:), vel(i,:), d_ang_momentum
+         !enddo
 
       end do
       
@@ -505,9 +505,8 @@ contains
                      write(*,*) "#Koniec dzialania programu. Nic nie zrobiono."
                      stop
                   else
-                  write(*,*) "Check_ord"
-                     select case (order)
-                        case(2)
+                     write(*,*) "Check_ord"
+                     if (order==2) then
                            df_dx_p => df_dx_o2
                            df_dy_p => df_dy_o2
                            df_dz_p => df_dz_o2
@@ -517,7 +516,7 @@ contains
                            d2f_dxdy_p => d2f_dxdy_o2
                            d2f_dxdz_p => d2f_dxdz_o2
                            d2f_dydz_p => d2f_dydz_o2
-                        case(4)
+                     else
                            df_dx_p => df_dx_o4
                            df_dy_p => df_dy_o4
                            df_dz_p => df_dz_o4
@@ -527,7 +526,7 @@ contains
                            d2f_dxdy_p => d2f_dxdy_o4
                            d2f_dxdz_p => d2f_dxdz_o4
                            d2f_dydz_p => d2f_dydz_o4
-                     end select
+                     end if
                   endif
          end subroutine check_ord
 
