@@ -341,12 +341,12 @@ contains
       ny = 300
       nz = 300
 
-      n_cell(1)=nx
-      n_cell(2)=ny
-      n_cell(3)=nz
+      n_cell(1) = nx
+      n_cell(2) = ny
+      n_cell(3) = nz
 
 
-      n_cells(:)=n_cell
+      n_cells(:) = n_cell
 
 
       eta = 1.0
