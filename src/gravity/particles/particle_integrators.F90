@@ -179,95 +179,35 @@ contains
            
       
       interface
-         function df_dx(cells, pot, n_cells, dx_cell, n)
+         function df_dx_i(cells, potential, n_cells, delta_x_i, n_particles)
             use constants, only: ndims
-            integer, intent(in) :: n
-            integer,dimension(n, ndims),intent(in) :: cells
+            integer, intent(in) :: n_particles
+            integer,dimension(n_particles, ndims),intent(in) :: cells
             integer, dimension(ndims), intent(in) :: n_cells
-            real,dimension(n_cells(1), n_cells(2), n_cells(3)),intent(in) :: pot
-            real,intent(in) :: dx_cell
-            real,dimension(n) :: df_dx
-         end function df_dx
+            real,dimension(n_cells(1), n_cells(2), n_cells(3)),intent(in) :: potential
+            real,intent(in) :: delta_x_i
+            real,dimension(n_particles) :: df_dx_i
+         end function df_dx_i
 
-         function d2f_dx2(cells, pot, n_cells, dx_cell, n)
+         function d2f_dx_i_2(cells, potential, n_cells, delta_xi, n_particles)
             use constants, only: ndims
-            integer, intent(in) :: n
-            integer,dimension(n, ndims),intent(in) :: cells
+            integer, intent(in) :: n_particles
+            integer,dimension(n_particles, ndims),intent(in) :: cells
             integer, dimension(ndims), intent(in) :: n_cells
-            real,dimension(n_cells(1), n_cells(2), n_cells(3)),intent(in) :: pot
-            real,intent(in) :: dx_cell
-            real,dimension(n) :: d2f_dx2
-         end function d2f_dx2
+            real,dimension(n_cells(1), n_cells(2), n_cells(3)),intent(in) :: potential
+            real,intent(in) :: delta_xi
+            real,dimension(n_particles) :: d2f_dx_i_2
+         end function d2f_dx_i_2
 
-         function df_dy(cells, pot, n_cells, dy_cell, n)
+         function d2f_dx_i_dx_j(cells, potential, n_cells, delta_x_i, delta_x_j, n_particles)
             use constants, only: ndims
-            integer, intent(in) :: n
-            integer,dimension(n, ndims),intent(in) :: cells
+            integer, intent(in) :: n_particles
+            integer,dimension(n_particles, ndims),intent(in) :: cells
             integer, dimension(ndims), intent(in) :: n_cells
-            real,dimension(n_cells(1), n_cells(2), n_cells(3)),intent(in) :: pot
-            real,intent(in) :: dy_cell
-            real,dimension(n) :: df_dy
-         end function df_dy
-
-         function d2f_dy2(cells, pot, n_cells, dy_cell, n)
-            use constants, only: ndims
-            integer, intent(in) :: n
-            integer,dimension(n, ndims),intent(in) :: cells
-            integer, dimension(ndims), intent(in) :: n_cells
-            real,dimension(n_cells(1), n_cells(2), n_cells(3)),intent(in) :: pot
-            real,intent(in) :: dy_cell
-            real,dimension(n) :: d2f_dy2
-         end function d2f_dy2
-
-         function df_dz(cells, pot, n_cells, dz_cell, n)
-            use constants, only: ndims
-            integer, intent(in) :: n
-            integer,dimension(n, ndims),intent(in) :: cells
-            integer, dimension(ndims), intent(in) :: n_cells
-            real,dimension(n_cells(1), n_cells(2), n_cells(3)),intent(in) :: pot
-            real,intent(in) :: dz_cell
-            real, dimension(n) :: df_dz
-         end function df_dz
-
-         function d2f_dz2(cells, pot, n_cells, dz_cell, n)
-            use constants, only: ndims
-            integer, intent(in) :: n
-            integer,dimension(n, ndims),intent(in) :: cells
-            integer, dimension(ndims), intent(in) :: n_cells
-            real,dimension(n_cells(1), n_cells(2), n_cells(3)),intent(in) :: pot
-            real,intent(in) :: dz_cell
-            real,dimension(n) :: d2f_dz2
-         end function d2f_dz2
-
-         function d2f_dxdy(cells, pot, n_cells, dx_cell, dy_cell, n)
-            use constants, only: ndims
-            integer, intent(in) :: n
-            integer,dimension(n, ndims),intent(in) :: cells
-            integer, dimension(ndims), intent(in) :: n_cells
-            real,dimension(n_cells(1), n_cells(2), n_cells(3)),intent(in) :: pot
-            real,intent(in) :: dx_cell, dy_cell
-            real,dimension(n) :: d2f_dxdy
-         end function d2f_dxdy
-
-         function d2f_dxdz(cells, pot, n_cells, dx_cell, dz_cell, n)
-            use constants, only: ndims
-            integer, intent(in) :: n
-            integer,dimension(n, ndims),intent(in) :: cells
-            integer, dimension(ndims), intent(in) :: n_cells
-            real,dimension(n_cells(1), n_cells(2), n_cells(3)),intent(in) :: pot
-            real,intent(in) :: dx_cell, dz_cell
-            real,dimension(n):: d2f_dxdz
-         end function d2f_dxdz
-
-         function d2f_dydz(cells, pot, n_cells, dy_cell, dz_cell, n)
-            use constants, only: ndims
-            integer, intent(in) :: n
-            integer,dimension(n, ndims),intent(in) :: cells
-            integer, dimension(ndims), intent(in) :: n_cells
-            real,dimension(n_cells(1), n_cells(2), n_cells(3)),intent(in) :: pot
-            real,intent(in) :: dy_cell, dz_cell
-            real,dimension(n) :: d2f_dydz
-         end function d2f_dydz
+            real,dimension(n_cells(1), n_cells(2), n_cells(3)),intent(in) :: potential
+            real,intent(in) :: delta_x_i, delta_x_j
+            real,dimension(n_particles) :: d2f_dx_i_dx_j
+         end function d2f_dx_i_dx_j
       
       end interface
    
@@ -284,15 +224,9 @@ contains
       integer :: nsteps, n, ndim, lun_out, lun_err, i, j, k, nx, ny, nz, order
       real :: eps2, xmin, xmax, ymin, ymax, zmin, zmax, n_orbit, tend, dx, dy, dz, ax, ay, az, axx, ayy, azz, energy, init_energy, d_energy, ang_momentum, init_ang_mom, d_ang_momentum, zero
 
-      procedure(df_dx),pointer :: df_dx_p
-      procedure(df_dx),pointer :: df_dy_p
-      procedure(df_dx),pointer :: df_dz_p
-      procedure(d2f_dx2),pointer :: d2f_dx2_p
-      procedure(d2f_dx2),pointer :: d2f_dy2_p
-      procedure(d2f_dx2),pointer :: d2f_dz2_p
-      procedure(d2f_dxdy),pointer :: d2f_dxdy_p
-      procedure(d2f_dxdy),pointer :: d2f_dxdz_p
-      procedure(d2f_dxdy),pointer :: d2f_dydz_p
+      procedure(df_dx_i),pointer :: df_dx_p, df_dy_p, df_dz_p
+      procedure(d2f_dx_i_2),pointer :: d2f_dx2_p, d2f_dy2_p, d2f_dz2_p
+      procedure(d2f_dx_i_dx_j),pointer :: d2f_dxdy_p, d2f_dxdz_p, d2f_dydz_p
       
       
       open(newunit=lun_out, file='leapfrog_out.log', status='unknown',  position='append')
@@ -468,43 +402,29 @@ contains
                   df_dz_p, d2f_dz2_p, d2f_dxdy_p, d2f_dxdz_p, d2f_dydz_p)
             implicit none
                integer,intent(in) :: order
-               procedure(df_dx),pointer :: df_dx_p
-               procedure(df_dy),pointer :: df_dy_p
-               procedure(df_dz),pointer :: df_dz_p
-               procedure(d2f_dx2),pointer :: d2f_dx2_p
-               procedure(d2f_dy2),pointer :: d2f_dy2_p
-               procedure(d2f_dz2),pointer :: d2f_dz2_p
-               procedure(d2f_dxdy),pointer :: d2f_dxdy_p
-               procedure(d2f_dxdz),pointer :: d2f_dxdz_p
-               procedure(d2f_dydz),pointer :: d2f_dydz_p
-                  if(.not.((order==2) .or. (order==4) ) ) then
-                     write(*,*) "#Wybrano zla dokladnosc pochodnych: ", order
-                     write(*,*) "#Dostepna dokladnosc: 2 lub 4."
-                     write(*,*) "#Koniec dzialania programu. Nic nie zrobiono."
-                     stop
+               procedure(df_dx_i),pointer :: df_dx_p, df_dy_p, df_dz_p
+               procedure(d2f_dx_i_2),pointer :: d2f_dx2_p, d2f_dy2_p, d2f_dz2_p
+               procedure(d2f_dx_i_dx_j),pointer :: d2f_dxdy_p, d2f_dxdz_p, d2f_dydz_p
+                  if (order==2) then
+                     df_dx_p => df_dx_o2
+                     df_dy_p => df_dy_o2
+                     df_dz_p => df_dz_o2
+                     d2f_dx2_p => d2f_dx2_o2
+                     d2f_dy2_p => d2f_dy2_o2
+                     d2f_dz2_p => d2f_dz2_o2
+                     d2f_dxdy_p => d2f_dxdy_o2
+                     d2f_dxdz_p => d2f_dxdz_o2
+                     d2f_dydz_p => d2f_dydz_o2
                   else
-                     write(*,*) "Check_ord"
-                     if (order==2) then
-                           df_dx_p => df_dx_o2
-                           df_dy_p => df_dy_o2
-                           df_dz_p => df_dz_o2
-                           d2f_dx2_p => d2f_dx2_o2
-                           d2f_dy2_p => d2f_dy2_o2
-                           d2f_dz2_p => d2f_dz2_o2
-                           d2f_dxdy_p => d2f_dxdy_o2
-                           d2f_dxdz_p => d2f_dxdz_o2
-                           d2f_dydz_p => d2f_dydz_o2
-                     else
-                           df_dx_p => df_dx_o4
-                           df_dy_p => df_dy_o4
-                           df_dz_p => df_dz_o4
-                           d2f_dx2_p => d2f_dx2_o4
-                           d2f_dy2_p => d2f_dy2_o4
-                           d2f_dz2_p => d2f_dz2_o4
-                           d2f_dxdy_p => d2f_dxdy_o4
-                           d2f_dxdz_p => d2f_dxdz_o4
-                           d2f_dydz_p => d2f_dydz_o4
-                     end if
+                     df_dx_p => df_dx_o4
+                     df_dy_p => df_dy_o4
+                     df_dz_p => df_dz_o4
+                     d2f_dx2_p => d2f_dx2_o4
+                     d2f_dy2_p => d2f_dy2_o4
+                     d2f_dz2_p => d2f_dz2_o4
+                     d2f_dxdy_p => d2f_dxdy_o4
+                     d2f_dxdz_p => d2f_dxdz_o4
+                     d2f_dydz_p => d2f_dydz_o4
                   endif
          end subroutine check_ord
 
