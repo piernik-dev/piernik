@@ -173,6 +173,7 @@ contains
    subroutine leapfrog2ord(pset, t_glob, dt_tot)
       use constants, only: ndims, xdim, zdim
       use particle_types, only: particle_set
+      use domain, only: dom
       implicit none 
       class(particle_set), intent(inout) :: pset  !< particle list
            
@@ -272,8 +273,8 @@ contains
    
       
       real, intent(in) :: t_glob, dt_tot
-      integer, dimension(:,:),allocatable::cells
-      real, dimension(3):: l_borders, r_borders
+      integer, dimension(:,:),allocatable :: cells
+      real, dimension(3) :: l_borders, r_borders
       real, dimension(:), allocatable :: mass, mins, maxs,delta_cells
       real, dimension(:, :), allocatable :: pos, vel, acc, vel_h, d_particles
       real, dimension(:, :, :), allocatable :: pot
@@ -284,14 +285,14 @@ contains
       real :: eps2, xmin, xmax, ymin, ymax, zmin, zmax, n_orbit, tend, dx, dy, dz, ax, ay, az, axx, ayy, azz, energy, init_energy, d_energy, ang_momentum, init_ang_mom, d_ang_momentum, zero
 
       procedure(df_dx),pointer :: df_dx_p
-      procedure(df_dy),pointer :: df_dy_p
-      procedure(df_dz),pointer :: df_dz_p
+      procedure(df_dx),pointer :: df_dy_p
+      procedure(df_dx),pointer :: df_dz_p
       procedure(d2f_dx2),pointer :: d2f_dx2_p
-      procedure(d2f_dy2),pointer :: d2f_dy2_p
-      procedure(d2f_dz2),pointer :: d2f_dz2_p
+      procedure(d2f_dx2),pointer :: d2f_dy2_p
+      procedure(d2f_dx2),pointer :: d2f_dz2_p
       procedure(d2f_dxdy),pointer :: d2f_dxdy_p
-      procedure(d2f_dxdz),pointer :: d2f_dxdz_p
-      procedure(d2f_dydz),pointer :: d2f_dydz_p
+      procedure(d2f_dxdy),pointer :: d2f_dxdz_p
+      procedure(d2f_dxdy),pointer :: d2f_dydz_p
       
       
       open(newunit=lun_out, file='leapfrog_out.log', status='unknown',  position='append')
@@ -299,7 +300,6 @@ contains
       n = size(pset%p, dim=1)
       
       allocate(mass(n), pos(n, ndims), vel(n, ndims), acc(n, ndims), vel_h(n, ndims), cells(n, ndims), mins(ndims), maxs(ndims), delta_cells(ndims), n_cells(ndims), d_particles(n,ndims))
-      
       
       
       mass(:) = pset%p(:)%mass
@@ -315,38 +315,16 @@ contains
       print *, "Leafrog: t_end= ", t_end
 
 
-      !interpolacja
-      xmin = -3.0
-      xmax = 3.0
-      ymin = -3.0
-      ymax = 3.0
-      zmin = -3.0
-      zmax = 3.0
 
-      l_borders(1) = xmin
-      l_borders(2) = ymin
-      l_borders(3) = zmin
 
-      r_borders(1) = xmax
-      r_borders(2) = ymax
-      r_borders(3) = zmax
+      mins(:) = dom%edge(:,1)
+      maxs(:) = dom%edge(:,2)
+      n_cell(:) = dom%n_d
 
-      mins(:) = l_borders
-      maxs(:) = r_borders
+
 
       zero = 0.0
       order = 4
-
-      nx = 300 
-      ny = 300
-      nz = 300
-
-      n_cell(1) = nx
-      n_cell(2) = ny
-      n_cell(3) = nz
-
-
-      n_cells(:) = n_cell
 
 
       eta = 1.0
@@ -406,9 +384,9 @@ contains
          nsteps = nsteps + 1
          d_ang_momentum = log(abs((get_ang_momentum(pos, vel, mass, n) - init_ang_mom)/init_ang_mom))
 
-         !do i = 1, n
-         !   write(lun_out, '(I3,1X,8(E13.6,1X))') i, mass(i), pos(i,:), vel(i,:), d_ang_momentum
-         !enddo
+         do i = 1, n
+            write(lun_out, '(I3,1X,8(E13.6,1X))') i, mass(i), pos(i,:), vel(i,:), d_ang_momentum
+         enddo
 
       end do
       
@@ -1005,7 +983,7 @@ contains
                      p2 = p2 + mass(i)**2 * vel(i, j)**2
                      rp = rp + pos(i, j) * mass(i) * vel(i, j)
                   enddo
-                  !write(*,*) "r2, p2, rp: ", r2, p2, rp
+
                   ang_mom = ang_mom + sqrt( r2 * p2 * ( 1.0 - ( rp / sqrt(r2*p2) )**2 ) )
                enddo
                get_ang_momentum = ang_mom
