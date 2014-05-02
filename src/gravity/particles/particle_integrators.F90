@@ -179,35 +179,35 @@ contains
            
       
       interface
-         function df_dx_i(cells, potential, n_cells, delta_x_i, n_particles)
-            use constants, only: ndims
-            integer, intent(in) :: n_particles
-            integer,dimension(n_particles, ndims),intent(in) :: cells
-            integer, dimension(ndims), intent(in) :: n_cells
-            real,dimension(n_cells(1), n_cells(2), n_cells(3)),intent(in) :: potential
-            real,intent(in) :: delta_x_i
-            real,dimension(n_particles) :: df_dx_i
-         end function df_dx_i
-
-         function d2f_dx_i_2(cells, potential, n_cells, delta_xi, n_particles)
+         function df_dxi(cells, potential, n_cells, delta_xi, n_particles)
             use constants, only: ndims
             integer, intent(in) :: n_particles
             integer,dimension(n_particles, ndims),intent(in) :: cells
             integer, dimension(ndims), intent(in) :: n_cells
             real,dimension(n_cells(1), n_cells(2), n_cells(3)),intent(in) :: potential
             real,intent(in) :: delta_xi
-            real,dimension(n_particles) :: d2f_dx_i_2
-         end function d2f_dx_i_2
+            real,dimension(n_particles) :: df_dxi
+         end function df_dxi
 
-         function d2f_dx_i_dx_j(cells, potential, n_cells, delta_x_i, delta_x_j, n_particles)
+         function d2f_dxi_2(cells, potential, n_cells, delta_xi, n_particles)
             use constants, only: ndims
             integer, intent(in) :: n_particles
             integer,dimension(n_particles, ndims),intent(in) :: cells
             integer, dimension(ndims), intent(in) :: n_cells
             real,dimension(n_cells(1), n_cells(2), n_cells(3)),intent(in) :: potential
-            real,intent(in) :: delta_x_i, delta_x_j
-            real,dimension(n_particles) :: d2f_dx_i_dx_j
-         end function d2f_dx_i_dx_j
+            real,intent(in) :: delta_xi
+            real,dimension(n_particles) :: d2f_dxi_2
+         end function d2f_dxi_2
+
+         function d2f_dxi_dxj(cells, potential, n_cells, delta_xi, delta_xj, n_particles)
+            use constants, only: ndims
+            integer, intent(in) :: n_particles
+            integer,dimension(n_particles, ndims),intent(in) :: cells
+            integer, dimension(ndims), intent(in) :: n_cells
+            real,dimension(n_cells(1), n_cells(2), n_cells(3)),intent(in) :: potential
+            real,intent(in) :: delta_xi, delta_xj
+            real,dimension(n_particles) :: d2f_dxi_dxj
+         end function d2f_dxi_dxj
       
       end interface
    
@@ -224,9 +224,9 @@ contains
       integer :: nsteps, n, ndim, lun_out, lun_err, i, j, k, nx, ny, nz, order
       real :: eps2, xmin, xmax, ymin, ymax, zmin, zmax, n_orbit, tend, dx, dy, dz, ax, ay, az, axx, ayy, azz, energy, init_energy, d_energy, ang_momentum, init_ang_mom, d_ang_momentum, zero
 
-      procedure(df_dx_i),pointer :: df_dx_p, df_dy_p, df_dz_p
-      procedure(d2f_dx_i_2),pointer :: d2f_dx2_p, d2f_dy2_p, d2f_dz2_p
-      procedure(d2f_dx_i_dx_j),pointer :: d2f_dxdy_p, d2f_dxdz_p, d2f_dydz_p
+      procedure(df_dxi),pointer :: df_dx_p, df_dy_p, df_dz_p
+      procedure(d2f_dxi_2),pointer :: d2f_dx2_p, d2f_dy2_p, d2f_dz2_p
+      procedure(d2f_dxi_dxj),pointer :: d2f_dxdy_p, d2f_dxdz_p, d2f_dydz_p
       
       
       open(newunit=lun_out, file='leapfrog_out.log', status='unknown',  position='append')
@@ -402,9 +402,9 @@ contains
                   df_dz_p, d2f_dz2_p, d2f_dxdy_p, d2f_dxdz_p, d2f_dydz_p)
             implicit none
                integer,intent(in) :: order
-               procedure(df_dx_i),pointer :: df_dx_p, df_dy_p, df_dz_p
-               procedure(d2f_dx_i_2),pointer :: d2f_dx2_p, d2f_dy2_p, d2f_dz2_p
-               procedure(d2f_dx_i_dx_j),pointer :: d2f_dxdy_p, d2f_dxdz_p, d2f_dydz_p
+               procedure(df_dxi),pointer :: df_dx_p, df_dy_p, df_dz_p
+               procedure(d2f_dxi_2),pointer :: d2f_dx2_p, d2f_dy2_p, d2f_dz2_p
+               procedure(d2f_dxi_dxj),pointer :: d2f_dxdy_p, d2f_dxdz_p, d2f_dydz_p
                   if (order==2) then
                      df_dx_p => df_dx_o2
                      df_dy_p => df_dy_o2
