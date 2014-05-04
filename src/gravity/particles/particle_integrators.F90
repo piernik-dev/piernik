@@ -179,32 +179,32 @@ contains
            
       
       interface
-         function df_dxi(cells, potential, n_cells, delta_xi, n_particles)
+         function df_dxi(cells, potential, n_cell, delta_xi, n_particles)
             use constants, only: ndims
             integer, intent(in) :: n_particles
             integer,dimension(n_particles, ndims),intent(in) :: cells
-            integer, dimension(ndims), intent(in) :: n_cells
-            real,dimension(n_cells(1), n_cells(2), n_cells(3)),intent(in) :: potential
+            integer, dimension(ndims), intent(in) :: n_cell
+            real,dimension(n_cell(1), n_cell(2), n_cell(3)),intent(in) :: potential
             real,intent(in) :: delta_xi
             real,dimension(n_particles) :: df_dxi
          end function df_dxi
 
-         function d2f_dxi_2(cells, potential, n_cells, delta_xi, n_particles)
+         function d2f_dxi_2(cells, potential, n_cell, delta_xi, n_particles)
             use constants, only: ndims
             integer, intent(in) :: n_particles
             integer,dimension(n_particles, ndims),intent(in) :: cells
-            integer, dimension(ndims), intent(in) :: n_cells
-            real,dimension(n_cells(1), n_cells(2), n_cells(3)),intent(in) :: potential
+            integer, dimension(ndims), intent(in) :: n_cell
+            real,dimension(n_cell(1), n_cell(2), n_cell(3)),intent(in) :: potential
             real,intent(in) :: delta_xi
             real,dimension(n_particles) :: d2f_dxi_2
          end function d2f_dxi_2
 
-         function d2f_dxi_dxj(cells, potential, n_cells, delta_xi, delta_xj, n_particles)
+         function d2f_dxi_dxj(cells, potential, n_cell, delta_xi, delta_xj, n_particles)
             use constants, only: ndims
             integer, intent(in) :: n_particles
             integer,dimension(n_particles, ndims),intent(in) :: cells
-            integer, dimension(ndims), intent(in) :: n_cells
-            real,dimension(n_cells(1), n_cells(2), n_cells(3)),intent(in) :: potential
+            integer, dimension(ndims), intent(in) :: n_cell
+            real,dimension(n_cell(1), n_cell(2), n_cell(3)),intent(in) :: potential
             real,intent(in) :: delta_xi, delta_xj
             real,dimension(n_particles) :: d2f_dxi_dxj
          end function d2f_dxi_dxj
@@ -218,9 +218,8 @@ contains
       real, dimension(:), allocatable :: mass, mins, maxs,delta_cells
       real, dimension(:, :), allocatable :: pos, vel, acc, vel_h, d_particles
       real, dimension(:, :, :), allocatable :: pot
-      integer, dimension(:), allocatable :: n_cells
+      integer, dimension(:), allocatable :: n_cell
       real :: t_dia, t_out, t_end, einit, dt, t, dth, eta, eps, a, epot
-      integer, dimension(3) :: n_cell
       integer :: nsteps, n, ndim, lun_out, lun_err, i, j, k, nx, ny, nz, order
       real :: eps2, xmin, xmax, ymin, ymax, zmin, zmax, n_orbit, tend, dx, dy, dz, ax, ay, az, axx, ayy, azz, energy, init_energy, d_energy, ang_momentum, init_ang_mom, d_ang_momentum, zero
 
@@ -233,7 +232,7 @@ contains
       
       n = size(pset%p, dim=1)
       
-      allocate(mass(n), pos(n, ndims), vel(n, ndims), acc(n, ndims), vel_h(n, ndims), cells(n, ndims), mins(ndims), maxs(ndims), delta_cells(ndims), n_cells(ndims), d_particles(n,ndims))
+      allocate(mass(n), pos(n, ndims), vel(n, ndims), acc(n, ndims), vel_h(n, ndims), cells(n, ndims), mins(ndims), maxs(ndims), delta_cells(ndims), n_cell(ndims), d_particles(n,ndims))
       
       
       mass(:) = pset%p(:)%mass
@@ -249,12 +248,14 @@ contains
       print *, "Leafrog: t_end= ", t_end
 
 
-
-
-      mins(:) = dom%edge(:,1)
-      maxs(:) = dom%edge(:,2)
-      n_cell(:) = dom%n_d
-
+      !mins(:) = dom%edge(:,1)
+      mins=-3.0
+      !maxs(:) = dom%edge(:,2)
+      maxs=3.0
+      !n_cell(:) = dom%n_d
+      n_cell(1)=300
+      n_cell(2)=300
+      n_cell(3)=300
 
 
       zero = 0.0
@@ -268,12 +269,12 @@ contains
 
 
       !alokacja potencjalu
-      allocate( pot(nx, ny, nz) )
+      allocate( pot(n_cell(1), n_cell(2), n_cell(3)) )
       write(*,*) "Zaalokowano potencjal"
 
       !obliczenie potencjalu na siatce
-      call pot_grid(pot, mins, maxs, n_cells, delta_cells, ndims, eps2)
-      
+      call pot_grid(pot, mins, maxs, n_cell, delta_cells, eps2)
+
       init_ang_mom = get_ang_momentum(pos, vel, mass, n)
 
       call cell_nr(pos, cells, mins, delta_cells, n)
@@ -283,7 +284,7 @@ contains
 
 
       !initial acceleration
-      call get_acc(cells, pos, acc, pot, n_cells, mins, delta_cells,n)
+      call get_acc(cells, pos, acc, pot, n_cell, mins, delta_cells, n)
 
 
       !timestep
@@ -304,7 +305,7 @@ contains
          call drift(pos, vel_h, dt, n) !position
          !3.acceleration + |a|
          call cell_nr(pos, cells, mins, delta_cells, n)
-         call get_acc(cells, pos, acc, pot, n_cells, mins, delta_cells, n)
+         call get_acc(cells, pos, acc, pot, n_cell, mins, delta_cells, n)
          !call get_acc_mod(acc, n, a)
          !4.kick(dth)
          vel(:,:) = vel_h
@@ -331,7 +332,7 @@ contains
          pset%p(:)%vel(ndim) = vel(:, ndim)
       enddo
 
-      deallocate (mass, pos, vel, acc, vel_h, cells, mins, maxs, delta_cells, n_cells, d_particles)
+      deallocate (mass, pos, vel, acc, vel_h, cells, mins, maxs, delta_cells, n_cell, d_particles)
       close(lun_out)
       
       !return
@@ -374,28 +375,27 @@ contains
          end function phi_pm
 
 
-         subroutine pot_grid(pot, mins, maxs, n_cells, delta_cells, ndims,eps2)
+         subroutine pot_grid(pot, mins, maxs, n_cell, delta_cells, eps2)
+            use constants, only: ndims
             implicit none
                integer :: i, j, k
-               integer,intent(in) :: ndims
-               integer, dimension(ndims), intent(in) :: n_cells
-               real,dimension(ndims),intent(in) :: mins,maxs
+               integer, dimension(ndims), intent(in) :: n_cell
+               real,dimension(ndims),intent(in) :: mins, maxs
                real,dimension(ndims),intent(out) :: delta_cells
                real, intent(in) :: eps2
-               real,dimension(n_cells(1), n_cells(2), n_cells(3)),intent(out) :: pot
+               real,dimension(n_cell(1), n_cell(2), n_cell(3)),intent(out) :: pot
+               !open(unit=77,file='potencjal.dat')
+               delta_cells = (maxs - mins) / n_cell
 
-               write(*,*) "Grid"
-
-               delta_cells = (maxs - mins) / n_cells
-
-                  do i = 1, n_cells(1), 1
-                     do j = 1, n_cells(2), 1
-                        do k = 1, n_cells(3), 1
+                  do i = 1, n_cell(1), 1
+                     do j = 1, n_cell(2), 1
+                        do k = 1, n_cell(3), 1
                            pot(i, j, k) = phi_pm(mins(1) + i*delta_cells(1), mins(2) + j*delta_cells(2), mins(3) + k*delta_cells(3), eps2)
+                           !write(77,*) i,j,k,pot(i,j,k)
                         enddo
                      enddo
                   enddo
-               
+               !close(77)
          end subroutine pot_grid
 
          subroutine check_ord(order, df_dx_p, d2f_dx2_p, df_dy_p, d2f_dy2_p,& 
@@ -428,18 +428,18 @@ contains
                   endif
          end subroutine check_ord
 
-         subroutine get_acc(cells, pos, acc, pot, n_cells, mins, delta_cells, n)
+         subroutine get_acc(cells, pos, acc, pot, n_cell, mins, delta_cells, n)
             use constants, only : ndims
             implicit none
                integer:: i
-               real:: dx_cell, dy_cell, dz_cell
+               real::  dx_cell, dy_cell, dz_cell
                integer, intent(in) :: n
-               integer,dimension(n, ndims) :: cells
+               integer,dimension(n, ndims), intent(in) :: cells
                real,dimension(n, ndims),intent(in) :: pos
                real,dimension(n, ndims),intent(out) :: acc
-               integer,dimension(ndims),intent(in) :: n_cells
-               real, dimension(ndims) :: mins, delta_cells
-               real,dimension(n_cells(1), n_cells(2), n_cells(3)),intent(in) :: pot
+               integer,dimension(ndims),intent(in) :: n_cell
+               real, dimension(ndims),intent(in) :: mins, delta_cells
+               real,dimension(n_cell(1), n_cell(2), n_cell(3)),intent(in) :: pot
                real,dimension(n, ndims) :: delta
                real,dimension(n) :: ax, ay, az
 
@@ -451,18 +451,18 @@ contains
                   dy_cell = delta_cells(2)
                   dz_cell = delta_cells(3)
 
-                  ax = -( df_dx_p(cells, pot, n_cells, dx_cell, n) + &
-                     d2f_dx2_p(cells, pot, n_cells, dx_cell, n) * delta(:,1) + &
-                     d2f_dxdy_p(cells, pot, n_cells, dx_cell, dy_cell, n) * delta(:,2) + &
-                     d2f_dxdz_p(cells, pot, n_cells, dx_cell, dz_cell, n) * delta(:,3))
-                  ay = -( df_dy_p(cells, pot, n_cells, dy_cell, n) + &
-                     d2f_dy2_p(cells, pot, n_cells, dy_cell, n) * delta(:,2) + &
-                     d2f_dxdy_p(cells, pot, n_cells, dx_cell, dy_cell, n) * delta(:,1) + &
-                     d2f_dydz_p(cells, pot, n_cells, dy_cell, dz_cell, n) * delta(:,3))
-                  az = -( df_dz_p(cells, pot, n_cells, dz_cell, n) + &
-                     d2f_dz2_p(cells, pot, n_cells, dz_cell, n) * delta(:,3) + &
-                     d2f_dxdz_p(cells, pot, n_cells, dx_cell, dz_cell, n) * delta(:,1) +&
-                     d2f_dydz_p(cells, pot, n_cells, dy_cell, dz_cell, n) * delta(:,2))
+                  ax = -( df_dx_p(cells, pot, n_cell, dx_cell, n) + &
+                     d2f_dx2_p(cells, pot, n_cell, dx_cell, n) * delta(:,1) + &
+                     d2f_dxdy_p(cells, pot, n_cell, dx_cell, dy_cell, n) * delta(:,2) + &
+                     d2f_dxdz_p(cells, pot, n_cell, dx_cell, dz_cell, n) * delta(:,3))
+                  ay = -( df_dy_p(cells, pot, n_cell, dy_cell, n) + &
+                     d2f_dy2_p(cells, pot, n_cell, dy_cell, n) * delta(:,2) + &
+                     d2f_dxdy_p(cells, pot, n_cell, dx_cell, dy_cell, n) * delta(:,1) + &
+                     d2f_dydz_p(cells, pot, n_cell, dy_cell, dz_cell, n) * delta(:,3))
+                  az = -( df_dz_p(cells, pot, n_cell, dz_cell, n) + &
+                     d2f_dz2_p(cells, pot, n_cell, dz_cell, n) * delta(:,3) + &
+                     d2f_dxdz_p(cells, pot, n_cell, dx_cell, dz_cell, n) * delta(:,1) +&
+                     d2f_dydz_p(cells, pot, n_cell, dy_cell, dz_cell, n) * delta(:,2))
                   acc(:,1) = ax
                   acc(:,2) = ay
                   acc(:,3) = az
@@ -476,20 +476,20 @@ contains
                integer,dimension(n, ndims),intent(out) :: cells
                real,dimension(n, ndims),intent(in) :: pos
                real, dimension(ndims), intent(in)  :: mins, delta_cells
-               
+
                do i=1, ndims
-                  cells(:,i) = floor( (pos(:,i) - mins(i) - 0.5*delta_cells(i)) / delta_cells(i) ) + 1
+                  cells(:,i) = int( (pos(:,i) - mins(i) - 0.5*delta_cells(i)) / delta_cells(i) ) + 1
                enddo
          end subroutine cell_nr
 
-         function df_dx_o2(cells, pot, n_cells, dx_cell, n)
+         function df_dx_o2(cells, pot, n_cell, dx_cell, n)
             use constants, only: ndims
             implicit none
                integer, intent(in) :: n
                integer,dimension(n, ndims),intent(in) :: cells
-               integer, dimension(ndims), intent(in):: n_cells
+               integer, dimension(ndims), intent(in):: n_cell
                integer :: i, p, q, r
-               real,dimension(n_cells(1), n_cells(2), n_cells(3)),intent(in) :: pot
+               real,dimension(n_cell(1), n_cell(2), n_cell(3)),intent(in) :: pot
                real,intent(in) :: dx_cell
                real,dimension(n),target :: df_dx_o2
 
@@ -500,17 +500,17 @@ contains
 
                   !o(R^2)
                   df_dx_o2(i) = ( pot(p+1, q, r) - pot(p-1, q, r) ) / (2.0*dx_cell)
-               enddo 
+               enddo
          end function df_dx_o2
 
-         function df_dx_o4(cells, pot, n_cells, dx_cell, n)
+         function df_dx_o4(cells, pot, n_cell, dx_cell, n)
             use constants, only: ndims
             implicit none
                integer, intent(in) :: n
                integer,dimension(n, ndims),intent(in) :: cells
-               integer, dimension(ndims), intent(in):: n_cells
+               integer, dimension(ndims), intent(in):: n_cell
                integer :: i, p, q, r
-               real,dimension(n_cells(1), n_cells(2), n_cells(3)),intent(in) :: pot
+               real,dimension(n_cell(1), n_cell(2), n_cell(3)),intent(in) :: pot
                real,intent(in) :: dx_cell
                real,dimension(n),target :: df_dx_o4
 
@@ -525,14 +525,14 @@ contains
                enddo
          end function df_dx_o4
 
-         function df_dy_o2(cells, pot, n_cells, dy_cell, n)
+         function df_dy_o2(cells, pot, n_cell, dy_cell, n)
             use constants, only: ndims
             implicit none
                integer, intent(in) :: n
                integer,dimension(n, ndims),intent(in) :: cells
-               integer, dimension(ndims), intent(in):: n_cells
+               integer, dimension(ndims), intent(in):: n_cell
                integer :: i, p, q, r
-               real,dimension(n_cells(1), n_cells(2), n_cells(3)),intent(in) :: pot
+               real,dimension(n_cell(1), n_cell(2), n_cell(3)),intent(in) :: pot
                real,intent(in) :: dy_cell
                real,dimension(n),target ::df_dy_o2
 
@@ -547,14 +547,14 @@ contains
          end function df_dy_o2
 
 
-         function df_dy_o4(cells, pot, n_cells, dy_cell, n)
+         function df_dy_o4(cells, pot, n_cell, dy_cell, n)
             use constants, only: ndims
             implicit none
                integer, intent(in) :: n
                integer,dimension(n, ndims),intent(in) :: cells
-               integer, dimension(ndims), intent(in):: n_cells
+               integer, dimension(ndims), intent(in):: n_cell
                integer :: i, p, q, r
-               real,dimension(n_cells(1), n_cells(2), n_cells(3)),intent(in) :: pot
+               real,dimension(n_cell(1), n_cell(2), n_cell(3)),intent(in) :: pot
                real,intent(in) :: dy_cell
                real, dimension(n), target :: df_dy_o4
 
@@ -569,14 +569,14 @@ contains
                enddo
          end function df_dy_o4
 
-         function df_dz_o2(cells, pot, n_cells, dz_cell, n)
+         function df_dz_o2(cells, pot, n_cell, dz_cell, n)
             use constants, only: ndims
             implicit none
                integer, intent(in) :: n
                integer,dimension(n, ndims),intent(in) :: cells
-               integer, dimension(ndims), intent(in):: n_cells
+               integer, dimension(ndims), intent(in):: n_cell
                integer :: i, p, q, r
-               real,dimension(n_cells(1), n_cells(2), n_cells(3)),intent(in) :: pot
+               real,dimension(n_cell(1), n_cell(2), n_cell(3)),intent(in) :: pot
                real,intent(in) :: dz_cell
                real, dimension(n), target :: df_dz_o2
 
@@ -591,14 +591,14 @@ contains
          end function df_dz_o2
 
 
-         function df_dz_o4(cells, pot, n_cells, dz_cell, n)
+         function df_dz_o4(cells, pot, n_cell, dz_cell, n)
             use constants, only: ndims
             implicit none
                integer, intent(in) :: n
                integer,dimension(n, ndims),intent(in) :: cells
-               integer, dimension(ndims), intent(in):: n_cells
+               integer, dimension(ndims), intent(in):: n_cell
                integer :: i, p, q, r
-               real,dimension(n_cells(1), n_cells(2), n_cells(3)),intent(in) :: pot
+               real,dimension(n_cell(1), n_cell(2), n_cell(3)),intent(in) :: pot
                real,intent(in) :: dz_cell
                real, dimension(n), target :: df_dz_o4
 
@@ -613,14 +613,14 @@ contains
                enddo
          end function df_dz_o4 
 
-         function d2f_dx2_o2(cells, pot, n_cells, dx_cell, n)
+         function d2f_dx2_o2(cells, pot, n_cell, dx_cell, n)
             use constants, only: ndims
             implicit none
                integer, intent(in) :: n
                integer,dimension(n, ndims),intent(in) :: cells
-               integer, dimension(ndims), intent(in):: n_cells
+               integer, dimension(ndims), intent(in):: n_cell
                integer :: i, p, q, r
-               real,dimension(n_cells(1), n_cells(2), n_cells(3)),intent(in) :: pot
+               real,dimension(n_cell(1), n_cell(2), n_cell(3)),intent(in) :: pot
                real,intent(in) :: dx_cell
                real,dimension(n),target :: d2f_dx2_o2
 
@@ -634,14 +634,14 @@ contains
                enddo
          end function d2f_dx2_o2
 
-         function d2f_dx2_o4(cells, pot, n_cells, dx_cell, n)
+         function d2f_dx2_o4(cells, pot, n_cell, dx_cell, n)
             use constants, only: ndims
             implicit none
                integer, intent(in) :: n
                integer,dimension(n, ndims),intent(in) :: cells
-               integer, dimension(ndims), intent(in) :: n_cells
+               integer, dimension(ndims), intent(in) :: n_cell
                integer :: i, p, q, r
-               real,dimension(n_cells(1), n_cells(2), n_cells(3)),intent(in) :: pot
+               real,dimension(n_cell(1), n_cell(2), n_cell(3)),intent(in) :: pot
                real,intent(in) :: dx_cell
                real,dimension(n),target :: d2f_dx2_o4
 
@@ -657,14 +657,14 @@ contains
                enddo
          end function d2f_dx2_o4
 
-         function d2f_dy2_o2(cells, pot, n_cells, dy_cell, n)
+         function d2f_dy2_o2(cells, pot, n_cell, dy_cell, n)
             use constants, only: ndims
             implicit none
                integer, intent(in) :: n
                integer,dimension(n, ndims),intent(in) :: cells
-               integer, dimension(ndims), intent(in):: n_cells
+               integer, dimension(ndims), intent(in):: n_cell
                integer :: i, p, q, r
-               real,dimension(n_cells(1), n_cells(2), n_cells(3)),intent(in) :: pot
+               real,dimension(n_cell(1), n_cell(2), n_cell(3)),intent(in) :: pot
                real,intent(in) :: dy_cell
                real,dimension(n),target :: d2f_dy2_o2
 
@@ -678,14 +678,14 @@ contains
                enddo
          end function d2f_dy2_o2
 
-         function d2f_dy2_o4(cells, pot, n_cells, dy_cell, n)
+         function d2f_dy2_o4(cells, pot, n_cell, dy_cell, n)
             use constants, only: ndims
             implicit none
                integer, intent(in) :: n
                integer,dimension(n, ndims),intent(in) :: cells
-               integer, dimension(ndims), intent(in) :: n_cells
+               integer, dimension(ndims), intent(in) :: n_cell
                integer :: i, p, q, r
-               real,dimension(n_cells(1), n_cells(2), n_cells(3)),intent(in) :: pot
+               real,dimension(n_cell(1), n_cell(2), n_cell(3)),intent(in) :: pot
                real,intent(in) :: dy_cell
                real,dimension(n),target :: d2f_dy2_o4
 
@@ -701,14 +701,14 @@ contains
                enddo
          end function d2f_dy2_o4
 
-         function d2f_dz2_o2(cells, pot, n_cells, dz_cell, n)
+         function d2f_dz2_o2(cells, pot, n_cell, dz_cell, n)
             use constants, only: ndims
             implicit none
                integer, intent(in) :: n
                integer,dimension(n, ndims),intent(in) :: cells
-               integer, dimension(ndims), intent(in) :: n_cells
+               integer, dimension(ndims), intent(in) :: n_cell
                integer :: i, p, q, r
-               real,dimension(n_cells(1), n_cells(2), n_cells(3)),intent(in) :: pot
+               real,dimension(n_cell(1), n_cell(2), n_cell(3)),intent(in) :: pot
                real,intent(in) :: dz_cell
                real,dimension(n),target :: d2f_dz2_o2
 
@@ -722,14 +722,14 @@ contains
                enddo
          end function d2f_dz2_o2
 
-         function d2f_dz2_o4(cells, pot, n_cells, dz_cell, n)
+         function d2f_dz2_o4(cells, pot, n_cell, dz_cell, n)
             use constants, only: ndims
             implicit none
                integer, intent(in) :: n
                integer,dimension(n, ndims),intent(in) :: cells
-               integer, dimension(ndims), intent(in) :: n_cells
+               integer, dimension(ndims), intent(in) :: n_cell
                integer :: i, p, q, r
-               real,dimension(n_cells(1), n_cells(2), n_cells(3)),intent(in) :: pot
+               real,dimension(n_cell(1), n_cell(2), n_cell(3)),intent(in) :: pot
                real,intent(in) :: dz_cell
                real,dimension(n),target :: d2f_dz2_o4
 
@@ -745,14 +745,14 @@ contains
                enddo
          end function d2f_dz2_o4
 
-         function d2f_dxdy_o2(cells, pot, n_cells, dx_cell, dy_cell, n)
+         function d2f_dxdy_o2(cells, pot, n_cell, dx_cell, dy_cell, n)
             use constants, only: ndims
             implicit none
                integer, intent(in) :: n
                integer,dimension(n, ndims),intent(in) :: cells
-               integer, dimension(ndims), intent(in) :: n_cells
+               integer, dimension(ndims), intent(in) :: n_cell
                integer :: i, p, q, r
-               real,dimension(n_cells(1), n_cells(2), n_cells(3)),intent(in) :: pot
+               real,dimension(n_cell(1), n_cell(2), n_cell(3)),intent(in) :: pot
                real,intent(in) :: dx_cell, dy_cell
                real,dimension(n),target :: d2f_dxdy_o2
 
@@ -768,14 +768,14 @@ contains
          end function d2f_dxdy_o2
 
 
-         function d2f_dxdy_o4(cells, pot, n_cells, dx_cell, dy_cell, n)
+         function d2f_dxdy_o4(cells, pot, n_cell, dx_cell, dy_cell, n)
             use constants, only: ndims
             implicit none
                integer, intent(in) :: n
                integer,dimension(n, ndims),intent(in) :: cells
-               integer, dimension(ndims), intent(in):: n_cells
+               integer, dimension(ndims), intent(in):: n_cell
                integer :: i, p, q, r
-               real,dimension(n_cells(1), n_cells(2), n_cells(3)),intent(in) :: pot
+               real,dimension(n_cell(1), n_cell(2), n_cell(3)),intent(in) :: pot
                real,intent(in) :: dx_cell, dy_cell
                real,dimension(n),target :: d2f_dxdy_o4
 
@@ -792,14 +792,14 @@ contains
                enddo
          end function d2f_dxdy_o4
 
-         function d2f_dxdz_o2(cells, pot, n_cells, dx_cell, dz_cell, n)
+         function d2f_dxdz_o2(cells, pot, n_cell, dx_cell, dz_cell, n)
             use constants, only: ndims
             implicit none
                integer, intent(in) :: n
                integer,dimension(n, ndims),intent(in) :: cells
-               integer, dimension(ndims), intent(in) :: n_cells
+               integer, dimension(ndims), intent(in) :: n_cell
                integer :: i, p, q, r
-               real,dimension(n_cells(1), n_cells(2), n_cells(3)),intent(in) :: pot
+               real,dimension(n_cell(1), n_cell(2), n_cell(3)),intent(in) :: pot
                real,intent(in) :: dx_cell, dz_cell
                real,dimension(n),target :: d2f_dxdz_o2
 
@@ -814,14 +814,14 @@ contains
                enddo
          end function d2f_dxdz_o2
 
-         function d2f_dxdz_o4(cells, pot, n_cells, dx_cell, dz_cell, n)
+         function d2f_dxdz_o4(cells, pot, n_cell, dx_cell, dz_cell, n)
             use constants, only: ndims
             implicit none
                integer, intent(in) :: n
                integer,dimension(n, ndims),intent(in) :: cells
-               integer, dimension(ndims), intent(in) :: n_cells
+               integer, dimension(ndims), intent(in) :: n_cell
                integer :: i, p, q, r
-               real,dimension(n_cells(1), n_cells(2), n_cells(3)),intent(in) :: pot
+               real,dimension(n_cell(1), n_cell(2), n_cell(3)),intent(in) :: pot
                real,intent(in) :: dx_cell, dz_cell
                real,dimension(n),target :: d2f_dxdz_o4
 
@@ -839,14 +839,14 @@ contains
          end function d2f_dxdz_o4
       
       
-         function d2f_dydz_o2(cells, pot, n_cells, dy_cell, dz_cell, n)
+         function d2f_dydz_o2(cells, pot, n_cell, dy_cell, dz_cell, n)
             use constants, only: ndims
             implicit none
                integer, intent(in) :: n
                integer,dimension(n, ndims),intent(in) :: cells
-               integer, dimension(ndims), intent(in) :: n_cells
+               integer, dimension(ndims), intent(in) :: n_cell
                integer :: i, p, q, r
-               real,dimension(n_cells(1), n_cells(2), n_cells(3)),intent(in) :: pot
+               real,dimension(n_cell(1), n_cell(2), n_cell(3)),intent(in) :: pot
                real,intent(in) :: dy_cell, dz_cell
                real,dimension(n),target :: d2f_dydz_o2
 
@@ -861,14 +861,14 @@ contains
                enddo
          end function d2f_dydz_o2
 
-         function d2f_dydz_o4(cells, pot, n_cells, dy_cell, dz_cell, n)
+         function d2f_dydz_o4(cells, pot, n_cell, dy_cell, dz_cell, n)
             use constants, only: ndims
             implicit none
                integer, intent(in) :: n
                integer,dimension(n, ndims),intent(in) :: cells
-               integer, dimension(ndims), intent(in) :: n_cells
+               integer, dimension(ndims), intent(in) :: n_cell
                integer :: i, p, q, r
-               real,dimension(n_cells(1), n_cells(2), n_cells(3)),intent(in) :: pot
+               real,dimension(n_cell(1), n_cell(2), n_cell(3)),intent(in) :: pot
                real,intent(in) :: dy_cell, dz_cell
                real,dimension(n),target :: d2f_dydz_o4
 
