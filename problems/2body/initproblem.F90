@@ -64,6 +64,7 @@ contains
       use dataio_pub,   only: printinfo
       use fluidindex,   only: flind
       use particle_pub, only: pset
+      use gravity,	   only: ptmass
 
       implicit none
 
