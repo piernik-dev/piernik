@@ -64,8 +64,8 @@ contains
       use dataio_pub,   only: printinfo
       use fluidindex,   only: flind
       use particle_pub, only: pset
-      use gravity,      only: ptmass
-      use units,        only: newtong
+      !use gravity,      only: ptmass
+      !use units,        only: newtong
 
       implicit none
 
@@ -101,7 +101,7 @@ contains
 
       e = 0.9
 
-      n_particles = 1
+      n_particles = 2
       write(*,*) "Particles: ", n_particles
       dtheta = pi2/n_particles
       write(*,*) "dtheta: ", dtheta
@@ -122,9 +122,10 @@ contains
          enddo
          !call printinfo('To see results type: gnuplot -p -e ''plot "nbody_out.log" u 2:3'' ')
          first_run = .false.
+         write(*,*) "Obliczono pozycje czastek "
       endif
-      write(*,*) "Obliczono pozycje czastek "
-      call system ('echo `date +%s` > times.dat')
+      
+      !call system ('echo `date +%s` > times.dat')
 
       contains
 
