@@ -67,13 +67,13 @@ contains
 
       implicit none
 
-      integer                          :: i, j, k, p, n_particles, particles
+      integer                          :: i, j, k, p, n_particles
       real                              :: x, y, z, dtheta, e
       real,dimension(3)                :: pos_init, vel_init
-      real, parameter :: pi2=6.283185307
-      logical, save                   :: first_run = .true.
-      type(cg_list_element),  pointer :: cgl
-      n_particles=1
+      real,parameter                   :: pi2=6.283185307
+      logical,save                     :: first_run = .true.
+      type(cg_list_element),  pointer  :: cgl
+
       
       do p = lbound(flind%all_fluids, dim=1), ubound(flind%all_fluids, dim=1)
          cgl => leaves%first
@@ -99,9 +99,9 @@ contains
 
       e = 0.9
 
-      particles = 1
-      write(*,*) "Particles: ", particles
-      dtheta = pi2/particles
+      n_particles = 1
+      write(*,*) "Particles: ", n_particles
+      dtheta = pi2/n_particles
       write(*,*) "dtheta: ", dtheta
 
       pos_init(1) = 1.0
@@ -111,7 +111,7 @@ contains
       vel_init = velocities(pos_init, e)
 
       if (first_run) then
-         do i = 1, particles, 1
+         do i = 1, n_particles, 1
             
             call pset%add(1.0, pos_init, vel_init)
             pos_init = positions(dtheta, pos_init)
@@ -121,6 +121,8 @@ contains
          !call printinfo('To see results type: gnuplot -p -e ''plot "nbody_out.log" u 2:3'' ')
          first_run = .false.
       endif
+      write(*,*) "Obliczono pozycje czastek "
+      call system ('echo `date +%s` > times.dat')
 
       contains
 
@@ -150,6 +152,15 @@ contains
          implicit none
             real, dimension(3) :: vector, rotate
             real :: theta
+               !x-axis
+               !rotate(1) = vector(1)
+               !rotate(2) = vector(2)*cos(theta) - vector(3)*sin(theta)
+               !rotate(3) = vector(2)*sin(theta) + vector(3)*cos(theta)
+               !y-axis
+               !rotate(1) = vector(1)*cos(theta) - vector(3)*sin(theta)
+               !rotate(2) = vector(2)
+               !rotate(3) = vector(1)*sin(theta) + vector(3)*cos(theta)
+               !z-axis
                rotate(1) = vector(1)*cos(theta) - vector(2)*sin(theta)
                rotate(2) = vector(1)*sin(theta) + vector(2)*cos(theta)
                rotate(3) = vector(3)
