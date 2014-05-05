@@ -422,6 +422,7 @@ contains
                      ijkp(cdim, IP) = min(ijkp(cdim, I0) + 1, cgl%cg%lhn(cdim, HI))
                   else
                      ijkp(cdim, IM) = cgl%cg%ijkse(cdim, LO)
+                     ijkp(cdim, I0) = cgl%cg%ijkse(cdim, LO)
                      ijkp(cdim, IP) = cgl%cg%ijkse(cdim, HI)
                   endif
                enddo
@@ -436,7 +437,7 @@ contains
                         do cdim = xdim, zdim
                            if (.not.dom%has_dir(cdim)) cycle
                            delta_x = ( part%pos(cdim) - cgl%cg%coord(CENTER, cdim)%r(cur_ind(cdim)) ) * idl(cdim)
-                           if (cur_ind(cdim) /= ijkp(cdim, 0)) then
+                           if (cur_ind(cdim) /= ijkp(cdim, 0)) then   !!! BEWARE hardcoded magic
                               weight_tmp = 1.125 - 1.5 * abs(delta_x) + 0.5 * delta_x**2
                            else
                               weight_tmp = 0.75 - delta_x**2
