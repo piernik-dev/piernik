@@ -62,6 +62,7 @@ contains
    subroutine hermit_4ord(pset, t_glob, dt_tot)
       use constants, only: ndims, xdim, zdim
       use particle_types, only: particle_set
+      use grid_cont,  only: grid_container
       implicit none
       class(particle_set), intent(inout) :: pset  !< particle list
       real, intent(in) :: t_glob, dt_tot
@@ -273,7 +274,10 @@ contains
       write(*,*) "Zaalokowano potencjal"
 
       !obliczenie potencjalu na siatce
-      call pot_grid(pot, mins, maxs, n_cell, delta_cells, eps2)
+      !call pot_grid(pot, mins, maxs, n_cell, delta_cells, eps2)
+      
+      delta_cells=?
+      pot = cg%gpot
 
       init_ang_mom = get_ang_momentum(pos, vel, mass, n)
 
