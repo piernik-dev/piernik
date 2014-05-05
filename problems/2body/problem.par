@@ -32,7 +32,7 @@
  /
 
  $OUTPUT_CONTROL
-    problem_name ='3body'
+    problem_name ='leapfrog'
     run_id =  'tst'
     dt_hdf  = 0.0
     dt_res  = 0.0
@@ -45,11 +45,11 @@
  /
 
  $FLUID_NEUTRAL
- !cs_iso = 0.001
+ !cs_iso = 0.05
  /
 
  $NUMERICAL_SETUP
-    cfl    = 1.0
+    cfl    = 0.8
     smalld = 1.e-3
     smallei= 1.e-5
     integration_order = 2
@@ -77,4 +77,5 @@
  $PARTICLES
    !time_integrator = 'hermit4'
    time_integrator = 'leapfrog2'
+   interpolation_scheme = 'cic'
  /
