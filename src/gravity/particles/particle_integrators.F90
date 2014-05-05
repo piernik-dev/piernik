@@ -65,6 +65,7 @@ contains
       use grid_cont,  only: grid_container
       implicit none
       class(particle_set), intent(inout) :: pset  !< particle list
+      type(grid_container), pointer :: cg
       real, intent(in) :: t_glob, dt_tot
 
       real, parameter :: dt_param = 0.0001        ! control parameter to determine time step size
