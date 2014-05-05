@@ -108,6 +108,7 @@ contains
       integer                         :: i, j, k, p
       type(cg_list_element),  pointer :: cgl
       integer :: ncg_i, cic_i, tsc_i
+      logical, save :: frun = .true.
 
       real, parameter, dimension(185) :: px = [ &
          -4.264752, -4.264106, -4.263515, -4.263066, -4.252018, -4.251456, -4.281534, -4.260255, -4.249320, -4.229333, -4.250500, &
@@ -146,9 +147,18 @@ contains
          2.051194, 2.167098, 2.332655, 2.490083, 2.589761, 2.614925, 2.524624, 2.092921, 2.117748, 2.117748, 1.878924, 1.721969, &
          1.557052, 1.450290, 1.492152, 1.575031, 1.985889 ]
 
-      call all_cg%reg_var(ngp_n)
-      call all_cg%reg_var(cic_n)
-      call all_cg%reg_var(tsc_n)
+      if (frun) then
+         call all_cg%reg_var(ngp_n)
+         call all_cg%reg_var(cic_n)
+         call all_cg%reg_var(tsc_n)
+
+         do i = lbound(px, 1), ubound(px, 1)
+            call pset%add(1.0, [px(i), py(i), 0.0], [0.0, 0.0, 0.0])
+         enddo
+
+         frun = .false.
+      endif
+
       ncg_i = qna%ind(ngp_n)
       cic_i = qna%ind(cic_n)
       tsc_i = qna%ind(tsc_n)
@@ -160,7 +170,7 @@ contains
                do k = cg%lhn(zdim,LO), cg%lhn(zdim,HI)
                   do j = cg%lhn(ydim,LO), cg%lhn(ydim,HI)
                      do i = cg%lhn(xdim,LO), cg%lhn(xdim,HI)
-                        associate( fl => flind%all_fluids(p)%fl )
+                        associate(fl => flind%all_fluids(p)%fl)
                            cg%u(fl%idn,i,j,k) = 1.0
                            cg%u(fl%imx,i,j,k) = 0.0
                            cg%u(fl%imy,i,j,k) = 0.0
@@ -177,9 +187,6 @@ contains
          enddo
       enddo
 
-      do i = lbound(px, 1), ubound(px, 1)
-         call pset%add(1.0, [px(i), py(i), 0.0], [0.0, 0.0, 0.0])
-      enddo
 
    end subroutine problem_initial_conditions
 !-----------------------------------------------------------------------------

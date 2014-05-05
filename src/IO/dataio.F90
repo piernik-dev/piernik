@@ -753,8 +753,12 @@ contains
 
       integer(kind=4), intent(in)    :: output  !< type of output
       logical,         intent(inout) :: dmp     !< perform I/O if True
+      character(len=cbuff_len)       :: tmp_probname
 
-      if (output == FINAL_DUMP .and. trim(problem_name) /= 'crash') write(problem_name, '(a,a6)') trim(problem_name), '_final'
+      if (output == FINAL_DUMP .and. trim(problem_name) /= 'crash') then
+          write(tmp_probname, '(a,a6)') trim(problem_name), '_final'
+          problem_name = tmp_probname
+      endif
       if ((output == INCEPTIVE) .and. initial_hdf_dump) dmp = .true.  !< \todo problem_name may be enhanced by '_initial', but this and nhdf should be reverted just after write_hdf5 is called
 
    end subroutine manage_hdf_dump
