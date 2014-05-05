@@ -62,10 +62,9 @@ contains
    subroutine hermit_4ord(pset, t_glob, dt_tot)
       use constants, only: ndims, xdim, zdim
       use particle_types, only: particle_set
-      use grid_cont,  only: grid_container
       implicit none
       class(particle_set), intent(inout) :: pset  !< particle list
-      type(grid_container), pointer :: cg
+      
       real, intent(in) :: t_glob, dt_tot
 
       real, parameter :: dt_param = 0.0001        ! control parameter to determine time step size
@@ -176,9 +175,10 @@ contains
       use constants, only: ndims, xdim, zdim
       use particle_types, only: particle_set
       use domain, only: dom
+      use grid_cont,  only: grid_container
       implicit none 
       class(particle_set), intent(inout) :: pset  !< particle list
-           
+      type(grid_container), pointer :: cg
       
       interface
          function df_dxi(cells, potential, n_cell, delta_xi, n_particles)
@@ -276,10 +276,10 @@ contains
 
       !obliczenie potencjalu na siatce
       !call pot_grid(pot, mins, maxs, n_cell, delta_cells, eps2)
-      
-      delta_cells=?
+      write(*,*) cg%dx, cg%dy,cg%dz
+      delta_cells=1.0
       pot = cg%gpot
-
+stop
       init_ang_mom = get_ang_momentum(pos, vel, mass, n)
 
       call cell_nr(pos, cells, mins, delta_cells, n)
