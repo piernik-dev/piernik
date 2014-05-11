@@ -484,4 +484,67 @@ contains
 
    end subroutine particle_set_evolve
 
+   subroutine inv_cic(this)
+      use cg_leaves, only: leaves
+      use cg_list,   only: cg_list_element
+      use constants, only: xdim, ydim, zdim, ndims
+      use domain,    only: dom
+      use grid_cont,  only: grid_container
+
+      
+      type(cg_list_element), pointer :: cgl
+      type(grid_container), pointer :: cg
+      class(particle_set),      intent(in) :: this
+      
+      integer :: i, k, l, m, n, p, q, r
+      !real :: dx, dy, dz
+      !real,dimension(:,:,:), allocatable :: boundaries
+      integer, dimension(:,:), allocatable, intent(out) :: cells
+      real, dimension(:), allocatable :: left_edge, delta_cells
+      integer, dimension(:,:,:),intent(out), pointer :: neighbors
+      
+      n = size(this%p, dim=1)
+      allocate(cells(n, ndims))
+      
+      
+      cgl => leaves%first
+      
+      do while (associated(cgl))
+            cg => cgl%cg
+            cgl => cgl%nxt
+      enddo
+      
+      allocate( neighbors(lbound(cg%gpot,dim=1):ubound(cg%gpot,dim=1), lbound(cg%gpot,dim=2):ubound(cg%gpot,dim=2),lbound(cg%gpot,dim=3):ubound(cg%gpot,dim=3))
+      
+      delta_cells = (/cg%dx,cg%dy,cg%dz/)
+      !dy = cg%dy
+      !dz = cg%dz
+      
+      !boundaries = (cg%x,cg%y,cg%z) !tu moga byc problemy :/
+      !left_edge = dom%(:,1)
+
+      
+      do i=1, ndims
+         cells(:,i) = int( ( this%p%pos(:,i) - dom%(i,1) ) / delta_cells(i) )  !+ 1   !(x-x_min)/dx
+      enddo
+      
+      
+      neighbors = 0
+      
+      do i = 1, n
+         p = cells(i,1)
+         q = cells(i,2)
+         r = cells(i,3)
+         
+         do k = p-2, p+1
+            do l = q-2, q+1
+               do m = r-2, r+1
+                  neighbors(p, q, r) = 1
+               enddo
+            enddo
+         enddo
+         
+      enddo
+   end subroutine inv_cic
+
 end module particle_types
