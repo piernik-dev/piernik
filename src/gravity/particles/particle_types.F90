@@ -46,6 +46,7 @@ module particle_types
       real                   :: mass       !< mass of the particle
       real, dimension(ndims) :: pos        !< physical position
       real, dimension(ndims) :: vel        !< particle velocity
+      real, dimension(ndims) :: force     !< force which works on particle
       logical                :: outside    !< this flag is true if the particle is outside the domain
    contains
       procedure :: is_outside              !< compute the outside flag
@@ -70,6 +71,7 @@ module particle_types
       procedure :: add_using_basic_types   !< add a particle
       procedure :: add_using_derived_type  !< add a particle
       procedure :: particle_with_id_exists  !< Check if particle no. "i" exists
+      procedure :: inv_cic
       generic, public :: exists => particle_with_id_exists
       generic, public :: add => add_using_basic_types, add_using_derived_type
    end type particle_set
