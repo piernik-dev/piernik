@@ -191,7 +191,7 @@ contains
 
 !> \brief Add a particle to the list
 
-   subroutine add_using_basic_types(this, mass, pos, vel)
+   subroutine add_using_basic_types(this, mass, pos, vel, force)
 
       implicit none
 
@@ -199,8 +199,9 @@ contains
       real,                   intent(in)    :: mass     !< mass of the particle (negative values are allowed just in case someone wants to calculate electric potential)
       real, dimension(:), intent(in)    :: pos      !< physical position
       real, dimension(:), intent(in)    :: vel      !< particle velosity
+      real, dimension(:), intent(in)    :: force
 
-      call this%add(particle(mass, pos, vel, .false.))
+      call this%add(particle(mass, pos, vel, force, .false.))
 
    end subroutine add_using_basic_types
 
@@ -484,10 +485,10 @@ contains
 
    end subroutine particle_set_evolve
 
-   subroutine inv_cic(this)
+   subroutine inv_cic(this, neighbors)
       use cg_leaves, only: leaves
       use cg_list,   only: cg_list_element
-      use constants, only: xdim, ydim, zdim, ndims
+      use constants, only: xdim, ydim, zdim, ndims, LO, HI, CENTER   !jak wygladaja i czym sa LO i HI
       use domain,    only: dom
       use grid_cont,  only: grid_container
 
@@ -496,50 +497,66 @@ contains
       type(grid_container), pointer :: cg
       class(particle_set),      intent(in) :: this
       
-      integer :: i, k, l, m, n, p, q, r
-      !real :: dx, dy, dz
-      !real,dimension(:,:,:), allocatable :: boundaries
-      integer, dimension(:,:), allocatable, intent(out) :: cells
+      integer :: p, cdim, t, u, v
+      integer(kind=8) :: cn, i, j, k, n
+      
+
+
+
+      !integer, dimension(:,:), allocatable, intent(out) :: cells
       real, dimension(:), allocatable :: left_edge, delta_cells
-      integer, dimension(:,:,:),intent(out), pointer :: neighbors
+      integer, dimension(:,:,:),allocatable, intent(out) :: neighbors
+
+      integer(kind=8), dimension(ndims, LO:HI) :: ijkp
       
       n = size(this%p, dim=1)
-      allocate(cells(n, ndims))
+      !allocate(cells(n, ndims))
       
       
       cgl => leaves%first
       
       do while (associated(cgl))
-            cg => cgl%cg
-            cgl => cgl%nxt
-      enddo
-      
-      allocate( neighbors(lbound(cg%gpot,dim=1):ubound(cg%gpot,dim=1), lbound(cg%gpot,dim=2):ubound(cg%gpot,dim=2),lbound(cg%gpot,dim=3):ubound(cg%gpot,dim=3))
-      
-      delta_cells = (/cg%dx,cg%dy,cg%dz/)
-      !dy = cg%dy
-      !dz = cg%dz
-      
-      !boundaries = (cg%x,cg%y,cg%z) !tu moga byc problemy :/
-      !left_edge = dom%(:,1)
 
-      
-      do i=1, ndims
-         cells(:,i) = int( ( this%p%pos(:,i) - dom%(i,1) ) / delta_cells(i) )  !+ 1   !(x-x_min)/dx
+         do p = lbound(this%p, dim=1), ubound(this%p, dim=1)
+            associate( &
+                  part  => this%p(p), &
+                  idl   => cgl%cg%idl &
+            )
+               !if (any(part%pos < cgl%cg%fbnd(:,LO)) .or. any(part%pos > cgl%cg%fbnd(:,HI))) cycle
+
+               do cdim = xdim, zdim
+                  if (dom%has_dir(cdim)) then
+                     cn = nint((part%pos(cdim) - cgl%cg%coord(CENTER, cdim)%r(1))*cgl%cg%idl(cdim)) + 1
+                     if (cgl%cg%coord(CENTER, cdim)%r(cn) > part%pos(cdim)) then
+                        ijkp(cdim, LO) = cn - 1
+                     else
+                        ijkp(cdim, LO) = cn
+                     endif
+                     ijkp(cdim, HI) = ijkp(cdim, LO) + 1
+                  else
+                     ijkp(cdim, :) = 1
+                  endif
+               enddo
+            end associate 
+            cgl => cgl%nxt
+         enddo
       enddo
+      
+      allocate( neighbors(lbound(cg%gpot,dim=1):ubound(cg%gpot,dim=1), lbound(cg%gpot,dim=2):ubound(cg%gpot,dim=2),lbound(cg%gpot,dim=3):ubound(cg%gpot,dim=3)))
+     !allocate(neighbors(ijkp(xdim,LO):ijkp(xdim,HI),ijkp(ydim,LO):ijkp(ydim,HI),ijkp(zdim,LO):ijkp(zdim,HI)) )
       
       
       neighbors = 0
       
-      do i = 1, n
-         p = cells(i,1)
-         q = cells(i,2)
-         r = cells(i,3)
+      do p = 1, n
+         i = ijkp(xdim, p)
+         j = ijkp(ydim, p)
+         k = ijkp(zdim, p)
          
-         do k = p-2, p+1
-            do l = q-2, q+1
-               do m = r-2, r+1
-                  neighbors(p, q, r) = 1
+         do t = i-2, i+1
+            do u = j-2, j+1
+               do v = k-2, k+1
+                  neighbors(t, u, v) = 1
                enddo
             enddo
          enddo
