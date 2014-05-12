@@ -115,7 +115,7 @@ contains
       if (first_run) then
          do i = 1, n_particles, 1
             
-            call pset%add(1.0, pos_init, vel_init)
+            call pset%add(1.0, pos_init, vel_init, [0.0, 0.0, 0.0] )
             pos_init = positions(dtheta, pos_init)
             vel_init = rotate(dtheta, vel_init)
             
@@ -125,6 +125,7 @@ contains
          write(*,*) "Obliczono pozycje czastek "
       endif
       
+      !call pset%map_
       !call system ('echo `date +%s` > times.dat')
 
       contains
