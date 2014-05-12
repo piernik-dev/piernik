@@ -175,10 +175,13 @@ contains
       use constants, only: ndims, xdim, zdim
       use particle_types, only: particle_set
       use domain, only: dom
+      use cg_leaves,    only: leaves
+      use cg_list,      only: cg_list_element
       use grid_cont,  only: grid_container
       implicit none 
       class(particle_set), intent(inout) :: pset  !< particle list
       type(grid_container), pointer :: cg
+      type(cg_list_element),  pointer  :: cgl
       
       interface
          function df_dxi(cells, potential, n_cell, delta_xi, n_particles)
@@ -250,15 +253,17 @@ contains
       print *, "Leafrog: t_end= ", t_end
 
 
-      !mins(:) = dom%edge(:,1)
-      mins=-3.0
-      !maxs(:) = dom%edge(:,2)
-      maxs=3.0
-      !n_cell(:) = dom%n_d
-      n_cell(1)=300
-      n_cell(2)=300
-      n_cell(3)=300
-
+      mins(:) = dom%edge(:,1)
+      !mins=-3.0
+      maxs(:) = dom%edge(:,2)
+      !maxs=3.0
+      n_cell(:) = dom%n_d
+      !n_cell(1)=300
+      !n_cell(2)=300
+      !n_cell(3)=300
+      write(*,*) "mins: ", mins
+      write(*,*) "maxs: ", maxs
+      write(*,*) "n_cell", n_cell
 
       zero = 0.0
       order = 4
@@ -271,14 +276,44 @@ contains
 
 
       !alokacja potencjalu
-      allocate( pot(n_cell(1), n_cell(2), n_cell(3)) )
+      !allocate( pot(n_cell(1), n_cell(2), n_cell(3)) )
       write(*,*) "Zaalokowano potencjal"
-
+      cgl => leaves%first
+      do while (associated(cgl))
+            cg => cgl%cg
+            write(*,*) size(cg%gpot)
+            
+            pot=cg%gpot
+            write(*,*) lbound(cg%gpot)
+            write(*,*) lbound(pot)
+            cgl => cgl%nxt
+      enddo
+      write(*,*) "dx,dy,dz ", cg%dx,cg%dy,cg%dz
+      write(*,*) "po associated"
       !obliczenie potencjalu na siatce
       !call pot_grid(pot, mins, maxs, n_cell, delta_cells, eps2)
-      write(*,*) cg%dx, cg%dy,cg%dz
-      delta_cells=1.0
-      pot = cg%gpot
+      !write(*,*) cg%u
+      !delta_cells=1.0
+      
+      
+      
+      
+      
+      !write(*,*) "pot size: ", size(pot)
+      !write(*,*) "pot 1: ", size(pot,dim=1)
+      !write(*,*) "pot 2: ", size(pot,dim=2)
+      !write(*,*) "pot 3: ", size(pot,dim=3)
+      !write(*,*) "gpot"
+      
+      !open(unit=88, file='potencjal.dat')
+      !do i=1,n_cell(1)
+       !  do j=1,n_cell(2)
+      !      do k=1,n_cell(3)
+      !         write(88,*) pot(i,j,k)
+      !      enddo
+      !   enddo
+      !enddo
+      !close(88)
 stop
       init_ang_mom = get_ang_momentum(pos, vel, mass, n)
 
