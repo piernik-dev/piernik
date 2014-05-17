@@ -218,8 +218,10 @@ contains
       
       end interface
       
-      integer(kind=8), dimension(ndims, LO:HI) :: neighb
-      real(kind=8), dimension(ndims, LO:HI) :: dist, acc2
+      !integer(kind=8), dimension(ndims, LO:HI) :: neighb
+     ! real(kind=8), dimension(ndims, LO:HI) :: dist, acc2
+      integer(kind=8), dimension(:,:), allocatable :: neighb
+      real(kind=8), dimension(:,:), allocatable :: dist, acc2
       
       real, intent(in) :: t_glob, dt_tot
       integer, dimension(:,:),allocatable :: cells
@@ -240,11 +242,14 @@ contains
       open(newunit=lun_out, file='leapfrog_out.log', status='unknown',  position='append')
       
       n = size(pset%p, dim=1)
+      !
+      allocate(neighb(ndims,n), dist(ndims,n), acc2(ndims,n))
+      !
       call pset%find_cells(neighb, dist)
       
       allocate(mass(n), pos(n, ndims), vel(n, ndims), acc(n, ndims), vel_h(n, ndims), cells(n, ndims), mins(ndims), maxs(ndims), delta_cells(ndims), n_cell(ndims), d_particles(n,ndims))
       
-      call grav_pot2acc_cic(neighb, dist, acc2)
+      call grav_pot2acc_cic(neighb, dist, acc2, n)
       
       mass(:) = pset%p(:)%mass
 

@@ -504,12 +504,17 @@ contains
       !type(cg_list_element), pointer :: cgl
       integer :: p, cdim
       
-      integer(kind=8), dimension(ndims, LO:HI), intent(out) :: neighbors
-      real(kind=8), dimension(ndims, LO:HI), intent(out) :: dist
+      !integer(kind=8), dimension(ndims, LO:HI), intent(out) :: neighbors
+      !real(kind=8), dimension(ndims, LO:HI), intent(out) :: dist
+      integer(kind=8), dimension(:,:), allocatable,intent(out) :: neighbors
+      real(kind=8), dimension(:,:),allocatable, intent(out) :: dist
 
       integer(kind=8) :: cn, i, j, k, n
       cgl => leaves%first
 
+      n = ubound(this%p, dim=1)
+      
+      allocate(neighbors(ndims,n), dist(ndims,n))
       do while (associated(cgl))
 
          do p = lbound(this%p, dim=1), ubound(this%p, dim=1)
@@ -523,9 +528,9 @@ contains
                   if (dom%has_dir(cdim)) then
                      cn = nint((part%pos(cdim) - cgl%cg%coord(CENTER, cdim)%r(1))*cgl%cg%idl(cdim)) + 1
                      if (cgl%cg%coord(CENTER, cdim)%r(cn) > part%pos(cdim)) then
-                        neighbors(cdim, LO) = cn - 1
+                        neighbors(cdim, p) = cn - 1
                      else
-                        neighbors(cdim,LO) = cn 
+                        neighbors(cdim,p) = cn 
                      endif
                      neighbors(cdim, HI) = neighbors(cdim, LO) + 1 !?
                   else
@@ -533,10 +538,11 @@ contains
                      neighbors(cdim,:) = 0
                   endif
                   if (part%pos(cdim) > 0.0) then
-                     dist(cdim, LO) = abs(0.5* (cgl%cg%coord(CENTER, cdim)%r(neighbors(cdim, LO)) + cgl%cg%coord(CENTER, cdim)%r(neighbors(cdim, LO)+1) ) - part%pos(cdim))
+                     dist(cdim, p) = abs(0.5* (cgl%cg%coord(CENTER, cdim)%r(neighbors(cdim, p)) + cgl%cg%coord(CENTER, cdim)%r(neighbors(cdim, p)+1) ) - part%pos(cdim))
                   else
-                     dist(cdim, LO) = abs(part%pos(cdim) - 0.5* (cgl%cg%coord(CENTER, cdim)%r(neighbors(cdim, LO)) + cgl%cg%coord(CENTER, cdim)%r(neighbors(cdim, LO)+1) ))
+                     dist(cdim, p) = abs(part%pos(cdim) - 0.5* (cgl%cg%coord(CENTER, cdim)%r(neighbors(cdim, p)) + cgl%cg%coord(CENTER, cdim)%r(neighbors(cdim, p)+1) ))
                   endif
+                  write(*,*) "p=", p
                enddo
             end associate
          enddo

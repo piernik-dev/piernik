@@ -1059,7 +1059,7 @@ contains
 
    end subroutine grav_accel2pot
 
-   subroutine grav_pot2acc_cic(neighbors, distances, acc)
+   subroutine grav_pot2acc_cic(neighbors, distances, acc, n)
       use constants, only: xdim, ydim, zdim, ndims, LO, HI
       use cg_leaves,        only: leaves
       use cg_list,          only: cg_list_element
@@ -1069,17 +1069,21 @@ contains
       type(cg_list_element), pointer :: cgl
       type(grid_container), pointer :: cg
       
-      integer :: n
-      integer(kind=8), dimension(ndims, LO:HI), intent(in) :: neighbors
-      real(kind=8), dimension(ndims, LO:HI), intent(in) :: distances
-      real(kind=8), dimension(ndims, LO:HI), intent(out) :: acc 
+      integer, intent(in) :: n
+      !integer(kind=8), dimension(ndims, LO:HI), intent(in) :: neighbors
+      !real(kind=8), dimension(ndims, LO:HI), intent(in) :: distances
+      !real(kind=8), dimension(ndims, LO:HI), intent(out) :: acc 
+      !
+      integer(kind=8), dimension(ndims, n), intent(in) :: neighbors
+      real(kind=8), dimension(ndims, n), intent(in) :: distances
+      real(kind=8), dimension(ndims, n), intent(out) :: acc 
       
-      
-      n = size(neighbors, dim=1)
+      !n = size(neighbors, dim=1)
       write(*,*) "pot2acc_cic: n= ", n
-      
-      
-      
+      !write(*,*) "pot2acc_cic: size= ", size(neighbors)
+      !write(*,*) "pot2acc_cic: shape= ", shape(neighbors)
+      !write(*,*) "pot2acc_cic: LO,HI= ", LO, HI
+      !write(*,*) "pot2acc_cic:", neighbors(1,3), distances(1,3)
       
       
       
