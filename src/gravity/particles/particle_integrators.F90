@@ -172,12 +172,14 @@ contains
 
 
    subroutine leapfrog2ord(pset, t_glob, dt_tot)
-      use constants, only: ndims, xdim, zdim
+      use constants, only: ndims, xdim, zdim, LO, HI
       use particle_types, only: particle_set
       use domain, only: dom
       use cg_leaves,    only: leaves
       use cg_list,      only: cg_list_element
       use grid_cont,  only: grid_container
+      use gravity,      only: grav_pot2acc_cic
+      
       implicit none 
       class(particle_set), intent(inout) :: pset  !< particle list
       type(grid_container), pointer :: cg
@@ -215,7 +217,9 @@ contains
          end function d2f_dxi_dxj
       
       end interface
-   
+      
+      integer(kind=8), dimension(ndims, LO:HI) :: neighb
+      real(kind=8), dimension(ndims, LO:HI) :: dist, acc2
       
       real, intent(in) :: t_glob, dt_tot
       integer, dimension(:,:),allocatable :: cells
@@ -236,9 +240,11 @@ contains
       open(newunit=lun_out, file='leapfrog_out.log', status='unknown',  position='append')
       
       n = size(pset%p, dim=1)
+      call pset%find_cells(neighb, dist)
       
       allocate(mass(n), pos(n, ndims), vel(n, ndims), acc(n, ndims), vel_h(n, ndims), cells(n, ndims), mins(ndims), maxs(ndims), delta_cells(ndims), n_cell(ndims), d_particles(n,ndims))
       
+      call grav_pot2acc_cic(neighb, dist, acc2)
       
       mass(:) = pset%p(:)%mass
 
