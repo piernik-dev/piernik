@@ -41,7 +41,7 @@ module gravity
    implicit none
 
    private
-   public :: init_grav, init_grav_ext, grav_accel, source_terms_grav, grav_pot2accel, grav_pot_3d, grav_type, get_gprofs, grav_accel2pot, sum_potential, manage_grav_pot_3d, update_gp
+   public :: init_grav, init_grav_ext, grav_accel, source_terms_grav, grav_pot2accel, grav_pot_3d, grav_type, get_gprofs, grav_accel2pot, sum_potential, manage_grav_pot_3d, update_gp, grav_pot2acc_cic
    public :: r_gc, ptmass, ptm_x, ptm_y, ptm_z, r_smooth, nsub, tune_zeq, tune_zeq_bnd, r_grav, n_gravr, user_grav, gprofs_target, ptm2_x
 
    integer, parameter         :: gp_stat_len   = 9
@@ -116,6 +116,19 @@ module gravity
          type(grid_container), pointer, intent(in)  :: cg         !< current grid_container
       end subroutine grav_pot2accel_T
 
+      !subroutine grav_pot2acc_cic_T(neighbors, distances, acc)
+       !  use constants, only: xdim, ydim, zdim, ndims, LO, HI
+       !  use cg_leaves,        only: leaves
+       !  use cg_list,          only: cg_list_element
+       !  use grid_cont,        only: grid_container
+       !  implicit none
+       !  type(cg_list_element), pointer :: cgl
+       !  type(grid_container), pointer :: cg
+      !   integer(kind=8), dimension(ndims, LO:HI), intent(in) :: neighbors
+      !   real(kind=8), dimension(ndims, LO:HI), intent(in) :: distances
+      !   real(kind=8), dimension(ndims, LO:HI), intent(out) :: acc 
+      !end subroutine grav_pot2acc_cic_T
+
    end interface
 
    procedure(user_grav_pot_3d), pointer :: grav_pot_3d => NULL()
@@ -123,6 +136,7 @@ module gravity
    procedure(gprofs_default),   pointer :: get_gprofs  => NULL()
    procedure(grav_types),       pointer :: grav_type   => NULL()
    procedure(grav_pot2accel_T), pointer :: grav_pot2accel => NULL()
+  ! procedure(grav_pot2acc_cic_T), pointer :: grav_pot2acc_cic => NULL()
 
 contains
 
@@ -1044,5 +1058,31 @@ contains
       ! Find the maximum, and adjust cg%gp (call leaves%q_add_val(igp, -max))
 
    end subroutine grav_accel2pot
+
+   subroutine grav_pot2acc_cic(neighbors, distances, acc)
+      use constants, only: xdim, ydim, zdim, ndims, LO, HI
+      use cg_leaves,        only: leaves
+      use cg_list,          only: cg_list_element
+      use grid_cont,        only: grid_container
+
+      implicit none
+      type(cg_list_element), pointer :: cgl
+      type(grid_container), pointer :: cg
+      
+      integer :: n
+      integer(kind=8), dimension(ndims, LO:HI), intent(in) :: neighbors
+      real(kind=8), dimension(ndims, LO:HI), intent(in) :: distances
+      real(kind=8), dimension(ndims, LO:HI), intent(out) :: acc 
+      
+      
+      n = size(neighbors, dim=1)
+      write(*,*) "pot2acc_cic: n= ", n
+      
+      
+      
+      
+      
+      
+   end subroutine grav_pot2acc_cic
 
 end module gravity
