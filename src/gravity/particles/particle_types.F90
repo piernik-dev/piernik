@@ -624,7 +624,12 @@ contains
                      ijkp(cdim, :) = 1
                      neighbors(cdim,:) = 0
                   endif
-                  dist(cdim, LO) = abs(0.5*(cgl%cg%coord(CENTER, cdim)%r(neighbors(cdim,LO)+1) - abs(cgl%cg%coord(CENTER, cdim)%r(neighbors(cdim,LO)))) - part%pos(cdim))
+                  if (part%pos(cdim) > 0.0) then
+                     dist(cdim, LO) = abs(0.5* (cgl%cg%coord(CENTER, cdim)%r(neighbors(cdim, LO)) + cgl%cg%coord(CENTER, cdim)%r(neighbors(cdim, LO)+1) ) - part%pos(cdim))
+                  else
+                     dist(cdim, LO) = abs(part%pos(cdim) - 0.5* (cgl%cg%coord(CENTER, cdim)%r(neighbors(cdim, LO)) + cgl%cg%coord(CENTER, cdim)%r(neighbors(cdim, LO)+1) ))
+                  endif
+                  !dist(cdim, LO) = abs(0.5*(cgl%cg%coord(CENTER, cdim)%r(neighbors(cdim,LO)+1) - abs(cgl%cg%coord(CENTER, cdim)%r(neighbors(cdim,LO)))) - part%pos(cdim))
                   write(*,*) "cdim, dist(cdim, LO): ", cdim, dist(cdim, LO)
                enddo
             end associate
