@@ -566,7 +566,7 @@ contains
    !   enddo
    !end subroutine inv_cic
    
-   subroutine found_cells(this, ijkp)
+   subroutine found_cells(this, ijkp, neighbors, dist)
       use cg_leaves, only: leaves
       use cg_list,   only: cg_list_element
       use constants, only: xdim, ydim, zdim, ndims, LO, HI, CENTER   !jak wygladaja i czym sa LO i HI
@@ -583,11 +583,12 @@ contains
       !type(cg_list_element), pointer :: cgl
       integer :: p, cdim
       
-      integer(kind=8), dimension(ndims, LO:HI), intent(out) :: ijkp
+      integer(kind=8), dimension(ndims, LO:HI), intent(out) :: ijkp, neighbors
+      real(kind=8), dimension(ndims, LO:HI), intent(out) :: dist
       
       integer(kind=8) :: cn, i, j, k, n
       write(*,*) "found_cells--in!"
-      
+      write(*,*) "LO,HI", LO, HI
       cgl => leaves%first
       
       do while (associated(cgl))
@@ -603,16 +604,28 @@ contains
                do cdim = xdim, zdim
                   if (dom%has_dir(cdim)) then
                      cn = nint((part%pos(cdim) - cgl%cg%coord(CENTER, cdim)%r(1))*cgl%cg%idl(cdim)) + 1
-                     write(*,*) "cdim,cn: ", cdim, cn
+                     !write(*,*) "cdim,cn             : ", cdim, cn
+                     write(*,*) "cn, r(cn), pos(cdim): ", cn, cgl%cg%coord(CENTER, cdim)%r(cn), part%pos(cdim)
                      if (cgl%cg%coord(CENTER, cdim)%r(cn) > part%pos(cdim)) then
-                        ijkp(cdim, LO) = cn - 1
+                        write(*,*) "--wieksze"
+                        ijkp(cdim, LO) = cn + 1
+                        neighbors(cdim, LO) = cn - 1
+                        !dist(cdim,LO) = 
+                        !write(*,*) "r(1): ", cgl%cg%coord(CENTER, cdim)%r(0), cgl%cg%coord(CENTER, cdim)%r(1), cgl%cg%coord(CENTER, cdim)%r(2)
                      else
+                     write(*,*) "--mniejsze"
                         ijkp(cdim, LO) = cn
+                        neighbors(cdim,LO) = cn 
                      endif
+                     write(*,*) "#cdim, neighbors(cdim, LO): ", cdim, neighbors(cdim, LO) 
                      ijkp(cdim, HI) = ijkp(cdim, LO) + 1
+                     !dist(cdim, LO) = abs(0.5*(cgl%cg%coord(CENTER, cdim)%r(neighbors(cdim,LO)+1) - cgl%cg%coord(CENTER, cdim)%r(neighbors(cdim,LO))) - part%pos(cdim))
                   else
                      ijkp(cdim, :) = 1
+                     neighbors(cdim,:) = 0
                   endif
+                  dist(cdim, LO) = abs(0.5*(cgl%cg%coord(CENTER, cdim)%r(neighbors(cdim,LO)+1) - abs(cgl%cg%coord(CENTER, cdim)%r(neighbors(cdim,LO)))) - part%pos(cdim))
+                  write(*,*) "cdim, dist(cdim, LO): ", cdim, dist(cdim, LO)
                enddo
             end associate
          enddo
@@ -620,7 +633,7 @@ contains
          write(*,*) "next cg"
       enddo
       write(*,*) "koniec"
-      write(*,*) "particle_types: shape(ijkp): ", shape(ijkp)
+      write(*,*) "particle_types: shapes: ", shape(ijkp), shape(neighbors), shape(dist)
    end subroutine found_cells
 
 end module particle_types
