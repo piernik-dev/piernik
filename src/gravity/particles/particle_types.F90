@@ -508,46 +508,52 @@ contains
       !real(kind=8), dimension(ndims, LO:HI), intent(out) :: dist
       integer(kind=8), dimension(:,:), allocatable,intent(out) :: neighbors
       real(kind=8), dimension(:,:),allocatable, intent(out) :: dist
+      !real(kind=8), dimension(:,:), allocatable, intent(in) :: pos
 
       integer(kind=8) :: cn, i, j, k, n
       cgl => leaves%first
 
       n = ubound(this%p, dim=1)
       
-      allocate(neighbors(ndims,n), dist(ndims,n))
+      allocate(neighbors(n,ndims), dist(n,ndims))
       do while (associated(cgl))
-
+   
          do p = lbound(this%p, dim=1), ubound(this%p, dim=1)
             associate( &
                   part  => this%p(p), &
                   idl   => cgl%cg%idl &
             )
                if (any(part%pos < cgl%cg%fbnd(:,LO)) .or. any(part%pos > cgl%cg%fbnd(:,HI))) cycle
-               write(*,*) xdim, zdim
+              ! write(*,*) xdim, zdim
                do cdim = xdim, zdim
                   if (dom%has_dir(cdim)) then
                      cn = nint((part%pos(cdim) - cgl%cg%coord(CENTER, cdim)%r(1))*cgl%cg%idl(cdim)) + 1
                      if (cgl%cg%coord(CENTER, cdim)%r(cn) > part%pos(cdim)) then
-                        neighbors(cdim, p) = cn - 1
+                        neighbors(p, cdim) = cn - 1
                      else
-                        neighbors(cdim,p) = cn 
+                        neighbors(p,cdim) = cn 
                      endif
-                     neighbors(cdim, HI) = neighbors(cdim, LO) + 1 !?
+                     neighbors(HI, cdim) = neighbors(LO, cdim) + 1 !?
                   else
                      !ijkp(cdim, :) = 1
-                     neighbors(cdim,:) = 0
+                     neighbors(:,cdim) = 0
                   endif
                   if (part%pos(cdim) > 0.0) then
-                     dist(cdim, p) = abs(0.5* (cgl%cg%coord(CENTER, cdim)%r(neighbors(cdim, p)) + cgl%cg%coord(CENTER, cdim)%r(neighbors(cdim, p)+1) ) - part%pos(cdim))
+                     dist(p,cdim) = abs(0.5* (cgl%cg%coord(CENTER, cdim)%r(neighbors(p, cdim)) + cgl%cg%coord(CENTER, cdim)%r(neighbors(p, cdim)+1) ) - part%pos(cdim))
                   else
-                     dist(cdim, p) = abs(part%pos(cdim) - 0.5* (cgl%cg%coord(CENTER, cdim)%r(neighbors(cdim, p)) + cgl%cg%coord(CENTER, cdim)%r(neighbors(cdim, p)+1) ))
+                     dist(p, cdim) = abs(part%pos(cdim) - 0.5* (cgl%cg%coord(CENTER, cdim)%r(neighbors(p, cdim)) + cgl%cg%coord(CENTER, cdim)%r(neighbors(p, cdim)+1) ))
                   endif
-                  write(*,*) "p=", p
+                  !write(*,*) "p=", p
                enddo
             end associate
          enddo
          cgl => cgl%nxt
       enddo
+      !do p = lbound(this%p, dim=1), ubound(this%p, dim=1)
+         !do i=xdim,zdim
+          !  write(*,*) p," : ",dist(:,p)
+         !enddo
+      !enddo
    end subroutine find_cells
 
 end module particle_types

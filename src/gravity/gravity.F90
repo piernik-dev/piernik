@@ -1070,22 +1070,31 @@ contains
       type(grid_container), pointer :: cg
       
       integer, intent(in) :: n
-      !integer(kind=8), dimension(ndims, LO:HI), intent(in) :: neighbors
-      !real(kind=8), dimension(ndims, LO:HI), intent(in) :: distances
-      !real(kind=8), dimension(ndims, LO:HI), intent(out) :: acc 
-      !
-      integer(kind=8), dimension(ndims, n), intent(in) :: neighbors
-      real(kind=8), dimension(ndims, n), intent(in) :: distances
-      real(kind=8), dimension(ndims, n), intent(out) :: acc 
+      integer :: i
       
-      !n = size(neighbors, dim=1)
-      write(*,*) "pot2acc_cic: n= ", n
-      !write(*,*) "pot2acc_cic: size= ", size(neighbors)
-      !write(*,*) "pot2acc_cic: shape= ", shape(neighbors)
-      !write(*,*) "pot2acc_cic: LO,HI= ", LO, HI
-      !write(*,*) "pot2acc_cic:", neighbors(1,3), distances(1,3)
+      integer(kind=8), dimension(n, ndims), intent(in) :: neighbors
+      real(kind=8), dimension(n, ndims), intent(in) :: distances
+      real(kind=8), dimension(n, ndims), intent(out) :: acc 
+     ! write(*,*) "gravity: shape(neighbors,acc,dist): ",shape(neighbors),shape(acc),shape(distances)
+
+      !write(*,*) "pot2acc_cic: n= ", n
+      
+      cgl => leaves%first
+      do while (associated(cgl))
+         cg => cgl%cg
+         do i = 1, n
+            acc(i,1) = (-cg%gpot(neighbors(i, 1) + 1, neighbors(i, 2), neighbors(i, 3)) + cg%gpot(neighbors(i, 1), neighbors(i, 2), neighbors(i, 3))) * distances(i, 1)/cg%dx
+            acc(i,2) = (-cg%gpot(neighbors(i, 1), neighbors(i, 2) + 1, neighbors(i, 3)) + cg%gpot(neighbors(i, 1), neighbors(i, 2), neighbors(i, 3))) * distances(i, 2)/cg%dy
+            acc(i,3) = (-cg%gpot(neighbors(i, 1), neighbors(i, 2), neighbors(i, 3) + 1) + cg%gpot(neighbors(i, 1), neighbors(i, 2), neighbors(i, 3))) * distances(i, 3)/cg%dz
+         enddo
+         cgl => cgl%nxt
+      enddo
+      !write(*,*) "gravity: shape(gpot): ",shape(cg%gpot)
+      !write(*,*) "gravity: przed petla
+      !write(*,*) "dx,dy,dz=",cg%dx,cg%dy,cg%dx
       
       
+
       
    end subroutine grav_pot2acc_cic
 

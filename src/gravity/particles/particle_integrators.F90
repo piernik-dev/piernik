@@ -243,14 +243,14 @@ contains
       
       n = size(pset%p, dim=1)
       !
-      allocate(neighb(ndims,n), dist(ndims,n), acc2(ndims,n))
+      allocate(neighb(n, ndims), dist(n, ndims), acc2(n, ndims))
       !
       call pset%find_cells(neighb, dist)
-      
+      write(*,*) "call find_cells"
       allocate(mass(n), pos(n, ndims), vel(n, ndims), acc(n, ndims), vel_h(n, ndims), cells(n, ndims), mins(ndims), maxs(ndims), delta_cells(ndims), n_cell(ndims), d_particles(n,ndims))
-      
+      write(*,*) "przed: grav_pot2acc_cic"
       call grav_pot2acc_cic(neighb, dist, acc2, n)
-      
+      write(*,*) "grav_pot2acc_cic"
       mass(:) = pset%p(:)%mass
 
       do ndim = xdim, zdim
@@ -261,7 +261,7 @@ contains
       
       t = t_glob
       t_end = t + dt_tot
-      print *, "Leafrog: t_end= ", t_end
+      !print *, "Leafrog: t_end= ", t_end
 
 
       mins(:) = dom%edge(:,1)
@@ -272,9 +272,9 @@ contains
       !n_cell(1)=300
       !n_cell(2)=300
       !n_cell(3)=300
-      write(*,*) "mins: ", mins
-      write(*,*) "maxs: ", maxs
-      write(*,*) "n_cell", n_cell
+      !write(*,*) "mins: ", mins
+      !write(*,*) "maxs: ", maxs
+      !write(*,*) "n_cell", n_cell
 
       zero = 0.0
       order = 4
@@ -288,54 +288,45 @@ contains
 
       !alokacja potencjalu
       !allocate( pot(n_cell(1), n_cell(2), n_cell(3)) )
-      write(*,*) "Zaalokowano potencjal"
+      !write(*,*) "Zaalokowano potencjal"
       cgl => leaves%first
       do while (associated(cgl))
             cg => cgl%cg
-            write(*,*) size(cg%gpot)
+            !write(*,*) size(cg%gpot)
             
             pot=cg%gpot
-            write(*,*) lbound(cg%gpot)
-            write(*,*) lbound(pot)
+            !write(*,*) lbound(cg%gpot)
+            !write(*,*) lbound(pot)
             cgl => cgl%nxt
       enddo
-      write(*,*) "dx,dy,dz ", cg%dx,cg%dy,cg%dz
-      write(*,*) "po associated"
+
       !obliczenie potencjalu na siatce
       !call pot_grid(pot, mins, maxs, n_cell, delta_cells, eps2)
-      !write(*,*) cg%u
-      !delta_cells=1.0
+
+      !write(*,*) "part_int: gpot(1,1,1): ", cg%gpot(1,1,1)
       
+
       
-      
-      
-      
-      !write(*,*) "pot size: ", size(pot)
-      !write(*,*) "pot 1: ", size(pot,dim=1)
-      !write(*,*) "pot 2: ", size(pot,dim=2)
-      !write(*,*) "pot 3: ", size(pot,dim=3)
-      !write(*,*) "gpot"
-      
-      !open(unit=88, file='potencjal.dat')
-      !do i=1,n_cell(1)
-       !  do j=1,n_cell(2)
-      !      do k=1,n_cell(3)
-      !         write(88,*) pot(i,j,k)
-      !      enddo
-      !   enddo
-      !enddo
-      !close(88)
-stop
+      open(unit=88, file='potencjal.dat')
+      do i=1,n_cell(1)
+         do j=1,n_cell(2)
+            do k=1,n_cell(3)
+               write(88,*) i,j,k,pot(i,j,k)
+            enddo
+         enddo
+      enddo
+      close(88)
+!stop
       init_ang_mom = get_ang_momentum(pos, vel, mass, n)
 
-      call cell_nr(pos, cells, mins, delta_cells, n)
+      !call cell_nr(pos, cells, mins, delta_cells, n)
 
-      call check_ord(order, df_dx_p, d2f_dx2_p, df_dy_p, d2f_dy2_p,& 
-                        df_dz_p, d2f_dz2_p, d2f_dxdy_p, d2f_dxdz_p, d2f_dydz_p)
+      !call check_ord(order, df_dx_p, d2f_dx2_p, df_dy_p, d2f_dy2_p,& 
+       !                 df_dz_p, d2f_dz2_p, d2f_dxdy_p, d2f_dxdz_p, d2f_dydz_p)
 
 
       !initial acceleration
-      call get_acc(cells, pos, acc, pot, n_cell, mins, delta_cells, n)
+      !call get_acc(cells, pos, acc, pot, n_cell, mins, delta_cells, n)
 
 
       !timestep
@@ -351,16 +342,21 @@ stop
       do while (t<t_end)
          !1.kick(dth)
          vel_h(:,:) = vel
-         call kick(vel_h, acc, dth, n) !velocity
+         call kick(vel_h, acc2, dth, n) !velocity
          !2.drift(dt)
          call drift(pos, vel_h, dt, n) !position
+         do ndim = xdim, zdim
+            pset%p(:)%pos(ndim) = pos(:, ndim)
+         enddo
          !3.acceleration + |a|
-         call cell_nr(pos, cells, mins, delta_cells, n)
-         call get_acc(cells, pos, acc, pot, n_cell, mins, delta_cells, n)
+         call pset%find_cells(neighb, dist)
+        ! call cell_nr(pos, cells, mins, delta_cells, n)
+         call grav_pot2acc_cic(neighb, dist, acc2, n)
+         !call get_acc(cells, pos, acc, pot, n_cell, mins, delta_cells, n)
          !call get_acc_mod(acc, n, a)
          !4.kick(dth)
          vel(:,:) = vel_h
-         call kick(vel, acc, dth, n)   !velocity
+         call kick(vel, acc2, dth, n)   !velocity
          !5.t
          t = t + dt
          !6.dt		!dt[n+1]
