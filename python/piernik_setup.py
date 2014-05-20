@@ -131,11 +131,14 @@ head_block2 = '''
 \t@git log -5 --decorate --graph >> env.dat
 
 version.F90: env.dat
-\t@( $(ECHO) -e "module version\\n   implicit none\\n   public\\n"; \\
+\t@( $(ECHO) "module version"; \\
+\t$(ECHO) "   implicit none"; \\
+\t$(ECHO) "   public"; \\
 \twc -l env.dat | awk '{print "   integer, parameter :: nenv = "$$1"+0"}'; \\
 \tawk '{if (length($0)>s) s=length($0)} END {print "   character(len="s"), dimension(nenv) :: env\\ncontains\\n   subroutine init_version\\n      implicit none"}' env.dat; \\
 \tawk '{printf("      env(%i) = \\"%s\\"\\n",NR,$$0)}' env.dat; \\
-\t$(ECHO) -e "   end subroutine init_version\\nend module version" ) > version_.F90; \\
+\t$(ECHO) "   end subroutine init_version"; \\
+\t$(ECHO) "end module version" ) > version_.F90; \\
 \tif [ -e version.F90 ]; then diff version_.F90 version.F90 > /dev/null || unlink version.F90 ; fi; \\
 \tif [ ! -e version.F90 ]; then mv version_.F90 version.F90 ; $(ECHO) 'generated version.F90'; fi
 
