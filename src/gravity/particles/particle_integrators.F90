@@ -177,7 +177,7 @@ contains
       use domain, only: dom
       use cg_leaves,    only: leaves
       use cg_list,      only: cg_list_element
-      use grid_cont,  only: grid_container
+      use grid_cont,    only: grid_container
       use gravity,      only: grav_pot2acc_cic
       
       implicit none 
@@ -246,11 +246,14 @@ contains
       allocate(neighb(n, ndims), dist(n, ndims), acc2(n, ndims))
       !
       call pset%find_cells(neighb, dist)
-      write(*,*) "call find_cells"
+      
+      !write(*,*) "call find_cells"
       allocate(mass(n), pos(n, ndims), vel(n, ndims), acc(n, ndims), vel_h(n, ndims), cells(n, ndims), mins(ndims), maxs(ndims), delta_cells(ndims), n_cell(ndims), d_particles(n,ndims))
-      write(*,*) "przed: grav_pot2acc_cic"
-      call grav_pot2acc_cic(neighb, dist, acc2, n)
-      write(*,*) "grav_pot2acc_cic"
+      !write(*,*) "przed: grav_pot2acc_cic"
+      
+      call grav_pot2acc_cic(neighb, dist, acc2, pset, n)
+      
+     ! write(*,*) "grav_pot2acc_cic"
       mass(:) = pset%p(:)%mass
 
       do ndim = xdim, zdim
@@ -308,9 +311,9 @@ contains
 
       
       open(unit=88, file='potencjal.dat')
-      do i=1,n_cell(1)
-         do j=1,n_cell(2)
-            do k=1,n_cell(3)
+      do i=lbound(cg%gpot,dim=1),ubound(cg%gpot,dim=1)
+         do j=lbound(cg%gpot,dim=2),ubound(cg%gpot,dim=2)
+            do k=lbound(cg%gpot,dim=3),ubound(cg%gpot,dim=3)
                write(88,*) i,j,k,pot(i,j,k)
             enddo
          enddo
@@ -345,13 +348,15 @@ contains
          call kick(vel_h, acc2, dth, n) !velocity
          !2.drift(dt)
          call drift(pos, vel_h, dt, n) !position
-         do ndim = xdim, zdim
-            pset%p(:)%pos(ndim) = pos(:, ndim)
-         enddo
+         !do ndim = xdim, zdim
+         !   pset%p(:)%pos(ndim) = pos(:, ndim)
+         !enddo
          !3.acceleration + |a|
+         !write(*,*) "particle_integrators: call find_cells"
          call pset%find_cells(neighb, dist)
         ! call cell_nr(pos, cells, mins, delta_cells, n)
-         call grav_pot2acc_cic(neighb, dist, acc2, n)
+         !write(*,*) "particle_integrators: grav_pot2acc_cics"
+         call grav_pot2acc_cic(neighb, dist, acc2, pset, n)
          !call get_acc(cells, pos, acc, pot, n_cell, mins, delta_cells, n)
          !call get_acc_mod(acc, n, a)
          !4.kick(dth)
@@ -372,7 +377,7 @@ contains
 
       end do
       
-      print *, "Leapfrog: nsteps=", nsteps
+      write(*,*), "Leapfrog: nsteps=", nsteps
       
       do ndim = xdim, zdim
          pset%p(:)%pos(ndim) = pos(:, ndim)
