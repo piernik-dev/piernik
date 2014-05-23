@@ -1,17 +1,17 @@
  $BASE_DOMAIN
-    n_d = 4, 1, 1
+    n_d = 10, 10, 10
     bnd_xl = 'per'
     bnd_xr = 'per'
     bnd_yl = 'per'
     bnd_yr = 'per'
     bnd_zl = 'per'
     bnd_zr = 'per'
-    xmin   =-10.0
-    xmax   = 10.0
-    ymin   =-10.0
-    ymax   = 10.0
-    zmin   =-10.0
-    zmax   = 10.0
+    xmin   =-5.0
+    xmax   = 5.0
+    ymin   =-5.0
+    ymax   = 5.0
+    zmin   =-5.0
+    zmax   = 5.0
  /
 
  $MPI_BLOCKS
@@ -45,7 +45,8 @@
  /
 
  $FLUID_NEUTRAL
- !cs_iso = 0.05
+ cs_iso = 0.05
+ selfgrav = .true.
  /
 
  $NUMERICAL_SETUP
