@@ -2,6 +2,6 @@
 #undef  MAGNETIC
 #define ISO
 #define GLOBAL_FR_SPEED
-#define GRAV
 #define RTVD
 #define MULTIGRID
+#define GRAV
