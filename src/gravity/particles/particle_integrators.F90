@@ -348,9 +348,9 @@ contains
          call kick(vel_h, acc2, dth, n) !velocity
          !2.drift(dt)
          call drift(pos, vel_h, dt, n) !position
-         !do ndim = xdim, zdim
-         !   pset%p(:)%pos(ndim) = pos(:, ndim)
-         !enddo
+         do j = 1, n
+            pset%p(j)%pos(:) = pos(j, :)
+         enddo
          !3.acceleration + |a|
          !write(*,*) "particle_integrators: call find_cells"
          call pset%find_cells(neighb, dist)
@@ -372,7 +372,7 @@ contains
          d_ang_momentum = log(abs((get_ang_momentum(pos, vel, mass, n) - init_ang_mom)/init_ang_mom))
 
          do i = 1, n
-            write(lun_out, '(I3,1X,8(E13.6,1X))') i, mass(i), pos(i,:), vel(i,:), d_ang_momentum
+            write(lun_out, '(I3,1X,8(E13.6,1X))') i, mass(i), pos(i,:), vel(i,:), acc(i,:), d_ang_momentum
          enddo
 
       end do
