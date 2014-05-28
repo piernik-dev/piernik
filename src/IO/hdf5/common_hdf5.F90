@@ -131,6 +131,10 @@ contains
 #ifdef GRAV
             case ('gpot')
                nhdf_vars = nhdf_vars + 1
+#ifdef MULTIGRID
+            case ('sgpt')
+               nhdf_vars = nhdf_vars + 1
+#endif /* MULTIGRID */
 #endif /* GRAV */
             case ('magx', 'magy', 'magz', 'pres')
                nhdf_vars = nhdf_vars + 1
@@ -187,6 +191,10 @@ contains
 #ifdef GRAV
             case ('gpot')
                hdf_vars(j) = 'gpot' ; j = j + 1
+#ifdef MULTIGRID
+            case ('sgpt')
+               hdf_vars(j) = 'sgpt' ; j = j + 1
+#endif /* MULTIGRID */
 #endif /* GRAV */
 #ifdef TRACER
             case ('trcr')

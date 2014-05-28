@@ -102,7 +102,9 @@ contains
             f%f2cgs = 1.0 / (fpi * sqrt(cm / (miu0 * gram)) * sek)
             f%stag = 1
          case ("cr1" : "cr9")
-         case ("gpot")
+         case ("gpot", "sgpt")
+            f%fu = "\rm{cm}^2 / \rm{s}^2"
+            f%f2cgs = 1.0 / (cm**2 / sek**2)
          case ("trcr")
       end select
    end function datafields_descr
@@ -244,6 +246,8 @@ contains
             tab(:,:,:) = real(cg%b(xdim + i_xyz, RNG), kind=4)
          case ("gpot")
             if (associated(cg%gpot)) tab(:,:,:) = real(cg%gpot(RNG), kind=4)
+         case ("sgpt")
+            if (associated(cg%sgp)) tab(:,:,:) = real(cg%sgp(RNG), kind=4)
          case ("level")
             tab(:,:,:) = real(cg%level_id, kind=4)
          case ("grid_id")
