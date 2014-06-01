@@ -245,8 +245,8 @@ contains
       !
       allocate(neighb(n, ndims), dist(n, ndims), acc2(n, ndims))
       !
-      call pset%find_cells(neighb, dist)
-      
+      !call pset%find_cells(neighb, dist)
+      call find_cells(pset,neighb, dist, n)
       !write(*,*) "call find_cells"
       allocate(mass(n), pos(n, ndims), vel(n, ndims), acc(n, ndims), vel_h(n, ndims), cells(n, ndims), mins(ndims), maxs(ndims), delta_cells(ndims), n_cell(ndims), d_particles(n,ndims))
       !write(*,*) "przed: grav_pot2acc_cic"
@@ -307,7 +307,7 @@ contains
       !call pot_grid(pot, mins, maxs, n_cell, delta_cells, eps2)
 
       !write(*,*) "part_int: gpot(1,1,1): ", cg%gpot(1,1,1)
-      
+      !write(*,*) "nint(2.5)=", nint(2.5), " nint(-2.5)=", nint(-2.5)
 
       
       open(unit=88, file='potencjal.dat')
@@ -320,7 +320,7 @@ contains
       enddo
       close(88)
 !stop
-      init_ang_mom = get_ang_momentum(pos, vel, mass, n)
+      !init_ang_mom = get_ang_momentum(pos, vel, mass, n)
 
       !call cell_nr(pos, cells, mins, delta_cells, n)
 
@@ -344,24 +344,28 @@ contains
       !main loop
       do while (t<t_end)
          !1.kick(dth)
-         vel_h(:,:) = vel
-         call kick(vel_h, acc2, dth, n) !velocity
+         !vel_h(:,:) = vel
+         !call kick(vel_h, acc2, dth, n) !velocity
+         call kick2(pset, acc2,dth,n)
          !2.drift(dt)
-         call drift(pos, vel_h, dt, n) !position
-         do j = 1, n
-            pset%p(j)%pos(:) = pos(j, :)
-         enddo
+         !call drift(pos, vel_h, dt, n) !position
+         call drift2(pset,dt,n)
+         !do j = 1, n
+            !pset%p(j)%pos(:) = pos(j, :)
+         !enddo
          !3.acceleration + |a|
          !write(*,*) "particle_integrators: call find_cells"
-         call pset%find_cells(neighb, dist)
+         !call pset%find_cells(neighb, dist)
+         call find_cells(pset,neighb, dist, n)
         ! call cell_nr(pos, cells, mins, delta_cells, n)
          !write(*,*) "particle_integrators: grav_pot2acc_cics"
          call grav_pot2acc_cic(neighb, dist, acc2, pset, n)
          !call get_acc(cells, pos, acc, pot, n_cell, mins, delta_cells, n)
          !call get_acc_mod(acc, n, a)
          !4.kick(dth)
-         vel(:,:) = vel_h
-         call kick(vel, acc2, dth, n)   !velocity
+         !vel(:,:) = vel_h
+         !call kick(vel, acc2, dth, n)   !velocity
+         call kick2(pset, acc2,dth,n)
          !5.t
          t = t + dt
          !6.dt		!dt[n+1]
@@ -369,10 +373,10 @@ contains
          !7.dth
          !dth =	0.5*dt
          nsteps = nsteps + 1
-         d_ang_momentum = log(abs((get_ang_momentum(pos, vel, mass, n) - init_ang_mom)/init_ang_mom))
+        ! d_ang_momentum = log(abs((get_ang_momentum(pos, vel, mass, n) - init_ang_mom)/init_ang_mom))
 
          do i = 1, n
-            write(lun_out, '(I3,1X,8(E13.6,1X))') i, mass(i), pos(i,:), vel(i,:), acc(i,:), d_ang_momentum
+            write(lun_out, '(I3,1X,9(E13.6,1X))') i, mass(i), acc2 (i,:), pset%p(i)%pos, pset%p(i)%vel!, acc2(i,:)!, d_ang_momentum
          enddo
 
       end do
@@ -402,6 +406,20 @@ contains
             vel = vel + acc*t
             
          end subroutine kick
+         
+         subroutine kick2(pset, acc, t, n)
+            use constants, only: ndims
+            use particle_types, only: particle_set
+            implicit none
+            class(particle_set), intent(inout) :: pset  !< particle list
+            real, intent(in) :: t
+            integer, intent(in) :: n
+            real, dimension(n, ndims), intent(in) :: acc
+            !real, dimension(n, ndims), intent(inout) :: vel
+            do i=1,n
+               pset%p(i)%vel = pset%p(i)%vel + acc(i,:)*t
+            enddo
+         end subroutine kick2
 
          !Drift
          subroutine drift(pos, vel, t, n)
@@ -415,6 +433,21 @@ contains
             pos = pos + vel*t
          end subroutine drift
 
+         subroutine drift2(pset, t, n)
+            use constants, only: ndims
+            use particle_types, only: particle_set
+
+            implicit none
+            class(particle_set), intent(inout) :: pset  !< particle list
+            real, intent(in) :: t
+            integer :: i
+            integer, intent(in) :: n
+            !real, dimension(n, ndims), intent(inout) :: pos
+            !real, dimension(n, ndims), intent(in) :: vel
+            do i=1,n
+               pset%p(i)%pos = pset%p(i)%pos + pset%p(i)%vel*t
+            enddo
+         end subroutine drift2
 
 
          function phi_pm(x, y, z, eps)
@@ -1024,6 +1057,81 @@ contains
       a = sqrt(maxval(acc2))
 
    end subroutine get_acc_mod
+
+
+   subroutine find_cells(pset, neighbors, dist, n)
+      use cg_leaves, only: leaves
+      use cg_list,   only: cg_list_element
+      use constants, only: xdim, ydim, zdim, ndims, LO, HI, CENTER
+      use domain,    only: dom
+      use grid_cont,  only: grid_container
+      use particle_types, only: particle_set
+
+      implicit none
+      type(cg_list_element), pointer :: cgl
+      type(grid_container), pointer :: cg
+      class(particle_set), intent(in)    :: pset   !< an object invoking the type-bound procedure
+      !integer(kind=4),     intent(in)    :: iv     !< index in cg%q array, where we want the particles to be projected
+      !real,                intent(in)    :: factor !< typically fpiG
+
+      integer, intent(in) :: n
+      integer :: p, cdim
+      
+      !integer(kind=8), dimension(ndims, LO:HI), intent(out) :: neighbors
+      !real(kind=8), dimension(ndims, LO:HI), intent(out) :: dist
+      integer(kind=8), dimension(n,ndims),intent(out) :: neighbors
+      real(kind=8), dimension(n,ndims), intent(out) :: dist
+      !real(kind=8), dimension(:,:), allocatable, intent(in) :: pos
+
+      integer(kind=8) :: cn, i, j, k
+      cgl => leaves%first
+
+      !n = ubound(pset%p, dim=1)
+      
+      !allocate(neighbors(n,ndims), dist(n,ndims))
+      !write(*,*) "ptypes: shape1(dist) ", shape(dist)
+      do while (associated(cgl))
+   
+         do p = lbound(pset%p, dim=1), ubound(pset%p, dim=1)
+            associate( &
+                  part  => pset%p(p), &
+                  idl   => cgl%cg%idl &
+            )
+               if (any(part%pos < cgl%cg%fbnd(:,LO)) .or. any(part%pos > cgl%cg%fbnd(:,HI))) cycle
+              ! write(*,*) xdim, zdim
+               do cdim = xdim, zdim
+                  if (dom%has_dir(cdim)) then
+                     cn = nint((part%pos(cdim) - cgl%cg%coord(CENTER, cdim)%r(1))*cgl%cg%idl(cdim)) + 1
+                     if (cgl%cg%coord(CENTER, cdim)%r(cn) > part%pos(cdim)) then
+                        neighbors(p, cdim) = cn - 1
+                     else
+                        neighbors(p,cdim) = cn
+                     endif
+                     !neighbors(HI, cdim) = neighbors(LO, cdim) + 1 !?
+                  else
+                     !ijkp(cdim, :) = 1
+                     neighbors(:,cdim) = 0
+                  endif
+                  if (part%pos(cdim) > 0.0) then
+                     dist(p, cdim) = abs(0.5* (cgl%cg%coord(CENTER, cdim)%r(neighbors(p, cdim)) + cgl%cg%coord(CENTER, cdim)%r(neighbors(p, cdim)+1) ) - part%pos(cdim))
+                  else
+                     dist(p, cdim) = abs(0.5 * (cgl%cg%coord(CENTER, cdim)%r(neighbors(p, cdim)) + cgl%cg%coord(CENTER, cdim)%r(neighbors(p, cdim)+1)) - part%pos(cdim))
+                  endif
+                  !write(*,*) "p=", p
+               enddo
+            end associate
+         enddo
+         cgl => cgl%nxt
+      enddo
+      open(unit=777, file='dist.dat', status='unknown',  position='append')
+      do i=1,n
+         write(777,*) i, dist(i,:), neighbors(i,:)
+      enddo
+      close(777)
+      
+      !write(*,*) "ptypes: dist maxloc", maxloc(dist)
+      !write(*,*) "ptypes: dist(max"
+   end subroutine find_cells
 
 
 
