@@ -1046,14 +1046,13 @@ contains
       real, dimension(n, ndims), intent(in) :: acc
       real, dimension(n) :: acc2
       real, intent(out)  :: a
-      
+
       acc2 = 0.0
-      
-      do i = 1, n
-         do j = 1, ndims
-            acc2(i) = acc2(i) + acc(i,j)**2
-         enddo
+
+      do i = 1, ndims
+            acc2(:) = acc2(:) + acc(:,i)**2
       enddo
+
       a = sqrt(maxval(acc2))
 
    end subroutine get_acc_mod
