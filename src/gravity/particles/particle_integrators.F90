@@ -178,7 +178,9 @@ contains
       use cg_leaves,    only: leaves
       use cg_list,      only: cg_list_element
       use grid_cont,    only: grid_container
-      use gravity,      only: grav_pot2acc_cic
+      !use gravity,      only: grav_pot2acc_cic2
+      !use particle_pub,      only: grav_pot2acc_cic2
+      
       
       implicit none 
       class(particle_set), intent(inout) :: pset  !< particle list
@@ -232,7 +234,7 @@ contains
       integer, dimension(:), allocatable :: n_cell
       real :: t_dia, t_out, t_end, einit, dt, t, dth, eta, eps, a, epot
       integer :: nsteps, n, ndim, lun_out, lun_err, i, j, k, nx, ny, nz, order
-      real :: eps2, xmin, xmax, ymin, ymax, zmin, zmax, n_orbit, tend, dx, dy, dz, ax, ay, az, axx, ayy, azz, energy, init_energy, d_energy, ang_momentum, init_ang_mom, d_ang_momentum, zero
+      real :: eps2, xmin, xmax, ymin, ymax, zmin, zmax, n_orbit, tend, dx, dy, dz, ax, ay, az,axx, ayy, azz, energy, init_energy, d_energy, ang_momentum, init_ang_mom, d_ang_momentum, zero
 
       procedure(df_dxi),pointer :: df_dx_p, df_dy_p, df_dz_p
       procedure(d2f_dxi_2),pointer :: d2f_dx2_p, d2f_dy2_p, d2f_dz2_p
@@ -251,7 +253,9 @@ contains
       allocate(mass(n), pos(n, ndims), vel(n, ndims), acc(n, ndims), vel_h(n, ndims), cells(n, ndims), mins(ndims), maxs(ndims), delta_cells(ndims), n_cell(ndims), d_particles(n,ndims))
       !write(*,*) "przed: grav_pot2acc_cic"
       
-      call grav_pot2acc_cic(neighb, dist, acc2, pset, n)
+      !call grav_pot2acc_cic2(neighb, dist, acc2, pset, n)
+      
+      
       
      ! write(*,*) "grav_pot2acc_cic"
       mass(:) = pset%p(:)%mass
@@ -268,16 +272,11 @@ contains
 
 
       mins(:) = dom%edge(:,1)
-      !mins=-3.0
+
       maxs(:) = dom%edge(:,2)
-      !maxs=3.0
+
       n_cell(:) = dom%n_d
-      !n_cell(1)=300
-      !n_cell(2)=300
-      !n_cell(3)=300
-      !write(*,*) "mins: ", mins
-      !write(*,*) "maxs: ", maxs
-      !write(*,*) "n_cell", n_cell
+
 
       zero = 0.0
       order = 4
@@ -286,7 +285,7 @@ contains
       eta = 1.0
       eps = 1.0e-6
       eps2 = 0.00
-
+     
 
 
       !alokacja potencjalu
@@ -330,7 +329,7 @@ contains
 
       !initial acceleration
       !call get_acc(cells, pos, acc, pot, n_cell, mins, delta_cells, n)
-
+      !call get_acc_mod(acc2,n,a)
 
       !timestep
       !dt = sqrt(2.0*eta*eps/a)            !variable
@@ -341,12 +340,15 @@ contains
       nsteps = 0
 
 
+      call get_acc2(neighb, dist, pset, acc2, cg, n)
       !main loop
       do while (t<t_end)
          !1.kick(dth)
          !vel_h(:,:) = vel
          !call kick(vel_h, acc2, dth, n) !velocity
+         !write(*,*) "1.pset%vel(1) (vel)= ",pset%p(1)%vel
          call kick2(pset, acc2,dth,n)
+         !write(*,*) "2.pset%vel(1) (vel_h)= ",pset%p(1)%vel
          !2.drift(dt)
          !call drift(pos, vel_h, dt, n) !position
          call drift2(pset,dt,n)
@@ -359,13 +361,16 @@ contains
          call find_cells(pset,neighb, dist, n)
         ! call cell_nr(pos, cells, mins, delta_cells, n)
          !write(*,*) "particle_integrators: grav_pot2acc_cics"
-         call grav_pot2acc_cic(neighb, dist, acc2, pset, n)
+         !call grav_pot2acc_cic2(neighb, dist, acc2, pset, n)
          !call get_acc(cells, pos, acc, pot, n_cell, mins, delta_cells, n)
-         !call get_acc_mod(acc, n, a)
+         call get_acc2(neighb, dist, pset, acc2, cg, n)
+         !call get_acc_mod(acc2, n, a)
          !4.kick(dth)
          !vel(:,:) = vel_h
          !call kick(vel, acc2, dth, n)   !velocity
+         
          call kick2(pset, acc2,dth,n)
+         !write(*,*) "3.pset%vel(1) (vel)= ",pset%p(1)%vel
          !5.t
          t = t + dt
          !6.dt		!dt[n+1]
@@ -376,19 +381,19 @@ contains
         ! d_ang_momentum = log(abs((get_ang_momentum(pos, vel, mass, n) - init_ang_mom)/init_ang_mom))
 
          do i = 1, n
-            write(lun_out, '(I3,1X,9(E13.6,1X))') i, mass(i), acc2 (i,:), pset%p(i)%pos, pset%p(i)%vel!, acc2(i,:)!, d_ang_momentum
+            write(lun_out, '(I3,1X,9(E13.6,1X))') i, mass(i),  pset%p(i)%pos, pset%p(i)%vel!, acc2(i,:)!, d_ang_momentum
          enddo
 
       end do
       
-      write(*,*), "Leapfrog: nsteps=", nsteps
+      write(*,*) "Leapfrog: nsteps=", nsteps
       
-      do ndim = xdim, zdim
-         pset%p(:)%pos(ndim) = pos(:, ndim)
-         pset%p(:)%vel(ndim) = vel(:, ndim)
-      enddo
+      !do ndim = xdim, zdim
+      !   pset%p(:)%pos(ndim) = pos(:, ndim)
+      !   pset%p(:)%vel(ndim) = vel(:, ndim)
+      !enddo
 
-      deallocate (mass, pos, vel, acc, vel_h, cells, mins, maxs, delta_cells, n_cell, d_particles)
+      deallocate (mass, pos, vel, acc, acc2, vel_h, cells, mins, maxs, delta_cells, n_cell, d_particles)
       close(lun_out)
       
       !return
@@ -513,6 +518,48 @@ contains
                   endif
          end subroutine check_ord
 
+
+   subroutine grav_pot2acc_cic2(neighbors, distances, acc, pset, n)
+      use constants, only: xdim, ydim, zdim, ndims, LO, HI
+      use cg_leaves,        only: leaves
+      use cg_list,          only: cg_list_element
+      use grid_cont,        only: grid_container
+      use particle_types, only: particle_set
+
+      implicit none
+      
+      type(cg_list_element), pointer :: cgl
+      type(grid_container), pointer :: cg
+      class(particle_set), intent(in) :: pset  !< particle list
+      
+      integer, intent(in) :: n
+      integer :: i
+      
+      integer(kind=8), dimension(n, ndims), intent(in) :: neighbors
+      real(kind=8), dimension(n, ndims), intent(in) :: distances
+      real(kind=8), dimension(n, ndims), intent(out) :: acc 
+
+      
+      cgl => leaves%first
+      do while (associated(cgl))
+         cg => cgl%cg
+        
+         
+         cgl => cgl%nxt
+      enddo
+      do i = 1, n
+         !write(*,*) "pot2acc_cic: i= ", i
+            acc(i,1) = (0.5/(cg%dx)**2)* ( (cg%dx-distances(i,1))*(cg%gpot(neighbors(i, 1)-1, neighbors(i, 2), neighbors(i, 3)) - cg%gpot(neighbors(i, 1)+1, neighbors(i, 2), neighbors(i, 3))) + (distances(i,1))*(cg%gpot(neighbors(i, 1)-2, neighbors(i, 2), neighbors(i, 3)) - cg%gpot(neighbors(i, 1), neighbors(i, 2), neighbors(i, 3))) )/pset%p(i)%mass
+            acc(i,2) = (0.5/(cg%dy)**2)* ( (cg%dy-distances(i,2))*(cg%gpot(neighbors(i, 1), neighbors(i, 2)-1, neighbors(i, 3)) - cg%gpot(neighbors(i, 1), neighbors(i, 2)+1, neighbors(i, 3))) + (distances(i,2))*(cg%gpot(neighbors(i, 1), neighbors(i, 2)-2, neighbors(i, 3)) - cg%gpot(neighbors(i, 1), neighbors(i, 2), neighbors(i, 3))) )/pset%p(i)%mass
+            acc(i,3) = (0.5/(cg%dz)**2)* ( (cg%dz-distances(i,3))*(cg%gpot(neighbors(i, 1), neighbors(i, 2), neighbors(i, 3)-1) - cg%gpot(neighbors(i, 1), neighbors(i, 2), neighbors(i, 3)+1)) + (distances(i,3))*(cg%gpot(neighbors(i, 1), neighbors(i, 2), neighbors(i, 3)-2) - cg%gpot(neighbors(i, 1), neighbors(i, 2), neighbors(i, 3))) )/pset%p(i)%mass
+            !write(*,*) i, distances(i, :)
+      enddo
+      !acc(2,:)=0.0
+      
+
+      
+   end subroutine grav_pot2acc_cic2
+   
          subroutine get_acc(cells, pos, acc, pot, n_cell, mins, delta_cells, n)
             use constants, only : ndims
             implicit none
@@ -553,6 +600,52 @@ contains
                   acc(:,3) = az
          end subroutine get_acc
 
+!---------------------------------
+         subroutine get_acc2(neighb, dist, pset, acc2, cg, n)
+            use constants, only : ndims
+            use cg_list,      only: cg_list_element
+            use grid_cont,    only: grid_container
+            use particle_types, only: particle_set
+            implicit none
+               class(particle_set), intent(in) :: pset  !< particle list
+               type(grid_container), pointer, intent(in) :: cg
+               integer :: i
+               real ::  dx_cell, dy_cell, dz_cell
+               integer, intent(in) :: n
+               integer(kind=8),dimension(n, ndims), intent(in) :: neighb
+               real(kind=8), dimension(n, ndims), intent(in) :: dist
+               real(kind=8),dimension(n, ndims),intent(out) :: acc2
+               real,dimension(n) :: ax, ay, az
+               
+                  dx_cell = cg%dx
+                  dy_cell = cg%dy
+                  dz_cell = cg%dz
+               
+               if (associated(cg)) then
+                  write(*,*) "get_acc2: ", d2f_dx2_o2_2(neighb, cg,dx_cell, n)
+               endif
+               
+                  
+
+
+                  ax = -( df_dx_o2_2(neighb, cg,dx_cell, n) + &
+                     d2f_dx2_o2_2(neighb, cg,dx_cell, n) * dist(:,1) + &
+                     d2f_dxdy_o2_2(neighb, cg,dx_cell, dy_cell, n) * dist(:,2) + &
+                     d2f_dxdz_o2_2(neighb, cg,dx_cell, dz_cell, n) * dist(:,3))
+                  ay = -( df_dy_o2_2(neighb, cg,dy_cell, n) + &
+                     d2f_dy2_o2_2(neighb, cg,dy_cell, n) * dist(:,2) + &
+                     d2f_dxdy_o2_2(neighb, cg,dx_cell, dy_cell, n) * dist(:,1) + &
+                     d2f_dydz_o2_2(neighb, cg,dy_cell, dz_cell, n) * dist(:,3))
+                  az = -( df_dz_o2_2(neighb, cg,dz_cell, n) + &
+                     d2f_dz2_o2_2(neighb, cg,dz_cell, n) * dist(:,3) + &
+                     d2f_dxdz_o2_2(neighb, cg,dx_cell, dz_cell, n) * dist(:,1) +&
+                     d2f_dydz_o2_2(neighb, cg,dy_cell, dz_cell, n) * dist(:,2))
+                  acc2(:,1) = ax
+                  acc2(:,2) = ay
+                  acc2(:,3) = az
+         end subroutine get_acc2
+!--------------------------------
+
          subroutine cell_nr(pos, cells, mins, delta_cells, n)
             use constants, only: ndims
             implicit none
@@ -587,6 +680,9 @@ contains
                   df_dx_o2(i) = ( pot(p+1, q, r) - pot(p-1, q, r) ) / (2.0*dx_cell)
                enddo
          end function df_dx_o2
+!---------------------------------
+
+!---------------------------------
 
          function df_dx_o4(cells, pot, n_cell, dx_cell, n)
             use constants, only: ndims
@@ -630,6 +726,10 @@ contains
                   df_dy_o2(i) = (pot(p, q+1, r) - pot(p, q-1, r) ) / (2.0*dy_cell)
                enddo
          end function df_dy_o2
+         
+!--------------------------------------
+
+!--------------------------------------
 
 
          function df_dy_o4(cells, pot, n_cell, dy_cell, n)
@@ -675,6 +775,9 @@ contains
                enddo
          end function df_dz_o2
 
+!--------------------------------------
+
+!--------------------------------------
 
          function df_dz_o4(cells, pot, n_cell, dz_cell, n)
             use constants, only: ndims
@@ -703,7 +806,7 @@ contains
             implicit none
                integer, intent(in) :: n
                integer,dimension(n, ndims),intent(in) :: cells
-               integer, dimension(ndims), intent(in):: n_cell
+               integer, dimension(ndims), intent(in) :: n_cell
                integer :: i, p, q, r
                real,dimension(n_cell(1), n_cell(2), n_cell(3)),intent(in) :: pot
                real,intent(in) :: dx_cell
@@ -718,6 +821,9 @@ contains
                   d2f_dx2_o2(i) = (pot(p+1, q, r) - 2.0*pot(p, q, r) + pot(p-1, q, r) ) / (dx_cell**2)
                enddo
          end function d2f_dx2_o2
+!------------------------------------------------
+
+!-------------------------------------------------
 
          function d2f_dx2_o4(cells, pot, n_cell, dx_cell, n)
             use constants, only: ndims
@@ -762,6 +868,10 @@ contains
                   d2f_dy2_o2(i) = ( pot(p, q+1, r) - 2.0*pot(p, q, r) + pot(p, q-1, r) ) / (dy_cell**2)
                enddo
          end function d2f_dy2_o2
+         
+!-------------------------------------------------------
+
+!-------------------------------------------------------
 
          function d2f_dy2_o4(cells, pot, n_cell, dy_cell, n)
             use constants, only: ndims
@@ -806,6 +916,10 @@ contains
                   d2f_dz2_o2(i) = ( pot(p, q, r+1) - 2.0*pot(p, q, r) + pot(p, q, r-1) ) / (dz_cell**2)
                enddo
          end function d2f_dz2_o2
+         
+!------------------------------------
+
+!------------------------------------
 
          function d2f_dz2_o4(cells, pot, n_cell, dz_cell, n)
             use constants, only: ndims
@@ -852,6 +966,9 @@ contains
                enddo
          end function d2f_dxdy_o2
 
+!------------------------------------------------------------------
+
+!------------------------------------------------------------------
 
          function d2f_dxdy_o4(cells, pot, n_cell, dx_cell, dy_cell, n)
             use constants, only: ndims
@@ -897,7 +1014,11 @@ contains
                   d2f_dxdz_o2(i) = ( pot(p+1, q, r+1) - pot(p+1, q, r-1) - &
                                  pot(p-1, q, r+1) + pot(p-1, q, r-1) ) / (4.0*dx_cell*dz_cell)
                enddo
-         end function d2f_dxdz_o2
+         end function 
+         
+!-------------------------------------
+
+!-------------------------------------
 
          function d2f_dxdz_o4(cells, pot, n_cell, dx_cell, dz_cell, n)
             use constants, only: ndims
@@ -945,6 +1066,10 @@ contains
                                  pot(p, q-1, r+1) + pot(p, q-1, r-1) ) / (4.0*dy_cell*dz_cell)
                enddo
          end function d2f_dydz_o2
+         
+!-------------------------------
+
+!-------------------------------
 
          function d2f_dydz_o4(cells, pot, n_cell, dy_cell, dz_cell, n)
             use constants, only: ndims
@@ -970,6 +1095,219 @@ contains
                enddo
          end function d2f_dydz_o4
 
+!-------funkcje sprawdzajace-----------------------------------------------
+!==========================================================================
+         function df_dx_o2_2(neighb, cg, dx_cell, n)
+            use constants, only: ndims
+            use grid_cont,  only: grid_container 
+            implicit none
+               type(grid_container), pointer, intent(in) :: cg
+               integer, intent(in) :: n
+               integer(kind=8),dimension(n, ndims),intent(in) :: neighb
+               !integer, dimension(ndims), intent(in):: n_cell
+               integer :: i, p, q, r
+               !real,dimension(n_cell(1), n_cell(2), n_cell(3)),intent(in) :: cg%gpot
+               real,intent(in) :: dx_cell
+               real,dimension(n),target :: df_dx_o2_2
+
+               do i=1, n, 1
+                  p = neighb(i, 1)
+                  q = neighb(i, 2)
+                  r = neighb(i, 3)
+
+                  !o(R^2)
+                  df_dx_o2_2(i) = ( cg%gpot(p+1, q, r) - cg%gpot(p-1, q, r) ) / (2.0*dx_cell)
+               enddo
+         end function df_dx_o2_2
+
+         function df_dy_o2_2(neighb, cg, dy_cell, n)
+            use constants, only: ndims
+            use grid_cont,  only: grid_container 
+            implicit none
+               type(grid_container), pointer, intent(in) :: cg
+               integer, intent(in) :: n
+               integer(kind=8),dimension(n, ndims),intent(in) :: neighb
+               !integer, dimension(ndims), intent(in):: n_cell
+               integer :: i, p, q, r
+               !real,dimension(n_cell(1), n_cell(2), n_cell(3)),intent(in) :: cg%gpot
+               real,intent(in) :: dy_cell
+               real,dimension(n),target ::df_dy_o2_2
+
+               do i = 1, n, 1
+                  p = neighb(i, 1)
+                  q = neighb(i, 2)
+                  r = neighb(i, 3)
+
+                  !o(R^2)
+                  df_dy_o2_2(i) = (cg%gpot(p, q+1, r) - cg%gpot(p, q-1, r) ) / (2.0*dy_cell)
+               enddo
+         end function df_dy_o2_2
+
+      function df_dz_o2_2(neighb, cg, dz_cell, n)
+            use constants, only: ndims
+            use grid_cont,  only: grid_container 
+            implicit none
+               type(grid_container), pointer, intent(in) :: cg
+               integer, intent(in) :: n
+               integer(kind=8),dimension(n, ndims),intent(in) :: neighb
+               !integer, dimension(ndims), intent(in):: n_cell
+               integer :: i, p, q, r
+               !real,dimension(n_cell(1), n_cell(2), n_cell(3)),intent(in) :: cg%gpot
+               real,intent(in) :: dz_cell
+               real, dimension(n), target :: df_dz_o2_2
+
+               do i = 1, n, 1
+                  p = neighb(i, 1)
+                  q = neighb(i, 2)
+                  r = neighb(i, 3)
+
+                  !o(R^2)
+                  df_dz_o2_2(i) = ( cg%gpot(p, q, r+1) - cg%gpot(p, q, r-1) ) / (2.0*dz_cell)
+               enddo
+         end function df_dz_o2_2
+
+         function d2f_dx2_o2_2(neighb, cg, dx_cell, n)
+            use constants, only: ndims
+            use grid_cont,  only: grid_container
+            implicit none
+               type(grid_container), pointer, intent(in) :: cg
+               integer, intent(in) :: n
+               integer(kind=8),dimension(n, ndims),intent(in) :: neighb
+               !integer, dimension(ndims), intent(in) :: n_cell
+               integer :: i, p, q, r
+               !real,dimension(n_cell(1), n_cell(2), n_cell(3)),intent(in) :: cg
+               real,intent(in) :: dx_cell
+               real,dimension(n),target :: d2f_dx2_o2_2
+
+               do i = 1, n, 1
+                  p = neighb(i, 1)
+                  q = neighb(i, 2)
+                  r = neighb(i, 3)
+
+                  !o(R^2)
+                  d2f_dx2_o2_2(i) = (cg%gpot(p+1, q, r) - 2.0*cg%gpot(p, q, r) + cg%gpot(p-1, q, r) ) / (dx_cell**2)
+               enddo
+         end function d2f_dx2_o2_2
+
+         function d2f_dy2_o2_2(neighb, cg, dy_cell, n)
+            use constants, only: ndims
+            use grid_cont,  only: grid_container
+            implicit none
+               type(grid_container), pointer, intent(in) :: cg
+               integer, intent(in) :: n
+               integer(kind=8),dimension(n, ndims),intent(in) :: neighb
+               !integer, dimension(ndims), intent(in):: n_cell
+               integer :: i, p, q, r
+               !real,dimension(n_cell(1), n_cell(2), n_cell(3)),intent(in) :: cg%gpot
+               real,intent(in) :: dy_cell
+               real,dimension(n),target :: d2f_dy2_o2_2
+
+               do i = 1, n, 1
+                  p = neighb(i, 1)
+                  q = neighb(i, 2)
+                  r = neighb(i, 3)
+
+                  !o(R^2)
+                  d2f_dy2_o2_2(i) = ( cg%gpot(p, q+1, r) - 2.0*cg%gpot(p, q, r) + cg%gpot(p, q-1, r) ) / (dy_cell**2)
+               enddo
+         end function d2f_dy2_o2_2
+
+         function d2f_dz2_o2_2(neighb, cg, dz_cell, n)
+            use constants, only: ndims
+            use grid_cont,  only: grid_container
+            implicit none
+               type(grid_container), pointer, intent(in) :: cg
+               integer, intent(in) :: n
+               integer(kind=8),dimension(n, ndims),intent(in) :: neighb
+               !integer, dimension(ndims), intent(in) :: n_cell
+               integer :: i, p, q, r
+               !real,dimension(n_cell(1), n_cell(2), n_cell(3)),intent(in) :: cg%gpot
+               real,intent(in) :: dz_cell
+               real,dimension(n),target :: d2f_dz2_o2_2
+
+               do i = 1, n, 1
+                  p = neighb(i, 1)
+                  q = neighb(i, 2)
+                  r = neighb(i, 3)
+
+                  !o(R^2)
+                  d2f_dz2_o2_2(i) = ( cg%gpot(p, q, r+1) - 2.0*cg%gpot(p, q, r) + cg%gpot(p, q, r-1) ) / (dz_cell**2)
+               enddo
+         end function d2f_dz2_o2_2
+
+         function d2f_dxdy_o2_2(neighb, cg, dx_cell, dy_cell, n)
+            use constants, only: ndims
+            use grid_cont,  only: grid_container
+            implicit none
+               type(grid_container), pointer, intent(in) :: cg
+               integer, intent(in) :: n
+               integer(kind=8),dimension(n, ndims),intent(in) :: neighb
+               !integer, dimension(ndims), intent(in) :: n_cell
+               integer :: i, p, q, r
+               !real,dimension(n_cell(1), n_cell(2), n_cell(3)),intent(in) :: cg%gpot
+               real,intent(in) :: dx_cell, dy_cell
+               real,dimension(n),target :: d2f_dxdy_o2_2
+
+               do i = 1, n, 1
+                  p = neighb(i, 1)
+                  q = neighb(i, 2)
+                  r = neighb(i, 3)
+
+                  !o(R^2)
+                  d2f_dxdy_o2_2(i) = ( cg%gpot(p+1, q+1, r) - cg%gpot(p+1, q-1, r) - &
+                              cg%gpot(p-1, q+1, r) + cg%gpot(p-1, q-1, r) ) / (4.0*dx_cell*dy_cell)
+               enddo
+         end function d2f_dxdy_o2_2
+
+         function d2f_dxdz_o2_2(neighb, cg, dx_cell, dz_cell, n)
+            use constants, only: ndims
+            use grid_cont,  only: grid_container
+            implicit none
+               type(grid_container), pointer, intent(in) :: cg
+               integer, intent(in) :: n
+               integer(kind=8),dimension(n, ndims),intent(in) :: neighb
+               !integer, dimension(ndims), intent(in) :: n_cell
+               integer :: i, p, q, r
+               !real,dimension(n_cell(1), n_cell(2), n_cell(3)),intent(in) :: cg%gpot
+               real,intent(in) :: dx_cell, dz_cell
+               real,dimension(n),target :: d2f_dxdz_o2_2
+
+               do i = 1, n, 1
+                  p = neighb(i, 1)
+                  q = neighb(i, 2)
+                  r = neighb(i, 3)
+
+                  !o(R^2)
+                  d2f_dxdz_o2_2(i) = ( cg%gpot(p+1, q, r+1) - cg%gpot(p+1, q, r-1) - &
+                                 cg%gpot(p-1, q, r+1) + cg%gpot(p-1, q, r-1) ) / (4.0*dx_cell*dz_cell)
+               enddo
+         end function d2f_dxdz_o2_2
+
+         function d2f_dydz_o2_2(neighb, cg, dy_cell, dz_cell, n)
+            use constants, only: ndims
+            use grid_cont,  only: grid_container
+            implicit none
+               type(grid_container), pointer, intent(in) :: cg
+               integer, intent(in) :: n
+               integer(kind=8),dimension(n, ndims),intent(in) :: neighb
+               !integer, dimension(ndims), intent(in) :: n_cell
+               integer :: i, p, q, r
+               !real,dimension(n_cell(1), n_cell(2), n_cell(3)),intent(in) :: cg%gpot
+               real,intent(in) :: dy_cell, dz_cell
+               real,dimension(n),target :: d2f_dydz_o2_2
+
+               do i = 1, n, 1
+                  p = neighb(i, 1)
+                  q = neighb(i, 2)
+                  r = neighb(i, 3)
+
+                  !o(R^2)
+                  d2f_dydz_o2_2(i) = ( cg%gpot(p, q+1, r+1) - cg%gpot(p, q+1, r-1) - &
+                                 cg%gpot(p, q-1, r+1) + cg%gpot(p, q-1, r-1) ) / (4.0*dy_cell*dz_cell)
+               enddo
+         end function d2f_dydz_o2_2
+!==========================================================================
+!-------koniec funkcji sprawdzajacych--------------------------------------
          function get_ang_momentum(pos, vel, mass, n)
             use constants, only : ndims
             implicit none
@@ -1097,26 +1435,29 @@ contains
                   idl   => cgl%cg%idl &
             )
                if (any(part%pos < cgl%cg%fbnd(:,LO)) .or. any(part%pos > cgl%cg%fbnd(:,HI))) cycle
-              ! write(*,*) xdim, zdim
+              
                do cdim = xdim, zdim
                   if (dom%has_dir(cdim)) then
                      cn = nint((part%pos(cdim) - cgl%cg%coord(CENTER, cdim)%r(1))*cgl%cg%idl(cdim)) + 1
                      if (cgl%cg%coord(CENTER, cdim)%r(cn) > part%pos(cdim)) then
-                        neighbors(p, cdim) = cn - 1
+                        neighbors(p, cdim) = cn! - 1 !tu wazne
                      else
                         neighbors(p,cdim) = cn
                      endif
                      !neighbors(HI, cdim) = neighbors(LO, cdim) + 1 !?
                   else
-                     !ijkp(cdim, :) = 1
+                     
                      neighbors(:,cdim) = 0
                   endif
-                  if (part%pos(cdim) > 0.0) then
-                     dist(p, cdim) = abs(0.5* (cgl%cg%coord(CENTER, cdim)%r(neighbors(p, cdim)) + cgl%cg%coord(CENTER, cdim)%r(neighbors(p, cdim)+1) ) - part%pos(cdim))
-                  else
-                     dist(p, cdim) = abs(0.5 * (cgl%cg%coord(CENTER, cdim)%r(neighbors(p, cdim)) + cgl%cg%coord(CENTER, cdim)%r(neighbors(p, cdim)+1)) - part%pos(cdim))
-                  endif
+                  !if (part%pos(cdim) > 0.0) then
+                     !dist(p, cdim) = abs(0.5* (cgl%cg%coord(CENTER, cdim)%r(neighbors(p, cdim)) + cgl%cg%coord(CENTER, cdim)%r(neighbors(p, cdim)+1) ) - part%pos(cdim)) !tu wazne
+                     dist(p, cdim) = (part%pos(cdim) - cgl%cg%coord(CENTER, cdim)%r(neighbors(p, cdim)))
+                     !write(*,*)"pi:", p, cdim, neighbors(p, cdim), cgl%cg%coord(CENTER, cdim)%r(neighbors(p, cdim)), part%pos(cdim), dist(p,cdim)
+                  !else
+                  !   dist(p, cdim) = abs(0.5 * (cgl%cg%coord(CENTER, cdim)%r(neighbors(p, cdim)) + cgl%cg%coord(CENTER, cdim)%r(neighbors(p, cdim)+1)) - part%pos(cdim))
+                  !endif
                   !write(*,*) "p=", p
+                  !write(*,*) "pi: ", cdim, cgl%cg%coord(CENTER, cdim)%r(1)
                enddo
             end associate
          enddo
