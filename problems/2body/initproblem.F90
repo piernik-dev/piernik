@@ -89,6 +89,7 @@ contains
                            cg%u(fl%imx,i,j,k) = 0.0
                            cg%u(fl%imy,i,j,k) = 0.0
                            cg%u(fl%imz,i,j,k) = 0.0
+                           !cg%u(fl%idn,32,32,32) = 9000.0
                         end associate
                      enddo
                   enddo
@@ -96,12 +97,13 @@ contains
             end associate
             cgl => cgl%nxt
          enddo
+         
       enddo
 
 
       e = 0.9
 
-      n_particles = 2
+      n_particles = 1
       write(*,*) "Particles: ", n_particles
       dtheta = pi2/n_particles
       write(*,*) "dtheta: ", dtheta
@@ -113,6 +115,9 @@ contains
       vel_init = velocities(pos_init, e)
 
       if (first_run) then
+      !call pset%add(1.0, [ 0.9700436, -0.24308753, 0.0], [ 0.466203685, 0.43236573, 0.0], [0.0, 0.0, 0.0])
+      !call pset%add(1.0, [-0.9700436, 0.24308753, 0.0], [ 0.466203685, 0.43236573, 0.0], [0.0, 0.0, 0.0])
+      !call pset%add(1.0, [ 0.0, 0.0, 0.0], [-0.932407370, -0.86473146, 0.0], [0.0, 0.0, 0.0] )
          do i = 1, n_particles, 1
             
             call pset%add(1.0, pos_init, vel_init, [0.0, 0.0, 0.0] )
@@ -120,6 +125,7 @@ contains
             vel_init = rotate(dtheta, vel_init)
             
          enddo
+         call pset%add(10.0,[0.0,0.0,0.0],[0.0,0.0,0.0],[0.0,0.0,0.0])
          !call printinfo('To see results type: gnuplot -p -e ''plot "nbody_out.log" u 2:3'' ')
          first_run = .false.
          write(*,*) "Obliczono pozycje czastek "
