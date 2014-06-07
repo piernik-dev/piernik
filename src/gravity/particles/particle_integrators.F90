@@ -1408,25 +1408,19 @@ contains
       type(cg_list_element), pointer :: cgl
       type(grid_container), pointer :: cg
       class(particle_set), intent(in)    :: pset   !< an object invoking the type-bound procedure
-      !integer(kind=4),     intent(in)    :: iv     !< index in cg%q array, where we want the particles to be projected
-      !real,                intent(in)    :: factor !< typically fpiG
+
 
       integer, intent(in) :: n
       integer :: p, cdim
       
-      !integer(kind=8), dimension(ndims, LO:HI), intent(out) :: neighbors
-      !real(kind=8), dimension(ndims, LO:HI), intent(out) :: dist
       integer(kind=8), dimension(n,ndims),intent(out) :: neighbors
       real(kind=8), dimension(n,ndims), intent(out) :: dist
-      !real(kind=8), dimension(:,:), allocatable, intent(in) :: pos
+
 
       integer(kind=8) :: cn, i, j, k
       cgl => leaves%first
 
-      !n = ubound(pset%p, dim=1)
       
-      !allocate(neighbors(n,ndims), dist(n,ndims))
-      !write(*,*) "ptypes: shape1(dist) ", shape(dist)
       do while (associated(cgl))
    
          do p = lbound(pset%p, dim=1), ubound(pset%p, dim=1)
