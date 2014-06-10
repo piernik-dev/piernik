@@ -248,7 +248,8 @@ contains
       allocate(neighb(n, ndims), dist(n, ndims), acc2(n, ndims))
       !
       !call pset%find_cells(neighb, dist)
-      call find_cells(pset,neighb, dist, n)
+      !call find_cells(pset,neighb, dist, n)
+      
       !write(*,*) "call find_cells"
       allocate(mass(n), pos(n, ndims), vel(n, ndims), acc(n, ndims), vel_h(n, ndims), cells(n, ndims), mins(ndims), maxs(ndims), delta_cells(ndims), n_cell(ndims), d_particles(n,ndims))
       !write(*,*) "przed: grav_pot2acc_cic"
@@ -276,18 +277,18 @@ contains
       maxs(:) = dom%edge(:,2)
 
       n_cell(:) = dom%n_d
-
+      write(*,*) "mins= ", mins
 
       zero = 0.0
       order = 4
 
 
       eta = 1.0
-      eps = 1.0e-6
+      eps = 5.0e-6
       eps2 = 0.00
      
 
-
+      !write(*,*) "int(1.3)=",int(1.3), "int(-1.3)=", int(-1.3)
       !alokacja potencjalu
       !allocate( pot(n_cell(1), n_cell(2), n_cell(3)) )
       !write(*,*) "Zaalokowano potencjal"
@@ -319,6 +320,9 @@ contains
       enddo
       close(88)
 !stop
+      
+      call cell_nr2(pset, neighb, dist, mins, cg, n)
+      call get_acc2(neighb, dist, pset, acc2, cg, n)
       !init_ang_mom = get_ang_momentum(pos, vel, mass, n)
 
       !call cell_nr(pos, cells, mins, delta_cells, n)
@@ -329,18 +333,18 @@ contains
 
       !initial acceleration
       !call get_acc(cells, pos, acc, pot, n_cell, mins, delta_cells, n)
-      !call get_acc_mod(acc2,n,a)
+      call get_acc_mod(acc2,n,a)
 
       !timestep
-      !dt = sqrt(2.0*eta*eps/a)            !variable
-      dt = 0.001                            !constant
+      dt = sqrt(2.0*eta*eps/a)            !variable
+      !dt = 0.001                            !constant
       dth = dt/2.0
       
 
       nsteps = 0
 
 
-      call get_acc2(neighb, dist, pset, acc2, cg, n)
+      
       !main loop
       do while (t<t_end)
          !1.kick(dth)
@@ -358,13 +362,14 @@ contains
          !3.acceleration + |a|
          !write(*,*) "particle_integrators: call find_cells"
          !call pset%find_cells(neighb, dist)
-         call find_cells(pset,neighb, dist, n)
+         !call find_cells(pset,neighb, dist, n)
+         call cell_nr2(pset, neighb, dist, mins, cg, n)
         ! call cell_nr(pos, cells, mins, delta_cells, n)
          !write(*,*) "particle_integrators: grav_pot2acc_cics"
          !call grav_pot2acc_cic2(neighb, dist, acc2, pset, n)
          !call get_acc(cells, pos, acc, pot, n_cell, mins, delta_cells, n)
          call get_acc2(neighb, dist, pset, acc2, cg, n)
-         !call get_acc_mod(acc2, n, a)
+         call get_acc_mod(acc2, n, a)
          !4.kick(dth)
          !vel(:,:) = vel_h
          !call kick(vel, acc2, dth, n)   !velocity
@@ -374,14 +379,14 @@ contains
          !5.t
          t = t + dt
          !6.dt		!dt[n+1]
-         !dt	= sqrt(2.0*eta*eps/a)
+         dt	= sqrt(2.0*eta*eps/a)
          !7.dth
-         !dth =	0.5*dt
+         dth =	0.5*dt
          nsteps = nsteps + 1
         ! d_ang_momentum = log(abs((get_ang_momentum(pos, vel, mass, n) - init_ang_mom)/init_ang_mom))
 
          do i = 1, n
-            write(lun_out, '(I3,1X,9(E13.6,1X))') i, mass(i),  pset%p(i)%pos, pset%p(i)%vel!, acc2(i,:)!, d_ang_momentum
+            write(lun_out, '(I3,1X,9(E13.6,1X))') i, mass(i),  pset%p(i)%pos, pset%p(i)%vel, acc2(i,:)!, d_ang_momentum
          enddo
 
       end do
@@ -621,9 +626,9 @@ contains
                   dy_cell = cg%dy
                   dz_cell = cg%dz
                
-               if (associated(cg)) then
-                  write(*,*) "get_acc2: ", d2f_dx2_o2_2(neighb, cg,dx_cell, n)
-               endif
+               !if (associated(cg)) then
+                !  write(*,*) "get_acc2: ", d2f_dx2_o2_2(neighb, cg,dx_cell, n)
+               !endif
                
                   
 
@@ -644,7 +649,7 @@ contains
                   acc2(:,2) = ay
                   acc2(:,3) = az
                   !druga czastka sie nie rusza
-                  acc2(2,:)=0.0
+                  !acc2(2,:)=0.0
          end subroutine get_acc2
 !--------------------------------
 
@@ -661,6 +666,41 @@ contains
                   cells(:,i) = int( (pos(:,i) - mins(i) - 0.5*delta_cells(i)) / delta_cells(i) ) + 1
                enddo
          end subroutine cell_nr
+         
+         subroutine cell_nr2(pset, neighb, dist, mins, cg, n)
+            use constants, only: ndims
+            use grid_cont,  only: grid_container
+            implicit none
+               class(particle_set), intent(in) :: pset  !< particle list
+               type(grid_container), pointer, intent(in) :: cg
+               integer :: i, j
+               integer, intent(in) :: n
+               integer(kind=8),dimension(n, ndims),intent(out) :: neighb
+               real(kind=8),dimension(n, ndims),intent(out) :: dist
+               !real,dimension(n, ndims),intent(in) :: pos
+               real, dimension(ndims), intent(in)  :: mins
+               real, dimension(ndims) :: delta_cells
+               delta_cells(1)=cg%dx
+               delta_cells(2)=cg%dy
+               delta_cells(3)=cg%dz
+               !write(*,*) "delta_cells=", delta_cells
+
+               do i=1, n
+                  do j=1, ndims
+                     neighb(i,j) = int( (pset%p(i)%pos(j) - mins(j) ) / delta_cells(j) ) + 1
+                  enddo
+               enddo
+               
+               do i = 1, n
+                     dist(i,:) =  pset%p(i)%pos - (mins+neighb(i,:) * delta_cells - 0.5*delta_cells )
+               enddo
+               
+               open(unit=777, file='dist.dat', status='unknown',  position='append')
+                  do i=1,n
+                     write(777,*) i, dist(i,:), neighb(i,:)
+                  enddo
+               close(777)
+         end subroutine cell_nr2
 
          function df_dx_o2(cells, pot, n_cell, dx_cell, n)
             use constants, only: ndims
