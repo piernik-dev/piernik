@@ -85,11 +85,10 @@ contains
                   do j = cg%lhn(ydim,LO), cg%lhn(ydim,HI)
                      do i = cg%lhn(xdim,LO), cg%lhn(xdim,HI)
                         associate( fl => flind%all_fluids(p)%fl )
-                           cg%u(fl%idn,i,j,k) = 1.0
+                           cg%u(fl%idn,i,j,k) = 1.0e-8
                            cg%u(fl%imx,i,j,k) = 0.0
                            cg%u(fl%imy,i,j,k) = 0.0
                            cg%u(fl%imz,i,j,k) = 0.0
-                           !cg%u(fl%idn,32,32,32) = 9000.0
                         end associate
                      enddo
                   enddo
@@ -101,14 +100,14 @@ contains
       enddo
 
 
-      e = 0.1
+      e = 0.01
 
       n_particles = 1
       write(*,*) "Particles: ", n_particles
       dtheta = pi2/n_particles
       write(*,*) "dtheta: ", dtheta
 
-      pos_init(1) = 1.0
+      pos_init(1) = 2.0
       pos_init(2) = 0.0
       pos_init(3) = 0.0
       
@@ -118,15 +117,16 @@ contains
       !call pset%add(1.0, [ 0.9700436, -0.24308753, 0.0], [ 0.466203685, 0.43236573, 0.0], [0.0, 0.0, 0.0])
       !call pset%add(1.0, [-0.9700436, 0.24308753, 0.0], [ 0.466203685, 0.43236573, 0.0], [0.0, 0.0, 0.0])
       !call pset%add(1.0, [ 0.0, 0.0, 0.0], [-0.932407370, -0.86473146, 0.0], [0.0, 0.0, 0.0] )
-         do i = 1, n_particles, 1
+         !do i = 1, n_particles, 1
             
-            call pset%add(1.0, pos_init, vel_init, [0.0, 0.0, 0.0] )
-            !call pset%add(1.0, [1.0,0.0,0.0], [0.0,3.3622,0.0], [0.0, 0.0, 0.0] )
-            pos_init = positions(dtheta, pos_init)
-            vel_init = rotate(dtheta, vel_init)
+            !call pset%add(1.0, pos_init, vel_init, [0.0, 0.0, 0.0] )
+            !call pset%add(0.00001, [2.0,0.0,0.0], [0.0,0.5,0.0], [0.0, 0.0, 0.0] )
+            call pset%add(1.0, [2.0,0.0,0.0], [0.0,0.707106781,0.0], [0.0, 0.0, 0.0] )
+            !pos_init = positions(dtheta, pos_init)
+            !vel_init = rotate(dtheta, vel_init)
             
-         enddo
-         call pset%add(20.0,[0.0,0.0,0.0],[0.0,0.0,0.0],[0.0,0.0,0.0])
+         !enddo
+         !call pset%add(1.0,[0.0,0.0,0.0],[0.0,0.0,0.0],[0.0,0.0,0.0])
          !call printinfo('To see results type: gnuplot -p -e ''plot "nbody_out.log" u 2:3'' ')
          first_run = .false.
          write(*,*) "Obliczono pozycje czastek "
@@ -149,7 +149,7 @@ contains
          implicit none
             real, dimension(3) :: pos_init, velocities
             real :: e, r, vx, vy
-            real, parameter :: mu = 10.0
+            real, parameter :: mu = 1.0
             
             r = sqrt(pos_init(1)**2 + pos_init(2)**2 + pos_init(3)**2)
             vx = 0.0

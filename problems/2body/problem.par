@@ -1,17 +1,17 @@
  $BASE_DOMAIN
-    n_d = 20, 20, 20
+    n_d = 30, 30, 30
     bnd_xl = 'per'
     bnd_xr = 'per'
     bnd_yl = 'per'
     bnd_yr = 'per'
     bnd_zl = 'per'
     bnd_zr = 'per'
-    xmin   =-2.0
-    xmax   = 2.0
-    ymin   =-2.0
-    ymax   = 2.0
-    zmin   =-2.0
-    zmax   = 2.0
+    xmin   =-3.0
+    xmax   = 3.0
+    ymin   =-3.0
+    ymax   = 3.0
+    zmin   =-3.0
+    zmax   = 3.0
  /
 
  $MPI_BLOCKS
@@ -27,8 +27,8 @@
  /
 
  $END_CONTROL
-    tend   = 20.0
-    nend   = 1000
+    tend   = 80.0
+    nend   = 6000
  /
 
  $OUTPUT_CONTROL
@@ -45,8 +45,8 @@
  /
 
  $FLUID_NEUTRAL
- cs_iso = 30.0
- selfgrav = .true.
+ cs_iso = 5.0
+ !selfgrav = .true.
  /
 
  $NUMERICAL_SETUP
@@ -78,6 +78,6 @@
  $PARTICLES
    !time_integrator = 'hermit4'
    time_integrator = 'leapfrog2'
-   interpolation_scheme = 'cic'
+   !interpolation_scheme = 'cic'
    !interpolation_scheme = 'tsc'
  /
