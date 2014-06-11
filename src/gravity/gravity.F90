@@ -41,7 +41,7 @@ module gravity
    implicit none
 
    private
-   public :: init_grav, init_grav_ext, grav_accel, source_terms_grav, grav_pot2accel, grav_pot_3d, grav_type, get_gprofs, grav_accel2pot, sum_potential, manage_grav_pot_3d, update_gp, grav_pot2acc_cic
+   public :: init_grav, init_grav_ext, grav_accel, source_terms_grav, grav_pot2accel, grav_pot_3d, grav_type, get_gprofs, grav_accel2pot, sum_potential, manage_grav_pot_3d, update_gp
    public :: r_gc, ptmass, ptm_x, ptm_y, ptm_z, r_smooth, nsub, tune_zeq, tune_zeq_bnd, r_grav, n_gravr, user_grav, gprofs_target, ptm2_x
 
    integer, parameter         :: gp_stat_len   = 9
@@ -1059,43 +1059,5 @@ contains
 
    end subroutine grav_accel2pot
 
-   subroutine grav_pot2acc_cic(neighbors, distances, acc, n)
-      use constants, only: xdim, ydim, zdim, ndims, LO, HI
-      use cg_leaves,        only: leaves
-      use cg_list,          only: cg_list_element
-      use grid_cont,        only: grid_container
-
-      implicit none
-      type(cg_list_element), pointer :: cgl
-      type(grid_container), pointer :: cg
-      
-      integer, intent(in) :: n
-      integer :: i
-      
-      integer(kind=8), dimension(n, ndims), intent(in) :: neighbors
-      real(kind=8), dimension(n, ndims), intent(in) :: distances
-      real(kind=8), dimension(n, ndims), intent(out) :: acc 
-     ! write(*,*) "gravity: shape(neighbors,acc,dist): ",shape(neighbors),shape(acc),shape(distances)
-
-      !write(*,*) "pot2acc_cic: n= ", n
-      
-      cgl => leaves%first
-      do while (associated(cgl))
-         cg => cgl%cg
-         do i = 1, n
-            acc(i,1) = (-cg%gpot(neighbors(i, 1) + 1, neighbors(i, 2), neighbors(i, 3)) + cg%gpot(neighbors(i, 1), neighbors(i, 2), neighbors(i, 3))) * distances(i, 1)/cg%dx
-            acc(i,2) = (-cg%gpot(neighbors(i, 1), neighbors(i, 2) + 1, neighbors(i, 3)) + cg%gpot(neighbors(i, 1), neighbors(i, 2), neighbors(i, 3))) * distances(i, 2)/cg%dy
-            acc(i,3) = (-cg%gpot(neighbors(i, 1), neighbors(i, 2), neighbors(i, 3) + 1) + cg%gpot(neighbors(i, 1), neighbors(i, 2), neighbors(i, 3))) * distances(i, 3)/cg%dz
-         enddo
-         cgl => cgl%nxt
-      enddo
-      !write(*,*) "gravity: shape(gpot): ",shape(cg%gpot)
-      !write(*,*) "gravity: przed petla
-      !write(*,*) "dx,dy,dz=",cg%dx,cg%dy,cg%dx
-      
-      
-
-      
-   end subroutine grav_pot2acc_cic
 
 end module gravity

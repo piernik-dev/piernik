@@ -501,7 +501,7 @@ contains
       !integer(kind=4),     intent(in)    :: iv     !< index in cg%q array, where we want the particles to be projected
       !real,                intent(in)    :: factor !< typically fpiG
 
-      !type(cg_list_element), pointer :: cgl
+    
       integer :: p, cdim
       
       !integer(kind=8), dimension(ndims, LO:HI), intent(out) :: neighbors
@@ -516,6 +516,7 @@ contains
       n = ubound(this%p, dim=1)
       
       allocate(neighbors(n,ndims), dist(n,ndims))
+      !write(*,*) "ptypes: shape1(dist) ", shape(dist)
       do while (associated(cgl))
    
          do p = lbound(this%p, dim=1), ubound(this%p, dim=1)
@@ -527,11 +528,11 @@ contains
               ! write(*,*) xdim, zdim
                do cdim = xdim, zdim
                   if (dom%has_dir(cdim)) then
-                     cn = nint((part%pos(cdim) - cgl%cg%coord(CENTER, cdim)%r(1))*cgl%cg%idl(cdim)) + 1
+                     cn = nint((part%pos(cdim) - cgl%cg%coord(CENTER, cdim)%r(1)) * cgl%cg%idl(cdim)) + 1
                      if (cgl%cg%coord(CENTER, cdim)%r(cn) > part%pos(cdim)) then
                         neighbors(p, cdim) = cn - 1
                      else
-                        neighbors(p,cdim) = cn 
+                        neighbors(p,cdim) = cn
                      endif
                      neighbors(HI, cdim) = neighbors(LO, cdim) + 1 !?
                   else
@@ -549,11 +550,9 @@ contains
          enddo
          cgl => cgl%nxt
       enddo
-      !do p = lbound(this%p, dim=1), ubound(this%p, dim=1)
-         !do i=xdim,zdim
-          !  write(*,*) p," : ",dist(:,p)
-         !enddo
-      !enddo
+      !write(*,*) "ptypes: dist max min", maxval(dist), minval(dist)
+      !write(*,*) "ptypes: dist maxloc", maxloc(dist)
+      !write(*,*) "ptypes: dist(max"
    end subroutine find_cells
 
 end module particle_types

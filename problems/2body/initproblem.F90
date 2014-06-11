@@ -70,7 +70,7 @@ contains
       implicit none
 
       integer                          :: i, j, k, p, n_particles
-      real                              :: x, y, z, dtheta, e
+      real                              :: dtheta, e
       real,dimension(3)                :: pos_init, vel_init
       real,parameter                   :: pi2=6.283185307
       logical,save                     :: first_run = .true.
@@ -101,7 +101,7 @@ contains
       enddo
 
 
-      e = 0.9
+      e = 0.1
 
       n_particles = 1
       write(*,*) "Particles: ", n_particles
@@ -121,11 +121,12 @@ contains
          do i = 1, n_particles, 1
             
             call pset%add(1.0, pos_init, vel_init, [0.0, 0.0, 0.0] )
+            !call pset%add(1.0, [1.0,0.0,0.0], [0.0,3.3622,0.0], [0.0, 0.0, 0.0] )
             pos_init = positions(dtheta, pos_init)
             vel_init = rotate(dtheta, vel_init)
             
          enddo
-         call pset%add(10.0,[0.0,0.0,0.0],[0.0,0.0,0.0],[0.0,0.0,0.0])
+         call pset%add(20.0,[0.0,0.0,0.0],[0.0,0.0,0.0],[0.0,0.0,0.0])
          !call printinfo('To see results type: gnuplot -p -e ''plot "nbody_out.log" u 2:3'' ')
          first_run = .false.
          write(*,*) "Obliczono pozycje czastek "
@@ -148,7 +149,7 @@ contains
          implicit none
             real, dimension(3) :: pos_init, velocities
             real :: e, r, vx, vy
-            real, parameter :: mu = 1.0
+            real, parameter :: mu = 10.0
             
             r = sqrt(pos_init(1)**2 + pos_init(2)**2 + pos_init(3)**2)
             vx = 0.0

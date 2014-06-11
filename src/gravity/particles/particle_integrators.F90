@@ -277,14 +277,14 @@ contains
       maxs(:) = dom%edge(:,2)
 
       n_cell(:) = dom%n_d
-      write(*,*) "mins= ", mins
+      !write(*,*) "mins= ", mins
 
       zero = 0.0
       order = 4
 
 
       eta = 1.0
-      eps = 5.0e-6
+      eps = 5.0e-7
       eps2 = 0.00
      
 
@@ -314,9 +314,10 @@ contains
       do i=lbound(cg%gpot,dim=1),ubound(cg%gpot,dim=1)
          do j=lbound(cg%gpot,dim=2),ubound(cg%gpot,dim=2)
             do k=lbound(cg%gpot,dim=3),ubound(cg%gpot,dim=3)
-               write(88,*) i,j,k,pot(i,j,k)
+               write(88,*) i,j,k,cg%gpot(i,j,k)
             enddo
          enddo
+         write(88,*)
       enddo
       close(88)
 !stop
@@ -379,9 +380,9 @@ contains
          !5.t
          t = t + dt
          !6.dt		!dt[n+1]
-         dt	= sqrt(2.0*eta*eps/a)
+         dt = sqrt(2.0*eta*eps/a)
          !7.dth
-         dth =	0.5*dt
+         dth = 0.5*dt
          nsteps = nsteps + 1
         ! d_ang_momentum = log(abs((get_ang_momentum(pos, vel, mass, n) - init_ang_mom)/init_ang_mom))
 
@@ -633,23 +634,25 @@ contains
                   
 
 
-                  ax = -( df_dx_o4_2(neighb, cg,dx_cell, n) + &
-                     d2f_dx2_o4_2(neighb, cg,dx_cell, n) * dist(:,1) + &
-                     d2f_dxdy_o4_2(neighb, cg,dx_cell, dy_cell, n) * dist(:,2) + &
-                     d2f_dxdz_o4_2(neighb, cg,dx_cell, dz_cell, n) * dist(:,3))
-                  ay = -( df_dy_o4_2(neighb, cg,dy_cell, n) + &
-                     d2f_dy2_o4_2(neighb, cg,dy_cell, n) * dist(:,2) + &
-                     d2f_dxdy_o4_2(neighb, cg,dx_cell, dy_cell, n) * dist(:,1) + &
-                     d2f_dydz_o4_2(neighb, cg,dy_cell, dz_cell, n) * dist(:,3))
-                  az = -( df_dz_o4_2(neighb, cg,dz_cell, n) + &
-                     d2f_dz2_o4_2(neighb, cg,dz_cell, n) * dist(:,3) + &
-                     d2f_dxdz_o4_2(neighb, cg,dx_cell, dz_cell, n) * dist(:,1) +&
-                     d2f_dydz_o4_2(neighb, cg,dy_cell, dz_cell, n) * dist(:,2))
+                  ax = -( df_dx_o2_2(neighb, cg,dx_cell, n) + &
+                     d2f_dx2_o2_2(neighb, cg,dx_cell, n) * dist(:,1) + &
+                     d2f_dxdy_o2_2(neighb, cg,dx_cell, dy_cell, n) * dist(:,2) + &
+                     d2f_dxdz_o2_2(neighb, cg,dx_cell, dz_cell, n) * dist(:,3))
+                  ay = -( df_dy_o2_2(neighb, cg,dy_cell, n) + &
+                     d2f_dy2_o2_2(neighb, cg,dy_cell, n) * dist(:,2) + &
+                     d2f_dxdy_o2_2(neighb, cg,dx_cell, dy_cell, n) * dist(:,1) + &
+                     d2f_dydz_o2_2(neighb, cg,dy_cell, dz_cell, n) * dist(:,3))
+                  az = -( df_dz_o2_2(neighb, cg,dz_cell, n) + &
+                     d2f_dz2_o2_2(neighb, cg,dz_cell, n) * dist(:,3) + &
+                     d2f_dxdz_o2_2(neighb, cg,dx_cell, dz_cell, n) * dist(:,1) +&
+                     d2f_dydz_o2_2(neighb, cg,dy_cell, dz_cell, n) * dist(:,2))
                   acc2(:,1) = ax
                   acc2(:,2) = ay
                   acc2(:,3) = az
                   !druga czastka sie nie rusza
-                  !acc2(2,:)=0.0
+                  acc2(2,:)=0.0
+                  !pierwsza czastka nie rusza sie w osi Z
+                  acc2(1,3)=0.0
          end subroutine get_acc2
 !--------------------------------
 
