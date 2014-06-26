@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 
 from yt.config import ytcfg
 ytcfg["yt", "loglevel"] = "50"
