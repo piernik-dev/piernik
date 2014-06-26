@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 import h5py as h5
 import numpy as np
 import sys
