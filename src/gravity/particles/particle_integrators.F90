@@ -234,7 +234,7 @@ contains
       integer, dimension(:), allocatable :: n_cell
       real :: t_dia, t_out, t_end, einit, dt, t, dth, eta, eps, a, epot
       integer :: nsteps, n, ndim, lun_out, lun_err, i, j, k, nx, ny, nz, order
-      real :: eps2, xmin, xmax, ymin, ymax, zmin, zmax, n_orbit, tend, dx, dy, dz, ax, ay, az,axx, ayy, azz, energy, init_energy, d_energy, ang_momentum, init_ang_mom, d_ang_momentum, zero
+      real :: eps2, n_orbit, tend, dx, dy, dz, ax, ay, az,axx, ayy, azz, energy, init_energy, d_energy, ang_momentum, init_ang_mom, d_ang_momentum, zero
 
       procedure(df_dxi),pointer :: df_dx_p, df_dy_p, df_dz_p
       procedure(d2f_dxi_2),pointer :: d2f_dx2_p, d2f_dy2_p, d2f_dz2_p
@@ -283,21 +283,21 @@ contains
       order = 4
 
 
-      eta = 1.0
-      eps = 5.0e-7
+      eta = 0.1 !1.0
+      eps = 1.0e-5
       eps2 = 0.00
      
 
       
       !alokacja potencjalu
-      !allocate( pot(n_cell(1), n_cell(2), n_cell(3)) )
-      !write(*,*) "Zaalokowano potencjal"
+      allocate( pot(n_cell(1), n_cell(2), n_cell(3)) )
+      write(*,*) "Zaalokowano potencjal"
       cgl => leaves%first
       do while (associated(cgl))
             cg => cgl%cg
             !write(*,*) size(cg%gpot)
             
-            pot=cg%gpot
+            !pot=cg%gpot
             !write(*,*) lbound(cg%gpot)
             !write(*,*) lbound(pot)
             cgl => cgl%nxt
@@ -306,51 +306,60 @@ contains
 
 
       !obliczenie potencjalu na siatce
-      !call pot_grid(pot, mins, maxs, n_cell, delta_cells, eps2)
-      
-      call pot_grid2(cg, mins, maxs, n_cell, delta_cells, eps2)
-      write(*,*) "pot_grid2"
+      call pot_grid(pot, mins, maxs, n_cell, delta_cells, eps)
+      !write(*,*) "Obliczanie potencjalu"
+      !call pot_grid2(cg, mins, maxs, n_cell, delta_cells, eps)
+      write(*,*) "Obliczono potencjal"
 
       !write(*,*) "part_int: gpot(1,1,1): ", cg%gpot(1,1,1)
       !write(*,*) "nint(2.5)=", nint(2.5), " nint(-2.5)=", nint(-2.5)
 
       
-      open(unit=88, file='potencjal.dat')
-      do i=lbound(cg%gpot,dim=1),ubound(cg%gpot,dim=1)
-         do j=lbound(cg%gpot,dim=2),ubound(cg%gpot,dim=2)
-            do k=lbound(cg%gpot,dim=3),ubound(cg%gpot,dim=3)
-               write(88,*) i,j,k,cg%gpot(i,j,k)
-            enddo
-         enddo
-         write(88,*)
-      enddo
-      close(88)
+      !open(unit=88, file='potencjal.dat')
+      !do i=lbound(cg%gpot,dim=1),ubound(cg%gpot,dim=1)
+      !   do j=lbound(cg%gpot,dim=2),ubound(cg%gpot,dim=2)
+      !      do k=lbound(cg%gpot,dim=3),ubound(cg%gpot,dim=3)
+      !         write(88,*) i,j,k,cg%gpot(i,j,k)
+      !      enddo
+      !   enddo
+      !   write(88,*)
+      !enddo
+      !close(88)
 !stop
+      
+      !pot=cg%gpot
       
       !call cell_nr2(pset, neighb, dist, mins, cg, n)
       !call get_acc2(neighb, dist, pset, acc2, cg, n)
       !init_ang_mom = get_ang_momentum(pos, vel, mass, n)
 
       call cell_nr(pos, cells, mins, delta_cells, n)
-      write(*,*) "cell_nr"
+      !write(*,*) "cell_nr"
 
-      !call check_ord(order, df_dx_p, d2f_dx2_p, df_dy_p, d2f_dy2_p,& 
-      !                  df_dz_p, d2f_dz2_p, d2f_dxdy_p, d2f_dxdz_p, d2f_dydz_p)
+      call check_ord(order, df_dx_p, d2f_dx2_p, df_dy_p, d2f_dy2_p,& 
+                        df_dz_p, d2f_dz2_p, d2f_dxdy_p, d2f_dxdz_p, d2f_dydz_p)
 
 
       !initial acceleration
-      !call get_acc(cells, pos, acc, pot, n_cell, mins, delta_cells, n)
-      call get_acc3(cells, pos, acc, cg, mins, delta_cells, n)
+      call get_acc(cells, pos, acc, pot, n_cell, mins, delta_cells, n)
+      !write(*,*) "get_acc"
+      call get_acc_num(pos,acc,eps,n)
+      !write(*,*) "get_acc_num" 
+      !call get_acc3(cells, pos, acc, cg, mins, delta_cells, n)
      
       !write(*,*) "get_acc3"
       call get_acc_mod(acc,n,a)
       !write(*,*) "get_acc_mod"
       !call get_acc_mod(acc2,n,a)
-
+      
+      !if ((a<1.0e-5) .and. (a> 0.0)) then
+      !   write (*,*) "a=0.0!"
+      !   stop
+      !endif
       !timestep
-      dt = sqrt(2.0*eta*eps/a) 
+      !dt = sqrt(2.0*eta*eps/a) 
       !write(*,*) "dt"           !variable
-      !dt = 0.001                            !constant
+      dt = 0.001                            !constant
       dth = dt/2.0
       
 
@@ -364,7 +373,7 @@ contains
          !vel_h(:,:) = vel
          call kick(vel, acc, dth, n) !velocity vel_h
          !write(*,*) "kick1"
-
+         
          !call kick2(pset, acc2,dth,n)
 
          !2.drift(dt)
@@ -380,15 +389,24 @@ contains
          !call cell_nr2(pset, neighb, dist, mins, cg, n)
          !write(*,*) "particle_integrators: grav_pot2acc_cics"
          !call grav_pot2acc_cic2(neighb, dist, acc2, pset, n)
-         !call get_acc(cells, pos, acc, pot, n_cell, mins, delta_cells, n)
-         call get_acc3(cells, pos, acc, cg, mins, delta_cells, n)
+         call get_acc(cells, pos, acc, pot, n_cell, mins, delta_cells, n)
+         axx=-der_x(pos,1.0e-8,eps)
+         ayy=-der_y(pos,1.0e-8,eps)
+         axx=-der_z(pos,1.0e-8,eps)
+         !call get_acc_num(pos, acc2, eps, n)
+         !call get_acc3(cells, pos, acc, cg, mins, delta_cells, n)
          !write(*,*) "get_acc3"
          !call get_acc2(neighb, dist, pset, acc2, cg, n)
          call get_acc_mod(acc, n, a)
+         !if ((a<1.0e-5) .and. (a> 0.0)) then
+         !   write (*,*) "a=0.0!"
+         !   stop
+         !endif
          !write(*,*) "get_acc_mod"
          !4.kick(dth)
          !vel(:,:) = vel_h
          call kick(vel, acc, dth, n)   !velocity
+         !call kick(vel, acc, dth, n)   !velocity
          !write(*,*) "kick2"
          !call kick2(pset, acc2,dth,n)
          !write(*,*) "3.pset%vel(1) (vel)= ",pset%p(1)%vel
@@ -406,7 +424,8 @@ contains
          !enddo
          
          do i=1, n
-            write(lun_out, '(I3,1X,9(E13.6,1X))') i, mass(i), pos(i,:), vel(i,:)
+            !write(lun_out, '(I3,1X,9(E13.6,1X))') pos(i,:), acc(i,:), acc2(i,:)
+            write(lun_out, '(9(E13.6,1X))') pos(i,:), acc(i,:), axx, ayy, azz
          enddo
 
       end do
@@ -487,8 +506,11 @@ contains
                real(kind=8) :: x, y, z, r, phi_pm, eps, G,M
                   G = 1.0
                   M = 1.0
-                  r = sqrt(x**2 + y**2 + z**2)
-                  phi_pm = -G*M / (sqrt(r**2 + eps**2))
+                  r = sqrt(x**2 + y**2 + z**2 + eps**2)
+                  if (r<1.0e-5) then
+                     write(*,*) " !phi_pm: x=",x, " y=", y, " z=", z, " eps=", eps, " r=", r
+                  end if
+                  phi_pm = -G*M / r
          end function phi_pm
 
 
@@ -517,7 +539,7 @@ contains
          end subroutine pot_grid
          
          
-         subroutine pot_grid2(cg, mins, maxs, n_cell, delta_cells, eps2)
+         subroutine pot_grid2(cg, mins, maxs, n_cell, delta_cells, eps)
             use constants, only: ndims
             use grid_cont,    only: grid_container
             implicit none
@@ -526,7 +548,7 @@ contains
                integer, dimension(ndims), intent(in) :: n_cell
                real,dimension(ndims),intent(in) :: mins, maxs
                real,dimension(ndims),intent(out) :: delta_cells
-               real, intent(in) :: eps2
+               real, intent(in) :: eps
                !eal,dimension(n_cell(1), n_cell(2), n_cell(3)),intent(inout) :: pot
                !open(unit=77,file='potencjal.dat')
                   delta_cells = (maxs - mins) / n_cell
@@ -534,10 +556,13 @@ contains
 
 
                   do i = lbound(cg%gpot, dim=1), ubound(cg%gpot, dim=1)
+                     
                      do j = lbound(cg%gpot, dim=2), ubound(cg%gpot, dim=2)
+                        
                         do k = lbound(cg%gpot, dim=3), ubound(cg%gpot, dim=3)
-                           cg%gpot(i, j, k) = phi_pm(mins(1) + i*delta_cells(1), mins(2) + j*delta_cells(2), mins(3) + k*delta_cells(3), eps2)
-                           !write(77,*) i,j,k,pot(i,j,k)
+                           
+                           cg%gpot(i, j, k) = phi_pm(mins(1) + i*delta_cells(1), mins(2) + j*delta_cells(2), mins(3) + k*delta_cells(3), eps)
+                           !write(77,*) i,j,k,cg%gpot(i,j,k)
                         enddo
                      enddo
                   enddo
@@ -633,12 +658,15 @@ contains
                real,dimension(n) :: ax, ay, az
 
                   do i = 1, ndims, 1
-                     delta(:,i) = - ( cells(:,i) * delta_cells(i) + mins(i) - pos(:,i) )
+                     !delta(:,i) = - ( cells(:,i) * delta_cells(i) + mins(i) - pos(:,i) )
+                     delta(:,i) = pos(:,i) - cells(:,i)*delta_cells(i) - mins(i)
                   enddo
+                  !write(*,*) "delta"
 
                   dx_cell = delta_cells(1)
                   dy_cell = delta_cells(2)
                   dz_cell = delta_cells(3)
+                  !write(*,*) "dx,dy,dz"
 
                   ax = -( df_dx_p(cells, pot, n_cell, dx_cell, n) + &
                      d2f_dx2_p(cells, pot, n_cell, dx_cell, n) * delta(:,1) + &
@@ -652,6 +680,7 @@ contains
                      d2f_dz2_p(cells, pot, n_cell, dz_cell, n) * delta(:,3) + &
                      d2f_dxdz_p(cells, pot, n_cell, dx_cell, dz_cell, n) * delta(:,1) +&
                      d2f_dydz_p(cells, pot, n_cell, dy_cell, dz_cell, n) * delta(:,2))
+                  !write(*,*) "ax,ay,az"
                   acc(:,1) = ax
                   acc(:,2) = ay
                   acc(:,3) = az
@@ -719,30 +748,77 @@ contains
                real,dimension(n) :: ax, ay, az
 
                   do i = 1, ndims, 1
-                     delta(:,i) = - ( cells(:,i) * delta_cells(i) + mins(i) - pos(:,i) )
+                     !delta(:,i) = - ( cells(:,i) * delta_cells(i) + mins(i) - pos(:,i) )
+                     delta(:,i) = pos(:,i) - cells(:,i)*delta_cells(i) - mins(i)
                   enddo
 
                   dx_cell = delta_cells(1)
                   dy_cell = delta_cells(2)
                   dz_cell = delta_cells(3)
 
-                  ax = -( df_dx_o2_3(cells, cg, dx_cell, n) + &
-                     d2f_dx2_o2_3(cells, cg,  dx_cell, n) * delta(:,1) + &
-                     d2f_dxdy_o2_3(cells, cg,  dx_cell, dy_cell, n) * delta(:,2) + &
-                     d2f_dxdz_o2_3(cells, cg,  dx_cell, dz_cell, n) * delta(:,3))
-                  ay = -( df_dy_o2_3(cells, cg,  dy_cell, n) + &
-                     d2f_dy2_o2_3(cells, cg,  dy_cell, n) * delta(:,2) + &
-                     d2f_dxdy_o2_3(cells, cg,  dx_cell, dy_cell, n) * delta(:,1) + &
-                     d2f_dydz_o2_3(cells, cg,  dy_cell, dz_cell, n) * delta(:,3))
-                  az = -( df_dz_o2_3(cells, cg,  dz_cell, n) + &
-                     d2f_dz2_o2_3(cells, cg,  dz_cell, n) * delta(:,3) + &
-                     d2f_dxdz_o2_3(cells, cg,  dx_cell, dz_cell, n) * delta(:,1) +&
-                     d2f_dydz_o2_3(cells, cg,  dy_cell, dz_cell, n) * delta(:,2))
+                  ax = -( df_dx_o4_3(cells, cg, dx_cell, n) + &
+                     d2f_dx2_o4_3(cells, cg,  dx_cell, n) * delta(:,1) + &
+                     d2f_dxdy_o4_3(cells, cg,  dx_cell, dy_cell, n) * delta(:,2) + &
+                     d2f_dxdz_o4_3(cells, cg,  dx_cell, dz_cell, n) * delta(:,3))
+                  ay = -( df_dy_o4_3(cells, cg,  dy_cell, n) + &
+                     d2f_dy2_o4_3(cells, cg,  dy_cell, n) * delta(:,2) + &
+                     d2f_dxdy_o4_3(cells, cg,  dx_cell, dy_cell, n) * delta(:,1) + &
+                     d2f_dydz_o4_3(cells, cg,  dy_cell, dz_cell, n) * delta(:,3))
+                  az = -( df_dz_o4_3(cells, cg,  dz_cell, n) + &
+                     d2f_dz2_o4_3(cells, cg,  dz_cell, n) * delta(:,3) + &
+                     d2f_dxdz_o4_3(cells, cg,  dx_cell, dz_cell, n) * delta(:,1) +&
+                     d2f_dydz_o4_3(cells, cg,  dy_cell, dz_cell, n) * delta(:,2))
                   acc(:,1) = ax
                   acc(:,2) = ay
                   acc(:,3) = az
 
          end subroutine get_acc3
+         
+         subroutine get_acc_num(pos,acc,eps,n)
+            use constants, only: ndims
+            implicit none
+               integer, intent(in) :: n
+               real, intent(in) :: eps
+               real, dimension(n, ndims), intent(in) :: pos
+               real, dimension(n, ndims), intent(out) :: acc
+               do i=1,n
+                  acc(i,1)=-der_x(pos(i,:),1.0e-8, eps)
+                  acc(i,2)=-der_y(pos(i,:),1.0e-8, eps)
+                  acc(i,3)=-der_z(pos(i,:),1.0e-8, eps)
+               enddo
+         end subroutine get_acc_num
+         
+         function der_x(polozenie, d, eps)
+         implicit none
+            real(kind=8) :: x, y, z, der_x, d, eps
+            real(kind=8),dimension(1,3) :: polozenie
+            x = polozenie(1,1)
+            y = polozenie(1,2)
+            z = polozenie(1,3)
+            der_x = ( phi_pm(x+d, y, z, eps) - phi_pm(x-d, y, z, eps) ) / (2.0*d)
+         end function der_x
+
+      !Pochodna wzgledem y
+      function der_y(polozenie, d, eps)
+         implicit none
+            real(kind=8) :: x, y, z, der_y, d, eps
+            real(kind=8),dimension(1,3) :: polozenie
+            x = polozenie(1,1)
+            y = polozenie(1,2)
+            z = polozenie(1,3)
+            der_y = ( phi_pm(x, y+d, z, eps) - phi_pm(x, y-d, z, eps) ) / (2.0*d)
+      end function der_y
+
+      !Pochodna wzgledem z
+      function der_z(polozenie, d, eps)
+         implicit none
+            real(kind=8) :: x, y, z, der_z, d, eps
+            real(kind=8),dimension(1,3) :: polozenie
+            x = polozenie(1,1)
+            y = polozenie(1,2)
+            z = polozenie(1,3)
+            der_z = ( phi_pm(x, y, z+d, eps) - phi_pm(x, y, z-d, eps) ) / (2.0*d)
+      end function der_z
          
          
          subroutine cell_nr(pos, cells, mins, delta_cells, n)
@@ -755,7 +831,8 @@ contains
                real, dimension(ndims), intent(in)  :: mins, delta_cells
 
                do i=1, ndims
-                  cells(:,i) = int( (pos(:,i) - mins(i) - 0.5*delta_cells(i)) / delta_cells(i) ) + 1
+                  cells(:,i) = int( (pos(:,i) - mins(i) - 0.5*delta_cells(i)) / delta_cells(i) )! + 1
+                  !cells(:,i) = int( (pos(:,i) - mins(i)) / delta_cells(i) ) + 1
                enddo
          end subroutine cell_nr
          
@@ -779,7 +856,7 @@ contains
 
                do i=1, n
                   do j=1, ndims
-                     neighb(i,j) = int( (pset%p(i)%pos(j) - mins(j) ) / delta_cells(j) ) + 1
+                     neighb(i,j) = int( (pset%p(i)%pos(j) - mins(j) - 0.5*delta_cells(j)) / delta_cells(j) )! + 1
                   enddo
                enddo
                
@@ -2089,6 +2166,7 @@ contains
                   p = cells(i, 1)
                   q = cells(i, 2)
                   r = cells(i, 3)
+                  !write(*,*) p,q,r
 
                   !o(R^4)
                   d2f_dxdz_o4_3(i) = ( cg%gpot(p+1, q, r+1) + cg%gpot(p-1, q, r-1) - cg%gpot(p+1, q, r-1) - &
