@@ -100,7 +100,7 @@ contains
       enddo
 
 
-      e = 0.01
+      e = 0.1
 
       n_particles = 1
       write(*,*) "Particles: ", n_particles
@@ -121,7 +121,8 @@ contains
             
             !call pset%add(1.0, pos_init, vel_init, [0.0, 0.0, 0.0] )
             !call pset%add(0.00001, [2.0,0.0,0.0], [0.0,0.5,0.0], [0.0, 0.0, 0.0] )
-            call pset%add(1.0, [2.0,0.0,0.0], [0.0,0.707106781,0.0], [0.0, 0.0, 0.0] )
+            !call pset%add(1.0, [2.0,0.0,0.0], [0.0,0.707106781,0.0], [0.0, 0.0, 0.0] ) !kolowa
+            call pset%add(1.0, [2.0, 0.0, 0.0],[0.0, 0.707106781, 0.0], [0.0,0.0,0.0])
             !pos_init = positions(dtheta, pos_init)
             !vel_init = rotate(dtheta, vel_init)
             
