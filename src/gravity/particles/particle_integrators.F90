@@ -283,8 +283,8 @@ contains
       order = 4
 
 
-      eta = 0.1 !1.0
-      eps = 1.0e-5
+      eta = 35.0 !1.0
+      eps = 1.0e-6
       eps2 = 0.00
      
 
@@ -343,7 +343,7 @@ contains
       !initial acceleration
       call get_acc(cells, pos, acc, pot, n_cell, mins, delta_cells, n)
       !write(*,*) "get_acc"
-      call get_acc_num(pos,acc,eps,n)
+      call get_acc_num(pos,acc2,eps,n)
       !write(*,*) "get_acc_num" 
       !call get_acc3(cells, pos, acc, cg, mins, delta_cells, n)
      
@@ -390,10 +390,10 @@ contains
          !write(*,*) "particle_integrators: grav_pot2acc_cics"
          !call grav_pot2acc_cic2(neighb, dist, acc2, pset, n)
          call get_acc(cells, pos, acc, pot, n_cell, mins, delta_cells, n)
-         axx=-der_x(pos,1.0e-8,eps)
-         ayy=-der_y(pos,1.0e-8,eps)
-         axx=-der_z(pos,1.0e-8,eps)
-         !call get_acc_num(pos, acc2, eps, n)
+         !axx=-der_x(pos,1.0e-8,eps)
+         !ayy=-der_y(pos,1.0e-8,eps)
+         !axx=-der_z(pos,1.0e-8,eps)
+         call get_acc_num(pos, acc2, eps, n)
          !call get_acc3(cells, pos, acc, cg, mins, delta_cells, n)
          !write(*,*) "get_acc3"
          !call get_acc2(neighb, dist, pset, acc2, cg, n)
@@ -425,7 +425,7 @@ contains
          
          do i=1, n
             !write(lun_out, '(I3,1X,9(E13.6,1X))') pos(i,:), acc(i,:), acc2(i,:)
-            write(lun_out, '(9(E13.6,1X))') pos(i,:), acc(i,:), axx, ayy, azz
+            write(lun_out, '(9(E13.6,1X))') pos(i,:), acc(i,:), acc2
          enddo
 
       end do
@@ -507,9 +507,9 @@ contains
                   G = 1.0
                   M = 1.0
                   r = sqrt(x**2 + y**2 + z**2 + eps**2)
-                  if (r<1.0e-5) then
-                     write(*,*) " !phi_pm: x=",x, " y=", y, " z=", z, " eps=", eps, " r=", r
-                  end if
+                  !if (r<1.0e-5) then
+                  !   write(*,*) " !phi_pm: x=",x, " y=", y, " z=", z, " eps=", eps, " r=", r
+                  !end if
                   phi_pm = -G*M / r
          end function phi_pm
 
@@ -774,49 +774,49 @@ contains
 
          end subroutine get_acc3
          
-         subroutine get_acc_num(pos,acc,eps,n)
+         subroutine get_acc_num(pos,acc2,eps,n)
             use constants, only: ndims
             implicit none
                integer, intent(in) :: n
                real, intent(in) :: eps
                real, dimension(n, ndims), intent(in) :: pos
-               real, dimension(n, ndims), intent(out) :: acc
+               real, dimension(n, ndims), intent(out) :: acc2
                do i=1,n
-                  acc(i,1)=-der_x(pos(i,:),1.0e-8, eps)
-                  acc(i,2)=-der_y(pos(i,:),1.0e-8, eps)
-                  acc(i,3)=-der_z(pos(i,:),1.0e-8, eps)
+                  acc2(i,1)=-der_x(pos(i,:),1.0e-8, eps)
+                  acc2(i,2)=-der_y(pos(i,:),1.0e-8, eps)
+                  acc2(i,3)=-der_z(pos(i,:),1.0e-8, eps)
                enddo
          end subroutine get_acc_num
          
-         function der_x(polozenie, d, eps)
+         function der_x(pos, d, eps)
          implicit none
             real(kind=8) :: x, y, z, der_x, d, eps
-            real(kind=8),dimension(1,3) :: polozenie
-            x = polozenie(1,1)
-            y = polozenie(1,2)
-            z = polozenie(1,3)
+            real(kind=8),dimension(1,3) :: pos
+            x = pos(1,1)
+            y = pos(1,2)
+            z = pos(1,3)
             der_x = ( phi_pm(x+d, y, z, eps) - phi_pm(x-d, y, z, eps) ) / (2.0*d)
          end function der_x
 
       !Pochodna wzgledem y
-      function der_y(polozenie, d, eps)
+      function der_y(pos, d, eps)
          implicit none
             real(kind=8) :: x, y, z, der_y, d, eps
-            real(kind=8),dimension(1,3) :: polozenie
-            x = polozenie(1,1)
-            y = polozenie(1,2)
-            z = polozenie(1,3)
+            real(kind=8),dimension(1,3) :: pos
+            x = pos(1,1)
+            y = pos(1,2)
+            z = pos(1,3)
             der_y = ( phi_pm(x, y+d, z, eps) - phi_pm(x, y-d, z, eps) ) / (2.0*d)
       end function der_y
 
       !Pochodna wzgledem z
-      function der_z(polozenie, d, eps)
+      function der_z(pos, d, eps)
          implicit none
             real(kind=8) :: x, y, z, der_z, d, eps
-            real(kind=8),dimension(1,3) :: polozenie
-            x = polozenie(1,1)
-            y = polozenie(1,2)
-            z = polozenie(1,3)
+            real(kind=8),dimension(1,3) :: pos
+            x = pos(1,1)
+            y = pos(1,2)
+            z = pos(1,3)
             der_z = ( phi_pm(x, y, z+d, eps) - phi_pm(x, y, z-d, eps) ) / (2.0*d)
       end function der_z
          
@@ -831,7 +831,7 @@ contains
                real, dimension(ndims), intent(in)  :: mins, delta_cells
 
                do i=1, ndims
-                  cells(:,i) = int( (pos(:,i) - mins(i) - 0.5*delta_cells(i)) / delta_cells(i) )! + 1
+                  cells(:,i) = int( (pos(:,i) - mins(i) - 0.5*delta_cells(i)) / delta_cells(i) ) + 1
                   !cells(:,i) = int( (pos(:,i) - mins(i)) / delta_cells(i) ) + 1
                enddo
          end subroutine cell_nr
