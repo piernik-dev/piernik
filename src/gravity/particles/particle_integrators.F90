@@ -172,7 +172,7 @@ contains
 
 
    subroutine leapfrog2ord(pset, t_glob, dt_tot)
-      use constants, only: ndims, xdim, zdim, LO, HI
+      use constants, only: ndims, xdim, zdim!, LO, HI
       use particle_types, only: particle_set
       use domain, only: dom
       use cg_leaves,    only: leaves
@@ -188,32 +188,41 @@ contains
       type(cg_list_element),  pointer  :: cgl
       
       interface
-         function df_dxi(cells, potential, n_cell, delta_xi, n_particles)
+         function df_dxi(neighb, cg, delta_xi, n_particles)
             use constants, only: ndims
+            use grid_cont,  only: grid_container
+            implicit none
+            type(grid_container), pointer, intent(in) :: cg
             integer, intent(in) :: n_particles
-            integer,dimension(n_particles, ndims),intent(in) :: cells
-            integer, dimension(ndims), intent(in) :: n_cell
-            real,dimension(-4:n_cell(1), -4:n_cell(2), -4:n_cell(3)),intent(in) :: potential
+            integer(kind=8),dimension(n_particles, ndims),intent(in) :: neighb
+            !integer, dimension(ndims), intent(in) :: n_cell
+            !real,dimension(-4:n_cell(1), -4:n_cell(2), -4:n_cell(3)),intent(in) :: potential
             real,intent(in) :: delta_xi
             real,dimension(n_particles) :: df_dxi
          end function df_dxi
 
-         function d2f_dxi_2(cells, potential, n_cell, delta_xi, n_particles)
+         function d2f_dxi_2(neighb, cg, delta_xi, n_particles)
             use constants, only: ndims
+            use grid_cont,  only: grid_container
+            implicit none
+            type(grid_container), pointer, intent(in) :: cg
             integer, intent(in) :: n_particles
-            integer,dimension(n_particles, ndims),intent(in) :: cells
-            integer, dimension(ndims), intent(in) :: n_cell
-            real,dimension(-4:n_cell(1), -4:n_cell(2), -4:n_cell(3)),intent(in) :: potential
+            integer(kind=8),dimension(n_particles, ndims),intent(in) :: neighb
+            !integer, dimension(ndims), intent(in) :: n_cell
+            !real,dimension(-4:n_cell(1), -4:n_cell(2), -4:n_cell(3)),intent(in) :: potential
             real,intent(in) :: delta_xi
             real,dimension(n_particles) :: d2f_dxi_2
          end function d2f_dxi_2
 
-         function d2f_dxi_dxj(cells, potential, n_cell, delta_xi, delta_xj, n_particles)
+         function d2f_dxi_dxj(neighb, cg, delta_xi, delta_xj, n_particles)
             use constants, only: ndims
+            use grid_cont,  only: grid_container
+            implicit none
+            type(grid_container), pointer, intent(in) :: cg
             integer, intent(in) :: n_particles
-            integer,dimension(n_particles, ndims),intent(in) :: cells
-            integer, dimension(ndims), intent(in) :: n_cell
-            real,dimension(-4:n_cell(1), -4:n_cell(2), -4:n_cell(3)),intent(in) :: potential
+            integer(kind=8),dimension(n_particles, ndims),intent(in) :: neighb
+            !integer, dimension(ndims), intent(in) :: n_cell
+            !real,dimension(-4:n_cell(1), -4:n_cell(2), -4:n_cell(3)),intent(in) :: potential
             real,intent(in) :: delta_xi, delta_xj
             real,dimension(n_particles) :: d2f_dxi_dxj
          end function d2f_dxi_dxj
@@ -227,7 +236,7 @@ contains
       
       real, intent(in) :: t_glob, dt_tot
       integer, dimension(:,:),allocatable :: cells
-      real, dimension(3) :: l_borders, r_borders
+      !real, dimension(3) :: l_borders, r_borders
       real, dimension(:), allocatable :: mass, mins, maxs,delta_cells
       real, dimension(:, :), allocatable :: pos, vel, acc, vel_h, d_particles
       real, dimension(:, :, :), allocatable :: pot
@@ -276,7 +285,7 @@ contains
 
       maxs(:) = dom%edge(:,2)
 
-      n_cell(:) = dom%n_d+4
+      n_cell(:) = dom%n_d
       write(*,*) "Wymiary potencjalu: ", n_cell
       !write(*,*) "mins= ", mins
 
@@ -303,13 +312,13 @@ contains
             !write(*,*) lbound(pot)
             cgl => cgl%nxt
       enddo
-      allocate( pot(lbound(cg%gpot,dim=1):ubound(cg%gpot,dim=1), lbound(cg%gpot,dim=2):ubound(cg%gpot,dim=2), lbound(cg%gpot,dim=3):ubound(cg%gpot,dim=3)) )
+      !allocate( pot(lbound(cg%gpot,dim=1):ubound(cg%gpot,dim=1), lbound(cg%gpot,dim=2):ubound(cg%gpot,dim=2), lbound(cg%gpot,dim=3):ubound(cg%gpot,dim=3)) )
 
 
       !obliczenie potencjalu na siatce
-      call pot_grid(pot, mins, maxs, n_cell, delta_cells, eps)
+      !call pot_grid(pot, mins, maxs, n_cell, delta_cells, eps)
       !write(*,*) "Obliczanie potencjalu"
-      !call pot_grid2(cg, mins, maxs, n_cell, delta_cells, eps)
+      call pot_grid2(cg, mins, maxs, n_cell, delta_cells, eps)
       write(*,*) "Obliczono potencjal"
 
       !write(*,*) "part_int: gpot(1,1,1): ", cg%gpot(1,1,1)
@@ -330,11 +339,11 @@ contains
       
       !pot=cg%gpot
       
-      !call cell_nr2(pset, neighb, dist, mins, cg, n)
+      call cell_nr2(pset, neighb, dist, mins, cg, n)
       !call get_acc2(neighb, dist, pset, acc2, cg, n)
       !init_ang_mom = get_ang_momentum(pos, vel, mass, n)
 
-      call cell_nr(pos, cells, mins, delta_cells, n)
+      !call cell_nr(pos, cells, mins, delta_cells, n)
       !write(*,*) "cell_nr"
 
       call check_ord(order, df_dx_p, d2f_dx2_p, df_dy_p, d2f_dy2_p,& 
@@ -342,14 +351,17 @@ contains
 
 
       !initial acceleration
-      call get_acc(cells, pos, acc, pot, n_cell, mins, delta_cells, n)
+      !call get_acc(cells, pos, acc, pot, n_cell, mins, delta_cells, n)
+      call get_acc2(neighb, dist, pset, acc, cg, n)
+      
       !write(*,*) "get_acc"
-      call get_acc_num(pos,acc2,eps,n)
+      !call get_acc_num(pos, acc2, eps, n)
+      call get_acc_num2(pset, acc2, eps, n)
       !write(*,*) "get_acc_num" 
       !call get_acc3(cells, pos, acc, cg, mins, delta_cells, n)
      
       !write(*,*) "get_acc3"
-      call get_acc_mod(acc,n,a)
+      call get_acc_mod(acc, n, a)
       !write(*,*) "get_acc_mod"
       !call get_acc_mod(acc2,n,a)
       
@@ -369,47 +381,57 @@ contains
 
       
       !main loop
-      do while (t<t_end)
+      do while (t < t_end)
          !1.kick(dth)
          !vel_h(:,:) = vel
-         if (t+dt>t_end) then
+         if (t + dt > t_end) then
             dt = t_end - t
+            dth = 0.5 * dt
          endif
-         dth=0.5*dt
+         
          
          do i=1, n
-            write(lun_out, '(I3,1X,10(E13.6,1X))') n, t, pos(i,:), acc(i,:), acc2(i,:)
+            write(lun_out, '(I3,1X,10(E13.6,1X))') n, t, pset%p(i)%pos, acc(i,:), acc2(i,:)
             !write(lun_out, '(9(E13.6,1X))') pos(i,:), acc(i,:), acc2
          enddo
          
-         acc=0.0
-         call kick(vel, acc, dth, n) !velocity vel_h
-         !write(*,*) "kick1"
+         !------------------------------------------------------------------
+         !acc=0.0
+         !call kick(vel, acc, dth, n) !velocity vel_h
+         !call drift(pos, vel, dt, n) !position vel_h
+         !call get_acc_num(pos, acc2, eps, n)
+         !call cell_nr(pos, cells, mins, delta_cells, n)
+         !call get_acc(cells, pos, acc, pot, n_cell, mins, delta_cells, n)
+         !call get_acc_mod(acc, n, a)
+         !call kick(vel, [zero,zero,zero], dth, n)   !velocity
+         !------------------------------------------------------------------
          
-         !call kick2(pset, acc2,dth,n)
+         acc(:,:) = 0.0
+         call kick2(pset, acc, dth, n)
 
          !2.drift(dt)
-         call drift(pos, vel, dt, n) !position vel_h
+         !call drift(pos, vel, dt, n) !position vel_h
          !write(*,*) "drift"
-         !call drift2(pset,dt,n)
+         call drift2(pset, dt, n)
          !przyspieszenie modelowe:
-         call get_acc_num(pos, acc2, eps, n)
+         !call get_acc_num(pos, acc2, eps, n)
+         call get_acc_num2(pset, acc2, eps, n)
          !3.acceleration + |a|
          !call pset%find_cells(neighb, dist)
          !call find_cells(pset,neighb, dist, n)
-         call cell_nr(pos, cells, mins, delta_cells, n)
+         !call cell_nr(pos, cells, mins, delta_cells, n)
          !write(*,*) "cell_nr"
-         !call cell_nr2(pset, neighb, dist, mins, cg, n)
+         call cell_nr2(pset, neighb, dist, mins, cg, n)
          !write(*,*) "particle_integrators: grav_pot2acc_cics"
          !call grav_pot2acc_cic2(neighb, dist, acc2, pset, n)
-         call get_acc(cells, pos, acc, pot, n_cell, mins, delta_cells, n)
+         !call get_acc(cells, pos, acc, pot, n_cell, mins, delta_cells, n)
          !axx=-der_x(pos,1.0e-8,eps)
          !ayy=-der_y(pos,1.0e-8,eps)
          !axx=-der_z(pos,1.0e-8,eps)
          !call get_acc_num(pos, acc2, eps, n)
          !call get_acc3(cells, pos, acc, cg, mins, delta_cells, n)
          !write(*,*) "get_acc3"
-         !call get_acc2(neighb, dist, pset, acc2, cg, n)
+         call get_acc2(neighb, dist, pset, acc, cg, n)
          call get_acc_mod(acc, n, a)
          !if ((a<1.0e-5) .and. (a> 0.0)) then
          !   write (*,*) "a=0.0!"
@@ -419,10 +441,11 @@ contains
          !4.kick(dth)
          !vel(:,:) = vel_h
          !acc=0.0
-         call kick(vel, [zero,zero,zero], dth, n)   !velocity
+         !call kick(vel, [zero,zero,zero], dth, n)   !velocity
          !call kick(vel, acc, dth, n)   !velocity
          !write(*,*) "kick2"
-         !call kick2(pset, acc2,dth,n)
+         !call kick2(pset, acc, dth, n) !powinno dzialac, ale trzeba policzyc od zera:
+         call kick2(pset, [zero,zero,zero], dth, n)
          !write(*,*) "3.pset%vel(1) (vel)= ",pset%p(1)%vel
          !5.t
          t = t + dt
@@ -443,10 +466,10 @@ contains
       
       write(*,*) "Leapfrog: nsteps=", nsteps
       
-      do ndim = xdim, zdim
-         pset%p(:)%pos(ndim) = pos(:, ndim)
-         pset%p(:)%vel(ndim) = vel(:, ndim)
-      enddo
+     ! do ndim = xdim, zdim
+     !    pset%p(:)%pos(ndim) = pos(:, ndim)
+     !    pset%p(:)%vel(ndim) = vel(:, ndim)
+     ! enddo
 
       deallocate (mass, pos, vel, acc, acc2, vel_h, cells, mins, maxs, delta_cells, n_cell, d_particles)
       close(lun_out)
@@ -589,25 +612,25 @@ contains
                procedure(d2f_dxi_2),pointer :: d2f_dx2_p, d2f_dy2_p, d2f_dz2_p
                procedure(d2f_dxi_dxj),pointer :: d2f_dxdy_p, d2f_dxdz_p, d2f_dydz_p
                   if (order==2) then
-                     df_dx_p => df_dx_o2
-                     df_dy_p => df_dy_o2
-                     df_dz_p => df_dz_o2
-                     d2f_dx2_p => d2f_dx2_o2
-                     d2f_dy2_p => d2f_dy2_o2
-                     d2f_dz2_p => d2f_dz2_o2
-                     d2f_dxdy_p => d2f_dxdy_o2
-                     d2f_dxdz_p => d2f_dxdz_o2
-                     d2f_dydz_p => d2f_dydz_o2
+                     df_dx_p => df_dx_o2_2
+                     df_dy_p => df_dy_o2_2
+                     df_dz_p => df_dz_o2_2
+                     d2f_dx2_p => d2f_dx2_o2_2
+                     d2f_dy2_p => d2f_dy2_o2_2
+                     d2f_dz2_p => d2f_dz2_o2_2
+                     d2f_dxdy_p => d2f_dxdy_o2_2
+                     d2f_dxdz_p => d2f_dxdz_o2_2
+                     d2f_dydz_p => d2f_dydz_o2_2
                   else
-                     df_dx_p => df_dx_o4
-                     df_dy_p => df_dy_o4
-                     df_dz_p => df_dz_o4
-                     d2f_dx2_p => d2f_dx2_o4
-                     d2f_dy2_p => d2f_dy2_o4
-                     d2f_dz2_p => d2f_dz2_o4
-                     d2f_dxdy_p => d2f_dxdy_o4
-                     d2f_dxdz_p => d2f_dxdz_o4
-                     d2f_dydz_p => d2f_dydz_o4
+                     df_dx_p => df_dx_o4_2
+                     df_dy_p => df_dy_o4_2
+                     df_dz_p => df_dz_o4_2
+                     d2f_dx2_p => d2f_dx2_o4_2
+                     d2f_dy2_p => d2f_dy2_o4_2
+                     d2f_dz2_p => d2f_dz2_o4_2
+                     d2f_dxdy_p => d2f_dxdy_o4_2
+                     d2f_dxdz_p => d2f_dxdz_o4_2
+                     d2f_dydz_p => d2f_dydz_o4_2
                   endif
          end subroutine check_ord
 
@@ -653,52 +676,52 @@ contains
       
    end subroutine grav_pot2acc_cic2
    
-         subroutine get_acc(cells, pos, acc, pot, n_cell, mins, delta_cells, n)
-            use constants, only : ndims
-            implicit none
-               integer:: i
-               real::  dx_cell, dy_cell, dz_cell
-               integer, intent(in) :: n
-               integer,dimension(n, ndims), intent(in) :: cells
-               real,dimension(n, ndims),intent(in) :: pos
-               real,dimension(n, ndims),intent(out) :: acc
-               integer,dimension(ndims),intent(in) :: n_cell
-               real, dimension(ndims),intent(in) :: mins, delta_cells
-               real,dimension(-4:n_cell(1), -4:n_cell(2), -4:n_cell(3)),intent(in) :: pot
-               real,dimension(n, ndims) :: delta
-               real,dimension(n) :: ax, ay, az
+         !subroutine get_acc(cells, pos, acc, pot, n_cell, mins, delta_cells, n)
+         !   use constants, only : ndims
+         !   implicit none
+         !      integer:: i
+         !      real::  dx_cell, dy_cell, dz_cell
+         !      integer, intent(in) :: n
+         !      integer,dimension(n, ndims), intent(in) :: cells
+         !      real,dimension(n, ndims),intent(in) :: pos
+         !      real,dimension(n, ndims),intent(out) :: acc
+         !      integer,dimension(ndims),intent(in) :: n_cell
+         !      real, dimension(ndims),intent(in) :: mins, delta_cells
+         !      real,dimension(-4:n_cell(1), -4:n_cell(2), -4:n_cell(3)),intent(in) :: pot
+         !      real,dimension(n, ndims) :: delta
+         !      real,dimension(n) :: ax, ay, az
 
-                  do i = 1, ndims, 1
-                     !delta(:,i) = - ( cells(:,i) * delta_cells(i) + mins(i) - pos(:,i) )
-                     delta(:,i) = pos(:,i) - cells(:,i)*delta_cells(i) - mins(i)
-                  enddo
-                  !write(*,*) "delta"
+         !         do i = 1, ndims, 1
+         !            !delta(:,i) = - ( cells(:,i) * delta_cells(i) + mins(i) - pos(:,i) )
+         !            delta(:,i) = pos(:,i) - cells(:,i)*delta_cells(i) - mins(i)
+         !         enddo
+         !         !write(*,*) "delta"
 
-                  dx_cell = delta_cells(1)
-                  dy_cell = delta_cells(2)
-                  dz_cell = delta_cells(3)
-                  !write(*,*) "dx,dy,dz"
+          !        dx_cell = delta_cells(1)
+          !        dy_cell = delta_cells(2)
+          !        dz_cell = delta_cells(3)
+          !        !write(*,*) "dx,dy,dz"
 
-                  ax = -( df_dx_p(cells, pot, n_cell, dx_cell, n) + &
-                     d2f_dx2_p(cells, pot, n_cell, dx_cell, n) * delta(:,1) + &
-                     d2f_dxdy_p(cells, pot, n_cell, dx_cell, dy_cell, n) * delta(:,2) + &
-                     d2f_dxdz_p(cells, pot, n_cell, dx_cell, dz_cell, n) * delta(:,3))
-                  ay = -( df_dy_p(cells, pot, n_cell, dy_cell, n) + &
-                     d2f_dy2_p(cells, pot, n_cell, dy_cell, n) * delta(:,2) + &
-                     d2f_dxdy_p(cells, pot, n_cell, dx_cell, dy_cell, n) * delta(:,1) + &
-                     d2f_dydz_p(cells, pot, n_cell, dy_cell, dz_cell, n) * delta(:,3))
-                  az = -( df_dz_p(cells, pot, n_cell, dz_cell, n) + &
-                     d2f_dz2_p(cells, pot, n_cell, dz_cell, n) * delta(:,3) + &
-                     d2f_dxdz_p(cells, pot, n_cell, dx_cell, dz_cell, n) * delta(:,1) +&
-                     d2f_dydz_p(cells, pot, n_cell, dy_cell, dz_cell, n) * delta(:,2))
-                  !write(*,*) "ax,ay,az"
-                  acc(:,1) = ax
-                  acc(:,2) = ay
-                  acc(:,3) = az
-         end subroutine get_acc
+         !         ax = -( df_dx_p(cells, pot, n_cell, dx_cell, n) + &
+         !            d2f_dx2_p(cells, pot, n_cell, dx_cell, n) * delta(:,1) + &
+         !            d2f_dxdy_p(cells, pot, n_cell, dx_cell, dy_cell, n) * delta(:,2) + &
+         !            d2f_dxdz_p(cells, pot, n_cell, dx_cell, dz_cell, n) * delta(:,3))
+         !         ay = -( df_dy_p(cells, pot, n_cell, dy_cell, n) + &
+         !            d2f_dy2_p(cells, pot, n_cell, dy_cell, n) * delta(:,2) + &
+         !            d2f_dxdy_p(cells, pot, n_cell, dx_cell, dy_cell, n) * delta(:,1) + &
+         !            d2f_dydz_p(cells, pot, n_cell, dy_cell, dz_cell, n) * delta(:,3))
+         !         az = -( df_dz_p(cells, pot, n_cell, dz_cell, n) + &
+         !            d2f_dz2_p(cells, pot, n_cell, dz_cell, n) * delta(:,3) + &
+         !            d2f_dxdz_p(cells, pot, n_cell, dx_cell, dz_cell, n) * delta(:,1) +&
+         !            d2f_dydz_p(cells, pot, n_cell, dy_cell, dz_cell, n) * delta(:,2))
+         !         !write(*,*) "ax,ay,az"
+         !         acc(:,1) = ax
+         !         acc(:,2) = ay
+         !         acc(:,3) = az
+         !end subroutine get_acc
 
 !---------------------------------
-         subroutine get_acc2(neighb, dist, pset, acc2, cg, n)
+         subroutine get_acc2(neighb, dist, pset, acc, cg, n)
             use constants, only : ndims
             use cg_list,      only: cg_list_element
             use grid_cont,    only: grid_container
@@ -711,7 +734,7 @@ contains
                integer, intent(in) :: n
                integer(kind=8),dimension(n, ndims), intent(in) :: neighb
                real(kind=8), dimension(n, ndims), intent(in) :: dist
-               real(kind=8),dimension(n, ndims),intent(out) :: acc2
+               real(kind=8),dimension(n, ndims),intent(out) :: acc
                real,dimension(n) :: ax, ay, az
 
                   dx_cell = cg%dx
@@ -731,13 +754,13 @@ contains
                      d2f_dz2_o2_2(neighb, cg,dz_cell, n) * dist(:,3) + &
                      d2f_dxdz_o2_2(neighb, cg,dx_cell, dz_cell, n) * dist(:,1) +&
                      d2f_dydz_o2_2(neighb, cg,dy_cell, dz_cell, n) * dist(:,2))
-                  acc2(:,1) = ax
-                  acc2(:,2) = ay
-                  acc2(:,3) = az
+                  acc(:,1) = ax
+                  acc(:,2) = ay
+                  acc(:,3) = az
                   !druga czastka sie nie rusza
-                  acc2(2,:)=0.0
+                  !acc2(2,:)=0.0
                   !pierwsza czastka nie rusza sie w osi Z
-                  acc2(1,3)=0.0
+                  !acc2(1,3)=0.0
          end subroutine get_acc2
 !--------------------------------
 
@@ -798,6 +821,22 @@ contains
                   acc2(i,3)=-der_z(pos(i,:),1.0e-8, eps)
                enddo
          end subroutine get_acc_num
+         
+         subroutine get_acc_num2(pset, acc2, eps, n)
+            use constants, only: ndims
+            use grid_cont,  only: grid_container
+            implicit none
+               class(particle_set), intent(in) :: pset  !< particle list
+               integer, intent(in) :: n
+               real, intent(in) :: eps
+               real, dimension(n, ndims), intent(out) :: acc2
+               do i=1,n
+                  acc2(i,1) = -der_x(pset%p(i)%pos, 1.0e-8, eps)
+                  acc2(i,2) = -der_y(pset%p(i)%pos, 1.0e-8, eps)
+                  acc2(i,3) = -der_z(pset%p(i)%pos, 1.0e-8, eps)
+               enddo
+               
+         end subroutine get_acc_num2
          
          function der_x(pos, d, eps)
          implicit none
@@ -860,19 +899,20 @@ contains
                !real,dimension(n, ndims),intent(in) :: pos
                real, dimension(ndims), intent(in)  :: mins
                real, dimension(ndims) :: delta_cells
-               delta_cells(1)=cg%dx
-               delta_cells(2)=cg%dy
-               delta_cells(3)=cg%dz
+               delta_cells(1) = cg%dx
+               delta_cells(2) = cg%dy
+               delta_cells(3) = cg%dz
                !write(*,*) "delta_cells=", delta_cells
 
                do i=1, n
                   do j=1, ndims
-                     neighb(i,j) = int( (pset%p(i)%pos(j) - mins(j) - 0.5*delta_cells(j)) / delta_cells(j) )! + 1
+                     neighb(i,j) = int( (pset%p(i)%pos(j) - mins(j) - 0.5*delta_cells(j)) / delta_cells(j) ) + 1
                   enddo
                enddo
                
                do i = 1, n
-                     dist(i,:) =  pset%p(i)%pos - (mins+neighb(i,:) * delta_cells - 0.5*delta_cells )
+                     !dist(i,:) =  pset%p(i)%pos - (mins+neighb(i,:) * delta_cells - 0.5*delta_cells )
+                     dist(i,:) = pset%p(i)%pos - neighb(i,:) * delta_cells - mins
                enddo
                
                open(unit=777, file='dist.dat', status='unknown',  position='append')
