@@ -241,9 +241,9 @@ contains
       real, dimension(:, :), allocatable :: pos, vel, acc, vel_h, d_particles
       real, dimension(:, :, :), allocatable :: pot
       integer, dimension(:), allocatable :: n_cell
-      real :: t_dia, t_out, t_end, einit, dt, t, dth, eta, eps, a, epot
-      integer :: nsteps, n, ndim, lun_out, lun_err, i, j, k, nx, ny, nz, order
-      real :: eps2, n_orbit, tend, dx, dy, dz, ax, ay, az,axx, ayy, azz, energy, init_energy, d_energy, ang_momentum, init_ang_mom, d_ang_momentum, zero
+      real :: t_end, einit, dt, t, dth, eta, eps, a, epot, eps2, energy, init_energy, d_energy, ang_momentum, init_ang_mom, d_ang_momentum, zero
+      integer :: nsteps, n, ndim, lun_out, i, order
+
 
       procedure(df_dxi),pointer :: df_dx_p, df_dy_p, df_dz_p
       procedure(d2f_dxi_2),pointer :: d2f_dx2_p, d2f_dy2_p, d2f_dz2_p
@@ -270,10 +270,10 @@ contains
      ! write(*,*) "grav_pot2acc_cic"
       mass(:) = pset%p(:)%mass
 
-      do ndim = xdim, zdim
-         pos(:, ndim) = pset%p(:)%pos(ndim)
-         vel(:, ndim) = pset%p(:)%vel(ndim)
-      enddo
+      !do ndim = xdim, zdim
+      !   pos(:, ndim) = pset%p(:)%pos(ndim)
+      !   vel(:, ndim) = pset%p(:)%vel(ndim)
+      !enddo
 
       
       t = t_glob
@@ -583,9 +583,12 @@ contains
                real,dimension(ndims),intent(in) :: mins, maxs
                real,dimension(ndims),intent(out) :: delta_cells
                real, intent(in) :: eps
-               !eal,dimension(n_cell(1), n_cell(2), n_cell(3)),intent(inout) :: pot
+               !real,dimension(n_cell(1), n_cell(2), n_cell(3)),intent(inout) :: pot
                !open(unit=77,file='potencjal.dat')
-                  delta_cells = (maxs - mins) / n_cell
+                  !delta_cells = (maxs - mins) / n_cell
+                  delta_cells(1) = cg%dx
+                  delta_cells(2) = cg%dy
+                  delta_cells(3) = cg%dz
                   !write(*,*) "pot_grid2: mins ",mins, " delta_cells ", delta_cells, " n_cell ", n_cell
 
 
