@@ -193,7 +193,7 @@ contains
             integer, intent(in) :: n_particles
             integer,dimension(n_particles, ndims),intent(in) :: cells
             integer, dimension(ndims), intent(in) :: n_cell
-            real,dimension(n_cell(1), n_cell(2), n_cell(3)),intent(in) :: potential
+            real,dimension(-4:n_cell(1), -4:n_cell(2), -4:n_cell(3)),intent(in) :: potential
             real,intent(in) :: delta_xi
             real,dimension(n_particles) :: df_dxi
          end function df_dxi
@@ -203,7 +203,7 @@ contains
             integer, intent(in) :: n_particles
             integer,dimension(n_particles, ndims),intent(in) :: cells
             integer, dimension(ndims), intent(in) :: n_cell
-            real,dimension(n_cell(1), n_cell(2), n_cell(3)),intent(in) :: potential
+            real,dimension(-4:n_cell(1), -4:n_cell(2), -4:n_cell(3)),intent(in) :: potential
             real,intent(in) :: delta_xi
             real,dimension(n_particles) :: d2f_dxi_2
          end function d2f_dxi_2
@@ -213,7 +213,7 @@ contains
             integer, intent(in) :: n_particles
             integer,dimension(n_particles, ndims),intent(in) :: cells
             integer, dimension(ndims), intent(in) :: n_cell
-            real,dimension(n_cell(1), n_cell(2), n_cell(3)),intent(in) :: potential
+            real,dimension(-4:n_cell(1), -4:n_cell(2), -4:n_cell(3)),intent(in) :: potential
             real,intent(in) :: delta_xi, delta_xj
             real,dimension(n_particles) :: d2f_dxi_dxj
          end function d2f_dxi_dxj
@@ -276,7 +276,8 @@ contains
 
       maxs(:) = dom%edge(:,2)
 
-      n_cell(:) = dom%n_d
+      n_cell(:) = dom%n_d+4
+      write(*,*) "Wymiary potencjalu: ", n_cell
       !write(*,*) "mins= ", mins
 
       zero = 0.0
@@ -290,7 +291,7 @@ contains
 
       
       !alokacja potencjalu
-      allocate( pot(n_cell(1), n_cell(2), n_cell(3)) )
+      
       write(*,*) "Zaalokowano potencjal"
       cgl => leaves%first
       do while (associated(cgl))
@@ -302,7 +303,7 @@ contains
             !write(*,*) lbound(pot)
             cgl => cgl%nxt
       enddo
-      
+      allocate( pot(lbound(cg%gpot,dim=1):ubound(cg%gpot,dim=1), lbound(cg%gpot,dim=2):ubound(cg%gpot,dim=2), lbound(cg%gpot,dim=3):ubound(cg%gpot,dim=3)) )
 
 
       !obliczenie potencjalu na siatce
@@ -357,9 +358,9 @@ contains
       !   stop
       !endif
       !timestep
-      !dt = sqrt(2.0*eta*eps/a) 
+      dt = sqrt(2.0*eta*eps/a) 
       !write(*,*) "dt"           !variable
-      dt = 0.001                            !constant
+      !dt = 0.001                            !constant
       dth = dt/2.0
       
 
@@ -371,6 +372,17 @@ contains
       do while (t<t_end)
          !1.kick(dth)
          !vel_h(:,:) = vel
+         if (t+dt>t_end) then
+            dt = t_end - t
+         endif
+         dth=0.5*dt
+         
+         do i=1, n
+            write(lun_out, '(I3,1X,10(E13.6,1X))') n, t, pos(i,:), acc(i,:), acc2(i,:)
+            !write(lun_out, '(9(E13.6,1X))') pos(i,:), acc(i,:), acc2
+         enddo
+         
+         acc=0.0
          call kick(vel, acc, dth, n) !velocity vel_h
          !write(*,*) "kick1"
          
@@ -380,7 +392,8 @@ contains
          call drift(pos, vel, dt, n) !position vel_h
          !write(*,*) "drift"
          !call drift2(pset,dt,n)
-         
+         !przyspieszenie modelowe:
+         call get_acc_num(pos, acc2, eps, n)
          !3.acceleration + |a|
          !call pset%find_cells(neighb, dist)
          !call find_cells(pset,neighb, dist, n)
@@ -393,7 +406,7 @@ contains
          !axx=-der_x(pos,1.0e-8,eps)
          !ayy=-der_y(pos,1.0e-8,eps)
          !axx=-der_z(pos,1.0e-8,eps)
-         call get_acc_num(pos, acc2, eps, n)
+         !call get_acc_num(pos, acc2, eps, n)
          !call get_acc3(cells, pos, acc, cg, mins, delta_cells, n)
          !write(*,*) "get_acc3"
          !call get_acc2(neighb, dist, pset, acc2, cg, n)
@@ -405,7 +418,8 @@ contains
          !write(*,*) "get_acc_mod"
          !4.kick(dth)
          !vel(:,:) = vel_h
-         call kick(vel, acc, dth, n)   !velocity
+         !acc=0.0
+         call kick(vel, [zero,zero,zero], dth, n)   !velocity
          !call kick(vel, acc, dth, n)   !velocity
          !write(*,*) "kick2"
          !call kick2(pset, acc2,dth,n)
@@ -423,10 +437,7 @@ contains
          !   write(lun_out, '(I3,1X,9(E13.6,1X))') i, mass(i),  pset%p(i)%pos, pset%p(i)%vel, acc2(i,:)!, d_ang_momentum
          !enddo
          
-         do i=1, n
-            !write(lun_out, '(I3,1X,9(E13.6,1X))') pos(i,:), acc(i,:), acc2(i,:)
-            write(lun_out, '(9(E13.6,1X))') pos(i,:), acc(i,:), acc2
-         enddo
+         
 
       end do
       
@@ -522,13 +533,13 @@ contains
                real,dimension(ndims),intent(in) :: mins, maxs
                real,dimension(ndims),intent(out) :: delta_cells
                real, intent(in) :: eps2
-               real,dimension(n_cell(1), n_cell(2), n_cell(3)),intent(out) :: pot
+               real,dimension(-4:n_cell(1), -4:n_cell(2), -4:n_cell(3)),intent(out) :: pot
                !open(unit=77,file='potencjal.dat')
-               delta_cells = (maxs - mins) / n_cell
+               delta_cells = (maxs - mins) / (n_cell-4)
 
-                  do i = 1, n_cell(1), 1
-                     do j = 1, n_cell(2), 1
-                        do k = 1, n_cell(3), 1
+                  do i = -4, n_cell(1), 1
+                     do j = -4, n_cell(2), 1
+                        do k = -4, n_cell(3), 1
                            pot(i, j, k) = phi_pm(mins(1) + i*delta_cells(1), mins(2) + j*delta_cells(2), mins(3) + k*delta_cells(3), eps2)
                            !write(77,*) i,j,k,pot(i,j,k)
                         enddo
@@ -653,7 +664,7 @@ contains
                real,dimension(n, ndims),intent(out) :: acc
                integer,dimension(ndims),intent(in) :: n_cell
                real, dimension(ndims),intent(in) :: mins, delta_cells
-               real,dimension(n_cell(1), n_cell(2), n_cell(3)),intent(in) :: pot
+               real,dimension(-4:n_cell(1), -4:n_cell(2), -4:n_cell(3)),intent(in) :: pot
                real,dimension(n, ndims) :: delta
                real,dimension(n) :: ax, ay, az
 
@@ -878,7 +889,7 @@ contains
                integer,dimension(n, ndims),intent(in) :: cells
                integer, dimension(ndims), intent(in):: n_cell
                integer :: i, p, q, r
-               real,dimension(n_cell(1), n_cell(2), n_cell(3)),intent(in) :: pot
+               real,dimension(-4:n_cell(1), -4:n_cell(2), -4:n_cell(3)),intent(in) :: pot
                real,intent(in) :: dx_cell
                real,dimension(n),target :: df_dx_o2
 
@@ -899,7 +910,7 @@ contains
                integer,dimension(n, ndims),intent(in) :: cells
                integer, dimension(ndims), intent(in):: n_cell
                integer :: i, p, q, r
-               real,dimension(n_cell(1), n_cell(2), n_cell(3)),intent(in) :: pot
+               real,dimension(-4:n_cell(1), -4:n_cell(2), -4:n_cell(3)),intent(in) :: pot
                real,intent(in) :: dx_cell
                real,dimension(n),target :: df_dx_o4
 
@@ -921,7 +932,7 @@ contains
                integer,dimension(n, ndims),intent(in) :: cells
                integer, dimension(ndims), intent(in):: n_cell
                integer :: i, p, q, r
-               real,dimension(n_cell(1), n_cell(2), n_cell(3)),intent(in) :: pot
+               real,dimension(-4:n_cell(1), -4:n_cell(2), -4:n_cell(3)),intent(in) :: pot
                real,intent(in) :: dy_cell
                real,dimension(n),target ::df_dy_o2
 
@@ -942,7 +953,7 @@ contains
                integer,dimension(n, ndims),intent(in) :: cells
                integer, dimension(ndims), intent(in):: n_cell
                integer :: i, p, q, r
-               real,dimension(n_cell(1), n_cell(2), n_cell(3)),intent(in) :: pot
+               real,dimension(-4:n_cell(1), -4:n_cell(2), -4:n_cell(3)),intent(in) :: pot
                real,intent(in) :: dy_cell
                real, dimension(n), target :: df_dy_o4
 
@@ -964,7 +975,7 @@ contains
                integer,dimension(n, ndims),intent(in) :: cells
                integer, dimension(ndims), intent(in):: n_cell
                integer :: i, p, q, r
-               real,dimension(n_cell(1), n_cell(2), n_cell(3)),intent(in) :: pot
+               real,dimension(-4:n_cell(1), -4:n_cell(2), -4:n_cell(3)),intent(in) :: pot
                real,intent(in) :: dz_cell
                real, dimension(n), target :: df_dz_o2
 
@@ -985,7 +996,7 @@ contains
                integer,dimension(n, ndims),intent(in) :: cells
                integer, dimension(ndims), intent(in):: n_cell
                integer :: i, p, q, r
-               real,dimension(n_cell(1), n_cell(2), n_cell(3)),intent(in) :: pot
+               real,dimension(-4:n_cell(1), -4:n_cell(2), -4:n_cell(3)),intent(in) :: pot
                real,intent(in) :: dz_cell
                real, dimension(n), target :: df_dz_o4
 
@@ -1007,7 +1018,7 @@ contains
                integer,dimension(n, ndims),intent(in) :: cells
                integer, dimension(ndims), intent(in) :: n_cell
                integer :: i, p, q, r
-               real,dimension(n_cell(1), n_cell(2), n_cell(3)),intent(in) :: pot
+               real,dimension(-4:n_cell(1), -4:n_cell(2), -4:n_cell(3)),intent(in) :: pot
                real,intent(in) :: dx_cell
                real,dimension(n),target :: d2f_dx2_o2
 
@@ -1028,7 +1039,7 @@ contains
                integer,dimension(n, ndims),intent(in) :: cells
                integer, dimension(ndims), intent(in) :: n_cell
                integer :: i, p, q, r
-               real,dimension(n_cell(1), n_cell(2), n_cell(3)),intent(in) :: pot
+               real,dimension(-4:n_cell(1), -4:n_cell(2), -4:n_cell(3)),intent(in) :: pot
                real,intent(in) :: dx_cell
                real,dimension(n),target :: d2f_dx2_o4
 
@@ -1051,7 +1062,7 @@ contains
                integer,dimension(n, ndims),intent(in) :: cells
                integer, dimension(ndims), intent(in):: n_cell
                integer :: i, p, q, r
-               real,dimension(n_cell(1), n_cell(2), n_cell(3)),intent(in) :: pot
+               real,dimension(-4:n_cell(1), -4:n_cell(2), -4:n_cell(3)),intent(in) :: pot
                real,intent(in) :: dy_cell
                real,dimension(n),target :: d2f_dy2_o2
 
@@ -1072,7 +1083,7 @@ contains
                integer,dimension(n, ndims),intent(in) :: cells
                integer, dimension(ndims), intent(in) :: n_cell
                integer :: i, p, q, r
-               real,dimension(n_cell(1), n_cell(2), n_cell(3)),intent(in) :: pot
+               real,dimension(-4:n_cell(1), -4:n_cell(2), -4:n_cell(3)),intent(in) :: pot
                real,intent(in) :: dy_cell
                real,dimension(n),target :: d2f_dy2_o4
 
@@ -1095,7 +1106,7 @@ contains
                integer,dimension(n, ndims),intent(in) :: cells
                integer, dimension(ndims), intent(in) :: n_cell
                integer :: i, p, q, r
-               real,dimension(n_cell(1), n_cell(2), n_cell(3)),intent(in) :: pot
+               real,dimension(-4:n_cell(1), -4:n_cell(2), -4:n_cell(3)),intent(in) :: pot
                real,intent(in) :: dz_cell
                real,dimension(n),target :: d2f_dz2_o2
 
@@ -1116,7 +1127,7 @@ contains
                integer,dimension(n, ndims),intent(in) :: cells
                integer, dimension(ndims), intent(in) :: n_cell
                integer :: i, p, q, r
-               real,dimension(n_cell(1), n_cell(2), n_cell(3)),intent(in) :: pot
+               real,dimension(-4:n_cell(1), -4:n_cell(2), -4:n_cell(3)),intent(in) :: pot
                real,intent(in) :: dz_cell
                real,dimension(n),target :: d2f_dz2_o4
 
@@ -1139,7 +1150,7 @@ contains
                integer,dimension(n, ndims),intent(in) :: cells
                integer, dimension(ndims), intent(in) :: n_cell
                integer :: i, p, q, r
-               real,dimension(n_cell(1), n_cell(2), n_cell(3)),intent(in) :: pot
+               real,dimension(-4:n_cell(1), -4:n_cell(2), -4:n_cell(3)),intent(in) :: pot
                real,intent(in) :: dx_cell, dy_cell
                real,dimension(n),target :: d2f_dxdy_o2
 
@@ -1161,7 +1172,7 @@ contains
                integer,dimension(n, ndims),intent(in) :: cells
                integer, dimension(ndims), intent(in):: n_cell
                integer :: i, p, q, r
-               real,dimension(n_cell(1), n_cell(2), n_cell(3)),intent(in) :: pot
+               real,dimension(-4:n_cell(1), -4:n_cell(2), -4:n_cell(3)),intent(in) :: pot
                real,intent(in) :: dx_cell, dy_cell
                real,dimension(n),target :: d2f_dxdy_o4
 
@@ -1185,7 +1196,7 @@ contains
                integer,dimension(n, ndims),intent(in) :: cells
                integer, dimension(ndims), intent(in) :: n_cell
                integer :: i, p, q, r
-               real,dimension(n_cell(1), n_cell(2), n_cell(3)),intent(in) :: pot
+               real,dimension(-4:n_cell(1), -4:n_cell(2), -4:n_cell(3)),intent(in) :: pot
                real,intent(in) :: dx_cell, dz_cell
                real,dimension(n),target :: d2f_dxdz_o2
 
@@ -1207,7 +1218,7 @@ contains
                integer,dimension(n, ndims),intent(in) :: cells
                integer, dimension(ndims), intent(in) :: n_cell
                integer :: i, p, q, r
-               real,dimension(n_cell(1), n_cell(2), n_cell(3)),intent(in) :: pot
+               real,dimension(-4:n_cell(1), -4:n_cell(2), -4:n_cell(3)),intent(in) :: pot
                real,intent(in) :: dx_cell, dz_cell
                real,dimension(n),target :: d2f_dxdz_o4
 
@@ -1232,7 +1243,7 @@ contains
                integer,dimension(n, ndims),intent(in) :: cells
                integer, dimension(ndims), intent(in) :: n_cell
                integer :: i, p, q, r
-               real,dimension(n_cell(1), n_cell(2), n_cell(3)),intent(in) :: pot
+               real,dimension(-4:n_cell(1), -4:n_cell(2), -4:n_cell(3)),intent(in) :: pot
                real,intent(in) :: dy_cell, dz_cell
                real,dimension(n),target :: d2f_dydz_o2
 
@@ -1254,7 +1265,7 @@ contains
                integer,dimension(n, ndims),intent(in) :: cells
                integer, dimension(ndims), intent(in) :: n_cell
                integer :: i, p, q, r
-               real,dimension(n_cell(1), n_cell(2), n_cell(3)),intent(in) :: pot
+               real,dimension(-4:n_cell(1), -4:n_cell(2), -4:n_cell(3)),intent(in) :: pot
                real,intent(in) :: dy_cell, dz_cell
                real,dimension(n),target :: d2f_dydz_o4
 

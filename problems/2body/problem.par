@@ -27,7 +27,7 @@
  /
 
  $END_CONTROL
-    tend   = 60.0
+    tend   = 7.0
     nend   = 6000
  /
 
@@ -45,7 +45,8 @@
  /
 
  $FLUID_NEUTRAL
- !cs_iso = 1.0
+ cs_iso = 1.0
+ !cs_iso = 0.1
  !selfgrav = .true.
  /
 
