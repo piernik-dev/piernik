@@ -286,7 +286,7 @@ contains
       maxs(:) = dom%edge(:,2)
 
       n_cell(:) = dom%n_d
-      write(*,*) "Wymiary potencjalu: ", n_cell
+      !write(*,*) "Wymiary potencjalu: ", n_cell
       !write(*,*) "mins= ", mins
 
       zero = 0.0
@@ -745,18 +745,18 @@ contains
                   dz_cell = cg%dz
 
 
-                  ax = -( df_dx_o2_2(neighb, cg,dx_cell, n) + &
-                     d2f_dx2_o2_2(neighb, cg,dx_cell, n) * dist(:,1) + &
-                     d2f_dxdy_o2_2(neighb, cg,dx_cell, dy_cell, n) * dist(:,2) + &
-                     d2f_dxdz_o2_2(neighb, cg,dx_cell, dz_cell, n) * dist(:,3))
-                  ay = -( df_dy_o2_2(neighb, cg,dy_cell, n) + &
-                     d2f_dy2_o2_2(neighb, cg,dy_cell, n) * dist(:,2) + &
-                     d2f_dxdy_o2_2(neighb, cg,dx_cell, dy_cell, n) * dist(:,1) + &
-                     d2f_dydz_o2_2(neighb, cg,dy_cell, dz_cell, n) * dist(:,3))
-                  az = -( df_dz_o2_2(neighb, cg,dz_cell, n) + &
-                     d2f_dz2_o2_2(neighb, cg,dz_cell, n) * dist(:,3) + &
-                     d2f_dxdz_o2_2(neighb, cg,dx_cell, dz_cell, n) * dist(:,1) +&
-                     d2f_dydz_o2_2(neighb, cg,dy_cell, dz_cell, n) * dist(:,2))
+                  ax = -( df_dx_p(neighb, cg,dx_cell, n) + &
+                     d2f_dx2_p(neighb, cg,dx_cell, n) * dist(:,1) + &
+                     d2f_dxdy_p(neighb, cg,dx_cell, dy_cell, n) * dist(:,2) + &
+                     d2f_dxdz_p(neighb, cg,dx_cell, dz_cell, n) * dist(:,3))
+                  ay = -( df_dy_p(neighb, cg,dy_cell, n) + &
+                     d2f_dy2_p(neighb, cg,dy_cell, n) * dist(:,2) + &
+                     d2f_dxdy_p(neighb, cg,dx_cell, dy_cell, n) * dist(:,1) + &
+                     d2f_dydz_p(neighb, cg,dy_cell, dz_cell, n) * dist(:,3))
+                  az = -( df_dz_p(neighb, cg,dz_cell, n) + &
+                     d2f_dz2_p(neighb, cg,dz_cell, n) * dist(:,3) + &
+                     d2f_dxdz_p(neighb, cg,dx_cell, dz_cell, n) * dist(:,1) +&
+                     d2f_dydz_p(neighb, cg,dy_cell, dz_cell, n) * dist(:,2))
                   acc(:,1) = ax
                   acc(:,2) = ay
                   acc(:,3) = az
@@ -1617,7 +1617,7 @@ contains
                   r = neighb(i, 3)
 
                   !o(R^4)
-                  df_dz_o4_2(i) = ( 2.0* (pot(p, q, r+1) - cg%gpot(p, q, r-1) ) ) / (3.0*dz_cell) - &
+                  df_dz_o4_2(i) = ( 2.0* (cg%gpot(p, q, r+1) - cg%gpot(p, q, r-1) ) ) / (3.0*dz_cell) - &
                            ( cg%gpot(p, q, r+2) - cg%gpot(p, q, r-2) ) / (12.0*dz_cell)
                enddo
          end function df_dz_o4_2
@@ -1669,8 +1669,8 @@ contains
 
                   !o(R^4)
                   d2f_dy2_o4_2(i) = 4.0*( cg%gpot(p, q+1, r) + cg%gpot(p, q-1, r) - &
-                        2.0*pot(p, q, r) ) / (3.0*dy_cell**2) - &
-                        ( cg%gpot(p, q+2, r) + cg%gpot(p, q-2, r) - 2.0*pot(p, q, r) ) / (12.0*dy_cell**2)
+                        2.0*cg%gpot(p, q, r) ) / (3.0*dy_cell**2) - &
+                        ( cg%gpot(p, q+2, r) + cg%gpot(p, q-2, r) - 2.0*cg%gpot(p, q, r) ) / (12.0*dy_cell**2)
                enddo
          end function d2f_dy2_o4_2
          
@@ -1695,8 +1695,8 @@ contains
 
                   !o(R^4)
                   d2f_dz2_o4_2(i) = 4.0*( cg%gpot(p, q, r+1) + cg%gpot(p, q, r-1) - &
-                           2.0*pot(p, q, r) ) / (3.0*dz_cell**2) - &
-                           ( cg%gpot(p, q, r+2) + cg%gpot(p, q, r-2) - 2.0*pot(p, q, r) ) / (12.0*dz_cell**2)
+                           2.0*cg%gpot(p, q, r) ) / (3.0*dz_cell**2) - &
+                           ( cg%gpot(p, q, r+2) + cg%gpot(p, q, r-2) - 2.0*cg%gpot(p, q, r) ) / (12.0*dz_cell**2)
                enddo
          end function d2f_dz2_o4_2
          
