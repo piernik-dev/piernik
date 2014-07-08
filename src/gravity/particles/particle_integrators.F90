@@ -354,6 +354,8 @@ contains
       !call get_acc(cells, pos, acc, pot, n_cell, mins, delta_cells, n)
       call get_acc2(neighb, dist, pset, acc, cg, n)
       
+      call get_energy(pset, cg, neighb, dist, n, energy)
+      init_energy = energy
       !write(*,*) "get_acc"
       !call get_acc_num(pos, acc2, eps, n)
       call get_acc_num2(pset, acc2, eps, n)
@@ -391,7 +393,7 @@ contains
          
          
          do i=1, n
-            write(lun_out, '(I3,1X,10(E13.6,1X))') n, t, pset%p(i)%pos, acc(i,:), acc2(i,:)
+            write(lun_out, '(I3,1X,11(E13.6,1X))') n, t, pset%p(i)%pos, acc(i,:), acc2(i,:), energy
             !write(lun_out, '(9(E13.6,1X))') pos(i,:), acc(i,:), acc2
          enddo
          
@@ -413,6 +415,7 @@ contains
          !call drift(pos, vel, dt, n) !position vel_h
          !write(*,*) "drift"
          call drift2(pset, dt, n)
+         call get_energy(pset, cg, neighb, dist, n, energy)
          !przyspieszenie modelowe:
          !call get_acc_num(pos, acc2, eps, n)
          call get_acc_num2(pset, acc2, eps, n)
@@ -638,47 +641,101 @@ contains
          end subroutine check_ord
 
 
-   subroutine grav_pot2acc_cic2(neighbors, distances, acc, pset, n)
-      use constants, only: xdim, ydim, zdim, ndims, LO, HI
-      use cg_leaves,        only: leaves
-      use cg_list,          only: cg_list_element
-      use grid_cont,        only: grid_container
-      use particle_types, only: particle_set
+         subroutine grav_pot2acc_cic2(neighbors, distances, acc, pset, n)
+            use constants, only: xdim, ydim, zdim, ndims, LO, HI
+            use cg_leaves,        only: leaves
+            use cg_list,          only: cg_list_element
+            use grid_cont,        only: grid_container
+            use particle_types, only: particle_set
 
-      implicit none
-      
-      type(cg_list_element), pointer :: cgl
-      type(grid_container), pointer :: cg
-      class(particle_set), intent(in) :: pset  !< particle list
-      
-      integer, intent(in) :: n
-      integer :: i
-      
-      integer(kind=8), dimension(n, ndims), intent(in) :: neighbors
-      real(kind=8), dimension(n, ndims), intent(in) :: distances
-      real(kind=8), dimension(n, ndims), intent(out) :: acc 
+            implicit none
+            
+            type(cg_list_element), pointer :: cgl
+            type(grid_container), pointer :: cg
+            class(particle_set), intent(in) :: pset  !< particle list
+            
+            integer, intent(in) :: n
+            integer :: i
+            
+            integer(kind=8), dimension(n, ndims), intent(in) :: neighbors
+            real(kind=8), dimension(n, ndims), intent(in) :: distances
+            real(kind=8), dimension(n, ndims), intent(out) :: acc 
 
-      
-      cgl => leaves%first
-      do while (associated(cgl))
-         cg => cgl%cg
-        
-         
-         cgl => cgl%nxt
-      enddo
-      do i = 1, n
-         !write(*,*) "pot2acc_cic: i= ", i
-            acc(i,1) = (0.5/(cg%dx)**2)* ( (cg%dx-distances(i,1))*(cg%gpot(neighbors(i, 1)-1, neighbors(i, 2), neighbors(i, 3)) - cg%gpot(neighbors(i, 1)+1, neighbors(i, 2), neighbors(i, 3))) + (distances(i,1))*(cg%gpot(neighbors(i, 1)-2, neighbors(i, 2), neighbors(i, 3)) - cg%gpot(neighbors(i, 1), neighbors(i, 2), neighbors(i, 3))) )/pset%p(i)%mass
-            acc(i,2) = (0.5/(cg%dy)**2)* ( (cg%dy-distances(i,2))*(cg%gpot(neighbors(i, 1), neighbors(i, 2)-1, neighbors(i, 3)) - cg%gpot(neighbors(i, 1), neighbors(i, 2)+1, neighbors(i, 3))) + (distances(i,2))*(cg%gpot(neighbors(i, 1), neighbors(i, 2)-2, neighbors(i, 3)) - cg%gpot(neighbors(i, 1), neighbors(i, 2), neighbors(i, 3))) )/pset%p(i)%mass
-            acc(i,3) = (0.5/(cg%dz)**2)* ( (cg%dz-distances(i,3))*(cg%gpot(neighbors(i, 1), neighbors(i, 2), neighbors(i, 3)-1) - cg%gpot(neighbors(i, 1), neighbors(i, 2), neighbors(i, 3)+1)) + (distances(i,3))*(cg%gpot(neighbors(i, 1), neighbors(i, 2), neighbors(i, 3)-2) - cg%gpot(neighbors(i, 1), neighbors(i, 2), neighbors(i, 3))) )/pset%p(i)%mass
-            !write(*,*) i, distances(i, :)
-      enddo
-      !acc(2,:)=0.0
-      
+            
+            cgl => leaves%first
+            do while (associated(cgl))
+               cg => cgl%cg
+              
+               
+               cgl => cgl%nxt
+            enddo
+            do i = 1, n
+               !write(*,*) "pot2acc_cic: i= ", i
+                  acc(i,1) = (0.5/(cg%dx)**2)* ( (cg%dx-distances(i,1))*(cg%gpot(neighbors(i, 1)-1, neighbors(i, 2), neighbors(i, 3)) - cg%gpot(neighbors(i, 1)+1, neighbors(i, 2), neighbors(i, 3))) + (distances(i,1))*(cg%gpot(neighbors(i, 1)-2, neighbors(i, 2), neighbors(i, 3)) - cg%gpot(neighbors(i, 1), neighbors(i, 2), neighbors(i, 3))) )/pset%p(i)%mass
+                  acc(i,2) = (0.5/(cg%dy)**2)* ( (cg%dy-distances(i,2))*(cg%gpot(neighbors(i, 1), neighbors(i, 2)-1, neighbors(i, 3)) - cg%gpot(neighbors(i, 1), neighbors(i, 2)+1, neighbors(i, 3))) + (distances(i,2))*(cg%gpot(neighbors(i, 1), neighbors(i, 2)-2, neighbors(i, 3)) - cg%gpot(neighbors(i, 1), neighbors(i, 2), neighbors(i, 3))) )/pset%p(i)%mass
+                  acc(i,3) = (0.5/(cg%dz)**2)* ( (cg%dz-distances(i,3))*(cg%gpot(neighbors(i, 1), neighbors(i, 2), neighbors(i, 3)-1) - cg%gpot(neighbors(i, 1), neighbors(i, 2), neighbors(i, 3)+1)) + (distances(i,3))*(cg%gpot(neighbors(i, 1), neighbors(i, 2), neighbors(i, 3)-2) - cg%gpot(neighbors(i, 1), neighbors(i, 2), neighbors(i, 3))) )/pset%p(i)%mass
+                  !write(*,*) i, distances(i, :)
+            enddo
 
-      
-   end subroutine grav_pot2acc_cic2
-   
+         end subroutine grav_pot2acc_cic2
+
+         subroutine potential(pset, cg, neighb, dist, n)
+         use constants,    only: ndims
+         use grid_cont,    only: grid_container
+         implicit none
+            type(grid_container), pointer, intent(in) :: cg
+            class(particle_set), intent(inout) :: pset  !< particle list
+            integer, intent(in) :: n
+            integer(kind=8), dimension(n, ndims), intent(in) :: neighb
+            real(kind=8), dimension(n, ndims), intent(in) :: dist
+            integer :: i
+            integer (kind=8) :: p,q,r
+            real ::  dx_cell, dy_cell, dz_cell
+            real,dimension(n):: pot_x,pot_y,pot_z
+
+            dx_cell = cg%dx
+            dy_cell = cg%dy
+            dz_cell = cg%dz
+
+            pot_x = df_dx_p(neighb, cg,dx_cell, n) * dist(:,1) + &
+                     0.5*d2f_dx2_p(neighb, cg, dx_cell, n) * dist(:,1)**2
+            pot_y = df_dy_p(neighb, cg,dy_cell, n) * dist(:,2) + &
+                     0.5*d2f_dy2_p(neighb, cg, dy_cell, n) * dist(:,2)**2
+            pot_z = df_dz_p(neighb, cg, dz_cell, n) * dist(:,3) + &
+                     0.5*d2f_dy2_p(neighb, cg,dx_cell, n) * dist(:,3)**2
+            do i=1,n,1
+               p = neighb(i,1)
+               q = neighb(i,2)
+               r = neighb(i,3)
+               pset%p(i)%pot = cg%gpot(p,q,r) +sqrt(pot_x(i)**2 + pot_y(i)**2 + pot_z(i)**2)
+            enddo
+         end subroutine potential
+
+         subroutine get_energy(pset, cg, neighb, dist, n, energy)
+            use constants,    only: ndims
+            use grid_cont,    only: grid_container
+            implicit none
+               type(grid_container), pointer, intent(in) :: cg
+               class(particle_set), intent(inout) :: pset  !< particle list
+               integer :: i, j
+               integer, intent(in) :: n
+               integer(kind=8), dimension(n, ndims), intent(in) :: neighb
+               real(kind=8), dimension(n, ndims), intent(in) :: dist
+               real, intent(out) :: energy
+               real :: velocity = 0.0
+               
+               call potential(pset, cg, neighb, dist, n)
+               energy = 0.0
+               do i=1, n
+                  do j=1, ndims
+                     velocity = velocity + pset%p(i)%vel(j)**2
+                  enddo
+                
+               energy = energy + 0.5*velocity + pset%p(i)%pot
+               velocity = 0.0
+               enddo
+         end subroutine get_energy
+
          !subroutine get_acc(cells, pos, acc, pot, n_cell, mins, delta_cells, n)
          !   use constants, only : ndims
          !   implicit none
