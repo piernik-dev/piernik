@@ -46,7 +46,7 @@ module particle_types
       real                   :: mass       !< mass of the particle
       real, dimension(ndims) :: pos        !< physical position
       real, dimension(ndims) :: vel        !< particle velocity
-      real, dimension(ndims) :: force     !< force which works on particle
+      real  :: pot                           !< gravitational potential in pos
       logical                :: outside    !< this flag is true if the particle is outside the domain
    contains
       procedure :: is_outside              !< compute the outside flag
