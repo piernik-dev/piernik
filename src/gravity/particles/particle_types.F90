@@ -192,17 +192,17 @@ contains
 
 !> \brief Add a particle to the list
 
-   subroutine add_using_basic_types(this, mass, pos, vel, force)
+   subroutine add_using_basic_types(this, mass, pos, vel, pot)
 
       implicit none
 
       class(particle_set),    intent(inout) :: this     !< an object invoking the type-bound procedure
       real,                   intent(in)    :: mass     !< mass of the particle (negative values are allowed just in case someone wants to calculate electric potential)
       real, dimension(:), intent(in)    :: pos      !< physical position
-      real, dimension(:), intent(in)    :: vel      !< particle velosity
-      real, dimension(:), intent(in)    :: force
+      real, dimension(:), intent(in)    :: vel      !< particle velocity
+      real,  intent(in)    :: pot
 
-      call this%add(particle(mass, pos, vel, force, .false.))
+      call this%add(particle(mass, pos, vel, pot, .false.))
 
    end subroutine add_using_basic_types
 
