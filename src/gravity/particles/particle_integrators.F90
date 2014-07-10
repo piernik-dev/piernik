@@ -232,7 +232,7 @@ contains
       !integer(kind=8), dimension(ndims, LO:HI) :: neighb
      ! real(kind=8), dimension(ndims, LO:HI) :: dist, acc2
       integer(kind=8), dimension(:,:), allocatable :: neighb
-      real(kind=8), dimension(:,:), allocatable :: dist, acc2
+      real(kind=8), dimension(:,:), allocatable :: dist, acc2, acc3
       
       real, intent(in) :: t_glob, dt_tot
       integer, dimension(:,:),allocatable :: cells
@@ -260,7 +260,7 @@ contains
       !call find_cells(pset,neighb, dist, n)
       
       !write(*,*) "call find_cells"
-      allocate(mass(n), pos(n, ndims), vel(n, ndims), acc(n, ndims), vel_h(n, ndims), cells(n, ndims), mins(ndims), maxs(ndims), delta_cells(ndims), n_cell(ndims), d_particles(n,ndims))
+      allocate(mass(n), pos(n, ndims), vel(n, ndims), acc(n, ndims), acc3(n, ndims), vel_h(n, ndims), cells(n, ndims), mins(ndims), maxs(ndims), delta_cells(ndims), n_cell(ndims), d_particles(n,ndims))
       !write(*,*) "przed: grav_pot2acc_cic"
       
       !call grav_pot2acc_cic2(neighb, dist, acc2, pset, n)
@@ -353,6 +353,7 @@ contains
       !initial acceleration
       !call get_acc(cells, pos, acc, pot, n_cell, mins, delta_cells, n)
       call get_acc2(neighb, dist, pset, acc, cg, n)
+      call grav_pot2acc_cic2(cg, neighb, dist, acc3, n)
       
       call get_energy(pset, cg, neighb, dist, n, energy)
       init_energy = energy
@@ -393,7 +394,7 @@ contains
          
          
          do i=1, n
-            write(lun_out, '(I3,1X,11(E13.6,1X))') n, t, pset%p(i)%pos, acc(i,:), acc2(i,:), energy
+            write(lun_out, '(I3,1X,14(E13.6,1X))') n, t, pset%p(i)%pos, acc(i,:), acc2(i,:), acc3(i,:), energy
             !write(lun_out, '(9(E13.6,1X))') pos(i,:), acc(i,:), acc2
          enddo
          
@@ -419,6 +420,7 @@ contains
          !przyspieszenie modelowe:
          !call get_acc_num(pos, acc2, eps, n)
          call get_acc_num2(pset, acc2, eps, n)
+         call grav_pot2acc_cic2(cg, neighb, dist, acc3, n)
          !3.acceleration + |a|
          !call pset%find_cells(neighb, dist)
          !call find_cells(pset,neighb, dist, n)
@@ -641,40 +643,49 @@ contains
          end subroutine check_ord
 
 
-         subroutine grav_pot2acc_cic2(neighbors, distances, acc, pset, n)
+         subroutine grav_pot2acc_cic2(cg, neighb, dist, acc3, n)
             use constants, only: xdim, ydim, zdim, ndims, LO, HI
-            use cg_leaves,        only: leaves
-            use cg_list,          only: cg_list_element
+            !use cg_leaves,        only: leaves
+            !use cg_list,          only: cg_list_element
             use grid_cont,        only: grid_container
-            use particle_types, only: particle_set
+            !use particle_types, only: particle_set
 
             implicit none
             
-            type(cg_list_element), pointer :: cgl
-            type(grid_container), pointer :: cg
-            class(particle_set), intent(in) :: pset  !< particle list
+            !type(cg_list_element), pointer :: cgl
+            type(grid_container), pointer, intent(in) :: cg
+            !(particle_set), intent(in) :: pset  !< particle list
             
             integer, intent(in) :: n
             integer :: i
             
-            integer(kind=8), dimension(n, ndims), intent(in) :: neighbors
-            real(kind=8), dimension(n, ndims), intent(in) :: distances
-            real(kind=8), dimension(n, ndims), intent(out) :: acc 
-
+            integer(kind=8), dimension(n, ndims), intent(in) :: neighb
+            real(kind=8), dimension(n, ndims), intent(in) :: dist
+            real(kind=8), dimension(n, ndims), intent(out) :: acc3 
+            !write(*,*) "cic: dx,y,z= ",cg%dx, cg%dy, cg%dz
             
-            cgl => leaves%first
-            do while (associated(cgl))
-               cg => cgl%cg
+            !cgl => leaves%first
+            !do while (associated(cgl))
+            !   cg => cgl%cg
               
                
-               cgl => cgl%nxt
-            enddo
+            !   cgl => cgl%nxt
+            !enddo
             do i = 1, n
                !write(*,*) "pot2acc_cic: i= ", i
-                  acc(i,1) = (0.5/(cg%dx)**2)* ( (cg%dx-distances(i,1))*(cg%gpot(neighbors(i, 1)-1, neighbors(i, 2), neighbors(i, 3)) - cg%gpot(neighbors(i, 1)+1, neighbors(i, 2), neighbors(i, 3))) + (distances(i,1))*(cg%gpot(neighbors(i, 1)-2, neighbors(i, 2), neighbors(i, 3)) - cg%gpot(neighbors(i, 1), neighbors(i, 2), neighbors(i, 3))) )/pset%p(i)%mass
-                  acc(i,2) = (0.5/(cg%dy)**2)* ( (cg%dy-distances(i,2))*(cg%gpot(neighbors(i, 1), neighbors(i, 2)-1, neighbors(i, 3)) - cg%gpot(neighbors(i, 1), neighbors(i, 2)+1, neighbors(i, 3))) + (distances(i,2))*(cg%gpot(neighbors(i, 1), neighbors(i, 2)-2, neighbors(i, 3)) - cg%gpot(neighbors(i, 1), neighbors(i, 2), neighbors(i, 3))) )/pset%p(i)%mass
-                  acc(i,3) = (0.5/(cg%dz)**2)* ( (cg%dz-distances(i,3))*(cg%gpot(neighbors(i, 1), neighbors(i, 2), neighbors(i, 3)-1) - cg%gpot(neighbors(i, 1), neighbors(i, 2), neighbors(i, 3)+1)) + (distances(i,3))*(cg%gpot(neighbors(i, 1), neighbors(i, 2), neighbors(i, 3)-2) - cg%gpot(neighbors(i, 1), neighbors(i, 2), neighbors(i, 3))) )/pset%p(i)%mass
-                  !write(*,*) i, distances(i, :)
+                  
+                  !write(*,*) "[cic] cg ",cg%gpot(neighb(i, 1) - 1, neighb(i, 2), neighb(i, 3)) - cg%gpot(neighb(i, 1) + 1, neighb(i, 2), neighb(i, 3)), cg%gpot(neighb(i, 1) - 2, neighb(i, 2), neighb(i, 3)) - cg%gpot(neighb(i, 1), neighb(i, 2), neighb(i, 3))
+                  
+                  !acc3(i, 1) = (0.5*(cg%dx**2)) * (((cg%dx + dist(i, 1)) * ( cg%gpot(neighb(i, 1) - 1, neighb(i, 2), neighb(i, 3)) - cg%gpot(neighb(i, 1) + 1, neighb(i, 2), neighb(i, 3))) ) - dist(i,1) * (cg%gpot(neighb(i, 1) - 2, neighb(i, 2), neighb(i, 3)) - cg%gpot(neighb(i, 1), neighb(i, 2), neighb(i, 3))) )
+                  !acc3(i, 2) = (0.5*(cg%dy**2)) * (((cg%dy + dist(i, 2)) * ( cg%gpot(neighb(i, 1), neighb(i, 2) - 1, neighb(i, 3)) - cg%gpot(neighb(i, 1), neighb(i, 2) + 1, neighb(i, 3))) ) - dist(i,2) * (cg%gpot(neighb(i, 1), neighb(i, 2) - 2, neighb(i, 3)) - cg%gpot(neighb(i, 1), neighb(i, 2), neighb(i, 3))) )
+                  !acc3(i, 3) = (0.5*(cg%dz**2)) * (((cg%dz + dist(i, 3)) * ( cg%gpot(neighb(i, 1), neighb(i, 2), neighb(i, 3) - 1) - cg%gpot(neighb(i, 1), neighb(i, 2), neighb(i, 3) + 1)) ) - dist(i,3) * (cg%gpot(neighb(i, 1), neighb(i, 2), neighb(i, 3) - 2) - cg%gpot(neighb(i, 1), neighb(i, 2), neighb(i, 3))) )
+                  acc3(i, 1) = (0.5/(cg%dx**2)) * (((-cg%dx - dist(i, 1)) * ( cg%gpot(neighb(i, 1) - 1, neighb(i, 2), neighb(i, 3)) - cg%gpot(neighb(i, 1) + 1, neighb(i, 2), neighb(i, 3)))*(-1.0) ) + dist(i,1) * (cg%gpot(neighb(i, 1) - 2, neighb(i, 2), neighb(i, 3)) - cg%gpot(neighb(i, 1), neighb(i, 2), neighb(i, 3)))*(-1.0) )
+                  acc3(i, 2) = (0.5/(cg%dy**2)) * (((-cg%dy - dist(i, 2)) * ( cg%gpot(neighb(i, 1), neighb(i, 2) - 1, neighb(i, 3)) - cg%gpot(neighb(i, 1), neighb(i, 2) + 1, neighb(i, 3)))*(-1.0) ) + dist(i,2) * (cg%gpot(neighb(i, 1), neighb(i, 2) - 2, neighb(i, 3)) - cg%gpot(neighb(i, 1), neighb(i, 2), neighb(i, 3)))*(-1.0) )
+                  acc3(i, 3) = (0.5/(cg%dz**2)) * (((-cg%dz - dist(i, 3)) * ( cg%gpot(neighb(i, 1), neighb(i, 2), neighb(i, 3) - 1) - cg%gpot(neighb(i, 1), neighb(i, 2), neighb(i, 3) + 1))*(-1.0) ) + dist(i,3) * (cg%gpot(neighb(i, 1), neighb(i, 2), neighb(i, 3) - 2) - cg%gpot(neighb(i, 1), neighb(i, 2), neighb(i, 3)))*(-1.0) )
+                  
+                  !acc3(i, 1) = ((1.0/cg%dx)) * ((cg%dx - dist(i, 1)) * ( cg%gpot(neighb(i, 1), neighb(i, 2), neighb(i, 3))) + dist(i,1) * (cg%gpot(neighb(i, 1) - 1, neighb(i, 2), neighb(i, 3) ) ) )
+                  !acc3(i, 2) = ((1.0/cg%dy)) * ((cg%dy - dist(i, 2)) * ( cg%gpot(neighb(i, 1), neighb(i, 2), neighb(i, 3))) + dist(i,2) * (cg%gpot(neighb(i, 1), neighb(i, 2) - 1, neighb(i, 3) ) ) )
+                  !acc3(i, 3) = ((1.0/cg%dz)) * ((cg%dz - dist(i, 3)) * ( cg%gpot(neighb(i, 1), neighb(i, 2), neighb(i, 3))) + dist(i,3) * (cg%gpot(neighb(i, 1), neighb(i, 2), neighb(i, 3) - 1 ) ) ) 
             enddo
 
          end subroutine grav_pot2acc_cic2
