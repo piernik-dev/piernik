@@ -667,7 +667,7 @@ contains
             !write(*,*) "cic: dx,y,z= ",cg%dx, cg%dy, cg%dz
             
                   neighb2 = neighb
-                  dist2 = abs(dist)
+                  dist2 = dist
                   !cgl => leaves%first
                   !do while (associated(cgl))
                   !   cg => cgl%cg
@@ -681,16 +681,16 @@ contains
                   do i = 1, n
                      do j=1, ndims
                         if (pset%p(i)%pos(j) > cg%coord(CENTER, j)%r(neighb(i,j))) then
-                           neighb2(i,j) = neighb(i,j) + 1
-                           acc3(i, 1) = (0.5/(cg%dx**2)) * ((dist2(i, 1) * ( cg%gpot(neighb2(i, 1) - 1, neighb2(i, 2), neighb2(i, 3)) - cg%gpot(neighb2(i, 1) + 1, neighb2(i, 2), neighb2(i, 3))) ) + (cg%dx - dist2(i,1) ) * (cg%gpot(neighb2(i, 1) - 2, neighb2(i, 2), neighb2(i, 3)) - cg%gpot(neighb2(i, 1), neighb2(i, 2), neighb2(i, 3))) )
-                           acc3(i, 2) = (0.5/(cg%dy**2)) * ((dist2(i, 2) * ( cg%gpot(neighb2(i, 1), neighb2(i, 2) - 1, neighb2(i, 3)) - cg%gpot(neighb2(i, 1), neighb2(i, 2) + 1, neighb2(i, 3))) ) + (cg%dy - dist2(i,2) ) * (cg%gpot(neighb2(i, 1), neighb2(i, 2) - 2, neighb2(i, 3)) - cg%gpot(neighb2(i, 1), neighb2(i, 2), neighb2(i, 3))) )
-                           acc3(i, 3) = (0.5/(cg%dz**2)) * ((dist2(i, 3) * ( cg%gpot(neighb2(i, 1), neighb2(i, 2), neighb2(i, 3) - 1) - cg%gpot(neighb2(i, 1), neighb2(i, 2), neighb2(i, 3) + 1)) ) + (cg%dz - dist2(i,3) ) * (cg%gpot(neighb2(i, 1), neighb2(i, 2), neighb2(i, 3) - 2) - cg%gpot(neighb2(i, 1), neighb2(i, 2), neighb2(i, 3))) )
+                           neighb2(i,j) = neighb(i,j)! + 1
+                           acc3(i, 1) = (0.5/(cg%dx**2)) * ((cg%dx - dist2(i, 1) * ( cg%gpot(neighb2(i, 1) - 1, neighb2(i, 2), neighb2(i, 3)) - cg%gpot(neighb2(i, 1) + 1, neighb2(i, 2), neighb2(i, 3))) ) + (dist2(i,1) ) * (cg%gpot(neighb2(i, 1) - 2, neighb2(i, 2), neighb2(i, 3)) - cg%gpot(neighb2(i, 1), neighb2(i, 2), neighb2(i, 3))) )
+                           acc3(i, 2) = (0.5/(cg%dy**2)) * ((cg%dy - dist2(i, 2) * ( cg%gpot(neighb2(i, 1), neighb2(i, 2) - 1, neighb2(i, 3)) - cg%gpot(neighb2(i, 1), neighb2(i, 2) + 1, neighb2(i, 3))) ) + (dist2(i,2) ) * (cg%gpot(neighb2(i, 1), neighb2(i, 2) - 2, neighb2(i, 3)) - cg%gpot(neighb2(i, 1), neighb2(i, 2), neighb2(i, 3))) )
+                           acc3(i, 3) = (0.5/(cg%dz**2)) * ((cg%dz - dist2(i, 3) * ( cg%gpot(neighb2(i, 1), neighb2(i, 2), neighb2(i, 3) - 1) - cg%gpot(neighb2(i, 1), neighb2(i, 2), neighb2(i, 3) + 1)) ) + (dist2(i,3) ) * (cg%gpot(neighb2(i, 1), neighb2(i, 2), neighb2(i, 3) - 2) - cg%gpot(neighb2(i, 1), neighb2(i, 2), neighb2(i, 3))) )
                         else
-                           !neighb2(i,j) = neighb(i,j)
+                           neighb2(i,j) = neighb(i,j)
                            !write(*,*) "neighb:", neighb2(i,j), neighb(i,j)
-                           acc3(i, 1) = (0.5/(cg%dx**2)) * (((cg%dx - dist2(i, 1) ) * ( cg%gpot(neighb2(i, 1) - 1, neighb2(i, 2), neighb2(i, 3)) - cg%gpot(neighb2(i, 1) + 1, neighb2(i, 2), neighb2(i, 3))) ) + dist2(i,1)  * (cg%gpot(neighb2(i, 1) - 2, neighb2(i, 2), neighb2(i, 3)) - cg%gpot(neighb2(i, 1), neighb2(i, 2), neighb2(i, 3))) )
-                           acc3(i, 2) = (0.5/(cg%dy**2)) * (((cg%dy - dist2(i, 2) ) * ( cg%gpot(neighb2(i, 1), neighb2(i, 2) - 1, neighb2(i, 3)) - cg%gpot(neighb2(i, 1), neighb2(i, 2) + 1, neighb2(i, 3))) ) + dist2(i,2)  * (cg%gpot(neighb2(i, 1), neighb2(i, 2) - 2, neighb2(i, 3)) - cg%gpot(neighb2(i, 1), neighb2(i, 2), neighb2(i, 3))) )
-                           acc3(i, 3) = (0.5/(cg%dz**2)) * (((cg%dz - dist2(i, 3) ) * ( cg%gpot(neighb2(i, 1), neighb2(i, 2), neighb2(i, 3) - 1) - cg%gpot(neighb2(i, 1), neighb2(i, 2), neighb2(i, 3) + 1)) ) + dist2(i,3)  * (cg%gpot(neighb2(i, 1), neighb2(i, 2), neighb2(i, 3) - 2) - cg%gpot(neighb2(i, 1), neighb2(i, 2), neighb2(i, 3))) )
+                           acc3(i, 1) = (0.5/(cg%dx**2)) * (((dist2(i, 1) ) * ( cg%gpot(neighb2(i, 1) - 1, neighb2(i, 2), neighb2(i, 3)) - cg%gpot(neighb2(i, 1) + 1, neighb2(i, 2), neighb2(i, 3))) ) + (cg%dx - dist2(i,1) ) * (cg%gpot(neighb2(i, 1) - 2, neighb2(i, 2), neighb2(i, 3)) - cg%gpot(neighb2(i, 1), neighb2(i, 2), neighb2(i, 3))) )
+                           acc3(i, 2) = (0.5/(cg%dy**2)) * (((dist2(i, 2) ) * ( cg%gpot(neighb2(i, 1), neighb2(i, 2) - 1, neighb2(i, 3)) - cg%gpot(neighb2(i, 1), neighb2(i, 2) + 1, neighb2(i, 3))) ) + (cg%dy - dist2(i,2) ) * (cg%gpot(neighb2(i, 1), neighb2(i, 2) - 2, neighb2(i, 3)) - cg%gpot(neighb2(i, 1), neighb2(i, 2), neighb2(i, 3))) )
+                           acc3(i, 3) = (0.5/(cg%dz**2)) * (((dist2(i, 3) ) * ( cg%gpot(neighb2(i, 1), neighb2(i, 2), neighb2(i, 3) - 1) - cg%gpot(neighb2(i, 1), neighb2(i, 2), neighb2(i, 3) + 1)) ) + (cg%dz - dist2(i,3) ) * (cg%gpot(neighb2(i, 1), neighb2(i, 2), neighb2(i, 3) - 2) - cg%gpot(neighb2(i, 1), neighb2(i, 2), neighb2(i, 3))) )
                         endif
                      enddo
                  
