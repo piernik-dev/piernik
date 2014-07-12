@@ -364,7 +364,7 @@ contains
      
 
       !call get_acc_mod(acc, n, a)
-      call get_acc_mod(acc3, n, a)
+      call get_acc_mod(acc, n, a)
       
       
       !timestep
@@ -409,26 +409,24 @@ contains
          !call kick2(pset, acc3, dth, n)
 
          !2.drift(dt)         
-         
+         call grav_pot2acc_cic2(pset, cg, neighb, dist, acc3, n)
          call drift2(pset, dt, n)
          
          call get_energy(pset, cg, neighb, dist, n, energy)
          !przyspieszenie modelowe:
          !call get_acc_num(pos, acc2, eps, n)
          call get_acc_num2(pset, acc2, eps, n)
-         call grav_pot2acc_cic2(pset, cg, neighb, dist, acc3, n)
+         !call grav_pot2acc_cic2(pset, cg, neighb, dist, acc3, n)
          !call grav_pot2acc_cic2(pset,cg, neighb, dist, acc3, n)
-         
+
+
+
          !3.acceleration + |a|
-         !call pset%find_cells(neighb, dist)
-         !call find_cells(pset,neighb, dist, n)
-         !call cell_nr(pos, cells, mins, delta_cells, n)
-         !write(*,*) "cell_nr"
          call cell_nr2(pset, neighb, dist, mins, cg, n)
          
-         !write(*,*) "particle_integrators: grav_pot2acc_cics"
+
          !call grav_pot2acc_cic2(neighb, dist, acc2, pset, n)
-         !call get_acc(cells, pos, acc, pot, n_cell, mins, delta_cells, n)
+
 
          !call get_acc_num(pos, acc2, eps, n)
          !call get_acc3(cells, pos, acc, cg, mins, delta_cells, n)
@@ -710,7 +708,7 @@ contains
                   do i=1,n
                      do j=1,ndims
                         if (pset%p(i)%pos(j) > cg%coord(CENTER, j)%r(neighb(i,j))) then
-                           neighb2(i,j) = neighb(i,j)+1
+                           neighb2(i,j) = neighb(i,j) + 1
                         else
                            neighb2(i,j) = neighb(i,j)
                         endif
