@@ -357,21 +357,16 @@ contains
       
       call get_energy(pset, cg, neighb, dist, n, energy)
       init_energy = energy
-      !write(*,*) "get_acc"
-      !call get_acc_num(pos, acc2, eps, n)
-      call get_acc_num2(pset, acc2, eps, n)
-      !write(*,*) "get_acc_num" 
-      !call get_acc3(cells, pos, acc, cg, mins, delta_cells, n)
-     
-      !write(*,*) "get_acc3"
-      call get_acc_mod(acc, n, a)
-      !write(*,*) "get_acc_mod"
-      !call get_acc_mod(acc2,n,a)
       
-      !if ((a<1.0e-5) .and. (a> 0.0)) then
-      !   write (*,*) "a=0.0!"
-      !   stop
-      !endif
+      
+      call get_acc_num2(pset, acc2, eps, n)
+      
+     
+
+      !call get_acc_mod(acc, n, a)
+      call get_acc_mod(acc3, n, a)
+      
+      
       !timestep
       dt = sqrt(2.0*eta*eps/a) 
       !write(*,*) "dt"           !variable
@@ -409,49 +404,49 @@ contains
          !call kick(vel, [zero,zero,zero], dth, n)   !velocity
          !------------------------------------------------------------------
          
-         acc(:,:) = 0.0
+         acc(:,:) = 0.0                                                 !odkomentowac dla ruchu po prostej
          call kick2(pset, acc, dth, n)
+         !call kick2(pset, acc3, dth, n)
 
-         !2.drift(dt)
-         !call drift(pos, vel, dt, n) !position vel_h
-         !write(*,*) "drift"
+         !2.drift(dt)         
+         
          call drift2(pset, dt, n)
+         
          call get_energy(pset, cg, neighb, dist, n, energy)
          !przyspieszenie modelowe:
          !call get_acc_num(pos, acc2, eps, n)
          call get_acc_num2(pset, acc2, eps, n)
-         call grav_pot2acc_cic2(pset,cg, neighb, dist, acc3, n)
+         call grav_pot2acc_cic2(pset, cg, neighb, dist, acc3, n)
+         !call grav_pot2acc_cic2(pset,cg, neighb, dist, acc3, n)
+         
          !3.acceleration + |a|
          !call pset%find_cells(neighb, dist)
          !call find_cells(pset,neighb, dist, n)
          !call cell_nr(pos, cells, mins, delta_cells, n)
          !write(*,*) "cell_nr"
          call cell_nr2(pset, neighb, dist, mins, cg, n)
+         
          !write(*,*) "particle_integrators: grav_pot2acc_cics"
          !call grav_pot2acc_cic2(neighb, dist, acc2, pset, n)
          !call get_acc(cells, pos, acc, pot, n_cell, mins, delta_cells, n)
-         !axx=-der_x(pos,1.0e-8,eps)
-         !ayy=-der_y(pos,1.0e-8,eps)
-         !axx=-der_z(pos,1.0e-8,eps)
+
          !call get_acc_num(pos, acc2, eps, n)
          !call get_acc3(cells, pos, acc, cg, mins, delta_cells, n)
          !write(*,*) "get_acc3"
          call get_acc2(neighb, dist, pset, acc, cg, n)
+         !call grav_pot2acc_cic2(pset, cg, neighb, dist, acc3, n)
+         
          call get_acc_mod(acc, n, a)
-         !if ((a<1.0e-5) .and. (a> 0.0)) then
-         !   write (*,*) "a=0.0!"
-         !   stop
-         !endif
-         !write(*,*) "get_acc_mod"
+         !call get_acc_mod(acc3, n, a)
+         
+         
+         
          !4.kick(dth)
-         !vel(:,:) = vel_h
-         !acc=0.0
-         !call kick(vel, [zero,zero,zero], dth, n)   !velocity
-         !call kick(vel, acc, dth, n)   !velocity
-         !write(*,*) "kick2"
-         !call kick2(pset, acc, dth, n) !powinno dzialac, ale trzeba policzyc od zera:
-         call kick2(pset, [zero,zero,zero], dth, n)
-         !write(*,*) "3.pset%vel(1) (vel)= ",pset%p(1)%vel
+                 
+         !call kick2(pset, acc, dth, n)                                  !zakomentowac dla ruchu po prostej
+         !call kick2(pset, acc3, dth, n)
+         call kick2(pset, [zero,zero,zero], dth, n)                     !odkomentowac dla ruchu po prostej
+         
          !5.t
          t = t + dt
          !6.dt		!dt[n+1]
@@ -666,7 +661,7 @@ contains
             real(kind=8), dimension(n, ndims), intent(out) :: acc3 
             !write(*,*) "cic: dx,y,z= ",cg%dx, cg%dy, cg%dz
             
-                  neighb2 = neighb
+                  !neighb2 = neighb
                   dist2 = dist
                   !cgl => leaves%first
                   !do while (associated(cgl))
@@ -719,7 +714,7 @@ contains
                         else
                            neighb2(i,j) = neighb(i,j)
                         endif
-                        d1(i,j) = pset%p(i)%pos(j) - cg%coord(CENTER, j)%r(neighb2(i,j) -1)
+                        d1(i,j) = pset%p(i)%pos(j) - cg%coord(CENTER, j)%r(neighb2(i,j) - 1)
                         d2(i,j) = cg%coord(CENTER, j)%r(neighb2(i,j)) - pset%p(i)%pos(j)
                      enddo
                   enddo
