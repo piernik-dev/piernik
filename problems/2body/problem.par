@@ -1,5 +1,5 @@
  $BASE_DOMAIN
-    n_d = 100, 100, 100
+    n_d = 200, 200, 200
     bnd_xl = 'per'
     bnd_xr = 'per'
     bnd_yl = 'per'
@@ -27,7 +27,8 @@
  /
 
  $END_CONTROL
-    tend   = 7.0
+    !tend   = 7.0
+    tend   = 700.0
     nend   = 6000
  /
 
@@ -45,8 +46,8 @@
  /
 
  $FLUID_NEUTRAL
- cs_iso = 1.0
- !cs_iso = 0.1
+ !cs_iso = 1.0
+ cs_iso = 0.05
  !selfgrav = .true.
  /
 
