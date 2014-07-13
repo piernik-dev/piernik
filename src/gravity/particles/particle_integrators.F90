@@ -335,7 +335,8 @@ contains
      !    write(88,*)
      ! enddo
      ! close(88)
-
+      call get_ang_momentum_2(pset, n, ang_momentum)
+      init_ang_mom = ang_momentum
       
 
       
@@ -389,7 +390,7 @@ contains
          
          
          do i=1, n
-            write(lun_out, '(I3,1X,14(E13.6,1X))') n, t, pset%p(i)%pos, acc(i,:), acc2(i,:), acc3(i,:), energy
+            write(lun_out, '(I3,1X,15(E13.6,1X))') n, t, pset%p(i)%pos, acc(i,:), acc2(i,:), acc3(i,:), energy, ang_momentum
             !write(lun_out, '(9(E13.6,1X))') pos(i,:), acc(i,:), acc2
          enddo
          
@@ -409,7 +410,7 @@ contains
          !call kick2(pset, acc3, dth, n)
 
          !2.drift(dt)         
-         call grav_pot2acc_cic2(pset, cg, neighb, dist, acc3, n)
+         
          call drift2(pset, dt, n)
          
          call get_energy(pset, cg, neighb, dist, n, energy)
@@ -444,6 +445,10 @@ contains
          !call kick2(pset, acc, dth, n)                                  !zakomentowac dla ruchu po prostej
          !call kick2(pset, acc3, dth, n)
          call kick2(pset, [zero,zero,zero], dth, n)                     !odkomentowac dla ruchu po prostej
+         call grav_pot2acc_cic2(pset, cg, neighb, dist, acc3, n)
+         
+         call get_energy(pset, cg, neighb, dist, n, energy)
+         call get_ang_momentum_2(pset, n, ang_momentum)
          
          !5.t
          t = t + dt
@@ -704,6 +709,28 @@ contains
                   
                   !enddo
                   
+                  !wersja przed-ostateczna--------------------------------------------------
+                  !do i=1,n
+                  !   do j=1,ndims
+                  !      if (pset%p(i)%pos(j) > cg%coord(CENTER, j)%r(neighb(i,j))) then
+                  !         neighb2(i,j) = neighb(i,j) + 1
+                  !      else
+                  !         neighb2(i,j) = neighb(i,j)
+                  !      endif
+                  !      d1(i,j) = pset%p(i)%pos(j) - cg%coord(CENTER, j)%r(neighb2(i,j) - 1)
+                  !      d2(i,j) = cg%coord(CENTER, j)%r(neighb2(i,j)) - pset%p(i)%pos(j)
+                  !   enddo
+                  !enddo
+                  
+                  !do i=1,n
+                  !   acc3(i, 1) = 0.5/(cg%dx**2) * (d1(i,1) * ( cg%gpot(neighb2(i, 1) - 1, neighb2(i, 2), neighb2(i, 3)) - cg%gpot(neighb2(i, 1) + 1, neighb2(i, 2), neighb2(i, 3)) ) + d2(i,1) * (cg%gpot(neighb2(i, 1) - 2, neighb2(i, 2), neighb2(i, 3)) - cg%gpot(neighb2(i, 1), neighb2(i, 2), neighb2(i, 3))) )
+                  !   acc3(i, 2) = 0.5/(cg%dy**2) * (d1(i,2) * ( cg%gpot(neighb2(i, 1), neighb2(i, 2) - 1, neighb2(i, 3)) - cg%gpot(neighb2(i, 1), neighb2(i, 2) + 1, neighb2(i, 3)) ) + d2(i,2) * (cg%gpot(neighb2(i, 1), neighb2(i, 2) - 2, neighb2(i, 3)) - cg%gpot(neighb2(i, 1), neighb2(i, 2), neighb2(i, 3))) )
+                  !   acc3(i, 3) = 0.5/(cg%dz**2) * (d1(i,3) * ( cg%gpot(neighb2(i, 1), neighb2(i, 2), neighb2(i, 3) - 1) - cg%gpot(neighb2(i, 1), neighb2(i, 2), neighb2(i, 3) + 1) ) + d2(i,3) * (cg%gpot(neighb2(i, 1), neighb2(i, 2), neighb2(i, 3) - 2) - cg%gpot(neighb2(i, 1), neighb2(i, 2), neighb2(i, 3))) )
+                  !enddo
+                  !--------------------------------------------------------------------
+                  
+                  
+                  
                   
                   do i=1,n
                      do j=1,ndims
@@ -712,15 +739,16 @@ contains
                         else
                            neighb2(i,j) = neighb(i,j)
                         endif
-                        d1(i,j) = pset%p(i)%pos(j) - cg%coord(CENTER, j)%r(neighb2(i,j) - 1)
-                        d2(i,j) = cg%coord(CENTER, j)%r(neighb2(i,j)) - pset%p(i)%pos(j)
+                        d1(i,j) = 0.5*( cg%coord(CENTER, j)%r(neighb2(i,j) - 1) + cg%coord(CENTER, j)%r(neighb2(i,j)) ) - pset%p(i)%pos(j)
+                        d2(i,j) = pset%p(i)%pos(j) - cg%coord(CENTER, j)%r(neighb2(i,j))
+                        !write(*,*) "i,j,d1,d2 ", i, j, d1(i,j), d2(i,j)
                      enddo
                   enddo
                   
                   do i=1,n
-                     acc3(i, 1) = 0.5/(cg%dx**2) * (d1(i,1) * ( cg%gpot(neighb2(i, 1) - 1, neighb2(i, 2), neighb2(i, 3)) - cg%gpot(neighb2(i, 1) + 1, neighb2(i, 2), neighb2(i, 3)) ) + d2(i,1) * (cg%gpot(neighb2(i, 1) - 2, neighb2(i, 2), neighb2(i, 3)) - cg%gpot(neighb2(i, 1), neighb2(i, 2), neighb2(i, 3))) )
-                     acc3(i, 2) = 0.5/(cg%dy**2) * (d1(i,2) * ( cg%gpot(neighb2(i, 1), neighb2(i, 2) - 1, neighb2(i, 3)) - cg%gpot(neighb2(i, 1), neighb2(i, 2) + 1, neighb2(i, 3)) ) + d2(i,2) * (cg%gpot(neighb2(i, 1), neighb2(i, 2) - 2, neighb2(i, 3)) - cg%gpot(neighb2(i, 1), neighb2(i, 2), neighb2(i, 3))) )
-                     acc3(i, 3) = 0.5/(cg%dz**2) * (d1(i,3) * ( cg%gpot(neighb2(i, 1), neighb2(i, 2), neighb2(i, 3) - 1) - cg%gpot(neighb2(i, 1), neighb2(i, 2), neighb2(i, 3) + 1) ) + d2(i,3) * (cg%gpot(neighb2(i, 1), neighb2(i, 2), neighb2(i, 3) - 2) - cg%gpot(neighb2(i, 1), neighb2(i, 2), neighb2(i, 3))) )
+                     acc3(i, 1) = 2.0/(cg%dx**2) * (d1(i,1) * ( cg%gpot(neighb2(i, 1) - 1, neighb2(i, 2), neighb2(i, 3)) - cg%gpot(neighb2(i, 1), neighb2(i, 2), neighb2(i, 3)) ) + d2(i,1) * (cg%gpot(neighb2(i, 1), neighb2(i, 2), neighb2(i, 3)) - cg%gpot(neighb2(i, 1)+1, neighb2(i, 2), neighb2(i, 3))) )
+                     acc3(i, 2) = 2.0/(cg%dy**2) * (d1(i,2) * ( cg%gpot(neighb2(i, 1), neighb2(i, 2) - 1, neighb2(i, 3)) - cg%gpot(neighb2(i, 1), neighb2(i, 2), neighb2(i, 3)) ) + d2(i,2) * (cg%gpot(neighb2(i, 1), neighb2(i, 2), neighb2(i, 3)) - cg%gpot(neighb2(i, 1), neighb2(i, 2)+1, neighb2(i, 3))) )
+                     acc3(i, 3) = 2.0/(cg%dz**2) * (d1(i,3) * ( cg%gpot(neighb2(i, 1), neighb2(i, 2), neighb2(i, 3) - 1) - cg%gpot(neighb2(i, 1), neighb2(i, 2), neighb2(i, 3)) ) + d2(i,3) * (cg%gpot(neighb2(i, 1), neighb2(i, 2), neighb2(i, 3)) - cg%gpot(neighb2(i, 1), neighb2(i, 2), neighb2(i, 3)+1)) )
                   enddo
          end subroutine grav_pot2acc_cic2
 
@@ -2384,6 +2412,28 @@ contains
                enddo
                get_ang_momentum = ang_mom
          end function get_ang_momentum
+         
+         
+          subroutine get_ang_momentum_2(pset, n, ang_momentum)
+            !use constants, only : ndims
+            use particle_types, only: particle_set
+            implicit none
+               class(particle_set), intent(in) :: pset
+               integer :: i, j
+               integer, intent(in) :: n
+               real, intent(out) :: ang_momentum
+               real :: L1,L2,L3
+
+
+               ang_momentum = 0.0
+               do i = 1, n, 1
+                  L1 = pset%p(i)%pos(2) * pset%p(i)%vel(3) - pset%p(i)%pos(3) * pset%p(i)%vel(2)
+                  L2 = pset%p(i)%pos(3) * pset%p(i)%vel(1) - pset%p(i)%pos(1) * pset%p(i)%vel(3)
+                  L3 = pset%p(i)%pos(1) * pset%p(i)%vel(2) - pset%p(i)%pos(2) * pset%p(i)%vel(1)
+                  ang_momentum = ang_momentum + pset%p(i)%mass * sqrt(L1**2 + L2**2 + L3**2)
+               enddo
+
+         end subroutine get_ang_momentum_2
 
   end subroutine leapfrog2ord      
       
