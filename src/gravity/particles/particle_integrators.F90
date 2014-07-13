@@ -241,8 +241,8 @@ contains
       real, dimension(:, :), allocatable :: pos, vel, acc, vel_h, d_particles
       real, dimension(:, :, :), allocatable :: pot
       integer, dimension(:), allocatable :: n_cell
-      real :: t_end, einit, dt, t, dth, eta, eps, a, epot, eps2, energy, init_energy, d_energy, ang_momentum, init_ang_mom, d_ang_momentum, zero
-      integer :: nsteps, n, ndim, lun_out, i, j, k, order
+      real :: t_end, dt, t, dth, eta, eps, a, epot, eps2, energy, init_energy, d_energy = 0.0, ang_momentum, init_ang_mom, d_ang_momentum = 0.0, zero
+      integer :: nsteps, n, lun_out, i, j, k, order
 
 
       procedure(df_dxi),pointer :: df_dx_p, df_dy_p, df_dz_p
@@ -290,7 +290,7 @@ contains
       !write(*,*) "mins= ", mins
 
       zero = 0.0
-      order = 2
+      order = 4
 
 
       eta = 35.0 !1.0
@@ -337,7 +337,6 @@ contains
      ! close(88)
       call get_ang_momentum_2(pset, n, ang_momentum)
       init_ang_mom = ang_momentum
-      
 
       
       call cell_nr2(pset, neighb, dist, mins, cg, n)
@@ -352,16 +351,15 @@ contains
 
 
       !initial acceleration
-      !call get_acc(cells, pos, acc, pot, n_cell, mins, delta_cells, n)
       call get_acc2(neighb, dist, pset, acc, cg, n)
-      call grav_pot2acc_cic2(pset, cg, neighb, dist, acc3, n)
+      
       
       call get_energy(pset, cg, neighb, dist, n, energy)
       init_energy = energy
       
       
       call get_acc_num2(pset, acc2, eps, n)
-      
+      call grav_pot2acc_cic2(pset, cg, neighb, dist, acc3, n)
      
 
       !call get_acc_mod(acc, n, a)
@@ -390,7 +388,7 @@ contains
          
          
          do i=1, n
-            write(lun_out, '(I3,1X,15(E13.6,1X))') n, t, pset%p(i)%pos, acc(i,:), acc2(i,:), acc3(i,:), energy, ang_momentum
+            write(lun_out, '(I3,1X,17(E13.6,1X))') n, t, pset%p(i)%pos, acc(i,:), acc2(i,:), acc3(i,:), energy, d_energy, ang_momentum, d_ang_momentum
             !write(lun_out, '(9(E13.6,1X))') pos(i,:), acc(i,:), acc2
          enddo
          
@@ -405,7 +403,7 @@ contains
          !call kick(vel, [zero,zero,zero], dth, n)   !velocity
          !------------------------------------------------------------------
          
-         acc(:,:) = 0.0                                                 !odkomentowac dla ruchu po prostej
+         !acc(:,:) = 0.0                                                 !odkomentowac dla ruchu po prostej
          call kick2(pset, acc, dth, n)
          !call kick2(pset, acc3, dth, n)
 
@@ -442,13 +440,14 @@ contains
          
          !4.kick(dth)
                  
-         !call kick2(pset, acc, dth, n)                                  !zakomentowac dla ruchu po prostej
-         !call kick2(pset, acc3, dth, n)
-         call kick2(pset, [zero,zero,zero], dth, n)                     !odkomentowac dla ruchu po prostej
+         call kick2(pset, acc, dth, n)                                  !zakomentowac dla ruchu po prostej
+         !call kick2(pset, [zero,zero,zero], dth, n)                     !odkomentowac dla ruchu po prostej
          call grav_pot2acc_cic2(pset, cg, neighb, dist, acc3, n)
          
          call get_energy(pset, cg, neighb, dist, n, energy)
+         d_energy = log(abs((energy - init_energy)/init_energy))
          call get_ang_momentum_2(pset, n, ang_momentum)
+         d_ang_momentum = log(abs((ang_momentum - init_ang_mom)/init_ang_mom))
          
          !5.t
          t = t + dt
@@ -522,16 +521,13 @@ contains
          end subroutine drift
 
          subroutine drift2(pset, t, n)
-            use constants, only: ndims
             use particle_types, only: particle_set
-
             implicit none
             class(particle_set), intent(inout) :: pset  !< particle list
             real, intent(in) :: t
             integer :: i
             integer, intent(in) :: n
-            !real, dimension(n, ndims), intent(inout) :: pos
-            !real, dimension(n, ndims), intent(in) :: vel
+
             do i=1,n
                pset%p(i)%pos = pset%p(i)%pos + pset%p(i)%vel*t
             enddo
@@ -642,7 +638,7 @@ contains
 
 
          subroutine grav_pot2acc_cic2(pset, cg, neighb, dist, acc3, n)
-            use constants, only: xdim, ydim, zdim, ndims, CENTER, LO, HI
+            use constants, only: ndims, CENTER
             !use cg_leaves,        only: leaves
             !use cg_list,          only: cg_list_element
             use grid_cont,        only: grid_container
@@ -862,7 +858,6 @@ contains
             implicit none
                class(particle_set), intent(in) :: pset  !< particle list
                type(grid_container), pointer, intent(in) :: cg
-               integer :: i
                real ::  dx_cell, dy_cell, dz_cell
                integer, intent(in) :: n
                integer(kind=8),dimension(n, ndims), intent(in) :: neighb
@@ -2396,7 +2391,7 @@ contains
                integer, intent(in) :: n
                real, dimension(n, ndims), intent(in) :: pos, vel
                real, dimension(n) :: mass
-               real :: ang_mom = 0.0, get_ang_momentum, r2, p2, r, p, rp
+               real :: ang_mom = 0.0, get_ang_momentum, r2, p2, rp
 
                do i = 1, n, 1
                   r2 = 0.0
@@ -2419,7 +2414,7 @@ contains
             use particle_types, only: particle_set
             implicit none
                class(particle_set), intent(in) :: pset
-               integer :: i, j
+               integer :: i
                integer, intent(in) :: n
                real, intent(out) :: ang_momentum
                real :: L1,L2,L3
@@ -2444,11 +2439,10 @@ contains
       real, dimension(n), intent(in) :: mass
       real, dimension(n, ndims), intent(in) :: pos
       real, dimension(n, ndims), intent(out) :: acc
-      real  :: eps
       real, intent(out) :: epot
       
       integer :: i, j
-      real, dimension(ndims) :: rji, vji, da
+      real, dimension(ndims) :: rji, da
       
       real :: r   ! | rji |
       real :: r2  ! | rji |^2
@@ -2483,7 +2477,7 @@ contains
       use constants, only: ndims
       implicit none
       integer, intent(in) :: n
-      integer  :: i, j
+      integer  :: i
       real, dimension(n, ndims), intent(in) :: acc
       real, dimension(n) :: acc2
       real, intent(out)  :: a
