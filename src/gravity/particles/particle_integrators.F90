@@ -265,7 +265,7 @@ contains
       
       !call grav_pot2acc_cic2(neighb, dist, acc2, pset, n)
       
-      
+      !write(*,*) int(3.28), floor(3.28), int(-3.28), floor(-3.28)
       
      ! write(*,*) "grav_pot2acc_cic"
       mass(:) = pset%p(:)%mass
@@ -298,10 +298,9 @@ contains
       eps2 = 0.00
      
 
+
       
-      !alokacja potencjalu
       
-      write(*,*) "Zaalokowano potencjal"
       cgl => leaves%first
       do while (associated(cgl))
             cg => cgl%cg
@@ -312,6 +311,7 @@ contains
             !write(*,*) lbound(pot)
             cgl => cgl%nxt
       enddo
+      !write(*,*) lbound(cg%gpot,dim=1), ubound(cg%gpot, dim=1)
       !allocate( pot(lbound(cg%gpot,dim=1):ubound(cg%gpot,dim=1), lbound(cg%gpot,dim=2):ubound(cg%gpot,dim=2), lbound(cg%gpot,dim=3):ubound(cg%gpot,dim=3)) )
 
 
@@ -404,25 +404,22 @@ contains
          !------------------------------------------------------------------
          
          !acc(:,:) = 0.0                                                 !odkomentowac dla ruchu po prostej
+         !call kick2(pset, acc, dth, n)
          call kick2(pset, acc, dth, n)
-         !call kick2(pset, acc3, dth, n)
 
          !2.drift(dt)         
          
          call drift2(pset, dt, n)
          
-         call get_energy(pset, cg, neighb, dist, n, energy)
          !przyspieszenie modelowe:
-         !call get_acc_num(pos, acc2, eps, n)
          call get_acc_num2(pset, acc2, eps, n)
-         !call grav_pot2acc_cic2(pset, cg, neighb, dist, acc3, n)
-         !call grav_pot2acc_cic2(pset,cg, neighb, dist, acc3, n)
 
 
+         
 
          !3.acceleration + |a|
          call cell_nr2(pset, neighb, dist, mins, cg, n)
-         
+         call get_acc2(neighb, dist, pset, acc, cg, n)
 
          !call grav_pot2acc_cic2(neighb, dist, acc2, pset, n)
 
@@ -430,17 +427,19 @@ contains
          !call get_acc_num(pos, acc2, eps, n)
          !call get_acc3(cells, pos, acc, cg, mins, delta_cells, n)
          !write(*,*) "get_acc3"
-         call get_acc2(neighb, dist, pset, acc, cg, n)
+         
+         !call get_acc2(neighb, dist, pset, acc, cg, n)
          !call grav_pot2acc_cic2(pset, cg, neighb, dist, acc3, n)
          
+         !call get_acc_mod(acc, n, a)
          call get_acc_mod(acc, n, a)
-         !call get_acc_mod(acc3, n, a)
          
          
          
          !4.kick(dth)
                  
-         call kick2(pset, acc, dth, n)                                  !zakomentowac dla ruchu po prostej
+         !call kick2(pset, acc, dth, n)                                  !zakomentowac dla ruchu po prostej
+         call kick2(pset, acc, dth, n)
          !call kick2(pset, [zero,zero,zero], dth, n)                     !odkomentowac dla ruchu po prostej
          call grav_pot2acc_cic2(pset, cg, neighb, dist, acc3, n)
          
@@ -473,25 +472,14 @@ contains
      !    pset%p(:)%vel(ndim) = vel(:, ndim)
      ! enddo
 
-      deallocate (mass, pos, vel, acc, acc2, vel_h, cells, mins, maxs, delta_cells, n_cell, d_particles)
+      deallocate (acc, acc2, acc3, neighb, dist, mins, maxs, delta_cells, n_cell)
       close(lun_out)
       
       !return
       contains
          
          !Kick
-         subroutine kick(vel, acc, t, n)
-            use constants, only: ndims
-            implicit none
-            real, intent(in) :: t
-            integer, intent(in) :: n
-            real, dimension(n, ndims), intent(in) :: acc
-            real, dimension(n, ndims), intent(inout) :: vel
-            !write(*,*) "kick proc"
-		    
-            vel = vel + acc*t
-            
-         end subroutine kick
+
          
          subroutine kick2(pset, acc, t, n)
             use constants, only: ndims
@@ -500,6 +488,7 @@ contains
             class(particle_set), intent(inout) :: pset  !< particle list
             real, intent(in) :: t
             integer, intent(in) :: n
+            integer :: i
             real, dimension(n, ndims), intent(in) :: acc
             !real, dimension(n, ndims), intent(inout) :: vel
             do i=1,n
@@ -508,17 +497,6 @@ contains
          end subroutine kick2
 
          !Drift
-         subroutine drift(pos, vel, t, n)
-            use constants, only: ndims
-            implicit none
-            real, intent(in) :: t
-            integer, intent(in) :: n
-            real, dimension(n, ndims), intent(inout) :: pos
-            real, dimension(n, ndims), intent(in) :: vel
-            !write(*,*) "drift proc"
-           
-            pos = pos + vel*t
-         end subroutine drift
 
          subroutine drift2(pset, t, n)
             use particle_types, only: particle_set
@@ -529,7 +507,7 @@ contains
             integer, intent(in) :: n
 
             do i=1,n
-               pset%p(i)%pos = pset%p(i)%pos + pset%p(i)%vel*t
+               pset%p(i)%pos = pset%p(i)%pos + pset%p(i)%vel * t
             enddo
          end subroutine drift2
 
@@ -585,10 +563,11 @@ contains
                !real,dimension(n_cell(1), n_cell(2), n_cell(3)),intent(inout) :: pot
                !open(unit=77,file='potencjal.dat')
                   !delta_cells = (maxs - mins) / n_cell
+                  
                   delta_cells(1) = cg%dx
                   delta_cells(2) = cg%dy
                   delta_cells(3) = cg%dz
-                  !write(*,*) "pot_grid2: mins ",mins, " delta_cells ", delta_cells, " n_cell ", n_cell
+                  
 
 
                   do i = lbound(cg%gpot, dim=1), ubound(cg%gpot, dim=1)
@@ -597,7 +576,7 @@ contains
                         
                         do k = lbound(cg%gpot, dim=3), ubound(cg%gpot, dim=3)
                            
-                           cg%gpot(i, j, k) = phi_pm(mins(1) + i*delta_cells(1), mins(2) + j*delta_cells(2), mins(3) + k*delta_cells(3), eps)
+                           cg%gpot(i, j, k) = phi_pm(mins(1) + (i-0.5)*delta_cells(1), mins(2) + (j-0.5)*delta_cells(2), mins(3) + (k-0.5)*delta_cells(3), eps)
                            !write(77,*) i,j,k,cg%gpot(i,j,k)
                         enddo
                      enddo
@@ -675,7 +654,7 @@ contains
                   !do i = 1, n
                   !   do j=1, ndims
                   !      if (pset%p(i)%pos(j) > cg%coord(CENTER, j)%r(neighb(i,j))) then
-                  !         neighb2(i,j) = neighb(i,j)! + 1
+                  !         neighb2(i,j) = neighb(i,j) + 1
                   !         acc3(i, 1) = (0.5/(cg%dx**2)) * ((cg%dx - dist2(i, 1) )* ( cg%gpot(neighb2(i, 1) - 1, neighb2(i, 2), neighb2(i, 3)) - cg%gpot(neighb2(i, 1) + 1, neighb2(i, 2), neighb2(i, 3))) + (dist2(i,1) ) * (cg%gpot(neighb2(i, 1) - 2, neighb2(i, 2), neighb2(i, 3)) - cg%gpot(neighb2(i, 1), neighb2(i, 2), neighb2(i, 3))) )
                   !         acc3(i, 2) = (0.5/(cg%dy**2)) * ((cg%dy - dist2(i, 2) )* ( cg%gpot(neighb2(i, 1), neighb2(i, 2) - 1, neighb2(i, 3)) - cg%gpot(neighb2(i, 1), neighb2(i, 2) + 1, neighb2(i, 3))) + (dist2(i,2) ) * (cg%gpot(neighb2(i, 1), neighb2(i, 2) - 2, neighb2(i, 3)) - cg%gpot(neighb2(i, 1), neighb2(i, 2), neighb2(i, 3))) )
                   !         acc3(i, 3) = (0.5/(cg%dz**2)) * ((cg%dz - dist2(i, 3) )* ( cg%gpot(neighb2(i, 1), neighb2(i, 2), neighb2(i, 3) - 1) - cg%gpot(neighb2(i, 1), neighb2(i, 2), neighb2(i, 3) + 1)) + (dist2(i,3) ) * (cg%gpot(neighb2(i, 1), neighb2(i, 2), neighb2(i, 3) - 2) - cg%gpot(neighb2(i, 1), neighb2(i, 2), neighb2(i, 3))) )
@@ -706,6 +685,28 @@ contains
                   !enddo
                   
                   !wersja przed-ostateczna--------------------------------------------------
+                  do i=1,n
+                     do j=1,ndims
+                        if (pset%p(i)%pos(j) > cg%coord(CENTER, j)%r(neighb(i,j))) then
+                           neighb2(i,j) = neighb(i,j)! + 1
+                        else
+                           neighb2(i,j) = neighb(i,j)
+                        endif
+                        d1(i,j) = pset%p(i)%pos(j) - cg%coord(CENTER, j)%r(neighb2(i,j) - 1)
+                        d2(i,j) = cg%coord(CENTER, j)%r(neighb2(i,j)) - pset%p(i)%pos(j)
+                     enddo
+                  enddo
+                  
+                  do i=1,n
+                     acc3(i, 1) = 0.5/(cg%dx**2) * (d1(i,1) * ( cg%gpot(neighb2(i, 1) - 1, neighb2(i, 2), neighb2(i, 3)) - cg%gpot(neighb2(i, 1) + 1, neighb2(i, 2), neighb2(i, 3)) ) + d2(i,1) * (cg%gpot(neighb2(i, 1) - 2, neighb2(i, 2), neighb2(i, 3)) - cg%gpot(neighb2(i, 1), neighb2(i, 2), neighb2(i, 3))) )
+                     acc3(i, 2) = 0.5/(cg%dy**2) * (d1(i,2) * ( cg%gpot(neighb2(i, 1), neighb2(i, 2) - 1, neighb2(i, 3)) - cg%gpot(neighb2(i, 1), neighb2(i, 2) + 1, neighb2(i, 3)) ) + d2(i,2) * (cg%gpot(neighb2(i, 1), neighb2(i, 2) - 2, neighb2(i, 3)) - cg%gpot(neighb2(i, 1), neighb2(i, 2), neighb2(i, 3))) )
+                     acc3(i, 3) = 0.5/(cg%dz**2) * (d1(i,3) * ( cg%gpot(neighb2(i, 1), neighb2(i, 2), neighb2(i, 3) - 1) - cg%gpot(neighb2(i, 1), neighb2(i, 2), neighb2(i, 3) + 1) ) + d2(i,3) * (cg%gpot(neighb2(i, 1), neighb2(i, 2), neighb2(i, 3) - 2) - cg%gpot(neighb2(i, 1), neighb2(i, 2), neighb2(i, 3))) )
+                  enddo
+                  !--------------------------------------------------------------------
+                  
+                  
+                  
+                  
                   !do i=1,n
                   !   do j=1,ndims
                   !      if (pset%p(i)%pos(j) > cg%coord(CENTER, j)%r(neighb(i,j))) then
@@ -713,39 +714,17 @@ contains
                   !      else
                   !         neighb2(i,j) = neighb(i,j)
                   !      endif
-                  !      d1(i,j) = pset%p(i)%pos(j) - cg%coord(CENTER, j)%r(neighb2(i,j) - 1)
-                  !      d2(i,j) = cg%coord(CENTER, j)%r(neighb2(i,j)) - pset%p(i)%pos(j)
+                  !      d1(i,j) = 0.5*( cg%coord(CENTER, j)%r(neighb2(i,j) - 1) + cg%coord(CENTER, j)%r(neighb2(i,j)) ) - pset%p(i)%pos(j)
+                  !      d2(i,j) = pset%p(i)%pos(j) - cg%coord(CENTER, j)%r(neighb2(i,j))
+                  !      !write(*,*) "i,j,d1,d2 ", i, j, d1(i,j), d2(i,j)
                   !   enddo
                   !enddo
                   
                   !do i=1,n
-                  !   acc3(i, 1) = 0.5/(cg%dx**2) * (d1(i,1) * ( cg%gpot(neighb2(i, 1) - 1, neighb2(i, 2), neighb2(i, 3)) - cg%gpot(neighb2(i, 1) + 1, neighb2(i, 2), neighb2(i, 3)) ) + d2(i,1) * (cg%gpot(neighb2(i, 1) - 2, neighb2(i, 2), neighb2(i, 3)) - cg%gpot(neighb2(i, 1), neighb2(i, 2), neighb2(i, 3))) )
-                  !   acc3(i, 2) = 0.5/(cg%dy**2) * (d1(i,2) * ( cg%gpot(neighb2(i, 1), neighb2(i, 2) - 1, neighb2(i, 3)) - cg%gpot(neighb2(i, 1), neighb2(i, 2) + 1, neighb2(i, 3)) ) + d2(i,2) * (cg%gpot(neighb2(i, 1), neighb2(i, 2) - 2, neighb2(i, 3)) - cg%gpot(neighb2(i, 1), neighb2(i, 2), neighb2(i, 3))) )
-                  !   acc3(i, 3) = 0.5/(cg%dz**2) * (d1(i,3) * ( cg%gpot(neighb2(i, 1), neighb2(i, 2), neighb2(i, 3) - 1) - cg%gpot(neighb2(i, 1), neighb2(i, 2), neighb2(i, 3) + 1) ) + d2(i,3) * (cg%gpot(neighb2(i, 1), neighb2(i, 2), neighb2(i, 3) - 2) - cg%gpot(neighb2(i, 1), neighb2(i, 2), neighb2(i, 3))) )
+                  !   acc3(i, 1) = 2.0/(cg%dx**2) * (d1(i,1) * ( cg%gpot(neighb2(i, 1) - 1, neighb2(i, 2), neighb2(i, 3)) - cg%gpot(neighb2(i, 1), neighb2(i, 2), neighb2(i, 3)) ) + d2(i,1) * (cg%gpot(neighb2(i, 1), neighb2(i, 2), neighb2(i, 3)) - cg%gpot(neighb2(i, 1)+1, neighb2(i, 2), neighb2(i, 3))) )
+                  !   acc3(i, 2) = 2.0/(cg%dy**2) * (d1(i,2) * ( cg%gpot(neighb2(i, 1), neighb2(i, 2) - 1, neighb2(i, 3)) - cg%gpot(neighb2(i, 1), neighb2(i, 2), neighb2(i, 3)) ) + d2(i,2) * (cg%gpot(neighb2(i, 1), neighb2(i, 2), neighb2(i, 3)) - cg%gpot(neighb2(i, 1), neighb2(i, 2)+1, neighb2(i, 3))) )
+                  !   acc3(i, 3) = 2.0/(cg%dz**2) * (d1(i,3) * ( cg%gpot(neighb2(i, 1), neighb2(i, 2), neighb2(i, 3) - 1) - cg%gpot(neighb2(i, 1), neighb2(i, 2), neighb2(i, 3)) ) + d2(i,3) * (cg%gpot(neighb2(i, 1), neighb2(i, 2), neighb2(i, 3)) - cg%gpot(neighb2(i, 1), neighb2(i, 2), neighb2(i, 3)+1)) )
                   !enddo
-                  !--------------------------------------------------------------------
-                  
-                  
-                  
-                  
-                  do i=1,n
-                     do j=1,ndims
-                        if (pset%p(i)%pos(j) > cg%coord(CENTER, j)%r(neighb(i,j))) then
-                           neighb2(i,j) = neighb(i,j) + 1
-                        else
-                           neighb2(i,j) = neighb(i,j)
-                        endif
-                        d1(i,j) = 0.5*( cg%coord(CENTER, j)%r(neighb2(i,j) - 1) + cg%coord(CENTER, j)%r(neighb2(i,j)) ) - pset%p(i)%pos(j)
-                        d2(i,j) = pset%p(i)%pos(j) - cg%coord(CENTER, j)%r(neighb2(i,j))
-                        !write(*,*) "i,j,d1,d2 ", i, j, d1(i,j), d2(i,j)
-                     enddo
-                  enddo
-                  
-                  do i=1,n
-                     acc3(i, 1) = 2.0/(cg%dx**2) * (d1(i,1) * ( cg%gpot(neighb2(i, 1) - 1, neighb2(i, 2), neighb2(i, 3)) - cg%gpot(neighb2(i, 1), neighb2(i, 2), neighb2(i, 3)) ) + d2(i,1) * (cg%gpot(neighb2(i, 1), neighb2(i, 2), neighb2(i, 3)) - cg%gpot(neighb2(i, 1)+1, neighb2(i, 2), neighb2(i, 3))) )
-                     acc3(i, 2) = 2.0/(cg%dy**2) * (d1(i,2) * ( cg%gpot(neighb2(i, 1), neighb2(i, 2) - 1, neighb2(i, 3)) - cg%gpot(neighb2(i, 1), neighb2(i, 2), neighb2(i, 3)) ) + d2(i,2) * (cg%gpot(neighb2(i, 1), neighb2(i, 2), neighb2(i, 3)) - cg%gpot(neighb2(i, 1), neighb2(i, 2)+1, neighb2(i, 3))) )
-                     acc3(i, 3) = 2.0/(cg%dz**2) * (d1(i,3) * ( cg%gpot(neighb2(i, 1), neighb2(i, 2), neighb2(i, 3) - 1) - cg%gpot(neighb2(i, 1), neighb2(i, 2), neighb2(i, 3)) ) + d2(i,3) * (cg%gpot(neighb2(i, 1), neighb2(i, 2), neighb2(i, 3)) - cg%gpot(neighb2(i, 1), neighb2(i, 2), neighb2(i, 3)+1)) )
-                  enddo
          end subroutine grav_pot2acc_cic2
 
          subroutine potential(pset, cg, neighb, dist, n)
@@ -885,10 +864,7 @@ contains
                   acc(:,1) = ax
                   acc(:,2) = ay
                   acc(:,3) = az
-                  !druga czastka sie nie rusza
-                  !acc2(2,:)=0.0
-                  !pierwsza czastka nie rusza sie w osi Z
-                  !acc2(1,3)=0.0
+
          end subroutine get_acc2
 !--------------------------------
 
@@ -1015,7 +991,7 @@ contains
          end subroutine cell_nr
          
          subroutine cell_nr2(pset, neighb, dist, mins, cg, n)
-            use constants, only: ndims
+            use constants, only: ndims, CENTER
             use grid_cont,  only: grid_container
             implicit none
                class(particle_set), intent(in) :: pset  !< particle list
@@ -1030,17 +1006,21 @@ contains
                delta_cells(1) = cg%dx
                delta_cells(2) = cg%dy
                delta_cells(3) = cg%dz
-               !write(*,*) "delta_cells=", delta_cells
+               
 
                do i=1, n
                   do j=1, ndims
-                     neighb(i,j) = int( (pset%p(i)%pos(j) - mins(j) - 0.5*delta_cells(j)) / delta_cells(j) ) + 1
+                     neighb(i,j) = int( (pset%p(i)%pos(j) - mins(j)) / delta_cells(j) ) + 1
+                     !neighb(i,j) = int( (pset%p(i)%pos(j) - mins(j) ) / delta_cells(j) )! + 1
                   enddo
                enddo
                
                do i = 1, n
-                     !dist(i,:) =  pset%p(i)%pos - (mins+neighb(i,:) * delta_cells - 0.5*delta_cells )
-                     dist(i,:) = pset%p(i)%pos - neighb(i,:) * delta_cells - mins
+                     dist(i,:) =  pset%p(i)%pos - (mins - 0.5*delta_cells + neighb(i,:) * delta_cells)
+                     !dist(i,:) = (pset%p(i)%pos - mins - delta_cells/2.0 - neighb(i,:) * delta_cells)
+                     !do j=1,ndims
+                     !   dist(i,j) = pset%p(i)%pos(j) - cg%coord(CENTER, j)%r(neighb(i,j))
+                     !enddo
                enddo
                
                open(unit=777, file='dist.dat', status='unknown',  position='append')
@@ -2479,17 +2459,16 @@ contains
       integer, intent(in) :: n
       integer  :: i
       real, dimension(n, ndims), intent(in) :: acc
-      real, dimension(n) :: acc2
+      real, dimension(n) :: ac
       real, intent(out)  :: a
 
-      acc2 = 0.0
+      ac = 0.0
 
       do i = 1, ndims
-            acc2(:) = acc2(:) + acc(:,i)**2
+            ac(:) = ac(:) + acc(:,i)**2
       enddo
 
-      a = sqrt(maxval(acc2))
-      !write(*,*) "acc_mod: a=", a
+      a = sqrt(maxval(ac))
 
    end subroutine get_acc_mod
 
