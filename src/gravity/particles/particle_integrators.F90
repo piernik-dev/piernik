@@ -304,14 +304,10 @@ contains
       cgl => leaves%first
       do while (associated(cgl))
             cg => cgl%cg
-            !write(*,*) size(cg%gpot)
-            
-            !pot=cg%gpot
-            !write(*,*) lbound(cg%gpot)
-            !write(*,*) lbound(pot)
+           
             cgl => cgl%nxt
       enddo
-      !write(*,*) lbound(cg%gpot,dim=1), ubound(cg%gpot, dim=1)
+      write(*,*) lbound(cg%gpot,dim=1), ubound(cg%gpot, dim=1)
       !allocate( pot(lbound(cg%gpot,dim=1):ubound(cg%gpot,dim=1), lbound(cg%gpot,dim=2):ubound(cg%gpot,dim=2), lbound(cg%gpot,dim=3):ubound(cg%gpot,dim=3)) )
 
 
@@ -344,7 +340,7 @@ contains
       !init_ang_mom = get_ang_momentum(pos, vel, mass, n)
 
       !call cell_nr(pos, cells, mins, delta_cells, n)
-      !write(*,*) "cell_nr"
+      !write(*,*) "Znaleziono komorki"
 
       call check_ord(order, df_dx_p, d2f_dx2_p, df_dy_p, d2f_dy2_p,& 
                         df_dz_p, d2f_dz2_p, d2f_dxdy_p, d2f_dxdz_p, d2f_dydz_p)
@@ -352,6 +348,7 @@ contains
 
       !initial acceleration
       call get_acc2(neighb, dist, pset, acc, cg, n)
+      !write(*,*) "Obliczono przyspieszenie"
       
       
       call get_energy(pset, cg, neighb, dist, n, energy)
@@ -359,6 +356,8 @@ contains
       
       
       call get_acc_num2(pset, acc2, eps, n)
+      !write(*,*) "Znaleziono potencjal modelowy"
+      
       call grav_pot2acc_cic2(pset, cg, neighb, dist, acc3, n)
      
 
@@ -367,9 +366,9 @@ contains
       
       
       !timestep
-      dt = sqrt(2.0*eta*eps/a) 
+      !dt = sqrt(2.0*eta*eps/a) 
       !write(*,*) "dt"           !variable
-      !dt = 0.001                            !constant
+      dt = 0.25                            !constant
       dth = dt/2.0
       
 
@@ -381,14 +380,14 @@ contains
       do while (t < t_end)
          !1.kick(dth)
          !vel_h(:,:) = vel
-         if (t + dt > t_end) then
-            dt = t_end - t
-            dth = 0.5 * dt
-         endif
+         !if (t + dt > t_end) then
+         !   dt = t_end - t
+         !   dth = 0.5 * dt
+         !endif
          
          
          do i=1, n
-            write(lun_out, '(I3,1X,17(E13.6,1X))') n, t, pset%p(i)%pos, acc(i,:), acc2(i,:), acc3(i,:), energy, d_energy, ang_momentum, d_ang_momentum
+            write(lun_out, '(I3,1X,10(E13.6,1X))') n, t, pset%p(i)%pos, acc(i,:), acc2(i,:)!, acc3(i,:)!, energy, d_energy, ang_momentum, d_ang_momentum
             !write(lun_out, '(9(E13.6,1X))') pos(i,:), acc(i,:), acc2
          enddo
          
@@ -403,13 +402,15 @@ contains
          !call kick(vel, [zero,zero,zero], dth, n)   !velocity
          !------------------------------------------------------------------
          
-         !acc(:,:) = 0.0                                                 !odkomentowac dla ruchu po prostej
-         !call kick2(pset, acc, dth, n)
+         acc(:,:) = 0.0                                                 !odkomentowac dla ruchu po prostej
          call kick2(pset, acc, dth, n)
+         !write(*,*) "kick"
+         !call kick2(pset, acc, dth, n)
 
          !2.drift(dt)         
          
          call drift2(pset, dt, n)
+         !write(*,*) "drift"
          
          !przyspieszenie modelowe:
          call get_acc_num2(pset, acc2, eps, n)
@@ -419,8 +420,9 @@ contains
 
          !3.acceleration + |a|
          call cell_nr2(pset, neighb, dist, mins, cg, n)
+         !write(*,*) "cell_nr2"
          call get_acc2(neighb, dist, pset, acc, cg, n)
-
+         !write(*,*) "get_acc"
          !call grav_pot2acc_cic2(neighb, dist, acc2, pset, n)
 
 
@@ -432,28 +434,34 @@ contains
          !call grav_pot2acc_cic2(pset, cg, neighb, dist, acc3, n)
          
          !call get_acc_mod(acc, n, a)
-         call get_acc_mod(acc, n, a)
+         !call get_acc_mod(acc, n, a)
+         !write(*,*) "get_acc_model"
          
          
          
          !4.kick(dth)
                  
          !call kick2(pset, acc, dth, n)                                  !zakomentowac dla ruchu po prostej
-         call kick2(pset, acc, dth, n)
-         !call kick2(pset, [zero,zero,zero], dth, n)                     !odkomentowac dla ruchu po prostej
-         call grav_pot2acc_cic2(pset, cg, neighb, dist, acc3, n)
+         !call kick2(pset, acc, dth, n)
+         call kick2(pset, [zero,zero,zero], dth, n)                     !odkomentowac dla ruchu po prostej
+         !write(*,*) "kick2"
+         !call grav_pot2acc_cic2(pset, cg, neighb, dist, acc3, n)
          
-         call get_energy(pset, cg, neighb, dist, n, energy)
-         d_energy = log(abs((energy - init_energy)/init_energy))
-         call get_ang_momentum_2(pset, n, ang_momentum)
-         d_ang_momentum = log(abs((ang_momentum - init_ang_mom)/init_ang_mom))
+         !call get_energy(pset, cg, neighb, dist, n, energy)
+         !write(*,*) "energy"
+         !d_energy = log(abs((energy - init_energy)/init_energy))
+         !write(*,*) "dE"
+         !call get_ang_momentum_2(pset, n, ang_momentum)
+         !write(*,*) "L"
+         !d_ang_momentum = log(abs((ang_momentum - init_ang_mom)/init_ang_mom))
+         !write(*,*) "dL"
          
          !5.t
          t = t + dt
          !6.dt		!dt[n+1]
-         dt = sqrt(2.0*eta*eps/a)
+         !dt = sqrt(2.0*eta*eps/a)
          !7.dth
-         dth = 0.5*dt
+         !dth = 0.5*dt
          nsteps = nsteps + 1
         ! d_ang_momentum = log(abs((get_ang_momentum(pos, vel, mass, n) - init_ang_mom)/init_ang_mom))
 
@@ -576,12 +584,14 @@ contains
                         
                         do k = lbound(cg%gpot, dim=3), ubound(cg%gpot, dim=3)
                            
-                           cg%gpot(i, j, k) = phi_pm(mins(1) + (i-0.5)*delta_cells(1), mins(2) + (j-0.5)*delta_cells(2), mins(3) + (k-0.5)*delta_cells(3), eps)
+                           cg%gpot(i, j, k) = phi_pm(mins(1) + i*delta_cells(1), &
+                                                     mins(2) + j*delta_cells(2), &
+                                                     mins(3) + k*delta_cells(3), eps)
                            !write(77,*) i,j,k,cg%gpot(i,j,k)
                         enddo
                      enddo
                   enddo
-
+               write(*,*) "Wygenerowano potencjal"
                !close(77)
          end subroutine pot_grid2
 
@@ -1010,13 +1020,13 @@ contains
 
                do i=1, n
                   do j=1, ndims
-                     neighb(i,j) = int( (pset%p(i)%pos(j) - mins(j)) / delta_cells(j) ) + 1
+                     neighb(i,j) = int( (pset%p(i)%pos(j) - mins(j) - 0.5*delta_cells(j)) / delta_cells(j) ) + 1
                      !neighb(i,j) = int( (pset%p(i)%pos(j) - mins(j) ) / delta_cells(j) )! + 1
                   enddo
                enddo
                
                do i = 1, n
-                     dist(i,:) =  pset%p(i)%pos - (mins - 0.5*delta_cells + neighb(i,:) * delta_cells)
+                     dist(i,:) =  pset%p(i)%pos - neighb(i,:) * delta_cells - mins
                      !dist(i,:) = (pset%p(i)%pos - mins - delta_cells/2.0 - neighb(i,:) * delta_cells)
                      !do j=1,ndims
                      !   dist(i,j) = pset%p(i)%pos(j) - cg%coord(CENTER, j)%r(neighb(i,j))
