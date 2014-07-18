@@ -387,7 +387,7 @@ contains
          
          
          do i=1, n
-            write(lun_out, '(I3,1X,10(E13.6,1X))') n, t, pset%p(i)%pos, acc(i,:), acc2(i,:)!, acc3(i,:)!, energy, d_energy, ang_momentum, d_ang_momentum
+            write(lun_out, '(I3,1X,13(E13.6,1X))') n, t, pset%p(i)%pos, acc(i,:), acc2(i,:), acc3(i,:)!, energy, d_energy, ang_momentum, d_ang_momentum
             !write(lun_out, '(9(E13.6,1X))') pos(i,:), acc(i,:), acc2
          enddo
          
@@ -423,7 +423,7 @@ contains
          !write(*,*) "cell_nr2"
          call get_acc2(neighb, dist, pset, acc, cg, n)
          !write(*,*) "get_acc"
-         !call grav_pot2acc_cic2(neighb, dist, acc2, pset, n)
+         call grav_pot2acc_cic2(pset, cg, neighb, dist, acc3, n)
 
 
          !call get_acc_num(pos, acc2, eps, n)
@@ -694,26 +694,30 @@ contains
                   !enddo
                   
                   !wersja przed-ostateczna--------------------------------------------------
-                  do i=1,n
-                     do j=1,ndims
-                        if (pset%p(i)%pos(j) > cg%coord(CENTER, j)%r(neighb(i,j))) then
-                           neighb2(i,j) = neighb(i,j)! + 1
-                        else
-                           neighb2(i,j) = neighb(i,j)
-                        endif
-                        d1(i,j) = pset%p(i)%pos(j) - cg%coord(CENTER, j)%r(neighb2(i,j) - 1)
-                        d2(i,j) = cg%coord(CENTER, j)%r(neighb2(i,j)) - pset%p(i)%pos(j)
-                     enddo
-                  enddo
-                  
-                  do i=1,n
-                     acc3(i, 1) = 0.5/(cg%dx**2) * (d1(i,1) * ( cg%gpot(neighb2(i, 1) - 1, neighb2(i, 2), neighb2(i, 3)) - cg%gpot(neighb2(i, 1) + 1, neighb2(i, 2), neighb2(i, 3)) ) + d2(i,1) * (cg%gpot(neighb2(i, 1) - 2, neighb2(i, 2), neighb2(i, 3)) - cg%gpot(neighb2(i, 1), neighb2(i, 2), neighb2(i, 3))) )
-                     acc3(i, 2) = 0.5/(cg%dy**2) * (d1(i,2) * ( cg%gpot(neighb2(i, 1), neighb2(i, 2) - 1, neighb2(i, 3)) - cg%gpot(neighb2(i, 1), neighb2(i, 2) + 1, neighb2(i, 3)) ) + d2(i,2) * (cg%gpot(neighb2(i, 1), neighb2(i, 2) - 2, neighb2(i, 3)) - cg%gpot(neighb2(i, 1), neighb2(i, 2), neighb2(i, 3))) )
-                     acc3(i, 3) = 0.5/(cg%dz**2) * (d1(i,3) * ( cg%gpot(neighb2(i, 1), neighb2(i, 2), neighb2(i, 3) - 1) - cg%gpot(neighb2(i, 1), neighb2(i, 2), neighb2(i, 3) + 1) ) + d2(i,3) * (cg%gpot(neighb2(i, 1), neighb2(i, 2), neighb2(i, 3) - 2) - cg%gpot(neighb2(i, 1), neighb2(i, 2), neighb2(i, 3))) )
-                  enddo
+                 ! do i=1,n
+                 !    do j=1,ndims
+                 !       if (pset%p(i)%pos(j) > cg%coord(CENTER, j)%r(neighb(i,j))) then
+                 !          neighb2(i,j) = neighb(i,j)! + 1
+                 !       else
+                 !          neighb2(i,j) = neighb(i,j)
+                 !       endif
+                 !       d1(i,j) = pset%p(i)%pos(j) - cg%coord(CENTER, j)%r(neighb2(i,j) - 1)
+                 !       d2(i,j) = cg%coord(CENTER, j)%r(neighb2(i,j)) - pset%p(i)%pos(j)
+                 !    enddo
+                 ! enddo
+                 ! 
+                 ! do i=1,n
+                 !    acc3(i, 1) = 0.5/(cg%dx**2) * (d1(i,1) * ( cg%gpot(neighb2(i, 1) - 1, neighb2(i, 2), neighb2(i, 3)) - cg%gpot(neighb2(i, 1) + 1, neighb2(i, 2), neighb2(i, 3)) ) + d2(i,1) * (cg%gpot(neighb2(i, 1) - 2, neighb2(i, 2), neighb2(i, 3)) - cg%gpot(neighb2(i, 1), neighb2(i, 2), neighb2(i, 3))) )
+                 !    acc3(i, 2) = 0.5/(cg%dy**2) * (d1(i,2) * ( cg%gpot(neighb2(i, 1), neighb2(i, 2) - 1, neighb2(i, 3)) - cg%gpot(neighb2(i, 1), neighb2(i, 2) + 1, neighb2(i, 3)) ) + d2(i,2) * (cg%gpot(neighb2(i, 1), neighb2(i, 2) - 2, neighb2(i, 3)) - cg%gpot(neighb2(i, 1), neighb2(i, 2), neighb2(i, 3))) )
+                 !    acc3(i, 3) = 0.5/(cg%dz**2) * (d1(i,3) * ( cg%gpot(neighb2(i, 1), neighb2(i, 2), neighb2(i, 3) - 1) - cg%gpot(neighb2(i, 1), neighb2(i, 2), neighb2(i, 3) + 1) ) + d2(i,3) * (cg%gpot(neighb2(i, 1), neighb2(i, 2), neighb2(i, 3) - 2) - cg%gpot(neighb2(i, 1), neighb2(i, 2), neighb2(i, 3))) )
+                 ! enddo
                   !--------------------------------------------------------------------
                   
-                  
+                  !do i=1,n
+                     acc3(:,1) = -(1.0/cg%dx)*(dist(:,1)+cg%dx)*df_dx_o2_2(neighb, cg, cg%dx, n) - (1.0/cg%dx)*dist(:,1)*df_dx_o2_2(neighb-1, cg, cg%dx, n)
+                     acc3(:,2) = -(1.0/cg%dy)*(dist(:,2)+cg%dy)*df_dy_o2_2(neighb, cg, cg%dy, n) - (1.0/cg%dx)*dist(:,2)*df_dy_o2_2(neighb-1, cg, cg%dy, n)
+                     acc3(:,3) = -(1.0/cg%dz)*(dist(:,3)+cg%dz)*df_dz_o2_2(neighb, cg, cg%dz, n) - (1.0/cg%dx)*dist(:,3)*df_dz_o2_2(neighb-1, cg, cg%dz, n)
+                  !enddo
                   
                   
                   !do i=1,n
