@@ -434,11 +434,10 @@ contains
          !call grav_pot2acc_cic2(pset, cg, neighb, dist, acc3, n)
          
          !call get_acc_mod(acc, n, a)
-         !call get_acc_mod(acc, n, a)
-         !write(*,*) "get_acc_model"
+
          
          
-         
+         call get_acc_mod(acc, n, a)
          !4.kick(dth)
                  
          !call kick2(pset, acc, dth, n)                                  !zakomentowac dla ruchu po prostej
@@ -1020,7 +1019,7 @@ contains
 
                do i=1, n
                   do j=1, ndims
-                     neighb(i,j) = int( (pset%p(i)%pos(j) - mins(j) - 0.5*delta_cells(j)) / delta_cells(j) ) + 1
+                     neighb(i,j) = floor( (pset%p(i)%pos(j) - mins(j) - 0.5*delta_cells(j)) / delta_cells(j) ) + 1
                      !neighb(i,j) = int( (pset%p(i)%pos(j) - mins(j) ) / delta_cells(j) )! + 1
                   enddo
                enddo
