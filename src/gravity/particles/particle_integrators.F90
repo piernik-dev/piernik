@@ -474,15 +474,12 @@ contains
       
       write(*,*) "Leapfrog: nsteps=", nsteps
       
-     ! do ndim = xdim, zdim
-     !    pset%p(:)%pos(ndim) = pos(:, ndim)
-     !    pset%p(:)%vel(ndim) = vel(:, ndim)
-     ! enddo
+
 
       deallocate (acc, acc2, acc3, neighb, dist, mins, maxs, delta_cells, n_cell)
       close(lun_out)
       
-      !return
+
       contains
          
          !Kick
@@ -497,7 +494,7 @@ contains
             integer, intent(in) :: n
             integer :: i
             real, dimension(n, ndims), intent(in) :: acc
-            !real, dimension(n, ndims), intent(inout) :: vel
+
             do i=1,n
                pset%p(i)%vel = pset%p(i)%vel + acc(i,:)*t
             enddo
@@ -525,9 +522,7 @@ contains
                   G = 1.0
                   M = 1.0
                   r = sqrt(x**2 + y**2 + z**2 + eps**2)
-                  !if (r<1.0e-5) then
-                  !   write(*,*) " !phi_pm: x=",x, " y=", y, " z=", z, " eps=", eps, " r=", r
-                  !end if
+
                   phi_pm = -G*M / r
          end function phi_pm
 
@@ -634,7 +629,7 @@ contains
 
             implicit none
             
-            !type(cg_list_element), pointer :: cgl
+
             type(grid_container), pointer, intent(in) :: cg
             class(particle_set), intent(in) :: pset  !< particle list
             
@@ -648,7 +643,7 @@ contains
             real(kind=8), dimension(n, ndims), intent(out) :: acc3
             integer, dimension(ndims) :: cic
              
-            !write(*,*) "cic: dx,y,z= ",cg%dx, cg%dy, cg%dz
+
             
                   !neighb2 = neighb
                   dist2 = dist
