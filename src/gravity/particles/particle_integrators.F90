@@ -366,9 +366,9 @@ contains
       
       
       !timestep
-      !dt = sqrt(2.0*eta*eps/a) 
+      dt = sqrt(2.0*eta*eps/a) 
       !write(*,*) "dt"           !variable
-      dt = 0.25                            !constant
+      !dt = 0.01                            !constant
       dth = dt/2.0
       
 
@@ -402,7 +402,7 @@ contains
          !call kick(vel, [zero,zero,zero], dth, n)   !velocity
          !------------------------------------------------------------------
          
-         acc(:,:) = 0.0                                                 !odkomentowac dla ruchu po prostej
+         !acc(:,:) = 0.0                                                 !odkomentowac dla ruchu po prostej
          call kick2(pset, acc, dth, n)
          !write(*,*) "kick"
          !call kick2(pset, acc, dth, n)
@@ -441,8 +441,8 @@ contains
          !4.kick(dth)
                  
          !call kick2(pset, acc, dth, n)                                  !zakomentowac dla ruchu po prostej
-         !call kick2(pset, acc, dth, n)
-         call kick2(pset, [zero,zero,zero], dth, n)                     !odkomentowac dla ruchu po prostej
+         call kick2(pset, acc, dth, n)
+         !call kick2(pset, [zero,zero,zero], dth, n)                     !odkomentowac dla ruchu po prostej
          !write(*,*) "kick2"
          !call grav_pot2acc_cic2(pset, cg, neighb, dist, acc3, n)
          
@@ -458,9 +458,9 @@ contains
          !5.t
          t = t + dt
          !6.dt		!dt[n+1]
-         !dt = sqrt(2.0*eta*eps/a)
+         dt = sqrt(2.0*eta*eps/a)
          !7.dth
-         !dth = 0.5*dt
+         dth = 0.5*dt
          nsteps = nsteps + 1
         ! d_ang_momentum = log(abs((get_ang_momentum(pos, vel, mass, n) - init_ang_mom)/init_ang_mom))
 
@@ -645,7 +645,9 @@ contains
             integer(kind=8), dimension(n, ndims) :: neighb2
             real(kind=8), dimension(n, ndims), intent(in) :: dist
             real(kind=8), dimension(n, ndims):: dist2,d1,d2
-            real(kind=8), dimension(n, ndims), intent(out) :: acc3 
+            real(kind=8), dimension(n, ndims), intent(out) :: acc3
+            integer, dimension(ndims) :: cic
+             
             !write(*,*) "cic: dx,y,z= ",cg%dx, cg%dy, cg%dz
             
                   !neighb2 = neighb
@@ -713,10 +715,12 @@ contains
                  ! enddo
                   !--------------------------------------------------------------------
                   
+                  
                   !do i=1,n
-                     acc3(:,1) = -(1.0/cg%dx)*(dist(:,1)+cg%dx)*df_dx_o2_2(neighb, cg, cg%dx, n) - (1.0/cg%dx)*dist(:,1)*df_dx_o2_2(neighb-1, cg, cg%dx, n)
-                     acc3(:,2) = -(1.0/cg%dy)*(dist(:,2)+cg%dy)*df_dy_o2_2(neighb, cg, cg%dy, n) - (1.0/cg%dx)*dist(:,2)*df_dy_o2_2(neighb-1, cg, cg%dy, n)
-                     acc3(:,3) = -(1.0/cg%dz)*(dist(:,3)+cg%dz)*df_dz_o2_2(neighb, cg, cg%dz, n) - (1.0/cg%dx)*dist(:,3)*df_dz_o2_2(neighb-1, cg, cg%dz, n)
+                   
+                     acc3(:,1) = -(1.0/cg%dx) * (dist(:,1)+cg%dx) * df_dx_o2_2(neighb, cg, cg%dx, n)  -  (1.0/cg%dx) * dist(:,1) * df_dx_o2_2_cic(neighb, cg, cg%dx, n)
+                     acc3(:,2) = -(1.0/cg%dy) * (dist(:,2)+cg%dy) * df_dy_o2_2(neighb, cg, cg%dy, n)  -  (1.0/cg%dy) * dist(:,2) * df_dy_o2_2_cic(neighb, cg, cg%dy, n)
+                     acc3(:,3) = -(1.0/cg%dz) * (dist(:,3)+cg%dz) * df_dz_o2_2(neighb, cg, cg%dz, n)  -  (1.0/cg%dz) * dist(:,3) * df_dz_o2_2_cic(neighb, cg, cg%dz, n)
                   !enddo
                   
                   
@@ -856,7 +860,7 @@ contains
                real(kind=8), dimension(n, ndims), intent(in) :: dist
                real(kind=8),dimension(n, ndims),intent(out) :: acc
                real,dimension(n) :: ax, ay, az
-
+               
                   dx_cell = cg%dx
                   dy_cell = cg%dy
                   dz_cell = cg%dz
@@ -1445,7 +1449,7 @@ contains
 
 !-------funkcje sprawdzajace-----------------------------------------------
 !==========================================================================
-         function df_dx_o2_2(neighb, cg, dx_cell, n)
+         function df_dx_o2_2(neighb, cg, dx_cell, n)!, cic)
             use constants, only: ndims
             use grid_cont,  only: grid_container
             implicit none
@@ -1457,7 +1461,34 @@ contains
                integer(kind=8) :: p, q, r
                !real,dimension(n_cell(1), n_cell(2), n_cell(3)),intent(in) :: cg%gpot
                real,intent(in) :: dx_cell
+              ! integer, dimension(ndims) :: cic
                real,dimension(n),target :: df_dx_o2_2
+
+               do i=1, n, 1
+                  p = neighb(i, 1)! + cic(1)
+                  q = neighb(i, 2)! + cic(2)
+                  r = neighb(i, 3)! + cic(3)
+
+                  !o(R^2)
+                  df_dx_o2_2(i) = ( cg%gpot(p+1, q, r) - cg%gpot(p-1, q, r) ) / (2.0*dx_cell)
+               enddo
+         end function df_dx_o2_2
+         
+         
+         function df_dx_o2_2_cic(neighb, cg, dx_cell, n)
+            use constants, only: ndims
+            use grid_cont,  only: grid_container
+            implicit none
+               type(grid_container), pointer, intent(in) :: cg
+               integer, intent(in) :: n
+               integer(kind=8),dimension(n, ndims),intent(in) :: neighb
+               !integer, dimension(ndims), intent(in):: n_cell
+               integer :: i
+               integer(kind=8) :: p, q, r
+               !real,dimension(n_cell(1), n_cell(2), n_cell(3)),intent(in) :: cg%gpot
+               real,intent(in) :: dx_cell
+              ! integer, dimension(ndims) :: cic
+               real,dimension(n) :: df_dx_o2_2_cic
 
                do i=1, n, 1
                   p = neighb(i, 1)
@@ -1465,11 +1496,11 @@ contains
                   r = neighb(i, 3)
 
                   !o(R^2)
-                  df_dx_o2_2(i) = ( cg%gpot(p+1, q, r) - cg%gpot(p-1, q, r) ) / (2.0*dx_cell)
+                  df_dx_o2_2_cic(i) = ( cg%gpot(p, q, r) - cg%gpot(p-2, q, r) ) / (2.0*dx_cell)
                enddo
-         end function df_dx_o2_2
+         end function df_dx_o2_2_cic
 
-         function df_dy_o2_2(neighb, cg, dy_cell, n)
+         function df_dy_o2_2(neighb, cg, dy_cell, n)!, cic)
             use constants, only: ndims
             use grid_cont,  only: grid_container 
             implicit none
@@ -1481,7 +1512,33 @@ contains
                integer(kind=8) :: p, q, r
                !real,dimension(n_cell(1), n_cell(2), n_cell(3)),intent(in) :: cg%gpot
                real,intent(in) :: dy_cell
-               real,dimension(n),target ::df_dy_o2_2
+              ! integer, dimension(ndims) :: cic
+               real,dimension(n),target :: df_dy_o2_2
+
+               do i = 1, n, 1
+                  p = neighb(i, 1)! + cic(1)
+                  q = neighb(i, 2)! + cic(2)
+                  r = neighb(i, 3)! + cic(3)
+
+                  !o(R^2)
+                  df_dy_o2_2(i) = (cg%gpot(p, q+1, r) - cg%gpot(p, q-1, r) ) / (2.0*dy_cell)
+               enddo
+         end function df_dy_o2_2
+         
+         function df_dy_o2_2_cic(neighb, cg, dy_cell, n)
+            use constants, only: ndims
+            use grid_cont,  only: grid_container 
+            implicit none
+               type(grid_container), pointer, intent(in) :: cg
+               integer, intent(in) :: n
+               integer(kind=8),dimension(n, ndims),intent(in) :: neighb
+               !integer, dimension(ndims), intent(in):: n_cell
+               integer :: i
+               integer(kind=8) :: p, q, r
+               !real,dimension(n_cell(1), n_cell(2), n_cell(3)),intent(in) :: cg%gpot
+               real,intent(in) :: dy_cell
+              ! integer, dimension(ndims) :: cic
+               real,dimension(n) :: df_dy_o2_2_cic
 
                do i = 1, n, 1
                   p = neighb(i, 1)
@@ -1489,11 +1546,12 @@ contains
                   r = neighb(i, 3)
 
                   !o(R^2)
-                  df_dy_o2_2(i) = (cg%gpot(p, q+1, r) - cg%gpot(p, q-1, r) ) / (2.0*dy_cell)
+                  df_dy_o2_2_cic(i) = (cg%gpot(p, q, r) - cg%gpot(p, q-2, r) ) / (2.0*dy_cell)
                enddo
-         end function df_dy_o2_2
+         end function df_dy_o2_2_cic
 
-      function df_dz_o2_2(neighb, cg, dz_cell, n)
+
+      function df_dz_o2_2(neighb, cg, dz_cell, n)!, cic)
             use constants, only: ndims
             use grid_cont,  only: grid_container 
             implicit none
@@ -1505,7 +1563,33 @@ contains
                integer(kind=8) :: p, q, r
                !real,dimension(n_cell(1), n_cell(2), n_cell(3)),intent(in) :: cg%gpot
                real,intent(in) :: dz_cell
+              ! integer, dimension(ndims) :: cic
                real, dimension(n), target :: df_dz_o2_2
+
+               do i = 1, n, 1
+                  p = neighb(i, 1)! + cic(1)
+                  q = neighb(i, 2)! + cic(2)
+                  r = neighb(i, 3)! + cic(3)
+
+                  !o(R^2)
+                  df_dz_o2_2(i) = ( cg%gpot(p, q, r+1) - cg%gpot(p, q, r-1) ) / (2.0*dz_cell)
+               enddo
+         end function df_dz_o2_2
+         
+         function df_dz_o2_2_cic(neighb, cg, dz_cell, n)
+            use constants, only: ndims
+            use grid_cont,  only: grid_container 
+            implicit none
+               type(grid_container), pointer, intent(in) :: cg
+               integer, intent(in) :: n
+               integer(kind=8),dimension(n, ndims),intent(in) :: neighb
+               !integer, dimension(ndims), intent(in):: n_cell
+               integer :: i
+               integer(kind=8) :: p, q, r
+               !real,dimension(n_cell(1), n_cell(2), n_cell(3)),intent(in) :: cg%gpot
+               real,intent(in) :: dz_cell
+              ! integer, dimension(ndims) :: cic
+               real, dimension(n) :: df_dz_o2_2_cic
 
                do i = 1, n, 1
                   p = neighb(i, 1)
@@ -1513,9 +1597,9 @@ contains
                   r = neighb(i, 3)
 
                   !o(R^2)
-                  df_dz_o2_2(i) = ( cg%gpot(p, q, r+1) - cg%gpot(p, q, r-1) ) / (2.0*dz_cell)
+                  df_dz_o2_2_cic(i) = ( cg%gpot(p, q, r) - cg%gpot(p, q, r-2) ) / (2.0*dz_cell)
                enddo
-         end function df_dz_o2_2
+         end function df_dz_o2_2_cic
 
          function d2f_dx2_o2_2(neighb, cg, dx_cell, n)
             use constants, only: ndims
@@ -1677,6 +1761,7 @@ contains
                integer :: i
                integer(kind=8) :: p, q, r
                real,intent(in) :: dx_cell
+               
                real,dimension(n),target :: df_dx_o4_2
 
                do i = 1, n, 1
@@ -1702,6 +1787,7 @@ contains
                integer :: i
                integer(kind=8) :: p, q, r
                real,intent(in) :: dy_cell
+
                real, dimension(n), target :: df_dy_o4_2
 
                do i = 1, n, 1
@@ -1727,6 +1813,7 @@ contains
                integer :: i
                integer(kind=8) :: p, q, r
                real,intent(in) :: dz_cell
+              ! integer, dimension(ndims) :: cic=[0,0,0]
                real, dimension(n), target :: df_dz_o4_2
 
                do i = 1, n, 1
