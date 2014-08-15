@@ -358,7 +358,7 @@ contains
       call get_acc_num2(pset, acc2, eps, n)
       !write(*,*) "Znaleziono potencjal modelowy"
       
-      call grav_pot2acc_cic2(pset, cg, neighb, dist, acc3, n)
+      call grav_pot2acc_cic2(pset, cg, neighb, acc3, n)
      
 
       !call get_acc_mod(acc, n, a)
@@ -423,7 +423,7 @@ contains
          !write(*,*) "cell_nr2"
          call get_acc2(neighb, dist, pset, acc, cg, n)
          !write(*,*) "get_acc"
-         call grav_pot2acc_cic2(pset, cg, neighb, dist, acc3, n)
+         call grav_pot2acc_cic2(pset, cg, neighb, acc3, n)
 
 
          !call get_acc_num(pos, acc2, eps, n)
@@ -566,21 +566,18 @@ contains
                !open(unit=77,file='potencjal.dat')
                   !delta_cells = (maxs - mins) / n_cell
                   
-                  delta_cells(1) = cg%dx
+                  delta_cells(1) = cg%dx  !potem trzeba to usunac
                   delta_cells(2) = cg%dy
                   delta_cells(3) = cg%dz
                   
 
 
                   do i = lbound(cg%gpot, dim=1), ubound(cg%gpot, dim=1)
-                     
                      do j = lbound(cg%gpot, dim=2), ubound(cg%gpot, dim=2)
-                        
                         do k = lbound(cg%gpot, dim=3), ubound(cg%gpot, dim=3)
-                           
-                           cg%gpot(i, j, k) = phi_pm(mins(1) + i*delta_cells(1), &
-                                                     mins(2) + j*delta_cells(2), &
-                                                     mins(3) + k*delta_cells(3), eps)
+                           cg%gpot(i, j, k) = phi_pm(mins(1) + (i-0.5)*cg%dx, &
+                                                     mins(2) + (j-0.5)*cg%dy, &
+                                                     mins(3) + (k-0.5)*cg%dz, eps)
                            !write(77,*) i,j,k,cg%gpot(i,j,k)
                         enddo
                      enddo
@@ -634,16 +631,16 @@ contains
             class(particle_set), intent(in) :: pset  !< particle list
             
             integer, intent(in) :: n
-            integer :: i, j, k, c, p, cdim
+            integer :: i, j, k, c, cdim
+            integer(kind=8) :: p
             
             integer(kind=8), dimension(n, ndims), intent(in) :: neighb
             integer(kind=8), dimension(n, ndims) :: neighb2
-            real(kind=8), dimension(n, ndims), :: dxyz
-            real(kind=8), dimension(n, ndims):: d3
-            real(kind=8), dimension(n, ndims), intent(out) :: acc3 = 0.0
-            integer, dimension(ndims) :: cic
+            real, dimension(n, ndims), :: dxyz
+            real :: d3
+            real, dimension(n, ndims), intent(out) :: acc3 = 0.0
             
-            real(kind=8),dimension(n,8):: aijk, f_x, f_y, f_z
+            real(kind=8),dimension(n, 8) :: aijk, f_x, f_y, f_z
 
             d3 = cg%dx*cg%dy*cg%dz
             
