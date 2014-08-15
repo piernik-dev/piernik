@@ -100,7 +100,7 @@ contains
       enddo
 
 
-      e = 0.7
+      e = 0.9
 
       n_particles = 1
       write(*,*) "Particles: ", n_particles
@@ -119,11 +119,10 @@ contains
       !call pset%add(1.0, [ 0.0, 0.0, 0.0], [-0.932407370, -0.86473146, 0.0], [0.0, 0.0, 0.0] )
          !do i = 1, n_particles, 1
             
-            call pset%add(1.0, pos_init, vel_init,0.0 )
+            call pset%add(1.0, pos_init, vel_init,0.0 ) !orbita eliptyczna
             !call pset%add(0.00001, [2.0,0.0,0.0], [0.0,0.5,0.0], [0.0, 0.0, 0.0] )
-            !call pset%add(1.0, [2.0,0.0,0.0], [0.0,0.707106781,0.0], [0.0, 0.0, 0.0] ) !kolowa
-            !call pset%add(1.0, [2.0, 0.0, 0.0],[0.0, 0.707106781, 0.0], 0.0)
-            !call pset%add(1.0, [-3.0,1.8,0.0],[1.0,0.0,0.0],0.0)        !ruch po prostej
+            !call pset%add(1.0, [2.0, 0.0, 0.0],[0.0, 0.707106781, 0.0], 0.0) !orbita kolowa
+            !call pset%add(1.0, [4.625,3.0,0.0],[-1.0,0.0,0.0],0.0)        !ruch po prostej
             !pos_init = positions(dtheta, pos_init)
             !vel_init = rotate(dtheta, vel_init)
             
@@ -150,13 +149,25 @@ contains
       function velocities(pos_init, e)
          implicit none
             real, dimension(3) :: pos_init, velocities
-            real :: e, r, vx, vy
-            real, parameter :: mu = 1.0
-            
-            r = sqrt(pos_init(1)**2 + pos_init(2)**2 + pos_init(3)**2)
-            vx = 0.0
-            vy = sqrt( (2.0 * mu * (1 - e**2) ) / (r * (r**2 + (1 - e**2) ) ) )
-            velocities(1) = vx
+            real :: a, e, r
+            real, parameter :: mu = 1.0,G=1.0, M=1.0
+            if((e<0.0) .or. (e>=1.0)) then
+               write(*,*) "Bledna wartosc mimosrodu! Zatrzymano!"
+               stop
+            else
+               r = sqrt(pos_init(1)**2+pos_init(2)**2+pos_init(3)**2)
+               if (e==0.0) then
+                  velocities(2) = sqrt(G*M/r)
+                  write(*,*) "Orbita kolowa"
+               else
+
+                  a = r/(1.0 + e)
+                  velocities(2) = sqrt(mu*(2.0/r - 1.0/a))
+                  write(*,'(A11,F4.2,A3,F5.3,A3,F5.3)') "#Elipsa: e=", e, " a=",a, " b=", a*sqrt(1.0 - e**2)
+                  !lenght = pi*( (x0/(1.0+e))*(1.5*(1.0+sqrt(1.0-e**2)) - (1.0-e**2)**0.25))
+               endif
+            endif!
+            velocities(1) = 0.0
             velocities(2) = vy
             velocities(3) = 0.0
       end function velocities
