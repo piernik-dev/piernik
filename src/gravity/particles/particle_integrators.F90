@@ -621,7 +621,7 @@ contains
 
 
          subroutine grav_pot2acc_cic2(pset, cg, neighb, acc3, n)
-            use constants, only: ndims, CENTER
+            use constants, only: ndims, CENTER, xdim, ydim, zdim
             !use cg_leaves,        only: leaves
             !use cg_list,          only: cg_list_element
             use grid_cont,        only: grid_container
@@ -645,6 +645,8 @@ contains
             
             real(kind=8),dimension(8)::aijk,fijk_x,fijk_y,fijk_z
 
+            d3 = cg%dx*cg%dy*cg%dz
+            
             do i = 1, n
                do cdim = 1, ndims
                   if (pset%p(i)%pos(cdim) < cg%coord(CENTER, cdim)%r(neighb(i,cdim))) then
@@ -652,11 +654,21 @@ contains
                   else
                      neighb2(i,cdim) = neigb(i,cdim)
                   endif
-                  dxyz(i, cdim) = pset%p(i)%pos(cdim) - cg%coord(CENTER, cdim)%r(neighb(i,cdim))
+                  dxyz(i, cdim) = pset%p(i)%pos(cdim) - cg%coord(CENTER, cdim)%r(neighb2(i,cdim))
                enddo
+               aijk(i, 1) = (cg%dx - dxyz(i, xdim))*(cg%dy - dxyz(i, ydim))*(cg%dz - dxyz(i, zdim))
+               aijk(i, 2) = (cg%dx - dxyz(i, xdim))*(cg%dy - dxyz(i, ydim))*         dxyz(i, zdim)
+               aijk(i, 3) = (cg%dx - dxyz(i, xdim))*         dxyz(i, ydim) *(cg%dz - dxyz(i, zdim))
+               aijk(i, 4) = (cg%dx - dxyz(i, xdim))*         dxyz(i, ydim) *         dxyz(i, zdim)
+               aijk(i, 5) =          dxyz(i, xdim) *(cg%dy - dxyz(i, ydim))*(cg%dz - dxyz(i, zdim))
+               aijk(i, 6) =          dxyz(i, xdim) *(cg%dy - dxyz(i, ydim))*         dxyz(i, zdim)
+               aijk(i, 7) =          dxyz(i, xdim) *         dxyz(i, ydim) *(cg%dz - dxyz(i, zdim))
+               aijk(i, 8) =          dxyz(i, xdim) *         dxyz(i, ydim) *         dxyz(i, zdim)
+
+               aijk = aijk/d3
             enddo
             
-            d3 = cg%dx*cg%dy*cg%dz
+            
             
             !-------------------------------------------------------------      
             if (polozenie(1,1) >cell(1,1)*dx_cell+xmin-0.5*dx_cell) then
