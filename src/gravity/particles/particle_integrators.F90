@@ -636,12 +636,13 @@ contains
             
             integer(kind=8), dimension(n, ndims), intent(in) :: neighb
             integer(kind=8), dimension(n, ndims) :: neighb2
-            real, dimension(n, ndims), :: dxyz
+            real, dimension(n, ndims) :: dxyz
             real :: d3
-            real, dimension(n, ndims), intent(out) :: acc3 = 0.0
+            real, dimension(n, ndims), intent(out) :: acc3
             
-            real(kind=8),dimension(n, 8) :: aijk, f_x, f_y, f_z
+            real(kind=8),dimension(n, 8) :: aijk, fx, fy, fz
 
+            acc3 = 0.0
             d3 = cg%dx*cg%dy*cg%dz
             
             do i = 1, n
@@ -649,7 +650,7 @@ contains
                   if (pset%p(i)%pos(cdim) < cg%coord(CENTER, cdim)%r(neighb(i,cdim))) then
                      neighb2(i,cdim) = neighb(i,cdim)-1
                   else
-                     neighb2(i,cdim) = neigb(i,cdim)
+                     neighb2(i,cdim) = neighb(i,cdim)
                   endif
                   dxyz(i, cdim) = pset%p(i)%pos(cdim) - cg%coord(CENTER, cdim)%r(neighb2(i,cdim))
                enddo
