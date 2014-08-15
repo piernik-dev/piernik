@@ -634,16 +634,16 @@ contains
             class(particle_set), intent(in) :: pset  !< particle list
             
             integer, intent(in) :: n
-            integer :: i, j, k, c, cdim
+            integer :: i, j, k, c, p, cdim
             
             integer(kind=8), dimension(n, ndims), intent(in) :: neighb
             integer(kind=8), dimension(n, ndims) :: neighb2
             real(kind=8), dimension(n, ndims), :: dxyz
             real(kind=8), dimension(n, ndims):: d3
-            real(kind=8), dimension(n, ndims), intent(out) :: acc3
+            real(kind=8), dimension(n, ndims), intent(out) :: acc3 = 0.0
             integer, dimension(ndims) :: cic
             
-            real(kind=8),dimension(8)::aijk,fijk_x,fijk_y,fijk_z
+            real(kind=8),dimension(n,8):: aijk, f_x, f_y, f_z
 
             d3 = cg%dx*cg%dy*cg%dz
             
@@ -664,105 +664,154 @@ contains
                aijk(i, 6) =          dxyz(i, xdim) *(cg%dy - dxyz(i, ydim))*         dxyz(i, zdim)
                aijk(i, 7) =          dxyz(i, xdim) *         dxyz(i, ydim) *(cg%dz - dxyz(i, zdim))
                aijk(i, 8) =          dxyz(i, xdim) *         dxyz(i, ydim) *         dxyz(i, zdim)
-
-               aijk = aijk/d3
             enddo
             
+            aijk = aijk/d3
             
+            
+            c = 1
+            do p = 1, n
+               do i = 0, 1
+                  do j = 0, 1
+                     do k = 0, 1
+                        fx(p, c) = -(cg%gpot(neighb2(p, xdim)+1+i, neighb2(p, ydim)  +j, neighb2(p, zdim)  +k) - cg%gpot(neighb2(p, xdim)-1+i, neighb2(p, ydim)  +j, neighb2(p, zdim)  +k))
+                        fy(p, c) = -(cg%gpot(neighb2(p, xdim)  +i, neighb2(p, ydim)+1+j, neighb2(p, zdim)  +k) - cg%gpot(neighb2(p, xdim)  +i, neighb2(p, ydim)-1+j, neighb2(p, zdim)  +k))
+                        fz(p, c) = -(cg%gpot(neighb2(p, xdim)  +i, neighb2(p, ydim)  +j, neighb2(p, zdim)+1+k) - cg%gpot(neighb2(p, xdim)  +i, neighb2(p, ydim)  +j, neighb2(p, zdim)-1+k))
+                        c = c + 1
+                     enddo
+                  enddo
+               enddo
+            enddo
+            fx = 0.5*fx*cg%idx
+            fy = 0.5*fy*cg%idy
+            fz = 0.5*fz*cg%idz
+            
+            do p = 1, n
+               do c = 1, 8
+                  acc3(p, xdim) = acc3(p, xdim) + aijk(p, c)*fx(p, c)
+                  acc3(p, ydim) = acc3(p, xdim) + aijk(p, c)*fy(p, c)
+                  acc3(p, zdim) = acc3(p, zdim) + aijk(p, c)*fz(p, c)
+               enddo
+            enddo
+            !c = 1
+            !do p = 1, n
+            !   do i = 0, 1
+            !      do j = 0, 1
+            !         do k = 0, 1
+            !            !fy(p, c) = -(cg%gpot(neighb2(p, xdim)+i,neighb2(p, ydim)+1+j,neighb2(p, zdim)+k) - cg%gpot(neighb2(p, xdim)+i,neighb2(p, ydim)-1+j,neighb2(p, zdim)+k))
+            !            !c = c + 1
+            !         enddo
+            !      enddo
+            !   enddo
+            !enddo
+            !fy = 0.5*fy*cg%idy
+            !
+            !c = 1
+            !do p = 1, n
+            !   do i = 0, 1
+            !      do j = 0, 1
+            !         do k = 0, 1
+            !            !fz(p, c) = -(cg%gpot(neighb2(p, xdim)+i,neighb2(p, ydim)+j,neighb2(p, zdim)+1+k) - cg%gpot(neighb2(p, xdim)+i,neighb2(p, ydim)+j,neighb2(p, zdim)-1+k))
+            !            !c = c + 1
+            !         enddo
+            !      enddo
+            !   enddo
+            !enddo
+            !fz = 0.5*fz*cg%idz
             
             !-------------------------------------------------------------      
-            if (polozenie(1,1) >cell(1,1)*dx_cell+xmin-0.5*dx_cell) then
-               cell2(1,1) = cell(1,1)
-            else
-               cell2(1,1) = cell(1,1)-1
-            endif
+            !if (polozenie(1,1) >cell(1,1)*dx_cell+xmin-0.5*dx_cell) then
+            !   cell2(1,1) = cell(1,1)
+            !else
+            !   cell2(1,1) = cell(1,1)-1
+            !endif
+            !!
+            !if (polozenie(1,2) >cell(1,2)*dy_cell+ymin-0.5*dy_cell) then
+            !   cell2(1,2) = cell(1,2)
+            !else
+            !   cell2(1,2) = cell(1,2)-1
+            !endif
+            !!
+            !if (polozenie(1,3) >cell(1,3)*dz_cell+zmin-0.5*dz_cell) then
+            !   cell2(1,3) = cell(1,3)
+            !else
+            !   cell2(1,3) = cell(1,3)-1
+            !endif
+
+            !d3 = dx_cell*dy_cell*dz_cell
+
+            !dx = polozenie(1,1) - (cell2(1,1)*dx_cell-0.5*dx_cell+xmin)
+            !dy = polozenie(1,2) - (cell2(1,2)*dy_cell-0.5*dy_cell+ymin)
+            !dz = polozenie(1,3) - (cell2(1,3)*dz_cell-0.5*dz_cell+zmin) 
+
+            !aijk(1) = (dx_cell - dx)*(dy_cell - dy)*(dz_cell - dz)
+            !aijk(2) = (dx_cell - dx)*(dy_cell - dy)*     dz
+            !aijk(3) = (dx_cell - dx)*          dy  *(dz_cell - dz)
+            !aijk(4) = (dx_cell - dx)*       dy     *     dz
+            !aijk(5) =            ! dx*(dy_cell - dy)*(dz_cell - dz)
+            !aijk(6) =     dx        *(dy_cell - dy)*     dz
+            !aijk(7) =     dx        *       dy     *(dz_cell - dz)
+            !aijk(8) = dx*dy*dz
+
+            !aijk = aijk/d3
+
+
+            !!x
+            !c=0
+            !do i=0,1
+            !   do j=0,1
+            !      do k=0,1
+            !         c=c+1
+            !         fijk_x(c) = -(pot(cell2(1,1)+1+i,cell2(1,2)+j,cell2(1,3)+k) - pot(cell2(1,1)-1+i,cell2(1,2)+j,cell2(1,3)+k))
+            !      enddo
+            !   enddo
+            !enddo
+
+            !fijk_x = fijk_x/(2.0*dx_cell)
+
+            !!w PIERNIKU tu mozna zrobic petle po cdim=1,3 z a(n,cdim)=a(n,cdim)+aijk*fijk(:,cdim)
+            !axc = 0.0
+            !   do i=1,8
+            !      axc = axc + aijk(i)*fijk_x(i)
+            !enddo
+
+            !!y
+            !c=0
+            !do i=0,1
+            !   do j=0,1
+            !      do k=0,1
+            !         c=c+1
+            !         fijk_y(c) = -(pot(cell2(1,1)+i,cell2(1,2)+1+j,cell2(1,3)+k) - pot(cell2(1,1)+i,cell2(1,2)-1+j,cell2(1,3)+k))
+            !      enddo
+            !   enddo
+            !enddo
+
+            !fijk_y = fijk_y/(2.0*dy_cell)
             !
-            if (polozenie(1,2) >cell(1,2)*dy_cell+ymin-0.5*dy_cell) then
-               cell2(1,2) = cell(1,2)
-            else
-               cell2(1,2) = cell(1,2)-1
-            endif
+            !!w PIERNIKU tu mozna zrobic petle po cdim=1,3 z a(n,cdim)=a(n,cdim)+aijk*fijk(:,cdim)
+            !ayc = 0.0
+            !   do i=1,8
+            !      ayc = ayc + aijk(i)*fijk_y(i)
+            !enddo
+
+            !!z 
+            !c=0
+            !do i=0,1
+            !   do j=0,1
+            !      do k=0,1
+            !         c=c+1
+            !         fijk_z(c) = -(pot(cell2(1,1)+i,cell2(1,2)+j,cell2(1,3)+1+k) - pot(cell2(1,1)+i,cell2(1,2)+j,cell2(1,3)-1+k))
+            !      enddo
+            !   enddo
+            !enddo
+
+            !fijk_z = fijk_z/(2.0*dz_cell)
             !
-            if (polozenie(1,3) >cell(1,3)*dz_cell+zmin-0.5*dz_cell) then
-               cell2(1,3) = cell(1,3)
-            else
-               cell2(1,3) = cell(1,3)-1
-            endif
-
-            d3 = dx_cell*dy_cell*dz_cell
-
-            dx = polozenie(1,1) - (cell2(1,1)*dx_cell-0.5*dx_cell+xmin)
-            dy = polozenie(1,2) - (cell2(1,2)*dy_cell-0.5*dy_cell+ymin)
-            dz = polozenie(1,3) - (cell2(1,3)*dz_cell-0.5*dz_cell+zmin) 
-
-            aijk(1) = (dx_cell - dx)*(dy_cell - dy)*(dz_cell - dz)
-            aijk(2) = (dx_cell - dx)*(dy_cell - dy)*     dz
-            aijk(3) = (dx_cell - dx)*          dy  *(dz_cell - dz)
-            aijk(4) = (dx_cell - dx)*       dy     *     dz
-            aijk(5) =             dx*(dy_cell - dy)*(dz_cell - dz)
-            aijk(6) =     dx        *(dy_cell - dy)*     dz
-            aijk(7) =     dx        *       dy     *(dz_cell - dz)
-            aijk(8) = dx*dy*dz
-
-            aijk = aijk/d3
-
-
-            !x
-            c=0
-            do i=0,1
-               do j=0,1
-                  do k=0,1
-                     c=c+1
-                     fijk_x(c) = -(pot(cell2(1,1)+1+i,cell2(1,2)+j,cell2(1,3)+k) - pot(cell2(1,1)-1+i,cell2(1,2)+j,cell2(1,3)+k))
-                  enddo
-               enddo
-            enddo
-
-            fijk_x = fijk_x/(2.0*dx_cell)
-
-            !w PIERNIKU tu mozna zrobic petle po cdim=1,3 z a(n,cdim)=a(n,cdim)+aijk*fijk(:,cdim)
-            axc = 0.0
-               do i=1,8
-                  axc = axc + aijk(i)*fijk_x(i)
-            enddo
-
-            !y
-            c=0
-            do i=0,1
-               do j=0,1
-                  do k=0,1
-                     c=c+1
-                     fijk_y(c) = -(pot(cell2(1,1)+i,cell2(1,2)+1+j,cell2(1,3)+k) - pot(cell2(1,1)+i,cell2(1,2)-1+j,cell2(1,3)+k))
-                  enddo
-               enddo
-            enddo
-
-            fijk_y = fijk_y/(2.0*dy_cell)
-            
-            !w PIERNIKU tu mozna zrobic petle po cdim=1,3 z a(n,cdim)=a(n,cdim)+aijk*fijk(:,cdim)
-            ayc = 0.0
-               do i=1,8
-                  ayc = ayc + aijk(i)*fijk_y(i)
-            enddo
-
-            !z 
-            c=0
-            do i=0,1
-               do j=0,1
-                  do k=0,1
-                     c=c+1
-                     fijk_z(c) = -(pot(cell2(1,1)+i,cell2(1,2)+j,cell2(1,3)+1+k) - pot(cell2(1,1)+i,cell2(1,2)+j,cell2(1,3)-1+k))
-                  enddo
-               enddo
-            enddo
-
-            fijk_z = fijk_z/(2.0*dz_cell)
-            
-            !w PIERNIKU tu mozna zrobic petle po cdim=1,3 z a(n,cdim)=a(n,cdim)+aijk*fijk(:,cdim)
-            azc = 0.0
-               do i=1,8
-                  azc = azc + aijk(i)*fijk_z(i)
-            enddo
+            !!w PIERNIKU tu mozna zrobic petle po cdim=1,3 z a(n,cdim)=a(n,cdim)+aijk*fijk(:,cdim)
+            !azc = 0.0
+            !   do i=1,8
+            !      azc = azc + aijk(i)*fijk_z(i)
+            !enddo
             
          end subroutine grav_pot2acc_cic2
 
