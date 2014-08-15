@@ -647,12 +647,12 @@ contains
             
             do i = 1, n
                do cdim = 1, ndims
-                  if (pset%p(i)%pos(cdim) < cg%coord(CENTER, cdim)%r(neighb(i,cdim))) then
+                  if (pset%p(i)%pos(cdim) < cg%coord(CENTER, cdim)%r(neighb(i,cdim)-1)) then
                      neighb2(i,cdim) = neighb(i,cdim)-1
                   else
                      neighb2(i,cdim) = neighb(i,cdim)
                   endif
-                  dxyz(i, cdim) = pset%p(i)%pos(cdim) - cg%coord(CENTER, cdim)%r(neighb2(i,cdim))
+                  dxyz(i, cdim) = pset%p(i)%pos(cdim) - cg%coord(CENTER, cdim)%r(neighb2(i,cdim)-1)
                enddo
                aijk(i, 1) = (cg%dx - dxyz(i, xdim))*(cg%dy - dxyz(i, ydim))*(cg%dz - dxyz(i, zdim))
                aijk(i, 2) = (cg%dx - dxyz(i, xdim))*(cg%dy - dxyz(i, ydim))*         dxyz(i, zdim)
@@ -687,7 +687,7 @@ contains
             do p = 1, n
                do c = 1, 8
                   acc3(p, xdim) = acc3(p, xdim) + aijk(p, c)*fx(p, c)
-                  acc3(p, ydim) = acc3(p, xdim) + aijk(p, c)*fy(p, c)
+                  acc3(p, ydim) = acc3(p, ydim) + aijk(p, c)*fy(p, c)
                   acc3(p, zdim) = acc3(p, zdim) + aijk(p, c)*fz(p, c)
                enddo
             enddo
