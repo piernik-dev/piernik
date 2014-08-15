@@ -554,7 +554,7 @@ contains
          
          subroutine pot_grid2(cg, mins, maxs, n_cell, delta_cells, eps)
             use constants, only: ndims
-            use grid_cont,    only: grid_container
+            use grid_cont, only: grid_container
             implicit none
                type(grid_container), pointer, intent(inout) :: cg
                integer :: i, j, k
@@ -1081,7 +1081,7 @@ contains
             implicit none
                class(particle_set), intent(in) :: pset  !< particle list
                type(grid_container), pointer, intent(in) :: cg
-               integer :: i, j
+               integer :: i, j, cdim
                integer, intent(in) :: n
                integer(kind=8),dimension(n, ndims),intent(out) :: neighb
                real(kind=8),dimension(n, ndims),intent(out) :: dist
@@ -1094,14 +1094,13 @@ contains
 
 
                do i=1, n
-                  do j=1, ndims
-                     neighb(i,j) = floor( (pset%p(i)%pos(j) - mins(j) - 0.5*delta_cells(j)) / delta_cells(j) ) + 1
-                     !neighb(i,j) = int( (pset%p(i)%pos(j) - mins(j) ) / delta_cells(j) )! + 1
+                  do cdim = 1, ndims
+                     neighb(i,cdim) = int( (pset%p(i)%pos(cdim) - mins(cdim)) / delta_cells(cdim) ) + 1
                   enddo
                enddo
                
                do i = 1, n
-                     dist(i,:) =  pset%p(i)%pos - neighb(i,:) * delta_cells - mins
+                     dist(i,:) =  pset%p(i)%pos - (neighb(i,:)-0.5) * delta_cells - mins
                enddo
                
                open(unit=777, file='dist.dat', status='unknown',  position='append')
