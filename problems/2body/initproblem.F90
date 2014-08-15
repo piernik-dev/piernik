@@ -100,7 +100,7 @@ contains
       enddo
 
 
-      e = 0.9
+      e = 0.0
 
       n_particles = 1
       write(*,*) "Particles: ", n_particles
@@ -150,13 +150,13 @@ contains
          implicit none
             real, dimension(3) :: pos_init, velocities
             real :: a, e, r
-            real, parameter :: mu = 1.0,G=1.0, M=1.0
+            real, parameter :: mu = 1.0,G=1.0, M=1.0, zero = 0.0
             if((e<0.0) .or. (e>=1.0)) then
                write(*,*) "Bledna wartosc mimosrodu! Zatrzymano!"
                stop
             else
                r = sqrt(pos_init(1)**2+pos_init(2)**2+pos_init(3)**2)
-               if (e==0.0) then
+               if (e==zero) then
                   velocities(2) = sqrt(G*M/r)
                   write(*,*) "Orbita kolowa"
                else
@@ -168,7 +168,7 @@ contains
                endif
             endif!
             velocities(1) = 0.0
-            velocities(2) = vy
+            !velocities(2) = vy
             velocities(3) = 0.0
       end function velocities
       
