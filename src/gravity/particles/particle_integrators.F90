@@ -293,8 +293,8 @@ contains
       order = 4
 
 
-      eta = 35.0 !1.0
-      eps = 1.0e-6
+      eta = 1.0 !1.0
+      eps = 1.0e-4
       eps2 = 0.00
      
 
@@ -317,8 +317,6 @@ contains
       call pot_grid2(cg, mins, maxs, n_cell, delta_cells, eps)
       write(*,*) "Obliczono potencjal"
 
-      !write(*,*) "part_int: gpot(1,1,1): ", cg%gpot(1,1,1)
-      !write(*,*) "nint(2.5)=", nint(2.5), " nint(-2.5)=", nint(-2.5)
 
       
      ! open(unit=88, file='potencjal.dat')
@@ -361,7 +359,7 @@ contains
       call grav_pot2acc_cic2(pset, cg, neighb, acc3, n)
      
 
-      !call get_acc_mod(acc, n, a)
+
       call get_acc_mod(acc, n, a)
       
       
@@ -426,14 +424,6 @@ contains
          call grav_pot2acc_cic2(pset, cg, neighb, acc3, n)
 
 
-         !call get_acc_num(pos, acc2, eps, n)
-         !call get_acc3(cells, pos, acc, cg, mins, delta_cells, n)
-         !write(*,*) "get_acc3"
-         
-         !call get_acc2(neighb, dist, pset, acc, cg, n)
-         !call grav_pot2acc_cic2(pset, cg, neighb, dist, acc3, n)
-         
-         !call get_acc_mod(acc, n, a)
 
          
          
