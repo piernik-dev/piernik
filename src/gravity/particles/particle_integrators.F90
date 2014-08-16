@@ -461,31 +461,6 @@ contains
          end function phi_pm
 
 
-         subroutine pot_grid(pot, mins, maxs, n_cell, delta_cells, eps2)
-            use constants, only: ndims
-            implicit none
-               integer :: i, j, k
-               integer, dimension(ndims), intent(in) :: n_cell
-               real,dimension(ndims),intent(in) :: mins, maxs
-               real,dimension(ndims),intent(out) :: delta_cells
-               real, intent(in) :: eps2
-               real,dimension(-4:n_cell(1), -4:n_cell(2), -4:n_cell(3)),intent(out) :: pot
-               !open(unit=77,file='potencjal.dat')
-               delta_cells = (maxs - mins) / (n_cell-4)
-
-                  do i = -4, n_cell(1), 1
-                     do j = -4, n_cell(2), 1
-                        do k = -4, n_cell(3), 1
-                           pot(i, j, k) = phi_pm(mins(1) + i*delta_cells(1), mins(2) + j*delta_cells(2), mins(3) + k*delta_cells(3), eps2)
-                           !write(77,*) i,j,k,pot(i,j,k)
-                        enddo
-                     enddo
-                  enddo
-
-               !close(77)
-         end subroutine pot_grid
-         
-         
          subroutine pot_grid2(cg, mins, delta_cells, eps)
             use constants, only: ndims
             use grid_cont, only: grid_container
@@ -498,11 +473,10 @@ contains
 
                !open(unit=77,file='potencjal.dat')
 
-                  
+
                   delta_cells(1) = cg%dx  !potem trzeba to usunac
                   delta_cells(2) = cg%dy
                   delta_cells(3) = cg%dz
-                  
 
 
                   do i = lbound(cg%gpot, dim=1), ubound(cg%gpot, dim=1)
