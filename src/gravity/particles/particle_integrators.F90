@@ -223,7 +223,7 @@ contains
       real(kind=8), dimension(:,:), allocatable :: dist, acc2, acc3
       
       real, intent(in) :: t_glob, dt_tot
-      integer, dimension(:,:),allocatable :: cells
+      !integer, dimension(:,:),allocatable :: cells
       real, dimension(:), allocatable :: mass, mins, maxs,delta_cells
       real, dimension(:, :), allocatable :: pos, vel, acc, vel_h, d_particles
       integer, dimension(:), allocatable :: n_cell
