@@ -353,7 +353,7 @@ contains
 
 
          do i=1, n
-            write(lun_out, '(I3,1X,13(E13.6,1X))') n, t, dt, mass(i), pset%p(i)%pos, acc(i,:), acc2(i,:), acc3(i,:), energy, d_energy, ang_momentum, d_ang_momentum
+            write(lun_out, '(I3,1X,19(E13.6,1X))') i, t, dt, mass(i), pset%p(i)%pos, acc(i,:), acc2(i,:), acc3(i,:), energy, d_energy, ang_momentum, d_ang_momentum
          enddo
 
          !------------------------------------------------------------------
@@ -564,8 +564,9 @@ contains
             aijk = aijk/d3
             
             
-            c = 1
+            
             do p = 1, n
+               c = 1
                do i = 0, 1
                   do j = 0, 1
                      do k = 0, 1
