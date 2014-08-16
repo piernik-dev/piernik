@@ -288,7 +288,7 @@ contains
 
 
       !obliczenie potencjalu na siatce
-      call pot_grid2(cg, mins, delta_cells, eps)
+      call pot2grid(cg, mins, delta_cells, eps)
       write(*,*) "Obliczono potencjal"
 
 
@@ -316,7 +316,7 @@ contains
 
 
       !initial acceleration
-      call get_acc2(neighb, dist, acc, cg, n)
+      call get_acc_int(neighb, dist, acc, cg, n)
       write(*,*) "Obliczono przyspieszenie"
       
       
@@ -324,14 +324,14 @@ contains
       init_energy = energy
       
       
-      call get_acc_num2(pset, acc2, eps, n)
+      call get_acc_model(pset, acc2, eps, n)
       !write(*,*) "Znaleziono potencjal modelowy"
       
       call get_acc_cic(pset, cg, neighb, acc3, n)
      
 
 
-      call get_acc_mod(acc, n, a)
+      call get_acc_max(acc, n, a)
       
       
       !timestep
@@ -366,30 +366,30 @@ contains
          !call get_acc_num(pos, acc2, eps, n)
          !call cell_nr(pos, cells, mins, delta_cells, n)
          !call get_acc(cells, pos, acc, pot, n_cell, mins, delta_cells, n)
-         !call get_acc_mod(acc, n, a)
+         !call get_acc_max(acc, n, a)
          !call kick(vel, [zero,zero,zero], dth, n)   !velocity
          !------------------------------------------------------------------
 
          !1.kick(dth)
          !acc(:,:) = 0.0                                                 !odkomentowac dla ruchu po prostej
-         call kick2(pset, acc, dth, n)
+         call kick(pset, acc, dth, n)
 
          !2.drift(dt)         
-         call drift2(pset, dt, n)
+         call drift(pset, dt, n)
 
 
          call cell_nr2(pset, neighb, dist, mins, cg, n)                 !finding cells
 
          !3.acceleration + |a|
-         call get_acc2(neighb, dist, acc, cg, n)                        !Lagrange polynomials acceleration
-         call get_acc_num2(pset, acc2, eps, n)                          !centered finite differencing acceleration (if gravitational potential is known explicite)
+         call get_acc_int(neighb, dist, acc, cg, n)                        !Lagrange polynomials acceleration
+         call get_acc_model(pset, acc2, eps, n)                          !centered finite differencing acceleration (if gravitational potential is known explicite)
          call get_acc_cic(pset, cg, neighb, acc3, n)              !CIC acceleration
-         call get_acc_mod(acc, n, a)                                    !max(|a_i|)
+         call get_acc_max(acc, n, a)                                    !max(|a_i|)
          
          !4.kick(dth)
-         !call kick2(pset, acc, dth, n)                                  !zakomentowac dla ruchu po prostej
-         call kick2(pset, acc, dth, n)
-         !call kick2(pset, [zero,zero,zero], dth, n)                     !odkomentowac dla ruchu po prostej
+         !call kick(pset, acc, dth, n)                                  !zakomentowac dla ruchu po prostej
+         call kick(pset, acc, dth, n)
+         !call kick(pset, [zero,zero,zero], dth, n)                     !odkomentowac dla ruchu po prostej
 
          
          call get_energy(pset, cg, neighb, dist, n, energy)
@@ -420,7 +420,7 @@ contains
       contains
          
          !Kick
-         subroutine kick2(pset, acc, t, n)
+         subroutine kick(pset, acc, t, n)
             use constants, only: ndims
             use particle_types, only: particle_set
             implicit none
@@ -433,10 +433,10 @@ contains
             do i=1,n
                pset%p(i)%vel = pset%p(i)%vel + acc(i,:)*t
             enddo
-         end subroutine kick2
+         end subroutine kick
 
          !Drift
-         subroutine drift2(pset, t, n)
+         subroutine drift(pset, t, n)
             use particle_types, only: particle_set
             implicit none
             class(particle_set), intent(inout) :: pset  !< particle list
@@ -447,7 +447,7 @@ contains
             do i=1,n
                pset%p(i)%pos = pset%p(i)%pos + pset%p(i)%vel * t
             enddo
-         end subroutine drift2
+         end subroutine drift
 
 
          function phi_pm(x, y, z, eps)
@@ -461,7 +461,7 @@ contains
          end function phi_pm
 
 
-         subroutine pot_grid2(cg, mins, delta_cells, eps)
+         subroutine pot2grid(cg, mins, delta_cells, eps)
             use constants, only: ndims
             use grid_cont, only: grid_container
             implicit none
@@ -491,7 +491,7 @@ contains
                   enddo
 
                !close(77)
-         end subroutine pot_grid2
+         end subroutine pot2grid
 
 
          subroutine check_ord(order, df_dx_p, d2f_dx2_p, df_dy_p, d2f_dy2_p,& 
@@ -658,7 +658,7 @@ contains
          end subroutine get_energy
 
 
-         subroutine get_acc2(neighb, dist, acc, cg, n)
+         subroutine get_acc_int(neighb, dist, acc, cg, n)
             use constants, only : ndims, xdim, ydim, zdim
             use cg_list,      only: cg_list_element
             use grid_cont,    only: grid_container
@@ -686,14 +686,14 @@ contains
                      d2f_dxdz_p(neighb, cg, n) * dist(:,1) +&
                      d2f_dydz_p(neighb, cg, n) * dist(:,2))
 
-         end subroutine get_acc2
+         end subroutine get_acc_int
 
 
 
          
 
          
-         subroutine get_acc_num2(pset, acc2, eps, n)
+         subroutine get_acc_model(pset, acc2, eps, n)
             use constants, only: ndims, xdim, ydim, zdim
             use grid_cont,  only: grid_container
             implicit none
@@ -708,7 +708,7 @@ contains
                   acc2(i, zdim) = -der_z(pset%p(i)%pos, 1.0e-8, eps)
                enddo
 
-         end subroutine get_acc_num2
+         end subroutine get_acc_model
 
 
          function der_x(pos, d, eps)
@@ -1222,7 +1222,7 @@ contains
          end subroutine get_ang_momentum_2
 
 
-         subroutine get_acc_mod(acc, n, a)
+         subroutine get_acc_max(acc, n, a)
             use constants, only: ndims
             implicit none
             integer, intent(in) :: n
@@ -1239,7 +1239,7 @@ contains
 
             a = sqrt(maxval(ac))
 
-         end subroutine get_acc_mod
+         end subroutine get_acc_max
 
   end subroutine leapfrog2ord      
       
