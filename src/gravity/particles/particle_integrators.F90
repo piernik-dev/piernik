@@ -172,21 +172,19 @@ contains
 
 
    subroutine leapfrog2ord(pset, t_glob, dt_tot)
-      use constants, only: ndims, xdim, zdim!, LO, HI
+      use constants, only: ndims
       use particle_types, only: particle_set
       use domain, only: dom
       use cg_leaves,    only: leaves
       use cg_list,      only: cg_list_element
       use grid_cont,    only: grid_container
-      !use gravity,      only: grav_pot2acc_cic2
-      !use particle_pub,      only: grav_pot2acc_cic2
-      
-      
+
+
       implicit none 
       class(particle_set), intent(inout) :: pset  !< particle list
       type(grid_container), pointer :: cg
       type(cg_list_element),  pointer  :: cgl
-      
+
       interface
          function df_dxi(neighb, cg, delta_xi, n_particles)
             use constants, only: ndims
@@ -231,10 +229,9 @@ contains
       integer, dimension(:,:),allocatable :: cells
       real, dimension(:), allocatable :: mass, mins, maxs,delta_cells
       real, dimension(:, :), allocatable :: pos, vel, acc, vel_h, d_particles
-      real, dimension(:, :, :), allocatable :: pot
       integer, dimension(:), allocatable :: n_cell
-      real :: t_end, dt, t, dth, eta, eps, a, epot, eps2, energy, init_energy, d_energy = 0.0, ang_momentum, init_ang_mom, d_ang_momentum = 0.0, zero
-      integer :: nsteps, n, lun_out, i, j, k, order
+      real :: t_end, dt, t, dth, eta, eps, a, eps2, energy, init_energy, d_energy = 0.0, ang_momentum, init_ang_mom, d_ang_momentum = 0.0, zero
+      integer :: nsteps, n, lun_out, i, order
 
 
       procedure(df_dxi),pointer :: df_dx_p, df_dy_p, df_dz_p
@@ -294,7 +291,7 @@ contains
 
 
       !obliczenie potencjalu na siatce
-      call pot_grid2(cg, mins, maxs, n_cell, delta_cells, eps)
+      call pot_grid2(cg, mins, delta_cells, eps)
       write(*,*) "Obliczono potencjal"
 
 
@@ -322,8 +319,8 @@ contains
 
 
       !initial acceleration
-      call get_acc2(neighb, dist, pset, acc, cg, n)
-      !write(*,*) "Obliczono przyspieszenie"
+      call get_acc2(neighb, dist, acc, cg, n)
+      write(*,*) "Obliczono przyspieszenie"
       
       
       call get_energy(pset, cg, neighb, dist, n, energy)
@@ -387,7 +384,7 @@ contains
          call cell_nr2(pset, neighb, dist, mins, cg, n)                 !finding cells
 
          !3.acceleration + |a|
-         call get_acc2(neighb, dist, pset, acc, cg, n)                  !Lagrange polynomials acceleration
+         call get_acc2(neighb, dist, acc, cg, n)                        !Lagrange polynomials acceleration
          call get_acc_num2(pset, acc2, eps, n)                          !centered finite differencing acceleration (if gravitational potential is known explicite)
          call grav_pot2acc_cic2(pset, cg, neighb, acc3, n)              !CIC acceleration
          call get_acc_mod(acc, n, a)                                    !max(|a_i|)
@@ -492,14 +489,13 @@ contains
          end subroutine pot_grid
          
          
-         subroutine pot_grid2(cg, mins, maxs, n_cell, delta_cells, eps)
+         subroutine pot_grid2(cg, mins, delta_cells, eps)
             use constants, only: ndims
             use grid_cont, only: grid_container
             implicit none
                type(grid_container), pointer, intent(inout) :: cg
                integer :: i, j, k
-               integer, dimension(ndims), intent(in) :: n_cell
-               real,dimension(ndims),intent(in) :: mins, maxs
+               real,dimension(ndims),intent(in) :: mins
                real,dimension(ndims),intent(out) :: delta_cells
                real, intent(in) :: eps
 
@@ -694,13 +690,11 @@ contains
          end subroutine get_energy
 
 
-         subroutine get_acc2(neighb, dist, pset, acc, cg, n)
+         subroutine get_acc2(neighb, dist, acc, cg, n)
             use constants, only : ndims, xdim, ydim, zdim
             use cg_list,      only: cg_list_element
             use grid_cont,    only: grid_container
-            use particle_types, only: particle_set
             implicit none
-               class(particle_set), intent(in) :: pset  !< particle list
                type(grid_container), pointer, intent(in) :: cg
                real ::  dx_cell, dy_cell, dz_cell
                integer, intent(in) :: n
@@ -791,21 +785,21 @@ contains
 
          
          subroutine cell_nr2(pset, neighb, dist, mins, cg, n)
-            use constants, only: ndims, CENTER
+            use constants, only: ndims, xdim, ydim, zdim
             use grid_cont,  only: grid_container
             implicit none
                class(particle_set), intent(in) :: pset  !< particle list
                type(grid_container), pointer, intent(in) :: cg
-               integer :: i, j, cdim
+               integer :: i, cdim
                integer, intent(in) :: n
                integer(kind=8),dimension(n, ndims),intent(out) :: neighb
                real(kind=8),dimension(n, ndims),intent(out) :: dist
                real, dimension(ndims), intent(in)  :: mins
                real, dimension(ndims) :: delta_cells
 
-               delta_cells(1) = cg%dx  !jak to zastapic przez samo cg?
-               delta_cells(2) = cg%dy
-               delta_cells(3) = cg%dz
+               delta_cells(xdim) = cg%dx  !jak to zastapic przez samo cg?
+               delta_cells(ydim) = cg%dy
+               delta_cells(zdim) = cg%dz
 
 
                do i=1, n
@@ -1290,7 +1284,7 @@ contains
 
          
          subroutine get_ang_momentum_2(pset, n, ang_momentum)
-            use constants, only : ndims, xdim, ydim, zdim
+            use constants, only : xdim, ydim, zdim
             use particle_types, only: particle_set
             implicit none
                class(particle_set), intent(in) :: pset
@@ -1315,15 +1309,15 @@ contains
             use constants, only: ndims
             implicit none
             integer, intent(in) :: n
-            integer  :: i
+            integer  :: cdim
             real, dimension(n, ndims), intent(in) :: acc
             real, dimension(n) :: ac
             real, intent(out)  :: a
 
             ac = 0.0
 
-            do i = 1, ndims
-                  ac(:) = ac(:) + acc(:,i)**2
+            do cdim = 1, ndims
+                  ac(:) = ac(:) + acc(:, cdim)**2
             enddo
 
             a = sqrt(maxval(ac))
