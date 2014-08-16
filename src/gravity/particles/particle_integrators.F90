@@ -369,23 +369,23 @@ contains
 
          !1.kick(dth)
          !acc(:,:) = 0.0                                                 !odkomentowac dla ruchu po prostej
-         call kick(pset, acc, dth, n)
+         call kick(pset, acc2, dth, n)
 
          !2.drift(dt)         
          call drift(pset, dt, n)
 
 
-         call find_cells(pset, cells, dist, mins, cg, n)                 !finding cells
+         call find_cells(pset, cells, dist, mins, cg, n)                !finding cells
 
          !3.acceleration + |a|
-         call get_acc_int(cells, dist, acc, cg, n)                        !Lagrange polynomials acceleration
-         call get_acc_model(pset, acc2, eps, n)                          !centered finite differencing acceleration (if gravitational potential is known explicite)
-         call get_acc_cic(pset, cg, cells, acc3, n)              !CIC acceleration
-         call get_acc_max(acc, n, a)                                    !max(|a_i|)
+         call get_acc_int(cells, dist, acc, cg, n)                      !Lagrange polynomials acceleration
+         call get_acc_model(pset, acc2, eps, n)                         !centered finite differencing acceleration (if gravitational potential is known explicite)
+         call get_acc_cic(pset, cg, cells, acc3, n)                     !CIC acceleration
+         call get_acc_max(acc2, n, a)                                    !max(|a_i|)
          
          !4.kick(dth)
          !call kick(pset, acc, dth, n)                                  !zakomentowac dla ruchu po prostej
-         call kick(pset, acc, dth, n)
+         call kick(pset, acc2, dth, n)
          !call kick(pset, [zero,zero,zero], dth, n)                     !odkomentowac dla ruchu po prostej
 
          
