@@ -220,13 +220,13 @@ contains
       
 
       integer(kind=8), dimension(:,:), allocatable :: cells
-      real(kind=8), dimension(:,:), allocatable :: dist, acc2, acc3
+      real, dimension(:,:), allocatable :: dist, acc, acc2, acc3
       
       real, intent(in) :: t_glob, dt_tot
       !integer, dimension(:,:),allocatable :: cells
-      real, dimension(:), allocatable :: mass, mins, maxs,delta_cells
-      real, dimension(:, :), allocatable :: pos, vel, acc, vel_h, d_particles
-      integer, dimension(:), allocatable :: n_cell
+      real, dimension(:), allocatable :: mass, mins, maxs
+
+
       real :: t_end, dt, t, dth, eta, eps, a, eps2, energy, init_energy, d_energy = 0.0, ang_momentum, init_ang_mom, d_ang_momentum = 0.0, zero
       integer :: nsteps, n, lun_out, i, order
 
@@ -239,12 +239,9 @@ contains
       open(newunit=lun_out, file='leapfrog_out.log', status='unknown',  position='append')
       
       n = size(pset%p, dim=1)
-      !
-      allocate(cells(n, ndims), dist(n, ndims), acc2(n, ndims))
 
-      
 
-      allocate(mass(n), pos(n, ndims), vel(n, ndims), acc(n, ndims), acc3(n, ndims), vel_h(n, ndims), cells(n, ndims), mins(ndims), maxs(ndims), delta_cells(ndims), n_cell(ndims), d_particles(n,ndims))
+      allocate(mass(n), acc(n, ndims), acc2(n, ndims), acc3(n, ndims), cells(n, ndims), dist(n, ndims), mins(ndims), maxs(ndims))
 
       
 
@@ -265,7 +262,7 @@ contains
 
       maxs(:) = dom%edge(:,2)
 
-      n_cell(:) = dom%n_d
+
 
 
       zero = 0.0
@@ -288,7 +285,7 @@ contains
 
 
       !obliczenie potencjalu na siatce
-      call pot2grid(cg, mins, delta_cells, eps)
+      call pot2grid(cg, mins, eps)
       write(*,*) "Obliczono potencjal"
 
 
@@ -413,7 +410,7 @@ contains
       
 
 
-      deallocate (acc, acc2, acc3, cells, dist, mins, maxs, delta_cells, n_cell)
+      deallocate (acc, acc2, acc3, cells, dist, mins, maxs)
       close(lun_out)
       
 
@@ -461,22 +458,16 @@ contains
          end function phi_pm
 
 
-         subroutine pot2grid(cg, mins, delta_cells, eps)
+         subroutine pot2grid(cg, mins, eps)
             use constants, only: ndims
             use grid_cont, only: grid_container
             implicit none
                type(grid_container), pointer, intent(inout) :: cg
                integer :: i, j, k
                real,dimension(ndims),intent(in) :: mins
-               real,dimension(ndims),intent(out) :: delta_cells
                real, intent(in) :: eps
 
                !open(unit=77,file='potencjal.dat')
-
-
-                  delta_cells(1) = cg%dx  !potem trzeba to usunac
-                  delta_cells(2) = cg%dy
-                  delta_cells(3) = cg%dz
 
 
                   do i = lbound(cg%gpot, dim=1), ubound(cg%gpot, dim=1)
