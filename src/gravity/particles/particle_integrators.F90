@@ -546,7 +546,7 @@ contains
             real :: d3
             real, dimension(n, ndims), intent(out) :: acc3
 
-            real(kind=8),dimension(n, 8) :: aijk, fx, fy, fz
+            real(kind=8), dimension(n, 8) :: aijk, fx, fy, fz
 
             acc3 = 0.0
             d3 = cg%dx*cg%dy*cg%dz
