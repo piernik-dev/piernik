@@ -327,7 +327,7 @@ contains
       call get_acc_num2(pset, acc2, eps, n)
       !write(*,*) "Znaleziono potencjal modelowy"
       
-      call grav_pot2acc_cic2(pset, cg, neighb, acc3, n)
+      call get_acc_cic(pset, cg, neighb, acc3, n)
      
 
 
@@ -383,7 +383,7 @@ contains
          !3.acceleration + |a|
          call get_acc2(neighb, dist, acc, cg, n)                        !Lagrange polynomials acceleration
          call get_acc_num2(pset, acc2, eps, n)                          !centered finite differencing acceleration (if gravitational potential is known explicite)
-         call grav_pot2acc_cic2(pset, cg, neighb, acc3, n)              !CIC acceleration
+         call get_acc_cic(pset, cg, neighb, acc3, n)              !CIC acceleration
          call get_acc_mod(acc, n, a)                                    !max(|a_i|)
          
          !4.kick(dth)
@@ -525,7 +525,7 @@ contains
          end subroutine check_ord
 
 
-         subroutine grav_pot2acc_cic2(pset, cg, neighb, acc3, n)
+         subroutine get_acc_cic(pset, cg, neighb, acc3, n)
             use constants, only: ndims, CENTER, xdim, ydim, zdim
             use grid_cont,        only: grid_container
             use particle_types, only: particle_set
@@ -539,18 +539,18 @@ contains
             integer, intent(in) :: n
             integer :: i, j, k, c, cdim
             integer(kind=8) :: p
-            
+
             integer(kind=8), dimension(n, ndims), intent(in) :: neighb
             integer(kind=8), dimension(n, ndims) :: neighb2
             real, dimension(n, ndims) :: dxyz
             real :: d3
             real, dimension(n, ndims), intent(out) :: acc3
-            
+
             real(kind=8),dimension(n, 8) :: aijk, fx, fy, fz
 
             acc3 = 0.0
             d3 = cg%dx*cg%dy*cg%dz
-            
+
             do i = 1, n
                do cdim = 1, ndims
                   if (pset%p(i)%pos(cdim) < cg%coord(CENTER, cdim)%r(neighb(i,cdim)-1)) then
@@ -598,7 +598,7 @@ contains
                enddo
             enddo
 
-         end subroutine grav_pot2acc_cic2
+         end subroutine get_acc_cic
 
 
          subroutine potential(pset, cg, neighb, dist, n)
