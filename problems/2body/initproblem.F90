@@ -103,7 +103,7 @@ contains
 
       e = 0.0
 
-      n_particles = 1000
+      n_particles = 5000
       !write(*,*) "Particles: ", n_particles
       !dtheta = pi2/n_particles
       !write(*,*) "dtheta: ", dtheta
@@ -244,8 +244,8 @@ contains
          logical,intent(inout) :: first_run
          real, dimension(n_particles, 3) :: pos_init!,vel_init
          real,dimension(3,2) :: domain
-         real :: tmp, factor
-         real, parameter :: onethird = 1.0/3.0
+         real :: tmp, factor, x, y, z, r, r_dom
+         real, parameter :: onesixth = 1.0/6.0
          
          domain(1,1) = -5.0
          domain(2,1) = -5.0
@@ -256,20 +256,20 @@ contains
          
          write(*,*) "Number of particles: ", n_particles
          call srand(seed)
+         r_dom = onesixth*sqrt(domain(1,2)**2 + domain(2,2)**2 + domain(3,2)**2)
          
 
          if(first_run) then
             open(unit=37, file="particles.dat")
             do i = 1, n_particles
-               do j = 1, 3
-                  factor = rand(0)
-                  tmp = onethird*rand(0)*domain(j, 2)
-                  !write(*,*) i,j,factor,tmp
-                  !do while (tmp > onethird*domain(j, 2))
-                  !   tmp = rand(0)*domain(j, 2)
-                  !   write(*,*) i,j,tmp
-                  !enddo
-                  pos_init(i, j) = sign(tmp,factor-0.5)
+               r = r_dom
+               do while ((r>=r_dom))
+                  do j = 1, 3
+                     factor = rand(0)
+                     pos_init(i, j) = sign(rand(0)*domain(j, 2),factor-0.5)
+                  enddo
+                  r = sqrt(pos_init(i,1)**2 + pos_init(i,2)**2 + pos_init(i,3)**2)
+                  !write(*,*) i, r
                enddo
                write(37, *) i, pos_init(i,:)
                !call pset%add(0.01, pos_init(i,:), [0.0,0.0,0.0],0.0 )
