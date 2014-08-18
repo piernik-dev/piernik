@@ -260,7 +260,7 @@ contains
          
 
          if(first_run) then
-            open(unit=37, file="particles.dat")
+            !open(unit=37, file="particles.dat")
             do i = 1, n_particles
                r = r_dom
                do while ((r>=r_dom))
@@ -271,10 +271,10 @@ contains
                   r = sqrt(pos_init(i,1)**2 + pos_init(i,2)**2 + pos_init(i,3)**2)
                   !write(*,*) i, r
                enddo
-               write(37, *) i, pos_init(i,:)
-               !call pset%add(0.01, pos_init(i,:), [0.0,0.0,0.0],0.0 )
+               !write(37, *) i, pos_init(i,:)
+               call pset%add(1.0, pos_init(i,:), [0.0,0.0,0.0],0.0 )
             enddo
-            close(37)
+            !close(37)
             first_run = .false.
             write(*,*) "Obliczono pozycje czastek"
          endif
