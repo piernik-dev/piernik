@@ -70,9 +70,10 @@ contains
       implicit none
 
       integer                          :: i, j, k, p, n_particles
-      real                              :: dtheta, e
-      real,dimension(3)                :: pos_init, vel_init
-      real,parameter                   :: pi2=6.283185307
+      !real                              :: dtheta
+      real(kind=4)                     :: e
+      !real,dimension(3)                :: pos_init, vel_init
+      !real,parameter                   :: pi2=6.283185307
       logical,save                     :: first_run = .true.
       type(cg_list_element),  pointer  :: cgl
 
@@ -85,7 +86,7 @@ contains
                   do j = cg%lhn(ydim,LO), cg%lhn(ydim,HI)
                      do i = cg%lhn(xdim,LO), cg%lhn(xdim,HI)
                         associate( fl => flind%all_fluids(p)%fl )
-                           cg%u(fl%idn,i,j,k) = 1.0e-8
+                           cg%u(fl%idn,i,j,k) = 1.0e-6
                            cg%u(fl%imx,i,j,k) = 0.0
                            cg%u(fl%imy,i,j,k) = 0.0
                            cg%u(fl%imz,i,j,k) = 0.0
@@ -102,39 +103,40 @@ contains
 
       e = 0.0
 
-      n_particles = 2
-      write(*,*) "Particles: ", n_particles
-      dtheta = pi2/n_particles
-      write(*,*) "dtheta: ", dtheta
+      n_particles = 1000
+      !write(*,*) "Particles: ", n_particles
+      !dtheta = pi2/n_particles
+      !write(*,*) "dtheta: ", dtheta
 
-      pos_init(1) = 2.0
-      pos_init(2) = 0.0
-      pos_init(3) = 0.0
+      !pos_init(1) = 2.0
+      !pos_init(2) = 0.0
+      !pos_init(3) = 0.0
       
-      vel_init = velocities(pos_init, e)
+      !vel_init = velocities(pos_init, e)
+      
+      !call orbits(n_particles, e, first_run)
+      call relax_time(n_particles, first_run)
+      !if (first_run) then
+      !call pset%add(1.1, [ 0.9700436, -0.24308753, 0.0], [ 0.466203685, 0.43236573, 0.0], 0.0)
+      !call pset%add(1.1, [-0.9700436, 0.24308753, 0.0], [ 0.466203685, 0.43236573, 0.0],0.0)
+      !call pset%add(1.1, [ 0.0, 0.0, 0.0], [-0.932407370, -0.86473146, 0.0], 0.0 )
+      !   !do i = 1, n_particles, 1
+      !      !
+      !      !!call pset%add(0.01, pos_init, vel_init,0.0 ) !orbita eliptyczna
+      !      !!call pset%add(0.00001, [2.0,0.0,0.0], [0.0,0.5,0.0], [0.0, 0.0, 0.0] )
+      !      !!call pset%add(0.1, [2.0, 0.0, 0.0],[0.0, 0.707106781, 0.0], 0.0) !orbita kolowa
+      !      !!call pset%add(1.0, [4.625,3.0,0.0],[-1.0,0.0,0.0],0.0)      !  !ruch po prostej
+      !      !!pos_init = positions(dtheta, pos_init)
+      !      !!vel_init = rotate(dtheta, vel_init)
+      !      !
+      !   !enddo
+      !   !call pset%add(1.0,[0.0,0.0,0.0],[0.0,0.0,0.0],[0.0,0.0,0.0])
+      !   !call printinfo('To see results type: gnuplot -p -e ''plot "nbody_out.log" u 2:3'' ')
+      !   first_run = .false.
+      !   write(*,*) "Obliczono pozycje czastek "
+      !endif
+      
 
-      if (first_run) then
-      !call pset%add(1.0, [ 0.9700436, -0.24308753, 0.0], [ 0.466203685, 0.43236573, 0.0], [0.0, 0.0, 0.0])
-      !call pset%add(1.0, [-0.9700436, 0.24308753, 0.0], [ 0.466203685, 0.43236573, 0.0], [0.0, 0.0, 0.0])
-      !call pset%add(1.0, [ 0.0, 0.0, 0.0], [-0.932407370, -0.86473146, 0.0], [0.0, 0.0, 0.0] )
-         do i = 1, n_particles, 1
-            
-            call pset%add(1.0, pos_init, vel_init,0.0 ) !orbita eliptyczna
-            !call pset%add(0.00001, [2.0,0.0,0.0], [0.0,0.5,0.0], [0.0, 0.0, 0.0] )
-            !call pset%add(1.0, [2.0, 0.0, 0.0],[0.0, 0.707106781, 0.0], 0.0) !orbita kolowa
-            !call pset%add(1.0, [4.625,3.0,0.0],[-1.0,0.0,0.0],0.0)        !ruch po prostej
-            pos_init = positions(dtheta, pos_init)
-            vel_init = rotate(dtheta, vel_init)
-            
-         enddo
-         !call pset%add(1.0,[0.0,0.0,0.0],[0.0,0.0,0.0],[0.0,0.0,0.0])
-         !call printinfo('To see results type: gnuplot -p -e ''plot "nbody_out.log" u 2:3'' ')
-         first_run = .false.
-         write(*,*) "Obliczono pozycje czastek "
-      endif
-      
-      !call pset%map_
-      !call system ('echo `date +%s` > times.dat')
 
       contains
 
@@ -149,7 +151,8 @@ contains
       function velocities(pos_init, e)
          implicit none
             real, dimension(3) :: pos_init, velocities
-            real :: a, e, r
+            real :: a, r
+            real(kind=4) :: e
             real, parameter :: mu = 1.0,G=1.0, M=1.0, zero = 0.0
             if((e<0.0) .or. (e>=1.0)) then
                write(*,*) "Bledna wartosc mimosrodu! Zatrzymano!"
@@ -189,6 +192,97 @@ contains
                rotate(2) = vector(1)*sin(theta) + vector(2)*cos(theta)
                rotate(3) = vector(3)
       end function rotate
+   
+   
+      subroutine orbits(n_particles, e, first_run)
+         use particle_pub, only: pset
+         implicit none
+         integer,intent(in)            :: n_particles
+         real(kind=4),intent(in)       :: e
+         real,dimension(3)             :: pos_init, vel_init
+         real                           :: dtheta
+         real,parameter                :: pi2=6.283185307
+         logical,intent(inout)         :: first_run
+         
+         write(*,*) "Number of particles: ", n_particles
+         
+         dtheta = pi2/n_particles
+         !write(*,*) "dtheta: ", dtheta
+
+         pos_init(1) = 2.0
+         pos_init(2) = 0.0
+         pos_init(3) = 0.0
+         
+         vel_init = velocities(pos_init, e)
+         
+         if(first_run) then
+            !call pset%add(1.1, [ 0.9700436, -0.24308753, 0.0], [ 0.466203685, 0.43236573, 0.0], 0.0)
+            !call pset%add(1.1, [-0.9700436, 0.24308753, 0.0], [ 0.466203685, 0.43236573, 0.0],0.0)
+            !call pset%add(1.1, [ 0.0, 0.0, 0.0], [-0.932407370, -0.86473146, 0.0], 0.0 )
+            do i = 1, n_particles, 1
+               
+               !call pset%add(0.01, pos_init, vel_init,0.0 ) !orbita eliptyczna
+               !call pset%add(0.1, [2.0, 0.0, 0.0],[0.0, 0.707106781, 0.0], 0.0) !orbita kolowa
+               !call pset%add(1.0, [4.625,3.0,0.0],[-1.0,0.0,0.0],0.0)        !ruch po prostej
+               pos_init = positions(dtheta, pos_init)
+               vel_init = rotate(dtheta, vel_init)
+               
+            enddo
+            !call printinfo('To see results type: gnuplot -p -e ''plot "nbody_out.log" u 2:3'' ')
+            first_run = .false.
+            
+            write(*,*) "Obliczono pozycje czastek "
+         endif
+      end subroutine orbits
+      
+      subroutine relax_time(n_particles, first_run)
+         use particle_pub, only: pset
+         implicit none
+         integer :: i, j
+         integer,parameter :: seed = 86437
+         integer,intent(in) :: n_particles
+         logical,intent(inout) :: first_run
+         real, dimension(n_particles, 3) :: pos_init!,vel_init
+         real,dimension(3,2) :: domain
+         real :: tmp, factor
+         real, parameter :: onethird = 1.0/3.0
+         
+         domain(1,1) = -5.0
+         domain(2,1) = -5.0
+         domain(3,1) = -5.0
+         domain(1,2) = 5.0
+         domain(2,2) = 5.0
+         domain(3,2) = 5.0
+         
+         write(*,*) "Number of particles: ", n_particles
+         call srand(seed)
+         
+
+         if(first_run) then
+            open(unit=37, file="particles.dat")
+            do i = 1, n_particles
+               do j = 1, 3
+                  factor = rand(0)
+                  tmp = onethird*rand(0)*domain(j, 2)
+                  !write(*,*) i,j,factor,tmp
+                  !do while (tmp > onethird*domain(j, 2))
+                  !   tmp = rand(0)*domain(j, 2)
+                  !   write(*,*) i,j,tmp
+                  !enddo
+                  pos_init(i, j) = sign(tmp,factor-0.5)
+               enddo
+               write(37, *) i, pos_init(i,:)
+               !call pset%add(0.01, pos_init(i,:), [0.0,0.0,0.0],0.0 )
+            enddo
+            close(37)
+            first_run = .false.
+            write(*,*) "Obliczono pozycje czastek"
+         endif
+         stop
+
+      end subroutine relax_time
+         
+         
    end subroutine problem_initial_conditions
 !-----------------------------------------------------------------------------
 end module initproblem
