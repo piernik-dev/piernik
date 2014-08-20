@@ -195,7 +195,7 @@ contains
             !call pset%add(1.1, [ 0.0, 0.0, 0.0], [-0.932407370, -0.86473146, 0.0], 0.0 )
             do i = 1, n_particles, 1
                
-               !call pset%add(0.01, pos_init, vel_init,0.0 ) !orbita eliptyczna
+               call pset%add(0.01, pos_init, vel_init,0.0 ) !orbita eliptyczna
                !call pset%add(0.1, [2.0, 0.0, 0.0],[0.0, 0.707106781, 0.0], 0.0) !orbita kolowa
                !call pset%add(1.0, [4.625,3.0,0.0],[-1.0,0.0,0.0],0.0)        !ruch po prostej
                pos_init = positions(dtheta, pos_init)
