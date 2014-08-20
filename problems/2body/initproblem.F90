@@ -53,6 +53,8 @@ contains
    subroutine read_problem_par
 
       implicit none
+      !call print_essential_units
+      !call print_essential_units
 
    end subroutine read_problem_par
 !-----------------------------------------------------------------------------
@@ -66,6 +68,7 @@ contains
       use particle_pub, only: pset
       !use gravity,      only: ptmass
       !use units,        only: newtong
+      !use particles_io_hdf5
 
       implicit none
 
@@ -103,12 +106,12 @@ contains
 
       e = 0.0
 
-      n_particles = 2
+      n_particles = 1
 
       
       call orbits(n_particles, e, first_run)
       !call relax_time(n_particles, first_run)
-
+      
       
 
 
@@ -211,15 +214,19 @@ contains
       
       subroutine relax_time(n_particles, first_run)
          use particle_pub, only: pset
+         use particles_io_hdf5!, only: write_hdf5, read_hdf5
          implicit none
          integer :: i, j
          integer,parameter :: seed = 86437
          integer,intent(in) :: n_particles
          logical,intent(inout) :: first_run
-         real, dimension(n_particles, 3) :: pos_init!,vel_init
+         real, dimension(n_particles, 3) :: pos_init, pos_init2!,vel_init
          real,dimension(3,2) :: domain
          real :: tmp, factor, x, y, z, r, r_dom
          real, parameter :: onesixth = 1.0/6.0
+         real, dimension(n_particles,3) :: vel2hdf5,pos2hdf5
+         
+         !allocate(pos2hdf5(n_particles,3), vel2hdf5(n_particles,3))
          
          domain(1,1) = -5.0
          domain(2,1) = -5.0
@@ -246,17 +253,66 @@ contains
                   !write(*,*) i, r
                enddo
                !write(37, *) i, pos_init(i,:)
+               pos2hdf5(i,:) = pos_init(i,:)
                call pset%add(1.0, pos_init(i,:), [0.0,0.0,0.0],0.0 )
             enddo
             !close(37)
             first_run = .false.
             write(*,*) "Obliczono pozycje czastek"
+            !write(*,*) pos_init
+            call write_hdf5(pos_init, n_particles)
+            call read_hdf5(pos_init2, n_particles)
+            write(*,*) pos_init
+            write(*,*)
+            write(*,*)
+            write(*,*) pos_init2
+            write(*,*)
+            write(*,*) pos_init - pos_init2
          endif
-         !stop
+         
+         stop
 
       end subroutine relax_time
-         
-         
+
    end subroutine problem_initial_conditions
+   
+      subroutine print_essential_units
+
+      use dataio_pub, only: msg, printinfo
+      use mpisetup,   only: master
+      use units,      only: units_set, s_len_u, s_time_u, s_mass_u, miu0, km, au, lyr, mH, gmu, erg, eV, clight, Gs, mGs, cm, ppcm2, ppcm3
+
+      implicit none
+
+      if (master) then
+
+         call printinfo('VINE to PIERNIK convertion of units done:')
+         write(msg,'(a,a28       )') units_set, ' is used in this simulation.'                         ; call printinfo(msg)
+         write(msg,'(a16,3a      )') 'It is based on: ', trim(s_len_u), trim(s_time_u), trim(s_mass_u) ; call printinfo(msg)
+         write(msg,'(a30,e22.15  )') '                       miu0 = ', miu0                            ; call printinfo(msg)
+         call printinfo('Some essential units for this set:')
+         write(msg,'(a30,e22.15,a)') '                         km = ', km, s_len_u                     ; call printinfo(msg)
+         write(msg,'(a30,e22.15,a)') '                         AU = ', au, s_len_u                     ; call printinfo(msg)
+         write(msg,'(a30,e22.15,a)') '                        lyr = ', lyr, s_len_u                    ; call printinfo(msg)
+         write(msg,'(a30,e22.15,a)') 'hydrogen atom mass:      mH = ', mH, s_mass_u                    ; call printinfo(msg)
+         write(msg,'(a30,e22.15,a)') 'galactic mass unit:     gmu = ', gmu, s_mass_u                   ; call printinfo(msg)
+         write(msg,'(a30,e22.15  )') '    hydrogen atoms / cm2    = ', mH/cm**2                        ; call printinfo(msg)
+         write(msg,'(a30,e22.15  )') '    hydrogen atoms / cm3    = ', mH/cm**3                        ; call printinfo(msg)
+         write(msg,'(a30,e22.15  )') 'averaged particles / cm2    = ', ppcm2                           ; call printinfo(msg)
+         write(msg,'(a30,e22.15  )') 'averaged particles / cm3    = ', ppcm3                           ; call printinfo(msg)
+         write(msg,'(a30,e22.15  )') '                        erg = ', erg                             ; call printinfo(msg)
+         write(msg,'(a30,e22.15  )') '                         eV = ', eV                              ; call printinfo(msg)
+         write(msg,'(a30,e22.15  )') '                  erg / cm3 = ', erg/cm**3                       ; call printinfo(msg)
+         write(msg,'(a30,e22.15  )') '                   eV / cm3 = ', eV/cm**3                        ; call printinfo(msg)
+         write(msg,'(a30,e22.15  )') 'speed of light in vacuum: c = ', clight                          ; call printinfo(msg)
+         write(msg,'(a30,e22.15  )') 'magnetic induction unit: Gs = ', Gs                              ; call printinfo(msg)
+         write(msg,'(a30,e22.15  )') '                    microGs = ', mGs                            ; call printinfo(msg)
+         
+         write(msg,*) '                    rho = ',  cm**3/mH                           ; call printinfo(msg)
+      endif
+
+   end subroutine print_essential_units
+         
+
 !-----------------------------------------------------------------------------
 end module initproblem
