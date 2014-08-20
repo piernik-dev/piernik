@@ -228,7 +228,7 @@ contains
 
 
       real :: t_end, dt, t, dth, eta, eps, a, eps2, energy, init_energy, d_energy = 0.0, ang_momentum, init_ang_mom, d_ang_momentum = 0.0, zero
-      integer :: nsteps, n, lun_out, i, order
+      integer :: nsteps, n, lun_out, i, order, j, k
 
 
       procedure(df_dxi),pointer :: df_dx_p, df_dy_p, df_dz_p
@@ -277,7 +277,7 @@ contains
       cgl => leaves%first
       do while (associated(cgl))
             cg => cgl%cg
-           
+            !write(*,*) "cg: ", maxval(cg%gpot), minval(cg%gpot)
             cgl => cgl%nxt
       enddo
       
@@ -285,25 +285,26 @@ contains
 
 
       !obliczenie potencjalu na siatce
-      call pot2grid(cg, mins, eps)
-      write(*,*) "Obliczono potencjal"
+      !call pot2grid(cg, mins, eps)
+      !write(*,*) "Obliczono potencjal"
 
 
       
-     ! open(unit=88, file='potencjal.dat')
-     ! do i=lbound(cg%gpot,dim=1),ubound(cg%gpot,dim=1)
-     !    do j=lbound(cg%gpot,dim=2),ubound(cg%gpot,dim=2)
-     !       do k=lbound(cg%gpot,dim=3),ubound(cg%gpot,dim=3)
-     !          write(88,*) i,j,k,cg%gpot(i,j,k)
-     !       enddo
-     !    enddo
-     !    write(88,*)
-     ! enddo
-     ! close(88)
+      open(unit=88, file='potencjal.dat')
+      do i=lbound(cg%gpot,dim=1),ubound(cg%gpot,dim=1)
+         do j=lbound(cg%gpot,dim=2),ubound(cg%gpot,dim=2)
+            do k=lbound(cg%gpot,dim=3),ubound(cg%gpot,dim=3)
+               write(88,*) i,j,k,cg%gpot(i,j,k)
+            enddo
+         enddo
+         write(88,*)
+      enddo
+      close(88)
       call get_ang_momentum_2(pset, n, ang_momentum)
       init_ang_mom = ang_momentum
 
       call find_cells(pset, cells, dist, mins, cg, n)
+      
 
 
 
@@ -312,14 +313,14 @@ contains
                         df_dz_p, d2f_dz2_p, d2f_dxdy_p, d2f_dxdz_p, d2f_dydz_p)
 
 
-      !initial acceleration
+      !przyspieszenie interpolowane
       call get_acc_int(cells, dist, acc, cg, n)
-      write(*,*) "Obliczono przyspieszenie"
+      !write(*,*) "Obliczono przyspieszenie, max(a)=", maxval(acc), minval(acc)
       
       
       call get_energy(pset, cg, cells, dist, n, energy)
       init_energy = energy
-      
+      !write(*,*) "E,dE"
       
       call get_acc_model(pset, acc2, eps, n)
       !write(*,*) "Znaleziono potencjal modelowy"
@@ -329,14 +330,14 @@ contains
 
 
       call get_acc_max(acc, n, a)
-      
+      write(*,*) "get_acc_max, a=", a
       
       !timestep
       dt = sqrt(2.0*eta*eps/a) 
       !write(*,*) "dt"           !variable
       !dt = 0.01                            !constant
       dth = dt/2.0
-      
+      !write(*,*) "dt,dth"
 
       nsteps = 0
 
@@ -369,7 +370,7 @@ contains
 
          !1.kick(dth)
          !acc(:,:) = 0.0                                                 !odkomentowac dla ruchu po prostej
-         call kick(pset, acc2, dth, n)
+         call kick(pset, acc, dth, n)
 
          !2.drift(dt)         
          call drift(pset, dt, n)
@@ -381,11 +382,11 @@ contains
          call get_acc_int(cells, dist, acc, cg, n)                      !Lagrange polynomials acceleration
          call get_acc_model(pset, acc2, eps, n)                         !centered finite differencing acceleration (if gravitational potential is known explicite)
          call get_acc_cic(pset, cg, cells, acc3, n)                     !CIC acceleration
-         call get_acc_max(acc2, n, a)                                    !max(|a_i|)
+         call get_acc_max(acc, n, a)                                    !max(|a_i|)
          
          !4.kick(dth)
          !call kick(pset, acc, dth, n)                                  !zakomentowac dla ruchu po prostej
-         call kick(pset, acc2, dth, n)
+         call kick(pset, acc, dth, n)
          !call kick(pset, [zero,zero,zero], dth, n)                     !odkomentowac dla ruchu po prostej
 
          
@@ -562,7 +563,7 @@ contains
             enddo
             
             aijk = aijk/d3
-            
+            write(*,*) "cic: po aijk"
             
             
             do p = 1, n
@@ -578,6 +579,7 @@ contains
                   enddo
                enddo
             enddo
+            write(*,*) "cic: po fxyz"
             fx = 0.5*fx*cg%idx
             fy = 0.5*fy*cg%idy
             fz = 0.5*fz*cg%idz
@@ -589,6 +591,7 @@ contains
                   acc3(p, zdim) = acc3(p, zdim) + aijk(p, c)*fz(p, c)
                enddo
             enddo
+            write(*,*) "cic: po acc3"
 
          end subroutine get_acc_cic
 
