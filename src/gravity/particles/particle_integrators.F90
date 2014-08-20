@@ -322,7 +322,7 @@ contains
       init_energy = energy
       !write(*,*) "E,dE"
       
-      call get_acc_model(pset, acc2, eps, n)
+      !call get_acc_model(pset, acc2, eps, n)
       !write(*,*) "Znaleziono potencjal modelowy"
       
       call get_acc_cic(pset, cg, cells, acc3, n)
@@ -380,7 +380,7 @@ contains
 
          !3.acceleration + |a|
          call get_acc_int(cells, dist, acc, cg, n)                      !Lagrange polynomials acceleration
-         call get_acc_model(pset, acc2, eps, n)                         !centered finite differencing acceleration (if gravitational potential is known explicite)
+         !call get_acc_model(pset, acc2, eps, n)                         !centered finite differencing acceleration (if gravitational potential is known explicite)
          call get_acc_cic(pset, cg, cells, acc3, n)                     !CIC acceleration
          call get_acc_max(acc, n, a)                                    !max(|a_i|)
          
@@ -677,9 +677,9 @@ contains
                               d2f_dydz_p(cells, cg, n) * dist(:,3))
 
                   acc(:, zdim) = -( df_dz_p(cells, cg, n) + &
-                     d2f_dz2_p(cells, cg, n) * dist(:,3) + &
-                     d2f_dxdz_p(cells, cg, n) * dist(:,1) +&
-                     d2f_dydz_p(cells, cg, n) * dist(:,2))
+                              d2f_dz2_p(cells, cg, n) * dist(:,3) + &
+                              d2f_dxdz_p(cells, cg, n) * dist(:,1) +&
+                              d2f_dydz_p(cells, cg, n) * dist(:,2))
 
          end subroutine get_acc_int
 
