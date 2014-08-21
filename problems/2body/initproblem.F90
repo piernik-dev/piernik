@@ -89,7 +89,7 @@ contains
                   do j = cg%lhn(ydim,LO), cg%lhn(ydim,HI)
                      do i = cg%lhn(xdim,LO), cg%lhn(xdim,HI)
                         associate( fl => flind%all_fluids(p)%fl )
-                           cg%u(fl%idn,i,j,k) = 1.0e-6
+                           cg%u(fl%idn,i,j,k) = 0.1!e-6
                            cg%u(fl%imx,i,j,k) = 0.0
                            cg%u(fl%imy,i,j,k) = 0.0
                            cg%u(fl%imz,i,j,k) = 0.0
@@ -104,7 +104,7 @@ contains
       enddo
 
 
-      e = 0.0
+      e = 0.9
 
       n_particles = 1
 
@@ -197,15 +197,16 @@ contains
             !call pset%add(1.1, [-0.9700436, 0.24308753, 0.0], [ 0.466203685, 0.43236573, 0.0],0.0)
             !call pset%add(1.1, [ 0.0, 0.0, 0.0], [-0.932407370, -0.86473146, 0.0], 0.0 )
             do i = 1, n_particles, 1
-               
-               call pset%add(0.01, pos_init, vel_init,0.0 ) !orbita eliptyczna
+               call pset%add(1.0, pos_init, vel_init,0.0 ) !orbita eliptyczna
                !call pset%add(0.1, [2.0, 0.0, 0.0],[0.0, 0.707106781, 0.0], 0.0) !orbita kolowa
-               !call pset%add(1.0, [4.625,3.0,0.0],[-1.0,0.0,0.0],0.0)        !ruch po prostej
+               
                pos_init = positions(dtheta, pos_init)
                vel_init = rotate(dtheta, vel_init)
-               
+
             enddo
-            !call printinfo('To see results type: gnuplot -p -e ''plot "nbody_out.log" u 2:3'' ')
+
+            !call pset%add(4.0, [0.0,0.0,0.0],[0.0,0.0,0.0],0.0)
+           
             first_run = .false.
             
             write(*,*) "Obliczono pozycje czastek "
@@ -262,15 +263,15 @@ contains
             !write(*,*) pos_init
             call write_hdf5(pos_init, n_particles)
             call read_hdf5(pos_init2, n_particles)
-            write(*,*) pos_init
-            write(*,*)
-            write(*,*)
-            write(*,*) pos_init2
-            write(*,*)
-            write(*,*) pos_init - pos_init2
+            !write(*,*) pos_init
+            !write(*,*)
+            !write(*,*)
+            !write(*,*) pos_init2
+            !write(*,*)
+            !write(*,*) pos_init - pos_init2
          endif
          
-         stop
+         !stop
 
       end subroutine relax_time
 

@@ -285,8 +285,8 @@ contains
 
 
       !obliczenie potencjalu na siatce
-      !call pot2grid(cg, mins, eps)
-      !write(*,*) "Obliczono potencjal"
+      call pot2grid(cg, mins, eps)
+      write(*,*) "Obliczono potencjal"
 
 
       
@@ -322,18 +322,19 @@ contains
       init_energy = energy
       !write(*,*) "E,dE"
       
-      !call get_acc_model(pset, acc2, eps, n)
+      call get_acc_model(pset, acc2, eps, n)
       !write(*,*) "Znaleziono potencjal modelowy"
       
       call get_acc_cic(pset, cg, cells, acc3, n)
      
 
 
-      call get_acc_max(acc, n, a)
+      call get_acc_max(acc3, n, a)
       write(*,*) "get_acc_max, a=", a
       
       !timestep
       dt = sqrt(2.0*eta*eps/a) 
+      !dt = 0.01
       !write(*,*) "dt"           !variable
       !dt = 0.01                            !constant
       dth = dt/2.0
@@ -357,20 +358,10 @@ contains
             write(lun_out, '(I3,1X,19(E13.6,1X))') i, t, dt, mass(i), pset%p(i)%pos, acc(i,:), acc2(i,:), acc3(i,:), energy, d_energy, ang_momentum, d_ang_momentum
          enddo
 
-         !------------------------------------------------------------------
-         !acc=0.0
-         !call kick(vel, acc, dth, n) !velocity vel_h
-         !call drift(pos, vel, dt, n) !position vel_h
-         !call get_acc_num(pos, acc2, eps, n)
-         !call cell_nr(pos, cells, mins, delta_cells, n)
-         !call get_acc(cells, pos, acc, pot, n_cell, mins, delta_cells, n)
-         !call get_acc_max(acc, n, a)
-         !call kick(vel, [zero,zero,zero], dth, n)   !velocity
-         !------------------------------------------------------------------
 
          !1.kick(dth)
          !acc(:,:) = 0.0                                                 !odkomentowac dla ruchu po prostej
-         call kick(pset, acc, dth, n)
+         call kick(pset, acc3, dth, n)
 
          !2.drift(dt)         
          call drift(pset, dt, n)
@@ -380,13 +371,13 @@ contains
 
          !3.acceleration + |a|
          call get_acc_int(cells, dist, acc, cg, n)                      !Lagrange polynomials acceleration
-         !call get_acc_model(pset, acc2, eps, n)                         !centered finite differencing acceleration (if gravitational potential is known explicite)
+         call get_acc_model(pset, acc2, eps, n)                         !centered finite differencing acceleration (if gravitational potential is known explicite)
          call get_acc_cic(pset, cg, cells, acc3, n)                     !CIC acceleration
-         call get_acc_max(acc, n, a)                                    !max(|a_i|)
+         call get_acc_max(acc3, n, a)                                    !max(|a_i|)
          
          !4.kick(dth)
          !call kick(pset, acc, dth, n)                                  !zakomentowac dla ruchu po prostej
-         call kick(pset, acc, dth, n)
+         call kick(pset, acc3, dth, n)
          !call kick(pset, [zero,zero,zero], dth, n)                     !odkomentowac dla ruchu po prostej
 
          
@@ -563,7 +554,7 @@ contains
             enddo
             
             aijk = aijk/d3
-            write(*,*) "cic: po aijk"
+            !write(*,*) "cic: po aijk"
             
             
             do p = 1, n
@@ -579,7 +570,7 @@ contains
                   enddo
                enddo
             enddo
-            write(*,*) "cic: po fxyz"
+            !write(*,*) "cic: po fxyz"
             fx = 0.5*fx*cg%idx
             fy = 0.5*fy*cg%idy
             fz = 0.5*fz*cg%idz
@@ -591,7 +582,7 @@ contains
                   acc3(p, zdim) = acc3(p, zdim) + aijk(p, c)*fz(p, c)
                enddo
             enddo
-            write(*,*) "cic: po acc3"
+            !write(*,*) "cic: po acc3"
 
          end subroutine get_acc_cic
 
