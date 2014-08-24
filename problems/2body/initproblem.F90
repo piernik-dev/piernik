@@ -104,7 +104,7 @@ contains
       enddo
 
 
-      e = 0.9
+      e = 0.0
 
       n_particles = 1
 
@@ -202,10 +202,9 @@ contains
                
                pos_init = positions(dtheta, pos_init)
                vel_init = rotate(dtheta, vel_init)
-
             enddo
 
-            !call pset%add(4.0, [0.0,0.0,0.0],[0.0,0.0,0.0],0.0)
+            !call pset%add(1.0, [0.0,0.0,0.0],[0.0,0.0,0.0],0.0)
            
             first_run = .false.
             
@@ -313,7 +312,12 @@ contains
       endif
 
    end subroutine print_essential_units
-         
+
+
+   subroutine read_buildgal
+      implicit none
+      integer :: p
+   end subroutine read_buildgal
 
 !-----------------------------------------------------------------------------
 end module initproblem
