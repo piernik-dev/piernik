@@ -229,8 +229,9 @@ contains
       real, dimension(:), allocatable :: mass, mins, maxs
       !real,dimension(11,3) :: dist2
 
-      real :: t_end, dt, t, dth, eta, eps, a, eps2, energy, init_energy, d_energy = 0.0, ang_momentum, init_ang_mom, d_ang_momentum = 0.0, zero
+      real :: t_end, dt, t, dth, t_out, eta, eps, a, eps2, energy, init_energy, d_energy = 0.0, ang_momentum, init_ang_mom, d_ang_momentum = 0.0, zero
       integer :: nsteps, n, lun_out, i, order, j, k, cdim
+      real, parameter :: dt_out = 0.1          ! time interval between output of snapshots
 
 
       procedure(df_dxi),pointer :: df_dx_p, df_dy_p, df_dz_p
@@ -257,6 +258,7 @@ contains
       
       t = t_glob
       t_end = t + dt_tot
+      t_out = t_glob + dt_out
       !print *, "Leafrog: t_end= ", t_end
 
 
@@ -388,10 +390,13 @@ contains
             dth = 0.5 * dt
          endif
 
-
-         do i=1, n
-            write(lun_out, '(I3,1X,19(E13.6,1X))') i, t, dt, mass(i), pset%p(i)%pos, acc(i,:), acc2(i,:), acc3(i,:), energy, d_energy, ang_momentum, d_ang_momentum
-         enddo
+         if (t >=t_out) then
+            do i=1, n
+               write(lun_out,*) "# t=", t
+               write(lun_out, '(I3,1X,19(E13.6,1X))') i, t, dt, mass(i), pset%p(i)%pos, acc(i,:), acc2(i,:), acc3(i,:), energy, d_energy, ang_momentum, d_ang_momentum
+            enddo
+            t_out = t_out + dt_out
+         endif
 
 
          !1.kick(dth)
