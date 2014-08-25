@@ -109,9 +109,10 @@ contains
       n_particles = 1
 
       
-      call orbits(n_particles, e, first_run)
+      !call orbits(n_particles, e, first_run)
       !call relax_time(n_particles, first_run)
-      
+      call read_buildgal
+      !stop
       
 
 
@@ -315,8 +316,34 @@ contains
 
 
    subroutine read_buildgal
+      use particle_pub, only: pset
       implicit none
-      integer :: p
+      integer :: i, j, nbodies,dims=3
+      integer :: galfile=1
+      character(len=6) :: galname="SPIRAL"
+      real,dimension(:,:), allocatable :: pos, vel
+      real,dimension(:), allocatable :: mass
+
+      open(unit=galfile,file=galname,action="read",status="old")
+         read(galfile,*) nbodies
+         write(*,*) "nbodies=",nbodies
+
+         allocate(mass(nbodies),pos(nbodies,3),vel(nbodies,3))
+
+         read(galfile,*) (mass(i),i=1,nbodies), &
+         ((pos(i,j),j=1,dims),i=1,nbodies),&
+         ((vel(i,j),j=1,dims),i=1,nbodies)
+
+      close(galfile)
+      
+      open(unit=2,file='galtest.dat')
+         do i=1,nbodies
+            !write(2,*) i, mass(i), pos(i,:), vel(i,:)
+            call pset%add(mass(i), pos(i,:), vel(i,:),0.0)
+         enddo
+      close(2)
+      !!pset%add(mass(i), [pos(i,:)], [vel(i,:)],0.0)
+
    end subroutine read_buildgal
 
 !-----------------------------------------------------------------------------
