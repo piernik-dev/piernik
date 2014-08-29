@@ -172,13 +172,17 @@ contains
 
 
    subroutine leapfrog2ord(pset, t_glob, dt_tot)
-      use constants, only: ndims, CENTER, xdim, ydim, zdim
+      use constants, only: ndims, CENTER, xdim, ydim, zdim, zero
       use particle_types, only: particle_set
       use domain, only: dom
       use cg_leaves,    only: leaves
       use cg_list,      only: cg_list_element
       use grid_cont,    only: grid_container
-
+#ifdef SELF_GRAV
+      use cg_list_dataop,   only: ind_val
+      use constants,        only: gp_n, gpot_n, hgpot_n, one, half, sgp_n, sgpm_n
+      use named_array_list, only: qna
+#endif /* SELF_GRAV */
 
       implicit none 
       class(particle_set), intent(inout) :: pset  !< particle list
@@ -229,7 +233,7 @@ contains
       real, dimension(:), allocatable :: mass, mins, maxs
       !real,dimension(11,3) :: dist2
 
-      real :: t_end, dt, t, dth, t_out, eta, eps, a, eps2, energy, init_energy, d_energy = 0.0, ang_momentum, init_ang_mom, d_ang_momentum = 0.0, zero
+      real :: t_end, dt, t, dth, t_out, eta, eps, a, eps2, energy, init_energy, d_energy = 0.0, ang_momentum, init_ang_mom, d_ang_momentum = 0.0!, zero
       integer :: nsteps, n, lun_out, i, order, j, k, cdim
       real, parameter :: dt_out = 0.05          ! time interval between output of snapshots
 
@@ -269,9 +273,6 @@ contains
       maxs(:) = dom%edge(:,2)
 
 
-
-
-      zero = 0.0
       order = 2
 
 
@@ -283,16 +284,16 @@ contains
       cgl => leaves%first
       do while (associated(cgl))
             cg => cgl%cg
-            !write(*,*) "cg: ", maxval(cg%gpot), minval(cg%gpot)
             cgl => cgl%nxt
       enddo
 
 
      
-
+#ifndef SELF_GRAV
       !obliczenie potencjalu na siatce
       call pot2grid(cg, mins, eps2)
-
+      write(*,*) "Obliczono potencjal zewnetrzny"
+#endif /* SELF_GRAV */
 
 
 
@@ -329,15 +330,16 @@ contains
       call get_energy(pset, cg, cells, dist, n, energy)
       init_energy = energy
 
-
+#ifndef SELF_GRAV
       call get_acc_model(pset, acc2, eps, n)
-
+#else
+      acc2(:,:) = zero
+#endif /* SELF_GRAV */
 
       call get_acc_cic(pset, cg, cells, acc3, n)
 
 
-
-      call get_acc_max(acc2, n, a)
+      call get_acc_max(acc3, n, a)
       write(*,*) "get_acc_max, a=", a
 
       !timestep
@@ -350,7 +352,7 @@ contains
       nsteps = 0
 
 
-      
+
       !main loop
       do while (t < t_end)
 
@@ -371,25 +373,43 @@ contains
 
          !1.kick(dth)
          !acc(:,:) = 0.0                                                 !odkomentowac dla ruchu po prostej
-         !call kick(pset, acc2, dth, n)
-         call kick(pset, [zero,zero,zero], dth, n)
+         call kick(pset, acc3, dth, n)
+         !call kick(pset, [zero,zero,zero], dth, n)
 
          !2.drift(dt)         
          call drift(pset, dt, n)
+
+
+         !ekstrapolacja potencjalu w przypadku samograwitacji
+         !czegos tu brakuje :/
+#ifdef SELF_GRAV
+         call leaves%q_copy(qna%ind(sgp_n), qna%ind(sgpm_n))
+         call leaves%q_lin_comb([ ind_val(qna%ind(gp_n), 1.), ind_val(qna%ind(sgp_n), one+dt),  ind_val(qna%ind(sgpm_n), -dt) ], qna%ind(gpot_n))
+         call leaves%q_lin_comb([ ind_val(qna%ind(gp_n), 1.), ind_val(qna%ind(sgp_n), one+dth), ind_val(qna%ind(sgpm_n), -dth)], qna%ind(hgpot_n))
+         
+#endif /* SELF_GRAV */
+
+
 
          call find_cells(pset, cells, dist, mins, cg, n)                !finding cells
 
          !3.acceleration + |a|
          call get_acc_int(cells, dist, acc, cg, n)                      !Lagrange polynomials acceleration
+
+
+#ifndef SELF_GRAV
          call get_acc_model(pset, acc2, eps, n)                         !centered finite differencing acceleration (if gravitational potential is known explicite)
+#endif /* SELF_GRAV */                         
+
+
          call get_acc_cic(pset, cg, cells, acc3, n)                     !CIC acceleration
-         call get_acc_max(acc2, n, a)                                    !max(|a_i|)
+         call get_acc_max(acc3, n, a)                                    !max(|a_i|)
 
 
          !4.kick(dth)
          !call kick(pset, acc, dth, n)                                  !zakomentowac dla ruchu po prostej
-         !call kick(pset, acc2, dth, n)
-         call kick(pset, [zero,zero,zero], dth, n)                     !odkomentowac dla ruchu po prostej
+         call kick(pset, acc3, dth, n)
+         !call kick(pset, [zero,zero,zero], dth, n)                     !odkomentowac dla ruchu po prostej
 
 
          call get_energy(pset, cg, cells, dist, n, energy)
@@ -397,11 +417,9 @@ contains
 
 
          call get_ang_momentum_2(pset, n, ang_momentum)
-         write(*,*) "get momentum"
-         write(*,*)"----------"
-         write(*,*) ang_momentum, init_ang_mom
+
+         !write(*,*) ang_momentum, init_ang_mom
          !d_ang_momentum = log(abs((ang_momentum - init_ang_mom)/init_ang_mom))
-         write(*,*) "d-momentum"
 
          !5.t
          t = t + dt
