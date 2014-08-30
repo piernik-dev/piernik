@@ -222,8 +222,8 @@ contains
       
       end interface
       
-      integer(kind=8), dimension(11,3)::cells3
-      real, dimension(11,3)::a_int,a_cic, cic_pos
+      !integer(kind=8), dimension(11,3)::cells3
+      !real, dimension(11,3)::a_int,a_cic, cic_pos
 
       integer(kind=8), dimension(:,:), allocatable :: cells
       real, dimension(:,:), allocatable :: dist, acc, acc2, acc3
@@ -236,7 +236,7 @@ contains
       real :: t_end, dt, t, dth, t_out, eta, eps, a, eps2, energy, init_energy, d_energy = 0.0, ang_momentum, init_ang_mom, d_ang_momentum = 0.0!, zero
       integer :: nsteps, n, lun_out, i, order, j, k, cdim
       real, parameter :: dt_out = 0.05          ! time interval between output of snapshots
-
+      logical :: save_potential,finish,external_pot,var_timestep
 
       procedure(df_dxi),pointer :: df_dx_p, df_dy_p, df_dz_p
       procedure(d2f_dxi_2),pointer :: d2f_dx2_p, d2f_dy2_p, d2f_dz2_p
@@ -246,13 +246,11 @@ contains
       open(newunit=lun_out, file='leapfrog_out.log', status='unknown',  position='append')
       
       n = size(pset%p, dim=1)
-      !write(*,*) "czastek: ",n
-      !stop
 
 
       allocate(mass(n), acc(n, ndims), acc2(n, ndims), acc3(n, ndims), cells(n, ndims), dist(n, ndims), mins(ndims), maxs(ndims))
 
-      
+
 
       mass(:) = pset%p(:)%mass
 
@@ -261,7 +259,7 @@ contains
       !   vel(:, ndim) = pset%p(:)%vel(ndim)
       !enddo
 
-      
+
       t = t_glob
       t_end = t + dt_tot
       t_out = t_glob + dt_out
@@ -277,7 +275,7 @@ contains
 
 
       eta = 5.0 !1.0
-      eps = 1.0e-6
+      eps = 1.0e-5
       eps2 = 0.00
 
 
@@ -288,26 +286,40 @@ contains
       enddo
 
 
-     
-#ifndef SELF_GRAV
-      !obliczenie potencjalu na siatce
-      call pot2grid(cg, mins, eps2)
-      write(*,*) "Obliczono potencjal zewnetrzny"
-#endif /* SELF_GRAV */
+      !obliczenie zewnętrznego potencjalu na siatce
+      external_pot = .true.
+      !external_pot = .false.
+
+      if (external_pot) then
+         call pot2grid(cg, mins, eps2)
+         write(*,*) "Obliczono potencjal zewnetrzny"
+      endif
 
 
 
-      !open(unit=88, file='potencjal.dat')
-      !do i=lbound(cg%gpot,dim=1),ubound(cg%gpot,dim=1)
-      !   do j=lbound(cg%gpot,dim=2),ubound(cg%gpot,dim=2)
-      !      do k=lbound(cg%gpot,dim=3),ubound(cg%gpot,dim=3)
-      !         write(88,*) i,j,k,cg%gpot(i,j,k)
-      !      enddo
-      !   enddo
-      !   write(88,*)
-      !enddo
-      !close(88)
-      !stop
+      !save_potential = .true.
+      save_potential = .false.
+      !finish         = .true.
+      finish         = .false.
+
+      if(save_potential) then
+         open(unit=88, file='potencjal.dat')
+
+         do i=lbound(cg%gpot,dim=1),ubound(cg%gpot,dim=1)
+            do j=lbound(cg%gpot,dim=2),ubound(cg%gpot,dim=2)
+               do k=lbound(cg%gpot,dim=3),ubound(cg%gpot,dim=3)
+                  write(88,*) i, j, k, cg%coord(CENTER, xdim)%r(i), &
+                              cg%coord(CENTER, xdim)%r(i), cg%coord(CENTER, xdim)%r(i), &
+                              cg%gpot(i,j,k)
+               enddo
+            enddo
+            write(88,*)
+         enddo
+         close(88)
+         
+         if(finish) stop
+      endif
+
 
       call get_ang_momentum_2(pset, n, ang_momentum)
       init_ang_mom = ang_momentum
@@ -330,22 +342,28 @@ contains
       call get_energy(pset, cg, cells, dist, n, energy)
       init_energy = energy
 
-#ifndef SELF_GRAV
-      call get_acc_model(pset, acc2, eps, n)
-#else
-      acc2(:,:) = zero
-#endif /* SELF_GRAV */
-
+      if (external_pot) then
+         call get_acc_model(pset, acc2, eps, n)
+      else
+         acc2(:,:) = 0.0
+      endif
+      
       call get_acc_cic(pset, cg, cells, acc3, n)
 
 
-      call get_acc_max(acc3, n, a)
+      call get_acc_max(acc2, n, a)
       write(*,*) "get_acc_max, a=", a
 
+
+      var_timestep=.true.
+      !var_timestep=.false.
       !timestep
-      !dt =sqrt(2.0*eta*eps/a)               !variable
-      dt = 0.1
-      !dt = 0.01                            !constant
+      if (var_timestep) then
+         dt = sqrt(2.0*eta*eps/a)               !variable
+      else
+         dt = 0.1
+         !dt = 0.01                            !constant
+      endif
       dth = dt/2.0
 
 
@@ -372,8 +390,7 @@ contains
 
 
          !1.kick(dth)
-         !acc(:,:) = 0.0                                                 !odkomentowac dla ruchu po prostej
-         call kick(pset, acc3, dth, n)
+         call kick(pset, acc2, dth, n)                                  !odkomentowac dla ruchu po prostej
          !call kick(pset, [zero,zero,zero], dth, n)
 
          !2.drift(dt)         
@@ -382,13 +399,12 @@ contains
 
          !ekstrapolacja potencjalu w przypadku samograwitacji
          !czegos tu brakuje :/
-#ifdef SELF_GRAV
-         call leaves%q_copy(qna%ind(sgp_n), qna%ind(sgpm_n))
-         call leaves%q_lin_comb([ ind_val(qna%ind(gp_n), 1.), ind_val(qna%ind(sgp_n), one+dt),  ind_val(qna%ind(sgpm_n), -dt) ], qna%ind(gpot_n))
-         call leaves%q_lin_comb([ ind_val(qna%ind(gp_n), 1.), ind_val(qna%ind(sgp_n), one+dth), ind_val(qna%ind(sgpm_n), -dth)], qna%ind(hgpot_n))
-         
-#endif /* SELF_GRAV */
-
+!#ifdef SELF_GRAV
+!         call leaves%q_copy(qna%ind(sgp_n), qna%ind(sgpm_n))
+!         call leaves%q_lin_comb([ ind_val(qna%ind(gp_n), 1.), ind_val(qna%ind(sgp_n), one+dt),  ind_val(qna%ind(sgpm_n), -dt) ], qna%ind(gpot_n))
+!         call leaves%q_lin_comb([ ind_val(qna%ind(gp_n), 1.), ind_val(qna%ind(sgp_n), one+dth), ind_val(qna%ind(sgpm_n), -dth)], qna%ind(hgpot_n))
+!         write(*,*) "Self_GRAV!"
+!#endif /* SELF_GRAV */
 
 
          call find_cells(pset, cells, dist, mins, cg, n)                !finding cells
@@ -397,18 +413,18 @@ contains
          call get_acc_int(cells, dist, acc, cg, n)                      !Lagrange polynomials acceleration
 
 
-#ifndef SELF_GRAV
-         call get_acc_model(pset, acc2, eps, n)                         !centered finite differencing acceleration (if gravitational potential is known explicite)
-#endif /* SELF_GRAV */                         
+         if (external_pot) then
+            call get_acc_model(pset, acc2, eps, n)                       !centered finite differencing acceleration (if gravitational potential is known explicite)
+         endif
 
 
          call get_acc_cic(pset, cg, cells, acc3, n)                     !CIC acceleration
-         call get_acc_max(acc3, n, a)                                    !max(|a_i|)
+         call get_acc_max(acc2, n, a)                                    !max(|a_i|)
 
 
          !4.kick(dth)
          !call kick(pset, acc, dth, n)                                  !zakomentowac dla ruchu po prostej
-         call kick(pset, acc3, dth, n)
+         call kick(pset, acc2, dth, n)
          !call kick(pset, [zero,zero,zero], dth, n)                     !odkomentowac dla ruchu po prostej
 
 
@@ -424,9 +440,11 @@ contains
          !5.t
          t = t + dt
          !6.dt		!dt[n+1]
-         !dt =  sqrt(2.0*eta*eps/a) 
-         !7.dth
-         !dth = 0.5*dt
+         if (var_timestep) then
+            dt = sqrt(2.0*eta*eps/a)
+            dth = 0.5*dt
+         endif
+
          nsteps = nsteps + 1
 
       end do
@@ -547,7 +565,7 @@ contains
 
 
          subroutine get_acc_cic(pset, cg, cells, acc3, n)
-            use constants, only: ndims, CENTER, xdim, ydim, zdim
+            use constants, only: ndims, CENTER, xdim, ydim, zdim, half
             use grid_cont,        only: grid_container
             use particle_types, only: particle_set
 
@@ -566,7 +584,6 @@ contains
 
             acc3 = 0.0
 
-            
 
             do i = 1, n
                do cdim = xdim, ndims
@@ -589,8 +606,7 @@ contains
             enddo
 
             aijk = aijk/cg%dvol
-            !write(*,*) "suma=", sum(aijk)
-            !stop
+
 
 
 
@@ -608,9 +624,9 @@ contains
                enddo
             enddo
 
-            fx = 0.5*fx*cg%idx
-            fy = 0.5*fy*cg%idy
-            fz = 0.5*fz*cg%idz
+            fx = half*fx*cg%idx
+            fy = half*fy*cg%idy
+            fz = half*fz*cg%idz
 
             do p = 1, n
                do c = 1, 8
@@ -621,83 +637,6 @@ contains
             enddo
 
          end subroutine get_acc_cic
-
-
-         subroutine get_acc_cic2(cic_pos, cg, cells, acc3, n)
-            use constants, only: ndims, CENTER, xdim, ydim, zdim
-            use grid_cont,        only: grid_container
-
-            implicit none
-
-            type(grid_container), pointer, intent(in) :: cg
-
-            integer, intent(in) :: n
-            integer :: i, j, k, c, cdim
-            integer(kind=8) :: p
-
-            integer(kind=8), dimension(n, ndims), intent(in) :: cells
-            integer(kind=8), dimension(n, ndims) :: cells2
-            real, dimension(n, ndims) :: dxyz
-
-            real, dimension(n, ndims), intent(out) :: acc3
-            real, dimension(n, ndims), intent(in) :: cic_pos
-
-            real(kind=8), dimension(n, 8) :: aijk, fx, fy, fz
-
-            acc3 = 0.0
-
-            
-
-            do i = 1, n
-               do cdim = xdim, ndims
-                  if (cic_pos(i,cdim) < cg%coord(CENTER, cdim)%r(cells(i,cdim))) then
-                     cells2(i,cdim) = cells(i,cdim)-1
-                  else
-                     cells2(i,cdim) = cells(i,cdim)
-                  endif
-                  dxyz(i, cdim) = cic_pos(i,cdim) - cg%coord(CENTER, cdim)%r(cells2(i,cdim))
-
-               enddo
-               aijk(i, 1) = (cg%dx - dxyz(i, xdim))*(cg%dy - dxyz(i, ydim))*(cg%dz - dxyz(i, zdim)) !a(i  ,j  ,k  )
-               aijk(i, 2) = (cg%dx - dxyz(i, xdim))*(cg%dy - dxyz(i, ydim))*         dxyz(i, zdim)  !a(i+1,j  ,k  )
-               aijk(i, 3) = (cg%dx - dxyz(i, xdim))*         dxyz(i, ydim) *(cg%dz - dxyz(i, zdim)) !a(i  ,j+1,k  )
-               aijk(i, 4) = (cg%dx - dxyz(i, xdim))*         dxyz(i, ydim) *         dxyz(i, zdim)  !a(i  ,j  ,k+1)
-               aijk(i, 5) =          dxyz(i, xdim) *(cg%dy - dxyz(i, ydim))*(cg%dz - dxyz(i, zdim)) !a(i+1,j+1,k  )
-               aijk(i, 6) =          dxyz(i, xdim) *(cg%dy - dxyz(i, ydim))*         dxyz(i, zdim)  !a(i  ,j+1,k+1)
-               aijk(i, 7) =          dxyz(i, xdim) *         dxyz(i, ydim) *(cg%dz - dxyz(i, zdim)) !a(i+1,j  ,k+1)
-               aijk(i, 8) =          dxyz(i, xdim) *         dxyz(i, ydim) *         dxyz(i, zdim)  !a(i+1,j+1,k+1)
-            enddo
-            
-            aijk = aijk/cg%dvol
-
-            do p = 1, n
-               c = 1
-               do i = 0, 1
-                  do j = 0, 1
-                     do k = 0, 1
-                        fx(p, c) = -(cg%gpot(cells2(p, xdim)+1+i, cells2(p, ydim)  +j, cells2(p, zdim)  +k) - cg%gpot(cells2(p, xdim)-1+i, cells2(p, ydim)  +j, cells2(p, zdim)  +k))
-                        fy(p, c) = -(cg%gpot(cells2(p, xdim)  +i, cells2(p, ydim)+1+j, cells2(p, zdim)  +k) - cg%gpot(cells2(p, xdim)  +i, cells2(p, ydim)-1+j, cells2(p, zdim)  +k))
-                        fz(p, c) = -(cg%gpot(cells2(p, xdim)  +i, cells2(p, ydim)  +j, cells2(p, zdim)+1+k) - cg%gpot(cells2(p, xdim)  +i, cells2(p, ydim)  +j, cells2(p, zdim)-1+k))
-                        c = c + 1
-                     enddo
-                  enddo
-               enddo
-            enddo
-            !write(*,*) "cic: po fxyz"
-            fx = 0.5*fx*cg%idx
-            fy = 0.5*fy*cg%idy
-            fz = 0.5*fz*cg%idz
-            
-            do p = 1, n
-               do c = 1, 8
-                  acc3(p, xdim) = acc3(p, xdim) + aijk(p, c)*fx(p, c)
-                  acc3(p, ydim) = acc3(p, ydim) + aijk(p, c)*fy(p, c)
-                  acc3(p, zdim) = acc3(p, zdim) + aijk(p, c)*fz(p, c)
-               enddo
-
-            enddo
-
-         end subroutine get_acc_cic2
 
 
          subroutine potential(pset, cg, cells, dist, n)

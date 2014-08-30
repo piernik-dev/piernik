@@ -1,5 +1,5 @@
  $BASE_DOMAIN
-    n_d = 100, 100, 100 
+    n_d = 101, 101, 101 
     bnd_xl = 'per'
     bnd_xr = 'per'
     bnd_yl = 'per'
@@ -28,7 +28,7 @@
  /
 
  $END_CONTROL
-    !tend   = 7.0
+    !tend   = 200.0
     tend   = 900.0
     nend   = 6000
  /
@@ -48,8 +48,8 @@
 
  $FLUID_NEUTRAL
  !cs_iso = 1.0
- cs_iso = 0.005
- !selfgrav = .true.
+ !cs_iso = 0.005
+ selfgrav = .true.
  /
 
  $NUMERICAL_SETUP
@@ -82,5 +82,4 @@
    !time_integrator = 'hermit4'
    time_integrator = 'leapfrog2'
    interpolation_scheme = 'cic'
-   !interpolation_scheme = 'tsc'
  /

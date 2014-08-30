@@ -89,7 +89,7 @@ contains
                   do j = cg%lhn(ydim,LO), cg%lhn(ydim,HI)
                      do i = cg%lhn(xdim,LO), cg%lhn(xdim,HI)
                         associate( fl => flind%all_fluids(p)%fl )
-                           cg%u(fl%idn,i,j,k) = 0.1!e-6
+                           cg%u(fl%idn,i,j,k) = 1.0!e-6
                            cg%u(fl%imx,i,j,k) = 0.0
                            cg%u(fl%imy,i,j,k) = 0.0
                            cg%u(fl%imz,i,j,k) = 0.0
@@ -107,12 +107,12 @@ contains
       e = 0.0
 
       n_particles = 1
-
+      !write(*,*) "int(3/3)=",int(3.0/3.0)
       
-      !call orbits(n_particles, e, first_run)
+      call orbits(n_particles, e, first_run)
       !call relax_time(n_particles, first_run)
-      call read_buildgal
-      !stop
+      !call read_buildgal
+      
       
 
 
@@ -178,14 +178,14 @@ contains
          integer,intent(in)            :: n_particles
          real(kind=4),intent(in)       :: e
          real,dimension(3)             :: pos_init, vel_init
-         real                           :: dtheta
+         real                           :: dtheta,zero = 0.0
          real,parameter                :: pi2=6.283185307
          logical,intent(inout)         :: first_run
          
          write(*,*) "Number of particles: ", n_particles
          
          dtheta = pi2/n_particles
-         !write(*,*) "dtheta: ", dtheta
+         !write(*,*) "1/0: ", 1.0/zero
 
          pos_init(1) = 2.0
          pos_init(2) = 0.0
@@ -197,15 +197,21 @@ contains
             !call pset%add(1.1, [ 0.9700436, -0.24308753, 0.0], [ 0.466203685, 0.43236573, 0.0], 0.0)
             !call pset%add(1.1, [-0.9700436, 0.24308753, 0.0], [ 0.466203685, 0.43236573, 0.0],0.0)
             !call pset%add(1.1, [ 0.0, 0.0, 0.0], [-0.932407370, -0.86473146, 0.0], 0.0 )
-            do i = 1, n_particles, 1
-               call pset%add(1.0, pos_init, vel_init,0.0 ) !orbita eliptyczna
-               !call pset%add(0.1, [2.0, 0.0, 0.0],[0.0, 0.707106781, 0.0], 0.0) !orbita kolowa
+            !do i = 1, n_particles, 1
+               !call pset%add(1.0, pos_init, vel_init,0.0 ) !orbita eliptyczna
+               !call pset%add(1.0, [4.54545454545455, 0.0, 0.0],[-0.909090909090909, 0.0, 0.0], 0.0)
                
-               pos_init = positions(dtheta, pos_init)
-               vel_init = rotate(dtheta, vel_init)
-            enddo
+               !call pset%add(1.0, [5.0, 0.0, 0.0],[-0.909090909090909, 0.0, 0.0], 0.0) !10 na komorke
+               !call pset%add(1.0, [4.54545454545455, 0.0, 0.0],[-9.09090909090909, 0.0, 0.0], 0.0) !srodki
+               !call pset%add(1.0, [4.54545454545455, 0.454545454545455, 0.0],[-0.909090909090909, 0.0, 0.0], 0.0) !j=1/2 sciana
+               !call pset%add(1.0, [4.54545454545455, 3.0*0.909090909090909, 0.0],[-0.909090909090909, 0.0, 0.0], 0.0) !j=1
+               
+               !pos_init = positions(dtheta, pos_init)
+               !vel_init = rotate(dtheta, vel_init)
+            !enddo
 
-            !call pset%add(1.0, [0.0,0.0,0.0],[0.0,0.0,0.0],0.0)
+            call pset%add(10.0, [0.0,0.0,0.0],[0.0,0.0,0.0],0.0)
+            call pset%add(1.0, [2.0,2.0,0.0],[0.0,0.0,0.0],0.0)
            
             first_run = .false.
             
@@ -338,7 +344,9 @@ contains
       
       open(unit=2,file='galtest.dat')
          do i=1,nbodies
-            !write(2,*) i, mass(i), pos(i,:), vel(i,:)
+         if (modulo(i,1000) .eq. 0.0) then
+            write(*,*) i!, mass(i), pos(i,:), vel(i,:)
+         endif
             call pset%add(mass(i), pos(i,:), vel(i,:),0.0)
          enddo
       close(2)
