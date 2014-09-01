@@ -270,7 +270,7 @@ contains
 
 
       eta = 5.0 !1.0
-      eps = 1.0e-5
+      eps = 1.0e-4
       eps2 = 0.00
 
 
@@ -343,18 +343,19 @@ contains
          acc2(:,:) = 0.0
       endif
       
-      call get_acc_cic(pset, cg, cells, acc3, n)
+      call get_acc_cic_o4(pset, cg, cells, acc3, n)
 
 
-      call get_acc_max(acc2, n, a)
+      call get_acc_max(acc3, n, a)
       write(*,*) "get_acc_max, a=", a
 
 
-      var_timestep=.true.
-      !var_timestep=.false.
+      !var_timestep=.true.
+      var_timestep=.false.
       !timestep
       if (var_timestep) then
          dt = sqrt(2.0*eta*eps/a)               !variable
+         write(*,*) "leapfrog: dt = ",dt
       else
          dt = 0.1
          !dt = 0.01                            !constant
@@ -385,7 +386,7 @@ contains
 
 
          !1.kick(dth)
-         call kick(pset, acc2, dth, n)
+         call kick(pset, acc3, dth, n)
          !call kick(pset, [zero,zero,zero], dth, n)
 
          !2.drift(dt)         
@@ -413,13 +414,13 @@ contains
          endif
 
 
-         call get_acc_cic(pset, cg, cells, acc3, n)                     !CIC acceleration
-         call get_acc_max(acc2, n, a)                                    !max(|a_i|)
+         call get_acc_cic_o4(pset, cg, cells, acc3, n)                     !CIC acceleration
+         call get_acc_max(acc3, n, a)                                    !max(|a_i|)
 
 
          !4.kick(dth)
          !call kick(pset, acc, dth, n)                                  !zakomentowac dla ruchu po prostej
-         call kick(pset, acc2, dth, n)
+         call kick(pset, acc3, dth, n)
          !call kick(pset, [zero,zero,zero], dth, n)                     !odkomentowac dla ruchu po prostej
 
 
@@ -697,9 +698,9 @@ contains
                enddo
             enddo
 
-            fx = half*fx*cg%idx
-            fy = half*fy*cg%idy
-            fz = half*fz*cg%idz
+            !fx = half*fx*cg%idx
+            !fy = half*fy*cg%idy
+            !fz = half*fz*cg%idz
 
             do p = 1, n
                do c = 1, 8
@@ -712,7 +713,7 @@ contains
          end subroutine get_acc_cic_o4
 
          subroutine potential(pset, cg, cells, dist, n)
-            use constants,    only: ndims
+            use constants,    only: ndims, half, xdim, ydim, zdim
             use grid_cont,    only: grid_container
             implicit none
             type(grid_container), pointer, intent(in) :: cg
@@ -722,22 +723,35 @@ contains
             real(kind=8), dimension(n, ndims), intent(in) :: dist
             integer :: i
             integer (kind=8) :: p, q, r
-            real,dimension(n):: pot_x,pot_y,pot_z
+            real,dimension(n):: pot_x,pot_y,pot_z,dpot,d2pot
 
 
-            pot_x = df_dx_p(cells, cg, n) * dist(:,1) + &
-                     0.5*d2f_dx2_p(cells, cg, n) * dist(:,1)**2
-            pot_y = df_dy_p(cells, cg, n) * dist(:,2) + &
-                     0.5*d2f_dy2_p(cells, cg, n) * dist(:,2)**2
-            pot_z = df_dz_p(cells, cg, n) * dist(:,3) + &
-                     0.5*d2f_dy2_p(cells, cg, n) * dist(:,3)**2
-
+            !pot_x = df_dx_p(cells, cg, n) * dist(:,1) + &
+            !         0.5*d2f_dx2_p(cells, cg, n) * dist(:,1)**2
+            !pot_y = df_dy_p(cells, cg, n) * dist(:,2) + &
+            !         0.5*d2f_dy2_p(cells, cg, n) * dist(:,2)**2
+            !pot_z = df_dz_p(cells, cg, n) * dist(:,3) + &
+            !         0.5*d2f_dy2_p(cells, cg, n) * dist(:,3)**2
+                     
+            dpot = df_dx_p(cells, cg, n) * dist(:, xdim) + &
+                   df_dy_p(cells, cg, n) * dist(:, ydim) + &
+                   df_dz_p(cells, cg, n) * dist(:, zdim)
+            
+            d2pot = d2f_dx2_p(cells, cg, n) * dist(:, xdim)**2 + &
+                    d2f_dy2_p(cells, cg, n) * dist(:, ydim)**2 + &
+                    d2f_dz2_p(cells, cg, n) * dist(:, zdim)**2 + &
+                    2.0*d2f_dxdy_p(cells, cg, n) * dist(:, xdim)*dist(:, ydim) + &
+                    2.0*d2f_dxdz_p(cells, cg, n) * dist(:, xdim)*dist(:, zdim)
+            
             do i = 1, n, 1
-               p = cells(i, 1)
-               q = cells(i, 2)
-               r = cells(i, 3)
-               pset%p(i)%pot = cg%gpot(p,q,r) +sqrt(pot_x(i)**2 + pot_y(i)**2 + pot_z(i)**2)
+               p = cells(i, xdim)
+               q = cells(i, ydim)
+               r = cells(i, zdim)
+               !pset%p(i)%pot = cg%gpot(p,q,r) +sqrt(pot_x(i)**2 + pot_y(i)**2 + pot_z(i)**2)
+               pset%p(i)%pot = cg%gpot(p,q,r) + dpot(i) + half*d2pot(i)
             enddo
+
+           ! pot=cg%gpot(p,q,r) + dpot+half*d2pot
          end subroutine potential
 
          subroutine get_energy(pset, cg, cells, dist, n, energy)
