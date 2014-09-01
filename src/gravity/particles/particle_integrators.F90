@@ -221,17 +221,12 @@ contains
          end function d2f_dxi_dxj
       
       end interface
-      
-      !integer(kind=8), dimension(11,3)::cells3
-      !real, dimension(11,3)::a_int,a_cic, cic_pos
 
       integer(kind=8), dimension(:,:), allocatable :: cells
       real, dimension(:,:), allocatable :: dist, acc, acc2, acc3
       
       real, intent(in) :: t_glob, dt_tot
-      !integer, dimension(:,:),allocatable :: cells
       real, dimension(:), allocatable :: mass, mins, maxs
-      !real,dimension(11,3) :: dist2
 
       real :: t_end, dt, t, dth, t_out, eta, eps, a, eps2, energy, init_energy, d_energy = 0.0, ang_momentum, init_ang_mom, d_ang_momentum = 0.0!, zero
       integer :: nsteps, n, lun_out, i, order, j, k, cdim
@@ -316,7 +311,7 @@ contains
             write(88,*)
          enddo
          close(88)
-         
+
          if(finish) stop
       endif
 
@@ -390,7 +385,7 @@ contains
 
 
          !1.kick(dth)
-         call kick(pset, acc2, dth, n)                                  !odkomentowac dla ruchu po prostej
+         call kick(pset, acc2, dth, n)
          !call kick(pset, [zero,zero,zero], dth, n)
 
          !2.drift(dt)         
@@ -638,6 +633,83 @@ contains
 
          end subroutine get_acc_cic
 
+
+         subroutine get_acc_cic_o4(pset, cg, cells, acc3, n)
+            use constants, only: ndims, CENTER, xdim, ydim, zdim, half
+            use grid_cont,        only: grid_container
+            use particle_types, only: particle_set
+
+            implicit none
+            type(grid_container), pointer, intent(in) :: cg
+            class(particle_set), intent(in) :: pset  !< particle list
+
+            integer, intent(in) :: n
+            integer :: i, j, k, c, cdim
+            integer(kind=8) :: p
+            integer(kind=8), dimension(n, ndims), intent(in) :: cells
+            integer(kind=8), dimension(n, ndims) :: cells2
+            real, dimension(n, ndims) :: dxyz
+            real, dimension(n, ndims), intent(out) :: acc3
+            real(kind=8), dimension(n, 8) :: aijk, fx, fy, fz
+
+            acc3 = 0.0
+
+
+            do i = 1, n
+               do cdim = xdim, ndims
+                  if (pset%p(i)%pos(cdim) < cg%coord(CENTER, cdim)%r(cells(i,cdim))) then
+                     cells2(i,cdim) = cells(i,cdim)-1
+                  else
+                     cells2(i,cdim) = cells(i,cdim)!+1
+                  endif
+                  dxyz(i, cdim) = abs(pset%p(i)%pos(cdim) - cg%coord(CENTER, cdim)%r(cells2(i,cdim)))
+
+               enddo
+               aijk(i, 1) = (cg%dx - dxyz(i, xdim))*(cg%dy - dxyz(i, ydim))*(cg%dz - dxyz(i, zdim)) !a(i  ,j  ,k  )
+               aijk(i, 2) = (cg%dx - dxyz(i, xdim))*(cg%dy - dxyz(i, ydim))*         dxyz(i, zdim)  !a(i+1,j  ,k  )
+               aijk(i, 3) = (cg%dx - dxyz(i, xdim))*         dxyz(i, ydim) *(cg%dz - dxyz(i, zdim)) !a(i  ,j+1,k  )
+               aijk(i, 4) = (cg%dx - dxyz(i, xdim))*         dxyz(i, ydim) *         dxyz(i, zdim)  !a(i  ,j  ,k+1)
+               aijk(i, 5) =          dxyz(i, xdim) *(cg%dy - dxyz(i, ydim))*(cg%dz - dxyz(i, zdim)) !a(i+1,j+1,k  )
+               aijk(i, 6) =          dxyz(i, xdim) *(cg%dy - dxyz(i, ydim))*         dxyz(i, zdim)  !a(i  ,j+1,k+1)
+               aijk(i, 7) =          dxyz(i, xdim) *         dxyz(i, ydim) *(cg%dz - dxyz(i, zdim)) !a(i+1,j  ,k+1)
+               aijk(i, 8) =          dxyz(i, xdim) *         dxyz(i, ydim) *         dxyz(i, zdim)  !a(i+1,j+1,k+1)
+            enddo
+
+            aijk = aijk/cg%dvol
+
+
+
+
+            do p = 1, n
+               c = 1
+               do i = 0, 1
+                  do j = 0, 1
+                     do k = 0, 1
+                        fx(p, c) = -( (2.0/3.0)*(cg%gpot(cells2(p, xdim)+1+i, cells2(p, ydim)  +j, cells2(p, zdim)  +k) - cg%gpot(cells2(p, xdim)-1+i, cells2(p, ydim)  +j, cells2(p, zdim)  +k))*cg%idx - &
+                                    (1.0/12.0) * (cg%gpot(cells2(p, xdim)+2+i, cells2(p, ydim)  +j, cells2(p, zdim)  +k) - cg%gpot(cells2(p, xdim)-2+i, cells2(p, ydim)  +j, cells2(p, zdim)  +k))*cg%idx)
+                        fy(p, c) = -( (2.0/3.0)*(cg%gpot(cells2(p, xdim)  +i, cells2(p, ydim)+1+j, cells2(p, zdim)  +k) - cg%gpot(cells2(p, xdim)  +i, cells2(p, ydim)-1+j, cells2(p, zdim)  +k))*cg%idy - &
+                                    (1.0/12.0) * (cg%gpot(cells2(p, xdim)  +i, cells2(p, ydim)+2+j, cells2(p, zdim)  +k) - cg%gpot(cells2(p, xdim)  +i, cells2(p, ydim)-2+j, cells2(p, zdim)  +k))*cg%idy)
+                        fz(p, c) = -( (2.0/3.0)*(cg%gpot(cells2(p, xdim)  +i, cells2(p, ydim)  +j, cells2(p, zdim)+1+k) - cg%gpot(cells2(p, xdim)  +i, cells2(p, ydim)  +j, cells2(p, zdim)-1+k))*cg%idz - &
+                                    (1.0/12.0) * (cg%gpot(cells2(p, xdim)  +i, cells2(p, ydim)  +j, cells2(p, zdim)+2+k) - cg%gpot(cells2(p, xdim)  +i, cells2(p, ydim)  +j, cells2(p, zdim)-2+k))*cg%idz)
+                        c = c + 1
+                     enddo
+                  enddo
+               enddo
+            enddo
+
+            fx = half*fx*cg%idx
+            fy = half*fy*cg%idy
+            fz = half*fz*cg%idz
+
+            do p = 1, n
+               do c = 1, 8
+                  acc3(p, xdim) = acc3(p, xdim) + aijk(p, c)*fx(p, c)
+                  acc3(p, ydim) = acc3(p, ydim) + aijk(p, c)*fy(p, c)
+                  acc3(p, zdim) = acc3(p, zdim) + aijk(p, c)*fz(p, c)
+               enddo
+            enddo
+
+         end subroutine get_acc_cic_o4
 
          subroutine potential(pset, cg, cells, dist, n)
             use constants,    only: ndims
