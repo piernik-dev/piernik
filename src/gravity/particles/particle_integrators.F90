@@ -269,7 +269,7 @@ contains
       order = 2
 
 
-      eta = 5.0 !1.0
+      eta = 8.0 !1.0
       eps = 1.0e-4
       eps2 = 0.00
 
@@ -282,8 +282,8 @@ contains
 
 
       !obliczenie zewnętrznego potencjalu na siatce
-      external_pot = .true.
-      !external_pot = .false.
+      !external_pot = .true.
+      external_pot = .false.
 
       if (external_pot) then
          call pot2grid(cg, mins, eps2)
@@ -343,7 +343,7 @@ contains
          acc2(:,:) = 0.0
       endif
       
-      call get_acc_cic_o4(pset, cg, cells, acc3, n)
+      call get_acc_cic(pset, cg, cells, acc3, n)
 
 
       call get_acc_max(acc3, n, a)
@@ -414,7 +414,7 @@ contains
          endif
 
 
-         call get_acc_cic_o4(pset, cg, cells, acc3, n)                     !CIC acceleration
+         call get_acc_cic(pset, cg, cells, acc3, n)                     !CIC acceleration
          call get_acc_max(acc3, n, a)                                    !max(|a_i|)
 
 
@@ -431,7 +431,7 @@ contains
          call get_ang_momentum_2(pset, n, ang_momentum)
 
          !write(*,*) ang_momentum, init_ang_mom
-         !d_ang_momentum = log(abs((ang_momentum - init_ang_mom)/init_ang_mom))
+         d_ang_momentum = log(abs((ang_momentum - init_ang_mom)/init_ang_mom))
 
          !5.t
          t = t + dt
