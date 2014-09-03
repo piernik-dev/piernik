@@ -46,12 +46,15 @@ module particle_types
       real                   :: mass       !< mass of the particle
       real, dimension(ndims) :: pos        !< physical position
       real, dimension(ndims) :: vel        !< particle velocity
-      real  :: pot                           !< gravitational potential in pos
+      real  :: pot                           !< gravitational potential in pos !potem przeniesc do particle_pot!!!
       logical                :: outside    !< this flag is true if the particle is outside the domain
    contains
       procedure :: is_outside              !< compute the outside flag
    end type particle
 
+   !type, extends (particle) :: particle_pot
+            !real  :: pot                           !< gravitational potential in pos
+   !end type particle_pot
    !> \brief A list of particles and some associated methods
 
    type :: particle_set
@@ -382,7 +385,7 @@ contains
                enddo
             end associate
          enddo
-         print *, sum(cgl%cg%q(iv)%arr)
+         !print *, sum(cgl%cg%q(iv)%arr)
          cgl => cgl%nxt
       enddo
 
