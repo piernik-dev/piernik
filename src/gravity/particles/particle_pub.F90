@@ -39,7 +39,7 @@ module particle_pub
 
    implicit none
    private
-   public :: pset, psolver, init_particles, cleanup_particles, time_integrator
+   public :: pset, psolver, init_particles, cleanup_particles
 
    type(particle_set) :: pset !< default particle list
    class(particle_solver_T), pointer :: psolver
