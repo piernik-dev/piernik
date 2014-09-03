@@ -39,7 +39,7 @@ module particle_pub
 
    implicit none
    private
-   public :: pset, psolver, init_particles, cleanup_particles
+   public :: pset, psolver, init_particles, cleanup_particles, time_integrator
 
    type(particle_set) :: pset !< default particle list
    class(particle_solver_T), pointer :: psolver
@@ -133,5 +133,7 @@ contains
      call pset%cleanup
 
    end subroutine cleanup_particles
+   
+
 
 end module particle_pub
