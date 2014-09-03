@@ -222,20 +222,48 @@ contains
       
       end interface
 
-      integer(kind=8), dimension(:,:), allocatable :: cells
-      real, dimension(:,:), allocatable :: dist, acc, acc2, acc3
-      
-      real, intent(in) :: t_glob, dt_tot
-      real, dimension(:), allocatable :: mass, mins, maxs
+      integer(kind=8),dimension(:,:),allocatable	:: cells				!< cells where the particles are
+      real,dimension(:,:),allocatable					:: dist				!< distances between positions of particles and centers of the cells
+      real,dimension(:,:),allocatable					:: acc				!< 3D array of particles acceleration taken from Lagrange polynomial interpolation
+      real,dimension(:,:),allocatable					:: acc2				!< 3D array of particles acceleration taken from model
+      real,dimension(:,:),allocatable					:: acc3				!< 3D array of particles acceleration taken from CIC
 
-      real :: t_end, dt, t, dth, t_out, eta, eps, a, eps2, energy, init_energy, d_energy = 0.0, ang_momentum, init_ang_mom, d_ang_momentum = 0.0!, zero
-      integer :: nsteps, n, lun_out, i, order, j, k, cdim
-      real, parameter :: dt_out = 0.05          ! time interval between output of snapshots
-      logical :: save_potential,finish,external_pot,var_timestep
+      real, intent(in)										:: t_glob			!< initial time of simulation
+      real, intent(in)										:: dt_tot			!< final time of simulation
+      real, dimension(:), allocatable					:: mass				!< 1D array of mass of the particles
+      real, dimension(:), allocatable					:: mins				!< left physical borders of the domain
+      real, dimension(:), allocatable					:: maxs				!< right physical borders of the domain
 
-      procedure(df_dxi),pointer :: df_dx_p, df_dy_p, df_dz_p
-      procedure(d2f_dxi_2),pointer :: d2f_dx2_p, d2f_dy2_p, d2f_dz2_p
-      procedure(d2f_dxi_dxj),pointer :: d2f_dxdy_p, d2f_dxdz_p, d2f_dydz_p
+      real														:: t_end				!< finial time of leapfrog simulation
+		real														:: dt					!< leaprfog timestep
+		real														:: dth				!< half of timestep, dth = 0.5*dt
+		real														:: t					!< current time in leapfrog simulation
+		real														:: t_out				!< time of snapshot?
+		real														:: eta				!< empirical variable, decides of variable timestep, see http://adsabs.harvard.edu/abs/2005MNRAS.364.1105S p.1116
+		real														:: eps				!< empirical variable, decides of variable timestep, should be equal to the gravitational softening constant, see http://adsabs.harvard.edu/abs/2005MNRAS.364.1105S p.1116
+		real														:: a					!< maximum acceleration in the set of particles, decides of variable timestep, see http://adsabs.harvard.edu/abs/2005MNRAS.364.1105S p.1116
+		real														:: eps2				!< gravitational softening used to external gravitational potential computation, should be equal to zero
+		real														:: energy			!< total energy of set of particles
+		real														:: init_energy		!< total energy of set of particles at t_glob
+		real														:: d_energy = 0.0	!< error of energy of set of particles in succeeding timesteps, at t=t_glob=0.0
+		real														:: ang_momentum	!< angular momentum of set of particles
+		real														:: init_ang_mom	!< angular momentum of set of particles at t_glob
+		real														:: d_ang_momentum = 0.0	!< error of angular momentum in succeeding timensteps, at t=t_glob=0.0
+
+      integer													:: i, j, k, cdim
+		integer													:: nsteps
+		integer													:: n					!< number of particles
+		integer													:: lun_out			!< output file
+		integer													:: order				!< order of Lagrange polynomials
+      real, parameter										:: dt_out = 0.05  !< time interval between output of snapshots
+      logical													:: save_potential !< save external potential or not save: that is the question
+      logical													:: finish			!< if .true. stop simulation with saving extrenal potential (works only if save_potential==.true.)
+      logical													:: external_pot	!< if .true. gravitational potential will be deleted and replaced by external potential of point mass
+      logical													:: var_timestep	!< if .true. variable timestep will be used
+
+      procedure(df_dxi),pointer :: df_dx_p, df_dy_p, df_dz_p					! COMMENT ME
+      procedure(d2f_dxi_2),pointer :: d2f_dx2_p, d2f_dy2_p, d2f_dz2_p		! COMMENT ME
+      procedure(d2f_dxi_dxj),pointer :: d2f_dxdy_p, d2f_dxdz_p, d2f_dydz_p	! COMMENT ME
       
       
       open(newunit=lun_out, file='leapfrog_out.log', status='unknown',  position='append')
@@ -259,7 +287,10 @@ contains
       t_end = t + dt_tot
       t_out = t_glob + dt_out
 
-
+#ifdef REST
+   write(*,*) "test dziala"
+   stop
+#endif /* REST */
 
       mins(:) = dom%edge(:,1)
 
@@ -319,9 +350,7 @@ contains
       call get_ang_momentum_2(pset, n, ang_momentum)
       init_ang_mom = ang_momentum
 
-
       call find_cells(pset, cells, dist, mins, cg, n)
-
 
       call check_ord(order, df_dx_p, d2f_dx2_p, df_dy_p, d2f_dy2_p,& 
                         df_dz_p, d2f_dz2_p, d2f_dxdy_p, d2f_dxdz_p, d2f_dydz_p)
@@ -395,12 +424,12 @@ contains
 
          !ekstrapolacja potencjalu w przypadku samograwitacji
          !czegos tu brakuje :/
-!#ifdef SELF_GRAV
-!         call leaves%q_copy(qna%ind(sgp_n), qna%ind(sgpm_n))
-!         call leaves%q_lin_comb([ ind_val(qna%ind(gp_n), 1.), ind_val(qna%ind(sgp_n), one+dt),  ind_val(qna%ind(sgpm_n), -dt) ], qna%ind(gpot_n))
-!         call leaves%q_lin_comb([ ind_val(qna%ind(gp_n), 1.), ind_val(qna%ind(sgp_n), one+dth), ind_val(qna%ind(sgpm_n), -dth)], qna%ind(hgpot_n))
-!         write(*,*) "Self_GRAV!"
-!#endif /* SELF_GRAV */
+#ifdef SELF_GRAV
+         call leaves%q_copy(qna%ind(sgp_n), qna%ind(sgpm_n))
+         call leaves%q_lin_comb([ ind_val(qna%ind(gp_n), 1.), ind_val(qna%ind(sgp_n), one+dt),  ind_val(qna%ind(sgpm_n), -dt) ], qna%ind(gpot_n))
+         call leaves%q_lin_comb([ ind_val(qna%ind(gp_n), 1.), ind_val(qna%ind(sgp_n), one+dth), ind_val(qna%ind(sgpm_n), -dth)], qna%ind(hgpot_n))
+         write(*,*) "Self_GRAV!"
+#endif /* SELF_GRAV */
 
 
          call find_cells(pset, cells, dist, mins, cg, n)                !finding cells
@@ -431,7 +460,7 @@ contains
          call get_ang_momentum_2(pset, n, ang_momentum)
 
          !write(*,*) ang_momentum, init_ang_mom
-         d_ang_momentum = log(abs((ang_momentum - init_ang_mom)/init_ang_mom))
+         !d_ang_momentum = log(abs((ang_momentum - init_ang_mom)/init_ang_mom))
 
          !5.t
          t = t + dt
