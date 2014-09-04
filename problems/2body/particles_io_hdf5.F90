@@ -17,7 +17,7 @@ module particles_io_hdf5
       
       character(len=128)                 :: hdf_name
 
-      integer(kind=4)                    :: error, rank, iv
+      integer(kind=4)                    :: error, rank
       integer(HID_T)                     :: file_id, dataspace_id, dataset_id
       integer(SIZE_T)                    :: bufsize
       integer(HSIZE_T), dimension(2)     :: dimm
@@ -59,7 +59,7 @@ module particles_io_hdf5
    end subroutine write_hdf5
 
 
-   subroutine read_hdf5(table,n)
+   subroutine read_hdf5(table, n)
 
       use hdf5,  only: h5open_f, h5close_f, h5fopen_f, h5fclose_f, h5dopen_f, h5dclose_f, h5dread_f, h5dget_space_f
       use hdf5,  only: HID_T, HSIZE_T, H5F_ACC_RDONLY_F, H5T_NATIVE_DOUBLE
@@ -70,7 +70,7 @@ module particles_io_hdf5
 
       character(len=128)                       :: hdf_name='test_01.h5'
 
-      integer(kind=4)                          :: error, iv,time
+      integer(kind=4)                          :: error,time
       integer(HID_T)                           :: file_id, dataset_id
       integer(HSIZE_T), dimension(2)           :: dimm
       !character(len=5), dimension(4)           :: vars
