@@ -172,7 +172,7 @@ contains
 
 
    subroutine leapfrog2ord(pset, t_glob, dt_tot)
-      use constants, only: ndims, CENTER, xdim, ydim, zdim, zero
+      use constants, only: ndims, CENTER, xdim, zdim, half, zero
       use particle_types, only: particle_set
       use domain, only: dom
       use cg_leaves,    only: leaves
@@ -180,7 +180,7 @@ contains
       use grid_cont,    only: grid_container
 #ifdef SELF_GRAV
       use cg_list_dataop,   only: ind_val
-      use constants,        only: gp_n, gpot_n, hgpot_n, one, half, sgp_n, sgpm_n
+      use constants,        only: gp_n, gpot_n, hgpot_n, one, sgp_n, sgpm_n
       use named_array_list, only: qna
 #endif /* SELF_GRAV */
 
@@ -222,52 +222,52 @@ contains
       
       end interface
 
-      integer(kind=8),dimension(:,:),allocatable	:: cells				!< cells where the particles are
-      real,dimension(:,:),allocatable					:: dist				!< distances between positions of particles and centers of the cells
-      real,dimension(:,:),allocatable					:: acc				!< 3D array of particles acceleration taken from Lagrange polynomial interpolation
-      real,dimension(:,:),allocatable					:: acc2				!< 3D array of particles acceleration taken from model
-      real,dimension(:,:),allocatable					:: acc3				!< 3D array of particles acceleration taken from CIC
+      integer(kind=8), dimension(:,:), allocatable      :: cells          !< cells where the particles are
+      real, dimension(:,:), allocatable                  :: dist           !< distances between positions of particles and centers of the cells
+      real, dimension(:,:), allocatable                  :: acc            !< 3D array of particles acceleration taken from Lagrange polynomial interpolation
+      real, dimension(:,:), allocatable                  :: acc2           !< 3D array of particles acceleration taken from model
+      real, dimension(:,:), allocatable                  :: acc3           !< 3D array of particles acceleration taken from CIC
 
-      real, intent(in)										:: t_glob			!< initial time of simulation
-      real, intent(in)										:: dt_tot			!< final time of simulation
-      real, dimension(:), allocatable					:: mass				!< 1D array of mass of the particles
-      real, dimension(:), allocatable					:: mins				!< left physical borders of the domain
-      real, dimension(:), allocatable					:: maxs				!< right physical borders of the domain
+      real, intent(in)                            :: t_glob           !< initial time of simulation
+      real, intent(in)                            :: dt_tot           !< final time of simulation
+      real, dimension(:), allocatable           :: mass             !< 1D array of mass of the particles
+      real, dimension(:), allocatable           :: mins             !< left physical borders of the domain
+      real, dimension(:), allocatable           :: maxs             !< right physical borders of the domain
 
-      real														:: t_end				!< finial time of leapfrog simulation
-		real														:: dt					!< leaprfog timestep
-		real														:: dth				!< half of timestep, dth = 0.5*dt
-		real														:: t					!< current time in leapfrog simulation
-		real														:: t_out				!< time of snapshot?
-		real														:: eta				!< empirical variable, decides of variable timestep, see http://adsabs.harvard.edu/abs/2005MNRAS.364.1105S p.1116
-		real														:: eps				!< empirical variable, decides of variable timestep, should be equal to the gravitational softening constant, see http://adsabs.harvard.edu/abs/2005MNRAS.364.1105S p.1116
-		real														:: a					!< maximum acceleration in the set of particles, decides of variable timestep, see http://adsabs.harvard.edu/abs/2005MNRAS.364.1105S p.1116
-		real														:: eps2				!< gravitational softening used to external gravitational potential computation, should be equal to zero
-		real														:: energy			!< total energy of set of particles
-		real														:: init_energy		!< total energy of set of particles at t_glob
-		real														:: d_energy = 0.0	!< error of energy of set of particles in succeeding timesteps, at t=t_glob=0.0
-		real														:: ang_momentum	!< angular momentum of set of particles
-		real														:: init_ang_mom	!< angular momentum of set of particles at t_glob
-		real														:: d_ang_momentum = 0.0	!< error of angular momentum in succeeding timensteps, at t=t_glob=0.0
+      real                                         :: t_end             !< finial time of leapfrog simulation
+      real                                         :: dt                !< leaprfog timestep
+      real                                         :: dth               !< half of timestep, dth = 0.5*dt
+      real                                         :: t                 !< current time in leapfrog simulation
+      real                                         :: t_out             !< time of snapshot?
+      real                                         :: eta               !< empirical variable, decides of variable timestep, see http://adsabs.harvard.edu/abs/2005MNRAS.364.1105S p.1116
+      real                                         :: eps               !< empirical variable, decides of variable timestep, should be equal to the gravitational softening constant, see http://adsabs.harvard.edu/abs/2005MNRAS.364.1105S p.1116
+      real                                         :: a                 !< maximum acceleration in the set of particles, decides of variable timestep, see http://adsabs.harvard.edu/abs/2005MNRAS.364.1105S p.1116
+      real                                         :: eps2              !< gravitational softening used to external gravitational potential computation, should be equal to zero
+      real                                         :: energy            !< total energy of set of particles
+      real                                         :: init_energy       !< total energy of set of particles at t_glob
+      real                                         :: d_energy = 0.0    !< error of energy of set of particles in succeeding timesteps, at t=t_glob=0.0
+      real                                         :: ang_momentum      !< angular momentum of set of particles
+      real                                         :: init_ang_mom      !< angular momentum of set of particles at t_glob
+      real                                         :: d_ang_momentum = 0.0 !< error of angular momentum in succeeding timensteps, at t=t_glob=0.0
 
-      integer													:: i, j, k, cdim
-		integer													:: nsteps
-		integer													:: n					!< number of particles
-		integer													:: lun_out			!< output file
-		integer													:: order				!< order of Lagrange polynomials
-      real, parameter										:: dt_out = 0.05  !< time interval between output of snapshots
-      logical													:: save_potential !< save external potential or not save: that is the question
-      logical													:: finish			!< if .true. stop simulation with saving extrenal potential (works only if save_potential==.true.)
-      logical													:: external_pot	!< if .true. gravitational potential will be deleted and replaced by external potential of point mass
-      logical													:: var_timestep	!< if .true. variable timestep will be used
+      integer                                      :: i, j, k!, cdim
+      integer                                      :: nsteps
+      integer                                      :: n                 !< number of particles
+      integer                                      :: lun_out           !< output file
+      integer                                      :: order             !< order of Lagrange polynomials
+      real, parameter                              :: dt_out = 0.05     !< time interval between output of snapshots
+      logical                                      :: save_potential    !< save external potential or not save: that is the question
+      logical                                      :: finish            !< if .true. stop simulation with saving extrenal potential (works only if save_potential==.true.)
+      logical                                      :: external_pot      !< if .true. gravitational potential will be deleted and replaced by external potential of point mass
+      logical                                      :: var_timestep      !< if .true. variable timestep will be used
 
-      procedure(df_dxi),pointer :: df_dx_p, df_dy_p, df_dz_p					! COMMENT ME
-      procedure(d2f_dxi_2),pointer :: d2f_dx2_p, d2f_dy2_p, d2f_dz2_p		! COMMENT ME
-      procedure(d2f_dxi_dxj),pointer :: d2f_dxdy_p, d2f_dxdz_p, d2f_dydz_p	! COMMENT ME
-      
-      
+      procedure(df_dxi),      pointer :: df_dx_p, df_dy_p, df_dz_p          ! COMMENT ME
+      procedure(d2f_dxi_2),   pointer :: d2f_dx2_p, d2f_dy2_p, d2f_dz2_p    ! COMMENT ME
+      procedure(d2f_dxi_dxj), pointer :: d2f_dxdy_p, d2f_dxdz_p, d2f_dydz_p ! COMMENT ME
+
+
       open(newunit=lun_out, file='leapfrog_out.log', status='unknown',  position='append')
-      
+
       n = size(pset%p, dim=1)
 
 
@@ -287,10 +287,10 @@ contains
       t_end = t + dt_tot
       t_out = t_glob + dt_out
 
-#ifdef REST
-   write(*,*) "test dziala"
-   stop
-#endif /* REST */
+!#ifdef REST
+!   write(*,*) "test dziala"
+!   stop
+!#endif /* REST */
 
       mins(:) = dom%edge(:,1)
 
@@ -302,7 +302,7 @@ contains
 
       eta = 8.0 !1.0
       eps = 1.0e-4
-      eps2 = 0.00
+      eps2 = zero
 
 
       cgl => leaves%first
@@ -317,7 +317,7 @@ contains
       external_pot = .false.
 
       if (external_pot) then
-         call pot2grid(cg, mins, eps2)
+         call pot2grid(cg, eps2)
          write(*,*) "Obliczono potencjal zewnetrzny"
       endif
 
@@ -389,7 +389,7 @@ contains
          dt = 0.1
          !dt = 0.01                            !constant
       endif
-      dth = dt/2.0
+      dth = half*dt
 
 
       nsteps = 0
@@ -450,7 +450,7 @@ contains
          !4.kick(dth)
          !call kick(pset, acc, dth, n)                                  !zakomentowac dla ruchu po prostej
          call kick(pset, acc3, dth, n)
-         !call kick(pset, [zero,zero,zero], dth, n)                     !odkomentowac dla ruchu po prostej
+
 
 
          call get_energy(pset, cg, cells, dist, n, energy)
@@ -464,7 +464,7 @@ contains
 
          !5.t
          t = t + dt
-         !6.dt		!dt[n+1]
+         !6.dt   !dt[n+1]
          if (var_timestep) then
             dt = sqrt(2.0*eta*eps/a)
             dth = 0.5*dt
@@ -517,8 +517,8 @@ contains
 
          function phi_pm(x, y, z, eps)
             implicit none
-               real,intent(in) :: x, y, z, eps
-               real::r, phi_pm, G,M 
+               real, intent(in) :: x, y, z, eps
+               real :: r, phi_pm, G,M 
                   G = 1.0
                   M = 1.0
                   r = sqrt(x**2 + y**2 + z**2 + eps**2)
@@ -527,13 +527,12 @@ contains
          end function phi_pm
 
 
-         subroutine pot2grid(cg, mins, eps2)
-            use constants, only: ndims,xdim,ydim,CENTER
+         subroutine pot2grid(cg, eps2)
+            use constants, only: xdim, ydim, CENTER
             use grid_cont, only: grid_container
             implicit none
                type(grid_container), pointer, intent(inout) :: cg
                integer :: i, j, k
-               real,dimension(ndims),intent(in) :: mins
                real, intent(in) :: eps2
 
                open(unit=77,file='potencjal.dat')
@@ -542,9 +541,6 @@ contains
                   do i = lbound(cg%gpot, dim=1), ubound(cg%gpot, dim=1)
                      do j = lbound(cg%gpot, dim=2), ubound(cg%gpot, dim=2)
                         do k = lbound(cg%gpot, dim=3), ubound(cg%gpot, dim=3)
-                           !cg%gpot(i, j, k) = phi_pm(mins(1) + (i-0.5)*cg%dx, &
-                           !                          mins(2) + (j-0.5)*cg%dy, &
-                           !                          mins(3) + (k-0.5)*cg%dz, eps)
                            cg%gpot(i,j,k) = phi_pm(cg%coord(CENTER,xdim)%r(i),&
                                                    cg%coord(CENTER,ydim)%r(j),&
                                                    cg%coord(CENTER,zdim)%r(k),eps2)
@@ -665,7 +661,7 @@ contains
 
 
          subroutine get_acc_cic_o4(pset, cg, cells, acc3, n)
-            use constants, only: ndims, CENTER, xdim, ydim, zdim, half
+            use constants, only: ndims, CENTER, xdim, ydim, zdim
             use grid_cont,        only: grid_container
             use particle_types, only: particle_set
 
@@ -727,10 +723,6 @@ contains
                enddo
             enddo
 
-            !fx = half*fx*cg%idx
-            !fy = half*fy*cg%idy
-            !fz = half*fz*cg%idz
-
             do p = 1, n
                do c = 1, 8
                   acc3(p, xdim) = acc3(p, xdim) + aijk(p, c)*fx(p, c)
@@ -752,16 +744,9 @@ contains
             real(kind=8), dimension(n, ndims), intent(in) :: dist
             integer :: i
             integer (kind=8) :: p, q, r
-            real,dimension(n):: pot_x,pot_y,pot_z,dpot,d2pot
+            real,dimension(n) :: dpot, d2pot
 
 
-            !pot_x = df_dx_p(cells, cg, n) * dist(:,1) + &
-            !         0.5*d2f_dx2_p(cells, cg, n) * dist(:,1)**2
-            !pot_y = df_dy_p(cells, cg, n) * dist(:,2) + &
-            !         0.5*d2f_dy2_p(cells, cg, n) * dist(:,2)**2
-            !pot_z = df_dz_p(cells, cg, n) * dist(:,3) + &
-            !         0.5*d2f_dy2_p(cells, cg, n) * dist(:,3)**2
-                     
             dpot = df_dx_p(cells, cg, n) * dist(:, xdim) + &
                    df_dy_p(cells, cg, n) * dist(:, ydim) + &
                    df_dz_p(cells, cg, n) * dist(:, zdim)
@@ -898,7 +883,7 @@ contains
 
          
          subroutine find_cells(pset, cells, dist, mins, cg, n)
-            use constants, only: ndims, xdim, ydim, zdim, CENTER
+            use constants, only: ndims, xdim, CENTER
             use grid_cont,  only: grid_container
             implicit none
                class(particle_set), intent(in) :: pset  !< particle list
@@ -911,7 +896,7 @@ contains
 
 
 
-               do i=1, n
+               do i = 1, n
                   do cdim = xdim, ndims
                      cells(i,cdim) = int( 0.5 + (pset%p(i)%pos(cdim) - cg%coord(CENTER,cdim)%r(0)) / cg%dl(cdim) )! + 1
                   enddo
@@ -923,9 +908,9 @@ contains
                   enddo
                enddo
 
-               do i=1,n
+               do i = 1,n
                   do cdim = xdim, ndims
-                     if (pset%p(i)%pos(cdim)<mins(cdim)) then
+                     if (pset%p(i)%pos(cdim) < mins(cdim)) then
                         write(*,*) "przekroczono"
                         stop
                      endif
@@ -969,7 +954,6 @@ contains
                type(grid_container), pointer, intent(in) :: cg
                !integer, intent(in) :: n
                integer,dimension(ndims),intent(in) :: cells
-               integer :: i
                integer(kind=8) :: p, q, r
                real :: df_dx_o2_1
 
@@ -1012,7 +996,6 @@ contains
                type(grid_container), pointer, intent(in) :: cg
                !integer, intent(in) :: n
                integer,dimension(ndims),intent(in) :: cells
-               integer :: i
                integer(kind=8) :: p, q, r
                real:: df_dy_o2_1
 
@@ -1055,7 +1038,6 @@ contains
                type(grid_container), pointer, intent(in) :: cg
               ! integer, intent(in) :: n
                integer,dimension(ndims),intent(in) :: cells
-               integer :: i
                integer(kind=8) :: p, q, r
                real :: df_dz_o2_1
 
