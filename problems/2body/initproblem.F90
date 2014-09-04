@@ -47,14 +47,17 @@ contains
    subroutine problem_pointers
 
       implicit none
+      
+
 
    end subroutine problem_pointers
 !-----------------------------------------------------------------------------
    subroutine read_problem_par
 
       implicit none
+
       !call print_essential_units
-      !call print_essential_units
+
 
    end subroutine read_problem_par
 !-----------------------------------------------------------------------------
@@ -66,21 +69,18 @@ contains
       use dataio_pub,   only: printinfo
       use fluidindex,   only: flind
       use particle_pub, only: pset
-      !use gravity,      only: ptmass
-      !use units,        only: newtong
+      
       !use particles_io_hdf5
 
       implicit none
 
-      integer                          :: i, j, k, p, n_particles
-      !real                              :: dtheta
-      real(kind=4)                     :: e
-      !real,dimension(3)                :: pos_init, vel_init
-      !real,parameter                   :: pi2=6.283185307
-      logical,save                     :: first_run = .true.
+      integer                          :: i, j, k, p
+      integer                         :: n_particles        !< number of particles
+      real(kind=4)                    :: e                  !< orbit eccentricity
+      logical,save                    :: first_run = .true.
       type(cg_list_element),  pointer  :: cgl
 
-      
+    
       do p = lbound(flind%all_fluids, dim=1), ubound(flind%all_fluids, dim=1)
          cgl => leaves%first
          do while (associated(cgl))
@@ -104,19 +104,22 @@ contains
       enddo
 
 
+!if leapfrog then 
       e = 0.0
 
       n_particles = 1
-      !write(*,*) "int(3/3)=",int(3.0/3.0)
-      
+
       call orbits(n_particles, e, first_run)
       !call relax_time(n_particles, first_run)
       !call read_buildgal
       
-      
+!else 
+!dodanie czastek w realizacji hermite'a!!!
 
 
       contains
+
+!< \brief rotate (x,y,z) vector by an angle theta
 
       function positions(dtheta, pos_init)
          implicit none
@@ -125,34 +128,47 @@ contains
                positions = rotate(dtheta, pos_init)
       end function positions
 
+!<
+!! \brief compute velocity of particle
+!!
+!! \details compute velocity of particle with position pos_init and eccentricity e <0,1)
+!!
+!! \warning it works properly only in XY plane and with unset units 
+!>
 
       function velocities(pos_init, e)
+         use constants,             only: zero, one
+         use dataio_pub,            only: die
          implicit none
-            real, dimension(3) :: pos_init, velocities
-            real :: a, r
+            real, dimension(3)   :: pos_init, velocities
+            real                 :: a        !< semi-major axis of elliptical orbit of particle
+            real                 :: r        !< lenght of radius vector
             real(kind=4) :: e
-            real, parameter :: mu = 1.0,G=1.0, M=1.0, zero = 0.0
-            if((e<0.0) .or. (e>=1.0)) then
-               write(*,*) "Bledna wartosc mimosrodu! Zatrzymano!"
-               stop
+            real, parameter :: mu = 1.0, G=1.0, M=1.0
+            
+            if( (e < zero) .or. (e >= one) ) then
+               call die("[initproblem:velocities] Invalid eccentricity")
             else
-               r = sqrt(pos_init(1)**2+pos_init(2)**2+pos_init(3)**2)
-               if (e==zero) then
+               r = sqrt(pos_init(1)**2 + pos_init(2)**2 + pos_init(3)**2)
+
+               if (e == zero) then
                   velocities(2) = sqrt(G*M/r)
                   write(*,*) "Orbita kolowa"
                else
-
                   a = r/(1.0 + e)
                   velocities(2) = sqrt(mu*(2.0/r - 1.0/a))
                   write(*,'(A11,F4.2,A3,F5.3,A3,F5.3)') "#Elipsa: e=", e, " a=",a, " b=", a*sqrt(1.0 - e**2)
-                  !lenght = pi*( (x0/(1.0+e))*(1.5*(1.0+sqrt(1.0-e**2)) - (1.0-e**2)**0.25))
                endif
-            endif!
+            endif
             velocities(1) = 0.0
-            !velocities(2) = vy
             velocities(3) = 0.0
       end function velocities
-      
+
+!< 
+!! \brief rotate vector over one of the axes by an angle theta
+!!
+!! \todo add to selection of axis (next variable)
+!>
       function rotate (theta, vector)
          implicit none
             real, dimension(3) :: vector, rotate
@@ -174,25 +190,26 @@ contains
    
       subroutine orbits(n_particles, e, first_run)
          use particle_pub, only: pset
+         use constants,    only: dpi
          implicit none
          integer,intent(in)            :: n_particles
          real(kind=4),intent(in)       :: e
          real,dimension(3)             :: pos_init, vel_init
-         real                           :: dtheta,zero = 0.0
-         real,parameter                :: pi2=6.283185307
+         real                           :: dtheta
+         !real,parameter                :: pi2=6.283185307
          logical,intent(inout)         :: first_run
          
          write(*,*) "Number of particles: ", n_particles
          
-         dtheta = pi2/n_particles
-         !write(*,*) "1/0: ", 1.0/zero
+         dtheta = dpi/n_particles
+
 
          pos_init(1) = 2.0
          pos_init(2) = 0.0
          pos_init(3) = 0.0
-         
+
          vel_init = velocities(pos_init, e)
-         
+
          if(first_run) then
             !call pset%add(1.1, [ 0.9700436, -0.24308753, 0.0], [ 0.466203685, 0.43236573, 0.0], 0.0)
             !call pset%add(1.1, [-0.9700436, 0.24308753, 0.0], [ 0.466203685, 0.43236573, 0.0],0.0)
@@ -201,7 +218,7 @@ contains
                !call pset%add(1.0, pos_init, vel_init,0.0 ) !orbita eliptyczna
                !call pset%add(1.0, [4.54545454545455, 0.0, 0.0],[-0.909090909090909, 0.0, 0.0], 0.0)
                
-               !call pset%add(1.0, [5.0, 0.0, 0.0],[-0.909090909090909, 0.0, 0.0], 0.0) !10 na komorke
+               !call pset%add(1.0, [4.8, 2.0, 0.0],[-1.0, 0.0, 0.0], 0.0) !10 na komorke
                !call pset%add(1.0, [4.54545454545455, 0.0, 0.0],[-9.09090909090909, 0.0, 0.0], 0.0) !srodki
                !call pset%add(1.0, [4.54545454545455, 0.454545454545455, 0.0],[-0.909090909090909, 0.0, 0.0], 0.0) !j=1/2 sciana
                !call pset%add(1.0, [4.54545454545455, 3.0*0.909090909090909, 0.0],[-0.909090909090909, 0.0, 0.0], 0.0) !j=1
@@ -210,30 +227,41 @@ contains
                !vel_init = rotate(dtheta, vel_init)
             !enddo
 
-            call pset%add(10.0, [0.0,0.0,0.0],[0.0,0.0,0.0],0.0)
-            call pset%add(1.0, [2.0,2.0,0.0],[0.0,0.0,0.0],0.0)
+            call pset%add(100.0, [0.0,0.0,0.0],[0.0,0.0,0.0],0.0)
+            call pset%add(0.1, [3.0,3.0,0.0],[0.0,0.0,0.0],0.0)
            
             first_run = .false.
             
             write(*,*) "Obliczono pozycje czastek "
          endif
       end subroutine orbits
-      
+
+
+
+!< \brief create a set of particles in random positions inside a sphere
+
       subroutine relax_time(n_particles, first_run)
          use particle_pub, only: pset
-         use particles_io_hdf5!, only: write_hdf5, read_hdf5
+#ifdef HDF5
+         use particles_io_hdf5, only: write_hdf5, read_hdf5
+#endif /* HDF5 */
+
          implicit none
-         integer :: i, j
-         integer,parameter :: seed = 86437
-         integer,intent(in) :: n_particles
-         logical,intent(inout) :: first_run
+
+         integer                          :: i, j
+         integer, parameter              :: seed = 86437
+         integer, intent(in)             :: n_particles
+         logical, intent(inout)          :: first_run
+
          real, dimension(n_particles, 3) :: pos_init, pos_init2!,vel_init
-         real,dimension(3,2) :: domain
-         real :: tmp, factor, x, y, z, r, r_dom
-         real, parameter :: onesixth = 1.0/6.0
-         real, dimension(n_particles,3) :: vel2hdf5,pos2hdf5
-         
-         !allocate(pos2hdf5(n_particles,3), vel2hdf5(n_particles,3))
+         real, dimension(3, 2)           :: domain
+
+         real                             :: factor, r_dom
+         real, parameter                 :: onesixth = 1.0/6.0
+
+#ifdef HDF5
+         real, dimension(n_particles, 3) :: pos2hdf5!, vel2hdf5
+#endif /* HDF5 */
          
          domain(1,1) = -5.0
          domain(2,1) = -5.0
@@ -241,14 +269,14 @@ contains
          domain(1,2) = 5.0
          domain(2,2) = 5.0
          domain(3,2) = 5.0
-         
+
          write(*,*) "Number of particles: ", n_particles
+
          call srand(seed)
          r_dom = onesixth*sqrt(domain(1,2)**2 + domain(2,2)**2 + domain(3,2)**2)
-         
+
 
          if(first_run) then
-            !open(unit=37, file="particles.dat")
             do i = 1, n_particles
                r = r_dom
                do while ((r>=r_dom))
@@ -257,32 +285,25 @@ contains
                      pos_init(i, j) = sign(rand(0)*domain(j, 2),factor-0.5)
                   enddo
                   r = sqrt(pos_init(i,1)**2 + pos_init(i,2)**2 + pos_init(i,3)**2)
-                  !write(*,*) i, r
                enddo
-               !write(37, *) i, pos_init(i,:)
-               pos2hdf5(i,:) = pos_init(i,:)
+#ifdef HDF5
+               pos2hdf5(i, :) = pos_init(i,:)
+#endif /* HDF5 */
                call pset%add(1.0, pos_init(i,:), [0.0,0.0,0.0],0.0 )
             enddo
-            !close(37)
             first_run = .false.
             write(*,*) "Obliczono pozycje czastek"
-            !write(*,*) pos_init
+#ifdef HDF5
             call write_hdf5(pos_init, n_particles)
-            call read_hdf5(pos_init2, n_particles)
-            !write(*,*) pos_init
-            !write(*,*)
-            !write(*,*)
-            !write(*,*) pos_init2
-            !write(*,*)
-            !write(*,*) pos_init - pos_init2
+            !call read_hdf5(pos_init2, n_particles)
+#endif /* HDF5 */
          endif
-         
-         !stop
 
       end subroutine relax_time
 
    end subroutine problem_initial_conditions
-   
+
+
       subroutine print_essential_units
 
       use dataio_pub, only: msg, printinfo
@@ -324,7 +345,7 @@ contains
    subroutine read_buildgal
       use particle_pub, only: pset
       implicit none
-      integer :: i, j, nbodies,dims=3
+      integer :: i, j, nbodies, dims=3
       integer :: galfile=1
       character(len=6) :: galname="SPIRAL"
       real,dimension(:,:), allocatable :: pos, vel
@@ -344,13 +365,12 @@ contains
       
       open(unit=2,file='galtest.dat')
          do i=1,nbodies
-         if (modulo(i,1000) .eq. 0.0) then
-            write(*,*) i!, mass(i), pos(i,:), vel(i,:)
+         if (modulo(i, 1000) .eq. 0.0) then
+            write(*,*) i
          endif
             call pset%add(mass(i), pos(i,:), vel(i,:),0.0)
          enddo
       close(2)
-      !!pset%add(mass(i), [pos(i,:)], [vel(i,:)],0.0)
 
    end subroutine read_buildgal
 
