@@ -69,6 +69,7 @@ contains
       use dataio_pub,   only: printinfo
       use fluidindex,   only: flind
       use particle_pub, only: pset
+
       
       !use particles_io_hdf5
 
@@ -78,7 +79,7 @@ contains
       integer                         :: n_particles        !< number of particles
       real(kind=4)                    :: e                  !< orbit eccentricity
       logical,save                    :: first_run = .true.
-      type(cg_list_element),  pointer  :: cgl
+      type(cg_list_element), pointer  :: cgl
 
     
       do p = lbound(flind%all_fluids, dim=1), ubound(flind%all_fluids, dim=1)
@@ -105,7 +106,7 @@ contains
 
 
 !if leapfrog then 
-      e = 0.0
+      e = 0.7
 
       n_particles = 1
 
@@ -139,20 +140,23 @@ contains
       function velocities(pos_init, e)
          use constants,             only: zero, one
          use dataio_pub,            only: die
+         use units,                 only: newtong
          implicit none
             real, dimension(3)   :: pos_init, velocities
             real                 :: a        !< semi-major axis of elliptical orbit of particle
             real                 :: r        !< lenght of radius vector
-            real(kind=4) :: e
-            real, parameter :: mu = 1.0, G=1.0, M=1.0
+            real(kind=4)         :: e
+            real                 :: mu
+            real, parameter :: G=1.0, M=1.0
             
+            mu = newtong*M
             if( (e < zero) .or. (e >= one) ) then
                call die("[initproblem:velocities] Invalid eccentricity")
             else
                r = sqrt(pos_init(1)**2 + pos_init(2)**2 + pos_init(3)**2)
 
                if (e == zero) then
-                  velocities(2) = sqrt(G*M/r)
+                  velocities(2) = sqrt(mu/r)
                   write(*,*) "Orbita kolowa"
                else
                   a = r/(1.0 + e)
@@ -214,8 +218,8 @@ contains
             !call pset%add(1.1, [ 0.9700436, -0.24308753, 0.0], [ 0.466203685, 0.43236573, 0.0], 0.0)
             !call pset%add(1.1, [-0.9700436, 0.24308753, 0.0], [ 0.466203685, 0.43236573, 0.0],0.0)
             !call pset%add(1.1, [ 0.0, 0.0, 0.0], [-0.932407370, -0.86473146, 0.0], 0.0 )
-            !do i = 1, n_particles, 1
-               !call pset%add(1.0, pos_init, vel_init,0.0 ) !orbita eliptyczna
+            do i = 1, n_particles, 1
+               call pset%add(1.0, pos_init, vel_init,0.0 ) !orbita eliptyczna
                !call pset%add(1.0, [4.54545454545455, 0.0, 0.0],[-0.909090909090909, 0.0, 0.0], 0.0)
                
                !call pset%add(1.0, [4.8, 2.0, 0.0],[-1.0, 0.0, 0.0], 0.0) !10 na komorke
@@ -223,12 +227,12 @@ contains
                !call pset%add(1.0, [4.54545454545455, 0.454545454545455, 0.0],[-0.909090909090909, 0.0, 0.0], 0.0) !j=1/2 sciana
                !call pset%add(1.0, [4.54545454545455, 3.0*0.909090909090909, 0.0],[-0.909090909090909, 0.0, 0.0], 0.0) !j=1
                
-               !pos_init = positions(dtheta, pos_init)
-               !vel_init = rotate(dtheta, vel_init)
-            !enddo
+               pos_init = positions(dtheta, pos_init)
+               vel_init = rotate(dtheta, vel_init)
+            enddo
 
-            call pset%add(100.0, [0.0,0.0,0.0],[0.0,0.0,0.0],0.0)
-            call pset%add(0.1, [3.0,3.0,0.0],[0.0,0.0,0.0],0.0)
+            !call pset%add(100.0, [0.0,0.0,0.0],[0.0,0.0,0.0],0.0)
+            !call pset%add(0.1, [3.0,3.0,0.0],[0.0,0.0,0.0],0.0)
            
             first_run = .false.
             
@@ -253,7 +257,7 @@ contains
          integer, intent(in)             :: n_particles
          logical, intent(inout)          :: first_run
 
-         real, dimension(n_particles, 3) :: pos_init, pos_init2!,vel_init
+         real, dimension(n_particles, 3) :: pos_init!, pos_init2!,vel_init
          real, dimension(3, 2)           :: domain
 
          real                             :: factor, r_dom

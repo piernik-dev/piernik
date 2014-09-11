@@ -172,12 +172,13 @@ contains
 
 
    subroutine leapfrog2ord(pset, t_glob, dt_tot)
-      use constants, only: ndims, CENTER, xdim, zdim, half, zero
+      use constants,      only: ndims, CENTER, xdim, zdim, half, zero
       use particle_types, only: particle_set
-      use domain, only: dom
-      use cg_leaves,    only: leaves
-      use cg_list,      only: cg_list_element
-      use grid_cont,    only: grid_container
+      use domain,         only: dom
+      use cg_leaves,      only: leaves
+      use cg_list,        only: cg_list_element
+      use grid_cont,      only: grid_container
+      use dataio_pub,     only: die
 #ifdef SELF_GRAV
       use cg_list_dataop,   only: ind_val
       use constants,        only: gp_n, gpot_n, hgpot_n, one, sgp_n, sgpm_n
@@ -265,6 +266,11 @@ contains
       procedure(d2f_dxi_2),   pointer :: d2f_dx2_p, d2f_dy2_p, d2f_dz2_p    ! COMMENT ME
       procedure(d2f_dxi_dxj), pointer :: d2f_dxdy_p, d2f_dxdz_p, d2f_dydz_p ! COMMENT ME
 
+#ifdef AMR
+   call die("[particle_integrators:leapfrog2ord] AMR not implemented for particles yet")
+#endif /* AMR */
+
+
 
       open(newunit=lun_out, file='leapfrog_out.log', status='unknown',  position='append')
 
@@ -293,14 +299,13 @@ contains
 !#endif /* REST */
 
       mins(:) = dom%edge(:,1)
-
       maxs(:) = dom%edge(:,2)
 
 
-      order = 2
+      order = 4
 
 
-      eta = 8.0 !1.0
+      eta = 1.0 !1.0
       eps = 1.0e-4
       eps2 = zero
 
@@ -313,8 +318,8 @@ contains
 
 
       !obliczenie zewnętrznego potencjalu na siatce
-      !external_pot = .true.
-      external_pot = .false.
+      external_pot = .true.
+      !external_pot = .false.
 
       if (external_pot) then
          call pot2grid(cg, eps2)
@@ -375,22 +380,21 @@ contains
       call get_acc_cic(pset, cg, cells, acc3, n)
 
 
-      call get_acc_max(acc3, n, a)
+      call get_acc_max(acc, n, a)
       write(*,*) "get_acc_max, a=", a
 
 
-      !var_timestep=.true.
-      var_timestep=.false.
+      var_timestep=.true.
+      !var_timestep=.false.
       !timestep
       if (var_timestep) then
          dt = sqrt(2.0*eta*eps/a)               !variable
          write(*,*) "leapfrog: dt = ",dt
       else
-         dt = 0.1
-         !dt = 0.01                            !constant
+         !dt = 0.05
+         dt = 0.01                            !constant
       endif
       dth = half*dt
-
 
       nsteps = 0
 
@@ -402,7 +406,7 @@ contains
 
          if (t + dt > t_end) then
             dt = t_end - t
-            dth = 0.5 * dt
+            dth = half * dt
          endif
 
          !if (t >=t_out) then
@@ -414,22 +418,23 @@ contains
          !endif
 
 
-         !1.kick(dth)
-         call kick(pset, acc3, dth, n)
-         !call kick(pset, [zero,zero,zero], dth, n)
 
-         !2.drift(dt)         
+         !1.kick(dth)
+         call kick(pset, acc, dth, n)
+
+
+         !2.drift(dt)
          call drift(pset, dt, n)
 
 
          !ekstrapolacja potencjalu w przypadku samograwitacji
          !czegos tu brakuje :/
-#ifdef SELF_GRAV
-         call leaves%q_copy(qna%ind(sgp_n), qna%ind(sgpm_n))
-         call leaves%q_lin_comb([ ind_val(qna%ind(gp_n), 1.), ind_val(qna%ind(sgp_n), one+dt),  ind_val(qna%ind(sgpm_n), -dt) ], qna%ind(gpot_n))
-         call leaves%q_lin_comb([ ind_val(qna%ind(gp_n), 1.), ind_val(qna%ind(sgp_n), one+dth), ind_val(qna%ind(sgpm_n), -dth)], qna%ind(hgpot_n))
-         write(*,*) "Self_GRAV!"
-#endif /* SELF_GRAV */
+!#ifdef SELF_GRAV
+!         call leaves%q_copy(qna%ind(sgp_n), qna%ind(sgpm_n))
+!         call leaves%q_lin_comb([ ind_val(qna%ind(gp_n), 1.), ind_val(qna%ind(sgp_n), one+dt),  ind_val(qna%ind(sgpm_n), -dt) ], qna%ind(gpot_n))
+!         call leaves%q_lin_comb([ ind_val(qna%ind(gp_n), 1.), ind_val(qna%ind(sgp_n), one+dth), ind_val(qna%ind(sgpm_n), -dth)], qna%ind(hgpot_n))
+!         write(*,*) "Self_GRAV!"
+!#endif /* SELF_GRAV */
 
 
          call find_cells(pset, cells, dist, mins, cg, n)                !finding cells
@@ -444,12 +449,12 @@ contains
 
 
          call get_acc_cic(pset, cg, cells, acc3, n)                     !CIC acceleration
-         call get_acc_max(acc3, n, a)                                    !max(|a_i|)
+         call get_acc_max(acc, n, a)                                    !max(|a_i|)
+
 
 
          !4.kick(dth)
-         !call kick(pset, acc, dth, n)                                  !zakomentowac dla ruchu po prostej
-         call kick(pset, acc3, dth, n)
+         call kick(pset, acc, dth, n)
 
 
 
@@ -467,8 +472,9 @@ contains
          !6.dt   !dt[n+1]
          if (var_timestep) then
             dt = sqrt(2.0*eta*eps/a)
-            dth = 0.5*dt
+            dth = half*dt
          endif
+
 
          nsteps = nsteps + 1
 
@@ -516,14 +522,16 @@ contains
 
 
          function phi_pm(x, y, z, eps)
+            use units,    only: newtong
             implicit none
                real, intent(in) :: x, y, z, eps
-               real :: r, phi_pm, G,M 
+               real :: r, phi_pm, G,M, mu
                   G = 1.0
                   M = 1.0
+                  mu = newtong*M
                   r = sqrt(x**2 + y**2 + z**2 + eps**2)
 
-                  phi_pm = -G*M / r
+                  phi_pm = -mu / r
          end function phi_pm
 
 
@@ -558,9 +566,9 @@ contains
                   df_dz_p, d2f_dz2_p, d2f_dxdy_p, d2f_dxdz_p, d2f_dydz_p)
             implicit none
                integer,intent(in) :: order
-               procedure(df_dxi),pointer :: df_dx_p, df_dy_p, df_dz_p
-               procedure(d2f_dxi_2),pointer :: d2f_dx2_p, d2f_dy2_p, d2f_dz2_p
-               procedure(d2f_dxi_dxj),pointer :: d2f_dxdy_p, d2f_dxdz_p, d2f_dydz_p
+               procedure(df_dxi),      pointer,intent(inout) :: df_dx_p, df_dy_p, df_dz_p
+               procedure(d2f_dxi_2),   pointer,intent(inout) :: d2f_dx2_p, d2f_dy2_p, d2f_dz2_p
+               procedure(d2f_dxi_dxj), pointer,intent(inout) :: d2f_dxdy_p, d2f_dxdz_p, d2f_dydz_p
                   if (order==2) then
                      df_dx_p => df_dx_o2
                      df_dy_p => df_dy_o2
@@ -627,8 +635,6 @@ contains
             enddo
 
             aijk = aijk/cg%dvol
-
-
 
 
             do p = 1, n
@@ -704,18 +710,16 @@ contains
             aijk = aijk/cg%dvol
 
 
-
-
             do p = 1, n
                c = 1
                do i = 0, 1
                   do j = 0, 1
                      do k = 0, 1
-                        fx(p, c) = -( (2.0/3.0)*(cg%gpot(cells2(p, xdim)+1+i, cells2(p, ydim)  +j, cells2(p, zdim)  +k) - cg%gpot(cells2(p, xdim)-1+i, cells2(p, ydim)  +j, cells2(p, zdim)  +k))*cg%idx - &
+                        fx(p, c) = -( (2.0/3.0)* (cg%gpot(cells2(p, xdim)+1+i, cells2(p, ydim)  +j, cells2(p, zdim)  +k) - cg%gpot(cells2(p, xdim)-1+i, cells2(p, ydim)  +j, cells2(p, zdim)  +k))*cg%idx - &
                                     (1.0/12.0) * (cg%gpot(cells2(p, xdim)+2+i, cells2(p, ydim)  +j, cells2(p, zdim)  +k) - cg%gpot(cells2(p, xdim)-2+i, cells2(p, ydim)  +j, cells2(p, zdim)  +k))*cg%idx)
-                        fy(p, c) = -( (2.0/3.0)*(cg%gpot(cells2(p, xdim)  +i, cells2(p, ydim)+1+j, cells2(p, zdim)  +k) - cg%gpot(cells2(p, xdim)  +i, cells2(p, ydim)-1+j, cells2(p, zdim)  +k))*cg%idy - &
+                        fy(p, c) = -( (2.0/3.0)* (cg%gpot(cells2(p, xdim)  +i, cells2(p, ydim)+1+j, cells2(p, zdim)  +k) - cg%gpot(cells2(p, xdim)  +i, cells2(p, ydim)-1+j, cells2(p, zdim)  +k))*cg%idy - &
                                     (1.0/12.0) * (cg%gpot(cells2(p, xdim)  +i, cells2(p, ydim)+2+j, cells2(p, zdim)  +k) - cg%gpot(cells2(p, xdim)  +i, cells2(p, ydim)-2+j, cells2(p, zdim)  +k))*cg%idy)
-                        fz(p, c) = -( (2.0/3.0)*(cg%gpot(cells2(p, xdim)  +i, cells2(p, ydim)  +j, cells2(p, zdim)+1+k) - cg%gpot(cells2(p, xdim)  +i, cells2(p, ydim)  +j, cells2(p, zdim)-1+k))*cg%idz - &
+                        fz(p, c) = -( (2.0/3.0)* (cg%gpot(cells2(p, xdim)  +i, cells2(p, ydim)  +j, cells2(p, zdim)+1+k) - cg%gpot(cells2(p, xdim)  +i, cells2(p, ydim)  +j, cells2(p, zdim)-1+k))*cg%idz - &
                                     (1.0/12.0) * (cg%gpot(cells2(p, xdim)  +i, cells2(p, ydim)  +j, cells2(p, zdim)+2+k) - cg%gpot(cells2(p, xdim)  +i, cells2(p, ydim)  +j, cells2(p, zdim)-2+k))*cg%idz)
                         c = c + 1
                      enddo
@@ -732,6 +736,7 @@ contains
             enddo
 
          end subroutine get_acc_cic_o4
+
 
          subroutine potential(pset, cg, cells, dist, n)
             use constants,    only: ndims, half, xdim, ydim, zdim
@@ -765,8 +770,8 @@ contains
                pset%p(i)%pot = cg%gpot(p,q,r) + dpot(i) + half*d2pot(i)
             enddo
 
-           ! pot=cg%gpot(p,q,r) + dpot+half*d2pot
          end subroutine potential
+
 
          subroutine get_energy(pset, cg, cells, dist, n, energy)
             use constants,    only: ndims
@@ -824,7 +829,6 @@ contains
                               d2f_dz2_p(cells, cg, n) * dist(:,3) + &
                               d2f_dxdz_p(cells, cg, n) * dist(:,1) +&
                               d2f_dydz_p(cells, cg, n) * dist(:,2))
-                  !write(*,*) "acc_int: ",acc(:,xdim), acc(:,ydim), acc(:,zdim)
 
          end subroutine get_acc_int
 
@@ -883,7 +887,7 @@ contains
 
          
          subroutine find_cells(pset, cells, dist, mins, cg, n)
-            use constants, only: ndims, xdim, CENTER
+            use constants, only: ndims, xdim, CENTER, LO, HI
             use grid_cont,  only: grid_container
             implicit none
                class(particle_set), intent(in) :: pset  !< particle list
@@ -897,13 +901,10 @@ contains
 
 
                do i = 1, n
+                  if (any(pset%p(i)%pos < cg%fbnd(:,LO)) .or. any(pset%p(i)%pos > cg%fbnd(:,HI))) cycle
                   do cdim = xdim, ndims
                      cells(i,cdim) = int( 0.5 + (pset%p(i)%pos(cdim) - cg%coord(CENTER,cdim)%r(0)) / cg%dl(cdim) )! + 1
-                  enddo
-               enddo
-
-               do i=1,n
-                  do cdim = xdim, ndims
+                  
                      dist(i, cdim) = pset%p(i)%pos(cdim) - ( cg%coord(CENTER, cdim)%r(0) + cells(i,cdim) * cg%dl(cdim) )
                   enddo
                enddo
