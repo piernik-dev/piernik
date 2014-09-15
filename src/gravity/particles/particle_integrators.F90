@@ -174,7 +174,7 @@ contains
    subroutine leapfrog2ord(pset, t_glob, dt_tot)
       use constants,      only: ndims, CENTER, xdim, zdim, half, zero
       use particle_types, only: particle_set
-      use domain,         only: dom
+      use domain,         only: is_refined, dom
       use cg_leaves,      only: leaves
       use cg_list,        only: cg_list_element
       use grid_cont,      only: grid_container
@@ -256,7 +256,7 @@ contains
       integer                                      :: n                 !< number of particles
       integer                                      :: lun_out           !< output file
       integer                                      :: order             !< order of Lagrange polynomials
-      real, parameter                              :: dt_out = 0.05     !< time interval between output of snapshots
+      real, parameter                              :: dt_out = 0.3     !< time interval between output of snapshots
       logical                                      :: save_potential    !< save external potential or not save: that is the question
       logical                                      :: finish            !< if .true. stop simulation with saving extrenal potential (works only if save_potential==.true.)
       logical                                      :: external_pot      !< if .true. gravitational potential will be deleted and replaced by external potential of point mass
@@ -266,9 +266,8 @@ contains
       procedure(d2f_dxi_2),   pointer :: d2f_dx2_p, d2f_dy2_p, d2f_dz2_p    ! COMMENT ME
       procedure(d2f_dxi_dxj), pointer :: d2f_dxdy_p, d2f_dxdz_p, d2f_dydz_p ! COMMENT ME
 
-#ifdef AMR
-   call die("[particle_integrators:leapfrog2ord] AMR not implemented for particles yet")
-#endif /* AMR */
+
+
 
 
 
@@ -311,6 +310,8 @@ contains
 
 
       cgl => leaves%first
+      if (is_refined) call die("[particle_integrators:leapfrog2ord] AMR not implemented for particles yet")
+
       do while (associated(cgl))
             cg => cgl%cg
             cgl => cgl%nxt
@@ -380,19 +381,19 @@ contains
       call get_acc_cic(pset, cg, cells, acc3, n)
 
 
-      call get_acc_max(acc, n, a)
+      call get_acc_max(acc2, n, a)
       write(*,*) "get_acc_max, a=", a
 
 
-      var_timestep=.true.
-      !var_timestep=.false.
+      !var_timestep=.true.
+      var_timestep=.false.
       !timestep
       if (var_timestep) then
          dt = sqrt(2.0*eta*eps/a)               !variable
          write(*,*) "leapfrog: dt = ",dt
       else
          !dt = 0.05
-         dt = 0.01                            !constant
+         dt = 0.1! * 130.91972208960826                            !constant
       endif
       dth = half*dt
 
@@ -409,18 +410,18 @@ contains
             dth = half * dt
          endif
 
-         !if (t >=t_out) then
+         if (t >=t_out) then
             do i=1, n
                !write(lun_out,*) "# t=", t
                write(lun_out, '(I3,1X,19(E13.6,1X))') i, t, dt, mass(i), pset%p(i)%pos, acc(i,:), acc2(i,:), acc3(i,:), energy, d_energy, ang_momentum, d_ang_momentum
             enddo
-            !t_out = t_out + dt_out
-         !endif
+            t_out = t_out + dt_out
+         endif
 
 
 
          !1.kick(dth)
-         call kick(pset, acc, dth, n)
+         call kick(pset, acc2, dth, n)
 
 
          !2.drift(dt)
@@ -449,12 +450,12 @@ contains
 
 
          call get_acc_cic(pset, cg, cells, acc3, n)                     !CIC acceleration
-         call get_acc_max(acc, n, a)                                    !max(|a_i|)
+         call get_acc_max(acc2, n, a)                                    !max(|a_i|)
 
 
 
          !4.kick(dth)
-         call kick(pset, acc, dth, n)
+         call kick(pset, acc2, dth, n)
 
 
 
@@ -465,7 +466,7 @@ contains
          call get_ang_momentum_2(pset, n, ang_momentum)
 
          !write(*,*) ang_momentum, init_ang_mom
-         !d_ang_momentum = log(abs((ang_momentum - init_ang_mom)/init_ang_mom))
+         d_ang_momentum = log(abs((ang_momentum - init_ang_mom)/init_ang_mom))
 
          !5.t
          t = t + dt

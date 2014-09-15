@@ -69,16 +69,17 @@ contains
       use dataio_pub,   only: printinfo
       use fluidindex,   only: flind
       use particle_pub, only: pset
+      use particle_types, only:  ht_integrator
 
       
       !use particles_io_hdf5
 
       implicit none
 
-      integer                          :: i, j, k, p
+      integer                         :: i, j, k, p
       integer                         :: n_particles        !< number of particles
       real(kind=4)                    :: e                  !< orbit eccentricity
-      logical,save                    :: first_run = .true.
+      logical,save                   :: first_run = .true.
       type(cg_list_element), pointer  :: cgl
 
     
@@ -105,8 +106,14 @@ contains
       enddo
 
 
+!if (ht_integrator) then
+!   write(*,*) "WORKS!!!!"
+!   stop
+!endif
+!write(*,*) "Nie dziala:("
+!stop
 !if leapfrog then 
-      e = 0.7
+      e = 0.6
 
       n_particles = 1
 
@@ -134,20 +141,21 @@ contains
 !!
 !! \details compute velocity of particle with position pos_init and eccentricity e <0,1)
 !!
-!! \warning it works properly only in XY plane and with unset units 
+!! \warning it works properly only in XY plane 
 !>
 
       function velocities(pos_init, e)
-         use constants,             only: zero, one
+         use constants,             only: zero, one, dpi
          use dataio_pub,            only: die
          use units,                 only: newtong
          implicit none
-            real, dimension(3)   :: pos_init, velocities
-            real                 :: a        !< semi-major axis of elliptical orbit of particle
+            real, dimension(3)  :: pos_init, velocities
+            real                 :: a        !< semi-major axis of initial elliptical orbit of particle
             real                 :: r        !< lenght of radius vector
             real(kind=4)         :: e
             real                 :: mu
-            real, parameter :: G=1.0, M=1.0
+            real, parameter     :: M=1.0
+            real:: lenght  !usunac
             
             mu = newtong*M
             if( (e < zero) .or. (e >= one) ) then
@@ -162,6 +170,8 @@ contains
                   a = r/(1.0 + e)
                   velocities(2) = sqrt(mu*(2.0/r - 1.0/a))
                   write(*,'(A11,F4.2,A3,F5.3,A3,F5.3)') "#Elipsa: e=", e, " a=",a, " b=", a*sqrt(1.0 - e**2)
+                  lenght = dpi*sqrt((a**3)/mu)  !usunac 
+                  write(*,*) "lenght=", lenght
                endif
             endif
             velocities(1) = 0.0
@@ -215,7 +225,7 @@ contains
          vel_init = velocities(pos_init, e)
 
          if(first_run) then
-            !call pset%add(1.1, [ 0.9700436, -0.24308753, 0.0], [ 0.466203685, 0.43236573, 0.0], 0.0)
+            !call pset%add(1.1, [ 0.9700436, -0.24308753, 0.0], [ 0.466203685, 0.43236573, 0.0])
             !call pset%add(1.1, [-0.9700436, 0.24308753, 0.0], [ 0.466203685, 0.43236573, 0.0],0.0)
             !call pset%add(1.1, [ 0.0, 0.0, 0.0], [-0.932407370, -0.86473146, 0.0], 0.0 )
             do i = 1, n_particles, 1

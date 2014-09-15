@@ -1,17 +1,17 @@
  $BASE_DOMAIN
-    n_d = 101, 101, 101 
+    n_d = 128, 128, 128 
     bnd_xl = 'per'
     bnd_xr = 'per'
     bnd_yl = 'per'
     bnd_yr = 'per'
     bnd_zl = 'per'
     bnd_zr = 'per'
-    xmin   =-5.0
-    xmax   = 5.0
-    ymin   =-5.0
-    ymax   = 5.0
-    zmin   =-5.0
-    zmax   = 5.0
+    xmin   =-3.0
+    xmax   = 3.0
+    ymin   =-3.0
+    ymax   = 3.0
+    zmin   =-3.0
+    zmax   = 3.0
  /
 
  $MPI_BLOCKS
@@ -29,7 +29,8 @@
 
  $END_CONTROL
     !tend   = 200.0
-    tend   = 900.0
+    !tend   = 900.0
+    tend    = 26183.9442
     nend   = 6000
  /
 
@@ -48,8 +49,9 @@
 
  $FLUID_NEUTRAL
  !cs_iso = 1.0
- !cs_iso = 0.005
- selfgrav = .true.
+ cs_iso = 0.0001
+ !selfgrav = .true.
+ !selfgrav = .false.
  /
 
  $NUMERICAL_SETUP
