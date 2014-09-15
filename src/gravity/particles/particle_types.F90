@@ -35,8 +35,9 @@ module particle_types
    implicit none
 
    private
-   public :: particle_set, particle_solver_T
-
+   public :: particle_set, particle_solver_T, ht_integrator
+   logical :: ht_integrator
+   
    !>
    !! \brief simple particle: just mass and position
    !!
@@ -201,7 +202,7 @@ contains
       real,                   intent(in)    :: mass     !< mass of the particle (negative values are allowed just in case someone wants to calculate electric potential)
       real, dimension(:), intent(in)    :: pos      !< physical position
       real, dimension(:), intent(in)    :: vel      !< particle velocity
-      real,  intent(in)    :: pot
+      real, intent(in)        :: pot! optional?
 
       call this%add(particle(mass, pos, vel, pot, .false.))
 
