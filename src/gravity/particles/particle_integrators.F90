@@ -308,7 +308,7 @@ contains
       eps = 1.0e-4
       eps2 = zero
 
-
+write(*,*) "particle_integrators"
       cgl => leaves%first
       if (is_refined) call die("[particle_integrators:leapfrog2ord] AMR not implemented for particles yet")
 
@@ -322,10 +322,10 @@ contains
       external_pot = .true.
       !external_pot = .false.
 
-      if (external_pot) then
-         call pot2grid(cg, eps2)
-         write(*,*) "Obliczono potencjal zewnetrzny"
-      endif
+      !if (external_pot) then
+      !   call pot2grid(cg, eps2)
+      !   write(*,*) "Obliczono potencjal zewnetrzny"
+      !endif
 
 
 
@@ -335,6 +335,7 @@ contains
       finish         = .false.
 
       if(save_potential) then
+         write(*,*) "Zapis potencjalu do pliku"
          open(unit=88, file='potencjal.dat')
 
          do i=lbound(cg%gpot,dim=1),ubound(cg%gpot,dim=1)
@@ -349,7 +350,10 @@ contains
          enddo
          close(88)
 
-         if(finish) stop
+         if(finish) then
+            write(*,*) "Warunek zakonczenia-zatrzymano"
+            stop
+         endif
       endif
 
 
@@ -544,7 +548,7 @@ contains
                integer :: i, j, k
                real, intent(in) :: eps2
 
-               open(unit=77,file='potencjal.dat')
+               !open(unit=77,file='potencjal.dat')
 
 
                   do i = lbound(cg%gpot, dim=1), ubound(cg%gpot, dim=1)
@@ -553,13 +557,13 @@ contains
                            cg%gpot(i,j,k) = phi_pm(cg%coord(CENTER,xdim)%r(i),&
                                                    cg%coord(CENTER,ydim)%r(j),&
                                                    cg%coord(CENTER,zdim)%r(k),eps2)
-                           write(77,*) cg%coord(CENTER,xdim)%r(i),cg%coord(CENTER,ydim)%r(j),&
-                                       cg%coord(CENTER,zdim)%r(k),cg%gpot(i,j,k)
+                           !write(77,*) cg%coord(CENTER,xdim)%r(i),cg%coord(CENTER,ydim)%r(j),&
+                            !           cg%coord(CENTER,zdim)%r(k),cg%gpot(i,j,k)
                         enddo
                      enddo
                   enddo
 
-               close(77)
+               !close(77)
          end subroutine pot2grid
 
 
