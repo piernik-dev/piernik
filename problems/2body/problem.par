@@ -51,7 +51,7 @@
  !cs_iso = 1.0
  cs_iso = 0.0001
  !selfgrav = .true.
- !selfgrav = .false.
+ selfgrav = .false.
  /
 
  $NUMERICAL_SETUP
