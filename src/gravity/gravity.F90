@@ -116,27 +116,15 @@ module gravity
          type(grid_container), pointer, intent(in)  :: cg         !< current grid_container
       end subroutine grav_pot2accel_T
 
-      !subroutine grav_pot2acc_cic_T(neighbors, distances, acc)
-       !  use constants, only: xdim, ydim, zdim, ndims, LO, HI
-       !  use cg_leaves,        only: leaves
-       !  use cg_list,          only: cg_list_element
-       !  use grid_cont,        only: grid_container
-       !  implicit none
-       !  type(cg_list_element), pointer :: cgl
-       !  type(grid_container), pointer :: cg
-      !   integer(kind=8), dimension(ndims, LO:HI), intent(in) :: neighbors
-      !   real(kind=8), dimension(ndims, LO:HI), intent(in) :: distances
-      !   real(kind=8), dimension(ndims, LO:HI), intent(out) :: acc 
-      !end subroutine grav_pot2acc_cic_T
 
    end interface
 
-   procedure(user_grav_pot_3d), pointer :: grav_pot_3d => NULL()
+   procedure(user_grav_pot_3d), pointer :: grav_pot_3d => point_mass_pot!NULL()
    procedure(user_grav_accel),  pointer :: grav_accel  => NULL()
    procedure(gprofs_default),   pointer :: get_gprofs  => NULL()
    procedure(grav_types),       pointer :: grav_type   => NULL()
    procedure(grav_pot2accel_T), pointer :: grav_pot2accel => NULL()
-  ! procedure(grav_pot2acc_cic_T), pointer :: grav_pot2acc_cic => NULL()
+
 
 contains
 
@@ -214,8 +202,10 @@ contains
 
       gprofs_target = 'extgp'
       external_gp   = 'null'
+      !external_gp   = 'flat_ptmass'
 
-      user_grav     = .false.
+      !user_grav     = .false.
+      user_grav     = .true.
       variable_gp   = .false.
 
       if (master) then
@@ -1058,6 +1048,55 @@ contains
       ! Find the maximum, and adjust cg%gp (call leaves%q_add_val(igp, -max))
 
    end subroutine grav_accel2pot
+
+   subroutine point_mass_pot
+   
+      use cg_leaves,        only: leaves
+      use cg_list,          only: cg_list_element
+      use constants, only: xdim, ydim, zdim, CENTER
+      use grid_cont, only: grid_container
+
+      implicit none
+
+      type(cg_list_element), pointer :: cgl
+      type(grid_container), pointer   :: cg
+      integer::i,j,k
+      real:: eps
+      eps=0.0
+      
+
+      cgl => leaves%first
+      do while (associated(cgl))
+         cg => cgl%cg
+         cgl => cgl%nxt
+      enddo
+      
+      write(*,*) "Obliczanie potencjalu grawitacyjnego masy punktowej."
+         do i = lbound(cg%gp, dim=1), ubound(cg%gp, dim=1)
+            do j = lbound(cg%gp, dim=2), ubound(cg%gp, dim=2)
+               do k = lbound(cg%gp, dim=3), ubound(cg%gp, dim=3)
+                     cg%gp(i,j,k) = phi_pm(cg%coord(CENTER,xdim)%r(i),&
+                                    cg%coord(CENTER,ydim)%r(j),&
+                                    cg%coord(CENTER,zdim)%r(k),eps)
+               enddo
+            enddo
+         enddo
+
+   contains
+
+      function phi_pm(x, y, z, eps)
+         use units,    only: newtong
+         implicit none
+            real, intent(in) :: x, y, z, eps
+            real :: r, phi_pm, G,M, mu
+            G = 1.0
+            M = 1.0
+            mu = newtong*M
+            r = sqrt(x**2 + y**2 + z**2 + eps**2)
+            phi_pm = -mu / r
+      end function phi_pm
+
+   end subroutine point_mass_pot
 
 
 end module gravity
