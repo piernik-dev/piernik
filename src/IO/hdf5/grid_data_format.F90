@@ -35,7 +35,7 @@ module gdf
    implicit none
    private
    public :: gdf_create_root_datasets, gdf_create_simulation_parameters, gdf_create_format_stamp, gdf_create_field_types, gdf_field_type, fmax
-   public :: gdf_parameters_T, gdf_root_datasets_T
+   public :: gdf_parameters_T, gdf_root_datasets_T, GDF_CARTESIAN, GDF_POLAR, GDF_CYLINDRICAL, GDF_SPHERICAL
 
    integer, parameter :: fmax = 60
 
@@ -47,6 +47,11 @@ module gdf
    end type gdf_field_type
 
    integer, parameter :: uniqid_len = 12
+
+   ! grid geometry type
+   enum, bind(C)
+       enumerator :: GDF_CARTESIAN = 0, GDF_POLAR, GDF_CYLINDRICAL, GDF_SPHERICAL
+   end enum
 
    type :: gdf_parameters_T
       integer(kind=8), dimension(:), pointer :: refine_by                !< relative global refinement

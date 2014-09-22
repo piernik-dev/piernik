@@ -652,7 +652,7 @@ contains
       use dataio_pub,   only: die, nproc_io, can_i_write, domain_dump, msg
       use domain,       only: dom
       use gdf,          only: gdf_create_format_stamp, gdf_create_simulation_parameters, gdf_create_root_datasets, &
-         &                    gdf_root_datasets_T, gdf_parameters_T
+         &                    gdf_root_datasets_T, gdf_parameters_T, GDF_CARTESIAN, GDF_POLAR
       use global,       only: t
       use hdf5,         only: HID_T, H5F_ACC_RDWR_F, H5P_FILE_ACCESS_F, H5P_GROUP_ACCESS_F, H5Z_FILTER_DEFLATE_F, &
          &                    h5open_f, h5close_f, h5fopen_f, h5fclose_f, h5gcreate_f, h5gopen_f, h5gclose_f, h5pclose_f, &
@@ -745,13 +745,13 @@ contains
                case (GEO_XYZ)
                   gdf_sp%domain_left_edge = dom%edge(:, LO) / cm
                   gdf_sp%domain_right_edge = dom%edge(:, HI) / cm
-                  gdf_sp%geometry = 0
+                  gdf_sp%geometry = GDF_CARTESIAN
                case (GEO_RPZ)
                   gdf_sp%domain_left_edge([xdim, zdim]) = dom%edge([xdim, zdim], LO) / cm
                   gdf_sp%domain_right_edge([xdim, zdim]) = dom%edge([xdim, zdim], HI) / cm
                   gdf_sp%domain_left_edge(ydim) = dom%edge(ydim, LO)
                   gdf_sp%domain_right_edge(ydim) = dom%edge(ydim, HI)
-                  gdf_sp%geometry = 1
+                  gdf_sp%geometry = GDF_POLAR
                case default
                   write(msg,'(a,i3)') "[common_hdf5:write_to_hdf5_v2] Unknown system of coordinates ", dom%geometry_type
                   call die(msg)
