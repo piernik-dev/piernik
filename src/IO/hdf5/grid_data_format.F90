@@ -54,6 +54,7 @@ module gdf
       integer(kind=8), dimension(:), pointer :: cosmological_simulation  !< 0 or 1 == True or False
       integer(kind=8), dimension(:), pointer :: num_ghost_zones          !< number of ghost zones
       integer(kind=4), dimension(:), pointer :: field_ordering           !< integer: 0 for C, 1 for Fortran
+      integer(kind=4), dimension(:), pointer :: geometry                 !< integer: 0 for cartesian, 1 polar, 2 cyl, 3 sph
       integer(kind=8), dimension(:), pointer :: domain_dimensions        !< dimensions in the top grid
       real(kind=8),    dimension(:), pointer :: domain_left_edge         !< the left edge of the domain, in cm
       real(kind=8),    dimension(:), pointer :: domain_right_edge        !< the right edge of the domain, in cm
@@ -126,6 +127,7 @@ contains
       call create_attribute(g_id, 'domain_right_edge', sp%domain_right_edge)
       call create_attribute(g_id, 'current_time', sp%current_time)
       call create_attribute(g_id, 'field_ordering', sp%field_ordering)
+      call create_attribute(g_id, 'geometry', sp%geometry)
       call create_attribute(g_id, 'unique_identifier', sp%unique_identifier)
       call create_attribute(g_id, 'boundary_conditions', sp%boundary_conditions)
       call h5gclose_f(g_id, error)
@@ -230,6 +232,7 @@ contains
       allocate(this%cosmological_simulation(1))
       allocate(this%num_ghost_zones(1))
       allocate(this%field_ordering(1))
+      allocate(this%geometry(1))
       allocate(this%domain_dimensions(3))
       allocate(this%domain_left_edge(3))
       allocate(this%domain_right_edge(3))
@@ -247,6 +250,7 @@ contains
       deallocate(this%cosmological_simulation)
       deallocate(this%num_ghost_zones)
       deallocate(this%field_ordering)
+      deallocate(this%geometry)
       deallocate(this%domain_dimensions)
       deallocate(this%domain_left_edge)
       deallocate(this%domain_right_edge)
