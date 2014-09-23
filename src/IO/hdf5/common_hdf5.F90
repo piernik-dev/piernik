@@ -647,11 +647,12 @@ contains
    subroutine write_to_hdf5_v2(filename, otype, create_empty_cg_datasets, write_cg_to_hdf5)
 
       use cg_leaves,    only: leaves
-      use constants,    only: cwdlen, dsetnamelen, xdim, zdim, ndims, I_ONE, I_TWO, I_THREE, INT4, LO, HI
-      use dataio_pub,   only: die, nproc_io, can_i_write, domain_dump
+      use constants,    only: cwdlen, dsetnamelen, xdim, ydim, zdim, ndims, I_ONE, I_TWO, I_THREE, INT4, LO, HI, &
+         &                    GEO_XYZ, GEO_RPZ
+      use dataio_pub,   only: die, nproc_io, can_i_write, domain_dump, msg
       use domain,       only: dom
       use gdf,          only: gdf_create_format_stamp, gdf_create_simulation_parameters, gdf_create_root_datasets, &
-         &                    gdf_root_datasets_T, gdf_parameters_T
+         &                    gdf_root_datasets_T, gdf_parameters_T, GDF_CARTESIAN, GDF_POLAR
       use global,       only: t
       use hdf5,         only: HID_T, H5F_ACC_RDWR_F, H5P_FILE_ACCESS_F, H5P_GROUP_ACCESS_F, H5Z_FILTER_DEFLATE_F, &
          &                    h5open_f, h5close_f, h5fopen_f, h5fclose_f, h5gcreate_f, h5gopen_f, h5gclose_f, h5pclose_f, &
@@ -740,8 +741,21 @@ contains
             call gdf_create_format_stamp(file_id)
             call gdf_sp%init()
             gdf_sp%current_time = t/sek
-            gdf_sp%domain_left_edge = dom%edge(:, LO) / cm
-            gdf_sp%domain_right_edge = dom%edge(:, HI) / cm
+            select case (dom%geometry_type)
+               case (GEO_XYZ)
+                  gdf_sp%domain_left_edge = dom%edge(:, LO) / cm
+                  gdf_sp%domain_right_edge = dom%edge(:, HI) / cm
+                  gdf_sp%geometry = GDF_CARTESIAN
+               case (GEO_RPZ)
+                  gdf_sp%domain_left_edge([xdim, zdim]) = dom%edge([xdim, zdim], LO) / cm
+                  gdf_sp%domain_right_edge([xdim, zdim]) = dom%edge([xdim, zdim], HI) / cm
+                  gdf_sp%domain_left_edge(ydim) = dom%edge(ydim, LO)
+                  gdf_sp%domain_right_edge(ydim) = dom%edge(ydim, HI)
+                  gdf_sp%geometry = GDF_POLAR
+               case default
+                  write(msg,'(a,i3)') "[common_hdf5:write_to_hdf5_v2] Unknown system of coordinates ", dom%geometry_type
+                  call die(msg)
+            end select
             gdf_sp%field_ordering = 1
             gdf_sp%boundary_conditions = int([0,0,0,0,0,0], kind=4)  !! \todo fix hardcoded integers
             gdf_sp%refine_by = int([2], kind=8) !! \todo fix hardcoded integers
