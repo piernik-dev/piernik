@@ -43,6 +43,7 @@ module particle_pub
 
    type(particle_set) :: pset !< default particle list
    class(particle_solver_T), pointer :: psolver
+   !logical :: ht_integrator
 
 contains
 
@@ -54,7 +55,9 @@ contains
       use dataio_pub,            only: nh  ! QA_WARN required for diff_nml
       use dataio_pub,            only: msg, die
       use mpisetup,              only: master, slave, cbuff, piernik_mpi_bcast
-      use particle_integrators,  only: hermit4, leapfrog2
+      use particle_integrators,  only: hermit4, leapfrog2, interp_method
+      use particle_types,        only: ht_integrator
+
 
       implicit none
       character(len=cbuff_len) :: time_integrator
@@ -62,10 +65,12 @@ contains
       character(len=cbuff_len), parameter :: default_ti = "none"
       character(len=cbuff_len), parameter :: default_is = "ngp"
 
-      namelist /PARTICLES/ time_integrator, interpolation_scheme
+
+      namelist /PARTICLES/ time_integrator, interpolation_scheme, interp_method
 
       time_integrator = default_ti
       interpolation_scheme = default_is
+      interp_method = 'cic'
 
       if (master) then
          if (.not.nh%initialized) call nh%init()
@@ -86,6 +91,7 @@ contains
 
          cbuff(1) = time_integrator
          cbuff(2) = interpolation_scheme
+         cbuff(3) = interp_method
       endif
 
       call piernik_MPI_Bcast(cbuff, cbuff_len)
@@ -93,6 +99,7 @@ contains
       if (slave) then
          time_integrator = cbuff(1)
          interpolation_scheme = cbuff(2)
+         interp_method = cbuff(3)
       endif
 
       psolver => null()
@@ -100,8 +107,10 @@ contains
 #ifndef _CRAYFTN
          case ('hermit4')
             psolver => hermit4
+            ht_integrator=.true.
          case ('leapfrog2')
             psolver => leapfrog2
+            ht_integrator=.false.
          case (default_ti) ! be quiet
 #endif /* !_CRAYFTN */
          case default
@@ -134,6 +143,5 @@ contains
 
    end subroutine cleanup_particles
    
-
 
 end module particle_pub

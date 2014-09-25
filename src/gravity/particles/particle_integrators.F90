@@ -31,13 +31,14 @@
 module particle_integrators
 ! pulled by GRAV
    use particle_types, only: particle_solver_T
+   use constants,             only: cbuff_len
 
    implicit none
    !------------------
 
    !------------------
    private
-   public :: hermit4, leapfrog2
+   public :: hermit4, leapfrog2, interp_method
 
    type, extends(particle_solver_T) :: hermit4_T
    contains
@@ -51,7 +52,7 @@ module particle_integrators
 
    type(hermit4_T), target :: hermit4
    type(leapfrog2_T), target :: leapfrog2
-
+   character(len=cbuff_len) :: interp_method
 contains
 
    !>
@@ -256,20 +257,28 @@ contains
       integer                                      :: n                 !< number of particles
       integer                                      :: lun_out           !< output file
       integer                                      :: order             !< order of Lagrange polynomials
-      real, parameter                              :: dt_out = 0.3     !< time interval between output of snapshots
+      real, parameter                              :: dt_out = 0.2     !< time interval between output of snapshots
       logical                                      :: save_potential    !< save external potential or not save: that is the question
       logical                                      :: finish            !< if .true. stop simulation with saving extrenal potential (works only if save_potential==.true.)
       logical                                      :: external_pot      !< if .true. gravitational potential will be deleted and replaced by external potential of point mass
       logical                                      :: var_timestep      !< if .true. variable timestep will be used
-
+      
+      
       procedure(df_dxi),      pointer :: df_dx_p, df_dy_p, df_dz_p          ! COMMENT ME
       procedure(d2f_dxi_2),   pointer :: d2f_dx2_p, d2f_dy2_p, d2f_dz2_p    ! COMMENT ME
       procedure(d2f_dxi_dxj), pointer :: d2f_dxdy_p, d2f_dxdz_p, d2f_dydz_p ! COMMENT ME
 
 
 
-
-
+      select case (interp_method)
+         case('cic')
+            write(*,*) "Metoda CIC"
+         case('lagrange')
+            write(*,*) "Metoda wielomianow"
+         case('model')
+            write(*,*) "Metoda dokladna"
+      end select
+      stop
 
       open(newunit=lun_out, file='leapfrog_out.log', status='unknown',  position='append')
 
@@ -923,11 +932,11 @@ write(*,*) "particle_integrators"
                   enddo
                enddo
 
-               open(unit=777, file='dist.dat', status='unknown',  position='append')
-                  do i=1,n
-                     write(777,*) i, cells(i,:), dist(i,:)
-                  enddo
-               close(777)
+               !open(unit=777, file='dist.dat', status='unknown',  position='append')
+               !   do i=1,n
+               !      write(777,*) i, cells(i,:), dist(i,:)
+               !   enddo
+               !close(777)
          end subroutine find_cells
 
 
