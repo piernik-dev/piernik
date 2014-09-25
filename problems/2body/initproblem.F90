@@ -65,12 +65,12 @@ contains
 
       use cg_leaves,    only: leaves
       use cg_list,      only: cg_list_element
-      use constants,    only: xdim, ydim, zdim, LO, HI
+      use constants,    only: xdim, ydim, zdim, LO, HI, CENTER
       use dataio_pub,   only: printinfo
       use fluidindex,   only: flind
       use particle_pub, only: pset
       use particle_types, only:  ht_integrator
-
+      
       
       !use particles_io_hdf5
 
@@ -79,9 +79,10 @@ contains
       integer                         :: i, j, k, p
       integer                         :: n_particles        !< number of particles
       real(kind=4)                    :: e                  !< orbit eccentricity
-      logical,save                   :: first_run = .true.
+      real                             :: eps2 = 0.0
+      logical,save                    :: first_run = .true.
       type(cg_list_element), pointer  :: cgl
-
+      
     
       do p = lbound(flind%all_fluids, dim=1), ubound(flind%all_fluids, dim=1)
          cgl => leaves%first
@@ -102,27 +103,25 @@ contains
             end associate
             cgl => cgl%nxt
          enddo
-         
       enddo
 
 
-!if (ht_integrator) then
-!   write(*,*) "WORKS!!!!"
-!   stop
-!endif
-!write(*,*) "Nie dziala:("
-!stop
-!if leapfrog then 
-      e = 0.6
 
-      n_particles = 1
-
-      call orbits(n_particles, e, first_run)
-      !call relax_time(n_particles, first_run)
-      !call read_buildgal
-      
-!else 
-!dodanie czastek w realizacji hermite'a!!!
+      if (ht_integrator) then
+         if(first_run) then
+         write(*,*) "Hermite!!!"
+            call pset%add(1.0, [ 0.9700436, -0.24308753, 0.0], [ 0.466203685, 0.43236573, 0.0],0.0)
+            call pset%add(1.0, [-0.9700436, 0.24308753, 0.0], [ 0.466203685, 0.43236573, 0.0],0.0)
+            call pset%add(1.0, [ 0.0, 0.0, 0.0], [-0.932407370, -0.86473146, 0.0], 0.0 )
+         endif
+         first_run=.false.
+      else
+         e = 0.6
+         n_particles = 1
+         call orbits(n_particles, e, first_run)
+         !call relax_time(n_particles, first_run)
+         !call read_buildgal
+      endif
 
 
       contains
@@ -163,7 +162,7 @@ contains
             else
                r = sqrt(pos_init(1)**2 + pos_init(2)**2 + pos_init(3)**2)
 
-               if (e == zero) then
+               if (e == real(zero)) then
                   velocities(2) = sqrt(mu/r)
                   write(*,*) "Orbita kolowa"
                else
@@ -354,6 +353,7 @@ contains
       endif
 
    end subroutine print_essential_units
+
 
 
    subroutine read_buildgal
