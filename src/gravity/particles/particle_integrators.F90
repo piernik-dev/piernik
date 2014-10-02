@@ -278,7 +278,7 @@ contains
          case('model')
             write(*,*) "Metoda dokladna"
       end select
-      stop
+
 
       open(newunit=lun_out, file='leapfrog_out.log', status='unknown',  position='append')
 
@@ -331,10 +331,10 @@ write(*,*) "particle_integrators"
       external_pot = .true.
       !external_pot = .false.
 
-      !if (external_pot) then
-      !   call pot2grid(cg, eps2)
-      !   write(*,*) "Obliczono potencjal zewnetrzny"
-      !endif
+      if (external_pot) then
+         call pot2grid(cg, eps2)
+         write(*,*) "Obliczono potencjal zewnetrzny"
+      endif
 
 
 
@@ -390,11 +390,11 @@ write(*,*) "particle_integrators"
       else
          acc2(:,:) = 0.0
       endif
-      
+
       call get_acc_cic(pset, cg, cells, acc3, n)
 
 
-      call get_acc_max(acc2, n, a)
+      call get_acc_max(acc3, n, a)
       write(*,*) "get_acc_max, a=", a
 
 
@@ -406,7 +406,7 @@ write(*,*) "particle_integrators"
          write(*,*) "leapfrog: dt = ",dt
       else
          !dt = 0.05
-         dt = 0.1! * 130.91972208960826                            !constant
+         dt = 0.001! * 130.91972208960826                            !constant
       endif
       dth = half*dt
 
@@ -434,7 +434,7 @@ write(*,*) "particle_integrators"
 
 
          !1.kick(dth)
-         call kick(pset, acc2, dth, n)
+         call kick(pset, acc3, dth, n)
 
 
          !2.drift(dt)
@@ -463,12 +463,12 @@ write(*,*) "particle_integrators"
 
 
          call get_acc_cic(pset, cg, cells, acc3, n)                     !CIC acceleration
-         call get_acc_max(acc2, n, a)                                    !max(|a_i|)
+         call get_acc_max(acc3, n, a)                                    !max(|a_i|)
 
 
 
          !4.kick(dth)
-         call kick(pset, acc2, dth, n)
+         call kick(pset, acc3, dth, n)
 
 
 
@@ -633,7 +633,7 @@ write(*,*) "particle_integrators"
                   if (pset%p(i)%pos(cdim) < cg%coord(CENTER, cdim)%r(cells(i,cdim))) then
                      cells2(i,cdim) = cells(i,cdim)-1
                   else
-                     cells2(i,cdim) = cells(i,cdim)!+1
+                     cells2(i,cdim) = cells(i,cdim)
                   endif
                   dxyz(i, cdim) = abs(pset%p(i)%pos(cdim) - cg%coord(CENTER, cdim)%r(cells2(i,cdim)))
 
@@ -962,25 +962,7 @@ write(*,*) "particle_integrators"
                enddo
          end function df_dx_o2
          
-         function df_dx_o2_1(cells, cg)!, n)
-            use constants, only: ndims
-            use grid_cont,  only: grid_container
-            implicit none
-               type(grid_container), pointer, intent(in) :: cg
-               !integer, intent(in) :: n
-               integer,dimension(ndims),intent(in) :: cells
-               integer(kind=8) :: p, q, r
-               real :: df_dx_o2_1
 
-               
-                  p = cells(1)
-                  q = cells(2)
-                  r = cells(3)
-
-                  !o(R^2)
-                  df_dx_o2_1 = ( cg%gpot(p+1, q, r) - cg%gpot(p-1, q, r) ) / (2.0*cg%dx)
-           
-         end function df_dx_o2_1
 
 
          function df_dy_o2(cells, cg, n)
@@ -1003,27 +985,7 @@ write(*,*) "particle_integrators"
                   df_dy_o2(i) = (cg%gpot(p, q+1, r) - cg%gpot(p, q-1, r) ) / (2.0*cg%dy)
                enddo
          end function df_dy_o2
-         
-         function df_dy_o2_1(cells, cg)!, n)
-            use constants, only: ndims
-            use grid_cont,  only: grid_container 
-            implicit none
-               type(grid_container), pointer, intent(in) :: cg
-               !integer, intent(in) :: n
-               integer,dimension(ndims),intent(in) :: cells
-               integer(kind=8) :: p, q, r
-               real:: df_dy_o2_1
 
-               
-                  p = cells(1)
-                  q = cells(2)
-                  r = cells(3)
-
-                  !o(R^2)
-                  df_dy_o2_1 = (cg%gpot(p, q+1, r) - cg%gpot(p, q-1, r) ) / (2.0*cg%dy)
-               
-         end function df_dy_o2_1
-         
 
       function df_dz_o2(cells, cg, n)
             use constants, only: ndims
@@ -1045,27 +1007,6 @@ write(*,*) "particle_integrators"
                   df_dz_o2(i) = ( cg%gpot(p, q, r+1) - cg%gpot(p, q, r-1) ) / (2.0*cg%dz)
                enddo
          end function df_dz_o2
-         
-         function df_dz_o2_1(cells, cg)!, n)
-            use constants, only: ndims
-            use grid_cont,  only: grid_container 
-            implicit none
-               type(grid_container), pointer, intent(in) :: cg
-              ! integer, intent(in) :: n
-               integer,dimension(ndims),intent(in) :: cells
-               integer(kind=8) :: p, q, r
-               real :: df_dz_o2_1
-
-               
-                  p = cells(1)
-                  q = cells(2)
-                  r = cells(3)
-
-                  !o(R^2)
-                  df_dz_o2_1 = ( cg%gpot(p, q, r+1) - cg%gpot(p, q, r-1) ) / (2.0*cg%dz)
-            
-         end function df_dz_o2_1
-         
 
 
          function d2f_dx2_o2(cells, cg, n)
@@ -1132,6 +1073,7 @@ write(*,*) "particle_integrators"
                   d2f_dz2_o2(i) = ( cg%gpot(p, q, r+1) - 2.0*cg%gpot(p, q, r) + cg%gpot(p, q, r-1) ) / (cg%dz**2)
                enddo
          end function d2f_dz2_o2
+
 
          function d2f_dxdy_o2(cells, cg, n)
             use constants, only: ndims
