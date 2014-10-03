@@ -335,6 +335,7 @@ contains
       real, dimension(n) :: ro,uo,Ptoto,etoto
       real    :: smallp, entho
       integer :: ivar
+      logical :: has_e ! has_energy, .false. for dust
 
 #ifndef ISO
       real, dimension(n) :: ekinl, ekinr
@@ -346,6 +347,7 @@ contains
       ! constants
       smallp = 1.e-7   !> \deprecated BEWARE
 
+      has_e = (size(qleft, dim=1) >= ien)
 #ifndef ISO
       entho = one/(gamma-one)
 #else /* ISO */
@@ -355,7 +357,11 @@ contains
       rl = max(qleft (idn,:), smalld)
       ul =     qleft (imx,:)
 #ifndef ISO
-      Pl = max(qleft (ien,:),rl(:)*smallp)
+      if (has_e) then
+         Pl = max(qleft (ien,:),rl(:)*smallp)
+      else
+         Pl = rl(:)*smallp
+      endif
 
       ekinl = half * rl * ( ul*ul + qleft(imy,:)**2 + qleft(imz,:)**2 )
       etotl = Pl*entho + ekinl
@@ -369,7 +375,11 @@ contains
       rr = max(qright(idn,:), smalld)
       ur =     qright(imx,:)
 #ifndef ISO
-      Pr = max(qright(ien,:), rr*smallp)
+      if (has_e) then
+         Pr = max(qright(ien,:), rr*smallp)
+      else
+         Pr = rr*smallp
+      endif
 
       ekinr = half * rr * ( ur*ur + qright(imy,:)**2 + qright(imz,:)**2 )
       etotr = Pr*entho + ekinr
@@ -440,7 +450,7 @@ contains
       fgdnv(idn,:) = ro*uo
       fgdnv(imx,:) = ro*uo*uo+Ptoto
 #ifndef ISO
-      fgdnv(ien,:) = (etoto+Ptoto)*uo
+      if (has_e) fgdnv(ien,:) = (etoto+Ptoto)*uo
 #endif /* !ISO */
 
       do ivar = imy,imz
