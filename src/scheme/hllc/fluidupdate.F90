@@ -263,11 +263,11 @@ contains
 
       implicit none
 
-      real, dimension(:,:), intent(in)       :: u, b
-      real, dimension(:),   intent(in)       :: cs2
+      real, dimension(:,:),        intent(in) :: u, b
+      real, dimension(:), pointer, intent(in) :: cs2
+
       real, dimension(size(u,1), size(u,2))  :: f
       real, dimension(size(u,2))             :: vx, p
-
       integer :: ip
       class(component_fluid), pointer :: fl
 
@@ -279,7 +279,12 @@ contains
             p = (u(fl%ien,:) - ekin(u(fl%imx,:), u(fl%imy,:), u(fl%imz,:), u(fl%idn,:))) * flind%neu%gam_1
             if (fl%is_magnetized) p = p + (two-fl%gam)*half*sum(b**2,dim=1)
          else
-            p = cs2*u(fl%idn,:)
+            if (associated(cs2)) then
+               p = cs2*u(fl%idn,:)
+            else
+               p = 0.
+            endif
+
          endif
 
          f(fl%idn,:) = u(fl%imx,:)
