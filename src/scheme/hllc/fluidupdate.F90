@@ -38,6 +38,7 @@ module fluidupdate   ! SPLIT MUSCL HANCOCK
   public :: fluid_update
 
 contains
+
    subroutine fluid_update
 
       use cg_list,     only: cg_list_element
@@ -132,8 +133,11 @@ contains
    end subroutine sweep
 !---------------------------------------------------------------------------
    function calculate_slope_vanleer(u) result(dq)
+
       implicit none
+
       real, dimension(:,:), intent(in)     :: u
+
       real, dimension(size(u,1),size(u,2)) :: dlft, drgt, dcen, dq
       integer :: n
 
@@ -153,12 +157,15 @@ contains
    end function calculate_slope_vanleer
 !---------------------------------------------------------------------------
    function calculate_slope_moncen(u) result(dq)
-      use constants,     only: half, one
+
+      use constants, only: half, one
+
       implicit none
+
       real, dimension(:,:), intent(in)     :: u
+
       real, dimension(size(u,1),size(u,2)) :: dlft,drgt,dcen,dlim, dq
       integer :: n
-
       real :: sl
 
       sl = one
@@ -180,17 +187,19 @@ contains
    end function calculate_slope_moncen
 !---------------------------------------------------------------------------
    subroutine sweep1d_mh(u,b,cs2,dtodx)
-      use constants,    only: half
-      use fluidindex,   only: flind
-      use fluidtypes,   only: component_fluid
+
+      use constants,  only: half
+      use fluidindex, only: flind
+      use fluidtypes, only: component_fluid
+
       implicit none
-      real,                 intent(in)           :: dtodx
-      real, dimension(:),   intent(in), pointer  :: cs2
-      real, dimension(:,:), intent(in)           :: b
-      real, dimension(:,:), intent(inout)        :: u
 
-      class(component_fluid), pointer            :: fl
+      real,                        intent(in)    :: dtodx
+      real, dimension(:), pointer, intent(in)    :: cs2
+      real, dimension(:,:),        intent(in)    :: b
+      real, dimension(:,:),        intent(inout) :: u
 
+      class(component_fluid), pointer              :: fl
       real, dimension(size(u,1),size(u,2)), target :: flux, ql, qr, qgdn
       real, dimension(size(u,1),size(u,2)), target :: du, ul, ur, u_l, u_r
       real, dimension(:,:), pointer                :: p_ql, p_qr, p_q, p_flux
@@ -234,8 +243,8 @@ contains
       implicit none
 
       real, dimension(:,:), intent(in)           :: u, b
-      real, dimension(size(u,1),size(u,2))       :: q
 
+      real, dimension(size(u,1),size(u,2))       :: q
       integer :: p
       class(component_fluid), pointer :: fl
 
@@ -317,14 +326,13 @@ contains
 
       implicit none
 
+      integer,                       intent(in)    :: n
+      real,                          intent(in)    :: gamma
+      real, dimension(:,:), pointer, intent(in)    :: qleft,qright
+      real, dimension(:,:), pointer, intent(inout) :: qgdnv,fgdnv
+      real, dimension(:),            intent(in)    :: cs2
+
       real, parameter    :: smallc = 1.e-8
-
-      integer,              intent(in)             :: n
-      real,                 intent(in)             :: gamma
-      real, dimension(:,:), intent(in),    pointer :: qleft,qright
-      real, dimension(:,:), intent(inout), pointer :: qgdnv,fgdnv
-      real, dimension(:),   intent(in)             :: cs2
-
       real, dimension(n) :: SL,SR
       real, dimension(n) :: rl,Pl,ul,etotl,ptotl
       real, dimension(n) :: rr,Pr,ur,etotr,ptotr
@@ -336,7 +344,6 @@ contains
       real    :: smallp, entho
       integer :: ivar
       logical :: has_e ! has_energy, .false. for dust
-
 #ifndef ISO
       real, dimension(n) :: ekinl, ekinr
 #endif /* !ISO */
