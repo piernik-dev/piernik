@@ -38,13 +38,14 @@ module fluidupdate   ! SPLIT MUSCL HANCOCK
   public :: fluid_update
 
 contains
+
    subroutine fluid_update
 
       use cg_list,     only: cg_list_element
       use cg_leaves,   only: leaves
       use constants,   only: xdim, zdim
-      use dataio_pub,  only: halfstep
-      use domain,      only: dom
+      use dataio_pub,  only: halfstep, die
+      use domain,      only: dom, is_multicg
       use global,      only: dt, dtm, t
       use user_hooks,  only: problem_customize_solution
 
@@ -53,6 +54,9 @@ contains
       logical, save                  :: first_run = .true.
       type(cg_list_element), pointer :: cgl
       integer(kind=4)                :: ddim
+
+      !> \todo figure out what the problem is and enable multicg and AMR as well
+      if (is_multicg) call die("[fluid_update] something here is not compatible with multiple blocks per process yet")
 
       halfstep = .false.
       if (first_run) then
@@ -91,8 +95,8 @@ contains
 !---------------------------------------------------------------------------
    subroutine sweep(cg,dt,ddim)
 
-      use constants,        only: pdims, xdim, zdim, cs_i2_n, ORTHO1, ORTHO2
-      use fluidboundaries,  only: all_fluid_boundaries
+      use constants,        only: pdims, xdim, zdim, cs_i2_n, ORTHO1, ORTHO2, LO, HI
+      use all_boundaries,   only: all_fluid_boundaries
       use fluidindex,       only: iarr_all_swp
       use grid_cont,        only: grid_container
       use named_array_list, only: qna, wna
@@ -132,8 +136,11 @@ contains
    end subroutine sweep
 !---------------------------------------------------------------------------
    function calculate_slope_vanleer(u) result(dq)
+
       implicit none
+
       real, dimension(:,:), intent(in)     :: u
+
       real, dimension(size(u,1),size(u,2)) :: dlft, drgt, dcen, dq
       integer :: n
 
@@ -153,12 +160,15 @@ contains
    end function calculate_slope_vanleer
 !---------------------------------------------------------------------------
    function calculate_slope_moncen(u) result(dq)
-      use constants,     only: half, one
+
+      use constants, only: half, one
+
       implicit none
+
       real, dimension(:,:), intent(in)     :: u
+
       real, dimension(size(u,1),size(u,2)) :: dlft,drgt,dcen,dlim, dq
       integer :: n
-
       real :: sl
 
       sl = one
@@ -180,17 +190,19 @@ contains
    end function calculate_slope_moncen
 !---------------------------------------------------------------------------
    subroutine sweep1d_mh(u,b,cs2,dtodx)
-      use constants,    only: half
-      use fluidindex,   only: flind
-      use fluidtypes,   only: component_fluid
+
+      use constants,  only: half
+      use fluidindex, only: flind
+      use fluidtypes, only: component_fluid
+
       implicit none
-      real,                 intent(in)           :: dtodx
-      real, dimension(:),   intent(in), pointer  :: cs2
-      real, dimension(:,:), intent(in)           :: b
-      real, dimension(:,:), intent(inout)        :: u
 
-      class(component_fluid), pointer            :: fl
+      real,                        intent(in)    :: dtodx
+      real, dimension(:), pointer, intent(in)    :: cs2
+      real, dimension(:,:),        intent(in)    :: b
+      real, dimension(:,:),        intent(inout) :: u
 
+      class(component_fluid), pointer              :: fl
       real, dimension(size(u,1),size(u,2)), target :: flux, ql, qr, qgdn
       real, dimension(size(u,1),size(u,2)), target :: du, ul, ur, u_l, u_r
       real, dimension(:,:), pointer                :: p_ql, p_qr, p_q, p_flux
@@ -234,8 +246,8 @@ contains
       implicit none
 
       real, dimension(:,:), intent(in)           :: u, b
-      real, dimension(size(u,1),size(u,2))       :: q
 
+      real, dimension(size(u,1),size(u,2))       :: q
       integer :: p
       class(component_fluid), pointer :: fl
 
@@ -263,11 +275,11 @@ contains
 
       implicit none
 
-      real, dimension(:,:), intent(in)       :: u, b
-      real, dimension(:),   intent(in)       :: cs2
+      real, dimension(:,:),        intent(in) :: u, b
+      real, dimension(:), pointer, intent(in) :: cs2
+
       real, dimension(size(u,1), size(u,2))  :: f
       real, dimension(size(u,2))             :: vx, p
-
       integer :: ip
       class(component_fluid), pointer :: fl
 
@@ -279,7 +291,12 @@ contains
             p = (u(fl%ien,:) - ekin(u(fl%imx,:), u(fl%imy,:), u(fl%imz,:), u(fl%idn,:))) * flind%neu%gam_1
             if (fl%is_magnetized) p = p + (two-fl%gam)*half*sum(b**2,dim=1)
          else
-            p = cs2*u(fl%idn,:)
+            if (associated(cs2)) then
+               p = cs2*u(fl%idn,:)
+            else
+               p = 0.
+            endif
+
          endif
 
          f(fl%idn,:) = u(fl%imx,:)
@@ -312,14 +329,13 @@ contains
 
       implicit none
 
+      integer,                       intent(in)    :: n
+      real,                          intent(in)    :: gamma
+      real, dimension(:,:), pointer, intent(in)    :: qleft,qright
+      real, dimension(:,:), pointer, intent(inout) :: qgdnv,fgdnv
+      real, dimension(:),            intent(in)    :: cs2
+
       real, parameter    :: smallc = 1.e-8
-
-      integer,              intent(in)             :: n
-      real,                 intent(in)             :: gamma
-      real, dimension(:,:), intent(in),    pointer :: qleft,qright
-      real, dimension(:,:), intent(inout), pointer :: qgdnv,fgdnv
-      real, dimension(:),   intent(in)             :: cs2
-
       real, dimension(n) :: SL,SR
       real, dimension(n) :: rl,Pl,ul,etotl,ptotl
       real, dimension(n) :: rr,Pr,ur,etotr,ptotr
@@ -330,7 +346,7 @@ contains
       real, dimension(n) :: ro,uo,Ptoto,etoto
       real    :: smallp, entho
       integer :: ivar
-
+      logical :: has_e ! has_energy, .false. for dust
 #ifndef ISO
       real, dimension(n) :: ekinl, ekinr
 #endif /* !ISO */
@@ -341,6 +357,7 @@ contains
       ! constants
       smallp = 1.e-7   !> \deprecated BEWARE
 
+      has_e = (size(qleft, dim=1) >= ien)
 #ifndef ISO
       entho = one/(gamma-one)
 #else /* ISO */
@@ -350,7 +367,11 @@ contains
       rl = max(qleft (idn,:), smalld)
       ul =     qleft (imx,:)
 #ifndef ISO
-      Pl = max(qleft (ien,:),rl(:)*smallp)
+      if (has_e) then
+         Pl = max(qleft (ien,:),rl(:)*smallp)
+      else
+         Pl = rl(:)*smallp
+      endif
 
       ekinl = half * rl * ( ul*ul + qleft(imy,:)**2 + qleft(imz,:)**2 )
       etotl = Pl*entho + ekinl
@@ -364,7 +385,11 @@ contains
       rr = max(qright(idn,:), smalld)
       ur =     qright(imx,:)
 #ifndef ISO
-      Pr = max(qright(ien,:), rr*smallp)
+      if (has_e) then
+         Pr = max(qright(ien,:), rr*smallp)
+      else
+         Pr = rr*smallp
+      endif
 
       ekinr = half * rr * ( ur*ur + qright(imy,:)**2 + qright(imz,:)**2 )
       etotr = Pr*entho + ekinr
@@ -378,8 +403,17 @@ contains
       qgdnv(imx,:) = half*( qleft(imx,:) + qright(imx,:) )
 
       ! Find the largest eigenvalues in the normal direction to the interface
+
+#if 0
+      ! strange FPExceptions here with gfortran 4.8.3 20140911 (Red Hat 4.8.3-7) when gamma*Pl/rl = -1.e-9 and there is -O3 (switching to -O2 fixes it)
       cfastl=sqrt(max(gamma*Pl/rl,smallc**2))
       cfastr=sqrt(max(gamma*Pr/rr,smallc**2))
+#else
+      cfastl=max(gamma*Pl/rl,smallc**2)
+      cfastl=sqrt(cfastl)
+      cfastr=max(gamma*Pr/rr,smallc**2)
+      cfastr=sqrt(cfastr)
+#endif
 
       ! Compute HLL wave speed
       SL=min(ul,ur)-max(cfastl,cfastr)
@@ -435,7 +469,7 @@ contains
       fgdnv(idn,:) = ro*uo
       fgdnv(imx,:) = ro*uo*uo+Ptoto
 #ifndef ISO
-      fgdnv(ien,:) = (etoto+Ptoto)*uo
+      if (has_e) fgdnv(ien,:) = (etoto+Ptoto)*uo
 #endif /* !ISO */
 
       do ivar = imy,imz
