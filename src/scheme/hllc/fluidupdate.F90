@@ -393,8 +393,17 @@ contains
       qgdnv(imx,:) = half*( qleft(imx,:) + qright(imx,:) )
 
       ! Find the largest eigenvalues in the normal direction to the interface
+
+#if 0
+      ! strange FPExceptions here with gfortran 4.8.3 20140911 (Red Hat 4.8.3-7) when gamma*Pl/rl = -1.e-9 and there is -O3 (switching to -O2 fixes it)
       cfastl=sqrt(max(gamma*Pl/rl,smallc**2))
       cfastr=sqrt(max(gamma*Pr/rr,smallc**2))
+#else
+      cfastl=max(gamma*Pl/rl,smallc**2)
+      cfastl=sqrt(cfastl)
+      cfastr=max(gamma*Pr/rr,smallc**2)
+      cfastr=sqrt(cfastr)
+#endif
 
       ! Compute HLL wave speed
       SL=min(ul,ur)-max(cfastl,cfastr)
