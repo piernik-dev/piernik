@@ -44,8 +44,8 @@ contains
       use cg_list,     only: cg_list_element
       use cg_leaves,   only: leaves
       use constants,   only: xdim, zdim
-      use dataio_pub,  only: halfstep
-      use domain,      only: dom
+      use dataio_pub,  only: halfstep, die
+      use domain,      only: dom, is_multicg
       use global,      only: dt, dtm, t
       use user_hooks,  only: problem_customize_solution
 
@@ -54,6 +54,9 @@ contains
       logical, save                  :: first_run = .true.
       type(cg_list_element), pointer :: cgl
       integer(kind=4)                :: ddim
+
+      !> \todo figure out what the problem is and enable multicg and AMR as well
+      if (is_multicg) call die("[fluid_update] something here is not compatible with multiple blocks per process yet")
 
       halfstep = .false.
       if (first_run) then
