@@ -250,8 +250,9 @@ contains
 
       implicit none
 
-      integer :: i, c, iv
-      integer, dimension(:), allocatable :: ic
+      integer :: i, c
+      integer(kind=4) :: iv
+      integer(kind=4), dimension(:), allocatable :: ic
 
       do i = 1, n_ref_auto_param
          call identify_field(refine_vars(i)%rvar, iv, ic)
@@ -281,8 +282,8 @@ contains
 
       implicit none
 
-      integer,          intent(in) :: iv        !< field index in cg%q or cg%w array
-      integer,          intent(in) :: ic        !< component index of 4D array or INVALID for 3D arrays
+      integer(kind=4),  intent(in) :: iv        !< field index in cg%q or cg%w array
+      integer(kind=4),  intent(in) :: ic        !< component index of 4D array or INVALID for 3D arrays
       real,             intent(in) :: ref_thr   !< refinement threshold
       real,             intent(in) :: deref_thr !< derefinement threshold
       real,             intent(in) :: aux       !< auxiliary parameter
@@ -402,9 +403,9 @@ contains
 
       implicit none
 
-      character(len=cbuff_len),           intent(in)  :: vname !< string specifying the field on
-      integer,                            intent(out) :: iv    !< field index in cg%q or cg%w array
-      integer, dimension(:), allocatable, intent(out) :: ic    !< component index array (cg%w(iv)%arr(ic,:,:,:)) or INVALID for 3D arrays
+      character(len=cbuff_len),                   intent(in)  :: vname !< string specifying the field on
+      integer(kind=4),                            intent(out) :: iv    !< field index in cg%q or cg%w array
+      integer(kind=4), dimension(:), allocatable, intent(out) :: ic    !< component index array (cg%w(iv)%arr(ic,:,:,:)) or INVALID for 3D arrays
 
       iv = INVALID
 

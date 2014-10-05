@@ -418,8 +418,8 @@ contains
                do cdim = xdim, zdim
                   if (dom%has_dir(cdim)) then
                      ijkp(cdim, I0) = nint((part%pos(cdim) - cgl%cg%coord(CENTER, cdim)%r(1))*cgl%cg%idl(cdim)) + 1   !!! BEWARE hardcoded magic
-                     ijkp(cdim, IM) = max(ijkp(cdim, I0) - 1, cgl%cg%lhn(cdim, LO))
-                     ijkp(cdim, IP) = min(ijkp(cdim, I0) + 1, cgl%cg%lhn(cdim, HI))
+                     ijkp(cdim, IM) = max(ijkp(cdim, I0) - 1, int(cgl%cg%lhn(cdim, LO), kind=8))
+                     ijkp(cdim, IP) = min(ijkp(cdim, I0) + 1, int(cgl%cg%lhn(cdim, HI), kind=8))
                   else
                      ijkp(cdim, IM) = cgl%cg%ijkse(cdim, LO)
                      ijkp(cdim, I0) = cgl%cg%ijkse(cdim, LO)

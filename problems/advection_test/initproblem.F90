@@ -88,7 +88,7 @@ contains
 
       implicit none
 
-      integer :: id
+      integer(kind=4) :: id
 
       ! namelist default parameter values
       pulse_size(:) = 1.0                  !< size of the pulse
@@ -191,7 +191,7 @@ contains
          call set_n_updAMR(nflip)
       else
          ! Automatic refinement criteria
-         do id = lbound(iarr_all_dn, dim=1), ubound(iarr_all_dn, dim=1)
+         do id = lbound(iarr_all_dn, dim=1, kind=4), ubound(iarr_all_dn, dim=1, kind=4)
             call user_ref2list(wna%fi, id, ref_thr*pulse_amp, deref_thr*pulse_amp, 0., "grad")
          enddo
       endif

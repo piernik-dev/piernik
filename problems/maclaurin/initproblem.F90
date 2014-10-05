@@ -99,7 +99,7 @@ contains
       implicit none
 
       integer, parameter :: maxsub = 10  !< upper limit for subsampling
-      integer :: id
+      integer(kind=4) :: id
 
       d1 = smalld                  ! ambient density
 
@@ -218,7 +218,7 @@ contains
 #endif /* MACLAURIN_PROBLEM */
 
       ! Set up automatic refinement criteria on densities
-      do id = lbound(iarr_all_dn, dim=1), ubound(iarr_all_dn, dim=1)
+      do id = lbound(iarr_all_dn, dim=1, kind=4), ubound(iarr_all_dn, dim=1, kind=4)
          !> \warning only selfgravitating fluids should be added
          call user_ref2list(wna%fi, id, ref_thr*d0, deref_thr*d0, 0., "grad")
       enddo
