@@ -262,23 +262,24 @@ contains
       logical                                      :: save_potential    !< save external potential or not save: that is the question
       logical                                      :: finish            !< if .true. stop simulation with saving extrenal potential (works only if save_potential==.true.)
       logical                                      :: external_pot      !< if .true. gravitational potential will be deleted and replaced by external potential of point mass
-
+      logical, save                                :: printed_info = .false.
 
       procedure(df_dxi),      pointer :: df_dx_p, df_dy_p, df_dz_p          ! COMMENT ME
       procedure(d2f_dxi_2),   pointer :: d2f_dx2_p, d2f_dy2_p, d2f_dz2_p    ! COMMENT ME
       procedure(d2f_dxi_dxj), pointer :: d2f_dxdy_p, d2f_dxdz_p, d2f_dydz_p ! COMMENT ME
 
 
-
-      select case (acc_interp_method)
-         case('cic')
-            write(*,*) "Metoda CIC"
-            call printinfo("[particle_integrators] Acceleration interpolation method: CIC") 
-         case('lagrange')
-            call printinfo("[particle_integrators] Acceleration interpolation method: Lagrange polynomials")
-         case('model')
-            call printinfo("[particle_integrators] Acceleration interpolation method: calkowanie bezposrednie")
-      end select
+      if (.not. printed_info) then
+         select case (acc_interp_method)
+            case('cic')
+               call printinfo("[particle_integrators:leapfrog2ord] Acceleration interpolation method: CIC") 
+            case('lagrange')
+               call printinfo("[particle_integrators:leapfrog2ord] Acceleration interpolation method: Lagrange polynomials")
+            case('model')
+               call printinfo("[particle_integrators:leapfrog2ord] Acceleration interpolation method: calkowanie bezposrednie")
+         end select
+         printed_info = .true.
+      endif
 
 
       open(newunit=lun_out, file='leapfrog_out.log', status='unknown',  position='append')
@@ -292,20 +293,10 @@ contains
 
       mass(:) = pset%p(:)%mass
 
-      !do ndim = xdim, zdim
-      !   pos(:, ndim) = pset%p(:)%pos(ndim)
-      !   vel(:, ndim) = pset%p(:)%vel(ndim)
-      !enddo
-
 
       t = t_glob
       t_end = t + dt_tot
       t_out = t_glob + dt_out
-
-!#ifdef REST
-!   write(*,*) "test dziala"
-!   stop
-!#endif /* REST */
 
       mins(:) = dom%edge(:,1)
       maxs(:) = dom%edge(:,2)
@@ -332,10 +323,10 @@ contains
       external_pot = .true.
       !external_pot = .false.
 
-      !if (external_pot) then
-      !   call pot2grid(cg, eps2)
-      !   write(*,*) "Obliczono potencjal zewnetrzny"
-      !endif
+      if (external_pot) then
+         call pot2grid(cg, eps2)
+         write(*,*) "Obliczono potencjal zewnetrzny"
+      endif
 
 
 
@@ -450,11 +441,11 @@ contains
 !#endif /* SELF_GRAV */
 !
 !
-#ifdef SELF_GRAV
-         call leaves%q_copy(qna%ind(sgpm_n), qna%ind(sgp_n))
-         call leaves%q_lin_comb([ ind_val(qna%ind(gp_n), 1.), ind_val(qna%ind(sgp_n), one+dt),  ind_val(qna%ind(sgpm_n), -dt) ], qna%ind(gpot_n))
-         call leaves%q_lin_comb([ ind_val(qna%ind(gp_n), 1.), ind_val(qna%ind(sgp_n), one+dth), ind_val(qna%ind(sgpm_n), -dth)], qna%ind(hgpot_n))
-#endif /* SELF_GRAV */
+!#ifdef SELF_GRAV
+!         call leaves%q_copy(qna%ind(sgpm_n), qna%ind(sgp_n))
+!         call leaves%q_lin_comb([ ind_val(qna%ind(gp_n), 1.), ind_val(qna%ind(sgp_n), one+dt),  ind_val(qna%ind(sgpm_n), -dt) ], qna%ind(gpot_n))
+!         call leaves%q_lin_comb([ ind_val(qna%ind(gp_n), 1.), ind_val(qna%ind(sgp_n), one+dth), ind_val(qna%ind(sgpm_n), -dth)], qna%ind(hgpot_n))
+!#endif /* SELF_GRAV */
 
          call find_cells(pset, cells, dist, mins, cg, n)                !finding cells
 
