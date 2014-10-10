@@ -31,14 +31,14 @@
 module particle_integrators
 ! pulled by GRAV
    use particle_types, only: particle_solver_T
-   use constants,             only: cbuff_len
+   use constants,      only: cbuff_len
 
    implicit none
    !------------------
 
    !------------------
    private
-   public :: hermit4, leapfrog2, interp_method
+   public :: hermit4, leapfrog2, acc_interp_method, var_timestep, lf_timestep
 
    type, extends(particle_solver_T) :: hermit4_T
    contains
@@ -50,9 +50,11 @@ module particle_integrators
       procedure, nopass :: evolve => leapfrog2ord
    end type leapfrog2_T
 
-   type(hermit4_T), target :: hermit4
+   type(hermit4_T),   target :: hermit4
    type(leapfrog2_T), target :: leapfrog2
-   character(len=cbuff_len) :: interp_method
+   character(len=cbuff_len)  :: acc_interp_method  !< acceleration interpolation method
+   logical                   :: var_timestep        !< if .true. then leapfrog2ord use variable timestep to integration
+   real                       :: lf_timestep         !< leapfrog2ord constant timestep value (works only if var_timestep = .false.)
 contains
 
    !>
@@ -179,7 +181,7 @@ contains
       use cg_leaves,      only: leaves
       use cg_list,        only: cg_list_element
       use grid_cont,      only: grid_container
-      use dataio_pub,     only: die
+      use dataio_pub,     only: die, printinfo
 #ifdef SELF_GRAV
       use cg_list_dataop,   only: ind_val
       use constants,        only: gp_n, gpot_n, hgpot_n, one, sgp_n, sgpm_n
@@ -228,7 +230,6 @@ contains
       real, dimension(:,:), allocatable                  :: dist           !< distances between positions of particles and centers of the cells
       real, dimension(:,:), allocatable                  :: acc            !< 3D array of particles acceleration taken from Lagrange polynomial interpolation
       real, dimension(:,:), allocatable                  :: acc2           !< 3D array of particles acceleration taken from model
-      real, dimension(:,:), allocatable                  :: acc3           !< 3D array of particles acceleration taken from CIC
 
       real, intent(in)                            :: t_glob           !< initial time of simulation
       real, intent(in)                            :: dt_tot           !< final time of simulation
@@ -252,7 +253,7 @@ contains
       real                                         :: init_ang_mom      !< angular momentum of set of particles at t_glob
       real                                         :: d_ang_momentum = 0.0 !< error of angular momentum in succeeding timensteps, at t=t_glob=0.0
 
-      integer                                      :: i, j, k!, cdim
+      integer                                      :: i, j, k
       integer                                      :: nsteps
       integer                                      :: n                 !< number of particles
       integer                                      :: lun_out           !< output file
@@ -261,22 +262,22 @@ contains
       logical                                      :: save_potential    !< save external potential or not save: that is the question
       logical                                      :: finish            !< if .true. stop simulation with saving extrenal potential (works only if save_potential==.true.)
       logical                                      :: external_pot      !< if .true. gravitational potential will be deleted and replaced by external potential of point mass
-      logical                                      :: var_timestep      !< if .true. variable timestep will be used
-      
-      
+
+
       procedure(df_dxi),      pointer :: df_dx_p, df_dy_p, df_dz_p          ! COMMENT ME
       procedure(d2f_dxi_2),   pointer :: d2f_dx2_p, d2f_dy2_p, d2f_dz2_p    ! COMMENT ME
       procedure(d2f_dxi_dxj), pointer :: d2f_dxdy_p, d2f_dxdz_p, d2f_dydz_p ! COMMENT ME
 
 
 
-      select case (interp_method)
+      select case (acc_interp_method)
          case('cic')
             write(*,*) "Metoda CIC"
+            call printinfo("[particle_integrators] Acceleration interpolation method: CIC") 
          case('lagrange')
-            write(*,*) "Metoda wielomianow"
+            call printinfo("[particle_integrators] Acceleration interpolation method: Lagrange polynomials")
          case('model')
-            write(*,*) "Metoda dokladna"
+            call printinfo("[particle_integrators] Acceleration interpolation method: calkowanie bezposrednie")
       end select
 
 
@@ -285,7 +286,7 @@ contains
       n = size(pset%p, dim=1)
 
 
-      allocate(mass(n), acc(n, ndims), acc2(n, ndims), acc3(n, ndims), cells(n, ndims), dist(n, ndims), mins(ndims), maxs(ndims))
+      allocate(mass(n), acc(n, ndims), acc2(n, ndims), cells(n, ndims), dist(n, ndims), mins(ndims), maxs(ndims))
 
 
 
@@ -317,7 +318,7 @@ contains
       eps = 1.0e-4
       eps2 = zero
 
-write(*,*) "particle_integrators"
+
       cgl => leaves%first
       if (is_refined) call die("[particle_integrators:leapfrog2ord] AMR not implemented for particles yet")
 
@@ -331,10 +332,10 @@ write(*,*) "particle_integrators"
       external_pot = .true.
       !external_pot = .false.
 
-      if (external_pot) then
-         call pot2grid(cg, eps2)
-         write(*,*) "Obliczono potencjal zewnetrzny"
-      endif
+      !if (external_pot) then
+      !   call pot2grid(cg, eps2)
+      !   write(*,*) "Obliczono potencjal zewnetrzny"
+      !endif
 
 
 
@@ -376,9 +377,14 @@ write(*,*) "particle_integrators"
 
 
 
+      !acceleration
+      select case (acc_interp_method)
+         case('lagrange', 'Lagrange')
+            call get_acc_int(cells, dist, acc, cg, n)
+         case('cic', 'CIC')
+            call get_acc_cic(pset, cg, cells, acc, n)
+      end select
 
-      !przyspieszenie interpolowane
-      call get_acc_int(cells, dist, acc, cg, n)
 
 
 
@@ -391,22 +397,17 @@ write(*,*) "particle_integrators"
          acc2(:,:) = 0.0
       endif
 
-      call get_acc_cic(pset, cg, cells, acc3, n)
+
+      call get_acc_max(acc, n, a)
 
 
-      call get_acc_max(acc3, n, a)
-      write(*,*) "get_acc_max, a=", a
-
-
-      !var_timestep=.true.
-      var_timestep=.false.
       !timestep
       if (var_timestep) then
          dt = sqrt(2.0*eta*eps/a)               !variable
          write(*,*) "leapfrog: dt = ",dt
       else
-         !dt = 0.05
-         dt = 0.001! * 130.91972208960826                            !constant
+         dt = lf_timestep                       !constant
+         write(*,*) "leapfrog: dt = ",dt, " constant"
       endif
       dth = half*dt
 
@@ -423,18 +424,17 @@ write(*,*) "particle_integrators"
             dth = half * dt
          endif
 
-         if (t >=t_out) then
-            do i=1, n
-               !write(lun_out,*) "# t=", t
-               write(lun_out, '(I3,1X,19(E13.6,1X))') i, t, dt, mass(i), pset%p(i)%pos, acc(i,:), acc2(i,:), acc3(i,:), energy, d_energy, ang_momentum, d_ang_momentum
+         !if (t >=t_out) then
+            do i = 1, n
+               write(lun_out, '(I3,1X,16(E13.6,1X))') i, t, dt, mass(i), pset%p(i)%pos, acc(i,:), acc2(i,:), energy, d_energy, ang_momentum, d_ang_momentum
             enddo
-            t_out = t_out + dt_out
-         endif
+            !t_out = t_out + dt_out
+         !endif
 
 
 
          !1.kick(dth)
-         call kick(pset, acc3, dth, n)
+         call kick(pset, acc, dth, n)
 
 
          !2.drift(dt)
@@ -447,29 +447,34 @@ write(*,*) "particle_integrators"
 !         call leaves%q_copy(qna%ind(sgp_n), qna%ind(sgpm_n))
 !         call leaves%q_lin_comb([ ind_val(qna%ind(gp_n), 1.), ind_val(qna%ind(sgp_n), one+dt),  ind_val(qna%ind(sgpm_n), -dt) ], qna%ind(gpot_n))
 !         call leaves%q_lin_comb([ ind_val(qna%ind(gp_n), 1.), ind_val(qna%ind(sgp_n), one+dth), ind_val(qna%ind(sgpm_n), -dth)], qna%ind(hgpot_n))
-!         write(*,*) "Self_GRAV!"
 !#endif /* SELF_GRAV */
-
+!
+!
+#ifdef SELF_GRAV
+         call leaves%q_copy(qna%ind(sgpm_n), qna%ind(sgp_n))
+         call leaves%q_lin_comb([ ind_val(qna%ind(gp_n), 1.), ind_val(qna%ind(sgp_n), one+dt),  ind_val(qna%ind(sgpm_n), -dt) ], qna%ind(gpot_n))
+         call leaves%q_lin_comb([ ind_val(qna%ind(gp_n), 1.), ind_val(qna%ind(sgp_n), one+dth), ind_val(qna%ind(sgpm_n), -dth)], qna%ind(hgpot_n))
+#endif /* SELF_GRAV */
 
          call find_cells(pset, cells, dist, mins, cg, n)                !finding cells
 
          !3.acceleration + |a|
-         call get_acc_int(cells, dist, acc, cg, n)                      !Lagrange polynomials acceleration
-
-
          if (external_pot) then
-            call get_acc_model(pset, acc2, eps, n)                       !centered finite differencing acceleration (if gravitational potential is known explicite)
+            call get_acc_model(pset, acc2, eps, n)                      !centered finite differencing acceleration (if gravitational potential is known explicite)
          endif
 
+         select case (acc_interp_method)
+            case('lagrange', 'Lagrange')
+               call get_acc_int(cells, dist, acc, cg, n)                !Lagrange polynomials acceleration
+            case('cic', 'CIC')
+               call get_acc_cic(pset, cg, cells, acc, n)                !CIC acceleration
+         end select
 
-         call get_acc_cic(pset, cg, cells, acc3, n)                     !CIC acceleration
-         call get_acc_max(acc3, n, a)                                    !max(|a_i|)
-
+         call get_acc_max(acc, n, a)                                    !max(|a_i|)
 
 
          !4.kick(dth)
-         call kick(pset, acc3, dth, n)
-
+         call kick(pset, acc, dth, n)
 
 
          call get_energy(pset, cg, cells, dist, n, energy)
@@ -477,8 +482,6 @@ write(*,*) "particle_integrators"
 
 
          call get_ang_momentum_2(pset, n, ang_momentum)
-
-         !write(*,*) ang_momentum, init_ang_mom
          d_ang_momentum = log(abs((ang_momentum - init_ang_mom)/init_ang_mom))
 
          !5.t
@@ -498,7 +501,7 @@ write(*,*) "particle_integrators"
 
 
 
-      deallocate (acc, acc2, acc3, cells, dist, mins, maxs)
+      deallocate (acc, acc2, cells, dist, mins, maxs)
       close(lun_out)
 
 
@@ -557,22 +560,16 @@ write(*,*) "particle_integrators"
                integer :: i, j, k
                real, intent(in) :: eps2
 
-               !open(unit=77,file='potencjal.dat')
-
-
                   do i = lbound(cg%gpot, dim=1), ubound(cg%gpot, dim=1)
                      do j = lbound(cg%gpot, dim=2), ubound(cg%gpot, dim=2)
                         do k = lbound(cg%gpot, dim=3), ubound(cg%gpot, dim=3)
                            cg%gpot(i,j,k) = phi_pm(cg%coord(CENTER,xdim)%r(i),&
                                                    cg%coord(CENTER,ydim)%r(j),&
                                                    cg%coord(CENTER,zdim)%r(k),eps2)
-                           !write(77,*) cg%coord(CENTER,xdim)%r(i),cg%coord(CENTER,ydim)%r(j),&
-                            !           cg%coord(CENTER,zdim)%r(k),cg%gpot(i,j,k)
                         enddo
                      enddo
                   enddo
 
-               !close(77)
          end subroutine pot2grid
 
 
@@ -607,7 +604,7 @@ write(*,*) "particle_integrators"
          end subroutine check_ord
 
 
-         subroutine get_acc_cic(pset, cg, cells, acc3, n)
+         subroutine get_acc_cic(pset, cg, cells, acc, n)
             use constants, only: ndims, CENTER, xdim, ydim, zdim, half
             use grid_cont,        only: grid_container
             use particle_types, only: particle_set
@@ -620,22 +617,22 @@ write(*,*) "particle_integrators"
             integer :: i, j, k, c, cdim
             integer(kind=8) :: p
             integer(kind=8), dimension(n, ndims), intent(in) :: cells
-            integer(kind=8), dimension(n, ndims) :: cells2
+            integer(kind=8), dimension(n, ndims) :: cic_cells
             real, dimension(n, ndims) :: dxyz
-            real, dimension(n, ndims), intent(out) :: acc3
+            real, dimension(n, ndims), intent(out) :: acc
             real(kind=8), dimension(n, 8) :: aijk, fx, fy, fz
 
-            acc3 = 0.0
+            acc = 0.0
 
 
             do i = 1, n
                do cdim = xdim, ndims
                   if (pset%p(i)%pos(cdim) < cg%coord(CENTER, cdim)%r(cells(i,cdim))) then
-                     cells2(i,cdim) = cells(i,cdim)-1
+                     cic_cells(i,cdim) = cells(i,cdim) - 1
                   else
-                     cells2(i,cdim) = cells(i,cdim)
+                     cic_cells(i,cdim) = cells(i,cdim)
                   endif
-                  dxyz(i, cdim) = abs(pset%p(i)%pos(cdim) - cg%coord(CENTER, cdim)%r(cells2(i,cdim)))
+                  dxyz(i, cdim) = abs(pset%p(i)%pos(cdim) - cg%coord(CENTER, cdim)%r(cic_cells(i,cdim)))
 
                enddo
                aijk(i, 1) = (cg%dx - dxyz(i, xdim))*(cg%dy - dxyz(i, ydim))*(cg%dz - dxyz(i, zdim)) !a(i  ,j  ,k  )
@@ -656,9 +653,9 @@ write(*,*) "particle_integrators"
                do i = 0, 1
                   do j = 0, 1
                      do k = 0, 1
-                        fx(p, c) = -(cg%gpot(cells2(p, xdim)+1+i, cells2(p, ydim)  +j, cells2(p, zdim)  +k) - cg%gpot(cells2(p, xdim)-1+i, cells2(p, ydim)  +j, cells2(p, zdim)  +k))
-                        fy(p, c) = -(cg%gpot(cells2(p, xdim)  +i, cells2(p, ydim)+1+j, cells2(p, zdim)  +k) - cg%gpot(cells2(p, xdim)  +i, cells2(p, ydim)-1+j, cells2(p, zdim)  +k))
-                        fz(p, c) = -(cg%gpot(cells2(p, xdim)  +i, cells2(p, ydim)  +j, cells2(p, zdim)+1+k) - cg%gpot(cells2(p, xdim)  +i, cells2(p, ydim)  +j, cells2(p, zdim)-1+k))
+                        fx(p, c) = -(cg%gpot(cic_cells(p, xdim)+1+i, cic_cells(p, ydim)  +j, cic_cells(p, zdim)  +k) - cg%gpot(cic_cells(p, xdim)-1+i, cic_cells(p, ydim)  +j, cic_cells(p, zdim)  +k))
+                        fy(p, c) = -(cg%gpot(cic_cells(p, xdim)  +i, cic_cells(p, ydim)+1+j, cic_cells(p, zdim)  +k) - cg%gpot(cic_cells(p, xdim)  +i, cic_cells(p, ydim)-1+j, cic_cells(p, zdim)  +k))
+                        fz(p, c) = -(cg%gpot(cic_cells(p, xdim)  +i, cic_cells(p, ydim)  +j, cic_cells(p, zdim)+1+k) - cg%gpot(cic_cells(p, xdim)  +i, cic_cells(p, ydim)  +j, cic_cells(p, zdim)-1+k))
                         c = c + 1
                      enddo
                   enddo
@@ -671,85 +668,13 @@ write(*,*) "particle_integrators"
 
             do p = 1, n
                do c = 1, 8
-                  acc3(p, xdim) = acc3(p, xdim) + aijk(p, c)*fx(p, c)
-                  acc3(p, ydim) = acc3(p, ydim) + aijk(p, c)*fy(p, c)
-                  acc3(p, zdim) = acc3(p, zdim) + aijk(p, c)*fz(p, c)
+                  acc(p, xdim) = acc(p, xdim) + aijk(p, c)*fx(p, c)
+                  acc(p, ydim) = acc(p, ydim) + aijk(p, c)*fy(p, c)
+                  acc(p, zdim) = acc(p, zdim) + aijk(p, c)*fz(p, c)
                enddo
             enddo
 
          end subroutine get_acc_cic
-
-
-         subroutine get_acc_cic_o4(pset, cg, cells, acc3, n)
-            use constants, only: ndims, CENTER, xdim, ydim, zdim
-            use grid_cont,        only: grid_container
-            use particle_types, only: particle_set
-
-            implicit none
-            type(grid_container), pointer, intent(in) :: cg
-            class(particle_set), intent(in) :: pset  !< particle list
-
-            integer, intent(in) :: n
-            integer :: i, j, k, c, cdim
-            integer(kind=8) :: p
-            integer(kind=8), dimension(n, ndims), intent(in) :: cells
-            integer(kind=8), dimension(n, ndims) :: cells2
-            real, dimension(n, ndims) :: dxyz
-            real, dimension(n, ndims), intent(out) :: acc3
-            real(kind=8), dimension(n, 8) :: aijk, fx, fy, fz
-
-            acc3 = 0.0
-
-
-            do i = 1, n
-               do cdim = xdim, ndims
-                  if (pset%p(i)%pos(cdim) < cg%coord(CENTER, cdim)%r(cells(i,cdim))) then
-                     cells2(i,cdim) = cells(i,cdim)-1
-                  else
-                     cells2(i,cdim) = cells(i,cdim)!+1
-                  endif
-                  dxyz(i, cdim) = abs(pset%p(i)%pos(cdim) - cg%coord(CENTER, cdim)%r(cells2(i,cdim)))
-
-               enddo
-               aijk(i, 1) = (cg%dx - dxyz(i, xdim))*(cg%dy - dxyz(i, ydim))*(cg%dz - dxyz(i, zdim)) !a(i  ,j  ,k  )
-               aijk(i, 2) = (cg%dx - dxyz(i, xdim))*(cg%dy - dxyz(i, ydim))*         dxyz(i, zdim)  !a(i+1,j  ,k  )
-               aijk(i, 3) = (cg%dx - dxyz(i, xdim))*         dxyz(i, ydim) *(cg%dz - dxyz(i, zdim)) !a(i  ,j+1,k  )
-               aijk(i, 4) = (cg%dx - dxyz(i, xdim))*         dxyz(i, ydim) *         dxyz(i, zdim)  !a(i  ,j  ,k+1)
-               aijk(i, 5) =          dxyz(i, xdim) *(cg%dy - dxyz(i, ydim))*(cg%dz - dxyz(i, zdim)) !a(i+1,j+1,k  )
-               aijk(i, 6) =          dxyz(i, xdim) *(cg%dy - dxyz(i, ydim))*         dxyz(i, zdim)  !a(i  ,j+1,k+1)
-               aijk(i, 7) =          dxyz(i, xdim) *         dxyz(i, ydim) *(cg%dz - dxyz(i, zdim)) !a(i+1,j  ,k+1)
-               aijk(i, 8) =          dxyz(i, xdim) *         dxyz(i, ydim) *         dxyz(i, zdim)  !a(i+1,j+1,k+1)
-            enddo
-
-            aijk = aijk/cg%dvol
-
-
-            do p = 1, n
-               c = 1
-               do i = 0, 1
-                  do j = 0, 1
-                     do k = 0, 1
-                        fx(p, c) = -( (2.0/3.0)* (cg%gpot(cells2(p, xdim)+1+i, cells2(p, ydim)  +j, cells2(p, zdim)  +k) - cg%gpot(cells2(p, xdim)-1+i, cells2(p, ydim)  +j, cells2(p, zdim)  +k))*cg%idx - &
-                                    (1.0/12.0) * (cg%gpot(cells2(p, xdim)+2+i, cells2(p, ydim)  +j, cells2(p, zdim)  +k) - cg%gpot(cells2(p, xdim)-2+i, cells2(p, ydim)  +j, cells2(p, zdim)  +k))*cg%idx)
-                        fy(p, c) = -( (2.0/3.0)* (cg%gpot(cells2(p, xdim)  +i, cells2(p, ydim)+1+j, cells2(p, zdim)  +k) - cg%gpot(cells2(p, xdim)  +i, cells2(p, ydim)-1+j, cells2(p, zdim)  +k))*cg%idy - &
-                                    (1.0/12.0) * (cg%gpot(cells2(p, xdim)  +i, cells2(p, ydim)+2+j, cells2(p, zdim)  +k) - cg%gpot(cells2(p, xdim)  +i, cells2(p, ydim)-2+j, cells2(p, zdim)  +k))*cg%idy)
-                        fz(p, c) = -( (2.0/3.0)* (cg%gpot(cells2(p, xdim)  +i, cells2(p, ydim)  +j, cells2(p, zdim)+1+k) - cg%gpot(cells2(p, xdim)  +i, cells2(p, ydim)  +j, cells2(p, zdim)-1+k))*cg%idz - &
-                                    (1.0/12.0) * (cg%gpot(cells2(p, xdim)  +i, cells2(p, ydim)  +j, cells2(p, zdim)+2+k) - cg%gpot(cells2(p, xdim)  +i, cells2(p, ydim)  +j, cells2(p, zdim)-2+k))*cg%idz)
-                        c = c + 1
-                     enddo
-                  enddo
-               enddo
-            enddo
-
-            do p = 1, n
-               do c = 1, 8
-                  acc3(p, xdim) = acc3(p, xdim) + aijk(p, c)*fx(p, c)
-                  acc3(p, ydim) = acc3(p, ydim) + aijk(p, c)*fy(p, c)
-                  acc3(p, zdim) = acc3(p, zdim) + aijk(p, c)*fz(p, c)
-               enddo
-            enddo
-
-         end subroutine get_acc_cic_o4
 
 
          subroutine potential(pset, cg, cells, dist, n)
@@ -780,8 +705,7 @@ write(*,*) "particle_integrators"
                p = cells(i, xdim)
                q = cells(i, ydim)
                r = cells(i, zdim)
-               !pset%p(i)%pot = cg%gpot(p,q,r) +sqrt(pot_x(i)**2 + pot_y(i)**2 + pot_z(i)**2)
-               pset%p(i)%pot = cg%gpot(p,q,r) + dpot(i) + half*d2pot(i)
+               pset%p(i)%pot = cg%gpot(p, q, r) + dpot(i) + half * d2pot(i)
             enddo
 
          end subroutine potential
