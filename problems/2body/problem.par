@@ -1,17 +1,17 @@
  $BASE_DOMAIN
-    n_d = 128, 128, 128 
+    n_d = 64, 64, 64
     bnd_xl = 'per'
     bnd_xr = 'per'
     bnd_yl = 'per'
     bnd_yr = 'per'
     bnd_zl = 'per'
     bnd_zr = 'per'
-    xmin   =-3.0
-    xmax   = 3.0
-    ymin   =-3.0
-    ymax   = 3.0
-    zmin   =-3.0
-    zmax   = 3.0
+    xmin   =-5.0
+    xmax   = 5.0
+    ymin   =-5.0
+    ymax   = 5.0
+    zmin   =-5.0
+    zmax   = 5.0
  /
 
  $MPI_BLOCKS
@@ -49,9 +49,9 @@
 
  $FLUID_NEUTRAL
  !cs_iso = 1.0
- cs_iso = 0.001
- !selfgrav = .true.
- selfgrav = .false.
+ !cs_iso = 0.001
+ selfgrav = .true.
+ !selfgrav = .false.
  /
 
  $NUMERICAL_SETUP
@@ -63,7 +63,8 @@
  /
 
  $GRAVITY
- external_gp = 'flat_ptmass'
+ !external_gp = 'flat_ptmass'
+ !ptmass = 1.0
  /
 
  $PROBLEM_CONTROL
@@ -85,5 +86,7 @@
    !time_integrator = 'hermit4'
    time_integrator = 'leapfrog2'
    interpolation_scheme = 'cic'
-   interp_method = 'model'
+   acc_interp_method = 'cic'
+   var_timestep = .true.
+   !lf_timestep = 0.2
  /
