@@ -358,8 +358,8 @@ contains
       endif
 
 
-      call get_ang_momentum_2(pset, n, ang_momentum)
-      init_ang_mom = ang_momentum
+      !call get_ang_momentum_2(pset, n, ang_momentum)
+      !init_ang_mom = ang_momentum
 
       call find_cells(pset, cells, dist, mins, cg, n)
 
@@ -470,8 +470,8 @@ contains
          d_energy = log(abs((energy - init_energy)/init_energy))
 
 
-         call get_ang_momentum_2(pset, n, ang_momentum)
-         d_ang_momentum = log(abs((ang_momentum - init_ang_mom)/init_ang_mom))
+         !call get_ang_momentum_2(pset, n, ang_momentum)
+         !d_ang_momentum = log(abs((ang_momentum - init_ang_mom)/init_ang_mom))
 
          !5.lf_t
          lf_t = lf_t + lf_dt
