@@ -63,13 +63,13 @@ contains
 !-----------------------------------------------------------------------------
    subroutine problem_initial_conditions
 
-      use cg_leaves,    only: leaves
-      use cg_list,      only: cg_list_element
-      use constants,    only: xdim, ydim, zdim, LO, HI, CENTER
-      use dataio_pub,   only: printinfo
-      use fluidindex,   only: flind
-      use particle_pub, only: pset
-      use particle_types, only:  ht_integrator
+      use cg_leaves,      only: leaves
+      use cg_list,        only: cg_list_element
+      use constants,      only: xdim, ydim, zdim, LO, HI
+      use dataio_pub,     only: printinfo
+      use fluidindex,     only: flind
+      use particle_pub,   only: pset
+      use particle_types, only: ht_integrator
       
       
       !use particles_io_hdf5
@@ -79,8 +79,8 @@ contains
       integer                         :: i, j, k, p
       integer                         :: n_particles        !< number of particles
       real(kind=4)                    :: e                  !< orbit eccentricity
-      real                             :: eps2 = 0.0
       logical,save                    :: first_run = .true.
+      character(len=2)                :: plane
       type(cg_list_element), pointer  :: cgl
       
     
@@ -92,7 +92,7 @@ contains
                   do j = cg%lhn(ydim,LO), cg%lhn(ydim,HI)
                      do i = cg%lhn(xdim,LO), cg%lhn(xdim,HI)
                         associate( fl => flind%all_fluids(p)%fl )
-                           cg%u(fl%idn,i,j,k) = 1.0!e-6
+                           cg%u(fl%idn,i,j,k) = 1.0
                            cg%u(fl%imx,i,j,k) = 0.0
                            cg%u(fl%imy,i,j,k) = 0.0
                            cg%u(fl%imz,i,j,k) = 0.0
@@ -109,7 +109,6 @@ contains
 
       if (ht_integrator) then
          if(first_run) then
-         write(*,*) "Hermite!!!"
             call pset%add(1.0, [ 0.9700436, -0.24308753, 0.0], [ 0.466203685, 0.43236573, 0.0],0.0)
             call pset%add(1.0, [-0.9700436, 0.24308753, 0.0], [ 0.466203685, 0.43236573, 0.0],0.0)
             call pset%add(1.0, [ 0.0, 0.0, 0.0], [-0.932407370, -0.86473146, 0.0], 0.0 )
@@ -118,7 +117,8 @@ contains
       else
          e = 0.6
          n_particles = 1
-         call orbits(n_particles, e, first_run)
+         plane = 'XY'
+         call orbits(n_particles, e, first_run, plane)
          !call relax_time(n_particles, first_run)
          !call read_buildgal
       endif
@@ -128,11 +128,12 @@ contains
 
 !< \brief rotate (x,y,z) vector by an angle theta
 
-      function positions(dtheta, pos_init)
+      function positions(dtheta, pos_init, plane)
          implicit none
             real, dimension(3) :: positions, pos_init
             real :: dtheta
-               positions = rotate(dtheta, pos_init)
+            character(len=2) :: plane
+               positions = rotate(dtheta, pos_init, plane)
       end function positions
 
 !<
@@ -157,12 +158,13 @@ contains
             real:: lenght  !usunac
             
             mu = newtong*M
+
             if( (e < zero) .or. (e >= one) ) then
                call die("[initproblem:velocities] Invalid eccentricity")
             else
                r = sqrt(pos_init(1)**2 + pos_init(2)**2 + pos_init(3)**2)
 
-               if (e == real(zero)) then
+               if (e == real(0.0,4)) then
                   velocities(2) = sqrt(mu/r)
                   write(*,*) "Orbita kolowa"
                else
@@ -182,26 +184,31 @@ contains
 !!
 !! \todo add to selection of axis (next variable)
 !>
-      function rotate (theta, vector)
+      function rotate (theta, vector, plane)
          implicit none
             real, dimension(3) :: vector, rotate
             real :: theta
-               !x-axis
-               !rotate(1) = vector(1)
-               !rotate(2) = vector(2)*cos(theta) - vector(3)*sin(theta)
-               !rotate(3) = vector(2)*sin(theta) + vector(3)*cos(theta)
-               !y-axis
-               !rotate(1) = vector(1)*cos(theta) - vector(3)*sin(theta)
-               !rotate(2) = vector(2)
-               !rotate(3) = vector(1)*sin(theta) + vector(3)*cos(theta)
-               !z-axis
-               rotate(1) = vector(1)*cos(theta) - vector(2)*sin(theta)
-               rotate(2) = vector(1)*sin(theta) + vector(2)*cos(theta)
-               rotate(3) = vector(3)
+            character(len=2) :: plane
+            
+            select case (plane)
+               case('XY', 'YX', 'xy', 'yx')
+                  rotate(1) = vector(1)*cos(theta) - vector(2)*sin(theta)
+                  rotate(2) = vector(1)*sin(theta) + vector(2)*cos(theta)
+                  rotate(3) = vector(3)
+               case('XZ', 'ZX', 'xz', 'zx')
+                  rotate(1) = vector(1)*cos(theta) - vector(3)*sin(theta)
+                  rotate(2) = vector(2)
+                  rotate(3) = vector(1)*sin(theta) + vector(3)*cos(theta)
+               case('YZ', 'ZY', 'yz', 'zy')
+                  rotate(1) = vector(1)
+                  rotate(2) = vector(2)*cos(theta) - vector(3)*sin(theta)
+                  rotate(3) = vector(2)*sin(theta) + vector(3)*cos(theta)
+            end select
+
       end function rotate
-   
-   
-      subroutine orbits(n_particles, e, first_run)
+
+
+      subroutine orbits(n_particles, e, first_run, plane)
          use particle_pub, only: pset
          use constants,    only: dpi
          implicit none
@@ -211,6 +218,7 @@ contains
          real                           :: dtheta
          !real,parameter                :: pi2=6.283185307
          logical,intent(inout)         :: first_run
+         character(len=2), intent(in) :: plane
          
          write(*,*) "Number of particles: ", n_particles
          
@@ -222,6 +230,7 @@ contains
          pos_init(3) = 0.0
 
          vel_init = velocities(pos_init, e)
+         write(*,*) "vel_init", vel_init
 
          if(first_run) then
             !call pset%add(1.1, [ 0.9700436, -0.24308753, 0.0], [ 0.466203685, 0.43236573, 0.0])
@@ -230,18 +239,13 @@ contains
             do i = 1, n_particles, 1
                call pset%add(1.0, pos_init, vel_init,0.0 ) !orbita eliptyczna
                !call pset%add(1.0, [4.54545454545455, 0.0, 0.0],[-0.909090909090909, 0.0, 0.0], 0.0)
-               
-               !call pset%add(1.0, [4.8, 2.0, 0.0],[-1.0, 0.0, 0.0], 0.0) !10 na komorke
-               !call pset%add(1.0, [4.54545454545455, 0.0, 0.0],[-9.09090909090909, 0.0, 0.0], 0.0) !srodki
-               !call pset%add(1.0, [4.54545454545455, 0.454545454545455, 0.0],[-0.909090909090909, 0.0, 0.0], 0.0) !j=1/2 sciana
-               !call pset%add(1.0, [4.54545454545455, 3.0*0.909090909090909, 0.0],[-0.909090909090909, 0.0, 0.0], 0.0) !j=1
-               
-               pos_init = positions(dtheta, pos_init)
-               vel_init = rotate(dtheta, vel_init)
+
+               pos_init = positions(dtheta, pos_init, plane)
+               vel_init = rotate(dtheta, vel_init, plane)
             enddo
 
             !call pset%add(100.0, [0.0,0.0,0.0],[0.0,0.0,0.0],0.0)
-            !call pset%add(0.1, [3.0,3.0,0.0],[0.0,0.0,0.0],0.0)
+            !call pset%add(0.1, [3.0,0.0,0.0],[0.0,0.0,0.0],0.0)
            
             first_run = .false.
             
