@@ -116,7 +116,7 @@ contains
          first_run=.false.
       else
          e = 0.6
-         n_particles = 1
+         n_particles = 10
          plane = 'XY'
          !call orbits(n_particles, e, first_run, plane)
          call relax_time(n_particles, first_run)
