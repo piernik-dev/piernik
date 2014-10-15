@@ -118,8 +118,8 @@ contains
          e = 0.6
          n_particles = 1
          plane = 'XY'
-         call orbits(n_particles, e, first_run, plane)
-         !call relax_time(n_particles, first_run)
+         !call orbits(n_particles, e, first_run, plane)
+         call relax_time(n_particles, first_run)
          !call read_buildgal
       endif
 

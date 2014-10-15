@@ -237,10 +237,10 @@ contains
       real, dimension(:), allocatable           :: mins             !< left physical borders of the domain
       real, dimension(:), allocatable           :: maxs             !< right physical borders of the domain
 
-      real                                         :: t_end             !< finial time of leapfrog simulation
-      real                                         :: dt                !< leaprfog timestep
-      real                                         :: dth               !< half of timestep, dth = 0.5*dt
-      real                                         :: t                 !< current time in leapfrog simulation
+      real                                         :: lf_tend           !< finial time of leapfrog simulation
+      real                                         :: lf_dt             !< leaprfog timestep
+      real                                         :: lf_dth               !< half of timestep, lf_dth = 0.5*dt
+      real                                         :: lf_t                 !< current time in leapfrog simulation
       real                                         :: t_out             !< time of snapshot?
       real                                         :: eta               !< empirical variable, decides of variable timestep, see http://adsabs.harvard.edu/abs/2005MNRAS.364.1105S p.1116
       real                                         :: eps               !< empirical variable, decides of variable timestep, should be equal to the gravitational softening constant, see http://adsabs.harvard.edu/abs/2005MNRAS.364.1105S p.1116
@@ -294,8 +294,8 @@ contains
       mass(:) = pset%p(:)%mass
 
 
-      t = t_glob
-      t_end = t + dt_tot
+      lf_t = t_glob
+      lf_tend = lf_t + dt_tot
       t_out = t_glob + dt_out
 
       mins(:) = dom%edge(:,1)
@@ -320,8 +320,8 @@ contains
 
 
       !obliczenie zewnętrznego potencjalu na siatce
-      external_pot = .true.
-      !external_pot = .false.
+      !external_pot = .true.
+      external_pot = .false.
 
       if (external_pot) then
          call pot2grid(cg, eps2)
@@ -394,58 +394,56 @@ contains
 
       !timestep
       if (var_timestep) then
-         dt = sqrt(2.0*eta*eps/a)               !variable
-         write(*,*) "leapfrog: dt = ",dt
+         lf_dt = sqrt(2.0*eta*eps/a)               !variable
       else
-         dt = lf_timestep                       !constant
-         write(*,*) "leapfrog: dt = ",dt, " constant"
+         lf_dt = lf_timestep                       !constant
       endif
-      dth = half*dt
+      lf_dth = half*lf_dt
 
       nsteps = 0
 
 
 
       !main loop
-      do while (t < t_end)
+      do while (lf_t < lf_tend)
 
 
-         if (t + dt > t_end) then
-            dt = t_end - t
-            dth = half * dt
+         if (lf_t + lf_dt > lf_tend) then
+            lf_dt = lf_tend - lf_t
+            lf_dth = half * lf_dt
          endif
 
          !if (t >=t_out) then
             do i = 1, n
-               write(lun_out, '(I3,1X,16(E13.6,1X))') i, t, dt, mass(i), pset%p(i)%pos, acc(i,:), acc2(i,:), energy, d_energy, ang_momentum, d_ang_momentum
+               write(lun_out, '(I3,1X,16(E13.6,1X))') i, lf_t, lf_dt, mass(i), pset%p(i)%pos, acc(i,:), acc2(i,:), energy, d_energy, ang_momentum, d_ang_momentum
             enddo
             !t_out = t_out + dt_out
          !endif
 
 
 
-         !1.kick(dth)
-         call kick(pset, acc, dth, n)
+         !1.kick(lf_dth)
+         call kick(pset, acc, lf_dth, n)
 
 
-         !2.drift(dt)
-         call drift(pset, dt, n)
+         !2.drift(lf_dt)
+         call drift(pset, lf_dt, n)
 
 
          !ekstrapolacja potencjalu w przypadku samograwitacji
          !czegos tu brakuje :/
-!#ifdef SELF_GRAV
-!         call leaves%q_copy(qna%ind(sgp_n), qna%ind(sgpm_n))
-!         call leaves%q_lin_comb([ ind_val(qna%ind(gp_n), 1.), ind_val(qna%ind(sgp_n), one+dt),  ind_val(qna%ind(sgpm_n), -dt) ], qna%ind(gpot_n))
-!         call leaves%q_lin_comb([ ind_val(qna%ind(gp_n), 1.), ind_val(qna%ind(sgp_n), one+dth), ind_val(qna%ind(sgpm_n), -dth)], qna%ind(hgpot_n))
-!#endif /* SELF_GRAV */
+!!#ifdef SELF_GRAV
+!!         call leaves%q_copy(qna%ind(sgp_n), qna%ind(sgpm_n))
+!!         call leaves%q_lin_comb([ ind_val(qna%ind(gp_n), 1.), ind_val(qna%ind(sgp_n), one+lf_dt),  ind_val(qna%ind(sgpm_n), -lf_dt) ], qna%ind(gpot_n))
+!!         call leaves%q_lin_comb([ ind_val(qna%ind(gp_n), 1.), ind_val(qna%ind(sgp_n), one+lf_dth), ind_val(qna%ind(sgpm_n), -lf_dth)], qna%ind(hgpot_n))
+!!#endif /* SELF_GRAV */
 !
 !
-!#ifdef SELF_GRAV
-!         call leaves%q_copy(qna%ind(sgpm_n), qna%ind(sgp_n))
-!         call leaves%q_lin_comb([ ind_val(qna%ind(gp_n), 1.), ind_val(qna%ind(sgp_n), one+dt),  ind_val(qna%ind(sgpm_n), -dt) ], qna%ind(gpot_n))
-!         call leaves%q_lin_comb([ ind_val(qna%ind(gp_n), 1.), ind_val(qna%ind(sgp_n), one+dth), ind_val(qna%ind(sgpm_n), -dth)], qna%ind(hgpot_n))
-!#endif /* SELF_GRAV */
+#ifdef SELF_GRAV
+         call leaves%q_copy(qna%ind(sgpm_n), qna%ind(sgp_n))
+         call leaves%q_lin_comb([ ind_val(qna%ind(gp_n), 1.), ind_val(qna%ind(sgp_n), one+lf_dt),  ind_val(qna%ind(sgpm_n), -lf_dt) ], qna%ind(gpot_n))
+         call leaves%q_lin_comb([ ind_val(qna%ind(gp_n), 1.), ind_val(qna%ind(sgp_n), one+lf_dth), ind_val(qna%ind(sgpm_n), -lf_dth)], qna%ind(hgpot_n))
+#endif /* SELF_GRAV */
 
          call find_cells(pset, cells, dist, mins, cg, n)                !finding cells
 
@@ -455,7 +453,7 @@ contains
          endif
 
          select case (acc_interp_method)
-            case('lagrange', 'Lagrange')
+            case('lagrange', 'Lagrange', 'polynomials')
                call get_acc_int(cells, dist, acc, cg, n)                !Lagrange polynomials acceleration
             case('cic', 'CIC')
                call get_acc_cic(pset, cg, cells, acc, n)                !CIC acceleration
@@ -464,8 +462,8 @@ contains
          call get_acc_max(acc, n, a)                                    !max(|a_i|)
 
 
-         !4.kick(dth)
-         call kick(pset, acc, dth, n)
+         !4.kick(lf_dth)
+         call kick(pset, acc, lf_dth, n)
 
 
          call get_energy(pset, cg, cells, dist, n, energy)
@@ -475,12 +473,12 @@ contains
          call get_ang_momentum_2(pset, n, ang_momentum)
          d_ang_momentum = log(abs((ang_momentum - init_ang_mom)/init_ang_mom))
 
-         !5.t
-         t = t + dt
-         !6.dt   !dt[n+1]
+         !5.lf_t
+         lf_t = lf_t + lf_dt
+         !6.lf_dt   !dt[n+1]
          if (var_timestep) then
-            dt = sqrt(2.0*eta*eps/a)
-            dth = half*dt
+            lf_dt = sqrt(2.0*eta*eps/a)
+            lf_dth = half*lf_dt
          endif
 
 
@@ -503,15 +501,16 @@ contains
             use constants, only: ndims
             use particle_types, only: particle_set
             implicit none
-            class(particle_set), intent(inout) :: pset  !< particle list
-            real, intent(in) :: t
-            integer, intent(in) :: n
-            integer :: i
-            real, dimension(n, ndims), intent(in) :: acc
+            class(particle_set), intent(inout)     :: pset  !< particle list
+            real, intent(in)                       :: t
+            integer, intent(in)                    :: n
+            integer                                  :: i
+            real, dimension(n, ndims), intent(in)  :: acc
 
-            do i=1,n
-               pset%p(i)%vel = pset%p(i)%vel + acc(i,:)*t
+            do i = 1, n
+               pset%p(i)%vel = pset%p(i)%vel + acc(i,:) * t
             enddo
+
          end subroutine kick
 
          !Drift
@@ -519,13 +518,14 @@ contains
             use particle_types, only: particle_set
             implicit none
             class(particle_set), intent(inout) :: pset  !< particle list
-            real, intent(in) :: t
-            integer :: i
-            integer, intent(in) :: n
+            real, intent(in)                    :: t
+            integer                              :: i
+            integer, intent(in)                 :: n
 
             do i=1,n
                pset%p(i)%pos = pset%p(i)%pos + pset%p(i)%vel * t
             enddo
+
          end subroutine drift
 
 
@@ -731,33 +731,30 @@ contains
 
 
          subroutine get_acc_int(cells, dist, acc, cg, n)
-            use constants, only : ndims, xdim, ydim, zdim
-            use cg_list,      only: cg_list_element
+            use constants,    only: ndims, xdim, ydim, zdim
+            !use cg_list,      only: cg_list_element
             use grid_cont,    only: grid_container
             implicit none
-               type(grid_container), pointer, intent(in) :: cg
-               integer, intent(in) :: n
-               integer(kind=8),dimension(n, ndims), intent(in) :: cells
-               real(kind=8), dimension(n, ndims), intent(in) :: dist
-               real(kind=8),dimension(n, ndims),intent(out) :: acc
+            type(grid_container), pointer, intent(in)       :: cg
+            integer, intent(in)                             :: n
+            integer(kind=8), dimension(n, ndims), intent(in) :: cells
+            real, dimension(n, ndims), intent(in)           :: dist
+            real, dimension(n, ndims), intent(out)          :: acc
 
+            acc(:, xdim) = -( df_dx_p(cells, cg, n) + &
+                           d2f_dx2_p(cells, cg, n)  * dist(:, xdim) + &
+                           d2f_dxdy_p(cells, cg, n) * dist(:, ydim) + &
+                           d2f_dxdz_p(cells, cg, n) * dist(:, zdim))
 
+            acc(:, ydim) = -( df_dy_p(cells, cg, n) + &
+                           d2f_dy2_p(cells, cg, n)  * dist(:, ydim) + &
+                           d2f_dxdy_p(cells, cg, n) * dist(:, xdim) + &
+                           d2f_dydz_p(cells, cg, n) * dist(:, zdim))
 
-
-                  acc(:, xdim) = -( df_dx_p(cells, cg, n) + &
-                              d2f_dx2_p(cells, cg, n) * dist(:,1) + &
-                              d2f_dxdy_p(cells, cg, n) * dist(:,2) + &
-                              d2f_dxdz_p(cells, cg, n) * dist(:,3))
-
-                  acc(:, ydim) = -( df_dy_p(cells, cg, n) + &
-                              d2f_dy2_p(cells, cg, n) * dist(:,2) + &
-                              d2f_dxdy_p(cells, cg, n) * dist(:,1) + &
-                              d2f_dydz_p(cells, cg, n) * dist(:,3))
-
-                  acc(:, zdim) = -( df_dz_p(cells, cg, n) + &
-                              d2f_dz2_p(cells, cg, n) * dist(:,3) + &
-                              d2f_dxdz_p(cells, cg, n) * dist(:,1) +&
-                              d2f_dydz_p(cells, cg, n) * dist(:,2))
+            acc(:, zdim) = -( df_dz_p(cells, cg, n) + &
+                           d2f_dz2_p(cells, cg, n)  * dist(:, zdim) + &
+                           d2f_dxdz_p(cells, cg, n) * dist(:, xdim) + &
+                           d2f_dydz_p(cells, cg, n) * dist(:, ydim))
 
          end subroutine get_acc_int
 
@@ -818,34 +815,38 @@ contains
          subroutine find_cells(pset, cells, dist, mins, cg, n)
             use constants, only: ndims, xdim, CENTER, LO, HI
             use grid_cont,  only: grid_container
+            use dataio_pub, only: die
             implicit none
-               class(particle_set), intent(in) :: pset  !< particle list
-               type(grid_container), pointer, intent(in) :: cg
-               integer :: i, cdim
-               integer, intent(in) :: n
-               integer(kind=8),dimension(n, ndims),intent(out) :: cells
-               real(kind=8),dimension(n, ndims),intent(out) :: dist
-               real, dimension(ndims), intent(in)  :: mins
+               class(particle_set), intent(in)                    :: pset  !< particle list
+               type(grid_container), pointer, intent(in)         :: cg
+               integer                                             :: i, cdim
+               integer, intent(in)                                :: n
+               integer(kind=8),dimension(n, ndims), intent(out) :: cells
+               real(kind=8),dimension(n, ndims), intent(out)     :: dist
+               real, dimension(ndims), intent(in)                :: mins
 
 
 
                do i = 1, n
-                  if (any(pset%p(i)%pos < cg%fbnd(:,LO)) .or. any(pset%p(i)%pos > cg%fbnd(:,HI))) cycle
+                  !if (any(pset%p(i)%pos < cg%fbnd(:,LO)) .or. any(pset%p(i)%pos > cg%fbnd(:,HI))) cycle
+                  if (any(pset%p(i)%pos < cg%fbnd(:,LO)) .or. any(pset%p(i)%pos > cg%fbnd(:,HI))) then
+                     call die("[particle_integrators] One or more particles is outside domain!")
+                  endif
                   do cdim = xdim, ndims
-                     cells(i,cdim) = int( 0.5 + (pset%p(i)%pos(cdim) - cg%coord(CENTER,cdim)%r(0)) / cg%dl(cdim) )! + 1
+                     cells(i,cdim) = int( 0.5 + (pset%p(i)%pos(cdim) - cg%coord(CENTER,cdim)%r(0)) / cg%dl(cdim) )
                   
                      dist(i, cdim) = pset%p(i)%pos(cdim) - ( cg%coord(CENTER, cdim)%r(0) + cells(i,cdim) * cg%dl(cdim) )
                   enddo
                enddo
 
-               do i = 1,n
-                  do cdim = xdim, ndims
-                     if (pset%p(i)%pos(cdim) < mins(cdim)) then
-                        write(*,*) "przekroczono"
-                        stop
-                     endif
-                  enddo
-               enddo
+               !do i = 1,n
+               !   do cdim = xdim, ndims
+               !      if (pset%p(i)%pos(cdim) < mins(cdim)) then
+               !         write(*,*) "przekroczono"
+               !         stop
+               !      endif
+               !   enddo
+               !enddo
 
                !open(unit=777, file='dist.dat', status='unknown',  position='append')
                !   do i=1,n
