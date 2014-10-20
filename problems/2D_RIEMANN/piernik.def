@@ -1,0 +1,5 @@
+#define NEUTRAL
+
+#define HLLC
+
+#define LOCAL_FR_SPEED
