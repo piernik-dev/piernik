@@ -1,11 +1,11 @@
  $BASE_DOMAIN
-    n_d = 128, 128, 1
-    bnd_xl = 'outd'
-    bnd_xr = 'outd'
-    bnd_yl = 'outd'
-    bnd_yr = 'outd'
-    bnd_zl = 'outd'
-    bnd_zr = 'outd'
+    n_d = 2*256, 1
+    bnd_xl = 'out'
+    bnd_xr = 'out'
+    bnd_yl = 'out'
+    bnd_yr = 'out'
+    bnd_zl = 'out'
+    bnd_zr = 'out'
     xmin   = -1.
     xmax   =  1.
     ymin   = -1.
@@ -18,6 +18,7 @@
  /
 
  $UNITS
+    units_set = "cgs"
  /
 
  $RESTART_CONTROL
@@ -27,17 +28,17 @@
  /
 
  $END_CONTROL
-   tend  = 0.3
-   nend  = 100
+   tend  = 1.0
+   nend  = 10000
  /
 
  $OUTPUT_CONTROL
    problem_name  = '2d_riemann'
    run_id        = 'tst'
-   dt_hdf        = 10.
-   dt_res        = 100.
-   dt_log        = 1.
-   dt_tsl        = 1.
+   dt_hdf        = 0.1
+   dt_res        = 10.
+   dt_log        = 0.1
+   dt_tsl        = 0.1
    vars(1:)      = 'ener', 'dens', 'velx', 'vely', 'pres'
  /
 
