@@ -190,6 +190,9 @@ contains
           enddo
        enddo
 
+       cg%b(:,:,:,:) = 0.
+       cg%u(flind%neu%imz, :, :, :) = 0.
+
        cgl => cgl%nxt
     enddo
 
