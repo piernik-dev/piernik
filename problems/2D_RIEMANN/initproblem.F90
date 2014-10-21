@@ -146,9 +146,7 @@ contains
     use cg_list,    only: cg_list_element
     use cg_leaves,  only: leaves
     use fluidindex, only: flind
-    use domain,     only: dom
     use grid_cont,  only: grid_container
-    use constants,  only: xdim, ydim
 
     implicit none
     
