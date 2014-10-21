@@ -56,19 +56,19 @@
  $PROBLEM_CONTROL
 ! default values:
 !    den_pp  = 1.5
-!    en_pp   = 3.75
+!    p_pp    = 1.5
 !    velx_pp = 0.0
 !    vely_pp = 0.0
 !    den_mp  = 0.5323
-!    en_mp   = 1.1371
+!    p_mp    = 0.3
 !    velx_mp = 1.206
 !    vely_mp = 0.0
 !    den_mm  = 0.138
-!    en_mm   = 0.2732
+!    p_mm    = 0.029
 !    velx_mm = 1.206
 !    vely_mm = 1.206
 !    den_pm  = 0.5323
-!    en_pm   = 1.1371
+!    p_pm    = 0.3
 !    velx_pm = 0.0
 !    vely_pm = 1.206
 /

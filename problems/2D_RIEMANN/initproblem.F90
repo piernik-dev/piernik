@@ -30,14 +30,16 @@ module initproblem
 ! Initial condition for 2D Riemann problem with 4 constant states.
 ! P. Varadarajan, CAMK, Warszawa. 15 October 2014.
 
+!> \todo put a reference to a paper with problem definition and analysis
+
   implicit none
 
   private
   public :: read_problem_par, problem_initial_conditions, problem_pointers
 
-  real :: den_pp, en_pp, velx_pp, vely_pp, den_mp, en_mp, velx_mp, vely_mp, den_mm, en_mm, velx_mm, vely_mm, den_pm, en_pm, velx_pm, vely_pm
+  real :: den_pp, p_pp, velx_pp, vely_pp, den_mp, p_mp, velx_mp, vely_mp, den_mm, p_mm, velx_mm, vely_mm, den_pm, p_pm, velx_pm, vely_pm
 
-  namelist /PROBLEM_CONTROL/ den_pp, en_pp, velx_pp, vely_pp, den_mp, en_mp, velx_mp, vely_mp, den_mm, en_mm, velx_mm, vely_mm, den_pm, en_pm, velx_pm, vely_pm
+  namelist /PROBLEM_CONTROL/ den_pp, p_pp, velx_pp, vely_pp, den_mp, p_mp, velx_mp, vely_mp, den_mm, p_mm, velx_mm, vely_mm, den_pm, p_pm, velx_pm, vely_pm
 
 contains
 
@@ -58,20 +60,27 @@ contains
 
     implicit none
 
+    !top right state
     den_pp  = 1.5
-    en_pp   = 3.75
+    p_pp    = 1.5
     velx_pp = 0.0
     vely_pp = 0.0
+
+    !top left state
     den_mp  = 0.5323
-    en_mp   = 1.1371
+    p_mp    = 0.3
     velx_mp = 1.206
     vely_mp = 0.0
+
+    !bottom left state
     den_mm  = 0.138
-    en_mm   = 0.2732
+    p_mm    = 0.029
     velx_mm = 1.206
     vely_mm = 1.206
+
+    !bottom right state
     den_pm  = 0.5323
-    en_pm   = 1.1371
+    p_pm    = 0.3
     velx_pm = 0.0
     vely_pm = 1.206
 
@@ -94,19 +103,19 @@ contains
          call nh%compare_namelist()
 
          rbuff(1) = den_pp
-         rbuff(2) = en_pp
+         rbuff(2) = p_pp
          rbuff(3) = velx_pp
          rbuff(4) = vely_pp
          rbuff(5) = den_mp
-         rbuff(6) = en_mp
+         rbuff(6) = p_mp
          rbuff(7) = velx_mp
          rbuff(8) = vely_mp
          rbuff(9) = den_mm
-         rbuff(10) = en_mm
+         rbuff(10) = p_mm
          rbuff(11) = velx_mm
          rbuff(12) = vely_mm
          rbuff(13) = den_pm
-         rbuff(14) = en_pm
+         rbuff(14) = p_pm
          rbuff(15) = velx_pm
          rbuff(16) = vely_pm
          
@@ -117,19 +126,19 @@ contains
       if (slave) then 
 
          den_pp  = rbuff(1)
-         en_pp   = rbuff(2)
+         p_pp    = rbuff(2)
          velx_pp = rbuff(3)
          vely_pp = rbuff(4)
          den_mp  = rbuff(5)
-         en_mp   = rbuff(6)
+         p_mp    = rbuff(6)
          velx_mp = rbuff(7)
          vely_mp = rbuff(8)
          den_mm  = rbuff(9)
-         en_mm   = rbuff(10)
+         p_mm    = rbuff(10)
          velx_mm = rbuff(11)
          vely_mm = rbuff(12)
          den_pm  = rbuff(13)
-         en_pm   = rbuff(14)
+         p_pm    = rbuff(14)
          velx_pm = rbuff(15)
          vely_pm = rbuff(16)
 
@@ -165,25 +174,24 @@ contains
                 
                 if ((cg%x(i) .gt. 0.0) .and. (cg%y(j) .gt. 0.0)) then
                    cg%u(flind%neu%idn, i, j, k) = den_pp
-                   cg%u(flind%neu%ien, i, j, k) = en_pp
                    cg%u(flind%neu%imx, i, j, k) = den_pp*velx_pp
                    cg%u(flind%neu%imy, i, j, k) = den_pp*vely_pp
+                   cg%u(flind%neu%ien, i, j, k) = p_pp / flind%neu%gam_1 + 0.5 / cg%u(flind%neu%idn, i, j, k) * sum(cg%u([flind%neu%imx,flind%neu%imy], i, j, k)**2)
                 else if ((cg%x(i) .lt. 0.0) .and. (cg%y(j) .gt. 0.0)) then
                    cg%u(flind%neu%idn, i, j, k) = den_mp
-                   cg%u(flind%neu%ien, i, j, k) = en_mp
                    cg%u(flind%neu%imx, i, j, k) = den_mp*velx_mp
                    cg%u(flind%neu%imy, i, j, k) = den_mp*vely_mp
+                   cg%u(flind%neu%ien, i, j, k) = p_mp / flind%neu%gam_1 + 0.5 / cg%u(flind%neu%idn, i, j, k) * sum(cg%u([flind%neu%imx,flind%neu%imy], i, j, k)**2)
                 else if ((cg%x(i) .lt. 0.0) .and. (cg%y(j) .lt. 0.0)) then
                    cg%u(flind%neu%idn, i, j, k) = den_mm
-                   cg%u(flind%neu%ien, i, j, k) = en_mm
                    cg%u(flind%neu%imx, i, j, k) = den_mm*velx_mm
                    cg%u(flind%neu%imy, i, j, k) = den_mm*vely_mm
+                   cg%u(flind%neu%ien, i, j, k) = p_mm / flind%neu%gam_1 + 0.5 / cg%u(flind%neu%idn, i, j, k) * sum(cg%u([flind%neu%imx,flind%neu%imy], i, j, k)**2)
                 else if ((cg%x(i) .gt. 0.0) .and. (cg%y(j) .lt. 0.0)) then
                    cg%u(flind%neu%idn, i, j, k) = den_pm
-                   cg%u(flind%neu%ien, i, j, k) = en_pm
                    cg%u(flind%neu%imx, i, j, k) = den_pm*velx_pm
                    cg%u(flind%neu%imy, i, j, k) = den_pm*vely_pm
-                
+                   cg%u(flind%neu%ien, i, j, k) = p_pm / flind%neu%gam_1 + 0.5 / cg%u(flind%neu%idn, i, j, k) * sum(cg%u([flind%neu%imx,flind%neu%imy], i, j, k)**2)
                 endif
              
              enddo
