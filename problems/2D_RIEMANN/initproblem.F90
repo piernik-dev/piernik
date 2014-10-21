@@ -47,7 +47,7 @@ contains
 
     implicit none
 
-  endsubroutine problem_pointers
+  end subroutine problem_pointers
 
 !-----------------------------------------------------------------------------------------------------
 
@@ -137,7 +137,7 @@ contains
       
 
   
-  endsubroutine read_problem_par
+  end subroutine read_problem_par
 
 !------------------------------------------------------------------------------------------------------
 
@@ -165,26 +165,26 @@ contains
           do j = cg%js, cg%je
              do i = cg%is, cg%ie
                 
-                if ((xdim .gt. 0.0) .and. (ydim .gt. 0.0)) then
-                   cg%u(flind%idn, i, j, k) = den_pp
-                   cg%u(flind%ien, i, j, k) = en_pp
-                   cg%u(flind%imx, i, j, k) = velx_pp
-                   cg%u(flind%imy, i, j, k) = vely_pp
-                else if ((xdim .lt. 0.0) .and. (ydim .gt. 0.0)) then
-                   cg%u(flind%idn, i, j, k) = den_mp
-                   cg%u(flind%ien, i, j, k) = en_mp
-                   cg%u(flind%imx, i, j, k) = velx_mp
-                   cg%u(flind%imy, i, j, k) = vely_mp
-                else if ((xdim .lt. 0.0) .and. (ydim .lt. 0.0)) then
-                   cg%u(flind%idn, i, j, k) = den_mm
-                   cg%u(flind%ien, i, j, k) = en_mm
-                   cg%u(flind%imx, i, j, k) = velx_mm
-                   cg%u(flind%imy, i, j, k) = vely_mm
-                else if ((xdim .gt. 0.0) .and. (ydim .lt. 0.0)) then
-                   cg%u(flind%idn, i, j, k) = den_pm
-                   cg%u(flind%ien, i, j, k) = en_pm
-                   cg%u(flind%imx, i, j, k) = velx_pm
-                   cg%u(flind%imy, i, j, k) = vely_pm
+                if ((cg%x(i) .gt. 0.0) .and. (cg%y(j) .gt. 0.0)) then
+                   cg%u(flind%neu%idn, i, j, k) = den_pp
+                   cg%u(flind%neu%ien, i, j, k) = en_pp
+                   cg%u(flind%neu%imx, i, j, k) = velx_pp
+                   cg%u(flind%neu%imy, i, j, k) = vely_pp
+                else if ((cg%x(i) .lt. 0.0) .and. (cg%y(j) .gt. 0.0)) then
+                   cg%u(flind%neu%idn, i, j, k) = den_mp
+                   cg%u(flind%neu%ien, i, j, k) = en_mp
+                   cg%u(flind%neu%imx, i, j, k) = velx_mp
+                   cg%u(flind%neu%imy, i, j, k) = vely_mp
+                else if ((cg%x(i) .lt. 0.0) .and. (cg%y(j) .lt. 0.0)) then
+                   cg%u(flind%neu%idn, i, j, k) = den_mm
+                   cg%u(flind%neu%ien, i, j, k) = en_mm
+                   cg%u(flind%neu%imx, i, j, k) = velx_mm
+                   cg%u(flind%neu%imy, i, j, k) = vely_mm
+                else if ((cg%x(i) .gt. 0.0) .and. (cg%y(j) .lt. 0.0)) then
+                   cg%u(flind%neu%idn, i, j, k) = den_pm
+                   cg%u(flind%neu%ien, i, j, k) = en_pm
+                   cg%u(flind%neu%imx, i, j, k) = velx_pm
+                   cg%u(flind%neu%imy, i, j, k) = vely_pm
                 
                 endif
              
@@ -195,7 +195,7 @@ contains
        cgl => cgl%nxt
     enddo
 
-  endsubroutine problem_initial_conditions
+  end subroutine problem_initial_conditions
 
 
 end module initproblem
