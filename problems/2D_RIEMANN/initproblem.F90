@@ -59,19 +59,19 @@ contains
     implicit none
 
     den_pp  = 1.5
-    en_pp   = 1.5
+    en_pp   = 3.75
     velx_pp = 0.0
     vely_pp = 0.0
-    den_mp  = 0.5325
-    en_mp   = 0.3
+    den_mp  = 0.5323
+    en_mp   = 1.1371
     velx_mp = 1.206
     vely_mp = 0.0
     den_mm  = 0.138
-    en_mm   = 0.029
+    en_mm   = 0.2732
     velx_mm = 1.206
     vely_mm = 1.206
-    den_pm  = 0.5232
-    en_pm   = 0.3
+    den_pm  = 0.5323
+    en_pm   = 1.1371
     velx_pm = 0.0
     vely_pm = 1.206
 
@@ -168,23 +168,23 @@ contains
                 if ((cg%x(i) .gt. 0.0) .and. (cg%y(j) .gt. 0.0)) then
                    cg%u(flind%neu%idn, i, j, k) = den_pp
                    cg%u(flind%neu%ien, i, j, k) = en_pp
-                   cg%u(flind%neu%imx, i, j, k) = velx_pp
-                   cg%u(flind%neu%imy, i, j, k) = vely_pp
+                   cg%u(flind%neu%imx, i, j, k) = den_pp*velx_pp
+                   cg%u(flind%neu%imy, i, j, k) = den_pp*vely_pp
                 else if ((cg%x(i) .lt. 0.0) .and. (cg%y(j) .gt. 0.0)) then
                    cg%u(flind%neu%idn, i, j, k) = den_mp
                    cg%u(flind%neu%ien, i, j, k) = en_mp
-                   cg%u(flind%neu%imx, i, j, k) = velx_mp
-                   cg%u(flind%neu%imy, i, j, k) = vely_mp
+                   cg%u(flind%neu%imx, i, j, k) = den_mp*velx_mp
+                   cg%u(flind%neu%imy, i, j, k) = den_mp*vely_mp
                 else if ((cg%x(i) .lt. 0.0) .and. (cg%y(j) .lt. 0.0)) then
                    cg%u(flind%neu%idn, i, j, k) = den_mm
                    cg%u(flind%neu%ien, i, j, k) = en_mm
-                   cg%u(flind%neu%imx, i, j, k) = velx_mm
-                   cg%u(flind%neu%imy, i, j, k) = vely_mm
+                   cg%u(flind%neu%imx, i, j, k) = den_mm*velx_mm
+                   cg%u(flind%neu%imy, i, j, k) = den_mm*vely_mm
                 else if ((cg%x(i) .gt. 0.0) .and. (cg%y(j) .lt. 0.0)) then
                    cg%u(flind%neu%idn, i, j, k) = den_pm
                    cg%u(flind%neu%ien, i, j, k) = en_pm
-                   cg%u(flind%neu%imx, i, j, k) = velx_pm
-                   cg%u(flind%neu%imy, i, j, k) = vely_pm
+                   cg%u(flind%neu%imx, i, j, k) = den_pm*velx_pm
+                   cg%u(flind%neu%imy, i, j, k) = den_pm*vely_pm
                 
                 endif
              
