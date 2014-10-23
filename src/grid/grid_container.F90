@@ -498,15 +498,16 @@ contains
    subroutine set_coords(this)
 
       use constants,  only: LO, HI, half, one, zero, xdim, ydim, zdim, CENTER, LEFT, RIGHT, INV_CENTER
-      use dataio_pub, only: die
+      use dataio_pub, only: die, warn
       use domain,     only: dom
-      use func,       only: operator(.notequals.)
+      use func,       only: operator(.notequals.), operator(.equals.)
 
       implicit none
 
       class(grid_container), intent(inout) :: this !< grid container, where the arrays have to be set
 
       integer :: d, i
+      integer, parameter :: safety_warn_factor = 1000 ! warn if a cell size is smaller than this * epsilon(coordinates)
 
       do d = xdim, zdim
          do i = CENTER, INV_CENTER
@@ -529,6 +530,15 @@ contains
             this%coord(INV_CENTER, d)%r(:) = zero
          endwhere
 
+         ! Generally nobody should substract one cell coordinate from another in code solvers. One should use cell sizes instead.
+         ! The problem may arise when initial conditions are comparing coordinates to set something on the left or right side of some line.
+         ! When the cell size is too small compared to the coordinates, such line cannot be properly calculated
+         ! Note that since we force real kind=8, we can use a named constant instead of epsilon
+         if ( any(this%coord(CENTER, d)%r(:) .equals. this%coord(LEFT,  d)%r(:)) .or. &
+              any(this%coord(CENTER, d)%r(:) .equals. this%coord(RIGHT, d)%r(:)) ) call die("[grid_container:set_coords] cannot distinguish between center and face coordinates of a cell")
+         if ( any(abs(this%coord(CENTER, d)%r(:)-this%coord(LEFT,  d)%r(:)) < safety_warn_factor*epsilon(this%coord(CENTER, d)%r(:))*this%coord(CENTER, d)%r(:)) .or. &
+              any(abs(this%coord(CENTER, d)%r(:)-this%coord(RIGHT, d)%r(:)) < safety_warn_factor*epsilon(this%coord(CENTER, d)%r(:))*this%coord(CENTER, d)%r(:))) &
+              call warn("[grid_container:set_coords] cell sizes are much smaller than coordinates. Inaccuracies in setting the initial conditions may happen.")
       enddo
 
       !--- Shortcuts --------------------
