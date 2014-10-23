@@ -266,6 +266,7 @@ contains
       use constants,    only: PIERNIK_INIT_DOMAIN, xdim, ydim, zdim, ndims, big_float, LO, HI, I_ONE, I_TWO, BND_MPI, BND_COR, GEO_XYZ, GEO_RPZ, dpi
       use dataio_pub,   only: die, warn, code_progress
       use domain,       only: dom
+      use func,         only: operator(.equals.)
       use grid_helpers, only: f2c
       use ordering,     only: SFC_order
 
@@ -358,6 +359,8 @@ contains
          this%fbnd(:, LO)  = dom%edge(:, LO)
          this%fbnd(:, HI)  = dom%edge(:, HI)
       endwhere
+
+      if (any(this%dl .equals. 0.)) call die("[grid_container:init_gc] found cell size equal to 0.")
 
       this%isb = this%ijkseb(xdim, LO)
       this%ieb = this%ijkseb(xdim, HI)
