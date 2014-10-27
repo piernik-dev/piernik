@@ -26,11 +26,32 @@
 !
 #include "piernik.h"
 module initproblem
-
+!
 ! Initial condition for 2D Riemann problem with 4 constant states.
-! P. Varadarajan, CAMK, Warszawa. 15 October 2014.
-
-!> \todo put a reference to a paper with problem definition and analysis
+! Author: Varadarajan Parthasarathy, CAMK, Warszawa. 15 October 2014.
+!
+! Problem description
+!
+! ........................................ 
+! .                 .                    .
+! .                 .                    .
+! .     *_mp        .         *_pp       .
+! .                 .                    .
+! .                 .                    .
+! ........................................
+! .                 .                    .
+! .                 .                    .
+! .     *_mm        .         *_pm       .
+! .                 .                    .
+! ........................................
+!
+! ---------------------------------------------------------------------------------------------------------------------------
+! References: 1.  Eleuterio F. Toro, Riemann Solvers and Numerical Methods for Fluid Dynamics-A Practical Introduction
+!                 Thrid Edition, Springer.
+!
+!             2.  Randall J. Leveque, Finite Volume Methods for Hyperbolic Problems
+!                 CAMBRIDGE TEXTS IN APPLIED MATHEMATICS, CAMBRIDGE UNIVERSITY PRESS.
+! ----------------------------------------------------------------------------------------------------------------------------
 
   implicit none
 
