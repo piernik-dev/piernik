@@ -1,0 +1,7 @@
+#define NEUTRAL
+
+#if (!defined(RTVD))
+#define HLLC
+#endif
+
+#define LOCAL_FR_SPEED
