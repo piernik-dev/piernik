@@ -320,8 +320,8 @@ contains
 
 
       !obliczenie zewnętrznego potencjalu na siatce
-      !external_pot = .true.
-      external_pot = .false.
+      external_pot = .true.
+      !external_pot = .false.
 
       if (external_pot) then
          call pot2grid(cg, eps2)
@@ -563,6 +563,25 @@ contains
 
          end subroutine pot2grid
 
+         !subroutine lf_timestep_sub(lf_timestep, lf_dt, var_timestep, acc_interp_method)
+         !   use particle_types, only: particle_set
+         !   implicit none
+         !   real, intent(in) :: lf_timestep
+         !   logical, intent(in) :: var_timestep
+         !   character(len=cbuff_len)  :: acc_interp_method
+         !   real, dimension(:,:) :: acc
+         !   real :: n
+         !   
+
+         !   select case (acc_interp_method)
+         !      case('lagrange', 'Lagrange', 'polynomials')
+         !         call get_acc_int(cells, dist, acc, cg, n)         !       !Lagrange polynomials acceleration
+         !      case('cic', 'CIC')
+         !         call get_acc_cic(pset, cg, cells, acc, n)         !       !CIC acceleration
+         !   end select
+         !   
+         !   call get_acc_max(acc, n, a)
+         !end subroutine lf_timestep_sub
 
          subroutine check_ord(order, df_dx_p, d2f_dx2_p, df_dy_p, d2f_dy2_p,& 
                   df_dz_p, d2f_dz2_p, d2f_dxdy_p, d2f_dxdz_p, d2f_dydz_p)
@@ -817,7 +836,7 @@ contains
             use grid_cont,  only: grid_container
             use dataio_pub, only: die
             implicit none
-               class(particle_set), intent(in)                    :: pset  !< particle list
+               class(particle_set), intent(inout)                    :: pset  !< particle list
                type(grid_container), pointer, intent(in)         :: cg
                integer                                             :: i, cdim
                integer, intent(in)                                :: n
@@ -830,12 +849,14 @@ contains
                do i = 1, n
                   !if (any(pset%p(i)%pos < cg%fbnd(:,LO)) .or. any(pset%p(i)%pos > cg%fbnd(:,HI))) cycle
                   if (any(pset%p(i)%pos < cg%fbnd(:,LO)) .or. any(pset%p(i)%pos > cg%fbnd(:,HI))) then
-                     call die("[particle_integrators] One or more particles is outside domain!")
+                     !call die("[particle_integrators] One or more particles is outside domain!")
+                     write(*,*) "[particle_integrators] One or more particles is outside domain!"
+                     pset%p(i)%outside = .true.
                   endif
                   do cdim = xdim, ndims
-                     cells(i,cdim) = int( 0.5 + (pset%p(i)%pos(cdim) - cg%coord(CENTER,cdim)%r(0)) / cg%dl(cdim) )
+                     cells(i, cdim) = int( 0.5 + (pset%p(i)%pos(cdim) - cg%coord(CENTER,cdim)%r(0)) / cg%dl(cdim) )
                   
-                     dist(i, cdim) = pset%p(i)%pos(cdim) - ( cg%coord(CENTER, cdim)%r(0) + cells(i,cdim) * cg%dl(cdim) )
+                     dist(i, cdim)  = pset%p(i)%pos(cdim) - ( cg%coord(CENTER, cdim)%r(0) + cells(i,cdim) * cg%dl(cdim) )
                   enddo
                enddo
 
