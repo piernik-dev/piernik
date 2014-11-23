@@ -38,7 +38,7 @@ module particle_integrators
 
    !------------------
    private
-   public :: hermit4, leapfrog2, acc_interp_method, var_timestep, lf_timestep
+   public :: hermit4, leapfrog2, acc_interp_method, var_timestep, lf_timestep, lf_c
 
    type, extends(particle_solver_T) :: hermit4_T
    contains
@@ -55,6 +55,7 @@ module particle_integrators
    character(len=cbuff_len)  :: acc_interp_method  !< acceleration interpolation method
    logical                   :: var_timestep        !< if .true. then leapfrog2ord use variable timestep to integration
    real                       :: lf_timestep         !< leapfrog2ord constant timestep value (works only if var_timestep = .false.)
+   real                       :: lf_c                !< timestep should depends of grid and velocities of particles (used to extrapolation of the gravitational potential)
 contains
 
    !>
@@ -340,7 +341,7 @@ contains
       !call get_ang_momentum_2(pset, n, ang_momentum)
       !init_ang_mom = ang_momentum
 
-      call find_cells(pset, cells, dist, mins, cg, n)
+      call find_cells(pset, cells, dist, cg, n)
 
       call check_ord(order, df_dx_p, d2f_dx2_p, df_dy_p, d2f_dy2_p,& 
                         df_dz_p, d2f_dz2_p, d2f_dxdy_p, d2f_dxdz_p, d2f_dydz_p)
@@ -387,7 +388,8 @@ contains
       do while (lf_t < lf_tend)
 
 
-         if (lf_t + lf_dt > lf_tend) then
+        !usunac
+        if (lf_t + lf_dt > lf_tend) then
             lf_dt = lf_tend - lf_t
             lf_dth = half * lf_dt
          endif
@@ -424,7 +426,7 @@ contains
          call leaves%q_lin_comb([ ind_val(qna%ind(gp_n), 1.), ind_val(qna%ind(sgp_n), one+lf_dth), ind_val(qna%ind(sgpm_n), -lf_dth)], qna%ind(hgpot_n))
 #endif /* SELF_GRAV */
 
-         call find_cells(pset, cells, dist, mins, cg, n)                !finding cells
+         call find_cells(pset, cells, dist, cg, n)                !finding cells
 
          !3.acceleration + |a|
          if (external_pot) then
@@ -456,6 +458,7 @@ contains
          lf_t = lf_t + lf_dt
          !6.lf_dt   !dt[n+1]
          if (var_timestep) then
+            call get_var_timestep_cfl(lf_dt, lf_dth, lf_t, lf_tend, eta, eps, a, lf_c, pset, cg, n)
             lf_dt = sqrt(2.0*eta*eps/a)
             lf_dth = half*lf_dt
          endif
@@ -501,7 +504,7 @@ contains
             integer                              :: i
             integer, intent(in)                 :: n
 
-            do i=1,n
+            do i=1, n
                pset%p(i)%pos = pset%p(i)%pos + pset%p(i)%vel * t
             enddo
 
@@ -533,8 +536,8 @@ contains
                   do i = lbound(cg%gpot, dim=1), ubound(cg%gpot, dim=1)
                      do j = lbound(cg%gpot, dim=2), ubound(cg%gpot, dim=2)
                         do k = lbound(cg%gpot, dim=3), ubound(cg%gpot, dim=3)
-                           cg%gpot(i,j,k) = phi_pm(cg%coord(CENTER,xdim)%r(i),&
-                                                   cg%coord(CENTER,ydim)%r(j),&
+                           cg%gpot(i,j,k) = phi_pm(cg%coord(CENTER,xdim)%r(i), &
+                                                   cg%coord(CENTER,ydim)%r(j), &
                                                    cg%coord(CENTER,zdim)%r(k),eps2)
                         enddo
                      enddo
@@ -561,6 +564,40 @@ contains
          !   
          !   call get_acc_max(acc, n, a)
          !end subroutine lf_timestep_sub
+
+         subroutine get_var_timestep_cfl(lf_dt, lf_dth, lf_t, lf_tend, eta, eps, a, lf_c, pset, cg, n)
+            use constants,      only: xdim, ydim, zdim
+            use particle_types, only: particle_set
+            use grid_cont,      only: grid_container
+            implicit none
+               type(grid_container), pointer, intent(in) :: cg
+               class(particle_set), intent(in) :: pset  !< particle list
+               
+               integer, intent(in) :: n
+               integer              :: i
+               real, intent(in)    :: eta, eps, a, lf_c, lf_tend
+               real, intent(out)   :: lf_dt, lf_dth
+               real, intent(inout) :: lf_t
+               real                 :: max_vx, max_vy, max_vz
+               
+               max_vx = 0.0
+               max_vy = 0.0
+               max_vz = 0.0
+               
+               !do i=1,n
+                  max_vx = maxval(pset%p(:)%vel(xdim))
+                  max_vy = maxval(pset%p(:)%vel(ydim))
+                  max_vz = maxval(pset%p(:)%vel(zdim))
+                  
+                  write(*,*) max_vx, max_vy, max_vz
+               !lf_dt = min(, max(pset%p(:)%
+
+            
+            if (lf_t + lf_dt > lf_tend) then
+               lf_dt  = lf_tend - lf_t
+               lf_dth = half * lf_dt
+            endif
+         end subroutine get_var_timestep_cfl
 
          subroutine check_ord(order, df_dx_p, d2f_dx2_p, df_dy_p, d2f_dy2_p,& 
                   df_dz_p, d2f_dz2_p, d2f_dxdy_p, d2f_dxdz_p, d2f_dydz_p)
@@ -680,16 +717,17 @@ contains
             real,dimension(n) :: dpot, d2pot
 
 
-            do i =1,n
-               dpot(i) = df_dx_p(cells(i,:), cg) * dist(i, xdim) + &
-                      df_dy_p(cells(i, :), cg) * dist(i, ydim) + &
-                      df_dz_p(cells(i, :), cg) * dist(i, zdim)
+            do i = 1, n
+
+               dpot(i) = df_dx_o2([cells(i, :)], cg) * dist(i, xdim) + &
+                      df_dy_o2([cells(i, :)], cg) * dist(i, ydim) + &
+                      df_dz_o2([cells(i, :)], cg) * dist(i, zdim)
                
-               d2pot(i) = d2f_dx2_p(cells(i, :), cg) * dist(i, xdim)**2 + &
-                       d2f_dy2_p(cells(i, :), cg) * dist(i, ydim)**2 + &
-                       d2f_dz2_p(cells(i, :), cg) * dist(i, zdim)**2 + &
-                       2.0*d2f_dxdy_p(cells(i, :), cg) * dist(i, xdim)*dist(i, ydim) + &
-                       2.0*d2f_dxdz_p(cells(i, :), cg) * dist(i, xdim)*dist(i, zdim)
+               d2pot(i) = d2f_dx2_o2([cells(i, :)], cg) * dist(i, xdim)**2 + &
+                       d2f_dy2_o2([cells(i, :)], cg) * dist(i, ydim)**2 + &
+                       d2f_dz2_o2([cells(i, :)], cg) * dist(i, zdim)**2 + &
+                       2.0*d2f_dxdy_o2([cells(i, :)], cg) * dist(i, xdim)*dist(i, ydim) + &
+                       2.0*d2f_dxdz_o2([cells(i, :)], cg) * dist(i, xdim)*dist(i, zdim)
             enddo
 
             do i = 1, n, 1
@@ -834,7 +872,7 @@ contains
          end function der_z
 
          
-         subroutine find_cells(pset, cells, dist, mins, cg, n)
+         subroutine find_cells(pset, cells, dist, cg, n)
             use constants, only: ndims, xdim, CENTER, LO, HI
             use grid_cont,  only: grid_container
             use dataio_pub, only: die
@@ -845,7 +883,6 @@ contains
                integer, intent(in)                                :: n
                integer,dimension(n, ndims), intent(out)          :: cells
                real(kind=8),dimension(n, ndims), intent(out)     :: dist
-               real, dimension(ndims), intent(in)                :: mins
 
 
 
@@ -863,20 +900,6 @@ contains
                   enddo
                enddo
 
-               !do i = 1,n
-               !   do cdim = xdim, ndims
-               !      if (pset%p(i)%pos(cdim) < mins(cdim)) then
-               !         write(*,*) "przekroczono"
-               !         stop
-               !      endif
-               !   enddo
-               !enddo
-
-               !open(unit=777, file='dist.dat', status='unknown',  position='append')
-               !   do i=1,n
-               !      write(777,*) i, cells(i,:), dist(i,:)
-               !   enddo
-               !close(777)
          end subroutine find_cells
 
 
@@ -934,7 +957,7 @@ contains
             use grid_cont, only: grid_container 
             implicit none
                type(grid_container), pointer, intent(in) :: cg
-               integer, dimension(ndims), intent(in):: cell
+               integer, dimension(ndims), intent(in) :: cell
                real,target :: d2f_dx2_o2
 
 
