@@ -78,7 +78,7 @@ contains
 
       integer                         :: i, j, k, p
       integer                         :: n_particles        !< number of particles
-      real(kind=4)                    :: e                  !< orbit eccentricity
+      real                             :: e                  !< orbit eccentricity
       logical,save                    :: first_run = .true.
       character(len=2)                :: plane
       type(cg_list_element), pointer  :: cgl
@@ -115,11 +115,11 @@ contains
          endif
          first_run=.false.
       else
-         e = 0.6
-         n_particles = 10
+         e = 0.0
+         n_particles = 2
          plane = 'XY'
-         !call orbits(n_particles, e, first_run, plane)
-         call relax_time(n_particles, first_run)
+         call orbits(n_particles, e, first_run, plane)
+         !call relax_time(n_particles, first_run)
          !call read_buildgal
       endif
 
@@ -148,11 +148,12 @@ contains
          use constants,             only: zero, one, dpi
          use dataio_pub,            only: die
          use units,                 only: newtong
+         use func,                  only: operator(.equals.)
          implicit none
             real, dimension(3)  :: pos_init, velocities
             real                 :: a        !< semi-major axis of initial elliptical orbit of particle
             real                 :: r        !< lenght of radius vector
-            real(kind=4)         :: e
+            real                 :: e
             real                 :: mu
             real, parameter     :: M=1.0
             real:: lenght  !usunac
@@ -164,7 +165,7 @@ contains
             else
                r = sqrt(pos_init(1)**2 + pos_init(2)**2 + pos_init(3)**2)
 
-               if (e == real(0.0,4)) then
+               if (e.equals.0.0) then
                   velocities(2) = sqrt(mu/r)
                   write(*,*) "Orbita kolowa"
                else
@@ -213,7 +214,7 @@ contains
          use constants,    only: dpi
          implicit none
          integer,intent(in)            :: n_particles
-         real(kind=4),intent(in)       :: e
+         real,intent(in)                :: e
          real,dimension(3)             :: pos_init, vel_init
          real                           :: dtheta
          !real,parameter                :: pi2=6.283185307
@@ -236,13 +237,14 @@ contains
             !call pset%add(1.1, [ 0.9700436, -0.24308753, 0.0], [ 0.466203685, 0.43236573, 0.0])
             !call pset%add(1.1, [-0.9700436, 0.24308753, 0.0], [ 0.466203685, 0.43236573, 0.0],0.0)
             !call pset%add(1.1, [ 0.0, 0.0, 0.0], [-0.932407370, -0.86473146, 0.0], 0.0 )
-            do i = 1, n_particles, 1
-               call pset%add(1.0, pos_init, vel_init,0.0 ) !orbita eliptyczna
-               !call pset%add(1.0, [4.54545454545455, 0.0, 0.0],[-0.909090909090909, 0.0, 0.0], 0.0)
+            !do i = 1, n_particles, 1
+               !call pset%add(1.0, pos_init, vel_init,0.0 ) !orbita eliptyczna
+               call pset%add(1.0, [4.0, 2.0, 0.0],[-1.0, 0.0, 0.0], 0.0)
+               call pset%add(1.0, [3.0, 2.0, 0.0],[0.0, -1.0, 0.0], 0.0)
 
                pos_init = positions(dtheta, pos_init, plane)
                vel_init = rotate(dtheta, vel_init, plane)
-            enddo
+            !enddo
 
             !call pset%add(100.0, [0.0,0.0,0.0],[0.0,0.0,0.0],0.0)
             !call pset%add(0.1, [3.0,0.0,0.0],[0.0,0.0,0.0],0.0)
@@ -362,12 +364,13 @@ contains
 
    subroutine read_buildgal
       use particle_pub, only: pset
+      
       implicit none
       integer :: i, j, nbodies, dims=3
       integer :: galfile=1
       character(len=6) :: galname="SPIRAL"
       real,dimension(:,:), allocatable :: pos, vel
-      real,dimension(:), allocatable :: mass
+      real,dimension(:), allocatable   :: mass
 
       open(unit=galfile,file=galname,action="read",status="old")
          read(galfile,*) nbodies
@@ -383,7 +386,7 @@ contains
       
       open(unit=2,file='galtest.dat')
          do i=1,nbodies
-         if (modulo(i, 1000) .eq. 0.0) then
+         if (modulo(i, 1000) .eq. 0) then
             write(*,*) i
          endif
             call pset%add(mass(i), pos(i,:), vel(i,:),0.0)
