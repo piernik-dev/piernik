@@ -115,8 +115,8 @@ contains
          endif
          first_run=.false.
       else
-         e = 0.0
-         n_particles = 2
+         e = 0.6
+         n_particles = 1
          plane = 'XY'
          call orbits(n_particles, e, first_run, plane)
          !call relax_time(n_particles, first_run)
@@ -237,14 +237,14 @@ contains
             !call pset%add(1.1, [ 0.9700436, -0.24308753, 0.0], [ 0.466203685, 0.43236573, 0.0])
             !call pset%add(1.1, [-0.9700436, 0.24308753, 0.0], [ 0.466203685, 0.43236573, 0.0],0.0)
             !call pset%add(1.1, [ 0.0, 0.0, 0.0], [-0.932407370, -0.86473146, 0.0], 0.0 )
-            !do i = 1, n_particles, 1
-               !call pset%add(1.0, pos_init, vel_init,0.0 ) !orbita eliptyczna
-               call pset%add(1.0, [4.0, 2.0, 0.0],[-1.0, 0.0, 0.0], 0.0)
-               call pset%add(1.0, [3.0, 2.0, 0.0],[0.0, -1.0, 0.0], 0.0)
+            do i = 1, n_particles, 1
+               call pset%add(1.0, pos_init, vel_init,0.0 ) !orbita eliptyczna
+               !call pset%add(1.0, [4.0, 4.0, 0.0],[0.0, 0.0, 0.0], 0.0)
+               !call pset%add(1.0, [3.0, 2.0, 0.0],[0.0, -1.0, 0.0], 0.0)
 
                pos_init = positions(dtheta, pos_init, plane)
                vel_init = rotate(dtheta, vel_init, plane)
-            !enddo
+            enddo
 
             !call pset%add(100.0, [0.0,0.0,0.0],[0.0,0.0,0.0],0.0)
             !call pset%add(0.1, [3.0,0.0,0.0],[0.0,0.0,0.0],0.0)
