@@ -430,7 +430,7 @@ contains
             lf_dth = half * lf_dt
          endif
 
-         if (t >=t_out) then
+         if (lf_t >=t_out) then
             do i = 1, n
                write(lun_out, '(I3,1X,16(E13.6,1X))') i, lf_t, lf_dt, mass(i), pset%p(i)%pos, acc(i,:), acc2(i,:), energy, d_energy, ang_momentum, d_ang_momentum
             enddo
@@ -590,9 +590,20 @@ contains
                integer            :: i, data_file=757
                real, intent(in)  :: lf_t
                character(len=17) :: filename
+               character(len=3)  :: counter_char
 
-               write(filename,'(A10,I3,A4)') 'particles_',counter, ".dat"
-               filename = trim(filename)
+               if(counter<10) then
+                  write(counter_char, '(I1)') counter
+                  write(filename,'(A9,A3,A1,A4)') 'particles','_00',counter_char,".dat"
+               endif
+               if ((counter >=10) .and.(counter <100)) then
+                  write(counter_char, '(I2)') counter
+                  write(filename,'(A9,A2,A2,A4)') 'particles','_0',counter_char,".dat"
+               endif
+               if (counter >=100) then
+                  write(counter_char, '(I3)') counter
+                  write(filename,'(A9,A1,A4,A4)') 'particles','_',counter_char,".dat"
+               endif
 
                open(unit = data_file, file=filename)
                   write(data_file, *) "#t =", lf_t
@@ -600,9 +611,11 @@ contains
                      write(data_file,*) i, pset%p(i)%pos, pset%p(i)%vel
                   enddo
                close(data_file)
+
                counter = counter + 1
-               
+
          end subroutine save_particles
+
 
          subroutine get_var_timestep_c(lf_dt, lf_dth, eta, eps, a, lf_c, pset, cg)
             use constants,      only: ndims, xdim, ydim, zdim, half, big, one
@@ -623,23 +636,23 @@ contains
 
                factor = big
 
-               write(*,*) "Petla"
+
                do cdim = xdim, zdim
                   maxv(cdim)  = abs(maxval(pset%p(:)%vel(cdim)))
                   minv(cdim)  = abs(minval(pset%p(:)%vel(cdim)))
 
                   max_v(cdim) = max(maxv(cdim), minv(cdim))
                enddo
-               write(*,*) "po petli, max_v=", max_v
 
-               
+
+
                lf_dt = sqrt(2.0*eta*eps/a)
-               write(*,*) "a=",a
+
 
 
 
                if (any(max_v*lf_dt > cg%dl)) then
-                  write(*,*) "wieksze"
+
 
                   if (any(max_v.notequals.0.0)) then
                      do cdim = xdim, zdim
@@ -652,15 +665,12 @@ contains
                   factor = one
                endif
 
-               write(*,*) " po factor, factor = ", factor
 
 
-               
 
                lf_dt  = lf_c * factor * lf_dt
-               write(*,*) "lf_dt"
                lf_dth = half * lf_dt
-               write(*,*) "lf_dth"
+
 
          end subroutine get_var_timestep_c
 
