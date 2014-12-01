@@ -269,6 +269,7 @@ contains
       logical                                      :: finish            !< if .true. stop simulation with saving extrenal potential (works only if save_potential==.true.)
       logical                                      :: external_pot      !< if .true. gravitational potential will be deleted and replaced by external potential of point mass
       logical, save                                :: printed_info = .false.
+      integer, save                                :: counter
 
       procedure(dxi), pointer :: df_dx_p => NULL(), & ! pointers to spatial differentation functions
                                     df_dy_p => NULL(), &
@@ -332,8 +333,8 @@ contains
 
 
       !obliczenie zewnętrznego potencjalu na siatce
-      !external_pot = .true.
-      external_pot = .false.
+      external_pot = .true.
+      !external_pot = .false.
 
       if (external_pot) then
          call pot2grid(cg, eps2)
@@ -417,8 +418,7 @@ contains
       lf_dth = half*lf_dt
 
       nsteps = 0
-
-
+      counter = 1
 
       !main loop
       do while (lf_t < lf_tend)
@@ -430,13 +430,14 @@ contains
             lf_dth = half * lf_dt
          endif
 
-         !if (t >=t_out) then
+         if (t >=t_out) then
             do i = 1, n
                write(lun_out, '(I3,1X,16(E13.6,1X))') i, lf_t, lf_dt, mass(i), pset%p(i)%pos, acc(i,:), acc2(i,:), energy, d_energy, ang_momentum, d_ang_momentum
             enddo
-            !t_out = t_out + dt_out
-         !endif
-         !call save_particles(lf_t, n, pset)
+            t_out = t_out + dt_out
+            call save_particles(n, lf_t, pset, counter)
+         endif
+         
 
 
          !1.kick(lf_dth)
@@ -579,25 +580,29 @@ contains
 
          end subroutine pot2grid
 
-         !subroutine lf_timestep_sub(lf_timestep, lf_dt, var_timestep, acc_interp_method)
-         !   use particle_types, only: particle_set
-         !   implicit none
-         !   real, intent(in) :: lf_timestep
-         !   logical, intent(in) :: var_timestep
-         !   character(len=cbuff_len)  :: acc_interp_method
-         !   real, dimension(:,:) :: acc
-         !   real :: n
-         !   
 
-         !   select case (acc_interp_method)
-         !      case('lagrange', 'Lagrange', 'polynomials')
-         !         call get_acc_int(cells, dist, acc, cg, n)         !       !Lagrange polynomials acceleration
-         !      case('cic', 'CIC')
-         !         call get_acc_cic(pset, cg, cells, acc, n)         !       !CIC acceleration
-         !   end select
-         !   
-         !   call get_acc_max(acc, n, a)
-         !end subroutine lf_timestep_sub
+         subroutine save_particles(n, lf_t, pset, counter)
+            use particle_types, only: particle_set
+            implicit none
+               class(particle_set), intent(in) :: pset  !< particle list
+               integer, intent (in)         :: n
+               integer, intent (inout) :: counter
+               integer            :: i, data_file=757
+               real, intent(in)  :: lf_t
+               character(len=17) :: filename
+
+               write(filename,'(A10,I3,A4)') 'particles_',counter, ".dat"
+               filename = trim(filename)
+
+               open(unit = data_file, file=filename)
+                  write(data_file, *) "#t =", lf_t
+                  do i=1,n
+                     write(data_file,*) i, pset%p(i)%pos, pset%p(i)%vel
+                  enddo
+               close(data_file)
+               counter = counter + 1
+               
+         end subroutine save_particles
 
          subroutine get_var_timestep_c(lf_dt, lf_dth, eta, eps, a, lf_c, pset, cg)
             use constants,      only: ndims, xdim, ydim, zdim, half, big, one
