@@ -332,8 +332,8 @@ contains
 
 
       !obliczenie zewnętrznego potencjalu na siatce
-      external_pot = .true.
-      !external_pot = .false.
+      !external_pot = .true.
+      external_pot = .false.
 
       if (external_pot) then
          call pot2grid(cg, eps2)
@@ -408,7 +408,9 @@ contains
 
       !timestep
       if (var_timestep) then
-         lf_dt = sqrt(2.0*eta*eps/a)               !variable
+         call get_var_timestep_c(lf_dt, lf_dth, eta, eps, a, lf_c, pset, cg)      !variable
+         !lf_dt = sqrt(2.0*eta*eps/a)
+         !lf_dth = half * lf_dt
       else
          lf_dt = lf_timestep                       !constant
       endif
@@ -430,11 +432,11 @@ contains
 
          !if (t >=t_out) then
             do i = 1, n
-               write(lun_out, '(I3,1X,19(E13.6,1X))') i, lf_t, lf_dt, mass(i), pset%p(i)%pos, pset%p(i)%vel, acc(i,:), acc2(i,:), energy, d_energy, ang_momentum, d_ang_momentum
+               write(lun_out, '(I3,1X,16(E13.6,1X))') i, lf_t, lf_dt, mass(i), pset%p(i)%pos, acc(i,:), acc2(i,:), energy, d_energy, ang_momentum, d_ang_momentum
             enddo
             !t_out = t_out + dt_out
          !endif
-
+         !call save_particles(lf_t, n, pset)
 
 
          !1.kick(lf_dth)
@@ -446,21 +448,16 @@ contains
 
 
          !ekstrapolacja potencjalu w przypadku samograwitacji
-         !czegos tu brakuje :/
-!!#ifdef SELF_GRAV
-!!         call leaves%q_copy(qna%ind(sgp_n), qna%ind(sgpm_n))
-!!         call leaves%q_lin_comb([ ind_val(qna%ind(gp_n), 1.), ind_val(qna%ind(sgp_n), one+lf_dt),  ind_val(qna%ind(sgpm_n), -lf_dt) ], qna%ind(gpot_n))
-!!         call leaves%q_lin_comb([ ind_val(qna%ind(gp_n), 1.), ind_val(qna%ind(sgp_n), one+lf_dth), ind_val(qna%ind(sgpm_n), -lf_dth)], qna%ind(hgpot_n))
-!!#endif /* SELF_GRAV */
-!
-!
+
 #ifdef SELF_GRAV
          call leaves%q_copy(qna%ind(sgpm_n), qna%ind(sgp_n))
          call leaves%q_lin_comb([ ind_val(qna%ind(gp_n), 1.), ind_val(qna%ind(sgp_n), one+lf_dt),  ind_val(qna%ind(sgpm_n), -lf_dt) ], qna%ind(gpot_n))
          call leaves%q_lin_comb([ ind_val(qna%ind(gp_n), 1.), ind_val(qna%ind(sgp_n), one+lf_dth), ind_val(qna%ind(sgpm_n), -lf_dth)], qna%ind(hgpot_n))
 #endif /* SELF_GRAV */
 
+
          call find_cells(pset, cells, dist, cg, n)                !finding cells
+
 
          !3.acceleration + |a|
          if (external_pot) then
@@ -492,10 +489,12 @@ contains
 
          !5.lf_t
          lf_t = lf_t + lf_dt
+
          !6.lf_dt   !dt[n+1]
          if (var_timestep) then
-            call get_var_timestep_c(lf_dt, lf_dth, lf_t, lf_tend, eta, eps, a, lf_c, pset, cg, n)
-
+            call get_var_timestep_c(lf_dt, lf_dth, eta, eps, a, lf_c, pset, cg)
+            !lf_dt = sqrt(2.0*eta*eps/a)
+            !lf_dth = half * lf_dt
          endif
 
 
@@ -600,61 +599,66 @@ contains
          !   call get_acc_max(acc, n, a)
          !end subroutine lf_timestep_sub
 
-         subroutine get_var_timestep_c(lf_dt, lf_dth, lf_t, lf_tend, eta, eps, a, lf_c, pset, cg, n)
-            use constants,      only: xdim, ydim, zdim, half
+         subroutine get_var_timestep_c(lf_dt, lf_dth, eta, eps, a, lf_c, pset, cg)
+            use constants,      only: ndims, xdim, ydim, zdim, half, big, one
             use particle_types, only: particle_set
             use grid_cont,      only: grid_container
+            use func,           only: operator(.notequals.)
             implicit none
                type(grid_container), pointer, intent(in) :: cg
                class(particle_set), intent(in) :: pset  !< particle list
-               
-               integer, intent(in) :: n
-               integer              :: i
-               real, intent(in)    :: eta, eps, a, lf_c, lf_tend
-               real, intent(out)   :: lf_dt, lf_dth
-               real, intent(inout) :: lf_t
-               real                 :: max_vx, max_vy, max_vz, min_vx, min_vy, min_vz, max_v, min_dl, lf_dt_c
 
 
+               real, intent(in)       :: eta, eps, a, lf_c
+               real, intent(out)      :: lf_dt, lf_dth
+               real                    :: factor
+               real, dimension(ndims) :: maxv, minv, max_v
+               integer                 :: cdim
 
-               max_vx = abs(maxval(pset%p(:)%vel(xdim)))   ;     min_vx = abs(minval(pset%p(:)%vel(xdim)))
-               max_vy = abs(maxval(pset%p(:)%vel(ydim)))   ;     min_vy = abs(minval(pset%p(:)%vel(ydim)))
-               max_vz = abs(maxval(pset%p(:)%vel(zdim)))   ;     min_vz = abs(minval(pset%p(:)%vel(zdim)))
 
+               factor = big
 
-              ! if (max_vx < min_vx) then
-              !    max_vx = min_vx
-              ! endif
+               write(*,*) "Petla"
+               do cdim = xdim, zdim
+                  maxv(cdim)  = abs(maxval(pset%p(:)%vel(cdim)))
+                  minv(cdim)  = abs(minval(pset%p(:)%vel(cdim)))
 
-               !if (max_vy < min_vy) then
-               !   max_vy = min_vy
-               !endif
+                  max_v(cdim) = max(maxv(cdim), minv(cdim))
+               enddo
+               write(*,*) "po petli, max_v=", max_v
 
-               !if (max_vz < min_vz) then
-               !   max_vz = min_vz
-               !endif
-
-               !write(*,*) "!!!", max_vx, max_vy, max_vz
-               max_v = max(max_vx, max_vy, max_vz, min_vx, min_vy, min_vz)
-               min_dl = min(cg%dx, cg%dy, cg%dz)
-
-               !lf_dt_c = lf_c/(max_vx/cg%dx + max_vy/cg%dy + max_vz/cg%dz)
-               
-               
                
                lf_dt = sqrt(2.0*eta*eps/a)
+               write(*,*) "a=",a
 
-               lf_dt  = lf_c * (min_dl/max_v) * lf_dt
-               lf_dth = half * lf_dt
 
-               if (lf_dt<0.0) then
-                  write(*,*) "dt ujemne"
+
+               if (any(max_v*lf_dt > cg%dl)) then
+                  write(*,*) "wieksze"
+
+                  if (any(max_v.notequals.0.0)) then
+                     do cdim = xdim, zdim
+                        if ((max_v(cdim).notequals.0.0)) then
+                           factor = min(cg%dl(cdim)/max_v(cdim), factor)
+                        endif
+                     enddo
+                  endif
+               else
+                  factor = one
                endif
-               !if (lf_t + lf_dt > lf_tend) then
-               !   lf_dt  = lf_tend - lf_t
-               !   lf_dth = half * lf_dt
-               !endif
+
+               write(*,*) " po factor, factor = ", factor
+
+
+               
+
+               lf_dt  = lf_c * factor * lf_dt
+               write(*,*) "lf_dt"
+               lf_dth = half * lf_dt
+               write(*,*) "lf_dth"
+
          end subroutine get_var_timestep_c
+
 
          subroutine check_ord(order, df_dx_p, d2f_dx2_p, df_dy_p, d2f_dy2_p,& 
                   df_dz_p, d2f_dz2_p, d2f_dxdy_p, d2f_dxdz_p, d2f_dydz_p)
@@ -665,7 +669,6 @@ contains
                procedure(d2dxixj), pointer, intent(inout) :: d2f_dxdy_p, d2f_dxdz_p,d2f_dydz_p
       
                   if (order == 2) then
-                  write(*,*) "order=2"
                      df_dx_p => df_dx_o2
                      df_dy_p => df_dy_o2
                      df_dz_p => df_dz_o2
@@ -676,7 +679,6 @@ contains
                      d2f_dxdz_p => d2f_dxdz_o2
                      d2f_dydz_p => d2f_dydz_o2
                   else
-                     write(*,*) "order=4"
                      df_dx_p => df_dx_o4
                      df_dy_p => df_dy_o4
                      df_dz_p => df_dz_o4
@@ -712,23 +714,27 @@ contains
 
 
             do i = 1, n
-               do cdim = xdim, ndims
-                  if (pset%p(i)%pos(cdim) < cg%coord(CENTER, cdim)%r(cells(i,cdim))) then
-                     cic_cells(i,cdim) = cells(i,cdim) - 1
-                  else
-                     cic_cells(i,cdim) = cells(i,cdim)
-                  endif
-                  dxyz(i, cdim) = abs(pset%p(i)%pos(cdim) - cg%coord(CENTER, cdim)%r(cic_cells(i,cdim)))
+               if ((pset%p(i)%outside) .eqv. .false.) then
+                  do cdim = xdim, ndims
+                     if (pset%p(i)%pos(cdim) < cg%coord(CENTER, cdim)%r(cells(i,cdim))) then
+                        cic_cells(i,cdim) = cells(i,cdim) - 1
+                     else
+                        cic_cells(i,cdim) = cells(i,cdim)
+                     endif
+                     dxyz(i, cdim) = abs(pset%p(i)%pos(cdim) - cg%coord(CENTER, cdim)%r(cic_cells(i,cdim)))
 
-               enddo
-               aijk(i, 1) = (cg%dx - dxyz(i, xdim))*(cg%dy - dxyz(i, ydim))*(cg%dz - dxyz(i, zdim)) !a(i  ,j  ,k  )
-               aijk(i, 2) = (cg%dx - dxyz(i, xdim))*(cg%dy - dxyz(i, ydim))*         dxyz(i, zdim)  !a(i+1,j  ,k  )
-               aijk(i, 3) = (cg%dx - dxyz(i, xdim))*         dxyz(i, ydim) *(cg%dz - dxyz(i, zdim)) !a(i  ,j+1,k  )
-               aijk(i, 4) = (cg%dx - dxyz(i, xdim))*         dxyz(i, ydim) *         dxyz(i, zdim)  !a(i  ,j  ,k+1)
-               aijk(i, 5) =          dxyz(i, xdim) *(cg%dy - dxyz(i, ydim))*(cg%dz - dxyz(i, zdim)) !a(i+1,j+1,k  )
-               aijk(i, 6) =          dxyz(i, xdim) *(cg%dy - dxyz(i, ydim))*         dxyz(i, zdim)  !a(i  ,j+1,k+1)
-               aijk(i, 7) =          dxyz(i, xdim) *         dxyz(i, ydim) *(cg%dz - dxyz(i, zdim)) !a(i+1,j  ,k+1)
-               aijk(i, 8) =          dxyz(i, xdim) *         dxyz(i, ydim) *         dxyz(i, zdim)  !a(i+1,j+1,k+1)
+                  enddo
+                  aijk(i, 1) = (cg%dx - dxyz(i, xdim))*(cg%dy - dxyz(i, ydim))*(cg%dz - dxyz(i, zdim)) !a(i  ,j  ,k  )
+                  aijk(i, 2) = (cg%dx - dxyz(i, xdim))*(cg%dy - dxyz(i, ydim))*         dxyz(i, zdim)  !a(i+1,j  ,k  )
+                  aijk(i, 3) = (cg%dx - dxyz(i, xdim))*         dxyz(i, ydim) *(cg%dz - dxyz(i, zdim)) !a(i  ,j+1,k  )
+                  aijk(i, 4) = (cg%dx - dxyz(i, xdim))*         dxyz(i, ydim) *         dxyz(i, zdim)  !a(i  ,j  ,k+1)
+                  aijk(i, 5) =          dxyz(i, xdim) *(cg%dy - dxyz(i, ydim))*(cg%dz - dxyz(i, zdim)) !a(i+1,j+1,k  )
+                  aijk(i, 6) =          dxyz(i, xdim) *(cg%dy - dxyz(i, ydim))*         dxyz(i, zdim)  !a(i  ,j+1,k+1)
+                  aijk(i, 7) =          dxyz(i, xdim) *         dxyz(i, ydim) *(cg%dz - dxyz(i, zdim)) !a(i+1,j  ,k+1)
+                  aijk(i, 8) =          dxyz(i, xdim) *         dxyz(i, ydim) *         dxyz(i, zdim)  !a(i+1,j+1,k+1)
+               !else funkcja...
+               endif
+
             enddo
 
             aijk = aijk/cg%dvol
@@ -939,7 +945,42 @@ contains
                der_z = ( phi_pm(x, y, z+d, eps) - phi_pm(x, y, z-d, eps) ) / (2.0*d)
          end function der_z
 
-         
+         !subroutine moments2acc(xe, ye, ze, d, ac, cdim)
+         !   use multipole, only : moments2pot
+         !   use constants, only : xdim, ydim, zdim
+         !   implicit none
+         !      real, intent(in)     :: xe, ye, ze, d
+         !      real, intent(out)    :: ac
+         !      real         !         !:: r, th, phi, potential, p1, p2
+         !      integer, intent(in) :: cdim
+
+         !      select case (cdim)
+         !         !case (xdim)
+         !         !   call moments2pot(xe-d, ye, ze)
+         !         !   p1 = potential
+         !         !   call moments2pot(xe+d, ye, ze)
+         !         !   p2 = potential
+
+         !         !case (ydim)
+         !         !   call moments2pot(xe, ye-d, ze)
+         !         !   p1 = potential
+         !         !   call moments2pot(xe, ye+d, ze)
+         !         !   p2 = potential
+
+
+         !         !case (zdim)
+         !         !   call moments2pot(xe, ye, ze-d)
+         !         !   p1 = potential
+         !         !   call moments2pot(xe, ye, ze+d)
+         !         !   p2 = potential
+
+         !      end select
+
+         !         !ac = (p1 - p2) / (2.0*d)
+
+         !end subroutine moments2acc
+
+
          subroutine find_cells(pset, cells, dist, cg, n)
             use constants, only: ndims, xdim, CENTER, LO, HI
             use grid_cont,  only: grid_container
@@ -963,7 +1004,7 @@ contains
                   endif
                   do cdim = xdim, ndims
                      cells(i, cdim) = int( 0.5 + (pset%p(i)%pos(cdim) - cg%coord(CENTER,cdim)%r(0)) / cg%dl(cdim) )
-                  
+
                      dist(i, cdim)  = pset%p(i)%pos(cdim) - ( cg%coord(CENTER, cdim)%r(0) + cells(i,cdim) * cg%dl(cdim) )
                   enddo
 
