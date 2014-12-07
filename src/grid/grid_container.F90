@@ -228,7 +228,7 @@ module grid_cont
       logical :: is_old                                          !< .true. if a given grid existed prior to  upgrade_refinement call
       logical :: processed                                       !< for use in sweeps.F90
       logical :: has_previous_timestep                           !< used to prevent timestep retries on freshly created blocks
-
+      !real , dimension(:) :: gx, gy, gz                           !< Gravitational potential on right borders of cells
    contains
 
       procedure          :: init_gc                              !< Initialization

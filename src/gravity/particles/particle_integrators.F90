@@ -247,7 +247,7 @@ contains
       real                                         :: lf_dt             !< leaprfog timestep
       real                                         :: lf_dth               !< half of timestep, lf_dth = 0.5*dt
       real                                         :: lf_t                 !< current time in leapfrog simulation
-      real                                         :: t_out             !< time of snapshot?
+      real, save                                  :: t_out             !< time of snapshot?
       real                                         :: eta               !< empirical variable, decides of variable timestep, see http://adsabs.harvard.edu/abs/2005MNRAS.364.1105S p.1116
       real                                         :: eps               !< empirical variable, decides of variable timestep, should be equal to the gravitational softening constant, see http://adsabs.harvard.edu/abs/2005MNRAS.364.1105S p.1116
       real                                         :: a                 !< maximum acceleration in the set of particles, decides of variable timestep, see http://adsabs.harvard.edu/abs/2005MNRAS.364.1105S p.1116
@@ -268,7 +268,7 @@ contains
       logical                                      :: save_potential    !< save external potential or not save: that is the question
       logical                                      :: finish            !< if .true. stop simulation with saving extrenal potential (works only if save_potential==.true.)
       logical                                      :: external_pot      !< if .true. gravitational potential will be deleted and replaced by external potential of point mass
-      logical, save                                :: printed_info = .false.
+      logical, save                                :: first_run_lf = .true.
       integer, save                                :: counter
 
       procedure(dxi), pointer :: df_dx_p => NULL(), & ! pointers to spatial differentation functions
@@ -282,7 +282,7 @@ contains
                                     d2f_dydz_p => NULL()
 
 
-      if (.not. printed_info) then
+      if (first_run_lf) then
          select case (acc_interp_method)
             case('cic')
                call printinfo("[particle_integrators:leapfrog2ord] Acceleration interpolation method: CIC") 
@@ -291,7 +291,9 @@ contains
             case('model')
                call printinfo("[particle_integrators:leapfrog2ord] Acceleration interpolation method: calkowanie bezposrednie")
          end select
-         printed_info = .true.
+
+         t_out = t_glob + dt_out
+         first_run_lf = .false.
       endif
 
 
@@ -309,7 +311,7 @@ contains
 
       lf_t = t_glob
       lf_tend = lf_t + dt_tot
-      t_out = t_glob + dt_out
+      
 
       mins(:) = dom%edge(:,1)
       maxs(:) = dom%edge(:,2)
@@ -333,8 +335,8 @@ contains
 
 
       !obliczenie zewnętrznego potencjalu na siatce
-      external_pot = .true.
-      !external_pot = .false.
+      !external_pot = .true.
+      external_pot = .false.
 
       if (external_pot) then
          call pot2grid(cg, eps2)
@@ -430,13 +432,13 @@ contains
             lf_dth = half * lf_dt
          endif
 
-         if (lf_t >=t_out) then
+         !if (lf_t >=t_out) then
             do i = 1, n
                write(lun_out, '(I3,1X,16(E13.6,1X))') i, lf_t, lf_dt, mass(i), pset%p(i)%pos, acc(i,:), acc2(i,:), energy, d_energy, ang_momentum, d_ang_momentum
             enddo
-            t_out = t_out + dt_out
-            call save_particles(n, lf_t, pset, counter)
-         endif
+            !t_out = t_out + dt_out
+            !call save_particles(n, lf_t, mass, pset, counter)
+         !endif
          
 
 
@@ -502,6 +504,7 @@ contains
          nsteps = nsteps + 1
 
       end do
+      call save_particles(n, lf_t, mass, pset, counter)
 
       write(*,*) "Leapfrog: nsteps=", nsteps
 
@@ -581,12 +584,13 @@ contains
          end subroutine pot2grid
 
 
-         subroutine save_particles(n, lf_t, pset, counter)
+         subroutine save_particles(n, lf_t, mass, pset, counter)
             use particle_types, only: particle_set
             implicit none
                class(particle_set), intent(in) :: pset  !< particle list
                integer, intent (in)         :: n
                integer, intent (inout) :: counter
+               real, dimension(n), intent(in) :: mass
                integer            :: i, data_file=757
                real, intent(in)  :: lf_t
                character(len=17) :: filename
@@ -602,13 +606,13 @@ contains
                endif
                if (counter >=100) then
                   write(counter_char, '(I3)') counter
-                  write(filename,'(A9,A1,A4,A4)') 'particles','_',counter_char,".dat"
+                  write(filename,'(A9,A1,A3,A4)') 'particles','_',counter_char,".dat"
                endif
 
                open(unit = data_file, file=filename)
                   write(data_file, *) "#t =", lf_t
                   do i=1,n
-                     write(data_file,*) i, pset%p(i)%pos, pset%p(i)%vel
+                     write(data_file,*) i, mass(i), pset%p(i)%pos, pset%p(i)%vel
                   enddo
                close(data_file)
 
@@ -618,7 +622,7 @@ contains
 
 
          subroutine get_var_timestep_c(lf_dt, lf_dth, eta, eps, a, lf_c, pset, cg)
-            use constants,      only: ndims, xdim, ydim, zdim, half, big, one
+            use constants,      only: ndims, xdim, zdim, half, big, one
             use particle_types, only: particle_set
             use grid_cont,      only: grid_container
             use func,           only: operator(.notequals.)
@@ -633,21 +637,15 @@ contains
                real, dimension(ndims) :: maxv, minv, max_v
                integer                 :: cdim
 
-
                factor = big
 
+               lf_dt = sqrt(2.0*eta*eps/a)
 
                do cdim = xdim, zdim
                   maxv(cdim)  = abs(maxval(pset%p(:)%vel(cdim)))
                   minv(cdim)  = abs(minval(pset%p(:)%vel(cdim)))
-
                   max_v(cdim) = max(maxv(cdim), minv(cdim))
                enddo
-
-
-
-               lf_dt = sqrt(2.0*eta*eps/a)
-
 
 
 
@@ -665,12 +663,8 @@ contains
                   factor = one
                endif
 
-
-
-
                lf_dt  = lf_c * factor * lf_dt
                lf_dth = half * lf_dt
-
 
          end subroutine get_var_timestep_c
 
@@ -708,22 +702,22 @@ contains
 
 
          subroutine get_acc_cic(pset, cg, cells, acc, n)
-            use constants, only: ndims, CENTER, xdim, ydim, zdim, half
-            use grid_cont,        only: grid_container
+            use constants,      only: ndims, CENTER, xdim, ydim, zdim, half
+            use grid_cont,      only: grid_container
             use particle_types, only: particle_set
 
             implicit none
             type(grid_container), pointer, intent(in) :: cg
-            class(particle_set), intent(in) :: pset  !< particle list
+            class(particle_set), intent(in)            :: pset
 
-            integer, intent(in) :: n
-            integer :: i, j, k, c, cdim
-            integer(kind=8) :: p
+            integer, intent(in)                       :: n
+            integer                                    :: i, j, k, c, cdim
+            integer(kind=8)                            :: p
             integer, dimension(n, ndims), intent(in) :: cells
-            integer(kind=8), dimension(n, ndims) :: cic_cells
-            real, dimension(n, ndims) :: dxyz
-            real, dimension(n, ndims), intent(out) :: acc
-            real(kind=8), dimension(n, 8) :: aijk, fx, fy, fz
+            integer(kind=8), dimension(n, ndims)      :: cic_cells
+            real, dimension(n, ndims)                  :: dxyz
+            real, dimension(n, ndims), intent(out)    :: acc
+            real(kind=8), dimension(n, 8)             :: wijk, fx, fy, fz
 
             acc = 0.0
 
@@ -739,20 +733,20 @@ contains
                      dxyz(i, cdim) = abs(pset%p(i)%pos(cdim) - cg%coord(CENTER, cdim)%r(cic_cells(i,cdim)))
 
                   enddo
-                  aijk(i, 1) = (cg%dx - dxyz(i, xdim))*(cg%dy - dxyz(i, ydim))*(cg%dz - dxyz(i, zdim)) !a(i  ,j  ,k  )
-                  aijk(i, 2) = (cg%dx - dxyz(i, xdim))*(cg%dy - dxyz(i, ydim))*         dxyz(i, zdim)  !a(i+1,j  ,k  )
-                  aijk(i, 3) = (cg%dx - dxyz(i, xdim))*         dxyz(i, ydim) *(cg%dz - dxyz(i, zdim)) !a(i  ,j+1,k  )
-                  aijk(i, 4) = (cg%dx - dxyz(i, xdim))*         dxyz(i, ydim) *         dxyz(i, zdim)  !a(i  ,j  ,k+1)
-                  aijk(i, 5) =          dxyz(i, xdim) *(cg%dy - dxyz(i, ydim))*(cg%dz - dxyz(i, zdim)) !a(i+1,j+1,k  )
-                  aijk(i, 6) =          dxyz(i, xdim) *(cg%dy - dxyz(i, ydim))*         dxyz(i, zdim)  !a(i  ,j+1,k+1)
-                  aijk(i, 7) =          dxyz(i, xdim) *         dxyz(i, ydim) *(cg%dz - dxyz(i, zdim)) !a(i+1,j  ,k+1)
-                  aijk(i, 8) =          dxyz(i, xdim) *         dxyz(i, ydim) *         dxyz(i, zdim)  !a(i+1,j+1,k+1)
+                  wijk(i, 1) = (cg%dx - dxyz(i, xdim))*(cg%dy - dxyz(i, ydim))*(cg%dz - dxyz(i, zdim)) !a(i  ,j  ,k  )
+                  wijk(i, 2) = (cg%dx - dxyz(i, xdim))*(cg%dy - dxyz(i, ydim))*         dxyz(i, zdim)  !a(i+1,j  ,k  )
+                  wijk(i, 3) = (cg%dx - dxyz(i, xdim))*         dxyz(i, ydim) *(cg%dz - dxyz(i, zdim)) !a(i  ,j+1,k  )
+                  wijk(i, 4) = (cg%dx - dxyz(i, xdim))*         dxyz(i, ydim) *         dxyz(i, zdim)  !a(i  ,j  ,k+1)
+                  wijk(i, 5) =          dxyz(i, xdim) *(cg%dy - dxyz(i, ydim))*(cg%dz - dxyz(i, zdim)) !a(i+1,j+1,k  )
+                  wijk(i, 6) =          dxyz(i, xdim) *(cg%dy - dxyz(i, ydim))*         dxyz(i, zdim)  !a(i  ,j+1,k+1)
+                  wijk(i, 7) =          dxyz(i, xdim) *         dxyz(i, ydim) *(cg%dz - dxyz(i, zdim)) !a(i+1,j  ,k+1)
+                  wijk(i, 8) =          dxyz(i, xdim) *         dxyz(i, ydim) *         dxyz(i, zdim)  !a(i+1,j+1,k+1)
                !else funkcja...
                endif
 
             enddo
 
-            aijk = aijk/cg%dvol
+            wijk = wijk/cg%dvol
 
 
             do p = 1, n
@@ -775,9 +769,9 @@ contains
 
             do p = 1, n
                do c = 1, 8
-                  acc(p, xdim) = acc(p, xdim) + aijk(p, c)*fx(p, c)
-                  acc(p, ydim) = acc(p, ydim) + aijk(p, c)*fy(p, c)
-                  acc(p, zdim) = acc(p, zdim) + aijk(p, c)*fz(p, c)
+                  acc(p, xdim) = acc(p, xdim) + wijk(p, c)*fx(p, c)
+                  acc(p, ydim) = acc(p, ydim) + wijk(p, c)*fy(p, c)
+                  acc(p, zdim) = acc(p, zdim) + wijk(p, c)*fz(p, c)
                enddo
             enddo
 
@@ -853,7 +847,6 @@ contains
                                  df_dx_p, d2f_dx2_p, df_dy_p, d2f_dy2_p,& 
                                  df_dz_p, d2f_dz2_p, d2f_dxdy_p, d2f_dxdz_p, d2f_dydz_p)
             use constants,    only: ndims, xdim, ydim, zdim
-            !use cg_list,      only: cg_list_element
             use grid_cont,    only: grid_container
             implicit none
             type(grid_container), pointer, intent(in)       :: cg
@@ -863,8 +856,8 @@ contains
             real, dimension(n, ndims), intent(out)          :: acc
             
             procedure(dxi), pointer, intent(in) :: df_dx_p, df_dy_p,df_dz_p
-               procedure(d2dxi2), pointer, intent(in) :: d2f_dx2_p, d2f_dy2_p,d2f_dz2_p
-               procedure(d2dxixj), pointer, intent(in) :: d2f_dxdy_p, d2f_dxdz_p,d2f_dydz_p
+            procedure(d2dxi2), pointer, intent(in) :: d2f_dx2_p, d2f_dy2_p,d2f_dz2_p
+            procedure(d2dxixj), pointer, intent(in) :: d2f_dxdy_p, d2f_dxdz_p,d2f_dydz_p
 
 
             do i=1, n

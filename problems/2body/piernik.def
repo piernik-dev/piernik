@@ -5,3 +5,5 @@
 #define RTVD
 #define MULTIGRID
 #define GRAV
+#define HDF5
+#define REST

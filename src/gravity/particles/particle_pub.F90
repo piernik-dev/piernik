@@ -55,7 +55,7 @@ contains
       use dataio_pub,            only: nh  ! QA_WARN required for diff_nml
       use dataio_pub,            only: msg, die
       use mpisetup,              only: master, slave, cbuff, lbuff, rbuff, piernik_mpi_bcast
-      use particle_integrators,  only: hermit4, leapfrog2, acc_interp_method, var_timestep, lf_timestep
+      use particle_integrators,  only: hermit4, leapfrog2, acc_interp_method, var_timestep, lf_timestep, lf_c
       use particle_types,        only: ht_integrator
 
 
@@ -66,13 +66,14 @@ contains
       character(len=cbuff_len), parameter :: default_is = "ngp"
 
 
-      namelist /PARTICLES/ time_integrator, interpolation_scheme, acc_interp_method, var_timestep, lf_timestep
+      namelist /PARTICLES/ time_integrator, interpolation_scheme, acc_interp_method, var_timestep, lf_timestep, lf_c
 
       time_integrator = default_ti
       interpolation_scheme = default_is
       acc_interp_method = 'cic'
       var_timestep  = .true.
       lf_timestep   = 0.01
+      lf_c          = 1.0
 
       if (master) then
          if (.not.nh%initialized) call nh%init()
@@ -96,6 +97,7 @@ contains
          cbuff(3) = acc_interp_method
          lbuff(1) = var_timestep
          rbuff(1) = lf_timestep
+         rbuff(2) = lf_c
       endif
 
       call piernik_MPI_Bcast(cbuff, cbuff_len)
@@ -105,7 +107,8 @@ contains
          interpolation_scheme = cbuff(2)
          acc_interp_method = cbuff(3)
          var_timestep = lbuff(1)
-         lf_timestep = rbuff(1)
+         lf_timestep  = rbuff(1)
+         lf_c         = rbuff(2) 
       endif
 
       psolver => null()
@@ -113,10 +116,10 @@ contains
 #ifndef _CRAYFTN
          case ('hermit4')
             psolver => hermit4
-            ht_integrator=.true.
+            ht_integrator = .true.
          case ('leapfrog2')
             psolver => leapfrog2
-            ht_integrator=.false.
+            ht_integrator = .false.
          case (default_ti) ! be quiet
 #endif /* !_CRAYFTN */
          case default
