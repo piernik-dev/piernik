@@ -458,6 +458,9 @@ contains
 
 
          call find_cells(pset, cells, dist, cg, n)                !finding cells
+#ifdef SELF_GRAV
+         call pot_refresh
+#endif /* SELF_GRAV */
 
 
          !3.acceleration + |a|
@@ -581,6 +584,18 @@ contains
 
          end subroutine pot2grid
 
+         subroutine pot_refresh
+
+            use cg_list_dataop,   only: ind_val
+            use constants,        only: sgp_n, sgpm_n
+            use named_array_list, only: qna
+
+            implicit none
+
+            call leaves%q_copy(qna%ind(sgp_n), qna%ind(sgpm_n))
+            call leaves%q_copy(qna%ind(sgpm_n), qna%ind(sgp_n))
+
+         end subroutine pot_refresh
 
          subroutine save_particles(n, lf_t, mass, pset, counter)
             use particle_types, only: particle_set
