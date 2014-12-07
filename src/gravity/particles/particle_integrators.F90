@@ -412,8 +412,6 @@ contains
       !timestep
       if (var_timestep) then
          call get_var_timestep_c(lf_dt, lf_dth, eta, eps, a, lf_c, pset, cg)      !variable
-         !lf_dt = sqrt(2.0*eta*eps/a)
-         !lf_dth = half * lf_dt
       else
          lf_dt = lf_timestep                       !constant
       endif
