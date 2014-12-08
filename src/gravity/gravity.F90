@@ -490,7 +490,7 @@ contains
 #endif /* SELF_GRAV */
 
 #ifdef GRAV_NBODY
-      use constants,        only: gpnbody_n
+      use constants,        only: gpnbody_n, one
 #endif /* GRAV_NBODY */
 
       implicit none
