@@ -178,7 +178,7 @@ contains
    subroutine leapfrog2ord(pset, t_glob, dt_tot)
       use constants,      only: ndims, CENTER, xdim, zdim, half, zero
       use particle_types, only: particle_set
-      use domain,         only: is_refined, dom
+      use domain,         only: is_refined, is_multicg, dom
       use cg_leaves,      only: leaves
       use cg_list,        only: cg_list_element
       use grid_cont,      only: grid_container
@@ -327,11 +327,13 @@ contains
 
       cgl => leaves%first
       if (is_refined) call die("[particle_integrators:leapfrog2ord] AMR not implemented for particles yet")
+      if (is_multicg) call die("[particle_integrators:leapfrog2ord] multi_cg not implemented for particles yet")
 
-      do while (associated(cgl))
+      !do while (associated(cgl))
             cg => cgl%cg
-            cgl => cgl%nxt
-      enddo
+      !!      
+       !     cgl => cgl%nxt
+      !enddo
 
 
       !obliczenie zewnętrznego potencjalu na siatce
@@ -1044,6 +1046,7 @@ contains
 
 
                   !write(*,*) "df_dx_o2"
+
                   !o(R^2)
                   df_dx_o2 = ( cg%gpot(cell(xdim)+1, cell(ydim), cell(zdim)) - &
                               cg%gpot(cell(xdim)-1, cell(ydim), cell(zdim)) ) / (2.0*cg%dx)

@@ -18,7 +18,7 @@
  /
 
  $UNITS
- !units_set = "PSM"
+ units_set = "PSM"
  /
 
  $RESTART_CONTROL
@@ -48,8 +48,8 @@
  /
 
  $FLUID_NEUTRAL
- !cs_iso = 0.01
- cs_iso = 0.001
+ cs_iso = 0.01
+ !cs_iso = 0.001
  selfgrav = .true.
  !selfgrav = .false.
  /
@@ -68,7 +68,7 @@
  /
 
  $MULTIGRID_GRAVITY
-   interp_mom2pot = .true.
+   !interp_mom2pot = .true.
 /
 
  $PROBLEM_CONTROL

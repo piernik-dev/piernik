@@ -208,6 +208,7 @@ module grid_cont
       real, dimension(:,:,:), pointer :: gp      => null()       !< Array for gravitational potential from external fields
       real, dimension(:,:,:), pointer :: sgp     => null()       !< Array for gravitational potential from multigrid or FFT solver
       real, dimension(:,:,:), pointer :: sgpm    => null()       !< Array for gravitational potential from multigrid or FFT solver at previous timestep saved by source_terms_grav.
+      real, dimension(:,:,:), pointer :: gpnbody => null()       !< Array for gravitational potential from particles
       real, dimension(:,:,:), pointer :: cs_iso2 => null()       !< COMMENT ME
       real, dimension(:,:,:), pointer :: wa      => null()       !< Temporary array used for different purposes, usually has dimension (grid::nx, grid::ny, grid::nz)
 

@@ -168,6 +168,11 @@ contains
 #ifdef SELF_GRAV
       use constants,      only: sgp_n, sgpm_n
 #endif /* SELF_GRAV */
+
+#ifdef GRAV_NBODY
+      use constants,      only: gpnbody_n
+#endif /* GRAV_NBODY */
+
 #ifdef CORIOLIS
       use coriolis,       only: set_omega
 #endif /* CORIOLIS */
@@ -302,6 +307,10 @@ contains
       call all_cg%reg_var(sgpm_n)
 #endif /* SELF_GRAV */
 
+#ifdef GRAV_NBODY
+      call all_cg%reg_var(gpnbody_n)
+#endif /* GRAV_NBODY */
+
       if (.not.user_grav) then
          grav_pot_3d => default_grav_pot_3d
 #ifdef VERBOSE
@@ -349,6 +358,10 @@ contains
       use constants,          only: sgp_n, sgpm_n
 #endif /* SELF_GRAV */
 
+#ifdef GRAV_NBODY
+      use constants,          only: gpnbody_n
+#endif /* GRAV_NBODY */
+
       implicit none
 
       type(grid_container), pointer,  intent(inout) :: cg
@@ -364,6 +377,10 @@ contains
          cg%sgp   => cg%q(qna%ind(  sgp_n))%arr
          cg%sgpm  => cg%q(qna%ind( sgpm_n))%arr
 #endif /* SELF_GRAV */
+
+#ifdef GRAV_NBODY
+         cg%gpnbody  => cg%q(qna%ind( gpnbody_n))%arr
+#endif /* GRAV_NBODY */
 
       endif
 
@@ -466,12 +483,21 @@ contains
       use constants,        only: gp_n, gpot_n, hgpot_n
       use func,             only: operator(.notequals.)
       use named_array_list, only: qna
+      use dataio_pub,       only: die
 #ifdef SELF_GRAV
       use constants,        only: one, half, sgp_n, sgpm_n, zero
       use global,           only: dt, dtm
 #endif /* SELF_GRAV */
 
+#ifdef GRAV_NBODY
+      use constants,        only: gpnbody_n
+#endif /* GRAV_NBODY */
+
       implicit none
+      
+#ifdef GRAV_NBODY
+      real :: wsp1, wsp2
+#endif /* GRAV_NBODY */
 
 #ifdef SELF_GRAV
       real :: h
@@ -485,10 +511,22 @@ contains
       call leaves%q_lin_comb([ ind_val(qna%ind(gp_n), 1.), ind_val(qna%ind(sgp_n), one+h),      ind_val(qna%ind(sgpm_n), -h)     ], qna%ind(gpot_n))
       call leaves%q_lin_comb([ ind_val(qna%ind(gp_n), 1.), ind_val(qna%ind(sgp_n), one+half*h), ind_val(qna%ind(sgpm_n), -half*h)], qna%ind(hgpot_n))
 
+#ifdef GRAV_NBODY
+      call die("[gravity:sum_potential]: Nie gotowe!")
+#endif /* GRAV_NBODY */
+
 #else /* !SELF_GRAV */
+#ifdef GRAV_NBODY
+      !> \todo sprawdzic wspolczynniki
+      wsp1 = one
+      wsp2 = one
+      call leaves%q_lin_comb([ ind_val(qna%ind(gp_n), 1.), ind_val(qna%ind(gpnbody_n), wsp1)], qna%ind(gpot_n))
+      call leaves%q_lin_comb([ ind_val(qna%ind(gp_n), 1.), ind_val(qna%ind(gpnbody_n), wsp2)], qna%ind(hgpot_n))
+#else /* !GRAV_NBODY */      
       !> \deprecated BEWARE: as long as grav_pot_3d is called only in init_piernik this assignment probably don't need to be repeated more than once
       call leaves%q_copy(qna%ind(gp_n), qna%ind(gpot_n))
       call leaves%q_copy(qna%ind(gp_n), qna%ind(hgpot_n))
+#endif /* !GRAV_NBODY */
 #endif /* !SELF_GRAV */
 
    end subroutine sum_potential

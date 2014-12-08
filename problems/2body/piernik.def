@@ -3,7 +3,6 @@
 #define ISO
 #define GLOBAL_FR_SPEED
 #define RTVD
-#define MULTIGRID
 #define GRAV
 #define HDF5
 #define REST
