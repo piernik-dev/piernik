@@ -511,9 +511,9 @@ contains
       call leaves%q_lin_comb([ ind_val(qna%ind(gp_n), 1.), ind_val(qna%ind(sgp_n), one+h),      ind_val(qna%ind(sgpm_n), -h)     ], qna%ind(gpot_n))
       call leaves%q_lin_comb([ ind_val(qna%ind(gp_n), 1.), ind_val(qna%ind(sgp_n), one+half*h), ind_val(qna%ind(sgpm_n), -half*h)], qna%ind(hgpot_n))
 
-#ifdef GRAV_NBODY
-      call die("[gravity:sum_potential]: Nie gotowe!")
-#endif /* GRAV_NBODY */
+!#ifdef GRAV_NBODY
+!      call die("[gravity:sum_potential]: Nie gotowe!")
+!#endif /* GRAV_NBODY */
 
 #else /* !SELF_GRAV */
 #ifdef GRAV_NBODY
