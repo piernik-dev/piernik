@@ -183,11 +183,11 @@ contains
       use cg_list,        only: cg_list_element
       use grid_cont,      only: grid_container
       use dataio_pub,     only: die, printinfo
-#ifdef SELF_GRAV
+#ifdef GRAV_NBODY
       use cg_list_dataop,   only: ind_val
       use constants,        only: gp_n, gpot_n, hgpot_n, one, sgp_n, sgpm_n
       use named_array_list, only: qna
-#endif /* SELF_GRAV */
+#endif /* GRAV_NBODY */
 
       implicit none 
       class(particle_set), intent(inout) :: pset  !< particle list
@@ -347,21 +347,21 @@ contains
 
 
 
-      !save_potential = .true.
-      save_potential = .false.
-      !finish         = .true.
-      finish         = .false.
+      save_potential = .true.
+      !save_potential = .false.
+      finish         = .true.
+      !finish         = .false.
 
       if(save_potential) then
          write(*,*) "Zapis potencjalu do pliku"
          open(unit=88, file='potencjal.dat')
 
-         do i=lbound(cg%gpot,dim=1),ubound(cg%gpot,dim=1)
-            do j=lbound(cg%gpot,dim=2),ubound(cg%gpot,dim=2)
-               do k=lbound(cg%gpot,dim=3),ubound(cg%gpot,dim=3)
+         do i=lbound(cg%gpnbody,dim=1),ubound(cg%gpnbody,dim=1)
+            do j=lbound(cg%gpnbody,dim=2),ubound(cg%gpnbody,dim=2)
+               do k=lbound(cg%gpnbody,dim=3),ubound(cg%gpnbody,dim=3)
                   write(88,*) i, j, k, cg%coord(CENTER, xdim)%r(i), &
                               cg%coord(CENTER, xdim)%r(i), cg%coord(CENTER, xdim)%r(i), &
-                              cg%gpot(i,j,k)
+                              cg%gpnbody(i,j,k)
                enddo
             enddo
             write(88,*)
@@ -409,6 +409,8 @@ contains
 
 
       call get_acc_max(acc, n, a)
+      write(*,*) "a=", a
+      stop
 
 
       !timestep
@@ -452,17 +454,15 @@ contains
 
          !ekstrapolacja potencjalu w przypadku samograwitacji
 
-#ifdef SELF_GRAV
-         call leaves%q_copy(qna%ind(sgpm_n), qna%ind(sgp_n))
-         call leaves%q_lin_comb([ ind_val(qna%ind(gp_n), 1.), ind_val(qna%ind(sgp_n), one+lf_dt),  ind_val(qna%ind(sgpm_n), -lf_dt) ], qna%ind(gpot_n))
-         call leaves%q_lin_comb([ ind_val(qna%ind(gp_n), 1.), ind_val(qna%ind(sgp_n), one+lf_dth), ind_val(qna%ind(sgpm_n), -lf_dth)], qna%ind(hgpot_n))
-#endif /* SELF_GRAV */
+!#ifdef GRAV_NBODY
+!         call leaves%q_copy(qna%ind(sgpm_n), qna%ind(sgp_n))
+!         call leaves%q_lin_comb([ ind_val(qna%ind(gp_n), 1.), ind_val(qna%ind(sgp_n), one+lf_dt),  ind_val(qna%ind(sgpm_n), -lf_dt) ], qna%ind(gpot_n))
+!         call leaves%q_lin_comb([ ind_val(qna%ind(gp_n), 1.), ind_val(qna%ind(sgp_n), one+lf_dth), ind_val(qna%ind(sgpm_n), -lf_dth)], qna%ind(hgpot_n))
+!#endif /* GRAV_NBODY */
 
 
          call find_cells(pset, cells, dist, cg, n)                !finding cells
-#ifdef SELF_GRAV
-         call pot_refresh
-#endif /* SELF_GRAV */
+
 
 
          !3.acceleration + |a|
@@ -1019,15 +1019,20 @@ contains
 
 
                do i = 1, n
-                  if (any(pset%p(i)%pos < cg%fbnd(:,LO)) .or. any(pset%p(i)%pos > cg%fbnd(:,HI))) then
-                     write(*,*) "[particle_integrators] One or more particles is outside domain!"
-                     pset%p(i)%outside = .true.
-                  else
-                     pset%p(i)%outside = .false.
-                  endif
-                  do cdim = xdim, ndims
-                     cells(i, cdim) = int( 0.5 + (pset%p(i)%pos(cdim) - cg%coord(CENTER,cdim)%r(0)) / cg%dl(cdim) )
+                  !if (any(pset%p(i)%pos < cg%fbnd(:,LO)) .or. any(pset%p(i)%pos > cg%fbnd(:,HI))) then
 
+                     !write(*,*) "[particle_integrators] One or more particles is outside domain!"
+                     !pset%p(i)%outside = .true.
+                  !else
+                     !pset%p(i)%outside = .false.
+                  !endif
+                  do cdim = xdim, ndims
+                     if ((pset%p(i)%pos(cdim) >= cg%ijkse(cdim, LO)) .or. (pset%p(i)%pos(cdim) <= cg%ijkse(cdim, HI)) then
+                        pset%p(i)%outside = .false.
+                     else
+                        pset%p(i)%outside = .true.
+                     endif
+                     cells(i, cdim) = int( 0.5 + (pset%p(i)%pos(cdim) - cg%coord(CENTER,cdim)%r(0)) / cg%dl(cdim) )
                      dist(i, cdim)  = pset%p(i)%pos(cdim) - ( cg%coord(CENTER, cdim)%r(0) + cells(i,cdim) * cg%dl(cdim) )
                   enddo
 
