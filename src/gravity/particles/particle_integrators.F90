@@ -55,7 +55,7 @@ module particle_integrators
    character(len=cbuff_len)  :: acc_interp_method  !< acceleration interpolation method
    logical                   :: var_timestep        !< if .true. then leapfrog2ord use variable timestep to integration
    real                       :: lf_timestep         !< leapfrog2ord constant timestep value (works only if var_timestep = .false.)
-   real                       :: lf_c                !< timestep should depends of grid and velocities of particles (used to extrapolation of the gravitational potential)
+   real                       :: lf_c                !< timestep should depends of grid and velocities of particles (Courant number)
 contains
 
    !>
@@ -264,7 +264,7 @@ contains
       real                                         :: init_ang_mom      !< angular momentum of set of particles at t_glob
       real                                         :: d_ang_momentum = 0.0 !< error of angular momentum in succeeding timensteps, at t=t_glob=0.0
 
-      integer                                      :: i, j, k
+      integer                                      :: i!, j, k
       integer                                      :: nsteps
       integer                                      :: n                 !< number of particles
       integer                                      :: lun_out           !< output file
@@ -356,32 +356,33 @@ contains
 
 
 
-      !save_potential = .true.
-      save_potential = .false.
-      !finish         = .true.
-      finish         = .false.
+      save_potential = .true.
+      !save_potential = .false.
+      finish         = .true.
+      !finish         = .false.
+!      call save_pot(save_potential, finish, cg)
 
-      if(save_potential) then
-         write(*,*) "Zapis potencjalu do pliku"
-         open(unit=88, file='potencjal.dat')
+!      if(save_potential) then
+!         write(*,*) "Zapis potencjalu do pliku"
+!         open(unit=88, file='potencjal.dat')
 
-         do i=lbound(cg%gpot,dim=1),ubound(cg%gpot,dim=1)
-            do j=lbound(cg%gpot,dim=2),ubound(cg%gpot,dim=2)
-               do k=lbound(cg%gpot,dim=3),ubound(cg%gpot,dim=3)
-                  write(88,*) i, j, k, cg%coord(CENTER, xdim)%r(i), &
-                              cg%coord(CENTER, xdim)%r(i), cg%coord(CENTER, xdim)%r(i), &
-                              cg%gpot(i,j,k)
-               enddo
-            enddo
-            write(88,*)
-         enddo
-         close(88)
+!         do i=lbound(cg%gpot,dim=1),ubound(cg%gpot,dim=1)
+!            do j=lbound(cg%gpot,dim=2),ubound(cg%gpot,dim=2)
+!               do k=lbound(cg%gpot,dim=3),ubound(cg%gpot,dim=3)
+!                  write(88,*) i, j, k, cg%coord(CENTER, xdim)%r(i), &
+!                              cg%coord(CENTER, xdim)%r(i), cg%coord(CENTER, xdim)%r(i), &
+!                              cg%gpot(i,j,k)
+!               enddo
+!            enddo
+!            write(88,*)
+!         enddo
+!         close(88)
 
-         if(finish) then
-            write(*,*) "Warunek zakonczenia-zatrzymano"
-            stop
-         endif
-      endif
+!         if(finish) then
+!            write(*,*) "Warunek zakonczenia-zatrzymano"
+!            stop
+!         endif
+!      endif
 
 
       !call get_ang_momentum_2(pset, n, ang_momentum)
@@ -419,7 +420,7 @@ contains
 
       call get_acc_max(acc, n, a)
       write(*,*) "a=", a
-      stop
+      !stop
 
 
       !timestep
@@ -472,12 +473,15 @@ contains
 #ifdef GRAV_NBODY
             call leaves%q_copy(qna%ind(sgp_n), qna%ind(gpnbody_n))
             if (first_loop) then
+            write(*,*) "First loop"
                call leaves%q_lin_comb([ ind_val(qna%ind(gpnbody_n), lf_dt + dt_old), ind_val(qna%ind(sgpm_n), one - (lf_dt + dt_old)), ind_val(qna%ind(sgpm_n), one)], qna%ind(gpot_n))
             else
                call leaves%q_lin_comb([ ind_val(qna%ind(gpnbody_n), lf_dt), ind_val(qna%ind(sgpm_n), one - lf_dt), ind_val(qna%ind(sgpm_n), one)], qna%ind(gpot_n))
             endif
             first_loop = .false.
-            call leaves%q_lin_comb([ ind_val(qna%ind(gp_n), one), ind_val(qna%ind(gpnbody_n), one)], qna%ind(sgpm_n))
+            !call leaves%q_lin_comb([ ind_val(qna%ind(gp_n), one), ind_val(qna%ind(gpnbody_n), one)], qna%ind(sgpm_n))
+            call leaves%q_lin_comb([ ind_val(qna%ind(gpnbody_n), one)], qna%ind(sgpm_n))
+
 #endif /* GRAV_NBODY */
 
          call find_cells(pset, cells, dist, cg, n)                !finding cells
@@ -529,6 +533,7 @@ contains
       call save_particles(n, lf_t, mass, pset, file_counter)
 
       write(*,*) "Leapfrog: nsteps=", nsteps
+      call save_pot(save_potential, finish, cg)
 
 
 
@@ -618,6 +623,38 @@ contains
 
 !         end subroutine pot_refresh
 
+         subroutine save_pot(save_potential, finish, cg)
+            use grid_cont,      only: grid_container
+            implicit none
+            type(grid_container), pointer, intent(in) :: cg
+            logical :: save_potential
+            logical :: finish
+            integer :: i, j, k
+            
+               if(save_potential) then
+                  write(*,*) "Zapis potencjalu do pliku"
+                  open(unit=88, file='potencjal.dat')
+
+                  do i=lbound(cg%gpot,dim=1),ubound(cg%gpot,dim=1)
+                     do j=lbound(cg%gpot,dim=2),ubound(cg%gpot,dim=2)
+                        do k=lbound(cg%gpot,dim=3),ubound(cg%gpot,dim=3)
+                           write(88,*) i, j, k, cg%coord(CENTER, xdim)%r(i), &
+                                       cg%coord(CENTER, xdim)%r(i), cg%coord(CENTER, xdim)%r(i), &
+                                       cg%gpot(i,j,k)
+                        enddo
+                     enddo
+                     write(88,*)
+                  enddo
+                  close(88)
+
+                  if(finish) then
+                     write(*,*) "Warunek zakonczenia-zatrzymano"
+                     stop
+                  endif
+               endif
+         end subroutine save_pot
+            
+            
          subroutine save_particles(n, lf_t, mass, pset, file_counter)
             use particle_types, only: particle_set
             implicit none
