@@ -773,7 +773,7 @@ contains
 
       use cg_leaves,         only: leaves
       use constants,         only: sgp_n
-      use constants,         only: gpnbody_n
+      !use constants,         only: gpnbody_n
       use multigrid_helpers, only: all_dirty
       use multigridvars,     only: solution, tot_ts, ts, grav_bnd, bnd_dirichlet, bnd_givenval, bnd_isolated
       use multipole,         only: multipole_solver
@@ -805,8 +805,8 @@ contains
       endif
       call init_source(i_all_dens)
       call poisson_solver(inner)
-      !call leaves%q_copy(solution, qna%ind(sgp_n))
-      call leaves%q_copy(solution, qna%ind(gpnbody_n)) !mgr thesis test (copying potential to cg%gpnbody array)
+      call leaves%q_copy(solution, qna%ind(sgp_n))
+      !call leaves%q_copy(solution, qna%ind(gpnbody_n)) !mgr thesis test (copying potential to cg%gpnbody array)
 
       if (grav_bnd_global == bnd_isolated) then
          grav_bnd = bnd_givenval
@@ -815,8 +815,8 @@ contains
          call multipole_solver
          call init_source(empty_array)
          call poisson_solver(outer)
-         !call leaves%q_add(solution, qna%ind(sgp_n)) ! add solution to sgp
-         call leaves%q_add(solution, qna%ind(gpnbody_n)) !mgr thesis test (copying potential to cg%gpnbody array)
+         call leaves%q_add(solution, qna%ind(sgp_n)) ! add solution to sgp
+         !call leaves%q_add(solution, qna%ind(gpnbody_n)) !mgr thesis test (copying potential to cg%gpnbody array)
       endif
  
       grav_bnd = grav_bnd_global
