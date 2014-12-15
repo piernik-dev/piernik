@@ -177,15 +177,17 @@ contains
 
    subroutine leapfrog2ord(pset, t_glob, dt_tot)
       use constants,      only: ndims, CENTER, xdim, zdim, half, zero
-      use particle_types, only: particle_set
-      use domain,         only: is_refined, is_multicg, dom
-      use cg_leaves,      only: leaves
-      use cg_list,        only: cg_list_element
-      use grid_cont,      only: grid_container
-      use dataio_pub,     only: die, printinfo
+      use particle_types,   only: particle_set
+      use domain,           only: is_refined, is_multicg, dom
+      use cg_leaves,        only: leaves
+      use cg_list,          only: cg_list_element
+      use grid_cont,        only: grid_container
+      use dataio_pub,       only: die, printinfo
+
 #ifdef GRAV_NBODY
+      use global,           only: dt_old
       use cg_list_dataop,   only: ind_val
-      use constants,        only: gp_n, gpot_n, hgpot_n, one, sgp_n, sgpm_n
+      use constants,        only: gp_n, gpot_n, one, sgp_n, sgpm_n, gpnbody_n
       use named_array_list, only: qna
 #endif /* GRAV_NBODY */
 
@@ -232,6 +234,9 @@ contains
 
       end interface
 
+#ifdef GRAV_NBODY
+      logical                                     :: first_loop
+#endif /* GRAV_NBODY */
       integer, dimension(:,:), allocatable               :: cells          !< cells where the particles are
       real, dimension(:,:), allocatable                  :: dist           !< distances between positions of particles and centers of the cells
       real, dimension(:,:), allocatable                  :: acc            !< 3D array of particles acceleration taken from Lagrange polynomial interpolation
@@ -269,7 +274,7 @@ contains
       logical                                      :: finish            !< if .true. stop simulation with saving extrenal potential (works only if save_potential==.true.)
       logical                                      :: external_pot      !< if .true. gravitational potential will be deleted and replaced by external potential of point mass
       logical, save                                :: first_run_lf = .true.
-      integer, save                                :: counter
+      integer, save                                :: file_counter
 
       procedure(dxi), pointer :: df_dx_p => NULL(), & ! pointers to spatial differentation functions
                                     df_dy_p => NULL(), &
@@ -295,6 +300,10 @@ contains
          t_out = t_glob + dt_out
          first_run_lf = .false.
       endif
+
+#ifdef GRAV_NBODY
+      first_loop = .true.
+#endif /* GRAV_NBODY */
 
 
       open(newunit=lun_out, file='leapfrog_out.log', status='unknown',  position='append')
@@ -347,21 +356,21 @@ contains
 
 
 
-      save_potential = .true.
-      !save_potential = .false.
-      finish         = .true.
-      !finish         = .false.
+      !save_potential = .true.
+      save_potential = .false.
+      !finish         = .true.
+      finish         = .false.
 
       if(save_potential) then
          write(*,*) "Zapis potencjalu do pliku"
          open(unit=88, file='potencjal.dat')
 
-         do i=lbound(cg%gpnbody,dim=1),ubound(cg%gpnbody,dim=1)
-            do j=lbound(cg%gpnbody,dim=2),ubound(cg%gpnbody,dim=2)
-               do k=lbound(cg%gpnbody,dim=3),ubound(cg%gpnbody,dim=3)
+         do i=lbound(cg%gpot,dim=1),ubound(cg%gpot,dim=1)
+            do j=lbound(cg%gpot,dim=2),ubound(cg%gpot,dim=2)
+               do k=lbound(cg%gpot,dim=3),ubound(cg%gpot,dim=3)
                   write(88,*) i, j, k, cg%coord(CENTER, xdim)%r(i), &
                               cg%coord(CENTER, xdim)%r(i), cg%coord(CENTER, xdim)%r(i), &
-                              cg%gpnbody(i,j,k)
+                              cg%gpot(i,j,k)
                enddo
             enddo
             write(88,*)
@@ -422,7 +431,7 @@ contains
       lf_dth = half*lf_dt
 
       nsteps = 0
-      counter = 1
+      file_counter = 1
 
       !main loop
       do while (lf_t < lf_tend)
@@ -439,7 +448,7 @@ contains
                write(lun_out, '(I3,1X,16(E13.6,1X))') i, lf_t, lf_dt, mass(i), pset%p(i)%pos, acc(i,:), acc2(i,:), energy, d_energy, ang_momentum, d_ang_momentum
             enddo
             !t_out = t_out + dt_out
-            !call save_particles(n, lf_t, mass, pset, counter)
+            call save_particles(n, lf_t, mass, pset, file_counter)
          !endif
          
 
@@ -460,6 +469,16 @@ contains
 !         call leaves%q_lin_comb([ ind_val(qna%ind(gp_n), 1.), ind_val(qna%ind(sgp_n), one+lf_dth), ind_val(qna%ind(sgpm_n), -lf_dth)], qna%ind(hgpot_n))
 !#endif /* GRAV_NBODY */
 
+#ifdef GRAV_NBODY
+            call leaves%q_copy(qna%ind(sgp_n), qna%ind(gpnbody_n))
+            if (first_loop) then
+               call leaves%q_lin_comb([ ind_val(qna%ind(gpnbody_n), lf_dt + dt_old), ind_val(qna%ind(sgpm_n), one - (lf_dt + dt_old)), ind_val(qna%ind(sgpm_n), one)], qna%ind(gpot_n))
+            else
+               call leaves%q_lin_comb([ ind_val(qna%ind(gpnbody_n), lf_dt), ind_val(qna%ind(sgpm_n), one - lf_dt), ind_val(qna%ind(sgpm_n), one)], qna%ind(gpot_n))
+            endif
+            first_loop = .false.
+            call leaves%q_lin_comb([ ind_val(qna%ind(gp_n), one), ind_val(qna%ind(gpnbody_n), one)], qna%ind(sgpm_n))
+#endif /* GRAV_NBODY */
 
          call find_cells(pset, cells, dist, cg, n)                !finding cells
 
@@ -507,7 +526,7 @@ contains
          nsteps = nsteps + 1
 
       end do
-      call save_particles(n, lf_t, mass, pset, counter)
+      call save_particles(n, lf_t, mass, pset, file_counter)
 
       write(*,*) "Leapfrog: nsteps=", nsteps
 
@@ -525,8 +544,8 @@ contains
             use particle_types, only: particle_set
             implicit none
             class(particle_set), intent(inout)     :: pset  !< particle list
-            real, intent(in)                       :: t
-            integer, intent(in)                    :: n
+            real, intent(in)                       :: t     !<timestep
+            integer, intent(in)                    :: n     !< number of particles
             integer                                  :: i
             real, dimension(n, ndims), intent(in)  :: acc
 
@@ -541,9 +560,9 @@ contains
             use particle_types, only: particle_set
             implicit none
             class(particle_set), intent(inout) :: pset  !< particle list
-            real, intent(in)                    :: t
+            real, intent(in)                    :: t     !<timestep
             integer                              :: i
-            integer, intent(in)                 :: n
+            integer, intent(in)                 :: n     !< number of particles
 
             do i=1, n
                pset%p(i)%pos = pset%p(i)%pos + pset%p(i)%vel * t
@@ -586,42 +605,42 @@ contains
 
          end subroutine pot2grid
 
-         subroutine pot_refresh
+!         subroutine pot_refresh
+!
+!            use cg_list_dataop,   only: ind_val
+!            use constants,        only: sgp_n, sgpm_n
+!            use named_array_list, only: qna
+!
+!            implicit none
+!
+!            call leaves%q_copy(qna%ind(sgp_n), qna%ind(sgpm_n))
+!            call leaves%q_copy(qna%ind(sgpm_n), qna%ind(sgp_n))
 
-            use cg_list_dataop,   only: ind_val
-            use constants,        only: sgp_n, sgpm_n
-            use named_array_list, only: qna
+!         end subroutine pot_refresh
 
-            implicit none
-
-            call leaves%q_copy(qna%ind(sgp_n), qna%ind(sgpm_n))
-            call leaves%q_copy(qna%ind(sgpm_n), qna%ind(sgp_n))
-
-         end subroutine pot_refresh
-
-         subroutine save_particles(n, lf_t, mass, pset, counter)
+         subroutine save_particles(n, lf_t, mass, pset, file_counter)
             use particle_types, only: particle_set
             implicit none
                class(particle_set), intent(in) :: pset  !< particle list
                integer, intent (in)         :: n
-               integer, intent (inout) :: counter
+               integer, intent (inout) :: file_counter
                real, dimension(n), intent(in) :: mass
                integer            :: i, data_file=757
                real, intent(in)  :: lf_t
                character(len=17) :: filename
-               character(len=3)  :: counter_char
+               character(len=3)  :: file_counter_char
 
-               if(counter<10) then
-                  write(counter_char, '(I1)') counter
-                  write(filename,'(A9,A3,A1,A4)') 'particles','_00',counter_char,".dat"
+               if(file_counter<10) then
+                  write(file_counter_char, '(I1)') file_counter
+                  write(filename,'(A9,A3,A1,A4)') 'particles','_00',file_counter_char,".dat"
                endif
-               if ((counter >=10) .and.(counter <100)) then
-                  write(counter_char, '(I2)') counter
-                  write(filename,'(A9,A2,A2,A4)') 'particles','_0',counter_char,".dat"
+               if ((file_counter >=10) .and.(file_counter <100)) then
+                  write(file_counter_char, '(I2)') file_counter
+                  write(filename,'(A9,A2,A2,A4)') 'particles','_0',file_counter_char,".dat"
                endif
-               if (counter >=100) then
-                  write(counter_char, '(I3)') counter
-                  write(filename,'(A9,A1,A3,A4)') 'particles','_',counter_char,".dat"
+               if (file_counter >=100) then
+                  write(file_counter_char, '(I3)') file_counter
+                  write(filename,'(A9,A1,A3,A4)') 'particles','_',file_counter_char,".dat"
                endif
 
                open(unit = data_file, file=filename)
@@ -631,7 +650,7 @@ contains
                   enddo
                close(data_file)
 
-               counter = counter + 1
+               file_counter = file_counter + 1
 
          end subroutine save_particles
 
@@ -1027,7 +1046,7 @@ contains
                      !pset%p(i)%outside = .false.
                   !endif
                   do cdim = xdim, ndims
-                     if ((pset%p(i)%pos(cdim) >= cg%ijkse(cdim, LO)) .or. (pset%p(i)%pos(cdim) <= cg%ijkse(cdim, HI)) then
+                     if ((pset%p(i)%pos(cdim) >= cg%ijkse(cdim, LO)) .or. (pset%p(i)%pos(cdim) <= cg%ijkse(cdim, HI))) then
                         pset%p(i)%outside = .false.
                      else
                         pset%p(i)%outside = .true.
