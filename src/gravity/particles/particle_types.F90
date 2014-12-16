@@ -35,20 +35,29 @@ module particle_types
    implicit none
 
    private
-   public :: particle_set, particle_solver_T, ht_integrator
+   public  :: particle_set, particle_solver_T, ht_integrator, grav_after_nbody
    logical :: ht_integrator
-   
+
+   interface
+
+   subroutine no_args
+      implicit none
+   end subroutine no_args
+
+   end interface
+
+   procedure(no_args),     pointer :: grav_after_nbody => NULL()
    !>
    !! \brief simple particle: just mass and position
    !!
    !! \todo Extend it a bit
    !<
    type :: particle
-      real                   :: mass       !< mass of the particle
+      real                     :: mass       !< mass of the particle
       real, dimension(ndims) :: pos        !< physical position
       real, dimension(ndims) :: vel        !< particle velocity
-      real  :: pot                           !< gravitational potential in pos !potem przeniesc do particle_pot!!!
-      logical                :: outside    !< this flag is true if the particle is outside the domain
+      real                     :: pot        !< potential energy of the particle
+      logical                 :: outside    !< this flag is true if the particle is outside the domain
    contains
       procedure :: is_outside              !< compute the outside flag
    end type particle
@@ -354,6 +363,7 @@ contains
                   part  => this%p(p), &
                   idl   => cgl%cg%idl &
             )
+            write(*,*) "IV: ", iv
                if (any(part%pos < cgl%cg%fbnd(:,LO)) .or. any(part%pos > cgl%cg%fbnd(:,HI))) cycle
 
                do cdim = xdim, zdim

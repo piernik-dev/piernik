@@ -18,7 +18,7 @@
  /
 
  $UNITS
- units_set = "PSM"
+ !units_set = "PSM"
  /
 
  $RESTART_CONTROL
@@ -89,7 +89,7 @@
  $PARTICLES
    time_integrator = 'leapfrog2'
    interpolation_scheme = 'cic' !density
-   acc_interp_method = 'lagrange'
+   acc_interp_method = 'cic'
    var_timestep = .true.
    lf_timestep = 0.1
    lf_c = 1.0

@@ -6,3 +6,4 @@
 #define GRAV
 #define HDF5
 #define REST
+#define MULTIGRID

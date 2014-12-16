@@ -185,10 +185,12 @@ contains
       use dataio_pub,       only: die, printinfo
 
 #ifdef GRAV_NBODY
-      use global,           only: dt_old
-      use cg_list_dataop,   only: ind_val
-      use constants,        only: gp_n, gpot_n, one, sgp_n, sgpm_n, gpnbody_n
+      use units,            only: fpiG 
+      use cg_list_dataop,   only: ind_val!, set_q_value
+      use constants,        only: nbody_dens_n
       use named_array_list, only: qna
+      !use nbody_grav,       only: source_terms_grav_nbody
+      use particle_types,   only: grav_after_nbody
 #endif /* GRAV_NBODY */
 
       implicit none 
@@ -234,9 +236,7 @@ contains
 
       end interface
 
-#ifdef GRAV_NBODY
-      logical                                     :: first_loop
-#endif /* GRAV_NBODY */
+
       integer, dimension(:,:), allocatable               :: cells          !< cells where the particles are
       real, dimension(:,:), allocatable                  :: dist           !< distances between positions of particles and centers of the cells
       real, dimension(:,:), allocatable                  :: acc            !< 3D array of particles acceleration taken from Lagrange polynomial interpolation
@@ -301,9 +301,7 @@ contains
          first_run_lf = .false.
       endif
 
-#ifdef GRAV_NBODY
-      first_loop = .true.
-#endif /* GRAV_NBODY */
+
 
 
       open(newunit=lun_out, file='leapfrog_out.log', status='unknown',  position='append')
@@ -360,29 +358,9 @@ contains
       !save_potential = .false.
       finish         = .true.
       !finish         = .false.
-!      call save_pot(save_potential, finish, cg)
+      !call save_pot(save_potential, finish, cg)
 
-!      if(save_potential) then
-!         write(*,*) "Zapis potencjalu do pliku"
-!         open(unit=88, file='potencjal.dat')
 
-!         do i=lbound(cg%gpot,dim=1),ubound(cg%gpot,dim=1)
-!            do j=lbound(cg%gpot,dim=2),ubound(cg%gpot,dim=2)
-!               do k=lbound(cg%gpot,dim=3),ubound(cg%gpot,dim=3)
-!                  write(88,*) i, j, k, cg%coord(CENTER, xdim)%r(i), &
-!                              cg%coord(CENTER, xdim)%r(i), cg%coord(CENTER, xdim)%r(i), &
-!                              cg%gpot(i,j,k)
-!               enddo
-!            enddo
-!            write(88,*)
-!         enddo
-!         close(88)
-
-!         if(finish) then
-!            write(*,*) "Warunek zakonczenia-zatrzymano"
-!            stop
-!         endif
-!      endif
 
 
       !call get_ang_momentum_2(pset, n, ang_momentum)
@@ -464,29 +442,30 @@ contains
 
          !ekstrapolacja potencjalu w przypadku samograwitacji
 
+
 !#ifdef GRAV_NBODY
-!         call leaves%q_copy(qna%ind(sgpm_n), qna%ind(sgp_n))
-!         call leaves%q_lin_comb([ ind_val(qna%ind(gp_n), 1.), ind_val(qna%ind(sgp_n), one+lf_dt),  ind_val(qna%ind(sgpm_n), -lf_dt) ], qna%ind(gpot_n))
-!         call leaves%q_lin_comb([ ind_val(qna%ind(gp_n), 1.), ind_val(qna%ind(sgp_n), one+lf_dth), ind_val(qna%ind(sgpm_n), -lf_dth)], qna%ind(hgpot_n))
+!            call leaves%q_copy(qna%ind(sgp_n), qna%ind(gpnbody_n))
+!            if (first_loop) then
+!            write(*,*) "First loop"
+!               call leaves%q_lin_comb([ ind_val(qna%ind(gpnbody_n), lf_dt + dt_old), ind_val(qna%ind(sgpm_n), one - (lf_dt + dt_old)), ind_val(qna%ind(sgpm_n), one)], qna%ind(gpot_n))
+!            else
+!               call leaves%q_lin_comb([ ind_val(qna%ind(gpnbody_n), lf_dt), ind_val(qna%ind(sgpm_n), one - lf_dt), ind_val(qna%ind(sgpm_n), one)], qna%ind(gpot_n))
+!            endif
+!            first_loop = .false.
+!            !call leaves%q_lin_comb([ ind_val(qna%ind(gp_n), one), ind_val(qna%ind(gpnbody_n), one)], qna%ind(sgpm_n))
+!            call leaves%q_lin_comb([ ind_val(qna%ind(gpnbody_n), one)], qna%ind(sgpm_n))
+
 !#endif /* GRAV_NBODY */
-
-#ifdef GRAV_NBODY
-            call leaves%q_copy(qna%ind(sgp_n), qna%ind(gpnbody_n))
-            if (first_loop) then
-            write(*,*) "First loop"
-               call leaves%q_lin_comb([ ind_val(qna%ind(gpnbody_n), lf_dt + dt_old), ind_val(qna%ind(sgpm_n), one - (lf_dt + dt_old)), ind_val(qna%ind(sgpm_n), one)], qna%ind(gpot_n))
-            else
-               call leaves%q_lin_comb([ ind_val(qna%ind(gpnbody_n), lf_dt), ind_val(qna%ind(sgpm_n), one - lf_dt), ind_val(qna%ind(sgpm_n), one)], qna%ind(gpot_n))
-            endif
-            first_loop = .false.
-            !call leaves%q_lin_comb([ ind_val(qna%ind(gp_n), one), ind_val(qna%ind(gpnbody_n), one)], qna%ind(sgpm_n))
-            call leaves%q_lin_comb([ ind_val(qna%ind(gpnbody_n), one)], qna%ind(sgpm_n))
-
-#endif /* GRAV_NBODY */
 
          call find_cells(pset, cells, dist, cg, n)                !finding cells
 
+#ifdef GRAV_NBODY
 
+         !cg%nbody_dens = 0.0
+         call pset%map(qna%ind(nbody_dens_n), fpiG)
+
+         call grav_after_nbody
+#endif /* GRAV_NBODY */
 
          !3.acceleration + |a|
          if (external_pot) then
@@ -610,18 +589,7 @@ contains
 
          end subroutine pot2grid
 
-!         subroutine pot_refresh
-!
-!            use cg_list_dataop,   only: ind_val
-!            use constants,        only: sgp_n, sgpm_n
-!            use named_array_list, only: qna
-!
-!            implicit none
-!
-!            call leaves%q_copy(qna%ind(sgp_n), qna%ind(sgpm_n))
-!            call leaves%q_copy(qna%ind(sgpm_n), qna%ind(sgp_n))
 
-!         end subroutine pot_refresh
 
          subroutine save_pot(save_potential, finish, cg)
             use grid_cont,      only: grid_container

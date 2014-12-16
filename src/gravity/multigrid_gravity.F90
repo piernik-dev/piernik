@@ -130,6 +130,7 @@ contains
       use multipole,          only: use_point_monopole, lmax, mmax, ord_prolong_mpole, coarsen_multipole, interp_pt2mom, interp_mom2pot
       use pcg,                only: use_CG, use_CG_outer, preconditioner, default_preconditioner, pcg_init
 
+
       implicit none
 
       integer       :: periodic_bnd_cnt   !< counter of periodic boundaries in existing directions
@@ -672,12 +673,17 @@ contains
       use problem_pub,    only: jeans_d0, jeans_mode ! hack for tests
 #endif /* JEANS_PROBLEM */
 
+#ifdef GRAV_NBODY
+      use constants,        only: nbody_dens_n
+      use named_array_list, only: qna
+#endif /* GRAV_NBODY */
+
       implicit none
 
       integer(kind=4), dimension(:), intent(in) :: i_all_dens !< indices to selfgravitating fluids
 
       real                           :: fac
-      integer                        :: i, side
+      integer                        :: i, side, z, zz, zzz
       type(cg_list_element), pointer :: cgl
       type(grid_container),  pointer :: cg
       logical                        :: apply_src_Mcorrection
@@ -688,10 +694,35 @@ contains
          cgl => leaves%first
          do while (associated(cgl))
             cg => cgl%cg
+
+#ifdef GRAV_NBODY
+            cg%q(qna%ind(nbody_dens_n))%arr = 0.0
+            call pset%map(qna%ind(nbody_dens_n), fpiG) !mgr test
+            open(unit=633, file='nbody_dens.dat')
+            do z = cg%is, cg%ie
+               do zz = cg%js, cg%je
+                  do zzz = cg%ks, cg%ke
+                     write(633,*) z, zz, zzz, cg%q(qna%ind(nbody_dens_n))%arr(z,zz,zzz)
+                  enddo
+               enddo
+            enddo
+            close(633)
+            stop
+            write(*,*) "qna: ", qna%ind(nbody_dens_n)
+            write(*,*) "Po mapowaniu ",sum(cg%q(qna%ind(nbody_dens_n))%arr(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke))
+            cg%q(source)%arr(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = fpiG * sum(cg%u(i_all_dens, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), dim=1) + cg%q(qna%ind(nbody_dens_n))%arr(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)
+            cgl => cgl%nxt
+         enddo
+#else /* !GRAV_NBODY */ 
             cg%q(source)%arr(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = fpiG * sum(cg%u(i_all_dens, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), dim=1)
+!#endif /* !GRAV_NBODY */
             cgl => cgl%nxt
          enddo
          call pset%map(source, fpiG)
+         write(*,*) "Wykonuje, czego ne mam..."
+#endif /* !GRAV_NBODY */
+
+
       else
          call leaves%set_q_value(source, 0.)
       endif
@@ -803,6 +834,7 @@ contains
          vstat%cprefix = ""
 #endif /* !COSM_RAYS */
       endif
+      write (*,*) "tu:", i_all_dens
       call init_source(i_all_dens)
       call poisson_solver(inner)
       call leaves%q_copy(solution, qna%ind(sgp_n))
@@ -813,6 +845,7 @@ contains
 
          vstat%cprefix = "Go-"
          call multipole_solver
+         write(*,*) "empty-array: ", empty_array
          call init_source(empty_array)
          call poisson_solver(outer)
          call leaves%q_add(solution, qna%ind(sgp_n)) ! add solution to sgp

@@ -170,7 +170,8 @@ contains
 #endif /* SELF_GRAV */
 
 #ifdef GRAV_NBODY
-      use constants,      only: gpnbody_n
+      use constants,      only: nbody_dens_n
+      use particle_types, only: grav_after_nbody
 #endif /* GRAV_NBODY */
 
 #ifdef CORIOLIS
@@ -308,7 +309,7 @@ contains
 #endif /* SELF_GRAV */
 
 #ifdef GRAV_NBODY
-      call all_cg%reg_var(gpnbody_n)
+      call all_cg%reg_var(nbody_dens_n)
 #endif /* GRAV_NBODY */
 
       if (.not.user_grav) then
@@ -328,6 +329,10 @@ contains
       end select
 
       call init_particles
+
+#ifdef GRAV_NBODY
+      grav_after_nbody => source_terms_grav
+#endif /* GRAV_NBODY */
 
    end subroutine init_grav
 
@@ -359,7 +364,7 @@ contains
 #endif /* SELF_GRAV */
 
 #ifdef GRAV_NBODY
-      use constants,          only: gpnbody_n
+      use constants,          only: nbody_dens_n
 #endif /* GRAV_NBODY */
 
       implicit none
@@ -379,7 +384,7 @@ contains
 #endif /* SELF_GRAV */
 
 #ifdef GRAV_NBODY
-         cg%gpnbody  => cg%q(qna%ind( gpnbody_n))%arr
+         cg%nbody_dens  => cg%q(qna%ind(nbody_dens_n))%arr
 #endif /* GRAV_NBODY */
 
       endif
@@ -438,6 +443,7 @@ contains
       call leaves%q_copy(qna%ind(sgp_n), qna%ind(sgpm_n))
 
 #ifdef MULTIGRID
+      write(*,*) "grav:", iarr_all_sg
       call multigrid_solve_grav(iarr_all_sg)
 #else /* !MULTIGRID */
 #error [gravity:source_terms_grav] SELF_GRAV without MULTIGRID gives uninitialized gravitational potential
@@ -489,15 +495,15 @@ contains
       use global,           only: dt, dtm
 #endif /* SELF_GRAV */
 
-#ifdef GRAV_NBODY
-      use constants,        only: gpnbody_n, one
-#endif /* GRAV_NBODY */
+!#ifdef GRAV_NBODY
+!      use constants,        only: gpnbody_n, one
+!#endif /* GRAV_NBODY */
 
       implicit none
       
-#ifdef GRAV_NBODY
-      real :: wsp1, wsp2
-#endif /* GRAV_NBODY */
+!#ifdef GRAV_NBODY
+!      real :: wsp1, wsp2
+!#endif /* GRAV_NBODY */
 
 #ifdef SELF_GRAV
       real :: h
@@ -516,17 +522,17 @@ contains
 !#endif /* GRAV_NBODY */
 
 #else /* !SELF_GRAV */
-#ifdef GRAV_NBODY
+!#ifdef GRAV_NBODY
       !> \todo sprawdzic wspolczynniki
-      wsp1 = one
-      wsp2 = one
-      call leaves%q_lin_comb([ ind_val(qna%ind(gp_n), 1.), ind_val(qna%ind(gpnbody_n), wsp1)], qna%ind(gpot_n))
-      call leaves%q_lin_comb([ ind_val(qna%ind(gp_n), 1.), ind_val(qna%ind(gpnbody_n), wsp2)], qna%ind(hgpot_n))
-#else /* !GRAV_NBODY */      
+!      wsp1 = one
+!      wsp2 = one
+!      call leaves%q_lin_comb([ ind_val(qna%ind(gp_n), 1.), ind_val(qna%ind(gpnbody_n), wsp1)], qna%ind(gpot_n))
+!      call leaves%q_lin_comb([ ind_val(qna%ind(gp_n), 1.), ind_val(qna%ind(gpnbody_n), wsp2)], qna%ind(hgpot_n))
+!#else /* !GRAV_NBODY */      
       !> \deprecated BEWARE: as long as grav_pot_3d is called only in init_piernik this assignment probably don't need to be repeated more than once
       call leaves%q_copy(qna%ind(gp_n), qna%ind(gpot_n))
       call leaves%q_copy(qna%ind(gp_n), qna%ind(hgpot_n))
-#endif /* !GRAV_NBODY */
+!#endif /* !GRAV_NBODY */
 #endif /* !SELF_GRAV */
 
    end subroutine sum_potential
