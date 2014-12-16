@@ -174,7 +174,7 @@ contains
 #ifdef NBODY
          !call timestep_nbody(cg)
          !dt = min(dt, dt_nobdy) 
-#endif NBODY
+#endif /* NBODY */
 
          if (use_fargo) dt = min(dt, timestep_fargo(cg, dt))
          cgl => cgl%nxt
