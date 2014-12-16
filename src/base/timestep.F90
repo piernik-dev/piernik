@@ -124,6 +124,9 @@ contains
       use piernikdebug,         only: has_const_dt, constant_dt
 #endif /* DEBUG */
 
+#ifdef NBODY
+      !use timestepnbody,        only: timestep_nbody
+#endif /* NBODY */
       implicit none
 
       real,              intent(inout) :: dt !< the timestep
