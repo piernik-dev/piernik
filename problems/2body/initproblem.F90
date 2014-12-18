@@ -109,9 +109,9 @@ contains
 
       if (ht_integrator) then
          if(first_run) then
-            call pset%add(1.0, [ 0.9700436, -0.24308753, 0.0], [ 0.466203685, 0.43236573, 0.0],0.0)
-            call pset%add(1.0, [-0.9700436, 0.24308753, 0.0], [ 0.466203685, 0.43236573, 0.0],0.0)
-            call pset%add(1.0, [ 0.0, 0.0, 0.0], [-0.932407370, -0.86473146, 0.0], 0.0 )
+            call pset%add(1.0, [ 0.9700436, -0.24308753, 0.0], [ 0.466203685, 0.43236573, 0.0], [0.0, 0.0, 0.0],0.0)
+            call pset%add(1.0, [-0.9700436, 0.24308753, 0.0], [ 0.466203685, 0.43236573, 0.0], [0.0, 0.0, 0.0],0.0)
+            call pset%add(1.0, [ 0.0, 0.0, 0.0], [-0.932407370, -0.86473146, 0.0], [0.0, 0.0, 0.0], 0.0 )
          endif
          first_run=.false.
       else
@@ -233,13 +233,13 @@ contains
          write(*,*) "vel_init", vel_init
 
          if(first_run) then
-            call pset%add(1.0, [ 0.9700436, -0.24308753, 0.0], [ 0.466203685, 0.43236573, 0.0], 0.0)
-            call pset%add(1.0, [-0.9700436, 0.24308753, 0.0], [ 0.466203685, 0.43236573, 0.0],0.0)
-            call pset%add(1.0, [ 0.0, 0.0, 0.0], [-0.932407370, -0.86473146, 0.0], 0.0 )
+            call pset%add(1.0, [ 0.9700436, -0.24308753, 0.0], [ 0.466203685, 0.43236573, 0.0], [0.0, 0.0, 0.0], 0.0)
+            call pset%add(1.0, [-0.9700436, 0.24308753, 0.0], [ 0.466203685, 0.43236573, 0.0], [0.0, 0.0, 0.0], 0.0)
+            call pset%add(1.0, [0.0, 0.0, 0.0], [-0.932407370, -0.86473146, 0.0], [0.0, 0.0, 0.0], 0.0 )
             !do i = 1, n_particles, 1
-               !call pset%add(1.0, pos_init, vel_init,0.0 ) !orbita eliptyczna
-               !call pset%add(1.0, [4.0, 2.0, 0.0],[-0.5, 0.0, 0.0], 0.0)
-               !call pset%add(1.0, [3.0, 2.0, 0.0],[0.0, -1.0, 0.0], 0.0)
+               !call pset%add(1.0, pos_init, vel_init, [0.0, 0.0, 0.0], 0.0 ) !orbita eliptyczna
+               !call pset%add(1.0, [4.0, 2.0, 0.0],[-0.5, 0.0, 0.0], [0.0, 0.0, 0.0], 0.0)
+               !call pset%add(1.0, [3.0, 2.0, 0.0],[0.0, -1.0, 0.0],  [0.0, 0.0, 0.0], 0.0)
 
                !pos_init = positions(dtheta, pos_init, plane)
                !vel_init = rotate(dtheta, vel_init, plane)
@@ -251,6 +251,9 @@ contains
             first_run = .false.
             
             write(*,*) "Obliczono pozycje czastek "
+            write(*,*) "Dodano czastki do domeny: ", size(pset%p, dim=1)
+           
+           
          endif
       end subroutine orbits
 
@@ -307,7 +310,7 @@ contains
 #ifdef HDF5
                pos2hdf5(i, :) = pos_init(i,:)
 #endif /* HDF5 */
-               call pset%add(1.0, pos_init(i,:), [0.0,0.0,0.0],0.0 )
+               call pset%add(1.0, pos_init(i,:), [0.0,0.0,0.0],[0.0, 0.0, 0.0],0.0 )
             enddo
             first_run = .false.
             write(*,*) "Obliczono pozycje czastek"
@@ -388,7 +391,7 @@ contains
          if (modulo(i, 1000) .eq. 0) then
             write(*,*) i
          endif
-            call pset%add(mass(i), pos(i,:), vel(i,:),0.0)
+            call pset%add(mass(i), pos(i,:), vel(i,:),[0.0, 0.0, 0.0], 0.0)
          enddo
       close(2)
 
