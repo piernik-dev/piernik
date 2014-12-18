@@ -56,6 +56,7 @@ contains
       use dataio_pub,            only: msg, die
       use mpisetup,              only: master, slave, cbuff, lbuff, rbuff, piernik_mpi_bcast
       use particle_integrators,  only: hermit4, leapfrog2, acc_interp_method, var_timestep, lf_timestep, lf_c
+      !use particle_integrators,  only: hermit4, leapfrog2!, var_timestep, lf_timestep, lf_c
       use particle_types,        only: ht_integrator
 
 
