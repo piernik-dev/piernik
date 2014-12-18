@@ -148,6 +148,9 @@ contains
       use global,              only: t, dt
       use gravity,             only: source_terms_grav
       use particle_pub,        only: pset, psolver
+#ifdef NBODY
+      use global,              only: dt_old
+#endif /* NBODY */
 #endif /* GRAV */
 #if defined(COSM_RAYS) && defined(MULTIGRID)
       use all_boundaries,      only: all_fluid_boundaries
@@ -163,6 +166,10 @@ contains
       logical, intent(in) :: forward  !< If .true. then do X->Y->Z sweeps, if .false. then reverse that order
 
       integer(kind=4) :: s
+
+#ifdef NBODY
+      logical, save     :: psolver_one_time = .false.
+#endif /* NBODY */
 
 #ifdef SHEAR
       call shear_3sweeps
@@ -196,7 +203,17 @@ contains
          endif
       endif
 #ifdef GRAV
+
+#ifdef NBODY
+      if(psolver_one_time) then                    !this condition prevent to calling particle solver twice (with halfsteps)
+         if (associated(psolver)) call pset%evolve(psolver, t-dt, 2.0*dt)
+         psolver_one_time = .false.
+      else
+         psolver_one_time = .true.
+      endif
+#else /* !NBODY */
       if (associated(psolver)) call pset%evolve(psolver, t-dt, dt)
+#endif /* NBODY */
 #endif /* GRAV */
       if (associated(problem_customize_solution)) call problem_customize_solution(forward)
 
