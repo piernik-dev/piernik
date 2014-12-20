@@ -118,6 +118,7 @@ contains
       implicit none
 
       call repeat_fluidstep
+      write(*,*) "[fl_upd]: Pierwszy, dt=", dt
 
       halfstep = .false.
       t=t+dt
@@ -126,6 +127,7 @@ contains
 ! Sources should be hooked to problem_customize_solution with forward argument
 
       halfstep = .true.
+      write(*,*) "[fl_upd]: Drugi   , dt=", dt
       t=t+dt
       dtm = dt
       call make_3sweeps(.false.) ! Z -> Y -> X
@@ -203,10 +205,10 @@ contains
          endif
       endif
 #ifdef GRAV
-
+write(*,*) "3sweeps, dt=", dt
 #ifdef NBODY
       if(psolver_one_time) then                    !this condition prevent to calling particle solver twice (with halfsteps)
-         if (associated(psolver)) call pset%evolve(psolver, t-dt, 2.0*dt)
+         if (associated(psolver)) call pset%evolve(psolver, t-2.0*dt, 2.0*dt)
          psolver_one_time = .false.
       else
          psolver_one_time = .true.
