@@ -125,7 +125,7 @@ contains
 #endif /* DEBUG */
 
 #ifdef NBODY
-      !use particle_types,       only: particle_set
+      use particle_pub,       only: pset
       use particle_integrators, only: get_timestep_nbody, dt_nbody
 #endif /* NBODY */
 
@@ -179,7 +179,7 @@ contains
 
          write(*,*) "[timestep]:dt przed nbody=", dt
 #ifdef NBODY
-         call get_timestep_nbody(dt_nbody)!, pset)
+         call get_timestep_nbody(dt_nbody, pset)
          write(*,*) "[timestep]:dt_nbody      =", dt_nbody
          dt = min(dt, dt_nbody) 
 #endif /* NBODY */
@@ -218,7 +218,7 @@ contains
          call printinfo(msg)
       endif
 #endif /* DEBUG */
-
+   write(*,*) "[timestep]: dt=", dt, "!!!"
    end subroutine time_step
 
 !------------------------------------------------------------------------------------------
