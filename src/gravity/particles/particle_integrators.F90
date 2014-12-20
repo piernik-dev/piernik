@@ -302,6 +302,8 @@ contains
          if (first_run_lf) then
             dt_tot_h_old = zero
             first_run_lf = .false.
+         else
+            dt_tot_h_old = half*dt_old
          endif
 
 
@@ -316,7 +318,7 @@ contains
          !2.drift(lf_dt)
          call drift(pset, dt_tot, n)
          
-         dt_tot_h_old = half*dt_old
+         !dt_tot_h_old = half*dt_old
 
 !         call find_cells(pset, cells, dist, cg, n)                !finding cells
 
@@ -796,10 +798,10 @@ contains
    end subroutine get_acc_jerk_pot_coll
 
 
-   subroutine get_timestep_nbody(dt_nbody)
+   subroutine get_timestep_nbody(dt_nbody, pset)
       use constants,      only: ndims
-      use particle_pub,   only: pset
-!      use particle_types, only: particle_set
+!      use particle_pub,   only: pset
+      use particle_types, only: particle_set
       use cg_leaves,      only: leaves
       use cg_list,        only: cg_list_element
       use grid_cont,      only: grid_container
@@ -836,7 +838,7 @@ contains
 
       end interface
 
-      !class(particle_set), intent(inout)   :: pset
+      class(particle_set),  intent(inout) :: pset
       type(grid_container),  pointer :: cg
       type(cg_list_element), pointer :: cgl
 
@@ -865,15 +867,15 @@ contains
       procedure(d2dxixj), pointer :: d2f_dxdy_p => NULL(), &
                                        d2f_dxdz_p => NULL(), &
                                        d2f_dydz_p => NULL()
-
+      write(*,*) "Poszukiwanie kroku nbody"
       eta = 1.0
       eps = 1.0e-4
-      write(*,*) "Przed n_part"
+      !write(*,*) "Przed n_part"
       n_part = size(pset%p, dim=1)
       write(*,*) "Number of particles: ", n_part
       allocate(cells(n_part, ndims), dist(n_part, ndims))
 
-      write(*,*) "Przed cg"
+      !write(*,*) "Przed cg"
       cgl => leaves%first
       cg  => cgl%cg
 
@@ -898,13 +900,13 @@ contains
       end select
 
       call get_acc_max(pset, n_part, max_acc)
-      write(*,*) "[get_timestep_nbody]: max_acc=", max_acc
-      write(*,*) "[get_timestep_nbody]:  eta   =", eta
-      write(*,*) "[get_timestep_nbody]:  eps   =", eps
-      write(*,*) "[get_timestep_nbody]:  lf_c  =", lf_c
+      !write(*,*) "[get_timestep_nbody]: max_acc=", max_acc
+      !write(*,*) "[get_timestep_nbody]:  eta   =", eta
+      !write(*,*) "[get_timestep_nbody]:  eps   =", eps
+      !write(*,*) "[get_timestep_nbody]:  lf_c  =", lf_c
 
       call get_var_timestep_c(dt_nbody, eta, eps, max_acc, lf_c, pset, cg)
-
+      write(*,*) "Koniec szukania kroku nbody"
 
 
    contains
@@ -1467,7 +1469,7 @@ contains
                factor = big
 
                dt_nbody = sqrt(2.0*eta*eps/max_acc)
-               write(*,*) "[get_var_timestep_c]: dt_nbody =", dt_nbody
+               !write(*,*) "[get_var_timestep_c]: dt_nbody =", dt_nbody
 
                do cdim = xdim, zdim
                   maxv(cdim)  = abs(maxval(pset%p(:)%vel(cdim)))
@@ -1489,7 +1491,7 @@ contains
                   factor = one
                endif
 
-               write(*,*) "[get_var_timestep_c]:  factor  =", factor
+               !write(*,*) "[get_var_timestep_c]:  factor  =", factor
                dt_nbody  = lf_c * factor * dt_nbody
                write(*,*) "[get_var_timestep_c]: dt_nbody =", dt_nbody
 
