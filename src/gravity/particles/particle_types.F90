@@ -44,11 +44,12 @@ module particle_types
    !! \todo Extend it a bit
    !<
    type :: particle
-      real                   :: mass       !< mass of the particle
-      real, dimension(ndims) :: pos        !< physical position
-      real, dimension(ndims) :: vel        !< particle velocity
-      real  :: pot                           !< gravitational potential in pos !potem przeniesc do particle_pot!!!
-      logical                :: outside    !< this flag is true if the particle is outside the domain
+      real                    :: mass      !< mass of the particle
+      real, dimension(ndims) :: pos      !< physical position
+      real, dimension(ndims) :: vel       !< particle velocity
+      real, dimension(ndims) :: acc       !< acceleration of the particle
+      real                    :: energy    !< total energy of particle
+      logical                 :: outside    !< this flag is true if the particle is outside the domain
    contains
       procedure :: is_outside              !< compute the outside flag
    end type particle
@@ -194,7 +195,7 @@ contains
 
 !> \brief Add a particle to the list
 
-   subroutine add_using_basic_types(this, mass, pos, vel, pot)
+   subroutine add_using_basic_types(this, mass, pos, vel, acc, energy)
 
       implicit none
 
@@ -202,9 +203,10 @@ contains
       real,                   intent(in)    :: mass     !< mass of the particle (negative values are allowed just in case someone wants to calculate electric potential)
       real, dimension(:), intent(in)    :: pos      !< physical position
       real, dimension(:), intent(in)    :: vel      !< particle velocity
-      real, intent(in)        :: pot! optional?
+      real, dimension(:), intent(in)    :: acc      !< particle acceleration
+      real, intent(in)                   :: energy   ! total energy of particle
 
-      call this%add(particle(mass, pos, vel, pot, .false.))
+      call this%add(particle(mass, pos, vel, acc, energy, .false.))
 
    end subroutine add_using_basic_types
 

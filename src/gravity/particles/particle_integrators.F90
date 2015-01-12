@@ -42,7 +42,7 @@ module particle_integrators
 
    !------------------
    private
-   public :: hermit4, leapfrog2, acc_interp_method, var_timestep, lf_timestep, lf_c, get_timestep_nbody, dt_nbody
+   public :: hermit4, leapfrog2, acc_interp_method, lf_c, get_timestep_nbody, dt_nbody
 
 
    type, extends(particle_solver_T) :: hermit4_T
@@ -61,8 +61,6 @@ module particle_integrators
 
 #ifdef NBODY
    character(len=cbuff_len)  :: acc_interp_method  !< acceleration interpolation method
-   logical                   :: var_timestep        !< if .true. then leapfrog2ord use variable timestep to integration
-   real                       :: lf_timestep         !< leapfrog2ord constant timestep value (works only if var_timestep = .false.)
    real                       :: lf_c                !< timestep should depends of grid and velocities of particles (used to extrapolation of the gravitational potential)
    real                       :: dt_nbody            !< timestep depends on particles
 
@@ -189,7 +187,7 @@ contains
 
 
    subroutine leapfrog2ord(pset, t_glob, dt_tot)
-      use constants,      only: CENTER, xdim, zdim, half, zero
+      use constants,      only: CENTER, xdim, zdim!, half, zero
       use particle_types, only: particle_set
       use domain,         only: is_refined, is_multicg
       use cg_list,        only: cg_list_element
@@ -204,10 +202,7 @@ contains
       real, intent(in)                            :: t_glob           !< initial time of simulation
       real, intent(in)                            :: dt_tot           !< timestep of simulation
       real, dimension(:), allocatable           :: mass             !< 1D array of mass of the particles
-
-      real                                         :: lf_dt             !< leaprfog timestep
       real                                         :: dt_tot_h          !< half of timestep, dt_tot_h = 0.5*dt_tot
-      real                                         :: lf_t              !< current time in leapfrog simulation
       real                                         :: energy            !< total energy of set of particles
       real                                         :: init_energy       !< total energy of set of particles at t_glob
       real                                         :: d_energy = 0.0    !< error of energy of set of particles in succeeding timesteps, at t=t_glob=0.0
@@ -220,15 +215,14 @@ contains
       logical                                      :: external_pot      !< if .true. gravitational potential will be deleted and replaced by external potential of point mass
       logical, save                                :: first_run_lf = .true.
       integer, save                                :: counter
-      real, save                                   :: dt_tot_h_old 
       integer                                      :: lun_out
 
 
       if (first_run_lf) then
          select case (acc_interp_method)
-            case('cic')
+            case('cic', 'CIC')
                call printinfo("[particle_integrators:leapfrog2ord] Acceleration interpolation method: CIC") 
-            case('lagrange')
+            case('lagrange', 'Lagrange')
                call printinfo("[particle_integrators:leapfrog2ord] Acceleration interpolation method: Lagrange polynomials")
          end select
 
@@ -262,19 +256,8 @@ contains
       !external_pot = .true.
       external_pot = .false.
 
-      !if (external_pot) then
-         !call pot2grid(cg, eps2)
-         !write(*,*) "Obliczono potencjal zewnetrzny"
-      !endif
 
 
-
-      !save_potential = .true.
-!      save_potential = .false.
-      !finish         = .true.
-!      finish         = .false.
-
-!      call save_pot(save_potential, finish, cg)
 
 
 
@@ -291,24 +274,22 @@ contains
 
 
             do i = 1, n
-               write(lun_out, '(I3,1X,13(E13.6,1X))') i, lf_t, lf_dt, mass(i), pset%p(i)%pos, pset%p(i)%acc, energy, d_energy, ang_momentum, d_ang_momentum
+               write(lun_out, '(I3,1X,13(E13.6,1X))') i, t_glob+dt_tot, dt_old, mass(i), pset%p(i)%pos, pset%p(i)%acc, energy, d_energy, ang_momentum, d_ang_momentum
             enddo
 
             !call save_particles(n, lf_t, mass, pset, counter)
-
+         write(*,*) "[p_i]:-----------------------------"
          write(*,*) "[p_i]:dt_tot= ", dt_tot
-         dt_tot_h = half * dt_tot
-
-         if (first_run_lf) then
-            dt_tot_h_old = zero
-            first_run_lf = .false.
-         else
-            dt_tot_h_old = half*dt_old
-         endif
+         write(*,*) "[p_i]:dt_old= ", dt_old
 
 
-         !3.kick(dt_tot_h_old)
-         call kick(pset, dt_tot_h_old, n)
+         first_run_lf = .false.
+
+
+
+
+         !3.kick(dt_old)
+         call kick(pset, dt_old, n)
 
 
          !1. Kick (dt_tot_h)
@@ -317,40 +298,13 @@ contains
 
          !2.drift(lf_dt)
          call drift(pset, dt_tot, n)
-         
-         !dt_tot_h_old = half*dt_old
 
-!         call find_cells(pset, cells, dist, cg, n)                !finding cells
-
-         !3.acceleration + |a|
-
-!         select case (acc_interp_method)
-!            case('lagrange', 'Lagrange', 'polynomials')
-!               call get_acc_int(cells, dist, acc, cg, n, &
-!                                 df_dx_p, d2f_dx2_p, df_dy_p, d2f_dy2_p,& 
-!                                 df_dz_p, d2f_dz2_p, d2f_dxdy_p, d2f_dxdz_p, d2f_dydz_p)                !Lagrange polynomials acceleration
-!            case('cic', 'CIC')
-!               call get_acc_cic(pset, cg, cells, acc, n)                !CIC acceleration
-!         end select
-
-!         call get_acc_max(acc, n, a)                                    !max(|a_i|)
-
-
-         !4.kick(lf_dth)
-         !call kick(pset, acc, lf_dth, n)
-
-
-         !6.lf_dt   !dt[n+1]
-         !if (var_timestep) then
-            !call get_var_timestep_c(dt_nbody, eta, eps, a, lf_c, pset, cg)
-         !else
-         !   dt_nbody = lf_timestep
-         !endif
 
 
       !call save_particles(n, lf_t, mass, pset, counter)
 
       close(lun_out)
+      write(*,*) "[p_i]:-----------------------------"
 
 
       contains
@@ -400,35 +354,6 @@ contains
                   phi_pm = -mu / r
          end function phi_pm
 
-         subroutine save_pot(save_potential, finish, cg)
-         use grid_cont, only: grid_container
-            implicit none
-            type(grid_container), pointer, intent(in) :: cg
-            logical :: save_potential
-            logical :: finish
-            integer :: i, j, k
-
-            if(save_potential) then
-                  write(*,*) "Zapis potencjalu do pliku"
-                  open(unit=88, file='potencjal.dat')
-                     do i=lbound(cg%gpot,dim=1),ubound(cg%gpot,dim=1)
-                        do j=lbound(cg%gpot,dim=2),ubound(cg%gpot,dim=2)
-                           do k=lbound(cg%gpot,dim=3),ubound(cg%gpot,dim=3)
-                              write(88,*) i, j, k, cg%coord(CENTER, xdim)%r(i), &
-                                       cg%coord(CENTER, xdim)%r(i), cg%coord(CENTER, xdim)%r(i), &
-                                       cg%gpot(i,j,k)
-                           enddo
-                        enddo
-                     write(88,*)
-                  enddo
-               close(88)
-
-               if(finish) then
-                  write(*,*) "Warunek zakonczenia-zatrzymano"
-                  stop
-               endif
-            endif
-         end subroutine save_pot
 
          subroutine pot2grid(cg, eps2)
             use constants, only: xdim, ydim, CENTER
@@ -797,7 +722,7 @@ contains
       return
    end subroutine get_acc_jerk_pot_coll
 
-
+#ifdef NBODY
    subroutine get_timestep_nbody(dt_nbody, pset)
       use constants,      only: ndims
 !      use particle_pub,   only: pset
@@ -814,8 +739,8 @@ contains
             use grid_cont, only: grid_container 
             implicit none
                type(grid_container), pointer, intent(in) :: cg
-               integer, dimension(ndims), intent(in) :: cell
-               real :: dxi
+               integer, dimension(ndims), intent(in)    :: cell
+               real                                        :: dxi
          end function dxi
 
          function d2dxi2(cell, cg)
@@ -823,8 +748,8 @@ contains
             use grid_cont, only: grid_container 
             implicit none
                type(grid_container), pointer, intent(in) :: cg
-               integer, dimension(ndims), intent(in) :: cell
-               real :: d2dxi2
+               integer, dimension(ndims), intent(in)    :: cell
+               real                                        :: d2dxi2
          end function d2dxi2
 
          function d2dxixj(cell, cg)
@@ -832,28 +757,25 @@ contains
             use grid_cont, only: grid_container 
             implicit none
                type(grid_container), pointer, intent(in) :: cg
-               integer, dimension(ndims), intent(in) :: cell
-               real :: d2dxixj
+               integer, dimension(ndims), intent(in)    :: cell
+               real                                        :: d2dxixj
          end function d2dxixj
 
       end interface
 
-      class(particle_set),  intent(inout) :: pset
-      type(grid_container),  pointer :: cg
-      type(cg_list_element), pointer :: cgl
+      class(particle_set),  intent(inout)  :: pset
+      type(grid_container),  pointer        :: cg
+      type(cg_list_element), pointer        :: cgl
 
-      integer                    :: order               !< order of Lagrange polynomials (acc_interp_method = 'lagrange')
-      real                       :: eta, eps
-      logical, save             :: first_run_nbody = .true.
-
-      integer                   :: n_part
-      real                       :: max_acc
+      integer                                :: order               !< order of Lagrange polynomials (if acc_interp_method = 'lagrange')
+      real                                    :: eta, eps
+      integer                                :: n_part
+      real                                    :: max_acc
 
       real,    dimension(:,:), allocatable :: dist
-
       integer, dimension(:,:), allocatable :: cells
-      !real, intent(out)         :: dt_nbody
-      real         :: dt_nbody
+      real                                    :: dt_nbody
+      logical                                 :: save_potential, finish
 
 
 
@@ -879,6 +801,12 @@ contains
       cgl => leaves%first
       cg  => cgl%cg
 
+      !save_potential = .true.
+      save_potential = .false.
+      !finish         = .true.
+      finish         = .false.
+
+      call save_pot(save_potential, finish, cg)
 
       if (acc_interp_method == 'lagrange') then
          order = 4
@@ -886,7 +814,6 @@ contains
                   df_dz_p, d2f_dz2_p, d2f_dxdy_p, d2f_dxdz_p, d2f_dydz_p)
       endif
 
-      !call find_cells(pset, cells, dist, cg, n_part)
       call find_cells(cells, dist, cg, n_part)
 
 
@@ -1497,6 +1424,39 @@ contains
 
       end subroutine get_var_timestep_c
 
+      subroutine save_pot(save_potential, finish, cg)
+         use constants, only: xdim,ydim, zdim, CENTER
+         use grid_cont, only: grid_container
+            implicit none
+            type(grid_container), pointer, intent(in) :: cg
+            logical :: save_potential
+            logical :: finish
+            integer :: i, j, k
+
+            if(save_potential) then
+                  write(*,*) "Zapis potencjalu do pliku"
+                  open(unit=88, file='potencjal.dat')
+                     do i=lbound(cg%gpot,dim=1),ubound(cg%gpot,dim=1)
+                        do j=lbound(cg%gpot,dim=2),ubound(cg%gpot,dim=2)
+                           do k=lbound(cg%gpot,dim=3),ubound(cg%gpot,dim=3)
+                              write(88,*) i, j, k, cg%coord(CENTER, xdim)%r(i), &
+                                       cg%coord(CENTER, ydim)%r(i), cg%coord(CENTER, zdim)%r(i), &
+                                       cg%gpot(i,j,k)
+                           enddo
+                        enddo
+                     write(88,*)
+                  enddo
+               close(88)
+
+               if(finish) then
+                  write(*,*) "Warunek zakonczenia-zatrzymano"
+                  stop
+               endif
+            endif
+      end subroutine save_pot
+
    end subroutine get_timestep_nbody
+
+#endif /*NBODY */
 
 end module particle_integrators
