@@ -4,6 +4,5 @@
 #define GLOBAL_FR_SPEED
 #define RTVD
 #define GRAV
-#define HDF5
 #define REST
 #define MULTIGRID
