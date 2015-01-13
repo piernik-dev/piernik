@@ -150,9 +150,9 @@ contains
       use global,              only: t, dt
       use gravity,             only: source_terms_grav
       use particle_pub,        only: pset, psolver
-#ifdef NBODY
-      use global,              only: dt_old
-#endif /* NBODY */
+!#ifdef NBODY
+!      use global,              only: dt_old
+!#endif /* NBODY */
 #endif /* GRAV */
 #if defined(COSM_RAYS) && defined(MULTIGRID)
       use all_boundaries,      only: all_fluid_boundaries

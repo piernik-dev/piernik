@@ -203,13 +203,15 @@ module grid_cont
       type(named_array4d), allocatable, dimension(:) :: w        !< 4D arrays such as u, vector fields (b) or other vector/multi-scalar user-defined quantities
 
       ! handy shortcuts to some entries in q(:)
-      real, dimension(:,:,:), pointer :: gpot    => null()       !< Array for sum of gravitational potential at t += dt
-      real, dimension(:,:,:), pointer :: hgpot   => null()       !< Array for sum of gravitational potential at t += 0.5*dt
-      real, dimension(:,:,:), pointer :: gp      => null()       !< Array for gravitational potential from external fields
-      real, dimension(:,:,:), pointer :: sgp     => null()       !< Array for gravitational potential from multigrid or FFT solver
-      real, dimension(:,:,:), pointer :: sgpm    => null()       !< Array for gravitational potential from multigrid or FFT solver at previous timestep saved by source_terms_grav.
-      real, dimension(:,:,:), pointer :: cs_iso2 => null()       !< COMMENT ME
-      real, dimension(:,:,:), pointer :: wa      => null()       !< Temporary array used for different purposes, usually has dimension (grid::nx, grid::ny, grid::nz)
+      real, dimension(:,:,:), pointer :: gpot       => null()       !< Array for sum of gravitational potential at t += dt
+      real, dimension(:,:,:), pointer :: hgpot      => null()       !< Array for sum of gravitational potential at t += 0.5*dt
+      real, dimension(:,:,:), pointer :: gp         => null()       !< Array for gravitational potential from external fields
+      real, dimension(:,:,:), pointer :: sgp        => null()       !< Array for gravitational potential from multigrid or FFT solver
+      real, dimension(:,:,:), pointer :: sgpm       => null()       !< Array for gravitational potential from multigrid or FFT solver at previous timestep saved by source_terms_grav.
+      real, dimension(:,:,:), pointer :: cs_iso2    => null()       !< COMMENT ME
+      real, dimension(:,:,:), pointer :: wa         => null()       !< Temporary array used for different purposes, usually has dimension (grid::nx, grid::ny, grid::nz)
+      real, dimension(:,:,:), pointer :: nbody_dens => null()       !< Array of density from particles
+
 
       ! handy shortcuts to some entries in w(:)
       real, dimension(:,:,:,:), pointer :: u     => null()       !< Main array of all fluids' components

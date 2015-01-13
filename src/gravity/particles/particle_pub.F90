@@ -54,9 +54,8 @@ contains
       use constants,             only: cbuff_len, I_NGP, I_CIC, I_TSC
       use dataio_pub,            only: nh  ! QA_WARN required for diff_nml
       use dataio_pub,            only: msg, die
-      use mpisetup,              only: master, slave, cbuff, lbuff, rbuff, piernik_mpi_bcast
-      use particle_integrators,  only: hermit4, leapfrog2, acc_interp_method, var_timestep, lf_timestep, lf_c
-      !use particle_integrators,  only: hermit4, leapfrog2!, var_timestep, lf_timestep, lf_c
+      use mpisetup,              only: master, slave, cbuff, rbuff, piernik_mpi_bcast
+      use particle_integrators,  only: hermit4, leapfrog2, acc_interp_method, lf_c
       use particle_types,        only: ht_integrator
 
 
@@ -67,14 +66,12 @@ contains
       character(len=cbuff_len), parameter :: default_is = "ngp"
 
 
-      namelist /PARTICLES/ time_integrator, interpolation_scheme, acc_interp_method, var_timestep, lf_timestep, lf_c
+      namelist /PARTICLES/ time_integrator, interpolation_scheme, acc_interp_method, lf_c
 
-      time_integrator = default_ti
+      time_integrator      = default_ti
       interpolation_scheme = default_is
-      acc_interp_method = 'cic'
-      var_timestep  = .true.
-      lf_timestep   = 0.01
-      lf_c          = 1.0
+      acc_interp_method    = 'cic'
+      lf_c                 = 1.0
 
       if (master) then
          if (.not.nh%initialized) call nh%init()
@@ -96,20 +93,16 @@ contains
          cbuff(1) = time_integrator
          cbuff(2) = interpolation_scheme
          cbuff(3) = acc_interp_method
-         lbuff(1) = var_timestep
-         rbuff(1) = lf_timestep
-         rbuff(2) = lf_c
+         rbuff(1) = lf_c
       endif
 
       call piernik_MPI_Bcast(cbuff, cbuff_len)
 
       if (slave) then
-         time_integrator = cbuff(1)
+         time_integrator      = cbuff(1)
          interpolation_scheme = cbuff(2)
-         acc_interp_method = cbuff(3)
-         var_timestep = lbuff(1)
-         lf_timestep  = rbuff(1)
-         lf_c         = rbuff(2) 
+         acc_interp_method    = cbuff(3)
+         lf_c                 = rbuff(1) 
       endif
 
       psolver => null()

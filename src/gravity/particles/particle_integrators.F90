@@ -61,8 +61,8 @@ module particle_integrators
 
 #ifdef NBODY
    character(len=cbuff_len)  :: acc_interp_method  !< acceleration interpolation method
-   real                       :: lf_c                !< timestep should depends of grid and velocities of particles (used to extrapolation of the gravitational potential)
-   real                       :: dt_nbody            !< timestep depends on particles
+   real                       :: lf_c               !< timestep should depends of grid and velocities of particles (used to extrapolation of the gravitational potential)
+   real                       :: dt_nbody           !< timestep depends on particles
 
 #endif /* NBODY */
 
@@ -273,33 +273,26 @@ contains
       counter = 1
 
 
-            do i = 1, n
-               write(lun_out, '(I3,1X,13(E13.6,1X))') i, t_glob+dt_tot, dt_old, mass(i), pset%p(i)%pos, pset%p(i)%acc, energy, d_energy, ang_momentum, d_ang_momentum
-            enddo
+      do i = 1, n
+         write(lun_out, '(I3,1X,13(E13.6,1X))') i, t_glob+dt_tot, dt_old, mass(i), pset%p(i)%pos, pset%p(i)%acc, energy, d_energy, ang_momentum, d_ang_momentum
+      enddo
 
-            !call save_particles(n, lf_t, mass, pset, counter)
-         write(*,*) "[p_i]:-----------------------------"
-         write(*,*) "[p_i]:dt_tot= ", dt_tot
-         write(*,*) "[p_i]:dt_old= ", dt_old
-
-
-         first_run_lf = .false.
+      !call save_particles(n, lf_t, mass, pset, counter)
+      write(*,*) "[p_i]:-----------------------------"
+      write(*,*) "[p_i]:dt_tot= ", dt_tot
+      write(*,*) "[p_i]:dt_old= ", dt_old
 
 
+      first_run_lf = .false.
 
+      !3.kick(dt_old)
+      call kick(pset, dt_old, n)
 
-         !3.kick(dt_old)
-         call kick(pset, dt_old, n)
+      !1. Kick (dt_tot_h)
+      call kick(pset, dt_tot_h, n)
 
-
-         !1. Kick (dt_tot_h)
-         call kick(pset, dt_tot_h, n)
-
-
-         !2.drift(lf_dt)
-         call drift(pset, dt_tot, n)
-
-
+      !2.drift(lf_dt)
+      call drift(pset, dt_tot, n)
 
       !call save_particles(n, lf_t, mass, pset, counter)
 
@@ -725,7 +718,6 @@ contains
 #ifdef NBODY
    subroutine get_timestep_nbody(dt_nbody, pset)
       use constants,      only: ndims
-!      use particle_pub,   only: pset
       use particle_types, only: particle_set
       use cg_leaves,      only: leaves
       use cg_list,        only: cg_list_element
@@ -870,7 +862,6 @@ contains
       end subroutine check_ord
 
 
-      !subroutine find_cells(pset, cells, dist, cg, n_part)
       subroutine find_cells(cells, dist, cg, n_part)
 
          use constants,      only: ndims, xdim, CENTER, LO, HI
@@ -884,8 +875,8 @@ contains
             integer,dimension(n_part, ndims), intent(out)  :: cells
             real,dimension(n_part, ndims), intent(out)     :: dist
 
-            write(*,*) "Finding cells"
-            write(*,*) "[find_cells]: Particles =", n_part 
+            !write(*,*) "Finding cells"
+            !write(*,*) "[find_cells]: Particles =", n_part 
             do i = 1, n_part
                do cdim = xdim, ndims
                   if ((pset%p(i)%pos(cdim) >= cg%ijkse(cdim, LO)) .or. (pset%p(i)%pos(cdim) <= cg%ijkse(cdim, HI))) then
@@ -1241,7 +1232,6 @@ contains
 
                do i=1, n_part
                   if ((pset%p(i)%outside) .eqv. .false.) then
-                  !write(*,*) "!!!", cells(i, :)
                      pset%p(i)%acc(xdim) = - (df_dx_p([cells(i, :)], cg) + &
                                     d2f_dx2_p([cells(i, :)], cg)  * dist(i, xdim) + &
                                     d2f_dxdy_p([cells(i, :)], cg) * dist(i, ydim) + &
@@ -1301,6 +1291,7 @@ contains
                max_acc = sqrt(maxval(acc))
 
       end subroutine get_acc_max
+
 
       subroutine get_acc_cic(pset, cg, cells, n_part)
          use constants,      only: ndims, CENTER, xdim, ydim, zdim, half, zero

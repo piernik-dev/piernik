@@ -125,7 +125,7 @@ contains
 #endif /* DEBUG */
 
 #ifdef NBODY
-      use particle_pub,       only: pset
+      use particle_pub,         only: pset
       use particle_integrators, only: get_timestep_nbody, dt_nbody
 #endif /* NBODY */
 

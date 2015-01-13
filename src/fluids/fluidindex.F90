@@ -163,7 +163,9 @@ contains
       if (has_ion) allocate(iarr_mag_swp(ndims,nmag),iarr_all_mag(nmag))
       allocate(iarr_all_swp(xdim:zdim, flind%all))
       allocate(iarr_all_dn(flind%fluids),iarr_all_mx(flind%fluids),iarr_all_my(flind%fluids),iarr_all_mz(flind%fluids))
+      write(*,*) "fluids_sg", flind%fluids_sg
       allocate(iarr_all_sg(flind%fluids_sg))
+
 #ifdef ISO
       allocate(iarr_all_en(0))
 #else /* !ISO */

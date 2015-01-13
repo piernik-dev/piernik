@@ -49,6 +49,7 @@
 
  $FLUID_NEUTRAL
  !cs_iso = 0.01
+ !cs_iso = 0.01
  !cs_iso = 0.001
  selfgrav = .true.
  !selfgrav = .false.
@@ -88,7 +89,8 @@
 
  $PARTICLES
    time_integrator = 'leapfrog2'
-   interpolation_scheme = 'cic' !density
+   interpolation_scheme = 'cic'
    acc_interp_method = 'lagrange'
+   acc_interp_method = 'cic'
    lf_c = 1.0
  /
