@@ -92,7 +92,7 @@ contains
                   do j = cg%lhn(ydim,LO), cg%lhn(ydim,HI)
                      do i = cg%lhn(xdim,LO), cg%lhn(xdim,HI)
                         associate( fl => flind%all_fluids(p)%fl )
-                           cg%u(fl%idn,i,j,k) = 1.0
+                           cg%u(fl%idn,i,j,k) = 1.0e-6
                            cg%u(fl%imx,i,j,k) = 0.0
                            cg%u(fl%imy,i,j,k) = 0.0
                            cg%u(fl%imz,i,j,k) = 0.0
@@ -236,17 +236,17 @@ contains
             !call pset%add(1.0, [ 0.9700436, -0.24308753, 0.0], [ 0.466203685, 0.43236573, 0.0], [0.0, 0.0, 0.0], 0.0)
             !call pset%add(1.0, [-0.9700436, 0.24308753, 0.0], [ 0.466203685, 0.43236573, 0.0], [0.0, 0.0, 0.0], 0.0)
             !call pset%add(1.0, [0.0, 0.0, 0.0], [-0.932407370, -0.86473146, 0.0], [0.0, 0.0, 0.0], 0.0 )
-            !do i = 1, n_particles, 1
-               !call pset%add(1.0, pos_init, vel_init, [0.0, 0.0, 0.0], 0.0 ) !orbita eliptyczna
+            do i = 1, n_particles, 1
+               call pset%add(1.0, pos_init, vel_init, [0.0, 0.0, 0.0], 0.0 ) !orbita eliptyczna
                !call pset%add(1.0, [4.0, 2.0, 0.0],[-0.5, 0.0, 0.0], [0.0, 0.0, 0.0], 0.0)
                !call pset%add(1.0, [3.0, 2.0, 0.0],[0.0, -1.0, 0.0],  [0.0, 0.0, 0.0], 0.0)
 
-               !pos_init = positions(dtheta, pos_init, plane)
-               !vel_init = rotate(dtheta, vel_init, plane)
-            !enddo
+               pos_init = positions(dtheta, pos_init, plane)
+               vel_init = rotate(dtheta, vel_init, plane)
+            enddo
 
-            call pset%add(1.0, [2.0,0.0,0.0],[0.0,0.0,0.0],[0.0,0.0,0.0],0.0)
-            call pset%add(100.0, [0.0,0.0,0.0],[0.0,0.0,0.0],[0.0,0.0,0.0],0.0)
+            !call pset%add(1.0, [2.0,0.0,0.0],[0.0,0.0,0.0],[0.0,0.0,0.0],0.0)
+            !call pset%add(1.0, [0.0,0.0,0.0],[0.0,0.0,0.0],[0.0,0.0,0.0],0.0)
            
             first_run = .false.
             
