@@ -356,6 +356,7 @@ contains
                   part  => this%p(p), &
                   idl   => cgl%cg%idl &
             )
+            field = 1.0e-6
                if (any(part%pos < cgl%cg%fbnd(:,LO)) .or. any(part%pos > cgl%cg%fbnd(:,HI))) cycle
 
                do cdim = xdim, zdim
