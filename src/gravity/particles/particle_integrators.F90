@@ -82,7 +82,7 @@ contains
       
       real, intent(in) :: t_glob, dt_tot
 
-      real, parameter :: dt_param = 0.0001        ! control parameter to determine time step size
+      real, parameter :: dt_param = 0.0001      ! control parameter to determine time step size
       real, parameter :: dt_dia = 1             ! time interval between diagnostics output
       real, parameter :: dt_out = 0.01          ! time interval between output of snapshots
 
@@ -197,25 +197,25 @@ contains
 
 
       implicit none 
-      class(particle_set), intent(inout) :: pset  !< particle list
+      class(particle_set), intent(inout) :: pset                 !< particle list
 
-      real, intent(in)                            :: t_glob           !< initial time of simulation
-      real, intent(in)                            :: dt_tot           !< timestep of simulation
-      real, dimension(:), allocatable           :: mass             !< 1D array of mass of the particles
-      real                                         :: dt_tot_h          !< half of timestep, dt_tot_h = 0.5*dt_tot
-      real                                         :: energy            !< total energy of set of particles
-      real                                         :: init_energy       !< total energy of set of particles at t_glob
-      real                                         :: d_energy = 0.0    !< error of energy of set of particles in succeeding timesteps, at t=t_glob=0.0
-      real                                         :: ang_momentum      !< angular momentum of set of particles
-      real                                         :: init_ang_mom      !< angular momentum of set of particles at t_glob
-      real                                         :: d_ang_momentum = 0.0 !< error of angular momentum in succeeding timensteps, at t=t_glob=0.0
+      real, intent(in)                   :: t_glob               !< initial time of simulation
+      real, intent(in)                   :: dt_tot               !< timestep of simulation
+      real, dimension(:), allocatable    :: mass                 !< 1D array of mass of the particles
+      real                               :: dt_tot_h             !< half of timestep, dt_tot_h = 0.5*dt_tot
+      real                               :: energy               !< total energy of set of particles
+      real                               :: init_energy          !< total energy of set of particles at t_glob
+      real                               :: d_energy = 0.0       !< error of energy of set of particles in succeeding timesteps, at t=t_glob=0.0
+      real                               :: ang_momentum         !< angular momentum of set of particles
+      real                               :: init_ang_mom         !< angular momentum of set of particles at t_glob
+      real                               :: d_ang_momentum = 0.0 !< error of angular momentum in succeeding timensteps, at t=t_glob=0.0
 
-      integer                                      :: i
-      integer                                      :: n                 !< number of particles
-      logical                                      :: external_pot      !< if .true. gravitational potential will be deleted and replaced by external potential of point mass
-      logical, save                                :: first_run_lf = .true.
-      integer, save                                :: counter
-      integer                                      :: lun_out
+      integer                            :: i
+      integer                            :: n                    !< number of particles
+      logical                            :: external_pot         !< if .true. gravitational potential will be deleted and replaced by external potential of point mass
+      logical, save                      :: first_run_lf = .true.
+      integer, save                      :: counter
+      integer                            :: lun_out
 
 
       if (first_run_lf) then
@@ -281,12 +281,13 @@ contains
       write(*,*) "[p_i]:-----------------------------"
       write(*,*) "[p_i]:dt_tot= ", dt_tot
       write(*,*) "[p_i]:dt_old= ", dt_old
+      dt_tot_h = 0.5*dt_tot
 
 
       first_run_lf = .false.
 
       !3.kick(dt_old)
-      call kick(pset, dt_old, n)
+      call kick(pset, 0.5*dt_old, n)
 
       !1. Kick (dt_tot_h)
       call kick(pset, dt_tot_h, n)
@@ -309,7 +310,7 @@ contains
             class(particle_set), intent(inout)     :: pset  !< particle list
             real, intent(in)                       :: t
             integer, intent(in)                    :: n
-            integer                                  :: i
+            integer                                :: i
 
 
             do i = 1, n
@@ -323,9 +324,9 @@ contains
             use particle_types, only: particle_set
             implicit none
             class(particle_set), intent(inout) :: pset  !< particle list
-            real, intent(in)                    :: t
-            integer                              :: i
-            integer, intent(in)                 :: n
+            real, intent(in)                   :: t
+            integer                            :: i
+            integer, intent(in)                :: n
 
             do i=1, n
                pset%p(i)%pos = pset%p(i)%pos + pset%p(i)%vel * t
@@ -334,52 +335,23 @@ contains
          end subroutine drift
 
 
-         function phi_pm(x, y, z, eps)
-            use units,    only: newtong
-            implicit none
-               real, intent(in) :: x, y, z, eps
-               real :: r, phi_pm, G,M, mu
-                  G = 1.0
-                  M = 1.0
-                  mu = newtong*M
-                  r = sqrt(x**2 + y**2 + z**2 + eps**2)
-
-                  phi_pm = -mu / r
-         end function phi_pm
 
 
-         subroutine pot2grid(cg, eps2)
-            use constants, only: xdim, ydim, CENTER
-            use grid_cont, only: grid_container
-            implicit none
-               type(grid_container), pointer, intent(inout) :: cg
-               integer :: i, j, k
-               real, intent(in) :: eps2
 
-                  do i = lbound(cg%gpot, dim=1), ubound(cg%gpot, dim=1)
-                     do j = lbound(cg%gpot, dim=2), ubound(cg%gpot, dim=2)
-                        do k = lbound(cg%gpot, dim=3), ubound(cg%gpot, dim=3)
-                           cg%gpot(i,j,k) = phi_pm(cg%coord(CENTER,xdim)%r(i), &
-                                                   cg%coord(CENTER,ydim)%r(j), &
-                                                   cg%coord(CENTER,zdim)%r(k),eps2)
-                        enddo
-                     enddo
-                  enddo
 
-         end subroutine pot2grid
 
 
          subroutine save_particles(n, lf_t, mass, pset, counter)
             use particle_types, only: particle_set
             implicit none
                class(particle_set), intent(in) :: pset  !< particle list
-               integer, intent (in)         :: n
-               integer, intent (inout) :: counter
-               real, dimension(n), intent(in) :: mass
-               integer            :: i, data_file=757
-               real, intent(in)  :: lf_t
-               character(len=17) :: filename
-               character(len=3)  :: counter_char
+               integer, intent (in)            :: n
+               integer, intent (inout)         :: counter
+               real, dimension(n), intent(in)  :: mass
+               integer                         :: i, data_file=757
+               real, intent(in)                :: lf_t
+               character(len=17)               :: filename
+               character(len=3)                :: counter_char
 
                if(counter<10) then
                   write(counter_char, '(I1)') counter
@@ -410,14 +382,14 @@ contains
 !            use constants,    only: ndims, half, xdim, ydim, zdim
 !            use grid_cont,    only: grid_container
 !            implicit none
-!            type(grid_container), pointer, intent(in) :: cg
-!            class(particle_set), intent(inout) :: pset  !< particle list
-!            integer, intent(in) :: n
-!            integer, dimension(n, ndims), intent(in) :: cells
+!            type(grid_container), pointer, intent(in)     :: cg
+!            class(particle_set), intent(inout)            :: pset  !< particle list
+!            integer, intent(in)                           :: n
+!            integer, dimension(n, ndims), intent(in)      :: cells
 !            real(kind=8), dimension(n, ndims), intent(in) :: dist
-!            integer :: i
-!            integer (kind=8) :: p, q, r
-!            real,dimension(n) :: dpot, d2pot
+!            integer                                       :: i
+!            integer (kind=8)                              :: p, q, r
+!            real,dimension(n)                             :: dpot, d2pot
 
 
  !           do i = 1, n
@@ -447,14 +419,14 @@ contains
 !            use constants,    only: ndims
 !            use grid_cont,    only: grid_container
 !            implicit none
-!               type(grid_container), pointer, intent(in) :: cg
-!               class(particle_set), intent(inout) :: pset  !< particle list
-!               integer :: i, j
-!               integer, intent(in) :: n
-!               integer, dimension(n, ndims), intent(in) :: cells
+!               type(grid_container), pointer, intent(in)     :: cg
+!               class(particle_set), intent(inout)            :: pset  !< particle list
+!               integer                                       :: i, j
+!               integer, intent(in)                           :: n
+!               integer, dimension(n, ndims), intent(in)      :: cells
 !               real(kind=8), dimension(n, ndims), intent(in) :: dist
-!               real, intent(out) :: energy
-!               real :: velocity = 0.0
+!               real, intent(out)                             :: energy
+!               real                                          :: velocity = 0.0
 
 !               call potential(pset, cg, cells, dist, n)
 
@@ -471,57 +443,57 @@ contains
 !         end subroutine get_energy
 
 
-         subroutine get_acc_model(pset, acc2, eps, n)
-            use constants, only: ndims, xdim, ydim, zdim
-            use grid_cont,  only: grid_container
-            implicit none
-               class(particle_set), intent(in) :: pset  !< particle list
-               integer, intent(in) :: n
-               real, intent(in) :: eps
-               real, dimension(n, ndims), intent(out) :: acc2
+!         subroutine get_acc_model(pset, acc2, eps, n)
+!            use constants, only: ndims, xdim, ydim, zdim
+!            use grid_cont,  only: grid_container
+!            implicit none
+!               class(particle_set), intent(in)        :: pset  !< particle list
+!               integer, intent(in)                    :: n
+!               real, intent(in)                       :: eps
+!               real, dimension(n, ndims), intent(out) :: acc2
 
-               do i=1,n
-                  acc2(i, xdim) = -der_x(pset%p(i)%pos, 1.0e-8, eps)
-                  acc2(i, ydim) = -der_y(pset%p(i)%pos, 1.0e-8, eps)
-                  acc2(i, zdim) = -der_z(pset%p(i)%pos, 1.0e-8, eps)
-               enddo
+!               do i=1,n
+!                  acc2(i, xdim) = -der_x(pset%p(i)%pos, 1.0e-8, eps)
+!                  acc2(i, ydim) = -der_y(pset%p(i)%pos, 1.0e-8, eps)
+!                  acc2(i, zdim) = -der_z(pset%p(i)%pos, 1.0e-8, eps)
+!               enddo
 
-         end subroutine get_acc_model
+!         end subroutine get_acc_model
 
 
-         function der_x(pos, d, eps)
-         implicit none
-            real(kind=8) :: x, y, z, der_x, d, eps
-            real(kind=8),dimension(1,3) :: pos
-            x = pos(1,1)
-            y = pos(1,2)
-            z = pos(1,3)
-            der_x = ( phi_pm(x+d, y, z, eps) - phi_pm(x-d, y, z, eps) ) / (2.0*d)
-         end function der_x
+!         function der_x(pos, d, eps)
+!         implicit none
+!            real(kind=8)                :: x, y, z, der_x, d, eps
+!            real(kind=8),dimension(1,3) :: pos
+!            x = pos(1,1)
+!            y = pos(1,2)
+!            z = pos(1,3)
+!            der_x = ( phi_pm(x+d, y, z, eps) - phi_pm(x-d, y, z, eps) ) / (2.0*d)
+!         end function der_x
 
          !Pochodna wzgledem y
-         function der_y(pos, d, eps)
-            implicit none
-               real(kind=8) :: x, y, z, der_y, d, eps
-               real(kind=8),dimension(1,3) :: pos
+!         function der_y(pos, d, eps)
+!            implicit none
+!               real(kind=8) :: x, y, z, der_y, d, eps
+!               real(kind=8),dimension(1,3) :: pos
 
-               x = pos(1,1)
-               y = pos(1,2)
-               z = pos(1,3)
-               der_y = ( phi_pm(x, y+d, z, eps) - phi_pm(x, y-d, z, eps) ) / (2.0*d)
-         end function der_y
+!               x = pos(1,1)
+!               y = pos(1,2)
+!               z = pos(1,3)
+!               der_y = ( phi_pm(x, y+d, z, eps) - phi_pm(x, y-d, z, eps) ) / (2.0*d)
+!         end function der_y
 
          !Pochodna wzgledem z
-         function der_z(pos, d, eps)
-            implicit none
-               real(kind=8) :: x, y, z, der_z, d, eps
-               real(kind=8),dimension(1,3) :: pos
+!         function der_z(pos, d, eps)
+!            implicit none
+!               real(kind=8)                :: x, y, z, der_z, d, eps
+!               real(kind=8),dimension(1,3) :: pos
 
-               x = pos(1,1)
-               y = pos(1,2)
-               z = pos(1,3)
-               der_z = ( phi_pm(x, y, z+d, eps) - phi_pm(x, y, z-d, eps) ) / (2.0*d)
-         end function der_z
+!               x = pos(1,1)
+!               y = pos(1,2)
+!               z = pos(1,3)
+!               der_z = ( phi_pm(x, y, z+d, eps) - phi_pm(x, y, z-d, eps) ) / (2.0*d)
+!         end function der_z
 
          
          subroutine get_ang_momentum_2(pset, n, ang_momentum)
@@ -529,10 +501,10 @@ contains
             use particle_types, only: particle_set
             implicit none
                class(particle_set), intent(in) :: pset
-               integer :: i
-               integer, intent(in) :: n
-               real, intent(out) :: ang_momentum
-               real :: L1,L2,L3
+               integer                         :: i
+               integer, intent(in)             :: n
+               real, intent(out)               :: ang_momentum
+               real                            :: L1, L2, L3
 
                ang_momentum = 0.0
                
@@ -547,18 +519,19 @@ contains
 
 
   end subroutine leapfrog2ord      
-      
+
+
    subroutine get_acc_pot(mass, pos, acc, n, epot)
       use constants, only: ndims
       implicit none
-      integer, intent(in) :: n
-      real, dimension(n), intent(in) :: mass
-      real, dimension(n, ndims), intent(in) :: pos
+      integer, intent(in)                    :: n
+      real, dimension(n), intent(in)         :: mass
+      real, dimension(n, ndims), intent(in)  :: pos
       real, dimension(n, ndims), intent(out) :: acc
-      real, intent(out) :: epot
+      real, intent(out)                      :: epot
       
-      integer :: i, j
-      real, dimension(ndims) :: rji, da
+      integer                                :: i, j
+      real, dimension(ndims)                 :: rji, da
       
       real :: r   ! | rji |
       real :: r2  ! | rji |^2
@@ -717,7 +690,7 @@ contains
 
 #ifdef NBODY
    subroutine get_timestep_nbody(dt_nbody, pset)
-      use constants,      only: ndims
+      use constants,      only: ndims, zero
       use particle_types, only: particle_set
       use cg_leaves,      only: leaves
       use cg_list,        only: cg_list_element
@@ -731,8 +704,8 @@ contains
             use grid_cont, only: grid_container 
             implicit none
                type(grid_container), pointer, intent(in) :: cg
-               integer, dimension(ndims), intent(in)    :: cell
-               real                                        :: dxi
+               integer, dimension(ndims), intent(in)     :: cell
+               real                                      :: dxi
          end function dxi
 
          function d2dxi2(cell, cg)
@@ -740,8 +713,8 @@ contains
             use grid_cont, only: grid_container 
             implicit none
                type(grid_container), pointer, intent(in) :: cg
-               integer, dimension(ndims), intent(in)    :: cell
-               real                                        :: d2dxi2
+               integer, dimension(ndims), intent(in)     :: cell
+               real                                      :: d2dxi2
          end function d2dxi2
 
          function d2dxixj(cell, cg)
@@ -749,38 +722,39 @@ contains
             use grid_cont, only: grid_container 
             implicit none
                type(grid_container), pointer, intent(in) :: cg
-               integer, dimension(ndims), intent(in)    :: cell
-               real                                        :: d2dxixj
+               integer, dimension(ndims), intent(in)     :: cell
+               real                                      :: d2dxixj
          end function d2dxixj
 
       end interface
 
       class(particle_set),  intent(inout)  :: pset
-      type(grid_container),  pointer        :: cg
-      type(cg_list_element), pointer        :: cgl
+      type(grid_container),  pointer       :: cg
+      type(cg_list_element), pointer       :: cgl
 
-      integer                                :: order               !< order of Lagrange polynomials (if acc_interp_method = 'lagrange')
-      real                                    :: eta, eps
-      integer                                :: n_part
-      real                                    :: max_acc
+      integer                              :: order               !< order of Lagrange polynomials (if acc_interp_method = 'lagrange')
+      real                                 :: eta, eps
+      integer                              :: n_part
+      real                                 :: max_acc
 
       real,    dimension(:,:), allocatable :: dist
       integer, dimension(:,:), allocatable :: cells
-      real                                    :: dt_nbody
-      logical                                 :: save_potential, finish
+      real                                 :: dt_nbody
+      logical                              :: save_potential, finish
 
 
 
 
       procedure(dxi), pointer     :: df_dx_p    => NULL(), &
-                                       df_dy_p    => NULL(), &
-                                       df_dz_p    => NULL()
+                                     df_dy_p    => NULL(), &
+                                     df_dz_p    => NULL()
       procedure(d2dxi2), pointer  :: d2f_dx2_p  => NULL(), &
-                                       d2f_dy2_p  => NULL(), &
-                                       d2f_dz2_p  => NULL() 
+                                     d2f_dy2_p  => NULL(), &
+                                     d2f_dz2_p  => NULL() 
       procedure(d2dxixj), pointer :: d2f_dxdy_p => NULL(), &
-                                       d2f_dxdz_p => NULL(), &
-                                       d2f_dydz_p => NULL()
+                                     d2f_dxdz_p => NULL(), &
+                                     d2f_dydz_p => NULL()
+
       write(*,*) "Poszukiwanie kroku nbody"
       eta = 1.0
       eps = 1.0e-4
@@ -797,6 +771,8 @@ contains
       save_potential = .false.
       !finish         = .true.
       finish         = .false.
+
+      call pot2grid(cg, zero)
 
       call save_pot(save_potential, finish, cg)
 
@@ -830,13 +806,48 @@ contains
 
    contains
 
+      function phi_pm(x, y, z, eps)
+         use units,    only: newtong
+         implicit none
+            real, intent(in) :: x, y, z, eps
+            real             :: r, phi_pm, G,M, mu
+               G = 1.0
+               M = 1.0
+               mu = newtong*M
+               r = sqrt(x**2 + y**2 + z**2 + eps**2)
+
+               phi_pm = -mu / r
+      end function phi_pm
+
+
+      subroutine pot2grid(cg, eps2)
+         use constants, only: xdim, ydim, zdim, CENTER
+         use grid_cont, only: grid_container
+         implicit none
+            type(grid_container), pointer, intent(inout) :: cg
+            integer                                      :: i, j, k
+            real, intent(in)                             :: eps2
+
+               do i = lbound(cg%gpot, dim=1), ubound(cg%gpot, dim=1)
+                  do j = lbound(cg%gpot, dim=2), ubound(cg%gpot, dim=2)
+                     do k = lbound(cg%gpot, dim=3), ubound(cg%gpot, dim=3)
+                        cg%gpot(i,j,k) = phi_pm(cg%coord(CENTER,xdim)%r(i), &
+                                                cg%coord(CENTER,ydim)%r(j), &
+                                                cg%coord(CENTER,zdim)%r(k),eps2)
+                     enddo
+                  enddo
+               enddo
+
+      end subroutine pot2grid
+
+
       subroutine check_ord(order, df_dx_p, d2f_dx2_p, df_dy_p, d2f_dy2_p,& 
                   df_dz_p, d2f_dz2_p, d2f_dxdy_p, d2f_dxdz_p, d2f_dydz_p)
          implicit none
             integer,intent(in) :: order
-            procedure(dxi), pointer, intent(inout) :: df_dx_p, df_dy_p,df_dz_p
-            procedure(d2dxi2), pointer, intent(inout) :: d2f_dx2_p, d2f_dy2_p,d2f_dz2_p
-            procedure(d2dxixj), pointer, intent(inout) :: d2f_dxdy_p, d2f_dxdz_p,d2f_dydz_p
+            procedure(dxi), pointer, intent(inout)     :: df_dx_p, df_dy_p, df_dz_p
+            procedure(d2dxi2), pointer, intent(inout)  :: d2f_dx2_p, d2f_dy2_p, d2f_dz2_p
+            procedure(d2dxixj), pointer, intent(inout) :: d2f_dxdy_p, d2f_dxdz_p, d2f_dydz_p
 
                if (order == 2) then
                   df_dx_p => df_dx_o2
@@ -868,12 +879,12 @@ contains
          use grid_cont,      only: grid_container
          !use particle_types,   only: particle_set
          implicit none
-            !class(particle_set)                         :: pset  !< particle list
-            type(grid_container)                        :: cg
-            integer                                     :: i, cdim
-            integer, intent(in)                        :: n_part
-            integer,dimension(n_part, ndims), intent(out)  :: cells
-            real,dimension(n_part, ndims), intent(out)     :: dist
+            !class(particle_set)                          :: pset  !< particle list
+            type(grid_container)                          :: cg
+            integer                                       :: i, cdim
+            integer, intent(in)                           :: n_part
+            integer,dimension(n_part, ndims), intent(out) :: cells
+            real,dimension(n_part, ndims), intent(out)    :: dist
 
             !write(*,*) "Finding cells"
             !write(*,*) "[find_cells]: Particles =", n_part 
@@ -900,8 +911,8 @@ contains
          use grid_cont, only: grid_container
          implicit none
             type(grid_container), pointer, intent(in) :: cg
-            integer, dimension(ndims), intent(in)    :: cell
-            real,target :: df_dx_o2
+            integer, dimension(ndims), intent(in)     :: cell
+            real,target                               :: df_dx_o2
 
                !o(R^2)
                df_dx_o2 = ( cg%gpot(cell(xdim)+1, cell(ydim), cell(zdim)) - &
@@ -915,8 +926,8 @@ contains
          use grid_cont, only: grid_container 
          implicit none
             type(grid_container), pointer, intent(in) :: cg
-            integer, dimension(ndims), intent(in):: cell
-            real,target :: df_dy_o2
+            integer, dimension(ndims), intent(in)     :: cell
+            real,target                               :: df_dy_o2
 
                !o(R^2)
                df_dy_o2 = ( cg%gpot(cell(xdim), cell(ydim)+1, cell(zdim)) - &
@@ -930,8 +941,8 @@ contains
          use grid_cont, only: grid_container 
          implicit none
             type(grid_container), pointer, intent(in) :: cg
-            integer, dimension(ndims), intent(in):: cell
-            real,target :: df_dz_o2
+            integer, dimension(ndims), intent(in)     :: cell
+            real,target                               :: df_dz_o2
 
                !o(R^2)
                df_dz_o2 = ( cg%gpot(cell(xdim), cell(ydim), cell(zdim)+1) - &
@@ -945,8 +956,8 @@ contains
          use grid_cont, only: grid_container 
          implicit none
             type(grid_container), pointer, intent(in) :: cg
-            integer, dimension(ndims), intent(in) :: cell
-            real,target :: d2f_dx2_o2
+            integer, dimension(ndims), intent(in)     :: cell
+            real,target                               :: d2f_dx2_o2
 
                !o(R^2)
                d2f_dx2_o2 = ( cg%gpot(cell(xdim)+1, cell(ydim), cell(zdim)) - &
@@ -961,8 +972,8 @@ contains
          use grid_cont, only: grid_container 
          implicit none
             type(grid_container), pointer, intent(in) :: cg
-            integer, dimension(ndims), intent(in) :: cell
-            real,target :: d2f_dy2_o2
+            integer, dimension(ndims), intent(in)     :: cell
+            real,target                               :: d2f_dy2_o2
 
                !o(R^2)
                d2f_dy2_o2 = ( cg%gpot(cell(xdim), cell(ydim)+1, cell(zdim)) - &
@@ -977,8 +988,8 @@ contains
          use grid_cont, only: grid_container 
          implicit none
             type(grid_container), pointer, intent(in) :: cg
-            integer, dimension(ndims), intent(in) :: cell
-            real,target :: d2f_dz2_o2
+            integer, dimension(ndims), intent(in)     :: cell
+            real,target                               :: d2f_dz2_o2
 
                !o(R^2)
                d2f_dz2_o2 = ( cg%gpot(cell(xdim), cell(ydim), cell(zdim)+1) - &
@@ -993,8 +1004,8 @@ contains
          use grid_cont, only: grid_container 
          implicit none
             type(grid_container), pointer, intent(in) :: cg
-            integer, dimension(ndims), intent(in) :: cell
-            real,target :: d2f_dxdy_o2
+            integer, dimension(ndims), intent(in)     :: cell
+            real,target                               :: d2f_dxdy_o2
 
                !o(R^2)
                d2f_dxdy_o2 = ( cg%gpot(cell(xdim)+1, cell(ydim)+1, cell(zdim)) - &
@@ -1010,8 +1021,8 @@ contains
          use grid_cont, only: grid_container 
          implicit none
             type(grid_container), pointer, intent(in) :: cg
-            integer, dimension(ndims), intent(in) :: cell
-            real,target :: d2f_dxdz_o2
+            integer, dimension(ndims), intent(in)     :: cell
+            real,target                               :: d2f_dxdz_o2
 
                !o(R^2)
                d2f_dxdz_o2 = ( cg%gpot(cell(xdim)+1, cell(ydim), cell(zdim)+1) - &
@@ -1027,8 +1038,8 @@ contains
          use grid_cont, only: grid_container 
          implicit none
             type(grid_container), pointer, intent(in) :: cg
-            integer, dimension(ndims), intent(in) :: cell
-            real,target :: d2f_dydz_o2
+            integer, dimension(ndims), intent(in)     :: cell
+            real,target                               :: d2f_dydz_o2
 
                !o(R^2)
                d2f_dydz_o2 = ( cg%gpot(cell(xdim), cell(ydim)+1, cell(zdim)+1) - &
@@ -1044,8 +1055,8 @@ contains
          use grid_cont, only: grid_container 
          implicit none
             type(grid_container), pointer, intent(in) :: cg
-            integer, dimension(ndims), intent(in)    :: cell
-            real,target :: df_dx_o4
+            integer, dimension(ndims), intent(in)     :: cell
+            real,target                               :: df_dx_o4
 
                !o(R^4)
                df_dx_o4 = 2.0 * (cg%gpot(cell(xdim)+1, cell(ydim), cell(zdim)) - &
@@ -1061,8 +1072,8 @@ contains
          use grid_cont, only: grid_container 
          implicit none
             type(grid_container), pointer, intent(in) :: cg
-            integer, dimension(ndims), intent(in):: cell
-            real,target :: df_dy_o4
+            integer, dimension(ndims), intent(in)     :: cell
+            real,target                               :: df_dy_o4
 
                !o(R^4)
                df_dy_o4 = 2.0 * ( cg%gpot(cell(xdim), cell(ydim)+1, cell(zdim)) - &
@@ -1078,8 +1089,8 @@ contains
          use grid_cont, only: grid_container 
          implicit none
             type(grid_container), pointer, intent(in) :: cg
-            integer, dimension(ndims), intent(in):: cell
-            real,target :: df_dz_o4
+            integer, dimension(ndims), intent(in)     :: cell
+            real,target                               :: df_dz_o4
 
                !o(R^4)
                df_dz_o4 = 2.0* (cg%gpot(cell(xdim), cell(ydim), cell(zdim)+1) - &
@@ -1095,8 +1106,8 @@ contains
          use grid_cont, only: grid_container 
          implicit none
             type(grid_container), pointer, intent(in) :: cg
-            integer, dimension(ndims), intent(in) :: cell
-            real,target :: d2f_dx2_o4
+            integer, dimension(ndims), intent(in)     :: cell
+            real,target                               :: d2f_dx2_o4
 
                !o(R^4)
                d2f_dx2_o4 = 4.0 * ( cg%gpot(cell(xdim)+1, cell(ydim), cell(zdim)) + &
@@ -1114,8 +1125,8 @@ contains
          use grid_cont, only: grid_container 
          implicit none
             type(grid_container), pointer, intent(in) :: cg
-            integer, dimension(ndims), intent(in) :: cell
-            real,target :: d2f_dy2_o4
+            integer, dimension(ndims), intent(in)     :: cell
+            real,target                               :: d2f_dy2_o4
 
                !o(R^4)
                d2f_dy2_o4 = 4.0*( cg%gpot(cell(xdim), cell(ydim)+1, cell(zdim)) + &
@@ -1133,8 +1144,8 @@ contains
          use grid_cont, only: grid_container 
          implicit none
             type(grid_container), pointer, intent(in) :: cg
-            integer, dimension(ndims), intent(in) :: cell
-            real,target :: d2f_dz2_o4
+            integer, dimension(ndims), intent(in)     :: cell
+            real,target                               :: d2f_dz2_o4
 
                !o(R^4)
                d2f_dz2_o4 = 4.0*( cg%gpot(cell(xdim), cell(ydim), cell(zdim)+1) + &
@@ -1152,8 +1163,8 @@ contains
          use grid_cont, only: grid_container 
          implicit none
             type(grid_container), pointer, intent(in) :: cg
-            integer, dimension(ndims), intent(in) :: cell
-            real,target :: d2f_dxdy_o4
+            integer, dimension(ndims), intent(in)     :: cell
+            real,target                               :: d2f_dxdy_o4
 
                !o(R^4)
                d2f_dxdy_o4 = ( cg%gpot(cell(xdim)+1, cell(ydim)+1, cell(zdim)) + &
@@ -1173,8 +1184,8 @@ contains
          use grid_cont, only: grid_container 
          implicit none
             type(grid_container), pointer, intent(in) :: cg
-            integer, dimension(ndims), intent(in) :: cell
-            real,target :: d2f_dxdz_o4
+            integer, dimension(ndims), intent(in)     :: cell
+            real,target                               :: d2f_dxdz_o4
 
                !o(R^4)
                d2f_dxdz_o4 = ( cg%gpot(cell(xdim)+1, cell(ydim), cell(zdim)+1) + &
@@ -1194,8 +1205,8 @@ contains
          use grid_cont, only: grid_container 
          implicit none
             type(grid_container), pointer, intent(in) :: cg
-            integer, dimension(ndims), intent(in) :: cell
-            real,target :: d2f_dydz_o4
+            integer, dimension(ndims), intent(in)     :: cell
+            real,target                               :: d2f_dydz_o4
 
                !o(R^4)
                d2f_dydz_o4 = ( cg%gpot(cell(xdim), cell(ydim)+1, cell(zdim)+1) + &
@@ -1217,17 +1228,17 @@ contains
          use grid_cont,      only: grid_container
          use particle_types, only: particle_set
          implicit none
-            class(particle_set), intent(inout)                 :: pset
-            type(grid_container), pointer, intent(in)       :: cg
-            integer, intent(in)                             :: n_part
-            integer, dimension(n_part, ndims), intent(in)       :: cells
-            real, dimension(n_part, ndims), intent(in)           :: dist
-            integer :: i
+            class(particle_set), intent(inout)            :: pset
+            type(grid_container), pointer, intent(in)     :: cg
+            integer, intent(in)                           :: n_part
+            integer, dimension(n_part, ndims), intent(in) :: cells
+            real, dimension(n_part, ndims), intent(in)    :: dist
+            integer                                       :: i
 
                
-            procedure(dxi), pointer, intent(in) :: df_dx_p, df_dy_p,df_dz_p
-            procedure(d2dxi2), pointer, intent(in) :: d2f_dx2_p, d2f_dy2_p,d2f_dz2_p
-            procedure(d2dxixj), pointer, intent(in) :: d2f_dxdy_p, d2f_dxdz_p,d2f_dydz_p
+            procedure(dxi), pointer, intent(in)     :: df_dx_p, df_dy_p, df_dz_p
+            procedure(d2dxi2), pointer, intent(in)  :: d2f_dx2_p, d2f_dy2_p, d2f_dz2_p
+            procedure(d2dxixj), pointer, intent(in) :: d2f_dxdy_p, d2f_dxdz_p, d2f_dydz_p
 
 
                do i=1, n_part
@@ -1275,10 +1286,9 @@ contains
          implicit none
             class(particle_set), intent(inout) :: pset
             integer, intent(in)                :: n_part
-            integer                             :: i, cdim
-
-            real, dimension(n_part) :: acc
-            real, intent(out)       :: max_acc
+            integer                            :: i, cdim
+            real, dimension(n_part)            :: acc
+            real, intent(out)                  :: max_acc
 
                acc = 0.0
 
@@ -1298,16 +1308,16 @@ contains
          use grid_cont,      only: grid_container
          use particle_types, only: particle_set
          implicit none
-            type(grid_container), pointer, intent(in) :: cg
-            class(particle_set), intent(inout)        :: pset
+            type(grid_container), pointer, intent(in)     :: cg
+            class(particle_set), intent(inout)            :: pset
 
-            integer, intent(in)                       :: n_part
-            integer                                    :: i, j, k, c, cdim
-            integer                                    :: p
+            integer, intent(in)                           :: n_part
+            integer                                       :: i, j, k, c, cdim
+            integer                                       :: p
             integer, dimension(n_part, ndims), intent(in) :: cells
-            integer(kind=8), dimension(n_part, ndims)      :: cic_cells
-            real, dimension(n_part, ndims)                  :: dxyz
-            real(kind=8), dimension(n_part, 8)             :: wijk, fx, fy, fz
+            integer(kind=8), dimension(n_part, ndims)     :: cic_cells
+            real, dimension(n_part, ndims)                :: dxyz
+            real(kind=8), dimension(n_part, 8)            :: wijk, fx, fy, fz
 
 
                do i = 1, n_part
@@ -1330,7 +1340,7 @@ contains
                      wijk(i, 6) =          dxyz(i, xdim) *(cg%dy - dxyz(i, ydim))*         dxyz(i, zdim)  !a(i  ,j+1,k+1)
                      wijk(i, 7) =          dxyz(i, xdim) *         dxyz(i, ydim) *(cg%dz - dxyz(i, zdim)) !a(i+1,j  ,k+1)
                      wijk(i, 8) =          dxyz(i, xdim) *         dxyz(i, ydim) *         dxyz(i, zdim)  !a(i+1,j+1,k+1)
-                  !else funkcja...
+                  !else multipole expansion for particles outside domain
                   endif
 
                enddo
@@ -1363,6 +1373,8 @@ contains
                      pset%p(p)%acc(zdim) = pset%p(p)%acc(zdim) + wijk(p, c) * fz(p, c)
                   enddo
                enddo
+               ! druga z czastek stoi w miejscu:
+               !pset%p(2)%acc(:) = 0.0
 
       end subroutine get_acc_cic
 
@@ -1375,14 +1387,13 @@ contains
          use func,           only: operator(.notequals.)
          implicit none
             type(grid_container), pointer, intent(in) :: cg
-            class(particle_set), intent(in)            :: pset  !< particle list
-
+            class(particle_set), intent(in)           :: pset  !< particle list
 
             real, intent(in)       :: eta, eps, max_acc, lf_c
             real, intent(out)      :: dt_nbody
-            real                    :: factor
+            real                   :: factor
             real, dimension(ndims) :: maxv, minv, max_v
-            integer                 :: cdim
+            integer                :: cdim
 
                factor = big
 
@@ -1415,13 +1426,13 @@ contains
 
       end subroutine get_var_timestep_c
 
+
       subroutine save_pot(save_potential, finish, cg)
-         use constants, only: xdim,ydim, zdim, CENTER
+         use constants, only: xdim, ydim, zdim, CENTER
          use grid_cont, only: grid_container
             implicit none
             type(grid_container), pointer, intent(in) :: cg
-            logical :: save_potential
-            logical :: finish
+            logical :: save_potential, finish
             integer :: i, j, k
 
             if(save_potential) then
