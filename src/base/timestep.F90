@@ -181,7 +181,8 @@ contains
 #ifdef NBODY
          call get_timestep_nbody(dt_nbody, pset)
          write(*,*) "[timestep]:dt_nbody      =", dt_nbody
-         dt = min(dt, dt_nbody) 
+         !dt = min(dt, dt_nbody) 
+         dt = dt_nbody
 #endif /* NBODY */
           write(*,*) "[timestep]:dt  po   nbody=", dt
          if (use_fargo) dt = min(dt, timestep_fargo(cg, dt))
