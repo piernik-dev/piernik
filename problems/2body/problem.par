@@ -61,6 +61,7 @@
     smallei= 1.e-5
     integration_order = 2
     limiter= 'vanleer'
+    !cflcontrol = 'none'
  /
 
  $GRAVITY
@@ -69,7 +70,6 @@
  /
 
  $MULTIGRID_GRAVITY
-   !interp_mom2pot = .true.
 /
 
  $PROBLEM_CONTROL
@@ -90,7 +90,6 @@
  $PARTICLES
    time_integrator = 'leapfrog2'
    interpolation_scheme = 'cic'
-   acc_interp_method = 'lagrange'
    acc_interp_method = 'cic'
    lf_c = 1.0
  /
