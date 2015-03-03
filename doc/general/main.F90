@@ -7,7 +7,7 @@
 !!
 !! \par PIERNIK source code and documentation
 !!
-!!Public version of PIERNIK code is available via the web-page: {http://piernik.astri.uni.torun.pl}. The web-page informs how to access the source code,  which is maintained in an SVN repository, together with on-line documentation describing details of code utilization. An overview of PIERNIK capabilities is in conference papers (Hanasz et al. 2008a,b,c and 2009a, see: {http://arxiv.org/abs/0812.2161}, {http://arxiv.org/abs/0812.2799}, {http://arxiv.org/abs/0812.4839}, {http://arxiv.org/abs/0901.0104}), and is also available in doc/papers subdirectory. Lectures notes on PIERNIK (slides in pdf format, as well as two sections prepared for Lecture Notes in Physics, Springer (in press)) are placed in doc/evora subdirectory.
+!!Public version of PIERNIK code is available via the web-page: {http://piernik.astri.umk.pl}. The web-page informs how to access the source code,  which is maintained in an SVN repository, together with on-line documentation describing details of code utilization. An overview of PIERNIK capabilities is in conference papers (Hanasz et al. 2008a,b,c and 2009a, see: {http://arxiv.org/abs/0812.2161}, {http://arxiv.org/abs/0812.2799}, {http://arxiv.org/abs/0812.4839}, {http://arxiv.org/abs/0901.0104}), and is also available in doc/papers subdirectory. Lectures notes on PIERNIK (slides in pdf format, as well as two sections prepared for Lecture Notes in Physics, Springer (in press)) are placed in doc/evora subdirectory.
 !!
 !<
 
