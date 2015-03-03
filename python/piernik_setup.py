@@ -697,7 +697,7 @@ def piernik_parse_args(data=None):
         all_args = []
         try:
             for frc in (".setuprc", ".setuprc." + os.uname()[1]):
-                for line in file(frc):
+                for line in open(frc):
                     all_args += line.split()
         except IOError:
             pass
