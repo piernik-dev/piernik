@@ -330,8 +330,13 @@ def setup_piernik(data=None):
     cmd = "echo '#include \"%spiernik.h\"' > \"%s\"" % ('src/base/', foo_path)
     cmd += " && cpp %s -dM -I%s \"%s\" && rm \"%s\"" % (
         cppflags, probdir, foo_path, foo_path)
-    defines = sp.Popen([cmd], stdout=sp.PIPE,
-        shell=True).communicate()[0].decode().rstrip().split("\n")
+    try:
+        defines = sp.Popen([cmd], stdout=sp.PIPE,
+            shell=True).communicate()[0].decode().rstrip().split("\n")
+    except UnicodeDecodeError:
+        # python 2 compatibility
+        defines = sp.Popen([cmd], stdout=sp.PIPE,
+            shell=True).communicate()[0].rstrip().split("\n")
     if(options.verbose):
         print(cmd)
         print("Defined symbols:")
@@ -384,7 +389,12 @@ def setup_piernik(data=None):
         if(keys_logic1 or keys_logic2):
             cmd = "cpp %s -I%s -I%s %s" % (cppflags, probdir, 'src/base', f)
             # Scan preprocessed files
-            for line in get_stdout(cmd).decode().split('\n'):
+            try:
+                lines = get_stdout(cmd).decode().split('\n')
+            except UnicodeDecodeError:
+                # python 2 compatibility
+                lines = get_stdout(cmd).split('\n')
+            for line in lines:
                 if have_use(line):
                     luse.append(line.split()[1].rstrip(","))
                 if have_mod(line):
