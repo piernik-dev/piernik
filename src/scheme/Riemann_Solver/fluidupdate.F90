@@ -150,4 +150,23 @@ contains
 
 !-------------------------------------------------------------------------------------------------------------------------
 
+  subroutine sweep(cg,dt,ddim)
+
+    use constants,        only: pdims, xdim, zdim, cs_i2_n, ORTHO1, ORTHO2, LO, HI
+    use all_boundaries,   only: all_fluid_boundaries
+    use fluidindex,       only: iarr_all_swp
+    use grid_cont,        only: grid_container
+    use named_array_list, only: qna, wna
+
+    implicit none
+
+    type(grid_container), pointer, intent(in) :: cg
+    real,                          intent(in) :: dt
+    integer(kind=4),               intent(in) :: ddim
+
+    ! Sweep later ..
+
+  end subroutine sweep
+
+!-----------------------------------------------------------------------------------------------------------------------
 end module fluidupdate
