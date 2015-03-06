@@ -80,22 +80,41 @@
  */
 
 #undef HYDRO_SOLVER
+#undef HS2
 
 #ifdef RTVD
+#if defined(HYDRO_SOLVER)
+#define HS2
+#else
 #define HYDRO_SOLVER
+#endif
 #endif
 
 #ifdef HLLC
+#if defined(HYDRO_SOLVER)
+#define HS2
+#else
 #define HYDRO_SOLVER
+#endif
 #endif
 
 #ifdef RIEMANN
+#if defined(HYDRO_SOLVER)
+#define HS2
+#else
 #define HYDRO_SOLVER
 #endif
+#endif
 
-#if defined(RTVD) && defined(HLLC) && defined(RIEMANN)
+
+#if defined(HS2)
 #error Choose only one of { RTVD, HLLC, RIEMANN }.
 #endif
+
+//#if defined(HS2)
+//#if defined(RTVD) && defined(HLLC) && defined(RIEMANN)
+//#error Choose only one of { RTVD, HLLC, RIEMANN }.
+//#endif
 
 #if !defined(HYDRO_SOLVER)
 #  define RTVD
