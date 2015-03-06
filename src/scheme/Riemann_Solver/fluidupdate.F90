@@ -25,8 +25,8 @@
 !    For full list of developers see $PIERNIK_HOME/license/pdt.txt
 !
 !    HLLD Riemann solver for ideal magnetohydrodynamics
-!    Varadarajan Parthasarathy, CAMK, Warszawa. 2015. 
-! 
+!    Varadarajan Parthasarathy, CAMK, Warszawa. 2015.
+!
 !--------------------------------------------------------------------------------------------------------------
 
 #include "piernik.def"
@@ -48,7 +48,7 @@ contains
     use domain,       only: dom
     use global,       only: dt, dtm, t
     use user_hooks,   only: problem_customize_solution
-    use dataio_pub,    only: halfstep 
+    use dataio_pub,    only: halfstep
 
     implicit none
 
@@ -57,32 +57,32 @@ contains
     integer(kind=4)                 :: ddim
 
     halfstep = .false.
-    
+
     if (first_run) then
        dtm = 0.0
-    
+
     else
-       
+
        dtm = dt
-    
+
     endif
 
     t = t + dt
 
     cgl => leaves%first
-    
+
     do while (associated(cgl))
-       
+
        do ddim = xdim, zdim
-          
+
           if (dom%has_dir(ddim)) call sweep(cgl%cg,dt,ddim)
-       
+
        enddo
-          
+
        if (associated(problem_customize_solution)) call problem_customize_solution(.true.)
-    
+
           cgl => cgl%nxt
-     
+
     enddo
 
      t = t + dt
@@ -90,19 +90,19 @@ contains
      halfstep = .true.
 
      cgl => leaves%first
-     
+
      do while (associated(cgl))
-        
+
         do ddim = zdim, xdim
-           
+
            if (dom%has_dir(ddim)) call sweep(cgl%cg,dt,ddim)
-        
+
         enddo
-           
+
         if (associated(problem_customize_solution)) call problem_customize_solution(.false.)
-        
+
         cgl => cgl%nxt
-       
+
      enddo
 
        if (first_run) first_run = .false.
@@ -136,12 +136,12 @@ contains
        q(fl%imy,:)  =  u(fl%idn,:)/u(fl%imx,:)
        q(fl%imz,:)  =  u(fl%idn,:)/u(fl%imz,:)
 
-       if(fl%has_energy) then
-          
+       if (fl%has_energy) then
+
           q(fl%ien,:) = fl%gam_1*(u(fl%ien,:) - ekin(u(fl%imx,:), u(fl%imy,:), u(fl%imz,:), u(fl%idn,:)))
 
-          if(fl%is_magnetized) q(fl%ien,:) = q(fl%ien,:) + (two-fl%gam)*half*sum(b(:,:)**2,dim=1)
-       
+          if (fl%is_magnetized) q(fl%ien,:) = q(fl%ien,:) + (two-fl%gam)*half*sum(b(:,:)**2,dim=1)
+
        endif
 
     enddo

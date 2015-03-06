@@ -29,11 +29,11 @@
 !  A multi-state HLLD approximate Riemann solver for ideal magnetohydrodynamics.
 !  Takahiro Miyoshi, Kanya Kusano
 !  Journal of Computational Physics 208 (2005) 315-344
-! 
-!  ->Solve one dimensional Riemann problem using adiabatic HLLD scheme 
+!
+!  ->Solve one dimensional Riemann problem using adiabatic HLLD scheme
 !
 !  Varadarajan Parthasarathy, CAMK, Warszawa. 2015.
-! 
+!
 !---------------------------------------------------------------------------------------------------------------------------
 
 
@@ -42,8 +42,8 @@
 module hlld
 ! pulled by RIEMANN
 
-  implicit none 
-  
+  implicit none
+
   private
   public :: riemann_hlld
 
@@ -64,7 +64,7 @@ contains
 
     real, dimension(:,:), pointer, intent(inout)  :: f
 
-    ! local variables 
+    ! local variables
 
     real    :: sl, sr, sm, sml, smr
     real    :: srl, srml, slmv, srmv, slmm, srmm, smvl, smvr
@@ -72,7 +72,7 @@ contains
     real    :: mx, dv, fc, b2, bs, ds, vbl, vbr, vb1l, vb1r, vb2
     real    :: pml, pmr, ptl, ptr, pt, pm
 
-    
+
 
     ! Follow the references and Kowal code as an example for computing fluxes.
 
