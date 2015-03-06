@@ -89,8 +89,12 @@
 #define HYDRO_SOLVER
 #endif
 
-#if defined(RTVD) && defined(HLLC)
-#error Choose only one of { RTVD, HLLC }.
+#ifdef RIEMANN
+#define HYDRO_SOLVER
+#endif
+
+#if defined(RTVD) && defined(HLLC) && defined(RIEMANN)
+#error Choose only one of { RTVD, HLLC, RIEMANN }.
 #endif
 
 #if !defined(HYDRO_SOLVER)
