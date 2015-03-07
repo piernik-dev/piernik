@@ -55,9 +55,11 @@
 !!
 !! \b NUMERICAL \b SCHEMES \b AND \b SOLUTIONS:
 !!
-!! \b \#define \b "RTVD"  - to choose Relaxing TVD scheme (then HLLC must be undefined)
+!! \b \#define \b "RTVD"  - to choose Relaxing TVD scheme (then HLLC or RIEMANN must be undefined)
 !!
-!! \b \#define \b "HLLC" - to choose HLLC scheme (without magnetic fields; RTVD must be undefined)
+!! \b \#define \b "HLLC" - to choose HLLC scheme (without magnetic fields; RTVD or RIEMANN must be undefined)
+!!
+!! \b \#define \b "RIEMANN" - to choose RIEMANN scheme (then HLLC or RTVD must be undefined)
 !!
 !! \b \#define \b "LOCAL_FR_SPEED" - choose locally computed freezing speed (i.e. in each cell)
 !!
