@@ -2,8 +2,8 @@ PROG      = piernik
 
 ### gcc-4.7
 F90       = /usr/local/openmpi/1.6.5/devtoolset21/x86_64/bin/mpif90
-F90FLAGS  = -fdefault-real-8 -ffree-form -std=gnu -fimplicit-none -ffree-line-length-none -g  -I/home/valborro/hdf5/include/
-LDFLAGS   = -Wl,--as-needed -Wl,-O1 -L/home/valborro/hdf5/lib/
+F90FLAGS  = -fdefault-real-8 -ffree-form -std=gnu -fimplicit-none -ffree-line-length-none -g
+LDFLAGS   = -Wl,--as-needed -Wl,-O1
 
 ifeq ($(PIERNIK_DEBUG), 1)
    F90FLAGS += -ggdb -O0 -ffpe-trap=zero,overflow,invalid -fcheck=all -fno-omit-frame-pointer
