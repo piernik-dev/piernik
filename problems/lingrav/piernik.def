@@ -10,4 +10,3 @@
 #define GRAV
 
 #undef SHEAR
-#define RTVD
