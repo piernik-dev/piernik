@@ -60,7 +60,6 @@ contains
 
       if (omega_uninitialized) coriolis_omega = 0.
 
-      if (dom%geometry_type /= GEO_XYZ) call die("[coriolis:init_coriolis] Only cartesian geometry is implemented")
 #if !(defined GRAV || defined SHEAR )
       call die("[coriolis:init_coriolis] Check how and under what conditions the rtvd::relaxing_tvd handles additional source terms")
 #endif /* !(GRAV || SHEAR ) */
@@ -76,27 +75,42 @@ contains
 !! \todo add cylindrical geometry support (check carefully what exactly is u(iarr_all_my(:), :)/u(iarr_all_dn(:), :) and fogure out whether any geometrical factors are needed)
 !<
 
-   function coriolis_force(sweep, u) result(rotacc)
+   function coriolis_force(sweep, u, i1, cg) result(rotacc)
 
       use fluidindex, only: flind, iarr_all_dn, iarr_all_mx, iarr_all_my
       use constants,  only: xdim, ydim !, zdim
 
       implicit none
 
-      integer(kind=4), intent(in)              :: sweep  !< string of characters that points out the current sweep direction
-      real, dimension(:,:), intent(in)         :: u      !< current fluid state vector
-      real, dimension(flind%fluids, size(u,2)) :: rotacc !< an array for Coriolis accelerations
+      integer(kind=4), intent(in)               :: sweep  !< string of characters that points out the current sweep direction
+      real, dimension(:,:), intent(in)          :: u      !< current fluid state vector
+      real, dimension(flind%fluids, size(u,2))  :: rotacc !< an array for Coriolis accelerations
+      integer, intent(in)                       :: i1     !< coordinate of sweep in the 1st remaining direction
+      type(grid_container), pointer, intent(in) :: cg     !< current grid piece
 
       ! Coriolis force for corotating coords
-      select case (sweep)
-         case (xdim)
-            rotacc(:,:) = +2.0 * coriolis_omega * u(iarr_all_my(:), :)/u(iarr_all_dn(:), :)
-         case (ydim)
-            rotacc(:,:) = -2.0 * coriolis_omega * u(iarr_all_mx(:), :)/u(iarr_all_dn(:), :)
-!         case (zdim) !no z-component of the Coriolis force
-         case default
-            rotacc(:,:) = 0.0
-      end select
+      ! Cartesian coords
+      if (dom%geometry_type == GEO_XYZ) then
+         select case (sweep)
+            case (xdim)
+               rotacc(:,:) = +2.0 * coriolis_omega * u(iarr_all_my(:), :)/u(iarr_all_dn(:), :)
+            case (ydim)
+               rotacc(:,:) = -2.0 * coriolis_omega * u(iarr_all_mx(:), :)/u(iarr_all_dn(:), :)
+!            case (zdim) !no z-component of the Coriolis force
+            case default
+               rotacc(:,:) = 0.0
+         end select
+      ! cylindrical coords
+      else if (dom%geometry_type == GEO_RPZ) then
+         select case (sweep)
+            case (xdim)
+               rotacc(:,:) = -cg%x(i1) * coriolis_omega**2
+            case (ydim)
+               rotacc(:,:) = 2.0 * coriolis_omega * u(iarr_all_mx(:), :)/u(iarr_all_dn(:), :)
+            case default
+               rotacc(:,:) = 0.0
+         end select
+      endif
 
    end function coriolis_force
 
