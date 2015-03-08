@@ -106,19 +106,8 @@
 #endif
 #endif
 
-
 #if defined(HS2)
 #error Choose only one of { RTVD, HLLC, RIEMANN }.
-#endif
-
-//#if defined(HS2)
-//#if defined(RTVD) && defined(HLLC) && defined(RIEMANN)
-//#error Choose only one of { RTVD, HLLC, RIEMANN }.
-//#endif
-
-#if !defined(HYDRO_SOLVER)
-#  define RTVD
-/* #  warning no hydro solver defined, possible choices { RTVD, HLLC }, defaulting to RTVD */
 #endif
 
 /*
