@@ -24,8 +24,8 @@ class DirectoryWalker:
                     self.files = os.listdir(self.directory)
                     self.index = 0
                 except OSError:
-                    print "\033[91mCannot open problem directory '%s'." % \
-                        self.directory + '\033[0m'
+                    print("\033[91mCannot open problem directory '%s'." % \
+                        self.directory + '\033[0m')
                     sys.exit(-1)
             else:
                 # got a filename
