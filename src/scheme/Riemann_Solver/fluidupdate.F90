@@ -93,7 +93,7 @@ contains
 
      do while (associated(cgl))
 
-        do ddim = zdim, xdim
+        do ddim = zdim, xdim, -1
 
            if (dom%has_dir(ddim)) call sweep(cgl%cg,dt,ddim)
 
