@@ -79,6 +79,7 @@ contains
 
       use fluidindex, only: flind, iarr_all_dn, iarr_all_mx, iarr_all_my
       use constants,  only: xdim, ydim !, zdim
+      use grid_cont,  only: grid_container
 
       implicit none
 
