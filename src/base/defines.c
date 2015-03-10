@@ -122,8 +122,8 @@
 #  endif
 #endif
 
-#if defined HLLC && defined CORIOLIS
-#error CORIOLIS for HLLC scheme has not been implemented yet.
+#if (defined(HLLC) || defined(RIEMANN)) && defined CORIOLIS
+#error CORIOLIS has been implemented only for RTVD so far.
 #endif
 
 #ifdef USER_RULES
