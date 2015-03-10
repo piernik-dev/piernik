@@ -8,6 +8,7 @@
 
 #undef GRAV
 
+#define CORIOLIS
 #if !(defined(HLLC))
 #define RTVD
 #endif

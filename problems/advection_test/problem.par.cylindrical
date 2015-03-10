@@ -71,6 +71,10 @@
     limiter= 'vanleer'
  /
 
+ $CORIOLIS
+    omega        = 1.0      ! angular freq.
+ /
+
  $PROBLEM_CONTROL
     pulse_vel = 0., 6., 0. !2., -2., 2.
     pulse_off = -2., -3., 0.
