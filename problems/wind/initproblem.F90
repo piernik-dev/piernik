@@ -109,7 +109,7 @@ contains
       type(cg_list_element),  pointer :: cgl
       type(grid_container),   pointer :: cg
 
-      fl => flind%neu
+      fl => flind%ion
 
       cgl => leaves%first
       do while (associated(cgl))
