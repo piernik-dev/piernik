@@ -18,13 +18,13 @@ contains
 !-----------------------------------------------------------------------------
 
    subroutine problem_pointers
-
-      use user_hooks, only: problem_customize_solution
-
+! 
+!       use user_hooks, only: problem_customize_solution
+! 
       implicit none
-
-      problem_customize_solution => impose_inflow
-
+! 
+!       problem_customize_solution => impose_inflow
+! 
    end subroutine problem_pointers
 
 !-----------------------------------------------------------------------------
