@@ -1,6 +1,6 @@
-#define NEUTRAL
+#define IONIZED
 
-#undef ISO
+#define ISO
 
 #define LOCAL_FR_SPEED
 #undef  MAGNETIC

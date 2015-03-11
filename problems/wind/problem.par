@@ -19,7 +19,6 @@
  /
 
  $UNITS
-    units_set = "cgs"
  /
 
  $RESTART_CONTROL
@@ -47,10 +46,6 @@
     cs_iso = 0.2
  /
 
- $FLUID_NEUTRAL
-    gamma = 1.01
- /
-
  $NUMERICAL_SETUP
     cfl    = 0.8
     smalld = 1.e-6
@@ -75,23 +70,10 @@
  /
 
  $PROBLEM_CONTROL
-    xblob = -2.3e11
-    yblob = 0.0
-    zblob = 0.0
-    dblob = 1.e20
-    Tblob = 3500
-    dnblob = 1.0e0
-    dnambfac  = 1.e-5
-    p0ambfac = 1.e-2
-    rclear = 1.e10
-    vxfac = 10.0
-    taucool = 1e30
+    mdot = 1.e-7
 /
 
  $INTERACTIONS
- /
-
- $PIERNIK_DEBUG
  /
 
  $AMR
