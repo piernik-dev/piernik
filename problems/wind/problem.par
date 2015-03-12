@@ -1,5 +1,5 @@
  $BASE_DOMAIN
-    n_d = 16, 16, 8
+    n_d = 32, 32, 8
     nb=4
     bnd_xl = 'ref'
     bnd_xr = 'out'
@@ -28,14 +28,14 @@
  /
 
  $END_CONTROL
-    tend   = 10.0
+    tend   = 100.0
     nend   = 1000000
  /
 
  $OUTPUT_CONTROL
     problem_name ='wind'
     run_id  =  'tst'
-    dt_hdf  = 1.0e-1
+    dt_hdf  = 1.0e1
     dt_res  = 0.0
     dt_log  = 0.001
     dt_tsl  = 0.001
@@ -70,7 +70,7 @@
  /
 
  $PROBLEM_CONTROL
-    mdot = 1.e-7
+    mdot = 1
 /
 
  $INTERACTIONS
