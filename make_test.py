@@ -21,6 +21,7 @@ class MakeTest(object):
       os.chdir(self.initpath)
 
    def put_png(self):
+      return
       server = xmlrpclib.ServerProxy("http://piernik:p1ern1k@hum/piernik/login/xmlrpc")
       for file in os.listdir(self.runpath):
          if file.find('png') != -1:
@@ -71,4 +72,3 @@ def main(argv):
 
 if __name__ == "__main__":
     main(sys.argv[1:])
-
