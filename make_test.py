@@ -3,7 +3,6 @@ import sys
 import getopt
 import os
 import subprocess as sp
-import shutil as sh
 import xmlrpclib
 
 
