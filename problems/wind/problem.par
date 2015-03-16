@@ -7,12 +7,12 @@
     bnd_yr = 'out'
     bnd_zl = 'outd'
     bnd_zr = 'outd'
-    xmin   = .5
-    xmax   = 4
-    ymin   = -1.5
-    ymax   = 1.5
-    zmin   = -.5
-    zmax   = .5
+    xmin   = 5.
+    xmax   = 40.
+    ymin   = -15.
+    ymax   = 15.
+    zmin   = -5.
+    zmax   = 5.
  /
 
  $MPI_BLOCKS
@@ -49,8 +49,8 @@
 
  $NUMERICAL_SETUP
     cfl    = 0.8
-    smalld = 1.e-6
-    smallei= 1.e-6
+    smalld = 1.e-20
+    smallei= 1.e-20
     integration_order = 2
     limiter= 'vanleer'
  /
