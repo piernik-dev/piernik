@@ -128,7 +128,7 @@ contains
                   cg%u(fl%ien,i,j,k) = fl%cs2/(fl%gam_1)*cg%u(fl%idn,i,j,k)
                   cg%u(fl%ien,i,j,k) = cg%u(fl%ien,i,j,k) + 0.5*vel**2*cg%u(fl%idn,i,j,k)
 
-                  phi = atan(yj/xi)
+                  phi = atan2(yj, xi)
                   theta = acos(zk/rc)
                   vx = vel*sin(theta)*cos(phi)
                   vy = vel*sin(theta)*sin(phi)
