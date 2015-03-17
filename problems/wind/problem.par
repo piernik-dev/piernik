@@ -1,7 +1,7 @@
  $BASE_DOMAIN
     n_d = 32, 32, 8
     nb=4
-    bnd_xl = 'ref'
+    bnd_xl = 'out'
     bnd_xr = 'out'
     bnd_yl = 'out'
     bnd_yr = 'out'
@@ -34,7 +34,7 @@
  /
 
  $OUTPUT_CONTROL
-    problem_name ='wind'
+    problem_name = 'wind'
     run_id  =  'tst'
     dt_hdf  = 1.0
     dt_res  = 0.0
@@ -53,17 +53,6 @@
     smallei= 1.e-20
     integration_order = 2
     limiter= 'vanleer'
- /
-
- $GRAVITY
-    external_gp = "GRAV_PTMASS"
-    ptmass  = 1.
-    ptm_x   = 0.0
-    ptm_y   = 10.
-    ptm_z   = 0.0
-    r_smooth= 0.1
-    nsub    = 10
-    n_gravr = 10
  /
 
  $RESISTIVITY
