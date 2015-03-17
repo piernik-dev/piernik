@@ -290,7 +290,7 @@ contains
 
       tsl_firstcall      = .true.
       use_v2_io          = .true.
-      gdf_strict         = .false.
+      gdf_strict         = .true.
       nproc_io           = nproc
       enable_compression = .false.
       gzip_level         = 9
