@@ -62,6 +62,7 @@ module helpers_hdf5
       module procedure create_dataset_int8_dim2
       module procedure create_dataset_int4_dim1
       module procedure create_dataset_int8_dim1
+      module procedure create_dataset_real_scalar
    end interface
 
 contains
@@ -229,6 +230,34 @@ contains
       call h5sclose_f(space, hdferr)
 
    end subroutine create_dataset_int8_dim1
+
+!> \brief Create native real dataset (scalar) in the given place_id.
+!
+   subroutine create_dataset_real_scalar(place, dname, ddata)
+
+      use hdf5,          only: HID_T, HSIZE_T, H5T_NATIVE_DOUBLE, H5S_SCALAR_F, &
+          &                    h5dcreate_f, h5dclose_f, h5screate_f, h5sclose_f, h5dwrite_f
+      use iso_c_binding, only: c_ptr, c_loc
+
+      implicit none
+
+      integer(HID_T),                         intent(in) :: place !< object id where dataset will be created
+      character(len=*),                       intent(in) :: dname !< name of dataset
+      real(kind=8),                           intent(in) :: ddata !< data used to create dataset
+
+      integer(HID_T)                                     :: dset, space, mem_type
+      integer(kind=4)                                    :: hdferr
+      integer(HSIZE_T), dimension(1)                     :: dims
+      type(c_ptr)                                        :: f_ptr
+
+      dims(1) = -99
+      call h5screate_f(H5S_SCALAR_F, space, hdferr)
+      call h5dcreate_f(place, dname, H5T_NATIVE_DOUBLE, space, dset, hdferr)
+      call h5dwrite_f(dset, H5T_NATIVE_DOUBLE, ddata, dims, hdferr)
+      call h5dclose_f(dset,  hdferr)
+      call h5sclose_f(space, hdferr)
+
+   end subroutine create_dataset_real_scalar
 
 !> \brief Attach an 32-bit integer attribute (scalar or rank-1 small array) to the given group.
 !
