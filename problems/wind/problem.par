@@ -35,6 +35,7 @@
 
  $OUTPUT_CONTROL
     problem_name = 'wind'
+    gdf_strict = .true.
     run_id  =  'tst'
     dt_hdf  = 1.0
     dt_res  = 0.0
