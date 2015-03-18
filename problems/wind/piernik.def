@@ -5,4 +5,6 @@
 #define LOCAL_FR_SPEED
 #undef  MAGNETIC
 
+#define GRAV
+
 #define RTVD
