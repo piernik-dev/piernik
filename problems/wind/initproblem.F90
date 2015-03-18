@@ -125,8 +125,10 @@ contains
 
                   call vel_profile(rc, vel, dens)
                   cg%u(fl%idn,i,j,k) = max(dens, smalld)
-                  cg%u(fl%ien,i,j,k) = fl%cs2/(fl%gam_1)*cg%u(fl%idn,i,j,k)
-                  cg%u(fl%ien,i,j,k) = cg%u(fl%ien,i,j,k) + 0.5*vel**2*cg%u(fl%idn,i,j,k)
+                  if (fl%ien > 1) then
+                     cg%u(fl%ien,i,j,k) = fl%cs2/(fl%gam_1)*cg%u(fl%idn,i,j,k)
+                     cg%u(fl%ien,i,j,k) = cg%u(fl%ien,i,j,k) + 0.5*vel**2*cg%u(fl%idn,i,j,k)
+                  endif
 
                   phi = atan2(yj, xi)
                   theta = acos(zk/rc)
