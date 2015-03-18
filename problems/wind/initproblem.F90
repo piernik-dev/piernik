@@ -31,9 +31,7 @@ contains
 
    subroutine read_problem_par
 
-      use constants,  only: xdim
       use dataio_pub, only: nh      ! QA_WARN required for diff_nml
-      use domain,     only: dom
       use mpisetup,   only: rbuff, master, slave, piernik_MPI_Bcast
 
       implicit none
