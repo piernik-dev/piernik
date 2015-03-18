@@ -18,13 +18,13 @@ contains
 !-----------------------------------------------------------------------------
 
    subroutine problem_pointers
-! 
-!       use user_hooks, only: problem_customize_solution
-! 
+
+      use user_hooks, only: problem_customize_solution
+
       implicit none
-! 
-!       problem_customize_solution => impose_inflow
-! 
+
+      problem_customize_solution => problem_customize_solution_wind
+
    end subroutine problem_pointers
 
 !-----------------------------------------------------------------------------
@@ -146,5 +146,70 @@ contains
       enddo
 
    end subroutine problem_initial_conditions
+
+   subroutine problem_customize_solution_wind(forward)
+      ! impose wind inflow after sweeps and modify the fluid data
+
+      use cg_leaves,        only: leaves
+      use cg_list,          only: cg_list_element
+      use constants,        only: xdim, ydim, zdim, LO, HI
+      use global,           only: smalld
+      use grid_cont,        only: grid_container
+      use all_boundaries,   only: all_fluid_boundaries
+      use fluidindex,       only: flind
+      use fluidtypes,       only: component_fluid
+
+      implicit none
+
+      class(component_fluid), pointer :: fl
+      logical, intent(in)             :: forward
+      integer                         :: i, j, k
+      type(cg_list_element), pointer  :: cgl
+      type(grid_container),  pointer  :: cg
+      real                            :: xi, yj, vx, vy, vz, zk, rc, vel,&
+                                       dens, phi, theta
+
+      fl => flind%ion
+
+      cgl => leaves%first
+      do while (associated(cgl))
+         cg => cgl%cg
+
+         do i = cg%lhn(xdim,LO), cg%lhn(xdim,HI)
+            xi = cg%x(i)
+            do j = cg%lhn(ydim,LO), cg%lhn(ydim,HI)
+               yj = cg%y(j)
+               do k = cg%lhn(zdim,LO), cg%lhn(zdim,HI)
+                  zk = cg%z(k)
+                  rc = sqrt(xi**2 + yj**2 + zk**2)
+
+                  if (rc < 10) then
+                     call vel_profile(rc, vel, dens)
+                     cg%u(fl%idn,i,j,k) = max(dens, smalld)
+
+                     phi = atan2(yj, xi)
+                     theta = acos(zk/rc)
+                     vx = vel*sin(theta)*cos(phi)
+                     vy = vel*sin(theta)*sin(phi)
+                     vz = vel*cos(theta)
+
+                     cg%u(fl%imx,i,j,k) = vx*cg%u(fl%idn,i,j,k)
+                     cg%u(fl%imy,i,j,k) = vy*cg%u(fl%idn,i,j,k)
+                     cg%u(fl%imz,i,j,k) = vz*cg%u(fl%idn,i,j,k)
+                  endif
+
+               enddo
+            enddo
+         enddo
+
+         cgl => cgl%nxt
+      enddo
+
+      call all_fluid_boundaries
+
+      return
+      if (forward) i = j ! suppress compiler warnings on unused arguments
+
+   end subroutine problem_customize_solution_wind
 
 end module initproblem
