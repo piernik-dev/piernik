@@ -155,7 +155,7 @@ contains
 
       call h5gcreate_f(file, gname, g_id, error)
       call h5ltset_attribute_string_f(g_id, gname2, 'data_software', 'piernik', error )
-      call h5ltset_attribute_string_f(g_id, gname2, 'data_software_version', '1.0', error )
+      call h5ltset_attribute_string_f(g_id, gname2, 'data_software_version', '1.1', error )
       call h5gclose_f(g_id, error)
 
    end subroutine gdf_create_format_stamp
