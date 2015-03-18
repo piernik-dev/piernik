@@ -34,7 +34,7 @@ module gdf
 ! pulled by HDF5
    implicit none
    private
-   public :: gdf_create_root_datasets, gdf_create_simulation_parameters, gdf_create_format_stamp, gdf_create_field_types, gdf_field_type, fmax
+   public :: gdf_create_root_datasets, gdf_create_simulation_parameters, gdf_create_format_stamp, gdf_create_root_group, gdf_field_type, fmax
    public :: gdf_parameters_T, gdf_root_datasets_T, GDF_CARTESIAN, GDF_POLAR, GDF_CYLINDRICAL, GDF_SPHERICAL
 
    integer, parameter :: fmax = 60
@@ -160,13 +160,14 @@ contains
 
    end subroutine gdf_create_format_stamp
 
-   subroutine gdf_create_field_types(filename, o_func)
+   subroutine gdf_create_root_group(filename, gname, o_func)
 
       use hdf5, only: HID_T, h5gcreate_f, h5gclose_f, h5fopen_f, h5fclose_f, H5F_ACC_RDWR_F, h5open_f, h5close_f
 
       implicit none
 
       character(len=*), intent(in) :: filename
+      character(len=*), intent(in) :: gname
       interface
          subroutine o_func(group_id)
             use hdf5, only: HID_T
@@ -177,7 +178,6 @@ contains
 
       integer(HID_T) :: g_id, file_id
       integer(kind=4) :: error
-      character(len=*), parameter :: gname = 'field_types'
 
       call h5open_f(error)
       call h5fopen_f(filename, H5F_ACC_RDWR_F, file_id, error)
@@ -187,7 +187,7 @@ contains
       call h5fclose_f(file_id, error)
       call h5close_f(error)
 
-   end subroutine gdf_create_field_types
+   end subroutine gdf_create_root_group
 
    subroutine gdf_root_datasets_init_existing(this, cg_all_n_b, cg_all_rl, cg_all_off, cg_all_parents, cg_all_particles)
       implicit none
