@@ -54,7 +54,8 @@ module helpers_hdf5
       module procedure create_int_attribute
       module procedure create_str_attribute
       module procedure create_int8_attribute
-      module procedure create_real_attribute
+      module procedure create_real_attribute_scalar
+      module procedure create_real_attribute_dim1
    end interface
 
    interface create_dataset
@@ -315,9 +316,9 @@ contains
 
    end subroutine create_int8_attribute
 
-!> \brief Attach an 64-bit real attribute (scalar or rank-1 small array) to the given group.
+!> \brief Attach an 64-bit real attribute (rank-1 small array) to the given group.
 !
-   subroutine create_real_attribute(g_id, name, real_array)
+   subroutine create_real_attribute_dim1(g_id, name, real_array)
 
       use hdf5, only: H5T_NATIVE_DOUBLE, HID_T, HSIZE_T, &
            &          h5acreate_f, h5aclose_f, h5awrite_f, h5screate_simple_f, h5sclose_f
@@ -339,14 +340,40 @@ contains
       call h5aclose_f(attr_id, error)
       call h5sclose_f(aspace_id, error)
 
-   end subroutine create_real_attribute
+   end subroutine create_real_attribute_dim1
+
+!> \brief Attach an 64-bit real attribute (scalar) to the given group.
+!
+   subroutine create_real_attribute_scalar(g_id, name, real_data)
+
+      use hdf5, only: H5T_NATIVE_DOUBLE, HID_T, HSIZE_T, H5S_SCALAR_F, &
+           &          h5acreate_f, h5aclose_f, h5awrite_f, h5screate_f, h5sclose_f
+
+      implicit none
+
+      integer(HID_T),             intent(in) :: g_id       !< group id where to create the attribute
+      character(len=*),           intent(in) :: name       !< name
+      real(kind=8),               intent(in) :: real_data !< the data
+
+      integer(HID_T)                         :: aspace_id, attr_id
+      integer(kind=4)                        :: error
+      integer(HSIZE_T), dimension(I_ONE)     :: dims
+
+      dims = -99
+      call h5screate_f(H5S_SCALAR_F, aspace_id, error)
+      call h5acreate_f(g_id, name, H5T_NATIVE_DOUBLE, aspace_id, attr_id, error)
+      call h5awrite_f(attr_id, H5T_NATIVE_DOUBLE, real_data, dims, error)
+      call h5aclose_f(attr_id, error)
+      call h5sclose_f(aspace_id, error)
+
+   end subroutine create_real_attribute_scalar
 
 !> \brief Attach an string attribute (scalar) to the given group.
 !
    subroutine create_str_attribute(g_id, name, data)
 
-      use hdf5,          only: HID_T, HSIZE_T, SIZE_T, &
-           &                   h5acreate_f, h5aclose_f, h5awrite_f, h5screate_simple_f, h5sclose_f, &
+      use hdf5,          only: HID_T, HSIZE_T, SIZE_T, H5S_SCALAR_F, &
+           &                   h5acreate_f, h5aclose_f, h5awrite_f, h5screate_f, h5sclose_f, &
            &                   H5Tcopy_f, H5T_C_S1, H5Tset_size_f, H5T_FORTRAN_S1, H5Tset_size_f, H5tclose_f
       use iso_c_binding, only: c_loc, c_ptr
 
@@ -367,7 +394,7 @@ contains
       call H5Tcopy_f( H5T_FORTRAN_S1, memtype, error)
       call H5Tset_size_f(memtype, int(len(data), SIZE_T), error)
 
-      call h5screate_simple_f(I_ONE, dims, space, error)
+      call h5screate_f(H5S_SCALAR_F, space, error)
       call H5Acreate_f(g_id, name, filetype, space, attr_id, error)
       f_ptr = C_LOC(data(1:1))
       call H5Awrite_f(attr_id, memtype, f_ptr, error)
