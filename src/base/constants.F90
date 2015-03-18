@@ -62,6 +62,11 @@ module constants
       enumerator :: I_ZERO = 0, I_ONE, I_TWO, I_THREE, I_FOUR, I_FIVE, I_SIX, I_SEVEN, I_EIGHT, I_NINE, I_TEN
    end enum
 
+   ! enumerator for length/mass/time/velocity/magnetic field units
+   enum, bind(C)
+      enumerator :: U_LEN = 1, U_MASS, U_TIME, U_VEL, U_MAG
+   end enum
+
    ! irrational number approximations
    real, parameter :: pi         = 3.141592653589793238  !< Pi (Archimedes' constant)
    real, parameter :: dpi        = 2.*pi                 !< doubled Pi
