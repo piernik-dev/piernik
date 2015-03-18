@@ -48,6 +48,10 @@
     cs_iso = 1. ! 3000 K bin units
  /
 
+ $FLUID_NEUTRAL
+    gamma = 1.01
+/
+
  $NUMERICAL_SETUP
     cfl    = 0.8
     smalld = 1.e-20

@@ -123,7 +123,8 @@ contains
                   zk = cg%z(k)
                   rc = sqrt(xi**2 + yj**2 + zk**2)
 
-                  call vel_profile(rc, vel, dens)
+!                   call vel_profile(rc, vel, dens)
+                  dens = mdot
                   cg%u(fl%idn,i,j,k) = max(dens, smalld)
                   cg%u(fl%ien,i,j,k) = fl%cs2/(fl%gam_1)*cg%u(fl%idn,i,j,k)
                   cg%u(fl%ien,i,j,k) = cg%u(fl%ien,i,j,k) + 0.5*vel**2*cg%u(fl%idn,i,j,k)
@@ -134,9 +135,9 @@ contains
                   vy = vel*sin(theta)*sin(phi)
                   vz = vel*cos(theta)
 
-                  cg%u(fl%imx,i,j,k) = vx*cg%u(fl%idn,i,j,k)
-                  cg%u(fl%imy,i,j,k) = vy*cg%u(fl%idn,i,j,k)
-                  cg%u(fl%imz,i,j,k) = vz*cg%u(fl%idn,i,j,k)
+                  cg%u(fl%imx,i,j,k) = 0.
+                  cg%u(fl%imy,i,j,k) = 0.
+                  cg%u(fl%imz,i,j,k) = 0.
 
                enddo
             enddo
