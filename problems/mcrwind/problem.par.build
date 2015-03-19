@@ -34,6 +34,7 @@
  /
 
  $OUTPUT_CONTROL
+    gdf_strict = .false.
     problem_name = 'crwind'
     run_id       = 'tst'
     dt_hdf       = 50. !e-6
