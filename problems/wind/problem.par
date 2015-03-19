@@ -7,7 +7,7 @@
     bnd_yr = 'out'
     bnd_zl = 'outd'
     bnd_zr = 'outd'
-    xmin   = 0.
+    xmin   = 5.
     xmax   = 30.
     ymin   = -15.
     ymax   = 15.
@@ -45,8 +45,8 @@
  /
 
  $FLUID_IONIZED
-    cs_iso = 1. ! 3000 K bin units
-    !cs_iso = .7 ! 1000 K bin units
+    !cs_iso = 1. ! 3000 K bin units
+    cs_iso = .7 ! 1000 K bin units
  /
 
  $NUMERICAL_SETUP
