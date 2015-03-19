@@ -7,8 +7,8 @@
     bnd_yr = 'out'
     bnd_zl = 'outd'
     bnd_zr = 'outd'
-    xmin   = 5.
-    xmax   = 35.
+    xmin   = 0.
+    xmax   = 30.
     ymin   = -15.
     ymax   = 15.
     zmin   = -5.
@@ -41,7 +41,7 @@
     dt_res  = 0.0
     dt_log  = 0.001
     dt_tsl  = 0.001
-    vars(1:) = 'ener', 'dens', 'magx', 'magy', 'magz', 'velx', 'vely', 'velz'
+    vars(1:) = 'ener', 'dens', 'velx', 'vely', 'velz'
  /
 
  $FLUID_IONIZED
@@ -60,7 +60,7 @@
  $GRAVITY
     external_gp = "GRAV_PTMASS"
     ptmass  = 1.
-    ptm_x   = 20.0
+    ptm_x   = 10.0
     ptm_y   = 0.
     ptm_z   = 0.0
     r_smooth= 0.1
@@ -79,4 +79,5 @@
  /
 
  $AMR
+    level_max = 2
  /
