@@ -156,8 +156,8 @@ contains
       !call piernik_MPI_Allreduce(cs_max, pMAX)
 
       if (has_neu .and. has_ion) then
-         if (flind%ion%cs2.notequals.flind%neu%cs2) &
-            call warn("[initfluids:init_fluids]: flind%neu%cs2 and flind%ion%cs should be equal")
+         if (flind%ion%cs2 .notequals. flind%neu%cs2) &
+            call warn("[initfluids:init_fluids]: flind%neu%cs2 and flind%ion%cs2 should be equal")
       endif
 
       !> \todo find a better place for the following (somewhere between calling fluid_index and reading restart)
