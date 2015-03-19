@@ -75,13 +75,14 @@ contains
    subroutine vel_profile(r, vel, dens)
    ! velocity profile for isothermal wind
 
+      use fluidindex,  only: flind
       use constants,  only: fpi
 
       implicit none
       real, intent(in)  :: r
       real, intent(out) :: vel, dens
 
-      vel = 2./(1 + exp(2*(1-r)))
+      vel = 2./(1 + exp(2*(1 - r))) * flind%ion%cs
       dens = mdot/fpi/r**2/vel
 
    end subroutine vel_profile

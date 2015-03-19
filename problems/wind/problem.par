@@ -45,7 +45,7 @@
  /
 
  $FLUID_IONIZED
-    cs_iso = 1. ! 3000 K bin units
+    cs_iso = .7 ! 3000 K bin units
  /
 
  $NUMERICAL_SETUP
