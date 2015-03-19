@@ -1,5 +1,5 @@
  $BASE_DOMAIN
-    n_d = 32, 32, 8
+    n_d = 48, 48, 16
     nb=4
     bnd_xl = 'out'
     bnd_xr = 'out'
@@ -8,7 +8,7 @@
     bnd_zl = 'outd'
     bnd_zr = 'outd'
     xmin   = 5.
-    xmax   = 40.
+    xmax   = 35.
     ymin   = -15.
     ymax   = 15.
     zmin   = -5.
@@ -45,7 +45,8 @@
  /
 
  $FLUID_IONIZED
-    cs_iso = .7 ! 3000 K bin units
+    cs_iso = 1. ! 3000 K bin units
+    !cs_iso = .7 ! 1000 K bin units
  /
 
  $NUMERICAL_SETUP
