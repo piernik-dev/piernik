@@ -5,6 +5,8 @@
 #define LOCAL_FR_SPEED
 #undef  MAGNETIC
 
+#define CORIOLIS
+
 #define GRAV
 
 #define RTVD

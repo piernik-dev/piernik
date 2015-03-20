@@ -34,7 +34,7 @@
  /
 
  $OUTPUT_CONTROL
-    problem_name = 'wind_grav'
+    problem_name = 'wind_cor'
     gdf_strict = .true.
     run_id  =  'tst'
     dt_hdf  = 1.0
@@ -59,13 +59,15 @@
 
  $GRAVITY
     external_gp = "GRAV_PTMASS"
-    ptmass  = 1.
-    ptm_x   = 10.0
+    ptmass  = 0.
+    ptm_x   = 0.0
     ptm_y   = 0.
     ptm_z   = 0.0
     r_smooth= 0.1
     nsub    = 10
     n_gravr = 10
+    ptmass  = .6
+    ptm2_x   = 10.0
  /
 
  $RESISTIVITY
