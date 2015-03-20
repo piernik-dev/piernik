@@ -6,14 +6,14 @@
     n_d = 128, 384, 1
     bnd_xl = 'out'
     bnd_xr = 'out'
-    bnd_yl = 'per'
-    bnd_yr = 'per'
+    bnd_yl = 'outd'
+    bnd_yr = 'outd'
     bnd_zl = 'per'
     bnd_zr = 'per'
     xmin   =  1.
     xmax   =  5.
-    ymin   =  0.
-    ymax   =  6.2831853071795862
+    ymin   =  1.7
+    ymax   =  4.71
     zmin   = -1.
     zmax   =  1.
     geometry = "cylindrical"
@@ -57,15 +57,23 @@
     selfgrav = .false.
  /
 
- ! Dust has no temperature and thus has effective gamma = 1. and in cylindrical geometry performs better than non-isothermal fluids
+ ! Dust has no temperature and thus has effective gamma = 1.
+ ! In cylindrical geometry performs better than ultra-cool non-isothermal fluids
  $FLUID_DUST
  /
 
  $NUMERICAL_SETUP
     cfl    = 0.7
     smalld = 1.e-5
-    smallei= 1.e-5
+    smallei= 1.e-1
+    ! Lowering the value of smallei makes the neutral component cooler
+    ! Cool gas exhibits tendences to form large ripples due to advection through the cylindrical grid
+    ! Note that the main purpose of this file is to test correctness of geometrical terms.
     limiter= 'vanleer'
+ /
+
+ $CORIOLIS
+    omega        = 1.0      ! angular freq.
  /
 
  $PROBLEM_CONTROL

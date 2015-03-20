@@ -478,7 +478,7 @@ contains
          acc = acc + shear_acc(sweep,u) ! n safe
 #endif /* SHEAR */
 #ifdef CORIOLIS
-         acc = acc + coriolis_force(sweep,u) ! n safe
+         acc = acc + coriolis_force(sweep, u, i1, cg) ! n safe
 #endif /* CORIOLIS */
 
          if (full_dim) then
