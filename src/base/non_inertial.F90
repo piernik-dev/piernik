@@ -1,0 +1,136 @@
+!
+! PIERNIK Code Copyright (C) 2006 Michal Hanasz
+!
+!    This file is part of PIERNIK code.
+!
+!    PIERNIK is free software: you can redistribute it and/or modify
+!    it under the terms of the GNU General Public License as published by
+!    the Free Software Foundation, either version 3 of the License, or
+!    (at your option) any later version.
+!
+!    PIERNIK is distributed in the hope that it will be useful,
+!    but WITHOUT ANY WARRANTY; without even the implied warranty of
+!    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+!    GNU General Public License for more details.
+!
+!    You should have received a copy of the GNU General Public License
+!    along with PIERNIK.  If not, see <http://www.gnu.org/licenses/>.
+!
+!    Initial implementation of PIERNIK code was based on TVD split MHD code by
+!    Ue-Li Pen
+!        see: Pen, Arras & Wong (2003) for algorithm and
+!             http://www.cita.utoronto.ca/~pen/MHD
+!             for original source code "mhd.f90"
+!
+!    For full list of developers see $PIERNIK_HOME/license/pdt.txt
+!
+#include "piernik.h"
+
+!>
+!! \brief Implementation of the non-inertial forces for rotating grid
+!<
+
+module non_inertial
+
+   implicit none
+
+   private
+   public  :: init_non_inertial, non_inertial_force
+
+   real :: omega
+
+contains
+
+!>
+!! \brief perform basic checks
+!<
+
+   subroutine init_non_inertial
+
+      use dataio_pub, only: nh    ! QA_WARN required for diff_nml
+      use mpisetup,   only: rbuff, master, slave
+      use constants,  only: PIERNIK_INIT_GRID, GEO_XYZ
+      use dataio_pub, only: die, code_progress
+      use domain,     only: dom
+
+      implicit none
+
+      namelist /NON_INERTIAL/ omega
+
+#ifdef VERBOSE
+      if (master) call printinfo("[non_inertial:init_non_inertial] Commencing module initialization")
+#endif /* VERBOSE */
+
+      omega = 0.0
+
+      if (master) then
+
+         if (.not.nh%initialized) call nh%init()
+         open(newunit=nh%lun, file=nh%tmp1, status="unknown")
+         write(nh%lun,nml=NON_INERTIAL)
+         close(nh%lun)
+         open(newunit=nh%lun, file=nh%par_file)
+         nh%errstr=''
+         read(unit=nh%lun, nml=NON_INERTIAL, iostat=nh%ierrh, iomsg=nh%errstr)
+         close(nh%lun)
+         call nh%namelist_errh(nh%ierrh, "NON_INERTIAL")
+         read(nh%cmdl_nml,nml=NON_INERTIAL, iostat=nh%ierrh)
+         call nh%namelist_errh(nh%ierrh, "NON_INERTIAL", .true.)
+         open(newunit=nh%lun, file=nh%tmp2, status="unknown")
+         write(nh%lun,nml=NON_INERTIAL)
+         close(nh%lun)
+         call nh%compare_namelist()
+
+         rbuff(1) = omega
+
+      endif
+
+      call piernik_MPI_Bcast(rbuff)
+
+      if (slave) then
+
+         omega = rbuff(1)
+
+      endif
+
+      if (code_progress < PIERNIK_INIT_GRID) call die("[non_inertial:init_non_inertial] grid not initialized.") ! this is a weak check, the real dependency is init_geometry at the moment
+
+      if (dom%geometry_type /= GEO_XYZ) call die("[non_inertial:init_non_inertial] Only cartesian geometry is implemented")
+#if !(defined GRAV || defined SHEAR )
+      call die("non_inertial:init_non_inertial] Check how and under what conditions the rtvd::relaxing_tvd handles additional source terms")
+#endif /* !(GRAV || SHEAR ) */
+
+   end subroutine init_non_inertial
+
+!>
+!! \brief Compute the non-inertial acceleration for a given row of cells.
+!!
+!! \details This is a low-order estimate of the accelerations, because this routine uses density and velocity fields
+!! from the beginning of the time step. This is a simple approach, but ignores any changes due to other accelerations during the time step.
+!<
+
+   function non_inertial_force(sweep, u) result(rotacc)
+
+      use fluidindex, only: flind, iarr_all_dn, iarr_all_mx, iarr_all_my
+      use constants,  only: xdim, ydim !, zdim
+
+      implicit none
+
+      integer(kind=4), intent(in)              :: sweep  !< string of characters that points out the current sweep direction
+      real, dimension(:,:), intent(in)         :: u      !< current fluid state vector
+      real, dimension(flind%fluids, size(u,2)) :: rotacc !< an array for non-inertial accelerations
+
+      ! non-inertial force for corotating coords
+      select case (sweep)
+         case (xdim)
+            rotacc(:,:) = +2.0 * omega * u(iarr_all_my(:), :)/u(iarr_all_dn(:), :)
+         case (ydim)
+            rotacc(:,:) = -2.0 * omega * u(iarr_all_mx(:), :)/u(iarr_all_dn(:), :)
+!         case (zdim) !no z-component of the Coriolis force
+         case default
+            rotacc(:,:) = 0.0
+      end select
+
+   end function non_inertial_force
+
+end module non_inertial
