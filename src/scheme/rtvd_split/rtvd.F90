@@ -271,6 +271,9 @@ contains
 #ifdef CORIOLIS
       use coriolis,         only: coriolis_force
 #endif /* CORIOLIS */
+#ifdef NON_INERTIAL
+      use non_inertial,     only: non_inertial_force
+#endif /* NON_INERTIAL */
 #ifdef SHEAR
       use shear,            only: shear_acc
 #endif /* SHEAR */
@@ -480,6 +483,9 @@ contains
 #ifdef CORIOLIS
          acc = acc + coriolis_force(sweep,u) ! n safe
 #endif /* CORIOLIS */
+#ifdef NON_INERTIAL
+         acc = acc + non_inertial_force(sweep, u, cg) ! n safe
+#endif /* NON_INERTIAL */
 
          if (full_dim) then
 #ifdef GRAV

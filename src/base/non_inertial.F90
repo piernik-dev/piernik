@@ -109,23 +109,24 @@ contains
 !! from the beginning of the time step. This is a simple approach, but ignores any changes due to other accelerations during the time step.
 !<
 
-   function non_inertial_force(sweep, u) result(rotacc)
+   function non_inertial_force(sweep, u, cg) result(rotacc)
 
       use fluidindex, only: flind, iarr_all_dn, iarr_all_mx, iarr_all_my
       use constants,  only: xdim, ydim !, zdim
 
       implicit none
 
-      integer(kind=4), intent(in)              :: sweep  !< string of characters that points out the current sweep direction
-      real, dimension(:,:), intent(in)         :: u      !< current fluid state vector
-      real, dimension(flind%fluids, size(u,2)) :: rotacc !< an array for non-inertial accelerations
+      integer(kind=4), intent(in)               :: sweep  !< string of characters that points out the current sweep direction
+      type(grid_container), pointer, intent(in) :: cg     !< current grid piece
+      real, dimension(:,:), intent(in)          :: u      !< current fluid state vector
+      real, dimension(flind%fluids, size(u,2))  :: rotacc !< an array for non-inertial accelerations
 
       ! non-inertial force for corotating coords
       select case (sweep)
          case (xdim)
-            rotacc(:,:) = +2.0 * omega * u(iarr_all_my(:), :)/u(iarr_all_dn(:), :)
+            rotacc(:,:) = +2.0 * omega * u(iarr_all_my(:), :)/u(iarr_all_dn(:), :) + omega**2 * cg%x
          case (ydim)
-            rotacc(:,:) = -2.0 * omega * u(iarr_all_mx(:), :)/u(iarr_all_dn(:), :)
+            rotacc(:,:) = -2.0 * omega * u(iarr_all_mx(:), :)/u(iarr_all_dn(:), :) + omega**2 * cg%y
 !         case (zdim) !no z-component of the Coriolis force
          case default
             rotacc(:,:) = 0.0
