@@ -37,7 +37,7 @@ module non_inertial
    private
    public  :: init_non_inertial, non_inertial_force
 
-   real :: omega
+   real :: omega, omegadot
 
 contains
 
@@ -55,33 +55,35 @@ contains
 
       implicit none
 
-      namelist /NON_INERTIAL/ omega
+      namelist /NONINERTIAL/ omega, omegadot
 
 #ifdef VERBOSE
       if (master) call printinfo("[non_inertial:init_non_inertial] Commencing module initialization")
 #endif /* VERBOSE */
 
       omega = 0.0
+      omegadot = 0.0
 
       if (master) then
 
          if (.not.nh%initialized) call nh%init()
          open(newunit=nh%lun, file=nh%tmp1, status="unknown")
-         write(nh%lun,nml=NON_INERTIAL)
+         write(nh%lun,nml=NONINERTIAL)
          close(nh%lun)
          open(newunit=nh%lun, file=nh%par_file)
          nh%errstr=''
-         read(unit=nh%lun, nml=NON_INERTIAL, iostat=nh%ierrh, iomsg=nh%errstr)
+         read(unit=nh%lun, nml=NONINERTIAL, iostat=nh%ierrh, iomsg=nh%errstr)
          close(nh%lun)
-         call nh%namelist_errh(nh%ierrh, "NON_INERTIAL")
-         read(nh%cmdl_nml,nml=NON_INERTIAL, iostat=nh%ierrh)
-         call nh%namelist_errh(nh%ierrh, "NON_INERTIAL", .true.)
+         call nh%namelist_errh(nh%ierrh, "NONINERTIAL")
+         read(nh%cmdl_nml,nml=NONINERTIAL, iostat=nh%ierrh)
+         call nh%namelist_errh(nh%ierrh, "NONINERTIAL", .true.)
          open(newunit=nh%lun, file=nh%tmp2, status="unknown")
-         write(nh%lun,nml=NON_INERTIAL)
+         write(nh%lun,nml=NONINERTIAL)
          close(nh%lun)
          call nh%compare_namelist()
 
          rbuff(1) = omega
+         rbuff(2) = omegadot
 
       endif
 
@@ -89,7 +91,8 @@ contains
 
       if (slave) then
 
-         omega = rbuff(1)
+         omega    = rbuff(1)
+         omegadot = rbuff(2)
 
       endif
 
@@ -113,6 +116,7 @@ contains
 
       use fluidindex, only: flind, iarr_all_dn, iarr_all_mx, iarr_all_my
       use constants,  only: xdim, ydim !, zdim
+      use grid_cont,  only: grid_container
 
       implicit none
 
