@@ -48,7 +48,7 @@ contains
    subroutine init_non_inertial
 
       use dataio_pub, only: nh    ! QA_WARN required for diff_nml
-      use mpisetup,   only: rbuff, master, slave
+      use mpisetup,   only: rbuff, master, slave, piernik_MPI_Bcast
       use constants,  only: PIERNIK_INIT_GRID, GEO_XYZ
       use dataio_pub, only: die, code_progress
       use domain,     only: dom
@@ -118,20 +118,23 @@ contains
       implicit none
 
       integer(kind=4), intent(in)               :: sweep  !< string of characters that points out the current sweep direction
+      integer                                   :: i
       type(grid_container), pointer, intent(in) :: cg     !< current grid piece
       real, dimension(:,:), intent(in)          :: u      !< current fluid state vector
       real, dimension(flind%fluids, size(u,2))  :: rotacc !< an array for non-inertial accelerations
 
       ! non-inertial force for corotating coords
-      select case (sweep)
-         case (xdim)
-            rotacc(:,:) = +2.0 * omega * u(iarr_all_my(:), :)/u(iarr_all_dn(:), :) + omega**2 * cg%x
-         case (ydim)
-            rotacc(:,:) = -2.0 * omega * u(iarr_all_mx(:), :)/u(iarr_all_dn(:), :) + omega**2 * cg%y
-!         case (zdim) !no z-component of the Coriolis force
-         case default
-            rotacc(:,:) = 0.0
-      end select
+      do i = 1, flind%all
+         select case (sweep)
+            case (xdim)
+               rotacc(:,i) = +2.0 * omega * u(iarr_all_my(:), i)/u(iarr_all_dn(:), i) + omega**2 * cg%x
+            case (ydim)
+               rotacc(:,i) = -2.0 * omega * u(iarr_all_mx(:), i)/u(iarr_all_dn(:), i) + omega**2 * cg%y
+   !         case (zdim) !no z-component of the Coriolis force
+            case default
+               rotacc(:,i) = 0.0
+         end select
+      enddo
 
    end function non_inertial_force
 
