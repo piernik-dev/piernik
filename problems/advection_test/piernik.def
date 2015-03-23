@@ -3,6 +3,7 @@
 #define NEUTRAL
 #define DUST
 #define LOCAL_FR_SPEED
+#define NON_INERTIAL
 
 #undef ISO
 

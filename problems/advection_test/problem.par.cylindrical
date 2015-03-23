@@ -79,6 +79,10 @@
     usedust = .true.
  /
 
+ $NONINERTIAL
+    omega = 1.e2
+ /
+
  $INTERACTIONS
  /
 
