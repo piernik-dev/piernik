@@ -9,9 +9,9 @@ module initproblem
    private
    public :: read_problem_par, vel_profile, problem_initial_conditions, problem_pointers
 
-   real :: mdot
+   real :: mstar, mdot
 
-   namelist /PROBLEM_CONTROL/  mdot
+   namelist /PROBLEM_CONTROL/  mstar, mdot
 
 contains
 
@@ -36,7 +36,8 @@ contains
 
       implicit none
 
-      mdot = 1.
+      mstar = 0.
+      mdot  = 0.
 
       if (master) then
 
@@ -56,7 +57,8 @@ contains
          close(nh%lun)
          call nh%compare_namelist()
 
-         rbuff(1)  = mdot
+         rbuff(1)  = mstar
+         rbuff(2)  = mdot
 
       endif
 
@@ -64,7 +66,8 @@ contains
 
       if (slave) then
 
-         mdot = rbuff(1)
+         mstar = rbuff(1)
+         mdot  = rbuff(2)
 
       endif
 
@@ -77,13 +80,17 @@ contains
 
       use fluidindex, only: flind
       use constants,  only: fpi
+      use units,      only: newtong
 
       implicit none
       real, intent(in)  :: r
       real, intent(out) :: vel, dens
       real, parameter   :: r_smooth = 1.
+      real              :: r_c
 
-      vel = 2./(1 + exp(2*(1 - r))) * flind%ion%cs
+      ! r_c = G*M/2/c_s**2
+      r_c = newtong*mstar/2./flind%ion%cs2
+      vel = 2./(1 + exp(2*(1 - r/r_c))) * flind%ion%cs
       dens = mdot/fpi/(r**2 + r_smooth**2)/vel
 
    end subroutine vel_profile

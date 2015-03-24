@@ -76,7 +76,8 @@
  /
 
  $PROBLEM_CONTROL
-    mdot = 1e-7
+    mstar = 2.
+    mdot  = 1e-7
 /
 
  $INTERACTIONS
