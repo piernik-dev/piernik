@@ -69,7 +69,7 @@
  /
 
  $NONINERTIAL
-    omega = 10./15.
+    omega = .4 ! 2*pi/15
  /
 
  $RESISTIVITY
@@ -78,7 +78,7 @@
  $PROBLEM_CONTROL
     mstar = 2.
     mdot  = 1e-7
-    rdust = 6.
+    rdust = 5.
 /
 
  $INTERACTIONS
