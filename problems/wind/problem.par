@@ -78,6 +78,7 @@
  $PROBLEM_CONTROL
     mstar = 2.
     mdot  = 1e-7
+    rdust = 6.
 /
 
  $INTERACTIONS

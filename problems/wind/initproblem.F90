@@ -9,9 +9,9 @@ module initproblem
    private
    public :: read_problem_par, vel_profile, problem_initial_conditions, problem_pointers
 
-   real :: mstar, mdot
+   real :: mstar, mdot, rdust
 
-   namelist /PROBLEM_CONTROL/  mstar, mdot
+   namelist /PROBLEM_CONTROL/  mstar, mdot, rdust
 
 contains
 
@@ -38,6 +38,7 @@ contains
 
       mstar = 0.
       mdot  = 0.
+      rdust = 0.
 
       if (master) then
 
@@ -59,6 +60,7 @@ contains
 
          rbuff(1)  = mstar
          rbuff(2)  = mdot
+         rbuff(3)  = rdust
 
       endif
 
@@ -68,6 +70,7 @@ contains
 
          mstar = rbuff(1)
          mdot  = rbuff(2)
+         rdust = rbuff(3)
 
       endif
 
@@ -192,7 +195,7 @@ contains
                   zk = cg%z(k)
                   rc = sqrt(xi**2 + yj**2 + zk**2)
 
-                  if (rc < 10) then
+                  if (rc < rdust) then
                      call vel_profile(rc, vel, dens)
                      cg%u(fl%idn,i,j,k) = max(dens, smalld)
 
