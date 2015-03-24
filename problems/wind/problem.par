@@ -63,7 +63,7 @@
     ptm_x   = 10.
     ptm_y   = 0.
     ptm_z   = 0.0
-    r_smooth= 0.1
+    r_smooth= 1.
     nsub    = 10
     n_gravr = 10
  /
