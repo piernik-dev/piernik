@@ -90,9 +90,9 @@ contains
       ! Coriolis force for corotating coords
       select case (sweep)
          case (xdim)
-            rotacc(:,:) = +2.0 * coriolis_omega * u(iarr_all_my(:), :)/u(iarr_all_dn(:), :)
+            rotacc(:,:) = +2.0 * coriolis_omega * u(:, iarr_all_my(:))/u(:, iarr_all_dn(:))
          case (ydim)
-            rotacc(:,:) = -2.0 * coriolis_omega * u(iarr_all_mx(:), :)/u(iarr_all_dn(:), :)
+            rotacc(:,:) = -2.0 * coriolis_omega * u(:, iarr_all_mx(:))/u(:, iarr_all_dn(:))
 !         case (zdim) !no z-component of the Coriolis force
          case default
             rotacc(:,:) = 0.0
