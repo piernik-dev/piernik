@@ -135,13 +135,14 @@ contains
 !       enddo
       select case (sweep)
          case (xdim)
-            rotacc(:,:) = +2.0 * omega * u(iarr_all_my(:), :)/u(iarr_all_dn(:), :)
+            rotacc(:,:) = +2.0 * omega * u(:, iarr_all_my(:))/u(:, iarr_all_dn(:))
          case (ydim)
-            rotacc(:,:) = -2.0 * omega * u(iarr_all_mx(:), :)/u(iarr_all_dn(:), :)
+            rotacc(:,:) = -2.0 * omega * u(:, iarr_all_my(:))/u(:, iarr_all_dn(:))
 !         case (zdim) !no z-component of non-inertial forces
          case default
             rotacc(:,:) = 0.0
       end select
+      print *, 'sweep', sweep, xdim, ydim, rotacc
 
    end function non_inertial_force
 
