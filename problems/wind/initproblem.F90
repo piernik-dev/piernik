@@ -9,9 +9,9 @@ module initproblem
    private
    public :: read_problem_par, vel_profile, problem_initial_conditions, problem_pointers
 
-   real :: mstar, mdot, rdust
+   real :: mstar, mdot, rin, rdust
 
-   namelist /PROBLEM_CONTROL/  mstar, mdot, rdust
+   namelist /PROBLEM_CONTROL/  mstar, mdot, rin, rdust
 
 contains
 
@@ -38,6 +38,7 @@ contains
 
       mstar = 0.
       mdot  = 0.
+      rin   = 0.
       rdust = 0.
 
       if (master) then
@@ -60,7 +61,8 @@ contains
 
          rbuff(1)  = mstar
          rbuff(2)  = mdot
-         rbuff(3)  = rdust
+         rbuff(3)  = rin
+         rbuff(4)  = rdust
 
       endif
 
@@ -70,6 +72,7 @@ contains
 
          mstar = rbuff(1)
          mdot  = rbuff(2)
+         rin   = rbuff(3)
          rdust = rbuff(3)
 
       endif
@@ -89,12 +92,17 @@ contains
       real, intent(in)  :: r
       real, intent(out) :: vel, dens
       real, parameter   :: r_smooth = 1.
-      real              :: r_c
+      real              :: r_c, vel0
 
       ! r_c = G*M/2/c_s**2
       r_c = newtong*mstar/2./flind%ion%cs2
       vel = 2./(1 + exp(2*(1 - r/r_c))) * flind%ion%cs
-      dens = mdot/fpi/(r**2 + r_smooth**2)/vel
+      if (r > rin) then
+         dens = mdot/fpi/r**2/vel
+      else
+         vel0 = 2./(1 + exp(2*(1 - rin/r_c))) * flind%ion%cs
+         dens = mdot/fpi/rin**2/vel0
+      endif
 
    end subroutine vel_profile
 
