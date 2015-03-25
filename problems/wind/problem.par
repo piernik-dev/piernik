@@ -1,5 +1,5 @@
  $BASE_DOMAIN
-    n_d = 48, 48, 16
+    n_d = 128, 128, 16
     nb=4
     bnd_xl = 'out'
     bnd_xr = 'out'
@@ -8,11 +8,11 @@
     bnd_zl = 'outd'
     bnd_zr = 'outd'
     xmin   = 0.
-    xmax   = 30.
-    ymin   = -15.
-    ymax   = 15.
-    zmin   = -5.
-    zmax   = 5.
+    xmax   = 20.
+    ymin   = -10.
+    ymax   = 10.
+    zmin   = -4.
+    zmax   = 4.
  /
 
  $MPI_BLOCKS
@@ -34,7 +34,7 @@
  /
 
  $OUTPUT_CONTROL
-    problem_name = 'wind_noninertial'
+    problem_name = 'chcyg_noninertial'
     gdf_strict = .true.
     run_id  =  'tst'
     dt_hdf  = 1.0
