@@ -122,27 +122,27 @@ contains
 
       omega = 1.e2
       ! non-inertial force for corotating coords
-!       do i = 1, flind%all
-!          select case (sweep)
-!             case (xdim)
-!                rotacc(:,i) = +2.0 * omega * u(iarr_all_my(:), i)/u(iarr_all_dn(:), i) + omega**2 * cg%x
-!             case (ydim)
-!                rotacc(:,i) = -2.0 * omega * u(iarr_all_mx(:), i)/u(iarr_all_dn(:), i) + omega**2 * cg%y
-!    !         case (zdim) !no z-component of non-inertial forces
-!             case default
-!                rotacc(:,i) = 0.0
-!          end select
-!       enddo
-      select case (sweep)
-         case (xdim)
-            rotacc(:,:) = +2.0 * omega * u(:, iarr_all_my(:))/u(:, iarr_all_dn(:))
-         case (ydim)
-            rotacc(:,:) = -2.0 * omega * u(:, iarr_all_my(:))/u(:, iarr_all_dn(:))
-!         case (zdim) !no z-component of non-inertial forces
-         case default
-            rotacc(:,:) = 0.0
-      end select
-      print *, 'sweep', sweep, xdim, ydim, rotacc
+      do i = 1, flind%all
+         select case (sweep)
+            case (xdim)
+               rotacc(:,i) = +2.0 * omega * u(:, iarr_all_my(i))/u(:, iarr_all_dn(i)) + omega**2 * cg%x
+            case (ydim)
+               rotacc(:,i) = -2.0 * omega * u(:, iarr_all_mx(i))/u(:, iarr_all_dn(i)) + omega**2 * cg%y
+   !         case (zdim) !no z-component of non-inertial forces
+            case default
+               rotacc(:,i) = 0.0
+         end select
+      enddo
+!       select case (sweep)
+!          case (xdim)
+!             rotacc(:,:) = +2.0 * omega * u(:, iarr_all_my(:))/u(:, iarr_all_dn(:))
+!          case (ydim)
+!             rotacc(:,:) = -2.0 * omega * u(:, iarr_all_my(:))/u(:, iarr_all_dn(:))
+! !         case (zdim) !no z-component of non-inertial forces
+!          case default
+!             rotacc(:,:) = 0.0
+!       end select
+!       print *, 'sweep', sweep, xdim, ydim, rotacc
 
    end function non_inertial_force
 
