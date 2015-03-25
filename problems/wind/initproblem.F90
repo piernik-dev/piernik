@@ -73,7 +73,7 @@ contains
          mstar = rbuff(1)
          mdot  = rbuff(2)
          rin   = rbuff(3)
-         rdust = rbuff(3)
+         rdust = rbuff(4)
 
       endif
 

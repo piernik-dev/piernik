@@ -34,11 +34,11 @@
  /
 
  $OUTPUT_CONTROL
-    problem_name = 'chcyg_noninertial'
+    problem_name = 'chcyg_test'
     gdf_strict = .true.
     run_id  =  'tst'
     dt_hdf  = 1.0
-    dt_res  = 0.0
+    dt_res  = 10.0
     dt_log  = 0.001
     dt_tsl  = 0.001
     vars(1:) = 'ener', 'dens', 'velx', 'vely', 'velz'
