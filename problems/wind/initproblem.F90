@@ -96,11 +96,11 @@ contains
 
       ! r_c = G*M/2/c_s**2
       r_c = newtong*mstar/2./flind%ion%cs2
-      vel = 2./(1 + exp(2*(1 - r/r_c))) * flind%ion%cs
+      vel = 20./(1 + exp(2*(1 - r/r_c))) * flind%ion%cs
       if (r > rin) then
          dens = mdot/fpi/r**2/vel
       else
-         vel0 = 2./(1 + exp(2*(1 - rin/r_c))) * flind%ion%cs
+         vel0 = 20./(1 + exp(2*(1 - rin/r_c))) * flind%ion%cs
          dens = mdot/fpi/rin**2/vel0
       endif
 
