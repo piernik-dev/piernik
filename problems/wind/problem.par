@@ -1,7 +1,7 @@
  $BASE_DOMAIN
     n_d = 64, 64, 16
     nb=4
-    bnd_xl = 'out'
+    bnd_xl = 'ref'
     bnd_xr = 'out'
     bnd_yl = 'out'
     bnd_yr = 'out'
