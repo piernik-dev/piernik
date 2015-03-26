@@ -37,7 +37,7 @@ module non_inertial
    private
    public  :: init_non_inertial, non_inertial_force
 
-   real :: omega
+   real    :: omega !< angular frequency around the z axis
 
 contains
 
@@ -118,10 +118,9 @@ contains
       integer                                   :: i
       type(grid_container), pointer, intent(in) :: cg     !< current grid piece
       real, dimension(:,:), intent(in)          :: u      !< current fluid state vector
-      real, dimension(flind%fluids, size(u,2))  :: rotacc !< an array for non-inertial accelerations
+      real, dimension(size(u,1), flind%fluids)  :: rotacc !< an array for non-inertial accelerations
 
-      omega = 1.e2
-      ! non-inertial force for corotating coords
+      ! non-inertial (Coriolis and centrifugal) forces for corotating coords
       do i = 1, flind%all
          select case (sweep)
             case (xdim)
@@ -133,16 +132,6 @@ contains
                rotacc(:,i) = 0.0
          end select
       enddo
-!       select case (sweep)
-!          case (xdim)
-!             rotacc(:,:) = +2.0 * omega * u(:, iarr_all_my(:))/u(:, iarr_all_dn(:))
-!          case (ydim)
-!             rotacc(:,:) = -2.0 * omega * u(:, iarr_all_my(:))/u(:, iarr_all_dn(:))
-! !         case (zdim) !no z-component of non-inertial forces
-!          case default
-!             rotacc(:,:) = 0.0
-!       end select
-!       print *, 'sweep', sweep, xdim, ydim, rotacc
 
    end function non_inertial_force
 
