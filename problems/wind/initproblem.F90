@@ -9,9 +9,9 @@ module initproblem
    private
    public :: read_problem_par, vel_profile, problem_initial_conditions, problem_pointers
 
-   real :: mstar, mdot, rin, rdust
+   real :: mstar, mdot, rin, rdust, vel_scale
 
-   namelist /PROBLEM_CONTROL/  mstar, mdot, rin, rdust
+   namelist /PROBLEM_CONTROL/  mstar, mdot, rin, rdust, vel_scale
 
 contains
 
@@ -36,10 +36,11 @@ contains
 
       implicit none
 
-      mstar = 0.
-      mdot  = 0.
-      rin   = 0.
-      rdust = 0.
+      mstar     = 0.
+      mdot      = 0.
+      rin       = 0.
+      rdust     = 0.
+      vel_scale = 1.
 
       if (master) then
 
@@ -63,6 +64,7 @@ contains
          rbuff(2)  = mdot
          rbuff(3)  = rin
          rbuff(4)  = rdust
+         rbuff(5)  = vel_scale
 
       endif
 
@@ -70,10 +72,11 @@ contains
 
       if (slave) then
 
-         mstar = rbuff(1)
-         mdot  = rbuff(2)
-         rin   = rbuff(3)
-         rdust = rbuff(4)
+         mstar     = rbuff(1)
+         mdot      = rbuff(2)
+         rin       = rbuff(3)
+         rdust     = rbuff(4)
+         vel_scale = rbuff(5)
 
       endif
 
@@ -96,11 +99,11 @@ contains
 
       ! r_c = G*M/2/c_s**2
       r_c = newtong*mstar/2./flind%ion%cs2
-      vel = 20./(1 + exp(2*(1 - r/r_c))) * flind%ion%cs
+      vel = 2. * vel_scale/(1 + exp(2*(1 - r/r_c))) * flind%ion%cs
       if (r > rin) then
          dens = mdot/fpi/r**2/vel
       else
-         vel0 = 20./(1 + exp(2*(1 - rin/r_c))) * flind%ion%cs
+         vel0 = 2. * vel_scale/(1 + exp(2*(1 - rin/r_c))) * flind%ion%cs
          dens = mdot/fpi/rin**2/vel0
       endif
 

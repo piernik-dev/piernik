@@ -34,11 +34,11 @@
  /
 
  $OUTPUT_CONTROL
-    problem_name = 'chcyg_3d'
+    problem_name = 'chcyg_3d_noniner'
     gdf_strict = .true.
     run_id  =  'tst'
     dt_hdf  = 1.0
-    dt_res  = 10.0
+    dt_res  = 1000.0
     dt_log  = 0.001
     dt_tsl  = 0.001
     vars(1:) = 'ener', 'dens', 'velx', 'vely', 'velz'
@@ -66,6 +66,8 @@
     r_smooth= 1.
     nsub    = 10
     n_gravr = 10
+    !ptmass2 = 0.4
+    !ptm2_x  = 10.
  /
 
  $NONINERTIAL
