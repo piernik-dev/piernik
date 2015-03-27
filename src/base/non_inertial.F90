@@ -115,21 +115,21 @@ contains
       implicit none
 
       integer(kind=4), intent(in)               :: sweep  !< string of characters that points out the current sweep direction
-      integer                                   :: i
+      integer                                   :: ifl
       type(grid_container), pointer, intent(in) :: cg     !< current grid piece
       real, dimension(:,:), intent(in)          :: u      !< current fluid state vector
       real, dimension(size(u,1), flind%fluids)  :: rotacc !< an array for non-inertial accelerations
 
       ! non-inertial (Coriolis and centrifugal) forces for corotating coords
-      do i = 1, flind%all
+      do ifl = 1, flind%fluids
          select case (sweep)
             case (xdim)
-               rotacc(:,i) = +2.0 * omega * u(:, iarr_all_my(i))/u(:, iarr_all_dn(i)) + omega**2 * cg%x
+               rotacc(:, ifl) = +2.0 * omega * u(:, iarr_all_my(ifl))/u(:, iarr_all_dn(ifl)) + omega**2 * cg%x
             case (ydim)
-               rotacc(:,i) = -2.0 * omega * u(:, iarr_all_mx(i))/u(:, iarr_all_dn(i)) + omega**2 * cg%y
+               rotacc(:, ifl) = -2.0 * omega * u(:, iarr_all_mx(ifl))/u(:, iarr_all_dn(ifl)) + omega**2 * cg%y
    !         case (zdim) !no z-component of non-inertial forces
             case default
-               rotacc(:,i) = 0.0
+               rotacc(:, ifl) = 0.0
          end select
       enddo
 
