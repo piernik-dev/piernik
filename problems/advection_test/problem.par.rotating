@@ -65,6 +65,7 @@
  /
 
  $NONINERTIAL
+    omega = 1.
  /
 
  $INTERACTIONS
