@@ -413,10 +413,12 @@ contains
 
       use cg_list,          only: cg_list_element
       use cg_leaves,        only: leaves
-      use constants,        only: xdim, zdim, ndims, GEO_XYZ, GEO_RPZ
+      use constants,        only: xdim, ydim, zdim, ndims, GEO_XYZ, GEO_RPZ
       use dataio_pub,       only: warn, die
       use domain,           only: dom
+      use func,             only: operator(.notequals.)
       use grid_cont,        only: grid_container
+      use non_inertial,     only: get_omega
       use mpisetup,         only: master
       use named_array_list, only: qna
 
@@ -430,8 +432,14 @@ contains
       type(grid_container),   pointer :: cg
       real, dimension(:,:,:), pointer :: inid
       real, dimension(ndims)          :: pos
+      real, dimension(xdim:ydim)      :: paux
+      real                            :: om, cot, sot
 
       pos = 0. ! suppres compiler warning
+      om = get_omega()
+      cot = cos(om * t)
+      sot = sin(om * t)
+
       cgl => leaves%first
       do while (associated(cgl))
          cg => cgl%cg
@@ -448,7 +456,12 @@ contains
 
                   select case (dom%geometry_type)
                      case (GEO_XYZ)
-                        pos = [cg%x(i), cg%y(j), cg%z(k)] - t * pulse_vel(:)
+                        pos = [cg%x(i), cg%y(j), cg%z(k)]
+                        if (om .notequals. 0.) then
+                           paux = [ pos(xdim) * cot - pos(ydim) * sot, pos(xdim) * sot + pos(ydim) * cot ]
+                           pos(xdim:ydim) = paux
+                        endif
+                        pos = pos - t * pulse_vel(:)
                      case (GEO_RPZ)
                         pos = [cg%x(i)*cos(cg%y(j)), cg%x(i)*sin(cg%y(j)), cg%z(k)] - t * pulse_vel(:)
                      case default
