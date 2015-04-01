@@ -124,9 +124,9 @@ contains
       do ifl = 1, flind%fluids
          select case (sweep)
             case (xdim)
-               rotacc(:, ifl) = +2.0 * omega * u(:, iarr_all_my(ifl))/u(:, iarr_all_dn(ifl)) + omega**2 * cg%x
+               rotacc(:, ifl) = +2.0 * omega * u(:, iarr_all_my(ifl))/u(:, iarr_all_dn(ifl)) + omega**2 * cg%x(cg%is:cg%ie)
             case (ydim)
-               rotacc(:, ifl) = -2.0 * omega * u(:, iarr_all_mx(ifl))/u(:, iarr_all_dn(ifl)) + omega**2 * cg%y
+               rotacc(:, ifl) = -2.0 * omega * u(:, iarr_all_mx(ifl))/u(:, iarr_all_dn(ifl)) + omega**2 * cg%y(cg%js:cg%je)
    !         case (zdim) !no z-component of non-inertial forces
             case default
                rotacc(:, ifl) = 0.0
