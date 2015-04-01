@@ -239,8 +239,10 @@ contains
                if (om .notequals. 0.) then
                   ! Include rotation for pulse_vel = 0., 0., 0. case
                   do i = cg%is, cg%ie
-                     cg%u(flind%neu%imx, i, :, :) = - om*cg%y(i) * cg%u(flind%neu%idn, i, :, :)
-                     cg%u(flind%neu%imy, i, :, :) = + om*cg%x(i) * cg%u(flind%neu%idn, i, :, :)
+                     do j = cg%js, cg%je
+                        cg%u(flind%neu%imx, i, j, :) = - om*cg%y(j) * cg%u(flind%neu%idn, i, j, :)
+                        cg%u(flind%neu%imy, i, j, :) = + om*cg%x(i) * cg%u(flind%neu%idn, i, j, :)
+                     enddo
                   enddo
                   cg%u(flind%neu%imz, :, :, :) = pulse_vel(zdim) * cg%u(flind%neu%idn, :, :, :)
                else
