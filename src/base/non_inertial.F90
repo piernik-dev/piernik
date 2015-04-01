@@ -106,7 +106,7 @@ contains
 !! from the beginning of the time step. This is a simple approach, but ignores any changes due to other accelerations during the time step.
 !<
 
-   function non_inertial_force(sweep, u, cg) result(rotacc)
+   function non_inertial_force(sweep, u, i1, i2, cg) result(rotacc)
 
       use fluidindex, only: flind, iarr_all_dn, iarr_all_mx, iarr_all_my
       use constants,  only: xdim, ydim !, zdim
@@ -115,18 +115,20 @@ contains
       implicit none
 
       integer(kind=4), intent(in)               :: sweep  !< string of characters that points out the current sweep direction
-      integer                                   :: ifl
-      type(grid_container), pointer, intent(in) :: cg     !< current grid piece
       real, dimension(:,:), intent(in)          :: u      !< current fluid state vector
+      integer, intent(in)                       :: i1     !< number of column in the first direction after one pointed out by sweep
+      integer, intent(in)                       :: i2     !< number of column in the second direction after one pointed out by sweep
+      type(grid_container), pointer, intent(in) :: cg     !< current grid piece
+      integer                                   :: ifl
       real, dimension(size(u,1), flind%fluids)  :: rotacc !< an array for non-inertial accelerations
 
       ! non-inertial (Coriolis and centrifugal) forces for corotating coords
       do ifl = 1, flind%fluids
          select case (sweep)
             case (xdim)
-               rotacc(:, ifl) = +2.0 * omega * u(:, iarr_all_my(ifl))/u(:, iarr_all_dn(ifl)) + omega**2 * cg%x(cg%is:cg%ie)
+               rotacc(:, ifl) = +2.0 * omega * u(:, iarr_all_my(ifl))/u(:, iarr_all_dn(ifl)) + omega**2 * cg%x(i1)
             case (ydim)
-               rotacc(:, ifl) = -2.0 * omega * u(:, iarr_all_mx(ifl))/u(:, iarr_all_dn(ifl)) + omega**2 * cg%y(cg%js:cg%je)
+               rotacc(:, ifl) = -2.0 * omega * u(:, iarr_all_mx(ifl))/u(:, iarr_all_dn(ifl)) + omega**2 * cg%y(i2)
    !         case (zdim) !no z-component of non-inertial forces
             case default
                rotacc(:, ifl) = 0.0

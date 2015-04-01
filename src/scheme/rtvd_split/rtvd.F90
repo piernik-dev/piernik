@@ -484,7 +484,7 @@ contains
          acc = acc + coriolis_force(sweep,u) ! n safe
 #endif /* CORIOLIS */
 #ifdef NON_INERTIAL
-         acc = acc + non_inertial_force(sweep, u, cg) ! n safe
+         acc = acc + non_inertial_force(sweep, u, i1, i2, cg)
 #endif /* NON_INERTIAL */
 
          if (full_dim) then
