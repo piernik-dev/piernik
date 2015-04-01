@@ -208,9 +208,11 @@ contains
       use dataio_pub,       only: die
       use domain,           only: dom
       use fluidindex,       only: flind
+      use func,             only: operator(.notequals.)
       use global,           only: smallei, t
       use grid_cont,        only: grid_container
       use named_array_list, only: qna
+      use non_inertial,     only: get_omega
 
       implicit none
 
@@ -218,6 +220,9 @@ contains
       type(grid_container), pointer :: cg
 
       integer :: i, j, k
+      real    :: om
+
+      om = get_omega()
 
       call analytic_solution(t)
 
@@ -231,10 +236,19 @@ contains
 
          select case (dom%geometry_type)
             case (GEO_XYZ)
-               ! Make uniform, completely boring flow
-               cg%u(flind%neu%imx, :, :, :) = pulse_vel(xdim) * cg%u(flind%neu%idn, :, :, :)
-               cg%u(flind%neu%imy, :, :, :) = pulse_vel(ydim) * cg%u(flind%neu%idn, :, :, :)
-               cg%u(flind%neu%imz, :, :, :) = pulse_vel(zdim) * cg%u(flind%neu%idn, :, :, :)
+               if (om .notequals. 0.) then
+                  ! Include rotation for pulse_vel = 0., 0., 0. case
+                  do i = cg%is, cg%ie
+                     cg%u(flind%neu%imx, i, :, :) = - om*cg%y(i) * cg%u(flind%neu%idn, i, :, :)
+                     cg%u(flind%neu%imy, i, :, :) = + om*cg%x(i) * cg%u(flind%neu%idn, i, :, :)
+                  enddo
+                  cg%u(flind%neu%imz, :, :, :) = pulse_vel(zdim) * cg%u(flind%neu%idn, :, :, :)
+               else
+                  ! Make uniform, completely boring flow
+                  cg%u(flind%neu%imx, :, :, :) = pulse_vel(xdim) * cg%u(flind%neu%idn, :, :, :)
+                  cg%u(flind%neu%imy, :, :, :) = pulse_vel(ydim) * cg%u(flind%neu%idn, :, :, :)
+                  cg%u(flind%neu%imz, :, :, :) = pulse_vel(zdim) * cg%u(flind%neu%idn, :, :, :)
+               endif
             case (GEO_RPZ)
                do k = cg%ks, cg%ke
                   do j = cg%js, cg%je
@@ -430,7 +444,7 @@ contains
       integer                         :: i, j, k, d
       type(cg_list_element),  pointer :: cgl
       type(grid_container),   pointer :: cg
-      real, dimension(:,:,:), pointer :: inid
+      real, dimension(:,:,:), pointer :: inid !< analytic solution
       real, dimension(ndims)          :: pos
       real, dimension(xdim:ydim)      :: paux
       real                            :: om, cot, sot

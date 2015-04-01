@@ -64,7 +64,7 @@
  /
 
  $PROBLEM_CONTROL
-    pulse_vel = 2., 0., 0. !2., -2., 2.
+    pulse_vel = 0., 0., 0. !2., -2., 2.
     pulse_size = 1., 1., 1.
  /
 
