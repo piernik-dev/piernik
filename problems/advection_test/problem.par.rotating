@@ -1,11 +1,11 @@
  $BASE_DOMAIN
     n_d = 64, 64, 1
-    bnd_xl = 'out'
-    bnd_xr = 'out'
-    bnd_yl = 'out'
-    bnd_yr = 'out'
-    bnd_zl = 'out'
-    bnd_zr = 'out'
+    bnd_xl = 'per'
+    bnd_xr = 'per'
+    bnd_yl = 'per'
+    bnd_yr = 'per'
+    bnd_zl = 'per'
+    bnd_zr = 'per'
     xmin   = -1.
     xmax   =  1.
     ymin   = -1.
