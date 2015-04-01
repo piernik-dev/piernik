@@ -35,7 +35,7 @@ module non_inertial
    implicit none
 
    private
-   public  :: init_non_inertial, non_inertial_force
+   public  :: init_non_inertial, non_inertial_force, get_omega
 
    real    :: omega !< angular frequency around the z axis
 
@@ -134,5 +134,18 @@ contains
       enddo
 
    end function non_inertial_force
+
+!>
+!! \brief return angular rotation parameter
+!<
+
+
+   real function get_omega()
+
+      implicit none
+
+      get_omega = omega
+
+   end function get_omega
 
 end module non_inertial
