@@ -172,6 +172,7 @@ contains
 
   subroutine rk2()
 
+    use constants,          only: half
     real, dimension(:,:),   intent(inout) :: uu, u0, u1, du
     real,                   intent(in)    :: dt, dtt
 
@@ -191,11 +192,11 @@ contains
     ! Second step of integration
     ! Fractional time step
 
-    dtt = 0.5 * dt
+    dtt = half * dt
 
     ! Update variables for last integration time step
 
-    u0(:,:) = 0.5 * (u0(:,:) + u1(:,:)) + dtt * du(:,:)
+    u0(:,:) = half * (u0(:,:) + u1(:,:)) + dtt * du(:,:)
 
     ! Assign pointer to first array
 
