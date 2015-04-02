@@ -133,7 +133,7 @@ contains
 
        q(fl%idn,:)  =  u(fl%idn,:)
        q(fl%imx,:)  =  u(fl%idn,:)/u(fl%imx,:)
-       q(fl%imy,:)  =  u(fl%idn,:)/u(fl%imx,:)
+       q(fl%imy,:)  =  u(fl%idn,:)/u(fl%imy,:)
        q(fl%imz,:)  =  u(fl%idn,:)/u(fl%imz,:)
 
        if (fl%has_energy) then
@@ -191,11 +191,11 @@ contains
     ! Second step of integration
     ! Fractional time step
 
-    dtt = 0.5d+00 * dt
+    dtt = 0.5 * dt
 
     ! Update variables for last integration time step
 
-    u0(:,:) = 0.5d+00 * (u0(:,:) + u1(:,:)) + dtt * du(:,:)
+    u0(:,:) = 0.5 * (u0(:,:) + u1(:,:)) + dtt * du(:,:)
 
     ! Assign pointer to first array
 
