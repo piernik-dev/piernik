@@ -169,4 +169,38 @@ contains
   end subroutine sweep
 
 !-----------------------------------------------------------------------------------------------------------------------
+
+  subroutine rk2()
+
+    real, dimension(:,:),   intent(inout) :: uu, u0, u1, du
+    real,                   intent(in)    :: dt, dtt
+
+    ! First step of integration
+    ! Fractional time step
+
+    dtt = dt
+
+    ! Update variables for intermediate integration step
+
+    u1(:,:) = u0(:,:) + dtt*du(:,:)
+
+    ! Pointer to current array for next integration time step
+
+    uu => u1
+
+    ! Second step of integration
+    ! Fractional time step
+
+    dtt = 0.5d+00 * dt
+
+    ! Update variables for last integration time step
+
+    u0(:,:) = 0.5d+00 * (u0(:,:) + u1(:,:)) + dtt * du(:,:)
+
+    ! Assign pointer to first array
+
+    uu => u0
+    
+  end subroutine rk2
+
 end module fluidupdate
