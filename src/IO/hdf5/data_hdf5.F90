@@ -142,7 +142,7 @@ contains
    subroutine create_units_description(gid)
 
       use common_hdf5,  only: hdf_vars
-      use constants,    only: cbuff_len, I_FIVE
+      use constants,    only: units_len, cbuff_len, I_FIVE
       use hdf5,         only: HID_T, H5S_SCALAR_F, h5dopen_f, h5dclose_f
       use helpers_hdf5, only: create_dataset, create_attribute
       use units,        only: lmtvB, s_lmtvB, get_unit
@@ -151,8 +151,9 @@ contains
       integer(HID_T), intent(in)             :: gid
       integer(HID_T)                         :: dset_id
       integer(kind=4)                        :: error, i
-      character(len=cbuff_len), pointer      :: sbuf
-      character(len=cbuff_len), target       :: s_unit
+      character(len=cbuff_len), pointer      :: ssbuf
+      character(len=units_len), pointer      :: sbuf
+      character(len=units_len), target       :: s_unit
       real                                   :: val_unit
 
       character(len=cbuff_len), dimension(I_FIVE), parameter :: base_dsets = &
@@ -162,7 +163,7 @@ contains
       do i = lbound(base_dsets, 1), ubound(base_dsets, 1)
          call create_dataset(gid, base_dsets(i), lmtvB(i))
          call h5dopen_f(gid, base_dsets(i), dset_id, error)
-         sbuf => s_lmtvB(i)
+         ssbuf => s_lmtvB(i)
          call create_attribute(dset_id, "unit", sbuf)
          call h5dclose_f(dset_id, error)
       enddo

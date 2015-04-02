@@ -65,7 +65,7 @@
 !<
 module units
 
-   use constants, only: cbuff_len, U_LEN, U_MAG
+   use constants, only: cbuff_len, U_LEN, U_MAG, units_len
 
    implicit none
 
@@ -458,13 +458,13 @@ contains
 
    subroutine get_unit(field, val, s_val)
 
-      use constants, only: U_LEN, U_MASS, U_TIME, U_VEL, U_MAG, cbuff_len
+      use constants, only: U_LEN, U_MASS, U_TIME, U_VEL, U_MAG, units_len
 
       implicit none
 
       character(len=*), intent(in) :: field
       real, intent(out) :: val
-      character(len=cbuff_len), intent(out):: s_val
+      character(len=units_len), intent(out):: s_val
 
       select case (trim(field))
          case ("dend", "deni", "denn", "density")
