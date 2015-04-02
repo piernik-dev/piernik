@@ -143,14 +143,13 @@ contains
 
       use common_hdf5,  only: hdf_vars
       use constants,    only: cbuff_len, I_FIVE
-      use gdf,          only: fmax
       use hdf5,         only: HID_T, H5S_SCALAR_F, h5dopen_f, h5dclose_f
       use helpers_hdf5, only: create_dataset, create_attribute
       use units,        only: lmtvB, s_lmtvB, get_unit
 
       implicit none
       integer(HID_T), intent(in)             :: gid
-      integer(HID_T)                         :: space_id, dset_id
+      integer(HID_T)                         :: dset_id
       integer(kind=4)                        :: error, i
       character(len=cbuff_len), pointer      :: sbuf
       character(len=cbuff_len), target       :: s_unit

@@ -246,10 +246,9 @@ contains
       character(len=*),                       intent(in) :: dname !< name of dataset
       real(kind=8),                           intent(in) :: ddata !< data used to create dataset
 
-      integer(HID_T)                                     :: dset, space, mem_type
+      integer(HID_T)                                     :: dset, space
       integer(kind=4)                                    :: hdferr
       integer(HSIZE_T), dimension(1)                     :: dims
-      type(c_ptr)                                        :: f_ptr
 
       dims(1) = -99
       call h5screate_f(H5S_SCALAR_F, space, hdferr)
