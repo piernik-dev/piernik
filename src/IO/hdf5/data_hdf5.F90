@@ -164,7 +164,7 @@ contains
          call create_dataset(gid, base_dsets(i), lmtvB(i))
          call h5dopen_f(gid, base_dsets(i), dset_id, error)
          ssbuf => s_lmtvB(i)
-         call create_attribute(dset_id, "unit", sbuf)
+         call create_attribute(dset_id, "unit", ssbuf)
          call h5dclose_f(dset_id, error)
       enddo
       do i = lbound(hdf_vars,1), ubound(hdf_vars,1)
