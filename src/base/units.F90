@@ -265,7 +265,7 @@ contains
             s_time_u = ' [s]'
             s_mass_u = ' [kg]'
             lmtvB    = [1.0, 1.0, 1.0, 1.0, 1.0]
-            s_lmtvB  = ["m    ", "kg   ", "s    ", "m / s", "tesla"]    ! FIXME is tesla right?
+            s_lmtvB  = ["m    ", "kg   ", "s    ", "m / s", "T    "]    ! FIXME is tesla right?
 
          case ("CGS", "cgs")
             ! CGS  uses: length --> cm,     mass --> gram,        time --> sek,        miu0 --> 4*pi,    temperature --> kelvin
