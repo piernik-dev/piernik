@@ -108,7 +108,7 @@ contains
 
    function non_inertial_force(sweep, u, i1, i2, cg) result(rotacc)
 
-      use fluidindex, only: flind, iarr_all_dn, iarr_all_mx, iarr_all_my
+      use fluidindex, only: flind, iarr_all_dn, iarr_all_mx, iarr_all_my, iarr_all_mz
       use constants,  only: xdim, ydim !, zdim
       use grid_cont,  only: grid_container
 
@@ -126,9 +126,9 @@ contains
       do ifl = 1, flind%fluids
          select case (sweep)
             case (xdim)
-               rotacc(:, ifl) = +2.0 * omega * u(:, iarr_all_my(ifl))/u(:, iarr_all_dn(ifl)) + omega**2 * cg%x(i1)
+               rotacc(:, ifl) = +2.0 * omega * u(:, iarr_all_my(ifl))/u(:, iarr_all_dn(ifl)) + omega**2 * cg%x
             case (ydim)
-               rotacc(:, ifl) = -2.0 * omega * u(:, iarr_all_mx(ifl))/u(:, iarr_all_dn(ifl)) + omega**2 * cg%y(i2)
+               rotacc(:, ifl) = -2.0 * omega * u(:, iarr_all_my(ifl))/u(:, iarr_all_dn(ifl)) + omega**2 * cg%y
    !         case (zdim) !no z-component of non-inertial forces
             case default
                rotacc(:, ifl) = 0.0
