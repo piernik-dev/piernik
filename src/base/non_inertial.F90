@@ -106,9 +106,9 @@ contains
 !! from the beginning of the time step. This is a simple approach, but ignores any changes due to other accelerations during the time step.
 !<
 
-   function non_inertial_force(sweep, u, i1, i2, cg) result(rotacc)
+   function non_inertial_force(sweep, u, cg) result(rotacc)
 
-      use fluidindex, only: flind, iarr_all_dn, iarr_all_mx, iarr_all_my, iarr_all_mz
+      use fluidindex, only: flind, iarr_all_dn, iarr_all_my
       use constants,  only: xdim, ydim !, zdim
       use grid_cont,  only: grid_container
 
@@ -116,8 +116,6 @@ contains
 
       integer(kind=4), intent(in)               :: sweep  !< string of characters that points out the current sweep direction
       real, dimension(:,:), intent(in)          :: u      !< current fluid state vector
-      integer, intent(in)                       :: i1     !< number of column in the first direction after one pointed out by sweep
-      integer, intent(in)                       :: i2     !< number of column in the second direction after one pointed out by sweep
       type(grid_container), pointer, intent(in) :: cg     !< current grid piece
       integer                                   :: ifl
       real, dimension(size(u,1), flind%fluids)  :: rotacc !< an array for non-inertial accelerations
