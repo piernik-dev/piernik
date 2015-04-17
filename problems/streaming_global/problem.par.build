@@ -49,6 +49,7 @@
     dt_log  = 10.0
     dt_tsl  = 10.0
     vars(1:) = 'dens', 'velx', 'vely', 'velz'
+    gdf_strict = .false.
  /
 
  $FLUID_NEUTRAL

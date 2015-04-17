@@ -290,7 +290,7 @@ contains
 
       tsl_firstcall      = .true.
       use_v2_io          = .true.
-      gdf_strict         = .false.
+      gdf_strict         = .true.
       nproc_io           = nproc
       enable_compression = .false.
       gzip_level         = 9
@@ -486,8 +486,9 @@ contains
    subroutine init_dataio
 
       use constants,    only: PIERNIK_INIT_IO_IC
-      use dataio_pub,   only: nres, nrestart, printinfo, nhdf, nstep_start, die, code_progress
+      use dataio_pub,   only: nres, nrestart, printinfo, nhdf, nstep_start, die, code_progress, gdf_strict, warn, msg
       use domain,       only: dom
+      use fluidindex,   only: flind
       use global,       only: t, nstep
       use mpisetup,     only: master
       use timer,        only: walltime_end
@@ -513,6 +514,13 @@ contains
       if (master) tn = walltime_end%time_left(wend)
 
 #ifdef HDF5
+      if (flind%fluids > 1 .and. gdf_strict) then
+         if (master) then
+            write(msg, '(a)') "[dataio:init_dataio] Cannot use gdf_strict with multiple fluids. Setting gdf_strict to .false."
+            call warn(msg)
+         endif
+         gdf_strict = .false.
+      endif
       call init_hdf5(vars)
       call init_data
 #endif /* HDF5 */

@@ -37,6 +37,9 @@
 !! @n @b PLN (PLaNetary) - good for planetary nebulae
 !! @n length --> AU,     mass --> Mjup,        time --> yr,         miu0 --> 4*pi,    temperature --> kelvin
 !! @n
+!! @n @b BIN (Binary system) - good for binary systems
+!! @n length --> AU,     mass --> Msun,        time --> yr,         miu0 --> 4*pi,    temperature --> kelvin
+!! @n
 !! @n @b KSG (Kiloparsec - Solar_mass - Gigayear) - good for galactic and intergalactic simulations
 !! @n length --> kpc,    mass --> 10^6*Msun,   time --> Gyr,        miu0 --> 4*pi,    temperature --> kelvin
 !! @n
@@ -205,6 +208,15 @@ contains
             s_len_u  = ' [AU]'
             s_time_u = ' [yr]'
             s_mass_u = ' [M_jup]'
+
+         case ("BIN", "bin")
+            ! BIN  uses: length --> AU,     mass --> Msun,        time --> yr,         miu0 --> 4*pi,    temperature --> kelvin
+            cm         = 1.0/au_cm            !< centimetre, length unit
+            sek        = 1.0/yr_s             !< second, time unit
+            gram       = 1.0/msun_g           !< gram, mass unit
+            s_len_u  = ' [AU]'
+            s_time_u = ' [yr]'
+            s_mass_u = ' [M_sun]'
 
          case ("KSG", "ksg")
             ! KSG  uses: length --> kpc,    mass --> 10^6*Msun,   time --> Gyr,        miu0 --> 4*pi,    temperature --> kelvin

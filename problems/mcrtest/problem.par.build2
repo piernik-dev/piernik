@@ -33,6 +33,7 @@
  /
 
  $OUTPUT_CONTROL
+    gdf_strict = .false.
     problem_name = 'mcr'
     run_id = 'tst'
     dt_hdf  = 1.0
