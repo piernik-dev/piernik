@@ -70,6 +70,12 @@ contains
 !>
 !! \brief Compute the Coriolis acceleration for a given row of cells.
 !!
+!! The equtions for the non-inertial acceleration in the x and y directions are given by:
+!! \f{equation}
+!! acc_x = 2 * \Omega * v_y
+!! acc_y = -2 * \Omega * v_x
+!! \f}
+!!
 !! \details This is a low-order estimate of the Coriolis accelerations, because this routine uses density and velocity fields
 !! from the beginning of the time step. This is a simple approach, but ignores any changes due to other accelerations during the time step.
 !!
@@ -78,7 +84,7 @@ contains
 
    function coriolis_force(sweep, u) result(rotacc)
 
-      use fluidindex, only: flind, iarr_all_dn, iarr_all_mx, iarr_all_my
+      use fluidindex, only: flind, iarr_all_dn, iarr_all_my
       use constants,  only: xdim, ydim !, zdim
 
       implicit none
@@ -92,7 +98,7 @@ contains
          case (xdim)
             rotacc(:,:) = +2.0 * coriolis_omega * u(:, iarr_all_my)/u(:, iarr_all_dn)
          case (ydim)
-            rotacc(:,:) = -2.0 * coriolis_omega * u(:, iarr_all_mx)/u(:, iarr_all_dn)
+            rotacc(:,:) = -2.0 * coriolis_omega * u(:, iarr_all_my)/u(:, iarr_all_dn)
 !         case (zdim) !no z-component of the Coriolis force
          case default
             rotacc(:,:) = 0.0
