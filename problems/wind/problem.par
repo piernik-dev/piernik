@@ -1,5 +1,5 @@
  $BASE_DOMAIN
-    n_d = 64, 48, 16
+    n_d = 128, 128, 32
     nb=4
     bnd_xl = 'out'
     bnd_xr = 'out'
@@ -7,10 +7,10 @@
     bnd_yr = 'out'
     bnd_zl = 'outd'
     bnd_zr = 'outd'
-    xmin   = -5.
+    xmin   = -20.
     xmax   = 25.
-    ymin   = -10.
-    ymax   = 10.
+    ymin   = -25.
+    ymax   = 20.
     zmin   = -4.
     zmax   = 4.
  /
@@ -90,5 +90,5 @@
  /
 
  $AMR
-    level_max = 1
+    level_max = 2
  /
