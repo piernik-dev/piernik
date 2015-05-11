@@ -82,8 +82,11 @@
     mstar     = 2.
     mdot      = 1e-7
     rin	      = 3.
-    rdust     = 5.
-    vel_scale = 10.
+    rdust     = 4.
+    vel_scale = 4.
+    tburst    = 10.
+    dburst    = 1.
+    vburst    = 10.
  /
 
  $INTERACTIONS

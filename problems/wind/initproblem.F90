@@ -9,9 +9,9 @@ module initproblem
    private
    public :: read_problem_par, vel_profile, problem_initial_conditions, problem_pointers
 
-   real :: mstar, mdot, rin, rdust, vel_scale
+   real :: mstar, mdot, rin, rdust, vel_scale, tburst, dburst, vburst
 
-   namelist /PROBLEM_CONTROL/  mstar, mdot, rin, rdust, vel_scale
+   namelist /PROBLEM_CONTROL/  mstar, mdot, rin, rdust, vel_scale, tburst, dburst, vburst
 
 contains
 
@@ -41,6 +41,9 @@ contains
       rin       = 0.
       rdust     = 0.
       vel_scale = 1.
+      tburst    = 0.
+      dburst    = 0.
+      vburst    = 0.
 
       if (master) then
 
@@ -65,6 +68,9 @@ contains
          rbuff(3)  = rin
          rbuff(4)  = rdust
          rbuff(5)  = vel_scale
+         rbuff(6)  = tburst
+         rbuff(7)  = dburst
+         rbuff(8)  = vburst
 
       endif
 
@@ -77,6 +83,9 @@ contains
          rin       = rbuff(3)
          rdust     = rbuff(4)
          vel_scale = rbuff(5)
+         tburst    = rbuff(6)
+         dburst    = rbuff(7)
+         vburst    = rbuff(8)
 
       endif
 
@@ -118,7 +127,7 @@ contains
       use constants,   only: xdim, ydim, zdim, LO, HI
       use fluidindex,  only: flind
       use fluidtypes,  only: component_fluid
-      use global,      only: smalld
+      use global,      only: smalld, t
       use grid_cont,   only: grid_container
 
       implicit none
@@ -145,11 +154,13 @@ contains
                   rc = sqrt(xi**2 + yj**2 + zk**2)
 
                   call vel_profile(rc, vel, dens)
+
                   cg%u(fl%idn,i,j,k) = max(dens, smalld)
                   if (fl%ien > 1) then
                      cg%u(fl%ien,i,j,k) = fl%cs2/(fl%gam_1)*cg%u(fl%idn,i,j,k)
                      cg%u(fl%ien,i,j,k) = cg%u(fl%ien,i,j,k) + 0.5*vel**2*cg%u(fl%idn,i,j,k)
                   endif
+
 
                   phi = atan2(yj, xi)
                   theta = acos(zk/rc)
@@ -176,7 +187,7 @@ contains
       use cg_leaves,        only: leaves
       use cg_list,          only: cg_list_element
       use constants,        only: xdim, ydim, zdim, LO, HI
-      use global,           only: smalld
+      use global,           only: smalld, t
       use grid_cont,        only: grid_container
       use all_boundaries,   only: all_fluid_boundaries
       use fluidindex,       only: flind
@@ -208,6 +219,10 @@ contains
 
                   if (rc < rdust) then
                      call vel_profile(rc, vel, dens)
+                     if ((tburst > 0.) .and. (t > tburst) .and. (t < tburst + dburst)) then
+                        vel = vel*vburst
+                     endif
+
                      cg%u(fl%idn,i,j,k) = max(dens, smalld)
 
                      phi = atan2(yj, xi)
