@@ -74,7 +74,7 @@ contains
 #ifdef MAGNETIZED
       is_magnetized = .true.
 #else /* !MAGNETIZED */
-      is_magnetized = .true.
+      is_magnetized = .false.
 #endif /* !MAGNETIZED */
 
       call this%set_fluid_index(flind, is_magnetized, selfgrav, has_energy, cs_iso, gamma, ION)
