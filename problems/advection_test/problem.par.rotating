@@ -43,7 +43,7 @@
     dt_res  = 0.0
     dt_log  = 0.001
     dt_tsl  = 0.001
-    vars(1:) = 'ener', 'dens', 'velx', 'vely', 'velz'
+    vars(1:) = 'ener', 'dens', 'velx', 'vely', 'velz', "inid"
     gdf_strict = .false.
  /
 
@@ -57,14 +57,19 @@
     smalld = 1.e-5
     smallei= 1.e-5
     limiter= 'vanleer'
+	! Workaround for a too big initial guess of timestep for some choices of parameters
+	! ToDo: fix it
+	DT_INITIAL=0.05
+	DT_MAX_GROW=1.
  /
 
  $PROBLEM_CONTROL
-    pulse_vel = 2., -2., 2.
+    pulse_vel = 0., 0., 0. !2., -2., 2.
     pulse_size = 1., 1., 1.
  /
 
  $NONINERTIAL
+    omega = 1.5707963267949 ! pi/2
  /
 
  $INTERACTIONS
