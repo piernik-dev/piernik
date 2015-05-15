@@ -71,11 +71,11 @@ contains
 #else /* !ISO */
       has_energy = .true.
 #endif /* !ISO */
-#ifdef MAGNETIZED
+#ifdef MAGNETIC
       is_magnetized = .true.
-#else /* !MAGNETIZED */
+#else /* !MAGNETIC */
       is_magnetized = .false.
-#endif /* !MAGNETIZED */
+#endif /* !MAGNETIC */
 
       call this%set_fluid_index(flind, is_magnetized, selfgrav, has_energy, cs_iso, gamma, ION)
 
