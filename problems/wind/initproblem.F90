@@ -9,9 +9,9 @@ module initproblem
    private
    public :: read_problem_par, vel_profile, problem_initial_conditions, problem_pointers
 
-   real :: mstar, mdot, rin, rdust, vel_scale, tburst, dburst, vburst
+   real :: mstar, mdot, rin, rdust, vel_scale, tburst, dburst, vburst, mburst
 
-   namelist /PROBLEM_CONTROL/  mstar, mdot, rin, rdust, vel_scale, tburst, dburst, vburst
+   namelist /PROBLEM_CONTROL/  mstar, mdot, rin, rdust, vel_scale, tburst, dburst, vburst, mburst
 
 contains
 
@@ -44,6 +44,7 @@ contains
       tburst    = 0.
       dburst    = 0.
       vburst    = 0.
+      mburst    = 0.
 
       if (master) then
 
@@ -71,6 +72,7 @@ contains
          rbuff(6)  = tburst
          rbuff(7)  = dburst
          rbuff(8)  = vburst
+         rbuff(9)  = mburst
 
       endif
 
@@ -86,6 +88,7 @@ contains
          tburst    = rbuff(6)
          dburst    = rbuff(7)
          vburst    = rbuff(8)
+         mburst    = rbuff(9)
 
       endif
 
@@ -221,6 +224,7 @@ contains
                      call vel_profile(rc, vel, dens)
                      if ((tburst > 0.) .and. (t > tburst) .and. (t < tburst + dburst)) then
                         vel = vel*vburst
+                        dens = dens*mburst
                      endif
 
                      cg%u(fl%idn,i,j,k) = max(dens, smalld)

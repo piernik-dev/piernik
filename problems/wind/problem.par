@@ -87,6 +87,7 @@
     tburst    = 10.
     dburst    = 1.
     vburst    = 10.
+    mburst    = 1.
  /
 
  $INTERACTIONS
