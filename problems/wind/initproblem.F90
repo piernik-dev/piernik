@@ -106,7 +106,6 @@ contains
       implicit none
       real, intent(in)  :: r
       real, intent(out) :: vel, dens
-      real, parameter   :: r_smooth = 1.
       real              :: r_c, vel0
 
       ! r_c = G*M/2/c_s**2
@@ -130,7 +129,7 @@ contains
       use constants,   only: xdim, ydim, zdim, LO, HI
       use fluidindex,  only: flind
       use fluidtypes,  only: component_fluid
-      use global,      only: smalld, t
+      use global,      only: smalld
       use grid_cont,   only: grid_container
 
       implicit none
