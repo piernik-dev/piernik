@@ -1,0 +1,12 @@
+#define IONIZED
+
+#define ISO
+
+#define LOCAL_FR_SPEED
+#undef  MAGNETIC
+
+#define NON_INERTIAL
+
+#define GRAV
+
+#define RTVD
