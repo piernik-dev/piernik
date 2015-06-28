@@ -1,5 +1,3 @@
-see http://piernik.astri.umk.pl/ for README
 
-For developers:
- 1) Never commit directly to this repository. Fork and issue a PR
- 2) Have fun with git repo!
+
+Piernik branch ‚crs’ (read: „Cosmic Ray Spectrum”) created to develop energy dependent CR transport module based on a Focker-Planck equation solver by Miniati’s (Computer Physics Communications 141, 2001, 17–38) COSMOCR, enhanced with our own improvements and extensions.
