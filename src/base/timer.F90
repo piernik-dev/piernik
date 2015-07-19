@@ -65,10 +65,12 @@ module timer
 
    type(timer_list), target, private, save :: timer_root
 
+#ifdef PERFMON
    integer :: cpuhours, cpumins, cpusecs, wchours, wcmins, wcsecs
    real    :: zcps, cputot, cpuallp, wctot, cpu_start, cpu_stop
    integer, dimension(3) :: iarray
    real(kind=4), dimension(2) :: tarray
+#endif /* PERFMON */
 
    type(wallclock) :: walltime_end = wallclock(0, 0, "end of simulation")
 
