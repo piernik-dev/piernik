@@ -38,7 +38,9 @@
 
 
 #include "piernik.def"
-
+!>
+!!  \brief This module implements HLLD Riemann solver following the work of Miyoshi & Kusano (2005)
+!<
 module hlld
 ! pulled by RIEMANN
 
@@ -49,34 +51,64 @@ module hlld
 
 contains
 
-  subroutine riemann_hlld(q, f, n, b)
+  subroutine riemann_hlld(n, gamma, qleft, qright, b)
 
-
-    use constants,  only: zero, one, half, idn, imx, imy, imz, ien
+    use constants,  only: half, one, two, xdim, ydim, zdim, idn, imx, imy, imz, ien
+    use domain,     only: dom
+    use fluidindex, only: iarr_all_dn, iarr_all_mx, iarr_all_my, flind, nmag
+    use func,       only: emag, ekin
+    !use fluidtypes  only: component_fluid
+    use grid_cont,  only: grid_container
+    use fluxes,     only: all_fluxes, flimiter
+    
 
     implicit none
+    
+    real, parameter  ::  four  = 4.0
+    integer,                       intent(in)    :: n      
+    real,                          intent(in)    :: gamma  
+    real, dimension(:,:), pointer, intent(in)    :: qleft, qright
+    real, dimension(:,:),          intent(in)    :: b
+    integer(kind=4)                              :: ibx, iby, ibz
+    
+   
+    !real, dimension(n, flind%all)                :: fl
+    !real, dimension(n, flind%all)                :: fr
+    real, dimension(n)                           :: SL, SR
+    real, dimension(n)                           :: denl,prl,ul, magprl
+    real, dimension(n)                           :: denr,prr,ur, magprr
+    real, dimension(n)                           :: cfastl
+    real, dimension(n)                           :: cfastr
 
-    real, dimension(:,:), intent(in)              :: b
+    ! Copy normal component of magnetic field to left and right states
 
-    integer,              intent(in)              :: n
+    qleft(ibx,:)  = b(ibx,:)  ! Check Artur
+    qright(ibx,:) = b(ibx,:)  ! Check Artur
 
-    real, dimension(:,:), pointer, intent(in)     :: q
+    ! Left variables
 
-    real, dimension(:,:), pointer, intent(inout)  :: f
+    denl  = qleft(idn,:)
+    ul    = qleft(imx,:)/qleft(idn,:)
+    magprl = emag(qleft(ibx,:), qleft(iby,:), qleft(ibz,:))
+    prl   = (gamma-one)*(qleft(ien,:) - ekin(qleft(imx,:), qleft(imy,:), qleft(imz,:), denl) - magprl)
+    cfastl = (gamma*prl+magprl)+sqrt((gamma*prl+magprl)*(gamma*prl+magprl) - (four*gamma*prl*qleft(ibx,:)*qleft(ibx,:)))
+    cfastl = sqrt(cfastl/two*denl)
 
-    ! local variables
+    ! Right variables
 
-    real    :: sl, sr, sm, sml, smr
-    real    :: srl, srml, slmv, srmv, slmm, srmm, smvl, smvr
-    real    :: dn, dnl, dnr, dlsq, drsq
-    real    :: mx, dv, fc, b2, bs, ds, vbl, vbr, vb1l, vb1r, vb2
-    real    :: pml, pmr, ptl, ptr, pt, pm
+    denr  = qright(idn,:)
+    ur    = qright(imx,:)/qright(idn,:)
+    magprr =  emag(qright(ibx,:), qright(iby,:), qright(ibz,:))
+    prr   = (gamma-one)*(qright(ien,:) - ekin(qright(imx,:), qright(imy,:), qright(imz,:), denr) - magprr)
+    cfastr = (gamma*prr+magprr)+sqrt((gamma*prr+magprr)*(gamma*prr+magprr) - (four*gamma*prr*qright(ibx,:)*qright(ibx,:)))
+    cfastr = sqrt(cfastr/two*denr)
 
+    ! Compute wave speed
 
+    SL = min(ul,ur) - max(cfastl,cfastr)
+    SR = max(ul,ur) + max(cfastl,cfastr)
 
-    ! Follow the references and Kowal code as an example for computing fluxes.
-
-
+    
   end subroutine riemann_hlld
 
 end module hlld
