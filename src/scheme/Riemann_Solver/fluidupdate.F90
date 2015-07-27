@@ -172,35 +172,7 @@ contains
 
   subroutine rk2()
 
-    use constants,          only: half
-    real, dimension(:,:),   intent(inout) :: uu, u0, u1, du
-    real,                   intent(in)    :: dt, dtt
-
-    ! First step of integration
-    ! Fractional time step
-
-    dtt = dt
-
-    ! Update variables for intermediate integration step
-
-    u1(:,:) = u0(:,:) + dtt*du(:,:)
-
-    ! Pointer to current array for next integration time step
-
-    uu => u1
-
-    ! Second step of integration
-    ! Fractional time step
-
-    dtt = half * dt
-
-    ! Update variables for last integration time step
-
-    u0(:,:) = half * (u0(:,:) + u1(:,:)) + dtt * du(:,:)
-
-    ! Assign pointer to first array
-
-    uu => u0
+    ! later
     
   end subroutine rk2
 
