@@ -367,14 +367,20 @@ def setup_piernik(data=None):
     for f in f90files:
         for line in open(f):
             if overriding(line):
-                print f, line, line.split(" ")
+                o_cnt = 0
                 for word in line.split(" "):
                     w = word.rstrip()
-                    print w
-                    try:
-                        f90files.remove(w)
-                    except:
-                        print "No", w
+                    if f90files.count(w) > 0:
+                        o_cnt+=1
+                        if (os.path.dirname(f).split("/").count("problems") < 1):
+                            print('\033[93m' + "Warning:" + '\033[0m' + " Only user problems should use the override feature, not " + f)
+                        if os.path.basename(w) == os.path.basename(f):
+                            f90files.remove(w)
+                            print("Overriding " + w + " by " + f)
+                        else:
+                            print('\033[93m' + "Warning:" + '\033[0m' + " Refused overriding " + w + " by " + f + " due to basename mismatch. Expect errors.")
+                if (o_cnt == 0):
+                    print('\033[93m' + "Warning:" + '\033[0m' + " No overridable target found for directive '" + line.rstrip() + "'. Expect errors.")
 
     for f in f90files:
         keys_logic1 = False
