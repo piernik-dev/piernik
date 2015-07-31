@@ -30,6 +30,7 @@
 !<
 program hello_world
 ! pulled by ANY
+! overrides src/base/piernik.F90
 
    use mpi, only: MPI_COMM_WORLD
 

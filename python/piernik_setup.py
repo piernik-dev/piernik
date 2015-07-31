@@ -27,6 +27,7 @@ is_f90 = re.compile("f90$", re.IGNORECASE)
 is_header = re.compile("h$", re.IGNORECASE)
 not_svn_junk = re.compile(".*(?!pro).*", re.IGNORECASE)
 test = re.compile(r'pulled by', re.IGNORECASE).search
+overriding = re.compile(r'overrides', re.IGNORECASE).search
 have_use = re.compile(r"^\s{0,9}use\s", re.IGNORECASE).search
 have_inc = re.compile(r"^#include\s", re.IGNORECASE).search
 have_mod = re.compile(r"^\s*module\s+(?!procedure)", re.IGNORECASE).search
@@ -362,6 +363,18 @@ def setup_piernik(data=None):
         if (not os.access(f, os.F_OK)):
             print('\033[93m' + "Warning: Cannot access file:" + '\033[0m', f)
             f90files.remove(f)
+
+    for f in f90files:
+        for line in open(f):
+            if overriding(line):
+                print f, line, line.split(" ")
+                for word in line.split(" "):
+                    w = word.rstrip()
+                    print w
+                    try:
+                        f90files.remove(w)
+                    except:
+                        print "No", w
 
     for f in f90files:
         keys_logic1 = False
