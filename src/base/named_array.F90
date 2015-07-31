@@ -28,12 +28,14 @@
 !>
 !! \brief Definitions of 3D and 4D data storage for named arrays
 !!
-!! \details The named arrays are used exclusively through grid container, where anyone may register a rank-3 (cg%q(:)) or rank-4 (cg%w(:)) array.
+!! \details The named arrays are used exclusively through grid container, where anyone may register a rank-3 (cg%q(:)), rank-4 (cg%w(:)) or a face-centered (cg%fc(:)) array.
 !!
 !! The maintenance of named arrays(initialization, cleanup, boundary cell exchange, I/O) is unified as much as possible,
 !! which saves us from writing a lot of partially duplicated code.
 !<
 module named_array
+
+   use constants, only: ndims
 
    implicit none
 
@@ -87,6 +89,17 @@ module named_array
       procedure       :: point     => array3d_point
    end type named_array3d
 
+   !> \brief array for components of face -centered fields
+   type :: fc_3d_arr
+      real, dimension(:,:,:), pointer :: arr => null()
+   end type fc_3d_arr
+
+   !> \brief A named array for face-centered fields
+   type, extends(generic_na) :: named_array_fc
+      type(fc_3d_arr), dimension(ndims) :: f_arr
+   contains
+   end type named_array_fc
+
 contains
 
 !>
@@ -112,12 +125,17 @@ contains
       select type(this)
          type is (named_array3d)
             if (size(n1) /= ndims) call die("[named_array:array_init] expected 3d shape")
-            if (.not.associated(this%arr)) allocate(this%arr(n1(xdim):n2(xdim), n1(ydim):n2(ydim), n1(zdim):n2(zdim)))
+            if (.not. associated(this%arr)) allocate(this%arr(n1(xdim):n2(xdim), n1(ydim):n2(ydim), n1(zdim):n2(zdim)))
             this%arr = big_float
          type is (named_array4d)
             if (size(n1) /= I_ONE + ndims) call die("[named_array:array_init] expected 4d shape")
-            if (.not.associated(this%arr)) allocate(this%arr(n1(I_ONE):n2(I_ONE), n1(I_ONE+xdim):n2(I_ONE+xdim), n1(I_ONE+ydim):n2(I_ONE+ydim), n1(I_ONE+zdim):n2(I_ONE+zdim)))
+            if (.not. associated(this%arr)) allocate(this%arr(n1(I_ONE):n2(I_ONE), n1(I_ONE+xdim):n2(I_ONE+xdim), n1(I_ONE+ydim):n2(I_ONE+ydim), n1(I_ONE+zdim):n2(I_ONE+zdim)))
             this%arr = big_float
+         type is (named_array_fc)
+            if (size(n1) /= ndims) call die("[named_array:array_init] expected 3d shape (fc)")
+            if (.not. associated(this%f_arr(xdim)%arr)) allocate(this%f_arr(xdim)%arr(n1(xdim):n2(xdim)+I_ONE, n1(ydim):n2(ydim),       n1(zdim):n2(zdim))      )
+            if (.not. associated(this%f_arr(ydim)%arr)) allocate(this%f_arr(ydim)%arr(n1(xdim):n2(xdim),       n1(ydim):n2(ydim)+I_ONE, n1(zdim):n2(zdim))      )
+            if (.not. associated(this%f_arr(zdim)%arr)) allocate(this%f_arr(zdim)%arr(n1(xdim):n2(xdim),       n1(ydim):n2(ydim),       n1(zdim):n2(zdim)+I_ONE))
          class default
             call die("[named_array:named_array_init] No initialization for generic named array")
       end select
@@ -134,11 +152,17 @@ contains
 
       class(generic_na), intent(inout) :: this
 
+      integer :: i
+
       select type(this)
          type is (named_array3d)
             if (associated(this%arr)) deallocate(this%arr)
          type is (named_array4d)
             if (associated(this%arr)) deallocate(this%arr)
+         type is (named_array_fc)
+            do i=lbound(this%f_arr, dim=1), ubound(this%f_arr, dim=1)
+               if (associated(this%f_arr(i)%arr)) deallocate(this%f_arr(i)%arr)
+            enddo
          class default
             call die("[named_array:clean] No cleanup for generic named array")
       end select
@@ -155,20 +179,30 @@ contains
 
       class(generic_na), intent(inout) :: this                  !! \todo i want to become polymorphic class(*) :/
 
+      integer :: i
+
       check = .false.
       select type(this)
          type is (named_array3d)
             if (associated(this%arr)) then
                check = any( this%arr >= big_float )
             else
-               call warn("[named_array:check] Array not allocated!")
+               call warn("[named_array:check] Array 3D not allocated!")
             endif
          type is (named_array4d)
             if (associated(this%arr)) then
                check = any( this%arr >= big_float )
             else
-               call warn("[named_array:check] Array not allocated!")
+               call warn("[named_array:check] Array 4D not allocated!")
             endif
+         type is (named_array_fc)
+            do i=lbound(this%f_arr, dim=1), ubound(this%f_arr, dim=1)
+               if (associated(this%f_arr(i)%arr)) then
+                  check = check .or. any( this%f_arr(i)%arr >= big_float )
+               else
+                  call warn("[named_array:check] Array FC not allocated!")
+               endif
+            enddo
          class default
             call die("[named_array:ccheck] No check for generic named array")
       end select
