@@ -46,8 +46,6 @@ module named_array
    !> \brief Common methods for 3D and 4D named arrays
    type, abstract :: generic_na
     contains
-      procedure :: lb
-      procedure :: ub
       procedure :: named_array_init
       procedure :: clean
       procedure :: check
@@ -176,56 +174,6 @@ contains
       end select
 
    end function check
-
-!> \brief Get the upper bound of a named array
-
-   function ub(this, dim_) result(n)
-
-      use constants,  only: INVALID
-      use dataio_pub, only: die
-
-      implicit none
-
-      class(generic_na), intent(in) :: this
-      integer(kind=4),      intent(in) :: dim_
-      integer(kind=4) :: n
-
-      n = INVALID
-      select type(this)
-         type is (named_array3d)
-            n = ubound(this%arr, dim=dim_, kind=4)
-         type is (named_array4d)
-            n = ubound(this%arr, dim=dim_, kind=4)
-         class default
-            call die("[named_array:ub] No upper bound for generic named array")
-      end select
-
-   end function ub
-
-!> \brief Get the lower bound of a named array
-
-   function lb(this, dim_) result(n)
-
-      use constants,  only: INVALID
-      use dataio_pub, only: die
-
-      implicit none
-
-      class(generic_na), intent(in) :: this
-      integer(kind=4),      intent(in) :: dim_
-      integer(kind=4) :: n
-
-      n = INVALID
-      select type(this)
-         type is (named_array3d)
-            n = lbound(this%arr,dim=dim_,kind=4)
-         type is (named_array4d)
-            n = lbound(this%arr,dim=dim_,kind=4)
-         class default
-            call die("[named_array:ub] No lower bound for generic named array")
-      end select
-
-   end function lb
 
 !> \brief Initialize named array with a predefined simple array
 
