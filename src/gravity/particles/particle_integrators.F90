@@ -283,12 +283,12 @@ contains
       write(*,*) "[p_i]:dt_old= ", dt_old
       dt_tot_h = 0.5*dt_tot
 
-
-      first_run_lf = .false.
-
-      !3.kick(dt_old)
-      call kick(pset, 0.5*dt_old, n)
-
+      if(first_run_lf) then
+         first_run_lf = .false.
+      else
+         !3.kick(dt_old)
+         call kick(pset, 0.5*dt_old, n)
+      endif
       !1. Kick (dt_tot_h)
       call kick(pset, dt_tot_h, n)
 
