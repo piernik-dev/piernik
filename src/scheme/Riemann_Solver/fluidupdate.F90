@@ -150,13 +150,13 @@ contains
 
 !-------------------------------------------------------------------------------------------------------------------------
 
-  subroutine sweep(cg,dt,ddim)
+  subroutine sweep(cg, dt, ddim)
 
-    use constants,        only: pdims, xdim, zdim, cs_i2_n, ORTHO1, ORTHO2, LO, HI
+    !use constants,        only: pdims, xdim, zdim
     use all_boundaries,   only: all_fluid_boundaries
-    use fluidindex,       only: iarr_all_swp
+    !use fluidindex,       only: iarr_all_swp
     use grid_cont,        only: grid_container
-    use named_array_list, only: qna, wna
+    !use named_array_list, only: qna, wna
 
     implicit none
 

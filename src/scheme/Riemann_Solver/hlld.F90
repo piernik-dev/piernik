@@ -47,15 +47,63 @@ module hlld
   implicit none
 
   private
-  public :: riemann_hlld
+  public :: riemann_hlld, fluxes
 
 contains
 
-  subroutine riemann_hlld(n, gamma, qleft, qright, b)
+  subroutine fluxes(n, q, u, f, gamma, b, cdim)
+ 
+    use constants,   only: half,one,idn, imx, imy, imz, ien, xdim, ydim, zdim
+    use fluidindex, only: iarr_mag_swp
+    use func,       only: emag, ekin
+    
+    implicit none
+     
+    integer,                       intent(in)    :: n  
+    real,                          intent(in)    :: gamma  
+    real, dimension(:,:),          intent(in)    :: q, u
+    real, dimension(:,:),          intent(out)   :: f
+    real, dimension(:,:),          intent(in)    :: b         
+    integer(kind=4)                              :: ibx, iby, ibz
+    integer(kind=4),               intent(in)    :: cdim
 
-    use constants,  only: half, one, two, xdim, ydim, zdim, idn, imx, imy, imz, ien
-    use domain,     only: dom
-    use fluidindex, only: iarr_all_dn, iarr_all_mx, iarr_all_my, flind, nmag
+    ! Local variables
+
+    integer :: i
+    real    :: vb, pr, prtot
+
+    ibx = iarr_mag_swp(cdim,xdim)
+    iby = iarr_mag_swp(cdim,ydim)
+    ibz = iarr_mag_swp(cdim,zdim)
+
+    do i = 1, n
+
+       vb   = sum((q(imx:imz,i)/q(idn,i))*q(ibx:ibz,i))
+       pr   = (gamma-one)*(q(ien,i) - ekin(q(imx,i), q(imy,i), q(imz,i), q(idn,i)) - emag(q(ibx,i),q(iby,i),q(ibz,i)))
+       prtot = pr + emag(q(ibx,i),q(iby,i),q(ibz,i))
+
+   ! MHD fluxes
+       
+       f(idn,i) = u(imx,i)
+       f(imx,i) = u(imx,i)*(q(imx,i)/q(idn,i)) - q(ibx,i)*q(ibx,i) - prtot
+       f(imy,i) = u(imy,i)*(q(imx,i)/q(idn,i)) - q(ibx,i)*q(iby,i)
+       f(imz,i) = u(imz,i)*(q(imx,i)/q(idn,i)) - q(ibx,i)*q(ibz,i)
+       f(ien,i) = (u(ien,i)+prtot)*(q(imx,i)/q(idn,i)) - q(ibx,i)*vb
+
+       f(iby,i) = q(iby,i)*(q(imx,i)/q(idn,i)) - q(ibx,i)*(q(imy,i)/q(idn,i))
+       f(ibz,i) = q(ibz,i)*(q(imx,i)/q(idn,i)) - q(ibz,i)*(q(imz,i)/q(idn,i))
+
+    end do
+
+  end subroutine fluxes
+
+!-------------------------------------------------------------------------------------------------------------------------------------------------
+
+  subroutine riemann_hlld(n, gamma, qleft, qright, b, cdim, f)
+
+    use constants,  only: one, two, zero, xdim, ydim, zdim, idn, imx, imy, imz, ien
+    !use domain,     only: dom
+    use fluidindex, only: iarr_mag_swp
     use func,       only: emag, ekin
     !use fluidtypes  only: component_fluid
     use grid_cont,  only: grid_container
@@ -68,17 +116,24 @@ contains
     integer,                       intent(in)    :: n      
     real,                          intent(in)    :: gamma  
     real, dimension(:,:), pointer, intent(in)    :: qleft, qright
+    real, dimension(:,:),          intent(out)   :: f
     real, dimension(:,:),          intent(in)    :: b
     integer(kind=4)                              :: ibx, iby, ibz
+    integer(kind=4),               intent(in)    :: cdim
     
    
-    !real, dimension(n, flind%all)                :: fl
-    !real, dimension(n, flind%all)                :: fr
+    integer                                      :: i          
+    !real, dimension(:,:)                         :: fleft
+    !real, dimension(:,:)                         :: fright
     real, dimension(n)                           :: SL, SR
     real, dimension(n)                           :: denl,prl,ul, magprl
     real, dimension(n)                           :: denr,prr,ur, magprr
     real, dimension(n)                           :: cfastl
     real, dimension(n)                           :: cfastr
+
+    ibx = iarr_mag_swp(cdim,xdim)
+    iby = iarr_mag_swp(cdim,ydim)
+    ibz = iarr_mag_swp(cdim,zdim)
 
     ! Copy normal component of magnetic field to left and right states
 
@@ -91,24 +146,40 @@ contains
     ul    = qleft(imx,:)/qleft(idn,:)
     magprl = emag(qleft(ibx,:), qleft(iby,:), qleft(ibz,:))
     prl   = (gamma-one)*(qleft(ien,:) - ekin(qleft(imx,:), qleft(imy,:), qleft(imz,:), denl) - magprl)
-    cfastl = (gamma*prl+magprl)+sqrt((gamma*prl+magprl)*(gamma*prl+magprl) - (four*gamma*prl*qleft(ibx,:)*qleft(ibx,:)))
+    cfastl = (gamma*prl+two*magprl)+sqrt((gamma*prl+two*magprl)*(gamma*prl+two*magprl) - (four*gamma*prl*qleft(ibx,:)*qleft(ibx,:)))
     cfastl = sqrt(cfastl/two*denl)
-
+       
     ! Right variables
-
+    
     denr  = qright(idn,:)
     ur    = qright(imx,:)/qright(idn,:)
     magprr =  emag(qright(ibx,:), qright(iby,:), qright(ibz,:))
     prr   = (gamma-one)*(qright(ien,:) - ekin(qright(imx,:), qright(imy,:), qright(imz,:), denr) - magprr)
-    cfastr = (gamma*prr+magprr)+sqrt((gamma*prr+magprr)*(gamma*prr+magprr) - (four*gamma*prr*qright(ibx,:)*qright(ibx,:)))
+    cfastr = (gamma*prr+two*magprr)+sqrt((gamma*prr+two*magprr)*(gamma*prr+two*magprr) - (four*gamma*prr*qright(ibx,:)*qright(ibx,:)))
     cfastr = sqrt(cfastr/two*denr)
 
     ! Compute wave speed
-
+    
     SL = min(ul,ur) - max(cfastl,cfastr)
     SR = max(ul,ur) + max(cfastl,cfastr)
 
+    ! HLLD flux
     
+    where(SL >= zero) 
+
+      ! f(:,:) = fleft(:,:) 
+
+    elsewhere (SR <= zero) 
+
+       !f(:,:) = fright(:,:)
+
+    elsewhere ! SL < 0 < SR
+
+      ! print*,'finish it'
+
+    endwhere
+    
+
   end subroutine riemann_hlld
 
 end module hlld
