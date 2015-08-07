@@ -133,7 +133,7 @@ contains
 
        q(fl%idn,:)  =  u(fl%idn,:)
        q(fl%imx,:)  =  u(fl%idn,:)/u(fl%imx,:)
-       q(fl%imy,:)  =  u(fl%idn,:)/u(fl%imx,:)
+       q(fl%imy,:)  =  u(fl%idn,:)/u(fl%imy,:)
        q(fl%imz,:)  =  u(fl%idn,:)/u(fl%imz,:)
 
        if (fl%has_energy) then
@@ -150,13 +150,13 @@ contains
 
 !-------------------------------------------------------------------------------------------------------------------------
 
-  subroutine sweep(cg,dt,ddim)
+  subroutine sweep(cg, dt, ddim)
 
-    use constants,        only: pdims, xdim, zdim, cs_i2_n, ORTHO1, ORTHO2, LO, HI
+    !use constants,        only: pdims, xdim, zdim
     use all_boundaries,   only: all_fluid_boundaries
-    use fluidindex,       only: iarr_all_swp
+    !use fluidindex,       only: iarr_all_swp
     use grid_cont,        only: grid_container
-    use named_array_list, only: qna, wna
+    !use named_array_list, only: qna, wna
 
     implicit none
 
@@ -172,35 +172,9 @@ contains
 
   subroutine rk2()
 
-    real, dimension(:,:),   intent(inout) :: uu, u0, u1, du
-    real,                   intent(in)    :: dt, dtt
-
-    ! First step of integration
-    ! Fractional time step
-
-    dtt = dt
-
-    ! Update variables for intermediate integration step
-
-    u1(:,:) = u0(:,:) + dtt*du(:,:)
-
-    ! Pointer to current array for next integration time step
-
-    uu => u1
-
-    ! Second step of integration
-    ! Fractional time step
-
-    dtt = 0.5d+00 * dt
-
-    ! Update variables for last integration time step
-
-    u0(:,:) = 0.5d+00 * (u0(:,:) + u1(:,:)) + dtt * du(:,:)
-
-    ! Assign pointer to first array
-
-    uu => u0
+    ! later
     
   end subroutine rk2
 
+!---------------------------------------------------------------------------------------------------------------------------------------------------------------------
 end module fluidupdate
