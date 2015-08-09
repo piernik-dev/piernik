@@ -127,6 +127,7 @@ contains
 #ifdef NBODY
       use particle_pub,         only: pset
       use particle_integrators, only: get_timestep_nbody, dt_nbody
+      use func,                 only: operator(.notequals.)
 #endif /* NBODY */
 
       implicit none
@@ -138,10 +139,6 @@ contains
       type(grid_container),  pointer   :: cg
       real                             :: c_, dt_
       integer                          :: ifl
-!#ifdef NBODY
-      !real :: dt_nbody
-      !class(particle_set), pointer  :: pset
-!#endif /* NBODY */
 
 ! Timestep computation
 
@@ -177,14 +174,17 @@ contains
          dt = min(dt,timestep_interactions(cg))
 #endif /* BALSARA */
 
-         write(*,*) "[timestep]:dt przed nbody=", dt
 #ifdef NBODY
+         write(*,*) "[timestep]:dt przed nbody=", dt
          call get_timestep_nbody(dt_nbody, pset)
          write(*,*) "[timestep]:dt_nbody      =", dt_nbody
-         !dt = min(dt, dt_nbody) 
-         dt = dt_nbody
+         if(dt_nbody.notequals. 0.0) then
+            dt = min(dt, dt_nbody) 
+         endif
+         write(*,*) "[timestep]:dt  po   nbody=", dt
 #endif /* NBODY */
-          write(*,*) "[timestep]:dt  po   nbody=", dt
+
+
          if (use_fargo) dt = min(dt, timestep_fargo(cg, dt))
          cgl => cgl%nxt
       enddo
