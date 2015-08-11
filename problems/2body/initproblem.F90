@@ -118,10 +118,10 @@ contains
          e = 0.6
          n_particles = 1
          plane = 'XY'
-         call orbits(n_particles, e, first_run, plane)
+         !call orbits(n_particles, e, first_run, plane)
          !call relax_time(n_particles, first_run)
          !call read_buildgal
-         !call twobodies(n_particles, e, first_run, plane)
+         call twobodies(n_particles, e, first_run, plane)
       endif
 
 
@@ -160,6 +160,7 @@ contains
             real:: lenght  !usunac
             
             mu = newtong*M
+            
 
             if( (e < zero) .or. (e >= one) ) then
                call die("[initproblem:velocities] Invalid eccentricity")
@@ -173,9 +174,6 @@ contains
                   a = r/(1.0 + e)
                   velocities(2) = sqrt(mu*(2.0/r - 1.0/a))
                   write(*,'(A11,F4.2,A3,F5.3,A3,F5.3)') "#Elipsa: e=", e, " a=",a, " b=", a*sqrt(1.0 - e**2)
-                  write(*,*) "[orbits: newtong]=", newtong
-                  write(*,*) "[orbits: mu     ]=", mu
-                  write(*,*) "[orbits: vel(2) ]=", velocities(2)
 
                   lenght = dpi*sqrt((a**3)/mu)  !usunac 
                   write(*,*) "lenght=", lenght
@@ -215,60 +213,51 @@ contains
 
       subroutine twobodies(n_particles, e, first_run, plane)
          use particle_pub, only: pset
-         use constants,    only: dpi
          implicit none
          integer,intent(in)            :: n_particles
          real,intent(in)                :: e
          real,dimension(3)             :: init_pos_body_one, init_pos_body_two, init_vel_body_one, init_vel_body_two
-         real                           :: dtheta, m1, m2
+         real                           :: m1, m2
          logical,intent(inout)         :: first_run
          character(len=2), intent(in) :: plane
          
          write(*,*) "Number of particles: ", n_particles
-         
-         dtheta = dpi/n_particles
+
 
          m1 = 10.0
+         init_pos_body_one = 0.0
+         init_vel_body_one = 0.0
+         
          m2 = 1.0
-         init_pos_body_one = [0.0, 0.0, 0.0]
-         init_vel_body_one = [0.0, 0.0, 0.0]
-         
          init_pos_body_two = [2.0, 0.0, 0.0]
-         init_vel_body_two = vel_2bodies(m2, init_pos_body_one, init_pos_body_two, e)
-         !init_vel_body_two = 0.0
+         init_vel_body_two = vel_2bodies(m1, init_pos_body_one, init_pos_body_two, e)
+         !init_vel_body_two = velocities(init_pos_body_two, e)
 
-         write(*,*) "Initial parameters of bodies:"
-         write(*,*) "Body 1: ", m1, " @ [", init_pos_body_one, "] with [", init_vel_body_one, "]"
-         write(*,*) "Body 2: ", m2, " @ [", init_pos_body_two, "] with [", init_vel_body_two, "]"
-
-         
          if(first_run) then
-            call pset%add(m1, init_pos_body_one, init_vel_body_one, [0.0, 0.0, 0.0], 0.0) !dominujace cialo
-            call pset%add(m2, init_pos_body_two, init_vel_body_two, [0.0, 0.0, 0.0], 0.0)
+            call pset%add(1.0, [2.0, 0.0, 0.0], init_vel_body_two, [0.0, 0.0, 0.0], 0.0)
+            call pset%add(10.0, [0.0, 0.0, 0.0], [0.0, 0.0, 0.0], [0.0, 0.0, 0.0], 0.0) !dominujace cialo
             first_run=.false.
-            write(*,*) "Obliczono pozycje czastek "
+            write(*,*) "[2b]: Obliczono pozycje czastek "
 
          endif
          
       end subroutine twobodies
 
-      function vel_2bodies(m1, init_pos_body_one, init_pos_body_two, e)
+      function vel_2bodies(mass, init_pos_body_one, init_pos_body_two, e)
          use constants,             only: zero, one, dpi
          use dataio_pub,            only: die
          use units,                 only: newtong
          use func,                  only: operator(.equals.)
          implicit none
-            real, dimension(3)  :: init_pos_body_one, init_pos_body_two, init_vel_body_one, init_vel_body_two, vel_2bodies
+            real, dimension(3)  :: init_pos_body_one, init_pos_body_two, vel_2bodies
             real                 :: a        !< semi-major axis of initial elliptical orbit of particle
             real                 :: r        !< lenght of radius vector
             real                 :: e
             real                 :: mu
-            real                 :: m1
+            real                 :: mass
             real                 :: lenght  !usunac
             
-            mu = newtong * m1
-            mu = newtong
-            write(*,*) "G=", newtong
+            mu = newtong * mass
 
             if( (e < zero) .or. (e >= one) ) then
                call die("[initproblem:velocities] Invalid eccentricity")
@@ -276,6 +265,7 @@ contains
                r = sqrt((init_pos_body_one(1) - init_pos_body_two(1))**2 + &
                         (init_pos_body_one(2) - init_pos_body_two(2))**2 + &
                         (init_pos_body_one(3) - init_pos_body_two(3))**2)
+
 
                if (e.equals.0.0) then
                   vel_2bodies(2) = sqrt(mu/r)
@@ -328,8 +318,8 @@ contains
                !call pset%add(1.0, [4.0, 2.0, 0.0],[-0.5, 0.0, 0.0], [0.0, 0.0, 0.0], 0.0)
                !call pset%add(1.0, [3.0, 2.0, 0.0],[0.0, -1.0, 0.0],  [0.0, 0.0, 0.0], 0.0)
 
-               pos_init = positions(dtheta, pos_init, plane)
-               vel_init = rotate(dtheta, vel_init, plane)
+               !pos_init = positions(dtheta, pos_init, plane)
+               !vel_init = rotate(dtheta, vel_init, plane)
             enddo
 
             call pset%add(10.0, [0.0,0.0,0.0],[0.0,0.0,0.0],[0.0,0.0,0.0],0.0)
