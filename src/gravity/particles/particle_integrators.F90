@@ -187,7 +187,7 @@ contains
 
 
    subroutine leapfrog2ord(pset, t_glob, dt_tot)
-      use constants,      only: CENTER, xdim, zdim!, half, zero
+      !use constants,      only: xdim, zdim!, half, zero
       use particle_types, only: particle_set
       use domain,         only: is_refined, is_multicg
       use cg_list,        only: cg_list_element
@@ -274,7 +274,7 @@ contains
 
 
       do i = 1, n
-         write(lun_out, '(I3,1X,13(E13.6,1X))') i, t_glob+dt_tot, dt_old, mass(i), pset%p(i)%pos, pset%p(i)%acc, energy, d_energy, ang_momentum, d_ang_momentum
+         write(lun_out, '(I3,1X,16(E13.6,1X))') i, t_glob+dt_tot, dt_old, mass(i), pset%p(i)%pos, pset%p(i)%vel, pset%p(i)%acc, energy, d_energy, ang_momentum, d_ang_momentum
       enddo
 
       !call save_particles(n, lf_t, mass, pset, counter)
@@ -772,7 +772,7 @@ contains
       !finish         = .true.
       finish         = .false.
 
-      call pot2grid(cg, zero)
+      !call pot2grid(cg, zero)
 
       call save_pot(save_potential, finish, cg)
 
@@ -814,7 +814,10 @@ contains
                G = 1.0
                M = 1.0
                mu = newtong*M
+               !write(*,*) "[phi_pm: newtong=]", newtong
+               !write(*,*) "[phi_pm: mu     =]", mu
                r = sqrt(x**2 + y**2 + z**2 + eps**2)
+               !stop
 
                phi_pm = -mu / r
       end function phi_pm
@@ -1261,6 +1264,7 @@ contains
                   !   call !funkcja liczaca pochodne z potencjalu policzonego z rozwiniecia multipolowego
                   endif
                enddo
+               !pset%p(1)%acc = 0.0
 
                !stara wersja wykorzystujaca tablice
                !acc(:, xdim) = -( df_dx_p(cells, cg, n) + &
@@ -1320,7 +1324,9 @@ contains
             real(kind=8), dimension(n_part, 8)            :: wijk, fx, fy, fz
 
 
+               write(*,*) "[get_acc_cic]: particles = ", n_part
                do i = 1, n_part
+
                   pset%p(i)%acc = zero
                   if ((pset%p(i)%outside) .eqv. .false.) then
                      do cdim = xdim, ndims
@@ -1332,6 +1338,9 @@ contains
                         dxyz(i, cdim) = abs(pset%p(i)%pos(cdim) - cg%coord(CENTER, cdim)%r(cic_cells(i,cdim)))
 
                      enddo
+                     !write(*,*) cells(i,:)
+                     !write(*,*) cic_cells(i,:)
+                     
                      wijk(i, 1) = (cg%dx - dxyz(i, xdim))*(cg%dy - dxyz(i, ydim))*(cg%dz - dxyz(i, zdim)) !a(i  ,j  ,k  )
                      wijk(i, 2) = (cg%dx - dxyz(i, xdim))*(cg%dy - dxyz(i, ydim))*         dxyz(i, zdim)  !a(i+1,j  ,k  )
                      wijk(i, 3) = (cg%dx - dxyz(i, xdim))*         dxyz(i, ydim) *(cg%dz - dxyz(i, zdim)) !a(i  ,j+1,k  )
@@ -1346,13 +1355,21 @@ contains
                enddo
 
                wijk = wijk/cg%dvol
+               !write(*,*) "wijk"
+               !write(*,*) wijk(1,:)
 
-
+!stare---------------------------------------------------------------------------
                do p = 1, n_part
+               !write(*,*) "1:Czastka ", p
                   c = 1
                   do i = 0, 1
                      do j = 0, 1
                         do k = 0, 1
+                        !write (*,*) i, j, k, c
+                        !write(*,'(A6, 3(I4), A3, 3(I4), A1)') "x:   [", i+1, j, k, "] [", i-1, j, k, "]"
+                        !write(*,'(A6, 3(I4), A3, 3(I4), A1)') "y:   [", i, j+1, k, "] [", i, j-1, k, "]" 
+                        !write(*,'(A6, 3(I4), A3, 3(I4), A1)') "z:   [", i, j, k+1, "] [", i, j, k-1, "]" 
+                        
                            fx(p, c) = -(cg%gpot(cic_cells(p, xdim)+1+i, cic_cells(p, ydim)  +j, cic_cells(p, zdim)  +k) - cg%gpot(cic_cells(p, xdim)-1+i, cic_cells(p, ydim)  +j, cic_cells(p, zdim)  +k))
                            fy(p, c) = -(cg%gpot(cic_cells(p, xdim)  +i, cic_cells(p, ydim)+1+j, cic_cells(p, zdim)  +k) - cg%gpot(cic_cells(p, xdim)  +i, cic_cells(p, ydim)-1+j, cic_cells(p, zdim)  +k))
                            fz(p, c) = -(cg%gpot(cic_cells(p, xdim)  +i, cic_cells(p, ydim)  +j, cic_cells(p, zdim)+1+k) - cg%gpot(cic_cells(p, xdim)  +i, cic_cells(p, ydim)  +j, cic_cells(p, zdim)-1+k))
@@ -1361,20 +1378,39 @@ contains
                      enddo
                   enddo
                enddo
+!---------------------------------------------------------------------------------
 
                fx = half*fx*cg%idx
                fy = half*fy*cg%idy
                fz = half*fz*cg%idz
+               !write(*,*) "fx ", fx
+               !write(*,*) "fy ", fy
+               !write(*,*) "fz ", fz
 
+               !write(*,*) "acc(xdim)", pset%p(1)%acc(xdim)
+               !write(*,*) "acc(ydim)", pset%p(1)%acc(ydim)
+               !write(*,*) "acc(zdim)", pset%p(1)%acc(zdim)
+               
                do p = 1, n_part
+                  !write(*,*) "2:Czastka ", p
                   do c = 1, 8
+                  !write(*,*) pset%p(p)%acc(xdim), wijk(p, c), fx(p, c), pset%p(p)%acc(xdim) + wijk(p, c) * fx(p, c)
                      pset%p(p)%acc(xdim) = pset%p(p)%acc(xdim) + wijk(p, c) * fx(p, c)
+                     
                      pset%p(p)%acc(ydim) = pset%p(p)%acc(ydim) + wijk(p, c) * fy(p, c)
                      pset%p(p)%acc(zdim) = pset%p(p)%acc(zdim) + wijk(p, c) * fz(p, c)
                   enddo
+                  write(*,*) "------", p, pset%p(p)%acc(xdim), pset%p(p)%acc(ydim), pset%p(p)%acc(zdim)
+                  !stop
+                  !pset%p(p)%acc(xdim) = wijk(p,1) * fx(p,1) + wijk(p, 8)*fx(p,8) + &
+                  !                  wijk(p,2) * fx(p,2) + wijk(p, 7)*fx(p,7) + &
+                  !                  wijk(p,3) * fx(p,3) + wijk(p, 6)*fx(p,6) + &
+                  !                  wijk(p,4) * fx(p,4) + wijk(p, 5)*fx(p,5)
                enddo
-               ! druga z czastek stoi w miejscu:
-               !pset%p(2)%acc(:) = 0.0
+               !write(*,*) "acc(xdim)", pset%p(1)%acc(xdim)
+               !write(*,*) "acc(ydim)", pset%p(1)%acc(ydim)
+               !write(*,*) "acc(zdim)", pset%p(1)%acc(zdim)
+               !stop
 
       end subroutine get_acc_cic
 
@@ -1396,7 +1432,8 @@ contains
             integer                :: cdim
 
                factor = big
-
+               
+               if(max_acc.notequals.0.0) then
                dt_nbody = sqrt(2.0*eta*eps/max_acc)
                !write(*,*) "[get_var_timestep_c]: dt_nbody =", dt_nbody
 
@@ -1422,6 +1459,9 @@ contains
 
                !write(*,*) "[get_var_timestep_c]:  factor  =", factor
                dt_nbody  = lf_c * factor * dt_nbody
+               else
+               dt_nbody = zero
+               endif
                write(*,*) "[get_var_timestep_c]: dt_nbody =", dt_nbody
 
       end subroutine get_var_timestep_c

@@ -121,6 +121,7 @@ contains
          call orbits(n_particles, e, first_run, plane)
          !call relax_time(n_particles, first_run)
          !call read_buildgal
+         !call twobodies(n_particles, e, first_run, plane)
       endif
 
 
@@ -155,7 +156,7 @@ contains
             real                 :: r        !< lenght of radius vector
             real                 :: e
             real                 :: mu
-            real, parameter     :: M=1.0
+            real, parameter     :: M=10.0
             real:: lenght  !usunac
             
             mu = newtong*M
@@ -172,6 +173,10 @@ contains
                   a = r/(1.0 + e)
                   velocities(2) = sqrt(mu*(2.0/r - 1.0/a))
                   write(*,'(A11,F4.2,A3,F5.3,A3,F5.3)') "#Elipsa: e=", e, " a=",a, " b=", a*sqrt(1.0 - e**2)
+                  write(*,*) "[orbits: newtong]=", newtong
+                  write(*,*) "[orbits: mu     ]=", mu
+                  write(*,*) "[orbits: vel(2) ]=", velocities(2)
+
                   lenght = dpi*sqrt((a**3)/mu)  !usunac 
                   write(*,*) "lenght=", lenght
                endif
@@ -208,7 +213,87 @@ contains
 
       end function rotate
 
+      subroutine twobodies(n_particles, e, first_run, plane)
+         use particle_pub, only: pset
+         use constants,    only: dpi
+         implicit none
+         integer,intent(in)            :: n_particles
+         real,intent(in)                :: e
+         real,dimension(3)             :: init_pos_body_one, init_pos_body_two, init_vel_body_one, init_vel_body_two
+         real                           :: dtheta, m1, m2
+         logical,intent(inout)         :: first_run
+         character(len=2), intent(in) :: plane
+         
+         write(*,*) "Number of particles: ", n_particles
+         
+         dtheta = dpi/n_particles
 
+         m1 = 10.0
+         m2 = 1.0
+         init_pos_body_one = [0.0, 0.0, 0.0]
+         init_vel_body_one = [0.0, 0.0, 0.0]
+         
+         init_pos_body_two = [2.0, 0.0, 0.0]
+         init_vel_body_two = vel_2bodies(m2, init_pos_body_one, init_pos_body_two, e)
+         !init_vel_body_two = 0.0
+
+         write(*,*) "Initial parameters of bodies:"
+         write(*,*) "Body 1: ", m1, " @ [", init_pos_body_one, "] with [", init_vel_body_one, "]"
+         write(*,*) "Body 2: ", m2, " @ [", init_pos_body_two, "] with [", init_vel_body_two, "]"
+
+         
+         if(first_run) then
+            call pset%add(m1, init_pos_body_one, init_vel_body_one, [0.0, 0.0, 0.0], 0.0) !dominujace cialo
+            call pset%add(m2, init_pos_body_two, init_vel_body_two, [0.0, 0.0, 0.0], 0.0)
+            first_run=.false.
+            write(*,*) "Obliczono pozycje czastek "
+
+         endif
+         
+      end subroutine twobodies
+
+      function vel_2bodies(m1, init_pos_body_one, init_pos_body_two, e)
+         use constants,             only: zero, one, dpi
+         use dataio_pub,            only: die
+         use units,                 only: newtong
+         use func,                  only: operator(.equals.)
+         implicit none
+            real, dimension(3)  :: init_pos_body_one, init_pos_body_two, init_vel_body_one, init_vel_body_two, vel_2bodies
+            real                 :: a        !< semi-major axis of initial elliptical orbit of particle
+            real                 :: r        !< lenght of radius vector
+            real                 :: e
+            real                 :: mu
+            real                 :: m1
+            real                 :: lenght  !usunac
+            
+            mu = newtong * m1
+            mu = newtong
+            write(*,*) "G=", newtong
+
+            if( (e < zero) .or. (e >= one) ) then
+               call die("[initproblem:velocities] Invalid eccentricity")
+            else
+               r = sqrt((init_pos_body_one(1) - init_pos_body_two(1))**2 + &
+                        (init_pos_body_one(2) - init_pos_body_two(2))**2 + &
+                        (init_pos_body_one(3) - init_pos_body_two(3))**2)
+
+               if (e.equals.0.0) then
+                  vel_2bodies(2) = sqrt(mu/r)
+                  write(*,*) "Orbita kolowa"
+               else
+                  a = r/(1.0 + e)
+                  vel_2bodies(2) = sqrt(mu*(2.0/r - 1.0/a))
+                  write(*,'(A11,F4.2,A3,F5.3,A3,F5.3)') "#Elipsa: e=", e, " a=",a, " b=", a*sqrt(1.0 - e**2)
+                  lenght = dpi*sqrt((a**3)/mu)  !usunac 
+                  write(*,*) "lenght=", lenght
+               endif
+            endif
+            vel_2bodies(1) = 0.0
+            vel_2bodies(3) = 0.0
+            
+      end function vel_2bodies
+      
+      
       subroutine orbits(n_particles, e, first_run, plane)
          use particle_pub, only: pset
          use constants,    only: dpi
@@ -228,8 +313,10 @@ contains
          pos_init(1) = 2.0
          pos_init(2) = 0.0
          pos_init(3) = 0.0
-
+         
+         
          vel_init = velocities(pos_init, e)
+         !vel_init = 0.0
          write(*,*) "vel_init", vel_init
 
          if(first_run) then
@@ -245,8 +332,8 @@ contains
                vel_init = rotate(dtheta, vel_init, plane)
             enddo
 
-            !call pset%add(1.0, [2.0,0.0,0.0],[0.0,0.0,0.0],[0.0,0.0,0.0],0.0)
-            !call pset%add(1.0, [0.0,0.0,0.0],[0.0,0.0,0.0],[0.0,0.0,0.0],0.0)
+            call pset%add(10.0, [0.0,0.0,0.0],[0.0,0.0,0.0],[0.0,0.0,0.0],0.0)
+            !call pset%add(1.0, [0.0,0.0,0.0],[0.0,0.0,0.0],[0.0,0.0,0.0],0.0) ! to "dziala"
            
             first_run = .false.
             
