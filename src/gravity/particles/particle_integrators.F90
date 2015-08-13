@@ -201,14 +201,14 @@ contains
 
       real, intent(in)                   :: t_glob               !< initial time of simulation
       real, intent(in)                   :: dt_tot               !< timestep of simulation
-      real, dimension(:), allocatable    :: mass                 !< 1D array of mass of the particles
+      real, dimension(:), allocatable    :: mass                !< 1D array of mass of the particles
       real                               :: dt_tot_h             !< half of timestep, dt_tot_h = 0.5*dt_tot
-      real                               :: total_energy         !< total energy of set of particles
-      real, save                        :: initial_energy       !< total initial energy of set of particles
-      real                               :: d_energy             !< error of energy of set of particles in succeeding timesteps, at t=t_glob=0.0
-      real                               :: ang_momentum         !< angular momentum of set of particles
-      real                               :: init_ang_mom         !< angular momentum of set of particles at t_glob
-      real                               :: d_ang_momentum = 0.0 !< error of angular momentum in succeeding timensteps, at t=t_glob=0.0
+      real                               :: total_energy         !< total energy of set of the particles
+      real, save                        :: initial_energy       !< total initial energy of set of the particles
+      real                               :: d_energy             !< error of energy of set of the particles in succeeding timesteps
+      real                               :: ang_momentum         !< angular momentum of set of the particles
+      real, save                        :: init_ang_mom         !< initial angular momentum of set of the particles
+      real                               :: d_ang_momentum       !< error of angular momentum in succeeding timensteps
 
       integer                            :: i
       integer                            :: n                    !< number of particles
@@ -270,11 +270,16 @@ contains
       !init_energy = energy
 
       call get_energy(pset, total_energy, n)
+      call get_ang_momentum_2(pset, n, ang_momentum)
+
       if (first_run_lf) then
          initial_energy = total_energy
-         d_energy = 0.0
+         d_energy       = 0.0
+         init_ang_momentum = ang_momentum
+         d_ang_momentum    = 0.0
       else
          d_energy = log(abs((total_energy - initial_energy)/initial_energy))
+         d_ang_momentum = log(abs((ang_momentum - init_ang_momentum)/init_ang_momentum))
       endif
 
       
