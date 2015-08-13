@@ -287,7 +287,7 @@ contains
 
 
       do i = 1, n
-         write(lun_out, '(I3,1X,18(E13.6,1X))') i, t_glob+dt_tot, dt_old, mass(i), pset%p(i)%pos, pset%p(i)%vel, pset%p(i)%acc, pset%p(i)%energy, total_energy, initial_energy, d_energy!, ang_momentum, d_ang_momentum
+         write(lun_out, '(I3,1X,19(E13.6,1X))') i, t_glob+dt_tot, dt_old, mass(i), pset%p(i)%pos, pset%p(i)%vel, pset%p(i)%acc, pset%p(i)%energy, total_energy, initial_energy, d_energy, ang_momentum, init_ang_momentum, d_ang_momentum
       enddo
 
       !call save_particles(n, lf_t, mass, pset, counter)
