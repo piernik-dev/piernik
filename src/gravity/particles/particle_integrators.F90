@@ -201,13 +201,13 @@ contains
 
       real, intent(in)                   :: t_glob               !< initial time of simulation
       real, intent(in)                   :: dt_tot               !< timestep of simulation
-      real, dimension(:), allocatable    :: mass                !< 1D array of mass of the particles
+      real, dimension(:), allocatable    :: mass                 !< 1D array of mass of the particles
       real                               :: dt_tot_h             !< half of timestep, dt_tot_h = 0.5*dt_tot
       real                               :: total_energy         !< total energy of set of the particles
-      real, save                        :: initial_energy       !< total initial energy of set of the particles
+      real, save                         :: initial_energy       !< total initial energy of set of the particles
       real                               :: d_energy             !< error of energy of set of the particles in succeeding timesteps
       real                               :: ang_momentum         !< angular momentum of set of the particles
-      real, save                        :: init_ang_mom         !< initial angular momentum of set of the particles
+      real, save                         :: init_ang_mom         !< initial angular momentum of set of the particles
       real                               :: d_ang_momentum       !< error of angular momentum in succeeding timensteps
 
       integer                            :: i
@@ -257,18 +257,6 @@ contains
       external_pot = .false.
 
 
-
-
-
-
-      !call get_ang_momentum_2(pset, n, ang_momentum)
-      !init_ang_mom = ang_momentum
-
-
-
-      !call get_energy(pset, cg, cells, dist, n, energy)
-      !init_energy = energy
-
       call get_energy(pset, total_energy, n)
       call get_ang_momentum_2(pset, n, ang_momentum)
 
@@ -301,7 +289,6 @@ contains
       else
          !3.kick(dt_old)
          call kick(pset, 0.5*dt_old, n)
-         
 
       endif
       !1. Kick (dt_tot_h)
@@ -351,14 +338,14 @@ contains
 
 
          subroutine get_energy(pset, total_energy, n)
-            use constants,    only: ndims, half, zero
+            use constants,      only: ndims, half, zero
             use particle_types, only: particle_set
             implicit none
             class(particle_set), intent(inout) :: pset  !< particle list
             integer, intent(in)                :: n      !< number of particles
-            integer                              :: cdim, p
-            real, dimension(n)                  :: v     !< kwadraty predkosci czastek
-            real, intent(out)                   :: total_energy !< total energy of set of particles
+            integer                            :: cdim, p
+            real, dimension(n)                 :: v     !< kwadraty predkosci czastek
+            real, intent(out)                  :: total_energy !< total energy of set of particles
 
             v = zero
             total_energy = zero
@@ -404,7 +391,7 @@ contains
 
                open(unit = data_file, file=filename)
                   write(data_file, *) "#t =", lf_t
-                  do i=1,n
+                  do i = 1, n
                      write(data_file,*) i, mass(i), pset%p(i)%pos, pset%p(i)%vel
                   enddo
                close(data_file)
@@ -532,9 +519,9 @@ contains
 !               der_z = ( phi_pm(x, y, z+d, eps) - phi_pm(x, y, z-d, eps) ) / (2.0*d)
 !         end function der_z
 
-         
+
          subroutine get_ang_momentum_2(pset, n, ang_momentum)
-            use constants, only : xdim, ydim, zdim
+            use constants,      only: xdim, ydim, zdim
             use particle_types, only: particle_set
             implicit none
                class(particle_set), intent(in) :: pset
@@ -765,7 +752,7 @@ contains
 
       end interface
 
-      class(particle_set),  intent(inout)  :: pset
+      class(particle_set),   intent(inout) :: pset
       type(grid_container),  pointer       :: cg
       type(cg_list_element), pointer       :: cgl
 
@@ -953,10 +940,10 @@ contains
             type(grid_container), pointer, intent(in)     :: cg
             class(particle_set), intent(inout)            :: pset  !< particle list
             integer, intent(in)                           :: n_part
-            integer, dimension(n_part, ndims), intent(in)      :: cells
-            real, dimension(n_part, ndims), intent(in) :: dist
+            integer, dimension(n_part, ndims), intent(in) :: cells
+            real, dimension(n_part, ndims), intent(in)    :: dist
             integer                                       :: p
-            real,dimension(n_part)                             :: dpot, d2pot
+            real, dimension(n_part)                       :: dpot, d2pot
 
                do p = 1, n_part
                   dpot(p) = df_dx_o2([cells(p, :)], cg) * dist(p, xdim) + &
@@ -978,7 +965,7 @@ contains
          implicit none
             type(grid_container), pointer, intent(in) :: cg
             integer, dimension(ndims), intent(in)     :: cell
-            real,target                               :: df_dx_o2
+            real, target                              :: df_dx_o2
 
                !o(R^2)
                df_dx_o2 = ( cg%gpot(cell(xdim)+1, cell(ydim), cell(zdim)) - &
@@ -993,7 +980,7 @@ contains
          implicit none
             type(grid_container), pointer, intent(in) :: cg
             integer, dimension(ndims), intent(in)     :: cell
-            real,target                               :: df_dy_o2
+            real, target                              :: df_dy_o2
 
                !o(R^2)
                df_dy_o2 = ( cg%gpot(cell(xdim), cell(ydim)+1, cell(zdim)) - &
@@ -1008,7 +995,7 @@ contains
          implicit none
             type(grid_container), pointer, intent(in) :: cg
             integer, dimension(ndims), intent(in)     :: cell
-            real,target                               :: df_dz_o2
+            real, target                              :: df_dz_o2
 
                !o(R^2)
                df_dz_o2 = ( cg%gpot(cell(xdim), cell(ydim), cell(zdim)+1) - &
@@ -1023,7 +1010,7 @@ contains
          implicit none
             type(grid_container), pointer, intent(in) :: cg
             integer, dimension(ndims), intent(in)     :: cell
-            real,target                               :: d2f_dx2_o2
+            real, target                              :: d2f_dx2_o2
 
                !o(R^2)
                d2f_dx2_o2 = ( cg%gpot(cell(xdim)+1, cell(ydim), cell(zdim)) - &
@@ -1039,7 +1026,7 @@ contains
          implicit none
             type(grid_container), pointer, intent(in) :: cg
             integer, dimension(ndims), intent(in)     :: cell
-            real,target                               :: d2f_dy2_o2
+            real, target                              :: d2f_dy2_o2
 
                !o(R^2)
                d2f_dy2_o2 = ( cg%gpot(cell(xdim), cell(ydim)+1, cell(zdim)) - &
@@ -1055,7 +1042,7 @@ contains
          implicit none
             type(grid_container), pointer, intent(in) :: cg
             integer, dimension(ndims), intent(in)     :: cell
-            real,target                               :: d2f_dz2_o2
+            real, target                              :: d2f_dz2_o2
 
                !o(R^2)
                d2f_dz2_o2 = ( cg%gpot(cell(xdim), cell(ydim), cell(zdim)+1) - &
@@ -1071,7 +1058,7 @@ contains
          implicit none
             type(grid_container), pointer, intent(in) :: cg
             integer, dimension(ndims), intent(in)     :: cell
-            real,target                               :: d2f_dxdy_o2
+            real, target                              :: d2f_dxdy_o2
 
                !o(R^2)
                d2f_dxdy_o2 = ( cg%gpot(cell(xdim)+1, cell(ydim)+1, cell(zdim)) - &
@@ -1088,7 +1075,7 @@ contains
          implicit none
             type(grid_container), pointer, intent(in) :: cg
             integer, dimension(ndims), intent(in)     :: cell
-            real,target                               :: d2f_dxdz_o2
+            real, target                              :: d2f_dxdz_o2
 
                !o(R^2)
                d2f_dxdz_o2 = ( cg%gpot(cell(xdim)+1, cell(ydim), cell(zdim)+1) - &
@@ -1105,7 +1092,7 @@ contains
          implicit none
             type(grid_container), pointer, intent(in) :: cg
             integer, dimension(ndims), intent(in)     :: cell
-            real,target                               :: d2f_dydz_o2
+            real, target                              :: d2f_dydz_o2
 
                !o(R^2)
                d2f_dydz_o2 = ( cg%gpot(cell(xdim), cell(ydim)+1, cell(zdim)+1) - &
@@ -1122,7 +1109,7 @@ contains
          implicit none
             type(grid_container), pointer, intent(in) :: cg
             integer, dimension(ndims), intent(in)     :: cell
-            real,target                               :: df_dx_o4
+            real, target                              :: df_dx_o4
 
                !o(R^4)
                df_dx_o4 = 2.0 * (cg%gpot(cell(xdim)+1, cell(ydim), cell(zdim)) - &
@@ -1139,7 +1126,7 @@ contains
          implicit none
             type(grid_container), pointer, intent(in) :: cg
             integer, dimension(ndims), intent(in)     :: cell
-            real,target                               :: df_dy_o4
+            real, target                              :: df_dy_o4
 
                !o(R^4)
                df_dy_o4 = 2.0 * ( cg%gpot(cell(xdim), cell(ydim)+1, cell(zdim)) - &
@@ -1156,7 +1143,7 @@ contains
          implicit none
             type(grid_container), pointer, intent(in) :: cg
             integer, dimension(ndims), intent(in)     :: cell
-            real,target                               :: df_dz_o4
+            real, target                              :: df_dz_o4
 
                !o(R^4)
                df_dz_o4 = 2.0* (cg%gpot(cell(xdim), cell(ydim), cell(zdim)+1) - &
@@ -1173,7 +1160,7 @@ contains
          implicit none
             type(grid_container), pointer, intent(in) :: cg
             integer, dimension(ndims), intent(in)     :: cell
-            real,target                               :: d2f_dx2_o4
+            real, target                              :: d2f_dx2_o4
 
                !o(R^4)
                d2f_dx2_o4 = 4.0 * ( cg%gpot(cell(xdim)+1, cell(ydim), cell(zdim)) + &
@@ -1192,7 +1179,7 @@ contains
          implicit none
             type(grid_container), pointer, intent(in) :: cg
             integer, dimension(ndims), intent(in)     :: cell
-            real,target                               :: d2f_dy2_o4
+            real, target                              :: d2f_dy2_o4
 
                !o(R^4)
                d2f_dy2_o4 = 4.0*( cg%gpot(cell(xdim), cell(ydim)+1, cell(zdim)) + &
@@ -1211,7 +1198,7 @@ contains
          implicit none
             type(grid_container), pointer, intent(in) :: cg
             integer, dimension(ndims), intent(in)     :: cell
-            real,target                               :: d2f_dz2_o4
+            real, target                              :: d2f_dz2_o4
 
                !o(R^4)
                d2f_dz2_o4 = 4.0*( cg%gpot(cell(xdim), cell(ydim), cell(zdim)+1) + &
@@ -1230,7 +1217,7 @@ contains
          implicit none
             type(grid_container), pointer, intent(in) :: cg
             integer, dimension(ndims), intent(in)     :: cell
-            real,target                               :: d2f_dxdy_o4
+            real, target                              :: d2f_dxdy_o4
 
                !o(R^4)
                d2f_dxdy_o4 = ( cg%gpot(cell(xdim)+1, cell(ydim)+1, cell(zdim)) + &
@@ -1251,7 +1238,7 @@ contains
          implicit none
             type(grid_container), pointer, intent(in) :: cg
             integer, dimension(ndims), intent(in)     :: cell
-            real,target                               :: d2f_dxdz_o4
+            real, target                              :: d2f_dxdz_o4
 
                !o(R^4)
                d2f_dxdz_o4 = ( cg%gpot(cell(xdim)+1, cell(ydim), cell(zdim)+1) + &
@@ -1272,7 +1259,7 @@ contains
          implicit none
             type(grid_container), pointer, intent(in) :: cg
             integer, dimension(ndims), intent(in)     :: cell
-            real,target                               :: d2f_dydz_o4
+            real, target                              :: d2f_dydz_o4
 
                !o(R^4)
                d2f_dydz_o4 = ( cg%gpot(cell(xdim), cell(ydim)+1, cell(zdim)+1) + &
@@ -1307,8 +1294,8 @@ contains
             procedure(d2dxixj), pointer, intent(in) :: d2f_dxdy_p, d2f_dxdz_p, d2f_dydz_p
 
 
-               do i=1, n_part
-                  if ((pset%p(i)%outside) .eqv. .false.) then
+               do i = 1, n_part
+                  if ( (pset%p(i)%outside) .eqv. .false.) then
                      pset%p(i)%acc(xdim) = - (df_dx_p([cells(i, :)], cg) + &
                                     d2f_dx2_p([cells(i, :)], cg)  * dist(i, xdim) + &
                                     d2f_dxdy_p([cells(i, :)], cg) * dist(i, ydim) + &
@@ -1389,7 +1376,6 @@ contains
 
                write(*,*) "[get_acc_cic]: particles = ", n_part
                do i = 1, n_part
-
                   pset%p(i)%acc = zero
                   if ((pset%p(i)%outside) .eqv. .false.) then
                      do cdim = xdim, ndims
@@ -1401,8 +1387,6 @@ contains
                         dxyz(i, cdim) = abs(pset%p(i)%pos(cdim) - cg%coord(CENTER, cdim)%r(cic_cells(i,cdim)))
 
                      enddo
-                     !write(*,*) cells(i,:)
-                     !write(*,*) cic_cells(i,:)
                      
                      wijk(i, 1) = (cg%dx - dxyz(i, xdim))*(cg%dy - dxyz(i, ydim))*(cg%dz - dxyz(i, zdim)) !a(i  ,j  ,k  )
                      wijk(i, 2) = (cg%dx - dxyz(i, xdim))*(cg%dy - dxyz(i, ydim))*         dxyz(i, zdim)  !a(i+1,j  ,k  )
@@ -1418,21 +1402,12 @@ contains
                enddo
 
                wijk = wijk/cg%dvol
-               !write(*,*) "wijk"
-               !write(*,*) wijk(1,:)
 
-!stare---------------------------------------------------------------------------
                do p = 1, n_part
-               !write(*,*) "1:Czastka ", p
                   c = 1
                   do i = 0, 1
                      do j = 0, 1
                         do k = 0, 1
-                        !write (*,*) i, j, k, c
-                        !write(*,'(A6, 3(I4), A3, 3(I4), A1)') "x:   [", i+1, j, k, "] [", i-1, j, k, "]"
-                        !write(*,'(A6, 3(I4), A3, 3(I4), A1)') "y:   [", i, j+1, k, "] [", i, j-1, k, "]" 
-                        !write(*,'(A6, 3(I4), A3, 3(I4), A1)') "z:   [", i, j, k+1, "] [", i, j, k-1, "]" 
-                        
                            fx(p, c) = -(cg%gpot(cic_cells(p, xdim)+1+i, cic_cells(p, ydim)  +j, cic_cells(p, zdim)  +k) - cg%gpot(cic_cells(p, xdim)-1+i, cic_cells(p, ydim)  +j, cic_cells(p, zdim)  +k))
                            fy(p, c) = -(cg%gpot(cic_cells(p, xdim)  +i, cic_cells(p, ydim)+1+j, cic_cells(p, zdim)  +k) - cg%gpot(cic_cells(p, xdim)  +i, cic_cells(p, ydim)-1+j, cic_cells(p, zdim)  +k))
                            fz(p, c) = -(cg%gpot(cic_cells(p, xdim)  +i, cic_cells(p, ydim)  +j, cic_cells(p, zdim)+1+k) - cg%gpot(cic_cells(p, xdim)  +i, cic_cells(p, ydim)  +j, cic_cells(p, zdim)-1+k))
@@ -1441,39 +1416,19 @@ contains
                      enddo
                   enddo
                enddo
-!---------------------------------------------------------------------------------
 
                fx = half*fx*cg%idx
                fy = half*fy*cg%idy
                fz = half*fz*cg%idz
-               !write(*,*) "fx ", fx
-               !write(*,*) "fy ", fy
-               !write(*,*) "fz ", fz
-
-               !write(*,*) "acc(xdim)", pset%p(1)%acc(xdim)
-               !write(*,*) "acc(ydim)", pset%p(1)%acc(ydim)
-               !write(*,*) "acc(zdim)", pset%p(1)%acc(zdim)
                
                do p = 1, n_part
-                  !write(*,*) "2:Czastka ", p
                   do c = 1, 8
-                  !write(*,*) pset%p(p)%acc(xdim), wijk(p, c), fx(p, c), pset%p(p)%acc(xdim) + wijk(p, c) * fx(p, c)
                      pset%p(p)%acc(xdim) = pset%p(p)%acc(xdim) + wijk(p, c) * fx(p, c)
-                     
                      pset%p(p)%acc(ydim) = pset%p(p)%acc(ydim) + wijk(p, c) * fy(p, c)
                      pset%p(p)%acc(zdim) = pset%p(p)%acc(zdim) + wijk(p, c) * fz(p, c)
                   enddo
                   write(*,*) "------", p, pset%p(p)%acc(xdim), pset%p(p)%acc(ydim), pset%p(p)%acc(zdim)
-                  !stop
-                  !pset%p(p)%acc(xdim) = wijk(p,1) * fx(p,1) + wijk(p, 8)*fx(p,8) + &
-                  !                  wijk(p,2) * fx(p,2) + wijk(p, 7)*fx(p,7) + &
-                  !                  wijk(p,3) * fx(p,3) + wijk(p, 6)*fx(p,6) + &
-                  !                  wijk(p,4) * fx(p,4) + wijk(p, 5)*fx(p,5)
                enddo
-               !write(*,*) "acc(xdim)", pset%p(1)%acc(xdim)
-               !write(*,*) "acc(ydim)", pset%p(1)%acc(ydim)
-               !write(*,*) "acc(zdim)", pset%p(1)%acc(zdim)
-               !stop
 
       end subroutine get_acc_cic
 
@@ -1497,33 +1452,31 @@ contains
                factor = big
                
                if(max_acc.notequals.0.0) then
-               dt_nbody = sqrt(2.0*eta*eps/max_acc)
-               !write(*,*) "[get_var_timestep_c]: dt_nbody =", dt_nbody
+                  dt_nbody = sqrt(2.0*eta*eps/max_acc)
 
-               do cdim = xdim, zdim
-                  maxv(cdim)  = abs(maxval(pset%p(:)%vel(cdim)))
-                  minv(cdim)  = abs(minval(pset%p(:)%vel(cdim)))
-                  max_v(cdim) = max(maxv(cdim), minv(cdim))
-               enddo
+                  do cdim = xdim, zdim
+                     maxv(cdim)  = abs(maxval(pset%p(:)%vel(cdim)))
+                     minv(cdim)  = abs(minval(pset%p(:)%vel(cdim)))
+                     max_v(cdim) = max(maxv(cdim), minv(cdim))
+                  enddo
 
 
-               if (any(max_v*dt_nbody > cg%dl)) then
+                  if (any(max_v*dt_nbody > cg%dl)) then
 
-                  if (any(max_v.notequals.0.0)) then
-                     do cdim = xdim, zdim
-                        if ((max_v(cdim).notequals.0.0)) then
-                           factor = min(cg%dl(cdim)/max_v(cdim), factor)
-                        endif
-                     enddo
+                     if (any(max_v.notequals.0.0)) then
+                        do cdim = xdim, zdim
+                           if ((max_v(cdim).notequals.0.0)) then
+                              factor = min(cg%dl(cdim)/max_v(cdim), factor)
+                           endif
+                        enddo
+                     endif
+                  else
+                     factor = one
                   endif
-               else
-                  factor = one
-               endif
 
-               !write(*,*) "[get_var_timestep_c]:  factor  =", factor
-               dt_nbody  = lf_c * factor * dt_nbody
+                  dt_nbody  = lf_c * factor * dt_nbody
                else
-               dt_nbody = zero
+                  dt_nbody = zero
                endif
                write(*,*) "[get_var_timestep_c]: dt_nbody =", dt_nbody
 
