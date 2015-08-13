@@ -360,7 +360,7 @@ contains
 
             do p = 1, n
                do cdim = 1, ndims
-                  v(p) = pset%p(p)%vel(cdim)**2
+                  v(p) = v(p)+ pset%p(p)%vel(cdim)**2
                enddo
                !energy       = 1/2  *      m         *  v**2 +     Ep(x,y,z)
                pset%p(p)%energy = half * pset%p(p)%mass *  v(p) + pset%p(p)%energy
