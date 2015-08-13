@@ -203,9 +203,9 @@ contains
       real, intent(in)                   :: dt_tot               !< timestep of simulation
       real, dimension(:), allocatable    :: mass                 !< 1D array of mass of the particles
       real                               :: dt_tot_h             !< half of timestep, dt_tot_h = 0.5*dt_tot
-      real                               :: energy               !< total energy of set of particles
-      real                               :: init_energy          !< total energy of set of particles at t_glob
-      real                               :: d_energy = 0.0       !< error of energy of set of particles in succeeding timesteps, at t=t_glob=0.0
+      real                               :: total_energy         !< total energy of set of particles
+      real, save                        :: initial_energy       !< total initial energy of set of particles
+      real                               :: d_energy             !< error of energy of set of particles in succeeding timesteps, at t=t_glob=0.0
       real                               :: ang_momentum         !< angular momentum of set of particles
       real                               :: init_ang_mom         !< angular momentum of set of particles at t_glob
       real                               :: d_ang_momentum = 0.0 !< error of angular momentum in succeeding timensteps, at t=t_glob=0.0
@@ -269,12 +269,20 @@ contains
       !call get_energy(pset, cg, cells, dist, n, energy)
       !init_energy = energy
 
+      call get_energy(pset, total_energy, n)
+      if (first_run_lf) then
+         initial_energy = total_energy
+         d_energy = 0.0
+      else
+         d_energy = log(abs((total_energy - initial_energy)/initial_energy))
+      endif
 
+      
       counter = 1
 
 
       do i = 1, n
-         write(lun_out, '(I3,1X,16(E13.6,1X))') i, t_glob+dt_tot, dt_old, mass(i), pset%p(i)%pos, pset%p(i)%vel, pset%p(i)%acc, energy, d_energy, ang_momentum, d_ang_momentum
+         write(lun_out, '(I3,1X,18(E13.6,1X))') i, t_glob+dt_tot, dt_old, mass(i), pset%p(i)%pos, pset%p(i)%vel, pset%p(i)%acc, pset%p(i)%energy, total_energy, initial_energy, d_energy!, ang_momentum, d_ang_momentum
       enddo
 
       !call save_particles(n, lf_t, mass, pset, counter)
@@ -288,7 +296,8 @@ contains
       else
          !3.kick(dt_old)
          call kick(pset, 0.5*dt_old, n)
-         call energy(pset, n)
+         
+
       endif
       !1. Kick (dt_tot_h)
       call kick(pset, dt_tot_h, n)
@@ -336,24 +345,28 @@ contains
          end subroutine drift
 
 
-         subroutine energy(pset, n)
+         subroutine get_energy(pset, total_energy, n)
             use constants,    only: ndims, half, zero
             use particle_types, only: particle_set
             implicit none
             class(particle_set), intent(inout) :: pset  !< particle list
             integer, intent(in)                :: n      !< number of particles
-            integer                              :: cdim
-            real, dimension(n)                  :: v     !< kwadraty predkosci czastek 
+            integer                              :: cdim, p
+            real, dimension(n)                  :: v     !< kwadraty predkosci czastek
+            real, intent(out)                   :: total_energy !< total energy of set of particles
 
             v = zero
+            total_energy = zero
+
             do p = 1, n
                do cdim = 1, ndims
                   v(p) = pset%p(p)%vel(cdim)**2
                enddo
-               !energia      = 1/2  *      m         *  v**2 +     Ep(x,y,z)
-               pset%p(p)%pot = half * pset%p(p)%mass *  v(p) + pset%p(p)%pot
+               !energy       = 1/2  *      m         *  v**2 +     Ep(x,y,z)
+               pset%p(p)%energy = half * pset%p(p)%mass *  v(p) + pset%p(p)%energy
+               total_energy = total_energy + pset%p(p)%energy
             enddo
-         end subroutine energy
+         end subroutine get_energy
 
 
 
@@ -395,31 +408,7 @@ contains
 
          end subroutine save_particles
 
-         subroutine potential2(pset, cg, cells, dist, n)
-            use constants,    only: ndims, half, xdim, ydim, zdim
-            use grid_cont,    only: grid_container
-               implicit none
-               type(grid_container), pointer, intent(in)     :: cg
-               class(particle_set), intent(inout)            :: pset  !< particle list
-               integer, intent(in)                           :: n
-               integer, dimension(n, ndims), intent(in)      :: cells
-               real(kind=8), dimension(n, ndims), intent(in) :: dist
-               integer                                       :: p
-               real,dimension(n)                             :: dpot, d2pot
-               
-               do p = 1, n
-                  dpot(p) = df_dx_o2([cells(p, :)], cg) * dist(p, xdim) + &
-                         df_dy_o2([cells(p, :)], cg) * dist(p, ydim) + &
-                         df_dz_o2([cells(p, :)], cg) * dist(p, zdim)
-                  
-                  d2pot(p) = d2f_dx2_o2([cells(p, :)], cg) * dist(p, xdim)**2 + &
-                          d2f_dy2_o2([cells(p, :)], cg) * dist(p, ydim)**2 + &
-                          d2f_dz2_o2([cells(p, :)], cg) * dist(p, zdim)**2 + &
-                          2.0*d2f_dxdy_o2([cells(p, :)], cg) * dist(p, xdim)*dist(p, ydim) + &
-                          2.0*d2f_dxdz_o2([cells(p, :)], cg) * dist(p, xdim)*dist(p, zdim)
-                  pset%p(p)%pot = cg%gpot(cells(p, xdim), cells(p, ydim), cells(p, zdim)) + dpot(p) + half * d2pot(p)
-               enddo
-         end subroutine potential2
+
 
 !         subroutine potential(pset, cg, cells, dist, n)!poprawic te funcje, bo teraz nie dziala prawidlowo :/
 !            use constants,    only: ndims, half, xdim, ydim, zdim
@@ -827,7 +816,7 @@ contains
 
       call find_cells(cells, dist, cg, n_part)
 
-      call potential2(pset, cg, cells, dist, n)    !szukanie energii potencjalnej w punktach-polozeniach czastek
+      call potential2(pset, cg, cells, dist, n_part)    !szukanie energii potencjalnej w punktach-polozeniach czastek
       
       select case (acc_interp_method)
          case('lagrange', 'Lagrange', 'polynomials')
@@ -921,7 +910,6 @@ contains
 
 
       subroutine find_cells(cells, dist, cg, n_part)
-
          use constants,      only: ndims, xdim, CENTER, LO, HI
          use grid_cont,      only: grid_container
          !use particle_types,   only: particle_set
@@ -952,6 +940,32 @@ contains
 
       end subroutine find_cells
 
+
+      subroutine potential2(pset, cg, cells, dist, n_part)
+         use constants,    only: ndims, half, xdim, ydim, zdim
+         use grid_cont,    only: grid_container
+            implicit none
+            type(grid_container), pointer, intent(in)     :: cg
+            class(particle_set), intent(inout)            :: pset  !< particle list
+            integer, intent(in)                           :: n_part
+            integer, dimension(n_part, ndims), intent(in)      :: cells
+            real, dimension(n_part, ndims), intent(in) :: dist
+            integer                                       :: p
+            real,dimension(n_part)                             :: dpot, d2pot
+
+               do p = 1, n_part
+                  dpot(p) = df_dx_o2([cells(p, :)], cg) * dist(p, xdim) + &
+                         df_dy_o2([cells(p, :)], cg) * dist(p, ydim) + &
+                         df_dz_o2([cells(p, :)], cg) * dist(p, zdim)
+                  
+                  d2pot(p) = d2f_dx2_o2([cells(p, :)], cg) * dist(p, xdim)**2 + &
+                          d2f_dy2_o2([cells(p, :)], cg) * dist(p, ydim)**2 + &
+                          d2f_dz2_o2([cells(p, :)], cg) * dist(p, zdim)**2 + &
+                          2.0*d2f_dxdy_o2([cells(p, :)], cg) * dist(p, xdim)*dist(p, ydim) + &
+                          2.0*d2f_dxdz_o2([cells(p, :)], cg) * dist(p, xdim)*dist(p, zdim)
+                  pset%p(p)%energy = cg%gpot(cells(p, xdim), cells(p, ydim), cells(p, zdim)) + dpot(p) + half * d2pot(p)
+               enddo
+      end subroutine potential2
 
       function df_dx_o2(cell, cg)
          use constants, only: ndims, xdim, ydim, zdim
