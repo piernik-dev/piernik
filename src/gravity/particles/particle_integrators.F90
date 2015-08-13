@@ -207,7 +207,7 @@ contains
       real, save                         :: initial_energy       !< total initial energy of set of the particles
       real                               :: d_energy             !< error of energy of set of the particles in succeeding timesteps
       real                               :: ang_momentum         !< angular momentum of set of the particles
-      real, save                         :: init_ang_mom         !< initial angular momentum of set of the particles
+      real, save                         :: init_ang_momentum    !< initial angular momentum of set of the particles
       real                               :: d_ang_momentum       !< error of angular momentum in succeeding timensteps
 
       integer                            :: i
@@ -359,9 +359,6 @@ contains
                total_energy = total_energy + pset%p(p)%energy
             enddo
          end subroutine get_energy
-
-
-
 
 
          subroutine save_particles(n, lf_t, mass, pset, counter)
