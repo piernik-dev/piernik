@@ -59,7 +59,6 @@ module named_array
    type, extends(generic_na) :: named_array4d
       real, dimension(:,:,:,:), pointer :: arr => null()
     contains
-      procedure :: array4d_associate
       procedure :: array4d_get_sweep
       procedure :: array4d_get_sweep_one_var
       procedure :: array4d_point
@@ -69,7 +68,6 @@ module named_array
       procedure :: array4d_span_ijkse
       procedure :: array4d_span_ijkse8
       procedure :: array4d_span_one_var_ijkse
-      generic, public :: init      => array4d_associate
       generic, public :: span      => array4d_span_one_var, array4d_span, array4d_span_one_var_ijkse, array4d_span_ijkse, array4d_span_ijkse8
       generic, public :: get_sweep => array4d_get_sweep_one_var, array4d_get_sweep
       generic, public :: point     => array4d_point, array4d_point_one_var
@@ -79,11 +77,9 @@ module named_array
    type, extends(generic_na) :: named_array3d
       real, dimension(:,:,:), pointer :: arr => null()
     contains
-      procedure :: array3d_associate
       procedure :: array3d_span
       procedure :: array3d_span_ijkse
       procedure :: array3d_span_ijkse8
-      generic, public :: init      => array3d_associate
       generic, public :: span      => array3d_span, array3d_span_ijkse, array3d_span_ijkse8
       procedure       :: get_sweep => array3d_get_sweep
       procedure       :: point     => array3d_point
@@ -213,32 +209,6 @@ contains
       end select
 
    end function check
-
-!> \brief Initialize named array with a predefined simple array
-
-   subroutine array3d_associate(this,other)
-
-      implicit none
-
-      class(named_array3d),           intent(inout) :: this
-      real, dimension(:,:,:), target, intent(in)    :: other
-
-      if (.not.associated(this%arr)) this%arr => other
-
-   end subroutine array3d_associate
-
-!> \brief Initialize named array with a predefined simple array
-
-   subroutine array4d_associate(this,other)
-
-      implicit none
-
-      class(named_array4d),             intent(inout) :: this
-      real, dimension(:,:,:,:), target, intent(in)    :: other
-
-      if (.not.associated(this%arr)) this%arr => other
-
-   end subroutine array4d_associate
 
 !> \brief Get a selected line of values
 
