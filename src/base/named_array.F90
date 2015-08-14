@@ -93,6 +93,8 @@ module named_array
    type, extends(generic_na) :: named_array_fc
       type(fc_3d_arr), dimension(ndims) :: f_arr
    contains
+      procedure :: array_fc_cc_point
+      procedure :: cc_point => array_fc_cc_point !< cell-centered value (simplest interpolation: average)
    end type named_array_fc
 
 contains
@@ -357,6 +359,44 @@ contains
       endif
 
    end function array4d_point_one_var
+
+   function array_fc_cc_point(this, v) result(p1d)
+
+      use constants,  only: xdim, ydim, zdim, I_ONE
+      use dataio_pub, only: die
+
+      implicit none
+
+      class(named_array_fc),         intent(inout) :: this
+      integer(kind=4), dimension(:), intent(in)    :: v
+
+      real, dimension(xdim:zdim)                           :: p1d
+
+      if (associated(this%f_arr(xdim)%arr)) then
+         p1d(xdim) = (this%f_arr(xdim)%arr(v(xdim),       v(ydim), v(zdim)) + &
+              &       this%f_arr(xdim)%arr(v(xdim)+I_ONE, v(ydim), v(zdim)))/2.
+      else
+         call die("[named_array:array_fc_cc_point] this%f_arr(xdim)%arr not associated")
+         p1d = 0 ! suppress use of uninitialized variable warning
+      endif
+
+      if (associated(this%f_arr(ydim)%arr)) then
+         p1d(ydim) = (this%f_arr(ydim)%arr(v(xdim), v(ydim),       v(zdim)) + &
+              &       this%f_arr(ydim)%arr(v(xdim), v(ydim)+I_ONE, v(zdim)))/2.
+      else
+         call die("[named_array:array_fc_cc_point] this%f_arr(ydim)%arr not associated")
+         p1d = 0 ! suppress use of uninitialized variable warning
+      endif
+
+      if (associated(this%f_arr(zdim)%arr)) then
+         p1d(zdim) = (this%f_arr(zdim)%arr(v(xdim), v(ydim), v(zdim)      ) + &
+              &       this%f_arr(zdim)%arr(v(xdim), v(ydim), v(zdim)+I_ONE))/2.
+      else
+         call die("[named_array:array_fc_cc_point] this%f_arr(zdim)%arr not associated")
+         p1d = 0 ! suppress use of uninitialized variable warning
+      endif
+
+   end function array_fc_cc_point
 
 !> \brief Get a selected range of values
 
