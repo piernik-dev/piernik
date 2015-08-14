@@ -167,7 +167,7 @@ contains
          call create_attribute(dset_id, "unit", ssbuf)
          call h5dclose_f(dset_id, error)
       enddo
-      do i = lbound(hdf_vars,1), ubound(hdf_vars,1)
+      do i = lbound(hdf_vars, 1, kind=4), ubound(hdf_vars, 1, kind=4)
          call get_unit(gdf_translate(hdf_vars(i)), val_unit, s_unit)
          call create_dataset(gid, gdf_translate(hdf_vars(i)), val_unit)
          call h5dopen_f(gid, gdf_translate(hdf_vars(i)), dset_id, error)
