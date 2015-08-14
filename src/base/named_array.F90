@@ -121,6 +121,8 @@ contains
       integer(kind=4), dimension(:), intent(in)    :: n1
       integer(kind=4), dimension(:), intent(in)    :: n2
 
+      integer :: d
+
       if (size(n1) /= size(n2)) call die("[named_array:array_init] sizes differ")
       select type(this)
          type is (named_array3d)
@@ -136,6 +138,9 @@ contains
             if (.not. associated(this%f_arr(xdim)%arr)) allocate(this%f_arr(xdim)%arr(n1(xdim):n2(xdim)+I_ONE, n1(ydim):n2(ydim),       n1(zdim):n2(zdim))      )
             if (.not. associated(this%f_arr(ydim)%arr)) allocate(this%f_arr(ydim)%arr(n1(xdim):n2(xdim),       n1(ydim):n2(ydim)+I_ONE, n1(zdim):n2(zdim))      )
             if (.not. associated(this%f_arr(zdim)%arr)) allocate(this%f_arr(zdim)%arr(n1(xdim):n2(xdim),       n1(ydim):n2(ydim),       n1(zdim):n2(zdim)+I_ONE))
+            do d = lbound(this%f_arr, dim=1), ubound(this%f_arr, dim=1)
+               this%f_arr(d)%arr = big_float
+            enddo
          class default
             call die("[named_array:named_array_init] No initialization for generic named array")
       end select
