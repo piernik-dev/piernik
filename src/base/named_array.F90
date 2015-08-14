@@ -52,7 +52,6 @@ module named_array
       procedure :: clean
       procedure :: check
       generic, public :: init => named_array_init
-      !> \todo add also span and get_sweep
    end type generic_na
 
    !> \brief A named array for multi-scalar and vector fields
@@ -85,7 +84,7 @@ module named_array
       procedure       :: point     => array3d_point
    end type named_array3d
 
-   !> \brief array for components of face -centered fields
+   !> \brief array for components of face-centered fields
    type :: fc_3d_arr
       real, dimension(:,:,:), pointer :: arr => null()
    end type fc_3d_arr
@@ -178,7 +177,7 @@ contains
 
       implicit none
 
-      class(generic_na), intent(inout) :: this                  !! \todo i want to become polymorphic class(*) :/
+      class(generic_na), intent(inout) :: this !! \todo i want to become polymorphic class(*) :/
 
       integer :: i
 
@@ -205,7 +204,7 @@ contains
                endif
             enddo
          class default
-            call die("[named_array:ccheck] No check for generic named array")
+            call die("[named_array:check] No check for generic named array")
       end select
 
    end function check
@@ -301,7 +300,7 @@ contains
       class(named_array3d),  intent(inout) :: this
       integer, dimension(:), intent(in)    :: v
 
-      real                                     :: p
+      real                                 :: p
 
       if (associated(this%arr)) then
          p = this%arr(v(xdim),v(ydim),v(zdim))
@@ -324,7 +323,7 @@ contains
       class(named_array4d),          intent(inout) :: this
       integer(kind=4), dimension(:), intent(in)    :: v
 
-      real,    dimension(:),     pointer       :: p1d
+      real, dimension(:), pointer                  :: p1d
 
       if (associated(this%arr)) then
          p1d => this%arr(:,v(xdim),v(ydim),v(zdim))
@@ -348,7 +347,7 @@ contains
       integer(kind=4),               intent(in)    :: nn
       integer(kind=4), dimension(:), intent(in)    :: v
 
-      real                                     :: p
+      real                                         :: p
 
       if (associated(this%arr)) then
          p = this%arr(nn,v(xdim),v(ydim),v(zdim))
@@ -370,7 +369,7 @@ contains
       class(named_array3d),          intent(inout) :: this
       integer(kind=4), dimension(:), intent(in)    :: v1, v2
 
-      real,    dimension(:,:,:), pointer       :: p3d
+      real, dimension(:,:,:), pointer              :: p3d
 
       if (.not.associated(this%arr)) then
          p3d => null()
@@ -391,7 +390,7 @@ contains
       class(named_array3d),            intent(inout) :: this
       integer(kind=4), dimension(:,:), intent(in)    :: v
 
-      real,    dimension(:,:,:), pointer             :: p3d
+      real, dimension(:,:,:), pointer                :: p3d
 
       if (.not.associated(this%arr)) then
          p3d => null()
@@ -412,7 +411,7 @@ contains
       class(named_array3d),            intent(inout) :: this
       integer(kind=8), dimension(:,:), intent(in)    :: v
 
-      real,    dimension(:,:,:), pointer             :: p3d
+      real, dimension(:,:,:), pointer                :: p3d
 
       if (.not.associated(this%arr)) then
          p3d => null()
@@ -434,7 +433,7 @@ contains
       integer(kind=4),               intent(in)    :: nn
       integer(kind=4), dimension(:), intent(in)    :: v1, v2
 
-      real,    dimension(:,:,:),  pointer      :: p3d
+      real, dimension(:,:,:),  pointer             :: p3d
 
       if (.not.associated(this%arr)) then
          p3d => null()
@@ -456,7 +455,7 @@ contains
       integer(kind=4),                  intent(in)    :: nn
       integer(kind=4), dimension(:, :), intent(in)    :: v
 
-      real,    dimension(:,:,:),  pointer            :: p3d
+      real, dimension(:,:,:), pointer                 :: p3d
 
       if (.not.associated(this%arr)) then
          p3d => null()
@@ -477,7 +476,7 @@ contains
       class(named_array4d),          intent(inout) :: this
       integer(kind=4), dimension(:), intent(in)    :: v1, v2
 
-      real,    dimension(:,:,:,:), pointer     :: p3d
+      real, dimension(:,:,:,:), pointer            :: p3d
 
       if (.not.associated(this%arr)) then
          p3d => null()
@@ -498,7 +497,7 @@ contains
       class(named_array4d),             intent(inout) :: this
       integer(kind=4), dimension(:, :), intent(in)    :: v
 
-      real,    dimension(:,:,:,:), pointer           :: p3d
+      real, dimension(:,:,:,:), pointer               :: p3d
 
       if (.not.associated(this%arr)) then
          p3d => null()
@@ -518,7 +517,7 @@ contains
       class(named_array4d),             intent(inout) :: this
       integer(kind=8), dimension(:, :), intent(in)    :: v
 
-      real,    dimension(:,:,:,:), pointer           :: p3d
+      real, dimension(:,:,:,:), pointer               :: p3d
 
       integer :: d
 
