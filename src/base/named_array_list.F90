@@ -45,11 +45,11 @@ module named_array_list
    implicit none
 
    private
-   public :: na_var, qna, wna
+   public :: na_var, qna, wna, fna
 
    !> \brief Common properties of 3D and 4D named arrays
    type :: na_var
-      character(len=dsetnamelen)                 :: name          !< a user-provided id for the array
+      character(len=dsetnamelen)                 :: name          !< an user-provided id for the array
       logical                                    :: vital         !< fields that are subject of automatic prolongation and restriction (e.g. state variables)
       integer(kind=4)                            :: restart_mode  !< AT_IGNORE: do not write to restart, AT_NO_B write without ext. boundaries, AT_OUT_B write with ext. boundaries
                                                                   !< \todo position /= VAR_CENTER should automatically force AT_OUT_B if AT_IGNORE was not chosen
@@ -78,14 +78,21 @@ module named_array_list
       integer(kind=4) :: wai                                   !< auxiliary array : cg%q(qna%wai)
    end type na_var_list_q
 
-   !> \brief the most commonly used 4D named arraya are u and b, thus we add shortcuts here
+   !> \brief the most commonly used 4D named arrays are u and b, thus we add shortcuts here
+   !> \deprecated b will be moved to face-centered array
    type, extends(na_var_list) :: na_var_list_w
       integer(kind=4) :: fi                                    !< fluid           : cg%w(wna%fi)
-      integer(kind=4) :: bi                                    !< magnetic field  : cg%w(wna%bi)
+      integer(kind=4) :: bi                                    !< magnetic field  : cg%w(wna%bi) !> \deprecated will be removed
    end type na_var_list_w
+
+   !> \brief the most commonly used face-centered named array will be b, thus we add shortcuts here
+   type, extends(na_var_list) :: na_var_list_f
+      integer(kind=4) :: bi                                    !< magnetic field  : cg%f(fna%bi)
+   end type na_var_list_f
 
    type(na_var_list_q) :: qna !< list of registered 3D named arrays
    type(na_var_list_w) :: wna !< list of registered 4D named arrays
+   type(na_var_list_f) :: fna !< list of registered face-centered named arrays
 
 contains
 
@@ -195,10 +202,13 @@ contains
       endif
       this%lst(ubound(this%lst(:), dim=1)) = element
 
+      !> set type-specific shortcuts
       select type(this)
+         type is (na_var_list_f)
+            if (element%name == mag_n)   this%bi  = ubound(this%lst(:), dim=1, kind=4)
          type is (na_var_list_w)
             if (element%name == fluid_n) this%fi  = ubound(this%lst(:), dim=1, kind=4)
-            if (element%name == mag_n)   this%bi  = ubound(this%lst(:), dim=1, kind=4)
+            if (element%name == mag_n)   this%bi  = ubound(this%lst(:), dim=1, kind=4) !> \deprecated will be removed
          type is (na_var_list_q)
             if (element%name == wa_n)    this%wai = ubound(this%lst(:), dim=1, kind=4)
       end select
