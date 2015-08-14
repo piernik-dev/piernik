@@ -187,13 +187,14 @@ contains
 
 
    subroutine leapfrog2ord(pset, t_glob, dt_tot)
-      !use constants,      only: xdim, zdim!, half, zero
+      use constants,      only: zero
       use particle_types, only: particle_set
       use domain,         only: is_refined, is_multicg
       use cg_list,        only: cg_list_element
       use grid_cont,      only: grid_container
       use dataio_pub,     only: die, printinfo
       use global,         only: dt_old
+      use func,           only: operator(.equals.)
 
 
       implicit none 
@@ -259,18 +260,26 @@ contains
 
       call get_energy(pset, total_energy, n)
       call get_ang_momentum_2(pset, n, ang_momentum)
+      write(*,*) "ANG_MOMENTUM-----: ", ang_momentum
+      !stop
 
       if (first_run_lf) then
          initial_energy = total_energy
          d_energy       = 0.0
          init_ang_momentum = ang_momentum
          d_ang_momentum    = 0.0
+         write(*,*) "Pierwszy"
       else
          d_energy = log(abs((total_energy - initial_energy)/initial_energy))
-         d_ang_momentum = log(abs((ang_momentum - init_ang_momentum)/init_ang_momentum))
+         d_ang_momentum = (ang_momentum - init_ang_momentum)/init_ang_momentum
+         if (d_ang_momentum.equals. zero) then
+            d_ang_momentum = 0.0
+         else
+            d_ang_momentum = log(abs(d_ang_momentum))
+         endif
       endif
 
-      
+
       counter = 1
 
 
@@ -289,13 +298,13 @@ contains
       else
          !3.kick(dt_old)
          call kick(pset, 0.5*dt_old, n)
-
       endif
       !1. Kick (dt_tot_h)
       call kick(pset, dt_tot_h, n)
 
       !2.drift(lf_dt)
       call drift(pset, dt_tot, n)
+      !stop
 
       !call save_particles(n, lf_t, mass, pset, counter)
 
