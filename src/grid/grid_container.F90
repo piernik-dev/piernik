@@ -32,7 +32,7 @@ module grid_cont
 
    use constants,       only: xdim, zdim, ndims, LO, HI, CENTER, INV_CENTER
    use fluxtypes,       only: fluxarray, fluxpoint
-   use named_array,     only: named_array4d, named_array3d
+   use named_array,     only: named_array4d, named_array3d, named_array_fc
    use refinement_flag, only: ref_flag
    use real_vector,     only: real_vec_T
 
@@ -201,8 +201,9 @@ module grid_cont
 
       ! Registered variables
 
-      type(named_array3d), allocatable, dimension(:) :: q        !< 3D arrays such as gravitational potential pr user-defined quantities or gravitational potential
-      type(named_array4d), allocatable, dimension(:) :: w        !< 4D arrays such as u, vector fields (b) or other vector/multi-scalar user-defined quantities
+      type(named_array3d),  allocatable, dimension(:) :: q       !< 3D arrays such as gravitational potential pr user-defined quantities or gravitational potential
+      type(named_array4d),  allocatable, dimension(:) :: w       !< 4D arrays such as u, vector fields (b) or other vector/multi-scalar user-defined quantities
+      type(named_array_fc), allocatable, dimension(:) :: f       !< face-centered arrays such as magnetic field
 
       ! handy shortcuts to some entries in q(:)
       real, dimension(:,:,:), pointer :: gpot    => null()       !< Array for sum of gravitational potential at t += dt
@@ -239,6 +240,7 @@ module grid_cont
       procedure, private :: add_all_na                           !< Register all known named arrays for this cg, sey up shortcuts to the crucial fields
       procedure          :: add_na                               !< Register a new 3D entry in current cg with given name.
       procedure          :: add_na_4d                            !< Register a new 4D entry in current cg with given name.
+      procedure          :: add_na_fc                            !< Register a new face_centered entry in current cg with given name.
       procedure          :: update_leafmap                       !< Check if the grid container has any parts covered by finer grids and update appropriate map
       procedure          :: set_fluxpointers
       procedure          :: save_outfluxes
@@ -623,6 +625,13 @@ contains
          deallocate(this%w)
       endif
 
+      if (allocated(this%f)) then
+         do g = lbound(this%f(:), dim=1), ubound(this%f(:), dim=1)
+            call this%f(g)%clean
+         enddo
+         deallocate(this%f)
+      endif
+
       ! arrays not handled through named_array feature
       if (associated(this%prolong_xyz)) deallocate(this%prolong_xyz)
       if (allocated(this%prolong_xy))   deallocate(this%prolong_xy)
@@ -712,7 +721,7 @@ contains
 
    subroutine add_all_na(this)
 
-      use named_array_list, only: qna, wna
+      use named_array_list, only: qna, wna, fna
 #ifdef ISO
       use constants,   only: cs_i2_n
       use fluids_pub,  only: cs2_max
@@ -729,15 +738,22 @@ contains
             call this%add_na(qna%lst(i)%multigrid)
          enddo
       endif
+
       if (allocated(wna%lst)) then
          do i = lbound(wna%lst(:), dim=1), ubound(wna%lst(:), dim=1)
             call this%add_na_4d(wna%lst(i)%dim4)
          enddo
       endif
 
+      if (allocated(fna%lst)) then
+         do i = lbound(fna%lst(:), dim=1), ubound(fna%lst(:), dim=1)
+            call this%add_na_fc()
+         enddo
+      endif
+
       ! shortcuts
       this%u  => this%w(wna%fi)%arr
-      this%b  => this%w(wna%bi)%arr
+      this%b  => this%w(wna%bi)%arr ! soon this%f(fna%bi)%f_arr
       this%wa => this%q(qna%wai)%arr
 #ifdef ISO
       this%cs_iso2 => this%q(qna%ind(cs_i2_n))%arr
@@ -804,6 +820,34 @@ contains
       if (this%level_id >= base_level_id) call this%w(ubound(this%w(:), dim=1))%init( [1_INT4, this%lhn(:, LO)], [n, this%lhn(:, HI)] ) !< \deprecated magic integer
 
    end subroutine add_na_4d
+
+!>
+!! \brief Register a new fc entry in current cg with given name. Called from cg_list_glob::reg_var
+!!
+!! \warning This routine should not be called directly from user routines
+!<
+   subroutine add_na_fc(this)
+
+      use constants,   only: base_level_id
+      use named_array, only: named_array_fc
+
+      implicit none
+
+      class(grid_container), intent(inout) :: this
+
+      type(named_array_fc), allocatable, dimension(:) :: tmp
+
+      if (.not. allocated(this%f)) then
+         allocate(this%f(1))
+      else
+         allocate(tmp(lbound(this%f(:),dim=1):ubound(this%f(:), dim=1) + 1))
+         tmp(:ubound(this%f(:), dim=1)) = this%f(:)
+         call move_alloc(from=tmp, to=this%f)
+      endif
+
+      if (this%level_id >= base_level_id) call this%f(ubound(this%f(:), dim=1))%init(this%lhn(:, LO), this%lhn(:, HI))
+
+   end subroutine add_na_fc
 
 !> \brief Check if the grid container has any parts covered by finer grids and update appropriate map
 
