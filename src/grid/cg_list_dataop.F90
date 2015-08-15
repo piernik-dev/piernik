@@ -788,17 +788,18 @@ contains
       use cg_list,          only: cg_list_element
       use constants,        only: big_float
       use dataio_pub,       only: warn, msg
-      use named_array_list, only: qna, wna
+      use named_array_list, only: qna, wna, fna
 
       implicit none
 
       class(cg_list_dataop_T), intent(in) :: this          !< object invoking type-bound procedure
 
-      integer                             :: i
+      integer                             :: i, d, cnt
       type(cg_list_element), pointer      :: cgl
 
       cgl => this%first
       do while (associated(cgl))
+
          do i = lbound(qna%lst(:), dim=1), ubound(qna%lst(:), dim=1)
             if (cgl%cg%q(i)%check()) then
                write(msg,'(3a,I12,a)') "[cg_list_dataop:check_for_dirt] Array ", trim(qna%lst(i)%name), " has ", &
@@ -806,6 +807,7 @@ contains
                call warn(msg)
             endif
          enddo
+
          do i = lbound(wna%lst(:), dim=1), ubound(wna%lst(:), dim=1)
             if (cgl%cg%w(i)%check()) then
                write(msg,'(3a,I12,a)') "[cg_list_dataop:check_for_dirt] Array ", trim(wna%lst(i)%name), " has ", &
@@ -813,6 +815,19 @@ contains
                call warn(msg)
             endif
          enddo
+
+         do i = lbound(fna%lst(:), dim=1), ubound(fna%lst(:), dim=1)
+            if (cgl%cg%f(i)%check()) then
+               cnt = 0
+               do d = lbound(cgl%cg%f(i)%f_arr, dim=1), ubound(cgl%cg%f(i)%f_arr, dim=1)
+                  cnt = cnt + count(cgl%cg%f(i)%f_arr(d)%arr >= big_float)
+               enddo
+               write(msg,'(3a,I12,a)') "[cg_list_dataop:check_for_dirt] Array ", trim(fna%lst(i)%name), " has ", &
+                  & cnt, " wrong values."
+               call warn(msg)
+            endif
+         enddo
+
          cgl => cgl%nxt
       enddo
 
