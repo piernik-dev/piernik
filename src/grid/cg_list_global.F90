@@ -124,11 +124,11 @@ contains
 !! When dim4 is present then create a rank-4 array instead.(in cg%w)
 !<
 
-   subroutine reg_var(this, name, vital, restart_mode, ord_prolong, dim4, position, multigrid, facecentered)
+   subroutine reg_var(this, name, vital, restart_mode, ord_prolong, dim4, multigrid, facecentered)
 
       use cg_list,          only: cg_list_element
-      use constants,        only: INVALID, VAR_CENTER, AT_NO_B, AT_IGNORE, I_ZERO, I_ONE, I_TWO, I_THREE, O_INJ, O_LIN, O_I2, O_D2, O_I3, O_I4, O_D3, O_D4, O_D5, O_D6
-      use dataio_pub,       only: die, warn, msg
+      use constants,        only: INVALID, AT_IGNORE, I_ZERO, I_ONE, I_TWO, I_THREE, O_INJ, O_LIN, O_I2, O_D2, O_I3, O_I4, O_D3, O_D4, O_D5, O_D6
+      use dataio_pub,       only: die, warn
       use domain,           only: dom
       use named_array_list, only: qna, wna, fna, na_var
 
@@ -140,7 +140,6 @@ contains
       integer(kind=4),                        optional, intent(in)    :: restart_mode  !< Write to the restart if not AT_IGNORE. Several write modes can be supported.
       integer(kind=4),                        optional, intent(in)    :: ord_prolong   !< Prolongation order for the variable
       integer(kind=4),                        optional, intent(in)    :: dim4          !< If present then register the variable in the cg%w array.
-      integer(kind=4), dimension(:), pointer, optional, intent(in)    :: position      !< If present then use this value instead of VAR_CENTER
       logical,                                optional, intent(in)    :: multigrid     !< If present and .true. then allocate cg%q(:)%arr and cg%w(:)%arr also below base level
       logical,                                optional, intent(in)    :: facecentered  !< If present and .true. then use face-centered list: cg%f(:)
 
@@ -148,7 +147,6 @@ contains
       logical                                                         :: mg, vit, fc
       integer                                                         :: nvar
       integer(kind=4)                                                 :: op, d4, rm
-      integer(kind=4), allocatable, dimension(:)                      :: pos
 
       vit = .false.
       if (present(vital)) vit = vital
@@ -175,28 +173,12 @@ contains
          nvar = 1
       endif
 
-      if (allocated(pos)) call die("[cg_list_global:reg_var] pos(:) already allocated")
-      allocate(pos(nvar))
-      pos(:) = VAR_CENTER
-      if (present(position)) then
-         if (any(size(position) == [1, nvar])) then
-            pos = position
-         else
-            write(msg,'(2(a,i3))')"[cg_list_global:reg_var] position should be an array of 1 or ",nvar," values. Got ",size(position)
-            call die(msg)
-         endif
-      endif
-      if (any(pos(:) /= VAR_CENTER) .and. rm == AT_NO_B) then
-         write(msg,'(3a)')"[cg_list_global:reg_var] no boundaries for restart with non cel-centered variable '",name,"' may result in loss of information in the restart files."
-         call warn(msg)
-      endif
-
       if (present(dim4)) then
-         call wna%add2lst(na_var(name, vit, rm, op, pos, d4, mg))
+         call wna%add2lst(na_var(name, vit, rm, op, d4, mg))
       else if (fc) then
-         call fna%add2lst(na_var(name, vit, rm, op, pos, d4, mg))
+         call fna%add2lst(na_var(name, vit, rm, op, d4, mg))
       else
-         call qna%add2lst(na_var(name, vit, rm, op, pos, d4, mg))
+         call qna%add2lst(na_var(name, vit, rm, op, d4, mg))
       endif
 
       select case (op)
@@ -227,15 +209,13 @@ contains
          cgl => cgl%nxt
       enddo
 
-      deallocate(pos)
-
    end subroutine reg_var
 
 !> \brief Register all crucial fields, which we cannot live without
 
    subroutine register_fluids(this)
 
-      use constants,  only: wa_n, fluid_n, uh_n, mag_n, u0_n, b0_n, ndims, AT_NO_B, AT_OUT_B, VAR_XFACE, VAR_YFACE, VAR_ZFACE, PIERNIK_INIT_FLUIDS
+      use constants,  only: wa_n, fluid_n, uh_n, mag_n, u0_n, b0_n, ndims, AT_NO_B, AT_OUT_B, PIERNIK_INIT_FLUIDS
       use dataio_pub, only: die, code_progress
       use fluidindex, only: flind
       use global,     only: repeat_step
@@ -247,11 +227,7 @@ contains
 
       class(cg_list_global_T), intent(inout)          :: this          !< object invoking type-bound procedure
 
-      integer(kind=4), save, dimension(ndims), target :: xyz_face = [ VAR_XFACE, VAR_YFACE, VAR_ZFACE ]
-      integer(kind=4),       dimension(:), pointer    :: pia
       ! the pia pointer above is used as a workaround for compiler warnings about possibly uninitialized variable in reg_var
-
-      pia => xyz_face
 
       if (code_progress < PIERNIK_INIT_FLUIDS) call die("[cg_list_global:register_fluids] Fluids are not yet initialized")
 
@@ -266,7 +242,7 @@ contains
 #else /* !MAGNETIC */
            .false., &
 #endif /* MAGNETIC */
-           restart_mode = AT_OUT_B, dim4 = ndims, position=pia)                                            !! Main array of magnetic field's components, "b"
+           restart_mode = AT_OUT_B, dim4 = ndims)                                                          !! Main array of magnetic field's components, "b"
       call this%reg_var(mag_n,   vital = &
 #ifdef MAGNETIC
            .true., &
@@ -276,7 +252,7 @@ contains
            restart_mode = AT_OUT_B, facecentered = .true.)                                                 !! Main array of magnetic field's components, "b"
       if (repeat_step) then
          call this%reg_var(u0_n,                                          dim4 = flind%all)                !! Copy of main array of all fluids' components
-         call this%reg_var(b0_n,                                          dim4 = ndims, position=pia)      !! Copy of main array of magnetic field's components
+         call this%reg_var(b0_n,                                          dim4 = ndims)                    !! Copy of main array of magnetic field's components
          call this%reg_var(b0_n,                                          facecentered = .true.)           !! Copy of main array of magnetic field's components
       endif
 #ifdef ISO

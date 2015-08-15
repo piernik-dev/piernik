@@ -333,7 +333,7 @@ contains
                   call this%finer%wq_copy(i, iw, qna%wai)
                   if (dom%geometry_type == GEO_RPZ .and. i == wna%fi .and. any(iw == iarr_all_my)) call this%finer%mul_by_r(qna%wai)
                endif
-               call this%prolong_q_1var(qna%wai, wna%lst(i)%position(iw), bnd_type = bnd_type)
+               call this%prolong_q_1var(qna%wai, bnd_type = bnd_type)
                if (dom%geometry_type == GEO_RPZ .and. i == wna%fi .and. any(iw == iarr_all_my)) call this%finer%div_by_r(qna%wai) ! angular momentum conservation
                call this%finer%qw_copy(qna%wai, i, iw) !> \todo filter this through cg%ignore_prolongation
             enddo
@@ -377,7 +377,7 @@ contains
                   call this%coarser%wq_copy(i, iw, qna%wai)
                   if (dom%geometry_type == GEO_RPZ .and. i == wna%fi .and. any(iw == iarr_all_my)) call this%coarser%mul_by_r(qna%wai)
                endif
-               call this%restrict_q_1var(qna%wai, wna%lst(i)%position(iw))
+               call this%restrict_q_1var(qna%wai)
                if (dom%geometry_type == GEO_RPZ .and. i == wna%fi .and. any(iw == iarr_all_my)) call this%coarser%div_by_r(qna%wai) ! angular momentum conservation
                call this%coarser%qw_copy(qna%wai, i, iw)
             enddo
@@ -448,23 +448,21 @@ contains
 !! \todo implement local copies without MPI anyway
 !<
 
-   subroutine restrict_q_1var(this, iv, pos)
+   subroutine restrict_q_1var(this, iv)
 
-      use constants,        only: xdim, ydim, zdim, ndims, LO, HI, I_ONE, refinement_factor, VAR_CENTER, GEO_XYZ, GEO_RPZ
+      use constants,        only: xdim, ydim, zdim, ndims, LO, HI, I_ONE, refinement_factor, GEO_XYZ, GEO_RPZ
       use dataio_pub,       only: msg, warn, die
       use domain,           only: dom
       use cg_list,          only: cg_list_element
       use grid_cont,        only: grid_container
-      use mpisetup,         only: comm, mpi_err, req, status, inflate_req, master
+      use mpisetup,         only: comm, mpi_err, req, status, inflate_req
       use mpi,              only: MPI_DOUBLE_PRECISION
       use named_array,      only: p3
-      use named_array_list, only: qna
 
       implicit none
 
       class(cg_level_connected_T), target, intent(inout) :: this !< object invoking type-bound procedure
       integer(kind=4),                     intent(in)    :: iv   !< variable to be restricted
-      integer(kind=4), optional,           intent(in)    :: pos  !< position of the variable within cell
 
       type(cg_level_connected_T), pointer                :: coarse
       integer                                            :: g
@@ -476,15 +474,6 @@ contains
       integer(kind=4), dimension(:,:), pointer           :: mpistatus
       type(cg_list_element), pointer                     :: cgl
       type(grid_container),  pointer                     :: cg                    !< current grid container
-      logical, save                                      :: warned = .false.
-      integer                                            :: position
-
-      position = qna%lst(iv)%position(I_ONE)
-      if (present(pos)) position = pos
-      if (position /= VAR_CENTER .and. .not. warned) then
-         if (master) call warn("[cg_level_connected:restrict_q_1var] Only cell-centered interpolation scheme is implemented. Exprect inaccurate results for variables that are placed on faces or corners")
-         warned = .true.
-      endif
 
       coarse => this%coarser
       if (.not. associated(coarse)) then ! can't restrict base level
@@ -624,22 +613,20 @@ contains
 !! \todo implement local copies without MPI
 !<
 
-   subroutine prolong_q_1var(this, iv, pos, bnd_type)
+   subroutine prolong_q_1var(this, iv, bnd_type)
 
       use cg_list,          only: cg_list_element
-      use constants,        only: xdim, ydim, zdim, LO, HI, I_ONE, O_INJ, VAR_CENTER, ndims
+      use constants,        only: xdim, ydim, zdim, LO, HI, I_ONE, O_INJ, ndims
       use dataio_pub,       only: msg, warn
       use grid_cont,        only: grid_container
       use grid_helpers,     only: f2c
-      use mpisetup,         only: comm, mpi_err, req, status, inflate_req, master
+      use mpisetup,         only: comm, mpi_err, req, status, inflate_req
       use mpi,              only: MPI_DOUBLE_PRECISION
-      use named_array_list, only: qna
 
       implicit none
 
       class(cg_level_connected_T), target, intent(inout) :: this     !< object invoking type-bound procedure
       integer(kind=4),                     intent(in)    :: iv       !< variable to be prolonged
-      integer(kind=4), optional,           intent(in)    :: pos      !< position of the variable within cell
       integer(kind=4), optional,           intent(in)    :: bnd_type !< Override default boundary type on external boundaries (useful in multigrid solver).
 
       type(cg_level_connected_T), pointer                :: fine
@@ -650,16 +637,7 @@ contains
       type(cg_list_element),            pointer          :: cgl
       type(grid_container),             pointer          :: cg               !< current grid container
       real, dimension(:,:,:),           pointer          :: p3d
-      logical, save                                      :: warned = .false.
-      integer                                            :: position
       integer(kind=8), dimension(ndims, LO:HI)           :: box_8            !< temporary storage
-
-      position = qna%lst(iv)%position(I_ONE)
-      if (present(pos)) position = pos
-      if (position /= VAR_CENTER .and. .not. warned) then
-         if (master) call warn("[cg_level_connected:prolong_q_1var] Only cell-centered interpolation scheme is implemented. Exprect inaccurate results for variables that are placed on faces or corners")
-         warned = .true.
-      endif
 
       fine => this%finer
       if (.not. associated(fine)) then ! can't prolong finest level

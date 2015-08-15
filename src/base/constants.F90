@@ -189,15 +189,6 @@ module constants
       enumerator :: AT_USER         !! user defined area type
    end enum
 
-   ! Position of variable within a cell
-   enum, bind(C)
-      enumerator :: VAR_CENTER      !! cell-centered
-      enumerator :: VAR_CORNER      !! corner (staggered-grid variable)
-      enumerator :: VAR_XFACE       !! X-face
-      enumerator :: VAR_YFACE       !! Y-face
-      enumerator :: VAR_ZFACE       !! Z-face
-   end enum
-
    ! Interpolation order
    enum, bind(C)
       enumerator :: O_INJ = 0  !! injection

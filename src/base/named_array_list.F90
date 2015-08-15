@@ -52,9 +52,8 @@ module named_array_list
       character(len=dsetnamelen)                 :: name          !< an user-provided id for the array
       logical                                    :: vital         !< fields that are subject of automatic prolongation and restriction (e.g. state variables)
       integer(kind=4)                            :: restart_mode  !< AT_IGNORE: do not write to restart, AT_NO_B write without ext. boundaries, AT_OUT_B write with ext. boundaries
-                                                                  !< \todo position /= VAR_CENTER should automatically force AT_OUT_B if AT_IGNORE was not chosen
+                                                                  !< \todo These are dirty tricks, hopefully removable for v2 I/O
       integer(kind=4)                            :: ord_prolong   !< Prolongation order for the variable
-      integer(kind=4), allocatable, dimension(:) :: position      !< VAR_CENTER by default, also possible VAR_CORNER and VAR_[XYZ]FACE
       integer(kind=4)                            :: dim4          !< <=0 for 3D arrays, >0 for 4D arrays
       logical                                    :: multigrid     !< .true. for variables that may exist below base level (e.g. work fields for multigrid solver)
    end type na_var
@@ -182,7 +181,6 @@ contains
       type(na_var),       intent(in)    :: element
 
       type(na_var), dimension(:), allocatable :: tmp
-      integer :: i
 
       if (this%exists(element%name)) then
          write(msg, '(3a)')"[named_array_list:add2lst] An array '",trim(element%name),"' was already registered in this list."
@@ -194,10 +192,6 @@ contains
       else
          allocate(tmp(lbound(this%lst(:),dim=1):ubound(this%lst(:), dim=1) + 1))
          tmp(:ubound(this%lst(:), dim=1)) = this%lst(:)
-         ! manually deallocate arrays inside user-types, as it seems that move_alloc is unable to do that
-         do i = lbound(this%lst(:), dim=1), ubound(this%lst(:), dim=1)
-            if (allocated(this%lst(i)%position)) deallocate(this%lst(i)%position)
-         enddo
          call move_alloc(from=tmp, to=this%lst)
       endif
       this%lst(ubound(this%lst(:), dim=1)) = element
@@ -271,12 +265,11 @@ contains
 
       do i = lbound(this%lst(:), dim=1), ubound(this%lst(:), dim=1)
          if (this%lst(i)%dim4 == INVALID) then
-            write(msg,'(3a,l2,a,i2,a,l2,2(a,i2))')"'", this%lst(i)%name, "', vital=", this%lst(i)%vital, ", restart_mode=", this%lst(i)%restart_mode, &
-                 &                                ", multigrid=", this%lst(i)%multigrid, ", ord_prolong=", this%lst(i)%ord_prolong, ", position=", this%lst(i)%position(:)
+            write(msg,'(3a,l2,a,i2,a,l2,a,i2)')"'", this%lst(i)%name, "', vital=", this%lst(i)%vital, ", restart_mode=", this%lst(i)%restart_mode, &
+                 &                               ", multigrid=", this%lst(i)%multigrid, ", ord_prolong=", this%lst(i)%ord_prolong
          else
-            write(msg,'(3a,l2,a,i2,a,l2,2(a,i2),a,100i2)')"'", this%lst(i)%name, "', vital=", this%lst(i)%vital, ", restart_mode=", this%lst(i)%restart_mode, &
-                 &                                        ", multigrid=", this%lst(i)%multigrid, ", ord_prolong=", this%lst(i)%ord_prolong, &
-                 &                                        ", components=", this%lst(i)%dim4, ", position=", this%lst(i)%position(:)
+            write(msg,'(3a,l2,a,i2,a,l2,2(a,i2))')"'", this%lst(i)%name, "', vital=", this%lst(i)%vital, ", restart_mode=", this%lst(i)%restart_mode, &
+                 &                                  ", multigrid=", this%lst(i)%multigrid, ", ord_prolong=", this%lst(i)%ord_prolong, ", components=", this%lst(i)%dim4
          endif
          call printinfo(msg, to_stdout)
       enddo
