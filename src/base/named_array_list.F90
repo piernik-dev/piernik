@@ -253,21 +253,21 @@ contains
       class(na_var_list), intent(in) :: this
       logical, optional,  intent(in) :: to_stdout
 
-      integer :: i, d3
+      integer :: i
 
       if (slave) return
 
-      d3 = count(this%lst(:)%dim4 == INVALID)
-
-      if (d3 /= 0) then
-         write(msg,'(a,i2,a)')"[named_array_list:print_vars] Found ",size(this%lst(:))," rank-3 arrays:"
-         call printinfo(msg, to_stdout)
-      endif
-      if (count(this%lst(:)%dim4 /= INVALID) /= 0) then
-         write(msg,'(a,i2,a)')"[named_array_list:print_vars] Found ",size(this%lst(:))," rank-4 arrays:"
-         call printinfo(msg, to_stdout)
-         if (d3 /=0) call warn("[named_array_list:print_vars] Both rank-3 and rank-4 named arrays are present in the same list!")
-      endif
+      select type(this)
+         type is (na_var_list_f)
+            write(msg,'(a,i2,a)')"[named_array_list:print_vars] Found ",size(this%lst(:))," face-centered arrays:"
+            call printinfo(msg, to_stdout)
+         type is (na_var_list_w)
+            write(msg,'(a,i2,a)')"[named_array_list:print_vars] Found ",size(this%lst(:))," rank-4 arrays:"
+            call printinfo(msg, to_stdout)
+         type is (na_var_list_q)
+            write(msg,'(a,i2,a)')"[named_array_list:print_vars] Found ",size(this%lst(:))," rank-3 arrays:"
+            call printinfo(msg, to_stdout)
+      end select
 
       do i = lbound(this%lst(:), dim=1), ubound(this%lst(:), dim=1)
          if (this%lst(i)%dim4 == INVALID) then

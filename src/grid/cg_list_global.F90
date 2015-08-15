@@ -124,13 +124,13 @@ contains
 !! When dim4 is present then create a rank-4 array instead.(in cg%w)
 !<
 
-   subroutine reg_var(this, name, vital, restart_mode, ord_prolong, dim4, position, multigrid)
+   subroutine reg_var(this, name, vital, restart_mode, ord_prolong, dim4, position, multigrid, facecentered)
 
       use cg_list,          only: cg_list_element
       use constants,        only: INVALID, VAR_CENTER, AT_NO_B, AT_IGNORE, I_ZERO, I_ONE, I_TWO, I_THREE, O_INJ, O_LIN, O_I2, O_D2, O_I3, O_I4, O_D3, O_D4, O_D5, O_D6
       use dataio_pub,       only: die, warn, msg
       use domain,           only: dom
-      use named_array_list, only: qna, wna, na_var
+      use named_array_list, only: qna, wna, fna, na_var
 
       implicit none
 
@@ -142,9 +142,10 @@ contains
       integer(kind=4),                        optional, intent(in)    :: dim4          !< If present then register the variable in the cg%w array.
       integer(kind=4), dimension(:), pointer, optional, intent(in)    :: position      !< If present then use this value instead of VAR_CENTER
       logical,                                optional, intent(in)    :: multigrid     !< If present and .true. then allocate cg%q(:)%arr and cg%w(:)%arr also below base level
+      logical,                                optional, intent(in)    :: facecentered  !< If present and .true. then use face-centered list: cg%f(:)
 
       type(cg_list_element), pointer                                  :: cgl
-      logical                                                         :: mg, vit
+      logical                                                         :: mg, vit, fc
       integer                                                         :: nvar
       integer(kind=4)                                                 :: op, d4, rm
       integer(kind=4), allocatable, dimension(:)                      :: pos
@@ -161,8 +162,12 @@ contains
       mg = .false.
       if (present(multigrid)) mg = multigrid
 
+      fc = .false.
+      if (present(facecentered)) fc = facecentered
+
       if (present(dim4)) then
          if (mg) call die("[cg_list_global:reg_var] there are no rank-4 multigrid arrays yet")
+         if (fc) call die("[cg_list_global:reg_var] there are no rank-4 face-centered arrays yet")
          d4 = dim4
          nvar = dim4
       else
@@ -188,6 +193,8 @@ contains
 
       if (present(dim4)) then
          call wna%add2lst(na_var(name, vit, rm, op, pos, d4, mg))
+      else if (fc) then
+         call fna%add2lst(na_var(name, vit, rm, op, pos, d4, mg))
       else
          call qna%add2lst(na_var(name, vit, rm, op, pos, d4, mg))
       endif
@@ -212,6 +219,8 @@ contains
       do while (associated(cgl))
          if (present(dim4)) then
             call cgl%cg%add_na_4d(dim4)
+         else if (fc) then
+            call cgl%cg%add_na_fc()
          else
             call cgl%cg%add_na(mg)
          endif
@@ -258,9 +267,17 @@ contains
            .false., &
 #endif /* MAGNETIC */
            restart_mode = AT_OUT_B, dim4 = ndims, position=pia)                                            !! Main array of magnetic field's components, "b"
+      call this%reg_var(mag_n,   vital = &
+#ifdef MAGNETIC
+           .true., &
+#else /* !MAGNETIC */
+           .false., &
+#endif /* MAGNETIC */
+           restart_mode = AT_OUT_B, facecentered = .true.)                                                 !! Main array of magnetic field's components, "b"
       if (repeat_step) then
          call this%reg_var(u0_n,                                          dim4 = flind%all)                !! Copy of main array of all fluids' components
          call this%reg_var(b0_n,                                          dim4 = ndims, position=pia)      !! Copy of main array of magnetic field's components
+         call this%reg_var(b0_n,                                          facecentered = .true.)           !! Copy of main array of magnetic field's components
       endif
 #ifdef ISO
       call all_cg%reg_var(cs_i2_n, vital = .true., restart_mode = AT_NO_B)
@@ -275,19 +292,20 @@ contains
       use constants,        only: INVALID, base_level_id
       use dataio_pub,       only: msg, die
       use cg_list,          only: cg_list_element
-      use named_array_list, only: qna, wna
+      use named_array_list, only: qna, wna, fna
 
       implicit none
 
       class(cg_list_global_T), intent(in) :: this          !< object invoking type-bound procedure
 
-      integer                             :: i
+      integer                             :: i, d
       type(cg_list_element), pointer      :: cgl
       logical                             :: bad
 
       cgl => this%first
       do while (associated(cgl))
          if (associated(cgl%cg)) then
+
             if (allocated(qna%lst) .neqv. allocated(cgl%cg%q)) then
                write(msg,'(2(a,l2))')"[cg_list_global:check_na] allocated(qna%lst) .neqv. allocated(cgl%cg%q):",allocated(qna%lst)," .neqv. ",allocated(cgl%cg%q)
                call die(msg)
@@ -308,6 +326,7 @@ contains
                   enddo
                endif
             endif
+
             if (allocated(wna%lst) .neqv. allocated(cgl%cg%w)) then
                write(msg,'(2(a,l2))')"[cg_list_global:check_na] allocated(wna%lst) .neqv. allocated(cgl%cg%w)",allocated(wna%lst)," .neqv. ",allocated(cgl%cg%w)
                call die(msg)
@@ -331,6 +350,30 @@ contains
                   enddo
                endif
             endif
+
+            if (allocated(fna%lst) .neqv. allocated(cgl%cg%f)) then
+               write(msg,'(2(a,l2))')"[cg_list_global:check_na] allocated(fna%lst) .neqv. allocated(cgl%cg%f)",allocated(fna%lst)," .neqv. ",allocated(cgl%cg%f)
+               call die(msg)
+            else if (allocated(fna%lst)) then
+               if (size(fna%lst(:)) /= size(cgl%cg%f)) then
+                  write(msg,'(2(a,i5))')"[cg_list_global:check_na] size(fna) /= size(cgl%cg%f)",size(fna%lst(:))," /= ",size(cgl%cg%f)
+                  call die(msg)
+               else
+                  do i = lbound(fna%lst(:), dim=1), ubound(fna%lst(:), dim=1)
+                     if (fna%lst(i)%dim4 /= INVALID) then
+                        write(msg,'(3a,i10)')"[cg_list_global:check_na] fna%lst(",i,"_, named '",fna%lst(i)%name,"' has dim4 set to ",fna%lst(i)%dim4
+                        call die(msg)
+                     endif
+                     do d = lbound(cgl%cg%f(i)%f_arr, dim=1), ubound(cgl%cg%f(i)%f_arr, dim=1)
+                        if (associated(cgl%cg%f(i)%f_arr(d)%arr) .and. cgl%cg%level_id < base_level_id) then
+                           write(msg,'(2(a,i3),3a)')"[cg_list_global:check_na] cgl%cg%f(",i,")%f_arr(",d,"), named '",fna%lst(i)%name,"' allocated on coarse level"
+                           call die(msg)
+                        endif
+                     enddo
+                  enddo
+               endif
+            endif
+
          endif
          cgl => cgl%nxt
       enddo

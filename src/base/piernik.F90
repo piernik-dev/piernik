@@ -45,7 +45,7 @@ program piernik
    use initpiernik,       only: init_piernik
    use list_of_cg_lists,  only: all_lists
    use mpisetup,          only: master, piernik_MPI_Barrier, piernik_MPI_Bcast
-   use named_array_list,  only: qna, wna
+   use named_array_list,  only: qna, wna, fna
    use refinement,        only: emergency_fix
    use refinement_update, only: update_refinement
    use timer,             only: walltime_end, set_timer
@@ -99,6 +99,7 @@ program piernik
       call printinfo("Named arrays present at start:", to_stdout=.false.)
       call qna%print_vars(to_stdout=.false.)
       call wna%print_vars(to_stdout=.false.)
+      call fna%print_vars(to_stdout=.false.)
       call printinfo("Grid lists present at start:", to_stdout=.false.)
    endif
    call all_lists%print(to_stdout = .false.)  ! needs all procs to participate
@@ -192,6 +193,7 @@ program piernik
       call printinfo("Named arrays present at finish:", to_stdout=.false.)
       call qna%print_vars(to_stdout=.false.)
       call wna%print_vars(to_stdout=.false.)
+      call fna%print_vars(to_stdout=.false.)
       call printinfo("Grid lists present at finish:", to_stdout=.false.)
    endif
    call all_lists%print(to_stdout = .false.)  ! needs all procs to participate
