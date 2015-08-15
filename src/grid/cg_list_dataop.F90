@@ -658,7 +658,7 @@ contains
 
    subroutine check_all_dirty(this, label, expand, warn_only)
 
-      use named_array_list, only: qna, wna
+      use named_array_list, only: qna, wna, fna
 
       implicit none
 
@@ -679,11 +679,15 @@ contains
          enddo
       enddo
 
+      do iv = lbound(fna%lst, dim=1, kind=4), ubound(fna%lst, dim=1, kind=4)
+         call this%check_dirty(iv, label, expand=expand, warn_only=warn_only, facecentered=.true.)
+      enddo
+
    end subroutine check_all_dirty
 
 !> \brief This routine checks for detectable traces of set_dirty calls.
 
-   subroutine check_dirty(this, iv, label, expand, subfield, warn_only)
+   subroutine check_dirty(this, iv, label, expand, subfield, warn_only, facecentered)
 
       use cg_list,          only: cg_list_element
       use constants,        only: dirtyL, pSUM
@@ -691,18 +695,19 @@ contains
       use domain,           only: dom
       use global,           only: dirty_debug, show_n_dirtys, no_dirty_checks
       use mpisetup,         only: proc, master, piernik_MPI_Allreduce
-      use named_array_list, only: qna, wna
+      use named_array_list, only: qna, wna, fna
 
       implicit none
 
-      class(cg_list_dataop_T),   intent(inout) :: this      !< level which we are checking
-      integer(kind=4),           intent(in)    :: iv        !< index of variable in cg%q(:) which we want to check
-      character(len=*),          intent(in)    :: label     !< label to indicate the origin of call
-      integer(kind=4), optional, intent(in)    :: expand    !< also check guardcells
-      integer(kind=4), optional, intent(in)    :: subfield  !< when present use it to check cg%w array
-      logical, optional,         intent(in)    :: warn_only !< do not die when dirty value has been spotted
+      class(cg_list_dataop_T),   intent(inout) :: this         !< level which we are checking
+      integer(kind=4),           intent(in)    :: iv           !< index of variable in cg%q(:) which we want to check
+      character(len=*),          intent(in)    :: label        !< label to indicate the origin of call
+      integer(kind=4), optional, intent(in)    :: expand       !< also check guardcells
+      integer(kind=4), optional, intent(in)    :: subfield     !< when present use it to check cg%w array
+      logical, optional,         intent(in)    :: warn_only    !< do not die when dirty value has been spotted
+      logical, optional,         intent(in)    :: facecentered !< when present and .true. check cg%f array
 
-      integer                                  :: i, j, k, ng, cnt
+      integer                                  :: i, j, k, d, ng, cnt
       type(cg_list_element), pointer           :: cgl
 
       if (.not. dirty_debug .or. no_dirty_checks) return
@@ -710,6 +715,8 @@ contains
       if (present(subfield)) then
          if (iv < lbound(wna%lst, dim=1) .or. iv > ubound(wna%lst, dim=1)) call die("[cg_list_dataop:check_dirty] Invalid w-variable index.")
          if (subfield < 1 .or. subfield > wna%lst(iv)%dim4) call die("[cg_list_dataop:check_dirty] Invalid w-variable component.")
+      else if (present(facecentered)) then
+         if (iv < lbound(fna%lst, dim=1) .or. iv > ubound(fna%lst, dim=1)) call die("[cg_list_dataop:check_dirty] Invalid f-variable index.")
       else
          if (iv < lbound(qna%lst, dim=1) .or. iv > ubound(qna%lst, dim=1)) call die("[cg_list_dataop:check_dirty] Invalid q-variable index.")
       endif
@@ -728,26 +735,36 @@ contains
                      if (associated(cgl%cg%w(iv)%arr)) then
                         if (abs(cgl%cg%w(iv)%arr(subfield, i, j, k)) > dirtyL) then
                            if (cnt <= show_n_dirtys) then
-                              if (cnt < show_n_dirtys) then
-                                 write(msg, '(3a,i4,a,i3,a,i5,3a,4i6,a,g20.12)') &
-                                      &                   "[cg_list_dataop:check_dirty] ", trim(label), "@", proc, " lvl^", cgl%cg%level_id, " cg#", cgl%cg%grid_id, &
-                                      &                   " '", trim(wna%lst(iv)%name), "'(", subfield, i, j, k, ") = ", cgl%cg%w(iv)%arr(subfield, i, j, k)
-                                 call warn(msg)
-                              endif
+                              write(msg, '(3a,i4,a,i3,a,i5,3a,4i6,a,g20.12)') &
+                                   &                   "[cg_list_dataop:check_dirty] 4D ", trim(label), "@", proc, " lvl^", cgl%cg%level_id, " cg#", cgl%cg%grid_id, &
+                                   &                   " '", trim(wna%lst(iv)%name), "'(", subfield, i, j, k, ") = ", cgl%cg%w(iv)%arr(subfield, i, j, k)
+                              call warn(msg)
                            endif
                            cnt = cnt + 1
                         endif
                      endif
+                  else if (present(facecentered)) then
+                     do d = lbound(cgl%cg%f(i)%f_arr, dim=1), ubound(cgl%cg%f(i)%f_arr, dim=1)
+                        if (associated(cgl%cg%f(iv)%f_arr(d)%arr)) then
+                           if (abs(cgl%cg%f(iv)%f_arr(d)%arr(i, j, k)) > dirtyL) then
+                              if (cnt <= show_n_dirtys) then
+                                 write(msg, '(3a,i4,a,i3,a,i5,3a,4i6,a,g20.12)') &
+                                      &                   "[cg_list_dataop:check_dirty] FC ", trim(label), "@", proc, " lvl^", cgl%cg%level_id, " cg#", cgl%cg%grid_id, &
+                                      &                   " '", trim(fna%lst(iv)%name), "'(", d, i, j, k, ") = ", cgl%cg%f(iv)%f_arr(d)%arr(i, j, k)
+                                 call warn(msg)
+                              endif
+                              cnt = cnt + 1
+                           endif
+                        endif
+                     enddo
                   else
                      if (associated(cgl%cg%q(iv)%arr)) then
                         if (abs(cgl%cg%q(iv)%arr(i, j, k)) > dirtyL) then
                            if (cnt <= show_n_dirtys) then
-                              if (cnt < show_n_dirtys) then
-                                 write(msg, '(3a,i4,a,i3,a,i5,3a,3i6,a,g20.12)') &
-                                      &                   "[cg_list_dataop:check_dirty] ", trim(label), "@", proc, " lvl^", cgl%cg%level_id, " cg#", cgl%cg%grid_id, &
-                                      &                   " '", trim(qna%lst(iv)%name), "'(", i, j, k, ") = ", cgl%cg%q(iv)%arr(i, j, k)
-                                 call warn(msg)
-                              endif
+                              write(msg, '(3a,i4,a,i3,a,i5,3a,3i6,a,g20.12)') &
+                                   &                   "[cg_list_dataop:check_dirty] 3D ", trim(label), "@", proc, " lvl^", cgl%cg%level_id, " cg#", cgl%cg%grid_id, &
+                                   &                   " '", trim(qna%lst(iv)%name), "'(", i, j, k, ") = ", cgl%cg%q(iv)%arr(i, j, k)
+                              call warn(msg)
                            endif
                            cnt = cnt + 1
                         endif
