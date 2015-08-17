@@ -91,7 +91,7 @@ contains
       use cg_level_connected, only: cg_level_connected_T
       use cg_list_global,     only: all_cg
       use list_of_cg_lists,   only: all_lists
-      use named_array_list,   only: qna, wna
+      use named_array_list,   only: qna, wna, fna
 
       implicit none
 
@@ -116,6 +116,7 @@ contains
 
       if (allocated(qna%lst)) deallocate(qna%lst)
       if (allocated(wna%lst)) deallocate(wna%lst)
+      if (allocated(fna%lst)) deallocate(fna%lst)
 
    end subroutine cleanup_grid
 
