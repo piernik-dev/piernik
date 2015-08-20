@@ -187,7 +187,7 @@ contains
 
 
    subroutine leapfrog2ord(pset, t_glob, dt_tot)
-      use constants,      only: zero
+      use constants,      only: zero, ndims
       use particle_types, only: particle_set
       use domain,         only: is_refined, is_multicg
       use cg_list,        only: cg_list_element
@@ -217,7 +217,7 @@ contains
       logical, save                      :: first_run_lf = .true.
       integer, save                      :: counter
       integer                            :: lun_out
-
+      real, dimension(:, :), allocatable :: acc2
 
       if (first_run_lf) then
          select case (acc_interp_method)
@@ -236,19 +236,20 @@ contains
 
 
       allocate(mass(n))
-
+      allocate(acc2(n, ndims))
+      
       if (t_glob < 0.0) i=1 ! supress compiler warnings
       
 
       mass(:) = pset%p(:)%mass
 
 
-!      cgl => leaves%first
+      !cgl => leaves%first
       if (is_refined) call die("[particle_integrators:leapfrog2ord] AMR not implemented for particles yet")
       if (is_multicg) call die("[particle_integrators:leapfrog2ord] multi_cg not implemented for particles yet")
 
       !do while (associated(cgl))
-!            cg => cgl%cg
+            !cg => cgl%cg
             !cgl => cgl%nxt
       !enddo
 
@@ -259,32 +260,43 @@ contains
 
 
       call get_energy(pset, total_energy, n)
+      write(*,*) "Energia----------: ", total_energy
+
       call get_ang_momentum_2(pset, n, ang_momentum)
       write(*,*) "ANG_MOMENTUM-----: ", ang_momentum
       !stop
 
-      if (first_run_lf) then
-         initial_energy = total_energy
-         d_energy       = 0.0
-         init_ang_momentum = ang_momentum
-         d_ang_momentum    = 0.0
-         write(*,*) "Pierwszy"
-      else
-         d_energy = log(abs((total_energy - initial_energy)/initial_energy))
-         d_ang_momentum = (ang_momentum - init_ang_momentum)/init_ang_momentum
-         if (d_ang_momentum.equals. zero) then
-            d_ang_momentum = 0.0
-         else
-            d_ang_momentum = log(abs(d_ang_momentum))
-         endif
-      endif
-
+      !if (first_run_lf) then
+      !   initial_energy = total_energy
+      !  d_energy       = 0.0
+      !   init_ang_momentum = ang_momentum
+      !   d_ang_momentum    = 0.0
+      !   write(*,*) "Pierwszy"
+      !else
+      !   d_energy = log(abs((total_energy - initial_energy)/initial_energy))
+      !   if (init_ang_momentum.equals. zero) then
+      !      d_ang_momentum = ang_momentum
+      !   else
+      !      d_ang_momentum = (ang_momentum - init_ang_momentum)/init_ang_momentum
+      !      if (d_ang_momentum.equals. zero) then
+      !         d_ang_momentum = 0.0
+      !      else
+      !         d_ang_momentum = log(abs(d_ang_momentum))
+      !      endif
+      !   endif
+      !endif
+      
+      write(*,*) "1:", pset%p(1)%vel
+      !write(*,*) "2:", pset%p(2)%vel
 
       counter = 1
 
 
       do i = 1, n
-         write(lun_out, '(I3,1X,19(E13.6,1X))') i, t_glob+dt_tot, dt_old, mass(i), pset%p(i)%pos, pset%p(i)%vel, pset%p(i)%acc, pset%p(i)%energy, total_energy, initial_energy, d_energy, ang_momentum, init_ang_momentum, d_ang_momentum
+      write(*,*) "n=",n," i=",i
+         call get_acc_model(pset, acc2, 0.0, n)
+         write(lun_out, '(I3,1X,19(E13.6,1X))') i, t_glob+dt_tot, dt_old, mass(i), pset%p(i)%pos, pset%p(i)%vel, pset%p(i)%acc, acc2(i,:)!, pset%p(i)%energy, total_energy, initial_energy, d_energy, ang_momentum, init_ang_momentum, d_ang_momentum
+         !write(lun_out, '(I3,1X,19(E13.6,1X))') i, t_glob+dt_tot, dt_old, pset%p(i)%pos, pset%p(i)%vel, pset%p(i)%acc, acc2(i,:)!, pset%p(i)%energy, total_energy, initial_energy, d_energy, ang_momentum, init_ang_momentum, d_ang_momentum
       enddo
 
       !call save_particles(n, lf_t, mass, pset, counter)
@@ -325,7 +337,8 @@ contains
 
 
             do i = 1, n
-               pset%p(i)%vel = pset%p(i)%vel + pset%p(i)%acc * t
+               !pset%p(i)%vel = pset%p(i)%vel + pset%p(i)%acc * t
+               pset%p(i)%vel = pset%p(i)%vel + 0.0 * t
             enddo
 
          end subroutine kick
@@ -473,57 +486,73 @@ contains
 !         end subroutine get_energy
 
 
-!         subroutine get_acc_model(pset, acc2, eps, n)
-!            use constants, only: ndims, xdim, ydim, zdim
-!            use grid_cont,  only: grid_container
-!            implicit none
-!               class(particle_set), intent(in)        :: pset  !< particle list
-!               integer, intent(in)                    :: n
-!               real, intent(in)                       :: eps
-!               real, dimension(n, ndims), intent(out) :: acc2
+         subroutine get_acc_model(pset, acc2, eps, n)
+            use constants, only: ndims, xdim, ydim, zdim
+            use grid_cont,  only: grid_container
+            implicit none
+               class(particle_set), intent(in)        :: pset  !< particle list
+               integer, intent(in)                    :: n
+               real, intent(in)                       :: eps
+               real, dimension(n, ndims), intent(out) :: acc2
+               integer  :: p
 
-!               do i=1,n
-!                  acc2(i, xdim) = -der_x(pset%p(i)%pos, 1.0e-8, eps)
-!                  acc2(i, ydim) = -der_y(pset%p(i)%pos, 1.0e-8, eps)
-!                  acc2(i, zdim) = -der_z(pset%p(i)%pos, 1.0e-8, eps)
-!               enddo
+               do p=1,n
+                  acc2(p, xdim) = -der_x(pset%p(p)%pos, 1.0e-8, eps)
+                  acc2(p, ydim) = -der_y(pset%p(p)%pos, 1.0e-8, eps)
+                  acc2(p, zdim) = -der_z(pset%p(p)%pos, 1.0e-8, eps)
+               enddo
 
-!         end subroutine get_acc_model
+         end subroutine get_acc_model
 
 
-!         function der_x(pos, d, eps)
-!         implicit none
-!            real(kind=8)                :: x, y, z, der_x, d, eps
-!            real(kind=8),dimension(1,3) :: pos
-!            x = pos(1,1)
-!            y = pos(1,2)
-!            z = pos(1,3)
-!            der_x = ( phi_pm(x+d, y, z, eps) - phi_pm(x-d, y, z, eps) ) / (2.0*d)
-!         end function der_x
+      function phi_pm(x, y, z, eps)
+         use units,    only: newtong
+         implicit none
+            real, intent(in) :: x, y, z, eps
+            real             :: r, phi_pm, G,M, mu
+               G = 1.0
+               M = 10.0
+               mu = newtong*M
+               !write(*,*) "[phi_pm: newtong=]", newtong
+               !write(*,*) "[phi_pm: mu     =]", mu
+               r = sqrt(x**2 + y**2 + z**2 + eps**2)
+               !stop
+
+               phi_pm = -mu / r
+      end function phi_pm
+
+         function der_x(pos, d, eps)
+         implicit none
+            real(kind=8)                :: x, y, z, der_x, d, eps
+            real(kind=8),dimension(1,3) :: pos
+            x = pos(1,1)
+            y = pos(1,2)
+            z = pos(1,3)
+            der_x = ( phi_pm(x+d, y, z, eps) - phi_pm(x-d, y, z, eps) ) / (2.0*d)
+         end function der_x
 
          !Pochodna wzgledem y
-!         function der_y(pos, d, eps)
-!            implicit none
-!               real(kind=8) :: x, y, z, der_y, d, eps
-!               real(kind=8),dimension(1,3) :: pos
+         function der_y(pos, d, eps)
+            implicit none
+               real(kind=8) :: x, y, z, der_y, d, eps
+               real(kind=8),dimension(1,3) :: pos
 
-!               x = pos(1,1)
-!               y = pos(1,2)
-!               z = pos(1,3)
-!               der_y = ( phi_pm(x, y+d, z, eps) - phi_pm(x, y-d, z, eps) ) / (2.0*d)
-!         end function der_y
+               x = pos(1,1)
+               y = pos(1,2)
+               z = pos(1,3)
+               der_y = ( phi_pm(x, y+d, z, eps) - phi_pm(x, y-d, z, eps) ) / (2.0*d)
+         end function der_y
 
          !Pochodna wzgledem z
-!         function der_z(pos, d, eps)
-!            implicit none
-!               real(kind=8)                :: x, y, z, der_z, d, eps
-!               real(kind=8),dimension(1,3) :: pos
-
-!               x = pos(1,1)
-!               y = pos(1,2)
-!               z = pos(1,3)
-!               der_z = ( phi_pm(x, y, z+d, eps) - phi_pm(x, y, z-d, eps) ) / (2.0*d)
-!         end function der_z
+         function der_z(pos, d, eps)
+            implicit none
+               real(kind=8)                :: x, y, z, der_z, d, eps
+               real(kind=8),dimension(1,3) :: pos
+               x = pos(1,1)
+               y = pos(1,2)
+               z = pos(1,3)
+               der_z = ( phi_pm(x, y, z+d, eps) - phi_pm(x, y, z-d, eps) ) / (2.0*d)
+         end function der_z
 
 
          subroutine get_ang_momentum_2(pset, n, ang_momentum)
@@ -771,6 +800,7 @@ contains
       integer, dimension(:,:), allocatable :: cells
       real                                 :: dt_nbody
       logical                              :: save_potential, finish
+      integer, save :: kroki = 0
 
 
 
@@ -797,14 +827,20 @@ contains
       cgl => leaves%first
       cg  => cgl%cg
 
-      !save_potential = .true.
-      save_potential = .false.
-      !finish         = .true.
-      finish         = .false.
+      !call pot_from_part(cg, zero, n_part, pset)
+      call pot2grid(cg, zero)
 
-      !call pot2grid(cg, zero)
-
-      call save_pot(save_potential, finish, cg)
+      !if (kroki == 0) then
+         save_potential = .true.
+         !save_potential = .false.
+         !finish         = .true.
+         !finish         = .false.
+         !call save_pot(save_potential, finish, cg, 64, 20)
+         call save_pot_pset(save_potential, finish, cg, 64, 20, pset)
+         !finish         = .true.
+      !endif
+      kroki = kroki + 1
+      write(*,*) "++++++++KROKI+++++++: ", kroki
 
       if (acc_interp_method == 'lagrange') then
          order = 4
@@ -852,6 +888,20 @@ contains
 
                phi_pm = -mu / r
       end function phi_pm
+      
+      function phi_pm_part(x, y, z, eps, mass)
+         use units,    only: newtong
+         implicit none
+            real, intent(in) :: x, y, z, eps
+            real             :: r, phi_pm_part, mass, mu
+               mu = newtong*mass
+               !write(*,*) "[phi_pm: newtong=]", newtong
+               !write(*,*) "[phi_pm: mu     =]", mu
+               r = sqrt(x**2 + y**2 + z**2 + eps**2)
+               !stop
+
+               phi_pm_part = -mu / r
+      end function phi_pm_part
 
 
       subroutine pot2grid(cg, eps2)
@@ -871,8 +921,37 @@ contains
                      enddo
                   enddo
                enddo
-
       end subroutine pot2grid
+
+      subroutine pot_from_part(cg, eps2, n_part, pset)
+         use constants, only: xdim, ydim, zdim, CENTER
+         use grid_cont, only: grid_container
+         use particle_types,   only: particle_set
+         implicit none
+            class(particle_set)                          :: pset  !< particle list
+            type(grid_container), pointer, intent(inout) :: cg
+            integer                                      :: i, j, k, p
+            real, intent(in)                             :: eps2
+            integer, intent(in) :: n_part
+               cg%gpot = 0.0
+               
+            open(unit=999, file='pset.dat')
+            do p = 1, n_part
+               do i = lbound(cg%gpot, dim=1), ubound(cg%gpot, dim=1)
+                  do j = lbound(cg%gpot, dim=2), ubound(cg%gpot, dim=2)
+                     do k = lbound(cg%gpot, dim=3), ubound(cg%gpot, dim=3)
+                        cg%gpot(i,j,k) = cg%gpot(i,j,k) + phi_pm_part(cg%coord(CENTER,xdim)%r(i) - pset%p(p)%pos(xdim), &
+                                                cg%coord(CENTER,ydim)%r(j) - pset%p(p)%pos(ydim), &
+                                                cg%coord(CENTER,zdim)%r(k) - pset%p(p)%pos(zdim) &
+                                                ,eps2, pset%p(p)%mass)
+                     enddo
+                  enddo
+               enddo
+               write(999,*) p, pset%p(p)%pos
+            enddo
+            close(999)
+
+      end subroutine pot_from_part
 
 
       subroutine check_ord(order, df_dx_p, d2f_dx2_p, df_dy_p, d2f_dy2_p,& 
@@ -1433,8 +1512,10 @@ contains
                      pset%p(p)%acc(ydim) = pset%p(p)%acc(ydim) + wijk(p, c) * fy(p, c)
                      pset%p(p)%acc(zdim) = pset%p(p)%acc(zdim) + wijk(p, c) * fz(p, c)
                   enddo
-                  write(*,*) "------", p, pset%p(p)%acc(xdim), pset%p(p)%acc(ydim), pset%p(p)%acc(zdim)
+                  !write(*,*) "------", p, pset%p(p)%acc(xdim), pset%p(p)%acc(ydim), pset%p(p)%acc(zdim)
                enddo
+               !czastka nr statyczna:
+               !pset%p(1)%acc = 0.0
 
       end subroutine get_acc_cic
 
@@ -1489,28 +1570,36 @@ contains
       end subroutine get_var_timestep_c
 
 
-      subroutine save_pot(save_potential, finish, cg)
+      subroutine save_pot(save_potential, finish, cg, numer1, numer2)
          use constants, only: xdim, ydim, zdim, CENTER
          use grid_cont, only: grid_container
             implicit none
             type(grid_container), pointer, intent(in) :: cg
             logical :: save_potential, finish
-            integer :: i, j, k
+            integer :: i, j
+            integer, intent(in) :: numer1, numer2
+
 
             if(save_potential) then
                   write(*,*) "Zapis potencjalu do pliku"
-                  open(unit=88, file='potencjal.dat')
+                  open(unit=88, file='potencjal1.dat')
+                  open(unit=89, file='potencjal2.dat')
                      do i=lbound(cg%gpot,dim=1),ubound(cg%gpot,dim=1)
                         do j=lbound(cg%gpot,dim=2),ubound(cg%gpot,dim=2)
-                           do k=lbound(cg%gpot,dim=3),ubound(cg%gpot,dim=3)
-                              write(88,*) i, j, k, cg%coord(CENTER, xdim)%r(i), &
-                                       cg%coord(CENTER, ydim)%r(i), cg%coord(CENTER, zdim)%r(i), &
-                                       cg%gpot(i,j,k)
-                           enddo
+                           !do k=lbound(cg%gpot,dim=3),ubound(cg%gpot,dim=3)
+                              write(88,*) i, j, numer1, cg%coord(CENTER, xdim)%r(i), &
+                                       cg%coord(CENTER, ydim)%r(j), cg%coord(CENTER, zdim)%r(numer1), &
+                                       cg%gpot(i,j,numer1)
+                              write(89,*) i, j, numer2, cg%coord(CENTER, xdim)%r(i), &
+                                       cg%coord(CENTER, ydim)%r(j), cg%coord(CENTER, zdim)%r(numer2), &
+                                       cg%gpot(i,j,numer2)
+                           !enddo
                         enddo
                      write(88,*)
+                     write(89,*)
                   enddo
                close(88)
+               close(89)
 
                if(finish) then
                   write(*,*) "Warunek zakonczenia-zatrzymano"
@@ -1518,6 +1607,60 @@ contains
                endif
             endif
       end subroutine save_pot
+
+
+
+
+
+      subroutine save_pot_pset(save_potential, finish, cg, numer1, numer2, pset)
+         use constants, only: xdim, ydim, zdim, CENTER
+         use grid_cont, only: grid_container
+         use particle_types, only: particle_set
+            implicit none
+            class(particle_set), intent(in)           :: pset  !< particle list
+            type(grid_container), pointer, intent(in) :: cg
+            logical :: save_potential, finish
+            integer :: i, j,p
+            integer, intent(in) :: numer1, numer2
+
+
+            open(unit=90, file='pset.dat')
+            do p=1, ubound(pset%p, dim=1)
+               write(90,*) p, pset%p(p)%pos
+            enddo
+            close(90)
+            if(save_potential) then
+                  write(*,*) "Zapis potencjalu do pliku"
+                  open(unit=88, file='potencjal1.dat')
+                  open(unit=89, file='potencjal2.dat')
+                     do i=lbound(cg%gpot,dim=1),ubound(cg%gpot,dim=1)
+                        do j=lbound(cg%gpot,dim=2),ubound(cg%gpot,dim=2)
+                           !do k=lbound(cg%gpot,dim=3),ubound(cg%gpot,dim=3)
+                              write(88,*) i, j, numer1, cg%coord(CENTER, xdim)%r(i), &
+                                       cg%coord(CENTER, ydim)%r(j), cg%coord(CENTER, zdim)%r(numer1), &
+                                       cg%gpot(i,j,numer1)
+                              write(89,*) i, j, numer2, cg%coord(CENTER, xdim)%r(i), &
+                                       cg%coord(CENTER, ydim)%r(j), cg%coord(CENTER, zdim)%r(numer2), &
+                                       cg%gpot(i,j,numer2)
+                           !enddo
+                        enddo
+                     write(88,*)
+                     write(89,*)
+                  enddo
+               close(88)
+               close(89)
+
+               if(finish) then
+                  write(*,*) "Warunek zakonczenia-zatrzymano"
+                  stop
+               endif
+            endif
+      end subroutine save_pot_pset
+
+
+
+
+
 
    end subroutine get_timestep_nbody
 

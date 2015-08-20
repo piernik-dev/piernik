@@ -115,13 +115,13 @@ contains
          endif
          first_run=.false.
       else
-         e = 0.6
+         e = 0.0
          n_particles = 1
          plane = 'XY'
-         !call orbits(n_particles, e, first_run, plane)
+         call orbits(n_particles, e, first_run, plane)
          !call relax_time(n_particles, first_run)
          !call read_buildgal
-         call twobodies(n_particles, e, first_run, plane)
+         !call twobodies(n_particles, e, first_run, plane)
       endif
 
 
@@ -193,7 +193,7 @@ contains
             real, dimension(3) :: vector, rotate
             real :: theta
             character(len=2) :: plane
-            
+
             select case (plane)
                case('XY', 'YX', 'xy', 'yx')
                   rotate(1) = vector(1)*cos(theta) - vector(2)*sin(theta)
@@ -210,6 +210,24 @@ contains
             end select
 
       end function rotate
+
+      function change_plane(vector, plane)
+         implicit none
+            real, dimension(3) :: vector, change_plane
+            character(len=2) :: plane
+               select case (plane)
+                  case('XZ', 'ZX', 'xz', 'zx')
+                     change_plane(1) = vector(1)
+                     change_plane(2) = vector(3)
+                     change_plane(3) = vector(2)
+                  case('YZ', 'ZY', 'yz', 'zy')
+                     change_plane(3) = vector(2)
+                     change_plane(2) = vector(1)
+                     change_plane(1) = vector(3)
+               end select
+                  
+      end function change_plane
+
 
       subroutine twobodies(n_particles, e, first_run, plane)
          use particle_pub, only: pset
@@ -231,11 +249,15 @@ contains
          m2 = 1.0
          init_pos_body_two = [2.0, 0.0, 0.0]
          init_vel_body_two = vel_2bodies(m1, init_pos_body_one, init_pos_body_two, e)
-         !init_vel_body_two = velocities(init_pos_body_two, e)
+         
+         !init_vel_body_two = 0.0
+         write(*,*) m1, " @ ", init_pos_body_one, ", with ", init_vel_body_one 
+         write(*,*) m2, " @ ", init_pos_body_two, ", with ", init_vel_body_two 
 
          if(first_run) then
-            call pset%add(1.0, [2.0, 0.0, 0.0], init_vel_body_two, [0.0, 0.0, 0.0], 0.0)
-            call pset%add(10.0, [0.0, 0.0, 0.0], [0.0, 0.0, 0.0], [0.0, 0.0, 0.0], 0.0) !dominujace cialo
+            call pset%add(m1, init_pos_body_one, init_vel_body_one, [0.0, 0.0, 0.0], 0.0) !dominujace cialo
+            call pset%add(m2, init_pos_body_two, init_vel_body_two, [0.0, 0.0, 0.0], 0.0)
+            !call pset%add(10.0, init_pos_body_one, init_vel_body_one, [0.0, 0.0, 0.0], 0.0) !dominujace cialo
             first_run=.false.
             write(*,*) "[2b]: Obliczono pozycje czastek "
 
@@ -258,6 +280,7 @@ contains
             real                 :: lenght  !usunac
             
             mu = newtong * mass
+            write(*,*) "NEWTONG=", newtong, "mu=", mu
 
             if( (e < zero) .or. (e >= one) ) then
                call die("[initproblem:velocities] Invalid eccentricity")
@@ -273,6 +296,10 @@ contains
                else
                   a = r/(1.0 + e)
                   vel_2bodies(2) = sqrt(mu*(2.0/r - 1.0/a))
+                  write(*,*) "predkosc 1: ", vel_2bodies(2)
+                  vel_2bodies(2) = sqrt((mu-mu*e)/r)
+                  write(*,*) "predkosc 2: ", vel_2bodies(2)
+
                   write(*,'(A11,F4.2,A3,F5.3,A3,F5.3)') "#Elipsa: e=", e, " a=",a, " b=", a*sqrt(1.0 - e**2)
                   lenght = dpi*sqrt((a**3)/mu)  !usunac 
                   write(*,*) "lenght=", lenght
@@ -301,12 +328,12 @@ contains
 
 
          pos_init(1) = 2.0
-         pos_init(2) = 0.0
+         pos_init(2) = 1.0
          pos_init(3) = 0.0
          
          
-         vel_init = velocities(pos_init, e)
-         !vel_init = 0.0
+         !vel_init = velocities(pos_init, e)
+         vel_init = [-0.5, 0.0, 0.0]
          write(*,*) "vel_init", vel_init
 
          if(first_run) then
@@ -322,7 +349,7 @@ contains
                !vel_init = rotate(dtheta, vel_init, plane)
             enddo
 
-            call pset%add(10.0, [0.0,0.0,0.0],[0.0,0.0,0.0],[0.0,0.0,0.0],0.0)
+            !call pset%add(10.0, [0.0,0.0,0.0],[0.0,0.0,0.0],[0.0,0.0,0.0],0.0)
             !call pset%add(1.0, [0.0,0.0,0.0],[0.0,0.0,0.0],[0.0,0.0,0.0],0.0) ! to "dziala"
            
             first_run = .false.

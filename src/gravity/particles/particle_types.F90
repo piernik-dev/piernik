@@ -356,7 +356,10 @@ contains
                   part  => this%p(p), &
                   idl   => cgl%cg%idl &
             )
-            field = 1.0e-6
+            if(p == 1) then
+               write(*,*) "czastka 1 ", p, "-zerowanie"
+               field = 1.0e-6
+            endif
                if (any(part%pos < cgl%cg%fbnd(:,LO)) .or. any(part%pos > cgl%cg%fbnd(:,HI))) cycle
 
                do cdim = xdim, zdim

@@ -6,19 +6,19 @@
     bnd_yr = 'per'
     bnd_zl = 'per'
     bnd_zr = 'per'
-    xmin   =-5.0
-    xmax   = 5.0
-    ymin   =-5.0
-    ymax   = 5.0
-    zmin   =-5.0
-    zmax   = 5.0
+    xmin   =-2.5
+    xmax   = 2.5
+    ymin   =-2.5
+    ymax   = 2.5
+    zmin   =-2.5
+    zmax   = 2.5
  /
 
  $MPI_BLOCKS
  /
 
  $UNITS
- units_set = "PSM"
+ !units_set = "PSM"
  /
 
  $RESTART_CONTROL
@@ -31,7 +31,8 @@
     !tend   = 200.0
     !tend   = 900.0
     tend    = 26183.9442
-    nend   = 6000
+    nend   = 60000
+    !nend = 4
  /
 
  $OUTPUT_CONTROL
@@ -51,7 +52,7 @@
  !cs_iso = 0.01
  !cs_iso = 0.01
  !cs_iso = 0.001
- selfgrav = .true.
+ !selfgrav = .true.
  !selfgrav = .false.
  /
 
@@ -66,7 +67,7 @@
 
  $GRAVITY
  !external_gp = 'ptmass_pot'
- !ptmass = 1.0
+ !ptmass = 10.0
  /
 
  $MULTIGRID_GRAVITY
@@ -91,5 +92,6 @@
    time_integrator = 'leapfrog2'
    interpolation_scheme = 'cic'
    acc_interp_method = 'cic'
+   !acc_interp_method = 'lagrange'
    lf_c = 1.0
  /
