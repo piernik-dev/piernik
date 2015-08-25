@@ -244,6 +244,7 @@ module grid_cont
       procedure          :: save_outfluxes
       procedure          :: prolong                              !< perform prolongation of the data stored in this%prolong_
       procedure          :: refinemap2SFC_list                   !< create list of SFC indices to be created from refine flags
+      procedure          :: set_constant_b_field                 !< set constant magnetic field on whole block
 
    end type grid_container
 
@@ -1276,5 +1277,26 @@ contains
       this%refinemap = .false.
 
    end subroutine refinemap2SFC_list
+
+!< \brief set constant magnetic field on whole block
+
+   subroutine set_constant_b_field(this, b)
+
+      use constants,  only: xdim, zdim
+
+      implicit none
+
+      class(grid_container),      intent(inout) :: this
+      real, dimension(xdim:zdim), intent(in)    :: b
+
+      integer :: d
+
+      if (associated(this%b)) then
+         do d = xdim, zdim
+            this%b(d, this%is:this%ie, this%js:this%je, this%ks:this%ke) = b(d)
+         enddo
+      endif
+
+   end subroutine set_constant_b_field
 
 end module grid_cont

@@ -169,7 +169,7 @@ contains
          cg => cgl%cg
          if (.not. cg%is_old) then
 
-            cg%b(:, :, :, :) = 0.
+            call cg%set_constant_b_field([0., 0., 0.])
             cg%u(:, :, :, :) = 0.
 
             mand => cg%q(qna%ind(mand_n))%arr

@@ -140,7 +140,7 @@ contains
       do while (associated(cgl))
          cg => cgl%cg
 
-         cg%b(:, :, :, :) = 0.
+         call cg%set_constant_b_field([0., 0., 0.])
          cg%u(:, :, :, :) = 0.
 
          if (dom%has_dir(xdim)) then
