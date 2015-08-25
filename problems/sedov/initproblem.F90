@@ -238,12 +238,10 @@ contains
             enddo
 
             if (fl%tag == ION) then
+               call cg%set_constant_b_field([bx0, by0, bz0])
                do k = cg%lhn(zdim,LO), cg%lhn(zdim,HI)
                   do j = cg%lhn(ydim,LO), cg%lhn(ydim,HI)
                      do i = cg%lhn(xdim,LO), cg%lhn(xdim,HI)
-                        cg%b(xdim,i,j,k) = bx0
-                        cg%b(ydim,i,j,k) = by0
-                        cg%b(zdim,i,j,k) = bz0
                         cg%u(fl%ien,i,j,k) = cg%u(fl%ien,i,j,k) + 0.5*(cg%b(xdim,i,j,k)**2 + cg%b(ydim,i,j,k)**2 + cg%b(zdim,i,j,k)**2)
                      enddo
                   enddo
@@ -412,9 +410,7 @@ contains
             cgl%cg%u(fl%imz, :, :, :) = 0.
             cgl%cg%u(fl%ien, :, :, :) = p0/(fl%gam_1) + ekin(cgl%cg%u(fl%imx, :, :, :), cgl%cg%u(fl%imy, :, :, :), cgl%cg%u(fl%imz, :, :, :), cgl%cg%u(fl%idn, :, :, :))
             if (fl%tag == ION) then
-               cgl%cg%b(xdim, :, :, :) = bx0
-               cgl%cg%b(ydim, :, :, :) = by0
-               cgl%cg%b(zdim, :, :, :) = bz0
+               call cgl%cg%set_constant_b_field([bx0, by0, bz0])
                cgl%cg%u(fl%ien, :, :, :) = cgl%cg%u(fl%ien, :, :, :) + emag(cgl%cg%b(xdim, :, :, :), cgl%cg%b(ydim, :, :, :), cgl%cg%b(zdim, :, :, :)**2)
             endif
             end associate

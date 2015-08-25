@@ -181,9 +181,7 @@ contains
       do while (associated(cgl))
          cg => cgl%cg
 
-         cg%b(xdim, :, :, :) = b0(xdim)
-         cg%b(ydim, :, :, :) = b0(ydim)
-         cg%b(zdim, :, :, :) = b0(zdim)
+         call cg%set_constant_b_field(b0)
          cg%u(fl%idn, :, :, :) = d0
          cg%u(fl%imx:fl%imz, :, :, :) = 0.0
 
