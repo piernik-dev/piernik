@@ -440,7 +440,7 @@ contains
 
             enddo
             cg%w(wna%ind(inid_n))%arr(:,:,:,:) = cg%u(:,:,:,:)
-            cg%b(:,:,:,:) = 0.0
+            call cg%set_constant_b_field([0., 0., 0.])
             if (allocated(grav)) deallocate(grav)
             if (allocated(dens_prof)) deallocate(dens_prof)
             if (allocated(ln_dens_der)) deallocate(ln_dens_der)

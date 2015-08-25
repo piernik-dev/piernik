@@ -230,7 +230,7 @@ contains
       do while (associated(cgl))
          cg => cgl%cg
 
-         cg%b(:, :, :, :) = 0.
+         call cg%set_constant_b_field([0., 0., 0.])
 
          cg%u(flind%neu%idn, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = cg%q(qna%ind(inid_n))%arr(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)
 

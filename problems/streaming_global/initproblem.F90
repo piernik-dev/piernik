@@ -483,7 +483,7 @@ contains
 
                enddo
                cg%w(wna%ind(inid_n))%arr(:,:,:,:) = cg%u(:,:,:,:)
-               cg%b(:,:,:,:) = 0.0
+               call cg%set_constant_b_field([0., 0., 0.])
             else
                call die("[initproblem:problem_initial_conditions] I don't know what to do... :/")
             endif
