@@ -253,6 +253,7 @@ contains
       endif
 
       ncrs = ncre + ncrn
+!!!!!            ncrs = (2*ncre+2) + ncrn   !!!!!
 
       if (any([ncrs, ncrn, ncre] > ncr_max) .or. any([ncrs, ncrn, ncre] < 0)) call die("[initcosmicrays:init_cosmicrays] ncr[nes] > ncr_max or ncr[nes] < 0")
       if (ncrs ==0) call warn("[initcosmicrays:init_cosmicrays] ncrs == 0")

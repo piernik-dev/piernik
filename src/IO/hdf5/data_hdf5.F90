@@ -101,7 +101,7 @@ contains
             f%fu = "\rm{Gs}"
             f%f2cgs = 1.0 / (fpi * sqrt(cm / (miu0 * gram)) * sek)
             f%stag = 1
-         case ("cr1" : "cr9")
+         case ("cr01" : "cr99")
          case ("gpot", "sgpt")
             f%fu = "\rm{cm}^2 / \rm{s}^2"
             f%f2cgs = 1.0 / (cm**2 / sek**2)
@@ -213,8 +213,8 @@ contains
 
       select case (var)
 #ifdef COSM_RAYS
-         case ("cr1" : "cr9")
-            read(var,'(A2,I1)') aux, i !> \deprecated BEWARE 0 <= i <= 9, no other indices can be dumped to hdf file
+         case ("cr01" : "cr99")
+            read(var,'(A2,I2.2)') aux, i !> \deprecated BEWARE 0 <= i <= 99, no other indices can be dumped to hdf file
             tab(:,:,:) = real(cg%u(flind%crs%beg+i-1, RNG), kind=4)
 #endif /* COSM_RAYS */
 #ifdef TRACER
