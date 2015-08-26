@@ -32,7 +32,7 @@ module grid_cont
 
    use constants,       only: xdim, zdim, ndims, LO, HI, CENTER, INV_CENTER
    use fluxtypes,       only: fluxarray, fluxpoint
-   use named_array,     only: named_array4d, named_array3d, named_array_fc
+   use named_array,     only: named_array4d, named_array3d, named_array_fc, fc_3d_arr
    use refinement_flag, only: ref_flag
    use real_vector,     only: real_vec_T
 
@@ -217,6 +217,7 @@ module grid_cont
       ! handy shortcuts to some entries in w(:)
       real, dimension(:,:,:,:), pointer :: u     => null()       !< Main array of all fluids' components
       real, dimension(:,:,:,:), pointer :: b     => null()       !< Main array of magnetic field's components
+      type(fc_3d_arr), dimension(:), pointer :: bf => null() !< Main array of face-centered magnetic field components
 
       ! Misc
       type(mg_arr), pointer :: mg                                !< multigrid arrays
@@ -730,7 +731,7 @@ contains
 
       implicit none
 
-      class(grid_container), intent(inout) :: this
+      class(grid_container), intent(inout), target :: this
 
       integer :: i
 
@@ -755,6 +756,7 @@ contains
       ! shortcuts
       this%u  => this%w(wna%fi)%arr
       this%b  => this%w(wna%bi)%arr ! soon this%f(fna%bi)%f_arr
+      this%bf => this%f(fna%bi)%f_arr
       this%wa => this%q(qna%wai)%arr
 #ifdef ISO
       this%cs_iso2 => this%q(qna%ind(cs_i2_n))%arr
@@ -1338,6 +1340,12 @@ contains
       if (associated(this%b)) then
          do d = xdim, zdim
             this%b(d, this%is:this%ie, this%js:this%je, this%ks:this%ke) = b(d)
+         enddo
+      endif
+
+      if (associated(this%bf)) then
+         do d = xdim, zdim
+            this%bf(d)%arr(this%is:this%ie, this%js:this%je, this%ks:this%ke) = b(d)
          enddo
       endif
 

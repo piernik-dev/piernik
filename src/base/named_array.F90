@@ -40,7 +40,7 @@ module named_array
    implicit none
 
    private
-   public :: named_array4d, named_array3d, named_array_fc, p3, p4
+   public :: named_array4d, named_array3d, named_array_fc, fc_3d_arr, p3, p4
 
    real, dimension(:,:,:),   pointer :: p3   !< auxiliary pointer to 3D named_arrays
    real, dimension(:,:,:,:), pointer :: p4   !< auxiliary pointer to 4D named_arrays
