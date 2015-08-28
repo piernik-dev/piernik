@@ -40,7 +40,7 @@
 
 module named_array_list
 
-   use constants, only: dsetnamelen
+   use constants, only: dsetnamelen, INVALID
 
    implicit none
 
@@ -81,12 +81,12 @@ module named_array_list
    !> \deprecated b will be moved to face-centered array
    type, extends(na_var_list) :: na_var_list_w
       integer(kind=4) :: fi                                    !< fluid           : cg%w(wna%fi)
-      integer(kind=4) :: bi                                    !< magnetic field  : cg%w(wna%bi) !> \deprecated will be removed
+      integer(kind=4) :: bi = INVALID                          !< magnetic field  : cg%w(wna%bi)
    end type na_var_list_w
 
    !> \brief the most commonly used face-centered named array will be b, thus we add shortcuts here
    type, extends(na_var_list) :: na_var_list_f
-      integer(kind=4) :: bi                                    !< magnetic field  : cg%f(fna%bi)
+      integer(kind=4) :: bi = INVALID                          !< magnetic field  : cg%f(fna%bi)
    end type na_var_list_f
 
    type(na_var_list_q) :: qna !< list of registered 3D named arrays
@@ -263,16 +263,18 @@ contains
             call printinfo(msg, to_stdout)
       end select
 
-      do i = lbound(this%lst(:), dim=1), ubound(this%lst(:), dim=1)
-         if (this%lst(i)%dim4 == INVALID) then
-            write(msg,'(3a,l2,a,i2,a,l2,a,i2)')"'", this%lst(i)%name, "', vital=", this%lst(i)%vital, ", restart_mode=", this%lst(i)%restart_mode, &
-                 &                               ", multigrid=", this%lst(i)%multigrid, ", ord_prolong=", this%lst(i)%ord_prolong
-         else
-            write(msg,'(3a,l2,a,i2,a,l2,2(a,i2))')"'", this%lst(i)%name, "', vital=", this%lst(i)%vital, ", restart_mode=", this%lst(i)%restart_mode, &
-                 &                                  ", multigrid=", this%lst(i)%multigrid, ", ord_prolong=", this%lst(i)%ord_prolong, ", components=", this%lst(i)%dim4
-         endif
-         call printinfo(msg, to_stdout)
-      enddo
+      if (allocated(this%lst)) then
+         do i = lbound(this%lst(:), dim=1), ubound(this%lst(:), dim=1)
+            if (this%lst(i)%dim4 == INVALID) then
+               write(msg,'(3a,l2,a,i2,a,l2,a,i2)')"'", this%lst(i)%name, "', vital=", this%lst(i)%vital, ", restart_mode=", this%lst(i)%restart_mode, &
+                    &                               ", multigrid=", this%lst(i)%multigrid, ", ord_prolong=", this%lst(i)%ord_prolong
+            else
+               write(msg,'(3a,l2,a,i2,a,l2,2(a,i2))')"'", this%lst(i)%name, "', vital=", this%lst(i)%vital, ", restart_mode=", this%lst(i)%restart_mode, &
+                    &                                  ", multigrid=", this%lst(i)%multigrid, ", ord_prolong=", this%lst(i)%ord_prolong, ", components=", this%lst(i)%dim4
+            endif
+            call printinfo(msg, to_stdout)
+         enddo
+      endif
 
    end subroutine print_vars
 

@@ -723,6 +723,8 @@ contains
 
    subroutine add_all_na(this)
 
+      use constants,        only: INVALID, base_level_id
+      use dataio_pub,       only: die, warn
       use named_array_list, only: qna, wna, fna
 #ifdef ISO
       use constants,   only: cs_i2_n
@@ -755,8 +757,12 @@ contains
 
       ! shortcuts
       this%u  => this%w(wna%fi)%arr
-      this%b  => this%w(wna%bi)%arr ! soon this%f(fna%bi)%f_arr
-      this%bf => this%f(fna%bi)%f_arr
+      if (wna%bi /= INVALID) this%b  => this%w(wna%bi)%arr
+      if (fna%bi /= INVALID) this%bf => this%f(fna%bi)%f_arr
+      if (associated(this%b) .and. associated(this%bf)) call die("[grid_container:add_all_na] both positions of magnetic field can not be used at same time")
+      ! if one ever needs other type of array for magnetic field storage (auxiliary one for interpolated values), it can be requested from user problem or solver but should not become a standard.
+      if ((.not. associated(this%b)) .and. (.not. associated(this%bf)) .and. (this%level_id >= base_level_id)) call warn("[grid_container:add_all_na] no magnetic field was declared")
+      !> \todo use this by default for nonmagnetic simulations  instead of having MAGNETIC preprocessor macro.
       this%wa => this%q(qna%wai)%arr
 #ifdef ISO
       this%cs_iso2 => this%q(qna%ind(cs_i2_n))%arr

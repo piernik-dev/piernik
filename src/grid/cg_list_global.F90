@@ -218,7 +218,7 @@ contains
       use constants,  only: wa_n, fluid_n, uh_n, mag_n, u0_n, b0_n, ndims, AT_NO_B, AT_OUT_B, PIERNIK_INIT_FLUIDS
       use dataio_pub, only: die, code_progress
       use fluidindex, only: flind
-      use global,     only: repeat_step
+      use global,     only: repeat_step, cc_magfield
 #ifdef ISO
       use constants,  only: cs_i2_n
 #endif /* ISO */
@@ -227,7 +227,7 @@ contains
 
       class(cg_list_global_T), intent(inout)          :: this          !< object invoking type-bound procedure
 
-      ! the pia pointer above is used as a workaround for compiler warnings about possibly uninitialized variable in reg_var
+      logical :: is_b_vital
 
       if (code_progress < PIERNIK_INIT_FLUIDS) call die("[cg_list_global:register_fluids] Fluids are not yet initialized")
 
@@ -235,25 +235,25 @@ contains
       call this%reg_var(fluid_n, vital = .true., restart_mode = AT_NO_B,  dim4 = flind%all)                !! Main array of all fluids' components, "u"
       call this%reg_var(uh_n,                                             dim4 = flind%all)                !! Main array of all fluids' components (for t += dt/2)
 
+#ifdef MAGNETIC
+      is_b_vital = .true.
+#else /* !MAGNETIC */
+      is_b_vital = .false.
+#endif /* MAGNETIC */
+
 !> \todo Do not even allocate magnetic stuff if MAGNETIC is not declared
-      call this%reg_var(mag_n,   vital = &
-#ifdef MAGNETIC
-           .true., &
-#else /* !MAGNETIC */
-           .false., &
-#endif /* MAGNETIC */
-           restart_mode = AT_OUT_B, dim4 = ndims)                                                          !! Main array of magnetic field's components, "b"
-      call this%reg_var(mag_n,   vital = &
-#ifdef MAGNETIC
-           .true., &
-#else /* !MAGNETIC */
-           .false., &
-#endif /* MAGNETIC */
-           restart_mode = AT_OUT_B, facecentered = .true.)                                                 !! Main array of magnetic field's components, "b"
+      if (cc_magfield) then
+         call this%reg_var(mag_n, vital = is_b_vital, restart_mode = AT_OUT_B, dim4 = ndims)               !! Main array of magnetic field's components, "b", cell-centered
+      else
+         call this%reg_var(mag_n, vital = is_b_vital, restart_mode = AT_OUT_B, facecentered = .true.)      !! Main array of magnetic field's components, "b", face-centered
+      endif
       if (repeat_step) then
-         call this%reg_var(u0_n,                                          dim4 = flind%all)                !! Copy of main array of all fluids' components
-         call this%reg_var(b0_n,                                          dim4 = ndims)                    !! Copy of main array of magnetic field's components
-         call this%reg_var(b0_n,                                          facecentered = .true.)           !! Copy of main array of magnetic field's components
+         call this%reg_var(u0_n,                                               dim4 = flind%all)           !! Copy of main array of all fluids' components
+         if (cc_magfield) then
+            call this%reg_var(b0_n,                                            dim4 = ndims)               !! Copy of main array of magnetic field's components, cell-centered
+         else
+            call this%reg_var(b0_n,                                            facecentered = .true.)      !! Copy of main array of magnetic field's components, face-centered
+         endif
       endif
 #ifdef ISO
       call all_cg%reg_var(cs_i2_n, vital = .true., restart_mode = AT_NO_B)

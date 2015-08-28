@@ -41,7 +41,7 @@ module global
    public :: cleanup_global, init_global, &
         &    cfl, cfl_max, cflcontrol, cfl_violated, &
         &    dt, dt_initial, dt_max_grow, dt_min, dt_old, dtm, t, t_saved, nstep, nstep_saved, &
-        &    integration_order, limiter, smalld, smallei, smallp, use_smalld, &
+        &    integration_order, limiter, smalld, smallei, smallp, use_smalld, cc_magfield, &
         &    relax_time, grace_period_passed, cfr_smooth, repeat_step, skip_sweep, geometry25D, &
         &    dirty_debug, do_ascii_dump, show_n_dirtys, no_dirty_checks, sweeps_mgu, use_fargo
 
@@ -63,6 +63,7 @@ module global
    real    :: cfl_max                  !< warning threshold for the effective CFL number achieved
    logical :: use_smalld               !< correct density when it gets lower than smalld
    logical :: geometry25D              !< include source terms in reduced dimension for 2D simulations
+   logical :: cc_magfield              !< use cell-centered magnetic field
    real    :: smallp                   !< artificial infimum for pressure
    real    :: smalld                   !< artificial infimum for density
    real    :: smallc                   !< artificial infimum for freezing speed
@@ -83,7 +84,7 @@ module global
 
    namelist /NUMERICAL_SETUP/ cfl, cflcontrol, cfl_max, use_smalld, smalld, smallei, smallc, smallp, dt_initial, dt_max_grow, dt_min, &
         &                     repeat_step, limiter, relax_time, integration_order, cfr_smooth, skip_sweep, geometry25D, sweeps_mgu, &
-        &                     use_fargo
+        &                     use_fargo, cc_magfield
 
 contains
 
@@ -115,6 +116,7 @@ contains
 !!   <tr><td>skip_sweep       </td><td>F, F, F</td><td>logical array                        </td><td>\copydoc global::skip_sweep       </td></tr>
 !!   <tr><td>geometry25D      </td><td>F      </td><td>logical value                        </td><td>\copydoc global::geometry25d      </td></tr>
 !!   <tr><td>sweeps_mgu       </td><td>F      </td><td>logical value                        </td><td>\copydoc global::sweeps_mgu       </td></tr>
+!!   <tr><td>cc_magfield      </td><td>T      </td><td>logical value                        </td><td>\copydoc global::cc_magfield      </td></tr>
 !! </table>
 !! \n \n
 !<
@@ -138,6 +140,7 @@ contains
       repeat_step = .true.
       geometry25D = .false.
       no_dirty_checks = .false.
+      cc_magfield = .true.  !> \deprecated should be changed to false as soon as we provide complete fc-array implementation
 #ifdef MAGNETIC
       sweeps_mgu  = .false.
 #else /* !MAGNETIC */
@@ -210,6 +213,7 @@ contains
          lbuff(6)   = geometry25D
          lbuff(7)   = sweeps_mgu
          lbuff(8)   = use_fargo
+         lbuff(9)   = cc_magfield
 
       endif
 
@@ -226,6 +230,7 @@ contains
          geometry25D   = lbuff(6)
          sweeps_mgu    = lbuff(7)
          use_fargo     = lbuff(8)
+         cc_magfield   = lbuff(9)
 
          smalld      = rbuff( 1)
          smallc      = rbuff( 2)
