@@ -843,7 +843,7 @@ contains
 
       use cg_leaves,        only: leaves
       use cg_list,          only: cg_list_element
-      use constants,        only: xdim, ydim, zdim, DST, pSUM, GEO_XYZ, GEO_RPZ, ndims, LO, HI, I_ONE
+      use constants,        only: xdim, DST, pSUM, GEO_XYZ, GEO_RPZ, ndims, LO, HI, I_ONE! , ydim, zdim
       use dataio_pub,       only: log_wr, tsl_file, tsl_lun
 #if defined(__INTEL_COMPILER)
       use dataio_pub,       only: io_blocksize, io_buffered, io_buffno
@@ -879,7 +879,7 @@ contains
       integer, parameter                                  :: field_len=17 ! should match formats below
       character(len=field_len), dimension(:), allocatable :: tsl_names
       real,                     dimension(:), allocatable :: tsl_vars
-      real, dimension(:,:,:,:), pointer                   :: pu, pb
+      real, dimension(:,:,:,:), pointer                   :: pu
       type(phys_prop),          pointer                   :: sn
       type(tsl_container)                                 :: tsl
       type(grid_container),     pointer                   :: cg
@@ -977,7 +977,6 @@ contains
          cg => cgl%cg
 
          pu => cg%w(wna%fi)%span(cg%ijkse)
-         pb => cg%w(wna%bi)%span(cg%ijkse)
 
          select case (dom%geometry_type)
 
@@ -994,11 +993,12 @@ contains
 
                tot_q(T_EKIN) = tot_q(T_EKIN) + cg%dvol * sum(sum(ekin(pu(iarr_all_mx(:),:,:,:), pu(iarr_all_my(:),:,:,:), pu(iarr_all_mz(:),:,:,:), max(pu(iarr_all_dn(:),:,:,:),smalld)), dim=1), mask=cg%leafmap)
 #ifdef MAGNETIC
-               tot_q(T_EMAG) = tot_q(T_EMAG) + cg%dvol * sum(emag(pb(xdim,:,:,:), pb(ydim,:,:,:), pb(zdim,:,:,:)), mask=cg%leafmap)
+               tot_q(T_EMAG) = tot_q(T_EMAG) + cg%dvol * sum(cg%emag(cg%ijkse), mask=cg%leafmap)
 #endif /* MAGNETIC */
-               tot_q(T_MFLX) = tot_q(T_MFLX) + cg%dvol/dom%L_(xdim) * sum(pb(xdim,:,:,:), mask=cg%leafmap) !cg%dy*cg%dz/dom%n_d(xdim)
-               tot_q(T_MFLY) = tot_q(T_MFLY) + cg%dvol/dom%L_(ydim) * sum(pb(ydim,:,:,:), mask=cg%leafmap) !cg%dx*cg%dz/dom%n_d(ydim)
-               tot_q(T_MFLZ) = tot_q(T_MFLZ) + cg%dvol/dom%L_(zdim) * sum(pb(zdim,:,:,:), mask=cg%leafmap) !cg%dx*cg%dy/dom%n_d(zdim)
+               !> \todo Do we need it? It will have to be calculated slightly differently for cell-centered and face-centered field
+               tot_q(T_MFLX) = 0. !tot_q(T_MFLX) + cg%dvol/dom%L_(xdim) * sum(pb(xdim,:,:,:), mask=cg%leafmap) !cg%dy*cg%dz/dom%n_d(xdim)
+               tot_q(T_MFLY) = 0. !tot_q(T_MFLY) + cg%dvol/dom%L_(ydim) * sum(pb(ydim,:,:,:), mask=cg%leafmap) !cg%dx*cg%dz/dom%n_d(ydim)
+               tot_q(T_MFLZ) = 0. !tot_q(T_MFLZ) + cg%dvol/dom%L_(zdim) * sum(pb(zdim,:,:,:), mask=cg%leafmap) !cg%dx*cg%dy/dom%n_d(zdim)
 #ifndef ISO
                tot_q(T_ENER) = tot_q(T_ENER) + cg%dvol * sum(sum(pu(iarr_all_en,:,:,:), dim=1), mask=cg%leafmap)
 #endif /* !ISO */
@@ -1027,12 +1027,12 @@ contains
                   tot_q(T_EKIN) = tot_q(T_EKIN) + drvol * sum(sum(ekin(pu(iarr_all_mx(:), ii, :, :), pu(iarr_all_my(:), ii, :, :)*cg%x(i), pu(iarr_all_mz(:), ii, :, :), &
                        &                                               max(pu(iarr_all_dn(:), ii, :, :),smalld)), dim=1), mask=cg%leafmap(i, :, :))
 #ifdef MAGNETIC
-                  tot_q(T_EMAG) = tot_q(T_EMAG) + drvol * sum(emag(pb(xdim, ii, :, :), pb(ydim, ii, :, :), pb(zdim, ii, :, :)), mask=cg%leafmap(i, :, :))
+                  tot_q(T_EMAG) = tot_q(T_EMAG) + drvol * sum(cg%emag(ijkse), mask=cg%leafmap(i:i, :, :))
 #endif /* MAGNETIC */
                   !> \todo Figure out the meaning of tot_q(T_MFL[XY]) and how to compute it properly or remove at all
                   tot_q(T_MFLX) = 0. !tot_q(T_MFLX) + cg%dvol/dom%L_(xdim) * sum(pb(xdim, ii, :, :), mask=cg%leafmap(i, :, :)) !cg%dy*cg%dz/dom%n_d(xdim)
                   tot_q(T_MFLY) = 0. !tot_q(T_MFLY) + cg%dvol/dom%L_(ydim) * sum(pb(ydim, ii, :, :), mask=cg%leafmap(i, :, :)) !cg%dx*cg%dz/dom%n_d(ydim)
-                  tot_q(T_MFLZ) = tot_q(T_MFLZ) + drvol/dom%L_(zdim) * sum(pb(zdim, ii, :, :), mask=cg%leafmap(i, :, :)) !cg%dx*cg%dy/dom%n_d(zdim)
+                  tot_q(T_MFLZ) = 0. !tot_q(T_MFLZ) + drvol/dom%L_(zdim) * sum(pb(zdim, ii, :, :), mask=cg%leafmap(i, :, :)) !cg%dx*cg%dy/dom%n_d(zdim)
 #ifndef ISO
                   tot_q(T_ENER) = tot_q(T_ENER) + drvol * sum(sum(pu(iarr_all_en, ii, :, :), dim=1), mask=cg%leafmap(i, :, :))
 #endif /* !ISO */

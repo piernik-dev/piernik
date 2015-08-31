@@ -198,7 +198,7 @@ contains
 
       use cg_leaves,        only: leaves
       use cg_list,          only: cg_list_element
-      use constants,        only: big_float, DST, xdim, ydim, zdim, cs_i2_n, pMAX, pMIN
+      use constants,        only: big_float, DST, cs_i2_n, pMAX, pMIN
       use dataio_pub,       only: warn, msg
       use fluidindex,       only: flind
       use fluidtypes,       only: component_fluid
@@ -214,22 +214,28 @@ contains
       type(grid_container),   pointer :: cg
       class(component_fluid), pointer :: fl
       integer                         :: i
-      real, pointer, dimension(:,:,:) :: dn, mx, my, mz, en, bx, by, bz
+      real, pointer, dimension(:,:,:) :: dn, mx, my, mz, en, bx, by, bz, wa
       real, parameter                 :: safety_factor = 1.e-4
       real, parameter                 :: max_dens_span = 5.0
       real                            :: maxdens, span, mindens, minpres
+      logical                         :: any_magnetized
 
       maxdens = 0.0
       mindens = smalld
       minpres = smallp
+
+      any_magnetized = .false.
+      do i = lbound(flind%all_fluids,1), ubound(flind%all_fluids,1)
+         if (flind%all_fluids(i)%fl%is_magnetized) any_magnetized = .true.
+      enddo
+
       ! collect the extrema
       cgl => leaves%first
       do while (associated(cgl))
          cg => cgl%cg
 
-         bx => cg%w(wna%bi)%span(xdim,cg%ijkse)
-         by => cg%w(wna%bi)%span(ydim,cg%ijkse)
-         bz => cg%w(wna%bi)%span(zdim,cg%ijkse)
+         wa => cg%q(qna%wai)%span(cg%ijkse)
+         if (any_magnetized) wa = cg%emag(cg%ijkse)
 
          if (smalld >= big_float) then
             do i = lbound(flind%all_fluids,1), ubound(flind%all_fluids,1)
@@ -250,7 +256,7 @@ contains
                if (fl%has_energy) then
                   en => cg%w(wna%fi)%span(fl%ien,cg%ijkse)
                   if (fl%is_magnetized) then
-                     minpres = min( minval( en - ekin(mx,my,mz,dn) - emag(bx,by,bz))/fl%gam_1, minpres )
+                     minpres = min( minval( en - ekin(mx,my,mz,dn) - wa)/fl%gam_1, minpres )
                   else
                      minpres = min( minval( en - ekin(mx,my,mz,dn))/fl%gam_1, minpres )
                   endif

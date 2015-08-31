@@ -248,6 +248,9 @@ module grid_cont
       procedure          :: prolong                              !< perform prolongation of the data stored in this%prolong_
       procedure          :: refinemap2SFC_list                   !< create list of SFC indices to be created from refine flags
       procedure          :: set_constant_b_field                 !< set constant magnetic field on whole block
+      procedure          :: emag_point                           !< return energy asociated with magnetic field at specified point
+      procedure          :: emag_range                           !< return energy asociated with magnetic field at specified range
+      generic, public    :: emag => emag_point, emag_range
 
    end type grid_container
 
@@ -1356,5 +1359,68 @@ contains
       endif
 
    end subroutine set_constant_b_field
+
+!< \brief return energy asociated with magnetic field at specified point
+
+   function emag_point(this, ijk) result(e_mag)
+
+      use constants,  only: xdim, ydim, zdim, I_ONE
+      use dataio_pub, only: die
+      use func,       only: emag
+
+      implicit none
+
+      class(grid_container), intent(in)  :: this
+      integer, dimension(:), intent(in)  :: ijk
+
+      real :: e_mag
+
+      if (associated(this%b)) then
+         e_mag = emag(this%b(xdim, ijk(xdim), ijk(ydim), ijk(zdim)), &
+              &       this%b(ydim, ijk(xdim), ijk(ydim), ijk(zdim)), &
+              &       this%b(zdim, ijk(xdim), ijk(ydim), ijk(zdim)))
+      else if (associated(this%bf)) then
+         e_mag = emag((this%bf(xdim)%arr(ijk(xdim), ijk(ydim), ijk(zdim)) + this%bf(xdim)%arr(ijk(xdim)+I_ONE, ijk(ydim), ijk(zdim)))/2., &
+              &       (this%bf(ydim)%arr(ijk(xdim), ijk(ydim), ijk(zdim)) + this%bf(ydim)%arr(ijk(xdim), ijk(ydim)+I_ONE, ijk(zdim)))/2., &
+              &       (this%bf(zdim)%arr(ijk(xdim), ijk(ydim), ijk(zdim)) + this%bf(zdim)%arr(ijk(xdim), ijk(ydim), ijk(zdim)+I_ONE))/2.)
+      else
+         call die("[grid_container:emag_point] no magnetic field declared here")
+         e_mag = 0.
+      end if
+
+   end function emag_point
+
+!< \brief return energy asociated with magnetic field at specified range
+
+   function emag_range(this, ijk) result(e_mag)
+
+      use constants,  only: xdim, ydim, zdim, LO, HI, I_ONE
+      use dataio_pub, only: die
+      use func,       only: emag
+
+      implicit none
+
+      class(grid_container),   intent(in)  :: this
+      integer, dimension(:,:), intent(in)  :: ijk
+
+      real, dimension(ijk(xdim, LO):ijk(xdim, HI), ijk(ydim, LO):ijk(ydim, HI), ijk(zdim, LO):ijk(zdim, HI)) :: e_mag
+
+      if (associated(this%b)) then
+         e_mag = emag(this%b(xdim, ijk(xdim, LO):ijk(xdim, HI), ijk(ydim, LO):ijk(ydim, HI), ijk(zdim, LO):ijk(zdim, HI)), &
+              &       this%b(ydim, ijk(xdim, LO):ijk(xdim, HI), ijk(ydim, LO):ijk(ydim, HI), ijk(zdim, LO):ijk(zdim, HI)), &
+              &       this%b(zdim, ijk(xdim, LO):ijk(xdim, HI), ijk(ydim, LO):ijk(ydim, HI), ijk(zdim, LO):ijk(zdim, HI)))
+      else if (associated(this%bf)) then
+         e_mag = emag((this%bf(xdim)%arr(ijk(xdim, LO)      :ijk(xdim, HI),       ijk(ydim, LO):ijk(ydim, HI), ijk(zdim, LO):ijk(zdim, HI)) + &
+              &        this%bf(xdim)%arr(ijk(xdim, LO)+I_ONE:ijk(xdim, HI)+I_ONE, ijk(ydim, LO):ijk(ydim, HI), ijk(zdim, LO):ijk(zdim, HI)))/2., &
+              &       (this%bf(ydim)%arr(ijk(xdim, LO):ijk(xdim, HI), ijk(ydim, LO)      :ijk(ydim, HI),       ijk(zdim, LO):ijk(zdim, HI)) + &
+              &        this%bf(ydim)%arr(ijk(xdim, LO):ijk(xdim, HI), ijk(ydim, LO)+I_ONE:ijk(ydim, HI)+I_ONE, ijk(zdim, LO):ijk(zdim, HI)))/2., &
+              &       (this%bf(zdim)%arr(ijk(xdim, LO):ijk(xdim, HI), ijk(ydim, LO):ijk(ydim, HI), ijk(zdim, LO)      :ijk(zdim, HI)      ) + &
+              &        this%bf(zdim)%arr(ijk(xdim, LO):ijk(xdim, HI), ijk(ydim, LO):ijk(ydim, HI), ijk(zdim, LO)+I_ONE:ijk(zdim, HI)+I_ONE))/2.)
+      else
+         call die("[grid_container:emag_range] no magnetic field declared here")
+         e_mag = 0.
+      endif
+
+   end function emag_range
 
 end module grid_cont

@@ -56,13 +56,14 @@ contains
       use global,           only: dt, dtm, t, t_saved, cfl_violated, nstep, nstep_saved, dt_max_grow, repeat_step
       use mass_defect,      only: downgrade_magic_mass
       use mpisetup,         only: master, piernik_MPI_Allreduce
-      use named_array_list, only: wna
+      use named_array_list, only: wna, fna
       use user_hooks,       only: user_reaction_to_redo_step
 
       implicit none
 
       type(cg_list_element), pointer :: cgl
       integer(kind=4) :: no_hist_count
+      integer :: d
 
       if (.not.repeat_step) return
 
@@ -83,7 +84,13 @@ contains
          if (cfl_violated) then
             if (cgl%cg%has_previous_timestep) then
                cgl%cg%u = cgl%cg%w(wna%ind(u0_n))%arr
-               cgl%cg%b = cgl%cg%w(wna%ind(b0_n))%arr
+               if (associated(cgl%cg%b)) then
+                  cgl%cg%b = cgl%cg%w(wna%ind(b0_n))%arr
+               else if (associated(cgl%cg%bf)) then
+                  do d = lbound(cgl%cg%bf, dim=1), ubound(cgl%cg%bf, dim=1)
+                     cgl%cg%bf(d)%arr = cgl%cg%f(fna%ind(b0_n))%f_arr(d)%arr
+                  enddo
+               endif
             else
                no_hist_count = no_hist_count + I_ONE
             endif
@@ -91,7 +98,13 @@ contains
             if (associated(user_reaction_to_redo_step)) call user_reaction_to_redo_step
          else
             cgl%cg%w(wna%ind(u0_n))%arr = cgl%cg%u
-            cgl%cg%w(wna%ind(b0_n))%arr = cgl%cg%b
+            if (associated(cgl%cg%b)) then
+               cgl%cg%w(wna%ind(b0_n))%arr = cgl%cg%b
+            else if (associated(cgl%cg%bf)) then
+               do d = lbound(cgl%cg%bf, dim=1), ubound(cgl%cg%bf, dim=1)
+                  cgl%cg%f(fna%ind(b0_n))%f_arr(d)%arr = cgl%cg%bf(d)%arr
+               enddo
+            endif
             cgl%cg%has_previous_timestep = .true.
          endif
          cgl => cgl%nxt
