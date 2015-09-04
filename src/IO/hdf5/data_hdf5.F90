@@ -217,11 +217,12 @@ contains
    subroutine datafields_hdf5(var, tab, ierrh, cg)
 
       use common_hdf5, only: common_shortcuts
-      use constants,   only: dsetnamelen, xdim
+      use constants,   only: dsetnamelen, xdim, I_ONE
       use fluidtypes,  only: component_fluid
       use func,        only: ekin, emag
       use grid_cont,   only: grid_container
       use mpisetup,    only: proc
+      use named_array_list, only: fna
 #ifndef ISO
       use constants,   only: ydim, zdim
 #endif /* !ISO */
@@ -238,8 +239,9 @@ contains
 
       class(component_fluid), pointer             :: fl_dni
       integer(kind=4)                             :: i_xyz
+      integer                                     :: i, j, k
+      real(kind=4)                                :: v
 #ifdef COSM_RAYS
-      integer                                     :: i
       integer, parameter                          :: auxlen = dsetnamelen - 1
       character(len=auxlen)                       :: aux
 #endif /* COSM_RAYS */
@@ -282,7 +284,26 @@ contains
                  &       real(flind%ion%gam_1*emag(cg%b(xdim, RNG), cg%b(ydim, RNG), cg%b(zdim, RNG)), kind=4)
 #endif /* !ISO */
          case ("magx", "magy", "magz")
-            tab(:,:,:) = real(cg%b(xdim + i_xyz, RNG), kind=4)
+            if (associated(cg%b)) then
+               tab(:,:,:) = real(cg%b(xdim + i_xyz, RNG), kind=4)
+            else if (associated(cg%bf)) then
+               do k = cg%ks, cg%ke
+                  do j = cg%js, cg%je
+                     do i = cg%is, cg%ie
+                        ! We need 0.5 here because otherwise the code may run into FP Overflow on non-initialized B felds in non-magnetized setups.
+                        v = real(0.5 * cg%f(fna%bi)%f_arr(xdim + i_xyz)%arr(i, j, k), kind=4)
+                        select case(i_xyz)
+                           case (xdim-xdim)
+                              v = v + real(0.5 * cg%f(fna%bi)%f_arr(xdim + i_xyz)%arr(i+I_ONE, j, k), kind=4)
+                           case (ydim-xdim)
+                              v = v + real(0.5 * cg%f(fna%bi)%f_arr(xdim + i_xyz)%arr(i, j+I_ONE, k), kind=4)
+                           case (zdim-xdim)
+                              v = v + real(0.5 * cg%f(fna%bi)%f_arr(xdim + i_xyz)%arr(i, j, k+I_ONE), kind=4)
+                        end select
+                     enddo
+                  enddo
+               enddo
+            endif
          case ("gpot")
             if (associated(cg%gpot)) tab(:,:,:) = real(cg%gpot(RNG), kind=4)
          case ("sgpt")
