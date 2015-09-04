@@ -47,137 +47,185 @@ module hlld
   implicit none
 
   private
-  public :: riemann_hlld, fluxes
+  public :: riemann_hlld
 
 contains
 
-  subroutine fluxes(n, q, u, f, gamma, b, cdim)
- 
-    use constants,   only: half,one,idn, imx, imy, imz, ien, xdim, ydim, zdim
-    use fluidindex, only: iarr_mag_swp
-    use func,       only: emag, ekin
-    
+  function fluxes(u,b,cs2) result(f)
+
+    use constants,  only: half, xdim, ydim, zdim
+    use fluidindex, only: flind
+    use fluidtypes, only: component_fluid
+    use func,       only: ekin
+
     implicit none
-     
-    integer,                       intent(in)    :: n  
-    real,                          intent(in)    :: gamma  
-    real, dimension(:,:),          intent(in)    :: q, u
-    real, dimension(:,:),          intent(out)   :: f
-    real, dimension(:,:),          intent(in)    :: b         
-    integer(kind=4)                              :: ibx, iby, ibz
-    integer(kind=4),               intent(in)    :: cdim
 
-    ! Local variables
+    real, dimension(:,:),      intent(in)    :: u
+    real, dimension(:,:),      intent(inout) :: b
+    real, dimension(:), pointer, intent(in)  :: cs2
 
-    integer :: i
-    real    :: vb, pr, prtot
+    real, dimension(size(u,1), size(u,2))    :: f
+    real, dimension(size(u,2))               :: vx, vy, vz, p
+    integer :: ip
+    class(component_fluid),    pointer       :: fl
 
-    ibx = iarr_mag_swp(cdim,xdim)
-    iby = iarr_mag_swp(cdim,ydim)
-    ibz = iarr_mag_swp(cdim,zdim)
+    do ip = 1, flind%fluids
 
-    do i = 1, n
+       fl => flind%all_fluids(ip)%fl
 
-       vb   = sum((q(imx:imz,i)/q(idn,i))*q(ibx:ibz,i))
-       pr   = (gamma-one)*(q(ien,i) - ekin(q(imx,i), q(imy,i), q(imz,i), q(idn,i)) - emag(q(ibx,i),q(iby,i),q(ibz,i)))
-       prtot = pr + emag(q(ibx,i),q(iby,i),q(ibz,i))
+       vx  =  u(fl%imx,:)/u(fl%idn,:)
+       vy  =  u(fl%imy,:)/u(fl%idn,:)
+       vz  =  u(fl%imz,:)/u(fl%idn,:)
 
-   ! MHD fluxes
+       if(fl%has_energy) then
+          p = fl%gam_1*(u(fl%ien,:) - ekin(u(fl%imx,:), u(fl%imy,:), u(fl%imz,:), u(fl%idn,:)) - half*sum(b**2,dim=2))
+       else
+          if(associated(cs2)) then
+             p = cs2*u(fl%idn,:)
+          else
+             p = 0.
+          endif
+       endif
        
-       f(idn,i) = u(imx,i)
-       f(imx,i) = u(imx,i)*(q(imx,i)/q(idn,i)) - q(ibx,i)*q(ibx,i) - prtot
-       f(imy,i) = u(imy,i)*(q(imx,i)/q(idn,i)) - q(ibx,i)*q(iby,i)
-       f(imz,i) = u(imz,i)*(q(imx,i)/q(idn,i)) - q(ibx,i)*q(ibz,i)
-       f(ien,i) = (u(ien,i)+prtot)*(q(imx,i)/q(idn,i)) - q(ibx,i)*vb
+       f(fl%idn,:)  =  u(fl%imx,:)
+       f(fl%imx,:)  =  u(fl%imx,:)*vx + p - b(xdim,:)*b(xdim,:)
+       f(fl%imy,:)  =  u(fl%imy,:)*vx - b(xdim,:)*b(ydim,:)
+       f(fl%imz,:)  =  u(fl%imz,:)*vx - b(xdim,:)*b(zdim,:)
+       b(ydim,:)    =  b(ydim,:)*vx - b(xdim,:)*vy
+       b(zdim,:)    =  b(zdim,:)*vx - b(xdim,:)*vz
+       if(fl%has_energy) then
+          f(fl%ien,:) = (u(fl%ien,:) + p(:))*vx(:) - b(xdim,:)*(b(xdim,:)*vx(:) + b(ydim,:)*vy(:) + b(zdim,:)*vz(:))
+       endif
+    enddo
 
-       f(iby,i) = q(iby,i)*(q(imx,i)/q(idn,i)) - q(ibx,i)*(q(imy,i)/q(idn,i))
-       f(ibz,i) = q(ibz,i)*(q(imx,i)/q(idn,i)) - q(ibz,i)*(q(imz,i)/q(idn,i))
+    return
 
-    end do
-
-  end subroutine fluxes
+  end function fluxes
+  
 
 !-------------------------------------------------------------------------------------------------------------------------------------------------
 
-  subroutine riemann_hlld(n, gamma, qleft, qright, b, cdim, f)
+  subroutine riemann_hlld(n, gamma, uleft, uright, b, cdim, f)
 
-    use constants,  only: one, two, zero, xdim, ydim, zdim, idn, imx, imy, imz, ien
-    !use domain,     only: dom
-    use fluidindex, only: iarr_mag_swp
-    use func,       only: emag, ekin
-    !use fluidtypes  only: component_fluid
-    use grid_cont,  only: grid_container
-    use fluxes,     only: all_fluxes, flimiter
+    ! external procedures
     
-
+    use constants,  only: half, xdim, ydim, zdim, idn, imx, imy, imz, ien
+    use fluidindex, only: iarr_mag_swp, flind
+    !use func,       only: emag, ekin
+    !use grid_cont,  only: grid_container
+    !use fluxes,     only: all_fluxes, flimiter
+    
+    ! arguments
+    
     implicit none
-    
-    real, parameter  ::  four  = 4.0
+
     integer,                       intent(in)    :: n      
     real,                          intent(in)    :: gamma  
-    real, dimension(:,:), pointer, intent(in)    :: qleft, qright
-    real, dimension(:,:),          intent(out)   :: f
+    real, dimension(:,:), pointer, intent(in)    :: uleft, uright
+    real, dimension(:,:), pointer, intent(out)   :: f
     real, dimension(:,:),          intent(in)    :: b
     integer(kind=4)                              :: ibx, iby, ibz
     integer(kind=4),               intent(in)    :: cdim
-    
-   
-    integer                                      :: i          
-    !real, dimension(:,:)                         :: fleft
-    !real, dimension(:,:)                         :: fright
-    real, dimension(n)                           :: SL, SR
-    real, dimension(n)                           :: denl,prl,ul, magprl
-    real, dimension(n)                           :: denr,prr,ur, magprr
-    real, dimension(n)                           :: cfastl
-    real, dimension(n)                           :: cfastr
 
+    !
+    ! Local variables
+    !
+    
+    ! left state
+
+    real, dimension(n)                           :: c_fastl  !< fast magneto-acoustic wave-left
+    real, dimension(n)                           :: SL       !< speed of left moving wave
+    real, dimension(n)                           :: SL_star  !< speed of left moving Alfven wave
+    real, dimension(n)                           :: gampr_l  !< gamma*pressure
+    real, dimension(n)                           :: ul       !< conserved variable-left
+    real, dimension(n,flind%all)                 :: fl       !< flux left
+    real, dimension(n)                           :: SLSM     !< SL - SM
+    real, dimension(n)                           :: SLVL     !< SL - vx_left
+    real, dimension(n)                           :: SMVL     !< SM - vx_left
+    real, dimension(n)                           :: DNLSLVL  !< rho_left*SLVL
+    
+    ! right state
+
+    real, dimension(n)                           :: c_fastr  !< fast magneto-acoustic wave-right
+    real, dimension(n)                           :: SR       !< speed of right moving wave
+    real, dimension(n)                           :: SR_star  !< speed of right moving Alfven wave
+    real, dimension(n)                           :: gampr_r  !< gamma*pressure
+    real, dimension(n)                           :: ur       !< conserved variable-right
+    real, dimension(n,flind%all)                 :: fr       !< flux right
+    real, dimension(n)                           :: SRSM     !< SR - SM
+    real, dimension(n)                           :: SRVR     !< SR - vx_right
+    real, dimension(n)                           :: SMVR     !< SM - vx_right
+    real, dimension(n)                           :: DNRSRVR   !< rho_right*SRVR
+
+    
+    integer                                      :: i
+    real, parameter                              :: four  = 4.0
+    !real, dimension(n)                           :: c_fast        !< fast magneto-acoustic wave
+    real, dimension(n)                           :: SM            !< entropy wave Eq. (38)
+    real, dimension(n)                           :: SM_nr, SM_dr  !< numerator and denominator of Eq. (38)
+    real, dimension(n)                           :: SRSL          !< SR - SL
+    
+    
     ibx = iarr_mag_swp(cdim,xdim)
     iby = iarr_mag_swp(cdim,ydim)
     ibz = iarr_mag_swp(cdim,zdim)
 
-    ! Copy normal component of magnetic field to left and right states
+    ! solver
 
-    qleft(ibx,:)  = b(ibx,:)  ! Check Artur
-    qright(ibx,:) = b(ibx,:)  ! Check Artur
+    do i = 1,n
 
-    ! Left variables
+       ul  =  uleft(imx,i)
+       ur  =  uright(imx,i)
+    
+       gampr_l  =  gamma*uleft(ien,i)
+       gampr_r  =  gamma*uright(ien,i)
 
-    denl  = qleft(idn,:)
-    ul    = qleft(imx,:)/qleft(idn,:)
-    magprl = emag(qleft(ibx,:), qleft(iby,:), qleft(ibz,:))
-    prl   = (gamma-one)*(qleft(ien,:) - ekin(qleft(imx,:), qleft(imy,:), qleft(imz,:), denl) - magprl)
-    cfastl = (gamma*prl+two*magprl)+sqrt((gamma*prl+two*magprl)*(gamma*prl+two*magprl) - (four*gamma*prl*qleft(ibx,:)*qleft(ibx,:)))
-    cfastl = sqrt(cfastl/two*denl)
+       c_fastl  =   (gampr_l+(uleft(ibx,i)**2+uleft(iby,i)**2+uleft(ibz,i)**2))  &
+            + sqrt((gampr_l+(uleft(ibx,i)**2+uleft(iby,i)**2+uleft(ibz,i)**2))**2-(four*gampr_l*uleft(ibx,i)**2))
+
+       c_fastl  =  sqrt(half*c_fastl/uleft(idn,i))
+
+       c_fastr  =   (gampr_r+(uright(ibx,i)**2+uright(iby,i)**2+uright(ibz,i)**2))  &
+            + sqrt((gampr_r+(uright(ibx,i)**2+uright(iby,i)**2+uright(ibz,i)**2))**2-(four*gampr_r*uright(ibx,i)**2))
+
+       c_fastr  =  sqrt(half*c_fastr/uright(idn,i))
+
+       ! Eq. (67)
+    
+       SL  =  min(ul,ur) - max(c_fastl,c_fastr)
+       SR  =  max(ul,ur) + max(c_fastl,c_fastr)
+
+       ! Speed of contact discontinuity Eq. (38)
+
+       SM_nr  =  (SR*ur - SL*ul) - (fr(imx,i) - fl(imx,i))
+       SM_dr  =  (SR*uright(idn,i) - SL*uleft(idn,i)) - (fr(idn,i) - fl(idn,i))
+       SM     =  SM_nr/SM_dr
+
+       ! Speed differences
+
+       SLSM  =  SL - SM
+       SRSM  =  SR - SM
+
+       SLVL  =  SL - (uleft(imx,i)/uleft(idn,i))
+       SRVR  =  SR - (uright(imx,i)/uright(idn,i))
+
+       SMVL  =  SM - (uleft(imx,i)/uleft(idn,i))
+       SMVR  =  SM - (uright(imx,i)/uright(idn,i))
+
+       SRSL  =  SR - SL
+    
+       ! Co-efficients
+
+       DNLSLVL  =  uleft(idn,i)*SLVL
+       DNRSRVR  =  uright(idn,i)*SRVR
        
-    ! Right variables
+       ! 
+
+       
+    end do
     
-    denr  = qright(idn,:)
-    ur    = qright(imx,:)/qright(idn,:)
-    magprr =  emag(qright(ibx,:), qright(iby,:), qright(ibz,:))
-    prr   = (gamma-one)*(qright(ien,:) - ekin(qright(imx,:), qright(imy,:), qright(imz,:), denr) - magprr)
-    cfastr = (gamma*prr+two*magprr)+sqrt((gamma*prr+two*magprr)*(gamma*prr+two*magprr) - (four*gamma*prr*qright(ibx,:)*qright(ibx,:)))
-    cfastr = sqrt(cfastr/two*denr)
 
-    ! Compute wave speed
     
-    SL = min(ul,ur) - max(cfastl,cfastr)
-    SR = max(ul,ur) + max(cfastl,cfastr)
-
-    ! HLLD flux
-    
-    where(SL >= zero) 
-
-      ! f(:,:) = fleft(:,:) 
-
-    elsewhere (SR <= zero) 
-
-       !f(:,:) = fright(:,:)
-
-    elsewhere ! SL < 0 < SR
-
-      ! print*,'finish it'
-
-    endwhere
     
 
   end subroutine riemann_hlld
