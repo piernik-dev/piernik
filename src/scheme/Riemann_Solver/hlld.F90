@@ -51,7 +51,7 @@ module hlld
 
 contains
 
-  function fluxes(u,b,cs2) result(f)
+  function fluxes(u,b,bb,cs2) result(f)
 
     use constants,  only: half, xdim, ydim, zdim
     use fluidindex, only: flind
@@ -62,6 +62,7 @@ contains
 
     real, dimension(:,:),      intent(in)    :: u
     real, dimension(:,:),      intent(inout) :: b
+    real, dimension(:,:),      intent(out)   :: bb
     real, dimension(:), pointer, intent(in)  :: cs2
 
     real, dimension(size(u,1), size(u,2))    :: f
@@ -91,8 +92,8 @@ contains
        f(fl%imx,:)  =  u(fl%imx,:)*vx + p - b(xdim,:)*b(xdim,:)
        f(fl%imy,:)  =  u(fl%imy,:)*vx - b(xdim,:)*b(ydim,:)
        f(fl%imz,:)  =  u(fl%imz,:)*vx - b(xdim,:)*b(zdim,:)
-       b(ydim,:)    =  b(ydim,:)*vx - b(xdim,:)*vy
-       b(zdim,:)    =  b(zdim,:)*vx - b(xdim,:)*vz
+       bb(:,ydim)    =  b(ydim,:)*vx - b(xdim,:)*vy
+       bb(:,zdim)    =  b(zdim,:)*vx - b(xdim,:)*vz
        if(fl%has_energy) then
           f(fl%ien,:) = (u(fl%ien,:) + p(:))*vx(:) - b(xdim,:)*(b(xdim,:)*vx(:) + b(ydim,:)*vy(:) + b(zdim,:)*vz(:))
        endif
