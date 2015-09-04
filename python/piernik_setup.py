@@ -291,11 +291,12 @@ def setup_piernik(data=None):
         shutil.rmtree(objdir)
     os.mkdir(objdir)
 
+    print("Using compiler settings from \033[93m" + compiler + "\033[0m")
     sc = open(objdir + "/.setup.call", "w")
     sc.write(
         " ".join(sys_args) +
         "\n#effective call (after evaluation of .setuprc*):\n#" + "./setup " +
-        " ".join(all_args) + "\n")
+        " ".join(all_args) + "\n#Using compiler settings from " + compiler + "\n")
     sc.close()
 
     f90files = []
