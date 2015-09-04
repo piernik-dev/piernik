@@ -306,7 +306,7 @@ contains
          cg%u(iarr_all_mz, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = 0.0
 
 #ifdef MAGNETIC
-         cg%b(:, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = 0.0
+         call cg%set_constant_b_field([0., 0., 0.])
 #endif /* MAGNETIC */
 
          cgl => cgl%nxt

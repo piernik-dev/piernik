@@ -97,7 +97,7 @@ module particle_types
       end subroutine map_scheme
    end interface
 
-   type(particle_set), target :: pset !< default particle list
+!   type(particle_set), target :: pset !< default particle list
 
 contains
 

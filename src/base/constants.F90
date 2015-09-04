@@ -62,6 +62,11 @@ module constants
       enumerator :: I_ZERO = 0, I_ONE, I_TWO, I_THREE, I_FOUR, I_FIVE, I_SIX, I_SEVEN, I_EIGHT, I_NINE, I_TEN
    end enum
 
+   ! enumerator for length/mass/time/velocity/magnetic field units
+   enum, bind(C)
+      enumerator :: U_LEN = 1, U_MASS, U_TIME, U_VEL, U_MAG
+   end enum
+
    ! irrational number approximations
    real, parameter :: pi         = 3.141592653589793238  !< Pi (Archimedes' constant)
    real, parameter :: dpi        = 2.*pi                 !< doubled Pi
@@ -102,6 +107,7 @@ module constants
    integer, parameter :: fmt_len = 128                   !< length of format string
    integer, parameter :: fnamelen = 128                  !< length of output filename
    integer, parameter :: cbuff_len = 32                  !< length for problem parameters
+   integer, parameter :: units_len = 5 * cbuff_len       !< length for unit strings
    integer, parameter :: fplen = 24                      !< length of buffer for printed FP or integer number
    integer, parameter :: domlen = 16                     !< should be <= cbuff_len
    integer, parameter :: dsetnamelen = 16                !< length of dataset name and state variable names in hdf files

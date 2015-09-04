@@ -308,7 +308,7 @@ contains
                   cg%u(fl%ien,i,j,k)        = pres/fl%gam_1 + ekin(cg%u(fl%imx,i,j,k), cg%u(fl%imy,i,j,k), cg%u(fl%imz,i,j,k), cg%u(fl%idn,i,j,k))
 
 #ifdef MAGNETIC
-                  cg%b(:,i,j,k)             = 0.0
+                  call cg%set_constant_b_field([0., 0., 0.])
                   cg%u(fl%ien,i,j,k)        = cg%u(fl%ien,i,j,k) + emag(cg%b(xdim,i,j,k)), cg%b(ydim,i,j,k), cg%b(zdim,i,j,k)
 #endif /* MAGNETIC */
 #endif /* !ISO */

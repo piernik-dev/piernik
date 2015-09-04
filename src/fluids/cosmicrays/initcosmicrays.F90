@@ -355,6 +355,7 @@ contains
       call my_deallocate(gamma_crs)
       call my_deallocate(K_crs_paral)
       call my_deallocate(K_crs_perp)
+      call my_deallocate(gpcr_essential)
 
    end subroutine cleanup_cosmicrays
 
