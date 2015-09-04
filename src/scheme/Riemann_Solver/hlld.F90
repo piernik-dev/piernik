@@ -61,7 +61,7 @@ contains
     implicit none
 
     real, dimension(:,:),      intent(in)    :: u
-    real, dimension(:,:),      intent(inout) :: b
+    real, dimension(:,:),      intent(in)    :: b
     real, dimension(:,:),      intent(out)   :: bb
     real, dimension(:), pointer, intent(in)  :: cs2
 
