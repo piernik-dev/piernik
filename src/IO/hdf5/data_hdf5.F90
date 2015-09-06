@@ -102,6 +102,10 @@ contains
             f%f2cgs = 1.0 / (fpi * sqrt(cm / (miu0 * gram)) * sek)
             f%stag = 1
          case ("cr01" : "cr99")
+         case ("cres_n")  !!! crs (n)
+         case ("cres_en") !!! crs (e) n,e -> q; n,q -> f
+         case ("cres_lc") !!! crs (i_lo)
+         case ("cres_uc")  !!! crs (i_up)
          case ("gpot", "sgpt")
             f%fu = "\rm{cm}^2 / \rm{s}^2"
             f%f2cgs = 1.0 / (cm**2 / sek**2)

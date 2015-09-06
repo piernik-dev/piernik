@@ -95,7 +95,7 @@ contains
       use fluids_pub, only: has_ion, has_dst, has_neu
 #ifdef COSM_RAYS
       use dataio_pub, only: warn, msg
-      use fluidindex, only: iarr_all_crs
+      use fluidindex, only: iarr_all_cre, iarr_all_crn !!!iarr_all_crn
 #endif /* COSM_RAYS */
 
       implicit none
@@ -138,21 +138,29 @@ contains
 #endif /* GRAV */
             case ('magx', 'magy', 'magz', 'pres')
                nhdf_vars = nhdf_vars + 1
+               
+            print *, '(mag)nhdf_vars = ',nhdf_vars
 #ifdef COSM_RAYS
             case ('encr')
-               nhdf_vars = nhdf_vars + size(iarr_all_crs,1)
+               nhdf_vars = nhdf_vars + size(iarr_all_crn,1) + size(iarr_all_cre,1)
+!             print *, '(crn+cre)nhdf_vars = ',nhdf_vars
 #endif /* COSM_RAYS */
 #ifdef TRACER
             case ('trcr')
                nhdf_vars = nhdf_vars + 1
+!            print *, 'nhdf_vars = ',nhdf_vars
 #endif /* TRACER */
             case default
                nhdf_vars = nhdf_vars + 1
+!             print *, 'default nhdf_vars = ',nhdf_vars
          end select
       enddo
+!     print *, 'nhdf_vars = ',nhdf_vars
       allocate(hdf_vars_avail(nhdf_vars))
       hdf_vars_avail = .true.
       allocate(hdf_vars(nhdf_vars)); j = 1
+      
+      
       do i = 1, nvars
          select case (vars(i))
             case ('dens')
@@ -178,7 +186,7 @@ contains
                hdf_vars(j) = vars(i) ; j = j + 1
 #ifdef COSM_RAYS
             case ('encr')
-               do k = 1, size(iarr_all_crs,1)
+               do k = 1, size(iarr_all_crn,1)
                   if (k<=9) then
                      write(aux,'(A2,I2.2)') 'cr', k
                      hdf_vars(j) = aux ; j = j + 1
@@ -187,6 +195,33 @@ contains
                      call warn(msg)
                   endif
                enddo
+
+!            case ('cres_n')  !!! - number of electrons per unit volume per bin
+               do k = 1, size(iarr_all_cre,1)   !!!
+                   write(aux,'(A4,I2.2)') 'cren', k !!!
+                   hdf_vars(j) = vars(i) ; j = j + 1  !!!
+               enddo    !!!
+!             print *, 'iarr_all_cre = ', size(iarr_all_cre,1)
+!             print *, 'nhdf_vars = ',nhdf_vars   
+!            case ('cres_en') !!! - energy per unit volume per bin
+               do k = 1, size(iarr_all_cre,1) !!!
+                   write(aux,'(A4,I2.2)') 'cree', k !!!
+                   hdf_vars(j) = vars(i) ; j = j + 1 !!!
+               enddo    !!!
+               
+
+!            case ('cres_low_cut') !!! - lower momentum cut
+               do k = 1, size(iarr_all_cre,1) !!!
+                   write(aux,'(A5,I2.2)') 'crepl', k  !!!
+                   hdf_vars(j) = vars(i) ; j = j + 1 !!!
+               enddo    !!!
+
+!            case ('cres_up_cut') !!! - upper momentum cut
+               do k = 1, size(iarr_all_cre,1) !!!
+                   write(aux,'(A5,I2.2)') 'crepu', k !!!
+                   hdf_vars(j) = vars(i) ; j = j + 1 !!!
+               enddo    !!!
+               
 #endif /* COSM_RAYS */
 #ifdef GRAV
             case ('gpot')

@@ -63,7 +63,16 @@ module initcosmicrays
    logical, dimension(ncr_max)         :: crn_gpcr_ess !< if CRn species/energy-bin is essential for grad_pcr calculation
    logical, dimension(ncr_max)         :: cre_gpcr_ess !< if CRe species/energy-bin is essential for grad_pcr calculation
    integer(kind=4), allocatable, dimension(:) :: gpcr_essential !< crs indexes of essentials for grad_pcr calculation
-
+   
+   ! cosmic electrons
+!   real, dimension(1:ncre)           :: cres_n         ! number of electrons per bin
+!   real, dimension(1:ncre)           :: cres_en        ! energy of electrons per bin
+   real, allocatable, dimension(:)   :: cres_n         ! number of electrons per bin !!!
+   real, allocatable, dimension(:)   :: cres_en        ! energy of electrons per bin !!!
+   integer(kind=4)                   :: cres_lc    ! lower momentum cut !!!
+   integer(kind=4)                   :: cres_uc    ! upper momentum cut !!!
+   ! 2*ncre+2 fields total   
+   
    ! public component data
    integer(kind=4), allocatable, dimension(:) :: iarr_crn !< array of indexes pointing to all CR nuclear components
    integer(kind=4), allocatable, dimension(:) :: iarr_cre !< array of indexes pointing to all CR electron components
@@ -206,7 +215,6 @@ contains
             rbuff(ne+1       :ne+  ncre) = gamma_cre  (1:ncre)
             rbuff(ne+1+  ncre:ne+2*ncre) = K_cre_paral(1:ncre)
             rbuff(ne+1+2*ncre:ne+3*ncre) = K_cre_perp (1:ncre)
-
             lbuff(ncrn+2:ncrn+ncre+1) = cre_gpcr_ess(1:ncre)
          endif
 
@@ -238,7 +246,6 @@ contains
             gamma_crn  (1:ncrn) = rbuff(nn+1       :nn+  ncrn)
             K_crn_paral(1:ncrn) = rbuff(nn+1+  ncrn:nn+2*ncrn)
             K_crn_perp (1:ncrn) = rbuff(nn+1+2*ncrn:nn+3*ncrn)
-
             crn_gpcr_ess(1:ncrn) = lbuff(2:ncrn+1)
          endif
 
@@ -246,14 +253,14 @@ contains
             gamma_cre  (1:ncre) = rbuff(ne+1       :ne+  ncre)
             K_cre_paral(1:ncre) = rbuff(ne+1+  ncre:ne+2*ncre)
             K_cre_perp (1:ncre) = rbuff(ne+1+2*ncre:ne+3*ncre)
-
             cre_gpcr_ess(1:ncre) = lbuff(ncrn+2:ncrn+ncre+1)
          endif
 
       endif
-
-      ncrs = ncre + ncrn
-!!!!!            ncrs = (2*ncre+2) + ncrn   !!!!!
+      
+          
+!      ncrs = ncre + ncrn
+            ncrs = (2*ncre+2) + ncrn   !!!!!
 
       if (any([ncrs, ncrn, ncre] > ncr_max) .or. any([ncrs, ncrn, ncre] < 0)) call die("[initcosmicrays:init_cosmicrays] ncr[nes] > ncr_max or ncr[nes] < 0")
       if (ncrs ==0) call warn("[initcosmicrays:init_cosmicrays] ncrs == 0")
@@ -270,14 +277,18 @@ contains
       endif
 
       if (ncre > 0) then
-         gamma_crs  (ncrn+1:ncrs) = gamma_cre  (1:ncre)
-         K_crs_paral(ncrn+1:ncrs) = K_cre_paral(1:ncre)
-         K_crs_perp (ncrn+1:ncrs) = K_cre_perp (1:ncre)
+         gamma_crs  (ncrn+1:ncrs) = 0 !gamma_cre  (1:ncre)
+         K_crs_paral(ncrn+1:ncrs) = 0!K_cre_paral(1:ncre)
+         K_crs_perp (ncrn+1:ncrs) = 0!K_cre_perp (1:ncre)
+!          allocate(cres_n(ncre))   !!!
+!          allocate(cres_en(ncre))  !!!
       endif
-
+     
+!      print *, 'size of cres_n and cres_en =', size(cres_n), size(cres_en)
+     
       ma1d = [ncrn]
       call my_allocate(iarr_crn, ma1d)
-      ma1d = [ncre]
+      ma1d = [2*ncre+2] !!!
       call my_allocate(iarr_cre, ma1d)
       ma1d = [ncrs]
       call my_allocate(iarr_crs, ma1d)
@@ -318,8 +329,9 @@ contains
       flind%crs%beg    = flind%crn%beg
 
       flind%crn%all  = ncrn
-      flind%cre%all  = ncre
+      flind%cre%all  = 2*ncre+2 !!!
       flind%crs%all  = ncrs
+      print *, 'ncrs (initcosmicrays) = ', ncrs
 
       do icr = 1, ncrn
          iarr_crn(icr)      = flind%all + icr
@@ -349,7 +361,9 @@ contains
       use diagnostics, only: my_deallocate
 
       implicit none
-
+      
+      deallocate(cres_en)
+      deallocate(cres_n)
       call my_deallocate(iarr_crn)
       call my_deallocate(iarr_cre)
       call my_deallocate(iarr_crs)
