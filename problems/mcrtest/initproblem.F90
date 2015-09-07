@@ -215,7 +215,7 @@ contains
 #endif /* !ISO */
 
 #ifdef COSM_RAYS
-	 print *, 'flind crs all = ' , flind%crs%all
+         print *, 'flind crs all = ' , flind%crs%all
          do icr = 1, flind%crs%all
             cg%u(iarr_crs(icr), :, :, :) =  beta_cr*fl%cs2 * cg%u(fl%idn, :, :, :)/(gamma_crn(icr)-1.0)
          enddo

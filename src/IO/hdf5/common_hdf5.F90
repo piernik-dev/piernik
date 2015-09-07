@@ -142,7 +142,10 @@ contains
             print *, '(mag)nhdf_vars = ',nhdf_vars
 #ifdef COSM_RAYS
             case ('encr')
-               nhdf_vars = nhdf_vars + size(iarr_all_crn,1) + size(iarr_all_cre,1)
+               nhdf_vars = nhdf_vars + size(iarr_all_crn,1) + 2*size(iarr_all_cre,1)+2
+               ! 2*size ... + 2 because one cannot forget about any component - cren(ncre), cree(ncre), crepl(1), crepu(1)
+               
+              print *, 'iarr_all_cre = ', iarr_all_cre, 'iarr_all_crn = ', iarr_all_crn
 !             print *, '(crn+cre)nhdf_vars = ',nhdf_vars
 #endif /* COSM_RAYS */
 #ifdef TRACER
@@ -160,30 +163,39 @@ contains
       hdf_vars_avail = .true.
       allocate(hdf_vars(nhdf_vars)); j = 1
       
+      print *, 'size of hdf_vars = ', size(hdf_vars)
       
+!allocating:
+
       do i = 1, nvars
          select case (vars(i))
             case ('dens')
                if (has_dst) then ; hdf_vars(j) = 'dend' ; j = j + 1 ; endif
                if (has_neu) then ; hdf_vars(j) = 'denn' ; j = j + 1 ; endif
                if (has_ion) then ; hdf_vars(j) = 'deni' ; j = j + 1 ; endif
+!                print *,'after dens j = ' , j
             case ('velx')
                if (has_dst) then ; hdf_vars(j) = 'vlxd' ; j = j + 1 ; endif
                if (has_neu) then ; hdf_vars(j) = 'vlxn' ; j = j + 1 ; endif
                if (has_ion) then ; hdf_vars(j) = 'vlxi' ; j = j + 1 ; endif
+!                print *,'after velx j = ' , j
             case ('vely')
                if (has_dst) then ; hdf_vars(j) = 'vlyd' ; j = j + 1 ; endif
                if (has_neu) then ; hdf_vars(j) = 'vlyn' ; j = j + 1 ; endif
                if (has_ion) then ; hdf_vars(j) = 'vlyi' ; j = j + 1 ; endif
+!                print *,'after vely j = ' , j
             case ('velz')
                if (has_dst) then ; hdf_vars(j) = 'vlzd' ; j = j + 1 ; endif
                if (has_neu) then ; hdf_vars(j) = 'vlzn' ; j = j + 1 ; endif
                if (has_ion) then ; hdf_vars(j) = 'vlzi' ; j = j + 1 ; endif
+!                print *,'after velz j = ' , j
             case ('ener')
                if (has_neu) then ; hdf_vars(j) = 'enen' ; j = j + 1 ; endif
                if (has_ion) then ; hdf_vars(j) = 'enei' ; j = j + 1 ; endif
+!                print *,'after ener j = ' , j
             case ("magx", "magy", "magz")
                hdf_vars(j) = vars(i) ; j = j + 1
+!                print *,'after mag j = ' , j
 #ifdef COSM_RAYS
             case ('encr')
                do k = 1, size(iarr_all_crn,1)
@@ -195,33 +207,28 @@ contains
                      call warn(msg)
                   endif
                enddo
-
-!            case ('cres_n')  !!! - number of electrons per unit volume per bin
+               
+!                print *,'after encr/cr j = ' , j
                do k = 1, size(iarr_all_cre,1)   !!!
                    write(aux,'(A4,I2.2)') 'cren', k !!!
-                   hdf_vars(j) = vars(i) ; j = j + 1  !!!
+                   hdf_vars(j) = aux ; j = j + 1  !!!
                enddo    !!!
-!             print *, 'iarr_all_cre = ', size(iarr_all_cre,1)
-!             print *, 'nhdf_vars = ',nhdf_vars   
-!            case ('cres_en') !!! - energy per unit volume per bin
+!                print *,'after encr/cren j = ' , j
                do k = 1, size(iarr_all_cre,1) !!!
                    write(aux,'(A4,I2.2)') 'cree', k !!!
-                   hdf_vars(j) = vars(i) ; j = j + 1 !!!
+                   hdf_vars(j) = aux ; j = j + 1 !!!
                enddo    !!!
-               
-
-!            case ('cres_low_cut') !!! - lower momentum cut
-               do k = 1, size(iarr_all_cre,1) !!!
-                   write(aux,'(A5,I2.2)') 'crepl', k  !!!
-                   hdf_vars(j) = vars(i) ; j = j + 1 !!!
-               enddo    !!!
-
-!            case ('cres_up_cut') !!! - upper momentum cut
-               do k = 1, size(iarr_all_cre,1) !!!
-                   write(aux,'(A5,I2.2)') 'crepu', k !!!
-                   hdf_vars(j) = vars(i) ; j = j + 1 !!!
-               enddo    !!!
-               
+!                print *,'after encr/cree j = ' , j
+!                do k = 1, (size(iarr_all_cre,1)-2) !!!
+                   write(aux,'(A5,I2.2)') 'crepl'  !!!
+                   hdf_vars(j) = aux ; j = j + 1 !!!
+!                enddo    !!!
+!                print *,'after encr/crepl j = ' , j
+!                do k = 1, (size(iarr_all_cre,1)-2) !!!
+                   write(aux,'(A5,I2.2)') 'crepu' !!!
+                   hdf_vars(j) = aux ; j = j + 1 !!!
+!                enddo    !!!
+!                print *,'after encr/crepu j = ' , j
 #endif /* COSM_RAYS */
 #ifdef GRAV
             case ('gpot')

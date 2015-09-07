@@ -67,10 +67,10 @@ module initcosmicrays
    ! cosmic electrons
 !   real, dimension(1:ncre)           :: cres_n         ! number of electrons per bin
 !   real, dimension(1:ncre)           :: cres_en        ! energy of electrons per bin
-   real, allocatable, dimension(:)   :: cres_n         ! number of electrons per bin !!!
-   real, allocatable, dimension(:)   :: cres_en        ! energy of electrons per bin !!!
-   integer(kind=4)                   :: cres_lc    ! lower momentum cut !!!
-   integer(kind=4)                   :: cres_uc    ! upper momentum cut !!!
+!    real, allocatable, dimension(:)   :: cres_n         ! number of electrons per bin !!!
+!    real, allocatable, dimension(:)   :: cres_en        ! energy of electrons per bin !!!
+!    integer(kind=4)                   :: cres_lc    ! lower momentum cut !!!
+!    integer(kind=4)                   :: cres_uc    ! upper momentum cut !!!
    ! 2*ncre+2 fields total   
    
    ! public component data
@@ -262,29 +262,27 @@ contains
 !      ncrs = ncre + ncrn
             ncrs = (2*ncre+2) + ncrn   !!!!!
 
-      if (any([ncrs, ncrn, ncre] > ncr_max) .or. any([ncrs, ncrn, ncre] < 0)) call die("[initcosmicrays:init_cosmicrays] ncr[nes] > ncr_max or ncr[nes] < 0")
-      if (ncrs ==0) call warn("[initcosmicrays:init_cosmicrays] ncrs == 0")
+      if (any([ncrn, ncre] > ncr_max) .or. any([ncrn, ncre] < 0)) call die("[initcosmicrays:init_cosmicrays] ncr[nes] > ncr_max or ncr[nes] < 0")
+      if (ncrs ==0) call warn("[initcosmicrays:init_cosmicrays] ncrs == 0; no cr components specified")
 
-      ma1d = [ncrs]
-      call my_allocate(gamma_crs,   ma1d)
-      call my_allocate(K_crs_paral, ma1d)
-      call my_allocate(K_crs_perp,  ma1d)
+!       ma1d = [ncrs]
+!       call my_allocate(gamma_crs,   ma1d)
+!       call my_allocate(K_crs_paral, ma1d)
+!       call my_allocate(K_crs_perp,  ma1d)
 
-      if (ncrn > 0) then
-         gamma_crs  (1:ncrn) = gamma_crn  (1:ncrn)
-         K_crs_paral(1:ncrn) = K_crn_paral(1:ncrn)
-         K_crs_perp (1:ncrn) = K_crn_perp (1:ncrn)
-      endif
+!       if (ncrn > 0) then
+!          gamma_crs  (1:ncrn) = gamma_crn  (1:ncrn)
+!          K_crs_paral(1:ncrn) = K_crn_paral(1:ncrn)
+!          K_crs_perp (1:ncrn) = K_crn_perp (1:ncrn)
+!       endif
 
-      if (ncre > 0) then
-         gamma_crs  (ncrn+1:ncrs) = 0 !gamma_cre  (1:ncre)
-         K_crs_paral(ncrn+1:ncrs) = 0!K_cre_paral(1:ncre)
-         K_crs_perp (ncrn+1:ncrs) = 0!K_cre_perp (1:ncre)
+!       if (ncre > 0) then
+!          gamma_crs  (ncrn+1:ncrs) = 0 !gamma_cre  (1:ncre)
+!          K_crs_paral(ncrn+1:ncrs) = 0!K_cre_paral(1:ncre)
+!          K_crs_perp (ncrn+1:ncrs) = 0!K_cre_perp (1:ncre)
 !          allocate(cres_n(ncre))   !!!
 !          allocate(cres_en(ncre))  !!!
-      endif
-     
-!      print *, 'size of cres_n and cres_en =', size(cres_n), size(cres_en)
+!       endif
      
       ma1d = [ncrn]
       call my_allocate(iarr_crn, ma1d)
@@ -328,10 +326,12 @@ contains
       flind%crn%beg    = flind%all + I_ONE
       flind%crs%beg    = flind%crn%beg
 
+      
+      print *, 'ncrs (initcosmicrays) = ', ncrs
       flind%crn%all  = ncrn
       flind%cre%all  = 2*ncre+2 !!!
       flind%crs%all  = ncrs
-      print *, 'ncrs (initcosmicrays) = ', ncrs
+      
 
       do icr = 1, ncrn
          iarr_crn(icr)      = flind%all + icr
@@ -339,7 +339,7 @@ contains
       enddo
       flind%all = flind%all + flind%crn%all
 
-      do icr = 1, ncre
+      do icr = 1, (2*ncre+2)
          iarr_cre(icr)        = flind%all + icr
          iarr_crs(ncrn + icr) = flind%all + icr
       enddo
@@ -362,8 +362,8 @@ contains
 
       implicit none
       
-      deallocate(cres_en)
-      deallocate(cres_n)
+!      deallocate(cres_en)
+!      deallocate(cres_n)
       call my_deallocate(iarr_crn)
       call my_deallocate(iarr_cre)
       call my_deallocate(iarr_crs)
