@@ -219,7 +219,20 @@ contains
 #ifdef COSM_RAYS
          case ("cr01" : "cr99")
             read(var,'(A2,I2.2)') aux, i !> \deprecated BEWARE 0 <= i <= 99, no other indices can be dumped to hdf file
-            tab(:,:,:) = real(cg%u(flind%crs%beg+i-1, RNG), kind=4)
+            tab(:,:,:) = real(cg%u(flind%crn%beg+i-1, RNG), kind=4)
+         case ("cren01" : "cren99")
+            read(var,'(A4,I2.2)') aux, i !> \deprecated BEWARE 0 <= i <= 99, no other indices can be dumped to hdf file
+            tab(:,:,:) = real(cg%u(flind%cre%beg+i-1, RNG), kind=4)
+         case ("cree01" : "cree99")
+            read(var,'(A4,I2.2)') aux, i !> \deprecated BEWARE 0 <= i <= 99, no other indices can be dumped to hdf file
+            tab(:,:,:) = real(cg%u(flind%cre%beg+i-1, RNG), kind=4)
+         case ("crepl")
+            read(var,'(A5)') aux, i !> \deprecated BEWARE 0 <= i <= 99, no other indices can be dumped to hdf file
+            tab(:,:,:) = real(cg%u(flind%cre%beg+i-1, RNG), kind=4)
+         case ("crepu")
+            read(var,'(A5)') aux, i !> \deprecated BEWARE 0 <= i <= 99, no other indices can be dumped to hdf file
+            tab(:,:,:) = real(cg%u(flind%cre%beg+i-1, RNG), kind=4)
+            
 #endif /* COSM_RAYS */
 #ifdef TRACER
          case ("trcr")
