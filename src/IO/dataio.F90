@@ -868,7 +868,7 @@ contains
       use fluidindex,       only: iarr_all_en
 #endif /* !ISO */
 #ifdef COSM_RAYS
-      use fluidindex,       only: iarr_all_cre, iarr_all_crn !,iarr_all_crs
+      use fluidindex,       only: iarr_all_cre, iarr_all_crn !,iarr_all_crs - /deprecated !!!
 #endif /* COSM_RAYS */
 #ifdef RESISTIVE
       use resistivity,      only: eta1_active
@@ -1040,7 +1040,7 @@ contains
 
 #ifdef COSM_RAYS
 !                   tot_q(T_ENCR) = tot_q(T_ENCR) + drvol * sum(sum(pu(iarr_all_crs, ii, :, :), dim=1), mask=cg%leafmap(i, :, :))
-                  tot_q(T_ENCR) = tot_q(T_ENCR) + drvol *( sum(sum(pu(iarr_all_crn, ii, :, :), dim=1), mask=cg%leafmap(i, :, :)) +  sum(sum(pu(iarr_all_cre, ii, :, :), dim=1), mask=cg%leafmap(i, :, :)))
+                  tot_q(T_ENCR) = tot_q(T_ENCR) + drvol *( sum(sum(pu(iarr_all_crn, ii, :, :), dim=1), mask=cg%leafmap(i, :, :)) +  sum(sum(pu(iarr_all_cre, ii, :, :), dim=1), mask=cg%leafmap(i, :, :))) !!!
                   tot_q(T_ENER) = tot_q(T_ENER) + tot_q(T_ENCR)
 #endif /* COSM_RAYS */
                enddo
@@ -1399,7 +1399,7 @@ contains
       use named_array_list,   only: qna
       use types,              only: value
 #ifdef COSM_RAYS
-      use fluidindex,         only: iarr_all_crn, iarr_all_cre!, iarr_all_crs
+      use fluidindex,         only: iarr_all_crn, iarr_all_cre!, iarr_all_crs /deprecated !!!
       use timestepcosmicrays, only: dt_crs
 #endif /* COSM_RAYS */
 #if defined COSM_RAYS || defined MAGNETIC

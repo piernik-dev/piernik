@@ -227,11 +227,11 @@ contains
             read(var,'(A4,I2.2)') aux, i !> \deprecated BEWARE 0 <= i <= 99, no other indices can be dumped to hdf file
             tab(:,:,:) = real(cg%u(flind%cre%beg+i-1, RNG), kind=4)
          case ("crepl")
-            read(var,'(A5)') aux, i !> \deprecated BEWARE 0 <= i <= 99, no other indices can be dumped to hdf file
-            tab(:,:,:) = real(cg%u(flind%cre%beg+i-1, RNG), kind=4)
+            read(var,'(A5)') aux !> \deprecated BEWARE 0 <= i <= 99, no other indices can be dumped to hdf file
+            tab(:,:,:) = real(cg%u(flind%cre%beg-1, RNG), kind=4)
          case ("crepu")
-            read(var,'(A5)') aux, i !> \deprecated BEWARE 0 <= i <= 99, no other indices can be dumped to hdf file
-            tab(:,:,:) = real(cg%u(flind%cre%beg+i-1, RNG), kind=4)
+            read(var,'(A5)') aux !> \deprecated BEWARE 0 <= i <= 99, no other indices can be dumped to hdf file
+            tab(:,:,:) = real(cg%u(flind%cre%beg-1, RNG), kind=4)
             
 #endif /* COSM_RAYS */
 #ifdef TRACER
