@@ -64,7 +64,7 @@ module fluidindex
    integer(kind=4), allocatable, dimension(:) :: iarr_all_en   !< array of indexes pointing to ener. densities of all fluids
    integer(kind=4), allocatable, dimension(:) :: iarr_all_crn  !< array of indexes pointing to ener. densities of all nuclear CR-components
    integer(kind=4), allocatable, dimension(:) :: iarr_all_cre  !< array of indexes pointing to ener. densities of all electron CR-components
-   integer(kind=4), allocatable, dimension(:), target :: iarr_all_crs   !< array of indexes pointing to ener. densities of all CR-components
+!    integer(kind=4), allocatable, dimension(:), target :: iarr_all_crs   !< array of indexes pointing to ener. densities of all CR-components
    integer(kind=4), allocatable, dimension(:), target :: iarr_all_trc   !< array of indexes pointing to tracers
    integer(kind=4), allocatable, dimension(:,:) :: iarr_all_swp         !< array (size = flind) of all fluid indexes in the order depending on sweeps direction
 
@@ -173,11 +173,11 @@ contains
 #ifdef COSM_RAYS
       allocate(iarr_all_crn(flind%crn%all))
       allocate(iarr_all_cre(flind%cre%all))
-      allocate(iarr_all_crs(flind%crs%all)) !!!
+!       allocate(iarr_all_crs(flind%crs%all)) !!!
 #else /* !COSM_RAYS */
       allocate(iarr_all_crn(0))
       allocate(iarr_all_cre(0))
-      allocate(iarr_all_crs(0)) !!!
+!       allocate(iarr_all_crs(0)) !!!
 #endif /* !COSM_RAYS */
 
 #ifdef TRACER
@@ -219,7 +219,7 @@ contains
 
       iarr_all_crn(1:flind%crn%all) = iarr_crn
       iarr_all_cre(1:flind%cre%all) = iarr_cre
-      iarr_all_crs(1:flind%crs%all) = iarr_crs
+!       iarr_all_crs(1:flind%crs%all) = iarr_crs
 #endif /* COSM_RAYS */
 
 #ifdef TRACER
@@ -271,7 +271,7 @@ contains
 
       call my_deallocate(iarr_all_crn)
       call my_deallocate(iarr_all_cre)
-      call my_deallocate(iarr_all_crs)
+!       call my_deallocate(iarr_all_crs)
 
       call my_deallocate(iarr_all_trc)
 

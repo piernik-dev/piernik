@@ -64,15 +64,6 @@ module initcosmicrays
    logical, dimension(ncr_max)         :: cre_gpcr_ess !< if CRe species/energy-bin is essential for grad_pcr calculation
    integer(kind=4), allocatable, dimension(:) :: gpcr_essential !< crs indexes of essentials for grad_pcr calculation
    
-   ! cosmic electrons
-!   real, dimension(1:ncre)           :: cres_n         ! number of electrons per bin
-!   real, dimension(1:ncre)           :: cres_en        ! energy of electrons per bin
-!    real, allocatable, dimension(:)   :: cres_n         ! number of electrons per bin !!!
-!    real, allocatable, dimension(:)   :: cres_en        ! energy of electrons per bin !!!
-!    integer(kind=4)                   :: cres_lc    ! lower momentum cut !!!
-!    integer(kind=4)                   :: cres_uc    ! upper momentum cut !!!
-   ! 2*ncre+2 fields total   
-   
    ! public component data
    integer(kind=4), allocatable, dimension(:) :: iarr_crn !< array of indexes pointing to all CR nuclear components
    integer(kind=4), allocatable, dimension(:) :: iarr_cre !< array of indexes pointing to all CR electron components
@@ -270,11 +261,11 @@ contains
 !       call my_allocate(K_crs_paral, ma1d)
 !       call my_allocate(K_crs_perp,  ma1d)
 
-!       if (ncrn > 0) then
-!          gamma_crs  (1:ncrn) = gamma_crn  (1:ncrn)
-!          K_crs_paral(1:ncrn) = K_crn_paral(1:ncrn)
-!          K_crs_perp (1:ncrn) = K_crn_perp (1:ncrn)
-!       endif
+!        if (ncrn > 0) then
+!           gamma_crs  (1:ncrn) = gamma_crn  (1:ncrn)
+!           K_crs_paral(1:ncrn) = K_crn_paral(1:ncrn)
+!           K_crs_perp (1:ncrn) = K_crn_perp (1:ncrn)
+!        endif
 
 !       if (ncre > 0) then
 !          gamma_crs  (ncrn+1:ncrs) = 0 !gamma_cre  (1:ncre)
@@ -327,7 +318,7 @@ contains
       flind%crs%beg    = flind%crn%beg
 
       
-      print *, 'ncrs (initcosmicrays) = ', ncrs
+!       print *, 'ncrs (initcosmicrays) = ', ncrs
       flind%crn%all  = ncrn
       flind%cre%all  = 2*ncre+2 !!!
       flind%crs%all  = ncrs
@@ -361,9 +352,7 @@ contains
       use diagnostics, only: my_deallocate
 
       implicit none
-      
-!      deallocate(cres_en)
-!      deallocate(cres_n)
+ 
       call my_deallocate(iarr_crn)
       call my_deallocate(iarr_cre)
       call my_deallocate(iarr_crs)

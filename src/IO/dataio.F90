@@ -868,7 +868,7 @@ contains
       use fluidindex,       only: iarr_all_en
 #endif /* !ISO */
 #ifdef COSM_RAYS
-      use fluidindex,       only: iarr_all_crs
+      use fluidindex,       only: iarr_all_cre, iarr_all_crn !,iarr_all_crs
 #endif /* COSM_RAYS */
 #ifdef RESISTIVE
       use resistivity,      only: eta1_active
@@ -1004,7 +1004,8 @@ contains
 #endif /* !ISO */
 
 #ifdef COSM_RAYS
-               tot_q(T_ENCR) = tot_q(T_ENCR) + cg%dvol * sum(sum(pu(iarr_all_crs,:,:,:), dim=1), mask=cg%leafmap)
+!                tot_q(T_ENCR) = tot_q(T_ENCR) + cg%dvol * sum(sum(pu(iarr_all_crs,:,:,:), dim=1), mask=cg%leafmap)
+               tot_q(T_ENCR) = tot_q(T_ENCR) + cg%dvol * (sum(sum(pu(iarr_all_crn,:,:,:), dim=1), mask=cg%leafmap) + sum(sum(pu(iarr_all_cre,:,:,:), dim=1), mask=cg%leafmap))
                tot_q(T_ENER) = tot_q(T_ENER) + tot_q(T_ENCR)
 #endif /* COSM_RAYS */
 
@@ -1038,7 +1039,8 @@ contains
 #endif /* !ISO */
 
 #ifdef COSM_RAYS
-                  tot_q(T_ENCR) = tot_q(T_ENCR) + drvol * sum(sum(pu(iarr_all_crs, ii, :, :), dim=1), mask=cg%leafmap(i, :, :))
+!                   tot_q(T_ENCR) = tot_q(T_ENCR) + drvol * sum(sum(pu(iarr_all_crs, ii, :, :), dim=1), mask=cg%leafmap(i, :, :))
+                  tot_q(T_ENCR) = tot_q(T_ENCR) + drvol *( sum(sum(pu(iarr_all_crn, ii, :, :), dim=1), mask=cg%leafmap(i, :, :)) +  sum(sum(pu(iarr_all_cre, ii, :, :), dim=1), mask=cg%leafmap(i, :, :)))
                   tot_q(T_ENER) = tot_q(T_ENER) + tot_q(T_ENCR)
 #endif /* COSM_RAYS */
                enddo
@@ -1397,7 +1399,7 @@ contains
       use named_array_list,   only: qna
       use types,              only: value
 #ifdef COSM_RAYS
-      use fluidindex,         only: iarr_all_crs
+      use fluidindex,         only: iarr_all_crn, iarr_all_cre!, iarr_all_crs
       use timestepcosmicrays, only: dt_crs
 #endif /* COSM_RAYS */
 #if defined COSM_RAYS || defined MAGNETIC
@@ -1539,7 +1541,9 @@ contains
 #ifdef COSM_RAYS
       cgl => leaves%first
       do while (associated(cgl))
-         cgl%cg%wa        = sum(cgl%cg%u(iarr_all_crs,:,:,:),1)
+         cgl%cg%wa        = sum(cgl%cg%u(iarr_all_crn,:,:,:),1)
+         cgl%cg%wa        = cgl%cg%wa + sum(cgl%cg%u(iarr_all_cre,:,:,:),1)
+!          cgl%cg%wa        = sum(cgl%cg%u(iarr_all_crs,:,:,:),1)
          cgl => cgl%nxt
       enddo
       call leaves%get_extremum(qna%wai, MAXL, encr_max)
