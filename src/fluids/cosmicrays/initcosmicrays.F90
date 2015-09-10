@@ -70,8 +70,8 @@ module initcosmicrays
    integer(kind=4), allocatable, dimension(:) :: iarr_crs !< array of indexes pointing to all CR components
 
    real,    allocatable, dimension(:)  :: gamma_crs    !< array containing adiabatic indexes of all CR components
-   real,    allocatable, dimension(:)  :: K_crs_paral  !< array containing parallel diffusion coefficients of all CR components
-   real,    allocatable, dimension(:)  :: K_crs_perp   !< array containing perpendicular diffusion coefficients of all CR components
+!    real,    allocatable, dimension(:)  :: K_crs_paral  !< array containing parallel diffusion coefficients of all CR components
+!    real,    allocatable, dimension(:)  :: K_crs_perp   !< array containing perpendicular diffusion coefficients of all CR components
    !> \deprecated BEWARE Possible confusion: *_perp coefficients are not "perpendicular" but rather isotropic
 
 contains
@@ -267,8 +267,16 @@ contains
 !           K_crs_perp (1:ncrn) = K_crn_perp (1:ncrn)
 !        endif
 
+       if (ncre > 0) then
+            gamma_cre  (1:ncre) = 0 !rbuff(ne+1       :ne+  ncre)
+            K_cre_paral(1:ncre) = 0 !rbuff(ne+1+  ncre:ne+2*ncre)
+            K_cre_perp (1:ncre) = 0 !rbuff(ne+1+2*ncre:ne+3*ncre)
+       endif
+
+
+
 !       if (ncre > 0) then
-!          gamma_crs  (ncrn+1:ncrs) = 0 !gamma_cre  (1:ncre)
+!          gamma_crs  (ncrn+1:ncrs) = 0 !gamma_cre  (1:ncre) !<- cre gamma and K is supposed to be 0
 !          K_crs_paral(ncrn+1:ncrs) = 0!K_cre_paral(1:ncre)
 !          K_crs_perp (ncrn+1:ncrs) = 0!K_cre_perp (1:ncre)
 !          allocate(cres_n(ncre))   !!!
@@ -318,10 +326,9 @@ contains
       flind%crs%beg    = flind%crn%beg
 
       
-!       print *, 'ncrs (initcosmicrays) = ', ncrs
       flind%crn%all  = ncrn
       flind%cre%all  = 2*ncre+2 !!!
-      flind%crs%all  = ncrs
+      flind%crs%all  = ncrs ! \crs deprecated, but we most likely need flind%crs%all to allocate part of cg%u responsible for all cosmic rays, so this remains unchanged
       
 
       do icr = 1, ncrn
@@ -357,8 +364,8 @@ contains
       call my_deallocate(iarr_cre)
       call my_deallocate(iarr_crs)
       call my_deallocate(gamma_crs)
-      call my_deallocate(K_crs_paral)
-      call my_deallocate(K_crs_perp)
+!       call my_deallocate(K_crs_paral)
+!       call my_deallocate(K_crs_perp)
 
    end subroutine cleanup_cosmicrays
 

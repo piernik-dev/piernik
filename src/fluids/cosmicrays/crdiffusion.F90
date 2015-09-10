@@ -141,7 +141,7 @@ contains
       use fluidindex,       only: flind
       use global,           only: dt
       use grid_cont,        only: grid_container
-      use initcosmicrays,   only: iarr_crs, K_crs_paral, K_crs_perp
+      use initcosmicrays,   only: iarr_crs, K_crn_paral, K_crn_perp !K_crs_paral, K_crs_perp !!!
       use named_array,      only: p4
       use named_array_list, only: wna
 
@@ -186,7 +186,7 @@ contains
                do i = ldm(xdim), hdm(xdim) ; il = i-1 ; ih = i+1 ; ild = i-idm(xdim)
 
                   decr(crdim,:) = (cg%u(iarr_crs,i,j,k) - cg%u(iarr_crs,ild,jld,kld)) * cg%idl(crdim)
-                  fcrdif = K_crs_perp * decr(crdim,:)
+                  fcrdif = K_crn_perp * decr(crdim,:) !!!
 
                   bcomp(crdim) =  cg%b(crdim,i,j,k)
 
@@ -212,7 +212,7 @@ contains
                   endif
 
                   bb = sum(bcomp**2)
-                  if (bb > epsilon(0.d0)) fcrdif = fcrdif + K_crs_paral * bcomp(crdim) * (bcomp(xdim)*decr(xdim,:) + bcomp(ydim)*decr(ydim,:) + bcomp(zdim)*decr(zdim,:)) / bb
+                  if (bb > epsilon(0.d0)) fcrdif = fcrdif + K_crn_paral * bcomp(crdim) * (bcomp(xdim)*decr(xdim,:) + bcomp(ydim)*decr(ydim,:) + bcomp(zdim)*decr(zdim,:)) / bb !!!
 
                   wcr(:,i,j,k) = - fcrdif * dt * cg%idl(crdim)
 
