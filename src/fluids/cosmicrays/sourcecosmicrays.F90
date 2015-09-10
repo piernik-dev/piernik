@@ -51,7 +51,7 @@ contains
 
       use domain,         only: dom
       use fluidindex,     only: flind
-      use initcosmicrays, only: iarr_crs, gamma_crs, cr_active, gpcr_essential
+      use initcosmicrays, only: iarr_crs, gamma_crn, cr_active, gpcr_essential ! gamma_crs \deprecated
 
       implicit none
 
@@ -65,12 +65,12 @@ contains
 
       do icr = 1, flind%crs%all
          ! 1/eff_dim is because we compute the p_cr*dv in every sweep (3 times in 3D, twice in 2D and once in 1D experiments)
-         decr(:, icr)      = -1. / real(dom%eff_dim) * (gamma_crs(icr)-1.0) * uu(:, iarr_crs(icr))*divv(:)
+         decr(:, icr)      = -1. / real(dom%eff_dim) * (gamma_crn(icr)-1.0) * uu(:, iarr_crs(icr))*divv(:)
       enddo
       grad_pcr(:) = 0.0
       do icr = 1, size(gpcr_essential)
          jcr = gpcr_essential(icr)
-         grad_pcr(2:nn-1) = grad_pcr(2:nn-1) + cr_active*(gamma_crs(jcr)-1.)*(uu(1:nn-2, iarr_crs(jcr)) - uu(3:nn, iarr_crs(jcr)))/(2.*dx)
+         grad_pcr(2:nn-1) = grad_pcr(2:nn-1) + cr_active*(gamma_crn(jcr)-1.)*(uu(1:nn-2, iarr_crs(jcr)) - uu(3:nn, iarr_crs(jcr)))/(2.*dx)
       enddo
       grad_pcr(1:2) = 0.0 ; grad_pcr(nn-1:nn) = 0.0
 
