@@ -57,7 +57,6 @@ contains
     integer(kind=4)                 :: ddim
 
     halfstep = .false.
-
     if (first_run) then
        dtm = 0.0
 
@@ -72,18 +71,13 @@ contains
     cgl => leaves%first
 
     do while (associated(cgl))
-
        do ddim = xdim, zdim
-
           if (dom%has_dir(ddim)) call sweep(cgl%cg,dt,ddim)
-
        enddo
 
        if (associated(problem_customize_solution)) call problem_customize_solution(.true.)
-
-          cgl => cgl%nxt
-
-    enddo
+       cgl => cgl%nxt
+       enddo
 
      t = t + dt
      dtm = dt
@@ -92,17 +86,11 @@ contains
      cgl => leaves%first
 
      do while (associated(cgl))
-
         do ddim = zdim, xdim, -1
-
            if (dom%has_dir(ddim)) call sweep(cgl%cg,dt,ddim)
-
         enddo
-
         if (associated(problem_customize_solution)) call problem_customize_solution(.false.)
-
         cgl => cgl%nxt
-
      enddo
 
        if (first_run) first_run = .false.
