@@ -290,7 +290,7 @@ contains
        vb_r  =  sum(ur(imx:imz,i)*ur(ibx:ibz,i))
        vb_starl  =  sum(u_starl(imx:imz)*u_starl(ibx:ibz))
        vb_starr  =  sum(u_starr(imx:imz)*u_starr(ibx:ibz))
-       vb_2star  =  sum(u_2star(ibx:ibz)*u_2star(ivx:ivz))
+       vb_2star  =  sum(u_2star(ibx:ibz)*u_2star(imx:imz))
        
    
        ! HLLD fluxes
@@ -425,7 +425,7 @@ contains
 
                    f(:,i)  =  fl(:,i) + alfven_l*u_2star(:) - (alfven_l - sl)*u_starl(:) - sl*ul(:,i)
 
-                else if (sm .le. zero)
+                else if (sm .le. zero) then
 
                    u_2star(idn)  =  u_starr(idn)
 
