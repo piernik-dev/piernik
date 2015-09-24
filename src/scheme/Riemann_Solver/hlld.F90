@@ -179,7 +179,7 @@ contains
     real                                         :: slsm, srsm, slvxl, srvxr, smvxl, smvxr, srmsl, srtsl, dn_l, dn_r
     real                                         :: b_lr, b_lrgam, magprl, magprr, prtl, prtr, prt_star, b_sig
     real                                         :: coeff_1, coeff_2, dn_lsqt, dn_rsqt, add_dnsq, mul_dnsq
-    real                                         :: vb_l, vb_starl, vb_r, vb_starr
+    real                                         :: vb_l, vb_starl, vb_r, vb_starr, vb_2star
     
     ! Local arrays
 
@@ -290,7 +290,7 @@ contains
        vb_r  =  sum(ur(imx:imz,i)*ur(ibx:ibz,i))
        vb_starl  =  sum(u_starl(imx:imz)*u_starl(ibx:ibz))
        vb_starr  =  sum(u_starr(imx:imz)*u_starr(ibx:ibz))
-
+       vb_2star  =  sum(u_2star(ibx:ibz)*u_2star(ivx:ivz))
        
    
        ! HLLD fluxes
@@ -408,9 +408,63 @@ contains
                 u_2star(ibx)  =  ul(ibx,i)
                 u_2star(iby)  =  ((dn_lsqt*u_starr(iby) + dn_rsqt*u_starl(iby)) + b_sig*mul_dnsq*(u_starr(imy) - u_starl(imy)))/add_dnsq
                 u_2star(ibz)  =  ((dn_lsqt*u_starr(ibz) + dn_rsqt*u_starl(iby)) + b_sig*mul_dnsq*(u_starr(imz) - u_starl(imy)))/add_dnsq
-                
-                
-                
+
+                ! Prefer right Alfven wave according to speed of contact discontinuity
+
+                if(sm .ge. zero) then
+
+                   u_2star(idn)  =  u_starl(idn)
+
+                   ! Check out for rest
+
+                   ! Energy of Alfven intermediate state Eq. 63
+
+                   u_2star(ien)  =  u_starl(ien) - b_sig*dn_lsqt*(vb_starl - vb_2star)
+
+                   ! Left Alfven intermediate flux Eq. 65
+
+                   f(:,i)  =  fl(:,i) + alfven_l*u_2star(:) - (alfven_l - sl)*u_starl(:) - sl*ul(:,i)
+
+                else if (sm .le. zero)
+
+                   u_2star(idn)  =  u_starr(idn)
+
+                   ! Energy of Alfven intermediate state Eq. 63
+
+                   u_2star(ien)  =  u_starr(ien) + b_sig*dn_rsqt*(vb_starr - vb_2star)
+
+                   ! Right Alfven intermediate flux Eq. 65
+
+                   f(:,i)  =  fr(:,i) + alfven_r*u_2star(:) - (alfven_r - sr)*u_starr(:) - sr*ur(:,i)
+
+
+                else ! sm = 0
+
+                   u_2star(idn)  =  u_starl(idn)
+
+                   ! Check out for rest
+
+                   ! Energy for Alfven intermediate state Eq. 63
+
+                   u_2star(ien)  =  u_starl(ien) - b_sig*dn_lsqt*(vb_starl - vb_2star)
+
+                   ! Left Alfven intermediate flux Eq. 65
+
+                   f(:,i)  =  fl(:,i) + alfven_l*u_2star(:) - (alfven_l - sl)*u_starl(:) - sl*ul(:,i)
+
+                   u_2star(idn)  =  u_starr(idn)
+
+                   ! Check out for rest
+
+                   ! Energy for Alfven intermediate state Eq. 63
+                   
+                   u_2star(ien)  =  u_starr(ien)  + b_sig*dn_rsqt*(vb_starr - vb_2star)
+
+                   ! Right Alfven intermediate flux Eq. 65
+
+                   f(:,i)  =  half*(f(:,i) + fr(:,i) + alfven_r*u_2star(:) - (alfven_r - sr)*u_starr(:) - sr*ur(:,i))
+
+                endif
 
           
 
