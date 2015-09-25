@@ -184,10 +184,8 @@ contains
     ! Local arrays
 
     real, dimension(n, flind%all)                :: ul, ur, fl, fr
-    !real, dimension(n, flind%all)                :: u_starl, u_starr, u_2star
     real, dimension(flind%all)                   :: u_starl, u_starr, u_2star
-    !real, dimension(flind%all)                   :: vx_starl, vx_starr, vy_starl, vy_starr, vz_starl, vz_starr
-    
+    real, dimension(flind%all)                   :: v_starl, v_starr, b_starl, b_starr, v_2star, b_2star
     
     ibx = iarr_mag_swp(cdim,xdim)
     iby = iarr_mag_swp(cdim,ydim)
@@ -202,9 +200,6 @@ contains
 
     do i = 1,n
 
-       !vx_l  =  ul(imx,i)/ul(idn,i)
-       !vx_r  =  ur(imx,i)/ur(idn,i)
-    
        gampr_l  =  gamma*ul(ien,i)
        gampr_r  =  gamma*ur(ien,i)
 
@@ -234,14 +229,8 @@ contains
        slsm  =  sl - sm
        srsm  =  sr - sm
 
-       !slvxl  =  sl - vx_l
-       !srvxr  =  sr - vx_r
-
        slvxl  =  sl - ul(imx,i)
        srvxr  =  sr - ur(imx,i)
-
-       !smvxl  =  sm - vx_l
-       !smvxr  =  sm - vx_r
 
        smvxl  =  sm - ul(imx,i)
        smvxr  =  sm - ur(imx,i)
@@ -271,28 +260,17 @@ contains
 
        prt_star  =  (prtl*dn_l*smvxl) + (prtr*dn_r*smvxr)  !< Check for 0.5.
 
-       ! Densities for left and right intermediate states Eq. (43)
-
-       u_starl(idn)  =  dn_l/slsm
-       u_starr(idn)  =  dn_r/srsm
-
-       ! Intermediate state velocity
-
-       u_starl(imx)  =  sm
-       u_starr(imx)  =  sm
-    
-       u_starl(ibx)  =  ul(ibx,i)
-       u_starr(ibx)  =  ur(ibx,i)
-
-       ! Dot product of velocity and magnetic field
-
-       vb_l  =  sum(ul(imx:imz,i)*ul(ibx:ibz,i))
-       vb_r  =  sum(ur(imx:imz,i)*ur(ibx:ibz,i))
-       vb_starl  =  sum(u_starl(imx:imz)*u_starl(ibx:ibz))
-       vb_starr  =  sum(u_starr(imx:imz)*u_starr(ibx:ibz))
-       vb_2star  =  sum(u_2star(ibx:ibz)*u_2star(imx:imz))
        
-   
+
+       ! Normal components of velocity and magnetic field
+
+       
+       v_starl(imx)  =  sm
+       v_starr(imx)  =  sm
+    
+       b_starl(ibx)  =  ul(ibx,i)
+       b_starr(ibx)  =  ur(ibx,i)
+
        ! HLLD fluxes
 
        if (sl .ge.  zero) then
@@ -309,24 +287,25 @@ contains
           
           if (coeff_1 /= zero .and. b_lrgam .le. ul(ien,i)) then
              coeff_2  =  (dn_l*slvxl - b_lr)/coeff_1
-             
-             u_starl(iby)  =  ul(iby,i)*coeff_2
-             u_starl(ibz)  =  ul(ibz,i)*coeff_2
+
+             b_starl(iby)   =  ul(iby,i)*coeff_2
+             b_starl(ibz)  =  ul(ibz,i)*coeff_2
 
           else
 
              ! Calculate HLL left states
              
-             u_starl(iby)  =  ((sr*ur(iby,i) - sl*ul(iby,i)) - (fr(iby,i) - fl(iby,i)))/srmsl
-             u_starl(ibz)  =  ((sr*ur(ibz,i) - sl*ul(ibz,i)) - (fr(ibz,i) - fl(ibz,i)))/srmsl
+             b_starl(iby)  =  ((sr*ur(iby,i) - sl*ul(iby,i)) - (fr(iby,i) - fl(iby,i)))/srmsl
+             b_starl(ibz)  =  ((sr*ur(ibz,i) - sl*ul(ibz,i)) - (fr(ibz,i) - fl(ibz,i)))/srmsl
              
           endif
 
           ! Transveral components of velocity Eq. 42
 
           coeff_1  =  ul(ibx,i)/dn_l
-          u_starl(imy)  =  ul(imy,i) + coeff_1*(ul(iby,i) - u_starl(iby))
-          u_starl(imz)  =  ul(imz,i) + coeff_1*(ul(ibz,i) - u_starl(ibz))
+          
+          v_starl(imy)  =  ul(imy,i) + coeff_1*(ul(iby,i) - u_starl(iby))
+          v_starl(imz)  =   ul(imz,i) + coeff_1*(ul(ibz,i) - u_starl(ibz))
 
           ! Transversal components of magnetic field for right states (Eq. 45 & 47), taking degeneracy into account
 
@@ -335,23 +314,54 @@ contains
           if (coeff_1 /= zero .and. b_lrgam .le. ur(ien,i)) then
              coeff_2  =  (dn_r*srvxr - b_lr)/coeff_1
 
-             u_starr(iby)  =  ur(iby,i)*coeff_2
-             u_starr(ibz)  =  ur(ibz,i)*coeff_2
+             b_starr(iby)  =  ur(iby,i)*coeff_2
+             b_starr(ibz)  =  ur(ibz,i)*coeff_2
 
           else
 
              ! Calculate HLL right states
 
-             u_starr(iby)  =  ((sr*ur(iby,i) - sl*ul(iby,i)) - (fr(iby,i) - fl(iby,i)))/srmsl
-             u_starr(ibz)  =  ((sr*ur(ibz,i) - sl*ul(ibz,i)) - (fr(ibz,i) - fl(ibz,i)))/srmsl
+             b_starr(iby)  =  ((sr*ur(iby,i) - sl*ul(iby,i)) - (fr(iby,i) - fl(iby,i)))/srmsl
+             b_starr(ibz)  =  ((sr*ur(ibz,i) - sl*ul(ibz,i)) - (fr(ibz,i) - fl(ibz,i)))/srmsl
 
           endif
 
           ! Transversal components of velocity Eq. 42
 
           coeff_1  =  ur(ibx,i)/dn_r
-          u_starl(imy)  =  ur(imy,i) + coeff_1*(ur(iby,i) - u_starr(iby))
-          u_starr(imz)  =  ur(imz,i) + coeff_1*(ur(ibz,i) - u_starr(ibz))
+
+          v_starr(imy)  =   ur(imy,i) + coeff_1*(ur(iby,i) - u_starr(iby))
+          v_starr(imz)  =  ur(imy,i) + coeff_1*(ur(iby,i) - u_starr(iby))
+
+          ! Dot product of velocity and magnetic field
+
+          vb_l  =  sum(ul(imx:imz,i)*ul(ibx:ibz,i))
+          vb_r  =  sum(ur(imx:imz,i)*ur(ibx:ibz,i))
+          vb_starl  =  sum(v_starl(imx:imz)*b_starl(ibx:ibz))
+          vb_starr  =  sum(v_starr(imx:imz)*b_starr(ibx:ibz))
+          
+          
+          ! Left intermediate state conservative form
+          
+          u_starl(idn)  =  dn_l/slsm   ! Densities for right intermediate state Eq. (43)
+          u_starl(imx)  =  u_starl(idn)*v_starl(imx)
+          u_starl(imy)  =  u_starl(idn)*v_starl(imy)
+          u_starl(imz)  =  u_starl(idn)*v_starl(imz)
+          u_starl(ibx)  =  b_starl(ibx)
+          u_starl(iby)  =  b_starl(iby)
+          u_starl(ibz)  =  b_starl(ibz)
+
+          ! Right intermediate state conservative form
+
+          u_starr(idn)  =  dn_r/srsm ! Density for right intermediate state Eq. (43)
+          u_starr(imx)  =  u_starr(idn)*v_starr(imx)
+          u_starr(imy)  =  u_starr(idn)*v_starr(imy)
+          u_starr(imz)  =  u_starr(idn)*v_starr(imz)
+          u_starr(ibx)  =  b_starr(ibx)
+          u_starr(iby)  =  b_starr(iby)
+          u_starr(ibz)  =  b_starr(ibz)
+
+          
 
           ! Total energy of left and right intermediate states Eq. (48)
 
@@ -401,21 +411,31 @@ contains
 
                 ! Components of velocity Eq. 39, 59, 60 and magnetic field Eq. 61, 62
 
-                u_2star(imx)  =  sm
-                u_2star(imy)  =  ((dn_lsqt*u_starl(imy) + dn_rsqt*u_starr(imy)) + b_sig*(u_starr(iby) - u_starl(iby)))/add_dnsq
-                u_2star(imz)  =  ((dn_lsqt*u_starl(imz) + dn_rsqt*u_starr(imz)) + b_sig*(u_starr(ibz) - u_starl(ibz)))/add_dnsq
+                v_2star(imx)  =  sm
+                v_2star(imy)  =  ((dn_lsqt*v_starl(imy) + dn_rsqt*v_starr(imy)) + b_sig*(b_starr(iby) - b_starl(iby)))/add_dnsq
+                v_2star(imz)  =  ((dn_lsqt*v_starl(imz) + dn_rsqt*v_starr(imz)) + b_sig*(b_starr(ibz) - b_starl(ibz)))/add_dnsq
 
-                u_2star(ibx)  =  ul(ibx,i)
-                u_2star(iby)  =  ((dn_lsqt*u_starr(iby) + dn_rsqt*u_starl(iby)) + b_sig*mul_dnsq*(u_starr(imy) - u_starl(imy)))/add_dnsq
-                u_2star(ibz)  =  ((dn_lsqt*u_starr(ibz) + dn_rsqt*u_starl(iby)) + b_sig*mul_dnsq*(u_starr(imz) - u_starl(imy)))/add_dnsq
+                b_2star(ibx)  =  ul(ibx,i)
+                b_2star(iby)  =  ((dn_lsqt*b_starr(iby) + dn_rsqt*b_starl(iby)) + b_sig*mul_dnsq*(v_starr(imy) - v_starl(imy)))/add_dnsq
+                b_2star(ibz)  =  ((dn_lsqt*b_starr(ibz) + dn_rsqt*b_starl(iby)) + b_sig*mul_dnsq*(v_starr(imz) - v_starl(imy)))/add_dnsq
 
-                ! Prefer right Alfven wave according to speed of contact discontinuity
+                ! Dot product of velocity and magnetic field
+
+                vb_2star  =  sum(v_2star(imx:imz)*b_2star(ibx:ibz))
+
+                ! CHoose right Alfven wave according to speed of contact discontinuity
 
                 if(sm .ge. zero) then
 
+                   ! Conservative variables for left Alfven intermediate state
+                   
                    u_2star(idn)  =  u_starl(idn)
-
-                   ! Check out for rest
+                   u_2star(imx)  =  u_2star(idn)*v_2star(imx)
+                   u_2star(imy)  =  u_2star(idn)*v_2star(imy)
+                   u_2star(imz)  =  u_2star(idn)*v_2star(imz)
+                   u_2star(ibx)  =  b_2star(ibx)
+                   u_2star(iby)  =  b_2star(iby)
+                   u_2star(ibz)  =  b_2star(ibz)
 
                    ! Energy of Alfven intermediate state Eq. 63
 
@@ -427,7 +447,15 @@ contains
 
                 else if (sm .le. zero) then
 
+                   ! Conservative variables for right Alfven intermediate state
+
                    u_2star(idn)  =  u_starr(idn)
+                   u_2star(imx)  =  u_2star(idn)*v_2star(imx)
+                   u_2star(imy)  =  u_2star(idn)*v_2star(imy)
+                   u_2star(imz)  =  u_2star(idn)*v_2star(imz)
+                   u_2star(ibx)  =  b_2star(ibx)
+                   u_2star(iby)  =  b_2star(iby)
+                   u_2star(ibz)  =  b_2star(ibz)
 
                    ! Energy of Alfven intermediate state Eq. 63
 
@@ -440,9 +468,17 @@ contains
 
                 else ! sm = 0
 
+                   ! Conservative variables for left Alfven intermediate state
+                   
                    u_2star(idn)  =  u_starl(idn)
-
-                   ! Check out for rest
+                   u_2star(imx)  =  u_2star(idn)*v_2star(imx)
+                   u_2star(imy)  =  u_2star(idn)*v_2star(imy)
+                   u_2star(imz)  =  u_2star(idn)*v_2star(imz)
+                   u_2star(ibx)  =  b_2star(ibx)
+                   u_2star(iby)  =  b_2star(iby)
+                   u_2star(ibz)  =  b_2star(ibz)
+                   
+                   
 
                    ! Energy for Alfven intermediate state Eq. 63
 
@@ -452,9 +488,15 @@ contains
 
                    f(:,i)  =  fl(:,i) + alfven_l*u_2star(:) - (alfven_l - sl)*u_starl(:) - sl*ul(:,i)
 
-                   u_2star(idn)  =  u_starr(idn)
+                   ! Conservative variables for right Alfven intermediate state
 
-                   ! Check out for rest
+                   u_2star(idn)  =  u_starr(idn)
+                   u_2star(imx)  =  u_2star(idn)*v_2star(imx)
+                   u_2star(imy)  =  u_2star(idn)*v_2star(imy)
+                   u_2star(imz)  =  u_2star(idn)*v_2star(imz)
+                   u_2star(ibx)  =  b_2star(ibx)
+                   u_2star(iby)  =  b_2star(iby)
+                   u_2star(ibz)  =  b_2star(ibz)
 
                    ! Energy for Alfven intermediate state Eq. 63
                    
@@ -464,24 +506,38 @@ contains
 
                    f(:,i)  =  half*(f(:,i) + fr(:,i) + alfven_r*u_2star(:) - (alfven_r - sr)*u_starr(:) - sr*ur(:,i))
 
-                endif
+                endif  ! sm = 0
 
-          
+             endif  ! alfven_l .le. 0 and alfven_r .ge. 0
 
-             endif
+          else ! B_x = 0
+
+             ! Intermediate state for B_x = 0
+
+             if(sm .ge. zero) then
+
+                ! Left intermediate flux Eq. 64
+
+                f(:,i)  =  fl(:,i) + sl*(u_starl(:) - ul(:,i))
+
+             else if(sm .le. zero) then
+
+                f(:,i)  =  fr(:,i) + sr*(u_starr(:) - ur(:,i))
+
+             else ! sm = 0
+
+                ! Average left and right flux if both sm = 0 = B_x
+
+                f(:,i)  =  half*((fl(:,i) + sl*(u_starl(:) - ul(:,i)) + fr(:,i) + sr*(u_starr(:) - ur(:,i))))
+
+             endif  ! sm = 0
 
           endif
 
        endif
-       
-       
+
     end do
     
-    
-    
-    
-
-
   end subroutine riemann_hlld
 
 end module hlld
