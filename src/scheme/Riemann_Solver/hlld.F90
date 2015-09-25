@@ -532,7 +532,7 @@ contains
 
              endif  ! sm = 0
 
-          endif
+          endif     ! B_x = 0 
 
        endif
 
