@@ -152,6 +152,7 @@ contains
     
     use constants,  only: half, zero, xdim, ydim, zdim, idn, imx, imy, imz, ien
     use fluidindex, only: iarr_mag_swp, flind
+    use func,       only: operator(.notequals.)
     !use func,       only: emag, ekin
     !use grid_cont,  only: grid_container
     !use fluxes,     only: all_fluxes, flimiter
@@ -285,7 +286,7 @@ contains
           
           coeff_1  =  dn_l*slsm - b_lr
           
-          if (coeff_1 /= zero .and. b_lrgam .le. ul(ien,i)) then
+          if ((coeff_1 .notequals. zero) .and. b_lrgam .le. ul(ien,i)) then
              coeff_2  =  (dn_l*slvxl - b_lr)/coeff_1
 
              b_starl(iby)   =  ul(iby,i)*coeff_2
@@ -311,7 +312,7 @@ contains
 
           coeff_1  =  dn_r*srsm - b_lr
 
-          if (coeff_1 /= zero .and. b_lrgam .le. ur(ien,i)) then
+          if ((coeff_1 .notequals. zero) .and. b_lrgam .le. ur(ien,i)) then
              coeff_2  =  (dn_r*srvxr - b_lr)/coeff_1
 
              b_starr(iby)  =  ur(iby,i)*coeff_2
