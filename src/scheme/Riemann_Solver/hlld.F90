@@ -332,7 +332,8 @@ contains
           coeff_1  =  ur(ibx,i)/dn_r
 
           v_starr(imy)  =   ur(imy,i) + coeff_1*(ur(iby,i) - u_starr(iby))
-          v_starr(imz)  =  ur(imy,i) + coeff_1*(ur(iby,i) - u_starr(iby))
+          !v_starr(imz)  =  ur(imy,i) + coeff_1*(ur(iby,i) - u_starr(iby))  ! CHECK: ur(imz,i) + coeff_1*(ur(ibz,i) - u_starr(ibz))
+          v_starr(imz)  =  ur(imy,i) + coeff_1*(ur(ibz,i) - u_starr(ibz))
 
           ! Dot product of velocity and magnetic field
 
@@ -381,6 +382,8 @@ contains
              alfven_l  =  sm - abs(ul(ibx,i))/dn_lsqt
              alfven_r  =  sm + abs(ur(ibx,i))/dn_rsqt
 
+             ! Intermediate discontinuities
+             
              if(alfven_l > zero) then
 
                 ! Left intermediate flux Eq. 64
@@ -395,6 +398,8 @@ contains
 
              else ! alfven_l .le. zero .le. alfven_r
 
+                ! Arragnge for sign of normal component of magnetic field
+                
                 if(ul(ibx,i) .ge. zero) then
 
                    b_sig = one
@@ -418,13 +423,14 @@ contains
 
                 b_2star(ibx)  =  ul(ibx,i)
                 b_2star(iby)  =  ((dn_lsqt*b_starr(iby) + dn_rsqt*b_starl(iby)) + b_sig*mul_dnsq*(v_starr(imy) - v_starl(imy)))/add_dnsq
-                b_2star(ibz)  =  ((dn_lsqt*b_starr(ibz) + dn_rsqt*b_starl(iby)) + b_sig*mul_dnsq*(v_starr(imz) - v_starl(imy)))/add_dnsq
-
+                !b_2star(ibz)  =  ((dn_lsqt*b_starr(ibz) + dn_rsqt*b_starl(iby)) + b_sig*mul_dnsq*(v_starr(imz) - v_starl(imy)))/add_dnsq  ! CHECK: dn_rsqt*b_starl(ibz),                                                                                                                                                v_starl(imz)
+                b_2star(ibz)  =  ((dn_lsqt*b_starr(ibz) + dn_rsqt*b_starl(ibz)) + b_sig*mul_dnsq*(v_starr(imz) - v_starl(imz)))/add_dnsq
+                
                 ! Dot product of velocity and magnetic field
 
                 vb_2star  =  sum(v_2star(imx:imz)*b_2star(ibx:ibz))
 
-                ! CHoose right Alfven wave according to speed of contact discontinuity
+                ! Choose right Alfven wave according to speed of contact discontinuity
 
                 if(sm .ge. zero) then
 
@@ -529,7 +535,7 @@ contains
 
                 ! Average left and right flux if both sm = 0 = B_x
 
-                f(:,i)  =  half*((fl(:,i) + sl*(u_starl(:) - ul(:,i)) + fr(:,i) + sr*(u_starr(:) - ur(:,i))))
+                f(:,i)  =  half*((fl(:,i) + sl*(u_starl(:) - ul(:,i))) + (fr(:,i) + sr*(u_starr(:) - ur(:,i))))
 
              endif  ! sm = 0
 
