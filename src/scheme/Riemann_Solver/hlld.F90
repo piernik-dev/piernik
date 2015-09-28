@@ -86,8 +86,8 @@ contains
        vz  =  u(fl%imz,:)/u(fl%idn,:)
 
        if(fl%has_energy) then
-          p_t = fl%gam_1*(u(fl%ien,:) - ekin(u(fl%imx,:), u(fl%imy,:), u(fl%imz,:), u(fl%idn,:)) - half*(b(ibx,:)**2 + b(iby,:)**2 + b(ibz,:)**2)) + &
-                                                                                                           half*(b(ibx,:)**2 + b(iby,:)**2 + b(ibz,:)**2)
+          p_t = fl%gam_1*(u(fl%ien,:) - ekin(u(fl%imx,:), u(fl%imy,:), u(fl%imz,:), u(fl%idn,:)) - half*(bb(ibx,:)**2 + bb(iby,:)**2 + bb(ibz,:)**2)) + &
+                                                                                                           half*(bb(ibx,:)**2 + bb(iby,:)**2 + bb(ibz,:)**2)
        else
           if(associated(cs2)) then
              p = cs2*u(fl%idn,:)
