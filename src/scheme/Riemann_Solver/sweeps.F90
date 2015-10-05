@@ -56,6 +56,6 @@ contains
 
       if (.false.) write(0,*) cdim, present(fargo_vel) ! suppress compiler warning on unused argument
 
-   end subroutine sweep
+    end subroutine sweep
 
 end module sweeps

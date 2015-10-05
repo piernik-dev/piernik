@@ -47,12 +47,12 @@ module hlld
   implicit none
 
   private
-  public :: riemann_hlld
+  public :: riemann_hlld, fluxes
 
 contains
 
   function fluxes(u,b,bb,cs2, cdim) result(f)
-
+ 
     use constants,  only: half, zero, xdim, ydim, zdim, idn, imx, imy, imz, ien
     use fluidindex, only: flind,iarr_mag_swp
     use fluidtypes, only: component_fluid
@@ -63,7 +63,7 @@ contains
 
     real, dimension(:,:),      intent(in)    :: u
     real, dimension(:,:),      intent(in)    :: bb
-    real, dimension(:,:),      intent(out)   :: b
+    real, dimension(:,:),        intent(out)    :: b
     real, dimension(:), pointer, intent(in)  :: cs2
     integer(kind=4),             intent(in)  :: cdim
 
@@ -141,6 +141,7 @@ contains
 
   end function fluxes
 
+
   ! Abstraction needed in terms in normal and tangential components that will reduce the if-blocks.
 
 !-------------------------------------------------------------------------------------------------------------------------------------------------
@@ -163,8 +164,10 @@ contains
     implicit none
 
     integer,                       intent(in)    :: n
-    real, dimension(:,:),          intent(out)   :: f
-    real, dimension(:),            intent(in)    :: b
+    real, dimension(:,:), pointer, intent(out)   :: f
+    !real, dimension(:,:), pointer, intent(inout) :: ul, ur 
+    !real, dimension(:), pointer,   intent(in)    :: b
+    real, dimension(:,:),    pointer, intent(in)    :: b
     real,                          intent(in)    :: gamma
     integer(kind=4),               intent(in)    :: cdim
 
@@ -185,6 +188,7 @@ contains
     ! Local arrays
 
     real, dimension(n, flind%all)                :: ul, ur, fl, fr
+    !real, dimension(n, flind%all)                :: fl, fr
     real, dimension(flind%all)                   :: u_starl, u_starr, u_2star
     real, dimension(flind%all)                   :: v_starl, v_starr, b_starl, b_starr, v_2star, b_2star
     
@@ -196,8 +200,8 @@ contains
 
     ! Copy normal components of magnetic field to the left and right states
 
-    ul(ibx,:) =  b(:)
-    ur(ibx,:) =  b(:)
+    ul(ibx,:) =  b(ibx,:)
+    ur(ibx,:) =  b(ibx,:)
 
     do i = 1,n
 
@@ -332,7 +336,6 @@ contains
           coeff_1  =  ur(ibx,i)/dn_r
 
           v_starr(imy)  =   ur(imy,i) + coeff_1*(ur(iby,i) - u_starr(iby))
-          !v_starr(imz)  =  ur(imy,i) + coeff_1*(ur(iby,i) - u_starr(iby))  ! CHECK: ur(imz,i) + coeff_1*(ur(ibz,i) - u_starr(ibz))
           v_starr(imz)  =  ur(imy,i) + coeff_1*(ur(ibz,i) - u_starr(ibz))
 
           ! Dot product of velocity and magnetic field
@@ -423,7 +426,6 @@ contains
 
                 b_2star(ibx)  =  ul(ibx,i)
                 b_2star(iby)  =  ((dn_lsqt*b_starr(iby) + dn_rsqt*b_starl(iby)) + b_sig*mul_dnsq*(v_starr(imy) - v_starl(imy)))/add_dnsq
-                !b_2star(ibz)  =  ((dn_lsqt*b_starr(ibz) + dn_rsqt*b_starl(iby)) + b_sig*mul_dnsq*(v_starr(imz) - v_starl(imy)))/add_dnsq  ! CHECK: dn_rsqt*b_starl(ibz),                                                                                                                                                v_starl(imz)
                 b_2star(ibz)  =  ((dn_lsqt*b_starr(ibz) + dn_rsqt*b_starl(ibz)) + b_sig*mul_dnsq*(v_starr(imz) - v_starl(imz)))/add_dnsq
                 
                 ! Dot product of velocity and magnetic field

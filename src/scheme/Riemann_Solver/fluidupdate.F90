@@ -34,9 +34,11 @@
 module fluidupdate
 ! pulled by RIEMANN
 
+  use hlld,  only: fluxes, riemann_hlld
   implicit none
   private
-  public :: fluid_update
+  public :: fluid_update, sweep_dsplit, rk2
+  
 
 contains
 
@@ -55,6 +57,7 @@ contains
     logical, save                   :: first_run = .true.
     type(cg_list_element), pointer  :: cgl
     integer(kind=4)                 :: ddim
+    integer(kind=4)                 :: cdim
 
     halfstep = .false.
     if (first_run) then
@@ -72,7 +75,7 @@ contains
 
     do while (associated(cgl))
        do ddim = xdim, zdim
-          if (dom%has_dir(ddim)) call sweep(cgl%cg,dt,ddim)
+          if (dom%has_dir(ddim)) call sweep_dsplit(cgl%cg,dt,ddim, cdim)
        enddo
 
        if (associated(problem_customize_solution)) call problem_customize_solution(.true.)
@@ -87,7 +90,7 @@ contains
 
      do while (associated(cgl))
         do ddim = zdim, xdim, -1
-           if (dom%has_dir(ddim)) call sweep(cgl%cg,dt,ddim)
+           if (dom%has_dir(ddim)) call sweep_dsplit(cgl%cg,dt,ddim,cdim)
         enddo
         if (associated(problem_customize_solution)) call problem_customize_solution(.false.)
         cgl => cgl%nxt
@@ -99,68 +102,98 @@ contains
 
 !-------------------------------------------------------------------------------------------------------------------
 
-  function utoq(u,b) result(q)
+  subroutine sweep_dsplit(cg, dt, ddim, cdim)
 
-    use constants,  only: half, two
-    use fluidindex, only: flind
-    use fluidtypes, only: component_fluid
-    use func,       only: ekin
-
-    implicit none
-
-    real, dimension(:,:), intent(in)      :: u,b
-
-    real, dimension(size(u,1),size(u,2))  :: q
-
-    integer :: p
-
-    class(component_fluid), pointer       :: fl
-
-    do p = 1, flind%fluids
-       fl => flind%all_fluids(p)%fl
-
-       q(fl%idn,:)  =  u(fl%idn,:)
-       q(fl%imx,:)  =  u(fl%idn,:)/u(fl%imx,:)
-       q(fl%imy,:)  =  u(fl%idn,:)/u(fl%imy,:)
-       q(fl%imz,:)  =  u(fl%idn,:)/u(fl%imz,:)
-
-       if (fl%has_energy) then
-
-          q(fl%ien,:) = fl%gam_1*(u(fl%ien,:) - ekin(u(fl%imx,:), u(fl%imy,:), u(fl%imz,:), u(fl%idn,:)))
-
-          if (fl%is_magnetized) q(fl%ien,:) = q(fl%ien,:) + (two-fl%gam)*half*sum(b(:,:)**2,dim=1)
-
-       endif
-
-    enddo
-
-  end function utoq
-
-!-------------------------------------------------------------------------------------------------------------------------
-
-  subroutine sweep(cg, dt, ddim)
-
-    !use constants,        only: pdims, xdim, zdim
+    use constants,        only: pdims, xdim, zdim, ORTHO1, ORTHO2, LO, HI
     use all_boundaries,   only: all_fluid_boundaries
-    !use fluidindex,       only: iarr_all_swp
+    use fluidindex,       only: iarr_all_swp
     use grid_cont,        only: grid_container
-    !use named_array_list, only: qna, wna
+    use named_array_list, only: wna
 
     implicit none
 
     type(grid_container), pointer, intent(in) :: cg
     real,                          intent(in) :: dt
     integer(kind=4),               intent(in) :: ddim
+    integer(kind=4),               intent(in) :: cdim
 
-    ! Sweep later ..
+    integer                                   :: n
+    real, dimension(size(cg%u,1),cg%n_(ddim)) :: u1d
+    !real, dimension(xdim:zdim, cg%n_(ddim)), pointer   :: b1d
+    real, dimension(:,:), pointer             :: b1d
+    real, dimension(xdim:zdim, cg%n_(ddim))   :: bb1d
+    real, dimension(:,:), pointer             :: pu
+    real, dimension(:), pointer               :: cs2
+    integer                                   :: i1, i2
+    
 
-  end subroutine sweep
+    do i2 = cg%lhn(pdims(ddim,ORTHO2),LO), cg%lhn(pdims(ddim,ORTHO2),HI)
+       do i1 = cg%lhn(pdims(ddim, ORTHO1), LO), cg%lhn(pdims(ddim, ORTHO1), HI)
+          pu => cg%w(wna%fi)%get_sweep(ddim,i1,i2)
+
+          u1d(iarr_all_swp(ddim,:),:) = pu(:,:)
+
+          call rk2(n,u1d,b1d,bb1d,cs2,cdim,dt/cg%dl(ddim))
+
+          pu(:,:) = u1d(iarr_all_swp(ddim,:),:)
+
+       enddo
+
+    enddo
+
+    call all_fluid_boundaries
+
+  end subroutine sweep_dsplit
 
 !-----------------------------------------------------------------------------------------------------------------------
 
-  subroutine rk2()
+  subroutine rk2(n,u,b,bb,cs2,cdim,dtodx)
 
-    ! later
+    use constants,   only: half, xdim, ydim, zdim
+    use fluidindex,  only: flind, iarr_mag_swp
+    use fluidtypes,  only: component_fluid
+
+
+    implicit none
+
+    !real,                 intent(in) :: dx, dt
+    integer,                        intent(in)   :: n
+    real, dimension(:,:),           intent(out)  :: u
+    real, dimension(:),   pointer,  intent(in)   :: cs2
+    real, dimension(:,:),  intent(in)            :: bb
+    real, dimension(:,:), pointer, intent(in)    :: b
+    integer(kind=4),       intent(in)            :: cdim
+    real,                    intent(in)          :: dtodx
+
+    class(component_fluid), pointer              :: fl
+    !real, dimension(:,:),                        :: u_predict
+    real, dimension(n, flind%all)                :: u0, u_predict
+    real, dimension(size(u,1),size(u,2)), target :: flx
+    real, dimension(:,:), pointer                :: p_flx, p_b
+    integer                                      :: nx, p
+    !real                                         :: dt, dx
+    integer(kind=4)                              :: ibx, iby, ibz
+
+    nx    = size(u,2)
+
+    ibx = iarr_mag_swp(cdim,xdim)
+    iby = iarr_mag_swp(cdim,ydim)
+    ibz = iarr_mag_swp(cdim,zdim)
+
+ 
+    flx = fluxes(u0,b,bb,cs2,cdim)
+
+    u_predict  =  u0 + dtodx*flx(:,:)
+
+    do p = 1, flind%fluids
+       fl    => flind%all_fluids(p)%fl
+       p_flx => flx(fl%beg:fl%end,:)
+       p_b   => b(ibx:ibz,:)
+       call riemann_hlld(nx, p_flx, p_b, fl%gam, cdim)
+    end do
+
+    u  =  half*(u0 + u_predict + dtodx*flx(:,:))
+
     
   end subroutine rk2
 
