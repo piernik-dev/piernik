@@ -57,7 +57,7 @@ contains
     logical, save                   :: first_run = .true.
     type(cg_list_element), pointer  :: cgl
     integer(kind=4)                 :: ddim
-    integer(kind=4)                 :: cdim
+    !integer(kind=4)                 :: cdim
 
     halfstep = .false.
     if (first_run) then
@@ -75,7 +75,8 @@ contains
 
     do while (associated(cgl))
        do ddim = xdim, zdim
-          if (dom%has_dir(ddim)) call sweep_dsplit(cgl%cg,dt,ddim, cdim)
+          !if (dom%has_dir(ddim)) call sweep_dsplit(cgl%cg,dt,ddim, cdim)
+          if (dom%has_dir(ddim)) call sweep_dsplit(cgl%cg,dt,ddim)
        enddo
 
        if (associated(problem_customize_solution)) call problem_customize_solution(.true.)
@@ -90,7 +91,8 @@ contains
 
      do while (associated(cgl))
         do ddim = zdim, xdim, -1
-           if (dom%has_dir(ddim)) call sweep_dsplit(cgl%cg,dt,ddim,cdim)
+           !if (dom%has_dir(ddim)) call sweep_dsplit(cgl%cg,dt,ddim,cdim)
+           if (dom%has_dir(ddim)) call sweep_dsplit(cgl%cg,dt,ddim)
         enddo
         if (associated(problem_customize_solution)) call problem_customize_solution(.false.)
         cgl => cgl%nxt
@@ -102,7 +104,8 @@ contains
 
 !-------------------------------------------------------------------------------------------------------------------
 
-  subroutine sweep_dsplit(cg, dt, ddim, cdim)
+  !subroutine sweep_dsplit(cg, dt, ddim, cdim)
+  subroutine sweep_dsplit(cg, dt, ddim)
 
     use constants,        only: pdims, xdim, zdim, ORTHO1, ORTHO2, LO, HI
     use all_boundaries,   only: all_fluid_boundaries
@@ -115,7 +118,7 @@ contains
     type(grid_container), pointer, intent(in) :: cg
     real,                          intent(in) :: dt
     integer(kind=4),               intent(in) :: ddim
-    integer(kind=4),               intent(in) :: cdim
+    !integer(kind=4),               intent(in) :: cdim
 
     integer                                   :: n
     real, dimension(size(cg%u,1),cg%n_(ddim)) :: u1d
@@ -125,6 +128,7 @@ contains
     real, dimension(:,:), pointer             :: pu
     real, dimension(:), pointer               :: cs2
     integer                                   :: i1, i2
+  
     
 
     do i2 = cg%lhn(pdims(ddim,ORTHO2),LO), cg%lhn(pdims(ddim,ORTHO2),HI)
@@ -133,7 +137,8 @@ contains
 
           u1d(iarr_all_swp(ddim,:),:) = pu(:,:)
 
-          call rk2(n,u1d,b1d,bb1d,cs2,cdim,dt/cg%dl(ddim))
+          !call rk2(n,u1d,b1d,bb1d,cs2,cdim,dt/cg%dl(ddim))
+          call rk2(n,u1d,b1d,bb1d,cs2,dt/cg%dl(ddim))
 
           pu(:,:) = u1d(iarr_all_swp(ddim,:),:)
 
@@ -147,7 +152,8 @@ contains
 
 !-----------------------------------------------------------------------------------------------------------------------
 
-  subroutine rk2(n,u,b,bb,cs2,cdim,dtodx)
+  !subroutine rk2(n,u,b,bb,cs2,cdim,dtodx)
+  subroutine rk2(n,u,b,bb,cs2,dtodx)
 
     use constants,   only: half, xdim, ydim, zdim
     use fluidindex,  only: flind, iarr_mag_swp
@@ -158,41 +164,45 @@ contains
 
     !real,                 intent(in) :: dx, dt
     integer,                        intent(in)   :: n
-    real, dimension(:,:),           intent(out)  :: u
+    real, dimension(:,:),           intent(inout)  :: u
     real, dimension(:),   pointer,  intent(in)   :: cs2
     real, dimension(:,:),  intent(in)            :: bb
     real, dimension(:,:), pointer, intent(in)    :: b
-    integer(kind=4),       intent(in)            :: cdim
+    !integer(kind=4),       intent(in)            :: cdim
     real,                    intent(in)          :: dtodx
 
     class(component_fluid), pointer              :: fl
     !real, dimension(:,:),                        :: u_predict
-    real, dimension(n, flind%all)                :: u0, u_predict
+    real, dimension(n, flind%all)                :: u_predict
     real, dimension(size(u,1),size(u,2)), target :: flx
     real, dimension(:,:), pointer                :: p_flx, p_b
     integer                                      :: nx, p
+    integer(kind=4)                              :: ddim
     !real                                         :: dt, dx
     integer(kind=4)                              :: ibx, iby, ibz
+    
 
     nx    = size(u,2)
 
-    ibx = iarr_mag_swp(cdim,xdim)
-    iby = iarr_mag_swp(cdim,ydim)
-    ibz = iarr_mag_swp(cdim,zdim)
+    ibx = iarr_mag_swp(ddim,xdim)
+    iby = iarr_mag_swp(ddim,ydim)
+    ibz = iarr_mag_swp(ddim,zdim)
 
  
-    flx = fluxes(u0,b,bb,cs2,cdim)
+    !flx = fluxes(u0,b,bb,cs2,ddim)
+    flx  = fluxes(u,b,bb,cs2,ddim)
 
-    u_predict  =  u0 + dtodx*flx(:,:)
+    u_predict  =  u + dtodx*flx(:,:)
 
     do p = 1, flind%fluids
        fl    => flind%all_fluids(p)%fl
        p_flx => flx(fl%beg:fl%end,:)
        p_b   => b(ibx:ibz,:)
-       call riemann_hlld(nx, p_flx, p_b, fl%gam, cdim)
+       call riemann_hlld(nx, p_flx, p_b, fl%gam, ddim)
     end do
 
-    u  =  half*(u0 + u_predict + dtodx*flx(:,:))
+    !u  =  half*(u0 + u_predict + dtodx*flx(:,:))
+    u  =  half*(u + u_predict + dtodx*flx(:,:))
 
     
   end subroutine rk2
