@@ -169,7 +169,7 @@ contains
 
     class(component_fluid), pointer              :: fl
     !real, dimension(:,:),                        :: u_predict
-    real, dimension(n, flind%all)                :: u_predict
+    real, dimension(size(u,1),size(u,2))         :: u_predict
     real, dimension(size(u,1),size(u,2)), target :: flx
     real, dimension(:,:), pointer                :: p_flx, p_b
     integer                                      :: nx, p
