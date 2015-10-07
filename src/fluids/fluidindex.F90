@@ -160,7 +160,7 @@ contains
 #endif /* TRACER */
 
 ! Allocate index arrays
-      if (has_ion) allocate(iarr_mag_swp(ndims,nmag),iarr_all_mag(nmag))
+      allocate(iarr_mag_swp(ndims,nmag),iarr_all_mag(nmag))
       allocate(iarr_all_swp(xdim:zdim, flind%all))
       allocate(iarr_all_dn(flind%fluids),iarr_all_mx(flind%fluids),iarr_all_my(flind%fluids),iarr_all_mz(flind%fluids))
       allocate(iarr_all_sg(flind%fluids_sg))
@@ -186,16 +186,14 @@ contains
       allocate(iarr_all_trc(0))
 #endif /* !TRACER */
 
-      if (has_ion) then
-         ! Compute index arrays for magnetic field
-         iarr_mag_swp(xdim,:) = [xdim,ydim,zdim]
-         iarr_mag_swp(ydim,:) = [ydim,xdim,zdim]
-         iarr_mag_swp(zdim,:) = [zdim,ydim,xdim]
-         iarr_all_mag(:)      = [xdim,ydim,zdim]
+      ! Compute index arrays for magnetic field
+      iarr_mag_swp(xdim,:) = [xdim,ydim,zdim]
+      iarr_mag_swp(ydim,:) = [ydim,xdim,zdim]
+      iarr_mag_swp(zdim,:) = [zdim,ydim,xdim]
+      iarr_all_mag(:)      = [xdim,ydim,zdim]
 
          ! Compute index arrays for the ionized fluid
-         call set_fluidindex_arrays(flind%ion,.true.)
-      endif
+      if (has_ion) call set_fluidindex_arrays(flind%ion,.true.)
 
       ! Compute index arrays for the neutral fluid
       if (has_neu) call set_fluidindex_arrays(flind%neu,.true.)
