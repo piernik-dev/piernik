@@ -138,7 +138,7 @@ contains
           u1d(iarr_all_swp(ddim,:),:) = pu(:,:)
 
           !call rk2(n,u1d,b1d,bb1d,cs2,cdim,dt/cg%dl(ddim))
-          call rk2(n,u1d,b1d,bb1d,cs2,dt/cg%dl(ddim))
+          call rk2(n,u1d,b1d,bb1d,cs2, ddim, dt/cg%dl(ddim))
 
           pu(:,:) = u1d(iarr_all_swp(ddim,:),:)
 
@@ -153,7 +153,7 @@ contains
 !-----------------------------------------------------------------------------------------------------------------------
 
   !subroutine rk2(n,u,b,bb,cs2,cdim,dtodx)
-  subroutine rk2(n,u,b,bb,cs2,dtodx)
+  subroutine rk2(n,u,b,bb,cs2, ddim, dtodx)
 
     use constants,   only: half, xdim, ydim, zdim
     use fluidindex,  only: flind, iarr_mag_swp
@@ -168,7 +168,7 @@ contains
     real, dimension(:),   pointer,  intent(in)   :: cs2
     real, dimension(:,:),  intent(in)            :: bb
     real, dimension(:,:), pointer, intent(in)    :: b
-    !integer(kind=4),       intent(in)            :: cdim
+    integer(kind=4),       intent(in)            :: ddim
     real,                    intent(in)          :: dtodx
 
     class(component_fluid), pointer              :: fl
@@ -177,7 +177,6 @@ contains
     real, dimension(size(u,1),size(u,2)), target :: flx
     real, dimension(:,:), pointer                :: p_flx, p_b
     integer                                      :: nx, p
-    integer(kind=4)                              :: ddim
     !real                                         :: dt, dx
     integer(kind=4)                              :: ibx, iby, ibz
     
