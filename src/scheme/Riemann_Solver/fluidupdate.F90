@@ -44,8 +44,6 @@ contains
 
   subroutine fluid_update
 
-    use cg_list,      only: cg_list_element
-    use cg_leaves,    only: leaves
     use constants,    only: xdim, zdim
     use domain,       only: dom
     use global,       only: dt, dtm, t
@@ -55,95 +53,93 @@ contains
     implicit none
 
     logical, save                   :: first_run = .true.
-    type(cg_list_element), pointer  :: cgl
     integer(kind=4)                 :: ddim
     !integer(kind=4)                 :: cdim
 
     halfstep = .false.
     if (first_run) then
        dtm = 0.0
-
     else
-
        dtm = dt
-
     endif
-
     t = t + dt
 
-    cgl => leaves%first
+    do ddim = xdim, zdim
+       !if (dom%has_dir(ddim)) call sweep_dsplit(cgl%cg,dt,ddim, cdim)
+       if (dom%has_dir(ddim)) call sweep_dsplit(dt,ddim)
+    enddo
+    if (associated(problem_customize_solution)) call problem_customize_solution(.true.)
 
-    do while (associated(cgl))
-       do ddim = xdim, zdim
-          !if (dom%has_dir(ddim)) call sweep_dsplit(cgl%cg,dt,ddim, cdim)
-          if (dom%has_dir(ddim)) call sweep_dsplit(cgl%cg,dt,ddim)
-       enddo
+    t = t + dt
+    dtm = dt
+    halfstep = .true.
 
-       if (associated(problem_customize_solution)) call problem_customize_solution(.true.)
-       cgl => cgl%nxt
-       enddo
+    do ddim = zdim, xdim, -1
+       !if (dom%has_dir(ddim)) call sweep_dsplit(cgl%cg,dt,ddim,cdim)
+       if (dom%has_dir(ddim)) call sweep_dsplit(dt,ddim)
+    enddo
+    if (associated(problem_customize_solution)) call problem_customize_solution(.false.)
 
-     t = t + dt
-     dtm = dt
-     halfstep = .true.
-
-     cgl => leaves%first
-
-     do while (associated(cgl))
-        do ddim = zdim, xdim, -1
-           !if (dom%has_dir(ddim)) call sweep_dsplit(cgl%cg,dt,ddim,cdim)
-           if (dom%has_dir(ddim)) call sweep_dsplit(cgl%cg,dt,ddim)
-        enddo
-        if (associated(problem_customize_solution)) call problem_customize_solution(.false.)
-        cgl => cgl%nxt
-     enddo
-
-       if (first_run) first_run = .false.
+    if (first_run) first_run = .false.
 
   end subroutine fluid_update
 
 !-------------------------------------------------------------------------------------------------------------------
 
   !subroutine sweep_dsplit(cg, dt, ddim, cdim)
-  subroutine sweep_dsplit(cg, dt, ddim)
+  subroutine sweep_dsplit(dt, ddim)
 
+    use cg_list,          only: cg_list_element
     use constants,        only: pdims, xdim, zdim, ORTHO1, ORTHO2, LO, HI
     use all_boundaries,   only: all_fluid_boundaries
     use fluidindex,       only: iarr_all_swp
     use grid_cont,        only: grid_container
+    use cg_leaves,        only: leaves
     use named_array_list, only: wna
 
     implicit none
 
-    type(grid_container), pointer, intent(in) :: cg
     real,                          intent(in) :: dt
     integer(kind=4),               intent(in) :: ddim
     !integer(kind=4),               intent(in) :: cdim
 
     integer                                   :: n
-    real, dimension(size(cg%u,1),cg%n_(ddim)) :: u1d
+    real, allocatable, dimension(:,:) :: u1d
     !real, dimension(xdim:zdim, cg%n_(ddim)), pointer   :: b1d
     real, dimension(:,:), pointer             :: b1d
-    real, dimension(xdim:zdim, cg%n_(ddim))   :: bb1d
+    real, allocatable, dimension(:,:)   :: bb1d
     real, dimension(:,:), pointer             :: pu
     real, dimension(:), pointer               :: cs2
     integer                                   :: i1, i2
-  
-    
+    type(cg_list_element), pointer  :: cgl
 
-    do i2 = cg%lhn(pdims(ddim,ORTHO2),LO), cg%lhn(pdims(ddim,ORTHO2),HI)
-       do i1 = cg%lhn(pdims(ddim, ORTHO1), LO), cg%lhn(pdims(ddim, ORTHO1), HI)
-          pu => cg%w(wna%fi)%get_sweep(ddim,i1,i2)
+    cgl => leaves%first
+    do while (associated(cgl))
 
-          u1d(iarr_all_swp(ddim,:),:) = pu(:,:)
+       if (allocated(u1d) .or. allocated(bb1d)) call die("[fluidupdate:sweep_dsplit] sweep vectors not clean")
+       !OPT: can check if the size is already right and avoid reallocation on AMR domains
+       allocate(u1d(size(cgl%cg%u,1),cgl%cg%n_(ddim)), bb1d(xdim:zdim, cgl%cg%n_(ddim)))
 
-          !call rk2(n,u1d,b1d,bb1d,cs2,cdim,dt/cg%dl(ddim))
-          call rk2(n,u1d,b1d,bb1d,cs2, ddim, dt/cg%dl(ddim))
+       do i2 = cgl%cg%lhn(pdims(ddim,ORTHO2),LO), cgl%cg%lhn(pdims(ddim,ORTHO2),HI)
+          do i1 = cgl%cg%lhn(pdims(ddim, ORTHO1), LO), cgl%cg%lhn(pdims(ddim, ORTHO1), HI)
+             pu => cgl%cg%w(wna%fi)%get_sweep(ddim,i1,i2)
 
-          pu(:,:) = u1d(iarr_all_swp(ddim,:),:)
+             b1d => cgl%cg%w(wna%bi)%get_sweep(ddim,i1,i2)
+             ! WARNING: what position of the b components do we expect? If cell-centered then interpolation is required above
 
+             u1d(iarr_all_swp(ddim,:),:) = pu(:,:)
+
+             !call rk2(n,u1d,b1d,bb1d,cs2,cdim,dt/cgl%cg%dl(ddim))
+             call rk2(n,u1d,b1d,bb1d,cs2, ddim, dt/cgl%cg%dl(ddim))
+
+             pu(:,:) = u1d(iarr_all_swp(ddim,:),:)
+
+          enddo
        enddo
 
+       deallocate(u1d, bb1d)
+
+       cgl => cgl%nxt
     enddo
 
     call all_fluid_boundaries
