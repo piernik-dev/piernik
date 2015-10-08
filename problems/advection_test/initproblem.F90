@@ -364,10 +364,10 @@ contains
          enumerator :: N_D, N_2
       end enum
       enum, bind(C)
-         enumerator :: NEU, DST
+         enumerator :: GAS, DST
       end enum
-      real, dimension(N_D:N_2, NEU:DST) :: norm
-      real, dimension(NEU:DST)          :: neg_err, pos_err
+      real, dimension(N_D:N_2, GAS:DST) :: norm
+      real, dimension(GAS:DST)          :: neg_err, pos_err
       type(cg_list_element),  pointer   :: cgl
       type(grid_container),   pointer   :: cg
       real, dimension(:,:,:), pointer   :: inid
@@ -393,10 +393,10 @@ contains
          endif
 
          cg%wa(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = inid(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) - cg%u(fl%idn, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)
-         norm(N_D, NEU) = norm(N_D, NEU) + sum(cg%wa(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)**2, mask=cg%leafmap)
-         norm(N_2, NEU) = norm(N_2, NEU) + sum(inid( cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)**2, mask=cg%leafmap)
-         neg_err(NEU) = min(neg_err(NEU), minval(cg%wa(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), mask=cg%leafmap))
-         pos_err(NEU) = max(pos_err(NEU), maxval(cg%wa(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), mask=cg%leafmap))
+         norm(N_D, GAS) = norm(N_D, GAS) + sum(cg%wa(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)**2, mask=cg%leafmap)
+         norm(N_2, GAS) = norm(N_2, GAS) + sum(inid( cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)**2, mask=cg%leafmap)
+         neg_err(GAS) = min(neg_err(GAS), minval(cg%wa(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), mask=cg%leafmap))
+         pos_err(GAS) = max(pos_err(GAS), maxval(cg%wa(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), mask=cg%leafmap))
 
          if (associated(flind%dst)) then
             cg%wa(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = inid(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) - cg%u(flind%dst%idn, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)
@@ -409,7 +409,7 @@ contains
          cgl => cgl%nxt
       enddo
 
-      do i = NEU, DST
+      do i = GAS, DST
          do j = N_D, N_2
             call piernik_MPI_Allreduce(norm(j, i), pSUM)
          enddo
@@ -418,11 +418,11 @@ contains
       enddo
 
       if (master) then
-         do i = NEU, DST
+         do i = GAS, DST
             if (i == DST .and. .not. usedust) exit
             select case (i)
-               case (NEU)
-                  descr = "NEU"
+               case (GAS)
+                  descr = "GAS"
                case (DST)
                   descr = "DST"
             end select
