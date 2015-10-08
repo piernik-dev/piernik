@@ -268,13 +268,15 @@ contains
          ! Set up the internal energy
          cg%u(flind%neu%ien,:,:,:) = max(smallei, pulse_pressure / flind%neu%gam_1 + 0.5 * sum(cg%u(flind%neu%imx:flind%neu%imz,:,:,:)**2,1) / cg%u(flind%neu%idn,:,:,:))
 
-         cg%u(flind%dst%idn, :, :, :) = cg%u(flind%neu%idn, :, :, :)
-         if (usedust) then
-            cg%u(flind%dst%imx, :, :, :) = cg%u(flind%neu%imx, :, :, :)
-            cg%u(flind%dst%imy, :, :, :) = cg%u(flind%neu%imy, :, :, :)
-            cg%u(flind%dst%imz, :, :, :) = cg%u(flind%neu%imz, :, :, :)
-         else
-            cg%u(flind%dst%imx:flind%dst%imz, :, :, :) = 0.
+         if (associated(flind%dst)) then
+            cg%u(flind%dst%idn, :, :, :) = cg%u(flind%neu%idn, :, :, :)
+            if (usedust) then
+               cg%u(flind%dst%imx, :, :, :) = cg%u(flind%neu%imx, :, :, :)
+               cg%u(flind%dst%imy, :, :, :) = cg%u(flind%neu%imy, :, :, :)
+               cg%u(flind%dst%imz, :, :, :) = cg%u(flind%neu%imz, :, :, :)
+            else
+               cg%u(flind%dst%imx:flind%dst%imz, :, :, :) = 0.
+            endif
          endif
 
          cgl => cgl%nxt
@@ -340,6 +342,7 @@ contains
       use constants,        only: PIERNIK_FINISHED, pSUM, pMIN, pMAX, idlen
       use dataio_pub,       only: code_progress, halfstep, msg, printinfo, warn
       use fluidindex,       only: flind
+      use func,             only: operator(.notequals.)
       use global,           only: t, nstep
       use grid_cont,        only: grid_container
       use mpisetup,         only: master, piernik_MPI_Allreduce
@@ -385,11 +388,13 @@ contains
          neg_err(NEU) = min(neg_err(NEU), minval(cg%wa(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), mask=cg%leafmap))
          pos_err(NEU) = max(pos_err(NEU), maxval(cg%wa(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), mask=cg%leafmap))
 
-         cg%wa(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = inid(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) - cg%u(flind%dst%idn, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)
-         norm(N_D, DST) = norm(N_D, DST) + sum(cg%wa(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)**2, mask=cg%leafmap)
-         norm(N_2, DST) = norm(N_2, DST) + sum(inid( cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)**2, mask=cg%leafmap)
-         neg_err(DST) = min(neg_err(DST), minval(cg%wa(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), mask=cg%leafmap))
-         pos_err(DST) = max(pos_err(DST), maxval(cg%wa(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), mask=cg%leafmap))
+         if (associated(flind%dst)) then
+            cg%wa(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = inid(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) - cg%u(flind%dst%idn, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)
+            norm(N_D, DST) = norm(N_D, DST) + sum(cg%wa(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)**2, mask=cg%leafmap)
+            norm(N_2, DST) = norm(N_2, DST) + sum(inid( cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)**2, mask=cg%leafmap)
+            neg_err(DST) = min(neg_err(DST), minval(cg%wa(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), mask=cg%leafmap))
+            pos_err(DST) = max(pos_err(DST), maxval(cg%wa(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), mask=cg%leafmap))
+         endif
 
          cgl => cgl%nxt
       enddo
@@ -411,9 +416,11 @@ contains
                case (DST)
                   descr = "DST"
             end select
-            write(msg,'(3a,f12.6,a,2f15.6)')"[initproblem:calculate_error_norm] L2 error norm (",descr,") = ", sqrt(norm(N_D, i)/norm(N_2, i)), &
-                 ", min and max error = ", neg_err(i), pos_err(i)
-            call printinfo(msg)
+            if (norm(N_2, i) .notequals. 0.) then
+               write(msg,'(3a,f12.6,a,2f15.6)')"[initproblem:calculate_error_norm] L2 error norm (",descr,") = ", sqrt(norm(N_D, i)/norm(N_2, i)), &
+                    ", min and max error = ", neg_err(i), pos_err(i)
+               call printinfo(msg)
+            end if
          enddo
       endif
 
