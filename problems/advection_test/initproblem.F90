@@ -28,7 +28,8 @@
 
 module initproblem
 
-   use constants, only: dsetnamelen, ndims, LO, HI
+   use constants,  only: dsetnamelen, ndims, LO, HI
+   use fluidtypes, only: component_fluid
 
    implicit none
 
@@ -53,6 +54,7 @@ module initproblem
    real, dimension(ndims, LO:HI) :: pulse_edge
    real :: pulse_low_density, pulse_pressure
    character(len=dsetnamelen), parameter :: inid_n = "inid"
+   class(component_fluid), pointer :: fl  !< will point either to neutral or ionized fluid
 
 contains
 
@@ -176,9 +178,17 @@ contains
          pulse_edge(:, HI) =  huge(1.)
       endwhere
 
+      if (associated(flind%neu)) then
+         fl => flind%neu
+      else if (associated(flind%ion)) then
+         fl => flind%ion
+      else
+         call die("[initproblem] current implementation requires either ionized or neutral fluid to be defined")
+      endif
+
       !BEWARE: hardcoded magic numbers
       pulse_low_density = smalld * 1e5
-      pulse_pressure = smallei * flind%neu%gam_1 * 1e2
+      pulse_pressure = smallei * fl%gam_1 * 1e2
 
       if (norm_step <= 0) norm_step = huge(I_ONE)
 
@@ -232,7 +242,7 @@ contains
 
          call cg%set_constant_b_field([0., 0., 0.])
 
-         cg%u(flind%neu%idn, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = cg%q(qna%ind(inid_n))%arr(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)
+         cg%u(fl%idn, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = cg%q(qna%ind(inid_n))%arr(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)
 
          select case (dom%geometry_type)
             case (GEO_XYZ)
@@ -240,41 +250,43 @@ contains
                   ! Include rotation for pulse_vel = 0., 0., 0. case
                   do i = cg%is, cg%ie
                      do j = cg%js, cg%je
-                        cg%u(flind%neu%imx, i, j, :) = - om*cg%y(j) * cg%u(flind%neu%idn, i, j, :)
-                        cg%u(flind%neu%imy, i, j, :) = + om*cg%x(i) * cg%u(flind%neu%idn, i, j, :)
+                        cg%u(fl%imx, i, j, :) = - om*cg%y(j) * cg%u(fl%idn, i, j, :)
+                        cg%u(fl%imy, i, j, :) = + om*cg%x(i) * cg%u(fl%idn, i, j, :)
                      enddo
                   enddo
-                  cg%u(flind%neu%imz, :, :, :) = pulse_vel(zdim) * cg%u(flind%neu%idn, :, :, :)
+                  cg%u(fl%imz, :, :, :) = pulse_vel(zdim) * cg%u(fl%idn, :, :, :)
                else
                   ! Make uniform, completely boring flow
-                  cg%u(flind%neu%imx, :, :, :) = pulse_vel(xdim) * cg%u(flind%neu%idn, :, :, :)
-                  cg%u(flind%neu%imy, :, :, :) = pulse_vel(ydim) * cg%u(flind%neu%idn, :, :, :)
-                  cg%u(flind%neu%imz, :, :, :) = pulse_vel(zdim) * cg%u(flind%neu%idn, :, :, :)
+                  cg%u(fl%imx, :, :, :) = pulse_vel(xdim) * cg%u(fl%idn, :, :, :)
+                  cg%u(fl%imy, :, :, :) = pulse_vel(ydim) * cg%u(fl%idn, :, :, :)
+                  cg%u(fl%imz, :, :, :) = pulse_vel(zdim) * cg%u(fl%idn, :, :, :)
                endif
             case (GEO_RPZ)
                do k = cg%ks, cg%ke
                   do j = cg%js, cg%je
                      do i = cg%is, cg%ie
-                        cg%u(flind%neu%imx, i, j, k) = ( pulse_vel(xdim)*cos(cg%y(j)) + pulse_vel(ydim)*sin(cg%y(j))) * cg%u(flind%neu%idn, i, j, k)
-                        cg%u(flind%neu%imy, i, j, k) = (-pulse_vel(xdim)*sin(cg%y(j)) + pulse_vel(ydim)*cos(cg%y(j))) * cg%u(flind%neu%idn, i, j, k)
+                        cg%u(fl%imx, i, j, k) = ( pulse_vel(xdim)*cos(cg%y(j)) + pulse_vel(ydim)*sin(cg%y(j))) * cg%u(fl%idn, i, j, k)
+                        cg%u(fl%imy, i, j, k) = (-pulse_vel(xdim)*sin(cg%y(j)) + pulse_vel(ydim)*cos(cg%y(j))) * cg%u(fl%idn, i, j, k)
                      enddo
                   enddo
                enddo
-               cg%u(flind%neu%imz, :, :, :) = pulse_vel(zdim) * cg%u(flind%neu%idn, :, :, :)
+               cg%u(fl%imz, :, :, :) = pulse_vel(zdim) * cg%u(fl%idn, :, :, :)
             case default
                call die("[initproblem:problem_initial_conditions] only cartesian and cylindrical geometries are supported")
          end select
 
          ! Set up the internal energy
-         cg%u(flind%neu%ien,:,:,:) = max(smallei, pulse_pressure / flind%neu%gam_1 + 0.5 * sum(cg%u(flind%neu%imx:flind%neu%imz,:,:,:)**2,1) / cg%u(flind%neu%idn,:,:,:))
+         cg%u(fl%ien,:,:,:) = max(smallei, pulse_pressure / fl%gam_1 + 0.5 * sum(cg%u(fl%imx:fl%imz,:,:,:)**2,1) / cg%u(fl%idn,:,:,:))
 
-         cg%u(flind%dst%idn, :, :, :) = cg%u(flind%neu%idn, :, :, :)
-         if (usedust) then
-            cg%u(flind%dst%imx, :, :, :) = cg%u(flind%neu%imx, :, :, :)
-            cg%u(flind%dst%imy, :, :, :) = cg%u(flind%neu%imy, :, :, :)
-            cg%u(flind%dst%imz, :, :, :) = cg%u(flind%neu%imz, :, :, :)
-         else
-            cg%u(flind%dst%imx:flind%dst%imz, :, :, :) = 0.
+         if (associated(flind%dst)) then
+            cg%u(flind%dst%idn, :, :, :) = cg%u(fl%idn, :, :, :)
+            if (usedust) then
+               cg%u(flind%dst%imx, :, :, :) = cg%u(fl%imx, :, :, :)
+               cg%u(flind%dst%imy, :, :, :) = cg%u(fl%imy, :, :, :)
+               cg%u(flind%dst%imz, :, :, :) = cg%u(fl%imz, :, :, :)
+            else
+               cg%u(flind%dst%imx:flind%dst%imz, :, :, :) = 0.
+            endif
          endif
 
          cgl => cgl%nxt
@@ -340,6 +352,7 @@ contains
       use constants,        only: PIERNIK_FINISHED, pSUM, pMIN, pMAX, idlen
       use dataio_pub,       only: code_progress, halfstep, msg, printinfo, warn
       use fluidindex,       only: flind
+      use func,             only: operator(.notequals.)
       use global,           only: t, nstep
       use grid_cont,        only: grid_container
       use mpisetup,         only: master, piernik_MPI_Allreduce
@@ -351,10 +364,10 @@ contains
          enumerator :: N_D, N_2
       end enum
       enum, bind(C)
-         enumerator :: NEU, DST
+         enumerator :: GAS, DST
       end enum
-      real, dimension(N_D:N_2, NEU:DST) :: norm
-      real, dimension(NEU:DST)          :: neg_err, pos_err
+      real, dimension(N_D:N_2, GAS:DST) :: norm
+      real, dimension(GAS:DST)          :: neg_err, pos_err
       type(cg_list_element),  pointer   :: cgl
       type(grid_container),   pointer   :: cg
       real, dimension(:,:,:), pointer   :: inid
@@ -379,22 +392,24 @@ contains
             return
          endif
 
-         cg%wa(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = inid(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) - cg%u(flind%neu%idn, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)
-         norm(N_D, NEU) = norm(N_D, NEU) + sum(cg%wa(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)**2, mask=cg%leafmap)
-         norm(N_2, NEU) = norm(N_2, NEU) + sum(inid( cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)**2, mask=cg%leafmap)
-         neg_err(NEU) = min(neg_err(NEU), minval(cg%wa(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), mask=cg%leafmap))
-         pos_err(NEU) = max(pos_err(NEU), maxval(cg%wa(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), mask=cg%leafmap))
+         cg%wa(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = inid(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) - cg%u(fl%idn, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)
+         norm(N_D, GAS) = norm(N_D, GAS) + sum(cg%wa(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)**2, mask=cg%leafmap)
+         norm(N_2, GAS) = norm(N_2, GAS) + sum(inid( cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)**2, mask=cg%leafmap)
+         neg_err(GAS) = min(neg_err(GAS), minval(cg%wa(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), mask=cg%leafmap))
+         pos_err(GAS) = max(pos_err(GAS), maxval(cg%wa(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), mask=cg%leafmap))
 
-         cg%wa(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = inid(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) - cg%u(flind%dst%idn, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)
-         norm(N_D, DST) = norm(N_D, DST) + sum(cg%wa(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)**2, mask=cg%leafmap)
-         norm(N_2, DST) = norm(N_2, DST) + sum(inid( cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)**2, mask=cg%leafmap)
-         neg_err(DST) = min(neg_err(DST), minval(cg%wa(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), mask=cg%leafmap))
-         pos_err(DST) = max(pos_err(DST), maxval(cg%wa(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), mask=cg%leafmap))
+         if (associated(flind%dst)) then
+            cg%wa(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = inid(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) - cg%u(flind%dst%idn, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)
+            norm(N_D, DST) = norm(N_D, DST) + sum(cg%wa(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)**2, mask=cg%leafmap)
+            norm(N_2, DST) = norm(N_2, DST) + sum(inid( cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)**2, mask=cg%leafmap)
+            neg_err(DST) = min(neg_err(DST), minval(cg%wa(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), mask=cg%leafmap))
+            pos_err(DST) = max(pos_err(DST), maxval(cg%wa(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), mask=cg%leafmap))
+         endif
 
          cgl => cgl%nxt
       enddo
 
-      do i = NEU, DST
+      do i = GAS, DST
          do j = N_D, N_2
             call piernik_MPI_Allreduce(norm(j, i), pSUM)
          enddo
@@ -403,17 +418,19 @@ contains
       enddo
 
       if (master) then
-         do i = NEU, DST
+         do i = GAS, DST
             if (i == DST .and. .not. usedust) exit
             select case (i)
-               case (NEU)
-                  descr = "NEU"
+               case (GAS)
+                  descr = "GAS"
                case (DST)
                   descr = "DST"
             end select
-            write(msg,'(3a,f12.6,a,2f15.6)')"[initproblem:calculate_error_norm] L2 error norm (",descr,") = ", sqrt(norm(N_D, i)/norm(N_2, i)), &
-                 ", min and max error = ", neg_err(i), pos_err(i)
-            call printinfo(msg)
+            if (norm(N_2, i) .notequals. 0.) then
+               write(msg,'(3a,f12.6,a,2f15.6)')"[initproblem:calculate_error_norm] L2 error norm (",descr,") = ", sqrt(norm(N_D, i)/norm(N_2, i)), &
+                    ", min and max error = ", neg_err(i), pos_err(i)
+               call printinfo(msg)
+            end if
          enddo
       endif
 
