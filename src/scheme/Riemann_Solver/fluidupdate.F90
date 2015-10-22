@@ -104,7 +104,7 @@ contains
     integer(kind=4),               intent(in) :: ddim
     !integer(kind=4),               intent(in) :: cdim
 
-    integer                                   :: n
+    !integer                                   :: n
     real, allocatable, dimension(:,:) :: u1d
     !real, dimension(xdim:zdim, cg%n_(ddim)), pointer   :: b1d
     !real, dimension(:,:), pointer             :: b1d
@@ -131,7 +131,7 @@ contains
              u1d(iarr_all_swp(ddim,:),:) = pu(:,:)
 
              !call rk2(n,u1d,b1d,bb1d,cs2,cdim,dt/cgl%cg%dl(ddim))
-             call rk2(n,u1d,b_cc1d,ddim, dt/cgl%cg%dl(ddim))
+             call rk2(u1d,b_cc1d,ddim, dt/cgl%cg%dl(ddim))
 
              pu(:,:) = u1d(iarr_all_swp(ddim,:),:)
 
@@ -198,6 +198,7 @@ contains
         q(fl%imx,:) =  u(fl%imx,:)/u(fl%idn,:)
         q(fl%imy,:) =  u(fl%imy,:)/u(fl%idn,:)
         q(fl%imz,:) =  u(fl%imz,:)/u(fl%idn,:)
+
         q(fl%ien,:) =  fl%gam_1*(u(fl%ien,:) - ekin(u(fl%imx,:), u(fl%imy,:), u(fl%imz,:), u(fl%idn,:)) - half*sum(b_cc(xdim:zdim,:))**2) + half*sum(b_cc(xdim:zdim,:))**2
         
      enddo
@@ -208,7 +209,7 @@ contains
 !-----------------------------------------------------------------------------------------------------------------------
 
   !subroutine rk2(n,u,b,bb,cs2,cdim,dtodx)
-  subroutine rk2(n,u,b_cc,ddim, dtodx)
+  subroutine rk2(u,b_cc,ddim, dtodx)
 
     use constants,   only: half, xdim, zdim
     use fluidindex,  only: flind
@@ -218,14 +219,15 @@ contains
     implicit none
 
   
-    integer,                        intent(in)     :: n
+    !integer,                        intent(in)     :: n
     real, dimension(:,:),           intent(inout)  :: u
     real, dimension(:,:),  intent(inout)           :: b_cc
     integer(kind=4),       intent(in)              :: ddim
     real,                    intent(in)            :: dtodx
 
     class(component_fluid), pointer              :: fl
-    real, dimension(xdim:zdim,n), target         :: b_ccl, b_ccr, mag_cc 
+    real, dimension(xdim:zdim,size(u,2)), target         :: b_ccl, b_ccr, mag_cc
+    real, dimension(xdim:zdim,size(u,2)), target :: db
     real, dimension(size(u,1),size(u,2))         :: u_predict
     real, dimension(size(u,1),size(u,2)), target :: flx, ql, qr, du, ul, ur
     real, dimension(:,:), pointer                :: p_flx, p_bcc, p_bccl, p_bccr, p_ql, p_qr
@@ -238,8 +240,11 @@ contains
     du  = calculate_slope_vanleer(u)
     ul  = u - half*du
     ur  = u + half*du
-    b_ccl = b_cc - half*du
-    b_ccr = b_cc + half*du
+
+
+    db  = calculate_slope_vanleer(b_cc)
+    b_ccl = b_cc - half*db
+    b_ccr = b_cc + half*db
 
     mag_cc = b_cc
 

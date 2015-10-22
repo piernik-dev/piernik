@@ -198,6 +198,9 @@ contains
     
     ! Local arrays
 
+
+
+
     !real, dimension(n, flind%all)                :: ul, ur, fl, fr
     !real, dimension(flind%all,n)                :: ul, ur, fl, fr
     !real, dimension(n, flind%all)                :: fl, fr
@@ -226,9 +229,9 @@ contains
        c_fastl  =   (gampr_l+(b_ccl(xdim,i)**2+b_ccl(ydim,i)**2+b_ccl(zdim,i)**2))  &
                                        + sqrt((gampr_l+(b_ccl(xdim,i)**2+b_ccl(ydim,i)**2+b_ccl(zdim,i)**2))**2-(four*gampr_l*b_ccl(xdim,i)**2))
       
-
+      
        c_fastl = sqrt(half*c_fastl/ul(idn,i))
-
+       
        c_fastr  =   (gampr_r+(b_ccr(xdim,i)**2+b_ccr(ydim,i)**2+b_ccr(zdim,i)**2))  &
                                                    + sqrt((gampr_r+(b_ccr(xdim,i)**2+b_ccr(ydim,i)**2+b_ccr(zdim,i)**2))**2-(four*gampr_r*b_ccr(xdim,i)**2))
 
@@ -323,7 +326,7 @@ contains
        fl(ien,i) = (ul(ien,i) + prtl)*(ul(imx,i)/ul(idn,i)) - b_ccl(xdim,i)*(b_ccl(xdim,i)*(ul(imx,i)/ul(idn,i)) + b_ccl(ydim,i)*(ul(imy,i)/ul(idn,i)) + &
             b_ccl(zdim,i)*(ul(imz,i)/ul(idn,i)))
        b_cclf(ydim,i) = b_ccl(ydim,i)*(ul(imx,i)/ul(idn,i)) - b_ccl(xdim,i)*(ul(imy,i)/ul(idn,i))
-       b_cclf(zdim,i) = b_ccl(zdim,i)*(ul(imx,i)/ul(idn,i)) - b_ccl(xdim,i)*(ul(i,imz)/ul(idn,i))
+       b_cclf(zdim,i) = b_ccl(zdim,i)*(ul(imx,i)/ul(idn,i)) - b_ccl(xdim,i)*(ul(imz,i)/ul(idn,i))
 
        ! Right flux
 
@@ -388,14 +391,14 @@ contains
           !coeff_1  =  ul(ibx,i)/dn_l
           coeff_1  =  b_ccl(xdim,i)/dn_l
           
-          v_starl(imy)  =  ul(i,imy) + coeff_1*(b_ccl(ydim,i) - b_starl(ydim))
-          v_starl(imz)  =  ul(i,imz) + coeff_1*(b_ccl(zdim,i) - b_starl(zdim))
+          v_starl(imy)  =  ul(imy,i) + coeff_1*(b_ccl(ydim,i) - b_starl(ydim))
+          v_starl(imz)  =  ul(imz,i) + coeff_1*(b_ccl(zdim,i) - b_starl(zdim))
 
           ! Transversal components of magnetic field for right states (Eq. 45 & 47), taking degeneracy into account
 
           coeff_1  =  dn_r*srsm - b_lr
 
-          if ((coeff_1 .notequals. zero) .and. b_lrgam .le. ur(i,ien)) then
+          if ((coeff_1 .notequals. zero) .and. b_lrgam .le. ur(ien,i)) then
              coeff_2  =  (dn_r*srvxr - b_lr)/coeff_1
 
              b_starr(ydim)  =  b_ccr(ydim,i)*coeff_2
@@ -416,13 +419,13 @@ contains
 
           coeff_1  =  b_ccr(xdim,i)/dn_r
 
-          v_starr(imy)  =   ur(i,imy) + coeff_1*(b_ccr(ydim,i) - b_starr(ydim))
-          v_starr(imz)  =   ur(i,imz) + coeff_1*(b_ccr(zdim,i) - b_starr(zdim))
+          v_starr(imy)  =   ur(imy,i) + coeff_1*(b_ccr(ydim,i) - b_starr(ydim))
+          v_starr(imz)  =   ur(imz,i) + coeff_1*(b_ccr(zdim,i) - b_starr(zdim))
 
           ! Dot product of velocity and magnetic field
 
-          vb_l  =  sum(ul(i,imx:imz)*b_ccl(xdim:zdim,i))
-          vb_r  =  sum(ur(i,imx:imz)*b_ccr(xdim:zdim,i))
+          vb_l  =  sum(ul(imx:imz,i)*b_ccl(xdim:zdim,i))
+          vb_r  =  sum(ur(imx:imz,i)*b_ccr(xdim:zdim,i))
           vb_starl  =  sum(v_starl(imx:imz)*b_starl(xdim:zdim))
           vb_starr  =  sum(v_starr(imx:imz)*b_starr(xdim:zdim))
           
