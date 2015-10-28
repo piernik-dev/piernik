@@ -230,7 +230,7 @@ contains
          associate (cg => cgl%cg)
 
          iC_cg = 0
-         cg%b(:,    :, :, :) = 0.
+         call cg%set_constant_b_field([0., 0., 0.])
          cg%u(fl%idn, :, :, :) = smalld
          cg%u(fl%ien, :, :, :) = smallei
 

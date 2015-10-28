@@ -647,7 +647,7 @@ contains
    subroutine write_to_hdf5_v2(filename, otype, create_empty_cg_datasets, write_cg_to_hdf5)
 
       use cg_leaves,    only: leaves
-      use constants,    only: cwdlen, dsetnamelen, xdim, ydim, zdim, ndims, I_ONE, I_TWO, I_THREE, INT4, LO, HI, &
+      use constants,    only: cwdlen, dsetnamelen, xdim, zdim, ndims, I_ONE, I_TWO, I_THREE, INT4, LO, HI, &
          &                    GEO_XYZ, GEO_RPZ
       use dataio_pub,   only: die, nproc_io, can_i_write, domain_dump, msg
       use domain,       only: dom
@@ -740,17 +740,15 @@ contains
          if (otype == O_OUT) then
             call gdf_create_format_stamp(file_id)
             call gdf_sp%init()
-            gdf_sp%current_time = t/sek
+            gdf_sp%current_time = t
             select case (dom%geometry_type)
                case (GEO_XYZ)
-                  gdf_sp%domain_left_edge = dom%edge(:, LO) / cm
-                  gdf_sp%domain_right_edge = dom%edge(:, HI) / cm
+                  gdf_sp%domain_left_edge = dom%edge(:, LO)
+                  gdf_sp%domain_right_edge = dom%edge(:, HI)
                   gdf_sp%geometry = GDF_CARTESIAN
                case (GEO_RPZ)
-                  gdf_sp%domain_left_edge([xdim, zdim]) = dom%edge([xdim, zdim], LO) / cm
-                  gdf_sp%domain_right_edge([xdim, zdim]) = dom%edge([xdim, zdim], HI) / cm
-                  gdf_sp%domain_left_edge(ydim) = dom%edge(ydim, LO)
-                  gdf_sp%domain_right_edge(ydim) = dom%edge(ydim, HI)
+                  gdf_sp%domain_left_edge = dom%edge(:, LO)
+                  gdf_sp%domain_right_edge = dom%edge(:, HI)
                   gdf_sp%geometry = GDF_POLAR
                case default
                   write(msg,'(a,i3)') "[common_hdf5:write_to_hdf5_v2] Unknown system of coordinates ", dom%geometry_type

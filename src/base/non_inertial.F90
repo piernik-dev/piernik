@@ -35,9 +35,9 @@ module non_inertial
    implicit none
 
    private
-   public  :: init_non_inertial, non_inertial_force
+   public  :: init_non_inertial, non_inertial_force, get_omega
 
-   real :: omega, omegadot
+   real    :: omega, omegadot
 
 contains
 
@@ -48,7 +48,7 @@ contains
    subroutine init_non_inertial
 
       use dataio_pub, only: nh    ! QA_WARN required for diff_nml
-      use mpisetup,   only: rbuff, master, slave
+      use mpisetup,   only: rbuff, master, slave, piernik_MPI_Bcast
       use constants,  only: PIERNIK_INIT_GRID, GEO_XYZ
       use dataio_pub, only: die, code_progress
       use domain,     only: dom
@@ -99,14 +99,17 @@ contains
       if (code_progress < PIERNIK_INIT_GRID) call die("[non_inertial:init_non_inertial] grid not initialized.") ! this is a weak check, the real dependency is init_geometry at the moment
 
       if (dom%geometry_type /= GEO_XYZ) call die("[non_inertial:init_non_inertial] Only cartesian geometry is implemented")
-#if !(defined GRAV || defined SHEAR )
-      call die("non_inertial:init_non_inertial] Check how and under what conditions the rtvd::relaxing_tvd handles additional source terms")
-#endif /* !(GRAV || SHEAR ) */
 
    end subroutine init_non_inertial
 
 !>
 !! \brief Compute the non-inertial acceleration for a given row of cells.
+!!
+!! The equtions for the non-inertial acceleration in the x and y directions are given by:
+!! \f{equation}
+!! acc_x = 2 * \Omega * v_y + \Omega^2 * x
+!! acc_y =  -2 * \Omega * v_x + \Omega^2 * y
+!! \f}
 !!
 !! \details This is a low-order estimate of the accelerations, because this routine uses density and velocity fields
 !! from the beginning of the time step. This is a simple approach, but ignores any changes due to other accelerations during the time step.
@@ -114,28 +117,44 @@ contains
 
    function non_inertial_force(sweep, u, cg) result(rotacc)
 
-      use fluidindex, only: flind, iarr_all_dn, iarr_all_mx, iarr_all_my
+      use fluidindex, only: flind, iarr_all_dn, iarr_all_my
       use constants,  only: xdim, ydim !, zdim
       use grid_cont,  only: grid_container
 
       implicit none
 
       integer(kind=4), intent(in)               :: sweep  !< string of characters that points out the current sweep direction
-      type(grid_container), pointer, intent(in) :: cg     !< current grid piece
       real, dimension(:,:), intent(in)          :: u      !< current fluid state vector
-      real, dimension(flind%fluids, size(u,2))  :: rotacc !< an array for non-inertial accelerations
+      type(grid_container), pointer, intent(in) :: cg     !< current grid piece
+      integer                                   :: ifl
+      real, dimension(size(u,1), flind%fluids)  :: rotacc !< an array for non-inertial accelerations
 
-      ! non-inertial force for corotating coords
-      select case (sweep)
-         case (xdim)
-            rotacc(:,:) = +2.0 * omega * u(iarr_all_my(:), :)/u(iarr_all_dn(:), :) + omega**2 * cg%x
-         case (ydim)
-            rotacc(:,:) = -2.0 * omega * u(iarr_all_mx(:), :)/u(iarr_all_dn(:), :) + omega**2 * cg%y
-!         case (zdim) !no z-component of the Coriolis force
-         case default
-            rotacc(:,:) = 0.0
-      end select
+      ! non-inertial (Coriolis and centrifugal) forces for corotating coords
+      do ifl = 1, flind%fluids
+         select case (sweep)
+            case (xdim)
+               rotacc(:, ifl) = +2.0 * omega * u(:, iarr_all_my(ifl))/u(:, iarr_all_dn(ifl)) + omega**2 * cg%x
+            case (ydim)
+               rotacc(:, ifl) = -2.0 * omega * u(:, iarr_all_my(ifl))/u(:, iarr_all_dn(ifl)) + omega**2 * cg%y
+   !         case (zdim) !no z-component of non-inertial forces
+            case default
+               rotacc(:, ifl) = 0.0
+         end select
+      enddo
 
    end function non_inertial_force
+
+!>
+!! \brief return angular rotation parameter
+!<
+
+
+   real function get_omega()
+
+      implicit none
+
+      get_omega = omega
+
+   end function get_omega
 
 end module non_inertial

@@ -202,9 +202,7 @@ contains
       do while (associated(cgl))
          cg => cgl%cg
 
-         cg%b(xdim, :, :, :) = bx0
-         cg%b(ydim, :, :, :) = by0
-         cg%b(zdim, :, :, :) = bz0
+         call cg%set_constant_b_field([bx0, by0, bz0])
          cg%u(fl%idn, :, :, :) = d0
          cg%u(fl%imx:fl%imz, :, :, :) = 0.0
 
@@ -442,9 +440,7 @@ contains
       do while (associated(cgl))
          if (cgl%cg%is_old) call die("[initproblem:cr_late_init] Old piece on a new list")
          associate (fl => flind%ion)
-         cgl%cg%b(xdim, :, :, :) = bx0
-         cgl%cg%b(ydim, :, :, :) = by0
-         cgl%cg%b(zdim, :, :, :) = bz0
+         call cgl%cg%set_constant_b_field([bx0, by0, bz0])
          cgl%cg%u(fl%idn, :, :, :) = d0
          cgl%cg%u(fl%imx:fl%imz, :, :, :) = 0.0
 #ifndef ISO

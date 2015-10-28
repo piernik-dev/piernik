@@ -1,0 +1,7 @@
+#if 0
+  Define only the minimum required by sanitizing tests
+#endif
+
+#define IONIZED
+#define LOCAL_FR_SPEED
+#define RTVD

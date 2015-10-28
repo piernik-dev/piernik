@@ -27,6 +27,7 @@ is_f90 = re.compile("f90$", re.IGNORECASE)
 is_header = re.compile("h$", re.IGNORECASE)
 not_svn_junk = re.compile(".*(?!pro).*", re.IGNORECASE)
 test = re.compile(r'pulled by', re.IGNORECASE).search
+overriding = re.compile(r'overrides', re.IGNORECASE).search
 have_use = re.compile(r"^\s{0,9}use\s", re.IGNORECASE).search
 have_inc = re.compile(r"^#include\s", re.IGNORECASE).search
 have_mod = re.compile(r"^\s*module\s+(?!procedure)", re.IGNORECASE).search
@@ -290,11 +291,12 @@ def setup_piernik(data=None):
         shutil.rmtree(objdir)
     os.mkdir(objdir)
 
+    print("Using compiler settings from \033[93m" + compiler + "\033[0m")
     sc = open(objdir + "/.setup.call", "w")
     sc.write(
         " ".join(sys_args) +
         "\n#effective call (after evaluation of .setuprc*):\n#" + "./setup " +
-        " ".join(all_args) + "\n")
+        " ".join(all_args) + "\n#Using compiler settings from " + compiler + "\n")
     sc.close()
 
     f90files = []
@@ -362,6 +364,24 @@ def setup_piernik(data=None):
         if (not os.access(f, os.F_OK)):
             print('\033[93m' + "Warning: Cannot access file:" + '\033[0m', f)
             f90files.remove(f)
+
+    for f in f90files:
+        for line in open(f):
+            if overriding(line):
+                o_cnt = 0
+                for word in line.split(" "):
+                    w = word.rstrip()
+                    if f90files.count(w) > 0:
+                        o_cnt+=1
+                        if (os.path.dirname(f).split("/").count("problems") < 1):
+                            print('\033[93m' + "Warning:" + '\033[0m' + " Only user problems should use the override feature, not " + f)
+                        if os.path.basename(w) == os.path.basename(f):
+                            f90files.remove(w)
+                            print("Overriding " + w + " by " + f)
+                        else:
+                            print('\033[93m' + "Warning:" + '\033[0m' + " Refused overriding " + w + " by " + f + " due to basename mismatch. Expect errors.")
+                if (o_cnt == 0):
+                    print('\033[93m' + "Warning:" + '\033[0m' + " No overridable target found for directive '" + line.rstrip() + "'. Expect errors.")
 
     for f in f90files:
         keys_logic1 = False

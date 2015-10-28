@@ -208,9 +208,11 @@ contains
       use dataio_pub,       only: die
       use domain,           only: dom
       use fluidindex,       only: flind
+      use func,             only: operator(.notequals.)
       use global,           only: smallei, t
       use grid_cont,        only: grid_container
       use named_array_list, only: qna
+      use non_inertial,     only: get_omega
 
       implicit none
 
@@ -218,6 +220,9 @@ contains
       type(grid_container), pointer :: cg
 
       integer :: i, j, k
+      real    :: om
+
+      om = get_omega()
 
       call analytic_solution(t)
 
@@ -225,16 +230,27 @@ contains
       do while (associated(cgl))
          cg => cgl%cg
 
-         cg%b(:, :, :, :) = 0.
+         call cg%set_constant_b_field([0., 0., 0.])
 
          cg%u(flind%neu%idn, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = cg%q(qna%ind(inid_n))%arr(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)
 
          select case (dom%geometry_type)
             case (GEO_XYZ)
-               ! Make uniform, completely boring flow
-               cg%u(flind%neu%imx, :, :, :) = pulse_vel(xdim) * cg%u(flind%neu%idn, :, :, :)
-               cg%u(flind%neu%imy, :, :, :) = pulse_vel(ydim) * cg%u(flind%neu%idn, :, :, :)
-               cg%u(flind%neu%imz, :, :, :) = pulse_vel(zdim) * cg%u(flind%neu%idn, :, :, :)
+               if (om .notequals. 0.) then
+                  ! Include rotation for pulse_vel = 0., 0., 0. case
+                  do i = cg%is, cg%ie
+                     do j = cg%js, cg%je
+                        cg%u(flind%neu%imx, i, j, :) = - om*cg%y(j) * cg%u(flind%neu%idn, i, j, :)
+                        cg%u(flind%neu%imy, i, j, :) = + om*cg%x(i) * cg%u(flind%neu%idn, i, j, :)
+                     enddo
+                  enddo
+                  cg%u(flind%neu%imz, :, :, :) = pulse_vel(zdim) * cg%u(flind%neu%idn, :, :, :)
+               else
+                  ! Make uniform, completely boring flow
+                  cg%u(flind%neu%imx, :, :, :) = pulse_vel(xdim) * cg%u(flind%neu%idn, :, :, :)
+                  cg%u(flind%neu%imy, :, :, :) = pulse_vel(ydim) * cg%u(flind%neu%idn, :, :, :)
+                  cg%u(flind%neu%imz, :, :, :) = pulse_vel(zdim) * cg%u(flind%neu%idn, :, :, :)
+               endif
             case (GEO_RPZ)
                do k = cg%ks, cg%ke
                   do j = cg%js, cg%je
@@ -413,10 +429,12 @@ contains
 
       use cg_list,          only: cg_list_element
       use cg_leaves,        only: leaves
-      use constants,        only: xdim, zdim, ndims, GEO_XYZ, GEO_RPZ
+      use constants,        only: xdim, ydim, zdim, ndims, GEO_XYZ, GEO_RPZ
       use dataio_pub,       only: warn, die
       use domain,           only: dom
+      use func,             only: operator(.notequals.)
       use grid_cont,        only: grid_container
+      use non_inertial,     only: get_omega
       use mpisetup,         only: master
       use named_array_list, only: qna
 
@@ -428,10 +446,16 @@ contains
       integer                         :: i, j, k, d
       type(cg_list_element),  pointer :: cgl
       type(grid_container),   pointer :: cg
-      real, dimension(:,:,:), pointer :: inid
+      real, dimension(:,:,:), pointer :: inid !< analytic solution
       real, dimension(ndims)          :: pos
+      real, dimension(xdim:ydim)      :: paux
+      real                            :: om, cot, sot
 
       pos = 0. ! suppres compiler warning
+      om = get_omega()
+      cot = cos(om * t)
+      sot = sin(om * t)
+
       cgl => leaves%first
       do while (associated(cgl))
          cg => cgl%cg
@@ -448,7 +472,12 @@ contains
 
                   select case (dom%geometry_type)
                      case (GEO_XYZ)
-                        pos = [cg%x(i), cg%y(j), cg%z(k)] - t * pulse_vel(:)
+                        pos = [cg%x(i), cg%y(j), cg%z(k)]
+                        if (om .notequals. 0.) then
+                           paux = [ pos(xdim) * cot - pos(ydim) * sot, pos(xdim) * sot + pos(ydim) * cot ]
+                           pos(xdim:ydim) = paux
+                        endif
+                        pos = pos - t * pulse_vel(:)
                      case (GEO_RPZ)
                         pos = [cg%x(i)*cos(cg%y(j)), cg%x(i)*sin(cg%y(j)), cg%z(k)] - t * pulse_vel(:)
                      case default

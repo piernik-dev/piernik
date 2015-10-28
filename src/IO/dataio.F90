@@ -45,7 +45,7 @@ module dataio
    private
    public :: check_log, check_tsl, dump, write_data, write_crashed, cleanup_dataio, init_dataio, init_dataio_parameters, user_msg_handler
 
-   integer                  :: istep                 !< current number of substep (related to integration order)
+!   integer                  :: istep                 !< current number of substep (related to integration order)
 
    integer, parameter       :: nvarsmx = 20          !< maximum number of variables to dump in hdf files
    character(len=cbuff_len) :: restart               !< choice of restart %file: if restart = 'last': automatic choice of the last restart file regardless of "nrestart" value; if something else is set: "nrestart" value is fixing
@@ -70,12 +70,12 @@ module dataio
    logical                  :: initial_hdf_dump      !< force initial hdf dump
    logical, dimension(RES:TSL) :: dump = .false.     !< logical values for all dump types to restrict to only one dump of each type a step
 
-   integer                  :: nchar                 !< number of characters in a user/system message
+!   integer                  :: nchar                 !< number of characters in a user/system message
    integer, parameter       :: umsg_len = 16
    character(len=umsg_len)  :: umsg                  !< string of characters - content of a user/system message
    real                     :: umsg_param            !< parameter changed by a user/system message
 
-   character(len=cwdlen)    :: filename              !< string of characters indicating currently used file
+!   character(len=cwdlen)    :: filename              !< string of characters indicating currently used file
    character(len=fmt_len), protected, target :: fmt_loc, fmt_dtloc, fmt_vloc
    logical                  :: colormode             !< enable color messages using ANSI escape modes
 

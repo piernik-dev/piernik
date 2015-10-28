@@ -90,6 +90,9 @@ contains
 #ifdef CORIOLIS
       use coriolis,              only: init_coriolis
 #endif /* CORIOLIS */
+#ifdef NON_INERTIAL
+      use non_inertial,          only: init_non_inertial
+#endif /* NON_INERTIAL */
 #ifdef COSM_RAYS
       use crdiffusion,           only: init_crdiffusion
 #endif /* COSM_RAYS */
@@ -191,6 +194,10 @@ contains
 #ifdef CORIOLIS
       call init_coriolis                     ! depends on geometry
 #endif /* CORIOLIS */
+
+#ifdef NON_INERTIAL
+      call init_non_inertial                 ! depends on geometry
+#endif /* NON_INERTIAL */
 
 #ifdef SN_SRC
       call init_snsources                    ! depends on grid and fluids/cosmicrays
