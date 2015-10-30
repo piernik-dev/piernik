@@ -1,9 +1,9 @@
-#undef IONIZED
-#undef MAGNETIC
-#define NEUTRAL
-#define DUST
+#define IONIZED
+#define MAGNETIC
+#undef NEUTRAL
+#undef DUST
 #define LOCAL_FR_SPEED
-#define NON_INERTIAL
+#undef NON_INERTIAL
 
 #undef ISO
 

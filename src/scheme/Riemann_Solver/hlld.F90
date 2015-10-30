@@ -681,7 +681,7 @@ contains
                 !f(:,i)  =  half*((fl(:,i) + sl*(u_starl(:) - ul(:,i))) + (fr(:,i) + sr*(u_starr(:) - ur(:,i))))
                 f(idn,i)  =  half*((fl(idn,i) + sl*(u_starl(idn) - ul(idn,i))) + (fr(idn,i) + sr*(u_starr(idn) - ur(idn,i))))
                 f(imx,i)  =  half*((fl(imx,i) + sl*(u_starl(imx) - ul(imx,i))) + (fr(imx,i) + sr*(u_starr(imx) - ur(imx,i))))
-                f(imy,i)  =  half*((fl(imy,i) + sl*(u_starl(imy) - ul(i,imy))) + (fr(imy,i) + sr*(u_starr(imy) - ur(imy,i))))
+                f(imy,i)  =  half*((fl(imy,i) + sl*(u_starl(imy) - ul(imy,i))) + (fr(imy,i) + sr*(u_starr(imy) - ur(imy,i))))
                 f(imz,i)  =  half*((fl(imz,i) + sl*(u_starl(imz) - ul(imz,i))) + (fr(imz,i) + sr*(u_starr(imz) - ur(imz,i))))
                 b_cc(ydim,i) = half*((b_cclf(ydim,i) + sl*(b_starl(ydim) - b_ccl(ydim,i))) + (b_ccrf(ydim,i) + sr*(b_starr(ydim) - b_ccr(ydim,i))))
                 b_cc(zdim,i) = half*((b_cclf(zdim,i) + sl*(b_starl(zdim) - b_ccl(zdim,i))) + (b_ccrf(zdim,i) + sr*(b_starr(zdim) - b_ccr(zdim,i))))
