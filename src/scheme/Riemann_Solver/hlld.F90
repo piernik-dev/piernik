@@ -225,11 +225,11 @@ contains
 
        gampr_l  =  gamma*ul(ien,i)
        gampr_r  =  gamma*ur(ien,i)
-
+       write(*,*) gampr_l, gampr_r, i,"gam"
        c_fastl  =   (gampr_l+(b_ccl(xdim,i)**2+b_ccl(ydim,i)**2+b_ccl(zdim,i)**2))  &
                                        + sqrt((gampr_l+(b_ccl(xdim,i)**2+b_ccl(ydim,i)**2+b_ccl(zdim,i)**2))**2-(four*gampr_l*b_ccl(xdim,i)**2))
       
-      
+       write(*,*) c_fastl, ul(idn,i)
        c_fastl = sqrt(half*c_fastl/ul(idn,i))
        
        c_fastr  =   (gampr_r+(b_ccr(xdim,i)**2+b_ccr(ydim,i)**2+b_ccr(zdim,i)**2))  &

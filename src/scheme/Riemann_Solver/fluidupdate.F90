@@ -127,7 +127,7 @@ contains
 
              !b1d => cgl%cg%w(wna%bi)%get_sweep(ddim,i1,i2)
              ! WARNING: what position of the b components do we expect? If cell-centered then interpolation is required above
-
+ write(*,*)"sweep",ddim, i1,i2,dt
              u1d(iarr_all_swp(ddim,:),:) = pu(:,:)
 
              !call rk2(n,u1d,b1d,bb1d,cs2,cdim,dt/cgl%cg%dl(ddim))
@@ -200,7 +200,7 @@ contains
         q(fl%imz,:) =  u(fl%imz,:)/u(fl%idn,:)
 
         q(fl%ien,:) =  fl%gam_1*(u(fl%ien,:) - ekin(u(fl%imx,:), u(fl%imy,:), u(fl%imz,:), u(fl%idn,:)) - half*sum(b_cc(xdim:zdim,:))**2) + half*sum(b_cc(xdim:zdim,:))**2
-        
+       
      enddo
      
    end function utoq
