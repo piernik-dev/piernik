@@ -120,7 +120,7 @@ contains
       use initionized,    only: ion_fluid
       use initneutral,    only: neutral_fluid
 #ifdef COSM_RAYS
-      use initcosmicrays, only: iarr_crn, iarr_cre, cosmicray_index, iarr_crs ! use of crs /deprecated
+      use initcosmicrays, only: iarr_crn, iarr_cre, cosmicray_index!, iarr_crs ! use of crs /deprecated
 #endif /* COSM_RAYS */
 #ifdef TRACER
       use inittracer,     only: tracer_index, iarr_trc

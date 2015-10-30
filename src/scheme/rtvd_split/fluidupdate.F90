@@ -125,6 +125,10 @@ contains
 
 ! Sources should be hooked to problem_customize_solution with forward argument
 
+#ifdef COSM_RAY_ELECTRONS
+!     call cresp_grid_update !!!
+#endif /* COSM_RAY_ELECTRONS */
+
       halfstep = .true.
       t=t+dt
       dtm = dt

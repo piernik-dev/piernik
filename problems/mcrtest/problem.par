@@ -69,8 +69,10 @@
     K_crn_perp(1)  = 0     ! isotropic
     K_crn_perp(2)  = 0
 !    K_crn_perp(3)  = 0
-    ncre        = 1
+    ncre        = 3
     use_split   = .false.
+!    p_lo0 = 0.0   ! initial lower cut momentum
+!    p_up0 = 0.0   ! initial upper cut momentum
  /
 
  $CR_SPECIES
