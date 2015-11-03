@@ -70,6 +70,8 @@ module initcosmicrays
    integer(kind=4), allocatable, dimension(:) :: iarr_crs !< array of indexes pointing to all CR components
 
    real,    allocatable, dimension(:)  :: gamma_crs    !< array containing adiabatic indexes of all CR components
+   real(kind=8)                        :: p_lo_init    ! < initial lower momentum cut in power spectrum
+   real(kind=8)                        :: p_up_init    ! < initial upper momentum cut in power spectrum
 !    real,    allocatable, dimension(:)  :: K_crs_paral  !< array containing parallel diffusion coefficients of all CR components
 !    real,    allocatable, dimension(:)  :: K_crs_perp   !< array containing perpendicular diffusion coefficients of all CR components
    !> \deprecated BEWARE Possible confusion: *_perp coefficients are not "perpendicular" but rather isotropic
@@ -126,7 +128,9 @@ contains
       namelist /COSMIC_RAYS/ cfl_cr, smallecr, cr_active, cr_eff, use_split, &
            &                 ncrn, gamma_crn, K_crn_paral, K_crn_perp, &
            &                 ncre, gamma_cre, K_cre_paral, K_cre_perp, &
-           &                 divv_scheme, crn_gpcr_ess, cre_gpcr_ess!, p_lo0, p_up0
+           &                 divv_scheme, crn_gpcr_ess, cre_gpcr_ess
+           
+      namelist /COSMIC_RAY_ELECTRONS/ p_lo_init, p_up_init
 
       cfl_cr     = 0.9
       smallecr   = 0.0
@@ -136,6 +140,9 @@ contains
       ncrn       = 0
       ncre       = 0
 
+      p_lo_init = 1.15e4
+      p_up_init = 1.15e5
+      
       use_split  = .true.
 
       gamma_crn(:)   = 4./3.
@@ -167,6 +174,13 @@ contains
          open(newunit=nh%lun, file=nh%tmp2, status="unknown")
          write(nh%lun,nml=COSMIC_RAYS)
          close(nh%lun)
+         call nh%namelist_errh(nh%ierrh, "COSMIC_RAY_ELECTRONS")
+         read(nh%cmdl_nml,nml=COSMIC_RAYS, iostat=nh%ierrh)
+         call nh%namelist_errh(nh%ierrh, "COSMIC_RAY_ELECTRONS", .true.)
+         open(newunit=nh%lun, file=nh%tmp2, status="unknown")
+         write(nh%lun,nml=COSMIC_RAYS)
+         close(nh%lun)
+         
          call nh%compare_namelist() ! Do not use one-line if here!
 
       endif
@@ -187,6 +201,9 @@ contains
          rbuff(2)   = smallecr
          rbuff(3)   = cr_active
          rbuff(4)   = cr_eff
+         
+         rbuff(5)   = p_lo_init   !!!
+         rbuff(6)   = p_up_init   !!!
 
          lbuff(1)   = use_split
 
@@ -229,6 +246,9 @@ contains
          cr_active  = rbuff(3)
          cr_eff     = rbuff(4)
 
+         p_lo_init  = rbuff(5)   !!!
+         p_up_init  = rbuff(6)   !!!
+         
          use_split  = lbuff(1)
 
          nn         = ibuff(ubound(ibuff, 1))    ! this must match the last rbuff() index above
@@ -300,6 +320,8 @@ contains
 !       call my_allocate(cree, ma1d)
 !       ma1d = [size(iarr_cre)]
 !       call my_allocate(cre_table,ma1d)
+     print *,'p_lo_init = ', p_lo_init, ', p_up_init = ', p_up_init
+    
 #endif /*COSM_RAY_ELECTRONS */
       
 #ifdef COSM_RAYS_SOURCES
