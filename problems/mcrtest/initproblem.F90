@@ -161,7 +161,7 @@ contains
 #ifdef COSM_RAY_ELECTRONS
 !       use initcosmicrays, only: p_lo0, p_up0
       use cresp_variables, only: p_lo, p_up
-      use cresp_crspectrum,only: cresp_init_state
+!       use cresp_crspectrum,only: cresp_init_state
 #endif /* COSM_RAY_ELECTRONS */
 
       implicit none
@@ -270,8 +270,8 @@ contains
 #endif /* COSM_RAYS */
 
 #ifdef COSM_RAY_ELECTRONS
-      cg%u(iarr_cre(cre_table(crepl),:,:,:)) = p_lo ! < initial value of low cut momentum assigned to all cg%u cells
-      cg%u(iarr_cre(cre_table(crepu),:,:,:)) = p_up ! < initial value of up cut momentum assigned to all cg%u cells
+!       cg%u(iarr_cre(cre_table(crepl),:,:,:)) = p_lo ! < initial value of low cut momentum assigned to all cg%u cells
+!       cg%u(iarr_cre(cre_table(crepu),:,:,:)) = p_up ! < initial value of up cut momentum assigned to all cg%u cells
 #endif /* COSM_RAY_ELECTRONS */
 
 

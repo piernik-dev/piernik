@@ -2,7 +2,7 @@ module cresp_crspectrum
 ! pulled by COSM_RAY_ELECTRONS
 
 !  use cresp_types, only: crel, x !uncomment crel for testing only
- use cresp_variables!,  only: ncre, u_b, u_d, c2nd, c3rd, f_init, q_init
+ use cresp_variables !,  only: ncre, u_b, u_d, c2nd, c3rd, f_init, q_init
 
  implicit none
  
@@ -109,7 +109,7 @@ module cresp_crspectrum
 
   real(kind=8)                 :: div_v = 0.0d-5 ! 0.5d-6
   real(kind=8)                 :: omega_d = 0.1d0 !0.1d0    ! frequency of div(v) oscilations
-  real(kind=8)                 :: u_b, u_d  ! magnetic and adiabatic energy density
+  real(kind=8)              :: u_b, u_d 
   real(kind=8), dimension(1:ncre)   :: n, e
   real(kind=8), dimension(0:ncre)   :: p_fix
 !   real(kind=8), dimension(0:ncre)   :: p,  f !,p_fix0
@@ -241,19 +241,19 @@ subroutine cresp_update_bin_index(dt, p_lo, p_up, p_lo_next, p_up_next)
       call p_update(dt, p_up, p_up_next)
     
 ! Locate cut-ofs before and after current timestep
-      i_lo = int(floor(dlog10(p_lo/p_fix(1))/w)) + 1
+      i_lo = int(floor(log10(p_lo/p_fix(1))/w)) + 1
       i_lo = max(0, i_lo)
       i_lo = min(i_lo, ncre - 1)
             
-      i_up = int(floor(dlog10(p_up/p_fix(1))/w)) + 2
+      i_up = int(floor(log10(p_up/p_fix(1))/w)) + 2
       i_up = max(1,i_up)
       i_up = min(i_up,ncre)
       
-      i_lo_next = int(floor(dlog10(p_lo_next/p_fix(1))/w)) + 1
+      i_lo_next = int(floor(log10(p_lo_next/p_fix(1))/w)) + 1
       i_lo_next = max(0, i_lo_next)
       i_lo_next = min(i_lo_next, ncre - 1)
       
-      i_up_next = int(floor(dlog10(p_up_next/p_fix(1))/w)) + 2
+      i_up_next = int(floor(log10(p_up_next/p_fix(1))/w)) + 2
       i_up_next = max(1,i_up_next)
       i_up_next = min(i_up_next,ncre)
       

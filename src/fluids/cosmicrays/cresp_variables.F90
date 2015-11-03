@@ -33,7 +33,7 @@ type (cresp_vector) x
   real(kind=8)                 :: w
   real(kind=8)     , parameter :: dt_ini = 0.1
   real(kind=8)     , parameter :: q_big = 10d0
-  real(kind=8)     , parameter :: cfl_cr  = 0.1d0 ! cfl factor for CR
+  real(kind=8)     , parameter :: cfl_cr  = 0.1e0 ! cfl factor for CR
 
   ! these will most probably be in types and will be modificated by the driver (piernik)
 
@@ -45,7 +45,7 @@ type (cresp_vector) x
 !   real(kind=8),dimension(1:ncre):: ndt, edt
 
   ! physical constants
-  real(kind=8), parameter      :: cnst_pi = 3.14159265358979311599796346854419d0
+  real(kind=8), parameter      :: cnst_pi = 3.14159265358979311599796346854419e0
   real(kind=8), parameter      :: cnst_c  = 1.0d0 ! speed of light
   !real(kind=8), parameter      :: cnst_me = 1.0d0 ! mass of electron
   

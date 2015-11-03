@@ -1,5 +1,5 @@
 module cresp_grid
-! pulled by COSM_RAY_ELECTRONS
+! pulled by NO_FLAG
 
 contains
 
@@ -17,7 +17,7 @@ contains
       use multigridvars,     only: ts, tot_ts, stdout
       use timer,             only: set_timer
       use func,              only: emag
-      use cresp_variables,   only: cr_table, cren, cree, crepl, crepu, u_d, u_b
+!       use cresp_variables,   only: cr_table, cren, cree, crepl, crepu, u_d, u_b
       use constants,         only: two
       
       implicit none
