@@ -7,17 +7,17 @@ module cresp_crspectrum
  implicit none
  
   integer          , parameter      :: ione    = 1
-  real(kind=8)     , parameter      :: zero    = 0.0d0
-  real(kind=8)     , parameter      :: half    = 0.5d0
-  real(kind=8)     , parameter      :: sixth   = 1.6666d-1
-  real(kind=8)     , parameter      :: one     = 1.d0
-!real(kind=8)     , parameter     :: two     = 2.d0
-  real(kind=8)     , parameter      :: three   = 3.d0
-  real(kind=8)     , parameter      :: four    = 4.d0
-  real(kind=8)     , parameter      :: five    = 5.d0
-  real(kind=8)     , parameter      :: ten     = 10.d0
-!real(kind=8)     , parameter     :: twenty  = 20.d0
-  real(kind=8)     , parameter      :: hundred = 100.d0
+  real(kind=8)     , parameter      :: zero    = 0.0e0
+  real(kind=8)     , parameter      :: half    = 0.5e0
+  real(kind=8)     , parameter      :: sixth   = 1.6666e-1
+  real(kind=8)     , parameter      :: one     = 1.e0
+!real(kind=8)     , parameter     :: two     = 2.e0
+  real(kind=8)     , parameter      :: three   = 3.e0
+  real(kind=8)     , parameter      :: four    = 4.e0
+  real(kind=8)     , parameter      :: five    = 5.e0
+  real(kind=8)     , parameter      :: ten     = 10.e0
+!real(kind=8)     , parameter     :: twenty  = 20.e0
+  real(kind=8)     , parameter      :: hundred = 100.e0
   
 !   integer, dimension(0:ncre)        :: all_edges, i_act_edges
 !   integer, dimension(1:ncre)        :: all_bins
@@ -103,15 +103,16 @@ module cresp_crspectrum
    real(kind=8), dimension(:),allocatable   :: p_next, p_upw , nflux, eflux ! , p_fix
 !    integer                           :: i_lo, i_up
 
-  real(kind=8)                 :: u_d0 = -1.5d-1 ! 5.0d-1
+  real(kind=8)                 :: u_d0 = -1.5e-1 ! 5.0e-1
   
-  real(kind=8)                 :: u_b0 = 0.0d-7 ! 1d-7 !0d0 !5d-7!
+  real(kind=8)                 :: u_b0 = 0.0e-7 ! 1e-7 !0e0 !5e-7!
 
-  real(kind=8)                 :: div_v = 0.0d-5 ! 0.5d-6
-  real(kind=8)                 :: omega_d = 0.1d0 !0.1d0    ! frequency of div(v) oscilations
+  real(kind=8)                 :: div_v = 0.0e-5 ! 0.5e-6
+  real(kind=8)                 :: omega_d = 0.1e0 !0.1e0    ! frequency of div(v) oscilations
   real(kind=8)              :: u_b, u_d 
   real(kind=8), dimension(1:ncre)   :: n, e
   real(kind=8), dimension(0:ncre)   :: p_fix
+  real(kind=8)                 :: w
 !   real(kind=8), dimension(0:ncre)   :: p,  f !,p_fix0
 !   real(kind=8)                      :: p_lo, p_up
 
@@ -666,8 +667,8 @@ subroutine ne_to_q(n, e, q)
    real(kind=8)     :: dfun1
    
    q = zero
-   dx    = 1.0d-3
-   q_err = 1.0d-12
+   dx    = 1.0e-3
+   q_err = 1.0e-12
   
    do i = 1, ncre
 !      if(is_active_bin_next(i)) then 
@@ -679,7 +680,7 @@ subroutine ne_to_q(n, e, q)
          base  = p(i)/p(i-1)                   !
          x     = q_init !q(i)
          do j = 1, 100
-            dfun1 = 0.5*(fun1(x+dx, alpha, base)-fun1(x-dx, alpha, base))/dx
+            dfun1 = half*(fun1(x+dx, alpha, base)-fun1(x-dx, alpha, base))/dx
      
             if(x .gt. q_big) then 
                q(i) = q_big ! (four*alpha-three)/(alpha-one)
@@ -701,7 +702,7 @@ subroutine ne_to_q(n, e, q)
             endif
          enddo
       else
-         q(i) = 0.0d0!zero! hundred ! when i-bin is empty 
+         q(i) = zero ! hundred ! when i-bin is empty 
       endif
 !            print *, i, is_active_bin(i), q(i)
    enddo

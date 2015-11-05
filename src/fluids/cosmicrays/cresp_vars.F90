@@ -1,5 +1,5 @@
 module vars ! & constants
-  
+! pulled by NO_FLAG
   implicit none
 
   integer          , parameter :: order = 3

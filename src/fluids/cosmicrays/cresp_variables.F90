@@ -1,5 +1,5 @@
 module cresp_variables ! & constants
-! pulled by COSM_RAY_ELECTRONS
+  
   implicit none
   integer          , parameter :: order = 3
   integer          , parameter :: ncre = 5
@@ -16,23 +16,22 @@ module cresp_variables ! & constants
 
   type cresp_vector
     real(kind=8), dimension(1:2*ncre+2) :: cresp_ind
-    real(kind=8)            :: uB
-    real(kind=8)            :: uD
+    real(kind=8)   :: uB        ! magnetic energy density
+    real(kind=8)   :: uD        ! adiabatic coeff (div_v)
   end type cresp_vector
   
 type (cresp_vector) x
 !   real(kind=8), dimension(1:2*ncre+1) :: x
   
-  real(kind=8)     , parameter :: t_max = 6.0d0 !10d0
-  real(kind=8)     , parameter :: f_init  = 1.0d0
+  real(kind=8)     , parameter :: t_max = 6.0e0 !10d0
+  real(kind=8)     , parameter :: f_init  = 1.0e0
   real(kind=8)     , parameter :: q_init  = 5.0
-  real(kind=8)                 :: p_min_fix = 1.0d4
-  real(kind=8)                 :: p_max_fix = 1.0d5
-  real(kind=8)                 :: p_lo = 1.05d4 !p_min_fix  !/10. !* 20.0
-  real(kind=8)                 :: p_up = 1.05d5 !p_max_fix ! / 2.0    !9.9d0
-  real(kind=8)                 :: w
+  real(kind=8)                 :: p_min_fix = 1.0e4
+  real(kind=8)                 :: p_max_fix = 1.0e5
+  real(kind=8)                 :: p_lo = 1.05e4 !p_min_fix  !/10. !* 20.0
+  real(kind=8)                 :: p_up = 1.05e5 !p_max_fix ! / 2.0    !9.9d0
   real(kind=8)     , parameter :: dt_ini = 0.1
-  real(kind=8)     , parameter :: q_big = 10d0
+  real(kind=8)     , parameter :: q_big = 10e0
   real(kind=8)     , parameter :: cfl_cr  = 0.1e0 ! cfl factor for CR
 
   ! these will most probably be in types and will be modificated by the driver (piernik)
@@ -46,7 +45,7 @@ type (cresp_vector) x
 
   ! physical constants
   real(kind=8), parameter      :: cnst_pi = 3.14159265358979311599796346854419e0
-  real(kind=8), parameter      :: cnst_c  = 1.0d0 ! speed of light
+  real(kind=8), parameter      :: cnst_c  = 1.0e0 ! speed of light
   !real(kind=8), parameter      :: cnst_me = 1.0d0 ! mass of electron
   
   

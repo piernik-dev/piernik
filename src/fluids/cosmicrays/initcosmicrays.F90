@@ -69,9 +69,14 @@ module initcosmicrays
    integer(kind=4), allocatable, dimension(:) :: iarr_cre !< array of indexes pointing to all CR electron components
    integer(kind=4), allocatable, dimension(:) :: iarr_crs !< array of indexes pointing to all CR components
 
-   real,    allocatable, dimension(:)  :: gamma_crs    !< array containing adiabatic indexes of all CR components
+   real,    allocatable, dimension(:)  :: gamma_crs    ! < array containing adiabatic indexes of all CR components
    real(kind=8)                        :: p_lo_init    ! < initial lower momentum cut in power spectrum
    real(kind=8)                        :: p_up_init    ! < initial upper momentum cut in power spectrum
+   real(kind=8)                        :: f_init       ! < initial value of the normalization parameter in cre energy spectrum
+   real(kind=8)                        :: q_init       ! < initial value of power law coefficient in cre energy spectrum
+   real(kind=8)                        :: p_min_fix    ! < momentum fixed grid
+   real(kind=8)                        :: p_max_fix    ! < momentum fixed grid
+
 !    real,    allocatable, dimension(:)  :: K_crs_paral  !< array containing parallel diffusion coefficients of all CR components
 !    real,    allocatable, dimension(:)  :: K_crs_perp   !< array containing perpendicular diffusion coefficients of all CR components
    !> \deprecated BEWARE Possible confusion: *_perp coefficients are not "perpendicular" but rather isotropic
@@ -127,10 +132,11 @@ contains
 
       namelist /COSMIC_RAYS/ cfl_cr, smallecr, cr_active, cr_eff, use_split, &
            &                 ncrn, gamma_crn, K_crn_paral, K_crn_perp, &
-           &                 ncre, gamma_cre, K_cre_paral, K_cre_perp, &
+           &                 gamma_cre, K_cre_paral, K_cre_perp, &
            &                 divv_scheme, crn_gpcr_ess, cre_gpcr_ess
            
-      namelist /COSMIC_RAY_ELECTRONS/ p_lo_init, p_up_init
+      namelist /COSMIC_RAY_SPECTRUM/ p_lo_init, p_up_init, f_init, q_init, ncre, p_min_fix, &
+           &                         p_max_fix
 
       cfl_cr     = 0.9
       smallecr   = 0.0
@@ -142,6 +148,9 @@ contains
 
       p_lo_init = 1.15e4
       p_up_init = 1.15e5
+      p_min_fix = 1.15e4
+      p_max_fix = 1.15e5
+      
       
       use_split  = .true.
 
@@ -174,11 +183,19 @@ contains
          open(newunit=nh%lun, file=nh%tmp2, status="unknown")
          write(nh%lun,nml=COSMIC_RAYS)
          close(nh%lun)
-         call nh%namelist_errh(nh%ierrh, "COSMIC_RAY_ELECTRONS")
-         read(nh%cmdl_nml,nml=COSMIC_RAYS, iostat=nh%ierrh)
-         call nh%namelist_errh(nh%ierrh, "COSMIC_RAY_ELECTRONS", .true.)
+         
+         open(newunit=nh%lun, file=nh%tmp1, status="unknown")
+         write(nh%lun,nml=COSMIC_RAY_SPECTRUM)
+         close(nh%lun)
+         open(newunit=nh%lun, file=nh%par_file)
+         nh%errstr=""
+         read(unit=nh%lun, nml=COSMIC_RAY_SPECTRUM, iostat=nh%ierrh, iomsg=nh%errstr)
+         close(nh%lun)
+         call nh%namelist_errh(nh%ierrh, "COSMIC_RAY_SPECTRUM")
+         read(nh%cmdl_nml,nml=COSMIC_RAY_SPECTRUM, iostat=nh%ierrh)
+         call nh%namelist_errh(nh%ierrh, "COSMIC_RAY_SPECTRUM", .true.)
          open(newunit=nh%lun, file=nh%tmp2, status="unknown")
-         write(nh%lun,nml=COSMIC_RAYS)
+         write(nh%lun,nml=COSMIC_RAY_SPECTRUM)
          close(nh%lun)
          
          call nh%compare_namelist() ! Do not use one-line if here!
@@ -204,6 +221,10 @@ contains
          
          rbuff(5)   = p_lo_init   !!!
          rbuff(6)   = p_up_init   !!!
+         rbuff(7)   = f_init      !!!
+         rbuff(8)   = q_init      !!!
+         rbuff(9)   = p_min_fix
+         rbuff(10)  = p_max_fix
 
          lbuff(1)   = use_split
 
@@ -248,6 +269,10 @@ contains
 
          p_lo_init  = rbuff(5)   !!!
          p_up_init  = rbuff(6)   !!!
+         f_init     = rbuff(7)   !!!
+         q_init     = rbuff(8)   !!!
+         p_min_fix  = rbuff(9)   !!!
+         p_max_fix  = rbuff(10)  !!!
          
          use_split  = lbuff(1)
 
@@ -320,7 +345,11 @@ contains
 !       call my_allocate(cree, ma1d)
 !       ma1d = [size(iarr_cre)]
 !       call my_allocate(cre_table,ma1d)
+     print *,'ncrn = ', ncrn
      print *,'p_lo_init = ', p_lo_init, ', p_up_init = ', p_up_init
+     print *,'f_init= ', f_init, ', q_init = ', q_init
+     print *,'p_min_fix = ', p_min_fix, ', p_max_fix = ', p_max_fix
+     print *,'ncre = ', ncre
     
 #endif /*COSM_RAY_ELECTRONS */
       

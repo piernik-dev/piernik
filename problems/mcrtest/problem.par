@@ -69,13 +69,17 @@
     K_crn_perp(1)  = 0     ! isotropic
     K_crn_perp(2)  = 0
 !    K_crn_perp(3)  = 0
-    ncre        = 5
     use_split   = .false.
  /   
   
- $COSMIC_RAY_ELECTRONS
+ $COSMIC_RAY_SPECTRUM
+    ncre        = 5      ! number of fixed spectrum bins between
     p_lo_init = 1.05e4   ! initial lower cut momentum
     p_up_init = 1.05e5   ! initial upper cut momentum
+    f_init    = 1.0e0   ! < initial value of the normalization parameter in cre energy spectrum
+    q_init    = 5.0e0   ! < initial value of power law coefficient in cre enrgy spectrum
+    p_min_fix = 1.05e4  ! momentum fixed grid
+    p_max_fix = 1.05e5  ! momentum fixed grid
  /
 
  $CR_SPECIES
