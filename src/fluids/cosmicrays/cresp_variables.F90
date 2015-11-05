@@ -1,5 +1,6 @@
 module cresp_variables ! & constants
-  
+! pulled by COSM_RAY_ELECTRONS
+
   implicit none
   integer          , parameter :: order = 3
   integer          , parameter :: ncre = 5

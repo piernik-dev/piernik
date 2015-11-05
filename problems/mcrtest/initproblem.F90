@@ -161,7 +161,7 @@ contains
 #ifdef COSM_RAY_ELECTRONS
      use initcosmicrays, only: q_init, f_init, p_lo_init, p_up_init, p_min_fix, p_max_fix, ncre
 !       use cresp_variables, only: p_lo, p_up
-     use cresp_crspectrum,only: cresp_init_state
+     use cresp_crspectrum, only: cresp_init_state
 #endif /* COSM_RAY_ELECTRONS */
 
       implicit none
@@ -220,7 +220,11 @@ contains
 #endif /* !ISO */
 
 #ifdef COSM_RAYS
-         print *, 'flind crs all = ' , flind%crs%all
+!          print *, 'flind crs all = ' , flind%crs%all  ! diagnostic output, to be removed
+!          print*,'zdim lo, zdim hi = ', zdim, LO, zdim, HI 
+!          print *,'cg%lhn(zdim,LO) = ', cg%lhn(zdim,LO)
+!          print *, 'cg%lhn(xdim,LO/HI) = ',cg%lhn(xdim,LO), cg%lhn(xdim,HI)
+!          print *, 'cg%lhn(ydim,LO/HI) = ',cg%lhn(ydim,LO), cg%lhn(ydim,HI) ! diagnostic output, to be removed
          do icr = 1, flind%crs%all
             cg%u(iarr_crs(icr), :, :, :) =  beta_cr*fl%cs2 * cg%u(fl%idn, :, :, :)/(gamma_crn(icr)-1.0)
          enddo

@@ -125,7 +125,7 @@ contains
 
 !----- main subroutine -----
 
-subroutine cresp_crsupdate(dt, args)
+subroutine cresp_crs_update(dt, args)
 
  implicit none
    real(kind=8), intent(in)  :: dt
@@ -220,9 +220,9 @@ subroutine cresp_crsupdate(dt, args)
    
 
    call deallocate_active_arrays
-      call deallocate_allocatable
+   call deallocate_allocatable
    
-end subroutine cresp_crsupdate
+end subroutine cresp_crs_update
 
 
 !-------------------------------------------------------------------------------------------------
