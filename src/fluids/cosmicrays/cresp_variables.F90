@@ -33,14 +33,14 @@ module cresp_variables ! & constants
 type (cresp_vector) x
 !   real(kind=8), dimension(1:2*ncre+1) :: x
   
-  real(kind=8)     , parameter :: t_max = 6.0e0 !10d0
+!   real(kind=8)     , parameter :: t_max = 6.0e0 !10d0
 !   real(kind=8)     , parameter :: f_init  = 1.0e0
 !   real(kind=8)     , parameter :: q_init  = 5.0
 !   real(kind=8)                 :: p_min_fix = 1.0e4
 !   real(kind=8)                 :: p_max_fix = 1.0e5
-  real(kind=8)                 :: p_lo = 1.05e4 !p_min_fix  !/10. !* 20.0
-  real(kind=8)                 :: p_up = 1.05e5 !p_max_fix ! / 2.0    !9.9d0
-  real(kind=8)     , parameter :: dt_ini = 0.1
+!   real(kind=8)                 :: p_lo = 1.05e4 !p_min_fix  !/10. !* 20.0
+!   real(kind=8)                 :: p_up = 1.05e5 !p_max_fix ! / 2.0    !9.9d0
+!   real(kind=8)     , parameter :: dt_ini = 0.1
   real(kind=8)     , parameter :: q_big = 10e0 ! must be consulted, whether we move it to cresp_crspectrum or make it user defined
   real(kind=8)     , parameter :: cfl_cr  = 0.1e0 ! cfl factor for CR ! it is not used in the module, just the driver (dt calculation)
 
@@ -50,7 +50,7 @@ type (cresp_vector) x
 
   integer                      :: c2nd, c3rd
 !   real(kind=8)                 :: p_lo_next, p_up_next  ! momemntum for spectrum cut-offs
-  real(kind=8)                 :: n_tot, n_tot0, e_tot, e_tot0
+
 !   real(kind=8),dimension(1:ncre):: ndt, edt
 
   ! physical constants

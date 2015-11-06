@@ -3,7 +3,7 @@ module cresp_crspectrum
 
 !  use cresp_types, only: crel, x !uncomment crel for testing only
  use cresp_variables !,  only: ncre, u_b, u_d, c2nd, c3rd, f_init, q_init
- use initcosmicrays, only: p_min_fix, p_max_fix, f_init, q_init
+ use initcosmicrays, only: p_min_fix, p_max_fix, f_init, q_init, p_lo_init, p_up_init
  use constants,      only: pi, fpi, zero, one, two, half
 
  implicit none
@@ -96,13 +96,14 @@ module cresp_crspectrum
    real(kind=8), allocatable, dimension(:) :: r !,n, e
    real(kind=8), allocatable, dimension(:) :: q  !dimension(1:ncre)   :: q
 !    real(kind=8), allocatable, dimension(:), protected :: p_next, p_fix, p_upw , nflux, eflux!, p_lo, p_up
-   real(kind=8)                      :: p_lo_next, p_up_next
+   real(kind=8)                      :: p_lo_next, p_up_next, p_lo, p_up
    integer                           :: i_lo
    integer                           :: i_up
    real(kind=8), dimension(:), allocatable   :: p !(0:ncre)   :: p
    real(kind=8), dimension(:), allocatable :: f !(0:ncre)   :: f
    
    real(kind=8), dimension(:),allocatable   :: p_next, p_upw , nflux, eflux ! , p_fix
+   real(kind=8)                             :: n_tot, n_tot0, e_tot, e_tot0
 !    integer                           :: i_lo, i_up
 
   real(kind=8)                 :: u_d0 = -1.5e-1 ! 5.0e-1
@@ -205,6 +206,7 @@ subroutine cresp_crs_update(dt, args)
    print '(A5, 11E18.9)', "    f", f
 
    print *, " "
+     
 #endif /* VERBOSE */
 
 ! uncomment only for testing:
@@ -399,8 +401,8 @@ subroutine cresp_update_bin_index(dt, p_lo, p_up, p_lo_next, p_up_next)
       w  = (log10(p_max_fix/p_min_fix))/dble(ncre-2)
 
       ! reading initial values of p_lo and p_up 
-      p_lo = p_lo
-      p_up = p_up 
+      p_lo = p_lo_init
+      p_up = p_up_init
             
       p_fix(1:ncre-1)  =  p_min_fix*ten**(w*dble(all_edges(1:ncre-1)-1))
       p_fix(0)    = zero     ! initial array of p used to identify fixed edges
@@ -912,4 +914,25 @@ subroutine ne_to_q(n, e, q)
   
   end subroutine deallocate_all_allocatable
   
+    subroutine cresp_accuracy_test(t)
+     implicit none
+     real(kind=8), intent(in)   :: t 
+
+   
+   print *, " -------------------------- "
+
+   print*, 'Accuracy test for adabatic compression/expansion:'
+   print*, 'n_tot = ', n_tot, 'n_tot0 = ', n_tot0, 'rel error = ', (n_tot - n_tot0)/n_tot0
+   print*, 'e_tot = ', e_tot, 'e_anal = ', e_tot0*exp(-u_d0*t), 'rel error = ', (e_tot-e_tot0*exp(-u_d0*t))/(e_tot0*exp(-u_d0*t))
+   print*
+   print *, '=================================='
+   print*,  '! End of iteration               !'
+   print *, '=================================='
+   print*
+   print*
+   print*,'--------------------'
+   print *,''
+    
+   end subroutine cresp_accuracy_test
+   
 end module cresp_crspectrum
