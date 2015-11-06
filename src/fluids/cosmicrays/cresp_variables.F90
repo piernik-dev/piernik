@@ -14,6 +14,15 @@ module cresp_variables ! & constants
   end type bin_old
 
   type(bin_old) crel
+  
+!   type cg_crs_element
+!     real(kind=8), dimension(1:ncre)  :: n
+!     real(kind=8), dimension(1:ncre)  :: e
+!     real(kind=8)                    :: p_lo
+!     real(kind=8)                    :: p_up
+!     real(kind=8)   :: uB        ! magnetic energy density
+!     real(kind=8)   :: uD        ! adiabatic coeff (div_v)
+!   end type cg_crs_element
 
   type cresp_vector
     real(kind=8), dimension(1:2*ncre+2) :: cresp_ind
@@ -25,15 +34,15 @@ type (cresp_vector) x
 !   real(kind=8), dimension(1:2*ncre+1) :: x
   
   real(kind=8)     , parameter :: t_max = 6.0e0 !10d0
-  real(kind=8)     , parameter :: f_init  = 1.0e0
-  real(kind=8)     , parameter :: q_init  = 5.0
-  real(kind=8)                 :: p_min_fix = 1.0e4
-  real(kind=8)                 :: p_max_fix = 1.0e5
+!   real(kind=8)     , parameter :: f_init  = 1.0e0
+!   real(kind=8)     , parameter :: q_init  = 5.0
+!   real(kind=8)                 :: p_min_fix = 1.0e4
+!   real(kind=8)                 :: p_max_fix = 1.0e5
   real(kind=8)                 :: p_lo = 1.05e4 !p_min_fix  !/10. !* 20.0
   real(kind=8)                 :: p_up = 1.05e5 !p_max_fix ! / 2.0    !9.9d0
   real(kind=8)     , parameter :: dt_ini = 0.1
-  real(kind=8)     , parameter :: q_big = 10e0
-  real(kind=8)     , parameter :: cfl_cr  = 0.1e0 ! cfl factor for CR
+  real(kind=8)     , parameter :: q_big = 10e0 ! must be consulted, whether we move it to cresp_crspectrum or make it user defined
+  real(kind=8)     , parameter :: cfl_cr  = 0.1e0 ! cfl factor for CR ! it is not used in the module, just the driver (dt calculation)
 
   ! these will most probably be in types and will be modificated by the driver (piernik)
 
@@ -45,7 +54,7 @@ type (cresp_vector) x
 !   real(kind=8),dimension(1:ncre):: ndt, edt
 
   ! physical constants
-  real(kind=8), parameter      :: cnst_pi = 3.14159265358979311599796346854419e0
+!   real(kind=8), parameter      :: cnst_pi = 3.14159265358979311599796346854419e0
   real(kind=8), parameter      :: cnst_c  = 1.0e0 ! speed of light
   !real(kind=8), parameter      :: cnst_me = 1.0d0 ! mass of electron
   

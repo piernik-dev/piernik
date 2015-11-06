@@ -150,6 +150,8 @@ contains
       p_up_init = 1.15e5
       p_min_fix = 1.15e4
       p_max_fix = 1.15e5
+      f_init    = 1.0e0
+      q_init    = 5.0e0
       
       
       use_split  = .true.
@@ -345,12 +347,7 @@ contains
 !       call my_allocate(cree, ma1d)
 !       ma1d = [size(iarr_cre)]
 !       call my_allocate(cre_table,ma1d)
-     print *,'ncrn = ', ncrn
-     print *,'p_lo_init = ', p_lo_init, ', p_up_init = ', p_up_init
-     print *,'f_init= ', f_init, ', q_init = ', q_init
-     print *,'p_min_fix = ', p_min_fix, ', p_max_fix = ', p_max_fix
-     print *,'ncre = ', ncre
-    
+     
 #endif /*COSM_RAY_ELECTRONS */
       
 #ifdef COSM_RAYS_SOURCES

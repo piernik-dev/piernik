@@ -3,14 +3,16 @@ module cresp_crspectrum
 
 !  use cresp_types, only: crel, x !uncomment crel for testing only
  use cresp_variables !,  only: ncre, u_b, u_d, c2nd, c3rd, f_init, q_init
+ use initcosmicrays, only: p_min_fix, p_max_fix, f_init, q_init
+ use constants,      only: pi, fpi, zero, one, two, half
 
  implicit none
- 
-  integer          , parameter      :: ione    = 1
-  real(kind=8)     , parameter      :: zero    = 0.0e0
-  real(kind=8)     , parameter      :: half    = 0.5e0
+     
+!   integer          , parameter      :: ione    = 1
+!   real(kind=8)     , parameter      :: zero    = 0.0e0
+!   real(kind=8)     , parameter      :: half    = 0.5e0
   real(kind=8)     , parameter      :: sixth   = 1.6666e-1
-  real(kind=8)     , parameter      :: one     = 1.e0
+!   real(kind=8)     , parameter      :: one     = 1.e0
 !real(kind=8)     , parameter     :: two     = 2.e0
   real(kind=8)     , parameter      :: three   = 3.e0
   real(kind=8)     , parameter      :: four    = 4.e0
@@ -492,7 +494,7 @@ subroutine cresp_update_bin_index(dt, p_lo, p_up, p_lo_next, p_up_next)
       real(kind=8), dimension(1:ncre)      :: fq_to_e
 
       fq_to_e = 0.0d0
-      e_bins = four*cnst_pi*cnst_c*f_l(bins)*p_l(bins)**4
+      e_bins = fpi*cnst_c*f_l(bins)*p_l(bins)**4
       where(q(bins) .ne. four) 
          e_bins = e_bins*((p_r(bins)/p_l(bins))**(four-q(bins)) - one)/(four - q(bins))
       elsewhere
@@ -522,7 +524,7 @@ subroutine cresp_update_bin_index(dt, p_lo, p_up, p_lo_next, p_up_next)
       
       n_bins = zero
       
-      n_bins = four*cnst_pi*f_l(bins)*p_l(bins)**3
+      n_bins = fpi*f_l(bins)*p_l(bins)**3
       where(q(bins) .ne. three) 
          n_bins = n_bins*((p_r(bins)/p_l(bins))**(three-q(bins)) - one)/(three - q(bins))
       elsewhere
@@ -577,7 +579,7 @@ subroutine cresp_update_bin_index(dt, p_lo, p_up, p_lo_next, p_up_next)
       nflux  = zero
       eflux  = zero
    
-      dn_upw(ce) = four*cnst_pi*fimh(ce)*pimh(ce)**3
+      dn_upw(ce) = fpi*fimh(ce)*pimh(ce)**3
       where(qi(ce) .ne. three) 
          dn_upw(ce) = dn_upw(ce)*((p_upw(ce)/pimh(ce))**(three-qi(ce)) - one)/(three - qi(ce))
       elsewhere
@@ -585,7 +587,7 @@ subroutine cresp_update_bin_index(dt, p_lo, p_up, p_lo_next, p_up_next)
       end where
       nflux(ce) = - dn_upw(ce)
             
-      de_upw(ce) = four*cnst_pi*cnst_c*fimh(ce)*pimh(ce)**4
+      de_upw(ce) = fpi*cnst_c*fimh(ce)*pimh(ce)**4
       where(qi(ce) .ne. four) 
          de_upw(ce) = de_upw(ce)*((p_upw(ce)/pimh(ce))**(four-qi(ce)) - one)/(four - qi(ce))
       elsewhere
@@ -598,7 +600,7 @@ subroutine cresp_update_bin_index(dt, p_lo, p_up, p_lo_next, p_up_next)
          eflux(i_up) = -e(i_up  )
       endif
          
-      dn_upw(he) = four*cnst_pi*fimth(he)*p_upw(he)**3*(pimth(he)/p_upw(he))**qim1(he)
+      dn_upw(he) = fpi*fimth(he)*p_upw(he)**3*(pimth(he)/p_upw(he))**qim1(he)
       where(qim1(he) .ne. three) 
          dn_upw(he) = dn_upw(he)*((pimh(he)/p_upw(he))**(three-qim1(he)) - one)/(three - qim1(he))
       elsewhere
@@ -606,7 +608,7 @@ subroutine cresp_update_bin_index(dt, p_lo, p_up, p_lo_next, p_up_next)
       end where
       nflux(he) = dn_upw(he)
             
-      de_upw(he) = four*cnst_pi*cnst_c*fimth(he)*p_upw(he)**4*(pimth(he)/p_upw(he))**qim1(he)
+      de_upw(he) = fpi*cnst_c*fimth(he)*p_upw(he)**4*(pimth(he)/p_upw(he))**qim1(he)
       where(qi(he) .ne. four) 
          de_upw(he) = de_upw(he)*((pimh(he)/p_upw(he))**(four-qim1(he)) - one)/(four - qim1(he))
       elsewhere
@@ -739,7 +741,7 @@ subroutine ne_to_q(n, e, q)
       real(kind=8), dimension(0:ncre)     :: nq_to_f
       
       f_bins = zero
-      f_bins = n(bins) / (four*cnst_pi*p_l(bins)**3)
+      f_bins = n(bins) / (fpi*p_l(bins)**3)
       where(q(bins) .ne. three) 
          f_bins = f_bins*(three - q(bins)) /((p_r(bins)/p_l(bins))**(three-q(bins)) - one)
       elsewhere

@@ -36,13 +36,13 @@ contains
          do j = cg%lhn(ydim,LO), cg%lhn(ydim,HI)
             do i = cg%lhn(xdim,LO), cg%lhn(xdim,HI)
               
+!               cresp_vector%cresp_ind(1:ncre) = cg%u()
 !             u_b = emag = pmag(bx(i,j,k), by(i,j,k), bz(i,j,k))
 !             u_d = div_v
 #ifdef VERBOSE
               print *, 'Output of cosmic ray electrons module for grid cell with coordinates i,j,k:', i, j, k
 #endif /* VERBOSE */
-!               call cell_cresp_update(two*dt,)
-!             call cresp_crsupdate(2*cresp_dt, cg%u(cr_table(cren)), cg%u(cr_table(cree)), cg%u(cr_table(crepl), &
+!             call cresp_crs_update(2*cresp_dt, cg%u(cr_table(cren)), cg%u(cr_table(cree)), cg%u(cr_table(crepl), &
 !             cg%u(cr_table(crepu), div_v ,emag(cg%b(i), cg%b(j), cg%b(k)) ! most likely 2 sweeps in one dt are executed in one step, we will test whether it's true or not
           
           enddo
@@ -51,4 +51,24 @@ contains
 
       
    end subroutine grid_cresp_update
+   
+   subroutine grid_cresp_initialization
+   
+       do k = cg%lhn(zdim,LO), cg%lhn(zdim,HI)
+           do j = cg%lhn(ydim,LO), cg%lhn(ydim,HI)
+              do i = cg%lhn(xdim,LO), cg%lhn(xdim,HI)
+              
+!             u_b = emag = pmag(bx(i,j,k), by(i,j,k), bz(i,j,k))
+!             u_d = div_v
+#ifdef VERBOSE
+              print *, 'Output of cosmic ray electrons module for grid cell with coordinates i,j,k:', i, j, k
+#endif /* VERBOSE */
+!               call cresp_init_state(two*dt,)
+          
+             enddo
+          enddo
+       enddo
+   
+   end subroutine grid_cresp_initialization
+   
 end module cresp_grid
