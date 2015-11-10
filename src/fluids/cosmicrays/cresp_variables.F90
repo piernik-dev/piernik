@@ -1,10 +1,12 @@
 module cresp_variables ! & constants
 ! pulled by COSM_RAY_ELECTRONS
-
-  implicit none
-  integer          , parameter :: order = 3
+  
+  
+  integer          , parameter :: cresp_taylor_order = 3 ! TODO - include somewhere in piernik
   integer          , parameter :: ncre = 5
-
+  
+  integer                      :: ind_e_beg, ind_e_end, ind_n_beg, ind_n_end, ind_p_lo, ind_p_up
+  
   type bin_old
     integer                           :: i_lo
     integer                           :: i_up
@@ -62,5 +64,24 @@ type (cresp_vector) x
   ! used in driver and crspectrum module
 
 !   real(kind=8), dimension(:),allocatable   :: n, e, r
+contains
+    subroutine cresp_indexes
+      use constants,    only: I_ONE, I_TWO
+      use fluidtypes,   only: var_numbers
+
+      implicit none
+  type(var_numbers)            :: flind
+     
+     ind_n_beg = flind%cre%beg
+     ind_n_end = flind%cre%beg + ncre
+     ind_e_beg = ind_n_end + I_ONE
+     ind_e_end = ind_n_end + ncre
+  
+     ind_p_lo = flind%cre%beg+I_TWO*ncre+I_ONE
+     ind_p_up = ind_p_lo + I_ONE
+!      print *,'ind_p_lo, ind_p_up = ', ind_p_lo, ind_p_up
+    
+   end subroutine cresp_indexes
+
 
 end module cresp_variables

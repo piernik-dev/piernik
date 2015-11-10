@@ -162,6 +162,7 @@ contains
      use initcosmicrays, only: q_init, f_init, p_lo_init, p_up_init, p_min_fix, p_max_fix, ncre, ncrn
 !       use cresp_variables, only: p_lo, p_up
      use cresp_crspectrum, only: cresp_init_state
+     use cresp_variables, only: cresp_indexes, ind_p_lo, ind_p_up
 #endif /* COSM_RAY_ELECTRONS */
 
       implicit none
@@ -274,13 +275,15 @@ contains
 #endif /* COSM_RAYS */
 
 #ifdef COSM_RAY_ELECTRONS
+      print *, ind_p_lo, ind_p_up
+      call cresp_indexes
       if (ncre > 0) then
-         cg%u(5+ncrn+2*ncre+1, :, :, :) = p_lo_init ! ? iarr_cre(2*ncre+1)? < initial value of low cut momentum assigned to all cg%u cells 
-         cg%u(5+ncrn+2*ncre+2, :, :, :) = p_up_init ! < initial value of up cut momentum assigned to all cg%u cells
+         cg%u(ind_p_lo, :, :, :) = p_lo_init ! ? iarr_cre(2*ncre+1)? < initial value of low cut momentum assigned to all cg%u cells 
+         cg%u(ind_p_up, :, :, :) = p_up_init ! < initial value of up cut momentum assigned to all cg%u cells
       endif
 #endif /* COSM_RAY_ELECTRONS */
 
-!       print *, 'in domain cell(2,2,0) p_lo_init = cg%u(:, -24, -24, 0) = ',cg%u(:, -2, -2, 0)  ! just some check, to be removed
+       print *, 'in domain cell(2,2,0) p_lo_init = cg%u(:, -24, -24, 0) = ',cg%u(:, -2, -2, 0)  ! just some check, to be removed
 
    end subroutine problem_initial_conditions
 

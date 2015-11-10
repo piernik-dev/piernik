@@ -411,6 +411,9 @@ contains
       flind%crn%pos = flind%components
       if (flind%cre%all  /= 0) flind%components = flind%components + I_ONE
       flind%cre%pos = flind%components
+      print *,'flind%crn%end = ', flind%crn%end
+      print *,'flind%cre%beg = ', flind%cre%beg
+      print *,'flind%cre%end = ', flind%cre%end
 
    end subroutine cosmicray_index
 
