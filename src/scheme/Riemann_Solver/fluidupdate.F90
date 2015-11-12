@@ -121,20 +121,28 @@ contains
        !OPT: can check if the size is already right and avoid reallocation on AMR domains
        allocate(u1d(size(cgl%cg%u,1),cgl%cg%n_(ddim)), b_cc1d(xdim:zdim, cgl%cg%n_(ddim)))
 
+       b_cc1d = 0.
+       
        do i2 = cgl%cg%lhn(pdims(ddim,ORTHO2),LO), cgl%cg%lhn(pdims(ddim,ORTHO2),HI)
           do i1 = cgl%cg%lhn(pdims(ddim, ORTHO1), LO), cgl%cg%lhn(pdims(ddim, ORTHO1), HI)
              pu => cgl%cg%w(wna%fi)%get_sweep(ddim,i1,i2)
 
+             !do f=lbound(pu, 2), ubound(pu, 2)
+             !   write(*,*) "-pu(:,",f,")",pu(:,f)
+             !end do
              !b1d => cgl%cg%w(wna%bi)%get_sweep(ddim,i1,i2)
              ! WARNING: what position of the b components do we expect? If cell-centered then interpolation is required above
- write(*,*)"sweep",ddim, i1,i2,dt
+ !write(*,*)"sweep",ddim, i1,i2,dt
              u1d(iarr_all_swp(ddim,:),:) = pu(:,:)
 
              !call rk2(n,u1d,b1d,bb1d,cs2,cdim,dt/cgl%cg%dl(ddim))
              call rk2(u1d,b_cc1d,ddim, dt/cgl%cg%dl(ddim))
 
              pu(:,:) = u1d(iarr_all_swp(ddim,:),:)
-
+             !do f=lbound(pu, 2), ubound(pu, 2)
+             !   write(*,*) "+pu(:,",f,")",pu(:,f)
+             !end do
+             
           enddo
        enddo
 
@@ -229,7 +237,7 @@ contains
     real, dimension(xdim:zdim,size(u,2)), target         :: b_ccl, b_ccr, mag_cc
     real, dimension(xdim:zdim,size(u,2)), target :: db
     real, dimension(size(u,1),size(u,2))         :: u_predict
-    real, dimension(size(u,1),size(u,2)), target :: flx, ql, qr, du, ul, ur
+    real, dimension(size(u,1),size(u,2)), target :: flx, ql, qr, du, ul, ur !, u_l, u_r
     real, dimension(:,:), pointer                :: p_flx, p_bcc, p_bccl, p_bccr, p_ql, p_qr
     integer                                      :: nx, i
     
@@ -240,6 +248,8 @@ contains
     du  = calculate_slope_vanleer(u)
     ul  = u - half*du
     ur  = u + half*du
+    write(*,*) "ul",ul(:,:)
+    write(*,*) "ur",ur(:,:)
 
 
     db  = calculate_slope_vanleer(b_cc)
@@ -249,13 +259,17 @@ contains
     mag_cc = b_cc
 
     flx  = fluxes(ul,b_ccl,ddim) - fluxes(ur,b_ccr,ddim)
+    write(*,*) "flx", flx(:,:)
 
    
 
     ql = utoq(ul,b_ccl)
     qr = utoq(ur,b_ccr)
 
-     u_predict  =  u + dtodx*flx(:,:)
+    u_predict  =  u + dtodx*flx(:,:)
+    !write(*,*) "u_predict", u_predict
+    !u_l = ur + half*dtodx*flx   ! (14.34) + (14.35)
+    !u_r(:,1:nx-1) = ul(:,2:nx) + half*dtodx*flx(:,2:nx); u_r(:,nx) = u_r(:,nx-1)
     
     do i = 1, flind%fluids
        fl    => flind%all_fluids(i)%fl
@@ -270,6 +284,9 @@ contains
 
     !u  =  half*(u0 + u_predict + dtodx*flx(:,:))
     u  =  half*(u + u_predict + dtodx*flx(:,:))
+    !u(:,2:nx) = u(:,2:nx) + dtodx*(flx(:,1:nx-1) - flx(:,2:nx))
+    !u(:,1)  = u(:,2); u(:,nx) = u(:,nx-1)
+    !write(*,*) "u", u
 
     
   end subroutine rk2

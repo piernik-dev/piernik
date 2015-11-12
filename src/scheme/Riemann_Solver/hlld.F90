@@ -1,5 +1,4 @@
-!
-! PIERNIK Code Copyright (C) 2006 Michal Hanasz
+! Code Copyright (C) 2006 Michal Hanasz
 !
 !    This file is part of PIERNIK code.
 !
@@ -218,26 +217,33 @@ contains
 
     ! SOLVER
 
-   
+    !c_fastl = 2.0
+    !c_fastr = 4.0
 
     do i = 1,n
 
 
        gampr_l  =  gamma*ul(ien,i)
        gampr_r  =  gamma*ur(ien,i)
-       write(*,*) gampr_l, gampr_r, i,"gam"
+       !write(*,*) gampr_l, gampr_r, i,"gam"
        c_fastl  =   (gampr_l+(b_ccl(xdim,i)**2+b_ccl(ydim,i)**2+b_ccl(zdim,i)**2))  &
                                        + sqrt((gampr_l+(b_ccl(xdim,i)**2+b_ccl(ydim,i)**2+b_ccl(zdim,i)**2))**2-(four*gampr_l*b_ccl(xdim,i)**2))
       
-       write(*,*) c_fastl, ul(idn,i)
+       !write(*,*) c_fastl, ul(idn,i)
+       !c_fastl  =   (gampr_l) + sqrt((gampr_l)**2)
        c_fastl = sqrt(half*c_fastl/ul(idn,i))
+       !c_fastl = sqrt(half*c_fastl)
        
        c_fastr  =   (gampr_r+(b_ccr(xdim,i)**2+b_ccr(ydim,i)**2+b_ccr(zdim,i)**2))  &
-                                                   + sqrt((gampr_r+(b_ccr(xdim,i)**2+b_ccr(ydim,i)**2+b_ccr(zdim,i)**2))**2-(four*gampr_r*b_ccr(xdim,i)**2))
+                                       + sqrt((gampr_r+(b_ccr(xdim,i)**2+b_ccr(ydim,i)**2+b_ccr(zdim,i)**2))**2-(four*gampr_r*b_ccr(xdim,i)**2))
+
+       !c_fastr = (gampr_r) + sqrt((gampr_r)**2)
 
        c_fastr  =  sqrt(half*c_fastr/ur(idn,i))
+       !c_fastr = sqrt(half*c_fastr)
 
-       
+       !c_fastl = 2.0
+       !c_fastr = 4.0
 
        ! Eq. (67)
     
