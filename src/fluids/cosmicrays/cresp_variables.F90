@@ -50,7 +50,7 @@ type (cresp_vector) x
 
 
 
-  integer                      :: c2nd, c3rd
+  integer                      :: taylor_coeff_2nd, taylor_coeff_3rd
 !   real(kind=8)                 :: p_lo_next, p_up_next  ! momemntum for spectrum cut-offs
 
 !   real(kind=8),dimension(1:ncre):: ndt, edt
@@ -63,25 +63,26 @@ type (cresp_vector) x
   
   ! used in driver and crspectrum module
 
-!   real(kind=8), dimension(:),allocatable   :: n, e, r
-contains
-    subroutine cresp_indexes
-      use constants,    only: I_ONE, I_TWO
-      use fluidtypes,   only: var_numbers
-
-      implicit none
-  type(var_numbers)            :: flind
-     
-     ind_n_beg = flind%cre%beg
-     ind_n_end = flind%cre%beg + ncre
-     ind_e_beg = ind_n_end + I_ONE
-     ind_e_end = ind_n_end + ncre
-  
-     ind_p_lo = flind%cre%beg+I_TWO*ncre+I_ONE
-     ind_p_up = ind_p_lo + I_ONE
+! !   real(kind=8), dimension(:),allocatable   :: n, e, r
+! contains
+!     subroutine cresp_index(flind)
+!       use constants,    only: I_ONE, I_TWO
+!       use fluidtypes,   only: var_numbers
+! 
+!       implicit none
+!       type(var_numbers), intent(inout)  :: flind
+!      
+!      ind_n_beg = flind%cre%beg
+!      ind_n_end = flind%cre%beg + ncre
+!      ind_e_beg = ind_n_end + I_ONE
+!      ind_e_end = ind_n_end + ncre
+!   
+!      ind_p_lo = flind%cre%beg+I_TWO*ncre+I_ONE
+!      ind_p_up = ind_p_lo + I_ONE
+!      print *,'flind%cre%beg = ', flind%cre%beg
 !      print *,'ind_p_lo, ind_p_up = ', ind_p_lo, ind_p_up
-    
-   end subroutine cresp_indexes
+!     
+!    end subroutine cresp_index
 
 
 end module cresp_variables

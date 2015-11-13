@@ -476,8 +476,8 @@ subroutine cresp_update_bin_index(dt, p_lo, p_up, p_lo_next, p_up_next)
    call deallocate_active_arrays
    call deallocate_allocatable
    
-   print *,'coefficients: c2nd = ',c2nd, ', c3rd = ', c3rd
-   print *
+!    print *,'coefficients: c2nd = ',c2nd, ', c3rd = ', c3rd
+!    print *
 !   stop
    
     end subroutine cresp_init_state
@@ -783,7 +783,8 @@ subroutine ne_to_q(n, e, q)
 !     real(kind=8), intent(in)  :: u_d,u_b
 
    !p_rch =  (u_b*p + u_d) * dt !!! b_sync_ic = 8.94e-25*(u_b+u_cmb)*gamma_l**2 ! erg/cm
-    p_rch = (- u_d - p * u_b ) *  dt  + c2nd *( half*u_d**2 + u_b**2 * p**2)*dt**2 + c3rd *(-sixth*u_d**3 - u_b**3 * p**3)*dt**3 ! analitycally correct solution
+    p_rch = (- u_d - p * u_b ) *  dt  + taylor_coeff_2nd *( half*u_d**2 + u_b**2 * p**2)*dt**2 &
+                                     + taylor_coeff_3rd *(-sixth*u_d**3 - u_b**3 * p**3)*dt**3 ! analitycally correct solution
    
 
   end function
@@ -798,7 +799,8 @@ subroutine ne_to_q(n, e, q)
 !     real(kind=8), intent(in)  :: u_b, u_d
    
    !p_upw_rch =  (u_b*p + u_d) * dt      !!! b_sync_ic = 8.94e-25*(u_b+u_cmb)*gamma_l**2 ! erg/cm
-    p_upw_rch = (u_d + p * u_b) * dt + c2nd * (half*u_d**2 + u_b**2 * p**2)*dt**2 + c3rd *(sixth*u_d**3 + u_b**3 * p**3)*dt**3 ! analitycally correct
+    p_upw_rch = (u_d + p * u_b) * dt + taylor_coeff_2nd * (half*u_d**2 + u_b**2 * p**2)*dt**2 &
+                                     + taylor_coeff_3rd *(sixth*u_d**3 + u_b**3 * p**3)*dt**3 ! analitycally correct
    
 
   end function
