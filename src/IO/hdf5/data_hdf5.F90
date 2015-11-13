@@ -190,6 +190,9 @@ contains
 #ifndef ISO
       use constants,   only: ydim, zdim
 #endif /* !ISO */
+#ifdef COSM_RAY_ELECTRONS
+      use initcosmicrays, only: ncre
+#endif /* COSM_RAY_ELECTRONS */
 #if defined(COSM_RAYS) || defined(TRACER) || !defined(ISO)
       use fluidindex,  only: flind
 #endif /* COSM_RAYS || TRACER || !ISO */
@@ -208,6 +211,7 @@ contains
       integer, parameter                          :: auxlen = dsetnamelen - 1
       character(len=auxlen)                       :: aux
 #endif /* COSM_RAYS */
+
 #define RNG cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke
 
       call common_shortcuts(var, fl_dni, i_xyz)
@@ -220,20 +224,24 @@ contains
          case ("cr01" : "cr99")
             read(var,'(A2,I2.2)') aux, i !> \deprecated BEWARE 0 <= i <= 99, no other indices can be dumped to hdf file
             tab(:,:,:) = real(cg%u(flind%crn%beg+i-1, RNG), kind=4)
+#endif /* COSM_RAYS */
+
+#ifdef COSM_RAY_ELECTRONS
          case ("cren01" : "cren99")
             read(var,'(A4,I2.2)') aux, i !> \deprecated BEWARE 0 <= i <= 99, no other indices can be dumped to hdf file
             tab(:,:,:) = real(cg%u(flind%cre%beg+i-1, RNG), kind=4)
          case ("cree01" : "cree99")
             read(var,'(A4,I2.2)') aux, i !> \deprecated BEWARE 0 <= i <= 99, no other indices can be dumped to hdf file
-            tab(:,:,:) = real(cg%u(flind%cre%beg+i-1, RNG), kind=4)
+            tab(:,:,:) = real(cg%u(flind%cre%beg+ncre+i-1, RNG), kind=4) ! this is consistent with the quantity of ncre variables, tested
          case ("crepl")
             read(var,'(A5)') aux !> \deprecated BEWARE 0 <= i <= 99, no other indices can be dumped to hdf file
-            tab(:,:,:) = real(cg%u(flind%cre%beg-1, RNG), kind=4)
+            tab(:,:,:) = real(cg%u(flind%cre%beg+2*ncre, RNG), kind=4)  
          case ("crepu")
             read(var,'(A5)') aux !> \deprecated BEWARE 0 <= i <= 99, no other indices can be dumped to hdf file
-            tab(:,:,:) = real(cg%u(flind%cre%beg-1, RNG), kind=4)
-            
-#endif /* COSM_RAYS */
+            tab(:,:,:) = real(cg%u(flind%cre%beg+2*ncre+1, RNG), kind=4)
+           
+#endif /* COSM_RAY_ELECTRONS */            
+
 #ifdef TRACER
          case ("trcr")
             tab(:,:,:) = real(cg%u(flind%trc%beg, RNG),4)

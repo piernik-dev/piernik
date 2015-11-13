@@ -141,10 +141,13 @@ contains
                
 #ifdef COSM_RAYS
             case ('encr')
-               nhdf_vars = nhdf_vars + size(iarr_all_crn,1) + size(iarr_all_cre,1)
+               nhdf_vars = nhdf_vars + size(iarr_all_crn,1)
                ! 2*size ... + 2 because one cannot forget about any component - cren(ncre), cree(ncre), crepl(1), crepu(1)
-               
+#ifdef COSM_RAY_ELECTRONS
+               nhdf_vars = nhdf_vars + size(iarr_all_cre,1)
+#endif /* COSM_RAY_ELECTRONS */
 #endif /* COSM_RAYS */
+
 #ifdef TRACER
             case ('trcr')
                nhdf_vars = nhdf_vars + 1
@@ -194,7 +197,7 @@ contains
                      call warn(msg)
                   endif
                enddo
-           
+#ifdef COSM_RAY_ELECTRONS           
                do k = 1, ncre ! size(iarr_all_cre,1)   !!!
                    write(aux,'(A4,I2.2)') 'cren', k !!!
                    hdf_vars(j) = aux ; j = j + 1  !!!
@@ -210,7 +213,9 @@ contains
                    write(aux,'(A5)') 'crepu' !!!
                    hdf_vars(j) = aux ; j = j + 1 !!!
 
+#endif /* COSM_RAY_ELECTRONS */
 #endif /* COSM_RAYS */
+
 #ifdef GRAV
             case ('gpot')
                hdf_vars(j) = 'gpot' ; j = j + 1
