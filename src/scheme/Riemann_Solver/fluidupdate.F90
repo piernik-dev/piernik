@@ -48,13 +48,13 @@ contains
     use domain,       only: dom
     use global,       only: dt, dtm, t
     use user_hooks,   only: problem_customize_solution
-    use dataio_pub,    only: halfstep
+    use dataio_pub,   only: halfstep
 
     implicit none
 
     logical, save                   :: first_run = .true.
     integer(kind=4)                 :: ddim
-    !integer(kind=4)                 :: cdim
+    
 
     halfstep = .false.
     if (first_run) then
@@ -65,7 +65,6 @@ contains
     t = t + dt
 
     do ddim = xdim, zdim
-       !if (dom%has_dir(ddim)) call sweep_dsplit(cgl%cg,dt,ddim, cdim)
        if (dom%has_dir(ddim)) call sweep_dsplit(dt,ddim)
     enddo
     if (associated(problem_customize_solution)) call problem_customize_solution(.true.)
@@ -75,7 +74,6 @@ contains
     halfstep = .true.
 
     do ddim = zdim, xdim, -1
-       !if (dom%has_dir(ddim)) call sweep_dsplit(cgl%cg,dt,ddim,cdim)
        if (dom%has_dir(ddim)) call sweep_dsplit(dt,ddim)
     enddo
     if (associated(problem_customize_solution)) call problem_customize_solution(.false.)
@@ -86,7 +84,6 @@ contains
 
 !-------------------------------------------------------------------------------------------------------------------
 
-  !subroutine sweep_dsplit(cg, dt, ddim, cdim)
   subroutine sweep_dsplit(dt, ddim)
 
     use cg_list,          only: cg_list_element
@@ -102,17 +99,11 @@ contains
 
     real,                          intent(in) :: dt
     integer(kind=4),               intent(in) :: ddim
-    !integer(kind=4),               intent(in) :: cdim
-
-    !integer                                   :: n
-    real, allocatable, dimension(:,:) :: u1d
-    !real, dimension(xdim:zdim, cg%n_(ddim)), pointer   :: b1d
-    !real, dimension(:,:), pointer             :: b1d
-    real, allocatable, dimension(:,:)   :: b_cc1d
+    real, allocatable, dimension(:,:)         :: u1d
+    real, allocatable, dimension(:,:)         :: b_cc1d
     real, dimension(:,:), pointer             :: pu
-    !real, dimension(:), pointer               :: cs2
     integer                                   :: i1, i2
-    type(cg_list_element), pointer  :: cgl
+    type(cg_list_element), pointer            :: cgl
 
     cgl => leaves%first
     do while (associated(cgl))
@@ -135,7 +126,6 @@ contains
  !write(*,*)"sweep",ddim, i1,i2,dt
              u1d(iarr_all_swp(ddim,:),:) = pu(:,:)
 
-             !call rk2(n,u1d,b1d,bb1d,cs2,cdim,dt/cgl%cg%dl(ddim))
              call rk2(u1d,b_cc1d,ddim, dt/cgl%cg%dl(ddim))
 
              pu(:,:) = u1d(iarr_all_swp(ddim,:),:)
@@ -193,11 +183,11 @@ contains
 
      implicit none
 
-     real, dimension(:,:),   intent(in) :: u, b_cc
+     real, dimension(:,:),   intent(in)    :: u, b_cc
      real, dimension(size(u,1),size(u,2))  :: q
      integer  :: p
 
-     class(component_fluid), pointer :: fl
+     class(component_fluid), pointer       :: fl
 
      do p = 1, flind%fluids
         fl => flind%all_fluids(p)%fl
@@ -216,7 +206,6 @@ contains
 
 !-----------------------------------------------------------------------------------------------------------------------
 
-  !subroutine rk2(n,u,b,bb,cs2,cdim,dtodx)
   subroutine rk2(u,b_cc,ddim, dtodx)
 
     use constants,   only: half, xdim, zdim
@@ -226,20 +215,18 @@ contains
 
     implicit none
 
-  
-    !integer,                        intent(in)     :: n
-    real, dimension(:,:),           intent(inout)  :: u
-    real, dimension(:,:),  intent(inout)           :: b_cc
-    integer(kind=4),       intent(in)              :: ddim
-    real,                    intent(in)            :: dtodx
+    real, dimension(:,:),           intent(inout)   :: u
+    real, dimension(:,:),           intent(inout)   :: b_cc
+    integer(kind=4),                intent(in)      :: ddim
+    real,                           intent(in)      :: dtodx
 
-    class(component_fluid), pointer              :: fl
-    real, dimension(xdim:zdim,size(u,2)), target         :: b_ccl, b_ccr, mag_cc
-    real, dimension(xdim:zdim,size(u,2)), target :: db
-    real, dimension(size(u,1),size(u,2))         :: u_predict
-    real, dimension(size(u,1),size(u,2)), target :: flx, ql, qr, du, ul, ur !, u_l, u_r
-    real, dimension(:,:), pointer                :: p_flx, p_bcc, p_bccl, p_bccr, p_ql, p_qr
-    integer                                      :: nx, i
+    class(component_fluid), pointer                 :: fl
+    real, dimension(xdim:zdim,size(u,2)), target    :: b_ccl, b_ccr, mag_cc
+    real, dimension(xdim:zdim,size(u,2)), target    :: db
+    real, dimension(size(u,1),size(u,2))            :: u_predict
+    real, dimension(size(u,1),size(u,2)), target    :: flx, ql, qr, du, ul, ur !, u_l, u_r
+    real, dimension(:,:), pointer                   :: p_flx, p_bcc, p_bccl, p_bccr, p_ql, p_qr
+    integer                                         :: nx, i
     
     
 
@@ -248,8 +235,8 @@ contains
     du  = calculate_slope_vanleer(u)
     ul  = u - half*du
     ur  = u + half*du
-    write(*,*) "ul",ul(:,:)
-    write(*,*) "ur",ur(:,:)
+    !write(*,*) "ul",ul(:,:)
+    !write(*,*) "ur",ur(:,:)
 
 
     db  = calculate_slope_vanleer(b_cc)
@@ -259,10 +246,8 @@ contains
     mag_cc = b_cc
 
     flx  = fluxes(ul,b_ccl,ddim) - fluxes(ur,b_ccr,ddim)
-    write(*,*) "flx", flx(:,:)
-
-   
-
+    !write(*,*) "flx", flx(:,:)
+ 
     ql = utoq(ul,b_ccl)
     qr = utoq(ur,b_ccr)
 
