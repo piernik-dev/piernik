@@ -114,6 +114,7 @@ contains
       use dataio_pub,  only: halfstep
       use global,      only: dt, dtm, t
       use mass_defect, only: update_magic_mass
+      use cresp_grid, only: grid_cresp_update
 
       implicit none
 
@@ -126,7 +127,7 @@ contains
 ! Sources should be hooked to problem_customize_solution with forward argument
 
 #ifdef COSM_RAY_ELECTRONS
-!     call cresp_grid_update !!!
+     call grid_cresp_update!!!
 #endif /* COSM_RAY_ELECTRONS */
 
       halfstep = .true.

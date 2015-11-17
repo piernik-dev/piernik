@@ -17,15 +17,6 @@ module cresp_variables ! & constants
 
   type(bin_old) crel
   
-!   type cg_crs_element
-!     real(kind=8), dimension(1:ncre)  :: n
-!     real(kind=8), dimension(1:ncre)  :: e
-!     real(kind=8)                    :: p_lo
-!     real(kind=8)                    :: p_up
-!     real(kind=8)   :: uB        ! magnetic energy density
-!     real(kind=8)   :: uD        ! adiabatic coeff (div_v)
-!   end type cg_crs_element
-
   type cresp_vector
     real(kind=8), dimension(1:2*ncre+2) :: cresp_ind
     real(kind=8)   :: uB        ! magnetic energy density

@@ -261,7 +261,7 @@ contains
       use gravity,          only: grav_pot2accel
 #endif /* GRAV */
 #ifdef COSM_RAYS
-      use initcosmicrays,   only: iarr_crs, smallecr
+      use initcosmicrays,   only: iarr_crs, iarr_crn, smallecr
       use sourcecosmicrays, only: src_gpcr
 #ifdef COSM_RAYS_SOURCES
       use initcosmicrays,   only: iarr_crn
@@ -322,7 +322,7 @@ contains
 
 #ifdef COSM_RAYS
       real, dimension(n)                            :: grad_pcr
-      real, dimension(n, flind%crs%all)             :: decr
+      real, dimension(n, flind%crn%all)             :: decr
 #ifdef COSM_RAYS_SOURCES
       real, dimension(n, flind%crn%all)             :: srccrn
 #endif /* COSM_RAYS_SOURCES */
@@ -510,8 +510,8 @@ contains
 #if defined COSM_RAYS && defined IONIZED
          if (full_dim) then
             call src_gpcr(u, n, dx, divv, decr, grad_pcr)
-            u1(:,                iarr_crs(:)) = u1(:,               iarr_crs(:)) + rk2coef(integration_order,istep) * decr(:,:) * dt
-            u1(:,                iarr_crs(:)) = max(smallecr, u1(:, iarr_crs(:)))
+            u1(:,                iarr_crn(:)) = u1(:,               iarr_crn(:)) + rk2coef(integration_order,istep) * decr(:,:) * dt
+            u1(:,                iarr_crn(:)) = max(smallecr, u1(:, iarr_crn(:)))
             u1(:, iarr_all_mx(flind%ion%pos)) = u1(:, iarr_all_mx(flind%ion%pos)) + rk2coef(integration_order,istep) * grad_pcr * dt
 #ifndef ISO
             u1(:, iarr_all_en(flind%ion%pos)) = u1(:, iarr_all_en(flind%ion%pos)) + rk2coef(integration_order,istep) * vx(:, flind%ion%pos) * grad_pcr * dt

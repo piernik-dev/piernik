@@ -374,7 +374,7 @@ contains
 
    subroutine cosmicray_index(flind)
 
-      use constants,    only: I_ONE, I_TWO
+      use constants,    only: I_ONE
       use fluidtypes,   only: var_numbers
 #ifdef COSM_RAY_ELECTRONS
       use cresp_variables, only: ind_p_lo, ind_p_up, ind_e_beg, ind_e_end, ind_n_beg, ind_n_end
@@ -414,9 +414,6 @@ contains
       flind%crn%pos = flind%components
       if (flind%cre%all  /= 0) flind%components = flind%components + I_ONE
       flind%cre%pos = flind%components
-      print *,'flind%crn%end = ', flind%crn%end
-      print *,'flind%cre%beg = ', flind%cre%beg
-      print *,'flind%cre%end = ', flind%cre%end
       
 #ifdef COSM_RAY_ELECTRONS      
      ind_n_beg = flind%crn%end + I_ONE
@@ -428,7 +425,7 @@ contains
      
      ind_p_lo = ind_e_end+I_ONE
      ind_p_up = ind_p_lo + I_ONE
-     print *,'flind%cre%beg = ', flind%cre%beg
+     print *,'flind%cre%beg & end  = ', flind%cre%beg, flind%cre%end
      print *,'ind_p_lo, ind_p_up = ', ind_p_lo, ind_p_up
 #endif /* COSM_RAY_ELECTRONS */      
    end subroutine cosmicray_index

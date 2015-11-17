@@ -161,7 +161,10 @@ contains
 
 ! Allocate index arrays
       if (has_ion) allocate(iarr_mag_swp(ndims,nmag),iarr_all_mag(nmag))
-      allocate(iarr_all_swp(xdim:zdim, flind%all))
+      allocate(iarr_all_swp(xdim:zdim, (flind%all - flind%cre%all)))   ! all but cre are taken into account
+! use of crs is deprecated; since electron indexes with cre shall not be swapped, there's
+! no need to allocate flind%all - this would cause problems with values in cre variables.
+
       allocate(iarr_all_dn(flind%fluids),iarr_all_mx(flind%fluids),iarr_all_my(flind%fluids),iarr_all_mz(flind%fluids))
       allocate(iarr_all_sg(flind%fluids_sg))
 #ifdef ISO
@@ -172,12 +175,15 @@ contains
 
 #ifdef COSM_RAYS
       allocate(iarr_all_crn(flind%crn%all))
+#ifdef COSM_RAY_ELECTRONS      
       allocate(iarr_all_cre(flind%cre%all))
-!       allocate(iarr_all_crs(flind%crs%all)) !!!
+#endif /* !COSM_RAY_ELECTRONS */
 #else /* !COSM_RAYS */
+
+!       allocate(iarr_all_crs(flind%crs%all)) !!! when cre is incorporated this will be deprecated
       allocate(iarr_all_crn(0))
       allocate(iarr_all_cre(0))
-!       allocate(iarr_all_crs(0)) !!!
+!       allocate(iarr_all_crs(0)) !!! when cre is incorporated this will be deprecated
 #endif /* !COSM_RAYS */
 
 #ifdef TRACER
@@ -192,7 +198,6 @@ contains
          iarr_mag_swp(ydim,:) = [ydim,xdim,zdim]
          iarr_mag_swp(zdim,:) = [zdim,ydim,xdim]
          iarr_all_mag(:)      = [xdim,ydim,zdim]
-
          ! Compute index arrays for the ionized fluid
          call set_fluidindex_arrays(flind%ion,.true.)
       endif
@@ -209,10 +214,11 @@ contains
       iarr_all_swp(ydim,flind%crn%beg:flind%crn%end) = iarr_crn
       iarr_all_swp(zdim,flind%crn%beg:flind%crn%end) = iarr_crn
 
-      iarr_all_swp(xdim,flind%cre%beg:flind%cre%end) = iarr_cre
-      iarr_all_swp(ydim,flind%cre%beg:flind%cre%end) = iarr_cre
-      iarr_all_swp(zdim,flind%cre%beg:flind%cre%end) = iarr_cre
-
+!      cre variables ought not be swapped anymore - these are handled via cresp_crs_update only
+!       iarr_all_swp(xdim,flind%cre%beg:flind%cre%end) = iarr_cre
+!       iarr_all_swp(ydim,flind%cre%beg:flind%cre%end) = iarr_cre
+!       iarr_all_swp(zdim,flind%cre%beg:flind%cre%end) = iarr_cre
+!        print *, 'iarr_all_swp =', iarr_all_swp
 !       iarr_all_swp(xdim,flind%crs%beg:flind%crs%end) = iarr_crs
 !       iarr_all_swp(ydim,flind%crs%beg:flind%crs%end) = iarr_crs
 !       iarr_all_swp(zdim,flind%crs%beg:flind%crs%end) = iarr_crs

@@ -4,7 +4,7 @@ module cresp_crspectrum
 !  use cresp_types, only: crel, x !uncomment crel for testing only
  use cresp_variables !,  only: ncre, u_b, u_d, c2nd, c3rd, f_init, q_init
  use initcosmicrays, only: p_min_fix, p_max_fix, f_init, q_init, p_lo_init, p_up_init
- use constants,      only: pi, fpi, zero, one, two, half
+ use constants,      only: pi, fpi, zero, one, two, half, I_ZERO, I_ONE, I_THREE, I_FOUR, I_FIVE
 
  implicit none
      
@@ -56,8 +56,6 @@ module cresp_crspectrum
 
   integer                           :: del_i_lo, del_i_up
 !   integer                           :: i_lo_act_edge, i_up_act_edge !,i
-
-
   
     ! logical arrays / arrays determining use of p/n/e in some lines
 !   logical, dimension(0:ncre)        :: is_fixed_edge,   is_fixed_edge_next 
@@ -266,10 +264,10 @@ subroutine cresp_update_bin_index(dt, p_lo, p_up, p_lo_next, p_up_next)
       del_i_lo = i_lo_next - i_lo
       del_i_up = i_up_next - i_up
 ! Since we are leaving subroutine, some arrays might be filled with junk, all_edges and all_bins are crucial
-      all_edges = zero
+      all_edges = I_ZERO
        
-      all_edges = (/ (i,i=0,ncre) /)
-      all_bins = (/ (i,i=1,ncre) /)
+      all_edges = (/ (i,i=I_ZERO,ncre) /)
+      all_bins = (/ (i,i=I_ONE,ncre) /)
 ! Construct index arrays for fixed edges betwen p_lo and p_up, active edges 
 ! before timestep
       is_fixed_edge = .false.
