@@ -117,21 +117,15 @@ contains
        do i2 = cgl%cg%lhn(pdims(ddim,ORTHO2),LO), cgl%cg%lhn(pdims(ddim,ORTHO2),HI)
           do i1 = cgl%cg%lhn(pdims(ddim, ORTHO1), LO), cgl%cg%lhn(pdims(ddim, ORTHO1), HI)
              pu => cgl%cg%w(wna%fi)%get_sweep(ddim,i1,i2)
-
-             !do f=lbound(pu, 2), ubound(pu, 2)
-             !   write(*,*) "-pu(:,",f,")",pu(:,f)
-             !end do
              !b1d => cgl%cg%w(wna%bi)%get_sweep(ddim,i1,i2)
              ! WARNING: what position of the b components do we expect? If cell-centered then interpolation is required above
  !write(*,*)"sweep",ddim, i1,i2,dt
              u1d(iarr_all_swp(ddim,:),:) = pu(:,:)
 
-             call rk2(u1d,b_cc1d,ddim, dt/cgl%cg%dl(ddim))
+             !call rk2(u1d,b_cc1d,ddim, dt/cgl%cg%dl(ddim))
+             call euler(u1d,b_cc1d,ddim, dt/cgl%cg%dl(ddim))
 
              pu(:,:) = u1d(iarr_all_swp(ddim,:),:)
-             !do f=lbound(pu, 2), ubound(pu, 2)
-             !   write(*,*) "+pu(:,",f,")",pu(:,f)
-             !end do
              
           enddo
        enddo
@@ -235,10 +229,7 @@ contains
     du  = calculate_slope_vanleer(u)
     ul  = u - half*du
     ur  = u + half*du
-    !write(*,*) "ul",ul(:,:)
-    !write(*,*) "ur",ur(:,:)
-
-
+    
     db  = calculate_slope_vanleer(b_cc)
     b_ccl = b_cc - half*db
     b_ccr = b_cc + half*db
@@ -246,15 +237,11 @@ contains
     mag_cc = b_cc
 
     flx  = fluxes(ul,b_ccl,ddim) - fluxes(ur,b_ccr,ddim)
-    !write(*,*) "flx", flx(:,:)
  
     ql = utoq(ul,b_ccl)
     qr = utoq(ur,b_ccr)
 
     u_predict  =  u + dtodx*flx(:,:)
-    !write(*,*) "u_predict", u_predict
-    !u_l = ur + half*dtodx*flx   ! (14.34) + (14.35)
-    !u_r(:,1:nx-1) = ul(:,2:nx) + half*dtodx*flx(:,2:nx); u_r(:,nx) = u_r(:,nx-1)
     
     do i = 1, flind%fluids
        fl    => flind%all_fluids(i)%fl
@@ -267,14 +254,61 @@ contains
        call riemann_hlld(nx, p_flx, p_ql, p_qr, mag_cc, p_bccl, p_bccr, fl%gam)
     end do
 
-    !u  =  half*(u0 + u_predict + dtodx*flx(:,:))
-    u  =  half*(u + u_predict + dtodx*flx(:,:))
-    !u(:,2:nx) = u(:,2:nx) + dtodx*(flx(:,1:nx-1) - flx(:,2:nx))
-    !u(:,1)  = u(:,2); u(:,nx) = u(:,nx-1)
-    !write(*,*) "u", u
+    !u  =  half*(u + u_predict + dtodx*flx(:,:))
+    u  =  half*(u + u_predict + dtodx*(fluxes(p_ql,p_bccl,ddim)-fluxes(p_qr,p_bccr,ddim)))
+    
 
     
   end subroutine rk2
 
-!---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+  !---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+  subroutine euler(u,b_cc,ddim, dtodx)
+
+    use constants,   only: half, xdim, zdim
+    !use fluidindex,  only: flind
+    use fluidtypes,  only: component_fluid
+
+
+    implicit none
+
+    real, dimension(:,:),           intent(inout)   :: u
+    real, dimension(:,:),           intent(inout)   :: b_cc
+    integer(kind=4),                intent(in)      :: ddim
+    real,                           intent(in)      :: dtodx
+
+    !class(component_fluid), pointer                 :: fl
+    real, dimension(xdim:zdim,size(u,2)), target    :: b_ccl, b_ccr, mag_cc
+    real, dimension(xdim:zdim,size(u,2)), target    :: db
+    real, dimension(size(u,1),size(u,2)), target    :: ql, qr, du, ul, ur, flx
+    integer                                         :: nx
+
+
+    nx  = size(u,2)
+
+    du  = calculate_slope_vanleer(u)
+    ul  = u - half*du
+    ur  = u + half*du
+    !write(*,*) "ul", ul
+    !write(*,*) "ur", ur
+    
+    db  = calculate_slope_vanleer(b_cc)
+    b_ccl = b_cc - half*db
+    b_ccr = b_cc + half*db
+
+    mag_cc = b_cc
+ 
+    ql = utoq(ul,b_ccl)
+    qr = utoq(ur,b_ccr)
+
+    flx = fluxes(ul,b_ccl,ddim) - fluxes(ur,b_ccr,ddim)
+    !write(*,*) "flx", flx(:,:)
+    
+    u  =  u + dtodx*flx(:,:)
+    write(*,*) "u", u
+
+  end subroutine euler
+
+    !---------------------------------------------------------------------------------------------------------------------------------------------------------
+    
 end module fluidupdate
