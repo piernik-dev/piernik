@@ -220,6 +220,9 @@ contains
       ul = u - half*du   ! (14.33)
       ur = u + half*du
 
+      write(*,*) "ul", ul
+      write(*,*) "ur", ur
+
       flux = compute_flux(ul,b,cs2) - compute_flux(ur,b,cs2)    !> \todo interpolate b?
 
       u_l = ur + half*dtodx*flux   ! (14.34) + (14.35)

@@ -181,7 +181,7 @@ contains
                                        + sqrt((gampr_l+(b_ccl(xdim,i)**2+b_ccl(ydim,i)**2+b_ccl(zdim,i)**2))**2-(four*gampr_l*b_ccl(xdim,i)**2))
       
        c_fastl = sqrt(half*c_fastl/ul(idn,i))
-             
+       write(*,*) "c_fastl", c_fastl
        c_fastr  =   (gampr_r+(b_ccr(xdim,i)**2+b_ccr(ydim,i)**2+b_ccr(zdim,i)**2))  &
                                        + sqrt((gampr_r+(b_ccr(xdim,i)**2+b_ccr(ydim,i)**2+b_ccr(zdim,i)**2))**2-(four*gampr_r*b_ccr(xdim,i)**2))
 
@@ -193,14 +193,7 @@ contains
        sl  =  min(ul(imx,i), ur(imx,i)) - max(c_fastl,c_fastr)
        sr  =  max(ur(imx,i), ur(imx,i)) + max(c_fastl,c_fastr)
 
-       ! Speed of contact discontinuity Eq. (38)
-
-       sm_nr = (sr - ur(imx,i))*(ur(idn,i)*ur(imx,i)) - (sl - ul(imx,i))*(ul(idn,i)*ul(imx,i)) - prtr + prtl
-       sm_dr = (sr - ur(imx,i))*ur(idn,i) - (sl - ul(idn,i))*ul(idn,i)
-       sm    = sm_nr/sm_dr
-      
-       
-       ! Magnetic pressure
+        ! Magnetic pressure
 
        magprl  =  half*sum(b_ccl(xdim:zdim,i)*b_ccl(xdim:zdim,i))
        magprr  =  half*sum(b_ccr(xdim:zdim,i)*b_ccr(xdim:zdim,i))
@@ -209,6 +202,13 @@ contains
 
        prtl  =  ul(ien,i) + magprl
        prtr  =  ur(ien,i) + magprr  
+       
+       ! Speed of contact discontinuity Eq. (38)
+
+       sm_nr = (sr - ur(imx,i))*(ur(idn,i)*ur(imx,i)) - (sl - ul(imx,i))*(ul(idn,i)*ul(imx,i)) - prtr + prtl
+       sm_dr = (sr - ur(imx,i))*ur(idn,i) - (sl - ul(idn,i))*ul(idn,i)
+       sm    = sm_nr/sm_dr
+         
 
       ! Speed differences
 
@@ -315,8 +315,8 @@ contains
           coeff_1  =  b_ccl(xdim,i)/dn_l
 
           ! degug
-          write(*,*) "b_ccl", b_ccl(xdim,i)
-          write(*,*) "dn_l", dn_l
+          !write(*,*) "b_ccl", b_ccl(xdim,i)
+          !write(*,*) "dn_l", dn_l
           
           v_starl(imy)  =  ul(imy,i) + coeff_1*(b_ccl(ydim,i) - b_starl(ydim))
           v_starl(imz)  =  ul(imz,i) + coeff_1*(b_ccl(zdim,i) - b_starl(zdim))

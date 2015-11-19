@@ -37,13 +37,15 @@ module fluidupdate
   use hlld,  only: fluxes, riemann_hlld
   implicit none
   private
-  public :: fluid_update, sweep_dsplit, rk2, utoq, calculate_slope_vanleer
+  public :: fluid_update, sweep_dsplit, rk2, utoq, calculate_slope_vanleer, euler
   
 
 contains
 
   subroutine fluid_update
 
+    use cg_list,      only: cg_list_element
+    use cg_leaves,    only: leaves
     use constants,    only: xdim, zdim
     use domain,       only: dom
     use global,       only: dt, dtm, t
@@ -53,8 +55,9 @@ contains
     implicit none
 
     logical, save                   :: first_run = .true.
+    type(cg_list_element), pointer  :: cgl
     integer(kind=4)                 :: ddim
-    
+        
 
     halfstep = .false.
     if (first_run) then
@@ -64,19 +67,31 @@ contains
     endif
     t = t + dt
 
-    do ddim = xdim, zdim
-       if (dom%has_dir(ddim)) call sweep_dsplit(dt,ddim)
+    cgl => leaves%first
+    do while (associated(cgl))
+       
+       do ddim = xdim, zdim, 1
+          if (dom%has_dir(ddim)) call sweep_dsplit(cgl%cg,dt,ddim)
+       enddo
+       if (associated(problem_customize_solution)) call problem_customize_solution(.true.)
+       cgl => cgl%nxt
     enddo
-    if (associated(problem_customize_solution)) call problem_customize_solution(.true.)
+    
 
     t = t + dt
     dtm = dt
     halfstep = .true.
 
-    do ddim = zdim, xdim, -1
-       if (dom%has_dir(ddim)) call sweep_dsplit(dt,ddim)
+    cgl => leaves%first
+    do while (associated(cgl))
+
+       do ddim = zdim, xdim, -1
+          if (dom%has_dir(ddim)) call sweep_dsplit(cgl%cg,dt,ddim)
+       enddo
+       if (associated(problem_customize_solution)) call problem_customize_solution(.false.)
+       cgl => cgl%nxt
     enddo
-    if (associated(problem_customize_solution)) call problem_customize_solution(.false.)
+    
 
     if (first_run) first_run = .false.
 
@@ -84,56 +99,74 @@ contains
 
 !-------------------------------------------------------------------------------------------------------------------
 
-  subroutine sweep_dsplit(dt, ddim)
-
+  !subroutine sweep_dsplit(dt, ddim)
+  subroutine sweep_dsplit(cg, dt, ddim)
+    
     use cg_list,          only: cg_list_element
     use constants,        only: pdims, xdim, zdim, ORTHO1, ORTHO2, LO, HI
     use all_boundaries,   only: all_fluid_boundaries
     use fluidindex,       only: iarr_all_swp
     use grid_cont,        only: grid_container
-    use cg_leaves,        only: leaves
+    !use cg_leaves,        only: leaves
     use named_array_list, only: wna
     use dataio_pub,       only: die
 
     implicit none
 
+    type(grid_container), pointer, intent(in) :: cg
     real,                          intent(in) :: dt
     integer(kind=4),               intent(in) :: ddim
-    real, allocatable, dimension(:,:)         :: u1d
-    real, allocatable, dimension(:,:)         :: b_cc1d
+    real, dimension(size(cg%u,1), cg%n_(ddim)) :: u1d
+    !real, dimension(size(cg%u,1), cg%n_(ddim)) :: u1d
+    real, dimension(xdim:zdim, cg%n_(ddim))   :: b_cc1d
+    !real, dimension(xdim:zdim, cg%n_(ddim))   :: b_cc1d
     real, dimension(:,:), pointer             :: pu
     integer                                   :: i1, i2
-    type(cg_list_element), pointer            :: cgl
+    !type(cg_list_element), pointer            :: cgl
 
-    cgl => leaves%first
-    do while (associated(cgl))
+    !cgl => leaves%first
+    !do while (associated(cgl))
 
-       if (allocated(u1d) .or. allocated(b_cc1d)) call die("[fluidupdate:sweep_dsplit] sweep vectors not clean")
+       !if (allocated(u1d) .or. allocated(b_cc1d)) call die("[fluidupdate:sweep_dsplit] sweep vectors not clean")
        !OPT: can check if the size is already right and avoid reallocation on AMR domains
-       allocate(u1d(size(cgl%cg%u,1),cgl%cg%n_(ddim)), b_cc1d(xdim:zdim, cgl%cg%n_(ddim)))
+       !allocate(u1d(size(cgl%cg%u,1),cgl%cg%n_(ddim)), b_cc1d(xdim:zdim, cgl%cg%n_(ddim)))
 
-       b_cc1d = 0.
+    b_cc1d = 0.
+
+    do i2 = cg%lhn(pdims(ddim, ORTHO2), LO), cg%lhn(pdims(ddim,ORTHO2), HI)
+       do i1 = cg%lhn(pdims(ddim, ORTHO1), LO), cg%lhn(pdims(ddim, ORTHO1), HI)
+          pu => cg%w(wna%fi)%get_sweep(ddim,i1,i2)
+
+          u1d(iarr_all_swp(ddim,:),:) = pu(:,:)
+
+          call muscl(u1d,b_cc1d,ddim, dt/cg%dl(ddim))
+
+          pu(:,:) = u1d(iarr_all_swp(ddim,:),:)
+
+       enddo
+    enddo
+    
        
-       do i2 = cgl%cg%lhn(pdims(ddim,ORTHO2),LO), cgl%cg%lhn(pdims(ddim,ORTHO2),HI)
-          do i1 = cgl%cg%lhn(pdims(ddim, ORTHO1), LO), cgl%cg%lhn(pdims(ddim, ORTHO1), HI)
-             pu => cgl%cg%w(wna%fi)%get_sweep(ddim,i1,i2)
+       !do i2 = cgl%cg%lhn(pdims(ddim,ORTHO2),LO), cgl%cg%lhn(pdims(ddim,ORTHO2),HI)
+          !do i1 = cgl%cg%lhn(pdims(ddim, ORTHO1), LO), cgl%cg%lhn(pdims(ddim, ORTHO1), HI)
+             !pu => cgl%cg%w(wna%fi)%get_sweep(ddim,i1,i2)
              !b1d => cgl%cg%w(wna%bi)%get_sweep(ddim,i1,i2)
              ! WARNING: what position of the b components do we expect? If cell-centered then interpolation is required above
  !write(*,*)"sweep",ddim, i1,i2,dt
-             u1d(iarr_all_swp(ddim,:),:) = pu(:,:)
+             !u1d(iarr_all_swp(ddim,:),:) = pu(:,:)
 
              !call rk2(u1d,b_cc1d,ddim, dt/cgl%cg%dl(ddim))
-             call euler(u1d,b_cc1d,ddim, dt/cgl%cg%dl(ddim))
+             !call euler(u1d,b_cc1d,ddim, dt/cgl%cg%dl(ddim))
 
-             pu(:,:) = u1d(iarr_all_swp(ddim,:),:)
+             !pu(:,:) = u1d(iarr_all_swp(ddim,:),:)
              
-          enddo
-       enddo
+         ! enddo
+       !enddo
 
-       deallocate(u1d, b_cc1d)
+       !deallocate(u1d, b_cc1d)
 
-       cgl => cgl%nxt
-    enddo
+       !cgl => cgl%nxt
+    !enddo
 
     call all_fluid_boundaries
 
@@ -305,10 +338,72 @@ contains
     !write(*,*) "flx", flx(:,:)
     
     u  =  u + dtodx*flx(:,:)
-    write(*,*) "u", u
+    !write(*,*) "u", u
 
   end subroutine euler
 
-    !---------------------------------------------------------------------------------------------------------------------------------------------------------
+  !---------------------------------------------------------------------------------------------------------------------------------------------------------
+
+  subroutine muscl(u,b_cc,ddim, dtodx)
+
+    use constants,   only: half, xdim, zdim
+    use fluidindex,  only: flind
+    use fluidtypes,  only: component_fluid
+
+
+    implicit none
+
+    real, dimension(:,:),           intent(inout)   :: u
+    real, dimension(:,:),           intent(inout)   :: b_cc
+    integer(kind=4),                intent(in)      :: ddim
+    real,                           intent(in)      :: dtodx
+
+    class(component_fluid), pointer                 :: fl
+    real, dimension(xdim:zdim,size(u,2)), target    :: b_ccl, b_ccr, mag_cc
+    real, dimension(xdim:zdim,size(u,2)), target    :: db
+    real, dimension(size(u,1),size(u,2))            :: u_l, u_r
+    real, dimension(size(u,1),size(u,2)), target    :: flx, ql, qr, du, ul, ur !, u_l, u_r
+    real, dimension(:,:), pointer                   :: p_flx, p_bcc, p_bccl, p_bccr, p_ql, p_qr
+    integer                                         :: nx, i
     
+    
+
+    nx  = size(u,2)
+
+    du  = calculate_slope_vanleer(u)
+    ul  = u - half*du
+    ur  = u + half*du
+    
+    db  = calculate_slope_vanleer(b_cc)
+    b_ccl = b_cc - half*db
+    b_ccr = b_cc + half*db
+
+    mag_cc = b_cc
+
+    flx  = fluxes(ul,b_ccl,ddim) - fluxes(ur,b_ccr,ddim)
+
+    u_l = ur + half*dtodx*flx
+    u_r(:,1:nx-1) = ul(:,2:nx) + half*dtodx*flx(:,2:nx) ; u_r(:,nx) = u_r(:,nx-1)
+    ql = utoq(ul,b_ccl)
+    qr = utoq(ur,b_ccr)
+
+  
+    
+    do i = 1, flind%fluids
+       fl    => flind%all_fluids(i)%fl
+       p_ql  => ql(fl%beg:fl%end,:)
+       p_qr  => qr(fl%beg:fl%end,:)
+       p_flx => flx(fl%beg:fl%end,:)
+       p_bcc => mag_cc(xdim:zdim,:)
+       p_bccl => b_ccl(xdim:zdim,:)
+       p_bccr => b_ccr(xdim:zdim,:)
+       call riemann_hlld(nx, p_flx, p_ql, p_qr, mag_cc, p_bccl, p_bccr, fl%gam)
+    end do
+
+    u(:,2:nx) = u(:,2:nx) + dtodx*(flx(:,1:nx-1) - flx(:,2:nx))
+    u(:,1) = u(:,2) ; u(:,nx) = u(:,nx-1)
+
+  end subroutine muscl
+
+  ! --------------------------------------------------------------------------------------------------------------------------------------------------------
 end module fluidupdate
