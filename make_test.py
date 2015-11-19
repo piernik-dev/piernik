@@ -32,7 +32,7 @@ class MakeTest(object):
 
    def testMaclaurin (self):
       from maclaurin import Maclaurin_test
-      Maclaurin_test(self.runpath+'/maclaurin_sph_0001.h5')
+      Maclaurin_test(self.runpath+'/maclaurin_sph_0000.h5')
       self.put_png()
 
    def testSedov (self):

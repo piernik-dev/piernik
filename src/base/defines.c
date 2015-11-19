@@ -67,7 +67,7 @@
 #ifdef NEUTRAL
 #  define FLUID
 #  ifdef IONIZED
-#    error Currently there are no solves that can manage a mixture of neutral and ionized fluid
+#    error Currently there are no solvers that can manage a mixture of neutral and ionized fluid
 #  endif
 #endif
 

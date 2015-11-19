@@ -615,6 +615,9 @@ contains
       integer(HID_T)                    :: memspace                !< Dataspace identifier in memory
       integer(HSIZE_T), dimension(rank) :: count, offset, stride, block, dimsf, chunk_dims
 
+      ! Sometimes the data(:,:,:) is created in an associated state, sometimes not
+      nullify(data)
+
       call h5open_f(error)
       !
       ! Setup file access property list with parallel I/O access.
