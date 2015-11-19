@@ -288,7 +288,7 @@ contains
 
          vx = u(fl%imx,:) / u(fl%idn,:)
          if (fl%has_energy) then
-            p = (u(fl%ien,:) - ekin(u(fl%imx,:), u(fl%imy,:), u(fl%imz,:), u(fl%idn,:))) * flind%neu%gam_1
+            p = (u(fl%ien,:) - ekin(u(fl%imx,:), u(fl%imy,:), u(fl%imz,:), u(fl%idn,:))) * fl%gam_1
             if (fl%is_magnetized) p = p + (two-fl%gam)*half*sum(b**2,dim=1)
          else
             if (associated(cs2)) then
