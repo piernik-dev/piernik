@@ -1,5 +1,7 @@
 module cresp_grid
 ! pulled by COSM_RAY_ELECTRONS
+      use initcosmicrays, only: ncre, iarr_cre
+      use global,         only: dt
 
 contains
 
@@ -7,12 +9,13 @@ contains
  subroutine grid_cresp_update
       use cg_leaves,      only: leaves
       use cg_list,        only: cg_list_element
-      use constants,      only: xdim, ydim, zdim, LO, HI, pMAX
+      use constants,      only: xdim, ydim, zdim, LO, HI, pMAX, I_ONE, I_TWO, I_FOUR
       use domain,         only: dom, is_multicg
       use func,           only: ekin, emag, operator(.equals.), operator(.notequals.)
       use grid_cont,      only: grid_container
       use cresp_variables, only: ind_p_lo, ind_p_up, cresp_taylor_order, taylor_coeff_2nd, taylor_coeff_3rd, &
                                 ind_e_beg, ind_e_end, ind_n_beg, ind_n_end
+      use cresp_crspectrum, only:cresp_crs_update
 
       implicit none
 
@@ -21,16 +24,21 @@ contains
 !       real                            :: cs_iso, xsn, ysn, zsn, r2, maxv
       type(cg_list_element),  pointer :: cgl
       type(grid_container),   pointer :: cg
+      real(kind=8), allocatable, dimension(:)  :: cresp_arguments
       
-      
-!       logical, save :: frun = .true.
+      allocate(cresp_arguments(I_ONE:I_TWO*ncre+I_FOUR))
+      !       logical, save :: frun = .true.
 !       integer       :: cr_id         ! maybe we should make this variable global in the module and do not pass it as an argument?
 
-!       i,j,k    = 0
-   cgl => leaves%first
-   cg => cgl%cg
+   i = 0
+   j = 0
+   k = 0
 
-!       ts =  set_timer(tmr_mgd, .true.)
+   cgl => leaves%first
+   do while (associated(cgl))
+     cg => cgl%cg
+     cresp_arguments = 0.0
+   !       ts =  set_timer(tmr_mgd, .true.)
 !       call all_dirty
 
 !       if (diff_explicit .or. (allow_explicit .and. dt/diff_dt_crs_orig<1)) then
@@ -40,43 +48,95 @@ contains
 !             frun = .false.
 !          endif
         print *,'PASS - cresp_grid'
-!         print *, 'in domain cell(-2,-2,0) p_lo_init = cg%u(:, -24, -24, 0) = ',cg%u(ind_n_beg:ind_p_up, -2, -2, 0)  ! just some check, to be removed
-!       do k = cg%lhn(zdim,LO), cg%lhn(zdim,HI)
-!          do j = cg%lhn(ydim,LO), cg%lhn(ydim,HI)
-!             do i = cg%lhn(xdim,LO), cg%lhn(xdim,HI)
-              
-!               cresp_vector%cresp_ind(1:ncre) = cg%u()
-!             u_b = emag = pmag(bx(i,j,k), by(i,j,k), bz(i,j,k))
-!             u_d = div_v
+!           print *, 'in domain cell(-2,-2,0) p_lo_init = cg%u(:, -2, -2, 0) = ',cg%u(ind_n_beg:ind_p_up, -2, -2, 0)  ! just some check, to be removed
+        do k = cg%ks, cg%ke
+!            print *,'entering k', k
+           do j = cg%js, cg%je
+!              print *,'entering j', j
+              do i = cg%is, cg%ie
+!                 print *,'entering i', i
+                  cresp_arguments(I_ONE:I_TWO*ncre+I_TWO)    = cg%u(iarr_cre, i, j, k)
+!                   cresp_arguments(ncre+1:2*ncre) = cg%u(ind_e_beg:ind_e_end, i, j, k)
+!                   cresp_arguments(2*ncre+1) = cg%u(ind_p_lo, i, j, k)
+!                   cresp_arguments(2*ncre+2) = cg%u(ind_p_up, i, j, k)
+                  cresp_arguments(2*ncre+3) = 2.5e-7
+                  cresp_arguments(2*ncre+4) = 5.0e-5
+
+! !                   print *, 'c_args = ', cresp_arguments
 #ifdef VERBOSE
               print *, 'Output of cosmic ray electrons module for grid cell with coordinates i,j,k:', i, j, k
 #endif /* VERBOSE */
-!             call cresp_crs_update(2*cresp_dt, cg%u(cr_table(cren)), cg%u(cr_table(cree)), cg%u(cr_table(crepl), &
-!             cg%u(cr_table(crepu), div_v ,emag(cg%b(i), cg%b(j), cg%b(k)) ! most likely 2 sweeps in one dt are executed in one step, we will test whether it's true or not
+              call cresp_crs_update(2*dt, cresp_arguments) !cg%u(cr_table(cren)), cg%u(cr_table(cree)), cg%u(cr_table(crepl), &
+              cg%u(iarr_cre, i, j, k) = cresp_arguments(I_ONE:I_TWO*ncre+I_TWO)
           
-!           enddo
-!         enddo
-!       enddo
+           enddo
+         enddo
+       enddo
+      cgl=>cgl%nxt
+      enddo
 
       
    end subroutine grid_cresp_update
    
    subroutine grid_cresp_initialization
    
-!        do k = cg%lhn(zdim,LO), cg%lhn(zdim,HI)
-!            do j = cg%lhn(ydim,LO), cg%lhn(ydim,HI)
-!               do i = cg%lhn(xdim,LO), cg%lhn(xdim,HI)
-              
-!             u_b = emag = pmag(bx(i,j,k), by(i,j,k), bz(i,j,k))
-!             u_d = div_v
+      use cg_leaves,      only: leaves
+      use cg_list,        only: cg_list_element
+      use constants,      only: xdim, ydim, zdim, LO, HI, pMAX, I_ONE, I_TWO, I_FOUR
+      use domain,         only: dom, is_multicg
+      use func,           only: ekin, emag, operator(.equals.), operator(.notequals.)
+      use grid_cont,      only: grid_container
+      use cresp_variables, only: ind_p_lo, ind_p_up, cresp_taylor_order, taylor_coeff_2nd, taylor_coeff_3rd, &
+                                ind_e_beg, ind_e_end, ind_n_beg, ind_n_end
+      use initcosmicrays, only: ncre, iarr_cre
+      use cresp_crspectrum, only: cresp_init_state
+      implicit none
+
+!       class(component_fluid), pointer :: fl
+      integer                         :: i, j, k !, icr, ipm, jpm, kpm
+!       real                            :: cs_iso, xsn, ysn, zsn, r2, maxv
+      type(cg_list_element),  pointer :: cgl
+      type(grid_container),   pointer :: cg
+      real(kind=8), allocatable, dimension(:)  :: cresp_arguments
+      
+      allocate(cresp_arguments(I_ONE:I_TWO*ncre+I_FOUR))
+      !       logical, save :: frun = .true.
+!       integer       :: cr_id         ! maybe we should make this variable global in the module and do not pass it as an argument?
+
+   i = 0
+   j = 0
+   k = 0
+   cgl => leaves%first
+   do while (associated(cgl))
+     cg => cgl%cg
+     cresp_arguments = 0.0
+     
+         do k = cg%ks, cg%ke
+            print *,'entering k', k
+           do j = cg%js, cg%je
+             print *,'entering j', j
+              do i = cg%is, cg%ie
+!                 print *,'entering i', i
+                  cresp_arguments(I_ONE:I_TWO*ncre+I_TWO)    = cg%u(iarr_cre, i, j, k)
+!                   cresp_arguments(ncre+1:2*ncre) = cg%u(ind_e_beg:ind_e_end, i, j, k)
+!                   cresp_arguments(2*ncre+1) = cg%u(ind_p_lo, i, j, k)
+!                   cresp_arguments(2*ncre+2) = cg%u(ind_p_up, i, j, k)
+                  cresp_arguments(2*ncre+3) = 2.5e-7
+                  cresp_arguments(2*ncre+4) = 5.0e-5
+   
+                  call cresp_init_state(dt, cresp_arguments)
 #ifdef VERBOSE
               print *, 'Output of cosmic ray electrons module for grid cell with coordinates i,j,k:', i, j, k
 #endif /* VERBOSE */
-!               call cresp_init_state(two*dt,)
-          
-!              enddo
-!           enddo
-!        enddo
+
+                  cg%u(iarr_cre, i, j, k) = cresp_arguments(I_ONE:I_TWO*ncre+I_TWO)
+
+           enddo
+         enddo
+       enddo
+      cgl=>cgl%nxt
+      enddo
+
    
    end subroutine grid_cresp_initialization
    

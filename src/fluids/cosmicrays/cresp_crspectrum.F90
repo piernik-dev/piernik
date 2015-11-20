@@ -1,9 +1,9 @@
 module cresp_crspectrum
 ! pulled by COSM_RAY_ELECTRONS
-
 !  use cresp_types, only: crel, x !uncomment crel for testing only
  use cresp_variables !,  only: ncre, u_b, u_d, c2nd, c3rd, f_init, q_init
- use initcosmicrays, only: p_min_fix, p_max_fix, f_init, q_init, p_lo_init, p_up_init
+ use initcosmicrays, only: ncre, p_min_fix, p_max_fix, f_init, q_init, p_lo_init, p_up_init, &
+                           crel
  use constants,      only: pi, fpi, zero, one, two, half, I_ZERO, I_ONE, I_THREE, I_FOUR, I_FIVE
 
  implicit none
@@ -111,8 +111,8 @@ module cresp_crspectrum
   real(kind=8)                 :: div_v = 0.0e-5 ! 0.5e-6
   real(kind=8)                 :: omega_d = 0.1e0 !0.1e0    ! frequency of div(v) oscilations
   real(kind=8)              :: u_b, u_d 
-  real(kind=8), dimension(1:ncre)   :: n, e
-  real(kind=8), dimension(0:ncre)   :: p_fix
+  real(kind=8), allocatable, dimension(:)  :: n, e ! dimension(1:ncre) 
+  real(kind=8), allocatable, dimension(:)  :: p_fix ! dimension(0:ncre)   
   real(kind=8)                 :: w
 !   real(kind=8), dimension(0:ncre)   :: p,  f !,p_fix0
 !   real(kind=8)                      :: p_lo, p_up
@@ -126,20 +126,20 @@ contains
 
 !----- main subroutine -----
 
-subroutine cresp_crs_update(dt, args)
+subroutine cresp_crs_update(dt, cresp_arguments)
 
  implicit none
    real(kind=8), intent(in)  :: dt
-   type(cresp_vector)        :: args
+   real(kind=8), dimension(1:2*ncre+4)   :: cresp_arguments
    
    call allocate_all_allocatable
  
-    n = args%cresp_ind(1:ncre)        ! number of electrons passed by x vector
-    e = args%cresp_ind(ncre+1:2*ncre) ! energy of electrons per bin passed by x vector
-    p_lo = args%cresp_ind(2*ncre+1)   ! low cut momentum 
-    p_up = args%cresp_ind(2*ncre+2)   ! upper cut momentum
-    u_b = args%uB
-    u_d = args%uD
+    n = cresp_arguments(1:ncre)        ! number of electrons passed by x vector
+    e = cresp_arguments(ncre+1:2*ncre) ! energy of electrons per bin passed by x vector
+    p_lo = cresp_arguments(2*ncre+1)   ! low cut momentum 
+    p_up = cresp_arguments(2*ncre+2)   ! upper cut momentum
+    u_b = cresp_arguments(2*ncre+3)
+    u_d = cresp_arguments(2*ncre+4)
     
    
 ! Update indexes of active bins, fixed edges and active edges at [t]
@@ -214,10 +214,10 @@ subroutine cresp_crs_update(dt, args)
   crel%i_lo = i_lo
   crel%i_up = i_up
   
-   args%cresp_ind(1:ncre)  = n        ! number of electrons passed by x vector
-   args%cresp_ind(ncre+1:2*ncre) = e  ! energy of electrons per bin passed by x vector
-   args%cresp_ind(2*ncre+1) = p_lo    ! low cut momentum 
-   args%cresp_ind(2*ncre+2) = p_up    ! upper cut momentum
+   cresp_arguments(1:ncre)  = n        ! number of electrons passed by x vector
+   cresp_arguments(ncre+1:2*ncre) = e  ! energy of electrons per bin passed by x vector
+   cresp_arguments(2*ncre+1) = p_lo    ! low cut momentum 
+   cresp_arguments(2*ncre+2) = p_up    ! upper cut momentum
 !----------------
    
 
@@ -379,13 +379,13 @@ subroutine cresp_update_bin_index(dt, p_lo, p_up, p_lo_next, p_up_next)
 ! arrays initialization
 !
 !-------------------------------------------------------------------------------------------------
-   subroutine cresp_init_state(dt, arguments)
+   subroutine cresp_init_state(dt, init_cresp_arguments)
       implicit none
       real(kind = 8), intent(in)  :: dt
       integer                     :: i, k
       real(kind=8)                ::  c ! width of bin
 !       real(kind=8), intent(in)    :: u_d, u_b
-      type(cresp_vector)          :: arguments
+      real(kind=8), dimension(1:2*ncre+4)          :: init_cresp_arguments
 
        call allocate_all_allocatable
       
@@ -397,7 +397,7 @@ subroutine cresp_update_bin_index(dt, p_lo, p_up, p_lo_next, p_up_next)
       q = q_init
 
       w  = (log10(p_max_fix/p_min_fix))/dble(ncre-2)
-
+!       print *,'w = ', w
       ! reading initial values of p_lo and p_up 
       p_lo = p_lo_init
       p_up = p_up_init
@@ -465,10 +465,10 @@ subroutine cresp_update_bin_index(dt, p_lo, p_up, p_lo_next, p_up_next)
        print *, 'e_tot0 =', e_tot0
 #endif /* VERBOSE */
 
-       arguments%cresp_ind(1:ncre) = n
-       arguments%cresp_ind(ncre+1:2*ncre) = e
-       arguments%cresp_ind(2*ncre+1) = p_lo
-       arguments%cresp_ind(2*ncre+2) = p_up
+       init_cresp_arguments(1:ncre) = n
+       init_cresp_arguments(ncre+1:2*ncre) = e
+       init_cresp_arguments(2*ncre+1) = p_lo
+       init_cresp_arguments(2*ncre+2) = p_up
        
        
    call deallocate_active_arrays
@@ -810,8 +810,8 @@ subroutine ne_to_q(n, e, q)
    
    ma1d = ncre
 !    print *, ma1d
-!   call allocate_with_index(n,1,ma1d)   !:: n, e, r
-!   call allocate_with_index(e,1,ma1d)
+  call allocate_with_index(n,1,ma1d)   !:: n, e, r
+  call allocate_with_index(e,1,ma1d)
 
    call allocate_with_index(r,1,ma1d)
    call allocate_with_index(f,0,ma1d)
@@ -820,7 +820,7 @@ subroutine ne_to_q(n, e, q)
 
    call allocate_with_index(edt,1,ma1d)
    call allocate_with_index(ndt,1,ma1d)
-!    call allocate_with_index(p_fix,0,ma1d)
+   call allocate_with_index(p_fix,0,ma1d)
 
    call allocate_with_index(p_next,0,ma1d)
    call allocate_with_index(p_upw,0,ma1d)

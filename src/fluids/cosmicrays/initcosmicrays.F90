@@ -37,13 +37,13 @@
 module initcosmicrays
 ! pulled by COSM_RAYS
    use constants, only: cbuff_len
+   use cresp_variables, only: bin_old
    implicit none
 
    public ! QA_WARN no secrets are kept here
    private :: cbuff_len ! QA_WARN prevent reexport
 
    integer, parameter                  :: ncr_max = 99  !< maximum number of CR nuclear and electron components (\warning higher ncr_max limit would require changes in names of components in common_hdf5)
-
    ! namelist parameters
    integer(kind=4)                     :: ncrn         !< number of CR nuclear  components \deprecated BEWARE: ncrs (sum of ncrn and ncre) should not be higher than ncr_max = 9
    integer(kind=4)                     :: ncre         !< number of CR electron components \deprecated BEWARE: ncrs (sum of ncrn and ncre) should not be higher than ncr_max = 9
@@ -80,6 +80,8 @@ module initcosmicrays
 !    real,    allocatable, dimension(:)  :: K_crs_paral  !< array containing parallel diffusion coefficients of all CR components
 !    real,    allocatable, dimension(:)  :: K_crs_perp   !< array containing perpendicular diffusion coefficients of all CR components
    !> \deprecated BEWARE Possible confusion: *_perp coefficients are not "perpendicular" but rather isotropic
+   
+   type(bin_old)                       :: crel
 
 contains
 
@@ -203,7 +205,7 @@ contains
          call nh%compare_namelist() ! Do not use one-line if here!
 
       endif
-
+      
 #ifndef MULTIGRID
       if (.not. use_split) call warn("[initcosmicrays:init_cosmicrays] No multigrid solver compiled in: use_split reset to .true.")
       use_split  = .true.
@@ -370,6 +372,8 @@ contains
          endif
       enddo
 
+   call init_cresp_type
+      
    end subroutine init_cosmicrays
 
    subroutine cosmicray_index(flind)
@@ -420,16 +424,28 @@ contains
      ind_n_end = flind%crn%end + ncre
      ind_e_beg = ind_n_end + I_ONE
      ind_e_end = ind_n_end + ncre
-     print *,'ind_n_beg, ind_n_end = ', ind_n_beg, ind_n_end
-     print *,'ind_e_beg, ind_e_end = ', ind_e_beg, ind_e_end
+!      print *,'ind_n_beg, ind_n_end = ', ind_n_beg, ind_n_end
+!      print *,'ind_e_beg, ind_e_end = ', ind_e_beg, ind_e_end
      
      ind_p_lo = ind_e_end+I_ONE
      ind_p_up = ind_p_lo + I_ONE
-     print *,'flind%cre%beg & end  = ', flind%cre%beg, flind%cre%end
-     print *,'ind_p_lo, ind_p_up = ', ind_p_lo, ind_p_up
+!      print *,'flind%cre%beg & end  = ', flind%cre%beg, flind%cre%end
+!      print *,'ind_p_lo, ind_p_up = ', ind_p_lo, ind_p_up
 #endif /* COSM_RAY_ELECTRONS */      
    end subroutine cosmicray_index
-
+   
+   subroutine init_cresp_type
+!    use cresp_variables, only: bin_old
+   implicit none
+   
+!      type(bin_old) crel
+     
+       allocate(crel%p(0:ncre))
+       allocate(crel%f(0:ncre))
+       allocate(crel%q(1:ncre))
+       
+   end subroutine init_cresp_type
+   
    subroutine cleanup_cosmicrays
 
       use diagnostics, only: my_deallocate
