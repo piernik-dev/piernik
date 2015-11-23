@@ -935,4 +935,18 @@ subroutine ne_to_q(n, e, q)
     
    end subroutine cresp_accuracy_test
    
+   !--------------------
+
+   subroutine printer(t)
+   implicit none
+     real   :: t
+      open(10, file="crs.dat", status='unknown', position='append')
+      write(10, '(e16.9, 3(1x,i8), 100(1x,e16.9))') t, ncre, crel%i_lo, crel%i_up, crel%p, crel%f, crel%q
+      close(10)
+!       write(20, '(e16.9, 1(1x,i4), 100(1x,e16.9))') t, ncre,  x
+   end subroutine printer
+
+! -------------------- 
+
+   
 end module cresp_crspectrum
