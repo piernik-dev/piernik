@@ -56,6 +56,9 @@ contains
       use initcosmicrays,      only: use_split
       use multigrid_diffusion, only: diff_explicit, diff_tstep_fac, diff_dt_crs_orig
 #endif /* MULTIGRID */
+#ifdef COSM_RAY_ELECTRONS
+      use cresp_grid,          only: dt_cre
+#endif /* COSM_RAY_ELECTRONS */
 
       implicit none
 
@@ -63,13 +66,18 @@ contains
 
       logical, save :: frun = .true.
       real :: dt
-
+         
+         
+         print *, 'dt_crs = ', dt_crs
+         print *, 'dt_cre (tscosmicrays) = ', dt_cre
+         
       if (.not. (is_multicg .or. frun)) return
       ! with multiple cg% there are few cg%dxmn to be checked
       ! with AMR minval(cg%dxmn) may change with time
 
       if (maxval(K_crn_paral+K_crn_perp) <= 0) then !!!
-         dt_crs = huge(one) ! \crs deprecated, but timestep still depends on both crn and cre(spectrum)
+         dt_crs = huge(one) ! \crs deprecated, but timestep still depends on both crn and cre
+         
       else
          dt = cfl_cr * half/maxval(K_crn_paral+K_crn_perp) !!!
          if (cg%dxmn < sqrt(huge(one))/dt) then
@@ -79,9 +87,15 @@ contains
             if (.not. (use_split .or. diff_explicit)) dt = dt * diff_tstep_fac ! enlarge timestep for non-explicit diffusion
 #endif /* MULTIGRID */
             dt_crs = min(dt_crs, dt)
+#ifdef COSM_RAY_ELECTRONS
+!             if (dt .ge. dt_cre) then
+!                 dt = dt_cre
+!             endif
+            dt_crs = min(dt, dt_crs, dt_cre)
+#endif /* COSM_RAY_ELECTRONS */
          endif
       endif
-
+      print *,'dt = ', dt_crs
       frun = .false.
 
    end subroutine timestep_crs
