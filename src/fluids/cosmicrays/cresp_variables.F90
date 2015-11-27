@@ -33,7 +33,7 @@ module cresp_variables ! & constants
 ! type (cresp_vector_template) cresp_vector
 
   real(kind=8)     , parameter :: q_big = 10e0 ! must be consulted, whether we move it to cresp_crspectrum or make it user defined
-  real(kind=8)     , parameter :: cfl_cr  = 0.1e0 ! cfl factor for CR ! it is not used in the module, just the driver (dt calculation)
+!   real(kind=8)     , parameter :: cfl_cr  = 0.1e0 ! cfl factor for CR ! it is not used in the module, just the driver (dt calculation)
 
   ! these will most probably be in types and will be modificated by the driver (piernik)
 

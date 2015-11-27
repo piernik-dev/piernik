@@ -3,7 +3,7 @@ module cresp_crspectrum
 !  use cresp_types, only: crel, x !uncomment crel for testing only
  use cresp_variables !,  only: ncre, u_b, u_d, c2nd, c3rd, f_init, q_init
  use initcosmicrays, only: ncre, p_min_fix, p_max_fix, f_init, q_init, p_lo_init, p_up_init, &
-                           crel
+                           crel, cfl_cre
  use constants,      only: pi, fpi, zero, one, two, half, I_ZERO, I_ONE, I_THREE, I_FOUR, I_FIVE
 
  implicit none
@@ -126,11 +126,12 @@ contains
 
 !----- main subroutine -----
 
-subroutine cresp_crs_update(dt, cresp_arguments)
+subroutine cresp_crs_update(dt, cresp_arguments, dt_calc)
 
  implicit none
    real(kind=8), intent(in)  :: dt
    real(kind=8), dimension(1:2*ncre+4)   :: cresp_arguments
+   real(kind=8)              :: dt_calc
    
    call allocate_all_allocatable
  
@@ -213,7 +214,8 @@ subroutine cresp_crs_update(dt, cresp_arguments)
   crel%q = q
   crel%i_lo = i_lo
   crel%i_up = i_up
-  
+
+   call cresp_timestep(dt_calc)
    cresp_arguments(1:ncre)  = n        ! number of electrons passed by x vector
    cresp_arguments(ncre+1:2*ncre) = e  ! energy of electrons per bin passed by x vector
    cresp_arguments(2*ncre+1) = p_lo    ! low cut momentum 
@@ -769,7 +771,7 @@ subroutine ne_to_q(n, e, q)
     real(kind=8), dimension(:), intent(in)  :: p
     real(kind=8), dimension(size(p)) :: b_losses
    
-    b_losses = u_b*p**2  !!! b_sync_ic = 8.94e-25*(u_b+u_cmb)*gamma_l**2 ! erg/cm
+    b_losses = 0.000001*u_b*p**2  !!! b_sync_ic = 8.94e-25*(u_b+u_cmb)*gamma_l**2 ! erg/cm
 
   end function
 
@@ -963,7 +965,7 @@ subroutine ne_to_q(n, e, q)
         dts_new =  (p(1:ncre)-p(0:ncre-1))/abs(b_losses(p(1:ncre)))
       end where
       
-      dts_min = minval(dts_new)   ! min of array
+      dts_min = cfl_cre*minval(dts_new)   ! min of array
 !       print *, 'p = ', p
 !       print *, 'ub  = ', u_b
 !       print *,'dts_min = ', dts_min
