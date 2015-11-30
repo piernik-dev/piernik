@@ -381,20 +381,18 @@ subroutine cresp_update_bin_index(dt, p_lo, p_up, p_lo_next, p_up_next)
 ! arrays initialization
 !
 !-------------------------------------------------------------------------------------------------
-   subroutine cresp_init_state(dt, init_cresp_arguments, dt_calc)
+   subroutine cresp_init_state(dt, init_cresp_arguments)
       implicit none
       real(kind = 8), intent(in)  :: dt
       integer                     :: i, k
       real(kind=8)                ::  c ! width of bin
 !       real(kind=8), intent(in)    :: u_d, u_b
       real(kind=8), dimension(1:2*ncre+4)          :: init_cresp_arguments
-      real(kind=8)                  :: dt_calc
-      
-      call allocate_all_allocatable
-      
-      u_b = init_cresp_arguments(2*ncre+4)
+
+       call allocate_all_allocatable
       
       all_edges = zero
+       
       all_edges = (/ (i,i=0,ncre) /)
       all_bins = (/ (i,i=1,ncre) /)
 
@@ -455,7 +453,7 @@ subroutine cresp_update_bin_index(dt, p_lo, p_up, p_lo_next, p_up_next)
       
        e = fq_to_e(p(0:ncre-1), p(1:ncre), f(0:ncre-1), q(1:ncre), active_bins)
        n = fq_to_n(p(0:ncre-1), p(1:ncre), f(0:ncre-1), q(1:ncre), active_bins)
-       
+
 #ifdef VERBOSE
       print *, 'init n =', n
       print *, 'init e =', e 
@@ -473,10 +471,6 @@ subroutine cresp_update_bin_index(dt, p_lo, p_up, p_lo_next, p_up_next)
        init_cresp_arguments(ncre+1:2*ncre) = e
        init_cresp_arguments(2*ncre+1) = p_lo
        init_cresp_arguments(2*ncre+2) = p_up
-       
-       
-! timestep calculation
-   call cresp_timestep(dt_calc)
        
        
    call deallocate_active_arrays
@@ -951,8 +945,9 @@ subroutine ne_to_q(n, e, q)
       open(10, file="crs.dat", status='unknown', position='append')
       write(10, '(e16.9, 3(1x,i8), 100(1x,e16.9))') t, ncre, crel%i_lo, crel%i_up, crel%p, crel%f, crel%q
       close(10)
-
+!       write(20, '(e16.9, 1(1x,i4), 100(1x,e16.9))') t, ncre,  x
    end subroutine printer
+
 
    subroutine cresp_timestep(dt_calc)
     implicit none
@@ -977,5 +972,6 @@ subroutine ne_to_q(n, e, q)
    end subroutine cresp_timestep
    
 ! -------------------- 
+
    
 end module cresp_crspectrum

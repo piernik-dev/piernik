@@ -20,7 +20,7 @@
  /
 
  $UNITS
-    units_set = "PSM" !"cgs"
+    units_set = "PSM"
  /
 
  $RESTART_CONTROL
