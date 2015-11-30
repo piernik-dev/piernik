@@ -49,7 +49,6 @@ module initcosmicrays
    integer(kind=4)                     :: ncre         !< number of CR electron components \deprecated BEWARE: ncrs (sum of ncrn and ncre) should not be higher than ncr_max = 9
    integer(kind=4)                     :: ncrs         !< number of all CR components \deprecated BEWARE: ncrs (sum of ncrn and ncre) should not be higher than ncr_max = 9
    real                                :: cfl_cr       !< CFL number for diffusive CR transport
-   real                                :: cfl_cre       !< CFL number for diffusive CR electrons transport
    real                                :: smallecr     !< floor value for CR energy density
    real                                :: cr_active    !< parameter specifying whether CR pressure gradient is (when =1.) or isn't (when =0.) included in the gas equation of motion
    real                                :: cr_eff       !< conversion rate of SN explosion energy to CR energy (default = 0.1)
@@ -69,7 +68,6 @@ module initcosmicrays
    integer(kind=4), allocatable, dimension(:) :: iarr_crn !< array of indexes pointing to all CR nuclear components
    integer(kind=4), allocatable, dimension(:) :: iarr_cre !< array of indexes pointing to all CR electron components
    integer(kind=4), allocatable, dimension(:) :: iarr_crs !< array of indexes pointing to all CR components
-   integer(kind=4), allocatable, dimension(:) :: iarr_crs_diff !< array of indexes pointing to all CR components
 
    real,    allocatable, dimension(:)  :: gamma_crs    ! < array containing adiabatic indexes of all CR components
    real(kind=8)                        :: p_lo_init    ! < initial lower momentum cut in power spectrum
@@ -79,8 +77,8 @@ module initcosmicrays
    real(kind=8)                        :: p_min_fix    ! < momentum fixed grid
    real(kind=8)                        :: p_max_fix    ! < momentum fixed grid
 
-    real,    allocatable, dimension(:)  :: K_crs_paral  !< array containing parallel diffusion coefficients of all CR components
-    real,    allocatable, dimension(:)  :: K_crs_perp   !< array containing perpendicular diffusion coefficients of all CR components
+!    real,    allocatable, dimension(:)  :: K_crs_paral  !< array containing parallel diffusion coefficients of all CR components
+!    real,    allocatable, dimension(:)  :: K_crs_perp   !< array containing perpendicular diffusion coefficients of all CR components
    !> \deprecated BEWARE Possible confusion: *_perp coefficients are not "perpendicular" but rather isotropic
    
    type(bin_old)                       :: crel
@@ -140,7 +138,7 @@ contains
            &                 divv_scheme, crn_gpcr_ess, cre_gpcr_ess
            
       namelist /COSMIC_RAY_SPECTRUM/ p_lo_init, p_up_init, f_init, q_init, ncre, p_min_fix, &
-           &                         p_max_fix, cfl_cre
+           &                         p_max_fix
 
       cfl_cr     = 0.9
       smallecr   = 0.0
@@ -149,15 +147,15 @@ contains
       !  we fix E_SN=10**51 erg
       ncrn       = 0
       ncre       = 0
-      
+
       p_lo_init = 1.15e4
       p_up_init = 1.15e5
       p_min_fix = 1.15e4
       p_max_fix = 1.15e5
       f_init    = 1.0e0
       q_init    = 5.0e0
-      cfl_cre   = 0.5
-           
+      
+      
       use_split  = .true.
 
       gamma_crn(:)   = 4./3.
@@ -231,7 +229,6 @@ contains
          rbuff(8)   = q_init      !!!
          rbuff(9)   = p_min_fix
          rbuff(10)  = p_max_fix
-         rbuff(11)  = cfl_cre    !!!
 
          lbuff(1)   = use_split
 
@@ -280,7 +277,6 @@ contains
          q_init     = rbuff(8)   !!!
          p_min_fix  = rbuff(9)   !!!
          p_max_fix  = rbuff(10)  !!!
-         cfl_cre    = rbuff(11)
          
          use_split  = lbuff(1)
 
@@ -312,30 +308,32 @@ contains
       if (any([ncrn, ncre] > ncr_max) .or. any([ncrn, ncre] < 0)) call die("[initcosmicrays:init_cosmicrays] ncr[nes] > ncr_max or ncr[nes] < 0")
       if (ncrs ==0) call warn("[initcosmicrays:init_cosmicrays] ncrs == 0; no cr components specified")
 
-      ma1d = [ncrs]
-      call my_allocate(gamma_crs,   ma1d)
-      call my_allocate(K_crs_paral, ma1d)
-      call my_allocate(K_crs_perp,  ma1d)
+!       ma1d = [ncrs]
+!       call my_allocate(gamma_crs,   ma1d)
+!       call my_allocate(K_crs_paral, ma1d)
+!       call my_allocate(K_crs_perp,  ma1d)
 
-       if (ncrn > 0) then
-          gamma_crs  (1:ncrn) = gamma_crn  (1:ncrn)
-          K_crs_paral(1:ncrn) = K_crn_paral(1:ncrn)
-          K_crs_perp (1:ncrn) = K_crn_perp (1:ncrn)
-       endif
+!        if (ncrn > 0) then
+!           gamma_crs  (1:ncrn) = gamma_crn  (1:ncrn)
+!           K_crs_paral(1:ncrn) = K_crn_paral(1:ncrn)
+!           K_crs_perp (1:ncrn) = K_crn_perp (1:ncrn)
+!        endif
 
        if (ncre > 0) then
-            gamma_cre  (1:2*ncre+2) = 0 !rbuff(ne+1       :ne+  ncre)
-            K_cre_paral(1:2*ncre+2) = 0 !rbuff(ne+1+  ncre:ne+2*ncre)
-            K_cre_perp (1:2*ncre+2) = 0 !rbuff(ne+1+2*ncre:ne+3*ncre)
+            gamma_cre  (1:ncre) = 0 !rbuff(ne+1       :ne+  ncre)
+            K_cre_paral(1:ncre) = 0 !rbuff(ne+1+  ncre:ne+2*ncre)
+            K_cre_perp (1:ncre) = 0 !rbuff(ne+1+2*ncre:ne+3*ncre)
        endif
 
 
 
-      if (ncre > 0) then                ! indexes end with ncrs-2 for we will not need gamma_crs and K for p_lo and p_up, but this will be handled in crdiffusion.
-         gamma_crs  (ncrn+1:ncrs) = 0 !gamma_cre  (1:ncre) !<- cre gamma and K is supposed to be 0
-         K_crs_paral(ncrn+1:ncrs) = 0!K_cre_paral(1:ncre)
-         K_crs_perp (ncrn+1:ncrs) = 0!K_cre_perp (1:ncre)
-      endif
+!       if (ncre > 0) then
+!          gamma_crs  (ncrn+1:ncrs) = 0 !gamma_cre  (1:ncre) !<- cre gamma and K is supposed to be 0
+!          K_crs_paral(ncrn+1:ncrs) = 0!K_cre_paral(1:ncre)
+!          K_crs_perp (ncrn+1:ncrs) = 0!K_cre_perp (1:ncre)
+!          allocate(cres_n(ncre))   !!!
+!          allocate(cres_en(ncre))  !!!
+!       endif
      
       ma1d = [ncrn]
       call my_allocate(iarr_crn, ma1d)
@@ -344,8 +342,6 @@ contains
 !                                                               (2*ncre+1) - momentum of lower cut, (2*ncre+2) - momentum of upper cut      
       ma1d = [ncrs]
       call my_allocate(iarr_crs, ma1d)
-      ma1d = [ncrs-2]
-      call my_allocate(iarr_crs_diff, ma1d) 
 
 #ifdef COSM_RAY_ELECTRONS
 !       ma1d = [ncre]
@@ -382,7 +378,7 @@ contains
 
    subroutine cosmicray_index(flind)
 
-      use constants,    only: I_ONE, I_TWO
+      use constants,    only: I_ONE
       use fluidtypes,   only: var_numbers
 #ifdef COSM_RAY_ELECTRONS
       use cresp_variables, only: ind_p_lo, ind_p_up, ind_e_beg, ind_e_end, ind_n_beg, ind_n_end
@@ -405,25 +401,13 @@ contains
       do icr = 1, ncrn
          iarr_crn(icr)      = flind%all + icr
          iarr_crs(icr)      = flind%all + icr
-         iarr_crs_diff(icr) = flind%all + icr
       enddo
-      
       flind%all = flind%all + flind%crn%all
 
-      print *, 'iarr_crn = ', iarr_crn
-      do icr = 1, (I_TWO*ncre+I_TWO)
+      do icr = 1, (2*ncre+2)
          iarr_cre(icr)        = flind%all + icr
          iarr_crs(ncrn + icr) = flind%all + icr
       enddo
-      print *, 'iarr_crn = ', iarr_cre
-            
-      do icr = 1, (I_TWO*ncre)
-         iarr_crs_diff(ncrn + icr)   = flind%all + icr
-      enddo
-      
-      print *, 'flind' ,flind%all
-      print *, 'iarr_crs_diff = ', iarr_crs_diff
-      
       flind%all = flind%all + flind%cre%all
 
       flind%crn%end = flind%crn%beg + flind%crn%all - I_ONE

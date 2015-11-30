@@ -26,7 +26,6 @@ contains
       type(cg_list_element),  pointer :: cgl
       type(grid_container),   pointer :: cg
       real(kind=8), allocatable, dimension(:)  :: cresp_arguments
-      real(kind=8)                           :: dt_cre_tmp
       
       allocate(cresp_arguments(I_ONE:I_TWO*ncre+I_FOUR))
       !       logical, save :: frun = .true.
@@ -35,10 +34,7 @@ contains
    i = 0
    j = 0
    k = 0
-   
-   dt_cre_tmp = 10.0
-   dt_cre = dt_cre_tmp
-   
+
    cgl => leaves%first
    do while (associated(cgl))
      cg => cgl%cg
@@ -76,18 +72,8 @@ contains
 #ifdef VERBOSE
               print *, 'Output of cosmic ray electrons module for grid cell with coordinates i,j,k:', i, j, k
 #endif /* VERBOSE */
-<<<<<<< HEAD
-                 call cresp_crs_update(2*dt, cresp_arguments, dt_cre_tmp) ! <- in this module n, e, p_lo and p_up are updated
-                 cg%u(iarr_cre, i, j, k) = cresp_arguments(I_ONE:I_TWO*ncre+I_TWO)
-                 
-                 if (dt_cre .ge. dt_cre_tmp) then
-                      dt_cre = dt_cre_tmp
-                  endif
-                 
-=======
               call cresp_crs_update(2*dt, cresp_arguments) !cg%u(cr_table(cren)), cg%u(cr_table(cree)), cg%u(cr_table(crepl), &
               cg%u(iarr_cre, i, j, k) = cresp_arguments(I_ONE:I_TWO*ncre+I_TWO)
->>>>>>> parent of 6ad4962... !
 !              diagnostic:
               if(i.eq.1.and.j.eq.1.and.k.eq.0) call printer(t)          
            enddo
@@ -95,16 +81,9 @@ contains
        enddo
       cgl=>cgl%nxt
       enddo
-<<<<<<< HEAD
-      
-      print *,'dt_cre grid update = ', dt_cre, ' ==0.5!'
-      dt_cre = 0.5
-     
-=======
 
       
       
->>>>>>> parent of 6ad4962... !
    end subroutine grid_cresp_update
    
    subroutine grid_cresp_initialization
@@ -159,12 +138,7 @@ contains
 #endif /* VERBOSE */
 
                   cg%u(iarr_cre, i, j, k) = cresp_arguments(I_ONE:I_TWO*ncre+I_TWO)
-<<<<<<< HEAD
-                  dt_cre = 0.5
-              enddo
-=======
 
->>>>>>> parent of 6ad4962... !
            enddo
          enddo
        enddo

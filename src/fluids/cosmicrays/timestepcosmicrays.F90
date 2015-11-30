@@ -63,11 +63,6 @@ contains
 
       logical, save :: frun = .true.
       real :: dt
-         
-         
-!          print *, 'dt_crs = ', dt_crs
-!          print *, 'dt_cre (tscosmicrays) = ', dt_cre
-         print *, 'dt = ', dt
 
       if (.not. (is_multicg .or. frun)) return
       ! with multiple cg% there are few cg%dxmn to be checked
@@ -77,7 +72,6 @@ contains
          dt_crs = huge(one) ! \crs deprecated, but timestep still depends on both crn and cre(spectrum)
       else
          dt = cfl_cr * half/maxval(K_crn_paral+K_crn_perp) !!!
-         print *,' cfl_cr, maxval (k_crn +...) = ', cfl_cr, maxval(K_crn_paral+K_crn_perp)
          if (cg%dxmn < sqrt(huge(one))/dt) then
             dt = dt * cg%dxmn**2
 #ifdef MULTIGRID
