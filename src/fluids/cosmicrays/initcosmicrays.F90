@@ -49,6 +49,7 @@ module initcosmicrays
    integer(kind=4)                     :: ncre         !< number of CR electron components \deprecated BEWARE: ncrs (sum of ncrn and ncre) should not be higher than ncr_max = 9
    integer(kind=4)                     :: ncrs         !< number of all CR components \deprecated BEWARE: ncrs (sum of ncrn and ncre) should not be higher than ncr_max = 9
    real                                :: cfl_cr       !< CFL number for diffusive CR transport
+   real                                :: cfl_cre
    real                                :: smallecr     !< floor value for CR energy density
    real                                :: cr_active    !< parameter specifying whether CR pressure gradient is (when =1.) or isn't (when =0.) included in the gas equation of motion
    real                                :: cr_eff       !< conversion rate of SN explosion energy to CR energy (default = 0.1)
@@ -77,8 +78,8 @@ module initcosmicrays
    real(kind=8)                        :: p_min_fix    ! < momentum fixed grid
    real(kind=8)                        :: p_max_fix    ! < momentum fixed grid
 
-!    real,    allocatable, dimension(:)  :: K_crs_paral  !< array containing parallel diffusion coefficients of all CR components
-!    real,    allocatable, dimension(:)  :: K_crs_perp   !< array containing perpendicular diffusion coefficients of all CR components
+   real,    allocatable, dimension(:)  :: K_crs_paral  !< array containing parallel diffusion coefficients of all CR components
+   real,    allocatable, dimension(:)  :: K_crs_perp   !< array containing perpendicular diffusion coefficients of all CR components
    !> \deprecated BEWARE Possible confusion: *_perp coefficients are not "perpendicular" but rather isotropic
    
    type(bin_old)                       :: crel
@@ -137,10 +138,11 @@ contains
            &                 gamma_cre, K_cre_paral, K_cre_perp, &
            &                 divv_scheme, crn_gpcr_ess, cre_gpcr_ess
            
-      namelist /COSMIC_RAY_SPECTRUM/ p_lo_init, p_up_init, f_init, q_init, ncre, p_min_fix, &
+      namelist /COSMIC_RAY_SPECTRUM/ cfl_cre, p_lo_init, p_up_init, f_init, q_init, ncre, p_min_fix, &
            &                         p_max_fix
 
       cfl_cr     = 0.9
+      cfl_cre    = 0.5
       smallecr   = 0.0
       cr_active  = 1.0
       cr_eff     = 0.1       !  canonical conversion rate of SN en.-> CR
@@ -229,7 +231,8 @@ contains
          rbuff(8)   = q_init      !!!
          rbuff(9)   = p_min_fix
          rbuff(10)  = p_max_fix
-
+         rbuff(11)  = cfl_cre     !!!
+         
          lbuff(1)   = use_split
 
          cbuff(1)   = divv_scheme
@@ -277,6 +280,7 @@ contains
          q_init     = rbuff(8)   !!!
          p_min_fix  = rbuff(9)   !!!
          p_max_fix  = rbuff(10)  !!!
+         cfl_cre    = rbuff(11)  !!!
          
          use_split  = lbuff(1)
 
@@ -308,16 +312,16 @@ contains
       if (any([ncrn, ncre] > ncr_max) .or. any([ncrn, ncre] < 0)) call die("[initcosmicrays:init_cosmicrays] ncr[nes] > ncr_max or ncr[nes] < 0")
       if (ncrs ==0) call warn("[initcosmicrays:init_cosmicrays] ncrs == 0; no cr components specified")
 
-!       ma1d = [ncrs]
-!       call my_allocate(gamma_crs,   ma1d)
-!       call my_allocate(K_crs_paral, ma1d)
-!       call my_allocate(K_crs_perp,  ma1d)
+      ma1d = [ncrs]
+      call my_allocate(gamma_crs,   ma1d)
+      call my_allocate(K_crs_paral, ma1d)
+      call my_allocate(K_crs_perp,  ma1d)
 
-!        if (ncrn > 0) then
-!           gamma_crs  (1:ncrn) = gamma_crn  (1:ncrn)
-!           K_crs_paral(1:ncrn) = K_crn_paral(1:ncrn)
-!           K_crs_perp (1:ncrn) = K_crn_perp (1:ncrn)
-!        endif
+       if (ncrn > 0) then
+          gamma_crs  (1:ncrn) = gamma_crn  (1:ncrn)
+          K_crs_paral(1:ncrn) = K_crn_paral(1:ncrn)
+          K_crs_perp (1:ncrn) = K_crn_perp (1:ncrn)
+       endif
 
        if (ncre > 0) then
             gamma_cre  (1:ncre) = 0 !rbuff(ne+1       :ne+  ncre)
@@ -327,13 +331,13 @@ contains
 
 
 
-!       if (ncre > 0) then
-!          gamma_crs  (ncrn+1:ncrs) = 0 !gamma_cre  (1:ncre) !<- cre gamma and K is supposed to be 0
-!          K_crs_paral(ncrn+1:ncrs) = 0!K_cre_paral(1:ncre)
-!          K_crs_perp (ncrn+1:ncrs) = 0!K_cre_perp (1:ncre)
+      if (ncre > 0) then
+         gamma_crs  (ncrn+1:ncrs) = 0 !gamma_cre  (1:ncre) !<- cre gamma and K is supposed to be 0
+         K_crs_paral(ncrn+1:ncrs) = 0!K_cre_paral(1:ncre)
+         K_crs_perp (ncrn+1:ncrs) = 0!K_cre_perp (1:ncre)
 !          allocate(cres_n(ncre))   !!!
 !          allocate(cres_en(ncre))  !!!
-!       endif
+      endif
      
       ma1d = [ncrn]
       call my_allocate(iarr_crn, ma1d)
@@ -455,7 +459,7 @@ contains
       call my_deallocate(iarr_crn)
       call my_deallocate(iarr_cre)
       call my_deallocate(iarr_crs)
-      call my_deallocate(gamma_crs)
+!       call my_deallocate(gamma_crs)
 !       call my_deallocate(K_crs_paral)
 !       call my_deallocate(K_crs_perp)
 

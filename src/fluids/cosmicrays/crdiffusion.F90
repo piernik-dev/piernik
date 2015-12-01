@@ -141,7 +141,7 @@ contains
       use fluidindex,       only: flind
       use global,           only: dt
       use grid_cont,        only: grid_container
-      use initcosmicrays,   only: iarr_crn, K_crn_paral, K_crn_perp !K_crs_paral, K_crs_perp !!!
+      use initcosmicrays,   only: iarr_crn, K_crn_paral, K_crn_perp, iarr_crs, K_crs_paral, K_crs_perp !!!
       use named_array,      only: p4
       use named_array_list, only: wna
 
@@ -185,34 +185,34 @@ contains
             do j = ldm(ydim), hdm(ydim)    ; jl = j-1 ; jh = j+1 ; jld = j-idm(ydim)
                do i = ldm(xdim), hdm(xdim) ; il = i-1 ; ih = i+1 ; ild = i-idm(xdim)
 
-                  decr(crdim,:) = (cg%u(iarr_crn,i,j,k) - cg%u(iarr_crn,ild,jld,kld)) * cg%idl(crdim)
-                  fcrdif = K_crn_perp * decr(crdim,:) !!!
+                  decr(crdim,:) = (cg%u(iarr_crs,i,j,k) - cg%u(iarr_crs,ild,jld,kld)) * cg%idl(crdim)
+                  fcrdif = K_crs_perp * decr(crdim,:) !!!
 
                   bcomp(crdim) =  cg%b(crdim,i,j,k)
 
                   if (present_not_crdim(xdim)) then
-                     dqm = half*((cg%u(iarr_crn,i ,jld,kld) + cg%u(iarr_crn,i ,j,k)) - (cg%u(iarr_crn,il,jld,kld) + cg%u(iarr_crn,il,j,k))) * cg%idx
-                     dqp = half*((cg%u(iarr_crn,ih,jld,kld) + cg%u(iarr_crn,ih,j,k)) - (cg%u(iarr_crn,i ,jld,kld) + cg%u(iarr_crn,i ,j,k))) * cg%idx
+                     dqm = half*((cg%u(iarr_crs,i ,jld,kld) + cg%u(iarr_crs,i ,j,k)) - (cg%u(iarr_crs,il,jld,kld) + cg%u(iarr_crs,il,j,k))) * cg%idx
+                     dqp = half*((cg%u(iarr_crs,ih,jld,kld) + cg%u(iarr_crs,ih,j,k)) - (cg%u(iarr_crs,i ,jld,kld) + cg%u(iarr_crs,i ,j,k))) * cg%idx
                      decr(xdim,:) = (dqp+dqm)* (1.0 + sign(1.0, dqm*dqp))*oneq
                      bcomp(xdim)   = sum(cg%b(xdim,i:ih, jld:j, kld:k))*oneq
                   endif
 
                   if (present_not_crdim(ydim)) then
-                     dqm = half*((cg%u(iarr_crn,ild,j ,kld) + cg%u(iarr_crn,i,j ,k)) - (cg%u(iarr_crn,ild,jl,kld) + cg%u(iarr_crn,i,jl,k))) * cg%idy
-                     dqp = half*((cg%u(iarr_crn,ild,jh,kld) + cg%u(iarr_crn,i,jh,k)) - (cg%u(iarr_crn,ild,j ,kld) + cg%u(iarr_crn,i,j ,k))) * cg%idy
+                     dqm = half*((cg%u(iarr_crs,ild,j ,kld) + cg%u(iarr_crs,i,j ,k)) - (cg%u(iarr_crs,ild,jl,kld) + cg%u(iarr_crs,i,jl,k))) * cg%idy
+                     dqp = half*((cg%u(iarr_crs,ild,jh,kld) + cg%u(iarr_crs,i,jh,k)) - (cg%u(iarr_crs,ild,j ,kld) + cg%u(iarr_crs,i,j ,k))) * cg%idy
                      decr(ydim,:) = (dqp+dqm)* (1.0 + sign(1.0, dqm*dqp))*oneq
                      bcomp(ydim)   = sum(cg%b(ydim,ild:i, j:jh, kld:k))*oneq
                   endif
 
                   if (present_not_crdim(zdim)) then
-                     dqm = half*((cg%u(iarr_crn,ild,jld,k ) + cg%u(iarr_crn,i,j,k )) - (cg%u(iarr_crn,ild,jld,kl) + cg%u(iarr_crn,i,j,kl))) * cg%idz
-                     dqp = half*((cg%u(iarr_crn,ild,jld,kh) + cg%u(iarr_crn,i,j,kh)) - (cg%u(iarr_crn,ild,jld,k ) + cg%u(iarr_crn,i,j,k ))) * cg%idz
+                     dqm = half*((cg%u(iarr_crs,ild,jld,k ) + cg%u(iarr_crs,i,j,k )) - (cg%u(iarr_crs,ild,jld,kl) + cg%u(iarr_crs,i,j,kl))) * cg%idz
+                     dqp = half*((cg%u(iarr_crs,ild,jld,kh) + cg%u(iarr_crs,i,j,kh)) - (cg%u(iarr_crs,ild,jld,k ) + cg%u(iarr_crs,i,j,k ))) * cg%idz
                      decr(zdim,:) = (dqp+dqm)* (1.0 + sign(1.0, dqm*dqp))*oneq
                      bcomp(zdim)   = sum(cg%b(zdim,ild:i, jld:j, k:kh))*oneq
                   endif
 
                   bb = sum(bcomp**2)
-                  if (bb > epsilon(0.d0)) fcrdif = fcrdif + K_crn_paral * bcomp(crdim) * (bcomp(xdim)*decr(xdim,:) + bcomp(ydim)*decr(ydim,:) + bcomp(zdim)*decr(zdim,:)) / bb !!!
+                  if (bb > epsilon(0.d0)) fcrdif = fcrdif + K_crs_paral * bcomp(crdim) * (bcomp(xdim)*decr(xdim,:) + bcomp(ydim)*decr(ydim,:) + bcomp(zdim)*decr(zdim,:)) / bb !!!
 
                   wcr(:,i,j,k) = - fcrdif * dt * cg%idl(crdim)
 
@@ -232,8 +232,8 @@ contains
          hdm = cg%lhn(:,LO) ; hdm(crdim) = cg%lhn(crdim,HI)
          ldm = hdm - idm
          p4 => cg%w(wna%fi)%span(cg%lhn(:,LO), int(ndm, kind=4))
-         p4(iarr_crn,:,:,:) = p4(iarr_crn,:,:,:) - (cg%w(wcri)%span(int(cg%lhn(:,LO)+idm, kind=4), cg%lhn(:,HI)) - cg%w(wcri)%span(cg%lhn(:,LO), int(ndm, kind=4)))
-         cg%u(iarr_crn,hdm(xdim):cg%lhn(xdim,HI),hdm(ydim):cg%lhn(ydim,HI),hdm(zdim):cg%lhn(zdim,HI)) = cg%u(iarr_crn,ldm(xdim):ndm(xdim),ldm(ydim):ndm(ydim),ldm(zdim):ndm(zdim)) ! for sanity
+         p4(iarr_crs,:,:,:) = p4(iarr_crs,:,:,:) - (cg%w(wcri)%span(int(cg%lhn(:,LO)+idm, kind=4), cg%lhn(:,HI)) - cg%w(wcri)%span(cg%lhn(:,LO), int(ndm, kind=4)))
+         cg%u(iarr_crs,hdm(xdim):cg%lhn(xdim,HI),hdm(ydim):cg%lhn(ydim,HI),hdm(zdim):cg%lhn(zdim,HI)) = cg%u(iarr_crs,ldm(xdim):ndm(xdim),ldm(ydim):ndm(ydim),ldm(zdim):ndm(zdim)) ! for sanity
 
          cgl => cgl%nxt
       enddo
