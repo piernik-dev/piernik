@@ -51,7 +51,7 @@ contains
       use constants,           only: one, half
       use domain,              only: is_multicg
       use grid_cont,           only: grid_container
-      use initcosmicrays,      only: cfl_cr, K_crn_paral, K_crn_perp!K_crs_paral, K_crs_perp \deprecated use of crs!!!
+      use initcosmicrays,      only: cfl_cr, K_crn_paral, K_crn_perp, K_crs_paral, K_crs_perp !\deprecated use of crs!!!
 #ifdef MULTIGRID
       use initcosmicrays,      only: use_split
       use multigrid_diffusion, only: diff_explicit, diff_tstep_fac, diff_dt_crs_orig
@@ -71,7 +71,7 @@ contains
       if (maxval(K_crn_paral+K_crn_perp) <= 0) then !!!
          dt_crs = huge(one) ! \crs deprecated, but timestep still depends on both crn and cre(spectrum)
       else
-         dt = cfl_cr * half/maxval(K_crn_paral+K_crn_perp) !!!
+         dt = cfl_cr * half/maxval(K_crs_paral+K_crs_perp) !!!
          if (cg%dxmn < sqrt(huge(one))/dt) then
             dt = dt * cg%dxmn**2
 #ifdef MULTIGRID

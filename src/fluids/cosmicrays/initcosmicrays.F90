@@ -69,6 +69,12 @@ module initcosmicrays
    integer(kind=4), allocatable, dimension(:) :: iarr_crn !< array of indexes pointing to all CR nuclear components
    integer(kind=4), allocatable, dimension(:) :: iarr_cre !< array of indexes pointing to all CR electron components
    integer(kind=4), allocatable, dimension(:) :: iarr_crs !< array of indexes pointing to all CR components
+   
+   integer(kind=4), allocatable, dimension(:) :: iarr_crs_diff !< array of indexes pointing to all conventionally diffusing CR components
+   integer(kind=4), allocatable, dimension(:) :: iarr_cre_e !< array of indexes pointing to all CR electron energy components
+   integer(kind=4), allocatable, dimension(:) :: iarr_cre_n !< array of indexes pointing to all CR electron number density components
+   integer(kind=4)                            :: iarr_cre_pl !< array of indexes pointing to CR electron p_lo components
+   integer(kind=4)                            :: iarr_cre_pu !< array of indexes pointing to CR electron p_up components
 
    real,    allocatable, dimension(:)  :: gamma_crs    ! < array containing adiabatic indexes of all CR components
    real(kind=8)                        :: p_lo_init    ! < initial lower momentum cut in power spectrum
@@ -342,10 +348,18 @@ contains
       ma1d = [ncrn]
       call my_allocate(iarr_crn, ma1d)
       ma1d = [2*ncre+2] !!!
-      call my_allocate(iarr_cre, ma1d) ! < iarr_cre will point: (1:ncre) - cre number per bin, (ncre+1:2*ncre) - cre energy per bin,
-!                                                               (2*ncre+1) - momentum of lower cut, (2*ncre+2) - momentum of upper cut      
+      call my_allocate(iarr_cre, ma1d) ! < iarr_cre will point: (1:ncre) - cre number per bin, (ncre+1:2*ncre) - cre energy per bin, (2*ncre+1) - momentum of lower cut, (2*ncre+2) - momentum of upper cut    
+      ma1d = [ncre]
+      call my_allocate(iarr_cre_e, ma1d)
+      call my_allocate(iarr_cre_n, ma1d)
+      
+
       ma1d = [ncrs]
       call my_allocate(iarr_crs, ma1d)
+      
+      ma1d = [ncrs-2]
+      call my_allocate(iarr_crs_diff, ma1d)
+      
 
 #ifdef COSM_RAY_ELECTRONS
 !       ma1d = [ncre]
@@ -405,6 +419,7 @@ contains
       do icr = 1, ncrn
          iarr_crn(icr)      = flind%all + icr
          iarr_crs(icr)      = flind%all + icr
+         iarr_crs_diff(icr) = flind%all + icr
       enddo
       flind%all = flind%all + flind%crn%all
 
@@ -412,6 +427,14 @@ contains
          iarr_cre(icr)        = flind%all + icr
          iarr_crs(ncrn + icr) = flind%all + icr
       enddo
+      
+      do icr = 1, (2*ncre)
+         iarr_crs_diff(ncrn + icr) = flind%all + icr
+      enddo
+      
+      print *, 'iarr_crs_diff = ', iarr_crs_diff
+      
+      
       flind%all = flind%all + flind%cre%all
 
       flind%crn%end = flind%crn%beg + flind%crn%all - I_ONE
@@ -433,6 +456,20 @@ contains
      
      ind_p_lo = ind_e_end+I_ONE
      ind_p_up = ind_p_lo + I_ONE
+         
+     do icr = 1, ncre
+        iarr_cre_e(icr) = ind_e_beg - I_ONE + icr
+     enddo
+     
+     do icr = 1, ncre !ind_n_beg, ind_n_end
+        iarr_cre_n(icr) = ind_n_beg - I_ONE + icr
+     enddo
+     
+     iarr_cre_pl = ind_p_lo
+     iarr_cre_pu = ind_p_up
+     print *,'iarr_cre_n = ', iarr_cre_n
+     print *,'iarr_cre_e = ', iarr_cre_e
+     print *,'iarr_cre_pl, pu = ', iarr_cre_pl, iarr_cre_pu
 !      print *,'flind%cre%beg & end  = ', flind%cre%beg, flind%cre%end
 !      print *,'ind_p_lo, ind_p_up = ', ind_p_lo, ind_p_up
 #endif /* COSM_RAY_ELECTRONS */      
