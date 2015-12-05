@@ -169,6 +169,8 @@ contains
     real, dimension(xdim:zdim,n)                 :: b_cclf, b_ccrf
     real, dimension(xdim:zdim)                   :: b_starl, b_starr, b_2star
 
+    !integer :: ii
+
     ! SOLVER
 
     do i = 1,n
@@ -182,6 +184,10 @@ contains
       
        c_fastl = sqrt(half*c_fastl/ul(idn,i))
        write(*,*) "c_fastl", c_fastl
+       !do ii=lbound(ul,2), ubound(ul,2)
+        !  write(*,*)"ul(idn)",ul(idn,ii)
+       !enddo
+
        c_fastr  =   (gampr_r+(b_ccr(xdim,i)**2+b_ccr(ydim,i)**2+b_ccr(zdim,i)**2))  &
                                        + sqrt((gampr_r+(b_ccr(xdim,i)**2+b_ccr(ydim,i)**2+b_ccr(zdim,i)**2))**2-(four*gampr_r*b_ccr(xdim,i)**2))
 

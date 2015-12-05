@@ -262,6 +262,9 @@ contains
     du  = calculate_slope_vanleer(u)
     ul  = u - half*du
     ur  = u + half*du
+
+    !write(*,*) "ul", ul
+    !write(*,*) "ur", ur
     
     db  = calculate_slope_vanleer(b_cc)
     b_ccl = b_cc - half*db
@@ -373,6 +376,9 @@ contains
     du  = calculate_slope_vanleer(u)
     ul  = u - half*du
     ur  = u + half*du
+
+    !write(*,*) "ul", ul
+    !write(*,*) "ur", ur
     
     db  = calculate_slope_vanleer(b_cc)
     b_ccl = b_cc - half*db
