@@ -1,6 +1,6 @@
 module cresp_grid
 ! pulled by COSM_RAY_ELECTRONS
-      use initcosmicrays, only: ncre, iarr_cre
+      use initcosmicrays, only: ncre, iarr_cre, iarr_cre_e, iarr_cre_n
       use global,         only: dt, t
 
 contains
@@ -96,7 +96,7 @@ contains
       allocate(cresp_arguments(I_ONE:I_TWO*ncre+I_FOUR))
       !       logical, save :: frun = .true.
       !       integer       :: cr_id         ! maybe we should make this variable global in the module and do not pass it as an argument?
-
+  print *, 'pass cresp grid init'
    i = 0
    j = 0
    k = 0
@@ -109,11 +109,6 @@ contains
            do j = cg%js, cg%je
               do i = cg%is, cg%ie
                   cresp_arguments(I_ONE:)    = cg%u(iarr_cre, i, j, k)
-!                   cresp_arguments(ncre+1:2*ncre) = cg%u(ind_e_beg:ind_e_end, i, j, k)
-!                   cresp_arguments(2*ncre+1) = cg%u(ind_p_lo, i, j, k)
-!                   cresp_arguments(2*ncre+2) = cg%u(ind_p_up, i, j, k)
-!                   cresp_arguments(2*ncre+3) = 2.5e-7
-!                   cresp_arguments(2*ncre+4) = 5.0e-5
                   call cresp_init_state(dt, cresp_arguments)
 #ifdef VERBOSE
               print *, 'Output of cosmic ray electrons module for grid cell with coordinates i,j,k:', i, j, k
@@ -124,7 +119,7 @@ contains
        enddo
       cgl=>cgl%nxt
       enddo
-
+      
    
    end subroutine grid_cresp_initialization
    
