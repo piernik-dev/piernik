@@ -67,7 +67,7 @@ contains
       if (.not. (is_multicg .or. frun)) return
       ! with multiple cg% there are few cg%dxmn to be checked
       ! with AMR minval(cg%dxmn) may change with time
-
+      print *, ' dt_crs = ', dt_crs, ' dt = ', dt
       if (maxval(K_crn_paral+K_crn_perp) <= 0) then !!!
          dt_crs = huge(one) ! \crs deprecated, but timestep still depends on both crn and cre(spectrum)
       else
@@ -81,7 +81,7 @@ contains
             dt_crs = min(dt_crs, dt)
          endif
       endif
-
+      print *, ' dt_crs = ', dt_crs, ' dt = ', dt,' cfl_cr = ', cfl_cr
       frun = .false.
 
    end subroutine timestep_crs

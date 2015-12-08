@@ -3,6 +3,10 @@ module cresp_grid
       use initcosmicrays, only: ncre, iarr_cre, iarr_cre_e, iarr_cre_n
       use global,         only: dt, t
 
+      
+      public        dt_cre      
+      
+      real(kind=8)                    :: dt_cre
 contains
 
 
@@ -28,6 +32,7 @@ contains
       type(cg_list_element),  pointer :: cgl
       type(grid_container),   pointer :: cg
       real(kind=8), allocatable, dimension(:)  :: cresp_arguments
+      real(kind=8)                             :: dt_cre_tmp
       
       allocate(cresp_arguments(I_ONE:I_TWO*ncre+I_FOUR))
       !       logical, save :: frun = .true.
@@ -36,6 +41,9 @@ contains
    i = 0
    j = 0
    k = 0
+
+   dt_cre_tmp = 1.0
+   dt_cre = dt_cre_tmp
 
    cgl => leaves%first
    do while (associated(cgl))
@@ -58,14 +66,23 @@ contains
 #ifdef VERBOSE
               print *, 'Output of cosmic ray electrons module for grid cell with coordinates i,j,k:', i, j, k
 #endif /* VERBOSE */
-              call cresp_crs_update(2*dt, cresp_arguments) !cg%u(cr_table(cren)), cg%u(cr_table(cree)), cg%u(cr_table(crepl), &
+              call cresp_crs_update(2*dt, cresp_arguments, dt_cre_tmp) !cg%u(cr_table(cren)), cg%u(cr_table(cree)), cg%u(cr_table(crepl), &
               cg%u(iarr_cre, i, j, k) = cresp_arguments(I_ONE:I_TWO*ncre+I_TWO)
 !              diagnostic:
               if(i.eq.1.and.j.eq.1.and.k.eq.0) call printer(t)          
+              
+              if (dt_cre .ge. dt_cre_tmp) then
+                      dt_cre = dt_cre_tmp
+              endif
+              
            enddo
          enddo
        enddo
       cgl=>cgl%nxt
+      
+      print *,'min_cre_dt = ', dt_cre
+      print *,'dt_cre grid update = ', dt_cre, ' ==0.5!'
+      dt_cre = 0.5
       enddo
       ! diagnostics!
 !       cg%u(ind_e_beg:ind_e_end,:,:,:) = 1.0
@@ -92,6 +109,7 @@ contains
       type(cg_list_element),  pointer :: cgl
       type(grid_container),   pointer :: cg
       real(kind=8), allocatable, dimension(:)  :: cresp_arguments
+      real(kind=8)                             :: dt_cre_tmp
       
       allocate(cresp_arguments(I_ONE:I_TWO*ncre+I_FOUR))
       !       logical, save :: frun = .true.
@@ -100,6 +118,10 @@ contains
    i = 0
    j = 0
    k = 0
+   
+   dt_cre_tmp = 1.0
+   dt_cre = dt_cre_tmp
+   
    cgl => leaves%first
    do while (associated(cgl))
      cg => cgl%cg
@@ -109,15 +131,25 @@ contains
            do j = cg%js, cg%je
               do i = cg%is, cg%ie
                   cresp_arguments(I_ONE:)    = cg%u(iarr_cre, i, j, k)
-                  call cresp_init_state(dt, cresp_arguments)
+                  cresp_arguments(2*ncre+3) = emag(cg%b(xdim,i,j,k), cg%b(ydim,i,j,k), cg%b(zdim,i,j,k))*1.0e-6
+                  call cresp_init_state(dt, cresp_arguments, dt_cre_tmp)
 #ifdef VERBOSE
               print *, 'Output of cosmic ray electrons module for grid cell with coordinates i,j,k:', i, j, k
 #endif /* VERBOSE */
                   cg%u(iarr_cre, i, j, k) = cresp_arguments(I_ONE:I_TWO*ncre+I_TWO)
+                  
+                  if (dt_cre .ge. dt_cre_tmp) then
+                      dt_cre = dt_cre_tmp
+                  endif
+
            enddo
          enddo
        enddo
       cgl=>cgl%nxt
+      print *,'min_cre_dt = ', dt_cre
+      print *,'dt_cre grid update = ', dt_cre, ' ==0.5!'
+      dt_cre = 0.5
+      
       enddo
       
    

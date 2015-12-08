@@ -467,12 +467,15 @@ contains
      
      iarr_cre_pl = ind_p_lo
      iarr_cre_pu = ind_p_up
-     print *,'iarr_cre_n = ', iarr_cre_n
-     print *,'iarr_cre_e = ', iarr_cre_e
-     print *,'iarr_cre_pl, pu = ', iarr_cre_pl, iarr_cre_pu
+!      print *,'iarr_cre_n = ', iarr_cre_n
+!      print *,'iarr_cre_e = ', iarr_cre_e
+!      print *,'iarr_cre_pl, pu = ', iarr_cre_pl, iarr_cre_pu
 !      print *,'flind%cre%beg & end  = ', flind%cre%beg, flind%cre%end
 !      print *,'ind_p_lo, ind_p_up = ', ind_p_lo, ind_p_up
 #endif /* COSM_RAY_ELECTRONS */      
+     if ( ncre.eq.0) then 
+         iarr_crs_diff = iarr_crs
+     endif
    end subroutine cosmicray_index
    
    subroutine init_cresp_type

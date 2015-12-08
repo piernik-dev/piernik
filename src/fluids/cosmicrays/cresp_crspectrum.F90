@@ -3,7 +3,7 @@ module cresp_crspectrum
 !  use cresp_types, only: crel, x !uncomment crel for testing only
  use cresp_variables !,  only: ncre, u_b, u_d, c2nd, c3rd, f_init, q_init
  use initcosmicrays, only: ncre, p_min_fix, p_max_fix, f_init, q_init, p_lo_init, p_up_init, &
-                           crel
+                           crel, cfl_cre
  use constants,      only: pi, fpi, zero, one, two, half, I_ZERO, I_ONE, I_THREE, I_FOUR, I_FIVE
 
  implicit none
@@ -114,6 +114,7 @@ module cresp_crspectrum
   real(kind=8), allocatable, dimension(:)  :: n, e ! dimension(1:ncre) 
   real(kind=8), allocatable, dimension(:)  :: p_fix ! dimension(0:ncre)   
   real(kind=8)                 :: w
+  
 !   real(kind=8), dimension(0:ncre)   :: p,  f !,p_fix0
 !   real(kind=8)                      :: p_lo, p_up
 
@@ -126,12 +127,12 @@ contains
 
 !----- main subroutine -----
 
-subroutine cresp_crs_update(dt, cresp_arguments)
+subroutine cresp_crs_update(dt, cresp_arguments, dt_calc)
 
  implicit none
    real(kind=8), intent(in)  :: dt
    real(kind=8), dimension(1:2*ncre+4)   :: cresp_arguments
-   
+   real(kind=8)                 ::dt_calc 
    call allocate_all_allocatable
  
     n = cresp_arguments(1:ncre)        ! number of electrons passed by x vector
@@ -379,16 +380,18 @@ subroutine cresp_update_bin_index(dt, p_lo, p_up, p_lo_next, p_up_next)
 ! arrays initialization
 !
 !-------------------------------------------------------------------------------------------------
-   subroutine cresp_init_state(dt, init_cresp_arguments)
+   subroutine cresp_init_state(dt, init_cresp_arguments, dt_calc)
       implicit none
       real(kind = 8), intent(in)  :: dt
       integer                     :: i, k
       real(kind=8)                ::  c ! width of bin
 !       real(kind=8), intent(in)    :: u_d, u_b
       real(kind=8), dimension(1:2*ncre+4)          :: init_cresp_arguments
+      real(kind=8)                 ::dt_calc
 
        call allocate_all_allocatable
       
+      u_b = init_cresp_arguments(2*ncre + 3)
       all_edges = zero
        
       all_edges = (/ (i,i=0,ncre) /)
@@ -464,7 +467,7 @@ subroutine cresp_update_bin_index(dt, p_lo, p_up, p_lo_next, p_up_next)
        print *, 'n_tot0 =', n_tot0
        print *, 'e_tot0 =', e_tot0
 #endif /* VERBOSE */
-
+       call cresp_timestep(dt_calc)
        init_cresp_arguments(1:ncre) = n
        init_cresp_arguments(ncre+1:2*ncre) = e
        init_cresp_arguments(2*ncre+1) = p_lo
@@ -914,6 +917,33 @@ subroutine ne_to_q(n, e, q)
   
   end subroutine deallocate_all_allocatable
   
+  ! ---------------------
+  
+  subroutine cresp_timestep(dt_calc)
+    implicit none
+    real(kind=8)                  :: dt_calc
+    real(kind=8)                  :: dts_min
+    real(kind=8), dimension(ncre) :: dts_new
+    
+      dts_new = huge(one) + dt_calc ! whole dts_new array
+      where (abs(b_losses(p(1:ncre))) .ne. zero)
+        dts_new =  (p(1:ncre)-p(0:ncre-1))/abs(b_losses(p(1:ncre)))
+      end where
+      
+      dts_min = cfl_cre*minval(dts_new)   ! min of array
+!        print *, 'p = ', p
+!        print *, 'ub  = ', u_b
+!        print *,'dts_min = ', dts_min
+!        print *,'b_losses(p(1:ncre) = ', b_losses(p(1:ncre))
+      
+      if (dt_calc.ge.dts_min) then
+         dt_calc = dts_min
+      endif
+   end subroutine cresp_timestep
+   
+! -------------------- 
+
+
     subroutine cresp_accuracy_test(t)
      implicit none
      real(kind=8), intent(in)   :: t 

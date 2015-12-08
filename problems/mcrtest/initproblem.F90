@@ -291,10 +291,10 @@ contains
          
       endif
            
-#endif /* COSM_RAY_ELECTRONS */
-
 !         print *, 'in domain cell(2,2,0) cre vars = ',cg%u(ind_n_beg:ind_p_up, -2, -2, 0)  ! just some check, to be removed
       call grid_cresp_initialization
+
+#endif /* COSM_RAY_ELECTRONS */      
       
    end subroutine problem_initial_conditions
 
