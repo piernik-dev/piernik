@@ -58,9 +58,9 @@ contains
 !                   cresp_arguments(2*ncre+1) = cg%u(ind_p_lo, i, j, k)
 !                   cresp_arguments(2*ncre+2) = cg%u(ind_p_up, i, j, k)
                   
-                  cresp_arguments(2*ncre+3) = emag(cg%b(xdim,i,j,k), cg%b(ydim,i,j,k), cg%b(zdim,i,j,k))*1.0e-6
-                  cresp_arguments(2*ncre+4) = cg%q(qna%ind(divv_n))%point([i,j,k])
-!                   print *,'emag = ', cresp_arguments(2*ncre+4)
+                  cresp_arguments(2*ncre+3) = emag(cg%b(xdim,i,j,k), cg%b(ydim,i,j,k), cg%b(zdim,i,j,k))/cg%dvol
+                  cresp_arguments(2*ncre+4) = cg%q(qna%ind(divv_n))%point([i,j,k])/cg%dvol
+                  
 !                   cresp_arguments(2*ncre+4) = 5.0e-5
 
 #ifdef VERBOSE
@@ -77,10 +77,12 @@ contains
               
            enddo
          enddo
+!          print *,'emag = ', cresp_arguments(2*ncre+3)
+!          print *,'dvol = ', cg%dvol
        enddo
       cgl=>cgl%nxt
       
-      print *,'min_cre_dt = ', dt_cre
+!       print *,'min_cre_dt = ', dt_cre
       print *,'dt_cre grid update = ', dt_cre, ' ==0.5!'
       dt_cre = 0.5
       enddo
@@ -114,7 +116,6 @@ contains
       allocate(cresp_arguments(I_ONE:I_TWO*ncre+I_FOUR))
       !       logical, save :: frun = .true.
       !       integer       :: cr_id         ! maybe we should make this variable global in the module and do not pass it as an argument?
-  print *, 'pass cresp grid init'
    i = 0
    j = 0
    k = 0
@@ -131,7 +132,8 @@ contains
            do j = cg%js, cg%je
               do i = cg%is, cg%ie
                   cresp_arguments(I_ONE:)    = cg%u(iarr_cre, i, j, k)
-                  cresp_arguments(2*ncre+3) = emag(cg%b(xdim,i,j,k), cg%b(ydim,i,j,k), cg%b(zdim,i,j,k))*1.0e-6
+                  cresp_arguments(2*ncre+3) = emag(cg%b(xdim,i,j,k), cg%b(ydim,i,j,k), cg%b(zdim,i,j,k))/cg%dvol
+
                   call cresp_init_state(dt, cresp_arguments, dt_cre_tmp)
 #ifdef VERBOSE
               print *, 'Output of cosmic ray electrons module for grid cell with coordinates i,j,k:', i, j, k
@@ -144,9 +146,10 @@ contains
 
            enddo
          enddo
+!          print *,'ub = ', cresp_arguments(2*ncre+3)
        enddo
       cgl=>cgl%nxt
-      print *,'min_cre_dt = ', dt_cre
+!       print *,'min_cre_dt = ', dt_cre
       print *,'dt_cre grid update = ', dt_cre, ' ==0.5!'
       dt_cre = 0.5
       
