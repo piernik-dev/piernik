@@ -64,7 +64,7 @@ module fluidindex
    integer(kind=4), allocatable, dimension(:) :: iarr_all_en   !< array of indexes pointing to ener. densities of all fluids
    integer(kind=4), allocatable, dimension(:) :: iarr_all_crn  !< array of indexes pointing to ener. densities of all nuclear CR-components
    integer(kind=4), allocatable, dimension(:) :: iarr_all_cre  !< array of indexes pointing to ener. densities of all electron CR-components
-!    integer(kind=4), allocatable, dimension(:), target :: iarr_all_crs   !< array of indexes pointing to ener. densities of all CR-components
+   integer(kind=4), allocatable, dimension(:), target :: iarr_all_crs   !< array of indexes pointing to ener. densities of all CR-components
    integer(kind=4), allocatable, dimension(:), target :: iarr_all_trc   !< array of indexes pointing to tracers
    integer(kind=4), allocatable, dimension(:,:) :: iarr_all_swp         !< array (size = flind) of all fluid indexes in the order depending on sweeps direction
 
@@ -120,7 +120,7 @@ contains
       use initionized,    only: ion_fluid
       use initneutral,    only: neutral_fluid
 #ifdef COSM_RAYS
-      use initcosmicrays, only: iarr_crn, iarr_cre, cosmicray_index!, iarr_crs ! use of crs /deprecated
+      use initcosmicrays, only: iarr_crn, iarr_cre, cosmicray_index, iarr_crs ! use of crs /deprecated
 #endif /* COSM_RAYS */
 #ifdef TRACER
       use inittracer,     only: tracer_index, iarr_trc
@@ -161,9 +161,10 @@ contains
 
 ! Allocate index arrays
       if (has_ion) allocate(iarr_mag_swp(ndims,nmag),iarr_all_mag(nmag))
-      allocate(iarr_all_swp(xdim:zdim, (flind%all - flind%cre%all)))   ! all but cre are taken into account
+      allocate(iarr_all_swp(xdim:zdim, (flind%all))) ! - flind%cre%all)))   ! all but cre are taken into account
 ! use of crs is deprecated; since electron indexes with cre shall not be swapped, there's
 ! no need to allocate flind%all - this would cause problems with values in cre variables.
+      print *,' iarr_all_swp = ', iarr_all_swp
 
       allocate(iarr_all_dn(flind%fluids),iarr_all_mx(flind%fluids),iarr_all_my(flind%fluids),iarr_all_mz(flind%fluids))
       allocate(iarr_all_sg(flind%fluids_sg))
@@ -174,16 +175,15 @@ contains
 #endif /* !ISO */
 
 #ifdef COSM_RAYS
+      allocate(iarr_all_crs(flind%crs%all)) !!! when cre is incorporated this will be deprecated
       allocate(iarr_all_crn(flind%crn%all))
-#ifdef COSM_RAY_ELECTRONS      
-      allocate(iarr_all_cre(flind%cre%all))
-#endif /* !COSM_RAY_ELECTRONS */
+      allocate(iarr_all_cre(flind%cre%all)) ! possibly this should be brought under separate precompiler flag
+
 #else /* !COSM_RAYS */
 
-!       allocate(iarr_all_crs(flind%crs%all)) !!! when cre is incorporated this will be deprecated
       allocate(iarr_all_crn(0))
       allocate(iarr_all_cre(0))
-!       allocate(iarr_all_crs(0)) !!! when cre is incorporated this will be deprecated
+      allocate(iarr_all_crs(0)) !!! when cre is incorporated this will be deprecated
 #endif /* !COSM_RAYS */
 
 #ifdef TRACER
@@ -215,17 +215,30 @@ contains
       iarr_all_swp(zdim,flind%crn%beg:flind%crn%end) = iarr_crn
 
 !      cre variables ought not be swapped anymore - these are handled via cresp_crs_update only
-!       iarr_all_swp(xdim,flind%cre%beg:flind%cre%end) = iarr_cre
-!       iarr_all_swp(ydim,flind%cre%beg:flind%cre%end) = iarr_cre
-!       iarr_all_swp(zdim,flind%cre%beg:flind%cre%end) = iarr_cre
-!        print *, 'iarr_all_swp =', iarr_all_swp
-!       iarr_all_swp(xdim,flind%crs%beg:flind%crs%end) = iarr_crs
-!       iarr_all_swp(ydim,flind%crs%beg:flind%crs%end) = iarr_crs
-!       iarr_all_swp(zdim,flind%crs%beg:flind%crs%end) = iarr_crs
+      iarr_all_swp(xdim,flind%cre%beg:flind%cre%end) = iarr_cre
+      iarr_all_swp(ydim,flind%cre%beg:flind%cre%end) = iarr_cre
+      iarr_all_swp(zdim,flind%cre%beg:flind%cre%end) = iarr_cre
 
+      iarr_all_swp(xdim,flind%crs%beg:flind%crs%end) = iarr_crs
+      iarr_all_swp(ydim,flind%crs%beg:flind%crs%end) = iarr_crs
+      iarr_all_swp(zdim,flind%crs%beg:flind%crs%end) = iarr_crs
+
+!       print *, 'iarr_all_swp =', iarr_all_swp  
+      print *, 'sizes: iarr_all_swp =', size(iarr_all_swp)
+      
       iarr_all_crn(1:flind%crn%all) = iarr_crn
+      print *, 'iarr_crs      = ', iarr_crs
+      print *, 'flind%all%crs = ', flind%crs%all
+      print *, 'iarr_all_crS  = ' , iarr_all_crs
+      print *, 'sizes: iarr_all_crs, iarr_cre =', size(iarr_all_crs), size(iarr_crs)      
+      iarr_all_crs(1:flind%crs%all) = iarr_crs
+      
+      print *, 'iarr_cre      = ', iarr_cre
+      print *, 'flind%all%cre = ', flind%cre%all
+      print *, 'iarr_all_cre  = ' , iarr_all_cre
+      print *, 'sizes: iarr_all_cre, iarr_cre =', size(iarr_all_cre), size(iarr_cre)
+                 !#elif COSM_RAY_ELECTRONS
       iarr_all_cre(1:flind%cre%all) = iarr_cre
-!       iarr_all_crs(1:flind%crs%all) = iarr_crs
 #endif /* COSM_RAYS */
 
 #ifdef TRACER
@@ -277,7 +290,7 @@ contains
 
       call my_deallocate(iarr_all_crn)
       call my_deallocate(iarr_all_cre)
-!       call my_deallocate(iarr_all_crs)
+      call my_deallocate(iarr_all_crs)
 
       call my_deallocate(iarr_all_trc)
 

@@ -3,9 +3,9 @@
 
 #define COSM_RAYS_SOURCES
 
-#define COSM_RAY_ELECTRONS
-
 #undef ISO
+
+#define COSM_RAY_ELECTRONS
 
 #define LOCAL_FR_SPEED
 

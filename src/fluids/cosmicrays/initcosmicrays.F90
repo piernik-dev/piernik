@@ -432,7 +432,7 @@ contains
          iarr_crs_diff(ncrn + icr) = flind%all + icr
       enddo
       
-      print *, 'iarr_crs_diff = ', iarr_crs_diff
+!       print *, 'iarr_crs_diff = ', iarr_crs_diff
       
       
       flind%all = flind%all + flind%cre%all
