@@ -80,10 +80,11 @@ contains
 !          print *,'emag = ', cresp_arguments(2*ncre+3)
 !          print *,'dvol = ', cg%dvol
        enddo
+!        print *, 'cresp_args: = ', cresp_arguments(iarr_cre)
       cgl=>cgl%nxt
       
 !       print *,'min_cre_dt = ', dt_cre
-      print *,'dt_cre grid update = ', dt_cre, ' ==0.5!'
+!       print *,'dt_cre grid update = ', dt_cre, ' ==0.5!'
       dt_cre = 0.5
       enddo
       ! diagnostics!
@@ -131,9 +132,9 @@ contains
          do k = cg%ks, cg%ke
            do j = cg%js, cg%je
               do i = cg%is, cg%ie
-                  cresp_arguments(I_ONE:)    = cg%u(iarr_cre, i, j, k)
-                  cresp_arguments(2*ncre+3) = emag(cg%b(xdim,i,j,k), cg%b(ydim,i,j,k), cg%b(zdim,i,j,k))/cg%dvol
 
+                  cresp_arguments(I_ONE:2*ncre+2)    = cg%u(iarr_cre, i, j, k)
+                  cresp_arguments(2*ncre+3) = emag(cg%b(xdim,i,j,k), cg%b(ydim,i,j,k),cg%b(zdim,i,j,k))/cg%dvol
                   call cresp_init_state(dt, cresp_arguments, dt_cre_tmp)
 #ifdef VERBOSE
               print *, 'Output of cosmic ray electrons module for grid cell with coordinates i,j,k:', i, j, k
@@ -143,14 +144,14 @@ contains
                   if (dt_cre .ge. dt_cre_tmp) then
                       dt_cre = dt_cre_tmp
                   endif
-
+!                print *, ' passed cresp grid'
            enddo
          enddo
 !          print *,'ub = ', cresp_arguments(2*ncre+3)
        enddo
       cgl=>cgl%nxt
 !       print *,'min_cre_dt = ', dt_cre
-      print *,'dt_cre grid update = ', dt_cre, ' ==0.5!'
+!       print *,'dt_cre grid update = ', dt_cre, ' ==0.5!'
       dt_cre = 0.5
       
       enddo

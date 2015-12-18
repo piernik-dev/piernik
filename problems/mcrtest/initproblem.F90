@@ -278,9 +278,9 @@ contains
 #ifdef COSM_RAY_ELECTRONS
        taylor_coeff_2nd = (mod(2,cresp_taylor_order) / 2 + mod(3,cresp_taylor_order))       ! coefficient which is always equal to 1 when order = 2 or = 3 and 0 if order = 1
        taylor_coeff_3rd = (cresp_taylor_order - 1)*(cresp_taylor_order- 2) / 2              ! coefficient which is equal to 1 only when order = 3
-         write(msg,*) 'Chosen Taylor expansion order (for cresp): ', cresp_taylor_order
+         write(msg,*) '[initproblem: problem_initial_conditions: Chosen Taylor expansion order (cresp)    = ', cresp_taylor_order
          call printinfo(msg)
-         write(msg,*) 'Taylor expansion coefficients (2nd, 3nd) = ', taylor_coeff_2nd, taylor_coeff_3rd
+         write(msg,*) '[initproblem: problem_initial conditions: Taylor expansion coefficients (2nd, 3nd) = ', taylor_coeff_2nd, taylor_coeff_3rd
          call printinfo(msg)
             
       if (ncre > 0) then

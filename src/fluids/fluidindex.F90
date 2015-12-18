@@ -164,7 +164,7 @@ contains
       allocate(iarr_all_swp(xdim:zdim, (flind%all))) ! - flind%cre%all)))   ! all but cre are taken into account
 ! use of crs is deprecated; since electron indexes with cre shall not be swapped, there's
 ! no need to allocate flind%all - this would cause problems with values in cre variables.
-      print *,' iarr_all_swp = ', iarr_all_swp
+!       print *,' iarr_all_swp = ', iarr_all_swp
 
       allocate(iarr_all_dn(flind%fluids),iarr_all_mx(flind%fluids),iarr_all_my(flind%fluids),iarr_all_mz(flind%fluids))
       allocate(iarr_all_sg(flind%fluids_sg))
@@ -224,21 +224,23 @@ contains
       iarr_all_swp(zdim,flind%crs%beg:flind%crs%end) = iarr_crs
 
 !       print *, 'iarr_all_swp =', iarr_all_swp  
-      print *, 'sizes: iarr_all_swp =', size(iarr_all_swp)
+!       print *, 'sizes: iarr_all_swp =', size(iarr_all_swp)
       
       iarr_all_crn(1:flind%crn%all) = iarr_crn
-      print *, 'iarr_crs      = ', iarr_crs
-      print *, 'flind%all%crs = ', flind%crs%all
-      print *, 'iarr_all_crS  = ' , iarr_all_crs
-      print *, 'sizes: iarr_all_crs, iarr_cre =', size(iarr_all_crs), size(iarr_crs)      
+!       print *, 'iarr_crs      = ', iarr_crs
+!       print *, 'flind%all%crs = ', flind%crs%all
+!       print *, 'iarr_all_crs  = ' , iarr_all_crs
+!       print *, 'sizes: iarr_all_crs, iarr_cre =', size(iarr_all_crs), size(iarr_crs)      
       iarr_all_crs(1:flind%crs%all) = iarr_crs
       
-      print *, 'iarr_cre      = ', iarr_cre
-      print *, 'flind%all%cre = ', flind%cre%all
-      print *, 'iarr_all_cre  = ' , iarr_all_cre
-      print *, 'sizes: iarr_all_cre, iarr_cre =', size(iarr_all_cre), size(iarr_cre)
+!       print *, 'iarr_cre      = ', iarr_cre
+!       print *, 'flind%all%cre = ', flind%cre%all
+!       print *, 'iarr_all_cre  = ' , iarr_all_cre
+!       print *, 'sizes: iarr_all_cre, iarr_cre =', size(iarr_all_cre), size(iarr_cre)
                  !#elif COSM_RAY_ELECTRONS
       iarr_all_cre(1:flind%cre%all) = iarr_cre
+      
+!       print *,' iarr_all_swp = ', iarr_all_swp
 #endif /* COSM_RAYS */
 
 #ifdef TRACER

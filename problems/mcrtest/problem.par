@@ -1,5 +1,5 @@
  $BASE_DOMAIN
-    n_d = 128, 128, 1
+    n_d = 64, 64, 1
     nb  = 4
     bnd_xl = 'per'
     bnd_xr = 'per'
@@ -75,12 +75,12 @@
  $COSMIC_RAY_SPECTRUM
     cfl_cre     = 0.4
     ncre        = 5      ! number of fixed spectrum bins between
-    p_lo_init = 1.05e4   ! initial lower cut momentum
-    p_up_init = 1.05e5   ! initial upper cut momentum
+    p_lo_init = 1.05e3   ! initial lower cut momentum
+    p_up_init = 1.05e4   ! initial upper cut momentum
     f_init    = 1.0e0   ! < initial value of the normalization parameter in cre energy spectrum
     q_init    = 5.0e0   ! < initial value of power law coefficient in cre enrgy spectrum
-    p_min_fix = 1.05e4  ! momentum fixed grid
-    p_max_fix = 1.05e5  ! momentum fixed grid
+    p_min_fix = 1.015e3  ! momentum fixed grid
+    p_max_fix = 1.015e4  ! momentum fixed grid
  /
 
  $CR_SPECIES

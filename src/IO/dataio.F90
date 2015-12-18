@@ -869,6 +869,7 @@ contains
 #endif /* !ISO */
 #ifdef COSM_RAYS
       use fluidindex,       only: iarr_all_cre, iarr_all_crn !,iarr_all_crs - /deprecated !!!
+      use initcosmicrays,   only: iarr_cre_e
 #endif /* COSM_RAYS */
 #ifdef RESISTIVE
       use resistivity,      only: eta1_active
@@ -1005,8 +1006,9 @@ contains
 
 #ifdef COSM_RAYS
 !                tot_q(T_ENCR) = tot_q(T_ENCR) + cg%dvol * sum(sum(pu(iarr_all_crs,:,:,:), dim=1), mask=cg%leafmap)
-               tot_q(T_ENCR) = tot_q(T_ENCR) + cg%dvol * (sum(sum(pu(iarr_all_crn,:,:,:), dim=1), mask=cg%leafmap) + sum(sum(pu(iarr_all_cre,:,:,:), dim=1), mask=cg%leafmap))
+               tot_q(T_ENCR) = tot_q(T_ENCR) + cg%dvol * (sum(sum(pu(iarr_all_crn,:,:,:), dim=1), mask=cg%leafmap) + sum(sum(pu(iarr_cre_e,:,:,:), dim=1), mask=cg%leafmap))
                tot_q(T_ENER) = tot_q(T_ENER) + tot_q(T_ENCR)
+               print *, ' T ENCR = ', T_ENCR, tot_q(T_ENCR)
 #endif /* COSM_RAYS */
 
             case (GEO_RPZ)

@@ -173,7 +173,7 @@ contains
       
 #ifdef COSM_RAY_ELECTRONS
       iarr_crs = iarr_crs_diff
-      print *,' iarr_crs = ', iarr_crs
+!       print *,' iarr_crs = ', iarr_crs
 #endif /* COSM_RAY_ELECTRONS */
       
       

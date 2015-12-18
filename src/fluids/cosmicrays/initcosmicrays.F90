@@ -312,8 +312,10 @@ contains
       endif
       
           
-!      ncrs = ncre + ncrn
-            ncrs = (2*ncre+2) + ncrn   !!!!!
+      ncrs = ncre + ncrn
+#ifdef COSM_RAY_ELECTRONS
+      ncrs = (2*ncre+2) + ncrn   !!!!!
+#endif /* COSM_RAY_ELECTRONS */
 
       if (any([ncrn, ncre] > ncr_max) .or. any([ncrn, ncre] < 0)) call die("[initcosmicrays:init_cosmicrays] ncr[nes] > ncr_max or ncr[nes] < 0")
       if (ncrs ==0) call warn("[initcosmicrays:init_cosmicrays] ncrs == 0; no cr components specified")
@@ -347,28 +349,26 @@ contains
      
       ma1d = [ncrn]
       call my_allocate(iarr_crn, ma1d)
-      ma1d = [2*ncre+2] !!!
+      
+      
+      if (ncre.gt.0) then
+         ma1d = [2*ncre+2] !!!
+      else
+         ma1d = 0
+      endif
+
       call my_allocate(iarr_cre, ma1d) ! < iarr_cre will point: (1:ncre) - cre number per bin, (ncre+1:2*ncre) - cre energy per bin, (2*ncre+1) - momentum of lower cut, (2*ncre+2) - momentum of upper cut    
+      
       ma1d = [ncre]
       call my_allocate(iarr_cre_e, ma1d)
       call my_allocate(iarr_cre_n, ma1d)
-      
+
 
       ma1d = [ncrs]
       call my_allocate(iarr_crs, ma1d)
       
       ma1d = [ncrs-2]
       call my_allocate(iarr_crs_diff, ma1d)
-      
-
-#ifdef COSM_RAY_ELECTRONS
-!       ma1d = [ncre]
-!       call my_allocate(cren, ma1d)
-!       call my_allocate(cree, ma1d)
-!       ma1d = [size(iarr_cre)]
-!       call my_allocate(cre_table,ma1d)
-     
-#endif /*COSM_RAY_ELECTRONS */
       
 #ifdef COSM_RAYS_SOURCES
       call init_crsources(ncrn, crn_gpcr_ess)
@@ -412,7 +412,13 @@ contains
 
       
       flind%crn%all  = ncrn
-      flind%cre%all  = 2*ncre+2 !!!
+      
+      if (ncre.gt.0) then 
+            flind%cre%all  = 2*ncre+2 !!!
+      else  
+            flind%cre%all  = 0
+      endif
+      
       flind%crs%all  = ncrs ! \crs deprecated, but we most likely need flind%crs%all to allocate part of cg%u responsible for all cosmic rays, so this remains unchanged
       
 
@@ -423,17 +429,20 @@ contains
       enddo
       flind%all = flind%all + flind%crn%all
 
-      do icr = 1, (2*ncre+2)
-         iarr_cre(icr)        = flind%all + icr
-         iarr_crs(ncrn + icr) = flind%all + icr
-      enddo
+      if (ncre.gt.0) then
+       do icr = 1, (2*ncre+2)
+          iarr_cre(icr)        = flind%all + icr
+          iarr_crs(ncrn + icr) = flind%all + icr
+       enddo
+      endif
+      
       
       do icr = 1, (2*ncre)
          iarr_crs_diff(ncrn + icr) = flind%all + icr
       enddo
       
 !       print *, 'iarr_crs_diff = ', iarr_crs_diff
-      
+!       print *, 'iarr_crs = ', iarr_crs
       
       flind%all = flind%all + flind%cre%all
 
