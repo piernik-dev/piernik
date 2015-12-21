@@ -169,7 +169,7 @@ contains
     real, dimension(xdim:zdim,n)                 :: b_cclf, b_ccrf
     real, dimension(xdim:zdim)                   :: b_starl, b_starr, b_2star
 
-    !integer :: ii
+    integer :: ii
 
     ! SOLVER
 
@@ -320,11 +320,19 @@ contains
 
           coeff_1  =  b_ccl(xdim,i)/dn_l
 
+          do ii=lbound(ul,2), ubound(ul,1)
+             write(*,*) "dn_l", dn_l
+          enddo
+          
+
           ! degug
           !write(*,*) "b_ccl", b_ccl(xdim,i)
           !write(*,*) "dn_l", dn_l
           
           v_starl(imy)  =  ul(imy,i) + coeff_1*(b_ccl(ydim,i) - b_starl(ydim))
+           do ii=lbound(ul,2), ubound(ul,1)
+             write(*,*) "ul(imy)", ul(imy,ii)
+          enddo
           !v_starl(imy)  =  ul(imy,i)
           
           !do ii=lbound(ul,2), ubound(ul,2)

@@ -202,6 +202,7 @@ contains
 
 
    function utoq(u,b_cc) result(q)
+   
 
      use constants,  only: half, xdim, zdim
      use fluidindex, only: flind
@@ -211,6 +212,7 @@ contains
      implicit none
 
      real, dimension(:,:),   intent(in)    :: u, b_cc
+     
      real, dimension(size(u,1),size(u,2))  :: q
      integer  :: p
 
@@ -225,7 +227,7 @@ contains
         q(fl%imz,:) =  u(fl%imz,:)/u(fl%idn,:)
 
         q(fl%ien,:) =  fl%gam_1*(u(fl%ien,:) - ekin(u(fl%imx,:), u(fl%imy,:), u(fl%imz,:), u(fl%idn,:)) - half*sum(b_cc(xdim:zdim,:))**2) + half*sum(b_cc(xdim:zdim,:))**2
-       
+        
      enddo
      
    end function utoq
@@ -406,18 +408,19 @@ contains
     
     ql = utoq(u_l,b_ccl)
     qr = utoq(u_r,b_ccr)
-
+    
   
     
     do i = 1, flind%fluids
        fl    => flind%all_fluids(i)%fl
+       p_flx => flx(fl%beg:fl%end,:)
        p_ql  => ql(fl%beg:fl%end,:)
        p_qr  => qr(fl%beg:fl%end,:)
-       p_flx => flx(fl%beg:fl%end,:)
+       !p_flx => flx(fl%beg:fl%end,:)
        p_bcc => mag_cc(xdim:zdim,:)
        p_bccl => b_ccl(xdim:zdim,:)
        p_bccr => b_ccr(xdim:zdim,:)
-       call riemann_hlld(nx, p_flx, p_ql, p_qr, mag_cc, p_bccl, p_bccr, fl%gam)
+       call riemann_hlld(nx, p_flx, p_ql, p_qr, p_bcc, p_bccl, p_bccr, fl%gam)
     end do
 
    
