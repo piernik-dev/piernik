@@ -182,8 +182,8 @@ contains
        c_fastl  =   (gampr_l+(b_ccl(xdim,i)**2+b_ccl(ydim,i)**2+b_ccl(zdim,i)**2))  &
                                        + sqrt((gampr_l+(b_ccl(xdim,i)**2+b_ccl(ydim,i)**2+b_ccl(zdim,i)**2))**2-(four*gampr_l*b_ccl(xdim,i)**2))
       
-       c_fastl = sqrt(half*c_fastl/ul(idn,i))
-       write(*,*) "c_fastl", c_fastl
+       !c_fastl = sqrt(half*c_fastl/ul(idn,i))
+       !write(*,*) "c_fastl", c_fastl
        !do ii=lbound(ul,2), ubound(ul,2)
         !  write(*,*)"ul(idn)",ul(idn,ii)
        !enddo
@@ -325,7 +325,14 @@ contains
           !write(*,*) "dn_l", dn_l
           
           v_starl(imy)  =  ul(imy,i) + coeff_1*(b_ccl(ydim,i) - b_starl(ydim))
+          !v_starl(imy)  =  ul(imy,i)
+          
+          !do ii=lbound(ul,2), ubound(ul,2)
+           !  write(*,*)"ul(imy)",ul(imy,ii)
+          !enddo
+
           v_starl(imz)  =  ul(imz,i) + coeff_1*(b_ccl(zdim,i) - b_starl(zdim))
+          !v_starl(imz)  =  ul(imz,i)
 
           ! Transversal components of magnetic field for right states (Eq. 45 & 47), taking degeneracy into account
 
@@ -352,7 +359,9 @@ contains
 
           v_starr(imy)  =   ur(imy,i) + coeff_1*(b_ccr(ydim,i) - b_starr(ydim))
           v_starr(imz)  =   ur(imz,i) + coeff_1*(b_ccr(zdim,i) - b_starr(zdim))
-
+          !v_starr(imy)  =   ur(imy,i)
+          !v_starr(imz)  =   ur(imz,i)
+          
           ! Dot product of velocity and magnetic field
 
           vb_l  =  sum(ul(imx:imz,i)*b_ccl(xdim:zdim,i))

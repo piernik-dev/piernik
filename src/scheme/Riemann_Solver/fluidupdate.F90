@@ -365,9 +365,11 @@ contains
     real, dimension(xdim:zdim,size(u,2)), target    :: b_ccl, b_ccr, mag_cc
     real, dimension(xdim:zdim,size(u,2)), target    :: db
     real, dimension(size(u,1),size(u,2))            :: u_l, u_r
+    !real, dimension(size(u,1),size(u,2)), target    :: u_l, u_r
     real, dimension(size(u,1),size(u,2)), target    :: flx, ql, qr, du, ul, ur !, u_l, u_r
     real, dimension(:,:), pointer                   :: p_flx, p_bcc, p_bccl, p_bccr, p_ql, p_qr
     integer                                         :: nx, i
+    !integer                                         :: ii
     
     
 
@@ -377,8 +379,10 @@ contains
     ul  = u - half*du
     ur  = u + half*du
 
-    !write(*,*) "ul", ul
-    !write(*,*) "ur", ur
+    !do ii = lbound(u, 2), ubound(u,2)
+     !  write(*,*) "ul(:,",ii,")", ul(:,ii)
+      ! write(*,*) "ur(:,",ii,")", ur(:,ii)
+    !end do
     
     db  = calculate_slope_vanleer(b_cc)
     b_ccl = b_cc - half*db
@@ -388,10 +392,20 @@ contains
 
     flx  = fluxes(ul,b_ccl,ddim) - fluxes(ur,b_ccr,ddim)
 
+    !do ii = lbound(u, 2), ubound(u,2)
+     !  write(*,*) "flx(:,",ii,")", flx(:,ii)
+    !end do
+
     u_l = ur + half*dtodx*flx
     u_r(:,1:nx-1) = ul(:,2:nx) + half*dtodx*flx(:,2:nx) ; u_r(:,nx) = u_r(:,nx-1)
-    ql = utoq(ul,b_ccl)
-    qr = utoq(ur,b_ccr)
+
+    !do ii = lbound(u, 2), ubound(u,2)
+     !  write(*,*) "u_l(:,",ii,")", u_l(:,ii)
+      ! write(*,*) "u_r(:,",ii,")", u_r(:,ii)
+    !end do
+    
+    ql = utoq(u_l,b_ccl)
+    qr = utoq(u_r,b_ccr)
 
   
     
@@ -406,8 +420,15 @@ contains
        call riemann_hlld(nx, p_flx, p_ql, p_qr, mag_cc, p_bccl, p_bccr, fl%gam)
     end do
 
+   
+    
     u(:,2:nx) = u(:,2:nx) + dtodx*(flx(:,1:nx-1) - flx(:,2:nx))
     u(:,1) = u(:,2) ; u(:,nx) = u(:,nx-1)
+
+    !do ii = lbound(u, 2), ubound(u,2)
+     !  write(*,*) "flx_diff(:,",ii,")", (flx(:,1:ii-1) - flx(:,2:ii))
+    !end do
+    
 
   end subroutine muscl
 
