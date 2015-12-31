@@ -53,18 +53,23 @@ module initcosmicrays
    real                                :: smallecr     !< floor value for CR energy density
    real                                :: cr_active    !< parameter specifying whether CR pressure gradient is (when =1.) or isn't (when =0.) included in the gas equation of motion
    real                                :: cr_eff       !< conversion rate of SN explosion energy to CR energy (default = 0.1)
+   real                                :: cre_eff      !< Conversion rate of SN explosion energy to CR electrons energy (default = 0.01)
    logical                             :: use_split    !< apply all diffusion operators at once (.false.) or use directional splittiong (.true.)
    real, dimension(ncr_max)            :: gamma_crn    !< array containing adiabatic indexes of all CR nuclear components
    real, dimension(ncr_max)            :: K_crn_paral  !< array containing parallel diffusion coefficients of all CR nuclear components
    real, dimension(ncr_max)            :: K_crn_perp   !< array containing perpendicular diffusion coefficients of all CR nuclear components
-   real, dimension(ncr_max)            :: gamma_cre    !< array containing adiabatic indexes of all CR nuclear components
+   real, dimension(ncr_max)            :: gamma_cre    !< array containing adiabatic indexes of all CR electron components
    real, dimension(ncr_max)            :: K_cre_paral  !< array containing parallel diffusion coefficients of all CR electron components
    real, dimension(ncr_max)            :: K_cre_perp   !< array containing perpendicular diffusion coefficients of all CR electron components
    character(len=cbuff_len)            :: divv_scheme  !< scheme used to calculate div(v), see crhelpers for more details
    logical, dimension(ncr_max)         :: crn_gpcr_ess !< if CRn species/energy-bin is essential for grad_pcr calculation
    logical, dimension(ncr_max)         :: cre_gpcr_ess !< if CRe species/energy-bin is essential for grad_pcr calculation
    integer(kind=4), allocatable, dimension(:) :: gpcr_essential !< crs indexes of essentials for grad_pcr calculation
-   
+   real                                :: K_cre_e_paral !< Contains parallel diffusion coefficient of electrons (for energy density)
+   real                                :: K_cre_n_paral !< Contains parallel diffusion coefficient of electrons (for number density)
+   real                                :: K_cre_e_perp  !< Contains perpendicular diffusion coefficient of electrons (for energy density)
+   real                                :: K_cre_n_perp  !< Contains perpendicular diffusion coefficient of electrons (for number density)
+   real                                :: K_pow_index   !< Power law index for scaling electron diffusion coefficients K(e) with K(n)
    ! public component data
    integer(kind=4), allocatable, dimension(:) :: iarr_crn !< array of indexes pointing to all CR nuclear components
    integer(kind=4), allocatable, dimension(:) :: iarr_cre !< array of indexes pointing to all CR electron components
@@ -89,6 +94,7 @@ module initcosmicrays
    !> \deprecated BEWARE Possible confusion: *_perp coefficients are not "perpendicular" but rather isotropic
    
    type(bin_old)                       :: crel
+   integer(kind=4), allocatable, dimension(:) :: iarr_crs_tmp
 
 contains
 
@@ -141,11 +147,11 @@ contains
 
       namelist /COSMIC_RAYS/ cfl_cr, smallecr, cr_active, cr_eff, use_split, &
            &                 ncrn, gamma_crn, K_crn_paral, K_crn_perp, &
-           &                 gamma_cre, K_cre_paral, K_cre_perp, &
-           &                 divv_scheme, crn_gpcr_ess, cre_gpcr_ess
+           &                 gamma_cre, divv_scheme, crn_gpcr_ess, cre_gpcr_ess
            
-      namelist /COSMIC_RAY_SPECTRUM/ cfl_cre, p_lo_init, p_up_init, f_init, q_init, ncre, p_min_fix, &
-           &                         p_max_fix
+      namelist /COSMIC_RAY_SPECTRUM/ cfl_cre, p_lo_init, p_up_init, f_init, q_init, ncre, &
+           &                         p_min_fix, p_max_fix, cre_eff, K_cre_e_paral, K_cre_e_perp, &
+           &                         K_cre_n_paral, K_cre_n_perp, K_pow_index
 
       cfl_cr     = 0.9
       cfl_cre    = 0.5
@@ -155,6 +161,7 @@ contains
       !  we fix E_SN=10**51 erg
       ncrn       = 0
       ncre       = 0
+      cre_eff    = 0.01
 
       p_lo_init = 1.15e4
       p_up_init = 1.15e5
@@ -172,6 +179,12 @@ contains
       gamma_cre(:)   = 4./3.
       K_cre_paral(:) = 0.0
       K_cre_perp(:)  = 0.0
+      
+      K_cre_e_paral = 0.0
+      K_cre_n_paral = 0.0
+      K_cre_e_perp  = 0.0
+      K_cre_n_perp  = 0.0
+      K_pow_index   = 0.0
 
       crn_gpcr_ess(:) = .false.
       crn_gpcr_ess(1) = .true.       ! in most cases protons are the first ingredient of CRs and they are essential
@@ -238,6 +251,13 @@ contains
          rbuff(9)   = p_min_fix
          rbuff(10)  = p_max_fix
          rbuff(11)  = cfl_cre     !!!
+         rbuff(12)  = cre_eff
+         rbuff(13)  = K_cre_e_paral !!!
+         rbuff(14)  = K_cre_n_paral !!!
+         rbuff(15)  = K_cre_e_perp !!!
+         rbuff(16)  = K_cre_n_perp !!!
+         rbuff(17)  = K_pow_index  !!!
+         
          
          lbuff(1)   = use_split
 
@@ -287,6 +307,13 @@ contains
          p_min_fix  = rbuff(9)   !!!
          p_max_fix  = rbuff(10)  !!!
          cfl_cre    = rbuff(11)  !!!
+         cre_eff    = rbuff(12)  !!!
+         K_cre_e_paral = rbuff(13) !!!
+         K_cre_n_paral = rbuff(14) !!!
+         K_cre_e_perp  = rbuff(15) !!!
+         K_cre_n_perp  = rbuff(16) !!!
+         K_pow_index   = rbuff(17) !!!
+         
          
          use_split  = lbuff(1)
 
@@ -366,6 +393,7 @@ contains
 
       ma1d = [ncrs]
       call my_allocate(iarr_crs, ma1d)
+      call my_allocate(iarr_crs_tmp, ma1d)
       
       ma1d = [ncrs-2]
       call my_allocate(iarr_crs_diff, ma1d)
@@ -465,13 +493,10 @@ contains
      
      ind_p_lo = ind_e_end+I_ONE
      ind_p_up = ind_p_lo + I_ONE
-         
-     do icr = 1, ncre
-        iarr_cre_e(icr) = ind_e_beg - I_ONE + icr
-     enddo
-     
+              
      do icr = 1, ncre !ind_n_beg, ind_n_end
         iarr_cre_n(icr) = ind_n_beg - I_ONE + icr
+        iarr_cre_e(icr) = ind_e_beg - I_ONE + icr
      enddo
      
      iarr_cre_pl = ind_p_lo

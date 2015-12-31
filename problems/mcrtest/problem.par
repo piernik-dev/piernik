@@ -30,7 +30,7 @@
  /
 
  $END_CONTROL
-    tend   = 50.0
+    tend   = 5.0
     nend   = 10000
  /
 
@@ -73,6 +73,7 @@
  /   
   
  $COSMIC_RAY_SPECTRUM
+    cre_eff     = 0.01
     cfl_cre     = 0.4
     ncre        = 5      ! number of fixed spectrum bins between
     p_lo_init = 1.05e3   ! initial lower cut momentum
@@ -81,6 +82,11 @@
     q_init    = 5.0e0   ! < initial value of power law coefficient in cre enrgy spectrum
     p_min_fix = 1.015e3  ! momentum fixed grid
     p_max_fix = 1.015e4  ! momentum fixed grid
+    K_cre_n_paral = 
+    K_cre_e_paral = 
+    K_cre_n_perp  =
+    K_cre_e_perp  =
+    K_pow_index   = 
  /
 
  $CR_SPECIES

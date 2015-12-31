@@ -221,6 +221,7 @@ subroutine cresp_crs_update(dt, cresp_arguments, dt_calc)
    cresp_arguments(2*ncre+2) = p_up    ! upper cut momentum
 !----------------
    
+   call cresp_timestep(dt_calc)
 
    call deallocate_active_arrays
    call deallocate_allocatable

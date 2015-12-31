@@ -141,7 +141,11 @@ contains
       use fluidindex,       only: flind
       use global,           only: dt
       use grid_cont,        only: grid_container
-      use initcosmicrays,   only: iarr_crn, K_crn_paral, K_crn_perp, iarr_crs_diff, K_crs_paral, K_crs_perp, iarr_crs !!!
+      use initcosmicrays,   only: iarr_crn, K_crn_paral, K_crn_perp, iarr_crs_diff, K_crs_paral, K_crs_perp, iarr_crs, iarr_crs_tmp !!!
+! #ifdef COSM_RAY_ELECTRONS
+!       use cresp_variables,  only: ind_p_lo, ind_p_up
+! #endif /* COSM_RAY_ELECTRONS */
+      
       use named_array,      only: p4
       use named_array_list, only: wna
 
@@ -172,6 +176,7 @@ contains
       wcri = wna%ind(wcr_n)
       
 #ifdef COSM_RAY_ELECTRONS
+      iarr_crs_tmp = iarr_crs
       iarr_crs = iarr_crs_diff
 !       print *,' iarr_crs = ', iarr_crs
 #endif /* COSM_RAY_ELECTRONS */
@@ -229,7 +234,7 @@ contains
       enddo
 
       call all_wcr_boundaries
-
+!       print *, ' ind_p_lo, ind_p_up = ', ind_p_lo, ind_p_up
       cgl => leaves%first
       do while (associated(cgl))
          cg => cgl%cg
@@ -243,7 +248,11 @@ contains
 
          cgl => cgl%nxt
       enddo
-
+!             print *,iarr_crs
+#ifdef COSM_RAY_ELECTRONS
+      iarr_crs = iarr_crs_tmp
+#endif /* COSM_RAY_ELECTRONS */
+!       print *,iarr_crs
    end subroutine cr_diff
 
 end module crdiffusion
