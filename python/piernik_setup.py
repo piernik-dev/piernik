@@ -25,7 +25,6 @@ columns = 90
 
 is_f90 = re.compile("f90$", re.IGNORECASE)
 is_header = re.compile("h$", re.IGNORECASE)
-not_svn_junk = re.compile(".*(?!pro).*", re.IGNORECASE)
 test = re.compile(r'pulled by', re.IGNORECASE).search
 overriding = re.compile(r'overrides', re.IGNORECASE).search
 have_use = re.compile(r"^\s{0,9}use\s", re.IGNORECASE).search
