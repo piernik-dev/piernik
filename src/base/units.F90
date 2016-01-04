@@ -223,6 +223,8 @@ contains
             s_len_u  = ' [AU]'
             s_time_u = ' [yr]'
             s_mass_u = ' [M_sun]'
+            lmtvB    = [1.0, 1.0, 1.0, 1.0, 1.0]
+            s_lmtvB  = ["au     ", "Msun   ", "yr     ", "au / yr", "gauss  "]
 
          case ("KSG", "ksg")
             ! KSG  uses: length --> kpc,    mass --> 10^6*Msun,   time --> Gyr,        miu0 --> 4*pi,    temperature --> kelvin
