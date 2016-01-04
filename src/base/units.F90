@@ -59,7 +59,7 @@
 !! @n length --> cm,     mass --> gram,        time --> sek,        miu0 --> 4*pi,    temperature --> kelvin
 !! @n
 !! @n @b WT4 - unit system for Wengen Test #4
-!! @n length --> 6.25AU, mass --> 0.1 M_sun,   time --> 2.5**3.5  pi years (=> G ≈ 1.)
+!! @n length --> 6.25AU, mass --> 0.1 M_sun,   time --> 2.5**3.5  pi years (=> G &asymp; 1.)
 !! @n
 !! @n @b USER - units system defined by user
 !! @n following variables from UNITS namelist should be specified: miu0, kelvin, cm, gram, sek
