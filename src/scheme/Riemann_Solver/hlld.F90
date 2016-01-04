@@ -169,7 +169,7 @@ contains
     real, dimension(xdim:zdim,n)                 :: b_cclf, b_ccrf
     real, dimension(xdim:zdim)                   :: b_starl, b_starr, b_2star
 
-    integer :: ii
+    !integer :: ii
 
     ! SOLVER
 
@@ -182,24 +182,25 @@ contains
        c_fastl  =   (gampr_l+(b_ccl(xdim,i)**2+b_ccl(ydim,i)**2+b_ccl(zdim,i)**2))  &
                                        + sqrt((gampr_l+(b_ccl(xdim,i)**2+b_ccl(ydim,i)**2+b_ccl(zdim,i)**2))**2-(four*gampr_l*b_ccl(xdim,i)**2))
       
-       !c_fastl = sqrt(half*c_fastl/ul(idn,i))
-       !write(*,*) "c_fastl", c_fastl
-       !do ii=lbound(ul,2), ubound(ul,2)
-        !  write(*,*)"ul(idn)",ul(idn,ii)
-       !enddo
+       c_fastl = sqrt(half*c_fastl/abs(ul(idn,i)))
+
+       
 
        c_fastr  =   (gampr_r+(b_ccr(xdim,i)**2+b_ccr(ydim,i)**2+b_ccr(zdim,i)**2))  &
                                        + sqrt((gampr_r+(b_ccr(xdim,i)**2+b_ccr(ydim,i)**2+b_ccr(zdim,i)**2))**2-(four*gampr_r*b_ccr(xdim,i)**2))
 
-       c_fastr  =  sqrt(half*c_fastr/ur(idn,i))
+       c_fastr  =  sqrt(half*c_fastr/abs(ur(idn,i)))
        
 
        ! Eq. (67)
 
-       sl  =  min(ul(imx,i), ur(imx,i)) - max(c_fastl,c_fastr)
-       sr  =  max(ur(imx,i), ur(imx,i)) + max(c_fastl,c_fastr)
+       !sl  =  min(ul(imx,i) ,ur(imx,i)) - max(c_fastl,c_fastr) ! bug
+       !sr  =  max(ur(imx,i), ur(imx,i)) + max(c_fastl,c_fastr) ! bug
 
-        ! Magnetic pressure
+       sl = min( (ul(imx,i)/ul(idn,i)), (ur(imx,i)/ur(idn,i)) ) - max(c_fastl,c_fastr)
+       sr = max( (ul(imx,i)/ul(idn,i)), (ur(imx,i)/ur(idn,i)) ) + max(c_fastl,c_fastr)
+
+       ! Magnetic pressure
 
        magprl  =  half*sum(b_ccl(xdim:zdim,i)*b_ccl(xdim:zdim,i))
        magprr  =  half*sum(b_ccr(xdim:zdim,i)*b_ccr(xdim:zdim,i))
@@ -207,49 +208,9 @@ contains
        ! Total pressure
 
        prtl  =  ul(ien,i) + magprl
-       prtr  =  ur(ien,i) + magprr  
+       prtr  =  ur(ien,i) + magprr
        
-       ! Speed of contact discontinuity Eq. (38)
-
-       sm_nr = (sr - ur(imx,i))*(ur(idn,i)*ur(imx,i)) - (sl - ul(imx,i))*(ul(idn,i)*ul(imx,i)) - prtr + prtl
-       sm_dr = (sr - ur(imx,i))*ur(idn,i) - (sl - ul(idn,i))*ul(idn,i)
-       sm    = sm_nr/sm_dr
-         
-
-      ! Speed differences
-
-       slsm  =  sl - sm
-       srsm  =  sr - sm
-
-       slvxl  =  sl - ul(imx,i)
-       srvxr  =  sr - ur(imx,i)
-
-       smvxl  =  sm - ul(imx,i)
-       smvxr  =  sm - ur(imx,i)
-
-       srmsl  =  sr - sl
-
-       srtsl  =  sr*sl
-    
-       ! Co-efficients
-
-       dn_l     =  ul(idn,i)*slvxl
-       dn_r     =  ur(idn,i)*srvxr
-       b_lr     =  b_ccl(xdim,i)*b_ccr(xdim,i)
-       b_lrgam  =  b_lr/gamma
-       
-       ! Pressure of intermediate state Eq. (23)
-
-       prt_star  =  (prtl*dn_l*smvxl) + (prtr*dn_r*smvxr)  !< Check for 0.5.  
-
-       ! Normal components of velocity and magnetic field
-
-       
-       v_starl(imx)  =  sm
-       v_starr(imx)  =  sm
-    
-       b_starl(xdim)  =  b_ccl(xdim,i)
-       b_starr(xdim)  =  b_ccr(xdim,i)
+     
 
        ! Left flux
        
@@ -275,7 +236,7 @@ contains
        
                                                 
        ! HLLD fluxes
-
+       
        if (sl .ge.  zero) then
           f(idn,i)  =  fl(idn,i)
           f(imx,i)  =  fl(imx,i)
@@ -296,11 +257,67 @@ contains
 
        else
 
-          ! Transversal components of magnetic field for left states (Eq. 45 & 47), taking degeneracy into account
+          ! Speed of contact discontinuity Eq. 38
+
+          sm_nr = (sr*ur(imx,i) - sl*ul(imx,i)) - (fr(imx,i) - fl(imx,i))
+          sm_dr = (sr*ur(idn,i) - sl*ul(idn,i)) - (fr(idn,i) - fl(idn,i))
+          sm    = sm_nr/sm_dr
+
+          ! Speed differences
+
+          slsm  =  sl - sm
+          srsm  =  sr - sm
           
-          coeff_1  =  dn_l*slsm - b_lr
+          slvxl  =  sl - (ul(imx,i)/ul(idn,i))
+          srvxr  =  sr - (ur(imx,i)/ur(idn,i))
           
-          if ((coeff_1 .notequals. zero) .and. b_lrgam .le. ul(ien,i)) then
+          smvxl  =  sm - (ul(imx,i)/ul(idn,i))
+          smvxr  =  sm - (ur(imx,i)/ur(idn,i))
+          
+          srmsl  =  sr - sl
+
+          srtsl  =  sr*sl
+
+          ! Co-efficients
+
+          dn_l     =  ul(idn,i)*slvxl
+          dn_r     =  ur(idn,i)*srvxr
+          b_lr     =  b_ccl(xdim,i)*b_ccr(xdim,i)
+          b_lrgam  =  b_lr/gamma
+
+          ! Magnetic pressure
+
+          !magprl  =  half*sum(b_ccl(xdim:zdim,i)*b_ccl(xdim:zdim,i))
+          !magprr  =  half*sum(b_ccr(xdim:zdim,i)*b_ccr(xdim:zdim,i))
+
+          ! Total pressure
+
+          !prtl  =  ul(ien,i) + magprl
+          !prtr  =  ur(ien,i) + magprr
+
+          ! Pressure of intermediate state Eq. (23)
+
+          prt_star  =  half*((prtl*dn_l*smvxl) + (prtr*dn_r*smvxr))  !< Check for 0.5.
+
+          ! Calculate densities for left and right intermediate states Eq. 43
+
+           !u_starl(idn)  =  dn_l/slsm 
+           !u_starr(idn)  =  dn_r/srsm
+
+           ! Normal components of velocity and magnetic field
+
+           v_starl(imx)  =  sm
+           v_starr(imx)  =  sm
+    
+           b_starl(xdim)  =  b_ccl(xdim,i)
+           b_starr(xdim)  =  b_ccr(xdim,i)
+
+           ! Transversal components of magnetic field for left states (Eq. 45 & 47), taking degeneracy into account
+          
+           coeff_1  =  dn_l*slsm - b_lr
+          
+           if ((coeff_1 .notequals. zero) .and. b_lrgam .le. ul(ien,i)) then
+           
              coeff_2  =  (dn_l*slvxl - b_lr)/coeff_1
 
              b_starl(ydim)   =  b_ccl(ydim,i)*coeff_2
@@ -311,7 +328,8 @@ contains
              ! Calculate HLL left states
              
              b_starl(ydim) = ((sr*b_ccr(ydim,i) - sl*b_ccl(ydim,i)) - (b_ccrf(ydim,i) - b_cclf(ydim,i)))/srmsl
-             b_starl(zdim) = ((sr*b_ccr(zdim,i) - sl*b_ccl(zdim,i)) - (b_ccrf(zdim,i) - b_ccrf(zdim,i)))/srmsl
+             !b_starl(zdim) = ((sr*b_ccr(zdim,i) - sl*b_ccl(zdim,i)) - (b_ccrf(zdim,i) - b_ccrf(zdim,i)))/srmsl
+             b_starl(zdim) = ((sr*b_ccr(zdim,i) - sl*b_ccl(zdim,i)) - (b_ccrf(zdim,i) - b_cclf(zdim,i)))/srmsl
              
              
           endif
@@ -320,33 +338,15 @@ contains
 
           coeff_1  =  b_ccl(xdim,i)/dn_l
 
-          do ii=lbound(ul,2), ubound(ul,1)
-             write(*,*) "dn_l", dn_l
-          enddo
-          
-
-          ! degug
-          !write(*,*) "b_ccl", b_ccl(xdim,i)
-          !write(*,*) "dn_l", dn_l
-          
-          v_starl(imy)  =  ul(imy,i) + coeff_1*(b_ccl(ydim,i) - b_starl(ydim))
-           do ii=lbound(ul,2), ubound(ul,1)
-             write(*,*) "ul(imy)", ul(imy,ii)
-          enddo
-          !v_starl(imy)  =  ul(imy,i)
-          
-          !do ii=lbound(ul,2), ubound(ul,2)
-           !  write(*,*)"ul(imy)",ul(imy,ii)
-          !enddo
-
-          v_starl(imz)  =  ul(imz,i) + coeff_1*(b_ccl(zdim,i) - b_starl(zdim))
-          !v_starl(imz)  =  ul(imz,i)
+          v_starl(imx) = (ul(imy,i)/ul(idn,i)) + coeff_1*(b_ccl(ydim,i) - b_starl(ydim))
+          v_starl(imx) = (ul(imz,i)/ul(idn,i)) + coeff_1*(b_ccl(zdim,i) - b_starl(zdim)) 
 
           ! Transversal components of magnetic field for right states (Eq. 45 & 47), taking degeneracy into account
 
           coeff_1  =  dn_r*srsm - b_lr
 
           if ((coeff_1 .notequals. zero) .and. b_lrgam .le. ur(ien,i)) then
+        
              coeff_2  =  (dn_r*srvxr - b_lr)/coeff_1
 
              b_starr(ydim)  =  b_ccr(ydim,i)*coeff_2
@@ -357,7 +357,8 @@ contains
              ! Calculate HLL right states
 
              b_starr(ydim)  =  ((sr*b_ccr(ydim,i) - sl*b_ccl(ydim,i)) - (b_ccrf(ydim,i) - b_cclf(ydim,i)))/srmsl
-             b_starr(zdim)  =  ((sr*b_ccr(zdim,i) - sl*b_ccl(zdim,i)) - (b_ccrf(zdim,i) - b_ccrf(zdim,i)))/srmsl
+             !b_starr(zdim)  =  ((sr*b_ccr(zdim,i) - sl*b_ccl(zdim,i)) - (b_ccrf(zdim,i) - b_ccrf(zdim,i)))/srmsl
+             b_starr(zdim)  =  ((sr*b_ccr(zdim,i) - sl*b_ccl(zdim,i)) - (b_ccrf(zdim,i) - b_cclf(zdim,i)))/srmsl
              
           endif
 
@@ -365,37 +366,49 @@ contains
 
           coeff_1  =  b_ccr(xdim,i)/dn_r
 
-          v_starr(imy)  =   ur(imy,i) + coeff_1*(b_ccr(ydim,i) - b_starr(ydim))
-          v_starr(imz)  =   ur(imz,i) + coeff_1*(b_ccr(zdim,i) - b_starr(zdim))
-          !v_starr(imy)  =   ur(imy,i)
-          !v_starr(imz)  =   ur(imz,i)
+          !v_starr(imy)  =   ur(imy,i) + coeff_1*(b_ccr(ydim,i) - b_starr(ydim))
+          !v_starr(imz)  =   ur(imz,i) + coeff_1*(b_ccr(zdim,i) - b_starr(zdim))
+          v_starr(imy) = (ur(imy,i)/ur(idn,i)) + coeff_1*(b_ccr(ydim,i) - b_starr(ydim))
+          v_starr(imz) = (ur(imz,i)/ur(idn,i)) + coeff_1*(b_ccr(zdim,i) - b_starr(zdim))
+          
           
           ! Dot product of velocity and magnetic field
 
+          !vb_l  =  sum(ul(imx:imz,i)*b_ccl(xdim:zdim,i))
           vb_l  =  sum(ul(imx:imz,i)*b_ccl(xdim:zdim,i))
+          !vb_r  =  sum(ur(imx:imz,i)*b_ccr(xdim:zdim,i))
           vb_r  =  sum(ur(imx:imz,i)*b_ccr(xdim:zdim,i))
+          !vb_starl  =  sum(v_starl(imx:imz)*b_starl(xdim:zdim))
           vb_starl  =  sum(v_starl(imx:imz)*b_starl(xdim:zdim))
           vb_starr  =  sum(v_starr(imx:imz)*b_starr(xdim:zdim))
           
           
           ! Left intermediate state conservative form
           
-          u_starl(idn)  =  dn_l/slsm   ! Densities for right intermediate state Eq. (43)
+          u_starl(idn)  =  dn_l/slsm 
+          !u_starl(imx)  =  u_starl(idn)*v_starl(imx)
+          !u_starl(imy)  =  u_starl(idn)*v_starl(imy)
+          !u_starl(imz)  =  u_starl(idn)*v_starl(imz)
           u_starl(imx)  =  u_starl(idn)*v_starl(imx)
           u_starl(imy)  =  u_starl(idn)*v_starl(imy)
           u_starl(imz)  =  u_starl(idn)*v_starl(imz)
-
+          
           ! Right intermediate state conservative form
 
-          u_starr(idn)  =  dn_r/srsm ! Density for right intermediate state Eq. (43)
+          u_starr(idn)  =  dn_r/srsm
+          !u_starr(imx)  =  u_starr(idn)*v_starr(imx)
+          !u_starr(imy)  =  u_starr(idn)*v_starr(imy)
+          !u_starr(imz)  =  u_starr(idn)*v_starr(imz)
           u_starr(imx)  =  u_starr(idn)*v_starr(imx)
           u_starr(imy)  =  u_starr(idn)*v_starr(imy)
           u_starr(imz)  =  u_starr(idn)*v_starr(imz)
 
           ! Total energy of left and right intermediate states Eq. (48)
 
-          u_starl(ien)  =  (slvxl*ul(ien,i) - prtl*ul(imx,i) + prt_star*sm + b_ccl(xdim,i)*(vb_l - vb_starl))/slsm
-          u_starr(ien)  =  (srvxr*ur(ien,i) - prtr*ur(imx,i) + prt_star*sm + b_ccr(xdim,i)*(vb_r - vb_starr))/srsm
+          !u_starl(ien)  =  (slvxl*ul(ien,i) - prtl*ul(imx,i) + prt_star*sm + b_ccl(xdim,i)*(vb_l - vb_starl))/slsm
+          !u_starr(ien)  =  (srvxr*ur(ien,i) - prtr*ur(imx,i) + prt_star*sm + b_ccr(xdim,i)*(vb_r - vb_starr))/srsm
+          u_starl(ien)  =  (slvxl*ul(ien,i) - prtl*(ul(imx,i)/ul(idn,i)) + prt_star*sm + b_ccl(xdim,i)*(vb_l - vb_starl))/slsm
+          u_starr(ien)  =  (srvxr*ur(ien,i) - prtr*(ur(imx,i)/ur(idn,i)) + prt_star*sm + b_ccr(xdim,i)*(vb_r - vb_starr))/srsm
 
           ! Cases for B_x .ne. and .eq. zero
 
@@ -456,16 +469,24 @@ contains
 
                 ! Components of velocity Eq. 39, 59, 60 and magnetic field Eq. 61, 62
 
+                !v_2star(imx)  =  sm
+                !v_2star(imy)  =  ((dn_lsqt*v_starl(imy) + dn_rsqt*v_starr(imy)) + b_sig*(b_starr(ydim) - b_starl(ydim)))/add_dnsq
+                !v_2star(imz)  =  ((dn_lsqt*v_starl(imz) + dn_rsqt*v_starr(imz)) + b_sig*(b_starr(zdim) - b_starl(zdim)))/add_dnsq
+
                 v_2star(imx)  =  sm
                 v_2star(imy)  =  ((dn_lsqt*v_starl(imy) + dn_rsqt*v_starr(imy)) + b_sig*(b_starr(ydim) - b_starl(ydim)))/add_dnsq
                 v_2star(imz)  =  ((dn_lsqt*v_starl(imz) + dn_rsqt*v_starr(imz)) + b_sig*(b_starr(zdim) - b_starl(zdim)))/add_dnsq
 
                 b_2star(xdim)  =  b_ccl(xdim,i)
+                !b_2star(ydim)  =  ((dn_lsqt*b_starr(ydim) + dn_rsqt*b_starl(ydim)) + b_sig*mul_dnsq*(v_starr(imy) - v_starl(imy)))/add_dnsq
+                !b_2star(zdim)  =  ((dn_lsqt*b_starr(zdim) + dn_rsqt*b_starl(zdim)) + b_sig*mul_dnsq*(v_starr(imz) - v_starl(imz)))/add_dnsq
+
                 b_2star(ydim)  =  ((dn_lsqt*b_starr(ydim) + dn_rsqt*b_starl(ydim)) + b_sig*mul_dnsq*(v_starr(imy) - v_starl(imy)))/add_dnsq
                 b_2star(zdim)  =  ((dn_lsqt*b_starr(zdim) + dn_rsqt*b_starl(zdim)) + b_sig*mul_dnsq*(v_starr(imz) - v_starl(imz)))/add_dnsq
                 
                 ! Dot product of velocity and magnetic field
 
+                !vb_2star  =  sum(v_2star(imx:imz)*b_2star(xdim:zdim))
                 vb_2star  =  sum(v_2star(imx:imz)*b_2star(xdim:zdim))
 
                 ! Choose right Alfven wave according to speed of contact discontinuity
