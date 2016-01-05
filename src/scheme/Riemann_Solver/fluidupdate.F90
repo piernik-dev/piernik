@@ -211,7 +211,7 @@ contains
 
      implicit none
 
-     real, dimension(:,:),   intent(in)    :: u, b_cc
+     real, dimension(:,:),   intent(in)    :: u , b_cc
      
      real, dimension(size(u,1),size(u,2))  :: q
      integer  :: p
@@ -225,8 +225,12 @@ contains
         q(fl%imx,:) =  u(fl%imx,:)/u(fl%idn,:)
         q(fl%imy,:) =  u(fl%imy,:)/u(fl%idn,:)
         q(fl%imz,:) =  u(fl%imz,:)/u(fl%idn,:)
+        if(fl%has_energy) then
+           
+           q(fl%ien,:) =  fl%gam_1*(u(fl%ien,:) - ekin(u(fl%imx,:), u(fl%imy,:), u(fl%imz,:), u(fl%idn,:)) - half*sum(b_cc(xdim:zdim,:))**2) + half*sum(b_cc(xdim:zdim,:))**2
+        
+        endif
 
-        q(fl%ien,:) =  fl%gam_1*(u(fl%ien,:) - ekin(u(fl%imx,:), u(fl%imy,:), u(fl%imz,:), u(fl%idn,:)) - half*sum(b_cc(xdim:zdim,:))**2) + half*sum(b_cc(xdim:zdim,:))**2
         
      enddo
      
