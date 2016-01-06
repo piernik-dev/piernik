@@ -149,6 +149,7 @@ contains
 
       real, dimension(size(u,1),size(u,2)) :: dlft, drgt, dcen, dq
       integer :: n
+     
 
       n = size(u,2)
 
@@ -157,6 +158,7 @@ contains
 
       dcen = dlft*drgt
 
+      write(*,*) "dcen", dcen
       where (dcen>0.0)
          dq = 2.0*dcen / (dlft+drgt)       ! (14.54) ?
       elsewhere
@@ -213,6 +215,7 @@ contains
       real, dimension(size(u,1),size(u,2)), target :: du, ul, ur, u_l, u_r
       real, dimension(:,:), pointer                :: p_ql, p_qr, p_q, p_flux
       integer :: nx, p
+      integer :: ii
 
       nx = size(u,2)
 
@@ -220,13 +223,24 @@ contains
       ul = u - half*du   ! (14.33)
       ur = u + half*du
 
-      write(*,*) "ul", ul
-      write(*,*) "ur", ur
+      do ii = lbound(u, 2), ubound(u,2)
+         write(*,*) "ul(:,",ii,")", ul(:,ii)
+         write(*,*) "ur(:,",ii,")", ur(:,ii)
+      end do
 
       flux = compute_flux(ul,b,cs2) - compute_flux(ur,b,cs2)    !> \todo interpolate b?
 
+      do ii = lbound(u, 2), ubound(u,2)
+         write(*,*) "flux(:,",ii,")", flux(:,ii)
+      end do
+
       u_l = ur + half*dtodx*flux   ! (14.34) + (14.35)
       u_r(:,1:nx-1) = ul(:,2:nx) + half*dtodx*flux(:,2:nx); u_r(:,nx) = u_r(:,nx-1)
+
+      do ii = lbound(u, 2), ubound(u,2)
+         write(*,*) "u_l(:,",ii,")", u_l(:,ii)
+         write(*,*) "u_r(:,",ii,")", u_r(:,ii)
+      end do
 
       ql = utoq(u_l,b)
       qr = utoq(u_r,b)
@@ -242,6 +256,10 @@ contains
 
       u(:,2:nx) = u(:,2:nx) + dtodx*(flux(:,1:nx-1) - flux(:,2:nx))
       u(:,1)  = u(:,2); u(:,nx) = u(:,nx-1)
+
+      do ii = lbound(u, 2), ubound(u,2)
+         write(*,*) "flx_diff(:,",ii,")", (flux(:,1:ii-1) - flux(:,2:ii))
+      end do
 
    end subroutine sweep1d_mh
 !---------------------------------------------------------------------------

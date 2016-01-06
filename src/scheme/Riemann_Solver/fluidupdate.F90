@@ -179,7 +179,7 @@ contains
 
       real, dimension(size(u,1),size(u,2)) :: dlft, drgt, dcen, dq
       integer :: n
-      integer :: ii
+      
 
       n = size(u,2)
 
@@ -188,9 +188,7 @@ contains
 
       dcen = dlft*drgt
 
-      do ii=lbound(u,2), ubound(u,2)
-         write(*,*) "dcen", dcen(:,:)
-      enddo
+      write(*,*) "dcen", dcen
 
 
       where (dcen>0.0)
