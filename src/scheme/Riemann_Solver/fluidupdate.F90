@@ -37,7 +37,7 @@ module fluidupdate
   use hlld,  only: fluxes, riemann_hlld
   implicit none
   private
-  public :: fluid_update, sweep_dsplit, rk2, utoq, calculate_slope_vanleer, euler
+  public :: fluid_update, sweep_dsplit, rk2, utoq, calculate_slope_vanleer, euler, muscl
   
 
 contains
@@ -136,11 +136,8 @@ contains
     do i2 = cg%lhn(pdims(ddim, ORTHO2), LO), cg%lhn(pdims(ddim,ORTHO2), HI)
        do i1 = cg%lhn(pdims(ddim, ORTHO1), LO), cg%lhn(pdims(ddim, ORTHO1), HI)
           pu => cg%w(wna%fi)%get_sweep(ddim,i1,i2)
-
           u1d(iarr_all_swp(ddim,:),:) = pu(:,:)
-
           call muscl(u1d,b_cc1d,ddim, dt/cg%dl(ddim))
-
           pu(:,:) = u1d(iarr_all_swp(ddim,:),:)
 
        enddo
@@ -151,16 +148,16 @@ contains
           !do i1 = cgl%cg%lhn(pdims(ddim, ORTHO1), LO), cgl%cg%lhn(pdims(ddim, ORTHO1), HI)
              !pu => cgl%cg%w(wna%fi)%get_sweep(ddim,i1,i2)
              !b1d => cgl%cg%w(wna%bi)%get_sweep(ddim,i1,i2)
-             ! WARNING: what position of the b components do we expect? If cell-centered then interpolation is required above
- !write(*,*)"sweep",ddim, i1,i2,dt
+             !WARNING: what position of the b components do we expect? If cell-centered then interpolation is required above
+             !write(*,*)"sweep",ddim, i1,i2,dt
              !u1d(iarr_all_swp(ddim,:),:) = pu(:,:)
 
              !call rk2(u1d,b_cc1d,ddim, dt/cgl%cg%dl(ddim))
              !call euler(u1d,b_cc1d,ddim, dt/cgl%cg%dl(ddim))
-
+             !call muscl(u1d,b_cc1d,ddim, dt/cg%dl(ddim))
              !pu(:,:) = u1d(iarr_all_swp(ddim,:),:)
              
-         ! enddo
+          !enddo
        !enddo
 
        !deallocate(u1d, b_cc1d)
@@ -182,6 +179,7 @@ contains
 
       real, dimension(size(u,1),size(u,2)) :: dlft, drgt, dcen, dq
       integer :: n
+      integer :: ii
 
       n = size(u,2)
 
@@ -189,6 +187,11 @@ contains
       drgt(:,1:n-1) = dlft(:,2:n) ;             drgt(:,n) = drgt(:,n-1)
 
       dcen = dlft*drgt
+
+      do ii=lbound(u,2), ubound(u,2)
+         write(*,*) "dcen", dcen(:,:)
+      enddo
+
 
       where (dcen>0.0)
          dq = 2.0*dcen / (dlft+drgt)       ! (14.54) ?
@@ -287,9 +290,9 @@ contains
     
     do i = 1, flind%fluids
        fl    => flind%all_fluids(i)%fl
-       p_ql  => ql(fl%beg:fl%end,:)
-       p_qr  => qr(fl%beg:fl%end,:)
        p_flx => flx(fl%beg:fl%end,:)
+       p_ql  => ql(fl%beg:fl%end,:)
+       p_qr  => qr(fl%beg:fl%end,:) 
        p_bcc => mag_cc(xdim:zdim,:)
        p_bccl => b_ccl(xdim:zdim,:)
        p_bccr => b_ccr(xdim:zdim,:)
