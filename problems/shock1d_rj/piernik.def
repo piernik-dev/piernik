@@ -7,4 +7,3 @@
 #define MAGNETIC
 
 #undef GRAV
-#define RTVD
