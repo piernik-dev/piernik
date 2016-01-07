@@ -2,4 +2,3 @@
 #undef MAGNETIC
 #define  NEUTRAL
 #define LOCAL_FR_SPEED
-#define RTVD

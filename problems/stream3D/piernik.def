@@ -9,4 +9,3 @@
 #define FLUID_INTERACTIONS
 
 #define GRAV
-#define RTVD
