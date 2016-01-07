@@ -99,7 +99,7 @@ contains
 
 !-------------------------------------------------------------------------------------------------------------------
 
-  !subroutine sweep_dsplit(dt, ddim)
+  
   subroutine sweep_dsplit(cg, dt, ddim)
     
     use cg_list,          only: cg_list_element
@@ -109,7 +109,7 @@ contains
     use grid_cont,        only: grid_container
     !use cg_leaves,        only: leaves
     use named_array_list, only: wna
-    use dataio_pub,       only: die
+    use dataio_pub,       only: die, warn
 
     implicit none
 
@@ -123,7 +123,7 @@ contains
     real, dimension(:,:), pointer             :: pu
     integer                                   :: i1, i2
     !type(cg_list_element), pointer            :: cgl
-
+    logical, save                             :: firstcall = .true.
     !cgl => leaves%first
     !do while (associated(cgl))
 
@@ -132,6 +132,8 @@ contains
        !allocate(u1d(size(cgl%cg%u,1),cgl%cg%n_(ddim)), b_cc1d(xdim:zdim, cgl%cg%n_(ddim)))
 
     b_cc1d = 0.
+     if (firstcall) call warn("[fluidupdate:sweep] magnetic field unimplemented yet. Forcing to be 0")
+      firstcall = .false.
 
     do i2 = cg%lhn(pdims(ddim, ORTHO2), LO), cg%lhn(pdims(ddim,ORTHO2), HI)
        do i1 = cg%lhn(pdims(ddim, ORTHO1), LO), cg%lhn(pdims(ddim, ORTHO1), HI)
@@ -188,7 +190,7 @@ contains
 
       dcen = dlft*drgt
 
-      write(*,*) "dcen", dcen
+      !write(*,*) "dcen", dcen
 
 
       where (dcen>0.0)
@@ -269,13 +271,11 @@ contains
     du  = calculate_slope_vanleer(u)
     ul  = u - half*du
     ur  = u + half*du
-
-    !write(*,*) "ul", ul
-    !write(*,*) "ur", ur
     
     db  = calculate_slope_vanleer(b_cc)
     b_ccl = b_cc - half*db
     b_ccr = b_cc + half*db
+   
 
     mag_cc = b_cc
 
@@ -296,8 +296,7 @@ contains
        p_bccr => b_ccr(xdim:zdim,:)
        call riemann_hlld(nx, p_flx, p_ql, p_qr, mag_cc, p_bccl, p_bccr, fl%gam)
     end do
-
-    !u  =  half*(u + u_predict + dtodx*flx(:,:))
+    
     u  =  half*(u + u_predict + dtodx*(fluxes(p_ql,p_bccl,ddim)-fluxes(p_qr,p_bccr,ddim)))
     
 
@@ -332,8 +331,6 @@ contains
     du  = calculate_slope_vanleer(u)
     ul  = u - half*du
     ur  = u + half*du
-    !write(*,*) "ul", ul
-    !write(*,*) "ur", ur
     
     db  = calculate_slope_vanleer(b_cc)
     b_ccl = b_cc - half*db
@@ -345,10 +342,9 @@ contains
     qr = utoq(ur,b_ccr)
 
     flx = fluxes(ul,b_ccl,ddim) - fluxes(ur,b_ccr,ddim)
-    !write(*,*) "flx", flx(:,:)
-    
+   
     u  =  u + dtodx*flx(:,:)
-    !write(*,*) "u", u
+   
 
   end subroutine euler
 
@@ -385,31 +381,23 @@ contains
     du  = calculate_slope_vanleer(u)
     ul  = u - half*du
     ur  = u + half*du
-
-    !do ii = lbound(u, 2), ubound(u,2)
-     !  write(*,*) "ul(:,",ii,")", ul(:,ii)
-      ! write(*,*) "ur(:,",ii,")", ur(:,ii)
-    !end do
+  
     
     db  = calculate_slope_vanleer(b_cc)
     b_ccl = b_cc - half*db
     b_ccr = b_cc + half*db
-
+    
+    
     mag_cc = b_cc
 
     flx  = fluxes(ul,b_ccl,ddim) - fluxes(ur,b_ccr,ddim)
 
-    !do ii = lbound(u, 2), ubound(u,2)
-     !  write(*,*) "flx(:,",ii,")", flx(:,ii)
-    !end do
+    
 
     u_l = ur + half*dtodx*flx
     u_r(:,1:nx-1) = ul(:,2:nx) + half*dtodx*flx(:,2:nx) ; u_r(:,nx) = u_r(:,nx-1)
 
-    !do ii = lbound(u, 2), ubound(u,2)
-     !  write(*,*) "u_l(:,",ii,")", u_l(:,ii)
-      ! write(*,*) "u_r(:,",ii,")", u_r(:,ii)
-    !end do
+   
     
     ql = utoq(u_l,b_ccl)
     qr = utoq(u_r,b_ccr)
@@ -421,7 +409,6 @@ contains
        p_flx => flx(fl%beg:fl%end,:)
        p_ql  => ql(fl%beg:fl%end,:)
        p_qr  => qr(fl%beg:fl%end,:)
-       !p_flx => flx(fl%beg:fl%end,:)
        p_bcc => mag_cc(xdim:zdim,:)
        p_bccl => b_ccl(xdim:zdim,:)
        p_bccr => b_ccr(xdim:zdim,:)
@@ -432,10 +419,6 @@ contains
     
     u(:,2:nx) = u(:,2:nx) + dtodx*(flx(:,1:nx-1) - flx(:,2:nx))
     u(:,1) = u(:,2) ; u(:,nx) = u(:,nx-1)
-
-    !do ii = lbound(u, 2), ubound(u,2)
-     !  write(*,*) "flx_diff(:,",ii,")", (flx(:,1:ii-1) - flx(:,2:ii))
-    !end do
     
 
   end subroutine muscl
