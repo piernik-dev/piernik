@@ -189,8 +189,8 @@ contains
        !enl(ien,i) = (prl(ien,i)/(gamma -one)) + half*ul(idn,i)*ul(imx:imz,i)**2 + half*b_ccl(xdim:zdim,i)**2
        !enr(ien,i) = (prr(ien,i)/(gamma -one)) + half*ur(idn,i)*ur(imx:imz,i)**2 + half*b_ccr(xdim:zdim,i)**2
 
-       enl = (prl(ien,i)/(gamma -one)) + half*ul(idn,i)*ul(imx:imz,i)**2 + half*b_ccl(xdim:zdim,i)**2
-       enr = (prr(ien,i)/(gamma -one)) + half*ur(idn,i)*ur(imx:imz,i)**2 + half*b_ccr(xdim:zdim,i)**2
+       enl = (prl(ien,i)/(gamma -one)) + half*ul(idn,i)*sum(ul(imx:imz,i))**2 + half*sum(b_ccl(xdim:zdim,i))**2
+       enr = (prr(ien,i)/(gamma -one)) + half*ur(idn,i)*sum(ur(imx:imz,i))**2 + half*sum(b_ccr(xdim:zdim,i))**2
 
        ! Wihtout magnetic fields total pressure/pressure will not cause any alterations. With magentic fields as explained in previous
        ! comment, one will need a proper check.
@@ -248,11 +248,11 @@ contains
        !b_cclf(ydim,i) = b_ccl(ydim,i)*(ul(imx,i)/ul(idn,i)) - b_ccl(xdim,i)*(ul(imy,i)/ul(idn,i))
        !b_cclf(zdim,i) = b_ccl(zdim,i)*(ul(imx,i)/ul(idn,i)) - b_ccl(xdim,i)*(ul(imz,i)/ul(idn,i))
        fl(idn,i) = ul(idn,i)*ul(imx,i)
-       fl(imx,i) = ul(idn,i)*ul(imx,i)**2 + ul(ien,i) - b_ccl(xdim,i)**2
+       fl(imx,i) = ul(idn,i)*ul(imx,i)**2 + prl(ien,i) - b_ccl(xdim,i)**2
        fl(imy,i) = ul(idn,i)*ul(imy,i)*ul(imx,i) - b_ccl(xdim,i)*b_ccl(ydim,i)
        fl(imz,i) = ul(idn,i)*ul(imz,i)*ul(imx,i) - b_ccl(xdim,i)*b_ccl(zdim,i)
        !fl(ien,i) = ((ul(ien,i)/(gamma -one)) + half*ul(idn,i)*ul(imx:imz,i)**2 + half*b_ccl(xdim:zdim,i)**2 + ul(ien,i))*ul(imx,i) - b_ccl(xdim,i)*(ul(imx:imz,i)*b_ccl(xdim:zdim,i))
-       fl(ien,i) = (enl + prl(ien,i))*ul(imx,i) - b_ccl(xdim,i)*(ul(imx:imz,i)*b_ccl(xdim:zdim,i))
+       fl(ien,i) = (enl + prl(ien,i))*ul(imx,i) - b_ccl(xdim,i)*(sum(ul(imx:imz,i))*sum(b_ccl(xdim:zdim,i)))
        b_cclf(ydim,i) = b_ccl(ydim,i)*ul(imx,i) - b_ccl(xdim,i)*ul(imy,i)
        b_cclf(zdim,i) = b_ccl(zdim,i)*ul(imx,i) - b_ccl(xdim,i)*ul(imz,i)
        
@@ -268,11 +268,11 @@ contains
        !b_ccrf(ydim,i) = b_ccr(ydim,i)*(ur(imx,i)/ur(idn,i)) - b_ccr(xdim,i)*(ur(imy,i)/ur(idn,i))
        !b_ccrf(zdim,i) = b_ccr(zdim,i)*(ur(imx,i)/ur(idn,i)) - b_ccr(xdim,i)*(ur(imz,i)/ur(idn,i))
        fr(idn,i) = ur(idn,i)*ur(imx,i)
-       fr(imx,i) = ur(idn,i)*ur(imx,i)**2 + ur(ien,i) - b_ccr(xdim,i)**2
+       fr(imx,i) = ur(idn,i)*ur(imx,i)**2 + prr(ien,i) - b_ccr(xdim,i)**2
        fr(imy,i) = ur(idn,i)*ur(imy,i)*ur(imx,i) - b_ccr(xdim,i)*b_ccr(ydim,i)
        fr(imz,i) = ur(idn,i)*ur(imz,i)*ur(imx,i) - b_ccr(xdim,i)*b_ccr(zdim,i)
        !fr(ien,i) = ((ur(ien,i)/(gamma -one)) + half*ur(idn,i)*ur(imx:imz,i)**2 + half*b_ccr(xdim:zdim,i)**2 + ur(ien,i))*ur(imx,i) - b_ccr(xdim,i)*(ur(imx:imz,i)*b_ccr(xdim:zdim,i))
-       fr(ien,i) = (enr + prr(ien,i))*ur(imx,i) - b_ccr(xdim,i)*(ur(imx:imz,i)*b_ccr(xdim:zdim,i))
+       fr(ien,i) = (enr + prr(ien,i))*ur(imx,i) - b_ccr(xdim,i)*(sum(ur(imx:imz,i))*sum(b_ccr(xdim:zdim,i)))
        b_ccrf(ydim,i) = b_ccr(ydim,i)*ur(imx,i) - b_ccr(xdim,i)*ur(imy,i)
        b_ccrf(zdim,i) = b_ccr(zdim,i)*ul(imx,i) - b_ccr(xdim,i)*ur(imz,i)
 
