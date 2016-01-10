@@ -252,7 +252,7 @@ contains
        fl(imy,i) = ul(idn,i)*ul(imy,i)*ul(imx,i) - b_ccl(xdim,i)*b_ccl(ydim,i)
        fl(imz,i) = ul(idn,i)*ul(imz,i)*ul(imx,i) - b_ccl(xdim,i)*b_ccl(zdim,i)
        !fl(ien,i) = ((ul(ien,i)/(gamma -one)) + half*ul(idn,i)*ul(imx:imz,i)**2 + half*b_ccl(xdim:zdim,i)**2 + ul(ien,i))*ul(imx,i) - b_ccl(xdim,i)*(ul(imx:imz,i)*b_ccl(xdim:zdim,i))
-       fl(ien,i) = (enl + prl(ien,i))*ul(imx,i) - b_ccl(xdim,i)*(sum(ul(imx:imz,i))*sum(b_ccl(xdim:zdim,i)))
+       fl(ien,i) = (enl + prl(ien,i))*ul(imx,i) - b_ccl(xdim,i)*(sum(ul(imx:imz,i)*b_ccl(xdim:zdim,i)))
        b_cclf(ydim,i) = b_ccl(ydim,i)*ul(imx,i) - b_ccl(xdim,i)*ul(imy,i)
        b_cclf(zdim,i) = b_ccl(zdim,i)*ul(imx,i) - b_ccl(xdim,i)*ul(imz,i)
        
@@ -272,7 +272,7 @@ contains
        fr(imy,i) = ur(idn,i)*ur(imy,i)*ur(imx,i) - b_ccr(xdim,i)*b_ccr(ydim,i)
        fr(imz,i) = ur(idn,i)*ur(imz,i)*ur(imx,i) - b_ccr(xdim,i)*b_ccr(zdim,i)
        !fr(ien,i) = ((ur(ien,i)/(gamma -one)) + half*ur(idn,i)*ur(imx:imz,i)**2 + half*b_ccr(xdim:zdim,i)**2 + ur(ien,i))*ur(imx,i) - b_ccr(xdim,i)*(ur(imx:imz,i)*b_ccr(xdim:zdim,i))
-       fr(ien,i) = (enr + prr(ien,i))*ur(imx,i) - b_ccr(xdim,i)*(sum(ur(imx:imz,i))*sum(b_ccr(xdim:zdim,i)))
+       fr(ien,i) = (enr + prr(ien,i))*ur(imx,i) - b_ccr(xdim,i)*(sum(ur(imx:imz,i)*b_ccr(xdim:zdim,i)))
        b_ccrf(ydim,i) = b_ccr(ydim,i)*ur(imx,i) - b_ccr(xdim,i)*ur(imy,i)
        b_ccrf(zdim,i) = b_ccr(zdim,i)*ul(imx,i) - b_ccr(xdim,i)*ur(imz,i)
 
