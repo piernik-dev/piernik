@@ -230,7 +230,7 @@ contains
         q(fl%imz,:) =  u(fl%imz,:)/u(fl%idn,:)
         if(fl%has_energy) then
            
-           q(fl%ien,:) =  fl%gam_1*(u(fl%ien,:) - ekin(u(fl%imx,:), u(fl%imy,:), u(fl%imz,:), u(fl%idn,:)) - half*sum(b_cc(xdim:zdim,:))**2) + half*sum(b_cc(xdim:zdim,:))**2
+           q(fl%ien,:) =  fl%gam_1*(u(fl%ien,:) - ekin(u(fl%imx,:), u(fl%imy,:), u(fl%imz,:), u(fl%idn,:)) - half*sum(b_cc(xdim:zdim,:)**2)) + half*sum(b_cc(xdim:zdim,:)**2)
         
         endif
 
@@ -372,7 +372,10 @@ contains
     real, dimension(size(u,1),size(u,2)), target    :: flx, ql, qr, du, ul, ur !, u_l, u_r
     real, dimension(:,:), pointer                   :: p_flx, p_bcc, p_bccl, p_bccr, p_ql, p_qr
     integer                                         :: nx, i
-    !integer                                         :: ii
+    integer                                         :: ii
+    logical :: prd
+
+    prd = .true. 
     
     
 
@@ -381,7 +384,12 @@ contains
     du  = calculate_slope_vanleer(u)
     ul  = u - half*du
     ur  = u + half*du
-  
+
+    do ii = lbound(u,2), ubound(u,2)
+       if (prd) write(*,*) "ul(:,",ii,")", ul(:,ii)
+       if (prd) write(*,*) "ur(:,",ii,")", ur(:,ii)
+    enddo
+       
     
     db  = calculate_slope_vanleer(b_cc)
     b_ccl = b_cc - half*db
@@ -392,17 +400,28 @@ contains
 
     flx  = fluxes(ul,b_ccl,ddim) - fluxes(ur,b_ccr,ddim)
 
+    do ii = lbound(u,2), ubound(u,2)
+       if (prd) write(*,*) "flx(:,",ii,")", flx(:,ii)
+    enddo
+    
+       
     
 
     u_l = ur + half*dtodx*flx
     u_r(:,1:nx-1) = ul(:,2:nx) + half*dtodx*flx(:,2:nx) ; u_r(:,nx) = u_r(:,nx-1)
-
+     do ii = lbound(u,2), ubound(u,2)
+        if (prd) write(*,*) "u_l(:,",ii,")", u_l(:,ii)
+        if (prd) write(*,*) "u_r(:,",ii,")", u_r(:,ii)
+     enddo
    
     
     ql = utoq(u_l,b_ccl)
     qr = utoq(u_r,b_ccr)
     
-  
+    do ii = lbound(u, 2), ubound(u,2)
+       if (prd) write(*,*) "ql(:,",ii,")", ql(:,ii)
+       if (prd) write(*,*) "qr(:,",ii,")", qr(:,ii)
+    end do
     
     do i = 1, flind%fluids
        fl    => flind%all_fluids(i)%fl
@@ -419,7 +438,14 @@ contains
     
     u(:,2:nx) = u(:,2:nx) + dtodx*(flx(:,1:nx-1) - flx(:,2:nx))
     u(:,1) = u(:,2) ; u(:,nx) = u(:,nx-1)
-    
+
+    do ii = lbound(u, 2), ubound(u,2)
+       if (prd) write(*,*) "flx(:,",ii,")", flx(:,ii)
+    end do
+    do ii = lbound(u, 2)+1, ubound(u,2)
+       if (prd) write(*,*) "flx_diff(:,",ii,")", dtodx*(flx(:,ii-1) - flx(:,ii))
+    end do
+  
 
   end subroutine muscl
 

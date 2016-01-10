@@ -78,8 +78,11 @@ contains
        vz  =  u(fl%imz,:)/u(fl%idn,:)
 
         if(fl%has_energy) then
-          p_t = fl%gam_1*(u(fl%ien,:) - ekin(u(fl%imx,:), u(fl%imy,:), u(fl%imz,:), u(fl%idn,:)) - half*(b_cc(xdim,:)**2 + b_cc(ydim,:)**2 + b_cc(zdim,:)**2)) + &
-                                                                                                           half*(b_cc(xdim,:)**2 + b_cc(ydim,:)**2 + b_cc(zdim,:)**2)
+          !p_t = fl%gam_1*(u(fl%ien,:) - ekin(u(fl%imx,:), u(fl%imy,:), u(fl%imz,:), u(fl%idn,:)) - half*(b_cc(xdim,:)**2 + b_cc(ydim,:)**2 + b_cc(zdim,:)**2)) + &
+           !half*(b_cc(xdim,:)**2 + b_cc(ydim,:)**2 + b_cc(zdim,:)**2)
+
+           p_t = fl%gam_1*(u(fl%ien,:) - ekin(u(fl%imx,:), u(fl%imy,:), u(fl%imz,:), u(fl%idn,:)) - half*sum(b_cc(xdim:zdim,:)**2)) + half*sum(b_cc(xdim:zdim,:)**2)
+                                                                                                          
        endif      
 
        if(ddim .eq. xdim) then
@@ -189,8 +192,8 @@ contains
        !enl(ien,i) = (prl(ien,i)/(gamma -one)) + half*ul(idn,i)*ul(imx:imz,i)**2 + half*b_ccl(xdim:zdim,i)**2
        !enr(ien,i) = (prr(ien,i)/(gamma -one)) + half*ur(idn,i)*ur(imx:imz,i)**2 + half*b_ccr(xdim:zdim,i)**2
 
-       enl = (prl(ien,i)/(gamma -one)) + half*ul(idn,i)*sum(ul(imx:imz,i))**2 + half*sum(b_ccl(xdim:zdim,i))**2
-       enr = (prr(ien,i)/(gamma -one)) + half*ur(idn,i)*sum(ur(imx:imz,i))**2 + half*sum(b_ccr(xdim:zdim,i))**2
+       enl = (prl(ien,i)/(gamma -one)) + half*ul(idn,i)*sum(ul(imx:imz,i)**2) + half*sum(b_ccl(xdim:zdim,i)**2)
+       enr = (prr(ien,i)/(gamma -one)) + half*ur(idn,i)*sum(ur(imx:imz,i)**2) + half*sum(b_ccr(xdim:zdim,i)**2)
 
        ! Wihtout magnetic fields total pressure/pressure will not cause any alterations. With magentic fields as explained in previous
        ! comment, one will need a proper check.
@@ -204,14 +207,14 @@ contains
                                        + sqrt((gampr_l+(b_ccl(xdim,i)**2+b_ccl(ydim,i)**2+b_ccl(zdim,i)**2))**2-(four*gampr_l*b_ccl(xdim,i)**2))
       
        !c_fastl = sqrt(half*c_fastl/abs(ul(idn,i)))
-       c_fastl = sqrt(half*c_fastl/abs(ul(idn,i)))
+       c_fastl = sqrt(half*c_fastl/ul(idn,i))
        
 
        c_fastr  =   (gampr_r+(b_ccr(xdim,i)**2+b_ccr(ydim,i)**2+b_ccr(zdim,i)**2))  &
                                        + sqrt((gampr_r+(b_ccr(xdim,i)**2+b_ccr(ydim,i)**2+b_ccr(zdim,i)**2))**2-(four*gampr_r*b_ccr(xdim,i)**2))
 
        !c_fastr  =  sqrt(half*c_fastr/abs(ur(idn,i)))
-       c_fastr  =  sqrt(half*c_fastr/abs(ur(idn,i)))
+       c_fastr  =  sqrt(half*c_fastr/ur(idn,i))
        
 
        ! Eq. (67)
