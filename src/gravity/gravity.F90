@@ -146,6 +146,8 @@ contains
 !! <tr><td>tune_zeq     </td><td>1.0    </td><td>real             </td><td>\copydoc gravity::tune_zeq     </td></tr>
 !! <tr><td>tune_zeq_bnd </td><td>1.0    </td><td>real             </td><td>\copydoc gravity::tune_zeq_bnd </td></tr>
 !! <tr><td>r_grav       </td><td>1.e6   </td><td>real             </td><td>\copydoc gravity::r_grav       </td></tr>
+!! <tr><td>ptmass2      </td><td>0.0    </td><td>non-negative real</td><td>\copydoc gravity::ptmass2      </td></tr>
+!! <tr><td>ptm2_x       </td><td>0.0    </td><td>real             </td><td>\copydoc gravity::ptm2_x       </td></tr>
 !! <tr><td>n_gravr      </td><td>0      </td><td>real             </td><td>\copydoc gravity::n_gravr      </td></tr>
 !! <tr><td>user_grav    </td><td>.false.</td><td>logical          </td><td>\copydoc gravity::user_grav    </td></tr>
 !! <tr><td>variable_gp  </td><td>.false.</td><td>logical          </td><td>\copydoc gravity::variable_gp  </td></tr>
