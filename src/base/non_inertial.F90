@@ -49,9 +49,8 @@ contains
 
       use dataio_pub, only: nh    ! QA_WARN required for diff_nml
       use mpisetup,   only: rbuff, master, slave, piernik_MPI_Bcast
-      use constants,  only: PIERNIK_INIT_GRID, GEO_XYZ
+      use constants,  only: PIERNIK_INIT_GRID
       use dataio_pub, only: die, code_progress
-      use domain,     only: dom
 
       implicit none
 
@@ -95,8 +94,6 @@ contains
 
       if (code_progress < PIERNIK_INIT_GRID) call die("[non_inertial:init_non_inertial] grid not initialized.") ! this is a weak check, the real dependency is init_geometry at the moment
 
-      if (dom%geometry_type /= GEO_XYZ) call die("[non_inertial:init_non_inertial] Only cartesian geometry is implemented")
-
    end subroutine init_non_inertial
 
 !>
@@ -105,7 +102,13 @@ contains
 !! The equtions for the non-inertial acceleration in the x and y directions are given by:
 !! \f{equation}
 !! acc_x = 2 * \Omega * v_y + \Omega^2 * x
-!! acc_y =  -2 * \Omega * v_x + \Omega^2 * y
+!! acc_y = -2 * \Omega * v_x + \Omega^2 * y
+!! \f}
+!!
+!! In polar coordinates the accelerations in r and phi directions are:
+!! \f{equation}
+!! acc_r = 2 * \Omega * v_phi + \Omega^2 * r
+!! acc_phi = -2 * \Omega * v_r
 !! \f}
 !!
 !! \details This is a low-order estimate of the accelerations, because this routine uses density and velocity fields
@@ -117,6 +120,8 @@ contains
       use fluidindex, only: flind, iarr_all_dn, iarr_all_my
       use constants,  only: xdim, ydim !, zdim
       use grid_cont,  only: grid_container
+      use constants,  only: GEO_XYZ, GEO_RPZ
+      use domain,     only: dom
 
       implicit none
 
@@ -127,17 +132,34 @@ contains
       real, dimension(size(u,1), flind%fluids)  :: rotacc !< an array for non-inertial accelerations
 
       ! non-inertial (Coriolis and centrifugal) forces for corotating coords
-      do ifl = 1, flind%fluids
-         select case (sweep)
-            case (xdim)
-               rotacc(:, ifl) = +2.0 * omega * u(:, iarr_all_my(ifl))/u(:, iarr_all_dn(ifl)) + omega**2 * cg%x
-            case (ydim)
-               rotacc(:, ifl) = -2.0 * omega * u(:, iarr_all_my(ifl))/u(:, iarr_all_dn(ifl)) + omega**2 * cg%y
-   !         case (zdim) !no z-component of non-inertial forces
-            case default
-               rotacc(:, ifl) = 0.0
-         end select
-      enddo
+      select case (dom%geometry_type)
+         case (GEO_XYZ)
+            do ifl = 1, flind%fluids
+               select case (sweep)
+                  case (xdim)
+                     rotacc(:, ifl) = +2.0 * omega * u(:, iarr_all_my(ifl))/u(:, iarr_all_dn(ifl)) + omega**2 * cg%x
+                  case (ydim)
+                     !> BEWARE: iarr_all_my points to the x-momentum in y-sweep
+                     rotacc(:, ifl) = -2.0 * omega * u(:, iarr_all_my(ifl))/u(:, iarr_all_dn(ifl)) + omega**2 * cg%y
+                  case default
+                     ! no z-component of non-inertial forces
+                     rotacc(:, ifl) = 0.0
+               end select
+            enddo
+         case (GEO_RPZ)
+            do ifl = 1, flind%fluids
+               select case (sweep)
+                  case (xdim)
+                     rotacc(:, ifl) = +2.0 * omega * u(:, iarr_all_my(ifl))/u(:, iarr_all_dn(ifl)) + omega**2 * cg%x
+                  case (ydim)
+                     !> BEWARE: iarr_all_my points to the r-momentum in y-sweep
+                     rotacc(:, ifl) = -2.0 * omega * u(:, iarr_all_my(ifl))/u(:, iarr_all_dn(ifl))
+                  case default
+                     ! no z-component of non-inertial forces
+                     rotacc(:, ifl) = 0.0
+               end select
+            enddo
+      end select
 
    end function non_inertial_force
 
