@@ -122,6 +122,7 @@ contains
       use grid_cont,  only: grid_container
       use constants,  only: GEO_XYZ, GEO_RPZ
       use domain,     only: dom
+      use dataio_pub, only: die
 
       implicit none
 
@@ -159,6 +160,8 @@ contains
                      rotacc(:, ifl) = 0.0
                end select
             enddo
+         case default
+            call die("[init_non_inertial:non_inertial_force] Unsupported geometry")
       end select
 
    end function non_inertial_force
