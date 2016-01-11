@@ -50,7 +50,7 @@ contains
 
    subroutine init_coriolis
 
-      use constants,  only: PIERNIK_INIT_GRID, GEO_XYZ
+      use constants,  only: PIERNIK_INIT_GRID, GEO_XYZ, GEO_RPZ
       use dataio_pub, only: die, code_progress
       use domain,     only: dom
 
@@ -60,7 +60,7 @@ contains
 
       if (omega_uninitialized) coriolis_omega = 0.
 
-      if (dom%geometry_type /= GEO_XYZ) call die("[coriolis:init_coriolis] Only cartesian geometry is implemented")
+      if (dom%geometry_type /= GEO_XYZ .and. dom%geometry_type /= GEO_RPZ) call die("[coriolis:init_coriolis] Only cartesian and polar geometries are supported")
 #if !(defined GRAV || defined SHEAR )
       call die("[coriolis:init_coriolis] Check how and under what conditions the rtvd::relaxing_tvd handles additional source terms")
 #endif /* !(GRAV || SHEAR ) */
@@ -78,8 +78,6 @@ contains
 !!
 !! \details This is a low-order estimate of the Coriolis accelerations, because this routine uses density and velocity fields
 !! from the beginning of the time step. This is a simple approach, but ignores any changes due to other accelerations during the time step.
-!!
-!! \todo add cylindrical geometry support (check carefully what exactly is u(iarr_all_my(:), :)/u(iarr_all_dn(:), :) and figure out whether any geometrical factors are needed)
 !<
 
    function coriolis_force(sweep, u) result(rotacc)
