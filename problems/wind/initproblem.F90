@@ -113,12 +113,12 @@ contains
       real              :: r_c, vel0
 
       ! r_c = G*M/2/c_s**2
-      r_c = newtong*mstar/2./flind%ion%cs2
-      vel = 2. * vel_scale/(1 + exp(2*(1 - r/r_c))) * flind%ion%cs
+      r_c = newtong*mstar/2./flind%neu%cs2
+      vel = 2. * vel_scale/(1 + exp(2*(1 - r/r_c))) * flind%neu%cs
       if (r > rin) then
          dens = mdot/fpi/r**2/vel
       else
-         vel0 = 2. * vel_scale/(1 + exp(2*(1 - rin/r_c))) * flind%ion%cs
+         vel0 = 2. * vel_scale/(1 + exp(2*(1 - rin/r_c))) * flind%neu%cs
          dens = mdot/fpi/rin**2/vel0
       endif
 
@@ -146,7 +146,7 @@ contains
       type(cg_list_element),  pointer :: cgl
       type(grid_container),   pointer :: cg
 
-      fl => flind%ion
+      fl => flind%neu
 
       cgl => leaves%first
       do while (associated(cgl))
@@ -220,7 +220,7 @@ contains
       real                            :: xi, yj, vx, vy, vz, zk, rc, vel,&
                                        dens, phi, theta
 
-      fl => flind%ion
+      fl => flind%neu
 
       cgl => leaves%first
       do while (associated(cgl))
