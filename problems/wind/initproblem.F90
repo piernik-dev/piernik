@@ -22,6 +22,7 @@ contains
       use user_hooks, only: problem_customize_solution
       use constants,  only: GEO_XYZ, GEO_RPZ
       use domain,     only: dom
+      use fluidboundaries_funcs, only: user_fluidbnd
 
       implicit none
 
@@ -179,7 +180,7 @@ contains
 
                         cg%u(fl%idn,i,j,k) = max(dens, smalld)
 
-                        theta = acos(zk/rc)
+                        theta = acos(zk/xi)
                         vx = vel*sin(theta)
                         vz = vel*cos(theta)
 
@@ -266,5 +267,51 @@ contains
       if (forward) i = j ! suppress compiler warnings on unused arguments
 
    end subroutine problem_customize_solution_wind
+
+
+   subroutine user_fluidbnd_wind(dir, side, cg, wn, qn, emfdir)
+      ! impose wind inflow after sweeps and modify the fluid data
+
+      use grid_cont,  only: grid_container
+      use dataio_pub, only: die
+      use constants,  only: xdim, ydim, zdim, LO, HI
+      use fluidtypes, only: component_fluid
+      use global,     only: smalld
+
+      implicit none
+
+      class(component_fluid), pointer              :: fl
+      integer(kind=4),               intent(in)    :: dir, side
+      type(grid_container), pointer, intent(inout) :: cg
+      integer(kind=4),     optional, intent(in)    :: wn, qn, emfdir
+      integer                                      :: i, j, k
+      real                                         :: xi, zk, vx, vz, vel, dens, theta
+
+      if (dir /= xdim) return
+
+      do i = cg%lhn(xdim,LO), cg%lhn(xdim,HI)
+         xi = cg%x(i)
+         do j = cg%lhn(ydim,LO), cg%lhn(ydim,HI)
+            do k = cg%lhn(zdim,LO), cg%lhn(zdim,HI)
+               zk = cg%z(k)
+               call wind_profile(xi, vel, dens)
+
+               cg%u(fl%idn,i,j,k) = max(dens, smalld)
+
+               theta = acos(zk/xi)
+               vx = vel*sin(theta)
+               vz = vel*cos(theta)
+
+               cg%u(fl%imx,i,j,k) = vx*cg%u(fl%idn,i,j,k)
+               cg%u(fl%imy,i,j,k) = 0.
+               cg%u(fl%imz,i,j,k) = vz*cg%u(fl%idn,i,j,k)
+            enddo
+         enddo
+      enddo
+
+      if (.true. .or. cg%grid_id*dir*side >=0) return ! suppress compiler warnings
+      if (present(wn) .or. present(qn) .or. present(emfdir)) return ! suppress compiler warning
+
+   end subroutine user_fluidbnd_wind
 
 end module initproblem
