@@ -693,7 +693,7 @@ contains
       integer                                             :: j, k
       real                                                :: GM1, GM2, z2, yz2, r_smooth2
 
-      if (dom%geometry_type /= GEO_XYZ .and. dom%geometry_type /= GEO_XYZ) call die("[gravity:grav_roche] geometry is not implemented yet.")
+      if (dom%geometry_type /= GEO_XYZ .and. dom%geometry_type /= GEO_RPZ) call die("[gravity:grav_roche] geometry is not implemented yet.")
 
       r_smooth2 = r_smooth**2
       GM1 =  newtong * ptmass
