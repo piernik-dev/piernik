@@ -7,6 +7,7 @@
     bnd_yr = 'out'
     bnd_zl = 'outd'
     bnd_zr = 'outd'
+    geometry = 'cylindrical'
     xmin   = -20.
     xmax   = 25.
     ymin   = -25.
@@ -44,9 +45,8 @@
     vars(1:) = 'ener', 'dens', 'velx', 'vely', 'velz'
  /
 
- $FLUID_IONIZED
-    cs_iso = 1. ! 3000 K bin units
-    !cs_iso = .7 ! 1000 K bin units
+ $FLUID_NEUTRAL
+    gamma = 1.01
  /
 
  $NUMERICAL_SETUP

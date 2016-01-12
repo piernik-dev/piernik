@@ -20,12 +20,13 @@ contains
    subroutine problem_pointers
 
       use user_hooks, only: problem_customize_solution
-      use constants,  only: GEO_XYZ
+      use constants,  only: GEO_XYZ, GEO_RPZ
       use domain,     only: dom
 
       implicit none
 
       if (dom%geometry_type == GEO_XYZ) problem_customize_solution => problem_customize_solution_wind
+      if (dom%geometry_type == GEO_RPZ) user_fluidbnd => user_fluidbnd_wind
 
    end subroutine problem_pointers
 
@@ -163,10 +164,6 @@ contains
                         call wind_profile(rc, vel, dens)
 
                         cg%u(fl%idn,i,j,k) = max(dens, smalld)
-                        if (fl%ien > 1) then
-                           cg%u(fl%ien,i,j,k) = fl%cs2/(fl%gam_1)*cg%u(fl%idn,i,j,k)
-                           cg%u(fl%ien,i,j,k) = cg%u(fl%ien,i,j,k) + 0.5*vel**2*cg%u(fl%idn,i,j,k)
-                        endif
 
                         phi = atan2(yj, xi)
                         theta = acos(zk/rc)
@@ -181,10 +178,6 @@ contains
                         call wind_profile(xi, vel, dens)
 
                         cg%u(fl%idn,i,j,k) = max(dens, smalld)
-                        if (fl%ien > 1) then
-                           cg%u(fl%ien,i,j,k) = fl%cs2/(fl%gam_1)*cg%u(fl%idn,i,j,k)
-                           cg%u(fl%ien,i,j,k) = cg%u(fl%ien,i,j,k) + 0.5*vel**2*cg%u(fl%idn,i,j,k)
-                        endif
 
                         theta = acos(zk/rc)
                         vx = vel*sin(theta)
