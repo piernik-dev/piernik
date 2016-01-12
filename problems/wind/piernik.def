@@ -5,7 +5,8 @@
 #define LOCAL_FR_SPEED
 #undef  MAGNETIC
 
-#define NON_INERTIAL
+#undef NON_INERTIAL
+#define CORIOLIS
 
 #define GRAV
 
