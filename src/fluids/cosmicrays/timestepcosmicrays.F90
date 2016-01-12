@@ -43,7 +43,7 @@ module timestepcosmicrays
 contains
 
 !>
-!! \details On a static grid with simple domain decompositions the fFollowing subroutine evaluates some constants, there is no need to run it
+!! \details On a static grid with simple domain decompositions the Following subroutine evaluates some constants, there is no need to run it
 !! more than once, apart from wasting CPU cycles.
 !<
    subroutine timestep_crs(cg)
@@ -51,11 +51,14 @@ contains
       use constants,           only: one, half
       use domain,              only: is_multicg
       use grid_cont,           only: grid_container
-      use initcosmicrays,      only: cfl_cr, K_crn_paral, K_crn_perp, K_crs_paral, K_crs_perp !\deprecated use of crs!!!
+      use initcosmicrays,      only: cfl_cr, K_crn_paral, K_crn_perp, K_crs_paral, K_crs_perp
 #ifdef MULTIGRID
       use initcosmicrays,      only: use_split
       use multigrid_diffusion, only: diff_explicit, diff_tstep_fac, diff_dt_crs_orig
 #endif /* MULTIGRID */
+#ifdef COSM_RAY_ELECTRONS
+      use cresp_grid,          only: dt_cre
+#endif /* COSM_RAY_ELECTRONS */
 
       implicit none
 
@@ -68,7 +71,7 @@ contains
       ! with multiple cg% there are few cg%dxmn to be checked
       ! with AMR minval(cg%dxmn) may change with time
       if (maxval(K_crn_paral+K_crn_perp) <= 0) then !!!
-         dt_crs = huge(one) ! \crs deprecated, but timestep still depends on both crn and cre(spectrum)
+         dt_crs = huge(one) 
       else
          dt = cfl_cr * half/maxval(K_crs_paral+K_crs_perp) !!!
          if (cg%dxmn < sqrt(huge(one))/dt) then
@@ -78,9 +81,13 @@ contains
             if (.not. (use_split .or. diff_explicit)) dt = dt * diff_tstep_fac ! enlarge timestep for non-explicit diffusion
 #endif /* MULTIGRID */
             dt_crs = min(dt_crs, dt)
+#ifdef COSM_RAY_ELECTRONS            
+            dt_crs = min(dt_crs, dt_cre, dt)
+#endif	/* COSM_RAY_ELECTRONS */
+!             print *,'dt_crs = ', dt_crs
          endif
       endif
-      print *, ' dt_crs = ', dt_crs, ' dt = ', dt,' cfl_cr = ', cfl_cr
+!       print *, ' dt_crs = ', dt_crs, ' dt = ', dt,' cfl_cr = ', cfl_cr
       frun = .false.
 
    end subroutine timestep_crs

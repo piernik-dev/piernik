@@ -31,13 +31,13 @@
 
  $END_CONTROL
     tend   = 5.0
-    nend   = 10000
+    nend   = 1000
  /
 
  $OUTPUT_CONTROL
     problem_name = 'mcr'
     run_id = 'tst'
-    dt_hdf  = 5.0
+    dt_hdf  = 0.5
     dt_res  = 0.0
     dt_log  = 0.05
     dt_tsl  = 0.000
@@ -76,17 +76,17 @@
     cre_eff     = 0.01
     cfl_cre     = 0.4
     ncre        = 5      ! number of fixed spectrum bins between
-    p_lo_init = 1.05e3   ! initial lower cut momentum
-    p_up_init = 1.05e4   ! initial upper cut momentum
+    p_lo_init = 1.0e2   ! initial lower cut momentum
+    p_up_init = 1.0e3   ! initial upper cut momentum
     f_init    = 1.0e0   ! < initial value of the normalization parameter in cre energy spectrum
     q_init    = 5.0e0   ! < initial value of power law coefficient in cre enrgy spectrum
-    p_min_fix = 1.015e3  ! momentum fixed grid
-    p_max_fix = 1.015e4  ! momentum fixed grid
-    K_cre_n_paral = 
-    K_cre_e_paral = 
-    K_cre_n_perp  =
-    K_cre_e_perp  =
-    K_pow_index   = 
+    p_min_fix = 1.0e2  ! momentum fixed grid
+    p_max_fix = 1.0e5  ! momentum fixed grid
+    K_cre_e_paral = 50000 
+    K_cre_n_paral = 20000
+    K_cre_e_perp  = 0
+    K_cre_n_perp  = 0
+    K_pow_index   = 0
  /
 
  $CR_SPECIES
@@ -112,7 +112,7 @@
     bx0    = 5.0
     by0    = 5.0
     bz0    = 5.0
-    x0     = 500.0
+    x0     = 0.0
     y0     = 0.0
     z0     = 0.0
     r0     = 64.0

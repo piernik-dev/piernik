@@ -163,10 +163,10 @@ contains
       ncre       = 0
       cre_eff    = 0.01
 
-      p_lo_init = 1.15e4
-      p_up_init = 1.15e5
-      p_min_fix = 1.15e4
-      p_max_fix = 1.15e5
+      p_lo_init = 1.0e2
+      p_up_init = 1.0e3
+      p_min_fix = 1.0e2
+      p_max_fix = 1.0e4
       f_init    = 1.0e0
       q_init    = 5.0e0
       
@@ -370,10 +370,18 @@ contains
          gamma_crs  (ncrn+1:ncrs) = 0 !gamma_cre  (1:ncre) !<- cre gamma and K is supposed to be 0
          K_crs_paral(ncrn+1:ncrs) = 0!K_cre_paral(1:ncre)
          K_crs_perp (ncrn+1:ncrs) = 0!K_cre_perp (1:ncre)
+#ifdef COSM_RAY_ELECTRONS      
+         K_crs_paral(ncrn+1:ncrn+ncre) = K_cre_e_paral
+         K_crs_paral(ncrn+ncre+1:2*ncre+1) = K_cre_n_paral
+         
+         K_crs_perp(ncrn+1:ncrn+ncre) = K_cre_e_perp
+         K_crs_perp(ncrn+ncre+1:2*ncre+1) = K_cre_n_perp
 !          allocate(cres_n(ncre))   !!!
 !          allocate(cres_en(ncre))  !!!
+#endif /* COSM_RAY_ELECTRONS */
       endif
-     
+!      print *, 'k paral = ', K_crs_paral !,'size :',  size(K_crs_paral)
+!      print *, 'k perp  = ', K_crs_perp !, 'size :', size(K_crs_perp)
       ma1d = [ncrn]
       call my_allocate(iarr_crn, ma1d)
       
@@ -437,10 +445,10 @@ contains
 
       flind%crn%beg    = flind%all + I_ONE
       flind%crs%beg    = flind%crn%beg
-
       
       flind%crn%all  = ncrn
       
+
       if (ncre.gt.0) then 
             flind%cre%all  = 2*ncre+2 !!!
       else  
@@ -484,10 +492,18 @@ contains
       flind%cre%pos = flind%components
       
 #ifdef COSM_RAY_ELECTRONS      
+     flind%cre%nbeg = flind%crn%end + I_ONE
      ind_n_beg = flind%crn%end + I_ONE
+     flind%cre%nend = flind%crn%end + ncre
      ind_n_end = flind%crn%end + ncre
+     
+     flind%cre%ebeg = flind%cre%nend + I_ONE
      ind_e_beg = ind_n_end + I_ONE
+     flind%cre%eend = flind%cre%nend + ncre
      ind_e_end = ind_n_end + ncre
+     
+     flind%cre%plo  = flind%cre%eend + I_ONE
+     flind%cre%pup  = flind%cre%eend + I_ONE + I_ONE
 !      print *,'ind_n_beg, ind_n_end = ', ind_n_beg, ind_n_end
 !      print *,'ind_e_beg, ind_e_end = ', ind_e_beg, ind_e_end
      

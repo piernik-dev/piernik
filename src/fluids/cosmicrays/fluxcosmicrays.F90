@@ -55,6 +55,7 @@ contains
       integer :: i
 
       fluxc   = 0.0
+!       print *, ' flind crn all(fluxcosmicrays) = ', flind%crn%all
       do i = 1, flind%crn%all
          fluxc(RNG, i) = uuc(RNG, i)*vion(RNG)
       enddo

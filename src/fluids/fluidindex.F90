@@ -228,19 +228,20 @@ contains
       
       iarr_all_crn(1:flind%crn%all) = iarr_crn
 !       print *, 'iarr_crs      = ', iarr_crs
-!       print *, 'flind%all%crs = ', flind%crs%all
+      
 !       print *, 'iarr_all_crs  = ' , iarr_all_crs
 !       print *, 'sizes: iarr_all_crs, iarr_cre =', size(iarr_all_crs), size(iarr_crs)      
       iarr_all_crs(1:flind%crs%all) = iarr_crs
       
 !       print *, 'iarr_cre      = ', iarr_cre
-!       print *, 'flind%all%cre = ', flind%cre%all
+
 !       print *, 'iarr_all_cre  = ' , iarr_all_cre
 !       print *, 'sizes: iarr_all_cre, iarr_cre =', size(iarr_all_cre), size(iarr_cre)
                  !#elif COSM_RAY_ELECTRONS
       iarr_all_cre(1:flind%cre%all) = iarr_cre
-      
-!       print *,' iarr_all_swp = ', iarr_all_swp
+!       print *, 'flind%all%crs = ', flind%crs%all
+!        print *,' iarr_all_swp = ', iarr_all_swp
+!        print *, 'flind%all%cre = ', flind%cre%all
 #endif /* COSM_RAYS */
 
 #ifdef TRACER
