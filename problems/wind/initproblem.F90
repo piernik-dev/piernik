@@ -20,10 +20,12 @@ contains
    subroutine problem_pointers
 
       use user_hooks, only: problem_customize_solution
+      use constants,  only: GEO_XYZ
+      use domain,     only: dom
 
       implicit none
 
-      problem_customize_solution => problem_customize_solution_wind
+      if (dom%geometry_type == GEO_XYZ) problem_customize_solution => problem_customize_solution_wind
 
    end subroutine problem_pointers
 
@@ -48,9 +50,9 @@ contains
 
       if (master) then
 
-         if (.not.nh%initialized) call nh%init()
+         if (.not. nh%initialized) call nh%init()
          open(newunit=nh%lun, file=nh%tmp1, status="unknown")
-         write(nh%lun,nml=PROBLEM_CONTROL)
+         write(nh%lun, nml=PROBLEM_CONTROL)
          close(nh%lun)
          open(newunit=nh%lun, file=nh%par_file)
          nh%errstr=""
@@ -100,7 +102,7 @@ contains
    ! velocity and density profiles for isothermal wind
 
       use fluidindex, only: flind
-      use constants,  only: fpi ! four*pi
+      use constants,  only: fpi ! 4*pi
       use units,      only: newtong
 
       implicit none
@@ -126,11 +128,12 @@ contains
 
       use cg_leaves,   only: leaves
       use cg_list,     only: cg_list_element
-      use constants,   only: xdim, ydim, zdim, LO, HI
+      use constants,   only: xdim, ydim, zdim, LO, HI, GEO_XYZ, GEO_RPZ
       use fluidindex,  only: flind
       use fluidtypes,  only: component_fluid
       use global,      only: smalld
       use grid_cont,   only: grid_container
+      use domain,      only: dom
 
       implicit none
 
@@ -153,27 +156,44 @@ contains
                yj = cg%y(j)
                do k = cg%lhn(zdim,LO), cg%lhn(zdim,HI)
                   zk = cg%z(k)
-                  rc = sqrt(xi**2 + yj**2 + zk**2)
+                  select case (dom%geometry_type)
+                     case (GEO_XYZ)
+                        rc = sqrt(xi**2 + yj**2 + zk**2)
 
-                  call wind_profile(rc, vel, dens)
+                        call wind_profile(rc, vel, dens)
 
-                  cg%u(fl%idn,i,j,k) = max(dens, smalld)
-                  if (fl%ien > 1) then
-                     cg%u(fl%ien,i,j,k) = fl%cs2/(fl%gam_1)*cg%u(fl%idn,i,j,k)
-                     cg%u(fl%ien,i,j,k) = cg%u(fl%ien,i,j,k) + 0.5*vel**2*cg%u(fl%idn,i,j,k)
-                  endif
+                        cg%u(fl%idn,i,j,k) = max(dens, smalld)
+                        if (fl%ien > 1) then
+                           cg%u(fl%ien,i,j,k) = fl%cs2/(fl%gam_1)*cg%u(fl%idn,i,j,k)
+                           cg%u(fl%ien,i,j,k) = cg%u(fl%ien,i,j,k) + 0.5*vel**2*cg%u(fl%idn,i,j,k)
+                        endif
 
+                        phi = atan2(yj, xi)
+                        theta = acos(zk/rc)
+                        vx = vel*sin(theta)*cos(phi)
+                        vy = vel*sin(theta)*sin(phi)
+                        vz = vel*cos(theta)
 
-                  phi = atan2(yj, xi)
-                  theta = acos(zk/rc)
-                  vx = vel*sin(theta)*cos(phi)
-                  vy = vel*sin(theta)*sin(phi)
-                  vz = vel*cos(theta)
+                        cg%u(fl%imx,i,j,k) = vx*cg%u(fl%idn,i,j,k)
+                        cg%u(fl%imy,i,j,k) = vy*cg%u(fl%idn,i,j,k)
+                        cg%u(fl%imz,i,j,k) = vz*cg%u(fl%idn,i,j,k)
+                     case (GEO_RPZ)
+                        call wind_profile(xi, vel, dens)
 
-                  cg%u(fl%imx,i,j,k) = vx*cg%u(fl%idn,i,j,k)
-                  cg%u(fl%imy,i,j,k) = vy*cg%u(fl%idn,i,j,k)
-                  cg%u(fl%imz,i,j,k) = vz*cg%u(fl%idn,i,j,k)
+                        cg%u(fl%idn,i,j,k) = max(dens, smalld)
+                        if (fl%ien > 1) then
+                           cg%u(fl%ien,i,j,k) = fl%cs2/(fl%gam_1)*cg%u(fl%idn,i,j,k)
+                           cg%u(fl%ien,i,j,k) = cg%u(fl%ien,i,j,k) + 0.5*vel**2*cg%u(fl%idn,i,j,k)
+                        endif
 
+                        theta = acos(zk/rc)
+                        vx = vel*sin(theta)
+                        vz = vel*cos(theta)
+
+                        cg%u(fl%imx,i,j,k) = vx*cg%u(fl%idn,i,j,k)
+                        cg%u(fl%imy,i,j,k) = 0.
+                        cg%u(fl%imz,i,j,k) = vz*cg%u(fl%idn,i,j,k)
+                  end select
                enddo
             enddo
          enddo
@@ -194,6 +214,7 @@ contains
       use all_boundaries,   only: all_fluid_boundaries
       use fluidindex,       only: flind
       use fluidtypes,       only: component_fluid
+      use domain,           only: dom
 
       implicit none
 
