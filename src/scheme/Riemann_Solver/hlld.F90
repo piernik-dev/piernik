@@ -1,5 +1,4 @@
-!
-! PIERNIK Code Copyright (C) 2006 Michal Hanasz
+! Code Copyright (C) 2006 Michal Hanasz
 !
 !    This file is part of PIERNIK code.
 !
@@ -61,22 +60,14 @@ contains
 
     implicit none
 
-    real, dimension(:,:),      intent(in)    :: u
-    !real, dimension(:,:),      intent(in)    :: bb
-    real, dimension(:,:),        intent(inout)    :: b_cc
-    !real, dimension(:), pointer, intent(in)  :: cs2
-    integer(kind=4),             intent(in)  :: ddim
-
-    real, dimension(size(u,1), size(u,2))    :: f
-    !real, dimension(size(u,2))               :: vx, vy, vz, p_t, p
-    real, dimension(size(u,2))               :: vx, vy, vz, p_t
-    integer :: ip
-    class(component_fluid),    pointer       :: fl
-    !integer(kind=4)                          :: ibx, iby, ibz
-
-    !ibx = iarr_mag_swp(cdim,xdim)
-    !iby = iarr_mag_swp(cdim,ydim)
-    !ibz = iarr_mag_swp(cdim,zdim)
+    real, dimension(:,:),        intent(in)         :: u
+    real, dimension(:,:),        intent(inout)      :: b_cc
+    integer(kind=4),             intent(in)         :: ddim
+    real, dimension(size(u,1), size(u,2))           :: f
+    real, dimension(size(u,2))                      :: vx, vy, vz, p_t
+    integer                                         :: ip
+    class(component_fluid),      pointer            :: fl
+    
 
     do ip = 1, flind%fluids
 
@@ -86,33 +77,21 @@ contains
        vy  =  u(fl%imy,:)/u(fl%idn,:)
        vz  =  u(fl%imz,:)/u(fl%idn,:)
 
-       !if(fl%has_energy) then
-        !  p_t = fl%gam_1*(u(fl%ien,:) - ekin(u(fl%imx,:), u(fl%imy,:), u(fl%imz,:), u(fl%idn,:)) - half*(bb(ibx,:)**2 + bb(iby,:)**2 + bb(ibz,:)**2)) + &
-                                                                                                           !half*(bb(ibx,:)**2 + bb(iby,:)**2 + bb(ibz,:)**2)
-      !else
-       !   if(associated(cs2)) then
-        !     p = cs2*u(fl%idn,:) !At line 93 of file hlld.F90 Fortran runtime error: Array bound mismatch for dimension 2 of array 'u' (72/0)
-         ! else
-          !   p = 0.
-         ! endif
-       !endif
-
         if(fl%has_energy) then
-          p_t = fl%gam_1*(u(fl%ien,:) - ekin(u(fl%imx,:), u(fl%imy,:), u(fl%imz,:), u(fl%idn,:)) - half*(b_cc(xdim,:)**2 + b_cc(ydim,:)**2 + b_cc(zdim,:)**2)) + &
-                                                                                                           half*(b_cc(xdim,:)**2 + b_cc(ydim,:)**2 + b_cc(zdim,:)**2)
+          !p_t = fl%gam_1*(u(fl%ien,:) - ekin(u(fl%imx,:), u(fl%imy,:), u(fl%imz,:), u(fl%idn,:)) - half*(b_cc(xdim,:)**2 + b_cc(ydim,:)**2 + b_cc(zdim,:)**2)) + &
+           !half*(b_cc(xdim,:)**2 + b_cc(ydim,:)**2 + b_cc(zdim,:)**2)
 
-       endif
-
-       
+           p_t = fl%gam_1*(u(fl%ien,:) - ekin(u(fl%imx,:), u(fl%imy,:), u(fl%imz,:), u(fl%idn,:)) - half*sum(b_cc(xdim:zdim,:)**2)) + half*sum(b_cc(xdim:zdim,:)**2)
+                                                                                                          
+       endif      
 
        if(ddim .eq. xdim) then
           f(fl%idn,:)  =  u(fl%imx,:)
           f(fl%imx,:)  =  u(fl%imx,:)*vx(:) + p_t(:) - b_cc(xdim,:)**2
           f(fl%imy,:)  =  u(fl%imy,:)*vx(:) - b_cc(xdim,:)*b_cc(ydim,:)
           f(fl%imz,:)  =  u(fl%imz,:)*vx(:) - b_cc(xdim,:)*b_cc(zdim,:)
-          !b(ibx,:)     =  zero
-          b_cc(ydim,:)     =  b_cc(ydim,:)*vx(:) - b_cc(xdim,:)*vy(:)
-          b_cc(zdim,:)     =  b_cc(zdim,:)*vx(:) - b_cc(xdim,:)*vz(:)
+          b_cc(ydim,:) =  b_cc(ydim,:)*vx(:) - b_cc(xdim,:)*vy(:)
+          b_cc(zdim,:) =  b_cc(zdim,:)*vx(:) - b_cc(xdim,:)*vz(:)
           if(fl%has_energy) then
              f(fl%ien,:)  =  (u(fl%ien,:) + p_t(:))*vx(:) - b_cc(xdim,:)*(b_cc(xdim,:)*vx(:) + b_cc(ydim,:)*vy(:) + b_cc(zdim,:)*vz(:))
           endif
@@ -122,8 +101,7 @@ contains
           f(fl%imx,:)  =  u(fl%imx,:)*vy(:) - b_cc(xdim,:)*b_cc(ydim,:)
           f(fl%imy,:)  =  u(fl%imy,:)*vy(:) + p_t(:) - b_cc(ydim,:)**2
           f(fl%imz,:)  =  u(fl%imz,:)*vy(:) - b_cc(zdim,:)*b_cc(ydim,:)
-          b_cc(xdim,:)     =  b_cc(xdim,:)*vy(:) - b_cc(ydim,:)*vx(:)
-          !b(iby,:)     =  zero
+          b_cc(xdim,:) =  b_cc(xdim,:)*vy(:) - b_cc(ydim,:)*vx(:)
           b_cc(zdim,:)     =  b_cc(zdim,:)*vy(:) - b_cc(ydim,:)*vz(:)
           if(fl%has_energy) then
              f(fl%ien,:)  =  (u(fl%ien,:) + p_t(:))*vy(:) -  b_cc(ydim,:)*(b_cc(xdim,:)*vx(:) + b_cc(ydim,:)*vy(:) + b_cc(zdim,:)*vz(:))
@@ -134,9 +112,8 @@ contains
           f(fl%imx,:)  =  u(fl%imx,:)*vz(:) - b_cc(xdim,:)*b_cc(zdim,:)
           f(fl%imy,:)  =  u(fl%imy,:)*vz(:) - b_cc(ydim,:)*b_cc(zdim,:)
           f(fl%imz,:)  =  u(fl%imz,:)*vz(:) + p_t(:) - b_cc(zdim,:)**2
-          b_cc(xdim,:)     =  b_cc(xdim,:)*vz(:) - b_cc(zdim,:)*vx(:)
-          b_cc(ydim,:)     =  b_cc(ydim,:)*vz(:) - b_cc(zdim,:)*vy(:)
-          !b(ibz,:)     =  zero
+          b_cc(xdim,:) =  b_cc(xdim,:)*vz(:) - b_cc(zdim,:)*vx(:)
+          b_cc(ydim,:) =  b_cc(ydim,:)*vz(:) - b_cc(zdim,:)*vy(:)
           if(fl%has_energy) then
              f(fl%ien,:)  =  (u(fl%ien,:) + p_t(:))*vy(:) - b_cc(zdim,:)*(b_cc(xdim,:)*vx(:) + b_cc(ydim,:)*vy(:) + b_cc(zdim,:)*vz(:))
           endif
@@ -155,7 +132,7 @@ contains
 
  !-------------------------------------------------------------------------------------------------------------------------------------------------
 
-  !subroutine riemann_hlld(n, gamma, uleft, uright, b, cdim, f)
+  
   subroutine riemann_hlld(n,f,ul,ur,b_cc,b_ccl,b_ccr,gamma)
 
     ! external procedures
@@ -163,9 +140,6 @@ contains
     use constants,  only: half, zero, xdim, ydim, zdim, idn, imx, imy, imz, ien
     use fluidindex, only: flind
     use func,       only: operator(.notequals.)
-    !use func,       only: emag, ekin
-    !use grid_cont,  only: grid_container
-    !use fluxes,     only: all_fluxes, flimiter
     use dataio_pub, only: die
 
     ! arguments
@@ -173,175 +147,147 @@ contains
     implicit none
 
     integer,                       intent(in)    :: n
-    real, dimension(:,:), pointer, intent(inout)   :: f
-    real, dimension(:,:), pointer, intent(in) :: ul, ur 
-    !real, dimension(:), pointer,   intent(in)    :: b
-    real, dimension(:,:),    pointer, intent(in) :: b_cc
-    real, dimension(:,:),    pointer, intent(in) :: b_ccl, b_ccr
+    real, dimension(:,:), pointer, intent(inout) :: f
+    real, dimension(:,:), pointer, intent(in)    :: ul, ur 
+    real, dimension(:,:), pointer, intent(in)    :: b_cc
+    real, dimension(:,:), pointer, intent(in)    :: b_ccl, b_ccr
     real,                          intent(in)    :: gamma
-    !integer(kind=4),               intent(in)    :: cdim
-
         
     ! Local variables
 
     integer                                      :: i
     real, parameter                              :: four = 4.0
-    real, parameter                              :: one  = 1.0   
-    !integer(kind=4)                              :: ibx, iby, ibz
-    
+    real, parameter                              :: one  = 1.0       
     real                                         :: sm, sm_nr, sm_dr, sl, sr
     real                                         :: alfven_l, alfven_r, c_fastl, c_fastr, gampr_l, gampr_r
     real                                         :: slsm, srsm, slvxl, srvxr, smvxl, smvxr, srmsl, srtsl, dn_l, dn_r
-    real                                         :: b_lr, b_lrgam, magprl, magprr, prtl, prtr, prt_star, b_sig
+    !real                                         :: b_lr, b_lrgam, magprl, magprr, prtl, prtr, prt_star, b_sig
+    real                                         :: b_lr, b_lrgam, magprl, magprr, prt_star, b_sig, enl, enr
     real                                         :: coeff_1, coeff_2, dn_lsqt, dn_rsqt, add_dnsq, mul_dnsq
     real                                         :: vb_l, vb_starl, vb_r, vb_starr, vb_2star
     
     ! Local arrays
-
-
-
-
-    !real, dimension(n, flind%all)                :: ul, ur, fl, fr
-    !real, dimension(flind%all,n)                :: ul, ur, fl, fr
-    !real, dimension(n, flind%all)                :: fl, fr
-    !real, dimension(flind%all)                   :: u_starl, u_starr, u_2star
-    !real, dimension(flind%all)                   :: v_starl, v_starr, b_starl, b_starr, v_2star, b_2star
+    
     real, dimension(flind%all,n)                 :: fl, fr
+    real, dimension(flind%all,n)                 :: prl, prr ! enl, enr
     real, dimension(flind%all)                   :: u_starl, u_starr, u_2star, v_starl, v_starr, v_2star
-    real, dimension(xdim:zdim,n)                         :: b_cclf, b_ccrf
-    real, dimension(xdim:zdim)                           :: b_starl, b_starr, b_2star
-    
-    
-    !ibx = iarr_mag_swp(cdim,xdim)
-    !iby = iarr_mag_swp(cdim,ydim)
-    !ibz = iarr_mag_swp(cdim,zdim)
+    real, dimension(xdim:zdim,n)                 :: b_cclf, b_ccrf
+    real, dimension(xdim:zdim)                   :: b_starl, b_starr, b_2star
+
+    !integer :: ii
 
     ! SOLVER
 
-   
-
     do i = 1,n
 
+       ! From function utoq the primitive variable pressure is ul/ur(ien,i) that includes magnetic fields. In the HD regime we are safe. But
+       ! with magentic fields we will need fl%is_magentised.
 
-       gampr_l  =  gamma*ul(ien,i)
-       gampr_r  =  gamma*ur(ien,i)
+       ! Total left and right pressure
+       prl(ien,i) = ul(ien,i) 
+       prr(ien,i) = ur(ien,i)
 
+       ! Left and rigght energy Eq. 2
+
+       !enl(ien,i) = (prl(ien,i)/(gamma -one)) + half*ul(idn,i)*ul(imx:imz,i)**2 + half*b_ccl(xdim:zdim,i)**2
+       !enr(ien,i) = (prr(ien,i)/(gamma -one)) + half*ur(idn,i)*ur(imx:imz,i)**2 + half*b_ccr(xdim:zdim,i)**2
+
+       enl = (prl(ien,i)/(gamma -one)) + half*ul(idn,i)*sum(ul(imx:imz,i)**2) + half*sum(b_ccl(xdim:zdim,i)**2)
+       enr = (prr(ien,i)/(gamma -one)) + half*ur(idn,i)*sum(ur(imx:imz,i)**2) + half*sum(b_ccr(xdim:zdim,i)**2)
+
+       ! Wihtout magnetic fields total pressure/pressure will not cause any alterations. With magentic fields as explained in previous
+       ! comment, one will need a proper check.
+
+       !gampr_l  =  gamma*ul(ien,i)
+       !gampr_r  =  gamma*ur(ien,i)
+       gampr_l = gamma*prl(ien,i)
+       gampr_r = gamma*prr(ien,i)
+       
        c_fastl  =   (gampr_l+(b_ccl(xdim,i)**2+b_ccl(ydim,i)**2+b_ccl(zdim,i)**2))  &
                                        + sqrt((gampr_l+(b_ccl(xdim,i)**2+b_ccl(ydim,i)**2+b_ccl(zdim,i)**2))**2-(four*gampr_l*b_ccl(xdim,i)**2))
       
-      
+       !c_fastl = sqrt(half*c_fastl/abs(ul(idn,i)))
        c_fastl = sqrt(half*c_fastl/ul(idn,i))
        
+
        c_fastr  =   (gampr_r+(b_ccr(xdim,i)**2+b_ccr(ydim,i)**2+b_ccr(zdim,i)**2))  &
-                                                   + sqrt((gampr_r+(b_ccr(xdim,i)**2+b_ccr(ydim,i)**2+b_ccr(zdim,i)**2))**2-(four*gampr_r*b_ccr(xdim,i)**2))
+                                       + sqrt((gampr_r+(b_ccr(xdim,i)**2+b_ccr(ydim,i)**2+b_ccr(zdim,i)**2))**2-(four*gampr_r*b_ccr(xdim,i)**2))
 
+       !c_fastr  =  sqrt(half*c_fastr/abs(ur(idn,i)))
        c_fastr  =  sqrt(half*c_fastr/ur(idn,i))
-
        
 
        ! Eq. (67)
-    
-       !sl  =  min(ul(imx,i), ur(imx,i)) - max(c_fastl,c_fastr)
-       !sr  =  max(ur(imx,i), ur(imx,i)) + max(c_fastl,c_fastr)
 
-       sl  =  min(ul(imx,i), ur(imx,i)) - max(c_fastl,c_fastr)
-       sr  =  max(ur(imx,i), ur(imx,i)) + max(c_fastl,c_fastr)
+       !sl  =  min(ul(imx,i) ,ur(imx,i)) - max(c_fastl,c_fastr) ! bug
+       !sr  =  max(ur(imx,i), ur(imx,i)) + max(c_fastl,c_fastr) ! bug
+       sl  =  min(ul(imx,i) ,ur(imx,i)) - max(c_fastl,c_fastr)
+       sr  =  max(ul(imx,i), ur(imx,i)) + max(c_fastl,c_fastr)
 
-       ! Speed of contact discontinuity Eq. (38)
+       !sl = min( (ul(imx,i)/ul(idn,i)), (ur(imx,i)/ur(idn,i)) ) - max(c_fastl,c_fastr)
+       !sr = max( (ul(imx,i)/ul(idn,i)), (ur(imx,i)/ur(idn,i)) ) + max(c_fastl,c_fastr)
 
-       !sm_nr  =  (sr*ur(imx,i) - sl*ul(imx,i)) - (fr(imx,i) - fl(imx,i))
-       !sm_dr  =  (sr*ur(idn,i) - sl*ul(idn,i)) - (fr(idn,i) - fl(idn,i))
-       !sm_nr  =  (sr*ur(i,imx) - sl*ul(i,imx)) - (fr(i,imx) - fl(i,imx))
-       !sm_dr  =  (sr*ur(i,idn) - sl*ul(i,idn)) - (fr(i,idn) - fl(i,idn))
-
-       
-       !sm     =  sm_nr/sm_dr
-       
-
-      
-       
        ! Magnetic pressure
 
        magprl  =  half*sum(b_ccl(xdim:zdim,i)*b_ccl(xdim:zdim,i))
        magprr  =  half*sum(b_ccr(xdim:zdim,i)*b_ccr(xdim:zdim,i))
 
-       !magprl  =  half*sum(b(ibx:ibz,i)*b(ibx:ibz,i))
-       !magprr  =  half*sum(b(ibx:ibz,i)*b(ibx:ibz,i))
-
        ! Total pressure
 
-       prtl  =  ul(ien,i) + magprl
-       prtr  =  ur(ien,i) + magprr
+       !prtl  =  ul(ien,i) + magprl
+       !prtr  =  ur(ien,i) + magprr
 
-       ! Eq. 38
-
-       sm_nr = (sr - ur(imx,i))*(ur(idn,i)*ur(imx,i)) - (sl - ul(imx,i))*(ul(idn,i)*ul(imx,i)) - prtr + prtl
-       sm_dr = (sr - ur(imx,i))*ur(idn,i) - (sl - ul(idn,i))*ul(idn,i)
-       sm    = sm_nr/sm_dr
-
-        ! Speed differences
-
-       slsm  =  sl - sm
-       srsm  =  sr - sm
-
-       slvxl  =  sl - ul(imx,i)
-       srvxr  =  sr - ur(imx,i)
-
-       smvxl  =  sm - ul(imx,i)
-       smvxr  =  sm - ur(imx,i)
-
-       srmsl  =  sr - sl
-
-       srtsl  =  sr*sl
-    
-       ! Co-efficients
-
-       dn_l     =  ul(idn,i)*slvxl
-       dn_r     =  ur(idn,i)*srvxr
-       !b_lr     =  ul(i,ibx)*ur(i,ibx)
-       b_lr     =  b_ccl(xdim,i)*b_ccr(xdim,i)
-       b_lrgam  =  b_lr/gamma
-       
-       ! Pressure of intermediate state Eq. (23)
-
-       prt_star  =  (prtl*dn_l*smvxl) + (prtr*dn_r*smvxr)  !< Check for 0.5.
-
-       
-
-       ! Normal components of velocity and magnetic field
-
-       
-       v_starl(imx)  =  sm
-       v_starr(imx)  =  sm
-    
-       b_starl(xdim)  =  b_ccl(xdim,i)
-       b_starr(xdim)  =  b_ccr(xdim,i)
+       ! From utoq, the variable supplied is pressure (gas+magnetic), so ul(ien,i) and ur(ien,i) is total pressure.
+     
 
        ! Left flux
        
-       fl(idn,i) = ul(imx,i)
-       fl(imx,i) = ul(imx,i)*(ul(imx,i)/ul(idn,i)) + ul(ien,i) + prtl - b_ccl(xdim,i)
-       fl(imy,i) = ul(imy,i)*(ul(imx,i)/ul(idn,i)) - b_ccl(xdim,i)*b_ccl(ydim,i)
-       fl(imz,i) = ul(imz,i)*(ul(imx,i)/ul(idn,i)) - b_ccl(xdim,i)*b_ccl(ydim,i)
-       fl(ien,i) = (ul(ien,i) + prtl)*(ul(imx,i)/ul(idn,i)) - b_ccl(xdim,i)*(b_ccl(xdim,i)*(ul(imx,i)/ul(idn,i)) + b_ccl(ydim,i)*(ul(imy,i)/ul(idn,i)) + &
-            b_ccl(zdim,i)*(ul(imz,i)/ul(idn,i)))
-       b_cclf(ydim,i) = b_ccl(ydim,i)*(ul(imx,i)/ul(idn,i)) - b_ccl(xdim,i)*(ul(imy,i)/ul(idn,i))
-       b_cclf(zdim,i) = b_ccl(zdim,i)*(ul(imx,i)/ul(idn,i)) - b_ccl(xdim,i)*(ul(imz,i)/ul(idn,i))
+       !fl(idn,i) = ul(imx,i)
+       !fl(imx,i) = ul(imx,i)*(ul(imx,i)/ul(idn,i)) + ul(ien,i) + prtl - b_ccl(xdim,i)
+       !fl(imy,i) = ul(imy,i)*(ul(imx,i)/ul(idn,i)) - b_ccl(xdim,i)*b_ccl(ydim,i)
+       !fl(imz,i) = ul(imz,i)*(ul(imx,i)/ul(idn,i)) - b_ccl(xdim,i)*b_ccl(ydim,i)
+       !fl(ien,i) = (ul(ien,i) + prtl)*(ul(imx,i)/ul(idn,i)) - b_ccl(xdim,i)*(b_ccl(xdim,i)*(ul(imx,i)/ul(idn,i)) + b_ccl(ydim,i)*(ul(imy,i)/ul(idn,i)) + &
+            !b_ccl(zdim,i)*(ul(imz,i)/ul(idn,i)))
+       !b_cclf(ydim,i) = b_ccl(ydim,i)*(ul(imx,i)/ul(idn,i)) - b_ccl(xdim,i)*(ul(imy,i)/ul(idn,i))
+       !b_cclf(zdim,i) = b_ccl(zdim,i)*(ul(imx,i)/ul(idn,i)) - b_ccl(xdim,i)*(ul(imz,i)/ul(idn,i))
+       fl(idn,i) = ul(idn,i)*ul(imx,i)
+       fl(imx,i) = ul(idn,i)*ul(imx,i)**2 + prl(ien,i) - b_ccl(xdim,i)**2
+       fl(imy,i) = ul(idn,i)*ul(imy,i)*ul(imx,i) - b_ccl(xdim,i)*b_ccl(ydim,i)
+       fl(imz,i) = ul(idn,i)*ul(imz,i)*ul(imx,i) - b_ccl(xdim,i)*b_ccl(zdim,i)
+       !fl(ien,i) = ((ul(ien,i)/(gamma -one)) + half*ul(idn,i)*ul(imx:imz,i)**2 + half*b_ccl(xdim:zdim,i)**2 + ul(ien,i))*ul(imx,i) - b_ccl(xdim,i)*(ul(imx:imz,i)*b_ccl(xdim:zdim,i))
+       fl(ien,i) = (enl + prl(ien,i))*ul(imx,i) - b_ccl(xdim,i)*(sum(ul(imx:imz,i)*b_ccl(xdim:zdim,i)))
+       b_cclf(ydim,i) = b_ccl(ydim,i)*ul(imx,i) - b_ccl(xdim,i)*ul(imy,i)
+       b_cclf(zdim,i) = b_ccl(zdim,i)*ul(imx,i) - b_ccl(xdim,i)*ul(imz,i)
+       
 
        ! Right flux
 
-       fr(idn,i) = ur(imx,i)
-       fr(imx,i) = ur(imx,i)*(ur(imx,i)/ur(idn,i)) + ur(ien,i) + prtr - b_ccr(xdim,i)
-       fr(imy,i) = ul(imy,i)*(ur(imx,i)/ur(idn,i)) - b_ccr(xdim,i)*b_ccr(ydim,i)
-       fr(imz,i) = ul(imz,i)*(ur(imx,i)/ur(idn,i)) - b_ccr(xdim,i)*b_ccr(zdim,i)
-       fr(ien,i) = (ur(ien,i) + prtl)*(ur(imx,i)/ur(idn,i)) - b_ccr(xdim,i)*(b_ccr(xdim,i)*(ur(imx,i)/ur(idn,i)) + b_ccr(ydim,i)*(ur(imy,i)/ur(idn,i)) + &
-            b_ccr(zdim,i)*(ur(imz,i)/ur(idn,i)))
-       b_ccrf(ydim,i) = b_ccr(ydim,i)*(ur(imx,i)/ur(idn,i)) - b_ccr(xdim,i)*(ur(imy,i)/ur(idn,i))
-       b_ccrf(zdim,i) = b_ccr(zdim,i)*(ur(imx,i)/ur(idn,i)) - b_ccr(xdim,i)*(ur(imz,i)/ur(idn,i))
-       
+       !fr(idn,i) = ur(imx,i)
+       !fr(imx,i) = ur(imx,i)*(ur(imx,i)/ur(idn,i)) + ur(ien,i) + prtr - b_ccr(xdim,i)
+       !fr(imy,i) = ul(imy,i)*(ur(imx,i)/ur(idn,i)) - b_ccr(xdim,i)*b_ccr(ydim,i)
+       !fr(imz,i) = ul(imz,i)*(ur(imx,i)/ur(idn,i)) - b_ccr(xdim,i)*b_ccr(zdim,i)
+       !fr(ien,i) = (ur(ien,i) + prtl)*(ur(imx,i)/ur(idn,i)) - b_ccr(xdim,i)*(b_ccr(xdim,i)*(ur(imx,i)/ur(idn,i)) + b_ccr(ydim,i)*(ur(imy,i)/ur(idn,i)) + &
+            !b_ccr(zdim,i)*(ur(imz,i)/ur(idn,i)))
+       !b_ccrf(ydim,i) = b_ccr(ydim,i)*(ur(imx,i)/ur(idn,i)) - b_ccr(xdim,i)*(ur(imy,i)/ur(idn,i))
+       !b_ccrf(zdim,i) = b_ccr(zdim,i)*(ur(imx,i)/ur(idn,i)) - b_ccr(xdim,i)*(ur(imz,i)/ur(idn,i))
+       fr(idn,i) = ur(idn,i)*ur(imx,i)
+       fr(imx,i) = ur(idn,i)*ur(imx,i)**2 + prr(ien,i) - b_ccr(xdim,i)**2
+       fr(imy,i) = ur(idn,i)*ur(imy,i)*ur(imx,i) - b_ccr(xdim,i)*b_ccr(ydim,i)
+       fr(imz,i) = ur(idn,i)*ur(imz,i)*ur(imx,i) - b_ccr(xdim,i)*b_ccr(zdim,i)
+       !fr(ien,i) = ((ur(ien,i)/(gamma -one)) + half*ur(idn,i)*ur(imx:imz,i)**2 + half*b_ccr(xdim:zdim,i)**2 + ur(ien,i))*ur(imx,i) - b_ccr(xdim,i)*(ur(imx:imz,i)*b_ccr(xdim:zdim,i))
+       fr(ien,i) = (enr + prr(ien,i))*ur(imx,i) - b_ccr(xdim,i)*(sum(ur(imx:imz,i)*b_ccr(xdim:zdim,i)))
+       b_ccrf(ydim,i) = b_ccr(ydim,i)*ur(imx,i) - b_ccr(xdim,i)*ur(imy,i)
+       b_ccrf(zdim,i) = b_ccr(zdim,i)*ul(imx,i) - b_ccr(xdim,i)*ur(imz,i)
+
+       ! Check for fluxes
+
+       !fl(:,i) = fl(:,i)*ul(idn,i)
+       !fr(:,i) = fr(:,i)*ur(idn,i)
+       !fl(imx:imz,i) = fl(imx:imz,i)*ul(idn,i)
+       !fr(imx:imz,i) = fr(imx:imz,i)*ur(idn,i)
                                                 
        ! HLLD fluxes
-
+       
        if (sl .ge.  zero) then
           f(idn,i)  =  fl(idn,i)
           f(imx,i)  =  fl(imx,i)
@@ -362,15 +308,57 @@ contains
 
        else
 
+          ! Speed of contact discontinuity Eq. 38
+
+          !sm_nr = (sr - ur(imx,i))*ur(idn,i)*ur(imx,i) - (sl - ul(imx,i))*ul(idn,i)*ul(imx,i) - ur(ien,i) + ul(ien,i)
+          sm_nr = (sr - ur(imx,i))*ur(idn,i)*ur(imx,i) - (sl - ul(imx,i))*ul(idn,i)*ul(imx,i) - prr(ien,i) + prl(ien,i)
+          sm_dr = (sr - ur(imx,i))*ur(idn,i) - (sl - ul(imx,i))*ul(idn,i)
+          sm    = sm_nr/sm_dr
+
+          ! Speed differences
+
+          slsm  =  sl - sm
+          srsm  =  sr - sm
+          
+          slvxl  =  sl - ul(imx,i)
+          srvxr  =  sr - ur(imx,i)
+          
+          smvxl  =  sm - ul(imx,i)
+          smvxr  =  sm - ur(imx,i)
+          
+          srmsl  =  sr - sl
+
+          srtsl  =  sr*sl
+
+          ! Co-efficients
+
+          dn_l     =  ul(idn,i)*slvxl
+          dn_r     =  ur(idn,i)*srvxr
+          b_lr     =  b_ccl(xdim,i)*b_ccr(xdim,i)
+          b_lrgam  =  b_lr/gamma
+
+          ! Pressure of intermediate state Eq. (23)
+
+          !prt_star  =  half*((prtl*dn_l*smvxl) + (prtr*dn_r*smvxr))  !< Check for 0.5.
+          !prt_star  =  half*((ul(ien,i)*dn_l*smvxl) + (ur(ien,i)*dn_r*smvxr))  !< Check for 0.5.
+          prt_star  =  half*((prl(ien,i)+dn_l*smvxl) + (prr(ien,i)+dn_r*smvxr))  !< Check for 0.5.
+
+          ! Normal components of velocity and magnetic field
+
+          v_starl(imx)  =  sm
+          v_starr(imx)  =  sm
+    
+          b_starl(xdim)  =  b_ccl(xdim,i)
+          b_starr(xdim)  =  b_ccr(xdim,i)
+
           ! Transversal components of magnetic field for left states (Eq. 45 & 47), taking degeneracy into account
           
           coeff_1  =  dn_l*slsm - b_lr
           
           if ((coeff_1 .notequals. zero) .and. b_lrgam .le. ul(ien,i)) then
+           
              coeff_2  =  (dn_l*slvxl - b_lr)/coeff_1
 
-             !b_starl(iby)   =  ul(iby,i)*coeff_2
-             !b_starl(ibz)   =  ul(ibz,i)*coeff_2
              b_starl(ydim)   =  b_ccl(ydim,i)*coeff_2
              b_starl(zdim)   =  b_ccl(zdim,i)*coeff_2
 
@@ -378,27 +366,25 @@ contains
 
              ! Calculate HLL left states
              
-             !b_starl(iby)  =  ((sr*ur(iby,i) - sl*ul(iby,i)) - (fr(iby,i) - fl(iby,i)))/srmsl
-             !b_starl(ibz)  =  ((sr*ur(ibz,i) - sl*ul(ibz,i)) - (fr(ibz,i) - fl(ibz,i)))/srmsl
              b_starl(ydim) = ((sr*b_ccr(ydim,i) - sl*b_ccl(ydim,i)) - (b_ccrf(ydim,i) - b_cclf(ydim,i)))/srmsl
-             b_starl(zdim) = ((sr*b_ccr(zdim,i) - sl*b_ccl(zdim,i)) - (b_ccrf(zdim,i) - b_ccrf(zdim,i)))/srmsl
+             b_starl(zdim) = ((sr*b_ccr(zdim,i) - sl*b_ccl(zdim,i)) - (b_ccrf(zdim,i) - b_cclf(zdim,i)))/srmsl
              
              
           endif
 
           ! Transveral components of velocity Eq. 42
 
-          !coeff_1  =  ul(ibx,i)/dn_l
           coeff_1  =  b_ccl(xdim,i)/dn_l
-          
-          v_starl(imy)  =  ul(imy,i) + coeff_1*(b_ccl(ydim,i) - b_starl(ydim))
-          v_starl(imz)  =  ul(imz,i) + coeff_1*(b_ccl(zdim,i) - b_starl(zdim))
 
+          v_starl(imy) = ul(imy,i)  + coeff_1*(b_ccl(ydim,i) - b_starl(ydim))
+          v_starl(imz) = ul(imz,i)  + coeff_1*(b_ccl(zdim,i) - b_starl(zdim)) 
+          
           ! Transversal components of magnetic field for right states (Eq. 45 & 47), taking degeneracy into account
 
           coeff_1  =  dn_r*srsm - b_lr
 
           if ((coeff_1 .notequals. zero) .and. b_lrgam .le. ur(ien,i)) then
+        
              coeff_2  =  (dn_r*srvxr - b_lr)/coeff_1
 
              b_starr(ydim)  =  b_ccr(ydim,i)*coeff_2
@@ -408,10 +394,8 @@ contains
 
              ! Calculate HLL right states
 
-             !b_starr(iby)  =  ((sr*ur(iby,i) - sl*ul(iby,i)) - (fr(iby,i) - fl(iby,i)))/srmsl
-             !b_starr(ibz)  =  ((sr*ur(ibz,i) - sl*ul(ibz,i)) - (fr(ibz,i) - fl(ibz,i)))/srmsl
              b_starr(ydim)  =  ((sr*b_ccr(ydim,i) - sl*b_ccl(ydim,i)) - (b_ccrf(ydim,i) - b_cclf(ydim,i)))/srmsl
-             b_starr(zdim)  =  ((sr*b_ccr(zdim,i) - sl*b_ccl(zdim,i)) - (b_ccrf(zdim,i) - b_ccrf(zdim,i)))/srmsl
+             b_starr(zdim)  =  ((sr*b_ccr(zdim,i) - sl*b_ccl(zdim,i)) - (b_ccrf(zdim,i) - b_cclf(zdim,i)))/srmsl
              
           endif
 
@@ -421,9 +405,10 @@ contains
 
           v_starr(imy)  =   ur(imy,i) + coeff_1*(b_ccr(ydim,i) - b_starr(ydim))
           v_starr(imz)  =   ur(imz,i) + coeff_1*(b_ccr(zdim,i) - b_starr(zdim))
-
+          
           ! Dot product of velocity and magnetic field
 
+          
           vb_l  =  sum(ul(imx:imz,i)*b_ccl(xdim:zdim,i))
           vb_r  =  sum(ur(imx:imz,i)*b_ccr(xdim:zdim,i))
           vb_starl  =  sum(v_starl(imx:imz)*b_starl(xdim:zdim))
@@ -432,31 +417,27 @@ contains
           
           ! Left intermediate state conservative form
           
-          u_starl(idn)  =  dn_l/slsm   ! Densities for right intermediate state Eq. (43)
+          u_starl(idn)  =  dn_l/slsm 
           u_starl(imx)  =  u_starl(idn)*v_starl(imx)
           u_starl(imy)  =  u_starl(idn)*v_starl(imy)
           u_starl(imz)  =  u_starl(idn)*v_starl(imz)
-          !u_starl(ibx)  =  b_starl(ibx)
-          !u_starl(iby)  =  b_starl(iby)
-          !u_starl(ibz)  =  b_starl(ibz)
-
+          
           ! Right intermediate state conservative form
 
-          u_starr(idn)  =  dn_r/srsm ! Density for right intermediate state Eq. (43)
+          u_starr(idn)  =  dn_r/srsm
           u_starr(imx)  =  u_starr(idn)*v_starr(imx)
           u_starr(imy)  =  u_starr(idn)*v_starr(imy)
           u_starr(imz)  =  u_starr(idn)*v_starr(imz)
-          !u_starr(ibx)  =  b_starr(ibx)
-          !u_starr(iby)  =  b_starr(iby)
-          !u_starr(ibz)  =  b_starr(ibz)
-
-          
 
           ! Total energy of left and right intermediate states Eq. (48)
 
-          u_starl(ien)  =  (slvxl*ul(ien,i) - prtl*ul(imx,i) + prt_star*sm + b_ccl(xdim,i)*(vb_l - vb_starl))/slsm
-          u_starr(ien)  =  (srvxr*ur(ien,i) - prtr*ur(imx,i) + prt_star*sm + b_ccr(xdim,i)*(vb_r - vb_starr))/srsm
-
+          !u_starl(ien)  =  (slvxl*ul(ien,i) - prtl*ul(imx,i) + prt_star*sm + b_ccl(xdim,i)*(vb_l - vb_starl))/slsm
+          !u_starr(ien)  =  (srvxr*ur(ien,i) - prtr*ur(imx,i) + prt_star*sm + b_ccr(xdim,i)*(vb_r - vb_starr))/srsm
+          !u_starl(ien)  =  (slvxl*((ul(ien,i)/(gamma -one)) + half*ul(idn,i)*ul(imx:imz,i)**2 + half*b_ccl(xdim:zdim,i)**2) - ul(ien,i)*ul(imx,i) + prt_star*sm + b_ccl(xdim,i)*(vb_l - vb_starl))/slsm
+          !u_starr(ien)  =  (srvxr*((ur(ien,i)/(gamma -one)) + half*ur(idn,i)*ur(imx:imz,i)**2 + half*b_ccr(xdim:zdim,i)**2) - ur(ien,i)*ur(imx,i) + prt_star*sm + b_ccr(xdim,i)*(vb_r - vb_starr))/srsm
+          u_starl(ien) = (slvxl*enl - prl(ien,i)*ul(imx,i) + prt_star*sm + b_ccl(xdim,i)*(vb_l - vb_starl))/slsm
+          u_starr(ien) = (srvxr*enr - prr(ien,i)*ur(imx,i) + prt_star*sm + b_ccr(xdim,i)*(vb_r - vb_starr))/srsm
+          
           ! Cases for B_x .ne. and .eq. zero
 
           if(abs(b_ccl(xdim,i)) > zero) then
@@ -475,12 +456,15 @@ contains
 
                 ! Left intermediate flux Eq. 64
 
-                !f(:,i)  =  fl(:,i) + sl*(u_starl(:) - ul(:,i))
                 f(idn,i) = fl(idn,i) + sl*(u_starl(idn) - ul(idn,i))
-                f(imx,i) = fl(imx,i) + sl*(u_starl(imx) - ul(imx,i))
-                f(imy,i) = fl(imy,i) + sl*(u_starl(imy) - ul(imy,i))
-                f(imz,i) = fl(imz,i) + sl*(u_starl(imz) - ul(imz,i))
-                f(ien,i) = fl(ien,i) + sl*(u_starl(ien) - ul(ien,i))
+                !f(imx,i) = fl(imx,i) + sl*(u_starl(imx) - ul(imx,i))
+                f(imx,i) = fl(imx,i) + sl*(u_starl(imx) - ul(idn,i)*ul(imx,i))
+                !f(imy,i) = fl(imy,i) + sl*(u_starl(imy) - ul(imy,i))
+                f(imy,i) = fl(imy,i) + sl*(u_starl(imy) - ul(idn,i)*ul(imy,i))
+                !f(imz,i) = fl(imz,i) + sl*(u_starl(imz) - ul(imz,i))
+                f(imz,i) = fl(imz,i) + sl*(u_starl(imz) - ul(idn,i)*ul(imz,i))
+                !f(ien,i) = fl(ien,i) + sl*(u_starl(ien) - ul(ien,i)) ! Check
+                f(ien,i) = fl(ien,i) + sl*(u_starl(ien) - enl)
                 b_cc(ydim,i) = b_cclf(ydim,i) + sl*(b_starl(ydim) - b_ccl(ydim,i))
                 b_cc(zdim,i) = b_cclf(zdim,i) + sl*(b_starl(zdim) - b_ccl(zdim,i))
 
@@ -488,12 +472,15 @@ contains
 
                 ! Right intermediate flux Eq. 64
 
-                !f(:,i)  =  fr(:,i) + sr*(u_starr(:) - ur(:,i))
                 f(idn,i) = fr(idn,i) + sl*(u_starr(idn) - ur(idn,i))
-                f(imx,i) = fr(imx,i) + sl*(u_starr(imx) - ur(imx,i))
-                f(imy,i) = fr(imy,i) + sl*(u_starr(imy) - ur(imy,i))
-                f(imz,i) = fr(imz,i) + sl*(u_starr(imz) - ur(imz,i))
-                f(ien,i) = fr(ien,i) + sl*(u_starr(ien) - ur(ien,i))
+                !f(imx,i) = fr(imx,i) + sl*(u_starr(imx) - ur(imx,i))
+                f(imx,i) = fr(imx,i) + sl*(u_starr(imx) - ur(idn,i)*ur(imx,i))
+                !f(imy,i) = fr(imy,i) + sl*(u_starr(imy) - ur(imy,i))
+                f(imy,i) = fr(imy,i) + sl*(u_starr(imy) - ur(idn,i)*ur(imy,i))
+                !f(imz,i) = fr(imz,i) + sl*(u_starr(imz) - ur(imz,i))
+                f(imz,i) = fr(imz,i) + sl*(u_starr(imz) - ur(idn,i)*ur(imz,i))
+                !f(ien,i) = fr(ien,i) + sl*(u_starr(ien) - ur(ien,i)) ! Check
+                f(ien,i) = fr(ien,i) + sl*(u_starr(ien) - enr)
                 b_cc(ydim,i) = b_ccrf(ydim,i) + sl*(b_starr(ydim) - b_ccr(ydim,i))
                 b_cc(zdim,i) = b_ccrf(zdim,i) + sl*(b_starr(zdim) - b_ccr(zdim,i))
 
@@ -540,9 +527,6 @@ contains
                    u_2star(imx)  =  u_2star(idn)*v_2star(imx)
                    u_2star(imy)  =  u_2star(idn)*v_2star(imy)
                    u_2star(imz)  =  u_2star(idn)*v_2star(imz)
-                   !u_2star(ibx)  =  b_2star(ibx)
-                   !u_2star(iby)  =  b_2star(iby)
-                   !u_2star(ibz)  =  b_2star(ibz)
 
                    ! Energy of Alfven intermediate state Eq. 63
 
@@ -550,12 +534,15 @@ contains
 
                    ! Left Alfven intermediate flux Eq. 65
 
-                   !f(:,i)  =  fl(:,i) + alfven_l*u_2star(:) - (alfven_l - sl)*u_starl(:) - sl*ul(:,i)
                    f(idn,i) = fl(idn,i) + alfven_l*u_2star(idn) - (alfven_l - sl)*u_starl(idn) - sl*ul(idn,i)
-                   f(imx,i) = fl(imx,i) + alfven_l*u_2star(imx) - (alfven_l - sl)*u_starl(imx) - sl*ul(imx,i)
-                   f(imy,i) = fl(imy,i) + alfven_l*u_2star(imy) - (alfven_l - sl)*u_starl(imy) - sl*ul(imy,i)
-                   f(imz,i) = fl(imz,i) + alfven_l*u_2star(imz) - (alfven_l - sl)*u_starl(imz) - sl*ul(imz,i)
-                   f(ien,i) = fl(ien,i) + alfven_l*u_2star(ien) - (alfven_l - sl)*u_starl(ien) - sl*ul(ien,i)
+                   !f(imx,i) = fl(imx,i) + alfven_l*u_2star(imx) - (alfven_l - sl)*u_starl(imx) - sl*ul(imx,i)
+                   f(imx,i) = fl(imx,i) + alfven_l*u_2star(imx) - (alfven_l - sl)*u_starl(imx) - sl*ul(idn,i)*ul(imx,i)
+                   !f(imy,i) = fl(imy,i) + alfven_l*u_2star(imy) - (alfven_l - sl)*u_starl(imy) - sl*ul(imy,i)
+                   f(imy,i) = fl(imy,i) + alfven_l*u_2star(imy) - (alfven_l - sl)*u_starl(imy) - sl*ul(idn,i)*ul(imy,i)
+                   !f(imz,i) = fl(imz,i) + alfven_l*u_2star(imz) - (alfven_l - sl)*u_starl(imz) - sl*ul(imz,i)
+                   f(imz,i) = fl(imz,i) + alfven_l*u_2star(imz) - (alfven_l - sl)*u_starl(imz) - sl*ul(idn,i)*ul(imz,i)
+                   !f(ien,i) = fl(ien,i) + alfven_l*u_2star(ien) - (alfven_l - sl)*u_starl(ien) - sl*ul(ien,i)
+                   f(ien,i) = fl(ien,i) + alfven_l*u_2star(ien) - (alfven_l - sl)*u_starl(ien) - sl*enl
                    b_cc(ydim,i) = b_cclf(ydim,i) + alfven_l*b_2star(ydim) - (alfven_l - sl)*b_starl(ydim) - sl*b_ccl(ydim,i)
                    b_cc(zdim,i) = b_cclf(zdim,i) + alfven_l*b_2star(zdim) - (alfven_l - sl)*b_starl(zdim) - sl*b_ccl(zdim,i)
                    
@@ -568,9 +555,6 @@ contains
                    u_2star(imx)  =  u_2star(idn)*v_2star(imx)
                    u_2star(imy)  =  u_2star(idn)*v_2star(imy)
                    u_2star(imz)  =  u_2star(idn)*v_2star(imz)
-                   !u_2star(ibx)  =  b_2star(ibx)
-                   !u_2star(iby)  =  b_2star(iby)
-                   !u_2star(ibz)  =  b_2star(ibz)
 
                    ! Energy of Alfven intermediate state Eq. 63
 
@@ -578,12 +562,15 @@ contains
 
                    ! Right Alfven intermediate flux Eq. 65
 
-                   !f(:,i)  =  fr(:,i) + alfven_r*u_2star(:) - (alfven_r - sr)*u_starr(:) - sr*ur(:,i)
                    f(idn,i) = fr(idn,i) + alfven_r*u_2star(idn) - (alfven_r - sl)*u_starr(idn) - sr*ur(idn,i)
-                   f(imx,i) = fr(imx,i) + alfven_r*u_2star(imx) - (alfven_r - sl)*u_starr(imx) - sr*ur(imx,i)
-                   f(imy,i) = fr(imy,i) + alfven_r*u_2star(imy) - (alfven_r - sl)*u_starr(imy) - sr*ur(imy,i)
-                   f(imz,i) = fr(imz,i) + alfven_r*u_2star(imz) - (alfven_r - sl)*u_starr(imz) - sr*ur(imz,i)
-                   f(ien,i) = fr(ien,i) + alfven_r*u_2star(ien) - (alfven_r - sl)*u_starr(ien) - sr*ur(ien,i)
+                   !f(imx,i) = fr(imx,i) + alfven_r*u_2star(imx) - (alfven_r - sl)*u_starr(imx) - sr*ur(imx,i)
+                   f(imx,i) = fr(imx,i) + alfven_r*u_2star(imx) - (alfven_r - sl)*u_starr(imx) - sr*ur(idn,i)*ur(imx,i)
+                   !f(imy,i) = fr(imy,i) + alfven_r*u_2star(imy) - (alfven_r - sl)*u_starr(imy) - sr*ur(imy,i)
+                   f(imy,i) = fr(imy,i) + alfven_r*u_2star(imy) - (alfven_r - sl)*u_starr(imy) - sr*ur(idn,i)*ur(imy,i)
+                   !f(imz,i) = fr(imz,i) + alfven_r*u_2star(imz) - (alfven_r - sl)*u_starr(imz) - sr*ur(imz,i)
+                   f(imz,i) = fr(imz,i) + alfven_r*u_2star(imz) - (alfven_r - sl)*u_starr(imz) - sr*ur(idn,i)*ur(imz,i)
+                   !f(ien,i) = fr(ien,i) + alfven_r*u_2star(ien) - (alfven_r - sl)*u_starr(ien) - sr*ur(ien,i)
+                   f(ien,i) = fr(ien,i) + alfven_r*u_2star(ien) - (alfven_r - sl)*u_starr(ien) - sr*enr
                    b_cc(ydim,i) = b_ccrf(ydim,i) + alfven_r*b_2star(ydim) - (alfven_r - sr)*b_starr(ydim) - sr*b_ccr(ydim,i)
                    b_cc(zdim,i) = b_ccrf(zdim,i) + alfven_r*b_2star(zdim) - (alfven_r - sr)*b_starr(zdim) - sr*b_ccr(zdim,i)
 
@@ -596,10 +583,6 @@ contains
                    u_2star(imx)  =  u_2star(idn)*v_2star(imx)
                    u_2star(imy)  =  u_2star(idn)*v_2star(imy)
                    u_2star(imz)  =  u_2star(idn)*v_2star(imz)
-                   !u_2star(ibx)  =  b_2star(ibx)
-                   !u_2star(iby)  =  b_2star(iby)
-                   !u_2star(ibz)  =  b_2star(ibz)
-                   
                    
 
                    ! Energy for Alfven intermediate state Eq. 63
@@ -608,12 +591,15 @@ contains
 
                    ! Left Alfven intermediate flux Eq. 65
 
-                   !f(:,i)  =  fl(:,i) + alfven_l*u_2star(:) - (alfven_l - sl)*u_starl(:) - sl*ul(:,i)
                    f(idn,i) = fl(idn,i) + alfven_l*u_2star(idn) - (alfven_l - sl)*u_starl(idn) - sl*ul(idn,i)
-                   f(imx,i) = fl(imx,i) + alfven_l*u_2star(imx) - (alfven_l - sl)*u_starl(imx) - sl*ul(imx,i)
-                   f(imy,i) = fl(imy,i) + alfven_l*u_2star(imy) - (alfven_l - sl)*u_starl(imy) - sl*ul(imy,i)
-                   f(imz,i) = fl(imz,i) + alfven_l*u_2star(imz) - (alfven_l - sl)*u_starl(imz) - sl*ul(imz,i)
-                   f(ien,i) = fl(ien,i) + alfven_l*u_2star(ien) - (alfven_l - sl)*u_starl(ien) - sl*ul(ien,i)
+                   !f(imx,i) = fl(imx,i) + alfven_l*u_2star(imx) - (alfven_l - sl)*u_starl(imx) - sl*ul(imx,i)
+                   f(imx,i) = fl(imx,i) + alfven_l*u_2star(imx) - (alfven_l - sl)*u_starl(imx) - sl*ul(idn,i)*ul(imx,i)
+                   !f(imy,i) = fl(imy,i) + alfven_l*u_2star(imy) - (alfven_l - sl)*u_starl(imy) - sl*ul(imy,i)
+                   f(imy,i) = fl(imy,i) + alfven_l*u_2star(imy) - (alfven_l - sl)*u_starl(imy) - sl*ul(idn,i)*ul(imy,i)
+                   !f(imz,i) = fl(imz,i) + alfven_l*u_2star(imz) - (alfven_l - sl)*u_starl(imz) - sl*ul(imz,i)
+                   f(imz,i) = fl(imz,i) + alfven_l*u_2star(imz) - (alfven_l - sl)*u_starl(imz) - sl*ul(idn,i)*ul(imz,i)
+                   !f(ien,i) = fl(ien,i) + alfven_l*u_2star(ien) - (alfven_l - sl)*u_starl(ien) - sl*ul(ien,i)
+                   f(ien,i) = fl(ien,i) + alfven_l*u_2star(ien) - (alfven_l - sl)*u_starl(ien) - sl*enl
                    b_cc(ydim,i) = b_cclf(ydim,i) + alfven_l*b_2star(ydim) - (alfven_l - sl)*b_2star(ydim) - sl*b_ccl(ydim,i)
                    b_cc(zdim,i) = b_cclf(zdim,i) + alfven_l*b_2star(zdim) - (alfven_l - sl)*b_2star(zdim) - sl*b_ccl(zdim,i)
 
@@ -623,9 +609,6 @@ contains
                    u_2star(imx)  =  u_2star(idn)*v_2star(imx)
                    u_2star(imy)  =  u_2star(idn)*v_2star(imy)
                    u_2star(imz)  =  u_2star(idn)*v_2star(imz)
-                   !u_2star(ibx)  =  b_2star(ibx)
-                   !u_2star(iby)  =  b_2star(iby)
-                   !u_2star(ibz)  =  b_2star(ibz)
 
                    ! Energy for Alfven intermediate state Eq. 63
                    
@@ -633,14 +616,17 @@ contains
 
                    ! Right Alfven intermediate flux Eq. 65
 
-                   !f(:,i)  =  half*(f(:,i) + fr(:,i) + alfven_r*u_2star(:) - (alfven_r - sr)*u_starr(:) - sr*ur(:,i))
-                   f(idn,i)  =  half*(f(idn,i) + fr(idn,i) + alfven_r*u_2star(idn) - (alfven_r - sr)*u_starr(idn) - sr*ur(idn,i))
-                   f(imx,i)  =  half*(f(imx,i) + fr(imx,i) + alfven_r*u_2star(imx) - (alfven_r - sr)*u_starr(imx) - sr*ur(imx,i))
-                   f(imy,i)  =  half*(f(imy,i) + fr(imy,i) + alfven_r*u_2star(imy) - (alfven_r - sr)*u_starr(imy) - sr*ur(imy,i))
-                   f(imz,i)  =  half*(f(imz,i) + fr(imz,i) + alfven_r*u_2star(imz) - (alfven_r - sr)*u_starr(imz) - sr*ur(imz,i))
-                   f(ien,i)  =  half*(f(ien,i) + fr(ien,i) + alfven_r*u_2star(ien) - (alfven_r - sr)*u_starr(ien) - sr*ur(ien,i))
-                   b_cc(ydim,i) = half*(b_cc(ydim,i) + b_ccrf(ydim,i) + alfven_r*b_2star(ydim) - (alfven_r - sr)*b_starr(ydim) - sr*b_ccr(ydim,i))
-                   b_cc(zdim,i) = half*(b_cc(zdim,i) + b_ccrf(zdim,i) + alfven_r*b_2star(zdim) - (alfven_r - sr)*b_starr(zdim) - sr*b_ccr(zdim,i))
+                   f(idn,i)  =  half*(f(idn,i) + (fr(idn,i) + alfven_r*u_2star(idn) - (alfven_r - sr)*u_starr(idn) - sr*ur(idn,i)))
+                   !f(imx,i)  =  half*(f(imx,i) + fr(imx,i) + alfven_r*u_2star(imx) - (alfven_r - sr)*u_starr(imx) - sr*ur(imx,i))
+                   f(imx,i)  =  half*(f(imx,i) + (fr(imx,i) + alfven_r*u_2star(imx) - (alfven_r - sr)*u_starr(imx) - sr*ur(idn,i)*ur(imx,i)))
+                   !f(imy,i)  =  half*(f(imy,i) + fr(imy,i) + alfven_r*u_2star(imy) - (alfven_r - sr)*u_starr(imy) - sr*ur(imy,i))
+                   f(imy,i)  =  half*(f(imy,i) + (fr(imy,i) + alfven_r*u_2star(imy) - (alfven_r - sr)*u_starr(imy) - sr*ur(idn,i)*ur(imy,i)))
+                   !f(imz,i)  =  half*(f(imz,i) + fr(imz,i) + alfven_r*u_2star(imz) - (alfven_r - sr)*u_starr(imz) - sr*ur(imz,i))
+                   f(imz,i)  =  half*(f(imz,i) + (fr(imz,i) + alfven_r*u_2star(imz) - (alfven_r - sr)*u_starr(imz) - sr*ur(idn,i)*ur(imz,i)))
+                   !f(ien,i)  =  half*(f(ien,i) + fr(ien,i) + alfven_r*u_2star(ien) - (alfven_r - sr)*u_starr(ien) - sr*ur(ien,i))
+                   f(ien,i)  =  half*(f(ien,i) + (fr(ien,i) + alfven_r*u_2star(ien) - (alfven_r - sr)*u_starr(ien) - sr*enr))
+                   b_cc(ydim,i) = half*(b_cc(ydim,i) + (b_ccrf(ydim,i) + alfven_r*b_2star(ydim) - (alfven_r - sr)*b_starr(ydim) - sr*b_ccr(ydim,i)))
+                   b_cc(zdim,i) = half*(b_cc(zdim,i) + (b_ccrf(zdim,i) + alfven_r*b_2star(zdim) - (alfven_r - sr)*b_starr(zdim) - sr*b_ccr(zdim,i)))
                    
                 endif  ! sm = 0
 
@@ -654,35 +640,48 @@ contains
 
                 ! Left intermediate flux Eq. 64
 
-                !f(:,i)  =  fl(:,i) + sl*(u_starl(:) - ul(:,i))
+                !f(idn,i)  =  fl(idn,i) + sl*(u_starl(idn) - ul(idn,i))
+                !f(imx,i)  =  fl(imx,i) + sl*(u_starl(imx) - ul(imx,i))
+                !f(imy,i)  =  fl(imy,i) + sl*(u_starl(imy) - ul(imy,i))
+                !f(imz,i)  =  fl(imz,i) + sl*(u_starl(imz) - ul(imz,i))
+                !f(ien,i)  =  fl(ien,i) + sl*(u_starl(ien) - ul(ien,i))
+                !b_cc(ydim,i) = b_cclf(ydim,i) + sl*(b_starl(ydim) - b_ccl(ydim,i))
+                !b_cc(zdim,i) = b_cclf(zdim,i) + sl*(b_starl(zdim) - b_ccl(zdim,i))
                 f(idn,i)  =  fl(idn,i) + sl*(u_starl(idn) - ul(idn,i))
-                f(imx,i)  =  fl(imx,i) + sl*(u_starl(imx) - ul(imx,i))
-                f(imy,i)  =  fl(imy,i) + sl*(u_starl(imy) - ul(imy,i))
-                f(imz,i)  =  fl(imz,i) + sl*(u_starl(imz) - ul(imz,i))
-                f(ien,i)  =  fl(ien,i) + sl*(u_starl(ien) - ul(ien,i))
+                f(imx,i)  =  fl(imx,i) + sl*(u_starl(imx) - ul(idn,i)*ul(imx,i))
+                f(imy,i)  =  fl(imy,i) + sl*(u_starl(imy) - ul(idn,i)*ul(imy,i))
+                f(imz,i)  =  fl(imz,i) + sl*(u_starl(imz) - ul(idn,i)*ul(imz,i))
+                f(ien,i)  =  fl(ien,i) + sl*(u_starl(ien) - enl)
                 b_cc(ydim,i) = b_cclf(ydim,i) + sl*(b_starl(ydim) - b_ccl(ydim,i))
                 b_cc(zdim,i) = b_cclf(zdim,i) + sl*(b_starl(zdim) - b_ccl(zdim,i))
 
              else if(sm .le. zero) then
-
-                !f(:,i)  =  fr(:,i) + sr*(u_starr(:) - ur(:,i))
-                f(idn,i)  =  fr(idn,i) + sr*(u_starr(idn) - ul(idn,i))
-                f(imx,i)  =  fr(imx,i) + sr*(u_starr(imx) - ul(imx,i))
-                f(imy,i)  =  fr(imy,i) + sr*(u_starr(imy) - ul(imy,i))
-                f(imz,i)  =  fr(imz,i) + sr*(u_starr(imz) - ul(imz,i))
-                f(ien,i)  =  fr(ien,i) + sr*(u_starr(ien) - ul(ien,i))
-                b_cc(ydim,i) = b_ccrf(ydim,i) + sr*(b_starr(ydim) - b_ccl(ydim,i))
-                b_cc(zdim,i) = b_ccrf(zdim,i) + sr*(b_starr(zdim) - b_ccl(zdim,i))
+                
+                f(idn,i)  =  fr(idn,i) + sr*(u_starr(idn) - ur(idn,i))
+                !f(imx,i)  =  fr(imx,i) + sr*(u_starr(imx) - ul(imx,i))
+                f(imx,i)  =  fr(imx,i) + sr*(u_starr(imx) - ur(idn,i)*ur(imx,i))
+                !f(imy,i)  =  fr(imy,i) + sr*(u_starr(imy) - ul(imy,i))
+                f(imy,i)  =  fr(imy,i) + sr*(u_starr(imy) - ur(idn,i)*ur(imy,i))
+                !f(imz,i)  =  fr(imz,i) + sr*(u_starr(imz) - ul(imz,i))
+                f(imz,i)  =  fr(imz,i) + sr*(u_starr(imz) - ur(idn,i)*ur(imz,i))
+                !f(ien,i)  =  fr(ien,i) + sr*(u_starr(ien) - ul(ien,i))
+                f(ien,i)  =  fr(ien,i) + sr*(u_starr(ien) - enr)
+                b_cc(ydim,i) = b_ccrf(ydim,i) + sr*(b_starr(ydim) - b_ccr(ydim,i))
+                b_cc(zdim,i) = b_ccrf(zdim,i) + sr*(b_starr(zdim) - b_ccr(zdim,i))
 
              else ! sm = 0
 
                 ! Average left and right flux if both sm = 0 = B_x
 
-                !f(:,i)  =  half*((fl(:,i) + sl*(u_starl(:) - ul(:,i))) + (fr(:,i) + sr*(u_starr(:) - ur(:,i))))
                 f(idn,i)  =  half*((fl(idn,i) + sl*(u_starl(idn) - ul(idn,i))) + (fr(idn,i) + sr*(u_starr(idn) - ur(idn,i))))
-                f(imx,i)  =  half*((fl(imx,i) + sl*(u_starl(imx) - ul(imx,i))) + (fr(imx,i) + sr*(u_starr(imx) - ur(imx,i))))
-                f(imy,i)  =  half*((fl(imy,i) + sl*(u_starl(imy) - ul(imy,i))) + (fr(imy,i) + sr*(u_starr(imy) - ur(imy,i))))
-                f(imz,i)  =  half*((fl(imz,i) + sl*(u_starl(imz) - ul(imz,i))) + (fr(imz,i) + sr*(u_starr(imz) - ur(imz,i))))
+                !f(imx,i)  =  half*((fl(imx,i) + sl*(u_starl(imx) - ul(imx,i))) + (fr(imx,i) + sr*(u_starr(imx) - ur(imx,i))))
+                f(imx,i)  =  half*((fl(imx,i) + sl*(u_starl(imx) - ul(idn,i)*ul(imx,i))) + (fr(imx,i) + sr*(u_starr(imx) - ur(idn,i)*ur(imx,i))))
+                !f(imy,i)  =  half*((fl(imy,i) + sl*(u_starl(imy) - ul(imy,i))) + (fr(imy,i) + sr*(u_starr(imy) - ur(imy,i))))
+                f(imy,i)  =  half*((fl(imy,i) + sl*(u_starl(imy) - ul(idn,i)*ul(imy,i))) + (fr(imy,i) + sr*(u_starr(imy) - ur(idn,i)*ur(imy,i))))
+                !f(imz,i)  =  half*((fl(imz,i) + sl*(u_starl(imz) - ul(imz,i))) + (fr(imz,i) + sr*(u_starr(imz) - ur(imz,i))))
+                f(imz,i)  =  half*((fl(imz,i) + sl*(u_starl(imz) - ul(idn,i)*ul(imz,i))) + (fr(imz,i) + sr*(u_starr(imz) - ur(idn,i)*ur(imz,i))))
+                !f(ien,i)  =  half*((fl(ien,i) + sl*(u_starl(ien) - ul(ien,i))) + (fr(ien,i) + sr*(u_starr(ien) - ur(ien,i)))) ! missing before
+                f(ien,i)  =  half*((fl(ien,i) + sl*(u_starl(ien) - enl)) + (fr(ien,i) + sr*(u_starr(ien) - enr)))
                 b_cc(ydim,i) = half*((b_cclf(ydim,i) + sl*(b_starl(ydim) - b_ccl(ydim,i))) + (b_ccrf(ydim,i) + sr*(b_starr(ydim) - b_ccr(ydim,i))))
                 b_cc(zdim,i) = half*((b_cclf(zdim,i) + sl*(b_starl(zdim) - b_ccl(zdim,i))) + (b_ccrf(zdim,i) + sr*(b_starr(zdim) - b_ccr(zdim,i))))
 

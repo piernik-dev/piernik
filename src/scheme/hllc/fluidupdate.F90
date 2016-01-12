@@ -97,6 +97,7 @@ contains
 
       use constants,        only: pdims, xdim, zdim, cs_i2_n, ORTHO1, ORTHO2, LO, HI
       use all_boundaries,   only: all_fluid_boundaries
+      use dataio_pub,       only: warn
       use fluidindex,       only: iarr_all_swp
       use grid_cont,        only: grid_container
       use named_array_list, only: qna, wna
@@ -112,6 +113,7 @@ contains
       real, dimension(xdim:zdim,   cg%n_(ddim)) :: b1d
       real, dimension(:,:), pointer             :: pu
       real, dimension(:),   pointer             :: cs2
+      logical, save                             :: firstcall = .true.
 
       cs2 => null()
       if (qna%exists(cs_i2_n)) then
@@ -119,6 +121,10 @@ contains
       else
          i_cs_iso2 = -1
       endif
+
+      b1d=0.
+      if (firstcall) call warn("[fluidupdate:sweep] magnetic field unimplemented yet. Forcing to be 0")
+      firstcall = .false.
 
       do i2 = cg%lhn(pdims(ddim, ORTHO2), LO), cg%lhn(pdims(ddim, ORTHO2), HI)
          do i1 = cg%lhn(pdims(ddim, ORTHO1), LO), cg%lhn(pdims(ddim, ORTHO1), HI)
@@ -143,6 +149,7 @@ contains
 
       real, dimension(size(u,1),size(u,2)) :: dlft, drgt, dcen, dq
       integer :: n
+     
 
       n = size(u,2)
 
@@ -151,6 +158,7 @@ contains
 
       dcen = dlft*drgt
 
+      write(*,*) "dcen", dcen
       where (dcen>0.0)
          dq = 2.0*dcen / (dlft+drgt)       ! (14.54) ?
       elsewhere
@@ -207,6 +215,7 @@ contains
       real, dimension(size(u,1),size(u,2)), target :: du, ul, ur, u_l, u_r
       real, dimension(:,:), pointer                :: p_ql, p_qr, p_q, p_flux
       integer :: nx, p
+      integer :: ii
 
       nx = size(u,2)
 
@@ -214,10 +223,24 @@ contains
       ul = u - half*du   ! (14.33)
       ur = u + half*du
 
+      do ii = lbound(u, 2), ubound(u,2)
+         write(*,*) "ul(:,",ii,")", ul(:,ii)
+         write(*,*) "ur(:,",ii,")", ur(:,ii)
+      end do
+
       flux = compute_flux(ul,b,cs2) - compute_flux(ur,b,cs2)    !> \todo interpolate b?
+
+      do ii = lbound(u, 2), ubound(u,2)
+         write(*,*) "flux(:,",ii,")", flux(:,ii)
+      end do
 
       u_l = ur + half*dtodx*flux   ! (14.34) + (14.35)
       u_r(:,1:nx-1) = ul(:,2:nx) + half*dtodx*flux(:,2:nx); u_r(:,nx) = u_r(:,nx-1)
+
+      do ii = lbound(u, 2), ubound(u,2)
+         write(*,*) "u_l(:,",ii,")", u_l(:,ii)
+         write(*,*) "u_r(:,",ii,")", u_r(:,ii)
+      end do
 
       ql = utoq(u_l,b)
       qr = utoq(u_r,b)
@@ -233,6 +256,10 @@ contains
 
       u(:,2:nx) = u(:,2:nx) + dtodx*(flux(:,1:nx-1) - flux(:,2:nx))
       u(:,1)  = u(:,2); u(:,nx) = u(:,nx-1)
+
+      do ii = lbound(u, 2), ubound(u,2)
+         write(*,*) "flx_diff(:,",ii,")", (flux(:,1:ii-1) - flux(:,2:ii))
+      end do
 
    end subroutine sweep1d_mh
 !---------------------------------------------------------------------------
@@ -288,7 +315,7 @@ contains
 
          vx = u(fl%imx,:) / u(fl%idn,:)
          if (fl%has_energy) then
-            p = (u(fl%ien,:) - ekin(u(fl%imx,:), u(fl%imy,:), u(fl%imz,:), u(fl%idn,:))) * flind%neu%gam_1
+            p = (u(fl%ien,:) - ekin(u(fl%imx,:), u(fl%imy,:), u(fl%imz,:), u(fl%idn,:))) * fl%gam_1
             if (fl%is_magnetized) p = p + (two-fl%gam)*half*sum(b**2,dim=1)
          else
             if (associated(cs2)) then

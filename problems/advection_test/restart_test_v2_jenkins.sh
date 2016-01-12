@@ -1,8 +1,7 @@
 #!/bin/bash
 set -e
 
-export PYTHONPATH=/mnt/xarth/local/lib/python2.7/site-packages:$PYTHONPATH
-export PATH=/mnt/xarth/local/bin:$PATH
+export PYTHONPATH=$HOME/yt
 
 rm -rf runs/advection_test
 
