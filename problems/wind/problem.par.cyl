@@ -1,0 +1,94 @@
+ $BASE_DOMAIN
+    n_d = 128, 128, 32
+    nb=4
+    bnd_xl = 'user'
+    bnd_xr = 'out'
+    bnd_yl = 'out'
+    bnd_yr = 'out'
+    bnd_zl = 'outd'
+    bnd_zr = 'outd'
+    geometry = 'cylindrical'
+    xmin   = 2.
+    xmax   = 25.
+    ymin   = -1.
+    ymax   = 1.
+    zmin   = -2.
+    zmax   = 2.
+ /
+
+ $MPI_BLOCKS
+ /
+
+ $UNITS
+    units_set = 'bin'
+ /
+
+ $RESTART_CONTROL
+    restart  = 'last'
+    new_id   = ''
+    nrestart = 0
+ /
+
+ $END_CONTROL
+    tend   = 100.0
+    nend   = 1000000
+ /
+
+ $OUTPUT_CONTROL
+    problem_name = 'chcyg_3d_cyl'
+    gdf_strict = .true.
+    run_id  =  'tst'
+    dt_hdf  = 1.0
+    dt_res  = 1000.0
+    dt_log  = 0.001
+    dt_tsl  = 0.001
+    vars(1:) = 'ener', 'dens', 'velx', 'vely', 'velz'
+ /
+
+ $FLUID_NEUTRAL
+    gamma = 1.2
+    cs_iso = 1.
+ /
+
+ $NUMERICAL_SETUP
+    cfl    = 0.8
+    smalld = 1.e-20
+    smallei= 1.e-20
+    integration_order = 2
+    limiter= 'vanleer'
+ /
+
+ $GRAVITY
+    external_gp = "roche"
+    ptmass  = 0.4
+    ptm_x   = 0.
+    ptm_y   = 0.
+    ptm_z   = 0.0
+    r_smooth= .1
+    nsub    = 10
+    n_gravr = 10
+    ptmass2 = 0.4
+    ptm2_x  = 10.
+ /
+
+ $RESISTIVITY
+ /
+
+ $PROBLEM_CONTROL
+    mstar     = 2.
+    mdot      = 1e-7
+    rin	      = 3.
+    rdust     = 4.
+    vel_scale = 4.
+    tburst    = 10.
+    dburst    = 1.
+    vburst    = 10.
+    mburst    = 1.
+ /
+
+ $INTERACTIONS
+ /
+
+ $AMR
+    level_max = 2
+ /
