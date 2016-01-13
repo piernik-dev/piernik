@@ -188,6 +188,10 @@ contains
                         cg%u(fl%imy,i,j,k) = 0.
                         cg%u(fl%imz,i,j,k) = vz*cg%u(fl%idn,i,j,k)
                   end select
+                  if (fl%ien > 1) then
+                     cg%u(fl%ien,i,j,k) = fl%cs2/(fl%gam_1)*cg%u(fl%idn,i,j,k)
+                     cg%u(fl%ien,i,j,k) = cg%u(fl%ien,i,j,k) + 0.5*vel**2*cg%u(fl%idn,i,j,k)
+                  endif
                enddo
             enddo
          enddo
@@ -305,6 +309,10 @@ contains
                cg%u(fl%imx,i,j,k) = vx*cg%u(fl%idn,i,j,k)
                cg%u(fl%imy,i,j,k) = 0.
                cg%u(fl%imz,i,j,k) = vz*cg%u(fl%idn,i,j,k)
+               if (fl%ien > 1) then
+                  cg%u(fl%ien,i,j,k) = fl%cs2/(fl%gam_1)*cg%u(fl%idn,i,j,k)
+                  cg%u(fl%ien,i,j,k) = cg%u(fl%ien,i,j,k) + 0.5*vel**2*cg%u(fl%idn,i,j,k)
+               endif
             enddo
          enddo
       enddo
