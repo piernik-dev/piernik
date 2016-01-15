@@ -69,7 +69,6 @@ module dataio
    logical                  :: tsl_with_ptc          !< place pressure, temperature and sound speed extrema in timeslice file (even if ISO while they are constant or only density dependent)
    logical                  :: initial_hdf_dump      !< force initial hdf dump
    logical, dimension(RES:TSL) :: dump = .false.     !< logical values for all dump types to restrict to only one dump of each type a step
-   logical                  :: fancy_names           !< allow  adding strings like "final" to the last output
 
 !   integer                  :: nchar                 !< number of characters in a user/system message
    integer, parameter       :: umsg_len = 16
@@ -103,7 +102,7 @@ module dataio
    namelist /OUTPUT_CONTROL/  problem_name, run_id, dt_hdf, dt_res, dt_tsl, dt_log, tsl_with_mom, tsl_with_ptc, &
                               domain_dump, vars, mag_center, vizit, fmin, fmax, user_message_file, system_message_file, &
                               multiple_h5files, use_v2_io, nproc_io, enable_compression, gzip_level, initial_hdf_dump, &
-                              colormode, wdt_res, gdf_strict, fancy_names
+                              colormode, wdt_res, gdf_strict
 
 contains
 
@@ -159,7 +158,6 @@ contains
 !! <tr><td>enable_compression </td><td>.false.            </td><td>logical   </td><td>\copydoc dataio_pub::enable_compression</td></tr>
 !! <tr><td>gzip_level         </td><td>9                  </td><td>integer   </td><td>\copydoc dataio_pub::gzip_level   </td></tr>
 !! <tr><td>colormode          </td><td>.true.             </td><td>logical   </td><td>\copydoc dataio_pub::colormode    </td></tr>
-!! <tr><td>fancy_names        </td><td>.false.            </td><td>logical   </td><td>\copydoc dataio_pub::fancy_names  </td></tr>
 !! </table>
 !! \n \n
 !<
@@ -283,7 +281,6 @@ contains
       tsl_with_ptc     = .true.
 #endif /* !ISO */
       initial_hdf_dump = .false.
-      fancy_names      = .false.
 
       domain_dump       = 'phys_domain'
       vars(:)           = ''
@@ -408,7 +405,6 @@ contains
          lbuff(7)  = tsl_with_ptc
          lbuff(8)  = colormode
          lbuff(9)  = gdf_strict
-         lbuff(10) = fancy_names
 
          cbuff(31) = problem_name
          cbuff(32) = run_id
@@ -468,7 +464,6 @@ contains
          tsl_with_ptc        = lbuff(7)
          colormode           = lbuff(8)
          gdf_strict          = lbuff(9)
-         fancy_names         = lbuff(10)
 
          problem_name        = cbuff(31)
          run_id              = cbuff(32)(1:idlen)
@@ -760,20 +755,13 @@ contains
 
    subroutine manage_hdf_dump(dmp, output)
 
-      use constants,    only: FINAL_DUMP, INCEPTIVE
+      use constants,    only: INCEPTIVE
 
       implicit none
 
       integer(kind=4), intent(in)    :: output  !< type of output
       logical,         intent(inout) :: dmp     !< perform I/O if True
-      character(len=cbuff_len)       :: tmp_probname
 
-      if (output == FINAL_DUMP .and. trim(problem_name) /= 'crash') then
-         if (fancy_names) then
-            write(tmp_probname, '(a,a6)') trim(problem_name), '_final'
-            problem_name = tmp_probname
-         endif
-      endif
       if ((output == INCEPTIVE) .and. initial_hdf_dump) dmp = .true.  !< \todo problem_name may be enhanced by '_initial', but this and nhdf should be reverted just after write_hdf5 is called
 
    end subroutine manage_hdf_dump
