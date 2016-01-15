@@ -101,6 +101,11 @@ contains
       integer, parameter :: maxsub = 10  !< upper limit for subsampling
       integer(kind=4) :: id
 
+      integer :: foo
+      real, allocatable, dimension(:) :: bar
+
+      allocate(bar(12345))
+
       d1 = smalld                  ! ambient density
 
       ! namelist default parameter values
