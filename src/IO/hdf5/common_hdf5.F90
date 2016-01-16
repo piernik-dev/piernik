@@ -660,7 +660,6 @@ contains
       use helpers_hdf5, only: create_attribute!, create_corefile
       use mpi,          only: MPI_INTEGER, MPI_INTEGER8, MPI_STATUS_IGNORE, MPI_REAL8
       use mpisetup,     only: comm, FIRST, LAST, master, mpi_err, piernik_MPI_Bcast
-      use units,        only: cm, sek
 
       implicit none
 

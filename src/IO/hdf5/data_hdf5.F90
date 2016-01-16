@@ -143,7 +143,7 @@ contains
 
       use common_hdf5,  only: hdf_vars
       use constants,    only: units_len, cbuff_len, I_FIVE
-      use hdf5,         only: HID_T, H5S_SCALAR_F, h5dopen_f, h5dclose_f
+      use hdf5,         only: HID_T, h5dopen_f, h5dclose_f
       use helpers_hdf5, only: create_dataset, create_attribute
       use units,        only: lmtvB, s_lmtvB, get_unit
 

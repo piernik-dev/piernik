@@ -68,7 +68,7 @@
 !<
 module units
 
-   use constants, only: cbuff_len, U_LEN, U_MAG, units_len
+   use constants, only: cbuff_len, U_LEN, U_MAG
 
    implicit none
 
