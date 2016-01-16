@@ -34,7 +34,6 @@
 module fluidupdate
 ! pulled by RIEMANN
 
-  use hlld,  only: fluxes, riemann_hlld
   implicit none
   private
   public :: fluid_update, sweep_dsplit, rk2, utoq, calculate_slope_vanleer, euler, muscl
@@ -101,13 +100,12 @@ contains
 
   subroutine sweep_dsplit(cg, dt, ddim)
 
-    use cg_list,          only: cg_list_element
     use constants,        only: pdims, xdim, zdim, ORTHO1, ORTHO2, LO, HI
     use all_boundaries,   only: all_fluid_boundaries
     use fluidindex,       only: iarr_all_swp
     use grid_cont,        only: grid_container
     use named_array_list, only: wna
-    use dataio_pub,       only: die, warn
+    use dataio_pub,       only: warn
 
     implicit none
 
@@ -121,8 +119,8 @@ contains
     logical, save                             :: firstcall = .true.
 
     b_cc1d = 0.
-     if (firstcall) call warn("[fluidupdate:sweep] magnetic field unimplemented yet. Forcing to be 0")
-      firstcall = .false.
+    if (firstcall) call warn("[fluidupdate:sweep] magnetic field unimplemented yet. Forcing to be 0")
+    firstcall = .false.
 
     do i2 = cg%lhn(pdims(ddim, ORTHO2), LO), cg%lhn(pdims(ddim,ORTHO2), HI)
        do i1 = cg%lhn(pdims(ddim, ORTHO1), LO), cg%lhn(pdims(ddim, ORTHO1), HI)
@@ -209,7 +207,7 @@ contains
     use constants,   only: half, xdim, zdim
     use fluidindex,  only: flind
     use fluidtypes,  only: component_fluid
-
+    use hlld,        only: fluxes, riemann_hlld
 
     implicit none
 
@@ -269,8 +267,7 @@ contains
   subroutine euler(u,b_cc, dtodx)
 
     use constants,   only: half, xdim, zdim
-    use fluidtypes,  only: component_fluid
-
+    use hlld,        only: fluxes
 
     implicit none
 
@@ -313,7 +310,7 @@ contains
     use constants,   only: half, xdim, zdim
     use fluidindex,  only: flind
     use fluidtypes,  only: component_fluid
-
+    use hlld,        only: fluxes, riemann_hlld
 
     implicit none
 

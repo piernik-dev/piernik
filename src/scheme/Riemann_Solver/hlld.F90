@@ -56,7 +56,6 @@ contains
     use fluidindex, only: flind
     use fluidtypes, only: component_fluid
     use func,       only: ekin
-    use dataio_pub, only: die
 
     implicit none
 
@@ -107,7 +106,6 @@ contains
     use constants,  only: half, zero, xdim, ydim, zdim, idn, imx, imy, imz, ien
     use fluidindex, only: flind
     use func,       only: operator(.notequals.)
-    use dataio_pub, only: die
 
     ! arguments
 
