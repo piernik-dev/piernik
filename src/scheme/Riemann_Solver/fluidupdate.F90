@@ -38,7 +38,7 @@ module fluidupdate
   implicit none
   private
   public :: fluid_update, sweep_dsplit, rk2, utoq, calculate_slope_vanleer, euler, muscl
-  
+
 
 contains
 
@@ -57,7 +57,7 @@ contains
     logical, save                   :: first_run = .true.
     type(cg_list_element), pointer  :: cgl
     integer(kind=4)                 :: ddim
-        
+
 
     halfstep = .false.
     if (first_run) then
@@ -69,14 +69,14 @@ contains
 
     cgl => leaves%first
     do while (associated(cgl))
-       
+
        do ddim = xdim, zdim, 1
           if (dom%has_dir(ddim)) call sweep_dsplit(cgl%cg,dt,ddim)
        enddo
        if (associated(problem_customize_solution)) call problem_customize_solution(.true.)
        cgl => cgl%nxt
     enddo
-    
+
 
     t = t + dt
     dtm = dt
@@ -91,16 +91,16 @@ contains
        if (associated(problem_customize_solution)) call problem_customize_solution(.false.)
        cgl => cgl%nxt
     enddo
-    
+
 
     if (first_run) first_run = .false.
 
   end subroutine fluid_update
 
 !-------------------------------------------------------------------------------------------------------------------
-  
+
   subroutine sweep_dsplit(cg, dt, ddim)
-    
+
     use cg_list,          only: cg_list_element
     use constants,        only: pdims, xdim, zdim, ORTHO1, ORTHO2, LO, HI
     use all_boundaries,   only: all_fluid_boundaries
@@ -118,7 +118,7 @@ contains
     real, dimension(xdim:zdim, cg%n_(ddim))   :: b_cc1d
     real, dimension(:,:), pointer             :: pu
     integer                                   :: i1, i2
-    logical, save                             :: firstcall = .true.     
+    logical, save                             :: firstcall = .true.
 
     b_cc1d = 0.
      if (firstcall) call warn("[fluidupdate:sweep] magnetic field unimplemented yet. Forcing to be 0")
@@ -148,7 +148,7 @@ contains
 
       real, dimension(size(u,1),size(u,2)) :: dlft, drgt, dcen, dq
       integer :: n
-      
+
 
       n = size(u,2)
 
@@ -158,7 +158,7 @@ contains
       dcen = dlft*drgt
 
       where (dcen>0.0)
-         dq = 2.0*dcen / (dlft+drgt)       ! (14.54) 
+         dq = 2.0*dcen / (dlft+drgt)       ! (14.54)
       elsewhere
          dq = 0.0
       endwhere
@@ -169,7 +169,7 @@ contains
 
 
    function utoq(u,b_cc) result(q)
-   
+
 
      use constants,  only: half, xdim, zdim
      use fluidindex, only: flind
@@ -179,7 +179,7 @@ contains
      implicit none
 
      real, dimension(:,:),   intent(in)    :: u , b_cc
-     
+
      real, dimension(size(u,1),size(u,2))  :: q
      integer  :: p
 
@@ -192,15 +192,15 @@ contains
         q(fl%imx,:) =  u(fl%imx,:)/u(fl%idn,:)
         q(fl%imy,:) =  u(fl%imy,:)/u(fl%idn,:)
         q(fl%imz,:) =  u(fl%imz,:)/u(fl%idn,:)
-        if(fl%has_energy) then 
+        if (fl%has_energy) then
            q(fl%ien,:) =  fl%gam_1*(u(fl%ien,:) - ekin(u(fl%imx,:), u(fl%imy,:), u(fl%imz,:), u(fl%idn,:)) - half*sum(b_cc(xdim:zdim,:)**2)) + half*sum(b_cc(xdim:zdim,:)**2)
         endif
 
-        
+
      enddo
-     
+
    end function utoq
-   
+
 
 !-----------------------------------------------------------------------------------------------------------------------
 
@@ -224,44 +224,44 @@ contains
     real, dimension(size(u,1),size(u,2)), target    :: flx, ql, qr, du, ul, ur !, u_l, u_r
     real, dimension(:,:), pointer                   :: p_flx, p_bcc, p_bccl, p_bccr, p_ql, p_qr
     integer                                         :: nx, i
-    
-    
+
+
 
     nx  = size(u,2)
 
     du  = calculate_slope_vanleer(u)
     ul  = u - half*du
     ur  = u + half*du
-    
+
     db  = calculate_slope_vanleer(b_cc)
     b_ccl = b_cc - half*db
     b_ccr = b_cc + half*db
-   
+
 
     mag_cc = b_cc
 
     flx  = fluxes(ul,b_ccl) - fluxes(ur,b_ccr)
- 
+
     ql = utoq(ul,b_ccl)
     qr = utoq(ur,b_ccr)
 
     u_predict  =  u + dtodx*flx(:,:)
-    
+
     do i = 1, flind%fluids
        fl    => flind%all_fluids(i)%fl
        p_flx => flx(fl%beg:fl%end,:)
        p_ql  => ql(fl%beg:fl%end,:)
-       p_qr  => qr(fl%beg:fl%end,:) 
+       p_qr  => qr(fl%beg:fl%end,:)
        p_bcc => mag_cc(xdim:zdim,:)
        p_bccl => b_ccl(xdim:zdim,:)
        p_bccr => b_ccr(xdim:zdim,:)
        call riemann_hlld(nx, p_flx, p_ql, p_qr, mag_cc, p_bccl, p_bccr, fl%gam)
-    end do
-    
-    u  =  half*(u + u_predict + dtodx*(fluxes(p_ql,p_bccl)-fluxes(p_qr,p_bccr)))
-    
+    enddo
 
-    
+    u  =  half*(u + u_predict + dtodx*(fluxes(p_ql,p_bccl)-fluxes(p_qr,p_bccr)))
+
+
+
   end subroutine rk2
 
   !---------------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -289,20 +289,20 @@ contains
     du  = calculate_slope_vanleer(u)
     ul  = u - half*du
     ur  = u + half*du
-    
+
     db  = calculate_slope_vanleer(b_cc)
     b_ccl = b_cc - half*db
     b_ccr = b_cc + half*db
 
     mag_cc = b_cc
- 
+
     ql = utoq(ul,b_ccl)
     qr = utoq(ur,b_ccr)
 
     flx = fluxes(ul,b_ccl) - fluxes(ur,b_ccr)
-   
+
     u  =  u + dtodx*flx(:,:)
-   
+
 
   end subroutine euler
 
@@ -330,28 +330,28 @@ contains
     integer                                         :: nx, i
     logical :: prd
 
-    prd = .true. 
+    prd = .true.
 
     nx  = size(u,2)
 
     du  = calculate_slope_vanleer(u)
     ul  = u - half*du
     ur  = u + half*du
-   
+
     db  = calculate_slope_vanleer(b_cc)
     b_ccl = b_cc - half*db
     b_ccr = b_cc + half*db
-    
+
     mag_cc = b_cc
 
     flx  = fluxes(ul,b_ccl) - fluxes(ur,b_ccr)
 
     u_l = ur + half*dtodx*flx
     u_r(:,1:nx-1) = ul(:,2:nx) + half*dtodx*flx(:,2:nx) ; u_r(:,nx) = u_r(:,nx-1)
-        
+
     ql = utoq(u_l,b_ccl)
     qr = utoq(u_r,b_ccr)
-        
+
     do i = 1, flind%fluids
        fl    => flind%all_fluids(i)%fl
        p_flx => flx(fl%beg:fl%end,:)
@@ -361,7 +361,7 @@ contains
        p_bccl => b_ccl(xdim:zdim,:)
        p_bccr => b_ccr(xdim:zdim,:)
        call riemann_hlld(nx, p_flx, p_ql, p_qr, p_bcc, p_bccl, p_bccr, fl%gam)
-    end do
+    enddo
 
     u(:,2:nx) = u(:,2:nx) + dtodx*(flx(:,1:nx-1) - flx(:,2:nx))
     u(:,1) = u(:,2) ; u(:,nx) = u(:,nx-1)
