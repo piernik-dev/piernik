@@ -50,7 +50,7 @@ module hlld
 
 contains
 
-  function fluxes(u,b_cc,ddim) result(f)
+  function fluxes(u,b_cc) result(f)
  
     use constants,  only: half, xdim, ydim, zdim
     use fluidindex, only: flind
@@ -62,7 +62,7 @@ contains
 
     real, dimension(:,:),        intent(in)         :: u
     real, dimension(:,:),        intent(inout)      :: b_cc
-    integer(kind=4),             intent(in)         :: ddim
+
     real, dimension(size(u,1), size(u,2))           :: f
     real, dimension(size(u,2))                      :: vx, vy, vz, p_t
     integer                                         :: ip
@@ -85,42 +85,17 @@ contains
                                                                                                           
        endif      
 
-       if(ddim .eq. xdim) then
-          f(fl%idn,:)  =  u(fl%imx,:)
-          f(fl%imx,:)  =  u(fl%imx,:)*vx(:) + p_t(:) - b_cc(xdim,:)**2
-          f(fl%imy,:)  =  u(fl%imy,:)*vx(:) - b_cc(xdim,:)*b_cc(ydim,:)
-          f(fl%imz,:)  =  u(fl%imz,:)*vx(:) - b_cc(xdim,:)*b_cc(zdim,:)
-          b_cc(ydim,:) =  b_cc(ydim,:)*vx(:) - b_cc(xdim,:)*vy(:)
-          b_cc(zdim,:) =  b_cc(zdim,:)*vx(:) - b_cc(xdim,:)*vz(:)
-          if(fl%has_energy) then
-             f(fl%ien,:)  =  (u(fl%ien,:) + p_t(:))*vx(:) - b_cc(xdim,:)*(b_cc(xdim,:)*vx(:) + b_cc(ydim,:)*vy(:) + b_cc(zdim,:)*vz(:))
-          endif
 
-       else if(ddim .eq. ydim) then
-          f(fl%idn,:)  =  u(fl%imy,:)
-          f(fl%imx,:)  =  u(fl%imx,:)*vy(:) - b_cc(xdim,:)*b_cc(ydim,:)
-          f(fl%imy,:)  =  u(fl%imy,:)*vy(:) + p_t(:) - b_cc(ydim,:)**2
-          f(fl%imz,:)  =  u(fl%imz,:)*vy(:) - b_cc(zdim,:)*b_cc(ydim,:)
-          b_cc(xdim,:) =  b_cc(xdim,:)*vy(:) - b_cc(ydim,:)*vx(:)
-          b_cc(zdim,:)     =  b_cc(zdim,:)*vy(:) - b_cc(ydim,:)*vz(:)
-          if(fl%has_energy) then
-             f(fl%ien,:)  =  (u(fl%ien,:) + p_t(:))*vy(:) -  b_cc(ydim,:)*(b_cc(xdim,:)*vx(:) + b_cc(ydim,:)*vy(:) + b_cc(zdim,:)*vz(:))
-          endif
-
-       else if(ddim .eq. zdim) then
-          f(fl%idn,:)  =  u(fl%imz,:)
-          f(fl%imx,:)  =  u(fl%imx,:)*vz(:) - b_cc(xdim,:)*b_cc(zdim,:)
-          f(fl%imy,:)  =  u(fl%imy,:)*vz(:) - b_cc(ydim,:)*b_cc(zdim,:)
-          f(fl%imz,:)  =  u(fl%imz,:)*vz(:) + p_t(:) - b_cc(zdim,:)**2
-          b_cc(xdim,:) =  b_cc(xdim,:)*vz(:) - b_cc(zdim,:)*vx(:)
-          b_cc(ydim,:) =  b_cc(ydim,:)*vz(:) - b_cc(zdim,:)*vy(:)
-          if(fl%has_energy) then
-             f(fl%ien,:)  =  (u(fl%ien,:) + p_t(:))*vy(:) - b_cc(zdim,:)*(b_cc(xdim,:)*vx(:) + b_cc(ydim,:)*vy(:) + b_cc(zdim,:)*vz(:))
-          endif
-
-       else
-          call die("Check the fluxes")
+       f(fl%idn,:)  =  u(fl%imx,:)
+       f(fl%imx,:)  =  u(fl%imx,:)*vx(:) + p_t(:) - b_cc(xdim,:)**2
+       f(fl%imy,:)  =  u(fl%imy,:)*vx(:) - b_cc(xdim,:)*b_cc(ydim,:)
+       f(fl%imz,:)  =  u(fl%imz,:)*vx(:) - b_cc(xdim,:)*b_cc(zdim,:)
+       b_cc(ydim,:) =  b_cc(ydim,:)*vx(:) - b_cc(xdim,:)*vy(:)
+       b_cc(zdim,:) =  b_cc(zdim,:)*vx(:) - b_cc(xdim,:)*vz(:)
+       if(fl%has_energy) then
+          f(fl%ien,:)  =  (u(fl%ien,:) + p_t(:))*vx(:) - b_cc(xdim,:)*(b_cc(xdim,:)*vx(:) + b_cc(ydim,:)*vy(:) + b_cc(zdim,:)*vz(:))
        endif
+
     enddo
 
     return
