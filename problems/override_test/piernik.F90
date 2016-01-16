@@ -46,7 +46,7 @@ program hello_world
       write(*,*)"This is a demonstration how to replace any of the standard Piernik files with your own version."
       write(*,*)"It is not intended for regular and prolonged use as maintaining slightly changed files can be painful task."
       write(*,*)"This mechanism may be a bit useful for developing purposes, doing dirty experiments or for maintaining one-time problems that require special care without disturbing main source tree."
-   end if
+   endif
 
    write(*,*)"Hello world from process #",proc
 
