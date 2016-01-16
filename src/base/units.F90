@@ -59,7 +59,7 @@
 !! @n length --> cm,     mass --> gram,        time --> sek,        miu0 --> 4*pi,    temperature --> kelvin
 !! @n
 !! @n @b WT4 - unit system for Wengen Test #4
-!! @n length --> 6.25AU, mass --> 0.1 M_sun,   time --> 2.5**3.5  pi years (=> G ≈ 1.)
+!! @n length --> 6.25AU, mass --> 0.1 M_sun,   time --> 2.5**3.5  pi years (=> G &asymp; 1.)
 !! @n
 !! @n @b USER - units system defined by user
 !! @n following variables from UNITS namelist should be specified: miu0, kelvin, cm, gram, sek
@@ -68,7 +68,7 @@
 !<
 module units
 
-   use constants, only: cbuff_len, U_LEN, U_MAG, units_len
+   use constants, only: cbuff_len, U_LEN, U_MAG
 
    implicit none
 
@@ -223,6 +223,8 @@ contains
             s_len_u  = ' [AU]'
             s_time_u = ' [yr]'
             s_mass_u = ' [M_sun]'
+            lmtvB    = [1.0, 1.0, 1.0, 1.0, 1.0]
+            s_lmtvB  = ["au     ", "Msun   ", "yr     ", "au / yr", "gauss  "]
 
          case ("KSG", "ksg")
             ! KSG  uses: length --> kpc,    mass --> 10^6*Msun,   time --> Gyr,        miu0 --> 4*pi,    temperature --> kelvin
@@ -489,7 +491,7 @@ contains
             val = lmtvB(U_MASS) * lmtvB(U_LEN) ** 2 / lmtvB(U_TIME) ** 2
             write(s_val, '(a, "*", a, "**2 /",a,"**2")') trim(s_lmtvB(U_MASS)), trim(s_lmtvB(U_LEN)), trim(s_lmtvB(U_TIME))
          case ("pren", "prei", "pressure")
-            val =  lmtvB(U_MASS) / lmtvB(U_LEN) / lmtvB(U_TIME) ** 2 
+            val =  lmtvB(U_MASS) / lmtvB(U_LEN) / lmtvB(U_TIME) ** 2
             write(s_val, '(a, "/", a, "/",a,"**2")') trim(s_lmtvB(U_MASS)), trim(s_lmtvB(U_LEN)), trim(s_lmtvB(U_TIME))
          case ("magx", "magy", "magz")
             val = lmtvB(U_MAG)
