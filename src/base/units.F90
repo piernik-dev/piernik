@@ -491,7 +491,7 @@ contains
             val = lmtvB(U_MASS) * lmtvB(U_LEN) ** 2 / lmtvB(U_TIME) ** 2
             write(s_val, '(a, "*", a, "**2 /",a,"**2")') trim(s_lmtvB(U_MASS)), trim(s_lmtvB(U_LEN)), trim(s_lmtvB(U_TIME))
          case ("pren", "prei", "pressure")
-            val =  lmtvB(U_MASS) / lmtvB(U_LEN) / lmtvB(U_TIME) ** 2 
+            val =  lmtvB(U_MASS) / lmtvB(U_LEN) / lmtvB(U_TIME) ** 2
             write(s_val, '(a, "/", a, "/",a,"**2")') trim(s_lmtvB(U_MASS)), trim(s_lmtvB(U_LEN)), trim(s_lmtvB(U_TIME))
          case ("magx", "magy", "magz")
             val = lmtvB(U_MAG)
