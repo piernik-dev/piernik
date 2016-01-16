@@ -215,7 +215,7 @@ def qa_checks(files, options):
     warns = []
     errors = []
     for f in f90files:
-#        qa_check_id(errors, f)
+        #        qa_check_id(errors, f)
         pfile = []
         lines = open(f, 'r').readlines()
         for line in lines:
@@ -255,8 +255,8 @@ def qa_checks(files, options):
             if (debug):
                 print '[qa_checks] obj =', obj
             part = pfile[obj['beg']:obj['end']]
-#         if (debug):
-#            for f in part: print f
+            #         if (debug):
+            #            for f in part: print f
             # False refs need to be done before removal of types in module body
             qa_false_refs(part, obj['name'], warns, f)
             if(obj['type'] == 'mod'):
@@ -349,7 +349,7 @@ def qa_labels(lines, rname, store, fname):
 
 
 def qa_depreciated_syntax(lines, rname, store, fname):
-#    print b.OKGREEN + "QA: " + b.ENDC + "Checking for depreciated syntax"
+    #    print b.OKGREEN + "QA: " + b.ENDC + "Checking for depreciated syntax"
     for f in filter(not_function.match, filter(depr_syntax_1.search, lines)):
         store.append(
             give_warn("!! lacking ::   ") + wtf(lines, f, rname, fname))
@@ -409,7 +409,7 @@ def qa_false_refs(lines, name, store, fname):
 
 
 def qa_implicit_saves(lines, name, store, fname):
-#   print b.OKGREEN + "QA: " + b.ENDC + "Checking for implicit saves"
+    #   print b.OKGREEN + "QA: " + b.ENDC + "Checking for implicit saves"
     impl = filter(not_param_nor_save.match, filter(implicit_save.search,
                   remove_amp(filter(remove_warn.match, lines), True)))
     if(len(impl)):
