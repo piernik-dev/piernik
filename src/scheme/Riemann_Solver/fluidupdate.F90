@@ -26,7 +26,7 @@
 !
 !    HLLD Riemann solver for ideal magnetohydrodynamics
 !    Varadarajan Parthasarathy, CAMK, Warszawa. 2015.
-!
+!    Dr. Artur Gawryszczak, CAMK, Warszawa.
 !--------------------------------------------------------------------------------------------------------------
 
 #include "piernik.def"
@@ -98,7 +98,6 @@ contains
   end subroutine fluid_update
 
 !-------------------------------------------------------------------------------------------------------------------
-
   
   subroutine sweep_dsplit(cg, dt, ddim)
     
@@ -107,7 +106,6 @@ contains
     use all_boundaries,   only: all_fluid_boundaries
     use fluidindex,       only: iarr_all_swp
     use grid_cont,        only: grid_container
-    !use cg_leaves,        only: leaves
     use named_array_list, only: wna
     use dataio_pub,       only: die, warn
 
@@ -117,19 +115,10 @@ contains
     real,                          intent(in) :: dt
     integer(kind=4),               intent(in) :: ddim
     real, dimension(size(cg%u,1), cg%n_(ddim)) :: u1d
-    !real, dimension(size(cg%u,1), cg%n_(ddim)) :: u1d
     real, dimension(xdim:zdim, cg%n_(ddim))   :: b_cc1d
-    !real, dimension(xdim:zdim, cg%n_(ddim))   :: b_cc1d
     real, dimension(:,:), pointer             :: pu
     integer                                   :: i1, i2
-    !type(cg_list_element), pointer            :: cgl
-    logical, save                             :: firstcall = .true.
-    !cgl => leaves%first
-    !do while (associated(cgl))
-
-       !if (allocated(u1d) .or. allocated(b_cc1d)) call die("[fluidupdate:sweep_dsplit] sweep vectors not clean")
-       !OPT: can check if the size is already right and avoid reallocation on AMR domains
-       !allocate(u1d(size(cgl%cg%u,1),cgl%cg%n_(ddim)), b_cc1d(xdim:zdim, cgl%cg%n_(ddim)))
+    logical, save                             :: firstcall = .true.     
 
     b_cc1d = 0.
      if (firstcall) call warn("[fluidupdate:sweep] magnetic field unimplemented yet. Forcing to be 0")
@@ -144,28 +133,6 @@ contains
 
        enddo
     enddo
-    
-       
-       !do i2 = cgl%cg%lhn(pdims(ddim,ORTHO2),LO), cgl%cg%lhn(pdims(ddim,ORTHO2),HI)
-          !do i1 = cgl%cg%lhn(pdims(ddim, ORTHO1), LO), cgl%cg%lhn(pdims(ddim, ORTHO1), HI)
-             !pu => cgl%cg%w(wna%fi)%get_sweep(ddim,i1,i2)
-             !b1d => cgl%cg%w(wna%bi)%get_sweep(ddim,i1,i2)
-             !WARNING: what position of the b components do we expect? If cell-centered then interpolation is required above
-             !write(*,*)"sweep",ddim, i1,i2,dt
-             !u1d(iarr_all_swp(ddim,:),:) = pu(:,:)
-
-             !call rk2(u1d,b_cc1d,ddim, dt/cgl%cg%dl(ddim))
-             !call euler(u1d,b_cc1d,ddim, dt/cgl%cg%dl(ddim))
-             !call muscl(u1d,b_cc1d,ddim, dt/cg%dl(ddim))
-             !pu(:,:) = u1d(iarr_all_swp(ddim,:),:)
-             
-          !enddo
-       !enddo
-
-       !deallocate(u1d, b_cc1d)
-
-       !cgl => cgl%nxt
-    !enddo
 
     call all_fluid_boundaries
 
@@ -190,11 +157,8 @@ contains
 
       dcen = dlft*drgt
 
-      !write(*,*) "dcen", dcen
-
-
       where (dcen>0.0)
-         dq = 2.0*dcen / (dlft+drgt)       ! (14.54) ?
+         dq = 2.0*dcen / (dlft+drgt)       ! (14.54) 
       elsewhere
          dq = 0.0
       endwhere
@@ -228,10 +192,8 @@ contains
         q(fl%imx,:) =  u(fl%imx,:)/u(fl%idn,:)
         q(fl%imy,:) =  u(fl%imy,:)/u(fl%idn,:)
         q(fl%imz,:) =  u(fl%imz,:)/u(fl%idn,:)
-        if(fl%has_energy) then
-           
+        if(fl%has_energy) then 
            q(fl%ien,:) =  fl%gam_1*(u(fl%ien,:) - ekin(u(fl%imx,:), u(fl%imy,:), u(fl%imz,:), u(fl%idn,:)) - half*sum(b_cc(xdim:zdim,:)**2)) + half*sum(b_cc(xdim:zdim,:)**2)
-        
         endif
 
         
@@ -307,7 +269,6 @@ contains
   subroutine euler(u,b_cc, dtodx)
 
     use constants,   only: half, xdim, zdim
-    !use fluidindex,  only: flind
     use fluidtypes,  only: component_fluid
 
 
@@ -317,7 +278,6 @@ contains
     real, dimension(:,:),           intent(inout)   :: b_cc
     real,                           intent(in)      :: dtodx
 
-    !class(component_fluid), pointer                 :: fl
     real, dimension(xdim:zdim,size(u,2)), target    :: b_ccl, b_ccr, mag_cc
     real, dimension(xdim:zdim,size(u,2)), target    :: db
     real, dimension(size(u,1),size(u,2)), target    :: ql, qr, du, ul, ur, flx
@@ -365,61 +325,33 @@ contains
     real, dimension(xdim:zdim,size(u,2)), target    :: b_ccl, b_ccr, mag_cc
     real, dimension(xdim:zdim,size(u,2)), target    :: db
     real, dimension(size(u,1),size(u,2))            :: u_l, u_r
-    !real, dimension(size(u,1),size(u,2)), target    :: u_l, u_r
     real, dimension(size(u,1),size(u,2)), target    :: flx, ql, qr, du, ul, ur !, u_l, u_r
     real, dimension(:,:), pointer                   :: p_flx, p_bcc, p_bccl, p_bccr, p_ql, p_qr
     integer                                         :: nx, i
-    !integer                                         :: ii
     logical :: prd
 
     prd = .true. 
-    
-    
 
     nx  = size(u,2)
 
     du  = calculate_slope_vanleer(u)
     ul  = u - half*du
     ur  = u + half*du
-
-    !do ii = lbound(u,2), ubound(u,2)
-    !   if (prd) write(*,*) "ul(:,",ii,")", ul(:,ii)
-    !   if (prd) write(*,*) "ur(:,",ii,")", ur(:,ii)
-    !enddo
-       
-    
+   
     db  = calculate_slope_vanleer(b_cc)
     b_ccl = b_cc - half*db
     b_ccr = b_cc + half*db
-    
     
     mag_cc = b_cc
 
     flx  = fluxes(ul,b_ccl) - fluxes(ur,b_ccr)
 
-    !do ii = lbound(u,2), ubound(u,2)
-    !   if (prd) write(*,*) "flx(:,",ii,")", flx(:,ii)
-    !enddo
-    
-       
-    
-
     u_l = ur + half*dtodx*flx
     u_r(:,1:nx-1) = ul(:,2:nx) + half*dtodx*flx(:,2:nx) ; u_r(:,nx) = u_r(:,nx-1)
-     !do ii = lbound(u,2), ubound(u,2)
-     !   if (prd) write(*,*) "u_l(:,",ii,")", u_l(:,ii)
-     !   if (prd) write(*,*) "u_r(:,",ii,")", u_r(:,ii)
-     !enddo
-   
-    
+        
     ql = utoq(u_l,b_ccl)
     qr = utoq(u_r,b_ccr)
-    
-!    do ii = lbound(u, 2), ubound(u,2)
-!       if (prd) write(*,*) "ql(:,",ii,")", ql(:,ii)
-!       if (prd) write(*,*) "qr(:,",ii,")", qr(:,ii)
-!    end do
-    
+        
     do i = 1, flind%fluids
        fl    => flind%all_fluids(i)%fl
        p_flx => flx(fl%beg:fl%end,:)
@@ -431,18 +363,8 @@ contains
        call riemann_hlld(nx, p_flx, p_ql, p_qr, p_bcc, p_bccl, p_bccr, fl%gam)
     end do
 
-   
-    
     u(:,2:nx) = u(:,2:nx) + dtodx*(flx(:,1:nx-1) - flx(:,2:nx))
     u(:,1) = u(:,2) ; u(:,nx) = u(:,nx-1)
-
-    !do ii = lbound(u, 2), ubound(u,2)
-    !   if (prd) write(*,*) "flx(:,",ii,")", flx(:,ii)
-    !end do
-    !do ii = lbound(u, 2)+1, ubound(u,2)
-    !   if (prd) write(*,*) "flx_diff(:,",ii,")", dtodx*(flx(:,ii-1) - flx(:,ii))
-    !end do
-  
 
   end subroutine muscl
 
