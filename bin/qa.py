@@ -167,20 +167,20 @@ def parse_f90file(lines, fname, store):
         print "[parse_f90file] subs_names = ", subs_names
 
     mod = filter(module_body.match, lines)
-    if (len(mod) > 1):
+    if (len(mod) <= 0):
+        store.append(
+            give_warn("QA:  ") + "[%s] => module body not found!" % fname)
+    else:
+        if (len(mod) > 1):
+            endline = line_num(lines, mod[1])
+        else:
+            endline = len(lines)
         obj = (mod[0].strip().split(" ")[1],
                line_num(lines, mod[0]),
-               line_num(lines, mod[1]),
+               endline,
                mod[0].strip().split(" ")[0][0:3]
                )
         subs_array = np.append(subs_array, np.array([obj], dtype=typ1))
-    elif (len(mod) == 1):
-        obj = (mod[0].strip(
-        ).split(" ")[1], line_num(lines, mod[0]), len(lines), 'mod')
-        subs_array = np.append(subs_array, np.array([obj], dtype=typ1))
-    else:
-        store.append(
-            give_warn("QA:  ") + "[%s] => module body not found!" % fname)
     return subs_array
 
 
