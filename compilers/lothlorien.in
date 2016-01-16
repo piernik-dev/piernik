@@ -9,7 +9,7 @@
 #
 
 PROG     = piernik
-F90      = mpif90
+F90      = h5pfc -shlib
 F90FLAGS  = -fdefault-real-8 -ffree-form -std=gnu -fimplicit-none -ffree-line-length-none
 F90FLAGS += -O3 -funroll-loops -fstack-arrays
 F90FLAGS += -Wall -Wextra -W -fbacktrace -ggdb -pedantic
