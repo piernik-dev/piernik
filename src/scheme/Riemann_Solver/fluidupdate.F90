@@ -139,7 +139,7 @@ contains
        do i1 = cg%lhn(pdims(ddim, ORTHO1), LO), cg%lhn(pdims(ddim, ORTHO1), HI)
           pu => cg%w(wna%fi)%get_sweep(ddim,i1,i2)
           u1d(iarr_all_swp(ddim,:),:) = pu(:,:)
-          call muscl(u1d,b_cc1d,ddim, dt/cg%dl(ddim))
+          call muscl(u1d,b_cc1d, dt/cg%dl(ddim))
           pu(:,:) = u1d(iarr_all_swp(ddim,:),:)
 
        enddo
@@ -242,7 +242,7 @@ contains
 
 !-----------------------------------------------------------------------------------------------------------------------
 
-  subroutine rk2(u,b_cc,ddim, dtodx)
+  subroutine rk2(u,b_cc, dtodx)
 
     use constants,   only: half, xdim, zdim
     use fluidindex,  only: flind
@@ -253,7 +253,6 @@ contains
 
     real, dimension(:,:),           intent(inout)   :: u
     real, dimension(:,:),           intent(inout)   :: b_cc
-    integer(kind=4),                intent(in)      :: ddim
     real,                           intent(in)      :: dtodx
 
     class(component_fluid), pointer                 :: fl
@@ -279,7 +278,7 @@ contains
 
     mag_cc = b_cc
 
-    flx  = fluxes(ul,b_ccl,ddim) - fluxes(ur,b_ccr,ddim)
+    flx  = fluxes(ul,b_ccl) - fluxes(ur,b_ccr)
  
     ql = utoq(ul,b_ccl)
     qr = utoq(ur,b_ccr)
@@ -297,7 +296,7 @@ contains
        call riemann_hlld(nx, p_flx, p_ql, p_qr, mag_cc, p_bccl, p_bccr, fl%gam)
     end do
     
-    u  =  half*(u + u_predict + dtodx*(fluxes(p_ql,p_bccl,ddim)-fluxes(p_qr,p_bccr,ddim)))
+    u  =  half*(u + u_predict + dtodx*(fluxes(p_ql,p_bccl)-fluxes(p_qr,p_bccr)))
     
 
     
@@ -305,7 +304,7 @@ contains
 
   !---------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
-  subroutine euler(u,b_cc,ddim, dtodx)
+  subroutine euler(u,b_cc, dtodx)
 
     use constants,   only: half, xdim, zdim
     !use fluidindex,  only: flind
@@ -316,7 +315,6 @@ contains
 
     real, dimension(:,:),           intent(inout)   :: u
     real, dimension(:,:),           intent(inout)   :: b_cc
-    integer(kind=4),                intent(in)      :: ddim
     real,                           intent(in)      :: dtodx
 
     !class(component_fluid), pointer                 :: fl
@@ -341,7 +339,7 @@ contains
     ql = utoq(ul,b_ccl)
     qr = utoq(ur,b_ccr)
 
-    flx = fluxes(ul,b_ccl,ddim) - fluxes(ur,b_ccr,ddim)
+    flx = fluxes(ul,b_ccl) - fluxes(ur,b_ccr)
    
     u  =  u + dtodx*flx(:,:)
    
@@ -350,7 +348,7 @@ contains
 
   !---------------------------------------------------------------------------------------------------------------------------------------------------------
 
-  subroutine muscl(u,b_cc,ddim, dtodx)
+  subroutine muscl(u,b_cc, dtodx)
 
     use constants,   only: half, xdim, zdim
     use fluidindex,  only: flind
@@ -361,7 +359,6 @@ contains
 
     real, dimension(:,:),           intent(inout)   :: u
     real, dimension(:,:),           intent(inout)   :: b_cc
-    integer(kind=4),                intent(in)      :: ddim
     real,                           intent(in)      :: dtodx
 
     class(component_fluid), pointer                 :: fl
@@ -398,7 +395,7 @@ contains
     
     mag_cc = b_cc
 
-    flx  = fluxes(ul,b_ccl,ddim) - fluxes(ur,b_ccr,ddim)
+    flx  = fluxes(ul,b_ccl) - fluxes(ur,b_ccr)
 
     !do ii = lbound(u,2), ubound(u,2)
     !   if (prd) write(*,*) "flx(:,",ii,")", flx(:,ii)
