@@ -130,7 +130,7 @@ def give_warn(s):
 
 
 def give_err(s):
-    return b.FAIL + "Error: " + s + b.ENDC
+    return b.FAIL + "Error:   " + s + b.ENDC
 
 
 def parse_f90file(lines, fname, store):
@@ -182,6 +182,7 @@ def parse_f90file(lines, fname, store):
                )
         subs_array = np.append(subs_array, np.array([obj], dtype=typ1))
     return subs_array
+
 
 def qa_checks(files, options):
     print b.OKBLUE + \
@@ -250,45 +251,45 @@ def qa_checks(files, options):
                 qa_have_implicit(part, obj['name'], errors, f)
                 qa_implicit_saves(part, obj['name'], errors, f)
 
-    for warning in warns:
-        print warning
-    for error in errors:
-        print error
+    if (len(warns)):
+        print b.WARNING + "%i warning(s) detected. " % len(warns) + b.ENDC
+        for warning in warns:
+            print warning
 
     if (len(errors)):
         print b.FAIL + "%i error(s) detected! " % len(errors) + b.ENDC
+        for error in errors:
+            print error
     else:
         print b.OKGREEN + "Yay! No errors!!! " + b.ENDC
 
-    if (len(warns)):
-        print b.WARNING + "%i warning(s) detected. " % len(warns) + b.ENDC
-    else:
-        if (len(errors) == 0):
-            print b.OKGREEN + "No warnings detected. " + b.ENDC + \
-                "If everyone were like you, I'd be out of business!"
+    if (len(errors) == 0 and len(warns) == 0):
+        print b.OKGREEN + "No warnings detected. " + b.ENDC + \
+            "If everyone were like you, I'd be out of business!"
+
 
 def qa_have_priv_pub(lines, name, warns, fname):
     if(not filter(have_privpub.search, lines)):
         warns.append(give_warn("QA:  ") +
                      "module [%s:%s] lacks public/private keywords." %
-                     (fname, give_err(name)))
+                     (fname, name))
     else:
         if(filter(remove_warn.match, filter(have_priv.search, lines))):
             warns.append(give_warn("QA:  ") +
                          "module [%s:%s] have selective private." %
-                         (fname, give_err(name)))
+                         (fname, name))
         if(filter(remove_warn.match,
                   filter(have_global_public.search, lines))):
             warns.append(give_warn("QA:  ") +
                          "module [%s:%s] is completely public." %
-                         (fname, give_err(name)))
+                         (fname, name))
 
 
 def qa_crude_write(lines, rname, store, fname):
     warning = 0
     for f in filter(remove_warn.match, filter(crude_write.search, lines)):
         store.append(
-            give_warn("!! crude write  ") + wtf(lines, f, rname, fname))
+            give_warn("crude write  ") + wtf(lines, f, rname, fname))
 
 
 def qa_magic_integers(lines, rname, store, fname):
@@ -296,24 +297,24 @@ def qa_magic_integers(lines, rname, store, fname):
         hits = np.where(lines == f)[0]
         if(len(hits) > 1):
             for i in hits:
-                warn = give_warn("!! magic integer") + wtf(i, f, rname, fname)
+                warn = give_warn("magic integer") + wtf(i, f, rname, fname)
                 if(warn not in store):
                     store.append(warn)
         else:
-            warn = give_warn("!! magic integer") + wtf(lines, f, rname, fname)
+            warn = give_warn("magic integer") + wtf(lines, f, rname, fname)
             if(warn not in store):
                 store.append(warn)
 
 
 def qa_nonconforming_tabs(lines, rname, store, fname):
     for f in filter(tab_char.search, lines):
-        store.append(give_err("QA:  ") + "non conforming tab detected " +
+        store.append(give_err("non conforming tab detected ") +
                      wtf(lines, f, rname, fname))
 
 
 def qa_labels(lines, rname, store, fname):
     for f in filter(have_label.search, lines):
-        store.append(give_err("QA:  ") + "label detected              " +
+        store.append(give_err("label detected              ") +
                      wtf(lines, f, rname, fname))
 
 
@@ -321,19 +322,19 @@ def qa_depreciated_syntax(lines, rname, store, fname):
     #    print b.OKGREEN + "QA: " + b.ENDC + "Checking for depreciated syntax"
     for f in filter(not_function.match, filter(depr_syntax_1.search, lines)):
         store.append(
-            give_warn("!! lacking ::   ") + wtf(lines, f, rname, fname))
+            give_warn("lacking ::   ") + wtf(lines, f, rname, fname))
     for f in filter(remove_warn.match, filter(depr_syntax_2.search, lines)):
         store.append(
-            give_warn("!! greedy use   ") + wtf(lines, f, rname, fname))
+            give_warn("greedy use   ") + wtf(lines, f, rname, fname))
     for f in filter(depr_syntax_3.search, lines):
         store.append(
-            give_warn("!! wrong syntax ") + wtf(lines, f, rname, fname))
+            give_warn("wrong syntax ") + wtf(lines, f, rname, fname))
 
 
 def qa_have_implicit(lines, name, store, fname):
     if(not filter(have_implicit.search, lines)):
-        store.append(give_err(
-            "QA:  ") + "missing 'implicit none'      [%s:%s]" % (fname, name))
+        store.append(give_err("missing 'implicit none'      ") +
+                     "[%s:%s]" % (fname, name))
 
 
 def remove_amp(lines, strip):
@@ -382,8 +383,8 @@ def qa_implicit_saves(lines, name, store, fname):
     impl = filter(not_param_nor_save.match, filter(implicit_save.search,
                   remove_amp(filter(remove_warn.match, lines), True)))
     if(len(impl)):
-        store.append(give_err(
-            "QA:  ") + "implicit saves detected in   [%s:%s]" % (fname, name))
+        store.append(give_err("implicit saves detected in   ") +
+                     "[%s:%s]" % (fname, name))
     for line in impl:
         store.append(line.strip())
 
