@@ -325,9 +325,6 @@ contains
     real, dimension(size(u,1),size(u,2)), target    :: flx, ql, qr, du, ul, ur !, u_l, u_r
     real, dimension(:,:), pointer                   :: p_flx, p_bcc, p_bccl, p_bccr, p_ql, p_qr
     integer                                         :: nx, i
-    logical :: prd
-
-    prd = .true.
 
     nx  = size(u,2)
 
