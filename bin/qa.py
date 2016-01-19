@@ -126,11 +126,11 @@ def line_num(lines, line):
 
 
 def give_warn(s):
-    return b.WARNING + s + b.ENDC
+    return b.WARNING + "Warning: " + s + b.ENDC
 
 
 def give_err(s):
-    return b.FAIL + s + b.ENDC
+    return b.FAIL + "Error: " + s + b.ENDC
 
 
 def parse_f90file(lines, fname, store):
@@ -278,25 +278,16 @@ def qa_checks(files, options):
         print error
 
     if (len(errors)):
-        print give_err("%i error(s) detected! " % len(
-            errors)) + "I will not let you commit unless you force me!!!"
-        if options.force:
-            print "Damn! You are determined to make low quality commit :-("
-        else:
-            exit()
+        print b.FAIL + "%i error(s) detected! " % len(errors) + b.ENDC
     else:
         print b.OKGREEN + "Yay! No errors!!! " + b.ENDC
 
     if (len(warns)):
-        s = give_warn("%i warnings detected. " % len(warns)) + \
-            "Do you wish to proceed? (y/N) "
-        if(raw_input(s) != 'y'):
-            print "See you later!"
-            exit()
+        print b.WARNING + "%i warning(s) detected. " % len(warns) + b.ENDC
     else:
-        print b.OKGREEN + "No warnings detected. " + b.ENDC + \
-            "If everyone were like you, I'd be out of business!"
-
+        if (len(errors) == 0):
+            print b.OKGREEN + "No warnings detected. " + b.ENDC + \
+                "If everyone were like you, I'd be out of business!"
 
 def qa_have_priv_pub(lines, name, warns, fname):
     if(not filter(have_privpub.search, lines)):
@@ -425,9 +416,6 @@ if __name__ == "__main__":
     parser.add_option("-v", "--verbose",
                       action="store_true", dest="debug", default=False,
                       help="make lots of noise [default]")
-    parser.add_option("-f", "--force",
-                      action="store_true", dest="force",
-                      help="commit despite errors (It will be logged)")
     (options, args) = parser.parse_args()
 
     debug = options.debug
