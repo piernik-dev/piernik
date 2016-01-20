@@ -32,7 +32,7 @@ module initproblem
 !
 ! Problem description
 !
-! ........................................ 
+! ........................................
 ! .                 .                    .
 ! .                 .                    .
 ! .     *_mp        .         *_pp       .
@@ -139,12 +139,12 @@ contains
          rbuff(14) = p_pm
          rbuff(15) = velx_pm
          rbuff(16) = vely_pm
-         
+
       endif
 
       call piernik_MPI_Bcast(rbuff)
 
-      if (slave) then 
+      if (slave) then
 
          den_pp  = rbuff(1)
          p_pp    = rbuff(2)
@@ -164,9 +164,9 @@ contains
          vely_pm = rbuff(16)
 
       endif
-      
 
-  
+
+
   end subroutine read_problem_par
 
 !------------------------------------------------------------------------------------------------------
@@ -179,7 +179,7 @@ contains
     use grid_cont,  only: grid_container
 
     implicit none
-    
+
     type(cg_list_element), pointer :: cgl
     type(grid_container),  pointer :: cg
 
@@ -192,7 +192,7 @@ contains
        do k = cg%ks, cg%ke
           do j = cg%js, cg%je
              do i = cg%is, cg%ie
-                
+
                 if ((cg%x(i) .gt. 0.0) .and. (cg%y(j) .gt. 0.0)) then
                    cg%u(flind%neu%idn, i, j, k) = den_pp
                    cg%u(flind%neu%imx, i, j, k) = den_pp*velx_pp
@@ -214,7 +214,7 @@ contains
                    cg%u(flind%neu%imy, i, j, k) = den_pm*vely_pm
                    cg%u(flind%neu%ien, i, j, k) = p_pm / flind%neu%gam_1 + 0.5 / cg%u(flind%neu%idn, i, j, k) * sum(cg%u([flind%neu%imx,flind%neu%imy], i, j, k)**2)
                 endif
-             
+
              enddo
           enddo
        enddo
