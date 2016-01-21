@@ -1,6 +1,6 @@
 module cresp_crspectrum
 ! pulled by COSM_RAY_ELECTRONS
-!  use cresp_types, only: crel, x !uncomment crel for testing only
+
  use cresp_variables !,  only: ncre, u_b, u_d, c2nd, c3rd, f_init, q_init
  use initcosmicrays, only: ncre, p_min_fix, p_max_fix, f_init, q_init, p_lo_init, p_up_init, &
                            crel, cfl_cre
@@ -397,7 +397,11 @@ subroutine cresp_update_bin_index(dt, p_lo, p_up, p_lo_next, p_up_next)
        
       all_edges = (/ (i,i=0,ncre) /)
       all_bins = (/ (i,i=1,ncre) /)
-
+ 
+      f = zero
+      q = zero
+      p = zero
+      
       q = q_init
 
       w  = (log10(p_max_fix/p_min_fix))/dble(ncre-2)
@@ -427,7 +431,8 @@ subroutine cresp_update_bin_index(dt, p_lo, p_up, p_lo_next, p_up_next)
       enddo
       
       f = f_init * (p/p_min_fix)**(-q_init)
-      
+!       f=f_init * (p/p_lo) ** (-q_init)
+!       print *, 'f  = ', f
       i_lo = 0
       i_up = ncre
       
@@ -929,6 +934,9 @@ subroutine ne_to_q(n, e, q)
       dts_new = huge(one) + dt_calc ! whole dts_new array
       where (abs(b_losses(p(1:ncre))) .ne. zero)
         dts_new =  (p(1:ncre)-p(0:ncre-1))/abs(b_losses(p(1:ncre)))
+        where ((p(1:ncre)-p(0:ncre-1)).eq.zero)   !!!
+          dts_new = huge(one)                     !!!
+        end where                                 !!!
       end where
       
       dts_min = cfl_cre*minval(dts_new)   ! min of array

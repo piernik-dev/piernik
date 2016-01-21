@@ -519,7 +519,7 @@ contains
      iarr_cre_pu = ind_p_up
 !      print *,'iarr_cre_n = ', iarr_cre_n
 !      print *,'iarr_cre_e = ', iarr_cre_e
-!      print *,'iarr_cre_pl, pu = ', iarr_cre_pl, iarr_cre_pu
+     print *,'iarr_cre_pl, pu = ', iarr_cre_pl, iarr_cre_pu, flind%cre%plo, flind%cre%pup
 !      print *,'flind%cre%beg & end  = ', flind%cre%beg, flind%cre%end
 !      print *,'ind_p_lo, ind_p_up = ', ind_p_lo, ind_p_up
 #endif /* COSM_RAY_ELECTRONS */      
@@ -537,6 +537,10 @@ contains
        allocate(crel%p(0:ncre))
        allocate(crel%f(0:ncre))
        allocate(crel%q(1:ncre))
+       
+       crel%p = 0.0
+       crel%f = 0.0
+       crel%q = 0.0
        
    end subroutine init_cresp_type
    

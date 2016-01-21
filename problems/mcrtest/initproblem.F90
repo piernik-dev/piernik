@@ -146,7 +146,7 @@ contains
 
       use cg_leaves,      only: leaves
       use cg_list,        only: cg_list_element
-      use constants,      only: xdim, ydim, zdim, LO, HI, pMAX
+      use constants,      only: xdim, ydim, zdim, LO, HI, pMAX, zero
       use dataio_pub,     only: msg, warn, printinfo, die
       use domain,         only: dom, is_multicg
       use fluidindex,     only: flind
@@ -284,14 +284,18 @@ contains
          call printinfo(msg)
             
       if (ncre > 0) then
+!          cg%u(iarr_cre,:,:,:)       = zero
+!          print *, 'cgu = ',  cg%u(iarr_cre_e,34,34,0)
+!          print *, 'watch *', LOC(cg%u(iarr_cre(3),34,34,0))
+!          ASSOCIATED(cg%u(iarr_cre(3),34,34,0))
          cg%u(iarr_cre_pl, :, :, :) = p_lo_init ! ? iarr_cre(2*ncre+1)? < initial value of low cut momentum assigned to all cg%u cells 
          cg%u(iarr_cre_pu, :, :, :) = p_up_init ! < initial value of up cut momentum assigned to all cg%u cells
-         cg%u(iarr_cre_n, :, :, :) = 1.0 !!! Diagnostics
-         cg%u(iarr_cre_e, :, :, :) = 5.0 !!! Diagnostics 
+!          cg%u(iarr_cre_n, :, :, :) = 1.0 !!! Diagnostics
+!          cg%u(iarr_cre_e, :, :, :) = 5.0 !!! Diagnostics 
          
       endif
            
-!         print *, 'in domain cell(2,2,0) cre vars = ',cg%u(ind_n_beg:ind_p_up, -2, -2, 0)  ! just some check, to be removed
+!       print *, 'e:', iarr_cre_e, ', n:', iarr_cre_n
       call grid_cresp_initialization
 
 #endif /* COSM_RAY_ELECTRONS */      
