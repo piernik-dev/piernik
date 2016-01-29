@@ -1,4 +1,4 @@
-#/usr/bin/env python
+#!/usr/bin/env python
 
 import sys
 import h5py as h5
@@ -25,9 +25,9 @@ for f in sys.argv[1:]:
 
     keys = h5f.attrs.keys()
     for attr in add_attrs:
-        if not attr in keys:
+        if attr not in keys:
             h5f.attrs[attr] = h5f.attrs['time']
-    if not 'nimg' in keys:
+    if 'nimg' not in keys:
         h5f.attrs['nimg'] = [0]
     h5f.attrs['piernik'] = [1.18]
     h5f.close()

@@ -55,8 +55,8 @@ def Maclaurin_test(file):
     z0 = h5f.root._v_attrs.z0[0]
 
     try:
-        soln    = h5f.root.gpot[:,:,:]
-        phi0_3D = h5f.root.apot[:,:,:]
+        soln = h5f.root.gpot[:, :, :]
+        phi0_3D = h5f.root.apot[:, :, :]
     except:
         print "Cannot find apot or gpot arrays"
         return
@@ -124,15 +124,17 @@ def Maclaurin_test(file):
               'g.', new_r[1:-1], phi_0[1:-1] / GM, 'b')
     axhi.xaxis.set_major_formatter(NullFormatter())
     axhi.set_ylabel('Gravitational potential / GM')
-    axhi.legend(
-        ('Numerical solution - $\\varphi$', 'Analytical solution - $\\varphi_0$'), loc='lower right')
+    axhi.legend(('Numerical solution - $\\varphi$',
+                 'Analytical solution - $\\varphi_0$'), loc='lower right')
 
-    # Typically, the lower right position is best for the legend because at lmax=16 the multipole solver underestimates the image mass
-    # For lmax roughly 192 the image mass almost matches the mass of the sphere.
+    # Typically, the lower right position is best for the legend because at
+    # lmax=16 the multipole solver underestimates the image mass.
+    # For lmax near 192 the image mass almost matches the mass of the sphere.
     # For lmax much greates than 192 it may help a bit to set loc to 'upper
     # right'
-    axlo.plot(new_r[1:-1], (phi_0[1:-1] - mean[1:-1]) / GM, 'g', new_r[1:-1], (
-        phi_0[1:-1] - mean[1:-1] - std[1:-1]) / GM, 'r:', new_r[1:-1], (phi_0[1:-1] - mean[1:-1] + std[1:-1]) / GM, 'r:')
+    axlo.plot(new_r[1:-1], (phi_0[1:-1] - mean[1:-1]) / GM, 'g', new_r[1:-1],
+              (phi_0[1:-1] - mean[1:-1] - std[1:-1]) / GM, 'r:', new_r[1:-1],
+              (phi_0[1:-1] - mean[1:-1] + std[1:-1]) / GM, 'r:')
     axlo.legend(('avg. difference', '+/- deviation'), loc='lower right')
     axlo.set_xlabel('Radius')
     axlo.set_ylabel('($\\varphi_0 - \\varphi$) / GM')

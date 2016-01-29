@@ -5,7 +5,7 @@ import re
 import numpy
 
 have_use = re.compile("^\s{1,12}use\s")
-remove_warn        = re.compile('''(?!.*QA_WARN .+)''', re.VERBOSE)
+remove_warn = re.compile('''(?!.*QA_WARN .+)''', re.VERBOSE)
 unwanted = re.compile("(\s|&|\n)", re.VERBOSE)
 
 

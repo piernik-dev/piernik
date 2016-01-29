@@ -12,12 +12,12 @@ def read_data_hdf5(name):
     h5f = h5.openFile(name)
     attrs = (h5f.root._v_attrs.xmin[
              0], h5f.root._v_attrs.xmax[0], h5f.root._v_attrs.time[0])
-    denn = h5f.root.denn[0,:,:]
-    vlxn = h5f.root.vlxn[0,:,:]
-    vlyn = h5f.root.vlyn[0,:,:]
-    dend = h5f.root.dend[0,:,:]
-    vlxd = h5f.root.vlxd[0,:,:]
-    vlyd = h5f.root.vlyd[0,:,:]
+    denn = h5f.root.denn[0, :, :]
+    vlxn = h5f.root.vlxn[0, :, :]
+    vlyn = h5f.root.vlyn[0, :, :]
+    dend = h5f.root.dend[0, :, :]
+    vlxd = h5f.root.vlxd[0, :, :]
+    vlyd = h5f.root.vlyd[0, :, :]
     h5f.close()
     return denn, dend, vlxn, vlxd, vlyn, vlyd, attrs
 

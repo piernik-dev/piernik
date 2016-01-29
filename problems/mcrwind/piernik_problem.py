@@ -35,13 +35,10 @@ def plot_diff(pf1, pf2, data1, data2, field):
     img2 = data2.to_frb(wd[1], (n_d[2] * 10, n_d[1] * 10),
                         center=np.array([0, 0, 0]), height=wd[2])
     diff = (img2[field] - img1[field])
-    clbl = \
-        r"$\rm{%s}^{\rm{new}} - \rm{%s}^{\rm{old}}$" % (field, field)
+    clbl = r"$\rm{%s}^{\rm{new}} - \rm{%s}^{\rm{old}}$" % (field, field)
     _myplot(diff, 'diff_bare.png', ext, clbl)
 
-    clbl = \
-        r"$\frac{\rm{%s}^{\rm{new}} - \rm{%s}^{\rm{old}}}{\rm{%s}^{\rm{old}}}$" % (
-            field, field, field)
+    clbl = r"$\frac{\rm{%s}^{\rm{new}} - \rm{%s}^{\rm{old}}}{\rm{%s}^{\rm{old}}}$" % (field, field, field)
     _myplot(diff / (img1[field] + THRESHOLD), 'diff.png', ext, clbl)
 
 

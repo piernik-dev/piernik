@@ -1,4 +1,4 @@
-#/usr/bin/env python
+#!/usr/bin/env python
 
 import sys
 import h5py as h5
@@ -17,7 +17,7 @@ def grow_dsets(h5f, datasets):
         n, nx, ny, nz = fluid.shape
         del h5f[dset]
         h5f[dset] = np.resize(fluid, (n + 1, nx, ny, nz)).T
-        h5f[dset][:,:,:, -1] = 0.0
+        h5f[dset][:, :, :, -1] = 0.0
 
 for f in sys.argv[1:]:
     h5f = h5.File(f)

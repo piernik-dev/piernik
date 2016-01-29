@@ -25,14 +25,15 @@ def get_rev(rev):
 def compare_with_previous(tdir, fname, pref):
     gold_file = os.path.join(tdir, 'previous.h5')
     if os.path.isfile(gold_file):
-        if sp.call([os.path.join(test_dir, 'piernik_problem.py'), gold_file, fname]) is not 0:
+        if sp.call([os.path.join(test_dir, 'piernik_problem.py'),
+                    gold_file, fname]) is not 0:
             shutil.move('diff.png', os.path.join(test_dir, "diff_%s" % pref))
             shutil.move('diff_bare.png',
                         os.path.join(test_dir, "bare_%s" % pref))
     shutil.move(fname, gold_file)
     return
 
-#test_dir = tempfile.mkdtemp()
+# test_dir = tempfile.mkdtemp()
 test_dir = '/dev/shm/dupa'
 os.mkdir(test_dir)
 

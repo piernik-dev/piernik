@@ -10,13 +10,13 @@ def read_hdf5(options, filename):
     dsets = [node.name for node in h5f.walkNodes("/", "Array")]
     attrs = h5f.root._v_attrs
 
-    if not options.dset in dsets:
+    if options.dset not in dsets:
         print '\033[91m' + "unknown dataset: " + '\033[0m' + options.dset
         print 'Possible choices are: '
         print dsets
         exit(-1)
 
-    arr = h5f.getNode("/", name=options.dset)[:,:,:]
+    arr = h5f.getNode("/", name=options.dset)[:, :, :]
 
     h5f.close()
     return arr, attrs
@@ -31,31 +31,31 @@ def get_frame(filename, options):
     if options.plane == "xy":
         p = 0
         extent = [attrs.xmin[0], attrs.xmax[0], attrs.ymin[0], attrs.ymax[0]]
-        s = s_[i1,:,:]
+        s = s_[i1, :, :]
     elif options.plane == "xz":
         p = 1
         extent = [attrs.xmin[0], attrs.xmax[0], attrs.zmin[0], attrs.zmax[0]]
-        s = s_[:, i1,:]
+        s = s_[:, i1, :]
     elif options.plane == "yz":
         p = 2
         extent = [attrs.ymin[0], attrs.ymax[0], attrs.zmin[0], attrs.zmax[0]]
-        s = s_[:,:, i1]
+        s = s_[:, :, i1]
     elif options.plane == "x":
         p = 0
         extent = [attrs.xmin[0], attrs.xmax[0]]
-        s = s_[i2, i1,:]
+        s = s_[i2, i1, :]
     elif options.plane == "y":
         p = 1
         extent = [attrs.ymin[0], attrs.ymax[0]]
-        s = s_[i1,:, i2]
+        s = s_[i1, :, i2]
     elif options.plane == "z":
         p = 2
         extent = [attrs.zmin[0], attrs.zmax[0]]
         s = s_[:, i2, i1]
 
     if i1 >= shape[p] or i1 < 0:
-        print(
-            "You gotta be kiddin' me... %d is _not_ in [0,%d]" % (i1, shape[p] - 1))
+        print("You gotta be kiddin' me... %d is _not_ in [0,%d]" %
+              (i1, shape[p] - 1))
 
     arr = tab[s]
     if options.dolog:
@@ -73,26 +73,26 @@ except TypeError:
     parser = OptionParser(usage=usage)
 
 parser.add_option("-d", "--dataset", dest="dset", default="",
-      help="datasets, use comma-separated list")
+                  help="datasets, use comma-separated list")
 parser.add_option("-p", "--plane", dest="plane", default="xy",
-      help="plane, possible values {xy,yz,xz}")
+                  help="plane, possible values {xy,yz,xz}")
 parser.add_option("-c", "--cell", "--i1", dest="i1", default=0, type="int",
-      help="")
+                  help="")
 parser.add_option("--vmin", dest="vmin", default=0.0, type="float",
-      help="")
+                  help="")
 parser.add_option("--vmax", dest="vmax", default=0.0, type="float",
-      help="")
+                  help="")
 parser.add_option("--wp", "--width", dest="width", default=8, type="int",
-      help="picture width")
+                  help="picture width")
 parser.add_option("--hp", "--height", dest="height", default=6, type="int",
-      help="picture height")
+                  help="picture height")
 parser.add_option("--i2", dest="i2", default=0, type="int",
-      help="")
+                  help="")
 parser.add_option("--log", dest="dolog", default=False, action="store_true",
-      help="use logarithmic scal")
+                  help="use logarithmic scal")
 (options, args) = parser.parse_args(sys.argv[1:])
 
-if not options.plane in ["xy", "yz", "xz", "x", "y", "z"]:
+if options.plane not in ["xy", "yz", "xz", "x", "y", "z"]:
     print '\033[91m' + "wrong plane: " + '\033[0m' + options.plane
     exit(-1)
 
@@ -120,8 +120,8 @@ if len(args) > 1:
         if len(extent) == 2:
             plt = plot(linspace(extent[0], extent[1], num=len(arr)), arr)
         else:
-            plt = imshow(
-                arr, extent=extent, interpolation='nearest', vmin=vmin, vmax=vmax)
+            plt = imshow(arr, extent=extent, interpolation='nearest',
+                         vmin=vmin, vmax=vmax)
             col.update_bruteforce(plt)
         title(title_str)
         draw()

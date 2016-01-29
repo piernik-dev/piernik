@@ -27,7 +27,8 @@ class MakeTest(object):
         for file in os.listdir(self.runpath):
             if file.find('png') != -1:
                 server.wiki.putAttachment(
-                    self.test + '/' + file, xmlrpclib.Binary(open(self.runpath + '/' + file).read()))
+                    self.test + '/' + file,
+                    xmlrpclib.Binary(open(self.runpath + '/' + file).read()))
 
     def testJeans(self):
         sp.call(["gnuplot", "verify.gpl"])

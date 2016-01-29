@@ -1,22 +1,24 @@
 #!/usr/bin/env python
 
-'''If you are in runs/problem directory, you got a bunch of .h5 files and you want to get values along just one line, you may do:
+'''If you are in runs/problem directory, you got a bunch of .h5 files
+and you want to get values along just one line, you may do:
 
 plot "< ../../python/yt_ray.py file.h5 0 0 0 0 0 0"
 
 it will print you some fields and domain extent, like this:
 
-yt : [WARNING  ] 2016-01-20 22:22:07,499 'field_units' was overridden by 'dataset_units/density'
-yt : [WARNING  ] 2016-01-20 22:22:07,504 'field_units' was overridden by 'dataset_units/pressure'
-yt : [WARNING  ] 2016-01-20 22:22:07,506 'field_units' was overridden by 'dataset_units/specific_energy'
-yt : [WARNING  ] 2016-01-20 22:22:07,509 'field_units' was overridden by 'dataset_units/velocity_x'
-yt : [WARNING  ] 2016-01-20 22:22:07,509 'field_units' was overridden by 'dataset_units/velocity_y'
-yt : [INFO     ] 2016-01-20 22:22:07,528 Parameters: current_time              = [ 1.]
-yt : [INFO     ] 2016-01-20 22:22:07,529 Parameters: domain_dimensions         = [1024 1024    1]
-yt : [INFO     ] 2016-01-20 22:22:07,529 Parameters: domain_left_edge          = [-1. -1.  0.]
-yt : [INFO     ] 2016-01-20 22:22:07,530 Parameters: domain_right_edge         = [ 1.  1.  1.]
+yt : [WARNING] 'field_units' was overridden by 'dataset_units/density'
+yt : [WARNING] 'field_units' was overridden by 'dataset_units/pressure'
+yt : [WARNING] 'field_units' was overridden by 'dataset_units/specific_energy'
+yt : [WARNING] 'field_units' was overridden by 'dataset_units/velocity_x'
+yt : [WARNING] 'field_units' was overridden by 'dataset_units/velocity_y'
+yt : [INFO   ] Parameters: current_time              = [ 1.]
+yt : [INFO   ] Parameters: domain_dimensions         = [1024 1024    1]
+yt : [INFO   ] Parameters: domain_left_edge          = [-1. -1.  0.]
+yt : [INFO   ] Parameters: domain_right_edge         = [ 1.  1.  1.]
 
-In columns 1-3, you will get x, y and z coordinates. further columns will contain "density", "pressure" and so on, in the order as above.
+In columns 1-3, you will get x, y and z coordinates. further columns will
+contain "density", "pressure" and so on, in the order as above.
 Now plot something:
 
 plot "< ../../python/yt_ray.py file.h5 -1 -.5 0 -1 -.5 0" u 1:4
@@ -57,8 +59,8 @@ if __name__ == "__main__":
             sys.argv[0] + " hdf_file x_start y_start z_start x_end y_end z_end"
     else:
         ndim = 3
-        print_ray(
-            sys.argv[1], (sys.argv[2:2 + ndim]), (sys.argv[2 + ndim:2 + 2 * ndim]))
+        print_ray(sys.argv[1],
+                  (sys.argv[2:2 + ndim]), (sys.argv[2 + ndim:2 + 2 * ndim]))
         if (len(sys.argv) > 8):
             print >> sys.stderr, "Ignored arguments: ", sys.argv[
                 8:len(sys.argv)]

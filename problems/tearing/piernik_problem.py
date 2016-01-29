@@ -7,12 +7,12 @@ FIELDS = ['curz']
 
 def _CurrentZ(field, data):
     new_field = np.zeros(data["magy"].shape, dtype='float64')
-    new_field[1:-1, 1:-1, :] = (data["magy"][1:-1, 1:-1,:] -
-                              data["magy"][0:-2, 1:-1, :]) \
-                              / data["dx"].flat[0]
-    new_field[1:-1, 1:-1, :] -= (data["magx"][1:-1, 1:-1,:] -
-                               data["magx"][1:-1, 0:-2, :]) \
-                               / data["dy"].flat[0]
+    new_field[1:-1, 1:-1, :] = (data["magy"][1:-1, 1:-1, :] -
+                                data["magy"][0:-2, 1:-1, :]) \
+        / data["dx"].flat[0]
+    new_field[1:-1, 1:-1, :] -= (data["magx"][1:-1, 1:-1, :] -
+                                 data["magx"][1:-1, 0:-2, :]) \
+        / data["dy"].flat[0]
     return new_field
 
 

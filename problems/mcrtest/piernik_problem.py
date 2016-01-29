@@ -26,8 +26,8 @@ def plot_diff(pf1, pf2, data1, data2, field):
     F = figure(1, (8, 6))
     imshow(diff, vmin=-v, vmax=v, extent=ext, cmap='RdBu')
     bar = colorbar()
-    bar.ax.set_xlabel(
-        r"$\frac{\rm{%s}^{\rm{new}} - \rm{%s}^{\rm{old}}}{\rm{%s}^{\rm{old}}}$" % (field, field, field))
+    bar.ax.set_xlabel(r"$\frac{\rm{%s}^{\rm{new}} - \rm{%s}^{\rm{old}}}{\rm{%s}^{\rm{old}}}$"
+                      % (field, field, field))
     draw()
     xlabel('x [pc]')
     ylabel('y [pc]')
