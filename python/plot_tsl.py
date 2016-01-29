@@ -23,7 +23,7 @@ for fn in args.files:
     tab = [line.strip() for line in f.readlines()]
     f.close()
     header = np.array(tab[0][1:].split())
-    if args.f == None:
+    if args.f is None:
         print ("There are following fields available in %s" % fn)
         print header
     else:

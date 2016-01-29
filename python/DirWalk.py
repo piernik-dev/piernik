@@ -14,7 +14,7 @@ class DirectoryWalker:
         self.index = 0
 
     def __getitem__(self, index):
-        while 1:
+        while True:
             try:
                 file = self.files[self.index]
                 self.index = self.index + 1
