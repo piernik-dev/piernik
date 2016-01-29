@@ -71,11 +71,6 @@ allsetup:
 		fi; \
 	done
 
-check:
-	TMPDIR=$$(mktemp -d /dev/shm/test_XXXXXX);\
-	bitten-slave -d . --build-dir $$TMPDIR -k bitten/trunk.mcrtest.xml ;\
-	rm -rf $$TMPDIR
-
 ifndef P
 P = "mcrwind"
 endif
