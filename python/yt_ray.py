@@ -29,6 +29,7 @@ except:
     print "you must make yt available somehow"
     exit(-1)
 
+
 def print_ray(fname, startpoint, endpoint):
 
     ds = yt.load(fname)
@@ -52,9 +53,12 @@ def print_ray(fname, startpoint, endpoint):
 if __name__ == "__main__":
     import sys
     if (len(sys.argv) < 8):
-        print >> sys.stderr, "Error: too few arguments.\nUsage: " + sys.argv[0] + " hdf_file x_start y_start z_start x_end y_end z_end"
+        print >> sys.stderr, "Error: too few arguments.\nUsage: " + \
+            sys.argv[0] + " hdf_file x_start y_start z_start x_end y_end z_end"
     else:
         ndim = 3
-        print_ray(sys.argv[1], (sys.argv[2:2+ndim]), (sys.argv[2+ndim:2+2*ndim]))
+        print_ray(
+            sys.argv[1], (sys.argv[2:2 + ndim]), (sys.argv[2 + ndim:2 + 2 * ndim]))
         if (len(sys.argv) > 8):
-            print >> sys.stderr, "Ignored arguments: ", sys.argv[8:len(sys.argv)]
+            print >> sys.stderr, "Ignored arguments: ", sys.argv[
+                8:len(sys.argv)]

@@ -14,7 +14,8 @@ import tempfile
 import hashlib
 import argparse
 import time
-import base64, getpass
+import base64
+import getpass
 from DirWalk import DirectoryWalker
 try:
     import requests
@@ -67,9 +68,9 @@ else:
     f = open('.jenkins', 'w')
     print("What is your username @jenkins: ")
     USER = sys.stdin.readline().strip()
-    f.write(base64.b64encode(USER)+'\n')
+    f.write(base64.b64encode(USER) + '\n')
     PASSWORD = getpass.getpass("What is your password: ").strip()
-    f.write(base64.b64encode(PASSWORD)+'\n')
+    f.write(base64.b64encode(PASSWORD) + '\n')
     f.close()
 
 svn = pysvn.Client()

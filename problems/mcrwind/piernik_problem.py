@@ -10,6 +10,7 @@ from pylab import *
 THRESHOLD = 1e-9
 FIELD = "cr1"
 
+
 def _myplot(diff, fname, ext, clbl):
     v = abs(diff).max()
     figure(1, (6, 8))
@@ -21,6 +22,7 @@ def _myplot(diff, fname, ext, clbl):
     ylabel('z [pc]')
     savefig(fname)
     clf()
+
 
 def plot_diff(pf1, pf2, data1, data2, field):
     wd = pf1.domain_width
@@ -38,7 +40,8 @@ def plot_diff(pf1, pf2, data1, data2, field):
     _myplot(diff, 'diff_bare.png', ext, clbl)
 
     clbl = \
-        r"$\frac{\rm{%s}^{\rm{new}} - \rm{%s}^{\rm{old}}}{\rm{%s}^{\rm{old}}}$" % (field, field, field)
+        r"$\frac{\rm{%s}^{\rm{new}} - \rm{%s}^{\rm{old}}}{\rm{%s}^{\rm{old}}}$" % (
+            field, field, field)
     _myplot(diff / (img1[field] + THRESHOLD), 'diff.png', ext, clbl)
 
 
@@ -62,7 +65,7 @@ for field in PF1.h.field_list:
         plot_diff(PF1, PF2, DATA1, DATA2, field)
         sys.exit(-1)
 
-figure(1, (8,6))
+figure(1, (8, 6))
 draw()
 savefig('diff.png')
 savefig('diff_bare.png')

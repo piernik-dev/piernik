@@ -9,13 +9,14 @@ import shutil
 from drive_via_spawn import parse_mpisignals
 
 
-PIERNIK_REPO=r"svn+ssh://ladon/piernik/piernik/trunk"
-REV_START=7700
-REV_END=7733
-PROBLEM="mcrwind"
-SETUP_CMD="%s --param problem.par.build --compiler gnu47 --debug" % PROBLEM
-SETUP_CMD_OLD="%s --param problem.par.build --compiler gnudbg" % PROBLEM
-HDF5_FILE="crwind_final_tst_0001.h5"
+PIERNIK_REPO = r"svn+ssh://ladon/piernik/piernik/trunk"
+REV_START = 7700
+REV_END = 7733
+PROBLEM = "mcrwind"
+SETUP_CMD = "%s --param problem.par.build --compiler gnu47 --debug" % PROBLEM
+SETUP_CMD_OLD = "%s --param problem.par.build --compiler gnudbg" % PROBLEM
+HDF5_FILE = "crwind_final_tst_0001.h5"
+
 
 def get_rev(rev):
     return pysvn.Revision(pysvn.opt_revision_kind.number, rev)
