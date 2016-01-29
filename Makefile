@@ -60,14 +60,14 @@ clean:
 	@CL=1 $(MAKE) -k all
 
 allsetup:
-	for i in {,../}problems/* ; do \
+	for i in problems/* ; do \
 		if [ ! -e $$i/OBSOLETE ] ; then \
 			if [ $$( dirname $$( dirname $$i ) ) == "." ] ; then \
 				nm=$$( basename $$i ); \
 			else \
 				nm="../"$$i; \
 			fi; \
-			./setup $$nm -o "A_"$$( basename $$i ) --nocompile && sed -i 's/ --nocompile//' "obj_A_"$$( basename $$i )"/"{.setup.call,Makefile,env.dat,version.F90} & \
+			./setup $$nm -o "A_"$$( basename $$i ) --nocompile && sed -i 's/ --nocompile//' "obj_A_"$$( basename $$i )"/"{.setup.call,Makefile,env.dat,version.F90}; \
 		fi; \
 	done
 
