@@ -239,7 +239,7 @@ contains
    subroutine print_vars(this, to_stdout)
 
       use constants,  only: INVALID
-      use dataio_pub, only: printinfo, warn, msg
+      use dataio_pub, only: printinfo, msg
       use mpisetup,   only: slave
 
       implicit none
