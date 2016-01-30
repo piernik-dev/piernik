@@ -47,21 +47,21 @@ module refinement
    logical,         protected :: prefer_n_bruteforce !< if .false. then try DFC algorithms for neighbor searches
 
    ! some refinement primitives
-   integer, parameter :: nshapes = 10
+   integer, parameter :: nshapes = 10 !< number of shapes of each kind allowed to be predefined by user in problem.par
 
    !> \brief Refinement point
    type :: ref_point
-      integer(kind=4)        :: level  !> desired level of refinement
-      real, dimension(ndims) :: coords !> coordinates, where to refine
+      integer(kind=4)        :: level  !< desired level of refinement
+      real, dimension(ndims) :: coords !< coordinates, where to refine
    end type ref_point
-   type(ref_point), dimension(nshapes), protected :: refine_points
+   type(ref_point), dimension(nshapes), protected :: refine_points !< points of refinement to be used from problem.par
 
    !> \brief Refinement box
    type :: ref_box
-      integer(kind=4)               :: level  !> desired level of refinement
-      real, dimension(ndims, LO:HI) :: coords !> coordinates, where to refine
+      integer(kind=4)               :: level  !< desired level of refinement
+      real, dimension(ndims, LO:HI) :: coords !< coordinates, where to refine
    end type ref_box
-   type(ref_box), dimension(nshapes), protected :: refine_boxes
+   type(ref_box), dimension(nshapes), protected :: refine_boxes !< areas (boxes) of refinement to be used from problem.par
 
    !> \brief Parameters of automagic refinement
    type :: ref_auto_param

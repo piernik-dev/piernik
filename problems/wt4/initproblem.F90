@@ -297,7 +297,7 @@ contains
 
    end subroutine cleanup_wt4
 
-!> \bried initialize fluids with the initial conditions data
+!> \brief initialize fluids with the initial conditions data
 
    subroutine problem_initial_conditions
 
