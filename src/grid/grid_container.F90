@@ -873,9 +873,9 @@ contains
       implicit none
 
       class(grid_container), intent(in)    :: this    !< object invoking type-bound procedure
-      integer(kind=4),       intent(in)    :: cdim
-      integer,               intent(in)    :: i1
-      integer,               intent(in)    :: i2
+      integer(kind=4),       intent(in)    :: cdim    !< direction of the flux
+      integer,               intent(in)    :: i1      !< coordinate
+      integer,               intent(in)    :: i2      !< coordinate
       type(ext_fluxes),      intent(inout) :: eflx
 
       if (this%finebnd(cdim, LO)%index(i1, i2) >= this%ijkse(cdim, LO)) then
@@ -1290,7 +1290,7 @@ contains
       implicit none
 
       class(grid_container),      intent(inout) :: this !< object invoking type-bound procedure
-      real, dimension(xdim:zdim), intent(in)    :: b
+      real, dimension(xdim:zdim), intent(in)    :: b    !< the value of the magnetic field vector in whole block
 
       integer :: d
 

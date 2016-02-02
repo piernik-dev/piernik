@@ -231,7 +231,7 @@ contains
 
       implicit none
 
-      integer, intent(in) :: nreq
+      integer, intent(in) :: nreq !< expected maximum number of concurrent MPI requests in non-blocking parts of the code
 
       integer :: sreq
 
@@ -915,7 +915,7 @@ contains
 
       implicit none
 
-      integer, intent(in) :: signum
+      integer, intent(in) :: signum !< signal identifier
 
       if (master) print *, "[mpisetup:abort_sigint] CTRL-C caught, calling abort"
       ! As per MPI documentation for MPI_Abort():
