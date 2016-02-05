@@ -1,8 +1,8 @@
 module cresp_crspectrum
 ! pulled by COSM_RAY_ELECTRONS
 
- use cresp_variables !,  only: ncre, u_b, u_d, c2nd, c3rd, f_init, q_init
- use initcosmicrays, only: ncre, p_min_fix, p_max_fix, f_init, q_init, p_lo_init, p_up_init, &
+ use cresp_variables!, only: q_big, cnst_c, taylor_coeff_2nd, taylor_coeff_3rd !ncre, u_b, u_d, c2nd, c3rd, f_init, q_init
+ use initcosmicrays,  only: ncre, p_min_fix, p_max_fix, f_init, q_init, p_lo_init, p_up_init, &
                            crel, cfl_cre
  use constants,      only: pi, fpi, zero, one, two, half, I_ZERO, I_ONE, I_THREE, I_FOUR, I_FIVE
 
@@ -104,12 +104,12 @@ module cresp_crspectrum
    real(kind=8)                             :: n_tot, n_tot0, e_tot, e_tot0
 !    integer                           :: i_lo, i_up
 
-  real(kind=8)                 :: u_d0 = -1.5e-1 ! 5.0e-1
+   real(kind=8)                 :: u_d_0 ! = -1.5e-1 ! 5.0e-1
   
-  real(kind=8)                 :: u_b0 = 0.0e-7 ! 1e-7 !0e0 !5e-7!
+   real(kind=8)                 :: u_b_0 ! = 0.0e-7 ! 1e-7 !0e0 !5e-7!
 
-  real(kind=8)                 :: div_v = 0.0e-5 ! 0.5e-6
-  real(kind=8)                 :: omega_d = 0.1e0 !0.1e0    ! frequency of div(v) oscilations
+!   real(kind=8)                 :: div_v = 0.0e-5 ! 0.5e-6
+!   real(kind=8)                 :: omega_d = 0.1e0 !0.1e0    ! frequency of div(v) oscilations
   real(kind=8)              :: u_b, u_d 
   real(kind=8), allocatable, dimension(:)  :: n, e ! dimension(1:ncre) 
   real(kind=8), allocatable, dimension(:)  :: p_fix ! dimension(0:ncre)   
@@ -393,7 +393,11 @@ subroutine cresp_update_bin_index(dt, p_lo, p_up, p_lo_next, p_up_next)
        call allocate_all_allocatable
       
       u_b = init_cresp_arguments(2*ncre + 3)
+      u_d = init_cresp_arguments(2*ncre + 4)
       all_edges = zero
+      
+      u_b_0 = u_b
+      u_d_0 = u_d
        
       all_edges = (/ (i,i=0,ncre) /)
       all_bins = (/ (i,i=1,ncre) /)
@@ -748,19 +752,29 @@ subroutine ne_to_q(n, e, q)
       integer, dimension(:) ,intent(in)                 :: bins
       real(kind=8), dimension(size(bins))   :: f_bins
       real(kind=8), dimension(0:ncre)     :: nq_to_f
-      
+      real(kind=8), dimension(0:ncre)      :: pr_by_pl
+            
       f_bins = zero
       f_bins = n(bins) / (fpi*p_l(bins)**3)
-      where(q(bins) .ne. three) 
-         f_bins = f_bins*(three - q(bins)) /((p_r(bins)/p_l(bins))**(three-q(bins)) - one)
-      elsewhere
+      pr_by_pl(bins) = p_r(bins)/p_l(bins)
+      where (pr_by_pl(bins).ne.one)
+        where(q(bins) .ne. three) 
+!          f_bins = f_bins*(three - q(bins)) /((p_r(bins)/p_l(bins))**(three-q(bins)) - one)
+          f_bins = f_bins*(three - q(bins)) /((pr_by_pl(bins))**(three-q(bins)) - one)
+        elsewhere
          f_bins = f_bins/log((p_r(bins)/p_l(bins)))
+        end where
+      elsewhere
+        f_bins = zero
       end where
-
+            
+!       print *, 'f = ', f_bins
+!       print *, 'pr/pl = ', pr_by_pl
+      
       nq_to_f= zero
       nq_to_f(bins-1) = f_bins
 
-
+!    stop
    end function nq_to_f  
    
 !-------------------------------------------------------------------------------------------------
@@ -948,6 +962,7 @@ subroutine ne_to_q(n, e, q)
       if (dt_calc.ge.dts_min) then
          dt_calc = dts_min
       endif
+!       stop
    end subroutine cresp_timestep
    
 ! -------------------- 
@@ -962,7 +977,7 @@ subroutine ne_to_q(n, e, q)
 
    print*, 'Accuracy test for adabatic compression/expansion:'
    print*, 'n_tot = ', n_tot, 'n_tot0 = ', n_tot0, 'rel error = ', (n_tot - n_tot0)/n_tot0
-   print*, 'e_tot = ', e_tot, 'e_anal = ', e_tot0*exp(-u_d0*t), 'rel error = ', (e_tot-e_tot0*exp(-u_d0*t))/(e_tot0*exp(-u_d0*t))
+   print*, 'e_tot = ', e_tot, 'e_anal = ', e_tot0*exp(-u_d_0*t), 'rel error = ', (e_tot-e_tot0*exp(-u_d_0*t))/(e_tot0*exp(-u_d_0*t))
    print*
    print *, '=================================='
    print*,  '! End of iteration               !'
@@ -978,10 +993,11 @@ subroutine ne_to_q(n, e, q)
 
    subroutine printer(t)
    implicit none
-     real   :: t
-      open(10, file="crs.dat", status='unknown', position='append')
+     real(kind = 8)   :: t
+      open(10, file="crs.dat", position='append')
       write(10, '(e16.9, 3(1x,i8), 100(1x,e16.9))') t, ncre, crel%i_lo, crel%i_up, crel%p, crel%f, crel%q
       close(10)
+!       print *, crel%p, crel%q, crel%f
 !       write(20, '(e16.9, 1(1x,i4), 100(1x,e16.9))') t, ncre,  x
    end subroutine printer
 

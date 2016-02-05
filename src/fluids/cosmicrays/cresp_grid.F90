@@ -71,13 +71,13 @@ contains
                 if (i.eq.1.and.j.eq.34.and.k.eq.0) then
                       call printer(t)      
 !                       print *, cresp_arguments(2*ncre+3)
-                      print *, 'cg%u(iarr_cre(e),34,34,:) =', cg%u(iarr_cre_e,34,34,0)
-                      print *, 'cg%u(iarr_cre(n),34,34,:) =', cg%u(iarr_cre_n,34,34,0)
-                      print *, 'p ', crel%p
-!                       print *, 'q ', crel%q
-                      print *, 'f ', crel%f
-                      print *, 'plo, pup = ', cg%u(flind%cre%plo,i,j,k),cg%u(flind%cre%pup,i,j,k)
-                      print *, '-------------------------'
+!                       print *, 'cg%u(iarr_cre(e),34,34,:) =', cg%u(iarr_cre_e,34,34,0)
+!                       print *, 'cg%u(iarr_cre(n),34,34,:) =', cg%u(iarr_cre_n,34,34,0)
+!                       print *, 'p ', crel%p
+! !                       print *, 'q ', crel%q
+!                       print *, 'f ', crel%f
+!                       print *, 'plo, pup = ', cg%u(flind%cre%plo,i,j,k),cg%u(flind%cre%pup,i,j,k)
+!                       print *, '-------------------------'
                 endif
               
               if (dt_cre .ge. dt_cre_tmp) then
@@ -150,16 +150,16 @@ contains
 #endif /* VERBOSE */
                   cg%u(iarr_cre, i, j, k) = cresp_arguments(I_ONE:I_TWO*ncre+I_TWO)
               
-                if (i.eq.34.and.j.eq.34.and.k.eq.0) then
-                      print *, 'cg%u(iarr_cre(e),34,34,:) =', cg%u(iarr_cre_e,i,j,k)
-                      print *, 'cg%u(iarr_cre(n),34,34,:) =', cg%u(iarr_cre_n,i,j,k)
-                      print *, 'p ', crel%p
-                      print *, 'q ', crel%q
-                      print *, 'f ', crel%f
-                      print *,''
-                      print *, 'plo, pup = ', cg%u(flind%cre%plo,i,j,k),cg%u(flind%cre%pup,i,j,k)
-                      print *, '-------------------------'
-                endif
+!                 if (i.eq.34.and.j.eq.34.and.k.eq.0) then
+!                       print *, 'cg%u(iarr_cre(e),34,34,:) =', cg%u(iarr_cre_e,i,j,k)
+!                       print *, 'cg%u(iarr_cre(n),34,34,:) =', cg%u(iarr_cre_n,i,j,k)
+!                       print *, 'p ', crel%p
+!                       print *, 'q ', crel%q
+!                       print *, 'f ', crel%f
+!                       print *,''
+!                       print *, 'plo, pup = ', cg%u(flind%cre%plo,i,j,k),cg%u(flind%cre%pup,i,j,k)
+!                       print *, '-------------------------'
+!                 endif
               
 
                   if (dt_cre .ge. dt_cre_tmp) then
