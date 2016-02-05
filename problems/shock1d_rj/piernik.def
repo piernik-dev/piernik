@@ -1,5 +1,7 @@
 #define IONIZED
 
+#undef NEUTRAL
+
 #undef ISO
 
 #define LOCAL_FR_SPEED
