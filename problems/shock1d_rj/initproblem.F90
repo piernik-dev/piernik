@@ -193,11 +193,22 @@ contains
                      cg%u(fl%imy,i,j,k) = vy*cg%u(fl%idn,i,j,k)
                      cg%u(fl%imz,i,j,k) = vz*cg%u(fl%idn,i,j,k)
 
-#ifndef NEUTRAL ! problem.par.sod
-                     cg%u(fl%ien,i,j,k) = pre ! \rho*e, where e = p/(rho*(gamma -1))
-                     cg%u(fl%ien,i,j,k) = max(cg%u(fl%ien,i,j,k), smallei)
-                     cg%u(fl%ien,i,j,k) = cg%u(fl%ien,i,j,k) 
-#endif                     
+                     if(fl%has_energy) then
+
+                        cg%u(fl%ien,i,j,k) = pre ! p/(gamma - 1)
+                        cg%u(fl%ien,i,j,k) = max(cg%u(fl%ien,i,j,k, smallei))
+                        cg%u(fl%ien,i,j,k) = cg%u(fl%ien,i,j,k) + ekin(cg%u(fl%imx,i,j,k), cg%u(fl%imy,i,j,k), cg%u(fl%imz,i,j,k), cg%u(fl%idn,i,j,k))
+
+                        if(fl%is_magnetized) then
+
+                           cg%b(xdim,i,j,k)   =  bx
+                           cg%b(ydim,i,j,k)   =  by
+                           cg%b(zdim,i,j,k)   =  bz
+                           cg%u(fl%ien,i,j,k) = cg%u(fl%ien,i,j,k) + emag(cg%b(xdim,i,j,k), cg%b(dim,i,j,k), cg%b(zdim,i,j,k))
+
+                        endif
+
+                     endif                     
                      
 #ifndef ISO
                      cg%u(fl%ien,i,j,k) = pre ! pre here means eint
