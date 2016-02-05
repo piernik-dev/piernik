@@ -139,6 +139,45 @@ contains
       endif
    end function gdf_translate
 
+   subroutine create_units_description(gid)
+
+      use common_hdf5,  only: hdf_vars
+      use constants,    only: units_len, cbuff_len, I_FIVE
+      use hdf5,         only: HID_T, h5dopen_f, h5dclose_f
+      use helpers_hdf5, only: create_dataset, create_attribute
+      use units,        only: lmtvB, s_lmtvB, get_unit
+
+      implicit none
+      integer(HID_T), intent(in)             :: gid
+      integer(HID_T)                         :: dset_id
+      integer(kind=4)                        :: error, i
+      character(len=cbuff_len), pointer      :: ssbuf
+      character(len=units_len), pointer      :: sbuf
+      character(len=units_len), target       :: s_unit
+      real                                   :: val_unit
+
+      character(len=cbuff_len), dimension(I_FIVE), parameter :: base_dsets = &
+         &  ["length_unit  ", "mass_unit    ", "time_unit    ",  &
+         &   "velocity_unit", "magnetic_unit"]
+
+      do i = lbound(base_dsets, 1), ubound(base_dsets, 1)
+         call create_dataset(gid, base_dsets(i), lmtvB(i))
+         call h5dopen_f(gid, base_dsets(i), dset_id, error)
+         ssbuf => s_lmtvB(i)
+         call create_attribute(dset_id, "unit", ssbuf)
+         call h5dclose_f(dset_id, error)
+      enddo
+      do i = lbound(hdf_vars, 1, kind=4), ubound(hdf_vars, 1, kind=4)
+         call get_unit(gdf_translate(hdf_vars(i)), val_unit, s_unit)
+         call create_dataset(gid, gdf_translate(hdf_vars(i)), val_unit)
+         call h5dopen_f(gid, gdf_translate(hdf_vars(i)), dset_id, error)
+         sbuf => s_unit
+         call create_attribute(dset_id, "unit", sbuf)
+         call h5dclose_f(dset_id, error)
+      enddo
+
+   end subroutine create_units_description
+
    subroutine create_datafields_descrs(place)
 
       use common_hdf5,  only: hdf_vars
@@ -311,7 +350,7 @@ contains
 
    subroutine h5_write_to_single_file_v2(fname)
       use common_hdf5, only: write_to_hdf5_v2, O_OUT
-      use gdf,         only: gdf_create_field_types
+      use gdf,         only: gdf_create_root_group
       use mpisetup,    only: master, piernik_MPI_Barrier
 
       implicit none
@@ -320,7 +359,10 @@ contains
 
       call write_to_hdf5_v2(fname, O_OUT, create_empty_cg_datasets_in_output, write_cg_to_output)
 
-      if (master) call gdf_create_field_types(fname,create_datafields_descrs)
+      if (master) then
+         call gdf_create_root_group(fname, 'field_types', create_datafields_descrs)
+         call gdf_create_root_group(fname, 'dataset_units', create_units_description)
+      endif
       call piernik_MPI_Barrier
 
    end subroutine h5_write_to_single_file_v2
@@ -572,6 +614,9 @@ contains
       integer(HID_T)                    :: filespace               !< Dataspace identifier in file
       integer(HID_T)                    :: memspace                !< Dataspace identifier in memory
       integer(HSIZE_T), dimension(rank) :: count, offset, stride, block, dimsf, chunk_dims
+
+      ! Sometimes the data(:,:,:) is created in an associated state, sometimes not
+      nullify(data)
 
       call h5open_f(error)
       !

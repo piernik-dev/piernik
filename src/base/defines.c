@@ -65,7 +65,10 @@
 #endif
 
 #ifdef NEUTRAL
-#define FLUID
+#  define FLUID
+#  ifdef IONIZED
+#    error Currently there are no solvers that can manage a mixture of neutral and ionized fluid
+#  endif
 #endif
 
 #ifndef FLUID

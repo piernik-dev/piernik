@@ -409,7 +409,7 @@ contains
             call printinfo(msg, .true.)
          endif
 
-         cg%b(:, :, :, :) = 0.0
+         call cg%set_constant_b_field([0., 0., 0.])
 
          do i = D0, VY0
             q0 => cg%q(qna%ind(q_n(i)))%arr

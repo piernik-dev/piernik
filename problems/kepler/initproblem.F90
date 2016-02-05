@@ -163,6 +163,12 @@ contains
 
             if (dom%has_dir(zdim)) call set_default_hsparams(cg)
 
+            if (trim(mag_field_orient) == 'vertical') then
+               call cg%set_constant_b_field([0., 0., b0])
+            else if (trim(mag_field_orient) == 'none') then
+               call cg%set_constant_b_field([0., 0., 0.])
+            endif
+
             do j = cg%lhn(ydim,LO), cg%lhn(ydim,HI)
                yj = cg%y(j)
                do i = cg%lhn(xdim,LO), cg%lhn(xdim,HI)
@@ -198,12 +204,6 @@ contains
                         cg%b(xdim,i,j,k)   = -b0*sqrt(cg%u(fl%idn,i,j,k)/d0)*yj/rc
                         cg%b(ydim,i,j,k)   =  b0*sqrt(cg%u(fl%idn,i,j,k)/d0)*xi/rc
                         cg%b(zdim,i,j,k)   =  0.0
-                     else if (trim(mag_field_orient) == 'vertical') then
-                        cg%b(xdim,i,j,k)   =  0.0
-                        cg%b(ydim,i,j,k)   =  0.0
-                        cg%b(zdim,i,j,k)   =  b0
-                     else if (trim(mag_field_orient) == 'none') then
-                        cg%b(:,i,j,k)     =  0.0
                      endif
 
                      if (fl%ien > 0) cg%u(fl%ien,i,j,k)   = cg%u(fl%ien,i,j,k) + 0.5*sum(cg%b(:,i,j,k)**2,1)

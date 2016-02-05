@@ -336,7 +336,6 @@ contains
       integer :: xl, xr
 
 !   Secondary parameters
-      allocate(ln_dens_der(0)) ! suppress compiler warnings
       cgl => leaves%first
       do while (associated(cgl))
          cg => cgl%cg
@@ -370,10 +369,10 @@ contains
 
             xl = cg%lhn(xdim, LO)
             xr = cg%lhn(xdim, HI)
-            if (.not.allocated(grav)) allocate(grav(xl:xr))
-            if (size(ln_dens_der) /= xr-xl+1) deallocate(ln_dens_der)
-            allocate(ln_dens_der(xl:xr))
-            if (.not.allocated(dens_prof)) allocate(dens_prof(xl:xr))
+            if (allocated(grav)) deallocate(grav)
+            if (allocated(dens_prof)) deallocate(dens_prof)
+            if (allocated(ln_dens_der)) deallocate(ln_dens_der)
+            allocate(grav(xl:xr), ln_dens_der(xl:xr), dens_prof(xl:xr))
 
             grav = compute_gravaccelR(cg)
             dens_prof(:) = d0 * cg%x(:)**(-dens_exp)  * gram / cm**2
@@ -441,7 +440,7 @@ contains
 
             enddo
             cg%w(wna%ind(inid_n))%arr(:,:,:,:) = cg%u(:,:,:,:)
-            cg%b(:,:,:,:) = 0.0
+            call cg%set_constant_b_field([0., 0., 0.])
             if (allocated(grav)) deallocate(grav)
             if (allocated(dens_prof)) deallocate(dens_prof)
             if (allocated(ln_dens_der)) deallocate(ln_dens_der)
