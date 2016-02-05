@@ -64,6 +64,12 @@ $PROBLEM_CONTROL
    vyr = 0.0
    vzr = 0.0
    er  = 1.199940003 ! 0.1499925004
+   bxl = 0.0
+   byl = 0.0
+   bzl = 0.0
+   bxr = 0.0
+   byr = 0.0
+   bzr = 0.0
 /
 
 $AMR
