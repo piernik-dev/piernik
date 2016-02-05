@@ -195,7 +195,7 @@ contains
 #ifndef NEUTRAL ! problem.par.sod
                      cg%u(fl%ien,i,j,k) = pre ! \rho*e, where e = p/(rho*(gamma -1))
                      cg%u(fl%ien,i,j,k) = max(cg%u(fl%ien,i,j,k), smallei)
-                     cg%u(fl%ien,i,j,k) = cg%u(fl%ien,i,j,k) + ekin(cg%u(fl%imx,i,j,k), cg%u(fl%imy,i,j,k), cg%u(fl%imz,i,j,k), cg%u(fl%idn,i,j,k))
+                     cg%u(fl%ien,i,j,k) = cg%u(fl%ien,i,j,k) 
 #endif                     
                      
 #ifndef ISO
