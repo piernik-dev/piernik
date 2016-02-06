@@ -128,7 +128,7 @@ contains
 
       implicit none
 
-      class(fluxarray),                  intent(inout) :: this
+      class(fluxarray),                  intent(inout) :: this !< object invoking type bound procedure
       integer(kind=4), dimension(LO:HI), intent(in)    :: i1 !< 1st range
       integer(kind=4), dimension(LO:HI), intent(in)    :: i2 !< 2nd range
 
@@ -156,7 +156,7 @@ contains
 
       implicit none
 
-      class(fluxarray), intent(in) :: this
+      class(fluxarray), intent(in) :: this !< object invoking type bound procedure
       integer,          intent(in) :: i1 !< 1st index
       integer,          intent(in) :: i2 !< 2nd index
 
@@ -175,7 +175,7 @@ contains
 
       implicit none
 
-      class(fluxarray), intent(inout) :: this
+      class(fluxarray), intent(inout) :: this !< object invoking type bound procedure
       type(fluxpoint),  intent(in)    :: fp !< point flux
       integer,          intent(in)    :: i1 !< 1st index
       integer,          intent(in)    :: i2 !< 2nd index

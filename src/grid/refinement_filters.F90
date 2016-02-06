@@ -142,7 +142,9 @@ contains
 
          implicit none
 
-         integer,                         intent(in) :: i, j, k !< indices
+         integer, intent(in) :: i !< x-index
+         integer, intent(in) :: j !< y-index
+         integer, intent(in) :: k !< z-index
 
          grad2 = (p3d(i+dom%D_x, j, k) - p3d(i-dom%D_x, j, k))**2 + &
               &  (p3d(i, j+dom%D_y, k) - p3d(i, j-dom%D_y, k))**2 + &
@@ -234,7 +236,9 @@ contains
 
          implicit none
 
-         integer,                         intent(in) :: i, j, k !< indices
+         integer, intent(in) :: i !< x-index
+         integer, intent(in) :: j !< y-index
+         integer, intent(in) :: k !< z-index
 
          rel_grad2 = 0.
 

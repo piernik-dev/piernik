@@ -273,13 +273,13 @@ contains
 
       implicit none
 
-      class(grid_container), target,   intent(inout) :: this ! intent(out) would silently clear everything, that was already set
-                                                             ! (also the fields in types derived from grid_container)
-      integer(kind=8), dimension(:),   intent(in) :: n_d     !< max resolution of my level
-      integer(kind=8), dimension(:),   intent(in) :: off     !< offset of my level
-      integer(kind=8), dimension(:,:), intent(in) :: my_se   !< my segment
-      integer,                         intent(in) :: grid_id
-      integer(kind=4),                 intent(in) :: level_id
+      class(grid_container), target,   intent(inout) :: this  ! intent(out) would silently clear everything, that was already set
+                                                              ! (also the fields in types derived from grid_container)
+      integer(kind=8), dimension(:),   intent(in) :: n_d      !< max resolution of my level
+      integer(kind=8), dimension(:),   intent(in) :: off      !< offset of my level
+      integer(kind=8), dimension(:,:), intent(in) :: my_se    !< my segment
+      integer,                         intent(in) :: grid_id  !< ID which should be unique across level
+      integer(kind=4),                 intent(in) :: level_id !< which level this grid belongs to
 
       integer :: i
       integer(kind=8), dimension(ndims, LO:HI) :: rn
@@ -565,7 +565,8 @@ contains
 
       implicit none
 
-      class(grid_container), intent(inout) :: this
+      class(grid_container), intent(inout) :: this !< object invoking type-bound procedure
+
       integer :: d, g, b, cdim
       integer, parameter :: nseg = 4*2
       type(tgt_list), dimension(nseg) :: rpio_tgt
@@ -721,7 +722,7 @@ contains
 
       implicit none
 
-      class(grid_container), intent(inout) :: this
+      class(grid_container), intent(inout) :: this  !< object invoking type-bound procedure
 
       integer :: i
 
@@ -759,7 +760,7 @@ contains
 
       implicit none
 
-      class(grid_container), intent(inout) :: this
+      class(grid_container), intent(inout) :: this          !< object invoking type-bound procedure
       logical,               intent(in)    :: multigrid     !< If .true. then cg%q(:)%arr and cg%w(:)%arr are allocated also below base level
 
       type(named_array3d), allocatable, dimension(:) :: tmp
@@ -789,7 +790,7 @@ contains
 
       implicit none
 
-      class(grid_container), intent(inout) :: this
+      class(grid_container), intent(inout) :: this         !< object invoking type-bound procedure
       integer(kind=4),       intent(in)    :: n            !< Length of the vector quantity to be stored (first dimension of the array)
 
       type(named_array4d), allocatable, dimension(:) :: tmp
@@ -814,7 +815,7 @@ contains
 
       implicit none
 
-      class(grid_container), intent(inout) :: this
+      class(grid_container), intent(inout) :: this !< object invoking type-bound procedure
 
       integer(kind=8), dimension(xdim:zdim, LO:HI) :: se
       integer :: g
@@ -837,10 +838,10 @@ contains
 
       implicit none
 
-      class(bnd_list),                              intent(inout) :: this
-      integer,                                      intent(in)    :: proc
-      integer(kind=8), dimension(xdim:zdim, LO:HI), intent(in)    :: se
-      integer(kind=4),                              intent(in)    :: tag
+      class(bnd_list),                              intent(inout) :: this !< object invoking type-bound procedure
+      integer,                                      intent(in)    :: proc !< process to be communicated
+      integer(kind=8), dimension(xdim:zdim, LO:HI), intent(in)    :: se   !< segment definition
+      integer(kind=4),                              intent(in)    :: tag  !< tag for MPI calls
 
       type(segment), dimension(:), allocatable :: tmp
       integer :: g
@@ -871,9 +872,10 @@ contains
 
       implicit none
 
-      class(grid_container), intent(in)    :: this
-      integer(kind=4),       intent(in)    :: cdim
-      integer,               intent(in)    :: i1, i2
+      class(grid_container), intent(in)    :: this    !< object invoking type-bound procedure
+      integer(kind=4),       intent(in)    :: cdim    !< direction of the flux
+      integer,               intent(in)    :: i1      !< coordinate
+      integer,               intent(in)    :: i2      !< coordinate
       type(ext_fluxes),      intent(inout) :: eflx
 
       if (this%finebnd(cdim, LO)%index(i1, i2) >= this%ijkse(cdim, LO)) then
@@ -915,9 +917,10 @@ contains
 
       implicit none
 
-      class(grid_container), intent(inout) :: this
+      class(grid_container), intent(inout) :: this    !< object invoking type-bound procedure
       integer(kind=4),       intent(in)    :: cdim
-      integer,               intent(in)    :: i1, i2
+      integer,               intent(in)    :: i1
+      integer,               intent(in)    :: i2
       type(ext_fluxes),      intent(inout) :: eflx
 
       if (associated(eflx%lo)) call this%coarsebnd(cdim, LO)%fp2fa(eflx%lo, i1, i2)
@@ -996,7 +999,7 @@ contains
 
       implicit none
 
-      class(grid_container),                        intent(inout) :: this
+      class(grid_container),                        intent(inout) :: this  !< object invoking type-bound procedure
       integer(kind=4),                              intent(in)    :: ind   !< index of cg%q(:) 3d array - variable to be prolonged
       integer(kind=8), dimension(xdim:zdim, LO:HI), intent(in)    :: cse   !< coarse segment
       logical,                                      intent(in)    :: p_xyz !< store the result in this%prolong_xyz when true, in this%q(ind)%arr otherwise
@@ -1223,7 +1226,7 @@ contains
 
       implicit none
 
-      class(grid_container), intent(inout) :: this
+      class(grid_container), intent(inout) :: this !< object invoking type-bound procedure
 
       integer :: i, j, k, ifs, ife, jfs, jfe, kfs, kfe
       enum, bind(C)
@@ -1286,8 +1289,8 @@ contains
 
       implicit none
 
-      class(grid_container),      intent(inout) :: this
-      real, dimension(xdim:zdim), intent(in)    :: b
+      class(grid_container),      intent(inout) :: this !< object invoking type-bound procedure
+      real, dimension(xdim:zdim), intent(in)    :: b    !< the value of the magnetic field vector in whole block
 
       integer :: d
 

@@ -105,7 +105,7 @@ contains
 
       implicit none
 
-      type(cg_level_connected_T), pointer, intent(inout) :: curl
+      type(cg_level_connected_T), pointer, intent(inout) :: curl !< the level on which we want the solution to be performed
       integer(kind=4),                     intent(in)    :: src  !< index of source in cg%q(:)
       integer(kind=4),                     intent(in)    :: soln !< index of solution in cg%q(:)
 

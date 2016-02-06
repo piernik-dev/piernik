@@ -829,12 +829,12 @@ contains
 
       implicit none
 
-      class(cg_level_connected_T), intent(inout) :: this !< the list on which to perform the boundary exchange
-      integer(kind=4),             intent(in)    :: ind
+      class(cg_level_connected_T), intent(inout) :: this      !< the list on which to perform the boundary exchange
+      integer(kind=4),             intent(in)    :: ind       !< index of the prolonged variable
       integer(kind=4), optional,   intent(in)    :: bnd_type  !< Override default boundary type on external boundaries (useful in multigrid solver).
                                                               !< Note that BND_PER, BND_MPI, BND_SHE and BND_COR aren't external and cannot be overridden
       integer(kind=4), optional,   intent(in)    :: dir       !< select only this direction
-      logical,         optional,   intent(in)    :: nocorners !< .when .true. then don't care about proper edge and corner update
+      logical,         optional,   intent(in)    :: nocorners !< when .true. then don't care about proper edge and corner update
 
       type(cg_level_connected_T), pointer :: coarse
       type(cg_list_element), pointer :: cgl
