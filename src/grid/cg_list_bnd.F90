@@ -454,7 +454,7 @@ contains
 !! \brief This routine exchanges guardcells with remote blocks for BND_MPI and BND_PER boundaries on rank-3 and
 !! rank-4 arrays. There is one message per each piece of boundary.
 !!
-!! \detail This routine will exchange local blocks as well (which would degrade the performance a bit) where the
+!! \details This routine will exchange local blocks as well (which would degrade the performance a bit) where the
 !! pointer in cg%i_bnd(:)%seg(:)%local is not set.
 !<
 
@@ -824,8 +824,8 @@ contains
 
       implicit none
 
-      class(cg_list_bnd_T), intent(in) :: this       !< the list on which to perform the boundary exchange
-      integer(kind=4),      intent(in) :: dir
+      class(cg_list_bnd_T), intent(in) :: this !< the list on which to perform the boundary exchange
+      integer(kind=4),      intent(in) :: dir  !< the direction in which we perform fluid boundary update (xdim, ydim or zdim)
 
       type(grid_container), pointer           :: cg
       integer(kind=4), dimension(ndims,LO:HI) :: l, r
@@ -1000,8 +1000,8 @@ contains
 
       implicit none
 
-      class(cg_list_bnd_T), intent(in) :: this       !< the list on which to perform the boundary exchange
-      integer(kind=4),      intent(in) :: dir
+      class(cg_list_bnd_T), intent(in) :: this !< the list on which to perform the boundary exchange
+      integer(kind=4),      intent(in) :: dir  !< the direction in which we perform magnetic boundary update (xdim, ydim or zdim)
 
       type(grid_container), pointer           :: cg
       integer(kind=4)                         :: side

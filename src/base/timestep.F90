@@ -126,8 +126,8 @@ contains
 
       implicit none
 
-      real,              intent(inout) :: dt !< the timestep
-      type(var_numbers), intent(in)    :: flind
+      real,              intent(inout) :: dt    !< the timestep
+      type(var_numbers), intent(in)    :: flind !< the structure with all fluid indices
 
       type(cg_list_element), pointer   :: cgl
       type(grid_container),  pointer   :: cg

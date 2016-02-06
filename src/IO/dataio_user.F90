@@ -107,14 +107,14 @@ module dataio_user
    end interface
 
 #ifdef HDF5
-   procedure(add_attr),  pointer :: user_attrs_rd         => Null()
-   procedure(add_attr),  pointer :: user_attrs_wr         => Null()
+   procedure(add_attr),  pointer :: user_attrs_rd         => Null() !< A hook to read user-defined attributes from the restart file
+   procedure(add_attr),  pointer :: user_attrs_wr         => Null() !< A hook to write user-defined attributes to the restart file
    procedure(plt_attr),  pointer :: user_plt_attrs        => Null()
    procedure(vars_hdf5), pointer :: user_vars_hdf5        => Null()
 #endif /* HDF5 */
    procedure(add_data),  pointer :: user_attrs_pre        => Null()
    procedure(tsl_out),   pointer :: user_tsl              => Null()
-   procedure(add_data),  pointer :: user_reg_var_restart  => Null()
+   procedure(add_data),  pointer :: user_reg_var_restart  => Null() !< A hook to have user-defined fields in the restart files
    procedure(postout),   pointer :: user_post_write_data  => Null()
 
 end module dataio_user
