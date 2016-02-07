@@ -427,7 +427,7 @@ def setup_piernik(data=None):
             shutil.copy(f, objdir)
         else:
             os.symlink('../' + f, objdir + '/' + strip_leading_path([f])[0])
-
+        
     if(options.param != 'problem.par'):
         os.symlink(options.param, objdir + '/' + 'problem.par')
 

@@ -39,7 +39,7 @@ $OUTPUT_CONTROL
    dt_res = 0.0
    dt_log = 0.02
    dt_tsl = 0.02
-   vars(1:) = 'denn', 'enen', 'velx', 'vely', 'velz'
+   vars(1:) = 'dens', 'ener', 'velx', 'vely', 'velz'
 /
 
 $FLUID_NEUTRAL
@@ -56,8 +56,8 @@ $NUMERICAL_SETUP
 $PROBLEM_CONTROL
    dl  = 1.0
    vxl = 0.0
-   vxy = 0.0
-   vxz = 0.0
+   vyl = 0.0
+   vzl = 0.0
    el  = 1.499925004
    dr  = 0.125
    vxr = 0.0
