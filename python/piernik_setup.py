@@ -425,9 +425,15 @@ def setup_piernik(data=None):
     for f in allfiles:
         if(options.hard_copy):
             shutil.copy(f, objdir)
+            # Perhaps we should check for overwriting duplicates here too
         else:
             os.symlink('../' + f, objdir + '/' + strip_leading_path([f])[0])
-        
+            try:
+                os.symlink('../' + f, objdir + '/' + strip_leading_path([f])[0])
+            except:
+                print "Possible duplicate link or a name clash :",f
+                raise
+
     if(options.param != 'problem.par'):
         os.symlink(options.param, objdir + '/' + 'problem.par')
 

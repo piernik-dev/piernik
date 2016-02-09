@@ -1,14 +1,10 @@
 #undef IONIZED
 #undef MAGNETIC
 #define NEUTRAL
-#define DUST
+#undef DUST
 #define LOCAL_FR_SPEED
-#define NON_INERTIAL
+#undef NON_INERTIAL
 
 #undef ISO
 
 #undef GRAV
-
-#if !(defined(HLLC))
-#define RTVD
-#endif

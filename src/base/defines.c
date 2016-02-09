@@ -78,27 +78,39 @@
 /*
  * Hydro solvers
  *
- * Exclusive: RTVD, MH
+ * Exclusive: RTVD, MH, RIEMANN
  * Default: RTVD
  */
 
 #undef HYDRO_SOLVER
+#undef HS2
 
 #ifdef RTVD
+#if defined(HYDRO_SOLVER)
+#define HS2
+#else
 #define HYDRO_SOLVER
+#endif
 #endif
 
 #ifdef HLLC
+#if defined(HYDRO_SOLVER)
+#define HS2
+#else
 #define HYDRO_SOLVER
 #endif
-
-#if defined(RTVD) && defined(HLLC)
-#error Choose only one of { RTVD, HLLC }.
 #endif
 
-#if !defined(HYDRO_SOLVER)
-#  define RTVD
-/* #  warning no hydro solver defined, possible choices { RTVD, HLLC }, defaulting to RTVD */
+#ifdef RIEMANN
+#if defined(HYDRO_SOLVER)
+#define HS2
+#else
+#define HYDRO_SOLVER
+#endif
+#endif
+
+#if defined(HS2)
+#error Choose only one of { RTVD, HLLC, RIEMANN }.
 #endif
 
 /*
@@ -113,8 +125,8 @@
 #  endif
 #endif
 
-#if defined HLLC && defined CORIOLIS
-#error CORIOLIS for HLLC scheme has not been implemented yet.
+#if (defined(HLLC) || defined(RIEMANN)) && defined CORIOLIS
+#error CORIOLIS has been implemented only for RTVD so far.
 #endif
 
 #ifdef USER_RULES

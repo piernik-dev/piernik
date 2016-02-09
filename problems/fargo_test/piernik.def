@@ -8,5 +8,4 @@
 #define BALSARA
 
 #define GRAV
-#define RTVD
 #undef  MULTIGRID
