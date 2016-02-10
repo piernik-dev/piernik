@@ -219,7 +219,7 @@ def get_stdout(cmd):
     process = sp.Popen(
         [cmd], stdout=sp.PIPE, shell="/bin/bash", stderr=nul_f)
     nul_f.close()
-    if sys.version_info >= (3,0,0):
+    if sys.version_info >= (3, 0, 0):
         return process.communicate()[0].decode('utf-8')
     else:
         return process.communicate()[0]
@@ -265,8 +265,8 @@ def setup_piernik(data=None):
     # set problem dir
     probdir = 'problems/' + args[0] + '/'
     if (not os.path.isdir(probdir)):
-        print("\033[91mCannot find problem directory '%s'." % probdir + \
-            '\033[0m')
+        print("\033[91mCannot find problem directory '%s'." % probdir +
+              '\033[0m')
         sys.exit()
 
     # parse cppflags
@@ -368,16 +368,19 @@ def setup_piernik(data=None):
                 for word in line.split(" "):
                     w = word.rstrip()
                     if f90files.count(w) > 0:
-                        o_cnt+=1
+                        o_cnt += 1
                         if (os.path.dirname(f).split("/").count("problems") < 1):
-                            print('\033[93m' + "Warning:" + '\033[0m' + " Only user problems should use the override feature, not " + f)
+                            print(
+                                '\033[93m' + "Warning:" + '\033[0m' + " Only user problems should use the override feature, not " + f)
                         if os.path.basename(w) == os.path.basename(f):
                             f90files.remove(w)
                             print("Overriding " + w + " by " + f)
                         else:
-                            print('\033[93m' + "Warning:" + '\033[0m' + " Refused overriding " + w + " by " + f + " due to basename mismatch. Expect errors.")
+                            print('\033[93m' + "Warning:" + '\033[0m' + " Refused overriding " +
+                                  w + " by " + f + " due to basename mismatch. Expect errors.")
                 if (o_cnt == 0):
-                    print('\033[93m' + "Warning:" + '\033[0m' + " No overridable target found for directive '" + line.rstrip() + "'. Expect errors.")
+                    print('\033[93m' + "Warning:" + '\033[0m' +
+                          " No overridable target found for directive '" + line.rstrip() + "'. Expect errors.")
 
     for f in f90files:
         keys_logic1 = False
@@ -399,7 +402,7 @@ def setup_piernik(data=None):
         if(len(keys) == 3):
             keys_logic2 = (
                 (keys[1] == "&&" and
-                (keys[0] in our_defs and keys[2] in our_defs)) or
+                 (keys[0] in our_defs and keys[2] in our_defs)) or
                 (keys[1] == "||" and (keys[0] in our_defs or keys[2] in our_defs)))
 
         if(keys_logic1 or keys_logic2):
@@ -416,7 +419,7 @@ def setup_piernik(data=None):
             uses.append(list(set(luse)))
             incl.append(list(set(linc)))
 
-    #for i in iter(module):
+    # for i in iter(module):
     #   if module[i] != i:
     #      print "File",module[i]+".F90 contains an alien module", i
 
@@ -427,7 +430,6 @@ def setup_piernik(data=None):
             shutil.copy(f, objdir)
             # Perhaps we should check for overwriting duplicates here too
         else:
-            os.symlink('../' + f, objdir + '/' + strip_leading_path([f])[0])
             try:
                 os.symlink('../' + f, objdir + '/' + strip_leading_path([f])[0])
             except:
@@ -498,12 +500,12 @@ def setup_piernik(data=None):
                 if module[j] + '.F90' in stripped_files:
                     d += module[j] + '.o '
                 else:
-                    print("Warning: ", module[j] + '.F90', "referenced in", \
-                        stripped_files[i], "not found!")
+                    print("Warning: ", module[j] + '.F90', "referenced in",
+                          stripped_files[i], "not found!")
             else:
                 if j not in known_external_modules:
-                    print("Warning: module", j, " from file ", \
-                        stripped_files[i], "not found!")
+                    print("Warning: module", j, " from file ",
+                          stripped_files[i], "not found!")
         m.write(pretty_format(deps, d.split(), columns))
     m.close()
 
@@ -571,7 +573,8 @@ def setup_piernik(data=None):
     # write the connectivity file
     dd = open(objdir + '/dep.dot', "w")
     dd.write("digraph piernik {\n")
-    dd.write("\t label=\"Dependency graph for the \'" + args[0] + "\' problem\"\n")
+    dd.write("\t label=\"Dependency graph for the \'" +
+             args[0] + "\' problem\"\n")
     for m in dep:
         for mod in dep_s[m].difference(dep[m]):
             try:
@@ -599,29 +602,29 @@ def setup_piernik(data=None):
     try:
         os.makedirs(rundir)
     except OSError:
-        print('\033[93m' + "Found old run." + '\033[0m' + \
-            " Making copy of old 'problem.par'.")
+        print('\033[93m' + "Found old run." + '\033[0m' +
+              " Making copy of old 'problem.par'.")
         try:
             if(os.path.isfile(rundir + 'problem.par')):
                 shutil.move(rundir + 'problem.par', rundir + 'problem.par.old')
         except (IOError, OSError):
-            print('\033[91m' + \
-                "Problem with copying 'problem.par' to 'problem.par.old'." + \
-                '\033[0m')
+            print('\033[91m' +
+                  "Problem with copying 'problem.par' to 'problem.par.old'." +
+                  '\033[0m')
         try:
             if(os.path.isfile(rundir + 'piernik')):
                 os.remove(rundir + 'piernik')
         except (IOError, OSError):
-            print('\033[91m' + \
-                "Problem with removing old 'piernik' executable from '%s'." % \
-                rundir.rstrip('/') + '\033[0m')
+            print('\033[91m' +
+                  "Problem with removing old 'piernik' executable from '%s'." %
+                  rundir.rstrip('/') + '\033[0m')
         try:
             if(os.path.isfile(rundir + 'piernik.def')):
                 os.remove(rundir + 'piernik.def')
         except (IOError, OSError):
-            print('\033[91m' + \
-                "Problem with removing old 'piernik.def' from '%s'." % \
-                rundir.rstrip('/') + '\033[0m')
+            print('\033[91m' +
+                  "Problem with removing old 'piernik.def' from '%s'." %
+                  rundir.rstrip('/') + '\033[0m')
 
     if (not options.nocompile):
         if(options.link_exe):
@@ -634,27 +637,27 @@ def setup_piernik(data=None):
             try:
                 shutil.copy(objdir + "/piernik", rundir + 'piernik')
             except (IOError, OSError, shutil.Error):
-                print('\033[91m' + "Copying 'piernik' failed." + \
-                    '\033[0m')
+                print('\033[91m' + "Copying 'piernik' failed." +
+                      '\033[0m')
                 fatal_problem = True
 
     try:
         shutil.copy(objdir + "/" + options.param, rundir + 'problem.par')
     except IOError:
-        print('\033[91m' + "Failed to copy 'problem.par' to '%s'." % \
-            rundir.rstrip('/') + '\033[0m')
+        print('\033[91m' + "Failed to copy 'problem.par' to '%s'." %
+              rundir.rstrip('/') + '\033[0m')
         fatal_problem = True
     try:
         shutil.copy(objdir + "/piernik.def", rundir + 'piernik.def')
     except IOError:
-        print('\033[91m' + "Failed to copy 'piernik.def' to '%s'." % \
-            rundir.rstrip('/') + '\033[0m')
+        print('\033[91m' + "Failed to copy 'piernik.def' to '%s'." %
+              rundir.rstrip('/') + '\033[0m')
 
     if (options.nocompile):
-        print('\033[93m' + "Compilation of '%s' skipped on request." % args[0] + \
-            '\033[0m' + \
-            " You may want to run 'make -C %s' before running the Piernik code." \
-            % objdir)
+        print('\033[93m' + "Compilation of '%s' skipped on request." % args[0] +
+              '\033[0m' +
+              " You may want to run 'make -C %s' before running the Piernik code."
+              % objdir)
         makejobs = ""
         if (mp):
             makejobs = "-j%i" % multiprocessing.cpu_count()
@@ -663,13 +666,13 @@ def setup_piernik(data=None):
         output = sp.Popen(
             makecmd, shell=True, stderr=sp.PIPE, stdout=sp.PIPE).communicate()
         if re.search(r"Circular", output[1]):
-            print('\033[91m' + \
-                "Circular dependencies foud in '%s'." % objdir + '\033[0m')
+            print('\033[91m' +
+                  "Circular dependencies foud in '%s'." % objdir + '\033[0m')
     else:
         if (fatal_problem):
-            print('\033[93m' + \
-                "'%s' compiled, but '%s' may not be ready to run." % (
-                args[0], rundir.rstrip('/')) + '\033[0m')
+            print('\033[93m' +
+                  "'%s' compiled, but '%s' may not be ready to run." % (
+                      args[0], rundir.rstrip('/')) + '\033[0m')
         else:
             print('\033[92m' + "'%s' ready in '%s'." % (
                 args[0], rundir.rstrip('/')) + '\033[0m')

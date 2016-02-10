@@ -47,21 +47,21 @@ module refinement
    logical,         protected :: prefer_n_bruteforce !< if .false. then try DFC algorithms for neighbor searches
 
    ! some refinement primitives
-   integer, parameter :: nshapes = 10
+   integer, parameter :: nshapes = 10 !< number of shapes of each kind allowed to be predefined by user in problem.par
 
    !> \brief Refinement point
    type :: ref_point
-      integer(kind=4)        :: level  !> desired level of refinement
-      real, dimension(ndims) :: coords !> coordinates, where to refine
+      integer(kind=4)        :: level  !< desired level of refinement
+      real, dimension(ndims) :: coords !< coordinates, where to refine
    end type ref_point
-   type(ref_point), dimension(nshapes), protected :: refine_points
+   type(ref_point), dimension(nshapes), protected :: refine_points !< points of refinement to be used from problem.par
 
    !> \brief Refinement box
    type :: ref_box
-      integer(kind=4)               :: level  !> desired level of refinement
-      real, dimension(ndims, LO:HI) :: coords !> coordinates, where to refine
+      integer(kind=4)               :: level  !< desired level of refinement
+      real, dimension(ndims, LO:HI) :: coords !< coordinates, where to refine
    end type ref_box
-   type(ref_box), dimension(nshapes), protected :: refine_boxes
+   type(ref_box), dimension(nshapes), protected :: refine_boxes !< areas (boxes) of refinement to be used from problem.par
 
    !> \brief Parameters of automagic refinement
    type :: ref_auto_param
@@ -71,13 +71,13 @@ module refinement
       real :: deref_thr                 !< derefinement threshold
       real :: aux                       !< auxiliary parameter (can be smoother or filter strength)
    end type ref_auto_param
-   integer, parameter :: n_ref_auto_param = 10
-   type(ref_auto_param), dimension(10), protected :: refine_vars
-   type(ref_crit), dimension(:), allocatable :: ref_crit_list
+   integer, parameter :: n_ref_auto_param = 10                                 !< number of automatic refinement criteria available to user
+   type(ref_auto_param), dimension(n_ref_auto_param), protected :: refine_vars !< definitions of user-supplied automatic refinement criteria
+   type(ref_crit), dimension(:), allocatable :: ref_crit_list                  !< definitions of user-supplied automatic refinement criteria, processed and checked
 
-   character(len=cbuff_len), parameter :: inactive_name = "none"
+   character(len=cbuff_len), parameter :: inactive_name = "none"               !< placeholder for inactive refinement criterium
 
-   logical :: emergency_fix !< set to .true. if you want to call update_refinement ASAP
+   logical :: emergency_fix                                                    !< set to .true. if you want to call update_refinement ASAP
 
    namelist /AMR/ level_min, level_max, n_updAMR, strict_SFC_ordering, &
         &         prefer_n_bruteforce, oop_thr, refine_points, refine_boxes, refine_vars

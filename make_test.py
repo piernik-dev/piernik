@@ -7,67 +7,73 @@ import xmlrpclib
 
 
 class MakeTest(object):
-   def __init__(self,test):
 
-      self.initpath = os.getcwd()
-      self.runpath  = os.path.join(self.initpath,'runs',test)
-      self.test     = test
-      os.chdir(self.runpath)
-      retcode = sp.call(["mpiexec","./piernik"])
-      if retcode != 0:
-         sys.exit(retcode)
-      self.runtest(test)
-      os.chdir(self.initpath)
+    def __init__(self, test):
 
-   def put_png(self):
-      return
-      server = xmlrpclib.ServerProxy("http://piernik:p1ern1k@hum/piernik/login/xmlrpc")
-      for file in os.listdir(self.runpath):
-         if file.find('png') != -1:
-            server.wiki.putAttachment(self.test+'/'+file, xmlrpclib.Binary(open(self.runpath+'/'+file).read()))
+        self.initpath = os.getcwd()
+        self.runpath = os.path.join(self.initpath, 'runs', test)
+        self.test = test
+        os.chdir(self.runpath)
+        retcode = sp.call(["mpiexec", "./piernik"])
+        if retcode != 0:
+            sys.exit(retcode)
+        self.runtest(test)
+        os.chdir(self.initpath)
 
-   def testJeans (self):
-      sp.call(["gnuplot","verify.gpl"])
-      self.put_png()
+    def put_png(self):
+        return
+        server = xmlrpclib.ServerProxy(
+            "http://piernik:p1ern1k@hum/piernik/login/xmlrpc")
+        for file in os.listdir(self.runpath):
+            if file.find('png') != -1:
+                server.wiki.putAttachment(
+                    self.test + '/' + file,
+                    xmlrpclib.Binary(open(self.runpath + '/' + file).read()))
 
-   def testMaclaurin (self):
-      from maclaurin import Maclaurin_test
-      Maclaurin_test(self.runpath+'/maclaurin_sph_0000.h5')
-      self.put_png()
+    def testJeans(self):
+        sp.call(["gnuplot", "verify.gpl"])
+        self.put_png()
 
-   def testSedov (self):
-      print "test not implemented"
+    def testMaclaurin(self):
+        from maclaurin import Maclaurin_test
+        Maclaurin_test(self.runpath + '/maclaurin_sph_0000.h5')
+        self.put_png()
 
-   def output(self):
-      print self.initpath
-      print self.runpath
+    def testSedov(self):
+        print "test not implemented"
 
-   def runtest(self,test):
-      tests = { "jeans": self.testJeans,
-                "maclaurin": self.testMaclaurin,
-                "sedov": self.testSedov}[test]()
-      #tests.get(test)
+    def output(self):
+        print self.initpath
+        print self.runpath
+
+    def runtest(self, test):
+        tests = {"jeans": self.testJeans,
+                 "maclaurin": self.testMaclaurin,
+                 "sedov": self.testSedov}[test]()
+        # tests.get(test)
+
 
 def usage():
-   print __doc__
+    print __doc__
+
 
 def main(argv):
-   try:
-      opts, args = getopt.getopt(argv, "ht", ["help", "test="])
-   except getopt.GetoptError:
-      usage()
-      sys.exit(2)
-   for opt, arg in opts:
-      if opt in ("-h", "--help"):
-         usage()
-         sys.exit()
-      elif opt in ("-t", "--test"):
-         test=arg
+    try:
+        opts, args = getopt.getopt(argv, "ht", ["help", "test="])
+    except getopt.GetoptError:
+        usage()
+        sys.exit(2)
+    for opt, arg in opts:
+        if opt in ("-h", "--help"):
+            usage()
+            sys.exit()
+        elif opt in ("-t", "--test"):
+            test = arg
 
-   # add piernik modules
-   sys.path.append(sys.path[0]+'/python')
-   t = MakeTest(test)
-   t.output()
+    # add piernik modules
+    sys.path.append(sys.path[0] + '/python')
+    t = MakeTest(test)
+    t.output()
 
 if __name__ == "__main__":
     main(sys.argv[1:])

@@ -86,7 +86,7 @@ contains
 
    end subroutine epa_init
 
-!> \bried Deallocate
+!> \brief Deallocate
 
    subroutine epa_cleanup(this)
 
@@ -113,7 +113,7 @@ contains
 
    end subroutine extend_independent
 
-!> Add a new entry that must be called after an existing one
+!> \brief Add a new entry that must be called after an existing one
 
    subroutine extend_dependent(this, init, cleanup, label, after_label)
 
