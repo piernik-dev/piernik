@@ -5,7 +5,6 @@
 #define LOCAL_FR_SPEED
 
 #undef ISO
-#define RTVD
 
 #undef GRAV
 #define MULTIGRID
