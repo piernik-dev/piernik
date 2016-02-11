@@ -430,7 +430,7 @@ contains
                write(msg,'(3a,f12.6,a,2f15.6)')"[initproblem:calculate_error_norm] L2 error norm (",descr,") = ", sqrt(norm(N_D, i)/norm(N_2, i)), &
                     ", min and max error = ", neg_err(i), pos_err(i)
                call printinfo(msg)
-            end if
+            endif
          enddo
       endif
 
