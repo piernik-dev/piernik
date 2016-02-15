@@ -58,7 +58,7 @@
 
  $COSMIC_RAYS
     cfl_cr      = 0.9
-    cr_active   = 0.0
+    cr_active   = 1.0
     ncrn        = 1
     gamma_crn(1)   = 1.333333
     gamma_crn(2)   = 1.333333
@@ -76,16 +76,21 @@
     cre_eff     = 0.01
     cfl_cre     = 0.4
     ncre        = 5      ! number of fixed spectrum bins between
+<<<<<<< HEAD
     p_lo_init = 1.05e1   ! initial lower cut momentum
     p_up_init = 1.5e2   ! initial upper cut momentum
+=======
+    p_lo_init = 1.0e2   ! initial lower cut momentum
+    p_up_init = 1.0e3   ! initial upper cut momentum
+>>>>>>> parent of 6df922c... Changes:
     f_init    = 1.0e0   ! < initial value of the normalization parameter in cre energy spectrum
     q_init    = 5.0e0   ! < initial value of power law coefficient in cre enrgy spectrum
     p_min_fix = 1.0e1  ! momentum fixed grid
     p_max_fix = 1.0e3  ! momentum fixed grid
     K_cre_e_paral = 50000 
     K_cre_n_paral = 20000
-    K_cre_e_perp  = 500
-    K_cre_n_perp  = 200
+    K_cre_e_perp  = 0
+    K_cre_n_perp  = 0
     K_pow_index   = 0
  /
 
