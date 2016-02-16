@@ -357,7 +357,8 @@ contains
 
       implicit none
 
-      integer                         :: i, j, k, kmid, p
+      integer                         :: j, k, kmid, p
+      integer(kind=4)                 :: i
       real                            :: xi, yj, zk, rc, vz, sqr_gm, vr, vphi
       real                            :: gprim, H2
 
@@ -366,7 +367,8 @@ contains
       type(cg_list_element),  pointer :: cgl
       type(grid_container),   pointer :: cg
 
-      integer :: xl, xr, ind
+      integer :: xl, xr
+      integer(kind=4) :: ind
       logical, save :: first_run = .true.
 
 !   Secondary parameters
