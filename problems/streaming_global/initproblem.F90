@@ -45,7 +45,6 @@ module initproblem
    real                     :: d0, r_in, r_out, f_in, f_out
    real                     :: dens_exp      !< exponent in profile density \f$\rho(R) = \rho_0 R^{-k}\f$
    real                     :: eps           !< dust to gas ratio
-   integer(kind=4)          :: cutoff_ncells !< width of cut-off profile
    real, save               :: T_inner = 0.0 !< Orbital period at the inner boundary
    real, save               :: max_vy = -HUGE(1.0) !< Maximum tangential dust velocity
    integer(kind=4), save    :: noise_added = NOT_ADDED !< whether noise has been already added
