@@ -38,7 +38,6 @@ module initproblem
 
    integer(kind=4) :: norm_step
    real            :: t_sn
-   integer         :: n_sn
    real            :: d0, p0, r0, beta_cr, amp_cr
    real, dimension(ndims) :: c_exp, c_rot, b0, sn_pos
 

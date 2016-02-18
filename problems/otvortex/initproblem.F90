@@ -33,9 +33,9 @@ module initproblem
    private
    public :: read_problem_par, problem_initial_conditions, problem_pointers
 
-   real   :: d0,r0,bx0,by0,bz0
+   real   :: d0, r0, bz0
 
-   namelist /PROBLEM_CONTROL/  d0, r0,bx0,by0,bz0
+   namelist /PROBLEM_CONTROL/ d0, r0, bz0
 
 contains
 

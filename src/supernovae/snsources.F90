@@ -39,9 +39,7 @@ module snsources
    real, dimension(3) :: ysnoi
 #endif /* SHEAR */
    integer, save      :: nsn, nsn_last
-   real,    save      :: dt_sn_prev, ecr_supl, decr_supl
-   real,    save      :: gset
-   integer, save      :: irand, iset
+   integer, save      :: irand
 
    real, parameter    :: ethu = 7.0**2/(5.0/3.0-1.0) * 1.0    !< thermal energy unit=0.76eV/cm**3 for c_si= 7km/s, n=1/cm^3 gamma=5/3
 
