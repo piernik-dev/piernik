@@ -179,6 +179,7 @@ contains
       iarr_crs_tmp = iarr_crs
       iarr_crs = iarr_crs_diff
 !       print *,' iarr_crs = ', iarr_crs
+!       print *, 'iarr_crn = ', iarr_crn
 #endif /* COSM_RAY_ELECTRONS */
       
       

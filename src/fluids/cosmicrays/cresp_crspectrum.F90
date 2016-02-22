@@ -1,16 +1,11 @@
 module cresp_crspectrum
 ! pulled by COSM_RAY_ELECTRONS
-<<<<<<< HEAD
 
- use cresp_variables!, only: q_big, cnst_c, taylor_coeff_2nd, taylor_coeff_3rd !ncre, u_b, u_d, c2nd, c3rd, f_init, q_init
- use initcosmicrays,  only: ncre, p_min_fix, p_max_fix, f_init, q_init, p_lo_init, p_up_init, &
-=======
 !  use cresp_types, only: crel, x !uncomment crel for testing only
  use cresp_variables !,  only: ncre, u_b, u_d, c2nd, c3rd, f_init, q_init
  use initcosmicrays, only: ncre, p_min_fix, p_max_fix, f_init, q_init, p_lo_init, p_up_init, &
->>>>>>> parent of 6df922c... Changes:
                            crel, cfl_cre
- use constants,      only: pi, fpi, zero, one, two, half, I_ZERO, I_ONE, I_THREE, I_FOUR, I_FIVE
+ use constants,      only: pi, fpi, zero, one, two, half, I_ZERO, I_ONE, I_TWO, I_THREE, I_FOUR, I_FIVE
 
  implicit none
      
@@ -393,9 +388,10 @@ subroutine cresp_update_bin_index(dt, p_lo, p_up, p_lo_next, p_up_next)
       integer                     :: i, k
       real(kind=8)                ::  c ! width of bin
 !       real(kind=8), intent(in)    :: u_d, u_b
-      real(kind=8), dimension(1:2*ncre+4)          :: init_cresp_arguments
+      real(kind=8), dimension(I_ONE:I_TWO*ncre+I_FOUR)          :: init_cresp_arguments
       real(kind=8)                 ::dt_calc
 
+!        allocate(init_cresp_arguments(I_ONE:I_TWO*ncre+I_FOUR))
        call allocate_all_allocatable
       
       u_b = init_cresp_arguments(2*ncre + 3)
@@ -949,8 +945,11 @@ subroutine ne_to_q(n, e, q)
       dts_new = huge(one) + dt_calc ! whole dts_new array
       where (abs(b_losses(p(1:ncre))) .ne. zero)
         dts_new =  (p(1:ncre)-p(0:ncre-1))/abs(b_losses(p(1:ncre)))
+         where ((p(1:ncre)-p(0:ncre-1)).eq.zero)   !!!
+          dts_new = huge(one)                     !!!
+        end where                              
       end where
-      
+!       print *,'dtsnew', dts_new
       dts_min = cfl_cre*minval(dts_new)   ! min of array
 !        print *, 'p = ', p
 !        print *, 'ub  = ', u_b

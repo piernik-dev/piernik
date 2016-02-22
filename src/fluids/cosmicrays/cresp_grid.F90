@@ -68,7 +68,6 @@ contains
               call cresp_crs_update(2*dt, cresp_arguments, dt_cre_tmp) !cg%u(cr_table(cren)), cg%u(cr_table(cree)), cg%u(cr_table(crepl), &
               cg%u(iarr_cre, i, j, k) = cresp_arguments(I_ONE:I_TWO*ncre+I_TWO)
 !              diagnostic:
-<<<<<<< HEAD
                 if (i.eq.1.and.j.eq.34.and.k.eq.0) then
                       call printer(t)      
 !                       print *, cresp_arguments(2*ncre+3)
@@ -80,9 +79,8 @@ contains
 !                       print *, 'plo, pup = ', cg%u(flind%cre%plo,i,j,k),cg%u(flind%cre%pup,i,j,k)
 !                       print *, '-------------------------'
                 endif
-=======
-              if(i.eq.1.and.j.eq.1.and.k.eq.0) call printer(t)          
->>>>>>> parent of 6df922c... Changes:
+!               if(i.eq.1.and.j.eq.1.and.k.eq.0) call printer(t)          
+
               
               if (dt_cre .ge. dt_cre_tmp) then
                       dt_cre = dt_cre_tmp
@@ -154,7 +152,6 @@ contains
               print *, 'Output of cosmic ray electrons module for grid cell with coordinates i,j,k:', i, j, k
 #endif /* VERBOSE */
                   cg%u(iarr_cre, i, j, k) = cresp_arguments(I_ONE:I_TWO*ncre+I_TWO)
-<<<<<<< HEAD
               
 !                 if (i.eq.34.and.j.eq.34.and.k.eq.0) then
 !                       print *, 'cg%u(iarr_cre(e),34,34,:) =', cg%u(iarr_cre_e,i,j,k)
@@ -166,10 +163,7 @@ contains
 !                       print *, 'plo, pup = ', cg%u(flind%cre%plo,i,j,k),cg%u(flind%cre%pup,i,j,k)
 !                       print *, '-------------------------'
 !                 endif
-              
 
-=======
->>>>>>> parent of 6df922c... Changes:
                   if (dt_cre .ge. dt_cre_tmp) then
                       dt_cre = dt_cre_tmp
                   endif
@@ -184,7 +178,8 @@ contains
 !       dt_cre = 0.5
       
       enddo
-      
+!       stop
+      deallocate(cresp_arguments)
    
    end subroutine grid_cresp_initialization
    
