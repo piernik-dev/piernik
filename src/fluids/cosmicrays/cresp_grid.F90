@@ -12,7 +12,7 @@ contains
  subroutine grid_cresp_update
       use cg_leaves,      only: leaves
       use cg_list,        only: cg_list_element
-      use constants,      only: I_ONE, I_TWO, I_FOUR, xdim, ydim, zdim!, LO, HI, pMAX, 
+      use constants,      only: I_ONE, I_TWO, I_FOUR, xdim, ydim, zdim, pi !, LO, HI, pMAX, 
       use domain,         only: dom!, is_multicg
       use func,           only: ekin, emag, operator(.equals.), operator(.notequals.)
       use grid_cont,      only: grid_container
@@ -21,7 +21,7 @@ contains
       use cresp_crspectrum, only:cresp_crs_update, printer
       use crhelpers,      only: divv_n
       use named_array_list, only: qna, wna
-      
+      use units,           only: s_len_u
 
       implicit none
 
@@ -43,33 +43,36 @@ contains
 
    dt_cre_tmp = 1.0
    dt_cre = dt_cre_tmp
-
    cgl => leaves%first
    do while (associated(cgl))
      cg => cgl%cg
      cresp_arguments = 0.0
-
+!    print *,'volume = ', cg%dvol
         do k = cg%ks, cg%ke
            do j = cg%js, cg%je
               do i = cg%is, cg%ie
+  
                   cresp_arguments(I_ONE:I_TWO*ncre+I_TWO)    = cg%u(iarr_cre, i, j, k)
 !                   cresp_arguments(ncre+1:2*ncre) = cg%u(ind_e_beg:ind_e_end, i, j, k)
 !                   cresp_arguments(2*ncre+1) = cg%u(ind_p_lo, i, j, k)
 !                   cresp_arguments(2*ncre+2) = cg%u(ind_p_up, i, j, k)
                   
-                  cresp_arguments(2*ncre+3) = emag(cg%b(xdim,i,j,k), cg%b(ydim,i,j,k), cg%b(zdim,i,j,k))/cg%dvol
+                  cresp_arguments(2*ncre+3) = emag(cg%b(xdim,i,j,k), cg%b(ydim,i,j,k), cg%b(zdim,i,j,k))*(0.0001)/cg%dvol  !!! module works properly for small emag. Should emag be > 1e-4, negative values will appear
+!                   cresp_arguments(2*ncre+3) = emag(cg%b(xdim,i,j,k), cg%b(ydim,i,j,k), cg%b(zdim,i,j,k))/(4*pi*cg%dvol)
                   cresp_arguments(2*ncre+4) = cg%q(qna%ind(divv_n))%point([i,j,k])/cg%dvol
                   
 !                   cresp_arguments(2*ncre+4) = 5.0e-5
-
 #ifdef VERBOSE
               print *, 'Output of cosmic ray electrons module for grid cell with coordinates i,j,k:', i, j, k
 #endif /* VERBOSE */
+! #ifndef DIFF_TEST
               call cresp_crs_update(2*dt, cresp_arguments, dt_cre_tmp) !cg%u(cr_table(cren)), cg%u(cr_table(cree)), cg%u(cr_table(crepl), &
+
               cg%u(iarr_cre, i, j, k) = cresp_arguments(I_ONE:I_TWO*ncre+I_TWO)
 !              diagnostic:
-                if (i.eq.1.and.j.eq.34.and.k.eq.0) then
+                if (i.eq.16.and.j.eq.16.and.k.eq.0) then
                       call printer(t)      
+!                        print *, '   emag = ', emag(cg%b(xdim,i,j,k), cg%b(ydim,i,j,k), cg%b(zdim,i,j,k))/(4*pi*cg%dvol)
 !                       print *, cresp_arguments(2*ncre+3)
 !                       print *, 'cg%u(iarr_cre(e),34,34,:) =', cg%u(iarr_cre_e,34,34,0)
 !                       print *, 'cg%u(iarr_cre(n),34,34,:) =', cg%u(iarr_cre_n,34,34,0)
@@ -82,9 +85,9 @@ contains
 !               if(i.eq.1.and.j.eq.1.and.k.eq.0) call printer(t)          
 
               
-              if (dt_cre .ge. dt_cre_tmp) then
+!               if (dt_cre .ge. dt_cre_tmp) then
                       dt_cre = dt_cre_tmp
-              endif
+!               endif
               
               
            enddo
@@ -95,13 +98,13 @@ contains
 !        print *, 'cresp_args: = ', cresp_arguments(iarr_cre)
       cgl=>cgl%nxt
       
-!       print *,'min_cre_dt = ', dt_cre, dt_cre_tmp
+      print *,'  dt_cre =   ', dt_cre !, dt_cre_tmp
 !       print *,'dt_cre grid update = ', dt_cre, ' ==0.5!'
-!       dt_cre = 0.5
       enddo
       ! diagnostics!
 !       cg%u(ind_e_beg:ind_e_end,:,:,:) = 1.0
 !       cg%u(ind_n_beg:ind_n_end,:,:,:) = 500.0
+
       
       
    end subroutine grid_cresp_update
@@ -110,14 +113,15 @@ contains
    
       use cg_leaves,      only: leaves
       use cg_list,        only: cg_list_element
-      use constants,      only: xdim, ydim, zdim, LO, HI, pMAX, I_ONE, I_TWO, I_FOUR
+      use constants,      only: xdim, ydim, zdim, LO, HI, pMAX, I_ONE, I_TWO, I_FOUR, fpi
       use domain,         only: dom, is_multicg
       use func,           only: ekin, emag, operator(.equals.), operator(.notequals.)
       use grid_cont,      only: grid_container
       use cresp_variables, only: ind_p_lo, ind_p_up, cresp_taylor_order, taylor_coeff_2nd, taylor_coeff_3rd, &
                                 ind_e_beg, ind_e_end, ind_n_beg, ind_n_end
-      use initcosmicrays, only: ncre, iarr_cre
+      use initcosmicrays, only: ncre, iarr_cre, f_init, p_up_init, p_lo_init, q_init, cre_eff, iarr_crn
       use cresp_crspectrum, only: cresp_init_state
+      use units,          only: clight
       implicit none
 
       integer                         :: i, j, k !, icr, ipm, jpm, kpm
@@ -147,6 +151,11 @@ contains
 
                   cresp_arguments(I_ONE:2*ncre+2)    = cg%u(iarr_cre, i, j, k)
                   cresp_arguments(2*ncre+3) = emag(cg%b(xdim,i,j,k), cg%b(ydim,i,j,k),cg%b(zdim,i,j,k))/cg%dvol
+                  
+                  f_init = 1/(fpi*clight*(p_lo_init**(I_FOUR))*(((p_up_init/p_lo_init)**(I_FOUR-q_init))-I_ONE)/(I_FOUR-q_init))   !!! amplitude and distribution of electron energy density is inherited after those of nucleons, see crspectrum.pdf, eq. 29
+!                    f_init = 1.0
+                  f_init    = f_init*cg%u(iarr_crn(1),i,j,k)*cre_eff
+                  
                   call cresp_init_state(dt, cresp_arguments, dt_cre_tmp)
 #ifdef VERBOSE
               print *, 'Output of cosmic ray electrons module for grid cell with coordinates i,j,k:', i, j, k

@@ -87,7 +87,7 @@ contains
 !             print *,'dt_crs = ', dt_crs
          endif
       endif
-!       print *, ' dt_crs = ', dt_crs, ' dt = ', dt,' cfl_cr = ', cfl_cr
+!       print *, ' dt_crs = ', dt_crs, ' dt = ', dt,' dt_cre = ', dt_cre
       frun = .false.
 
    end subroutine timestep_crs

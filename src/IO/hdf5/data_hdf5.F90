@@ -229,16 +229,16 @@ contains
 #ifdef COSM_RAY_ELECTRONS
          case ("cren01" : "cren99")
             read(var,'(A4,I2.2)') aux, i !> \deprecated BEWARE 0 <= i <= 99, no other indices can be dumped to hdf file
-            tab(:,:,:) = real(cg%u(flind%cre%beg+i-1, RNG), kind=4)
+            tab(:,:,:) = real(cg%u(flind%cre%nbeg+i-1, RNG), kind=4)
          case ("cree01" : "cree99")
             read(var,'(A4,I2.2)') aux, i !> \deprecated BEWARE 0 <= i <= 99, no other indices can be dumped to hdf file
-            tab(:,:,:) = real(cg%u(flind%cre%beg+ncre+i-1, RNG), kind=4) ! this is consistent with the quantity of ncre variables, tested
+            tab(:,:,:) = real(cg%u(flind%cre%ebeg+i-1, RNG), kind=4) ! this is consistent with the quantity of ncre variables, tested
          case ("crepl")
             read(var,'(A5)') aux !> \deprecated BEWARE 0 <= i <= 99, no other indices can be dumped to hdf file
-            tab(:,:,:) = real(cg%u(flind%cre%beg+2*ncre, RNG), kind=4)  
+            tab(:,:,:) = real(cg%u(flind%cre%plo, RNG), kind=4)  
          case ("crepu")
             read(var,'(A5)') aux !> \deprecated BEWARE 0 <= i <= 99, no other indices can be dumped to hdf file
-            tab(:,:,:) = real(cg%u(flind%cre%beg+2*ncre+1, RNG), kind=4)
+            tab(:,:,:) = real(cg%u(flind%cre%pup, RNG), kind=4)
            
 #endif /* COSM_RAY_ELECTRONS */            
 

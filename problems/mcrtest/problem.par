@@ -77,15 +77,15 @@
     cfl_cre     = 0.4
     ncre        = 5      ! number of fixed spectrum bins between
     p_lo_init = 1.0e1   ! initial lower cut momentum
-    p_up_init = 1.5e2   ! initial upper cut momentum
+    p_up_init = 1.0e2   ! initial upper cut momentum
     f_init    = 1.0e0   ! < initial value of the normalization parameter in cre energy spectrum
     q_init    = 5.0e0   ! < initial value of power law coefficient in cre enrgy spectrum
     p_min_fix = 1.0e1  ! momentum fixed grid
     p_max_fix = 1.0e3  ! momentum fixed grid
-    K_cre_e_paral = 50000 
-    K_cre_n_paral = 20000
-    K_cre_e_perp  = 0
-    K_cre_n_perp  = 0
+    K_cre_e_paral = 40000.0
+    K_cre_n_paral = 20000.0
+    K_cre_e_perp  = 400.0
+    K_cre_n_perp  = 200.0
     K_pow_index   = 0
  /
 

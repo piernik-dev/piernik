@@ -175,14 +175,6 @@ contains
       present_not_crdim = dom%has_dir .and. ( [ xdim,ydim,zdim ] /= crdim )
       wcri = wna%ind(wcr_n)
       
-#ifdef COSM_RAY_ELECTRONS
-      iarr_crs_tmp = iarr_crs
-      iarr_crs = iarr_crs_diff
-!       print *,' iarr_crs = ', iarr_crs
-!       print *, 'iarr_crn = ', iarr_crn
-#endif /* COSM_RAY_ELECTRONS */
-      
-      
       cgl => leaves%first
       do while (associated(cgl))
          cg => cgl%cg
@@ -197,28 +189,28 @@ contains
             do j = ldm(ydim), hdm(ydim)    ; jl = j-1 ; jh = j+1 ; jld = j-idm(ydim)
                do i = ldm(xdim), hdm(xdim) ; il = i-1 ; ih = i+1 ; ild = i-idm(xdim)
 
-                  decr(crdim,:) = (cg%u(iarr_crs,i,j,k) - cg%u(iarr_crs,ild,jld,kld)) * cg%idl(crdim)
+                  decr(crdim,:) = (cg%u(iarr_crs_diff,i,j,k) - cg%u(iarr_crs_diff,ild,jld,kld)) * cg%idl(crdim)
                   fcrdif = K_crs_perp * decr(crdim,:) !!!
 
                   bcomp(crdim) =  cg%b(crdim,i,j,k)
 
                   if (present_not_crdim(xdim)) then
-                     dqm = half*((cg%u(iarr_crs,i ,jld,kld) + cg%u(iarr_crs,i ,j,k)) - (cg%u(iarr_crs,il,jld,kld) + cg%u(iarr_crs,il,j,k))) * cg%idx
-                     dqp = half*((cg%u(iarr_crs,ih,jld,kld) + cg%u(iarr_crs,ih,j,k)) - (cg%u(iarr_crs,i ,jld,kld) + cg%u(iarr_crs,i ,j,k))) * cg%idx
+                     dqm = half*((cg%u(iarr_crs_diff,i ,jld,kld) + cg%u(iarr_crs_diff,i ,j,k)) - (cg%u(iarr_crs_diff,il,jld,kld) + cg%u(iarr_crs_diff,il,j,k))) * cg%idx
+                     dqp = half*((cg%u(iarr_crs_diff,ih,jld,kld) + cg%u(iarr_crs_diff,ih,j,k)) - (cg%u(iarr_crs_diff,i ,jld,kld) + cg%u(iarr_crs_diff,i ,j,k))) * cg%idx
                      decr(xdim,:) = (dqp+dqm)* (1.0 + sign(1.0, dqm*dqp))*oneq
                      bcomp(xdim)   = sum(cg%b(xdim,i:ih, jld:j, kld:k))*oneq
                   endif
 
                   if (present_not_crdim(ydim)) then
-                     dqm = half*((cg%u(iarr_crs,ild,j ,kld) + cg%u(iarr_crs,i,j ,k)) - (cg%u(iarr_crs,ild,jl,kld) + cg%u(iarr_crs,i,jl,k))) * cg%idy
-                     dqp = half*((cg%u(iarr_crs,ild,jh,kld) + cg%u(iarr_crs,i,jh,k)) - (cg%u(iarr_crs,ild,j ,kld) + cg%u(iarr_crs,i,j ,k))) * cg%idy
+                     dqm = half*((cg%u(iarr_crs_diff,ild,j ,kld) + cg%u(iarr_crs_diff,i,j ,k)) - (cg%u(iarr_crs_diff,ild,jl,kld) + cg%u(iarr_crs_diff,i,jl,k))) * cg%idy
+                     dqp = half*((cg%u(iarr_crs_diff,ild,jh,kld) + cg%u(iarr_crs_diff,i,jh,k)) - (cg%u(iarr_crs_diff,ild,j ,kld) + cg%u(iarr_crs_diff,i,j ,k))) * cg%idy
                      decr(ydim,:) = (dqp+dqm)* (1.0 + sign(1.0, dqm*dqp))*oneq
                      bcomp(ydim)   = sum(cg%b(ydim,ild:i, j:jh, kld:k))*oneq
                   endif
 
                   if (present_not_crdim(zdim)) then
-                     dqm = half*((cg%u(iarr_crs,ild,jld,k ) + cg%u(iarr_crs,i,j,k )) - (cg%u(iarr_crs,ild,jld,kl) + cg%u(iarr_crs,i,j,kl))) * cg%idz
-                     dqp = half*((cg%u(iarr_crs,ild,jld,kh) + cg%u(iarr_crs,i,j,kh)) - (cg%u(iarr_crs,ild,jld,k ) + cg%u(iarr_crs,i,j,k ))) * cg%idz
+                     dqm = half*((cg%u(iarr_crs_diff,ild,jld,k ) + cg%u(iarr_crs_diff,i,j,k )) - (cg%u(iarr_crs_diff,ild,jld,kl) + cg%u(iarr_crs_diff,i,j,kl))) * cg%idz
+                     dqp = half*((cg%u(iarr_crs_diff,ild,jld,kh) + cg%u(iarr_crs_diff,i,j,kh)) - (cg%u(iarr_crs_diff,ild,jld,k ) + cg%u(iarr_crs_diff,i,j,k ))) * cg%idz
                      decr(zdim,:) = (dqp+dqm)* (1.0 + sign(1.0, dqm*dqp))*oneq
                      bcomp(zdim)   = sum(cg%b(zdim,ild:i, jld:j, k:kh))*oneq
                   endif
@@ -240,6 +232,13 @@ contains
       do while (associated(cgl))
          cg => cgl%cg
 
+#ifdef COSM_RAY_ELECTRONS
+      iarr_crs_tmp = iarr_crs
+      iarr_crs = iarr_crs_diff
+!       print *,' iarr_crs = ', iarr_crs
+!       print *, 'iarr_crn = ', iarr_crn
+#endif /* COSM_RAY_ELECTRONS */         
+         
          ndm = cg%lhn(:,HI) - idm
          hdm = cg%lhn(:,LO) ; hdm(crdim) = cg%lhn(crdim,HI)
          ldm = hdm - idm

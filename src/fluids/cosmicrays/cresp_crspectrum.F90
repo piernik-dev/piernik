@@ -143,15 +143,19 @@ subroutine cresp_crs_update(dt, cresp_arguments, dt_calc)
     u_b = cresp_arguments(2*ncre+3)
     u_d = cresp_arguments(2*ncre+4)
     
-   
+#ifndef DIFF_TEST
+    
+!     print *, 'PASS - crs_update'
 ! Update indexes of active bins, fixed edges and active edges at [t]
 ! Detect heating edges (energy upflow) and cooling edges (energy downflow)
+
     call cresp_update_bin_index(dt, p_lo, p_up, p_lo_next, p_up_next)    
 
 ! Compute power indexes for each bin at [t]
     call ne_to_q(n, e, q)
    
 ! Compute f on left bin faces at [t]
+    f = zero
     f = nq_to_f(p(0:ncre-1), p(1:ncre), n(1:ncre), q(1:ncre), active_bins)
 
 ! Compute fluxes through fixed edges in time period [t,t+dt]
@@ -171,7 +175,8 @@ subroutine cresp_crs_update(dt, cresp_arguments, dt_calc)
    call cresp_compute_r(p_next, active_bins_next)                 ! new active bins already received some particles, Ri is needed for those bins too
    
    edt(1:ncre) = edt(1:ncre) *(one-dt*r(1:ncre))
-
+#endif /* DIFF_TEST */
+   
    p_lo = p_lo_next
    p_up = p_up_next
 
