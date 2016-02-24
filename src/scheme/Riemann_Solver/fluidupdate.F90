@@ -126,7 +126,8 @@ contains
        do i1 = cg%lhn(pdims(ddim, ORTHO1), LO), cg%lhn(pdims(ddim, ORTHO1), HI)
           pu => cg%w(wna%fi)%get_sweep(ddim,i1,i2)
           u1d(iarr_all_swp(ddim,:),:) = pu(:,:)
-          call muscl(u1d,b_cc1d, dt/cg%dl(ddim))
+          !call muscl(u1d,b_cc1d, dt/cg%dl(ddim))
+          call rk2(u1d,b_cc1d, dt/cg%dl(ddim))
           pu(:,:) = u1d(iarr_all_swp(ddim,:),:)
 
        enddo
@@ -243,7 +244,8 @@ contains
     ql = utoq(ul,b_ccl)
     qr = utoq(ur,b_ccr)
 
-    u_predict  =  u + dtodx*flx(:,:)
+    !u_predict  =  u + dtodx*flx(:,:)
+    
 
     do i = 1, flind%fluids
        fl    => flind%all_fluids(i)%fl
@@ -256,7 +258,8 @@ contains
        call riemann_hlld(nx, p_flx, p_ql, p_qr, mag_cc, p_bccl, p_bccr, fl%gam)
     enddo
 
-    u  =  half*(u + u_predict + dtodx*(fluxes(p_ql,p_bccl)-fluxes(p_qr,p_bccr)))
+    u_predict = u - half*dtodx*p_flx(:,:)
+    u  =  u_predict - dtodx*(fluxes(p_ql,p_bccl)-fluxes(p_qr,p_bccr))
 
 
 
