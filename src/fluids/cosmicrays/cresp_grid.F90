@@ -12,6 +12,7 @@ contains
  subroutine grid_cresp_update
       use cg_leaves,      only: leaves
       use cg_list,        only: cg_list_element
+!       use cg_level_finest,       only: finest
       use constants,      only: I_ONE, I_TWO, I_FOUR, xdim, ydim, zdim, pi !, LO, HI, pMAX, 
       use domain,         only: dom!, is_multicg
       use func,           only: ekin, emag, operator(.equals.), operator(.notequals.)
@@ -34,6 +35,7 @@ contains
       real(kind=8)                             :: dt_cre_tmp
       
       allocate(cresp_arguments(I_ONE:I_TWO*ncre+I_FOUR))
+
       !       logical, save :: frun = .true.
 !       integer       :: cr_id         ! maybe we should make this variable global in the module and do not pass it as an argument?
 
@@ -47,7 +49,6 @@ contains
    do while (associated(cgl))
      cg => cgl%cg
      cresp_arguments = 0.0
-!    print *,'volume = ', cg%dvol
         do k = cg%ks, cg%ke
            do j = cg%js, cg%je
               do i = cg%is, cg%ie
@@ -57,7 +58,7 @@ contains
 !                   cresp_arguments(2*ncre+1) = cg%u(ind_p_lo, i, j, k)
 !                   cresp_arguments(2*ncre+2) = cg%u(ind_p_up, i, j, k)
                   
-                  cresp_arguments(2*ncre+3) = emag(cg%b(xdim,i,j,k), cg%b(ydim,i,j,k), cg%b(zdim,i,j,k))*(0.0001)/cg%dvol  !!! module works properly for small emag. Should emag be > 1e-4, negative values will appear
+                  cresp_arguments(2*ncre+3) = emag(cg%b(xdim,i,j,k), cg%b(ydim,i,j,k), cg%b(zdim,i,j,k))/cg%dvol  !!! module works properly for small emag. Should emag be > 1e-4, negative values will appear
 !                   cresp_arguments(2*ncre+3) = emag(cg%b(xdim,i,j,k), cg%b(ydim,i,j,k), cg%b(zdim,i,j,k))/(4*pi*cg%dvol)
                   cresp_arguments(2*ncre+4) = cg%q(qna%ind(divv_n))%point([i,j,k])/cg%dvol
                   
@@ -67,12 +68,11 @@ contains
 #endif /* VERBOSE */
 ! #ifndef DIFF_TEST
               call cresp_crs_update(2*dt, cresp_arguments, dt_cre_tmp) !cg%u(cr_table(cren)), cg%u(cr_table(cree)), cg%u(cr_table(crepl), &
-
               cg%u(iarr_cre, i, j, k) = cresp_arguments(I_ONE:I_TWO*ncre+I_TWO)
 !              diagnostic:
                 if (i.eq.16.and.j.eq.16.and.k.eq.0) then
                       call printer(t)      
-!                        print *, '   emag = ', emag(cg%b(xdim,i,j,k), cg%b(ydim,i,j,k), cg%b(zdim,i,j,k))/(4*pi*cg%dvol)
+!                        print *, '   emag = ', emag(cg%b(xdim,i,j,k), cg%b(ydim,i,j,k), cg%b(zdim,i,j,k))/cg%dvol !/(4*pi*cg%dvol)
 !                       print *, cresp_arguments(2*ncre+3)
 !                       print *, 'cg%u(iarr_cre(e),34,34,:) =', cg%u(iarr_cre_e,34,34,0)
 !                       print *, 'cg%u(iarr_cre(n),34,34,:) =', cg%u(iarr_cre_n,34,34,0)
@@ -83,13 +83,11 @@ contains
 !                       print *, '-------------------------'
                 endif
 !               if(i.eq.1.and.j.eq.1.and.k.eq.0) call printer(t)          
-
               
+              dt_cre = min(dt_cre, dt_cre_tmp)
 !               if (dt_cre .ge. dt_cre_tmp) then
-                      dt_cre = dt_cre_tmp
+!                       dt_cre = dt_cre_tmp
 !               endif
-              
-              
            enddo
          enddo
 !          print *,'emag = ', cresp_arguments(2*ncre+3)
@@ -97,15 +95,9 @@ contains
        enddo
 !        print *, 'cresp_args: = ', cresp_arguments(iarr_cre)
       cgl=>cgl%nxt
-      
-      print *,'  dt_cre =   ', dt_cre !, dt_cre_tmp
+!       print *,'  dt_cre =   ', dt_cre !, dt_cre_tmp
 !       print *,'dt_cre grid update = ', dt_cre, ' ==0.5!'
       enddo
-      ! diagnostics!
-!       cg%u(ind_e_beg:ind_e_end,:,:,:) = 1.0
-!       cg%u(ind_n_beg:ind_n_end,:,:,:) = 500.0
-
-      
       
    end subroutine grid_cresp_update
    

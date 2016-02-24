@@ -84,7 +84,7 @@ contains
 #ifdef COSM_RAY_ELECTRONS            
             dt_crs = min(dt_crs, dt_cre, dt)
 #endif	/* COSM_RAY_ELECTRONS */
-!             print *,'dt_crs = ', dt_crs
+!             print *,'    dt_crs = ', dt_crs
          endif
       endif
 !       print *, ' dt_crs = ', dt_crs, ' dt = ', dt,' dt_cre = ', dt_cre
