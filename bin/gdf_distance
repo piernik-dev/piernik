@@ -51,7 +51,28 @@ def is_comparable(fname1, fname2):
     if (v1 != v2):
         print("Warning: different revisions of Piernik HDF format. Expect troubles.")
 
-    # dimensionality
+    # dimensionality, assume v2 naming conventions
+    sp_key = 'simulation_parameters'
+    dim_key = 'dimensionality'
+    try:
+        d1 = h5f1[sp_key].attrs[dim_key][0]
+    except KeyError:
+        status = False
+        print("KeyError: %s (`%s')" % (sys.exc_info()[1], fname1))
+    try:
+        d2 = h5f2[sp_key].attrs[dim_key][0]
+    except KeyError:
+        status = False
+        print("KeyError: %s (`%s')" % (sys.exc_info()[1], fname2))
+
+    if status is False:
+        return status
+
+    if (d1 != d2):
+        status = False
+        print("Cannot compare files with different dimensionality (%d != %d)" % (d1, d2))
+        return status
+
     # geometry
 
     return status
