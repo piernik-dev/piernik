@@ -2,11 +2,58 @@
 
 
 def is_comparable(fname1, fname2):
+    import h5py
     status = True
-    # read
+
+    # open
+    try:
+        h5f1 = h5py.File(fname1, "r")
+    except IOError:
+        status = False
+        print("IOError: %s (`%s')" % (sys.exc_info()[1], fname1))
+    try:
+        h5f2 = h5py.File(fname2, "r")
+    except IOError:
+        status = False
+        print("IOError: %s (`%s')" % (sys.exc_info()[1], fname2))
+
+    if status is False:
+        return status
+
     # piernik versions
+    v_key = 'piernik'
+    try:
+        v1 = h5f1.attrs[v_key][0]
+    except KeyError:
+        status = False
+        print("KeyError: %s (`%s')" % (sys.exc_info()[1], fname1))
+    try:
+        v2 = h5f2.attrs[v_key][0]
+    except KeyError:
+        status = False
+        print("KeyError: %s (`%s')" % (sys.exc_info()[1], fname2))
+
+    if status is False:
+        return status
+
+    if (int(v1) != int(v2)):
+        status = False
+        print("Cannot compare different major file format revisions (%d and %d)" %
+              (int(v1), int(v2)))
+        return status
+
+    if (int(v1) == 1 or int(v2) == 1):
+        status = False
+        print("Piernik v1 HDF files aren't supported now and perhaps will never are. (%.2f and/or %.2f)" %
+              (v1, v2))
+        return status
+
+    if (v1 != v2):
+        print("Warning: different revisions of Piernik HDF format. Expect troubles.")
+
     # dimensionality
     # geometry
+
     return status
 
 
