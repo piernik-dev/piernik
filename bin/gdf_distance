@@ -10,12 +10,12 @@ def is_comparable(fname1, fname2):
         h5f1 = h5py.File(fname1, "r")
     except IOError:
         status = False
-        print("IOError: %s (`%s')" % (sys.exc_info()[1], fname1))
+        print("IOError: %s (`%s')." % (sys.exc_info()[1], fname1))
     try:
         h5f2 = h5py.File(fname2, "r")
     except IOError:
         status = False
-        print("IOError: %s (`%s')" % (sys.exc_info()[1], fname2))
+        print("IOError: %s (`%s')." % (sys.exc_info()[1], fname2))
 
     if status is False:
         return status
@@ -26,25 +26,25 @@ def is_comparable(fname1, fname2):
         v1 = h5f1.attrs[v_key][0]
     except KeyError:
         status = False
-        print("KeyError: %s (`%s')" % (sys.exc_info()[1], fname1))
+        print("KeyError: %s (`%s')." % (sys.exc_info()[1], fname1))
     try:
         v2 = h5f2.attrs[v_key][0]
     except KeyError:
         status = False
-        print("KeyError: %s (`%s')" % (sys.exc_info()[1], fname2))
+        print("KeyError: %s (`%s')." % (sys.exc_info()[1], fname2))
 
     if status is False:
         return status
 
     if (int(v1) != int(v2)):
         status = False
-        print("Cannot compare different major file format revisions (%d and %d)" %
+        print("Cannot compare different major file format revisions (%d and %d)." %
               (int(v1), int(v2)))
         return status
 
     if (int(v1) == 1 or int(v2) == 1):
         status = False
-        print("Piernik v1 HDF files aren't supported now and perhaps will never are. (%.2f and/or %.2f)" %
+        print("Piernik v1 HDF files aren't supported now and perhaps will never be. (%.2f and/or %.2f)." %
               (v1, v2))
         return status
 
@@ -58,24 +58,49 @@ def is_comparable(fname1, fname2):
         d1 = h5f1[sp_key].attrs[dim_key][0]
     except KeyError:
         status = False
-        print("KeyError: %s (`%s')" % (sys.exc_info()[1], fname1))
+        print("KeyError: %s (`%s')." % (sys.exc_info()[1], fname1))
     try:
         d2 = h5f2[sp_key].attrs[dim_key][0]
     except KeyError:
         status = False
-        print("KeyError: %s (`%s')" % (sys.exc_info()[1], fname2))
+        print("KeyError: %s (`%s')." % (sys.exc_info()[1], fname2))
 
     if status is False:
         return status
 
     if (d1 != d2):
         status = False
-        print("Cannot compare files with different dimensionality (%d != %d)" % (d1, d2))
+        print("Cannot compare files with different dimensionality (%d != %d)." %
+              (d1, d2))
         return status
 
-    # geometry
+    # geometry, assume v2 naming conventions
+    geo_key = 'geometry'
+    # geo_CART = 0
+    # geo_CYL = 1
+    try:
+        g1 = h5f1[sp_key].attrs[geo_key][0]
+    except KeyError:
+        status = False
+        print("KeyError: %s (`%s')." % (sys.exc_info()[1], fname1))
+    try:
+        g2 = h5f2[sp_key].attrs[geo_key][0]
+    except KeyError:
+        status = False
+        print("KeyError: %s (`%s')." % (sys.exc_info()[1], fname2))
 
-    return status
+    if status is False:
+        return status
+
+    if (g1 != g2):
+        status = False
+        print("Cannot compare files with different geometries yet (%d != %d)." %
+              (g1, g2))
+        print("It is an interesting idea for future :-)")
+
+        return status
+
+    return status  # for safety, in case more checks will be added
 
 
 def piernik_gdf_compare(fname1, fname2):
