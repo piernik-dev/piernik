@@ -1,0 +1,53 @@
+#!/usr/bin/env python
+
+
+def is_comparable(fname1, fname2):
+    status = True
+    # read
+    # piernik versions
+    # dimensionality
+    # geometry
+    return status
+
+
+def piernik_gdf_compare(fname1, fname2):
+    norms = {}
+    # compare domains
+    norms["domain (not checked)"] = 0.
+    # compare AMR coverage
+    norms["AMR (not checked)"] = 0.
+    # compare datafield lists
+    norms["datafield lists (not checked)"] = 0.
+    # compare data in common datafields
+    return norms
+
+if __name__ == "__main__":
+    import sys
+    if (len(sys.argv) < 3):
+        print >> sys.stderr, "Error: too few arguments.\nUsage: " + \
+            sys.argv[0] + " piernik_data_hdf_file1 piernik_data_hdf_file2"
+        exit(1)
+
+    if (is_comparable(sys.argv[1], sys.argv[2])):
+        norms = piernik_gdf_compare(sys.argv[1], sys.argv[2])
+        tot_norm = 0.
+        failed = False
+        for i in norms.keys():
+            if (norms[i] >= 0. and norms[i] <= 1.):
+                print("Difference of %s: %g" % (i, norms[i]))
+                tot_norm = 1. - (1.-tot_norm) * (1. - norms[i])
+            else:
+                print("Difference measure `%s` out of [0,1] range: %g" %
+                      (i, norms[i]))
+                failed = True
+        if (failed):
+            print("Comparison of `%s' and `%s' failed" %
+                  (sys.argv[1], sys.argv[2]))
+            exit(3)
+        else:
+            print("Total difference between `%s' and `%s': %g" %
+                  (sys.argv[1], sys.argv[2], tot_norm))
+    else:
+        print("Cannot compare files `%s' and `%s'" %
+              (sys.argv[1], sys.argv[2]))
+        exit(2)
