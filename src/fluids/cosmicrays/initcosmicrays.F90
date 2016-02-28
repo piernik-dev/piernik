@@ -208,7 +208,10 @@ contains
          open(newunit=nh%lun, file=nh%tmp2, status="unknown")
          write(nh%lun,nml=COSMIC_RAYS)
          close(nh%lun)
-         
+         call nh%compare_namelist()
+      endif
+      
+      if (master) then
          open(newunit=nh%lun, file=nh%tmp1, status="unknown")
          write(nh%lun,nml=COSMIC_RAY_SPECTRUM)
          close(nh%lun)
@@ -427,6 +430,8 @@ contains
       enddo
 
    call init_cresp_type
+   
+   open(10, file='crs.dat',status='replace',position='rewind')
       
    end subroutine init_cosmicrays
 
