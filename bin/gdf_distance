@@ -113,12 +113,12 @@ def compare_domains(h5f1, h5f2):
     failed = False
 
     try:
-        (dl1, dr1) = (h5f1[sp_key].attrs[dle_key], h5f1[sp_key].attrs[dre_key])
+        dl1, dr1 = h5f1[sp_key].attrs[dle_key], h5f1[sp_key].attrs[dre_key]
     except KeyError:
         failed = True
         print("KeyError: %s (`%s':%s,%s)." % (sys.exc_info()[1], fname1, dle_key, dre_key))
     try:
-        (dl2, dr2) = (h5f2[sp_key].attrs[dle_key], h5f2[sp_key].attrs[dre_key])
+        dl2, dr2 = h5f2[sp_key].attrs[dle_key], h5f2[sp_key].attrs[dre_key]
     except KeyError:
         failed = True
         print("KeyError: %s (`%s':%s,%s)." % (sys.exc_info()[1], fname2, dle_key, dre_key))
@@ -133,7 +133,7 @@ def compare_domains(h5f1, h5f2):
     for i in numpy.subtract(dro, dlo):
         if (i < 0.):
             print("Domains don't overlap.")
-            return 1.
+            return 1., [0., 0., 0.], [0., 0., 0.]
 
     vol_1 = numpy.product(numpy.subtract(dr1, dl1))
     vol_2 = numpy.product(numpy.subtract(dr2, dl2))
@@ -142,7 +142,7 @@ def compare_domains(h5f1, h5f2):
         print("Both domains have no volume!")
         exit(11)
 
-    return 1. - vol_o/(vol_1 + vol_2 - vol_o)
+    return 1. - vol_o/(vol_1 + vol_2 - vol_o), dlo, dro
 
 
 def piernik_gdf_compare(fname1, fname2):
@@ -154,15 +154,24 @@ def piernik_gdf_compare(fname1, fname2):
     # prevent attempt to open these files.
 
     # compare domains
-    norms["domains"] = compare_domains(h5f1, h5f2)
+    norms["domains"], dlo, dro = compare_domains(h5f1, h5f2)
+
     # compare boundary types
     norms["boundary types (not checked)"] = 0.
-    # compare AMR coverage
-    norms["AMR (not checked)"] = 0.
+
     # compare datafield lists
-    norms["datafield lists (not checked)"] = 0.
-    # compare data in common datafields
+    norms["datafield lists (not checked)"], common_fields = 0., []
+
+    if (norms["domains"] < 1.):
+        # compare AMR coverage (norm of difference of resolution on overlapped part of the domain)
+        norms["AMR (not checked)"] = 0.
+
+        # compare data in common datafields
+        for f in common_fields:
+            norms["datafield `" + f + "' (not checked)"] = 0.
+
     return norms
+
 
 if __name__ == "__main__":
     import sys
