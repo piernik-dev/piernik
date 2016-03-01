@@ -116,12 +116,12 @@ def compare_domains(h5f1, h5f2):
         dl1, dr1 = h5f1[sp_key].attrs[dle_key], h5f1[sp_key].attrs[dre_key]
     except KeyError:
         failed = True
-        print("KeyError: %s (`%s':%s,%s)." % (sys.exc_info()[1], fname1, dle_key, dre_key))
+        print("KeyError: %s (`%s':%s,%s)." % (sys.exc_info()[1], h5f1.filename, dle_key, dre_key))
     try:
         dl2, dr2 = h5f2[sp_key].attrs[dle_key], h5f2[sp_key].attrs[dre_key]
     except KeyError:
         failed = True
-        print("KeyError: %s (`%s':%s,%s)." % (sys.exc_info()[1], fname2, dle_key, dre_key))
+        print("KeyError: %s (`%s':%s,%s)." % (sys.exc_info()[1], h5f2.filename, dle_key, dre_key))
 
     if failed:
         exit(10)
@@ -145,6 +145,35 @@ def compare_domains(h5f1, h5f2):
     return 1. - vol_o/(vol_1 + vol_2 - vol_o), dlo, dro
 
 
+def compare_dlists(h5f1, h5f2):
+    d_key = '/data'
+    g0_key = 'grid_0000000000'
+    failed = False
+
+    try:
+        f1 = h5f1[d_key][g0_key].keys()
+    except KeyError:
+        failed = True
+        print("KeyError: %s (`%s': %s,%s)." % (sys.exc_info()[1], h5f1.filename, d_key, g0_key))
+    try:
+        f2 = h5f2[d_key][g0_key].keys()
+    except KeyError:
+        failed = True
+        print("KeyError: %s (`%s': %s,%s)." % (sys.exc_info()[1], h5f2.filename, d_key, g0_key))
+    # trick: GDF has to contain this grid id
+    # if anything changes dramatically, we may change it to yt.load(fname).field_list
+    if failed:
+        exit(20)
+
+    fc = list(set(f1) & set(f2))
+    if (len(fc) != len(f1)):
+        print "Fields unique for `", h5f1.filename, "': ", list(set(f1) ^ set(fc))
+    if (len(fc) != len(f2)):
+        print "Fields unique for `", h5f2.filename, "': ", list(set(f2) ^ set(fc))
+
+    return 1. - len(fc)/float(len(f1) + len(f2) - len(fc)), fc
+
+
 def piernik_gdf_compare(fname1, fname2):
     import h5py
     norms = {}
@@ -160,7 +189,7 @@ def piernik_gdf_compare(fname1, fname2):
     norms["boundary types (not checked)"] = 0.
 
     # compare datafield lists
-    norms["datafield lists (not checked)"], common_fields = 0., []
+    norms["datafield lists"], common_fields = compare_dlists(h5f1, h5f2)
 
     if (norms["domains"] < 1.):
         # compare AMR coverage (norm of difference of resolution on overlapped part of the domain)
