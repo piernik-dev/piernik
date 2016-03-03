@@ -176,7 +176,13 @@ contains
             if (dom%has_dir(xdim)) prop%coords(xdim) = cg_x%x(prop%loc(xdim))
             if (dom%has_dir(ydim)) prop%coords(ydim) = cg_x%y(prop%loc(ydim))
             if (dom%has_dir(zdim)) prop%coords(zdim) = cg_x%z(prop%loc(zdim))
-            if (present(dir))      prop%assoc        = cg_x%dl(dir)
+            if (present(dir)) then
+               if (dir == 0) then
+                  prop%assoc = minval(cg_x%dl(:))
+               else
+                  prop%assoc = cg_x%dl(dir)
+               endif
+            endif
 !         else
 !            write(msg,'(a,a)') "[cg_list_dataop:get_extremum] cg_x not associated for q array name ", qna%lst(ind)%name
 !            call die(msg)
