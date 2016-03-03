@@ -1236,20 +1236,20 @@ contains
                omega_mean = sum(cgl%cg%u(fl%imy, i, :, :) / cgl%cg%u(fl%idn, i, :, :) / cgl%cg%x(i)) / size(cgl%cg%u(fl%idn, i, :, :))
                cgl%cg%wa(i, :, :) = abs(cgl%cg%u(fl%imy, i, :, :) / cgl%cg%u(fl%idn, i, :, :)  - omega_mean * cgl%cg%x(i))
             enddo
+            do k = cgl%cg%ks, cgl%cg%ke
+               do j = cgl%cg%js, cgl%cg%je
+                  do i = cgl%cg%is, cgl%cg%ie
+                     cgl%cg%wa(i, j, k) = cgl%cg%wa(i, j, k) + fl%get_cs(i, j, k, cgl%cg%u, cgl%cg%b, cgl%cg%cs_iso2)
+                  enddo
+               enddo
+            enddo
          else
             where (cgl%cg%u(fl%idn,:, :, :) > 0.0)
                cgl%cg%wa = abs(cgl%cg%u(fl%imy,:, :, :) / cgl%cg%u(fl%idn,:, :, :))
             elsewhere
-               cgl%cg%wa = 0.0
+               cgl%cg%wa = 0.
             endwhere
          endif
-         do k = cgl%cg%ks, cgl%cg%ke
-            do j = cgl%cg%js, cgl%cg%je
-               do i = cgl%cg%is, cgl%cg%ie
-                  cgl%cg%wa(i, j, k) = cgl%cg%wa(i, j, k) + fl%get_cs(i, j, k, cgl%cg%u, cgl%cg%b, cgl%cg%cs_iso2)
-               enddo
-            enddo
-         enddo
          cgl => cgl%nxt
       enddo
       call leaves%get_extremum(qna%wai, MAXL, pr%vely_max, ydim)
