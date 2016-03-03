@@ -1329,6 +1329,7 @@ contains
       pr%cs_max%loc      = 0
       pr%cs_max%coords   = 0.0
       pr%cs_max%proc     = 0
+      pr%cs_max%assoc    = cfl * minval(leaves%first%cg%dl(:))/(pr%cs_max%val + small)
       pr%temp_min%val    = (mH * fl%cs2)/ (kboltz * fl%gam)
       pr%temp_min%loc    = 0
       pr%temp_min%coords = 0.0
@@ -1351,8 +1352,9 @@ contains
             cgl%cg%wa(:,:,:) = fl%gam*cgl%cg%wa(:,:,:)/cgl%cg%u(fl%idn,:,:,:) ! sound speed squared
             cgl => cgl%nxt
          enddo
-         call leaves%get_extremum(qna%wai, MAXL, pr%cs_max)
+         call leaves%get_extremum(qna%wai, MAXL, pr%cs_max, 0)
          pr%cs_max%val = sqrt(pr%cs_max%val)
+         if (master) pr%cs_max%assoc = cfl * pr%cs_max%assoc / (pr%cs_max%val + small)
 
          cgl => leaves%first
          do while (associated(cgl))
