@@ -1263,16 +1263,22 @@ contains
 
       cgl => leaves%first
       do while (associated(cgl))
-         cgl%cg%wa = cgl%cg%dy / (cgl%cg%wa +small)
-         if (dom%geometry_type == GEO_RPZ) then
-            do i = cgl%cg%is, cgl%cg%ie
-               cgl%cg%wa(i, :, :) = cgl%cg%wa(i, :, :) * cgl%cg%x(i)
-            enddo
+         if (is_multicg) cgl%cg%wa = cgl%cg%dy / (cgl%cg%wa +small)
+         if (use_fargo) then
+            cgl%cg%wa = cgl%cg%dy / (cgl%cg%wa +small)
+            if (dom%geometry_type == GEO_RPZ) then
+               do i = cgl%cg%is, cgl%cg%ie
+                  cgl%cg%wa(i, :, :) = cgl%cg%wa(i, :, :) * cgl%cg%x(i)
+               enddo
+            endif
          endif
          cgl => cgl%nxt
       enddo
       call leaves%get_extremum(qna%wai, MINL, pr%dtvy_min, ydim)
-      if (master) pr%dtvy_min%assoc = cfl * pr%dtvy_min%val
+      if (master) then
+         if (is_multicg) pr%dtvy_min%assoc = cfl * pr%dtvy_min%assoc / (pr%dtvy_min%val + small)
+         if (use_fargo) pr%dtvy_min%assoc = cfl * pr%dtvy_min%val
+      endif
 
       ! -------------
 
