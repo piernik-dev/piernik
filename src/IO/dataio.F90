@@ -1123,11 +1123,14 @@ contains
       call cmnlog_l(fmt_dtloc, 'max(|vy|)   ', fluid, pr%vely_max)
       call cmnlog_l(fmt_dtloc, 'max(|vz|)   ', fluid, pr%velz_max)
       if (cs_tn) call cmnlog_l(fmt_dtloc, 'max(c_s)    ', fluid, pr%cs_max)
-      if (use_fargo) call cmnlog_l(fmt_dtloc, 'max(shear)  ', fluid, pr%shear_max)
+      if (use_fargo) then
+         call cmnlog_l(fmt_dtloc, 'max(shear)  ', fluid, pr%shear_max)
+         call cmnlog_l(fmt_vloc, 'min(dtvy(f)) ', fluid, pr%dtvy_min)
+      endif
 
-      call cmnlog_l(fmt_vloc, 'min(dt_vy)   ', fluid, pr%dtvy_min)
       if (is_multicg) then
          call cmnlog_l(fmt_vloc, 'min(dt_vx)   ', fluid, pr%dtvx_min)
+         call cmnlog_l(fmt_vloc, 'min(dt_vy)   ', fluid, pr%dtvy_min)
          call cmnlog_l(fmt_vloc, 'min(dt_vz)   ', fluid, pr%dtvz_min)
          if (cs_tn) call cmnlog_l(fmt_vloc, 'min(dt_cs)   ', fluid, pr%dtcs_min)
       endif
