@@ -1223,7 +1223,7 @@ contains
       if (is_multicg) then
          cgl => leaves%first
          do while (associated(cgl))
-            cgl%cg%wa = cgl%cg%dx / (cgl%cg%wa +small)
+            cgl%cg%wa = cfl * cgl%cg%dx / (cgl%cg%wa + small)
             cgl => cgl%nxt
          enddo
          call leaves%get_extremum(qna%wai, MINL, pr%dtvx_min, xdim)
@@ -1263,9 +1263,9 @@ contains
 
       cgl => leaves%first
       do while (associated(cgl))
-         if (is_multicg) cgl%cg%wa = cgl%cg%dy / (cgl%cg%wa +small)
+         if (is_multicg) cgl%cg%wa = cfl * cgl%cg%dy / (cgl%cg%wa + small)
          if (use_fargo) then
-            cgl%cg%wa = cgl%cg%dy / (cgl%cg%wa +small)
+            cgl%cg%wa = cgl%cg%dy / (cgl%cg%wa + small)
             if (dom%geometry_type == GEO_RPZ) then
                do i = cgl%cg%is, cgl%cg%ie
                   cgl%cg%wa(i, :, :) = cgl%cg%wa(i, :, :) * cgl%cg%x(i)
@@ -1313,7 +1313,7 @@ contains
       if (is_multicg) then
          cgl => leaves%first
          do while (associated(cgl))
-            cgl%cg%wa = cgl%cg%dz / (cgl%cg%wa +small)
+            cgl%cg%wa = cfl * cgl%cg%dz / (cgl%cg%wa + small)
             cgl => cgl%nxt
          enddo
          call leaves%get_extremum(qna%wai, MINL, pr%dtvz_min, zdim)
@@ -1361,7 +1361,7 @@ contains
             else
                dxmn_safe = cgl%cg%dxmn
             endif
-            cgl%cg%wa = (cfl * dxmn_safe)**2 / (cgl%cg%wa +small)
+            cgl%cg%wa = (cfl * dxmn_safe)**2 / (cgl%cg%wa + small)
             cgl => cgl%nxt
          enddo
          call leaves%get_extremum(qna%wai, MINL, pr%dtcs_min)
