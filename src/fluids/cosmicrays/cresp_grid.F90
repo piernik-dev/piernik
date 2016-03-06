@@ -13,15 +13,15 @@ contains
       use cg_leaves,      only: leaves
       use cg_list,        only: cg_list_element
 !       use cg_level_finest,       only: finest
-      use constants,      only: I_ONE, I_TWO, I_FOUR, xdim, ydim, zdim, pi !, LO, HI, pMAX, 
-      use domain,         only: dom!, is_multicg
+      use constants,      only: I_ONE, I_TWO, I_FOUR, xdim, ydim, zdim !, LO, HI, pMAX, 
+!       use domain,         only: dom!, is_multicg
       use func,           only: ekin, emag, operator(.equals.), operator(.notequals.)
       use grid_cont,      only: grid_container
       use cresp_variables, only: ind_p_lo, ind_p_up, cresp_taylor_order, taylor_coeff_2nd, taylor_coeff_3rd, &
                                 ind_e_beg, ind_e_end, ind_n_beg, ind_n_end
       use cresp_crspectrum, only:cresp_crs_update, printer
       use crhelpers,      only: divv_n
-      use named_array_list, only: qna, wna
+      use named_array_list, only: qna
       use units,           only: s_len_u
 
       implicit none
@@ -70,17 +70,17 @@ contains
               call cresp_crs_update(2*dt, cresp_arguments, dt_cre_tmp) !cg%u(cr_table(cren)), cg%u(cr_table(cree)), cg%u(cr_table(crepl), &
               cg%u(iarr_cre, i, j, k) = cresp_arguments(I_ONE:I_TWO*ncre+I_TWO)
 !              diagnostic:
-                if (i.eq.16.and.j.eq.16.and.k.eq.0) then
+                if (i.eq.34.and.j.eq.34.and.k.eq.0) then
                       call printer(t)      
-!                        print *, '   emag = ', emag(cg%b(xdim,i,j,k), cg%b(ydim,i,j,k), cg%b(zdim,i,j,k))/cg%dvol !/(4*pi*cg%dvol)
+                       print *, '   emag = ', emag(cg%b(xdim,i,j,k), cg%b(ydim,i,j,k), cg%b(zdim,i,j,k))/cg%dvol !/(4*pi*cg%dvol)
 !                       print *, cresp_arguments(2*ncre+3)
 !                       print *, 'cg%u(iarr_cre(e),34,34,:) =', cg%u(iarr_cre_e,34,34,0)
-!                       print *, 'cg%u(iarr_cre(n),34,34,:) =', cg%u(iarr_cre_n,34,34,0)
+                      print *, 'cg%u(iarr_cre(n),34,34,:) =', cg%u(iarr_cre_n,34,34,0)
 !                       print *, 'p ', crel%p
 ! !                       print *, 'q ', crel%q
 !                       print *, 'f ', crel%f
 !                       print *, 'plo, pup = ', cg%u(flind%cre%plo,i,j,k),cg%u(flind%cre%pup,i,j,k)
-!                       print *, '-------------------------'
+                      print *, '-------------------------'
                 endif
 !               if(i.eq.1.and.j.eq.1.and.k.eq.0) call printer(t)          
               
@@ -105,8 +105,8 @@ contains
    
       use cg_leaves,      only: leaves
       use cg_list,        only: cg_list_element
-      use constants,      only: xdim, ydim, zdim, LO, HI, pMAX, I_ONE, I_TWO, I_FOUR, fpi
-      use domain,         only: dom, is_multicg
+      use constants,      only: xdim, ydim, zdim, I_ONE, I_TWO, I_FOUR, fpi !, LO, HI, pMAX,
+!       use domain,         only: dom, is_multicg
       use func,           only: ekin, emag, operator(.equals.), operator(.notequals.)
       use grid_cont,      only: grid_container
       use cresp_variables, only: ind_p_lo, ind_p_up, cresp_taylor_order, taylor_coeff_2nd, taylor_coeff_3rd, &
@@ -142,7 +142,7 @@ contains
               do i = cg%is, cg%ie
 
                   cresp_arguments(I_ONE:2*ncre+2)    = cg%u(iarr_cre, i, j, k)
-                  cresp_arguments(2*ncre+3) = emag(cg%b(xdim,i,j,k), cg%b(ydim,i,j,k),cg%b(zdim,i,j,k))/cg%dvol
+                  cresp_arguments(2*ncre+3) = emag(cg%b(xdim,i,j,k), cg%b(ydim,i,j,k),cg%b(zdim,i,j,k))*0.1/cg%dvol
                   
                   f_init = 1/(fpi*clight*(p_lo_init**(I_FOUR))*(((p_up_init/p_lo_init)**(I_FOUR-q_init))-I_ONE)/(I_FOUR-q_init))   !!! amplitude and distribution of electron energy density is inherited after those of nucleons, see crspectrum.pdf, eq. 29
 !                    f_init = 1.0
@@ -168,10 +168,11 @@ contains
                   if (dt_cre .ge. dt_cre_tmp) then
                       dt_cre = dt_cre_tmp
                   endif
-!                print *, ' dt cre, dt_cre_tmp', dt_cre, dt_cre_tmp
+!
            enddo
          enddo
 !          print *,'ub = ', cresp_arguments(2*ncre+3)
+!          print *, ' dt cre, dt_cre_tmp', dt_cre, dt_cre_tmp
        enddo
       cgl=>cgl%nxt
 !       print *,'min_cre_dt = ', dt_cre
