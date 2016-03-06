@@ -145,6 +145,22 @@ def compare_domains(h5f1, h5f2):
     return 1. - vol_o/(vol_1 + vol_2 - vol_o), dlo, dro
 
 
+def compare_resolution(h5f1, h5f2):
+    dim_key = "domain_dimensions"
+
+    try:
+        res1, res2 = h5f1[sp_key].attrs[dim_key], h5f2[sp_key].attrs[dim_key]
+    except KeyError:
+        print("KeyError: %s (`%s',`%s':%s)." % (sys.exc_info()[1], h5f1.filename, h5f2.filename, dim_key))
+        exit(30)
+
+    r_norm = 0.
+    for i in range(len(res1)):
+        r_norm = 1. - (1. - r_norm) * (1. - abs(res1[i] - res2[i])/float(res1[i] + res2[i]))
+
+    return r_norm
+
+
 def compare_dlists(h5f1, h5f2):
     d_key = '/data'
     g0_key = 'grid_0000000000'
@@ -184,6 +200,9 @@ def piernik_gdf_compare(fname1, fname2):
 
     # compare domains
     norms["domains"], dlo, dro = compare_domains(h5f1, h5f2)
+
+    # compare resolution
+    norms["resolution"] = compare_resolution(h5f1, h5f2)
 
     # compare boundary types
     norms["boundary types (not checked)"] = 0.
