@@ -190,6 +190,26 @@ def compare_dlists(h5f1, h5f2):
     return 1. - len(fc)/float(len(f1) + len(f2) - len(fc)), fc
 
 
+def compare_data(ds1, ds2, f):
+    import numpy
+
+    # This norm is:
+    #   0. when n1 == n2
+    #   1. when one field is non-0. and the other is 0.
+    #   1. when one field is proportional to the other but with negative coefficient
+    #   epsilon/2 when difference between fields is epsilon
+
+    n1 = numpy.linalg.norm(ds1.covering_grid(0, ds1.domain_left_edge, ds1.domain_dimensions)[f].v)
+    n2 = numpy.linalg.norm(ds2.covering_grid(0, ds2.domain_left_edge, ds2.domain_dimensions)[f].v)
+    nd = numpy.linalg.norm(ds1.covering_grid(0, ds1.domain_left_edge, ds1.domain_dimensions)[f].v -
+                           ds2.covering_grid(0, ds2.domain_left_edge, ds2.domain_dimensions)[f].v)
+
+    if (n1 + n2 != 0.):
+        return nd/(n1 + n2)
+    else:
+        return 0.
+
+
 def piernik_gdf_compare(fname1, fname2):
     import h5py
     norms = {}
@@ -210,13 +230,40 @@ def piernik_gdf_compare(fname1, fname2):
     # compare datafield lists
     norms["datafield lists"], common_fields = compare_dlists(h5f1, h5f2)
 
+    h5f1.close()
+    h5f2.close()
+
     if (norms["domains"] < 1.):
+        try:
+            import yt
+        except:
+            print "You must make yt available somehow!"
+            exit(30)
+        # For AMR domains it is way easier to make YT do the dirty work
+
+        print("yt.load(`%s')" % fname1)
+        ds1 = yt.load(fname1)
+        print("yt.load(`%s')" % fname2)
+        ds2 = yt.load(fname2)
+
+        if (ds1.index.level_stats['numgrids'][1] != 0 or ds2.index.level_stats['numgrids'][1] != 0):
+            print "Warning: refinement levels are not compared yet."
+
         # compare AMR coverage (norm of difference of resolution on overlapped part of the domain)
         norms["AMR (not checked)"] = 0.
 
         # compare data in common datafields
-        for f in common_fields:
-            norms["datafield `" + f + "' (not checked)"] = 0.
+
+        if (norms["domains"] == 0 and norms["resolution"] == 0):
+            tot_datanorm = 0.
+            for f in common_fields:
+                norm = compare_data(ds1, ds2, f)
+                norms["datafield `" + f + "'"] = norm
+                tot_datanorm = 1. - (1. - tot_datanorm) * (1. - norm)
+            print("All datafield difference: %g" % tot_datanorm)
+        else:
+            print "Comparing domains of different size or resolution is not implementsd yet"
+            exit(31)
 
     return norms
 
@@ -235,7 +282,7 @@ if __name__ == "__main__":
         for i in norms.keys():
             if (norms[i] >= 0. and norms[i] <= 1.):
                 print("Difference of %s: %g" % (i, norms[i]))
-                tot_norm = 1. - (1.-tot_norm) * (1. - norms[i])
+                tot_norm = 1. - (1. - tot_norm) * (1. - norms[i])
             else:
                 print("Difference measure `%s` out of [0,1] range: %g" %
                       (i, norms[i]))
