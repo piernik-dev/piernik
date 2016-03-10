@@ -224,7 +224,7 @@ contains
     real, dimension(:,:), pointer                   :: p_flx, p_bcc, p_bccl, p_bccr, p_ql, p_qr
     integer                                         :: nx, i
 
-
+  integer :: ii
 
     nx  = size(u,2)
 
@@ -258,10 +258,27 @@ contains
        call riemann_hlld(nx, p_flx, p_ql, p_qr, mag_cc, p_bccl, p_bccr, fl%gam)
     enddo
 
-    u_predict = u - half*dtodx*p_flx(:,:)
-    u  =  u_predict - dtodx*(fluxes(p_ql,p_bccl)-fluxes(p_qr,p_bccr))
+    !u_predict = u - half*dtodx*p_flx(:,:)
+    u_predict(:,2:nx) = u(:,2:nx) - half*dtodx*(flx(:,2:nx) - flx(:,1:nx-1))
+ 
+    do ii = lbound(u_predict, 2), ubound(u_predict, 2)
+       write(*,*) u_predict(:, ii)
+    end do
 
+    do i = 1, flind%fluids
+       fl    => flind%all_fluids(i)%fl
+       p_flx => flx(fl%beg:fl%end,:)
+       p_ql  => ql(fl%beg:fl%end,:)
+       p_qr  => qr(fl%beg:fl%end,:)
+       p_bcc => mag_cc(xdim:zdim,:)
+       p_bccl => b_ccl(xdim:zdim,:)
+       p_bccr => b_ccr(xdim:zdim,:)
+       call riemann_hlld(nx, p_flx, p_ql, p_qr, mag_cc, p_bccl, p_bccr, fl%gam)
+    enddo
 
+   ! u  =  u_predict - dtodx*(flx(:,1:nx-1) - flx(:,2:nx))
+    
+    u  =  u_predict
 
   end subroutine rk2
 
