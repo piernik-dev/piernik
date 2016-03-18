@@ -499,6 +499,9 @@ contains
          case ("magx", "magy", "magz")
             val = lmtvB(U_MAG)
             write(s_val, '(a)') trim(s_lmtvB(U_MAG))
+         case ("cr1" : "cr9")
+            val = lmtvB(U_MASS) / lmtvB(U_LEN) / lmtvB(U_TIME) ** 2
+            write(s_val, '(a, "/", a, " /",a,"**2")') trim(s_lmtvB(U_MASS)), trim(s_lmtvB(U_LEN)), trim(s_lmtvB(U_TIME))
          case ("gpot", "sgpt")
             val = lmtvB(U_VEL) ** 2
             write(s_val, '(a,"**2")') trim(s_lmtvB(U_VEL))
