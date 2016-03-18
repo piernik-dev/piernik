@@ -487,9 +487,10 @@ contains
          case ("vlxd", "vlxn", "vlxi", "vlyd", "vlyn", "vlyi", "vlzd", "vlzn", "vlzi", "velocity_x", "velocity_y", "velocity_z")
             val = lmtvB(U_VEL)
             write(s_val, '(a)') trim(s_lmtvB(U_VEL))
-         case ("enen", "enei", "specific_energy")
+         case ("enen", "enei", "energy_density")
             val = lmtvB(U_MASS) * lmtvB(U_LEN) ** 2 / lmtvB(U_TIME) ** 2
             write(s_val, '(a, "*", a, "**2 /",a,"**2")') trim(s_lmtvB(U_MASS)), trim(s_lmtvB(U_LEN)), trim(s_lmtvB(U_TIME))
+         case ("ethn", "ethi", "specific_energy")
          case ("pren", "prei", "pressure")
             val =  lmtvB(U_MASS) / lmtvB(U_LEN) / lmtvB(U_TIME) ** 2
             write(s_val, '(a, "/", a, "/",a,"**2")') trim(s_lmtvB(U_MASS)), trim(s_lmtvB(U_LEN)), trim(s_lmtvB(U_TIME))
