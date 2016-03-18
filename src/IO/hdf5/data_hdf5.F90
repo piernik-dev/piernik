@@ -288,6 +288,18 @@ contains
                  &       ekin(cg%u(flind%ion%imx, RNG), cg%u(flind%ion%imy, RNG), cg%u(flind%ion%imz, RNG), cg%u(flind%ion%idn, RNG)), kind=4) - &
                  &       real(flind%ion%gam_1*emag(cg%b(xdim, RNG), cg%b(ydim, RNG), cg%b(zdim, RNG)), kind=4)
 #endif /* !ISO */
+         case ("ethn")
+#ifndef ISO
+            tab(:,:,:) = real( (cg%u(flind%neu%ien, RNG) - &
+                 &       ekin(cg%u(flind%neu%imx, RNG), cg%u(flind%neu%imy, RNG), cg%u(flind%neu%imz, RNG), cg%u(flind%neu%idn, RNG))) /         &
+                 &       cg%u(flind%neu%idn, RNG), kind=4)
+#endif /* !ISO */
+         case ("ethi")
+#ifndef ISO
+            tab(:,:,:) = real( (cg%u(flind%ion%ien, RNG) - &
+                 &       ekin(cg%u(flind%ion%imx, RNG), cg%u(flind%ion%imy, RNG), cg%u(flind%ion%imz, RNG), cg%u(flind%ion%idn, RNG)) -          &
+                 &       emag(cg%b(xdim, RNG), cg%b(ydim, RNG), cg%b(zdim, RNG))) / cg%u(flind%ion%idn, RNG), kind=4)
+#endif /* !ISO */
          case ("magx", "magy", "magz")
             tab(:,:,:) = real(cg%b(xdim + i_xyz, RNG), kind=4)
          case ("gpot")
