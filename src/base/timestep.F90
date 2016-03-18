@@ -117,7 +117,8 @@ contains
       use timestepcosmicrays,   only: timestep_crs, dt_crs
 #endif /* COSM_RAYS */
 #ifdef COSM_RAY_ELECTRONS
-      use cresp_grid,           only: dt_cre
+!       use timestep_cresp,   only: timestep_cresp_update, dt_cre
+      use cresp_grid,         only: dt_cre
 #endif /* COSM_RAY_ELECTRONS */
 #ifdef RESISTIVE
       use resistivity,          only: dt_resist, timestep_resist
@@ -163,7 +164,9 @@ contains
 #endif /* COSM_RAYS */
 
 #ifdef COSM_RAY_ELECTRONS
-         dt = min(dt, dt_crs, dt_cre)
+!          call timestep_cresp_update
+         dt = min(dt, dt_cre)
+!          print *, 'timestep: dt_cre = ', dt_cre
 #endif /* COSM_RAY_ELECTRONS */
 
 #ifdef RESISTIVE
