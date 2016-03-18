@@ -73,7 +73,7 @@ contains
 
       use constants, only: fpi
       use gdf,       only: gdf_field_type
-      use units,     only: cm, gram, sek, miu0
+      use units,     only: cm, erg, gram, sek, miu0
 
       implicit none
 
@@ -92,8 +92,11 @@ contains
             f%fu = "\rm{cm}/\rm{s}"
             f%f2cgs = 1.0 / (cm/sek)
          case ("enen", "enei")
-            f%fu = "\rm{g}*\rm{cm}^2/\rm{s}^2"
-            f%f2cgs = 1.0 / (gram*cm**2/sek**2)
+            f%fu = "\rm{erg}/\rm{cm}^3"
+            f%f2cgs = 1.0 / (erg/cm**3)
+         case ("ethn", "ethi")
+            f%fu = "\rm{erg}/\rm{g}"
+            f%f2cgs = 1.0 / (erg/gram)
          case ("pren", "prei")
             f%fu = "\rm{g}/\rm{cm}/\rm{s}^2"
             f%f2cgs = 1.0 / (gram/cm/sek**2)
