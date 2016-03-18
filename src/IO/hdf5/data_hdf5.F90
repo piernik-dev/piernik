@@ -126,6 +126,8 @@ contains
             case ("vlxd", "vlxn", "vlxi", "vlyd", "vlyn", "vlyi", "vlzd", "vlzn", "vlzi")
                write(newname, '("velocity_",A1)') var(3:3)
             case ("enen", "enei")
+               newname = "energy_density"
+            case ("ethn", "ethi")
                newname = "specific_energy"
             case ("pren", "prei")
                newname = "pressure"
