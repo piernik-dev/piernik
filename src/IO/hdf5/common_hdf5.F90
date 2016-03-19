@@ -174,6 +174,9 @@ contains
             case ('ener')
                if (has_neu) then ; hdf_vars(j) = 'enen' ; j = j + 1 ; endif
                if (has_ion) then ; hdf_vars(j) = 'enei' ; j = j + 1 ; endif
+            case ('ethr')
+               if (has_neu) then ; hdf_vars(j) = 'ethn' ; j = j + 1 ; endif
+               if (has_ion) then ; hdf_vars(j) = 'ethi' ; j = j + 1 ; endif
             case ("magx", "magy", "magz")
                hdf_vars(j) = vars(i) ; j = j + 1
 #ifdef COSM_RAYS
