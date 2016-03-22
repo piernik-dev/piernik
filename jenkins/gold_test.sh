@@ -52,6 +52,7 @@ git clone http://github.com/piernik-dev/piernik $GOLD_DIR
 (
     cd $GOLD_DIR
     git checkout $GOLD_COMMIT
+    rsync -avx --delete ../compilers/ ./compilers
     python setup $PROBLEM_NAME $SETUP_PARAMS -n --copy -o $GOLD_OBJ
 )
 mv ${GOLD_DIR}/${OBJ_PREFIX}$GOLD_OBJ .
