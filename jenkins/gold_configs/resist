@@ -16,7 +16,6 @@ PROBLEM_NAME=tearing
 SETUP_PARAMS="--param problem.par.build --debug"
 
 # options for running gold test
-#GOLD_PARAMS="-n '&OUTPUT_CONTROL run_id=\"gld\" /'"
 GOLD_PARAMS="-n '&OUTPUT_CONTROL dt_res=0. /'"
 
 # which file to compare
