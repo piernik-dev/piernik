@@ -1,5 +1,5 @@
 module timestep_cresp
-! pulled by COSM_RAY_ELECTRONS
+! pulled by VOID  !  pulled by COSM_RAY_ELECTRONS
 
  use initcosmicrays, only: ncre
  use constants,      only: one, zero
@@ -42,7 +42,7 @@ contains
       integer        :: id,jd,kd, i, k            ! id;kd - domain indices, i,k - sorting indices
   
       call allocate_with_index(p_tmp, 0, ncre)
-      call allocate_with_index(dts_new, 1, ncre)
+      call allocate_with_index(dts_new, 0, ncre)
 
   u_b        = zero
   dt_tmp = huge(one)
@@ -58,6 +58,7 @@ contains
                p_l   = cg%u(flind%cre%plo, id, jd, kd)
                p_u   = cg%u(flind%cre%pup, id, jd, kd)
                u_b   = emag(cg%b(xdim,id,jd,kd), cg%b(ydim,id,jd,kd), cg%b(zdim,id,jd,kd))/cg%dvol
+               u_d   = cg%q(qna%ind(divv_n))%point([i,j,k])/cg%dvol
 
                p_tmp = zero                        ! important to have p_tmp = zero after each iteration
                p_tmp = p_fix_init                  ! initial (and constant) values of momentum grid are passed down to momentum array for the current cell
@@ -111,7 +112,7 @@ contains
 !----------------------------------------------------------
 ! remove from cresp_crspectrum when this module starts to work!
  
-   subroutine cresp_timestep(dt_calc)
+   subroutine cresp_timestep(dt_calc)    ! cresp_timestep_old
     use initcosmicrays,    only: cfl_cre
     implicit none
     real(kind=8)                  :: dt_calc
@@ -156,5 +157,39 @@ contains
     b_losses = u_b*p**2  !!! b_sync_ic = 8.94e-25*(u_b+u_cmb)*gamma_l**2 ! erg/cm
 
   end function
+  
+!----------------------------------------------------------
+! Subroutine consistent with rules depicted in crspectrum.pdf
+
+ subroutine cresp_timestep_new(dt_calc)
+   implicit none
+   
+   real(kind=8), intent(in)   :: dt_calc
+   real(kind=8)               :: dt_cre_ud, dt_cre_ub
+!    real(kind=8), dimension(:) :: width
+   
+   dt_cre_ud = huge(one)
+   dt_cre_ub = huge(one)
+   dts_new = huge(one)
+
+! Adiabatic cooling timestep:
+   where (p_tmp(1:ncre) .ne. zero .and. p_tmp(0:ncre-1) .ne. zero)
+     dts_new = cfl_cre * log10(p_tmp(1:ncre) / p_tmp(0:ncre-1)) / u_d
+   end where
+   dt_cre_ud = minval(dts_new)   ! it was already multiplied by cfl_cre
+   
+   dts_new = huge(one)
+   
+! Synchrotron cooling timestep (is dependant only on p_up, highest value of p):
+   where (p_tmp(1:ncre).ne.zero)   ! We only need p_(i+1/2) to compute this timestep.
+     dts_new = cfl_cre * p_tmp(1:ncre) / (p_u * u_b) 
+   end where
+   dt_cre_ub = minval(dts_new)
+!    print *, dt_cre_ud, dt_cre_ub
+
+! Finally, shortest among calculated timesteps is chosen.
+   dt_calc = min(dt_cre_ud, dt_cre_ub)
+! Should dt_cre_ud or dt_cre_ub be greater than current one, next timestep shall be independently increased by piernik in timestep
+ end subroutine cresp_timestep_new
 
 end module timestep_cresp
