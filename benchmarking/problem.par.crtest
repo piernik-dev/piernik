@@ -1,0 +1,102 @@
+ $BASE_DOMAIN
+    n_d = 64, 64, 64
+    bnd_xl = 'per'
+    bnd_xr = 'per'
+    bnd_yl = 'per'
+    bnd_yr = 'per'
+    bnd_zl = 'out'
+    bnd_zr = 'out'
+    xmin   =-512.0
+    xmax   = 512.0
+    ymin   =-512.0
+    ymax   = 512.0
+    zmin   =-512.0
+    zmax   = 512.0
+ /
+
+ $MPI_BLOCKS
+    allow_uneven = .true.
+    allow_noncart = .true.
+    dd_unif_quality = 1.1
+    dd_rect_quality = 1.1
+ /
+
+ $UNITS
+ /
+
+ $RESTART_CONTROL
+    restart  = 'last'
+    new_id   = ''
+    nrestart = 0
+ /
+
+ $END_CONTROL
+    tend   = 50.0
+    nend   = 10000
+ /
+
+ $OUTPUT_CONTROL
+    problem_name = 'cr'
+    run_id = 'tst'
+    dt_hdf  = 0.0
+    dt_res  = 0.0
+    dt_log  = 0.0
+    dt_tsl  = 0.0
+    vars(1:) = 'ener', 'dens', 'magx', 'magy', 'magz', 'encr', 'acr1', 'err1', 'velx', 'vely', 'velz'
+ /
+
+ $NUMERICAL_SETUP
+    cfl    = 0.5
+    smalld = 1.e-3
+    smallei= 1.e-5
+    integration_order = 2
+    limiter= 'vanleer'
+ /
+
+ $FLUID_IONIZED
+    gamma  = 1.66666666666666666
+ /
+
+ $COSMIC_RAYS
+    cfl_cr      = 0.9
+    cr_active   = 1.0
+    ncrn        = 1
+    K_crn_paral = 200.0   ! anisotropic
+!    K_crn_perp  = 200.0 ! isotropic
+    use_split   = .false.
+ /
+
+ $MULTIGRID_SOLVER
+    stdout = .true.
+ /
+
+ $MULTIGRID_DIFFUSION
+!    diff_explicit = .true.
+    diff_theta     = 0.6
+    diff_tstep_fac = 86.80555556 !91.0222223 !91.0222223 !45.511112 !22.7555556
+    norm_tol = 1e-5
+    nsmoob = 4
+    max_cycles = 10
+    diff_bnd_str = "styrofoam"
+ /
+
+ $PROBLEM_CONTROL
+    d0     = 1.0e5
+    p0     = 1.0
+    bx0    = 5.0
+    by0    = 5.0
+    bz0    = 5.0
+    x0     = 0. !416.0
+    y0     = 0. !416.0
+    z0     = 0.0
+    r0     = 64.0
+    beta_cr= 0.0
+    amp_cr = 1.0
+    norm_step = 1
+ /
+
+ $INTERACTIONS
+ /
+
+ $AMR
+ /

@@ -69,3 +69,53 @@ OBJ_LIST=$( get_n_problems 8 )
 echo -n "Multi-thread make eight objects "
 time $MAKE -j $OBJ_LIST > /dev/null
 } 2>&1 | $( dirname $0 )"/pretty_time_form.awk"
+
+#
+# Benchmarking: Piernik
+#
+
+for p in sedov crtest maclaurin ; do
+    for t in weak strong ; do
+	echo "Benchmarking $p, $t scaling"
+	(
+	    RUNDIR=runs/${p}_B_${p}
+	    cp  $( dirname $0 )"/problem.par."${p} ${RUNDIR}/problem.par
+	    cd $RUNDIR
+	    case $p in
+		sedov)     echo "#Threads dWallClock1 dWallClock2 dWallClock3 dWallClock4 dWallClock5 dWallClock_Average";;
+		crtest)    echo "#Threads MG_prepare MG_cycle Total_MG";;
+		maclaurin) echo "#Threads MG_prepare MG_i-cycle MG_multipole MG_o-cycle Total_MG";;
+	    esac
+	    for i in $N_PROC_LIST ; do
+		rm *log 2> /dev/null
+		echo -n $i
+		case $p in
+		    sedov)
+			case $t in
+			    weak)
+				mpirun -np $i ./piernik -n '&BASE_DOMAIN n_d = '$(( $i * 64 ))', 2*64 xmin = -'$(( $i * 1 ))' xmax = '$(( $i * 1 ))'/' 2> /dev/null ;;
+			    strong)
+				mpirun -np $i ./piernik -n '&BASE_DOMAIN n_d = 3*64 /' 2> /dev/null ;;
+			esac | grep "dWallClock" | awk 'BEGIN {t=0; n=0;} {if ($12 != 0.) {printf("%7.2f ", $12); t+=$12; n++;} } END {printf("%7.3f\n", t/n)}' ;;
+		    crtest)
+			case $t in
+			    weak)
+				mpirun -np $i ./piernik -n '&BASE_DOMAIN n_d = '$(( $i * 64 ))', 2*64 xmin = -'$(( $i * 512 ))' xmax = '$(( $i * 512 ))'/' 2> /dev/null ;;
+			    strong)
+				mpirun -np $i ./piernik -n '&BASE_DOMAIN n_d = 3*64 /' 2> /dev/null ;;
+			esac | grep "C1-cycles" | awk '{if (NR==1) printf("%7.3f %7.3f ", $5, $8)}'
+			awk '/Spent/ { print $5 }' *log ;;
+		    maclaurin)
+			case $t in
+			    weak)
+				mpirun -np $i ./piernik -n '&BASE_DOMAIN n_d = '$(( $i * 64 ))', 2*64 xmin = -'$(( $i * 2 ))' xmax = '$(( $i * 2 ))' / &MPI_BLOCKS AMR_bsize = 3*32 /' 2> /dev/null ;;
+			    strong)
+				mpirun -np $i ./piernik -n '&BASE_DOMAIN n_d = 3*128 / &MPI_BLOCKS AMR_bsize = 3*32 /' 2> /dev/null ;;
+			esac | grep cycles | awk '{printf("%7.3f %7.3f ", $5, $8)}'
+			awk '/Spent/ { print $5 }' *log ;;
+	        esac
+	    done
+	) | column -t
+	echo
+    done
+done
