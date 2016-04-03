@@ -69,6 +69,7 @@ OBJ_LIST=$( get_n_problems 8 )
 echo -n "Multi-thread make eight objects "
 time $MAKE -j $OBJ_LIST > /dev/null
 } 2>&1 | $( dirname $0 )"/pretty_time_form.awk"
+echo
 
 #
 # Benchmarking: Piernik
@@ -100,9 +101,9 @@ for p in sedov crtest maclaurin ; do
 		    crtest)
 			case $t in
 			    weak)
-				mpirun -np $i ./piernik -n '&BASE_DOMAIN n_d = '$(( $i * 64 ))', 2*64 xmin = -'$(( $i * 512 ))' xmax = '$(( $i * 512 ))'/' 2> /dev/null ;;
+				mpirun -np $i ./piernik -n '&BASE_DOMAIN n_d = '$(( $i * 32 ))', 2*32 xmin = -'$(( $i * 512 ))' xmax = '$(( $i * 512 ))'/' 2> /dev/null ;;
 			    strong)
-				mpirun -np $i ./piernik -n '&BASE_DOMAIN n_d = 3*64 /' 2> /dev/null ;;
+				mpirun -np $i ./piernik -n '&BASE_DOMAIN n_d = 3*32 /' 2> /dev/null ;;
 			esac | grep "C1-cycles" | awk '{if (NR==1) printf("%7.3f %7.3f ", $5, $8)}'
 			awk '/Spent/ { print $5 }' *log ;;
 		    maclaurin)
