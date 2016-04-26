@@ -126,9 +126,13 @@ contains
        do i1 = cg%lhn(pdims(ddim, ORTHO1), LO), cg%lhn(pdims(ddim, ORTHO1), HI)
           pu => cg%w(wna%fi)%get_sweep(ddim,i1,i2)
           u1d(iarr_all_swp(ddim,:),:) = pu(:,:)
-          !call muscl(u1d,b_cc1d, dt/cg%dl(ddim))
+#ifdef MUSCL
+          call muscl(u1d,b_cc1d, dt/cg%dl(ddim))
+#endif
           !call rk2(u1d,b_cc1d, dt/cg%dl(ddim))
+#ifdef EULER
           call euler_check(u1d,b_cc1d, dt/cg%dl(ddim))
+#endif
           pu(:,:) = u1d(iarr_all_swp(ddim,:),:)
 
        enddo
@@ -442,13 +446,18 @@ contains
 
     
     flx = fluxes(u,b_cc)
-
+    !flx  = fluxes(ul,b_ccl) - fluxes(ur,b_ccr)
     
     ql = utoq(ul,b_ccl)
     qr = utoq(ur,b_ccr)
+    !ql = utoq(u(:,1:nx-1),b_cc(:,1:nx-1))
+    !qr = utoq(u(:,2:nx),b_cc(:,2:nx))
 
+    !write(*,*) "gam", fl%gam
+    
     do i = 1, flind%fluids
        fl    => flind%all_fluids(i)%fl
+       !write(*,*) "gam", fl%gam
        p_flx => flx(fl%beg:fl%end,:)
        p_ql  => ql(fl%beg:fl%end,:)
        p_qr  => qr(fl%beg:fl%end,:)
@@ -459,7 +468,22 @@ contains
     enddo
 
     
-    u = u+dtodx*flx(:,:)
+    !write(*,*) "u2", u(:,2:nx)
+    !write(*,*) "dtodx", dtodx
+    !write(*,*) "flx1", flx(:,1:nx-1)
+    !write(*,*) "flx2", flx(:,2:nx)
+    !write(*,*) "flxdiff", flx(:,1:nx-1) - flx(:,2:nx)
+    !u(:,2:nx) = u(:,2:nx) + dtodx*(flx(:,1:nx-1) - flx(:,2:nx))
+    write(*,*) "flx(1,2:nx)    ", flx(1,2:nx)
+    write(*,*) "cshift(flx,1,2)", cshift(flx(1,:),1,1)
+    u = u + dtodx*(flx - cshift(flx,1,2))
+
+    !do ii = lbound(flx, 2), ubound(flx, 2)
+    !   write(*,*) flx(:, ii)
+    !end do
+
+    
+    !u = u + dtodx*flx
 
  
 

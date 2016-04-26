@@ -139,9 +139,10 @@ contains
     real, dimension(xdim:zdim)                   :: b_starl, b_starr, b_2star
 
     ! SOLVER
-
+    !write(*,*) "checkpoint1", n
+    !print*, "uld", ul(idn,:)
     do i = 1,n
-
+       !write(*,*) "checkpoint1a", i
        ! Total left and right pressure
 
        prl(ien,i) = ul(ien,i)
@@ -156,17 +157,27 @@ contains
        gampr_r = gamma*prr(ien,i)
 
        ! Fast magnetosonic waves Eq. 3
-
+       !write(*,*) "checkpoint1b"
        c_fastl  =   (gampr_l+(b_ccl(xdim,i)**2+b_ccl(ydim,i)**2+b_ccl(zdim,i)**2))  &
                                        + sqrt((gampr_l+(b_ccl(xdim,i)**2+b_ccl(ydim,i)**2+b_ccl(zdim,i)**2))**2-(four*gampr_l*b_ccl(xdim,i)**2))
+       !write(*,*) "cfastl", c_fastl
 
+       !print*, half, c_fastl, ul(idn,i)
+       !print*, half*c_fastl/ul(idn,i)
+       !print*, sqrt(half*c_fastl/ul(idn,i))
        c_fastl = sqrt(half*c_fastl/ul(idn,i))
-
+        !write(*,*) "ul", ul(idn,i)
+        !write(*,*) "checkpoint2"
        c_fastr  =   (gampr_r+(b_ccr(xdim,i)**2+b_ccr(ydim,i)**2+b_ccr(zdim,i)**2))  &
-                                       + sqrt((gampr_r+(b_ccr(xdim,i)**2+b_ccr(ydim,i)**2+b_ccr(zdim,i)**2))**2-(four*gampr_r*b_ccr(xdim,i)**2))
+            + sqrt((gampr_r+(b_ccr(xdim,i)**2+b_ccr(ydim,i)**2+b_ccr(zdim,i)**2))**2-(four*gampr_r*b_ccr(xdim,i)**2))
+
+       !write(*,*) "cfr1", c_fastr
 
        c_fastr  =  sqrt(half*c_fastr/ur(idn,i))
-
+        !write(*,*) "checkpoint3"
+       !write(*,*) "cfr2", c_fastr
+       !write(*,*) "uridn", ur(idn,i)
+       
 
        ! Eq. (67)
 
@@ -219,7 +230,7 @@ contains
           b_cc(zdim,i) = b_ccrf(zdim,i)
 
        else
-
+           !write(*,*) "checkpoint4"
           ! Speed of contact discontinuity Eq. 38
 
           sm_nr = (sr - ur(imx,i))*ur(idn,i)*ur(imx,i) - (sl - ul(imx,i))*ul(idn,i)*ul(imx,i) - prr(ien,i) + prl(ien,i)
@@ -280,7 +291,7 @@ contains
 
 
           endif
-
+          !write(*,*) "checkpoint5"
           ! Transveral components of velocity Eq. 42
 
           coeff_1  =  b_ccl(xdim,i)/dn_l
@@ -307,7 +318,7 @@ contains
              b_starr(zdim)  =  ((sr*b_ccr(zdim,i) - sl*b_ccl(zdim,i)) - (b_ccrf(zdim,i) - b_cclf(zdim,i)))/srmsl
 
           endif
-
+          !write(*,*) "checkpoint6"
           ! Transversal components of velocity Eq. 42
 
           coeff_1  =  b_ccr(xdim,i)/dn_r
@@ -343,7 +354,7 @@ contains
           u_starr(ien) = (srvxr*enr - prr(ien,i)*ur(imx,i) + prt_star*sm + b_ccr(xdim,i)*(vb_r - vb_starr))/srsm
 
           ! Cases for B_x .ne. and .eq. zero
-
+          !write(*,*) "checkpoint7"
           if (abs(b_ccl(xdim,i)) > zero) then
 
              ! Left and right Alfven waves velocity Eq. 51
@@ -381,7 +392,7 @@ contains
                 b_cc(zdim,i) = b_ccrf(zdim,i) + sl*(b_starr(zdim) - b_ccr(zdim,i))
 
              else ! alfven_l .le. zero .le. alfven_r
-
+                
                 ! Arragnge for sign of normal component of magnetic field
 
                 if (b_ccl(xdim,i) .ge. zero) then
@@ -393,7 +404,7 @@ contains
                    b_sig = -one
 
                 endif
-
+                !write(*,*) "checkpoint8"
                 ! Sum and product of density square-root
 
                 add_dnsq  =  dn_lsqt + dn_rsqt
@@ -414,7 +425,7 @@ contains
                 vb_2star  =  sum(v_2star(imx:imz)*b_2star(xdim:zdim))
 
                 ! Choose right Alfven wave according to speed of contact discontinuity
-
+                !write(*,*) "checkpoint9"
                 if (sm .ge. zero) then
 
                    ! Conservative variables for left Alfven intermediate state
@@ -555,9 +566,11 @@ contains
           endif     ! B_x = 0
 
        endif
-
+       !write(*,*) "checkpoint8"
+       !write(*,*) "checkpoint9"
+       !write(*,*) "checkpoint10"
     enddo
-
+    !write(*,*) "checkpoint10"
   end subroutine riemann_hlld
 
 
