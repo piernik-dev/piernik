@@ -1,5 +1,8 @@
 module cresp_grid
 ! pulled by COSM_RAY_ELECTRONS
+
+! This module contains routines necessary to initialize, compute timestep for cre bins and to update spectrum in the whole domain
+! as the crspectrum module operates on a single grid cell.
       use initcosmicrays, only: ncre, iarr_cre, iarr_cre_e, iarr_cre_n
       use global,         only: dt, t
 
@@ -17,28 +20,21 @@ contains
       use domain,         only: dom!, is_multicg
       use func,           only: ekin, emag, operator(.equals.), operator(.notequals.)
       use grid_cont,      only: grid_container
-      use cresp_variables, only: ind_p_lo, ind_p_up, cresp_taylor_order, taylor_coeff_2nd, taylor_coeff_3rd, &
-                                ind_e_beg, ind_e_end, ind_n_beg, ind_n_end
+!       use cresp_variables, only: ind_p_lo, ind_p_up, cresp_taylor_order, taylor_coeff_2nd, taylor_coeff_3rd, &
+!                                 ind_e_beg, ind_e_end, ind_n_beg, ind_n_end
       use cresp_crspectrum, only:cresp_crs_update, printer
       use crhelpers,      only: divv_n
       use named_array_list, only: qna, wna
       use units,           only: s_len_u
 
       implicit none
-
-!       class(component_fluid), pointer :: fl
-      integer                         :: i, j, k !, icr, ipm, jpm, kpm
-!       real                            :: cs_iso, xsn, ysn, zsn, r2, maxv
+      integer                         :: i, j, k 
       type(cg_list_element),  pointer :: cgl
       type(grid_container),   pointer :: cg
       real(kind=8), allocatable, dimension(:)  :: cresp_arguments
       real(kind=8)                             :: dt_cre_tmp
       
       allocate(cresp_arguments(I_ONE:I_TWO*ncre+I_FOUR))
-
-      !       logical, save :: frun = .true.
-!       integer       :: cr_id         ! maybe we should make this variable global in the module and do not pass it as an argument?
-
    i = 0
    j = 0
    k = 0
@@ -54,15 +50,9 @@ contains
               do i = cg%is, cg%ie
   
                   cresp_arguments(I_ONE:I_TWO*ncre+I_TWO)    = cg%u(iarr_cre, i, j, k)
-!                   cresp_arguments(ncre+1:2*ncre) = cg%u(ind_e_beg:ind_e_end, i, j, k)
-!                   cresp_arguments(2*ncre+1) = cg%u(ind_p_lo, i, j, k)
-!                   cresp_arguments(2*ncre+2) = cg%u(ind_p_up, i, j, k)
-                  
+                 
                   cresp_arguments(2*ncre+3) = emag(cg%b(xdim,i,j,k), cg%b(ydim,i,j,k), cg%b(zdim,i,j,k))/cg%dvol  !!! module works properly for small emag. Should emag be > 1e-4, negative values will appear
-!                   cresp_arguments(2*ncre+3) = emag(cg%b(xdim,i,j,k), cg%b(ydim,i,j,k), cg%b(zdim,i,j,k))/(4*pi*cg%dvol)
                   cresp_arguments(2*ncre+4) = cg%q(qna%ind(divv_n))%point([i,j,k])/cg%dvol
-                  
-!                   cresp_arguments(2*ncre+4) = 5.0e-5
 #ifdef VERBOSE
               print *, 'Output of cosmic ray electrons module for grid cell with coordinates i,j,k:', i, j, k
 #endif /* VERBOSE */
@@ -90,13 +80,8 @@ contains
 !               endif
            enddo
          enddo
-!          print *,'emag = ', cresp_arguments(2*ncre+3)
-!          print *,'dvol = ', cg%dvol
        enddo
-!        print *, 'cresp_args: = ', cresp_arguments(iarr_cre)
       cgl=>cgl%nxt
-!       print *,'  dt_cre =   ', dt_cre !, dt_cre_tmp
-!       print *,'dt_cre grid update = ', dt_cre, ' ==0.5!'
       enddo
       
    end subroutine grid_cresp_update
@@ -109,8 +94,8 @@ contains
       use domain,         only: dom, is_multicg
       use func,           only: ekin, emag, operator(.equals.), operator(.notequals.)
       use grid_cont,      only: grid_container
-      use cresp_variables, only: ind_p_lo, ind_p_up, cresp_taylor_order, taylor_coeff_2nd, taylor_coeff_3rd, &
-                                ind_e_beg, ind_e_end, ind_n_beg, ind_n_end
+!       use cresp_variables, only: ind_p_lo, ind_p_up, cresp_taylor_order, taylor_coeff_2nd, taylor_coeff_3rd, &
+!                                 ind_e_beg, ind_e_end, ind_n_beg, ind_n_end
       use initcosmicrays, only: ncre, iarr_cre, f_init, p_up_init, p_lo_init, q_init, cre_eff, iarr_crn
       use cresp_crspectrum, only: cresp_init_state
       use units,          only: clight
@@ -168,20 +153,70 @@ contains
                   if (dt_cre .ge. dt_cre_tmp) then
                       dt_cre = dt_cre_tmp
                   endif
-!                print *, ' dt cre, dt_cre_tmp', dt_cre, dt_cre_tmp
            enddo
          enddo
-!          print *,'ub = ', cresp_arguments(2*ncre+3)
        enddo
       cgl=>cgl%nxt
-!       print *,'min_cre_dt = ', dt_cre
-!       print *,'dt_cre grid update = ', dt_cre, ' ==0.5!'
-!       dt_cre = 0.5
-      
       enddo
-!       stop
+
       deallocate(cresp_arguments)
    
    end subroutine grid_cresp_initialization
+   
+! ------------------------------------------------
+
+   subroutine grid_cresp_timestep
+    use cg_leaves,        only: leaves
+    use cg_leaves,        only: leaves
+    use cg_list,          only: cg_list_element
+    use fluidtypes,       only: var_numbers
+    use cresp_crspectrum, only:cresp_crs_update, printer
+    use crhelpers,        only: divv_n
+    use func,             only: emag !, operator(.equals.), operator(.notequals.)
+    use grid_cont,        only: grid_container
+    use constants,        only: I_ONE, I_TWO, I_FOUR, xdim, ydim, zdim, pi !, LO, HI, pMAX, 
+    use named_array_list, only: qna
+    use constants,        only: one
+    
+    use timestep_cresp,  only: cresp_timestep_new
+!     use timestep_cresp,   only: cresp_timestep_new
+    
+  
+     implicit none
+     integer                         :: i, j, k 
+     type(grid_container), pointer   :: cg
+     type(cg_list_element), pointer  :: cgl
+     type(var_numbers)    :: flind
+     real   :: p_l, p_u, u_b, u_d
+     real(kind=8)                             :: dt_cre_tmp
+     
+     dt_cre = huge(one)
+     dt_cre_tmp = huge(one)
+     cgl => leaves%first
+     do while (associated(cgl))
+     cg => cgl%cg
+     
+         do k = cg%ks, cg%ke
+           do j = cg%js, cg%je
+              do i = cg%is, cg%ie
+!                print *, i,j,k
+!                print *, 'pass timestep'
+               p_l = cg%u(flind%cre%plo, i, j, k)
+               p_u = cg%u(flind%cre%plo, i, j, k)
+               u_b = emag(cg%b(xdim,i,j,k), cg%b(ydim,i,j,k), cg%b(zdim,i,j,k))/cg%dvol
+               u_d=  cg%q(qna%ind(divv_n))%point([i,j,k])/cg%dvol
+               
+!                print *, p_l, p_u, u_b, u_d 
+               call cresp_timestep_new(dt_cre_tmp, p_l, p_u, u_b, u_d)
+               dt_cre = min(dt_cre, dt_cre_tmp)
+              enddo
+           enddo
+         enddo
+         cgl=>cgl%nxt
+!          pause
+     enddo
+   
+   
+   end subroutine grid_cresp_timestep
    
 end module cresp_grid

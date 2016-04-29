@@ -95,7 +95,11 @@ module initcosmicrays
    
    type(bin_old)                       :: crel
    integer(kind=4), allocatable, dimension(:) :: iarr_crs_tmp
-
+   
+    real(kind=8),allocatable, dimension(:) :: p_fix
+    real(kind=8),allocatable, dimension(:) :: cresp_edges
+    real(kind=8)       :: w
+    integer  :: i
 contains
 
 !>
@@ -340,8 +344,19 @@ contains
          endif
 
       endif
+! temporary!      
+
+      allocate(p_fix(ncre))
+      allocate(cresp_edges(0:ncre))
+    cresp_edges = (/ (i,i=0,ncre) /)
+    p_fix = 0.0
+    w  = (log10(p_max_fix/p_min_fix))/dble(ncre-2)
+    p_fix(1:ncre-1)  =  p_min_fix*10.0**(w*dble(cresp_edges(1:ncre-1)-1))
+    p_fix(0)    = 0.0
+    p_fix(ncre) = 0.0
+  
+  print *,'pfix = ',p_fix
       
-          
       ncrs = ncre + ncrn
 #ifdef COSM_RAY_ELECTRONS
       ncrs = (2*ncre+2) + ncrn   !!!!!
@@ -379,8 +394,6 @@ contains
          
          K_crs_perp(ncrn+1:ncrn+ncre) = K_cre_e_perp
          K_crs_perp(ncrn+ncre+1:2*ncre+1) = K_cre_n_perp
-!          allocate(cres_n(ncre))   !!!
-!          allocate(cres_en(ncre))  !!!
 #endif /* COSM_RAY_ELECTRONS */
       endif
 !      print *, 'k paral = ', K_crs_paral !,'size :',  size(K_crs_paral)
@@ -409,6 +422,7 @@ contains
       ma1d = [ncrs-2]
       call my_allocate(iarr_crs_diff, ma1d)
       
+      print *,ncrn
 #ifdef COSM_RAYS_SOURCES
       call init_crsources(ncrn, crn_gpcr_ess)
 #endif /* COSM_RAYS_SOURCES */
@@ -554,6 +568,10 @@ contains
       call my_deallocate(iarr_crn)
       call my_deallocate(iarr_cre)
       call my_deallocate(iarr_crs)
+            print *, 'initcosmicrays - almost done' 
+      if (allocated(cresp_edges)) deallocate(cresp_edges)
+      if (allocated(p_fix)) deallocate(p_fix)
+      print *, 'initcosmicrays - done' 
 !       call my_deallocate(gamma_crs)
 !       call my_deallocate(K_crs_paral)
 !       call my_deallocate(K_crs_perp)
