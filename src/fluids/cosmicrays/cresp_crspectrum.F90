@@ -2,6 +2,7 @@ module cresp_crspectrum
 ! pulled by COSM_RAY_ELECTRONS
 
  use cresp_variables !,  only: ncre, u_b, u_d, c2nd, c3rd, f_init, q_init
+ use units,          only: clight
  use initcrspectrum, only: ncre, p_min_fix, p_max_fix, f_init, q_init, p_lo_init, p_up_init, &
                            w, p_fix, crel, q_big, taylor_coeff_2nd, taylor_coeff_3rd !, cfl_cre 
      
@@ -461,7 +462,7 @@ subroutine cresp_update_bin_index(dt, p_lo, p_up, p_lo_next, p_up_next)
       real(kind=8), dimension(1:ncre)      :: fq_to_e
 
       fq_to_e = 0.0d0
-      e_bins = fpi*cnst_c*f_l(bins)*p_l(bins)**4
+      e_bins = fpi*clight*f_l(bins)*p_l(bins)**4
       where(q(bins) .ne. four) 
          e_bins = e_bins*((p_r(bins)/p_l(bins))**(four-q(bins)) - one)/(four - q(bins))
       elsewhere
@@ -554,7 +555,7 @@ subroutine cresp_update_bin_index(dt, p_lo, p_up, p_lo_next, p_up_next)
       end where
       nflux(ce) = - dn_upw(ce)
             
-      de_upw(ce) = fpi*cnst_c*fimh(ce)*pimh(ce)**4
+      de_upw(ce) = fpi*clight*fimh(ce)*pimh(ce)**4
       where(qi(ce) .ne. four) 
          de_upw(ce) = de_upw(ce)*((p_upw(ce)/pimh(ce))**(four-qi(ce)) - one)/(four - qi(ce))
       elsewhere
@@ -575,7 +576,7 @@ subroutine cresp_update_bin_index(dt, p_lo, p_up, p_lo_next, p_up_next)
       end where
       nflux(he) = dn_upw(he)
             
-      de_upw(he) = fpi*cnst_c*fimth(he)*p_upw(he)**4*(pimth(he)/p_upw(he))**qim1(he)
+      de_upw(he) = fpi*clight*fimth(he)*p_upw(he)**4*(pimth(he)/p_upw(he))**qim1(he)
       where(qi(he) .ne. four) 
          de_upw(he) = de_upw(he)*((pimh(he)/p_upw(he))**(four-qim1(he)) - one)/(four - qim1(he))
       elsewhere
@@ -641,11 +642,11 @@ subroutine ne_to_q(n, e, q)
   
    do i = 1, ncre
 !      if(is_active_bin_next(i)) then 
-!         alpha = e(i)/(n(i)*p_next(i-1)*cnst_c)     ! czy tu ma byc p_next ?
+!         alpha = e(i)/(n(i)*p_next(i-1)*clight)     ! czy tu ma byc p_next ?
 !         base  = p_next(i)/p_next(i-1)                   !
 
       if(is_active_bin(i).and.n(i).ne.0.and.p(i-1).ne.0.)  then  ! dziala takze z jednym dodatkowym warunkiem, niezaleznie czy jest to n czy p, ktores musi byc wieksze od 0
-         alpha = e(i)/(n(i)*p(i-1)*cnst_c)     ! czy tu ma byc p_next ?
+         alpha = e(i)/(n(i)*p(i-1)*clight)     ! czy tu ma byc p_next ?
          base  = p(i)/p(i-1)                   !
          x     = q_init !q(i)
          do j = 1, 100
