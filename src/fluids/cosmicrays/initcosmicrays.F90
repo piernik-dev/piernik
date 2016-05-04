@@ -38,6 +38,10 @@ module initcosmicrays
 ! pulled by COSM_RAYS
    use constants, only: cbuff_len
    use cresp_variables, only: bin_old
+   
+   use initcrspectrum, only: ncre, p_min_fix, p_max_fix, f_init, q_init, q_big, p_lo_init, p_up_init,  & 
+                          cfl_cre, cre_eff, K_cre_e_paral, K_cre_e_perp, K_cre_n_paral, K_cre_n_perp, K_pow_index, &
+                          w, p_fix, init_cresp
    implicit none
 
    public ! QA_WARN no secrets are kept here
@@ -46,14 +50,14 @@ module initcosmicrays
    integer, parameter                  :: ncr_max = 99  !< maximum number of CR nuclear and electron components (\warning higher ncr_max limit would require changes in names of components in common_hdf5)
    ! namelist parameters
    integer(kind=4)                     :: ncrn         !< number of CR nuclear  components \deprecated BEWARE: ncrs (sum of ncrn and ncre) should not be higher than ncr_max = 9
-   integer(kind=4)                     :: ncre         !< number of CR electron components \deprecated BEWARE: ncrs (sum of ncrn and ncre) should not be higher than ncr_max = 9
+!    integer(kind=4)                     :: ncre         !< number of CR electron components \deprecated BEWARE: ncrs (sum of ncrn and ncre) should not be higher than ncr_max = 9
    integer(kind=4)                     :: ncrs         !< number of all CR components \deprecated BEWARE: ncrs (sum of ncrn and ncre) should not be higher than ncr_max = 9
    real                                :: cfl_cr       !< CFL number for diffusive CR transport
-   real                                :: cfl_cre
+!    real                                :: cfl_cre
    real                                :: smallecr     !< floor value for CR energy density
    real                                :: cr_active    !< parameter specifying whether CR pressure gradient is (when =1.) or isn't (when =0.) included in the gas equation of motion
    real                                :: cr_eff       !< conversion rate of SN explosion energy to CR energy (default = 0.1)
-   real                                :: cre_eff      !< Conversion rate of SN explosion energy to CR electrons energy (default = 0.01)
+!    real                                :: cre_eff      !< Conversion rate of SN explosion energy to CR electrons energy (default = 0.01)
    logical                             :: use_split    !< apply all diffusion operators at once (.false.) or use directional splittiong (.true.)
    real, dimension(ncr_max)            :: gamma_crn    !< array containing adiabatic indexes of all CR nuclear components
    real, dimension(ncr_max)            :: K_crn_paral  !< array containing parallel diffusion coefficients of all CR nuclear components
@@ -65,11 +69,11 @@ module initcosmicrays
    logical, dimension(ncr_max)         :: crn_gpcr_ess !< if CRn species/energy-bin is essential for grad_pcr calculation
    logical, dimension(ncr_max)         :: cre_gpcr_ess !< if CRe species/energy-bin is essential for grad_pcr calculation
    integer(kind=4), allocatable, dimension(:) :: gpcr_essential !< crs indexes of essentials for grad_pcr calculation
-   real                                :: K_cre_e_paral !< Contains parallel diffusion coefficient of electrons (for energy density)
-   real                                :: K_cre_n_paral !< Contains parallel diffusion coefficient of electrons (for number density)
-   real                                :: K_cre_e_perp  !< Contains perpendicular diffusion coefficient of electrons (for energy density)
-   real                                :: K_cre_n_perp  !< Contains perpendicular diffusion coefficient of electrons (for number density)
-   real                                :: K_pow_index   !< Power law index for scaling electron diffusion coefficients K(e) with K(n)
+!    real                                :: K_cre_e_paral !< Contains parallel diffusion coefficient of electrons (for energy density)
+!    real                                :: K_cre_n_paral !< Contains parallel diffusion coefficient of electrons (for number density)
+!    real                                :: K_cre_e_perp  !< Contains perpendicular diffusion coefficient of electrons (for energy density)
+!    real                                :: K_cre_n_perp  !< Contains perpendicular diffusion coefficient of electrons (for number density)
+!    real                                :: K_pow_index   !< Power law index for scaling electron diffusion coefficients K(e) with K(n)
    ! public component data
    integer(kind=4), allocatable, dimension(:) :: iarr_crn !< array of indexes pointing to all CR nuclear components
    integer(kind=4), allocatable, dimension(:) :: iarr_cre !< array of indexes pointing to all CR electron components
@@ -82,24 +86,24 @@ module initcosmicrays
    integer(kind=4)                            :: iarr_cre_pu !< array of indexes pointing to CR electron p_up components
 
    real,    allocatable, dimension(:)  :: gamma_crs    ! < array containing adiabatic indexes of all CR components
-   real(kind=8)                        :: p_lo_init    ! < initial lower momentum cut in power spectrum
-   real(kind=8)                        :: p_up_init    ! < initial upper momentum cut in power spectrum
-   real(kind=8)                        :: f_init       ! < initial value of the normalization parameter in cre energy spectrum
-   real(kind=8)                        :: q_init       ! < initial value of power law coefficient in cre energy spectrum
-   real(kind=8)                        :: p_min_fix    ! < momentum fixed grid
-   real(kind=8)                        :: p_max_fix    ! < momentum fixed grid
+!    real(kind=8)                        :: p_lo_init    ! < initial lower momentum cut in power spectrum
+!    real(kind=8)                        :: p_up_init    ! < initial upper momentum cut in power spectrum
+!    real(kind=8)                        :: f_init       ! < initial value of the normalization parameter in cre energy spectrum
+!    real(kind=8)                        :: q_init       ! < initial value of power law coefficient in cre energy spectrum
+!    real(kind=8)                        :: p_min_fix    ! < momentum fixed grid
+!    real(kind=8)                        :: p_max_fix    ! < momentum fixed grid
 
    real,    allocatable, dimension(:)  :: K_crs_paral  !< array containing parallel diffusion coefficients of all CR components
    real,    allocatable, dimension(:)  :: K_crs_perp   !< array containing perpendicular diffusion coefficients of all CR components
    !> \deprecated BEWARE Possible confusion: *_perp coefficients are not "perpendicular" but rather isotropic
    
-   type(bin_old)                       :: crel
+!    type(bin_old)                       :: crel
    integer(kind=4), allocatable, dimension(:) :: iarr_crs_tmp
    
-    real(kind=8),allocatable, dimension(:) :: p_fix
-    real(kind=8),allocatable, dimension(:) :: cresp_edges
-    real(kind=8)       :: w
-    integer  :: i
+!     real(kind=8),allocatable, dimension(:) :: p_fix
+!     real(kind=8),allocatable, dimension(:) :: cresp_edges
+!     real(kind=8)       :: w
+!     integer  :: i
 contains
 
 !>
@@ -153,9 +157,9 @@ contains
            &                 ncrn, gamma_crn, K_crn_paral, K_crn_perp, &
            &                 gamma_cre, divv_scheme, crn_gpcr_ess, cre_gpcr_ess
            
-      namelist /COSMIC_RAY_SPECTRUM/ cfl_cre, p_lo_init, p_up_init, f_init, q_init, ncre, &
-           &                         p_min_fix, p_max_fix, cre_eff, K_cre_e_paral, K_cre_e_perp, &
-           &                         K_cre_n_paral, K_cre_n_perp, K_pow_index
+!       namelist /COSMIC_RAY_SPECTRUM/ cfl_cre, p_lo_init, p_up_init, f_init, q_init, ncre, &
+!            &                         p_min_fix, p_max_fix, cre_eff, K_cre_e_paral, K_cre_e_perp, &
+!            &                         K_cre_n_paral, K_cre_n_perp, K_pow_index
 
       cfl_cr     = 0.9
       cfl_cre    = 0.5
@@ -215,24 +219,26 @@ contains
          call nh%compare_namelist()
       endif
       
-      if (master) then
-         open(newunit=nh%lun, file=nh%tmp1, status="unknown")
-         write(nh%lun,nml=COSMIC_RAY_SPECTRUM)
-         close(nh%lun)
-         open(newunit=nh%lun, file=nh%par_file)
-         nh%errstr=""
-         read(unit=nh%lun, nml=COSMIC_RAY_SPECTRUM, iostat=nh%ierrh, iomsg=nh%errstr)
-         close(nh%lun)
-         call nh%namelist_errh(nh%ierrh, "COSMIC_RAY_SPECTRUM")
-         read(nh%cmdl_nml,nml=COSMIC_RAY_SPECTRUM, iostat=nh%ierrh)
-         call nh%namelist_errh(nh%ierrh, "COSMIC_RAY_SPECTRUM", .true.)
-         open(newunit=nh%lun, file=nh%tmp2, status="unknown")
-         write(nh%lun,nml=COSMIC_RAY_SPECTRUM)
-         close(nh%lun)
-         
-         call nh%compare_namelist() ! Do not use one-line if here!
+!       if (master) then
+!          open(newunit=nh%lun, file=nh%tmp1, status="unknown")
+!          write(nh%lun,nml=COSMIC_RAY_SPECTRUM)
+!          close(nh%lun)
+!          open(newunit=nh%lun, file=nh%par_file)
+!          nh%errstr=""
+!          read(unit=nh%lun, nml=COSMIC_RAY_SPECTRUM, iostat=nh%ierrh, iomsg=nh%errstr)
+!          close(nh%lun)
+!          call nh%namelist_errh(nh%ierrh, "COSMIC_RAY_SPECTRUM")
+!          read(nh%cmdl_nml,nml=COSMIC_RAY_SPECTRUM, iostat=nh%ierrh)
+!          call nh%namelist_errh(nh%ierrh, "COSMIC_RAY_SPECTRUM", .true.)
+!          open(newunit=nh%lun, file=nh%tmp2, status="unknown")
+!          write(nh%lun,nml=COSMIC_RAY_SPECTRUM)
+!          close(nh%lun)
+!          
+!          call nh%compare_namelist() ! Do not use one-line if here!
 
-      endif
+!       endif
+      
+      call init_cresp
       
 #ifndef MULTIGRID
       if (.not. use_split) call warn("[initcosmicrays:init_cosmicrays] No multigrid solver compiled in: use_split reset to .true.")
@@ -344,18 +350,18 @@ contains
          endif
 
       endif
-! temporary!      
-
-      allocate(p_fix(ncre))
-      allocate(cresp_edges(0:ncre))
-    cresp_edges = (/ (i,i=0,ncre) /)
-    p_fix = 0.0
-    w  = (log10(p_max_fix/p_min_fix))/dble(ncre-2)
-    p_fix(1:ncre-1)  =  p_min_fix*10.0**(w*dble(cresp_edges(1:ncre-1)-1))
-    p_fix(0)    = 0.0
-    p_fix(ncre) = 0.0
-  
-  print *,'pfix = ',p_fix
+! ! temporary!      
+! 
+!       allocate(p_fix(ncre))
+!       allocate(cresp_edges(0:ncre))
+!     cresp_edges = (/ (i,i=0,ncre) /)
+!     p_fix = 0.0
+!     w  = (log10(p_max_fix/p_min_fix))/dble(ncre-2)
+!     p_fix(1:ncre-1)  =  p_min_fix*10.0**(w*dble(cresp_edges(1:ncre-1)-1))
+!     p_fix(0)    = 0.0
+!     p_fix(ncre) = 0.0
+!   
+!   print *,'pfix = ',p_fix
       
       ncrs = ncre + ncrn
 #ifdef COSM_RAY_ELECTRONS
@@ -443,7 +449,7 @@ contains
          endif
       enddo
 
-   call init_cresp_type
+!    call init_cresp_type
    
    open(10, file='crs.dat',status='replace',position='rewind')
       
@@ -547,17 +553,17 @@ contains
      endif
    end subroutine cosmicray_index
    
-   subroutine init_cresp_type
-!    use cresp_variables, only: bin_old
-   implicit none
-   
-!      type(bin_old) crel
-     
-       allocate(crel%p(0:ncre))
-       allocate(crel%f(0:ncre))
-       allocate(crel%q(1:ncre))
-       
-   end subroutine init_cresp_type
+!    subroutine init_cresp_type
+! !    use cresp_variables, only: bin_old
+!    implicit none
+!    
+! !      type(bin_old) crel
+!      
+!        allocate(crel%p(0:ncre))
+!        allocate(crel%f(0:ncre))
+!        allocate(crel%q(1:ncre))
+!        
+!    end subroutine init_cresp_type
    
    subroutine cleanup_cosmicrays
 
@@ -568,10 +574,10 @@ contains
       call my_deallocate(iarr_crn)
       call my_deallocate(iarr_cre)
       call my_deallocate(iarr_crs)
-            print *, 'initcosmicrays - almost done' 
-      if (allocated(cresp_edges)) deallocate(cresp_edges)
-      if (allocated(p_fix)) deallocate(p_fix)
-      print *, 'initcosmicrays - done' 
+!             print *, 'initcosmicrays - almost done' 
+!       if (allocated(cresp_edges)) deallocate(cresp_edges)
+!       if (allocated(p_fix)) deallocate(p_fix)
+!       print *, 'initcosmicrays - done' 
 !       call my_deallocate(gamma_crs)
 !       call my_deallocate(K_crs_paral)
 !       call my_deallocate(K_crs_perp)

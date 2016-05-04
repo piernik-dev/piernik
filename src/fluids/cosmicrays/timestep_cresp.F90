@@ -92,7 +92,7 @@ contains
 
 ! Here shortest among calculated timesteps is chosen.
    dt_comp = min(dt_cre_ud, dt_cre_ub)
-   dt_comp = 0.5*dt_comp      ! module is called with 2*dt
+   dt_comp = 0.5*dt_comp      ! advection step in momentum space for spectrum evolution is always called with 2*dt
    
 ! Should dt_cre_ud or dt_cre_ub be greater than current one, next timestep shall be independently increased by piernik in timestep
 !    dt_cre = min(dt_cre, dt_comp) ! Gives minimal timestep among computed for current cell and previous ones

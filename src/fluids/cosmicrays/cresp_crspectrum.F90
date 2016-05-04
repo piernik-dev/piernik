@@ -3,7 +3,7 @@ module cresp_crspectrum
 
 !  use cresp_types, only: crel, x !uncomment crel for testing only
  use cresp_variables !,  only: ncre, u_b, u_d, c2nd, c3rd, f_init, q_init
- use initcosmicrays, only: ncre, p_min_fix, p_max_fix, f_init, q_init, p_lo_init, p_up_init, &
+ use initcrspectrum, only: ncre, p_min_fix, p_max_fix, f_init, q_init, p_lo_init, p_up_init, &
                            crel, cfl_cre
  use constants,      only: pi, fpi, zero, one, two, half, I_ZERO, I_ONE, I_TWO, I_THREE, I_FOUR, I_FIVE
 

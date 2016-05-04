@@ -3,7 +3,8 @@ module cresp_grid
 
 ! This module contains routines necessary to initialize, compute timestep for cre bins and to update spectrum in the whole domain
 ! as the crspectrum module operates on a single grid cell.
-      use initcosmicrays, only: ncre, iarr_cre, iarr_cre_e, iarr_cre_n
+      use initcosmicrays, only: iarr_cre, iarr_cre_e, iarr_cre_n
+      use initcrspectrum, only: ncre
       use global,         only: dt, t
 
       
@@ -96,7 +97,8 @@ contains
       use grid_cont,      only: grid_container
 !       use cresp_variables, only: ind_p_lo, ind_p_up, cresp_taylor_order, taylor_coeff_2nd, taylor_coeff_3rd, &
 !                                 ind_e_beg, ind_e_end, ind_n_beg, ind_n_end
-      use initcosmicrays, only: ncre, iarr_cre, f_init, p_up_init, p_lo_init, q_init, cre_eff, iarr_crn
+      use initcrspectrum, only: ncre, f_init, p_up_init, p_lo_init, q_init, cre_eff
+      use initcosmicrays, only: iarr_crn, iarr_cre
       use cresp_crspectrum, only: cresp_init_state
       use units,          only: clight
       implicit none
@@ -170,7 +172,7 @@ contains
     use cg_leaves,        only: leaves
     use cg_list,          only: cg_list_element
     use fluidtypes,       only: var_numbers
-    use cresp_crspectrum, only:cresp_crs_update, printer
+    use cresp_crspectrum, only: cresp_crs_update, printer
     use crhelpers,        only: divv_n
     use func,             only: emag !, operator(.equals.), operator(.notequals.)
     use grid_cont,        only: grid_container
