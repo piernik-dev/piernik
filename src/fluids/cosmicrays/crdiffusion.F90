@@ -141,7 +141,7 @@ contains
       use fluidindex,       only: flind
       use global,           only: dt
       use grid_cont,        only: grid_container
-      use initcosmicrays,   only: iarr_crn, K_crn_paral, K_crn_perp, iarr_crs_diff, K_crs_paral, K_crs_perp, iarr_crs, iarr_crs_tmp !!!
+      use initcosmicrays,   only: K_crn_paral, K_crn_perp, iarr_crs_diff, K_crs_paral, K_crs_perp, iarr_crs, iarr_crs_tmp  !, iarr_crn !!!
 ! #ifdef COSM_RAY_ELECTRONS
 !       use cresp_variables,  only: ind_p_lo, ind_p_up
 ! #endif /* COSM_RAY_ELECTRONS */

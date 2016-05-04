@@ -396,10 +396,12 @@ contains
          K_crs_perp (ncrn+1:ncrs) = 0!K_cre_perp (1:ncre)
 #ifdef COSM_RAY_ELECTRONS      
          K_crs_paral(ncrn+1:ncrn+ncre) = K_cre_e_paral
-         K_crs_paral(ncrn+ncre+1:2*ncre+1) = K_cre_n_paral
+         K_crs_paral(ncrn+1+ncre:ncrn+2*ncre) = K_cre_n_paral
+         K_crs_paral(ncrn+2*ncre+1:ncrn+2*ncre+2) = 0.0    ! p_lo, p_up
          
-         K_crs_perp(ncrn+1:ncrn+ncre) = K_cre_e_perp
-         K_crs_perp(ncrn+ncre+1:2*ncre+1) = K_cre_n_perp
+         K_crs_perp(ncrn+1:ncrn+1+ncre) = K_cre_e_perp
+         K_crs_perp(ncrn+ncre+1:ncrn+1+2*ncre) = K_cre_n_perp
+         K_crs_perp(ncrn+2*ncre+1:ncrn+2*ncre+2) = 0.0    ! p_lo, p_up
 #endif /* COSM_RAY_ELECTRONS */
       endif
 !      print *, 'k paral = ', K_crs_paral !,'size :',  size(K_crs_paral)

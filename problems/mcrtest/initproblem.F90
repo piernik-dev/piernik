@@ -153,7 +153,7 @@ contains
       use fluidtypes,     only: component_fluid
       use func,           only: ekin, emag, operator(.equals.), operator(.notequals.)
       use grid_cont,      only: grid_container
-      use initcosmicrays, only: iarr_crn, iarr_cre, iarr_crs, gamma_crn, K_crn_paral, K_crn_perp
+      use initcosmicrays, only: iarr_crn, iarr_crs, gamma_crn, K_crn_paral, K_crn_perp !, iarr_cre
       use mpisetup,       only: master, piernik_MPI_Allreduce
 #ifdef COSM_RAYS_SOURCES
       use cr_data,        only: icr_H1, icr_C12, cr_table

@@ -20,33 +20,6 @@ contains
 !
 !-------------------
 
-! !------------------------------------------------------
-! ! Here a subdomain is prepared for each domain cell to call timestep.
-!  subroutine cresp_timestep_organize_call(p_l, p_u, sptab)
-!       use initcosmicrays,        only: ncre, p_min_fix, p_max_fix, spec_mod_trms !p_tmp, dts_new
-!       use cresp_variables!,       only: uB, uD, p_lo_d, p_up_d
-!       use cresp_arrays_handling, only: allocate_with_index
-!       implicit none
-!       real(kind=8)                     :: c !, p_l_n, p_u_n
-!       integer                          :: i, k     ! sorting indices
-! !       real(kind=8) :: u_b, u_d
-!       real(kind=8) :: p_l, p_u
-!       type(spec_mod_trms) sptab
-! 
-!       call allocate_with_index(p_tmp,0,ncre)
-!       call allocate_with_index(dts_new,1,ncre)
-!         dt_tmp = huge(one)
-!         dt_cre = huge(one)
-!       
-!                call cresp_timestep_new(dt_tmp, p_l, p_u, sptab)
-!                
-!                dt_cre = min(dt_cre, dt_tmp) ! Gives minimal timestep
-!     
-!     if (allocated(p_tmp))   deallocate(p_tmp)
-!     if (allocated(dts_new)) deallocate(dts_new)
-!  
-!  end subroutine cresp_timestep_organize_call
-
 !----------------------------------------------------------
 ! Subroutine consistent with rules depicted in crspectrum.pdf
 
@@ -146,5 +119,5 @@ contains
     b_losses = u_b*p**2  !!! b_sync_ic = 8.94e-25*(u_b+u_cmb)*gamma_l**2 ! erg/cm
 
   end function
-  
+
 end module timestep_cresp
