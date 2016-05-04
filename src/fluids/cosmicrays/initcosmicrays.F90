@@ -37,11 +37,9 @@
 module initcosmicrays
 ! pulled by COSM_RAYS
    use constants, only: cbuff_len
-   use cresp_variables, only: bin_old
-   
    use initcrspectrum, only: ncre, p_min_fix, p_max_fix, f_init, q_init, q_big, p_lo_init, p_up_init,  & 
                           cfl_cre, cre_eff, K_cre_e_paral, K_cre_e_perp, K_cre_n_paral, K_cre_n_perp, K_pow_index, &
-                          w, p_fix, init_cresp
+                          w, p_fix, expan_order, init_cresp
    implicit none
 
    public ! QA_WARN no secrets are kept here
@@ -97,7 +95,6 @@ module initcosmicrays
    real,    allocatable, dimension(:)  :: K_crs_perp   !< array containing perpendicular diffusion coefficients of all CR components
    !> \deprecated BEWARE Possible confusion: *_perp coefficients are not "perpendicular" but rather isotropic
    
-!    type(bin_old)                       :: crel
    integer(kind=4), allocatable, dimension(:) :: iarr_crs_tmp
    
 !     real(kind=8),allocatable, dimension(:) :: p_fix
@@ -177,7 +174,8 @@ contains
       p_max_fix = 1.0e4
       f_init    = 1.0e0
       q_init    = 5.0e0
-      
+      q_big     = 10.0e0      
+      expan_order = 1
       
       use_split  = .true.
 
@@ -238,7 +236,7 @@ contains
 
 !       endif
       
-      call init_cresp
+      call init_cresp ! ncre,cfl_cre and other imported from initcrspectrum are initialized and read from parameter file
       
 #ifndef MULTIGRID
       if (.not. use_split) call warn("[initcosmicrays:init_cosmicrays] No multigrid solver compiled in: use_split reset to .true.")
@@ -462,7 +460,7 @@ contains
       use constants,    only: I_ONE
       use fluidtypes,   only: var_numbers
 #ifdef COSM_RAY_ELECTRONS
-      use cresp_variables, only: ind_p_lo, ind_p_up, ind_e_beg, ind_e_end, ind_n_beg, ind_n_end
+!       use cresp_variables, only: ind_p_lo, ind_p_up, ind_e_beg, ind_e_end, ind_n_beg, ind_n_end
 #endif /* COSM_RAY_ELECTRONS */
 
       implicit none
@@ -520,32 +518,32 @@ contains
       
 #ifdef COSM_RAY_ELECTRONS      
      flind%cre%nbeg = flind%crn%end + I_ONE
-     ind_n_beg = flind%crn%end + I_ONE
+!      ind_n_beg = flind%crn%end + I_ONE
      flind%cre%nend = flind%crn%end + ncre
-     ind_n_end = flind%crn%end + ncre
+!      ind_n_end = flind%crn%end + ncre
      
      flind%cre%ebeg = flind%cre%nend + I_ONE
-     ind_e_beg = ind_n_end + I_ONE
+!      ind_e_beg = ind_n_end + I_ONE
      flind%cre%eend = flind%cre%nend + ncre
-     ind_e_end = ind_n_end + ncre
+!      ind_e_end = ind_n_end + ncre
      
      flind%cre%plo  = flind%cre%eend + I_ONE
      flind%cre%pup  = flind%cre%eend + I_ONE + I_ONE
 !      print *,'ind_n_beg, ind_n_end = ', ind_n_beg, ind_n_end
 !      print *,'ind_e_beg, ind_e_end = ', ind_e_beg, ind_e_end
      
-     ind_p_lo = ind_e_end+I_ONE
-     ind_p_up = ind_p_lo + I_ONE
+!      ind_p_lo = ind_e_end+I_ONE
+!      ind_p_up = ind_p_lo + I_ONE
               
      do icr = 1, ncre !ind_n_beg, ind_n_end
-        iarr_cre_n(icr) = ind_n_beg - I_ONE + icr
-        iarr_cre_e(icr) = ind_e_beg - I_ONE + icr
+        iarr_cre_n(icr) = flind%cre%nbeg - I_ONE + icr
+        iarr_cre_e(icr) = flind%cre%ebeg - I_ONE + icr
      enddo
      
-     iarr_cre_pl = ind_p_lo
-     iarr_cre_pu = ind_p_up
-!      print *,'iarr_cre_n = ', iarr_cre_n
-!      print *,'iarr_cre_e = ', iarr_cre_e
+     iarr_cre_pl = flind%cre%plo
+     iarr_cre_pu = flind%cre%pup
+     print *,'iarr_cre_n = ', iarr_cre_n
+     print *,'iarr_cre_e = ', iarr_cre_e
 !      print *,'iarr_cre_pl, pu = ', iarr_cre_pl, iarr_cre_pu
 !      print *,'flind%cre%beg & end  = ', flind%cre%beg, flind%cre%end
 !      print *,'ind_p_lo, ind_p_up = ', ind_p_lo, ind_p_up
@@ -554,18 +552,6 @@ contains
          iarr_crs_diff = iarr_crs
      endif
    end subroutine cosmicray_index
-   
-!    subroutine init_cresp_type
-! !    use cresp_variables, only: bin_old
-!    implicit none
-!    
-! !      type(bin_old) crel
-!      
-!        allocate(crel%p(0:ncre))
-!        allocate(crel%f(0:ncre))
-!        allocate(crel%q(1:ncre))
-!        
-!    end subroutine init_cresp_type
    
    subroutine cleanup_cosmicrays
 
@@ -576,10 +562,6 @@ contains
       call my_deallocate(iarr_crn)
       call my_deallocate(iarr_cre)
       call my_deallocate(iarr_crs)
-!             print *, 'initcosmicrays - almost done' 
-!       if (allocated(cresp_edges)) deallocate(cresp_edges)
-!       if (allocated(p_fix)) deallocate(p_fix)
-!       print *, 'initcosmicrays - done' 
 !       call my_deallocate(gamma_crs)
 !       call my_deallocate(K_crs_paral)
 !       call my_deallocate(K_crs_perp)

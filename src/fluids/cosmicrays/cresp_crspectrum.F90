@@ -1,57 +1,22 @@
 module cresp_crspectrum
 ! pulled by COSM_RAY_ELECTRONS
 
-!  use cresp_types, only: crel, x !uncomment crel for testing only
  use cresp_variables !,  only: ncre, u_b, u_d, c2nd, c3rd, f_init, q_init
  use initcrspectrum, only: ncre, p_min_fix, p_max_fix, f_init, q_init, p_lo_init, p_up_init, &
-                           crel, cfl_cre
+                           w, p_fix, crel, q_big, taylor_coeff_2nd, taylor_coeff_3rd !, cfl_cre 
+     
  use constants,      only: pi, fpi, zero, one, two, half, I_ZERO, I_ONE, I_TWO, I_THREE, I_FOUR, I_FIVE
 
  implicit none
      
-!   integer          , parameter      :: ione    = 1
-!   real(kind=8)     , parameter      :: zero    = 0.0e0
-!   real(kind=8)     , parameter      :: half    = 0.5e0
   real(kind=8)     , parameter      :: sixth   = 1.6666e-1
-!   real(kind=8)     , parameter      :: one     = 1.e0
-!real(kind=8)     , parameter     :: two     = 2.e0
   real(kind=8)     , parameter      :: three   = 3.e0
   real(kind=8)     , parameter      :: four    = 4.e0
   real(kind=8)     , parameter      :: five    = 5.e0
   real(kind=8)     , parameter      :: ten     = 10.e0
 !real(kind=8)     , parameter     :: twenty  = 20.e0
   real(kind=8)     , parameter      :: hundred = 100.e0
-  
-!   integer, dimension(0:ncre)        :: all_edges, i_act_edges
-!   integer, dimension(1:ncre)        :: all_bins
-!   integer                           :: del_i_lo, del_i_up
-! !   integer                           :: i_lo_act_edge, i_up_act_edge !,i
-! 
-! 
-!   
-!     ! logical arrays / arrays determining use of p/n/e in some lines
-!   logical, dimension(0:ncre)        :: is_fixed_edge,   is_fixed_edge_next 
-!   logical, dimension(0:ncre)        :: is_active_edge,  is_active_edge_next 
-!   logical, dimension(0:ncre)        :: is_cooling_edge, is_cooling_edge_next 
-!   logical, dimension(0:ncre)        :: is_heating_edge, is_heating_edge_next 
-!   logical, dimension(1:ncre)        :: is_active_bin,   is_active_bin_next
-!   
-!     ! counters
-!   integer                           :: num_fixed_edges,   num_fixed_edges_next
-!   integer                           :: num_active_edges,  num_active_edges_next
-!   integer                           :: num_active_bins,   num_active_bins_next
-!   integer                           :: num_cooling_edges, num_cooling_edges_next
-!   integer                           :: num_heating_edges, num_heating_edges_next
-!   
-!     ! dynamic arrays
-!   integer, allocatable              :: fixed_edges(:),   fixed_edges_next(:)
-!   integer, allocatable              :: active_edges(:),  active_edges_next(:)
-!   integer, allocatable              :: active_bins(:),   active_bins_next(:)
-!   integer, allocatable              :: cooling_edges(:), cooling_edges_next(:)
-!   integer, allocatable              :: heating_edges(:), heating_edges_next(:)
-!   
- 
- 
+
  integer, allocatable        :: all_edges(:), i_act_edges(:)
  integer, allocatable        :: all_bins(:)
 
@@ -59,12 +24,6 @@ module cresp_crspectrum
 !   integer                           :: i_lo_act_edge, i_up_act_edge !,i
   
     ! logical arrays / arrays determining use of p/n/e in some lines
-!   logical, dimension(0:ncre)        :: is_fixed_edge,   is_fixed_edge_next 
-!   logical, dimension(0:ncre)        :: is_active_edge,  is_active_edge_next 
-!   logical, dimension(0:ncre)        :: is_cooling_edge, is_cooling_edge_next 
-!   logical, dimension(0:ncre)        :: is_heating_edge, is_heating_edge_next 
-!   logical, dimension(1:ncre)        :: is_active_bin,   is_active_bin_next
-
 
    logical, allocatable, dimension(:) :: is_fixed_edge,   is_fixed_edge_next 
    logical, allocatable, dimension(:) :: is_active_edge,  is_active_edge_next 
@@ -109,13 +68,10 @@ module cresp_crspectrum
   
    real(kind=8)                 :: u_b_0 ! = 0.0e-7 ! 1e-7 !0e0 !5e-7!
 
-!   real(kind=8)                 :: div_v = 0.0e-5 ! 0.5e-6
-!   real(kind=8)                 :: omega_d = 0.1e0 !0.1e0    ! frequency of div(v) oscilations
   real(kind=8)              :: u_b, u_d 
   real(kind=8), allocatable, dimension(:)  :: n, e ! dimension(1:ncre) 
-  real(kind=8), allocatable, dimension(:)  :: p_fix ! dimension(0:ncre)   
-  real(kind=8)                 :: w
-  
+!   real(kind=8), allocatable, dimension(:)  :: p_fix ! dimension(0:ncre)   
+!   real(kind=8)                 :: w
 !   real(kind=8), dimension(0:ncre)   :: p,  f !,p_fix0
 !   real(kind=8)                      :: p_lo, p_up
 
@@ -128,27 +84,24 @@ contains
 
 !----- main subroutine -----
 
-subroutine cresp_crs_update(dt, cresp_arguments, dt_calc)
-
+subroutine cresp_crs_update(dt, cresp_arguments, sptab)
+ use initcrspectrum, only: spec_mod_trms
  implicit none
    real(kind=8), intent(in)  :: dt
-   real(kind=8), dimension(1:2*ncre+4)   :: cresp_arguments
-   real(kind=8)                 ::dt_calc 
+   real(kind=8), dimension(1:2*ncre+2)   :: cresp_arguments
+   type(spec_mod_trms) sptab
+   
    call allocate_all_allocatable
  
     n = cresp_arguments(1:ncre)        ! number of electrons passed by x vector
     e = cresp_arguments(ncre+1:2*ncre) ! energy of electrons per bin passed by x vector
     p_lo = cresp_arguments(2*ncre+1)   ! low cut momentum 
     p_up = cresp_arguments(2*ncre+2)   ! upper cut momentum
-    u_b = cresp_arguments(2*ncre+3)
-    u_d = cresp_arguments(2*ncre+4)
-    
-#ifndef DIFF_TEST
-    
-!     print *, 'PASS - crs_update'
+    u_b = sptab%ub  !cresp_arguments(2*ncre+3)
+    u_d = sptab%ud  !cresp_arguments(2*ncre+4)
+
 ! Update indexes of active bins, fixed edges and active edges at [t]
 ! Detect heating edges (energy upflow) and cooling edges (energy downflow)
-
     call cresp_update_bin_index(dt, p_lo, p_up, p_lo_next, p_up_next)    
 
 ! Compute power indexes for each bin at [t]
@@ -164,19 +117,17 @@ subroutine cresp_crs_update(dt, cresp_arguments, dt_calc)
 ! in case new fixed edges appear or disappear.
 ! fill new bins
    call cresp_compute_fluxes(cooling_edges_next,heating_edges_next)
-  
+
 ! Computing e and n at [t+dt]
    ndt(1:ncre) = n(1:ncre)  - (nflux(1:ncre) - nflux(0:ncre-1))
    edt(1:ncre) = e(1:ncre)  - (eflux(1:ncre) - eflux(0:ncre-1))
    
-!   edt(1:ncre) = e(1:ncre) *(one-0.5*dt*r(1:ncre)) - (eflux(1:ncre) - eflux(0:ncre-1))/(one+0.5*dt*r(1:ncre))   !!! oryginalnie u Miniatiego
-
+! edt(1:ncre) = e(1:ncre) *(one-0.5*dt*r(1:ncre)) - (eflux(1:ncre) - eflux(0:ncre-1))/(one+0.5*dt*r(1:ncre))   !!! oryginalnie u Miniatiego
 ! Compute coefficients R_i needed to find energy in [t,t+dt]
    call cresp_compute_r(p_next, active_bins_next)                 ! new active bins already received some particles, Ri is needed for those bins too
    
    edt(1:ncre) = edt(1:ncre) *(one-dt*r(1:ncre))
-#endif /* DIFF_TEST */
-   
+
    p_lo = p_lo_next
    p_up = p_up_next
 
@@ -226,9 +177,6 @@ subroutine cresp_crs_update(dt, cresp_arguments, dt_calc)
    cresp_arguments(2*ncre+1) = p_lo    ! low cut momentum 
    cresp_arguments(2*ncre+2) = p_up    ! upper cut momentum
 !----------------
-   
-   call cresp_timestep(dt_calc)
-
    call deallocate_active_arrays
    call deallocate_allocatable
    
@@ -250,7 +198,7 @@ subroutine cresp_update_bin_index(dt, p_lo, p_up, p_lo_next, p_up_next)
 ! Compute p_lo and p_up at [t+dt]
       call p_update(dt, p_lo, p_lo_next)
       call p_update(dt, p_up, p_up_next)
-    
+      
 ! Locate cut-ofs before and after current timestep
       i_lo = int(floor(log10(p_lo/p_fix(1))/w)) + 1
       i_lo = max(0, i_lo)
@@ -338,7 +286,7 @@ subroutine cresp_update_bin_index(dt, p_lo, p_up, p_lo_next, p_up_next)
 ! Detect cooling edges and heating edges
       is_cooling_edge_next = .false.
       is_cooling_edge_next(fixed_edges_next)   = (p_upw(fixed_edges_next) &
-                                                           > p_fix(fixed_edges_next))
+                                                         > p_fix(fixed_edges_next))
       num_cooling_edges_next = count(is_cooling_edge_next)
       allocate(cooling_edges_next(num_cooling_edges_next))
       cooling_edges_next = pack(all_edges, is_cooling_edge_next)
@@ -349,7 +297,6 @@ subroutine cresp_update_bin_index(dt, p_lo, p_up, p_lo_next, p_up_next)
       num_heating_edges_next = count(is_heating_edge_next)
       allocate(heating_edges_next(num_heating_edges_next))
       heating_edges_next = pack(all_edges, is_heating_edge_next)
-
 #ifdef VERBOSE      
       print *, 'In update_bin_index'
       print *, 'active edges: ', is_active_edge_next, active_edges_next
@@ -357,7 +304,6 @@ subroutine cresp_update_bin_index(dt, p_lo, p_up, p_lo_next, p_up_next)
       print *, 'fixed  edges: ', is_fixed_edge_next,  fixed_edges_next
       print *, 'cooling edges:', is_cooling_edge_next,  cooling_edges_next
       print *, 'heating edges:', is_heating_edge_next,  heating_edges_next
-      print *, 'Exit update_bin_index'
 #endif /* VERBOSE */
       
 
@@ -387,20 +333,21 @@ subroutine cresp_update_bin_index(dt, p_lo, p_up, p_lo_next, p_up_next)
 ! arrays initialization
 !
 !-------------------------------------------------------------------------------------------------
-   subroutine cresp_init_state(dt, init_cresp_arguments, dt_calc)
+   subroutine cresp_init_state(dt, init_cresp_arguments, sptab)
+!       use initcosmicrays,   only: w
+      use initcrspectrum, only: spec_mod_trms
       implicit none
       real(kind = 8), intent(in)  :: dt
       integer                     :: i, k
       real(kind=8)                ::  c ! width of bin
 !       real(kind=8), intent(in)    :: u_d, u_b
       real(kind=8), dimension(I_ONE:I_TWO*ncre+I_FOUR)          :: init_cresp_arguments
-      real(kind=8)                 ::dt_calc
+      type (spec_mod_trms)   :: sptab
 
-!        allocate(init_cresp_arguments(I_ONE:I_TWO*ncre+I_FOUR))
        call allocate_all_allocatable
       
-      u_b = init_cresp_arguments(2*ncre + 3)
-      u_d = init_cresp_arguments(2*ncre + 4)
+      u_b = sptab%ub
+      u_d = sptab%ud
       all_edges = zero
       
       u_b_0 = u_b
@@ -409,23 +356,24 @@ subroutine cresp_update_bin_index(dt, p_lo, p_up, p_lo_next, p_up_next)
       all_edges = (/ (i,i=0,ncre) /)
       all_bins = (/ (i,i=1,ncre) /)
 
+      f = zero
+      q = zero
+      p = zero
+
       q = q_init
 
-      w  = (log10(p_max_fix/p_min_fix))/dble(ncre-2)
-!       print *,'w = ', w
+!       w  = (log10(p_max_fix/p_min_fix))/dble(ncre-2)
       ! reading initial values of p_lo and p_up 
       p_lo = p_lo_init
       p_up = p_up_init
-            
-      p_fix(1:ncre-1)  =  p_min_fix*ten**(w*dble(all_edges(1:ncre-1)-1))
-      p_fix(0)    = zero     ! initial array of p used to identify fixed edges
-      p_fix(ncre) = zero     ! extreme two edges are never fixed edges
-
+                  
+!       p_fix(1:ncre-1)  =  p_min_fix*ten**(w*dble(all_edges(1:ncre-1)-1))
+!       p_fix(0)    = zero     ! initial array of p used to identify fixed edges
+!       p_fix(ncre) = zero     ! extreme two edges are never fixed edges
       p          = p_fix       ! actual array of p including free edges
-      
+
       p(0)     = p_lo
       p(ncre)  = p_up
-
 ! Sorting bin edges - arbitrary chosen p_lo and p_up may need to be sorted to appear in growing order
       do k = ncre, 1, -1
          do i = 0, k-1
@@ -441,59 +389,63 @@ subroutine cresp_update_bin_index(dt, p_lo, p_up, p_lo_next, p_up_next)
       
       i_lo = 0
       i_up = ncre
-      
-!       dt = 0.0d0 ! <-- only driver / piernik can do that
-!       u_d = 0.0d0 ! <-- only driver / piernik can do that
-      
-!      call timestep(dt) <- will be called in the driver instead
+                  
+! we only need cresp_init_state to derive n & e from f & p_lo, p_up. For this only 'active bins' is needed.
+!        call cresp_update_bin_index(dt, p_lo, p_up, p_lo_next, p_up_next)
 
-       call cresp_update_bin_index(dt, p_lo, p_up, p_lo_next, p_up_next)
 
+      i_lo = int(floor(log10(p_lo/p_fix(1))/w)) + 1
+      i_lo = max(0, i_lo)
+      i_lo = min(i_lo, ncre - 1)
       
-#ifdef VERBOSE      
-     print*, 'In init_state'
-     print *, num_active_edges, size(active_edges), lbound(active_edges), ubound(active_edges)
-     print *, num_active_bins,  size(active_bins), lbound(active_bins), ubound(active_bins)
-     print *, 'p      =', active_edges(1:num_active_edges-1), & 
-                                                          p(active_edges(1:num_active_edges-1))
-     print *, 'p      =', active_edges(2:num_active_edges),   &
-                                                          p(active_edges(2:num_active_edges))
-     print *, 'init f =', active_edges(1:num_active_edges-1), & 
-                                                          f(active_edges(1:num_active_edges-1))
-     print *, 'init q =', active_bins(1:num_active_bins),     & 
-                                                          q(active_bins(1:num_active_bins))
-#endif /* VERBOSE */      
+      i_up = int(floor(log10(p_up/p_fix(1))/w)) + 2
+      i_up = max(1,i_up)
+      i_up = min(i_up,ncre)
+
+      is_active_bin = .false.
+      is_active_bin(i_lo+1:i_up) = .true.
+      num_active_bins = count(is_active_bin)
+      allocate(active_bins(num_active_bins))
+      active_bins = pack(all_bins, is_active_bin)
       
        e = fq_to_e(p(0:ncre-1), p(1:ncre), f(0:ncre-1), q(1:ncre), active_bins)
        n = fq_to_n(p(0:ncre-1), p(1:ncre), f(0:ncre-1), q(1:ncre), active_bins)
 
-#ifdef VERBOSE
-      print *, 'init n =', n
-      print *, 'init e =', e 
-#endif /* VERBOSE */
 
        n_tot0 = sum(n)
        e_tot0 = sum(e)
        
-#ifdef VERBOSE
-       print *, 'n_tot0 =', n_tot0
-       print *, 'e_tot0 =', e_tot0
-#endif /* VERBOSE */
-       call cresp_timestep(dt_calc)
        init_cresp_arguments(1:ncre) = n
        init_cresp_arguments(ncre+1:2*ncre) = e
        init_cresp_arguments(2*ncre+1) = p_lo
        init_cresp_arguments(2*ncre+2) = p_up
        
+#ifdef VERBOSE      
+     print*,' '
+     print*, 'In init_state:'
+     print*, 'active bins ', active_bins
+!      print *, 'num_act_edges', num_active_edges, size(active_edges), lbound(active_edges), ubound(active_edges)
+!      print *, 'num_act_bins', num_active_bins,  size(active_bins), lbound(active_bins), ubound(active_bins)
+     print *, 'p      =', p(active_bins)
+!      print *, 'p      =', active_edges(1:num_active_edges-1), & 
+!                                                           p(active_edges(1:num_active_edges-1))
+!      print *, 'p      =', active_edges(2:num_active_edges),   &
+!                                                           p(active_edges(2:num_active_edges))
+!      print *, 'init f =', f(active_edges(1:num_active_edges-1)) !, active_edges(1:num_active_edges-1)
+     print *, 'init f =', f(active_bins)
+     print *, 'init q =', q(active_bins(1:num_active_bins)) ! , active_bins(1:num_active_bins),  
+                                                          
+                                                          ! #ifdef VERBOSE
+     print *, 'init n =', n
+     print *, 'init e =', e 
+     print *, 'n_tot0 =', n_tot0
+     print *, 'e_tot0 =', e_tot0
+#endif /* VERBOSE */    
        
-   call deallocate_active_arrays
-   call deallocate_allocatable
-   
-!    print *,'coefficients: c2nd = ',c2nd, ', c3rd = ', c3rd
-!    print *
-!   stop
-   
-    end subroutine cresp_init_state
+     call deallocate_active_arrays
+     call deallocate_allocatable
+
+   end subroutine cresp_init_state
   
 !-------------------------------------------------------------------------------------------------
 ! 
@@ -611,8 +563,8 @@ subroutine cresp_update_bin_index(dt, p_lo, p_up, p_lo_next, p_up_next)
       eflux(ce) =  - de_upw(ce)
       
       if(del_i_up == -1) then 
-         nflux(i_up) = -n(i_up)
-         eflux(i_up) = -e(i_up  )
+         nflux(i_up-1) = -n(i_up)
+         eflux(i_up-1) = -e(i_up  )
       endif
          
       dn_upw(he) = fpi*fimth(he)*p_upw(he)**3*(pimth(he)/p_upw(he))**qim1(he)
@@ -845,7 +797,7 @@ subroutine ne_to_q(n, e, q)
 
    call allocate_with_index(edt,1,ma1d)
    call allocate_with_index(ndt,1,ma1d)
-   call allocate_with_index(p_fix,0,ma1d)
+!    call allocate_with_index(p_fix,0,ma1d)
 
    call allocate_with_index(p_next,0,ma1d)
    call allocate_with_index(p_upw,0,ma1d)
@@ -941,35 +893,6 @@ subroutine ne_to_q(n, e, q)
   
   ! ---------------------
   
-  subroutine cresp_timestep(dt_calc)
-    implicit none
-    real(kind=8)                  :: dt_calc
-    real(kind=8)                  :: dts_min
-    real(kind=8), dimension(ncre) :: dts_new
-    
-      dts_new = huge(one) + dt_calc ! whole dts_new array
-      where (abs(b_losses(p(1:ncre))) .ne. zero)
-        dts_new =  (p(1:ncre)-p(0:ncre-1))/abs(b_losses(p(1:ncre)))
-         where ((p(1:ncre)-p(0:ncre-1)).eq.zero)   !!!
-          dts_new = huge(one)                     !!!
-        end where                              
-      end where
-!       print *,'dtsnew', dts_new
-      dts_min = cfl_cre*minval(dts_new)   ! min of array
-!        print *, 'p = ', p
-!        print *, 'ub  = ', u_b
-!        print *,'dts_min = ', dts_min
-!        print *,'b_losses(p(1:ncre) = ', b_losses(p(1:ncre))
-      
-      if (dt_calc.ge.dts_min) then
-         dt_calc = dts_min
-      endif
-!       stop
-   end subroutine cresp_timestep
-   
-! -------------------- 
-
-
     subroutine cresp_accuracy_test(t)
      implicit none
      real(kind=8), intent(in)   :: t 

@@ -159,10 +159,10 @@ contains
       use cr_data,        only: icr_H1, icr_C12, cr_table
 #endif /* COSM_RAYS_SOURCES */
 #ifdef COSM_RAY_ELECTRONS
-     use initcosmicrays, only: q_init, f_init, p_lo_init, p_up_init, p_min_fix, p_max_fix, ncre, ncrn, &
-                               iarr_cre_n, iarr_cre_e, iarr_cre_pl, iarr_cre_pu
+     use initcosmicrays, only: ncrn, iarr_cre_n, iarr_cre_e, iarr_cre_pl, iarr_cre_pu
      use cresp_crspectrum, only: cresp_init_state
-     use cresp_variables, only: cresp_taylor_order, taylor_coeff_2nd, taylor_coeff_3rd
+     use initcrspectrum,   only: q_init, f_init, p_lo_init, p_up_init, p_min_fix, p_max_fix, ncre, &
+                                 expan_order, taylor_coeff_2nd, taylor_coeff_3rd
      use cresp_grid,     only: grid_cresp_initialization
 #endif /* COSM_RAY_ELECTRONS */
 
@@ -276,9 +276,7 @@ contains
 #endif /* COSM_RAYS */
 
 #ifdef COSM_RAY_ELECTRONS
-       taylor_coeff_2nd = (mod(2,cresp_taylor_order) / 2 + mod(3,cresp_taylor_order))       ! coefficient which is always equal to 1 when order = 2 or = 3 and 0 if order = 1
-       taylor_coeff_3rd = (cresp_taylor_order - 1)*(cresp_taylor_order- 2) / 2              ! coefficient which is equal to 1 only when order = 3
-         write(msg,*) '[initproblem:problem_initial_conditions]: Taylor_exp._ord. (cresp)    = ', cresp_taylor_order
+         write(msg,*) '[initproblem:problem_initial_conditions]: Taylor_exp._ord. (cresp)    = ', expan_order
          call printinfo(msg)
          write(msg,*) '[initproblem:problem_initial conditions]: Taylor_exp._coeff.(2nd,3rd) = ', taylor_coeff_2nd, taylor_coeff_3rd
          call printinfo(msg)

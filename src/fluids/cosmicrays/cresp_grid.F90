@@ -27,6 +27,7 @@ contains
       use crhelpers,      only: divv_n
       use named_array_list, only: qna
       use units,           only: s_len_u
+      use initcrspectrum, only: spec_mod_trms
 
       implicit none
       integer                         :: i, j, k 
@@ -34,6 +35,7 @@ contains
       type(grid_container),   pointer :: cg
       real(kind=8), allocatable, dimension(:)  :: cresp_arguments
       real(kind=8)                             :: dt_cre_tmp
+      type(spec_mod_trms)  :: sptab
       
       allocate(cresp_arguments(I_ONE:I_TWO*ncre+I_FOUR))
    i = 0
@@ -52,13 +54,13 @@ contains
   
                   cresp_arguments(I_ONE:I_TWO*ncre+I_TWO)    = cg%u(iarr_cre, i, j, k)
                  
-                  cresp_arguments(2*ncre+3) = emag(cg%b(xdim,i,j,k), cg%b(ydim,i,j,k), cg%b(zdim,i,j,k))/cg%dvol  !!! module works properly for small emag. Should emag be > 1e-4, negative values will appear
-                  cresp_arguments(2*ncre+4) = cg%q(qna%ind(divv_n))%point([i,j,k])/cg%dvol
+                  sptab%ub = emag(cg%b(xdim,i,j,k), cg%b(ydim,i,j,k), cg%b(zdim,i,j,k))/cg%dvol  !!! module works properly for small emag. Should emag be > 1e-4, negative values will appear
+                  sptab%ud = cg%q(qna%ind(divv_n))%point([i,j,k])/cg%dvol
 #ifdef VERBOSE
               print *, 'Output of cosmic ray electrons module for grid cell with coordinates i,j,k:', i, j, k
 #endif /* VERBOSE */
 ! #ifndef DIFF_TEST
-              call cresp_crs_update(2*dt, cresp_arguments, dt_cre_tmp) !cg%u(cr_table(cren)), cg%u(cr_table(cree)), cg%u(cr_table(crepl), &
+              call cresp_crs_update(2*dt, cresp_arguments, sptab) !cg%u(cr_table(cren)), cg%u(cr_table(cree)), cg%u(cr_table(crepl), &
               cg%u(iarr_cre, i, j, k) = cresp_arguments(I_ONE:I_TWO*ncre+I_TWO)
 !              diagnostic:
                 if (i.eq.34.and.j.eq.34.and.k.eq.0) then
@@ -97,10 +99,13 @@ contains
       use grid_cont,      only: grid_container
 !       use cresp_variables, only: ind_p_lo, ind_p_up, cresp_taylor_order, taylor_coeff_2nd, taylor_coeff_3rd, &
 !                                 ind_e_beg, ind_e_end, ind_n_beg, ind_n_end
-      use initcrspectrum, only: ncre, f_init, p_up_init, p_lo_init, q_init, cre_eff
+      use initcrspectrum, only: ncre, f_init, p_up_init, p_lo_init, q_init, cre_eff, spec_mod_trms
       use initcosmicrays, only: iarr_crn, iarr_cre
       use cresp_crspectrum, only: cresp_init_state
       use units,          only: clight
+      use crhelpers,      only: divv_n
+      use named_array_list, only: qna
+      
       implicit none
 
       integer                         :: i, j, k !, icr, ipm, jpm, kpm
@@ -108,6 +113,7 @@ contains
       type(grid_container),   pointer :: cg
       real(kind=8), allocatable, dimension(:)  :: cresp_arguments
       real(kind=8)                             :: dt_cre_tmp
+      type(spec_mod_trms)  :: sptab
       
       allocate(cresp_arguments(I_ONE:I_TWO*ncre+I_FOUR))
       !       logical, save :: frun = .true.
@@ -129,13 +135,14 @@ contains
               do i = cg%is, cg%ie
 
                   cresp_arguments(I_ONE:2*ncre+2)    = cg%u(iarr_cre, i, j, k)
-                  cresp_arguments(2*ncre+3) = emag(cg%b(xdim,i,j,k), cg%b(ydim,i,j,k),cg%b(zdim,i,j,k))*0.1/cg%dvol
+                  sptab%ub = emag(cg%b(xdim,i,j,k), cg%b(ydim,i,j,k),cg%b(zdim,i,j,k))/cg%dvol
+                  sptab%ud = cg%q(qna%ind(divv_n))%point([i,j,k])/cg%dvol
                   
                   f_init = 1/(fpi*clight*(p_lo_init**(I_FOUR))*(((p_up_init/p_lo_init)**(I_FOUR-q_init))-I_ONE)/(I_FOUR-q_init))   !!! amplitude and distribution of electron energy density is inherited after those of nucleons, see crspectrum.pdf, eq. 29
 !                    f_init = 1.0
                   f_init    = f_init*cg%u(iarr_crn(1),i,j,k)*cre_eff
                   
-                  call cresp_init_state(dt, cresp_arguments, dt_cre_tmp)
+                  call cresp_init_state(dt, cresp_arguments, sptab)
 #ifdef VERBOSE
               print *, 'Output of cosmic ray electrons module for grid cell with coordinates i,j,k:', i, j, k
 #endif /* VERBOSE */
@@ -180,6 +187,7 @@ contains
     use constants,        only: I_ONE, I_TWO, I_FOUR, xdim, ydim, zdim, pi !, LO, HI, pMAX, 
     use named_array_list, only: qna
     use constants,        only: one
+    use initcrspectrum,   only: spec_mod_trms
     
     use timestep_cresp,  only: cresp_timestep_new
 !     use timestep_cresp,   only: cresp_timestep_new
@@ -192,6 +200,7 @@ contains
      type(var_numbers)    :: flind
      real   :: p_l, p_u, u_b, u_d
      real(kind=8)                             :: dt_cre_tmp
+     type(spec_mod_trms)   :: sptab
      
      dt_cre = huge(one)
      dt_cre_tmp = huge(one)
@@ -202,21 +211,17 @@ contains
          do k = cg%ks, cg%ke
            do j = cg%js, cg%je
               do i = cg%is, cg%ie
-!                print *, i,j,k
-!                print *, 'pass timestep'
+
                p_l = cg%u(flind%cre%plo, i, j, k)
                p_u = cg%u(flind%cre%plo, i, j, k)
-               u_b = emag(cg%b(xdim,i,j,k), cg%b(ydim,i,j,k), cg%b(zdim,i,j,k))/cg%dvol
-               u_d=  cg%q(qna%ind(divv_n))%point([i,j,k])/cg%dvol
-               
-!                print *, p_l, p_u, u_b, u_d 
-               call cresp_timestep_new(dt_cre_tmp, p_l, p_u, u_b, u_d)
+               sptab%ub = emag(cg%b(xdim,i,j,k), cg%b(ydim,i,j,k), cg%b(zdim,i,j,k))/cg%dvol
+               sptab%ud = cg%q(qna%ind(divv_n))%point([i,j,k])/cg%dvol
+               call cresp_timestep_new(dt_cre_tmp, p_l, p_u, sptab)
                dt_cre = min(dt_cre, dt_cre_tmp)
               enddo
            enddo
          enddo
          cgl=>cgl%nxt
-!          pause
      enddo
    
    

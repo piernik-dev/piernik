@@ -19,6 +19,7 @@ module initcrspectrum
  real(kind=8)       :: K_cre_n_paral ! = 0
  real(kind=8)       :: K_cre_n_perp ! = 0
  real(kind=8)       :: K_pow_index  ! = 0 
+ integer(kind=4)    :: expan_order
  
  real(kind=8),allocatable, dimension(:) :: p_fix
  real(kind=8)       :: w
@@ -40,6 +41,7 @@ module initcrspectrum
    real(kind=8)    :: ucmb
   end type spec_mod_trms
       
+  integer(kind=4)  :: taylor_coeff_2nd, taylor_coeff_3rd
 !----------------------------------------------  
 !  
 contains
@@ -58,7 +60,7 @@ contains
  
   namelist /COSMIC_RAY_SPECTRUM/ cfl_cre, p_lo_init, p_up_init, f_init, q_init, q_big, ncre, &
            &                         p_min_fix, p_max_fix, cre_eff, K_cre_e_paral, K_cre_e_perp, &
-           &                         K_cre_n_paral, K_cre_n_perp, K_pow_index
+           &                         K_cre_n_paral, K_cre_n_perp, K_pow_index, expan_order
            
   open(unit=101, file="problem.par", status="unknown")
   read(unit=101, nml=COSMIC_RAY_SPECTRUM)
@@ -66,15 +68,16 @@ contains
   
   if (ncre .ne. I_ZERO)  then
    print *,'[@init_cresp] Initial CRESP parameters read:'
-   print *,'ncre      = ', ncre
-   print *,'p_min_fix = ', p_min_fix
-   print *,'p_max_fix = ', p_max_fix
-   print *,'p_lo_init = ', p_lo_init
-   print *,'p_up_init = ', p_up_init
-   print *,'f_init    = ', f_init
-   print *,'q_init    = ', q_init
-   print *,'q_big     = ', q_big
-   print *,'cfl_cre   =  ', cfl_cre
+   print *,'ncre        = ', ncre
+   print *,'p_min_fix   = ', p_min_fix
+   print *,'p_max_fix   = ', p_max_fix
+   print *,'p_lo_init   = ', p_lo_init
+   print *,'p_up_init   = ', p_up_init
+   print *,'f_init      = ', f_init
+   print *,'q_init      = ', q_init
+   print *,'q_big       = ', q_big
+   print *,'cfl_cre     = ', cfl_cre
+   print *,'expan_order = ', expan_order
    
 ! arrays initialization and stuff
 
@@ -91,8 +94,11 @@ contains
   
    
  else
-  print *,'ncre   = ', ncre, '; cr-electrons not initnialized. If COSM_RAY_ELECTRONS flag is on, please check your parameters.'
+  print *,'ncre   = ', ncre, '; cr-electrons NOT initnialized. If COSM_RAY_ELECTRONS flag is on, please check your parameters.'
  endif
+
+  taylor_coeff_2nd = (mod(2,expan_order) / 2 + mod(3,expan_order))       ! coefficient which is always equal to 1 when order = 2 or = 3 and 0 if order = 1
+  taylor_coeff_3rd = (expan_order - 1)*(expan_order- 2) / 2              ! coefficient which is equal to 1 only when order = 3
  
  call init_cresp_types
 !  print *,'[@init_cresp:] type crel%[p,f,q,i_lo i_up] :'
