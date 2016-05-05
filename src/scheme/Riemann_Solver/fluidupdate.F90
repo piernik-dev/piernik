@@ -210,41 +210,7 @@ contains
 
    end function utoq
 
-!--------------------
-
-   function qtou(q, b_cc) result(u)
-
-      use constants,  only: half, xdim, zdim
-     use fluidindex, only: flind
-     use fluidtypes, only: component_fluid
-     use func,       only: ekin
-
-     implicit none
-
-     real, dimension(:,:),   intent(in)    :: b_cc
-     real, dimension(:,:), intent(in) :: q
-
-     !real, dimension(size(u,1),size(u,2))  :: u
-     real, dimension(size(q,1),size(q,2))  :: u
-     integer  :: p
-
-     class(component_fluid), pointer       :: fl
-
-     do p = 1, flind%fluids
-        fl => flind%all_fluids(p)%fl
-
-        u(fl%idn,:) = q(fl%idn,:)
-        u(fl%imx,:) = q(fl%idn,:)*q(fl%imx,:)
-        u(fl%imy,:) = q(fl%idn,:)*q(fl%imy,:)
-        u(fl%imz,:) = q(fl%idn,:)*q(fl%imz,:)
-        if (fl%has_energy) then
-           u(fl%ien,:) = (q(fl%ien,:)-half*sum(b_cc(xdim:zdim,:)**2))/fl%gam_1 +  ekin(u(fl%imx,:), u(fl%imy,:), u(fl%imz,:), u(fl%idn,:)) +  half*sum(b_cc(xdim:zdim,:)**2)
-        end if
-        
-     end do
-
-   end function qtou
-!-----------------------------------------------------------------------------------------------------------------------
+!--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
   subroutine rk2(u,b_cc, dtodx)
 
