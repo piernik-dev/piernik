@@ -127,6 +127,7 @@ def mkplot(data):
         plt.annotate(t_labels[test], xy=(0.5, 0.1), xycoords="axes fraction", horizontalalignment='center')
         plt.ylim(ymin=0.)
         plt.xlim(1-exp, ntm+exp)
+        plt.xticks(range(1,ntm+1))
 
     names = []
     for d in data:
