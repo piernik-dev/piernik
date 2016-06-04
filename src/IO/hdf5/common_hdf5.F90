@@ -41,10 +41,10 @@ module common_hdf5
 
    private
    public :: init_hdf5, cleanup_hdf5, set_common_attributes, common_shortcuts, write_to_hdf5_v2, set_h5_properties
-   public :: nhdf_vars, hdf_vars, hdf_vars_avail, cancel_hdf_var, d_gname, base_d_gname, d_fc_aname, d_size_aname, d_edge_apname, d_bnd_apname, &
-      cg_gname, cg_cnt_aname, cg_lev_aname, cg_size_aname, cg_offset_aname, n_cg_name, dir_pref, cg_ledge_aname, &
-      cg_redge_aname, cg_dl_aname, O_OUT, O_RES, create_empty_cg_dataset, get_nth_cg, data_gname, output_fname, &
-      cg_output
+   public :: nhdf_vars, hdf_vars, hdf_vars_avail, cancel_hdf_var, d_gname, base_d_gname, d_fc_aname, d_size_aname, &
+        d_edge_apname, d_bnd_apname, cg_gname, cg_cnt_aname, cg_lev_aname, cg_size_aname, cg_offset_aname, &
+        n_cg_name, dir_pref, cg_ledge_aname, cg_redge_aname, cg_dl_aname, O_OUT, O_RES, STAT_OK, STAT_INV, &
+        create_empty_cg_dataset, get_nth_cg, data_gname, output_fname, cg_output
 
    character(len=dsetnamelen), allocatable, dimension(:), protected :: hdf_vars  !< dataset names for hdf files
    logical,                    allocatable, dimension(:), protected :: hdf_vars_avail
@@ -61,6 +61,12 @@ module common_hdf5
    enum, bind(c)
       enumerator :: O_RES
       enumerator :: O_OUT
+   end enum
+
+   ! indicate success or failure
+   enum, bind(C)
+      enumerator :: STAT_OK = 0
+      enumerator :: STAT_INV = -1
    end enum
 
    enum, bind(c)
