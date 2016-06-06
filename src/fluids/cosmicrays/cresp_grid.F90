@@ -13,7 +13,7 @@ module cresp_grid
 contains
 
 
- subroutine grid_cresp_update
+ subroutine cresp_update_grid
       use cg_leaves,      only: leaves
       use cg_list,        only: cg_list_element
 !       use cg_level_finest,       only: finest
@@ -23,7 +23,7 @@ contains
       use grid_cont,      only: grid_container
 !       use cresp_variables, only: ind_p_lo, ind_p_up, cresp_taylor_order, taylor_coeff_2nd, taylor_coeff_3rd, &
 !                                 ind_e_beg, ind_e_end, ind_n_beg, ind_n_end
-      use cresp_crspectrum, only:cresp_crs_update, printer
+      use cresp_crspectrum, only:cresp_update_cell, printer
       use crhelpers,      only: divv_n
       use named_array_list, only: qna
       use units,           only: s_len_u
@@ -51,7 +51,6 @@ contains
         do k = cg%ks, cg%ke
            do j = cg%js, cg%je
               do i = cg%is, cg%ie
-  
                   cresp_arguments(I_ONE:I_TWO*ncre+I_TWO)    = cg%u(iarr_cre, i, j, k)
                  
                   sptab%ub = emag(cg%b(xdim,i,j,k), cg%b(ydim,i,j,k), cg%b(zdim,i,j,k))/cg%dvol  !!! module works properly for small emag. Should emag be > 1e-4, negative values will appear
@@ -60,7 +59,7 @@ contains
               print *, 'Output of cosmic ray electrons module for grid cell with coordinates i,j,k:', i, j, k
 #endif /* VERBOSE */
 ! #ifndef DIFF_TEST
-              call cresp_crs_update(2*dt, cresp_arguments, sptab) !cg%u(cr_table(cren)), cg%u(cr_table(cree)), cg%u(cr_table(crepl), &
+              call cresp_update_cell(2*dt, cresp_arguments, sptab) !cg%u(cr_table(cren)), cg%u(cr_table(cree)), cg%u(cr_table(crepl), &
               cg%u(iarr_cre, i, j, k) = cresp_arguments(I_ONE:I_TWO*ncre+I_TWO)
 !              diagnostic:
                 if (i.eq.34.and.j.eq.34.and.k.eq.0) then
@@ -87,9 +86,9 @@ contains
       cgl=>cgl%nxt
       enddo
       
-   end subroutine grid_cresp_update
+   end subroutine cresp_update_grid
    
-   subroutine grid_cresp_initialization
+   subroutine cresp_init_grid
    
       use cg_leaves,      only: leaves
       use cg_list,        only: cg_list_element
@@ -171,7 +170,7 @@ contains
 
       deallocate(cresp_arguments)
    
-   end subroutine grid_cresp_initialization
+   end subroutine cresp_init_grid
    
 ! ------------------------------------------------
 
@@ -180,7 +179,6 @@ contains
     use cg_leaves,        only: leaves
     use cg_list,          only: cg_list_element
     use fluidtypes,       only: var_numbers
-    use cresp_crspectrum, only: cresp_crs_update, printer
     use crhelpers,        only: divv_n
     use func,             only: emag !, operator(.equals.), operator(.notequals.)
     use grid_cont,        only: grid_container

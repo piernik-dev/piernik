@@ -85,7 +85,7 @@ contains
 
 !----- main subroutine -----
 
-subroutine cresp_crs_update(dt, cresp_arguments, sptab)
+subroutine cresp_update_cell(dt, cresp_arguments, sptab)
  use initcrspectrum, only: spec_mod_trms
  implicit none
    real(kind=8), intent(in)  :: dt
@@ -181,7 +181,7 @@ subroutine cresp_crs_update(dt, cresp_arguments, sptab)
    call deallocate_active_arrays
    call deallocate_allocatable
    
-end subroutine cresp_crs_update
+end subroutine cresp_update_cell
 
 
 !-------------------------------------------------------------------------------------------------

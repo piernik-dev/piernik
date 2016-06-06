@@ -91,7 +91,7 @@ contains
     p_fix(1:ncre-1)  =  p_min_fix*10.0**(w*dble(cresp_edges(1:ncre-1)-1))
     p_fix(0)    = zero
     p_fix(ncre) = zero
-  
+  print *, 'p_fix = ', p_fix
    
  else
   print *,'ncre   = ', ncre, '; cr-electrons NOT initnialized. If COSM_RAY_ELECTRONS flag is on, please check your parameters.'

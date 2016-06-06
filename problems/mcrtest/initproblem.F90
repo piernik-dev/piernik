@@ -160,10 +160,9 @@ contains
 #endif /* COSM_RAYS_SOURCES */
 #ifdef COSM_RAY_ELECTRONS
      use initcosmicrays, only: ncrn, iarr_cre_n, iarr_cre_e, iarr_cre_pl, iarr_cre_pu
-     use cresp_crspectrum, only: cresp_init_state
      use initcrspectrum,   only: q_init, f_init, p_lo_init, p_up_init, p_min_fix, p_max_fix, ncre, &
                                  expan_order, taylor_coeff_2nd, taylor_coeff_3rd
-     use cresp_grid,     only: grid_cresp_initialization
+     use cresp_grid,     only: cresp_init_grid
 #endif /* COSM_RAY_ELECTRONS */
 
       implicit none
@@ -280,6 +279,7 @@ contains
          call printinfo(msg)
          write(msg,*) '[initproblem:problem_initial conditions]: Taylor_exp._coeff.(2nd,3rd) = ', taylor_coeff_2nd, taylor_coeff_3rd
          call printinfo(msg)
+!          call print_mcrtest_vars_hdf5()
             
       if (ncre > 0) then
          cg%u(iarr_cre_pl, :, :, :) = p_lo_init ! ? iarr_cre(2*ncre+1)? < initial value of low cut momentum assigned to all cg%u cells 
@@ -290,10 +290,45 @@ contains
       endif
            
 !         print *, 'in domain cell(2,2,0) cre vars = ',cg%u(ind_n_beg:ind_p_up, -2, -2, 0)  ! just some check, to be removed
-      call grid_cresp_initialization
+      call cresp_init_grid
 
 #endif /* COSM_RAY_ELECTRONS */      
       
    end subroutine problem_initial_conditions
-
+   
+!       subroutine print_mcrtest_vars_hdf5(var, tab, ierrh, cg)
+! 
+!       use grid_cont,        only: grid_container
+!       use named_array,      only: p3
+!       use named_array_list, only: qna
+! !       use dodges,           only: MSD_n, MMD_n
+! 
+!       implicit none
+! 
+!       character(len=*),               intent(in)    :: var
+!       real(kind=4), dimension(:,:,:), intent(inout) :: tab
+!       integer,                        intent(inout) :: ierrh
+!       type(grid_container), pointer,  intent(in)    :: cg
+! 
+!       ierrh = 0
+!       select case (trim(var))
+! 
+!          case ("mmss")
+!             if (qna%exists(MMD_n)) then
+!                p3 => cg%q(qna%ind(MMD_n))%span(cg%ijkse) ; tab(:,:,:) = real(p3, kind=4)
+!                cg%q(qna%ind(MMD_n))%arr(:,:,:) = 0.0
+!             endif
+!          case ("dmss")
+!             if (qna%exists(MSD_n)) then
+!                p3 => cg%q(qna%ind(MSD_n))%span(cg%ijkse) ; tab(:,:,:) = real(p3, kind=4)
+!                cg%q(qna%ind(MSD_n))%arr(:,:,:) = 0.0
+!             endif
+!          case default
+!             ierrh = -1
+!             if (.false.) tab(:,:,:) = real(cg%u(-ierrh,:,:,:),kind=4) ! suppress compiler warnings
+!       end select
+! 
+!    end subroutine print_mcrtest_vars_hdf5
+! 
 end module initproblem
+
