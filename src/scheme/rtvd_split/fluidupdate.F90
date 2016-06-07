@@ -115,6 +115,7 @@ contains
       use global,      only: dt, dtm, t
       use mass_defect, only: update_magic_mass
       use cresp_grid, only: cresp_update_grid
+      use cresp_p_diffusion, only: cresp_p_cut_diff
 
       implicit none
 
@@ -128,6 +129,7 @@ contains
 
 #ifdef COSM_RAY_ELECTRONS
      call cresp_update_grid!!!
+     call cresp_p_cut_diff
 #endif /* COSM_RAY_ELECTRONS */
 
       halfstep = .true.

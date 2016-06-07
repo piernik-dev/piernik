@@ -16,13 +16,9 @@ contains
  subroutine cresp_update_grid
       use cg_leaves,      only: leaves
       use cg_list,        only: cg_list_element
-!       use cg_level_finest,       only: finest
       use constants,      only: I_ONE, I_TWO, I_FOUR, xdim, ydim, zdim !, LO, HI, pMAX, 
-!       use domain,         only: dom!, is_multicg
       use func,           only: ekin, emag, operator(.equals.), operator(.notequals.)
       use grid_cont,      only: grid_container
-!       use cresp_variables, only: ind_p_lo, ind_p_up, cresp_taylor_order, taylor_coeff_2nd, taylor_coeff_3rd, &
-!                                 ind_e_beg, ind_e_end, ind_n_beg, ind_n_end
       use cresp_crspectrum, only:cresp_update_cell, printer
       use crhelpers,      only: divv_n
       use named_array_list, only: qna
@@ -76,10 +72,7 @@ contains
                 endif
 !               if(i.eq.1.and.j.eq.1.and.k.eq.0) call printer(t)          
               
-              dt_cre = min(dt_cre, dt_cre_tmp)
-!               if (dt_cre .ge. dt_cre_tmp) then
-!                       dt_cre = dt_cre_tmp
-!               endif
+!               dt_cre = min(dt_cre, dt_cre_tmp)
            enddo
          enddo
        enddo
@@ -157,10 +150,6 @@ contains
 !                       print *, 'plo, pup = ', cg%u(flind%cre%plo,i,j,k),cg%u(flind%cre%pup,i,j,k)
 !                       print *, '-------------------------'
 !                 endif
-
-                  if (dt_cre .ge. dt_cre_tmp) then
-                      dt_cre = dt_cre_tmp
-                  endif
            enddo
          enddo
 
@@ -176,7 +165,6 @@ contains
 
    subroutine grid_cresp_timestep
     use cg_leaves,        only: leaves
-    use cg_leaves,        only: leaves
     use cg_list,          only: cg_list_element
     use fluidtypes,       only: var_numbers
     use crhelpers,        only: divv_n
@@ -188,9 +176,7 @@ contains
     use initcrspectrum,   only: spec_mod_trms
     
     use timestep_cresp,  only: cresp_timestep_new
-!     use timestep_cresp,   only: cresp_timestep_new
-    
-  
+
      implicit none
      integer                         :: i, j, k 
      type(grid_container), pointer   :: cg
