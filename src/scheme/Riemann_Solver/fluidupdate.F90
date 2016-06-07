@@ -36,7 +36,7 @@ module fluidupdate
 
   implicit none
   private
-  public :: fluid_update, sweep_dsplit, rk2, utoq, calculate_slope_vanleer, euler, muscl, muscl_check, euler_check, rk2_check, qtou
+  public :: fluid_update, sweep_dsplit, rk2, utoq, calculate_slope_vanleer, euler, muscl, muscl_check, euler_check, rk2_check
 
 
 contains
@@ -127,8 +127,8 @@ contains
           pu => cg%w(wna%fi)%get_sweep(ddim,i1,i2)
           u1d(iarr_all_swp(ddim,:),:) = pu(:,:)
 #ifdef MUSCL
-          !call muscl(u1d,b_cc1d, dt/cg%dl(ddim))
-          call muscl_check(u1d,b_cc1d, dt/cg%dl(ddim))
+          call muscl(u1d,b_cc1d, dt/cg%dl(ddim))
+          !call muscl_check(u1d,b_cc1d, dt/cg%dl(ddim))
 #endif
 
 #ifdef RK2
@@ -399,7 +399,7 @@ contains
 
     do i = 1, flind%fluids
        fl    => flind%all_fluids(i)%fl
-       p_flx => flx(fl%beg:fl%end,:)
+       p_flx => flx(fl%beg:fl%end,:)  ! flx is intent (out) and ignored at end of call
        p_ql  => ql(fl%beg:fl%end,:)
        p_qr  => qr(fl%beg:fl%end,:)
        p_bcc => mag_cc(xdim:zdim,:)
@@ -610,8 +610,8 @@ contains
     real, dimension(size(u,1),size(u,2)), target    :: flx, ql, qr, du, ul, ur, u_l, u_r
     real, dimension(:,:), pointer                   :: p_flx, p_bcc, p_bccl, p_bccr, p_ql, p_qr
     integer                                         :: nx, i, ii
-    real, dimension(size(u,1),size(u,2)) :: dflx, u1
-
+    real, dimension(size(u,1),size(u,2)) :: uhalf
+    real::a
     nx  = size(u,2)
 
     du  = calculate_slope_vanleer(u)
@@ -624,15 +624,17 @@ contains
 
     mag_cc = b_cc
 
-    flx  = fluxes(ul,b_ccl) - fluxes(ur,b_ccr)
+    flx  = fluxes(ul,b_ccl) - fluxes(ur,b_ccr) ! not needed
 
-    u_l = ul !+ half*dtodx*flx
-    u_r(:,1:nx-1) = ul(:,2:nx) !+ half*dtodx*flx(:,2:nx) ;
-    u_r(:,nx) = u_r(:,nx-1)
+    u_l = ur + half*dtodx*flx 
+    u_r(:,1:nx-1) = ul(:,2:nx) + half*dtodx*flx(:,2:nx) ; u_r(:,nx) = u_r(:,nx-1) 
 
-    ql = utoq(u_l,b_ccl)
-    qr = utoq(u_r,b_ccr)
+    ql = utoq(u_l,b_ccl) ! ul
+    qr = utoq(u_r,b_ccr) ! ur
  
+    !ql = utoq(ul,b_ccl)
+    !qr = utoq(ur,b_ccr)
+
     do i = 1, flind%fluids
        fl    => flind%all_fluids(i)%fl
        p_flx => flx(fl%beg:fl%end,:)
@@ -654,12 +656,63 @@ contains
     !write(*,*) "cshift(flx,1,2)", cshift(flx(1,:),1,1)
     !write(*,*) "flx", flx
     !write(*,*) "p_flx", p_flx
-    dflx =  cshift(flx,-1,2) - flx
+    !dflx =  cshift(flx,-1,2) - flx
     !u = u + dtodx*(flx - cshift(flx,1,2))
-    u1 = u + half*dtodx*dflx
+ a=half ! half
+    uhalf(:,2:nx) = u(:,2:nx) + a*dtodx*(flx(:,1:nx-1) - flx(:,2:nx))
+    uhalf(:,1) = uhalf(:,2) ; uhalf(:,nx) = uhalf(:,nx-1)
+
+ !u = uhalf
+
+!#if 0
+!!$ do ii=lbound(u,2), ubound(u,2)
+!!$ write(*,*)"u ",u(:,ii)
+!!$ write(*,*)"uh",uhalf(:,ii)
+!!$ end do
+
+    du  = calculate_slope_vanleer(uhalf)
+    ul = uhalf - half*du
+    ur = uhalf + half*du
+
+    db  = calculate_slope_vanleer(b_cc)
+    b_ccl = b_cc - half*db
+    b_ccr = b_cc + half*db
+
+    mag_cc = b_cc
+
+    flx  = fluxes(ul,b_ccl) - fluxes(ur,b_ccr) ! not needed
+
+    u_l = ur + half*dtodx*flx 
+    u_r(:,1:nx-1) = ul(:,2:nx) + half*dtodx*flx(:,2:nx) ; u_r(:,nx) = u_r(:,nx-1) 
+
+    ql = utoq(u_l,b_ccl) ! ul
+    qr = utoq(u_r,b_ccr) ! ur
+
+    !ql = utoq(ul,b_ccl)
+    !qr = utoq(ur,b_ccr)
+
+     do i = 1, flind%fluids
+       fl    => flind%all_fluids(i)%fl
+       p_flx => flx(fl%beg:fl%end,:)
+       p_ql  => ql(fl%beg:fl%end,:)
+       p_qr  => qr(fl%beg:fl%end,:)
+       p_bcc => mag_cc(xdim:zdim,:)
+       p_bccl => b_ccl(xdim:zdim,:)
+       p_bccr => b_ccr(xdim:zdim,:)
+       call riemann_hlld(nx, p_flx, p_ql, p_qr, p_bcc, p_bccl, p_bccr, fl%gam)
+    enddo
+
+    u(:,2:nx) = u(:,2:nx) + dtodx*(flx(:,1:nx-1) - flx(:,2:nx))
+    u(:,1) = u(:,2) ; u(:,nx) = u(:,nx-1)
+
+!!$ do ii=lbound(u,2), ubound(u,2)
+!!$ write(*,*)"u1",u(:,ii)
+!!$ end do
+!#endif
+
     !dflx = flx - cshift(flx,1,2)
     !dflx =  cshift(flx,-1,2) - flx
-    write(*,*) "dflx", dflx(1,:)
+    !write(*,*) "dflx", dflx(1,:)
     !write(*,*) "u_before", u(:,:)
 
     !u(:,:) = u(:,:) + dtodx*flx(:,:)
@@ -684,35 +737,35 @@ contains
     
     !u = u + dtodx*flx
 
-    du  = calculate_slope_vanleer(u1)
-    ul  = u1 - half*du
-    ur  = u1 + half*du
+    !du  = calculate_slope_vanleer(u1)
+    !ul  = u1 - half*du
+    !ur  = u1 + half*du
 
-    db  = calculate_slope_vanleer(b_cc)
-    b_ccl = b_cc - half*db
-    b_ccr = b_cc + half*db
+    !db  = calculate_slope_vanleer(b_cc)
+    !b_ccl = b_cc - half*db
+    !b_ccr = b_cc + half*db
 
-    mag_cc = b_cc
+    !mag_cc = b_cc
 
-    flx  = fluxes(ul,b_ccl) - fluxes(ur,b_ccr)
-
-    u_l = ul !+ half*dtodx*flx
-    u_r(:,1:nx-1) = ul(:,2:nx) !+ half*dtodx*flx(:,2:nx) ;
-    u_r(:,nx) = u_r(:,nx-1)
-
-    ql = utoq(u_l,b_ccl)
-    qr = utoq(u_r,b_ccr)
- 
-    do i = 1, flind%fluids
-       call riemann_hlld(nx, p_flx, p_ql, p_qr, p_bcc, p_bccl, p_bccr, fl%gam)
-    enddo
-
-    dflx =  cshift(flx,-1,2) - flx
-    !u = u + dtodx*(flx - cshift(flx,1,2))
-    u = u + dtodx*dflx
-    !dflx = flx - cshift(flx,1,2)
-    !dflx =  cshift(flx,-1,2) - flx
-    write(*,*) "dflx", dflx(1,:)
+!!$    flx  = fluxes(ul,b_ccl) - fluxes(ur,b_ccr)
+!!$
+!!$    u_l = ul !+ half*dtodx*flx
+!!$    u_r(:,1:nx-1) = ul(:,2:nx) !+ half*dtodx*flx(:,2:nx) ;
+!!$    u_r(:,nx) = u_r(:,nx-1)
+!!$
+!!$    ql = utoq(u_l,b_ccl)
+!!$    qr = utoq(u_r,b_ccr)
+!!$ 
+!!$    do i = 1, flind%fluids
+!!$       call riemann_hlld(nx, p_flx, p_ql, p_qr, p_bcc, p_bccl, p_bccr, fl%gam)
+!!$    enddo
+!!$
+!!$    dflx =  cshift(flx,-1,2) - flx
+!!$    !u = u + dtodx*(flx - cshift(flx,1,2))
+!!$    u = u + dtodx*dflx
+!!$    !dflx = flx - cshift(flx,1,2)
+!!$    !dflx =  cshift(flx,-1,2) - flx
+!!$    write(*,*) "dflx", dflx(1,:)
  
 
   end subroutine rk2_check
