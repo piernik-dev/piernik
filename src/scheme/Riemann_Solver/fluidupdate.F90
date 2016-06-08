@@ -271,7 +271,7 @@ contains
     qr = utoq(ur,b_ccr)
 
     !u_predict  =  u + dtodx*flx(:,:)
-    
+
 
     do i = 1, flind%fluids
        fl    => flind%all_fluids(i)%fl
@@ -286,10 +286,10 @@ contains
 
     !u_predict = u - half*dtodx*p_flx(:,:)
     u_predict(:,2:nx) = u(:,2:nx) - half*dtodx*(flx(:,2:nx) - flx(:,1:nx-1))
- 
+
     do ii = lbound(u_predict, 2), ubound(u_predict, 2)
        write(*,*) u_predict(:, ii)
-    end do
+    enddo
 
     do i = 1, flind%fluids
        fl    => flind%all_fluids(i)%fl
@@ -303,7 +303,7 @@ contains
     enddo
 
    ! u  =  u_predict - dtodx*(flx(:,1:nx-1) - flx(:,2:nx))
-    
+
     u  =  u_predict
 
   end subroutine rk2
@@ -364,8 +364,8 @@ contains
     !write(*,*) "flx", flx(:,1:nx-1) - flx(:,2:nx)
      do ii = lbound(flx, 2), ubound(flx, 1)
        write(*,*) flx(:, ii)
-    end do
-    
+    enddo
+
     !u(:,1) = u(:,2) ; u(:,nx) = u(:,nx-1)
 
 
@@ -474,7 +474,7 @@ contains
 
     ql = utoq(u_l,b_ccl)
     qr = utoq(u_r,b_ccr)
- 
+
     do i = 1, flind%fluids
        fl    => flind%all_fluids(i)%fl
        p_flx => flx(fl%beg:fl%end,:)
@@ -516,17 +516,17 @@ contains
 
     !do ii = lbound(flx, 1), ubound(flx, 1)
     !   write(*,*) "flx1", flx - cshift(flx,1,2)
-    !end do
+    !enddo
 
     !do ii = lbound(flx, 2), ubound(flx, 2)
     !   write(*,*) "flx2", flx - cshift(flx,1,2)
-    !end do
-    
+    !enddo
 
-    
+
+
     !u = u + dtodx*flx
 
- 
+
 
   end subroutine euler_check
 
@@ -595,12 +595,12 @@ contains
 
     !do ii = lbound(flx,1), ubound(flx,1)
     !   write(*,*) "flx1", flx(:,1:nx-1) - flx(:,2:nx)
-    !end do
+    !enddo
 
     !do ii = lbound(flx,2), ubound(flx,2)
     !   write(*,*) "flx2", flx(:,1:nx-1) - flx(:,2:nx)
     !enddo
-    
+
     u(:,1) = u(:,2) ; u(:,nx) = u(:,nx-1)
 
   end subroutine muscl_check
@@ -628,7 +628,7 @@ contains
     integer                                         :: nx, i !, ii
     real, dimension(size(u,1),size(u,2))            :: uhalf
     real                                            ::a
-   
+
     nx  = size(u,2)
     a = half
 
@@ -642,14 +642,14 @@ contains
 
     mag_cc = b_cc
 
-    flx  = fluxes(ul,b_ccl) - fluxes(ur,b_ccr) 
+    flx  = fluxes(ul,b_ccl) - fluxes(ur,b_ccr)
 
-    u_l = ur + half*dtodx*flx 
-    u_r(:,1:nx-1) = ul(:,2:nx) + half*dtodx*flx(:,2:nx) ; u_r(:,nx) = u_r(:,nx-1) 
+    u_l = ur + half*dtodx*flx
+    u_r(:,1:nx-1) = ul(:,2:nx) + half*dtodx*flx(:,2:nx) ; u_r(:,nx) = u_r(:,nx-1)
 
-    ql = utoq(u_l,b_ccl) 
-    qr = utoq(u_r,b_ccr) 
- 
+    ql = utoq(u_l,b_ccl)
+    qr = utoq(u_r,b_ccr)
+
     do i = 1, flind%fluids
        fl    => flind%all_fluids(i)%fl
        p_flx => flx(fl%beg:fl%end,:)
@@ -675,13 +675,13 @@ contains
 
     mag_cc = b_cc
 
-    flx  = fluxes(ul,b_ccl) - fluxes(ur,b_ccr) 
+    flx  = fluxes(ul,b_ccl) - fluxes(ur,b_ccr)
 
-    u_l = ur + half*dtodx*flx 
-    u_r(:,1:nx-1) = ul(:,2:nx) + half*dtodx*flx(:,2:nx) ; u_r(:,nx) = u_r(:,nx-1) 
+    u_l = ur + half*dtodx*flx
+    u_r(:,1:nx-1) = ul(:,2:nx) + half*dtodx*flx(:,2:nx) ; u_r(:,nx) = u_r(:,nx-1)
 
-    ql = utoq(u_l,b_ccl) 
-    qr = utoq(u_r,b_ccr) 
+    ql = utoq(u_l,b_ccl)
+    qr = utoq(u_r,b_ccr)
 
      do i = 1, flind%fluids
        fl    => flind%all_fluids(i)%fl
@@ -698,7 +698,7 @@ contains
     u(:,1) = u(:,2) ; u(:,nx) = u(:,nx-1)
 
   end subroutine rk2_check
-  
+
   !-------------------------------------------------------------------------------------------------
 
   subroutine rk2_flx(u,b_cc, dtodx)
