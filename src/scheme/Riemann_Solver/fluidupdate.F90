@@ -141,6 +141,8 @@ contains
              solve => euler_check
           case ("rk2_check")
              solve => rk2_check
+          case ("rk2_flx")
+             solve => rk2_flx
           case default
              call die("[fluidupdate:sweep_dsplit] No recognized solver")
        end select
@@ -695,4 +697,84 @@ contains
 
   end subroutine rk2_check
   
+  !-------------------------------------------------------------------------------------------------
+
+  subroutine rk2_flx(u,b_cc, dtodx)
+
+    use constants,   only: half, xdim, zdim
+    use fluidindex,  only: flind
+    use fluidtypes,  only: component_fluid
+    use hlld,        only: fluxes, riemann_hlld
+
+    implicit none
+
+    real, dimension(:,:),           intent(inout)   :: u
+    real, dimension(:,:),           intent(inout)   :: b_cc
+    real,                           intent(in)      :: dtodx
+
+    class(component_fluid), pointer                 :: fl
+    real, dimension(xdim:zdim,size(u,2)), target    :: b_ccl, b_ccr, mag_cc
+    real, dimension(xdim:zdim,size(u,2)), target    :: db
+    real, dimension(size(u,1),size(u,2)), target    :: flx, ql, qr, du, ul, ur, u_l, u_r
+    real, dimension(:,:), pointer                   :: p_flx, p_bcc, p_bccl, p_bccr, p_ql, p_qr
+    integer                                         :: nx, i !, ii
+
+    nx  = size(u,2)
+
+    du  = calculate_slope_vanleer(u)
+    ul  = u - half*du
+    ur  = u + half*du
+
+    db  = calculate_slope_vanleer(b_cc)
+    b_ccl = b_cc - half*db
+    b_ccr = b_cc + half*db
+
+    mag_cc = b_cc
+
+    u_l = ur
+    u_r(:,1:nx-1) = ul(:,2:nx); u_r(:,nx) = u_r(:,nx-1)
+
+    ql = utoq(u_l,b_ccl)
+    qr = utoq(u_r,b_ccr)
+
+    ! Just the slope is used to feed 1st call to Riemann solver
+    do i = 1, flind%fluids
+       fl    => flind%all_fluids(i)%fl
+       p_flx => flx(fl%beg:fl%end,:)
+       p_ql  => ql(fl%beg:fl%end,:)
+       p_qr  => qr(fl%beg:fl%end,:)
+       p_bcc => mag_cc(xdim:zdim,:)
+       p_bccl => b_ccl(xdim:zdim,:)
+       p_bccr => b_ccr(xdim:zdim,:)
+       call riemann_hlld(nx, p_flx, p_ql, p_qr, p_bcc, p_bccl, p_bccr, fl%gam)
+    enddo
+
+    ! Now we advance the left and right states by half timestep.
+    ! The slope is already calculated and can be reused
+    u_l(:,2:nx) = ur(:,2:nx) + half*dtodx*(flx(:,1:nx-1) - flx(:,2:nx))
+    u_l(:,1) = u_l(:,2)
+
+    u_r(:,1:nx-1) = ul(:,2:nx) + half*dtodx*(flx(:,1:nx-1) - flx(:,2:nx))
+    u_r(:,nx) = u_r(:,nx-1)
+
+    ql = utoq(u_l,b_ccl)
+    qr = utoq(u_r,b_ccr)
+
+    ! second call for Riemann problem uses states evolved to half timestep
+    do i = 1, flind%fluids
+       fl    => flind%all_fluids(i)%fl
+       p_flx => flx(fl%beg:fl%end,:)
+       p_ql  => ql(fl%beg:fl%end,:)
+       p_qr  => qr(fl%beg:fl%end,:)
+       p_bcc => mag_cc(xdim:zdim,:)
+       p_bccl => b_ccl(xdim:zdim,:)
+       p_bccr => b_ccr(xdim:zdim,:)
+       call riemann_hlld(nx, p_flx, p_ql, p_qr, p_bcc, p_bccl, p_bccr, fl%gam)
+    enddo
+
+    u(:,2:nx) = u(:,2:nx) + dtodx*(flx(:,1:nx-1) - flx(:,2:nx))
+    u(:,1) = u(:,2) ; u(:,nx) = u(:,nx-1)
+
+  end subroutine rk2_flx
+
 end module fluidupdate
