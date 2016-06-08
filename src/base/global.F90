@@ -41,7 +41,7 @@ module global
    public :: cleanup_global, init_global, &
         &    cfl, cfl_max, cflcontrol, cfl_violated, &
         &    dt, dt_initial, dt_max_grow, dt_min, dt_old, dtm, t, t_saved, nstep, nstep_saved, &
-        &    integration_order, limiter, smalld, smallei, smallp, use_smalld, &
+        &    integration_order, limiter, smalld, smallei, smallp, use_smalld, h_solver, &
         &    relax_time, grace_period_passed, cfr_smooth, repeat_step, skip_sweep, geometry25D, &
         &    dirty_debug, do_ascii_dump, show_n_dirtys, no_dirty_checks, sweeps_mgu, use_fargo
 
@@ -76,6 +76,7 @@ module global
    integer(kind=4), protected    :: integration_order !< Runge-Kutta time integration order (1 - 1st order, 2 - 2nd order)
    character(len=cbuff_len)      :: limiter           !< type of flux limiter
    character(len=cbuff_len)      :: cflcontrol        !< type of cfl control just before each sweep (possibilities: 'none', 'main', 'user')
+   character(len=cbuff_len)      :: h_solver          !< type of hydro solver
    logical                       :: repeat_step       !< repeat fluid step if cfl condition is violated (significantly increases mem usage)
    logical, dimension(xdim:zdim) :: skip_sweep        !< allows to skip sweep in chosen direction
    logical                       :: sweeps_mgu        !< Mimimal Guardcell Update in sweeps
@@ -83,7 +84,7 @@ module global
 
    namelist /NUMERICAL_SETUP/ cfl, cflcontrol, cfl_max, use_smalld, smalld, smallei, smallc, smallp, dt_initial, dt_max_grow, dt_min, &
         &                     repeat_step, limiter, relax_time, integration_order, cfr_smooth, skip_sweep, geometry25D, sweeps_mgu, &
-        &                     use_fargo
+        &                     use_fargo, h_solver
 
 contains
 
@@ -135,6 +136,7 @@ contains
 
       limiter     = 'vanleer'
       cflcontrol  = 'warn'
+      h_solver    = 'muscl'
       repeat_step = .true.
       geometry25D = .false.
       no_dirty_checks = .false.
@@ -189,6 +191,7 @@ contains
 
          cbuff(1) = limiter
          cbuff(2) = cflcontrol
+         cbuff(3) = h_solver
 
          ibuff(1) = integration_order
 
@@ -241,6 +244,7 @@ contains
 
          limiter    = cbuff(1)
          cflcontrol = cbuff(2)
+         h_solver   = cbuff(3)
 
          integration_order = ibuff(1)
 

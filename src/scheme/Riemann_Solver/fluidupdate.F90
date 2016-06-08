@@ -38,7 +38,6 @@ module fluidupdate
   private
   public :: fluid_update, sweep_dsplit, rk2, utoq, calculate_slope_vanleer, euler, muscl, muscl_check, euler_check, rk2_check
 
-
 contains
 
   subroutine fluid_update
@@ -101,45 +100,59 @@ contains
   subroutine sweep_dsplit(cg, dt, ddim)
 
     use constants,        only: pdims, xdim, zdim, ORTHO1, ORTHO2, LO, HI
+    use dataio_pub,       only: die
     use all_boundaries,   only: all_fluid_boundaries
     use fluidindex,       only: iarr_all_swp
+    use global,           only: h_solver
     use grid_cont,        only: grid_container
     use named_array_list, only: wna
     use dataio_pub,       only: warn
 
     implicit none
 
+    interface
+       subroutine solver_1d(f_data, b_data, dt_dx)
+          implicit none
+          real, dimension(:,:), intent(inout) :: f_data
+          real, dimension(:,:), intent(inout) :: b_data
+          real,                 intent(in)    :: dt_dx
+       end subroutine solver_1d
+    end interface
+
     type(grid_container), pointer, intent(in) :: cg
     real,                          intent(in) :: dt
     integer(kind=4),               intent(in) :: ddim
+
     real, dimension(size(cg%u,1), cg%n_(ddim)) :: u1d
     real, dimension(xdim:zdim, cg%n_(ddim))   :: b_cc1d
     real, dimension(:,:), pointer             :: pu
     integer                                   :: i1, i2
     logical, save                             :: firstcall = .true.
 
+    procedure(solver_1d), pointer, save :: solve => NULL()
+
     b_cc1d = 0.
-    if (firstcall) call warn("[fluidupdate:sweep] magnetic field unimplemented yet. Forcing to be 0")
+    if (firstcall) then
+       call warn("[fluidupdate:sweep] magnetic field unimplemented yet. Forcing to be 0")
+       select case (h_solver)
+          case ("muscl")
+             solve => muscl
+          case ("euler_check")
+             solve => euler_check
+          case ("rk2_check")
+             solve => rk2_check
+          case default
+             call die("[fluidupdate:sweep_dsplit] No recognized solver")
+       end select
+    end if
     firstcall = .false.
 
     do i2 = cg%lhn(pdims(ddim, ORTHO2), LO), cg%lhn(pdims(ddim,ORTHO2), HI)
        do i1 = cg%lhn(pdims(ddim, ORTHO1), LO), cg%lhn(pdims(ddim, ORTHO1), HI)
           pu => cg%w(wna%fi)%get_sweep(ddim,i1,i2)
           u1d(iarr_all_swp(ddim,:),:) = pu(:,:)
-#ifdef MUSCL
-          call muscl(u1d,b_cc1d, dt/cg%dl(ddim))
-          !call muscl_check(u1d,b_cc1d, dt/cg%dl(ddim))
-#endif
-
-#ifdef RK2
-          call rk2_check(u1d,b_cc1d, dt/cg%dl(ddim))
-#endif
-          
-#ifdef EULER
-          call euler_check(u1d,b_cc1d, dt/cg%dl(ddim))
-#endif
+          call solve(u1d,b_cc1d, dt/cg%dl(ddim))
           pu(:,:) = u1d(iarr_all_swp(ddim,:),:)
-
        enddo
     enddo
 
