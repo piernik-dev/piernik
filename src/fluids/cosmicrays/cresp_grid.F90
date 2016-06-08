@@ -174,6 +174,7 @@ contains
     use named_array_list, only: qna
     use constants,        only: one
     use initcrspectrum,   only: spec_mod_trms
+    use initcosmicrays,   only: iarr_cre_pl, iarr_cre_pu
     
     use timestep_cresp,  only: cresp_timestep_new
 
@@ -181,7 +182,7 @@ contains
      integer                         :: i, j, k 
      type(grid_container), pointer   :: cg
      type(cg_list_element), pointer  :: cgl
-     type(var_numbers)    :: flind
+!      type(var_numbers)    :: flind
      real   :: p_l, p_u, u_b, u_d
      real(kind=8)                             :: dt_cre_tmp
      type(spec_mod_trms)   :: sptab
@@ -195,9 +196,10 @@ contains
          do k = cg%ks, cg%ke
            do j = cg%js, cg%je
               do i = cg%is, cg%ie
-
-               p_l = cg%u(flind%cre%plo, i, j, k)
-               p_u = cg%u(flind%cre%plo, i, j, k)
+!                print*, flind%cre%plo, flind%cre%pup
+!                print *, cg%u(iarr_cre_pl, i, j, k), cg%u(iarr_cre_pu, i, j, k)
+               p_l = cg%u(iarr_cre_pl, i, j, k)
+               p_u = cg%u(iarr_cre_pu, i, j, k)
                sptab%ub = emag(cg%b(xdim,i,j,k), cg%b(ydim,i,j,k), cg%b(zdim,i,j,k))/cg%dvol
                sptab%ud = cg%q(qna%ind(divv_n))%point([i,j,k])/cg%dvol
                call cresp_timestep_new(dt_cre_tmp, p_l, p_u, sptab)

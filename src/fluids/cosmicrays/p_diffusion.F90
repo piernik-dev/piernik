@@ -12,7 +12,7 @@ contains
 !   
 
   subroutine cresp_p_cut_diff
-  use initcosmicrays, only: iarr_cre
+  use initcosmicrays, only: iarr_cre, iarr_cre_pl, iarr_cre_pu
   use cg_leaves,        only: leaves
   use cg_list,          only: cg_list_element
   use fluidtypes,       only: var_numbers
@@ -22,23 +22,17 @@ contains
   integer       :: i_lo, i_up
    type(grid_container), pointer   :: cg
    type(cg_list_element), pointer  :: cgl
-   type(var_numbers)    :: flind
-  
-!       wcri = wna%ind(wcr_n)
-      
+ 
       cgl => leaves%first
       do while (associated(cgl))
          cg => cgl%cg
-!          wcr => cg%w(wcri)%arr
-           
          do k = cg%ks, cg%ke
            do j = cg%js, cg%je
               do i = cg%is, cg%ie
-              
-                i_lo = i_lo_detect(cg%u(flind%cre%plo,i,j,k))
-                i_up = i_up_detect(cg%u(flind%cre%plo,i,j,k))
+                i_lo = i_lo_detect(cg%u(iarr_cre_pl,i,j,k))
+                i_up = i_up_detect(cg%u(iarr_cre_pu,i,j,k))
 ! #ifdef VERBOSE                
-                print *,'@p_diffusion(', i,j,k, '): i_lo = ', i_lo , ', i_up = ,', i_up
+!                 print *,'@p_diffusion(', i,j,k, '): i_lo = ', i_lo , ', i_up = ,', i_up 
 ! #endif /* VERBOSE */
               enddo
            enddo
@@ -54,15 +48,16 @@ contains
   use initcrspectrum, only: ncre, p_fix
   implicit none
    real(kind=8), intent(in) :: p_lo
-   integer   :: m
+   integer   :: i
    integer(kind=4)   :: i_lo_detect
   
-  m = 0
-  do while (m .le. ncre)
-      if ( p_lo .lt. p_fix(m)) exit
-      i_lo_detect = m
-      m = m + I_ONE
-      print *,m
+  i = 1
+  do while (i .le. ncre)
+      i_lo_detect = i
+!       print *, 'p_lo', i, p_lo, p_fix(i)
+      if ( p_lo .lt. p_fix(i)) exit ! checked and works properly
+      i = i + I_ONE
+
   enddo
   
   
@@ -75,14 +70,15 @@ contains
   use constants, only: I_ONE
   implicit none 
    real(kind=8), intent(in) :: p_up
-   integer   :: n
+   integer   :: i
    integer(kind=4)   :: i_up_detect
   
-  n = ncre
-  do while (n .ge. 0)
-    i_up_detect = n
-    n = n - I_ONE
-    if (p_up .lt.  p_fix(n)) exit
+  i = ncre - I_ONE
+  do while (i .ge. 0)
+    i_up_detect = i+I_ONE
+!     print *, 'p_up ', i, p_up, p_fix(i)
+    if (p_up .gt.  p_fix(i)) exit   ! checked and works properly - if p_fix(i) is lt p_up, then e(max) must be in i-th + 1 bin.
+    i = i - I_ONE
   enddo
   
 !   return p_up_ind

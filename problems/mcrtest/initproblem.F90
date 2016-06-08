@@ -284,8 +284,8 @@ contains
       if (ncre > 0) then
          cg%u(iarr_cre_pl, :, :, :) = p_lo_init ! ? iarr_cre(2*ncre+1)? < initial value of low cut momentum assigned to all cg%u cells 
          cg%u(iarr_cre_pu, :, :, :) = p_up_init ! < initial value of up cut momentum assigned to all cg%u cells
-         cg%u(iarr_cre_n, :, :, :) = 1.0 !!! Diagnostics
-         cg%u(iarr_cre_e, :, :, :) = 5.0 !!! Diagnostics 
+!          cg%u(iarr_cre_n, :, :, :) = 1.0 !!! Diagnostics
+!          cg%u(iarr_cre_e, :, :, :) = 5.0 !!! Diagnostics 
          
       endif
            
