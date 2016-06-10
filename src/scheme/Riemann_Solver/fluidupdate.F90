@@ -36,7 +36,7 @@ module fluidupdate
 
   implicit none
   private
-  public :: fluid_update, sweep_dsplit, utoq, calculate_slope_vanleer, euler, muscl, muscl_check, euler_check, rk2_check
+  public :: fluid_update
 
 contains
 
