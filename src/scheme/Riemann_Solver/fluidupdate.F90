@@ -253,75 +253,66 @@ contains
     real, dimension(xdim:zdim,size(u,2)), target    :: db
     real, dimension(size(u,1),size(u,2)), target    :: flx, ql, qr, du, ul, ur, u_l, u_r
     real, dimension(:,:), pointer                   :: p_flx, p_bcc, p_bccl, p_bccr, p_ql, p_qr
-    integer                                         :: nx, i !, ii
-    real, dimension(size(u,1),size(u,2))            :: upre
+    integer                                         :: nx
+    real, dimension(size(u,1),size(u,2))            :: du1
 
     nx  = size(u,2)
 
-    du  = calculate_slope_vanleer(u)
-    ul  = u - half*du
-    ur  = u + half*du
+    call u_slope_q(u)
+    call riemann_wrap
+    du1(:,2:nx) = dtodx*(flx(:,1:nx-1) - flx(:,2:nx))
+    du1(:,1) = du1(:,2) ; du1(:,nx) = du1(:,nx-1)
 
-    db  = calculate_slope_vanleer(b_cc)
-    b_ccl = b_cc - half*db
-    b_ccr = b_cc + half*db
-
-    mag_cc = b_cc
-
-    u_l = ur
-    u_r(:,1:nx-1) = ul(:,2:nx)
-    u_r(:,nx) = u_r(:,nx-1)
-
-    ql = utoq(u_l,b_ccl)
-    qr = utoq(u_r,b_ccr)
-
-    ! Just the slope is used to feed 1st call to Riemann solver
-    do i = 1, flind%fluids
-       fl    => flind%all_fluids(i)%fl
-       p_flx => flx(fl%beg:fl%end,:)
-       p_ql  => ql(fl%beg:fl%end,:)
-       p_qr  => qr(fl%beg:fl%end,:)
-       p_bcc => mag_cc(xdim:zdim,:)
-       p_bccl => b_ccl(xdim:zdim,:)
-       p_bccr => b_ccr(xdim:zdim,:)
-       call riemann_hlld(nx, p_flx, p_ql, p_qr, p_bcc, p_bccl, p_bccr, fl%gam)
-    enddo
-
-    ! Now we can calculate state for half-timestep and recalculate slopes
-    upre(:,2:nx) = u(:,2:nx) + dtodx*(flx(:,1:nx-1) - flx(:,2:nx))
-    upre(:,1) = upre(:,2) ; upre(:,nx) = upre(:,nx-1)
-
-    du  = calculate_slope_vanleer(upre)
-    ul = upre - half*du
-    ur = upre + half*du
-
-    db  = calculate_slope_vanleer(b_cc)
-    b_ccl = b_cc - half*db
-    b_ccr = b_cc + half*db
-
-    mag_cc = b_cc
-
-    u_l = ur
-    u_r(:,1:nx-1) = ul(:,2:nx)
-    u_r(:,nx) = u_r(:,nx-1)
-
-    ql = utoq(u_l,b_ccl)
-    qr = utoq(u_r,b_ccr)
-
-    ! second call for Riemann problem needs just the slope from states evolved to half timestep
-    do i = 1, flind%fluids
-       fl    => flind%all_fluids(i)%fl
-       p_flx => flx(fl%beg:fl%end,:)
-       p_ql  => ql(fl%beg:fl%end,:)
-       p_qr  => qr(fl%beg:fl%end,:)
-       p_bcc => mag_cc(xdim:zdim,:)
-       p_bccl => b_ccl(xdim:zdim,:)
-       p_bccr => b_ccr(xdim:zdim,:)
-       call riemann_hlld(nx, p_flx, p_ql, p_qr, p_bcc, p_bccl, p_bccr, fl%gam)
-    enddo
-
-    u(:,2:nx) = half*(u(:,2:nx) + upre(:,2:nx) + dtodx*(flx(:,1:nx-1) - flx(:,2:nx)))
+    call u_slope_q(u+du1)
+    call riemann_wrap
+    u(:,2:nx) = u(:,2:nx) + half*(du1(:,2:nx) + dtodx*(flx(:,1:nx-1) - flx(:,2:nx)))
     u(:,1) = u(:,2) ; u(:,nx) = u(:,nx-1)
+
+    contains
+
+       subroutine u_slope_q(uu)
+
+          implicit none
+
+          real, dimension(:,:), intent(in) :: uu
+
+          du  = calculate_slope_vanleer(uu)
+          ul  = uu - half*du
+          ur  = uu + half*du
+
+          db  = calculate_slope_vanleer(b_cc)
+          b_ccl = b_cc - half*db
+          b_ccr = b_cc + half*db
+
+          mag_cc = b_cc
+
+          u_l = ur
+          u_r(:,1:nx-1) = ul(:,2:nx)
+          u_r(:,nx) = u_r(:,nx-1)
+
+          ql = utoq(u_l,b_ccl)
+          qr = utoq(u_r,b_ccr)
+
+       end subroutine u_slope_q
+
+       subroutine riemann_wrap()
+
+          implicit none
+
+          integer :: i
+
+          do i = 1, flind%fluids
+             fl    => flind%all_fluids(i)%fl
+             p_flx => flx(fl%beg:fl%end,:)
+             p_ql  => ql(fl%beg:fl%end,:)
+             p_qr  => qr(fl%beg:fl%end,:)
+             p_bcc => mag_cc(xdim:zdim,:)
+             p_bccl => b_ccl(xdim:zdim,:)
+             p_bccr => b_ccr(xdim:zdim,:)
+             call riemann_hlld(nx, p_flx, p_ql, p_qr, p_bcc, p_bccl, p_bccr, fl%gam)
+          enddo
+
+       end subroutine riemann_wrap
 
   end subroutine rk2
 
