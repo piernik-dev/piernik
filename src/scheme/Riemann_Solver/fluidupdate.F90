@@ -848,8 +848,6 @@ contains
 
     mag_cc = b_cc
 
-    flx  = fluxes(ul,b_ccl) - fluxes(ur,b_ccr)
-
     u_l = ur
     u_r(:,1:nx-1) = ul(:,2:nx) ; u_r(:,nx) = u_r(:,nx-1)
 
