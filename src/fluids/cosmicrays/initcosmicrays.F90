@@ -39,7 +39,7 @@ module initcosmicrays
    use constants, only: cbuff_len
    use initcrspectrum, only: ncre, p_min_fix, p_max_fix, f_init, q_init, q_big, p_lo_init, p_up_init,  & 
                           cfl_cre, cre_eff, K_cre_e_paral, K_cre_e_perp, K_cre_n_paral, K_cre_n_perp, K_pow_index, &
-                          w, p_fix, expan_order, init_cresp
+                          w, p_fix, expan_order, init_cresp, compute_K
    implicit none
 
    public ! QA_WARN no secrets are kept here
@@ -61,8 +61,8 @@ module initcosmicrays
    real, dimension(ncr_max)            :: K_crn_paral  !< array containing parallel diffusion coefficients of all CR nuclear components
    real, dimension(ncr_max)            :: K_crn_perp   !< array containing perpendicular diffusion coefficients of all CR nuclear components
    real, dimension(ncr_max)            :: gamma_cre    !< array containing adiabatic indexes of all CR electron components
-   real, dimension(ncr_max)            :: K_cre_paral  !< array containing parallel diffusion coefficients of all CR electron components
-   real, dimension(ncr_max)            :: K_cre_perp   !< array containing perpendicular diffusion coefficients of all CR electron components
+   real, dimension(ncr_max)            :: K_cre_paral  !< array containing parallel diffusion coefficients of all CR electron components (number density and energy density)
+   real, dimension(ncr_max)            :: K_cre_perp   !< array containing perpendicular diffusion coefficients of all CR electron components (number density and energy density)
    character(len=cbuff_len)            :: divv_scheme  !< scheme used to calculate div(v), see crhelpers for more details
    logical, dimension(ncr_max)         :: crn_gpcr_ess !< if CRn species/energy-bin is essential for grad_pcr calculation
    logical, dimension(ncr_max)         :: cre_gpcr_ess !< if CRe species/energy-bin is essential for grad_pcr calculation
@@ -286,12 +286,26 @@ contains
 
             lbuff(2:ncrn+1) = crn_gpcr_ess(1:ncrn)
          endif
+         
+#ifdef COSM_RAY_ELECTRONS
+!          TODO - to be implemented later
+!          K_cre_paral(1:ncre) = compute_K(K_cre_n_paral, K_pow_index, 0.1, ncre)
+! !          print *, 'K = ',K_cre_paral(1:ncre)
+!          K_cre_paral(ncre:2*ncre) = compute_K(K_cre_e_paral, K_pow_index, 0.0, ncre)
+!          
+!          K_cre_perp(1:ncre) = compute_K(K_cre_n_perp, K_pow_index, 0.1, ncre)
+!          K_cre_paral(ncre:2*ncre) = compute_K(K_cre_e_perp, K_pow_index, 0.0, ncre)
+
+#endif /* COSM_RAY_ELECTRONS */         
 
          if (ncre > 0) then
             rbuff(ne+1       :ne+  ncre) = gamma_cre  (1:ncre)
-            rbuff(ne+1+  ncre:ne+2*ncre) = K_cre_paral(1:ncre)
-            rbuff(ne+1+2*ncre:ne+3*ncre) = K_cre_perp (1:ncre)
+            rbuff(ne+1+  ncre:ne+2*ncre) = K_cre_paral(1:ncre)  ! deprecated
+            rbuff(ne+1+2*ncre:ne+3*ncre) = K_cre_perp (1:ncre)  ! deprecated
+!             rbuff(ne+1+  ncre:ne+3*ncre) = K_cre_paral(1:2*ncre) ! to be enabled later, with K dependant on momentum
+!             rbuff(ne+1+3*ncre:ne+5*ncre) = K_cre_perp (1:2*ncre) ! to be enabled later, with K dependant on momentum
             lbuff(ncrn+2:ncrn+ncre+1) = cre_gpcr_ess(1:ncre)
+            print *, ne+1+  ncre , ne+3*ncre, ne+1+3*ncre, ne+5*ncre
          endif
 
       endif
@@ -348,18 +362,6 @@ contains
          endif
 
       endif
-! ! temporary!      
-! 
-!       allocate(p_fix(ncre))
-!       allocate(cresp_edges(0:ncre))
-!     cresp_edges = (/ (i,i=0,ncre) /)
-!     p_fix = 0.0
-!     w  = (log10(p_max_fix/p_min_fix))/dble(ncre-2)
-!     p_fix(1:ncre-1)  =  p_min_fix*10.0**(w*dble(cresp_edges(1:ncre-1)-1))
-!     p_fix(0)    = 0.0
-!     p_fix(ncre) = 0.0
-!   
-!   print *,'pfix = ',p_fix
       
       ncrs = ncre + ncrn
 #ifdef COSM_RAY_ELECTRONS
@@ -449,8 +451,6 @@ contains
          endif
       enddo
 
-!    call init_cresp_type
-   
    open(10, file='crs.dat',status='replace',position='rewind')
       
    end subroutine init_cosmicrays

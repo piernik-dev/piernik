@@ -78,6 +78,10 @@ contains
    print *,'q_big       = ', q_big
    print *,'cfl_cre     = ', cfl_cre
    print *,'expan_order = ', expan_order
+   print *,'K_cre_e_paral=', K_cre_e_paral
+   print *,'K_cre_e_perp=', K_cre_e_perp
+   print *,'K_cre_n_paral=', K_cre_n_paral
+   print *,'K_cre_n_perp=', K_cre_n_perp
    
 ! arrays initialization and stuff
 
@@ -129,4 +133,23 @@ contains
    crel%i_up = zero
    
  end subroutine init_cresp_types
+ 
+ function compute_K(K0, alpha, alpha_n, length)
+ implicit none
+ real :: K0, alpha, alpha_n
+ integer :: length, i
+ real, dimension(length) :: compute_K
+ 
+!  print *, K0, alpha, alpha_n, length
+ 
+!  i = 1
+ do i = 1, length+1
+!   compute_K(i) = K0 * (p_fix(i) + (p_fix(i+1) - p_fix(i))*0.5 ) ** (alpha - alpha_n)  ! The values are rising too fast with momentum
+!   compute_K(i) = K0 * (p_fix(i)) ** (alpha - alpha_n)                                 ! The speed of growth is a little lower, but still too high.
+!     compute_K(i) = K0 + p_fix(i-1) ** (alpha - alpha_n)
+    compute_K(i) = K0 + p_fix(i-1) * K0 ** (alpha - alpha_n)
+ enddo 
+ print *, '@compute_K = ', compute_K
+!  return K_out
+ end function compute_K
 end module initcrspectrum
