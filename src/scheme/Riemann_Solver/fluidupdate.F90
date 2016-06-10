@@ -36,7 +36,7 @@ module fluidupdate
 
   implicit none
   private
-  public :: fluid_update, sweep_dsplit, rk2, utoq, calculate_slope_vanleer, euler, muscl, muscl_check, euler_check, rk2_check
+  public :: fluid_update, sweep_dsplit, utoq, calculate_slope_vanleer, euler, muscl, muscl_check, euler_check, rk2_check
 
 contains
 
@@ -147,11 +147,11 @@ contains
              solve => rk2_uh
           case ("euler")
              solve => euler
-          case ("rk2")
-             solve => rk2
-           case ("rk4")
+          case ("heun")
+             solve => heun
+          case ("rk4")
              solve => rk4
-         case default
+          case default
              call die("[fluidupdate:sweep_dsplit] No recognized solver")
        end select
     endif
@@ -235,7 +235,7 @@ contains
 
   !-------------------------------------------------------------------------------------------------
 
-  subroutine rk2(u,b_cc, dtodx)
+  subroutine heun(u,b_cc, dtodx)
 
     use constants,   only: half, xdim, zdim
     use fluidindex,  only: flind
@@ -314,7 +314,7 @@ contains
 
        end subroutine riemann_wrap
 
-  end subroutine rk2
+    end subroutine heun
 
   !-------------------------------------------------------------------------------------------------
 
