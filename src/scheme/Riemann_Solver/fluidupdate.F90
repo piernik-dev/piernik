@@ -147,6 +147,8 @@ contains
              solve => rk2_uh
           case ("euler")
              solve => euler
+          case ("rk2")
+             solve => rk2
           case default
              call die("[fluidupdate:sweep_dsplit] No recognized solver")
        end select
@@ -229,7 +231,7 @@ contains
 
    end function utoq
 
-!--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+  !-------------------------------------------------------------------------------------------------
 
   subroutine rk2(u,b_cc, dtodx)
 
@@ -247,12 +249,10 @@ contains
     class(component_fluid), pointer                 :: fl
     real, dimension(xdim:zdim,size(u,2)), target    :: b_ccl, b_ccr, mag_cc
     real, dimension(xdim:zdim,size(u,2)), target    :: db
-    real, dimension(size(u,1),size(u,2))            :: u_predict
-    real, dimension(size(u,1),size(u,2)), target    :: flx, ql, qr, du, ul, ur !, u_l, u_r
+    real, dimension(size(u,1),size(u,2)), target    :: flx, ql, qr, du, ul, ur, u_l, u_r
     real, dimension(:,:), pointer                   :: p_flx, p_bcc, p_bccl, p_bccr, p_ql, p_qr
-    integer                                         :: nx, i
-
-  integer :: ii
+    integer                                         :: nx, i !, ii
+    real, dimension(size(u,1),size(u,2))            :: upre
 
     nx  = size(u,2)
 
@@ -264,17 +264,49 @@ contains
     b_ccl = b_cc - half*db
     b_ccr = b_cc + half*db
 
+    mag_cc = b_cc
+
+    u_l = ur
+    u_r(:,1:nx-1) = ul(:,2:nx)
+    u_r(:,nx) = u_r(:,nx-1)
+
+    ql = utoq(u_l,b_ccl)
+    qr = utoq(u_r,b_ccr)
+
+    ! Just the slope is used to feed 1st call to Riemann solver
+    do i = 1, flind%fluids
+       fl    => flind%all_fluids(i)%fl
+       p_flx => flx(fl%beg:fl%end,:)
+       p_ql  => ql(fl%beg:fl%end,:)
+       p_qr  => qr(fl%beg:fl%end,:)
+       p_bcc => mag_cc(xdim:zdim,:)
+       p_bccl => b_ccl(xdim:zdim,:)
+       p_bccr => b_ccr(xdim:zdim,:)
+       call riemann_hlld(nx, p_flx, p_ql, p_qr, p_bcc, p_bccl, p_bccr, fl%gam)
+    enddo
+
+    ! Now we can calculate state for half-timestep and recalculate slopes
+    upre(:,2:nx) = u(:,2:nx) + dtodx*(flx(:,1:nx-1) - flx(:,2:nx))
+    upre(:,1) = upre(:,2) ; upre(:,nx) = upre(:,nx-1)
+
+    du  = calculate_slope_vanleer(upre)
+    ul = upre - half*du
+    ur = upre + half*du
+
+    db  = calculate_slope_vanleer(b_cc)
+    b_ccl = b_cc - half*db
+    b_ccr = b_cc + half*db
 
     mag_cc = b_cc
 
-    flx  = fluxes(ul,b_ccl) - fluxes(ur,b_ccr)
+    u_l = ur
+    u_r(:,1:nx-1) = ul(:,2:nx)
+    u_r(:,nx) = u_r(:,nx-1)
 
-    ql = utoq(ul,b_ccl)
-    qr = utoq(ur,b_ccr)
+    ql = utoq(u_l,b_ccl)
+    qr = utoq(u_r,b_ccr)
 
-    !u_predict  =  u + dtodx*flx(:,:)
-
-
+    ! second call for Riemann problem needs just the slope from states evolved to half timestep
     do i = 1, flind%fluids
        fl    => flind%all_fluids(i)%fl
        p_flx => flx(fl%beg:fl%end,:)
@@ -283,30 +315,11 @@ contains
        p_bcc => mag_cc(xdim:zdim,:)
        p_bccl => b_ccl(xdim:zdim,:)
        p_bccr => b_ccr(xdim:zdim,:)
-       call riemann_hlld(nx, p_flx, p_ql, p_qr, mag_cc, p_bccl, p_bccr, fl%gam)
+       call riemann_hlld(nx, p_flx, p_ql, p_qr, p_bcc, p_bccl, p_bccr, fl%gam)
     enddo
 
-    !u_predict = u - half*dtodx*p_flx(:,:)
-    u_predict(:,2:nx) = u(:,2:nx) - half*dtodx*(flx(:,2:nx) - flx(:,1:nx-1))
-
-    do ii = lbound(u_predict, 2), ubound(u_predict, 2)
-       write(*,*) u_predict(:, ii)
-    enddo
-
-    do i = 1, flind%fluids
-       fl    => flind%all_fluids(i)%fl
-       p_flx => flx(fl%beg:fl%end,:)
-       p_ql  => ql(fl%beg:fl%end,:)
-       p_qr  => qr(fl%beg:fl%end,:)
-       p_bcc => mag_cc(xdim:zdim,:)
-       p_bccl => b_ccl(xdim:zdim,:)
-       p_bccr => b_ccr(xdim:zdim,:)
-       call riemann_hlld(nx, p_flx, p_ql, p_qr, mag_cc, p_bccl, p_bccr, fl%gam)
-    enddo
-
-   ! u  =  u_predict - dtodx*(flx(:,1:nx-1) - flx(:,2:nx))
-
-    u  =  u_predict
+    u(:,2:nx) = half*(u(:,2:nx) + upre(:,2:nx) + dtodx*(flx(:,1:nx-1) - flx(:,2:nx)))
+    u(:,1) = u(:,2) ; u(:,nx) = u(:,nx-1)
 
   end subroutine rk2
 
