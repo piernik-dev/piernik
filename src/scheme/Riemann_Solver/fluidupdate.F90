@@ -102,7 +102,7 @@ contains
     use constants,        only: pdims, xdim, zdim, ORTHO1, ORTHO2, LO, HI
     use dataio_pub,       only: die
     use all_boundaries,   only: all_fluid_boundaries
-    use fluidindex,       only: iarr_all_swp
+    use fluidindex,       only: iarr_all_swp, iarr_mag_swp
     use global,           only: h_solver
     use grid_cont,        only: grid_container
     use named_array_list, only: wna
@@ -125,13 +125,12 @@ contains
 
     real, dimension(size(cg%u,1), cg%n_(ddim)) :: u1d
     real, dimension(xdim:zdim, cg%n_(ddim))   :: b_cc1d
-    real, dimension(:,:), pointer             :: pu
+    real, dimension(:,:), pointer             :: pu, pb
     integer                                   :: i1, i2
     logical, save                             :: firstcall = .true.
 
     procedure(solver_1d), pointer, save :: solve => NULL()
 
-    b_cc1d = 0.
     if (firstcall) then
        call warn("[fluidupdate:sweep] magnetic field unimplemented yet. Forcing to be 0")
        select case (h_solver)
@@ -156,9 +155,12 @@ contains
     do i2 = cg%lhn(pdims(ddim, ORTHO2), LO), cg%lhn(pdims(ddim,ORTHO2), HI)
        do i1 = cg%lhn(pdims(ddim, ORTHO1), LO), cg%lhn(pdims(ddim, ORTHO1), HI)
           pu => cg%w(wna%fi)%get_sweep(ddim,i1,i2)
+          pb => cg%w(wna%bi)%get_sweep(ddim,i1,i2)
           u1d(iarr_all_swp(ddim,:),:) = pu(:,:)
+          b_cc1d(iarr_mag_swp(ddim,:),:) = pb(:,:)
           call solve(u1d,b_cc1d, dt/cg%dl(ddim))
           pu(:,:) = u1d(iarr_all_swp(ddim,:),:)
+          pb(:,:) = b_cc1d(iarr_mag_swp(ddim,:),:)
        enddo
     enddo
 
@@ -526,9 +528,10 @@ contains
 
   ! --------------------------------------------------------------------------------------------------------------------------------------------------------
 
-  subroutine rk2(u,b_cc, dtodx)
+  subroutine rk2(u, b_cc, dtodx)
 
     use constants,   only: half, xdim, zdim
+    use dataio_pub,  only: die
     use fluidindex,  only: flind
     use fluidtypes,  only: component_fluid
     use hlld,        only: riemann_hlld
@@ -539,14 +542,16 @@ contains
     real, dimension(:,:),           intent(inout)   :: b_cc
     real,                           intent(in)      :: dtodx
 
-    class(component_fluid), pointer                 :: fl
-    real, dimension(xdim:zdim,size(u,2)), target    :: b_ccl, b_ccr, mag_cc
-    real, dimension(xdim:zdim,size(u,2)), target    :: db
-    real, dimension(size(u,1),size(u,2)), target    :: flx, ql, qr, du, ul, ur, u_l, u_r
-    real, dimension(:,:), pointer                   :: p_flx, p_bcc, p_bccl, p_bccr, p_ql, p_qr
-    integer                                         :: nx, i !, ii
+    class(component_fluid), pointer                    :: fl
+    real, dimension(size(b_cc,1),size(b_cc,2)), target :: b_cc_l, b_cc_r, mag_cc
+    real, dimension(size(b_cc,1),size(b_cc,2))         :: db, b_ccl, b_ccr
+    real, dimension(size(u,1),size(u,2)), target       :: flx, ql, qr
+    real, dimension(size(u,1),size(u,2))               :: du, ul, ur, u_l, u_r
+    real, dimension(:,:), pointer                      :: p_flx, p_bcc, p_bccl, p_bccr, p_ql, p_qr
+    integer                                            :: nx, i
 
     nx  = size(u,2)
+    if (size(b_cc,2) /= nx) call die("[fluidupdate:rk2] size b_cc and u mismatch")
 
     du  = calculate_slope_vanleer(u)
     ul  = u - half*du
@@ -556,23 +561,26 @@ contains
     b_ccl = b_cc - half*db
     b_ccr = b_cc + half*db
 
-    mag_cc = b_cc
-
     u_l = ur
-    u_r(:,1:nx-1) = ul(:,2:nx); u_r(:,nx) = u_r(:,nx-1)
+    u_r(:,1:nx-1) = ul(:,2:nx)
+    u_r(:,nx) = u_r(:,nx-1)
 
-    ql = utoq(u_l,b_ccl)
-    qr = utoq(u_r,b_ccr)
+    b_cc_l = b_ccr
+    b_cc_r(:,1:nx-1) = b_ccl(:,2:nx)
+    b_cc_r(:,nx) = b_cc_r(:,nx-1)
+
+    ql = utoq(u_l,b_cc_l)
+    qr = utoq(u_r,b_cc_r)
 
     ! Just the slope is used to feed 1st call to Riemann solver
     do i = 1, flind%fluids
-       fl    => flind%all_fluids(i)%fl
-       p_flx => flx(fl%beg:fl%end,:)
-       p_ql  => ql(fl%beg:fl%end,:)
-       p_qr  => qr(fl%beg:fl%end,:)
-       p_bcc => mag_cc(xdim:zdim,:)
-       p_bccl => b_ccl(xdim:zdim,:)
-       p_bccr => b_ccr(xdim:zdim,:)
+       fl     => flind%all_fluids(i)%fl
+       p_flx  => flx(fl%beg:fl%end,:)
+       p_ql   => ql(fl%beg:fl%end,:)
+       p_qr   => qr(fl%beg:fl%end,:)
+       p_bcc  => mag_cc(xdim:zdim,:)
+       p_bccl => b_cc_l(xdim:zdim,:)
+       p_bccr => b_cc_r(xdim:zdim,:)
        call riemann_hlld(nx, p_flx, p_ql, p_qr, p_bcc, p_bccl, p_bccr, fl%gam)
     enddo
 
@@ -584,6 +592,11 @@ contains
     u_r(:,1:nx-1) = ul(:,2:nx) + half*dtodx*(flx(:,1:nx-1) - flx(:,2:nx))
     u_r(:,nx) = u_r(:,nx-1)
 
+    b_cc_l(:,2:nx) = b_ccr(:,2:nx) + half*dtodx*(mag_cc(:,1:nx-1) - mag_cc(:,2:nx))
+    b_cc_l(:,1) = b_cc_l(:,2)
+    b_cc_r(:,1:nx-1) = b_ccl(:,2:nx) + half*dtodx*(mag_cc(:,1:nx-1) - mag_cc(:,2:nx))
+    b_cc_r(:,nx) = b_cc_r(:,nx-1)
+
     ql = utoq(u_l,b_ccl)
     qr = utoq(u_r,b_ccr)
 
@@ -594,13 +607,18 @@ contains
        p_ql  => ql(fl%beg:fl%end,:)
        p_qr  => qr(fl%beg:fl%end,:)
        p_bcc => mag_cc(xdim:zdim,:)
-       p_bccl => b_ccl(xdim:zdim,:)
-       p_bccr => b_ccr(xdim:zdim,:)
+       p_bccl => b_cc_l(xdim:zdim,:)
+       p_bccr => b_cc_r(xdim:zdim,:)
        call riemann_hlld(nx, p_flx, p_ql, p_qr, p_bcc, p_bccl, p_bccr, fl%gam)
     enddo
 
     u(:,2:nx) = u(:,2:nx) + dtodx*(flx(:,1:nx-1) - flx(:,2:nx))
-    u(:,1) = u(:,2) ; u(:,nx) = u(:,nx-1)
+    u(:,1) = u(:,2)
+    u(:,nx) = u(:,nx-1)
+
+    b_cc(:,2:nx) = b_cc(:,2:nx) + dtodx*(mag_cc(:,1:nx-1) - mag_cc(:,2:nx))
+    b_cc(:,1) = b_cc(:,2)
+    b_cc(:,nx) = b_cc(:,nx-1)
 
   end subroutine rk2
 
