@@ -233,7 +233,7 @@ contains
     use constants,   only: half, xdim, zdim
     use fluidindex,  only: flind
     use fluidtypes,  only: component_fluid
-    use hlld,        only: fluxes, riemann_hlld
+    use hlld,        only: riemann_hlld
 
     implicit none
 
@@ -316,7 +316,7 @@ contains
     use constants,   only: half, xdim, zdim
     use fluidindex,  only: flind
     use fluidtypes,  only: component_fluid
-    use hlld,        only: fluxes, riemann_hlld
+    use hlld,        only: riemann_hlld
 
     implicit none
 
@@ -410,7 +410,7 @@ contains
     use constants,   only: half, xdim, zdim
     use fluidindex,  only: flind
     use fluidtypes,  only: component_fluid
-    use hlld,        only: fluxes, riemann_hlld
+    use hlld,        only: riemann_hlld
 
     implicit none
 
@@ -476,13 +476,14 @@ contains
     real, dimension(:,:),           intent(inout)   :: b_cc
     real,                           intent(in)      :: dtodx
 
-    class(component_fluid), pointer                 :: fl
-    real, dimension(xdim:zdim,size(u,2)), target    :: b_ccl, b_ccr, mag_cc
-    real, dimension(xdim:zdim,size(u,2)), target    :: db
-    real, dimension(size(u,1),size(u,2))            :: u_l, u_r
-    real, dimension(size(u,1),size(u,2)), target    :: flx, ql, qr, du, ul, ur !, u_l, u_r
-    real, dimension(:,:), pointer                   :: p_flx, p_bcc, p_bccl, p_bccr, p_ql, p_qr
-    integer                                         :: nx, i
+    class(component_fluid), pointer                           :: fl
+    real, dimension(size(b_cc,1),size(u,2)), target           :: b_ccl, b_ccr, mag_cc
+    real, dimension(size(b_cc,1),size(u,2)), target           :: db
+    real, dimension(size(u,1),size(u,2))                      :: u_l, u_r
+    real, dimension(size(u,1)+size(b_cc,1),size(u,2)), target :: flx
+    real, dimension(size(u,1),size(u,2)), target              :: ql, qr, du, ul, ur
+    real, dimension(:,:), pointer                             :: p_flx, p_bcc, p_bccl, p_bccr, p_ql, p_qr
+    integer                                                   :: nx, i
 
     nx  = size(u,2)
 
@@ -494,12 +495,11 @@ contains
     b_ccl = b_cc - half*db
     b_ccr = b_cc + half*db
 
-    mag_cc = b_cc
-
     flx  = fluxes(ul,b_ccl) - fluxes(ur,b_ccr)
 
-    u_l = ur + half*dtodx*flx
-    u_r(:,1:nx-1) = ul(:,2:nx) + half*dtodx*flx(:,2:nx) ; u_r(:,nx) = u_r(:,nx-1)
+    u_l = ur + half*dtodx*flx(:size(u,1),:)
+    u_r(:,1:nx-1) = ul(:,2:nx) + half*dtodx*flx(:size(u,1),2:nx)
+    u_r(:,nx) = u_r(:,nx-1)
 
     ql = utoq(u_l,b_ccl)
     qr = utoq(u_r,b_ccr)
@@ -515,8 +515,9 @@ contains
        call riemann_hlld(nx, p_flx, p_ql, p_qr, p_bcc, p_bccl, p_bccr, fl%gam)
     enddo
 
-    u(:,2:nx) = u(:,2:nx) + dtodx*(flx(:,1:nx-1) - flx(:,2:nx))
-    u(:,1) = u(:,2) ; u(:,nx) = u(:,nx-1)
+    u(:,2:nx) = u(:,2:nx) + dtodx*(flx(:size(u,1),1:nx-1) - flx(:size(u,1),2:nx))
+    u(:,1) = u(:,2)
+    u(:,nx) = u(:,nx-1)
 
   end subroutine muscl
 
@@ -527,7 +528,7 @@ contains
     use constants,   only: half, xdim, zdim
     use fluidindex,  only: flind
     use fluidtypes,  only: component_fluid
-    use hlld,        only: fluxes, riemann_hlld
+    use hlld,        only: riemann_hlld
 
     implicit none
 
@@ -615,13 +616,15 @@ contains
     real, dimension(:,:),           intent(inout)   :: b_cc
     real,                           intent(in)      :: dtodx
 
-    class(component_fluid), pointer                 :: fl
-    real, dimension(xdim:zdim,size(u,2)), target    :: b_ccl, b_ccr, mag_cc
-    real, dimension(xdim:zdim,size(u,2)), target    :: db
-    real, dimension(size(u,1),size(u,2)), target    :: flx, ql, qr, du, ul, ur, u_l, u_r
-    real, dimension(:,:), pointer                   :: p_flx, p_bcc, p_bccl, p_bccr, p_ql, p_qr
-    integer                                         :: nx, i !, ii
-    real, dimension(size(u,1),size(u,2))            :: uhalf
+    class(component_fluid), pointer                           :: fl
+    real, dimension(size(b_cc,1),size(u,2)), target           :: b_ccl, b_ccr, mag_cc
+    real, dimension(size(b_cc,1),size(u,2)), target           :: db
+    real, dimension(size(u,1),size(u,2))                      :: u_l, u_r
+    real, dimension(size(u,1)+size(b_cc,1),size(u,2)), target :: flx
+    real, dimension(size(u,1),size(u,2)), target              :: ql, qr, du, ul, ur
+    real, dimension(:,:), pointer                             :: p_flx, p_bcc, p_bccl, p_bccr, p_ql, p_qr
+    integer                                                   :: nx, i
+    real, dimension(size(u,1),size(u,2))                      :: uhalf
 
     nx  = size(u,2)
 
@@ -633,12 +636,11 @@ contains
     b_ccl = b_cc - half*db
     b_ccr = b_cc + half*db
 
-    mag_cc = b_cc
-
     flx  = fluxes(ul,b_ccl) - fluxes(ur,b_ccr)
 
-    u_l = ur + half*dtodx*flx
-    u_r(:,1:nx-1) = ul(:,2:nx) + half*dtodx*flx(:,2:nx) ; u_r(:,nx) = u_r(:,nx-1)
+    u_l = ur + half*dtodx*flx(:size(u,1),:)
+    u_r(:,1:nx-1) = ul(:,2:nx) + half*dtodx*flx(:size(u,1),2:nx)
+    u_r(:,nx) = u_r(:,nx-1)
 
     ql = utoq(u_l,b_ccl)
     qr = utoq(u_r,b_ccr)
@@ -656,7 +658,7 @@ contains
     enddo
 
     ! Now we can calculate state for half-timestep and recalculate slopes
-    uhalf(:,2:nx) = u(:,2:nx) + half*dtodx*(flx(:,1:nx-1) - flx(:,2:nx))
+    uhalf(:,2:nx) = u(:,2:nx) + half*dtodx*(flx(:size(u,1),1:nx-1) - flx(:size(u,1),2:nx))
     uhalf(:,1) = uhalf(:,2) ; uhalf(:,nx) = uhalf(:,nx-1)
 
     du  = calculate_slope_vanleer(uhalf)
@@ -667,10 +669,9 @@ contains
     b_ccl = b_cc - half*db
     b_ccr = b_cc + half*db
 
-    mag_cc = b_cc
-
     u_l = ur
-    u_r(:,1:nx-1) = ul(:,2:nx) ; u_r(:,nx) = u_r(:,nx-1)
+    u_r(:,1:nx-1) = ul(:,2:nx)
+    u_r(:,nx) = u_r(:,nx-1)
 
     ql = utoq(u_l,b_ccl)
     qr = utoq(u_r,b_ccr)
@@ -687,8 +688,9 @@ contains
        call riemann_hlld(nx, p_flx, p_ql, p_qr, p_bcc, p_bccl, p_bccr, fl%gam)
     enddo
 
-    u(:,2:nx) = u(:,2:nx) + dtodx*(flx(:,1:nx-1) - flx(:,2:nx))
-    u(:,1) = u(:,2) ; u(:,nx) = u(:,nx-1)
+    u(:,2:nx) = u(:,2:nx) + dtodx*(flx(:size(u,1),1:nx-1) - flx(:size(u,1),2:nx))
+    u(:,1) = u(:,2)
+    u(:,nx) = u(:,nx-1)
 
   end subroutine rk2_muscl
 

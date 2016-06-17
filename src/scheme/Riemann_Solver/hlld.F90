@@ -50,23 +50,25 @@ module hlld
 
 contains
 
-  function fluxes(u,b_cc) result(f)
+  function fluxes(u, b_cc) result(f)
 
-    use constants,  only: half, xdim, ydim, zdim
+    use constants,  only: one, half, xdim, ydim, zdim
     use fluidindex, only: flind
     use fluidtypes, only: component_fluid
     use func,       only: ekin
 
     implicit none
 
-    real, dimension(:,:),        intent(in)         :: u
-    real, dimension(:,:),        intent(inout)      :: b_cc
+    real, dimension(:,:), intent(in) :: u
+    real, dimension(:,:), intent(in) :: b_cc
 
-    real, dimension(size(u,1), size(u,2))           :: f
-    real, dimension(size(u,2))                      :: vx, vy, vz, p_t
-    integer                                         :: ip
-    class(component_fluid),      pointer            :: fl
+    real, dimension(size(u,1) + size(b_cc,1), size(u,2)) :: f
+    real, dimension(size(u,2))                           :: vx, vy, vz, p_t
+    integer                                              :: ip, boff
+    class(component_fluid), pointer                      :: fl
 
+    boff = size(u, 1) ! assume xdim == 1
+    f(boff+xdim:,:) = 0.
 
     do ip = 1, flind%fluids
 
@@ -76,16 +78,23 @@ contains
        vy  =  u(fl%imy,:)/u(fl%idn,:)
        vz  =  u(fl%imz,:)/u(fl%idn,:)
 
-        if (fl%has_energy) then
-           p_t = fl%gam_1*(u(fl%ien,:) - ekin(u(fl%imx,:), u(fl%imy,:), u(fl%imz,:), u(fl%idn,:)) - half*sum(b_cc(xdim:zdim,:)**2)) + half*sum(b_cc(xdim:zdim,:)**2)
-        endif
+       if (fl%has_energy) then
+          p_t = fl%gam_1*(u(fl%ien,:) - ekin(u(fl%imx,:), u(fl%imy,:), u(fl%imz,:), u(fl%idn,:)))
+          if (fl%is_magnetized) then
+             p_t = p_t + (one - half*fl%gam) * sum(b_cc(xdim:zdim,:)**2, dim=1)
+          endif
+       else
+          p_t = 0.
+       endif
 
        f(fl%idn,:)  =  u(fl%imx,:)
        f(fl%imx,:)  =  u(fl%imx,:)*vx(:) + p_t(:) - b_cc(xdim,:)**2
        f(fl%imy,:)  =  u(fl%imy,:)*vx(:) - b_cc(xdim,:)*b_cc(ydim,:)
        f(fl%imz,:)  =  u(fl%imz,:)*vx(:) - b_cc(xdim,:)*b_cc(zdim,:)
-       b_cc(ydim,:) =  b_cc(ydim,:)*vx(:) - b_cc(xdim,:)*vy(:)
-       b_cc(zdim,:) =  b_cc(zdim,:)*vx(:) - b_cc(xdim,:)*vz(:)
+       if (fl%is_magnetized) then
+          f(boff+ydim,:) =  b_cc(ydim,:)*vx(:) - b_cc(xdim,:)*vy(:)
+          f(boff+zdim,:) =  b_cc(zdim,:)*vx(:) - b_cc(xdim,:)*vz(:)
+       endif
        if (fl%has_energy) then
           f(fl%ien,:)  =  (u(fl%ien,:) + p_t(:))*vx(:) - b_cc(xdim,:)*(b_cc(xdim,:)*vx(:) + b_cc(ydim,:)*vy(:) + b_cc(zdim,:)*vz(:))
        endif
@@ -140,6 +149,7 @@ contains
 
     ! SOLVER
     
+    b_cc(xdim,:) = 0.
     
     do i = 1,n
        
