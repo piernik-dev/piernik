@@ -543,7 +543,7 @@ contains
     real,                           intent(in)      :: dtodx
 
     class(component_fluid), pointer                    :: fl
-    real, dimension(size(b_cc,1),size(b_cc,2)), target :: b_cc_l, b_cc_r, mag_cc
+    real, dimension(size(b_cc,1),size(b_cc,2)), target :: b_cc_l, b_cc_r, mag_cc, b0
     real, dimension(size(b_cc,1),size(b_cc,2))         :: db, b_ccl, b_ccr
     real, dimension(size(u,1),size(u,2)), target       :: flx, ql, qr
     real, dimension(size(u,1),size(u,2))               :: du, ul, ur, u_l, u_r
@@ -579,8 +579,14 @@ contains
        p_ql   => ql(fl%beg:fl%end,:)
        p_qr   => qr(fl%beg:fl%end,:)
        p_bcc  => mag_cc(xdim:zdim,:)
-       p_bccl => b_cc_l(xdim:zdim,:)
-       p_bccr => b_cc_r(xdim:zdim,:)
+       if (fl%is_magnetized) then
+          p_bccl => b_cc_l(xdim:zdim,:)
+          p_bccr => b_cc_r(xdim:zdim,:)
+       else ! ignore all magnetic field
+          b0 = 0.
+          p_bccl => b0
+          p_bccr => b0
+       end if
        call riemann_hlld(nx, p_flx, p_ql, p_qr, p_bcc, p_bccl, p_bccr, fl%gam)
     enddo
 
@@ -607,8 +613,14 @@ contains
        p_ql  => ql(fl%beg:fl%end,:)
        p_qr  => qr(fl%beg:fl%end,:)
        p_bcc => mag_cc(xdim:zdim,:)
-       p_bccl => b_cc_l(xdim:zdim,:)
-       p_bccr => b_cc_r(xdim:zdim,:)
+       if (fl%is_magnetized) then
+          p_bccl => b_cc_l(xdim:zdim,:)
+          p_bccr => b_cc_r(xdim:zdim,:)
+       else ! ignore all magnetic field
+          b0 = 0.
+          p_bccl => b0
+          p_bccr => b0
+       end if
        call riemann_hlld(nx, p_flx, p_ql, p_qr, p_bcc, p_bccl, p_bccr, fl%gam)
     enddo
 
