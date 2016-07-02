@@ -96,7 +96,9 @@ contains
           f(boff+zdim,:) =  b_cc(zdim,:)*vx(:) - b_cc(xdim,:)*vz(:)
        endif
        if (fl%has_energy) then
-          f(fl%ien,:)  =  (u(fl%ien,:) + p_t(:))*vx(:) - b_cc(xdim,:)*(b_cc(xdim,:)*vx(:) + b_cc(ydim,:)*vy(:) + b_cc(zdim,:)*vz(:))
+          f(fl%ien,:)  =  (u(fl%ien,:) + p_t(:))*vx(:)
+          if (fl%is_magnetized) &
+               f(fl%ien,:) = f(fl%ien,:) - b_cc(xdim,:)*(b_cc(xdim,:)*vx(:) + b_cc(ydim,:)*vy(:) + b_cc(zdim,:)*vz(:))
        endif
 
     enddo
