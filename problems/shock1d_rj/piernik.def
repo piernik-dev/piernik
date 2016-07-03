@@ -1,11 +1,9 @@
-#undef IONIZED
-
-#define NEUTRAL
+#define IONIZED
 
 #undef ISO
 
 #define LOCAL_FR_SPEED
 
-#undef MAGNETIC
+#define MAGNETIC
 
 #undef GRAV
