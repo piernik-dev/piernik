@@ -234,7 +234,9 @@ contains
 !! \deprecated repeated magic integers
 !<
       subroutine set_fluid_index(this, flind, is_magnetized, is_selfgrav, has_energy, cs_iso, gamma_, tag)
-         use constants,   only: xdim, ydim, zdim, ndims, I_ONE
+
+         use constants,   only: xdim, ydim, zdim, ndims, I_ONE, ION, NEU, DST, cbuff_len
+         use dataio_pub,  only: msg, printinfo
          use diagnostics, only: ma1d, ma2d, my_allocate
 
          implicit none
@@ -245,6 +247,7 @@ contains
          logical,                intent(in)    :: is_selfgrav, is_magnetized, has_energy
          real,                   intent(in)    :: cs_iso, gamma_
          integer(kind=4)                       :: tag
+         character(len=cbuff_len)              :: aux
 
          this%beg    = flind%all + I_ONE
 
@@ -294,6 +297,33 @@ contains
          this%has_energy    = has_energy
          this%is_selfgrav   = is_selfgrav
          this%is_magnetized = is_magnetized
+
+         msg = "Registered"
+         select case(tag)
+            case (ION)
+               msg = trim(msg) // " ionized"
+            case (NEU)
+               msg = trim(msg) // " neutral"
+            case (DST)
+               msg = trim(msg) // " dust"
+            case default
+               msg = trim(msg) // " unknown"
+         end select
+         msg = trim(msg) // " fluid:"
+         write(aux, '(A,F7.4)') " gamma = ", gamma_
+         msg = trim(msg) // aux
+         if (is_magnetized) msg = trim(msg) // ", magnetized"
+         if (is_selfgrav) msg = trim(msg) // ", selfgravitating"
+         if (has_energy) then
+            msg = trim(msg) // ", with energy"
+         else
+            msg = trim(msg) // ", isothermal with c_sound = "
+            write(aux, '(G10.2)') cs_iso
+            msg = trim(msg) // aux
+         end if
+
+         call printinfo(msg)
+
       end subroutine set_fluid_index
 
 !>
