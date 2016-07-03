@@ -52,6 +52,9 @@ contains
       use constants,  only: PIERNIK_INIT_GRID, GEO_XYZ
       use dataio_pub, only: die, code_progress
       use domain,     only: dom
+#ifdef VERBOSE
+      use dataio_pub, only: printinfo
+#endif /* VERBOSE */
 
       implicit none
 

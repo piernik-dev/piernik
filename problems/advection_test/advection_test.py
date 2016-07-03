@@ -10,7 +10,7 @@ def calculate_norm(fn):
     pf = load(fn)
 
     data = pf.h.all_data()
-    diff = data['inid'] - data['denn']
+    diff = data['inid'].v - data['denn'].v
     norm = np.sqrt((diff ** 2).sum() / data['inid'].sum())
     print("Calculating difference between numerical and analytical solution")
     print("L2 error norm = %12.6f, min and max error = %15.6f %15.6f" %

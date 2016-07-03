@@ -174,6 +174,9 @@ contains
             case ('ener')
                if (has_neu) then ; hdf_vars(j) = 'enen' ; j = j + 1 ; endif
                if (has_ion) then ; hdf_vars(j) = 'enei' ; j = j + 1 ; endif
+            case ('ethr')
+               if (has_neu) then ; hdf_vars(j) = 'ethn' ; j = j + 1 ; endif
+               if (has_ion) then ; hdf_vars(j) = 'ethi' ; j = j + 1 ; endif
             case ("magx", "magy", "magz")
                hdf_vars(j) = vars(i) ; j = j + 1
 #ifdef COSM_RAYS
@@ -783,6 +786,7 @@ contains
          ! Do not assume that the master knows all the lists
          do p = FIRST, LAST
             allocate(cg_rl(cg_n(p)), cg_n_b(cg_n(p), ndims), cg_off(cg_n(p), ndims))
+            nullify(dbuf)
             if (otype == O_OUT) allocate(dbuf(cg_le:cg_dl, cg_n(p), ndims))
             if (p == FIRST) then
                call collect_cg_data(cg_rl, cg_n_b, cg_off, dbuf, otype)
@@ -868,6 +872,7 @@ contains
          call rd%cleanup()
       else ! send all the necessary information to the master
          allocate(cg_rl(leaves%cnt), cg_n_b(leaves%cnt, ndims), cg_off(leaves%cnt, ndims))
+         nullify(dbuf)
          if (otype == O_OUT) allocate(dbuf(cg_le:cg_dl, leaves%cnt, ndims))
          call collect_cg_data(cg_rl, cg_n_b, cg_off, dbuf, otype)
          call MPI_Send(cg_rl,  size(cg_rl),  MPI_INTEGER,  FIRST, tag,         comm, mpi_err)

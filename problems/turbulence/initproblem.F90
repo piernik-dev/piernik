@@ -8,7 +8,6 @@ module initproblem
    private
    public :: read_problem_par, problem_initial_conditions, problem_pointers
 
-   integer           :: n_sn
    real              :: d0, Mrms, t_sn, c_si
 
    namelist /PROBLEM_CONTROL/  d0, c_si, Mrms

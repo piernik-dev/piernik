@@ -626,19 +626,25 @@ def setup_piernik(data=None):
                   "Problem with removing old 'piernik.def' from '%s'." %
                   rundir.rstrip('/') + '\033[0m')
 
-    if (not options.nocompile):
-        if(options.link_exe):
-            try:
-                os.symlink("../../" + objdir + "/piernik", rundir + 'piernik')
-            except (IOError, OSError):
-                print('\033[91m' + "Symlinking 'piernik' failed." + '\033[0m')
-                fatal_problem = True
-        else:
+    if (options.link_exe):
+        try:
+            if (os.path.islink(rundir + 'piernik')):
+                os.remove(rundir + 'piernik')
+        except (IOError, OSError):
+            print('\033[91m' +
+                  "Problem with removing old 'piernik' executable from '%s'." %
+                  rundir.rstrip('/') + '\033[0m')
+        try:
+            os.symlink("../../" + objdir + "/piernik", rundir + 'piernik')
+        except (IOError, OSError):
+            print('\033[91m' + "Symlinking 'piernik' failed." + '\033[0m')
+            fatal_problem = True
+    else:
+        if (not options.nocompile):
             try:
                 shutil.copy(objdir + "/piernik", rundir + 'piernik')
             except (IOError, OSError, shutil.Error):
-                print('\033[91m' + "Copying 'piernik' failed." +
-                      '\033[0m')
+                print('\033[91m' + "Copying 'piernik' failed." + '\033[0m')
                 fatal_problem = True
 
     try:

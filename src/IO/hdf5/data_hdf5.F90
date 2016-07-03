@@ -73,7 +73,7 @@ contains
 
       use constants, only: fpi
       use gdf,       only: gdf_field_type
-      use units,     only: cm, gram, sek, miu0
+      use units,     only: cm, erg, gram, sek, miu0
 
       implicit none
 
@@ -92,8 +92,11 @@ contains
             f%fu = "\rm{cm}/\rm{s}"
             f%f2cgs = 1.0 / (cm/sek)
          case ("enen", "enei")
-            f%fu = "\rm{g}*\rm{cm}^2/\rm{s}^2"
-            f%f2cgs = 1.0 / (gram*cm**2/sek**2)
+            f%fu = "\rm{erg}/\rm{cm}^3"
+            f%f2cgs = 1.0 / (erg/cm**3)
+         case ("ethn", "ethi")
+            f%fu = "\rm{erg}/\rm{g}"
+            f%f2cgs = 1.0 / (erg/gram)
          case ("pren", "prei")
             f%fu = "\rm{g}/\rm{cm}/\rm{s}^2"
             f%f2cgs = 1.0 / (gram/cm/sek**2)
@@ -102,6 +105,8 @@ contains
             f%f2cgs = 1.0 / (fpi * sqrt(cm / (miu0 * gram)) * sek)
             f%stag = 1
          case ("cr1" : "cr9")
+            f%fu = "\rm{erg}/\rm{cm}^3"
+            f%f2cgs = 1.0 / (erg/cm**3)
          case ("gpot", "sgpt")
             f%fu = "\rm{cm}^2 / \rm{s}^2"
             f%f2cgs = 1.0 / (cm**2 / sek**2)
@@ -126,6 +131,8 @@ contains
             case ("vlxd", "vlxn", "vlxi", "vlyd", "vlyn", "vlyi", "vlzd", "vlzn", "vlzi")
                write(newname, '("velocity_",A1)') var(3:3)
             case ("enen", "enei")
+               newname = "energy_density"
+            case ("ethn", "ethi")
                newname = "specific_energy"
             case ("pren", "prei")
                newname = "pressure"
@@ -280,6 +287,18 @@ contains
             tab(:,:,:) = real(flind%ion%gam_1, kind=4) * real( cg%u(flind%ion%ien, RNG) - &
                  &       ekin(cg%u(flind%ion%imx, RNG), cg%u(flind%ion%imy, RNG), cg%u(flind%ion%imz, RNG), cg%u(flind%ion%idn, RNG)), kind=4) - &
                  &       real(flind%ion%gam_1*emag(cg%b(xdim, RNG), cg%b(ydim, RNG), cg%b(zdim, RNG)), kind=4)
+#endif /* !ISO */
+         case ("ethn")
+#ifndef ISO
+            tab(:,:,:) = real( (cg%u(flind%neu%ien, RNG) - &
+                 &       ekin(cg%u(flind%neu%imx, RNG), cg%u(flind%neu%imy, RNG), cg%u(flind%neu%imz, RNG), cg%u(flind%neu%idn, RNG))) /         &
+                 &       cg%u(flind%neu%idn, RNG), kind=4)
+#endif /* !ISO */
+         case ("ethi")
+#ifndef ISO
+            tab(:,:,:) = real( (cg%u(flind%ion%ien, RNG) - &
+                 &       ekin(cg%u(flind%ion%imx, RNG), cg%u(flind%ion%imy, RNG), cg%u(flind%ion%imz, RNG), cg%u(flind%ion%idn, RNG)) -          &
+                 &       emag(cg%b(xdim, RNG), cg%b(ydim, RNG), cg%b(zdim, RNG))) / cg%u(flind%ion%idn, RNG), kind=4)
 #endif /* !ISO */
          case ("magx", "magy", "magz")
             tab(:,:,:) = real(cg%b(xdim + i_xyz, RNG), kind=4)
