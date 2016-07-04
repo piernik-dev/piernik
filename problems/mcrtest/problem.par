@@ -1,5 +1,5 @@
  $BASE_DOMAIN
-    n_d = 4, 4, 1
+    n_d = 64, 64, 1
     nb  = 4
     bnd_xl = 'per'
     bnd_xr = 'per'
@@ -30,8 +30,8 @@
  /
 
  $END_CONTROL
-    tend   = 5.0
-    nend   = 1
+    tend   = 1.0
+    nend   = 2
  /
 
  $OUTPUT_CONTROL
@@ -77,7 +77,7 @@
     cfl_cre     = 0.4    ! CFL coefficient for cosmic ray electrons
     ncre        = 5      ! number of fixed spectrum bins between
     expan_order = 3     ! 1/2/3 - Taylor expansion order for computing electron spectrum
-    p_lo_init = 1.2e1   ! initial lower cut momentum[1]
+    p_lo_init = 1.2e1  ! initial lower cut momentum[2]
     p_up_init = 1.5e2   ! initial upper cut momentum[3]
     f_init    = 1.0e0   ! < initial value of the normalization parameter in cre energy spectrum
     q_init    = 5.0e0   ! < initial value of power law coefficient in cre enrgy spectrum

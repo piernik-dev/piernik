@@ -11,7 +11,7 @@ contains
 !   
 !   
 
-  subroutine cresp_p_cut_diff
+  subroutine cresp_p_cut_diff(credim)
   use initcosmicrays, only: iarr_cre, iarr_cre_pl, iarr_cre_pu
   use initcrspectrum, only: ncre
   use cg_leaves,        only: leaves
@@ -19,13 +19,17 @@ contains
   use fluidtypes,       only: var_numbers
   use grid_cont,        only: grid_container
   use domain,  only: dom
-  use constants, only: I_ZERO, I_ONE
+  use constants, only: I_ZERO, I_ONE, xdim, ydim, zdim, ndims
   implicit none
-  integer       :: i,j,k!, id, jd, kd
+  integer       :: i,j,k, il, jl, kl, ih, jh, kh, ild, jld, kld
    type(grid_container), pointer   :: cg
    type(cg_list_element), pointer  :: cgl
    integer(kind=4),allocatable, dimension(:,:,:)  :: i_lo_dom !dimension(dom%n_d(1),dom%n_d(2),dom%n_d(3))
    integer(kind=4),allocatable, dimension(:,:,:)  :: i_up_dom !dimension(dom%n_d(1),dom%n_d(2),dom%n_d(3))
+   integer(kind=4),intent(in) :: credim
+   integer, dimension(ndims)            :: idm, ndm, hdm, ldm
+   
+   print *, 'dim@cresp_p_cut_diff = ', credim
    
    allocate(i_lo_dom(0:dom%n_d(1)-I_ONE,0:dom%n_d(2)-I_ONE,0:dom%n_d(3)-I_ONE))
    allocate(i_up_dom(0:dom%n_d(1)-I_ONE,0:dom%n_d(2)-I_ONE,0:dom%n_d(3)-I_ONE))
@@ -34,7 +38,7 @@ contains
    i_up_dom(:,:,:) = I_ZERO
 
       cgl => leaves%first
-      
+! Determinig cutoff momenta to show which cree and cren are going to be used
       do while (associated(cgl))
          cg => cgl%cg
          do k = cg%ks, cg%ke
@@ -50,6 +54,18 @@ contains
          enddo
       cgl => cgl%nxt  
       enddo
+      
+      
+!       ldm        = cg%ijkse(:,LO) ;      ldm(credim) = cg%lhn(credim,LO) + dom%D_(credim)      ! ldm =           1 + D_
+!       hdm        = cg%ijkse(:,HI) ;      hdm(credim) = cg%lhn(credim,HI)                      ! hdm = cg%n_ + idm - D_
+      do k = ldm(zdim), hdm(zdim)       ; kl = k-1 ; kh = k+1 ; kld = k-idm(zdim)
+         do j = ldm(ydim), hdm(ydim)    ; jl = j-1 ; jh = j+1 ; jld = j-idm(ydim)
+            do i = ldm(xdim), hdm(xdim) ; il = i-1 ; ih = i+1 ; ild = i-idm(xdim)
+!            
+            enddo
+         enddo
+      enddo
+!       
   if(allocated(i_lo_dom)) deallocate(i_lo_dom)
   if(allocated(i_up_dom)) deallocate(i_up_dom)
   

@@ -115,7 +115,7 @@ contains
       use global,      only: dt, dtm, t
       use mass_defect, only: update_magic_mass
       use cresp_grid, only: cresp_update_grid
-      use cresp_p_diffusion, only: cresp_p_cut_diff
+!       use cresp_p_diffusion, only: cresp_p_cut_diff
 
       implicit none
 
@@ -129,7 +129,6 @@ contains
 
 #ifdef COSM_RAY_ELECTRONS
      call cresp_update_grid!!!
-     call cresp_p_cut_diff
 #endif /* COSM_RAY_ELECTRONS */
 
       halfstep = .true.
@@ -221,6 +220,9 @@ contains
       use crdiffusion,    only: cr_diff
       use initcosmicrays, only: use_split
 #endif /* COSM_RAYS */
+#ifdef COSM_RAY_ELECTRONS
+      use cresp_p_diffusion, only: cresp_p_cut_diff
+#endif /* COSM_RAY_ELECTRONS */
 #ifdef DEBUG
       use piernikiodebug,   only: force_dumps
 #endif /* DEBUG */
@@ -249,6 +251,9 @@ contains
 #ifdef COSM_RAYS
             if (use_split) call cr_diff(dir)
 #endif /* COSM_RAYS */
+#ifdef COSM_RAY_ELECTRONS
+            if (use_split) call cresp_p_cut_diff(dir)
+#endif /* COSM_RAY_ELECTRONS */
          endif
       else
          if (geometry25D) call sweep(dir)
