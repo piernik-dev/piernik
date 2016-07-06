@@ -1,5 +1,5 @@
  $BASE_DOMAIN
-    n_d = 4, 4, 1
+    n_d = 40, 40, 1
     nb  = 4
     bnd_xl = 'per'
     bnd_xr = 'per'
@@ -30,16 +30,16 @@
  /
 
  $END_CONTROL
-    tend   = 5.0
-    nend   = 1
+    tend   = 1.0
+    nend   = 100
  /
 
  $OUTPUT_CONTROL
     problem_name = 'mcr'
     run_id = 'tst'
-    dt_hdf  = 0.5
+    dt_hdf  = 0.1
     dt_res  = 0.0
-    dt_log  = 0.05
+    dt_log  = 1.0e-10
     dt_tsl  = 0.000
     vars(1:) = 'ener', 'dens', 'magx', 'magy', 'magz', 'encr', 'velx', 'vely', 'velz'
  /
@@ -77,17 +77,17 @@
     cfl_cre     = 0.4    ! CFL coefficient for cosmic ray electrons
     ncre        = 5      ! number of fixed spectrum bins between
     expan_order = 3     ! 1/2/3 - Taylor expansion order for computing electron spectrum
-    p_lo_init = 1.2e1   ! initial lower cut momentum[1]
-    p_up_init = 1.5e2   ! initial upper cut momentum[3]
+    p_lo_init = 0.2e1   ! initial lower cut momentum[1]
+    p_up_init = 2.0e3   ! initial upper cut momentum[3]
     f_init    = 1.0e0   ! < initial value of the normalization parameter in cre energy spectrum
-    q_init    = 5.0e0   ! < initial value of power law coefficient in cre enrgy spectrum
+    q_init    = 4.2e0   ! < initial value of power law coefficient in cre enrgy spectrum
     p_min_fix = 1.0e1  ! momentum fixed grid
     p_max_fix = 1.0e3  ! momentum fixed grid
-    K_cre_e_paral = 50.0
-    K_cre_n_paral = 20.0
-    K_cre_e_perp  = 0.5
-    K_cre_n_perp  = 0.2
-    K_pow_index   = 1.05
+    K_cre_e_paral = 3.e4
+    K_cre_n_paral = 3.e4
+    K_cre_e_perp  = 3.e2
+    K_cre_n_perp  = 3.e2
+    K_pow_index   = 0.5
  /
 
  $CR_SPECIES
@@ -99,7 +99,7 @@
  /
 
  $MULTIGRID_DIFFUSION
-!    diff_explicit = .true.
+    diff_explicit = .true.
     diff_theta     = 0.6
     diff_tstep_fac = 1000
     norm_tol = 1e-2
@@ -110,9 +110,9 @@
  $PROBLEM_CONTROL
     d0     = 1.0 ! when COSM_RAYS_SOURCES are defined, the density somehow scales the result of sourcecosmicrays.F90 and values like 1e5 quickly lead to FP overflow. This must be a bug.
     p0     = 1.0
-    bx0    = 5.0
-    by0    = 5.0
-    bz0    = 5.0
+    bx0    = 1.0
+    by0    = 1.0
+    bz0    = 0.0
     x0     = 0.0
     y0     = 0.0
     z0     = 0.0

@@ -203,13 +203,14 @@ contains
                sptab%ub = emag(cg%b(xdim,i,j,k), cg%b(ydim,i,j,k), cg%b(zdim,i,j,k))/cg%dvol
                sptab%ud = cg%q(qna%ind(divv_n))%point([i,j,k])/cg%dvol
                call cresp_timestep_new(dt_cre_tmp, p_l, p_u, sptab)
-               dt_cre = min(dt_cre, dt_cre_tmp)
+               dt_cre = 0.1 !min(dt_cre, dt_cre_tmp)
               enddo
            enddo
          enddo
          cgl=>cgl%nxt
      enddo
    
+   print *, 'grid_cresp_timestep: dt_cre = ',dt_cre
    
    end subroutine grid_cresp_timestep
    
