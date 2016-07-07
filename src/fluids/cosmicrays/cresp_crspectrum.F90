@@ -334,11 +334,11 @@ subroutine cresp_update_bin_index(dt, p_lo, p_up, p_lo_next, p_up_next)
 ! arrays initialization
 !
 !-------------------------------------------------------------------------------------------------
-   subroutine cresp_init_state(dt, init_cresp_arguments, sptab)
+   subroutine cresp_init_state(init_cresp_arguments, sptab)
 !       use initcosmicrays,   only: w
       use initcrspectrum, only: spec_mod_trms
       implicit none
-      real(kind = 8), intent(in)  :: dt
+!       real(kind = 8), intent(in)  :: dt
       integer                     :: i, k
       real(kind=8)                ::  c ! width of bin
 !       real(kind=8), intent(in)    :: u_d, u_b

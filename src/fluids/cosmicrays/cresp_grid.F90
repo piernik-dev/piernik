@@ -16,12 +16,12 @@ contains
  subroutine cresp_update_grid
       use cg_leaves,      only: leaves
       use cg_list,        only: cg_list_element
-      use constants,      only: I_ONE, I_TWO, I_FOUR, xdim, ydim, zdim !, LO, HI, pMAX, 
-      use func,           only: ekin, emag, operator(.equals.), operator(.notequals.)
+      use constants,      only: I_ONE, I_TWO, I_FOUR !, xdim, ydim, zdim !, LO, HI, pMAX, 
+!       use func,           only: ekin, emag, operator(.equals.), operator(.notequals.)
       use grid_cont,      only: grid_container
       use cresp_crspectrum, only:cresp_update_cell, printer
-      use crhelpers,      only: divv_n
-      use named_array_list, only: qna
+!       use crhelpers,      only: divv_n
+!       use named_array_list, only: qna
       use units,           only: s_len_u
       use initcrspectrum, only: spec_mod_trms
 
@@ -48,9 +48,9 @@ contains
            do j = cg%js, cg%je
               do i = cg%is, cg%ie
                   cresp_arguments(I_ONE:I_TWO*ncre+I_TWO)    = cg%u(iarr_cre, i, j, k)
-                 
-                  sptab%ub = emag(cg%b(xdim,i,j,k), cg%b(ydim,i,j,k), cg%b(zdim,i,j,k))/cg%dvol  !!! module works properly for small emag. Should emag be > 1e-4, negative values will appear
-                  sptab%ud = cg%q(qna%ind(divv_n))%point([i,j,k])/cg%dvol
+                  call  append_dissipative_terms(i,j,k)  ! loads values of magnetic energy and vel divergence
+!                   sptab%ub = emag(cg%b(xdim,i,j,k), cg%b(ydim,i,j,k), cg%b(zdim,i,j,k))
+!                   sptab%ud = cg%q(qna%ind(divv_n))%point([i,j,k])
 #ifdef VERBOSE
               print *, 'Output of cosmic ray electrons module for grid cell with coordinates i,j,k:', i, j, k
 #endif /* VERBOSE */
@@ -60,7 +60,7 @@ contains
 !              diagnostic:
                 if (i.eq.34.and.j.eq.34.and.k.eq.0) then
                       call printer(t)      
-                       print *, '   emag = ', emag(cg%b(xdim,i,j,k), cg%b(ydim,i,j,k), cg%b(zdim,i,j,k))/cg%dvol !/(4*pi*cg%dvol)
+!                        print *, '   emag = ', emag(cg%b(xdim,i,j,k), cg%b(ydim,i,j,k), cg%b(zdim,i,j,k))
 !                       print *, cresp_arguments(2*ncre+3)
 !                       print *, 'cg%u(iarr_cre(e),34,34,:) =', cg%u(iarr_cre_e,34,34,0)
 !                       print *, 'cg%u(iarr_cre(n),34,34,:) =', cg%u(iarr_cre_n,34,34,0)
@@ -85,9 +85,9 @@ contains
    
       use cg_leaves,      only: leaves
       use cg_list,        only: cg_list_element
-      use constants,      only: xdim, ydim, zdim, I_ONE, I_TWO, I_FOUR, fpi !, LO, HI, pMAX,
+      use constants,      only: I_ONE, I_TWO, I_FOUR, fpi !, LO, HI, pMAX,
 !       use domain,         only: dom, is_multicg
-      use func,           only: ekin, emag, operator(.equals.), operator(.notequals.)
+!       use func,           only: ekin, emag, operator(.equals.), operator(.notequals.)
       use grid_cont,      only: grid_container
 !       use cresp_variables, only: ind_p_lo, ind_p_up, cresp_taylor_order, taylor_coeff_2nd, taylor_coeff_3rd, &
 !                                 ind_e_beg, ind_e_end, ind_n_beg, ind_n_end
@@ -95,8 +95,8 @@ contains
       use initcosmicrays, only: iarr_crn, iarr_cre
       use cresp_crspectrum, only: cresp_init_state
       use units,          only: clight
-      use crhelpers,      only: divv_n
-      use named_array_list, only: qna
+!       use crhelpers,      only: divv_n
+!       use named_array_list, only: qna
       
       implicit none
 
@@ -127,14 +127,14 @@ contains
               do i = cg%is, cg%ie
 
                   cresp_arguments(I_ONE:2*ncre+2)    = cg%u(iarr_cre, i, j, k)
-                  sptab%ub = emag(cg%b(xdim,i,j,k), cg%b(ydim,i,j,k),cg%b(zdim,i,j,k))/cg%dvol
-                  sptab%ud = cg%q(qna%ind(divv_n))%point([i,j,k])/cg%dvol
-                  
+!                   sptab%ub = emag(cg%b(xdim,i,j,k), cg%b(ydim,i,j,k),cg%b(zdim,i,j,k))
+!                   sptab%ud = cg%q(qna%ind(divv_n))%point([i,j,k])
+                 call  append_dissipative_terms(i,j,k)
                   f_init = 1/(fpi*clight*(p_lo_init**(I_FOUR))*(((p_up_init/p_lo_init)**(I_FOUR-q_init))-I_ONE)/(I_FOUR-q_init))   !!! amplitude and distribution of electron energy density is inherited after those of nucleons, see crspectrum.pdf, eq. 29
 !                    f_init = 1.0
                   f_init    = f_init*cg%u(iarr_crn(1),i,j,k)*cre_eff
                   
-                  call cresp_init_state(dt, cresp_arguments, sptab)
+                  call cresp_init_state(cresp_arguments, sptab)
 #ifdef VERBOSE
               print *, 'Output of cosmic ray electrons module for grid cell with coordinates i,j,k:', i, j, k
 #endif /* VERBOSE */
@@ -166,12 +166,12 @@ contains
    subroutine grid_cresp_timestep
     use cg_leaves,        only: leaves
     use cg_list,          only: cg_list_element
-    use fluidtypes,       only: var_numbers
-    use crhelpers,        only: divv_n
-    use func,             only: emag !, operator(.equals.), operator(.notequals.)
+!     use fluidtypes,       only: var_numbers
+!     use crhelpers,        only: divv_n
+!     use func,             only: emag !, operator(.equals.), operator(.notequals.)
     use grid_cont,        only: grid_container
-    use constants,        only: I_ONE, I_TWO, I_FOUR, xdim, ydim, zdim, pi !, LO, HI, pMAX, 
-    use named_array_list, only: qna
+!     use constants,        only: I_ONE, I_TWO !, I_FOUR !, xdim, ydim, zdim, pi !, LO, HI, pMAX, 
+!     use named_array_list, only: qna
     use constants,        only: one
     use initcrspectrum,   only: spec_mod_trms
     use initcosmicrays,   only: iarr_cre_pl, iarr_cre_pu
@@ -183,7 +183,7 @@ contains
      type(grid_container), pointer   :: cg
      type(cg_list_element), pointer  :: cgl
 !      type(var_numbers)    :: flind
-     real   :: p_l, p_u, u_b, u_d
+     real   :: p_l, p_u
      real(kind=8)                             :: dt_cre_tmp
      type(spec_mod_trms)   :: sptab
      
@@ -200,8 +200,9 @@ contains
 !                print *, cg%u(iarr_cre_pl, i, j, k), cg%u(iarr_cre_pu, i, j, k)
                p_l = cg%u(iarr_cre_pl, i, j, k)
                p_u = cg%u(iarr_cre_pu, i, j, k)
-               sptab%ub = emag(cg%b(xdim,i,j,k), cg%b(ydim,i,j,k), cg%b(zdim,i,j,k))/cg%dvol
-               sptab%ud = cg%q(qna%ind(divv_n))%point([i,j,k])/cg%dvol
+               call append_dissipative_terms(i,j,k)
+!                sptab%ub = emag(cg%b(xdim,i,j,k), cg%b(ydim,i,j,k), cg%b(zdim,i,j,k))
+!                sptab%ud = cg%q(qna%ind(divv_n))%point([i,j,k])
                call cresp_timestep_new(dt_cre_tmp, p_l, p_u, sptab)
                dt_cre = min(dt_cre, dt_cre_tmp)
               enddo
@@ -209,8 +210,32 @@ contains
          enddo
          cgl=>cgl%nxt
      enddo
-   
+!     print *, '@cresp_timestep_new: ', dt_cre
    
    end subroutine grid_cresp_timestep
+   
+   subroutine append_dissipative_terms(i,j,k)
+    use initcrspectrum, only: spec_mod_trms
+    use named_array_list, only: qna
+    use grid_cont,        only: grid_container
+    use cg_list,          only: cg_list_element
+    use constants,        only: xdim, ydim, zdim
+    use crhelpers,        only: divv_n
+    use func,             only: emag
+    use cg_leaves,        only: leaves
+     implicit none
+     type(spec_mod_trms)  :: sptab
+     type(grid_container), pointer :: cg
+     type(cg_list_element), pointer:: cgl
+     integer :: i,j,k
+!Below - magnetic energy density and velocity divergence values are passed to sptab   
+     cgl => leaves%first
+     do while (associated(cgl))
+     cg => cgl%cg
+       sptab%ub = emag(cg%b(xdim,i,j,k), cg%b(ydim,i,j,k), cg%b(zdim,i,j,k))
+       sptab%ud = cg%q(qna%ind(divv_n))%point([i,j,k])
+     cgl =>cgl%nxt
+    enddo
+   end subroutine append_dissipative_terms
    
 end module cresp_grid
