@@ -142,10 +142,6 @@ contains
       use global,           only: dt
       use grid_cont,        only: grid_container
       use initcosmicrays,   only: K_crn_paral, K_crn_perp, iarr_crs_diff, K_crs_paral, K_crs_perp, iarr_crs, iarr_crs_tmp  !, iarr_crn !!!
-! #ifdef COSM_RAY_ELECTRONS
-!       use cresp_variables,  only: ind_p_lo, ind_p_up
-! #endif /* COSM_RAY_ELECTRONS */
-      
       use named_array,      only: p4
       use named_array_list, only: wna
 
@@ -164,7 +160,7 @@ contains
       logical, dimension(ndims)            :: present_not_crdim
       real, dimension(:,:,:,:), pointer    :: wcr
       integer                              :: wcri
-
+      
       if (.not. has_cr) return
       if (.not.dom%has_dir(crdim)) return
 
@@ -214,12 +210,10 @@ contains
                      decr(zdim,:) = (dqp+dqm)* (1.0 + sign(1.0, dqm*dqp))*oneq
                      bcomp(zdim)   = sum(cg%b(zdim,ild:i, jld:j, k:kh))*oneq
                   endif
-
                   bb = sum(bcomp**2)
                   if (bb > epsilon(0.d0)) fcrdif = fcrdif + K_crs_paral * bcomp(crdim) * (bcomp(xdim)*decr(xdim,:) + bcomp(ydim)*decr(ydim,:) + bcomp(zdim)*decr(zdim,:)) / bb !!!
 
                   wcr(:,i,j,k) = - fcrdif * dt * cg%idl(crdim)
-
                enddo
             enddo
          enddo
@@ -227,7 +221,6 @@ contains
       enddo
 
       call all_wcr_boundaries
-!       print *, ' ind_p_lo, ind_p_up = ', ind_p_lo, ind_p_up
       cgl => leaves%first
       do while (associated(cgl))
          cg => cgl%cg

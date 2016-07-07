@@ -205,6 +205,7 @@ contains
       if (associated(psolver)) call pset%evolve(psolver, t-dt, dt)
 #endif /* GRAV */
       if (associated(problem_customize_solution)) call problem_customize_solution(forward)
+      
 
    end subroutine make_3sweeps
 
@@ -237,6 +238,11 @@ contains
 #ifdef COSM_RAYS
             if (use_split) call cr_diff(dir)
 #endif /* COSM_RAYS */
+
+#ifdef COSM_RAY_ELECTRONS
+         call cresp_p_cut_diff(dir)
+#endif /* COSM_RAY_ELECTRONS */
+
 #ifdef MAGNETIC
             call magfield(dir)
 #endif /* MAGNETIC */
@@ -251,8 +257,9 @@ contains
 #ifdef COSM_RAYS
             if (use_split) call cr_diff(dir)
 #endif /* COSM_RAYS */
+
 #ifdef COSM_RAY_ELECTRONS
-            if (use_split) call cresp_p_cut_diff(dir)
+         call cresp_p_cut_diff(dir)
 #endif /* COSM_RAY_ELECTRONS */
          endif
       else
@@ -262,6 +269,8 @@ contains
 #ifdef DEBUG
       call force_dumps
 #endif /* DEBUG */
+
+
 
    end subroutine make_sweep
 

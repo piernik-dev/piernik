@@ -42,6 +42,8 @@ module initcrspectrum
   end type spec_mod_trms
       
   integer(kind=4)  :: taylor_coeff_2nd, taylor_coeff_3rd
+  
+  real, allocatable :: flux_cre(:,:,:,:)    ! array of fluxes for p_cut diffusion
 !----------------------------------------------  
 !  
 contains
@@ -51,6 +53,8 @@ contains
   subroutine init_cresp
   use constants,             only: I_ZERO, I_ONE, zero, one !, ten
   use cresp_arrays_handling, only: allocate_with_index
+  use domain,  only: dom
+!   use cresp_p_diffusion,     only: flux_cre
   implicit none
    
    integer                           :: vecdim  ! vector dimension
@@ -111,7 +115,7 @@ contains
 !  print *, crel%q
 !  print *, crel%i_lo, crel%i_up
  
-  
+  allocate(flux_cre(ncre,0:dom%n_d(1)-I_ONE,0:dom%n_d(2)-I_ONE,0:dom%n_d(3)-I_ONE))
  
  end subroutine init_cresp
  

@@ -526,7 +526,6 @@ contains
 !      ind_e_beg = ind_n_end + I_ONE
      flind%cre%eend = flind%cre%nend + ncre
 !      ind_e_end = ind_n_end + ncre
-     
      flind%cre%plo  = flind%cre%eend + I_ONE
      flind%cre%pup  = flind%cre%eend + I_TWO
 !      print *,'ind_n_beg, ind_n_end = ', ind_n_beg, ind_n_end
@@ -556,12 +555,17 @@ contains
    subroutine cleanup_cosmicrays
 
       use diagnostics, only: my_deallocate
+      use initcrspectrum, only: flux_cre
 
       implicit none
  
       call my_deallocate(iarr_crn)
       call my_deallocate(iarr_cre)
       call my_deallocate(iarr_crs)
+#ifdef COSM_RAY_ELECTRONS
+      call my_deallocate(iarr_crs_diff)
+      call my_deallocate(flux_cre)
+#endif /* COSM_RAY_ELECTRONS */
 !       call my_deallocate(gamma_crs)
 !       call my_deallocate(K_crs_paral)
 !       call my_deallocate(K_crs_perp)
