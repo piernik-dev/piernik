@@ -156,11 +156,13 @@ contains
       use gravity,             only: source_terms_grav
       use particle_pub,        only: pset, psolver
 #endif /* GRAV */
-#if defined(COSM_RAYS) && defined(MULTIGRID)
+#if defined(COSM_RAYS) 
       use all_boundaries,      only: all_fluid_boundaries
       use initcosmicrays,      only: use_split
+#if defined(MULTIGRID)
       use multigrid_diffusion, only: multigrid_solve_diff
-#endif /* COSM_RAYS && MULTIGRID */
+#endif /* MULTIGRID */
+#endif /* COSM_RAYS */
 #ifdef SHEAR
       use shear,               only: shear_3sweeps
 #endif /* SHEAR */
@@ -179,12 +181,26 @@ contains
       call source_terms_grav
 #endif /* GRAV */
 
-#if defined(COSM_RAYS) && defined(MULTIGRID)
+#if defined(COSM_RAYS) 
+
       if (.not. use_split) then
+#if defined(MULTIGRID)
          call multigrid_solve_diff
          call all_fluid_boundaries
-      endif
 #endif /* COSM_RAYS && MULTIGRID */
+      else
+         if (forward) then
+            do s = xdim, zdim
+               if (.not.skip_sweep(s)) call make_diff_sweep(s, forward)
+            enddo
+         else
+            do s = zdim, xdim, -I_ONE
+               if (.not.skip_sweep(s)) call make_diff_sweep(s, forward)
+            enddo
+         endif
+
+      endif
+#endif /* COSM_RAYS */
 
       call expanded_domain%delete ! at this point everything should be initialized after domain expansion and we no longer need this list
       if (use_fargo) then
@@ -232,9 +248,7 @@ contains
 
       if (dom%has_dir(dir)) then
          if (.not. forward) then
-#ifdef COSM_RAYS
-            if (use_split) call cr_diff(dir)
-#endif /* COSM_RAYS */
+
 #ifdef MAGNETIC
             call magfield(dir)
 #endif /* MAGNETIC */
@@ -246,9 +260,6 @@ contains
 #ifdef MAGNETIC
             call magfield(dir)
 #endif /* MAGNETIC */
-#ifdef COSM_RAYS
-            if (use_split) call cr_diff(dir)
-#endif /* COSM_RAYS */
          endif
       else
          if (geometry25D) call sweep(dir)
@@ -259,6 +270,44 @@ contains
 #endif /* DEBUG */
 
    end subroutine make_sweep
+
+
+!>
+!! \brief Perform single diffusion sweep in forward or backward direction
+!<
+   subroutine make_diff_sweep(dir, forward)
+
+      use domain,         only: dom
+      use sweeps,         only: sweep
+#ifdef COSM_RAYS
+      use crdiffusion,    only: cr_diff
+      use initcosmicrays, only: use_split
+#endif /* COSM_RAYS */
+#ifdef DEBUG
+      use piernikiodebug,   only: force_dumps
+#endif /* DEBUG */
+
+      implicit none
+
+      integer(kind=4), intent(in) :: dir      !< direction, one of xdim, ydim, zdim
+      logical,         intent(in) :: forward  !< if .false. then reverse operation order in the sweep
+
+#ifdef COSM_RAYS
+      if (dom%has_dir(dir)) then
+         if (use_split) call cr_diff(dir)
+      endif
+#endif /* COSM_RAYS */
+
+#ifdef DEBUG
+      call force_dumps
+#endif /* DEBUG */
+
+   end subroutine make_diff_sweep
+
+
+
+
+
 
 #ifdef MAGNETIC
    subroutine magfield(dir)
