@@ -204,17 +204,17 @@ contains
 
       call expanded_domain%delete ! at this point everything should be initialized after domain expansion and we no longer need this list
       if (use_fargo) then
-         if (.not.skip_sweep(zdim)) call make_sweep(zdim, forward)
-         if (.not.skip_sweep(xdim)) call make_sweep(xdim, forward)
+         if (.not.skip_sweep(zdim)) call make_adv_sweep(zdim, forward)
+         if (.not.skip_sweep(xdim)) call make_adv_sweep(xdim, forward)
          if (.not.skip_sweep(ydim)) call make_fargosweep
       else
          if (forward) then
             do s = xdim, zdim
-               if (.not.skip_sweep(s)) call make_sweep(s, forward)
+               if (.not.skip_sweep(s)) call make_adv_sweep(s, forward)
             enddo
          else
             do s = zdim, xdim, -I_ONE
-               if (.not.skip_sweep(s)) call make_sweep(s, forward)
+               if (.not.skip_sweep(s)) call make_adv_sweep(s, forward)
             enddo
          endif
       endif
@@ -228,7 +228,7 @@ contains
 !>
 !! \brief Perform single sweep in forward or backward direction
 !<
-   subroutine make_sweep(dir, forward)
+   subroutine make_adv_sweep(dir, forward)
 
       use domain,         only: dom
       use global,         only: geometry25D
@@ -269,7 +269,7 @@ contains
       call force_dumps
 #endif /* DEBUG */
 
-   end subroutine make_sweep
+   end subroutine make_adv_sweep
 
 
 !>
