@@ -393,7 +393,7 @@ contains
 
              else ! alfven_l .le. zero .le. alfven_r
                 
-                ! Arragnge for sign of normal component of magnetic field
+                ! Arrange for sign of normal component of magnetic field
 
                 if (b_ccl(xdim,i) .ge. zero) then
 
