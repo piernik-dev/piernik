@@ -120,7 +120,7 @@ contains
       use initionized,    only: ion_fluid
       use initneutral,    only: neutral_fluid
 #ifdef COSM_RAYS
-      use initcosmicrays, only: iarr_crn, iarr_cre, cosmicray_index, iarr_crs ! use of crs /deprecated
+      use initcosmicrays, only: iarr_crn, iarr_cre, cosmicray_index, iarr_crs, iarr_cre_diff, iarr_crs_diff ! use of crs /deprecated
 #endif /* COSM_RAYS */
 #ifdef TRACER
       use inittracer,     only: tracer_index, iarr_trc
@@ -231,7 +231,7 @@ contains
       
 !       print *, 'iarr_all_crs  = ' , iarr_all_crs
 !       print *, 'sizes: iarr_all_crs, iarr_cre =', size(iarr_all_crs), size(iarr_crs)      
-      iarr_all_crs(1:flind%crs%all) = iarr_crs
+      iarr_all_crs(1:size(iarr_crs_diff)) = iarr_crs_diff
       
 !       print *, 'iarr_cre      = ', iarr_cre
 

@@ -24,7 +24,8 @@ contains
       use named_array_list, only: qna
       use units,           only: s_len_u
       use initcrspectrum, only: spec_mod_trms
-
+      use initcosmicrays,   only: iarr_cre_pl, iarr_cre_pu
+    
       implicit none
       integer                         :: i, j, k 
       type(cg_list_element),  pointer :: cgl
@@ -38,11 +39,20 @@ contains
    j = 0
    k = 0
 
+   
    dt_cre_tmp = 1.0
    dt_cre = dt_cre_tmp
    cgl => leaves%first
+
+
    do while (associated(cgl))
      cg => cgl%cg
+
+   print *, 'cresp_update_grid'
+   print *, 'iarr_cre =', iarr_cre
+   print *, size(cg%u(:, :, :, :),1), size(cg%u(:, :, :, :),2),size(cg%u(:, :, :, :),3),size(cg%u(:, :, :, :),4)
+   print *, '1: plo, pup=', cg%u(iarr_cre_pl, 9, 26, 0), cg%u(iarr_cre_pu, 9, 26, 0)
+   
      cresp_arguments = 0.0
         do k = cg%ks, cg%ke
            do j = cg%js, cg%je
@@ -78,7 +88,8 @@ contains
        enddo
       cgl=>cgl%nxt
       enddo
-      
+!         print *, '2: plo, pup=', cg%u(iarr_cre_pl, 9, 26, 0), cg%u(iarr_cre_pu, 9, 26, 0)
+
    end subroutine cresp_update_grid
    
    subroutine cresp_init_grid
@@ -193,6 +204,12 @@ contains
      do while (associated(cgl))
      cg => cgl%cg
      
+   print *, 'grid_cresp_timestep: dt_cre = ',dt_cre
+   print *, size(cg%u(:, :, :, :),1), size(cg%u(:, :, :, :),2),size(cg%u(:, :, :, :),3),size(cg%u(:, :, :, :),4)
+   print *, lbound(cg%u(:, :, :, :),1), lbound(cg%u(:, :, :, :),2),lbound(cg%u(:, :, :, :),3),lbound(cg%u(:, :, :, :),4)
+   print *, ubound(cg%u(:, :, :, :),1), ubound(cg%u(:, :, :, :),2),ubound(cg%u(:, :, :, :),3),ubound(cg%u(:, :, :, :),4)
+   print *, 'p_lo, p_up =', cg%u(iarr_cre_pl, 9, 26, 1), cg%u(iarr_cre_pu, 9, 26, 1)
+
          do k = cg%ks, cg%ke
            do j = cg%js, cg%je
               do i = cg%is, cg%ie
@@ -210,7 +227,6 @@ contains
          cgl=>cgl%nxt
      enddo
    
-   print *, 'grid_cresp_timestep: dt_cre = ',dt_cre
    
    end subroutine grid_cresp_timestep
    

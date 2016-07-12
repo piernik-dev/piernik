@@ -50,13 +50,14 @@ contains
       use crhelpers,      only: divv_n
       use dataio_pub,     only: warn
       use fluidindex,     only: flind
+      use initcosmicrays,   only: iarr_crs_diff
 
       implicit none
 
       has_cr = (flind%crs%all > 0)
 
       if (has_cr) then
-         call all_cg%reg_var(wcr_n, dim4 = flind%crs%all)
+         call all_cg%reg_var(wcr_n, dim4 = size(iarr_crs_diff))
       else
          call warn("[crdiffusion:init_crdiffusion] No CR species to diffuse")
       endif
@@ -156,9 +157,9 @@ contains
       integer, dimension(ndims)            :: idm, ndm, hdm, ldm
       real                                 :: bb
       real, dimension(ndims)               :: bcomp
-      real, dimension(flind%crs%all)       :: fcrdif
-      real, dimension(ndims,flind%crs%all) :: decr
-      real, dimension(flind%crs%all)       :: dqp, dqm
+      real, dimension(size(iarr_crs_diff)) :: fcrdif
+      real, dimension(ndims,size(iarr_crs_diff)) :: decr
+      real, dimension(size(iarr_crs_diff)) :: dqp, dqm
       type(cg_list_element), pointer       :: cgl
       type(grid_container),  pointer       :: cg
       logical, dimension(ndims)            :: present_not_crdim
@@ -231,13 +232,6 @@ contains
       cgl => leaves%first
       do while (associated(cgl))
          cg => cgl%cg
-
-#ifdef COSM_RAY_ELECTRONS
-      iarr_crs_tmp = iarr_crs
-      iarr_crs = iarr_crs_diff
-!       print *,' iarr_crs = ', iarr_crs
-!       print *, 'iarr_crn = ', iarr_crn
-#endif /* COSM_RAY_ELECTRONS */         
          
          ndm = cg%lhn(:,HI) - idm
          hdm = cg%lhn(:,LO) ; hdm(crdim) = cg%lhn(crdim,HI)
@@ -248,11 +242,7 @@ contains
 
          cgl => cgl%nxt
       enddo
-!             print *,iarr_crs
-#ifdef COSM_RAY_ELECTRONS
-      iarr_crs = iarr_crs_tmp
-#endif /* COSM_RAY_ELECTRONS */
-!       print *,iarr_crs
+
    end subroutine cr_diff
 
 end module crdiffusion
