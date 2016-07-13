@@ -128,8 +128,8 @@ contains
 ! Sources should be hooked to problem_customize_solution with forward argument
 
 #ifdef COSM_RAY_ELECTRONS
-     call cresp_update_grid!!!
-     call cresp_p_cut_diff
+!     call cresp_update_grid!!!
+!     call cresp_p_cut_diff
 #endif /* COSM_RAY_ELECTRONS */
 
       halfstep = .true.
@@ -158,7 +158,9 @@ contains
 #endif /* GRAV */
 #if defined(COSM_RAYS) 
       use all_boundaries,      only: all_fluid_boundaries
-      use initcosmicrays,      only: use_split
+      use initcosmicrays,      only: use_split, iarr_crs_diff
+      use fluidindex,          only: flind
+      use initcrspectrum,      only: ncre
 #if defined(MULTIGRID)
       use multigrid_diffusion, only: multigrid_solve_diff
 #endif /* MULTIGRID */
@@ -171,7 +173,7 @@ contains
 
       logical, intent(in) :: forward  !< If .true. then do X->Y->Z sweeps, if .false. then reverse that order
 
-      integer(kind=4) :: s
+      integer(kind=4) :: s, icrc      ! index of cr component in iarr_crs_diff
 
 #ifdef SHEAR
       call shear_3sweeps
@@ -187,18 +189,24 @@ contains
 #if defined(MULTIGRID)
          call multigrid_solve_diff
          call all_fluid_boundaries
-#endif /* COSM_RAYS && MULTIGRID */
+#endif /* MULTIGRID */
       else
-         if (forward) then
-            do s = xdim, zdim
-               if (.not.skip_sweep(s)) call make_diff_sweep(s, forward)
-            enddo
-         else
-            do s = zdim, xdim, -I_ONE
-               if (.not.skip_sweep(s)) call make_diff_sweep(s, forward)
-            enddo
-         endif
 
+            do icrc=1, flind%crn%all
+               do s = xdim, zdim
+                  if (.not.skip_sweep(s)) call make_diff_sweep(icrc, s)
+               enddo
+            enddoz
+             
+            do icrc= flind%crn%all + 1, flind%crn%all + ncre
+               do s = xdim, zdim
+                  if (.not.skip_sweep(s)) call make_diff_sweep(icrc, s)
+               enddo
+               do s = xdim, zdim
+                  if (.not.skip_sweep(s)) call make_diff_sweep(ncre + icrc, s)
+               enddo
+            enddo
+         
       endif
 #endif /* COSM_RAYS */
 
@@ -210,11 +218,11 @@ contains
       else
          if (forward) then
             do s = xdim, zdim
-               if (.not.skip_sweep(s)) call make_adv_sweep(s, forward)
+!               if (.not.skip_sweep(s)) call make_adv_sweep(s, forward)
             enddo
          else
             do s = zdim, xdim, -I_ONE
-               if (.not.skip_sweep(s)) call make_adv_sweep(s, forward)
+!               if (.not.skip_sweep(s)) call make_adv_sweep(s, forward)
             enddo
          endif
       endif
@@ -275,7 +283,7 @@ contains
 !>
 !! \brief Perform single diffusion sweep in forward or backward direction
 !<
-   subroutine make_diff_sweep(dir, forward)
+   subroutine make_diff_sweep(icrc, dir)
 
       use domain,         only: dom
       use sweeps,         only: sweep
@@ -289,12 +297,11 @@ contains
 
       implicit none
 
-      integer(kind=4), intent(in) :: dir      !< direction, one of xdim, ydim, zdim
-      logical,         intent(in) :: forward  !< if .false. then reverse operation order in the sweep
+      integer(kind=4), intent(in) :: icrc, dir      !< direction, one of xdim, ydim, zdim
 
 #ifdef COSM_RAYS
       if (dom%has_dir(dir)) then
-         if (use_split) call cr_diff(dir)
+         call cr_diff(icrc,dir)
       endif
 #endif /* COSM_RAYS */
 

@@ -48,10 +48,10 @@ contains
    do while (associated(cgl))
      cg => cgl%cg
 
-   print *, 'cresp_update_grid'
-   print *, 'iarr_cre =', iarr_cre
-   print *, size(cg%u(:, :, :, :),1), size(cg%u(:, :, :, :),2),size(cg%u(:, :, :, :),3),size(cg%u(:, :, :, :),4)
-   print *, '1: plo, pup=', cg%u(iarr_cre_pl, 9, 26, 0), cg%u(iarr_cre_pu, 9, 26, 0)
+!   print *, 'cresp_update_grid'
+!   print *, 'iarr_cre =', iarr_cre
+!   print *, size(cg%u(:, :, :, :),1), size(cg%u(:, :, :, :),2),size(cg%u(:, :, :, :),3),size(cg%u(:, :, :, :),4)
+!   print *, '1: plo, pup=', cg%u(iarr_cre_pl, 9, 26, 0), cg%u(iarr_cre_pu, 9, 26, 0)
    
      cresp_arguments = 0.0
         do k = cg%ks, cg%ke
@@ -205,10 +205,10 @@ contains
      cg => cgl%cg
      
    print *, 'grid_cresp_timestep: dt_cre = ',dt_cre
-   print *, size(cg%u(:, :, :, :),1), size(cg%u(:, :, :, :),2),size(cg%u(:, :, :, :),3),size(cg%u(:, :, :, :),4)
-   print *, lbound(cg%u(:, :, :, :),1), lbound(cg%u(:, :, :, :),2),lbound(cg%u(:, :, :, :),3),lbound(cg%u(:, :, :, :),4)
-   print *, ubound(cg%u(:, :, :, :),1), ubound(cg%u(:, :, :, :),2),ubound(cg%u(:, :, :, :),3),ubound(cg%u(:, :, :, :),4)
-   print *, 'p_lo, p_up =', cg%u(iarr_cre_pl, 9, 26, 1), cg%u(iarr_cre_pu, 9, 26, 1)
+!   print *, size(cg%u(:, :, :, :),1), size(cg%u(:, :, :, :),2),size(cg%u(:, :, :, :),3),size(cg%u(:, :, :, :),4)
+!   print *, lbound(cg%u(:, :, :, :),1), lbound(cg%u(:, :, :, :),2),lbound(cg%u(:, :, :, :),3),lbound(cg%u(:, :, :, :),4)
+!   print *, ubound(cg%u(:, :, :, :),1), ubound(cg%u(:, :, :, :),2),ubound(cg%u(:, :, :, :),3),ubound(cg%u(:, :, :, :),4)
+!   print *, 'p_lo, p_up =', cg%u(iarr_cre_pl, 9, 26, 1), cg%u(iarr_cre_pu, 9, 26, 1)
 
          do k = cg%ks, cg%ke
            do j = cg%js, cg%je
