@@ -207,7 +207,7 @@ contains
        fr(imz,i) = ur(idn,i)*ur(imz,i)*ur(imx,i) - b_ccr(xdim,i)*b_ccr(zdim,i)
        fr(ien,i) = (enr + prr(ien,i))*ur(imx,i) - b_ccr(xdim,i)*(sum(ur(imx:imz,i)*b_ccr(xdim:zdim,i)))
        b_ccrf(ydim,i) = b_ccr(ydim,i)*ur(imx,i) - b_ccr(xdim,i)*ur(imy,i)
-       b_ccrf(zdim,i) = b_ccr(zdim,i)*ul(imx,i) - b_ccr(xdim,i)*ur(imz,i)
+       b_ccrf(zdim,i) = b_ccr(zdim,i)*ur(imx,i) - b_ccr(xdim,i)*ur(imz,i)
 
        ! HLLD fluxes
 
@@ -383,13 +383,13 @@ contains
 
                 ! Right intermediate flux Eq. 64
 
-                f(idn,i) = fr(idn,i) + sl*(u_starr(idn) - ur(idn,i))
-                f(imx,i) = fr(imx,i) + sl*(u_starr(imx) - ur(idn,i)*ur(imx,i))
-                f(imy,i) = fr(imy,i) + sl*(u_starr(imy) - ur(idn,i)*ur(imy,i))
-                f(imz,i) = fr(imz,i) + sl*(u_starr(imz) - ur(idn,i)*ur(imz,i))
-                f(ien,i) = fr(ien,i) + sl*(u_starr(ien) - enr)
-                b_cc(ydim,i) = b_ccrf(ydim,i) + sl*(b_starr(ydim) - b_ccr(ydim,i))
-                b_cc(zdim,i) = b_ccrf(zdim,i) + sl*(b_starr(zdim) - b_ccr(zdim,i))
+                f(idn,i) = fr(idn,i) + sr*(u_starr(idn) - ur(idn,i))
+                f(imx,i) = fr(imx,i) + sr*(u_starr(imx) - ur(idn,i)*ur(imx,i))
+                f(imy,i) = fr(imy,i) + sr*(u_starr(imy) - ur(idn,i)*ur(imy,i))
+                f(imz,i) = fr(imz,i) + sr*(u_starr(imz) - ur(idn,i)*ur(imz,i))
+                f(ien,i) = fr(ien,i) + sr*(u_starr(ien) - enr)
+                b_cc(ydim,i) = b_ccrf(ydim,i) + sr*(b_starr(ydim) - b_ccr(ydim,i))
+                b_cc(zdim,i) = b_ccrf(zdim,i) + sr*(b_starr(zdim) - b_ccr(zdim,i))
 
              else ! alfven_l .le. zero .le. alfven_r
                 
@@ -465,11 +465,11 @@ contains
 
                    ! Right Alfven intermediate flux Eq. 65
 
-                   f(idn,i) = fr(idn,i) + alfven_r*u_2star(idn) - (alfven_r - sl)*u_starr(idn) - sr*ur(idn,i)
-                   f(imx,i) = fr(imx,i) + alfven_r*u_2star(imx) - (alfven_r - sl)*u_starr(imx) - sr*ur(idn,i)*ur(imx,i)
-                   f(imy,i) = fr(imy,i) + alfven_r*u_2star(imy) - (alfven_r - sl)*u_starr(imy) - sr*ur(idn,i)*ur(imy,i)
-                   f(imz,i) = fr(imz,i) + alfven_r*u_2star(imz) - (alfven_r - sl)*u_starr(imz) - sr*ur(idn,i)*ur(imz,i)
-                   f(ien,i) = fr(ien,i) + alfven_r*u_2star(ien) - (alfven_r - sl)*u_starr(ien) - sr*enr
+                   f(idn,i) = fr(idn,i) + alfven_r*u_2star(idn) - (alfven_r - sr)*u_starr(idn) - sr*ur(idn,i)
+                   f(imx,i) = fr(imx,i) + alfven_r*u_2star(imx) - (alfven_r - sr)*u_starr(imx) - sr*ur(idn,i)*ur(imx,i)
+                   f(imy,i) = fr(imy,i) + alfven_r*u_2star(imy) - (alfven_r - sr)*u_starr(imy) - sr*ur(idn,i)*ur(imy,i)
+                   f(imz,i) = fr(imz,i) + alfven_r*u_2star(imz) - (alfven_r - sr)*u_starr(imz) - sr*ur(idn,i)*ur(imz,i)
+                   f(ien,i) = fr(ien,i) + alfven_r*u_2star(ien) - (alfven_r - sr)*u_starr(ien) - sr*enr
                    b_cc(ydim,i) = b_ccrf(ydim,i) + alfven_r*b_2star(ydim) - (alfven_r - sr)*b_starr(ydim) - sr*b_ccr(ydim,i)
                    b_cc(zdim,i) = b_ccrf(zdim,i) + alfven_r*b_2star(zdim) - (alfven_r - sr)*b_starr(zdim) - sr*b_ccr(zdim,i)
 
