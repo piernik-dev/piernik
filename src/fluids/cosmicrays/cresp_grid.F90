@@ -59,8 +59,8 @@ contains
               do i = cg%is, cg%ie
                   cresp_arguments(I_ONE:I_TWO*ncre+I_TWO)    = cg%u(iarr_cre, i, j, k)
                  
-                  sptab%ub = emag(cg%b(xdim,i,j,k), cg%b(ydim,i,j,k), cg%b(zdim,i,j,k))/cg%dvol  !!! module works properly for small emag. Should emag be > 1e-4, negative values will appear
-                  sptab%ud = cg%q(qna%ind(divv_n))%point([i,j,k])/cg%dvol
+                  sptab%ub = emag(cg%b(xdim,i,j,k), cg%b(ydim,i,j,k), cg%b(zdim,i,j,k))  !!! module works properly for small emag. Should emag be > 1e-4, negative values will appear
+                  sptab%ud = cg%q(qna%ind(divv_n))%point([i,j,k])
 #ifdef VERBOSE
               print *, 'Output of cosmic ray electrons module for grid cell with coordinates i,j,k:', i, j, k
 #endif /* VERBOSE */
@@ -138,8 +138,8 @@ contains
               do i = cg%is, cg%ie
 
                   cresp_arguments(I_ONE:2*ncre+2)    = cg%u(iarr_cre, i, j, k)
-                  sptab%ub = emag(cg%b(xdim,i,j,k), cg%b(ydim,i,j,k),cg%b(zdim,i,j,k))/cg%dvol
-                  sptab%ud = cg%q(qna%ind(divv_n))%point([i,j,k])/cg%dvol
+                  sptab%ub = emag(cg%b(xdim,i,j,k), cg%b(ydim,i,j,k),cg%b(zdim,i,j,k))
+                  sptab%ud = cg%q(qna%ind(divv_n))%point([i,j,k])
                   
                   f_init = 1/(fpi*clight*(p_lo_init**(I_FOUR))*(((p_up_init/p_lo_init)**(I_FOUR-q_init))-I_ONE)/(I_FOUR-q_init))   !!! amplitude and distribution of electron energy density is inherited after those of nucleons, see crspectrum.pdf, eq. 29
 !                    f_init = 1.0
@@ -217,8 +217,8 @@ contains
 !                print *, cg%u(iarr_cre_pl, i, j, k), cg%u(iarr_cre_pu, i, j, k)
                p_l = cg%u(iarr_cre_pl, i, j, k)
                p_u = cg%u(iarr_cre_pu, i, j, k)
-               sptab%ub = emag(cg%b(xdim,i,j,k), cg%b(ydim,i,j,k), cg%b(zdim,i,j,k))/cg%dvol
-               sptab%ud = cg%q(qna%ind(divv_n))%point([i,j,k])/cg%dvol
+               sptab%ub = emag(cg%b(xdim,i,j,k), cg%b(ydim,i,j,k), cg%b(zdim,i,j,k))
+               sptab%ud = cg%q(qna%ind(divv_n))%point([i,j,k])
                call cresp_timestep_new(dt_cre_tmp, p_l, p_u, sptab)
                dt_cre = 0.1 !min(dt_cre, dt_cre_tmp)
               enddo

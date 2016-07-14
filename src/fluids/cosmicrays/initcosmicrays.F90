@@ -38,7 +38,7 @@ module initcosmicrays
 ! pulled by COSM_RAYS
    use constants, only: cbuff_len
    use initcrspectrum, only: ncre, p_min_fix, p_max_fix, f_init, q_init, q_big, p_lo_init, p_up_init,  & 
-                          cfl_cre, cre_eff, K_cre_e_paral, K_cre_e_perp, K_cre_n_paral, K_cre_n_perp, K_pow_index, &
+                          cfl_cre, cre_eff, K_cre_paral_1, K_cre_perp_1, K_cre_pow, &
                           w, p_fix, expan_order, init_cresp, compute_K
    implicit none
 
@@ -145,6 +145,7 @@ contains
 #endif /* COSM_RAYS_SOURCES */
 #ifdef COSM_RAY_ELECTRONS
 !    use cresp_variables!, only: cre_table, cren, cree
+!      use cresp_crspectrum, only: active_bins
 #endif /* COSM_RAY_ELECTRONS */   
 
       implicit none
@@ -172,8 +173,8 @@ contains
 
       p_lo_init = 1.0e2
       p_up_init = 1.0e3
-      p_min_fix = 1.0e2
-      p_max_fix = 1.0e4
+      p_min_fix = 1.0e1
+      p_max_fix = 1.0e3
       f_init    = 1.0e0
       q_init    = 5.0e0
       q_big     = 10.0e0      
@@ -188,11 +189,9 @@ contains
       K_cre_paral(:) = 0.0
       K_cre_perp(:)  = 0.0
       
-      K_cre_e_paral = 0.0
-      K_cre_n_paral = 0.0
-      K_cre_e_perp  = 0.0
-      K_cre_n_perp  = 0.0
-      K_pow_index   = 0.0
+      K_cre_paral_1 = 0.0
+      K_cre_perp_1  = 0.0
+      K_cre_pow     = 0.0
 
       crn_gpcr_ess(:) = .false.
       crn_gpcr_ess(1) = .true.       ! in most cases protons are the first ingredient of CRs and they are essential
@@ -265,11 +264,9 @@ contains
          rbuff(10)  = p_max_fix
          rbuff(11)  = cfl_cre     !!!
          rbuff(12)  = cre_eff
-         rbuff(13)  = K_cre_e_paral !!!
-         rbuff(14)  = K_cre_n_paral !!!
-         rbuff(15)  = K_cre_e_perp !!!
-         rbuff(16)  = K_cre_n_perp !!!
-         rbuff(17)  = K_pow_index  !!!
+         rbuff(13)  = K_cre_paral_1 !!!
+         rbuff(14)  = K_cre_perp_1 !!!
+         rbuff(15)  = K_cre_pow !!!
          
          
          lbuff(1)   = use_split
@@ -335,11 +332,9 @@ contains
          p_max_fix  = rbuff(10)  !!!
          cfl_cre    = rbuff(11)  !!!
          cre_eff    = rbuff(12)  !!!
-         K_cre_e_paral = rbuff(13) !!!
-         K_cre_n_paral = rbuff(14) !!!
-         K_cre_e_perp  = rbuff(15) !!!
-         K_cre_n_perp  = rbuff(16) !!!
-         K_pow_index   = rbuff(17) !!!
+         K_cre_paral_1 = rbuff(13) !!!
+         K_cre_perp_1  = rbuff(14) !!!
+         K_cre_pow  = rbuff(15) !!!
          
          
          use_split  = lbuff(1)
@@ -390,11 +385,23 @@ contains
 
       if (ncre > 0) then
 #ifdef COSM_RAY_ELECTRONS      
-         K_crs_paral(ncrn+1:ncrn+ncre) = K_cre_e_paral
-         K_crs_paral(ncrn+1+ncre:ncrn+2*ncre) = K_cre_n_paral
+
+!        This is only estimation of the upper limit of CR diffusion coefficients 
+!        necessary for the first computation of CR timestep
+         K_crs_paral(ncrn+1:ncrn+ncre) = K_cre_paral_1 * p_up_init**K_cre_pow
+         K_crs_paral(ncrn+1+ncre:ncrn+2*ncre) = K_cre_paral_1 * p_up_init**K_cre_pow
          
-         K_crs_perp(ncrn+1:ncrn+ncre) = K_cre_e_perp
-         K_crs_perp(ncrn+ncre+1:ncrn+2*ncre) = K_cre_n_perp
+         K_crs_perp(ncrn+1:ncrn+ncre) = K_cre_perp_1 * p_up_init**K_cre_pow
+         K_crs_perp(ncrn+ncre+1:ncrn+2*ncre) = K_cre_perp_1 * p_up_init**K_cre_pow
+
+!         print *, 'init_cosmicrays'
+!         print *, K_crs_paral(ncrn+1:ncrn+ncre) 
+!         print *, K_crs_paral(ncrn+1+ncre:ncrn+2*ncre)
+!         print *, K_crs_perp(ncrn+1:ncrn+ncre)
+!         print *, K_crs_perp(ncrn+ncre+1:ncrn+2*ncre)
+
+
+
 #endif /* COSM_RAY_ELECTRONS */
       endif
 !      print *, 'k paral = ', K_crs_paral !,'size :',  size(K_crs_paral)

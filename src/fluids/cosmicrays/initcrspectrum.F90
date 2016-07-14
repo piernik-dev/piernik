@@ -14,11 +14,9 @@ module initcrspectrum
  real(kind=8)       :: p_up_init ! = 1.3e3
  real(kind=8)       :: cfl_cre   ! = 1.0
  real(kind=8)       :: cre_eff
- real(kind=8)       :: K_cre_e_paral ! = 0
- real(kind=8)       :: K_cre_e_perp ! = 0
- real(kind=8)       :: K_cre_n_paral ! = 0
- real(kind=8)       :: K_cre_n_perp ! = 0
- real(kind=8)       :: K_pow_index  ! = 0 
+ real(kind=8)       :: K_cre_paral_1 ! = 0
+ real(kind=8)       :: K_cre_perp_1 ! = 0
+ real(kind=8)       :: K_cre_pow    ! = 0 
  integer(kind=4)    :: expan_order
  
  real(kind=8),allocatable, dimension(:) :: p_fix
@@ -59,8 +57,8 @@ contains
    integer                           :: i       ! enumerator
  
   namelist /COSMIC_RAY_SPECTRUM/ cfl_cre, p_lo_init, p_up_init, f_init, q_init, q_big, ncre, &
-           &                         p_min_fix, p_max_fix, cre_eff, K_cre_e_paral, K_cre_e_perp, &
-           &                         K_cre_n_paral, K_cre_n_perp, K_pow_index, expan_order
+                                     p_min_fix, p_max_fix, cre_eff, expan_order, &
+                                     K_cre_paral_1, K_cre_perp_1, K_cre_pow 
            
   open(unit=101, file="problem.par", status="unknown")
   read(unit=101, nml=COSMIC_RAY_SPECTRUM)
@@ -78,10 +76,9 @@ contains
    print *,'q_big       = ', q_big
    print *,'cfl_cre     = ', cfl_cre
    print *,'expan_order = ', expan_order
-   print *,'K_cre_e_paral=', K_cre_e_paral
-   print *,'K_cre_e_perp=', K_cre_e_perp
-   print *,'K_cre_n_paral=', K_cre_n_paral
-   print *,'K_cre_n_perp=', K_cre_n_perp
+   print *,'K_cre_paral_1=', K_cre_paral_1
+   print *,'K_cre_perp_1=', K_cre_perp_1
+   print *,'K_cre_pow   =', K_cre_pow
    
 ! arrays initialization and stuff
 

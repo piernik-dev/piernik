@@ -98,8 +98,8 @@ subroutine cresp_update_cell(dt, cresp_arguments, sptab)
     e = cresp_arguments(ncre+1:2*ncre) ! energy of electrons per bin passed by x vector
     p_lo = cresp_arguments(2*ncre+1)   ! low cut momentum 
     p_up = cresp_arguments(2*ncre+2)   ! upper cut momentum
-    u_b = sptab%ub  !cresp_arguments(2*ncre+3)
-    u_d = sptab%ud  !cresp_arguments(2*ncre+4)
+    u_b = 0.0 !sptab%ub  !cresp_arguments(2*ncre+3)   ! FPE FIXME!
+    u_d = 0.5 !sptab%ud  !cresp_arguments(2*ncre+4)   ! FPE FIXME!
 
 ! Update indexes of active bins, fixed edges and active edges at [t]
 ! Detect heating edges (energy upflow) and cooling edges (energy downflow)
@@ -324,8 +324,8 @@ subroutine cresp_update_bin_index(dt, p_lo, p_up, p_lo_next, p_up_next)
       real(kind=8), intent(out) :: p_new
 !       real(kind=8)              :: u_d, u_b
       
-      p_new = p_old*(one + p_rch(dt, p_old)) ! changed from - to + for the sake of intuitiveness in p_rch subroutine
-      
+!      p_new = p_old*(one + p_rch(dt, p_old)) ! changed from - to + for the sake of intuitiveness in p_rch subroutine
+      p_new = p_old
       
    end subroutine p_update
 
@@ -347,8 +347,8 @@ subroutine cresp_update_bin_index(dt, p_lo, p_up, p_lo_next, p_up_next)
 
        call allocate_all_allocatable
       
-      u_b = sptab%ub
-      u_d = sptab%ud
+      u_b = 0.0 !sptab%ub  ! FPE FIXME!
+      u_d = 0.5 !sptab%ud  ! FPE FIXME!
       all_edges = zero
       
       u_b_0 = u_b
@@ -408,6 +408,8 @@ subroutine cresp_update_bin_index(dt, p_lo, p_up, p_lo_next, p_up_next)
       num_active_bins = count(is_active_bin)
       allocate(active_bins(num_active_bins))
       active_bins = pack(all_bins, is_active_bin)
+!      print *, 'cresp_init_state'
+!      print *, 'active_bins =', active_bins
       
        e = fq_to_e(p(0:ncre-1), p(1:ncre), f(0:ncre-1), q(1:ncre), active_bins)
        n = fq_to_n(p(0:ncre-1), p(1:ncre), f(0:ncre-1), q(1:ncre), active_bins)

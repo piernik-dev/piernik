@@ -128,8 +128,8 @@ contains
 ! Sources should be hooked to problem_customize_solution with forward argument
 
 #ifdef COSM_RAY_ELECTRONS
-!     call cresp_update_grid!!!
-!     call cresp_p_cut_diff
+     call cresp_update_grid!!!
+     call cresp_p_cut_diff
 #endif /* COSM_RAY_ELECTRONS */
 
       halfstep = .true.
@@ -159,8 +159,15 @@ contains
 #if defined(COSM_RAYS) 
       use all_boundaries,      only: all_fluid_boundaries
       use initcosmicrays,      only: use_split, iarr_crs_diff
+      use initcosmicrays,      only: ncrn, ncre
+      use initcosmicrays,      only: K_crs_paral, K_crs_perp 
+      use initcosmicrays,      only: K_cre_paral_1, K_cre_perp_1, K_cre_pow
       use fluidindex,          only: flind
-      use initcrspectrum,      only: ncre
+#if defined(COSM_RAY_ELECTRONS) 
+      use initcrspectrum,      only: ncre, p_fix, p_lo_init, p_up_init
+!      use cresp_crspectrum,    only: active_bins
+      use cresp_arrays_handling, only: allocate_with_index
+#endif /* COSM_RAY_ELECTRONS */
 #if defined(MULTIGRID)
       use multigrid_diffusion, only: multigrid_solve_diff
 #endif /* MULTIGRID */
@@ -175,6 +182,9 @@ contains
 
       integer(kind=4) :: s, icrc      ! index of cr component in iarr_crs_diff
 
+      real(kind=8),allocatable, dimension(:) :: p
+      real(kind=8),allocatable, dimension(:) :: p_mid
+
 #ifdef SHEAR
       call shear_3sweeps
 #endif /* SHEAR */
@@ -184,6 +194,35 @@ contains
 #endif /* GRAV */
 
 #if defined(COSM_RAYS) 
+
+#ifdef COSM_RAY_ELECTRONS      
+!        WARNING: Temporary solution. This will work only if p_lo and p_up are fixed
+         call allocate_with_index(p, 0, ncre)
+         call allocate_with_index(p_mid, 1, ncre)
+         p = p_fix
+         p(0)    = p_lo_init
+         p(ncre) = p_up_init
+         p_mid = sqrt(p(0:ncre-1)*p(1:ncre))
+!         print *, p
+!         print *, p_mid
+
+         
+         K_crs_paral(ncrn+1:ncrn+ncre) = K_cre_paral_1  * p_mid**K_cre_pow
+         K_crs_paral(ncrn+1+ncre:ncrn+2*ncre) = K_cre_paral_1 * p_mid**K_cre_pow
+         
+         K_crs_perp(ncrn+1:ncrn+ncre) = K_cre_perp_1 * p_mid**K_cre_pow
+         K_crs_perp(ncrn+ncre+1:ncrn+2*ncre) = K_cre_perp_1 * p_mid**K_cre_pow
+         
+!         print *, 'fluidupdate'
+!         print *, K_crs_paral(ncrn+1:ncrn+ncre) 
+!         print *, K_crs_paral(ncrn+1+ncre:ncrn+2*ncre)
+!         print *, K_crs_perp(ncrn+1:ncrn+ncre)
+!         print *, K_crs_perp(ncrn+ncre+1:ncrn+2*ncre)
+         
+!         stop
+#endif /* COSM_RAY_ELECTRONS */
+
+
 
       if (.not. use_split) then
 #if defined(MULTIGRID)
@@ -196,7 +235,7 @@ contains
                do s = xdim, zdim
                   if (.not.skip_sweep(s)) call make_diff_sweep(icrc, s)
                enddo
-            enddoz
+            enddo
              
             do icrc= flind%crn%all + 1, flind%crn%all + ncre
                do s = xdim, zdim

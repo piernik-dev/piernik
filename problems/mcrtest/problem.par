@@ -30,8 +30,8 @@
  /
 
  $END_CONTROL
-    tend   = 1.0
-    nend   = 10
+    tend   = 10.0
+    nend   = 1000
  /
 
  $OUTPUT_CONTROL
@@ -75,19 +75,17 @@
  $COSMIC_RAY_SPECTRUM
     cre_eff     = 0.01   ! Fraction of total cr01 energy passed to cosmic ray electrons
     cfl_cre     = 0.4    ! CFL coefficient for cosmic ray electrons
-    ncre        = 5      ! number of fixed spectrum bins between
+    ncre        = 3      ! number of fixed spectrum bins between
     expan_order = 3     ! 1/2/3 - Taylor expansion order for computing electron spectrum
-    p_lo_init = 0.2e1   ! initial lower cut momentum[1]
-    p_up_init = 2.0e3   ! initial upper cut momentum[3]
+    p_lo_init = 1.0e1   ! initial lower cut momentum[1]
+    p_up_init = 1.0e4   ! initial upper cut momentum[3]
     f_init    = 1.0e0   ! < initial value of the normalization parameter in cre energy spectrum
     q_init    = 4.2e0   ! < initial value of power law coefficient in cre enrgy spectrum
-    p_min_fix = 1.0e1  ! momentum fixed grid
+    p_min_fix = 1.0e2  ! momentum fixed grid
     p_max_fix = 1.0e3  ! momentum fixed grid
-    K_cre_e_paral = 3.e4
-    K_cre_n_paral = 3.e4
-    K_cre_e_perp  = 3.e2
-    K_cre_n_perp  = 3.e2
-    K_pow_index   = 0.5
+    K_cre_paral_1 = 1.e3
+    K_cre_perp_1  = 1.e1
+    K_cre_pow     = 0.5
  /
 
  $CR_SPECIES
