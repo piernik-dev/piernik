@@ -42,13 +42,14 @@ contains
 
   subroutine fluid_update
 
-    use cg_list,      only: cg_list_element
-    use cg_leaves,    only: leaves
-    use constants,    only: xdim, zdim
-    use domain,       only: dom
-    use global,       only: dt, dtm, t
-    use user_hooks,   only: problem_customize_solution
-    use dataio_pub,   only: halfstep
+    use cg_list,        only: cg_list_element
+    use cg_leaves,      only: leaves
+    use constants,      only: xdim, zdim
+    use domain,         only: dom
+    use all_boundaries, only: all_bnd
+    use global,         only: dt, dtm, t
+    use user_hooks,     only: problem_customize_solution
+    use dataio_pub,     only: halfstep
 
     implicit none
 
@@ -65,6 +66,8 @@ contains
     endif
     t = t + dt
 
+    ! ToDo: check if changes of execution order here (block loop, direction loop, boundary update can change
+    ! cost or allow for reduction of required guardcells
     cgl => leaves%first
     do while (associated(cgl))
 
@@ -74,7 +77,7 @@ contains
        if (associated(problem_customize_solution)) call problem_customize_solution(.true.)
        cgl => cgl%nxt
     enddo
-
+    call all_bnd
 
     t = t + dt
     dtm = dt
@@ -89,7 +92,7 @@ contains
        if (associated(problem_customize_solution)) call problem_customize_solution(.false.)
        cgl => cgl%nxt
     enddo
-
+    call all_bnd
 
     if (first_run) first_run = .false.
 
@@ -101,7 +104,6 @@ contains
 
     use constants,        only: pdims, xdim, zdim, ORTHO1, ORTHO2, LO, HI
     use dataio_pub,       only: die
-    use all_boundaries,   only: all_fluid_boundaries
     use fluidindex,       only: iarr_all_swp, iarr_mag_swp
     use global,           only: h_solver
     use grid_cont,        only: grid_container
@@ -163,8 +165,6 @@ contains
           pb(:,:) = b_cc1d(iarr_mag_swp(ddim,:),:)
        enddo
     enddo
-
-    call all_fluid_boundaries
 
   end subroutine sweep_dsplit
 
