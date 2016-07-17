@@ -414,6 +414,7 @@ contains
   subroutine euler(u,b_cc, dtodx)
 
     use constants,   only: half, xdim, zdim
+    use dataio_pub,  only: die
     use fluidindex,  only: flind
     use fluidtypes,  only: component_fluid
     use hlld,        only: riemann_hlld
@@ -425,13 +426,17 @@ contains
     real,                           intent(in)      :: dtodx
 
     class(component_fluid), pointer                 :: fl
-    real, dimension(xdim:zdim,size(u,2)), target    :: b_ccl, b_ccr, mag_cc
-    real, dimension(xdim:zdim,size(u,2)), target    :: db
-    real, dimension(size(u,1),size(u,2)), target    :: flx, ql, qr, du, ul, ur, u_l, u_r
+    real, dimension(xdim:zdim,size(u,2)), target    :: b_cc_l, b_cc_r, mag_cc, b0
+    real, dimension(xdim:zdim,size(u,2))            :: db, b_ccl, b_ccr
+    real, dimension(size(u,1),size(u,2)), target    :: flx, ql, qr
+    real, dimension(size(u,1),size(u,2))            :: du, ul, ur, u_l, u_r
     real, dimension(:,:), pointer                   :: p_flx, p_bcc, p_bccl, p_bccr, p_ql, p_qr
-    integer                                         :: nx, i !, ii
+    integer                                         :: nx, i
 
     nx  = size(u,2)
+    if (size(b_cc,2) /= nx) call die("[fluidupdate:rk2] size b_cc and u mismatch")
+
+    mag_cc = huge(1.)
 
     du  = calculate_slope_vanleer(u)
     ul  = u - half*du
@@ -441,11 +446,13 @@ contains
     b_ccl = b_cc - half*db
     b_ccr = b_cc + half*db
 
-    mag_cc = b_cc
-
     u_l = ur
     u_r(:,1:nx-1) = ul(:,2:nx)
     u_r(:,nx) = u_r(:,nx-1)
+
+    b_cc_l = b_ccr
+    b_cc_r(:,1:nx-1) = b_ccl(:,2:nx)
+    b_cc_r(:,nx) = b_cc_r(:,nx-1)
 
     ql = utoq(u_l,b_ccl)
     qr = utoq(u_r,b_ccr)
@@ -457,13 +464,24 @@ contains
        p_ql  => ql(fl%beg:fl%end,:)
        p_qr  => qr(fl%beg:fl%end,:)
        p_bcc => mag_cc(xdim:zdim,:)
-       p_bccl => b_ccl(xdim:zdim,:)
-       p_bccr => b_ccr(xdim:zdim,:)
+       if (fl%is_magnetized) then
+          p_bccl => b_cc_l(xdim:zdim,:)
+          p_bccr => b_cc_r(xdim:zdim,:)
+       else ! ignore all magnetic field
+          b0 = 0.
+          p_bccl => b0
+          p_bccr => b0
+       end if
        call riemann_hlld(nx, p_flx, p_ql, p_qr, p_bcc, p_bccl, p_bccr, fl%gam)
     enddo
 
     u(:,2:nx) = u(:,2:nx) + dtodx*(flx(:,1:nx-1) - flx(:,2:nx))
-    u(:,1) = u(:,2) ; u(:,nx) = u(:,nx-1)
+    u(:,1) = u(:,2)
+    u(:,nx) = u(:,nx-1)
+
+    b_cc(:,2:nx) = b_cc(:,2:nx) + dtodx*(mag_cc(:,1:nx-1) - mag_cc(:,2:nx))
+    b_cc(:,1) = b_cc(:,2)
+    b_cc(:,nx) = b_cc(:,nx-1)
 
   end subroutine euler
 
