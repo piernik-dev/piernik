@@ -47,7 +47,7 @@ contains
     use constants,      only: xdim, zdim
     use domain,         only: dom
     use all_boundaries, only: all_bnd
-    use global,         only: dt, dtm, t
+    use global,         only: skip_sweep, dt, dtm, t
     use user_hooks,     only: problem_customize_solution
     use dataio_pub,     only: halfstep
 
@@ -72,7 +72,8 @@ contains
     do while (associated(cgl))
 
        do ddim = xdim, zdim, 1
-          if (dom%has_dir(ddim)) call sweep_dsplit(cgl%cg,dt,ddim)
+          ! Warning: 2.5D MHD may need all directional calls anyway
+          if (.not. skip_sweep(ddim) .and. dom%has_dir(ddim)) call sweep_dsplit(cgl%cg,dt,ddim)
        enddo
        if (associated(problem_customize_solution)) call problem_customize_solution(.true.)
        cgl => cgl%nxt
@@ -87,7 +88,7 @@ contains
     do while (associated(cgl))
 
        do ddim = zdim, xdim, -1
-          if (dom%has_dir(ddim)) call sweep_dsplit(cgl%cg,dt,ddim)
+          if (.not. skip_sweep(ddim) .and. dom%has_dir(ddim)) call sweep_dsplit(cgl%cg,dt,ddim)
        enddo
        if (associated(problem_customize_solution)) call problem_customize_solution(.false.)
        cgl => cgl%nxt
