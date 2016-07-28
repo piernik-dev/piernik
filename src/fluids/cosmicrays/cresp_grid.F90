@@ -234,6 +234,7 @@ contains
      cg => cgl%cg
        sptab%ub = emag(cg%b(xdim,i,j,k), cg%b(ydim,i,j,k), cg%b(zdim,i,j,k))
        sptab%ud = cg%q(qna%ind(divv_n))%point([i,j,k])
+       sptab%ucmb = 0.0
      cgl =>cgl%nxt
     enddo
    end subroutine append_dissipative_terms

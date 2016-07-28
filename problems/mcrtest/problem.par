@@ -1,5 +1,5 @@
  $BASE_DOMAIN
-    n_d = 64, 64, 1
+    n_d = 4, 4, 1
     nb  = 4
     bnd_xl = 'per'
     bnd_xr = 'per'
@@ -83,10 +83,10 @@
     q_init    = 5.0e0   ! < initial value of power law coefficient in cre enrgy spectrum
     p_min_fix = 1.0e1  ! momentum fixed grid
     p_max_fix = 1.0e3  ! momentum fixed grid
-    K_cre_e_paral = 50.0
-    K_cre_n_paral = 20.0
-    K_cre_e_perp  = 0.5
-    K_cre_n_perp  = 0.2
+    K_cre_e_paral = 50000.0  ! maximal value of K
+    K_cre_n_paral = 20000.0  ! maximal value of K
+    K_cre_e_perp  = 50      ! maximal value of K
+    K_cre_n_perp  = 20      ! maximal value of K
     K_pow_index   = 1.05
  /
 

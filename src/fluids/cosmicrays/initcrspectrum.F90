@@ -45,6 +45,8 @@ module initcrspectrum
   
   real, allocatable :: fdif_cre(:,:,:,:)    ! array of diffusion fluxes for p_cut diffusion
   real, allocatable :: fadv_cre(:,:,:,:)    ! array of advection fluxes for p_cut diffusion
+  
+  integer,allocatable, dimension(:) :: cresp_edges
 !----------------------------------------------  
 !  
 contains
@@ -59,7 +61,6 @@ contains
   implicit none
    
    integer                           :: vecdim  ! vector dimension
-   integer,allocatable, dimension(:) :: cresp_edges
 !    real(kind=8)                    :: w
    integer                           :: i       ! enumerator
  
@@ -146,16 +147,10 @@ contains
  integer :: length, i
  real, dimension(length) :: compute_K
  
-!  print *, K0, alpha, alpha_n, length
- 
-!  i = 1
  do i = 1, length+1
-!   compute_K(i) = K0 * (p_fix(i) + (p_fix(i+1) - p_fix(i))*0.5 ) ** (alpha - alpha_n)  ! The values are rising too fast with momentum
-!   compute_K(i) = K0 * (p_fix(i)) ** (alpha - alpha_n)                                 ! The speed of growth is a little lower, but still too high.
-!     compute_K(i) = K0 + p_fix(i-1) ** (alpha - alpha_n)
-    compute_K(i) = K0 + p_fix(i-1) * K0 ** (alpha - alpha_n)
+    compute_K(i)   = K0*(p_min_fix*10.0**(w*dble(cresp_edges(i-1)-1))/p_max_fix) ** (alpha - alpha_n)
  enddo 
  print *, '@compute_K = ', compute_K
-!  return K_out
+
  end function compute_K
 end module initcrspectrum
