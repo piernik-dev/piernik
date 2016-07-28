@@ -805,19 +805,19 @@ contains
             endif
 
             do g = 1, cg_n(p)
-               call h5gcreate_f(cgl_g_id, n_cg_name(sum(cg_n(:p))-cg_n(p)+g), cg_g_id, error) ! create "/cg/cg_%08d"
+               call h5gcreate_f(cgl_g_id, n_cg_name(sum(cg_n(:p))-cg_n(p)+g), cg_g_id, error) ! create "/data/grid_%08d"
 
-               call create_attribute(cg_g_id, cg_lev_aname, [ cg_rl(g) ] )                ! create "/cg/cg_%08d/level"
+               call create_attribute(cg_g_id, cg_lev_aname, [ cg_rl(g) ] )                ! create "/data/grid_%08d/level"
                temp = cg_n_b(g, :)
-               call create_attribute(cg_g_id, cg_size_aname, temp)                        ! create "/cg/cg_%08d/n_b"
-               call create_attribute(cg_g_id, cg_offset_aname, int(cg_off(g, :), kind=4)) ! create "/cg/cg_%08d/off"
+               call create_attribute(cg_g_id, cg_size_aname, temp)                        ! create "/data/grid_%08d/n_b"
+               call create_attribute(cg_g_id, cg_offset_aname, int(cg_off(g, :), kind=4)) ! create "/data/grid_%08d/off"
                if (otype == O_OUT) then
                   temp(:) = dbuf(cg_le, g, :)
-                  call create_attribute(cg_g_id, cg_ledge_aname, temp)  ! create "/cg/cg_%08d/left_edge"
+                  call create_attribute(cg_g_id, cg_ledge_aname, temp)  ! create "/data/grid_%08d/left_edge"
                   temp(:) = dbuf(cg_re, g, :)
-                  call create_attribute(cg_g_id, cg_redge_aname, temp)  ! create "/cg/cg_%08d/right_edge"
+                  call create_attribute(cg_g_id, cg_redge_aname, temp)  ! create "/data/grid_%08d/right_edge"
                   temp(:) = dbuf(cg_dl, g, :)
-                  call create_attribute(cg_g_id, cg_dl_aname, temp)     ! create "/cg/cg_%08d/dl"
+                  call create_attribute(cg_g_id, cg_dl_aname, temp)     ! create "/data/grid_%08d/dl"
                endif
 
                cg_all_n_b(:, sum(cg_n(:p))-cg_n(p)+g) = cg_n_b(g, :)

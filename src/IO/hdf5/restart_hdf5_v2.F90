@@ -142,14 +142,14 @@ contains
 
       if (allocated(qna%lst)) then
          do i = lbound(qna%lst(:), dim=1), ubound(qna%lst(:), dim=1)
-            if (qna%lst(i)%restart_mode /= AT_IGNORE) &                                ! create "/cg/cg_%08d/leaves.qna%lst(i_).name"
+            if (qna%lst(i)%restart_mode /= AT_IGNORE) &  ! create "/data/grid_%08d/qna%lst(i)%name"
                  call create_empty_cg_dataset(cg_g_id, qna%lst(i)%name, int(cg_n_b(g, :), kind=HSIZE_T), Z_avail, O_RES)
          enddo
       endif
 
       if (allocated(wna%lst)) then
          do i = lbound(wna%lst(:), dim=1), ubound(wna%lst(:), dim=1)
-            if (wna%lst(i)%restart_mode /= AT_IGNORE) &                                ! create "/cg/cg_%08d/leaves.wna%lst(i_.name"
+            if (wna%lst(i)%restart_mode /= AT_IGNORE) &  ! create "/data/grid_%08d/wna%lst(i)%name"
                  call create_empty_cg_dataset(cg_g_id, wna%lst(i)%name, int([ wna%lst(i)%dim4, cg_n_b(g, :) ], kind=HSIZE_T), Z_avail, O_RES)
          enddo
       endif
@@ -588,29 +588,29 @@ contains
       call h5gclose_f(doml_g_id, error)
 
       ! Read available cg pieces
-      call h5gopen_f(file_id, data_gname, cgl_g_id, error)         ! open "/cg"
+      call h5gopen_f(file_id, data_gname, cgl_g_id, error)         ! open "/data"
 
       allocate(ibuf(1))
-      call read_attribute(cgl_g_id, cg_cnt_aname, ibuf)          ! open "/cg/cg_count"
+      call read_attribute(cgl_g_id, cg_cnt_aname, ibuf)          ! open "/data/cg_count"
       if (ibuf(1) <= 0) call die("[restart_hdf5_v2:read_restart_hdf5_v2] Empty cg list")
 
       allocate(cg_res(ibuf(1)))
       deallocate(ibuf)
 
       do ia = lbound(cg_res, dim=1), ubound(cg_res, dim=1)
-         call h5gopen_f(cgl_g_id, n_cg_name(ia), cg_g_id, error) ! open "/cg/cg_%08d, ia"
+         call h5gopen_f(cgl_g_id, n_cg_name(ia), cg_g_id, error) ! open "/data/grid_%08d, ia"
 
          allocate(ibuf(1))
-         call read_attribute(cg_g_id, cg_lev_aname, ibuf)        ! open "/cg/cg_%08d/level"
+         call read_attribute(cg_g_id, cg_lev_aname, ibuf)        ! open "/data/grid_%08d/level"
          if (ibuf(1) < base%level%level_id) call die("[restart_hdf5_v2:read_restart_hdf5_v2] Grids coarser than base level are not supported")
          cg_res(ia)%level=ibuf(1)
          deallocate(ibuf)
 
          allocate(ibuf(ndims))
-         call read_attribute(cg_g_id, cg_size_aname, ibuf)       ! open "/cg/cg_%08d/n_b"
+         call read_attribute(cg_g_id, cg_size_aname, ibuf)       ! open "/data/grid_%08d/n_b"
          if (any(ibuf(:)<=0)) call die("[restart_hdf5_v2:read_restart_hdf5_v2] Non-positive cg size detected")
          cg_res(ia)%n_b(:) = ibuf(:)
-         call read_attribute(cg_g_id, cg_offset_aname, ibuf)     ! open "/cg/cg_%08d/off"
+         call read_attribute(cg_g_id, cg_offset_aname, ibuf)     ! open "/data/grid_%08d/off"
          cg_res(ia)%off(:) = ibuf(:)
          deallocate(ibuf)
 
@@ -813,13 +813,13 @@ contains
 
       qr_lst = qna%get_reslst()
       wr_lst = wna%get_reslst()
-      call h5gopen_f(cgl_g_id, n_cg_name(ncg), cg_g_id, error) ! open "/cg/cg_%08d, ncg"
+      call h5gopen_f(cgl_g_id, n_cg_name(ncg), cg_g_id, error) ! open "/data/grid_%08d, ncg"
 
       if (size(qr_lst) > 0) then
          allocate(dims(ndims), off(ndims), cnt(ndims))
          dims(:) = o_size(:)
          do i = lbound(qr_lst, dim=1), ubound(qr_lst, dim=1)
-            call h5dopen_f(cg_g_id, qna%lst(qr_lst(i))%name, dset_id, error) ! open "/cg/cg_%08d/cg.q(qr_lst(i)).name"
+            call h5dopen_f(cg_g_id, qna%lst(qr_lst(i))%name, dset_id, error) ! open "/data/grid_%08d/cg%q(qr_lst(i))%name"
             call h5dget_space_f(dset_id, filespace, error)
             off(:) = restart_off(:)
             cnt(:) = 1
