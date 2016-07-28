@@ -36,7 +36,7 @@ module restart_hdf5_v1
    implicit none
 
    private
-   public :: read_restart_hdf5_v1, write_restart_hdf5_v1, read_arr_from_restart
+   public :: read_restart_hdf5_v1, write_restart_hdf5_v1
 
 contains
 
