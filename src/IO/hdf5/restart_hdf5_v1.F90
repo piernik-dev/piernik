@@ -142,7 +142,7 @@ contains
 
       use constants,        only: cwdlen
       use hdf5,             only: HID_T, H5P_FILE_ACCESS_F, H5F_ACC_RDWR_F, h5open_f, h5close_f, h5fopen_f, h5fclose_f, h5pcreate_f, h5pclose_f, h5pset_fapl_mpio_f
-      !, H5P_DATASET_XFER_F, h5pset_preserve_f
+
       use mpi,              only: MPI_INFO_NULL
       use mpisetup,         only: comm
       use named_array_list, only: qna, wna
@@ -174,20 +174,9 @@ contains
          enddo
       endif
 
-!     \todo writing axes using collective I/O takes order of magnitude more than
-!        dumping U and B arrays altogether, since XYZ-axis is not even read
-!        back during restart I'm commenting this out. Rewrite or punt.
-!      call write_axes_to_restart(file_id)
-
       ! End of parallel writing (close the HDF5 file stuff)
       call h5pclose_f(plist_id, error)
 
-      ! dump cg
-      !call h5pcreate_f(H5P_DATASET_XFER_F, plist_id, error)
-      !call h5pset_preserve_f(plist_id, .true., error)
-      !call write_grid_containter(cg, file_id, plist_id)
-      !call h5pclose_f(plist_id, error)
-      !
       call h5fclose_f(file_id, error)
       call h5close_f(error)
 
