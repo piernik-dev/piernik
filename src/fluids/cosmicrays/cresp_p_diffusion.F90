@@ -4,7 +4,7 @@
 !    logical, dimension(:)             :: mask_flux_pos, mask_flux_neg   ! arrays of masks determining direction of momenta diffusion
    use constants, only: I_ONE, ndims
    use fluidindex,       only: flind
-   use initcrspectrum,   only: flux_cre  ! WARNING - flux_cre does not 'remember' diffusive fluxes in all directions, only the current one
+   use initcrspectrum,   only: fdif_cre  ! WARNING - flux_cre does not 'remember' diffusive fluxes in all directions, only the current one
    implicit none
 !    logical         :: p_cut_computed
 ! --------------
@@ -67,44 +67,38 @@ contains
 
       cgl => cgl%nxt  
       enddo
-!       ldm        = cg%ijkse(:,LO) ;      ldm(credim) = cg%lhn(credim,LO) + dom%D_(credim)      ! ldm =           1 + D_
-!       hdm        = cg%ijkse(:,HI) ;      hdm(credim) = cg%lhn(credim,HI)                      ! hdm = cg%n_ + idm - D_
 
-!       print *, one_posnegzero(0.000250)
-!       print *, one_posnegzero(-0.000005)
-!       print *, one_posnegzero(0.0)
-
-! WARNING - wrong indexing and whole array flux_cre is equal zero
-      do k = ldm(zdim), hdm(zdim)       ; kl = k-1 ; kh = k+1
-         do j = ldm(ydim), hdm(ydim)    ; jl = j-1 ; jh = j+1
-            do i = ldm(xdim), hdm(xdim) ; il = i-1 ; ih = i+1
-! p_lo update - value of p_lo will migrate accordingly to the sign of flux (1,-1 or 0), computed in one_posnegzero
+! WARNING - wrong indexing and whole array fdif_cre is equal zero
+      do k = cg%ks, cg%ke               !; kl = k-1 ; kh = k+1
+         do j = cg%js, cg%je            !; jl = j-1 ; jh = j+1
+            do i = cg%is, cg%ie         !; il = i-1 ; ih = i+1
+! p_lo update - value of p_lo will migrate accordingly to the sign of flux (1,-1 or 0), computed in get_direction
 
               if (current_direction(xdim)) then
-                p_lo_new(i,j,k) = min(cg%u(iarr_cre_pl,i + one_posnegzero(flux_cre(i_lo_dom(i,j,k),i,j,k)),j,k) &
+                p_lo_new(i,j,k) = min(cg%u(iarr_cre_pl,i + get_direction(fdif_cre(i_lo_dom(i,j,k),i,j,k)),j,k) &
                   , cg%u(iarr_cre_pl,i,j,k) )
               endif
               if (current_direction(ydim)) then
-                p_lo_new(i,j,k) = min(cg%u(iarr_cre_pl,i ,j + one_posnegzero(flux_cre(i_lo_dom(i,j,k),i,j,k)), k) &
+                p_lo_new(i,j,k) = min(cg%u(iarr_cre_pl,i ,j + get_direction(fdif_cre(i_lo_dom(i,j,k),i,j,k)), k) &
                   , cg%u(iarr_cre_pl,i,j,k) )
               endif
               if (current_direction(zdim)) then
-                p_lo_new(i,j,k) = min(cg%u(iarr_cre_pl,i ,j, k + one_posnegzero(flux_cre(i_lo_dom(i,j,k),i,j,k))) &
+                p_lo_new(i,j,k) = min(cg%u(iarr_cre_pl,i ,j, k + get_direction(fdif_cre(i_lo_dom(i,j,k),i,j,k))) &
                   , cg%u(iarr_cre_pl,i,j,k) )
               endif
 
-! p_up update - value of p_up will migrate accordingly to the sign of flux (1,-1 or 0), computed in one_posnegzero           
+! p_up update - value of p_up will migrate accordingly to the sign of flux (1,-1 or 0), computed in get_direction           
 
               if (current_direction(xdim)) then
-                 p_up_new(i,j,k) = min(cg%u(iarr_cre_pl,i + one_posnegzero(flux_cre(i_up_dom(i,j,k),i,j,k)),j,k) &
+                 p_up_new(i,j,k) = min(cg%u(iarr_cre_pl,i + get_direction(fdif_cre(i_up_dom(i,j,k),i,j,k)),j,k) &
                   , cg%u(iarr_cre_pl,i,j,k) )
               endif
               if (current_direction(ydim)) then
-                p_up_new(i,j,k) = min(cg%u(iarr_cre_pl,i ,j + one_posnegzero(flux_cre(i_up_dom(i,j,k),i,j,k)), k) &
+                p_up_new(i,j,k) = min(cg%u(iarr_cre_pl,i ,j + get_direction(fdif_cre(i_up_dom(i,j,k),i,j,k)), k) &
                   , cg%u(iarr_cre_pl,i,j,k) )
               endif
               if (current_direction(zdim)) then
-                p_up_new(i,j,k) = min(cg%u(iarr_cre_pl,i ,j, k + one_posnegzero(flux_cre(i_up_dom(i,j,k),i,j,k))) &
+                p_up_new(i,j,k) = min(cg%u(iarr_cre_pl,i ,j, k + get_direction(fdif_cre(i_up_dom(i,j,k),i,j,k))) &
                   , cg%u(iarr_cre_pl,i,j,k) )
               endif
               
@@ -149,18 +143,18 @@ contains
   end function i_up_detect
   
 !------------------------------------------  
-  function one_posnegzero(value)
+  function get_direction(value)
 ! Function computes and returns 0 / 1 / -1 depending on the sign of total cre energy, 
 ! minimalizing usage of if conditions.
    use constants,    only: one
    implicit none
    real(kind=8)      :: value
-   integer(kind = 4) :: one_posnegzero
+   integer(kind = 4) :: get_direction
     
-    one_posnegzero = int(sign(one,value))
-    if (value .eq. 0.0) one_posnegzero = 0
+    get_direction = int(sign(one,value))
+    if (value .eq. 0.0) get_direction = 0
   
    return
-  end function one_posnegzero
+  end function get_direction
 
 end module cresp_p_diffusion

@@ -289,15 +289,17 @@ contains
          
 #ifdef COSM_RAY_ELECTRONS
 !          TODO - to be implemented later
-!          K_cre_paral(1:ncre) = compute_K(K_cre_n_paral, K_pow_index, 0.1, ncre)
-! !          print *, 'K = ',K_cre_paral(1:ncre)
-!          K_cre_paral(ncre:2*ncre) = compute_K(K_cre_e_paral, K_pow_index, 0.0, ncre)
+         K_cre_paral(1:ncre) = compute_K(K_cre_n_paral, K_pow_index, 0.1, ncre)
+         K_cre_paral(ncre:2*ncre) = compute_K(K_cre_e_paral, K_pow_index, 0.0, ncre)
+         K_cre_paral(2*ncre+1:2*ncre+2) = 0.0  ! K for cutoff momenta must always remain zero
+!          print *, 'K = ',K_cre_paral(1:ncre)
 !          
-!          K_cre_perp(1:ncre) = compute_K(K_cre_n_perp, K_pow_index, 0.1, ncre)
-!          K_cre_paral(ncre:2*ncre) = compute_K(K_cre_e_perp, K_pow_index, 0.0, ncre)
+         K_cre_perp(1:ncre) = compute_K(K_cre_n_perp, K_pow_index, 0.1, ncre)
+         K_cre_perp(ncre:2*ncre) = compute_K(K_cre_e_perp, K_pow_index, 0.0, ncre)
+         K_cre_perp(2*ncre+1:2*ncre+2) = 0.0   ! K for cutoff momenta always remain zero
 
 #endif /* COSM_RAY_ELECTRONS */         
-
+!  pause
          if (ncre > 0) then
             rbuff(ne+1       :ne+  ncre) = gamma_cre  (1:ncre)
             rbuff(ne+1+  ncre:ne+2*ncre) = K_cre_paral(1:ncre)  ! deprecated
@@ -555,7 +557,7 @@ contains
    subroutine cleanup_cosmicrays
 
       use diagnostics, only: my_deallocate
-      use initcrspectrum, only: flux_cre
+      use initcrspectrum, only: fdif_cre,fadv_cre
 
       implicit none
  
@@ -564,7 +566,8 @@ contains
       call my_deallocate(iarr_crs)
 #ifdef COSM_RAY_ELECTRONS
       call my_deallocate(iarr_crs_diff)
-      call my_deallocate(flux_cre)
+      call my_deallocate(fdif_cre)
+      call my_deallocate(fadv_cre)
 #endif /* COSM_RAY_ELECTRONS */
 !       call my_deallocate(gamma_crs)
 !       call my_deallocate(K_crs_paral)
