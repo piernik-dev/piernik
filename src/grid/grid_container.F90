@@ -149,6 +149,7 @@ module grid_cont
       integer(kind=4), dimension(ndims, LO:HI)  :: ijkseb        !< [[isb, jsb, ksb], [ieb, jeb, keb]]
       integer(kind=4), dimension(ndims, LO:HI)  :: lh1           !< [[il1, jl1, kl1], [ih1, jh1, kh1]]
       integer(kind=4), dimension(ndims, LO:HI)  :: lhn           !< [[iln, jln, kln], [ihn, jhn, khn]]
+      integer(kind=4), dimension(ndims, LO:HI)  :: lh_out        !< ijkse expanded at the external boundaries to include external guardcells for contexts where AT_OUT_B is used
       integer(kind=8), dimension(ndims)         :: h_cor1        !< offsets of the corner opposite to the one defined by off(:) + 1, a shortcut to be compared with dom%n_d(:) DEPRECATED will be equivalent to ijkse(:, HI)+1
       integer(kind=4), dimension(ndims)         :: n_            !< number of %grid cells in one block in x-, y- and z-directions (n_b(:) + 2 * nb)
       integer(kind=8), dimension(ndims, LO:HI) :: my_se          !< own segment. my_se(:,LO) = 0; my_se(:,HI) = dom%n_d(:) - 1 would cover entire domain on a base level
@@ -360,6 +361,14 @@ contains
          this%fbnd(:, LO)  = dom%edge(:, LO)
          this%fbnd(:, HI)  = dom%edge(:, HI)
       endwhere
+
+      ! Compute indices that include external boundary cells
+      ! Strangely, we ignore periodicity here, following what we had in restart_hdf5_v1::set_dims_for_restart
+
+      this%lh_out = this%ijkse
+      where (dom%has_dir(:) .and. (my_se(:, LO) == off(:)                 )) this%lh_out(:, LO) = this%lh_out(:, LO) - dom%nb
+      where (dom%has_dir(:) .and. (my_se(:, HI) == off(:) + n_d(:) - I_ONE)) this%lh_out(:, HI) = this%lh_out(:, HI) + dom%nb
+      !> \todo make sure the above works correctly with refinements
 
       if (any(this%dl .equals. 0.)) call die("[grid_container:init_gc] found cell size equal to 0.")
 
