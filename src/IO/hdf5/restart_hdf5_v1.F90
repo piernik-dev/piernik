@@ -138,7 +138,6 @@ contains
 
       use constants,        only: cwdlen
       use hdf5,             only: HID_T, H5P_FILE_ACCESS_F, H5F_ACC_RDWR_F, h5open_f, h5close_f, h5fopen_f, h5fclose_f, h5pcreate_f, h5pclose_f, h5pset_fapl_mpio_f
-
       use mpi,              only: MPI_INFO_NULL
       use mpisetup,         only: comm
       use named_array_list, only: qna, wna
