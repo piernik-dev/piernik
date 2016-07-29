@@ -75,15 +75,12 @@ contains
 
       select case (area_type)
          case (AT_OUT_B)                                   ! physical domain with outer boundaries
-            where (cg%my_se(:, LO) == 0 .and. dom%has_dir(:))
-               lleft(:)  = lleft(:)  - dom%nb
-               chnk(:)   = chnk(:)   + dom%nb
-            endwhere
-            where (cg%h_cor1(:) == dom%n_d(:) .and. dom%has_dir(:)) !! \warning this should be checked against level%n_d
-               lright(:) = lright(:) + dom%nb
-               chnk(:)   = chnk(:)   + dom%nb
-            endwhere
+            lleft(:)  = cg%lh_out(:, LO)
+            lright(:) = cg%lh_out(:, HI)
+            where (lleft(:)  /= cg%ijkse(:, LO)) chnk(:) = chnk(:) + dom%nb
+            where (lright(:) /= cg%ijkse(:, HI)) chnk(:) = chnk(:) + dom%nb
             where (loffs(:)>0) loffs(:) = loffs(:) + dom%nb ! the block adjacent to the left boundary are dom%nb cells wider than cg%n_b(:)
+            ! I'm afraid that the above statement won't work well on domains with non-0 offset
          case (AT_NO_B)                                    ! only physical domain without any boundaries
             ! Nothing special
          case (AT_USER)                                    ! user defined domain (with no reference to simulations domain)
