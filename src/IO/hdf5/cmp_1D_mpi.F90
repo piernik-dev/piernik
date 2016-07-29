@@ -69,18 +69,14 @@ contains
 
       real, dimension(:), intent(in)  :: arr
 
-      real, dimension(:), allocatable :: aux
-      integer(kind=4), parameter      :: tag = 10
-
-      allocate(aux(size(arr(:))))
+      real, dimension(size(arr)) :: aux
+      integer(kind=4), parameter :: tag = 10
 
       if (proc /= LAST) call MPI_Send(arr(:), size(arr(:), kind=4), MPI_DOUBLE_PRECISION, proc+I_ONE, tag, comm, mpi_err)
       if (slave) then
          call MPI_Recv(aux(:), size(aux(:), kind=4), MPI_DOUBLE_PRECISION, proc-I_ONE, tag, comm, MPI_STATUS_IGNORE, mpi_err)
          if (any(aux(:).notequals.arr(:))) call die("[restart_hdf5:compare_real_array1D] Inconsistency found.")
       endif
-
-      deallocate(aux)
 
    end subroutine compare_real_array1D
 
@@ -97,18 +93,14 @@ contains
 
       integer(kind=4), dimension(:), intent(in)  :: arr
 
-      integer(kind=4), dimension(:), allocatable :: aux
-      integer(kind=4), parameter                 :: tag = 10
-
-      allocate(aux(size(arr(:))))
+      integer(kind=4), dimension(size(arr)) :: aux
+      integer(kind=4), parameter            :: tag = 10
 
       if (proc /= LAST) call MPI_Send(arr(:), size(arr(:), kind=4), MPI_INTEGER, proc+I_ONE, tag, comm, mpi_err)
       if (slave) then
          call MPI_Recv(aux(:), size(aux(:), kind=4), MPI_INTEGER, proc-I_ONE, tag, comm, MPI_STATUS_IGNORE, mpi_err)
          if (any(aux(:) /= arr(:))) call die("[restart_hdf5:compare_int_array1D] Inconsistency found.")
       endif
-
-      deallocate(aux)
 
    end subroutine compare_int_array1D
 
