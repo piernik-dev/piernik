@@ -260,13 +260,13 @@ contains
                   cg => get_nth_cg(cg_desc%cg_src_n(ncg))
                   if (size(qr_lst) > 0) then
                      do i = lbound(qr_lst, dim=1), ubound(qr_lst, dim=1)
-                        pa3d => cg%q(qr_lst(i))%span(cg%ijkse)
+                        pa3d => cg%q(qr_lst(i))%span(cg%ijkse) !< \todo use set_dims_for_restart
                         call MPI_Send(pa3d(:,:,:), size(pa3d(:,:,:)), MPI_DOUBLE_PRECISION, FIRST, ncg + cg_desc%tot_cg_n*i, comm, mpi_err)
                      enddo
                   endif
                   if (size(wr_lst) > 0) then
                      do i = lbound(wr_lst, dim=1), ubound(wr_lst, dim=1)
-                        pa4d => cg%w(wr_lst(i))%span(cg%ijkse)
+                        pa4d => cg%w(wr_lst(i))%span(cg%ijkse) !< \todo use set_dims_for_restart
                         call MPI_Send(pa4d(:,:,:,:), size(pa4d(:,:,:,:)), MPI_DOUBLE_PRECISION, FIRST, ncg + cg_desc%tot_cg_n*(size(qr_lst)+i), comm, mpi_err)
                      enddo
                   endif
