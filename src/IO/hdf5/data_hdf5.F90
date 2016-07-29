@@ -583,23 +583,23 @@ contains
 
    end subroutine get_data_from_cg
 
-   subroutine create_empty_cg_datasets_in_output(cg_g_id, cg_n_b, Z_avail, g)
+   subroutine create_empty_cg_datasets_in_output(cg_g_id, cg_n_b, Z_avail)
 
       use common_hdf5, only: create_empty_cg_dataset, hdf_vars, O_OUT
       use hdf5,        only: HID_T, HSIZE_T
 
       implicit none
 
-      integer(HID_T),                           intent(in) :: cg_g_id
-      integer(kind=4), dimension(:,:), pointer, intent(in) :: cg_n_b
-      logical(kind=4),                          intent(in) :: Z_avail
-      integer,                                  intent(in) :: g
+      integer(HID_T),                intent(in) :: cg_g_id
+      integer(kind=4), dimension(:), intent(in) :: cg_n_b
+      logical(kind=4),               intent(in) :: Z_avail
 
-      integer                                              :: i
+      integer :: i
 
       do i = lbound(hdf_vars,1), ubound(hdf_vars,1)
-         call create_empty_cg_dataset(cg_g_id, gdf_translate(hdf_vars(i)), int(cg_n_b(g, :), kind=HSIZE_T), Z_avail, O_OUT)
+         call create_empty_cg_dataset(cg_g_id, gdf_translate(hdf_vars(i)), int(cg_n_b, kind=HSIZE_T), Z_avail, O_OUT)
       enddo
+
    end subroutine create_empty_cg_datasets_in_output
 
    subroutine h5_write_to_single_file_v1(fname)

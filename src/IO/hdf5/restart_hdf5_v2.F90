@@ -124,7 +124,7 @@ contains
 
 !> \brief create empty datasets for each cg to store restart data
 
-   subroutine create_empty_cg_datasets_in_restart(cg_g_id, cg_n_b, Z_avail, g)
+   subroutine create_empty_cg_datasets_in_restart(cg_g_id, cg_n_b, Z_avail)
 
       use common_hdf5,      only: create_empty_cg_dataset, O_RES
       use constants,        only: AT_IGNORE
@@ -133,24 +133,23 @@ contains
 
       implicit none
 
-      integer(HID_T),                           intent(in) :: cg_g_id
-      integer(kind=4), dimension(:,:), pointer, intent(in) :: cg_n_b
-      logical(kind=4),                          intent(in) :: Z_avail
-      integer,                                  intent(in) :: g
+      integer(HID_T),                intent(in) :: cg_g_id
+      integer(kind=4), dimension(:), intent(in) :: cg_n_b
+      logical(kind=4),               intent(in) :: Z_avail
 
-      integer                                              :: i
+      integer :: i
 
       if (allocated(qna%lst)) then
          do i = lbound(qna%lst(:), dim=1), ubound(qna%lst(:), dim=1)
             if (qna%lst(i)%restart_mode /= AT_IGNORE) &  ! create "/data/grid_%08d/qna%lst(i)%name"
-                 call create_empty_cg_dataset(cg_g_id, qna%lst(i)%name, int(cg_n_b(g, :), kind=HSIZE_T), Z_avail, O_RES)
+                 call create_empty_cg_dataset(cg_g_id, qna%lst(i)%name, int(cg_n_b, kind=HSIZE_T), Z_avail, O_RES)
          enddo
       endif
 
       if (allocated(wna%lst)) then
          do i = lbound(wna%lst(:), dim=1), ubound(wna%lst(:), dim=1)
             if (wna%lst(i)%restart_mode /= AT_IGNORE) &  ! create "/data/grid_%08d/wna%lst(i)%name"
-                 call create_empty_cg_dataset(cg_g_id, wna%lst(i)%name, int([ wna%lst(i)%dim4, cg_n_b(g, :) ], kind=HSIZE_T), Z_avail, O_RES)
+                 call create_empty_cg_dataset(cg_g_id, wna%lst(i)%name, int([ wna%lst(i)%dim4, cg_n_b], kind=HSIZE_T), Z_avail, O_RES)
          enddo
       endif
 
