@@ -124,7 +124,7 @@ contains
 
 !> \brief create empty datasets for each cg to store restart data
 
-   subroutine create_empty_cg_datasets_in_restart(cg_g_id, cg_n_b, Z_avail)
+   subroutine create_empty_cg_datasets_in_restart(cg_g_id, cg_n_b, cg_n_o, Z_avail)
 
       use common_hdf5,      only: create_empty_cg_dataset, O_RES
       use constants,        only: AT_IGNORE
@@ -135,6 +135,7 @@ contains
 
       integer(HID_T),                intent(in) :: cg_g_id
       integer(kind=4), dimension(:), intent(in) :: cg_n_b
+      integer(kind=4), dimension(:), intent(in) :: cg_n_o
       logical(kind=4),               intent(in) :: Z_avail
 
       integer :: i

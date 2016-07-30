@@ -678,11 +678,12 @@ contains
          !>
          !! Function responsible for creating empty datasets, called by master
          !<
-         subroutine create_empty_cg_datasets(cgl_g_id, cg_n_b, Z_avail)
+         subroutine create_empty_cg_datasets(cgl_g_id, cg_n_b, cg_n_o, Z_avail)
             use hdf5, only: HID_T
             implicit none
             integer(HID_T),                intent(in) :: cgl_g_id
             integer(kind=4), dimension(:), intent(in) :: cg_n_b
+            integer(kind=4), dimension(:), intent(in) :: cg_n_o
             logical(kind=4),               intent(in) :: Z_avail
          end subroutine create_empty_cg_datasets
 
@@ -836,7 +837,7 @@ contains
                if (any(cg_off(g, :) > 2.**31)) &
                   & call die("[common_hdf5:write_to_hdf5_v2] large offsets require better treatment")
 
-               call create_empty_cg_datasets(cg_g_id, cg_n_b(g, :), Z_avail) !!!!!
+               call create_empty_cg_datasets(cg_g_id, cg_n_b(g, :), cg_n_o(g, :), Z_avail) !!!!!
 
                call h5gclose_f(cg_g_id, error)
             enddo

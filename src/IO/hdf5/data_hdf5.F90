@@ -583,7 +583,7 @@ contains
 
    end subroutine get_data_from_cg
 
-   subroutine create_empty_cg_datasets_in_output(cg_g_id, cg_n_b, Z_avail)
+   subroutine create_empty_cg_datasets_in_output(cg_g_id, cg_n_b, cg_n_o, Z_avail)
 
       use common_hdf5, only: create_empty_cg_dataset, hdf_vars, O_OUT
       use hdf5,        only: HID_T, HSIZE_T
@@ -592,6 +592,7 @@ contains
 
       integer(HID_T),                intent(in) :: cg_g_id
       integer(kind=4), dimension(:), intent(in) :: cg_n_b
+      integer(kind=4), dimension(:), intent(in) :: cg_n_o
       logical(kind=4),               intent(in) :: Z_avail
 
       integer :: i
@@ -599,6 +600,8 @@ contains
       do i = lbound(hdf_vars,1), ubound(hdf_vars,1)
          call create_empty_cg_dataset(cg_g_id, gdf_translate(hdf_vars(i)), int(cg_n_b, kind=HSIZE_T), Z_avail, O_OUT)
       enddo
+
+      if (.false.) i = size(cg_n_o) ! suppress compiler warning
 
    end subroutine create_empty_cg_datasets_in_output
 
