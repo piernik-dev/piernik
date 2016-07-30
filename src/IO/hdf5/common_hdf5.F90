@@ -656,7 +656,7 @@ contains
    subroutine write_to_hdf5_v2(filename, otype, create_empty_cg_datasets, write_cg_to_hdf5)
 
       use cg_leaves,    only: leaves
-      use constants,    only: cwdlen, dsetnamelen, xdim, zdim, ndims, I_ONE, I_TWO, I_THREE, INT4, LO, HI, &
+      use constants,    only: cwdlen, dsetnamelen, xdim, zdim, ndims, I_ONE, I_TWO, I_THREE, I_FOUR, INT4, LO, HI, &
          &                    GEO_XYZ, GEO_RPZ
       use dataio_pub,   only: die, nproc_io, can_i_write, domain_dump, msg
       use domain,       only: dom
@@ -711,6 +711,7 @@ contains
       integer(kind=4),  dimension(:,:), pointer     :: cg_all_n_b       !< sizes of all cg
       integer(kind=4),  dimension(:),   pointer     :: cg_rl            !< list of refinement levels from all cgs/procs
       integer(kind=4),  dimension(:,:), pointer     :: cg_n_b           !< list of n_b from all cgs/procs
+      integer(kind=4),  dimension(:,:), pointer     :: cg_n_o           !< list of grid dimnsions with external guardcells from all cgs/procs
       integer(kind=8),  dimension(:,:), pointer     :: cg_off           !< list of offsets from all cgs/procs
 
       !>
@@ -793,14 +794,18 @@ contains
             allocate(cg_rl(cg_n(p)), cg_n_b(cg_n(p), ndims), cg_off(cg_n(p), ndims))
             nullify(dbuf)
             if (otype == O_OUT) allocate(dbuf(cg_le:cg_dl, cg_n(p), ndims))
+            nullify(cg_n_o)
+            if (otype == O_RES) allocate(cg_n_o(cg_n(p), ndims))
             if (p == FIRST) then
-               call collect_cg_data(cg_rl, cg_n_b, cg_off, dbuf, otype)
+               call collect_cg_data(cg_rl, cg_n_b, cg_n_o, cg_off, dbuf, otype)
             else
                call MPI_Recv(cg_rl,  size(cg_rl),  MPI_INTEGER,  p, tag,         comm, MPI_STATUS_IGNORE, mpi_err)
                call MPI_Recv(cg_n_b, size(cg_n_b), MPI_INTEGER,  p, tag+I_ONE,   comm, MPI_STATUS_IGNORE, mpi_err)
                call MPI_Recv(cg_off, size(cg_off), MPI_INTEGER8, p, tag+I_TWO,   comm, MPI_STATUS_IGNORE, mpi_err)
                if (otype == O_OUT) &
-                  & call MPI_Recv(dbuf,   size(dbuf) ,  MPI_REAL8,    p, tag+I_THREE, comm, MPI_STATUS_IGNORE, mpi_err)
+                  & call MPI_Recv(dbuf,   size(dbuf),   MPI_REAL8,    p, tag+I_THREE, comm, MPI_STATUS_IGNORE, mpi_err)
+               if (otype == O_RES) &
+                  & call MPI_Recv(cg_n_o, size(cg_n_o), MPI_INTEGER,  p, tag+I_FOUR,  comm, MPI_STATUS_IGNORE, mpi_err)
             endif
 
             do g = 1, cg_n(p)
@@ -838,6 +843,7 @@ contains
 
             deallocate(cg_rl, cg_n_b, cg_off)
             if (associated(dbuf)) deallocate(dbuf)
+            if (associated(cg_n_o)) deallocate(cg_n_o)
          enddo
          rd%grid_dimensions = cg_all_n_b
 
@@ -879,13 +885,17 @@ contains
          allocate(cg_rl(leaves%cnt), cg_n_b(leaves%cnt, ndims), cg_off(leaves%cnt, ndims))
          nullify(dbuf)
          if (otype == O_OUT) allocate(dbuf(cg_le:cg_dl, leaves%cnt, ndims))
-         call collect_cg_data(cg_rl, cg_n_b, cg_off, dbuf, otype)
+         nullify(cg_n_o)
+         if (otype == O_RES) allocate(cg_n_o(leaves%cnt, ndims))
+         call collect_cg_data(cg_rl, cg_n_b, cg_n_o, cg_off, dbuf, otype)
          call MPI_Send(cg_rl,  size(cg_rl),  MPI_INTEGER,  FIRST, tag,         comm, mpi_err)
          call MPI_Send(cg_n_b, size(cg_n_b), MPI_INTEGER,  FIRST, tag+I_ONE,   comm, mpi_err)
          call MPI_Send(cg_off, size(cg_off), MPI_INTEGER8, FIRST, tag+I_TWO,   comm, mpi_err)
          if (otype == O_OUT) call MPI_Send(dbuf,   size(dbuf),   MPI_REAL8,    FIRST, tag+I_THREE, comm, mpi_err)
+         if (otype == O_RES) call MPI_Send(cg_n_o, size(cg_n_o), MPI_INTEGER,  FIRST, tag+I_FOUR,  comm, mpi_err)
          deallocate(cg_rl, cg_n_b, cg_off)
          if (associated(dbuf)) deallocate(dbuf)
+         if (associated(cg_n_o)) deallocate(cg_n_o)
       endif
 
       call piernik_MPI_Bcast(cg_all_n_b)
@@ -913,17 +923,18 @@ contains
 
    end subroutine write_to_hdf5_v2
 
-   subroutine collect_cg_data(cg_rl, cg_n_b, cg_off, dbuf, otype)
+   subroutine collect_cg_data(cg_rl, cg_n_b, cg_n_o, cg_off, dbuf, otype)
 
       use cg_level_base,      only: base
       use cg_level_connected, only: cg_level_connected_T
       use cg_list,            only: cg_list_element
-      use constants,          only: LO, HI
+      use constants,          only: LO, HI, I_ONE
 
       implicit none
 
       integer(kind=4), dimension(:),     pointer, intent(inout) :: cg_rl            !< list of refinement levels from all cgs/procs
       integer(kind=4), dimension(:,:),   pointer, intent(inout) :: cg_n_b           !< list of n_b from all cgs/procs
+      integer(kind=4), dimension(:,:),   pointer, intent(inout) :: cg_n_o           !< list of grid dimnsions with external guardcells from all cgs/procs
       integer(kind=8), dimension(:,:),   pointer, intent(inout) :: cg_off           !< list of offsets from all cgs/procs
       real(kind=8),    dimension(:,:,:), pointer, intent(inout) :: dbuf
       integer(kind=4),                            intent(in)    :: otype            !< Output type (restart, data)
@@ -945,6 +956,7 @@ contains
                dbuf(cg_re, g, :)  = cgl%cg%fbnd(:, HI)
                dbuf(cg_dl, g, :)  = cgl%cg%dl
             endif
+            if (otype == O_RES) cg_n_o(g, :) = cgl%cg%lh_out(:, HI) - cgl%cg%lh_out(:, LO) + I_ONE
             g = g + 1
             cgl => cgl%nxt
          enddo
