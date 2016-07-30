@@ -127,7 +127,8 @@ contains
    subroutine create_empty_cg_datasets_in_restart(cg_g_id, cg_n_b, cg_n_o, Z_avail)
 
       use common_hdf5,      only: create_empty_cg_dataset, O_RES
-      use constants,        only: AT_IGNORE
+      use constants,        only: AT_IGNORE, AT_OUT_B, I_ONE
+      use dataio_pub,       only: die
       use hdf5,             only: HID_T, HSIZE_T
       use named_array_list, only: qna, wna
 
@@ -139,20 +140,37 @@ contains
       logical(kind=4),               intent(in) :: Z_avail
 
       integer :: i
+      integer(HSIZE_T), dimension(:), allocatable :: d_size
 
+      if (size(cg_n_b) /= size(cg_n_o)) call die("[restart_hdf5_v2:create_empty_cg_datasets_in_restart] size(cg_n_b) /= size(cg_n_o)")
+
+      allocate(d_size(size(cg_n_b)))
       if (allocated(qna%lst)) then
          do i = lbound(qna%lst(:), dim=1), ubound(qna%lst(:), dim=1)
+            if (qna%lst(i)%restart_mode == AT_OUT_B) then
+               d_size = int(cg_n_o, kind=HSIZE_T)
+            else
+               d_size = int(cg_n_b, kind=HSIZE_T)
+            endif
             if (qna%lst(i)%restart_mode /= AT_IGNORE) &  ! create "/data/grid_%08d/qna%lst(i)%name"
                  call create_empty_cg_dataset(cg_g_id, qna%lst(i)%name, int(cg_n_b, kind=HSIZE_T), Z_avail, O_RES)
          enddo
       endif
+      deallocate(d_size)
 
+      allocate(d_size(size(cg_n_b)+I_ONE))
       if (allocated(wna%lst)) then
          do i = lbound(wna%lst(:), dim=1), ubound(wna%lst(:), dim=1)
+            if (wna%lst(i)%restart_mode == AT_OUT_B) then
+               d_size = int([ wna%lst(i)%dim4, cg_n_o ], kind=HSIZE_T)
+            else
+               d_size = int([ wna%lst(i)%dim4, cg_n_b ], kind=HSIZE_T)
+            endif
             if (wna%lst(i)%restart_mode /= AT_IGNORE) &  ! create "/data/grid_%08d/wna%lst(i)%name"
-                 call create_empty_cg_dataset(cg_g_id, wna%lst(i)%name, int([ wna%lst(i)%dim4, cg_n_b], kind=HSIZE_T), Z_avail, O_RES)
+                 call create_empty_cg_dataset(cg_g_id, wna%lst(i)%name, int([ wna%lst(i)%dim4, cg_n_b ], kind=HSIZE_T), Z_avail, O_RES)
          enddo
       endif
+      deallocate(d_size)
 
    end subroutine create_empty_cg_datasets_in_restart
 
