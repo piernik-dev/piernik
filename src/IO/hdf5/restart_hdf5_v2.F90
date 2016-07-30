@@ -153,7 +153,7 @@ contains
                d_size = int(cg_n_b, kind=HSIZE_T)
             endif
             if (qna%lst(i)%restart_mode /= AT_IGNORE) &  ! create "/data/grid_%08d/qna%lst(i)%name"
-                 call create_empty_cg_dataset(cg_g_id, qna%lst(i)%name, int(cg_n_b, kind=HSIZE_T), Z_avail, O_RES)
+                 call create_empty_cg_dataset(cg_g_id, qna%lst(i)%name, d_size, Z_avail, O_RES)
          enddo
       endif
       deallocate(d_size)
@@ -167,7 +167,7 @@ contains
                d_size = int([ wna%lst(i)%dim4, cg_n_b ], kind=HSIZE_T)
             endif
             if (wna%lst(i)%restart_mode /= AT_IGNORE) &  ! create "/data/grid_%08d/wna%lst(i)%name"
-                 call create_empty_cg_dataset(cg_g_id, wna%lst(i)%name, int([ wna%lst(i)%dim4, cg_n_b ], kind=HSIZE_T), Z_avail, O_RES)
+                 call create_empty_cg_dataset(cg_g_id, wna%lst(i)%name, d_size, Z_avail, O_RES)
          enddo
       endif
       deallocate(d_size)
@@ -211,6 +211,7 @@ contains
       character(len=dsetnamelen), dimension(:), allocatable :: dsets
       real, target, dimension(0,0,0)                        :: null_r3d
       real, target, dimension(0,0,0,0)                      :: null_r4d
+      integer(kind=4), dimension(ndims)                     :: n_b
 
       qr_lst = qna%get_reslst()
       wr_lst = wna%get_reslst()
@@ -242,10 +243,11 @@ contains
                   do i = lbound(qr_lst, dim=1), ubound(qr_lst, dim=1)
                      if (cg_desc%cg_src_p(ncg) == proc) then
                         cg => get_nth_cg(cg_desc%cg_src_n(ncg))
-                        pa3d => cg%q(qr_lst(i))%span(cg%ijkse) !< \todo use set_dims_for_restart
+                        pa3d => cg%q(qr_lst(i))%span(pick_area(cg, qna%lst(qr_lst(i))%restart_mode))
                         dims(:) = cg%n_b
                      else
-                        allocate(pa3d(cg_all_n_b(xdim, ncg), cg_all_n_b(ydim, ncg), cg_all_n_b(zdim, ncg)))
+                        n_b = pick_size(ncg, qna%lst(qr_lst(i))%restart_mode)
+                        allocate(pa3d(n_b(xdim), n_b(ydim), n_b(zdim)))
                         call MPI_Recv(pa3d(:,:,:), size(pa3d(:,:,:)), MPI_DOUBLE_PRECISION, cg_desc%cg_src_p(ncg), ncg + cg_desc%tot_cg_n*i, comm, MPI_STATUS_IGNORE, mpi_err)
                         dims(:) = shape(pa3d)
                      endif
@@ -260,10 +262,11 @@ contains
                   do i = lbound(wr_lst, dim=1), ubound(wr_lst, dim=1)
                      if (cg_desc%cg_src_p(ncg) == proc) then
                         cg => get_nth_cg(cg_desc%cg_src_n(ncg))
-                        pa4d => cg%w(wr_lst(i))%span(cg%ijkse) !< \todo use set_dims_for_restart
+                        pa4d => cg%w(wr_lst(i))%span(pick_area(cg, wna%lst(wr_lst(i))%restart_mode))
                         dims(:) = [ wna%lst(wr_lst(i))%dim4, cg%n_b ]
                      else
-                        allocate(pa4d(wna%lst(wr_lst(i))%dim4, cg_all_n_b(xdim, ncg), cg_all_n_b(ydim, ncg), cg_all_n_b(zdim, ncg)))
+                        n_b = pick_size(ncg, wna%lst(wr_lst(i))%restart_mode)
+                        allocate(pa4d(wna%lst(wr_lst(i))%dim4, n_b(xdim), n_b(ydim), n_b(zdim)))
                         call MPI_Recv(pa4d(:,:,:,:), size(pa4d(:,:,:,:)), MPI_DOUBLE_PRECISION, cg_desc%cg_src_p(ncg), &
                            ncg + cg_desc%tot_cg_n*(size(qr_lst)+i), comm, MPI_STATUS_IGNORE, mpi_err)
                         dims(:) = shape(pa4d)
@@ -279,13 +282,13 @@ contains
                   cg => get_nth_cg(cg_desc%cg_src_n(ncg))
                   if (size(qr_lst) > 0) then
                      do i = lbound(qr_lst, dim=1), ubound(qr_lst, dim=1)
-                        pa3d => cg%q(qr_lst(i))%span(cg%ijkse) !< \todo use set_dims_for_restart
+                        pa3d => cg%q(qr_lst(i))%span(pick_area(cg, qna%lst(qr_lst(i))%restart_mode))
                         call MPI_Send(pa3d(:,:,:), size(pa3d(:,:,:)), MPI_DOUBLE_PRECISION, FIRST, ncg + cg_desc%tot_cg_n*i, comm, mpi_err)
                      enddo
                   endif
                   if (size(wr_lst) > 0) then
                      do i = lbound(wr_lst, dim=1), ubound(wr_lst, dim=1)
-                        pa4d => cg%w(wr_lst(i))%span(cg%ijkse) !< \todo use set_dims_for_restart
+                        pa4d => cg%w(wr_lst(i))%span(pick_area(cg, wna%lst(wr_lst(i))%restart_mode))
                         call MPI_Send(pa4d(:,:,:,:), size(pa4d(:,:,:,:)), MPI_DOUBLE_PRECISION, FIRST, ncg + cg_desc%tot_cg_n*(size(qr_lst)+i), comm, mpi_err)
                      enddo
                   endif
@@ -308,8 +311,8 @@ contains
                   dims(:) = cg%n_b
                   do i = lbound(qr_lst, dim=1), ubound(qr_lst, dim=1)
                      ic = ic + 1
-                     pa3d => cg%q(qr_lst(i))%span(cg%ijkse) !< \todo use set_dims_for_restart
-                     dims(:) = cg%n_b
+                     pa3d => cg%q(qr_lst(i))%span(pick_area(cg, qna%lst(qr_lst(i))%restart_mode))
+                     dims(:) = pick_dims(cg, qna%lst(qr_lst(i))%restart_mode)
                      call h5dwrite_f(cg_desc%dset_id(ncg, ic), H5T_NATIVE_DOUBLE, pa3d, dims, error, xfer_prp = cg_desc%xfer_prp)
                   enddo
                   deallocate(dims)
@@ -318,8 +321,8 @@ contains
                   allocate(dims(rank4))
                   do i = lbound(wr_lst, dim=1), ubound(wr_lst, dim=1)
                      ic = ic + 1
-                     pa4d => cg%w(wr_lst(i))%span(cg%ijkse) !< \todo use set_dims_for_restart
-                     dims(:) = [ wna%lst(wr_lst(i))%dim4, cg%n_b ]
+                     pa4d => cg%w(wr_lst(i))%span(pick_area(cg, wna%lst(wr_lst(i))%restart_mode))
+                     dims(:) = [ wna%lst(wr_lst(i))%dim4, pick_dims(cg, qna%lst(qr_lst(i))%restart_mode) ]
                      call h5dwrite_f(cg_desc%dset_id(ncg, ic), H5T_NATIVE_DOUBLE, pa4d, dims, error, xfer_prp = cg_desc%xfer_prp)
                   enddo
                   deallocate(dims)
@@ -340,7 +343,7 @@ contains
 
                   do i = lbound(qr_lst, dim=1), ubound(qr_lst, dim=1)
                      ic = ic + 1
-                     pa3d => null_r3d !< \todo use set_dims_for_restart
+                     pa3d => null_r3d
                      dims(:) = 0
                      call h5dwrite_f(cg_desc%dset_id(1, ic), H5T_NATIVE_DOUBLE, pa3d, dims, error, &
                         xfer_prp = cg_desc%xfer_prp, file_space_id = filespace_id, mem_space_id = memspace_id)
@@ -362,7 +365,7 @@ contains
                      call h5screate_simple_f(rank4, dims, memspace_id, error)
                      call h5sselect_none_f(memspace_id, error)   ! empty memoryscape
 
-                     pa4d => null_r4d !< \todo use set_dims_for_restart
+                     pa4d => null_r4d
                      call h5dwrite_f(cg_desc%dset_id(1, ic), H5T_NATIVE_DOUBLE, pa4d, dims, error, &
                         xfer_prp = cg_desc%xfer_prp, file_space_id = filespace_id, mem_space_id = memspace_id)
                      call h5sclose_f(memspace_id, error)
@@ -381,6 +384,78 @@ contains
       ! clean up
       call cg_desc%clean()
       deallocate(qr_lst, wr_lst, dsets)
+
+   contains
+
+      function pick_area(cg, mode) result(ijkse)
+
+         use constants,  only: AT_OUT_B, AT_NO_B, AT_USER, ndims, LO, HI
+         use dataio_pub, only: die
+
+         implicit none
+
+         type(grid_container), pointer, intent(in) :: cg
+         integer(kind=4),               intent(in) :: mode
+
+         integer(kind=4), dimension(ndims, LO:HI)  :: ijkse
+
+         select case (mode)
+            case (AT_OUT_B)
+               ijkse = cg%lh_out
+            case (AT_NO_B)
+               ijkse = cg%ijkse
+            case (AT_USER)
+               call die("[restart_hdf5_v2:write_cg_to_restart:pick_area] AT_USER not implemented")
+            case default
+               call die("[restart_hdf5_v2:write_cg_to_restart:pick_area] Non-recognized area_type.")
+         end select
+         return
+
+      end function pick_area
+
+      function pick_dims(cg, mode) result(n_b)
+
+         use constants,  only: ndims, LO, HI
+
+         implicit none
+
+         type(grid_container), pointer, intent(in) :: cg
+         integer(kind=4),               intent(in) :: mode
+
+         integer(kind=4), dimension(ndims, LO:HI)  :: ijkse
+         integer(kind=4), dimension(ndims) :: n_b
+
+         ijkse = pick_area(cg, mode)
+         n_b = ijkse(:,HI) - ijkse(:,LO) + I_ONE
+         return
+
+      end function pick_dims
+
+      function pick_size(ncg, mode) result(n_b)
+
+         use constants,  only: AT_OUT_B, AT_NO_B, AT_USER, ndims
+         use dataio_pub, only: die
+
+         implicit none
+
+         integer,         intent(in) :: ncg
+         integer(kind=4), intent(in) :: mode
+
+         integer(kind=4), dimension(ndims) :: n_b
+
+         select case (mode)
+            case (AT_OUT_B)
+               n_b = cg_all_n_b(:, ncg)
+            case (AT_NO_B)
+               n_b = cg_all_n_o(:, ncg)
+            case (AT_USER)
+               call die("[restart_hdf5_v2:write_cg_to_restart:pick_size] AT_USER not implemented")
+            case default
+               call die("[restart_hdf5_v2:write_cg_to_restart:pick_size] Non-recognized area_type.")
+         end select
+         return
+
+     end function pick_size
 
    end subroutine write_cg_to_restart
 
