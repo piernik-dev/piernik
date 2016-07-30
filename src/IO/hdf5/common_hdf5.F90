@@ -690,12 +690,13 @@ contains
          !>
          !! Function that performs actual I/O, called by all
          !<
-         subroutine write_cg_to_hdf5(cgl_g_id, cg_n, cg_all_n_b)
+         subroutine write_cg_to_hdf5(cgl_g_id, cg_n, cg_all_n_b, cg_all_n_o)
             use hdf5, only: HID_T
             implicit none
             integer(HID_T),                           intent(in) :: cgl_g_id
             integer(kind=4), dimension(:),   pointer, intent(in) :: cg_n
             integer(kind=4), dimension(:,:), pointer, intent(in) :: cg_all_n_b
+            integer(kind=4), dimension(:,:), pointer, intent(in) :: cg_all_n_o
          end subroutine write_cg_to_hdf5
       end interface
 
@@ -710,6 +711,7 @@ contains
       integer, parameter                            :: tag = I_ONE
       integer(kind=4),  dimension(:),   pointer     :: cg_n             !< offset for cg group numbering
       integer(kind=4),  dimension(:,:), pointer     :: cg_all_n_b       !< sizes of all cg
+      integer(kind=4),  dimension(:,:), pointer     :: cg_all_n_o       !< sizes of all cg, expanded by external boundaries
       integer(kind=4),  dimension(:),   pointer     :: cg_rl            !< list of refinement levels from all cgs/procs
       integer(kind=4),  dimension(:,:), pointer     :: cg_n_b           !< list of n_b from all cgs/procs
       integer(kind=4),  dimension(:,:), pointer     :: cg_n_o           !< list of grid dimnsions with external guardcells from all cgs/procs
@@ -734,7 +736,7 @@ contains
       allocate(cg_n(FIRST:LAST))
       call MPI_Allgather(leaves%cnt, I_ONE, MPI_INTEGER, cg_n, I_ONE, MPI_INTEGER, comm, mpi_err)
       cg_cnt = sum(cg_n(:))
-      allocate(cg_all_n_b(ndims, cg_cnt))
+      allocate(cg_all_n_b(ndims, cg_cnt), cg_all_n_o(ndims, cg_cnt))
 
       if (master) then
          call rd%init(cg_cnt)
@@ -826,6 +828,7 @@ contains
                endif
 
                cg_all_n_b(:, sum(cg_n(:p))-cg_n(p)+g) = cg_n_b(g, :)
+               if (associated(cg_n_o)) cg_all_n_o(:, sum(cg_n(:p))-cg_n(p)+g) = cg_n_o(g, :)
                if (otype == O_OUT) then
                   indx = int(sum(cg_n(:p))-cg_n(p)+g, kind=4)
                   rd%grid_level(indx) = cg_rl(g)
@@ -900,6 +903,7 @@ contains
       endif
 
       call piernik_MPI_Bcast(cg_all_n_b)
+      call piernik_MPI_Bcast(cg_all_n_o)
       ! Reopen the HDF5 file for parallel write
       call h5open_f(error)
       if (can_i_write) then
@@ -911,7 +915,7 @@ contains
          call h5pclose_f(plist_id, error)
       endif
 
-      call write_cg_to_hdf5(cgl_g_id, cg_n, cg_all_n_b) !!!!!
+      call write_cg_to_hdf5(cgl_g_id, cg_n, cg_all_n_b, cg_all_n_o) !!!!!
 
       if (can_i_write) then
          call h5gclose_f(cgl_g_id, error)
@@ -920,7 +924,7 @@ contains
 
       call h5close_f(error)            ! Close HDF5 stuff
 
-      deallocate(cg_n, cg_all_n_b)
+      deallocate(cg_n, cg_all_n_b, cg_all_n_o)
 
    end subroutine write_to_hdf5_v2
 

@@ -176,7 +176,7 @@ contains
 
 !> \brief Write all grid containers to the file
 
-   subroutine write_cg_to_restart(cgl_g_id, cg_n, cg_all_n_b)
+   subroutine write_cg_to_restart(cgl_g_id, cg_n, cg_all_n_b, cg_all_n_o)
 
       use cg_leaves,        only: leaves
       use cg_list,          only: cg_list_element
@@ -194,6 +194,7 @@ contains
       integer(HID_T),                           intent(in)  :: cgl_g_id    !< cg group identifier
       integer(kind=4), dimension(:),   pointer, intent(in)  :: cg_n        !< offset for cg group numbering
       integer(kind=4), dimension(:,:), pointer, intent(in)  :: cg_all_n_b  !< all cg sizes
+      integer(kind=4), dimension(:,:), pointer, intent(in)  :: cg_all_n_o  !< all cg sizes, expanded by external boundaries
 
       integer(HID_T)                                        :: filespace_id, memspace_id
       integer(kind=4)                                       :: error
