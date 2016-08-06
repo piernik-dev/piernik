@@ -110,6 +110,8 @@ contains
       new_lev%off = c2f_o(this%level%off)
       where (dom%has_dir(:)) new_lev%n_d(:) = this%level%n_d(:) * refinement_factor
 
+      call new_lev%l%init(this%level%l%id+I_ONE, this%level%l%n_d*refinement_factor, c2f_o(this%level%l%off))
+
       !! make sure that vertical_prep will be called where necessary
       this%level%ord_prolong_set = INVALID
       write(msg, '(a,i3)')"level ",new_lev%level_id

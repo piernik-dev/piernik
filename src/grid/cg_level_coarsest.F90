@@ -81,6 +81,9 @@ contains
          call die(msg)
       endif
       where (dom%has_dir(:)) new_lev%n_d(:) = this%level%n_d(:) / refinement_factor
+
+      call new_lev%l%init(this%level%l%id-I_ONE, this%level%l%n_d/refinement_factor, f2c_o(this%level%l%off))
+
       if (master .and. any(new_lev%n_d(:)*refinement_factor /= this%level%n_d(:) .and. dom%has_dir(:))) then
          write(msg, '(a,3f10.1,a,i3)')"[cg_level_coarsest:add_coarser] Fractional number of domain cells: ", this%level%n_d(:)/real(refinement_factor), " at level ",new_lev%level_id
          call die(msg)

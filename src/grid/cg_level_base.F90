@@ -93,6 +93,9 @@ contains
          this%level%off(:) = 0
       endwhere
 
+      allocate(this%level%l)
+      call this%level%l%init(base_level_id, int(n_d, kind=8), dom%off)
+
       base_level => this%level
       call all_lists%register(this%level, "Base level")
 

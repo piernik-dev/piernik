@@ -96,6 +96,7 @@ contains
       if (allocated(this%omega_cr))     deallocate(this%omega_cr)
       if (allocated(this%nshift))       deallocate(this%nshift)
       if (allocated(this%local_omega))  deallocate(this%local_omega)
+      deallocate(this%l)
 
    end subroutine cleanup
 

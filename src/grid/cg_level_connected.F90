@@ -91,6 +91,7 @@ contains
       this%need_vb_update = .true.
       this%recently_changed = .false. ! this level was just created, but no grids were added yet, so no update is required.
       this%dot%is_blocky = .false.
+      allocate(this%l)
 
    end subroutine init_level
 
