@@ -262,14 +262,16 @@ contains
 !! Things that are related to communication with other grid containers or global properties are set up in cg_level::init_all_new_cg.
 !<
 
-   subroutine init_gc(this, n_d, off, my_se, grid_id, level_id)
+   subroutine init_gc(this, n_d, off, my_se, grid_id, level_id, l)
 
-      use constants,    only: PIERNIK_INIT_DOMAIN, xdim, ydim, zdim, ndims, big_float, LO, HI, I_ONE, I_TWO, BND_MPI, BND_COR, GEO_XYZ, GEO_RPZ, dpi
-      use dataio_pub,   only: die, warn, code_progress
-      use domain,       only: dom
-      use func,         only: operator(.equals.)
-      use grid_helpers, only: f2c
-      use ordering,     only: SFC_order
+      use constants,        only: PIERNIK_INIT_DOMAIN, xdim, ydim, zdim, ndims, big_float, &
+           &                      LO, HI, I_ONE, I_TWO, BND_MPI, BND_COR, GEO_XYZ, GEO_RPZ, dpi
+      use dataio_pub,       only: die, warn, code_progress
+      use domain,           only: dom
+      use func,             only: operator(.equals.)
+      use grid_helpers,     only: f2c
+      use level_essentials, only: level_T
+      use ordering,         only: SFC_order
 
       implicit none
 
@@ -280,6 +282,7 @@ contains
       integer(kind=8), dimension(:,:), intent(in) :: my_se    !< my segment
       integer,                         intent(in) :: grid_id  !< ID which should be unique across level
       integer(kind=4),                 intent(in) :: level_id !< which level this grid belongs to
+      class(level_T),                  intent(in) :: l        !< level essential data
 
       integer :: i
       integer(kind=8), dimension(ndims, LO:HI) :: rn
