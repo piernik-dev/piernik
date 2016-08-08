@@ -52,8 +52,9 @@ contains
 
    subroutine init(this, id, n_d, off)
 
-      use constants, only: ndims
-      use domain,    only: dom
+      use constants,  only: ndims
+      use dataio_pub, only: msg, printinfo
+      use domain,     only: dom
 
       implicit none
 
@@ -70,6 +71,9 @@ contains
          this%n_d(:) = 1
          this%off(:) = 0
       endwhere
+
+      write(msg, '(a,i4,2(a,3i8),a)')"[level_essentials] Initializing level", this%id, ", size=[", this%n_d, "], offset=[", this%off, "]"
+      call printinfo(msg, .false.)
 
    end subroutine init
 
