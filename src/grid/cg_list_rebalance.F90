@@ -303,7 +303,7 @@ contains
             call this%add
             cglepa(i)%p => this%last
             cgl => cglepa(i)%p
-            call this%last%cg%init_gc(this%n_d, this%l%off, se, n_gid, this%level_id, this%l) ! we cannot pass "this" as an argument because of circular dependencies
+            call this%last%cg%init_gc(this%n_d, se, n_gid, this%level_id, this%l) ! we cannot pass "this" as an argument because of circular dependencies
             allocate(cglepa(i)%tbuf(totfld, cgl%cg%n_(xdim), cgl%cg%n_(ydim), cgl%cg%n_(zdim)))
             do p = lbound(cg_extptrs%ext, dim=1, kind=4), ubound(cg_extptrs%ext, dim=1, kind=4)
                if (associated(cg_extptrs%ext(p)%init))  call cg_extptrs%ext(p)%init(this%last%cg)

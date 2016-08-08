@@ -262,7 +262,7 @@ contains
 !! Things that are related to communication with other grid containers or global properties are set up in cg_level::init_all_new_cg.
 !<
 
-   subroutine init_gc(this, n_d, off, my_se, grid_id, level_id, l)
+   subroutine init_gc(this, n_d, my_se, grid_id, level_id, l)
 
       use constants,        only: PIERNIK_INIT_DOMAIN, xdim, ydim, zdim, ndims, big_float, &
            &                      LO, HI, I_ONE, I_TWO, BND_MPI, BND_COR, GEO_XYZ, GEO_RPZ, dpi
@@ -278,7 +278,6 @@ contains
       class(grid_container), target,   intent(inout) :: this  ! intent(out) would silently clear everything, that was already set
                                                               ! (also the fields in types derived from grid_container)
       integer(kind=8), dimension(:),   intent(in) :: n_d      !< max resolution of my level
-      integer(kind=8), dimension(:),   intent(in) :: off      !< offset of my level
       integer(kind=8), dimension(:,:), intent(in) :: my_se    !< my segment
       integer,                         intent(in) :: grid_id  !< ID which should be unique across level
       integer(kind=4),                 intent(in) :: level_id !< which level this grid belongs to
@@ -289,21 +288,21 @@ contains
 
       if (code_progress < PIERNIK_INIT_DOMAIN) call die("[grid_container:init_gc] MPI not initialized.")
 
-      this%level_off  = off
+      this%level_off  = l%off
       this%membership = 1
       this%grid_id    = grid_id
       this%my_se(:,:) = my_se(:, :)
       this%h_cor1(:)  = this%my_se(:, HI) + I_ONE
       this%n_b(:)     = int(this%my_se(:, HI) - this%my_se(:, LO) + I_ONE, 4) ! Block 'physical' grid sizes
       this%level_id   = level_id
-      this%SFC_id     = SFC_order(this%my_se(:, LO) - off)
+      this%SFC_id     = SFC_order(this%my_se(:, LO) - l%off)
 
       if (any(this%n_b(:) <= 0)) call die("[grid_container:init_gc] Mixed positive and non-positive grid sizes")
 
       ! Inherit the boundaries from the domain, then set MPI or SHEAR boundaries where applicable
       this%bnd(:,:) = dom%bnd(:,:)
-      where (my_se(:, LO)   /= off(:)         ) this%bnd(:, LO) = BND_MPI
-      where (this%h_cor1(:) /= off(:) + n_d(:)) this%bnd(:, HI) = BND_MPI
+      where (my_se(:, LO)   /= l%off(:)         ) this%bnd(:, LO) = BND_MPI
+      where (this%h_cor1(:) /= l%off(:) + n_d(:)) this%bnd(:, HI) = BND_MPI
       ! For periodic boundaries do not set BND_MPI when local domain spans through the whole computational domain in given direction.
       where (dom%periodic(:) .and. this%h_cor1(:)    /= n_d(:)) this%bnd(:, LO) = BND_MPI
       where (dom%periodic(:) .and. this%my_se(:, LO) /= 0)      this%bnd(:, HI) = BND_MPI
@@ -311,8 +310,8 @@ contains
       this%ext_bnd(:, :) = .false.
       do i = xdim, zdim
          if (dom%has_dir(i) .and. .not. dom%periodic(i)) then
-            this%ext_bnd(i, LO) = (my_se(i, LO)   == off(i))
-            this%ext_bnd(i, HI) = (this%h_cor1(i) == off(i) + n_d(i)) !! \warning not true on AMR
+            this%ext_bnd(i, LO) = (my_se(i, LO)   == l%off(i))
+            this%ext_bnd(i, HI) = (this%h_cor1(i) == l%off(i) + n_d(i)) !! \warning not true on AMR
          endif
       enddo
 
@@ -347,8 +346,8 @@ contains
          this%lhn(:,LO)    = this%ijkse(:, LO) - dom%nb
          this%lhn(:,HI)    = this%ijkse(:, HI) + dom%nb
          this%dl(:)        = dom%L_(:) / n_d(:)
-         this%fbnd(:, LO)  = dom%edge(:, LO) + this%dl(:) * (this%my_se(:, LO) - off(:))
-         this%fbnd(:, HI)  = dom%edge(:, LO) + this%dl(:) * (this%h_cor1(:) - off(:))
+         this%fbnd(:, LO)  = dom%edge(:, LO) + this%dl(:) * (this%my_se(:, LO) - l%off(:))
+         this%fbnd(:, HI)  = dom%edge(:, LO) + this%dl(:) * (this%h_cor1(:) - l%off(:))
       elsewhere
          this%n_(:)        = 1
          this%ijkse(:, LO) = 0
