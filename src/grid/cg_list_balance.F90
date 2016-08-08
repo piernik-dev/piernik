@@ -53,7 +53,6 @@ module cg_list_balance
    type, extends(cg_list_bnd_T), abstract :: cg_list_balance_T
       type(patch_list_T)                :: plist            !< list of patches that exist on the current level
       type(dot_T)                       :: dot              !< depiction of topology
-      integer(kind=8), dimension(ndims) :: off              !< offset of the level
       logical                           :: recently_changed !< .true. when anything was added to or deleted from this level
       type(level_T), pointer            :: l                !< single place to store off, n_d and id
    contains
@@ -121,7 +120,7 @@ contains
       integer(kind=4) :: ls, s, i, p
       integer(kind=4), dimension(FIRST:LAST+1) :: from
 
-      call this%dot%update_SFC_id_range(this%off)
+      call this%dot%update_SFC_id_range(this%l%off)
       if (.not. this%dot%is_strict_SFC) then
 !!$         ! call reshuffle
 !!$         call die("[cg_list_balance:balance_strict_SFC] reshuffling not implemented.")
@@ -140,7 +139,7 @@ contains
       ! sort id
       if (master) then !> \warning Antiparallel
          ! apply unique numbers to the grids and sort the list
-         call gp%set_id(this%off)
+         call gp%set_id(this%l%off)
          call gp%sort
 
          ! calculate patch distribution
@@ -246,7 +245,7 @@ contains
 
       if (master) then !> \warning Antiparallel
          ! apply unique numbers to the grids and sort the list
-         call gp%set_id(this%off)
+         call gp%set_id(this%l%off)
          call gp%sort
 
          ! measure their weight (unused yet)

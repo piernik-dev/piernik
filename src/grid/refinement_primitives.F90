@@ -78,8 +78,8 @@ contains
          do while (associated(curl))
             if (curl%level_id <= refine_points(ip)%level .and. curl%level_id>=base%level%level_id) then
 
-               ip_ijk(:) = curl%off(:)
-               where (dom%has_dir) ip_ijk(:) = curl%off(:) + floor((refine_points(ip)%coords(:) - dom%edge(:, LO))/dom%L_(:)*curl%n_d)
+               ip_ijk(:) = curl%l%off(:)
+               where (dom%has_dir) ip_ijk(:) = curl%l%off(:) + floor((refine_points(ip)%coords(:) - dom%edge(:, LO))/dom%L_(:)*curl%n_d)
                !BEWARE: ip_ijk can contain indices outside the domain
 
                cgl => curl%first
@@ -125,11 +125,11 @@ contains
 
             if (curl%level_id <= refine_boxes(ip)%level .and. curl%level_id>=base%level%level_id) then
 
-               ip_ijk(:, LO) = curl%off(:)
-               ip_ijk(:, HI) = curl%off(:)
+               ip_ijk(:, LO) = curl%l%off(:)
+               ip_ijk(:, HI) = curl%l%off(:)
                where (dom%has_dir)
-                  ip_ijk(:, LO) = curl%off(:) + floor((refine_boxes(ip)%coords(:, LO) - dom%edge(:, LO))/dom%L_(:)*curl%n_d)
-                  ip_ijk(:, HI) = curl%off(:) + floor((refine_boxes(ip)%coords(:, HI) - dom%edge(:, LO))/dom%L_(:)*curl%n_d)
+                  ip_ijk(:, LO) = curl%l%off(:) + floor((refine_boxes(ip)%coords(:, LO) - dom%edge(:, LO))/dom%L_(:)*curl%n_d)
+                  ip_ijk(:, HI) = curl%l%off(:) + floor((refine_boxes(ip)%coords(:, HI) - dom%edge(:, LO))/dom%L_(:)*curl%n_d)
                endwhere
                !BEWARE: ip_ijk can contain indices outside the domain
 

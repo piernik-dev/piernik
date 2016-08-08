@@ -1127,8 +1127,8 @@ contains
                                              endif
                                           enddo
                                           if (.not. found_flux) then
-                                             segp2(:, LO) = this%off(:)
-                                             segp2(:, HI) = this%off(:) - dom%D_(:)
+                                             segp2(:, LO) = this%l%off(:)
+                                             segp2(:, HI) = this%l%off(:) - dom%D_(:)
                                           endif
                                           seg2 (:, LO) = segp2(:, LO) + [ ix, iy, iz ] * per(:)
                                           seg2 (:, HI) = segp2(:, HI) + [ ix, iy, iz ] * per(:)

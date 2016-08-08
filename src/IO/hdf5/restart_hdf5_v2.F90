@@ -44,6 +44,7 @@ module restart_hdf5_v2
       integer(kind=8), dimension(ndims) :: off
       integer(kind=4)                   :: level
    end type cg_essentials
+   ! nearly duplicate with level_essentials::level_T
 
 contains
 
@@ -674,9 +675,9 @@ contains
             cgl => curl%first
             do while (associated(cgl))
                if (cg_res(ia)%level == curl%level_id) then
-                  other_box(:, LO) = cgl%cg%my_se(:, LO) - curl%off(:)
-                  other_box(:, HI) = cgl%cg%my_se(:, HI) - curl%off(:)
-                  if (is_overlap(my_box, other_box)) call read_cg_from_restart(cgl%cg, cgl_g_id, ia, cg_res(ia), curl%off)
+                  other_box(:, LO) = cgl%cg%my_se(:, LO) - curl%l%off(:)
+                  other_box(:, HI) = cgl%cg%my_se(:, HI) - curl%l%off(:)
+                  if (is_overlap(my_box, other_box)) call read_cg_from_restart(cgl%cg, cgl_g_id, ia, cg_res(ia), curl%l%off)
                endif
                cgl => cgl%nxt
             enddo

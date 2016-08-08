@@ -87,10 +87,8 @@ contains
 
       where (dom%has_dir(:))
          this%level%n_d(:) = n_d(:)
-         this%level%off(:) = dom%off(:)
       elsewhere
          this%level%n_d(:) = 1
-         this%level%off(:) = 0
       endwhere
 
       allocate(this%level%l)
@@ -200,18 +198,18 @@ contains
       e_size = this%level%n_d
       e_size(d) = AMR_bsize(d)
 
-      e_off = this%level%off
+      e_off = this%level%l%off
       select case (lh)
          case (LO)
-            e_off(d) = this%level%off(d) - AMR_bsize(d)
+            e_off(d) = this%level%l%off(d) - AMR_bsize(d)
          case (HI)
-            e_off(d) = this%level%off(d) + this%level%n_d(d)
+            e_off(d) = this%level%l%off(d) + this%level%n_d(d)
       end select
 
       curl => this%level
       do while (associated(curl))
          curl%n_d(d) = curl%n_d(d) + AMR_bsize(d)*refinement_factor**(curl%level_id-this%level%level_id)
-         curl%off(d) = min(curl%off(d),  e_off(d)*refinement_factor**(curl%level_id-this%level%level_id))
+         curl%l%off(d) = min(curl%l%off(d),  e_off(d)*refinement_factor**(curl%level_id-this%level%level_id))
          call curl%refresh_SFC_id
          curl => curl%finer
       enddo

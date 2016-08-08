@@ -236,7 +236,7 @@ contains
 
       do j = 0, level_incredible
          if (any((mod(base_level%n_d(:), int(refinement_factor, kind=8)**(j+1)) /= 0 .or. base_level%n_d(:)/refinement_factor**(j+1) < minsize(:)) .and. dom%has_dir(:))) exit
-         if (any((mod(base_level%off(:), int(refinement_factor, kind=8)**(j+1)) /= 0 .and. dom%has_dir(:)))) exit
+         if (any((mod(base_level%l%off(:), int(refinement_factor, kind=8)**(j+1)) /= 0 .and. dom%has_dir(:)))) exit
       enddo
       if (level_depth > j) then
          if (master) then

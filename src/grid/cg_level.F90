@@ -233,8 +233,8 @@ contains
       class(cg_level_T), intent(inout) :: this   !< object invoking type bound procedure
 
       call this%update_decomposition_properties
-      call this%dot%update_global(this%first, this%cnt, this%off) ! communicate everything that was added before
-      call this%dot%update_SFC_id_range(this%off)
+      call this%dot%update_global(this%first, this%cnt, this%l%off) ! communicate everything that was added before
+      call this%dot%update_SFC_id_range(this%l%off)
       call this%find_neighbors ! requires access to whole this%dot%gse(:)%c(:)%se(:,:)
       call this%update_req     ! Perhaps this%find_neighbors added some new entries
       call this%dot%update_tot_se
@@ -282,7 +282,7 @@ contains
                this%dot%gse(proc)%c(i)%se(:,:) = this%plist%patches(p)%pse(s)%se(:,:)
                call this%add
                cg => this%last%cg
-               call cg%init_gc(this%n_d, this%off, this%dot%gse(proc)%c(i)%se(:, :), i, this%level_id, this%l) ! we cannot pass "this" as an argument because of circular dependencies
+               call cg%init_gc(this%n_d, this%l%off, this%dot%gse(proc)%c(i)%se(:, :), i, this%level_id, this%l) ! we cannot pass "this" as an argument because of circular dependencies
                do ep = lbound(cg_extptrs%ext, dim=1), ubound(cg_extptrs%ext, dim=1)
                   if (associated(cg_extptrs%ext(ep)%init))  call cg_extptrs%ext(ep)%init(cg)
                enddo
@@ -339,7 +339,7 @@ contains
       class(cg_level_T), target, intent(inout) :: this     !< current level
       integer(kind=4), optional, intent(in)    :: n_pieces !< how many pieces the patch should be divided to?
 
-      call this%add_patch_detailed(this%n_d, this%off, n_pieces)
+      call this%add_patch_detailed(this%n_d, this%l%off, n_pieces)
 
    end subroutine add_patch_fulllevel
 
@@ -404,7 +404,7 @@ contains
 
       cgl => this%first
       do while (associated(cgl))
-         cgl%cg%SFC_id = SFC_order(cgl%cg%my_se(:, LO) - this%off)
+         cgl%cg%SFC_id = SFC_order(cgl%cg%my_se(:, LO) - this%l%off)
          cgl => cgl%nxt
       enddo
 
