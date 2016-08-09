@@ -30,11 +30,12 @@
 
 module grid_cont
 
-   use constants,       only: xdim, zdim, ndims, LO, HI, CENTER, INV_CENTER
-   use fluxtypes,       only: fluxarray, fluxpoint
-   use named_array,     only: named_array4d, named_array3d
-   use refinement_flag, only: ref_flag
-   use real_vector,     only: real_vec_T
+   use constants,        only: xdim, zdim, ndims, LO, HI, CENTER, INV_CENTER
+   use fluxtypes,        only: fluxarray, fluxpoint
+   use level_essentials, only: level_T
+   use named_array,      only: named_array4d, named_array3d
+   use refinement_flag,  only: ref_flag
+   use real_vector,      only: real_vec_T
 
    implicit none
 
@@ -133,6 +134,7 @@ module grid_cont
       integer(kind=4) :: nyb                                     !< number of %grid cells in one block (without boundary cells) in y-direction
       integer(kind=4) :: nzb                                     !< number of %grid cells in one block (without boundary cells) in z-direction
       integer(kind=4) :: level_id                                !< level id (number); do not use it without a good reason, use cg_level_T%lev where possible instead
+      class(level_T), pointer :: l                               !< level essential data
 
       ! shortcuts
       !> \todo Change kind from 4 to 8 to allow really deep refinements (effective resolution > 2**31, perhaps the other requirement will be default integer  kind = 8)
@@ -154,7 +156,6 @@ module grid_cont
       integer(kind=8), dimension(ndims, LO:HI) :: my_se          !< own segment. my_se(:,LO) = 0; my_se(:,HI) = dom%n_d(:) - 1 would cover entire domain on a base level
                                                                  !! my_se(:,LO) = 0; my_se(:,HI) = finest%level%n_d(:) -1 would cover entire domain on the most refined level
                                                                  !! DEPRECATED: will be equivalent to ijkse(:,:)
-      integer(kind=8), dimension(ndims) :: level_off             !< offset of own level
 
       ! Physical size and coordinates
 
@@ -281,14 +282,14 @@ contains
       integer(kind=8), dimension(:,:), intent(in) :: my_se    !< my segment
       integer,                         intent(in) :: grid_id  !< ID which should be unique across level
       integer(kind=4),                 intent(in) :: level_id !< which level this grid belongs to
-      class(level_T),                  intent(in) :: l        !< level essential data
+      class(level_T), pointer,         intent(in) :: l        !< level essential data
 
       integer :: i
       integer(kind=8), dimension(ndims, LO:HI) :: rn
 
       if (code_progress < PIERNIK_INIT_DOMAIN) call die("[grid_container:init_gc] MPI not initialized.")
 
-      this%level_off  = l%off
+      this%l          => l
       this%membership = 1
       this%grid_id    = grid_id
       this%my_se(:,:) = my_se(:, :)
@@ -1253,23 +1254,23 @@ contains
 
       if (any(AMR_bsize == 0)) return ! this routine works only with blocky AMR
 
-      do i = int(((this%is - this%level_off(xdim))*refinement_factor) / AMR_bsize(xdim)), int(((this%ie - this%level_off(xdim))*refinement_factor + I_ONE) / AMR_bsize(xdim))
-         ifs = max(int(this%is), int(this%level_off(xdim)) + (i*AMR_bsize(xdim))/refinement_factor)
-         ife = min(int(this%ie), int(this%level_off(xdim)) + ((i+I_ONE)*AMR_bsize(xdim)-I_ONE)/refinement_factor)
+      do i = int(((this%is - this%l%off(xdim))*refinement_factor) / AMR_bsize(xdim)), int(((this%ie - this%l%off(xdim))*refinement_factor + I_ONE) / AMR_bsize(xdim))
+         ifs = max(int(this%is), int(this%l%off(xdim)) + (i*AMR_bsize(xdim))/refinement_factor)
+         ife = min(int(this%ie), int(this%l%off(xdim)) + ((i+I_ONE)*AMR_bsize(xdim)-I_ONE)/refinement_factor)
 
-         do j = int(((this%js - this%level_off(ydim))*refinement_factor) / AMR_bsize(ydim)), int(((this%je - this%level_off(ydim))*refinement_factor + I_ONE) / AMR_bsize(ydim))
-            jfs = max(int(this%js), int(this%level_off(ydim)) + (j*AMR_bsize(ydim))/refinement_factor)
-            jfe = min(int(this%je), int(this%level_off(ydim)) + ((j+I_ONE)*AMR_bsize(ydim)-I_ONE)/refinement_factor)
+         do j = int(((this%js - this%l%off(ydim))*refinement_factor) / AMR_bsize(ydim)), int(((this%je - this%l%off(ydim))*refinement_factor + I_ONE) / AMR_bsize(ydim))
+            jfs = max(int(this%js), int(this%l%off(ydim)) + (j*AMR_bsize(ydim))/refinement_factor)
+            jfe = min(int(this%je), int(this%l%off(ydim)) + ((j+I_ONE)*AMR_bsize(ydim)-I_ONE)/refinement_factor)
 
-            do k = int(((this%ks - this%level_off(zdim))*refinement_factor) / AMR_bsize(zdim)), int(((this%ke - this%level_off(zdim))*refinement_factor + I_ONE) / AMR_bsize(zdim))
-               kfs = max(int(this%ks), int(this%level_off(zdim)) + (k*AMR_bsize(zdim))/refinement_factor)
-               kfe = min(int(this%ke), int(this%level_off(zdim)) + ((k+I_ONE)*AMR_bsize(zdim)-I_ONE)/refinement_factor)
+            do k = int(((this%ks - this%l%off(zdim))*refinement_factor) / AMR_bsize(zdim)), int(((this%ke - this%l%off(zdim))*refinement_factor + I_ONE) / AMR_bsize(zdim))
+               kfs = max(int(this%ks), int(this%l%off(zdim)) + (k*AMR_bsize(zdim))/refinement_factor)
+               kfe = min(int(this%ke), int(this%l%off(zdim)) + ((k+I_ONE)*AMR_bsize(zdim)-I_ONE)/refinement_factor)
                select case (type)
                   case (REFINE)
-                     if (any(this%refinemap(ifs:ife, jfs:jfe, kfs:kfe))) call this%refine_flags%add(this%level_id+I_ONE, int([i, j, k]*AMR_bsize, kind=8)+refinement_factor*this%level_off, refinement_factor*this%level_off)
+                     if (any(this%refinemap(ifs:ife, jfs:jfe, kfs:kfe))) call this%refine_flags%add(this%level_id+I_ONE, int([i, j, k]*AMR_bsize, kind=8)+refinement_factor*this%l%off, refinement_factor*this%l%off)
                   case (LEAF)
                      if (all(this%leafmap(ifs:ife, jfs:jfe, kfs:kfe))) then
-                        call this%refine_flags%add(this%level_id+I_ONE, int([i, j, k]*AMR_bsize, kind=8)+refinement_factor*this%level_off, refinement_factor*this%level_off)
+                        call this%refine_flags%add(this%level_id+I_ONE, int([i, j, k]*AMR_bsize, kind=8)+refinement_factor*this%l%off, refinement_factor*this%l%off)
                      else if (any(this%leafmap(ifs:ife, jfs:jfe, kfs:kfe))) then
                         call die("[grid_container:refinemap2SFC_list] cannot refine partially leaf parf of the grid")
                      endif
