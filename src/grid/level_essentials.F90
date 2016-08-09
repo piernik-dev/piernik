@@ -44,11 +44,20 @@ module level_essentials
       integer(kind=4)                   :: id   !< level number (relative to base level). No arithmetic should depend on it.
       !type(level_T), pointer :: coarser
       !type(level_T), pointer :: finer
+
+      ! Shadows of the values initialized by init.
+      ! I would like to protect them from being modified by mistake, but can't find any convenient way other than making all of them private and accessible through functions (which is not convenient).
+      integer(kind=8), dimension(ndims), private :: off_ = huge(1)
+      integer(kind=8), dimension(ndims), private :: n_d_ = huge(1)
+      integer(kind=4),                   private :: id_  = huge(1)
    contains
       procedure :: init  !< simple initialization
+      procedure :: check !< check against shadows if nothing has changed
    end type level_T
 
 contains
+
+   !> \brief simple initialization
 
    subroutine init(this, id, n_d, off)
 
@@ -72,9 +81,41 @@ contains
          this%off(:) = 0
       endwhere
 
+      this%off_ = this%off
+      this%n_d_ = this%n_d
+      this%id_  = this%id
+
       write(msg, '(a,i4,2(a,3i8),a)')"[level_essentials] Initializing level", this%id, ", size=[", this%n_d, "], offset=[", this%off, "]"
       call printinfo(msg, .false.)
 
    end subroutine init
+
+   !> \brief check against shadows if nothing has changed
+
+   subroutine check(this)
+
+      use dataio_pub, only: msg, warn
+      use mpisetup,   only: proc
+
+      implicit none
+
+      class(level_T), intent(in) :: this
+
+      if (this%id /= this%id_) then
+         write(msg, '(a,i6,2(a,i4))')"[level_essentials:check] @", proc, " shadow id has changed: ", this%id, " /=", this%id_
+         call warn(msg)
+      endif
+
+      if (any(this%off /= this%off_)) then
+         write(msg, '(a,i6,2(a,3i8),a,i4)')"[level_essentials:check] @", proc, " shadow off has changed: [ ", this%off, " ] /= [ ", this%off_, " ], id = ", this%id_
+         call warn(msg)
+      endif
+
+      if (any(this%n_d /= this%n_d_)) then
+         write(msg, '(a,i6,2(a,3i8),a,i4)')"[level_essentials:check] @", proc, " shadow n_d has changed: [ ", this%n_d, " ] /= [ ", this%n_d_, " ], id = ", this%id_
+         call warn(msg)
+      endif
+
+   end subroutine check
 
 end module level_essentials
