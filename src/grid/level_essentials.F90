@@ -62,7 +62,7 @@ contains
    subroutine init(this, id, n_d, off)
 
       use constants,  only: ndims
-      use dataio_pub, only: msg, printinfo
+      use dataio_pub, only: msg, printinfo, die
       use domain,     only: dom
 
       implicit none
@@ -71,6 +71,8 @@ contains
       integer(kind=4),                   intent(in)    :: id
       integer(kind=8), dimension(ndims), intent(in)    :: n_d
       integer(kind=8), dimension(ndims), intent(in)    :: off
+
+      if (any([int(this%off_(:), 4), int(this%n_d_(:), 4), this%id_] /= huge(1))) call die("[level_essentials:init] Level essentials already initialized")
 
       this%id  = id
       where (dom%has_dir(:))
