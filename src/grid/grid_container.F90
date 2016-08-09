@@ -133,7 +133,6 @@ module grid_cont
       integer(kind=4) :: nxb                                     !< number of %grid cells in one block (without boundary cells) in x-direction
       integer(kind=4) :: nyb                                     !< number of %grid cells in one block (without boundary cells) in y-direction
       integer(kind=4) :: nzb                                     !< number of %grid cells in one block (without boundary cells) in z-direction
-      integer(kind=4) :: level_id                                !< level id (number); do not use it without a good reason, use cg_level_T%lev where possible instead
       class(level_T), pointer :: l                               !< level essential data
 
       ! shortcuts
@@ -154,7 +153,7 @@ module grid_cont
       integer(kind=8), dimension(ndims)         :: h_cor1        !< offsets of the corner opposite to the one defined by off(:) + 1, a shortcut to be compared with dom%n_d(:) DEPRECATED will be equivalent to ijkse(:, HI)+1
       integer(kind=4), dimension(ndims)         :: n_            !< number of %grid cells in one block in x-, y- and z-directions (n_b(:) + 2 * nb)
       integer(kind=8), dimension(ndims, LO:HI) :: my_se          !< own segment. my_se(:,LO) = 0; my_se(:,HI) = dom%n_d(:) - 1 would cover entire domain on a base level
-                                                                 !! my_se(:,LO) = 0; my_se(:,HI) = finest%level%n_d(:) -1 would cover entire domain on the most refined level
+                                                                 !! my_se(:,LO) = 0; my_se(:,HI) = finest%level%l%n_d(:) -1 would cover entire domain on the most refined level
                                                                  !! DEPRECATED: will be equivalent to ijkse(:,:)
 
       ! Physical size and coordinates
@@ -263,7 +262,7 @@ contains
 !! Things that are related to communication with other grid containers or global properties are set up in cg_level::init_all_new_cg.
 !<
 
-   subroutine init_gc(this, my_se, grid_id, level_id, l)
+   subroutine init_gc(this, my_se, grid_id, l)
 
       use constants,        only: PIERNIK_INIT_DOMAIN, xdim, ydim, zdim, ndims, big_float, &
            &                      LO, HI, I_ONE, I_TWO, BND_MPI, BND_COR, GEO_XYZ, GEO_RPZ, dpi
@@ -280,7 +279,6 @@ contains
                                                               ! (also the fields in types derived from grid_container)
       integer(kind=8), dimension(:,:), intent(in) :: my_se    !< my segment
       integer,                         intent(in) :: grid_id  !< ID which should be unique across level
-      integer(kind=4),                 intent(in) :: level_id !< which level this grid belongs to
       class(level_T), pointer,         intent(in) :: l        !< level essential data
 
       integer :: i
@@ -294,7 +292,6 @@ contains
       this%my_se(:,:) = my_se(:, :)
       this%h_cor1(:)  = this%my_se(:, HI) + I_ONE
       this%n_b(:)     = int(this%my_se(:, HI) - this%my_se(:, LO) + I_ONE, 4) ! Block 'physical' grid sizes
-      this%level_id   = level_id
       this%SFC_id     = SFC_order(this%my_se(:, LO) - l%off)
 
       if (any(this%n_b(:) <= 0)) call die("[grid_container:init_gc] Mixed positive and non-positive grid sizes")
@@ -775,7 +772,7 @@ contains
          call move_alloc(from=tmp, to=this%q)
       endif
 
-      if (multigrid .or. this%level_id >= base_level_id) call this%q(ubound(this%q(:), dim=1))%init(this%lhn(:, LO), this%lhn(:, HI))
+      if (multigrid .or. this%l%id >= base_level_id) call this%q(ubound(this%q(:), dim=1))%init(this%lhn(:, LO), this%lhn(:, HI))
 
    end subroutine add_na
 
@@ -805,7 +802,7 @@ contains
          call move_alloc(from=tmp, to=this%w)
       endif
 
-      if (this%level_id >= base_level_id) call this%w(ubound(this%w(:), dim=1))%init( [1_INT4, this%lhn(:, LO)], [n, this%lhn(:, HI)] ) !< \deprecated magic integer
+      if (this%l%id >= base_level_id) call this%w(ubound(this%w(:), dim=1))%init( [1_INT4, this%lhn(:, LO)], [n, this%lhn(:, HI)] ) !< \deprecated magic integer
 
    end subroutine add_na_4d
 
@@ -1266,10 +1263,10 @@ contains
                kfe = min(int(this%ke), int(this%l%off(zdim)) + ((k+I_ONE)*AMR_bsize(zdim)-I_ONE)/refinement_factor)
                select case (type)
                   case (REFINE)
-                     if (any(this%refinemap(ifs:ife, jfs:jfe, kfs:kfe))) call this%refine_flags%add(this%level_id+I_ONE, int([i, j, k]*AMR_bsize, kind=8)+refinement_factor*this%l%off, refinement_factor*this%l%off)
+                     if (any(this%refinemap(ifs:ife, jfs:jfe, kfs:kfe))) call this%refine_flags%add(this%l%id+I_ONE, int([i, j, k]*AMR_bsize, kind=8)+refinement_factor*this%l%off, refinement_factor*this%l%off)
                   case (LEAF)
                      if (all(this%leafmap(ifs:ife, jfs:jfe, kfs:kfe))) then
-                        call this%refine_flags%add(this%level_id+I_ONE, int([i, j, k]*AMR_bsize, kind=8)+refinement_factor*this%l%off, refinement_factor*this%l%off)
+                        call this%refine_flags%add(this%l%id+I_ONE, int([i, j, k]*AMR_bsize, kind=8)+refinement_factor*this%l%off, refinement_factor*this%l%off)
                      else if (any(this%leafmap(ifs:ife, jfs:jfe, kfs:kfe))) then
                         call die("[grid_container:refinemap2SFC_list] cannot refine partially leaf parf of the grid")
                      endif

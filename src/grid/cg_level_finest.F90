@@ -70,17 +70,17 @@ contains
 
       integer(kind=4) :: g_finest_id
 
-      g_finest_id = this%level%level_id
+      g_finest_id = this%level%l%id
       call piernik_MPI_Allreduce(g_finest_id, pMAX)
 
-      do while (g_finest_id > this%level%level_id)
+      do while (g_finest_id > this%level%l%id)
          call this%add_finer
       enddo
 
-      g_finest_id = this%level%level_id
+      g_finest_id = this%level%l%id
       call piernik_MPI_Allreduce(g_finest_id, pMAX)
 
-      if (g_finest_id /= this%level%level_id) call die("[cg_level_finest:equalize] failure")
+      if (g_finest_id /= this%level%l%id) call die("[cg_level_finest:equalize] failure")
 
    end subroutine equalize
 
@@ -104,13 +104,11 @@ contains
 
       if (associated(this%level%finer)) call die("[cg_level_finest:add_finer] finer level already exists")
 
-      new_lev%level_id = this%level%level_id + I_ONE
-
       call new_lev%l%init(this%level%l%id+I_ONE, this%level%l%n_d*refinement_factor, c2f_o(this%level%l%off))
 
       !! make sure that vertical_prep will be called where necessary
       this%level%ord_prolong_set = INVALID
-      write(msg, '(a,i3)')"level ",new_lev%level_id
+      write(msg, '(a,i3)')"level ",new_lev%l%id
       call all_lists%register(new_lev, msg)
 
       this%level%finer => new_lev

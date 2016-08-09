@@ -938,7 +938,7 @@ contains
       do while (associated(curl))
          cgl => curl%first
          do while (associated(cgl))
-            cg_rl (g   ) = int(cgl%cg%level_id, kind=4)
+            cg_rl (g   ) = int(cgl%cg%l%id, kind=4)
             cg_n_b(g, :) = cgl%cg%n_b(:)
             cg_off(g, :) = cgl%cg%my_se(:, LO) - curl%l%off(:)
             if (otype == O_OUT) then

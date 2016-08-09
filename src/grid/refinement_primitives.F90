@@ -76,7 +76,7 @@ contains
 
          curl => finest%level
          do while (associated(curl))
-            if (curl%level_id <= refine_points(ip)%level .and. curl%level_id>=base%level%level_id) then
+            if (curl%l%id <= refine_points(ip)%level .and. curl%l%id>=base%level%l%id) then
 
                ip_ijk(:) = curl%l%off(:)
                where (dom%has_dir) ip_ijk(:) = curl%l%off(:) + floor((refine_points(ip)%coords(:) - dom%edge(:, LO))/dom%L_(:)*curl%l%n_d)
@@ -86,7 +86,7 @@ contains
                do while (associated(cgl))
                   cgl%cg%refine_flags%derefine = .true.
                   if (all(ip_ijk >= cgl%cg%ijkse(:, LO)) .and. all(ip_ijk <= cgl%cg%ijkse(:, HI))) then
-                     if (curl%level_id < refine_points(ip)%level) cgl%cg%refinemap(ip_ijk(xdim), ip_ijk(ydim), ip_ijk(zdim)) = .true.
+                     if (curl%l%id < refine_points(ip)%level) cgl%cg%refinemap(ip_ijk(xdim), ip_ijk(ydim), ip_ijk(zdim)) = .true.
                      cgl%cg%refine_flags%derefine = .false.
                   endif
                   cgl => cgl%nxt
@@ -123,7 +123,7 @@ contains
          curl => finest%level
          do while (associated(curl))
 
-            if (curl%level_id <= refine_boxes(ip)%level .and. curl%level_id>=base%level%level_id) then
+            if (curl%l%id <= refine_boxes(ip)%level .and. curl%l%id>=base%level%l%id) then
 
                ip_ijk(:, LO) = curl%l%off(:)
                ip_ijk(:, HI) = curl%l%off(:)
@@ -137,7 +137,7 @@ contains
                do while (associated(cgl))
                   cgl%cg%refine_flags%derefine = .true.
                   if (all(ip_ijk(:, HI) >= cgl%cg%ijkse(:, LO)) .and. all(ip_ijk(:, LO) <= cgl%cg%ijkse(:, HI))) then
-                     if (curl%level_id < refine_boxes(ip)%level) then
+                     if (curl%l%id < refine_boxes(ip)%level) then
                         cg_ijk(:, LO) = min(max(int(ip_ijk(:, LO), kind=4), cgl%cg%ijkse(:, LO)), cgl%cg%ijkse(:, HI))
                         cg_ijk(:, HI) = min(max(int(ip_ijk(:, HI), kind=4), cgl%cg%ijkse(:, LO)), cgl%cg%ijkse(:, HI))
                         cgl%cg%refinemap(cg_ijk(xdim, LO):cg_ijk(xdim, HI), &

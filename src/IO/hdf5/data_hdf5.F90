@@ -307,7 +307,7 @@ contains
          case ("sgpt")
             if (associated(cg%sgp)) tab(:,:,:) = real(cg%sgp(RNG), kind=4)
          case ("level")
-            tab(:,:,:) = real(cg%level_id, kind=4)
+            tab(:,:,:) = real(cg%l%id, kind=4)
          case ("grid_id")
             tab(:,:,:) = real(cg%grid_id, kind=4)
          case ("proc")

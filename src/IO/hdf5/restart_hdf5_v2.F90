@@ -610,7 +610,7 @@ contains
 
          allocate(ibuf(1))
          call read_attribute(cg_g_id, cg_lev_aname, ibuf)        ! open "/cg/cg_%08d/level"
-         if (ibuf(1) < base%level%level_id) call die("[restart_hdf5_v2:read_restart_hdf5_v2] Grids coarser than base level are not supported")
+         if (ibuf(1) < base%level%l%id) call die("[restart_hdf5_v2:read_restart_hdf5_v2] Grids coarser than base level are not supported")
          cg_res(ia)%level=ibuf(1)
          deallocate(ibuf)
 
@@ -630,13 +630,13 @@ contains
       outside = .false.
       overlapped = .false.
       do ia = lbound(cg_res, dim=1), ubound(cg_res, dim=1)
-         if (cg_res(ia)%level == base%level%level_id) then
+         if (cg_res(ia)%level == base%level%l%id) then
             tot_cells = tot_cells + product(cg_res(ia)%n_b(:))
             my_box(:,LO) = cg_res(ia)%off(:)
             my_box(:,HI) = cg_res(ia)%off(:) + cg_res(ia)%n_b(:) - 1
             outside = outside .or. any(my_box(:,LO) < 0) .or. any(my_box(:,HI) >= dom%n_d(:) .and. dom%has_dir(:))
             do j = ia+1, ubound(cg_res, dim=1)
-               if (cg_res(j)%level == base%level%level_id) then
+               if (cg_res(j)%level == base%level%l%id) then
                   other_box(:,LO) = cg_res(j)%off(:)
                   other_box(:,HI) = cg_res(j)%off(:) + cg_res(j)%n_b(:) - 1
                   overlapped = overlapped .or. is_overlap(my_box, other_box)
@@ -674,7 +674,7 @@ contains
          do while (associated(curl))
             cgl => curl%first
             do while (associated(cgl))
-               if (cg_res(ia)%level == curl%level_id) then
+               if (cg_res(ia)%level == curl%l%id) then
                   other_box(:, LO) = cgl%cg%my_se(:, LO) - curl%l%off(:)
                   other_box(:, HI) = cgl%cg%my_se(:, HI) - curl%l%off(:)
                   if (is_overlap(my_box, other_box)) call read_cg_from_restart(cgl%cg, cgl_g_id, ia, cg_res(ia), curl%l%off)
@@ -730,14 +730,14 @@ contains
       integer :: lmax, i
       type(cg_level_connected_T), pointer :: curl
 
-      lmax = base%level%level_id
+      lmax = base%level%l%id
       do i = lbound(cg_res(:), dim=1), ubound(cg_res(:), dim=1)
          if (cg_res(i)%level > lmax) lmax = cg_res(i)%level
       enddo
 
-      if (lmax == base%level%level_id) return
+      if (lmax == base%level%l%id) return
 
-      do while (lmax > finest%level%level_id)
+      do while (lmax > finest%level%l%id)
          call finest%add_finer
       enddo
 
@@ -746,7 +746,7 @@ contains
          curl => base%level%finer
          do while (associated(curl))
             do i = lbound(cg_res(:), dim=1), ubound(cg_res(:), dim=1)
-               if (cg_res(i)%level == curl%level_id) call curl%add_patch(int(cg_res(i)%n_b, kind=8), cg_res(i)%off)
+               if (cg_res(i)%level == curl%l%id) call curl%add_patch(int(cg_res(i)%n_b, kind=8), cg_res(i)%off)
             enddo
             curl => curl%finer
          enddo

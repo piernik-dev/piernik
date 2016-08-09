@@ -269,7 +269,7 @@ contains
 
             call problem_initial_conditions ! reset initial conditions after possible changes of refinement structure
             nit = nit + 1
-            write(msg, '(2(a,i3),a,f10.2)')"[initpiernik] IC iteration: ",nit,", finest level:",finest%level%level_id,", time elapsed: ",set_timer(tmr_fu)
+            write(msg, '(2(a,i3),a,f10.2)')"[initpiernik] IC iteration: ",nit,", finest level:",finest%level%l%id,", time elapsed: ",set_timer(tmr_fu)
             if (master) call printinfo(msg)
          enddo
 
@@ -277,7 +277,7 @@ contains
 
       endif
 
-      write(msg, '(a,3i8,a,i3)')"[initpiernik:init_piernik] Effective resolution is [", finest%level%l%n_d(:), " ] at level ", finest%level%level_id
+      write(msg, '(a,3i8,a,i3)')"[initpiernik:init_piernik] Effective resolution is [", finest%level%l%n_d(:), " ] at level ", finest%level%l%id
       !> \todo Do an MPI_Reduce in case the master process don't have any part of the globally finest level or ensure it is empty in such case
       if (master) call printinfo(msg)
 

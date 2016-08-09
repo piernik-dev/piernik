@@ -83,7 +83,6 @@ contains
 
       allocate(this%level)
       call this%level%init_level
-      this%level%level_id = base_level_id
 
       allocate(this%level%l)
       call this%level%l%init(base_level_id, int(n_d, kind=8), dom%off)
@@ -132,7 +131,7 @@ contains
 
       if (changed) then
          if (master) then
-            write(msg, '(a,3i8,a,i3)')"[cg_level_base:expand] Effective resolution is [", finest%level%l%n_d(:), " ] at level ", finest%level%level_id
+            write(msg, '(a,3i8,a,i3)')"[cg_level_base:expand] Effective resolution is [", finest%level%l%n_d(:), " ] at level ", finest%level%l%id
             call warn(msg) ! As long as the restart file does not automagically recognize changed parameters, this message should be easily visible
          endif
          call coarsest%delete_coarser_than_base
@@ -180,7 +179,7 @@ contains
       do while (associated(cgl))
          if (cgl%cg%ext_bnd(d, lh)) then
             cgl%cg%ext_bnd(d, lh) = .false.
-            if (cgl%cg%level_id == this%level%level_id) then
+            if (cgl%cg%l%id == this%level%l%id) then
                cgl%cg%bnd(d, lh) = BND_MPI
             else
                cgl%cg%bnd(d, lh) = BND_FC
@@ -202,8 +201,8 @@ contains
 
       curl => this%level
       do while (associated(curl))
-         curl%l%n_d(d) = curl%l%n_d(d) + AMR_bsize(d)*refinement_factor**(curl%level_id-this%level%level_id)
-         curl%l%off(d) = min(curl%l%off(d),  e_off(d)*refinement_factor**(curl%level_id-this%level%level_id))
+         curl%l%n_d(d) = curl%l%n_d(d) + AMR_bsize(d)*refinement_factor**(curl%l%id-this%level%l%id)
+         curl%l%off(d) = min(curl%l%off(d),  e_off(d)*refinement_factor**(curl%l%id-this%level%l%id))
          call curl%refresh_SFC_id
          curl => curl%finer
       enddo
