@@ -235,7 +235,7 @@ contains
       endif
 
       do j = 0, level_incredible
-         if (any((mod(base_level%n_d(:), int(refinement_factor, kind=8)**(j+1)) /= 0 .or. base_level%n_d(:)/refinement_factor**(j+1) < minsize(:)) .and. dom%has_dir(:))) exit
+         if (any((mod(base_level%l%n_d(:), int(refinement_factor, kind=8)**(j+1)) /= 0 .or. base_level%l%n_d(:)/refinement_factor**(j+1) < minsize(:)) .and. dom%has_dir(:))) exit
          if (any((mod(base_level%l%off(:), int(refinement_factor, kind=8)**(j+1)) /= 0 .and. dom%has_dir(:)))) exit
       enddo
       if (level_depth > j) then
@@ -292,7 +292,7 @@ contains
       ! summary
       if (master) then
          write(msg, '(a,i2,a,3i4,a)')"[multigrid:init_multigrid] Initialized ", finest%level%level_id - coarsest%level%level_id, &
-              &                      " coarse levels, coarsest level resolution [ ", coarsest%level%n_d(:)," ]"
+              &                      " coarse levels, coarsest level resolution [ ", coarsest%level%l%n_d(:)," ]"
          call printinfo(msg)
       endif
 

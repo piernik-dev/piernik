@@ -74,17 +74,14 @@ contains
       call new_lev%init_level
       call new_lev%l%init(this%level%l%id-I_ONE, this%level%l%n_d/refinement_factor, f2c_o(this%level%l%off))
 
-      new_lev%n_d(:) = 1
-
       new_lev%level_id = this%level%level_id - I_ONE
       if (any(c2f_o(new_lev%l%off) /= this%level%l%off)) then
          write(msg, '(a,3f10.1,a,i3)')"[cg_level_coarsest:add_coarser] Fractional offset: ", this%level%l%off(:)/real(refinement_factor), " at level ",new_lev%level_id
          call die(msg)
       endif
-      where (dom%has_dir(:)) new_lev%n_d(:) = this%level%n_d(:) / refinement_factor
 
-      if (master .and. any(new_lev%n_d(:)*refinement_factor /= this%level%n_d(:) .and. dom%has_dir(:))) then
-         write(msg, '(a,3f10.1,a,i3)')"[cg_level_coarsest:add_coarser] Fractional number of domain cells: ", this%level%n_d(:)/real(refinement_factor), " at level ",new_lev%level_id
+      if (master .and. any(new_lev%l%n_d(:)*refinement_factor /= this%level%l%n_d(:) .and. dom%has_dir(:))) then
+         write(msg, '(a,3f10.1,a,i3)')"[cg_level_coarsest:add_coarser] Fractional number of domain cells: ", this%level%l%n_d(:)/real(refinement_factor), " at level ",new_lev%level_id
          call die(msg)
       endif
 

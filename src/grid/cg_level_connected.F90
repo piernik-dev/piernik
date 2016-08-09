@@ -915,7 +915,7 @@ contains
 
       ! merge received coarse data into one array and interpolate it into the right place
       per(:) = 0
-      where (dom%periodic(:)) per(:) = coarse%n_d(:)
+      where (dom%periodic(:)) per(:) = coarse%l%n_d(:)
 
       cgl => this%first
       do while (associated(cgl))
@@ -1057,7 +1057,7 @@ contains
 
       ! define areas on the fine side at BND_FC and BND_MPI_FC faces that require coarse data
       per(:) = 0
-      where (dom%periodic(:)) per(:) = coarse%n_d(:)
+      where (dom%periodic(:)) per(:) = coarse%l%n_d(:)
 
       call t_pool%release(this%level_id)
       call t_pool%get(this%level_id, tag_min, tag_max)

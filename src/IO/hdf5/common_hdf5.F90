@@ -438,7 +438,7 @@ contains
       !! \todo check if finest is complete, if not then find finest complete level
       !! (see data_hdf5::h5_write_to_single_file_v1)
       !<
-      ibuffer(5:7) = int(finest%level%n_d(:), kind=4) ; ibuffer_name(5:7) = [ "nxd", "nyd", "nzd" ] !rr1
+      ibuffer(5:7) = int(finest%level%l%n_d(:), kind=4) ; ibuffer_name(5:7) = [ "nxd", "nyd", "nzd" ] !rr1
       ibuffer(8)   = dom%nb                  ; ibuffer_name(8)   = "nb"
       ibuffer(9)   = require_problem_IC      ; ibuffer_name(9)   = "require_problem_IC" !rr2
 

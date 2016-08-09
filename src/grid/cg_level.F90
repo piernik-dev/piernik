@@ -283,7 +283,7 @@ contains
                this%dot%gse(proc)%c(i)%se(:,:) = this%plist%patches(p)%pse(s)%se(:,:)
                call this%add
                cg => this%last%cg
-               call cg%init_gc(this%n_d, this%dot%gse(proc)%c(i)%se(:, :), i, this%level_id, this%l) ! we cannot pass "this" as an argument because of circular dependencies
+               call cg%init_gc(this%dot%gse(proc)%c(i)%se(:, :), i, this%level_id, this%l) ! we cannot pass "this" as an argument because of circular dependencies
                do ep = lbound(cg_extptrs%ext, dim=1), ubound(cg_extptrs%ext, dim=1)
                   if (associated(cg_extptrs%ext(ep)%init))  call cg_extptrs%ext(ep)%init(cg)
                enddo
@@ -340,7 +340,7 @@ contains
       class(cg_level_T), target, intent(inout) :: this     !< current level
       integer(kind=4), optional, intent(in)    :: n_pieces !< how many pieces the patch should be divided to?
 
-      call this%add_patch_detailed(this%n_d, this%l%off, n_pieces)
+      call this%add_patch_detailed(this%l%n_d, this%l%off, n_pieces)
 
    end subroutine add_patch_fulllevel
 

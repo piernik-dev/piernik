@@ -177,10 +177,10 @@ contains
                   if (any( [ ix, iy, iz ] /= 0)) then
                      ! find their SFC_id (take care about periodicity)
                      n_off = cg%my_se(:, LO) + [ ix, iy, iz ] * cg%n_b
-                     where (dom%periodic) n_off = mod(n_off + this%n_d - this%l%off, this%n_d) + this%l%off
+                     where (dom%periodic) n_off = mod(n_off + this%l%n_d - this%l%off, this%l%n_d) + this%l%off
                      n_id = INVALID
-                     if ( all(n_off >= this%l%off          .or. .not. dom%has_dir) .and. &
-                          all(n_off <  this%l%off+this%n_d .or. .not. dom%has_dir)) then ! it is internal boundary
+                     if ( all(n_off >= this%l%off            .or. .not. dom%has_dir) .and. &
+                          all(n_off <  this%l%off+this%l%n_d .or. .not. dom%has_dir)) then ! it is internal boundary
 
                         n_dd = INVALID
                         if (count([ix, iy, iz] /= 0) > 1) then
@@ -317,7 +317,7 @@ contains
          allocate(cg%i_bnd(xdim:cor_dim), cg%o_bnd(xdim:cor_dim))
 
          per(:) = 0
-         where (dom%periodic(:)) per(:) = this%n_d(:)
+         where (dom%periodic(:)) per(:) = this%l%n_d(:)
 
          ! Create maps to mark neighbouring face cells
          do d = xdim, zdim

@@ -263,7 +263,7 @@ contains
 !! Things that are related to communication with other grid containers or global properties are set up in cg_level::init_all_new_cg.
 !<
 
-   subroutine init_gc(this, n_d, my_se, grid_id, level_id, l)
+   subroutine init_gc(this, my_se, grid_id, level_id, l)
 
       use constants,        only: PIERNIK_INIT_DOMAIN, xdim, ydim, zdim, ndims, big_float, &
            &                      LO, HI, I_ONE, I_TWO, BND_MPI, BND_COR, GEO_XYZ, GEO_RPZ, dpi
@@ -278,7 +278,6 @@ contains
 
       class(grid_container), target,   intent(inout) :: this  ! intent(out) would silently clear everything, that was already set
                                                               ! (also the fields in types derived from grid_container)
-      integer(kind=8), dimension(:),   intent(in) :: n_d      !< max resolution of my level
       integer(kind=8), dimension(:,:), intent(in) :: my_se    !< my segment
       integer,                         intent(in) :: grid_id  !< ID which should be unique across level
       integer(kind=4),                 intent(in) :: level_id !< which level this grid belongs to
@@ -302,17 +301,17 @@ contains
 
       ! Inherit the boundaries from the domain, then set MPI or SHEAR boundaries where applicable
       this%bnd(:,:) = dom%bnd(:,:)
-      where (my_se(:, LO)   /= l%off(:)         ) this%bnd(:, LO) = BND_MPI
-      where (this%h_cor1(:) /= l%off(:) + n_d(:)) this%bnd(:, HI) = BND_MPI
+      where (my_se(:, LO)   /= l%off(:)           ) this%bnd(:, LO) = BND_MPI
+      where (this%h_cor1(:) /= l%off(:) + l%n_d(:)) this%bnd(:, HI) = BND_MPI
       ! For periodic boundaries do not set BND_MPI when local domain spans through the whole computational domain in given direction.
-      where (dom%periodic(:) .and. this%h_cor1(:)    /= n_d(:)) this%bnd(:, LO) = BND_MPI
-      where (dom%periodic(:) .and. this%my_se(:, LO) /= 0)      this%bnd(:, HI) = BND_MPI
+      where (dom%periodic(:) .and. this%h_cor1(:)    /= l%n_d(:)) this%bnd(:, LO) = BND_MPI
+      where (dom%periodic(:) .and. this%my_se(:, LO) /= 0)        this%bnd(:, HI) = BND_MPI
 
       this%ext_bnd(:, :) = .false.
       do i = xdim, zdim
          if (dom%has_dir(i) .and. .not. dom%periodic(i)) then
             this%ext_bnd(i, LO) = (my_se(i, LO)   == l%off(i))
-            this%ext_bnd(i, HI) = (this%h_cor1(i) == l%off(i) + n_d(i)) !! \warning not true on AMR
+            this%ext_bnd(i, HI) = (this%h_cor1(i) == l%off(i) + l%n_d(i)) !! \warning not true on AMR
          endif
       enddo
 
@@ -346,7 +345,7 @@ contains
          this%lh1(:,HI)    = this%ijkse(:, HI) + I_ONE
          this%lhn(:,LO)    = this%ijkse(:, LO) - dom%nb
          this%lhn(:,HI)    = this%ijkse(:, HI) + dom%nb
-         this%dl(:)        = dom%L_(:) / n_d(:)
+         this%dl(:)        = dom%L_(:) / l%n_d(:)
          this%fbnd(:, LO)  = dom%edge(:, LO) + this%dl(:) * (this%my_se(:, LO) - l%off(:))
          this%fbnd(:, HI)  = dom%edge(:, LO) + this%dl(:) * (this%h_cor1(:) - l%off(:))
       elsewhere

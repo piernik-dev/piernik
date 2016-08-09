@@ -90,7 +90,6 @@ contains
 
       use constants,        only: INVALID, I_ONE, refinement_factor
       use dataio_pub,       only: die, msg
-      use domain,           only: dom
       use grid_helpers,     only: c2f_o
       use list_of_cg_lists, only: all_lists
 
@@ -102,12 +101,10 @@ contains
 
       allocate(new_lev)
       call new_lev%init_level
-      new_lev%n_d(:) = 1
 
       if (associated(this%level%finer)) call die("[cg_level_finest:add_finer] finer level already exists")
 
       new_lev%level_id = this%level%level_id + I_ONE
-      where (dom%has_dir(:)) new_lev%n_d(:) = this%level%n_d(:) * refinement_factor
 
       call new_lev%l%init(this%level%l%id+I_ONE, this%level%l%n_d*refinement_factor, c2f_o(this%level%l%off))
 
