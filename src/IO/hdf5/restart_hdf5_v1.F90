@@ -77,9 +77,9 @@ contains
          case (AT_OUT_B)                                   ! physical domain with outer boundaries
             lleft(:)  = cg%lh_out(:, LO)
             lright(:) = cg%lh_out(:, HI)
-            where (lleft(:)  /= cg%ijkse(:, LO)) chnk(:) = chnk(:) + dom%nb
-            where (lright(:) /= cg%ijkse(:, HI)) chnk(:) = chnk(:) + dom%nb
-            where (loffs(:)>cg%level_off(:)) loffs(:) = loffs(:) + dom%nb ! the block adjacent to the left boundary are dom%nb cells wider than cg%n_b(:)
+            where (lleft(:)  /= cg%ijkse(:, LO)) chnk(:)  = chnk(:)  + dom%nb
+            where (lright(:) /= cg%ijkse(:, HI)) chnk(:)  = chnk(:)  + dom%nb
+            where (loffs(:)  >  cg%l%off(:))     loffs(:) = loffs(:) + dom%nb ! the block adjacent to the left boundary are dom%nb cells wider than cg%n_b(:)
          case (AT_NO_B)                                    ! only physical domain without any boundaries
             ! Nothing special
          case (AT_USER)                                    ! user defined domain (with no reference to simulations domain)

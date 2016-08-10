@@ -333,7 +333,7 @@ contains
       integer                :: i, j, k, d
       type(cg_level_connected_T), pointer :: curl
 
-      curl => find_level(cg%level_id)
+      curl => find_level(cg%l%id)
 
       c_fl = small
       dt_proc(:) = huge(1.)

@@ -438,7 +438,7 @@ contains
       !! \todo check if finest is complete, if not then find finest complete level
       !! (see data_hdf5::h5_write_to_single_file_v1)
       !<
-      ibuffer(5:7) = int(finest%level%n_d(:), kind=4) ; ibuffer_name(5:7) = [ "nxd", "nyd", "nzd" ] !rr1
+      ibuffer(5:7) = int(finest%level%l%n_d(:), kind=4) ; ibuffer_name(5:7) = [ "nxd", "nyd", "nzd" ] !rr1
       ibuffer(8)   = dom%nb                  ; ibuffer_name(8)   = "nb"
       ibuffer(9)   = require_problem_IC      ; ibuffer_name(9)   = "require_problem_IC" !rr2
 
@@ -953,9 +953,9 @@ contains
       do while (associated(curl))
          cgl => curl%first
          do while (associated(cgl))
-            cg_rl (g   ) = int(cgl%cg%level_id, kind=4)
+            cg_rl (g   ) = int(cgl%cg%l%id, kind=4)
             cg_n_b(g, :) = cgl%cg%n_b(:)
-            cg_off(g, :) = cgl%cg%my_se(:, LO) - curl%off(:)
+            cg_off(g, :) = cgl%cg%my_se(:, LO) - curl%l%off(:)
             if (otype == O_OUT) then
                dbuf(cg_le, g, :)  = cgl%cg%fbnd(:, LO)
                dbuf(cg_re, g, :)  = cgl%cg%fbnd(:, HI)
