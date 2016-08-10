@@ -45,15 +45,16 @@ module level_essentials
       !type(level_T), pointer :: coarser
       !type(level_T), pointer :: finer
 
-      ! Shadows of the values initialized by init.
+      ! Shadows of the values set by level_T%write.
       ! I would like to protect them from being modified by mistake, but can't find any convenient way other than making all of them private and accessible through functions (which is not convenient).
       integer(kind=8), dimension(ndims), private :: off_ = huge(1)
       integer(kind=8), dimension(ndims), private :: n_d_ = huge(1)
       integer(kind=4),                   private :: id_  = huge(1)
    contains
-      procedure :: init   !< simple initialization
-      procedure :: update !< update data (e.g. after resizing the domain)
-      procedure :: check  !< check against shadows if nothing has changed
+      procedure          :: init   !< simple initialization
+      procedure          :: update !< update data (e.g. after resizing the domain)
+      procedure, private :: write  !< do the actual saving of the data
+      procedure          :: check  !< check against shadows if nothing has changed
    end type level_T
 
 contains
@@ -64,7 +65,6 @@ contains
 
       use constants,  only: ndims
       use dataio_pub, only: msg, printinfo, die
-      use domain,     only: dom
       use mpisetup,   only: master
 
       implicit none
@@ -76,18 +76,7 @@ contains
 
       if (any([int(this%off_(:), 4), int(this%n_d_(:), 4), this%id_] /= huge(1))) call die("[level_essentials:init] Level essentials already initialized")
 
-      this%id  = id
-      where (dom%has_dir(:))
-         this%n_d(:) = n_d(:)
-         this%off(:) = off(:)
-      elsewhere
-         this%n_d(:) = 1
-         this%off(:) = 0
-      endwhere
-
-      this%off_ = this%off
-      this%n_d_ = this%n_d
-      this%id_  = this%id
+      call this%write(id, n_d, off)
 
       write(msg, '(a,i4,2(a,3i8),a)')"[level_essentials] Initializing level", this%id, ", size=[", this%n_d, "], offset=[", this%off, "]"
       if (master) call printinfo(msg)
@@ -100,7 +89,6 @@ contains
 
       use constants,  only: ndims
       use dataio_pub, only: msg, printinfo, die
-      use domain,     only: dom
       use mpisetup,   only: master
 
       implicit none
@@ -113,6 +101,28 @@ contains
       if (any([int(this%off_(:), 4), int(this%n_d_(:), 4), this%id_] == huge(1))) call die("[level_essentials:update] Level essentials not initialized yet")
       if (this%id_ /= id) call die("[level_essentials:update] level id don't match")
 
+      call this%write(id, n_d, off)
+
+      write(msg, '(a,i4,2(a,3i8),a)')"[level_essentials] Updating level", this%id, ", new size=[", this%n_d, "], new offset=[", this%off, "]"
+      if (master) call printinfo(msg)
+
+   end subroutine update
+
+   !> \brief do the actual saving of the data
+
+   subroutine write(this, id, n_d, off)
+
+      use constants,  only: ndims
+      use domain,     only: dom
+
+      implicit none
+
+      class(level_T),                    intent(inout) :: this
+      integer(kind=4),                   intent(in)    :: id
+      integer(kind=8), dimension(ndims), intent(in)    :: n_d
+      integer(kind=8), dimension(ndims), intent(in)    :: off
+
+      this%id = id
       where (dom%has_dir(:))
          this%n_d(:) = n_d(:)
          this%off(:) = off(:)
@@ -123,11 +133,9 @@ contains
 
       this%off_ = this%off
       this%n_d_ = this%n_d
+      this%id_  = this%id
 
-      write(msg, '(a,i4,2(a,3i8),a)')"[level_essentials] Updating level", this%id, ", new size=[", this%n_d, "], new offset=[", this%off, "]"
-      if (master) call printinfo(msg)
-
-   end subroutine update
+   end subroutine write
 
    !> \brief check against shadows if nothing has changed
 
