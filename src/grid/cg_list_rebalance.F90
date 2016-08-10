@@ -32,7 +32,6 @@
 module cg_list_rebalance
 
    use cg_list_balance, only: cg_list_balance_T
-   use constants,       only: ndims
 
    implicit none
 
