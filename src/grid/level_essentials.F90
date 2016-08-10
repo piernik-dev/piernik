@@ -51,8 +51,9 @@ module level_essentials
       integer(kind=8), dimension(ndims), private :: n_d_ = huge(1)
       integer(kind=4),                   private :: id_  = huge(1)
    contains
-      procedure :: init  !< simple initialization
-      procedure :: check !< check against shadows if nothing has changed
+      procedure :: init   !< simple initialization
+      procedure :: update !< update data (e.g. after resizing the domain)
+      procedure :: check  !< check against shadows if nothing has changed
    end type level_T
 
 contains
@@ -64,6 +65,7 @@ contains
       use constants,  only: ndims
       use dataio_pub, only: msg, printinfo, die
       use domain,     only: dom
+      use mpisetup,   only: master
 
       implicit none
 
@@ -88,9 +90,44 @@ contains
       this%id_  = this%id
 
       write(msg, '(a,i4,2(a,3i8),a)')"[level_essentials] Initializing level", this%id, ", size=[", this%n_d, "], offset=[", this%off, "]"
-      call printinfo(msg, .false.)
+      if (master) call printinfo(msg)
 
    end subroutine init
+
+   !> \brief update data (e.g. after resizing the domain)
+
+   subroutine update(this, id, n_d, off)
+
+      use constants,  only: ndims
+      use dataio_pub, only: msg, printinfo, die
+      use domain,     only: dom
+      use mpisetup,   only: master
+
+      implicit none
+
+      class(level_T),                    intent(inout) :: this
+      integer(kind=4),                   intent(in)    :: id
+      integer(kind=8), dimension(ndims), intent(in)    :: n_d
+      integer(kind=8), dimension(ndims), intent(in)    :: off
+
+      if (any([int(this%off_(:), 4), int(this%n_d_(:), 4), this%id_] == huge(1))) call die("[level_essentials:update] Level essentials not initialized yet")
+      if (this%id_ /= id) call die("[level_essentials:update] level id don't match")
+
+      where (dom%has_dir(:))
+         this%n_d(:) = n_d(:)
+         this%off(:) = off(:)
+      elsewhere
+         this%n_d(:) = 1
+         this%off(:) = 0
+      endwhere
+
+      this%off_ = this%off
+      this%n_d_ = this%n_d
+
+      write(msg, '(a,i4,2(a,3i8),a)')"[level_essentials] Updating level", this%id, ", new size=[", this%n_d, "], new offset=[", this%off, "]"
+      if (master) call printinfo(msg)
+
+   end subroutine update
 
    !> \brief check against shadows if nothing has changed
 

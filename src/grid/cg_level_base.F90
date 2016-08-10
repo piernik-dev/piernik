@@ -163,10 +163,10 @@ contains
       implicit none
 
       class(cg_level_base_T), intent(inout) :: this   !< object invoking type bound procedure
-      integer,                intent(in)    :: d      !< direction to be expadned
+      integer,                intent(in)    :: d      !< direction to be expanded
       integer,                intent(in)    :: lh     !< side to be expanded
 
-      integer(kind=8), dimension(xdim:zdim) :: e_size, e_off
+      integer(kind=8), dimension(xdim:zdim) :: e_size, e_off, new_n_d, new_off
       type(cg_list_element),  pointer :: cgl
       type(cg_level_connected_T), pointer :: curl
 
@@ -201,8 +201,11 @@ contains
 
       curl => this%level
       do while (associated(curl))
-         curl%l%n_d(d) = curl%l%n_d(d) + AMR_bsize(d)*refinement_factor**(curl%l%id-this%level%l%id)
-         curl%l%off(d) = min(curl%l%off(d),  e_off(d)*refinement_factor**(curl%l%id-this%level%l%id))
+         new_n_d = curl%l%n_d
+         new_n_d(d) = curl%l%n_d(d) + AMR_bsize(d)*refinement_factor**(curl%l%id-this%level%l%id)
+         new_off = curl%l%off
+         new_off(d) = min(curl%l%off(d), e_off(d)*refinement_factor**(curl%l%id-this%level%l%id))
+         call curl%l%update(curl%l%id, new_n_d, new_off)
          call curl%refresh_SFC_id
          curl => curl%finer
       enddo
