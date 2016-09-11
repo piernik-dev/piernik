@@ -736,7 +736,7 @@ contains
                            if (cnt <= show_n_dirtys) then
                               if (cnt < show_n_dirtys) then
                                  write(msg, '(3a,i4,a,i3,a,i5,3a,4i6,a,g20.12)') &
-                                      &                   "[cg_list_dataop:check_dirty] ", trim(label), "@", proc, " lvl^", cgl%cg%level_id, " cg#", cgl%cg%grid_id, &
+                                      &                   "[cg_list_dataop:check_dirty] ", trim(label), "@", proc, " lvl^", cgl%cg%l%id, " cg#", cgl%cg%grid_id, &
                                       &                   " '", trim(wna%lst(iv)%name), "'(", subfield, i, j, k, ") = ", cgl%cg%w(iv)%arr(subfield, i, j, k)
                                  call warn(msg)
                               endif
@@ -750,7 +750,7 @@ contains
                            if (cnt <= show_n_dirtys) then
                               if (cnt < show_n_dirtys) then
                                  write(msg, '(3a,i4,a,i3,a,i5,3a,3i6,a,g20.12)') &
-                                      &                   "[cg_list_dataop:check_dirty] ", trim(label), "@", proc, " lvl^", cgl%cg%level_id, " cg#", cgl%cg%grid_id, &
+                                      &                   "[cg_list_dataop:check_dirty] ", trim(label), "@", proc, " lvl^", cgl%cg%l%id, " cg#", cgl%cg%grid_id, &
                                       &                   " '", trim(qna%lst(iv)%name), "'(", i, j, k, ") = ", cgl%cg%q(iv)%arr(i, j, k)
                                  call warn(msg)
                               endif

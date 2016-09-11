@@ -307,7 +307,7 @@ contains
          case ("sgpt")
             if (associated(cg%sgp)) tab(:,:,:) = real(cg%sgp(RNG), kind=4)
          case ("level")
-            tab(:,:,:) = real(cg%level_id, kind=4)
+            tab(:,:,:) = real(cg%l%id, kind=4)
          case ("grid_id")
             tab(:,:,:) = real(cg%grid_id, kind=4)
          case ("proc")
@@ -650,7 +650,7 @@ contains
       call h5pclose_f(plist_idf, error)
 
       !! \todo check if finest is complete, if not then find finest complete level
-      dimsf  = finest%level%n_d(:)    ! Dataset dimensions
+      dimsf  = finest%level%l%n_d(:)    ! Dataset dimensions
       !
       ! Create the data space for the  dataset.
       !

@@ -360,7 +360,7 @@ contains
 
                      !> \todo OPT: use cg%leafmap to skip lines fully covered by finer grids
                      ! it should be also possible to compute only parts of lines that aren't covered by finer grids
-                     curl => find_level(cg%level_id)
+                     curl => find_level(cg%l%id)
 
                      cs2 => null()
                      do i2 = cg%ijkse(pdims(cdim, ORTHO2), LO), cg%ijkse(pdims(cdim, ORTHO2), HI)

@@ -299,7 +299,7 @@ contains
          this%is_magnetized = is_magnetized
 
          msg = "Registered"
-         select case(tag)
+         select case (tag)
             case (ION)
                msg = trim(msg) // " ionized"
             case (NEU)
@@ -320,7 +320,7 @@ contains
             msg = trim(msg) // ", isothermal with c_sound = "
             write(aux, '(G10.2)') cs_iso
             msg = trim(msg) // aux
-         end if
+         endif
 
          call printinfo(msg)
 
