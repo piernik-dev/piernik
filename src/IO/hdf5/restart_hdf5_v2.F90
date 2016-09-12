@@ -713,6 +713,7 @@ contains
       enddo
 
       ! Check if whole base level is covered without any overlaps
+      ! OPT: do overlap search on a separate list of base level blocks only because it is O(n^2) process
       tot_cells = 0
       outside = .false.
       overlapped = .false.
@@ -734,7 +735,6 @@ contains
 
       if (tot_cells /= product(dom%n_d(:)) .or. outside .or. overlapped) call die("[restart_hdf5_v2:read_restart_hdf5_v2] Improper coverage of base domain by available cg")
 
-      ! For AMR this will be more complicated: check if all restart cg cover leaf patches, do an additional domain decomposition
       call set_refinement(cg_res)
 
       ! set up things such as register user rank-3 and rank-4 arrays to be read by read_arr_from_restart. Read also anything that is not read by all read_cg_from_restart calls
@@ -764,7 +764,7 @@ contains
                if (cg_res(ia)%level == curl%l%id) then
                   other_box(:, LO) = cgl%cg%my_se(:, LO) - curl%l%off(:)
                   other_box(:, HI) = cgl%cg%my_se(:, HI) - curl%l%off(:)
-                  if (is_overlap(my_box, other_box)) call read_cg_from_restart(cgl%cg, cgl_g_id, ia, cg_res(ia), curl%l%off)
+                  if (is_overlap(my_box, other_box)) call read_cg_from_restart(cgl%cg, cgl_g_id, ia, cg_res(ia))
                endif
                cgl => cgl%nxt
             enddo
@@ -850,7 +850,7 @@ contains
    end subroutine set_refinement
 
 !> \brief Read as much as possible from stored cg to own cg
-   subroutine read_cg_from_restart(cg, cgl_g_id, ncg, cg_r, curl_off)
+   subroutine read_cg_from_restart(cg, cgl_g_id, ncg, cg_r)
 
       use common_hdf5,      only: n_cg_name
       use constants,        only: xdim, ydim, zdim, ndims, LO, HI, LONG
@@ -867,7 +867,6 @@ contains
       integer(HID_T),                    intent(in)    :: cgl_g_id  !< cg group identifier in the restart file
       integer,                           intent(in)    :: ncg       !< number of cg in the restart file
       type(cg_essentials),               intent(in)    :: cg_r      !< cg attributes that do not need to be reread
-      integer(kind=8), dimension(ndims), intent(in)    :: curl_off  !< offset of the level
 
       integer(HID_T)                               :: cg_g_id !< cg group identifier
       integer(HID_T)                               :: dset_id
@@ -883,8 +882,8 @@ contains
 
       ! Find overlap between own cg and restart cg
       own_box(:, :) = cg%my_se(:, :)
-      restart_box(:, LO) = curl_off(:) + cg_r%off(:)
-      restart_box(:, HI) = curl_off(:) + cg_r%off(:) + cg_r%n_b(:) - 1
+      restart_box(:, LO) = cg%l%off(:) + cg_r%off(:)
+      restart_box(:, HI) = cg%l%off(:) + cg_r%off(:) + cg_r%n_b(:) - 1
       if (.not. is_overlap(own_box, restart_box)) call die("[restart_hdf5_v2:read_cg_from_restart] No overlap found") ! this condition should never happen
 
       own_off(:) = 0
