@@ -853,7 +853,7 @@ contains
    subroutine read_cg_from_restart(cg, cgl_g_id, ncg, cg_r)
 
       use common_hdf5,      only: n_cg_name
-      use constants,        only: xdim, ydim, zdim, ndims, LO, HI, LONG
+      use constants,        only: xdim, ydim, zdim, ndims, LO, HI
       use dataio_pub,       only: die
       use domain,           only: dom
       use grid_cont,        only: grid_container, is_overlap
@@ -873,37 +873,42 @@ contains
       integer(HID_T)                               :: filespace, memspace
       integer(HSIZE_T), dimension(:), allocatable  :: dims, off, cnt
       integer(kind=4)                              :: error
-      integer(kind=8), dimension(xdim:zdim, LO:HI) :: own_box, restart_box
       integer(kind=8), dimension(xdim:zdim)        :: own_off, restart_off, o_size   ! the position and size of the overlapped region
+      integer(kind=8), dimension(xdim:zdim, LO:HI) :: own_box_nb, restart_box_nb              ! variants for AT_NO_B
+      integer(kind=8), dimension(xdim:zdim)        :: own_off_nb, restart_off_nb, o_size_nb   !
+      integer(kind=8), dimension(xdim:zdim, LO:HI) :: own_box_ob, restart_box_ob              ! variants for AT_OUT_B
+      integer(kind=8), dimension(xdim:zdim)        :: own_off_ob, restart_off_ob, o_size_ob   ! as opposed to AT_NO_B
       integer, allocatable, dimension(:)           :: qr_lst, wr_lst
-      integer                                      :: d, i
+      integer                                      :: i
       real, dimension(:,:,:),   allocatable        :: a3d
       real, dimension(:,:,:,:), allocatable        :: a4d
 
       ! Find overlap between own cg and restart cg
-      own_box(:, :) = cg%my_se(:, :)
-      restart_box(:, LO) = cg%l%off(:) + cg_r%off(:)
-      restart_box(:, HI) = cg%l%off(:) + cg_r%off(:) + cg_r%n_b(:) - 1
-      if (.not. is_overlap(own_box, restart_box)) call die("[restart_hdf5_v2:read_cg_from_restart] No overlap found") ! this condition should never happen
+      own_box_nb(:, :) = cg%my_se(:, :)
+      restart_box_nb(:, LO) = cg%l%off(:) + cg_r%off(:)
+      restart_box_nb(:, HI) = cg%l%off(:) + cg_r%off(:) + cg_r%n_b(:) - 1
+      if (.not. is_overlap(own_box_nb, restart_box_nb)) call die("[restart_hdf5_v2:read_cg_from_restart] No overlap found") ! this condition should never happen
 
-      own_off(:) = 0
-      restart_off(:) = 0
-      o_size(:) = 1
-      do d = xdim, zdim
-         if (dom%has_dir(d)) then
-            own_off(d) = max(restart_box(d, LO) - own_box(d, LO), 0_LONG)
-            restart_off(d) = max(own_box(d, LO) - restart_box(d, LO), 0_LONG)
-            o_size(d) = min(restart_box(d, HI), own_box(d, HI)) - max(restart_box(d, LO), own_box(d, LO)) + 1
-         endif
-      enddo
+      call calc_off_and_size(restart_box_nb, own_box_nb, own_off_nb, restart_off_nb, o_size_nb)
+
+      ! Find overlap between own cg and restart cg in case of AT_OUT_B
+      own_box_ob(:, :) = cg%lh_out(:, :)
+      restart_box_ob(:, LO) = cg%l%off(:) + cg_r%off(:)
+      where (dom%has_dir(:) .and. (cg_r%off(:) <= 0)) restart_box_ob(:, LO) = restart_box_ob(:, LO) - dom%nb
+      restart_box_ob(:, HI) = cg%l%off(:) + cg_r%off(:) + cg_r%n_b(:) - 1
+      where (dom%has_dir(:) .and. (cg_r%off(:) + cg_r%n_b(:) >= cg%l%n_d)) restart_box_ob(:, HI) = restart_box_ob(:, HI) + dom%nb
+      if (.not. is_overlap(own_box_ob, restart_box_ob)) call die("[restart_hdf5_v2:read_cg_from_restart] No overlap found (AT_OUT_B)") ! this condition should never happen
+
+      call calc_off_and_size(restart_box_ob, own_box_ob, own_off_ob, restart_off_ob, o_size_ob)
+      where (dom%has_dir(:) .and. (cg_r%off(:) <= 0)) own_off_ob(:) = own_off_ob(:) - dom%nb
 
       ! these conditions should never happen
-      if (any(own_off(:) > cg%n_b(:))) call die("[restart_hdf5_v2:read_cg_from_restart] own_off(:) > cg%n_b(:)")
-      if (any(restart_off(:) > cg_r%n_b(:))) call die("[restart_hdf5_v2:read_cg_from_restart] restart_off(:) > cg_r%n_b(:)")
-      if (any(o_size(:) > cg%n_b(:)) .or. any(o_size(:) > cg_r%n_b(:))) call die("[restart_hdf5_v2:read_cg_from_restart] o_size(:) > cg%n_b(:) or o_size(:) > cg_r%n_b(:)")
-      if (any(cg%leafmap(cg%is+own_off(xdim):cg%is+own_off(xdim)+o_size(xdim)-1, &
-           &             cg%js+own_off(ydim):cg%js+own_off(ydim)+o_size(ydim)-1, &
-           &             cg%ks+own_off(zdim):cg%ks+own_off(zdim)+o_size(zdim)-1))) call die("[restart_hdf5_v2:read_cg_from_restart] Trying to initialize same area twice.")
+      if (any(own_off_nb(:) > cg%n_b(:))) call die("[restart_hdf5_v2:read_cg_from_restart] own_off(:) > cg%n_b(:)")
+      if (any(restart_off_nb(:) > cg_r%n_b(:))) call die("[restart_hdf5_v2:read_cg_from_restart] restart_off(:) > cg_r%n_b(:)")
+      if (any(o_size_nb(:) > cg%n_b(:)) .or. any(o_size_nb(:) > cg_r%n_b(:))) call die("[restart_hdf5_v2:read_cg_from_restart] o_size(:) > cg%n_b(:) or o_size(:) > cg_r%n_b(:)")
+      if (any(cg%leafmap(cg%is+own_off_nb(xdim):cg%is+own_off_nb(xdim)+o_size_nb(xdim)-1, &
+           &             cg%js+own_off_nb(ydim):cg%js+own_off_nb(ydim)+o_size_nb(ydim)-1, &
+           &             cg%ks+own_off_nb(zdim):cg%ks+own_off_nb(zdim)+o_size_nb(zdim)-1))) call die("[restart_hdf5_v2:read_cg_from_restart] Trying to initialize same area twice.")
 
       qr_lst = qna%get_reslst()
       wr_lst = wna%get_reslst()
@@ -911,8 +916,9 @@ contains
 
       if (size(qr_lst) > 0) then
          allocate(dims(ndims), off(ndims), cnt(ndims))
-         dims(:) = o_size(:)
          do i = lbound(qr_lst, dim=1), ubound(qr_lst, dim=1)
+            call pick_off_and_size(qna%lst(qr_lst(i))%restart_mode, o_size, restart_off, own_off)
+            dims(:) = o_size(:)
             call h5dopen_f(cg_g_id, qna%lst(qr_lst(i))%name, dset_id, error) ! open "/data/grid_%08d/cg%q(qr_lst(i))%name"
             call h5dget_space_f(dset_id, filespace, error)
             off(:) = restart_off(:)
@@ -933,6 +939,7 @@ contains
       if (size(wr_lst) > 0) then
          allocate(dims(ndims+1), off(ndims+1), cnt(ndims+1))
          do i = lbound(wr_lst, dim=1), ubound(wr_lst, dim=1)
+            call pick_off_and_size(wna%lst(wr_lst(i))%restart_mode, o_size, restart_off, own_off)
             dims(:) = [ int(wna%lst(wr_lst(i))%dim4, kind=HSIZE_T), int(o_size(:), kind=HSIZE_T) ]
             call h5dopen_f(cg_g_id, wna%lst(wr_lst(i))%name, dset_id, error)
             call h5dget_space_f(dset_id, filespace, error)
@@ -955,9 +962,72 @@ contains
       deallocate(qr_lst, wr_lst)
 
       ! Mark the area as initialized
-      cg%leafmap(cg%is+own_off(xdim):cg%is+own_off(xdim)+o_size(xdim)-1, &
-           &     cg%js+own_off(ydim):cg%js+own_off(ydim)+o_size(ydim)-1, &
-           &     cg%ks+own_off(zdim):cg%ks+own_off(zdim)+o_size(zdim)-1) = .true.
+      cg%leafmap(cg%is+own_off_nb(xdim):cg%is+own_off_nb(xdim)+o_size_nb(xdim)-1, &
+           &     cg%js+own_off_nb(ydim):cg%js+own_off_nb(ydim)+o_size_nb(ydim)-1, &
+           &     cg%ks+own_off_nb(zdim):cg%ks+own_off_nb(zdim)+o_size_nb(zdim)-1) = .true.
+
+   contains
+
+      subroutine pick_off_and_size(mode, o_size, restart_off, own_off)
+
+         use constants,  only: AT_OUT_B, AT_NO_B, AT_USER
+         use dataio_pub, only: die
+
+         implicit none
+
+         integer(kind=4),                       intent(in)  :: mode
+         integer(kind=8), dimension(xdim:zdim), intent(out) :: o_size
+         integer(kind=8), dimension(xdim:zdim), intent(out) :: restart_off
+         integer(kind=8), dimension(xdim:zdim), intent(out) :: own_off
+
+         ! suppress compiler warnings on possibly use of uninitialized values
+         o_size = 0
+         restart_off = 0
+         own_off = 0
+
+         select case (mode)
+            case (AT_OUT_B)
+               o_size = o_size_ob
+               restart_off = restart_off_ob
+               own_off = own_off_ob
+            case (AT_NO_B)
+               o_size = o_size_nb
+               restart_off = restart_off_nb
+               own_off = own_off_nb
+            case (AT_USER)
+               call die("[restart_hdf5_v2:read_cg_from_restart:pick_off_and_size] AT_USER not implemented (w)")
+            case default
+               call die("[restart_hdf5_v2:read_cg_from_restart:pick_off_and_size] Non-recognized area_type. (w)")
+         end select
+
+      end subroutine pick_off_and_size
+
+      subroutine calc_off_and_size(restart_box_my, own_box_my, own_off_my, restart_off_my, o_size_my)
+
+         use constants, only: LONG, LO, HI, xdim, zdim
+
+         implicit none
+
+         integer(kind=8), dimension(xdim:zdim, LO:HI), intent(in)  :: restart_box_my
+         integer(kind=8), dimension(xdim:zdim, LO:HI), intent(in)  :: own_box_my
+         integer(kind=8), dimension(xdim:zdim),        intent(out) :: own_off_my
+         integer(kind=8), dimension(xdim:zdim),        intent(out) :: restart_off_my
+         integer(kind=8), dimension(xdim:zdim),        intent(out) :: o_size_my
+
+         integer :: d
+
+         own_off_my(:) = 0
+         restart_off_my(:) = 0
+         o_size_my(:) = 1
+         do d = xdim, zdim
+            if (dom%has_dir(d)) then
+               own_off_my(d) = max(restart_box_my(d, LO) - own_box_my(d, LO), 0_LONG)
+               restart_off_my(d) = max(own_box_my(d, LO) - restart_box_my(d, LO), 0_LONG)
+               o_size_my(d) = min(restart_box_my(d, HI), own_box_my(d, HI)) - max(restart_box_my(d, LO), own_box_my(d, LO)) + 1
+            endif
+         enddo
+
+      end subroutine calc_off_and_size
 
    end subroutine read_cg_from_restart
 
