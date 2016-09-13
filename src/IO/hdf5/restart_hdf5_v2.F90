@@ -323,7 +323,7 @@ contains
                   do i = lbound(wr_lst, dim=1), ubound(wr_lst, dim=1)
                      ic = ic + 1
                      pa4d => cg%w(wr_lst(i))%span(pick_area(cg, wna%lst(wr_lst(i))%restart_mode))
-                     dims(:) = [ wna%lst(wr_lst(i))%dim4, pick_dims(cg, qna%lst(qr_lst(i))%restart_mode) ]
+                     dims(:) = [ wna%lst(wr_lst(i))%dim4, pick_dims(cg, wna%lst(wr_lst(i))%restart_mode) ]
                      call h5dwrite_f(cg_desc%dset_id(ncg, ic), H5T_NATIVE_DOUBLE, pa4d, dims, error, xfer_prp = cg_desc%xfer_prp)
                   enddo
                   deallocate(dims)
