@@ -400,6 +400,7 @@ contains
 
          integer(kind=4), dimension(ndims, LO:HI)  :: ijkse
 
+         ijkse = 0 ! suppress compiler warning on maybe uninitialized variable
          select case (mode)
             case (AT_OUT_B)
                ijkse = cg%lh_out
