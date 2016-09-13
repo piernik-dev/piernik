@@ -447,9 +447,9 @@ contains
 
          select case (mode)
             case (AT_OUT_B)
-               n_b = cg_all_n_b(:, ncg)
-            case (AT_NO_B)
                n_b = cg_all_n_o(:, ncg)
+            case (AT_NO_B)
+               n_b = cg_all_n_b(:, ncg)
             case (AT_USER)
                call die("[restart_hdf5_v2:write_cg_to_restart:pick_size] AT_USER not implemented")
             case default
