@@ -73,7 +73,7 @@ contains
 
       use constants, only: fpi
       use gdf,       only: gdf_field_type
-      use units,     only: cm, gram, sek, miu0
+      use units,     only: cm, erg, gram, sek, miu0
 
       implicit none
 
@@ -92,8 +92,11 @@ contains
             f%fu = "\rm{cm}/\rm{s}"
             f%f2cgs = 1.0 / (cm/sek)
          case ("enen", "enei")
-            f%fu = "\rm{g}*\rm{cm}^2/\rm{s}^2"
-            f%f2cgs = 1.0 / (gram*cm**2/sek**2)
+            f%fu = "\rm{erg}/\rm{cm}^3"
+            f%f2cgs = 1.0 / (erg/cm**3)
+         case ("ethn", "ethi")
+            f%fu = "\rm{erg}/\rm{g}"
+            f%f2cgs = 1.0 / (erg/gram)
          case ("pren", "prei")
             f%fu = "\rm{g}/\rm{cm}/\rm{s}^2"
             f%f2cgs = 1.0 / (gram/cm/sek**2)
@@ -102,6 +105,8 @@ contains
             f%f2cgs = 1.0 / (fpi * sqrt(cm / (miu0 * gram)) * sek)
             f%stag = 1
          case ("cr1" : "cr9")
+            f%fu = "\rm{erg}/\rm{cm}^3"
+            f%f2cgs = 1.0 / (erg/cm**3)
          case ("gpot", "sgpt")
             f%fu = "\rm{cm}^2 / \rm{s}^2"
             f%f2cgs = 1.0 / (cm**2 / sek**2)
@@ -126,6 +131,8 @@ contains
             case ("vlxd", "vlxn", "vlxi", "vlyd", "vlyn", "vlyi", "vlzd", "vlzn", "vlzi")
                write(newname, '("velocity_",A1)') var(3:3)
             case ("enen", "enei")
+               newname = "energy_density"
+            case ("ethn", "ethi")
                newname = "specific_energy"
             case ("pren", "prei")
                newname = "pressure"
@@ -143,7 +150,7 @@ contains
 
       use common_hdf5,  only: hdf_vars
       use constants,    only: units_len, cbuff_len, I_FIVE
-      use hdf5,         only: HID_T, H5S_SCALAR_F, h5dopen_f, h5dclose_f
+      use hdf5,         only: HID_T, h5dopen_f, h5dclose_f
       use helpers_hdf5, only: create_dataset, create_attribute
       use units,        only: lmtvB, s_lmtvB, get_unit
 
@@ -283,6 +290,18 @@ contains
                  &       ekin(cg%u(flind%ion%imx, RNG), cg%u(flind%ion%imy, RNG), cg%u(flind%ion%imz, RNG), cg%u(flind%ion%idn, RNG)), kind=4) - &
                  &       real(flind%ion%gam_1*emag(cg%b(xdim, RNG), cg%b(ydim, RNG), cg%b(zdim, RNG)), kind=4)
 #endif /* !ISO */
+         case ("ethn")
+#ifndef ISO
+            tab(:,:,:) = real( (cg%u(flind%neu%ien, RNG) - &
+                 &       ekin(cg%u(flind%neu%imx, RNG), cg%u(flind%neu%imy, RNG), cg%u(flind%neu%imz, RNG), cg%u(flind%neu%idn, RNG))) /         &
+                 &       cg%u(flind%neu%idn, RNG), kind=4)
+#endif /* !ISO */
+         case ("ethi")
+#ifndef ISO
+            tab(:,:,:) = real( (cg%u(flind%ion%ien, RNG) - &
+                 &       ekin(cg%u(flind%ion%imx, RNG), cg%u(flind%ion%imy, RNG), cg%u(flind%ion%imz, RNG), cg%u(flind%ion%idn, RNG)) -          &
+                 &       emag(cg%b(xdim, RNG), cg%b(ydim, RNG), cg%b(zdim, RNG))) / cg%u(flind%ion%idn, RNG), kind=4)
+#endif /* !ISO */
          case ("magx", "magy", "magz")
             if (associated(cg%b)) then
                tab(:,:,:) = real(cg%b(xdim + i_xyz, RNG), kind=4)
@@ -309,7 +328,7 @@ contains
          case ("sgpt")
             if (associated(cg%sgp)) tab(:,:,:) = real(cg%sgp(RNG), kind=4)
          case ("level")
-            tab(:,:,:) = real(cg%level_id, kind=4)
+            tab(:,:,:) = real(cg%l%id, kind=4)
          case ("grid_id")
             tab(:,:,:) = real(cg%grid_id, kind=4)
          case ("proc")
@@ -390,7 +409,7 @@ contains
 
 !> \brief Write all grid containers to the file
 
-   subroutine write_cg_to_output(cgl_g_id, cg_n, cg_all_n_b)
+   subroutine write_cg_to_output(cgl_g_id, cg_n, cg_all_n_b, cg_all_n_o)
 
       use cg_leaves,   only: leaves
       use cg_list,     only: cg_list_element
@@ -407,6 +426,7 @@ contains
       integer(HID_T),                           intent(in) :: cgl_g_id    !< cg group identifier
       integer(kind=4), dimension(:),   pointer, intent(in) :: cg_n        !< offset for cg group numbering
       integer(kind=4), dimension(:,:), pointer, intent(in) :: cg_all_n_b  !< all cg sizes
+      integer(kind=4), dimension(:,:), pointer, intent(in) :: cg_all_n_o  !< all cg sizes, expanded by external boundaries
 
       integer(HID_T)                                       :: filespace_id, memspace_id
       integer(kind=4)                                      :: error
@@ -517,6 +537,8 @@ contains
       if (associated(data)) deallocate(data)
       call cg_desc%clean()
 
+      if (.false.) i = size(cg_all_n_o) ! suppress compiler warning
+
       contains
          !>
          !! Try to avoid pointless data reallocation for every cg if shape doesn't change
@@ -585,23 +607,26 @@ contains
 
    end subroutine get_data_from_cg
 
-   subroutine create_empty_cg_datasets_in_output(cg_g_id, cg_n_b, Z_avail, g)
+   subroutine create_empty_cg_datasets_in_output(cg_g_id, cg_n_b, cg_n_o, Z_avail)
 
       use common_hdf5, only: create_empty_cg_dataset, hdf_vars, O_OUT
       use hdf5,        only: HID_T, HSIZE_T
 
       implicit none
 
-      integer(HID_T),                           intent(in) :: cg_g_id
-      integer(kind=4), dimension(:,:), pointer, intent(in) :: cg_n_b
-      logical(kind=4),                          intent(in) :: Z_avail
-      integer,                                  intent(in) :: g
+      integer(HID_T),                intent(in) :: cg_g_id
+      integer(kind=4), dimension(:), intent(in) :: cg_n_b
+      integer(kind=4), dimension(:), intent(in) :: cg_n_o
+      logical(kind=4),               intent(in) :: Z_avail
 
-      integer                                              :: i
+      integer :: i
 
       do i = lbound(hdf_vars,1), ubound(hdf_vars,1)
-         call create_empty_cg_dataset(cg_g_id, gdf_translate(hdf_vars(i)), int(cg_n_b(g, :), kind=HSIZE_T), Z_avail, O_OUT)
+         call create_empty_cg_dataset(cg_g_id, gdf_translate(hdf_vars(i)), int(cg_n_b, kind=HSIZE_T), Z_avail, O_OUT)
       enddo
+
+      if (.false.) i = size(cg_n_o) ! suppress compiler warning
+
    end subroutine create_empty_cg_datasets_in_output
 
    subroutine h5_write_to_single_file_v1(fname)
@@ -636,6 +661,9 @@ contains
       integer(HID_T)                    :: memspace                !< Dataspace identifier in memory
       integer(HSIZE_T), dimension(rank) :: count, offset, stride, block, dimsf, chunk_dims
 
+      ! Sometimes the data(:,:,:) is created in an associated state, sometimes not
+      nullify(data)
+
       call h5open_f(error)
       !
       ! Setup file access property list with parallel I/O access.
@@ -649,7 +677,7 @@ contains
       call h5pclose_f(plist_idf, error)
 
       !! \todo check if finest is complete, if not then find finest complete level
-      dimsf  = finest%level%n_d(:)    ! Dataset dimensions
+      dimsf  = finest%level%l%n_d(:)    ! Dataset dimensions
       !
       ! Create the data space for the  dataset.
       !

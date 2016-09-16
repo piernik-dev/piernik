@@ -33,7 +33,7 @@ module initproblem
    private
    public :: read_problem_par, problem_initial_conditions, problem_pointers
 
-   real :: dblob, xblob, yblob, zblob, dnamb, rclear, pblob, dnblob, dnin, vxfac, p0ambfac, dnambfac, taucool, Tblob, pamb
+   real :: dblob, xblob, yblob, zblob, dnamb, rclear, pblob, dnblob, vxfac, p0ambfac, dnambfac, taucool, Tblob, pamb
 
    namelist /PROBLEM_CONTROL/  dnblob,xblob,yblob,zblob,rclear,Tblob,dblob, &
                                vxfac, p0ambfac, taucool, dnambfac

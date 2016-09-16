@@ -1,4 +1,4 @@
-! wind problem
+! wind accretion problem
 !
 #include "piernik.h"
 
@@ -7,7 +7,7 @@ module initproblem
    implicit none
 
    private
-   public :: read_problem_par, vel_profile, problem_initial_conditions, problem_pointers
+   public :: read_problem_par, wind_profile, problem_initial_conditions, problem_pointers
 
    real :: mstar, mdot, rin, rdust, vel_scale, tburst, dburst, vburst, mburst
 
@@ -36,15 +36,15 @@ contains
 
       implicit none
 
-      mstar     = 0.
-      mdot      = 0.
-      rin       = 0.
-      rdust     = 0.
-      vel_scale = 1.
-      tburst    = 0.
-      dburst    = 0.
-      vburst    = 0.
-      mburst    = 0.
+      mstar     = 0. !< stellar mass
+      mdot      = 0. !< mass loss
+      rin       = 0. !< inner boundary for wind solution
+      rdust     = 0. !< outer boundary for customized wind solution
+      vel_scale = 1. !< velocity factor
+      tburst    = 0. !< burst initial time
+      dburst    = 0. !< burst duration since tburst
+      vburst    = 0. !< velocity factor during burst
+      mburst    = 0. !< density factor during burst
 
       if (master) then
 
@@ -96,11 +96,11 @@ contains
 
 !-----------------------------------------------------------------------------
 
-   subroutine vel_profile(r, vel, dens)
-   ! velocity profile for isothermal wind
+   subroutine wind_profile(r, vel, dens)
+   ! velocity and density profiles for isothermal wind
 
       use fluidindex, only: flind
-      use constants,  only: fpi
+      use constants,  only: fpi ! four*pi
       use units,      only: newtong
 
       implicit none
@@ -118,7 +118,7 @@ contains
          dens = mdot/fpi/rin**2/vel0
       endif
 
-   end subroutine vel_profile
+   end subroutine wind_profile
 
 !-----------------------------------------------------------------------------
 
@@ -155,7 +155,7 @@ contains
                   zk = cg%z(k)
                   rc = sqrt(xi**2 + yj**2 + zk**2)
 
-                  call vel_profile(rc, vel, dens)
+                  call wind_profile(rc, vel, dens)
 
                   cg%u(fl%idn,i,j,k) = max(dens, smalld)
                   if (fl%ien > 1) then
@@ -220,7 +220,7 @@ contains
                   rc = sqrt(xi**2 + yj**2 + zk**2)
 
                   if (rc < rdust) then
-                     call vel_profile(rc, vel, dens)
+                     call wind_profile(rc, vel, dens)
                      if ((tburst > 0.) .and. (t > tburst) .and. (t < tburst + dburst)) then
                         vel = vel*vburst
                         dens = dens*mburst

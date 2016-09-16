@@ -427,12 +427,12 @@ contains
                if (master) call warn("[multigrid_gravity:init_multigrid_grav] base_no_fft unset but no suitable boundary conditions found. Reverting to relaxation.")
          end select
          if (trim(FFTn) /= "none" .and. master) then
-            write(msg,'(a,i3,2a)')"[multigrid_gravity:init_multigrid_grav] Coarsest level (",coarsest%level%level_id,"), FFT solver: ", trim(FFTn)
+            write(msg,'(a,i3,2a)')"[multigrid_gravity:init_multigrid_grav] Coarsest level (",coarsest%level%l%id,"), FFT solver: ", trim(FFTn)
             call printinfo(msg)
          endif
       endif
       if (coarsest%level%fft_type == fft_none .and. master) then
-         write(msg,'(a,i3,a)')"[multigrid_gravity:init_multigrid_grav] Coarsest level (",coarsest%level%level_id,"), relaxation solver"
+         write(msg,'(a,i3,a)')"[multigrid_gravity:init_multigrid_grav] Coarsest level (",coarsest%level%l%id,"), relaxation solver"
          call printinfo(msg)
       endif
 
@@ -534,10 +534,10 @@ contains
       cg%mg%r  = cg%mg%r * cg%dvol**2
 
       ! FFT solver storage and data
-      curl => find_level(cg%level_id)
+      curl => find_level(cg%l%id)
 
       if (.not. associated(curl)) call die("[multigrid_gravity:mgg_cg_init] level not found")
-      if (cg%level_id /= curl%level_id) call die("[multigrid_gravity:mgg_cg_init] wrong level found")
+      if (cg%l%id /= curl%l%id) call die("[multigrid_gravity:mgg_cg_init] wrong level found")
 
       cg%mg%planf = 0
       cg%mg%plani = 0

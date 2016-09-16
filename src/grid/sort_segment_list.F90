@@ -86,7 +86,7 @@ contains
 
       implicit none
 
-      class(sort_segment_list_T),                   intent(inout) :: this
+      class(sort_segment_list_T),                   intent(inout) :: this !< object invoking type-bound procedure
       integer(kind=4),                              intent(in)    :: tag
       integer(kind=8), dimension(xdim:zdim, LO:HI), intent(in)    :: se
       type(grid_container), pointer,                intent(in)    :: cg
@@ -126,7 +126,7 @@ contains
 
       implicit none
 
-      class(sort_segment_list_T),       intent(inout) :: this
+      class(sort_segment_list_T),       intent(inout) :: this  !< object invoking type-bound procedure
       logical, dimension(xdim:cor_dim), intent(in)    :: dmask !< .true. for the directions we want to include
 
       integer :: i
@@ -154,7 +154,7 @@ contains
 
       implicit none
 
-      class(sort_segment_list_T), intent(inout) :: this
+      class(sort_segment_list_T), intent(inout) :: this !< object invoking type-bound procedure
 
       if (allocated(this%list)) deallocate(this%list)
 
@@ -171,7 +171,7 @@ contains
 
       implicit none
 
-      class(sort_segment_list_T), intent(inout) :: this
+      class(sort_segment_list_T), intent(inout) :: this !< object invoking type-bound procedure
       integer,                    intent(in)    :: a, b
 
       if (a == b) then
@@ -199,7 +199,7 @@ contains
 
       implicit none
 
-      class(sort_segment_list_T), intent(inout) :: this
+      class(sort_segment_list_T), intent(inout) :: this !< object invoking type-bound procedure
       integer,                    intent(in)    :: a, b
 
       if (a == b) return
@@ -220,7 +220,7 @@ contains
 
       implicit none
 
-      class(sort_segment_list_T), intent(in) :: this
+      class(sort_segment_list_T), intent(in) :: this !< object invoking type-bound procedure
 
       if (allocated(this%list)) then
          l_bound = lbound(this%list, dim=1)
@@ -236,7 +236,7 @@ contains
 
       implicit none
 
-      class(sort_segment_list_T), intent(in) :: this
+      class(sort_segment_list_T), intent(in) :: this !< object invoking type-bound procedure
 
       if (allocated(this%list)) then
          u_bound = this%cur_last

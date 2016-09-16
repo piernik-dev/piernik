@@ -368,7 +368,7 @@ contains
 
       integer, intent(in) :: cr_id !< CR component index
 
-      if (finest%level%level_id /= base_level_id) call die("[multigrid_diffusion:init_source] refinements not implemented yet")
+      if (finest%level%l%id /= base_level_id) call die("[multigrid_diffusion:init_source] refinements not implemented yet")
 
       call all_cg%set_dirty(source)
       call all_cg%set_dirty(correction)
@@ -520,7 +520,7 @@ contains
       norm_rhs = leaves%norm_sq(solution)
       norm_old = norm_rhs
 
-      if (finest%level%level_id /= base_level_id) call die("[multigrid_diffusion:vcycle_hg] refinements not implemented yet")
+      if (finest%level%l%id /= base_level_id) call die("[multigrid_diffusion:vcycle_hg] refinements not implemented yet")
 
       do v = 0, max_cycles
 

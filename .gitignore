@@ -2,7 +2,8 @@ obj*/
 runs/
 *~
 .lastsetup
-python/DirWalk.pyc
+*.pyc
 .setuprc
 html/
 dep.png
+*.ignore

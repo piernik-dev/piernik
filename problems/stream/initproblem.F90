@@ -37,7 +37,6 @@ module initproblem
 
    character(len=cbuff_len) :: fnoise
    real                     :: rhog, eps, amp, kx, kz
-   real, dimension(8), save :: vec
    logical                  :: linear
 
    namelist /PROBLEM_CONTROL/  rhog, eps, amp, fnoise, kx,kz, linear

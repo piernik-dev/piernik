@@ -30,11 +30,12 @@
 
 module grid_cont
 
-   use constants,       only: xdim, zdim, ndims, LO, HI, CENTER, INV_CENTER
-   use fluxtypes,       only: fluxarray, fluxpoint
-   use named_array,     only: named_array4d, named_array3d, named_array_fc, fc_3d_arr
-   use refinement_flag, only: ref_flag
-   use real_vector,     only: real_vec_T
+   use constants,        only: xdim, zdim, ndims, LO, HI, CENTER, INV_CENTER
+   use fluxtypes,        only: fluxarray, fluxpoint
+   use level_essentials, only: level_T
+   use named_array,      only: named_array4d, named_array3d, named_array_fc, fc_3d_arr
+   use refinement_flag,  only: ref_flag
+   use real_vector,      only: real_vec_T
 
    implicit none
 
@@ -132,7 +133,7 @@ module grid_cont
       integer(kind=4) :: nxb                                     !< number of %grid cells in one block (without boundary cells) in x-direction
       integer(kind=4) :: nyb                                     !< number of %grid cells in one block (without boundary cells) in y-direction
       integer(kind=4) :: nzb                                     !< number of %grid cells in one block (without boundary cells) in z-direction
-      integer(kind=4) :: level_id                                !< level id (number); do not use it without a good reason, use cg_level_T%lev where possible instead
+      class(level_T), pointer :: l                               !< level essential data
 
       ! shortcuts
       !> \todo Change kind from 4 to 8 to allow really deep refinements (effective resolution > 2**31, perhaps the other requirement will be default integer  kind = 8)
@@ -149,12 +150,11 @@ module grid_cont
       integer(kind=4), dimension(ndims, LO:HI)  :: ijkseb        !< [[isb, jsb, ksb], [ieb, jeb, keb]]
       integer(kind=4), dimension(ndims, LO:HI)  :: lh1           !< [[il1, jl1, kl1], [ih1, jh1, kh1]]
       integer(kind=4), dimension(ndims, LO:HI)  :: lhn           !< [[iln, jln, kln], [ihn, jhn, khn]]
-      integer(kind=8), dimension(ndims)         :: h_cor1        !< offsets of the corner opposite to the one defined by off(:) + 1, a shortcut to be compared with dom%n_d(:) DEPRECATED will be equivalent to ijkse(:, HI)+1
+      integer(kind=4), dimension(ndims, LO:HI)  :: lh_out        !< ijkse expanded at the external boundaries to include external guardcells for contexts where AT_OUT_B is used
       integer(kind=4), dimension(ndims)         :: n_            !< number of %grid cells in one block in x-, y- and z-directions (n_b(:) + 2 * nb)
-      integer(kind=8), dimension(ndims, LO:HI) :: my_se          !< own segment. my_se(:,LO) = 0; my_se(:,HI) = dom%n_d(:) - 1 would cover entire domain on a base level
+      integer(kind=8), dimension(ndims, LO:HI)  :: my_se         !< own segment. my_se(:,LO) = 0; my_se(:,HI) = dom%n_d(:) - 1 would cover entire domain on a base level
                                                                  !! my_se(:,LO) = 0; my_se(:,HI) = finest%level%n_d(:) -1 would cover entire domain on the most refined level
                                                                  !! DEPRECATED: will be equivalent to ijkse(:,:)
-      integer(kind=8), dimension(ndims) :: level_off             !< offset of own level
 
       ! Physical size and coordinates
 
@@ -266,56 +266,57 @@ contains
 !! \details This method sets up the grid container variables, coordinates and allocates basic arrays.
 !! Everything related to the interior of grid container should be set here.
 !! Things that are related to communication with other grid containers or global properties are set up in cg_level::init_all_new_cg.
+!!
+!! BEWARE: things like off and n_d are replicated across level (it was a cheap workaround for circular dependencies)
+!! \todo invent something better that avoids both circular dependencies and replication of same data
 !<
 
-   subroutine init_gc(this, n_d, off, my_se, grid_id, level_id)
+   subroutine init_gc(this, my_se, grid_id, l)
 
-      use constants,    only: PIERNIK_INIT_DOMAIN, xdim, ydim, zdim, ndims, big_float, LO, HI, I_ONE, I_TWO, BND_MPI, BND_COR, GEO_XYZ, GEO_RPZ, dpi
-      use dataio_pub,   only: die, warn, code_progress
-      use domain,       only: dom
-      use func,         only: operator(.equals.)
-      use grid_helpers, only: f2c
-      use ordering,     only: SFC_order
+      use constants,        only: PIERNIK_INIT_DOMAIN, xdim, ydim, zdim, ndims, big_float, &
+           &                      LO, HI, I_ONE, I_TWO, BND_MPI, BND_COR, GEO_XYZ, GEO_RPZ, dpi
+      use dataio_pub,       only: die, warn, code_progress
+      use domain,           only: dom
+      use func,             only: operator(.equals.)
+      use grid_helpers,     only: f2c
+      use level_essentials, only: level_T
+      use ordering,         only: SFC_order
 
       implicit none
 
-      class(grid_container), target,   intent(inout) :: this ! intent(out) would silently clear everything, that was already set
-                                                             ! (also the fields in types derived from grid_container)
-      integer(kind=8), dimension(:),   intent(in) :: n_d     !< max resolution of my level
-      integer(kind=8), dimension(:),   intent(in) :: off     !< offset of my level
-      integer(kind=8), dimension(:,:), intent(in) :: my_se   !< my segment
-      integer,                         intent(in) :: grid_id
-      integer(kind=4),                 intent(in) :: level_id
+      class(grid_container), target,   intent(inout) :: this  ! intent(out) would silently clear everything, that was already set
+                                                              ! (also the fields in types derived from grid_container)
+      integer(kind=8), dimension(:,:), intent(in) :: my_se    !< my segment
+      integer,                         intent(in) :: grid_id  !< ID which should be unique across level
+      class(level_T), pointer,         intent(in) :: l        !< level essential data
 
       integer :: i
       integer(kind=8), dimension(ndims, LO:HI) :: rn
 
       if (code_progress < PIERNIK_INIT_DOMAIN) call die("[grid_container:init_gc] MPI not initialized.")
 
-      this%level_off  = off
+      this%l          => l
       this%membership = 1
       this%grid_id    = grid_id
       this%my_se(:,:) = my_se(:, :)
-      this%h_cor1(:)  = this%my_se(:, HI) + I_ONE
       this%n_b(:)     = int(this%my_se(:, HI) - this%my_se(:, LO) + I_ONE, 4) ! Block 'physical' grid sizes
-      this%level_id   = level_id
-      this%SFC_id     = SFC_order(this%my_se(:, LO) - off)
+      this%SFC_id     = SFC_order(this%my_se(:, LO) - l%off)
 
       if (any(this%n_b(:) <= 0)) call die("[grid_container:init_gc] Mixed positive and non-positive grid sizes")
 
       ! Inherit the boundaries from the domain, then set MPI or SHEAR boundaries where applicable
       this%bnd(:,:) = dom%bnd(:,:)
-      where (my_se(:, LO)   /= off(:)         ) this%bnd(:, LO) = BND_MPI
-      where (this%h_cor1(:) /= off(:) + n_d(:)) this%bnd(:, HI) = BND_MPI
+      where (my_se(:, LO)         /= l%off(:)           ) this%bnd(:, LO) = BND_MPI
+      where (my_se(:, HI) + I_ONE /= l%off(:) + l%n_d(:)) this%bnd(:, HI) = BND_MPI
       ! For periodic boundaries do not set BND_MPI when local domain spans through the whole computational domain in given direction.
-      where (dom%periodic(:) .and. this%h_cor1(:)    /= n_d(:)) this%bnd(:, LO) = BND_MPI
-      where (dom%periodic(:) .and. this%my_se(:, LO) /= 0)      this%bnd(:, HI) = BND_MPI
+      where (dom%periodic(:) .and. this%my_se(:, HI) + I_ONE /= l%n_d(:)) this%bnd(:, LO) = BND_MPI
+      where (dom%periodic(:) .and. this%my_se(:, LO)         /= 0       ) this%bnd(:, HI) = BND_MPI
 
       this%ext_bnd(:, :) = .false.
       do i = xdim, zdim
          if (dom%has_dir(i) .and. .not. dom%periodic(i)) then
-            this%ext_bnd(i, LO) = (my_se(i, LO)   == off(i))
-            this%ext_bnd(i, HI) = (this%h_cor1(i) == off(i) + n_d(i)) !! \warning not true on AMR
+            this%ext_bnd(i, LO) = (my_se(i, LO)         == l%off(i))
+            this%ext_bnd(i, HI) = (my_se(i, HI) + I_ONE == l%off(i) + l%n_d(i))
          endif
       enddo
 
@@ -349,9 +350,9 @@ contains
          this%lh1(:,HI)    = this%ijkse(:, HI) + I_ONE
          this%lhn(:,LO)    = this%ijkse(:, LO) - dom%nb
          this%lhn(:,HI)    = this%ijkse(:, HI) + dom%nb
-         this%dl(:)        = dom%L_(:) / n_d(:)
-         this%fbnd(:, LO)  = dom%edge(:, LO) + this%dl(:) * (this%my_se(:, LO) - off(:))
-         this%fbnd(:, HI)  = dom%edge(:, LO) + this%dl(:) * (this%h_cor1(:) - off(:))
+         this%dl(:)        = dom%L_(:) / l%n_d(:)
+         this%fbnd(:, LO)  = dom%edge(:, LO) + this%dl(:) * (this%my_se(:, LO)         - l%off(:))
+         this%fbnd(:, HI)  = dom%edge(:, LO) + this%dl(:) * (this%my_se(:, HI) + I_ONE - l%off(:))
       elsewhere
          this%n_(:)        = 1
          this%ijkse(:, LO) = 0
@@ -366,6 +367,14 @@ contains
          this%fbnd(:, LO)  = dom%edge(:, LO)
          this%fbnd(:, HI)  = dom%edge(:, HI)
       endwhere
+
+      ! Compute indices that include external boundary cells
+      ! Strangely, we ignore periodicity here, following what we had in restart_hdf5_v1::set_dims_for_restart
+
+      this%lh_out = this%ijkse
+      where (dom%has_dir(:) .and. (my_se(:, LO) == l%off(:)                   )) this%lh_out(:, LO) = this%lh_out(:, LO) - dom%nb
+      where (dom%has_dir(:) .and. (my_se(:, HI) == l%off(:) + l%n_d(:) - I_ONE)) this%lh_out(:, HI) = this%lh_out(:, HI) + dom%nb
+      !> \todo make sure the above works correctly with refinements
 
       if (any(this%dl .equals. 0.)) call die("[grid_container:init_gc] found cell size equal to 0.")
 
@@ -571,7 +580,8 @@ contains
 
       implicit none
 
-      class(grid_container), intent(inout) :: this
+      class(grid_container), intent(inout) :: this !< object invoking type-bound procedure
+
       integer :: d, g, b, cdim
       integer, parameter :: nseg = 4*2
       type(tgt_list), dimension(nseg) :: rpio_tgt
@@ -736,7 +746,7 @@ contains
 
       implicit none
 
-      class(grid_container), intent(inout), target :: this
+      class(grid_container), intent(inout), target :: this  !< object invoking type-bound procedure
 
       integer :: i
 
@@ -764,7 +774,7 @@ contains
       if (fna%bi /= INVALID) this%bf => this%f(fna%bi)%f_arr
       if (associated(this%b) .and. associated(this%bf)) call die("[grid_container:add_all_na] both positions of magnetic field can not be used at same time")
       ! if one ever needs other type of array for magnetic field storage (auxiliary one for interpolated values), it can be requested from user problem or solver but should not become a standard.
-      if ((.not. associated(this%b)) .and. (.not. associated(this%bf)) .and. (this%level_id >= base_level_id)) call warn("[grid_container:add_all_na] no magnetic field was declared")
+      if ((.not. associated(this%b)) .and. (.not. associated(this%bf)) .and. (this%l%id >= base_level_id)) call warn("[grid_container:add_all_na] no magnetic field was declared")
       !> \todo use this by default for nonmagnetic simulations  instead of having MAGNETIC preprocessor macro.
       this%wa => this%q(qna%wai)%arr
 #ifdef ISO
@@ -786,7 +796,7 @@ contains
 
       implicit none
 
-      class(grid_container), intent(inout) :: this
+      class(grid_container), intent(inout) :: this          !< object invoking type-bound procedure
       logical,               intent(in)    :: multigrid     !< If .true. then cg%q(:)%arr and cg%w(:)%arr are allocated also below base level
 
       type(named_array3d), allocatable, dimension(:) :: tmp
@@ -799,7 +809,7 @@ contains
          call move_alloc(from=tmp, to=this%q)
       endif
 
-      if (multigrid .or. this%level_id >= base_level_id) call this%q(ubound(this%q(:), dim=1))%init(this%lhn(:, LO), this%lhn(:, HI))
+      if (multigrid .or. this%l%id >= base_level_id) call this%q(ubound(this%q(:), dim=1))%init(this%lhn(:, LO), this%lhn(:, HI))
 
    end subroutine add_na
 
@@ -816,7 +826,7 @@ contains
 
       implicit none
 
-      class(grid_container), intent(inout) :: this
+      class(grid_container), intent(inout) :: this         !< object invoking type-bound procedure
       integer(kind=4),       intent(in)    :: n            !< Length of the vector quantity to be stored (first dimension of the array)
 
       type(named_array4d), allocatable, dimension(:) :: tmp
@@ -829,7 +839,7 @@ contains
          call move_alloc(from=tmp, to=this%w)
       endif
 
-      if (this%level_id >= base_level_id) call this%w(ubound(this%w(:), dim=1))%init( [1_INT4, this%lhn(:, LO)], [n, this%lhn(:, HI)] ) !< \deprecated magic integer
+      if (this%l%id >= base_level_id) call this%w(ubound(this%w(:), dim=1))%init( [1_INT4, this%lhn(:, LO)], [n, this%lhn(:, HI)] ) !< \deprecated magic integer
 
    end subroutine add_na_4d
 
@@ -857,7 +867,7 @@ contains
          call move_alloc(from=tmp, to=this%f)
       endif
 
-      if (this%level_id >= base_level_id) call this%f(ubound(this%f(:), dim=1))%init(this%lhn(:, LO), this%lhn(:, HI))
+      if (this%l%id >= base_level_id) call this%f(ubound(this%f(:), dim=1))%init(this%lhn(:, LO), this%lhn(:, HI))
 
    end subroutine add_na_fc
 
@@ -869,7 +879,7 @@ contains
 
       implicit none
 
-      class(grid_container), intent(inout) :: this
+      class(grid_container), intent(inout) :: this !< object invoking type-bound procedure
 
       integer(kind=8), dimension(xdim:zdim, LO:HI) :: se
       integer :: g
@@ -892,10 +902,10 @@ contains
 
       implicit none
 
-      class(bnd_list),                              intent(inout) :: this
-      integer,                                      intent(in)    :: proc
-      integer(kind=8), dimension(xdim:zdim, LO:HI), intent(in)    :: se
-      integer(kind=4),                              intent(in)    :: tag
+      class(bnd_list),                              intent(inout) :: this !< object invoking type-bound procedure
+      integer,                                      intent(in)    :: proc !< process to be communicated
+      integer(kind=8), dimension(xdim:zdim, LO:HI), intent(in)    :: se   !< segment definition
+      integer(kind=4),                              intent(in)    :: tag  !< tag for MPI calls
 
       type(segment), dimension(:), allocatable :: tmp
       integer :: g
@@ -926,9 +936,10 @@ contains
 
       implicit none
 
-      class(grid_container), intent(in)    :: this
-      integer(kind=4),       intent(in)    :: cdim
-      integer,               intent(in)    :: i1, i2
+      class(grid_container), intent(in)    :: this    !< object invoking type-bound procedure
+      integer(kind=4),       intent(in)    :: cdim    !< direction of the flux
+      integer,               intent(in)    :: i1      !< coordinate
+      integer,               intent(in)    :: i2      !< coordinate
       type(ext_fluxes),      intent(inout) :: eflx
 
       if (this%finebnd(cdim, LO)%index(i1, i2) >= this%ijkse(cdim, LO)) then
@@ -970,9 +981,10 @@ contains
 
       implicit none
 
-      class(grid_container), intent(inout) :: this
+      class(grid_container), intent(inout) :: this    !< object invoking type-bound procedure
       integer(kind=4),       intent(in)    :: cdim
-      integer,               intent(in)    :: i1, i2
+      integer,               intent(in)    :: i1
+      integer,               intent(in)    :: i2
       type(ext_fluxes),      intent(inout) :: eflx
 
       if (associated(eflx%lo)) call this%coarsebnd(cdim, LO)%fp2fa(eflx%lo, i1, i2)
@@ -1051,7 +1063,7 @@ contains
 
       implicit none
 
-      class(grid_container),                        intent(inout) :: this
+      class(grid_container),                        intent(inout) :: this  !< object invoking type-bound procedure
       integer(kind=4),                              intent(in)    :: ind   !< index of cg%q(:) 3d array - variable to be prolonged
       integer(kind=8), dimension(xdim:zdim, LO:HI), intent(in)    :: cse   !< coarse segment
       logical,                                      intent(in)    :: p_xyz !< store the result in this%prolong_xyz when true, in this%q(ind)%arr otherwise
@@ -1278,7 +1290,7 @@ contains
 
       implicit none
 
-      class(grid_container), intent(inout) :: this
+      class(grid_container), intent(inout) :: this !< object invoking type-bound procedure
 
       integer :: i, j, k, ifs, ife, jfs, jfe, kfs, kfe
       enum, bind(C)
@@ -1303,23 +1315,23 @@ contains
 
       if (any(AMR_bsize == 0)) return ! this routine works only with blocky AMR
 
-      do i = int(((this%is - this%level_off(xdim))*refinement_factor) / AMR_bsize(xdim)), int(((this%ie - this%level_off(xdim))*refinement_factor + I_ONE) / AMR_bsize(xdim))
-         ifs = max(int(this%is), int(this%level_off(xdim)) + (i*AMR_bsize(xdim))/refinement_factor)
-         ife = min(int(this%ie), int(this%level_off(xdim)) + ((i+I_ONE)*AMR_bsize(xdim)-I_ONE)/refinement_factor)
+      do i = int(((this%is - this%l%off(xdim))*refinement_factor) / AMR_bsize(xdim)), int(((this%ie - this%l%off(xdim))*refinement_factor + I_ONE) / AMR_bsize(xdim))
+         ifs = max(int(this%is), int(this%l%off(xdim)) + (i*AMR_bsize(xdim))/refinement_factor)
+         ife = min(int(this%ie), int(this%l%off(xdim)) + ((i+I_ONE)*AMR_bsize(xdim)-I_ONE)/refinement_factor)
 
-         do j = int(((this%js - this%level_off(ydim))*refinement_factor) / AMR_bsize(ydim)), int(((this%je - this%level_off(ydim))*refinement_factor + I_ONE) / AMR_bsize(ydim))
-            jfs = max(int(this%js), int(this%level_off(ydim)) + (j*AMR_bsize(ydim))/refinement_factor)
-            jfe = min(int(this%je), int(this%level_off(ydim)) + ((j+I_ONE)*AMR_bsize(ydim)-I_ONE)/refinement_factor)
+         do j = int(((this%js - this%l%off(ydim))*refinement_factor) / AMR_bsize(ydim)), int(((this%je - this%l%off(ydim))*refinement_factor + I_ONE) / AMR_bsize(ydim))
+            jfs = max(int(this%js), int(this%l%off(ydim)) + (j*AMR_bsize(ydim))/refinement_factor)
+            jfe = min(int(this%je), int(this%l%off(ydim)) + ((j+I_ONE)*AMR_bsize(ydim)-I_ONE)/refinement_factor)
 
-            do k = int(((this%ks - this%level_off(zdim))*refinement_factor) / AMR_bsize(zdim)), int(((this%ke - this%level_off(zdim))*refinement_factor + I_ONE) / AMR_bsize(zdim))
-               kfs = max(int(this%ks), int(this%level_off(zdim)) + (k*AMR_bsize(zdim))/refinement_factor)
-               kfe = min(int(this%ke), int(this%level_off(zdim)) + ((k+I_ONE)*AMR_bsize(zdim)-I_ONE)/refinement_factor)
+            do k = int(((this%ks - this%l%off(zdim))*refinement_factor) / AMR_bsize(zdim)), int(((this%ke - this%l%off(zdim))*refinement_factor + I_ONE) / AMR_bsize(zdim))
+               kfs = max(int(this%ks), int(this%l%off(zdim)) + (k*AMR_bsize(zdim))/refinement_factor)
+               kfe = min(int(this%ke), int(this%l%off(zdim)) + ((k+I_ONE)*AMR_bsize(zdim)-I_ONE)/refinement_factor)
                select case (type)
                   case (REFINE)
-                     if (any(this%refinemap(ifs:ife, jfs:jfe, kfs:kfe))) call this%refine_flags%add(this%level_id+I_ONE, int([i, j, k]*AMR_bsize, kind=8)+refinement_factor*this%level_off, refinement_factor*this%level_off)
+                     if (any(this%refinemap(ifs:ife, jfs:jfe, kfs:kfe))) call this%refine_flags%add(this%l%id+I_ONE, int([i, j, k]*AMR_bsize, kind=8)+refinement_factor*this%l%off, refinement_factor*this%l%off)
                   case (LEAF)
                      if (all(this%leafmap(ifs:ife, jfs:jfe, kfs:kfe))) then
-                        call this%refine_flags%add(this%level_id+I_ONE, int([i, j, k]*AMR_bsize, kind=8)+refinement_factor*this%level_off, refinement_factor*this%level_off)
+                        call this%refine_flags%add(this%l%id+I_ONE, int([i, j, k]*AMR_bsize, kind=8)+refinement_factor*this%l%off, refinement_factor*this%l%off)
                      else if (any(this%leafmap(ifs:ife, jfs:jfe, kfs:kfe))) then
                         call die("[grid_container:refinemap2SFC_list] cannot refine partially leaf parf of the grid")
                      endif
@@ -1341,8 +1353,8 @@ contains
 
       implicit none
 
-      class(grid_container),      intent(inout) :: this
-      real, dimension(xdim:zdim), intent(in)    :: b
+      class(grid_container),      intent(inout) :: this !< object invoking type-bound procedure
+      real, dimension(xdim:zdim), intent(in)    :: b    !< the value of the magnetic field vector in whole block
 
       integer :: d
 

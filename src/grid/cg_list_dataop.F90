@@ -176,7 +176,13 @@ contains
             if (dom%has_dir(xdim)) prop%coords(xdim) = cg_x%x(prop%loc(xdim))
             if (dom%has_dir(ydim)) prop%coords(ydim) = cg_x%y(prop%loc(ydim))
             if (dom%has_dir(zdim)) prop%coords(zdim) = cg_x%z(prop%loc(zdim))
-            if (present(dir))      prop%assoc        = cg_x%dl(dir)
+            if (present(dir)) then
+               if (dir == 0) then
+                  prop%assoc = minval(cg_x%dl(:))
+               else
+                  prop%assoc = cg_x%dl(dir)
+               endif
+            endif
 !         else
 !            write(msg,'(a,a)') "[cg_list_dataop:get_extremum] cg_x not associated for q array name ", qna%lst(ind)%name
 !            call die(msg)
@@ -736,7 +742,7 @@ contains
                         if (abs(cgl%cg%w(iv)%arr(subfield, i, j, k)) > dirtyL) then
                            if (cnt <= show_n_dirtys) then
                               write(msg, '(3a,i4,a,i3,a,i5,3a,4i6,a,g20.12)') &
-                                   &                   "[cg_list_dataop:check_dirty] 4D ", trim(label), "@", proc, " lvl^", cgl%cg%level_id, " cg#", cgl%cg%grid_id, &
+                                   &                   "[cg_list_dataop:check_dirty] 4D ", trim(label), "@", proc, " lvl^", cgl%cg%l%id, " cg#", cgl%cg%grid_id, &
                                    &                   " '", trim(wna%lst(iv)%name), "'(", subfield, i, j, k, ") = ", cgl%cg%w(iv)%arr(subfield, i, j, k)
                               call warn(msg)
                            endif
@@ -749,8 +755,8 @@ contains
                            if (abs(cgl%cg%f(iv)%f_arr(d)%arr(i, j, k)) > dirtyL) then
                               if (cnt <= show_n_dirtys) then
                                  write(msg, '(3a,i4,a,i3,a,i5,3a,4i6,a,g20.12)') &
-                                      &                   "[cg_list_dataop:check_dirty] FC ", trim(label), "@", proc, " lvl^", cgl%cg%level_id, " cg#", cgl%cg%grid_id, &
-                                      &                   " '", trim(fna%lst(iv)%name), "'(", d, i, j, k, ") = ", cgl%cg%f(iv)%f_arr(d)%arr(i, j, k)
+                                      &                   "[cg_list_dataop:check_dirty] FC ", trim(label), "@", proc, " lvl^", cgl%cg%l%id, " cg#", cgl%cg%grid_id, &
+                                      &                   " '", trim(fna%lst(iv)%name), "'(", d, i, j, k, ") = ", cgl%cg%w(iv)%arr(subfield, i, j, k)
                                  call warn(msg)
                               endif
                               cnt = cnt + 1
@@ -761,10 +767,12 @@ contains
                      if (associated(cgl%cg%q(iv)%arr)) then
                         if (abs(cgl%cg%q(iv)%arr(i, j, k)) > dirtyL) then
                            if (cnt <= show_n_dirtys) then
-                              write(msg, '(3a,i4,a,i3,a,i5,3a,3i6,a,g20.12)') &
-                                   &                   "[cg_list_dataop:check_dirty] 3D ", trim(label), "@", proc, " lvl^", cgl%cg%level_id, " cg#", cgl%cg%grid_id, &
-                                   &                   " '", trim(qna%lst(iv)%name), "'(", i, j, k, ") = ", cgl%cg%q(iv)%arr(i, j, k)
-                              call warn(msg)
+                              if (cnt < show_n_dirtys) then
+                                 write(msg, '(3a,i4,a,i3,a,i5,3a,3i6,a,g20.12)') &
+                                      &                   "[cg_list_dataop:check_dirty] 3D ", trim(label), "@", proc, " lvl^", cgl%cg%l%id, " cg#", cgl%cg%grid_id, &
+                                      &                   " '", trim(qna%lst(iv)%name), "'(", i, j, k, ") = ", cgl%cg%q(iv)%arr(i, j, k)
+                                 call warn(msg)
+                              endif
                            endif
                            cnt = cnt + 1
                         endif

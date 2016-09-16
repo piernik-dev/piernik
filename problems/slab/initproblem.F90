@@ -35,7 +35,6 @@ module initproblem
 
    real               :: d0, r0, bx0, by0, bz0
    integer, parameter :: one = 1
-   character(len=one) :: dir
 
    namelist /PROBLEM_CONTROL/  d0, r0, bx0, by0, bz0
 

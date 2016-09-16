@@ -12,4 +12,3 @@
 #define SHEAR_BND
 #define FFTW
 
-#define RTVD

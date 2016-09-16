@@ -12,4 +12,3 @@
 #undef GRAV
 
 #define MULTIGRID
-#define RTVD

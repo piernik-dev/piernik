@@ -13,3 +13,8 @@
 #if defined(I_KNOW_WHAT_I_AM_DOING)
 #undef HDF5
 #endif
+
+#if !defined(RTVD) && !defined(HLLC)
+#define RTVD
+/* #  warning no hydro solver defined, possible choices { RTVD, HLLC }, defaulting to RTVD */
+#endif

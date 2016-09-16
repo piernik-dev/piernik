@@ -238,7 +238,7 @@ contains
 
       use hdf5,          only: HID_T, HSIZE_T, H5T_NATIVE_DOUBLE, H5S_SCALAR_F, &
           &                    h5dcreate_f, h5dclose_f, h5screate_f, h5sclose_f, h5dwrite_f
-      use iso_c_binding, only: c_ptr, c_loc
+!      use iso_c_binding, only: c_ptr, c_loc
 
       implicit none
 

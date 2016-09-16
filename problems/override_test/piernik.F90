@@ -43,12 +43,12 @@ program hello_world
    call MPI_Comm_rank(MPI_COMM_WORLD, proc, mpi_err)
 
    if (proc == 0) then
-      write(*,*)"This is a demonstration how to replace any of the standard Piernik files with your own version."
-      write(*,*)"It is not intended for regular and prolonged use as maintaining slightly changed files can be painful task."
-      write(*,*)"This mechanism may be a bit useful for developing purposes, doing dirty experiments or for maintaining one-time problems that require special care without disturbing main source tree."
-   end if
+      write(*,*)"This is a demonstration how to replace any of the standard Piernik files with your own version."                                                                                         ! QA_WARN intentional
+      write(*,*)"It is not intended for regular and prolonged use as maintaining slightly changed files can be painful task."                                                                             ! QA_WARN intentional
+      write(*,*)"This mechanism may be a bit useful for developing purposes, doing dirty experiments or for maintaining one-time problems that require special care without disturbing main source tree." ! QA_WARN intentional
+   endif
 
-   write(*,*)"Hello world from process #",proc
+   write(*,*)"Hello world from process #", proc ! QA_WARN intentional
 
    call MPI_Finalize(mpi_err)
 

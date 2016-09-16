@@ -43,7 +43,7 @@ module shear
 
    include "fftw3.f"
 
-   real    :: ts, dely, eps, omega, qshear, dts, ddly, eta_gas, csvk
+   real    :: dely, eps, omega, qshear, ddly, eta_gas, csvk
    integer :: delj
    real, dimension(:), allocatable :: global_gradP
 

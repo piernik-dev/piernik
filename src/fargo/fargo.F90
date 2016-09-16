@@ -158,8 +158,8 @@ contains
       curl => base%level
       do while (associated(curl))
 
-         if (.not.allocated(curl%local_omega)) allocate(curl%local_omega(curl%off(xdim):curl%off(xdim)+curl%n_d(xdim)-I_ONE, flind%fluids))
-         if (.not.allocated(curl%cell_count)) allocate(curl%cell_count(curl%off(xdim):curl%off(xdim)+curl%n_d(xdim)-I_ONE))
+         if (.not.allocated(curl%local_omega)) allocate(curl%local_omega(curl%l%off(xdim):curl%l%off(xdim)+curl%l%n_d(xdim)-I_ONE, flind%fluids))
+         if (.not.allocated(curl%cell_count)) allocate(curl%cell_count(curl%l%off(xdim):curl%l%off(xdim)+curl%l%n_d(xdim)-I_ONE))
          curl%local_omega(:,:) = 0.0
          curl%cell_count(:) = 0
 
@@ -217,11 +217,11 @@ contains
       curl => base%level
       do while (associated(curl))
 
-         if (.not. allocated(curl%omega_mean)) allocate(curl%omega_mean(curl%off(xdim):curl%off(xdim)+curl%n_d(xdim)-I_ONE, flind%fluids))
-         if (.not. allocated(curl%omega_cr))   allocate(curl%omega_cr  (curl%off(xdim):curl%off(xdim)+curl%n_d(xdim)-I_ONE, flind%fluids))
-         if (.not. allocated(curl%nshift))     allocate(curl%nshift    (curl%off(xdim):curl%off(xdim)+curl%n_d(xdim)-I_ONE, flind%fluids))
+         if (.not. allocated(curl%omega_mean)) allocate(curl%omega_mean(curl%l%off(xdim):curl%l%off(xdim)+curl%l%n_d(xdim)-I_ONE, flind%fluids))
+         if (.not. allocated(curl%omega_cr))   allocate(curl%omega_cr  (curl%l%off(xdim):curl%l%off(xdim)+curl%l%n_d(xdim)-I_ONE, flind%fluids))
+         if (.not. allocated(curl%nshift))     allocate(curl%nshift    (curl%l%off(xdim):curl%l%off(xdim)+curl%l%n_d(xdim)-I_ONE, flind%fluids))
 
-         dl_ydim = dom%L_(ydim)/curl%n_d(ydim)
+         dl_ydim = dom%L_(ydim)/curl%l%n_d(ydim)
 
          do ifl = 1, flind%fluids
             curl%omega_mean(:, ifl) = curl%local_omega(:, ifl)
