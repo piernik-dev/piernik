@@ -150,10 +150,10 @@ module grid_cont
       integer(kind=4), dimension(ndims, LO:HI)  :: ijkseb        !< [[isb, jsb, ksb], [ieb, jeb, keb]]
       integer(kind=4), dimension(ndims, LO:HI)  :: lh1           !< [[il1, jl1, kl1], [ih1, jh1, kh1]]
       integer(kind=4), dimension(ndims, LO:HI)  :: lhn           !< [[iln, jln, kln], [ihn, jhn, khn]]
-      integer(kind=8), dimension(ndims)         :: h_cor1        !< offsets of the corner opposite to the one defined by off(:) + 1, a shortcut to be compared with dom%n_d(:) DEPRECATED will be equivalent to ijkse(:, HI)+1
+      integer(kind=4), dimension(ndims, LO:HI)  :: lh_out        !< ijkse expanded at the external boundaries to include external guardcells for contexts where AT_OUT_B is used
       integer(kind=4), dimension(ndims)         :: n_            !< number of %grid cells in one block in x-, y- and z-directions (n_b(:) + 2 * nb)
-      integer(kind=8), dimension(ndims, LO:HI) :: my_se          !< own segment. my_se(:,LO) = 0; my_se(:,HI) = dom%n_d(:) - 1 would cover entire domain on a base level
-                                                                 !! my_se(:,LO) = 0; my_se(:,HI) = finest%level%l%n_d(:) -1 would cover entire domain on the most refined level
+      integer(kind=8), dimension(ndims, LO:HI)  :: my_se         !< own segment. my_se(:,LO) = 0; my_se(:,HI) = dom%n_d(:) - 1 would cover entire domain on a base level
+                                                                 !! my_se(:,LO) = 0; my_se(:,HI) = finest%level%n_d(:) -1 would cover entire domain on the most refined level
                                                                  !! DEPRECATED: will be equivalent to ijkse(:,:)
 
       ! Physical size and coordinates
@@ -260,6 +260,9 @@ contains
 !! \details This method sets up the grid container variables, coordinates and allocates basic arrays.
 !! Everything related to the interior of grid container should be set here.
 !! Things that are related to communication with other grid containers or global properties are set up in cg_level::init_all_new_cg.
+!!
+!! BEWARE: things like off and n_d are replicated across level (it was a cheap workaround for circular dependencies)
+!! \todo invent something better that avoids both circular dependencies and replication of same data
 !<
 
    subroutine init_gc(this, my_se, grid_id, l)
@@ -290,7 +293,6 @@ contains
       this%membership = 1
       this%grid_id    = grid_id
       this%my_se(:,:) = my_se(:, :)
-      this%h_cor1(:)  = this%my_se(:, HI) + I_ONE
       this%n_b(:)     = int(this%my_se(:, HI) - this%my_se(:, LO) + I_ONE, 4) ! Block 'physical' grid sizes
       this%SFC_id     = SFC_order(this%my_se(:, LO) - l%off)
 
@@ -298,17 +300,17 @@ contains
 
       ! Inherit the boundaries from the domain, then set MPI or SHEAR boundaries where applicable
       this%bnd(:,:) = dom%bnd(:,:)
-      where (my_se(:, LO)   /= l%off(:)           ) this%bnd(:, LO) = BND_MPI
-      where (this%h_cor1(:) /= l%off(:) + l%n_d(:)) this%bnd(:, HI) = BND_MPI
+      where (my_se(:, LO)         /= l%off(:)           ) this%bnd(:, LO) = BND_MPI
+      where (my_se(:, HI) + I_ONE /= l%off(:) + l%n_d(:)) this%bnd(:, HI) = BND_MPI
       ! For periodic boundaries do not set BND_MPI when local domain spans through the whole computational domain in given direction.
-      where (dom%periodic(:) .and. this%h_cor1(:)    /= l%n_d(:)) this%bnd(:, LO) = BND_MPI
-      where (dom%periodic(:) .and. this%my_se(:, LO) /= 0)        this%bnd(:, HI) = BND_MPI
+      where (dom%periodic(:) .and. this%my_se(:, HI) + I_ONE /= l%n_d(:)) this%bnd(:, LO) = BND_MPI
+      where (dom%periodic(:) .and. this%my_se(:, LO)         /= 0       ) this%bnd(:, HI) = BND_MPI
 
       this%ext_bnd(:, :) = .false.
       do i = xdim, zdim
          if (dom%has_dir(i) .and. .not. dom%periodic(i)) then
-            this%ext_bnd(i, LO) = (my_se(i, LO)   == l%off(i))
-            this%ext_bnd(i, HI) = (this%h_cor1(i) == l%off(i) + l%n_d(i)) !! \warning not true on AMR
+            this%ext_bnd(i, LO) = (my_se(i, LO)         == l%off(i))
+            this%ext_bnd(i, HI) = (my_se(i, HI) + I_ONE == l%off(i) + l%n_d(i))
          endif
       enddo
 
@@ -343,8 +345,8 @@ contains
          this%lhn(:,LO)    = this%ijkse(:, LO) - dom%nb
          this%lhn(:,HI)    = this%ijkse(:, HI) + dom%nb
          this%dl(:)        = dom%L_(:) / l%n_d(:)
-         this%fbnd(:, LO)  = dom%edge(:, LO) + this%dl(:) * (this%my_se(:, LO) - l%off(:))
-         this%fbnd(:, HI)  = dom%edge(:, LO) + this%dl(:) * (this%h_cor1(:) - l%off(:))
+         this%fbnd(:, LO)  = dom%edge(:, LO) + this%dl(:) * (this%my_se(:, LO)         - l%off(:))
+         this%fbnd(:, HI)  = dom%edge(:, LO) + this%dl(:) * (this%my_se(:, HI) + I_ONE - l%off(:))
       elsewhere
          this%n_(:)        = 1
          this%ijkse(:, LO) = 0
@@ -359,6 +361,14 @@ contains
          this%fbnd(:, LO)  = dom%edge(:, LO)
          this%fbnd(:, HI)  = dom%edge(:, HI)
       endwhere
+
+      ! Compute indices that include external boundary cells
+      ! Strangely, we ignore periodicity here, following what we had in restart_hdf5_v1::set_dims_for_restart
+
+      this%lh_out = this%ijkse
+      where (dom%has_dir(:) .and. (my_se(:, LO) == l%off(:)                   )) this%lh_out(:, LO) = this%lh_out(:, LO) - dom%nb
+      where (dom%has_dir(:) .and. (my_se(:, HI) == l%off(:) + l%n_d(:) - I_ONE)) this%lh_out(:, HI) = this%lh_out(:, HI) + dom%nb
+      !> \todo make sure the above works correctly with refinements
 
       if (any(this%dl .equals. 0.)) call die("[grid_container:init_gc] found cell size equal to 0.")
 

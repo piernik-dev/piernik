@@ -125,48 +125,59 @@ contains
 
 !> \brief create empty datasets for each cg to store restart data
 
-   subroutine create_empty_cg_datasets_in_restart(cg_g_id, cg_n_b, Z_avail, g)
+   subroutine create_empty_cg_datasets_in_restart(cg_g_id, cg_n_b, cg_n_o, Z_avail)
 
       use common_hdf5,      only: create_empty_cg_dataset, O_RES
-      use constants,        only: ndims, I_ONE, AT_IGNORE
+      use constants,        only: AT_IGNORE, AT_OUT_B, I_ONE
+      use dataio_pub,       only: die
       use hdf5,             only: HID_T, HSIZE_T
       use named_array_list, only: qna, wna
 
       implicit none
 
-      integer(HID_T),                           intent(in) :: cg_g_id
-      integer(kind=4), dimension(:,:), pointer, intent(in) :: cg_n_b
-      logical(kind=4),                          intent(in) :: Z_avail
-      integer,                                  intent(in) :: g
+      integer(HID_T),                intent(in) :: cg_g_id
+      integer(kind=4), dimension(:), intent(in) :: cg_n_b
+      integer(kind=4), dimension(:), intent(in) :: cg_n_o
+      logical(kind=4),               intent(in) :: Z_avail
 
-      integer(kind=4)                                      :: drank
-      integer                                              :: i
-      integer(HSIZE_T), dimension(:),   allocatable        :: ddims
+      integer :: i
+      integer(HSIZE_T), dimension(:), allocatable :: d_size
 
+      if (size(cg_n_b) /= size(cg_n_o)) call die("[restart_hdf5_v2:create_empty_cg_datasets_in_restart] size(cg_n_b) /= size(cg_n_o)")
+
+      allocate(d_size(size(cg_n_b)))
       if (allocated(qna%lst)) then
-         drank = ndims
-         allocate(ddims(drank))
          do i = lbound(qna%lst(:), dim=1), ubound(qna%lst(:), dim=1)
-            if (qna%lst(i)%restart_mode /= AT_IGNORE) &                                ! create "/cg/cg_%08d/leaves.qna%lst(i_).name"
-                 call create_empty_cg_dataset(cg_g_id, qna%lst(i)%name, int(cg_n_b(g, :), kind=HSIZE_T), Z_avail, O_RES)
+            if (qna%lst(i)%restart_mode == AT_OUT_B) then
+               d_size = int(cg_n_o, kind=HSIZE_T)
+            else
+               d_size = int(cg_n_b, kind=HSIZE_T)
+            endif
+            if (qna%lst(i)%restart_mode /= AT_IGNORE) &  ! create "/data/grid_%08d/qna%lst(i)%name"
+                 call create_empty_cg_dataset(cg_g_id, qna%lst(i)%name, d_size, Z_avail, O_RES)
          enddo
-         deallocate(ddims)
       endif
+      deallocate(d_size)
 
+      allocate(d_size(size(cg_n_b)+I_ONE))
       if (allocated(wna%lst)) then
-         drank = ndims + I_ONE
-         allocate(ddims(drank))
          do i = lbound(wna%lst(:), dim=1), ubound(wna%lst(:), dim=1)
-            if (wna%lst(i)%restart_mode /= AT_IGNORE) &                                ! create "/cg/cg_%08d/leaves.wna%lst(i_.name"
-                 call create_empty_cg_dataset(cg_g_id, wna%lst(i)%name, int([ wna%lst(i)%dim4, cg_n_b(g, :) ], kind=HSIZE_T), Z_avail, O_RES)
+            if (wna%lst(i)%restart_mode == AT_OUT_B) then
+               d_size = int([ wna%lst(i)%dim4, cg_n_o ], kind=HSIZE_T)
+            else
+               d_size = int([ wna%lst(i)%dim4, cg_n_b ], kind=HSIZE_T)
+            endif
+            if (wna%lst(i)%restart_mode /= AT_IGNORE) &  ! create "/data/grid_%08d/wna%lst(i)%name"
+                 call create_empty_cg_dataset(cg_g_id, wna%lst(i)%name, d_size, Z_avail, O_RES)
          enddo
-         deallocate(ddims)
       endif
+      deallocate(d_size)
+
    end subroutine create_empty_cg_datasets_in_restart
 
 !> \brief Write all grid containers to the file
 
-   subroutine write_cg_to_restart(cgl_g_id, cg_n, cg_all_n_b)
+   subroutine write_cg_to_restart(cgl_g_id, cg_n, cg_all_n_b, cg_all_n_o)
 
       use cg_leaves,        only: leaves
       use cg_list,          only: cg_list_element
@@ -184,6 +195,7 @@ contains
       integer(HID_T),                           intent(in)  :: cgl_g_id    !< cg group identifier
       integer(kind=4), dimension(:),   pointer, intent(in)  :: cg_n        !< offset for cg group numbering
       integer(kind=4), dimension(:,:), pointer, intent(in)  :: cg_all_n_b  !< all cg sizes
+      integer(kind=4), dimension(:,:), pointer, intent(in)  :: cg_all_n_o  !< all cg sizes, expanded by external boundaries
 
       integer(HID_T)                                        :: filespace_id, memspace_id
       integer(kind=4)                                       :: error
@@ -200,6 +212,7 @@ contains
       character(len=dsetnamelen), dimension(:), allocatable :: dsets
       real, target, dimension(0,0,0)                        :: null_r3d
       real, target, dimension(0,0,0,0)                      :: null_r4d
+      integer(kind=4), dimension(ndims)                     :: n_b
 
       qr_lst = qna%get_reslst()
       wr_lst = wna%get_reslst()
@@ -231,10 +244,11 @@ contains
                   do i = lbound(qr_lst, dim=1), ubound(qr_lst, dim=1)
                      if (cg_desc%cg_src_p(ncg) == proc) then
                         cg => get_nth_cg(cg_desc%cg_src_n(ncg))
-                        pa3d => cg%q(qr_lst(i))%span(cg%ijkse) !< \todo use set_dims_for_restart
+                        pa3d => cg%q(qr_lst(i))%span(pick_area(cg, qna%lst(qr_lst(i))%restart_mode))
                         dims(:) = cg%n_b
                      else
-                        allocate(pa3d(cg_all_n_b(xdim, ncg), cg_all_n_b(ydim, ncg), cg_all_n_b(zdim, ncg)))
+                        n_b = pick_size(ncg, qna%lst(qr_lst(i))%restart_mode)
+                        allocate(pa3d(n_b(xdim), n_b(ydim), n_b(zdim)))
                         call MPI_Recv(pa3d(:,:,:), size(pa3d(:,:,:)), MPI_DOUBLE_PRECISION, cg_desc%cg_src_p(ncg), ncg + cg_desc%tot_cg_n*i, comm, MPI_STATUS_IGNORE, mpi_err)
                         dims(:) = shape(pa3d)
                      endif
@@ -249,10 +263,11 @@ contains
                   do i = lbound(wr_lst, dim=1), ubound(wr_lst, dim=1)
                      if (cg_desc%cg_src_p(ncg) == proc) then
                         cg => get_nth_cg(cg_desc%cg_src_n(ncg))
-                        pa4d => cg%w(wr_lst(i))%span(cg%ijkse) !< \todo use set_dims_for_restart
+                        pa4d => cg%w(wr_lst(i))%span(pick_area(cg, wna%lst(wr_lst(i))%restart_mode))
                         dims(:) = [ wna%lst(wr_lst(i))%dim4, cg%n_b ]
                      else
-                        allocate(pa4d(wna%lst(wr_lst(i))%dim4, cg_all_n_b(xdim, ncg), cg_all_n_b(ydim, ncg), cg_all_n_b(zdim, ncg)))
+                        n_b = pick_size(ncg, wna%lst(wr_lst(i))%restart_mode)
+                        allocate(pa4d(wna%lst(wr_lst(i))%dim4, n_b(xdim), n_b(ydim), n_b(zdim)))
                         call MPI_Recv(pa4d(:,:,:,:), size(pa4d(:,:,:,:)), MPI_DOUBLE_PRECISION, cg_desc%cg_src_p(ncg), &
                            ncg + cg_desc%tot_cg_n*(size(qr_lst)+i), comm, MPI_STATUS_IGNORE, mpi_err)
                         dims(:) = shape(pa4d)
@@ -268,13 +283,13 @@ contains
                   cg => get_nth_cg(cg_desc%cg_src_n(ncg))
                   if (size(qr_lst) > 0) then
                      do i = lbound(qr_lst, dim=1), ubound(qr_lst, dim=1)
-                        pa3d => cg%q(qr_lst(i))%span(cg%ijkse)
+                        pa3d => cg%q(qr_lst(i))%span(pick_area(cg, qna%lst(qr_lst(i))%restart_mode))
                         call MPI_Send(pa3d(:,:,:), size(pa3d(:,:,:)), MPI_DOUBLE_PRECISION, FIRST, ncg + cg_desc%tot_cg_n*i, comm, mpi_err)
                      enddo
                   endif
                   if (size(wr_lst) > 0) then
                      do i = lbound(wr_lst, dim=1), ubound(wr_lst, dim=1)
-                        pa4d => cg%w(wr_lst(i))%span(cg%ijkse)
+                        pa4d => cg%w(wr_lst(i))%span(pick_area(cg, wna%lst(wr_lst(i))%restart_mode))
                         call MPI_Send(pa4d(:,:,:,:), size(pa4d(:,:,:,:)), MPI_DOUBLE_PRECISION, FIRST, ncg + cg_desc%tot_cg_n*(size(qr_lst)+i), comm, mpi_err)
                      enddo
                   endif
@@ -297,8 +312,8 @@ contains
                   dims(:) = cg%n_b
                   do i = lbound(qr_lst, dim=1), ubound(qr_lst, dim=1)
                      ic = ic + 1
-                     pa3d => cg%q(qr_lst(i))%span(cg%ijkse) !< \todo use set_dims_for_restart
-                     dims(:) = cg%n_b
+                     pa3d => cg%q(qr_lst(i))%span(pick_area(cg, qna%lst(qr_lst(i))%restart_mode))
+                     dims(:) = pick_dims(cg, qna%lst(qr_lst(i))%restart_mode)
                      call h5dwrite_f(cg_desc%dset_id(ncg, ic), H5T_NATIVE_DOUBLE, pa3d, dims, error, xfer_prp = cg_desc%xfer_prp)
                   enddo
                   deallocate(dims)
@@ -307,8 +322,8 @@ contains
                   allocate(dims(rank4))
                   do i = lbound(wr_lst, dim=1), ubound(wr_lst, dim=1)
                      ic = ic + 1
-                     pa4d => cg%w(wr_lst(i))%span(cg%ijkse) !< \todo use set_dims_for_restart
-                     dims(:) = [ wna%lst(wr_lst(i))%dim4, cg%n_b ]
+                     pa4d => cg%w(wr_lst(i))%span(pick_area(cg, wna%lst(wr_lst(i))%restart_mode))
+                     dims(:) = [ wna%lst(wr_lst(i))%dim4, pick_dims(cg, wna%lst(wr_lst(i))%restart_mode) ]
                      call h5dwrite_f(cg_desc%dset_id(ncg, ic), H5T_NATIVE_DOUBLE, pa4d, dims, error, xfer_prp = cg_desc%xfer_prp)
                   enddo
                   deallocate(dims)
@@ -329,7 +344,7 @@ contains
 
                   do i = lbound(qr_lst, dim=1), ubound(qr_lst, dim=1)
                      ic = ic + 1
-                     pa3d => null_r3d !< \todo use set_dims_for_restart
+                     pa3d => null_r3d
                      dims(:) = 0
                      call h5dwrite_f(cg_desc%dset_id(1, ic), H5T_NATIVE_DOUBLE, pa3d, dims, error, &
                         xfer_prp = cg_desc%xfer_prp, file_space_id = filespace_id, mem_space_id = memspace_id)
@@ -351,7 +366,7 @@ contains
                      call h5screate_simple_f(rank4, dims, memspace_id, error)
                      call h5sselect_none_f(memspace_id, error)   ! empty memoryscape
 
-                     pa4d => null_r4d !< \todo use set_dims_for_restart
+                     pa4d => null_r4d
                      call h5dwrite_f(cg_desc%dset_id(1, ic), H5T_NATIVE_DOUBLE, pa4d, dims, error, &
                         xfer_prp = cg_desc%xfer_prp, file_space_id = filespace_id, mem_space_id = memspace_id)
                      call h5sclose_f(memspace_id, error)
@@ -370,6 +385,79 @@ contains
       ! clean up
       call cg_desc%clean()
       deallocate(qr_lst, wr_lst, dsets)
+
+   contains
+
+      function pick_area(cg, mode) result(ijkse)
+
+         use constants,  only: AT_OUT_B, AT_NO_B, AT_USER, ndims, LO, HI
+         use dataio_pub, only: die
+
+         implicit none
+
+         type(grid_container), pointer, intent(in) :: cg
+         integer(kind=4),               intent(in) :: mode
+
+         integer(kind=4), dimension(ndims, LO:HI)  :: ijkse
+
+         ijkse = 0 ! suppress compiler warning on maybe uninitialized variable
+         select case (mode)
+            case (AT_OUT_B)
+               ijkse = cg%lh_out
+            case (AT_NO_B)
+               ijkse = cg%ijkse
+            case (AT_USER)
+               call die("[restart_hdf5_v2:write_cg_to_restart:pick_area] AT_USER not implemented")
+            case default
+               call die("[restart_hdf5_v2:write_cg_to_restart:pick_area] Non-recognized area_type.")
+         end select
+         return
+
+      end function pick_area
+
+      function pick_dims(cg, mode) result(n_b)
+
+         use constants,  only: ndims, LO, HI
+
+         implicit none
+
+         type(grid_container), pointer, intent(in) :: cg
+         integer(kind=4),               intent(in) :: mode
+
+         integer(kind=4), dimension(ndims, LO:HI)  :: ijkse
+         integer(kind=4), dimension(ndims) :: n_b
+
+         ijkse = pick_area(cg, mode)
+         n_b = ijkse(:,HI) - ijkse(:,LO) + I_ONE
+         return
+
+      end function pick_dims
+
+      function pick_size(ncg, mode) result(n_b)
+
+         use constants,  only: AT_OUT_B, AT_NO_B, AT_USER, ndims
+         use dataio_pub, only: die
+
+         implicit none
+
+         integer,         intent(in) :: ncg
+         integer(kind=4), intent(in) :: mode
+
+         integer(kind=4), dimension(ndims) :: n_b
+
+         select case (mode)
+            case (AT_OUT_B)
+               n_b = cg_all_n_o(:, ncg)
+            case (AT_NO_B)
+               n_b = cg_all_n_b(:, ncg)
+            case (AT_USER)
+               call die("[restart_hdf5_v2:write_cg_to_restart:pick_size] AT_USER not implemented")
+            case default
+               call die("[restart_hdf5_v2:write_cg_to_restart:pick_size] Non-recognized area_type.")
+         end select
+         return
+
+     end function pick_size
 
    end subroutine write_cg_to_restart
 
@@ -596,29 +684,29 @@ contains
       call h5gclose_f(doml_g_id, error)
 
       ! Read available cg pieces
-      call h5gopen_f(file_id, data_gname, cgl_g_id, error)         ! open "/cg"
+      call h5gopen_f(file_id, data_gname, cgl_g_id, error)         ! open "/data"
 
       allocate(ibuf(1))
-      call read_attribute(cgl_g_id, cg_cnt_aname, ibuf)          ! open "/cg/cg_count"
+      call read_attribute(cgl_g_id, cg_cnt_aname, ibuf)          ! open "/data/cg_count"
       if (ibuf(1) <= 0) call die("[restart_hdf5_v2:read_restart_hdf5_v2] Empty cg list")
 
       allocate(cg_res(ibuf(1)))
       deallocate(ibuf)
 
       do ia = lbound(cg_res, dim=1), ubound(cg_res, dim=1)
-         call h5gopen_f(cgl_g_id, n_cg_name(ia), cg_g_id, error) ! open "/cg/cg_%08d, ia"
+         call h5gopen_f(cgl_g_id, n_cg_name(ia), cg_g_id, error) ! open "/data/grid_%08d, ia"
 
          allocate(ibuf(1))
-         call read_attribute(cg_g_id, cg_lev_aname, ibuf)        ! open "/cg/cg_%08d/level"
+         call read_attribute(cg_g_id, cg_lev_aname, ibuf)        ! open "/data/grid_%08d/level"
          if (ibuf(1) < base%level%l%id) call die("[restart_hdf5_v2:read_restart_hdf5_v2] Grids coarser than base level are not supported")
          cg_res(ia)%level=ibuf(1)
          deallocate(ibuf)
 
          allocate(ibuf(ndims))
-         call read_attribute(cg_g_id, cg_size_aname, ibuf)       ! open "/cg/cg_%08d/n_b"
+         call read_attribute(cg_g_id, cg_size_aname, ibuf)       ! open "/data/grid_%08d/n_b"
          if (any(ibuf(:)<=0)) call die("[restart_hdf5_v2:read_restart_hdf5_v2] Non-positive cg size detected")
          cg_res(ia)%n_b(:) = ibuf(:)
-         call read_attribute(cg_g_id, cg_offset_aname, ibuf)     ! open "/cg/cg_%08d/off"
+         call read_attribute(cg_g_id, cg_offset_aname, ibuf)     ! open "/data/grid_%08d/off"
          cg_res(ia)%off(:) = ibuf(:)
          deallocate(ibuf)
 
@@ -626,6 +714,7 @@ contains
       enddo
 
       ! Check if whole base level is covered without any overlaps
+      ! OPT: do overlap search on a separate list of base level blocks only because it is O(n^2) process
       tot_cells = 0
       outside = .false.
       overlapped = .false.
@@ -647,7 +736,6 @@ contains
 
       if (tot_cells /= product(dom%n_d(:)) .or. outside .or. overlapped) call die("[restart_hdf5_v2:read_restart_hdf5_v2] Improper coverage of base domain by available cg")
 
-      ! For AMR this will be more complicated: check if all restart cg cover leaf patches, do an additional domain decomposition
       call set_refinement(cg_res)
 
       ! set up things such as register user rank-3 and rank-4 arrays to be read by read_arr_from_restart. Read also anything that is not read by all read_cg_from_restart calls
@@ -677,7 +765,7 @@ contains
                if (cg_res(ia)%level == curl%l%id) then
                   other_box(:, LO) = cgl%cg%my_se(:, LO) - curl%l%off(:)
                   other_box(:, HI) = cgl%cg%my_se(:, HI) - curl%l%off(:)
-                  if (is_overlap(my_box, other_box)) call read_cg_from_restart(cgl%cg, cgl_g_id, ia, cg_res(ia), curl%l%off)
+                  if (is_overlap(my_box, other_box)) call read_cg_from_restart(cgl%cg, cgl_g_id, ia, cg_res(ia))
                endif
                cgl => cgl%nxt
             enddo
@@ -763,10 +851,10 @@ contains
    end subroutine set_refinement
 
 !> \brief Read as much as possible from stored cg to own cg
-   subroutine read_cg_from_restart(cg, cgl_g_id, ncg, cg_r, curl_off)
+   subroutine read_cg_from_restart(cg, cgl_g_id, ncg, cg_r)
 
       use common_hdf5,      only: n_cg_name
-      use constants,        only: xdim, ydim, zdim, ndims, LO, HI, LONG
+      use constants,        only: xdim, ydim, zdim, ndims, LO, HI
       use dataio_pub,       only: die
       use domain,           only: dom
       use grid_cont,        only: grid_container, is_overlap
@@ -780,54 +868,59 @@ contains
       integer(HID_T),                    intent(in)    :: cgl_g_id  !< cg group identifier in the restart file
       integer,                           intent(in)    :: ncg       !< number of cg in the restart file
       type(cg_essentials),               intent(in)    :: cg_r      !< cg attributes that do not need to be reread
-      integer(kind=8), dimension(ndims), intent(in)    :: curl_off  !< offset of the level
 
       integer(HID_T)                               :: cg_g_id !< cg group identifier
       integer(HID_T)                               :: dset_id
       integer(HID_T)                               :: filespace, memspace
       integer(HSIZE_T), dimension(:), allocatable  :: dims, off, cnt
       integer(kind=4)                              :: error
-      integer(kind=8), dimension(xdim:zdim, LO:HI) :: own_box, restart_box
       integer(kind=8), dimension(xdim:zdim)        :: own_off, restart_off, o_size   ! the position and size of the overlapped region
+      integer(kind=8), dimension(xdim:zdim, LO:HI) :: own_box_nb, restart_box_nb              ! variants for AT_NO_B
+      integer(kind=8), dimension(xdim:zdim)        :: own_off_nb, restart_off_nb, o_size_nb   !
+      integer(kind=8), dimension(xdim:zdim, LO:HI) :: own_box_ob, restart_box_ob              ! variants for AT_OUT_B
+      integer(kind=8), dimension(xdim:zdim)        :: own_off_ob, restart_off_ob, o_size_ob   ! as opposed to AT_NO_B
       integer, allocatable, dimension(:)           :: qr_lst, wr_lst
-      integer                                      :: d, i
+      integer                                      :: i
       real, dimension(:,:,:),   allocatable        :: a3d
       real, dimension(:,:,:,:), allocatable        :: a4d
 
       ! Find overlap between own cg and restart cg
-      own_box(:, :) = cg%my_se(:, :)
-      restart_box(:, LO) = curl_off(:) + cg_r%off(:)
-      restart_box(:, HI) = curl_off(:) + cg_r%off(:) + cg_r%n_b(:) - 1
-      if (.not. is_overlap(own_box, restart_box)) call die("[restart_hdf5_v2:read_cg_from_restart] No overlap found") ! this condition should never happen
+      own_box_nb(:, :) = cg%my_se(:, :)
+      restart_box_nb(:, LO) = cg%l%off(:) + cg_r%off(:)
+      restart_box_nb(:, HI) = cg%l%off(:) + cg_r%off(:) + cg_r%n_b(:) - 1
+      if (.not. is_overlap(own_box_nb, restart_box_nb)) call die("[restart_hdf5_v2:read_cg_from_restart] No overlap found") ! this condition should never happen
 
-      own_off(:) = 0
-      restart_off(:) = 0
-      o_size(:) = 1
-      do d = xdim, zdim
-         if (dom%has_dir(d)) then
-            own_off(d) = max(restart_box(d, LO) - own_box(d, LO), 0_LONG)
-            restart_off(d) = max(own_box(d, LO) - restart_box(d, LO), 0_LONG)
-            o_size(d) = min(restart_box(d, HI), own_box(d, HI)) - max(restart_box(d, LO), own_box(d, LO)) + 1
-         endif
-      enddo
+      call calc_off_and_size(restart_box_nb, own_box_nb, own_off_nb, restart_off_nb, o_size_nb)
+
+      ! Find overlap between own cg and restart cg in case of AT_OUT_B
+      own_box_ob(:, :) = cg%lh_out(:, :)
+      restart_box_ob(:, LO) = cg%l%off(:) + cg_r%off(:)
+      where (dom%has_dir(:) .and. (cg_r%off(:) <= 0)) restart_box_ob(:, LO) = restart_box_ob(:, LO) - dom%nb
+      restart_box_ob(:, HI) = cg%l%off(:) + cg_r%off(:) + cg_r%n_b(:) - 1
+      where (dom%has_dir(:) .and. (cg_r%off(:) + cg_r%n_b(:) >= cg%l%n_d)) restart_box_ob(:, HI) = restart_box_ob(:, HI) + dom%nb
+      if (.not. is_overlap(own_box_ob, restart_box_ob)) call die("[restart_hdf5_v2:read_cg_from_restart] No overlap found (AT_OUT_B)") ! this condition should never happen
+
+      call calc_off_and_size(restart_box_ob, own_box_ob, own_off_ob, restart_off_ob, o_size_ob)
+      where (dom%has_dir(:) .and. (cg_r%off(:) <= 0)) own_off_ob(:) = own_off_ob(:) - dom%nb
 
       ! these conditions should never happen
-      if (any(own_off(:) > cg%n_b(:))) call die("[restart_hdf5_v2:read_cg_from_restart] own_off(:) > cg%n_b(:)")
-      if (any(restart_off(:) > cg_r%n_b(:))) call die("[restart_hdf5_v2:read_cg_from_restart] restart_off(:) > cg_r%n_b(:)")
-      if (any(o_size(:) > cg%n_b(:)) .or. any(o_size(:) > cg_r%n_b(:))) call die("[restart_hdf5_v2:read_cg_from_restart] o_size(:) > cg%n_b(:) or o_size(:) > cg_r%n_b(:)")
-      if (any(cg%leafmap(cg%is+own_off(xdim):cg%is+own_off(xdim)+o_size(xdim)-1, &
-           &             cg%js+own_off(ydim):cg%js+own_off(ydim)+o_size(ydim)-1, &
-           &             cg%ks+own_off(zdim):cg%ks+own_off(zdim)+o_size(zdim)-1))) call die("[restart_hdf5_v2:read_cg_from_restart] Trying to initialize same area twice.")
+      if (any(own_off_nb(:) > cg%n_b(:))) call die("[restart_hdf5_v2:read_cg_from_restart] own_off(:) > cg%n_b(:)")
+      if (any(restart_off_nb(:) > cg_r%n_b(:))) call die("[restart_hdf5_v2:read_cg_from_restart] restart_off(:) > cg_r%n_b(:)")
+      if (any(o_size_nb(:) > cg%n_b(:)) .or. any(o_size_nb(:) > cg_r%n_b(:))) call die("[restart_hdf5_v2:read_cg_from_restart] o_size(:) > cg%n_b(:) or o_size(:) > cg_r%n_b(:)")
+      if (any(cg%leafmap(cg%is+own_off_nb(xdim):cg%is+own_off_nb(xdim)+o_size_nb(xdim)-1, &
+           &             cg%js+own_off_nb(ydim):cg%js+own_off_nb(ydim)+o_size_nb(ydim)-1, &
+           &             cg%ks+own_off_nb(zdim):cg%ks+own_off_nb(zdim)+o_size_nb(zdim)-1))) call die("[restart_hdf5_v2:read_cg_from_restart] Trying to initialize same area twice.")
 
       qr_lst = qna%get_reslst()
       wr_lst = wna%get_reslst()
-      call h5gopen_f(cgl_g_id, n_cg_name(ncg), cg_g_id, error) ! open "/cg/cg_%08d, ncg"
+      call h5gopen_f(cgl_g_id, n_cg_name(ncg), cg_g_id, error) ! open "/data/grid_%08d, ncg"
 
       if (size(qr_lst) > 0) then
          allocate(dims(ndims), off(ndims), cnt(ndims))
-         dims(:) = o_size(:)
          do i = lbound(qr_lst, dim=1), ubound(qr_lst, dim=1)
-            call h5dopen_f(cg_g_id, qna%lst(qr_lst(i))%name, dset_id, error) ! open "/cg/cg_%08d/cg.q(qr_lst(i)).name"
+            call pick_off_and_size(qna%lst(qr_lst(i))%restart_mode, o_size, restart_off, own_off)
+            dims(:) = o_size(:)
+            call h5dopen_f(cg_g_id, qna%lst(qr_lst(i))%name, dset_id, error) ! open "/data/grid_%08d/cg%q(qr_lst(i))%name"
             call h5dget_space_f(dset_id, filespace, error)
             off(:) = restart_off(:)
             cnt(:) = 1
@@ -847,6 +940,7 @@ contains
       if (size(wr_lst) > 0) then
          allocate(dims(ndims+1), off(ndims+1), cnt(ndims+1))
          do i = lbound(wr_lst, dim=1), ubound(wr_lst, dim=1)
+            call pick_off_and_size(wna%lst(wr_lst(i))%restart_mode, o_size, restart_off, own_off)
             dims(:) = [ int(wna%lst(wr_lst(i))%dim4, kind=HSIZE_T), int(o_size(:), kind=HSIZE_T) ]
             call h5dopen_f(cg_g_id, wna%lst(wr_lst(i))%name, dset_id, error)
             call h5dget_space_f(dset_id, filespace, error)
@@ -869,9 +963,72 @@ contains
       deallocate(qr_lst, wr_lst)
 
       ! Mark the area as initialized
-      cg%leafmap(cg%is+own_off(xdim):cg%is+own_off(xdim)+o_size(xdim)-1, &
-           &     cg%js+own_off(ydim):cg%js+own_off(ydim)+o_size(ydim)-1, &
-           &     cg%ks+own_off(zdim):cg%ks+own_off(zdim)+o_size(zdim)-1) = .true.
+      cg%leafmap(cg%is+own_off_nb(xdim):cg%is+own_off_nb(xdim)+o_size_nb(xdim)-1, &
+           &     cg%js+own_off_nb(ydim):cg%js+own_off_nb(ydim)+o_size_nb(ydim)-1, &
+           &     cg%ks+own_off_nb(zdim):cg%ks+own_off_nb(zdim)+o_size_nb(zdim)-1) = .true.
+
+   contains
+
+      subroutine pick_off_and_size(mode, o_size, restart_off, own_off)
+
+         use constants,  only: AT_OUT_B, AT_NO_B, AT_USER
+         use dataio_pub, only: die
+
+         implicit none
+
+         integer(kind=4),                       intent(in)  :: mode
+         integer(kind=8), dimension(xdim:zdim), intent(out) :: o_size
+         integer(kind=8), dimension(xdim:zdim), intent(out) :: restart_off
+         integer(kind=8), dimension(xdim:zdim), intent(out) :: own_off
+
+         ! suppress compiler warnings on possibly use of uninitialized values
+         o_size = 0
+         restart_off = 0
+         own_off = 0
+
+         select case (mode)
+            case (AT_OUT_B)
+               o_size = o_size_ob
+               restart_off = restart_off_ob
+               own_off = own_off_ob
+            case (AT_NO_B)
+               o_size = o_size_nb
+               restart_off = restart_off_nb
+               own_off = own_off_nb
+            case (AT_USER)
+               call die("[restart_hdf5_v2:read_cg_from_restart:pick_off_and_size] AT_USER not implemented (w)")
+            case default
+               call die("[restart_hdf5_v2:read_cg_from_restart:pick_off_and_size] Non-recognized area_type. (w)")
+         end select
+
+      end subroutine pick_off_and_size
+
+      subroutine calc_off_and_size(restart_box_my, own_box_my, own_off_my, restart_off_my, o_size_my)
+
+         use constants, only: LONG, LO, HI, xdim, zdim
+
+         implicit none
+
+         integer(kind=8), dimension(xdim:zdim, LO:HI), intent(in)  :: restart_box_my
+         integer(kind=8), dimension(xdim:zdim, LO:HI), intent(in)  :: own_box_my
+         integer(kind=8), dimension(xdim:zdim),        intent(out) :: own_off_my
+         integer(kind=8), dimension(xdim:zdim),        intent(out) :: restart_off_my
+         integer(kind=8), dimension(xdim:zdim),        intent(out) :: o_size_my
+
+         integer :: d
+
+         own_off_my(:) = 0
+         restart_off_my(:) = 0
+         o_size_my(:) = 1
+         do d = xdim, zdim
+            if (dom%has_dir(d)) then
+               own_off_my(d) = max(restart_box_my(d, LO) - own_box_my(d, LO), 0_LONG)
+               restart_off_my(d) = max(own_box_my(d, LO) - restart_box_my(d, LO), 0_LONG)
+               o_size_my(d) = min(restart_box_my(d, HI), own_box_my(d, HI)) - max(restart_box_my(d, LO), own_box_my(d, LO)) + 1
+            endif
+         enddo
+
+      end subroutine calc_off_and_size
 
    end subroutine read_cg_from_restart
 

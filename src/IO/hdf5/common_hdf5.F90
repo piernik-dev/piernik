@@ -656,7 +656,7 @@ contains
    subroutine write_to_hdf5_v2(filename, otype, create_empty_cg_datasets, write_cg_to_hdf5)
 
       use cg_leaves,    only: leaves
-      use constants,    only: cwdlen, dsetnamelen, xdim, zdim, ndims, I_ONE, I_TWO, I_THREE, INT4, LO, HI, &
+      use constants,    only: cwdlen, dsetnamelen, xdim, zdim, ndims, I_ONE, I_TWO, I_THREE, I_FOUR, INT4, LO, HI, &
          &                    GEO_XYZ, GEO_RPZ
       use dataio_pub,   only: die, nproc_io, can_i_write, domain_dump, msg
       use domain,       only: dom
@@ -678,24 +678,25 @@ contains
          !>
          !! Function responsible for creating empty datasets, called by master
          !<
-         subroutine create_empty_cg_datasets(cgl_g_id, cg_n_b, Z_avail, g)
+         subroutine create_empty_cg_datasets(cgl_g_id, cg_n_b, cg_n_o, Z_avail)
             use hdf5, only: HID_T
             implicit none
-            integer(HID_T),                           intent(in) :: cgl_g_id
-            integer(kind=4), dimension(:,:), pointer, intent(in) :: cg_n_b
-            logical(kind=4),                          intent(in) :: Z_avail
-            integer,                                  intent(in) :: g
+            integer(HID_T),                intent(in) :: cgl_g_id
+            integer(kind=4), dimension(:), intent(in) :: cg_n_b
+            integer(kind=4), dimension(:), intent(in) :: cg_n_o
+            logical(kind=4),               intent(in) :: Z_avail
          end subroutine create_empty_cg_datasets
 
          !>
          !! Function that performs actual I/O, called by all
          !<
-         subroutine write_cg_to_hdf5(cgl_g_id, cg_n, cg_all_n_b)
+         subroutine write_cg_to_hdf5(cgl_g_id, cg_n, cg_all_n_b, cg_all_n_o)
             use hdf5, only: HID_T
             implicit none
             integer(HID_T),                           intent(in) :: cgl_g_id
             integer(kind=4), dimension(:),   pointer, intent(in) :: cg_n
             integer(kind=4), dimension(:,:), pointer, intent(in) :: cg_all_n_b
+            integer(kind=4), dimension(:,:), pointer, intent(in) :: cg_all_n_o
          end subroutine write_cg_to_hdf5
       end interface
 
@@ -710,8 +711,10 @@ contains
       integer, parameter                            :: tag = I_ONE
       integer(kind=4),  dimension(:),   pointer     :: cg_n             !< offset for cg group numbering
       integer(kind=4),  dimension(:,:), pointer     :: cg_all_n_b       !< sizes of all cg
+      integer(kind=4),  dimension(:,:), pointer     :: cg_all_n_o       !< sizes of all cg, expanded by external boundaries
       integer(kind=4),  dimension(:),   pointer     :: cg_rl            !< list of refinement levels from all cgs/procs
       integer(kind=4),  dimension(:,:), pointer     :: cg_n_b           !< list of n_b from all cgs/procs
+      integer(kind=4),  dimension(:,:), pointer     :: cg_n_o           !< list of grid dimnsions with external guardcells from all cgs/procs
       integer(kind=8),  dimension(:,:), pointer     :: cg_off           !< list of offsets from all cgs/procs
 
       !>
@@ -733,7 +736,7 @@ contains
       allocate(cg_n(FIRST:LAST))
       call MPI_Allgather(leaves%cnt, I_ONE, MPI_INTEGER, cg_n, I_ONE, MPI_INTEGER, comm, mpi_err)
       cg_cnt = sum(cg_n(:))
-      allocate(cg_all_n_b(ndims, cg_cnt))
+      allocate(cg_all_n_b(ndims, cg_cnt), cg_all_n_o(ndims, cg_cnt))
 
       if (master) then
          call rd%init(cg_cnt)
@@ -794,33 +797,38 @@ contains
             allocate(cg_rl(cg_n(p)), cg_n_b(cg_n(p), ndims), cg_off(cg_n(p), ndims))
             nullify(dbuf)
             if (otype == O_OUT) allocate(dbuf(cg_le:cg_dl, cg_n(p), ndims))
+            nullify(cg_n_o)
+            if (otype == O_RES) allocate(cg_n_o(cg_n(p), ndims))
             if (p == FIRST) then
-               call collect_cg_data(cg_rl, cg_n_b, cg_off, dbuf, otype)
+               call collect_cg_data(cg_rl, cg_n_b, cg_n_o, cg_off, dbuf, otype)
             else
                call MPI_Recv(cg_rl,  size(cg_rl),  MPI_INTEGER,  p, tag,         comm, MPI_STATUS_IGNORE, mpi_err)
                call MPI_Recv(cg_n_b, size(cg_n_b), MPI_INTEGER,  p, tag+I_ONE,   comm, MPI_STATUS_IGNORE, mpi_err)
                call MPI_Recv(cg_off, size(cg_off), MPI_INTEGER8, p, tag+I_TWO,   comm, MPI_STATUS_IGNORE, mpi_err)
                if (otype == O_OUT) &
-                  & call MPI_Recv(dbuf,   size(dbuf) ,  MPI_REAL8,    p, tag+I_THREE, comm, MPI_STATUS_IGNORE, mpi_err)
+                  & call MPI_Recv(dbuf,   size(dbuf),   MPI_REAL8,    p, tag+I_THREE, comm, MPI_STATUS_IGNORE, mpi_err)
+               if (otype == O_RES) &
+                  & call MPI_Recv(cg_n_o, size(cg_n_o), MPI_INTEGER,  p, tag+I_FOUR,  comm, MPI_STATUS_IGNORE, mpi_err)
             endif
 
             do g = 1, cg_n(p)
-               call h5gcreate_f(cgl_g_id, n_cg_name(sum(cg_n(:p))-cg_n(p)+g), cg_g_id, error) ! create "/cg/cg_%08d"
+               call h5gcreate_f(cgl_g_id, n_cg_name(sum(cg_n(:p))-cg_n(p)+g), cg_g_id, error) ! create "/data/grid_%08d"
 
-               call create_attribute(cg_g_id, cg_lev_aname, [ cg_rl(g) ] )                ! create "/cg/cg_%08d/level"
+               call create_attribute(cg_g_id, cg_lev_aname, [ cg_rl(g) ] )                ! create "/data/grid_%08d/level"
                temp = cg_n_b(g, :)
-               call create_attribute(cg_g_id, cg_size_aname, temp)                        ! create "/cg/cg_%08d/n_b"
-               call create_attribute(cg_g_id, cg_offset_aname, int(cg_off(g, :), kind=4)) ! create "/cg/cg_%08d/off"
+               call create_attribute(cg_g_id, cg_size_aname, temp)                        ! create "/data/grid_%08d/n_b"
+               call create_attribute(cg_g_id, cg_offset_aname, int(cg_off(g, :), kind=4)) ! create "/data/grid_%08d/off"
                if (otype == O_OUT) then
                   temp(:) = dbuf(cg_le, g, :)
-                  call create_attribute(cg_g_id, cg_ledge_aname, temp)  ! create "/cg/cg_%08d/left_edge"
+                  call create_attribute(cg_g_id, cg_ledge_aname, temp)  ! create "/data/grid_%08d/left_edge"
                   temp(:) = dbuf(cg_re, g, :)
-                  call create_attribute(cg_g_id, cg_redge_aname, temp)  ! create "/cg/cg_%08d/right_edge"
+                  call create_attribute(cg_g_id, cg_redge_aname, temp)  ! create "/data/grid_%08d/right_edge"
                   temp(:) = dbuf(cg_dl, g, :)
-                  call create_attribute(cg_g_id, cg_dl_aname, temp)     ! create "/cg/cg_%08d/dl"
+                  call create_attribute(cg_g_id, cg_dl_aname, temp)     ! create "/data/grid_%08d/dl"
                endif
 
                cg_all_n_b(:, sum(cg_n(:p))-cg_n(p)+g) = cg_n_b(g, :)
+               if (associated(cg_n_o)) cg_all_n_o(:, sum(cg_n(:p))-cg_n(p)+g) = cg_n_o(g, :)
                if (otype == O_OUT) then
                   indx = int(sum(cg_n(:p))-cg_n(p)+g, kind=4)
                   rd%grid_level(indx) = cg_rl(g)
@@ -832,13 +840,14 @@ contains
                if (any(cg_off(g, :) > 2.**31)) &
                   & call die("[common_hdf5:write_to_hdf5_v2] large offsets require better treatment")
 
-               call create_empty_cg_datasets(cg_g_id, cg_n_b, Z_avail, g) !!!!!
+               call create_empty_cg_datasets(cg_g_id, cg_n_b(g, :), cg_n_o(g, :), Z_avail) !!!!!
 
                call h5gclose_f(cg_g_id, error)
             enddo
 
             deallocate(cg_rl, cg_n_b, cg_off)
             if (associated(dbuf)) deallocate(dbuf)
+            if (associated(cg_n_o)) deallocate(cg_n_o)
          enddo
          rd%grid_dimensions = cg_all_n_b
 
@@ -880,16 +889,21 @@ contains
          allocate(cg_rl(leaves%cnt), cg_n_b(leaves%cnt, ndims), cg_off(leaves%cnt, ndims))
          nullify(dbuf)
          if (otype == O_OUT) allocate(dbuf(cg_le:cg_dl, leaves%cnt, ndims))
-         call collect_cg_data(cg_rl, cg_n_b, cg_off, dbuf, otype)
+         nullify(cg_n_o)
+         if (otype == O_RES) allocate(cg_n_o(leaves%cnt, ndims))
+         call collect_cg_data(cg_rl, cg_n_b, cg_n_o, cg_off, dbuf, otype)
          call MPI_Send(cg_rl,  size(cg_rl),  MPI_INTEGER,  FIRST, tag,         comm, mpi_err)
          call MPI_Send(cg_n_b, size(cg_n_b), MPI_INTEGER,  FIRST, tag+I_ONE,   comm, mpi_err)
          call MPI_Send(cg_off, size(cg_off), MPI_INTEGER8, FIRST, tag+I_TWO,   comm, mpi_err)
          if (otype == O_OUT) call MPI_Send(dbuf,   size(dbuf),   MPI_REAL8,    FIRST, tag+I_THREE, comm, mpi_err)
+         if (otype == O_RES) call MPI_Send(cg_n_o, size(cg_n_o), MPI_INTEGER,  FIRST, tag+I_FOUR,  comm, mpi_err)
          deallocate(cg_rl, cg_n_b, cg_off)
          if (associated(dbuf)) deallocate(dbuf)
+         if (associated(cg_n_o)) deallocate(cg_n_o)
       endif
 
       call piernik_MPI_Bcast(cg_all_n_b)
+      call piernik_MPI_Bcast(cg_all_n_o)
       ! Reopen the HDF5 file for parallel write
       call h5open_f(error)
       if (can_i_write) then
@@ -901,7 +915,7 @@ contains
          call h5pclose_f(plist_id, error)
       endif
 
-      call write_cg_to_hdf5(cgl_g_id, cg_n, cg_all_n_b) !!!!!
+      call write_cg_to_hdf5(cgl_g_id, cg_n, cg_all_n_b, cg_all_n_o) !!!!!
 
       if (can_i_write) then
          call h5gclose_f(cgl_g_id, error)
@@ -910,21 +924,22 @@ contains
 
       call h5close_f(error)            ! Close HDF5 stuff
 
-      deallocate(cg_n, cg_all_n_b)
+      deallocate(cg_n, cg_all_n_b, cg_all_n_o)
 
    end subroutine write_to_hdf5_v2
 
-   subroutine collect_cg_data(cg_rl, cg_n_b, cg_off, dbuf, otype)
+   subroutine collect_cg_data(cg_rl, cg_n_b, cg_n_o, cg_off, dbuf, otype)
 
       use cg_level_base,      only: base
       use cg_level_connected, only: cg_level_connected_T
       use cg_list,            only: cg_list_element
-      use constants,          only: LO, HI
+      use constants,          only: LO, HI, I_ONE
 
       implicit none
 
       integer(kind=4), dimension(:),     pointer, intent(inout) :: cg_rl            !< list of refinement levels from all cgs/procs
       integer(kind=4), dimension(:,:),   pointer, intent(inout) :: cg_n_b           !< list of n_b from all cgs/procs
+      integer(kind=4), dimension(:,:),   pointer, intent(inout) :: cg_n_o           !< list of grid dimnsions with external guardcells from all cgs/procs
       integer(kind=8), dimension(:,:),   pointer, intent(inout) :: cg_off           !< list of offsets from all cgs/procs
       real(kind=8),    dimension(:,:,:), pointer, intent(inout) :: dbuf
       integer(kind=4),                            intent(in)    :: otype            !< Output type (restart, data)
@@ -946,6 +961,7 @@ contains
                dbuf(cg_re, g, :)  = cgl%cg%fbnd(:, HI)
                dbuf(cg_dl, g, :)  = cgl%cg%dl
             endif
+            if (otype == O_RES) cg_n_o(g, :) = cgl%cg%lh_out(:, HI) - cgl%cg%lh_out(:, LO) + I_ONE
             g = g + 1
             cgl => cgl%nxt
          enddo
