@@ -240,7 +240,7 @@ contains
 #endif /* COSM_RAYS */
 
 #ifdef COSM_RAY_ELECTRONS
-         call cresp_p_cut_diff(dir)
+!          call cresp_p_cut_diff(dir)
 #endif /* COSM_RAY_ELECTRONS */
 
 #ifdef MAGNETIC

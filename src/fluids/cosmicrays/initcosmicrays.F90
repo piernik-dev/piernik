@@ -397,7 +397,7 @@ contains
          K_crs_paral(ncrn+1:ncrs) = 0!K_cre_paral(1:ncre)
          K_crs_perp (ncrn+1:ncrs) = 0!K_cre_perp (1:ncre)
 #ifdef COSM_RAY_ELECTRONS      
-         K_crs_paral(ncrn+1:ncrn+ncre) = K_cre_e_paral
+         K_crs_paral(ncrn+1:ncrn+ncre) = K_cre_e_paral ! TODO wrong! - number density indexes are the first!
          K_crs_paral(ncrn+1+ncre:ncrn+2*ncre) = K_cre_n_paral
          K_crs_paral(ncrn+2*ncre+1:ncrn+2*ncre+2) = 0.0    ! p_lo, p_up
          

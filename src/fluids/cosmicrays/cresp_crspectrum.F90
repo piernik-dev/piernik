@@ -104,7 +104,7 @@ subroutine cresp_update_cell(dt, cresp_arguments, sptab)
 ! Update indexes of active bins, fixed edges and active edges at [t]
 ! Detect heating edges (energy upflow) and cooling edges (energy downflow)
     call cresp_update_bin_index(dt, p_lo, p_up, p_lo_next, p_up_next)    
-
+!    print *, p_lo, p_lo_next, p_up, p_up_next, u_b
 ! Compute power indexes for each bin at [t]
     call ne_to_q(n, e, q)
    
@@ -143,19 +143,19 @@ subroutine cresp_update_cell(dt, cresp_arguments, sptab)
    print '(A5, 11E18.9)', "p_act", p
    print '(A5, 11E18.9)', "p_nex", p_next
    print '(A5, 11E18.9)', "p_upw", p_upw
-   print '(A6, 1E18.9, A9, 1E18.9)', "p_lo ", p_lo, ",  p_up ", p_up
+   print '(A6, 2E18.9, A9, 2E18.9)', "p_lo ", p_lo, p_lo_next, ",  p_up ", p_up, p_up_next
 
    print *, " "
    print '(A5, 10E18.9)', "    n", n
    print '(A5, 11E18.9)', "nflux", nflux
    print '(A5, 10E18.9)', "  ndt", ndt
-!   print '(A5, 10E18.9)', "   n1", n1
+  print '(A5, 10E18.9)', "   n1", n1
 
    print *, " "
    print '(A5, 10E18.9)', "    e", e
    print '(A5, 11E18.9)', "eflux", eflux
    print '(A5, 10E18.9)', "  edt", edt
-!   print '(A5, 10E18.9)', "   e1", e1
+  print '(A5, 10E18.9)', "   e1", e1
 
    print *, " "
    print '(A5, 10E18.9)', "    r", r
@@ -280,9 +280,9 @@ subroutine cresp_update_bin_index(dt, p_lo, p_up, p_lo_next, p_up_next)
       p_upw = zero
       p_upw(1:ncre) = p_fix(1:ncre)*(one+p_upw_rch(dt,p_fix(1:ncre)))
             
-#ifdef VERBOSE
-      print*, 'Change of  cut index lo,up:', del_i_lo, del_i_up
-#endif /* VERBOSE */      
+! #ifdef VERBOSE
+!       print*, 'Change of  cut index lo,up:', del_i_lo, del_i_up
+! #endif /* VERBOSE */
       
 ! Detect cooling edges and heating edges
       is_cooling_edge_next = .false.
@@ -530,7 +530,7 @@ subroutine cresp_update_bin_index(dt, p_lo, p_up, p_lo_next, p_up_next)
       implicit none
       integer, dimension(:), intent(in) :: ce, he    ! cooling edges, heating edges
       real(kind=8), dimension(1:ncre-1) :: pimh, pimth, fimh,fimth
-      
+      integer :: i
       real(kind=8), dimension(1:ncre-1) :: dn_upw, de_upw, qi,qim1
       
       pimh(1:ncre-1) = p(1:ncre-1)
@@ -563,11 +563,6 @@ subroutine cresp_update_bin_index(dt, p_lo, p_up, p_lo_next, p_up_next)
       end where
       eflux(ce) =  - de_upw(ce)
       
-      if(del_i_up == -1) then 
-         nflux(i_up-1) = -n(i_up)
-         eflux(i_up-1) = -e(i_up  )
-      endif
-         
       dn_upw(he) = fpi*fimth(he)*p_upw(he)**3*(pimth(he)/p_upw(he))**qim1(he)
       where(qim1(he) .ne. three) 
          dn_upw(he) = dn_upw(he)*((pimh(he)/p_upw(he))**(three-qim1(he)) - one)/(three - qim1(he))
@@ -583,6 +578,11 @@ subroutine cresp_update_bin_index(dt, p_lo, p_up, p_lo_next, p_up_next)
          de_upw(he) = de_upw(he)*log(pimh(he)/p_upw(he))
       end where
       eflux(he) = de_upw(he)
+
+      if(del_i_up == -1) then 
+         nflux(i_up-1) = -n(i_up)
+         eflux(i_up-1) = -e(i_up)
+      endif
       
       if(del_i_lo == 1) then 
          nflux(i_lo+1) = n(i_lo+1)

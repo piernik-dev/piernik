@@ -45,6 +45,8 @@ module initcrspectrum
   
   real, allocatable :: fdif_cre(:,:,:,:)    ! array of diffusion fluxes for p_cut diffusion
   real, allocatable :: fadv_cre(:,:,:,:)    ! array of advection fluxes for p_cut diffusion
+  real, allocatable :: p_lo_nda(:,:,:)      ! non-diffused / advected p_lo
+  real, allocatable :: p_up_nda(:,:,:)      ! non-diffused / advected p_up
   
   integer,allocatable, dimension(:) :: cresp_edges
 !----------------------------------------------  
@@ -71,6 +73,8 @@ contains
   open(unit=101, file="problem.par", status="unknown")
   read(unit=101, nml=COSMIC_RAY_SPECTRUM)
   close(unit=101)
+  
+!   open(10, file="crs.dat", status="replace", position="rewind")
   
   if (ncre .ne. I_ZERO)  then
    print *,'[@init_cresp] Initial CRESP parameters read:'
@@ -119,7 +123,18 @@ contains
  
   allocate(fdif_cre(ncre,0:dom%n_d(1)-I_ONE,0:dom%n_d(2)-I_ONE,0:dom%n_d(3)-I_ONE))
   allocate(fadv_cre(ncre,0:dom%n_d(1)-I_ONE,0:dom%n_d(2)-I_ONE,0:dom%n_d(3)-I_ONE))
- 
+  
+!   allocate(p_lo_nda(0:dom%n_d(1)-I_ONE,0:dom%n_d(2)-I_ONE,0:dom%n_d(3)-I_ONE))
+!   allocate(p_up_nda(0:dom%n_d(1)-I_ONE,0:dom%n_d(2)-I_ONE,0:dom%n_d(3)-I_ONE))
+
+! for diffusion from bin to bin these must have +2 indexes more
+  allocate(p_lo_nda(-dom%nb:dom%n_d(1)+dom%nb,-dom%nb:dom%n_d(2)+dom%nb,-dom%nb:dom%n_d(3)+dom%nb)) ! p_diffusion must be updated  - new size of p_??_nda
+  allocate(p_up_nda(-dom%nb:dom%n_d(1)+dom%nb,-dom%nb:dom%n_d(2)+dom%nb,-dom%nb:dom%n_d(3)+dom%nb))
+  
+  p_lo_nda = zero
+  p_up_nda = zero
+!   close(10)
+  
  end subroutine init_cresp
  
 !----------------------------

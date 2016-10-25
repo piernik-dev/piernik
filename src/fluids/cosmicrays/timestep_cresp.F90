@@ -61,8 +61,7 @@ contains
    dt_cre_ub = minval(dts_new)
 #ifdef VERBOSE
    print *, '[@timestep_cresp:] Computed timesteps:'
-   print *, 'dt_cre_ud = ', dt_cre_ud
-   print *, 'dt_cre_ub = ', dt_cre_ub
+   print *, 'dt_cre_ud = ', dt_cre_ud, 'dt_cre_ub = ', dt_cre_ub
 #endif /* VERBOSE */
 
 ! Here shortest among calculated timesteps is chosen.

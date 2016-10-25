@@ -145,8 +145,8 @@ contains
       use named_array,      only: p4
       use named_array_list, only: wna
 #ifdef COSM_RAY_ELECTRONS
-      use initcosmicrays,   only: ncrn, iarr_cre_pl, iarr_cre_pu
-      use initcrspectrum,    only: ncre, fdif_cre
+      use initcosmicrays,   only: ncrn, iarr_cre_pl, iarr_cre_pu, iarr_cre_e, iarr_cre_n
+      use initcrspectrum,    only: ncre, fdif_cre, p_lo_nda, p_up_nda
 #endif /* COSM_RAY_ELECTRONS */
 
       implicit none
@@ -191,7 +191,7 @@ contains
                                                                                                ! in case of integration with boundaries:
          ldm        = cg%ijkse(:,LO) ;      ldm(crdim) = cg%lhn(crdim,LO) + dom%D_(crdim)      ! ldm =           1 + D_
          hdm        = cg%ijkse(:,HI) ;      hdm(crdim) = cg%lhn(crdim,HI)                      ! hdm = cg%n_ + idm - D_
-
+         
          do k = ldm(zdim), hdm(zdim)       ; kl = k-1 ; kh = k+1 ; kld = k-idm(zdim)
             do j = ldm(ydim), hdm(ydim)    ; jl = j-1 ; jh = j+1 ; jld = j-idm(ydim)
                do i = ldm(xdim), hdm(xdim) ; il = i-1 ; ih = i+1 ; ild = i-idm(xdim)
@@ -224,14 +224,20 @@ contains
                   bb = sum(bcomp**2)
                   if (bb > epsilon(0.d0)) fcrdif = fcrdif + K_crs_paral * bcomp(crdim) * (bcomp(xdim)*decr(xdim,:) + bcomp(ydim)*decr(ydim,:) + bcomp(zdim)*decr(zdim,:)) / bb !!!
                   wcr(:,i,j,k) = - fcrdif * dt * cg%idl(crdim)
+                  
                enddo
             enddo
          enddo
 #ifdef COSM_RAY_ELECTRONS
          fdif_cre = wcr(cre_e,cg%is:cg%ie,cg%js:cg%je,cg%ks:cg%ke) / (dt*cg%idl(crdim)) 
          ! ^ copying obtained energy flux of cr electrons energy to use it in p_cut update
-#endif /* COSM_RAY_ELECTRONS */
+
+         cg%u(iarr_cre_pl,cg%lhn(xdim,LO):cg%lhn(xdim,HI),cg%lhn(ydim,LO):cg%lhn(ydim,HI),cg%lhn(zdim,LO):cg%lhn(zdim,HI)) =  &
+                             p_lo_nda(cg%lhn(xdim,LO):cg%lhn(xdim,HI),cg%lhn(ydim,LO):cg%lhn(ydim,HI),cg%lhn(zdim,LO):cg%lhn(zdim,HI))
+         cg%u(iarr_cre_pu,cg%lhn(xdim,LO):cg%lhn(xdim,HI),cg%lhn(ydim,LO):cg%lhn(ydim,HI),cg%lhn(zdim,LO):cg%lhn(zdim,HI)) =  &
+                             p_up_nda(cg%lhn(xdim,LO):cg%lhn(xdim,HI),cg%lhn(ydim,LO):cg%lhn(ydim,HI),cg%lhn(zdim,LO):cg%lhn(zdim,HI))
          cgl => cgl%nxt
+#endif /* COSM_RAY_ELECTRONS */
       enddo
 
       call all_wcr_boundaries
