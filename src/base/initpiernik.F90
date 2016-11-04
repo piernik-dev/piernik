@@ -297,7 +297,7 @@ contains
    subroutine parse_cmdline
 
       use constants,  only: stdout, cwdlen
-      use dataio_pub, only: cmdl_nml, wd_rd, wd_wr, piernik_hdf5_version, log_wr
+      use dataio_pub, only: cmdl_nml, wd_rd, wd_wr, piernik_hdf5_version, piernik_hdf5_version2, log_wr
       use version,    only: nenv,env, init_version
 
       implicit none
@@ -322,8 +322,9 @@ contains
          select case (arg)
          case ('-v', '--version')
             call init_version
-            write(stdout, '(a,f5.2)') 'output version: ',piernik_hdf5_version
-            write(stdout,'(a)') "###############     Source configuration     ###############"
+            write(stdout, '(a,f5.2)') 'GDF output version: ',piernik_hdf5_version2
+            write(stdout, '(a,f5.2)') 'old output version: ',piernik_hdf5_version
+            write(stdout,'(/,a)') "###############     Source configuration     ###############"
             do j = 1, nenv
                write(stdout,'(a)') env(j)
             enddo
