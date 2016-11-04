@@ -330,20 +330,16 @@ contains
             enddo
             stop
          case ('-p', '--param')
-            call get_command_argument(i+1,arg)
-            write(wd_rd,'(a)') arg
+            write(wd_rd,'(a)') get_next_arg(i+1, arg)
             skip_next = .true.
          case ('-w', '--write')
-            call get_command_argument(i+1,arg)
-            write(wd_wr,'(a)') arg
+            write(wd_wr,'(a)') get_next_arg(i+1, arg)
             skip_next = .true.
          case ('-l', '--log')
-            call get_command_argument(i+1,arg)
-            write(log_wr,'(a)') arg
+            write(log_wr,'(a)') get_next_arg(i+1, arg)
             skip_next = .true.
          case ('-n', '--namelist')
-            call get_command_argument(i+1,arg)
-            write(cmdl_nml, '(3A)') cmdl_nml(1:len_trim(cmdl_nml)), " ", trim(arg)
+            write(cmdl_nml, '(3A)') cmdl_nml(1:len_trim(cmdl_nml)), " ", trim(get_next_arg(i+1, arg))
             skip_next = .true.
          case ('-h', '--help')
             call print_help()
@@ -367,6 +363,30 @@ contains
          write (stdout, '(1x,a,":",a,1x,a)') time(1:2), time(3:4), zone
          stop
       endif
+
+   contains
+
+      function get_next_arg(n, arg) result(param)
+
+         use constants,  only: stderr
+
+         implicit none
+
+         integer,               intent(in) :: n
+         character(len=cwdlen), intent(in) :: arg
+
+         character(len=cwdlen) :: param
+
+         if (n > command_argument_count()) then
+            write(stderr, '(2a)')"[initpiernik:parse_cmdline:get_next_arg] cannot find argument for option ", arg
+            stop
+         endif
+
+         call get_command_argument(n, param)
+
+      end function get_next_arg
+
+
    end subroutine parse_cmdline
 !-----------------------------------------------------------------------------
    subroutine print_help
