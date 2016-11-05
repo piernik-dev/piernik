@@ -313,6 +313,10 @@ contains
 !!
 !! \details Write real, integer and character attributes. Store contents of problem.par and env files.
 !! Other common elements may also be moved here.
+!!
+!! \ToDo figure out if it is of use for us:
+!! http://computation.llnl.gov/projects/floating-point-compression/zfp-and-derivatives
+!! https://github.com/LLNL/H5Z-ZFP
 !<
    subroutine set_common_attributes(filename)
 
