@@ -155,18 +155,28 @@ contains
     
     do i = 1,n
        
+       ! Magnetic pressure
+
+       magprl  =  half*sum(b_ccl(xdim:zdim,i)*b_ccl(xdim:zdim,i))
+       magprr  =  half*sum(b_ccr(xdim:zdim,i)*b_ccr(xdim:zdim,i))
+       
        ! Total left and right pressure
 
-       prl(ien,i) = ul(ien,i)
-       prr(ien,i) = ur(ien,i)
+       prl(ien,i) = ul(ien,i) + magprl ! ul(ien,i) is the left state of gas pressure
+       prr(ien,i) = ur(ien,i) + magprr ! ur(ien,i) is the right state of gas pressure
 
        ! Left and right energy Eq. 2
 
-       enl = (prl(ien,i)/(gamma -one)) + half*ul(idn,i)*sum(ul(imx:imz,i)**2) + half*sum(b_ccl(xdim:zdim,i)**2)
-       enr = (prr(ien,i)/(gamma -one)) + half*ur(idn,i)*sum(ur(imx:imz,i)**2) + half*sum(b_ccr(xdim:zdim,i)**2)
-
-       gampr_l = gamma*prl(ien,i)
-       gampr_r = gamma*prr(ien,i)
+       !enl = (prl(ien,i)/(gamma -one)) + half*ul(idn,i)*sum(ul(imx:imz,i)**2) + half*sum(b_ccl(xdim:zdim,i)**2)
+       !enr = (prr(ien,i)/(gamma -one)) + half*ur(idn,i)*sum(ur(imx:imz,i)**2) + half*sum(b_ccr(xdim:zdim,i)**2)
+       enl = (ul(ien,i)/(gamma -one)) + half*ul(idn,i)*sum(ul(imx:imz,i)**2) + half*sum(b_ccl(xdim:zdim,i)**2)
+       enr = (ur(ien,i)/(gamma -one)) + half*ur(idn,i)*sum(ur(imx:imz,i)**2) + half*sum(b_ccr(xdim:zdim,i)**2)
+       
+       !gampr_l = gamma*prl(ien,i)
+       !gampr_r = gamma*prr(ien,i)
+       gampr_l = gamma*ul(ien,i) ! Gas pressure, left state
+       gampr_r = gamma*ur(ien,i) ! Gas pressure, right state
+       
 
        ! Fast magnetosonic waves Eq. 3
        
@@ -175,8 +185,7 @@ contains
        c_fastl = sqrt(half*c_fastl/ul(idn,i))
            
        c_fastr  =   (gampr_r+(b_ccr(xdim,i)**2+b_ccr(ydim,i)**2+b_ccr(zdim,i)**2))  &
-            + sqrt((gampr_r+(b_ccr(xdim,i)**2+b_ccr(ydim,i)**2+b_ccr(zdim,i)**2))**2-(four*gampr_r*b_ccr(xdim,i)**2))
-
+                                       + sqrt((gampr_r+(b_ccr(xdim,i)**2+b_ccr(ydim,i)**2+b_ccr(zdim,i)**2))**2-(four*gampr_r*b_ccr(xdim,i)**2))
        c_fastr  =  sqrt(half*c_fastr/ur(idn,i))
         
        ! Eq. (67)
@@ -186,26 +195,26 @@ contains
 
        ! Magnetic pressure
 
-       magprl  =  half*sum(b_ccl(xdim:zdim,i)*b_ccl(xdim:zdim,i))
-       magprr  =  half*sum(b_ccr(xdim:zdim,i)*b_ccr(xdim:zdim,i))
+       !magprl  =  half*sum(b_ccl(xdim:zdim,i)*b_ccl(xdim:zdim,i))
+       !magprr  =  half*sum(b_ccr(xdim:zdim,i)*b_ccr(xdim:zdim,i))
 
        ! Left flux
 
        fl(idn,i) = ul(idn,i)*ul(imx,i)
-       fl(imx,i) = ul(idn,i)*ul(imx,i)**2 + prl(ien,i) - b_ccl(xdim,i)**2
+       fl(imx,i) = ul(idn,i)*ul(imx,i)**2 + prl(ien,i) - b_ccl(xdim,i)**2  ! Total left state of pressure, so prl(ien,i)
        fl(imy,i) = ul(idn,i)*ul(imy,i)*ul(imx,i) - b_ccl(xdim,i)*b_ccl(ydim,i)
        fl(imz,i) = ul(idn,i)*ul(imz,i)*ul(imx,i) - b_ccl(xdim,i)*b_ccl(zdim,i)
-       fl(ien,i) = (enl + prl(ien,i))*ul(imx,i) - b_ccl(xdim,i)*(sum(ul(imx:imz,i)*b_ccl(xdim:zdim,i)))
+       fl(ien,i) = (enl + prl(ien,i))*ul(imx,i) - b_ccl(xdim,i)*(sum(ul(imx:imz,i)*b_ccl(xdim:zdim,i))) ! Total left state of pressure, so prl(ien,i)
        b_cclf(ydim,i) = b_ccl(ydim,i)*ul(imx,i) - b_ccl(xdim,i)*ul(imy,i)
        b_cclf(zdim,i) = b_ccl(zdim,i)*ul(imx,i) - b_ccl(xdim,i)*ul(imz,i)
 
        ! Right flux
 
        fr(idn,i) = ur(idn,i)*ur(imx,i)
-       fr(imx,i) = ur(idn,i)*ur(imx,i)**2 + prr(ien,i) - b_ccr(xdim,i)**2
+       fr(imx,i) = ur(idn,i)*ur(imx,i)**2 + prr(ien,i) - b_ccr(xdim,i)**2  ! Total right state of pressure, so prl(ien,i)
        fr(imy,i) = ur(idn,i)*ur(imy,i)*ur(imx,i) - b_ccr(xdim,i)*b_ccr(ydim,i)
        fr(imz,i) = ur(idn,i)*ur(imz,i)*ur(imx,i) - b_ccr(xdim,i)*b_ccr(zdim,i)
-       fr(ien,i) = (enr + prr(ien,i))*ur(imx,i) - b_ccr(xdim,i)*(sum(ur(imx:imz,i)*b_ccr(xdim:zdim,i)))
+       fr(ien,i) = (enr + prr(ien,i))*ur(imx,i) - b_ccr(xdim,i)*(sum(ur(imx:imz,i)*b_ccr(xdim:zdim,i)))  ! Total right state of pressure, so prl(ien,i)
        b_ccrf(ydim,i) = b_ccr(ydim,i)*ur(imx,i) - b_ccr(xdim,i)*ur(imy,i)
        b_ccrf(zdim,i) = b_ccr(zdim,i)*ur(imx,i) - b_ccr(xdim,i)*ur(imz,i)
 
@@ -233,7 +242,7 @@ contains
            
           ! Speed of contact discontinuity Eq. 38
 
-          sm_nr = (sr - ur(imx,i))*ur(idn,i)*ur(imx,i) - (sl - ul(imx,i))*ul(idn,i)*ul(imx,i) - prr(ien,i) + prl(ien,i)
+          sm_nr = (sr - ur(imx,i))*ur(idn,i)*ur(imx,i) - (sl - ul(imx,i))*ul(idn,i)*ul(imx,i) - prr(ien,i) + prl(ien,i)  ! Total left and right states of pressure, so prr(ien,i) and prl(ien,i)
           sm_dr = (sr - ur(imx,i))*ur(idn,i) - (sl - ul(imx,i))*ul(idn,i)
           sm    = sm_nr/sm_dr
 
@@ -261,7 +270,7 @@ contains
 
           ! Pressure of intermediate state Eq. (23)
 
-          prt_star  =  half*((prl(ien,i)+dn_l*smvxl) + (prr(ien,i)+dn_r*smvxr))  !< Check for 0.5.
+          prt_star  =  half*((prl(ien,i)+dn_l*smvxl) + (prr(ien,i)+dn_r*smvxr))  !< Check for 0.5. Total left and right states of pressure, so prr(ien,i) and prl(ien,i)
 
           ! Normal components of velocity and magnetic field
 
@@ -275,7 +284,7 @@ contains
 
           coeff_1  =  dn_l*slsm - b_lr
 
-          if ((coeff_1 .notequals. zero) .and. b_lrgam .le. ul(ien,i)) then
+          if ((coeff_1 .notequals. zero) .and. b_lrgam .le. ul(ien,i)) then  ! Left state of gas pressure, so ul(ien,i)
 
              coeff_2  =  (dn_l*slvxl - b_lr)/coeff_1
 
@@ -303,7 +312,7 @@ contains
 
           coeff_1  =  dn_r*srsm - b_lr
 
-          if ((coeff_1 .notequals. zero) .and. b_lrgam .le. ur(ien,i)) then
+          if ((coeff_1 .notequals. zero) .and. b_lrgam .le. ur(ien,i)) then  ! Right state of gas pressure, so ur(ien,i)
 
              coeff_2  =  (dn_r*srvxr - b_lr)/coeff_1
 
@@ -350,8 +359,8 @@ contains
 
           ! Total energy of left and right intermediate states Eq. (48)
 
-          u_starl(ien) = (slvxl*enl - prl(ien,i)*ul(imx,i) + prt_star*sm + b_ccl(xdim,i)*(vb_l - vb_starl))/slsm
-          u_starr(ien) = (srvxr*enr - prr(ien,i)*ur(imx,i) + prt_star*sm + b_ccr(xdim,i)*(vb_r - vb_starr))/srsm
+          u_starl(ien) = (slvxl*enl - prl(ien,i)*ul(imx,i) + prt_star*sm + b_ccl(xdim,i)*(vb_l - vb_starl))/slsm  ! Total left state of pressure
+          u_starr(ien) = (srvxr*enr - prr(ien,i)*ur(imx,i) + prt_star*sm + b_ccr(xdim,i)*(vb_r - vb_starr))/srsm  ! Total right state of pressure
 
           ! Cases for B_x .ne. and .eq. zero
           
