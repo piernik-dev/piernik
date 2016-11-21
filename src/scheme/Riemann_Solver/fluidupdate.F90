@@ -226,6 +226,8 @@ contains
            ! if (fl%is_magnetized) then
            !    q(fl%ien,:) =  q(fl%ien,:) + (one - half*fl%gam) * sum(b_cc(xdim:zdim,:)**2, dim=1)
            q(fl%ien,:) =  fl%gam_1*(u(fl%ien,:) - ekin(u(fl%imx,:), u(fl%imy,:), u(fl%imz,:), u(fl%idn,:)))
+           if (fl%is_magnetized) &
+                q(fl%ien,:) =  q(fl%ien,:) - half * fl%gam_1 * sum(b_cc(xdim:zdim,:)**2, dim=1)
         endif
      
 
