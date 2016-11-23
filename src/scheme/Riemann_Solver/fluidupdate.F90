@@ -135,7 +135,6 @@ contains
     procedure(solver_1d), pointer, save :: solve => NULL()
 
     if (firstcall) then
-       call warn("[fluidupdate:sweep] magnetic field unimplemented yet. Forcing to be 0")
        select case (h_solver)
           case ("muscl")
              solve => muscl
@@ -221,16 +220,14 @@ contains
         q(fl%imx,:) =  u(fl%imx,:)/u(fl%idn,:)
         q(fl%imy,:) =  u(fl%imy,:)/u(fl%idn,:)
         q(fl%imz,:) =  u(fl%imz,:)/u(fl%idn,:)
+        ! J.CoPhy 208 (2005),Pg 317, Eq. 2. Gas pressure: p = (gamma-1)*(e-half*rho*v^2-half*B^2) and Total pressure: p_T = p + half*B^2. (1) and (2) are markers for HD and MHD.
         if (fl%has_energy) then
-           ! q(fl%ien,:) =  fl%gam_1*(u(fl%ien,:) - ekin(u(fl%imx,:), u(fl%imy,:), u(fl%imz,:), u(fl%idn,:)))
-           ! if (fl%is_magnetized) then
-           !    q(fl%ien,:) =  q(fl%ien,:) + (one - half*fl%gam) * sum(b_cc(xdim:zdim,:)**2, dim=1)
-           q(fl%ien,:) =  fl%gam_1*(u(fl%ien,:) - ekin(u(fl%imx,:), u(fl%imy,:), u(fl%imz,:), u(fl%idn,:)))
-           if (fl%is_magnetized) &
-                q(fl%ien,:) =  q(fl%ien,:) - half * fl%gam_1 * sum(b_cc(xdim:zdim,:)**2, dim=1)
+            q(fl%ien,:) =  fl%gam_1*(u(fl%ien,:) - ekin(u(fl%imx,:), u(fl%imy,:), u(fl%imz,:), u(fl%idn,:))) ! Primitive variable for gas pressure (p) without magnetic fields. (1)
+            if (fl%is_magnetized) then
+               q(fl%ien,:) =  q(fl%ien,:) - half*fl%gam_1*sum(b_cc(xdim:zdim,:)**2, dim=1) ! Primitive variable for gas pressure (p) with magnetic fields. The requirement of total pressure is dealt in the fluxes and hlld routines. (2)
+            endif
         endif
      
-
      enddo
 
    end function utoq

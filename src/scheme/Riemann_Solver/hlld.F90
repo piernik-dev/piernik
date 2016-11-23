@@ -50,7 +50,7 @@ module hlld
 
 contains
 
-  function fluxes(u, b_cc) result(f)
+  function fluxes(u, b_cc) result(f) ! This function is called by muscl and rk2muscl
 
     use constants,  only: one, half, xdim, ydim, zdim
     use fluidindex, only: flind
@@ -63,7 +63,8 @@ contains
     real, dimension(:,:), intent(in) :: b_cc
 
     real, dimension(size(u,1) + size(b_cc,1), size(u,2)) :: f
-    real, dimension(size(u,2))                           :: vx, vy, vz, p_t
+    !real, dimension(size(u,2))                           :: vx, vy, vz, p_t
+    real, dimension(size(u,2))                           :: vx, vy, vz, pr
     integer                                              :: ip, boff
     class(component_fluid), pointer                      :: fl
 
@@ -79,16 +80,24 @@ contains
        vz  =  u(fl%imz,:)/u(fl%idn,:)
 
        if (fl%has_energy) then
-          p_t = fl%gam_1*(u(fl%ien,:) - ekin(u(fl%imx,:), u(fl%imy,:), u(fl%imz,:), u(fl%idn,:)))
+          ! Gas pressure without magnetic fields. Pg 317, Eq. 2. (1) and (2) are markers for HD and MHD
+          pr = fl%gam_1*(u(fl%ien,:) - ekin(u(fl%imx,:), u(fl%imy,:), u(fl%imz,:), u(fl%idn,:))) ! (1)
           if (fl%is_magnetized) then
-             p_t = p_t + (one - half*fl%gam) * sum(b_cc(xdim:zdim,:)**2, dim=1)
+             ! Gas pressure with magnetic fields. Pg 317, Eq. 2.
+             pr = pr - half*fl%gam_1*sum(b_cc(xdim:zdim,:)**2, dim=1) ! (2)
           endif
        else
-          p_t = 0.
+          ! Dust
+          pr = 0.
        endif
 
        f(fl%idn,:)  =  u(fl%imx,:)
-       f(fl%imx,:)  =  u(fl%imx,:)*vx(:) + p_t(:) - b_cc(xdim,:)**2
+       if(fl%has_energy) then
+          f(fl%imx,:)  =  u(fl%imx,:)*vx(:) + pr(:) - b_cc(xdim,:)**2  ! b_cc does not contribute in the limit of vanishing magnetic fields. Hydro part is recovered trivially. 
+          if(fl%is_magnetized) then
+             f(fl%imx,:)  =  u(fl%imx,:)*vx(:) + (pr(:)+half*sum(b_cc(xdim:zdim,:)**2,dim=1)) - b_cc(xdim,:)**2 ! Eq. 2 Pg 317
+          endif
+       endif
        f(fl%imy,:)  =  u(fl%imy,:)*vx(:) - b_cc(xdim,:)*b_cc(ydim,:)
        f(fl%imz,:)  =  u(fl%imz,:)*vx(:) - b_cc(xdim,:)*b_cc(zdim,:)
        if (fl%is_magnetized) then
@@ -96,9 +105,10 @@ contains
           f(boff+zdim,:) =  b_cc(zdim,:)*vx(:) - b_cc(xdim,:)*vz(:)
        endif
        if (fl%has_energy) then
-          f(fl%ien,:)  =  (u(fl%ien,:) + p_t(:))*vx(:)
-          if (fl%is_magnetized) &
-               f(fl%ien,:) = f(fl%ien,:) - b_cc(xdim,:)*(b_cc(xdim,:)*vx(:) + b_cc(ydim,:)*vy(:) + b_cc(zdim,:)*vz(:))
+          f(fl%ien,:)  =  (u(fl%ien,:) + pr(:))*vx(:) ! Hydro regime. Eq. 2, Pg 317. Takes pr (1)
+          if (fl%is_magnetized) then
+             f(fl%ien,:) =  (u(fl%ien,:) + (pr(:)+half*sum(b_cc(xdim:zdim,:)**2,dim=1)))*vx(:) - b_cc(xdim,:)*(b_cc(xdim,:)*vx(:) + b_cc(ydim,:)*vy(:) + b_cc(zdim,:)*vz(:)) ! MHD regime. Eq. 2, Pg 317. Takes pr (2)
+          end if
        endif
 
     enddo
@@ -155,30 +165,29 @@ contains
     
     do i = 1,n
        
-       ! Magnetic pressure
+       ! Left and right states of magnetic pressure
 
        magprl  =  half*sum(b_ccl(xdim:zdim,i)*b_ccl(xdim:zdim,i))
        magprr  =  half*sum(b_ccr(xdim:zdim,i)*b_ccr(xdim:zdim,i))
        
-       ! Total left and right pressure
-
+       ! Left and right states of total pressure
+       ! From fluidupdate.F90, utoq() (1) is used in hydro regime and (2) in MHD regime. In case of vanishing magnetic fields the magnetic components do not contribute and hydro results are obtained trivially. 
+       
        prl(ien,i) = ul(ien,i) + magprl ! ul(ien,i) is the left state of gas pressure
        prr(ien,i) = ur(ien,i) + magprr ! ur(ien,i) is the right state of gas pressure
 
-       ! Left and right energy Eq. 2
+       ! Left and right states of energy Eq. 2. 
 
-       !enl = (prl(ien,i)/(gamma -one)) + half*ul(idn,i)*sum(ul(imx:imz,i)**2) + half*sum(b_ccl(xdim:zdim,i)**2)
-       !enr = (prr(ien,i)/(gamma -one)) + half*ur(idn,i)*sum(ur(imx:imz,i)**2) + half*sum(b_ccr(xdim:zdim,i)**2)
        enl = (ul(ien,i)/(gamma -one)) + half*ul(idn,i)*sum(ul(imx:imz,i)**2) + half*sum(b_ccl(xdim:zdim,i)**2)
        enr = (ur(ien,i)/(gamma -one)) + half*ur(idn,i)*sum(ur(imx:imz,i)**2) + half*sum(b_ccr(xdim:zdim,i)**2)
        
-       !gampr_l = gamma*prl(ien,i)
-       !gampr_r = gamma*prr(ien,i)
-       gampr_l = gamma*ul(ien,i) ! Gas pressure, left state
-       gampr_r = gamma*ur(ien,i) ! Gas pressure, right state
+       ! Left and right states of gamma*p_gas
+
+       gampr_l = gamma*ul(ien,i) 
+       gampr_r = gamma*ur(ien,i) 
        
 
-       ! Fast magnetosonic waves Eq. 3
+       ! Left and right states of fast magnetosonic waves Eq. 3
        
        c_fastl  =   (gampr_l+(b_ccl(xdim,i)**2+b_ccl(ydim,i)**2+b_ccl(zdim,i)**2))  &
                                        + sqrt((gampr_l+(b_ccl(xdim,i)**2+b_ccl(ydim,i)**2+b_ccl(zdim,i)**2))**2-(four*gampr_l*b_ccl(xdim,i)**2))
@@ -188,15 +197,10 @@ contains
                                        + sqrt((gampr_r+(b_ccr(xdim,i)**2+b_ccr(ydim,i)**2+b_ccr(zdim,i)**2))**2-(four*gampr_r*b_ccr(xdim,i)**2))
        c_fastr  =  sqrt(half*c_fastr/ur(idn,i))
         
-       ! Eq. (67)
+       ! Estimates of speed for left and right going waves Eq. 67
 
        sl  =  min(ul(imx,i) ,ur(imx,i)) - max(c_fastl,c_fastr)
        sr  =  max(ul(imx,i), ur(imx,i)) + max(c_fastl,c_fastr)
-
-       ! Magnetic pressure
-
-       !magprl  =  half*sum(b_ccl(xdim:zdim,i)*b_ccl(xdim:zdim,i))
-       !magprr  =  half*sum(b_ccr(xdim:zdim,i)*b_ccr(xdim:zdim,i))
 
        ! Left flux
 
