@@ -149,7 +149,7 @@ contains
       use func,        only: ekin, emag
       use grid_cont,   only: grid_container
 #ifndef ISO
-      use global,      only: smallei
+!      use global,      only: smallei
 #endif /* !ISO */
       implicit none
 
@@ -249,13 +249,13 @@ contains
                      cg%u(fl%imy,i,j,k) = vy*cg%u(fl%idn,i,j,k)
                      cg%u(fl%imz,i,j,k) = vz*cg%u(fl%idn,i,j,k)
 
-                     if(fl%has_energy) then
+                     if (fl%has_energy) then
 
                         cg%u(fl%ien,i,j,k) = pre ! p/(gamma - 1)
                         !cg%u(fl%ien,i,j,k) = max(cg%u(fl%ien,i,j,k, smallei))
                         cg%u(fl%ien,i,j,k) = cg%u(fl%ien,i,j,k) + ekin(cg%u(fl%imx,i,j,k), cg%u(fl%imy,i,j,k), cg%u(fl%imz,i,j,k), cg%u(fl%idn,i,j,k))
 
-                        if(fl%is_magnetized) then
+                        if (fl%is_magnetized) then
 
                            cg%b(xdim,i,j,k)   =  bx
                            cg%b(ydim,i,j,k)   =  by
@@ -264,8 +264,8 @@ contains
 
                         endif
 
-                     endif                     
-                     
+                     endif
+
 !#ifndef ISO
 !                     cg%u(fl%ien,i,j,k) = pre ! pre here means eint
 !                     cg%u(fl%ien,i,j,k) = max(cg%u(fl%ien,i,j,k), smallei)
