@@ -52,7 +52,7 @@ contains
 
   function fluxes(u, b_cc) result(f) ! This function is called by muscl and rk2muscl
 
-    use constants,  only: one, half, xdim, ydim, zdim
+    use constants,  only: half, xdim, ydim, zdim
     use fluidindex, only: flind
     use fluidtypes, only: component_fluid
     use func,       only: ekin
@@ -92,9 +92,9 @@ contains
        endif
 
        f(fl%idn,:)  =  u(fl%imx,:)
-       if(fl%has_energy) then
-          f(fl%imx,:)  =  u(fl%imx,:)*vx(:) + pr(:) - b_cc(xdim,:)**2  ! b_cc does not contribute in the limit of vanishing magnetic fields. Hydro part is recovered trivially. 
-          if(fl%is_magnetized) then
+       if (fl%has_energy) then
+          f(fl%imx,:)  =  u(fl%imx,:)*vx(:) + pr(:) - b_cc(xdim,:)**2  ! b_cc does not contribute in the limit of vanishing magnetic fields. Hydro part is recovered trivially.
+          if (fl%is_magnetized) then
              f(fl%imx,:)  =  u(fl%imx,:)*vx(:) + (pr(:)+half*sum(b_cc(xdim:zdim,:)**2,dim=1)) - b_cc(xdim,:)**2 ! Eq. 2 Pg 317
           endif
        endif
@@ -108,7 +108,7 @@ contains
           f(fl%ien,:)  =  (u(fl%ien,:) + pr(:))*vx(:) ! Hydro regime. Eq. 2, Pg 317. Takes pr (1)
           if (fl%is_magnetized) then
              f(fl%ien,:) =  (u(fl%ien,:) + (pr(:)+half*sum(b_cc(xdim:zdim,:)**2,dim=1)))*vx(:) - b_cc(xdim,:)*(b_cc(xdim,:)*vx(:) + b_cc(ydim,:)*vy(:) + b_cc(zdim,:)*vz(:)) ! MHD regime. Eq. 2, Pg 317. Takes pr (2)
-          end if
+          endif
        endif
 
     enddo
@@ -154,49 +154,49 @@ contains
     ! Local arrays
 
     real, dimension(flind%all,n)                 :: fl, fr
-    real, dimension(flind%all,n)                 :: prl, prr 
+    real, dimension(flind%all,n)                 :: prl, prr
     real, dimension(flind%all)                   :: u_starl, u_starr, u_2star, v_starl, v_starr, v_2star
     real, dimension(xdim:zdim,n)                 :: b_cclf, b_ccrf
     real, dimension(xdim:zdim)                   :: b_starl, b_starr, b_2star
 
     ! SOLVER
-    
+
     b_cc(xdim,:) = 0.
-    
+
     do i = 1,n
-       
+
        ! Left and right states of magnetic pressure
 
        magprl  =  half*sum(b_ccl(xdim:zdim,i)*b_ccl(xdim:zdim,i))
        magprr  =  half*sum(b_ccr(xdim:zdim,i)*b_ccr(xdim:zdim,i))
-       
+
        ! Left and right states of total pressure
-       ! From fluidupdate.F90, utoq() (1) is used in hydro regime and (2) in MHD regime. In case of vanishing magnetic fields the magnetic components do not contribute and hydro results are obtained trivially. 
-       
+       ! From fluidupdate.F90, utoq() (1) is used in hydro regime and (2) in MHD regime. In case of vanishing magnetic fields the magnetic components do not contribute and hydro results are obtained trivially.
+
        prl(ien,i) = ul(ien,i) + magprl ! ul(ien,i) is the left state of gas pressure
        prr(ien,i) = ur(ien,i) + magprr ! ur(ien,i) is the right state of gas pressure
 
-       ! Left and right states of energy Eq. 2. 
+       ! Left and right states of energy Eq. 2.
 
        enl = (ul(ien,i)/(gamma -one)) + half*ul(idn,i)*sum(ul(imx:imz,i)**2) + half*sum(b_ccl(xdim:zdim,i)**2)
        enr = (ur(ien,i)/(gamma -one)) + half*ur(idn,i)*sum(ur(imx:imz,i)**2) + half*sum(b_ccr(xdim:zdim,i)**2)
-       
+
        ! Left and right states of gamma*p_gas
 
-       gampr_l = gamma*ul(ien,i) 
-       gampr_r = gamma*ur(ien,i) 
-       
+       gampr_l = gamma*ul(ien,i)
+       gampr_r = gamma*ur(ien,i)
+
 
        ! Left and right states of fast magnetosonic waves Eq. 3
-       
+
        c_fastl  =   (gampr_l+(b_ccl(xdim,i)**2+b_ccl(ydim,i)**2+b_ccl(zdim,i)**2))  &
                                        + sqrt((gampr_l+(b_ccl(xdim,i)**2+b_ccl(ydim,i)**2+b_ccl(zdim,i)**2))**2-(four*gampr_l*b_ccl(xdim,i)**2))
        c_fastl = sqrt(half*c_fastl/ul(idn,i))
-           
+
        c_fastr  =   (gampr_r+(b_ccr(xdim,i)**2+b_ccr(ydim,i)**2+b_ccr(zdim,i)**2))  &
                                        + sqrt((gampr_r+(b_ccr(xdim,i)**2+b_ccr(ydim,i)**2+b_ccr(zdim,i)**2))**2-(four*gampr_r*b_ccr(xdim,i)**2))
        c_fastr  =  sqrt(half*c_fastr/ur(idn,i))
-        
+
        ! Estimates of speed for left and right going waves Eq. 67
 
        sl  =  min(ul(imx,i) ,ur(imx,i)) - max(c_fastl,c_fastr)
@@ -243,7 +243,7 @@ contains
           b_cc(zdim,i) = b_ccrf(zdim,i)
 
        else
-           
+
           ! Speed of contact discontinuity Eq. 38
 
           sm_nr = (sr - ur(imx,i))*ur(idn,i)*ur(imx,i) - (sl - ul(imx,i))*ul(idn,i)*ul(imx,i) - prr(ien,i) + prl(ien,i)  ! Total left and right states of pressure, so prr(ien,i) and prl(ien,i)
@@ -304,7 +304,7 @@ contains
 
 
           endif
-          
+
           ! Transveral components of velocity Eq. 42
 
           coeff_1  =  b_ccl(xdim,i)/dn_l
@@ -331,7 +331,7 @@ contains
              b_starr(zdim)  =  ((sr*b_ccr(zdim,i) - sl*b_ccl(zdim,i)) - (b_ccrf(zdim,i) - b_cclf(zdim,i)))/srmsl
 
           endif
-          
+
           ! Transversal components of velocity Eq. 42
 
           coeff_1  =  b_ccr(xdim,i)/dn_r
@@ -367,7 +367,7 @@ contains
           u_starr(ien) = (srvxr*enr - prr(ien,i)*ur(imx,i) + prt_star*sm + b_ccr(xdim,i)*(vb_r - vb_starr))/srsm  ! Total right state of pressure
 
           ! Cases for B_x .ne. and .eq. zero
-          
+
           if (abs(b_ccl(xdim,i)) > zero) then
 
              ! Left and right Alfven waves velocity Eq. 51
@@ -405,7 +405,7 @@ contains
                 b_cc(zdim,i) = b_ccrf(zdim,i) + sr*(b_starr(zdim) - b_ccr(zdim,i))
 
              else ! alfven_l .le. zero .le. alfven_r
-                
+
                 ! Arrange for sign of normal component of magnetic field
 
                 if (b_ccl(xdim,i) .ge. zero) then
@@ -417,7 +417,7 @@ contains
                    b_sig = -one
 
                 endif
-                
+
                 ! Sum and product of density square-root
 
                 add_dnsq  =  dn_lsqt + dn_rsqt
@@ -438,7 +438,7 @@ contains
                 vb_2star  =  sum(v_2star(imx:imz)*b_2star(xdim:zdim))
 
                 ! Choose right Alfven wave according to speed of contact discontinuity
-                
+
                 if (sm .ge. zero) then
 
                    ! Conservative variables for left Alfven intermediate state
@@ -579,9 +579,9 @@ contains
           endif     ! B_x = 0
 
        endif
-   
+
     enddo
-    
+
   end subroutine riemann_hlld
 
 end module hlld

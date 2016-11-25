@@ -109,7 +109,6 @@ contains
     use global,           only: h_solver
     use grid_cont,        only: grid_container
     use named_array_list, only: wna
-    use dataio_pub,       only: warn
 
     implicit none
 
@@ -199,7 +198,7 @@ contains
 
    function utoq(u,b_cc) result(q)
 
-     use constants,  only: one, half, xdim, zdim
+     use constants,  only: half, xdim, zdim
      use fluidindex, only: flind
      use fluidtypes, only: component_fluid
      use func,       only: ekin
@@ -227,7 +226,7 @@ contains
                q(fl%ien,:) =  q(fl%ien,:) - half*fl%gam_1*sum(b_cc(xdim:zdim,:)**2, dim=1) ! Primitive variable for gas pressure (p) with magnetic fields. The requirement of total pressure is dealt in the fluxes and hlld routines. (2)
             endif
         endif
-     
+
      enddo
 
    end function utoq
@@ -471,7 +470,7 @@ contains
           b0 = 0.
           p_bccl => b0
           p_bccr => b0
-       end if
+       endif
        call riemann_hlld(nx, p_flx, p_ql, p_qr, p_bcc, p_bccl, p_bccr, fl%gam)
     enddo
 
@@ -539,7 +538,7 @@ contains
 
     do i = 1, flind%fluids
        fl    => flind%all_fluids(i)%fl
-       p_flx => flx(fl%beg:fl%end,:)  
+       p_flx => flx(fl%beg:fl%end,:)
        p_ql  => ql(fl%beg:fl%end,:)
        p_qr  => qr(fl%beg:fl%end,:)
        p_bcc => mag_cc(xdim:zdim,:)
@@ -550,7 +549,7 @@ contains
           b0 = 0.
           p_bccl => b0
           p_bccr => b0
-       end if
+       endif
        call riemann_hlld(nx, p_flx, p_ql, p_qr, p_bcc, p_bccl, p_bccr, fl%gam)
     enddo
 
@@ -626,7 +625,7 @@ contains
           b0 = 0.
           p_bccl => b0
           p_bccr => b0
-       end if
+       endif
        call riemann_hlld(nx, p_flx, p_ql, p_qr, p_bcc, p_bccl, p_bccr, fl%gam)
     enddo
 
@@ -660,7 +659,7 @@ contains
           b0 = 0.
           p_bccl => b0
           p_bccr => b0
-       end if
+       endif
        call riemann_hlld(nx, p_flx, p_ql, p_qr, p_bcc, p_bccl, p_bccr, fl%gam)
     enddo
 
