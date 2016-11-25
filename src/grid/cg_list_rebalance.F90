@@ -32,7 +32,6 @@
 module cg_list_rebalance
 
    use cg_list_balance, only: cg_list_balance_T
-   use constants,       only: ndims
 
    implicit none
 
@@ -42,8 +41,6 @@ module cg_list_rebalance
    !> \brief An abstract type created to take out some load-balance related code from cg_level (old grids)
 
    type, extends(cg_list_balance_T), abstract :: cg_list_rebalance_T
-      integer(kind=4)                   :: level_id  !< level number (relative to base level). No arithmetic should depend on it.
-      integer(kind=8), dimension(ndims) :: n_d       !< maximum number of grid cells in each direction (size of fully occupied level)
    contains
       procedure          :: rebalance_old  !< Routine for measuring disorder level in distribution of grids across processes
       procedure, private :: reshuffle      !< Routine for moving existing grids between processes
@@ -148,7 +145,7 @@ contains
       if (allocated(gptemp)) deallocate(gptemp)
 
       if (master) then
-         call gp%set_id(this%off)
+         call gp%set_id(this%l%off)
          call gp%sort
          do p = FIRST, LAST
             gp%list(p*size(gp%list)/nproc+1 : ((p+1)*size(gp%list))/nproc)%dest_proc = p
@@ -157,7 +154,7 @@ contains
          if (size(gp%list) > 0) then
             s = count(gp%list(:)%cur_proc /= gp%list(:)%dest_proc)
             if (s/real(size(gp%list)) > oop_thr) then
-               write(msg,'(a,i3,2(a,i6),a,f6.3,a)')"[cg_list_rebalance:balance_old] ^", this%level_id," Reshuffling OutOfPlace grids:",s, "/",size(gp%list)," (load balance: ",sum(cnt_existing)/real(maxval(cnt_existing)*size(cnt_existing)),")"
+               write(msg,'(a,i3,2(a,i6),a,f6.3,a)')"[cg_list_rebalance:balance_old] ^", this%l%id," Reshuffling OutOfPlace grids:",s, "/",size(gp%list)," (load balance: ",sum(cnt_existing)/real(maxval(cnt_existing)*size(cnt_existing)),")"
                call printinfo(msg)
             else
                s = 0
@@ -230,7 +227,7 @@ contains
       if (associated(cgl)) then
          do p = lbound(wna%lst, dim=1, kind=4), ubound(wna%lst, dim=1, kind=4)
             if ((.not. only_vital .or. wna%lst(p)%vital) .and. associated(cgl%cg%w(p)%arr)) then
-               ! associated(cgl%cg%w(p)%arr)) .eqv. (this%level_id >= base_level_id) .or. wna%lst(p)%multigrid ?
+               ! associated(cgl%cg%w(p)%arr)) .eqv. (this%l%id >= base_level_id) .or. wna%lst(p)%multigrid ?
                totfld = totfld + wna%lst(p)%dim4
             endif
          enddo
@@ -303,7 +300,7 @@ contains
             call this%add
             cglepa(i)%p => this%last
             cgl => cglepa(i)%p
-            call this%last%cg%init_gc(this%n_d, this%off, se, n_gid, this%level_id) ! we cannot pass "this" as an argument because of circular dependencies
+            call this%last%cg%init_gc(se, n_gid, this%l)
             allocate(cglepa(i)%tbuf(totfld, cgl%cg%n_(xdim), cgl%cg%n_(ydim), cgl%cg%n_(zdim)))
             do p = lbound(cg_extptrs%ext, dim=1, kind=4), ubound(cg_extptrs%ext, dim=1, kind=4)
                if (associated(cg_extptrs%ext(p)%init))  call cg_extptrs%ext(p)%init(this%last%cg)

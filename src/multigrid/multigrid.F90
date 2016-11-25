@@ -235,8 +235,8 @@ contains
       endif
 
       do j = 0, level_incredible
-         if (any((mod(base_level%n_d(:), int(refinement_factor, kind=8)**(j+1)) /= 0 .or. base_level%n_d(:)/refinement_factor**(j+1) < minsize(:)) .and. dom%has_dir(:))) exit
-         if (any((mod(base_level%off(:), int(refinement_factor, kind=8)**(j+1)) /= 0 .and. dom%has_dir(:)))) exit
+         if (any((mod(base_level%l%n_d(:), int(refinement_factor, kind=8)**(j+1)) /= 0 .or. base_level%l%n_d(:)/refinement_factor**(j+1) < minsize(:)) .and. dom%has_dir(:))) exit
+         if (any((mod(base_level%l%off(:), int(refinement_factor, kind=8)**(j+1)) /= 0 .and. dom%has_dir(:)))) exit
       enddo
       if (level_depth > j) then
          if (master) then
@@ -247,7 +247,7 @@ contains
          level_depth = j
       endif
 
-      do while (coarsest%level%level_id > -level_depth)
+      do while (coarsest%level%l%id > -level_depth)
          call coarsest%add_coarser
       enddo
 
@@ -260,7 +260,7 @@ contains
 
             if (any(cg%n_b(:) < dom%nb .and. dom%has_dir(:))) then
                write(msg, '(a,i1,a,3i4,2(a,i2))')"[multigrid:init_multigrid] Number of guardcells exceeds number of interior cells: ", &
-                    dom%nb, " > ", cg%n_b(:), " at level ", curl%level_id, ". You may try to set level_depth <=", -curl%level_id
+                    dom%nb, " > ", cg%n_b(:), " at level ", curl%l%id, ". You may try to set level_depth <=", -curl%l%id
                call die(msg)
             endif
 
@@ -273,7 +273,7 @@ contains
       curl => base_level%coarser
       do while (associated(curl))
          if (master) then
-            if (curl%level_id == -level_depth .and. single_base) then
+            if (curl%l%id == -level_depth .and. single_base) then
                call curl%add_patch(n_pieces=I_ONE)
             else
                !> \todo When there is more AMR_bsize-pieces than processes, consider forcing cartesian or noncartesian decomposition
@@ -291,8 +291,8 @@ contains
 
       ! summary
       if (master) then
-         write(msg, '(a,i2,a,3i4,a)')"[multigrid:init_multigrid] Initialized ", finest%level%level_id - coarsest%level%level_id, &
-              &                      " coarse levels, coarsest level resolution [ ", coarsest%level%n_d(:)," ]"
+         write(msg, '(a,i2,a,3i4,a)')"[multigrid:init_multigrid] Initialized ", finest%level%l%id - coarsest%level%l%id, &
+              &                      " coarse levels, coarsest level resolution [ ", coarsest%level%l%n_d(:)," ]"
          call printinfo(msg)
       endif
 

@@ -307,7 +307,7 @@ contains
          case ("sgpt")
             if (associated(cg%sgp)) tab(:,:,:) = real(cg%sgp(RNG), kind=4)
          case ("level")
-            tab(:,:,:) = real(cg%level_id, kind=4)
+            tab(:,:,:) = real(cg%l%id, kind=4)
          case ("grid_id")
             tab(:,:,:) = real(cg%grid_id, kind=4)
          case ("proc")
@@ -388,7 +388,7 @@ contains
 
 !> \brief Write all grid containers to the file
 
-   subroutine write_cg_to_output(cgl_g_id, cg_n, cg_all_n_b)
+   subroutine write_cg_to_output(cgl_g_id, cg_n, cg_all_n_b, cg_all_n_o)
 
       use cg_leaves,   only: leaves
       use cg_list,     only: cg_list_element
@@ -405,6 +405,7 @@ contains
       integer(HID_T),                           intent(in) :: cgl_g_id    !< cg group identifier
       integer(kind=4), dimension(:),   pointer, intent(in) :: cg_n        !< offset for cg group numbering
       integer(kind=4), dimension(:,:), pointer, intent(in) :: cg_all_n_b  !< all cg sizes
+      integer(kind=4), dimension(:,:), pointer, intent(in) :: cg_all_n_o  !< all cg sizes, expanded by external boundaries
 
       integer(HID_T)                                       :: filespace_id, memspace_id
       integer(kind=4)                                      :: error
@@ -515,6 +516,8 @@ contains
       if (associated(data)) deallocate(data)
       call cg_desc%clean()
 
+      if (.false.) i = size(cg_all_n_o) ! suppress compiler warning
+
       contains
          !>
          !! Try to avoid pointless data reallocation for every cg if shape doesn't change
@@ -583,23 +586,26 @@ contains
 
    end subroutine get_data_from_cg
 
-   subroutine create_empty_cg_datasets_in_output(cg_g_id, cg_n_b, Z_avail, g)
+   subroutine create_empty_cg_datasets_in_output(cg_g_id, cg_n_b, cg_n_o, Z_avail)
 
       use common_hdf5, only: create_empty_cg_dataset, hdf_vars, O_OUT
       use hdf5,        only: HID_T, HSIZE_T
 
       implicit none
 
-      integer(HID_T),                           intent(in) :: cg_g_id
-      integer(kind=4), dimension(:,:), pointer, intent(in) :: cg_n_b
-      logical(kind=4),                          intent(in) :: Z_avail
-      integer,                                  intent(in) :: g
+      integer(HID_T),                intent(in) :: cg_g_id
+      integer(kind=4), dimension(:), intent(in) :: cg_n_b
+      integer(kind=4), dimension(:), intent(in) :: cg_n_o
+      logical(kind=4),               intent(in) :: Z_avail
 
-      integer                                              :: i
+      integer :: i
 
       do i = lbound(hdf_vars,1), ubound(hdf_vars,1)
-         call create_empty_cg_dataset(cg_g_id, gdf_translate(hdf_vars(i)), int(cg_n_b(g, :), kind=HSIZE_T), Z_avail, O_OUT)
+         call create_empty_cg_dataset(cg_g_id, gdf_translate(hdf_vars(i)), int(cg_n_b, kind=HSIZE_T), Z_avail, O_OUT)
       enddo
+
+      if (.false.) i = size(cg_n_o) ! suppress compiler warning
+
    end subroutine create_empty_cg_datasets_in_output
 
    subroutine h5_write_to_single_file_v1(fname)
@@ -650,7 +656,7 @@ contains
       call h5pclose_f(plist_idf, error)
 
       !! \todo check if finest is complete, if not then find finest complete level
-      dimsf  = finest%level%n_d(:)    ! Dataset dimensions
+      dimsf  = finest%level%l%n_d(:)    ! Dataset dimensions
       !
       ! Create the data space for the  dataset.
       !
