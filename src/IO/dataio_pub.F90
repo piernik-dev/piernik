@@ -237,13 +237,7 @@ contains
       character(len=msg_type_len)   :: msg_type_str
       integer(kind=4)               :: proc
       integer                       :: outunit
-      logical, save                 :: frun = .true.
       character(len=idlen)          :: adv
-
-      if (frun) then
-         call set_colors(.false.)
-         frun = .false.
-      endif
 
 !      write(stdout,*) ansi_red, "Red ", ansi_green, "Green ", ansi_yellow, "Yellow ", ansi_blue, "Blue ", ansi_magenta, "Magenta ", ansi_cyan, "Cyan ", ansi_white, "White ", ansi_black
       adv = 'yes'
@@ -317,6 +311,9 @@ contains
          endif
          if (mode == T_ERR) call flush_to_log
          if (.not. log_file_initialized) close(log_lun)
+      else
+         if (mode == T_SILENT) &
+            write(stderr,'(a,a," @",a,i5,2a)', advance=adv) trim(ansi_red), "not logged", ansi_black, proc, ': ', trim(nm)
       endif
 
    end subroutine colormessage
