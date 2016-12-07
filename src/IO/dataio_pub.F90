@@ -67,7 +67,7 @@ module dataio_pub
    integer                     :: tsl_lun                        !< logical unit number for timeslice file
    integer                     :: log_lun                        !< logical unit number for log file
    integer(kind=4)             :: nend                           !< number of the step to end simulation
-   integer(kind=4), save       :: cbline = 1                     !< current buffer line
+   integer(kind=4), save       :: cbline = 0                     !< current buffer line
    integer                     :: nstep_start                    !< number of start timestep
    integer(kind=4)             :: nhdf                           !< current number of hdf file
    integer(kind=4)             :: nres                           !< current number of restart file
@@ -307,12 +307,13 @@ contains
 #endif /* !__INTEL_COMPILER */
          endif
          if (proc == 0 .and. mode == T_ERR) write(log_lun,'(/,a,/)')"###############     Crashing     ###############"
-         if (cbline <= bufferlines) then
-            write(logbuffer(cbline), '(2a,i5,2a)') msg_type_str," @", proc, ': ', trim(nm)
+         if (cbline < bufferlines) then
             cbline = cbline + I_ONE
-         else
+            write(logbuffer(cbline), '(2a,i5,2a)') msg_type_str," @", proc, ': ', trim(nm)
+         endif
+         if (cbline >= bufferlines) then
             call flush_to_log
-            cbline = 1
+            cbline = 0
          endif
          if (mode == T_ERR) call flush_to_log
          if (.not. log_file_initialized) close(log_lun)
