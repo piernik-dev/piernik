@@ -307,11 +307,11 @@ contains
 #endif /* !__INTEL_COMPILER */
          endif
          if (proc == 0 .and. mode == T_ERR) write(log_lun,'(/,a,/)')"###############     Crashing     ###############"
-         if (cbline < bufferlines) then
+         if (cbline < size(logbuffer)) then
             cbline = cbline + I_ONE
             write(logbuffer(cbline), '(2a,i5,2a)') msg_type_str," @", proc, ': ', trim(nm)
          endif
-         if (cbline >= bufferlines) then
+         if (cbline >= size(logbuffer)) then
             call flush_to_log
             cbline = 0
          endif
@@ -325,7 +325,7 @@ contains
       implicit none
       integer :: line
 
-      do line = 1, min(cbline, bufferlines)
+      do line = 1, min(cbline, size(logbuffer))
 #if defined(__INTEL_COMPILER)
          write(log_lun, '(a)') trim(logbuffer(line))
 #else /* __INTEL_COMPILER */
