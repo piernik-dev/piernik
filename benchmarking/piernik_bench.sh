@@ -124,7 +124,8 @@ for p in $B_PROBLEM_LIST ; do
 			    strong)
 				mpirun -np $i ./piernik -n '&BASE_DOMAIN n_d = 3*32 /' 2> /dev/null ;;
 			esac | grep "C1-cycles" | awk '{if (NR==1) printf("%7.3f %7.3f ", $5, $8)}'
-			awk '/Spent/ { print $5 }' *log ;;
+			awk '/Spent/ { printf("%s ",$5) }' *log
+			echo ;;
 		    maclaurin)
 			case $t in
 			    weak)
@@ -132,7 +133,8 @@ for p in $B_PROBLEM_LIST ; do
 			    strong)
 				mpirun -np $i ./piernik -n '&BASE_DOMAIN n_d = 3*128 / &MPI_BLOCKS AMR_bsize = 3*32 /' 2> /dev/null ;;
 			esac | grep cycles | awk '{printf("%7.3f %7.3f ", $5, $8)}'
-			awk '/Spent/ { print $5 }' *log ;;
+			awk '/Spent/ { printf("%s ", $5) }' *log
+			echo ;;
 	        esac
 	    done
 	) | column -t
