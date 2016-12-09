@@ -9,6 +9,10 @@ if [ $# -ge 1 ] ; then
     fi
 fi
 
+SCALE=${BIG:=1}
+
+[ $SCALE -ne 1 ] && echo "# test domains are scaled by factor of $SCALE"
+
 # create list of thread count to be tested
 if [ $# -lt 1 ] ; then
     N=$( awk 'BEGIN {c=0} /processor/ {if ($NF > c) c=$NF} END {print c+1}' /proc/cpuinfo )
@@ -111,27 +115,31 @@ for p in $B_PROBLEM_LIST ; do
 		echo -n $i
 		case $p in
 		    sedov)
+			NX=$(( 64 * $SCALE ))
 			case $t in
 			    weak)
-				mpirun -np $i ./piernik -n '&BASE_DOMAIN n_d = '$(( $i * 64 ))', 2*64 xmin = -'$(( $i * 1 ))' xmax = '$(( $i * 1 ))'/' 2> /dev/null ;;
+				mpirun -np $i ./piernik -n '&BASE_DOMAIN n_d = '$(( $i * $NX ))', 2*'$NX' xmin = -'$(( $i * 1 ))' xmax = '$(( $i * 1 ))'/' 2> /dev/null ;;
 			    strong)
-				mpirun -np $i ./piernik -n '&BASE_DOMAIN n_d = 3*64 /' 2> /dev/null ;;
+				mpirun -np $i ./piernik -n '&BASE_DOMAIN n_d = 3*'$NX' /' 2> /dev/null ;;
 			esac | grep "dWallClock" | awk 'BEGIN {t=0; n=0;} {if ($12 != 0.) {printf("%7.2f ", $12); t+=$12; n++;} } END {printf("%7.3f\n", t/n)}' ;;
 		    crtest)
+			NX=$(( 32 * $SCALE ))
 			case $t in
 			    weak)
-				mpirun -np $i ./piernik -n '&BASE_DOMAIN n_d = '$(( $i * 32 ))', 2*32 xmin = -'$(( $i * 512 ))' xmax = '$(( $i * 512 ))'/' 2> /dev/null ;;
+				mpirun -np $i ./piernik -n '&BASE_DOMAIN n_d = '$(( $i * $NX ))', 2*'$NX' xmin = -'$(( $i * 512 ))' xmax = '$(( $i * 512 ))'/' 2> /dev/null ;;
 			    strong)
-				mpirun -np $i ./piernik -n '&BASE_DOMAIN n_d = 3*32 /' 2> /dev/null ;;
+				mpirun -np $i ./piernik -n '&BASE_DOMAIN n_d = 3*'$NX' /' 2> /dev/null ;;
 			esac | grep "C1-cycles" | awk '{if (NR==1) printf("%7.3f %7.3f ", $5, $8)}'
 			awk '/Spent/ { printf("%s ",$5) }' *log
 			echo ;;
 		    maclaurin)
 			case $t in
 			    weak)
-				mpirun -np $i ./piernik -n '&BASE_DOMAIN n_d = '$(( $i * 64 ))', 2*64 xmin = -'$(( $i * 2 ))' xmax = '$(( $i * 2 ))' / &MPI_BLOCKS AMR_bsize = 3*32 /' 2> /dev/null ;;
+				NX=$(( 64 * $SCALE ))
+				mpirun -np $i ./piernik -n '&BASE_DOMAIN n_d = '$(( $i * $NX ))', 2*'$NX' xmin = -'$(( $i * 2 ))' xmax = '$(( $i * 2 ))' / &MPI_BLOCKS AMR_bsize = 3*32 /' 2> /dev/null ;;
 			    strong)
-				mpirun -np $i ./piernik -n '&BASE_DOMAIN n_d = 3*128 / &MPI_BLOCKS AMR_bsize = 3*32 /' 2> /dev/null ;;
+				NX=$(( 128 * $SCALE ))
+				mpirun -np $i ./piernik -n '&BASE_DOMAIN n_d = 3*'$NX' / &MPI_BLOCKS AMR_bsize = 3*32 /' 2> /dev/null ;;
 			esac | grep cycles | awk '{printf("%7.3f %7.3f ", $5, $8)}'
 			awk '/Spent/ { printf("%s ", $5) }' *log
 			echo ;;
