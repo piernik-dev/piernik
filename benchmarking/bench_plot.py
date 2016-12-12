@@ -55,7 +55,9 @@ def read_timings(file):
             if (len(columns) > 0):
                 try:
                     nthr = int(columns[0])
-                    if (nthr > 0):
+                    if (nthr > 2**20): # crude protection against eating too much memory due to bad data lines
+                        print "Ignoring bogus thread number: ", columns
+                    elif (nthr > 0):
                         if (nthr not in timings):
                             timings[nthr] = [0 for x in range(crtest_strong + 1)]
                         if (len(columns) >= d_col+1):
