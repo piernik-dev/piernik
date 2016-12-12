@@ -619,6 +619,7 @@ contains
 
    subroutine mgg_cg_cleanup(cg)
 
+      use global,    only: allow_FFTW_leaks
       use grid_cont, only: grid_container
 
       implicit none
@@ -630,8 +631,10 @@ contains
       if (allocated(cg%mg%src))     deallocate(cg%mg%src)
       if (allocated(cg%mg%Green3D)) deallocate(cg%mg%Green3D)
 
-      if (cg%mg%planf /= 0) call dfftw_destroy_plan(cg%mg%planf)
-      if (cg%mg%plani /= 0) call dfftw_destroy_plan(cg%mg%plani)
+      if (.not. allow_FFTW_leaks) then
+         if (cg%mg%planf /= 0) call dfftw_destroy_plan(cg%mg%planf)
+         if (cg%mg%plani /= 0) call dfftw_destroy_plan(cg%mg%plani)
+      endif
 
    end subroutine mgg_cg_cleanup
 
