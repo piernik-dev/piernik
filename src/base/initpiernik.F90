@@ -47,7 +47,7 @@ contains
       use cg_list_global,        only: all_cg
       use constants,             only: PIERNIK_INIT_MPI, PIERNIK_INIT_GLOBAL, PIERNIK_INIT_FLUIDS, PIERNIK_INIT_DOMAIN, PIERNIK_INIT_GRID, PIERNIK_INIT_IO_IC, INCEPTIVE, tmr_fu
       use dataio,                only: init_dataio, init_dataio_parameters, write_data
-      use dataio_pub,            only: nrestart, wd_rd, par_file, tmp_log_file, msg, printio, printinfo, warn, require_problem_IC, problem_name, run_id, code_progress, log_wr
+      use dataio_pub,            only: nrestart, wd_rd, par_file, tmp_log_file, msg, printio, printinfo, warn, require_problem_IC, problem_name, run_id, code_progress, log_wr, set_colors
       use decomposition,         only: init_decomposition
       use domain,                only: init_domain
       use diagnostics,           only: diagnose_arrays, check_environment
@@ -112,6 +112,8 @@ contains
       integer :: nit, ac
       logical :: finished
       integer, parameter :: nit_over = 5 ! maximum number of auxiliary iterations after reaching level_max
+
+      call set_colors(.false.)               ! Make sure that we won't emit colorful messages before we are allowed to do so
 
       call parse_cmdline
       write(par_file,'(2a)') trim(wd_rd),'problem.par'
