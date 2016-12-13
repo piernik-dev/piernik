@@ -59,7 +59,7 @@ def read_timings(file):
                         print "Ignoring bogus thread number: ", columns
                     elif (nthr > 0):
                         if (nthr not in timings):
-                            timings[nthr] = [0 for x in range(crtest_strong + 1)]
+                            timings[nthr] = [None for x in range(crtest_strong + 1)]
                         if (len(columns) >= d_col+1):
                             timings[nthr][b_type] = float(columns[d_col])
                         else:
@@ -120,7 +120,8 @@ def mkplot(data):
                 y.append(d["timings"][x][test])
             if (test in (sedov_strong, maclaurin_strong, crtest_strong)):
                 for i in range(len(y)):
-                    y[i] *= n[i]
+                    if (y[i]):
+                        y[i] *= n[i]
             plt.plot(n, y)
         plt.xlabel("N_threads", verticalalignment='center')
         if (test in (sedov_strong, maclaurin_strong, crtest_strong)):
