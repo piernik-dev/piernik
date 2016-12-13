@@ -75,6 +75,7 @@ def read_timings(file):
 
 def mkplot(data):
     import matplotlib.pyplot as plt
+    import math as m
 
     plt.figure(figsize=(20, 15))
 
@@ -129,7 +130,22 @@ def mkplot(data):
         plt.annotate(t_labels[test], xy=(0.5, 0.1), xycoords="axes fraction", horizontalalignment='center')
         plt.ylim(ymin=0.)
         plt.xlim(1-exp, ntm+exp)
-        plt.xticks(range(1,ntm+1))
+
+        if (ntm >= 10):
+            xf, xi = m.modf(m.log10(ntm))
+            xf = pow(10, xf)
+            if (xf >= 5.):
+                xf = 1
+                xi += 1
+            elif (xf >= 2.):
+                xf = 5
+            else:
+                xf = 2
+            xtstep = int(xf * m.pow(10, xi-1))
+            x_ticks = range(0, ntm+xtstep, xtstep)
+        else:
+            x_ticks = range(1, ntm+1)
+        plt.xticks(x_ticks)
 
     names = []
     for d in data:
