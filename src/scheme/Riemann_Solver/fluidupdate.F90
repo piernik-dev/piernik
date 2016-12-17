@@ -533,8 +533,8 @@ contains
     b_cc_r(:,1:nx-1) = b_ccl(:,2:nx) + half*dtodx*flx(size(u,1)+1:,2:nx)
     b_cc_r(:,nx) = b_cc_r(:,nx-1)
 
-    ql = utoq(u_l,b_ccl)
-    qr = utoq(u_r,b_ccr)
+    ql = utoq(u_l,b_cc_l)
+    qr = utoq(u_r,b_cc_r)
 
     do i = 1, flind%fluids
        fl    => flind%all_fluids(i)%fl
@@ -642,8 +642,8 @@ contains
     b_cc_r(:,1:nx-1) = b_ccl(:,2:nx) + half*dtodx*(mag_cc(:,1:nx-1) - mag_cc(:,2:nx))
     b_cc_r(:,nx) = b_cc_r(:,nx-1)
 
-    ql = utoq(u_l,b_ccl)
-    qr = utoq(u_r,b_ccr)
+    ql = utoq(u_l,b_cc_l)
+    qr = utoq(u_r,b_cc_r)
 
     ! second call for Riemann problem uses states evolved to half timestep
     do i = 1, flind%fluids
