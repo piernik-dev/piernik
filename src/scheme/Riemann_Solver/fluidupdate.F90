@@ -104,22 +104,11 @@ contains
   subroutine sweep_dsplit(cg, dt, ddim)
 
     use constants,        only: pdims, xdim, zdim, ORTHO1, ORTHO2, LO, HI
-    use dataio_pub,       only: die
     use fluidindex,       only: iarr_all_swp, iarr_mag_swp
-    use global,           only: h_solver
     use grid_cont,        only: grid_container
     use named_array_list, only: wna
 
     implicit none
-
-    interface
-       subroutine solver_1d(f_data, b_data, dt_dx)
-          implicit none
-          real, dimension(:,:), intent(inout) :: f_data
-          real, dimension(:,:), intent(inout) :: b_data
-          real,                 intent(in)    :: dt_dx
-       end subroutine solver_1d
-    end interface
 
     type(grid_container), pointer, intent(in) :: cg
     real,                          intent(in) :: dt
@@ -129,29 +118,6 @@ contains
     real, dimension(xdim:zdim, cg%n_(ddim))   :: b_cc1d
     real, dimension(:,:), pointer             :: pu, pb
     integer                                   :: i1, i2
-    logical, save                             :: firstcall = .true.
-
-    procedure(solver_1d), pointer, save :: solve => NULL()
-
-    if (firstcall) then
-       select case (h_solver)
-          case ("muscl")
-             solve => muscl
-          case ("rk2")
-             solve => rk2
-          case ("rk2_muscl")
-             solve => rk2_muscl
-          case ("euler")
-             solve => euler
-          case ("heun")
-             solve => heun
-          case ("rk4")
-             solve => rk4
-          case default
-             call die("[fluidupdate:sweep_dsplit] No recognized solver")
-       end select
-    endif
-    firstcall = .false.
 
     do i2 = cg%lhn(pdims(ddim, ORTHO2), LO), cg%lhn(pdims(ddim,ORTHO2), HI)
        do i1 = cg%lhn(pdims(ddim, ORTHO1), LO), cg%lhn(pdims(ddim, ORTHO1), HI)
@@ -166,6 +132,38 @@ contains
     enddo
 
   end subroutine sweep_dsplit
+
+!---------------------------------------------------------------------------------------------------------------------
+
+  subroutine solve(u, b_cc, dtodx)
+
+     use dataio_pub, only: die
+     use global,     only: h_solver
+
+     implicit none
+
+     real, dimension(:,:), intent(inout) :: u
+     real, dimension(:,:), intent(inout) :: b_cc
+     real,                 intent(in)    :: dtodx
+
+     select case (h_solver)
+        case ("muscl")
+           call  muscl(u, b_cc, dtodx)
+        case ("rk2")
+           call rk2(u, b_cc, dtodx)
+        case ("rk2_muscl")
+           call rk2_muscl(u, b_cc, dtodx)
+        case ("euler")
+           call euler(u, b_cc, dtodx)
+        case ("heun")
+           call heun(u, b_cc, dtodx)
+        case ("rk4")
+           call rk4(u, b_cc, dtodx)
+        case default
+           call die("[fluidupdate:sweep_dsplit] No recognized solver")
+     end select
+
+  end subroutine solve
 
 !---------------------------------------------------------------------------------------------------------------------
 
