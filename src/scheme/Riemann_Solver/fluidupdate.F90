@@ -163,13 +163,7 @@ contains
         case ("muscl")
            call  muscl(u, b_cc, dtodx)
         case ("rk2")
-           du  = calculate_slope_vanleer(u)
-           ul  = u - half*du
-           ur  = u + half*du
-
-           db  = calculate_slope_vanleer(b_cc)
-           b_ccl = b_cc - half*db
-           b_ccr = b_cc + half*db
+           call slope
 
            u_l = ur
            u_r(:,1:nx-1) = ul(:,2:nx)
@@ -227,6 +221,20 @@ contains
      contains
 
         ! some shortcuts
+
+        subroutine slope()
+
+           implicit none
+
+           du  = calculate_slope_vanleer(u)
+           ul  = u - half*du
+           ur  = u + half*du
+
+           db  = calculate_slope_vanleer(b_cc)
+           b_ccl = b_cc - half*db
+           b_ccr = b_cc + half*db
+
+        end subroutine slope
 
         subroutine riemann_wrap()
 
