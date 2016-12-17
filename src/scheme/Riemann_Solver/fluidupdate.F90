@@ -150,9 +150,9 @@ contains
      real,                 intent(in)    :: dtodx
 
      real, dimension(size(b_cc,1),size(b_cc,2)), target :: b_cc_l, b_cc_r, mag_cc
-     real, dimension(size(b_cc,1),size(b_cc,2))         :: db, b_ccl, b_ccr
+     real, dimension(size(b_cc,1),size(b_cc,2))         :: db, b_ccl, b_ccr, db1
      real, dimension(size(u,1),size(u,2)), target       :: flx, ql, qr
-     real, dimension(size(u,1),size(u,2))               :: du, ul, ur, u_l, u_r
+     real, dimension(size(u,1),size(u,2))               :: du, ul, ur, u_l, u_r, du1
      integer                                            :: nx
 
      nx  = size(u,2)
@@ -165,35 +165,20 @@ contains
         case ("rk2")
            call slope
 
-           u_l = ur
-           u_r(:,1:nx-1) = ul(:,2:nx)
-           u_r(:,nx) = u_r(:,nx-1)
-
-           b_cc_l = b_ccr
-           b_cc_r(:,1:nx-1) = b_ccl(:,2:nx)
-           b_cc_r(:,nx) = b_cc_r(:,nx-1)
-
-           ql = utoq(u_l,b_cc_l)
-           qr = utoq(u_r,b_cc_r)
+           call ulr_to_qlr
 
            ! Just the slope is used to feed 1st call to Riemann solver
            call riemann_wrap
 
            ! Now we advance the left and right states by half timestep.
            ! The slope is already calculated and can be reused
-           u_l(:,2:nx) = ur(:,2:nx) + half*dtodx*(flx(:,1:nx-1) - flx(:,2:nx))
-           u_l(:,1) = u_l(:,2)
+           du1(:,2:nx) = dtodx*(flx(:,1:nx-1) - flx(:,2:nx))
+           du1(:,1) = du1(:,2)
 
-           u_r(:,1:nx-1) = ul(:,2:nx) + half*dtodx*(flx(:,1:nx-1) - flx(:,2:nx))
-           u_r(:,nx) = u_r(:,nx-1)
+           db1(:,2:nx) = dtodx*(mag_cc(:,1:nx-1) - mag_cc(:,2:nx))
+           db1(:,1) = db1(:,2)
 
-           b_cc_l(:,2:nx) = b_ccr(:,2:nx) + half*dtodx*(mag_cc(:,1:nx-1) - mag_cc(:,2:nx))
-           b_cc_l(:,1) = b_cc_l(:,2)
-           b_cc_r(:,1:nx-1) = b_ccl(:,2:nx) + half*dtodx*(mag_cc(:,1:nx-1) - mag_cc(:,2:nx))
-           b_cc_r(:,nx) = b_cc_r(:,nx-1)
-
-           ql = utoq(u_l,b_cc_l)
-           qr = utoq(u_r,b_cc_r)
+           call ulr_to_qlr(half*du1, half*db1)
 
            ! second call for Riemann problem uses states evolved to half timestep
            call riemann_wrap
@@ -235,6 +220,36 @@ contains
            b_ccr = b_cc + half*db
 
         end subroutine slope
+
+        subroutine ulr_to_qlr(du, db)
+
+           implicit none
+
+           real, optional, dimension(size(u,1),size(u,2)),       intent(in) :: du
+           real, optional, dimension(size(b_cc,1),size(b_cc,2)), intent(in) :: db
+
+           if (present(du)) then
+              u_l = ur + du
+              u_r(:,1:nx-1) = ul(:,2:nx) + du(:,2:nx)
+           else
+              u_l = ur
+              u_r(:,1:nx-1) = ul(:,2:nx)
+           endif
+           u_r(:,nx) = u_r(:,nx-1)
+
+           if (present(db)) then
+              b_cc_l = b_ccr + db
+              b_cc_r(:,1:nx-1) = b_ccl(:,2:nx) + db(:,2:nx)
+           else
+              b_cc_l = b_ccr
+              b_cc_r(:,1:nx-1) = b_ccl(:,2:nx)
+           endif
+           b_cc_r(:,nx) = b_cc_r(:,nx-1)
+
+           ql = utoq(u_l,b_cc_l)
+           qr = utoq(u_r,b_cc_r)
+
+        end subroutine ulr_to_qlr
 
         subroutine riemann_wrap()
 
