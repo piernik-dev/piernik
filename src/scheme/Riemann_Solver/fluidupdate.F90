@@ -183,13 +183,7 @@ contains
            ! second call for Riemann problem uses states evolved to half timestep
            call riemann_wrap
 
-           u(:,2:nx) = u(:,2:nx) + dtodx*(flx(:,1:nx-1) - flx(:,2:nx))
-           u(:,1) = u(:,2)
-           u(:,nx) = u(:,nx-1)
-
-           b_cc(:,2:nx) = b_cc(:,2:nx) + dtodx*(mag_cc(:,1:nx-1) - mag_cc(:,2:nx))
-           b_cc(:,1) = b_cc(:,2)
-           b_cc(:,nx) = b_cc(:,nx-1)
+           call update
 
         case ("rk2_muscl")
            call rk2_muscl(u, b_cc, dtodx)
@@ -281,6 +275,20 @@ contains
            enddo
 
         end subroutine riemann_wrap
+
+        subroutine update
+
+           implicit none
+
+           u(:,2:nx) = u(:,2:nx) + dtodx*(flx(:,1:nx-1) - flx(:,2:nx))
+           u(:,1) = u(:,2)
+           u(:,nx) = u(:,nx-1)
+
+           b_cc(:,2:nx) = b_cc(:,2:nx) + dtodx*(mag_cc(:,1:nx-1) - mag_cc(:,2:nx))
+           b_cc(:,1) = b_cc(:,2)
+           b_cc(:,nx) = b_cc(:,nx-1)
+
+        end subroutine update
 
   end subroutine solve
 
