@@ -137,11 +137,10 @@ contains
 
   subroutine solve(u, b_cc, dtodx)
 
-     use constants,  only: half, xdim, zdim
+     use constants,  only: half
      use dataio_pub, only: die
 
      use global,     only: h_solver
-     use hlld,       only: riemann_hlld
 
      implicit none
 
@@ -150,9 +149,9 @@ contains
      real,                 intent(in)    :: dtodx
 
      real, dimension(size(b_cc,1),size(b_cc,2)), target :: b_cc_l, b_cc_r, mag_cc
-     real, dimension(size(b_cc,1),size(b_cc,2))         :: db, b_ccl, b_ccr, db1
+     real, dimension(size(b_cc,1),size(b_cc,2))         :: b_ccl, b_ccr, db1
      real, dimension(size(u,1),size(u,2)), target       :: flx, ql, qr
-     real, dimension(size(u,1),size(u,2))               :: du, ul, ur, u_l, u_r, du1
+     real, dimension(size(u,1),size(u,2))               :: ul, ur, du1
      integer                                            :: nx
 
      nx  = size(u,2)
@@ -199,7 +198,12 @@ contains
 
         subroutine slope()
 
+           use constants,  only: half
+
            implicit none
+
+           real, dimension(size(u,1),size(u,2))       :: du
+           real, dimension(size(b_cc,1),size(b_cc,2)) :: db
 
            du  = calculate_slope_vanleer(u)
            ul  = u - half*du
@@ -217,6 +221,8 @@ contains
 
            real, optional, dimension(size(u,1),size(u,2)),       intent(in) :: du
            real, optional, dimension(size(b_cc,1),size(b_cc,2)), intent(in) :: db
+
+           real, dimension(size(u,1),size(u,2))               :: u_l, u_r
 
            if (present(du)) then
               u_l = ur + du
@@ -258,8 +264,10 @@ contains
 
         subroutine riemann_wrap()
 
+           use constants,  only: xdim, zdim
            use fluidindex, only: flind
            use fluidtypes, only: component_fluid
+           use hlld,       only: riemann_hlld
 
            implicit none
 
