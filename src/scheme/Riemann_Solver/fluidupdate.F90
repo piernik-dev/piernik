@@ -139,8 +139,7 @@ contains
 
      use constants,  only: half, xdim, zdim
      use dataio_pub, only: die
-     use fluidindex, only: flind
-     use fluidtypes, only: component_fluid
+
      use global,     only: h_solver
      use hlld,       only: riemann_hlld
 
@@ -150,13 +149,11 @@ contains
      real, dimension(:,:), intent(inout) :: b_cc
      real,                 intent(in)    :: dtodx
 
-     class(component_fluid), pointer                    :: fl
-     real, dimension(size(b_cc,1),size(b_cc,2)), target :: b_cc_l, b_cc_r, mag_cc, b0
+     real, dimension(size(b_cc,1),size(b_cc,2)), target :: b_cc_l, b_cc_r, mag_cc
      real, dimension(size(b_cc,1),size(b_cc,2))         :: db, b_ccl, b_ccr
      real, dimension(size(u,1),size(u,2)), target       :: flx, ql, qr
      real, dimension(size(u,1),size(u,2))               :: du, ul, ur, u_l, u_r
-     real, dimension(:,:), pointer                      :: p_flx, p_bcc, p_bccl, p_bccr, p_ql, p_qr
-     integer                                            :: nx, i
+     integer                                            :: nx
 
      nx  = size(u,2)
      if (size(b_cc,2) /= nx) call die("[fluidupdate:rk2] size b_cc and u mismatch")
@@ -186,22 +183,7 @@ contains
            qr = utoq(u_r,b_cc_r)
 
            ! Just the slope is used to feed 1st call to Riemann solver
-           do i = 1, flind%fluids
-              fl     => flind%all_fluids(i)%fl
-              p_flx  => flx(fl%beg:fl%end,:)
-              p_ql   => ql(fl%beg:fl%end,:)
-              p_qr   => qr(fl%beg:fl%end,:)
-              p_bcc  => mag_cc(xdim:zdim,:)
-              if (fl%is_magnetized) then
-                 p_bccl => b_cc_l(xdim:zdim,:)
-                 p_bccr => b_cc_r(xdim:zdim,:)
-              else ! ignore all magnetic field
-                 b0 = 0.
-                 p_bccl => b0
-                 p_bccr => b0
-              endif
-              call riemann_hlld(nx, p_flx, p_ql, p_qr, p_bcc, p_bccl, p_bccr, fl%gam)
-           enddo
+           call riemann_wrap
 
            ! Now we advance the left and right states by half timestep.
            ! The slope is already calculated and can be reused
@@ -220,22 +202,7 @@ contains
            qr = utoq(u_r,b_ccr)
 
            ! second call for Riemann problem uses states evolved to half timestep
-           do i = 1, flind%fluids
-              fl    => flind%all_fluids(i)%fl
-              p_flx => flx(fl%beg:fl%end,:)
-              p_ql  => ql(fl%beg:fl%end,:)
-              p_qr  => qr(fl%beg:fl%end,:)
-              p_bcc => mag_cc(xdim:zdim,:)
-              if (fl%is_magnetized) then
-                 p_bccl => b_cc_l(xdim:zdim,:)
-                 p_bccr => b_cc_r(xdim:zdim,:)
-              else ! ignore all magnetic field
-                 b0 = 0.
-                 p_bccl => b0
-                 p_bccr => b0
-              endif
-              call riemann_hlld(nx, p_flx, p_ql, p_qr, p_bcc, p_bccl, p_bccr, fl%gam)
-           enddo
+           call riemann_wrap
 
            u(:,2:nx) = u(:,2:nx) + dtodx*(flx(:,1:nx-1) - flx(:,2:nx))
            u(:,1) = u(:,2)
@@ -256,6 +223,41 @@ contains
         case default
            call die("[fluidupdate:sweep_dsplit] No recognized solver")
      end select
+
+     contains
+
+        ! some shortcuts
+
+        subroutine riemann_wrap()
+
+           use fluidindex, only: flind
+           use fluidtypes, only: component_fluid
+
+           implicit none
+
+           integer :: i
+           class(component_fluid), pointer :: fl
+           real, dimension(size(b_cc,1),size(b_cc,2)), target :: b0
+           real, dimension(:,:), pointer :: p_flx, p_bcc, p_bccl, p_bccr, p_ql, p_qr
+
+           do i = 1, flind%fluids
+              fl    => flind%all_fluids(i)%fl
+              p_flx => flx(fl%beg:fl%end,:)
+              p_ql  => ql(fl%beg:fl%end,:)
+              p_qr  => qr(fl%beg:fl%end,:)
+              p_bcc => mag_cc(xdim:zdim,:)
+              if (fl%is_magnetized) then
+                 p_bccl => b_cc_l(xdim:zdim,:)
+                 p_bccr => b_cc_r(xdim:zdim,:)
+              else ! ignore all magnetic field
+                 b0 = 0.
+                 p_bccl => b0
+                 p_bccr => b0
+              endif
+              call riemann_hlld(nx, p_flx, p_ql, p_qr, p_bcc, p_bccl, p_bccr, fl%gam)
+           enddo
+
+        end subroutine riemann_wrap
 
   end subroutine solve
 
