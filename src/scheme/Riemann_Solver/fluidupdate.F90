@@ -149,9 +149,9 @@ contains
      real,                 intent(in)    :: dtodx
 
      real, dimension(size(b_cc,1),size(b_cc,2)), target :: b_cc_l, b_cc_r, mag_cc
-     real, dimension(size(b_cc,1),size(b_cc,2))         :: b_ccl, b_ccr, db1
+     real, dimension(size(b_cc,1),size(b_cc,2))         :: b_ccl, b_ccr, db1, db2, db3
      real, dimension(size(u,1),size(u,2)), target       :: flx, ql, qr
-     real, dimension(size(u,1),size(u,2))               :: ul, ur, du1
+     real, dimension(size(u,1),size(u,2))               :: ul, ur, du1, du2, du3
      integer                                            :: nx
 
      nx  = size(u,2)
@@ -201,7 +201,27 @@ contains
            b_cc(:,nx) = b_cc(:,nx-1)
 
         case ("rk4")
-           call rk4(u, b_cc, dtodx)
+           call slope
+           call ulr_to_qlr
+           call riemann_wrap
+           call du_db(du1, db1)
+           call ulr_to_qlr(half*du1, half*db1)
+           call riemann_wrap
+           call du_db(du2, db2)
+           call ulr_to_qlr(half*du2, half*db2)
+           call riemann_wrap
+           call du_db(du3, db3)
+           call ulr_to_qlr(du3, db3)
+           call riemann_wrap
+
+           u(:,2:nx) = u(:,2:nx) + (du1(:,2:nx) + 2*du2(:,2:nx) + 2*du3(:,2:nx) + dtodx*(flx(:,1:nx-1) - flx(:,2:nx)))/6.
+           u(:,1) = u(:,2)
+           u(:,nx) = u(:,nx-1)
+
+           b_cc(:,2:nx) = b_cc(:,2:nx) + (db1(:,2:nx) + 2*db2(:,2:nx) + 2*db3(:,2:nx) + dtodx*(mag_cc(:,1:nx-1) - mag_cc(:,2:nx)))/6.
+           b_cc(:,1) = b_cc(:,2)
+           b_cc(:,nx) = b_cc(:,nx-1)
+
         case default
            call die("[fluidupdate:sweep_dsplit] No recognized solver")
      end select
@@ -388,99 +408,6 @@ contains
      enddo
 
    end function utoq
-
-   !-------------------------------------------------------------------------------------------------
-
-  subroutine rk4(u,b_cc, dtodx)
-
-    use constants,   only: half, xdim, zdim
-    use fluidindex,  only: flind
-    use fluidtypes,  only: component_fluid
-    use hlld,        only: riemann_hlld
-
-    implicit none
-
-    real, dimension(:,:),           intent(inout)   :: u
-    real, dimension(:,:),           intent(inout)   :: b_cc
-    real,                           intent(in)      :: dtodx
-
-    class(component_fluid), pointer                 :: fl
-    real, dimension(xdim:zdim,size(u,2)), target    :: b_ccl, b_ccr, mag_cc
-    real, dimension(xdim:zdim,size(u,2)), target    :: db
-    real, dimension(size(u,1),size(u,2)), target    :: flx, ql, qr, du, ul, ur, u_l, u_r
-    real, dimension(:,:), pointer                   :: p_flx, p_bcc, p_bccl, p_bccr, p_ql, p_qr
-    integer                                         :: nx
-    real, dimension(size(u,1),size(u,2))            :: du1, du2, du3
-
-    nx  = size(u,2)
-
-    call u_slope_q(u)
-    call riemann_wrap
-    du1(:,2:nx) = dtodx*(flx(:,1:nx-1) - flx(:,2:nx))
-    du1(:,1) = du1(:,2) ; du1(:,nx) = du1(:,nx-1)
-
-    call u_slope_q(u+half*du1)
-    call riemann_wrap
-    du2(:,2:nx) = dtodx*(flx(:,1:nx-1) - flx(:,2:nx))
-    du2(:,1) = du2(:,2) ; du2(:,nx) = du2(:,nx-1)
-
-    call u_slope_q(u+half*du2)
-    call riemann_wrap
-    du3(:,2:nx) = dtodx*(flx(:,1:nx-1) - flx(:,2:nx))
-    du3(:,1) = du3(:,2) ; du3(:,nx) = du3(:,nx-1)
-
-    call u_slope_q(u+du3)
-    call riemann_wrap
-    u(:,2:nx) = u(:,2:nx) + (du1(:,2:nx) + 2*du2(:,2:nx) + 2*du3(:,2:nx) + dtodx*(flx(:,1:nx-1) - flx(:,2:nx)))/6.
-    u(:,1) = u(:,2) ; u(:,nx) = u(:,nx-1)
-
-    contains
-
-       subroutine u_slope_q(uu)
-
-          implicit none
-
-          real, dimension(:,:), intent(in) :: uu
-
-          du  = calculate_slope_vanleer(uu)
-          ul  = uu - half*du
-          ur  = uu + half*du
-
-          db  = calculate_slope_vanleer(b_cc)
-          b_ccl = b_cc - half*db
-          b_ccr = b_cc + half*db
-
-          mag_cc = b_cc
-
-          u_l = ur
-          u_r(:,1:nx-1) = ul(:,2:nx)
-          u_r(:,nx) = u_r(:,nx-1)
-
-          ql = utoq(u_l,b_ccl)
-          qr = utoq(u_r,b_ccr)
-
-       end subroutine u_slope_q
-
-       subroutine riemann_wrap()
-
-          implicit none
-
-          integer :: i
-
-          do i = 1, flind%fluids
-             fl    => flind%all_fluids(i)%fl
-             p_flx => flx(fl%beg:fl%end,:)
-             p_ql  => ql(fl%beg:fl%end,:)
-             p_qr  => qr(fl%beg:fl%end,:)
-             p_bcc => mag_cc(xdim:zdim,:)
-             p_bccl => b_ccl(xdim:zdim,:)
-             p_bccr => b_ccr(xdim:zdim,:)
-             call riemann_hlld(nx, p_flx, p_ql, p_qr, p_bcc, p_bccl, p_bccr, fl%gam)
-          enddo
-
-       end subroutine riemann_wrap
-
-  end subroutine rk4
 
   !-------------------------------------------------------------------------------------------------
   ! Gives very sharp advection, especially for CFL=0.5, seems to produce a lot of noise
