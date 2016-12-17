@@ -172,11 +172,7 @@ contains
 
            ! Now we advance the left and right states by half timestep.
            ! The slope is already calculated and can be reused
-           du1(:,2:nx) = dtodx*(flx(:,1:nx-1) - flx(:,2:nx))
-           du1(:,1) = du1(:,2)
-
-           db1(:,2:nx) = dtodx*(mag_cc(:,1:nx-1) - mag_cc(:,2:nx))
-           db1(:,1) = db1(:,2)
+           call du_db(du1, db1)
 
            call ulr_to_qlr(half*du1, half*db1)
 
@@ -244,6 +240,21 @@ contains
            qr = utoq(u_r,b_cc_r)
 
         end subroutine ulr_to_qlr
+
+        subroutine du_db(du, db)
+
+           implicit none
+
+           real, dimension(size(u,1),size(u,2)),       intent(out) :: du
+           real, dimension(size(b_cc,1),size(b_cc,2)), intent(out) :: db
+
+           du(:,2:nx) = dtodx*(flx(:,1:nx-1) - flx(:,2:nx))
+           du(:,1) = du(:,2)
+
+           db(:,2:nx) = dtodx*(mag_cc(:,1:nx-1) - mag_cc(:,2:nx))
+           db(:,1) = db(:,2)
+
+        end subroutine du_db
 
         subroutine riemann_wrap()
 
