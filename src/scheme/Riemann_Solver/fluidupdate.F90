@@ -183,7 +183,13 @@ contains
            call update
 
         case ("rk2_muscl")
-           call rk2_muscl(u, b_cc, dtodx)
+           call slope
+           call ulr_fluxes_qlr
+           call riemann_wrap                   ! MUSCL-Hancock is used to feed 1st call to Riemann solver
+           call du_db(du1, db1)                ! Now we can calculate state for half-timestep and recalculate slopes
+           call ulr_to_qlr(half*du1, half*db1)
+           call riemann_wrap                   ! second call for Riemann problem needs just the slope from states evolved to half timestep
+           call update
         case ("euler") ! Gives quite sharp advection, especially for CFL=0.5, but it is unstable and produces a lot of noise. Do not use, except for educational purposes.
            call slope
            call ulr_to_qlr
@@ -438,100 +444,5 @@ contains
      enddo
 
    end function utoq
-
-  !---------------------------------------------------------------------------------------------------------------------
-
-  subroutine rk2_muscl(u,b_cc, dtodx)
-
-    use constants,   only: half, xdim, zdim
-    use fluidindex,  only: flind
-    use fluidtypes,  only: component_fluid
-    use hlld,        only: fluxes, riemann_hlld
-
-    implicit none
-
-    real, dimension(:,:),           intent(inout)   :: u
-    real, dimension(:,:),           intent(inout)   :: b_cc
-    real,                           intent(in)      :: dtodx
-
-    class(component_fluid), pointer                           :: fl
-    real, dimension(size(b_cc,1),size(u,2)), target           :: b_ccl, b_ccr, mag_cc
-    real, dimension(size(b_cc,1),size(u,2)), target           :: db
-    real, dimension(size(u,1),size(u,2))                      :: u_l, u_r
-    real, dimension(size(u,1)+size(b_cc,1),size(u,2)), target :: flx
-    real, dimension(size(u,1),size(u,2)), target              :: ql, qr, du, ul, ur
-    real, dimension(:,:), pointer                             :: p_flx, p_bcc, p_bccl, p_bccr, p_ql, p_qr
-    integer                                                   :: nx, i
-    real, dimension(size(u,1),size(u,2))                      :: uhalf
-
-    nx  = size(u,2)
-
-    du  = calculate_slope_vanleer(u)
-    ul  = u - half*du
-    ur  = u + half*du
-
-    db  = calculate_slope_vanleer(b_cc)
-    b_ccl = b_cc - half*db
-    b_ccr = b_cc + half*db
-
-    flx  = fluxes(ul,b_ccl) - fluxes(ur,b_ccr)
-
-    u_l = ur + half*dtodx*flx(:size(u,1),:)
-    u_r(:,1:nx-1) = ul(:,2:nx) + half*dtodx*flx(:size(u,1),2:nx)
-    u_r(:,nx) = u_r(:,nx-1)
-
-    ql = utoq(u_l,b_ccl)
-    qr = utoq(u_r,b_ccr)
-
-    ! MUSCL-Hancock is used to feed 1st call to Riemann solver
-    do i = 1, flind%fluids
-       fl    => flind%all_fluids(i)%fl
-       p_flx => flx(fl%beg:fl%end,:)
-       p_ql  => ql(fl%beg:fl%end,:)
-       p_qr  => qr(fl%beg:fl%end,:)
-       p_bcc => mag_cc(xdim:zdim,:)
-       p_bccl => b_ccl(xdim:zdim,:)
-       p_bccr => b_ccr(xdim:zdim,:)
-       call riemann_hlld(nx, p_flx, p_ql, p_qr, p_bcc, p_bccl, p_bccr, fl%gam)
-    enddo
-
-    ! Now we can calculate state for half-timestep and recalculate slopes
-    uhalf(:,2:nx) = u(:,2:nx) + half*dtodx*(flx(:size(u,1),1:nx-1) - flx(:size(u,1),2:nx))
-    uhalf(:,1) = uhalf(:,2) ; uhalf(:,nx) = uhalf(:,nx-1)
-
-    du  = calculate_slope_vanleer(uhalf)
-    ul = uhalf - half*du
-    ur = uhalf + half*du
-
-    db  = calculate_slope_vanleer(b_cc)
-    b_ccl = b_cc - half*db
-    b_ccr = b_cc + half*db
-
-    u_l = ur
-    u_r(:,1:nx-1) = ul(:,2:nx)
-    u_r(:,nx) = u_r(:,nx-1)
-
-    ql = utoq(u_l,b_ccl)
-    qr = utoq(u_r,b_ccr)
-
-    ! second call for Riemann problem needs just the slope from states evolved to half timestep
-    do i = 1, flind%fluids
-       fl    => flind%all_fluids(i)%fl
-       p_flx => flx(fl%beg:fl%end,:)
-       p_ql  => ql(fl%beg:fl%end,:)
-       p_qr  => qr(fl%beg:fl%end,:)
-       p_bcc => mag_cc(xdim:zdim,:)
-       p_bccl => b_ccl(xdim:zdim,:)
-       p_bccr => b_ccr(xdim:zdim,:)
-       call riemann_hlld(nx, p_flx, p_ql, p_qr, p_bcc, p_bccl, p_bccr, fl%gam)
-    enddo
-
-    u(:,2:nx) = u(:,2:nx) + dtodx*(flx(:size(u,1),1:nx-1) - flx(:size(u,1),2:nx))
-    u(:,1) = u(:,2)
-    u(:,nx) = u(:,nx-1)
-
-  end subroutine rk2_muscl
-
-!----------------------------------------------------------------------------------------------------------------------------------
 
 end module fluidupdate
