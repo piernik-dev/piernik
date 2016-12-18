@@ -159,7 +159,10 @@ contains
 
      select case (h_solver)
         case ("muscl")
-           call  muscl(u, b_cc, dtodx)
+           call slope
+           call ulr_fluxes_qlr
+           call riemann_wrap
+           call update
         case ("rk2")
            call slope
 
@@ -282,6 +285,31 @@ contains
            qr = utoq(u_r,b_cc_r)
 
         end subroutine ulr_to_qlr
+
+        subroutine ulr_fluxes_qlr
+
+           use hlld,       only: fluxes
+
+           implicit none
+
+           real, dimension(size(u,1)+size(b_cc,1),size(u,2)), target :: flx
+           real, dimension(size(u,1),size(u,2))                      :: u_l, u_r
+
+           flx  = fluxes(ul,b_ccl) - fluxes(ur,b_ccr)
+
+           u_l = ur + half*dtodx*flx(:size(u,1),:)
+           u_r(:,1:nx-1) = ul(:,2:nx) + half*dtodx*flx(:size(u,1),2:nx)
+           u_r(:,nx) = u_r(:,nx-1)
+
+           b_cc_l(:,2:nx) = b_ccr(:,2:nx) + half*dtodx*flx(size(u,1)+1:,2:nx)
+           b_cc_l(:,1) = b_cc_l(:,2)
+           b_cc_r(:,1:nx-1) = b_ccl(:,2:nx) + half*dtodx*flx(size(u,1)+1:,2:nx)
+           b_cc_r(:,nx) = b_cc_r(:,nx-1)
+
+           ql = utoq(u_l,b_cc_l)
+           qr = utoq(u_r,b_cc_r)
+
+        end subroutine ulr_fluxes_qlr
 
         subroutine du_db(du, db)
 
@@ -410,86 +438,6 @@ contains
      enddo
 
    end function utoq
-
-
-  !---------------------------------------------------------------------------------------------------------------------------------------------------------
-
-  subroutine muscl(u,b_cc, dtodx)
-
-    use constants,   only: half, xdim, zdim
-    use dataio_pub,  only: die
-    use fluidindex,  only: flind
-    use fluidtypes,  only: component_fluid
-    use hlld,        only: fluxes, riemann_hlld
-
-    implicit none
-
-    real, dimension(:,:),           intent(inout)   :: u
-    real, dimension(:,:),           intent(inout)   :: b_cc
-    real,                           intent(in)      :: dtodx
-
-    class(component_fluid), pointer                           :: fl
-    real, dimension(size(b_cc,1),size(u,2)), target           :: b_cc_l, b_cc_r, mag_cc, b0
-    real, dimension(size(b_cc,1),size(u,2))                   :: db, b_ccl, b_ccr
-    real, dimension(size(u,1),size(u,2))                      :: du, ul, ur, u_l, u_r
-    real, dimension(size(u,1)+size(b_cc,1),size(u,2)), target :: flx
-    real, dimension(size(u,1),size(u,2)), target              :: ql, qr
-    real, dimension(:,:), pointer                             :: p_flx, p_bcc, p_bccl, p_bccr, p_ql, p_qr
-    integer                                                   :: nx, i
-
-    nx  = size(u,2)
-    if (size(b_cc,2) /= nx) call die("[fluidupdate:muscl] size b_cc and u mismatch")
-
-    mag_cc = huge(1.)
-
-    du  = calculate_slope_vanleer(u)
-    ul  = u - half*du
-    ur  = u + half*du
-
-    db  = calculate_slope_vanleer(b_cc)
-    b_ccl = b_cc - half*db
-    b_ccr = b_cc + half*db
-
-    flx  = fluxes(ul,b_ccl) - fluxes(ur,b_ccr)
-
-    u_l = ur + half*dtodx*flx(:size(u,1),:)
-    u_r(:,1:nx-1) = ul(:,2:nx) + half*dtodx*flx(:size(u,1),2:nx)
-    u_r(:,nx) = u_r(:,nx-1)
-
-    b_cc_l(:,2:nx) = b_ccr(:,2:nx) + half*dtodx*flx(size(u,1)+1:,2:nx)
-    b_cc_l(:,1) = b_cc_l(:,2)
-    b_cc_r(:,1:nx-1) = b_ccl(:,2:nx) + half*dtodx*flx(size(u,1)+1:,2:nx)
-    b_cc_r(:,nx) = b_cc_r(:,nx-1)
-
-    ql = utoq(u_l,b_cc_l)
-    qr = utoq(u_r,b_cc_r)
-
-    do i = 1, flind%fluids
-       fl    => flind%all_fluids(i)%fl
-       p_flx => flx(fl%beg:fl%end,:)
-       p_ql  => ql(fl%beg:fl%end,:)
-       p_qr  => qr(fl%beg:fl%end,:)
-       p_bcc => mag_cc(xdim:zdim,:)
-       if (fl%is_magnetized) then
-          p_bccl => b_cc_l(xdim:zdim,:)
-          p_bccr => b_cc_r(xdim:zdim,:)
-       else ! ignore all magnetic field
-          b0 = 0.
-          p_bccl => b0
-          p_bccr => b0
-       endif
-       call riemann_hlld(nx, p_flx, p_ql, p_qr, p_bcc, p_bccl, p_bccr, fl%gam)
-    enddo
-
-    u(:,2:nx) = u(:,2:nx) + dtodx*(flx(:size(u,1),1:nx-1) - flx(:size(u,1),2:nx))
-    u(:,1) = u(:,2)
-    u(:,nx) = u(:,nx-1)
-
-    b_cc(:,2:nx) = b_cc(:,2:nx) + dtodx*(mag_cc(:,1:nx-1) - mag_cc(:,2:nx))
-    b_cc(:,1) = b_cc(:,2)
-    b_cc(:,nx) = b_cc(:,nx-1)
-
-  end subroutine muscl
 
   !---------------------------------------------------------------------------------------------------------------------
 
