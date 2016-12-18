@@ -182,6 +182,15 @@ contains
 
            call update
 
+        case ("rk2_s") ! RK2 with alternative approach to calculating slopes for 2nd step
+           call slope
+           call ulr_to_qlr
+           call riemann_wrap
+           call du_db(du1, db1)
+           call slope(half*du1, half*db1)
+           call ulr_to_qlr
+           call riemann_wrap
+           call update
         case ("rk2_muscl")
            call slope
            call ulr_fluxes_qlr
@@ -189,6 +198,15 @@ contains
            call du_db(du1, db1)                ! Now we can calculate state for half-timestep and recalculate slopes
            call ulr_to_qlr(half*du1, half*db1)
            call riemann_wrap                   ! second call for Riemann problem needs just the slope from states evolved to half timestep
+           call update
+        case ("rk2_muscl_s") ! MUSCL-RK2 with alternative approach to calculating slopes for 2nd step
+           call slope
+           call ulr_fluxes_qlr
+           call riemann_wrap
+           call du_db(du1, db1)
+           call slope(half*du1, half*db1)
+           call ulr_to_qlr
+           call riemann_wrap
            call update
         case ("euler") ! Gives quite sharp advection, especially for CFL=0.5, but it is unstable and produces a lot of noise. Do not use, except for educational purposes.
            call slope
@@ -224,15 +242,24 @@ contains
            call du_db(du3, db3)
            call ulr_to_qlr(du3, db3)
            call riemann_wrap
-
-           u(:,2:nx) = u(:,2:nx) + (du1(:,2:nx) + 2*du2(:,2:nx) + 2*du3(:,2:nx) + dtodx*(flx(:,1:nx-1) - flx(:,2:nx)))/6.
-           u(:,1) = u(:,2)
-           u(:,nx) = u(:,nx-1)
-
-           b_cc(:,2:nx) = b_cc(:,2:nx) + (db1(:,2:nx) + 2*db2(:,2:nx) + 2*db3(:,2:nx) + dtodx*(mag_cc(:,1:nx-1) - mag_cc(:,2:nx)))/6.
-           b_cc(:,1) = b_cc(:,2)
-           b_cc(:,nx) = b_cc(:,nx-1)
-
+           call update3
+        case ("rk4_s") ! RK4 with alternative approach to calculating slopes for 2nd-4th step
+           call slope
+           call ulr_to_qlr
+           call riemann_wrap
+           call du_db(du1, db1)
+           call slope(half*du1, half*db1)
+           call ulr_to_qlr
+           call riemann_wrap
+           call du_db(du2, db2)
+           call slope(half*du2, half*db2)
+           call ulr_to_qlr
+           call riemann_wrap
+           call du_db(du3, db3)
+           call slope(du3, db3)
+           call ulr_to_qlr
+           call riemann_wrap
+           call update3
         case default
            call die("[fluidupdate:sweep_dsplit] No recognized solver")
      end select
@@ -241,22 +268,37 @@ contains
 
         ! some shortcuts
 
-        subroutine slope()
+        subroutine slope(uu, bb)
 
            use constants,  only: half
 
            implicit none
 
+           real, optional, dimension(size(u,1),size(u,2)),       intent(in) :: uu
+           real, optional, dimension(size(b_cc,1),size(b_cc,2)), intent(in) :: bb
+
            real, dimension(size(u,1),size(u,2))       :: du
            real, dimension(size(b_cc,1),size(b_cc,2)) :: db
 
-           du  = calculate_slope_vanleer(u)
-           ul  = u - half*du
-           ur  = u + half*du
+           if (present(uu)) then
+              du  = calculate_slope_vanleer(u + uu)
+              ul  = u + uu - half*du
+              ur  = u + uu + half*du
+           else
+              du  = calculate_slope_vanleer(u)
+              ul  = u - half*du
+              ur  = u + half*du
+           endif
 
-           db  = calculate_slope_vanleer(b_cc)
-           b_ccl = b_cc - half*db
-           b_ccr = b_cc + half*db
+           if (present(bb)) then
+              db  = calculate_slope_vanleer(b_cc + bb)
+              b_ccl = b_cc + bb - half*db
+              b_ccr = b_cc + bb + half*db
+           else
+              db  = calculate_slope_vanleer(b_cc)
+              b_ccl = b_cc - half*db
+              b_ccr = b_cc + half*db
+           endif
 
         end subroutine slope
 
@@ -378,6 +420,20 @@ contains
            b_cc(:,nx) = b_cc(:,nx-1)
 
         end subroutine update
+
+        subroutine update3
+
+           implicit none
+
+           u(:,2:nx) = u(:,2:nx) + (du1(:,2:nx) + 2*du2(:,2:nx) + 2*du3(:,2:nx) + dtodx*(flx(:,1:nx-1) - flx(:,2:nx)))/6.
+           u(:,1) = u(:,2)
+           u(:,nx) = u(:,nx-1)
+
+           b_cc(:,2:nx) = b_cc(:,2:nx) + (db1(:,2:nx) + 2*db2(:,2:nx) + 2*db3(:,2:nx) + dtodx*(mag_cc(:,1:nx-1) - mag_cc(:,2:nx)))/6.
+           b_cc(:,1) = b_cc(:,2)
+           b_cc(:,nx) = b_cc(:,nx-1)
+
+        end subroutine update3
 
   end subroutine solve
 
