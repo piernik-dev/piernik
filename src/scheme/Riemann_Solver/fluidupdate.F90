@@ -271,6 +271,7 @@ contains
         subroutine slope(uu, bb)
 
            use constants,  only: half
+           use dataio_pub, only: die
 
            implicit none
 
@@ -279,6 +280,8 @@ contains
 
            real, dimension(size(u,1),size(u,2))       :: du
            real, dimension(size(b_cc,1),size(b_cc,2)) :: db
+
+           if (present(uu) .neqv. present(bb)) call die("[fluidupdate:solve:slope] either mone or both optional arguments must be present")
 
            if (present(uu)) then
               du  = calculate_slope_vanleer(u + uu)
@@ -304,12 +307,16 @@ contains
 
         subroutine ulr_to_qlr(du, db)
 
+           use dataio_pub, only: die
+
            implicit none
 
            real, optional, dimension(size(u,1),size(u,2)),       intent(in) :: du
            real, optional, dimension(size(b_cc,1),size(b_cc,2)), intent(in) :: db
 
            real, dimension(size(u,1),size(u,2))               :: u_l, u_r
+
+           if (present(du) .neqv. present(db)) call die("[fluidupdate:solve:ulr_to_qlr] either mone or both optional arguments must be present")
 
            if (present(du)) then
               u_l = ur + du
