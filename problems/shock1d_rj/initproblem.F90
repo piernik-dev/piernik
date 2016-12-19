@@ -33,6 +33,9 @@ module initproblem
 ! See: Ryu, Jones, ApJ 442:228-258, (1995)  !
 !    and reference therein                  !
 ! ----------------------------------------- !
+! Initial condition for a 1D Sod shcok tube !
+! See: Gary A. Sod, J.Comp.Physics 27,1-31(1978) !
+! ------------------------------------------!
 
    implicit none
 
@@ -135,7 +138,7 @@ contains
       use func,        only: ekin, emag
       use grid_cont,   only: grid_container
 #ifndef ISO
-      use global,      only: smallei
+!      use global,      only: smallei
 #endif /* !ISO */
       implicit none
 
@@ -144,64 +147,86 @@ contains
       real                            :: xi, yj, zk, vx, vy, vz, rho, pre, bx, by, bz
       type(cg_list_element),  pointer :: cgl
       type(grid_container),   pointer :: cg
+      integer                         :: p
 
       call read_problem_par
 
-!   Secondary parameters
-      fl => flind%ion
+      !   Secondary parameters
+      do p = 1, flind%fluids
 
-      cgl => leaves%first
-      do while (associated(cgl))
-         cg => cgl%cg
+         fl => flind%all_fluids(p)%fl
 
-         do j = cg%lhn(ydim,LO), cg%lhn(ydim,HI)
-            yj = cg%y(j)
-            do i = cg%lhn(xdim,LO), cg%lhn(xdim,HI)
-               xi = cg%x(i)
-               do k = cg%lhn(zdim,LO), cg%lhn(zdim,HI)
-                  zk = cg%z(k)
+         cgl => leaves%first
+         do while (associated(cgl))
+            cg => cgl%cg
 
-                  if ((xi <= 0.5)) then
-                     rho = dl
-                     pre = el
-                     vx  = vxl
-                     vy  = vyl
-                     vz  = vzl
-                     bx  = bxl
-                     by  = byl
-                     bz  = bzl
-                  else
-                     rho = dr
-                     pre = er
-                     vx  = vxr
-                     vy  = vyr
-                     vz  = vzr
-                     bx  = bxr
-                     by  = byr
-                     bz  = bzr
-                  endif
+            do j = cg%lhn(ydim,LO), cg%lhn(ydim,HI)
+               yj = cg%y(j)
+               do i = cg%lhn(xdim,LO), cg%lhn(xdim,HI)
+                  xi = cg%x(i)
+                  do k = cg%lhn(zdim,LO), cg%lhn(zdim,HI)
+                     zk = cg%z(k)
 
-                  cg%u(fl%idn,i,j,k) = rho
-                  cg%u(fl%imx,i,j,k) = vx*cg%u(fl%idn,i,j,k)
-                  cg%u(fl%imy,i,j,k) = vy*cg%u(fl%idn,i,j,k)
-                  cg%u(fl%imz,i,j,k) = vz*cg%u(fl%idn,i,j,k)
-#ifndef ISO
-                  cg%u(fl%ien,i,j,k) = pre ! pre here means eint
-                  cg%u(fl%ien,i,j,k) = max(cg%u(fl%ien,i,j,k), smallei)
-                  cg%u(fl%ien,i,j,k) = cg%u(fl%ien,i,j,k) +ekin(cg%u(fl%imx,i,j,k), cg%u(fl%imy,i,j,k), cg%u(fl%imz,i,j,k), cg%u(fl%idn,i,j,k))
-#endif /* !ISO */
-                  cg%b(xdim,i,j,k)   =  bx
-                  cg%b(ydim,i,j,k)   =  by
-                  cg%b(zdim,i,j,k)   =  bz
+                     if ((xi <= 0.5)) then
+                        rho = dl
+                        pre = el
+                        vx  = vxl
+                        vy  = vyl
+                        vz  = vzl
+                        bx  = bxl
+                        by  = byl
+                        bz  = bzl
+                     else
+                        rho = dr
+                        pre = er
+                        vx  = vxr
+                        vy  = vyr
+                        vz  = vzr
+                        bx  = bxr
+                        by  = byr
+                        bz  = bzr
+                     endif
 
-#ifndef ISO
-                  cg%u(fl%ien,i,j,k) = cg%u(fl%ien,i,j,k) + emag(cg%b(xdim,i,j,k), cg%b(ydim,i,j,k), cg%b(zdim,i,j,k))
-#endif /* !ISO */
+                     cg%u(fl%idn,i,j,k) = rho
+                     cg%u(fl%imx,i,j,k) = vx*cg%u(fl%idn,i,j,k)
+                     cg%u(fl%imy,i,j,k) = vy*cg%u(fl%idn,i,j,k)
+                     cg%u(fl%imz,i,j,k) = vz*cg%u(fl%idn,i,j,k)
+
+                     if (fl%has_energy) then
+
+                        cg%u(fl%ien,i,j,k) = pre ! p/(gamma - 1)
+                        !cg%u(fl%ien,i,j,k) = max(cg%u(fl%ien,i,j,k, smallei))
+                        cg%u(fl%ien,i,j,k) = cg%u(fl%ien,i,j,k) + ekin(cg%u(fl%imx,i,j,k), cg%u(fl%imy,i,j,k), cg%u(fl%imz,i,j,k), cg%u(fl%idn,i,j,k))
+
+                        if (fl%is_magnetized) then
+
+                           cg%b(xdim,i,j,k)   =  bx
+                           cg%b(ydim,i,j,k)   =  by
+                           cg%b(zdim,i,j,k)   =  bz
+                           cg%u(fl%ien,i,j,k) = cg%u(fl%ien,i,j,k) + emag(cg%b(xdim,i,j,k), cg%b(ydim,i,j,k), cg%b(zdim,i,j,k))
+
+                        endif
+
+                     endif
+
+!#ifndef ISO
+!                     cg%u(fl%ien,i,j,k) = pre ! pre here means eint
+!                     cg%u(fl%ien,i,j,k) = max(cg%u(fl%ien,i,j,k), smallei)
+!                     cg%u(fl%ien,i,j,k) = cg%u(fl%ien,i,j,k) +ekin(cg%u(fl%imx,i,j,k), cg%u(fl%imy,i,j,k), cg%u(fl%imz,i,j,k), cg%u(fl%idn,i,j,k))
+!#endif /* !ISO */
+!                     cg%b(xdim,i,j,k)   =  bx
+!                     cg%b(ydim,i,j,k)   =  by
+!                     cg%b(zdim,i,j,k)   =  bz
+
+!#ifndef ISO
+!                     cg%u(fl%ien,i,j,k) = cg%u(fl%ien,i,j,k) + emag(cg%b(xdim,i,j,k), cg%b(ydim,i,j,k), cg%b(zdim,i,j,k))
+!#endif /* !ISO */
+                  enddo
                enddo
             enddo
-         enddo
 
-         cgl => cgl%nxt
+            cgl => cgl%nxt
+         enddo
       enddo
 
    end subroutine problem_initial_conditions

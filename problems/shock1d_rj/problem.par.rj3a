@@ -53,6 +53,7 @@
     smallei= 1.e-5
     integration_order = 2
     limiter= 'vanleer'
+    h_solver= 'rk2'
  /
 
  $RESISTIVITY

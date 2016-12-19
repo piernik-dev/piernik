@@ -433,7 +433,7 @@ def setup_piernik(data=None):
             try:
                 os.symlink('../' + f, objdir + '/' + strip_leading_path([f])[0])
             except:
-                print "Possible duplicate link or a name clash :", f
+                print "Possible duplicate link or a name clash :",f
                 raise
 
     if(options.param != 'problem.par'):
