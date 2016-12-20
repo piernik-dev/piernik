@@ -209,15 +209,7 @@ contains
            call du_db(du1, db1)
            call ulr_to_qlr(du1, db1)
            call riemann_wrap
-
-           u(:,2:nx) = u(:,2:nx) + half*(du1(:,2:nx) + dtodx*(flx(:,1:nx-1) - flx(:,2:nx)))
-           u(:,1) = u(:,2)
-           u(:,nx) = u(:,nx-1)
-
-           b_cc(:,2:nx) = b_cc(:,2:nx) + half*(db1(:,2:nx) + dtodx*(mag_cc(:,1:nx-1) - mag_cc(:,2:nx)))
-           b_cc(:,1) = b_cc(:,2)
-           b_cc(:,nx) = b_cc(:,nx-1)
-
+           call update([1., 1.])
         case ("rk4")
            call slope
            call ulr_to_qlr
@@ -231,7 +223,7 @@ contains
            call du_db(du3, db3)
            call ulr_to_qlr(du3, db3)
            call riemann_wrap
-           call update3
+           call update([1., 1., 2., 2.])
         case ("rk4_s")                         ! RK4 with alternative approach to calculating slopes for 2nd-4th step
            call slope
            call ulr_to_qlr
@@ -248,7 +240,7 @@ contains
            call slope(du3, db3)
            call ulr_to_qlr
            call riemann_wrap
-           call update3
+           call update([1., 1., 2., 2.])
         case default
            call die("[fluidupdate:sweep_dsplit] No recognized solver")
      end select
@@ -403,33 +395,39 @@ contains
 
         end subroutine riemann_wrap
 
-        subroutine update
+        subroutine update(weights)
 
            implicit none
 
-           u(:,2:nx) = u(:,2:nx) + dtodx*(flx(:,1:nx-1) - flx(:,2:nx))
+           real, optional, dimension(:), intent(in) :: weights
+
+           real, dimension(:), allocatable :: w
+
+           if (present(weights)) then
+              allocate(w(size(weights)))
+              w = weights/sum(weights)
+           else
+              allocate(w(1))
+              w(1) = 1.
+           endif
+
+           u(:,2:nx) = u(:,2:nx) + w(1) * dtodx * (flx(:,1:nx-1) - flx(:,2:nx))
+           if (size(w)>=2) u(:,2:nx) = u(:,2:nx) + w(2) * du1(:,2:nx)
+           if (size(w)>=3) u(:,2:nx) = u(:,2:nx) + w(3) * du2(:,2:nx)
+           if (size(w)>=4) u(:,2:nx) = u(:,2:nx) + w(4) * du3(:,2:nx)
            u(:,1) = u(:,2)
            u(:,nx) = u(:,nx-1)
 
-           b_cc(:,2:nx) = b_cc(:,2:nx) + dtodx*(mag_cc(:,1:nx-1) - mag_cc(:,2:nx))
+           b_cc(:,2:nx) = b_cc(:,2:nx) + w(1) * dtodx * (mag_cc(:,1:nx-1) - mag_cc(:,2:nx))
+           if (size(w)>=2)  b_cc(:,2:nx) = b_cc(:,2:nx) + w(2) * db1(:,2:nx)
+           if (size(w)>=3)  b_cc(:,2:nx) = b_cc(:,2:nx) + w(3) * db2(:,2:nx)
+           if (size(w)>=4)  b_cc(:,2:nx) = b_cc(:,2:nx) + w(4) * db3(:,2:nx)
            b_cc(:,1) = b_cc(:,2)
            b_cc(:,nx) = b_cc(:,nx-1)
+
+           deallocate(w)
 
         end subroutine update
-
-        subroutine update3
-
-           implicit none
-
-           u(:,2:nx) = u(:,2:nx) + (du1(:,2:nx) + 2*du2(:,2:nx) + 2*du3(:,2:nx) + dtodx*(flx(:,1:nx-1) - flx(:,2:nx)))/6.
-           u(:,1) = u(:,2)
-           u(:,nx) = u(:,nx-1)
-
-           b_cc(:,2:nx) = b_cc(:,2:nx) + (db1(:,2:nx) + 2*db2(:,2:nx) + 2*db3(:,2:nx) + dtodx*(mag_cc(:,1:nx-1) - mag_cc(:,2:nx)))/6.
-           b_cc(:,1) = b_cc(:,2)
-           b_cc(:,nx) = b_cc(:,nx-1)
-
-        end subroutine update3
 
   end subroutine solve
 
