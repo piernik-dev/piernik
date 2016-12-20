@@ -240,6 +240,7 @@ contains
                            endif
                         case default
                            call die("[initproblem:problem_initial_conditions] wrong problem direction")
+                           rho = 0.; pre = 0.; vx = 0.; vy = 0.; vz = 0.; bx = 0.; by = 0.; bz = 0. ! suppress compiler warnings on possibly uninitialized variables
                      end select
 
                      cg%u(fl%idn,i,j,k) = rho
