@@ -165,24 +165,13 @@ contains
            call update
         case ("rk2")
            call slope
-
-           call ulr_to_qlr
-
-           ! Just the slope is used to feed 1st call to Riemann solver
-           call riemann_wrap
-
-           ! Now we advance the left and right states by half timestep.
-           ! The slope is already calculated and can be reused
-           call du_db(du1, db1)
-
+           call ulr_to_qlr                     ! Just the slope is used to feed 1st call to Riemann solver
+           call riemann_wrap                   ! Now we advance the left and right states by half timestep.
+           call du_db(du1, db1)                ! The slope is already calculated and can be reused
            call ulr_to_qlr(half*du1, half*db1)
-
-           ! second call for Riemann problem uses states evolved to half timestep
-           call riemann_wrap
-
+           call riemann_wrap                   ! second call for Riemann problem uses states evolved to half timestep
            call update
-
-        case ("rk2_s") ! RK2 with alternative approach to calculating slopes for 2nd step
+        case ("rk2_s")                         ! RK2 with alternative approach to calculating slopes for 2nd step
            call slope
            call ulr_to_qlr
            call riemann_wrap
@@ -199,7 +188,7 @@ contains
            call ulr_to_qlr(half*du1, half*db1)
            call riemann_wrap                   ! second call for Riemann problem needs just the slope from states evolved to half timestep
            call update
-        case ("rk2_muscl_s") ! MUSCL-RK2 with alternative approach to calculating slopes for 2nd step
+        case ("rk2_muscl_s")                   ! MUSCL-RK2 with alternative approach to calculating slopes for 2nd step
            call slope
            call ulr_fluxes_qlr
            call riemann_wrap
@@ -208,7 +197,7 @@ contains
            call ulr_to_qlr
            call riemann_wrap
            call update
-        case ("euler") ! Gives quite sharp advection, especially for CFL=0.5, but it is unstable and produces a lot of noise. Do not use, except for educational purposes.
+        case ("euler")                         ! Gives quite sharp advection, especially for CFL=0.5, but it is unstable and produces a lot of noise. Do not use, except for educational purposes.
            call slope
            call ulr_to_qlr
            call riemann_wrap
@@ -243,7 +232,7 @@ contains
            call ulr_to_qlr(du3, db3)
            call riemann_wrap
            call update3
-        case ("rk4_s") ! RK4 with alternative approach to calculating slopes for 2nd-4th step
+        case ("rk4_s")                         ! RK4 with alternative approach to calculating slopes for 2nd-4th step
            call slope
            call ulr_to_qlr
            call riemann_wrap
