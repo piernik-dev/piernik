@@ -44,9 +44,10 @@ module initproblem
 
    real               :: dl,vxl,vyl,vzl,bxl,byl,bzl,el
    real               :: dr,vxr,vyr,vzr,bxr,byr,bzr,er
+   character(len=1)   :: dir
    integer, parameter :: one = 1
 
-   namelist /PROBLEM_CONTROL/  dl,vxl,vyl,vzl,bxl,byl,bzl,el,dr,vxr,vyr,vzr,bxr,byr,bzr,er
+   namelist /PROBLEM_CONTROL/  dl,vxl,vyl,vzl,bxl,byl,bzl,el,dr,vxr,vyr,vzr,bxr,byr,bzr,er,dir
 
 contains
 
@@ -61,10 +62,13 @@ contains
 
    subroutine read_problem_par
 
+      use constants,  only: cbuff_len
       use dataio_pub, only: nh      ! QA_WARN required for diff_nml
-      use mpisetup,   only: rbuff, master, slave, piernik_MPI_Bcast
+      use mpisetup,   only: rbuff, cbuff, master, slave, piernik_MPI_Bcast
 
       implicit none
+
+      dir = "x"
 
       if (master) then
 
@@ -101,9 +105,12 @@ contains
          rbuff(15) = bzr
          rbuff(16) = er
 
+         cbuff(1)  = dir
+
       endif
 
       call piernik_MPI_Bcast(rbuff)
+      call piernik_MPI_Bcast(cbuff, cbuff_len)
 
       if (slave) then
 
@@ -124,6 +131,8 @@ contains
          bzr = rbuff(15)
          er  = rbuff(16)
 
+         dir = trim(cbuff(1))
+
       endif
 
    end subroutine read_problem_par
@@ -133,6 +142,7 @@ contains
       use cg_leaves,   only: leaves
       use cg_list,     only: cg_list_element
       use constants,   only: xdim, ydim, zdim, LO, HI
+      use dataio_pub,  only: die
       use fluidindex,  only: flind
       use fluidtypes,  only: component_fluid
       use func,        only: ekin, emag
@@ -167,25 +177,70 @@ contains
                   do k = cg%lhn(zdim,LO), cg%lhn(zdim,HI)
                      zk = cg%z(k)
 
-                     if ((xi <= 0.5)) then
-                        rho = dl
-                        pre = el
-                        vx  = vxl
-                        vy  = vyl
-                        vz  = vzl
-                        bx  = bxl
-                        by  = byl
-                        bz  = bzl
-                     else
-                        rho = dr
-                        pre = er
-                        vx  = vxr
-                        vy  = vyr
-                        vz  = vzr
-                        bx  = bxr
-                        by  = byr
-                        bz  = bzr
-                     endif
+                     select case (dir)
+                        case ("x")
+                           if ((xi <= 0.5)) then
+                              rho = dl
+                              pre = el
+                              vx  = vxl
+                              vy  = vyl
+                              vz  = vzl
+                              bx  = bxl
+                              by  = byl
+                              bz  = bzl
+                           else
+                              rho = dr
+                              pre = er
+                              vx  = vxr
+                              vy  = vyr
+                              vz  = vzr
+                              bx  = bxr
+                              by  = byr
+                              bz  = bzr
+                           endif
+                        case ("y")
+                           if ((yj <= 0.5)) then
+                              rho = dl
+                              pre = el
+                              vx  = vzl
+                              vy  = vxl
+                              vz  = vyl
+                              bx  = bzl
+                              by  = bxl
+                              bz  = byl
+                           else
+                              rho = dr
+                              pre = er
+                              vx  = vzr
+                              vy  = vxr
+                              vz  = vyr
+                              bx  = bzr
+                              by  = bxr
+                              bz  = byr
+                           endif
+                        case ("z")
+                           if ((zk <= 0.5)) then
+                              rho = dl
+                              pre = el
+                              vx  = vyl
+                              vy  = vzl
+                              vz  = vxl
+                              bx  = byl
+                              by  = bzl
+                              bz  = bxl
+                           else
+                              rho = dr
+                              pre = er
+                              vx  = vyr
+                              vy  = vzr
+                              vz  = vxr
+                              bx  = byr
+                              by  = bzr
+                              bz  = bxr
+                           endif
+                        case default
+                           call die("[initproblem:problem_initial_conditions] wrong problem direction")
+                     end select
 
                      cg%u(fl%idn,i,j,k) = rho
                      cg%u(fl%imx,i,j,k) = vx*cg%u(fl%idn,i,j,k)
