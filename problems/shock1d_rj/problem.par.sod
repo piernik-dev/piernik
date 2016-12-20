@@ -5,7 +5,7 @@ $BASE_DOMAIN
   bnd_xr = 'out'
   bnd_yl = 'per'
   bnd_yr = 'per'
-  bnd_zr = 'per'
+  bnd_zl = 'per'
   bnd_zr = 'per'
   xmin   =  0.0
   xmax   =  1.0
@@ -21,7 +21,7 @@ $MPI_BLOCKS
 $UNITS
 /
 
-$RESTART_CONTRAL
+$RESTART_CONTROL
    restart  = 'last'
    new_id   = ''
    nrestart = 0
@@ -64,7 +64,7 @@ $PROBLEM_CONTROL
    vxr = 0.0
    vyr = 0.0
    vzr = 0.0
-   er  = 0.1499925004 !  1.199940003 
+   er  = 0.1499925004 !  1.199940003
    bxl = 0.0
    byl = 0.0
    bzl = 0.0
