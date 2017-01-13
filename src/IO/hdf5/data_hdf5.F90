@@ -142,7 +142,7 @@ contains
             case ("magx", "magy", "magz")
                write(newname, '("mag_field_",A1)') var(4:4)
             case ("divbc", "divbf")
-               newname = "div(B)"
+               newname = "magnetic_field_divergence"
             case default
                write(newname, '(A)') trim(var)
          end select
