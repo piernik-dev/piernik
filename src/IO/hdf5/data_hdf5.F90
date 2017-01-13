@@ -104,6 +104,9 @@ contains
             f%fu = "\rm{Gs}"
             f%f2cgs = 1.0 / (fpi * sqrt(cm / (miu0 * gram)) * sek)
             f%stag = 1
+         case ("divbc", "divbf")
+            f%fu= "\rm{Gs}/\rm{cm}" ! I'm not sure if it is a best description
+            f%f2cgs = 1.0 / (fpi * sqrt(cm / (miu0 * gram)) * sek * cm)
          case ("cr1" : "cr9")
             f%fu = "\rm{erg}/\rm{cm}^3"
             f%f2cgs = 1.0 / (erg/cm**3)
@@ -138,6 +141,8 @@ contains
                newname = "pressure"
             case ("magx", "magy", "magz")
                write(newname, '("mag_field_",A1)') var(4:4)
+            case ("divbc", "divbf")
+               newname = "magnetic_field_divergence"
             case default
                write(newname, '(A)') trim(var)
          end select
@@ -224,7 +229,8 @@ contains
    subroutine datafields_hdf5(var, tab, ierrh, cg)
 
       use common_hdf5, only: common_shortcuts
-      use constants,   only: dsetnamelen, xdim
+      use constants,   only: dsetnamelen, xdim, ydim, zdim, half
+      use domain,      only: dom
       use fluidtypes,  only: component_fluid
       use func,        only: ekin, emag
       use grid_cont,   only: grid_container
@@ -302,6 +308,22 @@ contains
 #endif /* !ISO */
          case ("magx", "magy", "magz")
             tab(:,:,:) = real(cg%b(xdim + i_xyz, RNG), kind=4)
+         case("divbf") ! face-fentered div(B): RTVD
+            tab(:,:,:) = real( half * ( &
+            &                           (cg%b(xdim, cg%is+dom%D_x:cg%ie+dom%D_x, cg%js        :cg%je,         cg%ks        :cg%ke        ) - &
+            &                            cg%b(xdim, cg%is        :cg%ie,         cg%js        :cg%je,         cg%ks        :cg%ke        )   )/cg%dx + &
+            &                           (cg%b(ydim, cg%is        :cg%ie,         cg%js+dom%D_y:cg%je+dom%D_y, cg%ks        :cg%ke        ) - &
+            &                            cg%b(ydim, cg%is        :cg%ie,         cg%js        :cg%je,         cg%ks        :cg%ke        )   )/cg%dy + &
+            &                           (cg%b(zdim, cg%is        :cg%ie,         cg%js        :cg%je,         cg%ks+dom%D_z:cg%ke+dom%D_z) - &
+            &                            cg%b(zdim, cg%is        :cg%ie,         cg%js        :cg%je,         cg%ks        :cg%ke        )   )/cg%dz ), kind=4)
+         case("divbc") ! cell-centered div(B): RIEMANN?
+            tab(:,:,:) = real( half * ( &
+            &                           (cg%b(xdim, cg%is+dom%D_x:cg%ie+dom%D_x, cg%js        :cg%je,         cg%ks        :cg%ke        ) - &
+            &                            cg%b(xdim, cg%is-dom%D_x:cg%ie-dom%D_x, cg%js        :cg%je,         cg%ks        :cg%ke        )   )/cg%dx + &
+            &                           (cg%b(ydim, cg%is        :cg%ie,         cg%js+dom%D_y:cg%je+dom%D_y, cg%ks        :cg%ke        ) - &
+            &                            cg%b(ydim, cg%is        :cg%ie,         cg%js-dom%D_y:cg%je-dom%D_y, cg%ks        :cg%ke        )   )/cg%dy + &
+            &                           (cg%b(zdim, cg%is        :cg%ie,         cg%js        :cg%je,         cg%ks+dom%D_z:cg%ke+dom%D_z) - &
+            &                            cg%b(zdim, cg%is        :cg%ie,         cg%js        :cg%je,         cg%ks-dom%D_z:cg%ke-dom%D_z)   )/cg%dz ), kind=4)
          case ("gpot")
             if (associated(cg%gpot)) tab(:,:,:) = real(cg%gpot(RNG), kind=4)
          case ("sgpt")
