@@ -104,6 +104,9 @@ contains
             f%fu = "\rm{Gs}"
             f%f2cgs = 1.0 / (fpi * sqrt(cm / (miu0 * gram)) * sek)
             f%stag = 1
+         case ("divbc", "divbf")
+            f%fu= "\rm{Gs}/\rm{cm}" ! I'm not sure if it is a best description
+            f%f2cgs = 1.0 / (fpi * sqrt(cm / (miu0 * gram)) * sek * cm)
          case ("cr1" : "cr9")
             f%fu = "\rm{erg}/\rm{cm}^3"
             f%f2cgs = 1.0 / (erg/cm**3)
@@ -138,6 +141,8 @@ contains
                newname = "pressure"
             case ("magx", "magy", "magz")
                write(newname, '("mag_field_",A1)') var(4:4)
+            case ("divbc", "divbf")
+               newname = "div(B)"
             case default
                write(newname, '(A)') trim(var)
          end select
