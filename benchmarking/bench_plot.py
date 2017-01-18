@@ -55,7 +55,7 @@ def read_timings(file):
             if (len(columns) > 0):
                 try:
                     nthr = int(columns[0])
-                    if (nthr > 2**20): # crude protection against eating too much memory due to bad data lines
+                    if (nthr > 2**20):  # crude protection against eating too much memory due to bad data lines
                         print "Ignoring bogus thread number: ", columns
                     elif (nthr > 0):
                         if (nthr not in timings):
@@ -188,7 +188,7 @@ def singlesample(data):
     import os.path
     rd = {}
     for d in data:
-        d["dname"]=d["filename"]
+        d["dname"] = d["filename"]
         rd[d["dname"]] = {}
         rd[d["dname"]]["avg"] = {}
         for i in ("make_real", "make_load", "timings"):
@@ -204,7 +204,7 @@ def reduce(data):
 
     rd = {}
     for d in data:
-        d["dname"]=os.path.dirname(d["filename"])
+        d["dname"] = os.path.dirname(d["filename"])
         if (d["dname"] not in rd):
             rd[d["dname"]] = {}
             rd[d["dname"]]["nt"] = 1
@@ -235,7 +235,7 @@ def reduce(data):
                 rd[d["dname"]]["min"]["timings"][p] = np.minimum(rd[d["dname"]]["min"]["timings"][p], d["timings"][p])
                 rd[d["dname"]]["max"]["timings"][p] = np.maximum(rd[d["dname"]]["max"]["timings"][p], d["timings"][p])
                 for i in range(len(rd[d["dname"]]["avg"]["timings"][p])):
-                    if (rd[d["dname"]]["avg"]["timings"][p][i] == None or d["timings"][p][i] == None):
+                    if (rd[d["dname"]]["avg"]["timings"][p][i] is None or d["timings"][p][i] is None):
                         rd[d["dname"]]["avg"]["timings"][p][i] = None
                     else:
                         rd[d["dname"]]["avg"]["timings"][p][i] = rd[d["dname"]]["avg"]["timings"][p][i] + d["timings"][p][i]
@@ -247,7 +247,7 @@ def reduce(data):
         if (rd[d]["nt"] > 1):
             for p in rd[d]["avg"]["timings"]:
                 for i in range(len(rd[d]["avg"]["timings"][p])):
-                    if (rd[d]["avg"]["timings"][p][i] != None):
+                    if (rd[d]["avg"]["timings"][p][i] is not None):
                         rd[d]["avg"]["timings"][p][i] /= rd[d]["nt"]
 
     return rd
