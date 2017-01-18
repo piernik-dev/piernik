@@ -186,7 +186,6 @@ def mkrplot(rdata):
 
 def singlesample(data):
     import os.path
-    import pprint
     rd = {}
     for d in data:
         d["dirname"]=d["filename"]
@@ -194,16 +193,12 @@ def singlesample(data):
         rd[d["dirname"]]["avg"] = {}
         for i in ("make_real", "make_load", "timings"):
             rd[d["dirname"]]["avg"][i] = d[i]
-    pp = pprint.PrettyPrinter(indent=6)
-
-    pp.pprint(rd)
 
     return rd
 
 
 def reduce(data):
     import os.path
-    import pprint
     import numpy as np
     from copy import deepcopy
 
@@ -242,7 +237,6 @@ def reduce(data):
                 rd[d["dirname"]]["min"]["timings"][p] = np.minimum(rd[d["dirname"]]["min"]["timings"][p], d["timings"][p])
                 rd[d["dirname"]]["max"]["timings"][p] = np.maximum(rd[d["dirname"]]["max"]["timings"][p], d["timings"][p])
                 try:
-                    print d["filename"],p,rd[d["dirname"]]["avg"]["timings"][p], d["timings"][p]
                     rd[d["dirname"]]["avg"]["timings"][p] = np.add(rd[d["dirname"]]["avg"]["timings"][p], d["timings"][p])
                 except TypeError:
                     for i in range(len(rd[d["dirname"]]["avg"]["timings"][p])):
@@ -260,16 +254,9 @@ def reduce(data):
                 try:
                     rd[d]["avg"]["timings"][p] /= rd[d]["nt"]
                 except TypeError:
-                    print rd[d]["avg"]["timings"][p]
                     for i in range(len(rd[d]["avg"]["timings"][p])):
                         if (rd[d]["avg"]["timings"][p][i] != None):
                             rd[d]["avg"]["timings"][p][i] /= rd[d]["nt"]
-
-    print dirnames
-    pp = pprint.PrettyPrinter(indent=6)
-
-    pp.pprint(data)
-    pp.pprint(rd)
 
     return rd
 
