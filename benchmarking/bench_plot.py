@@ -258,15 +258,14 @@ def reduce(data):
 
     return rd
 
+import argparse
 
-from sys import argv
-
-if (len(argv) < 2):
-    print "Usage: ", argv[0], " benchmark_file [benchmark_file ...]"
-    exit(-1)
+parser = argparse.ArgumentParser(description='Show performance graphs')
+parser.add_argument('file', nargs='+', metavar='benchmark_file', help='file with results obtained by piernik_bench')
+args = parser.parse_args()
 
 data = []
-for f in argv[1:]:
+for f in args.file:
     data.append(read_timings(f))
 
 rdata = []
