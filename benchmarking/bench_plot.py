@@ -260,7 +260,11 @@ def reduce(data):
 
 import argparse
 
-parser = argparse.ArgumentParser(description='Show performance graphs')
+parser = argparse.ArgumentParser(description='''
+Show performance graphs from benchmark files.
+By default the data files are grouped by the parent directory.
+If there are more files in the same directory, an average is computed and also minimum and maximum values are indicated by shading.
+''')
 parser.add_argument('file', nargs='+', metavar='benchmark_file', help='file with results obtained by piernik_bench')
 parser.add_argument('-s', '--separate', action='store_true', help='do not group the graphs, plot them separately')
 args = parser.parse_args()
