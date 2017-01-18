@@ -188,11 +188,11 @@ def singlesample(data):
     import os.path
     rd = {}
     for d in data:
-        d["dirname"]=d["filename"]
-        rd[d["dirname"]] = {}
-        rd[d["dirname"]]["avg"] = {}
+        d["dname"]=d["filename"]
+        rd[d["dname"]] = {}
+        rd[d["dname"]]["avg"] = {}
         for i in ("make_real", "make_load", "timings"):
-            rd[d["dirname"]]["avg"][i] = d[i]
+            rd[d["dname"]]["avg"][i] = d[i]
 
     return rd
 
@@ -203,47 +203,45 @@ def reduce(data):
     from copy import deepcopy
 
     rd = {}
-    dirnames = set()
     for d in data:
-        d["dirname"]=os.path.dirname(d["filename"])
-        dirnames.add(d["dirname"])
-        if (d["dirname"] not in rd):
-            rd[d["dirname"]] = {}
-            rd[d["dirname"]]["nt"] = 1
-            rd[d["dirname"]]["nm"] = 0
+        d["dname"]=os.path.dirname(d["filename"])
+        if (d["dname"] not in rd):
+            rd[d["dname"]] = {}
+            rd[d["dname"]]["nt"] = 1
+            rd[d["dname"]]["nm"] = 0
             if (np.product(d["make_real"]) * np.product(d["make_load"]) != 0):
-                rd[d["dirname"]]["nm"] = 1
-            rd[d["dirname"]]["avg"] = {}
+                rd[d["dname"]]["nm"] = 1
+            rd[d["dname"]]["avg"] = {}
             for i in ("make_real", "make_load", "timings"):
-                rd[d["dirname"]]["avg"][i] = d[i]
+                rd[d["dname"]]["avg"][i] = d[i]
             for i in ("min", "max"):
-                rd[d["dirname"]][i] = deepcopy(rd[d["dirname"]]["avg"])
+                rd[d["dname"]][i] = deepcopy(rd[d["dname"]]["avg"])
         else:
             if (np.product(d["make_real"]) * np.product(d["make_load"]) != 0):
-                rd[d["dirname"]]["nm"] += 1
+                rd[d["dname"]]["nm"] += 1
                 for i in ("make_real", "make_load"):
-                    if (rd[d["dirname"]]["nm"] > 1):
-                        rd[d["dirname"]]["min"][i] = np.minimum(rd[d["dirname"]]["min"][i], d[i])
-                        rd[d["dirname"]]["max"][i] = np.maximum(rd[d["dirname"]]["max"][i], d[i])
-                        rd[d["dirname"]]["avg"][i] = np.add(rd[d["dirname"]]["avg"][i], d[i])
-                if (rd[d["dirname"]]["nm"] == 1):
+                    if (rd[d["dname"]]["nm"] > 1):
+                        rd[d["dname"]]["min"][i] = np.minimum(rd[d["dname"]]["min"][i], d[i])
+                        rd[d["dname"]]["max"][i] = np.maximum(rd[d["dname"]]["max"][i], d[i])
+                        rd[d["dname"]]["avg"][i] = np.add(rd[d["dname"]]["avg"][i], d[i])
+                if (rd[d["dname"]]["nm"] == 1):
                     for i in ("make_real", "make_load"):
-                        rd[d["dirname"]]["avg"][i] = d[i]
+                        rd[d["dname"]]["avg"][i] = d[i]
                     for i in ("min", "max"):
                         for j in ("make_real", "make_load"):
-                            rd[d["dirname"]][i][j] = deepcopy(rd[d["dirname"]]["avg"][j])
-            rd[d["dirname"]]["nt"] += 1
+                            rd[d["dname"]][i][j] = deepcopy(rd[d["dname"]]["avg"][j])
+            rd[d["dname"]]["nt"] += 1
             for p in d["timings"]:
-                rd[d["dirname"]]["min"]["timings"][p] = np.minimum(rd[d["dirname"]]["min"]["timings"][p], d["timings"][p])
-                rd[d["dirname"]]["max"]["timings"][p] = np.maximum(rd[d["dirname"]]["max"]["timings"][p], d["timings"][p])
+                rd[d["dname"]]["min"]["timings"][p] = np.minimum(rd[d["dname"]]["min"]["timings"][p], d["timings"][p])
+                rd[d["dname"]]["max"]["timings"][p] = np.maximum(rd[d["dname"]]["max"]["timings"][p], d["timings"][p])
                 try:
-                    rd[d["dirname"]]["avg"]["timings"][p] = np.add(rd[d["dirname"]]["avg"]["timings"][p], d["timings"][p])
+                    rd[d["dname"]]["avg"]["timings"][p] = np.add(rd[d["dname"]]["avg"]["timings"][p], d["timings"][p])
                 except TypeError:
-                    for i in range(len(rd[d["dirname"]]["avg"]["timings"][p])):
-                        if (rd[d["dirname"]]["avg"]["timings"][p][i] == None or d["timings"][p][i] == None):
-                            rd[d["dirname"]]["avg"]["timings"][p][i] = None
+                    for i in range(len(rd[d["dname"]]["avg"]["timings"][p])):
+                        if (rd[d["dname"]]["avg"]["timings"][p][i] == None or d["timings"][p][i] == None):
+                            rd[d["dname"]]["avg"]["timings"][p][i] = None
                         else:
-                            rd[d["dirname"]]["avg"]["timings"][p][i] = rd[d["dirname"]]["avg"]["timings"][p][i] + d["timings"][p][i]
+                            rd[d["dname"]]["avg"]["timings"][p][i] = rd[d["dname"]]["avg"]["timings"][p][i] + d["timings"][p][i]
 
     for d in rd:
         if (rd[d]["nm"] > 1):
