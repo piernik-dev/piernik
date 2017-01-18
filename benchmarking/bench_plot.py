@@ -234,14 +234,11 @@ def reduce(data):
             for p in d["timings"]:
                 rd[d["dname"]]["min"]["timings"][p] = np.minimum(rd[d["dname"]]["min"]["timings"][p], d["timings"][p])
                 rd[d["dname"]]["max"]["timings"][p] = np.maximum(rd[d["dname"]]["max"]["timings"][p], d["timings"][p])
-                try:
-                    rd[d["dname"]]["avg"]["timings"][p] = np.add(rd[d["dname"]]["avg"]["timings"][p], d["timings"][p])
-                except TypeError:
-                    for i in range(len(rd[d["dname"]]["avg"]["timings"][p])):
-                        if (rd[d["dname"]]["avg"]["timings"][p][i] == None or d["timings"][p][i] == None):
-                            rd[d["dname"]]["avg"]["timings"][p][i] = None
-                        else:
-                            rd[d["dname"]]["avg"]["timings"][p][i] = rd[d["dname"]]["avg"]["timings"][p][i] + d["timings"][p][i]
+                for i in range(len(rd[d["dname"]]["avg"]["timings"][p])):
+                    if (rd[d["dname"]]["avg"]["timings"][p][i] == None or d["timings"][p][i] == None):
+                        rd[d["dname"]]["avg"]["timings"][p][i] = None
+                    else:
+                        rd[d["dname"]]["avg"]["timings"][p][i] = rd[d["dname"]]["avg"]["timings"][p][i] + d["timings"][p][i]
 
     for d in rd:
         if (rd[d]["nm"] > 1):
@@ -249,12 +246,9 @@ def reduce(data):
                 rd[d]["avg"][i] /= rd[d]["nm"]
         if (rd[d]["nt"] > 1):
             for p in rd[d]["avg"]["timings"]:
-                try:
-                    rd[d]["avg"]["timings"][p] /= rd[d]["nt"]
-                except TypeError:
-                    for i in range(len(rd[d]["avg"]["timings"][p])):
-                        if (rd[d]["avg"]["timings"][p][i] != None):
-                            rd[d]["avg"]["timings"][p][i] /= rd[d]["nt"]
+                for i in range(len(rd[d]["avg"]["timings"][p])):
+                    if (rd[d]["avg"]["timings"][p][i] != None):
+                        rd[d]["avg"]["timings"][p][i] /= rd[d]["nt"]
 
     return rd
 
