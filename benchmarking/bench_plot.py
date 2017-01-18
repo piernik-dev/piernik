@@ -73,91 +73,6 @@ def read_timings(file):
     return data
 
 
-def mkplot(data):
-    import matplotlib.pyplot as plt
-    import math as m
-
-    plt.figure(figsize=(20, 15))
-
-    m_labels = ["setup", "serial make", "parallel make", "parallel make\n2 objects", "parallel make\n4 objects", "parallel make\n8 objects"]
-    t_labels = ["sedov, weak scaling", "sedov, strong scaling", "maclaurin, weak scaling", "maclaurin, strong scaling", "crtest, weak scaling", "crtest, strong scaling"]
-
-    exp = 0.25
-    sub = 1
-    lines = []
-    plt.subplot(4, 2, sub)
-    for d in data:
-        l, = plt.plot(d["make_real"])
-        lines.append(l)
-    plt.ylabel("time [s]")
-    plt.xticks(range(len(d["make_real"])), m_labels)
-    plt.annotate("compilation time", xy=(0.5, 0.1), xycoords="axes fraction", horizontalalignment='center')
-    plt.ylim(ymin=0.)
-    plt.xlim(-exp, len(m_labels)-1+exp)
-
-    sub = 2
-    plt.subplot(4, 2, sub)
-    for d in data:
-        plt.plot(d["make_load"])
-    plt.ylabel("CPU load [%]")
-    plt.xticks(range(len(d["make_load"])), m_labels)
-    plt.annotate("compilation CPU usage", xy=(0.5, 0.1), xycoords="axes fraction", horizontalalignment='center')
-    plt.ylim(ymin=0.)
-    plt.xlim(-exp, len(m_labels)-1+exp)
-
-    ntm = 0
-    for d in data:
-        for k in d["timings"].keys():
-            ntm = max(ntm, k)
-
-    for test in (sedov_weak, sedov_strong, maclaurin_weak, maclaurin_strong, crtest_weak, crtest_strong):
-        sub += 1
-        plt.subplot(4, 2, sub)
-        for d in data:
-            n = d["timings"].keys()
-            y = []
-            for x in n:
-                y.append(d["timings"][x][test])
-            if (test in (sedov_strong, maclaurin_strong, crtest_strong)):
-                for i in range(len(y)):
-                    if (y[i]):
-                        y[i] *= n[i]
-            plt.plot(n, y)
-        plt.xlabel("N_threads", verticalalignment='center')
-        if (test in (sedov_strong, maclaurin_strong, crtest_strong)):
-            plt.ylabel("time * N_threads [s]")
-        else:
-            plt.ylabel("time [s]")
-        plt.annotate(t_labels[test], xy=(0.5, 0.1), xycoords="axes fraction", horizontalalignment='center')
-        plt.ylim(ymin=0.)
-        plt.xlim(1-exp, ntm+exp)
-
-        if (ntm >= 10):
-            xf, xi = m.modf(m.log10(ntm))
-            xf = pow(10, xf)
-            if (xf >= 5.):
-                xf = 1
-                xi += 1
-            elif (xf >= 2.):
-                xf = 5
-            else:
-                xf = 2
-            xtstep = int(xf * m.pow(10, xi-1))
-            x_ticks = range(0, ntm+xtstep, xtstep)
-        else:
-            x_ticks = range(1, ntm+1)
-        plt.xticks(x_ticks)
-
-    names = []
-    for d in data:
-        names.append(d["filename"])
-
-    plt.subplots_adjust(top=0.95, bottom=0.05+0.025*int((len(data)-1)/2+1), left=0.05, right=0.95, wspace=0.1)
-    plt.figlegend((lines), names, loc="lower center", ncol=2, frameon=False)
-    plt.annotate("Piernik benchmarks", xy=(0.5, 0.97), xycoords="figure fraction", horizontalalignment='center', size=20)
-
-#    plt.show()
-
 def mkrplot(rdata):
     import matplotlib.pyplot as plt
     import math as m
@@ -176,7 +91,8 @@ def mkrplot(rdata):
     plt.subplot(4, 2, sub)
     for d in rdata:
         l, = plt.plot(rdata[d]["avg"]["make_real"])
-        plt.fill_between(range(len(rdata[d]["avg"]["make_real"])), rdata[d]["min"]["make_real"], rdata[d]["max"]["make_real"], alpha=alph, color=l.get_color())
+        if ("min" in rdata[d]):
+            plt.fill_between(range(len(rdata[d]["avg"]["make_real"])), rdata[d]["min"]["make_real"], rdata[d]["max"]["make_real"], alpha=alph, color=l.get_color())
         lines.append(l)
         ld[d] = l
     plt.ylabel("time [s]")
@@ -189,7 +105,8 @@ def mkrplot(rdata):
     plt.subplot(4, 2, sub)
     for d in rdata:
         plt.plot(rdata[d]["avg"]["make_load"])
-        plt.fill_between(range(len(rdata[d]["avg"]["make_load"])), rdata[d]["min"]["make_load"], rdata[d]["max"]["make_load"], alpha=alph, color=ld[d].get_color())
+        if ("min" in rdata[d]):
+            plt.fill_between(range(len(rdata[d]["avg"]["make_load"])), rdata[d]["min"]["make_load"], rdata[d]["max"]["make_load"], alpha=alph, color=ld[d].get_color())
     plt.ylabel("CPU load [%]")
     plt.xticks(range(len(rdata[d]["avg"]["make_load"])), m_labels)
     plt.annotate("compilation CPU usage", xy=(0.5, 0.1), xycoords="axes fraction", horizontalalignment='center')
@@ -211,22 +128,26 @@ def mkrplot(rdata):
             ymax = []
             for x in n:
                 y.append(rdata[d]["avg"]["timings"][x][test])
-                ymin.append(rdata[d]["min"]["timings"][x][test])
-                ymax.append(rdata[d]["max"]["timings"][x][test])
+                if ("min" in rdata[d]):
+                    ymin.append(rdata[d]["min"]["timings"][x][test])
+                    ymax.append(rdata[d]["max"]["timings"][x][test])
             if (test in (sedov_strong, maclaurin_strong, crtest_strong)):
                 for i in range(len(y)):
                     if (y[i]):
                         y[i] *= n[i]
-                        ymin[i] *= n[i]
-                        ymax[i] *= n[i]
+                        if ("min" in rdata[d]):
+                            ymin[i] *= n[i]
+                            ymax[i] *= n[i]
             ywhere = np.empty_like(y, dtype=bool)
-            for i in range(len(y)):
-                ywhere[i] = ymin[i] and ymax[i]
-                if (not ywhere[i]):
-                    ymin[i] = 0.
-                    ymax[i] = 0.
+            if ("min" in rdata[d]):
+                for i in range(len(y)):
+                    ywhere[i] = ymin[i] and ymax[i]
+                    if (not ywhere[i]):
+                        ymin[i] = 0.
+                        ymax[i] = 0.
             plt.plot(n, y)
-            plt.fill_between(n, ymin, ymax, alpha=alph, color=ld[d].get_color(), where=ywhere)
+            if ("min" in rdata[d]):
+                plt.fill_between(n, ymin, ymax, alpha=alph, color=ld[d].get_color(), where=ywhere)
         plt.xlabel("N_threads", verticalalignment='center')
         if (test in (sedov_strong, maclaurin_strong, crtest_strong)):
             plt.ylabel("time * N_threads [s]")
@@ -261,6 +182,24 @@ def mkrplot(rdata):
     plt.annotate("Piernik benchmarks", xy=(0.5, 0.97), xycoords="figure fraction", horizontalalignment='center', size=20)
 
     plt.show()
+
+
+def singlesample(data):
+    import os.path
+    import pprint
+    rd = {}
+    for d in data:
+        d["dirname"]=d["filename"]
+        rd[d["dirname"]] = {}
+        rd[d["dirname"]]["avg"] = {}
+        for i in ("make_real", "make_load", "timings"):
+            rd[d["dirname"]]["avg"][i] = d[i]
+    pp = pprint.PrettyPrinter(indent=6)
+
+    pp.pprint(rd)
+
+    return rd
+
 
 def reduce(data):
     import os.path
@@ -345,9 +284,10 @@ data = []
 for f in argv[1:]:
     data.append(read_timings(f))
 
-mkplot(data)
-
 rdata = []
 rdata = reduce(data)
-
 mkrplot(rdata)
+
+sdata = []
+sdata = singlesample(data)
+mkrplot(sdata)
