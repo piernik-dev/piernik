@@ -161,6 +161,7 @@ def mkplot(data):
 def mkrplot(rdata):
     import matplotlib.pyplot as plt
     import math as m
+    import numpy as np
 
     plt.figure(figsize=(20, 15))
 
@@ -218,8 +219,14 @@ def mkrplot(rdata):
                         y[i] *= n[i]
                         ymin[i] *= n[i]
                         ymax[i] *= n[i]
+            ywhere = np.empty_like(y, dtype=bool)
+            for i in range(len(y)):
+                ywhere[i] = ymin[i] and ymax[i]
+                if (not ywhere[i]):
+                    ymin[i] = 0.
+                    ymax[i] = 0.
             plt.plot(n, y)
-            plt.fill_between(n, ymin, ymax, alpha=alph, color=ld[d].get_color())
+            plt.fill_between(n, ymin, ymax, alpha=alph, color=ld[d].get_color(), where=ywhere)
         plt.xlabel("N_threads", verticalalignment='center')
         if (test in (sedov_strong, maclaurin_strong, crtest_strong)):
             plt.ylabel("time * N_threads [s]")
