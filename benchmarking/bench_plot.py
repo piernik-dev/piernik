@@ -262,6 +262,7 @@ import argparse
 
 parser = argparse.ArgumentParser(description='Show performance graphs')
 parser.add_argument('file', nargs='+', metavar='benchmark_file', help='file with results obtained by piernik_bench')
+parser.add_argument('-s', '--separate', action='store_true', help='do not group the graphs, plot them separately')
 args = parser.parse_args()
 
 data = []
@@ -269,9 +270,8 @@ for f in args.file:
     data.append(read_timings(f))
 
 rdata = []
-rdata = reduce(data)
+if args.separate:
+    rdata = singlesample(data)
+else:
+    rdata = reduce(data)
 mkrplot(rdata)
-
-sdata = []
-sdata = singlesample(data)
-mkrplot(sdata)
