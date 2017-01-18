@@ -275,18 +275,30 @@ def reduce(data):
         dirnames.add(d["dirname"])
         if (d["dirname"] not in rd):
             rd[d["dirname"]] = {}
-            rd[d["dirname"]]["n"] = 1
+            rd[d["dirname"]]["nt"] = 1
+            rd[d["dirname"]]["nm"] = 0
+            if (np.product(d["make_real"]) * np.product(d["make_load"]) != 0):
+                rd[d["dirname"]]["nm"] = 1
             rd[d["dirname"]]["avg"] = {}
             for i in ("make_real", "make_load", "timings"):
                 rd[d["dirname"]]["avg"][i] = d[i]
             for i in ("min", "max"):
                 rd[d["dirname"]][i] = deepcopy(rd[d["dirname"]]["avg"])
         else:
-            rd[d["dirname"]]["n"] += 1
-            for i in ("make_real", "make_load"):
-                rd[d["dirname"]]["min"][i] = np.minimum(rd[d["dirname"]]["min"][i], d[i])
-                rd[d["dirname"]]["max"][i] = np.maximum(rd[d["dirname"]]["max"][i], d[i])
-                rd[d["dirname"]]["avg"][i] = np.add(rd[d["dirname"]]["avg"][i], d[i])
+            if (np.product(d["make_real"]) * np.product(d["make_load"]) != 0):
+                rd[d["dirname"]]["nm"] += 1
+                for i in ("make_real", "make_load"):
+                    if (rd[d["dirname"]]["nm"] > 1):
+                        rd[d["dirname"]]["min"][i] = np.minimum(rd[d["dirname"]]["min"][i], d[i])
+                        rd[d["dirname"]]["max"][i] = np.maximum(rd[d["dirname"]]["max"][i], d[i])
+                        rd[d["dirname"]]["avg"][i] = np.add(rd[d["dirname"]]["avg"][i], d[i])
+                if (rd[d["dirname"]]["nm"] == 1):
+                    for i in ("make_real", "make_load"):
+                        rd[d["dirname"]]["avg"][i] = d[i]
+                    for i in ("min", "max"):
+                        for j in ("make_real", "make_load"):
+                            rd[d["dirname"]][i][j] = deepcopy(rd[d["dirname"]]["avg"][j])
+            rd[d["dirname"]]["nt"] += 1
             for p in d["timings"]:
                 rd[d["dirname"]]["min"]["timings"][p] = np.minimum(rd[d["dirname"]]["min"]["timings"][p], d["timings"][p])
                 rd[d["dirname"]]["max"]["timings"][p] = np.maximum(rd[d["dirname"]]["max"]["timings"][p], d["timings"][p])
@@ -301,17 +313,18 @@ def reduce(data):
                             rd[d["dirname"]]["avg"]["timings"][p][i] = rd[d["dirname"]]["avg"]["timings"][p][i] + d["timings"][p][i]
 
     for d in rd:
-        if (rd[d]["n"] > 1):
+        if (rd[d]["nm"] > 1):
             for i in ("make_real", "make_load"):
-                rd[d]["avg"][i] /= rd[d]["n"]
+                rd[d]["avg"][i] /= rd[d]["nm"]
+        if (rd[d]["nt"] > 1):
             for p in rd[d]["avg"]["timings"]:
                 try:
-                    rd[d]["avg"]["timings"][p] /= rd[d]["n"]
+                    rd[d]["avg"]["timings"][p] /= rd[d]["nt"]
                 except TypeError:
                     print rd[d]["avg"]["timings"][p]
                     for i in range(len(rd[d]["avg"]["timings"][p])):
                         if (rd[d]["avg"]["timings"][p][i] != None):
-                            rd[d]["avg"]["timings"][p][i] /= rd[d]["n"]
+                            rd[d]["avg"]["timings"][p][i] /= rd[d]["nt"]
 
     print dirnames
     pp = pprint.PrettyPrinter(indent=6)
