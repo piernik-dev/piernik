@@ -3,7 +3,6 @@
 sedov_weak, sedov_strong, maclaurin_weak, maclaurin_strong, crtest_weak, crtest_strong = range(6)
 make_prep, make_11, make_1n, make_2n, make_4n, make_8n = range(6)
 
-
 def extr_make_t(columns):
     return float(columns[len(columns)-4]), float(columns[len(columns)-1].replace('%', ''))
 
@@ -18,10 +17,13 @@ def read_timings(file):
         make_real = [0 for x in range(make_8n + 1)]
         make_load = [0 for x in range(make_8n + 1)]
         timings = {}
+        data["big"] = 1  # problem size factor
 
         b_type = -1
         for line in f:
             columns = line.split()
+            if re.match("# test domains are scaled by factor of", line):
+                data["big"] = int(columns[-1])
             if re.match("Preparing objects", line):
                 make_real[make_prep], make_load[make_prep] = extr_make_t(columns)
             if re.match("Single-thread make object", line):
@@ -80,8 +82,23 @@ def mkrplot(rdata):
 
     plt.figure(figsize=(20, 15))
 
+    big=-1
+    for d in rdata:
+        if (big < 0):
+            big = rdata[d]["big"]
+        elif (big != rdata[d]["big"]):
+            print "Mixed benchmark sizes"
+            big = 0
+
     m_labels = ["setup", "serial make", "parallel make", "parallel make\n2 objects", "parallel make\n4 objects", "parallel make\n8 objects"]
-    t_labels = ["sedov, weak scaling", "sedov, strong scaling", "maclaurin, weak scaling", "maclaurin, strong scaling", "crtest, weak scaling", "crtest, strong scaling"]
+    t_labels = [
+        "sedov, weak scaling, N_thr*{} x {} x {}, cartesian decomposition".format(64*big, 64*big, 64*big),
+        "sedov, strong scaling, {} x {} x {}, cartesian decomposition".format(64*big, 64*big, 64*big),
+        "maclaurin, weak scaling, N_thr*{} x {} x {}, block decomposition 32 x 32 x 32".format(64*big, 64*big, 64*big),
+        "maclaurin, strong scaling, {} x {} x {}, block decomposition 32 x 32 x 32".format(128*big, 128*big, 128*big),
+        "crtest, weak scaling, N_thr*{} x {} x {}, noncartesian decomposition".format(32*big, 32*big, 32*big),
+        "crtest, strong scaling, {} x {} x {}, noncartesian decomposition".format(32*big, 32*big, 32*big)
+    ]
 
     alph = 0.2
     exp = 0.25
@@ -190,6 +207,7 @@ def singlesample(data):
     for d in data:
         d["dname"] = d["filename"]
         rd[d["dname"]] = {}
+        rd[d["dname"]]["big"] = d["big"]
         rd[d["dname"]]["avg"] = {}
         for i in ("make_real", "make_load", "timings"):
             rd[d["dname"]]["avg"][i] = d[i]
@@ -207,6 +225,7 @@ def reduce(data):
         d["dname"] = os.path.dirname(d["filename"])
         if (d["dname"] not in rd):
             rd[d["dname"]] = {}
+            rd[d["dname"]]["big"] = d["big"]
             rd[d["dname"]]["nt"] = 1
             rd[d["dname"]]["nm"] = 0
             if (np.product(d["make_real"]) * np.product(d["make_load"]) != 0):
@@ -217,6 +236,9 @@ def reduce(data):
             for i in ("min", "max"):
                 rd[d["dname"]][i] = deepcopy(rd[d["dname"]]["avg"])
         else:
+            if (rd[d["dname"]]["big"] != d["big"]):
+                print "Mixing different problem sizes (" + d["dname"] + ", " + d["filename"] + ")"
+                exit(-2)
             if (np.product(d["make_real"]) * np.product(d["make_load"]) != 0):
                 rd[d["dname"]]["nm"] += 1
                 for i in ("make_real", "make_load"):
