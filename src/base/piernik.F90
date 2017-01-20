@@ -48,7 +48,7 @@ program piernik
    use named_array_list,  only: qna, wna
    use refinement,        only: emergency_fix
    use refinement_update, only: update_refinement
-   use timer,             only: walltime_end, set_timer
+   use timer,             only: walltime_end
    use timestep,          only: time_step
    use user_hooks,        only: finalize_problem, problem_domain_update
 #ifdef PERFMON
