@@ -110,6 +110,7 @@ contains
       implicit none
 
       integer :: nit, ac
+      real    :: ts                  !< Timestep wallclock
       logical :: finished
       integer, parameter :: nit_over = 5 ! maximum number of auxiliary iterations after reaching level_max
 
@@ -119,6 +120,10 @@ contains
 
       call init_mpi                          ! First, we must initialize the communication (and things that do not depend on init_mpi if there are any)
       code_progress = PIERNIK_INIT_MPI       ! Now we can initialize grid and everything that depends at most on init_mpi. All calls prior to PIERNIK_INIT_GRID can be reshuffled when necessary
+
+      ! Timers should not be started before initializing MPI
+      ts=set_timer(tmr_fu,.true.)
+
       call check_environment
 
 #ifdef PIERNIK_OPENCL
