@@ -67,29 +67,29 @@ if [ $DO_MAKE == 1 ] ; then
 	OBJ_LIST=$( get_n_problems 1 )
 
 	echo -n "Single-thread make object "
-	time $MAKE $OBJ_LIST > /dev/null
+	time $MAKE $OBJ_LIST > /dev/null 2>&1
 	$MAKE $OBJ_LIST CL=1 > /dev/null
 
 	echo -n "Multi-thread make object "
-	time $MAKE -j $OBJ_LIST > /dev/null
+	time $MAKE -j $OBJ_LIST > /dev/null 2>&1
 	$MAKE $OBJ_LIST CL=1 > /dev/null
 
 	OBJ_LIST=$( get_n_problems 2 )
 
 	echo -n "Multi-thread make two objects "
-	time $MAKE -j $OBJ_LIST > /dev/null
+	time $MAKE -j $OBJ_LIST > /dev/null 2>&1
 	$MAKE $OBJ_LIST CL=1 > /dev/null
 
 	OBJ_LIST=$( get_n_problems 4 )
 
 	echo -n "Multi-thread make four objects "
-	time $MAKE -j $OBJ_LIST > /dev/null
+	time $MAKE -j $OBJ_LIST > /dev/null 2>&1
 	$MAKE $OBJ_LIST CL=1 > /dev/null
 
 	OBJ_LIST=$( get_n_problems 8 )
 
 	echo -n "Multi-thread make eight objects "
-	time $MAKE -j $OBJ_LIST > /dev/null
+	time $MAKE -j $OBJ_LIST > /dev/null 2>&1
     } 2>&1 | $( dirname $0 )"/pretty_time_form.awk"
     echo
 fi
