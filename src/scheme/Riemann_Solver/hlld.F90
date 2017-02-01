@@ -508,8 +508,8 @@ contains
                    f(imy,i) = fl(imy,i) + alfven_l*u_2star(imy) - (alfven_l - sl)*u_starl(imy) - sl*ul(idn,i)*ul(imy,i)
                    f(imz,i) = fl(imz,i) + alfven_l*u_2star(imz) - (alfven_l - sl)*u_starl(imz) - sl*ul(idn,i)*ul(imz,i)
                    f(ien,i) = fl(ien,i) + alfven_l*u_2star(ien) - (alfven_l - sl)*u_starl(ien) - sl*enl
-                   b_cc(ydim,i) = b_cclf(ydim,i) + alfven_l*b_2star(ydim) - (alfven_l - sl)*b_2star(ydim) - sl*b_ccl(ydim,i)
-                   b_cc(zdim,i) = b_cclf(zdim,i) + alfven_l*b_2star(zdim) - (alfven_l - sl)*b_2star(zdim) - sl*b_ccl(zdim,i)
+                   b_cc(ydim,i) = b_cclf(ydim,i) + alfven_l*b_2star(ydim) - (alfven_l - sl)*b_starl(ydim) - sl*b_ccl(ydim,i)
+                   b_cc(zdim,i) = b_cclf(zdim,i) + alfven_l*b_2star(zdim) - (alfven_l - sl)*b_starl(zdim) - sl*b_ccl(zdim,i)
 
                    ! Conservative variables for right Alfven intermediate state
 
