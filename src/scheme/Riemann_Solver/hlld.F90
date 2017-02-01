@@ -150,12 +150,13 @@ contains
     real                                         :: b_lr, b_lrgam, magprl, magprr, prt_star, b_sig, enl, enr
     real                                         :: coeff_1, dn_lsqt, dn_rsqt, add_dnsq, mul_dnsq
     real                                         :: vb_l, vb_starl, vb_r, vb_starr, vb_2star
+    real                                         :: prl, prr
 
     ! Local arrays
 
     real, dimension(flind%all)                   :: fl, fr
-    real, dimension(flind%all)                   :: prl, prr
-    real, dimension(flind%all)                   :: u_starl, u_starr, u_2starl, u_2starr, v_starl, v_starr, v_2star
+    real, dimension(flind%all)                   :: u_starl, u_starr, u_2starl, u_2starr
+    real, dimension(xdim:zdim)                   :: v_2star, v_starl, v_starr
     real, dimension(xdim:zdim)                   :: b_cclf, b_ccrf
     real, dimension(xdim:zdim)                   :: b_starl, b_starr, b_2star
 
@@ -173,8 +174,8 @@ contains
        ! Left and right states of total pressure
        ! From fluidupdate.F90, utoq() (1) is used in hydro regime and (2) in MHD regime. In case of vanishing magnetic fields the magnetic components do not contribute and hydro results are obtained trivially.
 
-       prl(ien) = ul(ien,i) + magprl ! ul(ien,i) is the left state of gas pressure
-       prr(ien) = ur(ien,i) + magprr ! ur(ien,i) is the right state of gas pressure
+       prl = ul(ien,i) + magprl ! ul(ien,i) is the left state of gas pressure
+       prr = ur(ien,i) + magprr ! ur(ien,i) is the right state of gas pressure
 
        ! Left and right states of energy Eq. 2.
 
@@ -201,17 +202,17 @@ contains
        ! Left flux
 
        fl(idn) = ul(idn,i)*ul(imx,i)
-       fl(imx) = ul(idn,i)*ul(imx,i)**2 + prl(ien) - b_ccl(xdim,i)**2  ! Total left state of pressure, so prl(ien)
+       fl(imx) = ul(idn,i)*ul(imx,i)**2 + prl - b_ccl(xdim,i)**2  ! Total left state of pressure, so prl
        fl(imy:imz) = ul(idn,i)*ul(imy:imz,i)*ul(imx,i) - b_ccl(xdim,i)*b_ccl(ydim:zdim,i)
-       fl(ien) = (enl + prl(ien))*ul(imx,i) - b_ccl(xdim,i)*(sum(ul(imx:imz,i)*b_ccl(xdim:zdim,i))) ! Total left state of pressure, so prl(ien)
+       fl(ien) = (enl + prl)*ul(imx,i) - b_ccl(xdim,i)*(sum(ul(imx:imz,i)*b_ccl(xdim:zdim,i))) ! Total left state of pressure, so prl
        b_cclf(ydim:zdim) = b_ccl(ydim:zdim,i)*ul(imx,i) - b_ccl(xdim,i)*ul(imy:imz,i)
 
        ! Right flux
 
        fr(idn) = ur(idn,i)*ur(imx,i)
-       fr(imx) = ur(idn,i)*ur(imx,i)**2 + prr(ien) - b_ccr(xdim,i)**2  ! Total right state of pressure, so prl(ien)
+       fr(imx) = ur(idn,i)*ur(imx,i)**2 + prr - b_ccr(xdim,i)**2  ! Total right state of pressure, so prl
        fr(imy:imz) = ur(idn,i)*ur(imy:imz,i)*ur(imx,i) - b_ccr(xdim,i)*b_ccr(ydim:zdim,i)
-       fr(ien) = (enr + prr(ien))*ur(imx,i) - b_ccr(xdim,i)*(sum(ur(imx:imz,i)*b_ccr(xdim:zdim,i)))  ! Total right state of pressure, so prl(ien)
+       fr(ien) = (enr + prr)*ur(imx,i) - b_ccr(xdim,i)*(sum(ur(imx:imz,i)*b_ccr(xdim:zdim,i)))  ! Total right state of pressure, so prl
        b_ccrf(ydim:zdim) = b_ccr(ydim:zdim,i)*ur(imx,i) - b_ccr(xdim,i)*ur(imy:imz,i)
 
        ! HLLD fluxes
@@ -225,9 +226,9 @@ contains
        else
 
           ! Speed of contact discontinuity Eq. 38
-          ! Total left and right states of pressure, so prr(ien) and prl(ien)sm_nr/sm_dr
-          sm =   ( ((sr - ur(imx,i))*ur(idn,i)*ur(imx,i) - prr(ien)) - &
-               &   ((sl - ul(imx,i))*ul(idn,i)*ul(imx,i) - prl(ien)) ) / &
+          ! Total left and right states of pressure, so prr and prl sm_nr/sm_dr
+          sm =   ( ((sr - ur(imx,i))*ur(idn,i)*ur(imx,i) - prr) - &
+               &   ((sl - ul(imx,i))*ul(idn,i)*ul(imx,i) - prl) ) / &
                &   ((sr - ur(imx,i))*ur(idn,i) - &
                &    (sl - ul(imx,i))*ul(idn,i))
 
@@ -253,12 +254,12 @@ contains
 
           ! Pressure of intermediate state Eq. (23)
 
-          prt_star  =  half*((prl(ien)+dn_l*smvxl) + (prr(ien)+dn_r*smvxr))  !< Check for 0.5. Total left and right states of pressure, so prr(ien) and prl(ien)
+          prt_star  =  half*((prl+dn_l*smvxl) + (prr+dn_r*smvxr))  !< Check for 0.5. Total left and right states of pressure, so prr and prl
 
           ! Normal components of velocity and magnetic field
 
-          v_starl(imx)  =  sm
-          v_starr(imx)  =  sm
+          v_starl(xdim)  =  sm
+          v_starr(xdim)  =  sm
 
           b_starl(xdim)  =  b_ccl(xdim,i)
           b_starr(xdim)  =  b_ccr(xdim,i)
@@ -281,31 +282,31 @@ contains
           endif
 
           ! Transversal components of velocity Eq. 42
-          v_starl(imy:imz) = ul(imy:imz,i) + b_ccl(xdim,i)/dn_l * (b_ccl(ydim:zdim,i) - b_starl(ydim:zdim))
-          v_starr(imy:imz) = ur(imy:imz,i) + b_ccr(xdim,i)/dn_r * (b_ccr(ydim:zdim,i) - b_starr(ydim:zdim))
+          v_starl(ydim:zdim) = ul(imy:imz,i) + b_ccl(xdim,i)/dn_l * (b_ccl(ydim:zdim,i) - b_starl(ydim:zdim))
+          v_starr(ydim:zdim) = ur(imy:imz,i) + b_ccr(xdim,i)/dn_r * (b_ccr(ydim:zdim,i) - b_starr(ydim:zdim))
 
           ! Dot product of velocity and magnetic field
 
-          vb_l  =  sum(ul(imx:imz,i)*b_ccl(xdim:zdim,i))
-          vb_r  =  sum(ur(imx:imz,i)*b_ccr(xdim:zdim,i))
-          vb_starl  =  sum(v_starl(imx:imz)*b_starl(xdim:zdim))
-          vb_starr  =  sum(v_starr(imx:imz)*b_starr(xdim:zdim))
+          vb_l  =  sum(ul(imx:imz,i)*b_ccl(:,i))
+          vb_r  =  sum(ur(imx:imz,i)*b_ccr(:,i))
+          vb_starl  =  sum(v_starl*b_starl)
+          vb_starr  =  sum(v_starr*b_starr)
 
 
           ! Left intermediate state conservative form
 
           u_starl(idn)  =  dn_l/slsm
-          u_starl(imx:imz)  =  u_starl(idn)*v_starl(imx:imz)
+          u_starl(imx:imz)  =  u_starl(idn)*v_starl
 
           ! Right intermediate state conservative form
 
           u_starr(idn)  =  dn_r/srsm
-          u_starr(imx:imz)  =  u_starr(idn)*v_starr(imx:imz)
+          u_starr(imx:imz)  =  u_starr(idn)*v_starr
 
           ! Total energy of left and right intermediate states Eq. (48)
 
-          u_starl(ien) = (slvxl*enl - prl(ien)*ul(imx,i) + prt_star*sm + b_ccl(xdim,i)*(vb_l - vb_starl))/slsm  ! Total left state of pressure
-          u_starr(ien) = (srvxr*enr - prr(ien)*ur(imx,i) + prt_star*sm + b_ccr(xdim,i)*(vb_r - vb_starr))/srsm  ! Total right state of pressure
+          u_starl(ien) = (slvxl*enl - prl*ul(imx,i) + prt_star*sm + b_ccl(xdim,i)*(vb_l - vb_starl))/slsm  ! Total left state of pressure
+          u_starr(ien) = (srvxr*enr - prr*ur(imx,i) + prt_star*sm + b_ccr(xdim,i)*(vb_r - vb_starr))/srsm  ! Total right state of pressure
 
           ! Cases for B_x .ne. and .eq. zero
 
@@ -356,22 +357,22 @@ contains
 
                 ! Components of velocity Eq. 39, 59, 60 and magnetic field Eq. 61, 62
 
-                v_2star(imx)  =  sm
-                v_2star(imy:imz)  =  ((dn_lsqt*v_starl(imy:imz) + dn_rsqt*v_starr(imy:imz)) + b_sig*(b_starr(ydim:zdim) - b_starl(ydim:zdim)))/add_dnsq
+                v_2star(xdim)      = sm
+                v_2star(ydim:zdim) = ((dn_lsqt*v_starl(ydim:zdim) + dn_rsqt*v_starr(ydim:zdim)) + b_sig*(b_starr(ydim:zdim) - b_starl(ydim:zdim)))/add_dnsq
 
-                b_2star(xdim)  =  b_ccl(xdim,i)
-                b_2star(ydim:zdim)  =  ((dn_lsqt*b_starr(ydim:zdim) + dn_rsqt*b_starl(ydim:zdim)) + b_sig*mul_dnsq*(v_starr(imy:imz) - v_starl(imy:imz)))/add_dnsq
+                b_2star(xdim)      = b_ccl(xdim,i)
+                b_2star(ydim:zdim) = ((dn_lsqt*b_starr(ydim:zdim) + dn_rsqt*b_starl(ydim:zdim)) + b_sig*mul_dnsq*(v_starr(ydim:zdim) - v_starl(ydim:zdim)))/add_dnsq
 
                 ! Dot product of velocity and magnetic field
 
-                vb_2star  =  sum(v_2star(imx:imz)*b_2star(xdim:zdim))
+                vb_2star  =  sum(v_2star*b_2star)
 
                 ! Choose right Alfven wave according to speed of contact discontinuity
 
                 if (sm >= zero) then
                    ! Conservative variables for left Alfven intermediate state
                    u_2starl(idn)  =  u_starl(idn)
-                   u_2starl(imx:imz)  =  u_starl(idn)*v_2star(imx:imz)
+                   u_2starl(imx:imz)  =  u_starl(idn)*v_2star
 
                    ! Energy of Alfven intermediate state Eq. 63
                    u_2starl(ien)  =  u_starl(ien) - b_sig*dn_lsqt*(vb_starl - vb_2star)
@@ -380,7 +381,7 @@ contains
                 if (sm <= zero) then
                    ! Conservative variables for right Alfven intermediate state
                    u_2starr(idn)  =  u_starr(idn)
-                   u_2starr(imx:imz)  =  u_starr(idn)*v_2star(imx:imz)
+                   u_2starr(imx:imz)  =  u_starr(idn)*v_2star
 
                    ! Energy of Alfven intermediate state Eq. 63
                    u_2starr(ien)  =  u_starr(ien) + b_sig*dn_rsqt*(vb_starr - vb_2star)
@@ -396,7 +397,7 @@ contains
                    b_cc(ydim:zdim,i) = b_ccrf(ydim:zdim) + alfven_r*b_2star(ydim:zdim) - (alfven_r - sr)*b_starr(ydim:zdim) - sr*b_ccr(ydim:zdim,i)
                 else ! sm = 0
                    ! Left and right Alfven intermediate flux Eq. 65
-                   f(:,i)  =  half*( &
+                   f(:,i) = half*( &
                         (fl + alfven_l*u_2starl - (alfven_l - sl)*u_starl - sl* [ ul(idn,i), ul(idn,i)*ul(imx:imz,i), enl ]) + &
                         (fr + alfven_r*u_2starr - (alfven_r - sr)*u_starr - sr* [ ur(idn,i), ur(idn,i)*ur(imx:imz,i), enr ]))
 
