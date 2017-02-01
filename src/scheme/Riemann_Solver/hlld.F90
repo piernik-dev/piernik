@@ -124,7 +124,7 @@ contains
 
     ! external procedures
 
-    use constants,  only: half, zero, xdim, ydim, zdim, idn, imx, imy, imz, ien
+    use constants,  only: half, zero, one, xdim, ydim, zdim, idn, imx, imy, imz, ien
     use fluidindex, only: flind
     use func,       only: operator(.notequals.)
 
@@ -143,7 +143,6 @@ contains
 
     integer                                      :: i
     real, parameter                              :: four = 4.0
-    real, parameter                              :: one  = 1.0
     real                                         :: sm, sl, sr
     real                                         :: alfven_l, alfven_r, c_fastm, gampr_l, gampr_r
     real                                         :: slsm, srsm, slvxl, srvxr, smvxl, smvxr, srmsl, dn_l, dn_r
