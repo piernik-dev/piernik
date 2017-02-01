@@ -368,7 +368,7 @@ contains
 
                 ! Choose right Alfven wave according to speed of contact discontinuity
 
-                if (sm .ge. zero) then
+                if (sm > zero) then
 
                    ! Conservative variables for left Alfven intermediate state
                    u_2starl(idn)  =  u_starl(idn)
@@ -381,7 +381,7 @@ contains
                    f(:,i) = fl + alfven_l*u_2starl - (alfven_l - sl)*u_starl - sl* [ ul(idn,i), ul(idn,i)*ul(imx:imz,i), enl ]
                    b_cc(ydim:zdim,i) = b_cclf(ydim:zdim) + alfven_l*b_2star(ydim:zdim) - (alfven_l - sl)*b_starl(ydim:zdim) - sl*b_ccl(ydim:zdim,i)
 
-                else if (sm .le. zero) then
+                else if (sm < zero) then
 
                    ! Conservative variables for right Alfven intermediate state
                    u_2starr(idn)  =  u_starr(idn)
@@ -427,14 +427,14 @@ contains
 
              ! Intermediate state for B_x = 0
 
-             if (sm .ge. zero) then
+             if (sm > zero) then
 
                 ! Left intermediate flux Eq. 64
 
                 f(:,i)  =  fl + sl*(u_starl - [ ul(idn,i), ul(idn,i)*ul(imx:imz,i), enl ])
                 b_cc(ydim:zdim,i) = b_cclf(ydim:zdim) + sl*(b_starl(ydim:zdim) - b_ccl(ydim:zdim,i))
 
-             else if (sm .le. zero) then
+             else if (sm < zero) then
 
                 f(:,i)  =  fr + sr*(u_starr - [ ur(idn,i), ur(idn,i)*ur(imx:imz,i), enr ])
                 b_cc(ydim:zdim,i) = b_ccrf(ydim:zdim) + sr*(b_starr(ydim:zdim) - b_ccr(ydim:zdim,i))
