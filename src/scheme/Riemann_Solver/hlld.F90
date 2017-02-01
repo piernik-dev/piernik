@@ -414,7 +414,7 @@ contains
                    ! Left Alfven intermediate flux Eq. 65
 
                    f(:,i) = fl + alfven_l*u_2star - (alfven_l - sl)*u_starl - sl* [ ul(idn,i), ul(idn,i)*ul(imx:imz,i), enl ]
-                   b_cc(ydim:zdim,i) = b_cclf(ydim:zdim) + alfven_l*b_2star(ydim:zdim) - (alfven_l - sl)*b_2star(ydim:zdim) - sl*b_ccl(ydim:zdim,i)
+                   b_cc(ydim:zdim,i) = b_cclf(ydim:zdim) + alfven_l*b_2star(ydim:zdim) - (alfven_l - sl)*b_starl(ydim:zdim) - sl*b_ccl(ydim:zdim,i)
 
                    ! Conservative variables for right Alfven intermediate state
 
