@@ -368,48 +368,33 @@ contains
 
                 ! Choose right Alfven wave according to speed of contact discontinuity
 
-                if (sm > zero) then
-
+                if (sm >= zero) then
                    ! Conservative variables for left Alfven intermediate state
                    u_2starl(idn)  =  u_starl(idn)
                    u_2starl(imx:imz)  =  u_starl(idn)*v_2star(imx:imz)
 
                    ! Energy of Alfven intermediate state Eq. 63
                    u_2starl(ien)  =  u_starl(ien) - b_sig*dn_lsqt*(vb_starl - vb_2star)
+                end if
 
-                   ! Left Alfven intermediate flux Eq. 65
-                   f(:,i) = fl + alfven_l*u_2starl - (alfven_l - sl)*u_starl - sl* [ ul(idn,i), ul(idn,i)*ul(imx:imz,i), enl ]
-                   b_cc(ydim:zdim,i) = b_cclf(ydim:zdim) + alfven_l*b_2star(ydim:zdim) - (alfven_l - sl)*b_starl(ydim:zdim) - sl*b_ccl(ydim:zdim,i)
-
-                else if (sm < zero) then
-
+                if (sm <= zero) then
                    ! Conservative variables for right Alfven intermediate state
                    u_2starr(idn)  =  u_starr(idn)
                    u_2starr(imx:imz)  =  u_starr(idn)*v_2star(imx:imz)
 
                    ! Energy of Alfven intermediate state Eq. 63
                    u_2starr(ien)  =  u_starr(ien) + b_sig*dn_rsqt*(vb_starr - vb_2star)
+                end if
 
+                if (sm > zero) then
+                   ! Left Alfven intermediate flux Eq. 65
+                   f(:,i) = fl + alfven_l*u_2starl - (alfven_l - sl)*u_starl - sl* [ ul(idn,i), ul(idn,i)*ul(imx:imz,i), enl ]
+                   b_cc(ydim:zdim,i) = b_cclf(ydim:zdim) + alfven_l*b_2star(ydim:zdim) - (alfven_l - sl)*b_starl(ydim:zdim) - sl*b_ccl(ydim:zdim,i)
+                else if (sm < zero) then
                    ! Right Alfven intermediate flux Eq. 65
                    f(:,i) = fr + alfven_r*u_2starr - (alfven_r - sr)*u_starr - sr* [ ur(idn,i), ur(idn,i)*ur(imx:imz,i), enr ]
                    b_cc(ydim:zdim,i) = b_ccrf(ydim:zdim) + alfven_r*b_2star(ydim:zdim) - (alfven_r - sr)*b_starr(ydim:zdim) - sr*b_ccr(ydim:zdim,i)
-
                 else ! sm = 0
-
-                   ! Conservative variables for left Alfven intermediate state
-                   u_2starl(idn)  =  u_starl(idn)
-                   u_2starl(imx:imz)  =  u_starl(idn)*v_2star(imx:imz)
-
-                   ! Energy for Alfven intermediate state Eq. 63
-                   u_2starl(ien)  =  u_starl(ien) - b_sig*dn_lsqt*(vb_starl - vb_2star)
-
-                   ! Conservative variables for right Alfven intermediate state
-                   u_2starr(idn)  =  u_starr(idn)
-                   u_2starr(imx:imz)  =  u_starr(idn)*v_2star(imx:imz)
-
-                   ! Energy for Alfven intermediate state Eq. 63
-                   u_2starr(ien)  =  u_starr(ien)  + b_sig*dn_rsqt*(vb_starr - vb_2star)
-
                    ! Left and right Alfven intermediate flux Eq. 65
                    f(:,i)  =  half*( &
                         (fl + alfven_l*u_2starl - (alfven_l - sl)*u_starl - sl* [ ul(idn,i), ul(idn,i)*ul(imx:imz,i), enl ]) + &
@@ -418,7 +403,6 @@ contains
                    b_cc(ydim:zdim,i) = half*( &
                         (b_cclf(ydim:zdim) + alfven_l*b_2star(ydim:zdim) - (alfven_l - sl)*b_starl(ydim:zdim) - sl*b_ccl(ydim:zdim,i)) + &
                         (b_ccrf(ydim:zdim) + alfven_r*b_2star(ydim:zdim) - (alfven_r - sr)*b_starr(ydim:zdim) - sr*b_ccr(ydim:zdim,i)))
-
                 endif  ! sm = 0
 
              endif  ! alfven_l .le. 0 and alfven_r .ge. 0
