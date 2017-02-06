@@ -1349,7 +1349,7 @@ contains
 
    subroutine set_constant_b_field(this, b)
 
-      use constants,  only: xdim, zdim
+      use constants, only: xdim, ydim, zdim, I_ONE
 
       implicit none
 
@@ -1365,9 +1365,9 @@ contains
       endif
 
       if (associated(this%bf)) then
-         do d = xdim, zdim
-            this%bf(d)%arr(this%is:this%ie, this%js:this%je, this%ks:this%ke) = b(d)
-         enddo
+         this%bf(xdim)%arr(this%is:this%ie+I_ONE, this%js:this%je,       this%ks:this%ke      ) = b(xdim)
+         this%bf(ydim)%arr(this%is:this%ie,       this%js:this%je+I_ONE, this%ks:this%ke      ) = b(ydim)
+         this%bf(zdim)%arr(this%is:this%ie,       this%js:this%je,       this%ks:this%ke+I_ONE) = b(zdim)
       endif
 
    end subroutine set_constant_b_field
