@@ -274,7 +274,13 @@ contains
             wb = wb + eh**2
          endif
 
-         eta(:,:,:) = eta_0 + eta_1 * sqrt( max(0.0,wb(:,:,:)- jc2 ))
+!        eta(:,:,:) = eta_0 + eta_1 * sqrt( max(0.0,wb(:,:,:)- jc2 ))
+!        the above may cause FPE because compiler may transform it to max(0.0, sqrt(wb(:,:,:)- jc2 ))
+         where (wb(:,:,:)- jc2 > 0.)
+            eta(:,:,:) = eta_0 + eta_1 * sqrt(wb(:,:,:)- jc2)
+         elsewhere
+            eta(:,:,:) = eta_0
+         end where
 
          eh = 0.0
          if (dom%has_dir(xdim)) then

@@ -47,7 +47,7 @@ contains
       use cg_list_global,        only: all_cg
       use constants,             only: PIERNIK_INIT_MPI, PIERNIK_INIT_GLOBAL, PIERNIK_INIT_FLUIDS, PIERNIK_INIT_DOMAIN, PIERNIK_INIT_GRID, PIERNIK_INIT_IO_IC, INCEPTIVE, tmr_fu
       use dataio,                only: init_dataio, init_dataio_parameters, write_data
-      use dataio_pub,            only: nrestart, wd_rd, par_file, tmp_log_file, msg, printio, printinfo, warn, require_problem_IC, problem_name, run_id, code_progress, log_wr
+      use dataio_pub,            only: nrestart, wd_rd, par_file, tmp_log_file, msg, printio, printinfo, warn, require_problem_IC, problem_name, run_id, code_progress, log_wr, set_colors
       use decomposition,         only: init_decomposition
       use domain,                only: init_domain
       use diagnostics,           only: diagnose_arrays, check_environment
@@ -110,8 +110,11 @@ contains
       implicit none
 
       integer :: nit, ac
+      real    :: ts                  !< Timestep wallclock
       logical :: finished
       integer, parameter :: nit_over = 5 ! maximum number of auxiliary iterations after reaching level_max
+
+      call set_colors(.false.)               ! Make sure that we won't emit colorful messages before we are allowed to do so
 
       call parse_cmdline
       write(par_file,'(2a)') trim(wd_rd),'problem.par'
@@ -119,6 +122,10 @@ contains
 
       call init_mpi                          ! First, we must initialize the communication (and things that do not depend on init_mpi if there are any)
       code_progress = PIERNIK_INIT_MPI       ! Now we can initialize grid and everything that depends at most on init_mpi. All calls prior to PIERNIK_INIT_GRID can be reshuffled when necessary
+
+      ! Timers should not be started before initializing MPI
+      ts=set_timer(tmr_fu,.true.)
+
       call check_environment
 
 #ifdef PIERNIK_OPENCL
@@ -296,8 +303,8 @@ contains
 !-----------------------------------------------------------------------------
    subroutine parse_cmdline
 
-      use constants,  only: stdout, cwdlen, INT4
-      use dataio_pub, only: cmdl_nml, wd_rd, wd_wr, piernik_hdf5_version, log_wr
+      use constants,  only: stdout, cwdlen
+      use dataio_pub, only: cmdl_nml, wd_rd, wd_wr, piernik_hdf5_version, piernik_hdf5_version2, log_wr
       use version,    only: nenv,env, init_version
 
       implicit none
@@ -308,10 +315,7 @@ contains
       character(len=10)           :: time   ! QA_WARN len defined by ISO standard
       character(len=5)            :: zone   ! QA_WARN len defined by ISO standard
       character(len=cwdlen)       :: arg
-!      character(len=*), parameter :: cmdlversion = '1.0'
       logical, save               :: do_time = .false.
-      integer(kind=4), dimension(:), allocatable :: revision
-      character(len=cwdlen)       :: aaa
 
       skip_next = .false.
 
@@ -324,35 +328,25 @@ contains
 
          select case (arg)
          case ('-v', '--version')
-!            print '(2a)', 'cmdline version ', cmdlversion
             call init_version
-            allocate(revision(nenv)) ; revision = 0_INT4
-            do j = 2, nenv
-               read(env(j),'(a37,1x,i4)') aaa(1:37), revision(j)
-            enddo
-            write(stdout, '(a,i6)') 'code revision: ', maxval(revision)
-            deallocate(revision)
-            write(stdout, '(a,f5.2)') 'output version: ',piernik_hdf5_version
-            write(stdout,'(a)') "###############     Source configuration     ###############"
+            write(stdout, '(a,f5.2)') 'GDF output version: ',piernik_hdf5_version2
+            write(stdout, '(a,f5.2)') 'old output version: ',piernik_hdf5_version
+            write(stdout,'(/,a)') "###############     Source configuration     ###############"
             do j = 1, nenv
                write(stdout,'(a)') env(j)
             enddo
             stop
          case ('-p', '--param')
-            call get_command_argument(i+1,arg)
-            write(wd_rd,'(a)') arg
+            write(wd_rd,'(a)') get_next_arg(i+1, arg)
             skip_next = .true.
          case ('-w', '--write')
-            call get_command_argument(i+1,arg)
-            write(wd_wr,'(a)') arg
+            write(wd_wr,'(a)') get_next_arg(i+1, arg)
             skip_next = .true.
          case ('-l', '--log')
-            call get_command_argument(i+1,arg)
-            write(log_wr,'(a)') arg
+            write(log_wr,'(a)') get_next_arg(i+1, arg)
             skip_next = .true.
          case ('-n', '--namelist')
-            call get_command_argument(i+1,arg)
-            write(cmdl_nml, '(3A)') cmdl_nml(1:len_trim(cmdl_nml)), " ", trim(arg)
+            write(cmdl_nml, '(3A)') cmdl_nml(1:len_trim(cmdl_nml)), " ", trim(get_next_arg(i+1, arg))
             skip_next = .true.
          case ('-h', '--help')
             call print_help()
@@ -376,6 +370,30 @@ contains
          write (stdout, '(1x,a,":",a,1x,a)') time(1:2), time(3:4), zone
          stop
       endif
+
+   contains
+
+      function get_next_arg(n, arg) result(param)
+
+         use constants,  only: stderr
+
+         implicit none
+
+         integer,               intent(in) :: n
+         character(len=cwdlen), intent(in) :: arg
+
+         character(len=cwdlen) :: param
+
+         if (n > command_argument_count()) then
+            write(stderr, '(2a)')"[initpiernik:parse_cmdline:get_next_arg] cannot find argument for option ", arg
+            stop
+         endif
+
+         call get_command_argument(n, param)
+
+      end function get_next_arg
+
+
    end subroutine parse_cmdline
 !-----------------------------------------------------------------------------
    subroutine print_help
