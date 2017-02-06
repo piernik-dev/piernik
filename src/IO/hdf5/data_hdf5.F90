@@ -330,6 +330,26 @@ contains
                   enddo
                enddo
             endif
+         ! Components of face-centered magnetic field components in sa form somewhat usable for debugging
+         ! Note that we lose rightmost element in each direction (on right domain edge)
+         case ("magxf")
+             if (associated(cg%bf)) then
+                tab(:,:,:) = real(cg%bf(xdim)%arr(RNG), kind=4)
+             else
+                call warn("[data_hdf5:datafields_hdf5] no face-centered field (xdim)")
+             end if
+          case ("magyf")
+             if (associated(cg%bf)) then
+                tab(:,:,:) = real(cg%bf(ydim)%arr(RNG), kind=4)
+             else
+                call warn("[data_hdf5:datafields_hdf5] no face-centered field (ydim)")
+             end if
+         case ("magzf")
+             if (associated(cg%bf)) then
+                tab(:,:,:) = real(cg%bf(zdim)%arr(RNG), kind=4)
+             else
+                call warn("[data_hdf5:datafields_hdf5] no face-centered field (zdim)")
+             end if
          case("divbf") ! face-centered div(B): RTVD
             if (associated(cg%bf)) then
                tab(:,:,:) = real( half * ( &
