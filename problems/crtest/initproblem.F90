@@ -168,12 +168,12 @@ contains
 
       use cg_leaves,      only: leaves
       use cg_list,        only: cg_list_element
-      use constants,      only: xdim, ydim, zdim, HI
+      use constants,      only: xdim, ydim, HI
       use dataio_pub,     only: die
       use domain,         only: dom
       use fluidindex,     only: flind
       use fluidtypes,     only: component_fluid
-      use func,           only: ekin, emag
+      use func,           only: ekin
       use grid_cont,      only: grid_container
       use initcosmicrays, only: gamma_crs, iarr_crs, ncrn, ncre
 
@@ -207,7 +207,7 @@ contains
          cg%u(fl%imx:fl%imz, :, :, :) = 0.0
 
 #ifndef ISO
-         cg%u(fl%ien,:,:,:) = p0/fl%gam_1 + emag(cg%b(xdim,:,:,:), cg%b(ydim,:,:,:), cg%b(zdim,:,:,:)) + &
+         cg%u(fl%ien,:,:,:) = p0/fl%gam_1 + cg%emag(cg%lhn) + &
               &               ekin(cg%u(fl%imx,:,:,:), cg%u(fl%imy,:,:,:), cg%u(fl%imz,:,:,:), cg%u(fl%idn,:,:,:))
 #endif /* !ISO */
 
@@ -426,10 +426,9 @@ contains
 
       use cg_list,        only: cg_list_element
       use cg_list_dataop, only: expanded_domain
-      use constants,      only: xdim, ydim, zdim
       use dataio_pub,     only: die
       use fluidindex,     only: flind
-      use func,           only: ekin, emag
+      use func,           only: ekin
       use initcosmicrays, only: gamma_crs, iarr_crs
 
       implicit none
@@ -444,7 +443,7 @@ contains
          cgl%cg%u(fl%idn, :, :, :) = d0
          cgl%cg%u(fl%imx:fl%imz, :, :, :) = 0.0
 #ifndef ISO
-         cgl%cg%u(fl%ien,:,:,:) = p0/fl%gam_1 + emag(cgl%cg%b(xdim,:,:,:), cgl%cg%b(ydim,:,:,:), cgl%cg%b(zdim,:,:,:)) + &
+         cgl%cg%u(fl%ien,:,:,:) = p0/fl%gam_1 + cgl%cg%emag(cgl%cg%lhn) + &
               &                   ekin(cgl%cg%u(fl%imx,:,:,:), cgl%cg%u(fl%imy,:,:,:), cgl%cg%u(fl%imz,:,:,:), cgl%cg%u(fl%idn,:,:,:))
 #endif /* !ISO */
 #ifdef COSM_RAYS
