@@ -40,7 +40,7 @@ module grid_cont
    implicit none
 
    private
-   public :: grid_container, pr_segment, tgt_list, is_overlap, segment, get_cs
+   public :: grid_container, tgt_list, is_overlap, segment, get_cs
 
    type(fluxpoint), target :: fpl, fpr, cpl, cpr
 
@@ -55,17 +55,6 @@ module grid_cont
       integer(kind=8), dimension(xdim:zdim, LO:HI) :: se2 !< auxiliary range, used in cg_level_connected:vertical_bf_prep
       type(grid_container), pointer :: local              !< set this pointer to non-null when the exchange is local
    end type segment
-
-   !> \brief coefficient-layer pair used for prolongation
-   type :: c_layer
-      integer :: layer                                                !< index of a layer with face-prolongation coefficient coeff
-      real    :: coeff                                                !< coefficient for face prolongation
-   end type c_layer
-
-   !> \brief segment type for prolongation and restriction
-   type, extends(segment) :: pr_segment
-      type(c_layer), dimension(:), allocatable :: f_lay               !< face layers to contribute to the prolonged face value
-   end type pr_segment
 
    !< \brief target list container for prolongations, restrictions and boundary exchanges
    type :: tgt_list
