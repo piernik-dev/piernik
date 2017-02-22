@@ -96,7 +96,6 @@ module fluidtypes
       procedure :: set_c   => update_freezing_speed
       procedure :: info    => printinfo_component_fluid
       procedure(tag),          nopass, deferred :: get_tag
-      procedure(cs_get),         pass, deferred :: get_cs
       procedure(flux_interface), pass, deferred :: compute_flux
       procedure(pass_flind),     pass, deferred :: initialize_indices
    end type component_fluid
@@ -134,17 +133,6 @@ module fluidtypes
          class(component_fluid), intent(inout) :: this
          type(var_numbers), intent(inout) :: flind
       end subroutine pass_flind
-
-      !> \todo try to remove dependency of this module on the grid_container
-      real function cs_get(this, i, j, k, u, b, cs_iso2)
-         import
-         implicit none
-         class(component_fluid),            intent(in) :: this
-         integer,                           intent(in) :: i, j, k !< cell indices
-         real, dimension(:,:,:,:), pointer, intent(in) :: u       !< pointer to array of fluid properties
-         real, dimension(:,:,:,:), pointer, intent(in) :: b       !< pointer to array of magnetic fields (used for ionized fluid with MAGNETIC #defined)
-         real, dimension(:,:,:),   pointer, intent(in) :: cs_iso2 !< pointer to array of isothermal sound speeds (used when ISO was #defined)
-      end function cs_get
 
       function tag()
          use constants, only: idlen

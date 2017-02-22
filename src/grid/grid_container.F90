@@ -40,7 +40,7 @@ module grid_cont
    implicit none
 
    private
-   public :: grid_container, pr_segment, tgt_list, is_overlap, segment
+   public :: grid_container, pr_segment, tgt_list, is_overlap, segment, get_cs
 
    type(fluxpoint), target :: fpl, fpr, cpl, cpr
 
@@ -1434,5 +1434,59 @@ contains
       endif
 
    end function emag_range
+
+
+   real function get_cs(this, i, j, k, u, b, cs_iso2) ! ion_cs
+
+      use constants,  only: two
+      use fluidtypes, only: component_fluid
+#ifndef ISO
+      use func,      only: ekin
+#endif /* !ISO */
+#ifdef MAGNETIC
+      use constants, only: xdim, ydim, zdim, half
+      use domain,    only: dom
+      use func,      only: emag
+#else /* !MAGNETIC */
+      use constants, only: zero
+#endif /* !MAGNETIC */
+
+      implicit none
+
+      class(component_fluid),            intent(in) :: this
+      integer,                           intent(in) :: i, j, k
+      real, dimension(:,:,:,:), pointer, intent(in) :: u       !< pointer to array of fluid properties
+      real, dimension(:,:,:,:), pointer, intent(in) :: b       !< pointer to array of magnetic fields (used for ionized fluid with MAGNETIC #defined)
+      real, dimension(:,:,:),   pointer, intent(in) :: cs_iso2 !< pointer to array of isothermal sound speeds (used when ISO was #defined)
+
+#ifdef MAGNETIC
+      real :: bx, by, bz
+#endif /* MAGNETIC */
+      real :: pmag, p, ps
+
+#ifdef MAGNETIC
+      bx = half*(b(xdim,i,j,k) + b(xdim, i+dom%D_x, j,         k        ))
+      by = half*(b(ydim,i,j,k) + b(ydim, i,         j+dom%D_y, k        ))
+      bz = half*(b(zdim,i,j,k) + b(zdim, i,         j,         k+dom%D_z))
+
+      pmag = emag(bx, by, bz)
+#else /* !MAGNETIC */
+      ! all_mag_boundaries has not been called so we cannot trust b(xdim, ie+dom%D_x:), b(ydim,:je+dom%D_y and b(zdim,:,:, ke+dom%D_z
+      pmag = zero
+#endif /* !MAGNETIC */
+
+#ifdef ISO
+      p  = cs_iso2(i, j, k) * u(this%idn, i, j, k)
+      ps = p + pmag
+      get_cs = sqrt(abs((two * pmag + p) / u(this%idn, i, j, k)))
+#else /* !ISO */
+      ps = (u(this%ien, i, j, k) - &
+         &   ekin(u(this%imx, i, j, k), u(this%imy, i, j, k), u(this%imz, i, j, k), u(this%idn, i, j, k)) &
+         & ) * (this%gam_1) + (two - this%gam) * pmag
+      p  = ps - pmag
+      get_cs = sqrt(abs((two * pmag + this%gam * p) / u(this%idn, i, j, k)))
+#endif /* !ISO */
+      if (.false.) print *, u(:, i, j, k), b(:, i, j, k), cs_iso2(i, j, k), this%cs
+   end function get_cs
 
 end module grid_cont

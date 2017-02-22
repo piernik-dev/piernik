@@ -51,7 +51,6 @@ module initionized
    type, extends(component_fluid) :: ion_fluid
       contains
          procedure, nopass :: get_tag
-         procedure, pass   :: get_cs => ion_cs
          procedure, pass   :: compute_flux => flux_ion
          procedure, pass   :: initialize_indices => initialize_ion_indices
    end type ion_fluid
@@ -80,56 +79,6 @@ contains
       call this%set_fluid_index(flind, is_magnetized, selfgrav, has_energy, cs_iso, gamma, ION)
 
    end subroutine initialize_ion_indices
-
-   real function ion_cs(this, i, j, k, u, b, cs_iso2)
-      use constants, only: two
-#ifndef ISO
-      use func,      only: ekin
-#endif /* !ISO */
-#ifdef MAGNETIC
-      use constants, only: xdim, ydim, zdim, half
-      use domain,    only: dom
-      use func,      only: emag
-#else /* !MAGNETIC */
-      use constants, only: zero
-#endif /* !MAGNETIC */
-
-      implicit none
-      class(ion_fluid),                  intent(in) :: this
-      integer,                           intent(in) :: i, j, k
-      real, dimension(:,:,:,:), pointer, intent(in) :: u       !< pointer to array of fluid properties
-      real, dimension(:,:,:,:), pointer, intent(in) :: b       !< pointer to array of magnetic fields (used for ionized fluid with MAGNETIC #defined)
-      real, dimension(:,:,:),   pointer, intent(in) :: cs_iso2 !< pointer to array of isothermal sound speeds (used when ISO was #defined)
-
-#ifdef MAGNETIC
-      real :: bx, by, bz
-#endif /* MAGNETIC */
-      real :: pmag, p, ps
-
-#ifdef MAGNETIC
-      bx = half*(b(xdim,i,j,k) + b(xdim, i+dom%D_x, j,         k        ))
-      by = half*(b(ydim,i,j,k) + b(ydim, i,         j+dom%D_y, k        ))
-      bz = half*(b(zdim,i,j,k) + b(zdim, i,         j,         k+dom%D_z))
-
-      pmag = emag(bx, by, bz)
-#else /* !MAGNETIC */
-      ! all_mag_boundaries has not been called so we cannot trust b(xdim, ie+dom%D_x:), b(ydim,:je+dom%D_y and b(zdim,:,:, ke+dom%D_z
-      pmag = zero
-#endif /* !MAGNETIC */
-
-#ifdef ISO
-      p  = cs_iso2(i, j, k) * u(this%idn, i, j, k)
-      ps = p + pmag
-      ion_cs = sqrt(abs((two * pmag + p) / u(this%idn, i, j, k)))
-#else /* !ISO */
-      ps = (u(this%ien, i, j, k) - &
-         &   ekin(u(this%imx, i, j, k), u(this%imy, i, j, k), u(this%imz, i, j, k), u(this%idn, i, j, k)) &
-         & ) * (this%gam_1) + (two - this%gam) * pmag
-      p  = ps - pmag
-      ion_cs = sqrt(abs((two * pmag + this%gam * p) / u(this%idn, i, j, k)))
-#endif /* !ISO */
-      if (.false.) print *, u(:, i, j, k), b(:, i, j, k), cs_iso2(i, j, k), this%cs
-   end function ion_cs
 
    function get_tag() result(tag)
       use constants, only: idlen

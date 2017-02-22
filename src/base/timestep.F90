@@ -317,7 +317,7 @@ contains
       use domain,             only: dom
       use fluidtypes,         only: component_fluid
       use global,             only: cfl, use_fargo
-      use grid_cont,          only: grid_container
+      use grid_cont,          only: grid_container, get_cs
 
       implicit none
 
@@ -350,7 +350,7 @@ contains
                      v(:) = 0.0
                   endif
 
-                  c(:) = max(v(:) + fl%get_cs(i, j, k, cg%u, cg%b, cg%cs_iso2), small)
+                  c(:) = max(v(:) + get_cs(fl, i, j, k, cg%u, cg%b, cg%cs_iso2), small)
                   c_fl = max(c_fl, maxval(c))
 
                   do d = xdim, zdim

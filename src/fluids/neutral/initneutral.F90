@@ -51,7 +51,6 @@ module initneutral
    type, extends(component_fluid) :: neutral_fluid
       contains
          procedure, nopass :: get_tag
-         procedure, pass   :: get_cs => neu_cs
          procedure, pass   :: compute_flux => flux_neu
          procedure, pass   :: initialize_indices => initialize_neu_indices
    end type neutral_fluid

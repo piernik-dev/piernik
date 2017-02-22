@@ -48,7 +48,6 @@ module initdust
    type, extends(component_fluid) :: dust_fluid
       contains
          procedure, nopass :: get_tag
-         procedure, pass   :: get_cs => dust_cs
          procedure, pass   :: compute_flux => flux_dust
          procedure, pass   :: initialize_indices => initialize_dust_indices
    end type dust_fluid
