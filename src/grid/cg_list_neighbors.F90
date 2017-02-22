@@ -284,8 +284,9 @@ contains
       use constants,  only: xdim, ydim, zdim, cor_dim, ndims, LO, HI, BND_MPI_FC, BND_FC
       use domain,     only: dom
       use gcpa,       only: gcpa_T
-      use grid_cont,  only: grid_container, is_overlap
+      use grid_cont,  only: grid_container
       use mpisetup,   only: FIRST, LAST, proc
+      use overlap,    only: is_overlap
 
       implicit none
 
