@@ -30,7 +30,8 @@
 
 module grid_cont
 
-   use grid_cont_basic,  only: grid_container_basic, tgt_list
+   use grid_cont_basic,  only: tgt_list
+   use grid_cont_dataop, only: grid_container_dataop
    use fluxtypes,        only: fluxpoint
    use refinement_flag,  only: ref_flag
 
@@ -42,7 +43,7 @@ module grid_cont
    type(fluxpoint), target :: fpl, fpr, cpl, cpr
 
    !> \brief Everything required for autonomous computation of a single sweep on a portion of the domain on a single process
-   type, extends(grid_container_basic) :: grid_container
+   type, extends(grid_container_dataop) :: grid_container
 
       ! Prolongation and restriction
 

@@ -318,7 +318,7 @@ contains
       use fluidtypes,         only: component_fluid
       use global,             only: cfl, use_fargo
       use grid_cont,          only: grid_container
-      use grid_cont_basic,    only: get_cs
+      use grid_cont_dataop,   only: get_cs
 
       implicit none
 
