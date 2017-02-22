@@ -43,13 +43,13 @@ contains
 !<
    real function timestep_interactions(cg) result(dt)
 
-      use constants,    only: small, I_ONE
-      use fluidindex,   only: flind
-      use func,         only: L2norm
-      use grid_cont,    only: grid_container
-      use interactions, only: collfaq, cfl_interact, has_interactions
-      use mpi,          only: MPI_MIN, MPI_DOUBLE_PRECISION
-      use mpisetup,     only: comm, mpi_err, FIRST, piernik_MPI_Bcast
+      use constants,       only: small, I_ONE
+      use fluidindex,      only: flind
+      use func,            only: L2norm
+      use grid_cont_basic, only: grid_container_basic
+      use interactions,    only: collfaq, cfl_interact, has_interactions
+      use mpi,             only: MPI_MIN, MPI_DOUBLE_PRECISION
+      use mpisetup,        only: comm, mpi_err, FIRST, piernik_MPI_Bcast
 
       implicit none
 
@@ -57,7 +57,7 @@ contains
       real :: dt_interact_all         !< timestep due to %interactions for all MPI blocks
       real :: val                     !< variable used to store the maximum value of relative momentum
 
-      type(grid_container), pointer, intent(in) :: cg
+      class(grid_container_basic), pointer, intent(in) :: cg
 
       !    dt_interact_proc = 1.0 / (maxval(collfaq)+small) / maxval(cg%u(iarr_all_dn,:,:,:))
 

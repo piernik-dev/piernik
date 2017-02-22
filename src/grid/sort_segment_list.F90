@@ -38,9 +38,9 @@
 
 module sort_segment_list
 
-   use constants,     only: xdim, zdim, LO, HI
-   use grid_cont,     only: grid_container
-   use sortable_list, only: sortable_list_T
+   use constants,       only: xdim, zdim, LO, HI
+   use grid_cont_basic, only: grid_container_basic
+   use sortable_list,   only: sortable_list_T
 
    implicit none
 
@@ -53,7 +53,7 @@ module sort_segment_list
       integer(kind=8), dimension(xdim:zdim, LO:HI) :: se  !< range
       integer(kind=8) :: offset                           !< offset within the chunk
       integer(kind=8) :: off_ceil                         !< offset of last element within the chunk
-      type(grid_container), pointer :: cg                 !< source/target grid container
+      class(grid_container_basic), pointer :: cg          !< source/target grid container
       integer :: dir                                      !< direction of the boundary segment
    end type seg
 
@@ -81,15 +81,15 @@ contains
 
    subroutine add(this, tag, se, cg, dir)
 
-      use constants, only: INVALID
-      use grid_cont, only: grid_container
+      use constants,       only: INVALID
+      use grid_cont_basic, only: grid_container_basic
 
       implicit none
 
       class(sort_segment_list_T),                   intent(inout) :: this !< object invoking type-bound procedure
       integer(kind=4),                              intent(in)    :: tag
       integer(kind=8), dimension(xdim:zdim, LO:HI), intent(in)    :: se
-      type(grid_container), pointer,                intent(in)    :: cg
+      class(grid_container_basic), pointer,         intent(in)    :: cg
       integer,                                      intent(in)    :: dir
 
       type(seg), dimension(:), allocatable :: tmp
