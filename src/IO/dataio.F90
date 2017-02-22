@@ -1179,7 +1179,7 @@ contains
       use fluidtypes,       only: phys_prop, component_fluid
       use func,             only: ekin
       use global,           only: cfl, use_fargo
-      use grid_cont,        only: get_cs
+      use grid_cont_basic,  only: get_cs
       use mpisetup,         only: master
       use named_array_list, only: qna
       use units,            only: mH, kboltz

@@ -236,7 +236,8 @@ contains
       use cg_list,          only: cg_list_element
       use constants,        only: xdim, cor_dim, INVALID
       use dataio_pub,       only: die
-      use grid_cont,        only: grid_container, segment
+      use grid_cont,        only: grid_container
+      use grid_cont_basic,  only: segment
 
       implicit none
 
@@ -463,7 +464,8 @@ contains
       use cg_list,          only: cg_list_element
       use constants,        only: xdim, ydim, zdim, cor_dim, LO, HI, I_ONE, I_TWO
       use dataio_pub,       only: die, warn
-      use grid_cont,        only: grid_container, segment
+      use grid_cont,        only: grid_container
+      use grid_cont_basic,  only: segment
       use mpi,              only: MPI_DOUBLE_PRECISION, MPI_STATUS_SIZE
       use mpisetup,         only: comm, mpi_err, req, inflate_req
       use named_array_list, only: wna
