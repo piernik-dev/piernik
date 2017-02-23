@@ -102,7 +102,7 @@ contains
               &       (this%bf(ydim)%arr(ijk(xdim), ijk(ydim), ijk(zdim)) + this%bf(ydim)%arr(ijk(xdim), ijk(ydim)+I_ONE, ijk(zdim)))/2., &
               &       (this%bf(zdim)%arr(ijk(xdim), ijk(ydim), ijk(zdim)) + this%bf(zdim)%arr(ijk(xdim), ijk(ydim), ijk(zdim)+I_ONE))/2.)
       else
-         call die("[grid_container:emag_point] no magnetic field declared here")
+         call die("[grid_container_dataop:emag_point] no magnetic field declared here")
          e_mag = 0.
       endif
 
@@ -135,7 +135,7 @@ contains
               &       (this%bf(zdim)%arr(ijk(xdim, LO):ijk(xdim, HI), ijk(ydim, LO):ijk(ydim, HI), ijk(zdim, LO)      :ijk(zdim, HI)      ) + &
               &        this%bf(zdim)%arr(ijk(xdim, LO):ijk(xdim, HI), ijk(ydim, LO):ijk(ydim, HI), ijk(zdim, LO)+I_ONE:ijk(zdim, HI)+I_ONE))/2.)
       else
-         call die("[grid_container:emag_range] no magnetic field declared here")
+         call die("[grid_container_dataop:emag_range] no magnetic field declared here")
          e_mag = 0.
       endif
 
@@ -173,9 +173,18 @@ contains
             get_cs = zero
          case (ION)
 #ifdef MAGNETIC
-            bx = half*(this%b(xdim,i,j,k) + this%b(xdim, i+dom%D_x, j,         k        ))
-            by = half*(this%b(ydim,i,j,k) + this%b(ydim, i,         j+dom%D_y, k        ))
-            bz = half*(this%b(zdim,i,j,k) + this%b(zdim, i,         j,         k+dom%D_z))
+            if (associated(this%b)) then
+               bx = half*(this%b(xdim, i, j, k) + this%b(xdim, i+dom%D_x, j,         k        ))
+               by = half*(this%b(ydim, i, j, k) + this%b(ydim, i,         j+dom%D_y, k        ))
+               bz = half*(this%b(zdim, i, j, k) + this%b(zdim, i,         j,         k+dom%D_z))
+            else if (associated(this%bf)) then
+               bx = half*(this%bf(xdim)%arr(i, j, k) + this%bf(xdim)%arr(i+dom%D_x, j,         k        ))
+               by = half*(this%bf(ydim)%arr(i, j, k) + this%bf(ydim)%arr(i,         j+dom%D_y, k        ))
+               bz = half*(this%bf(zdim)%arr(i, j, k) + this%bf(zdim)%arr(i,         j,         k+dom%D_z))
+            else
+               call die("[grid_container_dataop:get_cs] no magnetic field declared here")
+               bx = zero; by = zero; bz = zero
+            endif
 
             pmag = emag(bx, by, bz)
 #else /* !MAGNETIC */
