@@ -68,36 +68,214 @@ contains
 
     ! ToDo: check if changes of execution order here (block loop, direction loop, boundary update can change
     ! cost or allow for reduction of required guardcells
-    cgl => leaves%first
-    do while (associated(cgl))
+    do ddim = xdim, zdim, 1
+      if (dom%has_dir(ddim)) then
+         cgl => leaves%first
+         do while (associated(cgl))
 
-       do ddim = xdim, zdim, 1
-          ! Warning: 2.5D MHD may need all directional calls anyway
-          if (.not. skip_sweep(ddim) .and. dom%has_dir(ddim)) call sweep_dsplit(cgl%cg,dt,ddim)
-       enddo
-       if (associated(problem_customize_solution)) call problem_customize_solution(.true.)
-       cgl => cgl%nxt
+            ! Warning: 2.5D MHD may need all directional calls anyway
+            if (.not. skip_sweep(ddim)) call sweep_dsplit(cgl%cg,dt,ddim)
+            if (associated(problem_customize_solution)) call problem_customize_solution(.true.)
+            cgl => cgl%nxt
+         enddo
+         call all_bnd
+#ifdef MAGNETIC
+         call magfield(ddim)
+#endif /* MAGNETIC */
+      endif
     enddo
-    call all_bnd
 
     t = t + dt
     dtm = dt
     halfstep = .true.
 
-    cgl => leaves%first
-    do while (associated(cgl))
+    do ddim = zdim, xdim, -1
+       if (dom%has_dir(ddim)) then
+#ifdef MAGNETIC
+          call magfield(ddim)
+#endif /* MAGNETIC */
+          cgl => leaves%first
+          do while (associated(cgl))
 
-       do ddim = zdim, xdim, -1
-          if (.not. skip_sweep(ddim) .and. dom%has_dir(ddim)) call sweep_dsplit(cgl%cg,dt,ddim)
-       enddo
-       if (associated(problem_customize_solution)) call problem_customize_solution(.false.)
-       cgl => cgl%nxt
+             if (.not. skip_sweep(ddim)) call sweep_dsplit(cgl%cg,dt,ddim)
+             if (associated(problem_customize_solution)) call problem_customize_solution(.false.)
+             cgl => cgl%nxt
+          enddo
+          call all_bnd
+       endif
     enddo
-    call all_bnd
 
     if (first_run) first_run = .false.
 
   end subroutine fluid_update
+
+!-------------------------------------------------------------------------------------------------------------------
+
+#ifdef MAGNETIC
+   subroutine magfield(dir)
+
+      use ct,     only: advectb, ctb
+      use constants,   only: ndims, I_ONE
+! #ifdef RESISTIVE
+!       use resistivity, only: diffuseb
+! #endif /* RESISTIVE */
+
+       implicit none
+
+       integer(kind=4), intent(in) :: dir
+
+       integer(kind=4)             :: bdir, dstep
+
+       do dstep = 0, 1
+          bdir  = I_ONE + mod(dir+dstep,ndims)
+          call advectb(bdir, dir)
+! #ifdef RESISTIVE
+!          call diffuseb(bdir, dir)
+! #endif /* RESISTIVE */
+         call mag_add(dir, bdir)
+      enddo
+
+   end subroutine magfield
+
+!-------------------------------------------------------------------------------------------------------------------
+
+ subroutine mag_add(dim1, dim2)
+
+      use cg_leaves,        only: leaves
+      use cg_list,          only: cg_list_element
+      use grid_cont,        only: grid_container
+      use all_boundaries,   only: all_mag_boundaries
+      use user_hooks,       only: custom_emf_bnd
+! #ifdef RESISTIVE
+!       use constants,        only: wcu_n
+!       use dataio_pub,       only: die
+!       use domain,           only: is_multicg
+!       use named_array_list, only: qna
+! #endif /* RESISTIVE */
+
+      implicit none
+
+      integer(kind=4), intent(in)    :: dim1, dim2
+
+      type(cg_list_element), pointer :: cgl
+      type(grid_container),  pointer :: cg
+! #ifdef RESISTIVE
+!       real, dimension(:,:,:), pointer :: wcu
+! #endif /* RESISTIVE */
+
+      cgl => leaves%first
+      do while (associated(cgl))
+         cg => cgl%cg
+! #ifdef RESISTIVE
+! ! DIFFUSION FULL STEP
+!          wcu => cg%q(qna%ind(wcu_n))%arr
+!          if (is_multicg) call die("[fluidupdate:mag_add] multiple grid pieces per processor not implemented yet") ! not tested custom_emf_bnd
+!          if (associated(custom_emf_bnd)) call custom_emf_bnd(wcu)
+!          cg%b(dim2,:,:,:) = cg%b(dim2,:,:,:) -              wcu*cg%idl(dim1)
+!          cg%b(dim2,:,:,:) = cg%b(dim2,:,:,:) + pshift(wcu,dim1)*cg%idl(dim1)
+!          cg%b(dim1,:,:,:) = cg%b(dim1,:,:,:) +              wcu*cg%idl(dim2)
+!          cg%b(dim1,:,:,:) = cg%b(dim1,:,:,:) - pshift(wcu,dim2)*cg%idl(dim2)
+! #endif /* RESISTIVE */
+! ADVECTION FULL STEP
+         if (associated(custom_emf_bnd)) call custom_emf_bnd(cg%wa)
+         cg%b(dim2,:,:,:) = cg%b(dim2,:,:,:) - cg%wa*cg%idl(dim1)
+         cg%wa = mshift(cg%wa,dim1)
+         cg%b(dim2,:,:,:) = cg%b(dim2,:,:,:) + cg%wa*cg%idl(dim1)
+         cg%b(dim1,:,:,:) = cg%b(dim1,:,:,:) - cg%wa*cg%idl(dim2)
+         cg%wa = pshift(cg%wa,dim2)
+         cg%b(dim1,:,:,:) = cg%b(dim1,:,:,:) + cg%wa*cg%idl(dim2)
+         cgl => cgl%nxt
+      enddo
+
+      call all_mag_boundaries
+
+   end subroutine mag_add
+
+!-------------------------------------------------------------------------------------------------------------------
+
+!>
+!! \brief Function pshift makes one-cell, forward circular shift of 3D array in any direction
+!! \param tab input array
+!! \param d direction of the shift, where 1,2,3 corresponds to \a x,\a y,\a z respectively
+!! \return real, dimension(size(tab,1),size(tab,2),size(tab,3))
+!!
+!! The function was written in order to significantly improve
+!! the performance at the cost of the flexibility of original \p CSHIFT.
+!<
+   function pshift(tab, d)
+
+      use dataio_pub,    only: warn
+
+      implicit none
+
+      real, dimension(:,:,:), intent(inout) :: tab
+      integer(kind=4),        intent(in)    :: d
+
+      integer :: ll
+      real, dimension(size(tab,1),size(tab,2),size(tab,3)) :: pshift
+
+      ll = size(tab,d)
+
+      if (ll==1) then
+         pshift = tab
+         return
+      endif
+
+      if (d==1) then
+         pshift(1:ll-1,:,:) = tab(2:ll,:,:); pshift(ll,:,:) = tab(1,:,:)
+      else if (d==2) then
+         pshift(:,1:ll-1,:) = tab(:,2:ll,:); pshift(:,ll,:) = tab(:,1,:)
+      else if (d==3) then
+         pshift(:,:,1:ll-1) = tab(:,:,2:ll); pshift(:,:,ll) = tab(:,:,1)
+      else
+         call warn('[fluidupdate:pshift]: Dim ill defined in pshift!')
+      endif
+
+      return
+   end function pshift
+
+!>
+!! \brief Function mshift makes one-cell, backward circular shift of 3D array in any direction
+!! \param tab input array
+!! \param d direction of the shift, where 1,2,3 corresponds to \a x,\a y,\a z respectively
+!! \return real, dimension(size(tab,1),size(tab,2),size(tab,3))
+!!
+!! The function was written in order to significantly improve
+!! the performance at the cost of the flexibility of original \p CSHIFT.
+!<
+   function mshift(tab,d)
+
+      use dataio_pub,    only: warn
+
+      implicit none
+
+      real, dimension(:,:,:), intent(inout) :: tab
+      integer(kind=4),        intent(in)    :: d
+
+      integer :: ll
+      real, dimension(size(tab,1) , size(tab,2) , size(tab,3)) :: mshift
+
+      ll = size(tab,d)
+
+      if (ll==1) then
+         mshift = tab
+         return
+      endif
+
+      if (d==1) then
+         mshift(2:ll,:,:) = tab(1:ll-1,:,:); mshift(1,:,:) = tab(ll,:,:)
+      else if (d==2) then
+         mshift(:,2:ll,:) = tab(:,1:ll-1,:); mshift(:,1,:) = tab(:,ll,:)
+      else if (d==3) then
+         mshift(:,:,2:ll) = tab(:,:,1:ll-1); mshift(:,:,1) = tab(:,:,ll)
+      else
+         call warn('[fluidupdate:mshift]: Dim ill defined in mshift!')
+      endif
+
+      return
+   end function mshift
+
+#endif /* MAGNETIC */
 
 !-------------------------------------------------------------------------------------------------------------------
 
@@ -123,11 +301,11 @@ contains
        do i1 = cg%lhn(pdims(ddim, ORTHO1), LO), cg%lhn(pdims(ddim, ORTHO1), HI)
           pu => cg%w(wna%fi)%get_sweep(ddim,i1,i2)
           pb => cg%w(wna%bi)%get_sweep(ddim,i1,i2)
-          u1d(iarr_all_swp(ddim,:),:) = pu(:,:)
-          b_cc1d(iarr_mag_swp(ddim,:),:) = pb(:,:)
+          u1d(iarr_all_swp(ddim,:),:) = pu(:,:); 
+          b_cc1d(iarr_mag_swp(ddim,:),:) = pb(:,:) ! ToDo: construct proper averaging to cell centers here
           call solve(u1d,b_cc1d, dt/cg%dl(ddim))
           pu(:,:) = u1d(iarr_all_swp(ddim,:),:)
-          pb(:,:) = b_cc1d(iarr_mag_swp(ddim,:),:)
+          ! pb(:,:) = b_cc1d(iarr_mag_swp(ddim,:),:)
        enddo
     enddo
 
@@ -390,7 +568,7 @@ contains
                  p_bccl => b0
                  p_bccr => b0
               endif
-              call riemann_hlld(nx, p_flx, p_ql, p_qr, p_bcc, p_bccl, p_bccr, fl%gam)
+              call riemann_hlld(nx, p_flx, p_ql, p_qr, p_bcc, p_bccl, p_bccr, fl%gam) ! whole mag_cc is not needed now for simple schemes but rk2 and rk4 still rely on it
            enddo
 
         end subroutine riemann_wrap
@@ -418,12 +596,12 @@ contains
            u(:,1) = u(:,2)
            u(:,nx) = u(:,nx-1)
 
-           b_cc(:,2:nx) = b_cc(:,2:nx) + w(1) * dtodx * (mag_cc(:,1:nx-1) - mag_cc(:,2:nx))
-           if (size(w)>=2)  b_cc(:,2:nx) = b_cc(:,2:nx) + w(2) * db1(:,2:nx)
-           if (size(w)>=3)  b_cc(:,2:nx) = b_cc(:,2:nx) + w(3) * db2(:,2:nx)
-           if (size(w)>=4)  b_cc(:,2:nx) = b_cc(:,2:nx) + w(4) * db3(:,2:nx)
-           b_cc(:,1) = b_cc(:,2)
-           b_cc(:,nx) = b_cc(:,nx-1)
+!!$           b_cc(:,2:nx) = b_cc(:,2:nx) + w(1) * dtodx * (mag_cc(:,1:nx-1) - mag_cc(:,2:nx))
+!!$           if (size(w)>=2)  b_cc(:,2:nx) = b_cc(:,2:nx) + w(2) * db1(:,2:nx)
+!!$           if (size(w)>=3)  b_cc(:,2:nx) = b_cc(:,2:nx) + w(3) * db2(:,2:nx)
+!!$           if (size(w)>=4)  b_cc(:,2:nx) = b_cc(:,2:nx) + w(4) * db3(:,2:nx)
+!!$           b_cc(:,1) = b_cc(:,2)
+!!$           b_cc(:,nx) = b_cc(:,nx-1)
 
            deallocate(w)
 
