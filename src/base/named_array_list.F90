@@ -251,19 +251,20 @@ contains
 
       if (slave) return
 
-      select type(this)
-         type is (na_var_list_f)
-            write(msg,'(a,i2,a)')"[named_array_list:print_vars] Found ",size(this%lst(:))," face-centered arrays:"
-            call printinfo(msg, to_stdout)
-         type is (na_var_list_w)
-            write(msg,'(a,i2,a)')"[named_array_list:print_vars] Found ",size(this%lst(:))," rank-4 arrays:"
-            call printinfo(msg, to_stdout)
-         type is (na_var_list_q)
-            write(msg,'(a,i2,a)')"[named_array_list:print_vars] Found ",size(this%lst(:))," rank-3 arrays:"
-            call printinfo(msg, to_stdout)
-      end select
-
       if (allocated(this%lst)) then
+
+         select type(this)
+            type is (na_var_list_f)
+               write(msg,'(a,i2,a)')"[named_array_list:print_vars] Found ",size(this%lst(:))," face-centered arrays:"
+               call printinfo(msg, to_stdout)
+            type is (na_var_list_w)
+               write(msg,'(a,i2,a)')"[named_array_list:print_vars] Found ",size(this%lst(:))," rank-4 arrays:"
+               call printinfo(msg, to_stdout)
+            type is (na_var_list_q)
+               write(msg,'(a,i2,a)')"[named_array_list:print_vars] Found ",size(this%lst(:))," rank-3 arrays:"
+               call printinfo(msg, to_stdout)
+         end select
+
          do i = lbound(this%lst(:), dim=1), ubound(this%lst(:), dim=1)
             if (this%lst(i)%dim4 == INVALID) then
                write(msg,'(3a,l2,a,i2,a,l2,a,i2)')"'", this%lst(i)%name, "', vital=", this%lst(i)%vital, ", restart_mode=", this%lst(i)%restart_mode, &
