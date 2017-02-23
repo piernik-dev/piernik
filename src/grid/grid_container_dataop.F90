@@ -41,6 +41,7 @@ module grid_cont_dataop
    type, extends(grid_container_basic) :: grid_container_dataop
    contains
 
+      procedure       :: get_cs                               !< calculate the speed of sound at given position
       procedure       :: set_constant_b_field                 !< set constant magnetic field on whole block
       procedure       :: emag_point                           !< return energy asociated with magnetic field at specified point
       procedure       :: emag_range                           !< return energy asociated with magnetic field at specified range
@@ -140,58 +141,73 @@ contains
 
    end function emag_range
 
+!< \brief calculate the speed of sound at given position
 
-   real function get_cs(this, i, j, k, u, b, cs_iso2) ! ion_cs
+   real function get_cs(this, fl, i, j, k) ! ion_cs
 
-      use constants,  only: two
+      use constants,  only: zero, two, ION, NEU, DST
+      use dataio_pub, only: die
       use fluidtypes, only: component_fluid
 #ifndef ISO
-      use func,      only: ekin
+      use func,       only: ekin
 #endif /* !ISO */
 #ifdef MAGNETIC
-      use constants, only: xdim, ydim, zdim, half
-      use domain,    only: dom
-      use func,      only: emag
-#else /* !MAGNETIC */
-      use constants, only: zero
+      use constants,  only: xdim, ydim, zdim, half
+      use domain,     only: dom
+      use func,       only: emag
 #endif /* !MAGNETIC */
 
       implicit none
 
-      class(component_fluid),            intent(in) :: this
-      integer,                           intent(in) :: i, j, k
-      real, dimension(:,:,:,:), pointer, intent(in) :: u       !< pointer to array of fluid properties
-      real, dimension(:,:,:,:), pointer, intent(in) :: b       !< pointer to array of magnetic fields (used for ionized fluid with MAGNETIC #defined)
-      real, dimension(:,:,:),   pointer, intent(in) :: cs_iso2 !< pointer to array of isothermal sound speeds (used when ISO was #defined)
+      class(grid_container_dataop), intent(in) :: this
+      class(component_fluid),       intent(in) :: fl
+      integer,                      intent(in) :: i, j, k
 
 #ifdef MAGNETIC
       real :: bx, by, bz
 #endif /* MAGNETIC */
       real :: pmag, p, ps
 
+      select case (fl%tag)
+         case (DST)
+            get_cs = zero
+         case (ION)
 #ifdef MAGNETIC
-      bx = half*(b(xdim,i,j,k) + b(xdim, i+dom%D_x, j,         k        ))
-      by = half*(b(ydim,i,j,k) + b(ydim, i,         j+dom%D_y, k        ))
-      bz = half*(b(zdim,i,j,k) + b(zdim, i,         j,         k+dom%D_z))
+            bx = half*(this%b(xdim,i,j,k) + this%b(xdim, i+dom%D_x, j,         k        ))
+            by = half*(this%b(ydim,i,j,k) + this%b(ydim, i,         j+dom%D_y, k        ))
+            bz = half*(this%b(zdim,i,j,k) + this%b(zdim, i,         j,         k+dom%D_z))
 
-      pmag = emag(bx, by, bz)
+            pmag = emag(bx, by, bz)
 #else /* !MAGNETIC */
-      ! all_mag_boundaries has not been called so we cannot trust b(xdim, ie+dom%D_x:), b(ydim,:je+dom%D_y and b(zdim,:,:, ke+dom%D_z
-      pmag = zero
+            ! all_mag_boundaries has not been called so we cannot trust b(xdim, ie+dom%D_x:), b(ydim,:je+dom%D_y and b(zdim,:,:, ke+dom%D_z
+            pmag = zero
 #endif /* !MAGNETIC */
-
 #ifdef ISO
-      p  = cs_iso2(i, j, k) * u(this%idn, i, j, k)
-      ps = p + pmag
-      get_cs = sqrt(abs((two * pmag + p) / u(this%idn, i, j, k)))
+            p  = this%cs_iso2(i, j, k) * this%u(fl%idn, i, j, k)
+            ps = p + pmag
+            get_cs = sqrt(abs((two * pmag + p) / this%u(fl%idn, i, j, k)))
 #else /* !ISO */
-      ps = (u(this%ien, i, j, k) - &
-         &   ekin(u(this%imx, i, j, k), u(this%imy, i, j, k), u(this%imz, i, j, k), u(this%idn, i, j, k)) &
-         & ) * (this%gam_1) + (two - this%gam) * pmag
-      p  = ps - pmag
-      get_cs = sqrt(abs((two * pmag + this%gam * p) / u(this%idn, i, j, k)))
+            ps = (this%u(fl%ien, i, j, k) - &
+                 &   ekin(this%u(fl%imx, i, j, k), this%u(fl%imy, i, j, k), this%u(fl%imz, i, j, k), this%u(fl%idn, i, j, k)) &
+                 & ) * fl%gam_1 + (two - fl%gam) * pmag
+            p  = ps - pmag
+            get_cs = sqrt(abs((two * pmag + fl%gam * p) / this%u(fl%idn, i, j, k)))
 #endif /* !ISO */
-      if (.false.) print *, u(:, i, j, k), b(:, i, j, k), cs_iso2(i, j, k), this%cs
+
+         case (NEU)
+#ifdef ISO
+            get_cs = sqrt(this%cs_iso2(i, j, k))
+#else /* !ISO */
+            p = (this%u(fl%ien, i, j, k) - &
+                 &   ekin(this%u(fl%imx, i, j, k), this%u(fl%imy, i, j, k), this%u(fl%imz, i, j, k), this%u(fl%idn, i, j, k)) &
+                 & ) * fl%gam_1
+            get_cs = sqrt(abs((fl%gam * p) / this%u(fl%idn, i, j, k)))
+#endif /* !ISO */
+         case default
+            call die("[grid_container_dataop:get_cs] unknown fluid (!ISO)")
+            get_cs = zero
+      end select
+
    end function get_cs
 
 end module grid_cont_dataop

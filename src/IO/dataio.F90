@@ -1179,7 +1179,6 @@ contains
       use fluidtypes,       only: phys_prop, component_fluid
       use func,             only: ekin
       use global,           only: cfl, use_fargo
-      use grid_cont_dataop, only: get_cs
       use mpisetup,         only: master
       use named_array_list, only: qna
       use units,            only: mH, kboltz
@@ -1243,7 +1242,7 @@ contains
             do k = cgl%cg%ks, cgl%cg%ke
                do j = cgl%cg%js, cgl%cg%je
                   do i = cgl%cg%is, cgl%cg%ie
-                     cgl%cg%wa(i, j, k) = cgl%cg%wa(i, j, k) + get_cs(fl, i, j, k, cgl%cg%u, cgl%cg%b, cgl%cg%cs_iso2)
+                     cgl%cg%wa(i, j, k) = cgl%cg%wa(i, j, k) + cgl%cg%get_cs(fl, i, j, k)
                   enddo
                enddo
             enddo

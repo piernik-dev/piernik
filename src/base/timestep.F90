@@ -318,7 +318,6 @@ contains
       use fluidtypes,         only: component_fluid
       use global,             only: cfl, use_fargo
       use grid_cont,          only: grid_container
-      use grid_cont_dataop,   only: get_cs
 
       implicit none
 
@@ -351,7 +350,7 @@ contains
                      v(:) = 0.0
                   endif
 
-                  c(:) = max(v(:) + get_cs(fl, i, j, k, cg%u, cg%b, cg%cs_iso2), small)
+                  c(:) = max(v(:) + cg%get_cs(fl, i, j, k), small)
                   c_fl = max(c_fl, maxval(c))
 
                   do d = xdim, zdim
