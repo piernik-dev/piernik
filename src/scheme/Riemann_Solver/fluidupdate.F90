@@ -279,6 +279,41 @@ contains
 
 !-------------------------------------------------------------------------------------------------------------------
 
+  function get_b_cc_sweep(cg, ddim, i1, i2) result(b_cc1d)
+
+     use constants,        only: pdims, xdim, zdim, half, ORTHO1, ORTHO2
+     use domain,           only: dom
+     use grid_cont,        only: grid_container
+     use named_array_list, only: wna
+
+     implicit none
+
+     type(grid_container), pointer, intent(in) :: cg
+     integer(kind=4),               intent(in) :: ddim
+     integer,                       intent(in) :: i1, i2
+
+     real, dimension(xdim:zdim, cg%n_(ddim)) :: b_cc1d
+     real, dimension(:,:), pointer :: pb
+     integer(kind=4) :: d
+
+     pb => cg%w(wna%bi)%get_sweep(ddim, i1, i2)
+     b_cc1d = pb(:,:)
+     b_cc1d(ddim, :cg%n_(ddim)-1) = half * (b_cc1d(ddim, :cg%n_(ddim)-1) + pb(ddim, 2:cg%n_(ddim)))
+
+     d = pdims(ddim, ORTHO1)
+     if (dom%has_dir(d) .and. cg%n_(d) < i1+1) then
+        pb => cg%w(wna%bi)%get_sweep(ddim, i1+1, i2)
+        b_cc1d(d, :) = half * (b_cc1d(d, :) + pb(d, :))
+     endif
+
+     d = pdims(ddim, ORTHO2)
+     if (dom%has_dir(d) .and. cg%n_(d) < i2+1) then
+        pb => cg%w(wna%bi)%get_sweep(ddim, i1, i2+1)
+        b_cc1d(d, :) = half * (b_cc1d(d, :) + pb(d, :))
+     endif
+
+  end function get_b_cc_sweep
+
   subroutine sweep_dsplit(cg, dt, ddim)
 
     use constants,        only: pdims, xdim, zdim, ORTHO1, ORTHO2, LO, HI
@@ -294,15 +329,15 @@ contains
 
     real, dimension(size(cg%u,1), cg%n_(ddim)) :: u1d
     real, dimension(xdim:zdim, cg%n_(ddim))   :: b_cc1d
-    real, dimension(:,:), pointer             :: pu, pb
+    real, dimension(:,:), pointer             :: pu !, pb
     integer                                   :: i1, i2
 
     do i2 = cg%lhn(pdims(ddim, ORTHO2), LO), cg%lhn(pdims(ddim,ORTHO2), HI)
        do i1 = cg%lhn(pdims(ddim, ORTHO1), LO), cg%lhn(pdims(ddim, ORTHO1), HI)
           pu => cg%w(wna%fi)%get_sweep(ddim,i1,i2)
-          pb => cg%w(wna%bi)%get_sweep(ddim,i1,i2)
+          ! pb => cg%w(wna%bi)%get_sweep(ddim,i1,i2)
           u1d(iarr_all_swp(ddim,:),:) = pu(:,:); 
-          b_cc1d(iarr_mag_swp(ddim,:),:) = pb(:,:) ! ToDo: construct proper averaging to cell centers here
+          b_cc1d(iarr_mag_swp(ddim,:),:) = get_b_cc_sweep(cg, ddim, i1, i2)
           call solve(u1d,b_cc1d, dt/cg%dl(ddim))
           pu(:,:) = u1d(iarr_all_swp(ddim,:),:)
           ! pb(:,:) = b_cc1d(iarr_mag_swp(ddim,:),:)
