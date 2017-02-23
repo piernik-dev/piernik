@@ -936,7 +936,7 @@ contains
             do k = cg%ks, cg%ke
                do j = cg%js, cg%je
                   do i = cg%is, cg%ie
-                     tab(i-cg%is+1, j-cg%js+1, k-cg%ks+1) = real(sqrt(pi/newtong/cg%u(flind%ion%idn, i, j, k)) * flind%ion%get_cs(i, j, k, cg%u, cg%b, cg%cs_iso2)/delx, kind=4)
+                     tab(i-cg%is+1, j-cg%js+1, k-cg%ks+1) = real(sqrt(pi/newtong/cg%u(flind%ion%idn, i, j, k)) * cg%get_cs(flind%ion, i, j, k)/delx, kind=4)
                   enddo
                enddo
             enddo
@@ -944,7 +944,7 @@ contains
             do k = cg%ks, cg%ke
                do j = cg%js, cg%je
                   do i = cg%is, cg%ie
-                     tab(i-cg%is+1, j-cg%js+1, k-cg%ks+1) = real(flind%ion%get_cs(i, j, k, cg%u, cg%b, cg%cs_iso2), kind=4)
+                     tab(i-cg%is+1, j-cg%js+1, k-cg%ks+1) = real(cg%get_cs(flind%ion, i, j, k), kind=4)
                   enddo
                enddo
             enddo
@@ -952,7 +952,7 @@ contains
             do k = cg%ks, cg%ke
                do j = cg%js, cg%je
                   do i = cg%is, cg%ie
-                     tab(i-cg%is+1, j-cg%js+1, k-cg%ks+1) = real(sqrt(2*ekin(cg%u(flind%ion%imx, i, j, k), cg%u(flind%ion%imy, i, j, k), cg%u(flind%ion%imz, i, j, k), cg%u(flind%ion%idn, i, j, k)**2)) / flind%ion%get_cs(i, j, k, cg%u, cg%b, cg%cs_iso2), kind=4)
+                     tab(i-cg%is+1, j-cg%js+1, k-cg%ks+1) = real(sqrt(2*ekin(cg%u(flind%ion%imx, i, j, k), cg%u(flind%ion%imy, i, j, k), cg%u(flind%ion%imz, i, j, k), cg%u(flind%ion%idn, i, j, k)**2)) / cg%get_cs(flind%ion, i, j, k), kind=4)
                   enddo
                enddo
             enddo

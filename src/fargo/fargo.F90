@@ -292,7 +292,7 @@ contains
 !           v_mean = sum(cg%u(pfl%imy, i, :, :) / cg%u(pfl%idn, i, :, :)) / size(cg%u(pfl%idn, i, :, :))
 !           nshft = nint(v_mean * dt / dphi)
 !           v_cr = v_mean - nshft * dphi / dt
-!           c_fl = max(c_fl, abs(v_cr) + pfl%get_cs(i, cg%js, cg%ks, cg%u, cg%b, cg%cs_iso2))
+!           c_fl = max(c_fl, abs(v_cr) + cg%get_cs(pfl, i, cg%js, cg%ks))
 !           dt_res = min(dt_res, dphi / c_fl)
 !        enddo
 !     enddo
