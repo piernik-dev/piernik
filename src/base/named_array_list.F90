@@ -238,7 +238,7 @@ contains
 
    subroutine print_vars(this, to_stdout)
 
-      use constants,  only: INVALID
+      use constants,  only: INVALID, cbuff_len
       use dataio_pub, only: printinfo, msg
       use mpisetup,   only: slave
 
@@ -248,6 +248,7 @@ contains
       logical, optional,  intent(in) :: to_stdout
 
       integer :: i
+      character(len=cbuff_len) :: descr
 
       if (slave) return
 
@@ -255,15 +256,16 @@ contains
 
          select type(this)
             type is (na_var_list_f)
-               write(msg,'(a,i2,a)')"[named_array_list:print_vars] Found ",size(this%lst(:))," face-centered arrays:"
-               call printinfo(msg, to_stdout)
+               descr = " face-centered arrays:"
             type is (na_var_list_w)
-               write(msg,'(a,i2,a)')"[named_array_list:print_vars] Found ",size(this%lst(:))," rank-4 arrays:"
-               call printinfo(msg, to_stdout)
+               descr = " rank-4 arrays:"
             type is (na_var_list_q)
-               write(msg,'(a,i2,a)')"[named_array_list:print_vars] Found ",size(this%lst(:))," rank-3 arrays:"
-               call printinfo(msg, to_stdout)
+               descr = " rank-3 arrays:"
+            class default
+               descr = " unknown things:"
          end select
+         write(msg,'(a,i2,2a)')"[named_array_list:print_vars] Found ", size(this%lst(:)), descr
+         call printinfo(msg, to_stdout)
 
          do i = lbound(this%lst(:), dim=1), ubound(this%lst(:), dim=1)
             if (this%lst(i)%dim4 == INVALID) then
