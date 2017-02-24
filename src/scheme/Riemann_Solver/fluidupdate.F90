@@ -281,7 +281,7 @@ contains
 
   function get_b_cc_sweep(cg, ddim, i1, i2) result(b_cc1d)
 
-     use constants,        only: pdims, xdim, zdim, half, ORTHO1, ORTHO2
+     use constants,        only: pdims, xdim, zdim, half, ORTHO1, ORTHO2, HI
      use domain,           only: dom
      use grid_cont,        only: grid_container
      use named_array_list, only: wna
@@ -301,13 +301,13 @@ contains
      b_cc1d(ddim, :cg%n_(ddim)-1) = half * (b_cc1d(ddim, :cg%n_(ddim)-1) + pb(ddim, 2:cg%n_(ddim)))
 
      d = pdims(ddim, ORTHO1)
-     if (dom%has_dir(d) .and. cg%n_(d) < i1+1) then
+     if (dom%has_dir(d) .and. cg%lhn(d, HI) >= i1+1) then
         pb => cg%w(wna%bi)%get_sweep(ddim, i1+1, i2)
         b_cc1d(d, :) = half * (b_cc1d(d, :) + pb(d, :))
      endif
 
      d = pdims(ddim, ORTHO2)
-     if (dom%has_dir(d) .and. cg%n_(d) < i2+1) then
+     if (dom%has_dir(d) .and. cg%lhn(d, HI) >= i2+1) then
         pb => cg%w(wna%bi)%get_sweep(ddim, i1, i2+1)
         b_cc1d(d, :) = half * (b_cc1d(d, :) + pb(d, :))
      endif
