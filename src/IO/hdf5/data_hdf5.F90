@@ -100,7 +100,7 @@ contains
          case ("pren", "prei")
             f%fu = "\rm{g}/\rm{cm}/\rm{s}^2"
             f%f2cgs = 1.0 / (gram/cm/sek**2)
-         case ("magx", "magy", "magz")
+         case ("magx", "magy", "magz", "magB")
             f%fu = "\rm{Gs}"
             f%f2cgs = 1.0 / (fpi * sqrt(cm / (miu0 * gram)) * sek)
             f%stag = 1
@@ -145,6 +145,8 @@ contains
                newname = "magnetic_field_divergence"
             case ("pmag%")
                newname = "p_mag_to_p_tot_ratio"
+            case ("magB")
+               newname = "mag_field_magnitude"
             case default
                write(newname, '(A)') trim(var)
          end select
@@ -231,7 +233,7 @@ contains
    subroutine datafields_hdf5(var, tab, ierrh, cg)
 
       use common_hdf5, only: common_shortcuts
-      use constants,   only: dsetnamelen, xdim, ydim, zdim, half
+      use constants,   only: dsetnamelen, xdim, ydim, zdim, half, two
       use domain,      only: dom
       use fluidtypes,  only: component_fluid
       use func,        only: ekin, emag
@@ -319,8 +321,10 @@ contains
                  &       emag_f_c) / cg%u(flind%ion%idn, RNG), kind=4)
 #endif /* !ISO */
          case ("magx", "magy", "magz")
-            tab(:,:,:) = real(cg%b(xdim + i_xyz, RNG), kind=4)
-         case ("divbf") ! face-fentered div(B): RTVD
+            tab(:,:,:) = real(cg%b(xdim + i_xyz, RNG), kind=4) ! beware: these are "raw", face-centered. Use them with care when you process plotfiles
+         case ("magB")
+            tab(:,:,:) = real(sqrt(two * emag_f_c), kind=4)
+         case("divbf") ! face-centered div(B): RTVD
             tab(:,:,:) = real( half * ( &
             &                           (cg%b(xdim, cg%is+dom%D_x:cg%ie+dom%D_x, cg%js        :cg%je,         cg%ks        :cg%ke        ) - &
             &                            cg%b(xdim, cg%is        :cg%ie,         cg%js        :cg%je,         cg%ks        :cg%ke        )   )/cg%dx + &
