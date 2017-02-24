@@ -143,6 +143,8 @@ contains
                write(newname, '("mag_field_",A1)') var(4:4)
             case ("divbc", "divbf")
                newname = "magnetic_field_divergence"
+            case ("pmag%")
+               newname = "p_mag_to_p_tot_ratio"
             case default
                write(newname, '(A)') trim(var)
          end select
@@ -292,9 +294,16 @@ contains
 #ifndef ISO
             tab(:,:,:) = real(flind%ion%gam_1, kind=4) * real( cg%u(flind%ion%ien, RNG) - &
                  &       ekin(cg%u(flind%ion%imx, RNG), cg%u(flind%ion%imy, RNG), cg%u(flind%ion%imz, RNG), cg%u(flind%ion%idn, RNG)), kind=4) - &
-                 &       real(flind%ion%gam_1*emag(cg%b(xdim, RNG), cg%b(ydim, RNG), cg%b(zdim, RNG)), kind=4)
+                 &       real(flind%ion%gam_1*emag(cg%b(xdim, RNG), cg%b(ydim, RNG), cg%b(zdim, RNG)), kind=4)  ! warning: mixed cell-centered and face-centered quantities
 #endif /* !ISO */
-         case ("ethn")
+         case ("pmag%")
+#ifndef ISO
+            tab(:,:,:) = real(flind%ion%gam_1*emag(cg%b(xdim, RNG), cg%b(ydim, RNG), cg%b(zdim, RNG)), kind=4) / &
+                 &      (real(flind%ion%gam_1, kind=4) * real( cg%u(flind%ion%ien, RNG) - &
+                 &       ekin(cg%u(flind%ion%imx, RNG), cg%u(flind%ion%imy, RNG), cg%u(flind%ion%imz, RNG), cg%u(flind%ion%idn, RNG)), kind=4) - &
+                 &       real(flind%ion%gam_1*emag(cg%b(xdim, RNG), cg%b(ydim, RNG), cg%b(zdim, RNG)), kind=4))  ! warning: mixed cell-centered and face-centered quantities
+#endif /* !ISO */
+        case ("ethn")
 #ifndef ISO
             tab(:,:,:) = real( (cg%u(flind%neu%ien, RNG) - &
                  &       ekin(cg%u(flind%neu%imx, RNG), cg%u(flind%neu%imy, RNG), cg%u(flind%neu%imz, RNG), cg%u(flind%neu%idn, RNG))) /         &
@@ -304,7 +313,7 @@ contains
 #ifndef ISO
             tab(:,:,:) = real( (cg%u(flind%ion%ien, RNG) - &
                  &       ekin(cg%u(flind%ion%imx, RNG), cg%u(flind%ion%imy, RNG), cg%u(flind%ion%imz, RNG), cg%u(flind%ion%idn, RNG)) -          &
-                 &       emag(cg%b(xdim, RNG), cg%b(ydim, RNG), cg%b(zdim, RNG))) / cg%u(flind%ion%idn, RNG), kind=4)
+                 &       emag(cg%b(xdim, RNG), cg%b(ydim, RNG), cg%b(zdim, RNG))) / cg%u(flind%ion%idn, RNG), kind=4)  ! warning: mixed cell-centered and face-centered quantities
 #endif /* !ISO */
          case ("magx", "magy", "magz")
             tab(:,:,:) = real(cg%b(xdim + i_xyz, RNG), kind=4)
