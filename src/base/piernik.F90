@@ -34,7 +34,7 @@ program piernik
    use all_boundaries,    only: all_bnd
    use cg_leaves,         only: leaves
    use cg_list_global,    only: all_cg
-   use constants,         only: PIERNIK_START, PIERNIK_INITIALIZED, PIERNIK_FINISHED, PIERNIK_CLEANUP, fplen, stdout, I_ONE, CHK, FINAL_DUMP, tmr_fu
+   use constants,         only: PIERNIK_START, PIERNIK_INITIALIZED, PIERNIK_FINISHED, PIERNIK_CLEANUP, fplen, stdout, I_ONE, CHK, FINAL_DUMP
    use dataio,            only: write_data, user_msg_handler, check_log, check_tsl, dump
    use dataio_pub,        only: nend, tend, msg, printinfo, warn, die, code_progress
    use finalizepiernik,   only: cleanup_piernik
@@ -48,7 +48,7 @@ program piernik
    use named_array_list,  only: qna, wna
    use refinement,        only: emergency_fix
    use refinement_update, only: update_refinement
-   use timer,             only: walltime_end, set_timer
+   use timer,             only: walltime_end
    use timestep,          only: time_step
    use user_hooks,        only: finalize_problem, problem_domain_update
 #ifdef PERFMON
@@ -65,12 +65,10 @@ program piernik
    logical, save        :: tleft = .true.      !< Used in main loop, to test whether to stop simulation or not
    character(len=fplen) :: nstr, tstr
    logical, save        :: first_step = .true.
-   real                 :: ts                  !< Timestep wallclock
    real                 :: tlast
    logical              :: try_rebalance
 
    try_rebalance = .false.
-   ts=set_timer(tmr_fu,.true.)
    tlast = 0.0
 
    code_progress = PIERNIK_START
