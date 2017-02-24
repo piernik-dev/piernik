@@ -265,6 +265,9 @@ contains
       ierrh = 0
       tab = 0.0
 
+      associate(emag_f_c => emag(half*(cg%b(xdim, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) + cg%b(xdim, cg%is+dom%D_x:cg%ie+dom%D_x, cg%js        :cg%je,         cg%ks        :cg%ke        )), &
+           &                     half*(cg%b(ydim, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) + cg%b(ydim, cg%is        :cg%ie,         cg%js+dom%D_y:cg%je+dom%D_y, cg%ks        :cg%ke        )), &
+           &                     half*(cg%b(zdim, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) + cg%b(zdim, cg%is        :cg%ie,         cg%js        :cg%je,         cg%ks+dom%D_z:cg%ke+dom%D_z))) )
       select case (var)
 #ifdef COSM_RAYS
          case ("cr1" : "cr9")
@@ -294,14 +297,14 @@ contains
 #ifndef ISO
             tab(:,:,:) = real(flind%ion%gam_1, kind=4) * real( cg%u(flind%ion%ien, RNG) - &
                  &       ekin(cg%u(flind%ion%imx, RNG), cg%u(flind%ion%imy, RNG), cg%u(flind%ion%imz, RNG), cg%u(flind%ion%idn, RNG)), kind=4) - &
-                 &       real(flind%ion%gam_1*emag(cg%b(xdim, RNG), cg%b(ydim, RNG), cg%b(zdim, RNG)), kind=4)  ! warning: mixed cell-centered and face-centered quantities
+                 &       real(flind%ion%gam_1*emag_f_c, kind=4)
 #endif /* !ISO */
          case ("pmag%")
 #ifndef ISO
-            tab(:,:,:) = real(flind%ion%gam_1*emag(cg%b(xdim, RNG), cg%b(ydim, RNG), cg%b(zdim, RNG)), kind=4) / &
+            tab(:,:,:) = real(flind%ion%gam_1*emag_f_c, kind=4) / &
                  &      (real(flind%ion%gam_1, kind=4) * real( cg%u(flind%ion%ien, RNG) - &
                  &       ekin(cg%u(flind%ion%imx, RNG), cg%u(flind%ion%imy, RNG), cg%u(flind%ion%imz, RNG), cg%u(flind%ion%idn, RNG)), kind=4) - &
-                 &       real(flind%ion%gam_1*emag(cg%b(xdim, RNG), cg%b(ydim, RNG), cg%b(zdim, RNG)), kind=4))  ! warning: mixed cell-centered and face-centered quantities
+                 &       real(flind%ion%gam_1*emag_f_c, kind=4))
 #endif /* !ISO */
         case ("ethn")
 #ifndef ISO
@@ -313,7 +316,7 @@ contains
 #ifndef ISO
             tab(:,:,:) = real( (cg%u(flind%ion%ien, RNG) - &
                  &       ekin(cg%u(flind%ion%imx, RNG), cg%u(flind%ion%imy, RNG), cg%u(flind%ion%imz, RNG), cg%u(flind%ion%idn, RNG)) -          &
-                 &       emag(cg%b(xdim, RNG), cg%b(ydim, RNG), cg%b(zdim, RNG))) / cg%u(flind%ion%idn, RNG), kind=4)  ! warning: mixed cell-centered and face-centered quantities
+                 &       emag_f_c) / cg%u(flind%ion%idn, RNG), kind=4)
 #endif /* !ISO */
          case ("magx", "magy", "magz")
             tab(:,:,:) = real(cg%b(xdim + i_xyz, RNG), kind=4)
@@ -346,7 +349,7 @@ contains
          case default
             ierrh = -1
       end select
-
+      end associate
 #undef RNG
 
    end subroutine datafields_hdf5
