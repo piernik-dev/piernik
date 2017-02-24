@@ -107,6 +107,8 @@ contains
          case ("divbc", "divbf")
             f%fu= "\rm{Gs}/\rm{cm}" ! I'm not sure if it is a best description
             f%f2cgs = 1.0 / (fpi * sqrt(cm / (miu0 * gram)) * sek * cm)
+         case ("magdir")
+            f%fu = "\rm{radians}"
          case ("cr1" : "cr9")
             f%fu = "\rm{erg}/\rm{cm}^3"
             f%f2cgs = 1.0 / (erg/cm**3)
@@ -146,7 +148,9 @@ contains
             case ("pmag%")
                newname = "p_mag_to_p_tot_ratio"
             case ("magB")
-               newname = "mag_field_magnitude"
+               newname = "magnetic_field_magnitude"
+            case ("magdir")
+               newname = "magnetic_field_direction"
             case default
                write(newname, '(A)') trim(var)
          end select
@@ -324,6 +328,9 @@ contains
             tab(:,:,:) = real(cg%b(xdim + i_xyz, RNG), kind=4) ! beware: these are "raw", face-centered. Use them with care when you process plotfiles
          case ("magB")
             tab(:,:,:) = real(sqrt(two * emag_f_c), kind=4)
+         case ("magdir")
+            tab(:,:,:) = real(atan2(cg%b(ydim, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) + cg%b(ydim, cg%is        :cg%ie,         cg%js+dom%D_y:cg%je+dom%D_y, cg%ks        :cg%ke        ), &
+                 &                  cg%b(xdim, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) + cg%b(xdim, cg%is+dom%D_x:cg%ie+dom%D_x, cg%js        :cg%je,         cg%ks        :cg%ke        )), kind=4)
          case("divbf") ! face-centered div(B): RTVD
             tab(:,:,:) = real( half * ( &
             &                           (cg%b(xdim, cg%is+dom%D_x:cg%ie+dom%D_x, cg%js        :cg%je,         cg%ks        :cg%ke        ) - &
