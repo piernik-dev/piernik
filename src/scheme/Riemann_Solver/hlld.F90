@@ -125,7 +125,6 @@ contains
     ! external procedures
 
     use constants,  only: half, zero, one, xdim, ydim, zdim, idn, imx, imy, imz, ien
-    use fluidindex, only: flind
     use func,       only: operator(.notequals.)
 
     ! arguments
@@ -153,8 +152,8 @@ contains
 
     ! Local arrays
 
-    real, dimension(flind%all)                   :: fl, fr
-    real, dimension(flind%all)                   :: u_starl, u_starr, u_2starl, u_2starr
+    real, dimension(size(f, 1))                  :: fl, fr
+    real, dimension(size(f, 1))                  :: u_starl, u_starr, u_2starl, u_2starr
     real, dimension(xdim:zdim)                   :: v_2star, v_starl, v_starr
     real, dimension(xdim:zdim)                   :: b_cclf, b_ccrf
     real, dimension(xdim:zdim)                   :: b_starl, b_starr, b_2star
