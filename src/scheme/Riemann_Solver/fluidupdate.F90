@@ -135,6 +135,8 @@ contains
          call mag_add(dir, bdir)
       enddo
 
+      call energy_fixup
+
    end subroutine magfield
 
 !-------------------------------------------------------------------------------------------------------------------
@@ -278,6 +280,50 @@ contains
 #endif /* MAGNETIC */
 
 !-------------------------------------------------------------------------------------------------------------------
+
+  subroutine energy_fixup
+
+     use all_boundaries,   only: all_bnd
+     use cg_leaves,        only: leaves
+     use cg_list,          only: cg_list_element
+     use constants,        only: xdim, ydim, zdim, LO, HI, half
+     use domain,           only: dom
+     use fluidindex,       only: flind
+     use func,             only: emag
+     use grid_cont,        only: grid_container
+     use named_array_list, only: wna
+
+     implicit none
+
+     type(cg_list_element), pointer :: cgl
+     type(grid_container),  pointer :: cg
+
+     integer :: i, j, k
+
+     cgl => leaves%first
+     do while (associated(cgl))
+        cg => cgl%cg
+
+        do k = cg%lh1(zdim, LO), cg%lh1(zdim, HI)
+           do j = cg%lh1(ydim, LO), cg%lh1(ydim, HI)-1
+              do i = cg%lh1(xdim, LO), cg%lh1(xdim, HI)-1
+                 cg%u(flind%ion%ien,i,j,k) = cg%u(flind%ion%ien,i,j,k) + ( &
+                      emag(half*(cg%b(xdim, i, j, k) + cg%b(xdim, i+dom%D_x, j, k)), &
+                      &    half*(cg%b(ydim, i, j, k) + cg%b(ydim, i, j+dom%D_y, k)), &
+                      &    half*(cg%b(zdim, i, j, k) + cg%b(zdim, i, j, k+dom%D_z)) ) - &
+                      emag(cg%w(wna%bcci)%arr(xdim, i, j, k), &
+                      &    cg%w(wna%bcci)%arr(ydim, i, j, k), &
+                      &    cg%w(wna%bcci)%arr(zdim, i, j, k) ) ) / 8.
+                 ! 1/8. to 1/6. seems to give best survivability of the otvortex but it is still far from being good
+              enddo
+           enddo
+        enddo
+        cgl => cgl%nxt
+     enddo
+
+     call all_bnd ! overkill
+
+  end subroutine energy_fixup
 
   function get_b_cc_sweep(cg, ddim, i1, i2) result(b_cc1d)
 
