@@ -68,8 +68,10 @@ contains
 
     ! ToDo: check if changes of execution order here (block loop, direction loop, boundary update can change
     ! cost or allow for reduction of required guardcells
+    call bfc2bcc
     do ddim = xdim, zdim, 1
       if (dom%has_dir(ddim)) then
+
          cgl => leaves%first
          do while (associated(cgl))
 
@@ -89,6 +91,7 @@ contains
     dtm = dt
     halfstep = .true.
 
+    call bfc2bcc
     do ddim = zdim, xdim, -1
        if (dom%has_dir(ddim)) then
 #ifdef MAGNETIC
@@ -281,6 +284,43 @@ contains
 
 !-------------------------------------------------------------------------------------------------------------------
 
+  subroutine bfc2bcc
+
+     use cg_leaves,        only: leaves
+     use cg_list,          only: cg_list_element
+     use constants,        only: xdim, ydim, zdim, LO, HI, half
+     use domain,           only: dom
+     use grid_cont,        only: grid_container
+     use named_array_list, only: wna
+
+     implicit none
+
+     type(cg_list_element), pointer :: cgl
+     type(grid_container),  pointer :: cg
+
+     cgl => leaves%first
+     do while (associated(cgl))
+        cg => cgl%cg
+
+        cg%w(wna%bcci)%arr(:,:,:,:) = half * cg%b(:, :, :, :)
+
+        cg%w(wna%bcci)%arr(xdim, cg%lhn(xdim, LO):cg%lhn(xdim, HI)-1, :, :) = &
+             cg%w(wna%bcci)%arr(xdim, cg%lhn(xdim, LO):cg%lhn(xdim, HI)-1, :, :) + &
+             half * cg%b(xdim, cg%lhn(xdim, LO)+dom%D_x:cg%lhn(xdim, HI)-1+dom%D_x, :, :)
+
+        cg%w(wna%bcci)%arr(ydim, :,cg%lhn(ydim, LO):cg%lhn(ydim, HI)-1, :) = &
+             cg%w(wna%bcci)%arr(ydim, :, cg%lhn(ydim, LO):cg%lhn(ydim, HI)-1, :) + &
+             half * cg%b(ydim, :, cg%lhn(ydim, LO)+dom%D_y:cg%lhn(ydim, HI)-1+dom%D_y, :)
+
+        cg%w(wna%bcci)%arr(zdim, :, :, cg%lhn(zdim, LO):cg%lhn(zdim, HI)-1) = &
+             cg%w(wna%bcci)%arr(zdim, :, :, cg%lhn(zdim, LO):cg%lhn(zdim, HI)-1) + &
+             half * cg%b(zdim, :, :, cg%lhn(zdim, LO)+dom%D_z:cg%lhn(zdim, HI)-1+dom%D_z)
+
+        cgl => cgl%nxt
+     enddo
+
+  end subroutine bfc2bcc
+
   subroutine energy_fixup
 
      use all_boundaries,   only: all_bnd
@@ -313,7 +353,7 @@ contains
                       &    half*(cg%b(zdim, i, j, k) + cg%b(zdim, i, j, k+dom%D_z)) ) - &
                       emag(cg%w(wna%bcci)%arr(xdim, i, j, k), &
                       &    cg%w(wna%bcci)%arr(ydim, i, j, k), &
-                      &    cg%w(wna%bcci)%arr(zdim, i, j, k) ) ) / 8.
+                      &    cg%w(wna%bcci)%arr(zdim, i, j, k) ) ) /4.
                  ! 1/8. to 1/6. seems to give best survivability of the otvortex but it is still far from being good
               enddo
            enddo
@@ -324,41 +364,6 @@ contains
      call all_bnd ! overkill
 
   end subroutine energy_fixup
-
-  function get_b_cc_sweep(cg, ddim, i1, i2) result(b_cc1d)
-
-     use constants,        only: pdims, xdim, zdim, half, ORTHO1, ORTHO2, HI
-     use domain,           only: dom
-     use grid_cont,        only: grid_container
-     use named_array_list, only: wna
-
-     implicit none
-
-     type(grid_container), pointer, intent(in) :: cg
-     integer(kind=4),               intent(in) :: ddim
-     integer,                       intent(in) :: i1, i2
-
-     real, dimension(xdim:zdim, cg%n_(ddim)) :: b_cc1d
-     real, dimension(:,:), pointer :: pb
-     integer(kind=4) :: d
-
-     pb => cg%w(wna%bi)%get_sweep(ddim, i1, i2)
-     b_cc1d = pb(:,:)
-     b_cc1d(ddim, :cg%n_(ddim)-1) = half * (b_cc1d(ddim, :cg%n_(ddim)-1) + pb(ddim, 2:cg%n_(ddim)))
-
-     d = pdims(ddim, ORTHO1)
-     if (dom%has_dir(d) .and. cg%lhn(d, HI) >= i1+1) then
-        pb => cg%w(wna%bi)%get_sweep(ddim, i1+1, i2)
-        b_cc1d(d, :) = half * (b_cc1d(d, :) + pb(d, :))
-     endif
-
-     d = pdims(ddim, ORTHO2)
-     if (dom%has_dir(d) .and. cg%lhn(d, HI) >= i2+1) then
-        pb => cg%w(wna%bi)%get_sweep(ddim, i1, i2+1)
-        b_cc1d(d, :) = half * (b_cc1d(d, :) + pb(d, :))
-     endif
-
-  end function get_b_cc_sweep
 
   subroutine sweep_dsplit(cg, dt, ddim)
 
@@ -381,11 +386,11 @@ contains
     do i2 = cg%lhn(pdims(ddim, ORTHO2), LO), cg%lhn(pdims(ddim,ORTHO2), HI)
        do i1 = cg%lhn(pdims(ddim, ORTHO1), LO), cg%lhn(pdims(ddim, ORTHO1), HI)
           pu => cg%w(wna%fi)%get_sweep(ddim,i1,i2)
-          u1d(iarr_all_swp(ddim,:),:) = pu(:,:); 
-          b_cc1d(iarr_mag_swp(ddim,:),:) = get_b_cc_sweep(cg, ddim, i1, i2)
+          u1d(iarr_all_swp(ddim,:),:) = pu(:,:)
+          pb => cg%w(wna%bcci)%get_sweep(ddim,i1,i2)
+          b_cc1d(iarr_mag_swp(ddim,:),:) = pb(:,:)
           call solve(u1d,b_cc1d, dt/cg%dl(ddim))
           pu(:,:) = u1d(iarr_all_swp(ddim,:),:)
-          pb => cg%w(wna%bcci)%get_sweep(ddim,i1,i2)
           pb(:,:) = b_cc1d(iarr_mag_swp(ddim,:),:) ! ToDo figure out how to manage CT energy fixup without extra storage
        enddo
     enddo
