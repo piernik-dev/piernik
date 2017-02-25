@@ -82,6 +82,7 @@ module named_array_list
    type, extends(na_var_list) :: na_var_list_w
       integer(kind=4) :: fi                                    !< fluid           : cg%w(wna%fi)
       integer(kind=4) :: bi                                    !< magnetic field  : cg%w(wna%bi)
+      integer(kind=4) :: bcci                                  !< cc-magnetic field : cg%w(wna%bcci)
    end type na_var_list_w
 
    type(na_var_list_q) :: qna !< list of registered 3D named arrays
@@ -166,7 +167,7 @@ contains
 
    subroutine add2lst(this, element)
 
-      use constants,  only: fluid_n, mag_n, wa_n
+      use constants,  only: fluid_n, mag_n, wa_n, mag_cc_n
       use dataio_pub, only: die, msg
 
       implicit none
@@ -199,7 +200,8 @@ contains
          type is (na_var_list_w)
             if (element%name == fluid_n) this%fi  = ubound(this%lst(:), dim=1, kind=4)
             if (element%name == mag_n)   this%bi  = ubound(this%lst(:), dim=1, kind=4)
-         type is (na_var_list_q)
+            if (element%name == mag_cc_n) this%bcci = ubound(this%lst(:), dim=1, kind=4)
+        type is (na_var_list_q)
             if (element%name == wa_n)    this%wai = ubound(this%lst(:), dim=1, kind=4)
       end select
 

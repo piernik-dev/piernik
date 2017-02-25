@@ -329,18 +329,18 @@ contains
 
     real, dimension(size(cg%u,1), cg%n_(ddim)) :: u1d
     real, dimension(xdim:zdim, cg%n_(ddim))   :: b_cc1d
-    real, dimension(:,:), pointer             :: pu !, pb
+    real, dimension(:,:), pointer             :: pu, pb
     integer                                   :: i1, i2
 
     do i2 = cg%lhn(pdims(ddim, ORTHO2), LO), cg%lhn(pdims(ddim,ORTHO2), HI)
        do i1 = cg%lhn(pdims(ddim, ORTHO1), LO), cg%lhn(pdims(ddim, ORTHO1), HI)
           pu => cg%w(wna%fi)%get_sweep(ddim,i1,i2)
-          ! pb => cg%w(wna%bi)%get_sweep(ddim,i1,i2)
           u1d(iarr_all_swp(ddim,:),:) = pu(:,:); 
           b_cc1d(iarr_mag_swp(ddim,:),:) = get_b_cc_sweep(cg, ddim, i1, i2)
           call solve(u1d,b_cc1d, dt/cg%dl(ddim))
           pu(:,:) = u1d(iarr_all_swp(ddim,:),:)
-          ! pb(:,:) = b_cc1d(iarr_mag_swp(ddim,:),:)
+          pb => cg%w(wna%bcci)%get_sweep(ddim,i1,i2)
+          pb(:,:) = b_cc1d(iarr_mag_swp(ddim,:),:) ! ToDo figure out how to manage CT energy fixup without extra storage
        enddo
     enddo
 
@@ -631,12 +631,12 @@ contains
            u(:,1) = u(:,2)
            u(:,nx) = u(:,nx-1)
 
-!!$           b_cc(:,2:nx) = b_cc(:,2:nx) + w(1) * dtodx * (mag_cc(:,1:nx-1) - mag_cc(:,2:nx))
-!!$           if (size(w)>=2)  b_cc(:,2:nx) = b_cc(:,2:nx) + w(2) * db1(:,2:nx)
-!!$           if (size(w)>=3)  b_cc(:,2:nx) = b_cc(:,2:nx) + w(3) * db2(:,2:nx)
-!!$           if (size(w)>=4)  b_cc(:,2:nx) = b_cc(:,2:nx) + w(4) * db3(:,2:nx)
-!!$           b_cc(:,1) = b_cc(:,2)
-!!$           b_cc(:,nx) = b_cc(:,nx-1)
+           b_cc(:,2:nx) = b_cc(:,2:nx) + w(1) * dtodx * (mag_cc(:,1:nx-1) - mag_cc(:,2:nx))
+           if (size(w)>=2)  b_cc(:,2:nx) = b_cc(:,2:nx) + w(2) * db1(:,2:nx)
+           if (size(w)>=3)  b_cc(:,2:nx) = b_cc(:,2:nx) + w(3) * db2(:,2:nx)
+           if (size(w)>=4)  b_cc(:,2:nx) = b_cc(:,2:nx) + w(4) * db3(:,2:nx)
+           b_cc(:,1) = b_cc(:,2)
+           b_cc(:,nx) = b_cc(:,nx-1)
 
            deallocate(w)
 
