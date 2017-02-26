@@ -119,9 +119,9 @@ contains
 
       use ct,     only: advectb, ctb
       use constants,   only: ndims, I_ONE
-! #ifdef RESISTIVE
-!       use resistivity, only: diffuseb
-! #endif /* RESISTIVE */
+#ifdef RESISTIVE
+      use resistivity, only: diffuseb
+#endif /* RESISTIVE */
 
        implicit none
 
@@ -132,9 +132,9 @@ contains
        do dstep = 0, 1
           bdir  = I_ONE + mod(dir+dstep,ndims)
           call advectb(bdir, dir)
-! #ifdef RESISTIVE
-!          call diffuseb(bdir, dir)
-! #endif /* RESISTIVE */
+#ifdef RESISTIVE
+         call diffuseb(bdir, dir)
+#endif /* RESISTIVE */
          call mag_add(dir, bdir)
       enddo
 
@@ -151,12 +151,12 @@ contains
       use grid_cont,        only: grid_container
       use all_boundaries,   only: all_mag_boundaries
       use user_hooks,       only: custom_emf_bnd
-! #ifdef RESISTIVE
-!       use constants,        only: wcu_n
-!       use dataio_pub,       only: die
-!       use domain,           only: is_multicg
-!       use named_array_list, only: qna
-! #endif /* RESISTIVE */
+#ifdef RESISTIVE
+      use constants,        only: wcu_n
+      use dataio_pub,       only: die
+      use domain,           only: is_multicg
+      use named_array_list, only: qna
+#endif /* RESISTIVE */
 
       implicit none
 
@@ -164,23 +164,23 @@ contains
 
       type(cg_list_element), pointer :: cgl
       type(grid_container),  pointer :: cg
-! #ifdef RESISTIVE
-!       real, dimension(:,:,:), pointer :: wcu
-! #endif /* RESISTIVE */
+#ifdef RESISTIVE
+      real, dimension(:,:,:), pointer :: wcu
+#endif /* RESISTIVE */
 
       cgl => leaves%first
       do while (associated(cgl))
          cg => cgl%cg
-! #ifdef RESISTIVE
-! ! DIFFUSION FULL STEP
-!          wcu => cg%q(qna%ind(wcu_n))%arr
-!          if (is_multicg) call die("[fluidupdate:mag_add] multiple grid pieces per processor not implemented yet") ! not tested custom_emf_bnd
-!          if (associated(custom_emf_bnd)) call custom_emf_bnd(wcu)
-!          cg%b(dim2,:,:,:) = cg%b(dim2,:,:,:) -              wcu*cg%idl(dim1)
-!          cg%b(dim2,:,:,:) = cg%b(dim2,:,:,:) + pshift(wcu,dim1)*cg%idl(dim1)
-!          cg%b(dim1,:,:,:) = cg%b(dim1,:,:,:) +              wcu*cg%idl(dim2)
-!          cg%b(dim1,:,:,:) = cg%b(dim1,:,:,:) - pshift(wcu,dim2)*cg%idl(dim2)
-! #endif /* RESISTIVE */
+#ifdef RESISTIVE
+! DIFFUSION FULL STEP
+         wcu => cg%q(qna%ind(wcu_n))%arr
+         if (is_multicg) call die("[fluidupdate:mag_add] multiple grid pieces per processor not implemented yet") ! not tested custom_emf_bnd
+         if (associated(custom_emf_bnd)) call custom_emf_bnd(wcu)
+         cg%b(dim2,:,:,:) = cg%b(dim2,:,:,:) -              wcu*cg%idl(dim1)
+         cg%b(dim2,:,:,:) = cg%b(dim2,:,:,:) + pshift(wcu,dim1)*cg%idl(dim1)
+         cg%b(dim1,:,:,:) = cg%b(dim1,:,:,:) +              wcu*cg%idl(dim2)
+         cg%b(dim1,:,:,:) = cg%b(dim1,:,:,:) - pshift(wcu,dim2)*cg%idl(dim2)
+#endif /* RESISTIVE */
 ! ADVECTION FULL STEP
          if (associated(custom_emf_bnd)) call custom_emf_bnd(cg%wa)
          cg%b(dim2,:,:,:) = cg%b(dim2,:,:,:) - cg%wa*cg%idl(dim1)
