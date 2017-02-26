@@ -152,10 +152,10 @@ contains
       use all_boundaries,   only: all_mag_boundaries
       use user_hooks,       only: custom_emf_bnd
 #ifdef RESISTIVE
-      use constants,        only: wcu_n
-      use dataio_pub,       only: die
-      use domain,           only: is_multicg
-      use named_array_list, only: qna
+     use constants,        only: wcu_n
+     use dataio_pub,       only: die
+     use domain,           only: is_multicg
+     use named_array_list, only: qna
 #endif /* RESISTIVE */
 
       implicit none
