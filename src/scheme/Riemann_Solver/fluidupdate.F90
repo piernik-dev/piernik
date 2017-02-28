@@ -529,21 +529,25 @@ contains
            if (present(uu) .neqv. present(bb)) call die("[fluidupdate:solve:slope] either mone or both optional arguments must be present")
 
            if (present(uu)) then
-              du  = calculate_slope_vanleer(u + uu)
+              !du  = calculate_slope_vanleer(u + uu)
+              du  = slope_limiter_minmod(u + uu)
               ul  = u + uu - half*du
               ur  = u + uu + half*du
            else
-              du  = calculate_slope_vanleer(u)
+              !du  = calculate_slope_vanleer(u)
+              du  = slope_limiter_minmod(u + uu)
               ul  = u - half*du
               ur  = u + half*du
            endif
 
            if (present(bb)) then
-              db  = calculate_slope_vanleer(b_cc + bb)
+              !db  = calculate_slope_vanleer(b_cc + bb)
+              db    = slope_limiter_minmod(b_cc + bb)
               b_ccl = b_cc + bb - half*db
               b_ccr = b_cc + bb + half*db
            else
-              db  = calculate_slope_vanleer(b_cc)
+              !db  = calculate_slope_vanleer(b_cc)
+              db    = slope_limiter_minmod(b_cc + bb)
               b_ccl = b_cc - half*db
               b_ccr = b_cc + half*db
            endif
@@ -721,6 +725,34 @@ contains
       endwhere
 
    end function calculate_slope_vanleer
+
+!-----------------------------------------------------------------------------------------------------------------------
+
+! Minmod slope limiter method
+!
+! Rezolla book, Pg 428 Eq. 9.44, 9.45
+!
+
+   function slope_limiter_minmod(u) result(dq)
+
+     use constants, only: zero, half, one
+
+     implicit none
+
+      real, dimension(:,:), intent(in)     :: u
+
+      real, dimension(size(u,1),size(u,2)) :: dlft, drgt, dq
+      integer :: n
+
+      n = size(u,2)
+     
+      dlft(:,2:n)   = (u(:,2:n) - u(:,1:n-1)) ; dlft(:,1) = dlft(:,2)    
+      drgt(:,1:n-1) = dlft(:,2:n) ;             drgt(:,n) = drgt(:,n-1)
+
+      dq = (sign(one, dlft) + sign(one, drgt))*min(abs(dlft),abs(drgt))*half
+
+   end function slope_limiter_minmod
+
 
 !-----------------------------------------------------------------------------------------------------------------------
 
