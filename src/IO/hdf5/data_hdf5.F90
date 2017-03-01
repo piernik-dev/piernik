@@ -307,10 +307,10 @@ contains
 #endif /* !ISO */
          case ("pmag%")
 #ifndef ISO
-            tab(:,:,:) = real(flind%ion%gam_1*emag_f_c, kind=4) / &
+            tab(:,:,:) = real(emag_f_c, kind=4) / &
                  &      (real(flind%ion%gam_1, kind=4) * real( cg%u(flind%ion%ien, RNG) - &
-                 &       ekin(cg%u(flind%ion%imx, RNG), cg%u(flind%ion%imy, RNG), cg%u(flind%ion%imz, RNG), cg%u(flind%ion%idn, RNG)), kind=4) - &
-                 &       real(flind%ion%gam_1*emag_f_c, kind=4))
+                 &       ekin(cg%u(flind%ion%imx, RNG), cg%u(flind%ion%imy, RNG), cg%u(flind%ion%imz, RNG), cg%u(flind%ion%idn, RNG)) - emag_f_c, kind=4) + &
+                 &       real(emag_f_c, kind=4))
 #endif /* !ISO */
         case ("ethn")
 #ifndef ISO
