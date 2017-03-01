@@ -541,13 +541,13 @@ contains
            endif
 
            if (present(bb)) then
-              !db  = calculate_slope_vanleer(b_cc + bb)
-              db    = slope_limiter_minmod(b_cc + bb)
+              db  = calculate_slope_vanleer(b_cc + bb)
+              !db    = slope_limiter_minmod(b_cc + bb)
               b_ccl = b_cc + bb - half*db
               b_ccr = b_cc + bb + half*db
            else
-              !db  = calculate_slope_vanleer(b_cc)
-              db    = slope_limiter_minmod(b_cc)
+              db  = calculate_slope_vanleer(b_cc)
+              !db    = slope_limiter_minmod(b_cc)
               b_ccl = b_cc - half*db
               b_ccr = b_cc + half*db
            endif
