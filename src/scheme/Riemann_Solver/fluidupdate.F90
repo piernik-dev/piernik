@@ -138,7 +138,7 @@ contains
          call mag_add(dir, bdir)
       enddo
 
-      call energy_fixup
+      ! call energy_fixup use cfl_resist = 0.3
 
    end subroutine magfield
 
@@ -529,7 +529,7 @@ contains
            if (present(uu) .neqv. present(bb)) call die("[fluidupdate:solve:slope] either mone or both optional arguments must be present")
 
            if (present(uu)) then
-              !du  = calculate_slope_vanleer(u + uu)
+              !du  = calculate_slope_vanleer(u + uu) ! use van leer limiter for du in hd and minmod limiter in mhd
               du  = slope_limiter_minmod(u + uu)
               ul  = u + uu - half*du
               ur  = u + uu + half*du
@@ -542,7 +542,7 @@ contains
 
            if (present(bb)) then
               db  = calculate_slope_vanleer(b_cc + bb)
-              !db    = slope_limiter_minmod(b_cc + bb)
+              !db    = slope_limiter_minmod(b_cc + bb) ! as of now we will use only van leer limiter for db
               b_ccl = b_cc + bb - half*db
               b_ccr = b_cc + bb + half*db
            else
