@@ -530,7 +530,10 @@ contains
 
            if (present(uu)) then
               !du  = calculate_slope_vanleer(u + uu) ! use van leer limiter for du in hd and minmod limiter in mhd
+              du  = calculate_slope_vanleer(u + uu)
+#ifdef MAGNETIC
               du  = slope_limiter_minmod(u + uu)
+#endif /* MAGNETIC */
               ul  = u + uu - half*du
               ur  = u + uu + half*du
            else
