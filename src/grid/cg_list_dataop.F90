@@ -92,7 +92,7 @@ contains
    subroutine get_extremum(this, ind, minmax, prop, dir)
 
       use cg_list,     only: cg_list_element
-      use constants,   only: MINL, MAXL, I_ONE, ndims, xdim, ydim, zdim, big_float, LO
+      use constants,   only: MINL, MAXL, I_ZERO, I_ONE, ndims, xdim, ydim, zdim, big_float, LO
       use dataio_pub,  only: msg, warn, die
       use domain,      only: dom
       use grid_cont,   only: grid_container
@@ -177,7 +177,7 @@ contains
             if (dom%has_dir(ydim)) prop%coords(ydim) = cg_x%y(prop%loc(ydim))
             if (dom%has_dir(zdim)) prop%coords(zdim) = cg_x%z(prop%loc(zdim))
             if (present(dir)) then
-               if (dir == 0) then
+               if (dir == I_ZERO) then
                   prop%assoc = minval(cg_x%dl(:))
                else
                   prop%assoc = cg_x%dl(dir)
