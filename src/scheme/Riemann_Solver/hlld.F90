@@ -93,16 +93,20 @@ contains
 
        f(fl%idn,:)  =  u(fl%imx,:)
        if (fl%has_energy) then
-          f(fl%imx,:)  =  u(fl%imx,:)*vx(:) + pr(:) - b_cc(xdim,:)**2  ! b_cc does not contribute in the limit of vanishing magnetic fields. Hydro part is recovered trivially.
           if (fl%is_magnetized) then
              f(fl%imx,:)  =  u(fl%imx,:)*vx(:) + (pr(:)+half*sum(b_cc(xdim:zdim,:)**2,dim=1)) - b_cc(xdim,:)**2 ! Eq. 2 Pg 317
+          else
+             f(fl%imx,:)  =  u(fl%imx,:)*vx(:) + pr(:)  ! b_cc does not contribute in the limit of vanishing magnetic fields. Hydro part is recovered trivially.
           endif
        endif
-       f(fl%imy,:)  =  u(fl%imy,:)*vx(:) - b_cc(xdim,:)*b_cc(ydim,:)
-       f(fl%imz,:)  =  u(fl%imz,:)*vx(:) - b_cc(xdim,:)*b_cc(zdim,:)
        if (fl%is_magnetized) then
+          f(fl%imy,:)  =  u(fl%imy,:)*vx(:) - b_cc(xdim,:)*b_cc(ydim,:)
+          f(fl%imz,:)  =  u(fl%imz,:)*vx(:) - b_cc(xdim,:)*b_cc(zdim,:)
           f(boff+ydim,:) =  b_cc(ydim,:)*vx(:) - b_cc(xdim,:)*vy(:)
           f(boff+zdim,:) =  b_cc(zdim,:)*vx(:) - b_cc(xdim,:)*vz(:)
+       else
+          f(fl%imy,:)  =  u(fl%imy,:)*vx(:)
+          f(fl%imz,:)  =  u(fl%imz,:)*vx(:)
        endif
        if (fl%has_energy) then
           f(fl%ien,:)  =  (u(fl%ien,:) + pr(:))*vx(:) ! Hydro regime. Eq. 2, Pg 317. Takes pr (1)
