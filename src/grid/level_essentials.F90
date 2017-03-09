@@ -30,7 +30,7 @@
 
 module level_essentials
 
-   use constants, only: ndims
+   use constants, only: ndims, LONG, INT4
 
    implicit none
    private
@@ -47,9 +47,9 @@ module level_essentials
 
       ! Shadows of the values set by level_T%write.
       ! I would like to protect them from being modified by mistake, but can't find any convenient way other than making all of them private and accessible through functions (which is not convenient).
-      integer(kind=8), dimension(ndims), private :: off_ = huge(1)
-      integer(kind=8), dimension(ndims), private :: n_d_ = huge(1)
-      integer(kind=4),                   private :: id_  = huge(1)
+      integer(kind=8), dimension(ndims), private :: off_ = huge(1_LONG)
+      integer(kind=8), dimension(ndims), private :: n_d_ = huge(1_LONG)
+      integer(kind=4),                   private :: id_  = huge(1_INT4)
    contains
       procedure          :: init   !< simple initialization
       procedure          :: update !< update data (e.g. after resizing the domain)
@@ -63,7 +63,7 @@ contains
 
    subroutine init(this, id, n_d, off)
 
-      use constants,  only: ndims
+      use constants,  only: ndims, LONG, INT4
       use dataio_pub, only: msg, printinfo, die
       use mpisetup,   only: master
 
@@ -74,7 +74,7 @@ contains
       integer(kind=8), dimension(ndims), intent(in)    :: n_d
       integer(kind=8), dimension(ndims), intent(in)    :: off
 
-      if (any([int(this%off_(:), 4), int(this%n_d_(:), 4), this%id_] /= huge(1))) call die("[level_essentials:init] Level essentials already initialized")
+      if (any([this%off_(:), this%n_d_(:)] /= huge(1_LONG)) .or. this%id_ /= huge(1_INT4)) call die("[level_essentials:init] Level essentials already initialized")
 
       call this%write(id, n_d, off)
 

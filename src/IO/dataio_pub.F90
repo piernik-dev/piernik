@@ -322,7 +322,7 @@ contains
       implicit none
       integer :: line
 
-      do line = 1, min(cbline, size(logbuffer))
+      do line = 1, min(cbline, size(logbuffer, kind=4))
 #if defined(__INTEL_COMPILER)
          write(log_lun, '(a)') trim(logbuffer(line))
 #else /* __INTEL_COMPILER */

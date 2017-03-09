@@ -339,7 +339,7 @@ contains
             &                            cg%b(ydim, cg%is        :cg%ie,         cg%js        :cg%je,         cg%ks        :cg%ke        )   )/cg%dy + &
             &                           (cg%b(zdim, cg%is        :cg%ie,         cg%js        :cg%je,         cg%ks+dom%D_z:cg%ke+dom%D_z) - &
             &                            cg%b(zdim, cg%is        :cg%ie,         cg%js        :cg%je,         cg%ks        :cg%ke        )   )/cg%dz ), kind=4)
-         case("divbc") ! cell-centered div(B): RIEMANN?
+         case ("divbc") ! cell-centered div(B): RIEMANN?
             tab(:,:,:) = real( half * ( &
             &                           (cg%b(xdim, cg%is+dom%D_x:cg%ie+dom%D_x, cg%js        :cg%je,         cg%ks        :cg%ke        ) - &
             &                            cg%b(xdim, cg%is-dom%D_x:cg%ie-dom%D_x, cg%js        :cg%je,         cg%ks        :cg%ke        )   )/cg%dx + &
