@@ -1,11 +1,11 @@
 ###############################################################################
 #
-# Make definitions for Fedora 20+
+# Make definitions for Fedora 23+
 #
 
 PROG     = piernik
 F90      = mpif90  -I/usr/lib64/gfortran/modules/mpich
 F90FLAGS  = -fdefault-real-8 -ffree-form -std=gnu -fimplicit-none -ffree-line-length-none
-F90FLAGS += -O3 -funroll-loops -fstack-arrays -Wno-unused-function
+F90FLAGS += -O3 -funroll-loops -fno-stack-arrays -Wno-unused-function
 LDFLAGS   = -Wl,--as-needed -Wl,-O1
 F90FLAGS += -I/usr/include
