@@ -271,9 +271,13 @@ contains
       ierrh = 0
       tab = 0.0
 
+#ifdef MAGNETIC
       associate(emag_f_c => emag(half*(cg%b(xdim, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) + cg%b(xdim, cg%is+dom%D_x:cg%ie+dom%D_x, cg%js        :cg%je,         cg%ks        :cg%ke        )), &
            &                     half*(cg%b(ydim, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) + cg%b(ydim, cg%is        :cg%ie,         cg%js+dom%D_y:cg%je+dom%D_y, cg%ks        :cg%ke        )), &
            &                     half*(cg%b(zdim, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) + cg%b(zdim, cg%is        :cg%ie,         cg%js        :cg%je,         cg%ks+dom%D_z:cg%ke+dom%D_z))) )
+#else /* !MAGNETIC */
+      associate(emag_f_c => 0.)
+#endif /* !MAGNETIC */
       select case (var)
 #ifdef COSM_RAYS
          case ("cr1" : "cr9")
