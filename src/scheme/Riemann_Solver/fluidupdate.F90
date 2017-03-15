@@ -27,6 +27,9 @@
 !    HLLD Riemann solver for ideal magnetohydrodynamics
 !    Varadarajan Parthasarathy, CAMK, Warszawa. 2015.
 !    Dr. Artur Gawryszczak, CAMK, Warszawa.
+!
+!    Energy fix up routines for CT and its related comments are not used in the current version.
+!    The algorithm is simply present for experimental purposes.
 !--------------------------------------------------------------------------------------------------------------
 
 #include "piernik.def"
@@ -529,7 +532,7 @@ contains
            if (present(uu) .neqv. present(bb)) call die("[fluidupdate:solve:slope] either mone or both optional arguments must be present")
 
            if (present(uu)) then
-              !du  = calculate_slope_vanleer(u + uu) ! use van leer limiter for du in hd and minmod limiter in mhd
+              ! Use van leer limiter for du in hydro and minmod limiter in mhd
               du  = calculate_slope_vanleer(u + uu)
 #ifdef MAGNETIC
               du  = slope_limiter_minmod(u + uu)
@@ -537,20 +540,18 @@ contains
               ul  = u + uu - half*du
               ur  = u + uu + half*du
            else
-              !du  = calculate_slope_vanleer(u)
               du  = slope_limiter_minmod(u)
               ul  = u - half*du
               ur  = u + half*du
            endif
 
            if (present(bb)) then
+              ! As of now we will use only van leer limiter for db
               db  = calculate_slope_vanleer(b_cc + bb)
-              !db    = slope_limiter_minmod(b_cc + bb) ! as of now we will use only van leer limiter for db
               b_ccl = b_cc + bb - half*db
               b_ccr = b_cc + bb + half*db
            else
               db  = calculate_slope_vanleer(b_cc)
-              !db    = slope_limiter_minmod(b_cc)
               b_ccl = b_cc - half*db
               b_ccr = b_cc + half*db
            endif
@@ -731,10 +732,7 @@ contains
 
 !-----------------------------------------------------------------------------------------------------------------------
 
-! Minmod slope limiter method
-!
-! Rezolla book, Pg 428 Eq. 9.44, 9.45
-!
+! Minmod slope limiter method. Rezolla book, Pg 428 Eq. 9.44, 9.45
 
    function slope_limiter_minmod(u) result(dq)
 
@@ -746,25 +744,15 @@ contains
 
       real, dimension(size(u,1),size(u,2)) :: dlft, drgt, dq
       integer :: n 
-      !integer :: i, ip1
 
       n = size(u,2)
      
       dlft(:,2:n)   = (u(:,2:n) - u(:,1:n-1)) ; dlft(:,1) = dlft(:,2)    
       drgt(:,1:n-1) = dlft(:,2:n) ;             drgt(:,n) = drgt(:,n-1)
-      ! dlft(:,1) = zero
-      ! do i = 1, n-1
-      !    ip1 = i+1
-      !    drgt(:,i) = (u(:,ip1) - u(:,i))
-      !    dlft(:,ip1) = drgt(:,i)
-      ! end do
-      ! drgt(:,n) = zero
-      
+ 
       dq = (sign(one, dlft) + sign(one, drgt))*min(abs(dlft),abs(drgt))*half
-         
 
    end function slope_limiter_minmod
-
 
 !-----------------------------------------------------------------------------------------------------------------------
 

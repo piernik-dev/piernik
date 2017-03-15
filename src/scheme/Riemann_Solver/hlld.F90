@@ -63,7 +63,6 @@ contains
     real, dimension(:,:), intent(in) :: b_cc
 
     real, dimension(size(u,1) + size(b_cc,1), size(u,2)) :: f
-    !real, dimension(size(u,2))                           :: vx, vy, vz, p_t
     real, dimension(size(u,2))                           :: vx, vy, vz, pr
     integer                                              :: ip, boff
     class(component_fluid), pointer                      :: fl
