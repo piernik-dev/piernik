@@ -129,7 +129,7 @@ contains
 
     use constants,  only: half, zero, one, xdim, ydim, zdim, idn, imx, imy, imz, ien
     use fluidindex, only: flind
-    use func,       only: operator(.notequals.)
+    use func,       only: operator(.notequals.), operator(.equals.)
 
     ! arguments
 
@@ -229,10 +229,14 @@ contains
 
           ! Speed of contact discontinuity Eq. 38
           ! Total left and right states of pressure, so prr and prl sm_nr/sm_dr
-          sm =   ( ((sr - ur(imx,i))*ur(idn,i)*ur(imx,i) - prr) - &
-               &   ((sl - ul(imx,i))*ul(idn,i)*ul(imx,i) - prl) ) / &
-               &   ((sr - ur(imx,i))*ur(idn,i) - &
-               &    (sl - ul(imx,i))*ul(idn,i))
+          if ((sr - ur(imx,i))*ur(idn,i) .equals. (sl - ul(imx,i))*ul(idn,i)) then
+             sm = (sl + sr) / 2.
+          else
+             sm =   ( ((sr - ur(imx,i))*ur(idn,i)*ur(imx,i) - prr) - &
+                  &   ((sl - ul(imx,i))*ul(idn,i)*ul(imx,i) - prl) ) / &
+                  &   ((sr - ur(imx,i))*ur(idn,i) - &
+                  &    (sl - ul(imx,i))*ul(idn,i))
+          endif
 
           ! Speed differences
 
@@ -284,8 +288,10 @@ contains
           endif
 
           ! Transversal components of velocity Eq. 42
-          v_starl(ydim:zdim) = ul(imy:imz,i) + b_ccl(xdim,i)/dn_l * (b_ccl(ydim:zdim,i) - b_starl(ydim:zdim))
-          v_starr(ydim:zdim) = ur(imy:imz,i) + b_ccr(xdim,i)/dn_r * (b_ccr(ydim:zdim,i) - b_starr(ydim:zdim))
+          v_starl(ydim:zdim) = ul(imy:imz,i)
+          if (b_ccl(xdim,i) .notequals. 0.) v_starl(ydim:zdim) = v_starl(ydim:zdim) + b_ccl(xdim,i)/dn_l * (b_ccl(ydim:zdim,i) - b_starl(ydim:zdim))
+          v_starr(ydim:zdim) = ur(imy:imz,i)
+          if (b_ccr(xdim,i) .notequals. 0.) v_starr(ydim:zdim) = v_starr(ydim:zdim) + b_ccr(xdim,i)/dn_r * (b_ccr(ydim:zdim,i) - b_starr(ydim:zdim))
 
           ! Dot product of velocity and magnetic field
 
