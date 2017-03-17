@@ -533,7 +533,9 @@ contains
 
            if (present(uu)) then
               ! Use van leer limiter for du in hydro and minmod limiter in mhd
-              du  = calculate_slope_vanleer(u + uu)
+              !du  = calculate_slope_vanleer(u + uu)
+              du  = slope_limiter_superbee(u + uu)
+              !du  = slope_limiter_moncen(u + uu)
 #ifdef MAGNETIC
               du  = slope_limiter_minmod(u + uu)
 #endif /* MAGNETIC */
@@ -754,6 +756,57 @@ contains
 
    end function slope_limiter_minmod
 
+!-----------------------------------------------------------------------------------------------------------------------
+
+! Monotonized central limiter
+
+   function slope_limiter_moncen(u) result(dq)
+
+      use constants, only: half, one, two
+
+     implicit none
+
+      real, dimension(:,:), intent(in)     :: u
+
+      real, dimension(size(u,1),size(u,2)) :: dlft, drgt, dq
+      integer :: n 
+
+      n = size(u,2)
+     
+      dlft(:,2:n)   = (u(:,2:n) - u(:,1:n-1)) ; dlft(:,1) = dlft(:,2)    
+      drgt(:,1:n-1) = dlft(:,2:n) ;             drgt(:,n) = drgt(:,n-1)
+
+      dq = (sign(one,dlft)+sign(one,drgt))*min(two*abs(dlft),two*abs(drgt),half*abs(dlft+drgt))*half
+
+    end function slope_limiter_moncen
+!-----------------------------------------------------------------------------------------------------------------------
+
+! Super-bee limiter
+
+    function slope_limiter_superbee(u) result(dq)
+
+      use constants, only: half, one, two
+
+     implicit none
+
+      real, dimension(:,:), intent(in)     :: u
+
+      real, dimension(size(u,1),size(u,2)) :: dlft, drgt, dq
+      integer :: n 
+
+      n = size(u,2)
+     
+      dlft(:,2:n)   = (u(:,2:n) - u(:,1:n-1)) ; dlft(:,1) = dlft(:,2)    
+      drgt(:,1:n-1) = dlft(:,2:n) ;             drgt(:,n) = drgt(:,n-1)
+
+      where (abs(dlft) > abs(drgt))                                                    
+         dq = (sign(one,dlft)+sign(one,drgt))*min(abs(dlft), abs(two*drgt))*half
+      elsewhere
+         dq = (sign(one,dlft)+sign(one,drgt))*min(abs(two*dlft), abs(drgt))*half
+      endwhere
+
+    end function slope_limiter_superbee
+     
 !-----------------------------------------------------------------------------------------------------------------------
 
    function utoq(u,b_cc) result(q)
