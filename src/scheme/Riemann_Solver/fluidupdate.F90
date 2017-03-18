@@ -45,14 +45,15 @@ contains
 
   subroutine fluid_update
 
-    use cg_list,        only: cg_list_element
-    use cg_leaves,      only: leaves
-    use constants,      only: xdim, zdim
-    use domain,         only: dom
     use all_boundaries, only: all_bnd
-    use global,         only: skip_sweep, dt, dtm, t
-    use user_hooks,     only: problem_customize_solution
+    use cg_leaves,      only: leaves
+    use cg_list,        only: cg_list_element
+    use constants,      only: xdim, zdim
     use dataio_pub,     only: halfstep
+    use domain,         only: dom
+    use fluxlimiters,   only: set_limiters
+    use global,         only: skip_sweep, dt, dtm, t, limiter, limiter_b
+    use user_hooks,     only: problem_customize_solution
 
     implicit none
 
@@ -64,6 +65,7 @@ contains
     halfstep = .false.
     if (first_run) then
        dtm = 0.0
+       call set_limiters(limiter, limiter_b)
     else
        dtm = dt
     endif
@@ -520,7 +522,7 @@ contains
 
            use constants,  only: half
            use dataio_pub, only: die
-           use fluxlimiters, only: slope_limiter_minmod, slope_limiter_superbee, calculate_slope_vanleer
+           use fluxlimiters, only: flimiter, blimiter
 
            implicit none
 
@@ -532,29 +534,24 @@ contains
 
            if (present(uu) .neqv. present(bb)) call die("[fluidupdate:solve:slope] either mone or both optional arguments must be present")
 
+           ! Use van leer limiter for du in hydro and minmod limiter in mhd
            if (present(uu)) then
-              ! Use van leer limiter for du in hydro and minmod limiter in mhd
-              !du  = calculate_slope_vanleer(u + uu)
-              du  = slope_limiter_superbee(u + uu)
-              !du  = slope_limiter_moncen(u + uu)
-#ifdef MAGNETIC
-              du  = slope_limiter_minmod(u + uu)
-#endif /* MAGNETIC */
+              du  = flimiter(u + uu)
               ul  = u + uu - half*du
               ur  = u + uu + half*du
            else
-              du  = slope_limiter_minmod(u)
+              du  = flimiter(u)
               ul  = u - half*du
               ur  = u + half*du
            endif
 
+           ! As of now we will use only van leer limiter for db
            if (present(bb)) then
-              ! As of now we will use only van leer limiter for db
-              db  = calculate_slope_vanleer(b_cc + bb)
+              db  = blimiter(b_cc + bb)
               b_ccl = b_cc + bb - half*db
               b_ccr = b_cc + bb + half*db
            else
-              db  = calculate_slope_vanleer(b_cc)
+              db  = blimiter(b_cc)
               b_ccl = b_cc - half*db
               b_ccr = b_cc + half*db
            endif

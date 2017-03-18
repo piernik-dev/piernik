@@ -39,11 +39,72 @@ module fluxlimiters
 
    implicit none
    private
-   public :: calculate_slope_vanleer, slope_limiter_minmod, slope_limiter_moncen, slope_limiter_superbee
+   public :: set_limiters, flimiter, blimiter, calculate_slope_vanleer, slope_limiter_minmod, slope_limiter_moncen, slope_limiter_superbee
+
+   interface
+      function limiter(q) result(dq)
+
+         implicit none
+
+         real, dimension(:,:), intent(in) :: q
+
+         real, dimension(size(q,1), size(q,2)) :: dq
+
+      end function limiter
+   end interface
+
+   procedure(limiter), pointer :: flimiter => null(), blimiter => null()
 
 contains
 
-!---------------------------------------------------------------------------------------------------------------------
+!!!-------------------------------------------------------------------------------
+
+   subroutine set_limiters(flim_str, blim_str)
+
+      use dataio_pub, only: die
+
+      implicit none
+
+      character(len=*), intent(in) :: flim_str, blim_str
+
+      if (associated(flimiter)) call die("[fluxlimiters:set_limiters] flimiter already associated")
+      flimiter => set_limiter(flim_str)
+
+      if (associated(blimiter)) call die("[fluxlimiters:set_limiters] blimiter already associated")
+      blimiter => set_limiter(blim_str)
+
+   end subroutine set_limiters
+
+!!!-------------------------------------------------------------------------------
+
+   function set_limiter(lim_str) result(lim)
+
+      use dataio_pub, only: msg, die
+
+      implicit none
+
+      character(len=*), intent(in) :: lim_str
+
+      procedure(limiter), pointer :: lim
+
+      select case (lim_str)
+         case ('vanleer', 'VANLEER')
+            lim => calculate_slope_vanleer
+         case ('minmod', 'MINMOD')
+            lim => slope_limiter_minmod
+         case ('moncen', 'MONCEN')
+            lim => slope_limiter_moncen
+         case ('superbee', 'SUPERBEE')
+            lim => slope_limiter_superbee
+         case default
+            write(msg,'(2a)') "[fluxlimiters:set_limiter] unknown limiter ", lim_str
+            call die(msg)
+            lim => null()
+      end select
+
+   end function set_limiter
+
+!!!-------------------------------------------------------------------------------
 
    function calculate_slope_vanleer(u) result(dq)
 
