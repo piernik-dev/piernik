@@ -125,11 +125,11 @@ contains
          select case (vars(i))
             case ('dens')
                nhdf_vars = nhdf_vars + size(iarr_all_dn,1)
-            case ('velx')
+            case ('velx', 'momx')
                nhdf_vars = nhdf_vars + size(iarr_all_mx,1)
-            case ('vely')
+            case ('vely', 'momy')
                nhdf_vars = nhdf_vars + size(iarr_all_my,1)
-            case ('velz')
+            case ('velz', 'momz')
                nhdf_vars = nhdf_vars + size(iarr_all_mz,1)
             case ('ener')
                nhdf_vars = nhdf_vars + size(iarr_all_mz,1)
@@ -177,6 +177,18 @@ contains
                if (has_dst) then ; hdf_vars(j) = 'vlzd' ; j = j + 1 ; endif
                if (has_neu) then ; hdf_vars(j) = 'vlzn' ; j = j + 1 ; endif
                if (has_ion) then ; hdf_vars(j) = 'vlzi' ; j = j + 1 ; endif
+            case ('momx')
+               if (has_dst) then ; hdf_vars(j) = 'momxd' ; j = j + 1 ; endif
+               if (has_neu) then ; hdf_vars(j) = 'momxn' ; j = j + 1 ; endif
+               if (has_ion) then ; hdf_vars(j) = 'momxi' ; j = j + 1 ; endif
+            case ('momy')
+               if (has_dst) then ; hdf_vars(j) = 'momyd' ; j = j + 1 ; endif
+               if (has_neu) then ; hdf_vars(j) = 'momyn' ; j = j + 1 ; endif
+               if (has_ion) then ; hdf_vars(j) = 'momyi' ; j = j + 1 ; endif
+            case ('momz')
+               if (has_dst) then ; hdf_vars(j) = 'momzd' ; j = j + 1 ; endif
+               if (has_neu) then ; hdf_vars(j) = 'momzn' ; j = j + 1 ; endif
+               if (has_ion) then ; hdf_vars(j) = 'momzi' ; j = j + 1 ; endif
             case ('ener')
                if (has_neu) then ; hdf_vars(j) = 'enen' ; j = j + 1 ; endif
                if (has_ion) then ; hdf_vars(j) = 'enei' ; j = j + 1 ; endif
@@ -273,12 +285,21 @@ contains
             case ("i")
                fl_dni => flind%ion
          end select
+      else if (any([ "momx", "momy", "momz" ] == var(1:4))) then
+         select case (var(5:5))
+            case ("d")
+               fl_dni => flind%dst
+            case ("n")
+               fl_dni => flind%neu
+            case ("i")
+               fl_dni => flind%ion
+         end select
       endif
 
       i_xyz = huge(1_INT4)
       if (var(1:2) == "vl") then
          dc = var(3:3)
-      else if (var(1:3) == "mag") then
+      else if (var(1:3) == "mag" .or. var(1:3) == "mom") then
          dc = var(4:4)
       else
          dc = '_'
