@@ -136,8 +136,14 @@ contains
 
       ! Begin processing of namelist parameters
 
+#ifdef RIEMANN
+      ! these limiters were performing best in the Otszag-Tang test (otvortex problem)
+      limiter     = 'minmod'    ! 'vanleer' is a 2nd choice for otvortex
+      limiter_b   = 'superbee'  ! 'moncen' and 'vanleer' were also performing well
+#else /* ! RIEMANN */
       limiter     = 'vanleer'
-      limiter_b   = 'vanleer'
+      limiter_b   = limiter
+#endif /* RIEMANN */
       cflcontrol  = 'warn'
       h_solver    = 'muscl'
       repeat_step = .true.
