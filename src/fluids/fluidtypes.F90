@@ -238,6 +238,7 @@ contains
          use constants,   only: xdim, ydim, zdim, ndims, I_ONE, ION, NEU, DST, cbuff_len
          use dataio_pub,  only: msg, printinfo
          use diagnostics, only: ma1d, ma2d, my_allocate
+         use mpisetup,    only: master
 
          implicit none
 
@@ -322,7 +323,7 @@ contains
             msg = trim(msg) // aux
          endif
 
-         call printinfo(msg)
+         if (master) call printinfo(msg)
 
       end subroutine set_fluid_index
 

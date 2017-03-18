@@ -110,7 +110,7 @@ module constants
    integer, parameter :: units_len = 5 * cbuff_len       !< length for unit strings
    integer, parameter :: fplen = 24                      !< length of buffer for printed FP or integer number
    integer, parameter :: domlen = 16                     !< should be <= cbuff_len
-   integer, parameter :: dsetnamelen = 16                !< length of dataset name and state variable names in hdf files
+   integer, parameter :: dsetnamelen = cbuff_len         !< length of dataset name and state variable names in hdf files
    integer, parameter :: idlen = 3                       !< COMMENT ME
    integer, parameter :: singlechar = 1                  !< a single character
 
@@ -162,6 +162,7 @@ module constants
    character(len=dsetnamelen), parameter :: u0_n    = "u0"      !< backup copy for timestep retrying
    ! magnetic field
    character(len=dsetnamelen), parameter :: mag_n   = "mag"     !< main array
+   character(len=dsetnamelen), parameter :: mag_cc_n = "magcc"  !< cell-centered magnetic field for temporarystorage
    character(len=dsetnamelen), parameter :: b0_n    = "b0"      !< backup copy for timestep retrying
    ! gravitational potential
    character(len=dsetnamelen), parameter :: gp_n    = "gp"      !< static, external field, must be explicitly set to 0. if no external fields are applied

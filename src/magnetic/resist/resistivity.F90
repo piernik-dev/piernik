@@ -280,7 +280,7 @@ contains
             eta(:,:,:) = eta_0 + eta_1 * sqrt(wb(:,:,:)- jc2)
          elsewhere
             eta(:,:,:) = eta_0
-         end where
+         endwhere
 
          eh = 0.0
          if (dom%has_dir(xdim)) then

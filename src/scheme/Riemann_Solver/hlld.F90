@@ -63,7 +63,6 @@ contains
     real, dimension(:,:), intent(in) :: b_cc
 
     real, dimension(size(u,1) + size(b_cc,1), size(u,2)) :: f
-    !real, dimension(size(u,2))                           :: vx, vy, vz, p_t
     real, dimension(size(u,2))                           :: vx, vy, vz, pr
     integer                                              :: ip, boff
     class(component_fluid), pointer                      :: fl
@@ -93,16 +92,20 @@ contains
 
        f(fl%idn,:)  =  u(fl%imx,:)
        if (fl%has_energy) then
-          f(fl%imx,:)  =  u(fl%imx,:)*vx(:) + pr(:) - b_cc(xdim,:)**2  ! b_cc does not contribute in the limit of vanishing magnetic fields. Hydro part is recovered trivially.
           if (fl%is_magnetized) then
              f(fl%imx,:)  =  u(fl%imx,:)*vx(:) + (pr(:)+half*sum(b_cc(xdim:zdim,:)**2,dim=1)) - b_cc(xdim,:)**2 ! Eq. 2 Pg 317
+          else
+             f(fl%imx,:)  =  u(fl%imx,:)*vx(:) + pr(:)  ! b_cc does not contribute in the limit of vanishing magnetic fields. Hydro part is recovered trivially.
           endif
        endif
-       f(fl%imy,:)  =  u(fl%imy,:)*vx(:) - b_cc(xdim,:)*b_cc(ydim,:)
-       f(fl%imz,:)  =  u(fl%imz,:)*vx(:) - b_cc(xdim,:)*b_cc(zdim,:)
        if (fl%is_magnetized) then
+          f(fl%imy,:)  =  u(fl%imy,:)*vx(:) - b_cc(xdim,:)*b_cc(ydim,:)
+          f(fl%imz,:)  =  u(fl%imz,:)*vx(:) - b_cc(xdim,:)*b_cc(zdim,:)
           f(boff+ydim,:) =  b_cc(ydim,:)*vx(:) - b_cc(xdim,:)*vy(:)
           f(boff+zdim,:) =  b_cc(zdim,:)*vx(:) - b_cc(xdim,:)*vz(:)
+       else
+          f(fl%imy,:)  =  u(fl%imy,:)*vx(:)
+          f(fl%imz,:)  =  u(fl%imz,:)*vx(:)
        endif
        if (fl%has_energy) then
           f(fl%ien,:)  =  (u(fl%ien,:) + pr(:))*vx(:) ! Hydro regime. Eq. 2, Pg 317. Takes pr (1)
@@ -125,7 +128,7 @@ contains
     ! external procedures
 
     use constants,  only: half, zero, one, xdim, ydim, zdim, idn, imx, imy, imz, ien
-    use func,       only: operator(.notequals.)
+    use func,       only: operator(.notequals.), operator(.equals.)
 
     ! arguments
 
@@ -188,9 +191,9 @@ contains
 
        ! Left and right states of fast magnetosonic waves Eq. 3
 
-       c_fastm = sqrt(half*max( &
-            ((gampr_l+sum(b_ccl(xdim:zdim,i)**2)) + sqrt((gampr_l+sum(b_ccl(xdim:zdim,i)**2))**2-(four*gampr_l*b_ccl(xdim,i)**2)))/ul(idn,i), &
-            ((gampr_r+sum(b_ccr(xdim:zdim,i)**2)) + sqrt((gampr_r+sum(b_ccr(xdim:zdim,i)**2))**2-(four*gampr_r*b_ccr(xdim,i)**2)))/ur(idn,i)) )
+        c_fastm = sqrt(half*max( &
+             ((gampr_l+sum(b_ccl(xdim:zdim,i)**2)) + sqrt((gampr_l+sum(b_ccl(xdim:zdim,i)**2))**2-(four*gampr_l*b_ccl(xdim,i)**2)))/ul(idn,i), &
+             ((gampr_r+sum(b_ccr(xdim:zdim,i)**2)) + sqrt((gampr_r+sum(b_ccr(xdim:zdim,i)**2))**2-(four*gampr_r*b_ccr(xdim,i)**2)))/ur(idn,i)) )
 
        ! Estimates of speed for left and right going waves Eq. 67
 
@@ -225,10 +228,14 @@ contains
 
           ! Speed of contact discontinuity Eq. 38
           ! Total left and right states of pressure, so prr and prl sm_nr/sm_dr
-          sm =   ( ((sr - ur(imx,i))*ur(idn,i)*ur(imx,i) - prr) - &
-               &   ((sl - ul(imx,i))*ul(idn,i)*ul(imx,i) - prl) ) / &
-               &   ((sr - ur(imx,i))*ur(idn,i) - &
-               &    (sl - ul(imx,i))*ul(idn,i))
+          if ((sr - ur(imx,i))*ur(idn,i) .equals. (sl - ul(imx,i))*ul(idn,i)) then
+             sm = (sl + sr) / 2.
+          else
+             sm =   ( ((sr - ur(imx,i))*ur(idn,i)*ur(imx,i) - prr) - &
+                  &   ((sl - ul(imx,i))*ul(idn,i)*ul(imx,i) - prl) ) / &
+                  &   ((sr - ur(imx,i))*ur(idn,i) - &
+                  &    (sl - ul(imx,i))*ul(idn,i))
+          endif
 
           ! Speed differences
 
@@ -280,8 +287,10 @@ contains
           endif
 
           ! Transversal components of velocity Eq. 42
-          v_starl(ydim:zdim) = ul(imy:imz,i) + b_ccl(xdim,i)/dn_l * (b_ccl(ydim:zdim,i) - b_starl(ydim:zdim))
-          v_starr(ydim:zdim) = ur(imy:imz,i) + b_ccr(xdim,i)/dn_r * (b_ccr(ydim:zdim,i) - b_starr(ydim:zdim))
+          v_starl(ydim:zdim) = ul(imy:imz,i)
+          if (b_ccl(xdim,i) .notequals. 0.) v_starl(ydim:zdim) = v_starl(ydim:zdim) + b_ccl(xdim,i)/dn_l * (b_ccl(ydim:zdim,i) - b_starl(ydim:zdim))
+          v_starr(ydim:zdim) = ur(imy:imz,i)
+          if (b_ccr(xdim,i) .notequals. 0.) v_starr(ydim:zdim) = v_starr(ydim:zdim) + b_ccr(xdim,i)/dn_r * (b_ccr(ydim:zdim,i) - b_starr(ydim:zdim))
 
           ! Dot product of velocity and magnetic field
 
@@ -374,7 +383,7 @@ contains
 
                    ! Energy of Alfven intermediate state Eq. 63
                    u_2starl(ien)  =  u_starl(ien) - b_sig*dn_lsqt*(vb_starl - vb_2star)
-                end if
+                endif
 
                 if (sm <= zero) then
                    ! Conservative variables for right Alfven intermediate state
@@ -383,7 +392,7 @@ contains
 
                    ! Energy of Alfven intermediate state Eq. 63
                    u_2starr(ien)  =  u_starr(ien) + b_sig*dn_rsqt*(vb_starr - vb_2star)
-                end if
+                endif
 
                 if (sm > zero) then
                    ! Left Alfven intermediate flux Eq. 65

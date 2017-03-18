@@ -1174,7 +1174,7 @@ contains
       use types,            only: value                          !QA_WARN: used by get_extremum (intel compiler)
       use cg_leaves,        only: leaves
       use cg_list,          only: cg_list_element
-      use constants,        only: MINL, MAXL, small, xdim, ydim, zdim, GEO_RPZ
+      use constants,        only: MINL, MAXL, small, xdim, ydim, zdim, GEO_RPZ, I_ZERO
       use domain,           only: is_multicg, dom
       use fluidtypes,       only: phys_prop, component_fluid
       use func,             only: ekin
@@ -1352,7 +1352,7 @@ contains
             cgl%cg%wa(:,:,:) = fl%gam*cgl%cg%wa(:,:,:)/cgl%cg%u(fl%idn,:,:,:) ! sound speed squared
             cgl => cgl%nxt
          enddo
-         call leaves%get_extremum(qna%wai, MAXL, pr%cs_max, 0)
+         call leaves%get_extremum(qna%wai, MAXL, pr%cs_max, I_ZERO)
          pr%cs_max%val = sqrt(pr%cs_max%val)
          if (master) pr%cs_max%assoc = cfl * pr%cs_max%assoc / (pr%cs_max%val + small)
 

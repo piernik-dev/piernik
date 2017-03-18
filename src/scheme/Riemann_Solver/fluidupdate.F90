@@ -27,6 +27,9 @@
 !    HLLD Riemann solver for ideal magnetohydrodynamics
 !    Varadarajan Parthasarathy, CAMK, Warszawa. 2015.
 !    Dr. Artur Gawryszczak, CAMK, Warszawa.
+!
+!    Energy fix up routines for CT and its related comments are not used in the current version.
+!    The algorithm is simply present for experimental purposes.
 !--------------------------------------------------------------------------------------------------------------
 
 #include "piernik.def"
@@ -42,14 +45,15 @@ contains
 
   subroutine fluid_update
 
-    use cg_list,        only: cg_list_element
-    use cg_leaves,      only: leaves
-    use constants,      only: xdim, zdim
-    use domain,         only: dom
     use all_boundaries, only: all_bnd
-    use global,         only: skip_sweep, dt, dtm, t
-    use user_hooks,     only: problem_customize_solution
+    use cg_leaves,      only: leaves
+    use cg_list,        only: cg_list_element
+    use constants,      only: xdim, zdim
     use dataio_pub,     only: halfstep
+    use domain,         only: dom
+    use fluxlimiters,   only: set_limiters
+    use global,         only: skip_sweep, dt, dtm, t, limiter, limiter_b
+    use user_hooks,     only: problem_customize_solution
 
     implicit none
 
@@ -61,6 +65,7 @@ contains
     halfstep = .false.
     if (first_run) then
        dtm = 0.0
+       call set_limiters(limiter, limiter_b)
     else
        dtm = dt
     endif
@@ -68,38 +73,302 @@ contains
 
     ! ToDo: check if changes of execution order here (block loop, direction loop, boundary update can change
     ! cost or allow for reduction of required guardcells
-    cgl => leaves%first
-    do while (associated(cgl))
+    call bfc2bcc
+    do ddim = xdim, zdim, 1
+      if (dom%has_dir(ddim)) then
 
-       do ddim = xdim, zdim, 1
-          ! Warning: 2.5D MHD may need all directional calls anyway
-          if (.not. skip_sweep(ddim) .and. dom%has_dir(ddim)) call sweep_dsplit(cgl%cg,dt,ddim)
-       enddo
-       if (associated(problem_customize_solution)) call problem_customize_solution(.true.)
-       cgl => cgl%nxt
+         cgl => leaves%first
+         do while (associated(cgl))
+
+            ! Warning: 2.5D MHD may need all directional calls anyway
+            if (.not. skip_sweep(ddim)) call sweep_dsplit(cgl%cg,dt,ddim)
+            if (associated(problem_customize_solution)) call problem_customize_solution(.true.)
+            cgl => cgl%nxt
+         enddo
+         call all_bnd
+#ifdef MAGNETIC
+         call magfield(ddim)
+#endif /* MAGNETIC */
+      endif
     enddo
-    call all_bnd
 
     t = t + dt
     dtm = dt
     halfstep = .true.
 
-    cgl => leaves%first
-    do while (associated(cgl))
+    call bfc2bcc
+    do ddim = zdim, xdim, -1
+       if (dom%has_dir(ddim)) then
+#ifdef MAGNETIC
+          call magfield(ddim)
+#endif /* MAGNETIC */
+          cgl => leaves%first
+          do while (associated(cgl))
 
-       do ddim = zdim, xdim, -1
-          if (.not. skip_sweep(ddim) .and. dom%has_dir(ddim)) call sweep_dsplit(cgl%cg,dt,ddim)
-       enddo
-       if (associated(problem_customize_solution)) call problem_customize_solution(.false.)
-       cgl => cgl%nxt
+             if (.not. skip_sweep(ddim)) call sweep_dsplit(cgl%cg,dt,ddim)
+             if (associated(problem_customize_solution)) call problem_customize_solution(.false.)
+             cgl => cgl%nxt
+          enddo
+          call all_bnd
+       endif
     enddo
-    call all_bnd
 
     if (first_run) first_run = .false.
 
   end subroutine fluid_update
 
 !-------------------------------------------------------------------------------------------------------------------
+
+#ifdef MAGNETIC
+   subroutine magfield(dir)
+
+      use ct,     only: advectb, ctb
+      use constants,   only: ndims, I_ONE
+#ifdef RESISTIVE
+      use resistivity, only: diffuseb
+#endif /* RESISTIVE */
+
+       implicit none
+
+       integer(kind=4), intent(in) :: dir
+
+       integer(kind=4)             :: bdir, dstep
+
+       do dstep = 0, 1
+          bdir  = I_ONE + mod(dir+dstep,ndims)
+          call advectb(bdir, dir)
+#ifdef RESISTIVE
+         call diffuseb(bdir, dir)
+#endif /* RESISTIVE */
+         call mag_add(dir, bdir)
+      enddo
+
+      ! call energy_fixup use cfl_resist = 0.3
+
+   end subroutine magfield
+
+!-------------------------------------------------------------------------------------------------------------------
+
+ subroutine mag_add(dim1, dim2)
+
+      use cg_leaves,        only: leaves
+      use cg_list,          only: cg_list_element
+      use grid_cont,        only: grid_container
+      use all_boundaries,   only: all_mag_boundaries
+      use user_hooks,       only: custom_emf_bnd
+#ifdef RESISTIVE
+     use constants,        only: wcu_n
+     use dataio_pub,       only: die
+     use domain,           only: is_multicg
+     use named_array_list, only: qna
+#endif /* RESISTIVE */
+
+      implicit none
+
+      integer(kind=4), intent(in)    :: dim1, dim2
+
+      type(cg_list_element), pointer :: cgl
+      type(grid_container),  pointer :: cg
+#ifdef RESISTIVE
+      real, dimension(:,:,:), pointer :: wcu
+#endif /* RESISTIVE */
+
+      cgl => leaves%first
+      do while (associated(cgl))
+         cg => cgl%cg
+#ifdef RESISTIVE
+! DIFFUSION FULL STEP
+         wcu => cg%q(qna%ind(wcu_n))%arr
+         if (is_multicg) call die("[fluidupdate:mag_add] multiple grid pieces per processor not implemented yet") ! not tested custom_emf_bnd
+         if (associated(custom_emf_bnd)) call custom_emf_bnd(wcu)
+         cg%b(dim2,:,:,:) = cg%b(dim2,:,:,:) -              wcu*cg%idl(dim1)
+         cg%b(dim2,:,:,:) = cg%b(dim2,:,:,:) + pshift(wcu,dim1)*cg%idl(dim1)
+         cg%b(dim1,:,:,:) = cg%b(dim1,:,:,:) +              wcu*cg%idl(dim2)
+         cg%b(dim1,:,:,:) = cg%b(dim1,:,:,:) - pshift(wcu,dim2)*cg%idl(dim2)
+#endif /* RESISTIVE */
+! ADVECTION FULL STEP
+         if (associated(custom_emf_bnd)) call custom_emf_bnd(cg%wa)
+         cg%b(dim2,:,:,:) = cg%b(dim2,:,:,:) - cg%wa*cg%idl(dim1)
+         cg%wa = mshift(cg%wa,dim1)
+         cg%b(dim2,:,:,:) = cg%b(dim2,:,:,:) + cg%wa*cg%idl(dim1)
+         cg%b(dim1,:,:,:) = cg%b(dim1,:,:,:) - cg%wa*cg%idl(dim2)
+         cg%wa = pshift(cg%wa,dim2)
+         cg%b(dim1,:,:,:) = cg%b(dim1,:,:,:) + cg%wa*cg%idl(dim2)
+         cgl => cgl%nxt
+      enddo
+
+      call all_mag_boundaries
+
+   end subroutine mag_add
+
+!-------------------------------------------------------------------------------------------------------------------
+
+!>
+!! \brief Function pshift makes one-cell, forward circular shift of 3D array in any direction
+!! \param tab input array
+!! \param d direction of the shift, where 1,2,3 corresponds to \a x,\a y,\a z respectively
+!! \return real, dimension(size(tab,1),size(tab,2),size(tab,3))
+!!
+!! The function was written in order to significantly improve
+!! the performance at the cost of the flexibility of original \p CSHIFT.
+!<
+   function pshift(tab, d)
+
+      use dataio_pub,    only: warn
+
+      implicit none
+
+      real, dimension(:,:,:), intent(inout) :: tab
+      integer(kind=4),        intent(in)    :: d
+
+      integer :: ll
+      real, dimension(size(tab,1),size(tab,2),size(tab,3)) :: pshift
+
+      ll = size(tab,d)
+
+      if (ll==1) then
+         pshift = tab
+         return
+      endif
+
+      if (d==1) then
+         pshift(1:ll-1,:,:) = tab(2:ll,:,:); pshift(ll,:,:) = tab(1,:,:)
+      else if (d==2) then
+         pshift(:,1:ll-1,:) = tab(:,2:ll,:); pshift(:,ll,:) = tab(:,1,:)
+      else if (d==3) then
+         pshift(:,:,1:ll-1) = tab(:,:,2:ll); pshift(:,:,ll) = tab(:,:,1)
+      else
+         call warn('[fluidupdate:pshift]: Dim ill defined in pshift!')
+      endif
+
+      return
+   end function pshift
+
+!>
+!! \brief Function mshift makes one-cell, backward circular shift of 3D array in any direction
+!! \param tab input array
+!! \param d direction of the shift, where 1,2,3 corresponds to \a x,\a y,\a z respectively
+!! \return real, dimension(size(tab,1),size(tab,2),size(tab,3))
+!!
+!! The function was written in order to significantly improve
+!! the performance at the cost of the flexibility of original \p CSHIFT.
+!<
+   function mshift(tab,d)
+
+      use dataio_pub,    only: warn
+
+      implicit none
+
+      real, dimension(:,:,:), intent(inout) :: tab
+      integer(kind=4),        intent(in)    :: d
+
+      integer :: ll
+      real, dimension(size(tab,1) , size(tab,2) , size(tab,3)) :: mshift
+
+      ll = size(tab,d)
+
+      if (ll==1) then
+         mshift = tab
+         return
+      endif
+
+      if (d==1) then
+         mshift(2:ll,:,:) = tab(1:ll-1,:,:); mshift(1,:,:) = tab(ll,:,:)
+      else if (d==2) then
+         mshift(:,2:ll,:) = tab(:,1:ll-1,:); mshift(:,1,:) = tab(:,ll,:)
+      else if (d==3) then
+         mshift(:,:,2:ll) = tab(:,:,1:ll-1); mshift(:,:,1) = tab(:,:,ll)
+      else
+         call warn('[fluidupdate:mshift]: Dim ill defined in mshift!')
+      endif
+
+      return
+   end function mshift
+
+#endif /* MAGNETIC */
+
+!-------------------------------------------------------------------------------------------------------------------
+
+  subroutine bfc2bcc
+
+     use cg_leaves,        only: leaves
+     use cg_list,          only: cg_list_element
+     use constants,        only: xdim, ydim, zdim, LO, HI, half
+     use domain,           only: dom
+     use grid_cont,        only: grid_container
+     use named_array_list, only: wna
+
+     implicit none
+
+     type(cg_list_element), pointer :: cgl
+     type(grid_container),  pointer :: cg
+
+     cgl => leaves%first
+     do while (associated(cgl))
+        cg => cgl%cg
+
+        cg%w(wna%bcci)%arr(:,:,:,:) = half * cg%b(:, :, :, :)
+
+        cg%w(wna%bcci)%arr(xdim, cg%lhn(xdim, LO):cg%lhn(xdim, HI)-1, :, :) = &
+             cg%w(wna%bcci)%arr(xdim, cg%lhn(xdim, LO):cg%lhn(xdim, HI)-1, :, :) + &
+             half * cg%b(xdim, cg%lhn(xdim, LO)+dom%D_x:cg%lhn(xdim, HI)-1+dom%D_x, :, :)
+
+        cg%w(wna%bcci)%arr(ydim, :,cg%lhn(ydim, LO):cg%lhn(ydim, HI)-1, :) = &
+             cg%w(wna%bcci)%arr(ydim, :, cg%lhn(ydim, LO):cg%lhn(ydim, HI)-1, :) + &
+             half * cg%b(ydim, :, cg%lhn(ydim, LO)+dom%D_y:cg%lhn(ydim, HI)-1+dom%D_y, :)
+
+        cg%w(wna%bcci)%arr(zdim, :, :, cg%lhn(zdim, LO):cg%lhn(zdim, HI)-1) = &
+             cg%w(wna%bcci)%arr(zdim, :, :, cg%lhn(zdim, LO):cg%lhn(zdim, HI)-1) + &
+             half * cg%b(zdim, :, :, cg%lhn(zdim, LO)+dom%D_z:cg%lhn(zdim, HI)-1+dom%D_z)
+
+        cgl => cgl%nxt
+     enddo
+
+  end subroutine bfc2bcc
+
+  subroutine energy_fixup
+
+     use all_boundaries,   only: all_bnd
+     use cg_leaves,        only: leaves
+     use cg_list,          only: cg_list_element
+     use constants,        only: xdim, ydim, zdim, LO, HI, half
+     use domain,           only: dom
+     use fluidindex,       only: flind
+     use func,             only: emag
+     use grid_cont,        only: grid_container
+     use named_array_list, only: wna
+
+     implicit none
+
+     type(cg_list_element), pointer :: cgl
+     type(grid_container),  pointer :: cg
+
+     integer :: i, j, k
+
+     cgl => leaves%first
+     do while (associated(cgl))
+        cg => cgl%cg
+
+        do k = cg%lh1(zdim, LO), cg%lh1(zdim, HI)
+           do j = cg%lh1(ydim, LO), cg%lh1(ydim, HI)-1
+              do i = cg%lh1(xdim, LO), cg%lh1(xdim, HI)-1
+                 cg%u(flind%ion%ien,i,j,k) = cg%u(flind%ion%ien,i,j,k) + ( &
+                      emag(half*(cg%b(xdim, i, j, k) + cg%b(xdim, i+dom%D_x, j, k)), &
+                      &    half*(cg%b(ydim, i, j, k) + cg%b(ydim, i, j+dom%D_y, k)), &
+                      &    half*(cg%b(zdim, i, j, k) + cg%b(zdim, i, j, k+dom%D_z)) ) - &
+                      emag(cg%w(wna%bcci)%arr(xdim, i, j, k), &
+                      &    cg%w(wna%bcci)%arr(ydim, i, j, k), &
+                      &    cg%w(wna%bcci)%arr(zdim, i, j, k) ) ) /4.
+                 ! 1/8. to 1/6. seems to give best survivability of the otvortex but it is still far from being good
+              enddo
+           enddo
+        enddo
+        cgl => cgl%nxt
+     enddo
+
+     call all_bnd ! overkill
+
+  end subroutine energy_fixup
 
   subroutine sweep_dsplit(cg, dt, ddim)
 
@@ -122,12 +391,12 @@ contains
     do i2 = cg%lhn(pdims(ddim, ORTHO2), LO), cg%lhn(pdims(ddim,ORTHO2), HI)
        do i1 = cg%lhn(pdims(ddim, ORTHO1), LO), cg%lhn(pdims(ddim, ORTHO1), HI)
           pu => cg%w(wna%fi)%get_sweep(ddim,i1,i2)
-          pb => cg%w(wna%bi)%get_sweep(ddim,i1,i2)
           u1d(iarr_all_swp(ddim,:),:) = pu(:,:)
+          pb => cg%w(wna%bcci)%get_sweep(ddim,i1,i2)
           b_cc1d(iarr_mag_swp(ddim,:),:) = pb(:,:)
           call solve(u1d,b_cc1d, dt/cg%dl(ddim))
           pu(:,:) = u1d(iarr_all_swp(ddim,:),:)
-          pb(:,:) = b_cc1d(iarr_mag_swp(ddim,:),:)
+          pb(:,:) = b_cc1d(iarr_mag_swp(ddim,:),:) ! ToDo figure out how to manage CT energy fixup without extra storage
        enddo
     enddo
 
@@ -253,6 +522,7 @@ contains
 
            use constants,  only: half
            use dataio_pub, only: die
+           use fluxlimiters, only: flimiter, blimiter
 
            implicit none
 
@@ -264,22 +534,24 @@ contains
 
            if (present(uu) .neqv. present(bb)) call die("[fluidupdate:solve:slope] either mone or both optional arguments must be present")
 
+           ! Use van leer limiter for du in hydro and minmod limiter in mhd
            if (present(uu)) then
-              du  = calculate_slope_vanleer(u + uu)
+              du  = flimiter(u + uu)
               ul  = u + uu - half*du
               ur  = u + uu + half*du
            else
-              du  = calculate_slope_vanleer(u)
+              du  = flimiter(u)
               ul  = u - half*du
               ur  = u + half*du
            endif
 
+           ! As of now we will use only van leer limiter for db
            if (present(bb)) then
-              db  = calculate_slope_vanleer(b_cc + bb)
+              db  = blimiter(b_cc + bb)
               b_ccl = b_cc + bb - half*db
               b_ccr = b_cc + bb + half*db
            else
-              db  = calculate_slope_vanleer(b_cc)
+              db  = blimiter(b_cc)
               b_ccl = b_cc - half*db
               b_ccr = b_cc + half*db
            endif
@@ -390,7 +662,7 @@ contains
                  p_bccl => b0
                  p_bccr => b0
               endif
-              call riemann_hlld(nx, p_flx, p_ql, p_qr, p_bcc, p_bccl, p_bccr, fl%gam)
+              call riemann_hlld(nx, p_flx, p_ql, p_qr, p_bcc, p_bccl, p_bccr, fl%gam) ! whole mag_cc is not needed now for simple schemes but rk2 and rk4 still rely on it
            enddo
 
         end subroutine riemann_wrap
@@ -431,34 +703,7 @@ contains
 
   end subroutine solve
 
-!---------------------------------------------------------------------------------------------------------------------
-
-  function calculate_slope_vanleer(u) result(dq)
-
-      implicit none
-
-      real, dimension(:,:), intent(in)     :: u
-
-      real, dimension(size(u,1),size(u,2)) :: dlft, drgt, dcen, dq
-      integer :: n
-
-
-      n = size(u,2)
-
-      dlft(:,2:n)   = (u(:,2:n) - u(:,1:n-1)) ; dlft(:,1) = dlft(:,2)    ! (14.38)
-      drgt(:,1:n-1) = dlft(:,2:n) ;             drgt(:,n) = drgt(:,n-1)
-
-      dcen = dlft*drgt
-
-      where (dcen>0.0)
-         dq = 2.0*dcen / (dlft+drgt)       ! (14.54)
-      elsewhere
-         dq = 0.0
-      endwhere
-
-   end function calculate_slope_vanleer
-
-!-----------------------------------------------------------------------------------------------------------------------
+!--------------------------------------------------------------------------------------------------------------
 
    function utoq(u,b_cc) result(q)
 
