@@ -195,7 +195,7 @@ contains
         c_fastm = sqrt(half*max( &
              ((gampr_l+sum(b_ccl(xdim:zdim,i)**2)) + sqrt((gampr_l+sum(b_ccl(xdim:zdim,i)**2))**2-(four*gampr_l*b_ccl(xdim,i)**2)))/ul(idn,i), &
              ((gampr_r+sum(b_ccr(xdim:zdim,i)**2)) + sqrt((gampr_r+sum(b_ccr(xdim:zdim,i)**2))**2-(four*gampr_r*b_ccr(xdim,i)**2)))/ur(idn,i)) )
-       
+
        ! Estimates of speed for left and right going waves Eq. 67
 
        sl  =  min(ul(imx,i) ,ur(imx,i)) - c_fastm
@@ -384,7 +384,7 @@ contains
 
                    ! Energy of Alfven intermediate state Eq. 63
                    u_2starl(ien)  =  u_starl(ien) - b_sig*dn_lsqt*(vb_starl - vb_2star)
-                end if
+                endif
 
                 if (sm <= zero) then
                    ! Conservative variables for right Alfven intermediate state
@@ -393,7 +393,7 @@ contains
 
                    ! Energy of Alfven intermediate state Eq. 63
                    u_2starr(ien)  =  u_starr(ien) + b_sig*dn_rsqt*(vb_starr - vb_2star)
-                end if
+                endif
 
                 if (sm > zero) then
                    ! Left Alfven intermediate flux Eq. 65
