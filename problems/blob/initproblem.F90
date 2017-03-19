@@ -30,7 +30,8 @@ module initproblem
 
 ! Initial condition for blob test
 ! Blob test by Agertz et al., 2007, MNRAS, 380, 963.
-! ToDo: write support for original, SPH-noisy, initial conditions
+
+   use constants, only: cbuff_len
 
    implicit none
 
@@ -38,8 +39,9 @@ module initproblem
    public :: read_problem_par, problem_initial_conditions, problem_pointers
 
    real   :: chi, rblob, blobxc, blobyc, blobzc, Mext, denv, tkh, vgal
+   character(len=cbuff_len) :: ICfile
 
-   namelist /PROBLEM_CONTROL/  chi, rblob, blobxc, blobyc, blobzc, Mext, denv, tkh, vgal
+   namelist /PROBLEM_CONTROL/  chi, rblob, blobxc, blobyc, blobzc, Mext, denv, tkh, vgal, ICfile
 
 contains
 
@@ -55,8 +57,9 @@ contains
 
    subroutine read_problem_par
 
+      use constants,  only: cbuff_len
       use dataio_pub, only: nh   ! QA_WARN required for diff_nml
-      use mpisetup,   only: rbuff, master, slave, piernik_MPI_Bcast
+      use mpisetup,   only: cbuff, rbuff, master, slave, piernik_MPI_Bcast
 
       implicit none
 
@@ -69,6 +72,8 @@ contains
       denv    =  1.0
       tkh     =  1.7
       vgal    =  0.0
+
+      ICfile = ""
 
       if (master) then
 
@@ -98,9 +103,12 @@ contains
          rbuff(8) = tkh
          rbuff(9) = vgal
 
+         cbuff(1) = ICfile
+
       endif
 
       call piernik_MPI_Bcast(rbuff)
+      call piernik_MPI_Bcast(cbuff, cbuff_len)
 
       if (slave) then
 
@@ -114,6 +122,8 @@ contains
          tkh      = rbuff(8)
          vgal     = rbuff(9)
 
+         ICfile   = cbuff(1)
+
       endif
 
    end subroutine read_problem_par
@@ -121,6 +131,38 @@ contains
 !-----------------------------------------------------------------------------
 
    subroutine problem_initial_conditions
+
+      use dataio_pub, only: msg, printinfo
+      use mpisetup,   only: master
+
+      implicit none
+
+      if (len(trim(ICfile)) > 0) then
+         write(msg, *) "[initproblem:problem_initial_conditions] Reading Initial Conditions from '", trim(ICfile), "'"
+         if (master) call printinfo(msg)
+         call problem_initial_conditions_original
+      else
+         if (master) call printinfo("[initproblem:problem_initial_conditions] Using analytical Initial Conditions")
+         call problem_initial_conditions_analytical
+      endif
+
+   end subroutine problem_initial_conditions
+
+!-----------------------------------------------------------------------------
+
+   subroutine problem_initial_conditions_original
+
+      use dataio_pub, only: die
+
+      implicit none
+
+      call die("[initproblem:problem_initial_conditions_original] Not implemented yet")
+
+   end subroutine problem_initial_conditions_original
+
+!-----------------------------------------------------------------------------
+
+   subroutine problem_initial_conditions_analytical
 
       use cg_leaves,  only: leaves
       use cg_list,    only: cg_list_element
@@ -178,7 +220,7 @@ contains
          cgl => cgl%nxt
       enddo
 
-   end subroutine problem_initial_conditions
+   end subroutine problem_initial_conditions_analytical
 
 !------------------------------------------------------------------------------------------
 
