@@ -163,26 +163,56 @@ contains
 
    subroutine problem_initial_conditions_original
 
-      use dataio_pub, only: warn
+      use cg_leaves,  only: leaves
+      use cg_list,    only: cg_list_element
+      use dataio_pub, only: msg, warn, die
+      use domain,     only: dom
+      use fluidindex, only: flind
+      use fluidtypes, only: component_fluid
+      use grid_cont,  only: grid_container
 
       implicit none
 
       logical :: firstcall = .true.
+      integer :: f, j, k
+      integer, dimension(5) :: fi
+      class(component_fluid), pointer :: fl
+      type(cg_list_element),  pointer :: cgl
+      type(grid_container),   pointer :: cg
 
       if (firstcall) then
          call problem_initial_conditions_readh5
          firstcall = .false.
       end if
 
-      call problem_initial_conditions_analytical
-      call warn("[initproblem:problem_initial_conditions_original] Not implemented yet, falling back to analytical")
+      ! Most naive: put the data 1:1, expect correct sizes, don't try to be friendly (ToDo: add more flexibility for AMR)
+
+      if (any(dom%n_d /= shape(data(1, :, :, :)))) then
+         write(msg, *)"[initproblem:problem_initial_conditions_original] domain doesn't match IC data: ",dom%n_d," /= ", shape(data(1, :, :, :)), " (read it in Z-Y-X order)"
+         call die(msg)
+      end if
+
+      fl => flind%neu
+      fi = [ fl%idn, fl%imx, fl%imy, fl%imz, fl%ien ]
+      cgl => leaves%first
+      do while (associated(cgl))
+         cg => cgl%cg
+         do f = lbound(fi, 1), ubound(fi, 1)
+            do k = cg%ks, cg%ke
+               do j = cg%js, cg%je
+                  cg%u(fi(f), cg%is:cg%ie, j, k) = data(f, 1+cg%is:1+cg%ie, 1+j, 1+k)
+               end do
+            end do
+         end do
+         cgl => cgl%nxt
+      enddo
 
    end subroutine problem_initial_conditions_original
 
    subroutine problem_initial_conditions_readh5
 
       use constants,  only: cbuff_len
-      use dataio_pub, only: msg, warn, die
+      use dataio_pub, only: msg, die
       use hdf5,       only: H5F_ACC_RDONLY_F, HID_T, HSIZE_T, SIZE_T, H5T_NATIVE_REAL, &
            &                h5open_f, h5close_f, h5fopen_f, h5fclose_f
       use h5lt,       only: h5ltfind_dataset_f, h5ltget_dataset_ndims_f, h5ltget_dataset_info_f, &
@@ -201,29 +231,29 @@ contains
 
       inquire(file = trim(ICfile), exist = file_exist)
       if (.not. file_exist) then
-         write(msg,'(3a)') '[initproblem:problem_initial_conditions_original] IC file: ', trim(ICfile),' does not exist'
+         write(msg,'(3a)') '[initproblem:problem_initial_conditions_readh5] IC file: ', trim(ICfile),' does not exist'
          call die(msg)
       endif
 
       call h5open_f(error)
       if (master .or. slave) then  ! ToDo do somewhat more intelligent reading as this may easily clutter memory on lagre IC file
          call h5fopen_f(trim(ICfile), H5F_ACC_RDONLY_F, file_id, error)
-         if (error /= 0) call die("[initproblem:problem_initial_conditions_original] error opening IC file")
+         if (error /= 0) call die("[initproblem:problem_initial_conditions_readh5] error opening IC file")
          do d = lbound(dsets, 1), ubound(dsets, 1)
             if (h5ltfind_dataset_f(file_id, trim(dsets(d))) == 0) then
-               write(msg, *)"[initproblem:problem_initial_conditions_original] Cannot find dataset '",trim(dsets(d)),"'"
+               write(msg, *)"[initproblem:problem_initial_conditions_readh5] Cannot find dataset '",trim(dsets(d)),"'"
                call die(msg)
             end if
             call h5ltget_dataset_ndims_f(file_id, dsets(d), rank, error)
-            if (rank /= 3) call die("[initproblem:problem_initial_conditions_original] Wrong dataset rank")
+            if (rank /= 3) call die("[initproblem:problem_initial_conditions_readh5] Wrong dataset rank")
             allocate(dims(rank+1))
             dims(1) = size(dsets)
             call h5ltget_dataset_info_f(file_id, dsets(d), dims(2:), type_class, type_size, error)
-            if (type_size /= expected_type_size) call die("[initproblem:problem_initial_conditions_original] Wrong type size")
+            if (type_size /= expected_type_size) call die("[initproblem:problem_initial_conditions_readh5] Wrong type size")
             if (d==1) then
                allocate(data(dims(1), dims(2), dims(3), dims(4)))
             else
-               if (any(dims /= shape(data))) call die("[initproblem:problem_initial_conditions_original] datasets differ in shape")
+               if (any(dims /= shape(data))) call die("[initproblem:problem_initial_conditions_readh5] datasets differ in shape")
             end if
             deallocate(dims)
             call h5ltread_dataset_f(file_id, dsets(d), H5T_NATIVE_REAL, data(d, :, :, :), dims, error)
