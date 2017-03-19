@@ -30,6 +30,9 @@ module initproblem
 
 ! Initial condition for blob test
 ! Blob test by Agertz et al., 2007, MNRAS, 380, 963.
+! 
+! For description and Initial Condition files look here:
+! http://www.astrosim.net/code/doku.php?id=home:codetest:hydrotest:wengen:wengen3
 
    use constants, only: cbuff_len
 
@@ -152,11 +155,62 @@ contains
 
    subroutine problem_initial_conditions_original
 
-      use dataio_pub, only: die
+      use constants,  only: cbuff_len
+      use dataio_pub, only: msg, warn, die
+      use hdf5,       only: H5F_ACC_RDONLY_F, HID_T, HSIZE_T, SIZE_T, H5T_NATIVE_REAL, &
+           &                h5open_f, h5close_f, h5fopen_f, h5fclose_f
+      use h5lt,       only: h5ltfind_dataset_f, h5ltget_dataset_ndims_f, h5ltget_dataset_info_f, &
+           &                h5ltread_dataset_f
+      use mpisetup,   only: master
 
       implicit none
 
-      call die("[initproblem:problem_initial_conditions_original] Not implemented yet")
+      logical :: file_exist
+      character(len=cbuff_len), dimension(5), parameter :: dsets = ["Density    ", "x-velocity ", "y-velocity ", "z-velocity ", "TotalEnergy" ]
+      integer(kind=4) :: error, rank, type_class
+      integer(HID_T) :: file_id
+      integer :: d
+      integer(SIZE_T) :: type_size
+      integer(HSIZE_T), allocatable, dimension(:) :: dims
+      integer, parameter :: expected_type_size = 4
+      real(kind=expected_type_size), dimension(:,:,:,:), allocatable :: data
+
+      inquire(file = trim(ICfile), exist = file_exist)
+      if (.not. file_exist) then
+         write(msg,'(3a)') '[initproblem:problem_initial_conditions_original] IC file: ', trim(ICfile),' does not exist'
+         call die(msg)
+      endif
+
+      call h5open_f(error)
+      if (master) then
+         call h5fopen_f(trim(ICfile), H5F_ACC_RDONLY_F, file_id, error)
+         if (error /= 0) call die("[initproblem:problem_initial_conditions_original] error opening IC file")
+         do d = lbound(dsets, 1), ubound(dsets, 1)
+            if (h5ltfind_dataset_f(file_id, trim(dsets(d))) == 0) then
+               write(msg, *)"[initproblem:problem_initial_conditions_original] Cannot find dataset '",trim(dsets(d)),"'"
+               call die(msg)
+            end if
+            call h5ltget_dataset_ndims_f(file_id, dsets(d), rank, error)
+            if (rank /= 3) call die("[initproblem:problem_initial_conditions_original] Wrong dataset rank")
+            allocate(dims(rank+1))
+            dims(1) = size(dsets)
+            call h5ltget_dataset_info_f(file_id, dsets(d), dims(2:), type_class, type_size, error)
+            if (type_size /= expected_type_size) call die("[initproblem:problem_initial_conditions_original] Wrong type size")
+            if (d==1) then
+               allocate(data(dims(1), dims(2), dims(3), dims(4)))
+            else
+               if (any(dims /= shape(data))) call die("[initproblem:problem_initial_conditions_original] datasets differ in shape")
+            end if
+            deallocate(dims)
+            call h5ltread_dataset_f(file_id, dsets(d), H5T_NATIVE_REAL, data(d, :, :, :), dims, error)
+         end do
+         call h5fclose_f(file_id, error)
+      end if
+      call h5close_f(error)
+
+      deallocate(data)
+      call problem_initial_conditions_analytical
+      call warn("[initproblem:problem_initial_conditions_original] Not implemented yet, falling back to analytical")
 
    end subroutine problem_initial_conditions_original
 
