@@ -41,6 +41,10 @@ module initproblem
    private
    public :: read_problem_par, problem_initial_conditions, problem_pointers
 
+   integer, parameter :: expected_type_size = 4
+   real(kind=expected_type_size), dimension(:,:,:,:), allocatable :: data
+
+   ! namelist parameters
    real   :: chi, rblob, blobxc, blobyc, blobzc, Mext, denv, tkh, vgal
    character(len=cbuff_len) :: ICfile
 
@@ -52,7 +56,11 @@ contains
 
    subroutine problem_pointers
 
+      use user_hooks, only: problem_post_IC
+
       implicit none
+
+      problem_post_IC => deallocate_h5IC
 
    end subroutine problem_pointers
 
@@ -155,13 +163,31 @@ contains
 
    subroutine problem_initial_conditions_original
 
+      use dataio_pub, only: warn
+
+      implicit none
+
+      logical :: firstcall = .true.
+
+      if (firstcall) then
+         call problem_initial_conditions_readh5
+         firstcall = .false.
+      end if
+
+      call problem_initial_conditions_analytical
+      call warn("[initproblem:problem_initial_conditions_original] Not implemented yet, falling back to analytical")
+
+   end subroutine problem_initial_conditions_original
+
+   subroutine problem_initial_conditions_readh5
+
       use constants,  only: cbuff_len
       use dataio_pub, only: msg, warn, die
       use hdf5,       only: H5F_ACC_RDONLY_F, HID_T, HSIZE_T, SIZE_T, H5T_NATIVE_REAL, &
            &                h5open_f, h5close_f, h5fopen_f, h5fclose_f
       use h5lt,       only: h5ltfind_dataset_f, h5ltget_dataset_ndims_f, h5ltget_dataset_info_f, &
            &                h5ltread_dataset_f
-      use mpisetup,   only: master
+      use mpisetup,   only: master, slave
 
       implicit none
 
@@ -172,8 +198,6 @@ contains
       integer :: d
       integer(SIZE_T) :: type_size
       integer(HSIZE_T), allocatable, dimension(:) :: dims
-      integer, parameter :: expected_type_size = 4
-      real(kind=expected_type_size), dimension(:,:,:,:), allocatable :: data
 
       inquire(file = trim(ICfile), exist = file_exist)
       if (.not. file_exist) then
@@ -182,7 +206,7 @@ contains
       endif
 
       call h5open_f(error)
-      if (master) then
+      if (master .or. slave) then  ! ToDo do somewhat more intelligent reading as this may easily clutter memory on lagre IC file
          call h5fopen_f(trim(ICfile), H5F_ACC_RDONLY_F, file_id, error)
          if (error /= 0) call die("[initproblem:problem_initial_conditions_original] error opening IC file")
          do d = lbound(dsets, 1), ubound(dsets, 1)
@@ -208,11 +232,15 @@ contains
       end if
       call h5close_f(error)
 
-      deallocate(data)
-      call problem_initial_conditions_analytical
-      call warn("[initproblem:problem_initial_conditions_original] Not implemented yet, falling back to analytical")
+   end subroutine problem_initial_conditions_readh5
 
-   end subroutine problem_initial_conditions_original
+   subroutine deallocate_h5IC
+
+      implicit none
+
+      deallocate(data)
+
+   end subroutine deallocate_h5IC
 
 !-----------------------------------------------------------------------------
 
