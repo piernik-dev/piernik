@@ -56,11 +56,13 @@ contains
 
    subroutine problem_pointers
 
-      use user_hooks, only: problem_post_IC
+      use dataio_user, only: user_tsl
+      use user_hooks,  only: problem_post_IC
 
       implicit none
 
       problem_post_IC => deallocate_h5IC
+      user_tsl        => clump_mass
 
    end subroutine problem_pointers
 
@@ -274,7 +276,7 @@ contains
 
       if (master) write(*,*) "Newton's constant, G = ", newtong
 
-      deallocate(data)
+      if (allocated(data)) deallocate(data)
 
    end subroutine deallocate_h5IC
 
@@ -341,5 +343,54 @@ contains
    end subroutine problem_initial_conditions_analytical
 
 !------------------------------------------------------------------------------------------
+
+   subroutine clump_mass(user_vars, tsl_names)
+
+      use cg_leaves,   only: leaves
+      use cg_list,     only: cg_list_element
+      use constants,   only: pSUM
+      use diagnostics, only: pop_vector
+      use fluidindex,  only: flind
+      use grid_cont,   only: grid_container
+      use mpisetup,    only: master, piernik_MPI_Allreduce
+
+      implicit none
+
+      real, dimension(:), intent(inout), allocatable                       :: user_vars
+      character(len=*), dimension(:), intent(inout), allocatable, optional :: tsl_names
+
+      real :: m_clump
+      integer :: i, j, k
+      type(cg_list_element), pointer :: cgl
+      type(grid_container),  pointer :: cg
+      real, parameter :: rho_thr = 0.64 * 3.13e-7, T_thr = 0.9 *123900. ! ToDo: get more exact eatimate of T_ext
+
+      if (present(tsl_names)) then
+         call pop_vector(tsl_names, len(tsl_names(1)), ["m_clump"])      !   add to header
+      else
+
+         m_clump = 0.
+         cgl => leaves%first
+         do while (associated(cgl))
+            cg => cgl%cg
+            do k = cg%ks, cg%ke
+               do j = cg%js, cg%je
+                  do i = cg%is, cg%ie
+                     if (cg%leafmap(i, j, k)) then
+                        if (cg%u(flind%neu%idn, i, j, k) > rho_thr .and. cg%u(flind%neu%ien, i, j, k) < T_thr) &
+                             m_clump = m_clump + cg%u(flind%neu%idn, i, j, k) * cg%dvol
+                     end if
+                  end do
+               end do
+            end do
+            cgl => cgl%nxt
+         enddo
+
+         call piernik_MPI_Allreduce(m_clump, pSUM)
+         if (master) call pop_vector(user_vars,[m_clump])                 !   pop value
+      endif
+
+
+   end subroutine clump_mass
 
 end module initproblem
