@@ -30,16 +30,25 @@ module initproblem
 
 ! Initial condition for blob test
 ! Blob test by Agertz et al., 2007, MNRAS, 380, 963.
-! ToDo: write support for original, SPH-noisy, initial conditions
+! 
+! For description and Initial Condition files look here:
+! http://www.astrosim.net/code/doku.php?id=home:codetest:hydrotest:wengen:wengen3
+
+   use constants, only: cbuff_len
 
    implicit none
 
    private
    public :: read_problem_par, problem_initial_conditions, problem_pointers
 
-   real   :: chi, rblob, blobxc, blobyc, blobzc, Mext, denv, tkh, vgal
+   integer, parameter :: expected_type_size = 4
+   real(kind=expected_type_size), dimension(:,:,:,:), allocatable :: data
 
-   namelist /PROBLEM_CONTROL/  chi, rblob, blobxc, blobyc, blobzc, Mext, denv, tkh, vgal
+   ! namelist parameters
+   real   :: chi, rblob, blobxc, blobyc, blobzc, Mext, denv, tkh, vgal
+   character(len=cbuff_len) :: ICfile
+
+   namelist /PROBLEM_CONTROL/  chi, rblob, blobxc, blobyc, blobzc, Mext, denv, tkh, vgal, ICfile
 
 contains
 
@@ -47,7 +56,11 @@ contains
 
    subroutine problem_pointers
 
+      use user_hooks, only: problem_post_IC
+
       implicit none
+
+      problem_post_IC => deallocate_h5IC
 
    end subroutine problem_pointers
 
@@ -55,8 +68,9 @@ contains
 
    subroutine read_problem_par
 
+      use constants,  only: cbuff_len
       use dataio_pub, only: nh   ! QA_WARN required for diff_nml
-      use mpisetup,   only: rbuff, master, slave, piernik_MPI_Bcast
+      use mpisetup,   only: cbuff, rbuff, master, slave, piernik_MPI_Bcast
 
       implicit none
 
@@ -69,6 +83,8 @@ contains
       denv    =  1.0
       tkh     =  1.7
       vgal    =  0.0
+
+      ICfile = ""
 
       if (master) then
 
@@ -98,9 +114,12 @@ contains
          rbuff(8) = tkh
          rbuff(9) = vgal
 
+         cbuff(1) = ICfile
+
       endif
 
       call piernik_MPI_Bcast(rbuff)
+      call piernik_MPI_Bcast(cbuff, cbuff_len)
 
       if (slave) then
 
@@ -114,6 +133,8 @@ contains
          tkh      = rbuff(8)
          vgal     = rbuff(9)
 
+         ICfile   = cbuff(1)
+
       endif
 
    end subroutine read_problem_par
@@ -121,6 +142,145 @@ contains
 !-----------------------------------------------------------------------------
 
    subroutine problem_initial_conditions
+
+      use dataio_pub, only: msg, printinfo
+      use mpisetup,   only: master
+
+      implicit none
+
+      if (len(trim(ICfile)) > 0) then
+         write(msg, *) "[initproblem:problem_initial_conditions] Reading Initial Conditions from '", trim(ICfile), "'"
+         if (master) call printinfo(msg)
+         call problem_initial_conditions_original
+      else
+         if (master) call printinfo("[initproblem:problem_initial_conditions] Using analytical Initial Conditions")
+         call problem_initial_conditions_analytical
+      endif
+
+   end subroutine problem_initial_conditions
+
+!-----------------------------------------------------------------------------
+
+   subroutine problem_initial_conditions_original
+
+      use cg_leaves,  only: leaves
+      use cg_list,    only: cg_list_element
+      use dataio_pub, only: msg, warn, die
+      use domain,     only: dom
+      use fluidindex, only: flind
+      use fluidtypes, only: component_fluid
+      use func,       only: ekin
+      use grid_cont,  only: grid_container
+      use units,      only: km, sek
+      implicit none
+
+      logical :: firstcall = .true.
+      integer :: f
+      class(component_fluid), pointer :: fl
+      type(cg_list_element),  pointer :: cgl
+      type(grid_container),   pointer :: cg
+
+      if (firstcall) then
+         call problem_initial_conditions_readh5
+         firstcall = .false.
+      end if
+
+      ! Most naive: put the data 1:1, expect correct sizes, don't try to be friendly (ToDo: add more flexibility for AMR)
+
+      if (any(dom%n_d /= shape(data(1, :, :, :)))) then
+         write(msg, *)"[initproblem:problem_initial_conditions_original] domain doesn't match IC data: ",dom%n_d," /= ", shape(data(1, :, :, :)), " (read it in Z-Y-X order)"
+         call die(msg)
+      end if
+
+      fl => flind%neu
+      cgl => leaves%first
+      do while (associated(cgl))
+         cg => cgl%cg
+#define RNG cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke
+#define RNG1 1+cg%is:1+cg%ie, 1+cg%js:1+cg%je, 1+cg%ks:1+cg%ke
+         cg%u(fl%idn, RNG) = data(1, RNG1)
+         do f = fl%imx, fl%imz
+            cg%u(f, RNG) = sek/km * data(2+f-fl%imx, RNG1) * cg%u(fl%idn, RNG)
+         end do
+         cg%u(fl%ien, RNG) = data(5, RNG1) * cg%u(fl%idn, RNG)+ekin(cg%u(fl%imx, RNG), cg%u(fl%imy, RNG), cg%u(fl%imz, RNG), cg%u(fl%idn, RNG))
+#undef RNG
+#undef RNG1
+         cgl => cgl%nxt
+      enddo
+
+   end subroutine problem_initial_conditions_original
+
+   subroutine problem_initial_conditions_readh5
+
+      use constants,  only: cbuff_len
+      use dataio_pub, only: msg, die
+      use hdf5,       only: H5F_ACC_RDONLY_F, HID_T, HSIZE_T, SIZE_T, H5T_NATIVE_REAL, &
+           &                h5open_f, h5close_f, h5fopen_f, h5fclose_f
+      use h5lt,       only: h5ltfind_dataset_f, h5ltget_dataset_ndims_f, h5ltget_dataset_info_f, &
+           &                h5ltread_dataset_f
+      use mpisetup,   only: master, slave
+
+      implicit none
+
+      logical :: file_exist
+      character(len=cbuff_len), dimension(5), parameter :: dsets = ["Density    ", "x-velocity ", "y-velocity ", "z-velocity ", "TotalEnergy" ]
+      integer(kind=4) :: error, rank, type_class
+      integer(HID_T) :: file_id
+      integer :: d
+      integer(SIZE_T) :: type_size
+      integer(HSIZE_T), allocatable, dimension(:) :: dims
+
+      inquire(file = trim(ICfile), exist = file_exist)
+      if (.not. file_exist) then
+         write(msg,'(3a)') '[initproblem:problem_initial_conditions_readh5] IC file: ', trim(ICfile),' does not exist'
+         call die(msg)
+      endif
+
+      call h5open_f(error)
+      if (master .or. slave) then  ! ToDo do somewhat more intelligent reading as this may easily clutter memory on lagre IC file
+         call h5fopen_f(trim(ICfile), H5F_ACC_RDONLY_F, file_id, error)
+         if (error /= 0) call die("[initproblem:problem_initial_conditions_readh5] error opening IC file")
+         do d = lbound(dsets, 1), ubound(dsets, 1)
+            if (h5ltfind_dataset_f(file_id, trim(dsets(d))) == 0) then
+               write(msg, *)"[initproblem:problem_initial_conditions_readh5] Cannot find dataset '",trim(dsets(d)),"'"
+               call die(msg)
+            end if
+            call h5ltget_dataset_ndims_f(file_id, dsets(d), rank, error)
+            if (rank /= 3) call die("[initproblem:problem_initial_conditions_readh5] Wrong dataset rank")
+            allocate(dims(rank+1))
+            dims(1) = size(dsets)
+            call h5ltget_dataset_info_f(file_id, dsets(d), dims(2:), type_class, type_size, error)
+            if (type_size /= expected_type_size) call die("[initproblem:problem_initial_conditions_readh5] Wrong type size")
+            if (d==1) then
+               allocate(data(dims(1), dims(2), dims(3), dims(4)))
+            else
+               if (any(dims /= shape(data))) call die("[initproblem:problem_initial_conditions_readh5] datasets differ in shape")
+            end if
+            deallocate(dims)
+            call h5ltread_dataset_f(file_id, dsets(d), H5T_NATIVE_REAL, data(d, :, :, :), dims, error)
+         end do
+         call h5fclose_f(file_id, error)
+      end if
+      call h5close_f(error)
+
+   end subroutine problem_initial_conditions_readh5
+
+   subroutine deallocate_h5IC
+
+      use mpisetup, only: master
+      use units,    only: newtong
+
+      implicit none
+
+      if (master) write(*,*) "Newton's constant, G = ", newtong
+
+      deallocate(data)
+
+   end subroutine deallocate_h5IC
+
+!-----------------------------------------------------------------------------
+
+   subroutine problem_initial_conditions_analytical
 
       use cg_leaves,  only: leaves
       use cg_list,    only: cg_list_element
@@ -178,7 +338,7 @@ contains
          cgl => cgl%nxt
       enddo
 
-   end subroutine problem_initial_conditions
+   end subroutine problem_initial_conditions_analytical
 
 !------------------------------------------------------------------------------------------
 
