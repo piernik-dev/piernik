@@ -198,6 +198,11 @@ contains
             dt_max_grow = dt_default_grow
          endif
 
+         if (h_solver /= "muscl" .and. h_solver /= "rk2") then
+            write(msg, *)"[fluidupdate:sweep_dsplit:warn_experimental] The scheme '", trim(h_solver), "' is experimental. Use 'muscl' or 'rk2' for production runs."
+            call warn(msg)
+         endif
+
          cbuff(1) = limiter
          cbuff(2) = limiter_b
          cbuff(3) = cflcontrol

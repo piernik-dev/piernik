@@ -426,6 +426,8 @@ contains
      if (size(b_cc,2) /= nx) call die("[fluidupdate:rk2] size b_cc and u mismatch")
      mag_cc = huge(1.)
 
+     ! Only muscl and rk2 schemes should be considered for production use.
+     ! Other schemes are left here for educational purposes, just to show how to construct alternative approaches.
      select case (h_solver)
         case ("muscl")
            call slope
@@ -532,7 +534,7 @@ contains
            real, dimension(size(u,1),size(u,2))       :: du
            real, dimension(size(b_cc,1),size(b_cc,2)) :: db
 
-           if (present(uu) .neqv. present(bb)) call die("[fluidupdate:solve:slope] either mone or both optional arguments must be present")
+           if (present(uu) .neqv. present(bb)) call die("[fluidupdate:solve:slope] either none or both optional arguments must be present")
 
            if (present(uu)) then
               du  = flimiter(u + uu)
