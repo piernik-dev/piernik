@@ -534,7 +534,6 @@ contains
 
            if (present(uu) .neqv. present(bb)) call die("[fluidupdate:solve:slope] either mone or both optional arguments must be present")
 
-           ! Use van leer limiter for du in hydro and minmod limiter in mhd
            if (present(uu)) then
               du  = flimiter(u + uu)
               ul  = u + uu - half*du
@@ -545,7 +544,6 @@ contains
               ur  = u + half*du
            endif
 
-           ! As of now we will use only van leer limiter for db
            if (present(bb)) then
               db  = blimiter(b_cc + bb)
               b_ccl = b_cc + bb - half*db
