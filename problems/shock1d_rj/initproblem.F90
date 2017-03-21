@@ -37,6 +37,8 @@ module initproblem
 ! See: Gary A. Sod, J.Comp.Physics 27,1-31(1978) !
 ! ------------------------------------------!
 
+   use constants, only: singlechar
+
    implicit none
 
    private
@@ -44,8 +46,7 @@ module initproblem
 
    real               :: dl,vxl,vyl,vzl,bxl,byl,bzl,el
    real               :: dr,vxr,vyr,vzr,bxr,byr,bzr,er
-   character(len=1)   :: dir
-   integer, parameter :: one = 1
+   character(len=singlechar) :: dir
 
    namelist /PROBLEM_CONTROL/  dl,vxl,vyl,vzl,bxl,byl,bzl,el,dr,vxr,vyr,vzr,bxr,byr,bzr,er,dir
 
