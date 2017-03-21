@@ -167,7 +167,7 @@ contains
 
       use cg_leaves,  only: leaves
       use cg_list,    only: cg_list_element
-      use dataio_pub, only: msg, warn, die
+      use dataio_pub, only: msg, die
       use domain,     only: dom
       use fluidindex, only: flind
       use fluidtypes, only: component_fluid
@@ -258,8 +258,8 @@ contains
             else
                if (any(dims /= shape(data))) call die("[initproblem:problem_initial_conditions_readh5] datasets differ in shape")
             end if
-            deallocate(dims)
             call h5ltread_dataset_f(file_id, dsets(d), H5T_NATIVE_REAL, data(d, :, :, :), dims, error)
+            deallocate(dims)
          end do
          call h5fclose_f(file_id, error)
       end if
@@ -269,12 +269,16 @@ contains
 
    subroutine deallocate_h5IC
 
-      use mpisetup, only: master
-      use units,    only: newtong
+      use dataio_pub, only: printinfo, msg
+      use mpisetup,   only: master
+      use units,      only: newtong
 
       implicit none
 
-      if (master) write(*,*) "Newton's constant, G = ", newtong
+      if (master) then
+         write(msg, *) "Newton's constant, G = ", newtong
+         call printinfo(msg)
+      endif
 
       if (allocated(data)) deallocate(data)
 
