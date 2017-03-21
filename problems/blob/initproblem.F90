@@ -360,7 +360,6 @@ contains
       character(len=*), dimension(:), intent(inout), allocatable, optional :: tsl_names
 
       real :: m_clump
-      integer :: i, j, k
       type(cg_list_element), pointer :: cgl
       type(grid_container),  pointer :: cg
       real, parameter :: rho_thr = 0.64 * 3.13e-7, T_thr = 0.9 *123900. ! ToDo: get more exact eatimate of T_ext
@@ -373,16 +372,10 @@ contains
          cgl => leaves%first
          do while (associated(cgl))
             cg => cgl%cg
-            do k = cg%ks, cg%ke
-               do j = cg%js, cg%je
-                  do i = cg%is, cg%ie
-                     if (cg%leafmap(i, j, k)) then
-                        if (cg%u(flind%neu%idn, i, j, k) > rho_thr .and. cg%u(flind%neu%ien, i, j, k) < T_thr) &
-                             m_clump = m_clump + cg%u(flind%neu%idn, i, j, k) * cg%dvol
-                     end if
-                  end do
-               end do
-            end do
+            m_clump = m_clump + cg%dvol * sum(cg%u(flind%neu%idn, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), &
+                 &                    mask = (cg%leafmap(         cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) .and. &
+                 &                            cg%u(flind%neu%idn, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) > rho_thr .and. &
+                 &                            cg%u(flind%neu%ien, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) < T_thr))
             cgl => cgl%nxt
          enddo
 
