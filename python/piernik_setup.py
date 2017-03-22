@@ -8,6 +8,7 @@ from DirWalk import DirectoryWalker
 import subprocess as sp
 import tempfile
 from optparse import OptionParser
+
 try:
     import multiprocessing
     mp = True
@@ -57,8 +58,6 @@ HEALTH WARNINGS:
 * the contents of \'./obj\' and \'./runs/<problem>\' are overwritten
   each time setup <problem>\' is run, unless you specify -obj <postfix>
   in which case the contents of runs/<problem>_<postfix> will be only updated
-* the def file \'piernik.def\' is copied only for reference, to change flags
-  with which the source is compiled edit \'./problems/<problem>/piernik.def\'
 * by default PIERNIK will read the configuration file \'problem.par\' from the
 working directory, to use alternative configurations execute
 \'./piernik <directory with an alternative problem.par>\'
@@ -653,11 +652,6 @@ def setup_piernik(data=None):
         print('\033[91m' + "Failed to copy 'problem.par' to '%s'." %
               rundir.rstrip('/') + '\033[0m')
         fatal_problem = True
-    try:
-        shutil.copy(objdir + "/piernik.def", rundir + 'piernik.def')
-    except IOError:
-        print('\033[91m' + "Failed to copy 'piernik.def' to '%s'." %
-              rundir.rstrip('/') + '\033[0m')
 
     if (options.nocompile):
         print('\033[93m' + "Compilation of '%s' skipped on request." % args[0] +

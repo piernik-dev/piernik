@@ -128,6 +128,7 @@ contains
       use domain,     only: dom
       use fluidindex, only: flind
       use fluidtypes, only: component_fluid
+      use func,       only: ekin
       use grid_cont,  only: grid_container
 
       implicit none
@@ -147,7 +148,6 @@ contains
          cg => cgl%cg
 
          cg%u(fl%imz, :, :, :) = 0.0
-         cg%u(fl%ien, :, :, :) = penv/fl%gam_1
 
          do i = cg%lhn(xdim,LO), cg%lhn(xdim,HI)
             rcx = (cg%x(i)-blobxc)**2
@@ -172,6 +172,8 @@ contains
                enddo
             enddo
          enddo
+
+         cg%u(fl%ien, :, :, :) = penv/fl%gam_1 + ekin(cg%u(fl%imx, :, :, :), cg%u(fl%imy, :, :, :), cg%u(fl%imz, :, :, :), cg%u(fl%idn, :, :, :))
 
          cgl => cgl%nxt
       enddo

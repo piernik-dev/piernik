@@ -84,7 +84,6 @@ contains
       allocate(this%level)
       call this%level%init_level
 
-      allocate(this%level%l)
       call this%level%l%init(base_level_id, int(n_d, kind=8), dom%off)
 
       base_level => this%level
