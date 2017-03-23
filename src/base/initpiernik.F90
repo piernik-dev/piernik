@@ -66,7 +66,7 @@ contains
       use refinement_update,     only: update_refinement
       use timer,                 only: set_timer
       use units,                 only: init_units
-      use user_hooks,            only: problem_post_restart
+      use user_hooks,            only: problem_post_restart, problem_post_IC
 #if defined MAGNETIC && defined RESISTIVE
       use resistivity,           only: init_resistivity, compute_resist
 #endif /* MAGNETIC && RESISTIVE */
@@ -281,7 +281,7 @@ contains
          enddo
 
          if (ac /= 0 .and. master) call warn("[initpiernik:init_piernik] The refinement structure does not seem to converge. Your refinement criteria may lead to oscillations of refinement structure. Bailing out.")
-
+         if (associated(problem_post_IC)) call problem_post_IC
       endif
 
       write(msg, '(a,3i8,a,i3)')"[initpiernik:init_piernik] Effective resolution is [", finest%level%l%n_d(:), " ] at level ", finest%level%l%id

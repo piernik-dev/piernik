@@ -1,9 +1,5 @@
-! This configuration file is for the analytical initialisation of the test problem
-! For noisy initialisation used in the Agertz paper look for problem.par.wt3_med
-! and remember to download proper initial conditions file.
-
  $BASE_DOMAIN
-    n_d = 128, 128, 512
+    n_d = 256, 256, 1024
     bnd_xl = 'per'
     bnd_xr = 'per'
     bnd_yl = 'per'
@@ -62,14 +58,8 @@
  /
 
  $PROBLEM_CONTROL
-    chi     =   10.0
-    rblob   =  197.0
-    blobxc  =    0.0
-    blobyc  =    0.0
-    blobzc  =    0.0
-    Mext    =    2.7
-    denv    =    3.13e-8
-    venv    = 1000.0
+    ICfile = "wengen3.hi.h5"
+! http://www.astrosim.net/code/lib/exe/fetch.php?media=wengen3.hi.h5
  /
 
  $INTERACTIONS
