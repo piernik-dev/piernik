@@ -1219,12 +1219,12 @@ contains
                enddo
             endif
             if (rseg(I_GRID + (j-1)*I_LAST) == cg%grid_id) then
-               if (rseg(I_PROC + (j-1)*I_LAST) /= proc) call warn("[clc:vbp] I_PROC /= proc")
+               if (rseg(I_PROC + (j-1)*I_LAST) /= proc) call warn("[cg_level_connected:vertical_b_prep] I_PROC /= proc")
                if (rseg(I_SRC_PROC + (j-1)*I_LAST) /= rp) then
-                  write(msg,*)"[clc:vbp] I_SRC_PROC /= rp @",proc," @@",rp, rseg(I_SRC_PROC + (j-1)*I_LAST)
+                  write(msg,*)"[cg_level_connected:vertical_b_prep] I_SRC_PROC /= rp @",proc," @@",rp, rseg(I_SRC_PROC + (j-1)*I_LAST)
                   call warn(msg)
                endif
-               ! call warn("[clc:vbp] I_TAG: visited twice")
+               ! call warn("[cg_level_connected:vertical_b_prep] I_TAG: visited twice")
                b = b + 1
             endif
          enddo

@@ -75,7 +75,7 @@ contains
       if (proc /= LAST) call MPI_Send(arr(:), size(arr(:), kind=4), MPI_DOUBLE_PRECISION, proc+I_ONE, tag, comm, mpi_err)
       if (slave) then
          call MPI_Recv(aux(:), size(aux(:), kind=4), MPI_DOUBLE_PRECISION, proc-I_ONE, tag, comm, MPI_STATUS_IGNORE, mpi_err)
-         if (any(aux(:).notequals.arr(:))) call die("[restart_hdf5:compare_real_array1D] Inconsistency found.")
+         if (any(aux(:).notequals.arr(:))) call die("[cmp_1D_mpi:compare_real_array1D] Inconsistency found.")
       endif
 
    end subroutine compare_real_array1D
@@ -99,7 +99,7 @@ contains
       if (proc /= LAST) call MPI_Send(arr(:), size(arr(:), kind=4), MPI_INTEGER, proc+I_ONE, tag, comm, mpi_err)
       if (slave) then
          call MPI_Recv(aux(:), size(aux(:), kind=4), MPI_INTEGER, proc-I_ONE, tag, comm, MPI_STATUS_IGNORE, mpi_err)
-         if (any(aux(:) /= arr(:))) call die("[restart_hdf5:compare_int_array1D] Inconsistency found.")
+         if (any(aux(:) /= arr(:))) call die("[cmp_1D_mpi:compare_int_array1D] Inconsistency found.")
       endif
 
    end subroutine compare_int_array1D
@@ -123,7 +123,7 @@ contains
       if (proc /= LAST) call MPI_Send(str, len(str, kind=4), MPI_CHARACTER, proc+I_ONE, tag, comm, mpi_err)
       if (slave) then
          call MPI_Recv(aux, len(aux, kind=4), MPI_CHARACTER, proc-I_ONE, tag, comm, MPI_STATUS_IGNORE, mpi_err)
-         if (aux /= str) call die("[restart_hdf5:compare_string] Inconsistency found.")
+         if (aux /= str) call die("[cmp_1D_mpi:compare_string] Inconsistency found.")
       endif
 
    end subroutine compare_string
