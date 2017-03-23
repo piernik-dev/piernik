@@ -303,6 +303,8 @@ contains
       type(grid_container),   pointer :: cg
 
       fl => flind%neu
+      rcx = 0.
+      rcy = 0.
       rblob2 = rblob**2
 
       uenv = (venv / Mext)**2 * denv / (fl%gam * fl%gam_1)
@@ -315,9 +317,9 @@ contains
          cg%u(fl%imy, :, :, :) = 0.0
 
          do i = cg%lhn(xdim,LO), cg%lhn(xdim,HI)
-            rcx = (cg%x(i)-blobxc)**2
+            if (dom%has_dir(xdim)) rcx = (cg%x(i)-blobxc)**2
             do j = cg%lhn(ydim,LO), cg%lhn(ydim,HI)
-               rcy = (cg%y(j)-blobyc)**2
+               if (dom%has_dir(ydim)) rcy = (cg%y(j)-blobyc)**2
                do k = cg%lhn(zdim,LO), cg%lhn(zdim,HI)
                   rrel = rcx + rcy
                   if (dom%has_dir(zdim)) rrel = rrel + (cg%z(k)-blobzc)**2
