@@ -2,7 +2,7 @@
 ! For noisy initialisation used in the Agertz paper look for problem.par.wt3_med
 ! and remember to download proper initial conditions file.
 
-\ $BASE_DOMAIN
+ $BASE_DOMAIN
     n_d = 128, 128, 512
     bnd_xl = 'per'
     bnd_xr = 'per'
@@ -35,7 +35,7 @@
  /
 
  $END_CONTROL
-    tend   = 1.0
+    tend   = 6.0
     nend   = 100000
  /
 
