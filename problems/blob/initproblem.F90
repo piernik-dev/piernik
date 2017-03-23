@@ -45,10 +45,10 @@ module initproblem
    real(kind=expected_type_size), dimension(:,:,:,:), allocatable :: data
 
    ! namelist parameters
-   real   :: chi, rblob, blobxc, blobyc, blobzc, Mext, denv, tkh, vgal
+   real   :: chi, rblob, blobxc, blobyc, blobzc, Mext, denv, venv
    character(len=cbuff_len) :: ICfile
 
-   namelist /PROBLEM_CONTROL/  chi, rblob, blobxc, blobyc, blobzc, Mext, denv, tkh, vgal, ICfile
+   namelist /PROBLEM_CONTROL/  chi, rblob, blobxc, blobyc, blobzc, Mext, denv, venv, ICfile
 
 contains
 
@@ -76,15 +76,14 @@ contains
 
       implicit none
 
-      chi     = 10.0
-      rblob   =  1.0
-      blobxc  =  5.0
-      blobyc  =  5.0
-      blobzc  =  5.0
-      Mext    =  2.7
-      denv    =  1.0
-      tkh     =  1.7
-      vgal    =  0.0
+      chi     =   10.0
+      rblob   =  197.0
+      blobxc  =    0.0
+      blobyc  =    0.0
+      blobzc  =    0.0
+      Mext    =    2.7
+      denv    =    3.13e-8
+      venv    = 1000.0
 
       ICfile = ""
 
@@ -113,8 +112,7 @@ contains
          rbuff(5) = blobzc
          rbuff(6) = Mext
          rbuff(7) = denv
-         rbuff(8) = tkh
-         rbuff(9) = vgal
+         rbuff(8) = venv
 
          cbuff(1) = ICfile
 
@@ -132,8 +130,7 @@ contains
          blobzc   = rbuff(5)
          Mext     = rbuff(6)
          denv     = rbuff(7)
-         tkh      = rbuff(8)
-         vgal     = rbuff(9)
+         venv     = rbuff(8)
 
          ICfile   = cbuff(1)
 
@@ -300,46 +297,43 @@ contains
       implicit none
 
       class(component_fluid), pointer :: fl
-      real                            :: penv, rcx, rcy, rrel
+      real                            :: uenv, rcx, rcy, rrel, rblob2
       integer                         :: i, j, k
       type(cg_list_element),  pointer :: cgl
       type(grid_container),   pointer :: cg
 
       fl => flind%neu
+      rblob2 = rblob**2
 
-      penv = 3.2*rblob*sqrt(chi)/tkh/(Mext*fl%gam/denv)
+      uenv = (venv / Mext)**2 * denv / (fl%gam * fl%gam_1)
 
       cgl => leaves%first
       do while (associated(cgl))
          cg => cgl%cg
 
-         cg%u(fl%imz, :, :, :) = 0.0
+         cg%u(fl%imx, :, :, :) = 0.0
+         cg%u(fl%imy, :, :, :) = 0.0
 
          do i = cg%lhn(xdim,LO), cg%lhn(xdim,HI)
             rcx = (cg%x(i)-blobxc)**2
             do j = cg%lhn(ydim,LO), cg%lhn(ydim,HI)
                rcy = (cg%y(j)-blobyc)**2
                do k = cg%lhn(zdim,LO), cg%lhn(zdim,HI)
-                  if (dom%has_dir(zdim)) then
-                     rrel = sqrt(rcx + rcy + (cg%z(k)-blobzc)**2)
-                  else
-                     rrel = sqrt(rcx + rcy)
-                  endif
+                  rrel = rcx + rcy
+                  if (dom%has_dir(zdim)) rrel = rrel + (cg%z(k)-blobzc)**2
 
-                  if (rblob >= rrel) then
+                  if (rblob2 >= rrel) then         ! inside clump
                      cg%u(fl%idn,i,j,k) = chi*denv
-                     cg%u(fl%imx,i,j,k) = chi*denv*vgal
-                     cg%u(fl%imy,i,j,k) = 0.0
-                  else
+                     cg%u(fl%imz,i,j,k) = 0.0
+                  else                             ! outsize clump
                      cg%u(fl%idn,i,j,k) = denv
-                     cg%u(fl%imx,i,j,k) = denv*vgal
-                     cg%u(fl%imy,i,j,k) = Mext*fl%gam*penv
+                     cg%u(fl%imz,i,j,k) = cg%u(fl%idn,i,j,k)*venv
                   endif
                enddo
             enddo
          enddo
 
-         cg%u(fl%ien, :, :, :) = penv/fl%gam_1 + ekin(cg%u(fl%imx, :, :, :), cg%u(fl%imy, :, :, :), cg%u(fl%imz, :, :, :), cg%u(fl%idn, :, :, :))
+         cg%u(fl%ien, :, :, :) = uenv + ekin(cg%u(fl%imx, :, :, :), cg%u(fl%imy, :, :, :), cg%u(fl%imz, :, :, :), cg%u(fl%idn, :, :, :))
 
          cgl => cgl%nxt
       enddo
