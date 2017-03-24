@@ -34,7 +34,7 @@ module initproblem
 ! For description and Initial Condition files look here:
 ! http://www.astrosim.net/code/doku.php?id=home:codetest:hydrotest:wengen:wengen3
 
-   use constants, only: cbuff_len
+   use constants, only: cwdlen
 
    implicit none
 
@@ -46,7 +46,7 @@ module initproblem
 
    ! namelist parameters
    real   :: chi, rblob, blobxc, blobyc, blobzc, Mext, denv, venv
-   character(len=cbuff_len) :: ICfile
+   character(len=cwdlen) :: ICfile
 
    namelist /PROBLEM_CONTROL/  chi, rblob, blobxc, blobyc, blobzc, Mext, denv, venv, ICfile
 
@@ -70,11 +70,13 @@ contains
 
    subroutine read_problem_par
 
-      use constants,  only: cbuff_len
+      use constants,  only: cwdlen
       use dataio_pub, only: nh   ! QA_WARN required for diff_nml
-      use mpisetup,   only: cbuff, rbuff, master, slave, piernik_MPI_Bcast
+      use mpisetup,   only: rbuff, master, slave, piernik_MPI_Bcast
 
       implicit none
+
+      character(len=cwdlen) :: lcbuff
 
       chi     =   10.0
       rblob   =  197.0
@@ -114,12 +116,12 @@ contains
          rbuff(7) = denv
          rbuff(8) = venv
 
-         cbuff(1) = ICfile
+         lcbuff   = ICfile
 
       endif
 
       call piernik_MPI_Bcast(rbuff)
-      call piernik_MPI_Bcast(cbuff, cbuff_len)
+      call piernik_MPI_Bcast(lcbuff, cwdlen)
 
       if (slave) then
 
@@ -132,7 +134,7 @@ contains
          denv     = rbuff(7)
          venv     = rbuff(8)
 
-         ICfile   = cbuff(1)
+         ICfile   = lcbuff
 
       endif
 
