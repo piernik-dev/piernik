@@ -176,7 +176,7 @@ contains
 
       use cg_leaves,  only: leaves
       use cg_list,    only: cg_list_element
-      use constants,  only: ION, xdim, ydim, zdim, LO, HI, pi
+      use constants,  only: ION, xdim, ydim, zdim, LO, HI, pi, ndims
       use domain,     only: dom
       use fluidindex, only: flind
       use func,       only: operator(.notequals.)
@@ -241,7 +241,7 @@ contains
                                     s = 0.5
                                     if (smooth .notequals. 0.) s = 0.5 * (1. - sin(pi / 2. * r/smooth))
                                  endif
-                                 if (s > 0.) cg%u(fl%ien,i,j,k) = cg%u(fl%ien,i,j,k) + Eexpl/isub**dom%eff_dim * s
+                                 if (s > 0.) cg%u(fl%ien,i,j,k) = cg%u(fl%ien,i,j,k) + Eexpl/isub**ndims * s
                               enddo
                            enddo
                         enddo
