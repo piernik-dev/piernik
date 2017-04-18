@@ -37,7 +37,7 @@ module non_inertial
    private
    public  :: init_non_inertial, non_inertial_force, get_omega
 
-   real    :: omega !< angular frequency around the z axis
+   real    :: omega, omegadot
 
 contains
 
@@ -58,13 +58,14 @@ contains
 
       implicit none
 
-      namelist /NONINERTIAL/ omega
+      namelist /NONINERTIAL/ omega, omegadot
 
 #ifdef VERBOSE
       if (master) call printinfo("[non_inertial:init_non_inertial] Commencing module initialization")
 #endif /* VERBOSE */
 
       omega = 0.0
+      omegadot = 0.0
 
       if (master) then
 
@@ -85,6 +86,7 @@ contains
          call nh%compare_namelist()
 
          rbuff(1) = omega
+         rbuff(2) = omegadot
 
       endif
 
@@ -93,6 +95,7 @@ contains
       if (slave) then
 
          omega    = rbuff(1)
+         omegadot = rbuff(2)
 
       endif
 
