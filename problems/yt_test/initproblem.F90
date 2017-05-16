@@ -197,7 +197,7 @@ contains
 
       rlev => finest%level
 
-      if (finest%level%level_id < level_max) then
+      if (finest%level%l%id < level_max) then
          call printinfo("[initproblem:add_a_patch] adding a patch ...")
          call finest%add_finer
          cgl => rlev%first
@@ -206,9 +206,9 @@ contains
                call finest%level%add_patch(int(cgl%cg%n_b(:)*width, kind=8), cgl%cg%my_se(:, LO)*refinement_factor + int(cgl%cg%n_b(:)*(1.-width/2.), kind=4))
             else
                call finest%level%add_patch(int(cgl%cg%n_b(:)*width, kind=8), &
-                    int([ cgl%cg%my_se(xdim:ydim, LO)*refinement_factor + cgl%cg%n_b(xdim:ydim)*(1.-width/2.+span), rlev%n_d(zdim) - cgl%cg%n_b(zdim)*width/2.], kind=8))
+                    int([ cgl%cg%my_se(xdim:ydim, LO)*refinement_factor + cgl%cg%n_b(xdim:ydim)*(1.-width/2.+span), rlev%l%n_d(zdim) - cgl%cg%n_b(zdim)*width/2.], kind=8))
                call finest%level%add_patch(int(cgl%cg%n_b(:)*width, kind=8), &
-                    int([ cgl%cg%my_se(xdim:ydim, LO)*refinement_factor + cgl%cg%n_b(xdim:ydim)*(1.-width/2.-span), rlev%n_d(zdim) - cgl%cg%n_b(zdim)*width/2.], kind=8))
+                    int([ cgl%cg%my_se(xdim:ydim, LO)*refinement_factor + cgl%cg%n_b(xdim:ydim)*(1.-width/2.-span), rlev%l%n_d(zdim) - cgl%cg%n_b(zdim)*width/2.], kind=8))
             endif
             cgl => cgl%nxt
          enddo
