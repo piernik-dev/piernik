@@ -9,7 +9,7 @@
 #
 
 PROG     = piernik
-F90      = h5pfc -shlib
+F90      = mpif90  -I/usr/lib64/gfortran/modules/mpich
 F90FLAGS  = -fdefault-real-8 -ffree-form -std=gnu -fimplicit-none -ffree-line-length-none
 F90FLAGS += -O3 -funroll-loops -fno-stack-arrays
 F90FLAGS += -Wall -Wextra -W -fbacktrace -ggdb -pedantic
