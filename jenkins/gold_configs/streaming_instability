@@ -1,6 +1,7 @@
 # sha1 of the gold commit
 # Note: update only when absolutely necessary
-GOLD_COMMIT=c21d1c15102bd2372d1006d89937a5748449403f
+GOLD_COMMIT=8fcf05bbd76c9162eb1999d620b59dd0966e0f8e
+# 8fcf05bbd76c9162eb1999d620b59dd0966e0f8e - several fixups needed for Jenkins on Fedora 24
 # c21d1c15102bd2372d1006d89937a5748449403f - gdf_distance relies on GDF 1.1 (output v. 2.01)
 # 120a3ed9859fe6edf704a37eab134b9c21793eef - Port changes from si_tweaks to master
 # ad5849fbafb94b393efca0e7219367a7198fc07e - Fargo merge

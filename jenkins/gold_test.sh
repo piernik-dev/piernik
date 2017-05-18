@@ -74,4 +74,5 @@ done
     eval $RUN_COMMAND ./${PIERNIK} $GOLD_PARAMS
 )
 
+[ ! -z $YT ] && source $YT
 ./bin/gdf_distance ${RUNS_DIR}/${PROBLEM_NAME}_{${TEST_OBJ},${GOLD_OBJ}}/${OUTPUT} 2>&1 | tee $GOLD_LOG

@@ -22,5 +22,5 @@ rm -rf runs/advection_test 2> /dev/null
     echo "Finish:  t = 2.0"
 )
 
+[ ! -z $YT ] && source $YT
 ./bin/gdf_distance runs/advection_test/moving_pulse_ts{1,2}_0002.h5 | tee compare.log
-

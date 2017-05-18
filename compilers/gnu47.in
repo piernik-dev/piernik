@@ -9,5 +9,11 @@ ifeq ($(PIERNIK_DEBUG), 1)
    F90FLAGS += -ggdb -O0 -ffpe-trap=zero,overflow,invalid -fcheck=all -fno-omit-frame-pointer
    F90FLAGS += -Wall -W -Wextra -pedantic-errors -Wno-unused-function
 else
-   F90FLAGS += -O2 -fstack-arrays
+   F90FLAGS += -O2 -fno-stack-arrays
+
+# -fstack-arrays may offer some extra performance in hydro solver but
+# unfortunately might be also a source of strange crashes due to exceeding
+# stack limits in configurations with large domains.  If you need this extra
+# performance be prepared also for tuning stack limits.
+
 endif
