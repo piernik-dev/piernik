@@ -206,6 +206,16 @@ def qa_checks(files, options):
             pfile.append(line)
 
         if lines != [line + '\n' for line in pfile]:
+            diff_cnt = 1 if (len(lines) != len(pfile)) else 0
+            if diff_cnt:
+                print give_warn("Line count changed") + " in file '%s'" % f
+            for i in range(min(len(lines), len(pfile))):
+                if (lines[i] != pfile[i] + '\n'):
+                    diff_cnt += 1
+            if diff_cnt:
+                print give_warn("QA:  ") + \
+                "Whistespace changes found in file '%s' (%d lines changed)" % \
+                (f, diff_cnt)
             fp = open(f, 'w')
             for line in pfile:
                 fp.write(line + '\n')
