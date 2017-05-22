@@ -6,7 +6,7 @@
 
 #undef ISO
 
-#undef GRAV
+#define GRAV
 #define MULTIGRID
 
 #define DEBUG
