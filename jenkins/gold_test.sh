@@ -37,15 +37,23 @@ fi
 
 PIERNIK=piernik
 GOLD_DIR=gold_dir
-RUNS_DIR=runs
 OBJ_PREFIX=obj_
-GOLD_OBJ=gold
-TEST_OBJ=test
+GOLD_OBJ=${PROBLEM_NAME}_gold
+TEST_OBJ=${PROBLEM_NAME}_test
 GOLD_LOG=gold_log
+TMP_DIR=/tmp/jenkins_gold/
+RUNS_DIR=$TMP_DIR
 
-rm -rf $GOLD_DIR ${OBJ_PREFIX}* ${RUNS_DIR}/* $GOLD_LOG
+[ ! -d $TMP_DIR ] && mkdir -p $TMP_DIR
+cp Makefile $TMP_DIR
+
+rm -rf $GOLD_DIR ${OBJ_PREFIX}$GOLD_OBJ ${OBJ_PREFIX}$TEST_OBJ ${RUNS_DIR}/${PROBLEM_NAME}_$TEST_OBJ $GOLD_LOG
+
+mkdir ${RUNS_DIR}/${PROBLEM_NAME}_${TEST_OBJ}
+mkdir ${RUNS_DIR}/${PROBLEM_NAME}_${GOLD_OBJ}
 
 python setup $PROBLEM_NAME $SETUP_PARAMS -n --copy -o $TEST_OBJ
+rsync -Icvxa --no-t ${OBJ_PREFIX}$TEST_OBJ $TMP_DIR
 
 git clone http://github.com/piernik-dev/piernik $GOLD_DIR
 [ -e .setuprc ] && cp .setuprc $GOLD_DIR
@@ -55,13 +63,19 @@ git clone http://github.com/piernik-dev/piernik $GOLD_DIR
     rsync -avx --delete ../compilers/ ./compilers
     python setup $PROBLEM_NAME $SETUP_PARAMS -n --copy -o $GOLD_OBJ
 )
-mv ${GOLD_DIR}/${OBJ_PREFIX}$GOLD_OBJ .
-mv ${GOLD_DIR}/${RUNS_DIR}/* ${RUNS_DIR}
+rsync -Icvxa --no-t ${GOLD_DIR}/${OBJ_PREFIX}$GOLD_OBJ $TMP_DIR
 
-make -j
+cp ${GOLD_DIR}/runs/${PROBLEM_NAME}_${GOLD_OBJ}/problem.par ${RUNS_DIR}/${PROBLEM_NAME}_${GOLD_OBJ}/
+cp runs/${PROBLEM_NAME}_${TEST_OBJ}/problem.par ${RUNS_DIR}/${PROBLEM_NAME}_${TEST_OBJ}/
+
+(
+    cd $TMP_DIR
+    make -j ${OBJ_PREFIX}$GOLD_OBJ ${OBJ_PREFIX}$TEST_OBJ
+)
 
 for i in $GOLD_OBJ $TEST_OBJ ; do
-    cp ${OBJ_PREFIX}${i}/${PIERNIK} ${RUNS_DIR}/${PROBLEM_NAME}_$i
+    rm ${RUNS_DIR}/${PROBLEM_NAME}_${i}/${PIERNIK} 2> /dev/null || echo "rundir clean"
+    cp ${TMP_DIR}/${OBJ_PREFIX}${i}/${PIERNIK} ${RUNS_DIR}/${PROBLEM_NAME}_$i
 done
 
 (
@@ -71,7 +85,7 @@ done
 
 (
     cd ${RUNS_DIR}/${PROBLEM_NAME}_$GOLD_OBJ
-    eval $RUN_COMMAND ./${PIERNIK} $GOLD_PARAMS
+    [ ! -e ${OUTPUT} ] && eval $RUN_COMMAND ./${PIERNIK} $GOLD_PARAMS
 )
 
 [ ! -z $YT ] && source $YT

@@ -30,7 +30,7 @@ module initproblem
 
 ! Initial condition for blob test
 ! Blob test by Agertz et al., 2007, MNRAS, 380, 963.
-! 
+!
 ! For description and Initial Condition files look here:
 ! http://www.astrosim.net/code/doku.php?id=home:codetest:hydrotest:wengen:wengen3
 
@@ -184,14 +184,14 @@ contains
       if (firstcall) then
          call problem_initial_conditions_readh5
          firstcall = .false.
-      end if
+      endif
 
       ! Most naive: put the data 1:1, expect correct sizes, don't try to be friendly (ToDo: add more flexibility for AMR)
 
       if (any(dom%n_d /= shape(data(1, :, :, :)))) then
          write(msg, *)"[initproblem:problem_initial_conditions_original] domain doesn't match IC data: ",dom%n_d," /= ", shape(data(1, :, :, :)), " (read it in Z-Y-X order)"
          call die(msg)
-      end if
+      endif
 
       fl => flind%neu
       cgl => leaves%first
@@ -202,7 +202,7 @@ contains
          cg%u(fl%idn, RNG) = data(1, RNG1)
          do f = fl%imx, fl%imz
             cg%u(f, RNG) = sek/km * data(2+f-fl%imx, RNG1) * cg%u(fl%idn, RNG)
-         end do
+         enddo
          cg%u(fl%ien, RNG) = data(5, RNG1) * cg%u(fl%idn, RNG)+ekin(cg%u(fl%imx, RNG), cg%u(fl%imy, RNG), cg%u(fl%imz, RNG), cg%u(fl%idn, RNG))
 #undef RNG
 #undef RNG1
@@ -245,7 +245,7 @@ contains
             if (h5ltfind_dataset_f(file_id, trim(dsets(d))) == 0) then
                write(msg, *)"[initproblem:problem_initial_conditions_readh5] Cannot find dataset '",trim(dsets(d)),"'"
                call die(msg)
-            end if
+            endif
             call h5ltget_dataset_ndims_f(file_id, dsets(d), rank, error)
             if (rank /= 3) call die("[initproblem:problem_initial_conditions_readh5] Wrong dataset rank")
             allocate(dims(rank+1))
@@ -256,12 +256,12 @@ contains
                allocate(data(dims(1), dims(2), dims(3), dims(4)))
             else
                if (any(dims /= shape(data))) call die("[initproblem:problem_initial_conditions_readh5] datasets differ in shape")
-            end if
+            endif
             call h5ltread_dataset_f(file_id, dsets(d), H5T_NATIVE_REAL, data(d, :, :, :), dims, error)
             deallocate(dims)
-         end do
+         enddo
          call h5fclose_f(file_id, error)
-      end if
+      endif
       call h5close_f(error)
 
    end subroutine problem_initial_conditions_readh5
