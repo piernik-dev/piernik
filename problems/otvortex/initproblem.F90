@@ -117,14 +117,15 @@ contains
 !   Secondary parameters
       fl => flind%ion
 
+      rho = 25.0/(36.0*pi)
+      pre =  5.0/(12.0*pi)
+      b0  = 1./sqrt(fpi)
+      vz  = 0.0
+      bz  = 0.0
+
       cgl => leaves%first
       do while (associated(cgl))
          cg => cgl%cg
-
-         rho = 25.0/(36.0*pi)
-         pre =  5.0/(12.0*pi)
-         b0  = 1./sqrt(fpi)
-         vz  = 0.0
 
          do j = cg%lhn(ydim,LO), cg%lhn(ydim,HI)
             yj = cg%y(j)
@@ -137,7 +138,6 @@ contains
                   vy  = sin(dpi*xi)
                   bx  = b0*vx
                   by  = b0*sin(fpi*xi)
-                  bz  = 0.0
 
                   cg%u(fl%idn,i,j,k) = rho
                   cg%u(fl%imx,i,j,k) = vx*cg%u(fl%idn,i,j,k)
