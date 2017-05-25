@@ -33,9 +33,9 @@ module initproblem
    private
    public :: read_problem_par, problem_initial_conditions, problem_pointers
 
-   real   :: d0, r0, bz0
+   real   :: d0, r0
 
-   namelist /PROBLEM_CONTROL/ d0, r0, bz0
+   namelist /PROBLEM_CONTROL/ d0, r0
 
 contains
 
@@ -125,7 +125,6 @@ contains
          pre =  5.0/(12.0*pi)
          b0  = 1./sqrt(fpi)
          vz  = 0.0
-         bz0 = 0.0
 
          do j = cg%lhn(ydim,LO), cg%lhn(ydim,HI)
             yj = cg%y(j)
