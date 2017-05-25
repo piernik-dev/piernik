@@ -109,8 +109,8 @@ contains
       implicit none
 
       class(component_fluid), pointer    :: fl
-      integer                            :: i, j, k
-      real                               :: xi, yj, zk, vx, vy, vz, rho, pre, bx, by, bz, b0
+      integer                            :: i, j
+      real                               :: xi, yj, vx, vy, vz, rho, pre, bx, by, bz, b0
       type(cg_list_element),  pointer    :: cgl
       type(grid_container),   pointer    :: cg
 
@@ -131,34 +131,31 @@ contains
             yj = cg%y(j)
             do i = cg%lhn(xdim,LO), cg%lhn(xdim,HI)
                xi = cg%x(i)
-               do k = cg%lhn(zdim,LO), cg%lhn(zdim,HI)
-                  zk = cg%z(k)
 
-                  vx  = -sin(dpi*yj)
-                  vy  = sin(dpi*xi)
-                  bx  = b0*vx
-                  by  = b0*sin(fpi*xi)
+               vx  = -sin(dpi*yj)
+               vy  = sin(dpi*xi)
+               bx  = b0*vx
+               by  = b0*sin(fpi*xi)
 
-                  cg%u(fl%idn,i,j,k) = rho
-                  cg%u(fl%imx,i,j,k) = vx*cg%u(fl%idn,i,j,k)
-                  cg%u(fl%imy,i,j,k) = vy*cg%u(fl%idn,i,j,k)
-                  cg%u(fl%imz,i,j,k) = vz*cg%u(fl%idn,i,j,k)
+               cg%u(fl%idn,i,j,:) = rho
+               cg%u(fl%imx,i,j,:) = vx*cg%u(fl%idn,i,j,:)
+               cg%u(fl%imy,i,j,:) = vy*cg%u(fl%idn,i,j,:)
+               cg%u(fl%imz,i,j,:) = vz*cg%u(fl%idn,i,j,:)
 #ifndef ISO
-                  cg%u(fl%ien,i,j,k) = pre/fl%gam_1
-                  cg%u(fl%ien,i,j,k) = max(cg%u(fl%ien,i,j,k), smallei)
-                  cg%u(fl%ien,i,j,k) = cg%u(fl%ien,i,j,k) +ekin(cg%u(fl%imx,i,j,k), cg%u(fl%imy,i,j,k), cg%u(fl%imz,i,j,k), cg%u(fl%idn,i,j,k))
+               cg%u(fl%ien,i,j,:) = pre/fl%gam_1
+               cg%u(fl%ien,i,j,:) = max(cg%u(fl%ien,i,j,:), smallei)
+               cg%u(fl%ien,i,j,:) = cg%u(fl%ien,i,j,:) +ekin(cg%u(fl%imx,i,j,:), cg%u(fl%imy,i,j,:), cg%u(fl%imz,i,j,:), cg%u(fl%idn,i,j,:))
 #endif /* !ISO */
-                  cg%b(xdim,i,j,k)  = bx
-                  cg%b(ydim,i,j,k)  = by
-                  cg%b(zdim,i,j,k)  = bz
+               cg%b(xdim,i,j,:)  = bx
+               cg%b(ydim,i,j,:)  = by
+               cg%b(zdim,i,j,:)  = bz
 
 #ifndef ISO
-                  ! BEWARE: The formula below ignores the fact that we have staggered grid for b
-                  ! It gives correct values only because initial Bx does not depend on x and By does not depend on y
-                  ! This should be addressed soon by reshape_b branch
-                  cg%u(fl%ien,i,j,k) = cg%u(fl%ien,i,j,k) + emag(cg%b(xdim,i,j,k), cg%b(ydim,i,j,k), cg%b(zdim,i,j,k))
+               ! BEWARE: The formula below ignores the fact that we have staggered grid for b
+               ! It gives correct values only because initial Bx does not depend on x and By does not depend on y
+               ! This should be addressed soon by reshape_b branch
+               cg%u(fl%ien,i,j,:) = cg%u(fl%ien,i,j,:) + emag(cg%b(xdim,i,j,:), cg%b(ydim,i,j,:), cg%b(zdim,i,j,:))
 #endif /* !ISO */
-               enddo
             enddo
          enddo
 
