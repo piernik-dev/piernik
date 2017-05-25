@@ -1,9 +1,9 @@
 #!/usr/bin/env python
 
 from yt.config import ytcfg
-ytcfg["yt", "loglevel"] = "50"
 from yt.mods import load
 import numpy as np
+ytcfg["yt", "loglevel"] = "50"
 
 
 def calculate_norm(fn):

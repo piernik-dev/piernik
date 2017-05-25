@@ -1174,7 +1174,7 @@ contains
       use types,            only: value                          !QA_WARN: used by get_extremum (intel compiler)
       use cg_leaves,        only: leaves
       use cg_list,          only: cg_list_element
-      use constants,        only: MINL, MAXL, small, xdim, ydim, zdim, GEO_RPZ, I_ZERO
+      use constants,        only: MINL, MAXL, small, xdim, ydim, zdim, GEO_RPZ
       use domain,           only: is_multicg, dom
       use fluidtypes,       only: phys_prop, component_fluid
       use func,             only: ekin
@@ -1183,7 +1183,7 @@ contains
       use named_array_list, only: qna
       use units,            only: mH, kboltz
 #ifndef ISO
-      use constants,        only: ION, DST, half
+      use constants,        only: ION, DST, half, I_ZERO
       use global,           only: smallp
 #endif /* !ISO */
 

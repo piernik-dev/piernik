@@ -1,6 +1,7 @@
 # sha1 of the gold commit
 # Note: update only when absolutely necessary
-GOLD_COMMIT=b39c890f49f76f59d8115b255581d5e04c7e4645
+GOLD_COMMIT=8fcf05bbd76c9162eb1999d620b59dd0966e0f8e
+# 8fcf05bbd76c9162eb1999d620b59dd0966e0f8e - several fixups needed for Jenkins on Fedora 24
 # b39c890f49f76f59d8115b255581d5e04c7e4645 - Merge pull request #173 from gawrysz/IO_naming_fix: removed adding "final" to the output filename
 # c21d1c15102bd2372d1006d89937a5748449403f - gdf_distance relies on GDF 1.1 (output v. 2.01)
 # 06ea0b29fbfbd569a9f5acd70370ac74574a60ae - Merge pull request #93 from woolt/bnd_fix (fixed in a20b91dcd352a860e020d025be3f0895e2f58301)
