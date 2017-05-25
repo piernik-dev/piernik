@@ -154,6 +154,9 @@ contains
                   cg%b(zdim,i,j,k)  = bz
 
 #ifndef ISO
+                  ! BEWARE: The formula below ignores the fact that we have staggered grid for b
+                  ! It gives correct values only because initial Bx does not depend on x and By does not depend on y
+                  ! This should be addressed soon by reshape_b branch
                   cg%u(fl%ien,i,j,k) = cg%u(fl%ien,i,j,k) + emag(cg%b(xdim,i,j,k), cg%b(ydim,i,j,k), cg%b(zdim,i,j,k))
 #endif /* !ISO */
                enddo
