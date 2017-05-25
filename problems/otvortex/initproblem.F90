@@ -99,7 +99,7 @@ contains
 
       use cg_leaves,   only: leaves
       use cg_list,     only: cg_list_element
-      use constants,   only: pi, dpi, fpi, xdim, ydim, zdim, LO, HI, LEFT
+      use constants,   only: pi, dpi, fpi, xdim, ydim, zdim, LO, HI
       use fluidindex,  only: flind
       use fluidtypes,  only: component_fluid
       use func,        only: ekin, emag
@@ -111,7 +111,6 @@ contains
       class(component_fluid), pointer    :: fl
       integer                            :: i, j, k
       real                               :: xi, yj, zk, vx, vy, vz, rho, pre, bx, by, bz, b0
-      real, dimension(:,:,:),allocatable :: A
       type(cg_list_element),  pointer    :: cgl
       type(grid_container),   pointer    :: cg
 
@@ -122,19 +121,11 @@ contains
       do while (associated(cgl))
          cg => cgl%cg
 
-         if (.not.allocated(A)) allocate(A(cg%lhn(xdim,LO):cg%lhn(xdim,HI), cg%lhn(ydim,LO):cg%lhn(ydim,HI), 1))
-
          rho = 25.0/(36.0*pi)
          pre =  5.0/(12.0*pi)
          b0  = 1./sqrt(fpi)
          vz  = 0.0
          bz0 = 0.0
-
-         do j = cg%lhn(ydim,LO), cg%lhn(ydim,HI)
-            do i = cg%lhn(xdim,LO), cg%lhn(xdim,HI)
-               A(i,j,1) = b0*(cos(fpi*cg%coord(LEFT, xdim)%r(i))/fpi + cos(dpi*cg%coord(LEFT, ydim)%r(j))/dpi)
-            enddo
-         enddo
 
          do j = cg%lhn(ydim,LO), cg%lhn(ydim,HI)
             yj = cg%y(j)
@@ -168,7 +159,6 @@ contains
                enddo
             enddo
          enddo
-         if (allocated(A)) deallocate(A)
 
          cgl => cgl%nxt
       enddo
