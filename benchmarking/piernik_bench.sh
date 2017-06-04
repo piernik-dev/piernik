@@ -99,7 +99,7 @@ fi
 #
 
 for p in $B_PROBLEM_LIST ; do
-    for t in weak strong ; do
+    for t in flood weak strong; do
 	echo "Benchmarking $p, $t scaling"
 	(
 	    RUNDIR=runs/${p}_B_${p}
@@ -112,37 +112,90 @@ for p in $B_PROBLEM_LIST ; do
 	    esac
 	    for i in $N_PROC_LIST ; do
 		rm *log 2> /dev/null
-		echo -n $i
+		for j in $( seq $i ) ; do
+		    if [ ! -d $j ] ; then
+			mkdir $j
+			cp piernik problem.par $j
+		    fi
+		done
 		case $p in
 		    sedov)
 			NX=$(( 64 * $SCALE ))
-			case $t in
-			    weak)
-				mpirun -np $i ./piernik -n '&BASE_DOMAIN n_d = '$(( $i * $NX ))', 2*'$NX' xmin = -'$(( $i * 1 ))' xmax = '$(( $i * 1 ))'/' 2> /dev/null ;;
-			    strong)
-				mpirun -np $i ./piernik -n '&BASE_DOMAIN n_d = 3*'$NX' /' 2> /dev/null ;;
-			esac | grep "dWallClock" | awk 'BEGIN {t=0; n=0;} {if ($12 != 0.) {printf("%7.2f ", $12); t+=$12; n++;} } END {printf("%7.3f ", t/n)}'
+			if [ $t == flood ] ; then
+			    for j in $( seq $i ) ; do
+				cd $j
+				rm *log 2> /dev/null
+				./piernik -n '&BASE_DOMAIN n_d = 3*'$NX' /' > _stdout_ 2> /dev/null &
+				cd - > /dev/null
+			    done
+			    wait
+			    sleep 1
+			    for j in $( seq $i ) ; do
+				grep "dWallClock" $j/_stdout_ | awk 'BEGIN {t=0; n=0; printf("%3d",'$i');} {if ($3 != 0) {printf("%7.2f ", $12); t+=$12; n++;} } END {printf("%7.3f\n", t/n)}'
+			    done
+			else
+			    echo -n $i
+			    case $t in
+				weak)
+				    mpirun -np $i ./piernik -n '&BASE_DOMAIN n_d = '$(( $i * $NX ))', 2*'$NX' xmin = -'$(( $i * 1 ))' xmax = '$(( $i * 1 ))'/' 2> /dev/null ;;
+				strong)
+				    mpirun -np $i ./piernik -n '&BASE_DOMAIN n_d = 3*'$NX' /' 2> /dev/null ;;
+			    esac | grep "dWallClock" | awk 'BEGIN {t=0; n=0;} {if ($12 != 0.) {printf("%7.2f ", $12); t+=$12; n++;} } END {printf("%7.3f ", t/n)}'
+			fi
 			echo ;;
 		    crtest)
 			NX=$(( 32 * $SCALE ))
-			case $t in
-			    weak)
-				mpirun -np $i ./piernik -n '&BASE_DOMAIN n_d = '$(( $i * $NX ))', 2*'$NX' xmin = -'$(( $i * 512 ))' xmax = '$(( $i * 512 ))'/' 2> /dev/null ;;
-			    strong)
-				mpirun -np $i ./piernik -n '&BASE_DOMAIN n_d = 3*'$NX' /' 2> /dev/null ;;
-			esac | grep "C1-cycles" | awk '{if (NR==1) printf("%7.3f %7.3f ", $5, $8)}'
-			awk '/Spent/ { printf("%s ",$5) }' *log
+			if [ $t == flood ] ; then
+			    for j in $( seq $i ) ; do
+				cd $j
+				rm *log 2> /dev/null
+				./piernik -n '&BASE_DOMAIN n_d = 3*'$NX' /' > _stdout_ 2> /dev/null &
+				cd - > /dev/null
+			    done
+			    wait
+			    sleep 1
+			    for j in $( seq $i ) ; do
+				grep "C1-cycles" $j/_stdout_ | awk '{if (NR==1) printf("%d %7.3f %7.3f ", '$i', $5, $8)}'
+				awk '/Spent/ { printf("%s\n",$5) }' $j/*log
+			    done
+			else
+			    echo -n $i
+			    case $t in
+				weak)
+				    mpirun -np $i ./piernik -n '&BASE_DOMAIN n_d = '$(( $i * $NX ))', 2*'$NX' xmin = -'$(( $i * 512 ))' xmax = '$(( $i * 512 ))'/' 2> /dev/null ;;
+				strong)
+				    mpirun -np $i ./piernik -n '&BASE_DOMAIN n_d = 3*'$NX' /' 2> /dev/null ;;
+			    esac | grep "C1-cycles" | awk '{if (NR==1) printf("%7.3f %7.3f ", $5, $8)}'
+			    awk '/Spent/ { printf("%s ",$5) }' *log
+			fi
 			echo ;;
 		    maclaurin)
-			case $t in
-			    weak)
-				NX=$(( 64 * $SCALE ))
-				mpirun -np $i ./piernik -n '&BASE_DOMAIN n_d = '$(( $i * $NX ))', 2*'$NX' xmin = -'$(( $i * 2 ))' xmax = '$(( $i * 2 ))' / &MPI_BLOCKS AMR_bsize = 3*32 /' 2> /dev/null ;;
-			    strong)
-				NX=$(( 128 * $SCALE ))
-				mpirun -np $i ./piernik -n '&BASE_DOMAIN n_d = 3*'$NX' / &MPI_BLOCKS AMR_bsize = 3*32 /' 2> /dev/null ;;
-			esac | grep cycles | awk '{printf("%7.3f %7.3f ", $5, $8)}'
-			awk '/Spent/ { printf("%s ", $5) }' *log
+			if [ $t == flood ] ; then
+			    NX=$(( 64 * $SCALE ))
+			    for j in $( seq $i ) ; do
+				cd $j
+				rm *log 2> /dev/null
+				./piernik -n '&BASE_DOMAIN n_d = 3*'$NX' / &MPI_BLOCKS AMR_bsize = 3*32 /' > _stdout_ 2> /dev/null &
+				cd - > /dev/null
+			    done
+			    wait
+			    sleep 1
+			    for j in $( seq $i ) ; do
+				grep cycles $j/_stdout_ | awk 'BEGIN {printf("%d", '$i');} {printf("%7.3f %7.3f ", $5, $8)}'
+				awk '/Spent/ { printf("%s\n",$5) }' $j/*log
+			    done
+			else
+			    echo -n $i
+			    case $t in
+				weak)
+				    NX=$(( 64 * $SCALE ))
+				    mpirun -np $i ./piernik -n '&BASE_DOMAIN n_d = '$(( $i * $NX ))', 2*'$NX' xmin = -'$(( $i * 2 ))' xmax = '$(( $i * 2 ))' / &MPI_BLOCKS AMR_bsize = 3*32 /' 2> /dev/null ;;
+				strong)
+				    NX=$(( 128 * $SCALE ))
+				    mpirun -np $i ./piernik -n '&BASE_DOMAIN n_d = 3*'$NX' / &MPI_BLOCKS AMR_bsize = 3*32 /' 2> /dev/null ;;
+			    esac | grep cycles | awk '{printf("%7.3f %7.3f ", $5, $8)}'
+			    awk '/Spent/ { printf("%s ", $5) }' *log
+			fi
 			echo ;;
 	        esac
 	    done
