@@ -6,8 +6,8 @@ if [ $# -lt 1 ] ; then
 fi
 
 if [ ! -d $1 ] ; then
-	echo "trying to do mkdir $1"
-	mkdir $1
+	echo "trying to do mkdir -p $1"
+	mkdir -p $1
 fi
 
 if [ ! -d $1 ] ; then
@@ -32,4 +32,4 @@ echo "starting from $N"
 for i in $( seq $N $(( $N + 2 )) ) ; do
   ./benchmarking/piernik_bench.sh | tee $1/${i}
 done
-BIG=2 ./benchmarking/piernik_bench.sh  | tee $1/${N}_big2 
+BIG=2 ./benchmarking/piernik_bench.sh | tee $1/${N}_big2
