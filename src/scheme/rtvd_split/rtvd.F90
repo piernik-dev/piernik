@@ -298,37 +298,37 @@ contains
       real, dimension(n, flind%fluids), intent(in), optional :: adv_vel  !< advection velocity
 
 #ifdef GRAV
-      integer                                      :: ind                !< fluid index
-      real, dimension(n)                           :: gravacc            !< acceleration caused by gravitation
+      integer                                         :: ind                !< fluid index
+      real, dimension(:), allocatable, save           :: gravacc            !< acceleration caused by gravitation
 #endif /* GRAV */
 
-      real                                         :: dtx                !< dt/dx
-      real, dimension(n, flind%all)                 :: cfr                !< freezing speed
+      real                                            :: dtx                !< dt/dx
+      real, dimension(:,:), allocatable, save         :: cfr                !< freezing speed
 !locals
-      real, dimension(n, flind%fluids)              :: acc                !< acceleration
-      real, dimension(n, flind%all)                 :: w                  !< auxiliary vector to calculate fluxes
-      real, dimension(n, flind%all)                 :: fr                 !< flux of the right-moving waves
-      real, dimension(n, flind%all)                 :: fl                 !< flux of the left-moving waves
-      real, dimension(n, flind%all)                 :: fu                 !< sum of fluxes of right- and left-moving waves
-      real, dimension(n, flind%all)                 :: dfp                !< second order correction of left/right-moving waves flux on the right cell boundary
-      real, dimension(n, flind%all)                 :: dfm                !< second order correction of left/right-moving waves flux on the left cell boundary
-      real, dimension(n, flind%all)                 :: u1                 !< updated vector of conservative variables (after one timestep in second order scheme)
-      real, dimension(n, flind%fluids)              :: geosrc             !< source terms caused by geometry of coordinate system
-      real, dimension(n, flind%fluids), target      :: pressure           !< gas pressure
-      real, dimension(n, flind%fluids), target      :: density            !< gas density
-      real, dimension(n, flind%fluids), target      :: vel_sweep          !< velocity in the direction of current sweep
-      real, dimension(:,:),            pointer      :: dens, vx
-      logical                                       :: full_dim
+      real, dimension(:,:), allocatable, save         :: acc                !< acceleration
+      real, dimension(:,:), allocatable, save         :: w                  !< auxiliary vector to calculate fluxes
+      real, dimension(:,:), allocatable, save         :: fr                 !< flux of the right-moving waves
+      real, dimension(:,:), allocatable, save         :: fl                 !< flux of the left-moving waves
+      real, dimension(:,:), allocatable, save         :: fu                 !< sum of fluxes of right- and left-moving waves
+      real, dimension(:,:), allocatable, save         :: dfp                !< second order correction of left/right-moving waves flux on the right cell boundary
+      real, dimension(:,:), allocatable, save         :: dfm                !< second order correction of left/right-moving waves flux on the left cell boundary
+      real, dimension(:,:), allocatable, save         :: u1                 !< updated vector of conservative variables (after one timestep in second order scheme)
+      real, dimension(:,:), allocatable, save         :: geosrc             !< source terms caused by geometry of coordinate system
+      real, dimension(:,:), allocatable, save, target :: pressure           !< gas pressure
+      real, dimension(:,:), allocatable, save, target :: density            !< gas density
+      real, dimension(:,:), allocatable, save, target :: vel_sweep          !< velocity in the direction of current sweep
+      real, dimension(:,:), pointer                   :: dens, vx
+      logical                                         :: full_dim
 
 #ifdef COSM_RAYS
-      real, dimension(n)                            :: grad_pcr
-      real, dimension(n, flind%crs%all)             :: decr
+      real, dimension(:), allocatable, save           :: grad_pcr
+      real, dimension(:,:), allocatable, save         :: decr
 #ifdef COSM_RAYS_SOURCES
-      real, dimension(n, flind%crn%all)             :: srccrn
+      real, dimension(:,:), allocatable, save         :: srccrn
 #endif /* COSM_RAYS_SOURCES */
 #endif /* COSM_RAYS */
 
-      real, dimension(n)              :: kin_ener, int_ener, mag_ener
+      real, dimension(:), allocatable, save           :: kin_ener, int_ener, mag_ener
 
       real, dimension(2,2), parameter              :: rk2coef = reshape( [ one, half, zero, one ], [ 2, 2 ] )
 
@@ -339,6 +339,33 @@ contains
       integer                                      :: dummy
       if (.false.) dummy = size(divv(:)) ! suppress compiler warnings
 #endif /* !(COSM_RAYS && IONIZED) */
+
+      if (allocated(cfr)) then
+         if (size(cfr, 1) /= n) then
+#ifdef GRAV
+            deallocate(gravacc)
+#endif /* GRAV */
+            deallocate(cfr, acc, w, fr, fl, fu, dfp, dfm, u1, geosrc, pressure, density, vel_sweep, kin_ener, int_ener, mag_ener)
+#ifdef COSM_RAYS
+            deallocate(grad_pcr, decr)
+#ifdef COSM_RAYS_SOURCES
+            deallocate(srccrn)
+#endif /* COSM_RAYS_SOURCES */
+#endif /* COSM_RAYS */
+         endif
+      endif
+      if (.not. allocated(cfr)) then
+#ifdef GRAV
+         allocate(gravacc(n))
+#endif /* GRAV */
+         allocate(cfr(n, flind%all), acc(n, flind%fluids), w(n, flind%all), fr(n, flind%all), fl(n, flind%all), fu(n, flind%all), dfp(n, flind%all), dfm(n, flind%all), u1(n, flind%all), geosrc(n, flind%fluids), pressure(n, flind%fluids), density(n, flind%fluids), vel_sweep(n, flind%fluids), kin_ener(n), int_ener(n), mag_ener(n))
+#ifdef COSM_RAYS
+         allocate(grad_pcr(n), decr(n, flind%crn%all))
+#ifdef COSM_RAYS_SOURCES
+         allocate(srccrn(n, flind%crn%all))
+#endif /* COSM_RAYS_SOURCES */
+#endif /* COSM_RAYS */
+      endif
 
       !OPT: try to avoid these explicit initializations of u1(:,:) and u0(:,:)
       dtx      = dt / dx
