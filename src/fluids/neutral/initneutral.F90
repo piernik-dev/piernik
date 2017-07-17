@@ -243,11 +243,11 @@ contains
       implicit none
       class(neutral_fluid), intent(in)             :: this
       integer(kind=4),      intent(in)             :: n         !< number of cells in the current sweep
-      real, dimension(:,:), intent(inout), pointer :: flux      !< flux of neutral fluid
-      real, dimension(:,:), intent(inout), pointer :: cfr       !< freezing speed for neutral fluid
+      real, dimension(:,:), intent(out),   pointer :: flux      !< flux of neutral fluid
+      real, dimension(:,:), intent(out),   pointer :: cfr       !< freezing speed for neutral fluid
       real, dimension(:,:), intent(in),    pointer :: uu        !< part of u for neutral fluid
-      real, dimension(:),   intent(inout), pointer :: vx        !< velocity of neutral fluid for current sweep
-      real, dimension(:),   intent(inout), pointer :: ps        !< pressure of neutral fluid for current sweep
+      real, dimension(:),   intent(in),    pointer :: vx        !< velocity of neutral fluid for current sweep
+      real, dimension(:),   intent(out),   pointer :: ps        !< pressure of neutral fluid for current sweep
       real, dimension(:,:), intent(in),    pointer :: bb        !< magnetic field x,y,z-components table
       real, dimension(:),   intent(in),    pointer :: cs_iso2   !< isothermal sound speed squared
       logical,              intent(in)             :: use_vx    !< use provided vx instead of computing it

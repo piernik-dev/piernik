@@ -192,11 +192,11 @@ contains
       implicit none
       class(dust_fluid), intent(in)                :: this
       integer(kind=4), intent(in)                  :: n         !< number of cells in the current sweep
-      real, dimension(:,:), intent(inout), pointer :: flux      !< flux of dust
-      real, dimension(:,:), intent(inout), pointer :: cfr       !< freezing speed for dust
+      real, dimension(:,:), intent(out),   pointer :: flux      !< flux of dust
+      real, dimension(:,:), intent(out),   pointer :: cfr       !< freezing speed for dust
       real, dimension(:,:), intent(in),    pointer :: uu        !< part of u for dust
-      real, dimension(:),   intent(inout), pointer :: vx        !< velocity of dust fluid for current sweep
-      real, dimension(:),   intent(inout), pointer :: ps        !< pressure of dust fluid for current sweep
+      real, dimension(:),   intent(in),    pointer :: vx        !< velocity of dust fluid for current sweep
+      real, dimension(:),   intent(out),   pointer :: ps        !< pressure of dust fluid for current sweep
       real, dimension(:,:), intent(in),    pointer :: bb        !< magnetic field x,y,z-components table
       real, dimension(:),   intent(in),    pointer :: cs_iso2   !< local isothermal sound speed squared (optional)
       logical,              intent(in)             :: use_vx    !< use provided vx instead of computing it
