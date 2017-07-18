@@ -177,6 +177,10 @@ contains
 #ifdef COSM_RAYS
       use initcosmicrays, only: cleanup_cosmicrays
 #endif /* COSM_RAYS */
+#ifdef COSM_RAY_ELECTRONS
+      use cresp_crspectrum, only: cleanup_cresp
+      use initcrspectrum,   only: cleanup_cresp_virtual_en_arrays
+#endif /* COSM_RAY_ELECTRONS */
 
       implicit none
 
@@ -185,6 +189,10 @@ contains
       call cleanup_cosmicrays
 #endif /* COSM_RAYS */
 
+#ifdef COSM_RAY_ELECTRONS
+      call cleanup_cresp
+      call cleanup_cresp_virtual_en_arrays
+#endif /* COSM_RAY_ELECTRONS */
       call cleanup_magic_mass
 
    end subroutine cleanup_fluids

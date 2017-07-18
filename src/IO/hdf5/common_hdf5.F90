@@ -33,7 +33,9 @@
 module common_hdf5
 
 ! pulled by HDF5
+#ifdef COSM_RAY_ELECTRONS
    use initcosmicrays, only: ncre
+#endif /* COSM_RAY_ELECTRONS */
    use constants, only: singlechar, ndims, dsetnamelen
    use hdf5,      only: HID_T
 
@@ -207,11 +209,11 @@ contains
                    write(aux,'(A4,I2.2)') 'cree', k !!!
                    hdf_vars(j) = aux ; j = j + 1 !!!
                enddo    !!!
-                   write(aux,'(A5)') 'crepl'  !!!
+                   write(aux,'(A5)') 'crepl'  !!! DEPRECATED
                    hdf_vars(j) = aux ; j = j + 1 !!!
 
                    write(aux,'(A5)') 'crepu' !!!
-                   hdf_vars(j) = aux ; j = j + 1 !!!
+                   hdf_vars(j) = aux ; j = j + 1 !!! DEPRECATED
 
 #endif /* COSM_RAY_ELECTRONS */
 #endif /* COSM_RAYS */

@@ -159,10 +159,11 @@ contains
       use cr_data,        only: icr_H1, icr_C12, cr_table
 #endif /* COSM_RAYS_SOURCES */
 #ifdef COSM_RAY_ELECTRONS
-     use initcosmicrays, only: ncrn, iarr_cre_n, iarr_cre_e, iarr_cre_pl, iarr_cre_pu
-     use initcrspectrum,   only: q_init, f_init, p_lo_init, p_up_init, p_min_fix, p_max_fix, ncre, &
+     use initcosmicrays, only: ncrn, iarr_cre_pl, iarr_cre_pu ! DEPRECATED
+     use initcrspectrum, only: q_init, f_init, p_lo_init, p_up_init, p_min_fix, p_max_fix, ncre, &
                                  expan_order, taylor_coeff_2nd, taylor_coeff_3rd
      use cresp_grid,     only: cresp_init_grid
+     use cresp_NR_method,only: cresp_initialize_guess_grids
 #endif /* COSM_RAY_ELECTRONS */
 
       implicit none
@@ -221,11 +222,6 @@ contains
 #endif /* !ISO */
 
 #ifdef COSM_RAYS
-!          print *, 'flind crs all = ' , flind%crs%all  ! diagnostic output, to be removed
-!          print*,'zdim lo, zdim hi = ', zdim, LO, zdim, HI 
-!          print *,'cg%lhn(zdim,LO) = ', cg%lhn(zdim,LO)
-!          print *, 'cg%lhn(xdim,LO/HI) = ',cg%lhn(xdim,LO), cg%lhn(xdim,HI)
-!          print *, 'cg%lhn(ydim,LO/HI) = ',cg%lhn(ydim,LO), cg%lhn(ydim,HI) ! diagnostic output, to be removed
          do icr = 1, flind%crs%all
             cg%u(iarr_crs(icr), :, :, :) =  beta_cr*fl%cs2 * cg%u(fl%idn, :, :, :)/(gamma_crn(icr)-1.0)
          enddo
@@ -282,14 +278,12 @@ contains
 !          call print_mcrtest_vars_hdf5()
             
       if (ncre > 0) then
-         cg%u(iarr_cre_pl, :, :, :) = p_lo_init ! ? iarr_cre(2*ncre+1)? < initial value of low cut momentum assigned to all cg%u cells 
-         cg%u(iarr_cre_pu, :, :, :) = p_up_init ! < initial value of up cut momentum assigned to all cg%u cells
-!          cg%u(iarr_cre_n, :, :, :) = 1.0 !!! Diagnostics
-!          cg%u(iarr_cre_e, :, :, :) = 5.0 !!! Diagnostics 
+      cg%u(iarr_cre_pl, :, :, :) = p_lo_init ! DEPRECATED
+      cg%u(iarr_cre_pu, :, :, :) = p_up_init ! DEPRECATED
          
       endif
            
-!         print *, 'in domain cell(2,2,0) cre vars = ',cg%u(ind_n_beg:ind_p_up, -2, -2, 0)  ! just some check, to be removed
+      call cresp_initialize_guess_grids
       call cresp_init_grid
 
 #endif /* COSM_RAY_ELECTRONS */      

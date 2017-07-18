@@ -1,5 +1,5 @@
  $BASE_DOMAIN
-    n_d = 4, 4, 1
+    n_d = 4, 1, 1
     nb  = 4
     bnd_xl = 'per'
     bnd_xr = 'per'
@@ -30,8 +30,8 @@
  /
 
  $END_CONTROL
-    tend   = 1.0
-    nend   = 2
+    tend   = 20.01 !.0 ! .1
+    nend   = 1
  /
 
  $OUTPUT_CONTROL
@@ -58,13 +58,13 @@
 
  $COSMIC_RAYS
     cfl_cr      = 0.9
-    cr_active   = 1.0
+    cr_active   = 0.0
     ncrn        = 1
     gamma_crn(1)   = 1.333333
     gamma_crn(2)   = 1.333333
 !    gamma_crn(3)   = 1.333333
-    K_crn_paral(1) = 10000.0 ! anisotropic
-    K_crn_paral(2) = 10000.0
+    K_crn_paral(1) = 0.0 !10000.0 ! anisotropic
+    K_crn_paral(2) = 0.0 !10000.0
 !   K_crn_paral(3) = 0.0
     K_crn_perp(1)  = 0     ! isotropic
     K_crn_perp(2)  = 0
@@ -73,21 +73,34 @@
  /   
   
  $COSMIC_RAY_SPECTRUM
-    cre_eff     = 0.01   ! Fraction of total cr01 energy passed to cosmic ray electrons
-    cfl_cre     = 0.4    ! CFL coefficient for cosmic ray electrons
-    ncre        = 5      ! number of fixed spectrum bins between
-    expan_order = 3     ! 1/2/3 - Taylor expansion order for computing electron spectrum
-    p_lo_init = 1.2e1  ! initial lower cut momentum[2]
-    p_up_init = 1.5e2   ! initial upper cut momentum[3]
-    f_init    = 1.0e0   ! < initial value of the normalization parameter in cre energy spectrum
-    q_init    = 5.0e0   ! < initial value of power law coefficient in cre enrgy spectrum
-    p_min_fix = 1.0e1  ! momentum fixed grid
-    p_max_fix = 1.0e3  ! momentum fixed grid
-    K_cre_e_paral = 50000.0  ! maximal value of K
-    K_cre_n_paral = 20000.0  ! maximal value of K
-    K_cre_e_perp  = 50      ! maximal value of K
-    K_cre_n_perp  = 20      ! maximal value of K
-    K_pow_index   = 1.05
+    cre_eff     = 0.01
+    cfl_cre     = 0.2
+    ncre        = 45          ! number of spectrum bins (including cutoff bins)
+    p_lo_init = 1.5e1 !50e0   ! initial lower cut momentum
+    p_up_init = 8.0e2 ! 5.0e2  ! initial upper cut momentum
+    expan_order = 1
+    f_init    = 1.0 ! 1.0e1   ! < initial value of the normalization parameter in cre energy spectrum
+    q_init    = 3.6 ! 4.1   ! < initial value of power law coefficient in cre enrgy spectrum
+    q_big     = 30.e0   ! < limit value of power law coefficient in cre energy spectrum, do not set that value too high!
+    p_min_fix = 0.4e0 ! 1.0e1  ! momentum fixed grid
+    p_max_fix = 1.65e4 ! 1.0e2  ! momentum fixed grid
+    K_cre_e_paral = 0.0
+    K_cre_n_paral = 0.0
+    K_cre_e_perp  = 0.0
+    K_cre_n_perp  = 0.0
+    K_pow_index   = 0
+    e_small     = 1.0e-5 ! 8.5e-3 ! 2.0e-4! 12.0e0
+    initial_condition ='bump' ! 'powl', 'brpl', 'bump', 'symf', 'syme'  !   powl - power-law, brpl - broken power-law, bump - bump-type spectrum, symf - symmetric distr. function spectrum, syme - symmetric energy distr. spectrum
+    bump_amp    = 0.5d0  ! amplitude of bump-type spectrum
+    e_small_approx_init_cond = 1  ! 0  ! 1 ! tells algoritm to approximate both boundary momenta at initialization
+    e_small_approx_p_lo = 1 ! 0 ! 1  ! tells algorithm to appriximate lower boundary momentum
+    e_small_approx_p_up = 1 ! 0 ! 1  ! tells algorithm to approximate upper boundary momentum
+    max_p_ratio = 2.5
+    NR_iter_limit = 250
+    force_init_NR = .false.
+!    arr_dim = 140 ! dimension of NR grids, must be an even number, don't put a number ridiculously high
+    
+    
  /
 
  $CR_SPECIES
@@ -110,9 +123,9 @@
  $PROBLEM_CONTROL
     d0     = 1.0 ! when COSM_RAYS_SOURCES are defined, the density somehow scales the result of sourcecosmicrays.F90 and values like 1e5 quickly lead to FP overflow. This must be a bug.
     p0     = 1.0
-    bx0    = 5.0
-    by0    = 5.0
-    bz0    = 5.0
+    bx0    = 0.5
+    by0    = 0.5
+    bz0    = 0.5
     x0     = 0.0
     y0     = 0.0
     z0     = 0.0
@@ -122,8 +135,26 @@
     norm_step = 1
  /
 
+ $PIERNIK_DEBUG
+    constant_dt = 0.01
+    
+ /
+ 
  $INTERACTIONS
  /
 
  $AMR
  /
+
+ $CRE_TEST
+     u_b0     = 0.0 ! 3.0228e-3    ! initial magnetic energy-density
+     u_d0     = 0.0 ! 0.25 ! 3.765e-4     ! initial magnitude of div_v
+     div_v    = -0.5  ! velocity field divergence, periodic, sums up with u_d0
+     ub_ampl  = 0.0   ! amplitude of synchrotron cooling coefficient with time
+     omega_d  = 0.157 ! omega_d parameter for test with periodic adiabatic compression: u_d0 = u_d0 + div_v * cos(omega_d * t)
+     omega_b  = 0.0   ! omega_b parameter for periodic variation of u_b: u_b = u_b0 + ub_ampl * cos(omega_b * t)
+     dt_ini   = 0.01        ! initial timestep, optional, if absent, initial dt shall be computed. Use value less than dt_max (cresp_driver)
+     force_dt = .false.      ! < if .true. - dt_ini shall be constant throughout entire simulation
+     
+ /
+ 

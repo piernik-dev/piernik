@@ -48,11 +48,16 @@ module constants
    real, parameter :: zero       = 0.0                   !< zero
    real, parameter :: one        = 1.0                   !< one
    real, parameter :: two        = 2.0                   !< two
+   real(kind=8), parameter :: three      = 3.0                   !< three
+   real(kind=8), parameter :: four       = 4.0                   !< four
+   real(kind=8), parameter :: five       = 4.0
+   real(kind=8), parameter :: ten        = 10.0
    real, parameter :: half       = 0.5                   !< a half
    real, parameter :: onet       = 1./3.                 !< one third
    real, parameter :: twot       = 2./3.                 !< two thirds
    real, parameter :: oneq       = 1./4.                 !< one fourth
    real, parameter :: thrq       = 3./4.                 !< three fourths
+   real(kind=8), parameter :: sixth      = 1.6666666666e-1       !< one sixth
 
    enum, bind(C)
       enumerator :: idn = 1, imx, imy, imz, ien

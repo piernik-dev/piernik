@@ -141,12 +141,12 @@ contains
       use fluidindex,       only: flind
       use global,           only: dt
       use grid_cont,        only: grid_container
-      use initcosmicrays,   only: K_crn_paral, K_crn_perp, iarr_crs_diff, K_crs_paral, K_crs_perp, iarr_crs, iarr_crs_tmp  !, iarr_crn !!!
+      use initcosmicrays,   only: K_crn_paral, K_crn_perp, K_crs_paral, K_crs_perp, iarr_crs !, iarr_crs_diff, iarr_crs_tmp  !, iarr_crn !!!
       use named_array,      only: p4
       use named_array_list, only: wna
 #ifdef COSM_RAY_ELECTRONS
-      use initcosmicrays,   only: ncrn, iarr_cre_pl, iarr_cre_pu, iarr_cre_e, iarr_cre_n
-      use initcrspectrum,    only: ncre, fdif_cre, p_lo_nda, p_up_nda
+      use initcosmicrays,   only: ncrn ! , iarr_cre_pl, iarr_cre_pu, iarr_cre_e, iarr_cre_n
+!       use initcrspectrum,    only: ncre !, fdif_cre, p_lo_nda, p_up_nda
 #endif /* COSM_RAY_ELECTRONS */
 
       implicit none
@@ -164,7 +164,6 @@ contains
       logical, dimension(ndims)            :: present_not_crdim
       real, dimension(:,:,:,:), pointer    :: wcr
       integer                              :: wcri
-      integer,dimension(ncre)              :: cre_e
       
       if (.not. has_cr) return
       if (.not.dom%has_dir(crdim)) return
@@ -175,13 +174,7 @@ contains
       decr(:,:)  = 0.             ;      bcomp(:)   = 0.                 ! essential where ( .not.dom%has_dir(dim) .and. (dim /= crdim) )
       present_not_crdim = dom%has_dir .and. ( [ xdim,ydim,zdim ] /= crdim )
       wcri = wna%ind(wcr_n)
-      
-      fdif_cre   = 0.
-      
-      do i = 1,ncre        ! a table of indexes is needed, nor iarr_cre / iarr_crs can be used here. Might be later moved to initcrspectrum
-        cre_e(i) = ncre+ncrn + i
-      enddo
-      
+           
       cgl => leaves%first
       do while (associated(cgl))
          cg => cgl%cg
@@ -228,16 +221,8 @@ contains
                enddo
             enddo
          enddo
-#ifdef COSM_RAY_ELECTRONS
-         fdif_cre = wcr(cre_e,cg%is:cg%ie,cg%js:cg%je,cg%ks:cg%ke) / (dt*cg%idl(crdim)) 
-         ! ^ copying obtained energy flux of cr electrons energy to use it in p_cut update
+       cgl => cgl%nxt
 
-         cg%u(iarr_cre_pl,cg%lhn(xdim,LO):cg%lhn(xdim,HI),cg%lhn(ydim,LO):cg%lhn(ydim,HI),cg%lhn(zdim,LO):cg%lhn(zdim,HI)) =  &
-                             p_lo_nda(cg%lhn(xdim,LO):cg%lhn(xdim,HI),cg%lhn(ydim,LO):cg%lhn(ydim,HI),cg%lhn(zdim,LO):cg%lhn(zdim,HI))
-         cg%u(iarr_cre_pu,cg%lhn(xdim,LO):cg%lhn(xdim,HI),cg%lhn(ydim,LO):cg%lhn(ydim,HI),cg%lhn(zdim,LO):cg%lhn(zdim,HI)) =  &
-                             p_up_nda(cg%lhn(xdim,LO):cg%lhn(xdim,HI),cg%lhn(ydim,LO):cg%lhn(ydim,HI),cg%lhn(zdim,LO):cg%lhn(zdim,HI))
-         cgl => cgl%nxt
-#endif /* COSM_RAY_ELECTRONS */
       enddo
 
       call all_wcr_boundaries

@@ -292,7 +292,6 @@ contains
          K_cre_paral(1:ncre) = compute_K(K_cre_n_paral, K_pow_index, 0.1, ncre)
          K_cre_paral(ncre:2*ncre) = compute_K(K_cre_e_paral, K_pow_index, 0.0, ncre)
          K_cre_paral(2*ncre+1:2*ncre+2) = 0.0  ! K for cutoff momenta must always remain zero
-!          print *, 'K = ',K_cre_paral(1:ncre)
 !          
          K_cre_perp(1:ncre) = compute_K(K_cre_n_perp, K_pow_index, 0.1, ncre)
          K_cre_perp(ncre:2*ncre) = compute_K(K_cre_e_perp, K_pow_index, 0.0, ncre)
@@ -307,7 +306,6 @@ contains
 !             rbuff(ne+1+  ncre:ne+3*ncre) = K_cre_paral(1:2*ncre) ! to be enabled later, with K dependant on momentum
 !             rbuff(ne+1+3*ncre:ne+5*ncre) = K_cre_perp (1:2*ncre) ! to be enabled later, with K dependant on momentum
             lbuff(ncrn+2:ncrn+ncre+1) = cre_gpcr_ess(1:ncre)
-            print *, ne+1+  ncre , ne+3*ncre, ne+1+3*ncre, ne+5*ncre
          endif
 
       endif
@@ -406,8 +404,6 @@ contains
          K_crs_perp(ncrn+2*ncre+1:ncrn+2*ncre+2) = 0.0    ! p_lo, p_up
 #endif /* COSM_RAY_ELECTRONS */
       endif
-!      print *, 'k paral = ', K_crs_paral !,'size :',  size(K_crs_paral)
-!      print *, 'k perp  = ', K_crs_perp !, 'size :', size(K_crs_perp)
       ma1d = [ncrn]
       call my_allocate(iarr_crn, ma1d)
       
@@ -432,7 +428,6 @@ contains
       ma1d = [ncrs-2]
       call my_allocate(iarr_crs_diff, ma1d)
       
-      print *,ncrn
 #ifdef COSM_RAYS_SOURCES
       call init_crsources(ncrn, crn_gpcr_ess)
 #endif /* COSM_RAYS_SOURCES */
@@ -504,9 +499,6 @@ contains
          iarr_crs_diff(ncrn + icr) = flind%all + icr
       enddo
       
-!       print *, 'iarr_crs_diff = ', iarr_crs_diff
-!       print *, 'iarr_crs = ', iarr_crs
-      
       flind%all = flind%all + flind%cre%all
 
       flind%crn%end = flind%crn%beg + flind%crn%all - I_ONE
@@ -543,11 +535,7 @@ contains
      
      iarr_cre_pl = flind%cre%plo
      iarr_cre_pu = flind%cre%pup
-     print *,'iarr_cre_n = ', iarr_cre_n
-     print *,'iarr_cre_e = ', iarr_cre_e
-!      print *,'iarr_cre_pl, pu = ', iarr_cre_pl, iarr_cre_pu
-!      print *,'flind%cre%beg & end  = ', flind%cre%beg, flind%cre%end
-!      print *,'ind_p_lo, ind_p_up = ', ind_p_lo, ind_p_up
+
 #endif /* COSM_RAY_ELECTRONS */      
      if ( ncre.eq.0) then 
          iarr_crs_diff = iarr_crs
@@ -555,23 +543,12 @@ contains
    end subroutine cosmicray_index
    
    subroutine cleanup_cosmicrays
-
       use diagnostics, only: my_deallocate
-      use initcrspectrum, only: fdif_cre,fadv_cre
-
       implicit none
  
       call my_deallocate(iarr_crn)
       call my_deallocate(iarr_cre)
       call my_deallocate(iarr_crs)
-#ifdef COSM_RAY_ELECTRONS
-      call my_deallocate(iarr_crs_diff)
-      call my_deallocate(fdif_cre)
-      call my_deallocate(fadv_cre)
-#endif /* COSM_RAY_ELECTRONS */
-!       call my_deallocate(gamma_crs)
-!       call my_deallocate(K_crs_paral)
-!       call my_deallocate(K_crs_perp)
 
    end subroutine cleanup_cosmicrays
 

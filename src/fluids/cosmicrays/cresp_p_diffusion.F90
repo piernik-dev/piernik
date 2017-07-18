@@ -1,6 +1,6 @@
 ! In this module resides algorithm used to update cutoff momenta of cosmic ray electron spectrum.
  module cresp_p_diffusion
-! pulled by COSM_RAY_ELECTRONS
+! pulled by VOID
 !    logical, dimension(:)             :: mask_flux_pos, mask_flux_neg   ! arrays of masks determining direction of momenta diffusion
    use constants, only: I_ONE, ndims
    use fluidindex,       only: flind
