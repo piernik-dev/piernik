@@ -39,7 +39,7 @@ module initcosmicrays
    use constants, only: cbuff_len
    use initcrspectrum, only: ncre, p_min_fix, p_max_fix, f_init, q_init, q_big, p_lo_init, p_up_init,  & 
                           cfl_cre, cre_eff, K_cre_e_paral, K_cre_e_perp, K_cre_n_paral, K_cre_n_perp, K_pow_index, &
-                          w, p_fix, expan_order, init_cresp, compute_K
+                          expan_order, init_cresp, compute_K
    implicit none
 
    public ! QA_WARN no secrets are kept here
@@ -269,7 +269,6 @@ contains
          rbuff(16)  = K_cre_n_perp !!!
          rbuff(17)  = K_pow_index  !!!
          
-         
          lbuff(1)   = use_split
 
          cbuff(1)   = divv_scheme
@@ -338,7 +337,6 @@ contains
          K_cre_e_perp  = rbuff(15) !!!
          K_cre_n_perp  = rbuff(16) !!!
          K_pow_index   = rbuff(17) !!!
-         
          
          use_split  = lbuff(1)
 

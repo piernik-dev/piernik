@@ -69,12 +69,9 @@ contains
 
   subroutine init_cresp
    use constants,             only: I_ZERO, zero, ten !, I_ONE
-   use domain,                only: dom
    use cresp_arrays_handling, only: allocate_with_index
-   use diagnostics,           only: my_allocate
    implicit none
     integer                  :: i       ! enumerator
-    integer,dimension(4) :: ma4d
     logical                  :: first_run = .true.
         namelist /COSMIC_RAY_SPECTRUM/ cfl_cre, p_lo_init, p_up_init, f_init, q_init, q_big, ncre, initial_condition, &
            &                         p_min_fix, p_max_fix, cre_eff, K_cre_e_paral, K_cre_e_perp, &
@@ -161,10 +158,6 @@ contains
                                  "~ 0. Check your parameters."
             stop
         endif
-
-        ma4d = [2,dom%n_d(1),dom%n_d(2),dom%n_d(3)]
-        if (.not. allocated(virtual_e)) call my_allocate(virtual_e,ma4d)
-        if (.not. allocated(virtual_n)) call my_allocate(virtual_n,ma4d)
 
         taylor_coeff_2nd = int(mod(2,expan_order) / 2 + mod(3,expan_order),kind=2 ) ! coefficient which is always equal 1 when order =2 or =3 and 0 if order = 1
         taylor_coeff_3rd = int((expan_order - 1)*(expan_order- 2) / 2,kind=2)        ! coefficient which is equal to 1 only when order = 3

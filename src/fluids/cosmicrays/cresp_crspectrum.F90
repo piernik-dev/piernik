@@ -85,16 +85,23 @@ contains
 #endif /* VERBOSE */
    use constants, only: zero, one, I_ZERO
    implicit none
-    real(kind=8), dimension(1:2) :: v_n, v_e
+    real(kind=8), dimension(1:2), intent(inout) :: v_n, v_e
     real(kind=8), intent(in)  :: dt
-    real(kind=8), dimension(1:2*ncre)   :: cresp_arguments
+    real(kind=8), dimension(1:2*ncre), intent(inout)   :: cresp_arguments
     type(spec_mod_trms), intent(in)       :: sptab
         e = zero; n = zero; edt = zero; ndt = zero ; p_up = zero ;  p_lo = zero
+        
+        p_lo_next = zero
+        p_up_next = zero
+        r = zero
+        f = zero
+        q = zero
         
         n = cresp_arguments(1:ncre)        ! number of electrons passed by x vector
         e = cresp_arguments(ncre+1:2*ncre) ! energy of electrons per bin passed by x vector
         u_b = sptab%ub
         u_d = sptab%ud
+
         vrtl_e = v_e
         vrtl_n = v_n
    
@@ -124,7 +131,6 @@ contains
             print '(A5, 35E18.9)', "out n", n1
         endif
 #endif /* VERBOSE */
-
         call cresp_update_bin_index(dt, p_lo, p_up, p_lo_next, p_up_next)      ! FIXME - must be modified in the future if this branch is connected to Piernik
 
 ! Compute fluxes through fixed edges in time period [t,t+dt], using f, q, p_lo and p_up at [t]
@@ -173,6 +179,7 @@ contains
                                                                       fail_count_NR_2dim(1), ", p_up", fail_count_NR_2dim(2)
         print *, " "
 #endif /* VERBOSE */
+
         n = ndt
         e = edt
         call cresp_detect_negative_content ! for testing
@@ -189,9 +196,10 @@ contains
 ! --- saving the data to output arrays
         cresp_arguments(1:ncre)  = n        ! number of electrons passed by x vector
         cresp_arguments(ncre+1:2*ncre) = e  ! energy of electrons per bin passed by x vector
+
         v_e = vrtl_e
         v_n = vrtl_n
-   
+        
         call deallocate_active_arrays
   end subroutine cresp_update_cell
 !-------------------------------------------------------------------------------------------------
@@ -276,8 +284,8 @@ contains
 ! Compute p_lo and p_up at [t+dt]
         call p_update(dt, p_lo, p_lo_next)
         call p_update(dt, p_up, p_up_next)
-
 ! Locate cut-ofs after current timestep
+
         i_lo_next = int(floor(log10(p_lo_next/p_fix(1))/w)) + 1
         i_lo_next = max(0, i_lo_next)
         i_lo_next = min(i_lo_next, ncre - 1)
@@ -434,9 +442,9 @@ contains
         allocate(active_bins(num_active_bins))
         active_bins = pack(all_bins, is_active_bin)
 !     TESTING ALGORITHM (finding p_lo and p_up using e_small)
-!#ifdef TEST_CRESP
+#ifdef TEST_CRESP
 !      call p_algorithm_accuracy_test  ! tests accuracy of algorithm which later seeks value of p_up using n, e, f and e_small
-!#endif /* TEST_CRESP */
+#endif /* TEST_CRESP */
 ! Pure power law spectrum initial condition
         f = f_init * (p/p_min_fix)**(-q_init)
         q = q_init
@@ -817,9 +825,9 @@ contains
         if ( all_bins(i_up+1) .eq. i_up+1 ) then  ! But it shuld only happen if there is bin with index i_up+1
          ndt(i_up+1) = nflux(i_up)
          edt(i_up+1) = eflux(i_up)
-!#ifdef VERBOSE
+#ifdef VERBOSE
          print *, ' **** UPPER BOUND +1 ****'
-!#endif /* VERBOSE */
+#endif /* VERBOSE */
          del_i_up = +1
         endif
       endif
@@ -827,9 +835,9 @@ contains
       if ( nflux(i_up-1)+n(i_up) .le. zero) then ! If flux is equal or greater than energy / density in a given bin,  these both shall migrate
          nflux(i_up-1) =  -n(i_up)                   ! to an adjacent bin, thus making given bin detected as inactive (empty) in the next timestep
          eflux(i_up-1) =  -e(i_up)
-!#ifdef VERBOSE
+#ifdef VERBOSE
          print *, " **** UPPER BOUND -1 **** "
-!#endif /* VERBOSE */
+#endif /* VERBOSE */
          del_i_up = -1
       endif
       
@@ -853,9 +861,9 @@ contains
          nflux(i_lo+1) = n(i_lo+1)
          eflux(i_lo+1) = e(i_lo+1)
 ! emptying lower boundary bins - in cases when flux gets greater than energy or number density 
-!#ifdef VERBOSE
+#ifdef VERBOSE
          print *, ' **** LOWER BOUND +1 ****'
-!#endif /* VERBOSE */
+#endif /* VERBOSE */
          del_i_lo = 1   ! in case it hasn't yet been modified
       endif
 
@@ -1029,6 +1037,7 @@ contains
 #ifdef VERBOSE
         write (*,"(A31,2E22.15)" ) "Input ratios(p, f) for NR (up):", x_NR
 #endif /* VERBOSE */
+        print *, "e,n (up):", e(i_up), n(i_up)
         alpha = (e(i_up)/(n(i_up)*clight*p_fix(i_up-1)))
         n_in  = n(i_up)
         x_NR_init = x_NR
@@ -1062,15 +1071,17 @@ contains
    implicit none
     real(kind=8), dimension(1:2) :: x_NR, x_NR_init
     logical :: exit_code
+        
         x_NR = zero
         x_NR = intpol_pf_from_NR_grids("lo", (e(i_lo+1)/(n(i_lo+1)*clight*p_fix(i_lo+1))), n(i_lo+1), alpha_tab_lo, n_tab_lo)
         alpha = (e(i_lo+1)/(n(i_lo+1)*clight*p_fix(i_lo+1)))
         n_in  = n(i_lo+1)
         selected_function => fvec_lo
         x_NR_init = x_NR
-#ifdef VERBOSE
+! #ifdef VERBOSE
         write (*,"(A31,2E22.15)" ) "Input ratios(p, f) for NR (lo):", x_NR
-#endif /* VERBOSE */
+! #endif /* VERBOSE */
+        print *, "e,n (lo):", e(i_lo+1), n(i_lo+1)
         call NR_algorithm(x_NR, exit_code)
         if (exit_code .eqv. .true.) then ! screwups still take place
             fail_count_NR_2dim(1) = fail_count_NR_2dim(1) +1
@@ -1079,6 +1090,8 @@ contains
     
         p_lo      = p_fix(i_lo+1)/ x_NR(1)
         p(i_lo)   = p_lo
+        print *, "Obtained ratios (p,f):", x_NR
+!         print *, p_lo, p(i_lo), i_lo
         f(i_lo)   = e_small_to_f(p_lo)
         q(i_lo+1) = q_ratios(x_NR(2), x_NR(1))
 !         if (abs(q(i_lo+1)) .gt. two * q_big ) q(i_lo+1) = sign(one, q(i_lo+1)) * q_big * two ! for some reason using bounds for lower q cause problems
@@ -1158,7 +1171,6 @@ contains
        ndt(i_lo+1) = ndt(i_lo+1) + vrtl_n(1) ; vrtl_n(1) = zero
        edt(i_lo+1) = edt(i_lo+1) + vrtl_e(1) ; vrtl_e(1) = zero
     endif
-
   end subroutine boundary_flux_check
   
 !----------------------------------------------------------------------------------------------------
