@@ -19,7 +19,7 @@ contains
   use grid_cont,      only: grid_container
   use cresp_crspectrum, only:cresp_update_cell, printer
   use units,           only: s_len_u
-  use initcrspectrum, only: spec_mod_trms, virtual_e, virtual_n, p_fix !, crel
+  use initcrspectrum, only: spec_mod_trms, virtual_e, virtual_n !, p_fix, crel
   use named_array_list, only: qna
   use crhelpers,        only: divv_n
   use func,             only: emag
@@ -34,7 +34,6 @@ contains
         cgl => leaves%first
         do while (associated(cgl))
             cg => cgl%cg
-            print *, "e(i_lo+1) - whole domain", cg%u(iarr_cre_e(16),:,:,:)
             cresp_arguments = 0.0
             do k = cg%lhn(zdim,LO), cg%lhn(zdim,HI)
                 do j = cg%lhn(ydim,LO), cg%lhn(ydim,HI)
@@ -43,10 +42,9 @@ contains
                         cresp_arguments(I_ONE+ncre:I_TWO*ncre)    = cg%u(iarr_cre_e, i, j, k)
                         sptab%ub = emag(cg%b(xdim,i,j,k), cg%b(ydim,i,j,k), cg%b(zdim,i,j,k))
                         sptab%ud = cg%q(qna%ind(divv_n))%point([i,j,k])
-! #ifdef VERBOSE
-                        print *,"--------"
+#ifdef VERBOSE
                         print *, 'Output of cosmic ray electrons module for grid cell with coordinates i,j,k:', i, j, k
-! #endif /* VERBOSE */    
+#endif /* VERBOSE */    
                         call cresp_update_cell(2*dt, cresp_arguments, sptab, virtual_n(:,i,j,k), virtual_e(:,i,j,k)) !cg%u(cr_table(cren)), cg%u(cr_table(cree)), cg%u(cr_table(crepl), &
                         cg%u(iarr_cre_n, i, j, k) = cresp_arguments(I_ONE:ncre)
                         cg%u(iarr_cre_e, i, j, k) = cresp_arguments(I_ONE+ncre:I_TWO*ncre)
@@ -102,6 +100,9 @@ contains
                         cg%lhn(zdim,LO):cg%lhn(zdim,HI)))
         if (.not. allocated(virtual_n)) allocate(virtual_n(1:2,cg%lhn(xdim,LO):cg%lhn(xdim,HI),cg%lhn(ydim,LO):cg%lhn(ydim,HI),&
                         cg%lhn(zdim,LO):cg%lhn(zdim,HI)))
+
+        virtual_e = zero
+        virtual_n = zero
             
             do k = cg%lhn(zdim,LO), cg%lhn(zdim,HI)
                 do j = cg%lhn(ydim,LO), cg%lhn(ydim,HI)

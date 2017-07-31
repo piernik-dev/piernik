@@ -201,16 +201,11 @@ contains
   use cresp_arrays_handling, only: deallocate_with_index
   implicit none
         print *, "[INFO] Deallocating remaining CRESP arrays"
-        if (allocated(virtual_e)) then
-            call my_deallocate(virtual_e)
-!             deallocate(virtual_e)
-        endif
-        if (allocated(virtual_n)) then
-            call my_deallocate(virtual_e)
-!             deallocate(virtual_n)
-        endif
-!         if (allocated(p_fix)) call deallocate_with_index(p_fix)  ! For some reason causes error in piernik
-!         if (allocated(cresp_edges)) call my_deallocate(cresp_edges)  ! For some reason causes error in piernik
+        if (allocated(virtual_e)) call my_deallocate(virtual_e)
+        if (allocated(virtual_n)) call my_deallocate(virtual_e)
+        
+        if (allocated(p_fix)) call deallocate_with_index(p_fix)
+        if (allocated(cresp_edges)) call my_deallocate(cresp_edges)
         if (allocated(crel%p)) call deallocate_with_index(crel%p)
         if (allocated(crel%f)) call deallocate_with_index(crel%f)
         if (allocated(crel%q)) call deallocate_with_index(crel%q)

@@ -594,12 +594,12 @@ contains
         p_lo_cell = p_lo
         p_up_cell = p_up
 
-! #ifdef VERBOSE   
+#ifdef VERBOSE   
         print *, ''
         print *, 'n_tot0 =', n_tot0
         print *, 'e_tot0 =', e_tot0
         print *, 'Initialization finished'
-! #endif /* VERBOSE */
+#endif /* VERBOSE */
      
        call deallocate_active_arrays
     
@@ -1037,7 +1037,6 @@ contains
 #ifdef VERBOSE
         write (*,"(A31,2E22.15)" ) "Input ratios(p, f) for NR (up):", x_NR
 #endif /* VERBOSE */
-        print *, "e,n (up):", e(i_up), n(i_up)
         alpha = (e(i_up)/(n(i_up)*clight*p_fix(i_up-1)))
         n_in  = n(i_up)
         x_NR_init = x_NR
@@ -1059,7 +1058,7 @@ contains
 #endif /* VERBOSE */
   end subroutine get_fqp_up
 !--------------------------------------------------------------------------------------------------
-! Preparation and computatuon of upper boundary momentum "p_lo" and and upper boundary 
+! ! Preparation and computatuon of upper boundary momentum "p_lo" and and upper boundary 
 ! distribution function value on the right bin edge "f"
 !--------------------------------------------------------------------------------------------------
   subroutine get_fqp_lo
@@ -1071,17 +1070,15 @@ contains
    implicit none
     real(kind=8), dimension(1:2) :: x_NR, x_NR_init
     logical :: exit_code
-        
         x_NR = zero
         x_NR = intpol_pf_from_NR_grids("lo", (e(i_lo+1)/(n(i_lo+1)*clight*p_fix(i_lo+1))), n(i_lo+1), alpha_tab_lo, n_tab_lo)
         alpha = (e(i_lo+1)/(n(i_lo+1)*clight*p_fix(i_lo+1)))
         n_in  = n(i_lo+1)
         selected_function => fvec_lo
         x_NR_init = x_NR
-! #ifdef VERBOSE
+#ifdef VERBOSE
         write (*,"(A31,2E22.15)" ) "Input ratios(p, f) for NR (lo):", x_NR
-! #endif /* VERBOSE */
-        print *, "e,n (lo):", e(i_lo+1), n(i_lo+1)
+#endif /* VERBOSE */
         call NR_algorithm(x_NR, exit_code)
         if (exit_code .eqv. .true.) then ! screwups still take place
             fail_count_NR_2dim(1) = fail_count_NR_2dim(1) +1
@@ -1090,8 +1087,6 @@ contains
     
         p_lo      = p_fix(i_lo+1)/ x_NR(1)
         p(i_lo)   = p_lo
-        print *, "Obtained ratios (p,f):", x_NR
-!         print *, p_lo, p(i_lo), i_lo
         f(i_lo)   = e_small_to_f(p_lo)
         q(i_lo+1) = q_ratios(x_NR(2), x_NR(1))
 !         if (abs(q(i_lo+1)) .gt. two * q_big ) q(i_lo+1) = sign(one, q(i_lo+1)) * q_big * two ! for some reason using bounds for lower q cause problems

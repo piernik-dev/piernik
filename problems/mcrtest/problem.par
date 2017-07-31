@@ -1,5 +1,5 @@
  $BASE_DOMAIN
-    n_d = 4, 1, 1
+    n_d = 4, 4, 1
     nb  = 4
     bnd_xl = 'per'
     bnd_xr = 'per'
@@ -31,13 +31,13 @@
 
  $END_CONTROL
     tend   = 20.01 !.0 ! .1
-    nend   = 1
+    nend   = 5
  /
 
  $OUTPUT_CONTROL
     problem_name = 'mcr'
     run_id = 'tst'
-    dt_hdf  = 0.5
+    dt_hdf  = 0.001
     dt_res  = 0.0
     dt_log  = 0.05
     dt_tsl  = 0.000
