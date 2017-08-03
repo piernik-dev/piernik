@@ -44,10 +44,11 @@ module initproblem
    logical :: log_polar       !< Use polar mapping around x_polar + i * y_polar
    real :: x_polar            !< x-coordinatr for polar mode
    real :: y_polar            !< y-coordinatr for polar mode
+   real :: c_polar            !< correct colouring with x-coordinate multiplied by this factor
    real :: ref_thr            !< threshold for refining a grid
    real :: deref_thr          !< threshold for derefining a grid
 
-   namelist /PROBLEM_CONTROL/  order, maxiter, smooth_map, log_polar, x_polar, y_polar, ref_thr, deref_thr
+   namelist /PROBLEM_CONTROL/  order, maxiter, smooth_map, log_polar, x_polar, y_polar, c_polar, ref_thr, deref_thr
 
    ! other private data
    character(len=dsetnamelen), parameter :: mand_n = "mand", re_n = "real", imag_n = "imag"
@@ -88,6 +89,7 @@ contains
       log_polar = .false.
       x_polar = 0.
       y_polar = 0.
+      c_polar = 0.
       ref_thr = 1.
       deref_thr = .2
 
@@ -119,6 +121,7 @@ contains
          rbuff(2) = deref_thr
          rbuff(3) = x_polar
          rbuff(4) = y_polar
+         rbuff(5) = c_polar
 
       endif
 
@@ -138,6 +141,7 @@ contains
          deref_thr  = rbuff(2)
          x_polar    = rbuff(3)
          y_polar    = rbuff(4)
+         c_polar    = rbuff(5)
 
       endif
 
@@ -227,7 +231,7 @@ contains
                      if (nit >= maxiter) then
                         mand(i, j, k) = min_log_mand ! increase contrast between interior and exterior
                      else
-                        mand(i, j, k) = max(min_log_mand, log(max(rnit, min_log_mand)))
+                        mand(i, j, k) = max(min_log_mand, log(max(rnit, min_log_mand)) + c_polar * cg%x(i))
                      endif
                      r__l(i, j, k) = zx
                      imag(i, j, k) = zy
