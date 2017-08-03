@@ -178,7 +178,7 @@ contains
       type(grid_container), pointer :: cg
       integer :: i, j, k, nit
       real, dimension(:,:,:), pointer :: mand, r__l, imag
-      real, parameter :: bailout2 = 10.
+      real, parameter :: bailout2 = 10., min_log_mand = 0.1
       real :: zx, zy, zt, cx, cy, rnit, r, f
 
       ! Create the initial density arrays
@@ -213,7 +213,7 @@ contains
 
                      zx = cx
                      zy = cy
-                     nit = 0
+                     nit = 1
                      do while (zx*zx + zy*zy < bailout2 .and. nit < maxiter)
                         zt = zx*zx - zy*zy + cx
                         zy = 2*zx*zy + cy
@@ -225,9 +225,9 @@ contains
                      if (smooth_map .and. zx*zx + zy*zy > bailout2) rnit = rnit + 1 - log(log(sqrt(zx*zx + zy*zy)))/log(2.)
 
                      if (nit >= maxiter) then
-                        mand(i, j, k) = -0.5 ! increase contrast between interior and exterior
+                        mand(i, j, k) = min_log_mand ! increase contrast between interior and exterior
                      else
-                        mand(i, j, k) = log(max(rnit, 0.5))
+                        mand(i, j, k) = max(min_log_mand, log(max(rnit, min_log_mand)))
                      endif
                      r__l(i, j, k) = zx
                      imag(i, j, k) = zy
