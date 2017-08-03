@@ -145,13 +145,13 @@ contains
            call die("[initproblem:read_problem_par] Mandelbrot is supposed to by run only with XY plane and without Z-direction present")
 
       if (order /= 2) then
-         call warn("[initproblem:read_problem_par] Only order == 2 is supported at the moment")
+         if (master) call warn("[initproblem:read_problem_par] Only order == 2 is supported at the moment")
          order = 2
       endif
 
       if (ref_thr <= deref_thr) call die("[initproblem:read_problem_par] ref_thr <= deref_thr")
 
-      if (log_polar) then
+      if (log_polar .and. master) then
          if (dom%edge(ydim, HI) - dom%edge(ydim, LO) < 0.999*dpi) call warn("[initproblem:read_problem_par] not covering full angle")
          if (dom%edge(ydim, HI) - dom%edge(ydim, LO) > 1.001*dpi) call warn("[initproblem:read_problem_par] covering more than full angle")
       endif
