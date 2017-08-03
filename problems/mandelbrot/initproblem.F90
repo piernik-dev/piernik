@@ -41,10 +41,13 @@ module initproblem
    integer(kind=4) :: order   !< Order of mandelbrot set
    integer(kind=4) :: maxiter !< Maximum number of iterations
    logical :: smooth_map      !< Try continuous colouring
+   logical :: log_polar       !< Use polar mapping around x_polar + i * y_polar
+   real :: x_polar            !< x-coordinatr for polar mode
+   real :: y_polar            !< y-coordinatr for polar mode
    real :: ref_thr            !< threshold for refining a grid
    real :: deref_thr          !< threshold for derefining a grid
 
-   namelist /PROBLEM_CONTROL/  order, maxiter, smooth_map, ref_thr, deref_thr
+   namelist /PROBLEM_CONTROL/  order, maxiter, smooth_map, log_polar, x_polar, y_polar, ref_thr, deref_thr
 
    ! other private data
    character(len=dsetnamelen), parameter :: mand_n = "mand", re_n = "real", imag_n = "imag"
@@ -70,6 +73,7 @@ contains
 
    subroutine read_problem_par
 
+      use constants,  only: ydim, LO, HI, dpi
       use dataio_pub, only: nh      ! QA_WARN required for diff_nml
       use dataio_pub, only: warn, die
       use domain,     only: dom
@@ -81,6 +85,9 @@ contains
       order = 2
       maxiter = 100
       smooth_map = .true.
+      log_polar = .false.
+      x_polar = 0.
+      y_polar = 0.
       ref_thr = 1.
       deref_thr = .2
 
@@ -106,9 +113,12 @@ contains
          ibuff(2) = maxiter
 
          lbuff(1) = smooth_map
+         lbuff(2) = log_polar
 
          rbuff(1) = ref_thr
          rbuff(2) = deref_thr
+         rbuff(3) = x_polar
+         rbuff(4) = y_polar
 
       endif
 
@@ -122,9 +132,12 @@ contains
          maxiter    = ibuff(2)
 
          smooth_map = lbuff(1)
+         log_polar  = lbuff(2)
 
          ref_thr    = rbuff(1)
          deref_thr  = rbuff(2)
+         x_polar    = rbuff(3)
+         y_polar    = rbuff(4)
 
       endif
 
@@ -137,6 +150,11 @@ contains
       endif
 
       if (ref_thr <= deref_thr) call die("[initproblem:read_problem_par] ref_thr <= deref_thr")
+
+      if (log_polar) then
+         if (dom%edge(ydim, HI) - dom%edge(ydim, LO) < 0.999*dpi) call warn("[initproblem:read_problem_par] not covering full angle")
+         if (dom%edge(ydim, HI) - dom%edge(ydim, LO) > 1.001*dpi) call warn("[initproblem:read_problem_par] covering more than full angle")
+      endif
 
       call register_user_var
 
@@ -161,7 +179,7 @@ contains
       integer :: i, j, k, nit
       real, dimension(:,:,:), pointer :: mand, r__l, imag
       real, parameter :: bailout2 = 10.
-      real :: zx, zy, zt, cx, cy, rnit
+      real :: zx, zy, zt, cx, cy, rnit, r, f
 
       ! Create the initial density arrays
       cgl => leaves%first
@@ -182,9 +200,16 @@ contains
 
             do k = cg%ks, cg%ke
                do j = cg%js, cg%je
-                  cy = cg%y(j)
                   do i = cg%is, cg%ie
-                     cx = cg%x(i)
+                     if (log_polar) then
+                        r = 10**cg%x(i)
+                        f = cg%y(j)
+                        cx = x_polar + r*cos(f)
+                        cy = y_polar + r*sin(f)
+                     else
+                        cx = cg%x(i)
+                        cy = cg%y(j)
+                     endif
 
                      zx = cx
                      zy = cy
@@ -199,7 +224,11 @@ contains
                      rnit = nit
                      if (smooth_map .and. zx*zx + zy*zy > bailout2) rnit = rnit + 1 - log(log(sqrt(zx*zx + zy*zy)))/log(2.)
 
-                     mand(i, j, k) = log(rnit)
+                     if (nit >= maxiter) then
+                        mand(i, j, k) = -0.5 ! increase contrast between interior and exterior
+                     else
+                        mand(i, j, k) = log(max(rnit, 0.5))
+                     endif
                      r__l(i, j, k) = zx
                      imag(i, j, k) = zy
 
