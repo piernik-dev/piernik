@@ -173,10 +173,12 @@ contains
       real                            :: cs_iso, xsn, ysn, zsn, r2, maxv
       type(cg_list_element),  pointer :: cgl
       type(grid_container),   pointer :: cg
+      logical        :: first_run = .true.
 #ifndef COSM_RAYS_SOURCES
       integer, parameter              :: icr_H1 = 1, icr_C12 = 2
 #endif /* !COSM_RAYS_SOURCES */
 
+     if (first_run .eqv. .true.) then
       fl => flind%ion
 
       ! BEWARE: temporary fix
@@ -287,6 +289,8 @@ contains
       call cresp_init_grid
 
 #endif /* COSM_RAY_ELECTRONS */      
+     first_run = .false.
+    endif
       
    end subroutine problem_initial_conditions
    

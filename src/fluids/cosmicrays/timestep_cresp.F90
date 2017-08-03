@@ -18,7 +18,7 @@ module timestep_cresp
 !-------------------
 ! if we only saved p_up value, this might save a LOT of time.
 
-  function approximate_p_up(e_cell, n_cell)
+  function approximate_p_up(n_cell, e_cell)
    use initcrspectrum, only: p_fix
    use cresp_NR_method, only: intpol_pf_from_NR_grids, alpha_tab_up, n_tab_up
    use units, only: clight
@@ -53,7 +53,7 @@ module timestep_cresp
 ! Subroutine consistent with rules depicted in crspectrum.pdf
 !----------------------------------------------------------------------------------------------------
 
-  subroutine cresp_timestep(dt_comp, sptab, e_cell, n_cell)
+  subroutine cresp_timestep(dt_comp, sptab, n_cell, e_cell)
    use initcrspectrum,   only: spec_mod_trms, ncre, w
    use cresp_arrays_handling, only: allocate_with_index
    use constants, only: zero
@@ -61,7 +61,7 @@ module timestep_cresp
     real(kind=8)               :: dt_comp
     real(kind=8)               :: dt_cre_ud, dt_cre_ub
     real(kind=8) :: p_u
-    real(kind=8), dimension(:) :: e_cell, n_cell
+    real(kind=8), dimension(:), intent(in) :: n_cell, e_cell
     type(spec_mod_trms) sptab
         dt_cre_ud = huge(one)
         dt_cre_ub = huge(one)
@@ -76,7 +76,7 @@ module timestep_cresp
 !    dts_new = huge(one)
    
 ! Synchrotron cooling timestep (is dependant only on p_up, highest value of p):
-            p_u = approximate_p_up(e_cell, n_cell)
+            p_u = approximate_p_up(n_cell, e_cell)
             if (sptab%ub .gt. zero) then
                 dt_cre_ub = cfl_cre * w / (p_u * sptab%ub)
             endif

@@ -77,7 +77,7 @@ contains
 
 !----- main subroutine -----
 
-  subroutine cresp_update_cell(dt, cresp_arguments, sptab, v_n, v_e) !, p_lo_cell, p_up_cell)
+  subroutine cresp_update_cell(dt, n_inout, e_inout, sptab, v_n, v_e) !, p_lo_cell, p_up_cell)
    use initcrspectrum, only: ncre, spec_mod_trms, e_small_approx_p_lo, e_small_approx_p_up, e_small_approx_init_cond,&
                              crel
 #ifdef VERBOSE
@@ -87,9 +87,9 @@ contains
    implicit none
     real(kind=8), dimension(1:2), intent(inout) :: v_n, v_e
     real(kind=8), intent(in)  :: dt
-    real(kind=8), dimension(1:2*ncre), intent(inout)   :: cresp_arguments
+    real(kind=8), dimension(1:ncre), intent(inout)   :: n_inout, e_inout
     type(spec_mod_trms), intent(in)       :: sptab
-        e = zero; n = zero; edt = zero; ndt = zero ; p_up = zero ;  p_lo = zero
+        e = zero; n = zero; edt = zero; ndt = zero 
         
         p_lo_next = zero
         p_up_next = zero
@@ -97,8 +97,8 @@ contains
         f = zero
         q = zero
         
-        n = cresp_arguments(1:ncre)        ! number of electrons passed by x vector
-        e = cresp_arguments(ncre+1:2*ncre) ! energy of electrons per bin passed by x vector
+        n = n_inout     ! number density of electrons passed to cresp module by the external module / grid
+        e = e_inout     ! energy density of electrons passed to cresp module by the external module / grid
         u_b = sptab%ub
         u_d = sptab%ud
 
@@ -114,9 +114,14 @@ contains
 ! Here values of distribution function f for active left edges (excluding upper momentum boundary) are computed
         f = nq_to_f(p(0:ncre-1), p(1:ncre), n(1:ncre), q(1:ncre), active_bins)
 
-        if (e_small_approx_p_up .gt. 0 )    call get_fqp_up
-        if (e_small_approx_p_lo .gt. 0 )    call get_fqp_lo
-
+        if (e_small_approx_p_up .gt. 0 ) then ! momenta values stored only within module - for tests; will not work in PIERNIK
+            p_up = zero
+            call get_fqp_up
+        endif
+        if (e_small_approx_p_lo .gt. 0 ) then ! momenta values stored only within module - for tests; will not work in PIERNIK
+            p_lo = zero
+            call get_fqp_lo
+        endif
 #ifdef VERBOSE
         if ((e_small_approx_p_lo + e_small_approx_p_up) .gt. 0) then
             print '(A9, 1EN22.9, A11, 1EN22.9)', "q(i_lo+1) =", q(i_lo+1), ", q(i_up) =", q(i_up)
@@ -194,8 +199,8 @@ contains
         crel%i_lo = i_lo
         crel%i_up = i_up
 ! --- saving the data to output arrays
-        cresp_arguments(1:ncre)  = n        ! number of electrons passed by x vector
-        cresp_arguments(ncre+1:2*ncre) = e  ! energy of electrons per bin passed by x vector
+        n_inout  = n  ! number density of electrons per bin passed back to the external module
+        e_inout  = e  ! energy density of electrons per bin passed back to the external module
 
         v_e = vrtl_e
         v_n = vrtl_n
@@ -221,7 +226,7 @@ contains
       all_bins = (/ (i,i=I_ONE,ncre) /)
 
       is_active_bin = .false.
-      where (e .ne. zero)         ! if energy density is nonzero, so should be number density
+      where (e .gt. zero)         ! if energy density is nonzero, so should be the number density
         is_active_bin = .true.  
       endwhere
       
@@ -375,21 +380,24 @@ contains
 ! arrays initialization
 !
 !-------------------------------------------------------------------------------------------------
-  subroutine cresp_init_state(init_cresp_arguments, sptab)
-   use initcrspectrum, only: ncre, spec_mod_trms, f_init, q_init, p_lo_init, p_up_init, initial_condition, bump_amp, &
+  subroutine cresp_init_state(init_n, init_e, f_amplitude, sptab)
+   use initcrspectrum, only: ncre, spec_mod_trms, q_init, p_lo_init, p_up_init, initial_condition, & ! f_init, bump_amp
                         e_small_approx_init_cond, e_small_approx_p_lo, e_small_approx_p_up, crel, p_fix, w,&
                         p_min_fix, p_max_fix
    use cresp_NR_method,only: e_small_to_f
-   use constants, only: zero, I_ZERO, I_ONE, I_TWO, fpi
+   use constants, only: zero, I_ZERO, I_ONE, fpi
    use cresp_variables, only: clight ! use units, only: clight
    implicit none
     integer                          :: i, k, i_lo_ch, i_up_ch, i_br
-    real(kind=8)                     ::  c, p_lo_cell, p_up_cell
-    real(kind=8), dimension(I_ONE:I_TWO*ncre)    :: init_cresp_arguments
+    real(kind=8)                     ::  c, f_amplitude
+    real(kind=8), dimension(I_ONE:ncre)    :: init_n, init_e
     type (spec_mod_trms), intent(in) :: sptab
         u_b = sptab%ub
         u_d = sptab%ud
         all_edges = I_ZERO
+        
+        init_e = zero
+        init_n = zero
 
         u_b_0 = u_b
         u_d_0 = u_d
@@ -446,7 +454,7 @@ contains
 !      call p_algorithm_accuracy_test  ! tests accuracy of algorithm which later seeks value of p_up using n, e, f and e_small
 #endif /* TEST_CRESP */
 ! Pure power law spectrum initial condition
-        f = f_init * (p/p_min_fix)**(-q_init)
+        f = f_amplitude * (p/p_min_fix)**(-q_init)
         q = q_init
         if (initial_condition == 'brpl') then
 ! Power law with a break at p_lo_init initial condition
@@ -480,7 +488,7 @@ contains
             print *, 'init_state:',sqrt(p_lo_init*p_up_init/1.) !,sp_init_width
             print *, 'init_state:',log(p/sqrt(p_lo_init*p_up_init/1.))
 #endif /* VERBOSE */
-            f = bump_amp*exp(-(2.5*log(p/sqrt(p_lo_init*p_up_init/1.))**2))
+            f = f_amplitude * exp(-(2.5*log(p/sqrt(p_lo_init*p_up_init/1.))**2))
             f(0:ncre-1) = f(0:ncre-1) / (fpi * clight * p(0:ncre-1)**(3.0)) ! without this spectrum is gaussian for distribution function
 #ifdef VERBOSE
             print *, "f", f
@@ -589,10 +597,8 @@ contains
         n_tot0 = sum(n)
         e_tot0 = sum(e) 
     
-        init_cresp_arguments(1:ncre) = n
-        init_cresp_arguments(ncre+1:2*ncre) = e
-        p_lo_cell = p_lo
-        p_up_cell = p_up
+        init_n = n
+        init_e = e
 
 #ifdef VERBOSE   
         print *, ''
