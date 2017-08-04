@@ -36,10 +36,10 @@ contains
         e_cell = zero
         do while (associated(cgl))
             cg => cgl%cg
-!             cresp_arguments = 0.0
             do k = cg%lhn(zdim,LO), cg%lhn(zdim,HI)
                 do j = cg%lhn(ydim,LO), cg%lhn(ydim,HI)
                     do i = cg%lhn(xdim,LO), cg%lhn(xdim,HI)
+
                         n_cell    = cg%u(iarr_cre_n, i, j, k)
                         e_cell    = cg%u(iarr_cre_e, i, j, k)
                         sptab%ub = emag(cg%b(xdim,i,j,k), cg%b(ydim,i,j,k), cg%b(zdim,i,j,k))
@@ -59,7 +59,6 @@ contains
             enddo
             cgl=>cgl%nxt
         enddo
-        print *, "----------- cresp_update_cell - finish ----------------"
    end subroutine cresp_update_grid
 !----------------------------------------------------------------------------------------------------      
  subroutine cresp_init_grid
@@ -115,11 +114,10 @@ contains
                             f_amplitude = f_init*cg%u(iarr_crn(1),i,j,k)*cre_eff
                         endif
                         if (initial_condition == "bump") then
-!                             f_amplitude = (half/pi) * (cre_eff * cg%u(iarr_crn(1),i,j,k) / (2.5))**2 ! for gaussian distribution
-!                             f_amplitude = clight * bump_amp0 * (cg%u(iarr_crn(1),i,j,k))/max_amp_cr  ! for gaussian distribution - to be enabled once clight is not hard-fixed
-                            f_amplitude = bump_amp ! * clight 
+                            f_amplitude = cre_eff * cg%u(iarr_crn(1),i,j,k) ! for gaussian distribution & inheritance of spatial energy/number density after nucleons
+!                             f_amplitude = bump_amp ! * clight 
                         endif
-                   
+
                         call cresp_init_state(n_cell, e_cell, f_amplitude, sptab)
 #ifdef VERBOSE
                         print *, 'Output of cosmic ray electrons module for grid cell with coordinates i,j,k:', i, j, k
@@ -162,7 +160,6 @@ contains
         cgl => leaves%first
         do while (associated(cgl))
             cg => cgl%cg
-     
             do k = cg%lhn(zdim,LO), cg%lhn(zdim,HI)
                 do j = cg%lhn(ydim,LO), cg%lhn(ydim,HI)
                     do i = cg%lhn(xdim,LO), cg%lhn(xdim,HI)

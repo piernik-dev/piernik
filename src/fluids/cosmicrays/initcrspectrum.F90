@@ -19,12 +19,13 @@ module initcrspectrum
  real(kind=8)       :: K_cre_n_perp ! = 0
  real(kind=8)       :: K_pow_index  ! = 0 
  integer(kind=4)    :: expan_order  ! = 1
- real(kind=8)       :: e_small      ! =
+ real(kind=8)       :: e_small      = 1.0e-5
  real(kind=8)       :: bump_amp
  character(len=4)   :: initial_condition
  integer(kind=1)    :: e_small_approx_p_lo
  integer(kind=1)    :: e_small_approx_p_up
  integer(kind=1)    :: e_small_approx_init_cond
+ integer(kind=1)    :: add_spectrum_base = 1
  real(kind=8)       :: max_p_ratio = 3.0
  integer(kind=2)    :: NR_iter_limit=300
 !  integer(kind=2)    :: arr_dim
@@ -77,7 +78,7 @@ contains
            &                         p_min_fix, p_max_fix, cre_eff, K_cre_e_paral, K_cre_e_perp, &
            &                         K_cre_n_paral, K_cre_n_perp, K_pow_index, expan_order, e_small, bump_amp, &
            &                         e_small_approx_init_cond, e_small_approx_p_lo, e_small_approx_p_up, force_init_NR,&
-           &                         NR_iter_limit, max_p_ratio !, arr_dim
+           &                         NR_iter_limit, max_p_ratio, add_spectrum_base !, arr_dim
            
         open(unit=101, file="problem.par", status="unknown")
         read(unit=101, nml=COSMIC_RAY_SPECTRUM)
@@ -105,6 +106,7 @@ contains
             print '(A27, I1)','e_small_approx_init_cond =', e_small_approx_init_cond
             print '(A22, I1)','e_small_approx_p_lo =', e_small_approx_p_lo
             print '(A22, I1)','e_small_approx_p_up =', e_small_approx_p_up
+            print '(A22, I1)','add_spectrum_base   =', add_spectrum_base
             print '(A22, 1F15.7 )','max_p_ratio =', max_p_ratio
             print '(A22, L2 )' ,'force_init_NR   = ', force_init_NR
             print '(A22, I4)', 'NR_iter_limit  = ', NR_iter_limit
@@ -158,6 +160,17 @@ contains
                                  "~ 0. Check your parameters."
             stop
         endif
+        if (add_spectrum_base .gt. 0 ) then
+            write (*,"(A73,E16.8,A27)") "add_spectrum_base is nonzero -> will assure energy .ge. e_small at initialization"
+            if (add_spectrum_base .ne. 1) then
+                add_spectrum_base = 1
+            endif
+        else
+            write (*,"(A73,E16.8,A27)") "add_spectrum_base is zero -> will NOT assure energy.ge. e_small at initialization"
+            if (add_spectrum_base .ne. 0) then
+                add_spectrum_base = 0
+            endif
+        endif
 
         taylor_coeff_2nd = int(mod(2,expan_order) / 2 + mod(3,expan_order),kind=2 ) ! coefficient which is always equal 1 when order =2 or =3 and 0 if order = 1
         taylor_coeff_3rd = int((expan_order - 1)*(expan_order- 2) / 2,kind=2)        ! coefficient which is equal to 1 only when order = 3
@@ -197,16 +210,16 @@ contains
  end function compute_K
 !----------------------------------------------------------------------------------------------------
  subroutine cleanup_cresp_virtual_en_arrays
-  use diagnostics, only: my_deallocate
+  use diagnostics, only: my_deallocate ! uncomment in PIERNIK
   use cresp_arrays_handling, only: deallocate_with_index
   implicit none
         print *, "[INFO] Deallocating remaining CRESP arrays"
         if (allocated(virtual_e)) call my_deallocate(virtual_e)
-        if (allocated(virtual_n)) call my_deallocate(virtual_e)
+        if (allocated(virtual_n)) call my_deallocate(virtual_n)
         
         if (allocated(p_fix)) call deallocate_with_index(p_fix)
         if (allocated(cresp_edges)) call my_deallocate(cresp_edges)
-        if (allocated(crel%p)) call deallocate_with_index(crel%p)
+        if (allocated(crel%p))  call deallocate_with_index(crel%p)
         if (allocated(crel%f)) call deallocate_with_index(crel%f)
         if (allocated(crel%q)) call deallocate_with_index(crel%q)
         if (allocated(crel%e)) call deallocate_with_index(crel%e)

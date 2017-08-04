@@ -96,7 +96,7 @@ contains
         r = zero
         f = zero
         q = zero
-        
+
         n = n_inout     ! number density of electrons passed to cresp module by the external module / grid
         e = e_inout     ! energy density of electrons passed to cresp module by the external module / grid
         u_b = sptab%ub
@@ -104,7 +104,7 @@ contains
 
         vrtl_e = v_e
         vrtl_n = v_n
-   
+
         call cresp_find_active_bins
         if (num_active_bins .eq. I_ZERO) return ! if grid cell contains empty bins, no action is taken
 ! Compute power indexes for each bin at [t] and f on left bin faces at [t] 
@@ -201,7 +201,7 @@ contains
 ! --- saving the data to output arrays
         n_inout  = n  ! number density of electrons per bin passed back to the external module
         e_inout  = e  ! energy density of electrons per bin passed back to the external module
-
+        
         v_e = vrtl_e
         v_n = vrtl_n
         
@@ -383,7 +383,7 @@ contains
   subroutine cresp_init_state(init_n, init_e, f_amplitude, sptab)
    use initcrspectrum, only: ncre, spec_mod_trms, q_init, p_lo_init, p_up_init, initial_condition, & ! f_init, bump_amp
                         e_small_approx_init_cond, e_small_approx_p_lo, e_small_approx_p_up, crel, p_fix, w,&
-                        p_min_fix, p_max_fix
+                        p_min_fix, p_max_fix, add_spectrum_base
    use cresp_NR_method,only: e_small_to_f
    use constants, only: zero, I_ZERO, I_ONE, fpi
    use cresp_variables, only: clight ! use units, only: clight
@@ -455,6 +455,11 @@ contains
 #endif /* TEST_CRESP */
 ! Pure power law spectrum initial condition
         f = f_amplitude * (p/p_min_fix)**(-q_init)
+        if (add_spectrum_base .gt. 0) then
+            do i = 0, ncre-1
+                if (f(i) .gt. zero ) f(i) = f(i) + e_small_to_f(p(i))
+            enddo
+        endif
         q = q_init
         if (initial_condition == 'brpl') then
 ! Power law with a break at p_lo_init initial condition
@@ -488,8 +493,14 @@ contains
             print *, 'init_state:',sqrt(p_lo_init*p_up_init/1.) !,sp_init_width
             print *, 'init_state:',log(p/sqrt(p_lo_init*p_up_init/1.))
 #endif /* VERBOSE */
-            f = f_amplitude * exp(-(2.5*log(p/sqrt(p_lo_init*p_up_init/1.))**2))
+!             f = f_amplitude * exp(-(2.5*log(p/sqrt(p_lo_init*p_up_init/1.))**2))
+            f = f_amplitude * exp(-(4*log(2.0)*log(p/sqrt(p_lo_init*p_up_init/1.))**2)) ! FWHM
             f(0:ncre-1) = f(0:ncre-1) / (fpi * clight * p(0:ncre-1)**(3.0)) ! without this spectrum is gaussian for distribution function
+            if (add_spectrum_base .gt. 0) then
+                do i = 0, ncre-1
+                    if (f(i) .gt. zero )  f(i) = f(i) + e_small_to_f(p(i))
+                enddo
+            endif
 #ifdef VERBOSE
             print *, "f", f
             print *, "clight =", clight
