@@ -37,10 +37,9 @@ module initproblem
    integer(kind=4)    :: norm_step
    real               :: t_sn
    integer            :: n_sn
-   real               :: d0, p0, bx0, by0, bz0, x0, y0, z0, r0, beta_cr, amp_cr
+   real               :: d0, p0, bx0, by0, bz0, x0, y0, z0, r0, beta_cr, amp_cr, vxd0, vyd0, vzd0
 
-   namelist /PROBLEM_CONTROL/ d0, p0, bx0, by0, bz0, x0, y0, z0, r0, beta_cr, amp_cr, norm_step
-
+   namelist /PROBLEM_CONTROL/ d0, p0, bx0, by0, bz0, x0, y0, z0, r0, vxd0, vyd0, vzd0, beta_cr, amp_cr, norm_step
 contains
 
 !-----------------------------------------------------------------------------
@@ -75,6 +74,9 @@ contains
       y0           = 0.0       !< y-position of the blob
       z0           = 0.0       !< z-position of the blob
       r0           = 5.* minval(dom%L_(:)/dom%n_d(:), mask=dom%has_dir(:))  !< radius of the blob
+      vxd0         = 0.0       !< initial velocity_x, refers to whole domain
+      vyd0         = 0.0       !< initial velocity_y, refers to whole domain
+      vzd0         = 0.0       !< initial velocity_z, refers to whole domain
 
       beta_cr      = 0.0       !< ambient level
       amp_cr       = 1.0       !< amplitude of the blob
@@ -110,6 +112,9 @@ contains
          rbuff(9)  = r0
          rbuff(10) = beta_cr
          rbuff(11) = amp_cr
+         rbuff(12) = vxd0
+         rbuff(13) = vyd0
+         rbuff(14) = vzd0
 
          ibuff(1)  = norm_step
 
@@ -131,11 +136,14 @@ contains
          r0        = rbuff(9)
          beta_cr   = rbuff(10)
          amp_cr    = rbuff(11)
+         vxd0      = rbuff(12)
+         vyd0      = rbuff(13)
+         vzd0      = rbuff(14)
 
          norm_step = int(ibuff(1), kind=4)
 
       endif
-
+      
       if (r0 .equals. 0.) call die("[initproblem:read_problem_par] r0 == 0")
 
    end subroutine read_problem_par
@@ -210,7 +218,7 @@ contains
          cg%b(zdim, :, :, :) = bz0
          cg%u(fl%idn, :, :, :) = d0
          cg%u(fl%imx:fl%imz, :, :, :) = 0.0
-
+         
 #ifndef ISO
          do k = cg%lhn(zdim,LO), cg%lhn(zdim,HI)
             do j = cg%lhn(ydim,LO), cg%lhn(ydim,HI)
@@ -254,7 +262,6 @@ contains
                enddo
             enddo
          enddo
-
          cgl => cgl%nxt
       enddo
 
@@ -289,7 +296,33 @@ contains
       call cresp_init_grid
 
 #endif /* COSM_RAY_ELECTRONS */      
-     first_run = .false.
+
+! Velocity field
+      cgl => leaves%first
+      do while (associated(cgl))
+        cg => cgl%cg
+#ifdef NEUTRAL
+! Neutral
+            cg%u(flind%neu%imx,:,:,:) = vxd0 * cg%u(flind%neu%idn,:,:,:)  !< vxd0 * rho
+            cg%u(flind%neu%imy,:,:,:) = vyd0 * cg%u(flind%neu%idn,:,:,:)  !< vyd0 * rho
+            cg%u(flind%neu%imz,:,:,:) = vzd0 * cg%u(flind%neu%idn,:,:,:)  !< vzd0 * rho
+#endif /* NEUTRAL */
+#ifdef IONIZED
+! Ionized
+            cg%u(flind%ion%imx,:,:,:) = vxd0 * cg%u(flind%ion%idn,:,:,:)  !< vxd0 * rho
+            cg%u(flind%ion%imy,:,:,:) = vyd0 * cg%u(flind%ion%idn,:,:,:)  !< vyd0 * rho
+            cg%u(flind%ion%imz,:,:,:) = vzd0 * cg%u(flind%ion%idn,:,:,:)  !< vzd0 * rho
+#endif /* NEUTRAL */
+#ifdef DUST
+! Dust
+            cg%u(flind%dst%imx,:,:,:) = vxd0 * cg%u(flind%dst%idn,:,:,:)  !< vxd0 * rho
+            cg%u(flind%dst%imy,:,:,:) = vyd0 * cg%u(flind%dst%idn,:,:,:)  !< vyd0 * rho
+            cg%u(flind%dst%imz,:,:,:) = vzd0 * cg%u(flind%dst%idn,:,:,:)  !< vzd0 * rho
+#endif /* DUST */
+        cgl => cgl%nxt
+      enddo
+
+      first_run = .false.
     endif
       
    end subroutine problem_initial_conditions

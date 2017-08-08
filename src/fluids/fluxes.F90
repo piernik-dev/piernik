@@ -77,7 +77,7 @@ contains
    subroutine all_fluxes(n, flux, cfr, uu, bb, pp, vx, cs_iso2, use_vx)
       use fluidtypes,     only: component_fluid
 #ifdef COSM_RAYS
-      use fluxcosmicrays, only: flux_crn
+      use fluxcosmicrays, only: flux_crs
 #endif /* COSM_RAYS */
 #ifdef TRACER
       use fluxtracer,     only: flux_tracer
@@ -127,7 +127,7 @@ contains
       pflux => flux(:, flind%crs%beg:flind%crs%end)
       pvx   => vx(:, flind%ion%pos)
 
-      call flux_crn(pflux,pvx,puu,n)
+      call flux_crs(pflux,pvx,puu,n)
 
       cfr(:, flind%crs%beg:flind%crs%end)  = spread(cfr(:, flind%ion%iarr(1)), 2, flind%crs%all)
 #endif /* COSM_RAYS */

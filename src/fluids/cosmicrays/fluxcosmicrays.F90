@@ -38,11 +38,11 @@ module fluxcosmicrays
    implicit none
 
    private
-   public :: flux_crn
+   public :: flux_crs
 
 contains
 
-   subroutine flux_crn(fluxc, vion, uuc, n)
+   subroutine flux_crs(fluxc, vion, uuc, n)
 
       use fluidindex, only: flind
 
@@ -56,10 +56,10 @@ contains
 
       fluxc   = 0.0
 !       print *, ' flind crn all(fluxcosmicrays) = ', flind%crn%all
-      do i = 1, flind%crn%all
+      do i = 1, flind%crs%all
          fluxc(RNG, i) = uuc(RNG, i)*vion(RNG)
       enddo
 
-   end subroutine flux_crn
+   end subroutine flux_crs
 
 end module fluxcosmicrays

@@ -120,7 +120,7 @@ contains
       use initionized,    only: ion_fluid
       use initneutral,    only: neutral_fluid
 #ifdef COSM_RAYS
-      use initcosmicrays, only: iarr_crn, iarr_cre, cosmicray_index, iarr_crs ! use of crs /deprecated
+      use initcosmicrays, only: iarr_crn, iarr_cre, iarr_crs, cosmicray_index
 #endif /* COSM_RAYS */
 #ifdef TRACER
       use inittracer,     only: tracer_index, iarr_trc
@@ -161,11 +161,7 @@ contains
 
 ! Allocate index arrays
       if (has_ion) allocate(iarr_mag_swp(ndims,nmag),iarr_all_mag(nmag))
-      allocate(iarr_all_swp(xdim:zdim, (flind%all))) ! - flind%cre%all)))   ! all but cre are taken into account
-! use of crs is deprecated; since electron indexes with cre shall not be swapped, there's
-! no need to allocate flind%all - this would cause problems with values in cre variables.
-!       print *,' iarr_all_swp = ', iarr_all_swp
-
+      allocate(iarr_all_swp(xdim:zdim, flind%all))
       allocate(iarr_all_dn(flind%fluids),iarr_all_mx(flind%fluids),iarr_all_my(flind%fluids),iarr_all_mz(flind%fluids))
       allocate(iarr_all_sg(flind%fluids_sg))
 #ifdef ISO
@@ -180,7 +176,6 @@ contains
       allocate(iarr_all_cre(flind%cre%all)) ! possibly this should be brought under separate precompiler flag
 
 #else /* !COSM_RAYS */
-
       allocate(iarr_all_crn(0))
       allocate(iarr_all_cre(0))
       allocate(iarr_all_crs(0)) !!! when cre is incorporated this will be deprecated
@@ -223,25 +218,9 @@ contains
       iarr_all_swp(ydim,flind%crs%beg:flind%crs%end) = iarr_crs
       iarr_all_swp(zdim,flind%crs%beg:flind%crs%end) = iarr_crs
 
-!       print *, 'iarr_all_swp =', iarr_all_swp  
-!       print *, 'sizes: iarr_all_swp =', size(iarr_all_swp)
-      
       iarr_all_crn(1:flind%crn%all) = iarr_crn
-!       print *, 'iarr_crs      = ', iarr_crs
-      
-!       print *, 'iarr_all_crs  = ' , iarr_all_crs
-!       print *, 'sizes: iarr_all_crs, iarr_cre =', size(iarr_all_crs), size(iarr_crs)      
-      iarr_all_crs(1:flind%crs%all) = iarr_crs
-      
-!       print *, 'iarr_cre      = ', iarr_cre
-
-!       print *, 'iarr_all_cre  = ' , iarr_all_cre
-!       print *, 'sizes: iarr_all_cre, iarr_cre =', size(iarr_all_cre), size(iarr_cre)
-                 !#elif COSM_RAY_ELECTRONS
       iarr_all_cre(1:flind%cre%all) = iarr_cre
-!       print *, 'flind%all%crs = ', flind%crs%all
-!        print *,' iarr_all_swp = ', iarr_all_swp
-!        print *, 'flind%all%cre = ', flind%cre%all
+      iarr_all_crs(1:flind%crs%all) = iarr_crs
 #endif /* COSM_RAYS */
 
 #ifdef TRACER
