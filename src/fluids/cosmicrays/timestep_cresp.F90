@@ -24,25 +24,23 @@ module timestep_cresp
    use units, only: clight
    implicit none
     integer :: cell_i_up
-    real(kind=8), dimension(:) :: n_cell, e_cell
+    real(kind=8), dimension(:), intent(in) :: n_cell, e_cell
     real(kind=8) :: approximate_p_up
     real(kind=8), dimension(1:2) :: pf_ratio
-        cell_i_up = evaluate_i_up(e_cell)
-!         alpha_inp = (e_cell(cell_i_up)/(n_inp(cell_i_up)*clight*p_fix(cell_i_up-1)))
-!         n_inp     = n_cell(cell_i_up)
+        cell_i_up = evaluate_i_up(e_cell, n_cell)
         pf_ratio  = intpol_pf_from_NR_grids("up",(e_cell(cell_i_up)/(n_cell(cell_i_up)*clight*p_fix(cell_i_up-1))), &
                                                         n_cell(cell_i_up), alpha_tab_up, n_tab_up) ! we use just an interpolated ratio, who knows if it'll work
         approximate_p_up = pf_ratio(1) * p_fix(cell_i_up-1)
     end function approximate_p_up
 !----------------------------------------------------------------------------------------------------
-  function evaluate_i_up(e_cell) ! obain i_up index from energy densities in cell
+  function evaluate_i_up(e_cell, n_cell) ! obain i_up index from energy densities in cell
   use initcrspectrum, only: ncre
   use constants, only: zero
   implicit none
-    real(kind=8), dimension(:) :: e_cell
+    real(kind=8), dimension(:), intent(in) :: e_cell, n_cell
     integer :: evaluate_i_up, i
         do i=ncre, 1, -1  ! we start counting from ncre since upper cutoff is rather expected at higher index numbers. Might change it though.
-            if (e_cell(i) .gt. zero) then ! better compare to zero or to eps?
+            if (e_cell(i) .gt. zero .and. n_cell(i) .gt. zero) then ! better compare to zero or to eps?
                 evaluate_i_up = i
                 return
             endif  ! no need for other conditions - if there IS a bin that has literally no energy, the algorithm will most likely crash.

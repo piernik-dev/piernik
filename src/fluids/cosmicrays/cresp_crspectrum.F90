@@ -226,42 +226,42 @@ contains
       all_bins = (/ (i,i=I_ONE,ncre) /)
 
       is_active_bin = .false.
-      where (e .gt. zero)         ! if energy density is nonzero, so should be the number density
+      where (e .gt. zero .and. n .gt. zero)     ! if energy density is nonzero, so should be the number density
         is_active_bin = .true.  
       endwhere
       
       num_active_bins = count(is_active_bin)
       if (num_active_bins .gt. I_ZERO) then
-      allocate(active_bins(num_active_bins))
-      active_bins = I_ZERO
-      active_bins = pack(all_bins, is_active_bin)
+        allocate(active_bins(num_active_bins))
+        active_bins = I_ZERO
+        active_bins = pack(all_bins, is_active_bin)
       
 ! Locate cut-ofs before current timestep: indices are found without use of p_lo nor p_up and point to boundary edges
-      i_lo = minval(active_bins) - 1
-      i_up = maxval(active_bins)
+        i_lo = minval(active_bins) - 1
+        i_up = maxval(active_bins)
 ! Construct index arrays for fixed edges betwen p_lo and p_up, active edges 
 ! before timestep  
-      is_fixed_edge = .false.
-      is_fixed_edge(i_lo+1:i_up-1) = .true.
-      num_fixed_edges = count(is_fixed_edge)
-      allocate(fixed_edges(num_fixed_edges))
-      fixed_edges = pack(all_edges, is_fixed_edge)
+        is_fixed_edge = .false.
+        is_fixed_edge(i_lo+1:i_up-1) = .true.
+        num_fixed_edges = count(is_fixed_edge)
+        allocate(fixed_edges(num_fixed_edges))
+        fixed_edges = pack(all_edges, is_fixed_edge)
 
-      is_active_edge = .false.
-      is_active_edge(i_lo:i_up) = .true.
-      num_active_edges = count(is_active_edge)
-      allocate(active_edges(i_lo:i_up))
-      active_edges = pack(all_edges, is_active_edge)
+        is_active_edge = .false.
+        is_active_edge(i_lo:i_up) = .true.
+        num_active_edges = count(is_active_edge)
+        allocate(active_edges(i_lo:i_up))
+        active_edges = pack(all_edges, is_active_edge)
 ! Compute p for all active edges
-      p = zero
-      p(fixed_edges) = p_fix(fixed_edges)
-      p(i_lo) = p_lo * (1 - e_small_approx_p_lo )
-      p(i_up) = p_up * (1 - e_small_approx_p_up ) ! cutoff momenta are going to be evaluated with use of get_fqp_lo and get_fqp_up if e_small_approx_* is set
+        p = zero
+        p(fixed_edges) = p_fix(fixed_edges)
+        p(i_lo) = p_lo * (1 - e_small_approx_p_lo )
+        p(i_up) = p_up * (1 - e_small_approx_p_up ) ! cutoff momenta are going to be evaluated with use of get_fqp_lo and get_fqp_up if e_small_approx_* is set
 #ifdef VERBOSE
-      print "(2(A9,i3))", "i_lo =", i_lo, ", i_up = ", i_up
+        print "(2(A9,i3))", "i_lo =", i_lo, ", i_up = ", i_up
 #endif /* VERBOSE */
 
-        endif
+      endif
   end subroutine cresp_find_active_bins
 !-----------------------------------------------------------------------
   subroutine cresp_detect_negative_content ! Diagnostic measure - negative values should not show up:
@@ -1229,7 +1229,6 @@ contains
   use cresp_arrays_handling, only: deallocate_with_index
   implicit none
   
-   print *, "[INFO] Deallocating cresp arrays @cresp_crspectrum"
    call deallocate_with_index(n)   !:: n, e, r
    call deallocate_with_index(e)
    call deallocate_with_index(r)

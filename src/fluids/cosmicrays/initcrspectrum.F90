@@ -213,7 +213,6 @@ contains
   use diagnostics, only: my_deallocate ! uncomment in PIERNIK
   use cresp_arrays_handling, only: deallocate_with_index
   implicit none
-        print *, "[INFO] Deallocating remaining CRESP arrays"
         if (allocated(virtual_e)) call my_deallocate(virtual_e)
         if (allocated(virtual_n)) call my_deallocate(virtual_n)
         
@@ -224,6 +223,5 @@ contains
         if (allocated(crel%q)) call deallocate_with_index(crel%q)
         if (allocated(crel%e)) call deallocate_with_index(crel%e)
         if (allocated(crel%n)) call deallocate_with_index(crel%n)
-        print *, "[INFO] Deallocation of CRESP arrays complete"
  end subroutine cleanup_cresp_virtual_en_arrays
 end module initcrspectrum
