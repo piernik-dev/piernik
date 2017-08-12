@@ -37,9 +37,9 @@ module initproblem
    integer(kind=4)    :: norm_step
    real               :: t_sn
    integer            :: n_sn
-   real               :: d0, p0, bx0, by0, bz0, x0, y0, z0, r0, beta_cr, amp_cr, vxd0, vyd0, vzd0
+   real               :: d0, p0, bx0, by0, bz0, x0, y0, z0, r0, beta_cr, amp_cr, vxd0, vyd0, vzd0, expansion_cnst
 
-   namelist /PROBLEM_CONTROL/ d0, p0, bx0, by0, bz0, x0, y0, z0, r0, vxd0, vyd0, vzd0, beta_cr, amp_cr, norm_step
+   namelist /PROBLEM_CONTROL/ d0, p0, bx0, by0, bz0, x0, y0, z0, r0, vxd0, vyd0, vzd0, beta_cr, amp_cr, norm_step, expansion_cnst
 contains
 
 !-----------------------------------------------------------------------------
@@ -82,6 +82,8 @@ contains
       amp_cr       = 1.0       !< amplitude of the blob
 
       norm_step    = I_TEN     !< how often to compute the norm (in steps)
+      
+      expansion_cnst = 0.0
 
       if (master) then
 
@@ -115,6 +117,7 @@ contains
          rbuff(12) = vxd0
          rbuff(13) = vyd0
          rbuff(14) = vzd0
+         rbuff(15) = expansion_cnst
 
          ibuff(1)  = norm_step
 
@@ -139,6 +142,7 @@ contains
          vxd0      = rbuff(12)
          vyd0      = rbuff(13)
          vzd0      = rbuff(14)
+         expansion_cnst = rbuff(15)
 
          norm_step = int(ibuff(1), kind=4)
 
@@ -289,18 +293,31 @@ contains
       if (ncre > 0) then
       cg%u(iarr_cre_pl, :, :, :) = p_lo_init ! DEPRECATED
       cg%u(iarr_cre_pu, :, :, :) = p_up_init ! DEPRECATED
-         
       endif
            
       call cresp_initialize_guess_grids
       call cresp_init_grid
-
+   call sleep (1)
 #endif /* COSM_RAY_ELECTRONS */      
 
 ! Velocity field
       cgl => leaves%first
       do while (associated(cgl))
         cg => cgl%cg
+        if (expansion_cnst .ne. 0.0 ) then ! adiabatic expansion / compression
+#ifdef IONIZED
+! Ionized
+         do k = cg%lhn(zdim,LO), cg%lhn(zdim,HI)
+            do j = cg%lhn(ydim,LO), cg%lhn(ydim,HI)
+               do i = cg%lhn(xdim,LO), cg%lhn(xdim,HI)
+                    cg%u(flind%ion%imx,i,j,k) = cg%u(flind%ion%idn,i,j,k) * (cg%x(i)-x0) * expansion_cnst  !< vxd0 * rho
+                    cg%u(flind%ion%imy,i,j,k) = cg%u(flind%ion%idn,i,j,k) * (cg%y(j)-y0) * expansion_cnst  !< vyd0 * rho
+                    cg%u(flind%ion%imz,i,j,k) = cg%u(flind%ion%idn,i,j,k) * (cg%z(k)-z0) * expansion_cnst  !< vzd0 * rho
+                  enddo
+                enddo
+            enddo
+#endif /* IONIZED */
+        else            
 #ifdef NEUTRAL
 ! Neutral
             cg%u(flind%neu%imx,:,:,:) = vxd0 * cg%u(flind%neu%idn,:,:,:)  !< vxd0 * rho
@@ -312,13 +329,14 @@ contains
             cg%u(flind%ion%imx,:,:,:) = vxd0 * cg%u(flind%ion%idn,:,:,:)  !< vxd0 * rho
             cg%u(flind%ion%imy,:,:,:) = vyd0 * cg%u(flind%ion%idn,:,:,:)  !< vyd0 * rho
             cg%u(flind%ion%imz,:,:,:) = vzd0 * cg%u(flind%ion%idn,:,:,:)  !< vzd0 * rho
-#endif /* NEUTRAL */
+#endif /* IONIZED */
 #ifdef DUST
 ! Dust
             cg%u(flind%dst%imx,:,:,:) = vxd0 * cg%u(flind%dst%idn,:,:,:)  !< vxd0 * rho
             cg%u(flind%dst%imy,:,:,:) = vyd0 * cg%u(flind%dst%idn,:,:,:)  !< vyd0 * rho
             cg%u(flind%dst%imz,:,:,:) = vzd0 * cg%u(flind%dst%idn,:,:,:)  !< vzd0 * rho
 #endif /* DUST */
+        endif
         cgl => cgl%nxt
       enddo
 
@@ -326,40 +344,5 @@ contains
     endif
       
    end subroutine problem_initial_conditions
-   
-!       subroutine print_mcrtest_vars_hdf5(var, tab, ierrh, cg)
-! 
-!       use grid_cont,        only: grid_container
-!       use named_array,      only: p3
-!       use named_array_list, only: qna
-! !       use dodges,           only: MSD_n, MMD_n
-! 
-!       implicit none
-! 
-!       character(len=*),               intent(in)    :: var
-!       real(kind=4), dimension(:,:,:), intent(inout) :: tab
-!       integer,                        intent(inout) :: ierrh
-!       type(grid_container), pointer,  intent(in)    :: cg
-! 
-!       ierrh = 0
-!       select case (trim(var))
-! 
-!          case ("mmss")
-!             if (qna%exists(MMD_n)) then
-!                p3 => cg%q(qna%ind(MMD_n))%span(cg%ijkse) ; tab(:,:,:) = real(p3, kind=4)
-!                cg%q(qna%ind(MMD_n))%arr(:,:,:) = 0.0
-!             endif
-!          case ("dmss")
-!             if (qna%exists(MSD_n)) then
-!                p3 => cg%q(qna%ind(MSD_n))%span(cg%ijkse) ; tab(:,:,:) = real(p3, kind=4)
-!                cg%q(qna%ind(MSD_n))%arr(:,:,:) = 0.0
-!             endif
-!          case default
-!             ierrh = -1
-!             if (.false.) tab(:,:,:) = real(cg%u(-ierrh,:,:,:),kind=4) ! suppress compiler warnings
-!       end select
-! 
-!    end subroutine print_mcrtest_vars_hdf5
-! 
 end module initproblem
 

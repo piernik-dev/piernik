@@ -36,9 +36,9 @@ contains
         e_cell = zero
         do while (associated(cgl))
             cg => cgl%cg
-            do k = cg%lhn(zdim,LO), cg%lhn(zdim,HI)
-                do j = cg%lhn(ydim,LO), cg%lhn(ydim,HI)
-                    do i = cg%lhn(xdim,LO), cg%lhn(xdim,HI)
+            do k = cg%ks, cg%ke !cg%lhn(zdim,LO), cg%lhn(zdim,HI)
+                do j = cg%js, cg%je  !cg%lhn(ydim,LO), cg%lhn(ydim,HI)
+                    do i = cg%is, cg%ie ! cg%lhn(xdim,LO), cg%lhn(xdim,HI)
 
                         n_cell    = cg%u(iarr_cre_n, i, j, k)
                         e_cell    = cg%u(iarr_cre_e, i, j, k)
@@ -47,11 +47,11 @@ contains
 #ifdef VERBOSE
                         print *, 'Output of cosmic ray electrons module for grid cell with coordinates i,j,k:', i, j, k
 #endif /* VERBOSE */    
-                        call cresp_update_cell(2*dt, n_cell, e_cell, sptab, virtual_n(:,i,j,k), virtual_e(:,i,j,k)) !cg%u(cr_table(cren)), cg%u(cr_table(cree)), cg%u(cr_table(crepl), &
+                        call cresp_update_cell(2*dt, n_cell, e_cell, sptab, virtual_n(:,i,j,k), virtual_e(:,i,j,k))
                         cg%u(iarr_cre_n, i, j, k) = n_cell
                         cg%u(iarr_cre_e, i, j, k) = e_cell
 !              diagnostic:
-                        if (i.eq.1.and.j.eq.0.and.k.eq.0) then
+                        if (i.eq.12.and.j.eq.12.and.k.eq.0) then
                             call printer(t)      
                         endif
                     enddo
@@ -124,7 +124,7 @@ contains
 #endif /* VERBOSE */
                         cg%u(iarr_cre_n, i, j, k) = n_cell
                         cg%u(iarr_cre_e, i, j, k) = e_cell
-                        if (i.eq.1.and.j.eq.0.and.k.eq.0) then ! diagnostics
+                        if (i.eq.12.and.j.eq.12.and.k.eq.0) then ! diagnostics
                             call printer(t)
                         endif
                     enddo

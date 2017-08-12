@@ -212,7 +212,7 @@ contains
   subroutine cresp_find_active_bins
    use constants, only: I_ONE, I_ZERO, zero
    use cresp_arrays_handling, only: allocate_with_index
-   use initcrspectrum       , only: ncre, e_small_approx_p_lo, e_small_approx_p_up, p_fix
+   use initcrspectrum       , only: ncre, e_small_approx_p_lo, e_small_approx_p_up, p_fix, e_small
    implicit none
     integer :: i
 
@@ -226,7 +226,7 @@ contains
       all_bins = (/ (i,i=I_ONE,ncre) /)
 
       is_active_bin = .false.
-      where (e .gt. zero .and. n .gt. zero)     ! if energy density is nonzero, so should be the number density
+      where (e .gt. e_small .and. n .gt. zero)     ! if energy density is nonzero, so should be the number density
         is_active_bin = .true.  
       endwhere
       
