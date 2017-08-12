@@ -30,8 +30,8 @@
  /
 
  $END_CONTROL
-    tend   = 100.01 !.0 ! .1
-    nend   = 50
+    tend   = 5.01 !.0 ! .1
+    nend   = 500
  /
 
  $OUTPUT_CONTROL
@@ -63,7 +63,7 @@
     gamma_crn(1)   = 1.333333
     gamma_crn(2)   = 1.333333
 !    gamma_crn(3)   = 1.333333
-    K_crn_paral(1) = 0.0 !10000.0 ! anisotropic
+    K_crn_paral(1) = 10000.0 ! anisotropic
     K_crn_paral(2) = 0.0 !10000.0
 !   K_crn_paral(3) = 0.0
     K_crn_perp(1)  = 0     ! isotropic
@@ -84,9 +84,9 @@
     q_big     = 30.e0   ! < limit value of power law coefficient in cre energy spectrum, do not set that value too high!
     p_min_fix = 0.4e0 ! 1.0e1  ! momentum fixed grid
     p_max_fix = 1.65e4 ! 1.0e2  ! momentum fixed grid
-    K_cre_paral_1 = 0.0 ! 1.e3
-    K_cre_perp_1  = 0.0 ! 1.e1
-    K_cre_pow     = 0.0 ! 0.5
+    K_cre_paral_1 = 1.e4
+    K_cre_perp_1  = 1.e2
+    K_cre_pow     = 0.5
     e_small     = 1.0e-5 ! 8.5e-3 ! 2.0e-4! 12.0e0
     initial_condition = 'bump' ! 'powl', 'brpl', 'bump', 'symf', 'syme'  !   powl - power-law, brpl - broken power-law, bump - bump-type spectrum, symf - symmetric distr. function spectrum, syme - symmetric energy distr. spectrum
     bump_amp    = 0.5d0  ! amplitude of bump-type spectrum
@@ -120,8 +120,8 @@
  $PROBLEM_CONTROL
     d0     = 1.0 ! when COSM_RAYS_SOURCES are defined, the density somehow scales the result of sourcecosmicrays.F90 and values like 1e5 quickly lead to FP overflow. This must be a bug.
     p0     = 1.0
-    bx0    = 0.0
-    by0    = 0.0
+    bx0    = 0.01
+    by0    = 0.01
     bz0    = 0.0
     x0     = 0.0
     y0     = 0.0

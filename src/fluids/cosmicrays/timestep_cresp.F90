@@ -34,13 +34,13 @@ module timestep_cresp
     end function approximate_p_up
 !----------------------------------------------------------------------------------------------------
   function evaluate_i_up(e_cell, n_cell) ! obain i_up index from energy densities in cell
-  use initcrspectrum, only: ncre
+  use initcrspectrum, only: ncre, e_small
   use constants, only: zero
   implicit none
     real(kind=8), dimension(:), intent(in) :: e_cell, n_cell
     integer :: evaluate_i_up, i
         do i=ncre, 1, -1  ! we start counting from ncre since upper cutoff is rather expected at higher index numbers. Might change it though.
-            if (e_cell(i) .gt. zero .and. n_cell(i) .gt. zero) then ! better compare to zero or to eps?
+            if (e_cell(i) .gt. e_small .and. n_cell(i) .gt. zero) then ! better compare to zero or to eps?
                 evaluate_i_up = i
                 return
             endif  ! no need for other conditions - if there IS a bin that has literally no energy, the algorithm will most likely crash.
@@ -52,7 +52,7 @@ module timestep_cresp
 !----------------------------------------------------------------------------------------------------
 
   subroutine cresp_timestep(dt_comp, sptab, n_cell, e_cell)
-   use initcrspectrum,   only: spec_mod_trms, ncre, w
+   use initcrspectrum,   only: spec_mod_trms, ncre, w, e_small
    use cresp_arrays_handling, only: allocate_with_index
    use constants, only: zero
    implicit none
@@ -64,7 +64,7 @@ module timestep_cresp
         dt_cre_ud = huge(one)
         dt_cre_ub = huge(one)
 
-        if (maxval(e_cell) .gt. zero) then ! any timestep evaluation makes sense only if there's any information to be migrated between bins
+        if (maxval(e_cell) .gt. e_small) then ! any timestep evaluation makes sense only if there's any information to be migrated between bins
 ! Adiabatic cooling timestep:
             if (sptab%ud .ne. zero) then
                 dt_cre_ud = cfl_cre * w / sptab%ud

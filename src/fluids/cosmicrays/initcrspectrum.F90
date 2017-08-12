@@ -13,11 +13,9 @@ module initcrspectrum
  real(kind=8)       :: p_up_init ! = 1.3e3
  real(kind=8)       :: cfl_cre   ! = 1.0
  real(kind=8)       :: cre_eff
- real(kind=8)       :: K_cre_e_paral ! = 0
- real(kind=8)       :: K_cre_e_perp ! = 0
- real(kind=8)       :: K_cre_n_paral ! = 0
- real(kind=8)       :: K_cre_n_perp ! = 0
- real(kind=8)       :: K_pow_index  ! = 0 
+ real(kind=8)       :: K_cre_paral_1 ! = 0
+ real(kind=8)       :: K_cre_perp_1 ! = 0
+ real(kind=8)       :: K_cre_pow    ! = 0 
  integer(kind=4)    :: expan_order  ! = 1
  real(kind=8)       :: e_small      = 1.0e-5
  real(kind=8)       :: bump_amp
@@ -74,12 +72,14 @@ contains
    implicit none
     integer                  :: i       ! enumerator
     logical                  :: first_run = .true.
-        namelist /COSMIC_RAY_SPECTRUM/ cfl_cre, p_lo_init, p_up_init, f_init, q_init, q_big, ncre, initial_condition, &
-           &                         p_min_fix, p_max_fix, cre_eff, K_cre_e_paral, K_cre_e_perp, &
-           &                         K_cre_n_paral, K_cre_n_perp, K_pow_index, expan_order, e_small, bump_amp, &
+    
+    namelist /COSMIC_RAY_SPECTRUM/ cfl_cre, p_lo_init, p_up_init, f_init, q_init, q_big, ncre, initial_condition, &
+           &                         p_min_fix, p_max_fix, cre_eff, K_cre_paral_1, K_cre_perp_1, K_cre_pow, &
+           &                         expan_order, e_small, bump_amp, &
            &                         e_small_approx_init_cond, e_small_approx_p_lo, e_small_approx_p_up, force_init_NR,&
            &                         NR_iter_limit, max_p_ratio, add_spectrum_base !, arr_dim
-           
+  
+
         open(unit=101, file="problem.par", status="unknown")
         read(unit=101, nml=COSMIC_RAY_SPECTRUM)
         close(unit=101)
@@ -96,10 +96,9 @@ contains
             print '(A15, 1F15.7)','q_big       = ', q_big
             print '(A15, 1F15.7)','cfl_cre     = ', cfl_cre
             print '(A25, 1I3)'    ,'Taylor expansion order =', expan_order
-            print '(A15, 10E15.7)','K_cre_e_paral=', K_cre_e_paral
-            print '(A15, 10E15.7)','K_cre_e_perp =', K_cre_e_perp
-            print '(A15, 10E15.7)','K_cre_n_paral=', K_cre_n_paral
-            print '(A15, 10E15.7)','K_cre_n_perp =', K_cre_n_perp
+            print '(A15, 10E15.7)','K_cre_paral_1=', K_cre_paral_1
+            print '(A15, 10E15.7)','K_cre_perp_1 =', K_cre_perp_1
+            print '(A15, 10E15.7)','K_cre_pow    =', K_cre_pow
             print '(A15, 1E15.7)', 'e_small      =', e_small
             print '(A20, A5)',     'initial_condition =' , initial_condition
             print '(A17, 1E15.7)','bump amplitude =', bump_amp
@@ -197,7 +196,7 @@ contains
     crel%i_up = I_ZERO
  end subroutine init_cresp_types
 !----------------------------------------------------------------------------------------------------
- function compute_K(K0, alpha, alpha_n, length)
+ function compute_K(K0, alpha, alpha_n, length) ! /deprecated
  implicit none
     real(kind=8) :: K0, alpha, alpha_n
     integer :: length, i
@@ -224,4 +223,5 @@ contains
         if (allocated(crel%e)) call deallocate_with_index(crel%e)
         if (allocated(crel%n)) call deallocate_with_index(crel%n)
  end subroutine cleanup_cresp_virtual_en_arrays
+
 end module initcrspectrum

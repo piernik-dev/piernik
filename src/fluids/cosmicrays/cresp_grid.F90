@@ -15,14 +15,15 @@ contains
  subroutine cresp_update_grid
   use cg_leaves,      only: leaves
   use cg_list,        only: cg_list_element
-  use constants,      only: I_ONE, I_TWO, xdim, ydim, zdim, LO, HI, zero !, pMAX, 
+  use constants,      only: xdim, ydim, zdim, zero !, pMAX, 
   use grid_cont,      only: grid_container
   use cresp_crspectrum, only:cresp_update_cell, printer
   use units,           only: s_len_u
   use initcrspectrum, only: spec_mod_trms, virtual_e, virtual_n !, p_fix, crel
   use named_array_list, only: qna
   use crhelpers,        only: divv_n
-  use func,             only: emag
+  use func,             only: emag, ekin, operator(.equals.), operator(.notequals.)
+  use fluidindex, only: iarr_all_dn
   implicit none
     integer                         :: i, j, k 
     type(cg_list_element),  pointer :: cgl
@@ -36,10 +37,10 @@ contains
         e_cell = zero
         do while (associated(cgl))
             cg => cgl%cg
-            do k = cg%ks, cg%ke !cg%lhn(zdim,LO), cg%lhn(zdim,HI)
-                do j = cg%js, cg%je  !cg%lhn(ydim,LO), cg%lhn(ydim,HI)
-                    do i = cg%is, cg%ie ! cg%lhn(xdim,LO), cg%lhn(xdim,HI)
-
+            do k = cg%ks, cg%ke
+                do j = cg%js, cg%je
+                    do i = cg%is, cg%ie
+                        sptab%ud = 0.0 ; sptab%ub = 0.0 ; sptab%ucmb = 0.0
                         n_cell    = cg%u(iarr_cre_n, i, j, k)
                         e_cell    = cg%u(iarr_cre_e, i, j, k)
                         sptab%ub = emag(cg%b(xdim,i,j,k), cg%b(ydim,i,j,k), cg%b(zdim,i,j,k))
@@ -59,12 +60,13 @@ contains
             enddo
             cgl=>cgl%nxt
         enddo
-   end subroutine cresp_update_grid
+
+  end subroutine cresp_update_grid
 !----------------------------------------------------------------------------------------------------      
  subroutine cresp_init_grid
   use cg_leaves,      only: leaves
   use cg_list,        only: cg_list_element
-  use constants,      only: I_ONE, I_TWO, I_FOUR, fpi, LO, HI, xdim, ydim, zdim, zero
+  use constants,      only: I_ONE, I_FOUR, fpi, LO, HI, xdim, ydim, zdim, zero
   use grid_cont,      only: grid_container
   use initcrspectrum, only: ncre, f_init, p_up_init, p_lo_init, q_init, cre_eff, spec_mod_trms, initial_condition, bump_amp, &
                             virtual_e, virtual_n
@@ -84,8 +86,6 @@ contains
         call allocate_all_allocatable
 
         i = 0; j = 0; k = 0
-!         dt_cre_tmp = 1.0
-!         dt_cre = dt_cre_tmp   
         cgl => leaves%first
         do while (associated(cgl))
             cg => cgl%cg
@@ -117,7 +117,6 @@ contains
                             f_amplitude = cre_eff * cg%u(iarr_crn(1),i,j,k) ! for gaussian distribution & inheritance of spatial energy/number density after nucleons
 !                             f_amplitude = bump_amp ! * clight 
                         endif
-
                         call cresp_init_state(n_cell, e_cell, f_amplitude, sptab)
 #ifdef VERBOSE
                         print *, 'Output of cosmic ray electrons module for grid cell with coordinates i,j,k:', i, j, k
@@ -160,10 +159,10 @@ contains
         cgl => leaves%first
         do while (associated(cgl))
             cg => cgl%cg
-            do k = cg%lhn(zdim,LO), cg%lhn(zdim,HI)
-                do j = cg%lhn(ydim,LO), cg%lhn(ydim,HI)
-                    do i = cg%lhn(xdim,LO), cg%lhn(xdim,HI)
-                        sptab%ub = 0.0 ; sptab%ub = 0.0 ; sptab%ucmb = 0.0
+            do k = cg%ks, cg%ke
+                do j = cg%js, cg%je
+                    do i = cg%is, cg%ie
+                        sptab%ud = 0.0 ; sptab%ub = 0.0 ; sptab%ucmb = 0.0
                         sptab%ub = emag(cg%b(xdim,i,j,k), cg%b(ydim,i,j,k), cg%b(zdim,i,j,k))
                         sptab%ud = cg%q(qna%ind(divv_n))%point([i,j,k])
                         call cresp_timestep(dt_cre_tmp, sptab, cg%u(iarr_cre_n, i, j, k), cg%u(iarr_cre_e, i, j, k))

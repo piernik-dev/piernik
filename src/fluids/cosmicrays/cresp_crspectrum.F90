@@ -137,7 +137,6 @@ contains
         endif
 #endif /* VERBOSE */
         call cresp_update_bin_index(dt, p_lo, p_up, p_lo_next, p_up_next)      ! FIXME - must be modified in the future if this branch is connected to Piernik
-
 ! Compute fluxes through fixed edges in time period [t,t+dt], using f, q, p_lo and p_up at [t]
 ! Note that new [t+dt] values of p_lo and p_up in case new fixed edges appear or disappear.
 ! fill new bins
@@ -674,7 +673,6 @@ contains
       print *, 'e    =', e(1),     '  n    =', n(1) ,     ' e/n        =',e(1)/n(1)
       print *, "Rel. error %(e):", (e(1) - e_new(1))/e(1)*100.0, ", (n): % ", (n(1) - n_new(1))/n(1) *100.0
       
-
       print *, '2D N-R p_lo search test:'
       p_l = 1.0
       p_r = 10.0  ! p_l was not altered
@@ -1161,10 +1159,11 @@ contains
 ! the condition is satisfied; q can be therefore assumed zero as the bin not be subject to any energy losses.
        vrtl_n(2) = vrtl_n(2) + ndt(i_up+1) ; ndt(i_up+1) = zero
        vrtl_e(2) = vrtl_e(2) + edt(i_up+1) ; edt(i_up+1) = zero
+#ifdef VERBOSE
        print *, "(p_up) relative momentum error exceeded, activating virtual n and e"
 !        print *, "virtual n up", vrtl_n(2), "virtual n up", vrtl_e(2)
+#endif /* VERBOSE */
        q(i_up+1) = zero
-!        call sleep(1)
     else
        ndt(i_up) = ndt(i_up) + vrtl_n(2) ; vrtl_n(2) = zero
        edt(i_up) = edt(i_up) + vrtl_e(2) ; vrtl_e(2) = zero
@@ -1175,10 +1174,11 @@ contains
 ! the condition is satisfied; q can be therefore assumed zero as the bin not be subject to any energy losses.
        vrtl_n(1) = vrtl_n(1) + ndt(i_lo) ; ndt(i_lo) = zero
        vrtl_e(1) = vrtl_e(1) + edt(i_lo) ; edt(i_lo) = zero
+#ifdef VERBOSE
        print *, "(p_lo,p_fix) relative error exceeded, activating virtual n and e"
 !        print *, "virtual n lo", vrtl_n(1), "virtual e lo", vrtl_e(1)
+#endif /* VERBOSE */
        q(i_lo+1) = zero
-!        call sleep(1)
     else
        ndt(i_lo+1) = ndt(i_lo+1) + vrtl_n(1) ; vrtl_n(1) = zero
        edt(i_lo+1) = edt(i_lo+1) + vrtl_e(1) ; vrtl_e(1) = zero

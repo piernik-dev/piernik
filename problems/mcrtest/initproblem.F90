@@ -183,6 +183,7 @@ contains
       class(component_fluid), pointer :: fl
       integer                         :: i, j, k, icr, ipm, jpm, kpm
       real                            :: cs_iso, xsn, ysn, zsn, r2, maxv
+      real                            :: sn_exp, sn_rdist2
       type(cg_list_element),  pointer :: cgl
       type(grid_container),   pointer :: cg
       logical        :: first_run = .true.
@@ -251,10 +252,15 @@ contains
                            do kpm=-1,1
 
                               r2 = (cg%x(i)-xsn+real(ipm)*dom%L_(xdim))**2+(cg%y(j)-ysn+real(jpm)*dom%L_(ydim))**2+(cg%z(k)-zsn+real(kpm)*dom%L_(zdim))**2
+                              sn_rdist2 = r2/r0**2
+                              sn_exp = 0.0
+                              if(sn_rdist2 <= 10.0) then
+                                 sn_exp = exp(-sn_rdist2)
+                              endif
                               if (icr == cr_table(icr_H1)) then
-                                 cg%u(iarr_crn(icr), i, j, k) = cg%u(iarr_crn(icr), i, j, k) + amp_cr*exp(-r2/r0**2)
+                                 cg%u(iarr_crn(icr), i, j, k) = cg%u(iarr_crn(icr), i, j, k) + amp_cr*sn_exp
                               elseif (icr == cr_table(icr_C12)) then
-                                 cg%u(iarr_crn(icr), i, j, k) = cg%u(iarr_crn(icr), i, j, k) + amp_cr*0.1*exp(-r2/r0**2) ! BEWARE: magic number
+                                 cg%u(iarr_crn(icr), i, j, k) = cg%u(iarr_crn(icr), i, j, k) + amp_cr*0.1*sn_exp ! BEWARE: magic number
                               else
                                  cg%u(iarr_crn(icr), i, j, k) = 0.0
                               endif

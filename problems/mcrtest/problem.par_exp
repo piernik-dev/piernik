@@ -31,7 +31,7 @@
 
  $END_CONTROL
     tend   = 100.01 !.0 ! .1
-    nend   = 50
+    nend   = 5000
  /
 
  $OUTPUT_CONTROL
@@ -130,7 +130,7 @@
     vxd0   = 0.0
     vyd0   = 0.0
     vzd0   = 0.0
-    expansion_cnst = 0.0
+    expansion_cnst = 1.0e-1
     beta_cr= 1.0
     amp_cr = 1000.0
     norm_step = 1
