@@ -7,15 +7,15 @@ module cresp_grid
       use initcrspectrum, only: ncre
       use global,         only: dt, t
 
-      
-      public        dt_cre      
+
+      public        dt_cre
       real(kind=8)                    :: dt_cre
 contains
 
  subroutine cresp_update_grid
   use cg_leaves,      only: leaves
   use cg_list,        only: cg_list_element
-  use constants,      only: xdim, ydim, zdim, zero !, pMAX, 
+  use constants,      only: xdim, ydim, zdim, zero !, pMAX,
   use grid_cont,      only: grid_container
   use cresp_crspectrum, only:cresp_update_cell, printer
   use units,           only: s_len_u
@@ -25,7 +25,7 @@ contains
   use func,             only: emag, ekin, operator(.equals.), operator(.notequals.)
   use fluidindex, only: iarr_all_dn
   implicit none
-    integer                         :: i, j, k 
+    integer                         :: i, j, k
     type(cg_list_element),  pointer :: cgl
     type(grid_container),   pointer :: cg
     real(kind=8), dimension(1:ncre)  :: n_cell, e_cell
@@ -47,13 +47,13 @@ contains
                         sptab%ud = cg%q(qna%ind(divv_n))%point([i,j,k])
 #ifdef VERBOSE
                         print *, 'Output of cosmic ray electrons module for grid cell with coordinates i,j,k:', i, j, k
-#endif /* VERBOSE */    
+#endif /* VERBOSE */
                         call cresp_update_cell(2*dt, n_cell, e_cell, sptab, virtual_n(:,i,j,k), virtual_e(:,i,j,k))
                         cg%u(iarr_cre_n, i, j, k) = n_cell
                         cg%u(iarr_cre_e, i, j, k) = e_cell
 !              diagnostic:
                         if (i.eq.12.and.j.eq.12.and.k.eq.0) then
-                            call printer(t)      
+                            call printer(t)
                         endif
                     enddo
                 enddo
@@ -62,7 +62,7 @@ contains
         enddo
 
   end subroutine cresp_update_grid
-!----------------------------------------------------------------------------------------------------      
+!----------------------------------------------------------------------------------------------------
  subroutine cresp_init_grid
   use cg_leaves,      only: leaves
   use cg_list,        only: cg_list_element
@@ -77,7 +77,7 @@ contains
     integer                         :: i, j, k
     type(cg_list_element),  pointer :: cgl
     type(grid_container),   pointer :: cg
-    real(kind=8), allocatable, dimension(:)  :: cresp_arguments
+!    real(kind=8), allocatable, dimension(:)  :: cresp_arguments
     real(kind=8)                             :: max_amp_cr, f_amplitude
     real(kind=8), dimension(1:ncre) :: n_cell, e_cell
     type(spec_mod_trms)  :: sptab
@@ -92,20 +92,20 @@ contains
             cg%u(iarr_cre_e,:,:,:) = zero
             cg%u(iarr_cre_n,:,:,:) = zero
             max_amp_cr = maxval(cg%u(iarr_crn(1),:,:,:))
-        
+
         if (.not. allocated(virtual_e)) allocate(virtual_e(1:2,cg%lhn(xdim,LO):cg%lhn(xdim,HI),cg%lhn(ydim,LO):cg%lhn(ydim,HI),&
                         cg%lhn(zdim,LO):cg%lhn(zdim,HI)))
         if (.not. allocated(virtual_n)) allocate(virtual_n(1:2,cg%lhn(xdim,LO):cg%lhn(xdim,HI),cg%lhn(ydim,LO):cg%lhn(ydim,HI),&
                         cg%lhn(zdim,LO):cg%lhn(zdim,HI)))
         virtual_e = zero
         virtual_n = zero
-        
-        n_cell = zero        
+
+        n_cell = zero
         e_cell = zero
             do k = cg%lhn(zdim,LO), cg%lhn(zdim,HI)
                 do j = cg%lhn(ydim,LO), cg%lhn(ydim,HI)
                     do i = cg%lhn(xdim,LO), cg%lhn(xdim,HI)
-                        cresp_arguments = 0.0
+!                        cresp_arguments = 0.0
                    ! Every initial condition should be normalized before initializing Cosmic Ray Electron SPectrum module
                         if ( initial_condition == "powl") then
                             f_amplitude = 1/(fpi*clight*(p_lo_init**(I_FOUR))*(((p_up_init/p_lo_init)**(I_FOUR-q_init))-I_ONE)/ &
@@ -115,7 +115,7 @@ contains
                         endif
                         if (initial_condition == "bump") then
                             f_amplitude = cre_eff * cg%u(iarr_crn(1),i,j,k) ! for gaussian distribution & inheritance of spatial energy/number density after nucleons
-!                             f_amplitude = bump_amp ! * clight 
+!                             f_amplitude = bump_amp ! * clight
                         endif
                         call cresp_init_state(n_cell, e_cell, f_amplitude, sptab)
 #ifdef VERBOSE
@@ -143,13 +143,13 @@ contains
   use crhelpers,        only: divv_n
   use func,             only: emag !, operator(.equals.), operator(.notequals.)
   use grid_cont,        only: grid_container
-  use constants,        only: xdim, ydim, zdim, LO, HI !, pMAX, 
+  use constants,        only: xdim, ydim, zdim, LO, HI !, pMAX,
   use named_array_list, only: qna
   use constants,        only: one
   use initcrspectrum,   only: spec_mod_trms
   use timestep_cresp,  only: cresp_timestep
   implicit none
-    integer                         :: i, j, k 
+    integer                         :: i, j, k
     type(grid_container), pointer   :: cg
     type(cg_list_element), pointer  :: cgl
     real(kind=8)                    :: dt_cre_tmp
@@ -189,7 +189,7 @@ contains
     type(grid_container), pointer :: cg
     type(cg_list_element), pointer:: cgl
     integer :: i,j,k
-!Below - magnetic energy density and velocity divergence values are passed to sptab   
+!Below - magnetic energy density and velocity divergence values are passed to sptab
         cgl => leaves%first
         do while (associated(cgl))
             cg => cgl%cg
@@ -199,5 +199,5 @@ contains
             cgl =>cgl%nxt
         enddo
  end subroutine append_dissipative_terms
-   
+
 end module cresp_grid

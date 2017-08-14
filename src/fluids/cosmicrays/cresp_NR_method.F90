@@ -7,14 +7,14 @@ module cresp_NR_method
   real(kind=8), dimension(:), allocatable :: p_space, q_space
   integer(kind=2), parameter :: ratio_ord_min = -6
   integer(kind=2), parameter :: ratio_ord_max = 1
-  integer(kind=2), parameter :: p_p_dec       = 12
+  integer(kind=2), parameter :: p_p_dec       = 20
   integer(kind=2), parameter :: arr_dim = int(p_p_dec * (ratio_ord_max - ratio_ord_min))
   real(kind=8) :: alpha, n_in, e_in, p_im1, p_ip1
   real(kind=8), dimension(1:arr_dim) :: alpha_tab_lo, alpha_tab_up, n_tab_lo, n_tab_up
   real(kind=8), dimension(1:arr_dim,1:arr_dim) :: p_ratios_lo, f_ratios_lo, p_ratios_up, f_ratios_up
   integer(kind=2) :: ii
   real(kind=8) :: eps_det = eps * 1.0e-10
-    
+
   abstract interface
     function arbitrary_function(z)
       real(kind=8),dimension(2) :: arbitrary_function
@@ -22,9 +22,9 @@ module cresp_NR_method
     end function arbitrary_function
   end interface
   procedure (arbitrary_function), pointer :: selected_function => null()
- 
+
   contains !  -------*--------
-  
+
   subroutine NR_algorithm(x,exit_code)
   use initcrspectrum, only: NR_iter_limit
   implicit none
@@ -36,7 +36,7 @@ module cresp_NR_method
     real(kind=8) :: det
     logical,intent(out)  :: exit_code
     integer(kind=2) :: i !, j
-    
+
     err_f = 1.0e-15
     err_x = 1.0e-15
     exit_code=.true.
@@ -50,7 +50,7 @@ module cresp_NR_method
 !   do j = 1, 3
     do i = 1, NR_iter_limit                                 ! it is not possible to find solution with demanded precision.
         if (maxval(abs(fun_vec_value)) < err_f ) then    ! For convergence via value of f
-            exit_code=.false. 
+            exit_code=.false.
 #ifdef VERBOSE
             write(*,"(A47,I4,A12)",advance="no") "Convergence via value of fun_vec_value after ",i, " iterations."!, x, fun_vec_value
 #endif /* VERBOSE */
@@ -64,7 +64,7 @@ module cresp_NR_method
         det = determinant_2d_real(fun_vec_jac)           ! WARNING - algorithm is used for ndim = 2. For more dimensions LU or other methods should be implemented.
         if (abs(det) .lt. eps_det) then              ! Countermeasure against determinant = zero
 !             write (*,"(A20)") "WARNING: det ~ 0.0"
-            exit_code = .true. 
+            exit_code = .true.
             return
         endif
         fun_vec_inv_jac = invert_2d_matrix(fun_vec_jac,det)
@@ -80,12 +80,12 @@ module cresp_NR_method
            exit_code = .false.
            ii = max(i, ii)
            return
-        endif 
+        endif
     enddo
 !   err_f = 5.0*err_f
 !   err_x = 5.0*err_x ! changing tolerance so that more solutions can be found
 !   enddo
-  
+
 !     write(*,"(A45,I4,A24)") "  ... WARNING: Maximum number of iterations (",NR_iter_limit,") exceeded @global_newt!"
     exit_code = .true.
 
@@ -97,19 +97,19 @@ module cresp_NR_method
    use constants,      only: zero
    implicit none
     logical   :: first_run = .true.
-        
+
         if (first_run .eqv. .true. ) then
-    
+
             if (.not. allocated(p_space))     allocate(p_space(1:arr_dim)) ! these will be deallocated once initialization is over
             if (.not. allocated(q_space))     allocate(q_space(1:arr_dim)) ! these will be deallocated once initialization is over
 
- 
+
             p_ratios_up = zero ; f_ratios_up = zero
             p_ratios_lo = zero ; f_ratios_lo = zero
-            
+
 !             call sleep(1)
             call fill_guess_grids
-        
+
             print *, "Are there zeros? (q_ratios)",    count(q_space.lt.eps)
             print *, "Are there zeros? (p_ratios_up)", count(p_ratios_up.lt.eps)
             print *, "Are there zeros? (f_ratios_up)", count(f_ratios_up.lt.eps)
@@ -117,13 +117,13 @@ module cresp_NR_method
             print *, "Are there zeros? (f_ratios_lo)", count(f_ratios_lo.lt.eps)
             print *, "Count of array elements:", size(p_ratios_lo)
             print *,"----------"
-!   
+!
             if (allocated(p_space)) deallocate(p_space) ! only needed at initialization
             if (allocated(q_space)) deallocate(q_space)
-            
+
             first_run = .false.
         endif
-! 
+!
   end subroutine cresp_initialize_guess_grids
 !----------------------------------------------------------------------------------------------------
   subroutine fill_guess_grids
@@ -132,7 +132,7 @@ module cresp_NR_method
    implicit none
     integer(kind=2)  :: i, j, int_logical_p, int_logical_f !, ierr
     logical  :: exit_code
-    real(kind=8) :: a_min_lo=huge(one), a_max_lo=tiny(one), a_min_up=huge(one), a_max_up=tiny(one),& 
+    real(kind=8) :: a_min_lo=huge(one), a_max_lo=tiny(one), a_min_up=huge(one), a_max_up=tiny(one),&
                     n_min_lo=huge(one), n_max_lo=tiny(one), n_min_up=huge(one), n_max_up=tiny(one)
         q_space = zero
         do i=1, int(half*arr_dim)
@@ -141,7 +141,7 @@ module cresp_NR_method
         do i= 1, int(half*arr_dim)!, arr_dim
             q_space(int(half*arr_dim)+i) = -q_space(int(half*arr_dim)+1-i)
         enddo
-        
+
 ! setting up a grids of ratios to be used as phase space for NR tabs, obtained later
         do i = 1, arr_dim
             p_space(i) =  max_p_ratio**(real(i)/real(arr_dim))
@@ -159,7 +159,7 @@ module cresp_NR_method
                 n_max_up = max(n_max_up, abs(n_func_2_zero_up(p_space(i),p_space(i)**(-q_space(j)), zero ,q_space(j))))
             enddo
         enddo
-        
+
         a_min_lo = 0.8 * a_min_lo
         a_max_lo = 0.999999 !1 * a_max_lo
         a_min_up = 1.000005 ! 0.8 * a_min_up
@@ -168,14 +168,14 @@ module cresp_NR_method
         n_max_lo = 1.1 * n_max_lo
         n_min_up = 0.001 * n_min_up
         n_max_up = 1.1 * n_max_up
-   
+
 !             print *," min / max values"
 !             print *, a_min_lo, a_max_lo
 !             print *, n_min_lo, n_max_lo
 !             print *, a_min_up, a_max_up
 !             print *, n_min_up, n_max_up
-        
-        print *,"alpha_tab_lo(i),      alpha_tab_up(i),        n_tab_lo(i),        n_tab_up(i) |       p_space(i),     q_space(i)" 
+
+        print *,"alpha_tab_lo(i),      alpha_tab_up(i),        n_tab_lo(i),        n_tab_up(i) |       p_space(i),     q_space(i)"
         do i=1, arr_dim
             alpha_tab_lo(i) = ln_eval_array_val(i, a_min_lo, a_max_lo, int(1,kind=2), arr_dim)
             alpha_tab_up(i) = a_min_up * ten**((log10(a_max_up/a_min_up))/real(arr_dim-1,kind=8)*real((i-1),kind=8))
@@ -211,18 +211,18 @@ module cresp_NR_method
             call save_NR_guess_grid(f_ratios_lo,"f_ratios_lo")
         else
             print *," >> Will not solve ratios table (lo), reading data from file instead."
-        endif        
-    
+        endif
+
         print *, "max values:", maxval(p_ratios_up,MASK=p_ratios_up.gt.0.0), maxval(f_ratios_up,MASK=f_ratios_up.gt.0.0)
         print *, "min values:", minval(p_ratios_up,MASK=p_ratios_up.gt.0.0), minval(f_ratios_up,MASK=f_ratios_up.gt.0.0)
-    
+
         print *, "max values:", maxval(p_ratios_lo,MASK=p_ratios_lo.gt.0.0), maxval(f_ratios_lo,MASK=f_ratios_lo.gt.0.0)
         print *, "min values:", minval(p_ratios_lo,MASK=p_ratios_lo.gt.0.0), minval(f_ratios_lo,MASK=f_ratios_lo.gt.0.0)
-    
+
         print *, "maximal number of iterations with success:", ii
-    
+
  end subroutine fill_guess_grids
-!---------------------------------------------------------------------------------------------------- 
+!----------------------------------------------------------------------------------------------------
  function ln_eval_array_val(i, arr_min, arr_max, min_i, max_i)
  implicit none
   real(kind=8) :: b, arr_min, arr_max, ln_eval_array_val
@@ -230,7 +230,7 @@ module cresp_NR_method
     b = (log(real(max_i)) -log(real(min_i)))/ (arr_max - arr_min)
     ln_eval_array_val = (arr_min-log(real(min_i))/b ) + log(real(i)) / b
  end function ln_eval_array_val
-!---------------------------------------------------------------------------------------------------- 
+!----------------------------------------------------------------------------------------------------
  subroutine fill_boundary_grid(bound_case, fill_p, fill_f) ! to be paralelized
   use constants, only: zero
   implicit none
@@ -258,7 +258,7 @@ module cresp_NR_method
                 else
                     print *, "Wrong *bound_case* argument provided, stopping"
                     stop
-                endif                    
+                endif
                 write(*,"(A12,2I4,A9,I4,A5,2E16.9)",advance="no") "Now solving",i,j,", sized ",arr_dim ,", (alpha,n): ",alpha,n_in
                 x_vec(1) = prev_solution(1)
                 x_vec(2) = prev_solution(2)
@@ -290,8 +290,8 @@ module cresp_NR_method
             enddo
         enddo
         print *,""
- 
- 
+
+
  end subroutine
  !----------------------------------------------------------------------------------------------------
   function q_ratios(f_ratio, p_ratio)
@@ -362,14 +362,14 @@ module cresp_NR_method
         fvec_up(1) = encp_func_2_zero_up(x(1), alpha, q_in)
         fvec_up(2) = n_func_2_zero_up(x(1), x(2), n_in, q_in)
  end function fvec_up
- 
+
 !----------------------------------------------------------------------------------------------------
   function fvec_lo(x)
   implicit none
     real(kind=8), dimension(ndim) :: x
     real(kind=8), dimension(ndim) :: fvec_lo
     real(kind=8) :: q_in
-        x = abs(x)    
+        x = abs(x)
         q_in     = q_ratios(x(2),x(1))
         fvec_lo(1) = encp_func_2_zero_lo(x(1), alpha, q_in)
         fvec_lo(2) = n_func_2_zero_lo(x(1), n_in, q_in)
@@ -381,7 +381,7 @@ module cresp_NR_method
     real(kind=8) :: p_ratio, q_in, alpha_cnst
     real(kind=8) :: encp_func_2_zero_up
         if (abs(q_in - three) .lt. eps) then
-            encp_func_2_zero_up = -alpha_cnst + (- one + p_ratio)/log(p_ratio) 
+            encp_func_2_zero_up = -alpha_cnst + (- one + p_ratio)/log(p_ratio)
         else if (abs(q_in - four) .lt. eps) then
             encp_func_2_zero_up = -alpha_cnst + p_ratio*log(p_ratio)/(p_ratio - one)
         else
@@ -389,7 +389,7 @@ module cresp_NR_method
                                     (p_ratio **(three - q_in)- one))
         endif
   end function encp_func_2_zero_up
-  
+
 !---------------------------------------------------------------------------------------------------
  function encp_func_2_zero_lo(p_ratio, alpha_cnst, q_in) ! from eqn. 29
  use constants,     only: one, three, four
@@ -406,7 +406,7 @@ module cresp_NR_method
         endif
   end function encp_func_2_zero_lo
 
-!----------------------------------------------------------------------------------------------------  
+!----------------------------------------------------------------------------------------------------
   function n_func_2_zero_up(p_ratio, f_ratio, n_cnst, q_in) ! from eqn. 9
   use constants,       only: one, two, three
   use initcrspectrum,  only: e_small
@@ -436,7 +436,7 @@ module cresp_NR_method
         endif
   end function n_func_2_zero_lo
 !====================================================================================================
-! Functions below are used to solve eqns 9 and 29 for p_up and f_l or p_lo and f_r 
+! Functions below are used to solve eqns 9 and 29 for p_up and f_l or p_lo and f_r
 ! (value of f_r doesn't appear in the f array of cresp_crspectrum module, but is used to estimate q).
 !----------------------------------------------------------------------------------------------------
  subroutine NR_get_solution_up(x, p_l, e_input, n_input, exit_code)
@@ -478,7 +478,7 @@ module cresp_NR_method
         func_val_vec_up_bnd(1) = fun3_up(x(1), x(2), p_im1, alpha)
         func_val_vec_up_bnd(2) = fun5_up(x(1), x(2), p_im1, n_in)
  end function func_val_vec_up_bnd
- 
+
 !----------------------------------------------------------------------------------------------------
   function modify_params_up(x_init, k)
    use constants, only: zero
@@ -511,7 +511,7 @@ module cresp_NR_method
         print *, " Determining p_lo @ NR_get_solution_lo"
         selected_function => func_val_vec_lo_bnd
         do while(k .le. 5)
-            call NR_algorithm(x, exit_code)    
+            call NR_algorithm(x, exit_code)
             if (exit_code .eqv. .false. ) then
                 print *, " NR root search done for p_lo, exit_code 0"
                 alpha = zero; p_ip1 = zero ; n_in = zero
@@ -526,7 +526,7 @@ module cresp_NR_method
         print *, "   CONVERGENCE FAILURE @ NR_get_solution_lo, assuming initial parameters."
         x = x_init  ; call sleep(1)
  end subroutine NR_get_solution_lo
- 
+
   !----------------------------------------------------------------------------------------------------
  function func_val_vec_lo_bnd(x) ! called by cresp_crspectrum module via NR_get_solution_lo
  implicit none
@@ -551,8 +551,8 @@ module cresp_NR_method
         k=k+1
   end function modify_params_lo
 
-!---------------------------------------------------------------------------------------------------    
-! fun3_up - Alternative function introduced to find p_up using integrals of n, e and p_fix value. Does not seek 
+!---------------------------------------------------------------------------------------------------
+! fun3_up - Alternative function introduced to find p_up using integrals of n, e and p_fix value. Does not seek
 !        q, therefore conditions for x = (3,4) are not necessary
 !---------------------------------------------------------------------------------------------------
   function fun3_up(log10_p_r, log10_f_l, p_l, alpha ) ! used by func_val_vec_up_bnd to compute upper boundary p and f.
@@ -564,9 +564,9 @@ module cresp_NR_method
         f_l = ten **log10_f_l
         f_r = e_small_to_f(p_r)
         q_bin = q_ratios(f_r/f_l,p_r/p_l)
-    
+
         if      ( abs(q_bin - three) .lt. eps) then
-            fun3_up = -alpha + (-one + p_r/p_l)/log(p_r/p_l) 
+            fun3_up = -alpha + (-one + p_r/p_l)/log(p_r/p_l)
         else if ( abs(q_bin - four) .lt. eps) then
             fun3_up = -alpha + (p_r/p_l)*log(p_r/p_l)/(p_r/p_l - one)
         else
@@ -574,7 +574,7 @@ module cresp_NR_method
                (((p_r/p_l)**((four - q_bin)) - one ) / ((p_r/p_l)**((three - q_bin)) - one ))
         endif
    end function fun3_up
-!---------------------------------------------------------------------------------------------------    
+!---------------------------------------------------------------------------------------------------
 ! fun5_up - Function similar to nq_to_f subroutine, used by compute_fp_NR_2dim to estimate value of p_up and f_l_iup
 !---------------------------------------------------------------------------------------------------
   function fun5_up(log10_p_r, log10_f_l, p_l, n_in) ! used by func_val_vec_up_bnd to compute upper boundary p and f.
@@ -593,9 +593,9 @@ module cresp_NR_method
             fun5_up = - f_l + ( n_in / (fpi * p_l **three) ) * ((three - q_bin) / ((p_r/p_l)**(three - q_bin) - one) )
         endif
   end function fun5_up
-  
-!---------------------------------------------------------------------------------------------------    
-! fun3_lo - Alternative function introduced to find p_up using integrals of n, e and p_fix value. Does not seek 
+
+!---------------------------------------------------------------------------------------------------
+! fun3_lo - Alternative function introduced to find p_up using integrals of n, e and p_fix value. Does not seek
 !        q, therefore conditions for x = (3,4) are not necessary
 !---------------------------------------------------------------------------------------------------
   function fun3_lo(log10_p_l, log10_f_r, p_r, alpha ) ! used by func_val_vec_lo_bnd to compute low boundary p and f.
@@ -607,9 +607,9 @@ module cresp_NR_method
         f_r = ten **log10_f_r
         f_l = e_small_to_f(p_l)
         q_bin = q_ratios(f_r/f_l,p_r/p_l)
-    
+
         if   ( abs(q_bin - three) .lt. eps) then
-            fun3_lo = -alpha/p_l + (-one + p_r/p_l)/log(p_r/p_l) 
+            fun3_lo = -alpha/p_l + (-one + p_r/p_l)/log(p_r/p_l)
         else if ( abs(q_bin - four) .lt. eps) then
             fun3_lo = -alpha/p_l + (p_r/p_l)*log(p_r/p_l)/(p_r/p_l - one)
         else
@@ -618,7 +618,7 @@ module cresp_NR_method
         endif
   end function fun3_lo
 
-!---------------------------------------------------------------------------------------------------    
+!---------------------------------------------------------------------------------------------------
 ! fun5_lo - Function similar to nq_to_f subroutine, used by compute_fp_NR_2dim to estimate value of p_lo and f_r_lo
 !---------------------------------------------------------------------------------------------------
   function fun5_lo(log10_p_l, log10_f_r, p_r, n_in) ! used by func_val_vec_lo_bnd to compute low boundary p and f.
@@ -630,7 +630,7 @@ module cresp_NR_method
         f_r = ten **log10_f_r
         f_l = e_small_to_f(p_l)
         q_bin = q_ratios(f_r/f_l,p_r/p_l)
-        
+
         if (abs(q_bin - three) .lt. eps) then
             fun5_lo = - f_l + n_in/((fpi * p_l **three) * log(p_r/p_l))
         else
@@ -739,7 +739,7 @@ module cresp_NR_method
             current_min_val = delta
             min_index = current_index
         endif
-  end subroutine get_index_min_lo            
+  end subroutine get_index_min_lo
 !----------------------------------------------------------------------------------------------------
   function find_indexes_panic(index_hi, index_lo, min_pos, min_neg)
   implicit none
@@ -751,7 +751,7 @@ module cresp_NR_method
         else
             find_indexes_panic = index_lo
         endif
-  end function find_indexes_panic  
+  end function find_indexes_panic
 !----------------------------------------------------------------------------------------------------
   function bl_interpol(y11,y12,y21,y22,t,u) ! for details see paragraph "Bilinear interpolation" in Numerical Recipes for F77, page 117, eqn. 3.6.5
   use constants, only: one
@@ -770,8 +770,8 @@ module cresp_NR_method
 !----------------------------------------------------------------------------------------------------
   function intpol_pf_from_NR_grids(which_bound, a_val, n_val, a_arr, n_arr) ! for details see paragraph "Bilinear interpolation" in Numerical Recipes for F77, page 117, eqn. 3.6.4
    implicit none
-    integer(kind=2), dimension(1:2) :: loc1, loc2, loc_no_interpol ! loc1, loc2 - indexes that points where alpha_tab_lo and up nad n_tab_lo and up are closest in value to a_val and n_val - indexes point to 
-    real(kind=8) :: a_val, n_val                                   ! ratios arrays (p,f: lo and up), for which solutions have been obtained. loc_no_interpol - in case when interpolation is not possible, 
+    integer(kind=2), dimension(1:2) :: loc1, loc2, loc_no_interpol ! loc1, loc2 - indexes that points where alpha_tab_lo and up nad n_tab_lo and up are closest in value to a_val and n_val - indexes point to
+    real(kind=8) :: a_val, n_val                                   ! ratios arrays (p,f: lo and up), for which solutions have been obtained. loc_no_interpol - in case when interpolation is not possible,
     real(kind=8), dimension(:) :: a_arr, n_arr                     ! indexes with best match and having solutions are chosen.
     real(kind=8), dimension(2) :: intpol_pf_from_NR_grids
     character(len=2) :: which_bound ! "lo" or "up"
@@ -804,7 +804,7 @@ module cresp_NR_method
             intpol_pf_from_NR_grids(1) = bl_interpol(p_ratios_up(loc1(1),loc1(2)), p_ratios_up(loc1(1),loc2(2)), &
                 p_ratios_up(loc2(1),loc1(2)), p_ratios_up(loc2(1),loc2(2)),bl_in_tu(a_arr(loc1(1)), a_val, a_arr(loc2(1))), &
                 bl_in_tu(n_arr(loc1(2)), n_val, n_arr(loc2(2))))
-            intpol_pf_from_NR_grids(2) = bl_interpol(f_ratios_up(loc1(1),loc1(2)), f_ratios_up(loc1(1),loc2(2)),& 
+            intpol_pf_from_NR_grids(2) = bl_interpol(f_ratios_up(loc1(1),loc1(2)), f_ratios_up(loc1(1),loc2(2)),&
                 f_ratios_up(loc2(1),loc1(2)), f_ratios_up(loc2(1),loc2(2)),bl_in_tu(a_arr(loc1(1)), a_val, a_arr(loc2(1))), &
                 bl_in_tu(n_arr(loc1(2)), n_val, n_arr(loc2(2))))
         else
@@ -813,7 +813,7 @@ module cresp_NR_method
         endif
   end function intpol_pf_from_NR_grids
 !----------------------------------------------------------------------------------------------------
-  subroutine save_NR_guess_grid(NR_guess_grid, var_name) 
+  subroutine save_NR_guess_grid(NR_guess_grid, var_name)
   use initcrspectrum, only: e_small, q_big, max_p_ratio
   use cresp_variables, only: clight ! use units, only: clight
   implicit none
@@ -831,7 +831,7 @@ module cresp_NR_method
                     & Do not remove content from this file"
             write(31, "(1E15.8, 2I10,10E22.15)") e_small, size(NR_guess_grid,dim=1), size(NR_guess_grid, dim=2), &
                                                  max_p_ratio, q_big, clight
-            write(31, "(A1)") " "                            ! Blank line for 
+            write(31, "(A1)") " "                            ! Blank line for
             do j=1, size(NR_guess_grid,dim=2)
                 write(31, "(*(E22.15))") NR_guess_grid(:,j)  ! WARNING - THIS MIGHT NEED EXPLICIT INDICATION OF ELEMENTS COUNT IN LINE IN OLDER COMPILERS
             enddo
@@ -839,7 +839,7 @@ module cresp_NR_method
         close(31)
 
   end subroutine save_NR_guess_grid
-!----------------------------------------------------------------------------------------------------  
+!----------------------------------------------------------------------------------------------------
   subroutine read_NR_guess_grid(NR_guess_grid, var_name, exit_code) ! must be improved, especially for cases when files do not exist
   use initcrspectrum, only: e_small, q_big, max_p_ratio
   use cresp_variables, only: clight ! use units, only: clight
@@ -855,7 +855,7 @@ module cresp_NR_method
         extension =  ".dat"
         f_name = var_name // extension
         open(31, file=f_name, status="unknown", position="rewind")
-        
+
             read(31,*) ! Skipping comment line
             read(31,"(1E15.8,2I10,10E22.15)") svd_e_sm, svd_rows, svd_cols, svd_max_p_r, svd_q_big, svd_clight
             if ( abs(svd_e_sm-e_small)/e_small .le. 1.0e-6 .and. svd_rows .eq. size(NR_guess_grid,dim=1) &
@@ -873,7 +873,7 @@ module cresp_NR_method
                 write(*,"(2I10,10E22.15)") size(NR_guess_grid, dim=1), size(NR_guess_grid,dim=2), e_small, max_p_ratio, q_big, clight
                 exit_code = .true.
             endif
-        close(31) 
+        close(31)
   end subroutine read_NR_guess_grid
 !----------------------------------------------------------------------------------------------------
   function logical_2_int(boolean_arg)
@@ -886,7 +886,7 @@ module cresp_NR_method
             logical_2_int = 0
         endif
   end function logical_2_int
-  
+
 !====================================================================================================
 ! Solver test section
 !----------------------------------------------------------------------------------------------------
@@ -898,7 +898,7 @@ module cresp_NR_method
         print *, "f1(x(:)) =  x(1)**2+x(2)**2+4.0d0"
         print *, "f2(x(:)) =  x(1) - x(2)"
         print *, "expected solution is x1 = x2 = sqrt(2)"
-   
+
         selected_function => fvec_test
         x(1) = -5.0
         x(2) = 8.0

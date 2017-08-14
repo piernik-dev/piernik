@@ -6,13 +6,13 @@ module timestep_cresp
 
       implicit none
 !       private         p_tmp
- 
+
       real(kind=8) :: dt_cre, dt_tmp
 !       real(kind=8), allocatable, dimension(:) :: p_tmp   ! do not use p variable in this module anywhere outside
 !       real(kind=8), allocatable, dimension(:) :: dts_new
 
-!-------------------      
-!      
+!-------------------
+!
  contains
 !
 !-------------------
@@ -27,10 +27,18 @@ module timestep_cresp
     real(kind=8), dimension(:), intent(in) :: n_cell, e_cell
     real(kind=8) :: approximate_p_up
     real(kind=8), dimension(1:2) :: pf_ratio
+
+!    print *, 'approximate_p_up'
+!    print *, e_cell
+!    print *, n_cell
         cell_i_up = evaluate_i_up(e_cell, n_cell)
         pf_ratio  = intpol_pf_from_NR_grids("up",(e_cell(cell_i_up)/(n_cell(cell_i_up)*clight*p_fix(cell_i_up-1))), &
                                                         n_cell(cell_i_up), alpha_tab_up, n_tab_up) ! we use just an interpolated ratio, who knows if it'll work
+!        print *, pf_ratio
         approximate_p_up = pf_ratio(1) * p_fix(cell_i_up-1)
+!        print *, approximate_p_up
+!        pause
+
     end function approximate_p_up
 !----------------------------------------------------------------------------------------------------
   function evaluate_i_up(e_cell, n_cell) ! obain i_up index from energy densities in cell
@@ -46,7 +54,7 @@ module timestep_cresp
             endif  ! no need for other conditions - if there IS a bin that has literally no energy, the algorithm will most likely crash.
         enddo
   end function evaluate_i_up
-  
+
 !----------------------------------------------------------------------------------------------------
 ! Subroutine consistent with rules depicted in crspectrum.pdf
 !----------------------------------------------------------------------------------------------------
@@ -72,28 +80,28 @@ module timestep_cresp
             endif
 !    dt_cre_ud = minval(dts_new)   ! it was already multiplied by cfl_cre
 !    dts_new = huge(one)
-   
+
 ! Synchrotron cooling timestep (is dependant only on p_up, highest value of p):
             p_u = approximate_p_up(n_cell, e_cell)
             if (sptab%ub .gt. zero) then
                 dt_cre_ub = cfl_cre * w / (p_u * sptab%ub)
             endif
 !    dt_cre_ub = minval(dts_new)
-#ifdef VERBOSE
-            print *, '[@timestep_cresp:] Computed timesteps:'
-            print *, 'dt_cre_ud = ', dt_cre_ud
-            print *, 'dt_cre_ub = ', dt_cre_ub
-#endif /* VERBOSE */
+!#ifdef VERBOSE
+!            print *, '[@timestep_cresp:] Computed timesteps:'
+!            print *, 'dt_cre_ud = ', dt_cre_ud
+!            print *, 'dt_cre_ub = ', dt_cre_ub
+!#endif /* VERBOSE */
         endif
 ! Here shortest among calculated timesteps is chosen.
         dt_comp = min(dt_cre_ud, dt_cre_ub)
 
 ! Should dt_cre_ud or dt_cre_ub be greater than current one, next timestep shall be independently increased by piernik in timestep
         dt_cre = min(dt_cre, dt_comp) ! Gives minimal timestep among computed for current cell and previous ones
-   
+
 !     if (allocated(p_tmp))   deallocate(p_tmp)
 !     if (allocated(dts_new)) deallocate(dts_new)
-    
+
  end subroutine cresp_timestep
-  
+
 end module timestep_cresp

@@ -30,16 +30,16 @@
  /
 
  $END_CONTROL
-    tend   = 100.01 !.0 ! .1
-    nend   = 50
+    tend   = 10.01 !.0 ! .1
+    nend   = 100000
  /
 
  $OUTPUT_CONTROL
     problem_name = 'mcr'
-    run_id = 'tst'
-    dt_hdf  = 0.001
+    run_id = 'ad1'
+    dt_hdf  = 1.0
     dt_res  = 0.0
-    dt_log  = 0.05
+    dt_log  = 1.0e-10
     dt_tsl  = 0.000
     vars(1:) = 'ener', 'dens', 'magx', 'magy', 'magz', 'encr', 'velx', 'vely', 'velz'
  /
@@ -69,9 +69,9 @@
     K_crn_perp(1)  = 0     ! isotropic
     K_crn_perp(2)  = 0
 !    K_crn_perp(3)  = 0
-    use_split   = .false.
- /   
-  
+    use_split   = .true.
+ /
+
  $COSMIC_RAY_SPECTRUM
     cre_eff     = 0.01
     cfl_cre     = 0.2
@@ -84,24 +84,20 @@
     q_big     = 30.e0   ! < limit value of power law coefficient in cre energy spectrum, do not set that value too high!
     p_min_fix = 0.4e0 ! 1.0e1  ! momentum fixed grid
     p_max_fix = 1.65e4 ! 1.0e2  ! momentum fixed grid
-    K_cre_e_paral = 0.0
-    K_cre_n_paral = 0.0
-    K_cre_e_perp  = 0.0
-    K_cre_n_perp  = 0.0
-    K_pow_index   = 0
+    K_cre_paral_1 = 0.0 ! 1.e3
+    K_cre_perp_1  = 0.0 ! 1.e1
+    K_cre_pow     = 0.0 ! 0.5
     e_small     = 1.0e-5 ! 8.5e-3 ! 2.0e-4! 12.0e0
-    initial_condition ='bump' ! 'powl', 'brpl', 'bump', 'symf', 'syme'  !   powl - power-law, brpl - broken power-law, bump - bump-type spectrum, symf - symmetric distr. function spectrum, syme - symmetric energy distr. spectrum
+    initial_condition = 'bump' ! 'powl', 'brpl', 'bump', 'symf', 'syme'  !   powl - power-law, brpl - broken power-law, bump - bump-type spectrum, symf - symmetric distr. function spectrum, syme - symmetric energy distr. spectrum
     bump_amp    = 0.5d0  ! amplitude of bump-type spectrum
     e_small_approx_init_cond = 1  ! 0  ! 1 ! tells algoritm to approximate both boundary momenta at initialization
     e_small_approx_p_lo = 1 ! 0 ! 1  ! tells algorithm to appriximate lower boundary momentum
     e_small_approx_p_up = 1 ! 0 ! 1  ! tells algorithm to approximate upper boundary momentum
     add_spectrum_base   = 1 ! 0 ! 1  ! ensures that minimal energy level after initialization is at least e_small
-    max_p_ratio = 2.5
+    max_p_ratio = 1.5
     NR_iter_limit = 250
     force_init_NR = .false.
 !    arr_dim = 140 ! dimension of NR grids, must be an even number, don't put a number ridiculously high
-    
-    
  /
 
  $CR_SPECIES
@@ -113,7 +109,7 @@
  /
 
  $MULTIGRID_DIFFUSION
-!    diff_explicit = .true.
+    diff_explicit = .true.
     diff_theta     = 0.6
     diff_tstep_fac = 1000
     norm_tol = 1e-2
@@ -124,26 +120,27 @@
  $PROBLEM_CONTROL
     d0     = 1.0 ! when COSM_RAYS_SOURCES are defined, the density somehow scales the result of sourcecosmicrays.F90 and values like 1e5 quickly lead to FP overflow. This must be a bug.
     p0     = 1.0
-    bx0    = 0.0 ! 0.5
-    by0    = 0.0 ! 0.5
-    bz0    = 0.0 ! 0.5
+    bx0    = 1.0e-10
+    by0    = 1.0e-10
+    bz0    = 0.0
     x0     = 0.0
     y0     = 0.0
     z0     = 0.0
     r0     = 64.0
-    vxd0   = 5.0
-    vyd0   = 5.0
+    vxd0   = 1.0e1
+    vyd0   = 1.0e1
     vzd0   = 0.0
-    beta_cr= 1.0
+    expansion_cnst = 0.0e-3
+    beta_cr= 1.0e-3
     amp_cr = 1000.0
     norm_step = 1
  /
 
  $PIERNIK_DEBUG
     constant_dt = 0.01
-    
+
  /
- 
+
  $INTERACTIONS
  /
 
@@ -159,6 +156,5 @@
      omega_b  = 0.0   ! omega_b parameter for periodic variation of u_b: u_b = u_b0 + ub_ampl * cos(omega_b * t)
      dt_ini   = 0.01        ! initial timestep, optional, if absent, initial dt shall be computed. Use value less than dt_max (cresp_driver)
      force_dt = .false.      ! < if .true. - dt_ini shall be constant throughout entire simulation
-     
+
  /
- 

@@ -37,7 +37,7 @@
 module initcosmicrays
 ! pulled by COSM_RAYS
    use constants, only: cbuff_len
-   use initcrspectrum, only: ncre, p_min_fix, p_max_fix, f_init, q_init, q_big, p_lo_init, p_up_init,  & 
+   use initcrspectrum, only: ncre, p_min_fix, p_max_fix, f_init, q_init, q_big, p_lo_init, p_up_init,  &
                           cfl_cre, cre_eff, K_cre_paral_1, K_cre_perp_1, K_cre_pow, &
                           expan_order, init_cresp, compute_K
    implicit none
@@ -76,14 +76,12 @@ module initcosmicrays
    integer(kind=4), allocatable, dimension(:) :: iarr_crn !< array of indexes pointing to all CR nuclear components
    integer(kind=4), allocatable, dimension(:) :: iarr_cre !< array of indexes pointing to all CR electron components
    integer(kind=4), allocatable, dimension(:) :: iarr_crs !< array of indexes pointing to all CR components
-   
+
    integer(kind=4), allocatable, dimension(:) :: iarr_crs_diff !< array of indexes pointing to all conventionally diffusing CR components
    integer(kind=4), allocatable, dimension(:) :: iarr_cre_diff !< array of indexes pointing to all conventionally diffusing CR electrons
 
    integer(kind=4), allocatable, dimension(:) :: iarr_cre_e !< array of indexes pointing to all CR electron energy components
    integer(kind=4), allocatable, dimension(:) :: iarr_cre_n !< array of indexes pointing to all CR electron number density components
-   integer(kind=4)                            :: iarr_cre_pl !< array of indexes pointing to CR electron p_lo components
-   integer(kind=4)                            :: iarr_cre_pu !< array of indexes pointing to CR electron p_up components
 
    real,    allocatable, dimension(:)  :: gamma_crs    ! < array containing adiabatic indexes of all CR components
 !    real(kind=8)                        :: p_lo_init    ! < initial lower momentum cut in power spectrum
@@ -96,9 +94,9 @@ module initcosmicrays
    real,    allocatable, dimension(:)  :: K_crs_paral  !< array containing parallel diffusion coefficients of all CR components
    real,    allocatable, dimension(:)  :: K_crs_perp   !< array containing perpendicular diffusion coefficients of all CR components
    !> \deprecated BEWARE Possible confusion: *_perp coefficients are not "perpendicular" but rather isotropic
-   
+
    integer(kind=4), allocatable, dimension(:) :: iarr_crs_tmp
-   
+
 !     real(kind=8),allocatable, dimension(:) :: p_fix
 !     real(kind=8),allocatable, dimension(:) :: cresp_edges
 !     real(kind=8)       :: w
@@ -146,7 +144,7 @@ contains
 #ifdef COSM_RAY_ELECTRONS
 !    use cresp_variables!, only: cre_table, cren, cree
 !      use cresp_crspectrum, only: active_bins
-#endif /* COSM_RAY_ELECTRONS */   
+#endif /* COSM_RAY_ELECTRONS */
 
       implicit none
 
@@ -156,7 +154,7 @@ contains
       namelist /COSMIC_RAYS/ cfl_cr, smallecr, cr_active, cr_eff, use_split, &
            &                 ncrn, gamma_crn, K_crn_paral, K_crn_perp, &
            &                 gamma_cre, divv_scheme, crn_gpcr_ess, cre_gpcr_ess
-           
+
 !       namelist /COSMIC_RAY_SPECTRUM/ cfl_cre, p_lo_init, p_up_init, f_init, q_init, ncre, &
 !            &                         p_min_fix, p_max_fix, cre_eff, K_cre_e_paral, K_cre_e_perp, &
 !            &                         K_cre_n_paral, K_cre_n_perp, K_pow_index
@@ -177,9 +175,9 @@ contains
       p_max_fix = 1.0e3
       f_init    = 1.0e0
       q_init    = 5.0e0
-      q_big     = 10.0e0      
+      q_big     = 10.0e0
       expan_order = 1
-      
+
       use_split  = .true.
 
       gamma_crn(:)   = 4./3.
@@ -188,7 +186,7 @@ contains
       gamma_cre(:)   = 4./3.
       K_cre_paral(:) = 0.0
       K_cre_perp(:)  = 0.0
-      
+
       K_cre_paral_1 = 0.0
       K_cre_perp_1  = 0.0
       K_cre_pow     = 0.0
@@ -217,7 +215,7 @@ contains
          close(nh%lun)
          call nh%compare_namelist()
       endif
-      
+
 !       if (master) then
 !          open(newunit=nh%lun, file=nh%tmp1, status="unknown")
 !          write(nh%lun,nml=COSMIC_RAY_SPECTRUM)
@@ -232,13 +230,13 @@ contains
 !          open(newunit=nh%lun, file=nh%tmp2, status="unknown")
 !          write(nh%lun,nml=COSMIC_RAY_SPECTRUM)
 !          close(nh%lun)
-!          
+!
 !          call nh%compare_namelist() ! Do not use one-line if here!
 
 !       endif
-      
+
       call init_cresp ! ncre,cfl_cre and other imported from initcrspectrum are initialized and read from parameter file
-      
+
 #ifndef MULTIGRID
       if (.not. use_split) call warn("[initcosmicrays:init_cosmicrays] No multigrid solver compiled in: use_split reset to .true.")
       use_split  = .true.
@@ -255,7 +253,7 @@ contains
          rbuff(2)   = smallecr
          rbuff(3)   = cr_active
          rbuff(4)   = cr_eff
-         
+
          rbuff(5)   = p_lo_init   !!!
          rbuff(6)   = p_up_init   !!!
          rbuff(7)   = f_init      !!!
@@ -267,7 +265,7 @@ contains
          rbuff(13)  = K_cre_paral_1 !!!
          rbuff(14)  = K_cre_perp_1 !!!
          rbuff(15)  = K_cre_pow !!!
-         
+
          lbuff(1)   = use_split
 
          cbuff(1)   = divv_scheme
@@ -284,18 +282,18 @@ contains
 
             lbuff(2:ncrn+1) = crn_gpcr_ess(1:ncrn)
          endif
-         
+
 ! #ifdef COSM_RAY_ELECTRONS
 ! !          TODO - to be implemented later
 !          K_cre_paral(1:ncre) = compute_K(K_cre_n_paral, K_pow_index, 0.1, ncre)
 !          K_cre_paral(ncre:2*ncre) = compute_K(K_cre_e_paral, K_pow_index, 0.0, ncre)
 !          K_cre_paral(2*ncre+1:2*ncre+2) = 0.0  ! K for cutoff momenta must always remain zero
-! !          
+! !
 !          K_cre_perp(1:ncre) = compute_K(K_cre_n_perp, K_pow_index, 0.1, ncre)
 !          K_cre_perp(ncre:2*ncre) = compute_K(K_cre_e_perp, K_pow_index, 0.0, ncre)
 !          K_cre_perp(2*ncre+1:2*ncre+2) = 0.0   ! K for cutoff momenta always remain zero
-! 
-! #endif /* COSM_RAY_ELECTRONS */         
+!
+! #endif /* COSM_RAY_ELECTRONS */
 !  pause
          if (ncre > 0) then
             rbuff(ne+1       :ne+  ncre) = gamma_cre  (1:ncre)
@@ -334,7 +332,7 @@ contains
          K_cre_paral_1 = rbuff(13) !!!
          K_cre_perp_1  = rbuff(14) !!!
          K_cre_pow  = rbuff(15) !!!
-         
+
          use_split  = lbuff(1)
 
          nn         = ibuff(ubound(ibuff, 1))    ! this must match the last rbuff() index above
@@ -357,10 +355,10 @@ contains
          endif
 
       endif
-      
-      ncrs = ncre + ncrn
+
+!!      ncrs = ncre + ncrn
 #ifdef COSM_RAY_ELECTRONS
-      ncrs = (2*ncre+2) + ncrn   !!!!!
+      ncrs = 2.*ncre + ncrn +2  !!!!!
 #endif /* COSM_RAY_ELECTRONS */
 
       if (any([ncrn, ncre] > ncr_max) .or. any([ncrn, ncre] < 0)) call die("[initcosmicrays:init_cosmicrays] ncr[nes] > ncr_max or ncr[nes] < 0")
@@ -382,17 +380,17 @@ contains
        endif
 
       if (ncre > 0) then
-#ifdef COSM_RAY_ELECTRONS      
-!        This is only estimation of the upper limit of CR diffusion coefficients 
+#ifdef COSM_RAY_ELECTRONS
+!        This is only estimation of the upper limit of CR diffusion coefficients
 !        necessary for the first computation of CR timestep
          K_crs_paral(ncrn+1:ncrn+ncre) = K_cre_paral_1 * p_up_init**K_cre_pow
          K_crs_paral(ncrn+1+ncre:ncrn+2*ncre) = K_cre_paral_1 * p_up_init**K_cre_pow
-         
+
          K_crs_perp(ncrn+1:ncrn+ncre) = K_cre_perp_1 * p_up_init**K_cre_pow
          K_crs_perp(ncrn+ncre+1:ncrn+2*ncre) = K_cre_perp_1 * p_up_init**K_cre_pow
 
 !         print *, 'init_cosmicrays'
-!         print *, K_crs_paral(ncrn+1:ncrn+ncre) 
+!         print *, K_crs_paral(ncrn+1:ncrn+ncre)
 !         print *, K_crs_paral(ncrn+1+ncre:ncrn+2*ncre)
 !         print *, K_crs_perp(ncrn+1:ncrn+ncre)
 !         print *, K_crs_perp(ncrn+ncre+1:ncrn+2*ncre)
@@ -403,16 +401,16 @@ contains
       endif
       ma1d = [ncrn]
       call my_allocate(iarr_crn, ma1d)
-      
-      
+
+
       if (ncre.gt.0) then
          ma1d = [2*ncre+2] !!!
       else
          ma1d = 0
       endif
 
-      call my_allocate(iarr_cre, ma1d) ! < iarr_cre will point: (1:ncre) - cre number per bin, (ncre+1:2*ncre) - cre energy per bin, (2*ncre+1) - momentum of lower cut, (2*ncre+2) - momentum of upper cut    
-      
+      call my_allocate(iarr_cre, ma1d) ! < iarr_cre will point: (1:ncre) - cre number per bin, (ncre+1:2*ncre) - cre energy per bin, (2*ncre+1) - momentum of lower cut, (2*ncre+2) - momentum of upper cut
+
       ma1d = [ncre]
       call my_allocate(iarr_cre_e, ma1d)
       call my_allocate(iarr_cre_n, ma1d)
@@ -421,13 +419,13 @@ contains
       ma1d = [ncrs]
       call my_allocate(iarr_crs, ma1d)
       call my_allocate(iarr_crs_tmp, ma1d)
-      
+
       ma1d = [2*ncre]
       call my_allocate(iarr_cre_diff, ma1d)
-      
+
       ma1d = [ncrs-2]
       call my_allocate(iarr_crs_diff, ma1d)
-      
+
 #ifdef COSM_RAYS_SOURCES
       call init_crsources(ncrn, crn_gpcr_ess)
 #endif /* COSM_RAYS_SOURCES */
@@ -449,7 +447,7 @@ contains
       enddo
 
    open(10, file='crs.dat',status='replace',position='rewind')
-      
+
    end subroutine init_cosmicrays
 
    subroutine cosmicray_index(flind)
@@ -467,18 +465,18 @@ contains
 
       flind%crn%beg    = flind%all + I_ONE
       flind%crs%beg    = flind%crn%beg
-      
-      flind%crn%all  = ncrn
-      
 
-      if (ncre.gt.0) then 
+      flind%crn%all  = ncrn
+
+
+      if (ncre.gt.0) then
             flind%cre%all  = 2*ncre+2 !!!
-      else  
+      else
             flind%cre%all  = 0
       endif
-      
+
       flind%crs%all  = ncrn+2*ncre+2 !ncrs ! \crs deprecated, but we most likely need flind%crs%all to allocate part of cg%u responsible for all cosmic rays, so this remains unchanged
-      
+
 
       do icr = 1, ncrn
          iarr_crn(icr)      = flind%all + icr
@@ -497,7 +495,7 @@ contains
             iarr_crs_diff(ncrn + icr) = flind%all + icr
          enddo
       endif
-            
+
       flind%all = flind%all + flind%cre%all
       flind%crn%end = flind%crn%beg + flind%crn%all - I_ONE
       flind%cre%beg = flind%crn%end + I_ONE
@@ -507,48 +505,42 @@ contains
       flind%crn%pos = flind%components
       if (flind%cre%all  /= 0) flind%components = flind%components + I_ONE
       flind%cre%pos = flind%components
-      
-#ifdef COSM_RAY_ELECTRONS      
+
+#ifdef COSM_RAY_ELECTRONS
      flind%cre%nbeg = flind%crn%end + I_ONE
 !      ind_n_beg = flind%crn%end + I_ONE
      flind%cre%nend = flind%crn%end + ncre
 !      ind_n_end = flind%crn%end + ncre
-     
+
      flind%cre%ebeg = flind%cre%nend + I_ONE
 !      ind_e_beg = ind_n_end + I_ONE
      flind%cre%eend = flind%cre%nend + ncre
 !      ind_e_end = ind_n_end + ncre
-     flind%cre%plo  = flind%cre%eend + I_ONE
-     flind%cre%pup  = flind%cre%eend + I_TWO
 !      print *,'ind_n_beg, ind_n_end = ', ind_n_beg, ind_n_end
 !      print *,'ind_e_beg, ind_e_end = ', ind_e_beg, ind_e_end
-     
+
 !      ind_p_lo = ind_e_end+I_ONE
 !      ind_p_up = ind_p_lo + I_ONE
-              
+
      do icr = 1, ncre !ind_n_beg, ind_n_end
         iarr_cre_n(icr) = flind%cre%nbeg - I_ONE + icr
         iarr_cre_e(icr) = flind%cre%ebeg - I_ONE + icr
      enddo
-     
-     iarr_cre_pl = flind%cre%plo
-     iarr_cre_pu = flind%cre%pup
 
-     print *,'iarr_cre_n = ', iarr_cre_n
-     print *,'iarr_cre_e = ', iarr_cre_e
-     print *,'iarr_cre_pl, pu = ', iarr_cre_pl, iarr_cre_pu
+!     print *,'iarr_cre_n = ', iarr_cre_n
+!     print *,'iarr_cre_e = ', iarr_cre_e
 !      print *,'flind%cre%beg & end  = ', flind%cre%beg, flind%cre%end
 !      print *,'ind_p_lo, ind_p_up = ', ind_p_lo, ind_p_up
-#endif /* COSM_RAY_ELECTRONS */      
-     if ( ncre.eq.0) then 
+#endif /* COSM_RAY_ELECTRONS */
+     if ( ncre.eq.0) then
          iarr_crs_diff = iarr_crs
      endif
    end subroutine cosmicray_index
-   
+
    subroutine cleanup_cosmicrays
       use diagnostics, only: my_deallocate
       implicit none
- 
+
       call my_deallocate(iarr_crn)
       call my_deallocate(iarr_cre)
       call my_deallocate(iarr_crs)

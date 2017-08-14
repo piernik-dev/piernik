@@ -82,7 +82,7 @@ contains
       amp_cr       = 1.0       !< amplitude of the blob
 
       norm_step    = I_TEN     !< how often to compute the norm (in steps)
-      
+
       expansion_cnst = 0.0
 
       if (master) then
@@ -147,7 +147,7 @@ contains
          norm_step = int(ibuff(1), kind=4)
 
       endif
-      
+
       if (r0 .equals. 0.) call die("[initproblem:read_problem_par] r0 == 0")
 
    end subroutine read_problem_par
@@ -171,7 +171,7 @@ contains
       use cr_data,        only: icr_H1, icr_C12, cr_table
 #endif /* COSM_RAYS_SOURCES */
 #ifdef COSM_RAY_ELECTRONS
-     use initcosmicrays, only: ncrn, iarr_cre_pl, iarr_cre_pu ! DEPRECATED
+     use initcosmicrays, only: ncrn !!!, iarr_cre_pl, iarr_cre_pu ! DEPRECATED
      use initcrspectrum, only: q_init, f_init, p_lo_init, p_up_init, p_min_fix, p_max_fix, ncre, &
                                  expan_order, taylor_coeff_2nd, taylor_coeff_3rd
      use cresp_grid,     only: cresp_init_grid
@@ -223,7 +223,7 @@ contains
          cg%b(zdim, :, :, :) = bz0
          cg%u(fl%idn, :, :, :) = d0
          cg%u(fl%imx:fl%imz, :, :, :) = 0.0
-         
+
 #ifndef ISO
          do k = cg%lhn(zdim,LO), cg%lhn(zdim,HI)
             do j = cg%lhn(ydim,LO), cg%lhn(ydim,HI)
@@ -295,16 +295,11 @@ contains
          write(msg,*) '[initproblem:problem_initial conditions]: Taylor_exp._coeff.(2nd,3rd) = ', taylor_coeff_2nd, taylor_coeff_3rd
          call printinfo(msg)
 !          call print_mcrtest_vars_hdf5()
-            
-      if (ncre > 0) then
-      cg%u(iarr_cre_pl, :, :, :) = p_lo_init ! DEPRECATED
-      cg%u(iarr_cre_pu, :, :, :) = p_up_init ! DEPRECATED
-      endif
-           
+
       call cresp_initialize_guess_grids
       call cresp_init_grid
    call sleep (1)
-#endif /* COSM_RAY_ELECTRONS */      
+#endif /* COSM_RAY_ELECTRONS */
 
 ! Velocity field
       cgl => leaves%first
@@ -323,32 +318,21 @@ contains
                 enddo
             enddo
 #endif /* IONIZED */
-        else            
-#ifdef NEUTRAL
-! Neutral
-            cg%u(flind%neu%imx,:,:,:) = vxd0 * cg%u(flind%neu%idn,:,:,:)  !< vxd0 * rho
-            cg%u(flind%neu%imy,:,:,:) = vyd0 * cg%u(flind%neu%idn,:,:,:)  !< vyd0 * rho
-            cg%u(flind%neu%imz,:,:,:) = vzd0 * cg%u(flind%neu%idn,:,:,:)  !< vzd0 * rho
-#endif /* NEUTRAL */
+        else
+
 #ifdef IONIZED
 ! Ionized
-            cg%u(flind%ion%imx,:,:,:) = vxd0 * cg%u(flind%ion%idn,:,:,:)  !< vxd0 * rho
-            cg%u(flind%ion%imy,:,:,:) = vyd0 * cg%u(flind%ion%idn,:,:,:)  !< vyd0 * rho
-            cg%u(flind%ion%imz,:,:,:) = vzd0 * cg%u(flind%ion%idn,:,:,:)  !< vzd0 * rho
+            cg%u(flind%ion%imx,:,:,:) = vxd0 * cg%u(flind%ion%idn,:,:,:)
+            cg%u(flind%ion%imy,:,:,:) = vyd0 * cg%u(flind%ion%idn,:,:,:)
+            cg%u(flind%ion%imz,:,:,:) = vzd0 * cg%u(flind%ion%idn,:,:,:)
 #endif /* IONIZED */
-#ifdef DUST
-! Dust
-            cg%u(flind%dst%imx,:,:,:) = vxd0 * cg%u(flind%dst%idn,:,:,:)  !< vxd0 * rho
-            cg%u(flind%dst%imy,:,:,:) = vyd0 * cg%u(flind%dst%idn,:,:,:)  !< vyd0 * rho
-            cg%u(flind%dst%imz,:,:,:) = vzd0 * cg%u(flind%dst%idn,:,:,:)  !< vzd0 * rho
-#endif /* DUST */
+
         endif
         cgl => cgl%nxt
       enddo
 
       first_run = .false.
     endif
-      
+
    end subroutine problem_initial_conditions
 end module initproblem
-
