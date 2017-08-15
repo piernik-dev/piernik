@@ -209,11 +209,11 @@ contains
                    write(aux,'(A4,I2.2)') 'cree', k !!!
                    hdf_vars(j) = aux ; j = j + 1 !!!
                enddo    !!!
-                   write(aux,'(A5)') 'crepl'  !!! DEPRECATED
-                   hdf_vars(j) = aux ; j = j + 1 !!!
-
-                   write(aux,'(A5)') 'crepu' !!!
-                   hdf_vars(j) = aux ; j = j + 1 !!! DEPRECATED
+!                    write(aux,'(A5)') 'crepl'  !!! DEPRECATED
+!                    hdf_vars(j) = aux ; j = j + 1 !!!
+! 
+!                    write(aux,'(A5)') 'crepu' !!!
+!                    hdf_vars(j) = aux ; j = j + 1 !!! DEPRECATED
 
 #endif /* COSM_RAY_ELECTRONS */
 #endif /* COSM_RAYS */

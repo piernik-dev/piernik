@@ -358,7 +358,7 @@ contains
 
 !!      ncrs = ncre + ncrn
 #ifdef COSM_RAY_ELECTRONS
-      ncrs = 2.*ncre + ncrn +2  !!!!!
+      ncrs = 2.*ncre + ncrn  !!!!!
 #endif /* COSM_RAY_ELECTRONS */
 
       if (any([ncrn, ncre] > ncr_max) .or. any([ncrn, ncre] < 0)) call die("[initcosmicrays:init_cosmicrays] ncr[nes] > ncr_max or ncr[nes] < 0")
@@ -404,7 +404,7 @@ contains
 
 
       if (ncre.gt.0) then
-         ma1d = [2*ncre+2] !!!
+         ma1d = [2*ncre] !!!
       else
          ma1d = 0
       endif
@@ -423,7 +423,7 @@ contains
       ma1d = [2*ncre]
       call my_allocate(iarr_cre_diff, ma1d)
 
-      ma1d = [ncrs-2]
+      ma1d = [ncrs]
       call my_allocate(iarr_crs_diff, ma1d)
 
 #ifdef COSM_RAYS_SOURCES
@@ -470,12 +470,12 @@ contains
 
 
       if (ncre.gt.0) then
-            flind%cre%all  = 2*ncre+2 !!!
+            flind%cre%all  = 2*ncre !!!
       else
             flind%cre%all  = 0
       endif
 
-      flind%crs%all  = ncrn+2*ncre+2 !ncrs ! \crs deprecated, but we most likely need flind%crs%all to allocate part of cg%u responsible for all cosmic rays, so this remains unchanged
+      flind%crs%all  = ncrn+2*ncre !ncrs ! \crs deprecated, but we most likely need flind%crs%all to allocate part of cg%u responsible for all cosmic rays, so this remains unchanged
 
 
       do icr = 1, ncrn
@@ -486,7 +486,7 @@ contains
       flind%all = flind%all + flind%crn%all
 
       if (ncre.gt.0) then
-         do icr = 1, (2*ncre+2)
+         do icr = 1, (2*ncre)
             iarr_cre(icr)        = flind%all + icr
             iarr_crs(ncrn + icr) = flind%all + icr
          enddo
