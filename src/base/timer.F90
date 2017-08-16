@@ -194,7 +194,7 @@ contains
 
          allocate(temp)
          temp%info = item
-         temp%info%time = MPI_Wtime()
+!          temp%info%time = MPI_Wtime()
          temp%node%next => tp
          tp => temp
 
