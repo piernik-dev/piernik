@@ -59,6 +59,9 @@ contains
       use gridgeometry,          only: init_geometry
       use initfluids,            only: init_fluids, sanitize_smallx_checks
       use interactions,          only: init_interactions
+#ifdef THERM
+      use thermal,               only: init_thermal
+#endif /*THERM*/
       use initproblem,           only: problem_initial_conditions, read_problem_par, problem_pointers
       use mpisetup,              only: init_mpi, master
       use refinement,            only: init_refinement
@@ -169,6 +172,9 @@ contains
 #endif /* COSM_RAYS */
 
       call init_interactions                 ! requires flind and units
+#ifdef THERM
+      call init_thermal
+#endif /*THERM*/
 
       call init_refinement
 

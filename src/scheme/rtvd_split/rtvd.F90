@@ -277,6 +277,9 @@ contains
 #ifdef SHEAR
       use shear,            only: shear_acc
 #endif /* SHEAR */
+#ifdef THERM
+      use thermal,          only: cool_heat, thermal_active
+#endif /*THERM*/
 
       implicit none
 
@@ -329,6 +332,9 @@ contains
 #endif /* COSM_RAYS */
 
       real, dimension(n)              :: kin_ener, int_ener, mag_ener
+#ifdef THERM
+      real, dimension(n)              :: eint_src
+#endif /*THERM*/
 
       real, dimension(2,2), parameter              :: rk2coef = reshape( [ one, half, zero, one ], [ 2, 2 ] )
 
@@ -522,6 +528,26 @@ contains
          u1(:, iarr_crn) = u1(:, iarr_crn) +  rk2coef(integration_order, istep)*srccrn(:,:)*dt
 #endif /* COSM_RAYS_SOURCES */
 #endif /* COSM_RAYS && IONIZED */
+#ifdef THERM
+   if(thermal_active) then
+      do ifl = 1, flind%fluids
+         pfl => flind%all_fluids(ifl)%fl
+         if (pfl%has_energy) then
+            kin_ener = ekin(u1(:, pfl%imx), u1(:, pfl%imy), u1(:, pfl%imz), u1(:, pfl%idn))
+            if (pfl%is_magnetized) then
+               mag_ener = emag(bb(:, xdim), bb(:, ydim), bb(:, zdim))
+               int_ener = u1(:, pfl%ien) - kin_ener - mag_ener
+            else
+               int_ener = u1(:, pfl%ien) - kin_ener
+            endif
+             call cool_heat(pfl%gam, n, u1(:,pfl%idn), int_ener, eint_src)
+             u1(:, pfl%ien) = u1(:, pfl%ien) + 1./dom%eff_dim*rk2coef(integration_order,istep)* eint_src * dt
+!            int_ener = max(int_ener, smallei)
+            if (pfl%is_magnetized) u1(:, pfl%ien) = u1(:, pfl%ien) + mag_ener
+         endif
+      enddo
+   endif
+#endif /*THERM*/
       endif ! sources
 
       do ifl = 1, flind%fluids
