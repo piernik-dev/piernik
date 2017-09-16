@@ -57,7 +57,6 @@
    smalld  = 1e-7
    smallei = 1e-7
    limiter = 'vanleer'
-   h_solver = 'muscl'
  /
 
  $PROBLEM_CONTROL
