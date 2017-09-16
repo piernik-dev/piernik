@@ -2,5 +2,8 @@
   Define only the minimum required by sanitizing tests
 #endif
 
-#define IONIZED
+#if !defined NEUTRAL && !defined DUST
+#  define IONIZED
+#endif
+
 #define LOCAL_FR_SPEED
