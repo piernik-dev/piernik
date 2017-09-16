@@ -1,4 +1,4 @@
-#define IONIZED
-#define MAGNETIC
-#undef  NEUTRAL
+#undef IONIZED
+#undef MAGNETIC
+#define  NEUTRAL
 #define LOCAL_FR_SPEED
