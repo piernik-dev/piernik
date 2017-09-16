@@ -11,7 +11,10 @@
 #endif
 
 #define DUST
-#define LOCAL_FR_SPEED
+
+#if !defined GLOBAL_FR_SPEED
+#  define LOCAL_FR_SPEED
+#endif
 #define NON_INERTIAL
 
 #undef ISO
