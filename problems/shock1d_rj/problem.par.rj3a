@@ -16,7 +16,6 @@
  /
 
  $MPI_BLOCKS
-    psize = 2, 1, 1
  /
 
  $UNITS
