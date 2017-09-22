@@ -7,7 +7,7 @@ LDFLAGS   = -Wl,--as-needed -Wl,-O1
 
 ifeq ($(PIERNIK_DEBUG), 1)
    F90FLAGS += -ggdb -O0 -ffpe-trap=zero,overflow,invalid -fcheck=all -fno-omit-frame-pointer -fbacktrace
-   F90FLAGS += -Wall -W -Wextra -pedantic-errors -Wno-unused-function 
+   F90FLAGS += -Wall -W -Wextra -pedantic-errors -Wno-unused-function
 else
    F90FLAGS += -O2 -fno-stack-arrays
 
