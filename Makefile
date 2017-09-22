@@ -20,6 +20,7 @@
 #                            $P defaults to mcrwind
 #   'make qa'              # run qa.py on all F90 files in src and problems
 #                            directories
+#   'make pep8'            # run pep8 on all Python scripts, ignore long lines
 #
 # Resetup will also call make for the object directories, unless you've
 # specified --nocompile either in your .setuprc* files or it was stored in
@@ -33,7 +34,7 @@ ALLOBJ = $(wildcard obj*)
 
 ECHO ?= /bin/echo
 
-.PHONY: $(ALLOBJ) check dep qa
+.PHONY: $(ALLOBJ) check dep qa pep8
 
 all: $(ALLOBJ)
 
@@ -73,8 +74,12 @@ allsetup:
 		fi; \
 	done
 
-qa:
+qa: pep8
 	./bin/qa.py $$( find src problems -name "*.F90" )
+
+pep8:
+	echo PEP8 check
+	pep8 `find . -name "*py"` --ignore=E501
 
 ifndef P
 P = "mcrwind"
