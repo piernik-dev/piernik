@@ -47,6 +47,11 @@
    selfgrav = .false.
  /
 
+ $FLUID_IONIZED
+   gamma    = 1.4
+   selfgrav = .false.
+ /
+
  $NUMERICAL_SETUP
    cfl     = 0.75
    smalld  = 1e-7
