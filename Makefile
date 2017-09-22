@@ -21,6 +21,7 @@
 #   'make qa'              # run qa.py on all F90 files in src and problems
 #                            directories
 #   'make pep8'            # run pep8 on all Python scripts, ignore long lines
+#   'make doxy'            # generate/updare Doxygen documentation
 #
 # Resetup will also call make for the object directories, unless you've
 # specified --nocompile either in your .setuprc* files or it was stored in
@@ -34,7 +35,7 @@ ALLOBJ = $(wildcard obj*)
 
 ECHO ?= /bin/echo
 
-.PHONY: $(ALLOBJ) check dep qa pep8
+.PHONY: $(ALLOBJ) check dep qa pep8 doxy
 
 all: $(ALLOBJ)
 
@@ -80,6 +81,9 @@ qa: pep8
 pep8:
 	echo PEP8 check
 	pep8 `find . -name "*py"` --ignore=E501
+
+doxy:
+	doxygen piernik.doxy
 
 ifndef P
 P = "mcrwind"
