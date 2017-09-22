@@ -16,8 +16,10 @@
 #   'make allsetup'        # creates object directories for all valid problems,
 #                            but does not compile them
 #   'make ctags'           # recreate ctags for {src,problems}
-#   'make dep [P=problem]  # create and show dependency graph
+#   'make dep [P=problem]' # create and show dependency graph
 #                            $P defaults to mcrwind
+#   'make qa'              # run qa.py on all F90 files in src and problems
+#                            directories
 #
 # Resetup will also call make for the object directories, unless you've
 # specified --nocompile either in your .setuprc* files or it was stored in
@@ -31,7 +33,7 @@ ALLOBJ = $(wildcard obj*)
 
 ECHO ?= /bin/echo
 
-.PHONY: $(ALLOBJ) check dep
+.PHONY: $(ALLOBJ) check dep qa
 
 all: $(ALLOBJ)
 
@@ -70,6 +72,9 @@ allsetup:
 			./setup $$nm -o "A_"$$( basename $$i ) --nocompile && sed -i 's/ --nocompile//' "obj_A_"$$( basename $$i )"/"{.setup.call,Makefile,env.dat,version.F90}; \
 		fi; \
 	done
+
+qa:
+	./bin/qa.py $$( find src problems -name "*.F90" )
 
 ifndef P
 P = "mcrwind"
