@@ -49,10 +49,11 @@ contains
     use cg_leaves,      only: leaves
     use cg_list,        only: cg_list_element
     use constants,      only: xdim, zdim, GEO_XYZ
-    use dataio_pub,     only: halfstep, die
+    use dataio_pub,     only: halfstep, die, warn
     use domain,         only: dom, is_refined
     use fluxlimiters,   only: set_limiters
     use global,         only: skip_sweep, dt, dtm, t, limiter, limiter_b
+    use mpisetup,       only: master
     use user_hooks,     only: problem_customize_solution
 
     implicit none
@@ -78,6 +79,7 @@ contains
     if (first_run) then
        dtm = 0.0
        call set_limiters(limiter, limiter_b)
+       if (master) call warn("[fluid_update] This is an experimental implementation of the Riemann solver. Expect unexpected.")
     else
        dtm = dt
     endif
