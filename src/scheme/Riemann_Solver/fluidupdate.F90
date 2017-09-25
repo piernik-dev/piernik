@@ -48,9 +48,9 @@ contains
     use all_boundaries, only: all_bnd
     use cg_leaves,      only: leaves
     use cg_list,        only: cg_list_element
-    use constants,      only: xdim, zdim
-    use dataio_pub,     only: halfstep
-    use domain,         only: dom
+    use constants,      only: xdim, zdim, GEO_XYZ
+    use dataio_pub,     only: halfstep, die
+    use domain,         only: dom, is_refined
     use fluxlimiters,   only: set_limiters
     use global,         only: skip_sweep, dt, dtm, t, limiter, limiter_b
     use user_hooks,     only: problem_customize_solution
@@ -61,6 +61,18 @@ contains
     type(cg_list_element), pointer  :: cgl
     integer(kind=4)                 :: ddim
 
+    ! is_multicg should be safe
+    if (is_refined) call die("[fluid_update] This Rieman solver is not compatible with mesh refinements yet!")
+    if (dom%geometry_type /= GEO_XYZ) call die("[fluid_update] Non-cartesian geometry is not implemented yet in this Riemann solver.")
+#ifdef GRAV
+#  error Graviy is not implemented yet in this Riemann solver.
+#endif /* GRAV */
+#ifdef ISO
+#  error Isothermal EOS is not implemented yet in this Riemann solver.
+#endif /* ISO */
+#ifdef COSM_RAYS
+#  error   Isothermal EOS is notCosmic rays are not implemented yet in this Riemann solver.
+#endif /* COSM_RAYS */
 
     halfstep = .false.
     if (first_run) then
