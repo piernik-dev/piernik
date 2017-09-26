@@ -42,8 +42,8 @@ module initproblem
    integer(kind=4) :: maxiter !< Maximum number of iterations
    logical :: smooth_map      !< Try continuous colouring
    logical :: log_polar       !< Use polar mapping around x_polar + i * y_polar
-   real :: x_polar            !< x-coordinatr for polar mode
-   real :: y_polar            !< y-coordinatr for polar mode
+   real :: x_polar            !< x-coordinate for polar mode
+   real :: y_polar            !< y-coordinate for polar mode
    real :: c_polar            !< correct colouring with x-coordinate multiplied by this factor
    real :: ref_thr            !< threshold for refining a grid
    real :: deref_thr          !< threshold for derefining a grid
