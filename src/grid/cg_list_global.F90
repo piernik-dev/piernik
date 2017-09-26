@@ -226,7 +226,7 @@ contains
 
    subroutine register_fluids(this)
 
-      use constants,  only: wa_n, fluid_n, uh_n, mag_n, u0_n, b0_n, ndims, AT_NO_B, AT_OUT_B, VAR_XFACE, VAR_YFACE, VAR_ZFACE, PIERNIK_INIT_FLUIDS
+      use constants,  only: wa_n, fluid_n, uh_n, mag_n, mag_cc_n, u0_n, b0_n, ndims, AT_NO_B, AT_OUT_B, VAR_XFACE, VAR_YFACE, VAR_ZFACE, PIERNIK_INIT_FLUIDS
       use dataio_pub, only: die, code_progress
       use fluidindex, only: flind
       use global,     only: repeat_step
@@ -258,6 +258,7 @@ contains
            .false., &
 #endif /* MAGNETIC */
            restart_mode = AT_OUT_B, dim4 = ndims, position=pia)                                            !! Main array of magnetic field's components, "b"
+      call this%reg_var(mag_cc_n, vital = .false.,                        dim4 = ndims) ! cell-centered magnetic field
       if (repeat_step) then
          call this%reg_var(u0_n,                                          dim4 = flind%all)                !! Copy of main array of all fluids' components
          call this%reg_var(b0_n,                                          dim4 = ndims, position=pia)      !! Copy of main array of magnetic field's components

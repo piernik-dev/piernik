@@ -41,7 +41,7 @@ module global
    public :: cleanup_global, init_global, &
         &    cfl, cfl_max, cflcontrol, cfl_violated, &
         &    dt, dt_initial, dt_max_grow, dt_min, dt_old, dtm, t, t_saved, nstep, nstep_saved, &
-        &    integration_order, limiter, smalld, smallei, smallp, use_smalld, &
+        &    integration_order, limiter, limiter_b, smalld, smallei, smallp, use_smalld, h_solver, &
         &    relax_time, grace_period_passed, cfr_smooth, repeat_step, skip_sweep, geometry25D, &
         &    dirty_debug, do_ascii_dump, show_n_dirtys, no_dirty_checks, sweeps_mgu, use_fargo
 
@@ -75,15 +75,17 @@ module global
    real    :: relax_time                              !< relaxation/grace time, additional physics will be turned off until global::t >= global::relax_time
    integer(kind=4), protected    :: integration_order !< Runge-Kutta time integration order (1 - 1st order, 2 - 2nd order)
    character(len=cbuff_len)      :: limiter           !< type of flux limiter
+   character(len=cbuff_len)      :: limiter_b         !< type of flux limiter for magnetic field in the Riemann solver
    character(len=cbuff_len)      :: cflcontrol        !< type of cfl control just before each sweep (possibilities: 'none', 'main', 'user')
+   character(len=cbuff_len)      :: h_solver          !< type of hydro solver
    logical                       :: repeat_step       !< repeat fluid step if cfl condition is violated (significantly increases mem usage)
    logical, dimension(xdim:zdim) :: skip_sweep        !< allows to skip sweep in chosen direction
    logical                       :: sweeps_mgu        !< Mimimal Guardcell Update in sweeps
    logical                       :: use_fargo         !< use Fast Eulerian Transport for differentially rotating disks
 
    namelist /NUMERICAL_SETUP/ cfl, cflcontrol, cfl_max, use_smalld, smalld, smallei, smallc, smallp, dt_initial, dt_max_grow, dt_min, &
-        &                     repeat_step, limiter, relax_time, integration_order, cfr_smooth, skip_sweep, geometry25D, sweeps_mgu, &
-        &                     use_fargo
+        &                     repeat_step, limiter, limiter_b, relax_time, integration_order, cfr_smooth, skip_sweep, geometry25D, sweeps_mgu, &
+        &                     use_fargo, h_solver
 
 contains
 
@@ -111,6 +113,7 @@ contains
 !!   <tr><td>dt_max_grow      </td><td>2.     </td><td>real value > 1.1                     </td><td>\copydoc global::dt_max_grow      </td></tr>
 !!   <tr><td>dt_min           </td><td>0.     </td><td>positive real value                  </td><td>\copydoc global::dt_min           </td></tr>
 !!   <tr><td>limiter          </td><td>vanleer</td><td>string                               </td><td>\copydoc global::limiter          </td></tr>
+!!   <tr><td>limiter_b        </td><td>vanleer</td><td>string                               </td><td>\copydoc global::limiter_b        </td></tr>
 !!   <tr><td>relax_time       </td><td>0.0    </td><td>real value                           </td><td>\copydoc global::relax_time       </td></tr>
 !!   <tr><td>skip_sweep       </td><td>F, F, F</td><td>logical array                        </td><td>\copydoc global::skip_sweep       </td></tr>
 !!   <tr><td>geometry25D      </td><td>F      </td><td>logical value                        </td><td>\copydoc global::geometry25d      </td></tr>
@@ -133,8 +136,16 @@ contains
 
       ! Begin processing of namelist parameters
 
+#ifdef RIEMANN
+      ! these limiters were performing best in the Otszag-Tang test (otvortex problem)
+      limiter     = 'minmod'    ! 'vanleer' is a 2nd choice for otvortex
+      limiter_b   = 'superbee'  ! 'moncen' and 'vanleer' were also performing well
+#else /* ! RIEMANN */
       limiter     = 'vanleer'
+      limiter_b   = limiter
+#endif /* RIEMANN */
       cflcontrol  = 'warn'
+      h_solver    = 'muscl'
       repeat_step = .true.
       geometry25D = .false.
       no_dirty_checks = .false.
@@ -187,8 +198,15 @@ contains
             dt_max_grow = dt_default_grow
          endif
 
+         if (h_solver /= "muscl" .and. h_solver /= "rk2") then
+            write(msg, *)"[fluidupdate:sweep_dsplit:warn_experimental] The scheme '", trim(h_solver), "' is experimental. Use 'muscl' or 'rk2' for production runs."
+            call warn(msg)
+         endif
+
          cbuff(1) = limiter
-         cbuff(2) = cflcontrol
+         cbuff(2) = limiter_b
+         cbuff(3) = cflcontrol
+         cbuff(4) = h_solver
 
          ibuff(1) = integration_order
 
@@ -240,7 +258,9 @@ contains
          relax_time  = rbuff(11)
 
          limiter    = cbuff(1)
-         cflcontrol = cbuff(2)
+         limiter_b  = cbuff(2)
+         cflcontrol = cbuff(3)
+         h_solver   = cbuff(4)
 
          integration_order = ibuff(1)
 
