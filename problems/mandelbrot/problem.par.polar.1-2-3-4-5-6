@@ -30,8 +30,8 @@
  /
 
  $OUTPUT_CONTROL
-    problem_name = 'mandelbrot'
-    run_id =  'ts0'
+    problem_name = 'mandelbrot_polar'
+    run_id =  '1-6'
     use_v2_io = .true.
     dt_hdf  = 0.5
     vars(1:) = 'mand', 'dist', 'ang', 'level'
