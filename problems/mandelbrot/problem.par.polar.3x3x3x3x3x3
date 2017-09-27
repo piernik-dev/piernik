@@ -44,7 +44,7 @@
  /
 
  $PROBLEM_CONTROL
-    maxiter = 100000
+    maxiter = 300000
     !smooth_map = .false.
     deref_thr = 0.
     log_polar = .true.
