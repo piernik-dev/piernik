@@ -26,7 +26,19 @@
 !
 #include "piernik.h"
 
-!> Brief calculate the lovely shape of the Mandelbrot set. Refine on the set to follow the interesting details.
+!>
+!! \brief calculate the lovely shape of the Mandelbrot set.  Refine on the
+!! set to follow the interesting details.
+!!
+!! The Mandelbrot problem is intended for stress testing of the AMR
+!! subsystem. There are more efficient fractal generators around but
+!! one may consider some fun ideas:
+!! * Use some multipresicion or implement own fixed point, optimized for
+!!   these calculations.
+!! * Use speedup tricks like these in fast deep zoom programs.
+!! * Detect interior of minibrotsfor further speedups (already sort of works
+!!   as it dos not get refined too much.
+!<
 
 module initproblem
 
@@ -41,10 +53,14 @@ module initproblem
    integer(kind=4) :: order   !< Order of mandelbrot set
    integer(kind=4) :: maxiter !< Maximum number of iterations
    logical :: smooth_map      !< Try continuous colouring
+   logical :: log_polar       !< Use polar mapping around x_polar + i * y_polar
+   real :: x_polar            !< x-coordinate for polar mode
+   real :: y_polar            !< y-coordinate for polar mode
+   real :: c_polar            !< correct colouring with x-coordinate multiplied by this factor
    real :: ref_thr            !< threshold for refining a grid
    real :: deref_thr          !< threshold for derefining a grid
 
-   namelist /PROBLEM_CONTROL/  order, maxiter, smooth_map, ref_thr, deref_thr
+   namelist /PROBLEM_CONTROL/  order, maxiter, smooth_map, log_polar, x_polar, y_polar, c_polar, ref_thr, deref_thr
 
    ! other private data
    character(len=dsetnamelen), parameter :: mand_n = "mand", re_n = "real", imag_n = "imag"
@@ -70,6 +86,7 @@ contains
 
    subroutine read_problem_par
 
+      use constants,  only: ydim, LO, HI, dpi
       use dataio_pub, only: nh      ! QA_WARN required for diff_nml
       use dataio_pub, only: warn, die
       use domain,     only: dom
@@ -81,6 +98,10 @@ contains
       order = 2
       maxiter = 100
       smooth_map = .true.
+      log_polar = .false.
+      x_polar = 0.
+      y_polar = 0.
+      c_polar = 0.
       ref_thr = 1.
       deref_thr = .2
 
@@ -106,9 +127,13 @@ contains
          ibuff(2) = maxiter
 
          lbuff(1) = smooth_map
+         lbuff(2) = log_polar
 
          rbuff(1) = ref_thr
          rbuff(2) = deref_thr
+         rbuff(3) = x_polar
+         rbuff(4) = y_polar
+         rbuff(5) = c_polar
 
       endif
 
@@ -122,9 +147,13 @@ contains
          maxiter    = ibuff(2)
 
          smooth_map = lbuff(1)
+         log_polar  = lbuff(2)
 
          ref_thr    = rbuff(1)
          deref_thr  = rbuff(2)
+         x_polar    = rbuff(3)
+         y_polar    = rbuff(4)
+         c_polar    = rbuff(5)
 
       endif
 
@@ -132,11 +161,16 @@ contains
            call die("[initproblem:read_problem_par] Mandelbrot is supposed to by run only with XY plane and without Z-direction present")
 
       if (order /= 2) then
-         call warn("[initproblem:read_problem_par] Only order == 2 is supported at the moment")
+         if (master) call warn("[initproblem:read_problem_par] Only order == 2 is supported at the moment")
          order = 2
       endif
 
       if (ref_thr <= deref_thr) call die("[initproblem:read_problem_par] ref_thr <= deref_thr")
+
+      if (log_polar .and. master) then
+         if (dom%edge(ydim, HI) - dom%edge(ydim, LO) < 0.999*dpi) call warn("[initproblem:read_problem_par] not covering full angle")
+         if (dom%edge(ydim, HI) - dom%edge(ydim, LO) > 1.001*dpi) call warn("[initproblem:read_problem_par] covering more than full angle")
+      endif
 
       call register_user_var
 
@@ -160,8 +194,8 @@ contains
       type(grid_container), pointer :: cg
       integer :: i, j, k, nit
       real, dimension(:,:,:), pointer :: mand, r__l, imag
-      real, parameter :: bailout2 = 10.
-      real :: zx, zy, zt, cx, cy, rnit
+      real, parameter :: bailout2 = 10., min_log_mand = 0.1
+      real :: zx, zy, zt, cx, cy, rnit, r, f
 
       ! Create the initial density arrays
       cgl => leaves%first
@@ -182,13 +216,20 @@ contains
 
             do k = cg%ks, cg%ke
                do j = cg%js, cg%je
-                  cy = cg%y(j)
                   do i = cg%is, cg%ie
-                     cx = cg%x(i)
+                     if (log_polar) then
+                        r = 10**cg%x(i)
+                        f = cg%y(j)
+                        cx = x_polar + r*cos(f)
+                        cy = y_polar + r*sin(f)
+                     else
+                        cx = cg%x(i)
+                        cy = cg%y(j)
+                     endif
 
                      zx = cx
                      zy = cy
-                     nit = 0
+                     nit = 1
                      do while (zx*zx + zy*zy < bailout2 .and. nit < maxiter)
                         zt = zx*zx - zy*zy + cx
                         zy = 2*zx*zy + cy
@@ -199,7 +240,11 @@ contains
                      rnit = nit
                      if (smooth_map .and. zx*zx + zy*zy > bailout2) rnit = rnit + 1 - log(log(sqrt(zx*zx + zy*zy)))/log(2.)
 
-                     mand(i, j, k) = log(rnit)
+                     if (nit >= maxiter) then
+                        mand(i, j, k) = min_log_mand ! increase contrast between interior and exterior
+                     else
+                        mand(i, j, k) = max(min_log_mand, log(max(rnit, min_log_mand)) + c_polar * cg%x(i))
+                     endif
                      r__l(i, j, k) = zx
                      imag(i, j, k) = zy
 
