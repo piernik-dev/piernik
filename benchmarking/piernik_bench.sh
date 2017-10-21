@@ -43,6 +43,8 @@ fi
 PROBLEM_LIST="maclaurin advection_test crtest jeans tearing sedov otvortex 3body"
 
 if [ $DO_MAKE == 1 ] ; then
+    touch Makefile
+    # run correctly also when the clock is messed up
     rm -rf obj_B_*
     for i in $PROBLEM_LIST; do
 	rm -rf runs/${i}_B_${i}
