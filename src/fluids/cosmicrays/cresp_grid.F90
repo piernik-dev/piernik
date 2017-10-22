@@ -47,7 +47,7 @@ contains
 #ifdef VERBOSE
                         print *, 'Output of cosmic ray electrons module for grid cell with coordinates i,j,k:', i, j, k
 #endif /* VERBOSE */    
-                        call cresp_update_cell(2*dt, n_cell, e_cell, sptab, virtual_n(:,i,j,k), virtual_e(:,i,j,k))
+                        call cresp_update_cell(2*dt, n_cell, e_cell, sptab, virtual_n(1:2,i,j,k), virtual_e(1:2,i,j,k))
                         cg%u(iarr_cre_n, i, j, k) = n_cell
                         cg%u(iarr_cre_e, i, j, k) = e_cell
 !              diagnostic:
@@ -75,7 +75,7 @@ contains
     integer                         :: i, j, k
     type(cg_list_element),  pointer :: cgl
     type(grid_container),   pointer :: cg
-    real(kind=8), allocatable, dimension(:)  :: cresp_arguments
+!     real(kind=8), allocatable, dimension(:)  :: cresp_arguments
     real(kind=8)                             :: max_amp_cr, f_amplitude
     real(kind=8), dimension(1:ncre) :: n_cell, e_cell
     type(spec_mod_trms)  :: sptab
@@ -105,7 +105,7 @@ contains
             do k = cg%lhn(zdim,LO), cg%lhn(zdim,HI)
                 do j = cg%lhn(ydim,LO), cg%lhn(ydim,HI)
                     do i = cg%lhn(xdim,LO), cg%lhn(xdim,HI)
-                        cresp_arguments = 0.0
+!                         cresp_arguments = 0.0
                    ! Every initial condition should be normalized before initializing Cosmic Ray Electron SPectrum module
                         if ( initial_condition == "powl") then
                             f_amplitude = 1/(fpi*clight*(p_lo_init**(I_FOUR))*(((p_up_init/p_lo_init)**(I_FOUR-q_init))-I_ONE)/ &

@@ -1,32 +1,44 @@
 module cresp_NR_method
 ! pulled by COSM_RAY_ELECTRONS
- use initcrspectrum, only: max_p_ratio, eps !, arr_dim
+ use initcrspectrum, only: max_p_ratio, eps, arr_dim
 
  implicit none
   integer, parameter :: ndim = 2
   real(kind=8), dimension(:), allocatable :: p_space, q_space
-  integer(kind=2), parameter :: ratio_ord_min = -6
-  integer(kind=2), parameter :: ratio_ord_max = 1
-  integer(kind=2), parameter :: p_p_dec       = 12
-  integer(kind=2), parameter :: arr_dim = int(p_p_dec * (ratio_ord_max - ratio_ord_min))
-  real(kind=8) :: alpha, n_in, e_in, p_im1, p_ip1
-  real(kind=8), dimension(1:arr_dim) :: alpha_tab_lo, alpha_tab_up, n_tab_lo, n_tab_up
-  real(kind=8), dimension(1:arr_dim,1:arr_dim) :: p_ratios_lo, f_ratios_lo, p_ratios_up, f_ratios_up
-  integer(kind=2) :: ii
-  real(kind=8) :: eps_det = eps * 1.0e-10
-    
-  abstract interface
-    function arbitrary_function(z)
-      real(kind=8),dimension(2) :: arbitrary_function
-      real(kind=8),dimension(2) :: z
-    end function arbitrary_function
-  end interface
-  procedure (arbitrary_function), pointer :: selected_function => null()
- 
-  contains !  -------*--------
+  real(kind=8) :: alpha, p_ratio_4_q, n_in, e_in, p_im1, p_ip1
+  real(kind=8), allocatable, dimension(:), target          :: alpha_tab_lo, alpha_tab_up, n_tab_lo, n_tab_up, alpha_tab_q, q_grid
+  real(kind=8), allocatable, dimension(:,:),target :: p_ratios_lo, f_ratios_lo, p_ratios_up, f_ratios_up
+  integer(kind=2) :: i_max
+  real(kind=8) :: eps_det = eps * 1.0e-15
+  real(kind=8) :: small_eps = 1.0e-25
+  real(kind=8), pointer, dimension(:)   :: p_a => null(), p_n => null() ! pointers for alpha_tab_(lo,up) and n_tab_(lo,up) or optional - other 1-dim arrays
+  real(kind=8), pointer, dimension(:,:) :: p_p => null(), p_f => null() ! pointers for p_ratios_(lo,up) and f_ratios_(lo,up)
   
+  abstract interface
+    function function_pointer_1D(z)
+      real(kind=8) :: function_pointer_1D
+      real(kind=8) :: z
+    end function function_pointer_1D
+    subroutine value_control_1D(z, exit_code)
+      logical      :: exit_code
+      real(kind=8) :: z
+    end subroutine value_control_1D
+    function function_pointer_2D(z)
+      real(kind=8),dimension(2) :: function_pointer_2D
+      real(kind=8),dimension(2) :: z
+    end function function_pointer_2D
+  end interface
+
+  procedure (function_pointer_1D), pointer :: selected_function_1D => null()
+  procedure (value_control_1D), pointer    :: selected_value_check_1D  => null()
+  procedure (function_pointer_2D), pointer :: selected_function_2D => null()
+
+!----------------------------------------------------------------------------------------------------
+  
+  contains !  -------*--------
+
   subroutine NR_algorithm(x,exit_code)
-  use initcrspectrum, only: NR_iter_limit
+  use initcrspectrum, only: NR_iter_limit, tol_f, tol_x
   implicit none
     real(kind=8),dimension(ndim),intent(inout) :: x
     real(kind=8),dimension(ndim)   :: fun_vec_value
@@ -35,35 +47,35 @@ module cresp_NR_method
     real(kind=8) :: err_f, err_x
     real(kind=8) :: det
     logical,intent(out)  :: exit_code
-    integer(kind=2) :: i !, j
+    integer(kind=2) :: i , j
     
-    err_f = 1.0e-15
-    err_x = 1.0e-15
+    err_f = tol_f
+    err_x = tol_x
     exit_code=.true.
 
-    fun_vec_value = selected_function(x)
+    fun_vec_value = selected_function_2D(x)
     if (maxval(abs(fun_vec_value)) < 0.01 * err_f) then ! in case when f converges at initialization
             exit_code=.false.
 !             write(*,"(A33,2E22.15)")"Convergence (f) at initialization", x
             return
     endif
-!   do j = 1, 3
-    do i = 1, NR_iter_limit                                 ! it is not possible to find solution with demanded precision.
+  do j = 1, 3 ! if it is not possible to find solution with demanded precision.
+    do i = 1, NR_iter_limit
         if (maxval(abs(fun_vec_value)) < err_f ) then    ! For convergence via value of f
             exit_code=.false. 
 #ifdef VERBOSE
             write(*,"(A47,I4,A12)",advance="no") "Convergence via value of fun_vec_value after ",i, " iterations."!, x, fun_vec_value
 #endif /* VERBOSE */
-            ii = max(i, ii)
+            i_max = max(i, i_max)
             return
         endif
 
-        fun_vec_value = selected_function(x)
+        fun_vec_value = selected_function_2D(x)
         fun_vec_jac = jac_fin_diff(x)                    ! function vector already explicitly provided to jac_fin_diff (finite difference method)
 
         det = determinant_2d_real(fun_vec_jac)           ! WARNING - algorithm is used for ndim = 2. For more dimensions LU or other methods should be implemented.
         if (abs(det) .lt. eps_det) then              ! Countermeasure against determinant = zero
-!             write (*,"(A20)") "WARNING: det ~ 0.0"
+!     write (*,"(A20)") "WARNING: det ~ 0.0"
             exit_code = .true. 
             return
         endif
@@ -72,79 +84,161 @@ module cresp_NR_method
         cor(1) = fun_vec_inv_jac(1,1) *fun_vec_value(1) + fun_vec_inv_jac(1,2) * fun_vec_value(2)
         cor(2) = fun_vec_inv_jac(2,1) *fun_vec_value(1) + fun_vec_inv_jac(2,2) * fun_vec_value(2)
         x = x+cor
-!  write(*,'(A20, 2E35.25, A5, 2E22.14)') "Obtained values (x): " , x,' | ', sum(abs(cor)), sum(abs(fun_vec_value))! ,maxval(abs(fun_vec_value)), maxval(abs(cor)),
+!         write(*,'(A20, 2E35.25, A5, 2E22.14)') "Obtained values (x): " , x,' | ', sum(abs(cor)), sum(abs(fun_vec_value))! ,maxval(abs(fun_vec_value)), maxval(abs(cor)),
         if (maxval(abs(cor)) < err_x) then                 ! For convergence via value of correction (cor) table.
 #ifdef VERBOSE
            write(*,"(A47,I4,A12)",advance="no") "Convergence via value of cor array     after ",i," iterations."
 #endif /* VERBOSE */
            exit_code = .false.
-           ii = max(i, ii)
+           i_max = max(i, i_max)
            return
         endif 
     enddo
-!   err_f = 5.0*err_f
-!   err_x = 5.0*err_x ! changing tolerance so that more solutions can be found
-!   enddo
-  
+  err_f = 5.0*err_f
+  err_x = 5.0*err_x ! changing tolerance so that more solutions can be found
+  enddo
 !     write(*,"(A45,I4,A24)") "  ... WARNING: Maximum number of iterations (",NR_iter_limit,") exceeded @global_newt!"
     exit_code = .true.
 
   end subroutine NR_algorithm
+!----------------------------------------------------------------------------------------------------
+  subroutine NR_algorithm_1D(x, exit_code)
+   use initcrspectrum, only: NR_iter_limit, tol_f_1D, tol_x_1D 
+   implicit none
+    integer          :: i
+    real(kind=8)     :: x, delta
+    real(kind=8)     :: dfun_1D, fun1D_val
+    logical :: exit_code, func_check
+        delta = huge(1.0)
+        func_check = .false.
+       
+        do i = 1, NR_iter_limit
+            fun1D_val = selected_function_1D(x)
+            if ((abs(fun1D_val) .le. tol_f_1D) .and. (abs(delta) .le. tol_f_1D)) then ! delta .le. tol_f acceptable as in case of f convergence we must only check if the algorithm hasn't wandered astray
+                exit_code = .false.
+                return
+            endif
+            
+            dfun_1D = derivative_1D(x)
+            
+            if ( abs(dfun_1D) .lt. small_eps ) then
+                exit_code = .true.
+                return
+            endif
+            
+            delta   = fun1D_val / derivative_1D(x)
+            
+            call selected_value_check_1D(x, func_check)  ! necessary in some cases, when maximal value x can take is defined, for other cases dummy_check_1D function defined
+            if ( func_check .eqv. .true. ) return
 
+            x = x - delta
+            
+            if(abs(delta) .lt. tol_x_1D) then
+                exit_code = .false.
+                return
+            endif
+        enddo
+        
+        exit_code = .true. ! if all fails
+  end subroutine NR_algorithm_1D
+!----------------------------------------------------------------------------------------------------
+  function derivative_1D(x) ! via finite difference method
+  use constants, only: half
+   implicit none
+    real(kind=8),intent(in) :: x
+    real(kind=8)            :: dx, dx_par, derivative_1D
+        dx_par = 1.0e-4
+        dx = min(x*dx_par, dx_par)
+        derivative_1D = half * (selected_function_1D(x+dx) - selected_function_1D(x-dx))/dx
+  end function derivative_1D
 !----------------------------------------------------------------------------------------------------
   subroutine cresp_initialize_guess_grids
-   use initcrspectrum, only: eps
    use constants,      only: zero
+   use initcrspectrum, only: e_small, q_big, max_p_ratio, p_fix
+   use cresp_variables, only: clight ! use units, only: clight
    implicit none
-    logical   :: first_run = .true.
+    logical   :: first_run = .true. , save_to_log = .false.
+    character(8)  :: date
+    character(9) :: time
+        open(15, file="log_NR_solve",position="append")
+        call initialize_arrays
         
         if (first_run .eqv. .true. ) then
     
             if (.not. allocated(p_space))     allocate(p_space(1:arr_dim)) ! these will be deallocated once initialization is over
             if (.not. allocated(q_space))     allocate(q_space(1:arr_dim)) ! these will be deallocated once initialization is over
-
+            call date_and_time(date,time)
+            call date_and_time(DATE=date)
+            call date_and_time(TIME=time)
  
             p_ratios_up = zero ; f_ratios_up = zero
             p_ratios_lo = zero ; f_ratios_lo = zero
             
-!             call sleep(1)
+            q_grid      = 2*q_big; q_grid(int(arr_dim/2):) = -2*q_big ! if crash, factor 2 must be removed
+            if (maxval(p_fix)**q_grid(1) .gt. huge(q_grid(1))) then
+                write (*,"(A100)") "p**q may result in FPE, check your parameters" ! use msg
+                call sleep(1)
+            endif
+            
             call fill_guess_grids
         
-            print *, "Are there zeros? (q_ratios)",    count(q_space.lt.eps)
-            print *, "Are there zeros? (p_ratios_up)", count(p_ratios_up.lt.eps)
-            print *, "Are there zeros? (f_ratios_up)", count(f_ratios_up.lt.eps)
-            print *, "Are there zeros? (p_ratios_lo)", count(p_ratios_lo.lt.eps)
-            print *, "Are there zeros? (f_ratios_lo)", count(f_ratios_lo.lt.eps)
+            print *, "Are there zeros? (q_ratios)",    count(abs(q_space).le.zero)
+            print *, "Are there zeros? (p_ratios_up)", count(p_ratios_up.le.zero)
+            print *, "Are there zeros? (f_ratios_up)", count(f_ratios_up.le.zero)
+            print *, "Are there zeros? (p_ratios_lo)", count(p_ratios_lo.le.zero)
+            print *, "Are there zeros? (f_ratios_lo)", count(f_ratios_lo.le.zero)
             print *, "Count of array elements:", size(p_ratios_lo)
             print *,"----------"
+            if (save_to_log) then
+                write (15,*) "------------------------------------------"
+                write (15,"(A,2x,A,2x)") "Run on: ", date, "at: ", time
+                write (15,*) "For set of parameters: e_small, size(NR_guess_grid,dim=1), size(NR_guess_grid, dim=2),", &
+                                                 "max_p_ratio, q_big, clight"
+                write (15, "(1E15.8, 2I10,10E22.15)") e_small, size(p_space), size(q_space), &
+                                                 max_p_ratio, q_big, clight
+                write (15,*) "Are there zeros? (q_ratios)",    count(abs(q_space).le.zero)
+                write (15,*) "Are there zeros? (p_ratios_up)", count(p_ratios_up.le.zero), &
+                                 real(count(p_ratios_up.le.zero))/real(size(p_ratios_up)) * 100.0,"%"
+                write (15,*) "Are there zeros? (f_ratios_up)", count(f_ratios_up.le.zero), & 
+                                 real(count(f_ratios_up.le.zero))/real(size(f_ratios_up)) * 100.0,"%"
+                write (15,*) "Are there zeros? (p_ratios_lo)", count(p_ratios_lo.le.zero), & 
+                                 real(count(p_ratios_lo.le.zero))/real(size(p_ratios_lo)) * 100.0,"%"
+                write (15,*) "Are there zeros? (f_ratios_lo)", count(f_ratios_lo.le.zero), & 
+                                 real(count(f_ratios_lo.le.zero))/real(size(f_ratios_lo)) * 100.0,"%"
+                write (15,*) "Count of array elements:", size(p_ratios_lo)
+                write (15,*) "----------"
+            else
+                print *, "!!! Warning: save_to_log = F; result will not be registered in LOG file !!!"
+            endif
 !   
             if (allocated(p_space)) deallocate(p_space) ! only needed at initialization
             if (allocated(q_space)) deallocate(q_space)
             
             first_run = .false.
         endif
+        close(15)
 ! 
   end subroutine cresp_initialize_guess_grids
 !----------------------------------------------------------------------------------------------------
   subroutine fill_guess_grids
-   use constants, only: zero, one, half, ten
-   use initcrspectrum,  only: q_big, force_init_NR
+   use constants, only: zero, one, half
+   use initcrspectrum,  only: q_big, force_init_NR, NR_run_refine_pf
    implicit none
-    integer(kind=2)  :: i, j, int_logical_p, int_logical_f !, ierr
+    integer(kind=4)  :: i, j, int_logical_p, int_logical_f !, ierr
     logical  :: exit_code
     real(kind=8) :: a_min_lo=huge(one), a_max_lo=tiny(one), a_min_up=huge(one), a_max_up=tiny(one),& 
                     n_min_lo=huge(one), n_max_lo=tiny(one), n_min_up=huge(one), n_max_up=tiny(one)
         q_space = zero
         do i=1, int(half*arr_dim)
-            q_space(i) = ln_eval_array_val(i, q_big, real(0.05,kind=8), int(1,kind=2), int(half*arr_dim,kind=2))
+            q_space(i) = ln_eval_array_val(i, q_big, real(0.05,kind=8), int(1,kind=4), int(half*arr_dim,kind=4))
         enddo
         do i= 1, int(half*arr_dim)!, arr_dim
             q_space(int(half*arr_dim)+i) = -q_space(int(half*arr_dim)+1-i)
         enddo
-        
+
 ! setting up a grids of ratios to be used as phase space for NR tabs, obtained later
         do i = 1, arr_dim
-            p_space(i) =  max_p_ratio**(real(i)/real(arr_dim))
+            p_space(i) = max_p_ratio**(real(i)/real(arr_dim)) ! ind_to_flog(i,1.000001 , max_p_ratio) ! max_p_ratio**(real(i)/real(arr_dim))
         enddo
         do i=1, arr_dim
             do j = 1,arr_dim
@@ -159,7 +253,9 @@ module cresp_NR_method
                 n_max_up = max(n_max_up, abs(n_func_2_zero_up(p_space(i),p_space(i)**(-q_space(j)), zero ,q_space(j))))
             enddo
         enddo
-        
+!         print *"min a, n:", a_min_lo, a_min_up, n_min_lo, n_min_up
+!         print *"max a, n:", a_max_lo, a_max_up, n_max_lo, n_max_up
+
         a_min_lo = 0.8 * a_min_lo
         a_max_lo = 0.999999 !1 * a_max_lo
         a_min_up = 1.000005 ! 0.8 * a_min_up
@@ -168,131 +264,500 @@ module cresp_NR_method
         n_max_lo = 1.1 * n_max_lo
         n_min_up = 0.001 * n_min_up
         n_max_up = 1.1 * n_max_up
-   
-!             print *," min / max values"
-!             print *, a_min_lo, a_max_lo
-!             print *, n_min_lo, n_max_lo
-!             print *, a_min_up, a_max_up
-!             print *, n_min_up, n_max_up
-        
-        print *,"alpha_tab_lo(i),      alpha_tab_up(i),        n_tab_lo(i),        n_tab_up(i) |       p_space(i),     q_space(i)" 
+
         do i=1, arr_dim
-            alpha_tab_lo(i) = ln_eval_array_val(i, a_min_lo, a_max_lo, int(1,kind=2), arr_dim)
-            alpha_tab_up(i) = a_min_up * ten**((log10(a_max_up/a_min_up))/real(arr_dim-1,kind=8)*real((i-1),kind=8))
-            n_tab_lo(i)     = n_min_lo * ten**((log10(n_max_lo/n_min_lo))/real(arr_dim-1,kind=8)*real((i-1),kind=8))
-            n_tab_up(i)     = n_min_up * ten**((log10(n_max_up/n_min_up))/real(arr_dim-1,kind=8)*real((i-1),kind=8))
+!             alpha_tab_lo(i) = ln_eval_array_val(i, a_min_lo, a_max_lo, int(1,kind=4), arr_dim) ! a_min_lo * ten**((log10(a_max_lo/a_min_lo))/real(arr_dim-1,kind=8)*real((i-1),kind=8))
+            alpha_tab_lo(i) = ind_to_flog(i,a_min_lo,a_max_lo) ! a_min_lo * ten**((log10(a_max_lo/a_min_lo))/real(arr_dim-1,kind=8)*real((i-1),kind=8))
+            alpha_tab_up(i) = ind_to_flog(i,a_min_up,a_max_up) ! a_min_up * ten**((log10(a_max_up/a_min_up))/real(arr_dim-1,kind=8)*real((i-1),kind=8))
+            n_tab_lo(i)     = ind_to_flog(i,n_min_lo,n_max_lo) ! n_min_lo * ten**((log10(n_max_lo/n_min_lo))/real(arr_dim-1,kind=8)*real((i-1),kind=8))
+            n_tab_up(i)     = ind_to_flog(i,n_min_up,n_max_up) ! n_min_up * ten**((log10(n_max_up/n_min_up))/real(arr_dim-1,kind=8)*real((i-1),kind=8))
+            alpha_tab_q(i)  = ind_to_flog(i,a_min_up,1.3     ) ! a_min_up * ten**((log10(1.3/a_min_up))/real(arr_dim-1,kind=8)*real((i-1),kind=8))
         enddo
 ! #ifdef VERBOSE
+        print *,"alpha_tab_lo(i),      alpha_tab_up(i),        n_tab_lo(i),        n_tab_up(i) |       p_space(i),     q_space(i)" 
         do i = 1, arr_dim
-            print *,i,"|", alpha_tab_lo(i), alpha_tab_up(i), n_tab_lo(i), n_tab_up(i),"|", p_space(i), q_space(i), &
+            print *,i,"|", alpha_tab_lo(i), alpha_tab_up(i), n_tab_lo(i), n_tab_up(i), alpha_tab_q(i),"|",p_space(i), q_space(i),&
                             p_space(i)**(-q_space(i))
         enddo
-!         call sleep(1)
         print *, "-----------"
 ! #endif /* VERBOSE */
-
-        call read_NR_guess_grid(p_ratios_up, "p_ratios_up", exit_code) ;  int_logical_p = logical_2_int(exit_code)
-        call read_NR_guess_grid(f_ratios_up, "f_ratios_up", exit_code) ;  int_logical_f = logical_2_int(exit_code)
-        if ( int_logical_f + int_logical_p .gt. 0 .or. force_init_NR .eqv. .true.) then
+        write (*, "(A36)", advance="no") "Reading (up) boundary ratio files..."
+        do j = 1,2
+            call read_NR_guess_grid(p_ratios_up, "p_ratios_up", exit_code) ;  int_logical_p = logical_2_int(exit_code)
+            call read_NR_guess_grid(f_ratios_up, "f_ratios_up", exit_code) ;  int_logical_f = logical_2_int(exit_code)
+            if ( int_logical_f + int_logical_p .gt. 0 .or. force_init_NR .eqv. .true.) then
 ! Setting up the "guess grid" for p_up case
-            call fill_boundary_grid("up", p_ratios_up, f_ratios_up)
+                call fill_boundary_grid("up", p_ratios_up, f_ratios_up)
+            else
+                print *," >> Will not solve ratios table (up), reading data from file instead."
+            endif
+            if ( NR_run_refine_pf .eqv. .true.) then
+                    call refine_all_directions("up")
+            endif
             call save_NR_guess_grid(p_ratios_up,"p_ratios_up")
             call save_NR_guess_grid(f_ratios_up,"f_ratios_up")
-        else
-            print *," >> Will not solve ratios table (up), reading data from file instead."
-        endif
-
-        call read_NR_guess_grid(p_ratios_lo, "p_ratios_lo", exit_code) ;   int_logical_p = logical_2_int(exit_code)
-        call read_NR_guess_grid(f_ratios_lo, "f_ratios_lo", exit_code) ;   int_logical_f = logical_2_int(exit_code)
-        if ( int_logical_f + int_logical_p .gt. 0 .or. force_init_NR .eqv. .true.) then
+        enddo
+        write (*, "(A36)", advance="no") "Reading (lo) boundary ratio files"
+        do j = 1,2
+            call read_NR_guess_grid(p_ratios_lo, "p_ratios_lo", exit_code) ;   int_logical_p = logical_2_int(exit_code)
+            call read_NR_guess_grid(f_ratios_lo, "f_ratios_lo", exit_code) ;   int_logical_f = logical_2_int(exit_code)
+            if ( int_logical_f + int_logical_p .gt. 0 .or. force_init_NR .eqv. .true.) then
 ! Setting up the "guess grid" for p_lo case
-            call fill_boundary_grid("lo", p_ratios_lo, f_ratios_lo)
+                call fill_boundary_grid("lo", p_ratios_lo, f_ratios_lo)
+            else
+                print *," >> Will not solve ratios table (lo), reading data from file instead."
+            endif
+            if (NR_run_refine_pf .eqv. .true.) then
+                    call refine_all_directions("lo")
+            endif
             call save_NR_guess_grid(p_ratios_lo,"p_ratios_lo")
             call save_NR_guess_grid(f_ratios_lo,"f_ratios_lo")
-        else
-            print *," >> Will not solve ratios table (lo), reading data from file instead."
-        endif        
-    
-        print *, "max values:", maxval(p_ratios_up,MASK=p_ratios_up.gt.0.0), maxval(f_ratios_up,MASK=f_ratios_up.gt.0.0)
-        print *, "min values:", minval(p_ratios_up,MASK=p_ratios_up.gt.0.0), minval(f_ratios_up,MASK=f_ratios_up.gt.0.0)
-    
-        print *, "max values:", maxval(p_ratios_lo,MASK=p_ratios_lo.gt.0.0), maxval(f_ratios_lo,MASK=f_ratios_lo.gt.0.0)
-        print *, "min values:", minval(p_ratios_lo,MASK=p_ratios_lo.gt.0.0), minval(f_ratios_lo,MASK=f_ratios_lo.gt.0.0)
-    
-        print *, "maximal number of iterations with success:", ii
+        enddo
+
+        call fill_q_grid(1) ! computing q_grid takes so little time, that it might not be necessary to save it at all.
     
  end subroutine fill_guess_grids
 !---------------------------------------------------------------------------------------------------- 
+ subroutine refine_all_directions(bound_case)
+ implicit none
+  character(len=2) :: bound_case
+        call associate_NR_pointers(bound_case)
+        call refine_ij(bound_case, p_p, p_f,1,-1)
+        call refine_ji(bound_case, p_p, p_f,1, -1)
+        call refine_ij(bound_case, p_p, p_f,-1,-1)
+        call refine_ji(bound_case, p_p, p_f,-1, -1)
+        call refine_ij(bound_case, p_p, p_f,1,1)
+        call refine_ji(bound_case, p_p, p_f, 1, 1)
+        call refine_ij(bound_case, p_p, p_f,-1,1)
+        call refine_ji(bound_case, p_p, p_f,-1, 1)
+ end subroutine refine_all_directions
+!----------------------------------------------------------------------------------------------------
  function ln_eval_array_val(i, arr_min, arr_max, min_i, max_i)
  implicit none
   real(kind=8) :: b, arr_min, arr_max, ln_eval_array_val
-  integer(kind=2) :: i, max_i, min_i
+  integer(kind=4) :: i, max_i, min_i
     b = (log(real(max_i)) -log(real(min_i)))/ (arr_max - arr_min)
     ln_eval_array_val = (arr_min-log(real(min_i))/b ) + log(real(i)) / b
  end function ln_eval_array_val
-!---------------------------------------------------------------------------------------------------- 
+!----------------------------------------------------------------------------------------------------
+ subroutine associate_NR_pointers(bound_case)
+  implicit none
+  character(len=2) :: bound_case
+    if (bound_case == "lo") then
+        p_a => alpha_tab_lo
+        p_n => n_tab_lo
+        p_p => p_ratios_lo
+        p_f => f_ratios_lo
+        selected_function_2D => fvec_lo
+    else if (bound_case == "up") then
+        p_a => alpha_tab_up
+        p_n => n_tab_up
+        p_p => p_ratios_up
+        p_f => f_ratios_up
+        selected_function_2D => fvec_up
+    else
+        print *, "Wrong *bound_case* argument provided, stopping"
+        stop
+    endif
+ end subroutine associate_NR_pointers
+!----------------------------------------------------------------------------------------------------
  subroutine fill_boundary_grid(bound_case, fill_p, fill_f) ! to be paralelized
   use constants, only: zero
   implicit none
-  real(kind=8), dimension(1:2) :: x_vec, prev_solution
+  real(kind=8), dimension(1:2) :: x_vec, prev_solution, prev_solution_1, x_in, x_step
   real(kind=8), dimension(:,:) :: fill_p, fill_f
   integer(kind=4) :: i, j, is, js
-  logical         :: exit_code
+  logical         :: exit_code, new_line
   character(len=2) :: bound_case ! "up" or "lo"
-
+  character(len=6) :: nam = "Solve "
     prev_solution(1) = p_space(1)
     prev_solution(2) = p_space(1)**q_space(1)
+    prev_solution_1 = prev_solution
+    
+    call associate_NR_pointers(bound_case)
     call sleep(1)
+    
     fill_p = zero ; fill_f = zero
-        do i =1, arr_dim
-            do j = 1, arr_dim
-                exit_code = .true.
-                if (bound_case == "lo") then
-                    alpha = alpha_tab_lo(i)
-                    n_in  = n_tab_lo(j)
-                    selected_function => fvec_lo
-                else if (bound_case == "up") then
-                    alpha = alpha_tab_up(i)
-                    n_in  = n_tab_up(j)
-                    selected_function => fvec_up
-                else
-                    print *, "Wrong *bound_case* argument provided, stopping"
-                    stop
-                endif                    
-                write(*,"(A12,2I4,A9,I4,A5,2E16.9)",advance="no") "Now solving",i,j,", sized ",arr_dim ,", (alpha,n): ",alpha,n_in
-                x_vec(1) = prev_solution(1)
-                x_vec(2) = prev_solution(2)
-                call NR_algorithm(x_vec, exit_code)
-                if (exit_code .eqv. .false.) then
-                    fill_p(i,j) = x_vec(1)
-                    fill_f(i,j) = x_vec(2)
-                    write (*, "(A51, 2E22.15)",advance="no") " -> (prev) solution obtained, (p_ratio, f_ratio) = ", x_vec
-                else
-                    do is =1, arr_dim
-                        do js = 1, arr_dim
-                            x_vec(1) = p_space(is)
-                            x_vec(2) = p_space(is)**(-q_space(js))
-                            if (exit_code .eqv. .true.) then
-                                call NR_algorithm(x_vec, exit_code)
-                                if ( exit_code .eqv. .false. ) then
-                                    fill_p(i,j) = x_vec(1) ! i index - alpha, j index - n_in
-                                    fill_f(i,j) = x_vec(2)
-                                    prev_solution(1) = x_vec(1)
-                                    prev_solution(2) = x_vec(2)
-                                    write (*, "(A45, 2E22.15)",advance="no") " -> solution obtained, (p_ratio, f_ratio) = ", x_vec
-                                    exit
-                                endif
-                            endif
-                        enddo
-                    enddo
+    x_step = 0.0
+    
+    do i =1, arr_dim
+        new_line = .true.
+        prev_solution = prev_solution_1 ! easier to find when not searching from the top
+        do j = 1, arr_dim ! j_incr = 1
+            exit_code = .true.
+            alpha = p_a(i)
+            n_in  = p_n(j)
+            write(*,"(A14,A2,A2,2I4,A9,I4,A1)",advance="no") "Now solving (",bound_case,") ",i,j,", sized ",arr_dim," "
+            call seek_solution_prev(fill_p(i,j), fill_f(i,j), prev_solution, nam, exit_code)
+            if (exit_code .eqv. .false. .and. new_line .eqv. .true.) then
+                prev_solution_1 = prev_solution
+                new_line = .false.
+            endif
+            if ( exit_code .eqv. .true. ) then
+                if (j-2 .ge. 1 .and. j-2 .le. arr_dim) then
+                    call step_extr(fill_p(i,j-2:j),fill_f(i,j-2:j),p_n(j-2:j),nam,exit_code)
                 endif
-                print *,""
+                if ((j-1) .ge. 1 ) then
+                    if (fill_p(i,j-1).gt.zero) call seek_solution_step(fill_p(i,j),fill_f(i,j),prev_solution,i,j-1,nam,exit_code)
+                endif
+            endif
+            if (exit_code .eqv. .true.) then !still...
+                do is =1, arr_dim
+                    do js = 1, arr_dim
+                        x_vec(1) = p_space(is)
+                        x_vec(2) = p_space(is)**(-q_space(js))
+                        if (exit_code .eqv. .true.) then
+                            call NR_algorithm(x_vec, exit_code)
+                            if ( exit_code .eqv. .false. ) then
+                                fill_p(i,j) = x_vec(1) ! i index - alpha, j index - n_in
+                                fill_f(i,j) = x_vec(2)
+                                prev_solution = x_vec
+                                call msg_success("    ",nam,x_in, x_vec)
+                                exit
+                            endif
+                        endif
+                    enddo
+                enddo
+            else
+                prev_solution(1) = fill_p(i,j)
+                prev_solution(2) = fill_f(i,j)
+            endif
+            if (exit_code .eqv. .true.) print *,""
+        enddo
+    enddo
+    fill_p = abs(fill_p)
+    fill_f = abs(fill_f)
+    print *,""
+  end subroutine
+!----------------------------------------------------------------------------------------------------
+ subroutine step_seek(x_step, prev_sol, ii, jj, i_sol, j_sol, exit_code, nstep)
+ use constants, only: I_ONE
+  implicit none
+    real(kind=8), dimension(1:2) :: prev_sol, x_step
+    integer(kind=4) :: ii, jj, i_sol, j_sol, nstep
+    integer(kind=4) :: i, j
+    logical :: exit_code
+        do i = -1,1
+            do j = -1,1
+                if (exit_code .eqv. .true.) then    
+                    x_step(1) = prev_sol(1) + (p_space(max(min(i_sol+i,arr_dim),I_ONE)) - prev_sol(1)) / real(nstep - ii + 0.1)
+                    x_step(2) = prev_sol(2) + (p_space(max(min(i_sol+i,arr_dim),I_ONE))**(-q_space(max(min(j_sol+j,arr_dim),1))) &
+                                            - prev_sol(2)) / real(nstep - jj + 0.1)
+                    call NR_algorithm(x_step, exit_code)
+                    if (exit_code .eqv. .false.) return
+                endif
             enddo
         enddo
+ end subroutine step_seek
+!----------------------------------------------------------------------------------------------------
+ subroutine refine_ji(bound_case, ref_p, ref_f, i_incr, j_incr) ! ref_f and ref_p should already be partially filled with solutions
+ use constants, only: zero
+  implicit none
+  integer(kind=4) :: i, j, i_beg, i_end, j_beg, j_end
+  integer(kind=4),intent(in)   :: i_incr, j_incr
+  real(kind=8), dimension(:,:), intent(inout) :: ref_p, ref_f
+  real(kind=8), dimension(1:2) :: prev_solution
+  character(len=2), intent(in) :: bound_case
+  character(len=6) :: nam = "Refine"
+  logical :: exit_code, new_line
+    call associate_NR_pointers(bound_case)
+    if (allocated(p_space) .and. allocated(q_space)) then
+        prev_solution(1) = p_space(1)              ! refine must be called before these are deallocated
+        prev_solution(2) = p_space(1)**q_space(1)  
+        print *,"Running refine for:", bound_case, " boundary"
+        call prepare_indices(i_incr, i_beg, i_end)
+        call prepare_indices(j_incr, j_beg, j_end)
+        do j = j_beg, j_end, j_incr
+            new_line = .true. 
+            do i = i_beg, i_end, i_incr
+                alpha = p_a(i)
+                n_in  = p_n(j)
+                exit_code = .true.
+                if (ref_p(i,j) .gt. zero .and. ref_f(i,j) .gt. zero) then
+                    prev_solution(1) = ref_p(i,j)
+                    prev_solution(2) = ref_f(i,j)
+                    new_line = .false.
+                else
+                    call seek_solution_prev(ref_p(i,j), ref_f(i,j), prev_solution, nam, exit_code) ! works for most cases
+                    if ( exit_code .eqv. .true. ) then
+                        if (i-2*i_incr .ge. 1 .and. i-2*i_incr .le. arr_dim) then
+                            call step_extr(ref_p(i-2*i_incr:i:i_incr,j),ref_f(i-2*i_incr:i:i_incr,j),&
+                                            p_a(i-2*i_incr:i:i_incr),nam,exit_code)
+                        endif
+                        if (i-i_incr .ge. 1 .and. i+i_incr .ge. 1 .and. i-i_incr .le. arr_dim .and. i+i_incr .le. arr_dim) then
+                            call step_inpl(ref_p(i-i_incr:i+i_incr:i_incr,j),ref_f(i-i_incr:i+i_incr:i_incr,j),&
+                                            i_incr,p_a(i-i_incr:i+i_incr:i_incr),nam,exit_code)
+                        endif
+                    endif
+                endif
+            enddo
+        enddo
+    else
+        print *, "@cresp_NR_method: refine_grids called after array deallocation, stopping"
+        stop
+    endif
+ end subroutine refine_ji
+!----------------------------------------------------------------------------------------------------
+ subroutine refine_ij(bound_case, ref_p, ref_f, i_incr, j_incr) ! ref_f and ref_p should already be partially filled with solutions
+ use constants, only: zero
+  implicit none
+  integer(kind=4) :: i, j, i_beg, i_end, j_beg, j_end
+  integer(kind=4),intent(in)   :: i_incr, j_incr
+  real(kind=8), dimension(:,:), intent(inout) :: ref_p, ref_f
+  real(kind=8), dimension(1:2) :: prev_solution
+  character(len=2), intent(in) :: bound_case
+  character(len=6) :: nam = "Refine"
+  logical :: exit_code, new_line, i_primary
+    call associate_NR_pointers(bound_case)
+    if (allocated(p_space) .and. allocated(q_space)) then
+        prev_solution(1) = p_space(1)              ! refine must be called before these are deallocated
+        prev_solution(2) = p_space(1)**q_space(1)  
+        print *,"Running refine for:", bound_case, " boundary"
+        i_primary = .true.
+        call prepare_indices(i_incr, i_beg, i_end)
+        call prepare_indices(j_incr, j_beg, j_end)
+        do i = i_beg, i_end, i_incr
+            new_line = .true. 
+            do j = j_beg, j_end, j_incr
+                alpha = p_a(i)
+                n_in  = p_n(j)
+                exit_code = .true.
+                if (ref_p(i,j) .gt. zero .and. ref_f(i,j) .gt. zero) then
+                    prev_solution(1) = ref_p(i,j)
+                    prev_solution(2) = ref_f(i,j)
+                    new_line = .false.
+                else
+                    call seek_solution_prev(ref_p(i,j), ref_f(i,j), prev_solution, nam, exit_code) ! works for the most cases
+                    if ( exit_code .eqv. .true. ) then
+                        if (j-2*j_incr .ge. 1 .and. j-2*j_incr .le. arr_dim) then
+                            call step_extr(ref_p(i,j-2*j_incr:j:j_incr), &
+                                            ref_f(i,j-2*j_incr:j:j_incr),p_n(j-2*j_incr:j),nam,exit_code)
+                        endif
+                        if (j-j_incr .ge. 1 .and. j+j_incr .ge. 1 .and. j-j_incr .le. arr_dim & 
+                                            .and. j+j_incr .le. arr_dim) then
+                            call step_inpl(ref_p(i,j-j_incr:j+j_incr:j_incr),ref_f(i,j-j_incr:j+j_incr:j_incr), &
+                                            j_incr,p_n(j-j_incr:j+j_incr:j_incr),nam,exit_code)
+                        endif
+                    endif
+                endif
+            enddo
+        enddo
+    else
+        print *, "@cresp_NR_method: refine_grids called after array deallocation, stopping"
+        stop
+    endif
+ end subroutine refine_ij
+ !----------------------------------------------------------------------------------------------------
+ subroutine step_extr(p3, f3, arg, sought_by, exit_code) ! checked
+ use constants, only: zero
+ implicit none
+  real(kind=8), dimension(1:2) :: x_vec_0, x_vec, delta, x_in
+  real(kind=8), dimension(1:3),intent(inout) :: f3, p3
+  real(kind=8), dimension(1:3),intent(in) :: arg
+  integer(kind=4) :: nstep = 100, k
+  character(len=6), intent(inout) :: sought_by
+  logical, intent(inout) :: exit_code
+!         alpha and n are set !
+    if ( minval(p3(1:2)) .gt. tiny(zero) .and. p3(3) .le. zero ) then ! sometimes NaNs and numbers of order e-317 appear; must be looked into
+        x_vec_0 = (/ p3(2) , f3(2) /)
+        delta(1) = lin_extrapol_1D(p3(1:2), arg(1:2), arg(3)) - p3(2) ! direction is not relevant in this case
+        delta(2) = lin_extrapol_1D(f3(1:2), arg(1:2), arg(3)) - f3(2)
+        delta = delta/nstep
+        do k = 0, nstep*2
+            x_vec = x_vec_0 + delta * k ! first iteration is a simple extrapolation
+            x_in = x_vec
+            call NR_algorithm(x_vec, exit_code)
+            if (exit_code .eqv. .false.) then
+                x_vec = abs(x_vec)
+                call msg_success("extr", sought_by,x_in,x_vec)
+                p3(3) = x_vec(1)
+                f3(3) = x_vec(2)
+                return
+            endif
+        enddo
+    endif
+ end subroutine step_extr
+!----------------------------------------------------------------------------------------------------
+ subroutine step_inpl(p3, f3, incr, args, sought_by, exit_code) ! checked
+!  use initcrspectrum, only: NR_iter_limit
+ use constants, only: zero
+ implicit none
+   real(kind=8), dimension(1:2) :: x_vec, x_vec_0, delta, x_in
+   real(kind=8), dimension(1:3), intent(inout) :: p3, f3
+   real(kind=8), dimension(1:3), intent(in) :: args
+   integer(kind=4) :: k, incr, nstep = 100 ! int(NR_iter_limit/15)
+   character(len=6), intent(inout) :: sought_by
+   logical,intent(inout) :: exit_code
+!         alpha and n are set !
+    if ( exit_code .eqv. .true.) then
+        if ( min(p3(1),p3(3)) .gt. tiny(zero) .and. p3(2) .le. zero ) then ! sometimes NaNs and numbers of order e-317 appear; must be looked into
+            x_vec_0 = (/ p3(1) , f3(1) /)
+            delta(1) = lin_interpolation_1D( (/ p3(2-incr), p3(2+incr) /), (/ args(2-incr), args(2+incr) /), args(2) ) - p3(1)
+            delta(2) = lin_interpolation_1D( (/ f3(2-incr), f3(2+incr) /), (/ args(2-incr), args(2+incr) /), args(2) ) - f3(1)
+            x_in = x_vec_0 + delta ! gives the interpolated value as starting one
+            delta = delta/nstep
+            do k = 0, nstep*2
+                x_vec = x_vec_0 + delta * k
+                x_in = x_vec
+                call NR_algorithm(x_vec, exit_code)
+                if (exit_code .eqv. .false.) then ! first iteration is a simple extrapolation
+                    x_vec = abs(x_vec)
+                    call msg_success("inpl", sought_by, x_in, x_vec)
+                    p3(2) = x_vec(1)
+                    f3(2) = x_vec(2)
+                    return
+                endif
+                x_vec = x_vec + delta
+            enddo
+        endif
+    endif
+ end subroutine step_inpl
+!----------------------------------------------------------------------------------------------------
+ subroutine msg_success(met_name, sought_by, x_in, x_out)
+ implicit none
+  real(kind=8), dimension(1:), intent(in)  :: x_in
+  real(kind=8), dimension(1:), intent(in) :: x_out
+  character(len=4), intent(in) :: met_name
+  character(len=6), intent(in) :: sought_by
+    write (*, "(A6,A13,2E16.9)",advance="no") sought_by," (alpha, n): ",alpha,n_in
+    write (*, "(A5,A4,A42, 2E19.10e3)",advance="no") " -> (",met_name,") solution obtained, (p_ratio, f_ratio) = ", x_out
+    write (*, "(A21, 2E17.10)",advance="no") ", provided input:", x_in ; print *,""
+end subroutine
+!----------------------------------------------------------------------------------------------------
+ function lin_interpolation_1D(fun, arg, arg_mid)
+ use constants, only: one
+ implicit none
+    real(kind=8) :: weight, arg_mid, lin_interpolation_1D
+    real(kind=8), dimension(1:2), intent(in):: arg, fun
+        weight   = (arg_mid - arg(1)) / (arg(2) - arg(1))
+        lin_interpolation_1D =  fun(1) * (one - weight) + fun(2) * (one - weight)
+ end function lin_interpolation_1D
+!----------------------------------------------------------------------------------------------------
+ subroutine seek_solution_prev(p2ref, f2ref, prev_solution, sought_by, exit_code)
+ implicit none
+    real(kind=8), intent(inout) :: p2ref, f2ref
+    real(kind=8), dimension(1:2), intent(inout) :: prev_solution
+    real(kind=8), dimension(1:2) :: x_vec
+    character(len=6), intent(inout) :: sought_by
+    logical, intent(inout) :: exit_code
+        if (exit_code .eqv. .true.) then
+            x_vec = prev_solution
+            call NR_algorithm(x_vec, exit_code)
+            if (exit_code .eqv. .false.) then
+                x_vec = abs(x_vec)
+                p2ref = x_vec(1)
+                f2ref = x_vec(2)
+                call msg_success("prev", sought_by, prev_solution, x_vec)
+                prev_solution = x_vec
+                return
+            endif
+        endif
+ end subroutine seek_solution_prev
+!----------------------------------------------------------------------------------------------------
+ subroutine seek_solution_step(p2ref, f2ref, prev_solution, i_obt, j_obt, sought_by, exit_code)
+!  use initcrspectrum, only: NR_iter_limit
+ implicit none
+   real(kind=8), dimension(1:2) :: x_vec, x_step, prev_solution
+   real(kind=8), intent(out):: p2ref, f2ref
+   integer(kind=4) :: i_obt, j_obt, ii, jj, nstep = 3 ! int(NR_iter_limit/15)
+   character(len=6), intent(inout) :: sought_by
+   logical :: exit_code
+!    alpha and n are set !
+     if (exit_code .eqv. .true. ) then
+            do ii = 0, nstep
+                do jj = 0,nstep
+                    call step_seek(x_step, prev_solution, ii, jj, i_obt, j_obt, exit_code, nstep)
+                    x_vec = x_step
+                    if (exit_code .eqv. .false. ) then
+                        x_step = abs(x_step)
+                        p2ref = x_step(1)
+                        f2ref = x_step(2)
+                        prev_solution = x_step
+                        call msg_success("step", sought_by, x_step, x_vec)
+                        return
+                    endif
+                enddo
+            enddo
+     endif
+ end subroutine seek_solution_step
+!----------------------------------------------------------------------------------------------------
+ subroutine fill_q_grid(i_incr)
+  use initcrspectrum, only: p_fix_ratio
+  implicit none
+  integer(kind=4) :: i,j, i_beg, i_end, i_incr
+  real(kind=8)    :: x, prev_solution
+  logical         :: exit_code
+    selected_function_1D => alpha_to_q
+    selected_value_check_1D  => q_control
+
+    call prepare_indices(i_incr, i_beg, i_end)
+    
+    p_ratio_4_q = p_fix_ratio
+    
+    prev_solution = q_space(int(arr_dim/2))
+    do i = i_beg, i_end, i_incr
+        exit_code = .true.
+        alpha = alpha_tab_q(i)
+        write(*,"(A25,1I4,A9,I4,A10,1E16.9)",advance="no") "Now solving (q_grid) no.",i,", sized ",arr_dim ,", (alpha): ",alpha
+        x = prev_solution
+        call NR_algorithm_1D(x, exit_code)
+        if ( exit_code .eqv. .true. ) then
+            do j = 1, arr_dim
+                if (exit_code .eqv. .true. ) then
+                    x = q_space(j)
+                    call NR_algorithm_1D(x,exit_code)
+                    if ( exit_code .eqv. .false.) then
+                        q_grid(i) = x
+                        prev_solution = x
+                        write (*, "(A44, 2E22.15)",advance="no") " ->        solution obtained, q_grid = ", x
+                    endif
+                endif
+            enddo
+        else
+            write (*, "(A44, 1E22.15)",advance="no") " -> (prev) solution obtained, q_grid = ", x
+            q_grid(i) = x
+        endif
         print *,""
- 
- 
- end subroutine
+    enddo
+ end subroutine fill_q_grid
+ !----------------------------------------------------------------------------------------------------
+ subroutine q_control(x, exit_code)
+ use initcrspectrum, only: q_big
+ use constants, only: one
+  implicit none
+  real(kind=8)  :: x
+  logical :: exit_code
+    if ( abs(x) .ge. q_big *2 ) then
+      x = sign(one, x) * q_big *2
+      exit_code = .true.
+      return
+    endif  
+ end subroutine q_control
+ !----------------------------------------------------------------------------------------------------
+ function alpha_to_q(x) ! this one (as of now) is only usable with fixed p_ratio_4_q bins (middle ones)
+ use initcrspectrum, only: eps
+ use constants, only: one, three, four
+  implicit none
+  real(kind=8)  :: x, alpha_to_q
+      if (abs(x - three) .lt. eps) then
+         alpha_to_q = -alpha + (-one + p_ratio_4_q)/log(p_ratio_4_q) 
+      else if (abs(x - four) .lt. eps) then
+         alpha_to_q = -alpha + p_ratio_4_q*log(p_ratio_4_q)/(p_ratio_4_q - one)
+      else
+         alpha_to_q = -alpha + ((three-x)/(four-x))*((p_ratio_4_q**(four-x)-one)/(p_ratio_4_q**(three-x)-one))
+      endif
+ end function alpha_to_q
+  !----------------------------------------------------------------------------------------------------
+ subroutine prepare_indices(ind_incr, ind_beg, ind_end)
+  implicit none
+  integer(kind=4), intent(out) :: ind_beg, ind_end
+  integer(kind=4), intent(in) :: ind_incr
+        if (ind_incr .eq. 1 ) then
+            ind_beg = 1 ; ind_end = arr_dim
+        else if (ind_incr .eq. -1) then
+            ind_beg = arr_dim ; ind_end = 1
+        endif
+   end subroutine prepare_indices
  !----------------------------------------------------------------------------------------------------
   function q_ratios(f_ratio, p_ratio)
   use constants, only: zero
@@ -306,6 +771,7 @@ module cresp_NR_method
 ! Function estimating values of jacobian via finite difference method
 !---------------------------------------------------------------------------------------------------
   function jac_fin_diff(x) ! jacobian via finite difference method
+  use constants, only: half
   implicit none
    real(kind=8), dimension(ndim) :: x, xp, xm
    real(kind=8), dimension(size(x),size(x)) :: jac_fin_diff
@@ -316,9 +782,8 @@ module cresp_NR_method
             dx(:) = min(x(:)*dx_par,dx_par) ! the value of dx is scaled not to go over value of x
             xp = x ; xm = x
             xp(j) = x(j) - dx(j) ;  xm(j) = x(j) + dx(j)
-            jac_fin_diff(:,j)  = ( selected_function(xp) - selected_function(xm)) / dx(j)
+            jac_fin_diff(:,j)  = half*( selected_function_2D(xp) - selected_function_2D(xm)) / dx(j)
         enddo
-        jac_fin_diff = 0.5 * jac_fin_diff
   end function jac_fin_diff
 !----------------------------------------------------------------------------------------------------
   function determinant_2d_real(matrix_2d_real)
@@ -453,7 +918,7 @@ module cresp_NR_method
         x_init = x
         k = 1
         print *, " Determining p_up @ NR_get_solution_up"
-        selected_function => func_val_vec_up_bnd
+        selected_function_2D => func_val_vec_up_bnd
 
         do while(k .le. 5)
             call NR_algorithm(x, exit_code)
@@ -509,7 +974,7 @@ module cresp_NR_method
         x_init = x
         k = 1
         print *, " Determining p_lo @ NR_get_solution_lo"
-        selected_function => func_val_vec_lo_bnd
+        selected_function_2D => func_val_vec_lo_bnd
         do while(k .le. 5)
             call NR_algorithm(x, exit_code)    
             if (exit_code .eqv. .false. ) then
@@ -552,10 +1017,9 @@ module cresp_NR_method
   end function modify_params_lo
 
 !---------------------------------------------------------------------------------------------------    
-! fun3_up - Alternative function introduced to find p_up using integrals of n, e and p_fix value. Does not seek 
-!        q, therefore conditions for x = (3,4) are not necessary
+! fun3_up - Alternative function introduced to find p_up using integrals of n, e and p_fix value.
 !---------------------------------------------------------------------------------------------------
-  function fun3_up(log10_p_r, log10_f_l, p_l, alpha ) ! used by func_val_vec_up_bnd to compute upper boundary p and f.
+  function fun3_up(log10_p_r, log10_f_l, p_l, alpha ) ! used by func_val_vec_up_bnd to compute upper boundary p and f.                                 ! DEPRECATED ?
    use constants, only: three, four, one, ten
    implicit none
     real(kind=8),intent(in)   :: log10_p_r, log10_f_l
@@ -577,7 +1041,7 @@ module cresp_NR_method
 !---------------------------------------------------------------------------------------------------    
 ! fun5_up - Function similar to nq_to_f subroutine, used by compute_fp_NR_2dim to estimate value of p_up and f_l_iup
 !---------------------------------------------------------------------------------------------------
-  function fun5_up(log10_p_r, log10_f_l, p_l, n_in) ! used by func_val_vec_up_bnd to compute upper boundary p and f.
+  function fun5_up(log10_p_r, log10_f_l, p_l, n_in) ! used by func_val_vec_up_bnd to compute upper boundary p and f.                                 ! DEPRECATED ?
    use constants, only: three, ten, one, fpi
    implicit none
     real(kind=8),intent(in) :: log10_p_r, log10_f_l
@@ -595,10 +1059,9 @@ module cresp_NR_method
   end function fun5_up
   
 !---------------------------------------------------------------------------------------------------    
-! fun3_lo - Alternative function introduced to find p_up using integrals of n, e and p_fix value. Does not seek 
-!        q, therefore conditions for x = (3,4) are not necessary
+! fun3_lo - Alternative function introduced to find p_up using integrals of n, e and p_fix value.
 !---------------------------------------------------------------------------------------------------
-  function fun3_lo(log10_p_l, log10_f_r, p_r, alpha ) ! used by func_val_vec_lo_bnd to compute low boundary p and f.
+  function fun3_lo(log10_p_l, log10_f_r, p_r, alpha ) ! used by func_val_vec_lo_bnd to compute low boundary p and f.                                 ! DEPRECATED ?
    use constants, only: three, four, one, ten
    implicit none
     real(kind=8),intent(in)   :: log10_p_l, log10_f_r
@@ -621,7 +1084,7 @@ module cresp_NR_method
 !---------------------------------------------------------------------------------------------------    
 ! fun5_lo - Function similar to nq_to_f subroutine, used by compute_fp_NR_2dim to estimate value of p_lo and f_r_lo
 !---------------------------------------------------------------------------------------------------
-  function fun5_lo(log10_p_l, log10_f_r, p_r, n_in) ! used by func_val_vec_lo_bnd to compute low boundary p and f.
+  function fun5_lo(log10_p_l, log10_f_r, p_r, n_in) ! used by func_val_vec_lo_bnd to compute low boundary p and f.                                 ! DEPRECATED ?
    use constants, only: three, one, fpi, ten
    implicit none
     real(kind=8),intent(in) :: log10_p_l, log10_f_r
@@ -651,11 +1114,11 @@ module cresp_NR_method
 
   end function e_small_to_f
 !----------------------------------------------------------------------------------------------------
-  subroutine find_both_indexes_lo(l_min1, l_min2, alpha_val, n_val, l_panic, exit_code)
-  use initcrspectrum, only: eps
+ subroutine find_both_indexes(l_min1, l_min2, alpha_val, n_val, l_panic, exit_code)                                 ! DEPRECATED ?
+  use constants, only: zero
   implicit none
-    integer(kind=2), dimension(1:2) :: l_min1, l_min2, l_panic
-    integer(kind=2) :: i, j, i_prev
+    integer(kind=4), dimension(1:2) :: l_min1, l_min2, l_panic
+    integer(kind=4) :: i, j, i_prev
     real(kind=8)    :: min_alpha, min_n, min2_alpha, min2_n, d_alpha, d_n
     real(kind=8)    :: alpha_val, n_val
     logical :: exit_code
@@ -664,10 +1127,10 @@ module cresp_NR_method
         l_min1 = 1 ; l_min2 = 1
         do i = 1, arr_dim
             do j = 1, arr_dim
-                if (p_ratios_lo(i,j) .gt. eps ) then
-                    d_n     = n_tab_lo(j) - n_val
+                if (p_p(i,j) .gt. zero ) then
+                    d_n     = p_n(j) - n_val
                     if ( i_prev .ne. i) then ! already checked, this omition should save up to 1/3 time needed for search each time this function is called
-                        d_alpha = alpha_tab_lo(i) - alpha_val
+                        d_alpha = p_a(i) - alpha_val
                         call get_index_min_hi( d_alpha, min_alpha,  i, l_min1(1))
                         call get_index_min_lo( d_alpha, min2_alpha, i, l_min2(1))
                     endif
@@ -682,46 +1145,25 @@ module cresp_NR_method
             l_panic(1) = find_indexes_panic(l_min1(1), l_min2(1), min_alpha, min2_alpha)
             l_panic(2) = find_indexes_panic(l_min1(2), l_min2(2), min_n, min2_n)
         endif
-  end subroutine find_both_indexes_lo
+ end subroutine find_both_indexes
 !----------------------------------------------------------------------------------------------------
-  subroutine find_both_indexes_up(l_min1, l_min2, alpha_val, n_val, l_panic, exit_code)
-  use initcrspectrum, only: eps
+ subroutine find_indices_1D(loc_min1, loc_min2, alpha_val)                                          ! DEPRECATED ?
   implicit none
-    integer(kind=2), dimension(1:2) :: l_min1, l_min2, l_panic ! sets of indexes to point to p_ratios_.. and f_ratios_.. arrays via alpha and n arrays.
-    integer(kind=2) :: i, j, i_prev
-    real(kind=8)    :: min_alpha, min_n, min2_alpha, min2_n, d_alpha, d_n
-    real(kind=8)    :: alpha_val, n_val
-    logical :: exit_code
-        min_alpha = huge(min_alpha); min_n = huge(min_n) ; min2_alpha = -huge(min2_alpha); min2_n = -huge(min2_n)
-        i_prev = 0
-        l_min1 = 1 ; l_min2 = 1
-        do i = 1, arr_dim
-            do j = 1, arr_dim
-                if (p_ratios_up(i,j) .gt. eps ) then
-                    d_n     = n_tab_up(j) - n_val
-                    if ( i_prev .ne. i) then ! already checked, this omition should save up to 1/3 time needed for search each time this function is called
-                    d_alpha = alpha_tab_up(i) - alpha_val
-                        call get_index_min_hi( d_alpha, min_alpha,  i, l_min1(1))
-                        call get_index_min_lo( d_alpha, min2_alpha, i, l_min2(1))
-                    endif
-                    call get_index_min_hi(d_n, min_n,  j, l_min1(2))
-                    call get_index_min_lo(d_n, min2_n, j, l_min2(2))
-                endif
-                i_prev = i ! already got result for current i
-            enddo
+    integer(kind=4) :: loc_min1, loc_min2, i
+    real(kind=8)    :: alpha_val, min_alpha, min2_alpha, d_alpha
+        loc_min1 = 1 ; loc_min2 = 2; min_alpha = huge(min2_alpha); min2_alpha = -huge(min2_alpha)
+        do i = 1,arr_dim
+            d_alpha = p_a(i) - alpha_val
+            call get_index_min_hi(d_alpha, min_alpha, i, loc_min1)
+            call get_index_min_lo(d_alpha, min2_alpha, i, loc_min2)
         enddo
-        if (l_min1(1) .eq. l_min2(1) .or. l_min1(2) .eq. l_min2(2)) then
-            exit_code = .true.
-            l_panic(1) = find_indexes_panic(l_min1(1), l_min2(1), min_alpha, min2_alpha)
-            l_panic(2) = find_indexes_panic(l_min1(2), l_min2(2), min_n, min2_n)
-        endif
-  end subroutine find_both_indexes_up
+ end subroutine find_indices_1D
 !----------------------------------------------------------------------------------------------------
   subroutine get_index_min_hi(delta, current_min_val, current_index, min_index)
   use constants, only: zero
   implicit none
     real(kind=8)    :: current_min_val, delta
-    integer(kind=2) :: current_index, min_index
+    integer(kind=4) :: current_index, min_index
         min_index = min_index
         if (delta .lt. current_min_val .and. delta .gt. zero) then
             current_min_val = delta
@@ -733,18 +1175,18 @@ module cresp_NR_method
   use constants, only: zero
   implicit none
     real(kind=8)    :: current_min_val, delta
-    integer(kind=2) :: current_index, min_index
+    integer(kind=4) :: current_index, min_index
         min_index = min_index
         if (delta .gt. current_min_val .and. delta .lt. zero) then
             current_min_val = delta
             min_index = current_index
         endif
-  end subroutine get_index_min_lo            
+  end subroutine get_index_min_lo
 !----------------------------------------------------------------------------------------------------
-  function find_indexes_panic(index_hi, index_lo, min_pos, min_neg)
+  function find_indexes_panic(index_hi, index_lo, min_pos, min_neg)                                 ! DEPRECATED ?
   implicit none
-    integer(kind=2) :: index_hi, index_lo
-    integer(kind=2) :: find_indexes_panic
+    integer(kind=4) :: index_hi, index_lo
+    integer(kind=4) :: find_indexes_panic
     real(kind=8)    :: min_pos, min_neg
         if ( min_pos .lt. abs(min_neg) ) then
             find_indexes_panic = index_hi
@@ -768,77 +1210,177 @@ module cresp_NR_method
         bl_in_tu = (val_mid - val_left) / (val_right - val_left)
   end function bl_in_tu
 !----------------------------------------------------------------------------------------------------
-  function intpol_pf_from_NR_grids(which_bound, a_val, n_val, a_arr, n_arr) ! for details see paragraph "Bilinear interpolation" in Numerical Recipes for F77, page 117, eqn. 3.6.4
+  function lin_interpol_1D(loc_1, loc_2, value)
    implicit none
-    integer(kind=2), dimension(1:2) :: loc1, loc2, loc_no_interpol ! loc1, loc2 - indexes that points where alpha_tab_lo and up nad n_tab_lo and up are closest in value to a_val and n_val - indexes point to 
-    real(kind=8) :: a_val, n_val                                   ! ratios arrays (p,f: lo and up), for which solutions have been obtained. loc_no_interpol - in case when interpolation is not possible, 
-    real(kind=8), dimension(:) :: a_arr, n_arr                     ! indexes with best match and having solutions are chosen.
-    real(kind=8), dimension(2) :: intpol_pf_from_NR_grids
-    character(len=2) :: which_bound ! "lo" or "up"
-    logical :: exit_code
-        exit_code = .false.
-        if (which_bound == "lo") then
-            call find_both_indexes_lo(loc1, loc2, a_val, n_val, loc_no_interpol, exit_code)
-        else
-            call find_both_indexes_up(loc1, loc2, a_val, n_val, loc_no_interpol, exit_code)
-        endif
-
-        if (which_bound == "lo") then
-            if (exit_code .eqv. .true. ) then ! interpolation won't work in this case, choosing closest values that have solutions.
-                  intpol_pf_from_NR_grids(1) = p_ratios_lo(loc_no_interpol(1),loc_no_interpol(2))
-                  intpol_pf_from_NR_grids(2) = f_ratios_lo(loc_no_interpol(1),loc_no_interpol(2))
+    real(kind=8) :: lin_interpol_1D
+    real(kind=8), intent(in) :: value
+    integer(kind=4), intent(in) :: loc_1, loc_2
+        lin_interpol_1D = p_n(loc_1) + (value - p_a(loc_1)) * ( p_n(loc_1) - p_n(loc_2) ) / (p_a(loc_1) - p_a(loc_2)) ! WARNING - uses p_a and p_n, that are usually used to point alpha and n arrays.
+  end function lin_interpol_1D
+!----------------------------------------------------------------------------------------------------
+ function lin_extrapol_1D(fun, arg, arg_out)
+ implicit none
+  real(kind=8),intent(in)::   arg_out
+  real(kind=8)  :: lin_extrapol_1D
+  real(kind=8),dimension(1:2), intent(in) :: fun, arg
+    lin_extrapol_1D = fun(1) + (fun(2) - fun(1)) * (arg_out - arg(1))/(arg(2)-arg(1))
+  end function lin_extrapol_1D
+!----------------------------------------------------------------------------------------------------
+  function intpol_pf_from_NR_grids(which_bound, a_val, n_val, interpolation_successful, not_interpolated) ! for details see paragraph "Bilinear interpolation" in Numerical Recipes for F77, page 117, eqn. 3.6.4
+   implicit none                                              ! should return exit code as well
+    real(kind=8), dimension(2) :: intpol_pf_from_NR_grids          ! indexes with best match and having solutions are chosen.
+    integer(kind=4), dimension(1:2) :: loc1, loc2, loc_no_ip ! loc1, loc2 - indexes that points where alpha_tab_ and up nad n_tab_ and up are closest in value to a_val and n_val - indexes point to 
+    real(kind=8),intent(inout) :: a_val, n_val                                   ! ratios arrays (p,f: lo and up), for which solutions have been obtained. loc_no_ip - in case when interpolation is not possible, 
+    character(len=2),intent(inout) :: which_bound ! "lo" or "up"
+    logical :: exit_code, find_failure
+    logical, intent(out) :: interpolation_successful, not_interpolated
+    
+        exit_code = .false.; find_failure = .false. ; not_interpolated = .false.
+        call associate_NR_pointers(which_bound)
+        call determine_loc(a_val, n_val, loc1, loc2, loc_no_ip, which_bound, exit_code, find_failure)
+!         call find_both_indexes(loc1, loc2, a_val, n_val, loc_no_ip, exit_code)
+        call save_loc(which_bound,loc1(1),loc1(2))
+        call save_loc(which_bound,loc2(1),loc2(2))
+            if (find_failure .eqv. .true.) then
+                not_interpolated = .true.
+!                 print *, "Not interpolated successfully, returning"
                 return
+            else
+                if (exit_code .eqv. .true. ) then ! interpolation won't work in this case, choosing closest values that have solutions.
+                    intpol_pf_from_NR_grids(1) = p_p(loc_no_ip(1),loc_no_ip(2)) ! this countermeasure wont work = loc_no_ip not initialized ! 
+                    intpol_pf_from_NR_grids(2) = p_f(loc_no_ip(1),loc_no_ip(2))
+                    interpolation_successful = .false.
+                    return
+                else
+                    intpol_pf_from_NR_grids(1) = bl_interpol(p_p(loc1(1),loc1(2)),p_p(loc1(1),loc2(2)), &
+                        p_p(loc2(1),loc1(2)),p_p(loc2(1),loc2(2)), bl_in_tu(p_a(loc1(1)), a_val, p_a(loc2(1))), &
+                        bl_in_tu(p_n(loc1(2)), n_val, p_n(loc2(2))) )
+                    intpol_pf_from_NR_grids(2) = bl_interpol(p_f(loc1(1),loc1(2)),p_f(loc1(1),loc2(2)), &
+                        p_f(loc2(1),loc1(2)),p_f(loc2(1),loc2(2)), bl_in_tu(p_a(loc1(1)), a_val, p_a(loc2(1))), &
+                        bl_in_tu(p_n(loc1(2)), n_val, p_n(loc2(2))) )
+                    interpolation_successful = .true.
+                    return
+                endif
             endif
-            intpol_pf_from_NR_grids(1) = bl_interpol(p_ratios_lo(loc1(1),loc1(2)),p_ratios_lo(loc1(1),loc2(2)), &
-                p_ratios_lo(loc2(1),loc1(2)),p_ratios_lo(loc2(1),loc2(2)), bl_in_tu(a_arr(loc1(1)), a_val, a_arr(loc2(1))), &
-                bl_in_tu(n_arr(loc1(2)), n_val, n_arr(loc2(2))) )
-            intpol_pf_from_NR_grids(2) = bl_interpol(f_ratios_lo(loc1(1),loc1(2)),f_ratios_lo(loc1(1),loc2(2)), &
-                f_ratios_lo(loc2(1),loc1(2)),f_ratios_lo(loc2(1),loc2(2)), bl_in_tu(a_arr(loc1(1)), a_val, a_arr(loc2(1))), &
-                bl_in_tu(n_arr(loc1(2)), n_val, n_arr(loc2(2))) )
-        else if (which_bound == "up") then
-            if (exit_code .eqv. .true. ) then ! interpolation won't work in this case, choosing closest values that have solutions.
-                intpol_pf_from_NR_grids(1) = p_ratios_up(loc_no_interpol(1),loc_no_interpol(2))
-                intpol_pf_from_NR_grids(2) = f_ratios_up(loc_no_interpol(1),loc_no_interpol(2))
-                return
-            endif
-            intpol_pf_from_NR_grids(1) = bl_interpol(p_ratios_up(loc1(1),loc1(2)), p_ratios_up(loc1(1),loc2(2)), &
-                p_ratios_up(loc2(1),loc1(2)), p_ratios_up(loc2(1),loc2(2)),bl_in_tu(a_arr(loc1(1)), a_val, a_arr(loc2(1))), &
-                bl_in_tu(n_arr(loc1(2)), n_val, n_arr(loc2(2))))
-            intpol_pf_from_NR_grids(2) = bl_interpol(f_ratios_up(loc1(1),loc1(2)), f_ratios_up(loc1(1),loc2(2)),& 
-                f_ratios_up(loc2(1),loc1(2)), f_ratios_up(loc2(1),loc2(2)),bl_in_tu(a_arr(loc1(1)), a_val, a_arr(loc2(1))), &
-                bl_in_tu(n_arr(loc1(2)), n_val, n_arr(loc2(2))))
-        else
-            print *, "ERROR - provided wrong value of which_bound variable @intpol_pf_from_NR_grids"
-            stop
-        endif
   end function intpol_pf_from_NR_grids
+!----------------------------------------------------------------------------------------------------
+  subroutine determine_loc(a_val, n_val, loc1, loc2, loc_panic, which_bound, exit_code, no_solution)
+  use constants, only: zero
+  implicit none
+    integer(kind=4), dimension(1:2),intent(inout) :: loc1, loc2, loc_panic
+    real(kind=8),intent(inout) :: a_val, n_val
+    logical, intent(inout) :: exit_code, no_solution
+    character(len=2), intent(in) :: which_bound
+        loc1(1) = inverse_f_to_ind(a_val, p_a(1), p_a(arr_dim))
+        loc1(2) = inverse_f_to_ind(n_val, p_n(1), p_n(arr_dim))
+        loc2 = loc1 + 1
+!         write(*,"(A19,A2,A2, 2I4, A3, 2I4)") "Obtained indices:", which_bound,"):", loc1, " | ", loc2 
+        if ((minval(loc1) .le. 0 .or. maxval(loc1) .gt. arr_dim) .and. (minval(loc2) .le. 0 .or. maxval(loc2) .gt. arr_dim)) then
+            exit_code = .true.
+            no_solution = .true.
+!             print *, "problem occured, both below 0"
+            return
+        else if ( (maxval(loc2) .gt. arr_dim) .or. (minval(loc2) .le. 0 ) ) then
+            exit_code = .true.
+            loc_panic = loc1
+            loc2 = loc1
+!             print *, "WARNING, maxval(loc2) exceeds arr_dim"
+            return
+        else if ( (maxval(loc1) .gt. arr_dim) .or. (minval(loc1) .le. 0 ) ) then
+            exit_code = .true.
+            loc_panic = loc2
+            loc1 = loc2
+!             print *, "WARNING, minval(loc1) eq 0"
+            return
+        endif
+        if ( ((p_p(loc1(1),loc1(2)) * p_p(loc1(1),loc2(2)) ) .le. zero ) .or. & 
+            ((p_p(loc2(1),loc1(2)) * p_p(loc2(1),loc2(2)) ) .le. zero )  ) then
+!             print *, "Exception, p_p(loc(alpha),loc(n)) = 0, no solution in at least one location"
+            exit_code = .true.
+            if (p_p(loc1(1),loc1(2)) .gt. zero ) then
+                loc_panic = loc1
+                return
+            else if (p_p(loc2(1),loc2(2)) .gt. zero ) then
+                loc_panic = loc2
+                return
+            else
+!                 print *, "For boundary: ", which_bound ,"neither index points to existent solution. Use extrapolation in this case?"
+                no_solution = .true.
+                return
+            endif
+        endif
+  end subroutine determine_loc
+!----------------------------------------------------------------------------------------------------
+  function compute_q(alpha_in, outer_p_ratio)
+  use initcrspectrum, only: NR_refine_solution_q, q_big, p_fix_ratio
+  use constants, only: one
+  implicit none
+    real(kind=8) :: compute_q
+    real(kind=8), optional :: outer_p_ratio
+    real(kind=8), intent(inout) :: alpha_in
+    integer(kind=4) :: loc_1, loc_2
+    logical :: exit_code
+        exit_code = .true.
+        p_a => alpha_tab_q
+        p_n => q_grid
+        selected_function_1D => alpha_to_q
+        selected_value_check_1D => q_control
+        
+        p_ratio_4_q = p_fix_ratio
+        if (present(outer_p_ratio)) p_ratio_4_q = outer_p_ratio
+        
+        loc_1 = inverse_f_to_ind(alpha_in, alpha_tab_q(1), alpha_tab_q(arr_dim))
+        loc_2 = loc_1 + 1
+!         if (alpha_tab_q(loc_1).gt. alpha_in .or. (alpha_tab_q(loc_2) .lt. alpha_in)) then
+!             print *, "alpha_in beyond tabualrized values:", alpha_tab_q(loc_1), alpha_in, alpha_tab_q(loc_2)
+!             pause
+!         endif
+        compute_q = lin_interpol_1D(loc_1, loc_2, alpha_in)
+        if (NR_refine_solution_q) then
+            alpha = alpha_in
+            call q_control(compute_q,exit_code)
+            call NR_algorithm_1D(compute_q, exit_code) ! this might not even be necessary
+        endif
+        if (abs(compute_q) .gt. q_big) compute_q = sign(one, compute_q) * q_big
+  end function compute_q
 !----------------------------------------------------------------------------------------------------
   subroutine save_NR_guess_grid(NR_guess_grid, var_name) 
   use initcrspectrum, only: e_small, q_big, max_p_ratio
   use cresp_variables, only: clight ! use units, only: clight
   implicit none
     real(kind=8),dimension(:,:) :: NR_guess_grid
-    integer(kind=4) :: width, j
+    integer(kind=4) :: j
     character(len=11) :: var_name
     character(len=4)  :: extension
     character(len=15) :: f_name
-        width     = size(NR_guess_grid, dim=1)
         extension =  ".dat"
         f_name = var_name // extension
         open(31, file=f_name, status="unknown", position="rewind")
-            write(31,"(A57,A3,A95)") "This is a storage file for NR init grid, boundary case: ", var_name(9:), &
+            write(31,"(A57,A3,A105)") "This is a storage file for NR init grid, boundary case: ", var_name(9:), &
                     "Saved below: e_small, size(NR_guess_grid,dim=1), size(NR_guess_grid,dim=2), max_p_ratio, q_big,  clight. &
                     & Do not remove content from this file"
             write(31, "(1E15.8, 2I10,10E22.15)") e_small, size(NR_guess_grid,dim=1), size(NR_guess_grid, dim=2), &
                                                  max_p_ratio, q_big, clight
             write(31, "(A1)") " "                            ! Blank line for 
             do j=1, size(NR_guess_grid,dim=2)
-                write(31, "(*(E22.15))") NR_guess_grid(:,j)  ! WARNING - THIS MIGHT NEED EXPLICIT INDICATION OF ELEMENTS COUNT IN LINE IN OLDER COMPILERS
+                write(31, "(*(E24.15E3))") NR_guess_grid(:,j)  ! WARNING - THIS MIGHT NEED EXPLICIT INDICATION OF ELEMENTS COUNT IN LINE IN OLDER COMPILERS
             enddo
         print *, var_name,": saving done."
         close(31)
 
   end subroutine save_NR_guess_grid
+!----------------------------------------------------------------------------------------------------
+  subroutine save_loc(bound_case, loc1, loc2) 
+   implicit none
+    integer(kind=4) :: loc1, loc2
+    character(len=2):: bound_case
+    character(len=10):: f_name
+        f_name = "loc_"//bound_case//".dat"
+        open(32, file=f_name, status="unknown", position="append")
+        write (32,"(2I5)") loc1, loc2
+        
+        close(32)
+  end subroutine save_loc
 !----------------------------------------------------------------------------------------------------  
   subroutine read_NR_guess_grid(NR_guess_grid, var_name, exit_code) ! must be improved, especially for cases when files do not exist
   use initcrspectrum, only: e_small, q_big, max_p_ratio
@@ -846,34 +1388,38 @@ module cresp_NR_method
   implicit none
     real(kind=8),dimension(:,:) :: NR_guess_grid
     real(kind=8)                :: svd_e_sm, svd_max_p_r, svd_q_big, svd_clight
-    integer(kind=4) :: width, j, svd_cols, svd_rows
+    integer(kind=4) :: j, svd_cols, svd_rows, file_status = 0
     character(len=11) :: var_name
     character(len=4)  :: extension
     character(len=15) :: f_name
     logical           :: exit_code
-        width     = size(NR_guess_grid, dim=1)
-        extension =  ".dat"
-        f_name = var_name // extension
-        open(31, file=f_name, status="unknown", position="rewind")
-        
+      extension =  ".dat"
+      f_name = var_name // extension
+      open(31, file=f_name, status="old", position="rewind",IOSTAT=file_status)
+      if (file_status .gt. 0) then
+        write(*,"(A8,I4,A8,2A20)") "IOSTAT:", file_status, ": file ", var_name//".dat"," does not exist!"
+        exit_code = .true.
+        return
+      else
             read(31,*) ! Skipping comment line
             read(31,"(1E15.8,2I10,10E22.15)") svd_e_sm, svd_rows, svd_cols, svd_max_p_r, svd_q_big, svd_clight
             if ( abs(svd_e_sm-e_small)/e_small .le. 1.0e-6 .and. svd_rows .eq. size(NR_guess_grid,dim=1) &
                         .and. svd_cols .eq. size(NR_guess_grid,dim=2) .and. abs(max_p_ratio-svd_max_p_r)/max_p_ratio .le. 1.0e-6 &
-                        .and. abs(q_big-svd_q_big)/q_big .le. 1.0e-6 .and. abs(clight-svd_clight)/clight .le. 1.0e-6 ) then ! Yeah, it's a long condition, but if met it saves a lot of time.
+                        .and. abs(q_big-svd_q_big)/q_big .le. 1.0e-6 .and. abs(clight-svd_clight)/clight .le. 1.0e-6 ) then ! This saves a lot of time
                 read(31, *)
                 do j=1, size(NR_guess_grid,dim=2)
-                    read(31, "(*(E22.15))") NR_guess_grid(:,j)  ! WARNING - THIS MIGHT NEED EXPLICIT INDICATION OF ELEMENTS COUNT IN LINE IN OLDER COMPILERS
+                    read(31, "(*(E24.15E3))") NR_guess_grid(:,j)  ! WARNING - THIS MIGHT NEED EXPLICIT INDICATION OF ELEMENTS COUNT IN LINE IN OLDER COMPILERS
                 enddo
                 print *, var_name, ": reading done."
                 exit_code = .false.
             else
                 write(*,"(A70,A4,A6)") "Different initial parameters, proceeding to resolve ratio tables for",var_name(10:),"case."
                 write(*,"(2I10,10E22.15)") svd_cols, svd_rows, svd_e_sm, svd_max_p_r, svd_q_big, svd_clight
-                write(*,"(2I10,10E22.15)") size(NR_guess_grid, dim=1), size(NR_guess_grid,dim=2), e_small, max_p_ratio, q_big, clight
+                write(*,"(2I10,10E22.15)") size(NR_guess_grid,dim=1), size(NR_guess_grid,dim=2),e_small,max_p_ratio,q_big,clight
                 exit_code = .true.
             endif
-        close(31) 
+      endif
+      close(31) 
   end subroutine read_NR_guess_grid
 !----------------------------------------------------------------------------------------------------
   function logical_2_int(boolean_arg)
@@ -887,6 +1433,23 @@ module cresp_NR_method
         endif
   end function logical_2_int
   
+!----------------------------------------------------------------------------------------------------
+  function ind_to_flog(ind,min_in, max_in)
+  use constants, only: I_ONE, ten
+  implicit none
+    real(kind=8) :: min_in, max_in
+    integer(kind=4) :: ind
+    real(kind=8) :: ind_to_flog
+        ind_to_flog = min_in * ten**(((log10(max_in/min_in))/real(arr_dim-I_ONE,kind=8))*real((ind-I_ONE),kind=8))
+  end function ind_to_flog
+!----------------------------------------------------------------------------------------------------
+  function inverse_f_to_ind(value, min_in, max_in) ! returns lower index for a given value, will need limiter
+  use constants, only: I_ONE
+  implicit none
+    integer(kind=4) :: inverse_f_to_ind
+    real(kind=8)    :: value, min_in, max_in
+     inverse_f_to_ind = int((log10(value/min_in)/log10(max_in/min_in)) * (arr_dim - I_ONE )) + I_ONE
+  end function inverse_f_to_ind
 !====================================================================================================
 ! Solver test section
 !----------------------------------------------------------------------------------------------------
@@ -899,11 +1462,12 @@ module cresp_NR_method
         print *, "f2(x(:)) =  x(1) - x(2)"
         print *, "expected solution is x1 = x2 = sqrt(2)"
    
-        selected_function => fvec_test
+        selected_function_2D => fvec_test
         x(1) = -5.0
         x(2) = 8.0
         print *, "starting with x =", x
         call NR_algorithm(x, exit_code)
+        print *, x
         print *, "x**2 = ", x**2
   end subroutine nr_test
 !----------------------------------------------------------------------------------------------------
@@ -916,5 +1480,49 @@ module cresp_NR_method
         fvec_test(1) = x(1)**2+x(2)**2 - four
         fvec_test(2) = x(1) - x(2)
   end function fvec_test
-
+!----------------------------------------------------------------------------------------------------
+  subroutine nr_test_1D
+   implicit none
+   real(kind=8) :: x
+   logical      :: exit_code
+        print *, "NR algorithm test, provided test functions are:"
+        print *, "f(x) = 1.1*x + sin(x)"
+        print *, "expected solution is x = 0.0 "
+        selected_value_check_1D  => dummy_check_1D
+        selected_function_1D => f_test_1D
+        x = -5.0
+        print *, "starting with x =", x, "f(x) = ", selected_function_1D(x)
+        call NR_algorithm_1D(x, exit_code)
+        print *, x
+  end subroutine nr_test_1D
+!----------------------------------------------------------------------------------------------------
+  function f_test_1D(x)
+   implicit none
+    real(kind=8) :: f_test_1D
+    real(kind=8) :: x
+        f_test_1D = 1.1*x + sin(x)
+  end function f_test_1D
+ !----------------------------------------------------------------------------------------------------
+ subroutine dummy_check_1D(x, exit_code)
+  implicit none
+   real(kind=8) :: x
+   logical      :: exit_code
+        x = x ! to turn off unused argument warnings
+        exit_code = .false.
+ end subroutine dummy_check_1D
+ !----------------------------------------------------------------------------------------------------
+ subroutine initialize_arrays
+ use diagnostics, only: my_allocate_with_index, my_allocate
+ implicit none
+    call my_allocate_with_index(alpha_tab_lo,arr_dim,1)
+    call my_allocate_with_index(alpha_tab_up,arr_dim,1)
+    call my_allocate_with_index(n_tab_lo,arr_dim,1)
+    call my_allocate_with_index(n_tab_up,arr_dim,1)
+    call my_allocate_with_index(alpha_tab_q,arr_dim,1)
+    call my_allocate_with_index(q_grid,arr_dim,1)
+    call my_allocate(p_ratios_lo, (/ arr_dim, arr_dim /) )
+    call my_allocate(f_ratios_lo, (/ arr_dim, arr_dim /) )
+    call my_allocate(p_ratios_up, (/ arr_dim, arr_dim /) )
+    call my_allocate(f_ratios_up, (/ arr_dim, arr_dim /) )
+ end subroutine initialize_arrays
 end module cresp_NR_method

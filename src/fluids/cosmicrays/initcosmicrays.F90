@@ -38,14 +38,14 @@ module initcosmicrays
 ! pulled by COSM_RAYS
    use constants, only: cbuff_len
    use initcrspectrum, only: ncre, p_min_fix, p_max_fix, f_init, q_init, q_big, p_lo_init, p_up_init,  & 
-                          cfl_cre, cre_eff, K_cre_e_paral, K_cre_e_perp, K_cre_n_paral, K_cre_n_perp, K_pow_index, &
-                          expan_order, init_cresp, compute_K
+                          cfl_cre, cre_eff, K_cre_paral_1, K_cre_perp_1, K_cre_pow, &
+                          expan_order, init_cresp !, compute_K
    implicit none
 
    public ! QA_WARN no secrets are kept here
    private :: cbuff_len ! QA_WARN prevent reexport
 
-   integer, parameter                  :: ncr_max = 99  !< maximum number of CR nuclear and electron components (\warning higher ncr_max limit would require changes in names of components in common_hdf5)
+   integer, parameter                  :: ncr_max = 102  !< maximum number of CR nuclear and electron components (\warning higher ncr_max limit would require changes in names of components in common_hdf5)
    ! namelist parameters
    integer(kind=4)                     :: ncrn         !< number of CR nuclear  components \deprecated BEWARE: ncrs (sum of ncrn and ncre) should not be higher than ncr_max = 9
 !    integer(kind=4)                     :: ncre         !< number of CR electron components \deprecated BEWARE: ncrs (sum of ncrn and ncre) should not be higher than ncr_max = 9
@@ -186,11 +186,13 @@ contains
       K_cre_paral(:) = 0.0
       K_cre_perp(:)  = 0.0
       
-      K_cre_e_paral = 0.0
-      K_cre_n_paral = 0.0
-      K_cre_e_perp  = 0.0
-      K_cre_n_perp  = 0.0
-      K_pow_index   = 0.0
+!       K_cre_e_paral = 0.0
+!       K_cre_n_paral = 0.0
+!       K_cre_e_perp  = 0.0
+!       K_cre_n_perp  = 0.0
+      K_cre_pow   = 0.0
+      K_cre_paral_1 = 0.0
+      K_cre_perp_1  = 0.0
 
       crn_gpcr_ess(:) = .false.
       crn_gpcr_ess(1) = .true.       ! in most cases protons are the first ingredient of CRs and they are essential
@@ -263,11 +265,11 @@ contains
          rbuff(10)  = p_max_fix
          rbuff(11)  = cfl_cre     !!!
          rbuff(12)  = cre_eff
-         rbuff(13)  = K_cre_e_paral !!!
-         rbuff(14)  = K_cre_n_paral !!!
-         rbuff(15)  = K_cre_e_perp !!!
-         rbuff(16)  = K_cre_n_perp !!!
-         rbuff(17)  = K_pow_index  !!!
+         rbuff(13)  = K_cre_paral_1 !!!
+         rbuff(14)  = K_cre_perp_1 !!!
+         rbuff(15)  = K_cre_pow !!!
+!          rbuff(16)  = K_cre_n_perp !!!
+!          rbuff(17)  = K_pow_index  !!!
          
          lbuff(1)   = use_split
 
@@ -288,12 +290,12 @@ contains
          
 #ifdef COSM_RAY_ELECTRONS
 !          TODO - to be implemented later
-         K_cre_paral(1:ncre) = compute_K(K_cre_n_paral, K_pow_index, 0.1, ncre)
-         K_cre_paral(ncre:2*ncre) = compute_K(K_cre_e_paral, K_pow_index, 0.0, ncre)
+!          K_cre_paral(1:ncre) = compute_K(K_cre_paral_1, K_cre_pow, 0.1, ncre)
+!          K_cre_paral(ncre:2*ncre) = compute_K(K_cre_e_paral, K_pow_index, 0.0, ncre)
          K_cre_paral(2*ncre+1:2*ncre+2) = 0.0  ! K for cutoff momenta must always remain zero
 !          
-         K_cre_perp(1:ncre) = compute_K(K_cre_n_perp, K_pow_index, 0.1, ncre)
-         K_cre_perp(ncre:2*ncre) = compute_K(K_cre_e_perp, K_pow_index, 0.0, ncre)
+!          K_cre_perp(1:ncre) = compute_K(K_cre_n_perp, K_pow_index, 0.1, ncre)
+!          K_cre_perp(ncre:2*ncre) = compute_K(K_cre_e_perp, K_pow_index, 0.0, ncre)
          K_cre_perp(2*ncre+1:2*ncre+2) = 0.0   ! K for cutoff momenta always remain zero
 
 #endif /* COSM_RAY_ELECTRONS */         
@@ -332,11 +334,11 @@ contains
          p_max_fix  = rbuff(10)  !!!
          cfl_cre    = rbuff(11)  !!!
          cre_eff    = rbuff(12)  !!!
-         K_cre_e_paral = rbuff(13) !!!
-         K_cre_n_paral = rbuff(14) !!!
-         K_cre_e_perp  = rbuff(15) !!!
-         K_cre_n_perp  = rbuff(16) !!!
-         K_pow_index   = rbuff(17) !!!
+         K_cre_paral_1 = rbuff(13) !!!
+         K_cre_perp_1 = rbuff(14) !!!
+         K_cre_pow  = rbuff(15) !!!
+!          K_cre_n_perp  = rbuff(16) !!!
+!          K_pow_index   = rbuff(17) !!!
          
          use_split  = lbuff(1)
 
@@ -393,12 +395,12 @@ contains
          K_crs_paral(ncrn+1:ncrs) = 0!K_cre_paral(1:ncre)
          K_crs_perp (ncrn+1:ncrs) = 0!K_cre_perp (1:ncre)
 #ifdef COSM_RAY_ELECTRONS      
-         K_crs_paral(ncrn+1:ncrn+ncre) = K_cre_e_paral ! TODO wrong! - number density indexes are the first!
-         K_crs_paral(ncrn+1+ncre:ncrn+2*ncre) = K_cre_n_paral
+         K_crs_paral(ncrn+1:ncrn+ncre) = K_cre_paral(1:ncre)
+         K_crs_paral(ncrn+1+ncre:ncrn+2*ncre) = K_cre_paral(1:ncre)
          K_crs_paral(ncrn+2*ncre+1:ncrn+2*ncre+2) = 0.0    ! p_lo, p_up
          
-         K_crs_perp(ncrn+1:ncrn+1+ncre) = K_cre_e_perp
-         K_crs_perp(ncrn+ncre+1:ncrn+1+2*ncre) = K_cre_n_perp
+         K_crs_perp(ncrn+1:ncrn+ncre) = K_cre_perp(1:ncre)
+         K_crs_perp(ncrn+ncre+1:ncrn+2*ncre) = K_cre_perp(1:ncre)
          K_crs_perp(ncrn+2*ncre+1:ncrn+2*ncre+2) = 0.0    ! p_lo, p_up
 #endif /* COSM_RAY_ELECTRONS */
       endif

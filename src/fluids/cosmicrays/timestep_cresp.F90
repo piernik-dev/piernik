@@ -5,42 +5,54 @@ module timestep_cresp
  use constants,      only: one, zero
 
       implicit none
-!       private         p_tmp
- 
-      real(kind=8) :: dt_cre, dt_tmp
-!       real(kind=8), allocatable, dimension(:) :: p_tmp   ! do not use p variable in this module anywhere outside
-!       real(kind=8), allocatable, dimension(:) :: dts_new
+    private
+    public :: dt_cre, cresp_timestep
 
-!-------------------      
-!      
+    real(kind=8) :: dt_cre
+
+!----------------------------------------------------------------------------------------------------
+!
  contains
 !
-!-------------------
-! if we only saved p_up value, this might save a LOT of time.
+!----------------------------------------------------------------------------------------------------
 
   function approximate_p_up(n_cell, e_cell)
    use initcrspectrum, only: p_fix
-   use cresp_NR_method, only: intpol_pf_from_NR_grids, alpha_tab_up, n_tab_up
+   use cresp_NR_method, only: intpol_pf_from_NR_grids
    use units, only: clight
    implicit none
     integer :: cell_i_up
     real(kind=8), dimension(:), intent(in) :: n_cell, e_cell
-    real(kind=8) :: approximate_p_up
+    real(kind=8) :: approximate_p_up, alpha_bnd, n_bnd
     real(kind=8), dimension(1:2) :: pf_ratio
+    character(len=2) :: which_bound="up"
+    logical :: interpolation_successful, intpol_fail
+        intpol_fail = .true.
         cell_i_up = evaluate_i_up(e_cell, n_cell)
-        pf_ratio  = intpol_pf_from_NR_grids("up",(e_cell(cell_i_up)/(n_cell(cell_i_up)*clight*p_fix(cell_i_up-1))), &
-                                                        n_cell(cell_i_up), alpha_tab_up, n_tab_up) ! we use just an interpolated ratio, who knows if it'll work
-        approximate_p_up = pf_ratio(1) * p_fix(cell_i_up-1)
-    end function approximate_p_up
+        if (cell_i_up .ne. 1) then
+            alpha_bnd = (e_cell(cell_i_up)/(n_cell(cell_i_up)*clight*p_fix(cell_i_up-1)))
+            n_bnd     = n_cell(cell_i_up)
+            pf_ratio  = intpol_pf_from_NR_grids(which_bound,alpha_bnd, n_bnd, interpolation_successful, intpol_fail) ! we use just an interpolated ratio
+            if ( intpol_fail ) then
+                approximate_p_up = p_fix(cell_i_up) ! if interpolation fails, upper p_fix boundary is provided - might cause problems with p_up moving beyond p_fix
+                return
+            else
+                approximate_p_up = pf_ratio(1) * p_fix(cell_i_up-1)
+                return
+            endif
+        else
+            approximate_p_up = p_fix(cell_i_up) ! approximate_p_up = pf_ratio(1) * p_fix(cell_i_up-1)
+        endif
+  end function approximate_p_up
 !----------------------------------------------------------------------------------------------------
-  function evaluate_i_up(e_cell, n_cell) ! obain i_up index from energy densities in cell
-  use initcrspectrum, only: ncre
+  function evaluate_i_up(e_cell, n_cell) ! obtain i_up index from energy densities in cell
+  use initcrspectrum, only: ncre, e_small
   use constants, only: zero
   implicit none
     real(kind=8), dimension(:), intent(in) :: e_cell, n_cell
     integer :: evaluate_i_up, i
         do i=ncre, 1, -1  ! we start counting from ncre since upper cutoff is rather expected at higher index numbers. Might change it though.
-            if (e_cell(i) .gt. zero .and. n_cell(i) .gt. zero) then ! better compare to zero or to eps?
+            if (e_cell(i) .gt. e_small .and. n_cell(i) .gt. zero) then ! better compare to zero or to eps?
                 evaluate_i_up = i
                 return
             endif  ! no need for other conditions - if there IS a bin that has literally no energy, the algorithm will most likely crash.
@@ -52,8 +64,7 @@ module timestep_cresp
 !----------------------------------------------------------------------------------------------------
 
   subroutine cresp_timestep(dt_comp, sptab, n_cell, e_cell)
-   use initcrspectrum,   only: spec_mod_trms, ncre, w
-   use cresp_arrays_handling, only: allocate_with_index
+   use initcrspectrum,   only: spec_mod_trms, ncre, w, e_small
    use constants, only: zero
    implicit none
     real(kind=8)               :: dt_comp
@@ -63,36 +74,23 @@ module timestep_cresp
     type(spec_mod_trms) sptab
         dt_cre_ud = huge(one)
         dt_cre_ub = huge(one)
-
-        if (maxval(e_cell) .gt. zero) then ! any timestep evaluation makes sense only if there's any information to be migrated between bins
+        if (maxval(e_cell) .gt. e_small) then ! any timestep evaluation makes sense only if there's any information to be migrated between bins
 ! Adiabatic cooling timestep:
-            if (sptab%ud .ne. zero) then
+            if (abs(sptab%ud) .gt. zero) then
                 dt_cre_ud = cfl_cre * w / sptab%ud
                 dt_cre_ud = abs(dt_cre_ud)
             endif
-!    dt_cre_ud = minval(dts_new)   ! it was already multiplied by cfl_cre
-!    dts_new = huge(one)
-   
 ! Synchrotron cooling timestep (is dependant only on p_up, highest value of p):
-            p_u = approximate_p_up(n_cell, e_cell)
             if (sptab%ub .gt. zero) then
+                p_u = approximate_p_up(n_cell, e_cell)
                 dt_cre_ub = cfl_cre * w / (p_u * sptab%ub)
             endif
-!    dt_cre_ub = minval(dts_new)
-#ifdef VERBOSE
-            print *, '[@timestep_cresp:] Computed timesteps:'
-            print *, 'dt_cre_ud = ', dt_cre_ud
-            print *, 'dt_cre_ub = ', dt_cre_ub
-#endif /* VERBOSE */
         endif
 ! Here shortest among calculated timesteps is chosen.
         dt_comp = min(dt_cre_ud, dt_cre_ub)
 
 ! Should dt_cre_ud or dt_cre_ub be greater than current one, next timestep shall be independently increased by piernik in timestep
-        dt_cre = min(dt_cre, dt_comp) ! Gives minimal timestep among computed for current cell and previous ones
-   
-!     if (allocated(p_tmp))   deallocate(p_tmp)
-!     if (allocated(dts_new)) deallocate(dts_new)
+        dt_cre = min(dt_cre, dt_comp) ! Assures that minimal timestep among computed for current cell and previous ones us chosen
     
  end subroutine cresp_timestep
   
