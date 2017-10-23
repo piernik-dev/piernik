@@ -48,14 +48,11 @@ module initcosmicrays
    integer, parameter                  :: ncr_max = 102  !< maximum number of CR nuclear and electron components (\warning higher ncr_max limit would require changes in names of components in common_hdf5)
    ! namelist parameters
    integer(kind=4)                     :: ncrn         !< number of CR nuclear  components \deprecated BEWARE: ncrs (sum of ncrn and ncre) should not be higher than ncr_max = 9
-!    integer(kind=4)                     :: ncre         !< number of CR electron components \deprecated BEWARE: ncrs (sum of ncrn and ncre) should not be higher than ncr_max = 9
    integer(kind=4)                     :: ncrs         !< number of all CR components \deprecated BEWARE: ncrs (sum of ncrn and ncre) should not be higher than ncr_max = 9
    real                                :: cfl_cr       !< CFL number for diffusive CR transport
-!    real                                :: cfl_cre
    real                                :: smallecr     !< floor value for CR energy density
    real                                :: cr_active    !< parameter specifying whether CR pressure gradient is (when =1.) or isn't (when =0.) included in the gas equation of motion
    real                                :: cr_eff       !< conversion rate of SN explosion energy to CR energy (default = 0.1)
-!    real                                :: cre_eff      !< Conversion rate of SN explosion energy to CR electrons energy (default = 0.01)
    logical                             :: use_split    !< apply all diffusion operators at once (.false.) or use directional splittiong (.true.)
    real, dimension(ncr_max)            :: gamma_crn    !< array containing adiabatic indexes of all CR nuclear components
    real, dimension(ncr_max)            :: K_crn_paral  !< array containing parallel diffusion coefficients of all CR nuclear components
@@ -67,11 +64,6 @@ module initcosmicrays
    logical, dimension(ncr_max)         :: crn_gpcr_ess !< if CRn species/energy-bin is essential for grad_pcr calculation
    logical, dimension(ncr_max)         :: cre_gpcr_ess !< if CRe species/energy-bin is essential for grad_pcr calculation
    integer(kind=4), allocatable, dimension(:) :: gpcr_essential !< crs indexes of essentials for grad_pcr calculation
-!    real                                :: K_cre_e_paral !< Contains parallel diffusion coefficient of electrons (for energy density)
-!    real                                :: K_cre_n_paral !< Contains parallel diffusion coefficient of electrons (for number density)
-!    real                                :: K_cre_e_perp  !< Contains perpendicular diffusion coefficient of electrons (for energy density)
-!    real                                :: K_cre_n_perp  !< Contains perpendicular diffusion coefficient of electrons (for number density)
-!    real                                :: K_pow_index   !< Power law index for scaling electron diffusion coefficients K(e) with K(n)
    ! public component data
    integer(kind=4), allocatable, dimension(:) :: iarr_crn !< array of indexes pointing to all CR nuclear components
    integer(kind=4), allocatable, dimension(:) :: iarr_cre !< array of indexes pointing to all CR electron components
@@ -84,12 +76,6 @@ module initcosmicrays
    integer(kind=4)                            :: iarr_cre_pu !< array of indexes pointing to CR electron p_up components
 
    real,    allocatable, dimension(:)  :: gamma_crs    ! < array containing adiabatic indexes of all CR components
-!    real(kind=8)                        :: p_lo_init    ! < initial lower momentum cut in power spectrum
-!    real(kind=8)                        :: p_up_init    ! < initial upper momentum cut in power spectrum
-!    real(kind=8)                        :: f_init       ! < initial value of the normalization parameter in cre energy spectrum
-!    real(kind=8)                        :: q_init       ! < initial value of power law coefficient in cre energy spectrum
-!    real(kind=8)                        :: p_min_fix    ! < momentum fixed grid
-!    real(kind=8)                        :: p_max_fix    ! < momentum fixed grid
 
    real,    allocatable, dimension(:)  :: K_crs_paral  !< array containing parallel diffusion coefficients of all CR components
    real,    allocatable, dimension(:)  :: K_crs_perp   !< array containing perpendicular diffusion coefficients of all CR components
@@ -97,10 +83,6 @@ module initcosmicrays
    
    integer(kind=4), allocatable, dimension(:) :: iarr_crs_tmp
    
-!     real(kind=8),allocatable, dimension(:) :: p_fix
-!     real(kind=8),allocatable, dimension(:) :: cresp_edges
-!     real(kind=8)       :: w
-!     integer  :: i
 contains
 
 !>
@@ -141,9 +123,6 @@ contains
 #ifdef COSM_RAYS_SOURCES
       use cr_data,         only: init_crsources
 #endif /* COSM_RAYS_SOURCES */
-#ifdef COSM_RAY_ELECTRONS
-!    use cresp_variables!, only: cre_table, cren, cree
-#endif /* COSM_RAY_ELECTRONS */   
 
       implicit none
 
@@ -154,10 +133,6 @@ contains
            &                 ncrn, gamma_crn, K_crn_paral, K_crn_perp, &
            &                 gamma_cre, divv_scheme, crn_gpcr_ess, cre_gpcr_ess
            
-!       namelist /COSMIC_RAY_SPECTRUM/ cfl_cre, p_lo_init, p_up_init, f_init, q_init, ncre, &
-!            &                         p_min_fix, p_max_fix, cre_eff, K_cre_e_paral, K_cre_e_perp, &
-!            &                         K_cre_n_paral, K_cre_n_perp, K_pow_index
-
       cfl_cr     = 0.9
       cfl_cre    = 0.5
       smallecr   = 0.0
@@ -168,15 +143,6 @@ contains
       ncre       = 0
       cre_eff    = 0.01
 
-      p_lo_init = 1.0e2
-      p_up_init = 1.0e3
-      p_min_fix = 1.0e2
-      p_max_fix = 1.0e4
-      f_init    = 1.0e0
-      q_init    = 5.0e0
-      q_big     = 10.0e0      
-      expan_order = 1
-      
       use_split  = .true.
 
       gamma_crn(:)   = 4./3.
@@ -186,13 +152,7 @@ contains
       K_cre_paral(:) = 0.0
       K_cre_perp(:)  = 0.0
       
-!       K_cre_e_paral = 0.0
-!       K_cre_n_paral = 0.0
-!       K_cre_e_perp  = 0.0
-!       K_cre_n_perp  = 0.0
       K_cre_pow   = 0.0
-      K_cre_paral_1 = 0.0
-      K_cre_perp_1  = 0.0
 
       crn_gpcr_ess(:) = .false.
       crn_gpcr_ess(1) = .true.       ! in most cases protons are the first ingredient of CRs and they are essential
@@ -219,26 +179,7 @@ contains
          call nh%compare_namelist()
       endif
       
-!       if (master) then
-!          open(newunit=nh%lun, file=nh%tmp1, status="unknown")
-!          write(nh%lun,nml=COSMIC_RAY_SPECTRUM)
-!          close(nh%lun)
-!          open(newunit=nh%lun, file=nh%par_file)
-!          nh%errstr=""
-!          read(unit=nh%lun, nml=COSMIC_RAY_SPECTRUM, iostat=nh%ierrh, iomsg=nh%errstr)
-!          close(nh%lun)
-!          call nh%namelist_errh(nh%ierrh, "COSMIC_RAY_SPECTRUM")
-!          read(nh%cmdl_nml,nml=COSMIC_RAY_SPECTRUM, iostat=nh%ierrh)
-!          call nh%namelist_errh(nh%ierrh, "COSMIC_RAY_SPECTRUM", .true.)
-!          open(newunit=nh%lun, file=nh%tmp2, status="unknown")
-!          write(nh%lun,nml=COSMIC_RAY_SPECTRUM)
-!          close(nh%lun)
-!          
-!          call nh%compare_namelist() ! Do not use one-line if here!
-
-!       endif
-      
-      call init_cresp ! ncre,cfl_cre and other imported from initcrspectrum are initialized and read from parameter file
+      call init_cresp       !<    ncre,cfl_cre and other imported from initcrspectrum are initialized and read from parameter file
       
 #ifndef MULTIGRID
       if (.not. use_split) call warn("[initcosmicrays:init_cosmicrays] No multigrid solver compiled in: use_split reset to .true.")
@@ -250,7 +191,7 @@ contains
       if (master) then
 
          ibuff(1)   = ncrn
-         ibuff(2)   = ncre
+         ibuff(2)   = ncre ! should this still be here?
 
          rbuff(1)   = cfl_cr
          rbuff(2)   = smallecr
@@ -268,8 +209,6 @@ contains
          rbuff(13)  = K_cre_paral_1 !!!
          rbuff(14)  = K_cre_perp_1 !!!
          rbuff(15)  = K_cre_pow !!!
-!          rbuff(16)  = K_cre_n_perp !!!
-!          rbuff(17)  = K_pow_index  !!!
          
          lbuff(1)   = use_split
 
@@ -337,8 +276,6 @@ contains
          K_cre_paral_1 = rbuff(13) !!!
          K_cre_perp_1 = rbuff(14) !!!
          K_cre_pow  = rbuff(15) !!!
-!          K_cre_n_perp  = rbuff(16) !!!
-!          K_pow_index   = rbuff(17) !!!
          
          use_split  = lbuff(1)
 
@@ -456,9 +393,6 @@ contains
 
       use constants,    only: I_ONE, I_TWO
       use fluidtypes,   only: var_numbers
-#ifdef COSM_RAY_ELECTRONS
-!       use cresp_variables, only: ind_p_lo, ind_p_up, ind_e_beg, ind_e_end, ind_n_beg, ind_n_end
-#endif /* COSM_RAY_ELECTRONS */
 
       implicit none
 
@@ -512,23 +446,14 @@ contains
       
 #ifdef COSM_RAY_ELECTRONS      
      flind%cre%nbeg = flind%crn%end + I_ONE
-!      ind_n_beg = flind%crn%end + I_ONE
      flind%cre%nend = flind%crn%end + ncre
-!      ind_n_end = flind%crn%end + ncre
      
      flind%cre%ebeg = flind%cre%nend + I_ONE
-!      ind_e_beg = ind_n_end + I_ONE
      flind%cre%eend = flind%cre%nend + ncre
-!      ind_e_end = ind_n_end + ncre
      flind%cre%plo  = flind%cre%eend + I_ONE
      flind%cre%pup  = flind%cre%eend + I_TWO
-!      print *,'ind_n_beg, ind_n_end = ', ind_n_beg, ind_n_end
-!      print *,'ind_e_beg, ind_e_end = ', ind_e_beg, ind_e_end
-     
-!      ind_p_lo = ind_e_end+I_ONE
-!      ind_p_up = ind_p_lo + I_ONE
               
-     do icr = 1, ncre !ind_n_beg, ind_n_end
+     do icr = 1, ncre
         iarr_cre_n(icr) = flind%cre%nbeg - I_ONE + icr
         iarr_cre_e(icr) = flind%cre%ebeg - I_ONE + icr
      enddo
