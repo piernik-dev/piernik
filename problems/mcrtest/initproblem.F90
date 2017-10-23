@@ -171,7 +171,7 @@ contains
       use cr_data,        only: icr_H1, icr_C12, cr_table
 #endif /* COSM_RAYS_SOURCES */
 #ifdef COSM_RAY_ELECTRONS
-     use initcosmicrays, only: ncrn, iarr_cre_pl, iarr_cre_pu ! DEPRECATED
+     use initcosmicrays, only: ncrn !, iarr_cre_pl, iarr_cre_pu ! DEPRECATED
      use initcrspectrum, only: q_init, f_init, p_lo_init, p_up_init, p_min_fix, p_max_fix, ncre, &
                                  expan_order, taylor_coeff_2nd, taylor_coeff_3rd
      use cresp_grid,     only: cresp_init_grid
@@ -290,11 +290,6 @@ contains
          call printinfo(msg)
 !          call print_mcrtest_vars_hdf5()
             
-      if (ncre > 0) then
-      cg%u(iarr_cre_pl, :, :, :) = p_lo_init ! DEPRECATED
-      cg%u(iarr_cre_pu, :, :, :) = p_up_init ! DEPRECATED
-      endif
-           
       call cresp_initialize_guess_grids
       call cresp_init_grid
    call sleep (1)

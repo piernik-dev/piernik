@@ -233,13 +233,6 @@ contains
          case ("cree01" : "cree99")
             read(var,'(A4,I2.2)') aux, i !> \deprecated BEWARE 0 <= i <= 99, no other indices can be dumped to hdf file
             tab(:,:,:) = real(cg%u(flind%cre%ebeg+i-1, RNG), kind=4) ! this is consistent with the quantity of ncre variables, tested
-         case ("crepl")
-            read(var,'(A5)') aux !> \deprecated BEWARE 0 <= i <= 99, no other indices can be dumped to hdf file
-            tab(:,:,:) = real(cg%u(flind%cre%plo, RNG), kind=4)  
-         case ("crepu")
-            read(var,'(A5)') aux !> \deprecated BEWARE 0 <= i <= 99, no other indices can be dumped to hdf file
-            tab(:,:,:) = real(cg%u(flind%cre%pup, RNG), kind=4)
-           
 #endif /* COSM_RAY_ELECTRONS */            
 
 #ifdef TRACER

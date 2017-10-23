@@ -144,7 +144,6 @@ contains
 #ifdef COSM_RAYS
             case ('encr')
                nhdf_vars = nhdf_vars + size(iarr_all_crn,1)
-               ! 2*size ... + 2 because one cannot forget about any component - cren(ncre), cree(ncre), crepl(1), crepu(1)
 #ifdef COSM_RAY_ELECTRONS
                nhdf_vars = nhdf_vars + size(iarr_all_cre,1)
 #endif /* COSM_RAY_ELECTRONS */
@@ -209,12 +208,6 @@ contains
                    write(aux,'(A4,I2.2)') 'cree', k !!!
                    hdf_vars(j) = aux ; j = j + 1 !!!
                enddo    !!!
-                   write(aux,'(A5)') 'crepl'  !!! DEPRECATED
-                   hdf_vars(j) = aux ; j = j + 1 !!!
-
-                   write(aux,'(A5)') 'crepu' !!!
-                   hdf_vars(j) = aux ; j = j + 1 !!! DEPRECATED
-
 #endif /* COSM_RAY_ELECTRONS */
 #endif /* COSM_RAYS */
 
