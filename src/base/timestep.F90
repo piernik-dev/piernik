@@ -156,16 +156,15 @@ contains
             dt    = min(dt, dt_)
             c_all = max(c_all, c_)
          enddo
+#ifdef COSM_RAY_ELECTRONS
+         call grid_cresp_timestep
+         dt = min(dt, dt_crs, dt_cre)
+#endif /* COSM_RAY_ELECTRONS */
 
 #ifdef COSM_RAYS
          call timestep_crs(cg)
          dt = min(dt, dt_crs)
 #endif /* COSM_RAYS */
-
-#ifdef COSM_RAY_ELECTRONS
-         call grid_cresp_timestep
-         dt = min(dt, dt_crs, dt_cre)
-#endif /* COSM_RAY_ELECTRONS */
 
 #ifdef RESISTIVE
          call timestep_resist(cg)

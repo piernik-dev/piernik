@@ -145,7 +145,7 @@ contains
   use grid_cont,        only: grid_container
   use constants,        only: xdim, ydim, zdim, LO, HI !, pMAX,
   use named_array_list, only: qna
-  use constants,        only: one
+  use constants,        only: one, half
   use initcrspectrum,   only: spec_mod_trms
   use timestep_cresp,  only: cresp_timestep
   implicit none
@@ -172,7 +172,7 @@ contains
             enddo
             cgl=>cgl%nxt
         enddo
-        dt_cre = 0.5 * dt_cre ! dt comes in to cresp_crspectrum with factor 2
+        dt_cre = half * dt_cre ! dt comes in to cresp_crspectrum with factor 2
   end subroutine grid_cresp_timestep
 !----------------------------------------------------------------------------------------------------
  subroutine append_dissipative_terms(i,j,k) ! To be fixed
