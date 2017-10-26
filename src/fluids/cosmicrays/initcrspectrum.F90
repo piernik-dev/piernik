@@ -38,7 +38,7 @@ module initcrspectrum
 !----------------------------------
  real(kind=8),parameter  :: eps   = 1.0e-15          ! < epsilon parameter for real number comparisons 
 !----------------------------------
- real(kind=8),allocatable, dimension(:) :: p_fix
+ real(kind=8),allocatable, dimension(:) :: p_fix, p_mid_fix
  real(kind=8)       :: w
 ! Types used in module: 
    type bin_old
@@ -132,6 +132,7 @@ module initcrspectrum
             endif
 ! arrays initialization
             call my_allocate_with_index(p_fix,ncre,0)
+            call my_allocate_with_index(p_mid_fix,ncre,1)
             call my_allocate_with_index(cresp_edges,ncre,0)
 
             cresp_edges = (/ (i,i=0,ncre) /)
@@ -143,6 +144,12 @@ module initcrspectrum
             p_fix_ratio = ten**w
             write (*,'(A22, 50E15.7)') 'Fixed momentum grid: ', p_fix
             write (*,'(A22, 50E15.7)') 'Bin p-width (log10): ', w
+            
+            p_mid_fix = 0.0
+            p_mid_fix(2:ncre-1) = sqrt(p_fix(1:ncre-2)*p_fix(2:ncre-1))
+            p_mid_fix(1)    = p_mid_fix(2) / p_fix_ratio
+            p_mid_fix(ncre) = p_mid_fix(ncre-1) * p_fix_ratio
+            write (*,'(A22, 50E15.7)') 'Fixed mid momenta:   ',p_mid_fix(1:ncre)
 ! Input parameters check
             else
                 write (*,"(A10,I4,A96)") 'ncre   = ', ncre, &
@@ -213,6 +220,7 @@ module initcrspectrum
         if (allocated(virtual_n)) call my_deallocate(virtual_n)
 
         if (allocated(p_fix)) call my_deallocate(p_fix)
+        if (allocated(p_mid_fix)) call my_deallocate(p_mid_fix)
         if (allocated(cresp_edges)) call my_deallocate(cresp_edges)
         if (allocated(crel%p))  call my_deallocate(crel%p)
         if (allocated(crel%f)) call my_deallocate(crel%f)
@@ -221,4 +229,5 @@ module initcrspectrum
         if (allocated(crel%n)) call my_deallocate(crel%n)
  end subroutine cleanup_cresp_virtual_en_arrays
 !----------------------------------------------------------------------------------------------------
+
 end module initcrspectrum

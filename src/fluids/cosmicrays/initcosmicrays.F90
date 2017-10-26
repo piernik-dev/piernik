@@ -38,7 +38,7 @@ module initcosmicrays
 ! pulled by COSM_RAYS
    use constants, only: cbuff_len
    use initcrspectrum, only: ncre, p_min_fix, p_max_fix, f_init, q_init, q_big, p_lo_init, p_up_init,  & 
-                          cfl_cre, cre_eff, K_cre_paral_1, K_cre_perp_1, K_cre_pow, &
+                          cfl_cre, cre_eff, K_cre_paral_1, K_cre_perp_1, K_cre_pow, p_mid_fix, &
                           expan_order, init_cresp !, compute_K
    implicit none
 
@@ -222,16 +222,6 @@ contains
             lbuff(2:ncrn+1) = crn_gpcr_ess(1:ncrn)
          endif
 
-#ifdef COSM_RAY_ELECTRONS
-!          TODO - to be implemented later
-!          K_cre_paral(1:ncre) = compute_K(K_cre_paral_1, K_cre_pow, 0.1, ncre)
-!          K_cre_paral(ncre:2*ncre) = compute_K(K_cre_e_paral, K_pow_index, 0.0, ncre)
-!          
-!          K_cre_perp(1:ncre) = compute_K(K_cre_n_perp, K_pow_index, 0.1, ncre)
-!          K_cre_perp(ncre:2*ncre) = compute_K(K_cre_e_perp, K_pow_index, 0.0, ncre)
-
-#endif /* COSM_RAY_ELECTRONS */         
-!  pause
          if (ncre > 0) then
             rbuff(ne+1       :ne+  ncre) = gamma_cre  (1:ncre)
             rbuff(ne+1+  ncre:ne+2*ncre) = K_cre_paral(1:ncre)  ! deprecated
@@ -316,24 +306,19 @@ contains
         K_crs_perp (1:ncrn) = K_crn_perp (1:ncrn)
       endif
 
-#ifdef COSM_RAY_ELECTRONS
+#ifdef COSM_RAY_ELECTRONS      
       if (ncre > 0) then
-!        This is only estimation of the upper limit of CR diffusion coefficients
-!        necessary for the first computation of CR timestep
-         K_crs_paral(ncrn+1:ncrn+ncre) = K_cre_paral_1 * p_up_init**K_cre_pow
-         K_crs_paral(ncrn+1+ncre:ncrn+2*ncre) = K_cre_paral_1 * p_up_init**K_cre_pow
-         K_crs_perp(ncrn+1:ncrn+ncre) = K_cre_perp_1 * p_up_init**K_cre_pow
-         K_crs_perp(ncrn+ncre+1:ncrn+2*ncre) = K_cre_perp_1 * p_up_init**K_cre_pow
-!          K_cre_paral(1:ncre)    = K_crs_paral(ncrn+1:ncrn+ncre)
-!          K_cre_perp(1:ncre)     = K_crs_perp(ncrn+1:ncrn+ncre)
-!         print *, 'init_cosmicrays'
-!         print *, K_crs_paral(ncrn+1:ncrn+ncre)
-!         print *, K_crs_paral(ncrn+1+ncre:ncrn+2*ncre)
-!         print *, K_crs_perp(ncrn+1:ncrn+ncre)
-!         print *, K_crs_perp(ncrn+ncre+1:ncrn+2*ncre)
+         K_crs_paral(ncrn+1:ncrn+ncre) = K_cre_paral_1  * p_mid_fix**K_cre_pow          ! number density K
+         K_crs_paral(ncrn+1+ncre:ncrn+2*ncre) = K_cre_paral_1 * p_mid_fix**K_cre_pow    ! energy density K
+         K_crs_perp(ncrn+1:ncrn+ncre) = K_cre_perp_1 * p_mid_fix**K_cre_pow             ! number density K
+         K_crs_perp(ncrn+ncre+1:ncrn+2*ncre) = K_cre_perp_1 * p_mid_fix**K_cre_pow      ! energy density K
 
-#endif /* COSM_RAY_ELECTRONS */
+         K_cre_paral(1:ncre)        =  K_crs_paral(ncrn+1:ncrn+ncre)               ! number density K
+         K_cre_paral(ncre+1:2*ncre) =  K_crs_paral(ncrn+1+ncre:ncrn+2*ncre)        ! energy density K
+         K_cre_perp(1:ncre)         =  K_crs_paral(ncrn+1:ncrn+ncre)               ! number density K
+         K_cre_perp(ncre+1:2*ncre)  =  K_crs_paral(ncrn+1+ncre:ncrn+2*ncre)        ! energy density K
       endif
+#endif /* COSM_RAY_ELECTRONS */
       ma1d = [ncrn]
       call my_allocate(iarr_crn, ma1d)
 
