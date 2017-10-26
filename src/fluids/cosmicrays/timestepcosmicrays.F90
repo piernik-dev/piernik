@@ -67,11 +67,17 @@ contains
       logical, save :: frun = .true.
       real :: dt
 
-      if (.not. (is_multicg .or. frun)) return
+!      print *, 'timestep_cosmicrays'
+!      print *, K_crs_paral
+!      print *, K_crs_perp
+
+
+
+!!!      if (.not. (is_multicg .or. frun)) return
       ! with multiple cg% there are few cg%dxmn to be checked
       ! with AMR minval(cg%dxmn) may change with time
-      if (maxval(K_crn_paral+K_crn_perp) <= 0) then !!!
-         dt_crs = huge(one) 
+      if (maxval(K_crs_paral+K_crs_perp) <= 0) then !!!
+         dt_crs = huge(one)
       else
          dt = cfl_cr * half/maxval(K_crs_paral+K_crs_perp) !!!
          if (cg%dxmn < sqrt(huge(one))/dt) then
@@ -80,14 +86,16 @@ contains
             diff_dt_crs_orig = min(dt_crs, dt)
             if (.not. (use_split .or. diff_explicit)) dt = dt * diff_tstep_fac ! enlarge timestep for non-explicit diffusion
 #endif /* MULTIGRID */
-            dt_crs = min(dt_crs, dt)
-#ifdef COSM_RAY_ELECTRONS            
-            dt_crs = min(dt_crs, dt_cre, dt)
+!            dt_crs = min(dt_crs, dt)
+#ifdef COSM_RAY_ELECTRONS
+
+            print *, ' dt_crs = ', dt_crs, 'dt_cre = ', dt_cre, ' dt = ', dt
+            dt = min(dt_crs, dt_cre, dt)
+            print *,  ' dt = ', dt
+
 #endif	/* COSM_RAY_ELECTRONS */
-!             print *,'    dt_crs = ', dt_crs
          endif
       endif
-!       print *, ' dt_crs = ', dt_crs, ' dt = ', dt,' dt_cre = ', dt_cre
       frun = .false.
 
    end subroutine timestep_crs

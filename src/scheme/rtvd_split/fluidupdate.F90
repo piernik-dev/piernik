@@ -156,11 +156,22 @@ contains
       use gravity,             only: source_terms_grav
       use particle_pub,        only: pset, psolver
 #endif /* GRAV */
-#if defined(COSM_RAYS) && defined(MULTIGRID)
+#if defined(COSM_RAYS) 
       use all_boundaries,      only: all_fluid_boundaries
-      use initcosmicrays,      only: use_split
+      use initcosmicrays,      only: use_split, iarr_crs_diff
+      use initcosmicrays,      only: ncrn, ncre
+      use initcosmicrays,      only: K_crs_paral, K_crs_perp 
+      use initcosmicrays,      only: K_cre_paral_1, K_cre_perp_1, K_cre_pow
+      use fluidindex,          only: flind
+#if defined(COSM_RAY_ELECTRONS) 
+      use initcrspectrum,      only: ncre, p_fix, p_lo_init, p_up_init
+!      use cresp_crspectrum,    only: active_bins
+      use cresp_arrays_handling, only: allocate_with_index
+#endif /* COSM_RAY_ELECTRONS */
+#if defined(MULTIGRID)
       use multigrid_diffusion, only: multigrid_solve_diff
-#endif /* COSM_RAYS && MULTIGRID */
+#endif /* MULTIGRID */
+#endif /* COSM_RAYS */
 #ifdef SHEAR
       use shear,               only: shear_3sweeps
 #endif /* SHEAR */
@@ -169,7 +180,10 @@ contains
 
       logical, intent(in) :: forward  !< If .true. then do X->Y->Z sweeps, if .false. then reverse that order
 
-      integer(kind=4) :: s
+      integer(kind=4) :: s, icrc      ! index of cr component in iarr_crs_diff
+
+      real(kind=8),allocatable, dimension(:) :: p
+      real(kind=8),allocatable, dimension(:) :: p_mid
 
 #ifdef SHEAR
       call shear_3sweeps
@@ -179,26 +193,75 @@ contains
       call source_terms_grav
 #endif /* GRAV */
 
-#if defined(COSM_RAYS) && defined(MULTIGRID)
+#if defined(COSM_RAYS) 
+
+#ifdef COSM_RAY_ELECTRONS      
+!        WARNING: Temporary solution. This will work only if p_lo and p_up are fixed
+         call allocate_with_index(p, 0, ncre)
+         call allocate_with_index(p_mid, 1, ncre)
+         p = p_fix
+         p(0)    = p_lo_init
+         p(ncre) = p_up_init
+         p_mid = sqrt(p(0:ncre-1)*p(1:ncre))
+!         print *, p
+!         print *, p_mid
+
+         
+         K_crs_paral(ncrn+1:ncrn+ncre) = K_cre_paral_1  * p_mid**K_cre_pow
+         K_crs_paral(ncrn+1+ncre:ncrn+2*ncre) = K_cre_paral_1 * p_mid**K_cre_pow
+         
+         K_crs_perp(ncrn+1:ncrn+ncre) = K_cre_perp_1 * p_mid**K_cre_pow
+         K_crs_perp(ncrn+ncre+1:ncrn+2*ncre) = K_cre_perp_1 * p_mid**K_cre_pow
+         
+!         print *, 'fluidupdate'
+!         print *, K_crs_paral(ncrn+1:ncrn+ncre) 
+!         print *, K_crs_paral(ncrn+1+ncre:ncrn+2*ncre)
+!         print *, K_crs_perp(ncrn+1:ncrn+ncre)
+!         print *, K_crs_perp(ncrn+ncre+1:ncrn+2*ncre)
+         
+!         stop
+#endif /* COSM_RAY_ELECTRONS */
+
+
+
       if (.not. use_split) then
+#if defined(MULTIGRID)
          call multigrid_solve_diff
          call all_fluid_boundaries
+#endif /* MULTIGRID */
+      else
+
+            do icrc=1, flind%crn%all
+               do s = xdim, zdim
+                  if (.not.skip_sweep(s)) call make_diff_sweep(icrc, s)
+               enddo
+            enddo
+             
+            do icrc= flind%crn%all + 1, flind%crn%all + ncre
+               do s = xdim, zdim
+                  if (.not.skip_sweep(s)) call make_diff_sweep(icrc, s)
+               enddo
+               do s = xdim, zdim
+                  if (.not.skip_sweep(s)) call make_diff_sweep(ncre + icrc, s)
+               enddo
+            enddo
+         
       endif
-#endif /* COSM_RAYS && MULTIGRID */
+#endif /* COSM_RAYS */
 
       call expanded_domain%delete ! at this point everything should be initialized after domain expansion and we no longer need this list
       if (use_fargo) then
-         if (.not.skip_sweep(zdim)) call make_sweep(zdim, forward)
-         if (.not.skip_sweep(xdim)) call make_sweep(xdim, forward)
+         if (.not.skip_sweep(zdim)) call make_adv_sweep(zdim, forward)
+         if (.not.skip_sweep(xdim)) call make_adv_sweep(xdim, forward)
          if (.not.skip_sweep(ydim)) call make_fargosweep
       else
          if (forward) then
             do s = xdim, zdim
-               if (.not.skip_sweep(s)) call make_sweep(s, forward)
+              if (.not.skip_sweep(s)) call make_adv_sweep(s, forward)
             enddo
          else
             do s = zdim, xdim, -I_ONE
-               if (.not.skip_sweep(s)) call make_sweep(s, forward)
+              if (.not.skip_sweep(s)) call make_adv_sweep(s, forward)
             enddo
          endif
       endif
@@ -213,7 +276,7 @@ contains
 !>
 !! \brief Perform single sweep in forward or backward direction
 !<
-   subroutine make_sweep(dir, forward)
+   subroutine make_adv_sweep(dir, forward)
 
       use domain,         only: dom
       use global,         only: geometry25D
@@ -233,9 +296,6 @@ contains
 
       if (dom%has_dir(dir)) then
          if (.not. forward) then
-#ifdef COSM_RAYS
-            if (use_split) call cr_diff(dir)
-#endif /* COSM_RAYS */
 
 #ifdef MAGNETIC
             call magfield(dir)
@@ -248,10 +308,6 @@ contains
 #ifdef MAGNETIC
             call magfield(dir)
 #endif /* MAGNETIC */
-#ifdef COSM_RAYS
-            if (use_split) call cr_diff(dir)
-#endif /* COSM_RAYS */
-
          endif
       else
          if (geometry25D) call sweep(dir)
@@ -261,9 +317,39 @@ contains
       call force_dumps
 #endif /* DEBUG */
 
+   end subroutine make_adv_sweep
 
 
-   end subroutine make_sweep
+!>
+!! \brief Perform single diffusion sweep in forward or backward direction
+!<
+   subroutine make_diff_sweep(icrc, dir)
+
+      use domain,         only: dom
+      use sweeps,         only: sweep
+#ifdef COSM_RAYS
+      use crdiffusion,    only: cr_diff
+      use initcosmicrays, only: use_split
+#endif /* COSM_RAYS */
+#ifdef DEBUG
+      use piernikiodebug,   only: force_dumps
+#endif /* DEBUG */
+
+      implicit none
+
+      integer(kind=4), intent(in) :: icrc, dir      !< direction, one of xdim, ydim, zdim
+
+#ifdef COSM_RAYS
+      if (dom%has_dir(dir)) then
+         call cr_diff(icrc,dir)
+      endif
+#endif /* COSM_RAYS */
+
+#ifdef DEBUG
+      call force_dumps
+#endif /* DEBUG */
+
+   end subroutine make_diff_sweep
 
 #ifdef MAGNETIC
    subroutine magfield(dir)

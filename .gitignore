@@ -3,6 +3,7 @@ obj*/
 runs/
 *~
 .lastsetup
+.DS_Store
 python/DirWalk.pyc
 .setuprc
 html/

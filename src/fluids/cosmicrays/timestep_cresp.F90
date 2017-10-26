@@ -58,7 +58,7 @@ module timestep_cresp
             endif  ! no need for other conditions - if there IS a bin that has literally no energy, the algorithm will most likely crash.
         enddo
   end function evaluate_i_up
-  
+
 !----------------------------------------------------------------------------------------------------
 ! Subroutine consistent with rules depicted in crspectrum.pdf
 !----------------------------------------------------------------------------------------------------
@@ -93,5 +93,5 @@ module timestep_cresp
         dt_cre = min(dt_cre, dt_comp) ! Assures that minimal timestep among computed for current cell and previous ones us chosen
     
  end subroutine cresp_timestep
-  
+
 end module timestep_cresp

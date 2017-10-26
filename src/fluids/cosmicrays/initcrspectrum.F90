@@ -24,7 +24,7 @@ module initcrspectrum
  integer(kind=1)    :: e_small_approx_p_up = 1  ! < 0,1 - turns off/on energy (e_small) approximated upper cutoff momentum in isolated case
  integer(kind=1)    :: e_small_approx_init_cond = 1 ! < 0,1 - turns off/on energy (e_small) approximated momenta at initialization
  integer(kind=1)    :: add_spectrum_base = 1    ! < adds base to spectrum of any type of e_small value
- real(kind=8)       :: max_p_ratio = 1.5        ! < maximal ratio of momenta for solution grids resolved at initialization via cresp_NR_method
+ real(kind=8)       :: max_p_ratio = 2.5        ! < maximal ratio of momenta for solution grids resolved at initialization via cresp_NR_method
  integer(kind=2)    :: NR_iter_limit=100        ! < maximal number of iterations for NR algorithm
  logical            :: force_init_NR = .false.  ! < forces resolving new ratio solution grids at initialization
  logical            :: NR_run_refine_pf  = .false.      ! < enables "refine_grids" subroutines that fill empty spaces on the solution grid
@@ -84,7 +84,7 @@ module initcrspectrum
            &                         K_cre_pow, expan_order, e_small, bump_amp, &
            &                         e_small_approx_init_cond, e_small_approx_p_lo, e_small_approx_p_up, force_init_NR,&
            &                         NR_iter_limit, max_p_ratio, add_spectrum_base !, arr_dim
-           
+  
         open(unit=101, file="problem.par", status="unknown")
         read(unit=101, nml=COSMIC_RAY_SPECTRUM)
         close(unit=101)
