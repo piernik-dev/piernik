@@ -261,7 +261,7 @@ contains
       use gravity,          only: grav_pot2accel
 #endif /* GRAV */
 #ifdef COSM_RAYS
-      use initcosmicrays,   only: iarr_crs, iarr_crn, smallecr
+      use initcosmicrays,   only: iarr_crn, smallecr ! , iarr_crs
       use sourcecosmicrays, only: src_gpcr
 #ifdef COSM_RAYS_SOURCES
       use initcosmicrays,   only: iarr_crn
