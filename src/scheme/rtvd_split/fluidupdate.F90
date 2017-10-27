@@ -209,9 +209,8 @@ contains
                   if (.not.skip_sweep(s)) call make_diff_sweep(ncre + icrc, s)
                enddo
             enddo
-         
-      endif
 #endif /* COSM_RAY_ELECTRONS */
+      endif
 #endif /* COSM_RAYS */
 
       call expanded_domain%delete ! at this point everything should be initialized after domain expansion and we no longer need this list

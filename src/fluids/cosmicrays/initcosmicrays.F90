@@ -173,9 +173,10 @@ contains
          close(nh%lun)
          call nh%compare_namelist()
       endif
-      
+#ifdef COSM_RAY_ELECTRONS
       call init_cresp       !<    ncre,cfl_cre and other imported from initcrspectrum are initialized and read from parameter file
-      
+#endif /* COSM_RAY_ELECTRONS */
+
 #ifndef MULTIGRID
       if (.not. use_split) call warn("[initcosmicrays:init_cosmicrays] No multigrid solver compiled in: use_split reset to .true.")
       use_split  = .true.
@@ -283,9 +284,9 @@ contains
 
       endif
 
-!!      ncrs = ncre + ncrn
+      ncrs = ncrn ! + ncre  ! < should it still be possible to perform simulation of cre component without compiling CRESP module?
 #ifdef COSM_RAY_ELECTRONS
-      ncrs = 2 * ncre + ncrn   !!!!!
+      ncrs = ncrs + 2 * ncre
 #endif /* COSM_RAY_ELECTRONS */
 
       if (any([ncrn, ncre] > ncr_max) .or. any([ncrn, ncre] < 0)) call die("[initcosmicrays:init_cosmicrays] ncr[nes] > ncr_max or ncr[nes] < 0")
