@@ -15,5 +15,3 @@
 
 #undef MULTIGRID
 #define RTVD
-
-#define DEBUG
