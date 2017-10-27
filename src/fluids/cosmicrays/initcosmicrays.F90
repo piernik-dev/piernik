@@ -366,7 +366,7 @@ contains
 
    subroutine cosmicray_index(flind)
 
-      use constants,    only: I_ONE, I_TWO
+      use constants,    only: I_ONE
       use fluidtypes,   only: var_numbers
 
       implicit none
