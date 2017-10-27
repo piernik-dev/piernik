@@ -64,7 +64,7 @@ contains
       logical, save :: frun = .true.
       real :: dt
 
-!!!      if (.not. (is_multicg .or. frun)) return
+     if (.not. (is_multicg .or. frun)) return
       ! with multiple cg% there are few cg%dxmn to be checked
       ! with AMR minval(cg%dxmn) may change with time
       if (maxval(K_crn_paral+K_crn_perp) <= 0) then !!!
