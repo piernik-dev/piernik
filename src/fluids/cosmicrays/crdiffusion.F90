@@ -50,7 +50,6 @@ contains
       use crhelpers,      only: divv_n
       use dataio_pub,     only: warn
       use fluidindex,     only: flind
-      use initcosmicrays,   only: iarr_crs_diff
 
       implicit none
       has_cr = (flind%crs%all > 0)
@@ -140,7 +139,7 @@ contains
       use domain,           only: dom
       use global,           only: dt
       use grid_cont,        only: grid_container
-      use initcosmicrays,   only: K_crn_paral, K_crn_perp, K_crs_paral, K_crs_perp, iarr_crs, iarr_crs_diff !, iarr_crn !!!
+      use initcosmicrays,   only: K_crn_paral, K_crn_perp, K_crs_paral, K_crs_perp, iarr_crs !, iarr_crn !!!
       use named_array,      only: p4
       use named_array_list, only: wna
 #ifdef COSM_RAY_ELECTRONS
@@ -151,7 +150,7 @@ contains
       implicit none
 
       integer(kind=4), intent(in)          :: crdim
-      integer(kind=4), intent(in)          :: icrc   ! this is the number of cr component (position in iarr_crs_diff)
+      integer(kind=4), intent(in)          :: icrc   ! this is the number of cr component (position in iarr_crs
                                                      ! number density and energy density of a single bin have different icrc
       integer                              :: icrs   ! this is a number of component in cg%u first index
       integer                              :: i, j, k, il, ih, jl, jh, kl, kh, ild, jld, kld
@@ -177,7 +176,7 @@ contains
       present_not_crdim = dom%has_dir .and. ( [ xdim,ydim,zdim ] /= crdim )
       wcri = wna%ind(wcr_n)
       
-      icrs = iarr_crs_diff(icrc)
+      icrs = iarr_crs(icrc)
       
       cgl => leaves%first
       do while (associated(cgl))
