@@ -66,9 +66,6 @@ module fluidtypes
       integer(kind=4) :: ebeg= 0   !< beginning number of energy density components for fluid/component (cre) !!!
       integer(kind=4) :: nend= 0   !< end number of number density components for fluid/component (cre)       !!!
       integer(kind=4) :: eend= 0   !< end number of energy density components for fluid/component (cre)       !!!
-      integer(kind=4) :: plo = 0   !< index denoting position of lower momentum cut for fluid/component(cre)  !!!
-      integer(kind=4) :: pup = 0   !< index denoting position of lower momentum cut for fluid/component(cre)  !!!
-      
    end type component
 
    type, abstract, extends(component) :: component_fluid
