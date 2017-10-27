@@ -3,13 +3,12 @@ module cresp_grid
 
 ! This module contains routines necessary to initialize, compute timestep for cre bins and to update spectrum in the whole domain
 ! as the crspectrum module operates on a single grid cell.
-      use initcosmicrays, only: iarr_cre_e, iarr_cre_n !, iarr_cre_pl
+      use initcosmicrays, only: iarr_cre_e, iarr_cre_n
       use initcrspectrum, only: ncre
       use global,         only: dt, t
 
-
-      public        dt_cre, cresp_update_grid, cresp_init_grid, grid_cresp_timestep
       private
+      public        dt_cre, cresp_update_grid, cresp_init_grid, grid_cresp_timestep
 
       real(kind=8)                    :: dt_cre
       integer(kind=4), save           :: i_up_max_prev
@@ -18,20 +17,18 @@ contains
  subroutine cresp_update_grid
   use cg_leaves,      only: leaves
   use cg_list,        only: cg_list_element
-  use constants,      only: xdim, ydim, zdim, zero !, pMAX,
+  use constants,      only: xdim, ydim, zdim, zero
   use grid_cont,      only: grid_container
   use cresp_crspectrum, only:cresp_update_cell, printer
-  use units,           only: s_len_u
-  use initcrspectrum, only: spec_mod_trms, virtual_e, virtual_n !, p_fix, crel
+  use initcrspectrum, only: spec_mod_trms, virtual_e, virtual_n
   use named_array_list, only: qna
-  use crhelpers,        only: divv_n
-  use func,             only: emag, ekin, operator(.equals.), operator(.notequals.)
-  use fluidindex, only: iarr_all_dn
+  use crhelpers,      only: divv_n
+  use func,           only: emag, ekin, operator(.equals.), operator(.notequals.)
   implicit none
     integer                         :: i, j, k
     type(cg_list_element),  pointer :: cgl
     type(grid_container),   pointer :: cg
-    real(kind=8), dimension(1:ncre)  :: n_cell, e_cell
+    real(kind=8), dimension(1:ncre) :: n_cell, e_cell
     type(spec_mod_trms)  :: sptab
         i = 0; j = 0;  k = 0
         cgl => leaves%first
@@ -54,8 +51,7 @@ contains
                         call cresp_update_cell(2*dt, n_cell, e_cell, sptab, virtual_n(1:2,i,j,k), virtual_e(1:2,i,j,k))
                         cg%u(iarr_cre_n, i, j, k) = n_cell
                         cg%u(iarr_cre_e, i, j, k) = e_cell
-!              diagnostic:
-                        if (i.eq.12.and.j.eq.12.and.k.eq.0) then
+                        if (i.eq.12.and.j.eq.12.and.k.eq.0) then ! diagnostic:
                             call printer(t)
                         endif
                     enddo
@@ -66,21 +62,20 @@ contains
 
   end subroutine cresp_update_grid
 !----------------------------------------------------------------------------------------------------
- subroutine cresp_init_grid
-  use cg_leaves,      only: leaves
-  use cg_list,        only: cg_list_element
-  use constants,      only: I_ONE, I_FOUR, fpi, LO, HI, xdim, ydim, zdim, zero
-  use grid_cont,      only: grid_container
-  use initcrspectrum, only: ncre, f_init, p_up_init, p_lo_init, q_init, cre_eff, spec_mod_trms, initial_condition, bump_amp, &
+  subroutine cresp_init_grid
+   use cg_leaves,      only: leaves
+   use cg_list,        only: cg_list_element
+   use constants,      only: I_ONE, I_FOUR, fpi, LO, HI, xdim, ydim, zdim, zero
+   use grid_cont,      only: grid_container
+   use initcrspectrum, only: ncre, f_init, p_up_init, p_lo_init, q_init, cre_eff, spec_mod_trms, initial_condition, bump_amp, &
                             virtual_e, virtual_n
-  use initcosmicrays, only: iarr_crn !, iarr_cre
-  use cresp_crspectrum, only: cresp_init_state, cresp_allocate_all, printer
-  use units,          only: clight
-  implicit none
+   use initcosmicrays, only: iarr_crn
+   use cresp_crspectrum, only: cresp_init_state, cresp_allocate_all, printer
+   use units,          only: clight
+   implicit none
     integer                         :: i, j, k
     type(cg_list_element),  pointer :: cgl
     type(grid_container),   pointer :: cg
-!     real(kind=8), allocatable, dimension(:)  :: cresp_arguments
     real(kind=8)                             :: max_amp_cr, f_amplitude
     real(kind=8), dimension(1:ncre) :: n_cell, e_cell
     type(spec_mod_trms)  :: sptab
@@ -96,28 +91,28 @@ contains
             cg%u(iarr_cre_n,:,:,:) = zero
             max_amp_cr = maxval(cg%u(iarr_crn(1),:,:,:))
 
-        if (.not. allocated(virtual_e)) allocate(virtual_e(1:2,cg%lhn(xdim,LO):cg%lhn(xdim,HI),cg%lhn(ydim,LO):cg%lhn(ydim,HI),&
-                        cg%lhn(zdim,LO):cg%lhn(zdim,HI)))
-        if (.not. allocated(virtual_n)) allocate(virtual_n(1:2,cg%lhn(xdim,LO):cg%lhn(xdim,HI),cg%lhn(ydim,LO):cg%lhn(ydim,HI),&
-                        cg%lhn(zdim,LO):cg%lhn(zdim,HI)))
-        virtual_e = zero
-        virtual_n = zero
+            if (.not. allocated(virtual_e)) allocate(virtual_e(1:2, cg%lhn(xdim,LO):cg%lhn(xdim,HI), &
+                cg%lhn(ydim,LO):cg%lhn(ydim,HI), cg%lhn(zdim,LO):cg%lhn(zdim,HI)))
+            if (.not. allocated(virtual_n)) allocate(virtual_n(1:2, cg%lhn(xdim,LO):cg%lhn(xdim,HI), &
+                cg%lhn(ydim,LO):cg%lhn(ydim,HI), cg%lhn(zdim,LO):cg%lhn(zdim,HI)))
+            virtual_e = zero
+            virtual_n = zero
 
-        n_cell = zero
-        e_cell = zero
+            n_cell = zero
+            e_cell = zero
             do k = cg%lhn(zdim,LO), cg%lhn(zdim,HI)
                 do j = cg%lhn(ydim,LO), cg%lhn(ydim,HI)
                     do i = cg%lhn(xdim,LO), cg%lhn(xdim,HI)
-!                         cresp_arguments = 0.0
-                   ! Every initial condition should be normalized before initializing Cosmic Ray Electron SPectrum module
+            ! Every initial condition should be normalized before initializing Cosmic Ray Electron SPectrum module
                         if ( initial_condition == "powl") then
                             f_amplitude = 1/(fpi*clight*(p_lo_init**(I_FOUR))*(((p_up_init/p_lo_init)**(I_FOUR-q_init))-I_ONE)/ &
                                                                                                             (I_FOUR-q_init))
-                     ! amplitude and distribution of electron energy density is inherited after those of nucleons, see crspectrum.pdf, eq. 29
+            ! amplitude and distribution of electron energy density is inherited after those of nucleons, see crspectrum.pdf, eq. 29
                             f_amplitude = f_init*cg%u(iarr_crn(1),i,j,k)*cre_eff
                         endif
                         if (initial_condition == "bump") then
-                            f_amplitude = cre_eff * cg%u(iarr_crn(1),i,j,k) ! for gaussian distribution & inheritance of spatial energy/number density after nucleons
+            ! for gaussian distribution & inheritance of spatial energy/number density after nucleons
+                            f_amplitude = cre_eff * cg%u(iarr_crn(1),i,j,k)
 !                             f_amplitude = bump_amp ! * clight
                         endif
                         call cresp_init_state(n_cell, e_cell, f_amplitude, sptab)
@@ -133,37 +128,38 @@ contains
                 enddo
             enddo
             cgl=>cgl%nxt
-        enddo
-        i_up_max_prev = 0
-        
-        first_run = .false. ! FIXME uncommenting results inf SIGFPE for some reason; whole subroutine is called twice.
-      endif
-   end subroutine cresp_init_grid
+            enddo
+            i_up_max_prev = 0
 
-! ------------------------------------------------
-
- subroutine grid_cresp_timestep
-  use cg_leaves,        only: leaves
-  use cg_list,          only: cg_list_element
-  use crhelpers,        only: divv_n
-  use func,             only: emag !, operator(.equals.), operator(.notequals.)
-  use grid_cont,        only: grid_container
-  use constants,        only: xdim, ydim, zdim, LO, HI !, pMAX,
-  use named_array_list, only: qna
-  use constants,        only: one, half
-  use initcrspectrum,   only: spec_mod_trms, cfl_cre
-  use initcosmicrays,   only: K_cre_paral, K_cre_perp
-  use timestep_cresp,  only: cresp_timestep
-  implicit none
+            first_run = .false. ! FIXME uncommenting results inf SIGFPE for some reason; whole subroutine is called twice.
+        endif
+  end subroutine cresp_init_grid
+!----------------------------------------------------------------------------------------------------
+  subroutine grid_cresp_timestep
+   use cg_leaves,        only: leaves
+   use cg_list,          only: cg_list_element
+   use crhelpers,        only: divv_n
+   use func,             only: emag !, operator(.equals.), operator(.notequals.)
+   use grid_cont,        only: grid_container
+   use constants,        only: xdim, ydim, zdim
+   use named_array_list, only: qna
+   use constants,        only: one, half
+   use initcrspectrum,   only: spec_mod_trms, cfl_cre
+   use initcosmicrays,   only: K_cre_paral, K_cre_perp
+   use timestep_cresp,   only: cresp_timestep
+   implicit none
     integer(kind=4)                 :: i, j, k, i_up_max, i_up_max_tmp
     type(grid_container), pointer   :: cg
     type(cg_list_element), pointer  :: cgl
     real(kind=8)                    :: dt_cre_tmp, K_cre_max_sum
     real(kind=8),save               :: dt_cre_K
     type(spec_mod_trms)             :: sptab
-        i_up_max = 0 ;  i_up_max_tmp = 0
+        i_up_max = 0
+        i_up_max_tmp = 0
+
         dt_cre = huge(one)
         dt_cre_tmp = huge(one)
+
         cgl => leaves%first
         do while (associated(cgl))
             cg => cgl%cg
@@ -181,6 +177,7 @@ contains
             enddo
             cgl=>cgl%nxt
         enddo
+
         if ( i_up_max_prev .ne. i_up_max ) then ! dt_cre_K saved, computed again only if in the whole domain highest i_up changes.
             i_up_max_prev = i_up_max
             K_cre_max_sum = K_cre_paral(i_up_max) + K_cre_perp(i_up_max) ! assumes the same K for energy and number density
@@ -190,20 +187,16 @@ contains
                 dt_cre_K = cfl_cre * half / K_cre_max_sum
                 if (cg%dxmn < sqrt(huge(one))/dt_cre_K) then
                     dt_cre_K = dt_cre_K * cg%dxmn**2
-! #ifdef MULTIGRID
-!                 diff_dt_crs_orig = min(dt_crs, dt)
-!                 if (.not. (use_split .or. diff_explicit)) dt = dt * diff_tstep_fac ! enlarge timestep for non-explicit diffusion
-! #endif /* MULTIGRID */
                 endif
             endif
         endif
         dt_cre = min(dt_cre, dt_cre_K)
-        dt_cre = half * dt_cre ! dt comes in to cresp_crspectrum with factor 2
+        dt_cre = half * dt_cre ! dt comes in to cresp_crspectrum with factor * 2
         
   end subroutine grid_cresp_timestep
 !----------------------------------------------------------------------------------------------------
  subroutine append_dissipative_terms(i,j,k) ! To be fixed
-  use initcrspectrum, only: spec_mod_trms
+  use initcrspectrum,   only: spec_mod_trms
   use named_array_list, only: qna
   use crhelpers,        only: divv_n
   use func,             only: emag
@@ -222,7 +215,7 @@ contains
             cg => cgl%cg
             sptab%ub = emag(cg%b(xdim,i,j,k), cg%b(ydim,i,j,k), cg%b(zdim,i,j,k))
             sptab%ud = cg%q(qna%ind(divv_n))%point([i,j,k])
-            sptab%ucmb = 0.0
+            sptab%ucmb = 0.0 ! Not included yet
             cgl =>cgl%nxt
         enddo
  end subroutine append_dissipative_terms
