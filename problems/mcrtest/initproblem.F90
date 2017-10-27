@@ -36,7 +36,6 @@ module initproblem
 
    integer(kind=4)    :: norm_step
    real               :: t_sn
-   integer            :: n_sn
    real               :: d0, p0, bx0, by0, bz0, x0, y0, z0, r0, beta_cr, amp_cr, vxd0, vyd0, vzd0, expansion_cnst
 
    namelist /PROBLEM_CONTROL/ d0, p0, bx0, by0, bz0, x0, y0, z0, r0, vxd0, vyd0, vzd0, beta_cr, amp_cr, norm_step, expansion_cnst
@@ -294,8 +293,6 @@ contains
          call printinfo(msg)
          write(msg,*) '[initproblem:problem_initial conditions]: Taylor_exp._coeff.(2nd,3rd) = ', taylor_coeff_2nd, taylor_coeff_3rd
          call printinfo(msg)
-!          call print_mcrtest_vars_hdf5()
-
       call cresp_initialize_guess_grids
       call cresp_init_grid
    call sleep (1)
@@ -305,7 +302,7 @@ contains
       cgl => leaves%first
       do while (associated(cgl))
         cg => cgl%cg
-        if (expansion_cnst .ne. 0.0 ) then ! adiabatic expansion / compression
+        if (expansion_cnst .gt. 0.0 ) then ! adiabatic expansion / compression
 #ifdef IONIZED
 ! Ionized
          do k = cg%lhn(zdim,LO), cg%lhn(zdim,HI)
