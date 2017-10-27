@@ -1,7 +1,9 @@
 module cresp_crspectrum
 ! pulled by COSM_RAY_ELECTRONS
  implicit none
-     
+  public :: cresp_update_cell, cresp_init_state, printer, fail_count_interpol, fail_count_no_sol, fail_count_NR_2dim, &
+      &   cleanup_cresp, cresp_accuracy_test, b_losses, cresp_allocate_all, cresp_deallocate_all
+  private ! most of it
   real(kind=8)     , parameter      :: three   = 3.e0
   real(kind=8)     , parameter      :: four    = 4.e0
   real(kind=8)     , parameter      :: five    = 5.e0
@@ -27,15 +29,15 @@ module cresp_crspectrum
   integer                           :: num_fixed_edges,   num_fixed_edges_next
   integer                           :: num_active_edges,  num_active_edges_next
   integer                           :: num_active_bins,   num_active_bins_next
-  integer                           :: num_cooling_edges, num_cooling_edges_next
-  integer                           :: num_heating_edges, num_heating_edges_next
+  integer                           :: num_cooling_edges_next
+  integer                           :: num_heating_edges_next
 
 ! dynamic arrays
   integer, allocatable              :: fixed_edges(:),   fixed_edges_next(:)
   integer, allocatable              :: active_edges(:),  active_edges_next(:)
   integer, allocatable              :: active_bins(:),   active_bins_next(:)
-  integer, allocatable              :: cooling_edges(:), cooling_edges_next(:)
-  integer, allocatable              :: heating_edges(:), heating_edges_next(:)
+  integer, allocatable              :: cooling_edges_next(:)
+  integer, allocatable              :: heating_edges_next(:)
 
    real(kind=8), allocatable, dimension(:) :: r  ! r term for energy losses (Miniati 2001, eqn. 25)
    real(kind=8), allocatable, dimension(:) :: q  ! power-law exponent array
@@ -65,7 +67,6 @@ module cresp_crspectrum
   
 ! in-algorithm energy & number density
   real(kind=8), allocatable, dimension(:)  :: n, e ! dimension(1:ncre) 
-  real(kind=8), allocatable, dimension(:)  :: n1, e1
 ! virtual e,n arrays for cutoff, for cases when bins are only slightly filled and p ~ p_fix - it might not be possible to find solution via NR  
    real(kind=8), dimension(1:2) :: vrtl_n, vrtl_e
 !-------------------------------------------------------------------------------------------------
@@ -77,8 +78,7 @@ contains
 !----- main subroutine -----
 
   subroutine cresp_update_cell(dt, n_inout, e_inout, sptab, v_n, v_e, p_out) !, p_lo_cell, p_up_cell)
-   use initcrspectrum, only: ncre, spec_mod_trms, e_small_approx_p_lo, e_small_approx_p_up, e_small_approx_init_cond,&
-                             crel, NR_refine_solution_pf
+   use initcrspectrum, only: ncre, spec_mod_trms, e_small_approx_p_lo, e_small_approx_p_up, e_small_approx_init_cond, crel
 ! #ifdef VERBOSE
    use initcrspectrum, only: p_fix
 ! #endif /* VERBOSE */
@@ -138,25 +138,35 @@ contains
             p_lo = p_fix(i_lo)
             p(i_lo) = p_fix(i_lo)
         endif
-        if (NR_refine_solution_pf .eqv. .false.) then ! arbitrary condition
-            if ((solve_fail_lo .eqv. .true.) .or. (solve_fail_up .eqv. .true.)) then
-                call deallocate_active_arrays
-                if (solve_fail_lo) then
+        if ((solve_fail_lo .eqv. .true.) .or. (solve_fail_up .eqv. .true.)) then
+            call deallocate_active_arrays
+            if (solve_fail_lo) then
+                if (i_lo .gt. 0) then
                     call relocate_quantities(e(i_lo+2),e(i_lo+1))
                     call relocate_quantities(n(i_lo+2),n(i_lo+1))
                     i_lo = i_lo + 1
                     call get_fqp_lo(solve_fail_lo)
+                else
+                    call relocate_quantities(v_e(1),e(i_lo+1))
+                    call relocate_quantities(v_n(1),n(i_lo+1))
+                    return
                 endif
-                if (solve_fail_up) then
+            endif
+            if (solve_fail_up) then
+                if (i_up .lt. ncre) then
                     call relocate_quantities(e(i_up-1),e(i_up)) ! instead of moving quantities to virtual
                     call relocate_quantities(n(i_up-1),n(i_up)) ! instead of moving quantities to virtual
                     i_up = i_up - 1
                     call get_fqp_up(solve_fail_up)
+                else
+                    call relocate_quantities(v_e(2),e(i_up))
+                    call relocate_quantities(v_n(2),n(i_up))
+                    return
                 endif
-                call cresp_find_active_bins
             endif
+            call cresp_find_active_bins
         endif
-
+        
         call cresp_update_bin_index(dt, p_lo, p_up, p_lo_next, p_up_next)      ! FIXME - must be modified in the future if this branch is connected to Piernik
 ! Compute fluxes through fixed edges in time period [t,t+dt], using f, q, p_lo and p_up at [t]
 ! Note that new [t+dt] values of p_lo and p_up in case new fixed edges appear or disappear.
@@ -201,11 +211,10 @@ contains
         write (*,'(A5, 50E18.9)') "    f", f
         write (*,'(A15,2E18.9,A3,2E18.9)') "virtual e & n", vrtl_e, " | ", vrtl_n
         print *, " "
-        
         if ( (e_small_approx_p_lo+e_small_approx_p_up) .gt. 0 ) then
-            print '(A36,I3,A5,I3)', "NR_2dim:  convergence failure: p_lo", fail_count_NR_2dim(1), ", p_up", fail_count_NR_2dim(2)
-            print '(A36,I3,A5,I3)', "NR_2dim:interpolation failure: p_lo", fail_count_interpol(1), ", p_up", fail_count_interpol(2)
-            print '(A36,I3,A5,I3)', "NR_2dim:  no solution failure: p_lo", fail_count_no_sol(1), ", p_up", fail_count_no_sol(2)
+            print '(A36,I5,A6,I3)', "NR_2dim:  convergence failure: p_lo", fail_count_NR_2dim(1), ", p_up", fail_count_NR_2dim(2)
+            print '(A36,I5,A6,I3)', "NR_2dim:interpolation failure: p_lo", fail_count_interpol(1), ", p_up", fail_count_interpol(2)
+            print '(A36,I5,A6,I3)', "NR_2dim:  no solution failure: p_lo", fail_count_no_sol(1), ", p_up", fail_count_no_sol(2)
         endif
 #endif /* VERBOSE */
         n = ndt
@@ -1071,7 +1080,9 @@ contains
             if (exit_code .eqv. .true.) then ! some failures still take place
                 if (interpolated .eqv. .false.) then
                     exit_code = .true.
+#ifdef VERBOSE
                     print *, " Interpolation AND NR failure (up)", alpha, n_in, x_NR_init
+#endif /* VERBOSE */
                     return
                 endif
                 fail_count_NR_2dim(2) = fail_count_NR_2dim(2) +1
@@ -1124,7 +1135,9 @@ contains
             if (exit_code .eqv. .true.) then ! some failures still take place
                 if (interpolated .eqv. .false.) then
                     exit_code = .true.
+#ifdef VERBOSE
                     print *, " Interpolation AND NR failure (lo)", alpha, n_in
+#endif /* VERBOSE */
                     return
                 endif
                 fail_count_NR_2dim(2) = fail_count_NR_2dim(2) +1
@@ -1265,7 +1278,7 @@ contains
     endif
   end subroutine threshold_energy_check_up
 !----------------------------------------------------------------------------------------------------
-  subroutine allocate_all_allocatable
+  subroutine cresp_allocate_all
    use initcrspectrum, only: ncre
    use diagnostics, only: my_allocate_with_index
    implicit none
@@ -1301,9 +1314,9 @@ contains
    call my_allocate_with_index(all_edges,ma1d,0)
    call my_allocate_with_index(i_act_edges,ma1d,0)
    
-  end subroutine allocate_all_allocatable
+  end subroutine cresp_allocate_all
   
-  subroutine deallocate_all_allocatable ! called by driver
+  subroutine cresp_deallocate_all! called by driver
   use diagnostics, only: my_deallocate
   implicit none
   
@@ -1339,7 +1352,7 @@ contains
    call my_deallocate(all_edges)
    call deallocate_active_arrays ! optional
    
-  end subroutine deallocate_all_allocatable
+  end subroutine cresp_deallocate_all
 
 ! !---------------------------------------------------------------------------------------------
    subroutine cresp_accuracy_test(t)
@@ -1364,7 +1377,7 @@ contains
 !----------------------------------------------------------------------------------------------------
  subroutine cleanup_cresp
   implicit none
-        call deallocate_all_allocatable
+        call cresp_deallocate_all
  end subroutine cleanup_cresp
 !----------------------------------------------------------------------------------------------------
    subroutine printer(t)
@@ -1372,7 +1385,7 @@ contains
    implicit none
      real(kind = 8)   :: t
       open(10, file="crs.dat", position='append')
-      write(10, '(e16.9, 3(1x,i8), 200(1x,ES18.9E3))') t, ncre, crel%i_lo, crel%i_up, crel%p, crel%f, crel%q
+      write(10, '(2e16.9, 3(1x,i8), 200(1x,ES18.9E3))') t, crel%dt, ncre, crel%i_lo, crel%i_up, crel%p, crel%f, crel%q
       close(10)
       
       open(11, file="crs_ne.dat", position='append')

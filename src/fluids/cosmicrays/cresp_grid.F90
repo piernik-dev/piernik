@@ -8,7 +8,9 @@ module cresp_grid
       use global,         only: dt, t
 
 
-      public        dt_cre
+      public        dt_cre, cresp_update_grid, cresp_init_grid, grid_cresp_timestep
+      private
+
       real(kind=8)                    :: dt_cre
       integer(kind=4), save           :: i_up_max_prev
 contains
@@ -72,7 +74,7 @@ contains
   use initcrspectrum, only: ncre, f_init, p_up_init, p_lo_init, q_init, cre_eff, spec_mod_trms, initial_condition, bump_amp, &
                             virtual_e, virtual_n
   use initcosmicrays, only: iarr_crn !, iarr_cre
-  use cresp_crspectrum, only: cresp_init_state, allocate_all_allocatable, printer
+  use cresp_crspectrum, only: cresp_init_state, cresp_allocate_all, printer
   use units,          only: clight
   implicit none
     integer                         :: i, j, k
@@ -84,7 +86,7 @@ contains
     type(spec_mod_trms)  :: sptab
     logical, save :: first_run = .true.
       if (first_run .eqv. .true.) then
-        call allocate_all_allocatable
+        call cresp_allocate_all
 
         i = 0; j = 0; k = 0
         cgl => leaves%first

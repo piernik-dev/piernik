@@ -1,6 +1,9 @@
 module initcrspectrum  
 ! pulled by COSM_RAY_ELECTRONS
 
+ public ! QA_WARN no secrets are kept here
+ private init_cresp_types
+
 ! contains routines reading namelist in problem.par file dedicated to cosmic ray electron spectrum and initializes types used.
 ! available via namelist COSMIC_RAY_SPECTRUM
  integer(kind=4)    :: ncre      = 0            ! < number of bins
@@ -79,15 +82,9 @@ module initcrspectrum
    implicit none
     integer                  :: i       ! enumerator
     logical, save            :: first_run = .true.
-        namelist /COSMIC_RAY_SPECTRUM/ cfl_cre, p_lo_init, p_up_init, f_init, q_init, q_big, ncre, initial_condition, &
-           &                         p_min_fix, p_max_fix, cre_eff, K_cre_paral_1, K_cre_perp_1, &
-           &                         K_cre_pow, expan_order, e_small, bump_amp, &
-           &                         e_small_approx_init_cond, e_small_approx_p_lo, e_small_approx_p_up, force_init_NR,&
-           &                         NR_iter_limit, max_p_ratio, add_spectrum_base !, arr_dim
-  
-        open(unit=101, file="problem.par", status="unknown")
-        read(unit=101, nml=COSMIC_RAY_SPECTRUM)
-        close(unit=101)
+
+    call cresp_read_nml_module
+
     if (first_run .eqv. .true.) then
         if (ncre .ne. I_ZERO)  then
             print *,'[@init_cresp] Initial CRESP parameters read:'
@@ -194,6 +191,19 @@ module initcrspectrum
         call init_cresp_types
       endif
  end subroutine init_cresp
+!---------------------------------------------------------------------------------------------------- 
+ subroutine cresp_read_nml_module
+ implicit none
+    namelist /COSMIC_RAY_SPECTRUM/ cfl_cre, p_lo_init, p_up_init, f_init, q_init, q_big, ncre, initial_condition, &
+    &                         p_min_fix, p_max_fix, cre_eff, K_cre_paral_1, K_cre_perp_1, &
+    &                         K_cre_pow, expan_order, e_small, bump_amp, &
+    &                         e_small_approx_init_cond, e_small_approx_p_lo, e_small_approx_p_up, force_init_NR,&
+    &                         NR_iter_limit, max_p_ratio, add_spectrum_base !, arr_dim
+           
+        open(unit=101, file="problem.par", status="unknown")
+        read(unit=101, nml=COSMIC_RAY_SPECTRUM)
+        close(unit=101)
+ end subroutine cresp_read_nml_module
 !----------------------------------------------------------------------------------------------------
  subroutine init_cresp_types
   use diagnostics,   only: my_allocate_with_index
@@ -229,5 +239,4 @@ module initcrspectrum
         if (allocated(crel%n)) call my_deallocate(crel%n)
  end subroutine cleanup_cresp_virtual_en_arrays
 !----------------------------------------------------------------------------------------------------
-
 end module initcrspectrum
