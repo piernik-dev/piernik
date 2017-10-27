@@ -159,19 +159,15 @@ contains
 #if defined(COSM_RAYS) 
       use all_boundaries,      only: all_fluid_boundaries
       use initcosmicrays,      only: use_split
-      use initcosmicrays,      only: ncrn, ncre
-      use initcosmicrays,      only: K_crs_paral, K_crs_perp 
-      use initcosmicrays,      only: K_cre_paral_1, K_cre_perp_1, K_cre_pow
+      use initcosmicrays,      only: ncrn
       use fluidindex,          only: flind
-#if defined(COSM_RAY_ELECTRONS) 
-!       use initcrspectrum,      only: ncre, p_fix, p_lo_init, p_up_init
-!      use cresp_crspectrum,    only: active_bins
-!       use cresp_arrays_handling, only: allocate_with_index
-#endif /* COSM_RAY_ELECTRONS */
 #if defined(MULTIGRID)
       use multigrid_diffusion, only: multigrid_solve_diff
 #endif /* MULTIGRID */
 #endif /* COSM_RAYS */
+#ifdef COSM_RAY_ELECTRONS
+      use initcrspectrum,      only: ncre
+#endif /* COSM_RAY_ELECTRONS */
 #ifdef SHEAR
       use shear,               only: shear_3sweeps
 #endif /* SHEAR */
@@ -181,9 +177,6 @@ contains
       logical, intent(in) :: forward  !< If .true. then do X->Y->Z sweeps, if .false. then reverse that order
 
       integer(kind=4) :: s, icrc      ! index of cr component in iarr_crs
-
-      real(kind=8),allocatable, dimension(:) :: p
-      real(kind=8),allocatable, dimension(:) :: p_mid
 
 #ifdef SHEAR
       call shear_3sweeps
