@@ -51,7 +51,7 @@ contains
       use constants,           only: one, half
       use domain,              only: is_multicg
       use grid_cont,           only: grid_container
-      use initcosmicrays,      only: cfl_cr, K_crn_paral, K_crn_perp, K_crs_paral, K_crs_perp
+      use initcosmicrays,      only: cfl_cr, K_crn_paral, K_crn_perp
 #ifdef MULTIGRID
       use initcosmicrays,      only: use_split
       use multigrid_diffusion, only: diff_explicit, diff_tstep_fac, diff_dt_crs_orig
@@ -67,10 +67,10 @@ contains
 !!!      if (.not. (is_multicg .or. frun)) return
       ! with multiple cg% there are few cg%dxmn to be checked
       ! with AMR minval(cg%dxmn) may change with time
-      if (maxval(K_crs_paral+K_crs_perp) <= 0) then !!!
+      if (maxval(K_crn_paral+K_crn_perp) <= 0) then !!!
          dt_crs = huge(one)
       else
-         dt = cfl_cr * half/maxval(K_crs_paral+K_crs_perp) !!! TODO: to be swapped with K_crn_paral + K_crn_perp, K_cre to be done separately
+         dt = cfl_cr * half/maxval(K_crn_paral+K_crn_perp) !!! dt(K_cre) done in cresp_timestep & cresp_grid
          if (cg%dxmn < sqrt(huge(one))/dt) then
             dt = dt * cg%dxmn**2
 #ifdef MULTIGRID
