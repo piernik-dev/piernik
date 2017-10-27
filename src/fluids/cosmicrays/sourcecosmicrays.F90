@@ -51,7 +51,7 @@ contains
 
       use domain,         only: dom
       use fluidindex,     only: flind
-      use initcosmicrays, only: iarr_crs, iarr_crn, gamma_crn, cr_active, gpcr_essential ! gamma_crs \deprecated
+      use initcosmicrays, only: iarr_crn, gamma_crn, cr_active, gpcr_essential ! gamma_crs \deprecated
 
       implicit none
 
