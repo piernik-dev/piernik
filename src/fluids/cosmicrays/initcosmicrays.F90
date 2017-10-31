@@ -361,8 +361,6 @@ contains
          endif
       enddo
 
-   open(10, file='crs.dat',status='replace',position='rewind')
-
    end subroutine init_cosmicrays
 
    subroutine cosmicray_index(flind)
