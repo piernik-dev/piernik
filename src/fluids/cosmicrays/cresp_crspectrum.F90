@@ -2,7 +2,7 @@ module cresp_crspectrum
 ! pulled by COSM_RAY_ELECTRONS
  implicit none
   public :: cresp_update_cell, cresp_init_state, printer, fail_count_interpol, fail_count_no_sol, fail_count_NR_2dim, &
-      &   cleanup_cresp, cresp_accuracy_test, b_losses, cresp_allocate_all, cresp_deallocate_all
+      &   cleanup_cresp, cresp_accuracy_test, b_losses, cresp_allocate_all, cresp_deallocate_all, e_threshold_lo, e_threshold_up
   private ! most of it
   real(kind=8)     , parameter      :: three   = 3.e0
   real(kind=8)     , parameter      :: four    = 4.e0
@@ -68,7 +68,9 @@ module cresp_crspectrum
 ! in-algorithm energy & number density
   real(kind=8), allocatable, dimension(:)  :: n, e ! dimension(1:ncre) 
 ! virtual e,n arrays for cutoff, for cases when bins are only slightly filled and p ~ p_fix - it might not be possible to find solution via NR  
-   real(kind=8), dimension(1:2) :: vrtl_n, vrtl_e
+  real(kind=8), dimension(1:2) :: vrtl_n, vrtl_e
+! lower / upper energy needed for bin activation
+  real(kind=8), save :: e_threshold_lo, e_threshold_up
 !-------------------------------------------------------------------------------------------------
 !
 contains
@@ -89,11 +91,12 @@ contains
     real(kind=8), intent(in)  :: dt
     real(kind=8), dimension(1:ncre), intent(inout)   :: n_inout, e_inout
     type(spec_mod_trms), intent(in)       :: sptab
-    logical :: solve_fail_lo, solve_fail_up, index_changed
+    logical :: solve_fail_lo, solve_fail_up, index_changed, empty_cell
         e = zero; n = zero; edt = zero; ndt = zero 
         solve_fail_lo = .false.
         solve_fail_up = .false.
         index_changed = .false.
+        empty_cell    = .false.
         
         p_lo_next = zero
         p_up_next = zero
@@ -114,11 +117,12 @@ contains
         vrtl_e = v_e
         vrtl_n = v_n
 
-        call find_i_bound
+        call find_i_bound(empty_cell)
+        if ( empty_cell ) return
         call cresp_find_active_bins
         call cresp_organize_p
 
-        if (num_active_bins .eq. I_ZERO) return ! if grid cell contains empty bins, no action is taken
+!         if (num_active_bins .eq. I_ZERO) return ! if grid cell contains empty bins, no action is taken
 ! Compute power indexes for each bin at [t] and f on left bin faces at [t] 
         f = zero; q=zero
         call ne_to_q(n, e, q )
@@ -246,26 +250,33 @@ contains
 !-------------------------------------------------------------------------------------------------
 ! all the procedures below are called by cresp_update_cell subroutine or the driver
 !-------------------------------------------------------------------------------------------------
-  subroutine find_i_bound
+  subroutine find_i_bound(exit_code)
   use initcrspectrum, only: e_small_approx_p_lo, e_small_approx_p_up, ncre, e_small
   use constants, only: zero
   implicit none
     integer(kind=4) :: i
-    logical :: i_lo_changed, i_up_changed
+    logical :: i_lo_changed, i_up_changed, exit_code
         i_lo_changed = .false.
         i_up_changed = .false.
+        exit_code    = .true.
 ! ! Locate cut-ofs before current timestep: indices are found without use of p_lo nor p_up and point to boundary edges    
         i_lo = 0
-        i = 1
-        do while ( e(i) .le. zero )         ! if energy density is nonzero, so should be the number density
-            i = i+1 ; i_lo = i-1
+        do i = 1, ncre                        ! if energy density is nonzero, so should be the number density
+            i_lo = i-1
+            if ( e(i) .gt. e_threshold_lo ) then
+                exit_code = .false.
+                exit
+            endif
         enddo
 
+        if ( exit_code .eqv. .true.) return   ! empty cell - nothing to do here!
+
         i_up = ncre
-        i = ncre
-        do while (e(i) .le. zero )          ! if energy density is nonzero, so should be the number density
-            i = i-1 ; i_up = i
+        do i = ncre, 1,-1
+            i_up = i
+            if (e(i) .gt. e_threshold_up ) exit         ! if energy density is nonzero, so should be the number density
         enddo
+!         print *, i_lo, i_up, e(i_lo+1), e(i_up)
         if ((e(i_lo+1)+vrtl_e(1)) .gt. e_small .and. vrtl_e(1) .gt. zero) then
             call relocate_quantities(e(i_lo+1), vrtl_e(1))
             call relocate_quantities(n(i_lo+1), vrtl_n(1))

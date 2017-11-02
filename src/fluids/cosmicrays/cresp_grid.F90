@@ -51,7 +51,7 @@ contains
                         call cresp_update_cell(2*dt, n_cell, e_cell, sptab, virtual_n(1:2,i,j,k), virtual_e(1:2,i,j,k))
                         cg%u(iarr_cre_n, i, j, k) = n_cell
                         cg%u(iarr_cre_e, i, j, k) = e_cell
-                        if (i.eq.12.and.j.eq.12.and.k.eq.0) then ! diagnostic:
+                        if (i.eq.22.and.j.eq.22.and.k.eq.0) then ! diagnostic:
                             call printer(t)
                         endif
                     enddo
@@ -68,9 +68,9 @@ contains
    use constants,      only: I_ONE, I_FOUR, fpi, LO, HI, xdim, ydim, zdim, zero
    use grid_cont,      only: grid_container
    use initcrspectrum, only: ncre, f_init, p_up_init, p_lo_init, q_init, cre_eff, spec_mod_trms, initial_condition, bump_amp, &
-                            virtual_e, virtual_n
+                            virtual_e, virtual_n, e_small, e_small_approx_p_lo, e_small_approx_p_up
    use initcosmicrays, only: iarr_crn
-   use cresp_crspectrum, only: cresp_init_state, cresp_allocate_all, printer
+   use cresp_crspectrum, only: cresp_init_state, cresp_allocate_all, printer, e_threshold_lo, e_threshold_up
    use units,          only: clight
    implicit none
     integer                         :: i, j, k
@@ -82,7 +82,10 @@ contains
     logical, save :: first_run = .true.
       if (first_run .eqv. .true.) then
         call cresp_allocate_all
-
+        
+        e_threshold_lo = e_small * e_small_approx_p_lo
+        e_threshold_up = e_small * e_small_approx_p_up
+        
         i = 0; j = 0; k = 0
         cgl => leaves%first
         do while (associated(cgl))
@@ -104,24 +107,27 @@ contains
                 do j = cg%lhn(ydim,LO), cg%lhn(ydim,HI)
                     do i = cg%lhn(xdim,LO), cg%lhn(xdim,HI)
             ! Every initial condition should be normalized before initializing Cosmic Ray Electron SPectrum module
-                        if ( initial_condition == "powl") then
-                            f_amplitude = 1/(fpi*clight*(p_lo_init**(I_FOUR))*(((p_up_init/p_lo_init)**(I_FOUR-q_init))-I_ONE)/ &
-                                                                                                            (I_FOUR-q_init))
+                        if (cg%u(iarr_crn(1),i,j,k)*cre_eff .gt. e_small) then ! early phase - fill cells only when total passed energy is greater than e_small
+                            if ( initial_condition == "powl") then
+                                f_amplitude = 1/(fpi * clight*(p_lo_init**(I_FOUR))* &
+                                    (((p_up_init / p_lo_init)**(I_FOUR - q_init )) - I_ONE) / (I_FOUR - q_init))
             ! amplitude and distribution of electron energy density is inherited after those of nucleons, see crspectrum.pdf, eq. 29
-                            f_amplitude = f_init*cg%u(iarr_crn(1),i,j,k)*cre_eff
-                        endif
-                        if (initial_condition == "bump") then
+                                f_amplitude = f_init*cg%u(iarr_crn(1),i,j,k)*cre_eff
+!                                 f_amplitude = f_amplitude*cg%u(iarr_crn(1),i,j,k)*cre_eff
+                            endif
+                            if (initial_condition == "bump") then
             ! for gaussian distribution & inheritance of spatial energy/number density after nucleons
-                            f_amplitude = cre_eff * cg%u(iarr_crn(1),i,j,k)
-!                             f_amplitude = bump_amp ! * clight
-                        endif
-                        call cresp_init_state(n_cell, e_cell, f_amplitude, sptab)
+                                f_amplitude = cre_eff * cg%u(iarr_crn(1),i,j,k)
+    !                             f_amplitude = bump_amp ! * clight
+                            endif
+                            call cresp_init_state(n_cell, e_cell, f_amplitude, sptab)
 #ifdef VERBOSE
-                        print *, 'Output of cosmic ray electrons module for grid cell with coordinates i,j,k:', i, j, k
+                            print *, 'Output of cosmic ray electrons module for grid cell with coordinates i,j,k:', i, j, k
 #endif /* VERBOSE */
-                        cg%u(iarr_cre_n, i, j, k) = n_cell
-                        cg%u(iarr_cre_e, i, j, k) = e_cell
-                        if (i.eq.12.and.j.eq.12.and.k.eq.0) then ! diagnostics
+                            cg%u(iarr_cre_n, i, j, k) = n_cell
+                            cg%u(iarr_cre_e, i, j, k) = e_cell
+                        endif ! if total(cre_eff*e) less than e_small - nothing done, cell remains uninitialized
+                        if (i.eq.22.and.j.eq.22.and.k.eq.0) then ! diagnostics
                             call printer(t)
                         endif
                     enddo
@@ -169,7 +175,7 @@ contains
                         sptab%ud = 0.0 ; sptab%ub = 0.0 ; sptab%ucmb = 0.0
                         sptab%ub = emag(cg%b(xdim,i,j,k), cg%b(ydim,i,j,k), cg%b(zdim,i,j,k))
                         sptab%ud = cg%q(qna%ind(divv_n))%point([i,j,k])
-                        call cresp_timestep(dt_cre_tmp, sptab, cg%u(iarr_cre_n, i, j, k), cg%u(iarr_cre_e, i, j, k), i_up_max_tmp)
+                        call cresp_timestep(dt_cre_tmp, sptab, cg%u(iarr_cre_n, i, j, k), cg%u(iarr_cre_e, i, j, k), i_up_max_tmp) ! gives dt_cre for the whole domain, but is unefficient
                         dt_cre = min(dt_cre, dt_cre_tmp)
                         i_up_max = max(i_up_max, i_up_max_tmp)
                     enddo

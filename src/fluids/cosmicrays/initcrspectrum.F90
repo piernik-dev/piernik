@@ -126,6 +126,7 @@ module initcrspectrum
             
             if (e_small_approx_p_lo+e_small_approx_p_up .eq. 0) then
                 NR_refine_solution_q = .true. ! for testing we leave precise solutions of q (especially for outer momenta)
+                e_small = zero                ! no threshold energy for bin activation necessary
             endif
 ! arrays initialization
             call my_allocate_with_index(p_fix,ncre,0)
