@@ -2,7 +2,8 @@ module cresp_crspectrum
 ! pulled by COSM_RAY_ELECTRONS
  implicit none
   public :: cresp_update_cell, cresp_init_state, printer, fail_count_interpol, fail_count_no_sol, fail_count_NR_2dim, &
-      &   cleanup_cresp, cresp_accuracy_test, b_losses, cresp_allocate_all, cresp_deallocate_all, e_threshold_lo, e_threshold_up
+      &   cleanup_cresp, cresp_accuracy_test, b_losses, cresp_allocate_all, cresp_deallocate_all, e_threshold_lo, e_threshold_up, &
+      &   fail_count_comp_q
   private ! most of it
   real(kind=8)     , parameter      :: three   = 3.e0
   real(kind=8)     , parameter      :: four    = 4.e0
@@ -10,7 +11,7 @@ module cresp_crspectrum
   real(kind=8)     , parameter      :: ten     = 10.e0
 
   integer, dimension(1:2), save     :: fail_count_NR_2dim, fail_count_interpol, fail_count_no_sol
-  
+  integer, allocatable, save   :: fail_count_comp_q(:)
 ! arrays helping in algorithm execution
  integer, allocatable        :: all_edges(:), i_act_edges(:)
  integer, allocatable        :: all_bins(:)
@@ -219,6 +220,7 @@ contains
             print '(A36,I5,A6,I3)', "NR_2dim:  convergence failure: p_lo", fail_count_NR_2dim(1), ", p_up", fail_count_NR_2dim(2)
             print '(A36,I5,A6,I3)', "NR_2dim:interpolation failure: p_lo", fail_count_interpol(1), ", p_up", fail_count_interpol(2)
             print '(A36,I5,A6,I3)', "NR_2dim:  no solution failure: p_lo", fail_count_no_sol(1), ", p_up", fail_count_no_sol(2)
+            print '(A36,   100I5)', "NR_2dim:inpl/solve  q(bin) failure:", fail_count_comp_q
         endif
 #endif /* VERBOSE */
         n = ndt
@@ -276,7 +278,6 @@ contains
             i_up = i
             if (e(i) .gt. e_threshold_up ) exit         ! if energy density is nonzero, so should be the number density
         enddo
-!         print *, i_lo, i_up, e(i_lo+1), e(i_up)
         if ((e(i_lo+1)+vrtl_e(1)) .gt. e_small .and. vrtl_e(1) .gt. zero) then
             call relocate_quantities(e(i_lo+1), vrtl_e(1))
             call relocate_quantities(n(i_lo+1), vrtl_n(1))
@@ -998,21 +999,24 @@ contains
     real(kind=8), dimension(1:ncre), intent(out) :: q
     integer          :: i
     real(kind=8)     :: alpha_in
+    logical :: exit_code
 
     q = zero
-       
+
     do i = max(i_lo,1) + e_small_approx_p_lo, i_up - e_small_approx_p_up ! 1, ncre
 
-     if (e(i) .gt. zero .and. p(i-1) .gt. zero) then
+        if (e(i) .gt. zero .and. p(i-1) .gt. zero) then
+          exit_code = .true.
           alpha_in = e(i)/(n(i)*p(i-1)*clight)
           if ((i .eq. i_lo+1) .or. (i .eq. i_up)) then ! for boudary case, when momenta are not approximated
-            q(i) = compute_q(alpha_in,p(i)/p(i-1))
+            q(i) = compute_q(alpha_in, exit_code, p(i)/p(i-1))
           else
-            q(i) = compute_q(alpha_in)
+            q(i) = compute_q(alpha_in, exit_code)
           endif
         else
             q(i) = zero
         endif
+        if ( exit_code .eqv. .true. ) fail_count_comp_q(i) = fail_count_comp_q(i) + 1
     enddo
   end subroutine ne_to_q
 
@@ -1296,6 +1300,8 @@ contains
      integer(kind = 4)          :: ma1d
    
    ma1d = ncre
+   call my_allocate_with_index(fail_count_comp_q,ma1d,1)
+   
    call my_allocate_with_index(n,ma1d,1)   !:: n, e, r
    call my_allocate_with_index(e,ma1d,1)
    call my_allocate_with_index(r,ma1d,1)
@@ -1388,6 +1394,10 @@ contains
 !----------------------------------------------------------------------------------------------------
  subroutine cleanup_cresp
   implicit none
+        print '(A36,I5,A6,I5)', "NR_2dim:  convergence failure: p_lo", fail_count_NR_2dim(1), ", p_up", fail_count_NR_2dim(2)
+        print '(A36,I5,A6,I5)', "NR_2dim:interpolation failure: p_lo", fail_count_interpol(1), ", p_up", fail_count_interpol(2)
+        print '(A36,I5,A6,I5)', "NR_2dim:  no solution failure: p_lo", fail_count_no_sol(1), ", p_up", fail_count_no_sol(2)
+        print '(A36,   100I5)', "NR_2dim:inpl/solve  q(bin) failure:", fail_count_comp_q
         call cresp_deallocate_all
  end subroutine cleanup_cresp
 !----------------------------------------------------------------------------------------------------

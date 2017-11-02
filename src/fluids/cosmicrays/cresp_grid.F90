@@ -70,7 +70,8 @@ contains
    use initcrspectrum, only: ncre, f_init, p_up_init, p_lo_init, q_init, cre_eff, spec_mod_trms, initial_condition, bump_amp, &
                             virtual_e, virtual_n, e_small, e_small_approx_p_lo, e_small_approx_p_up
    use initcosmicrays, only: iarr_crn
-   use cresp_crspectrum, only: cresp_init_state, cresp_allocate_all, printer, e_threshold_lo, e_threshold_up
+   use cresp_crspectrum, only: cresp_init_state, cresp_allocate_all, printer, e_threshold_lo, e_threshold_up, &
+                    & fail_count_interpol, fail_count_no_sol, fail_count_NR_2dim, fail_count_comp_q
    use units,          only: clight
    implicit none
     integer                         :: i, j, k
@@ -83,6 +84,11 @@ contains
       if (first_run .eqv. .true.) then
         call cresp_allocate_all
         
+        fail_count_interpol = 0
+        fail_count_no_sol   = 0
+        fail_count_NR_2dim  = 0
+        fail_count_comp_q   = 0
+
         e_threshold_lo = e_small * e_small_approx_p_lo
         e_threshold_up = e_small * e_small_approx_p_up
         

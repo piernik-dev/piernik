@@ -1344,7 +1344,7 @@ end subroutine
         endif
   end subroutine determine_loc
 !----------------------------------------------------------------------------------------------------
-  function compute_q(alpha_in, outer_p_ratio)
+  function compute_q(alpha_in, exit_code, outer_p_ratio)
   use initcrspectrum, only: NR_refine_solution_q, q_big, p_fix_ratio
   use constants, only: one
   implicit none
@@ -1352,8 +1352,7 @@ end subroutine
     real(kind=8), optional :: outer_p_ratio
     real(kind=8), intent(inout) :: alpha_in
     integer(kind=4) :: loc_1, loc_2
-    logical :: exit_code
-        exit_code = .true.
+    logical, intent(inout) :: exit_code ! is provided with value .true. by caller (cresp_crspectrum)
         p_a => alpha_tab_q
         p_n => q_grid
         selected_function_1D => alpha_to_q
@@ -1363,16 +1362,19 @@ end subroutine
         if (present(outer_p_ratio)) p_ratio_4_q = outer_p_ratio
         
         loc_1 = inverse_f_to_ind(alpha_in, alpha_tab_q(1), alpha_tab_q(arr_dim))
-        loc_2 = loc_1 + 1
-        if (alpha_tab_q(loc_1).gt. alpha_in .or. (alpha_tab_q(loc_2) .lt. alpha_in)) then
-            print *, "alpha_in beyond tabualrized values:", alpha_tab_q(loc_1), alpha_in, alpha_tab_q(loc_2)
+        if (loc_1 .le. 0 .or. (loc_1 .ge. arr_dim)) then
+            loc_1 = minloc(abs(alpha_tab_q-alpha),dim=1) ! slow, but always finds something
+            compute_q = q_grid(loc_1)
+            return                      ! returns compute_q withh exit_code = .true. which can be used to warn. Usually occurs for q.gt.2*q_big
         endif
+        loc_2 = loc_1 + 1
         compute_q = lin_interpol_1D(loc_1, loc_2, alpha_in)
         if (NR_refine_solution_q) then
             alpha = alpha_in
             call q_control(compute_q,exit_code)
             call NR_algorithm_1D(compute_q, exit_code) ! this might not even be necessary
         endif
+        exit_code = .false.
         if (abs(compute_q) .gt. q_big) compute_q = sign(one, compute_q) * q_big
   end function compute_q
 !----------------------------------------------------------------------------------------------------
