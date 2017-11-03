@@ -142,10 +142,6 @@ contains
       use initcosmicrays,   only: K_crn_paral, K_crn_perp, K_crs_paral, K_crs_perp, iarr_crs !, iarr_crn !!!
       use named_array,      only: p4
       use named_array_list, only: wna
-#ifdef COSM_RAY_ELECTRONS
-      use initcosmicrays,   only: ncrn ! , iarr_cre_pl, iarr_cre_pu, iarr_cre_e, iarr_cre_n
-!       use initcrspectrum,    only: ncre !, fdif_cre, p_lo_nda, p_up_nda
-#endif /* COSM_RAY_ELECTRONS */
 
       implicit none
 
