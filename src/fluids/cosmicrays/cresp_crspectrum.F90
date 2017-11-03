@@ -85,7 +85,7 @@ contains
 ! #ifdef VERBOSE
    use initcrspectrum, only: p_fix
 ! #endif /* VERBOSE */
-   use constants, only: zero, one
+   use constants, only: zero, one, I_ZERO
    implicit none
     real(kind=8), dimension(1:2), intent(inout), optional :: p_out
     real(kind=8), dimension(1:2), intent(inout) :: v_n, v_e
@@ -96,7 +96,7 @@ contains
         e = zero; n = zero; edt = zero; ndt = zero 
         solve_fail_lo = .false.
         solve_fail_up = .false.
-`        index_changed = .false.
+        index_changed = .false.
         empty_cell    = .false.
         
         p_lo_next = zero
@@ -119,10 +119,11 @@ contains
         vrtl_n = v_n
 
         call find_i_bound(empty_cell)
-        if ( empty_cell ) return                                ! if grid cell contains empty bins, no action is taken
+        if ( empty_cell ) return
         call cresp_find_active_bins
         call cresp_organize_p
 
+!         if (num_active_bins .eq. I_ZERO) return ! if grid cell contains empty bins, no action is taken
 ! Compute power indexes for each bin at [t] and f on left bin faces at [t] 
         f = zero; q=zero
         call ne_to_q(n, e, q )
@@ -132,39 +133,39 @@ contains
         
         if (e_small_approx_p_up .gt. 0 .and. i_up .ne. 1) then ! momenta values stored only within module - for tests; will not work in PIERNIK
             call get_fqp_up(solve_fail_up)
-        else                                                   ! spectrum beyond the fixed momentum grid
+        else
             p_up = p_fix(i_up)
             p(i_up) = p_fix(i_up)
         endif
         if (e_small_approx_p_lo .gt. 0 .and. (i_lo+1) .ne. ncre) then ! momenta values stored only within module - for tests; will not work in PIERNIK
             call get_fqp_lo(solve_fail_lo)
-        else                                                   ! spectrum beyond the fixed momentum grid
+        else
             p_lo = p_fix(i_lo)
             p(i_lo) = p_fix(i_lo)
-        endif                                                  ! countermeasure against failure in finding boundary momentum
+        endif
         if ((solve_fail_lo .eqv. .true.) .or. (solve_fail_up .eqv. .true.)) then
             call deallocate_active_arrays
             if (solve_fail_lo) then
                 if (i_lo .gt. 0) then
-                    call transfer_quantities(e(i_lo+2),e(i_lo+1))
-                    call transfer_quantities(n(i_lo+2),n(i_lo+1))
+                    call relocate_quantities(e(i_lo+2),e(i_lo+1))
+                    call relocate_quantities(n(i_lo+2),n(i_lo+1))
                     i_lo = i_lo + 1
                     call get_fqp_lo(solve_fail_lo)
                 else
-                    call transfer_quantities(v_e(1),e(i_lo+1))
-                    call transfer_quantities(v_n(1),n(i_lo+1))
+                    call relocate_quantities(v_e(1),e(i_lo+1))
+                    call relocate_quantities(v_n(1),n(i_lo+1))
                     return
                 endif
             endif
             if (solve_fail_up) then
                 if (i_up .lt. ncre) then
-                    call transfer_quantities(e(i_up-1),e(i_up)) ! instead of moving quantities to virtual
-                    call transfer_quantities(n(i_up-1),n(i_up)) ! instead of moving quantities to virtual
+                    call relocate_quantities(e(i_up-1),e(i_up)) ! instead of moving quantities to virtual
+                    call relocate_quantities(n(i_up-1),n(i_up)) ! instead of moving quantities to virtual
                     i_up = i_up - 1
                     call get_fqp_up(solve_fail_up)
                 else
-                    call transfer_quantities(v_e(2),e(i_up))
-                    call transfer_quantities(v_n(2),n(i_up))
+                    call relocate_quantities(v_e(2),e(i_up))
+                    call relocate_quantities(v_n(2),n(i_up))
                     return
                 endif
             endif
@@ -278,12 +279,12 @@ contains
             if (e(i) .gt. e_threshold_up ) exit         ! if energy density is nonzero, so should be the number density
         enddo
         if ((e(i_lo+1)+vrtl_e(1)) .gt. e_small .and. vrtl_e(1) .gt. zero) then
-            call transfer_quantities(e(i_lo+1), vrtl_e(1))
-            call transfer_quantities(n(i_lo+1), vrtl_n(1))
+            call relocate_quantities(e(i_lo+1), vrtl_e(1))
+            call relocate_quantities(n(i_lo+1), vrtl_n(1))
         endif
         if ((e(i_up)+vrtl_e(2)) .gt. e_small .and. vrtl_e(2) .gt. zero) then
-            call transfer_quantities(e(i_up), vrtl_e(2))
-            call transfer_quantities(n(i_up), vrtl_n(2))
+            call relocate_quantities(e(i_up), vrtl_e(2))
+            call relocate_quantities(n(i_up), vrtl_n(2))
         endif
         if ( (e_small_approx_p_lo .eq. 1) .or. (e_small_approx_p_up .eq. 1) ) then ! TODO - this might need slight change of condition
             call threshold_energy_check_lo(e, n, i_lo_changed, .false.)
@@ -1244,13 +1245,13 @@ contains
     endif
   end subroutine boundary_flux_check
 !----------------------------------------------------------------------------------------------------
-  subroutine transfer_quantities(give_to, take_from)
+  subroutine relocate_quantities(give_to, take_from)
   use constants, only: zero
   implicit none
     real(kind=8), intent(inout) :: give_to, take_from
         give_to = give_to + take_from
         take_from = zero
-  end subroutine transfer_quantities
+  end subroutine relocate_quantities
 !----------------------------------------------------------------------------------------------------
   subroutine threshold_energy_check_lo(e_tab, n_tab, e_lo_lt_e_small, solution_failed)
   use initcrspectrum, only: e_small, e_small_approx_p_lo
