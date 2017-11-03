@@ -8,32 +8,13 @@ fi
 
 for i in GOLD_COMMIT PROBLEM_NAME SETUP_PARAMS GOLD_PARAMS OUTPUT; do
     eval $( sed -n '/^'"$i"'=/p' $1 )
+    if [ -z ${!i+x} ] ; then
+	echo "$i not set"
+	exit 2
+    else
+	echo $i"  =  "${!i}
+    fi
 done
-
-if [ -z ${GOLD_COMMIT+x} ] ; then
-    echo "GOLD_COMMIT not set"
-    exit 2
-fi
-
-if [ -z ${PROBLEM_NAME+x} ] ; then
-    echo "PROBLEM_NAME not set"
-    exit 3
-fi
-
-if [ -z ${SETUP_PARAMS+x} ] ; then
-    echo "SETUP_PARAMS not set"
-    exit 4
-fi
-
-if [ -z ${GOLD_PARAMS+x} ] ; then
-    echo "GOLD_PARAMS not set"
-    exit 5
-fi
-
-if [ -z ${OUTPUT+x} ] ; then
-    echo "OUTPUT not set"
-    exit 5
-fi
 
 PIERNIK=piernik
 GOLD_DIR=gold_dir
