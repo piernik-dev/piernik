@@ -34,7 +34,7 @@ module ct
    implicit none
 
    private
-   public  :: advectb, ctb
+   public  :: advectb
    real, dimension(:), pointer :: vibj => null()
 
 contains
