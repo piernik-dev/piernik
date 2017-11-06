@@ -72,7 +72,7 @@ contains
 #  error Isothermal EOS is not implemented yet in this Riemann solver.
 #endif /* ISO */
 #ifdef COSM_RAYS
-#  error   Isothermal EOS is notCosmic rays are not implemented yet in this Riemann solver.
+#  error   Cosmic rays are not implemented yet in this Riemann solver.
 #endif /* COSM_RAYS */
 
     halfstep = .false.
