@@ -136,7 +136,7 @@ contains
 #ifdef MAGNETIC
    subroutine magfield(dir)
 
-      use ct,     only: advectb, ctb
+      use ct,          only: advectb
       use constants,   only: ndims, I_ONE
 #ifdef RESISTIVE
       use resistivity, only: diffuseb
