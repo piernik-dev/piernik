@@ -10,5 +10,3 @@
 
 #define MAGNETIC
 #define RESISTIVE
-
-#define GRAV
