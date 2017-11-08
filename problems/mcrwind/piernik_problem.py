@@ -3,12 +3,13 @@
 import sys
 import numpy as np
 import matplotlib
-matplotlib.use('cairo')
 from yt.mods import load as yt_load
 from pylab import *
+matplotlib.use('cairo')
 
 THRESHOLD = 1e-9
 FIELD = "cr1"
+
 
 def _myplot(diff, fname, ext, clbl):
     v = abs(diff).max()
@@ -22,6 +23,7 @@ def _myplot(diff, fname, ext, clbl):
     savefig(fname)
     clf()
 
+
 def plot_diff(pf1, pf2, data1, data2, field):
     wd = pf1.domain_width
     n_d = pf1.domain_dimensions
@@ -33,12 +35,10 @@ def plot_diff(pf1, pf2, data1, data2, field):
     img2 = data2.to_frb(wd[1], (n_d[2] * 10, n_d[1] * 10),
                         center=np.array([0, 0, 0]), height=wd[2])
     diff = (img2[field] - img1[field])
-    clbl = \
-        r"$\rm{%s}^{\rm{new}} - \rm{%s}^{\rm{old}}$" % (field, field)
+    clbl = r"$\rm{%s}^{\rm{new}} - \rm{%s}^{\rm{old}}$" % (field, field)
     _myplot(diff, 'diff_bare.png', ext, clbl)
 
-    clbl = \
-        r"$\frac{\rm{%s}^{\rm{new}} - \rm{%s}^{\rm{old}}}{\rm{%s}^{\rm{old}}}$" % (field, field, field)
+    clbl = r"$\frac{\rm{%s}^{\rm{new}} - \rm{%s}^{\rm{old}}}{\rm{%s}^{\rm{old}}}$" % (field, field, field)
     _myplot(diff / (img1[field] + THRESHOLD), 'diff.png', ext, clbl)
 
 
@@ -62,7 +62,7 @@ for field in PF1.h.field_list:
         plot_diff(PF1, PF2, DATA1, DATA2, field)
         sys.exit(-1)
 
-figure(1, (8,6))
+figure(1, (8, 6))
 draw()
 savefig('diff.png')
 savefig('diff_bare.png')

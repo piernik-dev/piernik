@@ -1,12 +1,20 @@
-#undef IONIZED
-#undef MAGNETIC
-#define NEUTRAL
-#define LOCAL_FR_SPEED
+#if 0
+! IONIZED usually makes sense when MAGNETIC is also set up. Add
+!
+!     -d MAGNETIC,IONIZED
+!
+! to your setup call if you want to play with magnetized sedov explosions.
+#endif
+
+#if !defined IONIZED
+#  define  NEUTRAL
+#endif
+
+
+#if !defined GLOBAL_FR_SPEED
+#  define LOCAL_FR_SPEED
+#endif
 
 #define ISO
 
 #undef GRAV
-
-#if !(defined(HLLC))
-#define RTVD
-#endif

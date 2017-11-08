@@ -4,7 +4,11 @@
 
 #define ISO
 
-#define GLOBAL_FR_SPEED
+
+#if !defined LOCAL_FR_SPEED
+#  define GLOBAL_FR_SPEED
+#endif
+
 
 #define RESISTIVE
 
@@ -13,4 +17,3 @@
 #define GALAXY
 #define SN_SRC
 
-#define RTVD

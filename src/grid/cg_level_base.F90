@@ -83,15 +83,8 @@ contains
 
       allocate(this%level)
       call this%level%init_level
-      this%level%level_id = base_level_id
 
-      where (dom%has_dir(:))
-         this%level%n_d(:) = n_d(:)
-         this%level%off(:) = dom%off(:)
-      elsewhere
-         this%level%n_d(:) = 1
-         this%level%off(:) = 0
-      endwhere
+      call this%level%l%init(base_level_id, int(n_d, kind=8), dom%off)
 
       base_level => this%level
       call all_lists%register(this%level, "Base level")
@@ -137,7 +130,7 @@ contains
 
       if (changed) then
          if (master) then
-            write(msg, '(a,3i8,a,i3)')"[cg_level_base:expand] Effective resolution is [", finest%level%n_d(:), " ] at level ", finest%level%level_id
+            write(msg, '(a,3i8,a,i3)')"[cg_level_base:expand] Effective resolution is [", finest%level%l%n_d(:), " ] at level ", finest%level%l%id
             call warn(msg) ! As long as the restart file does not automagically recognize changed parameters, this message should be easily visible
          endif
          call coarsest%delete_coarser_than_base
@@ -169,10 +162,10 @@ contains
       implicit none
 
       class(cg_level_base_T), intent(inout) :: this   !< object invoking type bound procedure
-      integer,                intent(in)    :: d      !< direction to be expadned
+      integer,                intent(in)    :: d      !< direction to be expanded
       integer,                intent(in)    :: lh     !< side to be expanded
 
-      integer(kind=8), dimension(xdim:zdim) :: e_size, e_off
+      integer(kind=8), dimension(xdim:zdim) :: e_size, e_off, new_n_d, new_off
       type(cg_list_element),  pointer :: cgl
       type(cg_level_connected_T), pointer :: curl
 
@@ -185,7 +178,7 @@ contains
       do while (associated(cgl))
          if (cgl%cg%ext_bnd(d, lh)) then
             cgl%cg%ext_bnd(d, lh) = .false.
-            if (cgl%cg%level_id == this%level%level_id) then
+            if (cgl%cg%l%id == this%level%l%id) then
                cgl%cg%bnd(d, lh) = BND_MPI
             else
                cgl%cg%bnd(d, lh) = BND_FC
@@ -194,21 +187,24 @@ contains
          cgl => cgl%nxt
       enddo
 
-      e_size = this%level%n_d
+      e_size = this%level%l%n_d
       e_size(d) = AMR_bsize(d)
 
-      e_off = this%level%off
+      e_off = this%level%l%off
       select case (lh)
          case (LO)
-            e_off(d) = this%level%off(d) - AMR_bsize(d)
+            e_off(d) = this%level%l%off(d) - AMR_bsize(d)
          case (HI)
-            e_off(d) = this%level%off(d) + this%level%n_d(d)
+            e_off(d) = this%level%l%off(d) + this%level%l%n_d(d)
       end select
 
       curl => this%level
       do while (associated(curl))
-         curl%n_d(d) = curl%n_d(d) + AMR_bsize(d)*refinement_factor**(curl%level_id-this%level%level_id)
-         curl%off(d) = min(curl%off(d),  e_off(d)*refinement_factor**(curl%level_id-this%level%level_id))
+         new_n_d = curl%l%n_d
+         new_n_d(d) = curl%l%n_d(d) + AMR_bsize(d)*refinement_factor**(curl%l%id-this%level%l%id)
+         new_off = curl%l%off
+         new_off(d) = min(curl%l%off(d), e_off(d)*refinement_factor**(curl%l%id-this%level%l%id))
+         call curl%l%update(curl%l%id, new_n_d, new_off)
          call curl%refresh_SFC_id
          curl => curl%finer
       enddo

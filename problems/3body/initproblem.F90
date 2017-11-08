@@ -36,11 +36,6 @@ module initproblem
    private
    public  :: read_problem_par, problem_initial_conditions, problem_pointers
 
-   integer(kind=4) :: n_sn
-   real            :: d0, p0, bx0, by0, bz0, Eexpl, x0, y0, z0, r0, dt_sn, r, t_sn
-
-   namelist /PROBLEM_CONTROL/ d0, p0, bx0, by0, bz0, Eexpl, x0, y0, z0, r0, n_sn, dt_sn
-
 contains
 !-----------------------------------------------------------------------------
    subroutine problem_pointers

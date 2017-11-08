@@ -3,11 +3,14 @@
 
 #define ISO
 
-#define GLOBAL_FR_SPEED
+
+#if !defined LOCAL_FR_SPEED
+#  define GLOBAL_FR_SPEED
+#endif
+
 
 #undef RESISTIVE
 
 #define GRAV
 
 #undef SHEAR
-#define RTVD

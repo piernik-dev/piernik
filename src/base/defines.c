@@ -18,27 +18,27 @@
 #undef FR_SPEED2
 
 #ifdef LOCAL_FR_SPEED
-#define FR_SPEED
+#  define FR_SPEED
 #endif
 
 #ifdef GLOBAL_FR_SPEED
-#ifdef FR_SPEED
-#define FR_SPEED2
-#else
-#define FR_SPEED
-#endif
+#  ifdef FR_SPEED
+#    define FR_SPEED2
+#  else
+#    define FR_SPEED
+#  endif
 #endif
 
 #ifdef FR_SPEED2
-#error Both freezing speeds defined
+#  error Both freezing speeds defined
 #endif
 
 #ifndef FR_SPEED
-#error No freezing speed defined.
+#  error No freezing speed defined.
 #endif
 
 #if defined(PSM) || defined(PLN) || defined(KSG) || defined(KSM) || defined(PGM) || defined(SSY) || defined(SI) || defined(CGS) || defined(WT4)
-#error Use run-time parameter constants_set from CONSTANTS namelist instead of { PGM SSY SI CGS WT4 PSM PLN KSG KSM } preprocessor symbols.
+#  error Use run-time parameter constants_set from CONSTANTS namelist instead of { PGM SSY SI CGS WT4 PSM PLN KSG KSM } preprocessor symbols.
 #endif
 
 /* basic sanity check for isothermal fluid */
@@ -57,45 +57,60 @@
 #undef FLUID
 
 #ifdef IONIZED
-#define FLUID
+#  define FLUID
 #endif
 
 #ifdef DUST
-#define FLUID
+#  define FLUID
 #endif
 
 #ifdef NEUTRAL
-#define FLUID
+#  define FLUID
+#  ifdef IONIZED
+#    error Currently there are no solvers that can manage a mixture of neutral and ionized fluid
+#  endif
 #endif
 
 #ifndef FLUID
-#error None of { IONIZED DUST NEUTRAL } were defined.
+#  error None of { IONIZED DUST NEUTRAL } were defined.
 #endif
 
 /*
  * Hydro solvers
  *
- * Exclusive: RTVD, MH
+ * Exclusive: RTVD, MH, RIEMANN
  * Default: RTVD
  */
 
 #undef HYDRO_SOLVER
+#undef HS2
 
 #ifdef RTVD
-#define HYDRO_SOLVER
+#  if defined(HYDRO_SOLVER)
+#    define HS2
+#  else
+#  define HYDRO_SOLVER
+#  endif
 #endif
 
 #ifdef HLLC
-#define HYDRO_SOLVER
+#  if defined(HYDRO_SOLVER)
+#    define HS2
+#  else
+#    define HYDRO_SOLVER
+#  endif
 #endif
 
-#if defined(RTVD) && defined(HLLC)
-#error Choose only one of { RTVD, HLLC }.
+#ifdef RIEMANN
+#  if defined(HYDRO_SOLVER)
+#    define HS2
+#  else
+#    define HYDRO_SOLVER
+#  endif
 #endif
 
-#if !defined(HYDRO_SOLVER)
-#  define RTVD
-/* #  warning no hydro solver defined, possible choices { RTVD, HLLC }, defaulting to RTVD */
+#if defined(HS2)
+#  error Choose only one of { RTVD, HLLC, RIEMANN }.
 #endif
 
 /*
@@ -110,10 +125,10 @@
 #  endif
 #endif
 
-#if defined HLLC && defined CORIOLIS
-#error CORIOLIS for HLLC scheme has not been implemented yet.
+#if (defined(HLLC) || defined(RIEMANN)) && defined CORIOLIS
+#  error CORIOLIS has been implemented only for RTVD so far.
 #endif
 
 #ifdef USER_RULES
-#include "user_rules.h"
+#  include "user_rules.h"
 #endif

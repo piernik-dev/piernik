@@ -140,8 +140,7 @@ contains
          cg%u(fl%imy,:,:,:) = 0.0
          cg%u(fl%imz,:,:,:) = 0.0
 
-         cg%b(xdim,:,:,:)   = 0.0
-         cg%b(zdim,:,:,:)   = 0.0
+         call cg%set_constant_b_field([0., 0., 0.]) ! slight overkill at ydim for simplicity
 
          call read_problem_par
 

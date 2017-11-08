@@ -35,7 +35,7 @@ module user_hooks
    private
    public :: problem_customize_solution, problem_grace_passed, finalize_problem, cleanup_problem, problem_refine_derefine, &
         &    custom_emf_bnd, at_user_dims_settings, at_user_area_settings, problem_post_restart, user_vars_arr_in_restart, &
-        &    user_reaction_to_redo_step, late_initial_conditions, problem_domain_update
+        &    user_reaction_to_redo_step, late_initial_conditions, problem_domain_update, problem_post_IC
 
    interface
 
@@ -75,6 +75,7 @@ module user_hooks
    procedure(no_args),     pointer :: user_reaction_to_redo_step => NULL()
    procedure(no_args),     pointer :: problem_grace_passed       => NULL()
    procedure(no_args),     pointer :: user_vars_arr_in_restart   => NULL()
+   procedure(no_args),     pointer :: problem_post_IC            => NULL() !< Call it after initial conditions refinement converge
    procedure(no_args),     pointer :: problem_post_restart       => NULL()
    procedure(no_args),     pointer :: finalize_problem           => NULL() !< A routine called at the end of simulation before last output is written.
    procedure(no_args),     pointer :: cleanup_problem            => NULL() !< A routine called at the end of run to deallocate arrays.

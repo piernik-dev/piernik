@@ -129,8 +129,8 @@ contains
 
       implicit none
 
-      real,              intent(inout) :: dt !< the timestep
-      type(var_numbers), intent(in)    :: flind
+      real,              intent(inout) :: dt    !< the timestep
+      type(var_numbers), intent(in)    :: flind !< the structure with all fluid indices
 
       type(cg_list_element), pointer   :: cgl
       type(grid_container),  pointer   :: cg
@@ -340,7 +340,7 @@ contains
       integer                :: i, j, k, d
       type(cg_level_connected_T), pointer :: curl
 
-      curl => find_level(cg%level_id)
+      curl => find_level(cg%l%id)
 
       c_fl = small
       dt_proc(:) = huge(1.)

@@ -110,7 +110,7 @@ contains
       sum_max = 0
       curl => finest%level
       do while (associated(curl))
-         if (curl%level_id == base_level_id) this%coarsest_leaves => curl !> \todo Find first not fully covered level
+         if (curl%l%id == base_level_id) this%coarsest_leaves => curl !> \todo Find first not fully covered level
          curl => curl%coarser
       enddo
       curl => this%coarsest_leaves

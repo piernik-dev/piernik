@@ -1,0 +1,40 @@
+# sha1 of the gold commit
+# Note: update only when absolutely necessary
+GOLD_COMMIT=8fcf05bbd76c9162eb1999d620b59dd0966e0f8e
+# 8fcf05bbd76c9162eb1999d620b59dd0966e0f8e - several fixups needed for Jenkins on Fedora 24
+# b39c890f49f76f59d8115b255581d5e04c7e4645 - Merge pull request #173 from gawrysz/IO_naming_fix: removed adding "final" to the output filename
+# c21d1c15102bd2372d1006d89937a5748449403f - gdf_distance relies on GDF 1.1 (output v. 2.01)
+# 06ea0b29fbfbd569a9f5acd70370ac74574a60ae - Merge pull request #93 from woolt/bnd_fix (fixed in a20b91dcd352a860e020d025be3f0895e2f58301)
+# r7854 - removed explicit setting of level_depth from problem.par files
+# r7711 - fixed dirty value propagation with some boundary conditions
+# r7684 - minor fixes in MG
+# r7649 - bumped due to reasons unrelated to this test
+# r7647 - Changed default prolongation to direct cubic (3rd order)
+# r7338 - Better treatment of corners
+# r7169 - use different potential
+# r7001 - cell centers are now calculated using slightly different formula (starting from blocks' physical edge instead of domain's edge)
+# r6656 - CRs source and pressure gradient given by u (instead of u1)
+# r6577 - up till now, ''decr'' was added to ''ecrX'', and ''grad_pcr'' was calculated using '''modified''' fluid state.
+#         That's only a partial fix as CR source terms still use '''wrong''' fluid state (''u1'' instead of ''u'')
+# r6568 - fixing CR source term in rtvd for 2D/3D (unclear if this fix is valid)
+# r6548 - changing order of operations in loops (differences of the order of 10^-11)
+# r6162 - grad_pcr and u(iarr_crs) update for all CR species
+# r6014 - bugfix
+# r5485 - after fixing ICEs with INTEL compiler
+# r5345 - due to decrease of level_max from 2 to 3 in problem.par
+# r4917 - due to multiplying by curl%idl instead of division by curl%dl in multigrid_diffusion
+# r4586 - due to critical change in bnd_emf
+
+# name of the problem to be compiled
+PROBLEM_NAME=mcrwind
+
+# options for setup call
+# Cannot rely on --linkexe here as long as we rely on revisions that don't have e2cc4da91b37238bf61cb86f258f4a0e4a1abd6a in ancestors
+SETUP_PARAMS="--param problem.par.build"
+
+# options for running gold test
+#GOLD_PARAMS="-n '&OUTPUT_CONTROL run_id=\"gld\" /'"
+GOLD_PARAMS="-n '&OUTPUT_CONTROL use_v2_io= .true. /'"
+
+# which file to compare
+OUTPUT=crwind_tst_0001.h5

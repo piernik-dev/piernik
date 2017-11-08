@@ -73,7 +73,7 @@ contains
 
       use constants, only: fpi
       use gdf,       only: gdf_field_type
-      use units,     only: cm, gram, sek, miu0
+      use units,     only: cm, erg, gram, sek, miu0
 
       implicit none
 
@@ -92,16 +92,32 @@ contains
             f%fu = "\rm{cm}/\rm{s}"
             f%f2cgs = 1.0 / (cm/sek)
          case ("enen", "enei")
-            f%fu = "\rm{g}*\rm{cm}^2/\rm{s}^2"
-            f%f2cgs = 1.0 / (gram*cm**2/sek**2)
+            f%fu = "\rm{erg}/\rm{cm}^3"
+            f%f2cgs = 1.0 / (erg/cm**3)
+         case ("ethn", "ethi")
+            f%fu = "\rm{erg}/\rm{g}"
+            f%f2cgs = 1.0 / (erg/gram)
          case ("pren", "prei")
             f%fu = "\rm{g}/\rm{cm}/\rm{s}^2"
             f%f2cgs = 1.0 / (gram/cm/sek**2)
-         case ("magx", "magy", "magz")
+         case ("magx", "magy", "magz", "magB")
             f%fu = "\rm{Gs}"
             f%f2cgs = 1.0 / (fpi * sqrt(cm / (miu0 * gram)) * sek)
             f%stag = 1
+         case ("divbc", "divbf")
+            f%fu= "\rm{Gs}/\rm{cm}" ! I'm not sure if it is a best description
+            f%f2cgs = 1.0 / (fpi * sqrt(cm / (miu0 * gram)) * sek * cm)
+         case ("magdir")
+            f%fu = "\rm{radians}"
          case ("cr01" : "cr99")
+            f%fu = "\rm{erg}/\rm{cm}^3"
+            f%f2cgs = 1.0 / (erg/cm**3)
+         case ("cren01" : "cren99")
+            f%fu = "1/\rm{cm}^3"
+            f%f2cgs = 1.0 / (erg/cm**3)
+         case ("cree01" : "cree99")
+            f%fu = "\rm{erg}/\rm{cm}^3"
+            f%f2cgs = 1.0 / (erg/cm**3)
          case ("gpot", "sgpt")
             f%fu = "\rm{cm}^2 / \rm{s}^2"
             f%f2cgs = 1.0 / (cm**2 / sek**2)
@@ -125,12 +141,24 @@ contains
                newname = "density"
             case ("vlxd", "vlxn", "vlxi", "vlyd", "vlyn", "vlyi", "vlzd", "vlzn", "vlzi")
                write(newname, '("velocity_",A1)') var(3:3)
+            case ("momxd", "momxn", "momxi", "momyd", "momyn", "momyi", "momzd", "momzn", "momzi")
+               write(newname, '("momentum_",A1)') var(4:4)
             case ("enen", "enei")
+               newname = "energy_density"
+            case ("ethn", "ethi")
                newname = "specific_energy"
             case ("pren", "prei")
                newname = "pressure"
             case ("magx", "magy", "magz")
                write(newname, '("mag_field_",A1)') var(4:4)
+            case ("divbc", "divbf")
+               newname = "magnetic_field_divergence"
+            case ("pmag%")
+               newname = "p_mag_to_p_tot_ratio"
+            case ("magB")
+               newname = "magnetic_field_magnitude"
+            case ("magdir")
+               newname = "magnetic_field_direction"
             case default
                write(newname, '(A)') trim(var)
          end select
@@ -138,6 +166,45 @@ contains
          write(newname, '(A)') trim(var)
       endif
    end function gdf_translate
+
+   subroutine create_units_description(gid)
+
+      use common_hdf5,  only: hdf_vars
+      use constants,    only: units_len, cbuff_len, I_FIVE
+      use hdf5,         only: HID_T, h5dopen_f, h5dclose_f
+      use helpers_hdf5, only: create_dataset, create_attribute
+      use units,        only: lmtvB, s_lmtvB, get_unit
+
+      implicit none
+      integer(HID_T), intent(in)             :: gid
+      integer(HID_T)                         :: dset_id
+      integer(kind=4)                        :: error, i
+      character(len=cbuff_len), pointer      :: ssbuf
+      character(len=units_len), pointer      :: sbuf
+      character(len=units_len), target       :: s_unit
+      real                                   :: val_unit
+
+      character(len=cbuff_len), dimension(I_FIVE), parameter :: base_dsets = &
+         &  ["length_unit  ", "mass_unit    ", "time_unit    ",  &
+         &   "velocity_unit", "magnetic_unit"]
+
+      do i = lbound(base_dsets, 1), ubound(base_dsets, 1)
+         call create_dataset(gid, base_dsets(i), lmtvB(i))
+         call h5dopen_f(gid, base_dsets(i), dset_id, error)
+         ssbuf => s_lmtvB(i)
+         call create_attribute(dset_id, "unit", ssbuf)
+         call h5dclose_f(dset_id, error)
+      enddo
+      do i = lbound(hdf_vars, 1, kind=4), ubound(hdf_vars, 1, kind=4)
+         call get_unit(gdf_translate(hdf_vars(i)), val_unit, s_unit)
+         call create_dataset(gid, gdf_translate(hdf_vars(i)), val_unit)
+         call h5dopen_f(gid, gdf_translate(hdf_vars(i)), dset_id, error)
+         sbuf => s_unit
+         call create_attribute(dset_id, "unit", sbuf)
+         call h5dclose_f(dset_id, error)
+      enddo
+
+   end subroutine create_units_description
 
    subroutine create_datafields_descrs(place)
 
@@ -178,7 +245,8 @@ contains
    subroutine datafields_hdf5(var, tab, ierrh, cg)
 
       use common_hdf5, only: common_shortcuts
-      use constants,   only: dsetnamelen, xdim
+      use constants,   only: dsetnamelen, xdim, ydim, zdim, half, two
+      use domain,      only: dom
       use fluidtypes,  only: component_fluid
       use func,        only: ekin, emag
       use grid_cont,   only: grid_container
@@ -215,6 +283,13 @@ contains
       ierrh = 0
       tab = 0.0
 
+#ifdef MAGNETIC
+      associate(emag_f_c => emag(half*(cg%b(xdim, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) + cg%b(xdim, cg%is+dom%D_x:cg%ie+dom%D_x, cg%js        :cg%je,         cg%ks        :cg%ke        )), &
+           &                     half*(cg%b(ydim, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) + cg%b(ydim, cg%is        :cg%ie,         cg%js+dom%D_y:cg%je+dom%D_y, cg%ks        :cg%ke        )), &
+           &                     half*(cg%b(zdim, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) + cg%b(zdim, cg%is        :cg%ie,         cg%js        :cg%je,         cg%ks+dom%D_z:cg%ke+dom%D_z))) )
+#else /* !MAGNETIC */
+      associate(emag_f_c => 0.)
+#endif /* !MAGNETIC */
       select case (var)
 #ifdef COSM_RAYS
          case ("cr01" : "cr99")
@@ -239,6 +314,8 @@ contains
             tab(:,:,:) = real(cg%u(fl_dni%idn, RNG), kind=4)
          case ("vlxd", "vlxn", "vlxi", "vlyd", "vlyn", "vlyi", "vlzd", "vlzn", "vlzi")
             tab(:,:,:) = real(cg%u(fl_dni%imx + i_xyz, RNG) / cg%u(fl_dni%idn, RNG), kind=4)
+         case ("momxd", "momxn", "momxi", "momyd", "momyn", "momyi", "momzd", "momzn", "momzi")
+            tab(:,:,:) = real(cg%u(fl_dni%imx + i_xyz, RNG), kind=4)
          case ("enen", "enei")
 #ifdef ISO
             tab(:,:,:) = real(ekin(cg%u(fl_dni%imx, RNG), cg%u(fl_dni%imy, RNG), cg%u(fl_dni%imz, RNG), cg%u(fl_dni%idn, RNG)), kind=4)
@@ -254,16 +331,56 @@ contains
 #ifndef ISO
             tab(:,:,:) = real(flind%ion%gam_1, kind=4) * real( cg%u(flind%ion%ien, RNG) - &
                  &       ekin(cg%u(flind%ion%imx, RNG), cg%u(flind%ion%imy, RNG), cg%u(flind%ion%imz, RNG), cg%u(flind%ion%idn, RNG)), kind=4) - &
-                 &       real(flind%ion%gam_1*emag(cg%b(xdim, RNG), cg%b(ydim, RNG), cg%b(zdim, RNG)), kind=4)
+                 &       real(flind%ion%gam_1*emag_f_c, kind=4)
+#endif /* !ISO */
+         case ("pmag%")
+#ifndef ISO
+            tab(:,:,:) = real(emag_f_c, kind=4) / &
+                 &      (real(flind%ion%gam_1, kind=4) * real( cg%u(flind%ion%ien, RNG) - &
+                 &       ekin(cg%u(flind%ion%imx, RNG), cg%u(flind%ion%imy, RNG), cg%u(flind%ion%imz, RNG), cg%u(flind%ion%idn, RNG)) - emag_f_c, kind=4) + &
+                 &       real(emag_f_c, kind=4))
+#endif /* !ISO */
+        case ("ethn")
+#ifndef ISO
+            tab(:,:,:) = real( (cg%u(flind%neu%ien, RNG) - &
+                 &       ekin(cg%u(flind%neu%imx, RNG), cg%u(flind%neu%imy, RNG), cg%u(flind%neu%imz, RNG), cg%u(flind%neu%idn, RNG))) /         &
+                 &       cg%u(flind%neu%idn, RNG), kind=4)
+#endif /* !ISO */
+         case ("ethi")
+#ifndef ISO
+            tab(:,:,:) = real( (cg%u(flind%ion%ien, RNG) - &
+                 &       ekin(cg%u(flind%ion%imx, RNG), cg%u(flind%ion%imy, RNG), cg%u(flind%ion%imz, RNG), cg%u(flind%ion%idn, RNG)) -          &
+                 &       emag_f_c) / cg%u(flind%ion%idn, RNG), kind=4)
 #endif /* !ISO */
          case ("magx", "magy", "magz")
-            tab(:,:,:) = real(cg%b(xdim + i_xyz, RNG), kind=4)
+            tab(:,:,:) = real(cg%b(xdim + i_xyz, RNG), kind=4) ! beware: these are "raw", face-centered. Use them with care when you process plotfiles
+         case ("magB")
+            tab(:,:,:) = real(sqrt(two * emag_f_c), kind=4)
+         case ("magdir")
+            tab(:,:,:) = real(atan2(cg%b(ydim, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) + cg%b(ydim, cg%is        :cg%ie,         cg%js+dom%D_y:cg%je+dom%D_y, cg%ks        :cg%ke        ), &
+                 &                  cg%b(xdim, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) + cg%b(xdim, cg%is+dom%D_x:cg%ie+dom%D_x, cg%js        :cg%je,         cg%ks        :cg%ke        )), kind=4)
+         case ("divbf") ! face-centered div(B): RTVD
+            tab(:,:,:) = real( half * ( &
+            &                           (cg%b(xdim, cg%is+dom%D_x:cg%ie+dom%D_x, cg%js        :cg%je,         cg%ks        :cg%ke        ) - &
+            &                            cg%b(xdim, cg%is        :cg%ie,         cg%js        :cg%je,         cg%ks        :cg%ke        )   )/cg%dx + &
+            &                           (cg%b(ydim, cg%is        :cg%ie,         cg%js+dom%D_y:cg%je+dom%D_y, cg%ks        :cg%ke        ) - &
+            &                            cg%b(ydim, cg%is        :cg%ie,         cg%js        :cg%je,         cg%ks        :cg%ke        )   )/cg%dy + &
+            &                           (cg%b(zdim, cg%is        :cg%ie,         cg%js        :cg%je,         cg%ks+dom%D_z:cg%ke+dom%D_z) - &
+            &                            cg%b(zdim, cg%is        :cg%ie,         cg%js        :cg%je,         cg%ks        :cg%ke        )   )/cg%dz ), kind=4)
+         case ("divbc") ! cell-centered div(B): RIEMANN?
+            tab(:,:,:) = real( half * ( &
+            &                           (cg%b(xdim, cg%is+dom%D_x:cg%ie+dom%D_x, cg%js        :cg%je,         cg%ks        :cg%ke        ) - &
+            &                            cg%b(xdim, cg%is-dom%D_x:cg%ie-dom%D_x, cg%js        :cg%je,         cg%ks        :cg%ke        )   )/cg%dx + &
+            &                           (cg%b(ydim, cg%is        :cg%ie,         cg%js+dom%D_y:cg%je+dom%D_y, cg%ks        :cg%ke        ) - &
+            &                            cg%b(ydim, cg%is        :cg%ie,         cg%js-dom%D_y:cg%je-dom%D_y, cg%ks        :cg%ke        )   )/cg%dy + &
+            &                           (cg%b(zdim, cg%is        :cg%ie,         cg%js        :cg%je,         cg%ks+dom%D_z:cg%ke+dom%D_z) - &
+            &                            cg%b(zdim, cg%is        :cg%ie,         cg%js        :cg%je,         cg%ks-dom%D_z:cg%ke-dom%D_z)   )/cg%dz ), kind=4)
          case ("gpot")
             if (associated(cg%gpot)) tab(:,:,:) = real(cg%gpot(RNG), kind=4)
          case ("sgpt")
             if (associated(cg%sgp)) tab(:,:,:) = real(cg%sgp(RNG), kind=4)
          case ("level")
-            tab(:,:,:) = real(cg%level_id, kind=4)
+            tab(:,:,:) = real(cg%l%id, kind=4)
          case ("grid_id")
             tab(:,:,:) = real(cg%grid_id, kind=4)
          case ("proc")
@@ -271,7 +388,7 @@ contains
          case default
             ierrh = -1
       end select
-
+      end associate
 #undef RNG
 
    end subroutine datafields_hdf5
@@ -325,7 +442,7 @@ contains
 
    subroutine h5_write_to_single_file_v2(fname)
       use common_hdf5, only: write_to_hdf5_v2, O_OUT
-      use gdf,         only: gdf_create_field_types
+      use gdf,         only: gdf_create_root_group
       use mpisetup,    only: master, piernik_MPI_Barrier
 
       implicit none
@@ -334,14 +451,17 @@ contains
 
       call write_to_hdf5_v2(fname, O_OUT, create_empty_cg_datasets_in_output, write_cg_to_output)
 
-      if (master) call gdf_create_field_types(fname,create_datafields_descrs)
+      if (master) then
+         call gdf_create_root_group(fname, 'field_types', create_datafields_descrs)
+         call gdf_create_root_group(fname, 'dataset_units', create_units_description)
+      endif
       call piernik_MPI_Barrier
 
    end subroutine h5_write_to_single_file_v2
 
 !> \brief Write all grid containers to the file
 
-   subroutine write_cg_to_output(cgl_g_id, cg_n, cg_all_n_b)
+   subroutine write_cg_to_output(cgl_g_id, cg_n, cg_all_n_b, cg_all_n_o)
 
       use cg_leaves,   only: leaves
       use cg_list,     only: cg_list_element
@@ -358,6 +478,7 @@ contains
       integer(HID_T),                           intent(in) :: cgl_g_id    !< cg group identifier
       integer(kind=4), dimension(:),   pointer, intent(in) :: cg_n        !< offset for cg group numbering
       integer(kind=4), dimension(:,:), pointer, intent(in) :: cg_all_n_b  !< all cg sizes
+      integer(kind=4), dimension(:,:), pointer, intent(in) :: cg_all_n_o  !< all cg sizes, expanded by external boundaries
 
       integer(HID_T)                                       :: filespace_id, memspace_id
       integer(kind=4)                                      :: error
@@ -468,6 +589,8 @@ contains
       if (associated(data)) deallocate(data)
       call cg_desc%clean()
 
+      if (.false.) i = size(cg_all_n_o) ! suppress compiler warning
+
       contains
          !>
          !! Try to avoid pointless data reallocation for every cg if shape doesn't change
@@ -536,23 +659,26 @@ contains
 
    end subroutine get_data_from_cg
 
-   subroutine create_empty_cg_datasets_in_output(cg_g_id, cg_n_b, Z_avail, g)
+   subroutine create_empty_cg_datasets_in_output(cg_g_id, cg_n_b, cg_n_o, Z_avail)
 
       use common_hdf5, only: create_empty_cg_dataset, hdf_vars, O_OUT
       use hdf5,        only: HID_T, HSIZE_T
 
       implicit none
 
-      integer(HID_T),                           intent(in) :: cg_g_id
-      integer(kind=4), dimension(:,:), pointer, intent(in) :: cg_n_b
-      logical(kind=4),                          intent(in) :: Z_avail
-      integer,                                  intent(in) :: g
+      integer(HID_T),                intent(in) :: cg_g_id
+      integer(kind=4), dimension(:), intent(in) :: cg_n_b
+      integer(kind=4), dimension(:), intent(in) :: cg_n_o
+      logical(kind=4),               intent(in) :: Z_avail
 
-      integer                                              :: i
+      integer :: i
 
       do i = lbound(hdf_vars,1), ubound(hdf_vars,1)
-         call create_empty_cg_dataset(cg_g_id, gdf_translate(hdf_vars(i)), int(cg_n_b(g, :), kind=HSIZE_T), Z_avail, O_OUT)
+         call create_empty_cg_dataset(cg_g_id, gdf_translate(hdf_vars(i)), int(cg_n_b, kind=HSIZE_T), Z_avail, O_OUT)
       enddo
+
+      if (.false.) i = size(cg_n_o) ! suppress compiler warning
+
    end subroutine create_empty_cg_datasets_in_output
 
    subroutine h5_write_to_single_file_v1(fname)
@@ -587,6 +713,9 @@ contains
       integer(HID_T)                    :: memspace                !< Dataspace identifier in memory
       integer(HSIZE_T), dimension(rank) :: count, offset, stride, block, dimsf, chunk_dims
 
+      ! Sometimes the data(:,:,:) is created in an associated state, sometimes not
+      nullify(data)
+
       call h5open_f(error)
       !
       ! Setup file access property list with parallel I/O access.
@@ -600,7 +729,7 @@ contains
       call h5pclose_f(plist_idf, error)
 
       !! \todo check if finest is complete, if not then find finest complete level
-      dimsf  = finest%level%n_d(:)    ! Dataset dimensions
+      dimsf  = finest%level%l%n_d(:)    ! Dataset dimensions
       !
       ! Create the data space for the  dataset.
       !

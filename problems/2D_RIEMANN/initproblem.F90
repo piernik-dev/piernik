@@ -32,7 +32,7 @@ module initproblem
 !
 ! Problem description
 !
-! ........................................ 
+! ........................................
 ! .                 .                    .
 ! .                 .                    .
 ! .     *_mp        .         *_pp       .
@@ -139,12 +139,12 @@ contains
          rbuff(14) = p_pm
          rbuff(15) = velx_pm
          rbuff(16) = vely_pm
-         
+
       endif
 
       call piernik_MPI_Bcast(rbuff)
 
-      if (slave) then 
+      if (slave) then
 
          den_pp  = rbuff(1)
          p_pp    = rbuff(2)
@@ -164,9 +164,9 @@ contains
          vely_pm = rbuff(16)
 
       endif
-      
 
-  
+
+
   end subroutine read_problem_par
 
 !------------------------------------------------------------------------------------------------------
@@ -175,15 +175,16 @@ contains
 
     use cg_list,    only: cg_list_element
     use cg_leaves,  only: leaves
-    use fluidindex, only: flind
+    use fluidindex, only: flind, iarr_all_mz
+    use fluidtypes, only: component_fluid
     use grid_cont,  only: grid_container
 
     implicit none
-    
+
     type(cg_list_element), pointer :: cgl
     type(grid_container),  pointer :: cg
-
-    integer :: i, j, k
+    class(component_fluid), pointer :: fl
+    integer :: i, j, k, f
 
     cgl => leaves%first
     do while (associated(cgl))
@@ -192,35 +193,38 @@ contains
        do k = cg%ks, cg%ke
           do j = cg%js, cg%je
              do i = cg%is, cg%ie
-                
-                if ((cg%x(i) .gt. 0.0) .and. (cg%y(j) .gt. 0.0)) then
-                   cg%u(flind%neu%idn, i, j, k) = den_pp
-                   cg%u(flind%neu%imx, i, j, k) = den_pp*velx_pp
-                   cg%u(flind%neu%imy, i, j, k) = den_pp*vely_pp
-                   cg%u(flind%neu%ien, i, j, k) = p_pp / flind%neu%gam_1 + 0.5 / cg%u(flind%neu%idn, i, j, k) * sum(cg%u([flind%neu%imx,flind%neu%imy], i, j, k)**2)
-                else if ((cg%x(i) .lt. 0.0) .and. (cg%y(j) .gt. 0.0)) then
-                   cg%u(flind%neu%idn, i, j, k) = den_mp
-                   cg%u(flind%neu%imx, i, j, k) = den_mp*velx_mp
-                   cg%u(flind%neu%imy, i, j, k) = den_mp*vely_mp
-                   cg%u(flind%neu%ien, i, j, k) = p_mp / flind%neu%gam_1 + 0.5 / cg%u(flind%neu%idn, i, j, k) * sum(cg%u([flind%neu%imx,flind%neu%imy], i, j, k)**2)
-                else if ((cg%x(i) .lt. 0.0) .and. (cg%y(j) .lt. 0.0)) then
-                   cg%u(flind%neu%idn, i, j, k) = den_mm
-                   cg%u(flind%neu%imx, i, j, k) = den_mm*velx_mm
-                   cg%u(flind%neu%imy, i, j, k) = den_mm*vely_mm
-                   cg%u(flind%neu%ien, i, j, k) = p_mm / flind%neu%gam_1 + 0.5 / cg%u(flind%neu%idn, i, j, k) * sum(cg%u([flind%neu%imx,flind%neu%imy], i, j, k)**2)
-                else if ((cg%x(i) .gt. 0.0) .and. (cg%y(j) .lt. 0.0)) then
-                   cg%u(flind%neu%idn, i, j, k) = den_pm
-                   cg%u(flind%neu%imx, i, j, k) = den_pm*velx_pm
-                   cg%u(flind%neu%imy, i, j, k) = den_pm*vely_pm
-                   cg%u(flind%neu%ien, i, j, k) = p_pm / flind%neu%gam_1 + 0.5 / cg%u(flind%neu%idn, i, j, k) * sum(cg%u([flind%neu%imx,flind%neu%imy], i, j, k)**2)
-                endif
-             
+
+                do f = 1, flind%fluids
+                   fl  => flind%all_fluids(f)%fl
+                   if ((cg%x(i) .gt. 0.0) .and. (cg%y(j) .gt. 0.0)) then
+                      cg%u(fl%idn, i, j, k) = den_pp
+                      cg%u(fl%imx, i, j, k) = den_pp*velx_pp
+                      cg%u(fl%imy, i, j, k) = den_pp*vely_pp
+                      cg%u(fl%ien, i, j, k) = p_pp / fl%gam_1 + 0.5 / cg%u(fl%idn, i, j, k) * sum(cg%u([fl%imx,fl%imy], i, j, k)**2)
+                   else if ((cg%x(i) .lt. 0.0) .and. (cg%y(j) .gt. 0.0)) then
+                      cg%u(fl%idn, i, j, k) = den_mp
+                      cg%u(fl%imx, i, j, k) = den_mp*velx_mp
+                      cg%u(fl%imy, i, j, k) = den_mp*vely_mp
+                      cg%u(fl%ien, i, j, k) = p_mp / fl%gam_1 + 0.5 / cg%u(fl%idn, i, j, k) * sum(cg%u([fl%imx,fl%imy], i, j, k)**2)
+                   else if ((cg%x(i) .lt. 0.0) .and. (cg%y(j) .lt. 0.0)) then
+                      cg%u(fl%idn, i, j, k) = den_mm
+                      cg%u(fl%imx, i, j, k) = den_mm*velx_mm
+                      cg%u(fl%imy, i, j, k) = den_mm*vely_mm
+                      cg%u(fl%ien, i, j, k) = p_mm / fl%gam_1 + 0.5 / cg%u(fl%idn, i, j, k) * sum(cg%u([fl%imx,fl%imy], i, j, k)**2)
+                   else if ((cg%x(i) .gt. 0.0) .and. (cg%y(j) .lt. 0.0)) then
+                      cg%u(fl%idn, i, j, k) = den_pm
+                      cg%u(fl%imx, i, j, k) = den_pm*velx_pm
+                      cg%u(fl%imy, i, j, k) = den_pm*vely_pm
+                      cg%u(fl%ien, i, j, k) = p_pm / fl%gam_1 + 0.5 / cg%u(fl%idn, i, j, k) * sum(cg%u([fl%imx,fl%imy], i, j, k)**2)
+                   endif
+                enddo
+
              enddo
           enddo
        enddo
 
-       cg%b(:,:,:,:) = 0.
-       cg%u(flind%neu%imz, :, :, :) = 0.
+       call cg%set_constant_b_field([0., 0., 0.])
+       cg%u(iarr_all_mz, :, :, :) = 0.
 
        cgl => cgl%nxt
     enddo

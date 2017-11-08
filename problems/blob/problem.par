@@ -1,24 +1,31 @@
+! This configuration file is for the analytical initialisation of the test problem
+! For noisy initialisation used in the Agertz paper look for problem.par.wt3_med
+! and remember to download proper initial conditions file.
+
  $BASE_DOMAIN
-    n_d = 128, 512, 1
+    n_d = 128, 128, 512
     bnd_xl = 'per'
     bnd_xr = 'per'
     bnd_yl = 'per'
     bnd_yr = 'per'
     bnd_zl = 'per'
     bnd_zr = 'per'
-    xmin   =  0.0
-    xmax   = 10.0
-    ymin   =  0.0
-    ymax   = 40.0
-    zmin   =  0.0
-    zmax   = 10.0
+    xmin   = -1000.0
+    xmax   =  1000.0
+    ymin   = -1000.0
+    ymax   =  1000.0
+    zmin   = -1000.0
+    zmax   =  7000.0
  /
 
  $MPI_BLOCKS
-    psize = 1, 4, 1
  /
 
  $UNITS
+    units_set = "user"
+    cm   = 3.2407792894189803e-22   !   length_unit = 1 kpc
+    gram = 2.1619676645392735e-39   !   mass_unit   = 2.3262e5 M_sun
+    sek  = 3.241028514145478e-17    !   time_unit   = 0.9777 Gyr
  /
 
  $RESTART_CONTROL
@@ -39,7 +46,7 @@
     dt_res  = 100.0e0
     dt_log  = 0.001
     dt_tsl  = 0.00001
-    vars(1:) = 'dens', 'velx', 'vely', 'ener'
+    vars(1:) = 'dens', 'velx', 'vely', "velz", 'ener', "pres", "ethr"
  /
 
  $FLUID_NEUTRAL
@@ -48,22 +55,21 @@
 
  $NUMERICAL_SETUP
     cfl    = 0.9
-    smalld = 1.e-6
-    smallei= 1.e-4
+    smalld = 1.e-10
+    smallei= 1.e-10
     integration_order = 2
     limiter= 'vanleer'
  /
 
  $PROBLEM_CONTROL
-    chi     = 10.0
-    rblob   =  1.0
-    blobxc  =  5.0
-    blobyc  =  5.0
-    blobzc  =  5.0
-    Mext    =  2.7
-    denv    =  1.0
-    tkh     =  1.7
-    vgal    =  0.0
+    chi     =   10.0
+    rblob   =  197.0
+    blobxc  =    0.0
+    blobyc  =    0.0
+    blobzc  =    0.0
+    Mext    =    2.7
+    denv    =    3.13e-8
+    venv    = 1000.0
  /
 
  $INTERACTIONS

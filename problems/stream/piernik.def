@@ -4,10 +4,12 @@
 #define ISO
 
 #undef      GLOBAL_FR_SPEED
-#define     LOCAL_FR_SPEED
+
+#if !defined GLOBAL_FR_SPEED
+#  define LOCAL_FR_SPEED
+#endif
 
 #define FLUID_INTERACTIONS
 
 #define GRAV
 #define SHEAR
-#define RTVD

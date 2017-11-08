@@ -36,7 +36,7 @@ module restart_hdf5_v1
    implicit none
 
    private
-   public :: read_restart_hdf5_v1, write_restart_hdf5_v1, read_arr_from_restart
+   public :: read_restart_hdf5_v1, write_restart_hdf5_v1
 
 contains
 
@@ -75,15 +75,11 @@ contains
 
       select case (area_type)
          case (AT_OUT_B)                                   ! physical domain with outer boundaries
-            where (cg%my_se(:, LO) == 0 .and. dom%has_dir(:))
-               lleft(:)  = lleft(:)  - dom%nb
-               chnk(:)   = chnk(:)   + dom%nb
-            endwhere
-            where (cg%h_cor1(:) == dom%n_d(:) .and. dom%has_dir(:)) !! \warning this should be checked against level%n_d
-               lright(:) = lright(:) + dom%nb
-               chnk(:)   = chnk(:)   + dom%nb
-            endwhere
-            where (loffs(:)>0) loffs(:) = loffs(:) + dom%nb ! the block adjacent to the left boundary are dom%nb cells wider than cg%n_b(:)
+            lleft(:)  = cg%lh_out(:, LO)
+            lright(:) = cg%lh_out(:, HI)
+            where (lleft(:)  /= cg%ijkse(:, LO)) chnk(:)  = chnk(:)  + dom%nb
+            where (lright(:) /= cg%ijkse(:, HI)) chnk(:)  = chnk(:)  + dom%nb
+            where (loffs(:)  >  cg%l%off(:))     loffs(:) = loffs(:) + dom%nb ! the block adjacent to the left boundary are dom%nb cells wider than cg%n_b(:)
          case (AT_NO_B)                                    ! only physical domain without any boundaries
             ! Nothing special
          case (AT_USER)                                    ! user defined domain (with no reference to simulations domain)
@@ -142,7 +138,6 @@ contains
 
       use constants,        only: cwdlen
       use hdf5,             only: HID_T, H5P_FILE_ACCESS_F, H5F_ACC_RDWR_F, h5open_f, h5close_f, h5fopen_f, h5fclose_f, h5pcreate_f, h5pclose_f, h5pset_fapl_mpio_f
-      !, H5P_DATASET_XFER_F, h5pset_preserve_f
       use mpi,              only: MPI_INFO_NULL
       use mpisetup,         only: comm
       use named_array_list, only: qna, wna
@@ -174,20 +169,9 @@ contains
          enddo
       endif
 
-!     \todo writing axes using collective I/O takes order of magnitude more than
-!        dumping U and B arrays altogether, since XYZ-axis is not even read
-!        back during restart I'm commenting this out. Rewrite or punt.
-!      call write_axes_to_restart(file_id)
-
       ! End of parallel writing (close the HDF5 file stuff)
       call h5pclose_f(plist_id, error)
 
-      ! dump cg
-      !call h5pcreate_f(H5P_DATASET_XFER_F, plist_id, error)
-      !call h5pset_preserve_f(plist_id, .true., error)
-      !call write_grid_containter(cg, file_id, plist_id)
-      !call h5pclose_f(plist_id, error)
-      !
       call h5fclose_f(file_id, error)
       call h5close_f(error)
 

@@ -132,7 +132,7 @@ contains
          do while (associated(cgl))
             cgl%cg%refine_flags%refine = cgl%cg%refine_flags%refine .or. &
                  &                       any(cgl%cg%refinemap .and. cgl%cg%leafmap)
-            call cgl%cg%refine_flags%sanitize(cgl%cg%level_id)
+            call cgl%cg%refine_flags%sanitize(cgl%cg%l%id)
             cgl => cgl%nxt
          enddo
          curl => curl%finer
@@ -285,13 +285,13 @@ contains
          enddo
 
          curl => finest%level%coarser
-         do while (associated(curl) .and. curl%level_id >= base%level%level_id)
+         do while (associated(curl) .and. curl%l%id >= base%level%l%id)
             some_refined = .false.
             cgl => curl%first
             do while (associated(cgl))
                if (cgl%cg%refine_flags%refine) then
-                  if (finest%level%level_id <= cgl%cg%level_id) call warn("[refinement_update:update_refinement] growing too fast!")
-!                  write(msg,*)"addp ^",curl%level_id," ^^",curl%level_id+1," @[]",cgl%cg%my_se(:, LO)*refinement_factor, " []",cgl%cg%n_b(:)*refinement_factor
+                  if (finest%level%l%id <= cgl%cg%l%id) call warn("[refinement_update:update_refinement] growing too fast!")
+!                  write(msg,*)"addp ^",curl%l%id," ^^",curl%l%id+1," @[]",cgl%cg%my_se(:, LO)*refinement_factor, " []",cgl%cg%n_b(:)*refinement_factor
                   if (associated(curl%finer)) then
                      call refine_one_grid(curl, cgl)
                      if (present(act_count)) act_count = act_count + 1
@@ -420,7 +420,7 @@ contains
       if (.not. associated(curl%finer)) call finest%add_finer
       if (size(cgl%cg%refine_flags%SFC_refine_list) > 0) then ! we've got detailed map!
          do b = lbound(cgl%cg%refine_flags%SFC_refine_list, dim=1), ubound(cgl%cg%refine_flags%SFC_refine_list, dim=1)
-            if (cgl%cg%refine_flags%SFC_refine_list(b)%level == curl%finer%level_id) then
+            if (cgl%cg%refine_flags%SFC_refine_list(b)%level == curl%finer%l%id) then
                call curl%finer%add_patch(int(AMR_bsize, kind=8), cgl%cg%refine_flags%SFC_refine_list(b)%off)
             else
                call die("[refinement_update:refine_one_grid] wrong level!")
@@ -493,7 +493,7 @@ contains
       ! Put a level number to the working array, restrict it and exchange internal boundaries
       cgl => leaves%first
       do while (associated(cgl))
-         cgl%cg%wa = cgl%cg%level_id
+         cgl%cg%wa = cgl%cg%l%id
          cgl => cgl%nxt
       enddo
       call finest%level%restrict_to_base_q_1var(qna%wai)
@@ -528,7 +528,7 @@ contains
                         if (lleaf == -huge(1)) then
                            lleaf = int(cgl%cg%wa(i, j, k))
                         else
-                           if (lleaf /= int(cgl%cg%wa(i, j, k)) .or. lleaf /= cgl%cg%level_id) call die("[refinement_update:fix_refinement] Inconsistent level map")
+                           if (lleaf /= int(cgl%cg%wa(i, j, k)) .or. lleaf /= cgl%cg%l%id) call die("[refinement_update:fix_refinement] Inconsistent level map")
                         endif
                         cgl%cg%prolong_xyz(i,j,k) = INSIDE
                      endif
@@ -583,7 +583,7 @@ contains
                         lnear = int(min(huge(I_ONE)/10.,maxval(cgl%cg%wa(i-range*dom%D_x:i+range*dom%D_x, j-range*dom%D_y:j+range*dom%D_y, k-range*dom%D_z:k+range*dom%D_z))))
                         if (lnear > lleaf) then
                            cgl%cg%refine_flags%derefine = .false.
-                           if (lnear > lleaf+1 .and. lnear <= finest%level%level_id) then
+                           if (lnear > lleaf+1 .and. lnear <= finest%level%l%id) then
                               cgl%cg%refinemap(i, j, k) = .true.
                               if (present(correct)) correct = .false.
                            endif
@@ -594,10 +594,10 @@ contains
                enddo
             enddo
             call cgl%cg%refinemap2SFC_list
-            call cgl%cg%refine_flags%sanitize(cgl%cg%level_id)
+            call cgl%cg%refine_flags%sanitize(cgl%cg%l%id)
 
             if (any(cgl%cg%refinemap) .and. .not. present(correct)) then
-               write(msg,'(a,i3,a,6i5,a,i3)')"[refinement_update:fix_refinement] neighbour level ^",lnear," at [",cgl%cg%my_se,"] ^",cgl%cg%level_id
+               write(msg,'(a,i3,a,6i5,a,i3)')"[refinement_update:fix_refinement] neighbour level ^",lnear," at [",cgl%cg%my_se,"] ^",cgl%cg%l%id
                call warn(msg)
                failed = .true.
             endif
@@ -639,7 +639,7 @@ end module refinement_update
 !!$      implicit none
 !!$
 !!$      if (master) then
-!!$         write(msg, '(a,i3)')"[refinement_update:refine_domain] refining level ",finest%level%level_id
+!!$         write(msg, '(a,i3)')"[refinement_update:refine_domain] refining level ",finest%level%l%id
 !!$         call printinfo(msg)
 !!$      endif
 !!$
@@ -666,7 +666,7 @@ end module refinement_update
 !!$      type(cg_list_element), pointer :: cgl
 !!$
 !!$      if (master) then
-!!$         write(msg, '(a,i3)')"[refinement_update:derefine_domain] derefining level ",finest%level%level_id
+!!$         write(msg, '(a,i3)')"[refinement_update:derefine_domain] derefining level ",finest%level%l%id
 !!$         call printinfo(msg)
 !!$      endif
 !!$      call finest%level%restrict

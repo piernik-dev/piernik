@@ -1,5 +1,10 @@
+For developers:
+ 1) Never commit directly to this repository. Fork and issue a PR
+ 2) Have fun with git repo!
 
+Join the chat at https://gitter.im/piernik-dev/piernik
 
+--------- This fork: ----------
 Piernik development branch ‚cresp_development_mh’ 
 created to plug in the cosmic ray energy spectrum module (cresp)
 (read: „Cosmic Ray Energy SPectrum”)
@@ -9,5 +14,3 @@ The cresp module is designed to model energy dependent CR transport module
 based on a Focker-Planck equation solver by Miniati’s 
 (Computer Physics Communications 141, 2001, 17–38) 
 COSMOCR, enhanced with our own improvements and extensions.
-
-

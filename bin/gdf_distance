@@ -1,0 +1,300 @@
+#!/usr/bin/env python
+
+sp_key = 'simulation_parameters'
+
+
+def is_comparable(fname1, fname2):
+    import h5py
+    status = True
+
+    # open
+    try:
+        h5f1 = h5py.File(fname1, "r")
+    except IOError:
+        status = False
+        print("IOError: %s (`%s')." % (sys.exc_info()[1], fname1))
+    try:
+        h5f2 = h5py.File(fname2, "r")
+    except IOError:
+        status = False
+        print("IOError: %s (`%s')." % (sys.exc_info()[1], fname2))
+
+    if status is False:
+        return status
+
+    # piernik versions
+    v_key = 'piernik'
+    try:
+        v1 = h5f1.attrs[v_key][0]
+    except KeyError:
+        status = False
+        print("KeyError: %s (`%s':%s)." % (sys.exc_info()[1], fname1, v_key))
+    try:
+        v2 = h5f2.attrs[v_key][0]
+    except KeyError:
+        status = False
+        print("KeyError: %s (`%s':%s)." % (sys.exc_info()[1], fname2, v_key))
+
+    if status is False:
+        return status
+
+    if (int(v1) != int(v2)):
+        status = False
+        print("Cannot compare different major file format revisions (%d and %d)." %
+              (int(v1), int(v2)))
+        return status
+
+    if (int(v1) == 1 or int(v2) == 1):
+        status = False
+        print("Piernik v1 HDF files aren't supported now and perhaps will never be. (%.2f and/or %.2f)." %
+              (v1, v2))
+        return status
+
+    if (v1 != v2):
+        print("Warning: different revisions of Piernik HDF format. Expect troubles.")
+
+    # dimensionality, assume v2 naming conventions
+    dim_key = 'dimensionality'
+    try:
+        d1 = h5f1[sp_key].attrs[dim_key][0]
+    except KeyError:
+        status = False
+        print("KeyError: %s (`%s':%s)." % (sys.exc_info()[1], fname1, dim_key))
+    try:
+        d2 = h5f2[sp_key].attrs[dim_key][0]
+    except KeyError:
+        status = False
+        print("KeyError: %s (`%s':%s)." % (sys.exc_info()[1], fname2, dim_key))
+
+    if status is False:
+        return status
+
+    if (d1 != d2):
+        status = False
+        print("Cannot compare files with different dimensionality (%d != %d)." %
+              (d1, d2))
+        return status
+
+    # geometry, assume v2 naming conventions
+    geo_key = 'geometry'
+    # geo_CART = 0
+    # geo_POLAR = 1
+    try:
+        g1 = h5f1[sp_key].attrs[geo_key][0]
+    except KeyError:
+        status = False
+        print("KeyError: %s (`%s':%s)." % (sys.exc_info()[1], fname1, geo_key))
+    try:
+        g2 = h5f2[sp_key].attrs[geo_key][0]
+    except KeyError:
+        status = False
+        print("KeyError: %s (`%s':%s)." % (sys.exc_info()[1], fname2, geo_key))
+
+    if status is False:
+        return status
+
+    if (g1 != g2):
+        status = False
+        print("Cannot compare files with different geometries yet (%d != %d)." %
+              (g1, g2))
+        print("It is an interesting idea for future :-)")
+
+        return status
+
+    h5f1.close()
+    h5f2.close()
+    return status  # for safety, in case more checks will be added
+
+
+def compare_domains(h5f1, h5f2):
+    import numpy
+    dle_key = 'domain_left_edge'
+    dre_key = 'domain_right_edge'
+    failed = False
+
+    try:
+        dl1, dr1 = h5f1[sp_key].attrs[dle_key], h5f1[sp_key].attrs[dre_key]
+    except KeyError:
+        failed = True
+        print("KeyError: %s (`%s':%s,%s)." % (sys.exc_info()[1], h5f1.filename, dle_key, dre_key))
+    try:
+        dl2, dr2 = h5f2[sp_key].attrs[dle_key], h5f2[sp_key].attrs[dre_key]
+    except KeyError:
+        failed = True
+        print("KeyError: %s (`%s':%s,%s)." % (sys.exc_info()[1], h5f2.filename, dle_key, dre_key))
+
+    if failed:
+        exit(10)
+
+    # find overlapped area
+    dlo = numpy.maximum(dl1, dl2)
+    dro = numpy.minimum(dr1, dr2)
+
+    for i in numpy.subtract(dro, dlo):
+        if (i < 0.):
+            print("Domains don't overlap.")
+            return 1., [0., 0., 0.], [0., 0., 0.]
+
+    vol_1 = numpy.product(numpy.subtract(dr1, dl1))
+    vol_2 = numpy.product(numpy.subtract(dr2, dl2))
+    vol_o = numpy.product(numpy.subtract(dro, dlo))
+    if (vol_1 == 0. and vol_2 == 0.):
+        print("Both domains have no volume!")
+        exit(11)
+
+    return 1. - vol_o/(vol_1 + vol_2 - vol_o), dlo, dro
+
+
+def compare_resolution(h5f1, h5f2):
+    dim_key = "domain_dimensions"
+
+    try:
+        res1, res2 = h5f1[sp_key].attrs[dim_key], h5f2[sp_key].attrs[dim_key]
+    except KeyError:
+        print("KeyError: %s (`%s',`%s':%s)." % (sys.exc_info()[1], h5f1.filename, h5f2.filename, dim_key))
+        exit(30)
+
+    r_norm = 0.
+    for i in range(len(res1)):
+        r_norm = 1. - (1. - r_norm) * (1. - abs(res1[i] - res2[i])/float(res1[i] + res2[i]))
+
+    return r_norm
+
+
+def compare_dlists(h5f1, h5f2):
+    d_key = '/data'
+    g0_key = 'grid_0000000000'
+    failed = False
+
+    try:
+        f1 = h5f1[d_key][g0_key].keys()
+    except KeyError:
+        failed = True
+        print("KeyError: %s (`%s': %s,%s)." % (sys.exc_info()[1], h5f1.filename, d_key, g0_key))
+    try:
+        f2 = h5f2[d_key][g0_key].keys()
+    except KeyError:
+        failed = True
+        print("KeyError: %s (`%s': %s,%s)." % (sys.exc_info()[1], h5f2.filename, d_key, g0_key))
+    # trick: GDF has to contain this grid id
+    # if anything changes dramatically, we may change it to yt.load(fname).field_list
+    if failed:
+        exit(20)
+
+    fc = list(set(f1) & set(f2))
+    if (len(fc) != len(f1)):
+        print "Fields unique for `", h5f1.filename, "': ", list(set(f1) ^ set(fc))
+    if (len(fc) != len(f2)):
+        print "Fields unique for `", h5f2.filename, "': ", list(set(f2) ^ set(fc))
+
+    return 1. - len(fc)/float(len(f1) + len(f2) - len(fc)), fc
+
+
+def compare_data(ds1, ds2, f):
+    import numpy
+
+    # This norm is:
+    #   0. when n1 == n2
+    #   1. when one field is non-0. and the other is 0.
+    #   1. when one field is proportional to the other but with negative coefficient
+    #   epsilon/2 when difference between fields is epsilon
+
+    n1 = numpy.linalg.norm(ds1.covering_grid(0, ds1.domain_left_edge, ds1.domain_dimensions)[f].v)
+    n2 = numpy.linalg.norm(ds2.covering_grid(0, ds2.domain_left_edge, ds2.domain_dimensions)[f].v)
+    nd = numpy.linalg.norm(ds1.covering_grid(0, ds1.domain_left_edge, ds1.domain_dimensions)[f].v -
+                           ds2.covering_grid(0, ds2.domain_left_edge, ds2.domain_dimensions)[f].v)
+
+    if (n1 + n2 != 0.):
+        return nd/(n1 + n2)
+    else:
+        return 0.
+
+
+def piernik_gdf_compare(fname1, fname2):
+    import h5py
+    norms = {}
+    h5f1 = h5py.File(fname1, "r")
+    h5f2 = h5py.File(fname2, "r")
+    # No error checking here, fail in ugly way when is_comparable does not
+    # prevent attempt to open these files.
+
+    # compare domains
+    norms["domains"], dlo, dro = compare_domains(h5f1, h5f2)
+
+    # compare resolution
+    norms["resolution"] = compare_resolution(h5f1, h5f2)
+
+    # compare boundary types
+    norms["boundary types (not checked)"] = 0.
+
+    # compare datafield lists
+    norms["datafield lists"], common_fields = compare_dlists(h5f1, h5f2)
+
+    h5f1.close()
+    h5f2.close()
+
+    if (norms["domains"] < 1.):
+        try:
+            import yt
+        except:
+            print "You must make yt available somehow!"
+            exit(30)
+        # For AMR domains it is way easier to make YT do the dirty work
+
+        print("yt.load(`%s')" % fname1)
+        ds1 = yt.load(fname1)
+        print("yt.load(`%s')" % fname2)
+        ds2 = yt.load(fname2)
+
+        if (ds1.index.level_stats['numgrids'][1] != 0 or ds2.index.level_stats['numgrids'][1] != 0):
+            print "Warning: refinement levels are not compared yet."
+
+        # compare AMR coverage (norm of difference of resolution on overlapped part of the domain)
+        norms["AMR (not checked)"] = 0.
+
+        # compare data in common datafields
+
+        if (norms["domains"] == 0 and norms["resolution"] == 0):
+            tot_datanorm = 0.
+            for f in common_fields:
+                norm = compare_data(ds1, ds2, f)
+                norms["datafield `" + f + "'"] = norm
+                tot_datanorm = 1. - (1. - tot_datanorm) * (1. - norm)
+            print("All datafield difference: %g" % tot_datanorm)
+        else:
+            print "Comparing domains of different size or resolution is not implementsd yet"
+            exit(31)
+
+    return norms
+
+
+if __name__ == "__main__":
+    import sys
+    if (len(sys.argv) < 3):
+        print >> sys.stderr, "Error: too few arguments.\nUsage: " + \
+            sys.argv[0] + " piernik_data_hdf_file1 piernik_data_hdf_file2"
+        exit(1)
+
+    if (is_comparable(sys.argv[1], sys.argv[2])):
+        norms = piernik_gdf_compare(sys.argv[1], sys.argv[2])
+        tot_norm = 0.
+        failed = False
+        for i in norms.keys():
+            if (norms[i] >= 0. and norms[i] <= 1.):
+                print("Difference of %s: %g" % (i, norms[i]))
+                tot_norm = 1. - (1. - tot_norm) * (1. - norms[i])
+            else:
+                print("Difference measure `%s` out of [0,1] range: %g" %
+                      (i, norms[i]))
+                failed = True
+        if (failed):
+            print("Comparison of `%s' and `%s' failed" %
+                  (sys.argv[1], sys.argv[2]))
+            exit(3)
+        else:
+            print("Total difference between `%s' and `%s': %g" %
+                  (sys.argv[1], sys.argv[2], tot_norm))
+    else:
+        print("Cannot compare files `%s' and `%s'" %
+              (sys.argv[1], sys.argv[2]))
+        exit(2)

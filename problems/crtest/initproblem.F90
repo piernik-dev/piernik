@@ -68,7 +68,7 @@ contains
    subroutine read_problem_par
 
       use cg_list_global, only: all_cg
-      use constants,      only: I_ONE, I_TEN, AT_NO_B
+      use constants,      only: xdim, ydim, zdim, I_ONE, I_TEN, AT_NO_B
       use dataio_pub,     only: nh      ! QA_WARN required for diff_nml
       use dataio_pub,     only: die
       use domain,         only: dom
@@ -110,6 +110,10 @@ contains
          write(nh%lun,nml=PROBLEM_CONTROL)
          close(nh%lun)
          call nh%compare_namelist()
+
+         if (.not.dom%has_dir(xdim)) bx0 = 0. ! ignore B field in nonexistent direction to match the analytical solution
+         if (.not.dom%has_dir(ydim)) by0 = 0.
+         if (.not.dom%has_dir(zdim)) bz0 = 0.
 
          rbuff(1)  = d0
          rbuff(2)  = p0
@@ -194,17 +198,11 @@ contains
 
       cs_iso = sqrt(p0/d0)
 
-      if (.not.dom%has_dir(xdim)) bx0 = 0. ! ignore B field in nonexistent direction to match the analytical solution
-      if (.not.dom%has_dir(ydim)) by0 = 0.
-      if (.not.dom%has_dir(zdim)) bz0 = 0.
-
       cgl => leaves%first
       do while (associated(cgl))
          cg => cgl%cg
 
-         cg%b(xdim, :, :, :) = bx0
-         cg%b(ydim, :, :, :) = by0
-         cg%b(zdim, :, :, :) = bz0
+         call cg%set_constant_b_field([bx0, by0, bz0])
          cg%u(fl%idn, :, :, :) = d0
          cg%u(fl%imx:fl%imz, :, :, :) = 0.0
 
@@ -442,9 +440,7 @@ contains
       do while (associated(cgl))
          if (cgl%cg%is_old) call die("[initproblem:cr_late_init] Old piece on a new list")
          associate (fl => flind%ion)
-         cgl%cg%b(xdim, :, :, :) = bx0
-         cgl%cg%b(ydim, :, :, :) = by0
-         cgl%cg%b(zdim, :, :, :) = bz0
+         call cgl%cg%set_constant_b_field([bx0, by0, bz0])
          cgl%cg%u(fl%idn, :, :, :) = d0
          cgl%cg%u(fl%imx:fl%imz, :, :, :) = 0.0
 #ifndef ISO

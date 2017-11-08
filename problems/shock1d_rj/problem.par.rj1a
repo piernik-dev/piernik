@@ -1,5 +1,5 @@
  $BASE_DOMAIN
-    n_d = 512, 1, 1
+    n_d = 512, 4, 4
     nb  = 4
     bnd_xl = 'out'
     bnd_xr = 'out'
@@ -9,10 +9,10 @@
     bnd_zr = 'per'
     xmin   = 0.0
     xmax   = 1.0
-    ymin   = -0.5
-    ymax   = 0.5
-    zmin   = -0.5
-    zmax   = 0.5
+    ymin   = 0.0
+    ymax   = 1.0
+    zmin   = 0.0
+    zmax   = 1.0
  /
 
  $MPI_BLOCKS
@@ -81,9 +81,6 @@
  /
 
  $INTERACTIONS
- /
-
- $AMR
  /
 
  $AMR

@@ -1,0 +1,23 @@
+# sha1 of the gold commit
+# Note: update only when absolutely necessary
+GOLD_COMMIT=8fcf05bbd76c9162eb1999d620b59dd0966e0f8e
+# 8fcf05bbd76c9162eb1999d620b59dd0966e0f8e - several fixups needed for Jenkins on Fedora 24
+# c21d1c15102bd2372d1006d89937a5748449403f - gdf_distance relies on GDF 1.1 (output v. 2.01)
+# 120a3ed9859fe6edf704a37eab134b9c21793eef - Port changes from si_tweaks to master
+# ad5849fbafb94b393efca0e7219367a7198fc07e - Fargo merge
+# 1a944b96f840531f51dc638a302da42666841369 r7815 - h5 files are now in single precision
+# r7583 - after merging AMR two cell differ at ~1e-4 level, seems to be benign.
+# r7405 - test was introduced
+
+# name of the problem to be compiled
+PROBLEM_NAME=streaming_global
+
+# options for setup call
+# Cannot rely on --linkexe here as long as we rely on revisions that don't have e2cc4da91b37238bf61cb86f258f4a0e4a1abd6a in ancestors
+SETUP_PARAMS="--param problem.par.build"
+
+# options for running gold test
+GOLD_PARAMS="-n '&OUTPUT_CONTROL dt_res=0. /'"
+
+# which file to compare
+OUTPUT=si_gld_0001.h5
