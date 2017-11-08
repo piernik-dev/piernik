@@ -398,11 +398,11 @@ contains
 
   subroutine sweep_dsplit(cg, dt, ddim)
 
-    use constants,        only: pdims, xdim, zdim, ORTHO1, ORTHO2, LO, HI
+    use constants,        only: pdims, xdim, zdim, ORTHO1, ORTHO2, LO, HI, phi_n, INVALID
     use fluidindex,       only: iarr_all_swp, iarr_mag_swp
     use global,           only: force_cc_mag
     use grid_cont,        only: grid_container
-    use named_array_list, only: wna
+    use named_array_list, only: wna, qna
 
     implicit none
 
@@ -412,9 +412,11 @@ contains
 
     real, dimension(size(cg%u,1), cg%n_(ddim)) :: u1d
     real, dimension(xdim:zdim, cg%n_(ddim))   :: b_cc1d
+    real, dimension(cg%n_(ddim))              :: psi_d
     real, dimension(:,:), pointer             :: pu, pb
+    real, dimension(:), pointer               :: ppsi
     integer                                   :: i1, i2
-    integer                                   :: bi
+    integer                                   :: bi, psii
 
     if (force_cc_mag) then
        bi = wna%bi
@@ -422,13 +424,23 @@ contains
        bi = wna%bcci
     endif
 
+    psii = INVALID
+    if (qna%exists(phi_n)) psii = qna%ind(phi_n)
+
     do i2 = cg%lhn(pdims(ddim, ORTHO2), LO), cg%lhn(pdims(ddim,ORTHO2), HI)
        do i1 = cg%lhn(pdims(ddim, ORTHO1), LO), cg%lhn(pdims(ddim, ORTHO1), HI)
           pu => cg%w(wna%fi)%get_sweep(ddim,i1,i2)
           u1d(iarr_all_swp(ddim,:),:) = pu(:,:)
           pb => cg%w(bi)%get_sweep(ddim,i1,i2)
           b_cc1d(iarr_mag_swp(ddim,:),:) = pb(:,:)
-          call solve(u1d,b_cc1d, dt/cg%dl(ddim))
+          if (psii /= INVALID) then
+             ppsi => cg%q(psii)%get_sweep(ddim,i1,i2)
+             psi_d(:) = ppsi(:)
+             call solve(u1d, b_cc1d, dt/cg%dl(ddim), psi_d)
+             ppsi(:) = psi_d(:)
+          else
+             call solve(u1d, b_cc1d, dt/cg%dl(ddim))
+          endif
           pu(:,:) = u1d(iarr_all_swp(ddim,:),:)
           pb(:,:) = b_cc1d(iarr_mag_swp(ddim,:),:) ! ToDo figure out how to manage CT energy fixup without extra storage
        enddo
@@ -438,7 +450,7 @@ contains
 
 !---------------------------------------------------------------------------------------------------------------------
 
-  subroutine solve(u, b_cc, dtodx)
+  subroutine solve(u, b_cc, dtodx, psi)
 
      use constants,  only: half
      use dataio_pub, only: die
@@ -449,12 +461,15 @@ contains
      real, dimension(:,:), intent(inout) :: u
      real, dimension(:,:), intent(inout) :: b_cc
      real,                 intent(in)    :: dtodx
+     real, dimension(:), optional, intent(inout) :: psi
 
      real, dimension(size(b_cc,1),size(b_cc,2)), target :: b_cc_l, b_cc_r, mag_cc
      real, dimension(size(b_cc,1),size(b_cc,2))         :: b_ccl, b_ccr, db1, db2, db3
      real, dimension(size(u,1),size(u,2)), target       :: flx, ql, qr
      real, dimension(size(u,1),size(u,2))               :: ul, ur, du1, du2, du3
      integer                                            :: nx
+
+     if (present(psi)) nx = 0 ! suppress compiler warnings for a while
 
      nx  = size(u,2)
      if (size(b_cc,2) /= nx) call die("[fluidupdate:rk2] size b_cc and u mismatch")
