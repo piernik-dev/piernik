@@ -175,6 +175,7 @@ module constants
    character(len=dsetnamelen), parameter :: cs_i2_n = "cs_iso2" !< map of imposed isothermal sound speed
    character(len=dsetnamelen), parameter :: wcr_n   = "wcr"     !< auxiliary array for CR diffusion
    character(len=dsetnamelen), parameter :: wa_n    = "wa"      !< general-purpose auxiliary 3D array
+   character(len=dsetnamelen), parameter :: phi_n   = "phi"     !< auxiliary 3D array for divergence cleaning
 
    ! timer names
    character(len=*), parameter :: tmr_fu  = "fluid_update"   !< main timer used to measure fluid_update step
