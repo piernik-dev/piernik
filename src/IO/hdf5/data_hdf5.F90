@@ -146,7 +146,7 @@ contains
             case ("magx", "magy", "magz")
                write(newname, '("mag_field_",A1)') var(4:4)
             case ("divbc", "divbf")
-               newname = "magnetic_field_divergence"
+               write(newname, '("magnetic_field_divergence_",A1)') var(5:5)
             case ("pmag%")
                newname = "p_mag_to_p_tot_ratio"
             case ("magB")
