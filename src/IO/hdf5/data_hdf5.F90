@@ -104,7 +104,7 @@ contains
             f%fu = "\rm{Gs}"
             f%f2cgs = 1.0 / (fpi * sqrt(cm / (miu0 * gram)) * sek)
             f%stag = 1
-         case ("divbc", "divbf", "divbc4", "divbf4")
+         case ("divbc", "divbf", "divbc4", "divbf4", "divbc6", "divbf6")
             f%fu= "\rm{Gs}/\rm{cm}" ! I'm not sure if it is a best description
             f%f2cgs = 1.0 / (fpi * sqrt(cm / (miu0 * gram)) * sek * cm)
          case ("magdir")
@@ -149,6 +149,8 @@ contains
                write(newname, '("magnetic_field_divergence_",A1)') var(5:5)
             case ("divbc4", "divbf4")
                write(newname, '("magnetic_field_divergence_",A1,"_O(4)")') var(5:5)
+            case ("divbc6", "divbf6")
+               write(newname, '("magnetic_field_divergence_",A1,"_O(6)")') var(5:5)
             case ("pmag%")
                newname = "p_mag_to_p_tot_ratio"
             case ("magB")
@@ -242,6 +244,7 @@ contains
 
       use common_hdf5, only: common_shortcuts
       use constants,   only: dsetnamelen, xdim, ydim, zdim, half, two
+      use dataio_pub,  only: die
       use domain,      only: dom
       use fluidtypes,  only: component_fluid
       use func,        only: ekin, emag
@@ -263,6 +266,7 @@ contains
 
       class(component_fluid), pointer             :: fl_dni
       integer(kind=4)                             :: i_xyz
+      real                                        :: coeff1, coeff2
 #ifdef COSM_RAYS
       integer                                     :: i
       integer, parameter                          :: auxlen = dsetnamelen - 1
@@ -341,7 +345,7 @@ contains
          case ("magdir")
             tab(:,:,:) = real(atan2(cg%b(ydim, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) + cg%b(ydim, cg%is        :cg%ie,         cg%js+dom%D_y:cg%je+dom%D_y, cg%ks        :cg%ke        ), &
                  &                  cg%b(xdim, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) + cg%b(xdim, cg%is+dom%D_x:cg%ie+dom%D_x, cg%js        :cg%je,         cg%ks        :cg%ke        )), kind=4)
-         case ("divbf", "divbf4") ! face-centered div(B): RTVD and RIEMANN, both with constrained transport
+         case ("divbf", "divbf4", "divbf6") ! face-centered div(B): RTVD and RIEMANN, both with constrained transport
             tab(:,:,:) = real( ( &
             &                           (cg%b(xdim, cg%is+dom%D_x:cg%ie+dom%D_x, cg%js        :cg%je,         cg%ks        :cg%ke        ) - &
             &                            cg%b(xdim, cg%is        :cg%ie,         cg%js        :cg%je,         cg%ks        :cg%ke        )   )/cg%dx + &
@@ -349,19 +353,40 @@ contains
             &                            cg%b(ydim, cg%is        :cg%ie,         cg%js        :cg%je,         cg%ks        :cg%ke        )   )/cg%dy + &
             &                           (cg%b(zdim, cg%is        :cg%ie,         cg%js        :cg%je,         cg%ks+dom%D_z:cg%ke+dom%D_z) - &
             &                            cg%b(zdim, cg%is        :cg%ie,         cg%js        :cg%je,         cg%ks        :cg%ke        )   )/cg%dz ), kind=4)
-            if (var == "divbf4") tab(:,:,:) = real( ( 9. * tab(:,:,:) - ( & ! factors: 9./8., -1./24. (Maxima: linsolve_by_lu(matrix([1,3],[1,3**3]), matrix([1],[0]));)
+            if (any(var == ["divbf4", "divbf6"])) then ! factors: 9./8., -1./24. (Maxima: linsolve_by_lu(matrix([1,3],[1,3**3]), matrix([1],[0]));)
+               select case(var)
+                  case ("divbf4")
+                     coeff1 = 9./8.
+                     coeff2 = -1./24.
+                  case ("divbf6")
+                     coeff1 = 75./64.
+                     coeff2 = -25./384.
+                  case default
+                     call die("[data_hdf5:datafields_hdf5] divbf*: wrong order")
+                     coeff1 = 0.
+                     coeff2 = 0.
+               end select
+               tab(:,:,:) = real( coeff1 * tab(:,:,:) + coeff2 * ( &
                  &                      (cg%b(xdim, cg%is+2*dom%D_x:cg%ie+2*dom%D_x, cg%js          :cg%je,           cg%ks          :cg%ke          ) - &
                  &                       cg%b(xdim, cg%is-  dom%D_x:cg%ie-  dom%D_x, cg%js          :cg%je,           cg%ks          :cg%ke          )   )/cg%dx + &
                  &                      (cg%b(ydim, cg%is          :cg%ie,           cg%js+2*dom%D_y:cg%je+2*dom%D_y, cg%ks          :cg%ke          ) - &
                  &                       cg%b(ydim, cg%is          :cg%ie,           cg%js-  dom%D_y:cg%je-  dom%D_y, cg%ks          :cg%ke          )   )/cg%dy + &
                  &                      (cg%b(zdim, cg%is          :cg%ie,           cg%js          :cg%je,           cg%ks+2*dom%D_z:cg%ke+2*dom%D_z) - &
-                 &                       cg%b(zdim, cg%is          :cg%ie,           cg%js          :cg%je,           cg%ks-  dom%D_z:cg%ke-  dom%D_z)   )/cg%dz ) / 3. ) / 8., kind=4 )
+                 &                       cg%b(zdim, cg%is          :cg%ie,           cg%js          :cg%je,           cg%ks-  dom%D_z:cg%ke-  dom%D_z)   )/cg%dz ), kind=4 )
             ! factors for 6th order: 75./64., -25./384., 3./640.
             ! Maxima: linsolve_by_lu(matrix([1,3,5],[1,3**3,5**3],[1,3**5,5**5]), matrix([1],[0],[0]));
+               if (var == "divbf6") tab(:,:,:) = real( tab(:,:,:) + 3./640. * ( &
+                    &                   (cg%b(xdim, cg%is+3*dom%D_x:cg%ie+3*dom%D_x, cg%js          :cg%je,           cg%ks          :cg%ke          ) - &
+                    &                    cg%b(xdim, cg%is-2*dom%D_x:cg%ie-2*dom%D_x, cg%js          :cg%je,           cg%ks          :cg%ke          )   )/cg%dx + &
+                    &                   (cg%b(ydim, cg%is          :cg%ie,           cg%js+3*dom%D_y:cg%je+3*dom%D_y, cg%ks          :cg%ke          ) - &
+                    &                    cg%b(ydim, cg%is          :cg%ie,           cg%js-2*dom%D_y:cg%je-2*dom%D_y, cg%ks          :cg%ke          )   )/cg%dy + &
+                    &                   (cg%b(zdim, cg%is          :cg%ie,           cg%js          :cg%je,           cg%ks+3*dom%D_z:cg%ke+3*dom%D_z) - &
+                    &                    cg%b(zdim, cg%is          :cg%ie,           cg%js          :cg%je,           cg%ks-2*dom%D_z:cg%ke-2*dom%D_z)   )/cg%dz ), kind=4 )
+            endif
 
             ! factors for 8th order: 1225./1024., -245./3072., 49./5120., -5./7168.
             ! Maxima: linsolve_by_lu(matrix([1,3,5,7],[1,3**3,5**3,7**3],[1,3**5,5**5,7**5],[1,3**7,5**7,7**7]),matrix([1],[0],[0],[0]));
-         case ("divbc", "divbc4") ! cell-centered div(B): RIEMANN dith divergence cleaning
+         case ("divbc", "divbc4", "divbc6") ! cell-centered div(B): RIEMANN dith divergence cleaning
             tab(:,:,:) = real( half * ( &
             &                           (cg%b(xdim, cg%is+dom%D_x:cg%ie+dom%D_x, cg%js        :cg%je,         cg%ks        :cg%ke        ) - &
             &                            cg%b(xdim, cg%is-dom%D_x:cg%ie-dom%D_x, cg%js        :cg%je,         cg%ks        :cg%ke        )   )/cg%dx + &
@@ -369,15 +394,36 @@ contains
             &                            cg%b(ydim, cg%is        :cg%ie,         cg%js-dom%D_y:cg%je-dom%D_y, cg%ks        :cg%ke        )   )/cg%dy + &
             &                           (cg%b(zdim, cg%is        :cg%ie,         cg%js        :cg%je,         cg%ks+dom%D_z:cg%ke+dom%D_z) - &
             &                            cg%b(zdim, cg%is        :cg%ie,         cg%js        :cg%je,         cg%ks-dom%D_z:cg%ke-dom%D_z)   )/cg%dz ), kind=4)
-            if (var == "divbc4") tab(:,:,:) = real( ( 8. * tab(:,:,:) - half * ( & ! factors: 2./3., -1./12. (Maxima: linsolve_by_lu(matrix([2,2*2],[2,2*2**3]), matrix([1],[0]));)
+            if (any(var == ["divbc4", "divbc6"])) then ! factors: 2./3., -1./12. (Maxima: linsolve_by_lu(matrix([2,2*2],[2,2*2**3]), matrix([1],[0]));)
+               select case(var)
+                  case ("divbc4")
+                     coeff1 = 2./3. / half
+                     coeff2 = -1./12.
+                  case ("divbc6")
+                     coeff1 = 3./4. / half
+                     coeff2 = -3./20.
+                  case default
+                     call die("[data_hdf5:datafields_hdf5] divbf*: wrong order")
+                     coeff1 = 0.
+                     coeff2 = 0.
+               end select
+               tab(:,:,:) = real( coeff1 * tab(:,:,:) + coeff2 * ( &
                  &                      (cg%b(xdim, cg%is+2*dom%D_x:cg%ie+2*dom%D_x, cg%js          :cg%je,           cg%ks          :cg%ke          ) - &
                  &                       cg%b(xdim, cg%is-2*dom%D_x:cg%ie-2*dom%D_x, cg%js          :cg%je,           cg%ks          :cg%ke          )   )/cg%dx + &
                  &                      (cg%b(ydim, cg%is          :cg%ie,           cg%js+2*dom%D_y:cg%je+2*dom%D_y, cg%ks          :cg%ke          ) - &
                  &                       cg%b(ydim, cg%is          :cg%ie,           cg%js-2*dom%D_y:cg%je-2*dom%D_y, cg%ks          :cg%ke          )   )/cg%dy + &
                  &                      (cg%b(zdim, cg%is          :cg%ie,           cg%js          :cg%je,           cg%ks+2*dom%D_z:cg%ke+2*dom%D_z) - &
-                 &                       cg%b(zdim, cg%is          :cg%ie,           cg%js          :cg%je,           cg%ks-2*dom%D_z:cg%ke-2*dom%D_z)   )/cg%dz ) ) / 6., kind=4 )
+                 &                       cg%b(zdim, cg%is          :cg%ie,           cg%js          :cg%je,           cg%ks-2*dom%D_z:cg%ke-2*dom%D_z)   )/cg%dz ), kind=4 )
             ! factors for 6th order: 3./4., -3./20., 1./60
             ! Maxima: linsolve_by_lu(matrix([2,2*2,2*3],[2,2*2**3,2*3**3],[2,2*2**5,2*3**5]), matrix([1],[0],[0]));
+               tab(:,:,:) = real( tab(:,:,:) + 1./60. * ( &
+                 &                      (cg%b(xdim, cg%is+3*dom%D_x:cg%ie+3*dom%D_x, cg%js          :cg%je,           cg%ks          :cg%ke          ) - &
+                 &                       cg%b(xdim, cg%is-3*dom%D_x:cg%ie-3*dom%D_x, cg%js          :cg%je,           cg%ks          :cg%ke          )   )/cg%dx + &
+                 &                      (cg%b(ydim, cg%is          :cg%ie,           cg%js+3*dom%D_y:cg%je+3*dom%D_y, cg%ks          :cg%ke          ) - &
+                 &                       cg%b(ydim, cg%is          :cg%ie,           cg%js-3*dom%D_y:cg%je-3*dom%D_y, cg%ks          :cg%ke          )   )/cg%dy + &
+                 &                      (cg%b(zdim, cg%is          :cg%ie,           cg%js          :cg%je,           cg%ks+3*dom%D_z:cg%ke+3*dom%D_z) - &
+                 &                       cg%b(zdim, cg%is          :cg%ie,           cg%js          :cg%je,           cg%ks-3*dom%D_z:cg%ke-3*dom%D_z)   )/cg%dz ), kind=4 )
+            endif
 
             ! factors for 8th order: 4./5., -1./5., 4./105., -1./280.
             ! Maxima: linsolve_by_lu(matrix([2,2*2,2*3,2*4],[2,2*2**3,2*3**3,2*4**3],[2,2*2**5,2*3**5,2*4**5],[2,2*2**7,2*3**7,2*4**7]),matrix([1],[0],[0],[0]));
