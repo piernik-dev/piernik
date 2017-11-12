@@ -341,7 +341,7 @@ contains
          case ("magdir")
             tab(:,:,:) = real(atan2(cg%b(ydim, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) + cg%b(ydim, cg%is        :cg%ie,         cg%js+dom%D_y:cg%je+dom%D_y, cg%ks        :cg%ke        ), &
                  &                  cg%b(xdim, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) + cg%b(xdim, cg%is+dom%D_x:cg%ie+dom%D_x, cg%js        :cg%je,         cg%ks        :cg%ke        )), kind=4)
-         case ("divbf", "divbf4") ! face-centered div(B): RTVD
+         case ("divbf", "divbf4") ! face-centered div(B): RTVD and RIEMANN, both with constrained transport
             tab(:,:,:) = real( ( &
             &                           (cg%b(xdim, cg%is+dom%D_x:cg%ie+dom%D_x, cg%js        :cg%je,         cg%ks        :cg%ke        ) - &
             &                            cg%b(xdim, cg%is        :cg%ie,         cg%js        :cg%je,         cg%ks        :cg%ke        )   )/cg%dx + &
@@ -349,14 +349,19 @@ contains
             &                            cg%b(ydim, cg%is        :cg%ie,         cg%js        :cg%je,         cg%ks        :cg%ke        )   )/cg%dy + &
             &                           (cg%b(zdim, cg%is        :cg%ie,         cg%js        :cg%je,         cg%ks+dom%D_z:cg%ke+dom%D_z) - &
             &                            cg%b(zdim, cg%is        :cg%ie,         cg%js        :cg%je,         cg%ks        :cg%ke        )   )/cg%dz ), kind=4)
-            if (var == "divbf4") tab(:,:,:) = real( ( 9. * tab(:,:,:) - ( &
+            if (var == "divbf4") tab(:,:,:) = real( ( 9. * tab(:,:,:) - ( & ! factors: 9./8., -1./24. (Maxima: linsolve_by_lu(matrix([1,3],[1,3**3]), matrix([1],[0]));)
                  &                      (cg%b(xdim, cg%is+2*dom%D_x:cg%ie+2*dom%D_x, cg%js          :cg%je,           cg%ks          :cg%ke          ) - &
                  &                       cg%b(xdim, cg%is-  dom%D_x:cg%ie-  dom%D_x, cg%js          :cg%je,           cg%ks          :cg%ke          )   )/cg%dx + &
                  &                      (cg%b(ydim, cg%is          :cg%ie,           cg%js+2*dom%D_y:cg%je+2*dom%D_y, cg%ks          :cg%ke          ) - &
                  &                       cg%b(ydim, cg%is          :cg%ie,           cg%js-  dom%D_y:cg%je-  dom%D_y, cg%ks          :cg%ke          )   )/cg%dy + &
                  &                      (cg%b(zdim, cg%is          :cg%ie,           cg%js          :cg%je,           cg%ks+2*dom%D_z:cg%ke+2*dom%D_z) - &
                  &                       cg%b(zdim, cg%is          :cg%ie,           cg%js          :cg%je,           cg%ks-  dom%D_z:cg%ke-  dom%D_z)   )/cg%dz ) / 3. ) / 8., kind=4 )
-         case ("divbc", "divbc4") ! cell-centered div(B): RIEMANN?
+            ! factors for 6th order: 75./64., -25./384., 3./640.
+            ! Maxima: linsolve_by_lu(matrix([1,3,5],[1,3**3,5**3],[1,3**5,5**5]), matrix([1],[0],[0]));
+
+            ! factors for 8th order: 1225./1024., -245./3072., 49./5120., -5./7168.
+            ! Maxima: linsolve_by_lu(matrix([1,3,5,7],[1,3**3,5**3,7**3],[1,3**5,5**5,7**5],[1,3**7,5**7,7**7]),matrix([1],[0],[0],[0]));
+         case ("divbc", "divbc4") ! cell-centered div(B): RIEMANN dith divergence cleaning
             tab(:,:,:) = real( half * ( &
             &                           (cg%b(xdim, cg%is+dom%D_x:cg%ie+dom%D_x, cg%js        :cg%je,         cg%ks        :cg%ke        ) - &
             &                            cg%b(xdim, cg%is-dom%D_x:cg%ie-dom%D_x, cg%js        :cg%je,         cg%ks        :cg%ke        )   )/cg%dx + &
@@ -364,13 +369,19 @@ contains
             &                            cg%b(ydim, cg%is        :cg%ie,         cg%js-dom%D_y:cg%je-dom%D_y, cg%ks        :cg%ke        )   )/cg%dy + &
             &                           (cg%b(zdim, cg%is        :cg%ie,         cg%js        :cg%je,         cg%ks+dom%D_z:cg%ke+dom%D_z) - &
             &                            cg%b(zdim, cg%is        :cg%ie,         cg%js        :cg%je,         cg%ks-dom%D_z:cg%ke-dom%D_z)   )/cg%dz ), kind=4)
-            if (var == "divbc4") tab(:,:,:) = real( ( 8. * tab(:,:,:) - half * ( &
+            if (var == "divbc4") tab(:,:,:) = real( ( 8. * tab(:,:,:) - half * ( & ! factors: 2./3., -1./12. (Maxima: linsolve_by_lu(matrix([2,2*2],[2,2*2**3]), matrix([1],[0]));)
                  &                      (cg%b(xdim, cg%is+2*dom%D_x:cg%ie+2*dom%D_x, cg%js          :cg%je,           cg%ks          :cg%ke          ) - &
                  &                       cg%b(xdim, cg%is-2*dom%D_x:cg%ie-2*dom%D_x, cg%js          :cg%je,           cg%ks          :cg%ke          )   )/cg%dx + &
                  &                      (cg%b(ydim, cg%is          :cg%ie,           cg%js+2*dom%D_y:cg%je+2*dom%D_y, cg%ks          :cg%ke          ) - &
                  &                       cg%b(ydim, cg%is          :cg%ie,           cg%js-2*dom%D_y:cg%je-2*dom%D_y, cg%ks          :cg%ke          )   )/cg%dy + &
                  &                      (cg%b(zdim, cg%is          :cg%ie,           cg%js          :cg%je,           cg%ks+2*dom%D_z:cg%ke+2*dom%D_z) - &
                  &                       cg%b(zdim, cg%is          :cg%ie,           cg%js          :cg%je,           cg%ks-2*dom%D_z:cg%ke-2*dom%D_z)   )/cg%dz ) ) / 6., kind=4 )
+            ! factors for 6th order: 3./4., -3./20., 1./60
+            ! Maxima: linsolve_by_lu(matrix([2,2*2,2*3],[2,2*2**3,2*3**3],[2,2*2**5,2*3**5]), matrix([1],[0],[0]));
+
+            ! factors for 8th order: 4./5., -1./5., 4./105., -1./280.
+            ! Maxima: linsolve_by_lu(matrix([2,2*2,2*3,2*4],[2,2*2**3,2*3**3,2*4**3],[2,2*2**5,2*3**5,2*4**5],[2,2*2**7,2*3**7,2*4**7]),matrix([1],[0],[0],[0]));
+
          case ("gpot")
             if (associated(cg%gpot)) tab(:,:,:) = real(cg%gpot(RNG), kind=4)
          case ("sgpt")
