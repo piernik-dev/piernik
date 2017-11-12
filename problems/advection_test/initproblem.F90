@@ -309,24 +309,53 @@ contains
                      cg%b(:, i, j, k) = divBc_amp * [cg%x(i), cg%y(j), cg%z(k)] ! slight offset between cell- and face-centered is unimportant here
 
                      select case (dom%eff_dim)
-                        case (I_ONE) ! can't do anything fancy
+                        case (I_ONE) ! can't do anything fancy, just set up something non-zero
                            cg%b(:, i, j, k) = cg%b(:, i, j, k) + divB0_amp
+                           if (ccB) then
+                              if (dom%D_x == 1) then
+                                 cg%b(:, i, j, k) = cg%b(:, i, j, k) + divBs_amp * [ kk(xdim)*cx, 1., 1. ]
+                              else if (dom%D_y == 1) then
+                                 cg%b(:, i, j, k) = cg%b(:, i, j, k) + divBs_amp * [ 1., kk(ydim)*cy, 1. ]
+                              else
+                                 cg%b(:, i, j, k) = cg%b(:, i, j, k) + divBs_amp * [ 1., 1., kk(zdim)*cz ]
+                              endif
+                           else
+                              if (dom%D_x == 1) then
+                                 cg%b(:, i, j, k) = cg%b(:, i, j, k) + divBs_amp * [ kk(xdim)*cfx, 1., 1. ]
+                              else if (dom%D_y == 1) then
+                                 cg%b(:, i, j, k) = cg%b(:, i, j, k) + divBs_amp * [ 1., kk(ydim)*cfy, 1. ]
+                              else
+                                 cg%b(:, i, j, k) = cg%b(:, i, j, k) + divBs_amp * [ 1., 1., kk(zdim)*cfz ]
+                              endif
+                           endif
                         case (I_TWO) ! [sin(x)*sin(y), cos(x)*cos(y), 0] should produce divB == 0. for XY case
                            if (ccB) then
                               if (dom%D_z == 0) then
-                                 cg%b(:, i, j, k) = cg%b(:, i, j, k) + divB0_amp * [ kk(ydim)*sx*sy, kk(xdim)*cx*cy, 1. ]
+                                 cg%b(:, i, j, k) = cg%b(:, i, j, k) + &
+                                      divB0_amp * [ kk(ydim)*sx*sy, kk(xdim)*cx*cy, 1. ] + &
+                                      divBs_amp * [ kk(xdim)*cx*sy, kk(ydim)*sx*cy, 1. ]
                               else if (dom%D_y == 0) then
-                                 cg%b(:, i, j, k) = cg%b(:, i, j, k) + divB0_amp * [ kk(zdim)*sx*sz, 1., kk(xdim)*cx*cz ]
+                                 cg%b(:, i, j, k) = cg%b(:, i, j, k) + &
+                                      divB0_amp * [ kk(zdim)*sx*sz, 1., kk(xdim)*cx*cz ] + &
+                                      divBs_amp * [ kk(xdim)*cx*sz, 1., kk(zdim)*sx*cz ]
                               else
-                                 cg%b(:, i, j, k) = cg%b(:, i, j, k) + divB0_amp * [ 1., kk(zdim)*sy*sz, kk(ydim)*cy*cz ]
+                                 cg%b(:, i, j, k) = cg%b(:, i, j, k) + &
+                                      divB0_amp * [ 1., kk(zdim)*sy*sz, kk(ydim)*cy*cz ] + &
+                                      divBs_amp * [ 1., kk(ydim)*cy*sz, kk(zdim)*sy*cz ]
                               endif
                            else
                               if (dom%D_z == 0) then
-                                 cg%b(:, i, j, k) = cg%b(:, i, j, k) + divB0_amp * [ kk(ydim)*sfx*sy, kk(xdim)*cx*cfy, 1. ]
+                                 cg%b(:, i, j, k) = cg%b(:, i, j, k) + &
+                                      divB0_amp * [ kk(ydim)*sfx*sy, kk(xdim)*cx*cfy, 1. ] + &
+                                      divBs_amp * [ kk(xdim)*cfx*sy, kk(ydim)*sx*cfy, 1. ]
                               else if (dom%D_y == 0) then
-                                 cg%b(:, i, j, k) = cg%b(:, i, j, k) + divB0_amp * [ kk(zdim)*sfx*sz, 1., kk(xdim)*cx*cfz ]
+                                 cg%b(:, i, j, k) = cg%b(:, i, j, k) + &
+                                      divB0_amp * [ kk(zdim)*sfx*sz, 1., kk(xdim)*cx*cfz ] + &
+                                      divBs_amp * [ kk(xdim)*cfx*sz, 1., kk(zdim)*sx*cfz ]
                               else
-                                 cg%b(:, i, j, k) = cg%b(:, i, j, k) + divB0_amp * [ 1., kk(zdim)*sfy*sz, kk(ydim)*cy*cfz ]
+                                 cg%b(:, i, j, k) = cg%b(:, i, j, k) + &
+                                      divB0_amp * [ 1., kk(zdim)*sfy*sz, kk(ydim)*cy*cfz ] + &
+                                      divBs_amp * [ 1., kk(ydim)*cfy*sz, kk(zdim)*sy*cfz ]
                               endif
                            endif
                         case (I_THREE) ! curl([sin(x)*sin(y)*sin(z), sin(x)*sin(y)*sin(z), sin(x)*sin(y)*sin(z)])
@@ -334,12 +363,14 @@ contains
                               cg%b(:, i, j, k) = cg%b(:, i, j, k) + divB0_amp * [ &
                                    kk(ydim)*sx*cy*sz - kk(zdim)*sx*sy*cz, &
                                    kk(zdim)*sx*sy*cz - kk(xdim)*cx*sy*sz, &
-                                   kk(xdim)*cx*sy*sz - kk(ydim)*sx*cy*sz ]
+                                   kk(xdim)*cx*sy*sz - kk(ydim)*sx*cy*sz ] + &
+                                   divBs_amp * [ kk(xdim)*cx*sy*sz, kk(ydim)*sx*cy*sz, kk(zdim)*sx*sy*cz ]
                            else
                               cg%b(:, i, j, k) = cg%b(:, i, j, k) + divB0_amp * [ &
                                    kk(ydim)*sfx*cy*sz - kk(zdim)*sfx*sy*cz, &
                                    kk(zdim)*sx*sfy*cz - kk(xdim)*cx*sfy*sz, &
-                                   kk(xdim)*cx*sy*sfz - kk(ydim)*sx*cy*sfz ]
+                                   kk(xdim)*cx*sy*sfz - kk(ydim)*sx*cy*sfz ] + &
+                                   divBs_amp * [ kk(xdim)*cfx*sy*sz, kk(ydim)*sx*cfy*sz, kk(zdim)*sx*sy*cfz ]
                            endif
                         case default
                            call die("[initproblem:problem_initial_conditions] unsupported dimensionality")
