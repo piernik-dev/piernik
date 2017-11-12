@@ -104,7 +104,7 @@ contains
             f%fu = "\rm{Gs}"
             f%f2cgs = 1.0 / (fpi * sqrt(cm / (miu0 * gram)) * sek)
             f%stag = 1
-         case ("divbc", "divbf")
+         case ("divbc", "divbf", "divbc4", "divbf4")
             f%fu= "\rm{Gs}/\rm{cm}" ! I'm not sure if it is a best description
             f%f2cgs = 1.0 / (fpi * sqrt(cm / (miu0 * gram)) * sek * cm)
          case ("magdir")
@@ -146,7 +146,9 @@ contains
             case ("magx", "magy", "magz")
                write(newname, '("mag_field_",A1)') var(4:4)
             case ("divbc", "divbf")
-               newname = "magnetic_field_divergence"
+               write(newname, '("magnetic_field_divergence_",A1)') var(5:5)
+            case ("divbc4", "divbf4")
+               write(newname, '("magnetic_field_divergence_",A1,"_O(4)")') var(5:5)
             case ("pmag%")
                newname = "p_mag_to_p_tot_ratio"
             case ("magB")
@@ -339,7 +341,7 @@ contains
          case ("magdir")
             tab(:,:,:) = real(atan2(cg%b(ydim, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) + cg%b(ydim, cg%is        :cg%ie,         cg%js+dom%D_y:cg%je+dom%D_y, cg%ks        :cg%ke        ), &
                  &                  cg%b(xdim, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) + cg%b(xdim, cg%is+dom%D_x:cg%ie+dom%D_x, cg%js        :cg%je,         cg%ks        :cg%ke        )), kind=4)
-         case ("divbf") ! face-centered div(B): RTVD
+         case ("divbf", "divbf4") ! face-centered div(B): RTVD
             tab(:,:,:) = real( ( &
             &                           (cg%b(xdim, cg%is+dom%D_x:cg%ie+dom%D_x, cg%js        :cg%je,         cg%ks        :cg%ke        ) - &
             &                            cg%b(xdim, cg%is        :cg%ie,         cg%js        :cg%je,         cg%ks        :cg%ke        )   )/cg%dx + &
@@ -347,7 +349,14 @@ contains
             &                            cg%b(ydim, cg%is        :cg%ie,         cg%js        :cg%je,         cg%ks        :cg%ke        )   )/cg%dy + &
             &                           (cg%b(zdim, cg%is        :cg%ie,         cg%js        :cg%je,         cg%ks+dom%D_z:cg%ke+dom%D_z) - &
             &                            cg%b(zdim, cg%is        :cg%ie,         cg%js        :cg%je,         cg%ks        :cg%ke        )   )/cg%dz ), kind=4)
-         case ("divbc") ! cell-centered div(B): RIEMANN?
+            if (var == "divbf4") tab(:,:,:) = real( ( 9. * tab(:,:,:) - ( &
+                 &                      (cg%b(xdim, cg%is+2*dom%D_x:cg%ie+2*dom%D_x, cg%js          :cg%je,           cg%ks          :cg%ke          ) - &
+                 &                       cg%b(xdim, cg%is-  dom%D_x:cg%ie-  dom%D_x, cg%js          :cg%je,           cg%ks          :cg%ke          )   )/cg%dx + &
+                 &                      (cg%b(ydim, cg%is          :cg%ie,           cg%js+2*dom%D_y:cg%je+2*dom%D_y, cg%ks          :cg%ke          ) - &
+                 &                       cg%b(ydim, cg%is          :cg%ie,           cg%js-  dom%D_y:cg%je-  dom%D_y, cg%ks          :cg%ke          )   )/cg%dy + &
+                 &                      (cg%b(zdim, cg%is          :cg%ie,           cg%js          :cg%je,           cg%ks+2*dom%D_z:cg%ke+2*dom%D_z) - &
+                 &                       cg%b(zdim, cg%is          :cg%ie,           cg%js          :cg%je,           cg%ks-  dom%D_z:cg%ke-  dom%D_z)   )/cg%dz ) / 3. ) / 8., kind=4 )
+         case ("divbc", "divbc4") ! cell-centered div(B): RIEMANN?
             tab(:,:,:) = real( half * ( &
             &                           (cg%b(xdim, cg%is+dom%D_x:cg%ie+dom%D_x, cg%js        :cg%je,         cg%ks        :cg%ke        ) - &
             &                            cg%b(xdim, cg%is-dom%D_x:cg%ie-dom%D_x, cg%js        :cg%je,         cg%ks        :cg%ke        )   )/cg%dx + &
@@ -355,6 +364,13 @@ contains
             &                            cg%b(ydim, cg%is        :cg%ie,         cg%js-dom%D_y:cg%je-dom%D_y, cg%ks        :cg%ke        )   )/cg%dy + &
             &                           (cg%b(zdim, cg%is        :cg%ie,         cg%js        :cg%je,         cg%ks+dom%D_z:cg%ke+dom%D_z) - &
             &                            cg%b(zdim, cg%is        :cg%ie,         cg%js        :cg%je,         cg%ks-dom%D_z:cg%ke-dom%D_z)   )/cg%dz ), kind=4)
+            if (var == "divbc4") tab(:,:,:) = real( ( 8. * tab(:,:,:) - half * ( &
+                 &                      (cg%b(xdim, cg%is+2*dom%D_x:cg%ie+2*dom%D_x, cg%js          :cg%je,           cg%ks          :cg%ke          ) - &
+                 &                       cg%b(xdim, cg%is-2*dom%D_x:cg%ie-2*dom%D_x, cg%js          :cg%je,           cg%ks          :cg%ke          )   )/cg%dx + &
+                 &                      (cg%b(ydim, cg%is          :cg%ie,           cg%js+2*dom%D_y:cg%je+2*dom%D_y, cg%ks          :cg%ke          ) - &
+                 &                       cg%b(ydim, cg%is          :cg%ie,           cg%js-2*dom%D_y:cg%je-2*dom%D_y, cg%ks          :cg%ke          )   )/cg%dy + &
+                 &                      (cg%b(zdim, cg%is          :cg%ie,           cg%js          :cg%je,           cg%ks+2*dom%D_z:cg%ke+2*dom%D_z) - &
+                 &                       cg%b(zdim, cg%is          :cg%ie,           cg%js          :cg%je,           cg%ks-2*dom%D_z:cg%ke-2*dom%D_z)   )/cg%dz ) ) / 6., kind=4 )
          case ("gpot")
             if (associated(cg%gpot)) tab(:,:,:) = real(cg%gpot(RNG), kind=4)
          case ("sgpt")
