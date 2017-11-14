@@ -29,14 +29,14 @@
 !    Dr. Varadarajan Parthasarathy, Dr. Artur Gawryszczak, CAMK (Warszawa)
 !    November 2017
 !
-#include "piernik.h"
+! #include "piernik.h"
 
-module hdc
-! pulled by MAGNETIC && RIEMANN
-  implicit none
+! module hdc
+! ! pulled by MAGNETIC && RIEMANN
+!   implicit none
 
-  private
+!   private
 
-contains
- !  Development process begins!!
-end module hdc
+! contains
+!  !  Development process begins!!
+! end module hdc
