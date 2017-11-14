@@ -52,7 +52,7 @@ contains
     use dataio_pub,     only: halfstep, die, warn
     use domain,         only: dom, is_refined
     use fluxlimiters,   only: set_limiters
-    use global,         only: skip_sweep, dt, dtm, t, limiter, limiter_b
+    use global,         only: skip_sweep, dt, dtm, t, limiter, limiter_b, force_cc_mag
     use mpisetup,       only: master
     use user_hooks,     only: problem_customize_solution
 
@@ -72,7 +72,7 @@ contains
 #  error Isothermal EOS is not implemented yet in this Riemann solver.
 #endif /* ISO */
 #ifdef COSM_RAYS
-#  error   Isothermal EOS is notCosmic rays are not implemented yet in this Riemann solver.
+#  error   Cosmic rays are not implemented yet in this Riemann solver.
 #endif /* COSM_RAYS */
 
     halfstep = .false.
@@ -87,7 +87,7 @@ contains
 
     ! ToDo: check if changes of execution order here (block loop, direction loop, boundary update can change
     ! cost or allow for reduction of required guardcells
-    call bfc2bcc
+    if (.not. force_cc_mag) call bfc2bcc
     do ddim = xdim, zdim, 1
       if (dom%has_dir(ddim)) then
 
@@ -96,36 +96,36 @@ contains
 
             ! Warning: 2.5D MHD may need all directional calls anyway
             if (.not. skip_sweep(ddim)) call sweep_dsplit(cgl%cg,dt,ddim)
-            if (associated(problem_customize_solution)) call problem_customize_solution(.true.)
             cgl => cgl%nxt
          enddo
          call all_bnd
 #ifdef MAGNETIC
-         call magfield(ddim)
+         if (.not. force_cc_mag) call magfield(ddim)
 #endif /* MAGNETIC */
       endif
     enddo
+    if (associated(problem_customize_solution)) call problem_customize_solution(.true.)
 
     t = t + dt
     dtm = dt
     halfstep = .true.
 
-    call bfc2bcc
+    if (.not. force_cc_mag) call bfc2bcc
     do ddim = zdim, xdim, -1
        if (dom%has_dir(ddim)) then
 #ifdef MAGNETIC
-          call magfield(ddim)
+          if (.not. force_cc_mag) call magfield(ddim)
 #endif /* MAGNETIC */
           cgl => leaves%first
           do while (associated(cgl))
 
              if (.not. skip_sweep(ddim)) call sweep_dsplit(cgl%cg,dt,ddim)
-             if (associated(problem_customize_solution)) call problem_customize_solution(.false.)
              cgl => cgl%nxt
           enddo
           call all_bnd
        endif
     enddo
+    if (associated(problem_customize_solution)) call problem_customize_solution(.false.)
 
     if (first_run) first_run = .false.
 
@@ -136,8 +136,10 @@ contains
 #ifdef MAGNETIC
    subroutine magfield(dir)
 
-      use ct,     only: advectb, ctb
+      use ct,          only: advectb
       use constants,   only: ndims, I_ONE
+      use dataio_pub,  only: die
+      use global,      only: force_cc_mag
 #ifdef RESISTIVE
       use resistivity, only: diffuseb
 #endif /* RESISTIVE */
@@ -147,6 +149,8 @@ contains
        integer(kind=4), intent(in) :: dir
 
        integer(kind=4)             :: bdir, dstep
+
+       if (force_cc_mag) call die("[fluidupdate:magfield] forcing cell-centered magnetic field is not allowed for constrained transport")
 
        do dstep = 0, 1
           bdir  = I_ONE + mod(dir+dstep,ndims)
@@ -167,6 +171,8 @@ contains
 
       use cg_leaves,        only: leaves
       use cg_list,          only: cg_list_element
+      use dataio_pub,       only: die
+      use global,           only: force_cc_mag
       use grid_cont,        only: grid_container
       use all_boundaries,   only: all_mag_boundaries
       use user_hooks,       only: custom_emf_bnd
@@ -186,6 +192,8 @@ contains
 #ifdef RESISTIVE
       real, dimension(:,:,:), pointer :: wcu
 #endif /* RESISTIVE */
+
+      if (force_cc_mag) call die("[fluidupdate:mag_add] forcing cell-centered magnetic field is not allowed for constrained transport")
 
       cgl => leaves%first
       do while (associated(cgl))
@@ -308,7 +316,9 @@ contains
      use cg_leaves,        only: leaves
      use cg_list,          only: cg_list_element
      use constants,        only: xdim, ydim, zdim, LO, HI, half
+     use dataio_pub,       only: die
      use domain,           only: dom
+     use global,           only: force_cc_mag
      use grid_cont,        only: grid_container
      use named_array_list, only: wna
 
@@ -316,6 +326,8 @@ contains
 
      type(cg_list_element), pointer :: cgl
      type(grid_container),  pointer :: cg
+
+     if (force_cc_mag) call die("[fluidupdate:bfc2bcc] no  point in converting cell-centered magnetic field to cell centers like it was face-centered")
 
      cgl => leaves%first
      do while (associated(cgl))
@@ -386,10 +398,11 @@ contains
 
   subroutine sweep_dsplit(cg, dt, ddim)
 
-    use constants,        only: pdims, xdim, zdim, ORTHO1, ORTHO2, LO, HI
+    use constants,        only: pdims, xdim, zdim, ORTHO1, ORTHO2, LO, HI, phi_n, INVALID
     use fluidindex,       only: iarr_all_swp, iarr_mag_swp
+    use global,           only: force_cc_mag
     use grid_cont,        only: grid_container
-    use named_array_list, only: wna
+    use named_array_list, only: wna, qna
 
     implicit none
 
@@ -399,16 +412,35 @@ contains
 
     real, dimension(size(cg%u,1), cg%n_(ddim)) :: u1d
     real, dimension(xdim:zdim, cg%n_(ddim))   :: b_cc1d
+    real, dimension(cg%n_(ddim))              :: psi_d
     real, dimension(:,:), pointer             :: pu, pb
+    real, dimension(:), pointer               :: ppsi
     integer                                   :: i1, i2
+    integer                                   :: bi, psii
+
+    if (force_cc_mag) then
+       bi = wna%bi
+    else
+       bi = wna%bcci
+    endif
+
+    psii = INVALID
+    if (qna%exists(phi_n)) psii = qna%ind(phi_n)
 
     do i2 = cg%lhn(pdims(ddim, ORTHO2), LO), cg%lhn(pdims(ddim,ORTHO2), HI)
        do i1 = cg%lhn(pdims(ddim, ORTHO1), LO), cg%lhn(pdims(ddim, ORTHO1), HI)
           pu => cg%w(wna%fi)%get_sweep(ddim,i1,i2)
           u1d(iarr_all_swp(ddim,:),:) = pu(:,:)
-          pb => cg%w(wna%bcci)%get_sweep(ddim,i1,i2)
+          pb => cg%w(bi)%get_sweep(ddim,i1,i2)
           b_cc1d(iarr_mag_swp(ddim,:),:) = pb(:,:)
-          call solve(u1d,b_cc1d, dt/cg%dl(ddim))
+          if (psii /= INVALID) then
+             ppsi => cg%q(psii)%get_sweep(ddim,i1,i2)
+             psi_d(:) = ppsi(:)
+             call solve(u1d, b_cc1d, dt/cg%dl(ddim), psi_d)
+             ppsi(:) = psi_d(:)
+          else
+             call solve(u1d, b_cc1d, dt/cg%dl(ddim))
+          endif
           pu(:,:) = u1d(iarr_all_swp(ddim,:),:)
           pb(:,:) = b_cc1d(iarr_mag_swp(ddim,:),:) ! ToDo figure out how to manage CT energy fixup without extra storage
        enddo
@@ -418,7 +450,7 @@ contains
 
 !---------------------------------------------------------------------------------------------------------------------
 
-  subroutine solve(u, b_cc, dtodx)
+  subroutine solve(u, b_cc, dtodx, psi)
 
      use constants,  only: half
      use dataio_pub, only: die
@@ -429,12 +461,15 @@ contains
      real, dimension(:,:), intent(inout) :: u
      real, dimension(:,:), intent(inout) :: b_cc
      real,                 intent(in)    :: dtodx
+     real, dimension(:), optional, intent(inout) :: psi
 
      real, dimension(size(b_cc,1),size(b_cc,2)), target :: b_cc_l, b_cc_r, mag_cc
      real, dimension(size(b_cc,1),size(b_cc,2))         :: b_ccl, b_ccr, db1, db2, db3
      real, dimension(size(u,1),size(u,2)), target       :: flx, ql, qr
      real, dimension(size(u,1),size(u,2))               :: ul, ur, du1, du2, du3
      integer                                            :: nx
+
+     if (present(psi)) nx = 0 ! suppress compiler warnings for a while
 
      nx  = size(u,2)
      if (size(b_cc,2) /= nx) call die("[fluidupdate:rk2] size b_cc and u mismatch")

@@ -43,7 +43,8 @@ module global
         &    dt, dt_initial, dt_max_grow, dt_min, dt_old, dtm, t, t_saved, nstep, nstep_saved, &
         &    integration_order, limiter, limiter_b, smalld, smallei, smallp, use_smalld, h_solver, &
         &    relax_time, grace_period_passed, cfr_smooth, repeat_step, skip_sweep, geometry25D, &
-        &    dirty_debug, do_ascii_dump, show_n_dirtys, no_dirty_checks, sweeps_mgu, use_fargo
+        &    dirty_debug, do_ascii_dump, show_n_dirtys, no_dirty_checks, sweeps_mgu, use_fargo, &
+        &    force_cc_mag
 
    real, parameter :: dt_default_grow = 2.
    logical         :: cfl_violated             !< True when cfl condition is violated
@@ -82,10 +83,11 @@ module global
    logical, dimension(xdim:zdim) :: skip_sweep        !< allows to skip sweep in chosen direction
    logical                       :: sweeps_mgu        !< Mimimal Guardcell Update in sweeps
    logical                       :: use_fargo         !< use Fast Eulerian Transport for differentially rotating disks
+   logical                       :: force_cc_mag      !< treat magnetic field as cell-centered in the Riemann solver (temporary hack)
 
    namelist /NUMERICAL_SETUP/ cfl, cflcontrol, cfl_max, use_smalld, smalld, smallei, smallc, smallp, dt_initial, dt_max_grow, dt_min, &
         &                     repeat_step, limiter, limiter_b, relax_time, integration_order, cfr_smooth, skip_sweep, geometry25D, sweeps_mgu, &
-        &                     use_fargo, h_solver
+        &                     use_fargo, h_solver, force_cc_mag
 
 contains
 
@@ -118,6 +120,7 @@ contains
 !!   <tr><td>skip_sweep       </td><td>F, F, F</td><td>logical array                        </td><td>\copydoc global::skip_sweep       </td></tr>
 !!   <tr><td>geometry25D      </td><td>F      </td><td>logical value                        </td><td>\copydoc global::geometry25d      </td></tr>
 !!   <tr><td>sweeps_mgu       </td><td>F      </td><td>logical value                        </td><td>\copydoc global::sweeps_mgu       </td></tr>
+!!   <tr><td>force_cc_mag     </td><td>F      </td><td>logical value                        </td><td>\copydoc global::force_cc_mag     </td></tr>
 !! </table>
 !! \n \n
 !<
@@ -169,6 +172,7 @@ contains
       relax_time  = 0.
       integration_order  = 2
       use_fargo   = .false.
+      force_cc_mag = .false.
 
       if (master) then
          if (.not.nh%initialized) call nh%init()
@@ -228,6 +232,7 @@ contains
          lbuff(6)   = geometry25D
          lbuff(7)   = sweeps_mgu
          lbuff(8)   = use_fargo
+         lbuff(9)   = force_cc_mag
 
       endif
 
@@ -244,6 +249,7 @@ contains
          geometry25D   = lbuff(6)
          sweeps_mgu    = lbuff(7)
          use_fargo     = lbuff(8)
+         force_cc_mag  = lbuff(9)
 
          smalld      = rbuff( 1)
          smallc      = rbuff( 2)
@@ -265,6 +271,11 @@ contains
          integration_order = ibuff(1)
 
       endif
+
+#ifndef RIEMANN
+      if (master .and. force_cc_mag) call warn("[init_global] force_cc_mag ignored when RIEMANN is not set")
+      force_cc_mag = .false.
+#endif /* !RIEMANN */
 
    end subroutine init_global
 
