@@ -1329,7 +1329,12 @@ contains
       pr%cs_max%loc      = 0
       pr%cs_max%coords   = 0.0
       pr%cs_max%proc     = 0
-      pr%cs_max%assoc    = cfl * minval(leaves%first%cg%dl(:))/(pr%cs_max%val + small)
+      if (associated(leaves%first)) then
+         pr%cs_max%assoc = cfl * minval(leaves%first%cg%dl(:))/(pr%cs_max%val + small)
+      else
+         pr%cs_max%assoc = 0.
+         ! if there are no blocks on master we should communicate something here
+      endif
       pr%temp_min%val    = (mH * fl%cs2)/ (kboltz * fl%gam)
       pr%temp_min%loc    = 0
       pr%temp_min%coords = 0.0
