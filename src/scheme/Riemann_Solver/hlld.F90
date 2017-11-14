@@ -97,6 +97,8 @@ contains
           else
              f(fl%imx,:)  =  u(fl%imx,:)*vx(:) + pr(:)  ! b_cc does not contribute in the limit of vanishing magnetic fields. Hydro part is recovered trivially.
           endif
+       else
+          f(fl%imx,:)  =  u(fl%imx,:)*vx(:)
        endif
        if (fl%is_magnetized) then
           f(fl%imy,:)  =  u(fl%imy,:)*vx(:) - b_cc(xdim,:)*b_cc(ydim,:)
