@@ -141,9 +141,9 @@ contains
     real, dimension(:,:), pointer, intent(out)   :: f
     real, dimension(:,:), pointer, intent(in)    :: ul, ur
     real, dimension(:,:), pointer, intent(out)   :: b_cc
-    real, dimension(:),   pointer, intent(out)   :: psi    
+    real, dimension(:,:), pointer, intent(out)   :: psi    
     real, dimension(:,:), pointer, intent(in)    :: b_ccl, b_ccr
-    real, dimension(:),   pointer, intent(in)    :: psi_l, psi_r
+    real, dimension(:,:), pointer, intent(in)    :: psi_l, psi_r
     real,                          intent(in)    :: gamma
 
     ! Local variables
@@ -165,8 +165,7 @@ contains
     real, dimension(xdim:zdim)                   :: v_2star, v_starl, v_starr
     real, dimension(xdim:zdim)                   :: b_cclf, b_ccrf
     real, dimension(xdim:zdim)                   :: b_starl, b_starr, b_2star
-    real, dimension(size(psi,1))                 :: psi_lf, psi_rf, psi_starl, psi_starr, psi_2star_l, psi_2star_r
-    !real, dimension(xdim:zdim)                   :: glmb, glmpsi
+    real, dimension(size(psi,1),size(psi,2))     :: psi_lf, psi_rf, psi_starl, psi_starr, psi_2star_l, psi_2star_r
     logical                                      :: has_energy
     real                                         :: ue
 
@@ -176,14 +175,12 @@ contains
     has_energy = (ubound(ul, dim=1) >= ien)
     ue = 0.
     
-#ifdef GLM
-    !glmb   = half*( (b_ccl(xdim,:)+b_ccr(xdim,:) - (psi_r(:)-psi_l(:))/chspeed ) )
-    !glmpsi = half*( (psi_r(:)+psi_l(:)) - chspeed*(b_ccr(xdim,:)-b_ccl(xdim,:))  )
-    b_cclf(xdim:) = half*( (b_ccl(xdim,:)+b_ccr(xdim,:) - (psi_r(:)-psi_l(:))/chspeed ) )
-    b_ccrf(xdim:) = half*( (b_ccl(xdim,:)+b_ccr(xdim,:) - (psi_r(:)-psi_l(:))/chspeed ) )
-    psi_lf(:) = half*( (psi_r(:)+psi_l(:)) - chspeed*(b_ccr(xdim,:)-b_ccl(xdim,:))  )
-    psi_rf(:) = half*( (psi_r(:)+psi_l(:)) - chspeed*(b_ccr(xdim,:)-b_ccl(xdim,:))  )
-#endif /* GLM */
+!#ifdef GLM
+    !b_cclf(xdim:) = half*( (b_ccl(xdim,:)+b_ccr(xdim,:) - (psi_r(:)-psi_l(:))/chspeed ) )
+    !b_ccrf(xdim:) = half*( (b_ccl(xdim,:)+b_ccr(xdim,:) - (psi_r(:)-psi_l(:))/chspeed ) )
+    !psi_lf(:) = half*( (psi_r(:)+psi_l(:)) - chspeed*(b_ccr(xdim,:)-b_ccl(xdim,:))  )
+    !psi_rf(:) = half*( (psi_r(:)+psi_l(:)) - chspeed*(b_ccr(xdim,:)-b_ccl(xdim,:))  )
+!#endif /* GLM */
     
      do i = 1,n
 
@@ -261,6 +258,12 @@ contains
           b_cc(ydim:zdim,i) = b_ccrf(ydim:zdim)
        else
 
+#ifdef GLM
+          b_cclf(xdim:) = half*( (b_ccl(xdim,i)+b_ccr(xdim,i) - (psi_r(:,i)-psi_l(:,i))/chspeed ) )
+          b_ccrf(xdim:) = half*( (b_ccl(xdim,i)+b_ccr(xdim,i) - (psi_r(:,i)-psi_l(:,i))/chspeed ) )
+          psi_lf(:,i) = half*( (psi_r(:,i)+psi_l(:,i)) - chspeed*(b_ccr(xdim,i)-b_ccl(xdim,i))  )
+          psi_rf(:,i) = half*( (psi_r(:,i)+psi_l(:,i)) - chspeed*(b_ccr(xdim,i)-b_ccl(xdim,i))  )
+#endif
           ! Speed of contact discontinuity Eq. 38
           ! Total left and right states of pressure, so prr and prl sm_nr/sm_dr
           if ((sr - ur(imx,i))*ur(idn,i) .equals. (sl - ul(imx,i))*ul(idn,i)) then
@@ -355,8 +358,8 @@ contains
           endif
 
 #ifdef GLM
-          psi_starl(:) = psi_lf(:)
-          psi_starr(:) = psi_rf(:)
+          psi_starl(:,i) = psi_lf(:,i)
+          psi_starr(:,i) = psi_rf(:,i)
 #endif /* GLM */
           ! Cases for B_x .ne. and .eq. zero
 
@@ -379,7 +382,7 @@ contains
                 f(:,i) = fl + sl*(u_starl - [ ul(idn,i), ul(idn,i)*ul(imx:imz,i), enl ] )
                 b_cc(ydim:zdim,i) = b_cclf(ydim:zdim) + sl*(b_starl(ydim:zdim) - b_ccl(ydim:zdim,i))
 #ifdef GLM
-                psi(:) = psi_lf(:) + sl*(psi_starl(:) - psi_l(:))
+                psi(:,i) = psi_lf(:,i) + sl*(psi_starl(:,i) - psi_l(:,i))
 #endif /* GLM */
                 
 
@@ -390,7 +393,7 @@ contains
                 f(:,i) = fr + sr*(u_starr - [ ur(idn,i), ur(idn,i)*ur(imx:imz,i), enr ] )
                 b_cc(ydim:zdim,i) = b_ccrf(ydim:zdim) + sr*(b_starr(ydim:zdim) - b_ccr(ydim:zdim,i))
 #ifdef GLM
-                psi(:) = psi_rf(:) + sl*(psi_starr(:) - psi_r(:))
+                psi(:,i) = psi_rf(:,i) + sl*(psi_starr(:,i) - psi_r(:,i))
 #endif /* GLM */
 
              else ! alfven_l .le. zero .le. alfven_r
@@ -455,22 +458,25 @@ contains
                    if (has_energy) u_2starr(ien)  =  u_starr(ien) + b_sig*dn_rsqt*(vb_starr - vb_2star)
 
                 endif
+
+#ifdef GLM
+                psi_2star_l(:,i) = psi_lf(:,i)
+                psi_2star_r(:,i) = psi_rf(:,i)
+#endif
                 
                 if (sm > zero) then
                    ! Left Alfven intermediate flux Eq. 65
                    f(:,i) = fl + alfven_l*u_2starl - (alfven_l - sl)*u_starl - sl* [ ul(idn,i), ul(idn,i)*ul(imx:imz,i), enl ]
                    b_cc(ydim:zdim,i) = b_cclf(ydim:zdim) + alfven_l*b_2star(ydim:zdim) - (alfven_l - sl)*b_starl(ydim:zdim) - sl*b_ccl(ydim:zdim,i)
 #ifdef GLM
-                   psi_2star_l(:) = psi_lf(:)
-                   psi(:) = psi_lf(:) + alfven_l*psi_2star(:) - (alfven_l - sl)*psi_starl(:) - sl*psi_l(:)
+                   psi(:,i) = psi_lf(:,i) + alfven_l*psi_2star_l(:,i) - (alfven_l - sl)*psi_starl(:,i) - sl*psi_l(:,i)
 #endif /* GLM */
                 else if (sm < zero) then
                    ! Right Alfven intermediate flux Eq. 65
                    f(:,i) = fr + alfven_r*u_2starr - (alfven_r - sr)*u_starr - sr* [ ur(idn,i), ur(idn,i)*ur(imx:imz,i), enr ]
                    b_cc(ydim:zdim,i) = b_ccrf(ydim:zdim) + alfven_r*b_2star(ydim:zdim) - (alfven_r - sr)*b_starr(ydim:zdim) - sr*b_ccr(ydim:zdim,i)
 #ifdef GLM
-                   psi_2star_r(:) = psi_rf(:)
-                   psi(:) = psi_rf(:) + alfven_r*psi_2star(:) - (alfven_r - sr)*psi_starr(:) - sr*psi_r(:)
+                   psi(:,i) = psi_rf(:,i) + alfven_r*psi_2star_r(:,i) - (alfven_r - sr)*psi_starr(:,i) - sr*psi_r(:,i)
 #endif /* GLM */
                 else ! sm = 0
                    ! Left and right Alfven intermediate flux Eq. 65
@@ -483,11 +489,9 @@ contains
                         (b_ccrf(ydim:zdim) + alfven_r*b_2star(ydim:zdim) - (alfven_r - sr)*b_starr(ydim:zdim) - sr*b_ccr(ydim:zdim,i)))
 
 #ifdef GLM
-                   psi_2star_l(:) = psi_lf(:)
-                   pse_2star_r(:) = psi_rf(:)
-                   psi(:) = half*( &
-                        (psi_lf(:) + alfven_l*psi_2star(:) - (alfven_l - sl)*psi_starl(:) - sl*psi_l(:)) + &
-                        (psi_rf(:) + alfven_r*psi_2star(:) - (alfven_r - sr)*psi_starr(:) - sr*psi_r(:)))
+                   psi(:,i) = half*( &
+                        (psi_lf(:,i) + alfven_l*psi_2star_l(:,i) - (alfven_l - sl)*psi_starl(:,i) - sl*psi_l(:,i)) + &
+                        (psi_rf(:,i) + alfven_r*psi_2star_r(:,i) - (alfven_r - sr)*psi_starr(:,i) - sr*psi_r(:,i)))
 #endif /* GLM */
 
                 endif  ! sm = 0
@@ -505,7 +509,7 @@ contains
                 f(:,i)  =  fl + sl*(u_starl - [ ul(idn,i), ul(idn,i)*ul(imx:imz,i), enl ])
                 b_cc(ydim:zdim,i) = b_cclf(ydim:zdim) + sl*(b_starl(ydim:zdim) - b_ccl(ydim:zdim,i))
 #ifdef GLM
-                psi(:) = psi_lf(:) + sl*(psi_starl(:) - psi_l(:))
+                psi(:,i) = psi_lf(:,i) + sl*(psi_starl(:,i) - psi_l(:,i))
 #endif /* GLM */
 
              else if (sm < zero) then
@@ -513,7 +517,7 @@ contains
                 f(:,i)  =  fr + sr*(u_starr - [ ur(idn,i), ur(idn,i)*ur(imx:imz,i), enr ])
                 b_cc(ydim:zdim,i) = b_ccrf(ydim:zdim) + sr*(b_starr(ydim:zdim) - b_ccr(ydim:zdim,i))
 #ifdef GLM
-                psi(:) = psi_rf(:) + sr*(psi_starr(:) - psi_r(:))
+                psi(:,i) = psi_rf(:,i) + sr*(psi_starr(:,i) - psi_r(:,i))
 #endif /* GLM */
 
              else ! sm = 0
@@ -525,8 +529,8 @@ contains
                 b_cc(ydim:zdim,i) = half*(b_cclf(ydim:zdim) + sl*(b_starl(ydim:zdim) - b_ccl(ydim:zdim,i)) + &
                      &                    b_ccrf(ydim:zdim) + sr*(b_starr(ydim:zdim) - b_ccr(ydim:zdim,i)))
 #ifdef GLM
-                psi(:) = half*(psi_lf(:) + sl*(psi_starl(:) - psi_l(:)) + &
-                     &                     psi_rf(:) + sr*(psi_starr(:) - psi_r(:)))
+                psi(:,i) = half*(psi_lf(:,i) + sl*(psi_starl(:,i) - psi_l(:,i)) + &
+                     &                     psi_rf(:,i) + sr*(psi_starr(:,i) - psi_r(:,i)))
 #endif /* GLM */
 
              endif  ! sm = 0
