@@ -413,8 +413,10 @@ contains
     real, dimension(size(cg%u,1), cg%n_(ddim)) :: u1d
     real, dimension(xdim:zdim, cg%n_(ddim))   :: b_cc1d
     real, dimension(cg%n_(ddim))              :: psi_d
+    !real, dimension(xdim:zdim, cg%n_(ddim))   :: psi_d
     real, dimension(:,:), pointer             :: pu, pb
     real, dimension(:), pointer               :: ppsi
+    !real, dimension(:,:), pointer               :: ppsi
     integer                                   :: i1, i2
     integer                                   :: bi, psii
 
@@ -436,8 +438,10 @@ contains
           if (psii /= INVALID) then
              ppsi => cg%q(psii)%get_sweep(ddim,i1,i2)
              psi_d(:) = ppsi(:)
+             !psi_d(:,:) = ppsi(:,:)
              call solve(u1d, b_cc1d, dt/cg%dl(ddim), psi_d)
              ppsi(:) = psi_d(:)
+             !ppsi(:,:) = psi_d(:,:)
           else
              call solve(u1d, b_cc1d, dt/cg%dl(ddim))
           endif
@@ -462,6 +466,8 @@ contains
      real, dimension(:,:), intent(inout) :: b_cc
      real,                 intent(in)    :: dtodx
      real, dimension(:), optional, intent(inout) :: psi
+     !real, dimension(:,:), optional, intent(inout) :: psi
+     
 
      real, dimension(size(b_cc,1),size(b_cc,2)), target :: b_cc_l, b_cc_r, mag_cc
      real, dimension(size(b_cc,1),size(b_cc,2))         :: b_ccl, b_ccr, db1, db2, db3
@@ -696,6 +702,7 @@ contains
            class(component_fluid), pointer :: fl
            real, dimension(size(b_cc,1),size(b_cc,2)), target :: b0
            real, dimension(:,:), pointer :: p_flx, p_bcc, p_bccl, p_bccr, p_ql, p_qr
+           real, dimension(:),   pointer :: p_psi, p_psi_l, p_psi_r
 
            do i = 1, flind%fluids
               fl    => flind%all_fluids(i)%fl
@@ -711,7 +718,8 @@ contains
                  p_bccl => b0
                  p_bccr => b0
               endif
-              call riemann_hlld(nx, p_flx, p_ql, p_qr, p_bcc, p_bccl, p_bccr, fl%gam) ! whole mag_cc is not needed now for simple schemes but rk2 and rk4 still rely on it
+              !call riemann_hlld(nx, p_flx, p_ql, p_qr, p_bcc, p_bccl, p_bccr, fl%gam) ! whole mag_cc is not needed now for simple schemes but rk2 and rk4 still rely on it
+              call riemann_hlld(nx, p_flx, p_ql, p_qr, p_bcc, p_bccl, p_bccr, fl%gam, p_psi, p_psi_l, p_psi_r)
            enddo
 
         end subroutine riemann_wrap

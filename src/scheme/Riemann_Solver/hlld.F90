@@ -124,13 +124,15 @@ contains
 
   !-------------------------------------------------------------------------------------------------------------------------------------------------
 
-  subroutine riemann_hlld(n,f,ul,ur,b_cc,b_ccl,b_ccr,gamma)
+  !subroutine riemann_hlld(n,f,ul,ur,b_cc,b_ccl,b_ccr,gamma)
+  subroutine riemann_hlld(n,f,ul,ur,b_cc,b_ccl,b_ccr,gamma,psi,psi_l,psi_r)
 
     ! external procedures
 
     use constants,  only: half, zero, one, xdim, ydim, zdim, idn, imx, imy, imz, ien
     use func,       only: operator(.notequals.), operator(.equals.)
-
+    use hdc, only: chspeed
+    
     ! arguments
 
     implicit none
@@ -139,7 +141,9 @@ contains
     real, dimension(:,:), pointer, intent(out)   :: f
     real, dimension(:,:), pointer, intent(in)    :: ul, ur
     real, dimension(:,:), pointer, intent(out)   :: b_cc
+    real, dimension(:),   pointer, intent(out)   :: psi    
     real, dimension(:,:), pointer, intent(in)    :: b_ccl, b_ccr
+    real, dimension(:),   pointer, intent(in)    :: psi_l, psi_r
     real,                          intent(in)    :: gamma
 
     ! Local variables
@@ -153,7 +157,7 @@ contains
     real                                         :: coeff_1, dn_lsqt, dn_rsqt, add_dnsq, mul_dnsq
     real                                         :: vb_l, vb_starl, vb_r, vb_starr, vb_2star
     real                                         :: prl, prr
-
+    
     ! Local arrays
 
     real, dimension(size(f, 1))                  :: fl, fr
@@ -161,6 +165,8 @@ contains
     real, dimension(xdim:zdim)                   :: v_2star, v_starl, v_starr
     real, dimension(xdim:zdim)                   :: b_cclf, b_ccrf
     real, dimension(xdim:zdim)                   :: b_starl, b_starr, b_2star
+    real, dimension(xdim:zdim)                   :: psi_lf, psi_rf, psi_starl, psi_starr, psi_2star
+    real, dimension(xdim:zdim)                   :: glmb, glmpsi
     logical                                      :: has_energy
     real                                         :: ue
 
@@ -169,9 +175,18 @@ contains
     b_cc(xdim,:) = 0.
     has_energy = (ubound(ul, dim=1) >= ien)
     ue = 0.
+    
+#ifdef GLM 
+    glmb   = half*( (b_ccl(xdim,:)+b_ccr(xdim,:) - (psi_r(:)-psi_l(:))/chspeed() ) )
+    glmpsi = half*( (psi_r(:)+psi_l(:)) - chspeed()*(b_ccr(xdim,:)-b_ccl(xdim,:))  )
+    b_cclf(xdim:) = glmb
+    b_ccrf(xdim:) = glmb
+    psi_lf(:) = glmpsi
+    psi_rf(:) = glmpsi
+#endif /* GLM */
+    
+     do i = 1,n
 
-    do i = 1,n
-       
        ! Left and right states of magnetic pressure
 
        magprl  =  half*sum(b_ccl(xdim:zdim,i)*b_ccl(xdim:zdim,i))
@@ -235,7 +250,7 @@ contains
        fr(imy:imz) = ur(idn,i)*ur(imy:imz,i)*ur(imx,i) - b_ccr(xdim,i)*b_ccr(ydim:zdim,i)
        if (has_energy) fr(ien) = (enr + prr)*ur(imx,i) - b_ccr(xdim,i)*(sum(ur(imx:imz,i)*b_ccr(xdim:zdim,i)))  ! Total right state of pressure, so prl
        b_ccrf(ydim:zdim) = b_ccr(ydim:zdim,i)*ur(imx,i) - b_ccr(xdim,i)*ur(imy:imz,i)
-
+       
        ! HLLD fluxes
 
        if (sl .ge.  zero) then
@@ -339,6 +354,10 @@ contains
              u_starr(ien) = (srvxr*enr - prr*ur(imx,i) + prt_star*sm + b_ccr(xdim,i)*(vb_r - vb_starr))/srsm  ! Total right state of pressure
           endif
 
+#ifdef GLM
+          psi_starl(:) = psi_lf(:)
+          psi_starr(:) = psi_rf(:)
+#endif /* GLM */
           ! Cases for B_x .ne. and .eq. zero
 
           if (abs(b_ccl(xdim,i)) > zero) then
@@ -359,6 +378,10 @@ contains
 
                 f(:,i) = fl + sl*(u_starl - [ ul(idn,i), ul(idn,i)*ul(imx:imz,i), enl ] )
                 b_cc(ydim:zdim,i) = b_cclf(ydim:zdim) + sl*(b_starl(ydim:zdim) - b_ccl(ydim:zdim,i))
+#ifdef GLM
+                psi(:) = psi_lf(:) + sl*(psi_starl(:) - psi_l(:))
+#endif /* GLM */
+                
 
              else if (alfven_r < zero) then
 
@@ -366,6 +389,9 @@ contains
 
                 f(:,i) = fr + sr*(u_starr - [ ur(idn,i), ur(idn,i)*ur(imx:imz,i), enr ] )
                 b_cc(ydim:zdim,i) = b_ccrf(ydim:zdim) + sr*(b_starr(ydim:zdim) - b_ccr(ydim:zdim,i))
+#ifdef GLM
+                psi(:) = psi_rf(:) + sl*(psi_starr(:) - psi_r(:))
+#endif /* GLM */
 
              else ! alfven_l .le. zero .le. alfven_r
 
@@ -404,28 +430,42 @@ contains
                    ! Conservative variables for left Alfven intermediate state
                    u_2starl(idn)  =  u_starl(idn)
                    u_2starl(imx:imz)  =  u_starl(idn)*v_2star
+#ifdef GLM
+                psi_2star(:) = psi_lf(:)
+#endif /* GLM */
 
                    ! Energy of Alfven intermediate state Eq. 63
                    if (has_energy) u_2starl(ien)  =  u_starl(ien) - b_sig*dn_lsqt*(vb_starl - vb_2star)
+
                 endif
 
                 if (sm <= zero) then
                    ! Conservative variables for right Alfven intermediate state
                    u_2starr(idn)  =  u_starr(idn)
                    u_2starr(imx:imz)  =  u_starr(idn)*v_2star
+#ifdef GLM
+                psi_2star(:) = psi_rf(:)
+#endif /* GLM */
 
                    ! Energy of Alfven intermediate state Eq. 63
                    if (has_energy) u_2starr(ien)  =  u_starr(ien) + b_sig*dn_rsqt*(vb_starr - vb_2star)
-                endif
 
+                endif
+                
                 if (sm > zero) then
                    ! Left Alfven intermediate flux Eq. 65
                    f(:,i) = fl + alfven_l*u_2starl - (alfven_l - sl)*u_starl - sl* [ ul(idn,i), ul(idn,i)*ul(imx:imz,i), enl ]
                    b_cc(ydim:zdim,i) = b_cclf(ydim:zdim) + alfven_l*b_2star(ydim:zdim) - (alfven_l - sl)*b_starl(ydim:zdim) - sl*b_ccl(ydim:zdim,i)
+#ifdef GLM
+                   psi(:) = psi_lf(:) + alfven_l*psi_2star(:) - (alfven_l - sl)*psi_starl(:) - sl*psi_l(:)
+#endif /* GLM */
                 else if (sm < zero) then
                    ! Right Alfven intermediate flux Eq. 65
                    f(:,i) = fr + alfven_r*u_2starr - (alfven_r - sr)*u_starr - sr* [ ur(idn,i), ur(idn,i)*ur(imx:imz,i), enr ]
                    b_cc(ydim:zdim,i) = b_ccrf(ydim:zdim) + alfven_r*b_2star(ydim:zdim) - (alfven_r - sr)*b_starr(ydim:zdim) - sr*b_ccr(ydim:zdim,i)
+#ifdef GLM
+                   psi(:) = psi_rf(:) + alfven_r*psi_2star(:) - (alfven_r - sr)*psi_starr(:) - sr*psi_r(:)
+#endif /* GLM */
                 else ! sm = 0
                    ! Left and right Alfven intermediate flux Eq. 65
                    f(:,i) = half*( &
@@ -435,6 +475,13 @@ contains
                    b_cc(ydim:zdim,i) = half*( &
                         (b_cclf(ydim:zdim) + alfven_l*b_2star(ydim:zdim) - (alfven_l - sl)*b_starl(ydim:zdim) - sl*b_ccl(ydim:zdim,i)) + &
                         (b_ccrf(ydim:zdim) + alfven_r*b_2star(ydim:zdim) - (alfven_r - sr)*b_starr(ydim:zdim) - sr*b_ccr(ydim:zdim,i)))
+
+#ifdef GLM
+                   psi(:) = half*( &
+                        (psi_lf(:) + alfven_l*psi_2star(:) - (alfven_l - sl)*psi_starl(:) - sl*psi_l(:)) + &
+                        (psi_rf(:) + alfven_r*psi_2star(:) - (alfven_r - sr)*psi_starr(:) - sr*psi_r(:)))
+#endif /* GLM */
+
                 endif  ! sm = 0
 
              endif  ! alfven_l .le. 0 and alfven_r .ge. 0
@@ -449,11 +496,17 @@ contains
 
                 f(:,i)  =  fl + sl*(u_starl - [ ul(idn,i), ul(idn,i)*ul(imx:imz,i), enl ])
                 b_cc(ydim:zdim,i) = b_cclf(ydim:zdim) + sl*(b_starl(ydim:zdim) - b_ccl(ydim:zdim,i))
+#ifdef GLM
+                psi(:) = psi_lf(:) + sl*(psi_starl(:) - psi_l(:))
+#endif /* GLM */
 
              else if (sm < zero) then
 
                 f(:,i)  =  fr + sr*(u_starr - [ ur(idn,i), ur(idn,i)*ur(imx:imz,i), enr ])
                 b_cc(ydim:zdim,i) = b_ccrf(ydim:zdim) + sr*(b_starr(ydim:zdim) - b_ccr(ydim:zdim,i))
+#ifdef GLM
+                psi(:) = psi_rf(:) + sr*(psi_starr(:) - psi_r(:))
+#endif /* GLM */
 
              else ! sm = 0
 
@@ -463,6 +516,10 @@ contains
                      &           fr + sr*(u_starr - [ ur(idn,i), ur(idn,i)*ur(imx:imz,i), enr ]))
                 b_cc(ydim:zdim,i) = half*(b_cclf(ydim:zdim) + sl*(b_starl(ydim:zdim) - b_ccl(ydim:zdim,i)) + &
                      &                    b_ccrf(ydim:zdim) + sr*(b_starr(ydim:zdim) - b_ccr(ydim:zdim,i)))
+#ifdef GLM
+                psi(:) = half*(psi_lf(:) + sl*(psi_starl(:) - psi_l(:)) + &
+                     &                     psi_rf(:) + sr*(psi_starr(:) - psi_r(:)))
+#endif /* GLM */
 
              endif  ! sm = 0
 
