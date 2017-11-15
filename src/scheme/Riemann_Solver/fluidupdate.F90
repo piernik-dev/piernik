@@ -53,6 +53,7 @@ contains
     use domain,         only: dom, is_refined
     use fluxlimiters,   only: set_limiters
     use global,         only: skip_sweep, dt, dtm, t, limiter, limiter_b, force_cc_mag
+    use hdc,            only: update_chspeed
     use mpisetup,       only: master
     use user_hooks,     only: problem_customize_solution
 
@@ -75,6 +76,7 @@ contains
 #  error   Cosmic rays are not implemented yet in this Riemann solver.
 #endif /* COSM_RAYS */
 
+    call update_chspeed
     halfstep = .false.
     if (first_run) then
        dtm = 0.0

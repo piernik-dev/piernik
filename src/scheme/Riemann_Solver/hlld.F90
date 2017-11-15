@@ -177,8 +177,8 @@ contains
     ue = 0.
     
 #ifdef GLM 
-    glmb   = half*( (b_ccl(xdim,:)+b_ccr(xdim,:) - (psi_r(:)-psi_l(:))/chspeed() ) )
-    glmpsi = half*( (psi_r(:)+psi_l(:)) - chspeed()*(b_ccr(xdim,:)-b_ccl(xdim,:))  )
+    glmb   = half*( (b_ccl(xdim,:)+b_ccr(xdim,:) - (psi_r(:)-psi_l(:))/chspeed ) )
+    glmpsi = half*( (psi_r(:)+psi_l(:)) - chspeed*(b_ccr(xdim,:)-b_ccl(xdim,:))  )
     b_cclf(xdim:) = glmb
     b_ccrf(xdim:) = glmb
     psi_lf(:) = glmpsi

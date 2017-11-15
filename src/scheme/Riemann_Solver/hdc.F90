@@ -35,19 +35,20 @@ module hdc
 ! pulled by MAGNETIC && RIEMANN
   implicit none
 
+  real, protected :: chspeed
+
   private
-  public :: chspeed
+  public :: chspeed, update_chspeed
 
 contains
 
-  function chspeed() ! Temporary fix
+  subroutine update_chspeed() ! Temporary fix
 
     use fluidindex, only: flind
     use fluidtypes, only: phys_prop
 
     type(phys_prop),          pointer            :: sn
     integer(kind=4)                              :: ifl
-    real                                         :: chspeed
 
     do ifl = lbound(flind%all_fluids, 1, kind=4), ubound(flind%all_fluids, 1, kind=4)
        sn => flind%all_fluids(ifl)%fl%snap
@@ -57,7 +58,7 @@ contains
 
     return
     
-  end function chspeed
+  end subroutine update_chspeed
    
 end module hdc
 
