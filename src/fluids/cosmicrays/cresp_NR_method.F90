@@ -1480,7 +1480,7 @@ end subroutine
   implicit none
     integer(kind=4) :: inverse_f_to_ind
     real(kind=8)    :: value, min_in, max_in
-     inverse_f_to_ind = int((log10(value/min_in)/log10(max_in/min_in)) * (arr_dim - I_ONE )) + I_ONE
+     inverse_f_to_ind = int((log10(abs(value)/min_in)/log10(max_in/min_in)) * (arr_dim - I_ONE )) + I_ONE
   end function inverse_f_to_ind
 !====================================================================================================
 ! Solver test section
