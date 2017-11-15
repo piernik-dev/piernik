@@ -468,10 +468,10 @@ contains
      real, dimension(:,:), intent(inout) :: b_cc
      real,                 intent(in)    :: dtodx
      real, dimension(:), optional, intent(inout) :: psi
-     !real, dimension(:,:), optional, intent(inout) :: psi
      
-
+     
      real, dimension(size(b_cc,1),size(b_cc,2)), target :: b_cc_l, b_cc_r, mag_cc
+     real, dimension(),                          target :: psi_cc, psi_l, psi_r
      real, dimension(size(b_cc,1),size(b_cc,2))         :: b_ccl, b_ccr, db1, db2, db3
      real, dimension(size(u,1),size(u,2)), target       :: flx, ql, qr
      real, dimension(size(u,1),size(u,2))               :: ul, ur, du1, du2, du3
@@ -577,9 +577,10 @@ contains
 
         ! some shortcuts
 
-        subroutine slope(uu, bb)
+       !subroutine slope(uu, bb)
+       subroutine slope(uu, bb, pp)
 
-           use constants,  only: half
+           use constants,  only: half, xdim, zdim
            use dataio_pub, only: die
            use fluxlimiters, only: flimiter, blimiter
 
@@ -587,9 +588,11 @@ contains
 
            real, optional, dimension(size(u,1),size(u,2)),       intent(in) :: uu
            real, optional, dimension(size(b_cc,1),size(b_cc,2)), intent(in) :: bb
+           real, optional, dimension(),                          intent(in) :: pp
 
            real, dimension(size(u,1),size(u,2))       :: du
            real, dimension(size(b_cc,1),size(b_cc,2)) :: db
+           real, dimension(1,size(b_cc,2))                 :: dp
 
            if (present(uu) .neqv. present(bb)) call die("[fluidupdate:solve:slope] either none or both optional arguments must be present")
 
@@ -612,6 +615,16 @@ contains
               b_ccl = b_cc - half*db
               b_ccr = b_cc + half*db
            endif
+
+           if (present(pp)) then
+              dp = blimiter(psi_cc + pp)
+              psi_l = psi_cc + pp - half*dp
+              psi_r = psi_cc + pp + half*dp
+           else
+              dp =  blimiter(psi_cc)
+              psi_l = psi_cc - half*dp
+              psi_r = psi_cc + half*dp
+           end if
 
         end subroutine slope
 
@@ -712,9 +725,12 @@ contains
               p_ql  => ql(fl%beg:fl%end,:)
               p_qr  => qr(fl%beg:fl%end,:)
               p_bcc => mag_cc(xdim:zdim,:)
+              p_psi => psi_cc()
               if (fl%is_magnetized) then
                  p_bccl => b_cc_l(xdim:zdim,:)
                  p_bccr => b_cc_r(xdim:zdim,:)
+                 p_psi_l => psi_l(xdim:zdim)
+                 p_psi_r => psi_r(xdim:zdim)
               else ! ignore all magnetic field
                  b0 = 0.
                  p_bccl => b0
