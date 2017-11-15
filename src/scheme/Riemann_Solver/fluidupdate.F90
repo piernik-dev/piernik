@@ -468,7 +468,6 @@ contains
      real, dimension(:,:), intent(inout) :: psi
 
      real, dimension(size(b_cc,1),size(b_cc,2)), target :: b_cc_l, b_cc_r, mag_cc
-     real, dimension(),                          target :: psi_cc, psi_l, psi_r
      real, dimension(size(b_cc,1),size(b_cc,2))         :: b_ccl, b_ccr, db1, db2, db3
      real, dimension(size(u,1),size(u,2)), target       :: flx, ql, qr
      real, dimension(size(u,1),size(u,2))               :: ul, ur, du1, du2, du3
@@ -584,19 +583,11 @@ contains
 
            real, optional, dimension(size(u,1),size(u,2)),       intent(in) :: uu
            real, optional, dimension(size(b_cc,1),size(b_cc,2)), intent(in) :: bb
-
-           real, optional, dimension(),                          intent(in) :: pp
-
-           real, dimension(size(u,1),size(u,2))       :: du
-           real, dimension(size(b_cc,1),size(b_cc,2)) :: db
-           real, dimension(1,size(b_cc,2))                 :: dp
-
            real, optional, dimension(size(psi,1),size(psi,2)),   intent(in) :: pp
 
            real, dimension(size(u,1),size(u,2))       :: du
            real, dimension(size(b_cc,1),size(b_cc,2)) :: db
            real, dimension(size(psi,1),size(psi,2))   :: dp
-
 
            if ((present(uu) .neqv. present(bb)) .or. (present(bb) .neqv. present(pp))) &
                 call die("[fluidupdate:solve:slope] either none or all optional arguments must be present")
@@ -622,16 +613,6 @@ contains
            endif
 
            if (present(pp)) then
-
-              dp = blimiter(psi_cc + pp)
-              psi_l = psi_cc + pp - half*dp
-              psi_r = psi_cc + pp + half*dp
-           else
-              dp =  blimiter(psi_cc)
-              psi_l = psi_cc - half*dp
-              psi_r = psi_cc + half*dp
-           end if
-
               db  = blimiter(psi + pp)
               psi__l = psi + bb - half*dp
               psi__r = psi + bb + half*dp
