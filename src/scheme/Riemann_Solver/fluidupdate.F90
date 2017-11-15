@@ -414,11 +414,9 @@ contains
 
     real, dimension(size(cg%u,1), cg%n_(ddim)) :: u1d
     real, dimension(xdim:zdim, cg%n_(ddim))   :: b_cc1d
-    real, dimension(cg%n_(ddim))              :: psi_d
-    !real, dimension(xdim:zdim, cg%n_(ddim))   :: psi_d
+    real, dimension(1, cg%n_(ddim))           :: psi_d ! artificial rank-2 to conform to flux limiter interface
     real, dimension(:,:), pointer             :: pu, pb
     real, dimension(:), pointer               :: ppsi
-    !real, dimension(:,:), pointer               :: ppsi
     integer                                   :: i1, i2
     integer                                   :: bi, psii
 
@@ -430,6 +428,8 @@ contains
 
     psii = INVALID
     if (qna%exists(phi_n)) psii = qna%ind(phi_n)
+    psi_d = 0.
+    nullify(ppsi)
 
     do i2 = cg%lhn(pdims(ddim, ORTHO2), LO), cg%lhn(pdims(ddim,ORTHO2), HI)
        do i1 = cg%lhn(pdims(ddim, ORTHO1), LO), cg%lhn(pdims(ddim, ORTHO1), HI)
@@ -439,13 +439,11 @@ contains
           b_cc1d(iarr_mag_swp(ddim,:),:) = pb(:,:)
           if (psii /= INVALID) then
              ppsi => cg%q(psii)%get_sweep(ddim,i1,i2)
-             psi_d(:) = ppsi(:)
-             !psi_d(:,:) = ppsi(:,:)
+             psi_d(1, :) = ppsi(:)
              call solve(u1d, b_cc1d, dt/cg%dl(ddim), psi_d)
-             ppsi(:) = psi_d(:)
-             !ppsi(:,:) = psi_d(:,:)
+             ppsi(:) = psi_d(1,:)
           else
-             call solve(u1d, b_cc1d, dt/cg%dl(ddim))
+             call solve(u1d, b_cc1d, dt/cg%dl(ddim), psi_d)
           endif
           pu(:,:) = u1d(iarr_all_swp(ddim,:),:)
           pb(:,:) = b_cc1d(iarr_mag_swp(ddim,:),:) ! ToDo figure out how to manage CT energy fixup without extra storage
@@ -467,17 +465,16 @@ contains
      real, dimension(:,:), intent(inout) :: u
      real, dimension(:,:), intent(inout) :: b_cc
      real,                 intent(in)    :: dtodx
-     real, dimension(:), optional, intent(inout) :: psi
-     
-     
+     real, dimension(:,:), intent(inout) :: psi
+
      real, dimension(size(b_cc,1),size(b_cc,2)), target :: b_cc_l, b_cc_r, mag_cc
      real, dimension(),                          target :: psi_cc, psi_l, psi_r
      real, dimension(size(b_cc,1),size(b_cc,2))         :: b_ccl, b_ccr, db1, db2, db3
      real, dimension(size(u,1),size(u,2)), target       :: flx, ql, qr
      real, dimension(size(u,1),size(u,2))               :: ul, ur, du1, du2, du3
+     real, dimension(size(psi,1),size(psi,2)), target   :: psi_l, psi_r, psi_flux
+     real, dimension(size(psi,1),size(psi,2))           :: psi__l, psi__r, dpsi1, dpsi2, dpsi3
      integer                                            :: nx
-
-     if (present(psi)) nx = 0 ! suppress compiler warnings for a while
 
      nx  = size(u,2)
      if (size(b_cc,2) /= nx) call die("[fluidupdate:rk2] size b_cc and u mismatch")
@@ -575,10 +572,9 @@ contains
 
      contains
 
-        ! some shortcuts
-
-       !subroutine slope(uu, bb)
-       subroutine slope(uu, bb, pp)
+       ! some shortcuts
+       
+        subroutine slope(uu, bb, pp)
 
            use constants,  only: half, xdim, zdim
            use dataio_pub, only: die
@@ -588,13 +584,22 @@ contains
 
            real, optional, dimension(size(u,1),size(u,2)),       intent(in) :: uu
            real, optional, dimension(size(b_cc,1),size(b_cc,2)), intent(in) :: bb
+
            real, optional, dimension(),                          intent(in) :: pp
 
            real, dimension(size(u,1),size(u,2))       :: du
            real, dimension(size(b_cc,1),size(b_cc,2)) :: db
            real, dimension(1,size(b_cc,2))                 :: dp
 
-           if (present(uu) .neqv. present(bb)) call die("[fluidupdate:solve:slope] either none or both optional arguments must be present")
+           real, optional, dimension(size(psi,1),size(psi,2)),   intent(in) :: pp
+
+           real, dimension(size(u,1),size(u,2))       :: du
+           real, dimension(size(b_cc,1),size(b_cc,2)) :: db
+           real, dimension(size(psi,1),size(psi,2))   :: dp
+
+
+           if ((present(uu) .neqv. present(bb)) .or. (present(bb) .neqv. present(pp))) &
+                call die("[fluidupdate:solve:slope] either none or all optional arguments must be present")
 
            if (present(uu)) then
               du  = flimiter(u + uu)
@@ -617,6 +622,7 @@ contains
            endif
 
            if (present(pp)) then
+
               dp = blimiter(psi_cc + pp)
               psi_l = psi_cc + pp - half*dp
               psi_r = psi_cc + pp + half*dp
@@ -625,6 +631,16 @@ contains
               psi_l = psi_cc - half*dp
               psi_r = psi_cc + half*dp
            end if
+
+              db  = blimiter(psi + pp)
+              psi__l = psi + bb - half*dp
+              psi__r = psi + bb + half*dp
+           else
+              db  = blimiter(psi)
+              psi__l = psi - half*dp
+              psi__r = psi + half*dp
+           endif
+
 
         end subroutine slope
 
