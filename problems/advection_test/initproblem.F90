@@ -50,9 +50,10 @@ module initproblem
    real                   :: divB0_amp   !< Amplitude of the non-divergent component of the magnetic field
    real                   :: divBc_amp   !< Amplitude of constant-divergence component of the magnetic field (has artifacts on periodic domains due to nondifferentiability)
    real                   :: divBs_amp   !< Amplitude of sine-wave divergence component of the magnetic field (should behave well on periodic domains)
+   real                   :: divBb_amp   !< Amplitude of blob of divergence (should behave well on periodic domains)
    logical                :: ccB         !< true for cell-cntered initial magnetic field
 
-   namelist /PROBLEM_CONTROL/  pulse_size, pulse_off, pulse_vel, pulse_amp, norm_step, nflip, flipratio, ref_thr, deref_thr, usedust, divB0_amp, divBc_amp, divBs_amp, ccB
+   namelist /PROBLEM_CONTROL/  pulse_size, pulse_off, pulse_vel, pulse_amp, norm_step, nflip, flipratio, ref_thr, deref_thr, usedust, divB0_amp, divBc_amp, divBs_amp, divBb_amp, ccB
 
    ! other private data
    real, dimension(ndims, LO:HI) :: pulse_edge
@@ -114,6 +115,7 @@ contains
       divB0_amp     = 0.                   !< should be safe to set non-0
       divBc_amp     = 0.                   !< unphysical, only for testing
       divBs_amp     = 0.                   !< unphysical, only for testing
+      divBb_amp     = 0.                   !< unphysical, only for testing
       ccB           = .false.              !< defaulting to face-centered initial field
 
       if (master) then
@@ -141,6 +143,7 @@ contains
          rbuff(5)   = divB0_amp
          rbuff(6)   = divBc_amp
          rbuff(7)   = divBs_amp
+         rbuff(8)   = divBb_amp
          rbuff(20+xdim:20+zdim) = pulse_size(:)
          rbuff(23+xdim:23+zdim) = pulse_vel(:)
          rbuff(26+xdim:26+zdim) = pulse_off(:)
@@ -166,6 +169,7 @@ contains
          divB0_amp  = rbuff(5)
          divBc_amp  = rbuff(6)
          divBs_amp  = rbuff(7)
+         divBb_amp  = rbuff(8)
          pulse_size = rbuff(20+xdim:20+zdim)
          pulse_vel  = rbuff(23+xdim:23+zdim)
          pulse_off  = rbuff(26+xdim:26+zdim)
@@ -226,13 +230,14 @@ contains
          enddo
       endif
 
-      if (any([divB0_amp, divBc_amp, divBs_amp] .notequals. 0.)) then
+      if (any([divB0_amp, divBc_amp, divBs_amp, divBb_amp] .notequals. 0.)) then
 #ifdef MAGNETIC
          if (dom%geometry_type /= GEO_XYZ) then
             call warn("[initproblem:read_problem_par] Only cartesian formulas for magnetic field is implemented. Forcing all amplitudes to 0.")
             divB0_amp     = 0.
             divBc_amp     = 0.
             divBs_amp     = 0.
+            divBb_amp     = 0.
          endif
 #else
          call warn("[initproblem:read_problem_par] Ignoring magnetic field amplitudes")
@@ -270,12 +275,22 @@ contains
       real, dimension(ndims) :: kk !< wavenumbers to fit one sine wave inside domain
       real :: sx, sy, sz, cx, cy, cz !< precomputed values of sine and cosine at cell centers
       real :: sfx, sfy, sfz, cfx, cfy, cfz !< precomputed values of sine and cosine at cell left faces
-      integer :: right_face
+      integer :: right_face, bcomp
+      real :: r02, rr02
 
       kk = 0.
       where (dom%D_ > 0) kk = dpi / dom%L_
       right_face = 1
       if (ccB) right_face = 0
+      r02 = huge(1.)
+      if (dom%D_x == 1) then
+         r02 = dom%L_(xdim)**2 / 8.
+      else if (dom%D_y == 1) then
+         r02 = dom%L_(ydim)**2 / 8.
+      else
+         r02 = dom%L_(zdim)**2 / 8.
+      endif
+
 #endif /* MAGNETIC */
 
       om = get_omega()
@@ -307,6 +322,17 @@ contains
                      cfx = cos(kk(xdim) * (cg%x(i) - cg%dx/2.))
 
                      cg%b(:, i, j, k) = divBc_amp * [cg%x(i), cg%y(j), cg%z(k)] ! slight offset between cell- and face-centered is unimportant here
+
+                     ! div B pulse, as described in Tricco, Price & Bate, https://arxiv.org/abs/1607.02394
+                     rr02 = sum(([cg%x(i), cg%y(j), cg%x(k)] - dom%C_)**2)/r02
+                     if (dom%D_x == 1) then
+                        bcomp = xdim
+                     else if (dom%D_y == 1) then
+                        bcomp = ydim
+                     else
+                        bcomp = zdim
+                     endif
+                     cg%b(bcomp, i, j, k) = cg%b(bcomp, i, j, k) + divBb_amp * (rr02**4 - 2 *rr02**2 + 1)
 
                      select case (dom%eff_dim)
                         case (I_ONE) ! can't do anything fancy, just set up something non-zero
