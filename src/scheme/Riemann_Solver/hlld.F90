@@ -131,7 +131,7 @@ contains
 
     use constants,  only: half, zero, one, xdim, ydim, zdim, idn, imx, imy, imz, ien
     use func,       only: operator(.notequals.), operator(.equals.)
-    use hdc, only: chspeed
+    use hdc,        only: chspeed
     
     ! arguments
 
@@ -176,7 +176,7 @@ contains
     has_energy = (ubound(ul, dim=1) >= ien)
     ue = 0.
     
-#ifdef GLM 
+#ifdef GLM
     glmb   = half*( (b_ccl(xdim,:)+b_ccr(xdim,:) - (psi_r(:)-psi_l(:))/chspeed ) )
     glmpsi = half*( (psi_r(:)+psi_l(:)) - chspeed*(b_ccr(xdim,:)-b_ccl(xdim,:))  )
     b_cclf(xdim:) = glmb

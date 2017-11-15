@@ -45,17 +45,9 @@ contains
   subroutine update_chspeed() ! Temporary fix
 
     use fluidindex, only: flind
-    use fluidtypes, only: phys_prop
-
-    type(phys_prop),          pointer            :: sn
-    integer(kind=4)                              :: ifl
-
-    do ifl = lbound(flind%all_fluids, 1, kind=4), ubound(flind%all_fluids, 1, kind=4)
-       sn => flind%all_fluids(ifl)%fl%snap
-    end do
-
-    chspeed = sn%cs_max%val
-
+    
+    chspeed = flind%ion%snap%cs_max%val
+    
     return
     
   end subroutine update_chspeed
@@ -118,4 +110,13 @@ end module hdc
 !     return
     
 !   end function chspeed
-  
+  !use fluidtypes, only: phys_prop
+
+    !type(phys_prop),          pointer            :: sn
+    !integer(kind=4)                              :: ifl
+
+    !do ifl = lbound(flind%all_fluids, 1, kind=4), ubound(flind%all_fluids, 1, kind=4)
+    !   sn => flind%all_fluids(ifl)%fl%snap
+    !end do
+    !sn => flind%ion%fl%snap
+    !chspeed = sn%cs_max%val
