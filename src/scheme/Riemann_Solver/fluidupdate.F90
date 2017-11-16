@@ -472,6 +472,8 @@ contains
      real, dimension(size(u,1),size(u,2)), target       :: flx, ql, qr
      real, dimension(size(u,1),size(u,2))               :: ul, ur, du1, du2, du3
      real, dimension(size(psi,1),size(psi,2)), target   :: psi_l, psi_r, psi_flux
+     !real, dimension(1,size(psi,2)), target             :: psi_l, psi_r, psi_flux
+     real, dimension(size(psi,1),size(psi,2)),target    :: psi_cc
      real, dimension(size(psi,1),size(psi,2))           :: psi__l, psi__r, dpsi1, dpsi2, dpsi3
      integer                                            :: nx
 
@@ -614,8 +616,8 @@ contains
 
            if (present(pp)) then
               db  = blimiter(psi + pp)
-              psi__l = psi + bb - half*dp
-              psi__r = psi + bb + half*dp
+              psi__l = psi + pp - half*dp
+              psi__r = psi + pp + half*dp
            else
               db  = blimiter(psi)
               psi__l = psi - half*dp
@@ -681,6 +683,11 @@ contains
            b_cc_r(:,1:nx-1) = b_ccl(:,2:nx) + half*dtodx*flx(size(u,1)+1:,2:nx)
            b_cc_r(:,nx) = b_cc_r(:,nx-1)
 
+           psi_l(:,2:nx) = psi__r(:,2:nx) 
+           psi_l(:,1) = psi__l(:,2)
+           psi_r(:,1:nx-1) = psi__l(:,2:nx)
+           psi_r(:,nx) = psi__r(:,nx-1)
+           
            ql = utoq(u_l,b_cc_l)
            qr = utoq(u_r,b_cc_r)
 
@@ -714,7 +721,7 @@ contains
            class(component_fluid), pointer :: fl
            real, dimension(size(b_cc,1),size(b_cc,2)), target :: b0
            real, dimension(:,:), pointer :: p_flx, p_bcc, p_bccl, p_bccr, p_ql, p_qr
-           real, dimension(:),   pointer :: p_psi, p_psi_l, p_psi_r
+           real, dimension(:,:), pointer :: p_psi, p_psi_l, p_psi_r
 
            do i = 1, flind%fluids
               fl    => flind%all_fluids(i)%fl
@@ -722,12 +729,12 @@ contains
               p_ql  => ql(fl%beg:fl%end,:)
               p_qr  => qr(fl%beg:fl%end,:)
               p_bcc => mag_cc(xdim:zdim,:)
-              p_psi => psi_cc()
+              p_psi => psi_cc(:,:)
               if (fl%is_magnetized) then
                  p_bccl => b_cc_l(xdim:zdim,:)
                  p_bccr => b_cc_r(xdim:zdim,:)
-                 p_psi_l => psi_l(xdim:zdim)
-                 p_psi_r => psi_r(xdim:zdim)
+                 p_psi_l => psi_l(:,:)
+                 p_psi_r => psi_r(:,:)
               else ! ignore all magnetic field
                  b0 = 0.
                  p_bccl => b0
