@@ -38,7 +38,7 @@ module hdc
   real, protected :: chspeed
 
   private
-  public :: chspeed, update_chspeed
+  public :: chspeed, update_chspeed, init_psi
 
 contains
 
@@ -57,7 +57,27 @@ contains
     return
     
   end subroutine update_chspeed
-   
+
+  subroutine init_psi
+
+     use cg_list,          only: cg_list_element
+     use cg_leaves,        only: leaves
+     use constants,        only: phi_n
+     use global,           only: psi_0
+     use named_array_list, only: qna
+
+     type(cg_list_element), pointer :: cgl
+
+     if (qna%exists(phi_n)) then
+        cgl => leaves%first
+        do while (associated(cgl))
+           cgl%cg%q(qna%ind(phi_n))%arr = psi_0
+           cgl => cgl%nxt
+        enddo
+     endif
+
+  end subroutine init_psi
+
 end module hdc
 
 

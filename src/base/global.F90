@@ -44,7 +44,7 @@ module global
         &    integration_order, limiter, limiter_b, smalld, smallei, smallp, use_smalld, h_solver, &
         &    relax_time, grace_period_passed, cfr_smooth, repeat_step, skip_sweep, geometry25D, &
         &    dirty_debug, do_ascii_dump, show_n_dirtys, no_dirty_checks, sweeps_mgu, use_fargo, &
-        &    force_cc_mag
+        &    force_cc_mag, psi_0
 
    real, parameter :: dt_default_grow = 2.
    logical         :: cfl_violated             !< True when cfl condition is violated
@@ -84,10 +84,11 @@ module global
    logical                       :: sweeps_mgu        !< Mimimal Guardcell Update in sweeps
    logical                       :: use_fargo         !< use Fast Eulerian Transport for differentially rotating disks
    logical                       :: force_cc_mag      !< treat magnetic field as cell-centered in the Riemann solver (temporary hack)
+   real                          :: psi_0             !< initial value for the psi field used in divergence cleaning
 
    namelist /NUMERICAL_SETUP/ cfl, cflcontrol, cfl_max, use_smalld, smalld, smallei, smallc, smallp, dt_initial, dt_max_grow, dt_min, &
         &                     repeat_step, limiter, limiter_b, relax_time, integration_order, cfr_smooth, skip_sweep, geometry25D, sweeps_mgu, &
-        &                     use_fargo, h_solver, force_cc_mag
+        &                     use_fargo, h_solver, force_cc_mag, psi_0
 
 contains
 
@@ -121,6 +122,7 @@ contains
 !!   <tr><td>geometry25D      </td><td>F      </td><td>logical value                        </td><td>\copydoc global::geometry25d      </td></tr>
 !!   <tr><td>sweeps_mgu       </td><td>F      </td><td>logical value                        </td><td>\copydoc global::sweeps_mgu       </td></tr>
 !!   <tr><td>force_cc_mag     </td><td>F      </td><td>logical value                        </td><td>\copydoc global::force_cc_mag     </td></tr>
+!!   <tr><td>psi_0            </td><td>0.     </td><td>real value                           </td><td>\copydoc global::psi_0            </td></tr>
 !! </table>
 !! \n \n
 !<
@@ -173,6 +175,7 @@ contains
       integration_order  = 2
       use_fargo   = .false.
       force_cc_mag = .false.
+      psi_0       = 0.
 
       if (master) then
          if (.not.nh%initialized) call nh%init()
@@ -225,6 +228,7 @@ contains
          rbuff( 9) = dt_min
          rbuff(10) = cfl_max
          rbuff(11) = relax_time
+         rbuff(12) = psi_0
 
          lbuff(1)   = use_smalld
          lbuff(2)   = repeat_step
@@ -262,6 +266,7 @@ contains
          dt_min      = rbuff( 9)
          cfl_max     = rbuff(10)
          relax_time  = rbuff(11)
+         psi_0       = rbuff(12)
 
          limiter    = cbuff(1)
          limiter_b  = cbuff(2)

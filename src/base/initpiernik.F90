@@ -57,6 +57,7 @@ contains
       use grid,                  only: init_grid
       use grid_container_ext,    only: cg_extptrs
       use gridgeometry,          only: init_geometry
+      use hdc,                   only: init_psi
       use initfluids,            only: init_fluids, sanitize_smallx_checks
       use interactions,          only: init_interactions
       use initproblem,           only: problem_initial_conditions, read_problem_par, problem_pointers
@@ -259,6 +260,7 @@ contains
          nit = 0
          finished = .false.
          call problem_initial_conditions ! may depend on anything
+         call init_psi ! initialize the auxiliary field for divergence cleaning
 
          write(msg, '(a,f10.2)')"[initpiernik] IC on base level, time elapsed: ",set_timer(tmr_fu)
          if (master) call printinfo(msg)
