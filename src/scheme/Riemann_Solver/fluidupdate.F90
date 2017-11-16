@@ -615,11 +615,11 @@ contains
            endif
 
            if (present(pp)) then
-              db  = blimiter(psi + pp)
+              dp  = blimiter(psi + pp)
               psi__l = psi + pp - half*dp
               psi__r = psi + pp + half*dp
            else
-              db  = blimiter(psi)
+              dp  = blimiter(psi)
               psi__l = psi - half*dp
               psi__r = psi + half*dp
            endif
