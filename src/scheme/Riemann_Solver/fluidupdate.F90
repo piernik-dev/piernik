@@ -413,12 +413,12 @@ contains
     integer(kind=4),               intent(in) :: ddim
 
     real, dimension(size(cg%u,1), cg%n_(ddim)) :: u1d
-    real, dimension(xdim:zdim, cg%n_(ddim))   :: b_cc1d
-    real, dimension(1, cg%n_(ddim))           :: psi_d ! artificial rank-2 to conform to flux limiter interface
-    real, dimension(:,:), pointer             :: pu, pb
-    real, dimension(:), pointer               :: ppsi
-    integer                                   :: i1, i2
-    integer                                   :: bi, psii
+    real, dimension(xdim:zdim, cg%n_(ddim))    :: b_cc1d
+    real, dimension(1, cg%n_(ddim))            :: psi_d ! artificial rank-2 to conform to flux limiter interface
+    real, dimension(:,:), pointer              :: pu, pb
+    real, dimension(:), pointer                :: ppsi
+    integer                                    :: i1, i2
+    integer                                    :: bi, psii
 
     if (force_cc_mag) then
        bi = wna%bi
