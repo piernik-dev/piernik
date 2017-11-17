@@ -493,16 +493,20 @@ contains
            call slope
            call ulr_to_qlr                     ! Just the slope is used to feed 1st call to Riemann solver
            call riemann_wrap                   ! Now we advance the left and right states by half timestep.
-           call du_db(du1, db1)                ! The slope is already calculated and can be reused
-           call ulr_to_qlr(half*du1, half*db1)
+           !call du_db(du1, db1)                ! The slope is already calculated and can be reused
+           !call ulr_to_qlr(half*du1, half*db1)
+           call du_db(du1, db1,dpsi1)
+           call ulr_to_qlr(half*du1, half*db1,half*dpsi1)
            call riemann_wrap                   ! second call for Riemann problem uses states evolved to half timestep
            call update
         case ("rk2_s")                         ! RK2 with alternative approach to calculating slopes for 2nd step
            call slope
            call ulr_to_qlr
            call riemann_wrap
-           call du_db(du1, db1)
-           call slope(half*du1, half*db1)
+           !call du_db(du1, db1)
+           !call slope(half*du1, half*db1)
+           call du_db(du1, db1,dpsi1)
+           call slope(half*du1, half*db1,half*dpsi1)
            call ulr_to_qlr
            call riemann_wrap
            call update
@@ -510,16 +514,20 @@ contains
            call slope
            call ulr_fluxes_qlr
            call riemann_wrap                   ! MUSCL-Hancock is used to feed 1st call to Riemann solver
-           call du_db(du1, db1)                ! Now we can calculate state for half-timestep and recalculate slopes
-           call ulr_to_qlr(half*du1, half*db1)
+           !call du_db(du1, db1)                ! Now we can calculate state for half-timestep and recalculate slopes
+           !call ulr_to_qlr(half*du1, half*db1)
+           call du_db(du1, db1,dpsi1)
+           call ulr_to_qlr(half*du1, half*db1,half*dpsi1)
            call riemann_wrap                   ! second call for Riemann problem needs just the slope from states evolved to half timestep
            call update
         case ("rk2_muscl_s")                   ! MUSCL-RK2 with alternative approach to calculating slopes for 2nd step
            call slope
            call ulr_fluxes_qlr
            call riemann_wrap
-           call du_db(du1, db1)
-           call slope(half*du1, half*db1)
+           !call du_db(du1, db1)
+           !call slope(half*du1, half*db1)
+           call du_db(du1, db1,dpsi1)
+           call slope(half*du1,half*db1,half*dpsi1)
            call ulr_to_qlr
            call riemann_wrap
            call update
@@ -532,38 +540,52 @@ contains
            call slope
            call ulr_to_qlr
            call riemann_wrap
-           call du_db(du1, db1)
-           call ulr_to_qlr(du1, db1)
+           !call du_db(du1, db1)
+           !call ulr_to_qlr(du1, db1)
+           call du_db(du1, db1,dpsi1)
+           call ulr_to_qlr(du1, db1,dpsi1)
            call riemann_wrap
            call update([1., 1.])
         case ("rk4")
            call slope
            call ulr_to_qlr
            call riemann_wrap
-           call du_db(du1, db1)
-           call ulr_to_qlr(half*du1, half*db1)
+           !call du_db(du1, db1)
+           !call ulr_to_qlr(half*du1, half*db1)
+           call du_db(du1, db1,dpsi1)
+           call ulr_to_qlr(half*du1, half*db1,half*dpsi1)
            call riemann_wrap
-           call du_db(du2, db2)
-           call ulr_to_qlr(half*du2, half*db2)
+           !call du_db(du2, db2)
+           !call ulr_to_qlr(half*du2, half*db2)
+           call du_db(du2, db2,dpsi2)
+           call ulr_to_qlr(half*du2, half*db2,half*dpsi2)
            call riemann_wrap
-           call du_db(du3, db3)
-           call ulr_to_qlr(du3, db3)
+           !call du_db(du3, db3)
+           !call ulr_to_qlr(du3, db3)
+           call du_db(du3, db3,dpsi3)
+           call ulr_to_qlr(du3, db3,dpsi3)
            call riemann_wrap
            call update([1., 1., 2., 2.])
         case ("rk4_s")                         ! RK4 with alternative approach to calculating slopes for 2nd-4th step
            call slope
            call ulr_to_qlr
            call riemann_wrap
-           call du_db(du1, db1)
-           call slope(half*du1, half*db1)
+           !call du_db(du1, db1)
+           !call slope(half*du1, half*db1)
+           call du_db(du1, db1,dpsi1)
+           call slope(half*du1, half*db1, half*dpsi1)
            call ulr_to_qlr
            call riemann_wrap
-           call du_db(du2, db2)
-           call slope(half*du2, half*db2)
+           !call du_db(du2, db2)
+           !call slope(half*du2, half*db2)
+           call du_db(du2, db2,dpsi2)
+           call slope(half*du2, half*db2, half*dpsi2)
            call ulr_to_qlr
            call riemann_wrap
-           call du_db(du3, db3)
-           call slope(du3, db3)
+           !call du_db(du3, db3)
+           !call slope(du3, db3)
+           call du_db(du3, db3, dpsi3)
+           call slope(du3, db3, dpsi3)
            call ulr_to_qlr
            call riemann_wrap
            call update([1., 1., 2., 2.])
@@ -627,7 +649,8 @@ contains
 
         end subroutine slope
 
-        subroutine ulr_to_qlr(du, db)
+        !subroutine ulr_to_qlr(du, db)
+        subroutine ulr_to_qlr(du, db, dpsi)
 
            use dataio_pub, only: die
 
@@ -635,10 +658,13 @@ contains
 
            real, optional, dimension(size(u,1),size(u,2)),       intent(in) :: du
            real, optional, dimension(size(b_cc,1),size(b_cc,2)), intent(in) :: db
+           real, optional, dimension(size(psi,1),size(psi,2)),   intent(in) :: dpsi
 
            real, dimension(size(u,1),size(u,2))               :: u_l, u_r
 
-           if (present(du) .neqv. present(db)) call die("[fluidupdate:solve:ulr_to_qlr] either mone or both optional arguments must be present")
+           !if (present(du) .neqv. present(db)) call die("[fluidupdate:solve:ulr_to_qlr] either mone or both optional arguments must be present")
+           if ((present(du) .neqv. present(db)) .or. (present(db) .neqv. present(dpsi))) &
+                call die("[fluidupdate:solve:slope] either none or all optional arguments must be present")
 
            if (present(du)) then
               u_l = ur + du
@@ -657,6 +683,15 @@ contains
               b_cc_r(:,1:nx-1) = b_ccl(:,2:nx)
            endif
            b_cc_r(:,nx) = b_cc_r(:,nx-1)
+
+           if(present(dpsi)) then
+              psi_l = psi__l + dpsi
+              psi_r(:,1:nx-1) = psi__l(:,2:nx) + psi(:,2:nx)
+           else
+              psi_l = psi__r
+              psi_r(:,1:nx-1) = psi__l(:,2:nx)
+           endif
+           psi_r(:,nx) = psi__r(:,nx-1)
 
            ql = utoq(u_l,b_cc_l)
            qr = utoq(u_r,b_cc_r)
@@ -683,9 +718,11 @@ contains
            b_cc_r(:,1:nx-1) = b_ccl(:,2:nx) + half*dtodx*flx(size(u,1)+1:,2:nx)
            b_cc_r(:,nx) = b_cc_r(:,nx-1)
 
-           psi_l(:,2:nx) = psi__r(:,2:nx) 
+           !psi_l(:,2:nx) = psi__r(:,2:nx)
+           psi_l(:,2:nx) = psi__r(:,2:nx) + half*dtodx*flx(size(u,1)+1:,2:nx) ! here there should be psi_flux?
            psi_l(:,1) = psi__l(:,2)
-           psi_r(:,1:nx-1) = psi__l(:,2:nx)
+           !psi_r(:,1:nx-1) = psi__l(:,2:nx)
+           psi_r(:,1:nx-1) = psi__l(:,2:nx) + half*dtodx*flx(size(u,1)+1:,2:nx) ! here there should be psi_flux?
            psi_r(:,nx) = psi__r(:,nx-1)
            
            ql = utoq(u_l,b_cc_l)
@@ -693,18 +730,23 @@ contains
 
         end subroutine ulr_fluxes_qlr
 
-        subroutine du_db(du, db)
+        !subroutine du_db(du, db)
+        subroutine du_db(du, db, dpsi)
 
            implicit none
 
            real, dimension(size(u,1),size(u,2)),       intent(out) :: du
            real, dimension(size(b_cc,1),size(b_cc,2)), intent(out) :: db
+           real, dimension(size(psi,1),size(psi,2)),   intent(out) :: dpsi
 
            du(:,2:nx) = dtodx*(flx(:,1:nx-1) - flx(:,2:nx))
            du(:,1) = du(:,2)
 
            db(:,2:nx) = dtodx*(mag_cc(:,1:nx-1) - mag_cc(:,2:nx))
            db(:,1) = db(:,2)
+
+           dpsi(:,2:nx) = dtodx*(psi_cc(:,1:nx-1) - psi_cc(:,2:nx))
+           dpsi(:,1) = dpsi(:,2)
 
         end subroutine du_db
 
@@ -775,6 +817,13 @@ contains
            if (size(w)>=4)  b_cc(:,2:nx) = b_cc(:,2:nx) + w(4) * db3(:,2:nx)
            b_cc(:,1) = b_cc(:,2)
            b_cc(:,nx) = b_cc(:,nx-1)
+
+           psi(:,2:nx) = psi(:,2:nx) + w(1) *dtodx * (psi_cc(:,1:nx-1) - psi_cc(:,2:nx))
+           if (size(w)>=2) psi(:,2:nx) = psi(:,2:nx) + w(2) * dpsi1(:,2:nx)
+           if (size(w)>=3) psi(:,2:nx) = psi(:,2:nx) + w(3) * dpsi2(:,2:nx)
+           if (size(w)>=4) psi(:,2:nx) = psi(:,2:nx) + w(4) * dpsi3(:,2:nx)
+           psi(:,1) = psi(:,2)
+           psi(:,nx) = psi(:,nx-1)
 
            deallocate(w)
 
