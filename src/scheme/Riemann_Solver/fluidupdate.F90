@@ -52,7 +52,7 @@ contains
     use dataio_pub,     only: halfstep, die, warn
     use domain,         only: dom, is_refined
     use fluxlimiters,   only: set_limiters
-    use global,         only: skip_sweep, dt, dtm, t, limiter, limiter_b, force_cc_mag
+    use global,         only: skip_sweep, dt, dtm, t, limiter, limiter_b, limiter_p, force_cc_mag
     use hdc,            only: update_chspeed
     use mpisetup,       only: master
     use user_hooks,     only: problem_customize_solution
@@ -80,7 +80,7 @@ contains
     halfstep = .false.
     if (first_run) then
        dtm = 0.0
-       call set_limiters(limiter, limiter_b)
+       call set_limiters(limiter, limiter_b, limiter_p)
        if (master) call warn("[fluid_update] This is an experimental implementation of the Riemann solver. Expect unexpected.")
     else
        dtm = dt
@@ -580,7 +580,7 @@ contains
 
            use constants,  only: half, xdim, zdim
            use dataio_pub, only: die
-           use fluxlimiters, only: flimiter, blimiter
+           use fluxlimiters, only: flimiter, blimiter, plimiter
 
            implicit none
 
@@ -616,11 +616,11 @@ contains
            endif
 
            if (present(pp)) then
-              dp  = blimiter(psi + pp)
+              dp  = plimiter(psi + pp)
               psi__l = psi + pp - half*dp
               psi__r = psi + pp + half*dp
            else
-              dp  = blimiter(psi)
+              dp  = plimiter(psi)
               psi__l = psi - half*dp
               psi__r = psi + half*dp
            endif
