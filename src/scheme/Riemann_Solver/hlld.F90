@@ -46,7 +46,7 @@ module hlld
   implicit none
 
   private
-  public :: riemann_hlld, fluxes!, chspeed
+  public :: riemann_hlld, fluxes, glm_psi_flux!, chspeed
 
 contains
 
@@ -122,6 +122,34 @@ contains
 
   end function fluxes
 
+  !------------------------------------------------------------------------------------------------------------------------------------------------
+
+#ifdef GLM
+  function glm_psi_flux(psi, b_cc) result(gpf)
+
+    use constants,  only: half, xdim, ydim, zdim
+    use fluidindex, only: flind
+    use fluidtypes, only: component_fluid
+    use hdc,        only: chspeed
+
+    implicit none
+
+    real, dimension(:,:), intent(in) :: psi
+    real, dimension(:,:), intent(in) :: b_cc
+
+    real, dimension(size(psi,1)+size(b_cc,1),size(psi,2)) :: gpf
+    class(component_fluid), pointer                       :: fl
+    integer                                               :: ip
+
+    !do ip = 1, flind%fluids
+    !   fl => flind%all_fluids(ip)%fl
+    !   if(fl%is_magnetised) then
+    gpf(:,:) = chspeed**2*(b_cc(xdim:zdim,:))
+     !  end if
+    return
+
+  end function glm_psi_flux
+#endif
   !-------------------------------------------------------------------------------------------------------------------------------------------------
 
   !subroutine riemann_hlld(n,f,ul,ur,b_cc,b_ccl,b_ccr,gamma)
@@ -175,8 +203,6 @@ contains
     has_energy = (ubound(ul, dim=1) >= ien)
     ue = 0.
 
-    !write(*,*) "chs", chspeed
-    
      do i = 1,n
 
        ! Left and right states of magnetic pressure
@@ -258,7 +284,6 @@ contains
           b_ccrf(xdim) = half*( (b_ccl(xdim,i)+b_ccr(xdim,i) - (psi_r(1,i)-psi_l(1,i))/chspeed ) )
           psi_lf(1,i) = half*( (psi_r(1,i)+psi_l(1,i)) - chspeed*(b_ccr(xdim,i)-b_ccl(xdim,i))  )
           psi_rf(1,i) = half*( (psi_r(1,i)+psi_l(1,i)) - chspeed*(b_ccr(xdim,i)-b_ccl(xdim,i))  )
-          !write(*,*) "psilf", psi_lf(1,i)
 #endif
           ! Speed of contact discontinuity Eq. 38
           ! Total left and right states of pressure, so prr and prl sm_nr/sm_dr

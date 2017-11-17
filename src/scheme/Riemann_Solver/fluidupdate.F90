@@ -700,7 +700,10 @@ contains
 
         subroutine ulr_fluxes_qlr
 
-           use hlld,       only: fluxes
+          use hlld,       only: fluxes
+#ifdef GLM
+          use hlld,       only: glm_psi_flux
+#endif
 
            implicit none
 
@@ -718,13 +721,13 @@ contains
            b_cc_r(:,1:nx-1) = b_ccl(:,2:nx) + half*dtodx*flx(size(u,1)+1:,2:nx)
            b_cc_r(:,nx) = b_cc_r(:,nx-1)
 
-           !psi_l(:,2:nx) = psi__r(:,2:nx)
-           psi_l(:,2:nx) = psi__r(:,2:nx) + half*dtodx*flx(size(u,1)+1:,2:nx) ! here there should be psi_flux?
+#ifdef GLM
+           psi_flux = glm_psi_flux(psi__l,b_ccl) - glm_psi_flux(psi__r,b_ccr)
+           psi_l(:,2:nx) = psi__r(:,2:nx) + half*dtodx*psi_flux(size(psi,1)+1:,2:nx) 
            psi_l(:,1) = psi__l(:,2)
-           !psi_r(:,1:nx-1) = psi__l(:,2:nx)
-           psi_r(:,1:nx-1) = psi__l(:,2:nx) + half*dtodx*flx(size(u,1)+1:,2:nx) ! here there should be psi_flux?
+           psi_r(:,1:nx-1) = psi__l(:,2:nx) + half*dtodx*psi_flux(size(psi,1)+1:,2:nx) 
            psi_r(:,nx) = psi__r(:,nx-1)
-           
+#endif
            ql = utoq(u_l,b_cc_l)
            qr = utoq(u_r,b_cc_r)
 
