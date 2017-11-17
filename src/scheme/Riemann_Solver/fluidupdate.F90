@@ -711,7 +711,6 @@ contains
 
         end subroutine ulr_fluxes_qlr
 
-        !subroutine du_db(du, db)
         subroutine du_db(du, db, dpsi)
 
            implicit none
