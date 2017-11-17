@@ -664,12 +664,12 @@ contains
 
            if(present(dpsi)) then
               psi_l = psi__l + dpsi
-              psi_r(:,1:nx-1) = psi__l(:,2:nx) + psi(:,2:nx)
+              psi_r(:,1:nx-1) = psi__l(:,2:nx) + dpsi(:,2:nx)
            else
               psi_l = psi__r
-              psi_r(:,1:nx-1) = psi__l(:,2:nx)
+              psi_r(:,1:nx-1) = psi_l(:,2:nx)
            endif
-           psi_r(:,nx) = psi__r(:,nx-1)
+           psi_r(:,nx) = psi_r(:,nx-1)
 
            ql = utoq(u_l,b_cc_l)
            qr = utoq(u_r,b_cc_r)
@@ -678,10 +678,7 @@ contains
 
         subroutine ulr_fluxes_qlr
 
-          use hlld,       only: fluxes
-#ifdef GLM
-          use hlld,       only: glm_psi_flux
-#endif
+          use hlld,       only: fluxes, glm_psi_flux
 
            implicit none
 
@@ -702,9 +699,11 @@ contains
 #ifdef GLM
            psi_flux = glm_psi_flux(psi__l,b_ccl) - glm_psi_flux(psi__r,b_ccr)
            psi_l(:,2:nx) = psi__r(:,2:nx) + half*dtodx*psi_flux(size(psi,1):,2:nx)
-           psi_l(:,1) = psi__l(:,2)
+           !psi_l(:,1) = psi__l(:,2)
+           psi_l(:,1) = psi_l(:,2)
            psi_r(:,1:nx-1) = psi__l(:,2:nx) + half*dtodx*psi_flux(size(psi,1):,2:nx)
-           psi_r(:,nx) = psi__r(:,nx-1)
+           !psi_r(:,nx) = psi__r(:,nx-1)
+           psi_r(:,nx) = psi_r(:,nx-1)
 #endif
            ql = utoq(u_l,b_cc_l)
            qr = utoq(u_r,b_cc_r)
@@ -725,8 +724,10 @@ contains
            db(:,2:nx) = dtodx*(mag_cc(:,1:nx-1) - mag_cc(:,2:nx))
            db(:,1) = db(:,2)
 
+#ifdef GLM
            dpsi(:,2:nx) = dtodx*(psi_cc(:,1:nx-1) - psi_cc(:,2:nx))
            dpsi(:,1) = dpsi(:,2)
+#endif
 
         end subroutine du_db
 
@@ -798,12 +799,14 @@ contains
            b_cc(:,1) = b_cc(:,2)
            b_cc(:,nx) = b_cc(:,nx-1)
 
+#ifdef GLM
            psi(:,2:nx) = psi(:,2:nx) + w(1) *dtodx * (psi_cc(:,1:nx-1) - psi_cc(:,2:nx))
            if (size(w)>=2) psi(:,2:nx) = psi(:,2:nx) + w(2) * dpsi1(:,2:nx)
            if (size(w)>=3) psi(:,2:nx) = psi(:,2:nx) + w(3) * dpsi2(:,2:nx)
            if (size(w)>=4) psi(:,2:nx) = psi(:,2:nx) + w(4) * dpsi3(:,2:nx)
            psi(:,1) = psi(:,2)
            psi(:,nx) = psi(:,nx-1)
+#endif           
 
            deallocate(w)
 
