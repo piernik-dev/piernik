@@ -663,15 +663,11 @@ contains
            b_cc_r(:,nx) = b_cc_r(:,nx-1)
 
            if(present(dpsi)) then
-
-              psi_l = psi__l + dpsi
-
               psi_l = psi__r + dpsi
-
               psi_r(:,1:nx-1) = psi__l(:,2:nx) + dpsi(:,2:nx)
            else
               psi_l = psi__r
-              psi_r(:,1:nx-1) = psi_l(:,2:nx)
+              psi_r(:,1:nx-1) = psi__l(:,2:nx)
            endif
            psi_r(:,nx) = psi_r(:,nx-1)
 
@@ -703,10 +699,6 @@ contains
 #ifdef GLM
            psi_flux = glm_psi_flux(psi__l,b_ccl) - glm_psi_flux(psi__r,b_ccr)
            psi_l(:,2:nx) = psi__r(:,2:nx) + half*dtodx*psi_flux(size(psi,1):,2:nx)
-
-           
-           psi_l(:,1) = psi_l(:,2)
-           psi_r(:,1:nx-1) = psi__l(:,2:nx) + half*dtodx*psi_flux(size(psi,1):,2:nx)
            
            psi_l(:,1) = psi_l(:,2)
            psi_r(:,1:nx-1) = psi__l(:,2:nx) + half*dtodx*psi_flux(size(psi,1):,2:nx)
