@@ -472,7 +472,6 @@ contains
      real, dimension(size(u,1),size(u,2)), target       :: flx, ql, qr
      real, dimension(size(u,1),size(u,2))               :: ul, ur, du1, du2, du3
      real, dimension(size(psi,1),size(psi,2)), target   :: psi_l, psi_r, psi_flux
-     !real, dimension(1,size(psi,2)), target             :: psi_l, psi_r, psi_flux
      real, dimension(size(psi,1),size(psi,2)),target    :: psi_cc
      real, dimension(size(psi,1),size(psi,2))           :: psi__l, psi__r, dpsi1, dpsi2, dpsi3
      integer                                            :: nx
@@ -493,9 +492,7 @@ contains
            call slope
            call ulr_to_qlr                     ! Just the slope is used to feed 1st call to Riemann solver
            call riemann_wrap                   ! Now we advance the left and right states by half timestep.
-           !call du_db(du1, db1)                ! The slope is already calculated and can be reused
-           !call ulr_to_qlr(half*du1, half*db1)
-           call du_db(du1, db1,dpsi1)
+           call du_db(du1, db1,dpsi1)               ! The slope is already calculated and can be reused
            call ulr_to_qlr(half*du1, half*db1,half*dpsi1)
            call riemann_wrap                   ! second call for Riemann problem uses states evolved to half timestep
            call update
@@ -503,8 +500,6 @@ contains
            call slope
            call ulr_to_qlr
            call riemann_wrap
-           !call du_db(du1, db1)
-           !call slope(half*du1, half*db1)
            call du_db(du1, db1,dpsi1)
            call slope(half*du1, half*db1,half*dpsi1)
            call ulr_to_qlr
@@ -514,9 +509,7 @@ contains
            call slope
            call ulr_fluxes_qlr
            call riemann_wrap                   ! MUSCL-Hancock is used to feed 1st call to Riemann solver
-           !call du_db(du1, db1)                ! Now we can calculate state for half-timestep and recalculate slopes
-           !call ulr_to_qlr(half*du1, half*db1)
-           call du_db(du1, db1,dpsi1)
+           call du_db(du1, db1,dpsi1)          ! Now we can calculate state for half-timestep and recalculate slopes
            call ulr_to_qlr(half*du1, half*db1,half*dpsi1)
            call riemann_wrap                   ! second call for Riemann problem needs just the slope from states evolved to half timestep
            call update
@@ -524,8 +517,6 @@ contains
            call slope
            call ulr_fluxes_qlr
            call riemann_wrap
-           !call du_db(du1, db1)
-           !call slope(half*du1, half*db1)
            call du_db(du1, db1,dpsi1)
            call slope(half*du1,half*db1,half*dpsi1)
            call ulr_to_qlr
@@ -540,8 +531,6 @@ contains
            call slope
            call ulr_to_qlr
            call riemann_wrap
-           !call du_db(du1, db1)
-           !call ulr_to_qlr(du1, db1)
            call du_db(du1, db1,dpsi1)
            call ulr_to_qlr(du1, db1,dpsi1)
            call riemann_wrap
@@ -550,8 +539,6 @@ contains
            call slope
            call ulr_to_qlr
            call riemann_wrap
-           !call du_db(du1, db1)
-           !call ulr_to_qlr(half*du1, half*db1)
            call du_db(du1, db1,dpsi1)
            call ulr_to_qlr(half*du1, half*db1,half*dpsi1)
            call riemann_wrap
@@ -560,8 +547,6 @@ contains
            call du_db(du2, db2,dpsi2)
            call ulr_to_qlr(half*du2, half*db2,half*dpsi2)
            call riemann_wrap
-           !call du_db(du3, db3)
-           !call ulr_to_qlr(du3, db3)
            call du_db(du3, db3,dpsi3)
            call ulr_to_qlr(du3, db3,dpsi3)
            call riemann_wrap
@@ -570,20 +555,14 @@ contains
            call slope
            call ulr_to_qlr
            call riemann_wrap
-           !call du_db(du1, db1)
-           !call slope(half*du1, half*db1)
            call du_db(du1, db1,dpsi1)
            call slope(half*du1, half*db1, half*dpsi1)
            call ulr_to_qlr
            call riemann_wrap
-           !call du_db(du2, db2)
-           !call slope(half*du2, half*db2)
            call du_db(du2, db2,dpsi2)
            call slope(half*du2, half*db2, half*dpsi2)
            call ulr_to_qlr
            call riemann_wrap
-           !call du_db(du3, db3)
-           !call slope(du3, db3)
            call du_db(du3, db3, dpsi3)
            call slope(du3, db3, dpsi3)
            call ulr_to_qlr
@@ -649,7 +628,6 @@ contains
 
         end subroutine slope
 
-        !subroutine ulr_to_qlr(du, db)
         subroutine ulr_to_qlr(du, db, dpsi)
 
            use dataio_pub, only: die
