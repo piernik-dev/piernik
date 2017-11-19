@@ -669,7 +669,7 @@ contains
               psi_l = psi__r
               psi_r(:,1:nx-1) = psi__l(:,2:nx)
            endif
-           psi_r(:,nx) = psi__r(:,nx-1)
+           psi_r(:,nx) = psi_r(:,nx-1)
 
            ql = utoq(u_l,b_cc_l)
            qr = utoq(u_r,b_cc_r)
