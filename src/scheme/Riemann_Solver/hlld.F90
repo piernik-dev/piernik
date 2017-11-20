@@ -127,9 +127,9 @@ contains
 #ifdef GLM
   function glm_psi_flux(psi, b_cc) result(gpf)
 
-    use constants,  only: half, xdim, ydim, zdim, zero
+    use constants,  only: half, xdim, zdim, zero
     use hdc,        only: chspeed
-    use fluids_pub, only: has_ion, has_dst, has_neu
+    use fluids_pub, only: has_ion
 
     implicit none
 
@@ -283,7 +283,7 @@ contains
           b_ccrf(xdim) = half*( (b_ccl(xdim,i)+b_ccr(xdim,i) - (psi_r(1,i)-psi_l(1,i))/chspeed ) )
           psi_lf(:,i) = half*( (psi_r(:,i)+psi_l(:,i)) - chspeed*(b_ccr(xdim,i)-b_ccl(xdim,i))  )
           psi_rf(:,i) = half*( (psi_r(:,i)+psi_l(:,i)) - chspeed*(b_ccr(xdim,i)-b_ccl(xdim,i))  )
-#endif
+#endif /* GLM */
           ! Speed of contact discontinuity Eq. 38
           ! Total left and right states of pressure, so prr and prl sm_nr/sm_dr
           if ((sr - ur(imx,i))*ur(idn,i) .equals. (sl - ul(imx,i))*ul(idn,i)) then

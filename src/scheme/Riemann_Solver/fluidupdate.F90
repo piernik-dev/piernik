@@ -704,7 +704,7 @@ contains
            psi_r(:,1:nx-1) = psi__l(:,2:nx) + half*dtodx*psi_flux(size(psi,1):,2:nx)
 
            psi_r(:,nx) = psi_r(:,nx-1)
-#endif
+#endif /* GLM */
            ql = utoq(u_l,b_cc_l)
            qr = utoq(u_r,b_cc_r)
 
@@ -727,7 +727,7 @@ contains
 #ifdef GLM
            dpsi(:,2:nx) = dtodx*(psi_cc(:,1:nx-1) - psi_cc(:,2:nx))
            dpsi(:,1) = dpsi(:,2)
-#endif
+#endif /*GLM */
 
         end subroutine du_db
 
@@ -806,7 +806,7 @@ contains
            if (size(w)>=4) psi(:,2:nx) = psi(:,2:nx) + w(4) * dpsi3(:,2:nx)
            psi(:,1) = psi(:,2)
            psi(:,nx) = psi(:,nx-1)
-#endif           
+#endif /* GLM */        
 
            deallocate(w)
 
