@@ -72,6 +72,8 @@ module cresp_crspectrum
   real(kind=8), dimension(1:2) :: vrtl_n, vrtl_e
 ! lower / upper energy needed for bin activation
   real(kind=8), save :: e_threshold_lo, e_threshold_up
+! if one bin, switch off cutoff p approximation
+  integer  :: approx_p_lo, approx_p_up
 !-------------------------------------------------------------------------------------------------
 !
 contains
@@ -99,6 +101,9 @@ contains
         index_changed = .false.
         empty_cell    = .false.
         
+        approx_p_lo = e_small_approx_p_lo
+        approx_p_up = e_small_approx_p_up
+
         p_lo_next = zero
         p_up_next = zero
         if (present(p_out)) then
@@ -130,13 +135,13 @@ contains
 ! Here values of distribution function f for active left edges (excluding upper momentum boundary) are computed
         f = nq_to_f(p(0:ncre-1), p(1:ncre), n(1:ncre), q(1:ncre), active_bins)
         
-        if (e_small_approx_p_up .gt. 0 .and. i_up .ne. 1) then ! momenta values stored only within module - for tests; will not work in PIERNIK
+        if (approx_p_up .gt. 0 .and. i_up .ne. 1) then         ! momenta values stored only within module - for tests; will not work in PIERNIK
             call get_fqp_up(solve_fail_up)
         else                                                   ! spectrum beyond the fixed momentum grid
             p_up = p_fix(i_up)
             p(i_up) = p_fix(i_up)
         endif
-        if (e_small_approx_p_lo .gt. 0 .and. (i_lo+1) .ne. ncre) then ! momenta values stored only within module - for tests; will not work in PIERNIK
+        if (approx_p_lo .gt. 0 .and. (i_lo+1) .ne. ncre) then  ! momenta values stored only within module - for tests; will not work in PIERNIK
             call get_fqp_lo(solve_fail_lo)
         else                                                   ! spectrum beyond the fixed momentum grid
             p_lo = p_fix(i_lo)
@@ -170,7 +175,7 @@ contains
             endif
             call cresp_find_active_bins
         endif
-        
+
         call cresp_update_bin_index(dt, p_lo, p_up, p_lo_next, p_up_next)      ! FIXME - must be modified in the future if this branch is connected to Piernik
 ! Compute fluxes through fixed edges in time period [t,t+dt], using f, q, p_lo and p_up at [t]
 ! Note that new [t+dt] values of p_lo and p_up in case new fixed edges appear or disappear.
@@ -215,7 +220,7 @@ contains
         write (*,'(A5, 50E18.9)') "    f", f
         write (*,'(A15,2E18.9,A3,2E18.9)') "virtual e & n", vrtl_e, " | ", vrtl_n
         print *, " "
-        if ( (e_small_approx_p_lo+e_small_approx_p_up) .gt. 0 ) then
+        if ( (approx_p_lo+approx_p_up) .gt. 0 ) then
             print '(A36,I5,A6,I3)', "NR_2dim:  convergence failure: p_lo", fail_count_NR_2dim(1), ", p_up", fail_count_NR_2dim(2)
             print '(A36,I5,A6,I3)', "NR_2dim:interpolation failure: p_lo", fail_count_interpol(1), ", p_up", fail_count_interpol(2)
             print '(A36,I5,A6,I3)', "NR_2dim:  no solution failure: p_lo", fail_count_no_sol(1), ", p_up", fail_count_no_sol(2)
@@ -252,7 +257,7 @@ contains
 ! all the procedures below are called by cresp_update_cell subroutine or the driver
 !-------------------------------------------------------------------------------------------------
   subroutine find_i_bound(exit_code)
-  use initcrspectrum, only: e_small_approx_p_lo, e_small_approx_p_up, ncre, e_small
+  use initcrspectrum, only: ncre, e_small
   use constants, only: zero
   implicit none
     integer(kind=4) :: i
@@ -285,7 +290,7 @@ contains
             call transfer_quantities(e(i_up), vrtl_e(2))
             call transfer_quantities(n(i_up), vrtl_n(2))
         endif
-        if ( (e_small_approx_p_lo .eq. 1) .or. (e_small_approx_p_up .eq. 1) ) then ! TODO - this might need slight change of condition
+        if ( (approx_p_lo .eq. 1) .or. (approx_p_up .eq. 1) ) then ! TODO - this might need slight change of condition
             call threshold_energy_check_lo(e, n, i_lo_changed, .false.)
             call threshold_energy_check_up(e, n, i_up_changed, .false.)
             if (i_lo_changed) i_lo = i_lo + 1
@@ -338,13 +343,19 @@ contains
   end subroutine cresp_find_active_bins
 !---------------! Compute p for all active edges !---------------------------------------------------  
   subroutine cresp_organize_p
-  use initcrspectrum, only: p_fix, e_small_approx_p_lo, e_small_approx_p_up
+  use initcrspectrum, only: p_fix, ncre
   use constants, only: zero
   implicit none
         p = zero
         p(fixed_edges) = p_fix(fixed_edges)
-        p(i_lo) = p_lo * (1 - e_small_approx_p_lo )
-        p(i_up) = p_up * (1 - e_small_approx_p_up ) ! cutoff momenta are going to be evaluated with use of get_fqp_lo and get_fqp_up if e_small_approx_* is set    
+        p(i_lo) = p_lo * (1 - approx_p_lo )
+        p(i_up) = p_up * (1 - approx_p_up ) ! cutoff momenta are going to be evaluated with use of get_fqp_lo and get_fqp_up if e_small_approx_* is set
+        if ( num_active_bins .eq. 1 .and. (i_lo .gt. 0 .and. i_up .lt. ncre) ) then
+            approx_p_lo = 0
+            approx_p_up = 0
+            p_lo = p_fix(i_lo) ; p(i_lo) = p_fix(i_lo) ! one bin -> momentum fixed grid to boundary momenta
+            p_up = p_fix(i_up) ; p(i_up) = p_fix(i_up) ! one bin -> momentum fixed grid to boundary momenta
+        endif
   end subroutine cresp_organize_p
 !-----------------------------------------------------------------------
   subroutine cresp_detect_negative_content ! Diagnostic measure - negative values should not show up:
@@ -481,6 +492,9 @@ contains
         u_d = sptab%ud
         all_edges = I_ZERO
         
+        approx_p_lo = e_small_approx_p_lo
+        approx_p_up = e_small_approx_p_up
+        
         init_e = zero
         init_n = zero
 
@@ -608,8 +622,8 @@ contains
         crel%i_up = i_up
    
         if ( e_small_approx_init_cond .gt. 0) then
-            if ( (e_small_approx_p_up + e_small_approx_init_cond ) .gt. 0 )  call get_fqp_up(exit_code)
-            if ( (e_small_approx_p_lo + e_small_approx_init_cond ) .gt. 0 )  call get_fqp_lo(exit_code)
+            if ( (approx_p_up + e_small_approx_init_cond ) .gt. 0 )  call get_fqp_up(exit_code)
+            if ( (approx_p_lo + e_small_approx_init_cond) .gt. 0 )  call get_fqp_lo(exit_code)
     
             i_lo_ch = int(floor(log10(p_lo/p_fix(1))/w)) + 1
             i_lo_ch = max(0, i_lo_ch)
@@ -989,7 +1003,7 @@ contains
 !-------------------------------------------------------------------------------------------------
 
   subroutine ne_to_q(n, e, q)
-   use initcrspectrum, only: e_small_approx_p_lo, e_small_approx_p_up, ncre
+   use initcrspectrum, only: ncre
    use constants, only: zero
    use cresp_variables, only: clight ! use units, only: clight
    use cresp_NR_method, only: compute_q
@@ -1002,7 +1016,7 @@ contains
 
     q = zero
 
-    do i = max(i_lo,1) + e_small_approx_p_lo, i_up - e_small_approx_p_up ! 1, ncre
+    do i = max(i_lo,1) + approx_p_lo, i_up - approx_p_up ! 1, ncre
 
         if (e(i) .gt. zero .and. p(i-1) .gt. zero) then
           exit_code = .true.
@@ -1253,12 +1267,12 @@ contains
   end subroutine transfer_quantities
 !----------------------------------------------------------------------------------------------------
   subroutine threshold_energy_check_lo(e_tab, n_tab, e_lo_lt_e_small, solution_failed)
-  use initcrspectrum, only: e_small, e_small_approx_p_lo
+  use initcrspectrum, only: e_small
   use constants, only: zero
   implicit none
     real(kind=8), dimension(:), intent(inout) :: e_tab, n_tab
     logical :: e_lo_lt_e_small, solution_failed
-      if ( solution_failed .or. ((e_tab(i_lo+1) .le. e_small) .and. (e_small_approx_p_lo .eq. 1))) then
+      if ( solution_failed .or. ((e_tab(i_lo+1) .le. e_small) .and. (approx_p_lo .eq. 1))) then
         vrtl_e(1) = vrtl_e(1) + e_tab(i_lo+1)  ; e_tab(i_lo+1) = zero
         vrtl_n(1) = vrtl_n(1) + n_tab(i_lo+1)  ; n_tab(i_lo+1) = zero
 !         print *, "e_tab(i_lo+1) close to e_small, activating virtual n and e"
@@ -1273,12 +1287,12 @@ contains
   end subroutine threshold_energy_check_lo
 !----------------------------------------------------------------------------------------------------
   subroutine threshold_energy_check_up(e_tab, n_tab, e_up_lt_e_small, solution_failed)
-  use initcrspectrum, only: e_small, e_small_approx_p_up
+  use initcrspectrum, only: e_small
   use constants, only: zero
   implicit none
     real(kind=8), dimension(:), intent(inout) :: e_tab, n_tab
     logical :: e_up_lt_e_small, solution_failed
-    if ( solution_failed .or. ((e_tab(i_up) .le. e_small) .and. (e_small_approx_p_up .eq. 1))) then
+    if ( solution_failed .or. ((e_tab(i_up) .le. e_small) .and. (approx_p_up .eq. 1))) then
         vrtl_e(2) = vrtl_e(2) + e_tab(i_up)  ; e_tab(i_up) = zero
         vrtl_n(2) = vrtl_n(2) + n_tab(i_up)  ; n_tab(i_up) = zero
 !         print *, "e_tab(i_up) close to e_small, activating virtual n and e"
