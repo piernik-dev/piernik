@@ -20,7 +20,7 @@ contains
   use constants,      only: xdim, ydim, zdim, zero
   use grid_cont,      only: grid_container
   use cresp_crspectrum, only:cresp_update_cell, printer
-  use initcrspectrum, only: spec_mod_trms, virtual_e, virtual_n
+  use initcrspectrum, only: spec_mod_trms, virtual_e, virtual_n, eps, prevent_neg_e
   use named_array_list, only: qna
   use crhelpers,      only: divv_n
   use func,           only: emag, ekin, operator(.equals.), operator(.notequals.)
@@ -40,6 +40,14 @@ contains
             do k = cg%ks, cg%ke
                 do j = cg%js, cg%je
                     do i = cg%is, cg%ie
+                        if ( prevent_neg_e ) then ! e = eps where it dropped below zero due to diffusion algorithm - TEMP workaround
+                            where (cg%u(iarr_cre_n, i, j, k) .lt. zero)
+                                cg%u(iarr_cre_n, i, j, k) = eps
+                            endwhere
+                            where (cg%u(iarr_cre_e, i, j, k) .lt. zero)
+                                cg%u(iarr_cre_e, i, j, k) = eps
+                            endwhere
+                        endif
                         sptab%ud = 0.0 ; sptab%ub = 0.0 ; sptab%ucmb = 0.0
                         n_cell    = cg%u(iarr_cre_n, i, j, k)
                         e_cell    = cg%u(iarr_cre_e, i, j, k)
@@ -71,7 +79,7 @@ contains
                             virtual_e, virtual_n, e_small, e_small_approx_p_lo, e_small_approx_p_up
    use initcosmicrays, only: iarr_crn
    use cresp_crspectrum, only: cresp_init_state, cresp_allocate_all, printer, e_threshold_lo, e_threshold_up, &
-                    & fail_count_interpol, fail_count_no_sol, fail_count_NR_2dim, fail_count_comp_q
+                        & fail_count_interpol, fail_count_no_sol, fail_count_NR_2dim, fail_count_comp_q
    use units,          only: clight
    implicit none
     integer                         :: i, j, k

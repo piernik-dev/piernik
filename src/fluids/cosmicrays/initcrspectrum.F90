@@ -33,6 +33,7 @@ module initcrspectrum
  logical            :: NR_run_refine_pf  = .false.      ! < enables "refine_grids" subroutines that fill empty spaces on the solution grid
  logical            :: NR_refine_solution_q = .false.    ! < enables NR_1D refinement for value of interpolated "q" value
  logical            :: NR_refine_solution_pf = .false.  ! < enables NR_2D refinement for interpolated values of "p" and "f". Note - algorithm tries to refine values if interpolation was unsuccessful.
+ logical            :: prevent_neg_e = .true.   ! < forces e,n=eps where e or n drops below zero due to diffusion algorithm (TEMP workaround)
  real(kind=8)       :: tol_f = 1.0e-11          ! < tolerance for f abs. error in NR algorithm
  real(kind=8)       :: tol_x = 1.0e-11          ! < tolerance for x abs. error in NR algorithm
  real(kind=8)       :: tol_f_1D = 1.0e-14 ! < tolerance for f abs. error in NR algorithm (1D)
