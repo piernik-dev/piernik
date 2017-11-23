@@ -90,6 +90,7 @@ contains
       use constants, only: xdim, ydim, zdim, half
       use domain,    only: dom
       use func,      only: emag
+      use global,    only: force_cc_mag
 #else /* !MAGNETIC */
       use constants, only: zero
 #endif /* !MAGNETIC */
@@ -107,11 +108,15 @@ contains
       real :: pmag, p, ps
 
 #ifdef MAGNETIC
-      bx = half*(b(xdim,i,j,k) + b(xdim, i+dom%D_x, j,         k        ))
-      by = half*(b(ydim,i,j,k) + b(ydim, i,         j+dom%D_y, k        ))
-      bz = half*(b(zdim,i,j,k) + b(zdim, i,         j,         k+dom%D_z))
+      if (force_cc_mag) then
+         pmag = emag(b(xdim,i,j,k), b(ydim,i,j,k), b(zdim,i,j,k))
+      else
+         bx = half*(b(xdim,i,j,k) + b(xdim, i+dom%D_x, j,         k        ))
+         by = half*(b(ydim,i,j,k) + b(ydim, i,         j+dom%D_y, k        ))
+         bz = half*(b(zdim,i,j,k) + b(zdim, i,         j,         k+dom%D_z))
 
-      pmag = emag(bx, by, bz)
+         pmag = emag(bx, by, bz)
+      end if
 #else /* !MAGNETIC */
       ! all_mag_boundaries has not been called so we cannot trust b(xdim, ie+dom%D_x:), b(ydim,:je+dom%D_y and b(zdim,:,:, ke+dom%D_z
       pmag = zero
