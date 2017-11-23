@@ -50,11 +50,12 @@ module timestep_cresp
   implicit none
     real(kind=8), dimension(:), intent(in) :: e_cell, n_cell
     integer :: evaluate_i_up, i
+        evaluate_i_up = 0
         do i=ncre, 1, -1  ! we start counting from ncre since upper cutoff is rather expected at higher index numbers. Might change it though.
             if (e_cell(i) .gt. e_small .and. n_cell(i) .gt. zero) then ! better compare to zero or to eps?
                 evaluate_i_up = i
-                return
-            endif  ! no need for other conditions - if there IS a bin that has literally no energy, the algorithm will most likely crash.
+                return ! if cell is empty, evaluate_i_up returns 0, which is handled by cresp_timestep
+            endif
         enddo
   end function evaluate_i_up
 
@@ -75,7 +76,9 @@ module timestep_cresp
         i_up_cell = I_ZERO
         dt_cre_ud = huge(one)
         dt_cre_ub = huge(one)
-        if (maxval(e_cell) .gt. e_small) then ! any timestep evaluation makes sense only if there's any information to be migrated between bins
+        i_up_cell = evaluate_i_up(e_cell, n_cell)
+! cell is assumed empty if evaluate_i_up over whole ncre range returns 0 -> nothing to do here
+        if (i_up_cell .gt. 0) then
 ! Adiabatic cooling timestep:
             if (abs(sptab%ud) .gt. zero) then
                 dt_cre_ud = cfl_cre * w / sptab%ud
@@ -83,7 +86,7 @@ module timestep_cresp
             endif
 ! Synchrotron cooling timestep (is dependant only on p_up, highest value of p):
             if (sptab%ub .gt. zero) then
-                i_up_cell = evaluate_i_up(e_cell, n_cell)
+!                 i_up_cell = evaluate_i_up(e_cell, n_cell)
                 p_u = approximate_p_up(n_cell, e_cell, i_up_cell)
                 dt_cre_ub = cfl_cre * w / (p_u * sptab%ub)
             endif
