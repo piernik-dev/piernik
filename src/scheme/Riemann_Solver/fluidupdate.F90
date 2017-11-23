@@ -414,22 +414,31 @@ contains
 
     real, dimension(size(cg%u,1), cg%n_(ddim)) :: u1d
     real, dimension(xdim:zdim, cg%n_(ddim))    :: b_cc1d
+#ifdef GLM
     real, dimension(1, cg%n_(ddim))            :: psi_d ! artificial rank-2 to conform to flux limiter interface
+#endif
     real, dimension(:,:), pointer              :: pu, pb
-    real, dimension(:), pointer                :: ppsi
     integer                                    :: i1, i2
-    integer                                    :: bi, psii
+    integer                                    :: bi
+#ifdef GLM
+    real, dimension(:), pointer                :: ppsi
+    integer                                    :: psii
+#endif
 
+#ifdef GLM
     if (force_cc_mag) then
        bi = wna%bi
     else
        bi = wna%bcci
     endif
+#endif
 
+#ifdef GLM
     psii = INVALID
     if (qna%exists(phi_n)) psii = qna%ind(phi_n)
     psi_d = 0.
     nullify(ppsi)
+#endif
 
     do i2 = cg%lhn(pdims(ddim, ORTHO2), LO), cg%lhn(pdims(ddim,ORTHO2), HI)
        do i1 = cg%lhn(pdims(ddim, ORTHO1), LO), cg%lhn(pdims(ddim, ORTHO1), HI)
@@ -465,15 +474,21 @@ contains
      real, dimension(:,:), intent(inout) :: u
      real, dimension(:,:), intent(inout) :: b_cc
      real,                 intent(in)    :: dtodx
+#ifdef GLM
      real, dimension(:,:), intent(inout) :: psi
+#endif
 
      real, dimension(size(b_cc,1),size(b_cc,2)), target :: b_cc_l, b_cc_r, mag_cc
      real, dimension(size(b_cc,1),size(b_cc,2))         :: b_ccl, b_ccr, db1, db2, db3
      real, dimension(size(u,1),size(u,2)), target       :: flx, ql, qr
      real, dimension(size(u,1),size(u,2))               :: ul, ur, du1, du2, du3
+
+#ifdef GLM
      real, dimension(size(psi,1),size(psi,2)), target   :: psi_l, psi_r, psi_flux
      real, dimension(size(psi,1),size(psi,2)),target    :: psi_cc
      real, dimension(size(psi,1),size(psi,2))           :: psi__l, psi__r, dpsi1, dpsi2, dpsi3
+#endif
+     
      integer                                            :: nx
 
      nx  = size(u,2)
@@ -586,11 +601,16 @@ contains
 
            real, optional, dimension(size(u,1),size(u,2)),       intent(in) :: uu
            real, optional, dimension(size(b_cc,1),size(b_cc,2)), intent(in) :: bb
+#ifdef GLM
            real, optional, dimension(size(psi,1),size(psi,2)),   intent(in) :: pp
+#endif
+           
 
            real, dimension(size(u,1),size(u,2))       :: du
            real, dimension(size(b_cc,1),size(b_cc,2)) :: db
+#ifdef GLM
            real, dimension(size(psi,1),size(psi,2))   :: dp
+#endif
 
            if ((present(uu) .neqv. present(bb)) .or. (present(bb) .neqv. present(pp))) &
                 call die("[fluidupdate:solve:slope] either none or all optional arguments must be present")
@@ -615,6 +635,7 @@ contains
               b_ccr = b_cc + half*db
            endif
 
+#ifdef GLM
            if (present(pp)) then
               dp  = plimiter(psi + pp)
               psi__l = psi + pp - half*dp
@@ -624,19 +645,22 @@ contains
               psi__l = psi - half*dp
               psi__r = psi + half*dp
            endif
+#endif
 
 
         end subroutine slope
 
         subroutine ulr_to_qlr(du, db, dpsi)
 
-           use dataio_pub, only: die
+          use dataio_pub, only: die
 
            implicit none
 
            real, optional, dimension(size(u,1),size(u,2)),       intent(in) :: du
            real, optional, dimension(size(b_cc,1),size(b_cc,2)), intent(in) :: db
+#ifdef GLM
            real, optional, dimension(size(psi,1),size(psi,2)),   intent(in) :: dpsi
+#endif
 
            real, dimension(size(u,1),size(u,2))               :: u_l, u_r
 
@@ -662,6 +686,7 @@ contains
            endif
            b_cc_r(:,nx) = b_cc_r(:,nx-1)
 
+#ifdef GLM
            if(present(dpsi)) then
               psi_l = psi__r + dpsi
               psi_r(:,1:nx-1) = psi__l(:,2:nx) + dpsi(:,2:nx)
@@ -670,6 +695,7 @@ contains
               psi_r(:,1:nx-1) = psi__l(:,2:nx)
            endif
            psi_r(:,nx) = psi_r(:,nx-1)
+#endif
 
            ql = utoq(u_l,b_cc_l)
            qr = utoq(u_r,b_cc_r)
@@ -678,7 +704,10 @@ contains
 
         subroutine ulr_fluxes_qlr
 
-          use hlld,       only: fluxes, glm_psi_flux
+          use hlld,       only: fluxes
+#ifdef GLM
+          use hdc,        only: glm_psi_flux
+#endif
 
            implicit none
 
@@ -699,10 +728,8 @@ contains
 #ifdef GLM
            psi_flux = glm_psi_flux(psi__l,b_ccl) - glm_psi_flux(psi__r,b_ccr)
            psi_l(:,2:nx) = psi__r(:,2:nx) + half*dtodx*psi_flux(size(psi,1):,2:nx)
-           
            psi_l(:,1) = psi_l(:,2)
            psi_r(:,1:nx-1) = psi__l(:,2:nx) + half*dtodx*psi_flux(size(psi,1):,2:nx)
-
            psi_r(:,nx) = psi_r(:,nx-1)
 #endif /* GLM */
            ql = utoq(u_l,b_cc_l)
@@ -716,7 +743,9 @@ contains
 
            real, dimension(size(u,1),size(u,2)),       intent(out) :: du
            real, dimension(size(b_cc,1),size(b_cc,2)), intent(out) :: db
+#ifdef GLM
            real, dimension(size(psi,1),size(psi,2)),   intent(out) :: dpsi
+#endif
 
            du(:,2:nx) = dtodx*(flx(:,1:nx-1) - flx(:,2:nx))
            du(:,1) = du(:,2)
@@ -733,7 +762,7 @@ contains
 
         subroutine riemann_wrap()
 
-           use constants,  only: xdim, zdim
+           use constants,  only: xdim, zdim, half
            use fluidindex, only: flind
            use fluidtypes, only: component_fluid
            use hlld,       only: riemann_hlld
@@ -744,7 +773,9 @@ contains
            class(component_fluid), pointer :: fl
            real, dimension(size(b_cc,1),size(b_cc,2)), target :: b0
            real, dimension(:,:), pointer :: p_flx, p_bcc, p_bccl, p_bccr, p_ql, p_qr
+#ifdef GLM
            real, dimension(:,:), pointer :: p_psi, p_psi_l, p_psi_r
+#endif
 
            do i = 1, flind%fluids
               fl    => flind%all_fluids(i)%fl
@@ -752,12 +783,14 @@ contains
               p_ql  => ql(fl%beg:fl%end,:)
               p_qr  => qr(fl%beg:fl%end,:)
               p_bcc => mag_cc(xdim:zdim,:)
+#ifdef GLM
               p_psi => psi_cc(:,:)
+              p_psi_l => psi_l(:,:)
+              p_psi_r => psi_r(:,:)
+#endif
               if (fl%is_magnetized) then
                  p_bccl => b_cc_l(xdim:zdim,:)
                  p_bccr => b_cc_r(xdim:zdim,:)
-                 p_psi_l => psi_l(:,:)
-                 p_psi_r => psi_r(:,:)
               else ! ignore all magnetic field
                  b0 = 0.
                  p_bccl => b0
