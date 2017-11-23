@@ -34,6 +34,8 @@ module initcrspectrum
  logical            :: NR_refine_solution_q = .false.    ! < enables NR_1D refinement for value of interpolated "q" value
  logical            :: NR_refine_solution_pf = .false.  ! < enables NR_2D refinement for interpolated values of "p" and "f". Note - algorithm tries to refine values if interpolation was unsuccessful.
  logical            :: prevent_neg_e = .true.   ! < forces e,n=eps where e or n drops below zero due to diffusion algorithm (TEMP workaround)
+ logical            :: test_spectrum_break   = .false.  ! < introduce break in the middle of the spectrum (to see how algorithm handles it), TEMP
+ 
  real(kind=8)       :: tol_f = 1.0e-11          ! < tolerance for f abs. error in NR algorithm
  real(kind=8)       :: tol_x = 1.0e-11          ! < tolerance for x abs. error in NR algorithm
  real(kind=8)       :: tol_f_1D = 1.0e-14 ! < tolerance for f abs. error in NR algorithm (1D)
@@ -143,12 +145,13 @@ module initcrspectrum
             p_fix_ratio = ten**w
             write (*,'(A22, 50E15.7)') 'Fixed momentum grid: ', p_fix
             write (*,'(A22, 50E15.7)') 'Bin p-width (log10): ', w
-            
+
             p_mid_fix = 0.0
             p_mid_fix(2:ncre-1) = sqrt(p_fix(1:ncre-2)*p_fix(2:ncre-1))
             p_mid_fix(1)    = p_mid_fix(2) / p_fix_ratio
             p_mid_fix(ncre) = p_mid_fix(ncre-1) * p_fix_ratio
             write (*,'(A22, 50E15.7)') 'Fixed mid momenta:   ',p_mid_fix(1:ncre)
+
 ! Input parameters check
             else
                 write (*,"(A10,I4,A96)") 'ncre   = ', ncre, &

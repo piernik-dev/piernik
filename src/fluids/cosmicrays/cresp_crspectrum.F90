@@ -25,6 +25,7 @@ module cresp_crspectrum
    logical, allocatable, dimension(:) :: is_cooling_edge, is_cooling_edge_next 
    logical, allocatable, dimension(:) :: is_heating_edge, is_heating_edge_next 
    logical, allocatable, dimension(:) :: is_active_bin,   is_active_bin_next
+   logical, allocatable, dimension(:) :: not_spectrum_break
 
 ! counters
   integer                           :: num_fixed_edges,   num_fixed_edges_next
@@ -32,6 +33,7 @@ module cresp_crspectrum
   integer                           :: num_active_bins,   num_active_bins_next
   integer                           :: num_cooling_edges_next
   integer                           :: num_heating_edges_next
+!   integer                           :: num_not_spectrum_break
 
 ! dynamic arrays
   integer, allocatable              :: fixed_edges(:),   fixed_edges_next(:)
@@ -130,7 +132,7 @@ contains
 
 ! Compute power indexes for each bin at [t] and f on left bin faces at [t] 
         f = zero; q=zero
-        call ne_to_q(n, e, q )
+        call ne_to_q(n, e, q, active_bins)
 
 ! Here values of distribution function f for active left edges (excluding upper momentum boundary) are computed
         f = nq_to_f(p(0:ncre-1), p(1:ncre), n(1:ncre), q(1:ncre), active_bins)
@@ -299,9 +301,9 @@ contains
   end subroutine find_i_bound
 !-------------------------------------------------------------------------------------------------
   subroutine cresp_find_active_bins
-   use constants, only: I_ONE, I_ZERO
-   use diagnostics, only: my_allocate_with_index
-   use initcrspectrum       , only: ncre
+   use constants,      only: I_ONE, I_ZERO, zero
+   use diagnostics,    only: my_allocate_with_index
+   use initcrspectrum, only: ncre, e_small
    implicit none
     integer :: i
       if(allocated(active_bins))  deallocate(active_bins)      
@@ -314,13 +316,18 @@ contains
       all_bins = (/ (i,i=I_ONE,ncre) /)
 
       is_active_bin = .false.
-      is_active_bin(i_lo+1:i_up) = .true.
+      is_active_bin(i_lo+1:i_up) = .true. ! unused if we use "not_spectrum_break"
 
       num_active_bins = count(is_active_bin)
       if (num_active_bins .gt. I_ZERO) then
         allocate(active_bins(num_active_bins))
+        not_spectrum_break(:) = .false.
+        where (e .gt. e_small .and. n .gt. zero)
+            not_spectrum_break = .true.
+        endwhere
         active_bins = I_ZERO
-        active_bins = pack(all_bins, is_active_bin)
+!         active_bins = pack(all_bins, is_active_bin)   ! not to iterate over spectrum break
+        active_bins = pack(all_bins, not_spectrum_break)   ! not to iterate over spectrum break
 
 ! Construct index arrays for fixed edges betwen p_lo and p_up, active edges 
 ! before timestep  
@@ -450,7 +457,7 @@ contains
         print *, 'p_lo_next, p_up_next:', p_lo_next, p_up_next
         write (*,"(A15,50L2, 50I3)") 'active_edges: ', is_active_edge, active_edges
         write (*,"(A15,50L2, 50I3)") 'active edgesN:', is_active_edge_next, active_edges_next
-        write (*,"(A15,50L2, 50I3)") 'active bins:  ', is_active_bin_next , active_bins_next
+        write (*,"(A15,50L2, 50I3)") 'active binsN :', is_active_bin_next , active_bins_next
         write (*,"(A15,50L2, 50I3)") 'fixed  edges: ', is_fixed_edge_next,  fixed_edges_next
         write (*,"(A15,50L2, 50I3)") 'cooling edges:', is_cooling_edge_next,  cooling_edges_next
         write (*,"(A15,50L2, 50I3)") 'heating edges:', is_heating_edge_next,  heating_edges_next
@@ -478,7 +485,7 @@ contains
   subroutine cresp_init_state(init_n, init_e, f_amplitude, sptab)
    use initcrspectrum, only: ncre, spec_mod_trms, q_init, p_lo_init, p_up_init, initial_condition, & ! f_init, bump_amp
                         e_small_approx_init_cond, e_small_approx_p_lo, e_small_approx_p_up, crel, p_fix, w,&
-                        p_min_fix, p_max_fix, add_spectrum_base
+                        p_min_fix, p_max_fix, add_spectrum_base, e_small, test_spectrum_break
    use cresp_NR_method,only: e_small_to_f
    use constants, only: zero, I_ZERO, I_ONE, fpi
    use cresp_variables, only: clight ! use units, only: clight
@@ -682,9 +689,15 @@ contains
             crel%i_up = i_up
 
         endif
+        
+! testing how the algorithm will handle discontinuity in the spectrum:
+        if (test_spectrum_break) then
+            e(int((i_lo+i_up)/2):int((i_lo+i_up)/2)+1) = 0.5*e_small ! some arbitrary values
+            n(int((i_lo+i_up)/2):int((i_lo+i_up)/2)+1) = 0.1*e_small
+        endif
     
         n_tot0 = sum(n)
-        e_tot0 = sum(e) 
+        e_tot0 = sum(e)
     
         init_n = n
         init_e = e
@@ -994,7 +1007,6 @@ contains
       end where
 
    end subroutine cresp_compute_r
-   
 
 !-------------------------------------------------------------------------------------------------
 ! 
@@ -1002,23 +1014,23 @@ contains
 !
 !-------------------------------------------------------------------------------------------------
 
-  subroutine ne_to_q(n, e, q)
-   use initcrspectrum, only: ncre
+  subroutine ne_to_q(n, e, q, bins)
+   use initcrspectrum, only: ncre, e_small
    use constants, only: zero
    use cresp_variables, only: clight ! use units, only: clight
    use cresp_NR_method, only: compute_q
    implicit none
     real(kind=8), dimension(1:ncre), intent(in)  :: n, e !
     real(kind=8), dimension(1:ncre), intent(out) :: q
-    integer          :: i
+    integer(kind=4), dimension(:), intent(in)    :: bins
+    integer          :: i, i_active
     real(kind=8)     :: alpha_in
     logical :: exit_code
 
     q = zero
-
-    do i = max(i_lo,1) + approx_p_lo, i_up - approx_p_up ! 1, ncre
-
-        if (e(i) .gt. zero .and. p(i-1) .gt. zero) then
+    do i_active = 1 + approx_p_lo, size(active_bins) - approx_p_up
+        i = bins(i_active)
+        if (e(i) .gt. e_small .and. p(i-1) .gt. zero) then
           exit_code = .true.
           alpha_in = e(i)/(n(i)*p(i-1)*clight)
           if ((i .eq. i_lo+1) .or. (i .eq. i_up)) then ! for boudary case, when momenta are not approximated
@@ -1343,6 +1355,7 @@ contains
    call my_allocate_with_index(is_active_bin_next,ma1d,1)
    call my_allocate_with_index(all_edges,ma1d,0)
    call my_allocate_with_index(i_act_edges,ma1d,0)
+   call my_allocate_with_index(not_spectrum_break,ma1d,1)
    
   end subroutine cresp_allocate_all
   
