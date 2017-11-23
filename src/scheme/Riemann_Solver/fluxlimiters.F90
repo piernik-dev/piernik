@@ -39,7 +39,7 @@ module fluxlimiters
 
    implicit none
    private
-   public :: set_limiters, flimiter, blimiter, calculate_slope_vanleer, slope_limiter_minmod, slope_limiter_moncen, slope_limiter_superbee
+   public :: set_limiters, flimiter, blimiter, plimiter, calculate_slope_vanleer, slope_limiter_minmod, slope_limiter_moncen, slope_limiter_superbee
 
    interface
       function limiter(q) result(dq)
@@ -53,25 +53,28 @@ module fluxlimiters
       end function limiter
    end interface
 
-   procedure(limiter), pointer :: flimiter => null(), blimiter => null()
+   procedure(limiter), pointer :: flimiter => null(), blimiter => null(), plimiter => null()
 
 contains
 
 !!!-------------------------------------------------------------------------------
 
-   subroutine set_limiters(flim_str, blim_str)
+   subroutine set_limiters(flim_str, blim_str, plim_str)
 
       use dataio_pub, only: die
 
       implicit none
 
-      character(len=*), intent(in) :: flim_str, blim_str
+      character(len=*), intent(in) :: flim_str, blim_str, plim_str
 
       if (associated(flimiter)) call die("[fluxlimiters:set_limiters] flimiter already associated")
       flimiter => set_limiter(flim_str)
 
       if (associated(blimiter)) call die("[fluxlimiters:set_limiters] blimiter already associated")
       blimiter => set_limiter(blim_str)
+
+      if (associated(plimiter)) call die("[fluxlimiters:set_limiters] plimiter already associated")
+      plimiter => set_limiter(plim_str)
 
    end subroutine set_limiters
 
