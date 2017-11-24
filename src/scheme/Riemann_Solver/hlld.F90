@@ -50,25 +50,31 @@ module hlld
 
 contains
 
-  function fluxes(u, b_cc) result(f) ! This function is called by muscl and rk2muscl
+  function fluxes(u, b_cc, psi) result(f) ! This function is called by muscl and rk2muscl
 
     use constants,  only: half, xdim, ydim, zdim
     use fluidindex, only: flind
     use fluidtypes, only: component_fluid
     use func,       only: ekin
+#ifdef GLM
+    use hdc,        only: chspeed
+#endif
 
     implicit none
 
     real, dimension(:,:), intent(in) :: u
     real, dimension(:,:), intent(in) :: b_cc
+    real, dimension(:,:), intent(in) :: psi
 
-    real, dimension(size(u,1) + size(b_cc,1), size(u,2)) :: f
+    real, dimension(size(u,1) + size(b_cc,1)+ size(psi,1), size(u,2)) :: f
     real, dimension(size(u,2))                           :: vx, vy, vz, pr
-    integer                                              :: ip, boff
+    integer                                              :: ip, boff, psioff
     class(component_fluid), pointer                      :: fl
 
     boff = size(u, 1) ! assume xdim == 1
+    psioff = size(u, 1) + size(b_cc, 1)
     f(boff+xdim:,:) = 0.
+    f(psioff+1,:) = 0.
 
     do ip = 1, flind%fluids
 
@@ -103,8 +109,14 @@ contains
        if (fl%is_magnetized) then
           f(fl%imy,:)  =  u(fl%imy,:)*vx(:) - b_cc(xdim,:)*b_cc(ydim,:)
           f(fl%imz,:)  =  u(fl%imz,:)*vx(:) - b_cc(xdim,:)*b_cc(zdim,:)
+#ifdef GLM
+          f(boff+xdim,:) = psi(:,:)
+#endif /* GLM */
           f(boff+ydim,:) =  b_cc(ydim,:)*vx(:) - b_cc(xdim,:)*vy(:)
           f(boff+zdim,:) =  b_cc(zdim,:)*vx(:) - b_cc(xdim,:)*vz(:)
+#ifdef GLM
+          f(psioff,:)    = chspeed*2*b_cc(xdim,:)
+#endif /* GLM */   
        else
           f(fl%imy,:)  =  u(fl%imy,:)*vx(:)
           f(fl%imz,:)  =  u(fl%imz,:)*vx(:)

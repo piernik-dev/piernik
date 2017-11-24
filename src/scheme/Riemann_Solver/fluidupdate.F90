@@ -484,7 +484,7 @@ contains
      real, dimension(size(u,1),size(u,2))               :: ul, ur, du1, du2, du3
 
 #ifdef GLM
-     real, dimension(size(psi,1),size(psi,2)), target   :: psi_l, psi_r, psi_flux
+     real, dimension(size(psi,1),size(psi,2)), target   :: psi_l, psi_r!, psi_flux
      real, dimension(size(psi,1),size(psi,2)),target    :: psi_cc
      real, dimension(size(psi,1),size(psi,2))           :: psi__l, psi__r, dpsi1, dpsi2, dpsi3
 #endif
@@ -595,7 +595,11 @@ contains
 
            use constants,  only: half, xdim, zdim
            use dataio_pub, only: die
-           use fluxlimiters, only: flimiter, blimiter, plimiter
+           use fluxlimiters, only: flimiter, blimiter
+#ifdef GLM
+            use fluxlimiters, only: plimiter
+#endif /*GLM */
+           
 
            implicit none
 
@@ -705,16 +709,13 @@ contains
         subroutine ulr_fluxes_qlr
 
           use hlld,       only: fluxes
-#ifdef GLM
-          use hdc,        only: glm_psi_flux
-#endif
 
            implicit none
 
-           real, dimension(size(u,1)+size(b_cc,1),size(u,2)), target :: flx
-           real, dimension(size(u,1),size(u,2))                      :: u_l, u_r
+           real, dimension(size(u,1)+size(b_cc,1)+size(psi,1),size(u,2)), target :: flx
+           real, dimension(size(u,1),size(u,2))                                  :: u_l, u_r
 
-           flx  = fluxes(ul,b_ccl) - fluxes(ur,b_ccr)
+           flx  = fluxes(ul,b_ccl,psi__l) - fluxes(ur,b_ccr,psi__r)
 
            u_l = ur + half*dtodx*flx(:size(u,1),:)
            u_r(:,1:nx-1) = ul(:,2:nx) + half*dtodx*flx(:size(u,1),2:nx)
@@ -726,11 +727,10 @@ contains
            b_cc_r(:,nx) = b_cc_r(:,nx-1)
 
 #ifdef GLM
-           psi_flux = glm_psi_flux(psi__l,b_ccl) - glm_psi_flux(psi__r,b_ccr)
-           psi_l(:,2:nx) = psi__r(:,2:nx) + half*dtodx*psi_flux(size(psi,1):,2:nx)
-           psi_l(:,1) = psi_l(:,2)
-           psi_r(:,1:nx-1) = psi__l(:,2:nx) + half*dtodx*psi_flux(size(psi,1):,2:nx)
-           psi_r(:,nx) = psi_r(:,nx-1)
+            psi_l(:,2:nx) = psi__r(:,2:nx) + half*dtodx*flx(size(u,1)+1:,2:nx)
+            psi_l(:,1) = psi_l(:,2)
+            psi_r(:,1:nx-1) = psi__l(:,2:nx) + half*dtodx*flx(size(u,1)+1:,2:nx)
+            psi_r(:,nx) = psi_r(:,nx-1)
 #endif /* GLM */
            ql = utoq(u_l,b_cc_l)
            qr = utoq(u_r,b_cc_r)

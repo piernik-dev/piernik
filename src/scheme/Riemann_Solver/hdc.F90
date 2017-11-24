@@ -40,36 +40,10 @@ module hdc
   real, protected :: chspeed
 
   private
-  public :: chspeed, update_chspeed, init_psi, glm_psi_flux
+  public :: chspeed, update_chspeed, init_psi
 
 contains
 
-  
-  function glm_psi_flux(psi, b_cc) result(gpf)
-  
-    use constants,  only: half, xdim, zdim, zero
-    use fluids_pub, only: has_ion
-
-    implicit none
-
-    real, dimension(:,:), intent(in) :: psi
-    real, dimension(:,:), intent(in) :: b_cc
-
-    real, dimension(size(psi,1),size(psi,2))              :: gpf
-    
-    if(has_ion) then
-       
-       gpf(1,:) = chspeed**2*(b_cc(xdim,:))
-      
-    else
-       gpf(1,:) = zero
-
-    end if
-    return
-
-  end function glm_psi_flux
-
-  
   subroutine update_chspeed() 
 
     use fluidindex, only: flind
@@ -85,7 +59,7 @@ contains
     return
     
   end subroutine update_chspeed
-
+!--------------------------------------------------------------------------------------------------------------
   subroutine init_psi
 
      use cg_list,          only: cg_list_element
@@ -105,7 +79,7 @@ contains
      endif
 
   end subroutine init_psi
-
+!---------------------------------------------------------------------------------------------------------------
 end module hdc
 
 #endif
