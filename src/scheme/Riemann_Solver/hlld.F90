@@ -52,7 +52,7 @@ contains
 
   function fluxes(u, b_cc, psi) result(f) ! This function is called by muscl and rk2muscl
 
-    use constants,  only: half, xdim, ydim, zdim
+    use constants,  only: half, xdim, ydim, zdim, I_ONE
     use fluidindex, only: flind
     use fluidtypes, only: component_fluid
     use func,       only: ekin
@@ -72,9 +72,8 @@ contains
     class(component_fluid), pointer                      :: fl
 
     boff = size(u, 1) ! assume xdim == 1
-    psioff = size(u, 1) + size(b_cc, 1)
-    f(boff+xdim:,:) = 0.
-    f(psioff+1,:) = 0.
+    psioff = size(u, 1) + size(b_cc, 1) + I_ONE
+    f(boff+xdim:,:) = 0.  ! clear B and psi fluxes
 
     do ip = 1, flind%fluids
 
@@ -109,12 +108,10 @@ contains
        if (fl%is_magnetized) then
           f(fl%imy,:)  =  u(fl%imy,:)*vx(:) - b_cc(xdim,:)*b_cc(ydim,:)
           f(fl%imz,:)  =  u(fl%imz,:)*vx(:) - b_cc(xdim,:)*b_cc(zdim,:)
-#ifdef GLM
-          f(boff+xdim,:) = psi(:,:)
-#endif /* GLM */
           f(boff+ydim,:) =  b_cc(ydim,:)*vx(:) - b_cc(xdim,:)*vy(:)
           f(boff+zdim,:) =  b_cc(zdim,:)*vx(:) - b_cc(xdim,:)*vz(:)
 #ifdef GLM
+          f(boff+xdim,:) = psi(1,:)
           f(psioff,:)    = chspeed*2*b_cc(xdim,:)
 #endif /* GLM */   
        else

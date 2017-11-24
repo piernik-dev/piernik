@@ -721,15 +721,15 @@ contains
            u_r(:,1:nx-1) = ul(:,2:nx) + half*dtodx*flx(:size(u,1),2:nx)
            u_r(:,nx) = u_r(:,nx-1)
 
-           b_cc_l(:,2:nx) = b_ccr(:,2:nx) + half*dtodx*flx(size(u,1)+1:,2:nx)
+           b_cc_l(:,2:nx) = b_ccr(:,2:nx) + half*dtodx*flx(size(u,1)+1:size(u,1)+size(b_cc,1),2:nx)
            b_cc_l(:,1) = b_cc_l(:,2)
-           b_cc_r(:,1:nx-1) = b_ccl(:,2:nx) + half*dtodx*flx(size(u,1)+1:,2:nx)
+           b_cc_r(:,1:nx-1) = b_ccl(:,2:nx) + half*dtodx*flx(size(u,1)+1:size(u,1)+size(b_cc,1),2:nx)
            b_cc_r(:,nx) = b_cc_r(:,nx-1)
 
 #ifdef GLM
-            psi_l(:,2:nx) = psi__r(:,2:nx) + half*dtodx*flx(size(u,1)+1:,2:nx)
+            psi_l(1,2:nx) = psi__r(1,2:nx) + half*dtodx*flx(size(u,1)+size(b_cc,1)+1,2:nx)
             psi_l(:,1) = psi_l(:,2)
-            psi_r(:,1:nx-1) = psi__l(:,2:nx) + half*dtodx*flx(size(u,1)+1:,2:nx)
+            psi_r(1,1:nx-1) = psi__l(1,2:nx) + half*dtodx*flx(size(u,1)+size(b_cc,1)+1,2:nx)
             psi_r(:,nx) = psi_r(:,nx-1)
 #endif /* GLM */
            ql = utoq(u_l,b_cc_l)
