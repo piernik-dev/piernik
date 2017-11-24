@@ -1057,8 +1057,13 @@ contains
       contains
 
          subroutine outflow_b(cg, dir, side)
+
+!            use global,                only: force_cc_mag
+! need different treatment for cell-centered field
             use grid_cont,             only: grid_container
+
             implicit none
+
             type(grid_container), pointer    :: cg
             integer(kind=4),      intent(in) :: dir
             integer(kind=4),      intent(in) :: side
@@ -1093,6 +1098,7 @@ contains
                      cg%b(ydim, :, :, it) = cg%b(ydim, :, :, it + pm_one)
                   enddo
             end select
+
          end subroutine outflow_b
 
    end subroutine bnd_b

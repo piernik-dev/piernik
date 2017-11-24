@@ -193,8 +193,8 @@ contains
     ue = 0.
 
 #ifdef GLM
-    b_cc(xdim,:) = 0.
-    psi(:,:)     = 0.
+    b_cc(xdim,:) = 0. ! This should be necessary only for non-GLM setups
+!    psi(:,:)     = 0. ! This should not be necessay
 #endif /* GLM */
 
      do i = 1,n

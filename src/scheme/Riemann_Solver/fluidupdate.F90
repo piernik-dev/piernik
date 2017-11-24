@@ -484,7 +484,7 @@ contains
      real, dimension(size(u,1),size(u,2))               :: ul, ur, du1, du2, du3
 
 #ifdef GLM
-     real, dimension(size(psi,1),size(psi,2)), target   :: psi_l, psi_r!, psi_flux
+     real, dimension(size(psi,1),size(psi,2)), target   :: psi_l, psi_r
      real, dimension(size(psi,1),size(psi,2)),target    :: psi_cc
      real, dimension(size(psi,1),size(psi,2))           :: psi__l, psi__r, dpsi1, dpsi2, dpsi3
 #endif
@@ -597,7 +597,7 @@ contains
            use dataio_pub, only: die
            use fluxlimiters, only: flimiter, blimiter
 #ifdef GLM
-            use fluxlimiters, only: plimiter
+           use fluxlimiters, only: plimiter
 #endif /*GLM */
            
 
@@ -668,7 +668,6 @@ contains
 
            real, dimension(size(u,1),size(u,2))               :: u_l, u_r
 
-           !if (present(du) .neqv. present(db)) call die("[fluidupdate:solve:ulr_to_qlr] either mone or both optional arguments must be present")
            if ((present(du) .neqv. present(db)) .or. (present(db) .neqv. present(dpsi))) &
                 call die("[fluidupdate:solve:slope] either none or all optional arguments must be present")
 
