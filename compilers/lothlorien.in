@@ -17,7 +17,27 @@ F90FLAGS  = -fdefault-real-8 -ffree-form -std=gnu -fimplicit-none -ffree-line-le
 F90FLAGS += -O3 -funroll-loops -fno-stack-arrays
 F90FLAGS += -Wall -Wextra -W -Wsurprising -Wcharacter-truncation -Wno-unused-function -pedantic
 F90FLAGS += -fbacktrace -ggdb
-F90FLAGS += -fcheck=all -finit-real=snan
+F90FLAGS += -fcheck=all
+
+ifdef ALLINIT
+  RINIT := 1
+  IINIT := 1
+  CINIT := 1
+  LINIT := 1
+endif
+ifdef RINIT
+  F90FLAGS += -finit-real=snan
+endif
+ifdef IINIT
+  F90FLAGS += -finit-integer=-2098765432
+endif
+ifdef CINIT
+  F90FLAGS += -finit-character=96
+endif
+ifdef LINIT
+  F90FLAGS += -finit-logical=true
+endif
+
 F90FLAGS +=  -ffpe-trap=invalid,zero,overflow
 #denormal,underflow,inexact
 ## denormal causes weird problems since gcc 4.7.0
