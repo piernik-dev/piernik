@@ -170,6 +170,7 @@ contains
       relax_time  = 0.
       integration_order  = 2
       use_fargo   = .false.
+      skip_sweep  = .false.
 
       if (master) then
          if (.not.nh%initialized) call nh%init()
