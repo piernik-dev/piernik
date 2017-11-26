@@ -50,12 +50,8 @@ contains
     use fluids_pub, only: has_ion
     use dataio_pub, only: warn
 
-    if(has_ion) then 
-       chspeed = flind%ion%snap%cs_max%val
-    else
-       call warn('Kenobi is in exile!')
-       ! set up some safe value or die
-    end if
+    chspeed = huge(1)
+    if(has_ion) chspeed = flind%ion%snap%cs_max%val
     
     return
     
