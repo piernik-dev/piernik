@@ -19,6 +19,10 @@ F90FLAGS += -Wall -Wextra -W -Wsurprising -Wcharacter-truncation -Wno-unused-fun
 F90FLAGS += -fbacktrace -ggdb
 F90FLAGS += -fcheck=all
 
+ifdef I64
+  F90FLAGS += -fdefault-integer-8
+endif
+
 ifdef ALLINIT
   RINIT := 1
   IINIT := 1
