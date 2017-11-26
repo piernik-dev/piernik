@@ -69,7 +69,7 @@ contains
       use user_hooks,            only: problem_post_restart, problem_post_IC
 #ifdef GLM
       use hdc,                   only: init_psi
-#endif /* GLM *.
+#endif /* GLM */
 #if defined MAGNETIC && defined RESISTIVE
       use resistivity,           only: init_resistivity, compute_resist
 #endif /* MAGNETIC && RESISTIVE */
