@@ -34,7 +34,7 @@
 #ifdef GLM
 
 module hdc
-! pulled by MAGNETIC && RIEMANN
+! pulled by RIEMANN
   implicit none
 
   real, protected :: chspeed

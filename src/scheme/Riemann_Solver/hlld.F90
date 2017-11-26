@@ -155,10 +155,8 @@ contains
     real, dimension(:,:), pointer, intent(in)    :: b_ccl, b_ccr
     
     real,                          intent(in)    :: gamma
-#ifdef GLM
     real, dimension(:,:), pointer, intent(out)   :: psi  
     real, dimension(:,:), pointer, intent(in)    :: psi_l, psi_r
-#endif /* GLM */
 
     ! Local variables
 
