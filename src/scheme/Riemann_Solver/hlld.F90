@@ -238,7 +238,7 @@ contains
 
        ! Left and right states of fast magnetosonic waves Eq. 3
 
-        c_fastm = sqrt(half*max( &
+       c_fastm = sqrt(half*max( &
              ((gampr_l+sum(b_ccl(xdim:zdim,i)**2)) + sqrt((gampr_l+sum(b_ccl(xdim:zdim,i)**2))**2-(four*gampr_l*b_ccl(xdim,i)**2)))/ul(idn,i), &
              ((gampr_r+sum(b_ccr(xdim:zdim,i)**2)) + sqrt((gampr_r+sum(b_ccr(xdim:zdim,i)**2))**2-(four*gampr_r*b_ccr(xdim,i)**2)))/ur(idn,i)) )
 
@@ -269,15 +269,15 @@ contains
           f(:,i)  =  fl
           b_cc(ydim:zdim,i) = b_cclf(ydim:zdim)
 #ifdef GLM
-          b_cc(xdim,i) = b_ccl(xdim,i)
-          psi(1,i)     = psi_l(1,i)
+         b_cc(xdim,i) = b_ccl(xdim,i)
+         psi(1,i)     = psi_l(1,i)
 #endif /* GLM */
        else if (sr .le.  zero) then
           f(:,i)  =  fr
           b_cc(ydim:zdim,i) = b_ccrf(ydim:zdim)
 #ifdef GLM
-          b_cc(xdim,i) = b_ccr(xdim,i)
-          psi(1,i)     = psi_r(1,i)
+         b_cc(xdim,i) = b_ccr(xdim,i)
+         psi(1,i)     = psi_r(1,i)
 #endif /* GLM */
        else
 
@@ -287,22 +287,23 @@ contains
           psi_lf(1,i) =  half*( (psi_r(1,i)+psi_l(1,i)) - chspeed*(b_ccr(xdim,i)-b_ccl(xdim,i))  )
           psi_rf(1,i) =  half*( (psi_r(1,i)+psi_l(1,i)) - chspeed*(b_ccr(xdim,i)-b_ccl(xdim,i))  )
 #endif /* GLM */
+          
           ! Speed of contact discontinuity Eq. 38
           ! Total left and right states of pressure, so prr and prl sm_nr/sm_dr
           if ((sr - ur(imx,i))*ur(idn,i) .equals. (sl - ul(imx,i))*ul(idn,i)) then
-             sm = (sl + sr) / 2.
+             sm = (sl + sr) / 2. 
           else
              sm =   ( ((sr - ur(imx,i))*ur(idn,i)*ur(imx,i) - prr) - &
                   &   ((sl - ul(imx,i))*ul(idn,i)*ul(imx,i) - prl) ) / &
                   &   ((sr - ur(imx,i))*ur(idn,i) - &
-                  &    (sl - ul(imx,i))*ul(idn,i))
+                  &    (sl - ul(imx,i))*ul(idn,i)) 
           endif
 
           ! Speed differences
 
           slsm  =  sl - sm
           srsm  =  sr - sm
-
+       
           slvxl  =  sl - ul(imx,i)
           srvxr  =  sr - ur(imx,i)
 
@@ -395,7 +396,7 @@ contains
 
              dn_lsqt  =  sqrt(u_starl(idn))
              dn_rsqt  =  sqrt(u_starr(idn))
-
+             
              alfven_l  =  sm - abs(b_ccl(xdim,i))/dn_lsqt
              alfven_r  =  sm + abs(b_ccr(xdim,i))/dn_rsqt
 

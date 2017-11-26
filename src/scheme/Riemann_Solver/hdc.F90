@@ -51,7 +51,7 @@ contains
     use dataio_pub, only: warn
 
     if(has_ion) then 
-       chspeed = flind%ion%snap%cs_max%val
+       chspeed = flind%ion%snap%cs_max%val 
     else
        call warn('Kenobi is in exile!')
     end if
