@@ -109,6 +109,12 @@
 #  endif
 #endif
 
+#ifdef GLM
+#  if !defined RIEMANN
+#    error GLM will not work without RIEMANN #defined
+#  endif
+#endif
+
 #if defined(HS2)
 #  error Choose only one of { RTVD, HLLC, RIEMANN }.
 #endif

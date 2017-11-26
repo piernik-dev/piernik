@@ -155,10 +155,8 @@ contains
     real, dimension(:,:), pointer, intent(in)    :: b_ccl, b_ccr
     
     real,                          intent(in)    :: gamma
-#ifdef GLM
     real, dimension(:,:), pointer, intent(out)   :: psi  
     real, dimension(:,:), pointer, intent(in)    :: psi_l, psi_r
-#endif /* GLM */
 
     ! Local variables
 
@@ -193,8 +191,8 @@ contains
     ue = 0.
 
 #ifdef GLM
-    b_cc(xdim,:) = 0.
-    psi(:,:)     = 0.
+    b_cc(xdim,:) = 0. ! This should be necessary only for non-GLM setups
+!    psi(:,:)     = 0. ! This should not be necessay
 #endif /* GLM */
 
      do i = 1,n
