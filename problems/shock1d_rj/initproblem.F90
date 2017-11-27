@@ -69,6 +69,24 @@ contains
 
       implicit none
 
+      dl = 1.
+      vxl = 0.
+      vyl = 0.
+      vzl = 0.
+      bxl = 0.
+      byl = 0.
+      bzl = 0.
+      el = 0.
+
+      dr = 1.
+      vxr = 0.
+      vyr = 0.
+      vzr = 0.
+      bxr = 0.
+      byr = 0.
+      bzr = 0.
+      er = 0.
+
       dir = "x"
 
       if (master) then
