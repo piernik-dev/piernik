@@ -39,7 +39,6 @@ module snsources
    real, dimension(3) :: ysnoi
 #endif /* SHEAR */
    integer, save      :: nsn, nsn_last
-   integer, save      :: irand
 
    real, parameter    :: ethu = 7.0**2/(5.0/3.0-1.0) * 1.0    !< thermal energy unit=0.76eV/cm**3 for c_si= 7km/s, n=1/cm^3 gamma=5/3
 
@@ -87,6 +86,7 @@ contains
       f_sn       = 0.0    !
       h_sn       = 0.0
       r_sn       = 0.0
+      f_sn_kpc2  = 0.0
 
       if (master) then
          if (.not.nh%initialized) call nh%init()
@@ -136,6 +136,8 @@ contains
       else
          f_sn = f_sn * 2.0*r_sn/1000.0
       endif
+
+      nsn_last = 0
 
    end subroutine init_snsources
 !>
@@ -267,7 +269,6 @@ contains
       ysn = dom%edge(ydim, LO)+ dom%L_(ydim)*rand(2)
 
       if (dom%has_dir(zdim)) then
-         irand = irand+4
          znorm = gasdev(rand(3),rand(4))
          zsn = h_sn*znorm
       else
@@ -343,7 +344,7 @@ contains
 
          real               :: x, y, x1, y1, r, fac, gasdev
          real,    save      :: gset
-         integer, save      :: iset, irand
+         integer, save      :: iset = 0
          real, dimension(2) :: rand
 
          r = 2.0
@@ -356,7 +357,6 @@ contains
                   call random_number(rand)
                   x = rand(1)
                   y = rand(2)
-                  irand = irand+2
                else
                   exit
                endif

@@ -548,8 +548,6 @@ contains
            call du_db(du1, db1,dpsi1)
            call ulr_to_qlr(half*du1, half*db1,half*dpsi1)
            call riemann_wrap
-           !call du_db(du2, db2)
-           !call ulr_to_qlr(half*du2, half*db2)
            call du_db(du2, db2,dpsi2)
            call ulr_to_qlr(half*du2, half*db2,half*dpsi2)
            call riemann_wrap
