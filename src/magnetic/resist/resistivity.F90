@@ -193,6 +193,8 @@ contains
          d_eta_factor = 1./(dims_twice+real(eta_scale, kind=8))
       endif
 
+      dt_resist = huge(1)
+
    end subroutine init_resistivity
 
 !>

@@ -181,6 +181,7 @@ contains
       use_fargo   = .false.
       force_cc_mag = .false.
       psi_0       = 0.
+      skip_sweep  = .false.
 
       if (master) then
          if (.not.nh%initialized) call nh%init()
