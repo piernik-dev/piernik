@@ -137,17 +137,19 @@ contains
 ! Here values of distribution function f for active left edges (excluding upper momentum boundary) are computed
         f = nq_to_f(p(0:ncre-1), p(1:ncre), n(1:ncre), q(1:ncre), active_bins)
         
-        if (approx_p_up .gt. 0 .and. i_up .ne. 1) then         ! momenta values stored only within module - for tests; will not work in PIERNIK
+        if ((approx_p_up .gt. 0) .and. (i_up .gt. 1)) then         ! momenta values stored only within module - for tests; will not work in PIERNIK
             call get_fqp_up(solve_fail_up)
         else                                                   ! spectrum beyond the fixed momentum grid
             p_up = p_fix(i_up)
             p(i_up) = p_fix(i_up)
+            solve_fail_up = .false.
         endif
-        if (approx_p_lo .gt. 0 .and. (i_lo+1) .ne. ncre) then  ! momenta values stored only within module - for tests; will not work in PIERNIK
+        if ((approx_p_lo .gt. 0) .and. ((i_lo+1) .ne. ncre)) then  ! momenta values stored only within module - for tests; will not work in PIERNIK
             call get_fqp_lo(solve_fail_lo)
         else                                                   ! spectrum beyond the fixed momentum grid
             p_lo = p_fix(i_lo)
             p(i_lo) = p_fix(i_lo)
+            solve_fail_lo = .false.
         endif                                                  ! countermeasure against failure in finding boundary momentum
         if ((solve_fail_lo .eqv. .true.) .or. (solve_fail_up .eqv. .true.)) then
             call deallocate_active_arrays
@@ -168,7 +170,11 @@ contains
                     call transfer_quantities(e(i_up-1),e(i_up)) ! instead of moving quantities to virtual
                     call transfer_quantities(n(i_up-1),n(i_up)) ! instead of moving quantities to virtual
                     i_up = i_up - 1
-                    call get_fqp_up(solve_fail_up)
+                    if (i_up .gt. 1) then
+                        call get_fqp_up(solve_fail_up)
+                    else
+                        p_up = p_fix(i_up); p(i_up) = p_fix(i_up)
+                    endif
                 else
                     call transfer_quantities(v_e(2),e(i_up))
                     call transfer_quantities(v_n(2),n(i_up))
