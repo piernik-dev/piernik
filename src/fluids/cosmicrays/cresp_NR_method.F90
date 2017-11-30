@@ -11,7 +11,7 @@ module cresp_NR_method
           &    NR_get_solution_up    ! DEPRECATED
   public :: e_in, nr_test, nr_test_1D, p_ip1, n_tab_up, alpha_tab_up, n_tab_lo, alpha_tab_lo, alpha_tab_q, q_control, & ! list for NR driver
           &    p_a, p_n, p_ratios_lo, f_ratios_lo, p_ratios_up, f_ratios_up, q_grid, lin_interpol_1D, alpha_to_q,   &   ! can be commented out for CRESP and PIERNIK
-          &    lin_extrapol_1D, lin_interpolation_1D, find_indices_1D
+          &    lin_extrapol_1D, lin_interpolation_1D, find_indices_1D, nearest_solution
  
   integer, parameter :: ndim = 2
   real(kind=8), dimension(:), allocatable :: p_space, q_space
@@ -278,7 +278,7 @@ module cresp_NR_method
             n_tab_up(i)     = ind_to_flog(i,n_min_up,n_max_up) ! n_min_up * ten**((log10(n_max_up/n_min_up))/real(arr_dim-1,kind=8)*real((i-1),kind=8))
             alpha_tab_q(i)  = ind_to_flog(i,a_min_up,1.3     ) ! a_min_up * ten**((log10(1.3/a_min_up))/real(arr_dim-1,kind=8)*real((i-1),kind=8))
         enddo
-#ifdef VERBOSE
+! #ifdef VERBOSE
         print *,"alpha_tab_lo(i),      alpha_tab_up(i),        n_tab_lo(i),        n_tab_up(i)  |       p_space(i),     q_space(i)" 
         do i = 1, arr_dim
           if (i .le. helper_arr_dim) then
@@ -290,7 +290,7 @@ module cresp_NR_method
           endif
         enddo
         print *, "-----------"
-#endif /* VERBOSE */
+! #endif /* VERBOSE */
         write (*, "(A36)", advance="no") "Reading (up) boundary ratio files..."
         do j = 1,2
             call read_NR_guess_grid(p_ratios_up, "p_ratios_up", exit_code) ;  int_logical_p = logical_2_int(exit_code)
@@ -1257,7 +1257,7 @@ end subroutine
 #endif /* VERBOSE */
         exit_code = .false.; find_failure = .false. ; not_interpolated = .false.
         call associate_NR_pointers(which_bound)
-        call determine_loc(a_val, n_val, loc1, loc2, loc_no_ip, exit_code, find_failure)
+        call determine_loc(a_val, n_val, loc1, loc2, loc_no_ip, exit_code)
 !         call find_both_indexes(loc1, loc2, a_val, n_val, loc_no_ip, exit_code)
         call save_loc(which_bound,loc1(1),loc1(2))
         call save_loc(which_bound,loc2(1),loc2(2))
@@ -1286,63 +1286,69 @@ end subroutine
             endif
   end function intpol_pf_from_NR_grids
 !----------------------------------------------------------------------------------------------------
-  subroutine determine_loc(a_val, n_val, loc1, loc2, loc_panic, exit_code, no_solution)
+  subroutine determine_loc(a_val, n_val, loc1, loc2, loc_panic, exit_code) !, no_solution)
   use constants, only: zero
   implicit none
     integer(kind=4), dimension(1:2),intent(inout) :: loc1, loc2, loc_panic
     real(kind=8),intent(inout) :: a_val, n_val
-    logical, intent(inout) :: exit_code, no_solution
+    logical, intent(inout) :: exit_code
+    logical                :: hit_zero !, no_solution
+        hit_zero = .false.
         loc1(1) = inverse_f_to_ind(a_val, p_a(1), p_a(arr_dim))
         loc1(2) = inverse_f_to_ind(n_val, p_n(1), p_n(arr_dim))
-        loc2 = loc1 + 1
-#ifdef VERBOSE
-        write(*,"(A19, 2I4, A3, 2I4)") "Obtained indices:", loc1, " | ", loc2 
-#endif /* VERBOSE */
-        if ((minval(loc1) .le. 0 .or. maxval(loc1) .gt. arr_dim) .and. (minval(loc2) .le. 0 .or. maxval(loc2) .gt. arr_dim)) then
-            exit_code = .true.
-            no_solution = .true.
-#ifdef VERBOSE
-            print *, "problem occured, both below 0"
-#endif /* VERBOSE */
-            return
-        else if ( (maxval(loc2) .gt. arr_dim) .or. (minval(loc2) .le. 0 ) ) then
-            exit_code = .true.
-            loc_panic = loc1
-            loc2 = loc1
-#ifdef VERBOSE
-            print *, "WARNING, maxval(loc2) exceeds arr_dim"
-#endif /* VERBOSE */
-            return
-        else if ( (maxval(loc1) .gt. arr_dim) .or. (minval(loc1) .le. 0 ) ) then
-            exit_code = .true.
-            loc_panic = loc2
-            loc1 = loc2
-#ifdef VERBOSE
-            print *, "WARNING, minval(loc1) eq 0"
-#endif /* VERBOSE */
-            return
-        endif
-        if ( ((p_p(loc1(1),loc1(2)) * p_p(loc1(1),loc2(2)) ) .le. zero ) .or. & 
-            ((p_p(loc2(1),loc1(2)) * p_p(loc2(1),loc2(2)) ) .le. zero )  ) then
-#ifdef VERBOSE
-            print *, "Exception, p_p(loc(alpha),loc(n)) = 0, no solution in at least one location"
-#endif /* VERBOSE */
-            exit_code = .true.
+        if ( (minval(loc1) .ge. 1 .and. maxval(loc1) .le. arr_dim-1)) then ! only need to test loc1
             if (p_p(loc1(1),loc1(2)) .gt. zero ) then
-                loc_panic = loc1
-                return
-            else if (p_p(loc2(1),loc2(2)) .gt. zero ) then
-                loc_panic = loc2
-                return
-            else
+                loc2 = loc1+1
 #ifdef VERBOSE
-                print *, "No index pointing to existing solution found. Use extrapolation in this case?"
+                write(*,"(A19, 2I8, A3, 2I8)") "Obtained indices:", loc1, " | ", loc2
 #endif /* VERBOSE */
-                no_solution = .true.
-                return
+                return        ! normal exit
+            else
+                exit_code = .true.
+                hit_zero  = .true.
             endif
+        else
+            exit_code = .true.
         endif
+
+        if ( exit_code ) then ! namely if ((minval(loc1) .le. 0 .or. maxval(loc1) .ge. arr_dim))
+            loc1(1) = max(0,min(loc1(1),arr_dim))   ! Here we either give algorithm closest nonzero value relative to a row
+            loc1(2) = max(0,min(loc1(2),arr_dim))   ! that was in the proper range or we just feed the algorithm ANY nonzero
+            exit_code = .true.                      ! initial vector that will prevent it from crashing.
+            loc2 = loc1
+            if (loc1(1) .eq. arr_dim .or. hit_zero) then
+                call nearest_solution(p_p(:,loc1(2)), loc1(1), 1, loc1(1), hit_zero)
+            endif
+            if (loc1(1) .le. 0 .or. hit_zero) then
+                call nearest_solution(p_p(:,loc1(2)), max(1,loc1(1)), arr_dim, loc1(1), hit_zero)
+            endif
+            if (loc1(2) .eq. arr_dim.or. hit_zero) then
+                call nearest_solution(p_p(loc1(1),:), loc1(2), 1, loc1(2), hit_zero)
+            endif
+            if (loc1(2) .le. 0 .or. hit_zero) then
+                call nearest_solution(p_p(loc1(1),:), max(1,loc1(2)), arr_dim, loc1(2), hit_zero)
+            endif
+            loc_panic = loc1
+        endif
+        loc2 = loc1 + 1
   end subroutine determine_loc
+!----------------------------------------------------------------------------------------------------
+  subroutine nearest_solution(arr_lin, i_beg, i_end, i_solution, hit_zero)
+  use constants, only: zero
+  implicit none
+   real(kind=8), dimension(:) :: arr_lin
+   integer(kind=4) :: i, i_beg, i_end, i_incr, i_solution
+   logical, intent(inout) :: hit_zero
+    i_solution = i_beg
+    i_incr = sign(1, i_end - i_beg)
+    do  i = i_beg, i_end, i_incr
+        if (arr_lin(i) .gt. zero) then
+            i_solution = i ! next one is i_solution + i_incr
+            hit_zero = .false.
+            return
+        endif
+    enddo
+  end subroutine nearest_solution
 !----------------------------------------------------------------------------------------------------
   function compute_q(alpha_in, exit_code, outer_p_ratio)
   use initcrspectrum, only: NR_refine_solution_q, q_big, p_fix_ratio
@@ -1480,7 +1486,7 @@ end subroutine
   implicit none
     integer(kind=4) :: inverse_f_to_ind
     real(kind=8)    :: value, min_in, max_in
-     inverse_f_to_ind = int((log10(abs(value)/min_in)/log10(max_in/min_in)) * (arr_dim - I_ONE )) + I_ONE
+     inverse_f_to_ind = int((log10(value/min_in)/log10(max_in/min_in)) * (arr_dim - I_ONE )) + I_ONE
   end function inverse_f_to_ind
 !====================================================================================================
 ! Solver test section
