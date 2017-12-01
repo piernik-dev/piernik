@@ -114,15 +114,15 @@ contains
       character(len=dsetnamelen)                           :: aux
 #endif /* COSM_RAYS */
 
-      nvars = 1
-      do while ( len(trim(vars(nvars))) > 1)
-         nvars = nvars + 1
+      nvars = 0
+      do i = lbound(vars, 1), ubound(vars, 1)
+         if (len_trim(vars(i)) > 0) nvars = nvars + 1
       enddo
-      nvars = nvars - 1
 
       nhdf_vars = 0
-      do i = 1, nvars
-         select case (vars(i))
+      do i = lbound(vars, 1), ubound(vars, 1)
+         select case (trim(vars(i)))
+            case ('')
             case ('dens')
                nhdf_vars = nhdf_vars + size(iarr_all_dn,1)
             case ('velx', 'momx')
@@ -159,8 +159,9 @@ contains
       allocate(hdf_vars_avail(nhdf_vars))
       hdf_vars_avail = .true.
       allocate(hdf_vars(nhdf_vars)); j = 1
-      do i = 1, nvars
-         select case (vars(i))
+      do i = lbound(vars, 1), ubound(vars, 1)
+         select case (trim(vars(i)))
+            case ('')
             case ('dens')
                if (has_dst) then ; hdf_vars(j) = 'dend' ; j = j + 1 ; endif
                if (has_neu) then ; hdf_vars(j) = 'denn' ; j = j + 1 ; endif
