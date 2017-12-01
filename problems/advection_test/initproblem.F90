@@ -251,11 +251,11 @@ contains
 
       use cg_list,          only: cg_list_element
       use cg_leaves,        only: leaves
-      use constants,        only: xdim, ydim, zdim, GEO_XYZ, GEO_RPZ
+      use constants,        only: xdim, ydim, zdim, GEO_XYZ, GEO_RPZ, half
       use dataio_pub,       only: die
       use domain,           only: dom
       use fluidindex,       only: flind
-      use func,             only: operator(.notequals.)
+      use func,             only: operator(.notequals.), emag
       use global,           only: smallei, t
       use grid_cont,        only: grid_container
       use named_array_list, only: qna
@@ -446,6 +446,17 @@ contains
 
          ! Set up the internal energy
          cg%u(fl%ien,:,:,:) = max(smallei, pulse_pressure / fl%gam_1 + 0.5 * sum(cg%u(fl%imx:fl%imz,:,:,:)**2,1) / cg%u(fl%idn,:,:,:))
+
+#ifdef MAGNETIC
+         if (ccB) then
+            cg%u(fl%ien,:,:,:) = cg%u(fl%ien,:,:,:) + emag(cg%b(xdim,:,:,:), cg%b(ydim,:,:,:), cg%b(zdim,:,:,:))  ! beware: this is for cell-centered B
+         else
+            cg%u(fl%ien, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = cg%u(fl%ien, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) + &
+                 emag(half*(cg%b(xdim, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) + cg%b(xdim, cg%is+dom%D_x:cg%ie+dom%D_x, cg%js        :cg%je,         cg%ks        :cg%ke        )), &
+                 &    half*(cg%b(ydim, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) + cg%b(ydim, cg%is        :cg%ie,         cg%js+dom%D_y:cg%je+dom%D_y, cg%ks        :cg%ke        )), &
+                 &    half*(cg%b(zdim, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) + cg%b(zdim, cg%is        :cg%ie,         cg%js        :cg%je,         cg%ks+dom%D_z:cg%ke+dom%D_z)))
+         endif
+#endif  /* !MAGNETIC */
 
          if (associated(flind%dst)) then
             cg%u(flind%dst%idn, :, :, :) = cg%u(fl%idn, :, :, :)
