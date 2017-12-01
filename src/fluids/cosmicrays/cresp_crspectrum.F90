@@ -137,20 +137,24 @@ contains
 ! Here values of distribution function f for active left edges (excluding upper momentum boundary) are computed
         f = nq_to_f(p(0:ncre-1), p(1:ncre), n(1:ncre), q(1:ncre), active_bins)
         
-        if ((approx_p_up .gt. 0) .and. (i_up .gt. 1)) then         ! momenta values stored only within module - for tests; will not work in PIERNIK
-            call get_fqp_up(solve_fail_up)
-        else                                                   ! spectrum beyond the fixed momentum grid
-            p_up = p_fix(i_up)
-            p(i_up) = p_fix(i_up)
-            solve_fail_up = .false.
+        if (approx_p_up .gt. 0) then         ! momenta values stored only within module - for tests; will not work in PIERNIK
+            if (i_up .gt. 1) then
+                call get_fqp_up(solve_fail_up)
+            else                                                   ! spectrum beyond the fixed momentum grid
+                p_up = p_fix(i_up)
+                p(i_up) = p_fix(i_up)
+                solve_fail_up = .false.
+            endif
         endif
-        if ((approx_p_lo .gt. 0) .and. ((i_lo+1) .ne. ncre)) then  ! momenta values stored only within module - for tests; will not work in PIERNIK
-            call get_fqp_lo(solve_fail_lo)
-        else                                                   ! spectrum beyond the fixed momentum grid
-            p_lo = p_fix(i_lo)
-            p(i_lo) = p_fix(i_lo)
-            solve_fail_lo = .false.
-        endif                                                  ! countermeasure against failure in finding boundary momentum
+        if (approx_p_lo .gt. 0) then  ! momenta values stored only within module - for tests; will not work in PIERNIK
+            if ((i_lo+1) .ne. ncre) then
+                call get_fqp_lo(solve_fail_lo)
+            else                                                   ! spectrum beyond the fixed momentum grid
+                p_lo = p_fix(i_lo)
+                p(i_lo) = p_fix(i_lo)
+                solve_fail_lo = .false.
+            endif                                                  ! countermeasure against failure in finding boundary momentum
+        endif
         if ((solve_fail_lo .eqv. .true.) .or. (solve_fail_up .eqv. .true.)) then
             call deallocate_active_arrays
             if (solve_fail_lo) then
@@ -566,13 +570,13 @@ contains
 !      call p_algorithm_accuracy_test  ! tests accuracy of algorithm which later seeks value of p_up using n, e, f and e_small
 #endif /* TEST_CRESP */
 ! Pure power law spectrum initial condition
+        q = q_init
         f = f_amplitude * (p/p_min_fix)**(-q_init)
         if (add_spectrum_base .gt. 0) then
             do i = 0, ncre-1
                 if (f(i) .gt. zero ) f(i) = f(i) + e_small_to_f(p(i))
             enddo
         endif
-        q = q_init
         if (initial_condition == 'brpl') then
 ! Power law with a break at p_lo_init initial condition
 ! In this case initial spectrum with a break at p_min_fix is assumed, the initial slope 
@@ -1426,9 +1430,9 @@ contains
 !----------------------------------------------------------------------------------------------------
  subroutine cleanup_cresp
   implicit none
-        print '(A36,I5,A6,I5)', "NR_2dim:  convergence failure: p_lo", fail_count_NR_2dim(1), ", p_up", fail_count_NR_2dim(2)
-        print '(A36,I5,A6,I5)', "NR_2dim:interpolation failure: p_lo", fail_count_interpol(1), ", p_up", fail_count_interpol(2)
-        print '(A36,I5,A6,I5)', "NR_2dim:  no solution failure: p_lo", fail_count_no_sol(1), ", p_up", fail_count_no_sol(2)
+        print '(A36,I6,A6,I6)', "NR_2dim:  convergence failure: p_lo", fail_count_NR_2dim(1), ", p_up", fail_count_NR_2dim(2)
+        print '(A36,I6,A6,I6)', "NR_2dim:interpolation failure: p_lo", fail_count_interpol(1), ", p_up", fail_count_interpol(2)
+        print '(A36,I6,A6,I6)', "NR_2dim:  no solution failure: p_lo", fail_count_no_sol(1), ", p_up", fail_count_no_sol(2)
         print '(A36,   100I5)', "NR_2dim:inpl/solve  q(bin) failure:", fail_count_comp_q
         call cresp_deallocate_all
  end subroutine cleanup_cresp
