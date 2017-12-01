@@ -351,9 +351,16 @@ def setup_piernik(data=None):
         print(our_defs)
 
     files = ['src/base/defines.c']
+    
     uses = [[]]
     incl = ['']
     module = dict()
+
+    if "COSM_RAY_ELECTRONS" in our_defs: # args[0] == 'mcrtest':
+        allfiles.append(probdir + "p_ratios_lo.dat")
+        allfiles.append(probdir + "f_ratios_lo.dat")
+        allfiles.append(probdir + "p_ratios_up.dat")
+        allfiles.append(probdir + "f_ratios_up.dat")
 
     for f in f90files:  # exclude links that symbolise file locks
         if (not os.access(f, os.F_OK)):
@@ -624,6 +631,25 @@ def setup_piernik(data=None):
             print('\033[91m' +
                   "Problem with removing old 'piernik.def' from '%s'." %
                   rundir.rstrip('/') + '\033[0m')
+        
+    if "COSM_RAY_ELECTRONS" in our_defs: # added by mogrodnik, CRESP needs these, flagname might change
+        for suf_nam in ["lo","up"]:
+            for pref_nam in ["p","f"]:
+                ratio_f_nam = str(pref_nam+'_ratios_'+suf_nam+'.dat')
+                try:
+                    if(os.path.isfile(rundir + ratio_f_nam)):
+                        print('\033[92m' + '('+args[0]+') ' + '\033[0m' +
+                        "Ratios files ("+ratio_f_nam+") already present in"+
+                        rundir.strip('/')+".")
+                    else:
+                        #shutil.copy(probdir + ratio_f_nam, rundir + ratio_f_nam)
+                        os.symlink("../../"+probdir + ratio_f_nam, rundir + ratio_f_nam)
+                        print('\033[92m' + '('+args[0]+') ' + '\033[0m' + "CRESP ratios ("
+                        +ratio_f_nam+") linked to "+'\033[92m'+rundir.strip('/')+".")
+                except (IOError):
+                    print ('\033[93m'+'('+args[0]+') '+ '\033[0m' +
+                    "Problem with copying "+ratio_f_nam+
+                    ". Piernik will compute it from scratch." )
 
     if (options.link_exe):
         try:
