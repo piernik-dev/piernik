@@ -284,12 +284,13 @@ contains
       if (ccB) right_face = 0
       r02 = huge(1.)
       if (dom%D_x == 1) then
-         r02 = dom%L_(xdim)**2 / 8.
+         r02 = dom%L_(xdim)**2
       else if (dom%D_y == 1) then
-         r02 = dom%L_(ydim)**2 / 8.
+         r02 = dom%L_(ydim)**2
       else
-         r02 = dom%L_(zdim)**2 / 8.
+         r02 = dom%L_(zdim)**2
       endif
+      r02 = r02 / 32. ! this should match the blob size of Tricco, Price & Bate when domain size is 2
 
 #endif /* MAGNETIC */
 
@@ -324,7 +325,9 @@ contains
                      cg%b(:, i, j, k) = divBc_amp * [cg%x(i), cg%y(j), cg%z(k)] ! slight offset between cell- and face-centered is unimportant here
 
                      ! div B pulse, as described in Tricco, Price & Bate, https://arxiv.org/abs/1607.02394
-                     rr02 = sum(([cg%x(i), cg%y(j), cg%x(k)] - dom%C_)**2)/r02
+                     rr02 = sum(([cg%x(i), cg%y(j), cg%x(k)] - dom%C_)**2, mask=dom%has_dir)/r02
+                     if (rr02 > 1.) rr02 = 1.
+
                      if (dom%D_x == 1) then
                         bcomp = xdim
                      else if (dom%D_y == 1) then
@@ -333,7 +336,6 @@ contains
                         bcomp = zdim
                      endif
                      cg%b(bcomp, i, j, k) = cg%b(bcomp, i, j, k) + divBb_amp * (rr02**4 - 2 *rr02**2 + 1)
-
                      select case (dom%eff_dim)
                         case (I_ONE) ! can't do anything fancy, just set up something non-zero
                            cg%b(:, i, j, k) = cg%b(:, i, j, k) + divB0_amp
