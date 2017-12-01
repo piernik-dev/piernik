@@ -3,7 +3,7 @@
 !
 !     -d MAGNETIC,IONIZED
 !
-! to your setup call if you want to play with magnetized sedov explosions.
+! to your setup call if you want to play with magnetized 2D Riemann problem.
 #endif
 
 #if !defined IONIZED
