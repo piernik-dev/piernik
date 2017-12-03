@@ -788,9 +788,11 @@ contains
                  p_bccl => b0
                  p_bccr => b0
               endif
+! final check needed where to call
 !#ifdef GLM
 !              call glm_mhd(nx, p_psif, p_psi_l, p_psi_r, p_bcc, p_bccl, p_bccr)
 !#endif /* GLM */
+              
               call riemann_hlld(nx, p_flx, p_ql, p_qr, p_bcc, p_bccl, p_bccr, fl%gam) ! whole mag_cc is not needed now for simple schemes but rk2 and rk4 still rely on it
 #ifdef GLM
               call glm_mhd(nx, p_psif, p_psi_l, p_psi_r, p_bcc, p_bccl, p_bccr)
