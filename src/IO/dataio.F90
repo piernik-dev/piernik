@@ -254,11 +254,13 @@ contains
    subroutine dataio_par_io
 
       use constants,  only: idlen, cbuff_len, INT4
-      use dataio_pub, only: nres, nrestart, warn, nhdf, wd_rd, multiple_h5files, warn
+      use dataio_pub, only: nres, nrestart, warn, nhdf, wd_rd, multiple_h5files, warn, msg
       use dataio_pub, only: nh, set_colors  ! QA_WARN required for diff_nml
       use mpisetup,   only: lbuff, ibuff, rbuff, cbuff, master, slave, nproc, piernik_MPI_Bcast
 
       implicit none
+
+      integer :: i, j
 
       problem_name = "nameless"
       run_id       = "___"
@@ -361,6 +363,18 @@ contains
             endif
 
          endif
+
+         do i = 1, nvarsmx - 1
+            if (len_trim(vars(i)) > 0) then
+               do j = i+1, nvarsmx
+                  if (trim(vars(i)) == trim(vars(j))) then
+                     write(msg, '(3a,2i3,a)')"[dataio:init_dataio_parameters] duplicate vars: ", trim(vars(i)), " at positions ", i, j, ". Fixing."
+                     call warn(msg)
+                     vars(j)=""
+                  endif
+               enddo
+            endif
+         enddo
 
          if (gzip_level < 1 .or. gzip_level > 9) then
             call warn("[dataio:init_dataio_parameters] invalid compression level")

@@ -901,7 +901,8 @@ contains
       if (.not. is_overlap(own_box_ob, restart_box_ob)) call die("[restart_hdf5_v2:read_cg_from_restart] No overlap found (AT_OUT_B)") ! this condition should never happen
 
       call calc_off_and_size(restart_box_ob, own_box_ob, own_off_ob, restart_off_ob, o_size_ob)
-      where (dom%has_dir(:) .and. (cg_r%off(:) <= 0)) own_off_ob(:) = own_off_ob(:) - dom%nb
+      where (dom%has_dir(:) .and. (cg%lh_out(:, LO) < cg%my_se(:, LO))) own_off_ob(:) = own_off_ob(:) - dom%nb
+      ! An extra correction for cg with low outer boundary. Blocks with high outer boundary will get it just through o_size_ob
 
       ! these conditions should never happen
       if (any(own_off_nb(:) > cg%n_b(:))) call die("[restart_hdf5_v2:read_cg_from_restart] own_off(:) > cg%n_b(:)")
