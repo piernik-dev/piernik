@@ -44,15 +44,47 @@ module hdc
 
 contains
 
-  subroutine update_chspeed() 
+!>
+!! \brief recalcualte the speed of propagation of psi waves
+!!
+!! This can be perhaps evaluated somewhere in timestep and reused here.
+!<
 
-    use fluidindex, only: flind
-    use fluids_pub, only: has_ion
-    use dataio_pub, only: warn
+   subroutine update_chspeed()
 
-    chspeed = huge(1)
-    if(has_ion) chspeed = flind%ion%snap%cs_max%val
-    
+      use cg_leaves,  only: leaves
+      use cg_list,    only: cg_list_element
+      use constants,  only: GEO_XYZ, small
+      use dataio_pub, only: warn, die
+      use domain,     only: dom
+      use fluidindex, only: flind
+      use fluids_pub, only: has_ion
+      use fluidtypes, only: component_fluid
+      use global,     only: use_fargo
+
+      type(cg_list_element), pointer  :: cgl
+      class(component_fluid), pointer :: fl
+      integer                         :: i, j, k
+
+      chspeed = huge(1.)
+      if (has_ion) then
+         if (use_fargo) call die("[hdc:update_chspeed] FARGO is not implemented here yet.")
+         if (dom%geometry_type /= GEO_XYZ) call die("[hdc:update_chspeed] non-cartesian geometry not implemented yet.")
+         chspeed = small
+         fl => flind%ion
+         cgl => leaves%first
+         do while (associated(cgl))
+            do k = cgl%cg%ks, cgl%cg%ke
+               do j = cgl%cg%js, cgl%cg%je
+                  do i = cgl%cg%is, cgl%cg%ie
+                     chspeed = max(chspeed, maxval(abs(cgl%cg%u(fl%imx:fl%imz, i, j, k) / cgl%cg%u(fl%idn, i, j, k)) + fl%get_cs(i, j, k, cgl%cg%u, cgl%cg%b, cgl%cg%cs_iso2)))
+                  enddo
+               enddo
+            enddo
+            cgl => cgl%nxt
+         enddo
+      endif
+
     return
     
   end subroutine update_chspeed
