@@ -1190,7 +1190,7 @@ contains
         write (*,"(A31,2E22.15)" ) "Input ratios(p, f) for NR (lo):", x_NR
 #endif /* VERBOSE */
         if ( (NR_refine_solution_pf .eqv. .true.) .or. (interpolated .eqv. .false.)) then
-            if (interpolated .eqv. .false.) fail_count_interpol(2) = fail_count_interpol(2) +1
+            if (interpolated .eqv. .false.) fail_count_interpol(1) = fail_count_interpol(1) +1
             call NR_algorithm(x_NR, exit_code)
             if (exit_code .eqv. .true.) then ! some failures still take place
                 if (interpolated .eqv. .false.) then
@@ -1200,7 +1200,7 @@ contains
 #endif /* VERBOSE */
                     return
                 endif
-                fail_count_NR_2dim(2) = fail_count_NR_2dim(2) +1
+                fail_count_NR_2dim(1) = fail_count_NR_2dim(1) +1
                 x_NR = x_NR_init
                 print *, "Interpolated?", interpolated, "NR_refine_solution_pf?", NR_refine_solution_pf,"solved?", exit_code
             endif
