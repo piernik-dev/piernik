@@ -1,12 +1,12 @@
  $BASE_DOMAIN
-    n_d = 24, 24, 1
+    n_d = 50, 50, 1
     nb  = 4
-    bnd_xl = 'per'
-    bnd_xr = 'per'
-    bnd_yl = 'per'
-    bnd_yr = 'per'
-    bnd_zl = 'per'
-    bnd_zr = 'per'
+    bnd_xl = 'out'
+    bnd_xr = 'out'
+    bnd_yl = 'out'
+    bnd_yr = 'out'
+    bnd_zl = 'out'
+    bnd_zr = 'out'
     xmin   =-500.0
     xmax   = 500.0
     ymin   =-500.0
@@ -30,13 +30,13 @@
  /
 
  $END_CONTROL
-    tend   = 2.01 !.0 ! .1
+    tend   = 100.01 !.0 ! .1
     nend   = 100000
  /
 
  $OUTPUT_CONTROL
     problem_name = 'mcr'
-    run_id = 'ex2'
+    run_id = 'ex1'
     dt_hdf  = 1.0e-1
     dt_res  = 0.0
     dt_log  = 1.0e-10
@@ -74,30 +74,30 @@
 
  $COSMIC_RAY_SPECTRUM
     cre_eff     = 0.01
-    cfl_cre     = 0.2
+    cfl_cre     = 0.3
     ncre        = 45          ! number of spectrum bins (including cutoff bins)
+    p_min_fix = 0.4e0 ! 1.0e1  ! momentum fixed grid
+    p_max_fix = 1.65e4 ! 1.0e2  ! momentum fixed grid
     p_lo_init = 1.5e1 !50e0   ! initial lower cut momentum
-    p_up_init = 8.0e2 ! 5.0e2  ! initial upper cut momentum
+    p_up_init = 7.5e2 ! 5.0e2  ! initial upper cut momentum
     expan_order = 1
     f_init    = 1.0 ! 1.0e1   ! < initial value of the normalization parameter in cre energy spectrum
     q_init    = 3.6 ! 4.1   ! < initial value of power law coefficient in cre enrgy spectrum
     q_big     = 30.e0   ! < limit value of power law coefficient in cre energy spectrum, do not set that value too high!
-    p_min_fix = 0.4e0 ! 1.0e1  ! momentum fixed grid
-    p_max_fix = 1.65e4 ! 1.0e2  ! momentum fixed grid
-    K_cre_paral_1 = 1.0e3 ! 1.e3
-    K_cre_perp_1  = 1.0e1 ! 1.e1
+    K_cre_paral_1 = 0.0e3 ! 1.e3
+    K_cre_perp_1  = 0.0e1 ! 1.e1
     K_cre_pow     = 0.5 ! 0.5
     e_small     = 1.0e-5 ! 8.5e-3 ! 2.0e-4! 12.0e0
-    initial_condition = 'bump' ! 'powl', 'brpl', 'bump', 'symf', 'syme'  !   powl - power-law, brpl - broken power-law, bump - bump-type spectrum, symf - symmetric distr. function spectrum, syme - symmetric energy distr. spectrum
+    initial_condition = 'powl' ! 'powl', 'brpl', 'bump', 'symf', 'syme'  !   powl - power-law, brpl - broken power-law, bump - bump-type spectrum, symf - symmetric distr. function spectrum, syme - symmetric energy distr. spectrum
     bump_amp    = 0.5d0  ! amplitude of bump-type spectrum
     e_small_approx_init_cond = 1  ! 0  ! 1 ! tells algoritm to approximate both boundary momenta at initialization
     e_small_approx_p_lo = 1 ! 0 ! 1  ! tells algorithm to appriximate lower boundary momentum
     e_small_approx_p_up = 1 ! 0 ! 1  ! tells algorithm to approximate upper boundary momentum
-    add_spectrum_base   = 1 ! 0 ! 1  ! ensures that minimal energy level after initialization is at least e_small
-    max_p_ratio = 1.5
+    add_spectrum_base   = 0 ! 0 ! 1  ! ensures that minimal energy level after initialization is at least e_small
+    max_p_ratio = 2.5
     NR_iter_limit = 250
     force_init_NR = .false.
-!    arr_dim = 140 ! dimension of NR grids, must be an even number, don't put a number ridiculously high
+!    arr_dim = 200 ! dimension of NR grids, must be an even number, don't put a number ridiculously high
  /
 
  $CR_SPECIES
@@ -130,8 +130,8 @@
     vxd0   = 0.0
     vyd0   = 0.0
     vzd0   = 0.0
-    expansion_cnst = 1.0e-1
-    beta_cr= 1.0e-3
+    expansion_cnst = 5.0e-1
+    beta_cr= 0.0e-3
     amp_cr = 1000.0
     norm_step = 1
  /
@@ -150,7 +150,7 @@
  $CRE_TEST
      u_b0     = 0.0 ! 3.0228e-3    ! initial magnetic energy-density
      u_d0     = 0.0 ! 0.25 ! 3.765e-4     ! initial magnitude of div_v
-     div_v    = -0.5  ! velocity field divergence, periodic, sums up with u_d0
+     div_v    = 0.0 ! velocity field divergence, periodic, sums up with u_d0
      ub_ampl  = 0.0   ! amplitude of synchrotron cooling coefficient with time
      omega_d  = 0.157 ! omega_d parameter for test with periodic adiabatic compression: u_d0 = u_d0 + div_v * cos(omega_d * t)
      omega_b  = 0.0   ! omega_b parameter for periodic variation of u_b: u_b = u_b0 + ub_ampl * cos(omega_b * t)
