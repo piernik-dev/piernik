@@ -75,7 +75,6 @@
     divB0_amp = 1.e-2
     divBc_amp = 0.1
     divBs_amp = 0.
-! ccB = .true. ! uncomment for cell-centered divergence cleaing
  /
 
  $NONINERTIAL
