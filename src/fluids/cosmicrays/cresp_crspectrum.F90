@@ -185,6 +185,16 @@ contains
                     return
                 endif
             endif
+            if (i_up .eq. i_lo) then
+                if (solve_fail_lo .and. solve_fail_up .eqv. .false.) then
+!                     print *, p_up, p_fix(i_up), p_fix(i_up+1)
+                    i_lo = i_up - 1 ; p_lo = p_fix(i_up) ; p(i_lo) = p_fix(i_up)
+                else if (solve_fail_up .and. solve_fail_lo .eqv. .false.) then
+                    i_up = i_lo + 1 ; p_up = p_fix(i_lo) ; p(i_lo) = p_fix(i_lo)
+                else
+                    i_lo = i_up +1 ; p_lo = p_fix(i_lo) ; p(i_lo) = p_fix(i_lo) ; p_up = p_fix(i_up) ; p(i_up) = p_fix(i_up)
+                endif
+            endif
             call cresp_find_active_bins
         endif
 
@@ -336,7 +346,7 @@ contains
             not_spectrum_break = .true.
         endwhere
         active_bins = I_ZERO
-!         active_bins = pack(all_bins, is_active_bin)   ! not to iterate over spectrum break
+!         active_bins = pack(all_bins, is_active_bin)
         active_bins = pack(all_bins, not_spectrum_break)   ! not to iterate over spectrum break
 
 ! Construct index arrays for fixed edges betwen p_lo and p_up, active edges 
