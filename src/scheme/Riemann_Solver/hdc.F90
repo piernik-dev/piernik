@@ -61,16 +61,16 @@ contains
 
      use cg_list,          only: cg_list_element
      use cg_leaves,        only: leaves
-     use constants,        only: phi_n
+     use constants,        only: psi_n
      use global,           only: psi_0
      use named_array_list, only: qna
 
      type(cg_list_element), pointer :: cgl
 
-     if (qna%exists(phi_n)) then
+     if (qna%exists(psi_n)) then
         cgl => leaves%first
         do while (associated(cgl))
-           cgl%cg%q(qna%ind(phi_n))%arr = psi_0
+           cgl%cg%q(qna%ind(psi_n))%arr = psi_0
            cgl => cgl%nxt
         enddo
      endif

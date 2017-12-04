@@ -403,7 +403,7 @@ contains
 
   subroutine sweep_dsplit(cg, dt, ddim)
 
-    use constants,        only: pdims, xdim, zdim, ORTHO1, ORTHO2, LO, HI, phi_n, INVALID
+    use constants,        only: pdims, xdim, zdim, ORTHO1, ORTHO2, LO, HI, psi_n, INVALID
     use fluidindex,       only: iarr_all_swp, iarr_mag_swp
     use global,           only: force_cc_mag
     use grid_cont,        only: grid_container
@@ -431,7 +431,7 @@ contains
     endif
 
     psii = INVALID
-    if (qna%exists(phi_n)) psii = qna%ind(phi_n)
+    if (qna%exists(psi_n)) psii = qna%ind(psi_n)
     psi_d = 0.
     nullify(ppsi)
 
