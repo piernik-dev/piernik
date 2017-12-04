@@ -472,20 +472,16 @@ contains
      real, dimension(:,:), intent(inout) :: u
      real, dimension(:,:), intent(inout) :: b_cc
      real,                 intent(in)    :: dtodx
-#ifdef GLM
      real, dimension(:,:), intent(inout) :: psi
-#endif /* GLM */
 
      real, dimension(size(b_cc,1),size(b_cc,2)), target :: b_cc_l, b_cc_r, mag_cc
      real, dimension(size(b_cc,1),size(b_cc,2))         :: b_ccl, b_ccr, db1, db2, db3
      real, dimension(size(u,1),size(u,2)), target       :: flx, ql, qr
      real, dimension(size(u,1),size(u,2))               :: ul, ur, du1, du2, du3
 
-#ifdef GLM
      real, dimension(size(psi,1),size(psi,2)), target   :: psi_l, psi_r
      real, dimension(size(psi,1),size(psi,2)),target    :: psi_cc
      real, dimension(size(psi,1),size(psi,2))           :: psi__l, psi__r, dpsi1, dpsi2, dpsi3
-#endif /* GLM */
      
      integer                                            :: nx
 
