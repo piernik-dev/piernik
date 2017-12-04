@@ -148,7 +148,7 @@ contains
     integer,                       intent(in)    :: n
     real, dimension(:,:), pointer, intent(out)   :: f
     real, dimension(:,:), pointer, intent(in)    :: ul, ur
-    real, dimension(:,:), pointer, intent(out)   :: b_cc    
+    real, dimension(:,:), pointer, intent(inout)   :: b_cc    
     real, dimension(:,:), pointer, intent(in)    :: b_ccl, b_ccr
     real,                          intent(in)    :: gamma
 
@@ -176,7 +176,7 @@ contains
 
     ! SOLVER
 
-    b_cc(xdim,:) = 0.
+    !b_cc(xdim,:) = 0.
     has_energy = (ubound(ul, dim=1) >= ien)
     ue = 0.
     
