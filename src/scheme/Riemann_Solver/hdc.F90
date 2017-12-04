@@ -40,7 +40,7 @@ module hdc
   real, protected :: chspeed
 
   private
-  public :: chspeed, update_chspeed, init_psi
+  public :: chspeed, update_chspeed, init_psi, glm_mhd
 
 contains
 
@@ -76,7 +76,37 @@ contains
      endif
 
   end subroutine init_psi
-!---------------------------------------------------------------------------------------------------------------
+  !---------------------------------------------------------------------------------------------------------------
+  subroutine glm_mhd(n, psif, psi_l, psi_r, b_cc, b_ccl, b_ccr)
+
+    ! external procedures
+    
+    use constants,  only: half, one, xdim
+
+    ! arguments
+    
+    implicit none
+    
+    integer,              intent(in)  :: n
+    real, dimension(:,:), intent(out) :: psif
+    real, dimension(:,:), intent(in)  :: psi_l
+    real, dimension(:,:), intent(in)  :: psi_r
+    real, dimension(:,:), intent(out) :: b_cc
+    real, dimension(:,:), intent(in)  :: b_ccl
+    real, dimension(:,:), intent(in)  :: b_ccr
+
+    ! local declarations
+
+    integer                           :: i
+
+     !b_cc(xdim,:) = 0.
+    
+    do i = 1, n
+       b_cc(xdim,i) = half*((b_ccl(xdim,i)+b_ccr(xdim,i)) - (one/chspeed)*(psi_r(1,i)-psi_l(1,i)))
+       psif(1,i)    = half*((psi_r(1,i)+psi_l(1,i)) - chspeed*(b_ccr(xdim,i)-b_ccl(xdim,i)))
+    end do
+    
+  end subroutine glm_mhd
 end module hdc
 
 #endif

@@ -463,22 +463,29 @@ contains
      use constants,  only: half
      use dataio_pub, only: die
      use global,     only: h_solver
-
+#ifdef GLM
+     use hdc,        only: glm_mhd
+#endif /* GLM */
+     
      implicit none
 
      real, dimension(:,:), intent(inout) :: u
      real, dimension(:,:), intent(inout) :: b_cc
      real,                 intent(in)    :: dtodx
+#ifdef GLM
      real, dimension(:,:), intent(inout) :: psi
+#endif /* GLM */
 
      real, dimension(size(b_cc,1),size(b_cc,2)), target :: b_cc_l, b_cc_r, mag_cc
      real, dimension(size(b_cc,1),size(b_cc,2))         :: b_ccl, b_ccr, db1, db2, db3
      real, dimension(size(u,1),size(u,2)), target       :: flx, ql, qr
      real, dimension(size(u,1),size(u,2))               :: ul, ur, du1, du2, du3
 
+#ifdef GLM
      real, dimension(size(psi,1),size(psi,2)), target   :: psi_l, psi_r
      real, dimension(size(psi,1),size(psi,2)),target    :: psi_cc
      real, dimension(size(psi,1),size(psi,2))           :: psi__l, psi__r, dpsi1, dpsi2, dpsi3
+#endif /* GLM */
      
      integer                                            :: nx
 
@@ -748,6 +755,9 @@ contains
            use fluidindex, only: flind
            use fluidtypes, only: component_fluid
            use hlld,       only: riemann_hlld
+#ifdef GLM
+           use hdc,        only: glm_mhd
+#endif /* GLM */
 
            implicit none
 
@@ -755,7 +765,9 @@ contains
            class(component_fluid), pointer :: fl
            real, dimension(size(b_cc,1),size(b_cc,2)), target :: b0
            real, dimension(:,:), pointer :: p_flx, p_bcc, p_bccl, p_bccr, p_ql, p_qr
-           real, dimension(:,:), pointer :: p_psi, p_psi_l, p_psi_r
+#ifdef GLM
+           real, dimension(:,:), pointer :: p_psif, p_psi_l, p_psi_r
+#endif /* GLM */
 
            do i = 1, flind%fluids
               fl    => flind%all_fluids(i)%fl
@@ -763,21 +775,28 @@ contains
               p_ql  => ql(fl%beg:fl%end,:)
               p_qr  => qr(fl%beg:fl%end,:)
               p_bcc => mag_cc(xdim:zdim,:)
-#ifdef GLM
-              p_psi => psi_cc(:,:)
-              p_psi_l => psi_l(:,:)
-              p_psi_r => psi_r(:,:)
-#endif
               if (fl%is_magnetized) then
                  p_bccl => b_cc_l(xdim:zdim,:)
                  p_bccr => b_cc_r(xdim:zdim,:)
+#ifdef GLM
+                 p_psif  => psi_cc(:,:)
+                 p_psi_l => psi_l(:,:)
+                 p_psi_r => psi_r(:,:)
+#endif /* GLM */
               else ! ignore all magnetic field
                  b0 = 0.
                  p_bccl => b0
                  p_bccr => b0
               endif
-              !call riemann_hlld(nx, p_flx, p_ql, p_qr, p_bcc, p_bccl, p_bccr, fl%gam) ! whole mag_cc is not needed now for simple schemes but rk2 and rk4 still rely on it
-              call riemann_hlld(nx, p_flx, p_ql, p_qr, p_bcc, p_bccl, p_bccr, fl%gam, p_psi, p_psi_l, p_psi_r)
+! final check needed where to call
+!#ifdef GLM
+!              call glm_mhd(nx, p_psif, p_psi_l, p_psi_r, p_bcc, p_bccl, p_bccr)
+!#endif /* GLM */
+              
+              call riemann_hlld(nx, p_flx, p_ql, p_qr, p_bcc, p_bccl, p_bccr, fl%gam) ! whole mag_cc is not needed now for simple schemes but rk2 and rk4 still rely on it
+#ifdef GLM
+              call glm_mhd(nx, p_psif, p_psi_l, p_psi_r, p_bcc, p_bccl, p_bccr)
+#endif /* GLM */
            enddo
 
         end subroutine riemann_wrap
