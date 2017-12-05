@@ -193,7 +193,7 @@ contains
          d_eta_factor = 1./(dims_twice+real(eta_scale, kind=8))
       endif
 
-      dt_resist = huge(1)
+      dt_resist = huge(1.)
 
    end subroutine init_resistivity
 
@@ -312,7 +312,7 @@ contains
       call leaves%get_extremum(qna%ind(wb_n), MAXL, cu2max)
 
 #ifndef ISO
-      dt_eint = huge(1)
+      dt_eint = huge(1.)
       cgl => leaves%first
       do while (associated(cgl))
          cg => cgl%cg
@@ -330,7 +330,7 @@ contains
 #endif /* !ISO */
       NULLIFY(p)
 
-      dt_resist = huge(1)
+      dt_resist = huge(1.)
       cgl => leaves%first
       do while (associated(cgl))
          call timestep_resist(cgl%cg)
