@@ -354,7 +354,7 @@ contains
             &                           (cg%b(zdim, cg%is        :cg%ie,         cg%js        :cg%je,         cg%ks+dom%D_z:cg%ke+dom%D_z) - &
             &                            cg%b(zdim, cg%is        :cg%ie,         cg%js        :cg%je,         cg%ks        :cg%ke        )   )/cg%dz ), kind=4)
             if (any(var == ["divbf4", "divbf6"])) then ! factors: 9./8., -1./24. (Maxima: linsolve_by_lu(matrix([1,3],[1,3**3]), matrix([1],[0]));)
-               select case(var)
+               select case (var)
                   case ("divbf4")
                      coeff1 = 9./8.
                      coeff2 = -1./24.
@@ -395,7 +395,7 @@ contains
             &                           (cg%b(zdim, cg%is        :cg%ie,         cg%js        :cg%je,         cg%ks+dom%D_z:cg%ke+dom%D_z) - &
             &                            cg%b(zdim, cg%is        :cg%ie,         cg%js        :cg%je,         cg%ks-dom%D_z:cg%ke-dom%D_z)   )/cg%dz ), kind=4)
             if (any(var == ["divbc4", "divbc6"])) then ! factors: 2./3., -1./12. (Maxima: linsolve_by_lu(matrix([2,2*2],[2,2*2**3]), matrix([1],[0]));)
-               select case(var)
+               select case (var)
                   case ("divbc4")
                      coeff1 = 2./3. / half
                      coeff2 = -1./12.
