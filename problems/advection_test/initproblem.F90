@@ -378,7 +378,7 @@ contains
                   enddo
                enddo
             enddo
-         end if
+         endif
 #else /* !MAGNETIC */
          call cg%set_constant_b_field([0., 0., 0.])
 #endif /* !MAGNETIC */
