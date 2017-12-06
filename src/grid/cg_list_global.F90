@@ -263,7 +263,7 @@ contains
            restart_mode = AT_OUT_B, dim4 = ndims, position=pia)                                            !! Main array of magnetic field's components, "b"
 #ifdef RIEMANN
       if (force_cc_mag) then
-         call this%reg_var(psi_n, vital = .false.) ! an array for div B cleaning
+         call this%reg_var(psi_n, vital = .false., restart_mode = AT_OUT_B) ! an array for div B cleaning
       else
          call this%reg_var(mag_cc_n, vital = .false.,                        dim4 = ndims) ! cell-centered magnetic field
       endif
