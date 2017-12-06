@@ -403,11 +403,14 @@ contains
 
   subroutine sweep_dsplit(cg, dt, ddim)
 
-    use constants,        only: pdims, xdim, zdim, ORTHO1, ORTHO2, LO, HI, phi_n, INVALID
+    use constants,        only: pdims, xdim, zdim, ORTHO1, ORTHO2, LO, HI, psi_n, INVALID
     use fluidindex,       only: iarr_all_swp, iarr_mag_swp
     use global,           only: force_cc_mag
     use grid_cont,        only: grid_container
     use named_array_list, only: wna, qna
+#ifdef GLM
+    use cg_leaves,        only: leaves
+#endif /* GLM */
 
     implicit none
 
@@ -431,7 +434,7 @@ contains
     endif
 
     psii = INVALID
-    if (qna%exists(phi_n)) psii = qna%ind(phi_n)
+    if (qna%exists(psi_n)) psii = qna%ind(psi_n)
     psi_d = 0.
     nullify(ppsi)
 
@@ -454,6 +457,11 @@ contains
        enddo
     enddo
 
+#ifdef GLM
+    if (qna%exists(psi_n)) call leaves%leaf_arr3d_boundaries(qna%ind(psi_n))
+    !! ToDo: check if it can be called less often and without corners
+#endif /* GLM */
+
   end subroutine sweep_dsplit
 
 !---------------------------------------------------------------------------------------------------------------------
@@ -472,20 +480,16 @@ contains
      real, dimension(:,:), intent(inout) :: u
      real, dimension(:,:), intent(inout) :: b_cc
      real,                 intent(in)    :: dtodx
-#ifdef GLM
      real, dimension(:,:), intent(inout) :: psi
-#endif /* GLM */
 
      real, dimension(size(b_cc,1),size(b_cc,2)), target :: b_cc_l, b_cc_r, mag_cc
      real, dimension(size(b_cc,1),size(b_cc,2))         :: b_ccl, b_ccr, db1, db2, db3
      real, dimension(size(u,1),size(u,2)), target       :: flx, ql, qr
      real, dimension(size(u,1),size(u,2))               :: ul, ur, du1, du2, du3
 
-#ifdef GLM
      real, dimension(size(psi,1),size(psi,2)), target   :: psi_l, psi_r
      real, dimension(size(psi,1),size(psi,2)),target    :: psi_cc
      real, dimension(size(psi,1),size(psi,2))           :: psi__l, psi__r, dpsi1, dpsi2, dpsi3
-#endif /* GLM */
      
      integer                                            :: nx
 

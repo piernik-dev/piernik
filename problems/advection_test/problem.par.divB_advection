@@ -77,7 +77,6 @@
     divBs_amp = 0.
     pulse_amp = 1.0
     divBb_amp = 0.28209479177387814 !  1./sqrt(4 * pi)
-! ccB = .true. ! uncomment for cell-centered divergence cleaing
  /
 
  $NONINERTIAL

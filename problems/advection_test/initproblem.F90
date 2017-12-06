@@ -88,7 +88,7 @@ contains
       use domain,           only: dom
       use fluidindex,       only: flind, iarr_all_dn
       use func,             only: operator(.notequals.)
-      use global,           only: smalld, smallei
+      use global,           only: smalld, smallei, force_cc_mag
       use mpisetup,         only: rbuff, ibuff, lbuff, master, slave, proc, have_mpi, LAST, piernik_MPI_Bcast
       use named_array_list, only: wna
       use refinement,       only: set_n_updAMR, n_updAMR, user_ref2list
@@ -116,7 +116,7 @@ contains
       divBc_amp     = 0.                   !< unphysical, only for testing
       divBs_amp     = 0.                   !< unphysical, only for testing
       divBb_amp     = 0.                   !< unphysical, only for testing
-      ccB           = .false.              !< defaulting to face-centered initial field
+      ccB           = force_cc_mag
 
       if (master) then
 
@@ -243,6 +243,9 @@ contains
          call warn("[initproblem:read_problem_par] Ignoring magnetic field amplitudes")
 #endif /* !MAGNETIC */
       endif
+
+      if (master .and. (ccB .neqv. force_cc_mag)) call warn("[initproblem:read_problem_par] ccB /= force_cc_mag")
+
    end subroutine read_problem_par
 
 !-----------------------------------------------------------------------------

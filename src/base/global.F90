@@ -179,7 +179,11 @@ contains
       relax_time  = 0.
       integration_order  = 2
       use_fargo   = .false.
+#ifdef GLM
+      force_cc_mag = .true.
+#else /* !GLM */
       force_cc_mag = .false.
+#endif /* !GLM */
       psi_0       = 0.
       skip_sweep  = .false.
 
@@ -285,10 +289,18 @@ contains
 
       endif
 
+      if (master) then
 #ifndef RIEMANN
-      if (master .and. force_cc_mag) call warn("[init_global] force_cc_mag ignored when RIEMANN is not set")
-      force_cc_mag = .false.
+         if (force_cc_mag) call warn("[global:init_global] force_cc_mag ignored when RIEMANN is not set.")
+         force_cc_mag = .false.
 #endif /* !RIEMANN */
+
+#ifdef GLM
+         if (.not. force_cc_mag) call warn("[global:init_global] force_cc_mag should be set to .true. for GLM.")
+#else /* !GLM */
+         if (force_cc_mag) call warn("[global:init_global] force_cc_mag should be set to .false. for CT (non-GLM).")
+#endif /* !GLM */
+      endif
 
    end subroutine init_global
 
