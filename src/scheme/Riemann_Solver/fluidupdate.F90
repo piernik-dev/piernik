@@ -408,6 +408,9 @@ contains
     use global,           only: force_cc_mag
     use grid_cont,        only: grid_container
     use named_array_list, only: wna, qna
+#ifdef GLM
+    use cg_leaves,        only: leaves
+#endif /* GLM */
 
     implicit none
 
@@ -453,6 +456,11 @@ contains
           pb(:,:) = b_cc1d(iarr_mag_swp(ddim,:),:) ! ToDo figure out how to manage CT energy fixup without extra storage
        enddo
     enddo
+
+#ifdef GLM
+    if (qna%exists(psi_n)) call leaves%leaf_arr3d_boundaries(qna%ind(psi_n))
+    !! ToDo: check if it can be called less often and without corners
+#endif /* GLM */
 
   end subroutine sweep_dsplit
 
