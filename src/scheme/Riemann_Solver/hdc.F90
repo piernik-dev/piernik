@@ -88,7 +88,7 @@ contains
     implicit none
     
     integer,              intent(in)    :: n
-    real, dimension(:,:), intent(inout)   :: psif
+    real, dimension(:,:), intent(inout) :: psif
     real, dimension(:,:), intent(inout) :: psi_l
     real, dimension(:,:), intent(inout) :: psi_r
     real, dimension(:,:), intent(inout) :: b_cc
@@ -104,7 +104,7 @@ contains
     do i = 1, n
        b_cc(xdim,i) = half*((b_ccl(xdim,i)+b_ccr(xdim,i)) - (one/chspeed)*(psi_r(1,i)-psi_l(1,i)))
        psif(1,i)    = half*((psi_r(1,i)+psi_l(1,i)) - chspeed*(b_ccr(xdim,i)-b_ccl(xdim,i)))
-
+   
        b_ccl(xdim,i) = b_cc(xdim,i)
        b_ccr(xdim,i) = b_cc(xdim,i)
 
