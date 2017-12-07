@@ -134,12 +134,15 @@ contains
   !------------------------------------------------------------------------------------------------------------------------------------------------
 
 
-  subroutine riemann_hlld(n,f,ul,ur,b_cc,b_ccl,b_ccr,gamma)
+  subroutine riemann_hlld(n,f,ul,ur,b_cc,b_ccl,b_ccr,gamma,psif,psi_l,psi_r)
 
     ! external procedures
 
     use constants,  only: half, zero, one, xdim, ydim, zdim, idn, imx, imy, imz, ien
     use func,       only: operator(.notequals.), operator(.equals.)
+#ifdef GLM
+    use hdc,        only: chspeed, update_chspeed
+#endif /* GLM */
     
     ! arguments
 
@@ -148,9 +151,12 @@ contains
     integer,                       intent(in)    :: n
     real, dimension(:,:), pointer, intent(out)   :: f
     real, dimension(:,:), pointer, intent(in)    :: ul, ur
-    real, dimension(:,:), pointer, intent(inout)   :: b_cc    
+    real, dimension(:,:), pointer, intent(inout) :: b_cc    
     real, dimension(:,:), pointer, intent(in)    :: b_ccl, b_ccr
     real,                          intent(in)    :: gamma
+    real, dimension(:,:), pointer, intent(out)   :: psif
+    real, dimension(:,:), pointer, intent(in)    :: psi_l
+    real, dimension(:,:), pointer, intent(in)    :: psi_r
 
     ! Local variables
 
@@ -173,13 +179,15 @@ contains
     real, dimension(xdim:zdim)                   :: b_starl, b_starr, b_2star
     logical                                      :: has_energy
     real                                         :: ue
+    real, dimension(size(psif,1),size(psif,2))   :: psistarl, psistarr, psi2star
+    real, dimension(xdim:zdim)                   :: bxglmstarl, bxglmstarr, bxglm2star
 
     ! SOLVER
 
     !b_cc(xdim,:) = 0.
     has_energy = (ubound(ul, dim=1) >= ien)
     ue = 0.
-    
+
      do i = 1,n
 
        ! Left and right states of magnetic pressure
@@ -230,6 +238,25 @@ contains
        sl  =  min(ul(imx,i) ,ur(imx,i)) - c_fastm
        sr  =  max(ul(imx,i), ur(imx,i)) + c_fastm
 
+#ifdef GLM 
+       b_cc(xdim,i) = half*((b_ccl(xdim,i)+b_ccr(xdim,i)) - (one/chspeed)*(psi_r(1,i)-psi_l(1,i)))
+       psif(1,i)    = half*((psi_r(1,i)+psi_l(1,i)) - chspeed*(b_ccr(xdim,i)-b_ccl(xdim,i)))
+   
+       b_ccl(xdim,i) = b_cc(xdim,i)
+       b_ccr(xdim,i) = b_cc(xdim,i)
+
+       psi_r(1,i) = psif(1,i)
+       psi_l(1,i) = psif(1,i)
+
+       psistarl(1,i) = psi_l(1,i)
+       psistarr(1,i) = psi_r(1,i)
+       psi2star(1,i) = psi_l(1,i) !(or psi_r(1,i))
+       
+       bxglmstarl(xdim) = b_ccl(xdim,i)
+       bxglmstarr(xdim) = b_ccr(xdim,i)
+       bxglm2star(xdim) = b_ccl(xdim,i) !(or b_ccr(xdim,i))
+#endif /* GLM */
+
        ! Left flux
 
        fl(idn) = ul(idn,i)*ul(imx,i)
@@ -251,9 +278,18 @@ contains
        if (sl .ge.  zero) then
           f(:,i)  =  fl
           b_cc(ydim:zdim,i) = b_cclf(ydim:zdim)
+#ifdef GLM
+          b_cc(xdim,i) = b_ccl(xdim,i)
+          psif(1,i) =    psi_l(1,i)
+#endif /* GLM */
        else if (sr .le.  zero) then
           f(:,i)  =  fr
           b_cc(ydim:zdim,i) = b_ccrf(ydim:zdim)
+#ifdef GLM
+          b_cc(xdim,i) = 0.1!b_ccr(xdim,i)
+          psif(1,i) = 0.1!psi_r(1,i)
+#endif /* GLM */
+
        else
           
           ! Speed of contact discontinuity Eq. 38
@@ -370,6 +406,10 @@ contains
 
                 f(:,i) = fl + sl*(u_starl - [ ul(idn,i), ul(idn,i)*ul(imx:imz,i), enl ] )
                 b_cc(ydim:zdim,i) = b_cclf(ydim:zdim) + sl*(b_starl(ydim:zdim) - b_ccl(ydim:zdim,i))
+#ifdef GLM
+                b_cc(xdim,i) = b_ccl(xdim,i) + sl*(bxglmstarl(xdim) - b_ccl(xdim,i))
+                psif(1,i) = psi_l(1,i) + sl*(psistarl(1,i) - psi_l(1,i)) 
+#endif /* GLM */
                 
              else if (alfven_r < zero) then
 
@@ -377,6 +417,10 @@ contains
 
                 f(:,i) = fr + sr*(u_starr - [ ur(idn,i), ur(idn,i)*ur(imx:imz,i), enr ] )
                 b_cc(ydim:zdim,i) = b_ccrf(ydim:zdim) + sr*(b_starr(ydim:zdim) - b_ccr(ydim:zdim,i))
+#ifdef GLM
+                b_cc(xdim,i) = b_ccr(xdim,i) + sr*(bxglmstarr(xdim) - b_ccr(xdim,i))
+                psif(1,i) = psi_r(1,i) + sl*(psistarr(1,i) - psi_r(1,i)) 
+#endif /* GLM */
 
              else ! alfven_l .le. zero .le. alfven_r
 
@@ -435,13 +479,22 @@ contains
                    ! Left Alfven intermediate flux Eq. 65
                    f(:,i) = fl + alfven_l*u_2starl - (alfven_l - sl)*u_starl - sl* [ ul(idn,i), ul(idn,i)*ul(imx:imz,i), enl ]
                    b_cc(ydim:zdim,i) = b_cclf(ydim:zdim) + alfven_l*b_2star(ydim:zdim) - (alfven_l - sl)*b_starl(ydim:zdim) - sl*b_ccl(ydim:zdim,i)
+#ifdef GLM
+                   b_cc(xdim,i) = b_ccl(xdim,i) + alfven_l*bxglm2star(xdim) - (alfven_l - sl)*bxglmstarl(xdim) - sl*b_ccl(xdim,i)
+                   psif(1,i)    = psi_l(1,i) + alfven_l*psi2star(1,i) - (alfven_l - sl)*psistarl(1,i) - sl*psi_l(1,i)
+#endif /* GLM */
 
                 else if (sm < zero) then
                    ! Right Alfven intermediate flux Eq. 65
                    f(:,i) = fr + alfven_r*u_2starr - (alfven_r - sr)*u_starr - sr* [ ur(idn,i), ur(idn,i)*ur(imx:imz,i), enr ]
                    b_cc(ydim:zdim,i) = b_ccrf(ydim:zdim) + alfven_r*b_2star(ydim:zdim) - (alfven_r - sr)*b_starr(ydim:zdim) - sr*b_ccr(ydim:zdim,i)
+#ifdef GLM
+                   b_cc(xdim,i) = b_ccr(xdim,i) + alfven_r*bxglm2star(xdim) - (alfven_r - sr)*bxglmstarr(xdim) - sr*b_ccr(xdim,i)
+                   psif(1,i) = psi_r(1,i) + alfven_r*psi2star(1,i) - (alfven_r - sr)*psistarr(1,i) - sr*psi_r(1,i)
+#endif /* GLM */
 
                 else ! sm = 0
+
                    ! Left and right Alfven intermediate flux Eq. 65
                    f(:,i) = half*( &
                         (fl + alfven_l*u_2starl - (alfven_l - sl)*u_starl - sl* [ ul(idn,i), ul(idn,i)*ul(imx:imz,i), enl ]) + &
@@ -450,6 +503,16 @@ contains
                    b_cc(ydim:zdim,i) = half*( &
                         (b_cclf(ydim:zdim) + alfven_l*b_2star(ydim:zdim) - (alfven_l - sl)*b_starl(ydim:zdim) - sl*b_ccl(ydim:zdim,i)) + &
                         (b_ccrf(ydim:zdim) + alfven_r*b_2star(ydim:zdim) - (alfven_r - sr)*b_starr(ydim:zdim) - sr*b_ccr(ydim:zdim,i)))
+
+#ifdef GLM
+                   b_cc(xdim,i) = half*( &
+                        (b_ccl(xdim,i) + alfven_l*bxglm2star(xdim) - (alfven_l - sl)*bxglmstarl(xdim) - sl*b_ccl(xdim,i)) + &
+                        (b_ccr(xdim,i) + alfven_r*bxglm2star(xdim) - (alfven_r - sr)*bxglmstarr(xdim) - sr*b_ccr(xdim,i)))
+
+                   psif(1,i) = half*( &
+                        (psi_l(1,i) + alfven_l*psi2star(1,i) - (alfven_l - sl)*psistarl(1,i) - sl*psi_l(1,i)) + &
+                        (psi_r(1,i) + alfven_r*psi2star(1,i) - (alfven_r - sr)*psistarr(1,i) - sr*psi_r(1,i)))
+#endif /* GLM */
 
                 endif  ! sm = 0
 

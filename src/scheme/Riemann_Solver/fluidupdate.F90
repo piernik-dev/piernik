@@ -759,9 +759,9 @@ contains
            use fluidindex, only: flind
            use fluidtypes, only: component_fluid
            use hlld,       only: riemann_hlld
-#ifdef GLM
-           use hdc,        only: glm_mhd
-#endif /* GLM */
+!#ifdef GLM
+!           use hdc,        only: glm_mhd
+!#endif /* GLM */
 
            implicit none
 
@@ -793,11 +793,11 @@ contains
                  p_bccr => b0
               endif
 ! final check needed where to call
-#ifdef GLM
-              call glm_mhd(nx, p_psif, p_psi_l, p_psi_r, p_bcc, p_bccl, p_bccr)
-#endif /* GLM */
+!#ifdef GLM
+!              call glm_mhd(nx, p_psif, p_psi_l, p_psi_r, p_bcc, p_bccl, p_bccr)
+!#endif /* GLM */
               
-              call riemann_hlld(nx, p_flx, p_ql, p_qr, p_bcc, p_bccl, p_bccr, fl%gam) ! whole mag_cc is not needed now for simple schemes but rk2 and rk4 still rely on it
+              call riemann_hlld(nx, p_flx, p_ql, p_qr, p_bcc, p_bccl, p_bccr, fl%gam, p_psif, p_psi_l, p_psi_r) ! whole mag_cc is not needed now for simple schemes but rk2 and rk4 still rely on it
 !#ifdef GLM
 !              call glm_mhd(nx, p_psif, p_psi_l, p_psi_r, p_bcc, p_bccl, p_bccr)
 !#endif /* GLM */
@@ -806,6 +806,9 @@ contains
         end subroutine riemann_wrap
 
         subroutine update(weights)
+          
+          
+          use constants, only: xdim
 
            implicit none
 
@@ -842,6 +845,8 @@ contains
            if (size(w)>=4) psi(:,2:nx) = psi(:,2:nx) + w(4) * dpsi3(:,2:nx)
            psi(:,1) = psi(:,2)
            psi(:,nx) = psi(:,nx-1)
+           !psi = psi_cc
+           !b_cc(xdim,:) = mag_cc(xdim,:)
 #endif /* GLM */        
 
            deallocate(w)
