@@ -126,7 +126,7 @@ contains
         vrtl_n = v_n
 
         call find_i_bound(empty_cell)
-        if ( empty_cell ) return                                ! if grid cell contains empty bins, no action is taken
+        if ( empty_cell ) return             ! if grid cell contains empty bins, no action is taken
         call cresp_find_active_bins
         call cresp_organize_p
 
@@ -158,7 +158,7 @@ contains
         if ((solve_fail_lo .eqv. .true.) .or. (solve_fail_up .eqv. .true.)) then
             call deallocate_active_arrays
             if (solve_fail_lo) then
-                if (i_lo .gt. 0) then
+                if (i_lo .gt. 0 .and. i_lo .lt. ncre-2) then
                     call transfer_quantities(e(i_lo+2),e(i_lo+1))
                     call transfer_quantities(n(i_lo+2),n(i_lo+1))
                     i_lo = i_lo + 1
@@ -166,7 +166,8 @@ contains
                 else
                     call transfer_quantities(v_e(1),e(i_lo+1))
                     call transfer_quantities(v_n(1),n(i_lo+1))
-                    return
+                    i_lo = i_lo+1
+                    p_lo = p_fix(i_lo) ; p(i_lo) = p_fix(i_lo)
                 endif
             endif
             if (solve_fail_up) then
@@ -182,7 +183,6 @@ contains
                 else
                     call transfer_quantities(v_e(2),e(i_up))
                     call transfer_quantities(v_n(2),n(i_up))
-                    return
                 endif
             endif
             if (i_up .eq. i_lo) then
@@ -1150,6 +1150,7 @@ contains
                 print *, "Interpolated?", interpolated, "NR_refine_solution_pf?", NR_refine_solution_pf,"solved?", exit_code
             endif
         endif
+        x_NR = abs(x_NR) ! negative values cannot be allowed
         p_up      = p_fix(i_up-1)*x_NR(1)
         p(i_up)   = p_up
         f(i_up-1) = e_small_to_f(p_up)/x_NR(2)
@@ -1205,6 +1206,7 @@ contains
                 print *, "Interpolated?", interpolated, "NR_refine_solution_pf?", NR_refine_solution_pf,"solved?", exit_code
             endif
         endif
+        x_NR = abs(x_NR) ! negative values cannot be allowed
         p_lo      = p_fix(i_lo+1)/ x_NR(1)
         p(i_lo)   = p_lo
         f(i_lo)   = e_small_to_f(p_lo)
