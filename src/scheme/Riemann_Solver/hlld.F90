@@ -179,8 +179,8 @@ contains
     real, dimension(xdim:zdim)                   :: b_starl, b_starr, b_2star
     logical                                      :: has_energy
     real                                         :: ue
-    real, dimension(size(psif,1),size(psif,2))   :: psilf, psirf, psistarl, psistarr, psi2star, glmflux_psi
-    real, dimension(xdim:zdim)                   :: bxglmstarl, bxglmstarr, bxglm2star, glmflux_b
+    real, dimension(size(psif,1),size(psif,2))   :: psilf, psirf, psistarl, psistarr, psi2star, glm_psi
+    real, dimension(xdim:zdim)                   :: bxglmstarl, bxglmstarr, bxglm2star, glm_b
 
     ! SOLVER
 
@@ -239,13 +239,13 @@ contains
        sr  =  max(ul(imx,i), ur(imx,i)) + c_fastm
 
 #ifdef GLM 
-       glmflux_b(xdim) =  half*((b_ccl(xdim,i)+b_ccr(xdim,i)) - (one/chspeed)*(psi_r(1,i)-psi_l(1,i)))
-       glmflux_psi(1,i) = half*((psi_r(1,i)+psi_l(1,i)) - chspeed*(b_ccr(xdim,i)-b_ccl(xdim,i)))
+       glm_b(xdim) =  half*((b_ccl(xdim,i)+b_ccr(xdim,i)) - (one/chspeed)*(psi_r(1,i)-psi_l(1,i)))
+       glm_psi(1,i) = half*((psi_r(1,i)+psi_l(1,i)) - chspeed*(b_ccr(xdim,i)-b_ccl(xdim,i)))
 
-       b_cclf(xdim) = glmflux_b(xdim)
-       b_ccrf(xdim) = glmflux_b(xdim)
-       psilf(1,i)   = glmflux_psi(1,i)
-       psirf(1,i)   = glmflux_psi(1,i)
+       b_cclf(xdim) = glm_b(xdim)
+       b_ccrf(xdim) = glm_b(xdim)
+       psilf(1,i)   = glm_psi(1,i)
+       psirf(1,i)   = glm_psi(1,i)
        
        psistarl(1,i) = psilf(1,i)
        psistarr(1,i) = psirf(1,i)

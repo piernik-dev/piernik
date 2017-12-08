@@ -722,10 +722,10 @@ contains
            b_cc_r(:,nx) = b_cc_r(:,nx-1)
 
 #ifdef GLM
-            psi_l(1,2:nx) = psi__r(1,2:nx) + half*dtodx*flx(size(u,1)+size(b_cc,1)+1,2:nx)
-            psi_l(:,1) = psi_l(:,2)
-            psi_r(1,1:nx-1) = psi__l(1,2:nx) + half*dtodx*flx(size(u,1)+size(b_cc,1)+1,2:nx)
-            psi_r(:,nx) = psi_r(:,nx-1)
+           psi_l(1,2:nx) = psi__r(1,2:nx) + half*dtodx*flx(size(u,1)+size(b_cc,1)+1,2:nx)
+           psi_l(:,1) = psi_l(:,2)
+           psi_r(1,1:nx-1) = psi__l(1,2:nx) + half*dtodx*flx(size(u,1)+size(b_cc,1)+1,2:nx)
+           psi_r(:,nx) = psi_r(:,nx-1)
 #endif /* GLM */
            ql = utoq(u_l,b_cc_l)
            qr = utoq(u_r,b_cc_r)
@@ -793,7 +793,7 @@ contains
                  p_bccr => b0
               endif
 
-`              call riemann_hlld(nx, p_flx, p_ql, p_qr, p_bcc, p_bccl, p_bccr, fl%gam, p_psif, p_psi_l, p_psi_r) ! whole mag_cc is not needed now for simple schemes but rk2 and rk4 still rely on it
+              call riemann_hlld(nx, p_flx, p_ql, p_qr, p_bcc, p_bccl, p_bccr, fl%gam, p_psif, p_psi_l, p_psi_r) ! whole mag_cc is not needed now for simple schemes but rk2 and rk4 still rely on it
            
 enddo
 
