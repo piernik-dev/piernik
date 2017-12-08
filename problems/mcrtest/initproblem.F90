@@ -305,7 +305,8 @@ contains
       cgl => leaves%first
       do while (associated(cgl))
         cg => cgl%cg
-        if (expansion_cnst .gt. 0.0 ) then ! adiabatic expansion / compression
+        if (expansion_cnst .ne. 0.0 ) then ! adiabatic expansion / compression
+         write(msg,*) '[initproblem:problem_initial_conditions] setting up expansion/compression, expansion_cnst=',expansion_cnst
 #ifdef IONIZED
 ! Ionized
          do k = cg%lhn(zdim,LO), cg%lhn(zdim,HI)
