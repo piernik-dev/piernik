@@ -109,7 +109,7 @@ contains
 
   end subroutine init_psi
   !---------------------------------------------------------------------------------------------------------------
-  subroutine glm_mhd(n, psif, psi_l, psi_r, b_cc, b_ccl, b_ccr)
+  subroutine glm_mhd(n, psi_l, psi_r, b_ccl, b_ccr, b_cc, psif)
 
     ! external procedures
     
@@ -120,28 +120,25 @@ contains
     implicit none
     
     integer,              intent(in)    :: n
-    real, dimension(:,:), intent(inout) :: psif
-    real, dimension(:,:), intent(inout) :: psi_l
-    real, dimension(:,:), intent(inout) :: psi_r
-    real, dimension(:,:), intent(inout) :: b_cc
-    real, dimension(:,:), intent(inout) :: b_ccl
-    real, dimension(:,:), intent(inout) :: b_ccr
+    real, dimension(:,:), intent(out) :: psif
+    real, dimension(:,:), intent(in) :: psi_l
+    real, dimension(:,:), intent(in) :: psi_r
+    real, dimension(:,:), intent(out) :: b_cc
+    real, dimension(:,:), intent(in) :: b_ccl
+    real, dimension(:,:), intent(in) :: b_ccr
 
     ! local declarations
 
     integer                           :: i
+    real, dimension(xdim)            :: glm_b
+    real, dimension(size(psif,1),size(psif,2)) :: glm_psi
 
-     !b_cc(xdim,:) = 0.
-    
     do i = 1, n
-       b_cc(xdim,i) = half*((b_ccl(xdim,i)+b_ccr(xdim,i)) - (one/chspeed)*(psi_r(1,i)-psi_l(1,i)))
-       psif(1,i)    = half*((psi_r(1,i)+psi_l(1,i)) - chspeed*(b_ccr(xdim,i)-b_ccl(xdim,i)))
+       glm_b(xdim) = half*((b_ccl(xdim,i)+b_ccr(xdim,i)) - (one/chspeed)*(psi_r(1,i)-psi_l(1,i)))
+       glm_psi(1,i)    = half*((psi_r(1,i)+psi_l(1,i)) - chspeed*(b_ccr(xdim,i)-b_ccl(xdim,i)))
    
-       b_ccl(xdim,i) = b_cc(xdim,i)
-       b_ccr(xdim,i) = b_cc(xdim,i)
-
-       psi_r(1,i) = psif(1,i)
-       psi_l(1,i) = psif(1,i)
+       b_cc(xdim,i) = glm_psi(1,i)
+       psif(1,i) = chspeed**2.0*glm_b(xdim)
     end do
     
   end subroutine glm_mhd

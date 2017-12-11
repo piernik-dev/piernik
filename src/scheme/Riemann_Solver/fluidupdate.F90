@@ -593,7 +593,7 @@ contains
        
         subroutine slope(uu, bb, pp)
 
-           use constants,  only: half, xdim, zdim
+           use constants,  only: half
            use dataio_pub, only: die
            use fluxlimiters, only: flimiter, blimiter
 #ifdef GLM
@@ -755,13 +755,13 @@ contains
 
         subroutine riemann_wrap()
 
-           use constants,  only: xdim, zdim, half
+           use constants,  only: xdim, zdim
            use fluidindex, only: flind
            use fluidtypes, only: component_fluid
            use hlld,       only: riemann_hlld
-!#ifdef GLM
-!           use hdc,        only: glm_mhd
-!#endif /* GLM */
+#ifdef GLM
+           use hdc,        only: glm_mhd
+#endif /* GLM */
 
            implicit none
 
@@ -792,18 +792,15 @@ contains
                  p_bccl => b0
                  p_bccr => b0
               endif
-
-              call riemann_hlld(nx, p_flx, p_ql, p_qr, p_bcc, p_bccl, p_bccr, fl%gam, p_psif, p_psi_l, p_psi_r) ! whole mag_cc is not needed now for simple schemes but rk2 and rk4 still rely on it
-           
+#ifdef GLM
+              call glm_mhd(nx, p_psi_l, p_psi_r, p_bccl, p_bccr, p_bcc, p_psif)
+#endif /* GLM */
+              call riemann_hlld(nx, p_flx, p_ql, p_qr, p_bcc, p_bccl, p_bccr, fl%gam) ! whole mag_cc is not needed now for simple schemes but rk2 and rk4 still rely on it
 enddo
-
         end subroutine riemann_wrap
 
         subroutine update(weights)
           
-          
-          use constants, only: xdim
-
            implicit none
 
            real, optional, dimension(:), intent(in) :: weights
@@ -839,8 +836,8 @@ enddo
            if (size(w)>=4) psi(:,2:nx) = psi(:,2:nx) + w(4) * dpsi3(:,2:nx)
            psi(:,1) = psi(:,2)
            psi(:,nx) = psi(:,nx-1)
-           !psi = psi_cc
-           !b_cc(xdim,:) = mag_cc(xdim,:)
+           !psi = psi_cc ! Not needed ?
+           !b_cc(xdim,:) = mag_cc(xdim,:) ! Not needed ? 
 #endif /* GLM */        
 
            deallocate(w)
