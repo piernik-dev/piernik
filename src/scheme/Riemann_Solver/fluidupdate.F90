@@ -786,15 +786,18 @@ contains
                  p_psif  => psi_cc(:,:)
                  p_psi_l => psi_l(:,:)
                  p_psi_r => psi_r(:,:)
+                 call glm_mhd(nx, p_psi_l, p_psi_r, p_bccl, p_bccr, p_bcc, p_psif)
 #endif /* GLM */
               else ! ignore all magnetic field
                  b0 = 0.
                  p_bccl => b0
                  p_bccr => b0
-              endif
 #ifdef GLM
-              call glm_mhd(nx, p_psi_l, p_psi_r, p_bccl, p_bccr, p_bcc, p_psif)
+                 psi_cc = 0.
+                 mag_cc = 0.
 #endif /* GLM */
+              endif
+
               call riemann_hlld(nx, p_flx, p_ql, p_qr, p_bcc, p_bccl, p_bccr, fl%gam) ! whole mag_cc is not needed now for simple schemes but rk2 and rk4 still rely on it
 enddo
         end subroutine riemann_wrap
