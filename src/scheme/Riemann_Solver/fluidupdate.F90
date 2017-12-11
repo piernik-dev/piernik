@@ -51,6 +51,7 @@ contains
     use constants,      only: xdim, zdim, GEO_XYZ
     use dataio_pub,     only: halfstep, die, warn
     use domain,         only: dom, is_refined
+    use fluidindex,     only: flind
     use fluxlimiters,   only: set_limiters
     use global,         only: skip_sweep, dt, dtm, t, limiter, limiter_b, limiter_p, force_cc_mag
     use mpisetup,       only: master
@@ -62,7 +63,7 @@ contains
 
     logical, save                   :: first_run = .true.
     type(cg_list_element), pointer  :: cgl
-    integer(kind=4)                 :: ddim
+    integer(kind=4)                 :: ddim, nmag, i
 
     ! is_multicg should be safe
     if (is_refined) call die("[fluid_update] This Rieman solver is not compatible with mesh refinements yet!")
@@ -76,6 +77,11 @@ contains
 #ifdef COSM_RAYS
 #  error   Cosmic rays are not implemented yet in this Riemann solver.
 #endif /* COSM_RAYS */
+    nmag = 0
+    do i = 1, flind%fluids
+       if (flind%all_fluids(i)%fl%is_magnetized) nmag = nmag + 1
+    enddo
+    if (nmag > 1) call die("[fluidupdate:fluid_update] At most one magnetized fluid is implemented")
 
 #ifdef GLM
     call update_chspeed
@@ -767,7 +773,8 @@ contains
 
            integer :: i
            class(component_fluid), pointer :: fl
-           real, dimension(size(b_cc,1),size(b_cc,2)), target :: b0
+           real, dimension(size(b_cc,1),size(b_cc,2)), target :: b0, bf0
+           real, dimension(size(psi,1),size(psi,2)), target ::  p0, pf0
            real, dimension(:,:), pointer :: p_flx, p_bcc, p_bccl, p_bccr, p_ql, p_qr
 #ifdef GLM
            real, dimension(:,:), pointer :: p_psif, p_psi_l, p_psi_r
@@ -778,23 +785,28 @@ contains
               p_flx => flx(fl%beg:fl%end,:)
               p_ql  => ql(fl%beg:fl%end,:)
               p_qr  => qr(fl%beg:fl%end,:)
-              p_bcc => mag_cc(xdim:zdim,:)
               if (fl%is_magnetized) then
                  p_bccl => b_cc_l(xdim:zdim,:)
                  p_bccr => b_cc_r(xdim:zdim,:)
+                 p_bcc  => mag_cc(xdim:zdim,:)
 #ifdef GLM
                  p_psif  => psi_cc(:,:)
                  p_psi_l => psi_l(:,:)
                  p_psi_r => psi_r(:,:)
                  call glm_mhd(nx, p_psi_l, p_psi_r, p_bccl, p_bccr, p_bcc, p_psif)
-#endif /* GLM */
+#else /* !GLM */
+                 mag_cc(xdim,:) = 0.
+#endif /* !GLM */
               else ! ignore all magnetic field
                  b0 = 0.
                  p_bccl => b0
                  p_bccr => b0
+                 p_bcc  => bf0
 #ifdef GLM
-                 psi_cc = 0.
-                 mag_cc = 0.
+                 p0 = 0.
+                 p_psi_l => p0
+                 p_psi_r => p0
+                 p_psif  => pf0
 #endif /* GLM */
               endif
 

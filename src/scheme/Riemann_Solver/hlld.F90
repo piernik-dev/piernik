@@ -175,7 +175,6 @@ contains
     
     ! SOLVER
 
-    !b_cc(xdim,:) = 0.
     has_energy = (ubound(ul, dim=1) >= ien)
     ue = 0.
 
