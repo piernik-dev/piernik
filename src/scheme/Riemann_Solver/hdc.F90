@@ -117,34 +117,29 @@ contains
 !! The result is already simplified: flux of B_x = psi_m and flux of psi = c_h^2 * B_x
 !<
 
-  subroutine glm_mhd(n, psi_l, psi_r, b_ccl, b_ccr, b_cc, psif)
+  subroutine glm_mhd(psi_l, psi_r, b_ccl, b_ccr, b_cc, psif)
 
     ! external procedures
     
-    use constants,  only: half, xdim
+    use constants,  only: half
 
     ! arguments
     
     implicit none
     
-    integer,              intent(in)    :: n
-    real, dimension(:,:), intent(out) :: psif
-    real, dimension(:,:), intent(in) :: psi_l
-    real, dimension(:,:), intent(in) :: psi_r
-    real, dimension(:,:), intent(out) :: b_cc
-    real, dimension(:,:), intent(in) :: b_ccl
-    real, dimension(:,:), intent(in) :: b_ccr
+    real, dimension(:), intent(out) :: psif
+    real, dimension(:), intent(in) :: psi_l
+    real, dimension(:), intent(in) :: psi_r
+    real, dimension(:), intent(out) :: b_cc
+    real, dimension(:), intent(in) :: b_ccl
+    real, dimension(:), intent(in) :: b_ccr
 
-    ! local declarations
 
-    integer                           :: i
-
-    do i = 1, n
-       b_cc(xdim,i) = half*((psi_r(1,i)+psi_l(1,i)) - chspeed*(b_ccr(xdim,i)-b_ccl(xdim,i)))
-       psif(1,i) = half*(chspeed**2 * (b_ccl(xdim,i)+b_ccr(xdim,i)) - chspeed*(psi_r(1,i)-psi_l(1,i)))
-    end do
+    b_cc = half * ((psi_r + psi_l) - chspeed * (b_ccr - b_ccl))
+    psif = half * chspeed * (chspeed * (b_ccl + b_ccr) - (psi_r - psi_l))
     
   end subroutine glm_mhd
+
 end module hdc
 
 #endif

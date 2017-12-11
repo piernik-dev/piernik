@@ -793,7 +793,7 @@ contains
                  p_psif  => psi_cc(:,:)
                  p_psi_l => psi_l(:,:)
                  p_psi_r => psi_r(:,:)
-                 call glm_mhd(nx, p_psi_l, p_psi_r, p_bccl, p_bccr, p_bcc, p_psif)
+                 call glm_mhd(p_psi_l(1,:), p_psi_r(1,:), p_bccl(xdim,:), p_bccr(xdim,:), p_bcc(xdim,:), p_psif(1,:))
 #else /* !GLM */
                  mag_cc(xdim,:) = 0.
 #endif /* !GLM */
