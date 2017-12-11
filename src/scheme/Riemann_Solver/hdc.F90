@@ -109,11 +109,19 @@ contains
 
   end subroutine init_psi
   !---------------------------------------------------------------------------------------------------------------
+
+!>
+!! \brief calculate vector of fluxes for B_x and psi
+!!
+!! \details This follows Dedner et al. (2002), Eq. 42.
+!! The result is already simplified: flux of B_x = psi_m and flux of psi = c_h^2 * B_x
+!<
+
   subroutine glm_mhd(n, psi_l, psi_r, b_ccl, b_ccr, b_cc, psif)
 
     ! external procedures
     
-    use constants,  only: half, one, xdim
+    use constants,  only: half, xdim
 
     ! arguments
     
@@ -130,15 +138,10 @@ contains
     ! local declarations
 
     integer                           :: i
-    real, dimension(xdim)            :: glm_b
-    real, dimension(size(psif,1),size(psif,2)) :: glm_psi
 
     do i = 1, n
-       glm_b(xdim) = half*((b_ccl(xdim,i)+b_ccr(xdim,i)) - (one/chspeed)*(psi_r(1,i)-psi_l(1,i)))
-       glm_psi(1,i)    = half*((psi_r(1,i)+psi_l(1,i)) - chspeed*(b_ccr(xdim,i)-b_ccl(xdim,i)))
-   
-       b_cc(xdim,i) = glm_psi(1,i)
-       psif(1,i) = chspeed**2.0*glm_b(xdim)
+       b_cc(xdim,i) = half*((psi_r(1,i)+psi_l(1,i)) - chspeed*(b_ccr(xdim,i)-b_ccl(xdim,i)))
+       psif(1,i) = half*(chspeed**2 * (b_ccl(xdim,i)+b_ccr(xdim,i)) - chspeed*(psi_r(1,i)-psi_l(1,i)))
     end do
     
   end subroutine glm_mhd
