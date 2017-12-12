@@ -214,7 +214,7 @@ def qa_checks(files, options):
                     diff_cnt += 1
             if diff_cnt:
                 print give_warn("QA:  ") + \
-                    "Whistespace changes found in file '%s' " + \
+                    "Whitespace changes found in file '%s' " + \
                     "(%d lines changed)" % (f, diff_cnt)
             fp = open(f, 'w')
             for line in pfile:
