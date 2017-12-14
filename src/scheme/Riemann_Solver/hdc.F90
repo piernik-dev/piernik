@@ -40,7 +40,7 @@ module hdc
   real, protected :: chspeed
 
   private
-  public :: chspeed, update_chspeed, init_psi, glm_mhd
+  public :: chspeed, update_chspeed, init_psi, glm_mhd, glmcp
 
 contains
 
@@ -145,22 +145,22 @@ contains
 !>
 !! This subroutine will have to be called twice, each time after call riemann_wrap under subroutine solve for rk2
 !<
-  subroutine glmcp(n, cg, dt, dtodx, glm_cp, psi_dtn, psi)
+  subroutine glmcp(n, cg, dtodx, glm_cp, psi_dtn, psi)
 
     use constants, only: xdim
+    use grid_cont, only: grid_container
 
     implicit none
 
     integer,                       intent(in)    :: n
     type(grid_container), pointer, intent(in)    :: cg
-    real,                          intent(in)    :: dt
     real,                          intent(in)    :: dtodx
     real, dimension(:),            intent(out)   :: glm_cp
     real, dimension(:),            intent(out)   :: psi_dtn
     real, dimension(:),            intent(inout) :: psi
 
-    real,                                        :: glm_alpha ! Should be move to globals.F90 and possible over-writing from problem.par enabled.
-    integer,                                     ::
+    real                                         :: glm_alpha ! Should be move to globals.F90 and possible over-writing from problem.par enabled.
+    integer                                      :: i
 
     glm_alpha = 0.1
     glm_cp    = sqrt(cg%dl(xdim)*chspeed/glm_alpha)
@@ -168,7 +168,7 @@ contains
     psi_dtn   = exp(-dtodx*glm_alpha*chspeed) ! May be a loop is needed along with psi at t = 0
 
     do i= 1,n
-       psi *= psi_dtn
+       psi = psi*psi_dtn
     end do
     
   end subroutine glmcp
