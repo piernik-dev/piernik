@@ -40,7 +40,7 @@ module hdc
   real, protected :: chspeed
 
   private
-  public :: chspeed, update_chspeed, init_psi, glm_mhd, glmcp
+  public :: chspeed, update_chspeed, init_psi, glm_mhd, glmdamping
 
 contains
 
@@ -143,36 +143,38 @@ contains
 !-----------------------------------------------------------------------------------------------------------
 
 !>
-!! This subroutine will have to be called twice, each time after call riemann_wrap under subroutine solve for rk2
+  !! Parabolic damping to psi
 !<
-  subroutine glmcp(n, cg, dtodx, glm_cp, psi_dtn, psi)
-
-    use constants, only: xdim
-    use grid_cont, only: grid_container
+  subroutine glmdamping(n, psi)
+    
+    use global,    only: cfl
 
     implicit none
 
     integer,                       intent(in)    :: n
-    type(grid_container), pointer, intent(in)    :: cg
-    real,                          intent(in)    :: dtodx
-    real, dimension(:),            intent(out)   :: glm_cp
-    real, dimension(:),            intent(out)   :: psi_dtn
     real, dimension(:),            intent(inout) :: psi
 
     real                                         :: glm_alpha ! Should be move to globals.F90 and possible over-writing from problem.par enabled.
     integer                                      :: i
 
     glm_alpha = 0.1
-    glm_cp    = sqrt(cg%dl(xdim)*chspeed/glm_alpha)
-
-    psi_dtn   = exp(-dtodx*glm_alpha*chspeed) ! May be a loop is needed along with psi at t = 0
 
     do i= 1,n
-       psi = psi*psi_dtn
+       psi = psi*exp(-glm_alpha*cfl)
     end do
     
-  end subroutine glmcp
+  end subroutine glmdamping
 
 end module hdc
 
 #endif /* GLM */
+!--------------------------------------------------------------------------------------------
+!subroutine glmpdamping(n, cg, dtodx, glm_cp, psi_dtn, psi)
+!use constants, only: xdim
+!use grid_cont, only: grid_container
+!type(grid_container), pointer, intent(in)    :: cg
+!real,                          intent(in)    :: dtodx
+!real, dimension(:),            intent(out)   :: glm_cp
+!real, dimension(:),            intent(out)   :: parb_damping
+!glm_cp    = sqrt(cg%dl(xdim)*chspeed/glm_alpha)
+!parb_damping   = exp(-dtodx*glm_alpha*chspeed) 
