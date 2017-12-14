@@ -145,24 +145,29 @@ contains
 !>
   !! Parabolic damping to psi
 !<
-  subroutine glmdamping(n, psi)
+  subroutine glmdamping
     
-    use global,    only: cfl
+    use global,           only: cfl
+    use cg_list,          only: cg_list_element
+    use cg_leaves,        only: leaves
+    use constants,        only: psi_n
+    use named_array_list, only: qna
 
     implicit none
 
-    integer,                       intent(in)    :: n
-    real, dimension(:),            intent(inout) :: psi
+    type(cg_list_element), pointer :: cgl
 
     real                                         :: glm_alpha ! Should be move to globals.F90 and possible over-writing from problem.par enabled.
-    integer                                      :: i
-
     glm_alpha = 0.1
-
-    do i= 1,n
-       psi = psi*exp(-glm_alpha*cfl)
-    end do
     
+       if (qna%exists(psi_n)) then
+        cgl => leaves%first
+        do while (associated(cgl))
+           cgl%cg%q(qna%ind(psi_n))%arr =  cgl%cg%q(qna%ind(psi_n))%arr * exp(-glm_alpha*cfl)
+           cgl => cgl%nxt
+        end do
+     end if
+     
   end subroutine glmdamping
 
 end module hdc

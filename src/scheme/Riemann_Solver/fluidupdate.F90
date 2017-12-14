@@ -57,7 +57,7 @@ contains
     use mpisetup,       only: master
     use user_hooks,     only: problem_customize_solution
 #ifdef GLM
-    use hdc,            only: update_chspeed
+    use hdc,            only: update_chspeed, glmdamping
 #endif /* GLM */
     implicit none
 
@@ -116,6 +116,9 @@ contains
       endif
     enddo
     if (associated(problem_customize_solution)) call problem_customize_solution(.true.)
+#ifdef GLM
+    call glmdamping
+#endif /* GLM */
 
     t = t + dt
     dtm = dt
@@ -137,6 +140,9 @@ contains
        endif
     enddo
     if (associated(problem_customize_solution)) call problem_customize_solution(.false.)
+#ifdef GLM
+    call glmdamping
+#endif /* GLM */
 
     if (first_run) first_run = .false.
 
