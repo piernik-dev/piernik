@@ -93,21 +93,12 @@ contains
 !--------------------------------------------------------------------------------------------------------------
   subroutine init_psi
 
-     use cg_list,          only: cg_list_element
      use cg_leaves,        only: leaves
      use constants,        only: psi_n
      use global,           only: psi_0
      use named_array_list, only: qna
 
-     type(cg_list_element), pointer :: cgl
-
-     if (qna%exists(psi_n)) then
-        cgl => leaves%first
-        do while (associated(cgl))
-           cgl%cg%q(qna%ind(psi_n))%arr = psi_0
-           cgl => cgl%nxt
-        enddo
-     endif
+     if (qna%exists(psi_n)) call leaves%set_q_value(qna%ind(psi_n), psi_0)
 
   end subroutine init_psi
   !---------------------------------------------------------------------------------------------------------------
@@ -135,7 +126,6 @@ contains
     real, dimension(:), intent(out) :: b_cc
     real, dimension(:), intent(in) :: b_ccl
     real, dimension(:), intent(in) :: b_ccr
-
 
     b_cc = half * ((psi_r + psi_l) - chspeed * (b_ccr - b_ccl))
     psif = half * chspeed * (chspeed * (b_ccl + b_ccr) - (psi_r - psi_l))
@@ -167,6 +157,10 @@ contains
            cgl => cgl%nxt
         enddo
      endif
+
+! can be simplified to
+!    if (qna%exists(psi_n)) call leaves%q_lin_comb( [qna%ind(psi_n), exp(-glm_alpha*cfl)], qna%ind(psi_n))
+! but for AMR we may decide to use different factors on different levels
      
   end subroutine glmdamping
 
