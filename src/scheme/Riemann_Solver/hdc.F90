@@ -78,6 +78,8 @@ contains
                do j = cgl%cg%js, cgl%cg%je
                   do i = cgl%cg%is, cgl%cg%ie
                      chspeed = max(chspeed, maxval(abs(cgl%cg%u(fl%imx:fl%imz, i, j, k) / cgl%cg%u(fl%idn, i, j, k)) + fl%get_cs(i, j, k, cgl%cg%u, cgl%cg%b, cgl%cg%cs_iso2)))
+                     ! for AMR or POLAR it may be better to have explicit dependence on cg%dl(:) here
+                     ! OPT: it will also be cheaper
                   enddo
                enddo
             enddo
@@ -161,6 +163,7 @@ contains
         cgl => leaves%first
         do while (associated(cgl))
            cgl%cg%q(qna%ind(psi_n))%arr =  cgl%cg%q(qna%ind(psi_n))%arr * exp(-glm_alpha*cfl)
+           ! for AMR or POLAR it may be better to have explicit dependence on cg%dl(:) here
            cgl => cgl%nxt
         enddo
      endif
