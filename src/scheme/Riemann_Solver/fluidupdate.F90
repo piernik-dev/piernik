@@ -605,7 +605,7 @@ contains
 
         subroutine slope(uu, bb, pp)
 
-           use constants,  only: half
+           use constants,  only: half, xdim
            use dataio_pub, only: die
            use fluxlimiters, only: flimiter, blimiter
 #ifdef GLM
@@ -658,6 +658,15 @@ contains
               dp  = plimiter(psi)
               psi__l = psi - half*dp
               psi__r = psi + half*dp
+           endif
+           if (present(bb)) then
+              db  = plimiter(b_cc + bb)
+              b_ccl(xdim, :) = b_cc(xdim, :) + bb(xdim, :) - half*db(xdim, :)
+              b_ccr(xdim, :) = b_cc(xdim, :) + bb(xdim, :) + half*db(xdim, :)
+           else
+              db  = plimiter(b_cc)
+              b_ccl(xdim, :) = b_cc(xdim, :) - half*db(xdim, :)
+              b_ccr(xdim, :) = b_cc(xdim, :) + half*db(xdim, :)
            endif
 #endif
 

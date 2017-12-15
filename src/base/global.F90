@@ -154,7 +154,7 @@ contains
 #else /* ! RIEMANN */
       limiter     = 'vanleer'
       limiter_b   = limiter
-      limiter_p   = limiter_b
+      limiter_p   = 'minmod'
 #endif /* RIEMANN */
       cflcontrol  = 'warn'
       h_solver    = 'muscl'
