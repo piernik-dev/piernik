@@ -147,26 +147,23 @@ contains
 !<
   subroutine glmdamping
     
-    use global,           only: cfl
-    use cg_list,          only: cg_list_element
-    use cg_leaves,        only: leaves
-    use constants,        only: psi_n
-    use named_array_list, only: qna
+     use global,           only: cfl, glm_alpha
+     use cg_list,          only: cg_list_element
+     use cg_leaves,        only: leaves
+     use constants,        only: psi_n
+     use named_array_list, only: qna
 
-    implicit none
+     implicit none
 
-    type(cg_list_element), pointer :: cgl
+     type(cg_list_element), pointer :: cgl
 
-    real                                         :: glm_alpha ! Should be move to globals.F90 and possible over-writing from problem.par enabled.
-    glm_alpha = 0.1
-    
-       if (qna%exists(psi_n)) then
+     if (qna%exists(psi_n)) then
         cgl => leaves%first
         do while (associated(cgl))
            cgl%cg%q(qna%ind(psi_n))%arr =  cgl%cg%q(qna%ind(psi_n))%arr * exp(-glm_alpha*cfl)
            cgl => cgl%nxt
-        end do
-     end if
+        enddo
+     endif
      
   end subroutine glmdamping
 
