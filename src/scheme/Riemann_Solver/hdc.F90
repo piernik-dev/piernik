@@ -168,12 +168,4 @@ end module hdc
 
 #endif /* GLM */
 !--------------------------------------------------------------------------------------------
-!subroutine glmpdamping(n, cg, dtodx, glm_cp, psi_dtn, psi)
-!use constants, only: xdim
-!use grid_cont, only: grid_container
-!type(grid_container), pointer, intent(in)    :: cg
-!real,                          intent(in)    :: dtodx
-!real, dimension(:),            intent(out)   :: glm_cp
-!real, dimension(:),            intent(out)   :: parb_damping
-!glm_cp    = sqrt(cg%dl(xdim)*chspeed/glm_alpha)
-!parb_damping   = exp(-dtodx*glm_alpha*chspeed) 
+ 
