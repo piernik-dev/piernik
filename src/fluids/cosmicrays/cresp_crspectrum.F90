@@ -365,7 +365,6 @@ contains
 #ifdef VERBOSE
         print "(2(A9,i3))", "i_lo =", i_lo, ", i_up = ", i_up
 #endif /* VERBOSE */
-
       endif
   end subroutine cresp_find_active_bins
 !---------------! Compute p for all active edges !---------------------------------------------------  
@@ -511,9 +510,10 @@ contains
    use cresp_variables, only: clight ! use units, only: clight
    implicit none
     integer                          :: i, k, i_lo_ch, i_up_ch, i_br
-    real(kind=8)                     ::  c, f_amplitude
+    real(kind=8)                     ::  c
     real(kind=8), dimension(I_ONE:ncre)    :: init_n, init_e
     type (spec_mod_trms), intent(in) :: sptab
+    real(kind=8), intent(in)         :: f_amplitude
     logical :: exit_code
         u_b = sptab%ub
         u_d = sptab%ud
@@ -581,7 +581,8 @@ contains
 #endif /* TEST_CRESP */
 ! Pure power law spectrum initial condition
         q = q_init
-        f = f_amplitude * (p/p_min_fix)**(-q_init)
+        f = zero
+        f = f_amplitude * (p/p_lo_init)**(-q_init)
         if (add_spectrum_base .gt. 0) then
             do i = 0, ncre-1
                 if (f(i) .gt. zero ) f(i) = f(i) + e_small_to_f(p(i))

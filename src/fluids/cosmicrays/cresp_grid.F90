@@ -59,7 +59,7 @@ contains
                         call cresp_update_cell(2*dt, n_cell, e_cell, sptab, virtual_n(1:2,i,j,k), virtual_e(1:2,i,j,k))
                         cg%u(iarr_cre_n, i, j, k) = n_cell
                         cg%u(iarr_cre_e, i, j, k) = e_cell
-                        if (i.eq.22.and.j.eq.22.and.k.eq.0) then ! diagnostic:
+                        if (i.eq.25.and.j.eq.25.and.k.eq.0) then ! diagnostic:
                             call printer(t)
                         endif
                     enddo
@@ -80,12 +80,13 @@ contains
    use initcosmicrays, only: iarr_crn
    use cresp_crspectrum, only: cresp_init_state, cresp_allocate_all, printer, e_threshold_lo, e_threshold_up, &
                         & fail_count_interpol, fail_count_no_sol, fail_count_NR_2dim, fail_count_comp_q
-   use units,          only: clight
+!    use units,          only: clight
+   use cresp_variables, only: clight ! temp, TODO
    implicit none
     integer                         :: i, j, k
     type(cg_list_element),  pointer :: cgl
     type(grid_container),   pointer :: cg
-    real(kind=8)                             :: max_amp_cr, f_amplitude
+    real(kind=8)                             :: max_amp_cr, f_amplitude, e_tot
     real(kind=8), dimension(1:ncre) :: n_cell, e_cell
     type(spec_mod_trms)  :: sptab
     logical, save :: first_run = .true.
@@ -123,16 +124,15 @@ contains
             ! Every initial condition should be normalized before initializing Cosmic Ray Electron SPectrum module
                         if (cg%u(iarr_crn(1),i,j,k)*cre_eff .gt. e_small) then ! early phase - fill cells only when total passed energy is greater than e_small
                             if ( initial_condition == "powl") then
-                                f_amplitude = 1/(fpi * clight*(p_lo_init**(I_FOUR))* &
-                                    (((p_up_init / p_lo_init)**(I_FOUR - q_init )) - I_ONE) / (I_FOUR - q_init))
             ! amplitude and distribution of electron energy density is inherited after those of nucleons, see crspectrum.pdf, eq. 29
-                                f_amplitude = f_init*cg%u(iarr_crn(1),i,j,k)*cre_eff
-!                                 f_amplitude = f_amplitude*cg%u(iarr_crn(1),i,j,k)*cre_eff
+                                e_tot = cg%u(iarr_crn(1),i,j,k) * cre_eff
+                                f_amplitude = (e_tot / (fpi * clight * p_lo_init ** I_FOUR) ) * (I_FOUR - q_init) / &
+                                                                 ((p_up_init/p_lo_init)**(I_FOUR - q_init) - I_ONE  )
                             endif
                             if (initial_condition == "bump") then
             ! for gaussian distribution & inheritance of spatial energy/number density after nucleons
                                 f_amplitude = cre_eff * cg%u(iarr_crn(1),i,j,k)
-    !                             f_amplitude = bump_amp ! * clight
+!                               f_amplitude = bump_amp ! * clight
                             endif
                             call cresp_init_state(n_cell, e_cell, f_amplitude, sptab)
 #ifdef VERBOSE
@@ -150,7 +150,6 @@ contains
             cgl=>cgl%nxt
             enddo
             i_up_max_prev = 0
-
             first_run = .false. ! FIXME uncommenting results inf SIGFPE for some reason; whole subroutine is called twice.
         endif
   end subroutine cresp_init_grid
