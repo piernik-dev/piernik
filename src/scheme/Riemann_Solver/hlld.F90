@@ -82,7 +82,7 @@ contains
        vx  =  u(fl%imx,:)/u(fl%idn,:)
        vy  =  u(fl%imy,:)/u(fl%idn,:)
        vz  =  u(fl%imz,:)/u(fl%idn,:)
-       
+
        if (fl%has_energy) then
           ! Gas pressure without magnetic fields. Pg 317, Eq. 2. (1) and (2) are markers for HD and MHD
           pr = fl%gam_1*(u(fl%ien,:) - ekin(u(fl%imx,:), u(fl%imy,:), u(fl%imz,:), u(fl%idn,:))) ! (1)
@@ -110,10 +110,10 @@ contains
           f(fl%imz,:)  =  u(fl%imz,:)*vx(:) - b_cc(xdim,:)*b_cc(zdim,:)
           f(boff+ydim,:) =  b_cc(ydim,:)*vx(:) - b_cc(xdim,:)*vy(:)
           f(boff+zdim,:) =  b_cc(zdim,:)*vx(:) - b_cc(xdim,:)*vz(:)
-#ifdef GLM 
-          f(boff+xdim,:) = psi(1,:) ! Check this with MUSCL 
+#ifdef GLM
+          f(boff+xdim,:) = psi(1,:) ! Check this with MUSCL
           f(psioff,:)    = chspeed*2*b_cc(xdim,:) ! Check this with MUSCL
-#endif /* GLM */   
+#endif /* GLM */
        else
           f(fl%imy,:)  =  u(fl%imy,:)*vx(:)
           f(fl%imz,:)  =  u(fl%imz,:)*vx(:)
@@ -139,7 +139,7 @@ contains
 
     use constants,  only: half, zero, one, xdim, ydim, zdim, idn, imx, imy, imz, ien
     use func,       only: operator(.notequals.), operator(.equals.)
-    
+
     ! arguments
 
     implicit none
@@ -147,7 +147,7 @@ contains
     integer,                       intent(in)    :: n
     real, dimension(:,:), pointer, intent(out)   :: f
     real, dimension(:,:), pointer, intent(in)    :: ul, ur
-    real, dimension(:,:), pointer, intent(inout) :: b_cc  
+    real, dimension(:,:), pointer, intent(inout) :: b_cc
     real, dimension(:,:), pointer, intent(in)    :: b_ccl, b_ccr
     real,                          intent(in)    :: gamma
 
@@ -162,7 +162,7 @@ contains
     real                                         :: coeff_1, dn_lsqt, dn_rsqt, add_dnsq, mul_dnsq
     real                                         :: vb_l, vb_starl, vb_r, vb_starr, vb_2star
     real                                         :: prl, prr
-    
+
     ! Local arrays
 
     real, dimension(size(f, 1))                  :: fl, fr
@@ -172,7 +172,7 @@ contains
     real, dimension(xdim:zdim)                   :: b_starl, b_starr, b_2star
     logical                                      :: has_energy
     real                                         :: ue
-    
+
     ! SOLVER
 
     has_energy = (ubound(ul, dim=1) >= ien)
@@ -243,7 +243,7 @@ contains
        fr(imy:imz) = ur(idn,i)*ur(imy:imz,i)*ur(imx,i) - b_ccr(xdim,i)*b_ccr(ydim:zdim,i)
        if (has_energy) fr(ien) = (enr + prr)*ur(imx,i) - b_ccr(xdim,i)*(sum(ur(imx:imz,i)*b_ccr(xdim:zdim,i)))  ! Total right state of pressure, so prl
        b_ccrf(ydim:zdim) = b_ccr(ydim:zdim,i)*ur(imx,i) - b_ccr(xdim,i)*ur(imy:imz,i)
-          
+
        ! HLLD fluxes
 
        if (sl .ge.  zero) then
@@ -255,24 +255,24 @@ contains
           b_cc(ydim:zdim,i) = b_ccrf(ydim:zdim)
 
        else
-          
+
           ! Speed of contact discontinuity Eq. 38
           ! Total left and right states of pressure, so prr and prl sm_nr/sm_dr
 
           if ((sr - ur(imx,i))*ur(idn,i) .equals. (sl - ul(imx,i))*ul(idn,i)) then
-             sm = (sl + sr) / 2. 
+             sm = (sl + sr) / 2.
           else
              sm =   ( ((sr - ur(imx,i))*ur(idn,i)*ur(imx,i) - prr) - &
                   &   ((sl - ul(imx,i))*ul(idn,i)*ul(imx,i) - prl) ) / &
                   &   ((sr - ur(imx,i))*ur(idn,i) - &
-                  &    (sl - ul(imx,i))*ul(idn,i)) 
+                  &    (sl - ul(imx,i))*ul(idn,i))
           endif
 
           ! Speed differences
 
           slsm  =  sl - sm
           srsm  =  sr - sm
-       
+
           slvxl  =  sl - ul(imx,i)
           srvxr  =  sr - ur(imx,i)
 
@@ -287,7 +287,7 @@ contains
           dn_r     =  ur(idn,i)*srvxr
           b_lr     =  b_ccl(xdim,i)*b_ccr(xdim,i)
           b_lrgam  =  b_lr/gamma
-         
+
           ! Pressure of intermediate state Eq. (23)
 
           prt_star  =  half*((prl+dn_l*smvxl) + (prr+dn_r*smvxr))  !< Check for 0.5. Total left and right states of pressure, so prr and prl
@@ -349,7 +349,7 @@ contains
              u_starl(ien) = (slvxl*enl - prl*ul(imx,i) + prt_star*sm + b_ccl(xdim,i)*(vb_l - vb_starl))/slsm  ! Total left state of pressure
              u_starr(ien) = (srvxr*enr - prr*ur(imx,i) + prt_star*sm + b_ccr(xdim,i)*(vb_r - vb_starr))/srsm  ! Total right state of pressure
           endif
-           
+
           ! Cases for B_x .ne. and .eq. zero
 
           if (abs(b_ccl(xdim,i)) > zero) then
@@ -358,7 +358,7 @@ contains
 
              dn_lsqt  =  sqrt(u_starl(idn))
              dn_rsqt  =  sqrt(u_starr(idn))
-             
+
              alfven_l  =  sm - abs(b_ccl(xdim,i))/dn_lsqt
              alfven_r  =  sm + abs(b_ccr(xdim,i))/dn_rsqt
 
@@ -370,7 +370,7 @@ contains
 
                 f(:,i) = fl + sl*(u_starl - [ ul(idn,i), ul(idn,i)*ul(imx:imz,i), enl ] )
                 b_cc(ydim:zdim,i) = b_cclf(ydim:zdim) + sl*(b_starl(ydim:zdim) - b_ccl(ydim:zdim,i))
-                
+
              else if (alfven_r < zero) then
 
                 ! Right intermediate flux Eq. 64
@@ -430,7 +430,7 @@ contains
                    if (has_energy) u_2starr(ien)  =  u_starr(ien) + b_sig*dn_rsqt*(vb_starr - vb_2star)
 
                 endif
-                
+
                 if (sm > zero) then
                    ! Left Alfven intermediate flux Eq. 65
                    f(:,i) = fl + alfven_l*u_2starl - (alfven_l - sl)*u_starl - sl* [ ul(idn,i), ul(idn,i)*ul(imx:imz,i), enl ]

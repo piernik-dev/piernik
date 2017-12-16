@@ -116,7 +116,7 @@ contains
          bz = half*(b(zdim,i,j,k) + b(zdim, i,         j,         k+dom%D_z))
 
          pmag = emag(bx, by, bz)
-      end if
+      endif
 #else /* !MAGNETIC */
       ! all_mag_boundaries has not been called so we cannot trust b(xdim, ie+dom%D_x:), b(ydim,:je+dom%D_y and b(zdim,:,:, ke+dom%D_z
       pmag = zero

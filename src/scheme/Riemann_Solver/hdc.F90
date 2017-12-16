@@ -55,12 +55,14 @@ contains
       use cg_leaves,  only: leaves
       use cg_list,    only: cg_list_element
       use constants,  only: GEO_XYZ, small
-      use dataio_pub, only: warn, die
+      use dataio_pub, only: die
       use domain,     only: dom
       use fluidindex, only: flind
       use fluids_pub, only: has_ion
       use fluidtypes, only: component_fluid
       use global,     only: use_fargo
+
+      implicit none
 
       type(cg_list_element), pointer  :: cgl
       class(component_fluid), pointer :: fl
@@ -88,7 +90,7 @@ contains
       endif
 
     return
-    
+
   end subroutine update_chspeed
 !--------------------------------------------------------------------------------------------------------------
   subroutine init_psi
@@ -97,6 +99,8 @@ contains
      use constants,        only: psi_n
      use global,           only: psi_0
      use named_array_list, only: qna
+
+     implicit none
 
      if (qna%exists(psi_n)) call leaves%set_q_value(qna%ind(psi_n), psi_0)
 
@@ -113,13 +117,13 @@ contains
   subroutine glm_mhd(psi_l, psi_r, b_ccl, b_ccr, b_cc, psif)
 
     ! external procedures
-    
+
     use constants,  only: half
 
     ! arguments
-    
+
     implicit none
-    
+
     real, dimension(:), intent(out) :: psif
     real, dimension(:), intent(in) :: psi_l
     real, dimension(:), intent(in) :: psi_r
@@ -129,7 +133,7 @@ contains
 
     b_cc = half * ((psi_r + psi_l) - chspeed * (b_ccr - b_ccl))
     psif = half * chspeed * (chspeed * (b_ccl + b_ccr) - (psi_r - psi_l))
-    
+
   end subroutine glm_mhd
 
 !-----------------------------------------------------------------------------------------------------------
@@ -138,7 +142,7 @@ contains
   !! Parabolic damping to psi
 !<
   subroutine glmdamping
-    
+
      use global,           only: cfl, glm_alpha
      use cg_list,          only: cg_list_element
      use cg_leaves,        only: leaves
@@ -161,11 +165,11 @@ contains
 ! can be simplified to
 !    if (qna%exists(psi_n)) call leaves%q_lin_comb( [qna%ind(psi_n), exp(-glm_alpha*cfl)], qna%ind(psi_n))
 ! but for AMR we may decide to use different factors on different levels
-     
+
   end subroutine glmdamping
 
 end module hdc
 
 #endif /* GLM */
 !--------------------------------------------------------------------------------------------
- 
+

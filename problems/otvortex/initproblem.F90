@@ -99,7 +99,7 @@ contains
 
       use cg_leaves,   only: leaves
       use cg_list,     only: cg_list_element
-      use constants,   only: pi, dpi, fpi, xdim, ydim, zdim, LO, HI, zero
+      use constants,   only: pi, dpi, fpi, xdim, ydim, zdim, LO, HI
       use fluidindex,  only: flind
       use fluidtypes,  only: component_fluid
       use func,        only: ekin, emag

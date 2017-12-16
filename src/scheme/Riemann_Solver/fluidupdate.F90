@@ -486,7 +486,7 @@ contains
 #ifdef GLM
      use hdc,        only: glm_mhd
 #endif /* GLM */
-     
+
      implicit none
 
      real, dimension(:,:), intent(inout) :: u
@@ -502,7 +502,7 @@ contains
      real, dimension(size(psi,1),size(psi,2)), target   :: psi_l, psi_r
      real, dimension(size(psi,1),size(psi,2)),target    :: psi_cc
      real, dimension(size(psi,1),size(psi,2))           :: psi__l, psi__r, dpsi1, dpsi2, dpsi3
-     
+
      integer                                            :: nx
 
      nx  = size(u,2)
@@ -602,7 +602,7 @@ contains
      contains
 
        ! some shortcuts
-       
+
         subroutine slope(uu, bb, pp)
 
            use constants,  only: half
@@ -611,14 +611,14 @@ contains
 #ifdef GLM
            use fluxlimiters, only: plimiter
 #endif /*GLM */
-           
+
 
            implicit none
 
            real, optional, dimension(size(u,1),size(u,2)),       intent(in) :: uu
            real, optional, dimension(size(b_cc,1),size(b_cc,2)), intent(in) :: bb
            real, optional, dimension(size(psi,1),size(psi,2)),   intent(in) :: pp
-           
+
 
            real, dimension(size(u,1),size(u,2))       :: du
            real, dimension(size(b_cc,1),size(b_cc,2)) :: db
@@ -698,7 +698,7 @@ contains
            b_cc_r(:,nx) = b_cc_r(:,nx-1)
 
 #ifdef GLM
-           if(present(dpsi)) then
+           if (present(dpsi)) then
               psi_l = psi__r + dpsi
               psi_r(:,1:nx-1) = psi__l(:,2:nx) + dpsi(:,2:nx)
            else
@@ -821,7 +821,7 @@ enddo
         end subroutine riemann_wrap
 
         subroutine update(weights)
-          
+
            implicit none
 
            real, optional, dimension(:), intent(in) :: weights
@@ -858,8 +858,8 @@ enddo
            psi(:,1) = psi(:,2)
            psi(:,nx) = psi(:,nx-1)
            !psi = psi_cc ! Not needed ?
-           !b_cc(xdim,:) = mag_cc(xdim,:) ! Not needed ? 
-#endif /* GLM */        
+           !b_cc(xdim,:) = mag_cc(xdim,:) ! Not needed ?
+#endif /* GLM */
 
            deallocate(w)
 
