@@ -57,7 +57,7 @@ module initproblem
 
    ! other private data
    real, dimension(ndims, LO:HI) :: pulse_edge
-   real :: pulse_low_density, pulse_pressure
+   real :: pulse_low_density
    character(len=dsetnamelen), parameter :: inid_n = "inid"
    class(component_fluid), pointer :: fl  !< will point either to neutral or ionized fluid
 
@@ -106,7 +106,7 @@ contains
       pulse_off(:)  = 0.0                  !< center of the pulse
       pulse_vel(:)  = 0.0                  !< pulse velocity
       pulse_amp     = 2.0                  !< pulse relative amplitude
-      pulse_pres    = 1e2                  !< pulse pressure
+      pulse_pres    = smallei * 67.  !< pulse pressure, mimic the old hardcoded default
       norm_step     = 5
       nflip         = 0
       ref_thr       = 0.1
@@ -212,7 +212,6 @@ contains
 
       !BEWARE: hardcoded magic numbers
       pulse_low_density = smalld * 1e5
-      pulse_pressure = smallei * fl%gam_1 * pulse_pres
 
       if (norm_step <= 0) norm_step = huge(I_ONE)
 
@@ -421,7 +420,7 @@ contains
          end select
 
          ! Set up the internal energy
-         cg%u(fl%ien,:,:,:) = max(smallei, pulse_pressure / fl%gam_1 + 0.5 * sum(cg%u(fl%imx:fl%imz,:,:,:)**2,1) / cg%u(fl%idn,:,:,:))
+         cg%u(fl%ien,:,:,:) = max(smallei, pulse_pres / fl%gam_1 + 0.5 * sum(cg%u(fl%imx:fl%imz,:,:,:)**2,1) / cg%u(fl%idn,:,:,:))
 
          if (associated(flind%dst)) then
             cg%u(flind%dst%idn, :, :, :) = cg%u(fl%idn, :, :, :)
