@@ -41,6 +41,7 @@ module initproblem
    real, dimension(ndims) :: pulse_off   !< offset of the pulse
    real                   :: pulse_amp   !< amplitude of the density pulse compared to the ambient level
    real, dimension(ndims) :: pulse_vel   !< uniform velocity components
+   real                   :: pulse_pres  !< pulse pressure
    integer(kind=4)        :: norm_step   !< how often to calculate the L2-norm
    integer(kind=4)        :: nflip       !< how often to call refine/derefine routine
    real                   :: flipratio   !< percentage of blocks on each level to be refined on flip
@@ -53,11 +54,11 @@ module initproblem
    real                   :: divBb_amp   !< Amplitude of blob of divergence (should behave well on periodic domains)
    logical                :: ccB         !< true for cell-cntered initial magnetic field
 
-   namelist /PROBLEM_CONTROL/  pulse_size, pulse_off, pulse_vel, pulse_amp, norm_step, nflip, flipratio, ref_thr, deref_thr, usedust, divB0_amp, divBc_amp, divBs_amp, divBb_amp, ccB
+   namelist /PROBLEM_CONTROL/  pulse_size, pulse_off, pulse_vel, pulse_amp, pulse_pres, norm_step, nflip, flipratio, ref_thr, deref_thr, usedust, divB0_amp, divBc_amp, divBs_amp, divBb_amp, ccB
 
    ! other private data
    real, dimension(ndims, LO:HI) :: pulse_edge
-   real :: pulse_low_density, pulse_pressure
+   real :: pulse_low_density
    character(len=dsetnamelen), parameter :: inid_n = "inid"
    class(component_fluid), pointer :: fl  !< will point either to neutral or ionized fluid
 
@@ -106,6 +107,7 @@ contains
       pulse_off(:)  = 0.0                  !< center of the pulse
       pulse_vel(:)  = 0.0                  !< pulse velocity
       pulse_amp     = 2.0                  !< pulse relative amplitude
+      pulse_pres    = smallei * 67.  !< pulse pressure, mimic the old hardcoded default
       norm_step     = 5
       nflip         = 0
       ref_thr       = 0.1
@@ -147,6 +149,7 @@ contains
          rbuff(20+xdim:20+zdim) = pulse_size(:)
          rbuff(23+xdim:23+zdim) = pulse_vel(:)
          rbuff(26+xdim:26+zdim) = pulse_off(:)
+         rbuff(29)              = pulse_pres
 
          ibuff(1)   = norm_step
          ibuff(2)   = nflip
@@ -173,6 +176,7 @@ contains
          pulse_size = rbuff(20+xdim:20+zdim)
          pulse_vel  = rbuff(23+xdim:23+zdim)
          pulse_off  = rbuff(26+xdim:26+zdim)
+         pulse_pres = rbuff(29)
 
          norm_step  = int(ibuff(1), kind=4)
          nflip      = ibuff(2)
@@ -212,7 +216,6 @@ contains
 
       !BEWARE: hardcoded magic numbers
       pulse_low_density = smalld * 1e5
-      pulse_pressure = smallei * fl%gam_1 * 1e2
 
       if (norm_step <= 0) norm_step = huge(I_ONE)
 
@@ -409,7 +412,7 @@ contains
                   enddo
                enddo
             enddo
-         end if
+         endif
 #else /* !MAGNETIC */
          call cg%set_constant_b_field([0., 0., 0.])
 #endif /* !MAGNETIC */
@@ -448,7 +451,7 @@ contains
          end select
 
          ! Set up the internal energy
-         cg%u(fl%ien,:,:,:) = max(smallei, pulse_pressure / fl%gam_1 + 0.5 * sum(cg%u(fl%imx:fl%imz,:,:,:)**2,1) / cg%u(fl%idn,:,:,:))
+         cg%u(fl%ien,:,:,:) = max(smallei, pulse_pres / fl%gam_1 + 0.5 * sum(cg%u(fl%imx:fl%imz,:,:,:)**2,1) / cg%u(fl%idn,:,:,:))
 
 #ifdef MAGNETIC
          if (ccB) then
