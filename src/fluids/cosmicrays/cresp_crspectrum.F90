@@ -1156,7 +1156,7 @@ contains
         p(i_up)   = p_up
         f(i_up-1) = e_small_to_f(p_up)/x_NR(2)
         q(i_up)   = q_ratios(x_NR(2), x_NR(1))
-        if (abs(q(i_up)) .gt. two * q_big ) q(i_up) = sign(one, q(i_up)) * q_big * two
+        if (abs(q(i_up)) .gt. two * q_big ) q(i_up) = sign(one, q(i_up)) * q_big
 #ifdef VERBOSE
         write (*,"(A1)") " "
         write (*,"(A26,2E22.15)") " >>> Obtained (p_up, f_l):", p_up, f(i_up-1) &
@@ -1212,7 +1212,7 @@ contains
         p(i_lo)   = p_lo
         f(i_lo)   = e_small_to_f(p_lo)
         q(i_lo+1) = q_ratios(x_NR(2), x_NR(1))
-        if (abs(q(i_lo+1)) .gt. 2 * q_big ) q(i_lo+1) = sign(one, q(i_lo+1)) * q_big * 2 ! for some reason using bounds for lower q cause problems
+        if (abs(q(i_lo+1)) .gt. 2 * q_big ) q(i_lo+1) = sign(one, q(i_lo+1)) * q_big
 #ifdef VERBOSE
         write (*,"(A1)") " "
         write (*,"(A26,2E22.15)") " >>> Obtained (p_lo, f_r):", p_lo, x_NR(2)*f(i_lo) &

@@ -135,16 +135,14 @@ module cresp_NR_method
             endif
             
             delta   = fun1D_val / derivative_1D(x)
-            
-            call selected_value_check_1D(x, func_check)  ! necessary in some cases, when maximal value x can take is defined, for other cases dummy_check_1D function defined
-            if ( func_check .eqv. .true. ) return
 
             x = x - delta
-            
             if(abs(delta) .lt. tol_x_1D) then
                 exit_code = .false.
                 return
             endif
+            call selected_value_check_1D(x, func_check)  ! necessary in some cases, when maximal value x can take is defined, for other cases dummy_check_1D function defined
+            if ( func_check .eqv. .true. ) return
         enddo
         
         exit_code = .true. ! if all fails
@@ -278,7 +276,7 @@ module cresp_NR_method
             n_tab_up(i)     = ind_to_flog(i,n_min_up,n_max_up) ! n_min_up * ten**((log10(n_max_up/n_min_up))/real(arr_dim-1,kind=8)*real((i-1),kind=8))
             alpha_tab_q(i)  = ind_to_flog(i,a_min_up,1.3     ) ! a_min_up * ten**((log10(1.3/a_min_up))/real(arr_dim-1,kind=8)*real((i-1),kind=8))
         enddo
-! #ifdef VERBOSE
+#ifdef VERBOSE
         print *,"alpha_tab_lo(i),      alpha_tab_up(i),        n_tab_lo(i),        n_tab_up(i)  |       p_space(i),     q_space(i)" 
         do i = 1, arr_dim
           if (i .le. helper_arr_dim) then
@@ -290,7 +288,7 @@ module cresp_NR_method
           endif
         enddo
         print *, "-----------"
-! #endif /* VERBOSE */
+#endif /* VERBOSE */
         write (*, "(A36)", advance="no") "Reading (up) boundary ratio files..."
         do j = 1,2
             call read_NR_guess_grid(p_ratios_up, "p_ratios_up", exit_code) ;  int_logical_p = logical_2_int(exit_code)
@@ -1259,8 +1257,10 @@ end subroutine
         call associate_NR_pointers(which_bound)
         call determine_loc(a_val, n_val, loc1, loc2, loc_no_ip, exit_code)
 !         call find_both_indexes(loc1, loc2, a_val, n_val, loc_no_ip, exit_code)
+#ifdef VERBOSE
         call save_loc(which_bound,loc1(1),loc1(2))
         call save_loc(which_bound,loc2(1),loc2(2))
+#endif /* VERBOSE */
             if (find_failure .eqv. .true.) then
                 not_interpolated = .true.
 #ifdef VERBOSE
@@ -1371,6 +1371,7 @@ end subroutine
         if (loc_1 .le. 0 .or. (loc_1 .ge. arr_dim)) then
             loc_1 = minloc(abs(alpha_tab_q-alpha),dim=1) ! slow, but always finds something
             compute_q = q_grid(loc_1)
+            if (abs(compute_q) .gt. q_big) compute_q = sign(one, compute_q) * q_big
             return                      ! returns compute_q withh exit_code = .true. which can be used to warn. Usually occurs for q.gt.2*q_big
         endif
         loc_2 = loc_1 + 1
