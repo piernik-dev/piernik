@@ -365,6 +365,12 @@ contains
 #ifdef VERBOSE
         print "(2(A9,i3))", "i_lo =", i_lo, ", i_up = ", i_up
 #endif /* VERBOSE */
+! cleaning (TEST)
+        e(:i_lo) = zero
+        n(:i_lo) = zero
+        e(i_up+1:) = zero
+        n(i_up+1:) = zero
+
       endif
   end subroutine cresp_find_active_bins
 !---------------! Compute p for all active edges !---------------------------------------------------  
