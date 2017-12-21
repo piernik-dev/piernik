@@ -87,7 +87,7 @@ module timestep_cresp
 ! Synchrotron cooling timestep (is dependant only on p_up, highest value of p):
             if (sptab%ub .gt. zero) then
 !                 i_up_cell = evaluate_i_up(e_cell, n_cell)
-                p_u = approximate_p_up(n_cell, e_cell, i_up_cell)
+                p_u = abs(approximate_p_up(n_cell, e_cell, i_up_cell)) ! TODO: fix problems with negative p_u
                 dt_cre_ub = cfl_cre * w / (p_u * sptab%ub)
             endif
         endif
