@@ -141,12 +141,13 @@ contains
                             cg%u(iarr_cre_n, i, j, k) = n_cell
                             cg%u(iarr_cre_e, i, j, k) = e_cell
                         endif ! if total(cre_eff*e) less than e_small - nothing done, cell remains uninitialized
-                        if (i.eq.22.and.j.eq.22.and.k.eq.0) then ! diagnostics
+                        if (i.eq.25.and.j.eq.25.and.k.eq.0) then ! diagnostics
                             call printer(t)
                         endif
                     enddo
                 enddo
             enddo
+
             cgl=>cgl%nxt
             enddo
             i_up_max_prev = 0
@@ -173,8 +174,8 @@ contains
     real(kind=8)                    :: dt_cre_tmp, K_cre_max_sum
     real(kind=8),save               :: dt_cre_K
     type(spec_mod_trms)             :: sptab
-        i_up_max = 0
-        i_up_max_tmp = 0
+        i_up_max     = 1
+        i_up_max_tmp = 1
 
         dt_cre = huge(one)
         dt_cre_tmp = huge(one)
