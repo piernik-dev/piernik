@@ -164,8 +164,8 @@ contains
                     i_lo = i_lo + 1
                     call get_fqp_lo(solve_fail_lo)
                 else
-                    call transfer_quantities(v_e(1),e(i_lo+1))
-                    call transfer_quantities(v_n(1),n(i_lo+1))
+                    call transfer_quantities(vrtl_e(1),e(i_lo+1))
+                    call transfer_quantities(vrtl_n(1),n(i_lo+1))
                     i_lo = i_lo+1
                     p_lo = p_fix(i_lo) ; p(i_lo) = p_fix(i_lo)
                 endif
@@ -181,8 +181,8 @@ contains
                         p_up = p_fix(i_up); p(i_up) = p_fix(i_up)
                     endif
                 else
-                    call transfer_quantities(v_e(2),e(i_up))
-                    call transfer_quantities(v_n(2),n(i_up))
+                    call transfer_quantities(vrtl_e(2),e(i_up))
+                    call transfer_quantities(vrtl_n(2),n(i_up))
                 endif
             endif
             if (i_up .eq. i_lo) then
@@ -203,19 +203,19 @@ contains
 ! Note that new [t+dt] values of p_lo and p_up in case new fixed edges appear or disappear.
 ! fill new bins
         call cresp_compute_fluxes(cooling_edges_next,heating_edges_next)
-   
+
 ! Computing e and n at [t+dt]
         ndt(1:ncre) = n(1:ncre)  - (nflux(1:ncre) - nflux(0:ncre-1))
         edt(1:ncre) = e(1:ncre)  - (eflux(1:ncre) - eflux(0:ncre-1))
-   
+
 !         call boundary_flux_check ! If relative error between boundary momenta and p_fix is not tolerable, boundary fluxes are moved to "virtual" bins, preventing premature activation of new bins and associated numerical errors.
    
 ! edt(1:ncre) = e(1:ncre) *(one-0.5*dt*r(1:ncre)) - (eflux(1:ncre) - eflux(0:ncre-1))/(one+0.5*dt*r(1:ncre))   !!! oryginalnie u Miniatiego
 ! Compute coefficients R_i needed to find energy in [t,t+dt]
         call cresp_compute_r(p_next, active_bins_next)                 ! new active bins already received some particles, Ri is needed for those bins too
-   
+
         edt(1:ncre) = edt(1:ncre) *(one-dt*r(1:ncre))
-   
+
         p_lo = p_lo_next
         p_up = p_up_next
    
