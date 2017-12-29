@@ -3,14 +3,14 @@ module cresp_crspectrum
  implicit none
   public :: cresp_update_cell, cresp_init_state, printer, fail_count_interpol, fail_count_no_sol, fail_count_NR_2dim, &
       &   cleanup_cresp, cresp_accuracy_test, b_losses, cresp_allocate_all, cresp_deallocate_all, e_threshold_lo, e_threshold_up, &
-      &   fail_count_comp_q
+      &   fail_count_comp_q, second_fail
   private ! most of it
   real(kind=8)     , parameter      :: three   = 3.e0
   real(kind=8)     , parameter      :: four    = 4.e0
   real(kind=8)     , parameter      :: five    = 5.e0
   real(kind=8)     , parameter      :: ten     = 10.e0
 
-  integer, dimension(1:2), save     :: fail_count_NR_2dim, fail_count_interpol, fail_count_no_sol
+  integer, dimension(1:2), save     :: fail_count_NR_2dim, fail_count_interpol, fail_count_no_sol, second_fail
   integer, allocatable, save   :: fail_count_comp_q(:)
 ! arrays helping in algorithm execution
  integer, allocatable        :: all_edges(:), i_act_edges(:)
@@ -85,7 +85,7 @@ contains
 !----- main subroutine -----
 
   subroutine cresp_update_cell(dt, n_inout, e_inout, sptab, v_n, v_e, p_out) !, p_lo_cell, p_up_cell)
-   use initcrspectrum, only: ncre, spec_mod_trms, e_small_approx_p_lo, e_small_approx_p_up, e_small_approx_init_cond, crel
+   use initcrspectrum, only: ncre, spec_mod_trms, e_small_approx_p_lo, e_small_approx_p_up, e_small_approx_init_cond, crel, p_mid_fix
 ! #ifdef VERBOSE
    use initcrspectrum, only: p_fix
 ! #endif /* VERBOSE */
@@ -158,7 +158,7 @@ contains
         if ((solve_fail_lo .eqv. .true.) .or. (solve_fail_up .eqv. .true.)) then
             call deallocate_active_arrays
             if (solve_fail_lo) then
-                if (i_lo .gt. 0 .and. i_lo .lt. ncre-2) then
+                if (i_lo .gt. 0 .and. i_lo .lt. ncre-3) then
                     call transfer_quantities(e(i_lo+2),e(i_lo+1))
                     call transfer_quantities(n(i_lo+2),n(i_lo+1))
                     i_lo = i_lo + 1
@@ -187,13 +187,22 @@ contains
             endif
             if (i_up .eq. i_lo) then
                 if (solve_fail_lo .and. solve_fail_up .eqv. .false.) then
-!                     print *, p_up, p_fix(i_up), p_fix(i_up+1)
                     i_lo = i_up - 1 ; p_lo = p_fix(i_up) ; p(i_lo) = p_fix(i_up)
                 else if (solve_fail_up .and. solve_fail_lo .eqv. .false.) then
                     i_up = i_lo + 1 ; p_up = p_fix(i_lo) ; p(i_lo) = p_fix(i_lo)
                 else
                     i_lo = i_up +1 ; p_lo = p_fix(i_lo) ; p(i_lo) = p_fix(i_lo) ; p_up = p_fix(i_up) ; p(i_up) = p_fix(i_up)
                 endif
+            endif
+            if (p_lo .le. zero) then ! in case of second failure
+                p_lo = p_mid_fix(i_lo)
+                p(i_lo) = p_lo
+                second_fail(1) = second_fail(1)+1
+            endif
+            if (p_up .le. zero) then ! in case of second failure
+                p_up = p_mid_fix(i_up)
+                p(i_up) = p_up
+                second_fail(2) = second_fail(2)+1
             endif
             call cresp_find_active_bins
         endif
@@ -252,9 +261,10 @@ contains
         n = ndt
         e = edt
         call cresp_detect_negative_content ! for testing
+! --- for testing
         n_tot = sum(n)
         e_tot = sum(e)
-! --- for testing
+
         crel%p = p
         crel%f = f
         crel%q = q
@@ -265,10 +275,9 @@ contains
 ! --- saving the data to output arrays
         n_inout  = n  ! number density of electrons per bin passed back to the external module
         e_inout  = e  ! energy density of electrons per bin passed back to the external module
-        
         v_e = vrtl_e
         v_n = vrtl_n
-        
+
         if (present(p_out)) then
             p_out(1) = p_lo
             p_out(2) = p_up
@@ -380,8 +389,8 @@ contains
   implicit none
         p = zero
         p(fixed_edges) = p_fix(fixed_edges)
-        p(i_lo) = p_lo * (1 - approx_p_lo )
-        p(i_up) = p_up * (1 - approx_p_up ) ! cutoff momenta are going to be evaluated with use of get_fqp_lo and get_fqp_up if e_small_approx_* is set
+        p(i_lo) = p_lo * (1 - approx_p_lo ); p_lo = p(i_lo)
+        p(i_up) = p_up * (1 - approx_p_up ); p_up = p(i_up) ! cutoff momenta are going to be evaluated with use of get_fqp_lo and get_fqp_up if e_small_approx_* is set
         if ( num_active_bins .eq. 1 .and. (i_lo .gt. 0 .and. i_up .lt. ncre) ) then
             approx_p_lo = 0
             approx_p_up = 0
@@ -420,11 +429,11 @@ contains
         i_lo_next = int(floor(log10(p_lo_next/p_fix(1))/w)) + 1
         i_lo_next = max(0, i_lo_next, i_lo-1)
         i_lo_next = min(i_lo_next, ncre - 1, i_lo+1)
-      
+
         i_up_next = int(floor(log10(p_up_next/p_fix(1))/w)) + 2
         i_up_next = max(1,i_up_next, i_up-1)
         i_up_next = min(i_up_next,ncre,i_up+1)
-      
+
 ! Detect changes in positions of lower an upper cut-ofs
         del_i_lo = i_lo_next - i_lo
         del_i_up = i_up_next - i_up
@@ -516,7 +525,7 @@ contains
    use cresp_variables, only: clight ! use units, only: clight
    implicit none
     integer                          :: i, k, i_lo_ch, i_up_ch, i_br
-    real(kind=8)                     ::  c
+    real(kind=8)                     :: c
     real(kind=8), dimension(I_ONE:ncre)    :: init_n, init_e
     type (spec_mod_trms), intent(in) :: sptab
     real(kind=8), intent(in)         :: f_amplitude
@@ -722,10 +731,10 @@ contains
             e(int((i_lo+i_up)/2):int((i_lo+i_up)/2)+1) = 0.5*e_small ! some arbitrary values
             n(int((i_lo+i_up)/2):int((i_lo+i_up)/2)+1) = 0.1*e_small
         endif
-    
+
         n_tot0 = sum(n)
         e_tot0 = sum(e)
-    
+
         init_n = n
         init_e = e
 
@@ -1158,6 +1167,10 @@ contains
             endif
         endif
         x_NR = abs(x_NR) ! negative values cannot be allowed
+        if (x_NR(1) .lt. 1.0) then
+            exit_code = .true.
+            return
+        endif
         p_up      = p_fix(i_up-1)*x_NR(1)
         p(i_up)   = p_up
         f(i_up-1) = e_small_to_f(p_up)/x_NR(2)
@@ -1214,6 +1227,10 @@ contains
             endif
         endif
         x_NR = abs(x_NR) ! negative values cannot be allowed
+        if (x_NR(1) .lt. 1.0) then
+            exit_code = .true.
+            return
+        endif
         p_lo      = p_fix(i_lo+1)/ x_NR(1)
         p(i_lo)   = p_lo
         f(i_lo)   = e_small_to_f(p_lo)
@@ -1452,6 +1469,7 @@ contains
         print '(A36,I6,A6,I6)', "NR_2dim:  convergence failure: p_lo", fail_count_NR_2dim(1), ", p_up", fail_count_NR_2dim(2)
         print '(A36,I6,A6,I6)', "NR_2dim:interpolation failure: p_lo", fail_count_interpol(1), ", p_up", fail_count_interpol(2)
         print '(A36,I6,A6,I6)', "NR_2dim:  no solution failure: p_lo", fail_count_no_sol(1), ", p_up", fail_count_no_sol(2)
+        print '(A36,I6,A6,I6)', "NR_2dim: second try failure  : p_lo", second_fail(1), ", p_up", second_fail(2)
         print '(A36,   100I5)', "NR_2dim:inpl/solve  q(bin) failure:", fail_count_comp_q
         call cresp_deallocate_all
  end subroutine cleanup_cresp

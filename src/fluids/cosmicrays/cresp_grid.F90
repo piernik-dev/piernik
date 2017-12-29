@@ -79,7 +79,7 @@ contains
                             virtual_e, virtual_n, e_small, e_small_approx_p_lo, e_small_approx_p_up
    use initcosmicrays, only: iarr_crn
    use cresp_crspectrum, only: cresp_init_state, cresp_allocate_all, printer, e_threshold_lo, e_threshold_up, &
-                        & fail_count_interpol, fail_count_no_sol, fail_count_NR_2dim, fail_count_comp_q
+                        & fail_count_interpol, fail_count_no_sol, fail_count_NR_2dim, fail_count_comp_q, second_fail
 !    use units,          only: clight
    use cresp_variables, only: clight ! temp, TODO
    implicit none
@@ -96,6 +96,7 @@ contains
         fail_count_interpol = 0
         fail_count_no_sol   = 0
         fail_count_NR_2dim  = 0
+        second_fail         = 0
         fail_count_comp_q   = 0
 
         e_threshold_lo = e_small * e_small_approx_p_lo
