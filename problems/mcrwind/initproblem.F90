@@ -182,6 +182,12 @@ contains
 #ifdef COSM_RAYS_SOURCES
       use cr_data,        only: cr_sigma, icr_N14, icr_O16
 #endif /* COSM_RAYS_SOURCES */
+#ifdef COSM_RAY_ELECTRONS
+      use cresp_NR_method, only: cresp_initialize_guess_grids
+      use cresp_grid,      only: cresp_init_grid
+      use initcrspectrum,  only: taylor_coeff_2nd, taylor_coeff_3rd, expan_order
+      use dataio_pub,      only: msg, printinfo
+#endif /* COSM_RAY_ELECTRONS */
       implicit none
 
       class(component_fluid), pointer :: fl
@@ -278,6 +284,15 @@ contains
 
          cgl => cgl%nxt
       enddo
+#ifdef COSM_RAY_ELECTRONS
+      write(msg,*) '[initproblem:problem_initial_conditions]: Taylor_exp._ord. (cresp)    = ', expan_order
+      call printinfo(msg)
+      write(msg,*) '[initproblem:problem_initial conditions]: Taylor_exp._coeff.(2nd,3rd) = ', taylor_coeff_2nd, taylor_coeff_3rd
+      call printinfo(msg)
+
+      call cresp_initialize_guess_grids
+      call cresp_init_grid
+#endif /* COSM_RAY_ELECTRONS */
 
    end subroutine problem_initial_conditions
 

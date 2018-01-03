@@ -36,7 +36,7 @@
  $OUTPUT_CONTROL
     problem_name = 'crwind'
     run_id       = 'tst'
-    dt_hdf       = 1.0
+    dt_hdf       = 1.e-1
     dt_res       = 0.0
     dt_log       = 1.0e-1
     dt_tsl       = 1.0e-1
@@ -72,7 +72,6 @@
 
   $COSMIC_RAYS
     ncrn        =   4
-    ncre        =   0
     cfl_cr      =   0.9
     cr_active   =   1.0
     gamma_crn(1)   =  1.333333
@@ -86,6 +85,23 @@
     K_crn_perp(1)  = 0
     smallecr       = 0.e-2
     use_split   = .false.
+ /
+
+ $COSMIC_RAY_SPECTRUM
+    cfl_cre = 0.3
+    cre_eff = 0.01
+    ncre        = 45    ! number of cr electron spectrum bins (including cutoff bins)
+    p_min_fix = 0.4e0   ! momentum fixed grid
+    p_max_fix = 1.65e4  ! momentum fixed grid
+    p_lo_init = 1.5e1   ! initial lower cut momentum
+    p_up_init = 7.5e2   ! initial upper cut momentum
+    q_init    = 3.6     ! < initial value of power law coefficient in cre enrgy spectrum
+    K_cre_paral_1 = 0.0e3
+    K_cre_perp_1  = 0.0e1
+    K_cre_pow     = 0.5 ! 0.5
+    e_small = 1.0e-5    ! lower energy cutoff for energy-approximated cutoff momenta
+    initial_condition = 'powl' ! 'powl', 'brpl', 'bump', 'symf', 'syme'
+    NR_iter_limit = 50
  /
 
  $CR_SPECIES
