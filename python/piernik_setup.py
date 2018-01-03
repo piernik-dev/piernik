@@ -357,10 +357,11 @@ def setup_piernik(data=None):
     module = dict()
 
     if "COSM_RAY_ELECTRONS" in our_defs: # args[0] == 'mcrtest':
-        allfiles.append(probdir + "p_ratios_lo.dat")
-        allfiles.append(probdir + "f_ratios_lo.dat")
-        allfiles.append(probdir + "p_ratios_up.dat")
-        allfiles.append(probdir + "f_ratios_up.dat")
+        ratio_path="src/fluids/cosmicrays/"
+        allfiles.append(ratio_path + "p_ratios_lo.dat")
+        allfiles.append(ratio_path + "f_ratios_lo.dat")
+        allfiles.append(ratio_path + "p_ratios_up.dat")
+        allfiles.append(ratio_path + "f_ratios_up.dat")
 
     for f in f90files:  # exclude links that symbolise file locks
         if (not os.access(f, os.F_OK)):
@@ -633,17 +634,18 @@ def setup_piernik(data=None):
                   rundir.rstrip('/') + '\033[0m')
         
     if "COSM_RAY_ELECTRONS" in our_defs: # added by mogrodnik, CRESP needs these, flagname might change
+        ratio_path="src/fluids/cosmicrays/"
         for suf_nam in ["lo","up"]:
             for pref_nam in ["p","f"]:
                 ratio_f_nam = str(pref_nam+'_ratios_'+suf_nam+'.dat')
                 try:
                     if(os.path.isfile(rundir + ratio_f_nam)):
                         print('\033[92m' + '('+args[0]+') ' + '\033[0m' +
-                        "Ratios files ("+ratio_f_nam+") already present in"+
+                        "Ratios file ("+ratio_f_nam+") already present in "+
                         rundir.strip('/')+".")
                     else:
                         #shutil.copy(probdir + ratio_f_nam, rundir + ratio_f_nam)
-                        os.symlink("../../"+probdir + ratio_f_nam, rundir + ratio_f_nam)
+                        os.symlink("../../"+ratio_path + ratio_f_nam, rundir + ratio_f_nam)
                         print('\033[92m' + '('+args[0]+') ' + '\033[0m' + "CRESP ratios ("
                         +ratio_f_nam+") linked to "+'\033[92m'+rundir.strip('/')+".")
                 except (IOError):
