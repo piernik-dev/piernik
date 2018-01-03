@@ -1371,6 +1371,7 @@ end subroutine
         if (loc_1 .le. 0 .or. (loc_1 .ge. arr_dim)) then
             loc_1 = minloc(abs(alpha_tab_q-alpha),dim=1) ! slow, but always finds something
             compute_q = q_grid(loc_1)
+            call NR_algorithm_1D(compute_q, exit_code)
             if (abs(compute_q) .gt. q_big) compute_q = sign(one, compute_q) * q_big
             return                      ! returns compute_q withh exit_code = .true. which can be used to warn. Usually occurs for q.gt.2*q_big
         endif
