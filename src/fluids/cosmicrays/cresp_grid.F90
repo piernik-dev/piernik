@@ -11,7 +11,7 @@ module cresp_grid
       public        dt_cre, cresp_update_grid, cresp_init_grid, grid_cresp_timestep
 
       real(kind=8)                    :: dt_cre
-      integer(kind=4), save           :: i_up_max_prev
+      integer(kind=4), save           :: i_up_max_prev, i_mid=0, j_mid=0, k_mid=0
 contains
 
  subroutine cresp_update_grid
@@ -32,7 +32,6 @@ contains
     type(spec_mod_trms)  :: sptab
         i = 0; j = 0;  k = 0
         cgl => leaves%first
-
         n_cell = zero
         e_cell = zero
         do while (associated(cgl))
@@ -59,7 +58,7 @@ contains
                         call cresp_update_cell(2*dt, n_cell, e_cell, sptab, virtual_n(1:2,i,j,k), virtual_e(1:2,i,j,k))
                         cg%u(iarr_cre_n, i, j, k) = n_cell
                         cg%u(iarr_cre_e, i, j, k) = e_cell
-                        if (i.eq.25.and.j.eq.25.and.k.eq.0) then ! diagnostic:
+                        if (i.eq.i_mid.and.j.eq.j_mid.and.k.eq.k_mid) then ! diagnostic:
                             call printer(t)
                         endif
                     enddo
@@ -67,7 +66,6 @@ contains
             enddo
             cgl=>cgl%nxt
         enddo
-
   end subroutine cresp_update_grid
 !----------------------------------------------------------------------------------------------------
   subroutine cresp_init_grid
@@ -110,6 +108,10 @@ contains
             cg%u(iarr_cre_n,:,:,:) = zero
             max_amp_cr = maxval(cg%u(iarr_crn(1),:,:,:))
 
+            i_mid = ((cg%lhn(xdim,LO)+cg%lhn(xdim,HI))/2)
+            j_mid = ((cg%lhn(ydim,LO)+cg%lhn(ydim,HI))/2)
+            k_mid = ((cg%lhn(zdim,LO)+cg%lhn(zdim,HI))/2)
+
             if (.not. allocated(virtual_e)) allocate(virtual_e(1:2, cg%lhn(xdim,LO):cg%lhn(xdim,HI), &
                 cg%lhn(ydim,LO):cg%lhn(ydim,HI), cg%lhn(zdim,LO):cg%lhn(zdim,HI)))
             if (.not. allocated(virtual_n)) allocate(virtual_n(1:2, cg%lhn(xdim,LO):cg%lhn(xdim,HI), &
@@ -142,13 +144,12 @@ contains
                             cg%u(iarr_cre_n, i, j, k) = n_cell
                             cg%u(iarr_cre_e, i, j, k) = e_cell
                         endif ! if total(cre_eff*e) less than e_small - nothing done, cell remains uninitialized
-                        if (i.eq.25.and.j.eq.25.and.k.eq.0) then ! diagnostics
+                        if (i.eq.i_mid.and.j.eq.j_mid.and.k.eq.k_mid) then ! diagnostics
                             call printer(t)
                         endif
                     enddo
                 enddo
             enddo
-
             cgl=>cgl%nxt
             enddo
             i_up_max_prev = 0
