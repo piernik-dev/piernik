@@ -292,13 +292,8 @@ contains
       write(msg,*) '[initproblem:problem_initial conditions]: Taylor_exp._coeff.(2nd,3rd) = ', taylor_coeff_2nd, taylor_coeff_3rd
       call printinfo(msg)
 
-      open(10, file='crs.dat',status='replace',position='rewind')     ! diagnostic files
-      open(11, file='crs_ne.dat',status='replace',position='rewind')  ! diagnostic files
-
       call cresp_initialize_guess_grids
       call cresp_init_grid
-
-      call sleep (1)
 #endif /* COSM_RAY_ELECTRONS */
 
 ! Velocity field

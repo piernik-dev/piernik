@@ -1,8 +1,13 @@
 module initcrspectrum  
-! pulled by COSM_RAY_ELECTRONS
+! pulled by COSM_RAYS
 
+#ifdef COSM_RAY_ELECTRONS
  public ! QA_WARN no secrets are kept here
- private init_cresp_types
+#endif /* COSM_RAY_ELECTRONS */
+#ifndef COSM_RAY_ELECTRONS
+ public ncre, p_min_fix, p_max_fix, f_init, q_init, q_big, p_lo_init, p_up_init, cfl_cre, cre_eff, K_cre_paral_1, K_cre_perp_1, &
+      & K_cre_pow, p_mid_fix, expan_order
+#endif /* not COSM_RAY_ELECTRONS */
 
 ! contains routines reading namelist in problem.par file dedicated to cosmic ray electron spectrum and initializes types used.
 ! available via namelist COSMIC_RAY_SPECTRUM
@@ -73,12 +78,12 @@ module initcrspectrum
   real(kind=8)     :: p_fix_ratio
 
   integer,allocatable, dimension(:) :: cresp_edges
+
 !====================================================================================================
 !  
  contains
 !
 !====================================================================================================
-
   subroutine init_cresp
    use constants,             only: I_ZERO, zero, ten
    use diagnostics, only: my_allocate_with_index
@@ -87,6 +92,9 @@ module initcrspectrum
     logical, save            :: first_run = .true.
 
     call cresp_read_nml_module
+
+    open(10, file='crs.dat',status='replace',position='rewind')     ! diagnostic files
+    open(11, file='crs_ne.dat',status='replace',position='rewind')  ! diagnostic files
 
     if (first_run .eqv. .true.) then
         if (ncre .ne. I_ZERO)  then

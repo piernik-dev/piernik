@@ -39,7 +39,10 @@ module initcosmicrays
    use constants, only: cbuff_len
    use initcrspectrum, only: ncre, p_min_fix, p_max_fix, f_init, q_init, q_big, p_lo_init, p_up_init,  & 
                           cfl_cre, cre_eff, K_cre_paral_1, K_cre_perp_1, K_cre_pow, p_mid_fix, &
-                          expan_order, init_cresp !, compute_K
+                          expan_order
+#ifdef COSM_RAY_ELECTRONS
+   use initcrspectrum, only: init_cresp
+#endif /* COSM_RAY_ELECTRONS */
    implicit none
 
    public ! QA_WARN no secrets are kept here
