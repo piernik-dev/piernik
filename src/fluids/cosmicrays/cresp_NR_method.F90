@@ -228,12 +228,14 @@ module cresp_NR_method
 !----------------------------------------------------------------------------------------------------
   subroutine fill_guess_grids
    use constants, only: zero, one, half
-   use initcrspectrum,  only: q_big, force_init_NR, NR_run_refine_pf
+   use cresp_variables, only: clight ! use units,   only: clight
+   use initcrspectrum,  only: q_big, force_init_NR, NR_run_refine_pf, p_fix_ratio
    implicit none
     integer(kind=4)  :: i, j, int_logical_p, int_logical_f !, ierr
     logical  :: exit_code
     real(kind=8) :: a_min_lo=huge(one), a_max_lo=tiny(one), a_min_up=huge(one), a_max_up=tiny(one),& 
-                    n_min_lo=huge(one), n_max_lo=tiny(one), n_min_up=huge(one), n_max_up=tiny(one)
+                    n_min_lo=huge(one), n_max_lo=tiny(one), n_min_up=huge(one), n_max_up=tiny(one),&
+                    a_max_q=tiny(one)
         q_space = zero
         do i=1, int(half*helper_arr_dim)
             q_space(i) = ln_eval_array_val(i, q_big, real(0.05,kind=8), int(1,kind=4), int(half*helper_arr_dim,kind=4))
@@ -260,10 +262,10 @@ module cresp_NR_method
             enddo
         enddo
 
-        a_min_lo = 0.8 * a_min_lo
-        a_max_lo = 0.999999 !1 * a_max_lo
-        a_min_up = 1.000005 ! 0.8 * a_min_up
-        a_max_up = 1.1 * a_max_up
+        a_min_lo = 0.8 * a_min_lo / clight
+        a_max_lo = 0.999999 / clight !1 * a_max_lo
+        a_min_up = 1.000005 / clight  ! 0.8 * a_min_up
+        a_max_up = 1.1 * a_max_up / clight
         n_min_lo = 0.001 * n_min_lo
         n_max_lo = 1.1 * n_max_lo
         n_min_up = 0.001 * n_min_up
@@ -274,21 +276,8 @@ module cresp_NR_method
             alpha_tab_up(i) = ind_to_flog(i,a_min_up,a_max_up) ! a_min_up * ten**((log10(a_max_up/a_min_up))/real(arr_dim-1,kind=8)*real((i-1),kind=8))
             n_tab_lo(i)     = ind_to_flog(i,n_min_lo,n_max_lo) ! n_min_lo * ten**((log10(n_max_lo/n_min_lo))/real(arr_dim-1,kind=8)*real((i-1),kind=8))
             n_tab_up(i)     = ind_to_flog(i,n_min_up,n_max_up) ! n_min_up * ten**((log10(n_max_up/n_min_up))/real(arr_dim-1,kind=8)*real((i-1),kind=8))
-            alpha_tab_q(i)  = ind_to_flog(i,a_min_up,1.3     ) ! a_min_up * ten**((log10(1.3/a_min_up))/real(arr_dim-1,kind=8)*real((i-1),kind=8))
         enddo
-#ifdef VERBOSE
-        print *,"alpha_tab_lo(i),      alpha_tab_up(i),        n_tab_lo(i),        n_tab_up(i)  |       p_space(i),     q_space(i)" 
-        do i = 1, arr_dim
-          if (i .le. helper_arr_dim) then
-            print *,i,"|",  alpha_tab_lo(i), alpha_tab_up(i), n_tab_lo(i), n_tab_up(i), alpha_tab_q(i), "| i = ", &
-                            min(i,helper_arr_dim), p_space(min(i,helper_arr_dim)), q_space(min(i,helper_arr_dim)), &
-                            p_space(min(i,helper_arr_dim))**(-q_space(min(i,helper_arr_dim)))
-          else
-            print *,i,"|",  alpha_tab_lo(i), alpha_tab_up(i), n_tab_lo(i), n_tab_up(i), alpha_tab_q(i)
-          endif
-        enddo
-        print *, "-----------"
-#endif /* VERBOSE */
+
         write (*, "(A36)", advance="no") "Reading (up) boundary ratio files..."
         do j = 1,2
             call read_NR_guess_grid(p_ratios_up, "p_ratios_up", exit_code) ;  int_logical_p = logical_2_int(exit_code)
@@ -322,8 +311,30 @@ module cresp_NR_method
             call save_NR_guess_grid(f_ratios_lo,"f_ratios_lo")
         enddo
 
-        call fill_q_grid(1) ! computing q_grid takes so little time, that it might not be necessary to save it at all.
-    
+        a_max_q = 10.0 * p_fix_ratio / clight
+        j = arr_dim - int(arr_dim/(arr_dim/10),kind=4)
+        do while (q_grid(j) .le. (-2*q_big) .and. (q_grid(arr_dim) .le. (-2*q_big)) )
+            a_max_q = a_max_q - a_max_q*0.1
+            do i=1,arr_dim
+                alpha_tab_q(i)  = ind_to_flog(i,a_min_up,a_max_q)
+            enddo
+            call fill_q_grid(1) ! computing q_grid takes so little time, that saving the grid is not necessary.
+        enddo
+
+#ifdef VERBOSE
+        print *,"alpha_tab_lo(i),      alpha_tab_up(i),        n_tab_lo(i),        n_tab_up(i)  |       p_space(i),     q_space(i)"
+        do i = 1, arr_dim
+          if (i .le. helper_arr_dim) then
+            print *,i,"|",  alpha_tab_lo(i), alpha_tab_up(i), n_tab_lo(i), n_tab_up(i), alpha_tab_q(i), "| i = ", &
+                            min(i,helper_arr_dim), p_space(min(i,helper_arr_dim)), q_space(min(i,helper_arr_dim)), &
+                            p_space(min(i,helper_arr_dim))**(-q_space(min(i,helper_arr_dim)))
+          else
+            print *,i,"|",  alpha_tab_lo(i), alpha_tab_up(i), n_tab_lo(i), n_tab_up(i), alpha_tab_q(i)
+          endif
+        enddo
+        print *, "-----------"
+#endif /* VERBOSE */
+
  end subroutine fill_guess_grids
 !---------------------------------------------------------------------------------------------------- 
  subroutine refine_all_directions(bound_case)
