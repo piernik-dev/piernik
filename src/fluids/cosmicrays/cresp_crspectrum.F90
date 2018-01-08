@@ -425,6 +425,8 @@ contains
 ! Compute p_lo and p_up at [t+dt]
         call p_update(dt, p_lo, p_lo_next)
         call p_update(dt, p_up, p_up_next)
+        p_lo_next = abs(p_lo_next)
+        p_up_next = abs(p_up_next)
 ! Locate cut-ofs after current timestep
         i_lo_next = int(floor(log10(p_lo_next/p_fix(1))/w)) + 1
         i_lo_next = max(0, i_lo_next, i_lo-1)
