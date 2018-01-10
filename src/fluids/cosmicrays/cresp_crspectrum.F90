@@ -84,7 +84,7 @@ contains
 
 !----- main subroutine -----
 
-  subroutine cresp_update_cell(dt, n_inout, e_inout, sptab, v_n, v_e, p_out) !, p_lo_cell, p_up_cell)
+  subroutine cresp_update_cell(dt, n_inout, e_inout, sptab, v_n, v_e, cfl_cresp_violation, p_out) !, p_lo_cell, p_up_cell)
    use initcrspectrum, only: ncre, spec_mod_trms, e_small_approx_p_lo, e_small_approx_p_up, e_small_approx_init_cond, crel, p_mid_fix
 ! #ifdef VERBOSE
    use initcrspectrum, only: p_fix
@@ -93,15 +93,17 @@ contains
    implicit none
     real(kind=8), dimension(1:2), intent(inout), optional :: p_out
     real(kind=8), dimension(1:2), intent(inout) :: v_n, v_e
+    logical, intent(inout)                      :: cfl_cresp_violation
     real(kind=8), intent(in)  :: dt
     real(kind=8), dimension(1:ncre), intent(inout)   :: n_inout, e_inout
     type(spec_mod_trms), intent(in)       :: sptab
     logical :: solve_fail_lo, solve_fail_up, index_changed, empty_cell
-        e = zero; n = zero; edt = zero; ndt = zero 
+        e = zero; n = zero; edt = zero; ndt = zero
         solve_fail_lo = .false.
         solve_fail_up = .false.
         index_changed = .false.
         empty_cell    = .false.
+        cfl_cresp_violation = .false.
         
         approx_p_lo = e_small_approx_p_lo
         approx_p_up = e_small_approx_p_up
@@ -207,7 +209,11 @@ contains
             call cresp_find_active_bins
         endif
 
-        call cresp_update_bin_index(dt, p_lo, p_up, p_lo_next, p_up_next)      ! FIXME - must be modified in the future if this branch is connected to Piernik
+        call cresp_update_bin_index(dt, p_lo, p_up, p_lo_next, p_up_next, cfl_cresp_violation)      ! FIXME - must be modified in the future if this branch is connected to Piernik
+        if ( cfl_cresp_violation ) then
+            call deallocate_active_arrays
+            return
+        endif
 ! Compute fluxes through fixed edges in time period [t,t+dt], using f, q, p_lo and p_up at [t]
 ! Note that new [t+dt] values of p_lo and p_up in case new fixed edges appear or disappear.
 ! fill new bins
@@ -413,15 +419,16 @@ contains
         enddo
   end subroutine cresp_detect_negative_content
 !----------------------------------------------------------------------------------------------------
-  subroutine cresp_update_bin_index(dt, p_lo, p_up, p_lo_next, p_up_next) ! evaluates only "next" momenta and is called after finding outer cutoff momenta
+  subroutine cresp_update_bin_index(dt, p_lo, p_up, p_lo_next, p_up_next, dt_too_high) ! evaluates only "next" momenta and is called after finding outer cutoff momenta
    use constants, only: zero, I_ZERO, one
    use initcrspectrum, only: ncre, p_fix, w
    implicit none
     real(kind=8), intent(in)  :: dt
     real(kind=8), intent(in)  :: p_lo, p_up
     real(kind=8), intent(out) :: p_lo_next, p_up_next
+    logical,      intent(out) :: dt_too_high
     integer                   :: i_lo_next, i_up_next
-
+        dt_too_high = .false.
 ! Compute p_lo and p_up at [t+dt]
         call p_update(dt, p_lo, p_lo_next)
         call p_update(dt, p_up, p_up_next)
@@ -435,7 +442,10 @@ contains
         i_up_next = int(floor(log10(p_up_next/p_fix(1))/w)) + 2
         i_up_next = max(1,i_up_next, i_up-1)
         i_up_next = min(i_up_next,ncre,i_up+1)
-
+        if ( p_up_next .lt. p_fix(i_up_next-1) ) then ! if no solution is found at the first try, approximation usually causes p_up to jump
+            dt_too_high = .true.                 ! towards higher values, which for sufficiently high dt can cause p_up_next to even
+            return                               ! become negative. As p_up would propagate more than one bin this is clearly cfl violation.
+        endif
 ! Detect changes in positions of lower an upper cut-ofs
         del_i_lo = i_lo_next - i_lo
         del_i_up = i_up_next - i_up

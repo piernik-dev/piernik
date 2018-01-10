@@ -8,9 +8,10 @@ module cresp_grid
       use global,         only: dt, t
 
       private
-      public        dt_cre, cresp_update_grid, cresp_init_grid, grid_cresp_timestep
+      public        dt_cre, cresp_update_grid, cresp_init_grid, grid_cresp_timestep, cfl_cresp_violation
 
       real(kind=8)                    :: dt_cre
+      logical                         :: cfl_cresp_violation
       integer(kind=4), save           :: i_up_max_prev, i_mid=0, j_mid=0, k_mid=0
 contains
 
@@ -24,6 +25,7 @@ contains
   use named_array_list, only: qna
   use crhelpers,      only: divv_n
   use func,           only: emag, ekin, operator(.equals.), operator(.notequals.)
+  use global,         only: cfl_violated, repeat_step
   implicit none
     integer                         :: i, j, k
     type(cg_list_element),  pointer :: cgl
@@ -34,6 +36,7 @@ contains
         cgl => leaves%first
         n_cell = zero
         e_cell = zero
+        cfl_cresp_violation = .false.
         do while (associated(cgl))
             cg => cgl%cg
             do k = cg%ks, cg%ke
@@ -55,7 +58,8 @@ contains
 #ifdef VERBOSE
                         print *, 'Output of cosmic ray electrons module for grid cell with coordinates i,j,k:', i, j, k
 #endif /* VERBOSE */
-                        call cresp_update_cell(2*dt, n_cell, e_cell, sptab, virtual_n(1:2,i,j,k), virtual_e(1:2,i,j,k))
+                        call cresp_update_cell(2*dt, n_cell, e_cell, sptab, virtual_n(1:2,i,j,k), virtual_e(1:2,i,j,k), cfl_cresp_violation)
+                        if ( cfl_cresp_violation ) return ! nothing to do here!
                         cg%u(iarr_cre_n, i, j, k) = n_cell
                         cg%u(iarr_cre_e, i, j, k) = e_cell
                         if (i.eq.i_mid.and.j.eq.j_mid.and.k.eq.k_mid) then ! diagnostic:
