@@ -1445,6 +1445,7 @@ contains
 #endif /* COSM_RAYS */
 #ifdef COSM_RAY_ELECTRONS
       use initcosmicrays,     only: iarr_cre_e, iarr_cre_n
+      use timestep_cresp,     only: dt_cre_min_ud, dt_cre_min_ub
 #endif /* COSM_RAY_ELECTRONS */
 #if defined COSM_RAYS || defined MAGNETIC
       use constants,          only: MINL
@@ -1481,9 +1482,9 @@ contains
       type(value)                        :: encr_min, encr_max
 #endif /* COSM_RAYS */
 #ifdef COSM_RAY_ELECTRONS
-      type(value )                       :: dcre_min, dcre_max   !< values of cre density
-      type(value )                       :: encre_min, encre_max !< values of cre energy
-      type(value )                       :: divv_min, divv_max   !< values of div_v
+      type(value)                       :: dcre_min, dcre_max   !< values of cre density
+      type(value)                       :: encre_min, encre_max !< values of cre energy
+      type(value)                       :: divv_min, divv_max   !< values of div_v
 #endif /* COSM_RAY_ELECTRONS */
 #ifdef VARIABLE_GP
       type(value)                        :: gpxmax, gpymax, gpzmax
@@ -1517,7 +1518,9 @@ contains
          enddo
          call leaves%get_extremum(qna%wai, MAXL, b_max)
          call leaves%get_extremum(qna%wai, MINL, b_min)
-
+#ifdef COSM_RAY_ELECTRONS
+         b_max%assoc = dt_cre_min_ub
+#endif /* COSM_RAY_ELECTRONS */
          cgl => leaves%first
          do while (associated(cgl))
             cgl%cg%wa(:,:,:)  = cgl%cg%wa(:,:,:) / sqrt(cgl%cg%u(flind%ion%idn,:,:,:))
@@ -1639,6 +1642,7 @@ contains
       enddo
       call leaves%get_extremum(qna%wai, MINL, divv_min)
       call leaves%get_extremum(qna%wai, MAXL, divv_max)
+      divv_max%assoc = dt_cre_min_ud
 #endif /* COSM_RAY_ELECTRONS */
 
       if (has_interactions) then
@@ -1662,7 +1666,11 @@ contains
                call cmnlog_l(fmt_dtloc, 'max(v_a)    ', id, vai_max)
                id = "MAG"
                call cmnlog_s(fmt_loc, 'min(|b|)    ', id, b_min)
-               call cmnlog_s(fmt_loc, 'max(|b|)    ', id, b_max)
+#ifdef COSM_RAY_ELECTRONS
+               call cmnlog_l(fmt_dtloc, 'max(|b|)    ', id, b_max)
+#else /* !COSM_RAY_ELECTRONS */
+               call cmnlog_s(fmt_loc,   'max(|b|)    ', id, b_max)
+#endif /* COSM_RAY_ELECTRONS */
                call cmnlog_s(fmt_loc, 'max(|divb|) ', id, divb_max)
 #else /* !MAGNETIC */
 !               if (csi_max%val > 0.) write(msg, fmtff8) 'max(c_s )   ION  =', sqrt(csi_max%val**2), 'dt=',cfl*dxmn_safe/sqrt(csi_max%val**2)
@@ -1681,11 +1689,11 @@ contains
 #ifdef COSM_RAY_ELECTRONS
             id = "CRE"
             call cmnlog_s(fmt_loc,   'min(dcre)    ', id, dcre_min)
-            call cmnlog_l(fmt_dtloc, 'max(dcre)    ', id, dcre_max)
+            call cmnlog_s(fmt_loc,   'max(dcre)    ', id, dcre_max)
             call cmnlog_s(fmt_loc,   'min(encre)   ', id, encre_min)
-            call cmnlog_l(fmt_dtloc, 'max(encre)   ', id, encre_max)
+            call cmnlog_s(fmt_loc,   'max(encre)   ', id, encre_max)
             call cmnlog_s(fmt_loc,   'min(div_v)   ', id, divv_min)
-            call cmnlog_s(fmt_loc,   'max(div_v)   ', id, divv_max)
+            call cmnlog_l(fmt_dtloc, 'max(div_v)   ', id, divv_max)
 #endif /* COSM_RAY_ELECTRONS */
 
 #ifdef RESISTIVE

@@ -172,7 +172,7 @@ contains
    use constants,        only: one, half
    use initcrspectrum,   only: spec_mod_trms, cfl_cre
    use initcosmicrays,   only: K_cre_paral, K_cre_perp
-   use timestep_cresp,   only: cresp_timestep
+   use timestep_cresp,   only: cresp_timestep, dt_cre_min_ub, dt_cre_min_ud
    implicit none
     integer(kind=4)                 :: i, j, k, i_up_max, i_up_max_tmp
     type(grid_container), pointer   :: cg
@@ -185,6 +185,8 @@ contains
 
         dt_cre = huge(one)
         dt_cre_tmp = huge(one)
+        dt_cre_min_ub = huge(one)
+        dt_cre_min_ud = huge(one)
 
         cgl => leaves%first
         do while (associated(cgl))

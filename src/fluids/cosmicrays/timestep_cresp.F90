@@ -6,9 +6,9 @@ module timestep_cresp
 
       implicit none
     private
-    public :: dt_cre, cresp_timestep
+    public :: dt_cre, cresp_timestep, dt_cre_min_ub, dt_cre_min_ud
 
-    real(kind=8) :: dt_cre
+    real(kind=8) :: dt_cre, dt_cre_min_ub, dt_cre_min_ud
 
 !----------------------------------------------------------------------------------------------------
 !
@@ -53,7 +53,7 @@ module timestep_cresp
                 return
             endif
         else
-            approximate_p_up = p_fix(min(cell_i_up-1, ncre-1)) ! p_fix(0,ncre) is zero, but cell_i_up > 0 is satisfied
+            approximate_p_up = p_fix(min(cell_i_up, ncre-1)) ! p_fix(0,ncre) is zero, but cell_i_up > 0 is satisfied
         endif
   end function approximate_p_up
 !----------------------------------------------------------------------------------------------------
@@ -93,15 +93,17 @@ module timestep_cresp
 ! cell is assumed empty if evaluate_i_up over whole ncre range returns 0 -> nothing to do here
         if (i_up_cell .gt. 0) then
 ! Adiabatic cooling timestep:
-            if (abs(sptab%ud) .gt. zero) then
+            if (abs(sptab%ud) .ne. zero) then
                 dt_cre_ud = cfl_cre * w / sptab%ud
                 dt_cre_ud = abs(dt_cre_ud)
+                dt_cre_min_ud = min(dt_cre_ud, dt_cre_min_ud)
             endif
 ! Synchrotron cooling timestep (is dependant only on p_up, highest value of p):
             if (sptab%ub .gt. zero) then
 !                 i_up_cell = evaluate_i_up(e_cell, n_cell)
                 p_u = abs(approximate_p_up(n_cell, e_cell, i_up_cell)) ! TODO: fix problems with negative p_u
                 dt_cre_ub = cfl_cre * w / (p_u * sptab%ub)
+                dt_cre_min_ub = min(dt_cre_ub, dt_cre_min_ub)
             endif
         endif
 ! Here shortest among calculated timesteps is chosen.
