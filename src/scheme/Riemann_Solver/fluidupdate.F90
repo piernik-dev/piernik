@@ -453,9 +453,11 @@ contains
      real, dimension(size(u,1),size(u,2)), target       :: flx, ql, qr
      real, dimension(size(u,1),size(u,2))               :: ul, ur, du1, du2, du3
 
+     real, dimension(size(psi,1),size(psi,2))           :: psi__l, psi__r, dpsi1, dpsi2, dpsi3
+#ifdef GLM
      real, dimension(size(psi,1),size(psi,2)), target   :: psi_l, psi_r
      real, dimension(size(psi,1),size(psi,2)),target    :: psi_cc
-     real, dimension(size(psi,1),size(psi,2))           :: psi__l, psi__r, dpsi1, dpsi2, dpsi3
+#endif /* GLM */
 
      integer                                            :: nx
 
@@ -559,10 +561,11 @@ contains
 
         subroutine slope(uu, bb, pp)
 
-           use constants,  only: half, xdim
+           use constants,  only: half
            use dataio_pub, only: die
            use fluxlimiters, only: flimiter, blimiter
 #ifdef GLM
+           use constants,  only: xdim
            use fluxlimiters, only: plimiter
 #endif /*GLM */
 
@@ -724,6 +727,8 @@ contains
 #ifdef GLM
            dpsi(:,2:nx) = dtodx*(psi_cc(:,1:nx-1) - psi_cc(:,2:nx))
            dpsi(:,1) = dpsi(:,2)
+#else
+           dpsi = 0.
 #endif /*GLM */
 
         end subroutine du_db
@@ -743,9 +748,9 @@ contains
            integer :: i
            class(component_fluid), pointer :: fl
            real, dimension(size(b_cc,1),size(b_cc,2)), target :: b0, bf0
-           real, dimension(size(psi,1),size(psi,2)), target ::  p0, pf0
            real, dimension(:,:), pointer :: p_flx, p_bcc, p_bccl, p_bccr, p_ql, p_qr
 #ifdef GLM
+           real, dimension(size(psi,1),size(psi,2)), target ::  p0, pf0
            real, dimension(:,:), pointer :: p_psif, p_psi_l, p_psi_r
 #endif /* GLM */
 
