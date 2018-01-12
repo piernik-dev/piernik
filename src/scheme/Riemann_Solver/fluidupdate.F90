@@ -77,9 +77,6 @@ contains
 #ifdef ISO
 #  error Isothermal EOS is not implemented yet in this Riemann solver.
 #endif /* ISO */
-#ifdef COSM_RAYS
-#  error   Cosmic rays are not implemented yet in this Riemann solver.
-#endif /* COSM_RAYS */
     nmag = 0
     do i = 1, flind%fluids
        if (flind%all_fluids(i)%fl%is_magnetized) nmag = nmag + 1
