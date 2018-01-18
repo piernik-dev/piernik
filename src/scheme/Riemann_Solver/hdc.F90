@@ -35,14 +35,60 @@
 
 module hdc
 ! pulled by RIEMANN
+
+   use constants, only: dsetnamelen, INVALID
+
   implicit none
 
   real, protected :: chspeed, divb
+  integer, protected :: idb = INVALID, igp = INVALID !< indices of div(B) and grad(psi) arrays
+  character(len=dsetnamelen), parameter :: divB_n = "div_B", gradpsi_n = "grad_psi"
 
   private
-  public :: chspeed, update_chspeed, init_psi, glm_mhd, glmdamping, divergencebc, eglm
+  public :: chspeed, update_chspeed, init_psi, glm_mhd, glmdamping, eglm!, divergencebc
 
 contains
+
+!>
+!! \brief Allocate extra space for divB and grad psi to speed up calculations
+!!
+!! To create the auxiliary arrays just use the call
+!!    if (idb == INVALID .or. igp == INVALID) call aux_var
+!! It should safe to call it multiple times from here - no new storage is
+!! created as long as the indices idb and igp are consistent with qna and wna entries.
+!!
+!! The divergence of the B field should be stored in cg%q(idb)%arr(:,:,:)
+!! The gradient of the psi fielsd should be stored in cg%w(igp)%arr(xdim:zdim,:,:,:)
+!!
+!! These arrays will be automagically freed with destruction of grid containers.
+!<
+
+   subroutine aux_var
+
+      use cg_list_global,   only: all_cg
+      use constants,        only: INVALID, ndims
+      use dataio_pub,       only: die
+      use named_array_list, only: qna, wna
+
+      implicit none
+
+      if (qna%exists(divB_n)) then
+         if (idb /= qna%ind(divB_n)) call die ("[hdc:aux_var] qna%exists(divB_n) .and. idb == INVALID")
+      else
+         if (idb /= INVALID) call die ("[hdc:aux_var] qna%exists(divB_n) .and. idb /= INVALID")
+         call all_cg%reg_var(divB_n)
+         idb = qna%ind(divB_n)
+      endif
+
+      if (wna%exists(gradpsi_n)) then
+         if (igp /= wna%ind(gradpsi_n)) call die ("[hdc:aux_var] wna%exists(gradpsi_n) .and. igp == INVALID")
+      else
+         if (igp /= INVALID) call die ("[hdc:aux_var] wna%exists(gradpsi_n) .and. igp /= INVALID")
+         call all_cg%reg_var(gradpsi_n, dim4=ndims)
+         igp = wna%ind(gradpsi_n)
+      endif
+
+   end subroutine aux_var
 
 !>
 !! \brief recalcualte the speed of propagation of psi waves
@@ -173,7 +219,11 @@ contains
      !! Eq.(38) Dedner et al. to be implemented
    !<
    subroutine eglm
-     
+
+      implicit none
+
+      if (idb == INVALID .or. igp == INVALID) call aux_var
+
    end subroutine eglm
 
 end module hdc
