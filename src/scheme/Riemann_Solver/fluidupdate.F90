@@ -43,27 +43,30 @@ module fluidupdate
 
 contains
 
+!>
+!! \brief Advance the solution by two timesteps using directional splitting
+!!
+!! Spaghetti warning: copied from rtvd_split
+!<
+
   subroutine fluid_update
 
-    use all_boundaries, only: all_bnd
-    use cg_leaves,      only: leaves
-    use cg_list,        only: cg_list_element
-    use constants,      only: xdim, zdim, GEO_XYZ
-    use dataio_pub,     only: halfstep, die, warn
-    use domain,         only: dom, is_refined
-    use fluidindex,     only: flind
-    use fluxlimiters,   only: set_limiters
-    use global,         only: skip_sweep, dt, dtm, t, limiter, limiter_b, limiter_p, force_cc_mag
-    use mpisetup,       only: master
-    use user_hooks,     only: problem_customize_solution
+    use constants,    only: GEO_XYZ
+    use dataio_pub,   only: halfstep, die, warn
+    use domain,       only: dom, is_refined
+    use fluidindex,   only: flind
+    use fluxlimiters, only: set_limiters
+    use global,       only: dt, dtm, t, limiter, limiter_b, limiter_p
+    use mass_defect,  only: update_magic_mass
+    use mpisetup,     only: master
 #ifdef GLM
-    use hdc,            only: update_chspeed, glmdamping
+    use hdc,          only: update_chspeed, glmdamping
 #endif /* GLM */
+
     implicit none
 
-    logical, save                   :: first_run = .true.
-    type(cg_list_element), pointer  :: cgl
-    integer(kind=4)                 :: ddim, nmag, i
+    integer(kind=4) :: nmag, i
+    logical, save   :: first_run = .true.
 
     ! is_multicg should be safe
     if (is_refined) call die("[fluid_update] This Rieman solver is not compatible with mesh refinements yet!")
@@ -83,6 +86,8 @@ contains
     enddo
     if (nmag > 1) call die("[fluidupdate:fluid_update] At most one magnetized fluid is implemented")
 
+!!!call repeat_fluidstep
+
 #ifdef GLM
     call update_chspeed
 #endif /* GLM */
@@ -95,58 +100,99 @@ contains
        dtm = dt
     endif
     t = t + dt
+    call make_3sweeps(.true.) ! X -> Y -> Z
 
-    ! ToDo: check if changes of execution order here (block loop, direction loop, boundary update can change
-    ! cost or allow for reduction of required guardcells
-    if (.not. force_cc_mag) call bfc2bcc
-    do ddim = xdim, zdim, 1
-      if (dom%has_dir(ddim)) then
+! Sources should be hooked to problem_customize_solution with forward argument
 
-         cgl => leaves%first
-         do while (associated(cgl))
-
-            ! Warning: 2.5D MHD may need all directional calls anyway
-            if (.not. skip_sweep(ddim)) call sweep_dsplit(cgl%cg,dt,ddim)
-            cgl => cgl%nxt
-         enddo
-         call all_bnd
-#ifdef MAGNETIC
-         if (.not. force_cc_mag) call magfield(ddim)
-#endif /* MAGNETIC */
-      endif
-    enddo
-    if (associated(problem_customize_solution)) call problem_customize_solution(.true.)
-#ifdef GLM
-    call glmdamping
-#endif /* GLM */
-
+    halfstep = .true.
     t = t + dt
     dtm = dt
-    halfstep = .true.
-
-    if (.not. force_cc_mag) call bfc2bcc
-    do ddim = zdim, xdim, -1
-       if (dom%has_dir(ddim)) then
-#ifdef MAGNETIC
-          if (.not. force_cc_mag) call magfield(ddim)
-#endif /* MAGNETIC */
-          cgl => leaves%first
-          do while (associated(cgl))
-
-             if (.not. skip_sweep(ddim)) call sweep_dsplit(cgl%cg,dt,ddim)
-             cgl => cgl%nxt
-          enddo
-          call all_bnd
-       endif
-    enddo
-    if (associated(problem_customize_solution)) call problem_customize_solution(.false.)
-#ifdef GLM
-    call glmdamping
-#endif /* GLM */
+    call make_3sweeps(.false.) ! Z -> Y -> X
+    call update_magic_mass
 
     if (first_run) first_run = .false.
 
   end subroutine fluid_update
+
+!-------------------------------------------------------------------------------------------------------------------
+
+  subroutine make_3sweeps(forward)
+
+    use constants,      only: xdim, zdim, I_ONE
+    use dataio_pub,     only: die, warn
+    use global,         only: skip_sweep, limiter, limiter_b, limiter_p, force_cc_mag
+    use user_hooks,     only: problem_customize_solution
+#ifdef GLM
+    use hdc,            only: glmdamping
+#endif /* GLM */
+
+    implicit none
+
+    logical, intent(in) :: forward  !< If .true. then do X->Y->Z sweeps, if .false. then reverse that order
+
+    integer(kind=4)                 :: ddim
+
+    if (forward) then
+       do ddim = xdim, zdim, 1
+          call make_sweep(ddim, forward)
+       enddo
+    else
+       do ddim = zdim, xdim, -I_ONE
+          call make_sweep(ddim, forward)
+       enddo
+    endif
+    if (associated(problem_customize_solution)) call problem_customize_solution(forward)
+#ifdef GLM
+    call glmdamping
+#endif /* GLM */
+
+  end subroutine make_3sweeps
+
+!-------------------------------------------------------------------------------------------------------------------
+
+  subroutine make_sweep(dir, forward)
+
+    use all_boundaries, only: all_bnd
+    use cg_leaves,      only: leaves
+    use cg_list,        only: cg_list_element
+    use domain,         only: dom
+    use global,         only: skip_sweep, dt, force_cc_mag
+
+    implicit none
+
+    integer(kind=4), intent(in) :: dir      !< direction, one of xdim, ydim, zdim
+    logical,         intent(in) :: forward  !< if .false. then reverse operation order in the sweep
+
+    type(cg_list_element), pointer  :: cgl
+
+    ! ToDo: check if changes of execution order here (block loop, direction loop, boundary update can change
+    ! cost or allow for reduction of required guardcells
+    if (.not. force_cc_mag) call bfc2bcc
+
+    if (dom%has_dir(dir)) then
+       if (.not. forward) then
+#ifdef MAGNETIC
+          if (.not. force_cc_mag) call magfield(dir)
+#endif /* MAGNETIC */
+       endif
+
+       cgl => leaves%first
+       do while (associated(cgl))
+          ! Warning: 2.5D MHD may need all directional calls anyway
+          if (.not. skip_sweep(dir)) call sweep_dsplit(cgl%cg,dt,dir)
+          cgl => cgl%nxt
+       enddo
+
+       call all_bnd
+       if (forward) then
+#ifdef MAGNETIC
+          if (.not. force_cc_mag) call magfield(dir)
+#endif /* MAGNETIC */
+       endif
+
+    endif
+
+  end subroutine make_sweep
 
 !-------------------------------------------------------------------------------------------------------------------
 
@@ -453,9 +499,11 @@ contains
      real, dimension(size(u,1),size(u,2)), target       :: flx, ql, qr
      real, dimension(size(u,1),size(u,2))               :: ul, ur, du1, du2, du3
 
+     real, dimension(size(psi,1),size(psi,2))           :: psi__l, psi__r, dpsi1, dpsi2, dpsi3
+#ifdef GLM
      real, dimension(size(psi,1),size(psi,2)), target   :: psi_l, psi_r
      real, dimension(size(psi,1),size(psi,2)),target    :: psi_cc
-     real, dimension(size(psi,1),size(psi,2))           :: psi__l, psi__r, dpsi1, dpsi2, dpsi3
+#endif /* GLM */
 
      integer                                            :: nx
 
@@ -559,10 +607,11 @@ contains
 
         subroutine slope(uu, bb, pp)
 
-           use constants,  only: half, xdim
+           use constants,  only: half
            use dataio_pub, only: die
            use fluxlimiters, only: flimiter, blimiter
 #ifdef GLM
+           use constants,  only: xdim
            use fluxlimiters, only: plimiter
 #endif /*GLM */
 
@@ -724,6 +773,8 @@ contains
 #ifdef GLM
            dpsi(:,2:nx) = dtodx*(psi_cc(:,1:nx-1) - psi_cc(:,2:nx))
            dpsi(:,1) = dpsi(:,2)
+#else
+           dpsi = 0.
 #endif /*GLM */
 
         end subroutine du_db
@@ -743,9 +794,9 @@ contains
            integer :: i
            class(component_fluid), pointer :: fl
            real, dimension(size(b_cc,1),size(b_cc,2)), target :: b0, bf0
-           real, dimension(size(psi,1),size(psi,2)), target ::  p0, pf0
            real, dimension(:,:), pointer :: p_flx, p_bcc, p_bccl, p_bccr, p_ql, p_qr
 #ifdef GLM
+           real, dimension(size(psi,1),size(psi,2)), target ::  p0, pf0
            real, dimension(:,:), pointer :: p_psif, p_psi_l, p_psi_r
 #endif /* GLM */
 
