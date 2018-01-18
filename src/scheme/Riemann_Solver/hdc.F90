@@ -37,10 +37,10 @@ module hdc
 ! pulled by RIEMANN
   implicit none
 
-  real, protected :: chspeed
+  real, protected :: chspeed, divb
 
   private
-  public :: chspeed, update_chspeed, init_psi, glm_mhd, glmdamping
+  public :: chspeed, update_chspeed, init_psi, glm_mhd, glmdamping, divergencebc, eglm
 
 contains
 
@@ -166,7 +166,15 @@ contains
 !    if (qna%exists(psi_n)) call leaves%q_lin_comb( [qna%ind(psi_n), exp(-glm_alpha*cfl)], qna%ind(psi_n))
 ! but for AMR we may decide to use different factors on different levels
 
-  end subroutine glmdamping
+   end subroutine glmdamping
+
+!--------------------------------------------------------------------------------------------
+   !>
+     !! Eq.(38) Dedner et al. to be implemented
+   !<
+   subroutine eglm
+     
+   end subroutine eglm
 
 end module hdc
 
