@@ -73,17 +73,17 @@ contains
       implicit none
 
       if (qna%exists(divB_n)) then
-         if (idb /= qna%ind(divB_n)) call die ("[hdc:aux_var] qna%exists(divB_n) .and. idb == INVALID")
+         if (idb /= qna%ind(divB_n)) call die ("[hdc:aux_var] qna%exists(divB_n) .and. idb /= qna%ind(divB_n)")
       else
-         if (idb /= INVALID) call die ("[hdc:aux_var] qna%exists(divB_n) .and. idb /= INVALID")
+         if (idb /= INVALID) call die ("[hdc:aux_var] .not. qna%exists(divB_n) .and. idb /= INVALID")
          call all_cg%reg_var(divB_n)
          idb = qna%ind(divB_n)
       endif
 
       if (wna%exists(gradpsi_n)) then
-         if (igp /= wna%ind(gradpsi_n)) call die ("[hdc:aux_var] wna%exists(gradpsi_n) .and. igp == INVALID")
+         if (igp /= wna%ind(gradpsi_n)) call die ("[hdc:aux_var] wna%exists(gradpsi_n) .and. igp /= wna%ind(gradpsi_n)")
       else
-         if (igp /= INVALID) call die ("[hdc:aux_var] wna%exists(gradpsi_n) .and. igp /= INVALID")
+         if (igp /= INVALID) call die ("[hdc:aux_var] .not. wna%exists(gradpsi_n) .and. igp /= INVALID")
          call all_cg%reg_var(gradpsi_n, dim4=ndims)
          igp = wna%ind(gradpsi_n)
       endif
