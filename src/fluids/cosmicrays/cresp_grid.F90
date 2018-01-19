@@ -21,11 +21,10 @@ contains
   use constants,      only: xdim, ydim, zdim, zero
   use grid_cont,      only: grid_container
   use cresp_crspectrum, only:cresp_update_cell, printer
-  use initcrspectrum, only: spec_mod_trms, virtual_e, virtual_n, eps, prevent_neg_e
+  use initcrspectrum, only: spec_mod_trms, virtual_e, virtual_n, eps, prevent_neg_e, synch_active, adiab_active
   use named_array_list, only: qna
   use crhelpers,      only: divv_n
   use func,           only: emag, ekin, operator(.equals.), operator(.notequals.)
-  use global,         only: cfl_violated, repeat_step
   implicit none
     integer                         :: i, j, k
     type(cg_list_element),  pointer :: cgl
@@ -53,8 +52,8 @@ contains
                         sptab%ud = 0.0 ; sptab%ub = 0.0 ; sptab%ucmb = 0.0
                         n_cell    = cg%u(iarr_cre_n, i, j, k)
                         e_cell    = cg%u(iarr_cre_e, i, j, k)
-                        sptab%ub = emag(cg%b(xdim,i,j,k), cg%b(ydim,i,j,k), cg%b(zdim,i,j,k))
-                        sptab%ud = cg%q(qna%ind(divv_n))%point([i,j,k])
+                        if (synch_active) sptab%ub = emag(cg%b(xdim,i,j,k), cg%b(ydim,i,j,k), cg%b(zdim,i,j,k))/1000.0
+                        if (synch_active) sptab%ud = cg%q(qna%ind(divv_n))%point([i,j,k])
 #ifdef VERBOSE
                         print *, 'Output of cosmic ray electrons module for grid cell with coordinates i,j,k:', i, j, k
 #endif /* VERBOSE */
@@ -170,7 +169,7 @@ contains
    use constants,        only: xdim, ydim, zdim
    use named_array_list, only: qna
    use constants,        only: one, half
-   use initcrspectrum,   only: spec_mod_trms, cfl_cre
+   use initcrspectrum,   only: spec_mod_trms, cfl_cre, synch_active, adiab_active
    use initcosmicrays,   only: K_cre_paral, K_cre_perp
    use timestep_cresp,   only: cresp_timestep, dt_cre_min_ub, dt_cre_min_ud
    implicit none
@@ -195,8 +194,8 @@ contains
                 do j = cg%js, cg%je
                     do i = cg%is, cg%ie
                         sptab%ud = 0.0 ; sptab%ub = 0.0 ; sptab%ucmb = 0.0
-                        sptab%ub = emag(cg%b(xdim,i,j,k), cg%b(ydim,i,j,k), cg%b(zdim,i,j,k))
-                        sptab%ud = cg%q(qna%ind(divv_n))%point([i,j,k])
+                        if (synch_active) sptab%ub = emag(cg%b(xdim,i,j,k), cg%b(ydim,i,j,k), cg%b(zdim,i,j,k))/1000.0
+                        if (adiab_active) sptab%ud = cg%q(qna%ind(divv_n))%point([i,j,k])
                         call cresp_timestep(dt_cre_tmp, sptab, cg%u(iarr_cre_n, i, j, k), cg%u(iarr_cre_e, i, j, k), i_up_max_tmp) ! gives dt_cre for the whole domain, but is unefficient
                         dt_cre = min(dt_cre, dt_cre_tmp)
                         i_up_max = max(i_up_max, i_up_max_tmp)

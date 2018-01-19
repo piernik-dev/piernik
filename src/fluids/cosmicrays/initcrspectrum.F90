@@ -40,6 +40,8 @@ module initcrspectrum
  logical            :: NR_refine_solution_pf = .false.  ! < enables NR_2D refinement for interpolated values of "p" and "f". Note - algorithm tries to refine values if interpolation was unsuccessful.
  logical            :: prevent_neg_e = .true.   ! < forces e,n=eps where e or n drops below zero due to diffusion algorithm (TEMP workaround)
  logical            :: test_spectrum_break   = .false.  ! < introduce break in the middle of the spectrum (to see how algorithm handles it), TEMP
+ logical            :: synch_active = .true.    ! < TEST feature - turns on / off synchrotron cooling @ CRESP
+ logical            :: adiab_active = .true.    ! < TEST feature - turns on / off adiabatic   cooling @ CRESP
  
  real(kind=8)       :: tol_f = 1.0e-11          ! < tolerance for f abs. error in NR algorithm
  real(kind=8)       :: tol_x = 1.0e-11          ! < tolerance for x abs. error in NR algorithm
@@ -211,7 +213,7 @@ module initcrspectrum
     &                         p_min_fix, p_max_fix, cre_eff, K_cre_paral_1, K_cre_perp_1, &
     &                         K_cre_pow, expan_order, e_small, bump_amp, &
     &                         e_small_approx_init_cond, e_small_approx_p_lo, e_small_approx_p_up, force_init_NR,&
-    &                         NR_iter_limit, max_p_ratio, add_spectrum_base !, arr_dim
+    &                         NR_iter_limit, max_p_ratio, add_spectrum_base, synch_active, adiab_active !, arr_dim
            
         open(unit=101, file="problem.par", status="unknown")
         read(unit=101, nml=COSMIC_RAY_SPECTRUM)
