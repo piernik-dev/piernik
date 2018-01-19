@@ -28,15 +28,16 @@ module timestep_cresp
     character(len=2) :: which_bound="up"
     logical :: interpolation_successful, intpol_fail
         intpol_fail = .true.
+        approximate_p_up = p_fix(ncre-1)
         if (cell_i_up .ne. 1) then
-            alpha_bnd = (e_cell(cell_i_up)/(n_cell(cell_i_up)*clight*p_fix(cell_i_up-1)))
-            n_bnd     = n_cell(cell_i_up)
+            alpha_bnd = abs(e_cell(cell_i_up)/(n_cell(cell_i_up)*clight*p_fix(cell_i_up-1))) ! must remain absolute value until treatment against
+            n_bnd     = abs(n_cell(cell_i_up))                                               ! negative values due to diffusion is introduced
             pf_ratio  = intpol_pf_from_NR_grids(which_bound, alpha_bnd, n_bnd, interpolation_successful, intpol_fail) ! we use just an interpolated ratio
             if ( .not. interpolation_successful ) then ! if interpolation fails once, we suppose bin deactivation might take place
                 if (cell_i_up .gt. 3) then
-                    n_bnd     = n_cell(cell_i_up) + n_cell(cell_i_up-1)
-                    e_bnd     = e_cell(cell_i_up) + e_cell(cell_i_up-1)
-                    alpha_bnd = e_bnd/(n_bnd*clight*p_fix(cell_i_up-2))
+                    n_bnd     = abs(n_cell(cell_i_up) + n_cell(cell_i_up-1)) ! must remain absolute value until treatment against
+                    e_bnd     = e_cell(cell_i_up) + e_cell(cell_i_up-1)      ! negative values due to diffusion is introduced
+                    alpha_bnd = abs(e_bnd/(n_bnd*clight*p_fix(cell_i_up-2)))
                     pf_ratio  = intpol_pf_from_NR_grids(which_bound, alpha_bnd, n_bnd, interpolation_successful, intpol_fail)
                     if ( .not. interpolation_successful ) then
                         approximate_p_up = max(p_fix(min(cell_i_up+1, ncre)), p_fix(cell_i_up)) ! if interpolation fails, upper p_fix boundary is provided
