@@ -1,0 +1,20 @@
+PROG      = piernik
+
+### gcc-4.7
+F90       = h5pfc
+F90FLAGS  = -fdefault-real-8 -ffree-form -std=gnu -fimplicit-none -ffree-line-length-none -g
+LDFLAGS   = -Wl,--as-needed -Wl,-O1
+
+ifeq ($(PIERNIK_DEBUG), 1)
+   F90FLAGS += -ggdb -O0 -ffpe-trap=zero,overflow,invalid -fcheck=all -fno-omit-frame-pointer -fbacktrace
+   F90FLAGS += -Wall -W -Wextra -pedantic-errors -Wno-unused-function
+else
+   F90FLAGS += -O2 -fno-stack-arrays
+
+# -fstack-arrays may offer some extra performance in hydro solver but
+# unfortunately might be also a source of strange crashes due to exceeding
+# stack limits in configurations with large domains.  If you need this extra
+# performance be prepared also for tuning stack limits.
+
+endif
+F90FLAGS += -I/usr/include
