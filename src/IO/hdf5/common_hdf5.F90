@@ -955,7 +955,7 @@ contains
       use mpisetup, only: comm
 
       implicit none
-      integer(kind=4), intent(in) :: h5p
+      integer(HID_T),  intent(in) :: h5p
       integer(kind=4), intent(in) :: nproc_io
       integer(HID_T)              :: plist_id
       integer(kind=4)             :: error
