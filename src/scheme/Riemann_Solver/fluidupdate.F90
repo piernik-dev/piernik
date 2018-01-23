@@ -119,6 +119,11 @@ contains
     use dataio_pub,     only: die, warn
     use global,         only: skip_sweep, limiter, limiter_b, limiter_p, force_cc_mag
     use user_hooks,     only: problem_customize_solution
+#if defined(COSM_RAYS) && defined(MULTIGRID)
+    use all_boundaries,      only: all_fluid_boundaries
+    use initcosmicrays,      only: use_split
+    use multigrid_diffusion, only: multigrid_solve_diff
+#endif /* COSM_RAYS && MULTIGRID */
 #ifdef GLM
     use hdc,            only: glmdamping
 #endif /* GLM */
@@ -128,6 +133,13 @@ contains
     logical, intent(in) :: forward  !< If .true. then do X->Y->Z sweeps, if .false. then reverse that order
 
     integer(kind=4)                 :: ddim
+
+#if defined(COSM_RAYS) && defined(MULTIGRID)
+    if (.not. use_split) then
+       call multigrid_solve_diff
+       call all_fluid_boundaries
+    endif
+#endif /* COSM_RAYS && MULTIGRID */
 
     if (forward) then
        do ddim = xdim, zdim, 1
@@ -154,6 +166,10 @@ contains
     use cg_list,        only: cg_list_element
     use domain,         only: dom
     use global,         only: skip_sweep, dt, force_cc_mag
+#ifdef COSM_RAYS
+    use crdiffusion,    only: cr_diff
+    use initcosmicrays, only: use_split
+#endif /* COSM_RAYS */
 
     implicit none
 
@@ -168,6 +184,9 @@ contains
 
     if (dom%has_dir(dir)) then
        if (.not. forward) then
+#ifdef COSM_RAYS
+          if (use_split) call cr_diff(dir)
+#endif /* COSM_RAYS */
 #ifdef MAGNETIC
           if (.not. force_cc_mag) call magfield(dir)
 #endif /* MAGNETIC */
@@ -185,6 +204,9 @@ contains
 #ifdef MAGNETIC
           if (.not. force_cc_mag) call magfield(dir)
 #endif /* MAGNETIC */
+#ifdef COSM_RAYS
+          if (use_split) call cr_diff(dir)
+#endif /* COSM_RAYS */
        endif
 
     endif
