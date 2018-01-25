@@ -40,7 +40,7 @@ module timestep_cresp
                     alpha_bnd = abs(e_bnd/(n_bnd*clight*p_fix(cell_i_up-2)))
                     pf_ratio  = intpol_pf_from_NR_grids(which_bound, alpha_bnd, n_bnd, interpolation_successful, intpol_fail)
                     if ( .not. interpolation_successful ) then
-                        approximate_p_up = max(p_fix(min(cell_i_up+1, ncre)), p_fix(cell_i_up)) ! if interpolation fails, upper p_fix boundary is provided
+                        approximate_p_up = p_fix(min(cell_i_up+1, ncre-1)) ! if interpolation fails, upper p_fix boundary is provided
                         return
                     else
                         approximate_p_up = pf_ratio(1) * p_fix(cell_i_up-2)
