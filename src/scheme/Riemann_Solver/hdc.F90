@@ -40,7 +40,7 @@ module hdc
 
   implicit none
 
-  real, protected :: chspeed, divb
+  real, protected :: chspeed
   integer, protected :: idb = INVALID, igp = INVALID !< indices of div(B) and grad(psi) arrays
   character(len=dsetnamelen), parameter :: divB_n = "div_B", gradpsi_n = "grad_psi"
 
@@ -220,10 +220,70 @@ contains
    !<
    subroutine eglm
 
-      implicit none
+     use cg_leaves,  only: leaves
+     use cg_list,    only: cg_list_element
+     use grid_cont,  only: grid_container
+     use constants,  only: xdim, ydim, zdim, psi_n
+     use fluidindex, only: flind
+     use fluids_pub, only: has_ion
+     use fluidtypes, only: component_fluid
+     use constants,  only: GEO_XYZ, half
+     use dataio_pub, only: die
+     use domain,     only: dom
+     use named_array_list, only: qna
 
-      if (idb == INVALID .or. igp == INVALID) call aux_var
+     implicit none
 
+     class(component_fluid), pointer  :: fl
+     type(cg_list_element),  pointer  :: cgl
+     type(grid_container),   pointer  :: cg
+     integer                          :: i, j, k, im1, ip1, jm1, jp1, km1, kp1, ipsi
+     
+     
+     if (idb == INVALID .or. igp == INVALID) call aux_var
+     ipsi = qna%ind(psi_n)
+     
+     if(has_ion) then
+        if (dom%geometry_type /= GEO_XYZ) call die("[hdc:update_chspeed] non-cartesian geometry not implemented yet.")
+        fl => flind%ion
+        cgl => leaves%first
+        do while (associated(cgl))
+           cg => cgl%cg
+           do k = cgl%cg%ks, cgl%cg%ke
+              km1 = max(1, k-1)
+              kp1 = min(km1, k+1)
+              do j = cgl%cg%js, cgl%cg%je
+                 jm1 = max(1, j-1)
+                 jp1 = min(jm1, j+1)
+                 do i = cgl%cg%is, cgl%cg%ie
+                    im1 = max(1, i-1)
+                    ip1 = min(im1, i+1)
+                    cg%q(idb)%arr(i,j,k) = half * ( &
+                         (cg%b(xdim,ip1,j,k) - cg%b(xdim,im1,j,k))/cg%dl(xdim) + &
+                         (cg%b(ydim,i,jp1,k) - cg%b(ydim,i,jm1,k))/cg%dl(ydim) + &
+                         (cg%b(zdim,i,j,kp1) - cg%b(zdim,i,j,km1))/cg%dl(zdim) &
+                         )
+
+                    cg%w(igp)%arr(:,i,j,k) = half * [ &
+                         (cg%q(ipsi)%arr(ip1,j,k) - cg%q(ipsi)%arr(im1,j,k)), &
+                         (cg%q(ipsi)%arr(i,jp1,k) - cg%q(ipsi)%arr(i,jm1,k)), &
+                         (cg%q(ipsi)%arr(i,j,kp1) - cg%q(ipsi)%arr(i,j,km1)) &
+                         ] / cg%dl
+                         
+
+
+                    cgl%cg%u(fl%imx:fl%imz,i,j,k) = cgl%cg%u(fl%imx:fl%imz,i,j,k) - cg%q(idb)%arr(i,j,k)*(cgl%cg%b(xdim:zdim,i,j,k))
+                    cgl%cg%b(xdim:zdim,i,j,k) = cgl%cg%b(xdim:zdim,i,j,k) - cg%w(igp)%arr(:,i,j,k)*(cgl%cg%u(fl%imx:fl%imz,i,j,k)/cgl%cg%u(fl%idn,i,j,k))
+                    cgl%cg%q(qna%ind(psi_n))%arr(i,j,k) =  cgl%cg%q(qna%ind(psi_n))%arr(i,j,k) - dot_product(cgl%cg%u(fl%imx:fl%imz,i,j,k)/cgl%cg%u(fl%idn,i,j,k),cg%w(igp)%arr(xdim:zdim,i,j,k))
+                    
+                 end do
+              end do
+           end do
+           cgl=>cgl%nxt
+        end do
+     end if
+
+     return
    end subroutine eglm
 
 end module hdc

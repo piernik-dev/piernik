@@ -60,7 +60,7 @@ contains
     use mass_defect,  only: update_magic_mass
     use mpisetup,     only: master
 #ifdef GLM
-    use hdc,          only: update_chspeed, glmdamping
+    use hdc,          only: update_chspeed, glmdamping, eglm
 #endif /* GLM */
 
     implicit none
@@ -123,7 +123,7 @@ contains
     use global,         only: skip_sweep, limiter, limiter_b, limiter_p, force_cc_mag
     use user_hooks,     only: problem_customize_solution
 #ifdef GLM
-    use hdc,            only: glmdamping
+    use hdc,            only: glmdamping, eglm
 #endif /* GLM */
 
     implicit none
@@ -144,6 +144,7 @@ contains
     if (associated(problem_customize_solution)) call problem_customize_solution(forward)
 #ifdef GLM
     call glmdamping
+    call eglm
 #endif /* GLM */
 
   end subroutine make_3sweeps
