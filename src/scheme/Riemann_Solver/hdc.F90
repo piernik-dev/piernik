@@ -258,12 +258,15 @@ contains
                  do i = cgl%cg%is, cgl%cg%ie
                     im1 = max(1, i-1)
                     ip1 = min(im1, i+1)
+
+                    ! Divergence of B
                     cg%q(idb)%arr(i,j,k) = half * ( &
                          (cg%b(xdim,ip1,j,k) - cg%b(xdim,im1,j,k))/cg%dl(xdim) + &
                          (cg%b(ydim,i,jp1,k) - cg%b(ydim,i,jm1,k))/cg%dl(ydim) + &
                          (cg%b(zdim,i,j,kp1) - cg%b(zdim,i,j,km1))/cg%dl(zdim) &
                          )
 
+                    ! Gradient of psi
                     cg%w(igp)%arr(:,i,j,k) = half * [ &
                          (cg%q(ipsi)%arr(ip1,j,k) - cg%q(ipsi)%arr(im1,j,k)), &
                          (cg%q(ipsi)%arr(i,jp1,k) - cg%q(ipsi)%arr(i,jm1,k)), &
@@ -271,10 +274,23 @@ contains
                          ] / cg%dl
                          
 
+                    !Sources
 
+                    ! Momentum
                     cgl%cg%u(fl%imx:fl%imz,i,j,k) = cgl%cg%u(fl%imx:fl%imz,i,j,k) - cg%q(idb)%arr(i,j,k)*(cgl%cg%b(xdim:zdim,i,j,k))
+
+                    ! Manetic field
                     cgl%cg%b(xdim:zdim,i,j,k) = cgl%cg%b(xdim:zdim,i,j,k) - cg%w(igp)%arr(:,i,j,k)*(cgl%cg%u(fl%imx:fl%imz,i,j,k)/cgl%cg%u(fl%idn,i,j,k))
-                    cgl%cg%q(qna%ind(psi_n))%arr(i,j,k) =  cgl%cg%q(qna%ind(psi_n))%arr(i,j,k) - dot_product(cgl%cg%u(fl%imx:fl%imz,i,j,k)/cgl%cg%u(fl%idn,i,j,k),cg%w(igp)%arr(xdim:zdim,i,j,k))
+
+                    ! Energy
+
+                    cgl%cg%u(fl%ien,i,j,k) = cgl%cg%u(fl%ien,i,j,k) - &
+                         cg%q(idb)%arr(i,j,k)*dot_product(cgl%cg%u(fl%imx:fl%imz,i,j,k)/cgl%cg%u(fl%idn,i,j,k),cgl%cg%b(xdim:zdim,i,j,k)) - &
+                                                                                             dot_product(cgl%cg%b(xdim:zdim,i,j,k),cg%w(igp)%arr(xdim:zdim,i,j,k))
+
+                    ! Psi
+                    cgl%cg%q(qna%ind(psi_n))%arr(i,j,k) =  cgl%cg%q(qna%ind(psi_n))%arr(i,j,k) - &
+                                                                        dot_product(cgl%cg%u(fl%imx:fl%imz,i,j,k)/cgl%cg%u(fl%idn,i,j,k),cg%w(igp)%arr(xdim:zdim,i,j,k))
                     
                  end do
               end do
