@@ -855,11 +855,16 @@ enddo
 
         subroutine update(weights)
 
+           use fluidindex, only: flind
+
            implicit none
 
            real, optional, dimension(:), intent(in) :: weights
 
            real, dimension(:), allocatable :: w
+           integer :: iend  !< last component of any fluid (i.e. exclude CR or tracers here)
+
+           iend = flind%all_fluids(flind%fluids)%fl%end
 
            if (present(weights)) then
               allocate(w(size(weights)))
@@ -869,12 +874,12 @@ enddo
               w(1) = 1.
            endif
 
-           u(:,2:nx) = u(:,2:nx) + w(1) * dtodx * (flx(:,1:nx-1) - flx(:,2:nx))
-           if (size(w)>=2) u(:,2:nx) = u(:,2:nx) + w(2) * du1(:,2:nx)
-           if (size(w)>=3) u(:,2:nx) = u(:,2:nx) + w(3) * du2(:,2:nx)
-           if (size(w)>=4) u(:,2:nx) = u(:,2:nx) + w(4) * du3(:,2:nx)
-           u(:,1) = u(:,2)
-           u(:,nx) = u(:,nx-1)
+           u(:iend,2:nx) = u(:iend,2:nx) + w(1) * dtodx * (flx(:iend,1:nx-1) - flx(:iend,2:nx))
+           if (size(w)>=2) u(:iend,2:nx) = u(:iend,2:nx) + w(2) * du1(:iend,2:nx)
+           if (size(w)>=3) u(:iend,2:nx) = u(:iend,2:nx) + w(3) * du2(:iend,2:nx)
+           if (size(w)>=4) u(:iend,2:nx) = u(:iend,2:nx) + w(4) * du3(:iend,2:nx)
+           u(:iend,1) = u(:iend,2)
+           u(:iend,nx) = u(:iend,nx-1)
 
            b_cc(:,2:nx) = b_cc(:,2:nx) + w(1) * dtodx * (mag_cc(:,1:nx-1) - mag_cc(:,2:nx))
            if (size(w)>=2)  b_cc(:,2:nx) = b_cc(:,2:nx) + w(2) * db1(:,2:nx)
