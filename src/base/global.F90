@@ -133,6 +133,7 @@ contains
       if (code_progress < PIERNIK_INIT_MPI) call die("[global:init_global] MPI not initialized.")
 
       dt_old = -1.
+      t = 0.
 
       ! Begin processing of namelist parameters
 
@@ -169,6 +170,7 @@ contains
       relax_time  = 0.
       integration_order  = 2
       use_fargo   = .false.
+      skip_sweep  = .false.
 
       if (master) then
          if (.not.nh%initialized) call nh%init()

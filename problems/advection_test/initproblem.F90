@@ -41,18 +41,23 @@ module initproblem
    real, dimension(ndims) :: pulse_off   !< offset of the pulse
    real                   :: pulse_amp   !< amplitude of the density pulse compared to the ambient level
    real, dimension(ndims) :: pulse_vel   !< uniform velocity components
+   real                   :: pulse_pres  !< pulse pressure
    integer(kind=4)        :: norm_step   !< how often to calculate the L2-norm
    integer(kind=4)        :: nflip       !< how often to call refine/derefine routine
    real                   :: flipratio   !< percentage of blocks on each level to be refined on flip
    real                   :: ref_thr     !< refinement threshold
    real                   :: deref_thr   !< derefinement threshold
    logical                :: usedust     !< If .false. then do not set velocity for dust
+   real                   :: divB0_amp   !< Amplitude of the non-divergent component of the magnetic field
+   real                   :: divBc_amp   !< Amplitude of constant-divergence component of the magnetic field (has artifacts on periodic domains due to nondifferentiability)
+   real                   :: divBs_amp   !< Amplitude of sine-wave divergence component of the magnetic field (should behave well on periodic domains)
+   logical                :: ccB         !< true for cell-cntered initial magnetic field
 
-   namelist /PROBLEM_CONTROL/  pulse_size, pulse_off, pulse_vel, pulse_amp, norm_step, nflip, flipratio, ref_thr, deref_thr, usedust
+   namelist /PROBLEM_CONTROL/  pulse_size, pulse_off, pulse_vel, pulse_amp, pulse_pres, norm_step, nflip, flipratio, ref_thr, deref_thr, usedust, divB0_amp, divBc_amp, divBs_amp, ccB
 
    ! other private data
    real, dimension(ndims, LO:HI) :: pulse_edge
-   real :: pulse_low_density, pulse_pressure
+   real :: pulse_low_density
    character(len=dsetnamelen), parameter :: inid_n = "inid"
    class(component_fluid), pointer :: fl  !< will point either to neutral or ionized fluid
 
@@ -82,11 +87,15 @@ contains
       use dataio_pub,       only: warn, die
       use domain,           only: dom
       use fluidindex,       only: flind, iarr_all_dn
+      use func,             only: operator(.notequals.)
       use global,           only: smalld, smallei
       use mpisetup,         only: rbuff, ibuff, lbuff, master, slave, proc, have_mpi, LAST, piernik_MPI_Bcast
       use named_array_list, only: wna
       use refinement,       only: set_n_updAMR, n_updAMR, user_ref2list
       use user_hooks,       only: problem_refine_derefine
+#ifdef MAGNETIC
+      use constants,        only: GEO_XYZ
+#endif /* MAGNETIC */
 
       implicit none
 
@@ -97,12 +106,17 @@ contains
       pulse_off(:)  = 0.0                  !< center of the pulse
       pulse_vel(:)  = 0.0                  !< pulse velocity
       pulse_amp     = 2.0                  !< pulse relative amplitude
+      pulse_pres    = smallei * 67.  !< pulse pressure, mimic the old hardcoded default
       norm_step     = 5
       nflip         = 0
       ref_thr       = 0.1
       deref_thr     = 0.01
       flipratio     = 1.
       usedust       = .false.
+      divB0_amp     = 0.                   !< should be safe to set non-0
+      divBc_amp     = 0.                   !< unphysical, only for testing
+      divBs_amp     = 0.                   !< unphysical, only for testing
+      ccB           = .false.              !< defaulting to face-centered initial field
 
       if (master) then
 
@@ -126,14 +140,19 @@ contains
          rbuff(2)   = ref_thr
          rbuff(3)   = deref_thr
          rbuff(4)   = flipratio
+         rbuff(5)   = divB0_amp
+         rbuff(6)   = divBc_amp
+         rbuff(7)   = divBs_amp
          rbuff(20+xdim:20+zdim) = pulse_size(:)
          rbuff(23+xdim:23+zdim) = pulse_vel(:)
          rbuff(26+xdim:26+zdim) = pulse_off(:)
+         rbuff(29)              = pulse_pres
 
          ibuff(1)   = norm_step
          ibuff(2)   = nflip
 
          lbuff(1)   = usedust
+         lbuff(2)   = ccB
 
       endif
 
@@ -147,14 +166,19 @@ contains
          ref_thr    = rbuff(2)
          deref_thr  = rbuff(3)
          flipratio  = rbuff(4)
+         divB0_amp  = rbuff(5)
+         divBc_amp  = rbuff(6)
+         divBs_amp  = rbuff(7)
          pulse_size = rbuff(20+xdim:20+zdim)
          pulse_vel  = rbuff(23+xdim:23+zdim)
          pulse_off  = rbuff(26+xdim:26+zdim)
+         pulse_pres = rbuff(29)
 
          norm_step  = int(ibuff(1), kind=4)
          nflip      = ibuff(2)
 
          usedust    = lbuff(1)
+         ccB        = lbuff(2)
 
       endif
 
@@ -188,7 +212,6 @@ contains
 
       !BEWARE: hardcoded magic numbers
       pulse_low_density = smalld * 1e5
-      pulse_pressure = smallei * fl%gam_1 * 1e2
 
       if (norm_step <= 0) norm_step = huge(I_ONE)
 
@@ -206,6 +229,18 @@ contains
          enddo
       endif
 
+      if (any([divB0_amp, divBc_amp, divBs_amp] .notequals. 0.)) then
+#ifdef MAGNETIC
+         if (dom%geometry_type /= GEO_XYZ) then
+            call warn("[initproblem:read_problem_par] Only cartesian formulas for magnetic field is implemented. Forcing all amplitudes to 0.")
+            divB0_amp     = 0.
+            divBc_amp     = 0.
+            divBs_amp     = 0.
+         endif
+#else
+         call warn("[initproblem:read_problem_par] Ignoring magnetic field amplitudes")
+#endif /* !MAGNETIC */
+      endif
    end subroutine read_problem_par
 
 !-----------------------------------------------------------------------------
@@ -223,6 +258,9 @@ contains
       use grid_cont,        only: grid_container
       use named_array_list, only: qna
       use non_inertial,     only: get_omega
+#ifdef MAGNETIC
+      use constants,        only: ndims, I_ONE, I_TWO, I_THREE, dpi
+#endif /* MAGNETIC */
 
       implicit none
 
@@ -231,6 +269,17 @@ contains
 
       integer :: i, j, k
       real    :: om
+#ifdef MAGNETIC
+      real, dimension(ndims) :: kk !< wavenumbers to fit one sine wave inside domain
+      real :: sx, sy, sz, cx, cy, cz !< precomputed values of sine and cosine at cell centers
+      real :: sfx, sfy, sfz, cfx, cfy, cfz !< precomputed values of sine and cosine at cell left faces
+      integer :: right_face
+
+      kk = 0.
+      where (dom%D_ > 0) kk = dpi / dom%L_
+      right_face = 1
+      if (ccB) right_face = 0
+#endif /* MAGNETIC */
 
       om = get_omega()
 
@@ -240,7 +289,102 @@ contains
       do while (associated(cgl))
          cg => cgl%cg
 
+#ifdef MAGNETIC
+         if (dom%geometry_type /= GEO_XYZ) then
+            call cg%set_constant_b_field([0., 0., 0.])
+         else
+            do k = cg%ks, cg%ke + right_face * dom%D_z
+               sz = sin(kk(zdim) * cg%z(k))
+               cz = cos(kk(zdim) * cg%z(k))
+               sfz = sin(kk(zdim) * (cg%z(k) - cg%dz/2.))
+               cfz = cos(kk(zdim) * (cg%z(k) - cg%dz/2.))
+               do j = cg%js, cg%je + right_face * dom%D_y
+                  sy = sin(kk(ydim) * cg%y(j))
+                  cy = cos(kk(ydim) * cg%y(j))
+                  sfy = sin(kk(ydim) * (cg%y(j) - cg%dy/2.))
+                  cfy = cos(kk(ydim) * (cg%y(j) - cg%dy/2.))
+                  do i = cg%is, cg%ie + right_face * dom%D_x
+                     sx = sin(kk(xdim) * cg%x(i))
+                     cx = cos(kk(xdim) * cg%x(i))
+                     sfx = sin(kk(xdim) * (cg%x(i) - cg%dx/2.))
+                     cfx = cos(kk(xdim) * (cg%x(i) - cg%dx/2.))
+
+                     cg%b(:, i, j, k) = divBc_amp * [cg%x(i), cg%y(j), cg%z(k)] ! slight offset between cell- and face-centered is unimportant here
+
+                     select case (dom%eff_dim)
+                        case (I_ONE) ! can't do anything fancy, just set up something non-zero
+                           cg%b(:, i, j, k) = cg%b(:, i, j, k) + divB0_amp
+                           if (ccB) then
+                              if (dom%D_x == 1) then
+                                 cg%b(:, i, j, k) = cg%b(:, i, j, k) + divBs_amp * [ kk(xdim)*cx, 1., 1. ]
+                              else if (dom%D_y == 1) then
+                                 cg%b(:, i, j, k) = cg%b(:, i, j, k) + divBs_amp * [ 1., kk(ydim)*cy, 1. ]
+                              else
+                                 cg%b(:, i, j, k) = cg%b(:, i, j, k) + divBs_amp * [ 1., 1., kk(zdim)*cz ]
+                              endif
+                           else
+                              if (dom%D_x == 1) then
+                                 cg%b(:, i, j, k) = cg%b(:, i, j, k) + divBs_amp * [ kk(xdim)*cfx, 1., 1. ]
+                              else if (dom%D_y == 1) then
+                                 cg%b(:, i, j, k) = cg%b(:, i, j, k) + divBs_amp * [ 1., kk(ydim)*cfy, 1. ]
+                              else
+                                 cg%b(:, i, j, k) = cg%b(:, i, j, k) + divBs_amp * [ 1., 1., kk(zdim)*cfz ]
+                              endif
+                           endif
+                        case (I_TWO) ! [sin(x)*sin(y), cos(x)*cos(y), 0] should produce divB == 0. for XY case
+                           if (ccB) then
+                              if (dom%D_z == 0) then
+                                 cg%b(:, i, j, k) = cg%b(:, i, j, k) + &
+                                      divB0_amp * [ kk(ydim)*sx*sy, kk(xdim)*cx*cy, 1. ] + &
+                                      divBs_amp * [ kk(xdim)*cx*sy, kk(ydim)*sx*cy, 1. ]
+                              else if (dom%D_y == 0) then
+                                 cg%b(:, i, j, k) = cg%b(:, i, j, k) + &
+                                      divB0_amp * [ kk(zdim)*sx*sz, 1., kk(xdim)*cx*cz ] + &
+                                      divBs_amp * [ kk(xdim)*cx*sz, 1., kk(zdim)*sx*cz ]
+                              else
+                                 cg%b(:, i, j, k) = cg%b(:, i, j, k) + &
+                                      divB0_amp * [ 1., kk(zdim)*sy*sz, kk(ydim)*cy*cz ] + &
+                                      divBs_amp * [ 1., kk(ydim)*cy*sz, kk(zdim)*sy*cz ]
+                              endif
+                           else
+                              if (dom%D_z == 0) then
+                                 cg%b(:, i, j, k) = cg%b(:, i, j, k) + &
+                                      divB0_amp * [ kk(ydim)*sfx*sy, kk(xdim)*cx*cfy, 1. ] + &
+                                      divBs_amp * [ kk(xdim)*cfx*sy, kk(ydim)*sx*cfy, 1. ]
+                              else if (dom%D_y == 0) then
+                                 cg%b(:, i, j, k) = cg%b(:, i, j, k) + &
+                                      divB0_amp * [ kk(zdim)*sfx*sz, 1., kk(xdim)*cx*cfz ] + &
+                                      divBs_amp * [ kk(xdim)*cfx*sz, 1., kk(zdim)*sx*cfz ]
+                              else
+                                 cg%b(:, i, j, k) = cg%b(:, i, j, k) + &
+                                      divB0_amp * [ 1., kk(zdim)*sfy*sz, kk(ydim)*cy*cfz ] + &
+                                      divBs_amp * [ 1., kk(ydim)*cfy*sz, kk(zdim)*sy*cfz ]
+                              endif
+                           endif
+                        case (I_THREE) ! curl([sin(x)*sin(y)*sin(z), sin(x)*sin(y)*sin(z), sin(x)*sin(y)*sin(z)])
+                           if (ccB) then
+                              cg%b(:, i, j, k) = cg%b(:, i, j, k) + divB0_amp * [ &
+                                   kk(ydim)*sx*cy*sz - kk(zdim)*sx*sy*cz, &
+                                   kk(zdim)*sx*sy*cz - kk(xdim)*cx*sy*sz, &
+                                   kk(xdim)*cx*sy*sz - kk(ydim)*sx*cy*sz ] + &
+                                   divBs_amp * [ kk(xdim)*cx*sy*sz, kk(ydim)*sx*cy*sz, kk(zdim)*sx*sy*cz ]
+                           else
+                              cg%b(:, i, j, k) = cg%b(:, i, j, k) + divB0_amp * [ &
+                                   kk(ydim)*sfx*cy*sz - kk(zdim)*sfx*sy*cz, &
+                                   kk(zdim)*sx*sfy*cz - kk(xdim)*cx*sfy*sz, &
+                                   kk(xdim)*cx*sy*sfz - kk(ydim)*sx*cy*sfz ] + &
+                                   divBs_amp * [ kk(xdim)*cfx*sy*sz, kk(ydim)*sx*cfy*sz, kk(zdim)*sx*sy*cfz ]
+                           endif
+                        case default
+                           call die("[initproblem:problem_initial_conditions] unsupported dimensionality")
+                     end select
+                  enddo
+               enddo
+            enddo
+         endif
+#else /* !MAGNETIC */
          call cg%set_constant_b_field([0., 0., 0.])
+#endif /* !MAGNETIC */
 
          cg%u(fl%idn, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = cg%q(qna%ind(inid_n))%arr(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)
 
@@ -276,7 +420,7 @@ contains
          end select
 
          ! Set up the internal energy
-         cg%u(fl%ien,:,:,:) = max(smallei, pulse_pressure / fl%gam_1 + 0.5 * sum(cg%u(fl%imx:fl%imz,:,:,:)**2,1) / cg%u(fl%idn,:,:,:))
+         cg%u(fl%ien,:,:,:) = max(smallei, pulse_pres / fl%gam_1 + 0.5 * sum(cg%u(fl%imx:fl%imz,:,:,:)**2,1) / cg%u(fl%idn,:,:,:))
 
          if (associated(flind%dst)) then
             cg%u(flind%dst%idn, :, :, :) = cg%u(fl%idn, :, :, :)
