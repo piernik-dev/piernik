@@ -274,7 +274,7 @@ def setup_piernik(data=None):
         for flag_grp in options.cppflags:
             for flag in flag_grp.split(","):
                 if (len(flag) > 0):
-                    cppflags += ' -D'+flag
+                    cppflags += ' -D' + flag
 
     # parse compiler
     if(not re.search('\.in$', options.compiler)):
