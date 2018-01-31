@@ -488,9 +488,9 @@ contains
       integer(HID_T)                 :: file_id         !< File identifier
       integer(HID_T)                 :: type_id, dspace_id, dset_id, prp_id
       integer(HSIZE_T), dimension(1) :: dimstr
-      logical(kind=4)                :: Z_avail
+      logical(kind=4)                :: Z_avail         !< Z_avail perhaps should be of type integer(HID_T)
       integer(SIZE_T)                :: maxlen
-      integer(kind=4)                :: error
+      integer(kind=4)                :: error           !< error perhaps should be of type integer(HID_T)
 
       ! \ToDo Set up a stack of routines registered by appropriate modules
       if (associated(user_attrs_pre)) call user_attrs_pre
@@ -600,7 +600,7 @@ contains
 
       integer(kind=4)                              :: fe
       integer(SIZE_T)                              :: i
-      integer(kind=4)                              :: error
+      integer(kind=4)                              :: error         !< error perhaps should be of type integer(HID_T)
       integer, parameter                           :: buf_len = 50
       integer(SIZE_T), parameter                   :: bufsize = I_ONE
       integer(SIZE_T),          dimension(buf_len) :: rbuffer_size
@@ -775,7 +775,7 @@ contains
      integer(kind=4),                intent(in) :: otype   !< output type
 
      integer(HID_T)                             :: prp_id, filespace, dset_id, dtype
-     integer(kind=4)                            :: error
+     integer(kind=4)                            :: error   !< error perhaps should be of type integer(HID_T)
 
      call h5pcreate_f(H5P_DATASET_CREATE_F, prp_id, error)
      if (enable_compression .and. Z_avail) then
@@ -898,7 +898,7 @@ contains
 #endif /* NBODY_1FILE */
       integer(HID_T)                                :: doml_g_id        !< domain list identifier
       integer(HID_T)                                :: dom_g_id         !< domain group identifier
-      integer(kind=4)                               :: error, cg_cnt, p
+      integer(kind=4)                               :: error, cg_cnt, p !< error perhaps should be of type integer(HID_T)
       integer                                       :: g, i
       integer(kind=4), parameter                    :: tag = I_ONE
       integer(kind=4),  dimension(:),   pointer     :: cg_n             !< offset for cg group numbering
@@ -1219,7 +1219,7 @@ contains
       integer(HID_T),  intent(in) :: h5p
       integer(kind=4), intent(in) :: nproc_io
       integer(HID_T)              :: plist_id
-      integer(kind=4)             :: error
+      integer(kind=4)             :: error    !< error perhaps should be of type integer(HID_T)
 
       call h5pcreate_f(h5p, plist_id, error)
       if (nproc_io > 1) then
@@ -1319,7 +1319,7 @@ contains
 
       integer(kind=4)                                         :: i, ncg
       integer(HID_T)                                          :: plist_id
-      integer(kind=4)                                         :: error
+      integer(kind=4)                                         :: error    !< error perhaps should be of type integer(HID_T)
 
       this%tot_cg_n = sum(cg_n)
       allocate(this%cg_src_p(1:this%tot_cg_n))
@@ -1393,7 +1393,7 @@ contains
       class(cg_output), intent(inout) :: this
 
       integer                         :: ncg, i
-      integer(kind=4)                 :: error
+      integer(kind=4)                 :: error    !< error perhaps should be of type integer(HID_T)
 
       if (can_i_write) then
          do ncg = lbound(this%cg_g_id, 1), ubound(this%cg_g_id, 1)
