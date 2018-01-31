@@ -26,7 +26,19 @@
 !
 #include "piernik.h"
 
-!> Brief calculate the lovely shape of the Mandelbrot set. Refine on the set to follow the interesting details.
+!>
+!! \brief calculate the lovely shape of the Mandelbrot set.  Refine on the
+!! set to follow the interesting details.
+!!
+!! The Mandelbrot problem is intended for stress testing of the AMR
+!! subsystem. There are more efficient fractal generators around but
+!! one may consider some fun ideas:
+!! * Use some multipresicion or implement own fixed point, optimized for
+!!   these calculations.
+!! * Use speedup tricks like these in fast deep zoom programs.
+!! * Detect interior of minibrotsfor further speedups (already sort of works
+!!   as it dos not get refined too much.
+!<
 
 module initproblem
 

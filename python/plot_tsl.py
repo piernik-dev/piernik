@@ -24,7 +24,7 @@ for fn in args.files:
     f.close()
     header = np.array(tab[0][1:].split())
     if args.f is None:
-        print ("There are following fields available in %s" % fn)
+        print("There are following fields available in %s" % fn)
         print header
     else:
         field = args.f[0]
