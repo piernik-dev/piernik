@@ -269,10 +269,12 @@ def setup_piernik(data=None):
         sys.exit()
 
     # parse cppflags
+    cppflags = ""
     if(options.cppflags):
-        cppflags = '-D' + ' -D'.join(options.cppflags.split(","))
-    else:
-        cppflags = ""
+        for flag_grp in options.cppflags:
+            for flag in flag_grp.split(","):
+                if (len(flag) > 0):
+                    cppflags += ' -D' + flag
 
     # parse compiler
     if(not re.search('\.in$', options.compiler)):
@@ -712,8 +714,8 @@ def piernik_parse_args(data=None):
     instead")
     parser.add_option("-p", "--param", dest="param", metavar="FILE",
                       help="use FILE instead problem.par", default="problem.par")
-    parser.add_option("-d", "--define", dest="cppflags", metavar="CPPFLAGS",
-                      help="add precompiler directives, use comma-separated list")
+    parser.add_option("-d", "--define", dest="cppflags", metavar="CPPFLAGS", action="append",
+                      help="add precompiler directives, '-d DEF1,DEF2' is equivalent to '-d DEF1 -d DEF2' or '--define DEF1 -d DEF2'")
     parser.add_option("--f90flags", dest="f90flags", metavar="F90FLAGS",
                       help="pass additional compiler flags to F90FLAGS")
     parser.add_option(
