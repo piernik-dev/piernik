@@ -246,16 +246,21 @@ contains
          cgl => cgl%nxt
       enddo
 
-      cg => leaves%first%cg
-      if (is_multicg) call die("[initproblem:problem_initial_conditions] multiple grid pieces per procesor not implemented yet") !nontrivial maxv
-
       do icr = 1, flind%crs%all
-         maxv = maxval(cg%u(iarr_crs(icr),:,:,:))
+
+         maxv = - huge(1.)
+         cgl => leaves%first
+         do while (associated(cgl))
+            maxv = max(maxv, maxval(cgl%cg%u(iarr_crs(icr),:,:,:)))
+            cgl => cgl%nxt
+         enddo
+
          call piernik_MPI_Allreduce(maxv, pMAX)
          if (master) then
             write(msg,*) '[initproblem:problem_initial_conditions] icr=',icr,' maxecr =',maxv
             call printinfo(msg)
          endif
+
       enddo
 #endif /* COSM_RAYS */
 
