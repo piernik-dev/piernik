@@ -436,12 +436,16 @@ contains
 
     use constants,        only: pdims, xdim, zdim, ORTHO1, ORTHO2, LO, HI, psi_n, INVALID
     use fluidindex,       only: iarr_all_swp, iarr_mag_swp
+    use fluidindex,       only: flind
     use global,           only: force_cc_mag
     use grid_cont,        only: grid_container
     use named_array_list, only: wna, qna
 #ifdef GLM
     use cg_leaves,        only: leaves
 #endif /* GLM */
+#ifdef COSM_RAYS
+    use crhelpers,        only: div_v, set_div_v1d
+#endif /* COSM_RAYS */
 
     implicit none
 
@@ -457,6 +461,7 @@ contains
     integer                                    :: bi
     real, dimension(:), pointer                :: ppsi
     integer                                    :: psii
+    real, dimension(:), pointer                :: div_v1d => null()
 
     if (force_cc_mag) then
        bi = wna%bi
@@ -469,19 +474,26 @@ contains
     psi_d = 0.
     nullify(ppsi)
 
+#ifdef COSM_RAYS
+    call div_v(flind%ion%pos, cg)
+#endif /* COSM_RAYS */
+
     do i2 = cg%lhn(pdims(ddim, ORTHO2), LO), cg%lhn(pdims(ddim,ORTHO2), HI)
        do i1 = cg%lhn(pdims(ddim, ORTHO1), LO), cg%lhn(pdims(ddim, ORTHO1), HI)
           pu => cg%w(wna%fi)%get_sweep(ddim,i1,i2)
           u1d(iarr_all_swp(ddim,:),:) = pu(:,:)
           pb => cg%w(bi)%get_sweep(ddim,i1,i2)
           b_cc1d(iarr_mag_swp(ddim,:),:) = pb(:,:)
+#ifdef COSM_RAYS
+          call set_div_v1d(div_v1d, ddim, i1, i2, cg)
+#endif /* COSM_RAYS */
           if (psii /= INVALID) then
              ppsi => cg%q(psii)%get_sweep(ddim,i1,i2)
              psi_d(1, :) = ppsi(:)
-             call solve(u1d, b_cc1d, dt/cg%dl(ddim), psi_d)
+             call solve(u1d, b_cc1d, dt/cg%dl(ddim), psi_d, div_v1d)
              ppsi(:) = psi_d(1,:)
           else
-             call solve(u1d, b_cc1d, dt/cg%dl(ddim), psi_d)
+             call solve(u1d, b_cc1d, dt/cg%dl(ddim), psi_d, div_v1d)
           endif
           pu(:,:) = u1d(iarr_all_swp(ddim,:),:)
           pb(:,:) = b_cc1d(iarr_mag_swp(ddim,:),:) ! ToDo figure out how to manage CT energy fixup without extra storage
@@ -497,7 +509,7 @@ contains
 
 !---------------------------------------------------------------------------------------------------------------------
 
-  subroutine solve(u, b_cc, dtodx, psi)
+  subroutine solve(u, b_cc, dtodx, psi, div_v1d)
 
      use constants,  only: half
      use dataio_pub, only: die
@@ -512,6 +524,7 @@ contains
      real, dimension(:,:), intent(inout) :: b_cc
      real,                 intent(in)    :: dtodx
      real, dimension(:,:), intent(inout) :: psi
+     real, dimension(:), pointer, intent(in) :: div_v1d
 
      real, dimension(size(b_cc,1),size(b_cc,2)), target :: b_cc_l, b_cc_r, mag_cc
      real, dimension(size(b_cc,1),size(b_cc,2))         :: b_ccl, b_ccr, db1, db2, db3
@@ -855,7 +868,17 @@ enddo
 
         subroutine update(weights)
 
-           use fluidindex, only: flind
+           use fluidindex,       only: flind
+#ifdef COSM_RAYS
+           use fluidindex,       only: iarr_all_dn, iarr_all_mx, iarr_all_en
+           use global,           only: dt
+           use initcosmicrays,   only: iarr_crs, smallecr
+           use sourcecosmicrays, only: src_gpcr
+#ifdef COSM_RAYS_SOURCES
+           use initcosmicrays,   only: iarr_crn
+           use sourcecosmicrays, only: src_crn
+#endif /* COSM_RAYS_SOURCES */
+#endif /* COSM_RAYS */
 
            implicit none
 
@@ -863,6 +886,16 @@ enddo
 
            real, dimension(:), allocatable :: w
            integer :: iend  !< last component of any fluid (i.e. exclude CR or tracers here)
+
+#ifdef COSM_RAYS
+           real, dimension(size(u,2),size(u,1))           :: u1
+           real, dimension(nx, flind%fluids), target      :: vx
+           real, dimension(nx)                            :: grad_pcr
+           real, dimension(nx, flind%crs%all)             :: decr
+#ifdef COSM_RAYS_SOURCES
+           real, dimension(nx, flind%crn%all)             :: srccrn
+#endif /* COSM_RAYS_SOURCES */
+#endif /* COSM_RAYS */
 
            iend = flind%all_fluids(flind%fluids)%fl%end
 
@@ -895,7 +928,30 @@ enddo
            if (size(w)>=4) psi(:,2:nx) = psi(:,2:nx) + w(4) * dpsi3(:,2:nx)
            psi(:,1) = psi(:,2)
            psi(:,nx) = psi(:,nx-1)
-#endif /* GLM */        
+#endif /* GLM */
+
+#if defined COSM_RAYS && defined IONIZED
+
+           ! transposition for compatibility with RTVD-based routines
+           u1 = transpose(u)
+
+           vx = u1(:, iarr_all_mx) / u1(:, iarr_all_dn)
+           ! Replace dt/dtodx by dx == cg%dl(ddim)
+!!$           call src_gpcr(u, nx, dt/dtodx, div_v1d, decr, grad_pcr)
+!!$           u1(:, iarr_crs(:)) = u1(:, iarr_crs(:)) + decr(:,:) * dt
+!!$           u1(:, iarr_crs(:)) = max(smallecr, u1(:, iarr_crs(:)))
+!!$           u1(:, iarr_all_mx(flind%ion%pos)) = u1(:, iarr_all_mx(flind%ion%pos)) + grad_pcr * dt
+#ifndef ISO
+!!$           u1(:, iarr_all_en(flind%ion%pos)) = u1(:, iarr_all_en(flind%ion%pos)) + vx(:, flind%ion%pos) * grad_pcr * dt
+#endif /* !ISO */
+#ifdef COSM_RAYS_SOURCES
+           call src_crn(u1, nx, srccrn, dt) ! n safe
+           u1(:, iarr_crn) = u1(:, iarr_crn) + srccrn(:,:)*dt
+#endif /* COSM_RAYS_SOURCES */
+
+           u = transpose(u1)
+
+#endif /* COSM_RAYS && IONIZED */
 
            deallocate(w)
 
