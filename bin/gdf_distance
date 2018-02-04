@@ -279,9 +279,12 @@ if __name__ == "__main__":
         norms = piernik_gdf_compare(sys.argv[1], sys.argv[2])
         tot_norm = 0.
         failed = False
+        longestkey = 0
+        for i in norms.keys():
+            longestkey = max(longestkey, len(i))
         for i in norms.keys():
             if (norms[i] >= 0. and norms[i] <= 1.):
-                print("Difference of %s: %g" % (i, norms[i]))
+                print("Difference of %-*s: %g" % (longestkey + 1, i, norms[i]))
                 tot_norm = 1. - (1. - tot_norm) * (1. - norms[i])
             else:
                 print("Difference measure `%s` out of [0,1] range: %g" %
