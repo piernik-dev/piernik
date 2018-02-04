@@ -146,8 +146,8 @@ contains
       use cg_leaves,      only: leaves
       use cg_list,        only: cg_list_element
       use constants,      only: xdim, ydim, zdim, LO, HI, pMAX
-      use dataio_pub,     only: msg, warn, printinfo, die
-      use domain,         only: dom, is_multicg
+      use dataio_pub,     only: msg, warn, printinfo
+      use domain,         only: dom
       use fluidindex,     only: flind
       use fluidtypes,     only: component_fluid
       use func,           only: ekin, emag, operator(.equals.), operator(.notequals.)
