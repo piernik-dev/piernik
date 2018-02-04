@@ -932,18 +932,20 @@ enddo
 
 #if defined COSM_RAYS && defined IONIZED
 
-           ! transposition for compatibility with RTVD-based routines
-           u1 = transpose(u)
+           if (nx > 1) then
+              ! transposition for compatibility with RTVD-based routines
+              u1 = transpose(u)
 
-           vx = u1(:, iarr_all_mx) / u1(:, iarr_all_dn)
-           ! Replace dt/dtodx by dx == cg%dl(ddim)
-!!$           call src_gpcr(u, nx, dt/dtodx, div_v1d, decr, grad_pcr)
-!!$           u1(:, iarr_crs(:)) = u1(:, iarr_crs(:)) + decr(:,:) * dt
-!!$           u1(:, iarr_crs(:)) = max(smallecr, u1(:, iarr_crs(:)))
-!!$           u1(:, iarr_all_mx(flind%ion%pos)) = u1(:, iarr_all_mx(flind%ion%pos)) + grad_pcr * dt
+              vx = u1(:, iarr_all_mx) / u1(:, iarr_all_dn) ! this may also be useful for gravitational acceleration
+              ! Replace dt/dtodx by dx == cg%dl(ddim)
+              call src_gpcr(u1, nx, dt/dtodx, div_v1d, decr, grad_pcr)
+              u1(:, iarr_crs(:)) = u1(:, iarr_crs(:)) + decr(:,:) * dt
+              u1(:, iarr_crs(:)) = max(smallecr, u1(:, iarr_crs(:)))
+              u1(:, iarr_all_mx(flind%ion%pos)) = u1(:, iarr_all_mx(flind%ion%pos)) + grad_pcr * dt
 #ifndef ISO
-!!$           u1(:, iarr_all_en(flind%ion%pos)) = u1(:, iarr_all_en(flind%ion%pos)) + vx(:, flind%ion%pos) * grad_pcr * dt
+              u1(:, iarr_all_en(flind%ion%pos)) = u1(:, iarr_all_en(flind%ion%pos)) + vx(:, flind%ion%pos) * grad_pcr * dt
 #endif /* !ISO */
+           endif
 #ifdef COSM_RAYS_SOURCES
            call src_crn(u1, nx, srccrn, dt) ! n safe
            u1(:, iarr_crn) = u1(:, iarr_crn) + srccrn(:,:)*dt
