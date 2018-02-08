@@ -42,6 +42,8 @@ module initcrspectrum
  logical            :: test_spectrum_break   = .false.  ! < introduce break in the middle of the spectrum (to see how algorithm handles it), TEMP
  logical            :: synch_active = .true.    ! < TEST feature - turns on / off synchrotron cooling @ CRESP
  logical            :: adiab_active = .true.    ! < TEST feature - turns on / off adiabatic   cooling @ CRESP
+ logical            :: cre_gpcr_ess = .true.    ! < electron essentiality for gpcr computation
+ real(kind=8)       :: cre_active   = 1.0       ! < electron contribution to Pcr
  
  real(kind=8)       :: tol_f = 1.0e-11          ! < tolerance for f abs. error in NR algorithm
  real(kind=8)       :: tol_x = 1.0e-11          ! < tolerance for x abs. error in NR algorithm
@@ -74,7 +76,7 @@ module initcrspectrum
   end type spec_mod_trms
   
   real(kind=8), allocatable, dimension(:,:,:,:) :: virtual_n, virtual_e ! arrays for storing n and e in bins that receive particles but are not yet activated, i.e. where the energy is less than e_small
-      
+
   integer(kind=4)  :: taylor_coeff_2nd, taylor_coeff_3rd
   
   real(kind=8)     :: p_fix_ratio
@@ -88,7 +90,7 @@ module initcrspectrum
 !====================================================================================================
   subroutine init_cresp
    use constants,             only: I_ZERO, zero, ten
-   use diagnostics, only: my_allocate_with_index
+   use diagnostics,           only: my_allocate_with_index
    implicit none
     integer                  :: i       ! enumerator
     logical, save            :: first_run = .true.
@@ -210,8 +212,8 @@ module initcrspectrum
  subroutine cresp_read_nml_module
  implicit none
     namelist /COSMIC_RAY_SPECTRUM/ cfl_cre, p_lo_init, p_up_init, f_init, q_init, q_big, ncre, initial_condition, &
-    &                         p_min_fix, p_max_fix, cre_eff, K_cre_paral_1, K_cre_perp_1, &
-    &                         K_cre_pow, expan_order, e_small, bump_amp, &
+    &                         p_min_fix, p_max_fix, cre_eff, K_cre_paral_1, K_cre_perp_1, cre_active, &
+    &                         K_cre_pow, expan_order, e_small, bump_amp, cre_gpcr_ess, &
     &                         e_small_approx_init_cond, e_small_approx_p_lo, e_small_approx_p_up, force_init_NR,&
     &                         NR_iter_limit, max_p_ratio, add_spectrum_base, synch_active, adiab_active !, arr_dim
            

@@ -261,8 +261,14 @@ contains
       use gravity,          only: grav_pot2accel
 #endif /* GRAV */
 #ifdef COSM_RAYS
-      use initcosmicrays,   only: iarr_crn, smallecr ! , iarr_crs
       use sourcecosmicrays, only: src_gpcr
+#ifdef COSM_RAY_ELECTRONS
+      use initcosmicrays,   only: iarr_crn, smallecr, iarr_cre ! , iarr_crs
+      use cresp_crspectrum, only: src_gpcresp
+      use initcrspectrum,   only: ncre
+#else
+      use initcosmicrays,   only: iarr_crs, smallecr
+#endif /* COSM_RAY_ELECTRONS */
 #ifdef COSM_RAYS_SOURCES
       use initcosmicrays,   only: iarr_crn
       use sourcecosmicrays, only: src_crn
@@ -323,6 +329,9 @@ contains
 #ifdef COSM_RAYS
       real, dimension(n)                            :: grad_pcr
       real, dimension(n, flind%crn%all)             :: decr
+#ifdef COSM_RAY_ELECTRONS
+      real, dimension(n)                            :: grad_pcresp
+#endif /* COSM_RAY_ELECTRONS */
 #ifdef COSM_RAYS_SOURCES
       real, dimension(n, flind%crn%all)             :: srccrn
 #endif /* COSM_RAYS_SOURCES */
@@ -513,8 +522,15 @@ contains
             u1(:,                iarr_crn(:)) = u1(:,               iarr_crn(:)) + rk2coef(integration_order,istep) * decr(:,:) * dt
             u1(:,                iarr_crn(:)) = max(smallecr, u1(:, iarr_crn(:)))
             u1(:, iarr_all_mx(flind%ion%pos)) = u1(:, iarr_all_mx(flind%ion%pos)) + rk2coef(integration_order,istep) * grad_pcr * dt
+#ifdef COSM_RAY_ELECTRONS /* & COSM_RAYS & IONIZED */
+            call src_gpcresp(u(:,iarr_cre(ncre+1):iarr_cre(2*ncre)), n, dx, grad_pcresp)
+            u1(:, iarr_all_mx(flind%ion%pos)) = u1(:, iarr_all_mx(flind%ion%pos)) + rk2coef(integration_order,istep) * grad_pcresp * dt
+#endif /* COSM_RAY_ELECTRONS & COSM_RAYS & IONIZED */
 #ifndef ISO
             u1(:, iarr_all_en(flind%ion%pos)) = u1(:, iarr_all_en(flind%ion%pos)) + rk2coef(integration_order,istep) * vx(:, flind%ion%pos) * grad_pcr * dt
+#ifdef COSM_RAY_ELECTRONS /* & !ISO */
+            u1(:, iarr_all_en(flind%ion%pos)) = u1(:, iarr_all_en(flind%ion%pos)) + rk2coef(integration_order,istep) * vx(:, flind%ion%pos) * grad_pcresp * dt
+#endif /* COSM_RAY_ELECTRONS & !ISO */
 #endif /* !ISO */
          endif
 #ifdef COSM_RAYS_SOURCES

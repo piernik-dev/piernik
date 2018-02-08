@@ -39,7 +39,7 @@ module initcosmicrays
    use constants, only: cbuff_len
    use initcrspectrum, only: ncre, p_min_fix, p_max_fix, f_init, q_init, q_big, p_lo_init, p_up_init,  & 
                           cfl_cre, cre_eff, K_cre_paral_1, K_cre_perp_1, K_cre_pow, p_mid_fix, &
-                          expan_order
+                          expan_order, cre_gpcr_ess
 #ifdef COSM_RAY_ELECTRONS
    use initcrspectrum, only: init_cresp
 #endif /* COSM_RAY_ELECTRONS */
@@ -60,12 +60,12 @@ module initcosmicrays
    real, dimension(ncr_max)            :: gamma_crn    !< array containing adiabatic indexes of all CR nuclear components
    real, dimension(ncr_max)            :: K_crn_paral  !< array containing parallel diffusion coefficients of all CR nuclear components
    real, dimension(ncr_max)            :: K_crn_perp   !< array containing perpendicular diffusion coefficients of all CR nuclear components
-   real, dimension(ncr_max)            :: gamma_cre    !< array containing adiabatic indexes of all CR electron components
+!    real, dimension(ncr_max)            :: gamma_cre    !< array containing adiabatic indexes of all CR electron components
    real, dimension(ncr_max)            :: K_cre_paral  !< array containing parallel diffusion coefficients of all CR electron components (number density and energy density)
    real, dimension(ncr_max)            :: K_cre_perp   !< array containing perpendicular diffusion coefficients of all CR electron components (number density and energy density)
    character(len=cbuff_len)            :: divv_scheme  !< scheme used to calculate div(v), see crhelpers for more details
    logical, dimension(ncr_max)         :: crn_gpcr_ess !< if CRn species/energy-bin is essential for grad_pcr calculation
-   logical, dimension(ncr_max)         :: cre_gpcr_ess !< if CRe species/energy-bin is essential for grad_pcr calculation
+!    logical, dimension(ncr_max)         :: cre_gpcr_ess !< if CRe species/energy-bin is essential for grad_pcr calculation
    integer(kind=4), allocatable, dimension(:) :: gpcr_essential !< crs indexes of essentials for grad_pcr calculation
    ! public component data
    integer(kind=4), allocatable, dimension(:) :: iarr_crn !< array of indexes pointing to all CR nuclear components
@@ -131,30 +131,26 @@ contains
 
       namelist /COSMIC_RAYS/ cfl_cr, smallecr, cr_active, cr_eff, use_split, &
            &                 ncrn, gamma_crn, K_crn_paral, K_crn_perp, &
-           &                 gamma_cre, divv_scheme, crn_gpcr_ess, cre_gpcr_ess
+           &                 divv_scheme, crn_gpcr_ess
 
       cfl_cr     = 0.9
-      cfl_cre    = 0.5
       smallecr   = 0.0
       cr_active  = 1.0
       cr_eff     = 0.1       !  canonical conversion rate of SN en.-> CR
       !  we fix E_SN=10**51 erg
       ncrn       = 0
-      ncre       = 0
-      cre_eff    = 0.01
 
       use_split  = .true.
 
       gamma_crn(:)   = 4./3.
       K_crn_paral(:) = 0.0
       K_crn_perp(:)  = 0.0
-      gamma_cre(:)   = 4./3.
       K_cre_paral(:) = 0.0
       K_cre_perp(:)  = 0.0
 
       crn_gpcr_ess(:) = .false.
       crn_gpcr_ess(1) = .true.       ! in most cases protons are the first ingredient of CRs and they are essential
-      cre_gpcr_ess(:) = .false.
+!       cre_gpcr_ess(:) = .false.
 
       divv_scheme = ''
 
@@ -227,12 +223,12 @@ contains
          endif
 
          if (ncre > 0) then
-            rbuff(ne+1       :ne+  ncre) = gamma_cre  (1:ncre)
+!             rbuff(ne+1)                  = gamma_cre !  (1:ncre)
             rbuff(ne+1+  ncre:ne+2*ncre) = K_cre_paral(1:ncre)  ! deprecated
             rbuff(ne+1+2*ncre:ne+3*ncre) = K_cre_perp (1:ncre)  ! deprecated
 !             rbuff(ne+1+  ncre:ne+3*ncre) = K_cre_paral(1:2*ncre) ! to be enabled later, with K dependant on momentum
 !             rbuff(ne+1+3*ncre:ne+5*ncre) = K_cre_perp (1:2*ncre) ! to be enabled later, with K dependant on momentum
-            lbuff(ncrn+2:ncrn+ncre+1) = cre_gpcr_ess(1:ncre)
+            lbuff(ncrn+2) = cre_gpcr_ess !(1:ncre)
          endif
 
       endif
@@ -279,10 +275,10 @@ contains
          endif
 
          if (ncre > 0) then
-            gamma_cre  (1:ncre) = rbuff(ne+1       :ne+  ncre)
+!             gamma_cre           = rbuff(ne+1)
             K_cre_paral(1:ncre) = rbuff(ne+1+  ncre:ne+2*ncre)
             K_cre_perp (1:ncre) = rbuff(ne+1+2*ncre:ne+3*ncre)
-            cre_gpcr_ess(1:ncre) = lbuff(ncrn+2:ncrn+ncre+1)
+            cre_gpcr_ess        = lbuff(ncrn+2) !:ncrn+ncre+1)
          endif
 
       endif
@@ -348,7 +344,9 @@ contains
       call init_crsources(ncrn, crn_gpcr_ess)
 #endif /* COSM_RAYS_SOURCES */
 
-      ma1d = [ int(count(crn_gpcr_ess) + count(cre_gpcr_ess), kind=4) ]
+      ma1d = [ int(count(crn_gpcr_ess), kind=4) ]
+!       if (cre_gpcr_ess) ma1d = [ int(count(crn_gpcr_ess) + 1, kind=4) ]
+
       call my_allocate(gpcr_essential, ma1d)
       jcr = 0
       do icr = 1, ncrn
@@ -357,12 +355,11 @@ contains
             gpcr_essential(jcr) = icr
          endif
       enddo
-      do icr = 1, ncre
-         if (cre_gpcr_ess(icr)) then
-            jcr = jcr + I_ONE
-            gpcr_essential(jcr) = icr + ncrn
-         endif
-      enddo
+!       do icr = 1, ncre
+!       if (cre_gpcr_ess) then
+!         jcr = jcr + I_ONE
+!         gpcr_essential(jcr) = ncrn + 1
+!       endif
 
    end subroutine init_cosmicrays
 

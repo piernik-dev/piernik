@@ -3,7 +3,7 @@ module cresp_crspectrum
  implicit none
   public :: cresp_update_cell, cresp_init_state, printer, fail_count_interpol, fail_count_no_sol, fail_count_NR_2dim, &
       &   cleanup_cresp, cresp_accuracy_test, b_losses, cresp_allocate_all, cresp_deallocate_all, e_threshold_lo, e_threshold_up, &
-      &   fail_count_comp_q, second_fail
+      &   fail_count_comp_q, second_fail, src_gpcresp
   private ! most of it
   real(kind=8)     , parameter      :: three   = 3.e0
   real(kind=8)     , parameter      :: four    = 4.e0
@@ -63,7 +63,7 @@ module cresp_crspectrum
    real(kind=8)                 :: u_b_0
 
 ! in-algorithm energy dissipation terms
-  real(kind=8)              :: u_b, u_d 
+  real(kind=8)              :: u_b, u_d
   
 ! work array of number density and energy during algorithm execution  
   real(kind=8),allocatable, dimension(:)    :: ndt, edt
@@ -1134,6 +1134,48 @@ contains
         end where
         nq_to_f(bins-1) = f_bins
    end function nq_to_f
+!---------------------------------------------------------------------------------------------------
+! Computing cosmic ray pressure (eq. 44)
+!---------------------------------------------------------------------------------------------------
+   function get_pcresp(p_l, p_r, f_l, q, bins)
+    use initcrspectrum, only: ncre, eps
+    use constants, only: zero, one, three, fpi
+    use cresp_variables, only: clight ! use units, only: clight
+      implicit none
+      real(kind=8), dimension(:), intent (in)  :: p_l, p_r, f_l, q
+      integer, dimension(:), intent(in)        :: bins
+      real(kind=8), dimension(size(bins))  :: p_cresp
+      real(kind=8)              :: get_pcresp
+
+      get_pcresp = zero
+      p_cresp = (fpi/three) * clight*f_l(bins)*p_l(bins)**4
+      where(abs(q(bins) - four) .gt. eps)
+         p_cresp = p_cresp*((p_r(bins)/p_l(bins))**(four-q(bins)) - one)/(four - q(bins))
+      elsewhere
+         p_cresp = p_cresp*log(p_r(bins)/p_l(bins))
+      end where
+    get_pcresp = sum(p_cresp)
+
+   end function get_pcresp
+!---------------------------------------------------------------------------------------------------
+! Computing cosmic ray spectrum component pressure gradient
+!---------------------------------------------------------------------------------------------------
+  subroutine src_gpcresp(u, n, dx, grad_pcresp)
+   use initcrspectrum, only: ncre, cre_active, cre_gpcr_ess
+   use constants, only: onet
+    implicit none
+    integer(kind=4), intent(in) :: n
+    real(kind=8), intent(in)                       :: dx
+    real(kind=8), dimension(n, 1:ncre), intent(in) :: u
+    real(kind=8), dimension(n), intent(out)        :: grad_pcresp
+    real(kind=8), dimension(n)                     :: P_cresp_r, P_cresp_l
+!     if (ultrarelativistic) then
+    grad_pcresp = 0.0 ;  P_cresp_l = 0.0 ;  P_cresp_r = 0.0
+    P_cresp_l(1:n-2) = onet * sum(u(1:n-2, :),dim=2)
+    P_cresp_r(3:n)   = onet * sum(u(3:n,   :),dim=2)
+    if (cre_gpcr_ess) grad_pcresp(2:n-1) = cre_active * (P_cresp_l(1:n-2) - P_cresp_r(3:n) )/(2.*dx)
+!     endif
+ end subroutine src_gpcresp
 !---------------------------------------------------------------------------------------------------
 ! Preparation and computatuon of upper boundary momentum "p_up" and and upper boundary 
 ! distribution function value on left bin edge "f"
