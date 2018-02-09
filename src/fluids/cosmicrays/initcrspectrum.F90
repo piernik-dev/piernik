@@ -1,6 +1,7 @@
 module initcrspectrum  
 ! pulled by COSM_RAYS
 
+ use units,  only: me, clight
 #ifdef COSM_RAY_ELECTRONS
  public ! QA_WARN no secrets are kept here
 #endif /* COSM_RAY_ELECTRONS */
@@ -44,6 +45,8 @@ module initcrspectrum
  logical            :: adiab_active = .true.    ! < TEST feature - turns on / off adiabatic   cooling @ CRESP
  logical            :: cre_gpcr_ess = .true.    ! < electron essentiality for gpcr computation
  real(kind=8)       :: cre_active   = 1.0       ! < electron contribution to Pcr
+ real(kind=8)       :: Gamma_min    = 1.0       ! < min of relativistic Gamma factor, Gamma = 1/sqrt(1-(v/c)**2) - lower range of CRESP fixed grid
+ real(kind=8)       :: Gamma_max    = 10.0      ! < max value of relativistic Gamma factor, Gamma = 1/sqrt(1-(v/c)**2) - upper range of CRESP fixed grid
  
  real(kind=8)       :: tol_f = 1.0e-11          ! < tolerance for f abs. error in NR algorithm
  real(kind=8)       :: tol_x = 1.0e-11          ! < tolerance for x abs. error in NR algorithm
@@ -55,6 +58,10 @@ module initcrspectrum
 !----------------------------------
  real(kind=8),allocatable, dimension(:) :: p_fix, p_mid_fix
  real(kind=8)       :: w
+
+ real(kind=8),allocatable, dimension(:) :: mom_cre_fix, mom_mid_cre_fix, Gamma_fix, Gamma_mid_fix, gamma_beta_c_fix
+ real(kind=8)       :: Gamma_fix_ratio
+ real(kind=8)       :: G_w
 ! Types used in module: 
    type bin_old
     integer                           :: i_lo
@@ -89,7 +96,7 @@ module initcrspectrum
 !
 !====================================================================================================
   subroutine init_cresp
-   use constants,             only: I_ZERO, zero, ten
+   use constants,             only: I_ZERO, zero, one, ten
    use diagnostics,           only: my_allocate_with_index
    implicit none
     integer                  :: i       ! enumerator
@@ -97,6 +104,7 @@ module initcrspectrum
 
     call cresp_read_nml_module
 
+!    e_small = e_small * clight     ! scale e_small to unit clight
     open(10, file='crs.dat',status='replace',position='rewind')     ! diagnostic files
     open(11, file='crs_ne.dat',status='replace',position='rewind')  ! diagnostic files
 
@@ -127,7 +135,9 @@ module initcrspectrum
             print '(A22, L2 )' ,'force_init_NR   = ', force_init_NR
             print '(A22, I4)', 'NR_iter_limit  = ', NR_iter_limit
             print '(A22, 1E15.7)','epsilon(eps) = ', eps
-   
+            print '(A15, 1E15.7)','Gamma_min    =', Gamma_min
+            print '(A15, 1E15.7)','Gamma_max    =', Gamma_max
+
             if ( (e_small_approx_p_lo+e_small_approx_p_up) .gt. 0 .and. e_small_approx_init_cond .lt. 1) then 
                 e_small_approx_init_cond = 1  ! 
                 print *, "[WARNING] @initcrspectrum: chosen approximation of boundary momenta"
@@ -146,6 +156,11 @@ module initcrspectrum
 ! arrays initialization
             call my_allocate_with_index(p_fix,ncre,0)
             call my_allocate_with_index(p_mid_fix,ncre,1)
+            call my_allocate_with_index(Gamma_fix,ncre,0)
+            call my_allocate_with_index(Gamma_mid_fix,ncre,1)
+            call my_allocate_with_index(mom_cre_fix,ncre,0)
+            call my_allocate_with_index(mom_mid_cre_fix,ncre,1)
+            call my_allocate_with_index(gamma_beta_c_fix,ncre,0)
             call my_allocate_with_index(cresp_edges,ncre,0)
 
             cresp_edges = (/ (i,i=0,ncre) /)
@@ -164,6 +179,32 @@ module initcrspectrum
             p_mid_fix(ncre) = p_mid_fix(ncre-1) * p_fix_ratio
             write (*,'(A22, 50E15.7)') 'Fixed mid momenta:   ',p_mid_fix(1:ncre)
 
+! set Gamma arrays
+            Gamma_fix = one
+            G_w  = (log10(Gamma_max/Gamma_min))/real(ncre-2,kind=8)
+            Gamma_fix(1:ncre-1)  =  Gamma_min*ten**(G_w* real((cresp_edges(1:ncre-1)-1),kind=8) )
+            Gamma_fix(0)    = one
+            Gamma_fix(ncre) = one
+            Gamma_fix_ratio = ten**w
+            write (*,'(A22, 50F10.5)') 'Fixed momentum grid: ', Gamma_fix
+            write (*,'(A22, 50F10.5)') 'Gamma bin width(log10): ', G_w
+
+            Gamma_mid_fix = one
+            Gamma_mid_fix(2:ncre-1) = sqrt( Gamma_fix(1:ncre-2) * Gamma_fix(2:ncre-1) )
+            Gamma_mid_fix(1)    = sqrt( one * Gamma_mid_fix(2) ) ! Gamma_mid_fix(2) / Gamma_mid_fix(1)
+            Gamma_mid_fix(ncre) = sqrt(Gamma_mid_fix(ncre-1) * Gamma_max)
+            write (*,'(A22, 50F10.5)') 'Fixed mid Gamma:   ', Gamma_mid_fix(1:ncre)
+! compute physical momenta of particles in given unit set
+            do i = 0, ncre
+                mom_cre_fix(i) = cresp_get_mom(me, Gamma_fix(i))
+            enddo
+            do i = 1, ncre
+                mom_mid_cre_fix(i) = cresp_get_mom(me, Gamma_mid_fix(i))
+            enddo
+            gamma_beta_c_fix = mom_cre_fix / me
+            write (*,'(A22, 50E15.7)') 'Fixed phys momentum : ', mom_cre_fix
+            write (*,'(A22, 50E15.7)') 'Fixed phys mid mom  : ', mom_mid_cre_fix
+            pause
 ! Input parameters check
             else
                 write (*,"(A10,I4,A96)") 'ncre   = ', ncre, &
@@ -239,6 +280,16 @@ module initcrspectrum
     crel%i_lo = I_ZERO
     crel%i_up = I_ZERO
  end subroutine init_cresp_types
+!----------------------------------------------------------------------------------------------------
+ function cresp_get_mom(mass, gamma)
+  use units,    only: clight
+  use constants,only: zero, I_TWO
+    real(kind=8), intent(in) :: mass, gamma
+    real(kind=8)             :: gamma_sqrd, cresp_get_mom
+        cresp_get_mom = zero
+        gamma_sqrd = gamma ** I_TWO
+        if ((gamma - 1.0) .gt. eps)  cresp_get_mom = mass * (gamma_sqrd)/(sqrt(gamma_sqrd - 1.0)) * clight
+ end function cresp_get_mom
 !----------------------------------------------------------------------------------------------------
  subroutine cleanup_cresp_virtual_en_arrays
   use diagnostics, only: my_deallocate
