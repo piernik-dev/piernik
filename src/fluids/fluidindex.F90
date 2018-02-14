@@ -120,7 +120,7 @@ contains
       use initionized,    only: ion_fluid
       use initneutral,    only: neutral_fluid
 #ifdef COSM_RAYS
-      use initcosmicrays, only: iarr_crn, iarr_cre, cosmicray_index, iarr_crs, iarr_crs_diff ! use of crs /deprecated
+      use initcosmicrays, only: iarr_crn, iarr_cre, cosmicray_index, iarr_crs, iarr_crs_diff
 #endif /* COSM_RAYS */
 #ifdef TRACER
       use inittracer,     only: tracer_index, iarr_trc
@@ -171,14 +171,14 @@ contains
 #endif /* !ISO */
 
 #ifdef COSM_RAYS
-      allocate(iarr_all_crs(flind%crs%all)) !!! when cre is incorporated this will be deprecated
+      allocate(iarr_all_crs(flind%crs%all))
       allocate(iarr_all_crn(flind%crn%all))
-      allocate(iarr_all_cre(flind%cre%all)) ! possibly this should be brought under separate precompiler flag
+      allocate(iarr_all_cre(flind%cre%all))
 
 #else /* !COSM_RAYS */
       allocate(iarr_all_crn(0))
       allocate(iarr_all_cre(0))
-      allocate(iarr_all_crs(0)) !!! when cre is incorporated this will be deprecated
+      allocate(iarr_all_crs(0))
 #endif /* !COSM_RAYS */
 
 #ifdef TRACER
