@@ -1447,13 +1447,18 @@ contains
       use named_array_list,   only: qna
       use types,              only: value
 #ifdef COSM_RAYS
-      use fluidindex,         only: iarr_all_crn !, iarr_all_crs /deprecated !!!
       use timestepcosmicrays, only: dt_crs
-#endif /* COSM_RAYS */
+#if defined(COSM_RAYS) && defined(COSM_RAY_ELECTRONS)
+      use fluidindex,        only: iarr_all_crn
+#endif /* COSM_RAYS && COSM_RAY_ELECTRONS */
+#if defined(COSM_RAYS) && !defined(COSM_RAY_ELECTRONS)
+      use fluidindex,         only: iarr_all_crs
+#endif /* COSM_RAYS && COSM_RAY_ELECTRONS */
 #ifdef COSM_RAY_ELECTRONS
       use initcosmicrays,     only: iarr_cre_e, iarr_cre_n
       use timestep_cresp,     only: dt_cre_min_ud, dt_cre_min_ub
 #endif /* COSM_RAY_ELECTRONS */
+#endif /* COSM_RAYS */
 #if defined COSM_RAYS || defined MAGNETIC
       use constants,          only: MINL
 #endif /* COSM_RAYS || MAGNETIC */
@@ -1597,17 +1602,21 @@ contains
       call leaves%get_extremum(qna%wai, MAXL, divb_max)
 #endif /* MAGNETIC */
 
-#ifdef COSM_RAYS
+#if defined(COSM_RAYS)
       cgl => leaves%first
       do while (associated(cgl))
+#if defined(COSM_RAYS) && defined(COSM_RAY_ELECTRONS)
          cgl%cg%wa        = sum(cgl%cg%u(iarr_all_crn,:,:,:),1)
+#endif /* COSM_RAYS && COSM_RAY_ELECTRONS */
+#if defined(COSM_RAYS) && !defined(COSM_RAY_ELECTRONS)
+         cgl%cg%wa        = sum(cgl%cg%u(iarr_all_crs,:,:,:),1)
+#endif /* COSM_RAYS && !COSM_RAY_ELECTRONS */
          cgl => cgl%nxt
       enddo
       call leaves%get_extremum(qna%wai, MAXL, encr_max)
       call leaves%get_extremum(qna%wai, MINL, encr_min)
       encr_max%assoc = dt_crs
 #endif /* COSM_RAYS */
-
 #ifdef COSM_RAY_ELECTRONS
       cgl => leaves%first
       do while (associated(cgl))
