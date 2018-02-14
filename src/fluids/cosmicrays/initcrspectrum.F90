@@ -81,7 +81,7 @@ module initcrspectrum
   
   real(kind=8)     :: p_fix_ratio
 
-  integer,allocatable, dimension(:) :: cresp_edges
+  integer,allocatable, dimension(:) :: cresp_all_edges, cresp_all_bins
 
 !====================================================================================================
 !  
@@ -146,12 +146,15 @@ module initcrspectrum
 ! arrays initialization
             call my_allocate_with_index(p_fix,ncre,0)
             call my_allocate_with_index(p_mid_fix,ncre,1)
-            call my_allocate_with_index(cresp_edges,ncre,0)
+            call my_allocate_with_index(cresp_all_edges,ncre,0)
+            call my_allocate_with_index(cresp_all_bins, ncre,1)
 
-            cresp_edges = (/ (i,i=0,ncre) /)
+            cresp_all_edges = (/ (i,i=0,ncre) /)
+            cresp_all_bins  = (/ (i,i=1,ncre) /)
+
             p_fix = zero 
             w  = (log10(p_max_fix/p_min_fix))/real(ncre-2,kind=8)
-            p_fix(1:ncre-1)  =  p_min_fix*ten**(w* real((cresp_edges(1:ncre-1)-1),kind=8) )
+            p_fix(1:ncre-1)  =  p_min_fix*ten**(w* real((cresp_all_edges(1:ncre-1)-1),kind=8) )
             p_fix(0)    = zero
             p_fix(ncre) = zero
             p_fix_ratio = ten**w
@@ -248,7 +251,8 @@ module initcrspectrum
 
         if (allocated(p_fix)) call my_deallocate(p_fix)
         if (allocated(p_mid_fix)) call my_deallocate(p_mid_fix)
-        if (allocated(cresp_edges)) call my_deallocate(cresp_edges)
+        if (allocated(cresp_all_edges)) call my_deallocate(cresp_all_edges)
+        if (allocated(cresp_all_bins )) call my_deallocate(cresp_all_bins)
         if (allocated(crel%p))  call my_deallocate(crel%p)
         if (allocated(crel%f)) call my_deallocate(crel%f)
         if (allocated(crel%q)) call my_deallocate(crel%q)

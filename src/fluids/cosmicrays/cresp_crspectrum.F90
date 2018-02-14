@@ -12,9 +12,6 @@ module cresp_crspectrum
 
   integer, dimension(1:2), save     :: fail_count_NR_2dim, fail_count_interpol, fail_count_no_sol, second_fail
   integer, allocatable, save   :: fail_count_comp_q(:)
-! arrays helping in algorithm execution
- integer, allocatable        :: all_edges(:), i_act_edges(:)
- integer, allocatable        :: all_bins(:)
 
 ! variables informing about change of bins
   integer                           :: del_i_lo, del_i_up
@@ -336,19 +333,12 @@ contains
   end subroutine find_i_bound
 !-------------------------------------------------------------------------------------------------
   subroutine cresp_find_active_bins
-   use constants,      only: I_ONE, I_ZERO, zero
+   use constants,      only: I_ZERO, zero
    use diagnostics,    only: my_allocate_with_index
-   use initcrspectrum, only: ncre, e_small
+   use initcrspectrum, only: ncre, e_small, cresp_all_edges, cresp_all_bins
    implicit none
-    integer :: i
       if(allocated(active_bins))  deallocate(active_bins)      
       if(allocated(active_edges)) deallocate(active_edges)
-
-! Since we are leaving subroutine, some arrays might be filled with junk, all_edges and all_bins are crucial
-! Detect and enumerate active bins and active edges
-      all_edges = I_ZERO      
-      all_edges = (/ (i,i=I_ZERO,ncre) /)
-      all_bins = (/ (i,i=I_ONE,ncre) /)
 
       is_active_bin = .false.
       is_active_bin(i_lo+1:i_up) = .true. ! unused if we use "not_spectrum_break"
@@ -362,7 +352,7 @@ contains
         endwhere
         active_bins = I_ZERO
 !         active_bins = pack(all_bins, is_active_bin)
-        active_bins = pack(all_bins, not_spectrum_break)   ! not to iterate over spectrum break
+        active_bins = pack(cresp_all_bins, not_spectrum_break)   ! not to iterate over spectrum break
 
 ! Construct index arrays for fixed edges betwen p_lo and p_up, active edges 
 ! before timestep  
@@ -370,13 +360,13 @@ contains
         is_fixed_edge(i_lo+1:i_up-1) = .true.
         num_fixed_edges = count(is_fixed_edge)
         allocate(fixed_edges(num_fixed_edges))
-        fixed_edges = pack(all_edges, is_fixed_edge)
+        fixed_edges = pack(cresp_all_edges, is_fixed_edge)
 
         is_active_edge = .false.
         is_active_edge(i_lo:i_up) = .true.
         num_active_edges = count(is_active_edge)
         allocate(active_edges(i_lo:i_up))
-        active_edges = pack(all_edges, is_active_edge)
+        active_edges = pack(cresp_all_edges, is_active_edge)
 #ifdef VERBOSE
         print "(2(A9,i3))", "i_lo =", i_lo, ", i_up = ", i_up
 #endif /* VERBOSE */
@@ -421,7 +411,7 @@ contains
 !----------------------------------------------------------------------------------------------------
   subroutine cresp_update_bin_index(dt, p_lo, p_up, p_lo_next, p_up_next, dt_too_high) ! evaluates only "next" momenta and is called after finding outer cutoff momenta
    use constants, only: zero, I_ZERO, one
-   use initcrspectrum, only: ncre, p_fix, w
+   use initcrspectrum, only: ncre, p_fix, w, cresp_all_bins, cresp_all_edges
    implicit none
     real(kind=8), intent(in)  :: dt
     real(kind=8), intent(in)  :: p_lo, p_up
@@ -456,20 +446,20 @@ contains
         is_fixed_edge_next(i_lo_next+1:i_up_next-1) = .true.
         num_fixed_edges_next = count(is_fixed_edge_next)
         allocate(fixed_edges_next(num_fixed_edges_next))
-        fixed_edges_next = pack(all_edges, is_fixed_edge_next)
+        fixed_edges_next = pack(cresp_all_edges, is_fixed_edge_next)
            
         is_active_edge_next = .false.
         is_active_edge_next(i_lo_next:i_up_next) = .true.
         num_active_edges_next = count(is_active_edge_next)
         allocate(active_edges_next(num_active_edges_next))
-        active_edges_next = pack(all_edges, is_active_edge_next)
+        active_edges_next = pack(cresp_all_edges, is_active_edge_next)
      
 ! Active bins after timestep
         is_active_bin_next = .false.
         is_active_bin_next(i_lo_next+1:i_up_next) = .true.
         num_active_bins_next = count(is_active_bin_next)
         allocate(active_bins_next(num_active_bins_next))
-        active_bins_next = pack(all_bins, is_active_bin_next)
+        active_bins_next = pack(cresp_all_bins, is_active_bin_next)
 
         p_next = zero
         p_next(fixed_edges_next) = p_fix(fixed_edges_next)
@@ -490,14 +480,14 @@ contains
                                                          > p_fix(fixed_edges_next))
         num_cooling_edges_next = count(is_cooling_edge_next)
         allocate(cooling_edges_next(num_cooling_edges_next))
-        cooling_edges_next = pack(all_edges, is_cooling_edge_next)
+        cooling_edges_next = pack(cresp_all_edges, is_cooling_edge_next)
       
         is_heating_edge_next = .false. ; num_heating_edges_next = I_ZERO
         is_heating_edge_next(fixed_edges_next) = (p_upw(fixed_edges_next) & 
                                                          < p_fix(fixed_edges_next))
         num_heating_edges_next = count(is_heating_edge_next)
         allocate(heating_edges_next(num_heating_edges_next))
-        heating_edges_next = pack(all_edges, is_heating_edge_next)
+        heating_edges_next = pack(cresp_all_edges, is_heating_edge_next)
 #ifdef VERBOSE      
         print *, 'In update_bin_index'
         print *, 'p_lo_next, p_up_next:', p_lo_next, p_up_next
@@ -531,9 +521,9 @@ contains
   subroutine cresp_init_state(init_n, init_e, f_amplitude, sptab)
    use initcrspectrum, only: ncre, spec_mod_trms, q_init, p_lo_init, p_up_init, initial_condition, & ! f_init, bump_amp
                         e_small_approx_init_cond, e_small_approx_p_lo, e_small_approx_p_up, crel, p_fix, w,&
-                        p_min_fix, p_max_fix, add_spectrum_base, e_small, test_spectrum_break
+                        p_min_fix, p_max_fix, add_spectrum_base, e_small, test_spectrum_break, cresp_all_bins
    use cresp_NR_method,only: e_small_to_f
-   use constants, only: zero, I_ZERO, I_ONE, fpi
+   use constants, only: zero, I_ONE, fpi
    use cresp_variables, only: clight ! use units, only: clight
    implicit none
     integer                          :: i, k, i_lo_ch, i_up_ch, i_br
@@ -544,7 +534,6 @@ contains
     logical :: exit_code
         u_b = sptab%ub
         u_d = sptab%ud
-        all_edges = I_ZERO
         
         approx_p_lo = e_small_approx_p_lo
         approx_p_up = e_small_approx_p_up
@@ -555,9 +544,6 @@ contains
         u_b_0 = u_b
         u_d_0 = u_d
        
-        all_edges = (/ (i,i=0,ncre) /)
-        all_bins = (/ (i,i=1,ncre) /)
-      
         f = zero
         q = zero
         p = zero
@@ -601,7 +587,7 @@ contains
         is_active_bin(i_lo+1:i_up) = .true.
         num_active_bins = count(is_active_bin)
         allocate(active_bins(num_active_bins))
-        active_bins = pack(all_bins, is_active_bin)
+        active_bins = pack(cresp_all_bins, is_active_bin)
 !     TESTING ALGORITHM (finding p_lo and p_up using e_small)
 #ifdef TEST_CRESP
 !      call p_algorithm_accuracy_test  ! tests accuracy of algorithm which later seeks value of p_up using n, e, f and e_small
@@ -723,7 +709,7 @@ contains
             num_active_bins = count(is_active_bin) ! active arrays must be reevaluated - number of active bins and edges might have changed
             if(allocated(active_bins)) deallocate(active_bins)
             allocate(active_bins(num_active_bins)) ! active arrays must be reevaluated - number of active bins and edges might have changed
-            active_bins = pack(all_bins, is_active_bin)
+            active_bins = pack(cresp_all_bins, is_active_bin)
 
             e = fq_to_e(p(0:ncre-1), p(1:ncre), f(0:ncre-1), q(1:ncre), active_bins) ! once again we must count n and e
             n = fq_to_n(p(0:ncre-1), p(1:ncre), f(0:ncre-1), q(1:ncre), active_bins)
@@ -931,7 +917,7 @@ contains
 !
 !-------------------------------------------------------------------------------------------------
    subroutine cresp_compute_fluxes(ce,he)
-    use initcrspectrum, only: ncre, eps
+    use initcrspectrum, only: ncre, eps, cresp_all_bins
     use constants, only: zero, one, fpi
     use cresp_variables, only: clight ! use units, only: clight
       implicit none
@@ -977,7 +963,7 @@ contains
       
 ! filling empty empty bin - switch of upper boundary, condition is checked only once per flux computation and is very rarely satisfied.
       if (nflux(i_up) .gt. zero) then             ! If flux is greater than zero it will go through right edge, activating next bin in the next timestep.
-        if ( all_bins(i_up+1) .eq. i_up+1 ) then  ! But it shuld only happen if there is bin with index i_up+1
+        if ( cresp_all_bins(i_up+1) .eq. i_up+1 ) then  ! But it shuld only happen if there is bin with index i_up+1
          ndt(i_up+1) = nflux(i_up)
          edt(i_up+1) = eflux(i_up)
 #ifdef VERBOSE
@@ -1453,8 +1439,6 @@ contains
    call my_allocate_with_index(is_heating_edge_next,ma1d,0)
    call my_allocate_with_index(is_active_bin,ma1d,1)
    call my_allocate_with_index(is_active_bin_next,ma1d,1)
-   call my_allocate_with_index(all_edges,ma1d,0)
-   call my_allocate_with_index(i_act_edges,ma1d,0)
    call my_allocate_with_index(not_spectrum_break,ma1d,1)
    
   end subroutine cresp_allocate_all
@@ -1489,10 +1473,6 @@ contains
    call my_deallocate(is_active_bin)
    call my_deallocate(is_active_bin_next)
    
-   call my_deallocate(all_edges)
-   call my_deallocate(i_act_edges)
-   call my_deallocate(all_bins)
-   call my_deallocate(all_edges)
    call deallocate_active_arrays ! optional
    
   end subroutine cresp_deallocate_all
