@@ -930,6 +930,9 @@ enddo
            psi(:,nx) = psi(:,nx-1)
 #endif /* GLM */
 
+! This is lowest order implementation of CR
+! It agrees with the implementation in RTVD in the limit of small CR energy amounts
+! ToDo: integrate it into h_solver schemes
 #if defined COSM_RAYS && defined IONIZED
 
            if (nx > 1) then
