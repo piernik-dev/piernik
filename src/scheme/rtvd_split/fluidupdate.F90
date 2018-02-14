@@ -159,7 +159,6 @@ contains
 #if defined(COSM_RAYS) 
       use all_boundaries,      only: all_fluid_boundaries
       use initcosmicrays,      only: use_split
-      use initcosmicrays,      only: ncrn
       use fluidindex,          only: flind
 #if defined(MULTIGRID)
       use multigrid_diffusion, only: multigrid_solve_diff

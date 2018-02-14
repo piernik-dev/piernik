@@ -149,9 +149,9 @@ contains
       ! because of their lower abundancies: n(alpha) ~ 0.1 n(p+), other elements less abundant by orders of magnitude
       eH1   = .true.
       eLi7  = .false.
-      eBe9  = .false. ! [.true., .false.]
-      eBe10 = .false. ! [.true., .false.]
-      eC12  = .false. ! [.true., .false.]
+      eBe9  = [.true., .false.]
+      eBe10 = [.true., .false.]
+      eC12  = [.true., .false.]
       eN14  = .false.
       eO16  = .false.
 

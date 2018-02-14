@@ -263,9 +263,8 @@ contains
 #ifdef COSM_RAYS
       use sourcecosmicrays, only: src_gpcr
 #ifdef COSM_RAY_ELECTRONS
-      use initcosmicrays,   only: iarr_crn, smallecr, iarr_cre ! , iarr_crs
       use cresp_crspectrum, only: src_gpcresp
-      use initcrspectrum,   only: ncre
+      use initcosmicrays,   only: iarr_crn, smallecr, iarr_cre_e
 #else
       use initcosmicrays,   only: iarr_crs, smallecr
 #endif /* COSM_RAY_ELECTRONS */
@@ -328,9 +327,11 @@ contains
 
 #ifdef COSM_RAYS
       real, dimension(n)                            :: grad_pcr
-      real, dimension(n, flind%crn%all)             :: decr
 #ifdef COSM_RAY_ELECTRONS
       real, dimension(n)                            :: grad_pcresp
+      real, dimension(n, flind%crn%all)             :: decr               ! < if CRESP is defined, decr refers only to cr components not described with spectrum
+#else /* COSM_RAYS && !COSM_RAY_ELECTRONS */
+      real, dimension(n, flind%crs%all)             :: decr               ! < if CRESP is not defined, decr refers to all cr components
 #endif /* COSM_RAY_ELECTRONS */
 #ifdef COSM_RAYS_SOURCES
       real, dimension(n, flind%crn%all)             :: srccrn
@@ -518,13 +519,18 @@ contains
 
 #if defined COSM_RAYS && defined IONIZED
          if (full_dim) then
+#ifdef COSM_RAY_ELECTRONS /* & COSM_RAYS & IONIZED */
             call src_gpcr(u, n, dx, divv, decr, grad_pcr)
-            u1(:,                iarr_crn(:)) = u1(:,               iarr_crn(:)) + rk2coef(integration_order,istep) * decr(:,:) * dt
+            u1(:,                iarr_crn(:)) = u1(:,               iarr_crn(:))  + rk2coef(integration_order,istep) * decr(:,:) * dt
             u1(:,                iarr_crn(:)) = max(smallecr, u1(:, iarr_crn(:)))
             u1(:, iarr_all_mx(flind%ion%pos)) = u1(:, iarr_all_mx(flind%ion%pos)) + rk2coef(integration_order,istep) * grad_pcr * dt
-#ifdef COSM_RAY_ELECTRONS /* & COSM_RAYS & IONIZED */
-            call src_gpcresp(u(:,iarr_cre(ncre+1):iarr_cre(2*ncre)), n, dx, grad_pcresp)
+            call src_gpcresp(u(:,iarr_cre_e(:)), n, dx, grad_pcresp)
             u1(:, iarr_all_mx(flind%ion%pos)) = u1(:, iarr_all_mx(flind%ion%pos)) + rk2coef(integration_order,istep) * grad_pcresp * dt
+#else /* !COSM_RAY_ELECTRONS & COSM_RAYS & IONIZED */
+            call src_gpcr(u, n, dx, divv, decr, grad_pcr)
+            u1(:,                iarr_crs(:)) = u1(:,               iarr_crs(:))  + rk2coef(integration_order,istep) * decr(:,:) * dt
+            u1(:,                iarr_crs(:)) = max(smallecr, u1(:, iarr_crs(:)))
+            u1(:, iarr_all_mx(flind%ion%pos)) = u1(:, iarr_all_mx(flind%ion%pos)) + rk2coef(integration_order,istep) * grad_pcr * dt
 #endif /* COSM_RAY_ELECTRONS & COSM_RAYS & IONIZED */
 #ifndef ISO
             u1(:, iarr_all_en(flind%ion%pos)) = u1(:, iarr_all_en(flind%ion%pos)) + rk2coef(integration_order,istep) * vx(:, flind%ion%pos) * grad_pcr * dt
