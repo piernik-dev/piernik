@@ -44,6 +44,7 @@ TEST_OBJ=${PROBLEM_NAME}_test
 GOLD_LOG=gold_log
 TMP_DIR=/tmp/jenkins_gold/
 RUNS_DIR=$TMP_DIR
+GOLD_SHA_FILE=__sha__
 
 [ ! -d $TMP_DIR ] && mkdir -p $TMP_DIR
 cp Makefile $TMP_DIR
@@ -87,7 +88,18 @@ done
 
 (
     cd ${RUNS_DIR}/${PROBLEM_NAME}_$GOLD_OBJ
-    [ ! -e ${OUTPUT} ] && eval $RUN_COMMAND ./${PIERNIK} $GOLD_PARAMS
+    # skip recalculating gold outpuf if and only if we know for sure that $GOLD_COMMIT did not change
+    if [ ! -e $GOLD_SHA_FILE ] ; then
+	[ -e ${OUTPUT} ] && rm ${OUTPUT}
+    else
+	if [ $( cat $GOLD_SHA_FILE  ) != $GOLD_COMMIT ] ; then
+	   [ -e ${OUTPUT} ] && rm ${OUTPUT}
+	fi
+    fi
+    if [ ! -e ${OUTPUT} ] ; then
+       eval $RUN_COMMAND ./${PIERNIK} $GOLD_PARAMS
+       echo $GOLD_COMMIT > $GOLD_SHA_FILE
+    fi
 )
 
 [ ! -z $YT ] && source $YT
