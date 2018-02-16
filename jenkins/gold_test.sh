@@ -35,6 +35,7 @@ if [ -z ${OUTPUT+x} ] ; then
     exit 5
 fi
 
+PIERNIK_REPO="http://github.com/piernik-dev/piernik"
 PIERNIK=piernik
 GOLD_DIR=gold_dir
 OBJ_PREFIX=obj_
@@ -55,10 +56,11 @@ mkdir ${RUNS_DIR}/${PROBLEM_NAME}_${GOLD_OBJ}
 python setup $PROBLEM_NAME $SETUP_PARAMS -n --copy -o $TEST_OBJ
 rsync -Icvxa --no-t ${OBJ_PREFIX}$TEST_OBJ $TMP_DIR
 
-git clone http://github.com/piernik-dev/piernik $GOLD_DIR
+git clone $PIERNIK_REPO $GOLD_DIR
 [ -e .setuprc ] && cp .setuprc $GOLD_DIR
 (
     cd $GOLD_DIR
+    git fetch $PIERNIK_REPO +refs/pull/*:refs/remotes/origin/pr/*
     git checkout $GOLD_COMMIT
     rsync -avx --delete ../compilers/ ./compilers
     python setup $PROBLEM_NAME $SETUP_PARAMS -n --copy -o $GOLD_OBJ
