@@ -39,6 +39,10 @@ if [ $DO_MAKE == 0 ] ; then
     done
 fi
 
+awkfor() {
+    awk '{printf("%19s %7s %7s %7s %8s\n", $1, $2, $3, $4, $5)}'
+}
+
 # some cleanup
 PROBLEM_LIST="maclaurin advection_test crtest jeans tearing sedov otvortex 3body"
 
@@ -52,11 +56,11 @@ if [ $DO_MAKE == 1 ] ; then
 
     {
 	# create object and run directories
-	echo -n "Preparing objects "
+	echo -n "Preparing objects                "
 	SETUP_PARAMS="-c ../benchmarking/benchmarking -n"
-	time for i in $PROBLEM_LIST; do
+	( time for i in $PROBLEM_LIST; do
 	./setup $i $SETUP_PARAMS -o "B_"$i > /dev/null
-	done
+	done ) 2>&1 | awkfor
 
 	get_n_problems() {
 	    echo $1 $PROBLEM_LIST | awk '{for (i=0; i<$1; i++) printf("obj_B_%s ",$(2+i)); print ""}'
@@ -68,31 +72,31 @@ if [ $DO_MAKE == 1 ] ; then
 
 	OBJ_LIST=$( get_n_problems 1 )
 
-	echo -n "Single-thread make object "
-	time $MAKE $OBJ_LIST > /dev/null 2>&1
+	echo -n "Single-thread make object        "
+	( time $MAKE $OBJ_LIST > /dev/null ) 2>&1 | awkfor
 	$MAKE $OBJ_LIST CL=1 > /dev/null
 
-	echo -n "Multi-thread make object "
-	time $MAKE -j $OBJ_LIST > /dev/null 2>&1
+	echo -n "Multi-thread make object         "
+	( time $MAKE -j $OBJ_LIST > /dev/null ) 2>&1 | awkfor
 	$MAKE $OBJ_LIST CL=1 > /dev/null
 
 	OBJ_LIST=$( get_n_problems 2 )
 
-	echo -n "Multi-thread make two objects "
-	time $MAKE -j $OBJ_LIST > /dev/null 2>&1
+	echo -n "Multi-thread make two objects    "
+	( time $MAKE -j $OBJ_LIST > /dev/null ) 2>&1 | awkfor
 	$MAKE $OBJ_LIST CL=1 > /dev/null
 
 	OBJ_LIST=$( get_n_problems 4 )
 
-	echo -n "Multi-thread make four objects "
-	time $MAKE -j $OBJ_LIST > /dev/null 2>&1
+	echo -n "Multi-thread make four objects   "
+	( time $MAKE -j $OBJ_LIST > /dev/null ) 2>&1 | awkfor
 	$MAKE $OBJ_LIST CL=1 > /dev/null
 
 	OBJ_LIST=$( get_n_problems 8 )
 
-	echo -n "Multi-thread make eight objects "
-	time $MAKE -j $OBJ_LIST > /dev/null 2>&1
-    } 2>&1 | $( dirname $0 )"/pretty_time_form.awk"
+	echo -n "Multi-thread make eight objects  "
+	( time $MAKE -j $OBJ_LIST > /dev/null ) 2>&1 | awkfor
+    }
     echo
 fi
 
@@ -201,7 +205,7 @@ for p in $B_PROBLEM_LIST ; do
 			echo ;;
 	        esac
 	    done
-	) | column -t
+	) | awk '{ if (substr($1,0,1) == "#") split($0,form); if (NF>0) {for (i=1;i<=NF;i++) printf("%-*s ",length(form[i]),$i); print ""; fflush()}}'
 	echo
     done
 done
