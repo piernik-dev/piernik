@@ -66,7 +66,11 @@ module initcrspectrum
     real(kind=8),allocatable,dimension(:)   :: n
     real(kind=8) :: dt
   end type bin_old
-
+  type cr_spectrum
+    real(kind=8),allocatable,dimension(:)   :: e
+    real(kind=8),allocatable,dimension(:)   :: n
+  end type cr_spectrum
+  type(cr_spectrum) cresp
   type(bin_old) crel
 ! For passing terms to compute energy sources / sinks
   type spec_mod_trms
@@ -234,6 +238,9 @@ module initcrspectrum
     call my_allocate_with_index(crel%q,ncre,1)
     call my_allocate_with_index(crel%e,ncre,1)
     call my_allocate_with_index(crel%n,ncre,1)
+
+    call my_allocate_with_index(cresp%n,ncre,1)
+    call my_allocate_with_index(cresp%e,ncre,1)
     crel%p = zero
     crel%q = zero
     crel%f = zero
@@ -241,6 +248,9 @@ module initcrspectrum
     crel%n = zero
     crel%i_lo = I_ZERO
     crel%i_up = I_ZERO
+
+    cresp%e = zero
+    cresp%n = zero
  end subroutine init_cresp_types
 !----------------------------------------------------------------------------------------------------
  subroutine cleanup_cresp_virtual_en_arrays
@@ -248,6 +258,9 @@ module initcrspectrum
   implicit none
         if (allocated(virtual_e)) call my_deallocate(virtual_e)
         if (allocated(virtual_n)) call my_deallocate(virtual_n)
+        
+        if (allocated(cresp%n))   call my_deallocate(cresp%n)
+        if (allocated(cresp%e))   call my_deallocate(cresp%e)
 
         if (allocated(p_fix)) call my_deallocate(p_fix)
         if (allocated(p_mid_fix)) call my_deallocate(p_mid_fix)
