@@ -3,7 +3,7 @@ module cresp_crspectrum
  implicit none
   public :: cresp_update_cell, cresp_init_state, printer, fail_count_interpol, fail_count_no_sol, fail_count_NR_2dim, &
       &   cleanup_cresp, cresp_accuracy_test, b_losses, cresp_allocate_all, cresp_deallocate_all, e_threshold_lo, e_threshold_up, &
-      &   fail_count_comp_q, second_fail, src_gpcresp
+      &   fail_count_comp_q, second_fail, src_gpcresp, cresp_init_powl_spectrum, get_powl_f_ampl, e_tot_2_f_init_params, e_tot_2_en_powl_init_params
   private ! most of it
   real(kind=8)     , parameter      :: three   = 3.e0
   real(kind=8)     , parameter      :: four    = 4.e0
@@ -515,7 +515,7 @@ contains
   end subroutine p_update
 !-------------------------------------------------------------------------------------------------
 ! 
-! arrays initialization
+! arrays initialization | TODO: reorganize cresp_init_state
 !
 !-------------------------------------------------------------------------------------------------
   subroutine cresp_init_state(init_n, init_e, f_amplitude, sptab)
@@ -529,11 +529,12 @@ contains
     integer                          :: i, k, i_lo_ch, i_up_ch, i_br
     real(kind=8)                     :: c
     real(kind=8), dimension(I_ONE:ncre)    :: init_n, init_e
-    type (spec_mod_trms), intent(in) :: sptab
+    type (spec_mod_trms), intent(in), optional :: sptab
     real(kind=8), intent(in)         :: f_amplitude
     logical :: exit_code
-        u_b = sptab%ub
-        u_d = sptab%ud
+        u_b = zero ; u_d = zero
+        if(present(sptab)) u_b = sptab%ub
+        if(present(sptab)) u_d = sptab%ud
         
         approx_p_lo = e_small_approx_p_lo
         approx_p_up = e_small_approx_p_up
@@ -541,8 +542,8 @@ contains
         init_e = zero
         init_n = zero
 
-        u_b_0 = u_b
-        u_d_0 = u_d
+        if(present(sptab)) u_b_0 = u_b
+        if(present(sptab)) u_d_0 = u_d
        
         f = zero
         q = zero
@@ -592,7 +593,7 @@ contains
 #ifdef TEST_CRESP
 !      call p_algorithm_accuracy_test  ! tests accuracy of algorithm which later seeks value of p_up using n, e, f and e_small
 #endif /* TEST_CRESP */
-! Pure power law spectrum initial condition
+! Pure power law spectrum initial condition (default case)
         q = q_init
         f = zero
         f = f_amplitude * (p/p_lo_init)**(-q_init)
@@ -601,12 +602,15 @@ contains
                 if (f(i) .gt. zero ) f(i) = f(i) + e_small_to_f(p(i))
             enddo
         endif
+        if (initial_condition == "powl") call cresp_init_powl_spectrum(n, e, f_amplitude, q_init, p_lo_init, p_up_init)
         if (initial_condition == 'brpl') then
 ! Power law with a break at p_lo_init initial condition
 ! In this case initial spectrum with a break at p_min_fix is assumed, the initial slope 
 ! on the left side of the break is just -q_init for simplicity.
             q(i_lo+1) = -q_init
             f(i_lo)   = f(i_lo+1) * (p(i_lo+1)/p_lo_init) ** q(i_lo+1)
+            e = fq_to_e(p(0:ncre-1), p(1:ncre), f(0:ncre-1), q(1:ncre), active_bins)
+            n = fq_to_n(p(0:ncre-1), p(1:ncre), f(0:ncre-1), q(1:ncre), active_bins)
         endif
         if (initial_condition == 'symf') then
             i_br = int((i_lo+i_up)/2)
@@ -615,8 +619,10 @@ contains
             do i=1,i_br-i_lo
                 f(i_br-i) = f(i_br+i)
             enddo
-        if ((i_up - i_br .ne. i_br - i_lo))  p_up = p_up - (p_up - p_fix(i_up-1))
-        p(i_up) = p_up ; i_up = i_up -1 
+            if ((i_up - i_br .ne. i_br - i_lo))  p_up = p_up - (p_up - p_fix(i_up-1))
+            p(i_up) = p_up ; i_up = i_up -1
+            e = fq_to_e(p(0:ncre-1), p(1:ncre), f(0:ncre-1), q(1:ncre), active_bins)
+            n = fq_to_n(p(0:ncre-1), p(1:ncre), f(0:ncre-1), q(1:ncre), active_bins)
         endif
         if (initial_condition == 'syme' ) then
             i_br = int((i_lo+i_up)/2)
@@ -625,7 +631,9 @@ contains
                 f(i_br-i) = f(i_br)*(p(i_br)/p(i_br-i))**(q(i_br-i+1))
             enddo
             if ((i_up - i_br .ne. i_br - i_lo))  p_up = p_up - (p_up - p_fix(i_up-1))
-            p(i_up) = p_up ; i_up = i_up -1 
+            p(i_up) = p_up ; i_up = i_up -1
+            e = fq_to_e(p(0:ncre-1), p(1:ncre), f(0:ncre-1), q(1:ncre), active_bins)
+            n = fq_to_n(p(0:ncre-1), p(1:ncre), f(0:ncre-1), q(1:ncre), active_bins)
         endif
         if(initial_condition == 'bump') then  ! TODO - @cresp_grid energy normalization and integral to scale cosmic ray electrons with nucleon energy density!
 ! Gaussian bump-type initial condition for energy distribution
@@ -649,10 +657,9 @@ contains
             do i=1, ncre
                 q(i) = pf_to_q(p(i-1),p(i),f(i-1),f(i)) !-log(f(i)/f(i-1))/log(p(i)/p(i-1))
             enddo
+            e = fq_to_e(p(0:ncre-1), p(1:ncre), f(0:ncre-1), q(1:ncre), active_bins)
+            n = fq_to_n(p(0:ncre-1), p(1:ncre), f(0:ncre-1), q(1:ncre), active_bins)
         endif
-
-        e = fq_to_e(p(0:ncre-1), p(1:ncre), f(0:ncre-1), q(1:ncre), active_bins)
-        n = fq_to_n(p(0:ncre-1), p(1:ncre), f(0:ncre-1), q(1:ncre), active_bins)
 
         crel%p = p
         crel%f = f
@@ -661,7 +668,7 @@ contains
         crel%n = n
         crel%i_lo = i_lo
         crel%i_up = i_up
-   
+
         if ( e_small_approx_init_cond .gt. 0) then
             if ( (approx_p_up + e_small_approx_init_cond ) .gt. 0 )  call get_fqp_up(exit_code)
             if ( (approx_p_lo + e_small_approx_init_cond) .gt. 0 )  call get_fqp_lo(exit_code)
@@ -688,7 +695,7 @@ contains
                 print *, 'Extending the range of lower boundary bin after NR_2dim momentum search'
 #endif /* VERBOSE */
             enddo
-   
+
             do i=i_up, i_up_ch-1
                 p(i) = p_fix(i)
                 f(i) = f(i_up-1)* (p_fix(i)/p_fix(i_up-1))**(-q(i_up))
@@ -703,7 +710,7 @@ contains
             i_lo = i_lo_ch   ;   i_up = i_up_ch
             q(i_up_ch) = q(i_up)
             p(i_up) = p_fix(i_up);  p(i_up) = p_up
-      
+
             is_active_bin = .false.
             is_active_bin(i_lo+1:i_up) = .true.
             num_active_bins = count(is_active_bin) ! active arrays must be reevaluated - number of active bins and edges might have changed
@@ -723,7 +730,7 @@ contains
             crel%i_up = i_up
 
         endif
-        
+
 ! testing how the algorithm will handle discontinuity in the spectrum:
         if (test_spectrum_break) then
             e(int((i_lo+i_up)/2):int((i_lo+i_up)/2)+1) = 0.5*e_small ! some arbitrary values
@@ -742,11 +749,82 @@ contains
         print *, 'e_tot0 =', e_tot0
         print *, 'Initialization finished'
 #endif /* VERBOSE */
-     
        call deallocate_active_arrays
-    
+
   end subroutine cresp_init_state
 
+!-------------------------------------------------------------------------------------------------
+! Assumes power-law spectrum, without breaks. In principle the same thing is done in cresp_init_state, but
+! init_state cannot be called from "outside".
+!-------------------------------------------------------------------------------------------------
+  subroutine cresp_init_powl_spectrum(n_inout, e_inout, f_in, q_in, p_dist_lo, p_dist_up)
+   use constants,      only: zero
+   use initcrspectrum, only: ncre, p_fix, w, cresp_all_bins, cresp_all_edges
+   use diagnostics,    only: my_deallocate
+   implicit none
+     real(kind=8), dimension(1:ncre), intent(inout) :: n_inout, e_inout
+     real(kind=8), intent(in) ::     f_in, q_in, p_dist_lo, p_dist_up
+     real(kind=8), dimension(1:ncre) :: n_add, e_add, q_add
+     real(kind=8), dimension(0:ncre) :: p_range_add , f_add
+     integer(kind=4), allocatable, dimension(:) :: act_bins, act_edges
+     integer(kind=4) :: i_l, i_u !, n_bins
+         n_add = zero  ; e_add = zero  ; q_add = zero  ; f_add = zero  ; p_range_add = zero
+
+         i_l = int(floor(log10(p_dist_lo/p_fix(1))/w)) + 1
+         i_l = max(0, i_l)
+         i_l = min(i_l, ncre - 1)
+
+         i_u = int(floor(log10(p_dist_up/p_fix(1))/w)) + 2
+         i_u = max(1,i_u)
+         i_u = min(i_u,ncre)
+
+         p_range_add(i_l:i_u) = p_fix(i_l:i_u)
+         p_range_add(i_l) = p_dist_lo
+         p_range_add(i_u) = p_dist_up
+         if (.not.allocated(act_edges)) allocate(act_edges(i_u - i_l  ))
+         if (.not.allocated(act_bins )) allocate( act_bins(i_u - i_l+1))
+         act_edges =  cresp_all_edges(i_l  :i_u)
+         act_bins  =   cresp_all_bins(i_l+1:i_u)
+         q_add(act_bins) = q_in
+
+         f_add(act_edges) = f_in * (p_range_add(act_edges)/p_dist_lo)**(-q_in)
+
+         n_add = fq_to_n(p_range_add(0:ncre-1), p_range_add(1:ncre), f_add(0:ncre-1), q_add(1:ncre), act_bins)
+         e_add = fq_to_e(p_range_add(0:ncre-1), p_range_add(1:ncre), f_add(0:ncre-1), q_add(1:ncre), act_bins)
+
+         n_inout = n_inout + n_add
+         e_inout = e_inout + e_add
+
+         call my_deallocate(act_bins)
+         call my_deallocate(act_edges)
+  end subroutine cresp_init_powl_spectrum
+!-------------------------------------------------------------------------------------------------
+  subroutine e_tot_2_en_powl_init_params(n_inout, e_inout, e_in_total)
+   use initcrspectrum, only: ncre, p_lo_init, p_up_init, q_init
+   use diagnostics,    only: my_deallocate
+      real(kind=8), dimension(1:ncre), intent(inout):: n_inout, e_inout
+      real(kind=8), intent(inout)     :: e_in_total
+      real(kind=8) :: f_amplitude
+         f_amplitude = get_powl_f_ampl(e_in_total, p_lo_init, p_up_init, q_init)
+         call cresp_init_powl_spectrum(n_inout, e_inout, f_amplitude, q_init, p_lo_init, p_up_init)
+  end subroutine e_tot_2_en_powl_init_params
+!-------------------------------------------------------------------------------------------------
+  function get_powl_f_ampl(e_tot, p_dist_lo, p_dist_up, q_dist)
+  use constants,       only: zero, I_ONE, I_FOUR, fpi
+  use cresp_variables, only: clight ! use units,    only: clight
+    real(kind=8), intent(in) :: e_tot, p_dist_lo, p_dist_up, q_dist
+    real(kind=8)             :: get_powl_f_ampl
+        get_powl_f_ampl = zero
+        get_powl_f_ampl = (e_tot / (fpi * clight * p_dist_lo ** I_FOUR) ) * ((I_FOUR - q_dist) / &
+                          ((p_dist_up/p_dist_lo)**(I_FOUR - q_dist) - I_ONE  ))
+  end function get_powl_f_ampl
+!-------------------------------------------------------------------------------------------------
+  function e_tot_2_f_init_params(e_in_total)
+   use initcrspectrum, only: p_lo_init, p_up_init, q_init
+   real(kind=8), intent(in) :: e_in_total
+   real(kind=8) :: e_tot_2_f_init_params
+      e_tot_2_f_init_params = get_powl_f_ampl(e_in_total, p_lo_init, p_up_init, q_init)
+  end function e_tot_2_f_init_params
 !-------------------------------------------------------------------------------------------------
 ! Testing p_up / p_lo finding algorithm, p_up -> p_u to avoid collisions with p_up values.
 !-------------------------------------------------------------------------------------------------
