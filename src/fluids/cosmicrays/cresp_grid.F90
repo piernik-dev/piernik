@@ -3,9 +3,9 @@ module cresp_grid
 
 ! This module contains routines necessary to initialize, compute timestep for cre bins and to update spectrum in the whole domain
 ! as the crspectrum module operates on a single grid cell.
-      use initcosmicrays, only: iarr_cre_e, iarr_cre_n
-      use initcrspectrum, only: ncre
-      use global,         only: dt, t
+   use initcosmicrays,  only: iarr_cre_e, iarr_cre_n
+   use initcrspectrum,  only: ncre
+   use global,          only: dt, t
 
       private
       public        dt_cre, cresp_update_grid, cresp_init_grid, grid_cresp_timestep, cfl_cresp_violation
@@ -16,15 +16,15 @@ module cresp_grid
 contains
 
  subroutine cresp_update_grid
-  use cg_leaves,      only: leaves
-  use cg_list,        only: cg_list_element
-  use constants,      only: xdim, ydim, zdim, zero
-  use grid_cont,      only: grid_container
+  use cg_leaves,        only: leaves
+  use cg_list,          only: cg_list_element
+  use constants,        only: xdim, ydim, zdim
+  use grid_cont,        only: grid_container
   use cresp_crspectrum, only:cresp_update_cell, printer
-  use initcrspectrum, only: spec_mod_trms, virtual_e, virtual_n, eps, prevent_neg_e, synch_active, adiab_active, cresp
+  use initcrspectrum,   only: spec_mod_trms, virtual_e, virtual_n, synch_active, adiab_active, cresp
   use named_array_list, only: qna
-  use crhelpers,      only: divv_n
-  use func,           only: emag, ekin, operator(.equals.), operator(.notequals.)
+  use crhelpers,        only: divv_n
+  use func,             only: emag, ekin, operator(.equals.), operator(.notequals.)
   implicit none
     integer                         :: i, j, k
     type(cg_list_element),  pointer :: cgl
@@ -38,14 +38,6 @@ contains
             do k = cg%ks, cg%ke
                 do j = cg%js, cg%je
                     do i = cg%is, cg%ie
-                        if ( prevent_neg_e ) then ! e = eps where it dropped below zero due to diffusion algorithm - TEMP workaround - move to scheme
-                            where (cg%u(iarr_cre_n, i, j, k) .lt. zero)
-                                cg%u(iarr_cre_n, i, j, k) = eps
-                            endwhere
-                            where (cg%u(iarr_cre_e, i, j, k) .lt. zero)
-                                cg%u(iarr_cre_e, i, j, k) = eps
-                            endwhere
-                        endif
                         sptab%ud = 0.0 ; sptab%ub = 0.0 ; sptab%ucmb = 0.0
                         cresp%n    = cg%u(iarr_cre_n, i, j, k)
                         cresp%e    = cg%u(iarr_cre_e, i, j, k)
@@ -69,13 +61,13 @@ contains
   end subroutine cresp_update_grid
 !----------------------------------------------------------------------------------------------------
   subroutine cresp_init_grid
-   use cg_leaves,      only: leaves
-   use cg_list,        only: cg_list_element
-   use constants,      only: LO, HI, xdim, ydim, zdim, zero
-   use grid_cont,      only: grid_container
-   use initcrspectrum, only: ncre, f_init, p_up_init, p_lo_init, q_init, cre_eff, initial_condition, bump_amp, &
+   use cg_leaves,       only: leaves
+   use cg_list,         only: cg_list_element
+   use constants,       only: LO, HI, xdim, ydim, zdim, zero
+   use grid_cont,       only: grid_container
+   use initcrspectrum,  only: ncre, f_init, p_up_init, p_lo_init, q_init, cre_eff, initial_condition, bump_amp, &
                              virtual_e, virtual_n, e_small, e_small_approx_p_lo, e_small_approx_p_up
-   use cresp_crspectrum, only: cresp_init_state, cresp_allocate_all, printer, e_threshold_lo, e_threshold_up, &
+   use cresp_crspectrum,only: cresp_init_state, cresp_allocate_all, printer, e_threshold_lo, e_threshold_up, &
                                fail_count_interpol, fail_count_no_sol, fail_count_NR_2dim, fail_count_comp_q, second_fail
    use dataio_pub,      only: warn, printinfo
    implicit none
@@ -121,17 +113,17 @@ contains
   end subroutine cresp_init_grid
 !----------------------------------------------------------------------------------------------------
   subroutine grid_cresp_timestep
-   use cg_leaves,        only: leaves
-   use cg_list,          only: cg_list_element
-   use crhelpers,        only: divv_n
-   use func,             only: emag !, operator(.equals.), operator(.notequals.)
-   use grid_cont,        only: grid_container
-   use constants,        only: xdim, ydim, zdim
-   use named_array_list, only: qna
-   use constants,        only: one, half
-   use initcrspectrum,   only: spec_mod_trms, cfl_cre, synch_active, adiab_active
-   use initcosmicrays,   only: K_cre_paral, K_cre_perp
-   use timestep_cresp,   only: cresp_timestep, dt_cre_min_ub, dt_cre_min_ud
+   use cg_leaves,       only: leaves
+   use cg_list,         only: cg_list_element
+   use crhelpers,       only: divv_n
+   use func,            only: emag !, operator(.equals.), operator(.notequals.)
+   use grid_cont,       only: grid_container
+   use constants,       only: xdim, ydim, zdim
+   use named_array_list,only: qna
+   use constants,       only: one, half
+   use initcrspectrum,  only: spec_mod_trms, cfl_cre, synch_active, adiab_active
+   use initcosmicrays,  only: K_cre_paral, K_cre_perp
+   use timestep_cresp,  only: cresp_timestep, dt_cre_min_ub, dt_cre_min_ud
    implicit none
     integer(kind=4)                 :: i, j, k, i_up_max, i_up_max_tmp
     type(grid_container), pointer   :: cg

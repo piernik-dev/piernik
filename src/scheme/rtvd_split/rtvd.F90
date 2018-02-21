@@ -264,7 +264,8 @@ contains
       use sourcecosmicrays, only: src_gpcr
 #ifdef COSM_RAY_ELECTRONS
       use cresp_crspectrum, only: src_gpcresp
-      use initcosmicrays,   only: iarr_crn, smallecr, iarr_cre_e
+      use initcosmicrays,   only: iarr_crn, smallecr, iarr_cre_e, iarr_cre
+      use initcrspectrum,   only: eps, prevent_neg_en
 #else
       use initcosmicrays,   only: iarr_crs, smallecr
 #endif /* COSM_RAY_ELECTRONS */
@@ -526,6 +527,7 @@ contains
             u1(:, iarr_all_mx(flind%ion%pos)) = u1(:, iarr_all_mx(flind%ion%pos)) + rk2coef(integration_order,istep) * grad_pcr * dt
             call src_gpcresp(u(:,iarr_cre_e(:)), n, dx, grad_pcresp)
             u1(:, iarr_all_mx(flind%ion%pos)) = u1(:, iarr_all_mx(flind%ion%pos)) + rk2coef(integration_order,istep) * grad_pcresp * dt
+            if (prevent_neg_en) u1(:,                iarr_cre(:)) = max(eps, u1(:, iarr_cre(:)))
 #else /* !COSM_RAY_ELECTRONS & COSM_RAYS & IONIZED */
             call src_gpcr(u, n, dx, divv, decr, grad_pcr)
             u1(:,                iarr_crs(:)) = u1(:,               iarr_crs(:))  + rk2coef(integration_order,istep) * decr(:,:) * dt

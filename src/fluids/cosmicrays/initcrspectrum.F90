@@ -38,7 +38,7 @@ module initcrspectrum
  logical            :: NR_run_refine_pf  = .false.      ! < enables "refine_grids" subroutines that fill empty spaces on the solution grid
  logical            :: NR_refine_solution_q = .false.    ! < enables NR_1D refinement for value of interpolated "q" value
  logical            :: NR_refine_solution_pf = .false.  ! < enables NR_2D refinement for interpolated values of "p" and "f". Note - algorithm tries to refine values if interpolation was unsuccessful.
- logical            :: prevent_neg_e = .true.   ! < forces e,n=eps where e or n drops below zero due to diffusion algorithm (TEMP workaround)
+ logical            :: prevent_neg_en = .true.  ! < forces e,n=eps where e or n drops below zero due to diffusion algorithm (TEMP workaround)
  logical            :: test_spectrum_break   = .false.  ! < introduce break in the middle of the spectrum (to see how algorithm handles it), TEMP
  logical            :: synch_active = .true.    ! < TEST feature - turns on / off synchrotron cooling @ CRESP
  logical            :: adiab_active = .true.    ! < TEST feature - turns on / off adiabatic   cooling @ CRESP
