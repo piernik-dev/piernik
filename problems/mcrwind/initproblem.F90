@@ -187,9 +187,9 @@ contains
       use cresp_NR_method, only: cresp_initialize_guess_grids
       use cresp_grid,      only: cresp_init_grid
       use initcrspectrum,  only: taylor_coeff_2nd, taylor_coeff_3rd, expan_order
+      use initcosmicrays,  only: iarr_cre_n, iarr_cre_e
 #ifdef SN_GALAXY
       use initcrspectrum,  only: cresp
-      use initcosmicrays,  only: iarr_cre_n, iarr_cre_e
 #endif /* SN_GALAXY */
       use dataio_pub,      only: msg, printinfo
 #endif /* COSM_RAY_ELECTRONS */
@@ -202,6 +202,9 @@ contains
       type(grid_container),   pointer :: cg
 #ifdef SN_GALAXY
       real                            :: decr, x1, x2, y1, y2, z1
+#ifdef COSM_RAY_ELECTRONS
+      real                            :: e_tot_sn
+#endif /* COSM_RAY_ELECTRONS */
 #endif /* SN_GALAXY */
 
 #ifdef COSM_RAYS_SOURCES
@@ -253,6 +256,10 @@ contains
 #ifdef COSM_RAYS
                   cg%u(iarr_crn,i,j,k)  = 0.0
                   cg%u(iarr_crn(1),i,j,k) = beta_cr*fl%cs2 * cg%u(fl%idn,i,j,k)/( gamma_crn(1) - 1.0 )
+#ifdef COSM_RAY_ELECTRONS
+                  cg%u(iarr_cre_n,i,j,k) = 0.0
+                  cg%u(iarr_cre_e,i,j,k) = 0.0
+#endif /* COSM_RAY_ELECTRONS */
 #ifdef SN_GALAXY
 ! Single SN explosion in x0,y0,z0 at t = 0 if amp_cr /= 0
                   if (any([eCRSP(icr_H1), eCRSP(icr_C12)])) then
@@ -264,9 +271,10 @@ contains
                   if (eCRSP(icr_H1 )) cg%u(iarr_crn(cr_table(icr_H1 )),i,j,k)= cg%u(iarr_crn(cr_table(icr_H1 )),i,j,k) +     decr
                   if (eCRSP(icr_C12)) cg%u(iarr_crn(cr_table(icr_C12)),i,j,k)= cg%u(iarr_crn(cr_table(icr_C12)),i,j,k) + 0.1*decr
 #ifdef COSM_RAY_ELECTRONS
+                  e_tot_sn = decr * cre_eff
                   cresp%n = 0.0 ;  cresp%e = 0.0
-                  if (decr * cre_eff .gt. e_small) then     ! early phase - fill cells only when total passed energy is greater than e_small
-                        call cresp_init_state(cresp%n,cresp%e, e_tot_2_f_init_params(decr * cre_eff))  ! initializes whole spectrum, accounts for "widening" due to e_small approximation
+                  if (e_tot_sn .gt. e_small) then     ! early phase - fill cells only when total passed energy is greater than e_small
+                        call cresp_init_state(cresp%n,cresp%e, e_tot_2_f_init_params(e_tot_sn))  ! initializes whole spectrum, accounts for "widening" due to e_small approximation
                   endif                                                                                ! distribution function amplitude computed from total explosion energy multiplied by factor cre_eff
                   cg%u(iarr_cre_n,i,j,k) = cg%u(iarr_cre_n,i,j,k) + cresp%n
                   cg%u(iarr_cre_e,i,j,k) = cg%u(iarr_cre_e,i,j,k) + cresp%e
@@ -510,13 +518,11 @@ contains
 #endif /* SHEAR */
 #ifdef COSM_RAY_ELECTRONS
       real          :: e_tot_sn
-      logical, save :: initialize_cresp = .true.
 #endif /* COSM_RAY_ELECTRONS */
 
       xsn = pos(xdim)
       ysn = pos(ydim)
       zsn = pos(zdim)
-
       cgl => leaves%first
       do while (associated(cgl))
          cg => cgl%cg
@@ -557,12 +563,8 @@ contains
 #ifdef COSM_RAY_ELECTRONS
                   e_tot_sn = decr * cre_eff
                   cresp%n = 0.0 ;  cresp%e = 0.0
-                  if (initialize_cresp) then
-                     if (decr * cre_eff .gt. e_small) then     ! early phase - fill cells only when total passed energy is greater than e_small, amplitude computed from total explosion energy multiplied by factor cre_eff
+                  if (e_tot_sn .gt. e_small) then     ! early phase - fill cells only when total passed energy is greater than e_small, amplitude computed from total explosion energy multiplied by factor cre_eff
                         call cresp_init_state(cresp%n,cresp%e, e_tot_2_f_init_params(e_tot_sn))  ! initializes whole spectrum, accounts for "widening" due to e_small approximation
-                     endif
-                  else
-                     call e_tot_2_en_powl_init_params(cresp%n, cresp%e, e_tot_sn)
                   endif
                   cg%u(iarr_cre_n,i,j,k) = cg%u(iarr_cre_n,i,j,k) + cresp%n
                   cg%u(iarr_cre_e,i,j,k) = cg%u(iarr_cre_e,i,j,k) + cresp%e
@@ -573,7 +575,6 @@ contains
          enddo ! k
          cgl => cgl%nxt
       enddo
-
    end subroutine cr_sn_beware
 #endif /* CR_SN */
 end module initproblem
