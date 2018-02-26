@@ -114,41 +114,40 @@ contains
 
       use constants,        only: retry_n, AT_IGNORE, dsetnamelen
       use dataio_pub,       only: warn, die, msg
-      use named_array_list, only: qna, wna
+      use named_array_list, only: qna, wna, na_var_list
 
       implicit none
 
-      integer :: i
+      integer :: i, j
       character(len=dsetnamelen) :: rname
+      class(na_var_list), pointer :: na
 
-      !! ToDo: despaghettify
+      ! for simplicity create an array of pointers to qna and wna
+      type :: na_p
+         class(na_var_list), pointer :: p
+      end type na_p
+      type(na_p), dimension(2) :: na_lists  ! currently we have only 2 such lists, fna may join in the future
 
-      do i = lbound(qna%lst(:), dim=1), ubound(qna%lst(:), dim=1)
-         if (qna%lst(i)%restart_mode /= AT_IGNORE) then
-            if (len_trim(qna%lst(i)%name) + len_trim(retry_n) > dsetnamelen) then
-               write(msg,'(3a,i3,a)')"[fluidupdate:restart_arrays] field name '", qna%lst(i)%name, "' too long. Try to shorten it to ", dsetnamelen - len_trim(retry_n), " characters"
-               call die(msg)
-            endif
-            write(rname, '(2a)') trim(qna%lst(i)%name), trim(retry_n)
-            if (.not. qna%exists(rname)) then
-               write(msg,'(5a)')"[fluidupdate:restart_arrays] field name '", qna%lst(i)%name, "' does not have backup field '", rname, "'"
-               call warn(msg)
-            endif
-         endif
-      enddo
+      na_lists(1)%p => qna
+      na_lists(2)%p => wna
 
-      do i = lbound(wna%lst(:), dim=1), ubound(wna%lst(:), dim=1)
-         if (wna%lst(i)%restart_mode /= AT_IGNORE) then
-            if (len_trim(wna%lst(i)%name) + len_trim(retry_n) > dsetnamelen) then
-               write(msg,'(3a,i3,a)')"[fluidupdate:restart_arrays] field name '", wna%lst(i)%name, "' too long. Try to shorten it to ", dsetnamelen - len_trim(retry_n), " characters"
-               call die(msg)
+      do j = lbound(na_lists, dim=1), ubound(na_lists, dim=1)
+         na => na_lists(j)%p
+
+         do i = lbound(na%lst(:), dim=1), ubound(na%lst(:), dim=1)
+            if (na%lst(i)%restart_mode /= AT_IGNORE) then
+               if (len_trim(na%lst(i)%name) + len_trim(retry_n) > dsetnamelen) then
+                  write(msg,'(3a,i3,a)')"[fluidupdate:restart_arrays] field name '", na%lst(i)%name, "' too long. Try to shorten it to ", dsetnamelen - len_trim(retry_n), " characters"
+                  call die(msg)
+               endif
+               write(rname, '(2a)') trim(na%lst(i)%name), trim(retry_n)
+               if (.not. na%exists(rname)) then
+                  write(msg,'(5a)')"[fluidupdate:restart_arrays] field name '", na%lst(i)%name, "' does not have backup field '", rname, "'"
+                  call warn(msg)
+               endif
             endif
-            write(rname, '(2a)') trim(wna%lst(i)%name), trim(retry_n)
-            if (.not. wna%exists(rname)) then
-               write(msg,'(5a)')"[fluidupdate:restart_arrays] field name '", wna%lst(i)%name, "' does not have backup field '", rname, "'"
-               call warn(msg)
-            endif
-         endif
+         enddo
+
       enddo
 
    end subroutine restart_arrays
