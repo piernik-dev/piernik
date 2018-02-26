@@ -66,6 +66,8 @@ contains
 
       if (.not.repeat_step) return
 
+      call restart_arrays
+
       if (cfl_violated) then
          if (master) call warn("[fluidupdate:fluid_update] Redoing previous step...")
          t = t_saved
@@ -102,8 +104,54 @@ contains
          call warn(msg)
       endif
 
-
    end subroutine repeat_fluidstep
+
+!>
+!! \brief Check if the arrays exist and create them if needed
+!<
+
+   subroutine restart_arrays
+
+      use constants,        only: retry_n, AT_IGNORE, dsetnamelen
+      use dataio_pub,       only: warn, die, msg
+      use named_array_list, only: qna, wna
+
+      implicit none
+
+      integer :: i
+      character(len=dsetnamelen) :: rname
+
+      !! ToDo: despaghettify
+
+      do i = lbound(qna%lst(:), dim=1), ubound(qna%lst(:), dim=1)
+         if (qna%lst(i)%restart_mode /= AT_IGNORE) then
+            if (len_trim(qna%lst(i)%name) + len_trim(retry_n) > dsetnamelen) then
+               write(msg,'(3a,i3,a)')"[fluidupdate:restart_arrays] field name '", qna%lst(i)%name, "' too long. Try to shorten it to ", dsetnamelen - len_trim(retry_n), " characters"
+               call die(msg)
+            endif
+            write(rname, '(2a)') trim(qna%lst(i)%name), trim(retry_n)
+            if (.not. qna%exists(rname)) then
+               write(msg,'(5a)')"[fluidupdate:restart_arrays] field name '", qna%lst(i)%name, "' does not have backup field '", rname, "'"
+               call warn(msg)
+            endif
+         endif
+      enddo
+
+      do i = lbound(wna%lst(:), dim=1), ubound(wna%lst(:), dim=1)
+         if (wna%lst(i)%restart_mode /= AT_IGNORE) then
+            if (len_trim(wna%lst(i)%name) + len_trim(retry_n) > dsetnamelen) then
+               write(msg,'(3a,i3,a)')"[fluidupdate:restart_arrays] field name '", wna%lst(i)%name, "' too long. Try to shorten it to ", dsetnamelen - len_trim(retry_n), " characters"
+               call die(msg)
+            endif
+            write(rname, '(2a)') trim(wna%lst(i)%name), trim(retry_n)
+            if (.not. wna%exists(rname)) then
+               write(msg,'(5a)')"[fluidupdate:restart_arrays] field name '", wna%lst(i)%name, "' does not have backup field '", rname, "'"
+               call warn(msg)
+            endif
+         endif
+      enddo
+
+   end subroutine restart_arrays
 
 !>
 !! \brief Advance the solution by two timesteps using directional splitting

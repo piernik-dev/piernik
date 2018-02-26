@@ -159,11 +159,11 @@ module constants
    ! fluids
    character(len=dsetnamelen), parameter :: fluid_n = "fluid"   !< main array
    character(len=dsetnamelen), parameter :: uh_n    = "uh"      !< auxiliary array for half-step values
-   character(len=dsetnamelen), parameter :: u0_n    = "u0"      !< backup copy for timestep retrying
+   character(len=dsetnamelen), parameter :: u0_n    = "fluid.retry" !< backup copy for timestep retrying
    ! magnetic field
    character(len=dsetnamelen), parameter :: mag_n   = "mag"     !< main array
    character(len=dsetnamelen), parameter :: mag_cc_n = "magcc"  !< cell-centered magnetic field for temporarystorage
-   character(len=dsetnamelen), parameter :: b0_n    = "b0"      !< backup copy for timestep retrying
+   character(len=dsetnamelen), parameter :: b0_n    = "mag.retry"      !< backup copy for timestep retrying
    ! gravitational potential
    character(len=dsetnamelen), parameter :: gp_n    = "gp"      !< static, external field, must be explicitly set to 0. if no external fields are applied
    character(len=dsetnamelen), parameter :: sgp_n   = "sgp"     !< current field from self-gravity
@@ -175,6 +175,8 @@ module constants
    character(len=dsetnamelen), parameter :: cs_i2_n = "cs_iso2" !< map of imposed isothermal sound speed
    character(len=dsetnamelen), parameter :: wcr_n   = "wcr"     !< auxiliary array for CR diffusion
    character(len=dsetnamelen), parameter :: wa_n    = "wa"      !< general-purpose auxiliary 3D array
+
+   character(len=dsetnamelen), parameter :: retry_n = '.retry'  !< append to mark an auto-generated copy for timestep retrying
 
    ! timer names
    character(len=*), parameter :: tmr_fu  = "fluid_update"   !< main timer used to measure fluid_update step
