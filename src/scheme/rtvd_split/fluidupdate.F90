@@ -112,8 +112,10 @@ contains
 
    subroutine restart_arrays
 
-      use constants,        only: retry_n, AT_IGNORE, dsetnamelen
-      use dataio_pub,       only: warn, die, msg
+      use cg_list_global,   only: all_cg
+      use constants,        only: retry_n, AT_IGNORE, dsetnamelen, INVALID
+      use dataio_pub,       only: printinfo, die, msg
+      use mpisetup,         only: master
       use named_array_list, only: qna, wna, na_var_list
 
       implicit none
@@ -142,8 +144,15 @@ contains
                endif
                write(rname, '(2a)') trim(na%lst(i)%name), trim(retry_n)
                if (.not. na%exists(rname)) then
-                  write(msg,'(5a)')"[fluidupdate:restart_arrays] field name '", na%lst(i)%name, "' does not have backup field '", rname, "'"
-                  call warn(msg)
+                  if (master) then
+                     write(msg,'(3a)')"[fluidupdate:restart_arrays] creating backup field '", rname, "'"
+                     call printinfo(msg)
+                  endif
+                  if (na%lst(i)%dim4 /= INVALID) then
+                     call all_cg%reg_var(rname, dim4=na%lst(i)%dim4, position=na%lst(i)%position, multigrid=na%lst(i)%multigrid)
+                  else
+                     call all_cg%reg_var(rname,                      position=na%lst(i)%position, multigrid=na%lst(i)%multigrid)
+                  endif
                endif
             endif
          enddo
