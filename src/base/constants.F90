@@ -174,8 +174,6 @@ module constants
    character(len=dsetnamelen), parameter :: wcr_n   = "wcr"     !< auxiliary array for CR diffusion
    character(len=dsetnamelen), parameter :: wa_n    = "wa"      !< general-purpose auxiliary 3D array
 
-   character(len=dsetnamelen), parameter :: retry_n = '.retry'  !< append to mark an auto-generated copy for timestep retrying
-
    ! timer names
    character(len=*), parameter :: tmr_fu  = "fluid_update"   !< main timer used to measure fluid_update step
    character(len=*), parameter :: tmr_hdf = "hdf_dump"       !< timer for I/O operations

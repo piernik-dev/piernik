@@ -49,6 +49,30 @@ module fluidupdate   ! SPLIT
 contains
 
 !<
+!! \brief Find the name for backup field when repeating timestep is allowed.
+!>
+
+   function get_rname(name) result(rname)
+
+      use constants,  only: dsetnamelen
+      use dataio_pub, only: die, msg
+
+      implicit none
+
+      character(len=dsetnamelen), intent(in) :: name
+
+      character(len=dsetnamelen), parameter :: retry_n = '.retry'  !< append to mark an auto-generated copy for timestep retrying
+      character(len=dsetnamelen) :: rname
+
+      if (len_trim(name) + len_trim(retry_n) > dsetnamelen) then
+         write(msg,'(3a,i3,a)')"[fluidupdate:get_rname] field name '", name, "' is too long. Try to shorten it to ", dsetnamelen - len_trim(retry_n), " characters"
+         call die(msg)
+      endif
+      write(rname, '(2a)') trim(name), trim(retry_n)
+
+   end function get_rname
+
+!<
 !! \brief Save the current state after correct time-step or restore previously saved state and try a shorter timestep.
 !!
 !! \warning There might be other evolving variables (such as mass_defect::magic_mass) that should be added here
@@ -60,7 +84,7 @@ contains
 
       use cg_leaves,        only: leaves
       use cg_list,          only: cg_list_element
-      use constants,        only: pSUM, I_ONE, dsetnamelen, AT_IGNORE, retry_n
+      use constants,        only: pSUM, I_ONE, dsetnamelen, AT_IGNORE
       use dataio_pub,       only: warn, msg, die
       use global,           only: dt, dtm, t, t_saved, cfl_violated, nstep, nstep_saved, dt_max_grow, repeat_step
       use mass_defect,      only: downgrade_magic_mass
@@ -100,7 +124,7 @@ contains
             na => na_lists(j)%p
             do i = lbound(na%lst(:), dim=1), ubound(na%lst(:), dim=1)
                if (na%lst(i)%restart_mode /= AT_IGNORE) then
-                  write(rname, '(2a)') trim(na%lst(i)%name), trim(retry_n)
+                  rname = get_rname(na%lst(i)%name)
                   if (cfl_violated) then
                      if (cgl%cg%has_previous_timestep) then
                         select type(na)  !! ToDo: unify qna and wna somehow at least in the grid_container
@@ -149,8 +173,8 @@ contains
    subroutine restart_arrays
 
       use cg_list_global,   only: all_cg
-      use constants,        only: retry_n, AT_IGNORE, dsetnamelen, INVALID
-      use dataio_pub,       only: printinfo, die, msg
+      use constants,        only: AT_IGNORE, dsetnamelen, INVALID
+      use dataio_pub,       only: printinfo, msg
       use mpisetup,         only: master
       use named_array_list, only: qna, wna, na_var_list
 
@@ -168,11 +192,7 @@ contains
 
          do i = lbound(na%lst(:), dim=1), ubound(na%lst(:), dim=1)
             if (na%lst(i)%restart_mode /= AT_IGNORE) then
-               if (len_trim(na%lst(i)%name) + len_trim(retry_n) > dsetnamelen) then
-                  write(msg,'(3a,i3,a)')"[fluidupdate:restart_arrays] field name '", na%lst(i)%name, "' too long. Try to shorten it to ", dsetnamelen - len_trim(retry_n), " characters"
-                  call die(msg)
-               endif
-               write(rname, '(2a)') trim(na%lst(i)%name), trim(retry_n)
+               rname = get_rname(na%lst(i)%name)
                if (.not. na%exists(rname)) then
                   if (master) then
                      write(msg,'(3a)')"[fluidupdate:restart_arrays] creating backup field '", rname, "'"
