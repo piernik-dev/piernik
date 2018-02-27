@@ -159,11 +159,9 @@ module constants
    ! fluids
    character(len=dsetnamelen), parameter :: fluid_n = "fluid"   !< main array
    character(len=dsetnamelen), parameter :: uh_n    = "uh"      !< auxiliary array for half-step values
-   character(len=dsetnamelen), parameter :: u0_n    = "u0"      !< backup copy for timestep retrying
    ! magnetic field
    character(len=dsetnamelen), parameter :: mag_n   = "mag"     !< main array
    character(len=dsetnamelen), parameter :: mag_cc_n = "magcc"  !< cell-centered magnetic field for temporarystorage
-   character(len=dsetnamelen), parameter :: b0_n    = "b0"      !< backup copy for timestep retrying
    ! gravitational potential
    character(len=dsetnamelen), parameter :: gp_n    = "gp"      !< static, external field, must be explicitly set to 0. if no external fields are applied
    character(len=dsetnamelen), parameter :: sgp_n   = "sgp"     !< current field from self-gravity
