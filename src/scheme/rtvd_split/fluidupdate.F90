@@ -32,10 +32,19 @@
 
 module fluidupdate   ! SPLIT
 ! pulled by RTVD
+
+   use named_array_list, only: na_var_list
+
    implicit none
 
    private
    public :: fluid_update
+
+   ! for simplicity create an array of pointers to qna and wna
+   type :: na_p
+      class(na_var_list), pointer :: p => null()
+   end type na_p
+   type(na_p), dimension(2) :: na_lists  ! currently we have only 2 such lists, fna may join in the future
 
 contains
 
@@ -51,18 +60,21 @@ contains
 
       use cg_leaves,        only: leaves
       use cg_list,          only: cg_list_element
-      use constants,        only: u0_n, b0_n, pSUM, I_ONE
-      use dataio_pub,       only: warn, msg
+      use constants,        only: pSUM, I_ONE, dsetnamelen, AT_IGNORE, retry_n
+      use dataio_pub,       only: warn, msg, die
       use global,           only: dt, dtm, t, t_saved, cfl_violated, nstep, nstep_saved, dt_max_grow, repeat_step
       use mass_defect,      only: downgrade_magic_mass
       use mpisetup,         only: master, piernik_MPI_Allreduce
-      use named_array_list, only: wna
+      use named_array_list, only: qna, wna, na_var_list, na_var_list_q, na_var_list_w
       use user_hooks,       only: user_reaction_to_redo_step
 
       implicit none
 
       type(cg_list_element), pointer :: cgl
       integer(kind=4) :: no_hist_count
+      class(na_var_list), pointer :: na
+      integer :: i, j
+      character(len=dsetnamelen) :: rname
 
       if (.not.repeat_step) return
 
@@ -82,20 +94,42 @@ contains
       cgl => leaves%first
       do while (associated(cgl))
          ! No need to take care of any cgl%cg%q arrays as long as graity is extrapolated from the prefious timestep.
-         if (cfl_violated) then
-            if (cgl%cg%has_previous_timestep) then
-               cgl%cg%u = cgl%cg%w(wna%ind(u0_n))%arr
-               cgl%cg%b = cgl%cg%w(wna%ind(b0_n))%arr
-            else
-               no_hist_count = no_hist_count + I_ONE
-            endif
-            call downgrade_magic_mass
-            if (associated(user_reaction_to_redo_step)) call user_reaction_to_redo_step
-         else
-            cgl%cg%w(wna%ind(u0_n))%arr = cgl%cg%u
-            cgl%cg%w(wna%ind(b0_n))%arr = cgl%cg%b
-            cgl%cg%has_previous_timestep = .true.
-         endif
+
+         ! error checking should've been done in restart_arrays, called few lines earlier
+         do j = lbound(na_lists, dim=1), ubound(na_lists, dim=1)
+            na => na_lists(j)%p
+            do i = lbound(na%lst(:), dim=1), ubound(na%lst(:), dim=1)
+               if (na%lst(i)%restart_mode /= AT_IGNORE) then
+                  write(rname, '(2a)') trim(na%lst(i)%name), trim(retry_n)
+                  if (cfl_violated) then
+                     if (cgl%cg%has_previous_timestep) then
+                        select type(na)  !! ToDo: unify qna and wna somehow at least in the grid_container
+                           type is (na_var_list_q)
+                              cgl%cg%q(i)%arr = cgl%cg%q(qna%ind(rname))%arr
+                           type is (na_var_list_w)
+                              cgl%cg%w(i)%arr = cgl%cg%w(wna%ind(rname))%arr
+                           class default
+                              call die("[fluidupdate:repeat_fluidstep] unknown named array list type ->")
+                        end select
+                     else
+                        no_hist_count = no_hist_count + I_ONE
+                     endif
+                     call downgrade_magic_mass
+                     if (associated(user_reaction_to_redo_step)) call user_reaction_to_redo_step
+                  else
+                     select type(na)
+                        type is (na_var_list_q)
+                           cgl%cg%q(qna%ind(rname))%arr = cgl%cg%q(i)%arr
+                        type is (na_var_list_w)
+                           cgl%cg%w(wna%ind(rname))%arr = cgl%cg%w(i)%arr
+                        class default
+                           call die("[fluidupdate:repeat_fluidstep] unknown named array list type <-")
+                     end select
+                     cgl%cg%has_previous_timestep = .true.
+                  endif
+               endif
+            enddo
+         enddo
          cgl => cgl%nxt
       enddo
       call piernik_MPI_Allreduce(no_hist_count, pSUM)
@@ -124,14 +158,8 @@ contains
       character(len=dsetnamelen) :: rname
       class(na_var_list), pointer :: na
 
-      ! for simplicity create an array of pointers to qna and wna
-      type :: na_p
-         class(na_var_list), pointer :: p
-      end type na_p
-      type(na_p), dimension(2) :: na_lists  ! currently we have only 2 such lists, fna may join in the future
-
-      na_lists(1)%p => qna
-      na_lists(2)%p => wna
+      if (.not. associated(na_lists(1)%p)) na_lists(1)%p => qna
+      if (.not. associated(na_lists(2)%p)) na_lists(2)%p => wna
 
       do j = lbound(na_lists, dim=1), ubound(na_lists, dim=1)
          na => na_lists(j)%p

@@ -45,7 +45,7 @@ module named_array_list
    implicit none
 
    private
-   public :: na_var, na_var_list, qna, wna
+   public :: na_var, na_var_list, na_var_list_q, na_var_list_w, qna, wna
 
    !> \brief Common properties of 3D and 4D named arrays
    type :: na_var
