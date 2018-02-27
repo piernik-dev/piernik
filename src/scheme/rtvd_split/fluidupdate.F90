@@ -135,7 +135,9 @@ contains
       call piernik_MPI_Allreduce(no_hist_count, pSUM)
       if (master .and. no_hist_count/=0) then
          write(msg, '(a,i6,a)')"[fluidupdate:repeat_fluidstep] Warning: not reverted: ", no_hist_count, " grid pieces."
-         call warn(msg)
+         call die(msg)
+         ! AMR domains require careful treatment of timestep retries.
+         ! Going back past rebalancing or refinement change would require updating whole AMR structure, not just field values.
       endif
 
    end subroutine repeat_fluidstep
