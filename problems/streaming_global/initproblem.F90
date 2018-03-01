@@ -571,7 +571,7 @@ contains
 
       use cg_leaves,        only: leaves
       use cg_list,          only: cg_list_element
-      use constants,        only: b0_n, fluid_n
+      use constants,        only: fluid_n
       use all_boundaries,   only: all_fluid_boundaries
       use named_array_list, only: wna
       use grid_cont,        only: grid_container
@@ -596,7 +596,6 @@ contains
          cg => cgl%cg
          cg%u  => cg%w(wna%ind(inid_n))%arr  ! BEWARE: Don't do things like that without parental supervision
          cg%b = 0.0
-         cg%w(wna%ind(b0_n))%arr = 0.0
          cgl => cgl%nxt
       enddo
 

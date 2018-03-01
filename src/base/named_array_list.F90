@@ -45,7 +45,7 @@ module named_array_list
    implicit none
 
    private
-   public :: na_var, qna, wna
+   public :: na_var, na_var_list, na_var_list_q, na_var_list_w, qna, wna
 
    !> \brief Common properties of 3D and 4D named arrays
    type :: na_var
@@ -87,8 +87,8 @@ module named_array_list
 #endif /* RIEMANN */
    end type na_var_list_w
 
-   type(na_var_list_q) :: qna !< list of registered 3D named arrays
-   type(na_var_list_w) :: wna !< list of registered 4D named arrays
+   type(na_var_list_q), target :: qna !< list of registered 3D named arrays
+   type(na_var_list_w), target :: wna !< list of registered 4D named arrays
 
 contains
 
