@@ -60,7 +60,7 @@ contains
     use mass_defect,  only: update_magic_mass
     use mpisetup,     only: master
 #ifdef GLM
-    use hdc,          only: update_chspeed, glmdamping
+    use hdc,          only: update_chspeed
 #endif /* GLM */
 
     implicit none
@@ -116,8 +116,6 @@ contains
   subroutine make_3sweeps(forward)
 
     use constants,      only: xdim, zdim, I_ONE
-    use dataio_pub,     only: die, warn
-    use global,         only: skip_sweep, limiter, limiter_b, limiter_p, force_cc_mag
     use user_hooks,     only: problem_customize_solution
 #if defined(COSM_RAYS) && defined(MULTIGRID)
     use all_boundaries,      only: all_fluid_boundaries
@@ -436,7 +434,6 @@ contains
 
     use constants,        only: pdims, xdim, zdim, ORTHO1, ORTHO2, LO, HI, psi_n, INVALID
     use fluidindex,       only: iarr_all_swp, iarr_mag_swp
-    use fluidindex,       only: flind
     use global,           only: force_cc_mag
     use grid_cont,        only: grid_container
     use named_array_list, only: wna, qna
@@ -445,6 +442,7 @@ contains
 #endif /* GLM */
 #ifdef COSM_RAYS
     use crhelpers,        only: div_v, set_div_v1d
+    use fluidindex,       only: flind
 #endif /* COSM_RAYS */
 
     implicit none
@@ -956,6 +954,8 @@ enddo
 
            u = transpose(u1)
 
+#else
+           if (.false.) div_v1d = div_v1d + 0.  ! suppress compiler warnings
 #endif /* COSM_RAYS && IONIZED */
 
            deallocate(w)
