@@ -63,10 +63,10 @@ nasty_spaces = [
     re.compile("end\s{1,}while", re.IGNORECASE), "endwhile",
     re.compile("end\s{1,}where", re.IGNORECASE), "endwhere",
     re.compile("only\s{1,}:", re.IGNORECASE), "only:",
-    re.compile("if(|\s{2,})\(", re.IGNORECASE), "if (",
-    re.compile("where(|\s{2,})\(", re.IGNORECASE), "where (",
-    re.compile("while(|\s{2,})\(", re.IGNORECASE), "while (",
-    re.compile("forall(|\s{2,})\(", re.IGNORECASE), "forall (",
+    re.compile("\sif(|\s{2,})\(", re.IGNORECASE), " if (",
+    re.compile("\swhere(|\s{2,})\(", re.IGNORECASE), " where (",
+    re.compile("\swhile(|\s{2,})\(", re.IGNORECASE), " while (",
+    re.compile("\sforall(|\s{2,})\(", re.IGNORECASE), " forall (",
     re.compile("\scase(|\s{2,})\(", re.IGNORECASE), " case ("
 ]
 
