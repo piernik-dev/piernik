@@ -142,7 +142,7 @@ def compare_domains(h5f1, h5f2):
         print("Both domains have no volume!")
         exit(11)
 
-    return 1. - vol_o/(vol_1 + vol_2 - vol_o), dlo, dro
+    return 1. - vol_o / (vol_1 + vol_2 - vol_o), dlo, dro
 
 
 def compare_resolution(h5f1, h5f2):
@@ -156,7 +156,7 @@ def compare_resolution(h5f1, h5f2):
 
     r_norm = 0.
     for i in range(len(res1)):
-        r_norm = 1. - (1. - r_norm) * (1. - abs(res1[i] - res2[i])/float(res1[i] + res2[i]))
+        r_norm = 1. - (1. - r_norm) * (1. - abs(res1[i] - res2[i]) / float(res1[i] + res2[i]))
 
     return r_norm
 
@@ -187,7 +187,7 @@ def compare_dlists(h5f1, h5f2):
     if (len(fc) != len(f2)):
         print "Fields unique for `", h5f2.filename, "': ", list(set(f2) ^ set(fc))
 
-    return 1. - len(fc)/float(len(f1) + len(f2) - len(fc)), fc
+    return 1. - len(fc) / float(len(f1) + len(f2) - len(fc)), fc
 
 
 def compare_data(ds1, ds2, f):
@@ -205,7 +205,7 @@ def compare_data(ds1, ds2, f):
                            ds2.covering_grid(0, ds2.domain_left_edge, ds2.domain_dimensions)[f].v)
 
     if (n1 + n2 != 0.):
-        return nd/(n1 + n2)
+        return nd / (n1 + n2)
     else:
         return 0.
 
@@ -279,9 +279,10 @@ if __name__ == "__main__":
         norms = piernik_gdf_compare(sys.argv[1], sys.argv[2])
         tot_norm = 0.
         failed = False
+        longestkey = len(max(norms, key=len))
         for i in norms.keys():
             if (norms[i] >= 0. and norms[i] <= 1.):
-                print("Difference of %s: %g" % (i, norms[i]))
+                print("Difference of %-*s: %g" % (longestkey + 1, i, norms[i]))
                 tot_norm = 1. - (1. - tot_norm) * (1. - norms[i])
             else:
                 print("Difference measure `%s` out of [0,1] range: %g" %
