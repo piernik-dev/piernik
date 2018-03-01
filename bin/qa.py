@@ -201,8 +201,8 @@ def qa_checks(files, options):
             # things done in "in-place"
             line = line.rstrip()    # that removes trailing spaces
             for i in range(0, len(nasty_spaces), 2):
-                line = re.sub(nasty_spaces[i], nasty_spaces[
-                              i + 1], line)   # remove nasty spaces
+                line = re.sub(nasty_spaces[i], nasty_spaces[i + 1], line)
+                # remove nasty spaces
             pfile.append(line)
 
         if lines != [line + '\n' for line in pfile]:
