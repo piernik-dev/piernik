@@ -39,9 +39,9 @@ module initcrspectrum
  logical            :: NR_refine_solution_q = .false.    ! < enables NR_1D refinement for value of interpolated "q" value
  logical            :: NR_refine_solution_pf = .false.  ! < enables NR_2D refinement for interpolated values of "p" and "f". Note - algorithm tries to refine values if interpolation was unsuccessful.
  logical            :: prevent_neg_en = .true.  ! < forces e,n=eps where e or n drops below zero due to diffusion algorithm (TEMP workaround)
- logical            :: test_spectrum_break   = .false.  ! < introduce break in the middle of the spectrum (to see how algorithm handles it), TEMP
- real(kind=8)       :: temp_magnetic_decrease = 0.001   ! < decreases magnetic energy amplitude at CRESP, TEMP
- logical            :: allow_init_extension  = .false.  ! < allow extension of spectrum to adjacent bins if momenta found exceed set p_fix
+ logical            :: test_spectrum_break    = .false.  ! < introduce break in the middle of the spectrum (to see how algorithm handles it), TEMP
+ real(kind=8)       :: magnetic_energy_scaler = 0.001    ! < decreases magnetic energy amplitude at CRESP, TEMP
+ logical            :: allow_source_spectrum_break  = .false.  ! < allow extension of spectrum to adjacent bins if momenta found exceed set p_fix
  logical            :: synch_active = .true.    ! < TEST feature - turns on / off synchrotron cooling @ CRESP
  logical            :: adiab_active = .true.    ! < TEST feature - turns on / off adiabatic   cooling @ CRESP
  logical            :: cre_gpcr_ess = .false.    ! < electron essentiality for gpcr computation
@@ -211,9 +211,9 @@ module initcrspectrum
             endif
         endif
 
-        if (temp_magnetic_decrease .le. 0.0) temp_magnetic_decrease = abs(temp_magnetic_decrease)
-        if (temp_magnetic_decrease .gt. 1.0) temp_magnetic_decrease = 1.0
-        if (temp_magnetic_decrease .eq. 0.0) synch_active = .false. ! < reduction magnetic energy to 0 naturally implies that
+        if (magnetic_energy_scaler .le. 0.0) magnetic_energy_scaler = abs(magnetic_energy_scaler)
+        if (magnetic_energy_scaler .gt. 1.0) magnetic_energy_scaler = 1.0
+        if (magnetic_energy_scaler .eq. 0.0) synch_active = .false. ! < reduction magnetic energy to 0 naturally implies that
 
         taylor_coeff_2nd = int(mod(2,expan_order) / 2 + mod(3,expan_order),kind=2 ) ! coefficient which is always equal 1 when order =2 or =3 and 0 if order = 1
         taylor_coeff_3rd = int((expan_order - 1)*(expan_order- 2) / 2,kind=2)        ! coefficient which is equal to 1 only when order = 3

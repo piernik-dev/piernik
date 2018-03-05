@@ -519,7 +519,7 @@ contains
 !
 !-------------------------------------------------------------------------------------------------
   subroutine cresp_init_state(init_n, init_e, f_amplitude, sptab)
-   use initcrspectrum, only: ncre, spec_mod_trms, q_init, p_lo_init, p_up_init, initial_condition, allow_init_extension, & ! f_init, bump_amp
+   use initcrspectrum, only: ncre, spec_mod_trms, q_init, p_lo_init, p_up_init, initial_condition, allow_source_spectrum_break, & ! f_init, bump_amp
                         e_small_approx_init_cond, e_small_approx_p_lo, e_small_approx_p_up, crel, p_fix, w,&
                         p_min_fix, p_max_fix, add_spectrum_base, e_small, test_spectrum_break, cresp_all_bins
    use cresp_NR_method,only: e_small_to_f
@@ -673,7 +673,7 @@ contains
             if ( (approx_p_up + e_small_approx_init_cond ) .gt. 0 )  call get_fqp_up(exit_code)
             if ( (approx_p_lo + e_small_approx_init_cond) .gt. 0 )  call get_fqp_lo(exit_code)
 
-            if (allow_init_extension) then
+            if (allow_source_spectrum_break) then
                i_lo_ch = int(floor(log10(p_lo/p_fix(1))/w)) + 1
                i_lo_ch = max(0, i_lo_ch)
                i_lo_ch = min(i_lo_ch, ncre - 1)
