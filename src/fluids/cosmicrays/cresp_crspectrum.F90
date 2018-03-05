@@ -519,7 +519,7 @@ contains
 !
 !-------------------------------------------------------------------------------------------------
   subroutine cresp_init_state(init_n, init_e, f_amplitude, sptab)
-   use initcrspectrum, only: ncre, spec_mod_trms, q_init, p_lo_init, p_up_init, initial_condition, & ! f_init, bump_amp
+   use initcrspectrum, only: ncre, spec_mod_trms, q_init, p_lo_init, p_up_init, initial_condition, allow_init_extension, & ! f_init, bump_amp
                         e_small_approx_init_cond, e_small_approx_p_lo, e_small_approx_p_up, crel, p_fix, w,&
                         p_min_fix, p_max_fix, add_spectrum_base, e_small, test_spectrum_break, cresp_all_bins
    use cresp_NR_method,only: e_small_to_f
@@ -672,63 +672,64 @@ contains
         if ( e_small_approx_init_cond .gt. 0) then
             if ( (approx_p_up + e_small_approx_init_cond ) .gt. 0 )  call get_fqp_up(exit_code)
             if ( (approx_p_lo + e_small_approx_init_cond) .gt. 0 )  call get_fqp_lo(exit_code)
-    
-            i_lo_ch = int(floor(log10(p_lo/p_fix(1))/w)) + 1
-            i_lo_ch = max(0, i_lo_ch)
-            i_lo_ch = min(i_lo_ch, ncre - 1)
-            i_up_ch = int(floor(log10(p_up/p_fix(1))/w)) + 2
-            i_up_ch = max(1,i_up_ch)
-            i_up_ch = min(i_up_ch,ncre)
-            f(i_up_ch) = e_small_to_f(p_up)
-            q(i_up_ch) = q(i_up)
-            p(i_up_ch) = p_up
-            
-            p(i_lo_ch) = p_lo
-            f(i_lo_ch) = e_small_to_f(p_lo)
-            q(i_lo_ch+1) = q(i_lo+1)
 
-            do i=i_lo_ch+1, i_lo
-                p(i) = p_fix(i)
-                f(i) = f(i_lo_ch) * (p_fix(i)/p(i_lo_ch))**(-q(i_lo_ch+1))
-                q(i+1) = q(i_lo_ch+1)
+            if (allow_init_extension) then
+               i_lo_ch = int(floor(log10(p_lo/p_fix(1))/w)) + 1
+               i_lo_ch = max(0, i_lo_ch)
+               i_lo_ch = min(i_lo_ch, ncre - 1)
+               i_up_ch = int(floor(log10(p_up/p_fix(1))/w)) + 2
+               i_up_ch = max(1,i_up_ch)
+               i_up_ch = min(i_up_ch,ncre)
+               f(i_up_ch) = e_small_to_f(p_up)
+               q(i_up_ch) = q(i_up)
+               p(i_up_ch) = p_up
+               
+               p(i_lo_ch) = p_lo
+               f(i_lo_ch) = e_small_to_f(p_lo)
+               q(i_lo_ch+1) = q(i_lo+1)
+
+               do i=i_lo_ch+1, i_lo
+                  p(i) = p_fix(i)
+                  f(i) = f(i_lo_ch) * (p_fix(i)/p(i_lo_ch))**(-q(i_lo_ch+1))
+                  q(i+1) = q(i_lo_ch+1)
 #ifdef VERBOSE
-                print *, 'Extending the range of lower boundary bin after NR_2dim momentum search'
+                  print *, 'Extending the range of lower boundary bin after NR_2dim momentum search'
 #endif /* VERBOSE */
-            enddo
+               enddo
 
-            do i=i_up, i_up_ch-1
-                p(i) = p_fix(i)
-                f(i) = f(i_up-1)* (p_fix(i)/p_fix(i_up-1))**(-q(i_up))
-                q(i) = q(i_up)
+               do i=i_up, i_up_ch-1
+                  p(i) = p_fix(i)
+                  f(i) = f(i_up-1)* (p_fix(i)/p_fix(i_up-1))**(-q(i_up))
+                  q(i) = q(i_up)
 #ifdef VERBOSE
-                print *, 'Extending the range of upper boundary bin after NR_2dim momentum search'
+                  print *, 'Extending the range of upper boundary bin after NR_2dim momentum search'
 #endif /* VERBOSE */
-            enddo
+               enddo
 #ifdef VERBOSE
-            print *, "Boundary bins now (i_lo_new i_lo | i_up_new i_up)",  i_lo_ch, i_lo, ' |', i_up_ch, i_up
+               print *, "Boundary bins now (i_lo_new i_lo | i_up_new i_up)",  i_lo_ch, i_lo, ' |', i_up_ch, i_up
 #endif /* VERBOSE */
-            i_lo = i_lo_ch   ;   i_up = i_up_ch
-            q(i_up_ch) = q(i_up)
-            p(i_up) = p_fix(i_up);  p(i_up) = p_up
+               i_lo = i_lo_ch   ;   i_up = i_up_ch
+               q(i_up_ch) = q(i_up)
+               p(i_up) = p_fix(i_up);  p(i_up) = p_up
 
-            is_active_bin = .false.
-            is_active_bin(i_lo+1:i_up) = .true.
-            num_active_bins = count(is_active_bin) ! active arrays must be reevaluated - number of active bins and edges might have changed
-            if(allocated(active_bins)) deallocate(active_bins)
-            allocate(active_bins(num_active_bins)) ! active arrays must be reevaluated - number of active bins and edges might have changed
-            active_bins = pack(cresp_all_bins, is_active_bin)
+               is_active_bin = .false.
+               is_active_bin(i_lo+1:i_up) = .true.
+               num_active_bins = count(is_active_bin) ! active arrays must be reevaluated - number of active bins and edges might have changed
+               if(allocated(active_bins)) deallocate(active_bins)
+               allocate(active_bins(num_active_bins)) ! active arrays must be reevaluated - number of active bins and edges might have changed
+               active_bins = pack(cresp_all_bins, is_active_bin)
 
-            e = fq_to_e(p(0:ncre-1), p(1:ncre), f(0:ncre-1), q(1:ncre), active_bins) ! once again we must count n and e
-            n = fq_to_n(p(0:ncre-1), p(1:ncre), f(0:ncre-1), q(1:ncre), active_bins)
+               e = fq_to_e(p(0:ncre-1), p(1:ncre), f(0:ncre-1), q(1:ncre), active_bins) ! once again we must count n and e
+               n = fq_to_n(p(0:ncre-1), p(1:ncre), f(0:ncre-1), q(1:ncre), active_bins)
 
-            crel%p = p
-            crel%f = f
-            crel%q = q
-            crel%e = e
-            crel%n = n
-            crel%i_lo = i_lo
-            crel%i_up = i_up
-
+               crel%p = p
+               crel%f = f
+               crel%q = q
+               crel%e = e
+               crel%n = n
+               crel%i_lo = i_lo
+               crel%i_up = i_up
+            endif
         endif
 
 ! testing how the algorithm will handle discontinuity in the spectrum:

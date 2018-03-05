@@ -40,10 +40,11 @@ module initcrspectrum
  logical            :: NR_refine_solution_pf = .false.  ! < enables NR_2D refinement for interpolated values of "p" and "f". Note - algorithm tries to refine values if interpolation was unsuccessful.
  logical            :: prevent_neg_en = .true.  ! < forces e,n=eps where e or n drops below zero due to diffusion algorithm (TEMP workaround)
  logical            :: test_spectrum_break   = .false.  ! < introduce break in the middle of the spectrum (to see how algorithm handles it), TEMP
+ logical            :: allow_init_extension  = .false.  ! < allow extension of spectrum to adjacent bins if momenta found exceed set p_fix
  logical            :: synch_active = .true.    ! < TEST feature - turns on / off synchrotron cooling @ CRESP
  logical            :: adiab_active = .true.    ! < TEST feature - turns on / off adiabatic   cooling @ CRESP
- logical            :: cre_gpcr_ess = .true.    ! < electron essentiality for gpcr computation
- real(kind=8)       :: cre_active   = 1.0       ! < electron contribution to Pcr
+ logical            :: cre_gpcr_ess = .false.    ! < electron essentiality for gpcr computation
+ real(kind=8)       :: cre_active   = 0.0       ! < electron contribution to Pcr
  
  real(kind=8)       :: tol_f = 1.0e-11          ! < tolerance for f abs. error in NR algorithm
  real(kind=8)       :: tol_x = 1.0e-11          ! < tolerance for x abs. error in NR algorithm
