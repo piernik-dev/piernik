@@ -1,5 +1,5 @@
  $BASE_DOMAIN
-    n_d = 24, 24, 1
+    n_d = 64, 64, 1
     nb  = 4
     bnd_xl = 'per'
     bnd_xr = 'per'
@@ -30,7 +30,7 @@
  /
 
  $END_CONTROL
-    tend   = 15.01 !.0 ! .1
+    tend   = 5.01 !.0 ! .1
     nend   = 100000
  /
 
@@ -75,14 +75,14 @@
  $COSMIC_RAY_SPECTRUM
     cre_eff     = 0.01
     cfl_cre     = 0.3
-    ncre        = 45          ! number of spectrum bins (including cutoff bins)
+    ncre        = 30          ! number of spectrum bins (including cutoff bins)
     p_min_fix = 0.4e0 ! 1.0e1  ! momentum fixed grid
     p_max_fix = 1.65e4 ! 1.0e2  ! momentum fixed grid
     p_lo_init = 1.5e1 !50e0   ! initial lower cut momentum
     p_up_init = 7.5e2 ! 5.0e2  ! initial upper cut momentum
     expan_order = 1
     f_init    = 1.0 ! 1.0e1   ! < initial value of the normalization parameter in cre energy spectrum
-    q_init    = 3.9 ! 4.1   ! < initial value of power law coefficient in cre enrgy spectrum
+    q_init    = 3.6 ! 4.1   ! < initial value of power law coefficient in cre enrgy spectrum
     q_big     = 30.e0   ! < limit value of power law coefficient in cre energy spectrum, do not set that value too high!
     K_cre_paral_1 = 1.0e3 ! 1.e3
     K_cre_perp_1  = 5.0e1 ! 1.e1
@@ -95,12 +95,22 @@
     e_small_approx_p_up = 1 ! 0 ! 1  ! tells algorithm to approximate upper boundary momentum
     add_spectrum_base   = 0 ! 0 ! 1  ! ensures that minimal energy level after initialization is at least e small
     max_p_ratio = 2.5
-    NR_iter_limit = 250
+    NR_iter_limit = 100
     force_init_NR = .false.
-!    arr_dim = 140 ! dimension of NR grids, must be an even number, don't put a number ridiculously high
+    adiab_active  = .false.
+    synch_active  = .true.
+    cre_active  = 0.0
+    cre_gpcr_ess =  .false.
  /
 
  $CR_SPECIES
+    eH1 = .true.
+    eLi7 = .false.
+    eBe9 = .false.
+    eBe10 = .false.
+    eC12 = .false.
+    eN14 = .false.
+    eO16 = .false.
  /
 
  $MULTIGRID_SOLVER

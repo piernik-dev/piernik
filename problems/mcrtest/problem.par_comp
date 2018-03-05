@@ -1,5 +1,5 @@
 $BASE_DOMAIN
-    n_d = 50, 50, 1
+    n_d = 64, 64, 1
     nb  = 4
     bnd_xl = 'out'
     bnd_xr = 'out'
@@ -37,7 +37,7 @@ $BASE_DOMAIN
  $OUTPUT_CONTROL
     problem_name = 'mcr'
     run_id = 'co1'
-    dt_hdf  = 0.5
+    dt_hdf  = 1.0
     dt_res  = 0.0
     dt_log  = 1.0e-10
     dt_tsl  = 0.000
@@ -75,7 +75,7 @@ $BASE_DOMAIN
  $COSMIC_RAY_SPECTRUM
     cre_eff     = 0.01
     cfl_cre     = 0.3
-    ncre        = 45    ! number of spectrum bins (including cutoff bins)
+    ncre        = 30    ! number of spectrum bins (including cutoff bins)
     p_min_fix = 0.4e0   ! momentum fixed grid
     p_max_fix = 1.65e4  ! momentum fixed grid
     p_lo_init = 1.5e1   ! initial lower cut momentum
@@ -95,12 +95,22 @@ $BASE_DOMAIN
     e_small_approx_p_up = 1 ! 0 ! 1  ! tells algorithm to approximate upper boundary momentum
     add_spectrum_base   = 0 ! 0 ! 1  ! ensures that minimal energy level after initialization is at least e_small
     max_p_ratio = 2.5
-    NR_iter_limit = 250
+    cre_active  = 0.0
+    cre_gpcr_ess =  .false.
+    NR_iter_limit = 100
     force_init_NR = .false.
-!    arr_dim = 200 ! dimension of NR grids, must be an even number, don't put a number ridiculously high
+    adiab_active  = .true.
+    synch_active  = .false.
  /
 
  $CR_SPECIES
+    eH1 = .true.
+    eLi7 = .false.
+    eBe9 = .false.
+    eBe10 = .false.
+    eC12 = .false.
+    eN14 = .false.
+    eO16 = .false.
  /
 
  $MULTIGRID_SOLVER
