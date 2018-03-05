@@ -58,11 +58,12 @@ if f_run == True:
     t = h5ds.current_time[0]
     dt= h5File.attrs["timestep"]
     time = t.in_units('Myr')    
+
 #---------- bounds on domain size
     grid_dim = h5File['grid_dimensions'][0][:]
     dim_map  = {'x':0,'y':1,'z':2}
     avail_dim = [0,1,2]
-
+    avail_dims_by_slice = [[1,2],[0,2],[0,1]]
     dom_l = np.array(h5ds.domain_left_edge[0:3])
     dom_r = np.array(h5ds.domain_right_edge[0:3])
 
@@ -78,36 +79,51 @@ if f_run == True:
         slice_coord = 0
         if   grid_dim[0] == 1: 
             slice_ax = 'x'
-            avail_dim = [2,1]
         elif grid_dim[1] == 1: 
             slice_ax = 'y'
-            avail_dim = [2,0]
         else:                  
             slice_ax = 'z'
-            avail_dim = [0,1]
-    print "Slice ax set to", slice_ax, ", ind = ", slice_coord
+    avail_dim = avail_dims_by_slice[dim_map[slice_ax]]
+    print "Slice ax set to", slice_ax, ", ind = ", slice_coord #, "available_dims: ", avail_dim
     min_ran = [0,0,0]
     min_ran[dim_map[slice_ax]] = slice_coord
     max_ran = grid_dim
     max_ran[dim_map[slice_ax]] = slice_coord
+
 #---------
     s = plt.figure(figsize=(12,6),dpi=80)
     s1 = plt.subplot(121)
+
     plot_field = "cr01"
     dset = h5File['data']['grid_0000000000'][plot_field]
+
     if (slice_ax == "x"):
       fig1 = plt.imshow(dset[:,:,slice_coord], origin="lower") # TODO provide the right coordinates
     elif (slice_ax == "y"):
       fig1 = plt.imshow(dset[:,slice_coord,:], origin="lower") # TODO provide the right coordinates
     else:
       fig1 = plt.imshow(dset[slice_coord,:,:], origin="lower") # TODO provide the right coordinates
-    plt.title("Component name: "+plot_field+"\nTime = %f Myr"  %time)
-    plt.ylabel("Domain cell ("+dim_map.keys()[dim_map.values().index(avail_dim[1])]+")" )
-    plt.xlabel("Domain cell ("+dim_map.keys()[dim_map.values().index(avail_dim[0])]+")" )
+
+    plt.title("Component name: "+plot_field+" | Time = %f Myr"  %time,y=1.07)
+    plt.ylabel("Physical domain ("+dim_map.keys()[dim_map.values().index(avail_dim[1])]+") [kpc]" )
+    plt.xlabel("Physical domain ("+dim_map.keys()[dim_map.values().index(avail_dim[0])]+") [kpc]" )
     if logscale_colors == True:
             print "WARNING: logscale_colors = True, if negative values are encountered, the script will crash."
             plt.pcolor(dset[:,:,0], norm=LogNorm(vmin=dset[:,:,0].min(), vmax=dset[:,:,0].max()), cmap='viridis') # TODO provide the right cooridinates
-    plt.colorbar()
+    plt.colorbar(shrink=0.9, pad=0.18)
+
+    valuesx = tuple(np.arange(0,grid_dim[avail_dim[0]], grid_dim[avail_dim[0]]/5.))# + (grid_dim[avail_dim[0]],)
+    labelsx = tuple(np.arange(dom_l[avail_dim[0]], dom_r[avail_dim[0]], ((abs(dom_l[avail_dim[0]])+abs(dom_r[avail_dim[0]]))/5.)))# + (dom_r[avail_dim[0]],)
+
+    s1.set_xticks(valuesx)
+    s1.set_xticklabels(labelsx)
+
+    valuesy = tuple(np.arange(0,grid_dim[avail_dim[1]], grid_dim[avail_dim[1]]/5.))# + (grid_dim[avail_dim[1]],)
+    labelsy = tuple(np.arange(dom_l[avail_dim[1]], dom_r[avail_dim[1]], ((abs(dom_l[avail_dim[1]])+abs(dom_r[avail_dim[1]]))/5.)))# + (dom_r[avail_dim[1]],)
+    
+    s1.set_yticks(valuesy)
+    s1.set_yticklabels(labelsy)
+
     click_coords = [0, 0]
     image_number = 0
 #---------
