@@ -21,7 +21,7 @@ contains
   use constants,        only: xdim, ydim, zdim
   use grid_cont,        only: grid_container
   use cresp_crspectrum, only:cresp_update_cell, printer
-  use initcrspectrum,   only: spec_mod_trms, virtual_e, virtual_n, synch_active, adiab_active, cresp
+  use initcrspectrum,   only: spec_mod_trms, virtual_e, virtual_n, synch_active, adiab_active, cresp, temp_magnetic_decrease
   use named_array_list, only: qna
   use crhelpers,        only: divv_n
   use func,             only: emag, ekin, operator(.equals.), operator(.notequals.)
@@ -41,7 +41,7 @@ contains
                         sptab%ud = 0.0 ; sptab%ub = 0.0 ; sptab%ucmb = 0.0
                         cresp%n    = cg%u(iarr_cre_n, i, j, k)
                         cresp%e    = cg%u(iarr_cre_e, i, j, k)
-                        if (synch_active) sptab%ub = emag(cg%b(xdim,i,j,k), cg%b(ydim,i,j,k), cg%b(zdim,i,j,k))/1000.0
+                        if (synch_active) sptab%ub = emag(cg%b(xdim,i,j,k), cg%b(ydim,i,j,k), cg%b(zdim,i,j,k)) * temp_magnetic_decrease
                         if (synch_active) sptab%ud = cg%q(qna%ind(divv_n))%point([i,j,k])
 #ifdef VERBOSE
                         print *, 'Output of cosmic ray electrons module for grid cell with coordinates i,j,k:', i, j, k
@@ -121,7 +121,7 @@ contains
    use constants,       only: xdim, ydim, zdim
    use named_array_list,only: qna
    use constants,       only: one, half
-   use initcrspectrum,  only: spec_mod_trms, cfl_cre, synch_active, adiab_active
+   use initcrspectrum,  only: spec_mod_trms, cfl_cre, synch_active, adiab_active, temp_magnetic_decrease
    use initcosmicrays,  only: K_cre_paral, K_cre_perp
    use timestep_cresp,  only: cresp_timestep, dt_cre_min_ub, dt_cre_min_ud
    implicit none
@@ -146,7 +146,7 @@ contains
                 do j = cg%js, cg%je
                     do i = cg%is, cg%ie
                         sptab%ud = 0.0 ; sptab%ub = 0.0 ; sptab%ucmb = 0.0
-                        if (synch_active) sptab%ub = emag(cg%b(xdim,i,j,k), cg%b(ydim,i,j,k), cg%b(zdim,i,j,k))/1000.0
+                        if (synch_active) sptab%ub = emag(cg%b(xdim,i,j,k), cg%b(ydim,i,j,k), cg%b(zdim,i,j,k)) * temp_magnetic_decrease
                         if (adiab_active) sptab%ud = cg%q(qna%ind(divv_n))%point([i,j,k])
                         call cresp_timestep(dt_cre_tmp, sptab, cg%u(iarr_cre_n, i, j, k), cg%u(iarr_cre_e, i, j, k), i_up_max_tmp) ! gives dt_cre for the whole domain, but is unefficient
                         dt_cre = min(dt_cre, dt_cre_tmp)
