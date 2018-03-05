@@ -17,23 +17,25 @@ def nq2f(n,q,p_l,p_r):
         else:
             nq2f = nq2f / log(p_r/p_l)
       return nq2f
-  
-# easy-peasy 1D Newton-Raphson algorithm (to find q):
+# 1D Newton-Raphson algorithm (to find q):
 #
 def nr_get_q(alpha, p_ratio):
+  q_big = 30.0
   exit_code = True
   iter_limit = 30
   tol_f      = 1.0e-9
-  for i in [-1,1]:
-    x = 1.0
-    df = 1.0
-    for i in range(iter_limit):
-        dx = min(x*1e-3,10e-2)
+  x = 5.0
+  df = 1.0
+  for i in range(iter_limit):
+        if abs(x) >= q_big:
+           x = (x/abs(x)) * q_big
+           break
+        dx = min(max(x*1e-3,1.0e-5),10e-2)
         df = 0.5*(fun(x+dx, alpha, p_ratio)-fun(x-dx, alpha, p_ratio))/dx
         delta = -fun(x, alpha, p_ratio)/df
         if abs(delta) <= tol_f:
             exit_code = False
-            break
+            return x
         else:
             x = x + delta
   nr_get_q = x
@@ -41,17 +43,18 @@ def nr_get_q(alpha, p_ratio):
 
 # function used to find q: ----------------------
 def fun(x, alpha, p_ratio):
-      if abs(x - 3.0) < eps:
+      if abs(x - 3.0) < 1.0e-3:
          fun = -alpha + (-1.0 + p_ratio)/log(p_ratio) 
-      elif abs(x - 4.0) < eps:
+      elif abs(x - 4.0) < 1.0e-3:
          fun = -alpha + p_ratio*log(p_ratio)/(p_ratio - 1.0)
       else:
          fun = -alpha + ((3.0-x)/(4.0-x))*((p_ratio**(4.0-x)-1.0)/(p_ratio**(3.0-x)-1.0))
       return fun
+
 # plot data ------------------------------------  
 def plot_data(plot_var, pl, pr, fl, fr, q, time, dt, i_lo_cut, i_up_cut, imgNbr):
    global first_run
-   f_lo_cut = fl[0] ;   f_up_cut = fr[-1]
+   f_lo_cut = fl[0] ;      f_up_cut = fr[-1]
    p_lo_cut = pl[0] ;   p_up_cut = pr[-1]
 
    if plot_var  == 'f' :
@@ -98,7 +101,6 @@ def plot_data(plot_var, pl, pr, fl, fr, q, time, dt, i_lo_cut, i_up_cut, imgNbr)
       plt.plot([pl[i],pr[i]],[plot_var_l[i],plot_var_r[i]],color='r')
       plt.plot([pl[i],pl[i]], [plot_var_min,plot_var_l[i]],color='r')
       plt.plot([pr[i],pr[i]], [plot_var_min,plot_var_r[i]],color='r')
-         
    s.set_facecolor('white')
    plt.title("Time = %7.3f, dt = %7.3f " % ( time, dt) )
    plt.savefig('results/'+plot_var+'_%04d.png' % imgNbr, transparent ='False',facecolor=s.get_facecolor())
@@ -115,12 +117,14 @@ def crs_plot_main(parameter_names, parameter_values, plot_var, ncrs, ecrs, time,
     p_min_fix = 0.4e0  #
     p_max_fix = 1.65e4 #
     c = 1.0
-    if len(parameter_names) != len(parameter_values): 
-        sys.exit("Exiting: len(names) = len(values)")
-    
-    for i in range(len(parameter_names)):
-        exec("%s = %s" %(parameter_names[i], parameter_values[i]))
-        
+
+    try:
+        for i in range(len(parameter_names)):
+            exec("%s = %s" %(parameter_names[i], parameter_values[i]))
+    except:
+        print "Exiting: len(names) not equal len(values)"
+        sys.exit()
+
 # TODO -------- do it under *args TODO
     fixed_width = 1  
 # TODO -------- do it under *args TODO
@@ -162,7 +166,6 @@ def crs_plot_main(parameter_names, parameter_values, plot_var, ncrs, ecrs, time,
     ncrs_act = ncrs[i_lo-2:i_up-2]
     ecrs_act = ecrs[i_lo-2:i_up-2]
     q_nr = [] ; fln = [] ; frn = []
-
     for i in range(0,i_up - i_lo):
         q_nr.append(nr_get_q(ecrs[i+i_lo]/(ncrs[i+i_lo]*c*pln[i]), prn[i]/pln[i], ))
         fln.append(nq2f(ncrs[i+i_lo], q_nr[-1], pln[i], prn[i]))

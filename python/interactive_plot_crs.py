@@ -52,11 +52,21 @@ if f_run == True:
     for grid in h5File['data']:
         for data in h5File['data'][grid]:
             if data not in h5_field_list: h5_field_list.append(data)
-    
+
+    h5ds = yt.load(filename)
+#----------- Loading other data
+    t = h5ds.current_time[0]
+    dt= h5File.attrs["timestep"]
+    time = t.in_units('Myr')    
 #---------- bounds on domain size
-    grid_dim = h5File['grid_dimensions'][0][::-1]
+    grid_dim = h5File['grid_dimensions'][0][:]
     dim_map  = {'x':0,'y':1,'z':2}
-    print "Domain size of provided file (i,j,k): ", grid_dim
+    avail_dim = [0,1,2]
+
+    dom_l = np.array(h5ds.domain_left_edge[0:3])
+    dom_r = np.array(h5ds.domain_right_edge[0:3])
+
+    print "Domain size of provided file (x, y, z): ", grid_dim[:]
     if len(grid_dim) == 3 and min(grid_dim) != 1:
         slice_ax = ''
         slice_coord = -1
@@ -67,37 +77,47 @@ if f_run == True:
     elif min(grid_dim) == 1:
         slice_coord = 0
         if   grid_dim[0] == 1: 
-            slice_ax = 'z'
+            slice_ax = 'x'
+            avail_dim = [2,1]
         elif grid_dim[1] == 1: 
             slice_ax = 'y'
+            avail_dim = [2,0]
         else:                  
-            slice_ax = 'x'
+            slice_ax = 'z'
+            avail_dim = [0,1]
+    print "Slice ax set to", slice_ax, ", ind = ", slice_coord
     min_ran = [0,0,0]
     min_ran[dim_map[slice_ax]] = slice_coord
     max_ran = grid_dim
     max_ran[dim_map[slice_ax]] = slice_coord
 #---------
     s = plt.figure(figsize=(12,6),dpi=80)
-    s1 = plt.subplot(131)
+    s1 = plt.subplot(121)
     plot_field = "cr01"
     dset = h5File['data']['grid_0000000000'][plot_field]
-    fig1 = plt.imshow(dset[:,:,0]) # TODO provide the right coordinates
-    
+    if (slice_ax == "x"):
+      fig1 = plt.imshow(dset[:,:,slice_coord], origin="lower") # TODO provide the right coordinates
+    elif (slice_ax == "y"):
+      fig1 = plt.imshow(dset[:,slice_coord,:], origin="lower") # TODO provide the right coordinates
+    else:
+      fig1 = plt.imshow(dset[slice_coord,:,:], origin="lower") # TODO provide the right coordinates
+    plt.title("Component name: "+plot_field+"\nTime = %f Myr"  %time)
+    plt.ylabel("Domain cell ("+dim_map.keys()[dim_map.values().index(avail_dim[1])]+")" )
+    plt.xlabel("Domain cell ("+dim_map.keys()[dim_map.values().index(avail_dim[0])]+")" )
     if logscale_colors == True:
             print "WARNING: logscale_colors = True, if negative values are encountered, the script will crash."
             plt.pcolor(dset[:,:,0], norm=LogNorm(vmin=dset[:,:,0].min(), vmax=dset[:,:,0].max()), cmap='viridis') # TODO provide the right cooridinates
     plt.colorbar()
-    plt.title("Field : %s " %plot_field)
     click_coords = [0, 0]
     image_number = 0
 #---------
     def read_click_and_plot(event):
         global click_coords, image_number, first_run
         image_number ++1
-        print('click: x=%d, y=%d, xdata=%d, ydata=%d' % (event.x, event.y, int(round(event.xdata)), int(round(event.ydata))))
+        #print('click: x=%d, y=%d, xdata=%d, ydata=%d' % (event.x, event.y, int(round(event.xdata)), int(round(event.ydata))))
         click_coords = [ int(round(event.xdata)), int(round(event.ydata)) ]
         point = s1.plot(event.xdata,event.ydata, marker="+", color="red")
-        coords = [0, 0, 0]
+        coords = [slice_coord, slice_coord, slice_coord]
         coords[dim_map[slice_ax]] = slice_coord
         if slice_ax == "x":
             coords[1] = click_coords[0]
@@ -106,8 +126,9 @@ if f_run == True:
             coords[0] = click_coords[1]
             coords[2] = click_coords[0]
         else: # slice_ax = "z"
-            coords[1] = click_coords[0]
-            coords[0] = click_coords[1]
+            coords[2] = click_coords[0]
+            coords[1] = click_coords[1]
+        print "Coordinates clicked:", coords[::-1]
 # ------------ preparing data and passing -------------------------
         time = h5File.attrs['time'][0]
         dt   = h5File.attrs['timestep'][0]
