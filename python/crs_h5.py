@@ -86,15 +86,14 @@ def plot_data(plot_var, pl, pr, fl, fr, q, time, dt, i_lo_cut, i_up_cut, imgNbr)
         print "Output dir created"
       plot_p_min    =  p_lo_cut
       plot_p_max    =  p_up_cut
-      plot_var_min  = 0.01*min(plot_var_l.min(),plot_var_r.min())
-      plot_var_max  = max(plot_var_l.max(),plot_var_r.max())
+      plot_var_min = 0.1*e_small
       first_run = False
    
    if fixed_width == 1:
       plt.xlim (0.01*plot_p_min   ,  10.*plot_p_max ) 
       plt.xlim
    
-   plt.ylim (10*plot_var_min , 10.*plot_var_max) 
+   plt.ylim (plot_var_min , plot_ymax)   
    plt.grid()
 
    for i in range(0, size(fr)) :
@@ -108,7 +107,7 @@ def plot_data(plot_var, pl, pr, fl, fr, q, time, dt, i_lo_cut, i_up_cut, imgNbr)
    return 
 #-----------------------------------------------------------------
 
-def crs_plot_main(parameter_names, parameter_values, plot_var, ncrs, ecrs, time, dt, image_number):
+def crs_plot_main(parameter_names, parameter_values, plot_var, ncrs, ecrs, field_max, time, dt, image_number):
     global e_small, eps, c, first_run, fixed_width
     
     e_small = 1.0e-5
@@ -116,6 +115,7 @@ def crs_plot_main(parameter_names, parameter_values, plot_var, ncrs, ecrs, time,
     ncre      = 45
     p_min_fix = 0.4e0  #
     p_max_fix = 1.65e4 #
+    cre_eff = 0.01
     c = 1.0
 
     try:
@@ -131,6 +131,8 @@ def crs_plot_main(parameter_names, parameter_values, plot_var, ncrs, ecrs, time,
 
     first_run = True
 # -------------------
+    global plot_ymax
+    plot_ymax = cre_eff * field_max
     edges = []
     p_fix = []
     edges[0:ncre] = range(0,ncre+1, 1)

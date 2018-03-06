@@ -32,7 +32,7 @@ if exten[0:2] != 'h5':
 var_array = []
 if f_run == True:
     var_names = []
-    var_names = [ "ncre", "p_min_fix", "p_max_fix", "e_small"]
+    var_names = [ "ncre", "p_min_fix", "p_max_fix", "e_small"] # TODO: add cre_eff
     if len(var_names) == 0:
         print ("Empty list of parameter names provided: enter names of parameters to read")
         var_names = read_h5.input_names_array()
@@ -99,10 +99,13 @@ if f_run == True:
 
     if (slice_ax == "x"):
       fig1 = plt.imshow(dset[:,:,slice_coord], origin="lower") # TODO provide the right coordinates
+      field_max = np.max(dset[:,:,slice_coord])
     elif (slice_ax == "y"):
       fig1 = plt.imshow(dset[:,slice_coord,:], origin="lower") # TODO provide the right coordinates
+      field_max = np.max(dset[:,slice_coord,:])
     else:
       fig1 = plt.imshow(dset[slice_coord,:,:], origin="lower") # TODO provide the right coordinates
+      field_max = np.max(dset[slice_coord,:,:])
 
     plt.title("Component name: "+plot_field+" | Time = %f Myr"  %time,y=1.07)
     plt.ylabel("Physical domain ("+dim_map.keys()[dim_map.values().index(avail_dim[1])]+") [kpc]" )
@@ -153,7 +156,7 @@ if f_run == True:
             ecrs.append(h5File['data']['grid_0000000000']['cree'+str(ind).zfill(2)].value[coords[0],coords[1],coords[2]])
             ncrs.append(h5File['data']['grid_0000000000']['cren'+str(ind).zfill(2)].value[coords[0],coords[1],coords[2]])
         plot_var = "e"
-        fig2 = crs_h5.crs_plot_main(var_names, var_array, plot_var, ncrs, ecrs, time, dt, image_number)
+        fig2 = crs_h5.crs_plot_main(var_names, var_array, plot_var, ncrs, ecrs, field_max, time, dt, image_number)
         first_run = False
     cid = s.canvas.mpl_connect('button_press_event',read_click_and_plot)
     
