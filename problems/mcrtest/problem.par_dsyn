@@ -93,7 +93,7 @@
     e_small_approx_init_cond = 1  ! 0  ! 1 ! tells algoritm to approximate both boundary momenta at initialization
     e_small_approx_p_lo = 1 ! 0 ! 1  ! tells algorithm to appriximate lower boundary momentum
     e_small_approx_p_up = 1 ! 0 ! 1  ! tells algorithm to approximate upper boundary momentum
-    add_spectrum_base   = 0 ! 0 ! 1  ! ensures that minimal energy level after initialization is at least e small
+    add_spectrum_base   = 0 ! 0 ! 1  ! ensures that minimal energy level after initialization is at least esmall
     max_p_ratio = 2.5
     NR_iter_limit = 100
     force_init_NR = .false.
