@@ -51,17 +51,15 @@ contains
 
   subroutine fluid_update
 
-    use constants,    only: GEO_XYZ
+    use constants,    only: GEO_XYZ, DIVB_HDC
     use dataio_pub,   only: halfstep, die, warn
     use domain,       only: dom, is_refined
     use fluidindex,   only: flind
     use fluxlimiters, only: set_limiters
-    use global,       only: dt, dtm, t, limiter, limiter_b, limiter_p
+    use global,       only: dt, dtm, t, limiter, limiter_b, limiter_p, divB_0_method
     use mass_defect,  only: update_magic_mass
     use mpisetup,     only: master
-#ifdef GLM
     use hdc,          only: update_chspeed
-#endif /* GLM */
 
     implicit none
 
@@ -85,9 +83,7 @@ contains
 
 !!!call repeat_fluidstep
 
-#ifdef GLM
-    call update_chspeed
-#endif /* GLM */
+    if (divB_0_method == DIVB_HDC) call update_chspeed
     halfstep = .false.
     if (first_run) then
        dtm = 0.0
@@ -115,16 +111,15 @@ contains
 
   subroutine make_3sweeps(forward)
 
-    use constants,      only: xdim, zdim, I_ONE
+    use constants,      only: xdim, zdim, I_ONE, DIVB_HDC
+    use global,         only: divB_0_method
+    use hdc,            only: glmdamping, eglm
     use user_hooks,     only: problem_customize_solution
 #if defined(COSM_RAYS) && defined(MULTIGRID)
     use all_boundaries,      only: all_fluid_boundaries
     use initcosmicrays,      only: use_split
     use multigrid_diffusion, only: multigrid_solve_diff
 #endif /* COSM_RAYS && MULTIGRID */
-#ifdef GLM
-    use hdc,            only: glmdamping, eglm
-#endif /* GLM */
 
     implicit none
 
@@ -149,10 +144,11 @@ contains
        enddo
     endif
     if (associated(problem_customize_solution)) call problem_customize_solution(forward)
-#ifdef GLM
-    call glmdamping
-    call eglm
-#endif /* GLM */
+
+    if (divB_0_method == DIVB_HDC) then
+       call glmdamping
+       call eglm
+    endif
 
   end subroutine make_3sweeps
 
@@ -509,9 +505,6 @@ contains
      use constants,  only: half
      use dataio_pub, only: die
      use global,     only: h_solver
-#ifdef GLM
-     use hdc,        only: glm_mhd
-#endif /* GLM */
 
      implicit none
 
@@ -527,10 +520,8 @@ contains
      real, dimension(size(u,1),size(u,2))               :: ul, ur, du1, du2, du3
 
      real, dimension(size(psi,1),size(psi,2))           :: psi__l, psi__r, dpsi1, dpsi2, dpsi3
-#ifdef GLM
      real, dimension(size(psi,1),size(psi,2)), target   :: psi_l, psi_r
      real, dimension(size(psi,1),size(psi,2)),target    :: psi_cc
-#endif /* GLM */
 
      integer                                            :: nx
 
@@ -634,14 +625,10 @@ contains
 
         subroutine slope(uu, bb, pp)
 
-           use constants,  only: half
-           use dataio_pub, only: die
-           use fluxlimiters, only: flimiter, blimiter
-#ifdef GLM
-           use constants,  only: xdim
-           use fluxlimiters, only: plimiter
-#endif /*GLM */
-
+           use constants,    only: half, xdim, DIVB_HDC
+           use dataio_pub,   only: die
+           use fluxlimiters, only: flimiter, blimiter, plimiter
+           use global,       only: divB_0_method
 
            implicit none
 
@@ -652,9 +639,7 @@ contains
 
            real, dimension(size(u,1),size(u,2))       :: du
            real, dimension(size(b_cc,1),size(b_cc,2)) :: db
-#ifdef GLM
            real, dimension(size(psi,1),size(psi,2))   :: dp
-#endif
 
            if ((present(uu) .neqv. present(bb)) .or. (present(bb) .neqv. present(pp))) &
                 call die("[fluidupdate:solve:slope] either none or all optional arguments must be present")
@@ -679,33 +664,35 @@ contains
               b_ccr = b_cc + half*db
            endif
 
-#ifdef GLM
-           if (present(pp)) then
-              dp  = plimiter(psi + pp)
-              psi__l = psi + pp - half*dp
-              psi__r = psi + pp + half*dp
-           else
-              dp  = plimiter(psi)
-              psi__l = psi - half*dp
-              psi__r = psi + half*dp
+           if (divB_0_method == DIVB_HDC) then
+              if (present(pp)) then
+                 dp  = plimiter(psi + pp)
+                 psi__l = psi + pp - half*dp
+                 psi__r = psi + pp + half*dp
+              else
+                 dp  = plimiter(psi)
+                 psi__l = psi - half*dp
+                 psi__r = psi + half*dp
+              endif
+              if (present(bb)) then
+                 db  = plimiter(b_cc + bb)
+                 b_ccl(xdim, :) = b_cc(xdim, :) + bb(xdim, :) - half*db(xdim, :)
+                 b_ccr(xdim, :) = b_cc(xdim, :) + bb(xdim, :) + half*db(xdim, :)
+              else
+                 db  = plimiter(b_cc)
+                 b_ccl(xdim, :) = b_cc(xdim, :) - half*db(xdim, :)
+                 b_ccr(xdim, :) = b_cc(xdim, :) + half*db(xdim, :)
+              endif
            endif
-           if (present(bb)) then
-              db  = plimiter(b_cc + bb)
-              b_ccl(xdim, :) = b_cc(xdim, :) + bb(xdim, :) - half*db(xdim, :)
-              b_ccr(xdim, :) = b_cc(xdim, :) + bb(xdim, :) + half*db(xdim, :)
-           else
-              db  = plimiter(b_cc)
-              b_ccl(xdim, :) = b_cc(xdim, :) - half*db(xdim, :)
-              b_ccr(xdim, :) = b_cc(xdim, :) + half*db(xdim, :)
-           endif
-#endif
 
 
         end subroutine slope
 
         subroutine ulr_to_qlr(du, db, dpsi)
 
-          use dataio_pub, only: die
+           use constants,  only: DIVB_HDC
+           use dataio_pub, only: die
+           use global,     only: divB_0_method
 
            implicit none
 
@@ -736,16 +723,16 @@ contains
            endif
            b_cc_r(:,nx) = b_cc_r(:,nx-1)
 
-#ifdef GLM
-           if (present(dpsi)) then
-              psi_l = psi__r + dpsi
-              psi_r(:,1:nx-1) = psi__l(:,2:nx) + dpsi(:,2:nx)
-           else
-              psi_l = psi__r
-              psi_r(:,1:nx-1) = psi__l(:,2:nx)
+           if (divB_0_method == DIVB_HDC) then
+              if (present(dpsi)) then
+                 psi_l = psi__r + dpsi
+                 psi_r(:,1:nx-1) = psi__l(:,2:nx) + dpsi(:,2:nx)
+              else
+                 psi_l = psi__r
+                 psi_r(:,1:nx-1) = psi__l(:,2:nx)
+              endif
+              psi_r(:,nx) = psi_r(:,nx-1)
            endif
-           psi_r(:,nx) = psi_r(:,nx-1)
-#endif
 
            ql = utoq(u_l,b_cc_l)
            qr = utoq(u_r,b_cc_r)
@@ -754,7 +741,9 @@ contains
 
         subroutine ulr_fluxes_qlr
 
-          use hlld,       only: fluxes
+           use constants,  only: DIVB_HDC
+           use hlld,       only: fluxes
+           use global,     only: divB_0_method
 
            implicit none
 
@@ -772,18 +761,21 @@ contains
            b_cc_r(:,1:nx-1) = b_ccl(:,2:nx) + half*dtodx*flx(size(u,1)+1:size(u,1)+size(b_cc,1),2:nx)
            b_cc_r(:,nx) = b_cc_r(:,nx-1)
 
-#ifdef GLM
-           psi_l(1,2:nx) = psi__r(1,2:nx) + half*dtodx*flx(size(u,1)+size(b_cc,1)+1,2:nx)
-           psi_l(:,1) = psi_l(:,2)
-           psi_r(1,1:nx-1) = psi__l(1,2:nx) + half*dtodx*flx(size(u,1)+size(b_cc,1)+1,2:nx)
-           psi_r(:,nx) = psi_r(:,nx-1)
-#endif /* GLM */
+           if (divB_0_method == DIVB_HDC) then
+              psi_l(1,2:nx) = psi__r(1,2:nx) + half*dtodx*flx(size(u,1)+size(b_cc,1)+1,2:nx)
+              psi_l(:,1) = psi_l(:,2)
+              psi_r(1,1:nx-1) = psi__l(1,2:nx) + half*dtodx*flx(size(u,1)+size(b_cc,1)+1,2:nx)
+              psi_r(:,nx) = psi_r(:,nx-1)
+           endif
            ql = utoq(u_l,b_cc_l)
            qr = utoq(u_r,b_cc_r)
 
         end subroutine ulr_fluxes_qlr
 
         subroutine du_db(du, db, dpsi)
+
+           use constants,  only: DIVB_HDC
+           use global,     only: divB_0_method
 
            implicit none
 
@@ -797,24 +789,23 @@ contains
            db(:,2:nx) = dtodx*(mag_cc(:,1:nx-1) - mag_cc(:,2:nx))
            db(:,1) = db(:,2)
 
-#ifdef GLM
-           dpsi(:,2:nx) = dtodx*(psi_cc(:,1:nx-1) - psi_cc(:,2:nx))
-           dpsi(:,1) = dpsi(:,2)
-#else
-           dpsi = 0.
-#endif /*GLM */
+           if (divB_0_method == DIVB_HDC) then
+              dpsi(:,2:nx) = dtodx*(psi_cc(:,1:nx-1) - psi_cc(:,2:nx))
+              dpsi(:,1) = dpsi(:,2)
+           else
+              dpsi = 0.
+           endif
 
         end subroutine du_db
 
         subroutine riemann_wrap()
 
-           use constants,  only: xdim, zdim
+           use constants,  only: xdim, zdim, DIVB_HDC
            use fluidindex, only: flind
            use fluidtypes, only: component_fluid
+           use global,     only: divB_0_method
            use hlld,       only: riemann_hlld
-#ifdef GLM
            use hdc,        only: glm_mhd
-#endif /* GLM */
 
            implicit none
 
@@ -822,10 +813,8 @@ contains
            class(component_fluid), pointer :: fl
            real, dimension(size(b_cc,1),size(b_cc,2)), target :: b0, bf0
            real, dimension(:,:), pointer :: p_flx, p_bcc, p_bccl, p_bccr, p_ql, p_qr
-#ifdef GLM
            real, dimension(size(psi,1),size(psi,2)), target ::  p0, pf0
            real, dimension(:,:), pointer :: p_psif, p_psi_l, p_psi_r
-#endif /* GLM */
 
            do i = 1, flind%fluids
               fl    => flind%all_fluids(i)%fl
@@ -836,25 +825,25 @@ contains
                  p_bccl => b_cc_l(xdim:zdim,:)
                  p_bccr => b_cc_r(xdim:zdim,:)
                  p_bcc  => mag_cc(xdim:zdim,:)
-#ifdef GLM
-                 p_psif  => psi_cc(:,:)
-                 p_psi_l => psi_l(:,:)
-                 p_psi_r => psi_r(:,:)
-                 call glm_mhd(p_psi_l(1,:), p_psi_r(1,:), p_bccl(xdim,:), p_bccr(xdim,:), p_bcc(xdim,:), p_psif(1,:))
-#else /* !GLM */
-                 mag_cc(xdim,:) = 0.
-#endif /* !GLM */
+                 if (divB_0_method == DIVB_HDC) then
+                    p_psif  => psi_cc(:,:)
+                    p_psi_l => psi_l(:,:)
+                    p_psi_r => psi_r(:,:)
+                    call glm_mhd(p_psi_l(1,:), p_psi_r(1,:), p_bccl(xdim,:), p_bccr(xdim,:), p_bcc(xdim,:), p_psif(1,:))
+                 else
+                    mag_cc(xdim,:) = 0.
+                 endif
               else ! ignore all magnetic field
                  b0 = 0.
                  p_bccl => b0
                  p_bccr => b0
                  p_bcc  => bf0
-#ifdef GLM
-                 p0 = 0.
-                 p_psi_l => p0
-                 p_psi_r => p0
-                 p_psif  => pf0
-#endif /* GLM */
+                 if (divB_0_method == DIVB_HDC) then
+                    p0 = 0.
+                    p_psi_l => p0
+                    p_psi_r => p0
+                    p_psif  => pf0
+                 endif
               endif
 
               call riemann_hlld(nx, p_flx, p_ql, p_qr, p_bcc, p_bccl, p_bccr, fl%gam) ! whole mag_cc is not needed now for simple schemes but rk2 and rk4 still rely on it
@@ -863,7 +852,9 @@ enddo
 
         subroutine update(weights)
 
+           use constants,        only: DIVB_HDC
            use fluidindex,       only: flind
+           use global,           only: divB_0_method
 #ifdef COSM_RAYS
            use fluidindex,       only: iarr_all_dn, iarr_all_mx, iarr_all_en
            use global,           only: dt
@@ -916,14 +907,14 @@ enddo
            b_cc(:,1) = b_cc(:,2)
            b_cc(:,nx) = b_cc(:,nx-1)
 
-#ifdef GLM
-           psi(:,2:nx) = psi(:,2:nx) + w(1) *dtodx * (psi_cc(:,1:nx-1) - psi_cc(:,2:nx))
-           if (size(w)>=2) psi(:,2:nx) = psi(:,2:nx) + w(2) * dpsi1(:,2:nx)
-           if (size(w)>=3) psi(:,2:nx) = psi(:,2:nx) + w(3) * dpsi2(:,2:nx)
-           if (size(w)>=4) psi(:,2:nx) = psi(:,2:nx) + w(4) * dpsi3(:,2:nx)
-           psi(:,1) = psi(:,2)
-           psi(:,nx) = psi(:,nx-1)
-#endif /* GLM */
+           if (divB_0_method == DIVB_HDC) then
+              psi(:,2:nx) = psi(:,2:nx) + w(1) *dtodx * (psi_cc(:,1:nx-1) - psi_cc(:,2:nx))
+              if (size(w)>=2) psi(:,2:nx) = psi(:,2:nx) + w(2) * dpsi1(:,2:nx)
+              if (size(w)>=3) psi(:,2:nx) = psi(:,2:nx) + w(3) * dpsi2(:,2:nx)
+              if (size(w)>=4) psi(:,2:nx) = psi(:,2:nx) + w(4) * dpsi3(:,2:nx)
+              psi(:,1) = psi(:,2)
+              psi(:,nx) = psi(:,nx-1)
+           endif
 
 ! This is lowest order implementation of CR
 ! It agrees with the implementation in RTVD in the limit of small CR energy amounts

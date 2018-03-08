@@ -52,13 +52,12 @@ contains
 
   function fluxes(u, b_cc, psi) result(f) ! This function is called by muscl and rk2muscl
 
-    use constants,  only: half, xdim, ydim, zdim, I_ONE
+    use constants,  only: half, xdim, ydim, zdim, I_ONE, DIVB_HDC
     use fluidindex, only: flind
     use fluidtypes, only: component_fluid
     use func,       only: ekin
-#ifdef GLM
+    use global,     only: divB_0_method
     use hdc,        only: chspeed
-#endif
 
     implicit none
 
@@ -110,10 +109,10 @@ contains
           f(fl%imz,:)  =  u(fl%imz,:)*vx(:) - b_cc(xdim,:)*b_cc(zdim,:)
           f(boff+ydim,:) =  b_cc(ydim,:)*vx(:) - b_cc(xdim,:)*vy(:)
           f(boff+zdim,:) =  b_cc(zdim,:)*vx(:) - b_cc(xdim,:)*vz(:)
-#ifdef GLM
-          f(boff+xdim,:) = psi(1,:) ! Check this with MUSCL
-          f(psioff,:)    = chspeed*2*b_cc(xdim,:) ! Check this with MUSCL
-#endif /* GLM */
+          if (divB_0_method == DIVB_HDC) then
+             f(boff+xdim,:) = psi(1,:) ! Check this with MUSCL
+             f(psioff,:)    = chspeed*2*b_cc(xdim,:) ! Check this with MUSCL
+          endif
        else
           f(fl%imy,:)  =  u(fl%imy,:)*vx(:)
           f(fl%imz,:)  =  u(fl%imz,:)*vx(:)
