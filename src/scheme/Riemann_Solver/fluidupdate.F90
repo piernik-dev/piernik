@@ -159,8 +159,9 @@ contains
     use all_boundaries, only: all_bnd
     use cg_leaves,      only: leaves
     use cg_list,        only: cg_list_element
+    use constants,      only: DIVB_CT
     use domain,         only: dom
-    use global,         only: skip_sweep, dt, force_cc_mag
+    use global,         only: skip_sweep, dt, force_cc_mag, divB_0_method
 #ifdef COSM_RAYS
     use crdiffusion,    only: cr_diff
     use initcosmicrays, only: use_split
@@ -183,7 +184,7 @@ contains
           if (use_split) call cr_diff(dir)
 #endif /* COSM_RAYS */
 #ifdef MAGNETIC
-          if (.not. force_cc_mag) call magfield(dir)
+          if (divB_0_method == DIVB_CT) call magfield(dir)
 #endif /* MAGNETIC */
        endif
 
@@ -197,7 +198,7 @@ contains
        call all_bnd
        if (forward) then
 #ifdef MAGNETIC
-          if (.not. force_cc_mag) call magfield(dir)
+          if (divB_0_method == DIVB_CT) call magfield(dir)
 #endif /* MAGNETIC */
 #ifdef COSM_RAYS
           if (use_split) call cr_diff(dir)
