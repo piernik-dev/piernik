@@ -67,9 +67,9 @@ contains
       use timer,                 only: set_timer
       use units,                 only: init_units
       use user_hooks,            only: problem_post_restart, problem_post_IC
-#ifdef GLM
+#ifdef RIEMANN
       use hdc,                   only: init_psi
-#endif /* GLM */
+#endif /* RIEMANN */
 #if defined MAGNETIC && defined RESISTIVE
       use resistivity,           only: init_resistivity, compute_resist
 #endif /* MAGNETIC && RESISTIVE */
@@ -264,9 +264,9 @@ contains
          nit = 0
          finished = .false.
          call problem_initial_conditions ! may depend on anything
-#ifdef GLM
-         call init_psi ! initialize the auxiliary field for divergence cleaning
-#endif /* GLM */
+#ifdef RIEMANN
+         call init_psi ! initialize the auxiliary field for divergence cleaning when needed
+#endif /* RIEMANN */
 
          write(msg, '(a,f10.2)')"[initpiernik] IC on base level, time elapsed: ",set_timer(tmr_fu)
          if (master) call printinfo(msg)

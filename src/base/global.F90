@@ -44,7 +44,7 @@ module global
         &    integration_order, limiter, limiter_b, limiter_p, smalld, smallei, smallp, use_smalld, h_solver, &
         &    relax_time, grace_period_passed, cfr_smooth, repeat_step, skip_sweep, geometry25D, &
         &    dirty_debug, do_ascii_dump, show_n_dirtys, no_dirty_checks, sweeps_mgu, use_fargo, &
-        &    force_cc_mag, psi_0, glm_alpha
+        &    divB_0_method, force_cc_mag, psi_0, glm_alpha
 
    real, parameter :: dt_default_grow = 2.
    logical         :: cfl_violated             !< True when cfl condition is violated
@@ -55,6 +55,7 @@ module global
    integer(kind=4) :: nstep, nstep_saved
    real            :: t, dt, dt_old, dtm, t_saved
    integer         :: divB_0_method            !< encoded method of making div(B) = 0 (currently DIVB_CT or DIVB_HDC)
+   logical         :: force_cc_mag             !< treat magnetic field as cell-centered in the Riemann solver (temporary hack)
 
    ! Namelist variables
 
@@ -86,13 +87,12 @@ module global
    logical, dimension(xdim:zdim) :: skip_sweep        !< allows to skip sweep in chosen direction
    logical                       :: sweeps_mgu        !< Mimimal Guardcell Update in sweeps
    logical                       :: use_fargo         !< use Fast Eulerian Transport for differentially rotating disks
-   logical                       :: force_cc_mag      !< treat magnetic field as cell-centered in the Riemann solver (temporary hack)
    real                          :: psi_0             !< initial value for the psi field used in divergence cleaning
    real                          :: glm_alpha         !< damping factor for the psi field
 
    namelist /NUMERICAL_SETUP/ cfl, cflcontrol, cfl_max, use_smalld, smalld, smallei, smallc, smallp, dt_initial, dt_max_grow, dt_min, &
         &                     repeat_step, limiter, limiter_b, limiter_p, relax_time, integration_order, cfr_smooth, skip_sweep, geometry25D, sweeps_mgu, &
-        &                     use_fargo, h_solver, divB_0, force_cc_mag, psi_0, glm_alpha
+        &                     use_fargo, h_solver, divB_0, psi_0, glm_alpha
 
 contains
 
@@ -127,7 +127,6 @@ contains
 !!   <tr><td>geometry25D      </td><td>F      </td><td>logical value                        </td><td>\copydoc global::geometry25d      </td></tr>
 !!   <tr><td>sweeps_mgu       </td><td>F      </td><td>logical value                        </td><td>\copydoc global::sweeps_mgu       </td></tr>
 !!   <tr><td>divB_0           </td><td>CT     </td><td>string                               </td><td>\copydoc global::divB_0           </td></tr>
-!!   <tr><td>force_cc_mag     </td><td>F      </td><td>logical value                        </td><td>\copydoc global::force_cc_mag     </td></tr>
 !!   <tr><td>psi_0            </td><td>0.     </td><td>real value                           </td><td>\copydoc global::psi_0            </td></tr>
 !!   <tr><td>glm_alpha        </td><td>0.1    </td><td>real value                           </td><td>\copydoc global::glm_alpha        </td></tr>
 !! </table>
@@ -186,11 +185,6 @@ contains
       relax_time  = 0.
       integration_order  = 2
       use_fargo   = .false.
-#ifdef GLM
-      force_cc_mag = .true.
-#else /* !GLM */
-      force_cc_mag = .false.
-#endif /* !GLM */
       psi_0       = 0.
       glm_alpha   = 0.1
       skip_sweep  = .false.
@@ -256,7 +250,6 @@ contains
          lbuff(6)   = geometry25D
          lbuff(7)   = sweeps_mgu
          lbuff(8)   = use_fargo
-         lbuff(9)   = force_cc_mag
 
       endif
 
@@ -273,7 +266,6 @@ contains
          geometry25D   = lbuff(6)
          sweeps_mgu    = lbuff(7)
          use_fargo     = lbuff(8)
-         force_cc_mag  = lbuff(9)
 
          smalld      = rbuff( 1)
          smallc      = rbuff( 2)
@@ -309,17 +301,16 @@ contains
             call die("[global:init_global] unrecognized divergence cleaning description.")
       end select
 
-      if (master) then
-         select case (divB_0_method)
-            case (DIVB_HDC)
-               if (.not. force_cc_mag) call warn("[global:init_global] force_cc_mag should be set to .true. for HDC.") ! BEWARE: upgrade to die()
-            case (DIVB_CT)
-               if (force_cc_mag) call warn("[global:init_global] force_cc_mag forced to.false. for Constrained Transport div(B) cleaning.") ! BEWARE: upgrade to die()
-               force_cc_mag = .false.
-            case default
-               call die("[global:init_global] unrecognized divergence cleaning method.")
-         end select
-      endif
+      !> reshape_b should carefully check things here
+      force_cc_mag = .false.
+      select case (divB_0_method)
+         case (DIVB_HDC)
+            force_cc_mag = .true.
+         case (DIVB_CT)
+            force_cc_mag = .false.
+         case default
+            call die("[global:init_global] unrecognized divergence cleaning method.")
+      end select
 
    end subroutine init_global
 

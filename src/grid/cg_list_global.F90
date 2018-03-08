@@ -229,12 +229,12 @@ contains
       use constants,  only: wa_n, fluid_n, uh_n, mag_n, ndims, AT_NO_B, AT_OUT_B, VAR_XFACE, VAR_YFACE, VAR_ZFACE, PIERNIK_INIT_FLUIDS
       use dataio_pub, only: die, code_progress
       use fluidindex, only: flind
-      use global,     only: force_cc_mag
 #ifdef ISO
       use constants,  only: cs_i2_n
 #endif /* ISO */
 #ifdef RIEMANN
       use constants,  only: mag_cc_n, psi_n
+      use global,     only: force_cc_mag
 #endif /* RIEMANN */
 
       implicit none

@@ -31,8 +31,6 @@
 !
 #include "piernik.h"
 
-#ifdef GLM
-
 module hdc
 ! pulled by RIEMANN
 
@@ -303,6 +301,5 @@ contains
 
 end module hdc
 
-#endif /* GLM */
 !--------------------------------------------------------------------------------------------
 
