@@ -240,6 +240,12 @@ module constants
       enumerator :: I_TSC   ! Triangular shaped cloud
    end enum
 
+   ! divB=0 constraining method
+   enum, bind(C)
+      enumerator :: DIVB_CT   ! Constrained Transport
+      enumerator :: DIVB_HDC  ! Hyperbolic Divergence Cleaning (div(B) diffusion, GLM)
+   end enum
+
    ! -1, 0, 1
    enum, bind(C)
       enumerator :: IM = -1

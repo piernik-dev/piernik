@@ -54,6 +54,7 @@ module global
    logical         :: no_dirty_checks          !< Temporarily disable dirty checks
    integer(kind=4) :: nstep, nstep_saved
    real            :: t, dt, dt_old, dtm, t_saved
+   integer         :: divB_0_method            !< encoded method of making div(B) = 0 (currently DIVB_CT or DIVB_HDC)
 
    ! Namelist variables
 
@@ -80,6 +81,7 @@ module global
    character(len=cbuff_len)      :: limiter_p         !< type of flux limiter for psi field in the Riemann solver
    character(len=cbuff_len)      :: cflcontrol        !< type of cfl control just before each sweep (possibilities: 'none', 'main', 'user')
    character(len=cbuff_len)      :: h_solver          !< type of hydro solver
+   character(len=cbuff_len)      :: divB_0            !< human-readable method of making div(B) = 0 (currently CT or HDC)
    logical                       :: repeat_step       !< repeat fluid step if cfl condition is violated (significantly increases mem usage)
    logical, dimension(xdim:zdim) :: skip_sweep        !< allows to skip sweep in chosen direction
    logical                       :: sweeps_mgu        !< Mimimal Guardcell Update in sweeps
@@ -90,7 +92,7 @@ module global
 
    namelist /NUMERICAL_SETUP/ cfl, cflcontrol, cfl_max, use_smalld, smalld, smallei, smallc, smallp, dt_initial, dt_max_grow, dt_min, &
         &                     repeat_step, limiter, limiter_b, limiter_p, relax_time, integration_order, cfr_smooth, skip_sweep, geometry25D, sweeps_mgu, &
-        &                     use_fargo, h_solver, force_cc_mag, psi_0, glm_alpha
+        &                     use_fargo, h_solver, divB_0, force_cc_mag, psi_0, glm_alpha
 
 contains
 
@@ -124,6 +126,7 @@ contains
 !!   <tr><td>skip_sweep       </td><td>F, F, F</td><td>logical array                        </td><td>\copydoc global::skip_sweep       </td></tr>
 !!   <tr><td>geometry25D      </td><td>F      </td><td>logical value                        </td><td>\copydoc global::geometry25d      </td></tr>
 !!   <tr><td>sweeps_mgu       </td><td>F      </td><td>logical value                        </td><td>\copydoc global::sweeps_mgu       </td></tr>
+!!   <tr><td>divB_0           </td><td>CT     </td><td>string                               </td><td>\copydoc global::divB_0           </td></tr>
 !!   <tr><td>force_cc_mag     </td><td>F      </td><td>logical value                        </td><td>\copydoc global::force_cc_mag     </td></tr>
 !!   <tr><td>psi_0            </td><td>0.     </td><td>real value                           </td><td>\copydoc global::psi_0            </td></tr>
 !!   <tr><td>glm_alpha        </td><td>0.1    </td><td>real value                           </td><td>\copydoc global::glm_alpha        </td></tr>
@@ -132,7 +135,7 @@ contains
 !<
    subroutine init_global
 
-      use constants,  only: big_float, PIERNIK_INIT_MPI
+      use constants,  only: big_float, PIERNIK_INIT_MPI, INVALID, DIVB_CT, DIVB_HDC
       use dataio_pub, only: die, msg, warn, code_progress
       use dataio_pub, only: nh  ! QA_WARN required for diff_nml
       use mpisetup,   only: cbuff, ibuff, lbuff, rbuff, master, slave, piernik_MPI_Bcast
@@ -151,10 +154,12 @@ contains
       limiter     = 'minmod'    ! 'vanleer' is a 2nd choice for otvortex
       limiter_b   = 'superbee'  ! 'moncen' and 'vanleer' were also performing well
       limiter_p   = limiter_b
+      divB_0      = "HDC"
 #else /* ! RIEMANN */
       limiter     = 'vanleer'
       limiter_b   = limiter
       limiter_p   = 'minmod'
+      divB_0      = "CT"
 #endif /* RIEMANN */
       cflcontrol  = 'warn'
       h_solver    = 'muscl'
@@ -294,17 +299,26 @@ contains
 
       endif
 
-      if (master) then
-#ifndef RIEMANN
-         if (force_cc_mag) call warn("[global:init_global] force_cc_mag ignored when RIEMANN is not set.")
-         force_cc_mag = .false.
-#endif /* !RIEMANN */
+      divB_0_method = INVALID
+      select case (divB_0)
+         case ("CT", "ct", "constrained transport", "Constrained Transport")
+            divB_0_method = DIVB_CT
+         case ("HDC", "hdc", "GLM", "glm", "divergence cleaning", "divergence diffusion")
+            divB_0_method = DIVB_HDC
+         case default
+            call die("[global:init_global] unrecognized divergence cleaning description.")
+      end select
 
-#ifdef GLM
-         if (.not. force_cc_mag) call warn("[global:init_global] force_cc_mag should be set to .true. for GLM.")
-#else /* !GLM */
-         if (force_cc_mag) call warn("[global:init_global] force_cc_mag should be set to .false. for CT (non-GLM).")
-#endif /* !GLM */
+      if (master) then
+         select case (divB_0_method)
+            case (DIVB_HDC)
+               if (.not. force_cc_mag) call warn("[global:init_global] force_cc_mag should be set to .true. for HDC.") ! BEWARE: upgrade to die()
+            case (DIVB_CT)
+               if (force_cc_mag) call warn("[global:init_global] force_cc_mag forced to.false. for Constrained Transport div(B) cleaning.") ! BEWARE: upgrade to die()
+               force_cc_mag = .false.
+            case default
+               call die("[global:init_global] unrecognized divergence cleaning method.")
+         end select
       endif
 
    end subroutine init_global
