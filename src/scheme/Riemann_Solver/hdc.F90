@@ -220,9 +220,8 @@ contains
      use fluidindex, only: flind
      use fluids_pub, only: has_ion
      use fluidtypes, only: component_fluid
-     use constants,  only: GEO_XYZ, half
-     use dataio_pub, only: die
-     use domain,     only: dom
+     use global,     only: use_eglm
+     use grid_cont,  only: grid_container
      use named_array_list, only: qna
 
      implicit none
@@ -232,6 +231,7 @@ contains
      type(grid_container),   pointer  :: cg
      integer                          :: i, j, k, ipsi
 
+     if (.not. use_eglm) return
 
      if (igp == INVALID) call aux_var
      ipsi = qna%ind(psi_n)
