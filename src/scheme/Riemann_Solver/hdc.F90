@@ -224,6 +224,7 @@ contains
      use cg_list,    only: cg_list_element
      use grid_cont,  only: grid_container
      use constants,  only: xdim, ydim, zdim, psi_n
+     use domain,     only: dom
      use fluidindex, only: flind
      use fluids_pub, only: has_ion
      use fluidtypes, only: component_fluid
@@ -237,67 +238,65 @@ contains
      class(component_fluid), pointer  :: fl
      type(cg_list_element),  pointer  :: cgl
      type(grid_container),   pointer  :: cg
-     integer                          :: i, j, k, im1, ip1, jm1, jp1, km1, kp1, ipsi
-     
-     
+     integer                          :: i, j, k, ipsi
+
+
      if (idb == INVALID .or. igp == INVALID) call aux_var
      ipsi = qna%ind(psi_n)
-     
-     if(has_ion) then
+
+     if (has_ion) then
         if (dom%geometry_type /= GEO_XYZ) call die("[hdc:update_chspeed] non-cartesian geometry not implemented yet.")
         fl => flind%ion
         cgl => leaves%first
         do while (associated(cgl))
            cg => cgl%cg
            do k = cgl%cg%ks, cgl%cg%ke
-              km1 = max(1, k-1)
-              kp1 = min(km1, k+1)
               do j = cgl%cg%js, cgl%cg%je
-                 jm1 = max(1, j-1)
-                 jp1 = min(jm1, j+1)
                  do i = cgl%cg%is, cgl%cg%ie
-                    im1 = max(1, i-1)
-                    ip1 = min(im1, i+1)
+                    associate (im1 => i - Dom%D_x, ip1 => i + Dom%D_x, &
+                         &     jm1 => j - Dom%D_y, jp1 => j + Dom%D_y, &
+                         &     km1 => k - Dom%D_z, kp1 => k + Dom%D_z)
 
-                    ! Divergence of B
-                    cg%q(idb)%arr(i,j,k) = half * ( &
-                         (cg%b(xdim,ip1,j,k) - cg%b(xdim,im1,j,k))/cg%dl(xdim) + &
-                         (cg%b(ydim,i,jp1,k) - cg%b(ydim,i,jm1,k))/cg%dl(ydim) + &
-                         (cg%b(zdim,i,j,kp1) - cg%b(zdim,i,j,km1))/cg%dl(zdim) &
-                         )
+                       ! Divergence of B
+                       cg%q(idb)%arr(i,j,k) = half * ( &
+                            (cg%b(xdim,ip1,j,k) - cg%b(xdim,im1,j,k))/cg%dl(xdim) + &
+                            (cg%b(ydim,i,jp1,k) - cg%b(ydim,i,jm1,k))/cg%dl(ydim) + &
+                            (cg%b(zdim,i,j,kp1) - cg%b(zdim,i,j,km1))/cg%dl(zdim) &
+                            )
 
-                    ! Gradient of psi
-                    cg%w(igp)%arr(:,i,j,k) = half * [ &
-                         (cg%q(ipsi)%arr(ip1,j,k) - cg%q(ipsi)%arr(im1,j,k)), &
-                         (cg%q(ipsi)%arr(i,jp1,k) - cg%q(ipsi)%arr(i,jm1,k)), &
-                         (cg%q(ipsi)%arr(i,j,kp1) - cg%q(ipsi)%arr(i,j,km1)) &
-                         ] / cg%dl
-                         
+                       ! Gradient of psi
+                       cg%w(igp)%arr(:,i,j,k) = half * [ &
+                            (cg%q(ipsi)%arr(ip1,j,k) - cg%q(ipsi)%arr(im1,j,k)), &
+                            (cg%q(ipsi)%arr(i,jp1,k) - cg%q(ipsi)%arr(i,jm1,k)), &
+                            (cg%q(ipsi)%arr(i,j,kp1) - cg%q(ipsi)%arr(i,j,km1)) &
+                            ] / cg%dl
 
-                    !Sources
 
-                    ! momentum = momentum -divB*B
-                    cgl%cg%u(fl%imx:fl%imz,i,j,k) = cgl%cg%u(fl%imx:fl%imz,i,j,k) - cg%q(idb)%arr(i,j,k)*(cgl%cg%b(xdim:zdim,i,j,k))
+                       !Sources
 
-                    ! B = B -divB*u
-                    cgl%cg%b(xdim:zdim,i,j,k) = cgl%cg%b(xdim:zdim,i,j,k) - cg%q(idb)%arr(i,j,k)*(cgl%cg%u(fl%imx:fl%imz,i,j,k)/cgl%cg%u(fl%idn,i,j,k))
+                       ! momentum = momentum -divB*B
+                       cgl%cg%u(fl%imx:fl%imz,i,j,k) = cgl%cg%u(fl%imx:fl%imz,i,j,k) - cg%q(idb)%arr(i,j,k)*(cgl%cg%b(xdim:zdim,i,j,k))
 
-                    ! e = e - divB*u.B - B.grad(psi)
+                       ! B = B -divB*u
+                       cgl%cg%b(xdim:zdim,i,j,k) = cgl%cg%b(xdim:zdim,i,j,k) - cg%q(idb)%arr(i,j,k)*(cgl%cg%u(fl%imx:fl%imz,i,j,k)/cgl%cg%u(fl%idn,i,j,k))
 
-                    cgl%cg%u(fl%ien,i,j,k) = cgl%cg%u(fl%ien,i,j,k) - &
-                         cg%q(idb)%arr(i,j,k)*dot_product(cgl%cg%u(fl%imx:fl%imz,i,j,k)/cgl%cg%u(fl%idn,i,j,k),cgl%cg%b(xdim:zdim,i,j,k)) - &
-                                                                                             dot_product(cgl%cg%b(xdim:zdim,i,j,k),cg%w(igp)%arr(xdim:zdim,i,j,k))
+                       ! e = e - divB*u.B - B.grad(psi)
 
-                    ! psi = psi - u.grad(psi), other term is calculated in damping
-                    cgl%cg%q(qna%ind(psi_n))%arr(i,j,k) =  cgl%cg%q(qna%ind(psi_n))%arr(i,j,k) - &
-                                                                        dot_product(cgl%cg%u(fl%imx:fl%imz,i,j,k)/cgl%cg%u(fl%idn,i,j,k),cg%w(igp)%arr(xdim:zdim,i,j,k))
-                    
-                 end do
-              end do
-           end do
+                       cgl%cg%u(fl%ien,i,j,k) = cgl%cg%u(fl%ien,i,j,k) - &
+                            cg%q(idb)%arr(i,j,k)*dot_product(cgl%cg%u(fl%imx:fl%imz,i,j,k)/cgl%cg%u(fl%idn,i,j,k),cgl%cg%b(xdim:zdim,i,j,k)) - &
+                            dot_product(cgl%cg%b(xdim:zdim,i,j,k),cg%w(igp)%arr(xdim:zdim,i,j,k))
+
+                       ! psi = psi - u.grad(psi), other term is calculated in damping
+                       cgl%cg%q(qna%ind(psi_n))%arr(i,j,k) =  cgl%cg%q(qna%ind(psi_n))%arr(i,j,k) - &
+                            dot_product(cgl%cg%u(fl%imx:fl%imz,i,j,k)/cgl%cg%u(fl%idn,i,j,k),cg%w(igp)%arr(xdim:zdim,i,j,k))
+
+                    end associate
+                 enddo
+              enddo
+           enddo
            cgl=>cgl%nxt
-        end do
-     end if
+        enddo
+     endif
 
      return
    end subroutine eglm
