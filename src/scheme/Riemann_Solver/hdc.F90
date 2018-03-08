@@ -35,14 +35,60 @@
 
 module hdc
 ! pulled by RIEMANN
+
+   use constants, only: dsetnamelen, INVALID
+
   implicit none
 
   real, protected :: chspeed
+  integer, protected :: idb = INVALID, igp = INVALID !< indices of div(B) and grad(psi) arrays
+  character(len=dsetnamelen), parameter :: divB_n = "div_B", gradpsi_n = "grad_psi"
 
   private
-  public :: chspeed, update_chspeed, init_psi, glm_mhd, glmdamping
+  public :: chspeed, update_chspeed, init_psi, glm_mhd, glmdamping, eglm!, divergencebc
 
 contains
+
+!>
+!! \brief Allocate extra space for divB and grad psi to speed up calculations
+!!
+!! To create the auxiliary arrays just use the call
+!!    if (idb == INVALID .or. igp == INVALID) call aux_var
+!! It should safe to call it multiple times from here - no new storage is
+!! created as long as the indices idb and igp are consistent with qna and wna entries.
+!!
+!! The divergence of the B field should be stored in cg%q(idb)%arr(:,:,:)
+!! The gradient of the psi fielsd should be stored in cg%w(igp)%arr(xdim:zdim,:,:,:)
+!!
+!! These arrays will be automagically freed with destruction of grid containers.
+!<
+
+   subroutine aux_var
+
+      use cg_list_global,   only: all_cg
+      use constants,        only: INVALID, ndims
+      use dataio_pub,       only: die
+      use named_array_list, only: qna, wna
+
+      implicit none
+
+      if (qna%exists(divB_n)) then
+         if (idb /= qna%ind(divB_n)) call die ("[hdc:aux_var] qna%exists(divB_n) .and. idb /= qna%ind(divB_n)")
+      else
+         if (idb /= INVALID) call die ("[hdc:aux_var] .not. qna%exists(divB_n) .and. idb /= INVALID")
+         call all_cg%reg_var(divB_n)
+         idb = qna%ind(divB_n)
+      endif
+
+      if (wna%exists(gradpsi_n)) then
+         if (igp /= wna%ind(gradpsi_n)) call die ("[hdc:aux_var] wna%exists(gradpsi_n) .and. igp /= wna%ind(gradpsi_n)")
+      else
+         if (igp /= INVALID) call die ("[hdc:aux_var] .not. wna%exists(gradpsi_n) .and. igp /= INVALID")
+         call all_cg%reg_var(gradpsi_n, dim4=ndims)
+         igp = wna%ind(gradpsi_n)
+      endif
+
+   end subroutine aux_var
 
 !>
 !! \brief recalcualte the speed of propagation of psi waves
@@ -166,7 +212,94 @@ contains
 !    if (qna%exists(psi_n)) call leaves%q_lin_comb( [qna%ind(psi_n), exp(-glm_alpha*cfl)], qna%ind(psi_n))
 ! but for AMR we may decide to use different factors on different levels
 
-  end subroutine glmdamping
+   end subroutine glmdamping
+
+!--------------------------------------------------------------------------------------------
+   !>
+     !! Eq.(38) Dedner et al. to be implemented
+   !<
+   subroutine eglm
+
+     use cg_leaves,  only: leaves
+     use cg_list,    only: cg_list_element
+     use grid_cont,  only: grid_container
+     use constants,  only: xdim, ydim, zdim, psi_n
+     use domain,     only: dom
+     use fluidindex, only: flind
+     use fluids_pub, only: has_ion
+     use fluidtypes, only: component_fluid
+     use constants,  only: GEO_XYZ, half
+     use dataio_pub, only: die
+     use domain,     only: dom
+     use named_array_list, only: qna
+
+     implicit none
+
+     class(component_fluid), pointer  :: fl
+     type(cg_list_element),  pointer  :: cgl
+     type(grid_container),   pointer  :: cg
+     integer                          :: i, j, k, ipsi
+
+
+     if (idb == INVALID .or. igp == INVALID) call aux_var
+     ipsi = qna%ind(psi_n)
+
+     if (has_ion) then
+        if (dom%geometry_type /= GEO_XYZ) call die("[hdc:update_chspeed] non-cartesian geometry not implemented yet.")
+        fl => flind%ion
+        cgl => leaves%first
+        do while (associated(cgl))
+           cg => cgl%cg
+           do k = cgl%cg%ks, cgl%cg%ke
+              do j = cgl%cg%js, cgl%cg%je
+                 do i = cgl%cg%is, cgl%cg%ie
+                    associate (im1 => i - Dom%D_x, ip1 => i + Dom%D_x, &
+                         &     jm1 => j - Dom%D_y, jp1 => j + Dom%D_y, &
+                         &     km1 => k - Dom%D_z, kp1 => k + Dom%D_z)
+
+                       ! Divergence of B
+                       cg%q(idb)%arr(i,j,k) = half * ( &
+                            (cg%b(xdim,ip1,j,k) - cg%b(xdim,im1,j,k))/cg%dl(xdim) + &
+                            (cg%b(ydim,i,jp1,k) - cg%b(ydim,i,jm1,k))/cg%dl(ydim) + &
+                            (cg%b(zdim,i,j,kp1) - cg%b(zdim,i,j,km1))/cg%dl(zdim) &
+                            )
+
+                       ! Gradient of psi
+                       cg%w(igp)%arr(:,i,j,k) = half * [ &
+                            (cg%q(ipsi)%arr(ip1,j,k) - cg%q(ipsi)%arr(im1,j,k)), &
+                            (cg%q(ipsi)%arr(i,jp1,k) - cg%q(ipsi)%arr(i,jm1,k)), &
+                            (cg%q(ipsi)%arr(i,j,kp1) - cg%q(ipsi)%arr(i,j,km1)) &
+                            ] / cg%dl
+
+
+                       !Sources
+
+                       ! momentum = momentum -divB*B
+                       cgl%cg%u(fl%imx:fl%imz,i,j,k) = cgl%cg%u(fl%imx:fl%imz,i,j,k) - cg%q(idb)%arr(i,j,k)*(cgl%cg%b(xdim:zdim,i,j,k))
+
+                       ! B = B -divB*u
+                       cgl%cg%b(xdim:zdim,i,j,k) = cgl%cg%b(xdim:zdim,i,j,k) - cg%q(idb)%arr(i,j,k)*(cgl%cg%u(fl%imx:fl%imz,i,j,k)/cgl%cg%u(fl%idn,i,j,k))
+
+                       ! e = e - divB*u.B - B.grad(psi)
+
+                       cgl%cg%u(fl%ien,i,j,k) = cgl%cg%u(fl%ien,i,j,k) - &
+                            cg%q(idb)%arr(i,j,k)*dot_product(cgl%cg%u(fl%imx:fl%imz,i,j,k)/cgl%cg%u(fl%idn,i,j,k),cgl%cg%b(xdim:zdim,i,j,k)) - &
+                            dot_product(cgl%cg%b(xdim:zdim,i,j,k),cg%w(igp)%arr(xdim:zdim,i,j,k))
+
+                       ! psi = psi - u.grad(psi), other term is calculated in damping
+                       cgl%cg%q(qna%ind(psi_n))%arr(i,j,k) =  cgl%cg%q(qna%ind(psi_n))%arr(i,j,k) - &
+                            dot_product(cgl%cg%u(fl%imx:fl%imz,i,j,k)/cgl%cg%u(fl%idn,i,j,k),cg%w(igp)%arr(xdim:zdim,i,j,k))
+
+                    end associate
+                 enddo
+              enddo
+           enddo
+           cgl=>cgl%nxt
+        enddo
+     endif
+
+     return
+   end subroutine eglm
 
 end module hdc
 

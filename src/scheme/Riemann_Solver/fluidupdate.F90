@@ -123,7 +123,7 @@ contains
     use multigrid_diffusion, only: multigrid_solve_diff
 #endif /* COSM_RAYS && MULTIGRID */
 #ifdef GLM
-    use hdc,            only: glmdamping
+    use hdc,            only: glmdamping, eglm
 #endif /* GLM */
 
     implicit none
@@ -151,6 +151,7 @@ contains
     if (associated(problem_customize_solution)) call problem_customize_solution(forward)
 #ifdef GLM
     call glmdamping
+    call eglm
 #endif /* GLM */
 
   end subroutine make_3sweeps
