@@ -90,9 +90,9 @@ module global
    real                          :: psi_0             !< initial value for the psi field used in divergence cleaning
    real                          :: glm_alpha         !< damping factor for the psi field
    logical                       :: use_eglm          !< use E-GLM?
-   logical                       :: use_hdc_3D        !< use GLM cleaning outside of 1D MHD solver
-   logical                       :: use_hdc_1D        !< use GLM cleaning inside 1D MHD solver
-   integer                       :: glm_iter          !< repeat GLM cleaning this many times
+   logical                       :: use_hdc_3D        !< use HDC outside of 1D MHD solver
+   logical                       :: use_hdc_1D        !< use HDC inside 1D MHD solver
+   integer                       :: glm_iter          !< repeat HDC this many times per timestep
 
    namelist /NUMERICAL_SETUP/ cfl, cflcontrol, cfl_max, use_smalld, smalld, smallei, smallc, smallp, dt_initial, dt_max_grow, dt_min, &
         &                     repeat_step, limiter, limiter_b, limiter_p, relax_time, integration_order, cfr_smooth, skip_sweep, geometry25D, sweeps_mgu, &
@@ -329,9 +329,9 @@ contains
       select case (divB_0_method)
          case (DIVB_HDC)
             force_cc_mag = .true.
-            if (glm_iter < 1) call warn("[global:init_global] glm_iter < 1 implies GLM switched off.")
-            if (.not. any([use_hdc_1D, use_hdc_3D])) call warn("[global:init_global] use_glm_* = .false. implies GLM switched off.")
-            if (all([use_hdc_1D, use_hdc_3D])) call warn("[global:init_global] both 1D and 3D GLM turned on.")
+            if (glm_iter < 1) call warn("[global:init_global] glm_iter < 1 implies HDC switched off.")
+            if (.not. any([use_hdc_1D, use_hdc_3D])) call warn("[global:init_global] use_glm_* = .false. implies HDC switched off.")
+            if (all([use_hdc_1D, use_hdc_3D])) call warn("[global:init_global] both 1D and 3D HDC turned on.")
          case (DIVB_CT)
             force_cc_mag = .false.
             if (any([use_hdc_1D, use_hdc_3D])) call warn("[global:init_global] use_glm_* = .true. ignored for CT.")
