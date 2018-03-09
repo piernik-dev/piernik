@@ -1,7 +1,6 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 import matplotlib.pyplot as plt
-import matplotlib
 from matplotlib.colors import LogNorm
 import numpy as np
 from math import pi
@@ -14,8 +13,7 @@ try:
     import yt
     import h5py
 except:
-    print "You must make yt & h5py available somehow"
-    exit(-1)
+    sys.exit("\033[91mYou must make yt & h5py available somehow\033[0m")
 
 f_run = True
 
@@ -24,17 +22,16 @@ plot_mag = True
 logscale_colors = False
 #---------- reading parameters
 filename=sys.argv[-1]
-exten = filename.split('.')
-exten = exten[-1]
+exten = filename.split('.')[-1]
 if exten[0:2] != 'h5':
-    sys.exit("Script requires (a list of) hdf5 file(s) on input")
+    sys.exit("\033[91mScript requires a (list of) hdf5 file(s) on input\033[0m")
 
 var_array = []
 if f_run == True:
     var_names = []
-    var_names = [ "ncre", "p_min_fix", "p_max_fix", "e_small"] # TODO: add cre_eff
+    var_names = [ "ncre", "p_min_fix", "p_max_fix", "e_small", "cre_eff"]
     if len(var_names) == 0:
-        print ("Empty list of parameter names provided: enter names of parameters to read")
+        print ("\033[93mEmpty list of parameter names provided: enter names of parameters to read\033[0m")
         var_names = read_h5.input_names_array()
     
     var_array = read_h5.read_par(filename, var_names)
@@ -47,34 +44,37 @@ if f_run == True:
         print ( " %20s =  %8s ( %15s  ) " %(var_names[i], var_array[i], type(var_array[i])))
     print ""
 #---------- Open file
-    h5File = h5py.File(filename,'r')
-    h5_field_list = []
-    for grid in h5File['data']:
-        for data in h5File['data'][grid]:
-            if data not in h5_field_list: h5_field_list.append(data)
-
+    h5File = h5py.File(filename,"r")
     h5ds = yt.load(filename)
-#----------- Loading other data
-    t = h5ds.current_time[0]
-    dt= h5File.attrs["timestep"]
-    time = t.in_units('Myr')    
-
 #---------- bounds on domain size
     grid_dim = h5File['grid_dimensions'][0][:]
     dim_map  = {'x':0,'y':1,'z':2}
-    avail_dim = [0,1,2]
-    avail_dims_by_slice = [[1,2],[0,2],[0,1]]
     dom_l = np.array(h5ds.domain_left_edge[0:3])
     dom_r = np.array(h5ds.domain_right_edge[0:3])
 
-    print "Domain size of provided file (x, y, z): ", grid_dim[:]
+#----------- Loading other data
+    t = h5ds.current_time[0]
+    dt= h5File.attrs["timestep"]
+    time = t.in_units('Myr')
+
+#------------ Organizing domain data
+    print ("\033[92mDomain shape of in provided file            (i, j, k): [%i,%i,%i] \033[0m" %(grid_dim[0], grid_dim[1], grid_dim[2]) )
+    print ("\033[92mDomain physical dimensions in provided file (x, y, z): [%f,%f,%f]:[%f,%f,%f] \033[0m" %(dom_l[0], dom_l[1], dom_l[2], dom_r[0], dom_r[1], dom_r[2]))
+
+    avail_dim = [0,1,2]
+    avail_dims_by_slice = [[1,2],[0,2],[0,1]]
+
     if len(grid_dim) == 3 and min(grid_dim) != 1:
-        slice_ax = ''
-        slice_coord = -1
+        slice_ax = ""
+        slice_coord = ""
         while slice_ax not in dim_map.keys():
-            slice_ax    = raw_input("Choose slice ax (x, y, z)      : ")
+            slice_ax    = raw_input("\033[92mChoose slice ax (x, y, z)      : \033[0m")
         while slice_coord > grid_dim[dim_map[slice_ax]] or slice_coord < 0:
-            slice_coord = int(raw_input("Choose slice coordinate (%d:%d): " % (0,grid_dim[dim_map[slice_ax]]) ))
+            try:
+                slice_coord = int(raw_input("\033[92mChoose slice coordinate (%d:%d) (if empty, middle is assumed): \033[0m" % (0,grid_dim[dim_map[slice_ax]]) ))
+            except:
+                slice_coord = int(grid_dim[dim_map[slice_ax]]/2.)
+                print ("\033[93m[Empty / improper input]: Setting slice coordinate to %i \033[0m" %slice_coord)
     elif min(grid_dim) == 1:
         slice_coord = 0
         if   grid_dim[0] == 1: 
@@ -84,18 +84,17 @@ if f_run == True:
         else:                  
             slice_ax = 'z'
     avail_dim = avail_dims_by_slice[dim_map[slice_ax]]
-    print "Slice ax set to", slice_ax, ", ind = ", slice_coord #, "available_dims: ", avail_dim
-    min_ran = [0,0,0]
-    min_ran[dim_map[slice_ax]] = slice_coord
-    max_ran = grid_dim
-    max_ran[dim_map[slice_ax]] = slice_coord
+    print ("\033[92mSlice ax set to %s, coordinate = %i \033[0m" %(slice_ax, slice_coord))
 
-#---------
+#--------- Preparing clickable image
     s = plt.figure(figsize=(12,6),dpi=80)
     s1 = plt.subplot(121)
 
     plot_field = "cr01"
     dset = h5File['data']['grid_0000000000'][plot_field]
+
+    click_coords = [0, 0]
+    image_number = 0
 
     if (slice_ax == "x"):
       fig1 = plt.imshow(dset[:,:,slice_coord], origin="lower") # TODO provide the right coordinates
@@ -111,7 +110,7 @@ if f_run == True:
     plt.ylabel("Physical domain ("+dim_map.keys()[dim_map.values().index(avail_dim[1])]+") [kpc]" )
     plt.xlabel("Physical domain ("+dim_map.keys()[dim_map.values().index(avail_dim[0])]+") [kpc]" )
     if logscale_colors == True:
-            print "WARNING: logscale_colors = True, if negative values are encountered, the script will crash."
+            print ("\033[93mWARNING: logscale_colors = True, if negative values are encountered, the script will crash.\033[0m")
             plt.pcolor(dset[:,:,0], norm=LogNorm(vmin=dset[:,:,0].min(), vmax=dset[:,:,0].max()), cmap='viridis') # TODO provide the right cooridinates
     plt.colorbar(shrink=0.9, pad=0.18)
 
@@ -127,17 +126,13 @@ if f_run == True:
     s1.set_yticks(valuesy)
     s1.set_yticklabels(labelsy)
 
-    click_coords = [0, 0]
-    image_number = 0
+    print ""
 #---------
     def read_click_and_plot(event):
         global click_coords, image_number, first_run
-        image_number ++1
-        #print('click: x=%d, y=%d, xdata=%d, ydata=%d' % (event.x, event.y, int(round(event.xdata)), int(round(event.ydata))))
         click_coords = [ int(round(event.xdata)), int(round(event.ydata)) ]
         point = s1.plot(event.xdata,event.ydata, marker="+", color="red")
         coords = [slice_coord, slice_coord, slice_coord]
-        coords[dim_map[slice_ax]] = slice_coord
         if slice_ax == "x":
             coords[1] = click_coords[0]
             coords[0] = click_coords[1]
@@ -147,17 +142,16 @@ if f_run == True:
         else: # slice_ax = "z"
             coords[2] = click_coords[0]
             coords[1] = click_coords[1]
-        print "Coordinates clicked:", coords[::-1]
 # ------------ preparing data and passing -------------------------
-        time = h5File.attrs['time'][0]
-        dt   = h5File.attrs['timestep'][0]
         ecrs = [] ; ncrs = []
+        print ("\033[92mValue of %s at point [%i, %i, %i] = %f \033[0m" %(plot_field, coords[0], coords[1], coords[2], h5File['data']['grid_0000000000'][plot_field].value[coords[0],coords[1],coords[2]]))
         for ind in range(1,ncre+1):
             ecrs.append(h5File['data']['grid_0000000000']['cree'+str(ind).zfill(2)].value[coords[0],coords[1],coords[2]])
             ncrs.append(h5File['data']['grid_0000000000']['cren'+str(ind).zfill(2)].value[coords[0],coords[1],coords[2]])
         plot_var = "e"
         fig2 = crs_h5.crs_plot_main(var_names, var_array, plot_var, ncrs, ecrs, field_max, time, dt, image_number)
         first_run = False
+        image_number=image_number+1
     cid = s.canvas.mpl_connect('button_press_event',read_click_and_plot)
     
     plt.show()
