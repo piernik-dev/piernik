@@ -853,9 +853,10 @@ enddo
 
         subroutine update(weights)
 
-           use constants,        only: DIVB_HDC
+           use constants,        only: xdim, ydim, zdim, DIVB_HDC
+           use hdc,              only: chspeed
            use fluidindex,       only: flind
-           use global,           only: divB_0_method
+           use global,           only: divB_0_method, glm_iter, use_hdc_1D
 #ifdef COSM_RAYS
            use fluidindex,       only: iarr_all_dn, iarr_all_mx, iarr_all_en
            use global,           only: dt
@@ -872,6 +873,7 @@ enddo
            real, optional, dimension(:), intent(in) :: weights
 
            real, dimension(:), allocatable :: w
+           integer :: i
            integer :: iend  !< last component of any fluid (i.e. exclude CR or tracers here)
 
 #ifdef COSM_RAYS
@@ -901,20 +903,29 @@ enddo
            u(:iend,1) = u(:iend,2)
            u(:iend,nx) = u(:iend,nx-1)
 
-           b_cc(:,2:nx) = b_cc(:,2:nx) + w(1) * dtodx * (mag_cc(:,1:nx-1) - mag_cc(:,2:nx))
-           if (size(w)>=2)  b_cc(:,2:nx) = b_cc(:,2:nx) + w(2) * db1(:,2:nx)
-           if (size(w)>=3)  b_cc(:,2:nx) = b_cc(:,2:nx) + w(3) * db2(:,2:nx)
-           if (size(w)>=4)  b_cc(:,2:nx) = b_cc(:,2:nx) + w(4) * db3(:,2:nx)
-           b_cc(:,1) = b_cc(:,2)
-           b_cc(:,nx) = b_cc(:,nx-1)
+           b_cc(ydim:zdim,2:nx) = b_cc(ydim:zdim,2:nx) + w(1) * dtodx * (mag_cc(ydim:zdim,1:nx-1) - mag_cc(ydim:zdim,2:nx))
+           if (size(w)>=2)  b_cc(ydim:zdim,2:nx) = b_cc(ydim:zdim,2:nx) + w(2) * db1(ydim:zdim,2:nx)
+           if (size(w)>=3)  b_cc(ydim:zdim,2:nx) = b_cc(ydim:zdim,2:nx) + w(3) * db2(ydim:zdim,2:nx)
+           if (size(w)>=4)  b_cc(ydim:zdim,2:nx) = b_cc(ydim:zdim,2:nx) + w(4) * db3(ydim:zdim,2:nx)
+           b_cc(ydim:zdim,1) = b_cc(ydim:zdim,2)
+           b_cc(ydim:zdim,nx) = b_cc(ydim:zdim,nx-1)
 
-           if (divB_0_method == DIVB_HDC) then
-              psi(:,2:nx) = psi(:,2:nx) + w(1) *dtodx * (psi_cc(:,1:nx-1) - psi_cc(:,2:nx))
-              if (size(w)>=2) psi(:,2:nx) = psi(:,2:nx) + w(2) * dpsi1(:,2:nx)
-              if (size(w)>=3) psi(:,2:nx) = psi(:,2:nx) + w(3) * dpsi2(:,2:nx)
-              if (size(w)>=4) psi(:,2:nx) = psi(:,2:nx) + w(4) * dpsi3(:,2:nx)
-              psi(:,1) = psi(:,2)
-              psi(:,nx) = psi(:,nx-1)
+           if (divB_0_method == DIVB_HDC .and. use_hdc_1D) then
+              do i=1, glm_iter
+                 b_cc(xdim, 2:nx-1) = b_cc(xdim, 2:nx-1) + dtodx * 0.5 * ( &
+                      (psi(1, 1:nx-2) - psi(1, 3:nx)) - &
+                      (2*b_cc(xdim, 2:nx-1) - b_cc(xdim, 1:nx-2) - b_cc(xdim, 3:nx)) * chspeed)
+
+                 b_cc(xdim,1) = b_cc(xdim,2)
+                 b_cc(xdim,nx) = b_cc(xdim,nx-1)
+
+                 psi(1, 2:nx-1) = psi(1, 2:nx-1) + dtodx * 0.5 * chspeed * ( &
+                      chspeed * (b_cc(xdim, 1:nx-2) - b_cc(xdim, 3:nx)) - &
+                      (2*psi(1, 2:nx-1) - psi(1, 1:nx-2) - psi(1, 3:nx)))
+
+                 psi(:,1) = psi(:,2)
+                 psi(:,nx) = psi(:,nx-1)
+              enddo
            endif
 
 ! This is lowest order implementation of CR
