@@ -51,10 +51,12 @@ module initproblem
    real                   :: divB0_amp   !< Amplitude of the non-divergent component of the magnetic field
    real                   :: divBc_amp   !< Amplitude of constant-divergence component of the magnetic field (has artifacts on periodic domains due to nondifferentiability)
    real                   :: divBs_amp   !< Amplitude of sine-wave divergence component of the magnetic field (should behave well on periodic domains)
-   real                   :: divBb_amp   !< Amplitude of blob of divergence (should behave well on periodic domains)
+   real                   :: divBbX_amp  !< Amplitude of x-component blob of divergence (should behave well on periodic domains)
+   real                   :: divBbY_amp  !< Amplitude of y-component blob of divergence (should behave well on periodic domains)
+   real                   :: divBbZ_amp  !< Amplitude of z-component blob of divergence (should behave well on periodic domains)
    logical                :: ccB         !< true for cell-cntered initial magnetic field
 
-   namelist /PROBLEM_CONTROL/  pulse_size, pulse_off, pulse_vel, pulse_amp, pulse_pres, norm_step, nflip, flipratio, ref_thr, deref_thr, usedust, divB0_amp, divBc_amp, divBs_amp, divBb_amp, ccB
+   namelist /PROBLEM_CONTROL/  pulse_size, pulse_off, pulse_vel, pulse_amp, pulse_pres, norm_step, nflip, flipratio, ref_thr, deref_thr, usedust, divB0_amp, divBc_amp, divBs_amp, divBbX_amp, divBbY_amp, divBbZ_amp, ccB
 
    ! other private data
    real, dimension(ndims, LO:HI) :: pulse_edge
@@ -117,7 +119,9 @@ contains
       divB0_amp     = 0.                   !< should be safe to set non-0
       divBc_amp     = 0.                   !< unphysical, only for testing
       divBs_amp     = 0.                   !< unphysical, only for testing
-      divBb_amp     = 0.                   !< unphysical, only for testing
+      divBbX_amp    = 0.                   !< unphysical, only for testing
+      divBbY_amp    = 0.                   !< unphysical, only for testing
+      divBbZ_amp    = 0.                   !< unphysical, only for testing
       ccB           = .false.              !< defaulting to face-centered initial field
 
       if (master) then
@@ -145,7 +149,9 @@ contains
          rbuff(5)   = divB0_amp
          rbuff(6)   = divBc_amp
          rbuff(7)   = divBs_amp
-         rbuff(8)   = divBb_amp
+         rbuff(8)   = divBbX_amp
+         rbuff(9)   = divBbY_amp
+         rbuff(10)  = divBbZ_amp
          rbuff(20+xdim:20+zdim) = pulse_size(:)
          rbuff(23+xdim:23+zdim) = pulse_vel(:)
          rbuff(26+xdim:26+zdim) = pulse_off(:)
@@ -172,7 +178,9 @@ contains
          divB0_amp  = rbuff(5)
          divBc_amp  = rbuff(6)
          divBs_amp  = rbuff(7)
-         divBb_amp  = rbuff(8)
+         divBbX_amp = rbuff(8)
+         divBbY_amp = rbuff(9)
+         divBbZ_amp = rbuff(10)
          pulse_size = rbuff(20+xdim:20+zdim)
          pulse_vel  = rbuff(23+xdim:23+zdim)
          pulse_off  = rbuff(26+xdim:26+zdim)
@@ -233,14 +241,16 @@ contains
          enddo
       endif
 
-      if (any([divB0_amp, divBc_amp, divBs_amp, divBb_amp] .notequals. 0.)) then
+      if (any([divB0_amp, divBc_amp, divBs_amp, divBbX_amp, divBbY_amp, divBbZ_amp] .notequals. 0.)) then
 #ifdef MAGNETIC
          if (dom%geometry_type /= GEO_XYZ) then
             call warn("[initproblem:read_problem_par] Only cartesian formulas for magnetic field is implemented. Forcing all amplitudes to 0.")
             divB0_amp     = 0.
             divBc_amp     = 0.
             divBs_amp     = 0.
-            divBb_amp     = 0.
+            divBbX_amp    = 0.
+            divBbY_amp    = 0.
+            divBbZ_amp    = 0.
          endif
 #else
          call warn("[initproblem:read_problem_par] Ignoring magnetic field amplitudes")
@@ -278,7 +288,7 @@ contains
       real, dimension(ndims) :: kk !< wavenumbers to fit one sine wave inside domain
       real :: sx, sy, sz, cx, cy, cz !< precomputed values of sine and cosine at cell centers
       real :: sfx, sfy, sfz, cfx, cfy, cfz !< precomputed values of sine and cosine at cell left faces
-      integer :: right_face, bcomp
+      integer :: right_face
       real :: r02, rr02
 
       kk = 0.
@@ -331,14 +341,9 @@ contains
                      rr02 = sum(([cg%x(i), cg%y(j), cg%x(k)] - dom%C_)**2, mask=dom%has_dir)/r02
                      if (rr02 > 1.) rr02 = 1.
 
-                     if (dom%D_x == 1) then
-                        bcomp = xdim
-                     else if (dom%D_y == 1) then
-                        bcomp = ydim
-                     else
-                        bcomp = zdim
-                     endif
-                     cg%b(bcomp, i, j, k) = cg%b(bcomp, i, j, k) + divBb_amp * (rr02**4 - 2 *rr02**2 + 1)
+                     if (dom%has_dir(xdim)) cg%b(xdim, i, j, k) = cg%b(xdim, i, j, k) + divBbX_amp * (rr02**4 - 2 *rr02**2 + 1)
+                     if (dom%has_dir(ydim)) cg%b(ydim, i, j, k) = cg%b(ydim, i, j, k) + divBbY_amp * (rr02**4 - 2 *rr02**2 + 1)
+                     if (dom%has_dir(zdim)) cg%b(zdim, i, j, k) = cg%b(zdim, i, j, k) + divBbZ_amp * (rr02**4 - 2 *rr02**2 + 1)
                      select case (dom%eff_dim)
                         case (I_ONE) ! can't do anything fancy, just set up something non-zero
                            cg%b(:, i, j, k) = cg%b(:, i, j, k) + divB0_amp
