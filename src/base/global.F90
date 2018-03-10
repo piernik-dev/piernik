@@ -41,7 +41,7 @@ module global
    public :: cleanup_global, init_global, &
         &    cfl, cfl_max, cflcontrol, cfl_violated, &
         &    dt, dt_initial, dt_max_grow, dt_min, dt_old, dtm, t, t_saved, nstep, nstep_saved, &
-        &    integration_order, limiter, limiter_b, limiter_p, smalld, smallei, smallp, use_smalld, h_solver, &
+        &    integration_order, limiter, limiter_b, smalld, smallei, smallp, use_smalld, h_solver, &
         &    relax_time, grace_period_passed, cfr_smooth, repeat_step, skip_sweep, geometry25D, &
         &    dirty_debug, do_ascii_dump, show_n_dirtys, no_dirty_checks, sweeps_mgu, use_fargo, &
         &    divB_0_method, force_cc_mag, psi_0, glm_alpha, use_eglm, use_hdc_3D, use_hdc_1D, glm_iter
@@ -79,7 +79,6 @@ module global
    integer(kind=4), protected    :: integration_order !< Runge-Kutta time integration order (1 - 1st order, 2 - 2nd order)
    character(len=cbuff_len)      :: limiter           !< type of flux limiter
    character(len=cbuff_len)      :: limiter_b         !< type of flux limiter for magnetic field in the Riemann solver
-   character(len=cbuff_len)      :: limiter_p         !< type of flux limiter for psi field in the Riemann solver
    character(len=cbuff_len)      :: cflcontrol        !< type of cfl control just before each sweep (possibilities: 'none', 'main', 'user')
    character(len=cbuff_len)      :: h_solver          !< type of hydro solver
    character(len=cbuff_len)      :: divB_0            !< human-readable method of making div(B) = 0 (currently CT or HDC)
@@ -95,7 +94,7 @@ module global
    integer                       :: glm_iter          !< repeat HDC this many times per timestep
 
    namelist /NUMERICAL_SETUP/ cfl, cflcontrol, cfl_max, use_smalld, smalld, smallei, smallc, smallp, dt_initial, dt_max_grow, dt_min, &
-        &                     repeat_step, limiter, limiter_b, limiter_p, relax_time, integration_order, cfr_smooth, skip_sweep, geometry25D, sweeps_mgu, &
+        &                     repeat_step, limiter, limiter_b, relax_time, integration_order, cfr_smooth, skip_sweep, geometry25D, sweeps_mgu, &
         &                     use_fargo, h_solver, divB_0, psi_0, glm_alpha, use_eglm, use_hdc_3D, use_hdc_1D, glm_iter
 
 contains
@@ -125,7 +124,6 @@ contains
 !!   <tr><td>dt_min           </td><td>0.     </td><td>positive real value                  </td><td>\copydoc global::dt_min           </td></tr>
 !!   <tr><td>limiter          </td><td>vanleer</td><td>string                               </td><td>\copydoc global::limiter          </td></tr>
 !!   <tr><td>limiter_b        </td><td>vanleer</td><td>string                               </td><td>\copydoc global::limiter_b        </td></tr>
-!!   <tr><td>limiter_p        </td><td>vanleer</td><td>string                               </td><td>\copydoc global::limiter_p        </td></tr>
 !!   <tr><td>relax_time       </td><td>0.0    </td><td>real value                           </td><td>\copydoc global::relax_time       </td></tr>
 !!   <tr><td>skip_sweep       </td><td>F, F, F</td><td>logical array                        </td><td>\copydoc global::skip_sweep       </td></tr>
 !!   <tr><td>geometry25D      </td><td>F      </td><td>logical value                        </td><td>\copydoc global::geometry25d      </td></tr>
@@ -160,7 +158,6 @@ contains
       ! these limiters were performing best in the Otszag-Tang test (otvortex problem)
       limiter     = 'minmod'    ! 'vanleer' is a 2nd choice for otvortex
       limiter_b   = 'superbee'  ! 'moncen' and 'vanleer' were also performing well
-      limiter_p   = limiter_b
       divB_0      = "HDC"
       use_hdc_3D  = .true.
       use_hdc_1D  = .false.
@@ -168,7 +165,6 @@ contains
 #else /* ! RIEMANN */
       limiter     = 'vanleer'
       limiter_b   = limiter
-      limiter_p   = 'minmod'
       divB_0      = "CT"
       use_hdc_3D  = .false.
       use_hdc_1D  = .false.
@@ -239,10 +235,9 @@ contains
 
          cbuff(1) = limiter
          cbuff(2) = limiter_b
-         cbuff(3) = limiter_p
-         cbuff(4) = cflcontrol
-         cbuff(5) = h_solver
-         cbuff(6) = divB_0
+         cbuff(3) = cflcontrol
+         cbuff(4) = h_solver
+         cbuff(5) = divB_0
 
          ibuff(1) = integration_order
          ibuff(2) = glm_iter
@@ -306,10 +301,9 @@ contains
 
          limiter    = cbuff(1)
          limiter_b  = cbuff(2)
-         limiter_p  = cbuff(3)
-         cflcontrol = cbuff(4)
-         h_solver   = cbuff(5)
-         divB_0     = cbuff(6)
+         cflcontrol = cbuff(3)
+         h_solver   = cbuff(4)
+         divB_0     = cbuff(5)
 
          integration_order = ibuff(1)
          glm_iter          = ibuff(2)

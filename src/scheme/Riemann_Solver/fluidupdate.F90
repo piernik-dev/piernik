@@ -56,7 +56,7 @@ contains
     use domain,       only: dom, is_refined
     use fluidindex,   only: flind
     use fluxlimiters, only: set_limiters
-    use global,       only: dt, dtm, t, limiter, limiter_b, limiter_p, divB_0_method
+    use global,       only: dt, dtm, t, limiter, limiter_b, divB_0_method
     use mass_defect,  only: update_magic_mass
     use mpisetup,     only: master
     use hdc,          only: update_chspeed
@@ -87,7 +87,7 @@ contains
     halfstep = .false.
     if (first_run) then
        dtm = 0.0
-       call set_limiters(limiter, limiter_b, limiter_p)
+       call set_limiters(limiter, limiter_b)
        if (master) call warn("[fluid_update] This is an experimental implementation of the Riemann solver. Expect unexpected.")
     else
        dtm = dt
@@ -628,7 +628,7 @@ contains
 
            use constants,    only: half, xdim, DIVB_HDC
            use dataio_pub,   only: die
-           use fluxlimiters, only: flimiter, blimiter, plimiter
+           use fluxlimiters, only: flimiter, blimiter
            use global,       only: divB_0_method
 
            implicit none
@@ -640,7 +640,6 @@ contains
 
            real, dimension(size(u,1),size(u,2))       :: du
            real, dimension(size(b_cc,1),size(b_cc,2)) :: db
-           real, dimension(size(psi,1),size(psi,2))   :: dp
 
            if ((present(uu) .neqv. present(bb)) .or. (present(bb) .neqv. present(pp))) &
                 call die("[fluidupdate:solve:slope] either none or all optional arguments must be present")
@@ -667,23 +666,17 @@ contains
 
            if (divB_0_method == DIVB_HDC) then
               if (present(pp)) then
-                 dp  = plimiter(psi + pp)
-                 psi__l = psi + pp - half*dp
-                 psi__r = psi + pp + half*dp
+                 psi__l = psi + pp
               else
-                 dp  = plimiter(psi)
-                 psi__l = psi - half*dp
-                 psi__r = psi + half*dp
+                 psi__l = psi
               endif
+              psi__r = psi__l
               if (present(bb)) then
-                 db  = plimiter(b_cc + bb)
-                 b_ccl(xdim, :) = b_cc(xdim, :) + bb(xdim, :) - half*db(xdim, :)
-                 b_ccr(xdim, :) = b_cc(xdim, :) + bb(xdim, :) + half*db(xdim, :)
+                 b_ccl(xdim, :) = b_cc(xdim, :) + bb(xdim, :)
               else
-                 db  = plimiter(b_cc)
-                 b_ccl(xdim, :) = b_cc(xdim, :) - half*db(xdim, :)
-                 b_ccr(xdim, :) = b_cc(xdim, :) + half*db(xdim, :)
+                 b_ccl(xdim, :) = b_cc(xdim, :)
               endif
+              b_ccr(xdim, :) = b_ccl(xdim, :)
            endif
 
 
