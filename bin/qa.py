@@ -63,10 +63,10 @@ nasty_spaces = [
     re.compile("end\s{1,}while", re.IGNORECASE), "endwhile",
     re.compile("end\s{1,}where", re.IGNORECASE), "endwhere",
     re.compile("only\s{1,}:", re.IGNORECASE), "only:",
-    re.compile("if(|\s{2,})\(", re.IGNORECASE), "if (",
-    re.compile("where(|\s{2,})\(", re.IGNORECASE), "where (",
-    re.compile("while(|\s{2,})\(", re.IGNORECASE), "while (",
-    re.compile("forall(|\s{2,})\(", re.IGNORECASE), "forall (",
+    re.compile("\sif(|\s{2,})\(", re.IGNORECASE), " if (",
+    re.compile("\swhere(|\s{2,})\(", re.IGNORECASE), " where (",
+    re.compile("\swhile(|\s{2,})\(", re.IGNORECASE), " while (",
+    re.compile("\sforall(|\s{2,})\(", re.IGNORECASE), " forall (",
     re.compile("\scase(|\s{2,})\(", re.IGNORECASE), " case ("
 ]
 
@@ -201,8 +201,8 @@ def qa_checks(files, options):
             # things done in "in-place"
             line = line.rstrip()    # that removes trailing spaces
             for i in range(0, len(nasty_spaces), 2):
-                line = re.sub(nasty_spaces[i], nasty_spaces[
-                              i + 1], line)   # remove nasty spaces
+                line = re.sub(nasty_spaces[i], nasty_spaces[i + 1], line)
+                # remove nasty spaces
             pfile.append(line)
 
         if lines != [line + '\n' for line in pfile]:
