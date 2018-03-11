@@ -116,13 +116,16 @@ contains
 
       integer :: ord
       logical :: ccB
+      integer, parameter :: max_ord = 8
 
       if (dom%geometry_type /= GEO_XYZ) call die("[divB::divB] non-cartesian geometry not implemented yet.")
 
       ord = 2
       if (present(order)) then
-         if (order > 6) call die("[divB::divB] Highest allowed order of div(B) is currently equal to 6.")
+         if (order > max_ord) call die("[divB::divB] Highest allowed order of div(B) is currently equal to 8.")
          select case (order)
+            case (7, 8)
+               ord = 8
             case (5, 6)
                ord = 6
             case (3, 4)
@@ -144,290 +147,111 @@ contains
 
       call divB_init  ! it should be BOTH safe and cheap to call it multiple times
       
-      if (ccB) then
-         call divB_c2(ord)
-         if (ord > 2) call divB_c4(ord)
-         if (ord > 4) call divB_c6(ord)
-         if (ord > 6) call warn("[divB::divB] only 6th order of div(B) is currently implemented for cell-centered field.")
-      else  ! face-centered B
-         call divB_f2(ord)
-         if (ord > 2) call divB_f4(ord)
-         if (ord > 4) call divB_f6(ord)
-         if (ord > 6) call warn("[divB::divB] only 2nd order of div(B) is currently implemented for face-centered field.")
-      endif
+      call divB_c(ord, ccB)
+      if (ord > max_ord) call warn("[divB::divB] only 8th order of div(B) is currently implemented for magnetic field.")  !! BEWARE: order hardcoded in the string
 
    end subroutine divB
 
 !>
-!! \brief Calculate 2nd order of divB for cell-centered field and put it in the proper array.
-!<
-
-   subroutine divB_c2(ord)
-
-      use cg_leaves,  only: leaves
-      use cg_list,    only: cg_list_element
-      use constants,  only: xdim, ydim, zdim
-      use dataio_pub, only: die
-      use domain,     only: dom
-      use func,       only: operator(.equals.)
-
-      implicit none
-
-      integer, intent(in) :: ord
-
-      type(cg_list_element), pointer :: cgl
-      real, dimension(4), parameter :: coeff = [ 1./2., 2./3., 3./4., 4./5. ]
-      integer :: o
-
-      o = ord/2  ! BEWARE: tricky, assumed stencils on uniform grid
-      if (o < lbound(coeff, dim=1) .or. o > ubound(coeff, dim=1) .or. 2*o /= ord .or. (coeff(o) .equals. 0.)) call die("[divB::divB_c2] cannot find coefficient") ! no odd order allowed here just in case
-
-      cgl => leaves%first
-      do while (associated(cgl))
-         associate (is => cgl%cg%is, ie => cgl%cg%ie, &
-              &     js => cgl%cg%js, je => cgl%cg%je, &
-              &     ks => cgl%cg%ks, ke => cgl%cg%ke)
-            cgl%cg%q(idivB)%arr(   is        :ie,         js        :je,         ks        :ke        ) = coeff(o) * ( &
-                 & (cgl%cg%b(xdim, is+dom%D_x:ie+dom%D_x, js        :je,         ks        :ke        ) - &
-                 &  cgl%cg%b(xdim, is-dom%D_x:ie-dom%D_x, js        :je,         ks        :ke        )   )/cgl%cg%dx + &
-                 & (cgl%cg%b(ydim, is        :ie,         js+dom%D_y:je+dom%D_y, ks        :ke        ) - &
-                 &  cgl%cg%b(ydim, is        :ie,         js-dom%D_y:je-dom%D_y, ks        :ke        )   )/cgl%cg%dy + &
-                 & (cgl%cg%b(zdim, is        :ie,         js        :je,         ks+dom%D_z:ke+dom%D_z) - &
-                 &  cgl%cg%b(zdim, is        :ie,         js        :je,         ks-dom%D_z:ke-dom%D_z)   )/cgl%cg%dz )
-         end associate
-         cgl => cgl%nxt
-      enddo
-
-   end subroutine divB_c2
-
-!>
-!! \brief Calculate 4th order correction for 2nd order estimate of divB for cell-centered field and add it to the proper array.
+!! \brief Calculate 2nd order of divB for cell- and face-centered field and put it in the proper array.
+!! If required, calculate higher order corrections and add it to the proper array.
 !!
 !! OPT: this may not be the best approach performance-wise.
-!!
-!! Spaghetti warning: this routime may be generalized and unified with divB_c2
 !<
 
-   subroutine divB_c4(ord)
+   subroutine divB_c(ord, ccB)
 
       use cg_leaves,  only: leaves
       use cg_list,    only: cg_list_element
-      use constants,  only: xdim, ydim, zdim
+      use constants,  only: I_ONE, I_TWO
       use dataio_pub, only: die
-      use domain,     only: dom
-      use func,       only: operator(.equals.)
+      use func,       only: operator(.notequals.)
 
       implicit none
 
       integer, intent(in) :: ord
+      logical, intent(in) :: ccB
 
       type(cg_list_element), pointer :: cgl
-      real, dimension(4), parameter :: coeff = [ 0., -1./12., -3./20., -1./5. ]
-      integer :: o
+      integer, parameter :: max_c = 4
+      real, dimension(max_c, max_c), parameter :: coeff_c = reshape( [ [ 1./2.,  0.,     0.,       0.      ], &
+           &                                                           [ 2./3., -1./12., 0.,       0.      ], &
+           &                                                           [ 3./4., -3./20., 1./60.,   0.      ], &
+           &                                                           [ 4./5., -1./5.,  4./105., -1./280. ] ], [max_c, max_c] ) ! it is sort of stupid that we can't directly initialize this as a 2D array here
+      real, dimension(max_c, max_c), parameter :: coeff_f = reshape( [ [    1.,          0.,        0.,        0.       ], &
+           &                                                           [    9./8.,      -1./24.,    0.,        0.       ], &
+           &                                                           [   75./64.,    -25./384.,   3./640.,   0.       ], &
+           &                                                           [ 1225./1024., -245./3072., 49./5120., -5./7168. ] ], [max_c, max_c] )
+      integer :: o, i
+      real, dimension(max_c) :: coeff
 
-      o = ord/2  ! BEWARE: tricky, assumed stencils on uniform grid
-      if (o < lbound(coeff, dim=1) .or. o > ubound(coeff, dim=1) .or. 2*o /= ord .or. (coeff(o) .equals. 0.)) call die("[divB::divB_c4] cannot find coefficient") ! no odd order allowed here just in case
+      o = ord/I_TWO  ! BEWARE: tricky, assumed stencils on uniform grid
+      if (o < I_ONE .or. o > max_c .or. I_TWO*o /= ord) call die("[divB::divB_c] cannot find coefficient") ! no odd order allowed here just in case
+
+      if (ccB) then
+         coeff = coeff_c(:, o)
+      else
+         coeff = coeff_f(:, o)
+      endif
 
       cgl => leaves%first
       do while (associated(cgl))
-         associate (is => cgl%cg%is, ie => cgl%cg%ie, &
-              &     js => cgl%cg%js, je => cgl%cg%je, &
-              &     ks => cgl%cg%ks, ke => cgl%cg%ke)
-            cgl%cg%q(idivB)%arr(     is        :ie,             js        :je,             ks        :ke            ) = &
-                 cgl%cg%q(idivB)%arr(is        :ie,             js        :je,             ks        :ke            ) + coeff(o) * ( &
-                 & (cgl%cg%b(xdim,   is+2*dom%D_x:ie+2*dom%D_x, js        :je,             ks        :ke            ) - &
-                 &  cgl%cg%b(xdim,   is-2*dom%D_x:ie-2*dom%D_x, js        :je,             ks        :ke            )   )/cgl%cg%dx + &
-                 & (cgl%cg%b(ydim,   is        :ie,             js+2*dom%D_y:je+2*dom%D_y, ks        :ke            ) - &
-                 &  cgl%cg%b(ydim,   is        :ie,             js-2*dom%D_y:je-2*dom%D_y, ks        :ke            )   )/cgl%cg%dy + &
-                 & (cgl%cg%b(zdim,   is        :ie,             js        :je,             ks+2*dom%D_z:ke+2*dom%D_z) - &
-                 &  cgl%cg%b(zdim,   is        :ie,             js        :je,             ks-2*dom%D_z:ke-2*dom%D_z)   )/cgl%cg%dz )
-         end associate
+         cgl%cg%q(idivB)%arr(                                cgl%cg%is:cgl%cg%ie, cgl%cg%js:cgl%cg%je, cgl%cg%ks:cgl%cg%ke) = sixpoint(cgl%cg, coeff(I_ONE), I_ONE, ccB)
+         do i = I_TWO, max_c
+            if (coeff(i) .notequals. 0.) cgl%cg%q(idivB)%arr(cgl%cg%is:cgl%cg%ie, cgl%cg%js:cgl%cg%je, cgl%cg%ks:cgl%cg%ke) = &
+                 &                       cgl%cg%q(idivB)%arr(cgl%cg%is:cgl%cg%ie, cgl%cg%js:cgl%cg%je, cgl%cg%ks:cgl%cg%ke) + sixpoint(cgl%cg, coeff(i),     i,     ccB)
+         enddo
          cgl => cgl%nxt
       enddo
 
-   end subroutine divB_c4
+   end subroutine divB_c
 
 !>
-!! \brief Calculate 6th order correction for 4th order estimate of divB for cell-centered field and add it to the proper array.
+!! \brief Return estimate of derivative taken at given span (in cells) nad multiplied by given coefficient for a given grid container.
+!! This is a basic piece useful to construct various order derivatives and takes the advantage of stencil symmetry on an uniform grid.
 !!
-!! OPT: this may not be the best approach performance-wise.
-!!
-!! Spaghetti warning: this routime may be generalized and unified with divB_c4
+!! OPT: this may not be the best approach performance-wise but it is compact and we don't expect to evaluate it foo often.
 !<
 
-   subroutine divB_c6(ord)
+   function sixpoint(cg, coeff, span, cell_centered)
 
-      use cg_leaves,  only: leaves
-      use cg_list,    only: cg_list_element
       use constants,  only: xdim, ydim, zdim
       use dataio_pub, only: die
       use domain,     only: dom
       use func,       only: operator(.equals.)
+      use grid_cont,  only: grid_container
 
       implicit none
 
-      integer, intent(in) :: ord
+      type(grid_container), pointer, intent(in) :: cg
+      real,                          intent(in) :: coeff
+      integer,                       intent(in) :: span
+      logical,                       intent(in) :: cell_centered
 
-      type(cg_list_element), pointer :: cgl
-      real, dimension(4), parameter :: coeff = [ 0., 0., 1./60., 4./105. ]
-      integer :: o
+      real, dimension(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) :: sixpoint
+      integer :: spm1
 
-      o = ord/2  ! BEWARE: tricky, assumed stencils on uniform grid
-      if (o < lbound(coeff, dim=1) .or. o > ubound(coeff, dim=1) .or. 2*o /= ord .or. (coeff(o) .equals. 0.)) call die("[divB::divB_c6] cannot find coefficient") ! no odd order allowed here just in case
+      if ((coeff .equals. 0.) .or. span <=0 .or. span > dom%nb) call die("[divB::sixpoint] coeff == 0. or unacceptable span")
 
-      cgl => leaves%first
-      do while (associated(cgl))
-         associate (is => cgl%cg%is, ie => cgl%cg%ie, &
-              &     js => cgl%cg%js, je => cgl%cg%je, &
-              &     ks => cgl%cg%ks, ke => cgl%cg%ke)
-            cgl%cg%q(idivB)%arr(     is        :ie,             js        :je,             ks        :ke            ) = &
-                 cgl%cg%q(idivB)%arr(is        :ie,             js        :je,             ks        :ke            ) + coeff(o) * ( &
-                 & (cgl%cg%b(xdim,   is+3*dom%D_x:ie+3*dom%D_x, js        :je,             ks        :ke            ) - &
-                 &  cgl%cg%b(xdim,   is-3*dom%D_x:ie-3*dom%D_x, js        :je,             ks        :ke            )   )/cgl%cg%dx + &
-                 & (cgl%cg%b(ydim,   is        :ie,             js+3*dom%D_y:je+3*dom%D_y, ks        :ke            ) - &
-                 &  cgl%cg%b(ydim,   is        :ie,             js-3*dom%D_y:je-3*dom%D_y, ks        :ke            )   )/cgl%cg%dy + &
-                 & (cgl%cg%b(zdim,   is        :ie,             js        :je,             ks+3*dom%D_z:ke+3*dom%D_z) - &
-                 &  cgl%cg%b(zdim,   is        :ie,             js        :je,             ks-3*dom%D_z:ke-3*dom%D_z)   )/cgl%cg%dz )
-         end associate
-         cgl => cgl%nxt
-      enddo
+      if (cell_centered) then
+         sixpoint = coeff * ( &
+                 & (cg%b(xdim, cg%is+span*dom%D_x:cg%ie+span*dom%D_x, cg%js             :cg%je,              cg%ks             :cg%ke             ) - &
+                 &  cg%b(xdim, cg%is-span*dom%D_x:cg%ie-span*dom%D_x, cg%js             :cg%je,              cg%ks             :cg%ke             )   )/cg%dx + &
+                 & (cg%b(ydim, cg%is             :cg%ie,              cg%js+span*dom%D_y:cg%je+span*dom%D_y, cg%ks             :cg%ke             ) - &
+                 &  cg%b(ydim, cg%is             :cg%ie,              cg%js-span*dom%D_y:cg%je-span*dom%D_y, cg%ks             :cg%ke             )   )/cg%dy + &
+                 & (cg%b(zdim, cg%is             :cg%ie,              cg%js             :cg%je,              cg%ks+span*dom%D_z:cg%ke+span*dom%D_z) - &
+                 &  cg%b(zdim, cg%is             :cg%ie,              cg%js             :cg%je,              cg%ks-span*dom%D_z:cg%ke-span*dom%D_z)   )/cg%dz )
+      else
+         spm1 = span - 1
+         sixpoint = coeff * ( &
+                 & (cg%b(xdim, cg%is+span*dom%D_x:cg%ie+span*dom%D_x, cg%js             :cg%je,              cg%ks             :cg%ke             ) - &
+                 &  cg%b(xdim, cg%is-spm1*dom%D_x:cg%ie-spm1*dom%D_x, cg%js             :cg%je,              cg%ks             :cg%ke             )   )/cg%dx + &
+                 & (cg%b(ydim, cg%is             :cg%ie,              cg%js+span*dom%D_y:cg%je+span*dom%D_y, cg%ks             :cg%ke             ) - &
+                 &  cg%b(ydim, cg%is             :cg%ie,              cg%js-spm1*dom%D_y:cg%je-spm1*dom%D_y, cg%ks             :cg%ke             )   )/cg%dy + &
+                 & (cg%b(zdim, cg%is             :cg%ie,              cg%js             :cg%je,              cg%ks+span*dom%D_z:cg%ke+span*dom%D_z) - &
+                 &  cg%b(zdim, cg%is             :cg%ie,              cg%js             :cg%je,              cg%ks-spm1*dom%D_z:cg%ke-spm1*dom%D_z)   )/cg%dz )
+      endif
 
-   end subroutine divB_c6
-
-!>
-!! \brief Calculate 2nd order of divB for face-centered field and put it in the proper array.
-!<
-
-   subroutine divB_f2(ord)
-
-      use cg_leaves,  only: leaves
-      use cg_list,    only: cg_list_element
-      use constants,  only: xdim, ydim, zdim
-      use dataio_pub, only: die
-      use domain,     only: dom
-      use func,       only: operator(.equals.)
-
-      implicit none
-
-      integer, intent(in) :: ord
-
-      type(cg_list_element), pointer :: cgl
-      real, dimension(4), parameter :: coeff = [ 1., 9./8., 75./64., 1225./1024. ]
-      integer :: o
-
-      o = ord/2  ! BEWARE: tricky, assumed stencils on uniform grid
-      if (o < lbound(coeff, dim=1) .or. o > ubound(coeff, dim=1) .or. 2*o /= ord .or. (coeff(o) .equals. 0.)) call die("[divB::divB_f2] cannot find coefficient") ! no odd order allowed here just in case
-
-      cgl => leaves%first
-      do while (associated(cgl))
-         associate (is => cgl%cg%is, ie => cgl%cg%ie, &
-              &     js => cgl%cg%js, je => cgl%cg%je, &
-              &     ks => cgl%cg%ks, ke => cgl%cg%ke)
-            cgl%cg%q(idivB)%arr(   is        :ie,         js        :je,         ks        :ke        ) = coeff(o) * ( &
-                 & (cgl%cg%b(xdim, is+dom%D_x:ie+dom%D_x, js        :je,         ks        :ke        ) - &
-                 &  cgl%cg%b(xdim, is        :ie,         js        :je,         ks        :ke        )   )/cgl%cg%dx + &
-                 & (cgl%cg%b(ydim, is        :ie,         js+dom%D_y:je+dom%D_y, ks        :ke        ) - &
-                 &  cgl%cg%b(ydim, is        :ie,         js        :je,         ks        :ke        )   )/cgl%cg%dy + &
-                 & (cgl%cg%b(zdim, is        :ie,         js        :je,         ks+dom%D_z:ke+dom%D_z) - &
-                 &  cgl%cg%b(zdim, is        :ie,         js        :je,         ks        :ke        )   )/cgl%cg%dz )
-         end associate
-         cgl => cgl%nxt
-      enddo
-
-   end subroutine divB_f2
-
-!>
-!! \brief Calculate 4th order correction for 2nd order estimate of divB for face-centered field and add it to the proper array.
-!!
-!! OPT: this may not be the best approach performance-wise.
-!!
-!! Spaghetti warning: this routime may be generalized and unified with divB_f2
-!<
-
-   subroutine divB_f4(ord)
-
-      use cg_leaves,  only: leaves
-      use cg_list,    only: cg_list_element
-      use constants,  only: xdim, ydim, zdim
-      use dataio_pub, only: die
-      use domain,     only: dom
-      use func,       only: operator(.equals.)
-
-      implicit none
-
-      integer, intent(in) :: ord
-
-      type(cg_list_element), pointer :: cgl
-      real, dimension(4), parameter :: coeff = [ 0., -1./24., -25./284., -245./3072. ]
-      integer :: o
-
-      o = ord/2  ! BEWARE: tricky, assumed stencils on uniform grid
-      if (o < lbound(coeff, dim=1) .or. o > ubound(coeff, dim=1) .or. 2*o /= ord .or. (coeff(o) .equals. 0.)) call die("[divB::divB_f4] cannot find coefficient") ! no odd order allowed here just in case
-
-      cgl => leaves%first
-      do while (associated(cgl))
-         associate (is => cgl%cg%is, ie => cgl%cg%ie, &
-              &     js => cgl%cg%js, je => cgl%cg%je, &
-              &     ks => cgl%cg%ks, ke => cgl%cg%ke)
-            cgl%cg%q(idivB)%arr(     is          :ie,           js          :je,           ks          :ke          ) = &
-                 cgl%cg%q(idivB)%arr(is          :ie,           js          :je,           ks          :ke          ) + coeff(o) * ( &
-                 & (cgl%cg%b(xdim,   is+2*dom%D_x:ie+2*dom%D_x, js          :je,           ks          :ke          ) - &
-                 &  cgl%cg%b(xdim,   is          :ie,           js          :je,           ks          :ke          )   )/cgl%cg%dx + &
-                 & (cgl%cg%b(ydim,   is          :ie,           js+2*dom%D_y:je+2*dom%D_y, ks          :ke          ) - &
-                 &  cgl%cg%b(ydim,   is          :ie,           js          :je,           ks          :ke          )   )/cgl%cg%dy + &
-                 & (cgl%cg%b(zdim,   is          :ie,           js          :je,           ks+2*dom%D_z:ke+2*dom%D_z) - &
-                 &  cgl%cg%b(zdim,   is          :ie,           js          :je,           ks          :ke          )   )/cgl%cg%dz )
-         end associate
-         cgl => cgl%nxt
-      enddo
-
-   end subroutine divB_f4
-
-!>
-!! \brief Calculate 4th order correction for 2nd order estimate of divB for face-centered field and add it to the proper array.
-!!
-!! OPT: this may not be the best approach performance-wise.
-!!
-!! Spaghetti warning: this routime may be generalized and unified with divB_f4
-!<
-
-   subroutine divB_f6(ord)
-
-      use cg_leaves,  only: leaves
-      use cg_list,    only: cg_list_element
-      use constants,  only: xdim, ydim, zdim
-      use dataio_pub, only: die
-      use domain,     only: dom
-      use func,       only: operator(.equals.)
-
-      implicit none
-
-      integer, intent(in) :: ord
-
-      type(cg_list_element), pointer :: cgl
-      real, dimension(4), parameter :: coeff = [ 0., 0., 3./640., 49./5120. ]
-      integer :: o
-
-      o = ord/2  ! BEWARE: tricky, assumed stencils on uniform grid
-      if (o < lbound(coeff, dim=1) .or. o > ubound(coeff, dim=1) .or. 2*o /= ord .or. (coeff(o) .equals. 0.)) call die("[divB::divB_f6] cannot find coefficient") ! no odd order allowed here just in case
-
-      cgl => leaves%first
-      do while (associated(cgl))
-         associate (is => cgl%cg%is, ie => cgl%cg%ie, &
-              &     js => cgl%cg%js, je => cgl%cg%je, &
-              &     ks => cgl%cg%ks, ke => cgl%cg%ke)
-            cgl%cg%q(idivB)%arr(     is          :ie,           js          :je,           ks          :ke          ) = &
-                 cgl%cg%q(idivB)%arr(is          :ie,           js          :je,           ks          :ke          ) + coeff(o) * ( &
-                 & (cgl%cg%b(xdim,   is+3*dom%D_x:ie+3*dom%D_x, js          :je,           ks          :ke          ) - &
-                 &  cgl%cg%b(xdim,   is          :ie,           js          :je,           ks          :ke          )   )/cgl%cg%dx + &
-                 & (cgl%cg%b(ydim,   is          :ie,           js+3*dom%D_y:je+3*dom%D_y, ks          :ke          ) - &
-                 &  cgl%cg%b(ydim,   is          :ie,           js          :je,           ks          :ke          )   )/cgl%cg%dy + &
-                 & (cgl%cg%b(zdim,   is          :ie,           js          :je,           ks+3*dom%D_z:ke+3*dom%D_z) - &
-                 &  cgl%cg%b(zdim,   is          :ie,           js          :je,           ks          :ke          )   )/cgl%cg%dz )
-         end associate
-         cgl => cgl%nxt
-      enddo
-
-   end subroutine divB_f6
+   end function sixpoint
 
 end module div_B
