@@ -78,7 +78,7 @@
 /*
  * Hydro solvers
  *
- * Exclusive: RTVD, MH, RIEMANN
+ * Exclusive: RTVD, HLLC, RIEMANN
  * Default: RTVD
  */
 
