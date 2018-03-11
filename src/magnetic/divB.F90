@@ -112,6 +112,7 @@ contains
       use constants,  only: GEO_XYZ
       use dataio_pub, only: msg, die, warn
       use domain,     only: dom
+      use global,     only: force_cc_mag
 
       implicit none
 
@@ -146,7 +147,7 @@ contains
          if (dom%nb < ord/2) call die("[divB::divB] Not enough guardcells for requested approximation order")  ! assumed stencils on uniform grid
       endif
 
-      ccB = .false.  ! ToDo detect automatically
+      ccB = force_cc_mag
       if (present(cell_centered)) ccB = cell_centered
 
       call divB_init  ! it should be BOTH safe and cheap to call it multiple times
