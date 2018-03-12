@@ -150,7 +150,7 @@ contains
       if (present(cell_centered)) ccB = cell_centered
 
       call divB_init  ! it should be BOTH safe and cheap to call it multiple times
-      
+
       call divB_c(ord, ccB)
       if (ord > max_ord) call warn("[divB::divB] only 8th order of div(B) is currently implemented for magnetic field.")  !! BEWARE: order hardcoded in the string
 
