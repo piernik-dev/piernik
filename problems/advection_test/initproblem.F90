@@ -542,7 +542,7 @@ contains
 
       use cg_list,          only: cg_list_element
       use cg_leaves,        only: leaves
-      use constants,        only: PIERNIK_FINISHED, pSUM, pMIN, pMAX, idlen
+      use constants,        only: PIERNIK_FINISHED, pSUM, pMIN, pMAX, idlen, psi_n
       use dataio_pub,       only: code_progress, halfstep, msg, printinfo, warn
       use domain,           only: dom
       use fluidindex,       only: flind
@@ -641,6 +641,7 @@ contains
          bnorms(i) = leaves%norm_sq(idivB) / sqrt(dom%Vol)
       enddo
       write(msg,'(3(a,g12.5))')"[initproblem:calculate_error_norm] |divB|_2= ", bnorms(1), " |divB|_4= ", bnorms(2), " |divB|_6= ", bnorms(3)
+      if (qna%exists(psi_n)) write(msg,'(2a,g12.5)') trim(msg), " |psi|= ", leaves%norm_sq(qna%ind(psi_n)) / sqrt(dom%Vol)
       if (master) call printinfo(msg)
 #endif
 
