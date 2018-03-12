@@ -545,6 +545,9 @@ contains
       use grid_cont,        only: grid_container
       use mpisetup,         only: master, piernik_MPI_Allreduce
       use named_array_list, only: qna
+#ifdef MAGNETIC
+      use div_B,            only: divB, idivB
+#endif /* MAGNETIC */
 
       implicit none
 
@@ -621,6 +624,12 @@ contains
             endif
          enddo
       endif
+
+#ifdef MAGNETIC
+      call divB
+      write(msg,'(a,g12.5)')"[initproblem:calculate_error_norm] |divB|= ", leaves%norm_sq(idivB)
+      if (master) call printinfo(msg)
+#endif
 
    end subroutine calculate_error_norm
 
