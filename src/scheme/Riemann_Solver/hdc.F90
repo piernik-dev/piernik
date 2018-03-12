@@ -39,8 +39,8 @@ module hdc
   implicit none
 
   real, protected :: chspeed
-  integer, protected :: idb = INVALID, igp = INVALID !< indices of div(B) and grad(psi) arrays
-  character(len=dsetnamelen), parameter :: divB_n = "div_B", gradpsi_n = "grad_psi"
+  integer, protected :: igp = INVALID !< index of grad(psi) array
+  character(len=dsetnamelen), parameter :: gradpsi_n = "grad_psi"
 
   private
   public :: chspeed, update_chspeed, init_psi, glm_mhd, glmdamping, eglm!, divergencebc
@@ -48,15 +48,15 @@ module hdc
 contains
 
 !>
-!! \brief Allocate extra space for divB and grad psi to speed up calculations
+!! \brief Allocate extra space for grad psi to speed up calculations
 !!
-!! To create the auxiliary arrays just use the call
-!!    if (idb == INVALID .or. igp == INVALID) call aux_var
+!! To create the auxiliary array just use the call
+!!    if (igp == INVALID) call aux_var
 !! It should safe to call it multiple times from here - no new storage is
-!! created as long as the indices idb and igp are consistent with qna and wna entries.
+!! created as long as the index igp is consistent with wna entry.
 !!
-!! The divergence of the B field should be stored in cg%q(idb)%arr(:,:,:)
-!! The gradient of the psi fielsd should be stored in cg%w(igp)%arr(xdim:zdim,:,:,:)
+!! The divergence of the B field should be stored in cg%q(idivB)%arr(:,:,:) (use div_B, only: idivB)
+!! The gradient of the psi field should be stored in cg%w(igp)%arr(xdim:zdim,:,:,:)
 !!
 !! These arrays will be automagically freed with destruction of grid containers.
 !<
@@ -66,17 +66,9 @@ contains
       use cg_list_global,   only: all_cg
       use constants,        only: INVALID, ndims
       use dataio_pub,       only: die
-      use named_array_list, only: qna, wna
+      use named_array_list, only: wna
 
       implicit none
-
-      if (qna%exists(divB_n)) then
-         if (idb /= qna%ind(divB_n)) call die ("[hdc:aux_var] qna%exists(divB_n) .and. idb /= qna%ind(divB_n)")
-      else
-         if (idb /= INVALID) call die ("[hdc:aux_var] .not. qna%exists(divB_n) .and. idb /= INVALID")
-         call all_cg%reg_var(divB_n)
-         idb = qna%ind(divB_n)
-      endif
 
       if (wna%exists(gradpsi_n)) then
          if (igp /= wna%ind(gradpsi_n)) call die ("[hdc:aux_var] wna%exists(gradpsi_n) .and. igp /= wna%ind(gradpsi_n)")
@@ -221,7 +213,9 @@ contains
      use cg_leaves,  only: leaves
      use cg_list,    only: cg_list_element
      use grid_cont,  only: grid_container
-     use constants,  only: xdim, ydim, zdim, psi_n
+     use constants,  only: xdim, zdim, psi_n, GEO_XYZ, half
+     use dataio_pub, only: die
+     use div_B,      only: divB, idivB
      use domain,     only: dom
      use fluidindex, only: flind
      use fluids_pub, only: has_ion
@@ -239,8 +233,10 @@ contains
      integer                          :: i, j, k, ipsi
 
 
-     if (idb == INVALID .or. igp == INVALID) call aux_var
+     if (igp == INVALID) call aux_var
      ipsi = qna%ind(psi_n)
+
+     call divB
 
      if (has_ion) then
         if (dom%geometry_type /= GEO_XYZ) call die("[hdc:update_chspeed] non-cartesian geometry not implemented yet.")
@@ -255,13 +251,6 @@ contains
                          &     jm1 => j - Dom%D_y, jp1 => j + Dom%D_y, &
                          &     km1 => k - Dom%D_z, kp1 => k + Dom%D_z)
 
-                       ! Divergence of B
-                       cg%q(idb)%arr(i,j,k) = half * ( &
-                            (cg%b(xdim,ip1,j,k) - cg%b(xdim,im1,j,k))/cg%dl(xdim) + &
-                            (cg%b(ydim,i,jp1,k) - cg%b(ydim,i,jm1,k))/cg%dl(ydim) + &
-                            (cg%b(zdim,i,j,kp1) - cg%b(zdim,i,j,km1))/cg%dl(zdim) &
-                            )
-
                        ! Gradient of psi
                        cg%w(igp)%arr(:,i,j,k) = half * [ &
                             (cg%q(ipsi)%arr(ip1,j,k) - cg%q(ipsi)%arr(im1,j,k)), &
@@ -273,15 +262,15 @@ contains
                        !Sources
 
                        ! momentum = momentum -divB*B
-                       cgl%cg%u(fl%imx:fl%imz,i,j,k) = cgl%cg%u(fl%imx:fl%imz,i,j,k) - cg%q(idb)%arr(i,j,k)*(cgl%cg%b(xdim:zdim,i,j,k))
+                       cgl%cg%u(fl%imx:fl%imz,i,j,k) = cgl%cg%u(fl%imx:fl%imz,i,j,k) - cg%q(idivB)%arr(i,j,k)*(cgl%cg%b(xdim:zdim,i,j,k))
 
                        ! B = B -divB*u
-                       cgl%cg%b(xdim:zdim,i,j,k) = cgl%cg%b(xdim:zdim,i,j,k) - cg%q(idb)%arr(i,j,k)*(cgl%cg%u(fl%imx:fl%imz,i,j,k)/cgl%cg%u(fl%idn,i,j,k))
+                       cgl%cg%b(xdim:zdim,i,j,k) = cgl%cg%b(xdim:zdim,i,j,k) - cg%q(idivB)%arr(i,j,k)*(cgl%cg%u(fl%imx:fl%imz,i,j,k)/cgl%cg%u(fl%idn,i,j,k))
 
                        ! e = e - divB*u.B - B.grad(psi)
 
                        cgl%cg%u(fl%ien,i,j,k) = cgl%cg%u(fl%ien,i,j,k) - &
-                            cg%q(idb)%arr(i,j,k)*dot_product(cgl%cg%u(fl%imx:fl%imz,i,j,k)/cgl%cg%u(fl%idn,i,j,k),cgl%cg%b(xdim:zdim,i,j,k)) - &
+                            cg%q(idivB)%arr(i,j,k)*dot_product(cgl%cg%u(fl%imx:fl%imz,i,j,k)/cgl%cg%u(fl%idn,i,j,k),cgl%cg%b(xdim:zdim,i,j,k)) - &
                             dot_product(cgl%cg%b(xdim:zdim,i,j,k),cg%w(igp)%arr(xdim:zdim,i,j,k))
 
                        ! psi = psi - u.grad(psi), other term is calculated in damping
