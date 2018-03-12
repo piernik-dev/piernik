@@ -564,6 +564,10 @@ contains
       real, dimension(:,:,:), pointer   :: inid
       integer                           :: i, j
       character(len=idlen)              :: descr
+#ifdef MAGNETIC
+      integer, parameter                :: nnorms = 3
+      real, dimension(nnorms)           :: bnorms ! store here O(dx**2), O(dx**4) and O(dx**6) norms
+#endif /* MAGNETIC */
 
       if (code_progress < PIERNIK_FINISHED .and. (mod(nstep, norm_step) /= 0 .or. halfstep)) return
 
@@ -626,8 +630,11 @@ contains
       endif
 
 #ifdef MAGNETIC
-      call divB
-      write(msg,'(a,g12.5)')"[initproblem:calculate_error_norm] |divB|= ", leaves%norm_sq(idivB)
+      do i = 1, nnorms
+         call divB(2*i)  ! tricky
+         bnorms(i) = leaves%norm_sq(idivB)
+      enddo
+      write(msg,'(3(a,g12.5))')"[initproblem:calculate_error_norm] |divB|_2= ", bnorms(1), " |divB|_4= ", bnorms(2), " |divB|_6= ", bnorms(3)
       if (master) call printinfo(msg)
 #endif
 
