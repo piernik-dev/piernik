@@ -480,6 +480,8 @@ contains
          cgl => cgl%nxt
       enddo
 
+      call calculate_error_norm
+
    end subroutine problem_initial_conditions
 
 !-----------------------------------------------------------------------------
@@ -539,6 +541,7 @@ contains
       use cg_leaves,        only: leaves
       use constants,        only: PIERNIK_FINISHED, pSUM, pMIN, pMAX, idlen
       use dataio_pub,       only: code_progress, halfstep, msg, printinfo, warn
+      use domain,           only: dom
       use fluidindex,       only: flind
       use func,             only: operator(.notequals.)
       use global,           only: t, nstep
@@ -632,7 +635,7 @@ contains
 #ifdef MAGNETIC
       do i = 1, nnorms
          call divB(2*i)  ! tricky
-         bnorms(i) = leaves%norm_sq(idivB)
+         bnorms(i) = leaves%norm_sq(idivB) / sqrt(dom%Vol)
       enddo
       write(msg,'(3(a,g12.5))')"[initproblem:calculate_error_norm] |divB|_2= ", bnorms(1), " |divB|_4= ", bnorms(2), " |divB|_6= ", bnorms(3)
       if (master) call printinfo(msg)
