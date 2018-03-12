@@ -61,7 +61,7 @@ def fun(x, alpha, p_ratio):
       return fun
 
 # plot data ------------------------------------  
-def plot_data(plot_var, pl, pr, fl, fr, q, time, dt, i_lo_cut, i_up_cut, imgNbr):
+def plot_data(plot_var, pl, pr, fl, fr, q, time, dt, i_lo_cut, i_up_cut):
    global first_run
    f_lo_cut = fl[0] ;      f_up_cut = fr[-1]
    p_lo_cut = pl[0] ;   p_up_cut = pr[-1]
@@ -90,9 +90,9 @@ def plot_data(plot_var, pl, pr, fl, fr, q, time, dt, i_lo_cut, i_up_cut, imgNbr)
    plt.ylabel(plot_var)
    global plot_p_min, plot_p_max, plot_var_min, plot_var_max
    if first_run :
-      if not os.path.exists('results'):
-        os.makedirs('results')
-        print "Output dir created"
+      #if not os.path.exists('results'):
+        #os.makedirs('results')
+      #print "Output dir created"
       plot_p_min    =  p_lo_cut
       plot_p_max    =  p_up_cut
       plot_var_min = 0.1*e_small
@@ -116,13 +116,12 @@ def plot_data(plot_var, pl, pr, fl, fr, q, time, dt, i_lo_cut, i_up_cut, imgNbr)
       plt.plot([pl[i],pl[i]], [plot_var_min,plot_var_l[i]],color='r')
       plt.plot([pr[i],pr[i]], [plot_var_min,plot_var_r[i]],color='r')
    s.set_facecolor('white')
-   plt.title("Time = %7.3f, dt = %7.3f " % ( time, dt) )
-   plt.savefig('results/'+plot_var+'_%04d.png' % imgNbr, transparent ='False',facecolor=s.get_facecolor())
+   plt.title("Spectrum of %s(p) \n Time = %7.3f, dt = %7.3f " % (plot_var, time, dt) )
 
-   return 
+   return s
 #-----------------------------------------------------------------
 
-def crs_plot_main(parameter_names, parameter_values, plot_var, ncrs, ecrs, field_max, time, dt, image_number):
+def crs_plot_main(parameter_names, parameter_values, plot_var, ncrs, ecrs, field_max, time, dt):
     global first_run
 
     try:
@@ -168,7 +167,7 @@ def crs_plot_main(parameter_names, parameter_values, plot_var, ncrs, ecrs, field
         i_up = i
         if ecrs[i-1] >= e_small: break
 
-    print('time = %6.2f |  i_lo = %2d, i_up = %2d, %11s'%(time, i_lo if not empty_cell else 0, i_up if not empty_cell else 0, '(empty cell)' if empty_cell else ' '))        
+    sys.stdout.write('Time = %6.2f |  i_lo = %2d, i_up = %2d, %11s.'%(time, i_lo if not empty_cell else 0, i_up if not empty_cell else 0, '(empty cell)' if empty_cell else ' '))
     pln = p_fix[i_lo:i_up]
     prn = p_fix[i_lo+1:i_up+1]
     pln = array(pln)
@@ -184,6 +183,8 @@ def crs_plot_main(parameter_names, parameter_values, plot_var, ncrs, ecrs, field
     fln  = array(fln)
     frn  = array(fln)
     frn  = frn * (prn/pln) ** (-q_nr)
+    plot = False
+    if empty_cell==False:
+        plot = plot_data(plot_var, pln, prn, fln, frn, q_nr, time, dt, i_lo, i_up)
 
-    if empty_cell==False: 
-        plot_data(plot_var, pln, prn, fln, frn, q_nr, time, dt, i_lo, i_up, image_number)
+    return plot, empty_cell

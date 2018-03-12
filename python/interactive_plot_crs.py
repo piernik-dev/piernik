@@ -22,9 +22,15 @@ plot_mag = True
 logscale_colors = False
 #---------- reading parameters
 filename=sys.argv[-1]
-exten = filename.split('.')[-1]
-if exten[0:2] != 'h5':
+filename_ext= filename.split('.')[-1]
+filename_nam  = filename.split('.')[0].split('/')[-1]
+if filename_ext[0:2] != 'h5':
     sys.exit("\033[91mScript requires a (list of) hdf5 file(s) on input\033[0m")
+
+if f_run :
+    if not os.path.exists('results'):
+        os.makedirs('results')
+        print ("\033[92mOutput directory created: %s\033[0m" %(os.getcwd()+'/results'))
 
 var_array = []
 if f_run == True:
@@ -129,7 +135,8 @@ if f_run == True:
     print ""
 #---------
     def read_click_and_plot(event):
-        global click_coords, image_number, first_run
+        global click_coords, image_number, f_run
+        exit_code = True
         click_coords = [ int(round(event.xdata)), int(round(event.ydata)) ]
         point = s1.plot(event.xdata,event.ydata, marker="+", color="red")
         coords = [slice_coord, slice_coord, slice_coord]
@@ -149,9 +156,15 @@ if f_run == True:
             ecrs.append(h5File['data']['grid_0000000000']['cree'+str(ind).zfill(2)].value[coords[0],coords[1],coords[2]])
             ncrs.append(h5File['data']['grid_0000000000']['cren'+str(ind).zfill(2)].value[coords[0],coords[1],coords[2]])
         plot_var = "e"
-        fig2 = crs_h5.crs_plot_main(var_names, var_array, plot_var, ncrs, ecrs, field_max, time, dt, image_number)
-        first_run = False
-        image_number=image_number+1
+        fig2,exit_code = crs_h5.crs_plot_main(var_names, var_array, plot_var, ncrs, ecrs, field_max, time, dt)
+        if (exit_code != True):
+            s.savefig('results/'+filename_nam+'_'+plot_var+'_%04d.png' % image_number, transparent ='False',facecolor=s.get_facecolor())
+            print ("\033[92m  --->  Saved plot to: %s\033[0m" %str('results/'+filename_nam+'_'+plot_var+'_%04d.png' %image_number))
+            image_number=image_number+1
+        else:
+            print("\033[92m Empty cell, not saving.\033[0m")
+        if (f_run): f_run = False
+
     cid = s.canvas.mpl_connect('button_press_event',read_click_and_plot)
     
     plt.show()
