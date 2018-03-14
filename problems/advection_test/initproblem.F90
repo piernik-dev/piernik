@@ -338,7 +338,7 @@ contains
                      cg%b(:, i, j, k) = divBc_amp * [cg%x(i), cg%y(j), cg%z(k)] ! slight offset between cell- and face-centered is unimportant here
 
                      ! div B pulse, as described in Tricco, Price & Bate, https://arxiv.org/abs/1607.02394
-                     rr02 = sum(([cg%x(i), cg%y(j), cg%x(k)] - dom%C_)**2, mask=dom%has_dir)/r02
+                     rr02 = sum(([cg%x(i), cg%y(j), cg%z(k)] - dom%C_)**2, mask=dom%has_dir)/r02
                      if (rr02 > 1.) rr02 = 1.
 
                      if (dom%has_dir(xdim)) cg%b(xdim, i, j, k) = cg%b(xdim, i, j, k) + divBbX_amp * (rr02**4 - 2 *rr02**2 + 1)
