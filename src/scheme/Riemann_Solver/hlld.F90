@@ -175,6 +175,7 @@ contains
 
     ! SOLVER
 
+    b_cc(xdim,:) = 0.
     has_energy = (ubound(ul, dim=1) >= ien)
     ue = 0.
 
@@ -418,7 +419,6 @@ contains
 
                    ! Energy of Alfven intermediate state Eq. 63
                    if (has_energy) u_2starl(ien)  =  u_starl(ien) - b_sig*dn_lsqt*(vb_starl - vb_2star)
-
                 endif
 
                 if (sm <= zero) then
@@ -428,7 +428,6 @@ contains
 
                    ! Energy of Alfven intermediate state Eq. 63
                    if (has_energy) u_2starr(ien)  =  u_starr(ien) + b_sig*dn_rsqt*(vb_starr - vb_2star)
-
                 endif
 
                 if (sm > zero) then
