@@ -115,7 +115,8 @@ contains
       use global,      only: dt, dtm, t
       use mass_defect, only: update_magic_mass
 #ifdef COSM_RAY_ELECTRONS
-      use cresp_grid, only: cresp_update_grid
+      use cresp_grid,    only: cresp_update_grid
+      use initcrspectrum,only: use_cresp
 #endif /* COSM_RAY_ELECTRONS */
 
       implicit none
@@ -129,7 +130,7 @@ contains
 ! Sources should be hooked to problem_customize_solution with forward argument
 
 #ifdef COSM_RAY_ELECTRONS
-     call cresp_update_grid     ! updating number density and energy density of cosmic ray electrons via CRESP module
+      if (use_cresp) call cresp_update_grid     ! updating number density and energy density of cosmic ray electrons via CRESP module
 #endif /* COSM_RAY_ELECTRONS */
 
       halfstep = .true.
@@ -202,10 +203,10 @@ contains
 #ifdef COSM_RAY_ELECTRONS
             do icrc= flind%crn%all + 1, flind%crn%all + ncre
                do s = xdim, zdim
-                  if (.not.skip_sweep(s)) call make_diff_sweep(icrc, s)
-               enddo
-               do s = xdim, zdim
-                  if (.not.skip_sweep(s)) call make_diff_sweep(ncre + icrc, s)
+                  if (.not.skip_sweep(s)) then
+                     call make_diff_sweep(icrc, s)
+                     call make_diff_sweep(ncre + icrc, s)
+                  endif
                enddo
             enddo
 #endif /* COSM_RAY_ELECTRONS */

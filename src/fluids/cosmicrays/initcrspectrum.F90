@@ -11,6 +11,7 @@ module initcrspectrum
 
 ! contains routines reading namelist in problem.par file dedicated to cosmic ray electron spectrum and initializes types used.
 ! available via namelist COSMIC_RAY_SPECTRUM
+ logical            :: use_cresp = .true.       ! < determines whether CRESP update is called by fluidupdate
  integer(kind=4)    :: ncre      = 0            ! < number of bins
  real(kind=8)       :: p_min_fix = 1.5e1        ! < fixed momentum grid lower cutoff
  real(kind=8)       :: p_max_fix = 1.65e4       ! < fixed momentum grid upper cutoff
@@ -226,7 +227,7 @@ module initcrspectrum
  implicit none
     namelist /COSMIC_RAY_SPECTRUM/ cfl_cre, p_lo_init, p_up_init, f_init, q_init, q_big, ncre, initial_condition, &
     &                         p_min_fix, p_max_fix, cre_eff, K_cre_paral_1, K_cre_perp_1, cre_active, &
-    &                         K_cre_pow, expan_order, e_small, bump_amp, cre_gpcr_ess, &
+    &                         K_cre_pow, expan_order, e_small, bump_amp, cre_gpcr_ess, use_cresp, &
     &                         e_small_approx_init_cond, e_small_approx_p_lo, e_small_approx_p_up, force_init_NR,&
     &                         NR_iter_limit, max_p_ratio, add_spectrum_base, synch_active, adiab_active !, arr_dim
            
