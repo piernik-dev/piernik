@@ -483,7 +483,7 @@ contains
          cgl => cgl%nxt
       enddo
 
-      call calculate_error_norm
+      call print_bnorm
 
    end subroutine problem_initial_conditions
 
@@ -542,18 +542,14 @@ contains
 
       use cg_list,          only: cg_list_element
       use cg_leaves,        only: leaves
-      use constants,        only: PIERNIK_FINISHED, pSUM, pMIN, pMAX, idlen, psi_n
+      use constants,        only: PIERNIK_FINISHED, pSUM, pMIN, pMAX, idlen
       use dataio_pub,       only: code_progress, halfstep, msg, printinfo, warn
-      use domain,           only: dom
       use fluidindex,       only: flind
       use func,             only: operator(.notequals.)
       use global,           only: t, nstep
       use grid_cont,        only: grid_container
       use mpisetup,         only: master, piernik_MPI_Allreduce
       use named_array_list, only: qna
-#ifdef MAGNETIC
-      use div_B,            only: divB, idivB
-#endif /* MAGNETIC */
 
       implicit none
 
@@ -570,10 +566,6 @@ contains
       real, dimension(:,:,:), pointer   :: inid
       integer                           :: i, j
       character(len=idlen)              :: descr
-#ifdef MAGNETIC
-      integer, parameter                :: nnorms = 3
-      real, dimension(nnorms)           :: bnorms ! store here O(dx**2), O(dx**4) and O(dx**6) norms
-#endif /* MAGNETIC */
 
       if (code_progress < PIERNIK_FINISHED .and. (mod(nstep, norm_step) /= 0 .or. halfstep)) return
 
@@ -635,7 +627,33 @@ contains
          enddo
       endif
 
+      call print_bnorm
+
+   end subroutine calculate_error_norm
+
+!>
+!! \brief print estimates of magnitude of div(B) and psi fields if these are available
+!<
+
+   subroutine print_bnorm
+
 #ifdef MAGNETIC
+      use cg_leaves,        only: leaves
+      use constants,        only: psi_n
+      use div_B,            only: divB, idivB
+      use dataio_pub,       only: msg, printinfo
+      use domain,           only: dom
+      use mpisetup,         only: master
+      use named_array_list, only: qna
+#endif /* MAGNETIC */
+
+      implicit none
+
+#ifdef MAGNETIC
+      integer                 :: i
+      integer, parameter      :: nnorms = 3
+      real, dimension(nnorms) :: bnorms ! store here O(dx**2), O(dx**4) and O(dx**6) norms
+
       do i = 1, nnorms
          call divB(2*i)  ! tricky
          bnorms(i) = leaves%norm_sq(idivB) / sqrt(dom%Vol)
@@ -643,9 +661,9 @@ contains
       write(msg,'(3(a,g12.5))')"[initproblem:calculate_error_norm] |divB|_2= ", bnorms(1), " |divB|_4= ", bnorms(2), " |divB|_6= ", bnorms(3)
       if (qna%exists(psi_n)) write(msg,'(2a,g12.5)') trim(msg), " |psi|= ", leaves%norm_sq(qna%ind(psi_n)) / sqrt(dom%Vol)
       if (master) call printinfo(msg)
-#endif
+#endif /* MAGNETIC */
 
-   end subroutine calculate_error_norm
+   end subroutine print_bnorm
 
    !>
    !! \brief Put analytic solution in the inid arrays
