@@ -233,6 +233,7 @@ contains
          cbuff(3) = limiter_p
          cbuff(4) = cflcontrol
          cbuff(5) = h_solver
+         cbuff(6) = divB_0
 
          ibuff(1) = integration_order
 
@@ -294,6 +295,7 @@ contains
          limiter_p  = cbuff(3)
          cflcontrol = cbuff(4)
          h_solver   = cbuff(5)
+         divB_0     = cbuff(6)
 
          integration_order = ibuff(1)
 
