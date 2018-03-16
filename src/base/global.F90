@@ -134,7 +134,7 @@ contains
 !!   <tr><td>use_eglm         </td><td>false  </td><td>logical value                        </td><td>\copydoc global::use_eglm         </td></tr>
 !!   <tr><td>use_hdc_3D       </td><td>true   </td><td>logical value                        </td><td>\copydoc global::use_hdc_3D       </td></tr>
 !!   <tr><td>use_hdc_1D       </td><td>false  </td><td>logical value                        </td><td>\copydoc global::use_hdc_1D       </td></tr>
-!!   <tr><td>glm_iter         </td><td>1      </td><td>integer value                        </td><td>\copydoc global::glm_iter         </td></tr>
+!!   <tr><td>glm_iter         </td><td>2      </td><td>integer value                        </td><td>\copydoc global::glm_iter         </td></tr>
 !! </table>
 !! \n \n
 !<
@@ -161,7 +161,7 @@ contains
       divB_0      = "HDC"
       use_hdc_3D  = .true.
       use_hdc_1D  = .false.
-      glm_iter    = 1
+      glm_iter    = 2           ! it looks like two iterations per step gives the required damping
 #else /* ! RIEMANN */
       limiter     = 'vanleer'
       limiter_b   = limiter
