@@ -43,7 +43,7 @@ module hdc
   character(len=dsetnamelen), parameter :: gradpsi_n = "grad_psi"
 
   private
-  public :: chspeed, update_chspeed, init_psi, glm_mhd, glmdamping, glm_3D, eglm!, divergencebc
+  public :: chspeed, update_chspeed, init_psi, glm_mhd, glmdamping, glm_3D, eglm
 
 contains
 
@@ -212,7 +212,6 @@ contains
 
      use cg_leaves,  only: leaves
      use cg_list,    only: cg_list_element
-     use grid_cont,  only: grid_container
      use constants,  only: xdim, zdim, psi_n, GEO_XYZ, half
      use dataio_pub, only: die
      use div_B,      only: divB, idivB
