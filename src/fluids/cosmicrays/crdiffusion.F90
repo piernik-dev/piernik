@@ -140,7 +140,7 @@ contains
       use global,           only: dt
       use grid_cont,        only: grid_container
       use initcosmicrays,   only: K_crn_paral, K_crn_perp, K_crs_paral, K_crs_perp, iarr_crs !, iarr_crn !!!
-      use named_array,      only: p4
+      use named_array,      only: p3
       use named_array_list, only: wna
 
       implicit none
@@ -183,7 +183,7 @@ contains
                                                                                                ! in case of integration with boundaries:
          ldm        = cg%ijkse(:,LO) ;      ldm(crdim) = cg%lhn(crdim,LO) + dom%D_(crdim)      ! ldm =           1 + D_
          hdm        = cg%ijkse(:,HI) ;      hdm(crdim) = cg%lhn(crdim,HI)                      ! hdm = cg%n_ + idm - D_
-         
+         wcr(:,:,:,:) = 0.0                                   !!!!! BEWARE: this is a very provisoric tric.
          do k = ldm(zdim), hdm(zdim)       ; kl = k-1 ; kh = k+1 ; kld = k-idm(zdim)
             do j = ldm(ydim), hdm(ydim)    ; jl = j-1 ; jh = j+1 ; jld = j-idm(ydim)
                do i = ldm(xdim), hdm(xdim) ; il = i-1 ; ih = i+1 ; ild = i-idm(xdim)
@@ -217,7 +217,6 @@ contains
 
                   if (bb > epsilon(0.d0)) fcrdif = fcrdif + K_crs_paral(icrc) * bcomp(crdim) * (bcomp(xdim)*decr(xdim) + bcomp(ydim)*decr(ydim) + bcomp(zdim)*decr(zdim)) / bb !!!
 
-                  wcr(:,i,j,k) = 0.0                                   !!!!! BEWARE: this is a very provisoric tric.
                   wcr(icrc,i,j,k) = - fcrdif * dt * cg%idl(crdim)      !!!!! wcr should be reduced to 3 dimensions !
 
                enddo
@@ -234,9 +233,9 @@ contains
          ndm = cg%lhn(:,HI) - idm
          hdm = cg%lhn(:,LO) ; hdm(crdim) = cg%lhn(crdim,HI)
          ldm = hdm - idm
-         p4 => cg%w(wna%fi)%span(cg%lhn(:,LO), int(ndm, kind=4))
-         p4(iarr_crs,:,:,:) = p4(iarr_crs,:,:,:) - (cg%w(wcri)%span(int(cg%lhn(:,LO)+idm, kind=4), cg%lhn(:,HI)) - cg%w(wcri)%span(cg%lhn(:,LO), int(ndm, kind=4)))
-         cg%u(iarr_crs,hdm(xdim):cg%lhn(xdim,HI),hdm(ydim):cg%lhn(ydim,HI),hdm(zdim):cg%lhn(zdim,HI)) = cg%u(iarr_crs,ldm(xdim):ndm(xdim),ldm(ydim):ndm(ydim),ldm(zdim):ndm(zdim)) ! for sanity
+         p3 => cg%w(wna%fi)%span(icrs,cg%lhn(:,LO), int(ndm, kind=4))
+         p3(:,:,:) = p3(:,:,:) - (cg%w(wcri)%span(icrc,int(cg%lhn(:,LO)+idm, kind=4), cg%lhn(:,HI)) - cg%w(wcri)%span(icrc,cg%lhn(:,LO), int(ndm, kind=4)))
+         cg%u(icrs,hdm(xdim):cg%lhn(xdim,HI),hdm(ydim):cg%lhn(ydim,HI),hdm(zdim):cg%lhn(zdim,HI)) = cg%u(icrs,ldm(xdim):ndm(xdim),ldm(ydim):ndm(ydim),ldm(zdim):ndm(zdim)) ! for sanity
          cgl => cgl%nxt
       enddo
 
