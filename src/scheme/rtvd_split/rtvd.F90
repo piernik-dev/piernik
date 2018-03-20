@@ -241,42 +241,13 @@ contains
       use dataio_pub,       only: msg, die
       use domain,           only: dom
       use fluidindex,       only: iarr_all_dn, iarr_all_mx, iarr_all_my, flind, nmag
-#ifndef ISO
-      use fluidindex,       only: iarr_all_en
-#endif /* !ISO */
       use fluxes,           only: flimiter, all_fluxes
       use fluxtypes,        only: ext_fluxes
-      use fluidtypes,       only: component_fluid
-      use func,             only: emag, ekin
-      use global,           only: smalld, integration_order, use_smalld, smallei
+      use global,           only: smalld, integration_order, use_smalld
       use grid_cont,        only: grid_container
-      use gridgeometry,     only: gc, GC1, GC2, GC3, geometry_source_terms
+      use gridgeometry,     only: gc, GC1, GC2, GC3
       use mass_defect,      only: local_magic_mass
-#ifdef BALSARA
-      use interactions,     only: balsara_implicit_interactions
-#else /* !BALSARA */
-      use interactions,     only: fluid_interactions
-#endif /* !BALSARA */
-#ifdef GRAV
-      use gravity,          only: grav_pot2accel
-#endif /* GRAV */
-#ifdef COSM_RAYS
-      use initcosmicrays,   only: iarr_crs, smallecr
-      use sourcecosmicrays, only: src_gpcr
-#ifdef COSM_RAYS_SOURCES
-      use initcosmicrays,   only: iarr_crn
-      use sourcecosmicrays, only: src_crn
-#endif /* COSM_RAYS_SOURCES */
-#endif /* COSM_RAYS */
-#ifdef CORIOLIS
-      use coriolis,         only: coriolis_force
-#endif /* CORIOLIS */
-#ifdef NON_INERTIAL
-      use non_inertial,     only: non_inertial_force
-#endif /* NON_INERTIAL */
-#ifdef SHEAR
-      use shear,            only: shear_acc
-#endif /* SHEAR */
+      use rtvd_sources,     only: rtvd_sources_proc
 
       implicit none
 
@@ -297,15 +268,9 @@ contains
       logical,                       intent(in)    :: sources            !< apply source terms
       real, dimension(n, flind%fluids), intent(in), optional :: adv_vel  !< advection velocity
 
-#ifdef GRAV
-      integer                                      :: ind                !< fluid index
-      real, dimension(n)                           :: gravacc            !< acceleration caused by gravitation
-#endif /* GRAV */
-
-      real                                         :: dtx                !< dt/dx
+      real                                          :: dtx                !< dt/dx
       real, dimension(n, flind%all)                 :: cfr                !< freezing speed
 !locals
-      real, dimension(n, flind%fluids)              :: acc                !< acceleration
       real, dimension(n, flind%all)                 :: w                  !< auxiliary vector to calculate fluxes
       real, dimension(n, flind%all)                 :: fr                 !< flux of the right-moving waves
       real, dimension(n, flind%all)                 :: fl                 !< flux of the left-moving waves
@@ -313,32 +278,13 @@ contains
       real, dimension(n, flind%all)                 :: dfp                !< second order correction of left/right-moving waves flux on the right cell boundary
       real, dimension(n, flind%all)                 :: dfm                !< second order correction of left/right-moving waves flux on the left cell boundary
       real, dimension(n, flind%all)                 :: u1                 !< updated vector of conservative variables (after one timestep in second order scheme)
-      real, dimension(n, flind%fluids)              :: geosrc             !< source terms caused by geometry of coordinate system
       real, dimension(n, flind%fluids), target      :: pressure           !< gas pressure
-      real, dimension(n, flind%fluids), target      :: density            !< gas density
       real, dimension(n, flind%fluids), target      :: vel_sweep          !< velocity in the direction of current sweep
-      real, dimension(:,:),            pointer      :: dens, vx
       logical                                       :: full_dim
-
-#ifdef COSM_RAYS
-      real, dimension(n)                            :: grad_pcr
-      real, dimension(n, flind%crs%all)             :: decr
-#ifdef COSM_RAYS_SOURCES
-      real, dimension(n, flind%crn%all)             :: srccrn
-#endif /* COSM_RAYS_SOURCES */
-#endif /* COSM_RAYS */
-
-      real, dimension(n)              :: kin_ener, int_ener, mag_ener
 
       real, dimension(2,2), parameter              :: rk2coef = reshape( [ one, half, zero, one ], [ 2, 2 ] )
 
-      class(component_fluid), pointer :: pfl
       integer :: ifl
-
-#if !(defined COSM_RAYS && defined IONIZED)
-      integer                                      :: dummy
-      if (.false.) dummy = size(divv(:)) ! suppress compiler warnings
-#endif /* !(COSM_RAYS && IONIZED) */
 
       !OPT: try to avoid these explicit initializations of u1(:,:) and u0(:,:)
       dtx      = dt / dx
@@ -347,10 +293,6 @@ contains
       u1 = u
 
       if (present(adv_vel)) vel_sweep = adv_vel !TODO can be done better
-      vx   => vel_sweep
-      dens => density
-
-      density(:,:) = u(:, iarr_all_dn)
 
       if (full_dim) then
          ! Fluxes calculation for cells centers
@@ -466,63 +408,35 @@ contains
       endif
 
 ! Source terms -------------------------------------
-      if (sources) then
-         geosrc = geometry_source_terms(u, pressure, sweep, cg)  ! n safe
+      if (sources) call rtvd_sources_proc(n, u, u0, divv, cs_iso2, istep, sweep, i1, i2, dx, dt, cg, u1, full_dim, pressure, vel_sweep)
 
-         u1(:, iarr_all_mx) = u1(:, iarr_all_mx) + rk2coef(integration_order,istep)*geosrc(:,:)*dt ! n safe
+      call limit_minimal_int_ener(n, bb, u1)
 
-         acc = 0.0
-#ifndef BALSARA
-         acc = acc + fluid_interactions(dens, vx)  ! n safe
-#else /* !BALSARA */
-         call balsara_implicit_interactions(u1, u0, vx, cs_iso2, dt, istep) ! n safe
-#endif /* !BALSARA */
-#ifdef SHEAR
-         acc = acc + shear_acc(sweep,u) ! n safe
-#endif /* SHEAR */
-#ifdef CORIOLIS
-         acc = acc + coriolis_force(sweep,u) ! n safe
-#endif /* CORIOLIS */
-#ifdef NON_INERTIAL
-         acc = acc + non_inertial_force(sweep, u, cg)
-#endif /* NON_INERTIAL */
+      u(:,:) = u1(:,:)
 
-         if (full_dim) then
-#ifdef GRAV
-            call grav_pot2accel(sweep, i1, i2, n, gravacc, istep, cg)
+   end subroutine relaxing_tvd
 
-            do ind = 1, flind%fluids
-               acc(:, ind) =  acc(:, ind) + gravacc(:)
-            enddo
-#endif /* !GRAV */
+!==========================================================================================
+   subroutine limit_minimal_int_ener(n, bb, u1)
 
-            acc(n, :) = acc(n-1, :)
-            acc(1, :) = acc(2, :)
-         endif
+      use constants,        only: xdim, ydim, zdim
+      use fluidindex,       only: flind, nmag
+      use fluidtypes,       only: component_fluid
+      use func,             only: emag, ekin
+      use global,           only: smallei
 
-         u1(:, iarr_all_mx) = u1(:, iarr_all_mx) + rk2coef(integration_order,istep)*acc(:,:)*u(:, iarr_all_dn)*dt
-#ifndef ISO
-         u1(:, iarr_all_en) = u1(:, iarr_all_en) + rk2coef(integration_order,istep)*acc(:,:)*u(:, iarr_all_mx)*dt
-#endif /* !ISO */
+      implicit none
 
-! --------------------------------------------------
+      integer(kind=4),               intent(in)    :: n                  !< array size
+      real, dimension(n, nmag),      intent(in)    :: bb                 !< local copy of magnetic field
+      real, dimension(n, flind%all), intent(inout) :: u1                 !< updated vector of conservative variables (after one timestep in second order scheme)
 
-#if defined COSM_RAYS && defined IONIZED
-         if (full_dim) then
-            call src_gpcr(u, n, dx, divv, decr, grad_pcr)
-            u1(:,                iarr_crs(:)) = u1(:,               iarr_crs(:)) + rk2coef(integration_order,istep) * decr(:,:) * dt
-            u1(:,                iarr_crs(:)) = max(smallecr, u1(:, iarr_crs(:)))
-            u1(:, iarr_all_mx(flind%ion%pos)) = u1(:, iarr_all_mx(flind%ion%pos)) + rk2coef(integration_order,istep) * grad_pcr * dt
-#ifndef ISO
-            u1(:, iarr_all_en(flind%ion%pos)) = u1(:, iarr_all_en(flind%ion%pos)) + rk2coef(integration_order,istep) * vx(:, flind%ion%pos) * grad_pcr * dt
-#endif /* !ISO */
-         endif
-#ifdef COSM_RAYS_SOURCES
-         call src_crn(u, n, srccrn, rk2coef(integration_order, istep) * dt) ! n safe
-         u1(:, iarr_crn) = u1(:, iarr_crn) +  rk2coef(integration_order, istep)*srccrn(:,:)*dt
-#endif /* COSM_RAYS_SOURCES */
-#endif /* COSM_RAYS && IONIZED */
-      endif ! sources
+!locals
+
+      real, dimension(n)              :: kin_ener, int_ener, mag_ener
+
+      class(component_fluid), pointer :: pfl
+      integer :: ifl
 
       do ifl = 1, flind%fluids
          pfl => flind%all_fluids(ifl)%fl
@@ -542,9 +456,7 @@ contains
          endif
       enddo
 
-      u(:,:) = u1(:,:)
-
-   end subroutine relaxing_tvd
+   end subroutine limit_minimal_int_ener
 
 !==========================================================================================
 end module rtvd
