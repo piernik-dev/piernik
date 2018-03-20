@@ -237,16 +237,14 @@ contains
 
    subroutine relaxing_tvd(n, u, u0, bb, divv, cs_iso2, istep, sweep, i1, i2, dx, dt, cg, eflx, sources, adv_vel)
 
-      use constants,        only: one, zero, half, GEO_XYZ, GEO_RPZ, LO, xdim, ydim, zdim
-      use dataio_pub,       only: msg, die
+      use constants,        only: one, zero, half, GEO_XYZ, GEO_RPZ, LO, ydim, zdim
       use domain,           only: dom
       use fluidindex,       only: iarr_all_dn, iarr_all_mx, iarr_all_my, flind, nmag
       use fluxes,           only: flimiter, all_fluxes
       use fluxtypes,        only: ext_fluxes
-      use global,           only: smalld, integration_order, use_smalld
+      use global,           only: integration_order
       use grid_cont,        only: grid_container
       use gridgeometry,     only: gc, GC1, GC2, GC3
-      use mass_defect,      only: local_magic_mass
       use rtvd_sources,     only: rtvd_sources_proc
 
       implicit none
@@ -283,8 +281,6 @@ contains
       logical                                       :: full_dim
 
       real, dimension(2,2), parameter              :: rk2coef = reshape( [ one, half, zero, one ], [ 2, 2 ] )
-
-      integer :: ifl
 
       !OPT: try to avoid these explicit initializations of u1(:,:) and u0(:,:)
       dtx      = dt / dx
@@ -371,6 +367,42 @@ contains
          vel_sweep = u1(:, iarr_all_mx) / u1(:, iarr_all_dn)
       endif ! (n > 1)
 
+      call limit_minimal_density(n, u1, cg, sweep, i1, i2)
+
+! Source terms -------------------------------------
+      if (sources) call rtvd_sources_proc(n, u, u0, divv, cs_iso2, istep, sweep, i1, i2, dx, dt, cg, u1, full_dim, pressure, vel_sweep)
+
+      call limit_minimal_int_ener(n, bb, u1)
+
+      u(:,:) = u1(:,:)
+
+   end subroutine relaxing_tvd
+
+
+!==========================================================================================
+   subroutine limit_minimal_density(n, u1, cg, sweep, i1, i2)
+
+      use constants,        only: GEO_XYZ, GEO_RPZ, xdim, ydim, zdim
+      use dataio_pub,       only: msg, die
+      use domain,           only: dom
+      use fluidindex,       only: flind, iarr_all_dn
+      use global,           only: smalld, use_smalld
+      use grid_cont,        only: grid_container
+      use mass_defect,      only: local_magic_mass
+
+      implicit none
+
+      integer(kind=4),               intent(in)    :: n                  !< array size
+      real, dimension(n, flind%all), intent(inout) :: u1                 !< updated vector of conservative variables (after one timestep in second order scheme)
+      type(grid_container), pointer, intent(in)    :: cg                 !< current grid piece
+      integer(kind=4),               intent(in)    :: sweep              !< direction (x, y or z) we are doing calculations for
+      integer,                       intent(in)    :: i1                 !< coordinate of sweep in the 1st remaining direction
+      integer,                       intent(in)    :: i2                 !< coordinate of sweep in the 2nd remaining direction
+
+!locals
+
+      integer :: ifl
+
       if (use_smalld) then
          ! This is needed e.g. for outflow boundaries in presence of perp. gravity
          select case (dom%geometry_type)
@@ -407,14 +439,7 @@ contains
          endif
       endif
 
-! Source terms -------------------------------------
-      if (sources) call rtvd_sources_proc(n, u, u0, divv, cs_iso2, istep, sweep, i1, i2, dx, dt, cg, u1, full_dim, pressure, vel_sweep)
-
-      call limit_minimal_int_ener(n, bb, u1)
-
-      u(:,:) = u1(:,:)
-
-   end subroutine relaxing_tvd
+   end subroutine limit_minimal_density
 
 !==========================================================================================
    subroutine limit_minimal_int_ener(n, bb, u1)
