@@ -159,13 +159,16 @@ contains
     use all_boundaries, only: all_bnd
     use cg_leaves,      only: leaves
     use cg_list,        only: cg_list_element
-    use constants,      only: DIVB_CT
     use domain,         only: dom
-    use global,         only: skip_sweep, dt, force_cc_mag, divB_0_method
+    use global,         only: skip_sweep, dt, force_cc_mag
 #ifdef COSM_RAYS
     use crdiffusion,    only: cr_diff
     use initcosmicrays, only: use_split
 #endif /* COSM_RAYS */
+#ifdef MAGNETIC
+    use constants,      only: DIVB_CT
+    use global,         only: divB_0_method
+#endif /* MAGNETIC */
 
     implicit none
 
