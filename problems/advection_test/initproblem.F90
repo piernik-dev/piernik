@@ -264,7 +264,7 @@ contains
 
       use cg_list,          only: cg_list_element
       use cg_leaves,        only: leaves
-      use constants,        only: xdim, ydim, zdim, GEO_XYZ, GEO_RPZ, half
+      use constants,        only: xdim, ydim, zdim, GEO_XYZ, GEO_RPZ
       use dataio_pub,       only: die
       use domain,           only: dom
       use fluidindex,       only: flind
@@ -274,7 +274,7 @@ contains
       use named_array_list, only: qna
       use non_inertial,     only: get_omega
 #ifdef MAGNETIC
-      use constants,        only: ndims, I_ONE, I_TWO, I_THREE, dpi
+      use constants,        only: ndims, I_ONE, I_TWO, I_THREE, dpi, half
 #endif /* MAGNETIC */
 
       implicit none
@@ -541,7 +541,6 @@ contains
       use cg_leaves,        only: leaves
       use constants,        only: PIERNIK_FINISHED, pSUM, pMIN, pMAX, idlen
       use dataio_pub,       only: code_progress, halfstep, msg, printinfo, warn
-      use domain,           only: dom
       use fluidindex,       only: flind
       use func,             only: operator(.notequals.)
       use global,           only: t, nstep
@@ -549,6 +548,7 @@ contains
       use mpisetup,         only: master, piernik_MPI_Allreduce
       use named_array_list, only: qna
 #ifdef MAGNETIC
+      use domain,           only: dom
       use div_B,            only: divB, idivB
 #endif /* MAGNETIC */
 
