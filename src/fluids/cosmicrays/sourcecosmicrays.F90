@@ -47,22 +47,29 @@ contains
 !>
 !! \brief Computation of Cosmic ray pressure gradient and pcr div v
 !<
-   subroutine src_gpcr(uu, nn, dx, divv, decr, grad_pcr)
+   subroutine src_gpcr(uu, nn, dx, decr, grad_pcr, sweep, i1, i2, cg)
 
+      use crhelpers,      only: set_div_v1d
       use domain,         only: dom
       use fluidindex,     only: flind
+      use grid_cont,      only: grid_container
       use initcosmicrays, only: iarr_crs, gamma_crs, cr_active, gpcr_essential
 
       implicit none
 
       integer(kind=4),                    intent(in)  :: nn                 !< array size
       real, dimension(nn, flind%all),     intent(in)  :: uu                 !< vector of conservative variables
-      real, dimension(:), pointer,        intent(in)  :: divv               !< vector of velocity divergence used in cosmic ray advection
       real,                               intent(in)  :: dx                 !< cell length
       real, dimension(nn),                intent(out) :: grad_pcr
       real, dimension(nn, flind%crs%all), intent(out) :: decr
+      integer(kind=4),                    intent(in)  :: sweep              !< direction (x, y or z) we are doing calculations for
+      integer,                            intent(in)  :: i1                 !< coordinate of sweep in the 1st remaining direction
+      integer,                            intent(in)  :: i2                 !< coordinate of sweep in the 2nd remaining direction
+      type(grid_container), pointer,      intent(in)  :: cg                 !< current grid piece
+      real, dimension(:), pointer                     :: divv               !< vector of velocity divergence used in cosmic ray advection
       integer                                         :: icr, jcr
 
+      call set_div_v1d(divv, sweep, i1, i2, cg)
       do icr = 1, flind%crs%all
          ! 1/eff_dim is because we compute the p_cr*dv in every sweep (3 times in 3D, twice in 2D and once in 1D experiments)
          decr(:, icr)      = -1. / real(dom%eff_dim) * (gamma_crs(icr)-1.0) * uu(:, iarr_crs(icr))*divv(:)

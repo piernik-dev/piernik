@@ -235,7 +235,7 @@ contains
 ! OPT: we may also try to work on bigger parts of the u(:,:,:,:) at a time , but the exact amount may depend on size of the L2 cache
 ! OPT: try an explicit loop over n to see if better pipelining can be achieved
 
-   subroutine relaxing_tvd(n, u, u0, bb, divv, cs_iso2, istep, sweep, i1, i2, dx, dt, cg, eflx, sources, adv_vel)
+   subroutine relaxing_tvd(n, u, u0, bb, cs_iso2, istep, sweep, i1, i2, dx, dt, cg, eflx, sources, adv_vel)
 
       use constants,        only: one, zero, half, GEO_XYZ, GEO_RPZ, LO, ydim, zdim
       use domain,           only: dom
@@ -253,7 +253,6 @@ contains
       real, dimension(n, flind%all), intent(inout) :: u                  !< vector of conservative variables
       real, dimension(n, flind%all), intent(in)    :: u0                 !< vector of conservative variables
       real, dimension(n, nmag),      intent(in)    :: bb                 !< local copy of magnetic field
-      real, dimension(:), pointer,   intent(in)    :: divv               !< vector of velocity divergence used in cosmic ray advection
       real, dimension(:), pointer,   intent(in)    :: cs_iso2            !< square of local isothermal sound speed
       integer,                       intent(in)    :: istep              !< step number in the time integration scheme
       integer(kind=4),               intent(in)    :: sweep              !< direction (x, y or z) we are doing calculations for
@@ -370,7 +369,7 @@ contains
       call limit_minimal_density(n, u1, cg, sweep, i1, i2)
 
 ! Source terms -------------------------------------
-      if (sources) call rtvd_sources_proc(n, u, u0, divv, cs_iso2, istep, sweep, i1, i2, dx, dt, cg, u1, full_dim, pressure, vel_sweep)
+      if (sources) call rtvd_sources_proc(n, u, u0, cs_iso2, istep, sweep, i1, i2, dx, dt, cg, u1, full_dim, pressure, vel_sweep)
 
       call limit_minimal_int_ener(n, bb, u1)
 

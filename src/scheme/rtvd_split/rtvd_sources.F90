@@ -47,7 +47,7 @@ contains
 !! \todo Do not pass i1 and i2, pass optional pointer to gravacc instead
 !<
 !*/
-   subroutine rtvd_sources_proc(n, u, u0, divv, cs_iso2, istep, sweep, i1, i2, dx, dt, cg, u1, full_dim, pressure, vel_sweep)
+   subroutine rtvd_sources_proc(n, u, u0, cs_iso2, istep, sweep, i1, i2, dx, dt, cg, u1, full_dim, pressure, vel_sweep)
 
       use constants,        only: one, zero, half
       use fluidindex,       only: iarr_all_dn, iarr_all_mx, flind
@@ -88,7 +88,6 @@ contains
       integer(kind=4),               intent(in)    :: n                  !< array size
       real, dimension(n, flind%all), intent(inout) :: u                  !< vector of conservative variables
       real, dimension(n, flind%all), intent(in)    :: u0                 !< vector of conservative variables
-      real, dimension(:), pointer,   intent(in)    :: divv               !< vector of velocity divergence used in cosmic ray advection
       real, dimension(:), pointer,   intent(in)    :: cs_iso2            !< square of local isothermal sound speed
       integer,                       intent(in)    :: istep              !< step number in the time integration scheme
       integer(kind=4),               intent(in)    :: sweep              !< direction (x, y or z) we are doing calculations for
@@ -122,11 +121,6 @@ contains
 #endif /* COSM_RAYS */
 
       real, dimension(2,2), parameter              :: rk2coef = reshape( [ one, half, zero, one ], [ 2, 2 ] )
-
-#if !(defined COSM_RAYS && defined IONIZED)
-      integer                                      :: dummy
-      if (.false.) dummy = size(divv(:)) ! suppress compiler warnings
-#endif /* !(COSM_RAYS && IONIZED) */
 
       vx   => vel_sweep
       dens => density
@@ -175,7 +169,7 @@ contains
 
 #if defined COSM_RAYS && defined IONIZED
          if (full_dim) then
-            call src_gpcr(u, n, dx, divv, decr, grad_pcr)
+            call src_gpcr(u, n, dx, decr, grad_pcr, sweep, i1, i2, cg)
             u1(:,                iarr_crs(:)) = u1(:,               iarr_crs(:)) + rk2coef(integration_order,istep) * decr(:,:) * dt
             u1(:,                iarr_crs(:)) = max(smallecr, u1(:, iarr_crs(:)))
             u1(:, iarr_all_mx(flind%ion%pos)) = u1(:, iarr_all_mx(flind%ion%pos)) + rk2coef(integration_order,istep) * grad_pcr * dt
