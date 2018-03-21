@@ -292,8 +292,11 @@ contains
 !<
    subroutine balsara_implicit_interactions(u1, u0, vx, cs_iso2, dt, istep)
 
-      use constants,  only: half, one, zero
+      use constants,  only: half, one, zero, I_ONE, I_TWO, LO, HI
+      use dataio_pub, only: msg, warn
       use fluidindex, only: iarr_all_dn, iarr_all_mx, flind
+      use fluidtypes, only: component_fluid
+      use mpisetup,   only: master
 
       implicit none
 
@@ -306,28 +309,42 @@ contains
 
       real, dimension(size(u1, 1), flind%fluids) :: vprim
       real, dimension(size(u1, 1))               :: delta, drag
+      integer, dimension(2)                      :: tfl
+      character(len=*), dimension(3), parameter  :: flns = ['ION', 'NEU', 'DST'] !< \todo move this to fluids modules
+      logical, save                              :: initbalsara = .true.
       !>
       !! \deprecated BEWARE: this bit assumes that we have 2 fluids and \f$u_1 \equiv u_0 - \nabla F\f$
       !! \todo 2) half-time step should be \f$\le \frac{1}{2}\frac{c_s}{drag * \rho'_? |v'_d - v'_g|}\f$
       !! \todo 3) what if not isothermal?
-      !! \todo 4) remove hardcoded integers
+      !! \todo 4) remove hardcoded integers - done
       !<
-      if (epstein_factor(flind%neu%pos) <= zero) return
-      drag(:) = dt * half / grain_dens_x_size * sqrt( cs_iso2(:) + abs( vx(:, 1) - vx(:, 2) )**2)
+      !call warn('balsara init')
+      !if (epstein_factor(flind%neu%pos) <= zero) return
+      !call warn('balsara cont')
 
-      delta(:) = one + drag(:) * (u1(:, iarr_all_dn(1)) + u1(:, iarr_all_dn(2)))
+      tfl = [I_ONE, I_TWO] !> may become changeable in future
+
+      if (initbalsara .and. master .and. (flind%fluids > I_TWO)) then
+         write(msg,"(a,i2,4a)")"[interactions:balsara_implicit_interactions] ", flind%fluids, " fluids present, yet only two included to compute interactions: ", flns(flind%all_fluids(tfl(LO))%fl%tag), " & ", flns(flind%all_fluids(tfl(HI))%fl%tag)
+         call warn(msg)
+         initbalsara = .false.
+      endif
+
+      drag(:) = dt * half / grain_dens_x_size * sqrt( cs_iso2(:) + abs( vx(:, tfl(LO)) - vx(:, tfl(HI)) )**2)
+
+      delta(:) = one + drag(:) * (u1(:, iarr_all_dn(tfl(LO))) + u1(:, iarr_all_dn(tfl(HI))))
       delta(:) = one/delta(:)
 
       if (istep == 1) then
-         vprim(:, 1) =  delta(:)*( (1./u1(:, iarr_all_dn(1)) + drag(:))*u1(:, iarr_all_mx(1)) + drag(:)*u1(:, iarr_all_mx(2)) )
-         vprim(:, 2) =  delta(:)*( (1./u1(:, iarr_all_dn(2)) + drag(:))*u1(:, iarr_all_mx(2)) + drag(:)*u1(:, iarr_all_mx(1)) )
+         vprim(:, tfl(LO)) =  delta(:)*( (1./u1(:, iarr_all_dn(tfl(LO))) + drag(:))*u1(:, iarr_all_mx(tfl(LO))) + drag(:)*u1(:, iarr_all_mx(tfl(HI))) )
+         vprim(:, tfl(HI)) =  delta(:)*( (1./u1(:, iarr_all_dn(tfl(HI))) + drag(:))*u1(:, iarr_all_mx(tfl(HI))) + drag(:)*u1(:, iarr_all_mx(tfl(LO))) )
       else
-         vprim(:, 2) =  delta(:)*(  &
-            drag(:)*( u0(:, iarr_all_dn(2))/u1(:, iarr_all_dn(2))*u0(:, iarr_all_mx(1)) - u0(:, iarr_all_dn(1))/u1(:, iarr_all_dn(2))*u0(:, iarr_all_mx(2)) &
-                    + u1(:, iarr_all_mx(1)) ) + u1(:, iarr_all_mx(2)) * ( 1./u1(:, iarr_all_dn(2)) + drag(:) )  )
-         vprim(:, 1) =  delta(:)*(  &
-            drag(:)*( u0(:, iarr_all_dn(1))/u1(:, iarr_all_dn(1))*u0(:, iarr_all_mx(2)) - u0(:, iarr_all_dn(2))/u1(:, iarr_all_dn(1))*u0(:, iarr_all_mx(1)) &
-                    + u1(:, iarr_all_mx(2)) ) + u1(:, iarr_all_mx(1)) * ( 1./u1(:, iarr_all_dn(1)) + drag(:) )  )
+         vprim(:, tfl(HI)) =  delta(:)*( drag(:)*( u0(:, iarr_all_dn(tfl(HI)))/u1(:, iarr_all_dn(tfl(HI)))*u0(:, iarr_all_mx(tfl(LO))) &
+                                                 - u0(:, iarr_all_dn(tfl(LO)))/u1(:, iarr_all_dn(tfl(HI)))*u0(:, iarr_all_mx(tfl(HI))) &
+                                                 + u1(:, iarr_all_mx(tfl(LO))) ) + u1(:, iarr_all_mx(tfl(HI))) * ( 1./u1(:, iarr_all_dn(tfl(HI))) + drag(:) )  )
+         vprim(:, tfl(LO)) =  delta(:)*( drag(:)*( u0(:, iarr_all_dn(tfl(LO)))/u1(:, iarr_all_dn(tfl(LO)))*u0(:, iarr_all_mx(tfl(HI))) &
+                                                 - u0(:, iarr_all_dn(tfl(HI)))/u1(:, iarr_all_dn(tfl(LO)))*u0(:, iarr_all_mx(tfl(LO))) &
+                                                 + u1(:, iarr_all_mx(tfl(HI))) ) + u1(:, iarr_all_mx(tfl(LO))) * ( 1./u1(:, iarr_all_dn(tfl(LO))) + drag(:) )  )
       endif
       u1(:, iarr_all_mx) = u1(:, iarr_all_dn) * vprim(:,:)
       return
