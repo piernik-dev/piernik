@@ -37,9 +37,36 @@ module sources
    implicit none
 
    private
-   public  :: all_sources
+   public  :: all_sources, prepare_sources
 
 contains
+
+!/*
+!>
+!! \brief Subroutine computes any scheme sources (yet, now it is based on rtvd scheme)
+!!
+!! \todo Do not pass i1 and i2, pass optional pointer to gravacc instead
+!<
+!*/
+   subroutine prepare_sources(cg)
+
+      use grid_cont,  only: grid_container
+#ifdef COSM_RAYS
+      use crhelpers,  only: div_v
+      use fluidindex, only: flind
+#endif /* COSM_RAYS */
+
+      implicit none
+
+      type(grid_container), pointer, intent(in)    :: cg                 !< current grid piece
+
+#ifdef COSM_RAYS
+                        call div_v(flind%ion%pos, cg)
+#endif /* COSM_RAYS */
+      if (.false. .and. cg%is_old) return ! to supress compiler warnings
+
+   end subroutine prepare_sources
+
 !/*
 !>
 !! \brief Subroutine computes any scheme sources (yet, now it is based on rtvd scheme)

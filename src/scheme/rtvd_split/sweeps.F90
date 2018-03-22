@@ -266,9 +266,7 @@ contains
       use mpisetup,           only: mpi_err, req, status
       use named_array_list,   only: qna, wna
       use rtvd,               only: relaxing_tvd
-#ifdef COSM_RAYS
-      use crhelpers,          only: div_v
-#endif /* COSM_RAYS */
+      use sources,            only: prepare_sources
 #ifdef MAGNETIC
       use fluidindex,         only: iarr_mag_swp
 #endif /* MAGNETIC */
@@ -352,9 +350,7 @@ contains
                      u(:,:) = 0.0
 
                      if (istep == 1) then
-#ifdef COSM_RAYS
-                        call div_v(flind%ion%pos, cg)
-#endif /* COSM_RAYS */
+                        call prepare_sources(cg)
                         cg%w(uhi)%arr = cg%u
                      endif
 
