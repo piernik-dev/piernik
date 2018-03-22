@@ -237,15 +237,15 @@ contains
 
    subroutine relaxing_tvd(n, u, u0, bb, cs_iso2, istep, sweep, i1, i2, dx, dt, cg, eflx, sources, adv_vel)
 
-      use constants,        only: one, zero, half, GEO_XYZ, GEO_RPZ, LO, ydim, zdim
-      use domain,           only: dom
-      use fluidindex,       only: iarr_all_dn, iarr_all_mx, iarr_all_my, flind, nmag
-      use fluxes,           only: flimiter, all_fluxes
-      use fluxtypes,        only: ext_fluxes
-      use global,           only: integration_order
-      use grid_cont,        only: grid_container
-      use gridgeometry,     only: gc, GC1, GC2, GC3
-      use rtvd_sources,     only: rtvd_sources_proc
+      use constants,    only: one, zero, half, GEO_XYZ, GEO_RPZ, LO, ydim, zdim
+      use domain,       only: dom
+      use fluidindex,   only: iarr_all_dn, iarr_all_mx, iarr_all_my, flind, nmag
+      use fluxes,       only: flimiter, all_fluxes
+      use fluxtypes,    only: ext_fluxes
+      use global,       only: integration_order
+      use grid_cont,    only: grid_container
+      use gridgeometry, only: gc, GC1, GC2, GC3
+      use sources,      only: all_sources
 
       implicit none
 
@@ -369,7 +369,7 @@ contains
       call limit_minimal_density(n, u1, cg, sweep, i1, i2)
 
 ! Source terms -------------------------------------
-      if (sources) call rtvd_sources_proc(n, u, u0, cs_iso2, istep, sweep, i1, i2, dx, dt, cg, u1, full_dim, pressure, vel_sweep)
+      if (sources) call all_sources(n, u, u0, cs_iso2, istep, sweep, i1, i2, dx, dt, cg, u1, full_dim, pressure, vel_sweep)
 
       call limit_minimal_int_ener(n, bb, u1)
 
