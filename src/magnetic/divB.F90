@@ -115,11 +115,11 @@ contains
 
       implicit none
 
-      integer, optional, intent(in) :: order
-      logical, optional, intent(in) :: cell_centered
+      integer(kind=4), optional, intent(in) :: order
+      logical,         optional, intent(in) :: cell_centered
 
-      integer :: ord
-      logical :: ccB
+      integer(kind=4) :: ord
+      logical         :: ccB
       integer, parameter :: max_ord = 8
 
       if (dom%geometry_type /= GEO_XYZ) call die("[divB::divB] non-cartesian geometry not implemented yet.")
@@ -173,11 +173,11 @@ contains
 
       implicit none
 
-      integer, intent(in) :: ord
-      logical, intent(in) :: ccB
+      integer(kind=4), intent(in) :: ord
+      logical,         intent(in) :: ccB
 
       type(cg_list_element), pointer :: cgl
-      integer :: o, i
+      integer(kind=4) :: o, i
       real, dimension(max_c) :: coeff
 
       o = ord/I_TWO  ! BEWARE: tricky, assumed stencils on uniform grid
@@ -217,12 +217,12 @@ contains
       implicit none
 
       type(grid_container), pointer, intent(in) :: cg
-      integer,                       intent(in) :: ord
+      integer(kind=4),               intent(in) :: ord
       logical,                       intent(in) :: cell_centered
 
       real(kind=4), dimension(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) :: divB_c_IO
 
-      integer :: o, i
+      integer(kind=4) :: o, i
       real, dimension(max_c) :: coeff
 
       o = ord/I_TWO  ! BEWARE: tricky, assumed stencils on uniform grid
@@ -260,7 +260,7 @@ contains
 
       type(grid_container), pointer, intent(in) :: cg
       real,                          intent(in) :: coeff
-      integer,                       intent(in) :: span
+      integer(kind=4),               intent(in) :: span
       logical,                       intent(in) :: cell_centered
 
       real, dimension(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) :: sixpoint
