@@ -155,9 +155,6 @@ contains
                acc(:, ind) =  acc(:, ind) + gravacc(:)
             enddo
 #endif /* !GRAV */
-
-            acc(n, :) = acc(n-1, :)
-            acc(1, :) = acc(2, :)
          endif
 
          u1(:, iarr_all_mx) = u1(:, iarr_all_mx) + rk2coef(integration_order,istep)*acc(:,:)*u(:, iarr_all_dn)*dt
