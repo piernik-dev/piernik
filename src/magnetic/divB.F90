@@ -38,7 +38,7 @@ module div_B
    implicit none
 
    character(len=dsetnamelen), parameter :: divB_n = "div_B"
-   integer, protected                    :: idivB = INVALID
+   integer(kind=4), protected            :: idivB = INVALID
 
 !! d/dx factors for cell-centered field:                                       ; positive half of the stencil from Maxima:
 !! 2nd order: [                      -1/2, 0, 1/2                       ] / dx ; linsolve_by_lu(matrix([2]),                                                                                       matrix([1]));
@@ -71,9 +71,36 @@ module div_B
         &                                                           [ 1225./1024., -245./3072., 49./5120., -5./7168. ] ], [max_c, max_c] )
 
    private
-   public :: divB, idivB, divB_c_IO
+   public :: divB, idivB, divB_c_IO, print_divB_norm
 
 contains
+
+!>
+!! \brief Print estimates of div(B) norm on demand
+!<
+
+   subroutine print_divB_norm
+
+      use cg_leaves,  only: leaves
+      use constants,  only: I_TWO
+      use dataio_pub, only: printinfo, msg
+      use domain,     only: dom
+      use mpisetup,   only: master
+
+      implicit none
+
+      integer, parameter      :: nnorms = 3
+      real, dimension(nnorms) :: bnorms ! store here O(dx**2), O(dx**4) and O(dx**6) norms
+      integer(kind=4)         :: i
+
+      do i = 1, nnorms
+         call divB(I_TWO*i)  ! tricky
+         bnorms(i) = leaves%norm_sq(idivB) / sqrt(dom%Vol)
+      enddo
+      write(msg,'(3(a,g12.5))')"[divB:print_divB_norm] |divB|_2= ", bnorms(1), " |divB|_4= ", bnorms(2), " |divB|_6= ", bnorms(3)
+      if (master) call printinfo(msg)
+
+   end subroutine print_divB_norm
 
 !>
 !! \brief Allocate extra space for divB
