@@ -369,7 +369,7 @@ contains
       call limit_minimal_density(n, u1, cg, sweep, i1, i2)
 
 ! Source terms -------------------------------------
-      if (sources) call all_sources(n, u, u0, cs_iso2, istep, sweep, i1, i2, dx, dt, cg, u1, full_dim, pressure, vel_sweep)
+      if (sources) call all_sources(n, u, u0, cs_iso2, istep, sweep, i1, i2, dx, dt, cg, u1, pressure, vel_sweep)
 
       call limit_minimal_int_ener(n, bb, u1)
 

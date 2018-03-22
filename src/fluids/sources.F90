@@ -47,7 +47,7 @@ contains
 !! \todo Do not pass i1 and i2, pass optional pointer to gravacc instead
 !<
 !*/
-   subroutine all_sources(n, u, u0, cs_iso2, istep, sweep, i1, i2, dx, dt, cg, u1, full_dim, pressure, vel_sweep)
+   subroutine all_sources(n, u, u0, cs_iso2, istep, sweep, i1, i2, dx, dt, cg, u1, pressure, vel_sweep)
 
       use constants,        only: one, zero, half
       use fluidindex,       only: iarr_all_dn, iarr_all_mx, flind
@@ -97,7 +97,6 @@ contains
       real,                          intent(in)    :: dt                 !< time step
       type(grid_container), pointer, intent(in)    :: cg                 !< current grid piece
       real, dimension(n, flind%all), intent(inout) :: u1                 !< updated vector of conservative variables (after one timestep in second order scheme)
-      logical,                       intent(in)    :: full_dim
       real, dimension(n, flind%fluids), intent(in) :: pressure           !< gas pressure
       real, dimension(n, flind%fluids), target, intent(in) :: vel_sweep          !< velocity in the direction of current sweep
 
@@ -119,8 +118,11 @@ contains
       real, dimension(n, flind%crn%all)             :: srccrn
 #endif /* COSM_RAYS_SOURCES */
 #endif /* COSM_RAYS */
+      logical                                       :: full_dim
 
-      real, dimension(2,2), parameter              :: rk2coef = reshape( [ one, half, zero, one ], [ 2, 2 ] )
+      real, dimension(2,2), parameter               :: rk2coef = reshape( [ one, half, zero, one ], [ 2, 2 ] )
+
+      full_dim = n > 1
 
       vx   => vel_sweep
       dens => density
