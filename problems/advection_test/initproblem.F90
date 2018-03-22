@@ -275,6 +275,7 @@ contains
       use non_inertial,     only: get_omega
 #ifdef MAGNETIC
       use constants,        only: ndims, I_ONE, I_TWO, I_THREE, dpi
+      use div_B,            only: print_divB_norm
 #endif /* MAGNETIC */
 
       implicit none
@@ -480,7 +481,9 @@ contains
          cgl => cgl%nxt
       enddo
 
-      call calculate_error_norm
+#ifdef MAGNETIC
+      call print_divB_norm
+#endif
 
    end subroutine problem_initial_conditions
 
@@ -541,7 +544,6 @@ contains
       use cg_leaves,        only: leaves
       use constants,        only: PIERNIK_FINISHED, pSUM, pMIN, pMAX, idlen
       use dataio_pub,       only: code_progress, halfstep, msg, printinfo, warn
-      use domain,           only: dom
       use fluidindex,       only: flind
       use func,             only: operator(.notequals.)
       use global,           only: t, nstep
@@ -549,7 +551,7 @@ contains
       use mpisetup,         only: master, piernik_MPI_Allreduce
       use named_array_list, only: qna
 #ifdef MAGNETIC
-      use div_B,            only: divB, idivB
+      use div_B,            only: print_divB_norm
 #endif /* MAGNETIC */
 
       implicit none
@@ -567,10 +569,6 @@ contains
       real, dimension(:,:,:), pointer   :: inid
       integer                           :: i, j
       character(len=idlen)              :: descr
-#ifdef MAGNETIC
-      integer, parameter                :: nnorms = 3
-      real, dimension(nnorms)           :: bnorms ! store here O(dx**2), O(dx**4) and O(dx**6) norms
-#endif /* MAGNETIC */
 
       if (code_progress < PIERNIK_FINISHED .and. (mod(nstep, norm_step) /= 0 .or. halfstep)) return
 
@@ -633,12 +631,7 @@ contains
       endif
 
 #ifdef MAGNETIC
-      do i = 1, nnorms
-         call divB(2*i)  ! tricky
-         bnorms(i) = leaves%norm_sq(idivB) / sqrt(dom%Vol)
-      enddo
-      write(msg,'(3(a,g12.5))')"[initproblem:calculate_error_norm] |divB|_2= ", bnorms(1), " |divB|_4= ", bnorms(2), " |divB|_6= ", bnorms(3)
-      if (master) call printinfo(msg)
+      call print_divB_norm
 #endif
 
    end subroutine calculate_error_norm
