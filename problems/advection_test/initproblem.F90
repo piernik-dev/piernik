@@ -264,7 +264,7 @@ contains
 
       use cg_list,          only: cg_list_element
       use cg_leaves,        only: leaves
-      use constants,        only: xdim, ydim, zdim, GEO_XYZ, GEO_RPZ, half
+      use constants,        only: xdim, ydim, zdim, GEO_XYZ, GEO_RPZ
       use dataio_pub,       only: die
       use domain,           only: dom
       use fluidindex,       only: flind
@@ -274,7 +274,7 @@ contains
       use named_array_list, only: qna
       use non_inertial,     only: get_omega
 #ifdef MAGNETIC
-      use constants,        only: ndims, I_ONE, I_TWO, I_THREE, dpi
+      use constants,        only: ndims, I_ONE, I_TWO, I_THREE, dpi, half
       use div_B,            only: print_divB_norm
 #endif /* MAGNETIC */
 
