@@ -132,6 +132,7 @@ contains
 #endif /* GRAV */
 
 !locals
+      real, dimension(n, flind%all)                 :: usrc               !< u array update from sources
       real, dimension(n, flind%fluids)              :: acc                !< acceleration
       real, dimension(n, flind%fluids)              :: geosrc             !< source terms caused by geometry of coordinate system
       real, dimension(n, flind%fluids), target      :: density            !< gas density
@@ -155,57 +156,74 @@ contains
 
       density(:,:) = u(:, iarr_all_dn)
 
-         geosrc = geometry_source_terms(u, pressure, sweep, cg)  ! n safe
+      geosrc = geometry_source_terms(u, pressure, sweep, cg)  ! n safe
 
-         u1(:, iarr_all_mx) = u1(:, iarr_all_mx) + rk2coef(integration_order,istep)*geosrc(:,:)*dt ! n safe
+      u1(:, iarr_all_mx) = u1(:, iarr_all_mx) + rk2coef(integration_order,istep)*geosrc(:,:)*dt ! n safe
 
-         acc = 0.0
+      usrc = 0.0
 #ifndef BALSARA
-         acc = acc + fluid_interactions(dens, vx)  ! n safe
+      acc = fluid_interactions(dens, vx)  ! n safe
+      usrc(:, iarr_all_mx) = usrc(:, iarr_all_mx) + acc(:,:) * u(:, iarr_all_dn)
+#ifndef ISO
+      usrc(:, iarr_all_en) = usrc(:, iarr_all_en) + acc(:,:) * u(:, iarr_all_mx)
+#endif /* !ISO */
 #else /* !BALSARA */
-         call balsara_implicit_interactions(u1, u0, vx, istep, sweep, i1, i2, cg) ! n safe
+      call balsara_implicit_interactions(u1, u0, vx, istep, sweep, i1, i2, cg) ! n safe
 #endif /* !BALSARA */
 #ifdef SHEAR
-         acc = acc + shear_acc(sweep,u) ! n safe
+      acc = shear_acc(sweep,u) ! n safe
+      usrc(:, iarr_all_mx) = usrc(:, iarr_all_mx) + acc(:,:) * u(:, iarr_all_dn)
+#ifndef ISO
+      usrc(:, iarr_all_en) = usrc(:, iarr_all_en) + acc(:,:) * u(:, iarr_all_mx)
+#endif /* !ISO */
 #endif /* SHEAR */
 #ifdef CORIOLIS
-         acc = acc + coriolis_force(sweep,u) ! n safe
+      acc = coriolis_force(sweep,u) ! n safe
+      usrc(:, iarr_all_mx) = usrc(:, iarr_all_mx) + acc(:,:) * u(:, iarr_all_dn)
+#ifndef ISO
+      usrc(:, iarr_all_en) = usrc(:, iarr_all_en) + acc(:,:) * u(:, iarr_all_mx)
+#endif /* !ISO */
 #endif /* CORIOLIS */
 #ifdef NON_INERTIAL
-         acc = acc + non_inertial_force(sweep, u, cg)
+      acc = non_inertial_force(sweep, u, cg)
+      usrc(:, iarr_all_mx) = usrc(:, iarr_all_mx) + acc(:,:) * u(:, iarr_all_dn)
+#ifndef ISO
+      usrc(:, iarr_all_en) = usrc(:, iarr_all_en) + acc(:,:) * u(:, iarr_all_mx)
+#endif /* !ISO */
 #endif /* NON_INERTIAL */
 
-         if (full_dim) then
+      if (full_dim) then
 #ifdef GRAV
-            call grav_pot2accel(sweep, i1, i2, n, gravacc, istep, cg)
+         call grav_pot2accel(sweep, i1, i2, n, gravacc, istep, cg)
 
-            do ind = 1, flind%fluids
-               acc(:, ind) =  acc(:, ind) + gravacc(:)
-            enddo
-#endif /* !GRAV */
-         endif
-
-         u1(:, iarr_all_mx) = u1(:, iarr_all_mx) + rk2coef(integration_order,istep)*acc(:,:)*u(:, iarr_all_dn)*dt
+         do ind = 1, flind%fluids
+            usrc(:, iarr_all_mx(ind)) = usrc(:, iarr_all_mx(ind)) + gravacc(:) * u(:, iarr_all_dn(ind))
 #ifndef ISO
-         u1(:, iarr_all_en) = u1(:, iarr_all_en) + rk2coef(integration_order,istep)*acc(:,:)*u(:, iarr_all_mx)*dt
+            usrc(:, iarr_all_en(ind)) = usrc(:, iarr_all_en(ind)) + gravacc(:) * u(:, iarr_all_mx(ind))
 #endif /* !ISO */
+         enddo
+#endif /* !GRAV */
+      endif
 
 ! --------------------------------------------------
 
 #if defined COSM_RAYS && defined IONIZED
-         if (full_dim) then
-            call src_gpcr(u, n, dx, decr, grad_pcr, sweep, i1, i2, cg)
-            u1(:,                iarr_crs(:)) = u1(:,               iarr_crs(:)) + rk2coef(integration_order,istep) * decr(:,:) * dt
-            u1(:,                iarr_crs(:)) = max(smallecr, u1(:, iarr_crs(:)))
-            u1(:, iarr_all_mx(flind%ion%pos)) = u1(:, iarr_all_mx(flind%ion%pos)) + rk2coef(integration_order,istep) * grad_pcr * dt
+      if (full_dim) then
+         call src_gpcr(u, n, dx, decr, grad_pcr, sweep, i1, i2, cg)
+         usrc(:,                iarr_crs(:)) = usrc(:,               iarr_crs(:)) + decr(:,:)
+         usrc(:, iarr_all_mx(flind%ion%pos)) = usrc(:, iarr_all_mx(flind%ion%pos)) + grad_pcr
 #ifndef ISO
-            u1(:, iarr_all_en(flind%ion%pos)) = u1(:, iarr_all_en(flind%ion%pos)) + rk2coef(integration_order,istep) * vx(:, flind%ion%pos) * grad_pcr * dt
+         usrc(:, iarr_all_en(flind%ion%pos)) = usrc1(:, iarr_all_en(flind%ion%pos)) + vx(:, flind%ion%pos) * grad_pcr
 #endif /* !ISO */
-         endif
+      endif
 #ifdef COSM_RAYS_SOURCES
-         call src_crn(u, n, srccrn, rk2coef(integration_order, istep) * dt) ! n safe
-         u1(:, iarr_crn) = u1(:, iarr_crn) +  rk2coef(integration_order, istep)*srccrn(:,:)*dt
+      call src_crn(u, n, srccrn, rk2coef(integration_order, istep) * dt) ! n safe
+      usrc(:, iarr_crn) = usrc(:, iarr_crn) + srccrn(:,:)
 #endif /* COSM_RAYS_SOURCES */
+#endif /* COSM_RAYS && IONIZED */
+      u1(:,:) = u1(:,:) + rk2coef(integration_order, istep)*usrc(:,:)*dt
+#if defined COSM_RAYS && defined IONIZED
+      if (full_dim) u1(:, iarr_crs(:)) = max(smallecr, u1(:, iarr_crs(:)))
 #endif /* COSM_RAYS && IONIZED */
 
    end subroutine all_sources
