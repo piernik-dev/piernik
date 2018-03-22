@@ -295,7 +295,6 @@ contains
       use constants,        only: half, one, zero, I_ONE, I_TWO, LO, HI, cs_i2_n
       use dataio_pub,       only: msg, warn
       use fluidindex,       only: iarr_all_dn, iarr_all_mx, flind
-      use fluidtypes,       only: component_fluid
       use global,           only: dt
       use grid_cont,        only: grid_container
       use mpisetup,         only: master
@@ -354,6 +353,76 @@ contains
       u1(:, iarr_all_mx) = u1(:, iarr_all_dn) * vprim(:,:)
       return
    end subroutine balsara_implicit_interactions
+
+!>
+!! \brief balsara_implicit_interactions rewritten to function
+!! \details
+!! Balsara Dinshaw S., Tilley David A., Rettig Terrence, Brittain Sean D. MNRAS (2009) 397: 24.
+!! Tilley, David A., Balsara, Dinshaw S. MNRAS (2008) 389: 1058.
+!<
+   function balsara_based_interactions_function(u1, u0, vx, istep, sweep, i1, i2, cg) result(usrc)
+
+      use constants,        only: half, one, zero, I_ONE, I_TWO, LO, HI, cs_i2_n
+      use dataio_pub,       only: msg, warn
+      use fluidindex,       only: iarr_all_dn, iarr_all_mx, flind
+      use global,           only: dt
+      use grid_cont,        only: grid_container
+      use mpisetup,         only: master
+      use named_array_list, only: qna
+
+      implicit none
+
+      real, dimension(:,:),          intent(in) :: u1
+      real, dimension(:,:),          intent(in) :: u0
+      real, dimension(:,:),          intent(in) :: vx
+      integer,                       intent(in) :: istep
+      integer(kind=4),               intent(in) :: sweep              !< direction (x, y or z) we are doing calculations for
+      integer,                       intent(in) :: i1                 !< coordinate of sweep in the 1st remaining direction
+      integer,                       intent(in) :: i2                 !< coordinate of sweep in the 2nd remaining direction
+      type(grid_container), pointer, intent(in) :: cg                 !< current grid piece
+      real, dimension(size(u1,1),size(u1,2))    :: usrc
+
+      real, dimension(:), pointer                :: cs_iso2
+      real, dimension(size(u1, 1))               :: delta, drag
+      integer, dimension(2)                      :: tfl, inv
+      integer                                    :: i
+      character(len=*), dimension(3), parameter  :: flns = ['ION', 'NEU', 'DST'] !< \todo move this to fluids modules
+      logical, save                              :: initbalsara = .true.
+      !>
+      !! \deprecated BEWARE: this bit assumes that we have 2 fluids and \f$u_1 \equiv u_0 - \nabla F\f$
+      !! \todo 2) half-time step should be \f$\le \frac{1}{2}\frac{c_s}{drag * \rho'_? |v'_d - v'_g|}\f$
+      !! \todo 3) what if not isothermal?
+      !! \note BEWARE: it is function to replace balsara_implicit_interactions, yet it requires extensive testing
+      !<
+      usrc = 0.0
+      if (epstein_factor(flind%neu%pos) <= zero) return
+
+      tfl = [I_ONE, I_TWO] !> may become changeable in future
+      inv = [tfl(HI), tfl(LO)]
+
+      if (initbalsara .and. master .and. (flind%fluids > I_TWO)) then
+         write(msg,"(a,i2,4a)")"[interactions:balsara_implicit_interactions] ", flind%fluids, " fluids present, yet only two included to compute interactions: ", flns(flind%all_fluids(tfl(LO))%fl%tag), " & ", flns(flind%all_fluids(tfl(HI))%fl%tag)
+         call warn(msg)
+         initbalsara = .false.
+      endif
+
+      cs_iso2 => cg%q(qna%ind(cs_i2_n))%get_sweep(sweep,i1,i2)
+      drag(:) = half / grain_dens_x_size * sqrt( cs_iso2(:) + abs( vx(:, tfl(LO)) - vx(:, tfl(HI)) )**2)
+
+      delta(:) = one + dt * drag(:) * (u1(:, iarr_all_dn(tfl(LO))) + u1(:, iarr_all_dn(tfl(HI))))
+      delta(:) = one/delta(:)
+
+      do i = I_ONE, I_TWO
+         if (istep == 1) then
+            usrc(:,iarr_all_mx(tfl(i))) = drag(:) * ( u1(:, iarr_all_dn(tfl(i)))*u1(:, iarr_all_mx(inv(i))) - delta(:)*u1(:, iarr_all_dn(inv(i)))*u1(:, iarr_all_mx(tfl(i))) )
+         else
+            usrc(:,iarr_all_mx(tfl(i))) = drag(:) * delta(:) * ( u0(:, iarr_all_dn(tfl(i)))*u0(:, iarr_all_mx(inv(i))) - u0(:, iarr_all_dn(inv(i)))*u0(:, iarr_all_mx(tfl(i))) &
+                                                               + u1(:, iarr_all_dn(tfl(i)))*u1(:, iarr_all_mx(inv(i))) - u1(:, iarr_all_dn(inv(i)))*u1(:, iarr_all_mx(tfl(i))) )
+         endif
+      enddo 
+      ! usrc should be used to update u1 in all_sources procedure: u1 = u1 + rk2factror*usrc*dt
+      return
+   end function balsara_based_interactions_function
 
    subroutine update_grain_size(new_size)
       use fluidindex, only: flind
