@@ -290,23 +290,29 @@ contains
 !! Balsara Dinshaw S., Tilley David A., Rettig Terrence, Brittain Sean D. MNRAS (2009) 397: 24.
 !! Tilley, David A., Balsara, Dinshaw S. MNRAS (2008) 389: 1058.
 !<
-   subroutine balsara_implicit_interactions(u1, u0, vx, cs_iso2, istep)
+   subroutine balsara_implicit_interactions(u1, u0, vx, istep, sweep, i1, i2, cg)
 
-      use constants,  only: half, one, zero, I_ONE, I_TWO, LO, HI
-      use dataio_pub, only: msg, warn
-      use fluidindex, only: iarr_all_dn, iarr_all_mx, flind
-      use fluidtypes, only: component_fluid
-      use global,     only: dt
-      use mpisetup,   only: master
+      use constants,        only: half, one, zero, I_ONE, I_TWO, LO, HI, cs_i2_n
+      use dataio_pub,       only: msg, warn
+      use fluidindex,       only: iarr_all_dn, iarr_all_mx, flind
+      use fluidtypes,       only: component_fluid
+      use global,           only: dt
+      use grid_cont,        only: grid_container
+      use mpisetup,         only: master
+      use named_array_list, only: qna
 
       implicit none
 
-      real, dimension(:,:), intent(inout)      :: u1
-      real, dimension(:,:), intent(in)         :: u0
-      real, dimension(:,:), intent(in)         :: vx
-      real, dimension(:), pointer,  intent(in) :: cs_iso2
-      integer, intent(in)                      :: istep
+      real, dimension(:,:), intent(inout)        :: u1
+      real, dimension(:,:), intent(in)           :: u0
+      real, dimension(:,:), intent(in)           :: vx
+      integer, intent(in)                        :: istep
+      integer(kind=4),               intent(in)  :: sweep              !< direction (x, y or z) we are doing calculations for
+      integer,                       intent(in)  :: i1                 !< coordinate of sweep in the 1st remaining direction
+      integer,                       intent(in)  :: i2                 !< coordinate of sweep in the 2nd remaining direction
+      type(grid_container), pointer, intent(in)  :: cg                 !< current grid piece
 
+      real, dimension(:), pointer                :: cs_iso2
       real, dimension(size(u1, 1), flind%fluids) :: vprim
       real, dimension(size(u1, 1))               :: delta, drag
       integer, dimension(2)                      :: tfl
@@ -318,9 +324,7 @@ contains
       !! \todo 3) what if not isothermal?
       !! \todo 4) remove hardcoded integers - done
       !<
-      !call warn('balsara init')
-      !if (epstein_factor(flind%neu%pos) <= zero) return
-      !call warn('balsara cont')
+      if (epstein_factor(flind%neu%pos) <= zero) return
 
       tfl = [I_ONE, I_TWO] !> may become changeable in future
 
@@ -330,6 +334,7 @@ contains
          initbalsara = .false.
       endif
 
+      cs_iso2 => cg%q(qna%ind(cs_i2_n))%get_sweep(sweep,i1,i2)
       drag(:) = dt * half / grain_dens_x_size * sqrt( cs_iso2(:) + abs( vx(:, tfl(LO)) - vx(:, tfl(HI)) )**2)
 
       delta(:) = one + drag(:) * (u1(:, iarr_all_dn(tfl(LO))) + u1(:, iarr_all_dn(tfl(HI))))

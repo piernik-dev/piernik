@@ -74,7 +74,7 @@ contains
 !! \todo Do not pass i1 and i2, pass optional pointer to gravacc instead
 !<
 !*/
-   subroutine all_sources(n, u, u0, cs_iso2, istep, sweep, i1, i2, dx, dt, cg, u1, pressure, vel_sweep)
+   subroutine all_sources(n, u, u0, istep, sweep, i1, i2, dx, dt, cg, u1, pressure, vel_sweep)
 
       use constants,        only: one, zero, half
       use fluidindex,       only: iarr_all_dn, iarr_all_mx, flind
@@ -115,7 +115,6 @@ contains
       integer(kind=4),               intent(in)    :: n                  !< array size
       real, dimension(n, flind%all), intent(inout) :: u                  !< vector of conservative variables
       real, dimension(n, flind%all), intent(in)    :: u0                 !< vector of conservative variables
-      real, dimension(:), pointer,   intent(in)    :: cs_iso2            !< square of local isothermal sound speed
       integer,                       intent(in)    :: istep              !< step number in the time integration scheme
       integer(kind=4),               intent(in)    :: sweep              !< direction (x, y or z) we are doing calculations for
       integer,                       intent(in)    :: i1                 !< coordinate of sweep in the 1st remaining direction
@@ -164,7 +163,7 @@ contains
 #ifndef BALSARA
          acc = acc + fluid_interactions(dens, vx)  ! n safe
 #else /* !BALSARA */
-         call balsara_implicit_interactions(u1, u0, vx, cs_iso2, istep) ! n safe
+         call balsara_implicit_interactions(u1, u0, vx, istep, sweep, i1, i2, cg) ! n safe
 #endif /* !BALSARA */
 #ifdef SHEAR
          acc = acc + shear_acc(sweep,u) ! n safe
