@@ -290,12 +290,13 @@ contains
 !! Balsara Dinshaw S., Tilley David A., Rettig Terrence, Brittain Sean D. MNRAS (2009) 397: 24.
 !! Tilley, David A., Balsara, Dinshaw S. MNRAS (2008) 389: 1058.
 !<
-   subroutine balsara_implicit_interactions(u1, u0, vx, cs_iso2, dt, istep)
+   subroutine balsara_implicit_interactions(u1, u0, vx, cs_iso2, istep)
 
       use constants,  only: half, one, zero, I_ONE, I_TWO, LO, HI
       use dataio_pub, only: msg, warn
       use fluidindex, only: iarr_all_dn, iarr_all_mx, flind
       use fluidtypes, only: component_fluid
+      use global,     only: dt
       use mpisetup,   only: master
 
       implicit none
@@ -304,7 +305,6 @@ contains
       real, dimension(:,:), intent(in)         :: u0
       real, dimension(:,:), intent(in)         :: vx
       real, dimension(:), pointer,  intent(in) :: cs_iso2
-      real, intent(in)                         :: dt
       integer, intent(in)                      :: istep
 
       real, dimension(size(u1, 1), flind%fluids) :: vprim
