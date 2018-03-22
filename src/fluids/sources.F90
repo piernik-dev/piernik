@@ -133,7 +133,6 @@ contains
 
 !locals
       real, dimension(n, flind%all)                 :: usrc               !< u array update from sources
-      real, dimension(n, flind%fluids)              :: acc                !< acceleration
       real, dimension(n, flind%fluids)              :: geosrc             !< source terms caused by geometry of coordinate system
       real, dimension(n, flind%fluids), target      :: density            !< gas density
       real, dimension(:,:),            pointer      :: dens, vx
@@ -162,50 +161,26 @@ contains
 
       usrc = 0.0
 #ifndef BALSARA
-      acc = fluid_interactions(dens, vx)  ! n safe
-      usrc(:, iarr_all_mx) = usrc(:, iarr_all_mx) + acc(:,:) * u(:, iarr_all_dn)
-#ifndef ISO
-      usrc(:, iarr_all_en) = usrc(:, iarr_all_en) + acc(:,:) * u(:, iarr_all_mx)
-#endif /* !ISO */
+      call get_updates_from_acc(n, u, usrc, fluid_interactions(dens, vx))  ! n safe
 #else /* !BALSARA */
       call balsara_implicit_interactions(u1, u0, vx, istep, sweep, i1, i2, cg) ! n safe
 #endif /* !BALSARA */
 #ifdef SHEAR
-      acc = shear_acc(sweep,u) ! n safe
-      usrc(:, iarr_all_mx) = usrc(:, iarr_all_mx) + acc(:,:) * u(:, iarr_all_dn)
-#ifndef ISO
-      usrc(:, iarr_all_en) = usrc(:, iarr_all_en) + acc(:,:) * u(:, iarr_all_mx)
-#endif /* !ISO */
+      call get_updates_from_acc(n, u, usrc, shear_acc(sweep,u)) ! n safe
 #endif /* SHEAR */
 #ifdef CORIOLIS
-      acc = coriolis_force(sweep,u) ! n safe
-      usrc(:, iarr_all_mx) = usrc(:, iarr_all_mx) + acc(:,:) * u(:, iarr_all_dn)
-#ifndef ISO
-      usrc(:, iarr_all_en) = usrc(:, iarr_all_en) + acc(:,:) * u(:, iarr_all_mx)
-#endif /* !ISO */
+      call get_updates_from_acc(n, u, usrc, coriolis_force(sweep,u)) ! n safe
 #endif /* CORIOLIS */
 #ifdef NON_INERTIAL
-      acc = non_inertial_force(sweep, u, cg)
-      usrc(:, iarr_all_mx) = usrc(:, iarr_all_mx) + acc(:,:) * u(:, iarr_all_dn)
-#ifndef ISO
-      usrc(:, iarr_all_en) = usrc(:, iarr_all_en) + acc(:,:) * u(:, iarr_all_mx)
-#endif /* !ISO */
+      call get_updates_from_acc(n, u, usrc, non_inertial_force(sweep, u, cg))
 #endif /* NON_INERTIAL */
 
       if (full_dim) then
 #ifdef GRAV
          call grav_pot2accel(sweep, i1, i2, n, gravacc, istep, cg)
-
-         do ind = 1, flind%fluids
-            usrc(:, iarr_all_mx(ind)) = usrc(:, iarr_all_mx(ind)) + gravacc(:) * u(:, iarr_all_dn(ind))
-#ifndef ISO
-            usrc(:, iarr_all_en(ind)) = usrc(:, iarr_all_en(ind)) + gravacc(:) * u(:, iarr_all_mx(ind))
-#endif /* !ISO */
-         enddo
+         call get_updates_from_acc(n, u, usrc, spread(gravacc,2,flind%fluids))
 #endif /* !GRAV */
       endif
-
-! --------------------------------------------------
 
 #if defined COSM_RAYS && defined IONIZED
       if (full_dim) then
@@ -213,7 +188,7 @@ contains
          usrc(:,                iarr_crs(:)) = usrc(:,               iarr_crs(:)) + decr(:,:)
          usrc(:, iarr_all_mx(flind%ion%pos)) = usrc(:, iarr_all_mx(flind%ion%pos)) + grad_pcr
 #ifndef ISO
-         usrc(:, iarr_all_en(flind%ion%pos)) = usrc1(:, iarr_all_en(flind%ion%pos)) + vx(:, flind%ion%pos) * grad_pcr
+         usrc(:, iarr_all_en(flind%ion%pos)) = usrc(:, iarr_all_en(flind%ion%pos)) + vx(:, flind%ion%pos) * grad_pcr
 #endif /* !ISO */
       endif
 #ifdef COSM_RAYS_SOURCES
@@ -221,12 +196,43 @@ contains
       usrc(:, iarr_crn) = usrc(:, iarr_crn) + srccrn(:,:)
 #endif /* COSM_RAYS_SOURCES */
 #endif /* COSM_RAYS && IONIZED */
+
+! --------------------------------------------------
+
       u1(:,:) = u1(:,:) + rk2coef(integration_order, istep)*usrc(:,:)*dt
 #if defined COSM_RAYS && defined IONIZED
       if (full_dim) u1(:, iarr_crs(:)) = max(smallecr, u1(:, iarr_crs(:)))
 #endif /* COSM_RAYS && IONIZED */
 
    end subroutine all_sources
+
+!/*
+!>
+!! \brief Subroutine computes any scheme sources (yet, now it is based on rtvd scheme)
+!!
+!! \todo Do not pass i1 and i2, pass optional pointer to gravacc instead
+!<
+!*/
+   subroutine get_updates_from_acc(n, u, usrc, acc)
+
+      use fluidindex,       only: iarr_all_dn, iarr_all_mx, flind
+#ifndef ISO
+      use fluidindex,       only: iarr_all_en
+#endif /* !ISO */
+
+      implicit none
+
+      integer(kind=4),               intent(in)    :: n                  !< array size
+      real, dimension(n, flind%all), intent(in)    :: u                  !< vector of conservative variables
+      real, dimension(n, flind%all), intent(inout) :: usrc               !< u array update from sources
+      real, dimension(n, flind%fluids), intent(in) :: acc                !< acceleration
+
+      usrc(:, iarr_all_mx) = usrc(:, iarr_all_mx) + acc(:,:) * u(:, iarr_all_dn)
+#ifndef ISO
+      usrc(:, iarr_all_en) = usrc(:, iarr_all_en) + acc(:,:) * u(:, iarr_all_mx)
+#endif /* !ISO */
+
+   end subroutine get_updates_from_acc
 
 !==========================================================================================
 end module sources
