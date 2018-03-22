@@ -82,22 +82,20 @@ contains
    subroutine print_divB_norm
 
       use cg_leaves,  only: leaves
-      use constants,  only: I_TWO
+      use constants,  only: I_TWO, I_SIX
       use dataio_pub, only: printinfo, msg
       use domain,     only: dom
       use mpisetup,   only: master
 
       implicit none
 
-      integer, parameter      :: nnorms = 3
-      real, dimension(nnorms) :: bnorms ! store here O(dx**2), O(dx**4) and O(dx**6) norms
       integer(kind=4)         :: i
 
-      do i = 1, nnorms
-         call divB(I_TWO*i)  ! tricky
-         bnorms(i) = leaves%norm_sq(idivB) / sqrt(dom%Vol)
+      write(msg,'(a)')"[divB:print_divB_norm]"
+      do i = I_TWO, I_SIX, I_TWO  ! only even-order norms
+         call divB(i)
+         write(msg,'(2a,i1,a,g12.5)')trim(msg), " |divB|_", i, "= ", leaves%norm_sq(idivB) / sqrt(dom%Vol)
       enddo
-      write(msg,'(3(a,g12.5))')"[divB:print_divB_norm] |divB|_2= ", bnorms(1), " |divB|_4= ", bnorms(2), " |divB|_6= ", bnorms(3)
       if (master) call printinfo(msg)
 
    end subroutine print_divB_norm
@@ -118,9 +116,9 @@ contains
       implicit none
 
       if (qna%exists(divB_n)) then
-         if (idivB /= qna%ind(divB_n)) call die ("[divB::divB_init] qna%exists(divB_n) .and. idivB /= qna%ind(divB_n)")
+         if (idivB /= qna%ind(divB_n)) call die ("[divB:divB_init] qna%exists(divB_n) .and. idivB /= qna%ind(divB_n)")
       else
-         if (idivB /= INVALID) call die ("[divB::divB_init] .not. qna%exists(divB_n) .and. idivB /= INVALID")
+         if (idivB /= INVALID) call die ("[divB:divB_init] .not. qna%exists(divB_n) .and. idivB /= INVALID")
          call all_cg%reg_var(divB_n)
          idivB = qna%ind(divB_n)
       endif
@@ -149,11 +147,11 @@ contains
       logical         :: ccB
       integer, parameter :: max_ord = 8
 
-      if (dom%geometry_type /= GEO_XYZ) call die("[divB::divB] non-cartesian geometry not implemented yet.")
+      if (dom%geometry_type /= GEO_XYZ) call die("[divB:divB] non-cartesian geometry not implemented yet.")
 
       ord = 2
       if (present(order)) then
-         if (order > max_ord) call die("[divB::divB] Highest allowed order of div(B) is currently equal to 8.")
+         if (order > max_ord) call die("[divB:divB] Highest allowed order of div(B) is currently equal to 8.")
          select case (order)
             case (7, 8)
                ord = 8
@@ -164,13 +162,13 @@ contains
             case (:2)
                ord = 2
             case default
-               call die("[divB::divB] invalid order of div(B)")
+               call die("[divB:divB] invalid order of div(B)")
          end select
          if (order /= ord) then
-            write(msg, '(a, i3)')"[divB::divB] order of div(B) was upgraded to ", ord
+            write(msg, '(a, i3)')"[divB:divB] order of div(B) was upgraded to ", ord
             call warn(msg)
          endif
-         if (dom%nb < ord/2) call die("[divB::divB] Not enough guardcells for requested approximation order")  ! assumed stencils on uniform grid
+         if (dom%nb < ord/2) call die("[divB:divB] Not enough guardcells for requested approximation order")  ! assumed stencils on uniform grid
       endif
 
       ccB = .false.  ! ToDo detect automatically
@@ -179,7 +177,7 @@ contains
       call divB_init  ! it should be BOTH safe and cheap to call it multiple times
 
       call divB_c(ord, ccB)
-      if (ord > max_ord) call warn("[divB::divB] only 8th order of div(B) is currently implemented for magnetic field.")  !! BEWARE: order hardcoded in the string
+      if (ord > max_ord) call warn("[divB:divB] only 8th order of div(B) is currently implemented for magnetic field.")  !! BEWARE: order hardcoded in the string
 
    end subroutine divB
 
@@ -208,7 +206,7 @@ contains
       real, dimension(max_c) :: coeff
 
       o = ord/I_TWO  ! BEWARE: tricky, assumed stencils on uniform grid
-      if (o < I_ONE .or. o > max_c .or. I_TWO*o /= ord) call die("[divB::divB_c] cannot find coefficient") ! no odd order allowed here just in case
+      if (o < I_ONE .or. o > max_c .or. I_TWO*o /= ord) call die("[divB:divB_c] cannot find coefficient") ! no odd order allowed here just in case
 
       if (ccB) then
          coeff = coeff_c(:, o)
@@ -253,7 +251,7 @@ contains
       real, dimension(max_c) :: coeff
 
       o = ord/I_TWO  ! BEWARE: tricky, assumed stencils on uniform grid
-      if (o < I_ONE .or. o > max_c .or. I_TWO*o /= ord) call die("[divB::divB_c] cannot find coefficient") ! no odd order allowed here just in case
+      if (o < I_ONE .or. o > max_c .or. I_TWO*o /= ord) call die("[divB:divB_c] cannot find coefficient") ! no odd order allowed here just in case
 
       if (cell_centered) then
          coeff = coeff_c(:, o)
@@ -293,7 +291,7 @@ contains
       real, dimension(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) :: sixpoint
       integer :: spm1
 
-      if ((coeff .equals. 0.) .or. span <=0 .or. span > dom%nb) call die("[divB::sixpoint] coeff == 0. or unacceptable span")
+      if ((coeff .equals. 0.) .or. span <=0 .or. span > dom%nb) call die("[divB:sixpoint] coeff == 0. or unacceptable span")
 
       if (cell_centered) then
          sixpoint = coeff * ( &
