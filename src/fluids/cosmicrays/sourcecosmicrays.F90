@@ -47,7 +47,7 @@ contains
 !>
 !! \brief Computation of Cosmic ray pressure gradient and pcr div v
 !<
-   subroutine src_gpcr(uu, nn, dx, decr, grad_pcr, sweep, i1, i2, cg)
+   subroutine src_gpcr(uu, nn, decr, grad_pcr, sweep, i1, i2, cg)
 
       use crhelpers,      only: set_div_v1d
       use domain,         only: dom
@@ -59,7 +59,6 @@ contains
 
       integer(kind=4),                    intent(in)  :: nn                 !< array size
       real, dimension(nn, flind%all),     intent(in)  :: uu                 !< vector of conservative variables
-      real,                               intent(in)  :: dx                 !< cell length
       real, dimension(nn),                intent(out) :: grad_pcr
       real, dimension(nn, flind%crs%all), intent(out) :: decr
       integer(kind=4),                    intent(in)  :: sweep              !< direction (x, y or z) we are doing calculations for
@@ -77,7 +76,7 @@ contains
       grad_pcr(:) = 0.0
       do icr = 1, size(gpcr_essential)
          jcr = gpcr_essential(icr)
-         grad_pcr(2:nn-1) = grad_pcr(2:nn-1) + cr_active*(gamma_crs(jcr)-1.)*(uu(1:nn-2, iarr_crs(jcr)) - uu(3:nn, iarr_crs(jcr)))/(2.*dx)
+         grad_pcr(2:nn-1) = grad_pcr(2:nn-1) + cr_active*(gamma_crs(jcr)-1.)*(uu(1:nn-2, iarr_crs(jcr)) - uu(3:nn, iarr_crs(jcr)))/(2.*cg%dl(sweep))
       enddo
       grad_pcr(1:2) = 0.0 ; grad_pcr(nn-1:nn) = 0.0
 

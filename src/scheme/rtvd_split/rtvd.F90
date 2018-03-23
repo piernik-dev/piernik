@@ -235,7 +235,7 @@ contains
 ! OPT: we may also try to work on bigger parts of the u(:,:,:,:) at a time , but the exact amount may depend on size of the L2 cache
 ! OPT: try an explicit loop over n to see if better pipelining can be achieved
 
-   subroutine relaxing_tvd(n, u, u0, bb, cs_iso2, istep, sweep, i1, i2, dx, dt, cg, eflx, sources, adv_vel)
+   subroutine relaxing_tvd(n, u, u0, bb, cs_iso2, istep, sweep, i1, i2, dt, cg, eflx, sources, adv_vel)
 
       use constants,    only: one, zero, half, GEO_XYZ, GEO_RPZ, LO, ydim, zdim
       use domain,       only: dom
@@ -258,14 +258,13 @@ contains
       integer(kind=4),               intent(in)    :: sweep              !< direction (x, y or z) we are doing calculations for
       integer,                       intent(in)    :: i1                 !< coordinate of sweep in the 1st remaining direction
       integer,                       intent(in)    :: i2                 !< coordinate of sweep in the 2nd remaining direction
-      real,                          intent(in)    :: dx                 !< cell length
       real,                          intent(in)    :: dt                 !< time step
       type(grid_container), pointer, intent(in)    :: cg                 !< current grid piece
       type(ext_fluxes),              intent(inout) :: eflx               !< external fluxes
       logical,                       intent(in)    :: sources            !< apply source terms
       real, dimension(n, flind%fluids), intent(in), optional :: adv_vel  !< advection velocity
 
-      real                                          :: dtx                !< dt/dx
+      real                                          :: dtx                !< dt/dx (dt/cg%dl(sweep))
       real, dimension(n, flind%all)                 :: cfr                !< freezing speed
 !locals
       real, dimension(n, flind%all)                 :: w                  !< auxiliary vector to calculate fluxes
@@ -282,7 +281,7 @@ contains
       real, dimension(2,2), parameter              :: rk2coef = reshape( [ one, half, zero, one ], [ 2, 2 ] )
 
       !OPT: try to avoid these explicit initializations of u1(:,:) and u0(:,:)
-      dtx      = dt / dx
+      dtx      = dt / cg%dl(sweep)
       full_dim = n > 1
 
       u1 = u
@@ -369,7 +368,7 @@ contains
       call limit_minimal_density(n, u1, cg, sweep, i1, i2)
 
 ! Source terms -------------------------------------
-      if (sources) call all_sources(n, u, u0, istep, sweep, i1, i2, dx, dt, cg, u1, pressure, vel_sweep)
+      if (sources) call all_sources(n, u, u0, istep, sweep, i1, i2, dt, cg, u1, pressure, vel_sweep)
 
       call limit_minimal_int_ener(n, bb, u1)
 

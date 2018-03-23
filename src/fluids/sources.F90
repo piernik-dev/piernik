@@ -74,7 +74,7 @@ contains
 !! \todo Do not pass i1 and i2, pass optional pointer to gravacc instead
 !<
 !*/
-   subroutine all_sources(n, u, u0, istep, sweep, i1, i2, dx, dt, cg, u1, pressure, vel_sweep)
+   subroutine all_sources(n, u, u0, istep, sweep, i1, i2, dt, cg, u1, pressure, vel_sweep)
 
       use constants,        only: one, zero, half
       use fluidindex,       only: iarr_all_dn, iarr_all_mx, flind
@@ -119,7 +119,6 @@ contains
       integer(kind=4),               intent(in)    :: sweep              !< direction (x, y or z) we are doing calculations for
       integer,                       intent(in)    :: i1                 !< coordinate of sweep in the 1st remaining direction
       integer,                       intent(in)    :: i2                 !< coordinate of sweep in the 2nd remaining direction
-      real,                          intent(in)    :: dx                 !< cell length
       real,                          intent(in)    :: dt                 !< time step
       type(grid_container), pointer, intent(in)    :: cg                 !< current grid piece
       real, dimension(n, flind%all), intent(inout) :: u1                 !< updated vector of conservative variables (after one timestep in second order scheme)
@@ -184,7 +183,7 @@ contains
 
 #if defined COSM_RAYS && defined IONIZED
       if (full_dim) then
-         call src_gpcr(u, n, dx, decr, grad_pcr, sweep, i1, i2, cg)
+         call src_gpcr(u, n, decr, grad_pcr, sweep, i1, i2, cg)
          usrc(:,                iarr_crs(:)) = usrc(:,               iarr_crs(:)) + decr(:,:)
          usrc(:, iarr_all_mx(flind%ion%pos)) = usrc(:, iarr_all_mx(flind%ion%pos)) + grad_pcr
 #ifndef ISO

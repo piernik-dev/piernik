@@ -399,9 +399,9 @@ contains
 
                            call cg%set_fluxpointers(cdim, i1, i2, eflx)
                            if (use_fargo .and. cdim == ydim) then
-                              call relaxing_tvd(cg%n_(cdim), u, u0, b, cs2, istep, cdim, i1, i2, cg%dl(cdim), dt, cg, eflx, sources, vx)
+                              call relaxing_tvd(cg%n_(cdim), u, u0, b, cs2, istep, cdim, i1, i2, dt, cg, eflx, sources, vx)
                            else
-                              call relaxing_tvd(cg%n_(cdim), u, u0, b, cs2, istep, cdim, i1, i2, cg%dl(cdim), dt, cg, eflx, sources)
+                              call relaxing_tvd(cg%n_(cdim), u, u0, b, cs2, istep, cdim, i1, i2, dt, cg, eflx, sources)
                            endif
                            call cg%save_outfluxes(cdim, i1, i2, eflx)
 
