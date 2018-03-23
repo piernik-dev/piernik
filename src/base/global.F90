@@ -43,7 +43,7 @@ module global
         &    dt, dt_initial, dt_max_grow, dt_min, dt_old, dtm, t, t_saved, nstep, nstep_saved, &
         &    integration_order, limiter, limiter_b, smalld, smallei, smallp, use_smalld, h_solver, &
         &    relax_time, grace_period_passed, cfr_smooth, repeat_step, skip_sweep, geometry25D, &
-        &    dirty_debug, do_ascii_dump, show_n_dirtys, no_dirty_checks, sweeps_mgu, use_fargo, &
+        &    dirty_debug, do_ascii_dump, show_n_dirtys, no_dirty_checks, sweeps_mgu, use_fargo, print_divB, &
         &    divB_0_method, force_cc_mag, psi_0, glm_alpha, use_eglm, use_hdc_3D, use_hdc_1D, glm_iter
 
    real, parameter :: dt_default_grow = 2.
@@ -86,15 +86,16 @@ module global
    logical, dimension(xdim:zdim) :: skip_sweep        !< allows to skip sweep in chosen direction
    logical                       :: sweeps_mgu        !< Mimimal Guardcell Update in sweeps
    logical                       :: use_fargo         !< use Fast Eulerian Transport for differentially rotating disks
+   integer(kind=4)               :: print_divB        !< if >0 then print div(B) estimates each print_divB steps
    real                          :: psi_0             !< initial value for the psi field used in divergence cleaning
    real                          :: glm_alpha         !< damping factor for the psi field
    logical                       :: use_eglm          !< use E-GLM?
    logical                       :: use_hdc_3D        !< use HDC outside of 1D MHD solver
    logical                       :: use_hdc_1D        !< use HDC inside 1D MHD solver
-   integer                       :: glm_iter          !< repeat HDC this many times per timestep
+   integer(kind=4)               :: glm_iter          !< repeat HDC this many times per timestep
 
    namelist /NUMERICAL_SETUP/ cfl, cflcontrol, cfl_max, use_smalld, smalld, smallei, smallc, smallp, dt_initial, dt_max_grow, dt_min, &
-        &                     repeat_step, limiter, limiter_b, relax_time, integration_order, cfr_smooth, skip_sweep, geometry25D, sweeps_mgu, &
+        &                     repeat_step, limiter, limiter_b, relax_time, integration_order, cfr_smooth, skip_sweep, geometry25D, sweeps_mgu, print_divB, &
         &                     use_fargo, h_solver, divB_0, psi_0, glm_alpha, use_eglm, use_hdc_3D, use_hdc_1D, glm_iter
 
 contains
@@ -135,6 +136,7 @@ contains
 !!   <tr><td>use_hdc_3D       </td><td>true   </td><td>logical value                        </td><td>\copydoc global::use_hdc_3D       </td></tr>
 !!   <tr><td>use_hdc_1D       </td><td>false  </td><td>logical value                        </td><td>\copydoc global::use_hdc_1D       </td></tr>
 !!   <tr><td>glm_iter         </td><td>2      </td><td>integer value                        </td><td>\copydoc global::glm_iter         </td></tr>
+!!   <tr><td>print_divB       </td><td>0      </td><td>integer value                        </td><td>\copydoc global::print_divB       </td></tr>
 !! </table>
 !! \n \n
 !<
@@ -199,6 +201,7 @@ contains
       glm_alpha   = 0.1
       skip_sweep  = .false.
       use_eglm    = .false.
+      print_divB  = 0
 
       if (master) then
          if (.not.nh%initialized) call nh%init()
@@ -240,7 +243,8 @@ contains
          cbuff(5) = divB_0
 
          ibuff(1) = integration_order
-         ibuff(2) = glm_iter
+         ibuff(2) = print_divB
+         ibuff(3) = glm_iter
 
          rbuff( 1) = smalld
          rbuff( 2) = smallc
@@ -306,7 +310,8 @@ contains
          divB_0     = cbuff(5)
 
          integration_order = ibuff(1)
-         glm_iter          = ibuff(2)
+         print_divB        = ibuff(2)
+         glm_iter          = ibuff(3)
 
       endif
 

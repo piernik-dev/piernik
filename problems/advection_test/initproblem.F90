@@ -278,6 +278,7 @@ contains
       use non_inertial,     only: get_omega
 #ifdef MAGNETIC
       use constants,        only: ndims, I_ONE, I_TWO, I_THREE, dpi, half
+      use div_B,            only: print_divB_norm
 #endif /* MAGNETIC */
 
       implicit none
@@ -483,7 +484,9 @@ contains
          cgl => cgl%nxt
       enddo
 
-      call print_bnorm
+#ifdef MAGNETIC
+      call print_divB_norm
+#endif
 
    end subroutine problem_initial_conditions
 
@@ -550,6 +553,9 @@ contains
       use grid_cont,        only: grid_container
       use mpisetup,         only: master, piernik_MPI_Allreduce
       use named_array_list, only: qna
+#ifdef MAGNETIC
+      use div_B,            only: print_divB_norm
+#endif /* MAGNETIC */
 
       implicit none
 
@@ -627,43 +633,11 @@ contains
          enddo
       endif
 
-      call print_bnorm
+#ifdef MAGNETIC
+      call print_divB_norm
+#endif
 
    end subroutine calculate_error_norm
-
-!>
-!! \brief print estimates of magnitude of div(B) and psi fields if these are available
-!<
-
-   subroutine print_bnorm
-
-#ifdef MAGNETIC
-      use cg_leaves,        only: leaves
-      use constants,        only: psi_n
-      use div_B,            only: divB, idivB
-      use dataio_pub,       only: msg, printinfo
-      use domain,           only: dom
-      use mpisetup,         only: master
-      use named_array_list, only: qna
-#endif /* MAGNETIC */
-
-      implicit none
-
-#ifdef MAGNETIC
-      integer                 :: i
-      integer, parameter      :: nnorms = 3
-      real, dimension(nnorms) :: bnorms ! store here O(dx**2), O(dx**4) and O(dx**6) norms
-
-      do i = 1, nnorms
-         call divB(2*i)  ! tricky
-         bnorms(i) = leaves%norm_sq(idivB) / sqrt(dom%Vol)
-      enddo
-      write(msg,'(3(a,g12.5))')"[initproblem:calculate_error_norm] |divB|_2= ", bnorms(1), " |divB|_4= ", bnorms(2), " |divB|_6= ", bnorms(3)
-      if (qna%exists(psi_n)) write(msg,'(2a,g12.5)') trim(msg), " |psi|= ", leaves%norm_sq(qna%ind(psi_n)) / sqrt(dom%Vol)
-      if (master) call printinfo(msg)
-#endif /* MAGNETIC */
-
-   end subroutine print_bnorm
 
    !>
    !! \brief Put analytic solution in the inid arrays
