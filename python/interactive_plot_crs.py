@@ -9,17 +9,42 @@ import os, weakref
 import sys
 import read_h5
 import crs_h5
+import re
+
 try:
     import yt
     import h5py
 except:
     sys.exit("\033[91mYou must make yt & h5py available somehow\033[0m")
+    
+plot_field = "cr01"
 
 f_run = True
 
 plot_vel = False
 plot_mag = True
 logscale_colors = False
+
+def _total_cree(field,data):
+   list_cree = []
+   for element in ds.field_list:
+      if re.search("cree",str(element[1])):
+         list_cree.append(element[1])
+   cree_tot = data[str(list_cree[0])]
+   for element in list_cree[1:]:
+      cree_tot = cree_tot + data[element]
+   return cree_tot
+
+def _total_cren(field,data):
+   list_cren = []
+   for element in ds.field_list:
+      if re.search("cren",str(element[1])):
+         list_cren.append(element[1])
+   cren_tot = data[str(list_cren[0])]
+   for element in list_cren[1:]:
+      cren_tot = cren_tot + data[element]
+   return cren_tot
+
 #---------- reading parameters
 filename=sys.argv[-1]
 filename_ext= filename.split('.')[-1]
@@ -96,28 +121,37 @@ if f_run == True:
     s = plt.figure(figsize=(12,6),dpi=80)
     s1 = plt.subplot(121)
 
-    plot_field = "cr01"
     dset = h5File['data']['grid_0000000000'][plot_field]
 
     click_coords = [0, 0]
     image_number = 0
 
-    if (slice_ax == "x"):
-      fig1 = plt.imshow(dset[:,:,slice_coord], origin="lower") # TODO provide the right coordinates
-      field_max = np.max(dset[:,:,slice_coord])
-    elif (slice_ax == "y"):
-      fig1 = plt.imshow(dset[:,slice_coord,:], origin="lower") # TODO provide the right coordinates
-      field_max = np.max(dset[:,slice_coord,:])
-    else:
-      fig1 = plt.imshow(dset[slice_coord,:,:], origin="lower") # TODO provide the right coordinates
-      field_max = np.max(dset[slice_coord,:,:])
+    field_max = h5ds.find_max("cr01")[0]
 
+    if (plot_field == "cree_tot" ):
+      h5ds.add_field(("gdf","cree_tot"), units="",function=_total_cree, display_name="Total cr electron enden")
+    if (plot_field == "cren_tot" ):
+      h5ds.add_field(("gdf","cren_tot"), units="",function=_total_cren, display_name="Total cr electron numden")
+
+    if (slice_ax == "x"):
+      fig1 = plt.imshow(dset[:,:,slice_coord], origin="lower")
+      field_max = np.max(dset[:,:,slice_coord])
+      if logscale_colors == True:
+        plt.pcolor(dset[:,:,slice_coord], norm=LogNorm(vmin=dset[:,:,slice_coord].min(), vmax=dset[:,:,slice_coord].max()), cmap='viridis')
+    elif (slice_ax == "y"):
+      fig1 = plt.imshow(dset[:,slice_coord,:], origin="lower")
+      field_max = np.max(dset[:,slice_coord,:])
+      if logscale_colors == True:
+        plt.pcolor(dset[:,slice_coord,:], norm=LogNorm(vmin=dset[:,slice_coord,:].min(), vmax=dset[:,slice_coord,:].max()), cmap='viridis')
+    else:
+      fig1 = plt.imshow(dset[slice_coord,:,:], origin="lower")
+      field_max = np.max(dset[slice_coord,:,:])
+      if logscale_colors == True:
+        plt.pcolor(dset[slice_coord,:,:], norm=LogNorm(vmin=dset[slice_coord,:,:].min(), vmax=dset[slice_coord,:,:].max()), cmap='viridis')
     plt.title("Component name: "+plot_field+" | Time = %f Myr"  %time,y=1.07)
     plt.ylabel("Physical domain ("+dim_map.keys()[dim_map.values().index(avail_dim[1])]+") [kpc]" )
     plt.xlabel("Physical domain ("+dim_map.keys()[dim_map.values().index(avail_dim[0])]+") [kpc]" )
-    if logscale_colors == True:
-            print ("\033[93mWARNING: logscale_colors = True, if negative values are encountered, the script will crash.\033[0m")
-            plt.pcolor(dset[:,:,0], norm=LogNorm(vmin=dset[:,:,0].min(), vmax=dset[:,:,0].max()), cmap='viridis') # TODO provide the right cooridinates
+
     plt.colorbar(shrink=0.9, pad=0.18)
 
     valuesx = tuple(np.arange(0,grid_dim[avail_dim[0]], grid_dim[avail_dim[0]]/5.))# + (grid_dim[avail_dim[0]],)
@@ -156,7 +190,7 @@ if f_run == True:
             ecrs.append(h5File['data']['grid_0000000000']['cree'+str(ind).zfill(2)].value[coords[0],coords[1],coords[2]])
             ncrs.append(h5File['data']['grid_0000000000']['cren'+str(ind).zfill(2)].value[coords[0],coords[1],coords[2]])
         plot_var = "e"
-        fig2,exit_code = crs_h5.crs_plot_main(var_names, var_array, plot_var, ncrs, ecrs, field_max, time, dt)
+        fig2,exit_code = crs_h5.crs_plot_main(var_names, var_array, plot_var, ncrs, ecrs, field_max, time, coords)
         if (exit_code != True):
             s.savefig('results/'+filename_nam+'_'+plot_var+'_%04d.png' % image_number, transparent ='False',facecolor=s.get_facecolor())
             print ("\033[92m  --->  Saved plot to: %s\033[0m" %str('results/'+filename_nam+'_'+plot_var+'_%04d.png' %image_number))

@@ -9,17 +9,41 @@ import os, weakref
 import sys
 import read_h5
 import crs_h5
+import re
 try:
     import yt
     import h5py
 except:
     sys.exit("\033[91mYou must make yt & h5py available somehow\033[0m")
 
+plot_field = "cren_tot"
+
 f_run = True
 
 plot_vel = False
 plot_mag = True
-logscale_colors = False
+logscale_colors = True #False
+
+def _total_cree(field,data):
+   list_cree = []
+   for element in h5ds.field_list:
+      if re.search("cree",str(element[1])):
+         list_cree.append(element[1])
+   cree_tot = data[str(list_cree[0])]
+   for element in list_cree[1:]:
+      cree_tot = cree_tot + data[element]
+   return cree_tot
+
+def _total_cren(field,data):
+   list_cren = []
+   for element in h5ds.field_list:
+      if re.search("cren",str(element[1])):
+         list_cren.append(element[1])
+   cren_tot = data[str(list_cren[0])]
+   for element in list_cren[1:]:
+      cren_tot = cren_tot + data[element]
+   return cren_tot
+
 #---------- reading parameters
 filename=sys.argv[-1]
 filename_ext= filename.split('.')[-1]
@@ -97,7 +121,10 @@ if f_run == True:
     s = plt.figure(figsize=(12,8),dpi=80)
     s1 = plt.subplot(121)
 
-    plot_field = "cr01"
+    if (plot_field == "cree_tot" ):
+      h5ds.add_field(("gdf","cree_tot"), units="",function=_total_cree, display_name="Total cr electron enden")
+    if (plot_field == "cren_tot" ):
+      h5ds.add_field(("gdf","cren_tot"), units="",function=_total_cren, display_name="Total cr electron numden")
 
     click_coords = [0, 0]
     image_number = 0
@@ -112,7 +139,10 @@ if f_run == True:
     plt.xlabel("Domain cooridnates ("+dim_map.keys()[dim_map.values().index(avail_dim[0])]+")" )
     plt.ylabel("Domain cooridnates ("+dim_map.keys()[dim_map.values().index(avail_dim[1])]+")" )
     plt.colormap="plasma"
-    plt.imshow(frb,extent=[dom_l[avail_dim[0]], dom_r[avail_dim[0]], dom_l[avail_dim[1]], dom_r[avail_dim[1]] ], origin="lower" ) #,origin="lower")
+    if (logscale_colors):
+        plt.imshow(frb,extent=[dom_l[avail_dim[0]], dom_r[avail_dim[0]], dom_l[avail_dim[1]], dom_r[avail_dim[1]] ], origin="lower" ,norm=LogNorm())
+    else:
+        plt.imshow(frb,extent=[dom_l[avail_dim[0]], dom_r[avail_dim[0]], dom_l[avail_dim[1]], dom_r[avail_dim[1]] ], origin="lower")
     plt.title("Component name: "+plot_field+" | time = %f Myr"  %time)
     cbar = plt.colorbar(shrink=0.9, pad=0.18)
     frb1 = np.array(dsSlice.to_frb(w, resolution, height=h)[plot_field])
@@ -143,7 +173,7 @@ if f_run == True:
                 ecrs.append(float(str( position['cree'+str(ind).zfill(2)][0]).split(" ")[0]))
                 ncrs.append(float(str( position['cren'+str(ind).zfill(2)][0]).split(" ")[0]))
             plot_var = "e"
-            fig2,exit_code = crs_h5.crs_plot_main(var_names, var_array, plot_var, ncrs, ecrs, field_max, time, dt)
+            fig2,exit_code = crs_h5.crs_plot_main(var_names, var_array, plot_var, ncrs, ecrs, field_max, time, coords)
             if (exit_code != True):
                 s.savefig('results/'+filename_nam+'_'+plot_var+'_%04d.png' % image_number, transparent ='False',facecolor=s.get_facecolor())
                 print ("\033[92m  --->  Saved plot to: %s\033[0m" %str('results/'+filename_nam+'_'+plot_var+'_%04d.png' %image_number))

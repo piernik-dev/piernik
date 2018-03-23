@@ -61,7 +61,7 @@ def fun(x, alpha, p_ratio):
       return fun
 
 # plot data ------------------------------------  
-def plot_data(plot_var, pl, pr, fl, fr, q, time, dt, i_lo_cut, i_up_cut):
+def plot_data(plot_var, pl, pr, fl, fr, q, time, location, i_lo_cut, i_up_cut):
    global first_run
    f_lo_cut = fl[0] ;      f_up_cut = fr[-1]
    p_lo_cut = pl[0] ;   p_up_cut = pr[-1]
@@ -90,9 +90,6 @@ def plot_data(plot_var, pl, pr, fl, fr, q, time, dt, i_lo_cut, i_up_cut):
    plt.ylabel(plot_var)
    global plot_p_min, plot_p_max, plot_var_min, plot_var_max
    if first_run :
-      #if not os.path.exists('results'):
-        #os.makedirs('results')
-      #print "Output dir created"
       plot_p_min    =  p_lo_cut
       plot_p_max    =  p_up_cut
       plot_var_min = 0.1*e_small
@@ -116,12 +113,12 @@ def plot_data(plot_var, pl, pr, fl, fr, q, time, dt, i_lo_cut, i_up_cut):
       plt.plot([pl[i],pl[i]], [plot_var_min,plot_var_l[i]],color='r')
       plt.plot([pr[i],pr[i]], [plot_var_min,plot_var_r[i]],color='r')
    s.set_facecolor('white')
-   plt.title("Spectrum of %s(p) \n Time = %7.3f, dt = %7.3f " % (plot_var, time, dt) )
+   plt.title("Spectrum of %s(p) \n Time = %7.3f | location: %7.2f %7.2f %7.2f " % (plot_var, time, location[0],location[1],location[2]) )
 
    return s
 #-----------------------------------------------------------------
 
-def crs_plot_main(parameter_names, parameter_values, plot_var, ncrs, ecrs, field_max, time, dt):
+def crs_plot_main(parameter_names, parameter_values, plot_var, ncrs, ecrs, field_max, time, location):
     global first_run
 
     try:
@@ -185,6 +182,6 @@ def crs_plot_main(parameter_names, parameter_values, plot_var, ncrs, ecrs, field
     frn  = frn * (prn/pln) ** (-q_nr)
     plot = False
     if empty_cell==False:
-        plot = plot_data(plot_var, pln, prn, fln, frn, q_nr, time, dt, i_lo, i_up)
+        plot = plot_data(plot_var, pln, prn, fln, frn, q_nr, time, location, i_lo, i_up)
 
     return plot, empty_cell
