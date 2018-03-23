@@ -82,11 +82,12 @@ contains
 
    subroutine print_divB_norm
 
-      use cg_leaves,  only: leaves
-      use constants,  only: I_TWO
-      use dataio_pub, only: printinfo, msg
-      use domain,     only: dom
-      use mpisetup,   only: master
+      use cg_leaves,        only: leaves
+      use constants,        only: I_TWO, psi_n
+      use dataio_pub,       only: printinfo, msg
+      use domain,           only: dom
+      use mpisetup,         only: master
+      use named_array_list, only: qna
 
       implicit none
 
@@ -97,6 +98,7 @@ contains
          call divB(i)
          write(msg,'(2a,i1,a,g12.5)')trim(msg), " |divB|_", i, "= ", leaves%norm_sq(idivB) / sqrt(dom%Vol)
       enddo
+      if (qna%exists(psi_n)) write(msg,'(2a,g12.5)') trim(msg), " |psi|= ", leaves%norm_sq(qna%ind(psi_n)) / sqrt(dom%Vol)
       if (master) call printinfo(msg)
 
    end subroutine print_divB_norm
