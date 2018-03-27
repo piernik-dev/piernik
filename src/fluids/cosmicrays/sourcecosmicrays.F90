@@ -25,7 +25,6 @@
 !    For full list of developers see $PIERNIK_HOME/license/pdt.txt
 !
 #include "piernik.h"
-#define RNG 2:n-1
 
 !>
 !! \brief Computation of Cosmic Ray sources and pcr gradient pcr
@@ -39,7 +38,7 @@ module sourcecosmicrays
    private
    public :: src_gpcr
 #ifdef COSM_RAYS_SOURCES
-   public :: src_crn
+   public :: src_crn_exec
 #endif /* COSM_RAYS_SOURCES */
 
 contains
@@ -146,5 +145,27 @@ contains
       enddo
 
    end subroutine src_crn
+
+!>
+!! \brief Execution of src_crn procedure designed for sources module
+!<
+   subroutine src_crn_exec(uu, n, usrc, rk_coeff)
+
+      use fluidindex,     only: flind
+      use initcosmicrays, only: iarr_crn
+
+      implicit none
+
+      integer(kind=4),               intent(in)  :: n
+      real, dimension(n, flind%all), intent(in)  :: uu
+      real,                          intent(in)  :: rk_coeff   !< coeffecient used in RK step, while computing source term
+      real, dimension(n, flind%all), intent(out) :: usrc       !< u array update component for sources
+      real, dimension(n, flind%crn%all)          :: srccrn
+
+      usrc = 0.0
+      call src_crn(uu, n, srccrn, rk_coeff) ! n safe
+      usrc(:, iarr_crn) = srccrn(:,:)
+
+   end subroutine src_crn_exec
 #endif /* COSM_RAYS_SOURCES */
 end module sourcecosmicrays

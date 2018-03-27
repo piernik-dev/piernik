@@ -96,8 +96,7 @@ contains
       use initcosmicrays,   only: iarr_crs, smallecr
       use sourcecosmicrays, only: src_gpcr
 #ifdef COSM_RAYS_SOURCES
-      use initcosmicrays,   only: iarr_crn
-      use sourcecosmicrays, only: src_crn
+      use sourcecosmicrays, only: src_crn_exec
 #endif /* COSM_RAYS_SOURCES */
 #endif /* COSM_RAYS */
 #ifdef CORIOLIS
@@ -131,7 +130,7 @@ contains
 #endif /* GRAV */
 
 !locals
-      real, dimension(n, flind%all)                 :: usrc               !< u array update from sources
+      real, dimension(n, flind%all)                 :: usrc, newsrc       !< u array update from sources
       real, dimension(n, flind%fluids)              :: geosrc             !< source terms caused by geometry of coordinate system
       real, dimension(n, flind%fluids), target      :: density            !< gas density
       real, dimension(:,:),            pointer      :: dens, vx
@@ -139,9 +138,6 @@ contains
 #ifdef COSM_RAYS
       real, dimension(n)                            :: grad_pcr
       real, dimension(n, flind%crs%all)             :: decr
-#ifdef COSM_RAYS_SOURCES
-      real, dimension(n, flind%crn%all)             :: srccrn
-#endif /* COSM_RAYS_SOURCES */
 #endif /* COSM_RAYS */
       logical                                       :: full_dim
 
@@ -191,8 +187,8 @@ contains
 #endif /* !ISO */
       endif
 #ifdef COSM_RAYS_SOURCES
-      call src_crn(u, n, srccrn, rk2coef(integration_order, istep) * dt) ! n safe
-      usrc(:, iarr_crn) = usrc(:, iarr_crn) + srccrn(:,:)
+      call src_crn_exec(u, n, newsrc, rk2coef(integration_order, istep) * dt) ! n safe
+      usrc(:,:) = usrc(:,:) + newsrc(:,:)
 #endif /* COSM_RAYS_SOURCES */
 #endif /* COSM_RAYS && IONIZED */
 
