@@ -77,10 +77,10 @@ contains
    subroutine all_sources(n, u, u0, istep, sweep, i1, i2, dt, cg, u1, pressure, vel_sweep)
 
       use constants,        only: one, zero, half
-      use fluidindex,       only: iarr_all_dn, iarr_all_mx, flind
+      use fluidindex,       only: iarr_all_dn, flind
       use global,           only: integration_order
       use grid_cont,        only: grid_container
-      use gridgeometry,     only: geometry_source_terms
+      use gridgeometry,     only: geometry_source_terms_exec
 #ifdef BALSARA
       use interactions,     only: balsara_implicit_interactions
 #else /* !BALSARA */
@@ -127,7 +127,6 @@ contains
 
 !locals
       real, dimension(n, flind%all)                 :: usrc, newsrc       !< u array update from sources
-      real, dimension(n, flind%fluids)              :: geosrc             !< source terms caused by geometry of coordinate system
       real, dimension(n, flind%fluids), target      :: density            !< gas density
       real, dimension(:,:),            pointer      :: dens, vx
 
@@ -142,11 +141,11 @@ contains
 
       density(:,:) = u(:, iarr_all_dn)
 
-      geosrc = geometry_source_terms(u, pressure, sweep, cg)  ! n safe
-
-      u1(:, iarr_all_mx) = u1(:, iarr_all_mx) + rk2coef(integration_order,istep)*geosrc(:,:)*dt ! n safe
-
       usrc = 0.0
+
+      call geometry_source_terms_exec(u, pressure, sweep, cg, newsrc)  ! n safe
+      usrc(:,:) = usrc(:,:) + newsrc(:,:)
+
 #ifndef BALSARA
       call get_updates_from_acc(n, u, usrc, fluid_interactions(dens, vx))  ! n safe
 #else /* !BALSARA */
