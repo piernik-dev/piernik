@@ -36,7 +36,7 @@ module sourcecosmicrays
    implicit none
 
    private
-   public :: src_gpcr
+   public :: src_gpcr_exec
 #ifdef COSM_RAYS_SOURCES
    public :: src_crn_exec
 #endif /* COSM_RAYS_SOURCES */
@@ -80,6 +80,45 @@ contains
       grad_pcr(1:2) = 0.0 ; grad_pcr(nn-1:nn) = 0.0
 
    end subroutine src_gpcr
+
+!>
+!! \brief Computation of Cosmic ray pressure gradient and pcr div v
+!<
+   subroutine src_gpcr_exec(uu, nn, usrc, sweep, i1, i2, cg, vx)
+
+      use fluidindex,     only: flind, iarr_all_mx, iarr_all_en
+      use grid_cont,      only: grid_container
+      use initcosmicrays, only: iarr_crs
+
+      implicit none
+
+      integer(kind=4),                intent(in)  :: nn                 !< array size
+      real, dimension(nn, flind%all), intent(in)  :: uu                 !< vector of conservative variables
+      integer(kind=4),                intent(in)  :: sweep              !< direction (x, y or z) we are doing calculations for
+      integer,                        intent(in)  :: i1                 !< coordinate of sweep in the 1st remaining direction
+      integer,                        intent(in)  :: i2                 !< coordinate of sweep in the 2nd remaining direction
+      type(grid_container), pointer,  intent(in)  :: cg                 !< current grid piece
+      real, dimension(:,:), pointer,  intent(in)  :: vx
+      real, dimension(nn, flind%all), intent(out) :: usrc               !< u array update component for sources
+!locals
+      real, dimension(nn)                         :: grad_pcr
+      real, dimension(nn, flind%crs%all)          :: decr
+      logical                                     :: full_dim
+
+      full_dim = nn > 1
+
+      usrc = 0.0
+      if (.not.full_dim) return
+
+      call src_gpcr(uu, nn, decr, grad_pcr, sweep, i1, i2, cg)
+      usrc(:, iarr_crs(:)) = decr(:,:)
+      usrc(:, iarr_all_mx(flind%ion%pos)) = grad_pcr
+#ifdef ISO
+      return
+#endif /* ISO */
+      usrc(:, iarr_all_en(flind%ion%pos)) = vx(:, flind%ion%pos) * grad_pcr
+
+   end subroutine src_gpcr_exec
 
 !==========================================================================================
 
@@ -160,6 +199,7 @@ contains
       real, dimension(n, flind%all), intent(in)  :: uu
       real,                          intent(in)  :: rk_coeff   !< coeffecient used in RK step, while computing source term
       real, dimension(n, flind%all), intent(out) :: usrc       !< u array update component for sources
+!locals
       real, dimension(n, flind%crn%all)          :: srccrn
 
       usrc = 0.0

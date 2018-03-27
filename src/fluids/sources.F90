@@ -78,9 +78,6 @@ contains
 
       use constants,        only: one, zero, half
       use fluidindex,       only: iarr_all_dn, iarr_all_mx, flind
-#ifndef ISO
-      use fluidindex,       only: iarr_all_en
-#endif /* !ISO */
       use global,           only: integration_order
       use grid_cont,        only: grid_container
       use gridgeometry,     only: geometry_source_terms
@@ -94,7 +91,7 @@ contains
 #endif /* GRAV */
 #ifdef COSM_RAYS
       use initcosmicrays,   only: iarr_crs, smallecr
-      use sourcecosmicrays, only: src_gpcr
+      use sourcecosmicrays, only: src_gpcr_exec
 #ifdef COSM_RAYS_SOURCES
       use sourcecosmicrays, only: src_crn_exec
 #endif /* COSM_RAYS_SOURCES */
@@ -125,7 +122,6 @@ contains
       real, dimension(n, flind%fluids), target, intent(in) :: vel_sweep          !< velocity in the direction of current sweep
 
 #ifdef GRAV
-      integer                                      :: ind                !< fluid index
       real, dimension(n)                           :: gravacc            !< acceleration caused by gravitation
 #endif /* GRAV */
 
@@ -135,10 +131,6 @@ contains
       real, dimension(n, flind%fluids), target      :: density            !< gas density
       real, dimension(:,:),            pointer      :: dens, vx
 
-#ifdef COSM_RAYS
-      real, dimension(n)                            :: grad_pcr
-      real, dimension(n, flind%crs%all)             :: decr
-#endif /* COSM_RAYS */
       logical                                       :: full_dim
 
       real, dimension(2,2), parameter               :: rk2coef = reshape( [ one, half, zero, one ], [ 2, 2 ] )
@@ -178,14 +170,8 @@ contains
       endif
 
 #if defined COSM_RAYS && defined IONIZED
-      if (full_dim) then
-         call src_gpcr(u, n, decr, grad_pcr, sweep, i1, i2, cg)
-         usrc(:,                iarr_crs(:)) = usrc(:,               iarr_crs(:)) + decr(:,:)
-         usrc(:, iarr_all_mx(flind%ion%pos)) = usrc(:, iarr_all_mx(flind%ion%pos)) + grad_pcr
-#ifndef ISO
-         usrc(:, iarr_all_en(flind%ion%pos)) = usrc(:, iarr_all_en(flind%ion%pos)) + vx(:, flind%ion%pos) * grad_pcr
-#endif /* !ISO */
-      endif
+      call src_gpcr_exec(u, n, newsrc, sweep, i1, i2, cg, vx)
+      usrc(:,:) = usrc(:,:) + newsrc(:,:)
 #ifdef COSM_RAYS_SOURCES
       call src_crn_exec(u, n, newsrc, rk2coef(integration_order, istep) * dt) ! n safe
       usrc(:,:) = usrc(:,:) + newsrc(:,:)
