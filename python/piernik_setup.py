@@ -319,12 +319,12 @@ def setup_piernik(data=None):
 
     pf = probdir + "info"
     if (not os.path.isfile(pf)):
-        print("\033[93mCannot find optional file", pf, "\033[0m")
+        print("\033[93mCannot find optional file " + pf + "\033[0m")
     req_prob = ["piernik.def", "initproblem.F90", "problem.par"]
     req_missing = False
     for pf in req_prob:
         if (not os.path.isfile(probdir + pf)):
-            print("\033[91mCannot find required file", probdir + pf, "\033[0m")
+            print("\033[91mCannot find required file " + probdir + pf + "\033[0m")
             req_missing = True
     if (req_missing):
         sys.exit()
