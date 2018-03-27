@@ -289,7 +289,6 @@ contains
 
   subroutine glm_3D
 
-     use global,           only:  use_hdc_3D
 #ifdef MAGNETIC
      use all_boundaries,   only: all_mag_boundaries
      use cg_leaves,        only: leaves
@@ -308,14 +307,7 @@ contains
      type(cg_list_element), pointer :: cgl
      type(grid_container),  pointer :: cg
      real, dimension(:,:,:), allocatable :: bbx, bby, bbz, pp
-#endif /* MAGNETIC */
 
-     if (.not. use_hdc_3D) then
-        call glmdamping
-        return
-     endif
-
-#ifdef MAGNETIC
      psii = qna%ind(psi_n)
 
      do ig = 1, glm_iter

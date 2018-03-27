@@ -112,7 +112,7 @@ contains
   subroutine make_3sweeps(forward)
 
     use constants,      only: xdim, zdim, I_ONE, DIVB_HDC
-    use global,         only: divB_0_method
+    use global,         only: divB_0_method, use_hdc_3D
     use hdc,            only: eglm, glm_3D
     use user_hooks,     only: problem_customize_solution
 #if defined(COSM_RAYS) && defined(MULTIGRID)
@@ -146,7 +146,7 @@ contains
     if (associated(problem_customize_solution)) call problem_customize_solution(forward)
 
     if (divB_0_method == DIVB_HDC) then
-       call glm_3D
+       if (use_hdc_3D) call glm_3D
        call eglm
     endif
 
@@ -852,7 +852,7 @@ enddo
            use constants,        only: xdim, ydim, zdim, DIVB_HDC
            use hdc,              only: chspeed
            use fluidindex,       only: flind
-           use global,           only: divB_0_method, glm_iter, use_hdc_1D
+           use global,           only: divB_0_method, glm_iter, use_hdc_1D, cfl, glm_alpha
 #ifdef COSM_RAYS
            use fluidindex,       only: iarr_all_dn, iarr_all_mx, iarr_all_en
            use global,           only: dt
@@ -921,6 +921,9 @@ enddo
 
                  psi(:,1) = psi(:,2)
                  psi(:,nx) = psi(:,nx-1)
+
+                 !damping
+                 psi = psi * exp(-glm_alpha*cfl)
               enddo
            endif
 
