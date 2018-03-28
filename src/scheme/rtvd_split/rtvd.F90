@@ -365,20 +365,45 @@ contains
          vel_sweep = u1(:, iarr_all_mx) / u1(:, iarr_all_dn)
       endif ! (n > 1)
 
-      call limit_minimal_density(n, u1, cg, sweep, i1, i2)
+      
 
 ! Source terms -------------------------------------
       if (sources) call all_sources(n, u, u0, u1, cg, istep, sweep, i1, i2, rk2coef(integration_order,istep)*dt, pressure, vel_sweep)
 
-      call limit_minimal_int_ener(n, bb, u1)
-#if defined COSM_RAYS && defined IONIZED
-      if (full_dim) call limit_minimal_ecr(n, u1)
-#endif /* COSM_RAYS && IONIZED */
+      call care_for_positives(n, u1, bb, cg, sweep, i1, i2)
 
       u(:,:) = u1(:,:)
 
    end subroutine relaxing_tvd
 
+
+!==========================================================================================
+   subroutine care_for_positives(n, u1, bb, cg, sweep, i1, i2)
+
+      use fluidindex,       only: flind, nmag
+      use grid_cont,        only: grid_container
+
+      implicit none
+
+      integer(kind=4),               intent(in)    :: n                  !< array size
+      real, dimension(n, flind%all), intent(inout) :: u1                 !< updated vector of conservative variables (after one timestep in second order scheme)
+      real, dimension(n, nmag),      intent(in)    :: bb                 !< local copy of magnetic field
+      type(grid_container), pointer, intent(in)    :: cg                 !< current grid piece
+      integer(kind=4),               intent(in)    :: sweep              !< direction (x, y or z) we are doing calculations for
+      integer,                       intent(in)    :: i1                 !< coordinate of sweep in the 1st remaining direction
+      integer,                       intent(in)    :: i2                 !< coordinate of sweep in the 2nd remaining direction
+!locals
+      logical                                      :: full_dim
+
+      full_dim = n > 1
+
+      call limit_minimal_density(n, u1, cg, sweep, i1, i2)
+      call limit_minimal_intener(n, bb, u1)
+#if defined COSM_RAYS && defined IONIZED
+      if (full_dim) call limit_minimal_ecr(n, u1)
+#endif /* COSM_RAYS && IONIZED */
+
+   end subroutine care_for_positives
 
 !==========================================================================================
    subroutine limit_minimal_density(n, u1, cg, sweep, i1, i2)
@@ -443,7 +468,7 @@ contains
    end subroutine limit_minimal_density
 
 !==========================================================================================
-   subroutine limit_minimal_int_ener(n, bb, u1)
+   subroutine limit_minimal_intener(n, bb, u1)
 
       use constants,        only: xdim, ydim, zdim
       use fluidindex,       only: flind, nmag
@@ -482,7 +507,7 @@ contains
          endif
       enddo
 
-   end subroutine limit_minimal_int_ener
+   end subroutine limit_minimal_intener
 
 #if defined COSM_RAYS && defined IONIZED
    subroutine limit_minimal_ecr(n, u1)
