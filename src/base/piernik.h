@@ -7,6 +7,12 @@
 
 #include "piernik.def"
 
+#ifdef IONIZED
+#  ifndef NONMAGNETIC
+#    define MAGNETIC
+#  endif /* !NONMAGNETIC */
+#endif /* IONIZED */
+
 #if defined(MULTIGRID) && defined(GRAV)
 #define SELF_GRAV
 #endif
