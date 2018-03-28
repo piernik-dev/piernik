@@ -74,9 +74,8 @@ contains
 !! \todo Do not pass i1 and i2, pass optional pointer to gravacc instead
 !<
 !*/
-   subroutine all_sources(n, u, u0, istep, sweep, i1, i2, dt, cg, u1, pressure, vel_sweep)
+   subroutine all_sources(n, u, u0, u1, cg, istep, sweep, i1, i2, coeffdt, pressure, vel_sweep)
 
-      use constants,        only: one, zero, half
       use fluidindex,       only: iarr_all_dn, flind
       use global,           only: integration_order
       use grid_cont,        only: grid_container
@@ -109,15 +108,15 @@ contains
       implicit none
 
       integer(kind=4),               intent(in)    :: n                  !< array size
-      real, dimension(n, flind%all), intent(inout) :: u                  !< vector of conservative variables
+      real, dimension(n, flind%all), intent(in)    :: u                  !< vector of conservative variables
       real, dimension(n, flind%all), intent(in)    :: u0                 !< vector of conservative variables
+      real, dimension(n, flind%all), intent(inout) :: u1                 !< updated vector of conservative variables (after one timestep in second order scheme)
+      type(grid_container), pointer, intent(in)    :: cg                 !< current grid piece
       integer,                       intent(in)    :: istep              !< step number in the time integration scheme
       integer(kind=4),               intent(in)    :: sweep              !< direction (x, y or z) we are doing calculations for
       integer,                       intent(in)    :: i1                 !< coordinate of sweep in the 1st remaining direction
       integer,                       intent(in)    :: i2                 !< coordinate of sweep in the 2nd remaining direction
-      real,                          intent(in)    :: dt                 !< time step
-      type(grid_container), pointer, intent(in)    :: cg                 !< current grid piece
-      real, dimension(n, flind%all), intent(inout) :: u1                 !< updated vector of conservative variables (after one timestep in second order scheme)
+      real,                          intent(in)    :: coeffdt            !< time step times scheme coefficient
       real, dimension(n, flind%fluids), intent(in) :: pressure           !< gas pressure
       real, dimension(n, flind%fluids), target, intent(in) :: vel_sweep          !< velocity in the direction of current sweep
 
@@ -131,8 +130,6 @@ contains
       real, dimension(:,:),            pointer      :: dens, vx
 
       logical                                       :: full_dim
-
-      real, dimension(2,2), parameter               :: rk2coef = reshape( [ one, half, zero, one ], [ 2, 2 ] )
 
       full_dim = n > 1
 
@@ -172,14 +169,14 @@ contains
       call src_gpcr_exec(u, n, newsrc, sweep, i1, i2, cg, vx)
       usrc(:,:) = usrc(:,:) + newsrc(:,:)
 #ifdef COSM_RAYS_SOURCES
-      call src_crn_exec(u, n, newsrc, rk2coef(integration_order, istep) * dt) ! n safe
+      call src_crn_exec(u, n, newsrc, coeffdt) ! n safe
       usrc(:,:) = usrc(:,:) + newsrc(:,:)
 #endif /* COSM_RAYS_SOURCES */
 #endif /* COSM_RAYS && IONIZED */
 
 ! --------------------------------------------------
 
-      u1(:,:) = u1(:,:) + rk2coef(integration_order, istep)*usrc(:,:)*dt
+      u1(:,:) = u1(:,:) + usrc(:,:) * coeffdt
 #if defined COSM_RAYS && defined IONIZED
       if (full_dim) u1(:, iarr_crs(:)) = max(smallecr, u1(:, iarr_crs(:)))
 #endif /* COSM_RAYS && IONIZED */
