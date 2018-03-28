@@ -85,7 +85,7 @@ contains
       use interactions,     only: fluid_interactions_exec
 #endif /* !BALSARA */
 #ifdef GRAV
-      use gravity,          only: grav_pot2accel
+      use gravity,          only: grav_src_exec
 #endif /* GRAV */
 #ifdef COSM_RAYS
       use sourcecosmicrays, only: src_gpcr_exec
@@ -116,19 +116,11 @@ contains
       integer,                       intent(in)    :: i2                 !< coordinate of sweep in the 2nd remaining direction
       real,                          intent(in)    :: coeffdt            !< time step times scheme coefficient
       real, dimension(n, flind%fluids), intent(in) :: pressure           !< gas pressure
-      real, dimension(n, flind%fluids), target, intent(in) :: vel_sweep          !< velocity in the direction of current sweep
-
-#ifdef GRAV
-      real, dimension(n)                           :: gravacc            !< acceleration caused by gravitation
-#endif /* GRAV */
+      real, dimension(n, flind%fluids), target, intent(in) :: vel_sweep  !< velocity in the direction of current sweep
 
 !locals
       real, dimension(n, flind%all)                 :: usrc, newsrc       !< u array update from sources
       real, dimension(:,:),            pointer      :: vx
-
-      logical                                       :: full_dim
-
-      full_dim = n > 1
 
       vx   => vel_sweep
 
@@ -152,12 +144,10 @@ contains
       call get_updates_from_acc(n, u, usrc, non_inertial_force(sweep, u, cg))
 #endif /* NON_INERTIAL */
 
-      if (full_dim) then
 #ifdef GRAV
-         call grav_pot2accel(sweep, i1, i2, n, gravacc, istep, cg)
-         call get_updates_from_acc(n, u, usrc, spread(gravacc,2,flind%fluids))
+      call grav_src_exec(n, u, cg, sweep, i1, i2, istep, newsrc)
+      usrc(:,:) = usrc(:,:) + newsrc(:,:)
 #endif /* !GRAV */
-      endif
 
 #if defined COSM_RAYS && defined IONIZED
       call src_gpcr_exec(u, n, newsrc, sweep, i1, i2, cg, vx)
