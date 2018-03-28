@@ -1,4 +1,10 @@
 
+/* spelling workaround */
+
+#ifdef IONISED
+#  define IONIZED
+#endif /* IONISED */
+
 #include "piernik.def"
 
 #if defined(MULTIGRID) && defined(GRAV)
