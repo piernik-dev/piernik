@@ -371,6 +371,9 @@ contains
       if (sources) call all_sources(n, u, u0, u1, cg, istep, sweep, i1, i2, rk2coef(integration_order,istep)*dt, pressure, vel_sweep)
 
       call limit_minimal_int_ener(n, bb, u1)
+#if defined COSM_RAYS && defined IONIZED
+      if (full_dim) call limit_minimal_ecr(n, u1)
+#endif /* COSM_RAYS && IONIZED */
 
       u(:,:) = u1(:,:)
 
@@ -480,6 +483,22 @@ contains
       enddo
 
    end subroutine limit_minimal_int_ener
+
+#if defined COSM_RAYS && defined IONIZED
+   subroutine limit_minimal_ecr(n, u1)
+
+      use fluidindex,       only: flind
+      use initcosmicrays,   only: iarr_crs, smallecr
+
+      implicit none
+
+      integer(kind=4),               intent(in)    :: n                  !< array size
+      real, dimension(n, flind%all), intent(inout) :: u1                 !< updated vector of conservative variables (after one timestep in second order scheme)
+
+      u1(:, iarr_crs(:)) = max(smallecr, u1(:, iarr_crs(:)))
+
+   end subroutine limit_minimal_ecr
+#endif /* COSM_RAYS && IONIZED */
 
 !==========================================================================================
 end module rtvd

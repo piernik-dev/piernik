@@ -88,7 +88,6 @@ contains
       use gravity,          only: grav_pot2accel
 #endif /* GRAV */
 #ifdef COSM_RAYS
-      use initcosmicrays,   only: iarr_crs, smallecr
       use sourcecosmicrays, only: src_gpcr_exec
 #ifdef COSM_RAYS_SOURCES
       use sourcecosmicrays, only: src_crn_exec
@@ -172,9 +171,6 @@ contains
 ! --------------------------------------------------
 
       u1(:,:) = u1(:,:) + usrc(:,:) * coeffdt
-#if defined COSM_RAYS && defined IONIZED
-      if (full_dim) u1(:, iarr_crs(:)) = max(smallecr, u1(:, iarr_crs(:)))
-#endif /* COSM_RAYS && IONIZED */
 
    end subroutine all_sources
 
