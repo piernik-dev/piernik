@@ -266,7 +266,8 @@ contains
             write(msg,'(3a,l2,a,i2,a,l2,2(a,i2))')"'", this%lst(i)%name, "', vital=", this%lst(i)%vital, ", restart_mode=", this%lst(i)%restart_mode, &
                  &                                ", multigrid=", this%lst(i)%multigrid, ", ord_prolong=", this%lst(i)%ord_prolong, ", position=", this%lst(i)%position(:)
          else
-            write(msg,'(3a,l2,a,i2,a,l2,2(a,i2),a,100i2)')"'", this%lst(i)%name, "', vital=", this%lst(i)%vital, ", restart_mode=", this%lst(i)%restart_mode, &
+            ! theoretically we can print even 452 entries for position
+            write(msg,'(3a,l2,a,i2,a,l2,a,i2,a,i3,a,400i2)')"'", this%lst(i)%name, "', vital=", this%lst(i)%vital, ", restart_mode=", this%lst(i)%restart_mode, &
                  &                                        ", multigrid=", this%lst(i)%multigrid, ", ord_prolong=", this%lst(i)%ord_prolong, &
                  &                                        ", components=", this%lst(i)%dim4, ", position=", this%lst(i)%position(:)
          endif
