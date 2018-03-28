@@ -76,14 +76,13 @@ contains
 !*/
    subroutine all_sources(n, u, u0, u1, cg, istep, sweep, i1, i2, coeffdt, pressure, vel_sweep)
 
-      use fluidindex,       only: iarr_all_dn, flind
-      use global,           only: integration_order
+      use fluidindex,       only: flind
       use grid_cont,        only: grid_container
       use gridgeometry,     only: geometry_source_terms_exec
 #ifdef BALSARA
       use interactions,     only: balsara_implicit_interactions
 #else /* !BALSARA */
-      use interactions,     only: fluid_interactions
+      use interactions,     only: fluid_interactions_exec
 #endif /* !BALSARA */
 #ifdef GRAV
       use gravity,          only: grav_pot2accel
@@ -126,17 +125,13 @@ contains
 
 !locals
       real, dimension(n, flind%all)                 :: usrc, newsrc       !< u array update from sources
-      real, dimension(n, flind%fluids), target      :: density            !< gas density
-      real, dimension(:,:),            pointer      :: dens, vx
+      real, dimension(:,:),            pointer      :: vx
 
       logical                                       :: full_dim
 
       full_dim = n > 1
 
       vx   => vel_sweep
-      dens => density
-
-      density(:,:) = u(:, iarr_all_dn)
 
       usrc = 0.0
 
@@ -144,7 +139,7 @@ contains
       usrc(:,:) = usrc(:,:) + newsrc(:,:)
 
 #ifndef BALSARA
-      call get_updates_from_acc(n, u, usrc, fluid_interactions(dens, vx))  ! n safe
+      call get_updates_from_acc(n, u, usrc, fluid_interactions_exec(n, u, vx))  ! n safe
 #else /* !BALSARA */
       call balsara_implicit_interactions(u1, u0, vx, istep, sweep, i1, i2, cg) ! n safe
 #endif /* !BALSARA */

@@ -40,7 +40,7 @@ module interactions
    implicit none
 
    private
-   public :: init_interactions, cleanup_interactions, fluid_interactions, collfaq, cfl_interact, dragc_gas_dust, has_interactions, &
+   public :: init_interactions, cleanup_interactions, fluid_interactions_exec, collfaq, cfl_interact, dragc_gas_dust, has_interactions, &
       & interactions_grace_passed, epstein_factor, balsara_implicit_interactions, update_grain_size
 
    real, allocatable, dimension(:,:)          :: collfaq            !< flind%fluids x flind%fluids array of collision factors
@@ -469,5 +469,30 @@ contains
       enddo
 
    end function dragforce
+
+!>
+!! \brief interface between sources and fluid_interactions
+!! \todo do it better
+!<
+   function fluid_interactions_exec(nn,uu,velx) result(acc)
+
+      use fluidindex, only: flind, iarr_all_dn
+
+      implicit none
+
+      integer(kind=4),                intent(in) :: nn                  !< array size
+      real, dimension(nn, flind%all), intent(in) :: uu                  !< vector of conservative variables
+      real, dimension(:,:), pointer,  intent(in) :: velx
+      real, dimension(size(velx,1),size(velx,2)) :: acc
+!locals
+      real, dimension(nn, flind%fluids), target  :: density            !< gas density
+      real, dimension(:,:),            pointer   :: dens
+
+      dens => density
+      density(:,:) = uu(:, iarr_all_dn)
+
+      acc(:,:) = fluid_interactions(dens,velx)
+
+   end function fluid_interactions_exec
 
 end module interactions
