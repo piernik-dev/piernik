@@ -526,6 +526,7 @@ contains
      real, dimension(size(psi,1),size(psi,2))           :: psi__l, psi__r, dpsi1, dpsi2, dpsi3
      real, dimension(size(psi,1),size(psi,2)), target   :: psi_l, psi_r
      real, dimension(size(psi,1),size(psi,2)),target    :: psi_cc
+     
 
      integer                                            :: nx
 
@@ -853,6 +854,7 @@ enddo
            use hdc,              only: chspeed
            use fluidindex,       only: flind
            use global,           only: divB_0_method, glm_iter, use_hdc_1D, cfl, glm_alpha
+           
 #ifdef COSM_RAYS
            use fluidindex,       only: iarr_all_dn, iarr_all_mx, iarr_all_en
            use global,           only: dt
@@ -923,7 +925,9 @@ enddo
                  psi(:,nx) = psi(:,nx-1)
 
                  !damping
-                 psi = psi * exp(-glm_alpha*cfl)
+                 !psi = psi * exp(-glm_alpha*cfl)
+                 psi = psi*exp(-glm_alpha*chspeed*dtodx)
+                 
               enddo
            endif
 
