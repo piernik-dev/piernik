@@ -853,7 +853,7 @@ enddo
            use constants,        only: xdim, ydim, zdim, DIVB_HDC
            use hdc,              only: chspeed
            use fluidindex,       only: flind
-           use global,           only: divB_0_method, glm_iter, use_hdc_1D, cfl, glm_alpha
+           use global,           only: divB_0_method, glm_iter, use_hdc_1D, glm_alpha !cfl
            
 #ifdef COSM_RAYS
            use fluidindex,       only: iarr_all_dn, iarr_all_mx, iarr_all_en
@@ -925,7 +925,6 @@ enddo
                  psi(:,nx) = psi(:,nx-1)
 
                  !damping
-                 !psi = psi * exp(-glm_alpha*cfl)
                  psi = psi*exp(-glm_alpha*chspeed*dtodx)
                  
               enddo
