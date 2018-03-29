@@ -175,7 +175,7 @@ program piernik
    enddo ! main loop
 #ifdef MAGNETIC
       if (print_divB > 0) then
-         if (mod(nstep, print_divB) /= 0) call print_divB_norm ! print the norm at the end if it wasn't printed inside the loop above
+         if (mod(nstep, print_divB) /= 0) call print_divB_norm ! print the norm at the end, if it wasn't printed inside the loop above
       endif
 #endif
 

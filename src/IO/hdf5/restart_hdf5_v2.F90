@@ -435,7 +435,7 @@ contains
 
       function pick_size(ncg, mode) result(n_b)
 
-         use constants,  only: AT_OUT_B, AT_NO_B, AT_USER, ndims
+         use constants,  only: AT_OUT_B, AT_NO_B, AT_USER, ndims, INVALID
          use dataio_pub, only: die
 
          implicit none
@@ -445,6 +445,7 @@ contains
 
          integer(kind=4), dimension(ndims) :: n_b
 
+         n_b = INVALID
          select case (mode)
             case (AT_OUT_B)
                n_b = cg_all_n_o(:, ncg)
