@@ -115,8 +115,8 @@ contains
       use global,      only: dt, dtm, t
       use mass_defect, only: update_magic_mass
 #ifdef COSM_RAY_ELECTRONS
-      use cresp_grid,    only: cresp_update_grid
-      use initcrspectrum,only: use_cresp
+      use cresp_grid,      only: cresp_update_grid
+      use initcrspectrum,  only: use_cresp
 #endif /* COSM_RAY_ELECTRONS */
 
       implicit none

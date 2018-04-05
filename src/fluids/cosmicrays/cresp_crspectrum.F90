@@ -519,10 +519,10 @@ contains
 !
 !-------------------------------------------------------------------------------------------------
   subroutine cresp_init_state(init_n, init_e, f_amplitude, sptab)
-   use initcrspectrum, only: ncre, spec_mod_trms, q_init, p_lo_init, p_up_init, initial_condition, allow_source_spectrum_break, & ! f_init, bump_amp
+   use initcrspectrum,  only: ncre, spec_mod_trms, q_init, p_lo_init, p_up_init, initial_condition, allow_source_spectrum_break, & ! f_init, bump_amp
                         e_small_approx_init_cond, e_small_approx_p_lo, e_small_approx_p_up, crel, p_fix, w,&
                         p_min_fix, p_max_fix, add_spectrum_base, e_small, test_spectrum_break, cresp_all_bins
-   use cresp_NR_method,only: e_small_to_f
+   use cresp_NR_method, only: e_small_to_f
    use constants, only: zero, I_ONE, fpi
    use cresp_variables, only: clight ! use units, only: clight
    implicit none
@@ -1246,9 +1246,9 @@ contains
 ! distribution function value on left bin edge "f"
 !---------------------------------------------------------------------------------------------------
   subroutine get_fqp_up(exit_code)
-   use initcrspectrum, only: e_small, q_big, p_fix, NR_refine_solution_pf
-   use constants, only: zero, one, two
-   use cresp_NR_method,only: intpol_pf_from_NR_grids, alpha, n_in, selected_function_2D, fvec_up, &
+   use initcrspectrum,  only: e_small, q_big, p_fix, NR_refine_solution_pf
+   use constants,       only: zero, one, two
+   use cresp_NR_method, only: intpol_pf_from_NR_grids, alpha, n_in, selected_function_2D, fvec_up, &
             NR_algorithm, e_small_to_f, q_ratios
    use cresp_variables, only: clight ! use units, only: clight
    implicit none

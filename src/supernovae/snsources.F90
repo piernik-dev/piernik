@@ -188,11 +188,9 @@ contains
       use initcosmicrays, only: iarr_crn
 #endif /* COSM_RAYS_SOURCES */
 #ifdef COSM_RAY_ELECTRONS
-      use cresp_crspectrum,only: e_tot_2_f_init_params, cresp_init_state, e_tot_2_en_powl_init_params
-      use cresp_NR_method, only: cresp_initialize_guess_grids
-      use cresp_grid,      only: cresp_init_grid
-      use initcrspectrum,  only: cresp, cre_eff, e_small
-      use initcosmicrays,  only: iarr_cre_n, iarr_cre_e
+      use cresp_crspectrum,   only: e_tot_2_f_init_params, cresp_init_state, e_tot_2_en_powl_init_params
+      use initcrspectrum,     only: cresp, cre_eff, e_small
+      use initcosmicrays,     only: iarr_cre_n, iarr_cre_e
 #endif /* COSM_RAY_ELECTRONS */
 
       implicit none
