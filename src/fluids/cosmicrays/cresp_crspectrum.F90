@@ -89,7 +89,7 @@ contains
    use constants, only: zero, one
    implicit none
     real(kind=8), dimension(1:2), intent(inout), optional :: p_out
-    real(kind=8), dimension(1:2), intent(inout) :: v_n, v_e
+    real(kind=8), dimension(:), pointer, intent(inout) :: v_n, v_e
     logical, intent(inout)                      :: cfl_cresp_violation
     real(kind=8), intent(in)  :: dt
     real(kind=8), dimension(1:ncre), intent(inout)   :: n_inout, e_inout

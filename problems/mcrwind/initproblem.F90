@@ -184,8 +184,6 @@ contains
 #endif /* COSM_RAYS_SOURCES */
 #ifdef COSM_RAY_ELECTRONS
       use cresp_crspectrum,   only: e_tot_2_f_init_params, cresp_init_powl_spectrum, cresp_init_state, e_tot_2_en_powl_init_params
-      use cresp_NR_method,    only: cresp_initialize_guess_grids
-      use cresp_grid,         only: cresp_init_grid
       use initcrspectrum,     only: taylor_coeff_2nd, taylor_coeff_3rd, expan_order
       use initcosmicrays,  only: iarr_cre_n, iarr_cre_e
 #ifdef SN_GALAXY
@@ -216,11 +214,6 @@ contains
 #ifdef GRAV
       call grav_pot_3d
 #endif /* GRAV */
-
-#ifdef COSM_RAY_ELECTRONS
-      call cresp_initialize_guess_grids
-      call cresp_init_grid
-#endif /* COSM_RAY_ELECTRONS */
 
 !   Secondary parameters
       fl => flind%ion

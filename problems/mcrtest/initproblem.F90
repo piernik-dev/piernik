@@ -173,8 +173,6 @@ contains
      use initcosmicrays,   only: ncrn, iarr_cre_e, iarr_cre_n
      use initcrspectrum,   only: expan_order, taylor_coeff_2nd, taylor_coeff_3rd, e_small, cresp, cre_eff
      use cresp_crspectrum, only: e_tot_2_f_init_params, cresp_init_powl_spectrum, cresp_init_state, e_tot_2_en_powl_init_params
-     use cresp_grid,       only: cresp_init_grid
-     use cresp_NR_method,  only: cresp_initialize_guess_grids
 #endif /* COSM_RAY_ELECTRONS */
 
       implicit none
@@ -232,11 +230,6 @@ contains
             enddo
          enddo
 #endif /* !ISO */
-
-#ifdef COSM_RAY_ELECTRONS
-      call cresp_initialize_guess_grids
-      call cresp_init_grid
-#endif /* COSM_RAY_ELECTRONS */
 
 #ifdef COSM_RAYS
          do icr = 1, flind%crs%all

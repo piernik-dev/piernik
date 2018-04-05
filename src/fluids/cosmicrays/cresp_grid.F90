@@ -12,7 +12,10 @@ module cresp_grid
 
       real(kind=8)                    :: dt_cre
       logical                         :: cfl_cresp_violation
-      integer(kind=4), save           :: i_up_max_prev, i_mid=0, j_mid=0, k_mid=0
+      integer(kind=4), save           :: i_up_max_prev
+! CRESP names
+      character(len=*), parameter :: vn_n = "vn" !< helping array for CRESP number density
+      character(len=*), parameter :: ve_n = "ve" !< helping array for CRESP energy density
 contains
 
  subroutine cresp_update_grid
@@ -21,11 +24,12 @@ contains
   use constants,        only: xdim, ydim, zdim
   use grid_cont,        only: grid_container
   use cresp_crspectrum, only:cresp_update_cell, printer
-  use initcrspectrum,   only: spec_mod_trms, virtual_e, virtual_n, synch_active, adiab_active, cresp, magnetic_energy_scaler
-  use named_array_list, only: qna
+  use initcrspectrum,   only: spec_mod_trms, synch_active, adiab_active, cresp, magnetic_energy_scaler
+  use named_array_list, only: qna, wna
   use crhelpers,        only: divv_n
   use func,             only: emag, ekin, operator(.equals.), operator(.notequals.)
   implicit none
+    real(kind=8), dimension(:) ,pointer :: virtual_e => null(), virtual_n => null()
     integer                         :: i, j, k
     type(cg_list_element),  pointer :: cgl
     type(grid_container),   pointer :: cg
@@ -41,18 +45,17 @@ contains
                         sptab%ud = 0.0 ; sptab%ub = 0.0 ; sptab%ucmb = 0.0
                         cresp%n    = cg%u(iarr_cre_n, i, j, k)
                         cresp%e    = cg%u(iarr_cre_e, i, j, k)
+                        virtual_n  => cg%w(wna%ind(vn_n))%point([i,j,k])
+                        virtual_e  => cg%w(wna%ind(ve_n))%point([i,j,k])
                         if (synch_active) sptab%ub = emag(cg%b(xdim,i,j,k), cg%b(ydim,i,j,k), cg%b(zdim,i,j,k)) * magnetic_energy_scaler
                         if (synch_active) sptab%ud = cg%q(qna%ind(divv_n))%point([i,j,k])
 #ifdef VERBOSE
                         print *, 'Output of cosmic ray electrons module for grid cell with coordinates i,j,k:', i, j, k
 #endif /* VERBOSE */
-                        call cresp_update_cell(2*dt, cresp%n, cresp%e, sptab, virtual_n(1:2,i,j,k), virtual_e(1:2,i,j,k), cfl_cresp_violation)
+                        call cresp_update_cell(2*dt, cresp%n, cresp%e, sptab, virtual_n, virtual_e, cfl_cresp_violation)
                         if ( cfl_cresp_violation ) return ! nothing to do here!
                         cg%u(iarr_cre_n, i, j, k) = cresp%n
                         cg%u(iarr_cre_e, i, j, k) = cresp%e
-                        if (i.eq.i_mid.and.j.eq.j_mid.and.k.eq.k_mid) then ! diagnostic:
-                            call printer(t)
-                        endif
                     enddo
                 enddo
             enddo
@@ -62,21 +65,23 @@ contains
 !----------------------------------------------------------------------------------------------------
   subroutine cresp_init_grid
    use cg_leaves,          only: leaves
+   use cg_list_global,     only: all_cg
    use cg_list,            only: cg_list_element
-   use constants,          only: LO, HI, xdim, ydim, zdim, zero
    use grid_cont,          only: grid_container
-   use initcrspectrum,     only: ncre, f_init, p_up_init, p_lo_init, q_init, cre_eff, initial_condition, bump_amp, &
-                             virtual_e, virtual_n, e_small, e_small_approx_p_lo, e_small_approx_p_up
-   use cresp_crspectrum,   only: cresp_init_state, cresp_allocate_all, printer, e_threshold_lo, e_threshold_up, &
-                               fail_count_interpol, fail_count_no_sol, fail_count_NR_2dim, fail_count_comp_q, second_fail
+   use initcrspectrum,     only: e_small, e_small_approx_p_lo, e_small_approx_p_up
+   use cresp_crspectrum,   only: cresp_allocate_all, e_threshold_lo, e_threshold_up, &
+                                 fail_count_interpol, fail_count_no_sol, fail_count_NR_2dim, fail_count_comp_q, second_fail
+   use cresp_NR_method,    only: cresp_initialize_guess_grids
    use dataio_pub,         only: warn, printinfo
+   use named_array_list,   only: wna
    implicit none
     type(cg_list_element),  pointer :: cgl
     type(grid_container),   pointer :: cg
-    logical, save :: first_run = .true.
+    logical, save :: first_run = .true., not_zeroed = .true.
       if (first_run .eqv. .true.) then
+        call cresp_initialize_guess_grids
         call cresp_allocate_all
-        
+
         fail_count_interpol = 0
         fail_count_no_sol   = 0
         fail_count_NR_2dim  = 0
@@ -85,30 +90,24 @@ contains
 
         e_threshold_lo = e_small * e_small_approx_p_lo
         e_threshold_up = e_small * e_small_approx_p_up
+
+        call all_cg%reg_var(vn_n, dim4=2) !< registering helper virtual arrays for CRESP number density
+        call all_cg%reg_var(ve_n, dim4=2) !< registering helper virtual arrays for CRESP energy density
         
         cgl => leaves%first
         do while (associated(cgl))
             cg => cgl%cg
-            cg%u(iarr_cre_e,:,:,:) = zero
-            cg%u(iarr_cre_n,:,:,:) = zero
-
-            i_mid = int((cg%lhn(xdim,LO)+cg%lhn(xdim,HI))/2,kind=4)
-            j_mid = int((cg%lhn(ydim,LO)+cg%lhn(ydim,HI))/2,kind=4)
-            k_mid = int((cg%lhn(zdim,LO)+cg%lhn(zdim,HI))/2,kind=4)
-
-            if (.not. allocated(virtual_e)) allocate(virtual_e(1:2, cg%lhn(xdim,LO):cg%lhn(xdim,HI), &
-                cg%lhn(ydim,LO):cg%lhn(ydim,HI), cg%lhn(zdim,LO):cg%lhn(zdim,HI)))
-            if (.not. allocated(virtual_n)) allocate(virtual_n(1:2, cg%lhn(xdim,LO):cg%lhn(xdim,HI), &
-                cg%lhn(ydim,LO):cg%lhn(ydim,HI), cg%lhn(zdim,LO):cg%lhn(zdim,HI)))
-            virtual_e = zero
-            virtual_n = zero
-            call printinfo("[cresp_grid:cresp_init_grid] CRESP initialized")
-
-            cgl=>cgl%nxt
+               cg%w(wna%ind(vn_n))%arr = 0.0
+               cg%w(wna%ind(ve_n))%arr = 0.0
+               not_zeroed = .false.
+            cgl => cgl%nxt
          enddo
+
+         call printinfo(" [cresp_grid:cresp_init_grid] CRESP initialized")
          first_run = .false. ! FIXME uncommenting results inf SIGFPE for some reason; whole subroutine is called twice.
       endif
-      if (first_run) call warn("[cresp_grid:cresp_init_grid] CRESP might not be initialized!")
+      if (first_run)  call warn("[cresp_grid:cresp_init_grid] CRESP might not be initialized!")
+      if (not_zeroed) call warn("[cresp_grid:cresp_init_grid] CRESP virtual arrays might not be initialized properly!")
 
   end subroutine cresp_init_grid
 !----------------------------------------------------------------------------------------------------
