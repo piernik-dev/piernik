@@ -23,7 +23,7 @@ module cresp_NR_method
   real(kind=8) :: small_eps = 1.0e-25
   real(kind=8), pointer, dimension(:)   :: p_a => null(), p_n => null() ! pointers for alpha_tab_(lo,up) and n_tab_(lo,up) or optional - other 1-dim arrays
   real(kind=8), pointer, dimension(:,:) :: p_p => null(), p_f => null() ! pointers for p_ratios_(lo,up) and f_ratios_(lo,up)
-  
+
   abstract interface
     function function_pointer_1D(z)
       real(kind=8) :: function_pointer_1D
@@ -44,7 +44,7 @@ module cresp_NR_method
   procedure (function_pointer_2D), pointer :: selected_function_2D => null()
 
 !----------------------------------------------------------------------------------------------------
-  
+
   contains !  -------*--------
 
   subroutine NR_algorithm(x,exit_code)
@@ -152,23 +152,24 @@ module cresp_NR_method
   use constants, only: half
    implicit none
     real(kind=8),intent(in) :: x
-    real(kind=8)            :: dx, dx_par, derivative_1D
-        dx_par = 1.0e-4
-        dx = min(x*dx_par, dx_par)
+    real(kind=8)            :: dx, derivative_1D
+    real(kind=8)            :: dx_par = 1.0e-4
+        dx = min(max(x*dx_par, eps), dx_par)
         derivative_1D = half * (selected_function_1D(x+dx) - selected_function_1D(x-dx))/dx
   end function derivative_1D
 !----------------------------------------------------------------------------------------------------
   subroutine cresp_initialize_guess_grids
    use constants,      only: zero
    use initcrspectrum, only: e_small, q_big, max_p_ratio, p_fix
-   use cresp_variables, only: clight ! use units, only: clight
+   use cresp_variables,only: clight ! use units, only: clight
+   use mpisetup,       only: master
    implicit none
     logical   :: first_run = .true. , save_to_log = .false.
     character(8)  :: date
     character(9) :: time
+      call initialize_arrays
+      if (master) then
         open(15, file="log_NR_solve",position="append")
-        call initialize_arrays
-        
         if (first_run .eqv. .true. ) then
             helper_arr_dim = int(arr_dim/4,kind=4)
             if (.not. allocated(p_space))     allocate(p_space(1:helper_arr_dim)) ! these will be deallocated once initialization is over
@@ -185,9 +186,9 @@ module cresp_NR_method
                 write (*,"(A100)") "p**q may result in FPE, check your parameters" ! use msg
                 call sleep(1)
             endif
-            
+
             call fill_guess_grids
-        
+
             print *, "Are there zeros? (q_ratios)",    count(abs(q_space).le.zero)
             print *, "Are there zeros? (p_ratios_up)", count(p_ratios_up.le.zero)
             print *, "Are there zeros? (f_ratios_up)", count(f_ratios_up.le.zero)
@@ -223,7 +224,9 @@ module cresp_NR_method
             first_run = .false.
         endif
         close(15)
-! 
+      endif
+      call cresp_NR_mpi_exchange
+
   end subroutine cresp_initialize_guess_grids
 !----------------------------------------------------------------------------------------------------
   subroutine fill_guess_grids
@@ -806,7 +809,7 @@ end subroutine
    real(kind=8), parameter          :: dx_par = 1.0e-4
    integer(kind=2) :: j
         do j = 1,size(x)
-            dx(:) = min(x(:)*dx_par,dx_par) ! the value of dx is scaled not to go over value of x
+            dx(:) = min(max(x(:)*dx_par,eps),dx_par) ! the value of dx is scaled not to go over value of x
             xp = x ; xm = x
             xp(j) = x(j) - dx(j) ;  xm(j) = x(j) + dx(j)
             jac_fin_diff(:,j)  = half*( selected_function_2D(xp) - selected_function_2D(xm)) / dx(j)
@@ -1430,7 +1433,7 @@ end subroutine
         f_name = "loc_"//bound_case//".dat"
         open(32, file=f_name, status="unknown", position="append")
         write (32,"(2I5)") loc1, loc2
-        
+
         close(32)
   end subroutine save_loc
 !----------------------------------------------------------------------------------------------------  
@@ -1501,6 +1504,20 @@ end subroutine
     real(kind=8)    :: value, min_in, max_in
      inverse_f_to_ind = int((log10(value/min_in)/log10(max_in/min_in)) * (arr_dim - I_ONE )) + I_ONE
   end function inverse_f_to_ind
+!----------------------------------------------------------------------------------------------------
+ subroutine cresp_NR_mpi_exchange
+ use mpisetup,       only: piernik_MPI_Bcast
+ implicit none
+    call piernik_MPI_Bcast(p_ratios_lo)
+    call piernik_MPI_Bcast(p_ratios_up)
+    call piernik_MPI_Bcast(f_ratios_lo)
+    call piernik_MPI_Bcast(f_ratios_up)
+    call piernik_MPI_Bcast(n_tab_lo)
+    call piernik_MPI_Bcast(n_tab_up)
+    call piernik_MPI_Bcast(alpha_tab_up)
+    call piernik_MPI_Bcast(alpha_tab_lo)
+    call piernik_MPI_Bcast(alpha_tab_q)
+ end subroutine cresp_NR_mpi_exchange
 !====================================================================================================
 ! Solver test section
 !----------------------------------------------------------------------------------------------------
@@ -1565,15 +1582,20 @@ end subroutine
  subroutine initialize_arrays
  use diagnostics, only: my_allocate_with_index, my_allocate
  implicit none
+   integer(kind=4), dimension(1) :: ma1d
+   integer(kind=4), dimension(2) :: ma2d
+    ma1d = arr_dim
+    ma2d = [arr_dim, arr_dim]
+
     call my_allocate_with_index(alpha_tab_lo,arr_dim,1)
     call my_allocate_with_index(alpha_tab_up,arr_dim,1)
     call my_allocate_with_index(n_tab_lo,arr_dim,1)
     call my_allocate_with_index(n_tab_up,arr_dim,1)
     call my_allocate_with_index(alpha_tab_q,arr_dim,1)
     call my_allocate_with_index(q_grid,arr_dim,1)
-    call my_allocate(p_ratios_lo, (/ arr_dim, arr_dim /) )
-    call my_allocate(f_ratios_lo, (/ arr_dim, arr_dim /) )
-    call my_allocate(p_ratios_up, (/ arr_dim, arr_dim /) )
-    call my_allocate(f_ratios_up, (/ arr_dim, arr_dim /) )
+    call my_allocate(p_ratios_lo, ma2d )
+    call my_allocate(f_ratios_lo, ma2d )
+    call my_allocate(p_ratios_up, ma2d )
+    call my_allocate(f_ratios_up, ma2d )
  end subroutine initialize_arrays
 end module cresp_NR_method
