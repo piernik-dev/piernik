@@ -69,6 +69,7 @@ contains
    use cg_list,            only: cg_list_element
    use grid_cont,          only: grid_container
    use initcrspectrum,     only: e_small, e_small_approx_p_lo, e_small_approx_p_up
+   use initcosmicrays,     only: iarr_cre_n, iarr_cre_e
    use cresp_crspectrum,   only: cresp_allocate_all, e_threshold_lo, e_threshold_up, &
                                  fail_count_interpol, fail_count_no_sol, fail_count_NR_2dim, fail_count_comp_q, second_fail
    use cresp_NR_method,    only: cresp_initialize_guess_grids
@@ -97,6 +98,8 @@ contains
         cgl => leaves%first
         do while (associated(cgl))
             cg => cgl%cg
+               cg%u(iarr_cre_n,:,:,:)  = 0.0
+               cg%u(iarr_cre_e,:,:,:)  = 0.0
                cg%w(wna%ind(vn_n))%arr = 0.0
                cg%w(wna%ind(ve_n))%arr = 0.0
                not_zeroed = .false.
