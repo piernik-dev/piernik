@@ -61,15 +61,15 @@ contains
   end subroutine cresp_update_grid
 !----------------------------------------------------------------------------------------------------
   subroutine cresp_init_grid
-   use cg_leaves,       only: leaves
-   use cg_list,         only: cg_list_element
-   use constants,       only: LO, HI, xdim, ydim, zdim, zero
-   use grid_cont,       only: grid_container
-   use initcrspectrum,  only: ncre, f_init, p_up_init, p_lo_init, q_init, cre_eff, initial_condition, bump_amp, &
+   use cg_leaves,          only: leaves
+   use cg_list,            only: cg_list_element
+   use constants,          only: LO, HI, xdim, ydim, zdim, zero
+   use grid_cont,          only: grid_container
+   use initcrspectrum,     only: ncre, f_init, p_up_init, p_lo_init, q_init, cre_eff, initial_condition, bump_amp, &
                              virtual_e, virtual_n, e_small, e_small_approx_p_lo, e_small_approx_p_up
-   use cresp_crspectrum,only: cresp_init_state, cresp_allocate_all, printer, e_threshold_lo, e_threshold_up, &
+   use cresp_crspectrum,   only: cresp_init_state, cresp_allocate_all, printer, e_threshold_lo, e_threshold_up, &
                                fail_count_interpol, fail_count_no_sol, fail_count_NR_2dim, fail_count_comp_q, second_fail
-   use dataio_pub,      only: warn, printinfo
+   use dataio_pub,         only: warn, printinfo
    implicit none
     type(cg_list_element),  pointer :: cgl
     type(grid_container),   pointer :: cg
@@ -113,17 +113,17 @@ contains
   end subroutine cresp_init_grid
 !----------------------------------------------------------------------------------------------------
   subroutine grid_cresp_timestep
-   use cg_leaves,       only: leaves
-   use cg_list,         only: cg_list_element
-   use crhelpers,       only: divv_n
-   use func,            only: emag !, operator(.equals.), operator(.notequals.)
-   use grid_cont,       only: grid_container
-   use constants,       only: xdim, ydim, zdim
-   use named_array_list,only: qna
-   use constants,       only: one, half
-   use initcrspectrum,  only: spec_mod_trms, cfl_cre, synch_active, adiab_active, magnetic_energy_scaler
-   use initcosmicrays,  only: K_cre_paral, K_cre_perp
-   use timestep_cresp,  only: cresp_timestep, dt_cre_min_ub, dt_cre_min_ud
+   use cg_leaves,          only: leaves
+   use cg_list,            only: cg_list_element
+   use crhelpers,          only: divv_n
+   use func,               only: emag !, operator(.equals.), operator(.notequals.)
+   use grid_cont,          only: grid_container
+   use constants,          only: xdim, ydim, zdim
+   use named_array_list,   only: qna
+   use constants,          only: one, half
+   use initcrspectrum,     only: spec_mod_trms, cfl_cre, synch_active, adiab_active, magnetic_energy_scaler
+   use initcosmicrays,     only: K_cre_paral, K_cre_perp
+   use timestep_cresp,     only: cresp_timestep, dt_cre_min_ub, dt_cre_min_ud
    implicit none
     integer(kind=4)                 :: i, j, k, i_up_max, i_up_max_tmp
     type(grid_container), pointer   :: cg
