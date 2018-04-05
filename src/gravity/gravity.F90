@@ -350,7 +350,7 @@ contains
 
       type(grid_container), pointer,  intent(inout) :: cg
 
-      if (cg%level_id >= base_level_id) then
+      if (cg%l%id >= base_level_id) then
 
          cg%gpot  => cg%q(qna%ind( gpot_n))%arr
          cg%hgpot => cg%q(qna%ind(hgpot_n))%arr

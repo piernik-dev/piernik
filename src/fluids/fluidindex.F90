@@ -120,7 +120,7 @@ contains
       use initionized,    only: ion_fluid
       use initneutral,    only: neutral_fluid
 #ifdef COSM_RAYS
-      use initcosmicrays, only: iarr_crn, iarr_cre, cosmicray_index, iarr_crs, iarr_crs_diff ! use of crs /deprecated
+      use initcosmicrays, only: iarr_crn, iarr_cre, cosmicray_index, iarr_crs, iarr_crs_diff
 #endif /* COSM_RAYS */
 #ifdef TRACER
       use inittracer,     only: tracer_index, iarr_trc
@@ -160,7 +160,7 @@ contains
 #endif /* TRACER */
 
 ! Allocate index arrays
-      if (has_ion) allocate(iarr_mag_swp(ndims,nmag),iarr_all_mag(nmag))
+      allocate(iarr_mag_swp(ndims,nmag),iarr_all_mag(nmag))
       allocate(iarr_all_swp(xdim:zdim, flind%all))
       allocate(iarr_all_dn(flind%fluids),iarr_all_mx(flind%fluids),iarr_all_my(flind%fluids),iarr_all_mz(flind%fluids))
       allocate(iarr_all_sg(flind%fluids_sg))
@@ -171,14 +171,14 @@ contains
 #endif /* !ISO */
 
 #ifdef COSM_RAYS
-      allocate(iarr_all_crs(flind%crs%all)) !!! when cre is incorporated this will be deprecated
+      allocate(iarr_all_crs(flind%crs%all))
       allocate(iarr_all_crn(flind%crn%all))
-      allocate(iarr_all_cre(flind%cre%all)) ! possibly this should be brought under separate precompiler flag
+      allocate(iarr_all_cre(flind%cre%all))
 
 #else /* !COSM_RAYS */
       allocate(iarr_all_crn(0))
       allocate(iarr_all_cre(0))
-      allocate(iarr_all_crs(0)) !!! when cre is incorporated this will be deprecated
+      allocate(iarr_all_crs(0))
 #endif /* !COSM_RAYS */
 
 #ifdef TRACER
@@ -193,9 +193,9 @@ contains
          iarr_mag_swp(ydim,:) = [ydim,xdim,zdim]
          iarr_mag_swp(zdim,:) = [zdim,ydim,xdim]
          iarr_all_mag(:)      = [xdim,ydim,zdim]
-         ! Compute index arrays for the ionized fluid
-         call set_fluidindex_arrays(flind%ion,.true.)
       endif
+      ! Compute index arrays for the ionized fluid
+      if (has_ion) call set_fluidindex_arrays(flind%ion,.true.)
 
       ! Compute index arrays for the neutral fluid
       if (has_neu) call set_fluidindex_arrays(flind%neu,.true.)

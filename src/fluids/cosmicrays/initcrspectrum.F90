@@ -1,11 +1,17 @@
 module initcrspectrum  
-! pulled by COSM_RAY_ELECTRONS
+! pulled by COSM_RAYS
 
+#ifdef COSM_RAY_ELECTRONS
  public ! QA_WARN no secrets are kept here
- private init_cresp_types
+#endif /* COSM_RAY_ELECTRONS */
+#ifndef COSM_RAY_ELECTRONS
+ public ncre, p_min_fix, p_max_fix, f_init, q_init, q_big, p_lo_init, p_up_init, cfl_cre, cre_eff, K_cre_paral_1, K_cre_perp_1, &
+      & K_cre_pow, p_mid_fix, expan_order
+#endif /* not COSM_RAY_ELECTRONS */
 
 ! contains routines reading namelist in problem.par file dedicated to cosmic ray electron spectrum and initializes types used.
 ! available via namelist COSMIC_RAY_SPECTRUM
+ logical            :: use_cresp = .true.       ! < determines whether CRESP update is called by fluidupdate
  integer(kind=4)    :: ncre      = 0            ! < number of bins
  real(kind=8)       :: p_min_fix = 1.5e1        ! < fixed momentum grid lower cutoff
  real(kind=8)       :: p_max_fix = 1.65e4       ! < fixed momentum grid upper cutoff
@@ -33,6 +39,15 @@ module initcrspectrum
  logical            :: NR_run_refine_pf  = .false.      ! < enables "refine_grids" subroutines that fill empty spaces on the solution grid
  logical            :: NR_refine_solution_q = .false.    ! < enables NR_1D refinement for value of interpolated "q" value
  logical            :: NR_refine_solution_pf = .false.  ! < enables NR_2D refinement for interpolated values of "p" and "f". Note - algorithm tries to refine values if interpolation was unsuccessful.
+ logical            :: prevent_neg_en = .true.  ! < forces e,n=eps where e or n drops below zero due to diffusion algorithm (TEMP workaround)
+ logical            :: test_spectrum_break    = .false.  ! < introduce break in the middle of the spectrum (to see how algorithm handles it), TEMP
+ real(kind=8)       :: magnetic_energy_scaler = 0.001    ! < decreases magnetic energy amplitude at CRESP, TEMP
+ logical            :: allow_source_spectrum_break  = .false.  ! < allow extension of spectrum to adjacent bins if momenta found exceed set p_fix
+ logical            :: synch_active = .true.    ! < TEST feature - turns on / off synchrotron cooling @ CRESP
+ logical            :: adiab_active = .true.    ! < TEST feature - turns on / off adiabatic   cooling @ CRESP
+ logical            :: cre_gpcr_ess = .false.    ! < electron essentiality for gpcr computation
+ real(kind=8)       :: cre_active   = 0.0       ! < electron contribution to Pcr
+ 
  real(kind=8)       :: tol_f = 1.0e-11          ! < tolerance for f abs. error in NR algorithm
  real(kind=8)       :: tol_x = 1.0e-11          ! < tolerance for x abs. error in NR algorithm
  real(kind=8)       :: tol_f_1D = 1.0e-14 ! < tolerance for f abs. error in NR algorithm (1D)
@@ -54,7 +69,11 @@ module initcrspectrum
     real(kind=8),allocatable,dimension(:)   :: n
     real(kind=8) :: dt
   end type bin_old
-
+  type cr_spectrum
+    real(kind=8),allocatable,dimension(:)   :: e
+    real(kind=8),allocatable,dimension(:)   :: n
+  end type cr_spectrum
+  type(cr_spectrum) cresp
   type(bin_old) crel
 ! For passing terms to compute energy sources / sinks
   type spec_mod_trms
@@ -64,26 +83,29 @@ module initcrspectrum
   end type spec_mod_trms
   
   real(kind=8), allocatable, dimension(:,:,:,:) :: virtual_n, virtual_e ! arrays for storing n and e in bins that receive particles but are not yet activated, i.e. where the energy is less than e_small
-      
+
   integer(kind=4)  :: taylor_coeff_2nd, taylor_coeff_3rd
   
   real(kind=8)     :: p_fix_ratio
 
-  integer,allocatable, dimension(:) :: cresp_edges
+  integer,allocatable, dimension(:) :: cresp_all_edges, cresp_all_bins
+
 !====================================================================================================
 !  
  contains
 !
 !====================================================================================================
-
   subroutine init_cresp
    use constants,             only: I_ZERO, zero, ten
-   use diagnostics, only: my_allocate_with_index
+   use diagnostics,           only: my_allocate_with_index
    implicit none
     integer                  :: i       ! enumerator
     logical, save            :: first_run = .true.
 
     call cresp_read_nml_module
+
+    open(10, file='crs.dat',status='replace',position='rewind')     ! diagnostic files
+    open(11, file='crs_ne.dat',status='replace',position='rewind')  ! diagnostic files
 
     if (first_run .eqv. .true.) then
         if (ncre .ne. I_ZERO)  then
@@ -131,23 +153,27 @@ module initcrspectrum
 ! arrays initialization
             call my_allocate_with_index(p_fix,ncre,0)
             call my_allocate_with_index(p_mid_fix,ncre,1)
-            call my_allocate_with_index(cresp_edges,ncre,0)
+            call my_allocate_with_index(cresp_all_edges,ncre,0)
+            call my_allocate_with_index(cresp_all_bins, ncre,1)
 
-            cresp_edges = (/ (i,i=0,ncre) /)
+            cresp_all_edges = (/ (i,i=0,ncre) /)
+            cresp_all_bins  = (/ (i,i=1,ncre) /)
+
             p_fix = zero 
             w  = (log10(p_max_fix/p_min_fix))/real(ncre-2,kind=8)
-            p_fix(1:ncre-1)  =  p_min_fix*ten**(w* real((cresp_edges(1:ncre-1)-1),kind=8) )
+            p_fix(1:ncre-1)  =  p_min_fix*ten**(w* real((cresp_all_edges(1:ncre-1)-1),kind=8) )
             p_fix(0)    = zero
             p_fix(ncre) = zero
             p_fix_ratio = ten**w
             write (*,'(A22, 50E15.7)') 'Fixed momentum grid: ', p_fix
             write (*,'(A22, 50E15.7)') 'Bin p-width (log10): ', w
-            
+
             p_mid_fix = 0.0
             p_mid_fix(2:ncre-1) = sqrt(p_fix(1:ncre-2)*p_fix(2:ncre-1))
             p_mid_fix(1)    = p_mid_fix(2) / p_fix_ratio
             p_mid_fix(ncre) = p_mid_fix(ncre-1) * p_fix_ratio
             write (*,'(A22, 50E15.7)') 'Fixed mid momenta:   ',p_mid_fix(1:ncre)
+
 ! Input parameters check
             else
                 write (*,"(A10,I4,A96)") 'ncre   = ', ncre, &
@@ -186,6 +212,10 @@ module initcrspectrum
             endif
         endif
 
+        if (magnetic_energy_scaler .le. 0.0) magnetic_energy_scaler = abs(magnetic_energy_scaler)
+        if (magnetic_energy_scaler .gt. 1.0) magnetic_energy_scaler = 1.0
+        if (magnetic_energy_scaler .eq. 0.0) synch_active = .false. ! < reduction magnetic energy to 0 naturally implies that
+
         taylor_coeff_2nd = int(mod(2,expan_order) / 2 + mod(3,expan_order),kind=2 ) ! coefficient which is always equal 1 when order =2 or =3 and 0 if order = 1
         taylor_coeff_3rd = int((expan_order - 1)*(expan_order- 2) / 2,kind=2)        ! coefficient which is equal to 1 only when order = 3
         print '(A15, 2I3)', 'Taylor coeffs:', taylor_coeff_2nd, taylor_coeff_3rd
@@ -196,10 +226,10 @@ module initcrspectrum
  subroutine cresp_read_nml_module
  implicit none
     namelist /COSMIC_RAY_SPECTRUM/ cfl_cre, p_lo_init, p_up_init, f_init, q_init, q_big, ncre, initial_condition, &
-    &                         p_min_fix, p_max_fix, cre_eff, K_cre_paral_1, K_cre_perp_1, &
-    &                         K_cre_pow, expan_order, e_small, bump_amp, &
+    &                         p_min_fix, p_max_fix, cre_eff, K_cre_paral_1, K_cre_perp_1, cre_active, &
+    &                         K_cre_pow, expan_order, e_small, bump_amp, cre_gpcr_ess, use_cresp, &
     &                         e_small_approx_init_cond, e_small_approx_p_lo, e_small_approx_p_up, force_init_NR,&
-    &                         NR_iter_limit, max_p_ratio, add_spectrum_base !, arr_dim
+    &                         NR_iter_limit, max_p_ratio, add_spectrum_base, synch_active, adiab_active !, arr_dim
            
         open(unit=101, file="problem.par", status="unknown")
         read(unit=101, nml=COSMIC_RAY_SPECTRUM)
@@ -215,6 +245,9 @@ module initcrspectrum
     call my_allocate_with_index(crel%q,ncre,1)
     call my_allocate_with_index(crel%e,ncre,1)
     call my_allocate_with_index(crel%n,ncre,1)
+
+    call my_allocate_with_index(cresp%n,ncre,1)
+    call my_allocate_with_index(cresp%e,ncre,1)
     crel%p = zero
     crel%q = zero
     crel%f = zero
@@ -222,6 +255,9 @@ module initcrspectrum
     crel%n = zero
     crel%i_lo = I_ZERO
     crel%i_up = I_ZERO
+
+    cresp%e = zero
+    cresp%n = zero
  end subroutine init_cresp_types
 !----------------------------------------------------------------------------------------------------
  subroutine cleanup_cresp_virtual_en_arrays
@@ -229,10 +265,14 @@ module initcrspectrum
   implicit none
         if (allocated(virtual_e)) call my_deallocate(virtual_e)
         if (allocated(virtual_n)) call my_deallocate(virtual_n)
+        
+        if (allocated(cresp%n))   call my_deallocate(cresp%n)
+        if (allocated(cresp%e))   call my_deallocate(cresp%e)
 
         if (allocated(p_fix)) call my_deallocate(p_fix)
         if (allocated(p_mid_fix)) call my_deallocate(p_mid_fix)
-        if (allocated(cresp_edges)) call my_deallocate(cresp_edges)
+        if (allocated(cresp_all_edges)) call my_deallocate(cresp_all_edges)
+        if (allocated(cresp_all_bins )) call my_deallocate(cresp_all_bins)
         if (allocated(crel%p))  call my_deallocate(crel%p)
         if (allocated(crel%f)) call my_deallocate(crel%f)
         if (allocated(crel%q)) call my_deallocate(crel%q)

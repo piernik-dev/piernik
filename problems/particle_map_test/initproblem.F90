@@ -34,14 +34,9 @@ module initproblem
    private
    public  :: read_problem_par, problem_initial_conditions, problem_pointers
 
-   integer(kind=4) :: n_sn
-   real            :: d0, p0, bx0, by0, bz0, Eexpl, x0, y0, z0, r0, dt_sn, r, t_sn
-
    character(len=dsetnamelen), parameter :: ngp_n = "ngp"
    character(len=dsetnamelen), parameter :: cic_n = "cic"
    character(len=dsetnamelen), parameter :: tsc_n = "tsc"
-
-   namelist /PROBLEM_CONTROL/ d0, p0, bx0, by0, bz0, Eexpl, x0, y0, z0, r0, n_sn, dt_sn
 
 contains
 !-----------------------------------------------------------------------------

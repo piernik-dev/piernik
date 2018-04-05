@@ -129,8 +129,8 @@ contains
 
       implicit none
 
-      real,              intent(inout) :: dt !< the timestep
-      type(var_numbers), intent(in)    :: flind
+      real,              intent(inout) :: dt    !< the timestep
+      type(var_numbers), intent(in)    :: flind !< the structure with all fluid indices
 
       type(cg_list_element), pointer   :: cgl
       type(grid_container),  pointer   :: cg
@@ -223,6 +223,10 @@ contains
       use global,       only: cfl, cfl_max, cfl_violated
       use mpisetup,     only: piernik_MPI_Bcast, master
       use timestep_pub, only: c_all
+#ifdef COSM_RAY_ELECTRONS
+      use cresp_grid,   only: cfl_cresp_violation
+      use initcrspectrum, only: cfl_cre
+#endif /* COSM_RAY_ELECTRONS */
 
       implicit none
 
@@ -237,6 +241,11 @@ contains
          if (stepcfl > cfl_max) then
             write(msg,'(a,g10.3)') "[timestep:cfl_warn] Possible violation of CFL: ",stepcfl
             cfl_violated = .true.
+#ifdef COSM_RAY_ELECTRONS
+         else if ( cfl_cresp_violation ) then
+            write(msg,'(a,g10.3)') "[timestep:cfl_warn] Possible violation of CFL @ CRESP module:", cfl_cre
+            cfl_violated = .true.
+#endif /* COSM_RAY_ELECTRONS */
          else if (stepcfl < 2*cfl - cfl_max) then
             write(msg,'(2(a,g10.3))') "[timestep:cfl_warn] Low CFL: ", stepcfl, " << ", cfl
          endif
@@ -340,7 +349,7 @@ contains
       integer                :: i, j, k, d
       type(cg_level_connected_T), pointer :: curl
 
-      curl => find_level(cg%level_id)
+      curl => find_level(cg%l%id)
 
       c_fl = small
       dt_proc(:) = huge(1.)

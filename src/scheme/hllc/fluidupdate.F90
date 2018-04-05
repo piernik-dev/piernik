@@ -97,6 +97,7 @@ contains
 
       use constants,        only: pdims, xdim, zdim, cs_i2_n, ORTHO1, ORTHO2, LO, HI
       use all_boundaries,   only: all_fluid_boundaries
+      use dataio_pub,       only: warn
       use fluidindex,       only: iarr_all_swp
       use grid_cont,        only: grid_container
       use named_array_list, only: qna, wna
@@ -112,6 +113,7 @@ contains
       real, dimension(xdim:zdim,   cg%n_(ddim)) :: b1d
       real, dimension(:,:), pointer             :: pu
       real, dimension(:),   pointer             :: cs2
+      logical, save                             :: firstcall = .true.
 
       cs2 => null()
       if (qna%exists(cs_i2_n)) then
@@ -119,6 +121,10 @@ contains
       else
          i_cs_iso2 = -1
       endif
+
+      b1d=0.
+      if (firstcall) call warn("[fluidupdate:sweep] magnetic field unimplemented yet. Forcing to be 0")
+      firstcall = .false.
 
       do i2 = cg%lhn(pdims(ddim, ORTHO2), LO), cg%lhn(pdims(ddim, ORTHO2), HI)
          do i1 = cg%lhn(pdims(ddim, ORTHO1), LO), cg%lhn(pdims(ddim, ORTHO1), HI)
@@ -288,7 +294,7 @@ contains
 
          vx = u(fl%imx,:) / u(fl%idn,:)
          if (fl%has_energy) then
-            p = (u(fl%ien,:) - ekin(u(fl%imx,:), u(fl%imy,:), u(fl%imz,:), u(fl%idn,:))) * flind%neu%gam_1
+            p = (u(fl%ien,:) - ekin(u(fl%imx,:), u(fl%imy,:), u(fl%imz,:), u(fl%idn,:))) * fl%gam_1
             if (fl%is_magnetized) p = p + (two-fl%gam)*half*sum(b**2,dim=1)
          else
             if (associated(cs2)) then

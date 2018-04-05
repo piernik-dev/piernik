@@ -1,0 +1,64 @@
+ $BASE_DOMAIN
+    n_d = 192, 16, 1
+    xmin   = -12.
+    xmax   =  1.
+    ymin   =  -2.25
+    ymax   =  4.0332
+    bnd_xl = "outd"
+    bnd_xr = "outd"
+    bnd_yl = "outd"
+    bnd_yr = "outd"
+ /
+
+ $MPI_BLOCKS
+    AMR_bsize = 3*16
+ /
+
+ $UNITS
+    units_set = "cgs"
+ /
+
+ $RESTART_CONTROL
+    restart  = 'none'
+    new_id   = ''
+    nrestart = 0
+ /
+
+ $END_CONTROL
+    tend   = 0.0
+    nend   = 0
+ /
+
+ $OUTPUT_CONTROL
+    problem_name = 'mandelbrot_polar'
+    run_id =  'F-M'
+    use_v2_io = .true.
+    dt_hdf  = 0.5
+    vars(1:) = 'mand', 'dist', 'ang', 'level'
+ /
+
+ $FLUID_NEUTRAL
+ /
+
+ $NUMERICAL_SETUP
+ /
+
+ $PROBLEM_CONTROL
+    maxiter = 1000000
+    ! maxiter = 100000000 for better coloring of the leftmost part (period 2**18 bulb near F-M point)
+    !smooth_map = .false.
+    deref_thr = 0.
+    log_polar = .true.
+! Feigenbaum-Myrberg point
+    x_polar = -1.4011551890920505
+    y_polar = 0.
+    c_polar = 1.05
+ /
+
+ $INTERACTIONS
+ /
+
+ $AMR
+    level_max = 3
+    n_updAMR = 1
+ /

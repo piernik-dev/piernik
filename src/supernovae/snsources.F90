@@ -39,9 +39,7 @@ module snsources
    real, dimension(3) :: ysnoi
 #endif /* SHEAR */
    integer, save      :: nsn, nsn_last
-   real,    save      :: dt_sn_prev, ecr_supl, decr_supl
-   real,    save      :: gset
-   integer, save      :: irand, iset
+   integer, save      :: irand
 
    real, parameter    :: ethu = 7.0**2/(5.0/3.0-1.0) * 1.0    !< thermal energy unit=0.76eV/cm**3 for c_si= 7km/s, n=1/cm^3 gamma=5/3
 
@@ -189,6 +187,13 @@ contains
       use cr_data,        only: icr_H1, icr_C12, icr_N14, icr_O16, cr_table, cr_primary, eCRSP
       use initcosmicrays, only: iarr_crn
 #endif /* COSM_RAYS_SOURCES */
+#ifdef COSM_RAY_ELECTRONS
+      use cresp_crspectrum,only: e_tot_2_f_init_params, cresp_init_state, e_tot_2_en_powl_init_params
+      use cresp_NR_method, only: cresp_initialize_guess_grids
+      use cresp_grid,      only: cresp_init_grid
+      use initcrspectrum,  only: cresp, cre_eff, e_small
+      use initcosmicrays,  only: iarr_cre_n, iarr_cre_e
+#endif /* COSM_RAY_ELECTRONS */
 
       implicit none
 
@@ -197,11 +202,13 @@ contains
       real                           :: decr, xsn, ysn, zsn, ysna, zr
       type(cg_list_element), pointer :: cgl
       type(grid_container),  pointer :: cg
+#ifdef COSM_RAY_ELECTRONS
+      real                           :: e_tot_sn
+#endif /* COSM_RAY_ELECTRONS */
 
       xsn = pos(1)
       ysn = pos(2)
       zsn = pos(3)
-
       cgl => leaves%first
       do while (associated(cgl))
          cg => cgl%cg
@@ -231,6 +238,15 @@ contains
                   if (eCRSP(icr_N14)) cg%u(iarr_crn(cr_table(icr_N14)),i,j,k) = cg%u(iarr_crn(cr_table(icr_N14)),i,j,k) + cr_primary(cr_table(icr_N14))*14*decr
                   if (eCRSP(icr_O16)) cg%u(iarr_crn(cr_table(icr_O16)),i,j,k) = cg%u(iarr_crn(cr_table(icr_O16)),i,j,k) + cr_primary(cr_table(icr_O16))*16*decr
 #endif /* COSM_RAYS_SOURCES */
+#ifdef COSM_RAY_ELECTRONS
+                  e_tot_sn = decr * cre_eff
+                  cresp%n =  0.0;  cresp%e = 0.0
+                  if (e_tot_sn .gt. e_small) then     ! early phase - fill cells only when total passed energy is greater than e_small
+                     call e_tot_2_en_powl_init_params(cresp%n, cresp%e, e_tot_sn) ! distribution function amplitude computed from total explosion energy multiplied by factor cre_eff
+                  endif
+                  cg%u(iarr_cre_n,i,j,k) = cg%u(iarr_cre_n,i,j,k) + cresp%n
+                  cg%u(iarr_cre_e,i,j,k) = cg%u(iarr_cre_e,i,j,k) + cresp%e
+#endif /* COSM_RAY_ELECTRONS */
 
                enddo
             enddo

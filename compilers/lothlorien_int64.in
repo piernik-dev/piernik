@@ -9,11 +9,12 @@
 #
 
 PROG     = piernik
-F90      = h5pfc -shlib
-F90FLAGS  = -fdefault-real-8 -fdefault-integer-8 -ffree-form -std=gnu -fimplicit-none -ffree-line-length-none
-F90FLAGS += -O3 -funroll-loops -fstack-arrays
+F90      = mpif90  -I/usr/lib64/gfortran/modules/mpich
+F90FLAGS  = -fdefault-real-8 -ffree-form -std=gnu -fimplicit-none -ffree-line-length-none
+F90FLAGS += -O3 -funroll-loops -fno-stack-arrays
 F90FLAGS += -Wall -Wextra -W -fbacktrace -ggdb -pedantic
 F90FLAGS += -fbounds-check -frange-check -Wsurprising -Wcharacter-truncation -Wno-unused-function
+F90FLAGS += -fdefault-integer-8
 #F90FLAGS +=  -ffpe-trap=invalid,zero,overflow,denormal
 ## denormal causes weird problems since gcc 4.7.0
 F90FLAGS +=  -ffpe-trap=invalid,zero,overflow

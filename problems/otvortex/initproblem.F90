@@ -33,9 +33,9 @@ module initproblem
    private
    public :: read_problem_par, problem_initial_conditions, problem_pointers
 
-   real   :: d0,r0,bx0,by0,bz0
+   real   :: d0, r0
 
-   namelist /PROBLEM_CONTROL/  d0, r0,bx0,by0,bz0
+   namelist /PROBLEM_CONTROL/ d0, r0
 
 contains
 
@@ -99,7 +99,7 @@ contains
 
       use cg_leaves,   only: leaves
       use cg_list,     only: cg_list_element
-      use constants,   only: pi, dpi, fpi, xdim, ydim, zdim, LO, HI, LEFT
+      use constants,   only: pi, dpi, fpi, xdim, ydim, zdim, LO, HI
       use fluidindex,  only: flind
       use fluidtypes,  only: component_fluid
       use func,        only: ekin, emag
@@ -109,66 +109,55 @@ contains
       implicit none
 
       class(component_fluid), pointer    :: fl
-      integer                            :: i, j, k
-      real                               :: xi, yj, zk, vx, vy, vz, rho, pre, bx, by, bz, b0
-      real, dimension(:,:,:),allocatable :: A
+      integer                            :: i, j
+      real                               :: xi, yj, vx, vy, vz, rho, pre, bx, by, bz, b0, e0
       type(cg_list_element),  pointer    :: cgl
       type(grid_container),   pointer    :: cg
 
 !   Secondary parameters
       fl => flind%ion
 
+      rho = 25.0/(36.0*pi)
+      pre =  5.0/(12.0*pi)
+      b0  = 1./sqrt(fpi)
+      vz  = 0.0
+      bz  = 0.0
+      e0  = max(pre/fl%gam_1, smallei)
+
       cgl => leaves%first
       do while (associated(cgl))
          cg => cgl%cg
 
-         if (.not.allocated(A)) allocate(A(cg%lhn(xdim,LO):cg%lhn(xdim,HI), cg%lhn(ydim,LO):cg%lhn(ydim,HI), 1))
-
-         rho = 25.0/(36.0*pi)
-         pre =  5.0/(12.0*pi)
-         b0  = 1./sqrt(fpi)
-         vz  = 0.0
-         bz0 = 0.0
+         cg%u(fl%idn, :, :, :) = rho
+         cg%u(fl%imz, :, :, :) = vz * cg%u(fl%idn, :, :, :)
+         cg%b(zdim,   :, :, :) = bz
 
          do j = cg%lhn(ydim,LO), cg%lhn(ydim,HI)
-            do i = cg%lhn(xdim,LO), cg%lhn(xdim,HI)
-               A(i,j,1) = b0*(cos(fpi*cg%coord(LEFT, xdim)%r(i))/fpi + cos(dpi*cg%coord(LEFT, ydim)%r(j))/dpi)
-            enddo
-         enddo
 
-         do j = cg%lhn(ydim,LO), cg%lhn(ydim,HI)
             yj = cg%y(j)
+            vx  = -sin(dpi*yj)
+            bx  = b0*vx
+
             do i = cg%lhn(xdim,LO), cg%lhn(xdim,HI)
+
                xi = cg%x(i)
-               do k = cg%lhn(zdim,LO), cg%lhn(zdim,HI)
-                  zk = cg%z(k)
+               vy  = sin(dpi*xi)
+               by  = b0*sin(fpi*xi)
 
-                  vx  = -sin(dpi*yj)
-                  vy  = sin(dpi*xi)
-                  bx  = b0*vx
-                  by  = b0*sin(fpi*xi)
-                  bz  = 0.0
-
-                  cg%u(fl%idn,i,j,k) = rho
-                  cg%u(fl%imx,i,j,k) = vx*cg%u(fl%idn,i,j,k)
-                  cg%u(fl%imy,i,j,k) = vy*cg%u(fl%idn,i,j,k)
-                  cg%u(fl%imz,i,j,k) = vz*cg%u(fl%idn,i,j,k)
+               cg%u(fl%imx,i,j,:) = vx*cg%u(fl%idn,i,j,:)
+               cg%u(fl%imy,i,j,:) = vy*cg%u(fl%idn,i,j,:)
+               cg%b(xdim,  i,j,:) = bx
+               cg%b(ydim,  i,j,:) = by
 #ifndef ISO
-                  cg%u(fl%ien,i,j,k) = pre/fl%gam_1
-                  cg%u(fl%ien,i,j,k) = max(cg%u(fl%ien,i,j,k), smallei)
-                  cg%u(fl%ien,i,j,k) = cg%u(fl%ien,i,j,k) +ekin(cg%u(fl%imx,i,j,k), cg%u(fl%imy,i,j,k), cg%u(fl%imz,i,j,k), cg%u(fl%idn,i,j,k))
-#endif /* !ISO */
-                  cg%b(xdim,i,j,k)  = bx
-                  cg%b(ydim,i,j,k)  = by
-                  cg%b(zdim,i,j,k)  = bz
+               cg%u(fl%ien,i,j,:) = e0 + ekin(cg%u(fl%imx,i,j,:), cg%u(fl%imy,i,j,:), cg%u(fl%imz,i,j,:), cg%u(fl%idn,i,j,:)) + &
+                    emag(cg%b(xdim,i,j,:), cg%b(ydim,i,j,:), cg%b(zdim,i,j,:))
 
-#ifndef ISO
-                  cg%u(fl%ien,i,j,k) = cg%u(fl%ien,i,j,k) + emag(cg%b(xdim,i,j,k), cg%b(ydim,i,j,k), cg%b(zdim,i,j,k))
+               ! BEWARE: The formula above ignores the fact that we have staggered grid for b
+               ! It gives correct values only because initial Bx does not depend on x and By does not depend on y
+               ! This should be addressed soon by reshape_b branch
 #endif /* !ISO */
-               enddo
             enddo
          enddo
-         if (allocated(A)) deallocate(A)
 
          cgl => cgl%nxt
       enddo

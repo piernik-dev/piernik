@@ -11,7 +11,7 @@ module cresp_NR_method
           &    NR_get_solution_up    ! DEPRECATED
   public :: e_in, nr_test, nr_test_1D, p_ip1, n_tab_up, alpha_tab_up, n_tab_lo, alpha_tab_lo, alpha_tab_q, q_control, & ! list for NR driver
           &    p_a, p_n, p_ratios_lo, f_ratios_lo, p_ratios_up, f_ratios_up, q_grid, lin_interpol_1D, alpha_to_q,   &   ! can be commented out for CRESP and PIERNIK
-          &    lin_extrapol_1D, lin_interpolation_1D, find_indices_1D
+          &    lin_extrapol_1D, lin_interpolation_1D, find_indices_1D, nearest_solution
  
   integer, parameter :: ndim = 2
   real(kind=8), dimension(:), allocatable :: p_space, q_space
@@ -135,16 +135,14 @@ module cresp_NR_method
             endif
             
             delta   = fun1D_val / derivative_1D(x)
-            
-            call selected_value_check_1D(x, func_check)  ! necessary in some cases, when maximal value x can take is defined, for other cases dummy_check_1D function defined
-            if ( func_check .eqv. .true. ) return
 
             x = x - delta
-            
             if(abs(delta) .lt. tol_x_1D) then
                 exit_code = .false.
                 return
             endif
+            call selected_value_check_1D(x, func_check)  ! necessary in some cases, when maximal value x can take is defined, for other cases dummy_check_1D function defined
+            if ( func_check .eqv. .true. ) return
         enddo
         
         exit_code = .true. ! if all fails
@@ -230,12 +228,14 @@ module cresp_NR_method
 !----------------------------------------------------------------------------------------------------
   subroutine fill_guess_grids
    use constants, only: zero, one, half
-   use initcrspectrum,  only: q_big, force_init_NR, NR_run_refine_pf
+   use cresp_variables, only: clight ! use units,   only: clight
+   use initcrspectrum,  only: q_big, force_init_NR, NR_run_refine_pf, p_fix_ratio
    implicit none
     integer(kind=4)  :: i, j, int_logical_p, int_logical_f !, ierr
     logical  :: exit_code
     real(kind=8) :: a_min_lo=huge(one), a_max_lo=tiny(one), a_min_up=huge(one), a_max_up=tiny(one),& 
-                    n_min_lo=huge(one), n_max_lo=tiny(one), n_min_up=huge(one), n_max_up=tiny(one)
+                    n_min_lo=huge(one), n_max_lo=tiny(one), n_min_up=huge(one), n_max_up=tiny(one),&
+                    a_max_q=tiny(one)
         q_space = zero
         do i=1, int(half*helper_arr_dim)
             q_space(i) = ln_eval_array_val(i, q_big, real(0.05,kind=8), int(1,kind=4), int(half*helper_arr_dim,kind=4))
@@ -262,10 +262,10 @@ module cresp_NR_method
             enddo
         enddo
 
-        a_min_lo = 0.8 * a_min_lo
-        a_max_lo = 0.999999 !1 * a_max_lo
-        a_min_up = 1.000005 ! 0.8 * a_min_up
-        a_max_up = 1.1 * a_max_up
+        a_min_lo = 0.8 * a_min_lo / clight
+        a_max_lo = 0.999999 / clight !1 * a_max_lo
+        a_min_up = 1.000005 / clight  ! 0.8 * a_min_up
+        a_max_up = 1.1 * a_max_up / clight
         n_min_lo = 0.001 * n_min_lo
         n_max_lo = 1.1 * n_max_lo
         n_min_up = 0.001 * n_min_up
@@ -276,21 +276,8 @@ module cresp_NR_method
             alpha_tab_up(i) = ind_to_flog(i,a_min_up,a_max_up) ! a_min_up * ten**((log10(a_max_up/a_min_up))/real(arr_dim-1,kind=8)*real((i-1),kind=8))
             n_tab_lo(i)     = ind_to_flog(i,n_min_lo,n_max_lo) ! n_min_lo * ten**((log10(n_max_lo/n_min_lo))/real(arr_dim-1,kind=8)*real((i-1),kind=8))
             n_tab_up(i)     = ind_to_flog(i,n_min_up,n_max_up) ! n_min_up * ten**((log10(n_max_up/n_min_up))/real(arr_dim-1,kind=8)*real((i-1),kind=8))
-            alpha_tab_q(i)  = ind_to_flog(i,a_min_up,1.3     ) ! a_min_up * ten**((log10(1.3/a_min_up))/real(arr_dim-1,kind=8)*real((i-1),kind=8))
         enddo
-#ifdef VERBOSE
-        print *,"alpha_tab_lo(i),      alpha_tab_up(i),        n_tab_lo(i),        n_tab_up(i)  |       p_space(i),     q_space(i)" 
-        do i = 1, arr_dim
-          if (i .le. helper_arr_dim) then
-            print *,i,"|",  alpha_tab_lo(i), alpha_tab_up(i), n_tab_lo(i), n_tab_up(i), alpha_tab_q(i), "| i = ", &
-                            min(i,helper_arr_dim), p_space(min(i,helper_arr_dim)), q_space(min(i,helper_arr_dim)), &
-                            p_space(min(i,helper_arr_dim))**(-q_space(min(i,helper_arr_dim)))
-          else
-            print *,i,"|",  alpha_tab_lo(i), alpha_tab_up(i), n_tab_lo(i), n_tab_up(i), alpha_tab_q(i)
-          endif
-        enddo
-        print *, "-----------"
-#endif /* VERBOSE */
+
         write (*, "(A36)", advance="no") "Reading (up) boundary ratio files..."
         do j = 1,2
             call read_NR_guess_grid(p_ratios_up, "p_ratios_up", exit_code) ;  int_logical_p = logical_2_int(exit_code)
@@ -324,8 +311,30 @@ module cresp_NR_method
             call save_NR_guess_grid(f_ratios_lo,"f_ratios_lo")
         enddo
 
-        call fill_q_grid(1) ! computing q_grid takes so little time, that it might not be necessary to save it at all.
-    
+        a_max_q = 10.0 * p_fix_ratio / clight
+        j = arr_dim - int(arr_dim/(arr_dim/10),kind=4)
+        do while (q_grid(j) .le. (-2*q_big) .and. (q_grid(arr_dim) .le. (-2*q_big)) )
+            a_max_q = a_max_q - a_max_q*0.1
+            do i=1,arr_dim
+                alpha_tab_q(i)  = ind_to_flog(i,a_min_up,a_max_q)
+            enddo
+            call fill_q_grid(1) ! computing q_grid takes so little time, that saving the grid is not necessary.
+        enddo
+
+#ifdef VERBOSE
+        print *,"alpha_tab_lo(i),      alpha_tab_up(i),        n_tab_lo(i),        n_tab_up(i)  |       p_space(i),     q_space(i)"
+        do i = 1, arr_dim
+          if (i .le. helper_arr_dim) then
+            print *,i,"|",  alpha_tab_lo(i), alpha_tab_up(i), n_tab_lo(i), n_tab_up(i), alpha_tab_q(i), "| i = ", &
+                            min(i,helper_arr_dim), p_space(min(i,helper_arr_dim)), q_space(min(i,helper_arr_dim)), &
+                            p_space(min(i,helper_arr_dim))**(-q_space(min(i,helper_arr_dim)))
+          else
+            print *,i,"|",  alpha_tab_lo(i), alpha_tab_up(i), n_tab_lo(i), n_tab_up(i), alpha_tab_q(i)
+          endif
+        enddo
+        print *, "-----------"
+#endif /* VERBOSE */
+
  end subroutine fill_guess_grids
 !---------------------------------------------------------------------------------------------------- 
  subroutine refine_all_directions(bound_case)
@@ -1257,10 +1266,12 @@ end subroutine
 #endif /* VERBOSE */
         exit_code = .false.; find_failure = .false. ; not_interpolated = .false.
         call associate_NR_pointers(which_bound)
-        call determine_loc(a_val, n_val, loc1, loc2, loc_no_ip, exit_code, find_failure)
+        call determine_loc(a_val, n_val, loc1, loc2, loc_no_ip, exit_code)
 !         call find_both_indexes(loc1, loc2, a_val, n_val, loc_no_ip, exit_code)
+#ifdef VERBOSE
         call save_loc(which_bound,loc1(1),loc1(2))
         call save_loc(which_bound,loc2(1),loc2(2))
+#endif /* VERBOSE */
             if (find_failure .eqv. .true.) then
                 not_interpolated = .true.
 #ifdef VERBOSE
@@ -1286,63 +1297,69 @@ end subroutine
             endif
   end function intpol_pf_from_NR_grids
 !----------------------------------------------------------------------------------------------------
-  subroutine determine_loc(a_val, n_val, loc1, loc2, loc_panic, exit_code, no_solution)
+  subroutine determine_loc(a_val, n_val, loc1, loc2, loc_panic, exit_code) !, no_solution)
   use constants, only: zero
   implicit none
     integer(kind=4), dimension(1:2),intent(inout) :: loc1, loc2, loc_panic
     real(kind=8),intent(inout) :: a_val, n_val
-    logical, intent(inout) :: exit_code, no_solution
+    logical, intent(inout) :: exit_code
+    logical                :: hit_zero !, no_solution
+        hit_zero = .false.
         loc1(1) = inverse_f_to_ind(a_val, p_a(1), p_a(arr_dim))
         loc1(2) = inverse_f_to_ind(n_val, p_n(1), p_n(arr_dim))
-        loc2 = loc1 + 1
-#ifdef VERBOSE
-        write(*,"(A19, 2I4, A3, 2I4)") "Obtained indices:", loc1, " | ", loc2 
-#endif /* VERBOSE */
-        if ((minval(loc1) .le. 0 .or. maxval(loc1) .gt. arr_dim) .and. (minval(loc2) .le. 0 .or. maxval(loc2) .gt. arr_dim)) then
-            exit_code = .true.
-            no_solution = .true.
-#ifdef VERBOSE
-            print *, "problem occured, both below 0"
-#endif /* VERBOSE */
-            return
-        else if ( (maxval(loc2) .gt. arr_dim) .or. (minval(loc2) .le. 0 ) ) then
-            exit_code = .true.
-            loc_panic = loc1
-            loc2 = loc1
-#ifdef VERBOSE
-            print *, "WARNING, maxval(loc2) exceeds arr_dim"
-#endif /* VERBOSE */
-            return
-        else if ( (maxval(loc1) .gt. arr_dim) .or. (minval(loc1) .le. 0 ) ) then
-            exit_code = .true.
-            loc_panic = loc2
-            loc1 = loc2
-#ifdef VERBOSE
-            print *, "WARNING, minval(loc1) eq 0"
-#endif /* VERBOSE */
-            return
-        endif
-        if ( ((p_p(loc1(1),loc1(2)) * p_p(loc1(1),loc2(2)) ) .le. zero ) .or. & 
-            ((p_p(loc2(1),loc1(2)) * p_p(loc2(1),loc2(2)) ) .le. zero )  ) then
-#ifdef VERBOSE
-            print *, "Exception, p_p(loc(alpha),loc(n)) = 0, no solution in at least one location"
-#endif /* VERBOSE */
-            exit_code = .true.
+        if ( (minval(loc1) .ge. 1 .and. maxval(loc1) .le. arr_dim-1)) then ! only need to test loc1
             if (p_p(loc1(1),loc1(2)) .gt. zero ) then
-                loc_panic = loc1
-                return
-            else if (p_p(loc2(1),loc2(2)) .gt. zero ) then
-                loc_panic = loc2
-                return
-            else
+                loc2 = loc1+1
 #ifdef VERBOSE
-                print *, "No index pointing to existing solution found. Use extrapolation in this case?"
+                write(*,"(A19, 2I8, A3, 2I8)") "Obtained indices:", loc1, " | ", loc2
 #endif /* VERBOSE */
-                no_solution = .true.
-                return
+                return        ! normal exit
+            else
+                exit_code = .true.
+                hit_zero  = .true.
             endif
+        else
+            exit_code = .true.
         endif
+
+        if ( exit_code ) then ! namely if ((minval(loc1) .le. 0 .or. maxval(loc1) .ge. arr_dim))
+            loc1(1) = max(0,min(loc1(1),arr_dim))   ! Here we either give algorithm closest nonzero value relative to a row
+            loc1(2) = max(0,min(loc1(2),arr_dim))   ! that was in the proper range or we just feed the algorithm ANY nonzero
+            exit_code = .true.                      ! initial vector that will prevent it from crashing.
+            loc2 = loc1
+            if (loc1(1) .eq. arr_dim .or. hit_zero) then
+                call nearest_solution(p_p(:,loc1(2)), loc1(1), 1, loc1(1), hit_zero)
+            endif
+            if (loc1(1) .le. 0 .or. hit_zero) then
+                call nearest_solution(p_p(:,loc1(2)), max(1,loc1(1)), arr_dim, loc1(1), hit_zero)
+            endif
+            if (loc1(2) .eq. arr_dim.or. hit_zero) then
+                call nearest_solution(p_p(loc1(1),:), loc1(2), 1, loc1(2), hit_zero)
+            endif
+            if (loc1(2) .le. 0 .or. hit_zero) then
+                call nearest_solution(p_p(loc1(1),:), max(1,loc1(2)), arr_dim, loc1(2), hit_zero)
+            endif
+            loc_panic = loc1
+        endif
+        loc2 = loc1 + 1
   end subroutine determine_loc
+!----------------------------------------------------------------------------------------------------
+  subroutine nearest_solution(arr_lin, i_beg, i_end, i_solution, hit_zero)
+  use constants, only: zero
+  implicit none
+   real(kind=8), dimension(:) :: arr_lin
+   integer(kind=4) :: i, i_beg, i_end, i_incr, i_solution
+   logical, intent(inout) :: hit_zero
+    i_solution = i_beg
+    i_incr = sign(1, i_end - i_beg)
+    do  i = i_beg, i_end, i_incr
+        if (arr_lin(i) .gt. zero) then
+            i_solution = i ! next one is i_solution + i_incr
+            hit_zero = .false.
+            return
+        endif
+    enddo
+  end subroutine nearest_solution
 !----------------------------------------------------------------------------------------------------
   function compute_q(alpha_in, exit_code, outer_p_ratio)
   use initcrspectrum, only: NR_refine_solution_q, q_big, p_fix_ratio
@@ -1365,6 +1382,8 @@ end subroutine
         if (loc_1 .le. 0 .or. (loc_1 .ge. arr_dim)) then
             loc_1 = minloc(abs(alpha_tab_q-alpha),dim=1) ! slow, but always finds something
             compute_q = q_grid(loc_1)
+            call NR_algorithm_1D(compute_q, exit_code)
+            if (abs(compute_q) .gt. q_big) compute_q = sign(one, compute_q) * q_big
             return                      ! returns compute_q withh exit_code = .true. which can be used to warn. Usually occurs for q.gt.2*q_big
         endif
         loc_2 = loc_1 + 1

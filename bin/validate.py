@@ -7,14 +7,14 @@
 #    anything, make it configurable
 
 import sys
-sys.path.append("python/")
 import os
 import json
 import tempfile
 import hashlib
 import argparse
 import time
-import base64, getpass
+import base64
+import getpass
 from DirWalk import DirectoryWalker
 try:
     import requests
@@ -32,6 +32,7 @@ except ImportError:
     print "  emerge -1 dev-python/pysvn"
     print "  yum install pysvn"
     sys.exit(-1)
+sys.path.append("python/")
 
 
 def run_jenkins_job(branch, setup_args):
@@ -67,9 +68,9 @@ else:
     f = open('.jenkins', 'w')
     print("What is your username @jenkins: ")
     USER = sys.stdin.readline().strip()
-    f.write(base64.b64encode(USER)+'\n')
+    f.write(base64.b64encode(USER) + '\n')
     PASSWORD = getpass.getpass("What is your password: ").strip()
-    f.write(base64.b64encode(PASSWORD)+'\n')
+    f.write(base64.b64encode(PASSWORD) + '\n')
     f.close()
 
 svn = pysvn.Client()
@@ -79,8 +80,7 @@ f.write(diff_data)
 f.close()
 
 diff_hash = hashlib.md5()
-tab = diff_data.split()
-tab.sort()
+tab = sorted(diff_data.split())
 diff_hash = hashlib.md5()
 diff_hash.update("".join(tab))
 hash_file = open('.diff_hash', 'w')

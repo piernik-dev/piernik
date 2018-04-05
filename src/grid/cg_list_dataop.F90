@@ -92,7 +92,7 @@ contains
    subroutine get_extremum(this, ind, minmax, prop, dir)
 
       use cg_list,     only: cg_list_element
-      use constants,   only: MINL, MAXL, I_ONE, ndims, xdim, ydim, zdim, big_float, LO
+      use constants,   only: MINL, MAXL, I_ZERO, I_ONE, ndims, xdim, ydim, zdim, big_float, LO
       use dataio_pub,  only: msg, warn, die
       use domain,      only: dom
       use grid_cont,   only: grid_container
@@ -160,7 +160,7 @@ contains
          enddo
          v_red(I_V) = prop%val;
       else
-         v_red(I_V) = -prop%val   !! No cgl means nothing to do there
+         v_red(I_V) = prop%val   !! No cgl means nothing to do there
       endif
 
       v_red(I_P) = real(proc)
@@ -176,7 +176,13 @@ contains
             if (dom%has_dir(xdim)) prop%coords(xdim) = cg_x%x(prop%loc(xdim))
             if (dom%has_dir(ydim)) prop%coords(ydim) = cg_x%y(prop%loc(ydim))
             if (dom%has_dir(zdim)) prop%coords(zdim) = cg_x%z(prop%loc(zdim))
-            if (present(dir))      prop%assoc        = cg_x%dl(dir)
+            if (present(dir)) then
+               if (dir == I_ZERO) then
+                  prop%assoc = minval(cg_x%dl(:))
+               else
+                  prop%assoc = cg_x%dl(dir)
+               endif
+            endif
 !         else
 !            write(msg,'(a,a)') "[cg_list_dataop:get_extremum] cg_x not associated for q array name ", qna%lst(ind)%name
 !            call die(msg)
@@ -730,7 +736,7 @@ contains
                            if (cnt <= show_n_dirtys) then
                               if (cnt < show_n_dirtys) then
                                  write(msg, '(3a,i4,a,i3,a,i5,3a,4i6,a,g20.12)') &
-                                      &                   "[cg_list_dataop:check_dirty] ", trim(label), "@", proc, " lvl^", cgl%cg%level_id, " cg#", cgl%cg%grid_id, &
+                                      &                   "[cg_list_dataop:check_dirty] ", trim(label), "@", proc, " lvl^", cgl%cg%l%id, " cg#", cgl%cg%grid_id, &
                                       &                   " '", trim(wna%lst(iv)%name), "'(", subfield, i, j, k, ") = ", cgl%cg%w(iv)%arr(subfield, i, j, k)
                                  call warn(msg)
                               endif
@@ -744,7 +750,7 @@ contains
                            if (cnt <= show_n_dirtys) then
                               if (cnt < show_n_dirtys) then
                                  write(msg, '(3a,i4,a,i3,a,i5,3a,3i6,a,g20.12)') &
-                                      &                   "[cg_list_dataop:check_dirty] ", trim(label), "@", proc, " lvl^", cgl%cg%level_id, " cg#", cgl%cg%grid_id, &
+                                      &                   "[cg_list_dataop:check_dirty] ", trim(label), "@", proc, " lvl^", cgl%cg%l%id, " cg#", cgl%cg%grid_id, &
                                       &                   " '", trim(qna%lst(iv)%name), "'(", i, j, k, ") = ", cgl%cg%q(iv)%arr(i, j, k)
                                  call warn(msg)
                               endif

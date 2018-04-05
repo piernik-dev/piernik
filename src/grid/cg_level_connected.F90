@@ -91,6 +91,7 @@ contains
       this%need_vb_update = .true.
       this%recently_changed = .false. ! this level was just created, but no grids were added yet, so no update is required.
       this%dot%is_blocky = .false.
+      allocate(this%l)
 
    end subroutine init_level
 
@@ -320,11 +321,11 @@ contains
       integer(kind=4) :: i, iw
 
       do i = lbound(qna%lst(:), dim=1, kind=4), ubound(qna%lst(:), dim=1, kind=4)
-         if (qna%lst(i)%vital .and. (qna%lst(i)%multigrid .or. this%level_id >= base_level_id)) call this%prolong_q_1var(i, bnd_type = bnd_type)
+         if (qna%lst(i)%vital .and. (qna%lst(i)%multigrid .or. this%l%id >= base_level_id)) call this%prolong_q_1var(i, bnd_type = bnd_type)
       enddo
 
       do i = lbound(wna%lst(:), dim=1, kind=4), ubound(wna%lst(:), dim=1, kind=4)
-         if (wna%lst(i)%vital .and. (wna%lst(i)%multigrid .or. this%level_id >= base_level_id)) then
+         if (wna%lst(i)%vital .and. (wna%lst(i)%multigrid .or. this%l%id >= base_level_id)) then
             if (wna%lst(i)%multigrid) call warn("[cg_level_connected:prolong] mg set for cg%w ???")
             do iw = 1, wna%lst(i)%dim4
                call this%wq_copy(i, iw, qna%wai)
@@ -364,11 +365,11 @@ contains
       integer(kind=4) :: i, iw
 
       do i = lbound(qna%lst(:), dim=1, kind=4), ubound(qna%lst(:), dim=1, kind=4)
-         if (qna%lst(i)%vital .and. (qna%lst(i)%multigrid .or. this%level_id > base_level_id)) call this%restrict_q_1var(i)
+         if (qna%lst(i)%vital .and. (qna%lst(i)%multigrid .or. this%l%id > base_level_id)) call this%restrict_q_1var(i)
       enddo
 
       do i = lbound(wna%lst(:), dim=1, kind=4), ubound(wna%lst(:), dim=1, kind=4)
-         if (wna%lst(i)%vital .and. (wna%lst(i)%multigrid .or. this%level_id > base_level_id)) then
+         if (wna%lst(i)%vital .and. (wna%lst(i)%multigrid .or. this%l%id > base_level_id)) then
             if (wna%lst(i)%multigrid) call warn("[cg_level_connected:restrict] mg set for cg%w ???")
             do iw = 1, wna%lst(i)%dim4
                call this%wq_copy(i, iw, qna%wai)
@@ -396,7 +397,7 @@ contains
 
       class(cg_level_connected_T), intent(inout) :: this !< object invoking type-bound procedure
 
-      if (this%level_id <= base_level_id) return
+      if (this%l%id <= base_level_id) return
       call this%restrict
       call this%coarser%restrict_to_base
 
@@ -428,7 +429,7 @@ contains
       class(cg_level_connected_T), intent(inout) :: this !< object invoking type-bound procedure
       integer(kind=4),             intent(in)    :: iv   !< variable to be restricted
 
-      if (this%level_id <= base_level_id) return
+      if (this%l%id <= base_level_id) return
       call this%restrict_q_1var(iv)
       call this%coarser%restrict_to_base_q_1var(iv)
 
@@ -488,7 +489,7 @@ contains
 
       coarse => this%coarser
       if (.not. associated(coarse)) then ! can't restrict base level
-         write(msg,'(a,i3)')"[cg_level_connected:restrict_q_1var] no coarser level than ", this%level_id
+         write(msg,'(a,i3)')"[cg_level_connected:restrict_q_1var] no coarser level than ", this%l%id
          call warn(msg)
          return
       endif
@@ -663,7 +664,7 @@ contains
 
       fine => this%finer
       if (.not. associated(fine)) then ! can't prolong finest level
-         write(msg,'(a,i3)')"[cg_level_connected:prolong_q_1var] no finer level than: ", this%level_id
+         write(msg,'(a,i3)')"[cg_level_connected:prolong_q_1var] no finer level than: ", this%l%id
          call warn(msg)
          return
       endif
@@ -790,7 +791,7 @@ contains
 
 !      call this%dirty_boundaries(ind)
 !      call this%clear_boundaries(ind, value=10.)
-      if (associated(this%coarser) .and. this%level_id > base_level_id) then
+      if (associated(this%coarser) .and. this%l%id > base_level_id) then
          do iw = 1, wna%lst(ind)%dim4
             call this%coarser%wq_copy(ind, iw, qna%wai)
             call this%wq_copy(ind, iw, qna%wai) !> Quick and dirty fix for cases when cg%ignore_prolongation == .true.
@@ -829,12 +830,12 @@ contains
 
       implicit none
 
-      class(cg_level_connected_T), intent(inout) :: this !< the list on which to perform the boundary exchange
-      integer(kind=4),             intent(in)    :: ind
+      class(cg_level_connected_T), intent(inout) :: this      !< the list on which to perform the boundary exchange
+      integer(kind=4),             intent(in)    :: ind       !< index of the prolonged variable
       integer(kind=4), optional,   intent(in)    :: bnd_type  !< Override default boundary type on external boundaries (useful in multigrid solver).
                                                               !< Note that BND_PER, BND_MPI, BND_SHE and BND_COR aren't external and cannot be overridden
       integer(kind=4), optional,   intent(in)    :: dir       !< select only this direction
-      logical,         optional,   intent(in)    :: nocorners !< .when .true. then don't care about proper edge and corner update
+      logical,         optional,   intent(in)    :: nocorners !< when .true. then don't care about proper edge and corner update
 
       type(cg_level_connected_T), pointer :: coarse
       type(cg_list_element), pointer :: cgl
@@ -860,7 +861,7 @@ contains
       coarse => this%coarser
 
       if (.not. associated(coarse)) return
-      if (this%level_id == base_level_id) return ! There are no fine/coarse boundaries on the base level by definition
+      if (this%l%id == base_level_id) return ! There are no fine/coarse boundaries on the base level by definition
 
       call this%vertical_b_prep
       call coarse%vertical_b_prep
@@ -914,7 +915,7 @@ contains
 
       ! merge received coarse data into one array and interpolate it into the right place
       per(:) = 0
-      where (dom%periodic(:)) per(:) = coarse%n_d(:)
+      where (dom%periodic(:)) per(:) = coarse%l%n_d(:)
 
       cgl => this%first
       do while (associated(cgl))
@@ -1045,10 +1046,10 @@ contains
       coarse => this%coarser
       if (.not. associated(coarse)) return ! check is some null allocations are required
 
-      ! Unfortunately we can't use finest%level%level_id
+      ! Unfortunately we can't use finest%level%l%id
       curl => this
       do while (associated(curl))
-         max_level = curl%level_id
+         max_level = curl%l%id
          curl => curl%finer
       enddo
 
@@ -1056,10 +1057,10 @@ contains
 
       ! define areas on the fine side at BND_FC and BND_MPI_FC faces that require coarse data
       per(:) = 0
-      where (dom%periodic(:)) per(:) = coarse%n_d(:)
+      where (dom%periodic(:)) per(:) = coarse%l%n_d(:)
 
-      call t_pool%release(this%level_id)
-      call t_pool%get(this%level_id, tag_min, tag_max)
+      call t_pool%release(this%l%id)
+      call t_pool%get(this%l%id, tag_min, tag_max)
       tag = tag_min
       mpifc_cnt = 0
       allocate(seglist(initial_size))
@@ -1101,7 +1102,7 @@ contains
                                           seg(:, HI) = min( seg(:, HI), coarse%dot%gse(j)%c(b)%se(:, HI)) ! this is what we want
                                           tag = tag + I_ONE
                                           if (tag > tag_max) then
-                                             call t_pool%get(this%level_id, tag_min, tag_max)
+                                             call t_pool%get(this%l%id, tag_min, tag_max)
                                              tag = tag_min
                                           endif
                                           if (tag<0) call die("[cg_level_connected:vertical_b_prep] tag overflow")
@@ -1126,8 +1127,8 @@ contains
                                              endif
                                           enddo
                                           if (.not. found_flux) then
-                                             segp2(:, LO) = this%off(:)
-                                             segp2(:, HI) = this%off(:) - dom%D_(:)
+                                             segp2(:, LO) = this%l%off(:)
+                                             segp2(:, HI) = this%l%off(:) - dom%D_(:)
                                           endif
                                           seg2 (:, LO) = segp2(:, LO) + [ ix, iy, iz ] * per(:)
                                           seg2 (:, HI) = segp2(:, HI) + [ ix, iy, iz ] * per(:)
@@ -1218,12 +1219,12 @@ contains
                enddo
             endif
             if (rseg(I_GRID + (j-1)*I_LAST) == cg%grid_id) then
-               if (rseg(I_PROC + (j-1)*I_LAST) /= proc) call warn("[clc:vbp] I_PROC /= proc")
+               if (rseg(I_PROC + (j-1)*I_LAST) /= proc) call warn("[cg_level_connected:vertical_b_prep] I_PROC /= proc")
                if (rseg(I_SRC_PROC + (j-1)*I_LAST) /= rp) then
-                  write(msg,*)"[clc:vbp] I_SRC_PROC /= rp @",proc," @@",rp, rseg(I_SRC_PROC + (j-1)*I_LAST)
+                  write(msg,*)"[cg_level_connected:vertical_b_prep] I_SRC_PROC /= rp @",proc," @@",rp, rseg(I_SRC_PROC + (j-1)*I_LAST)
                   call warn(msg)
                endif
-               ! call warn("[clc:vbp] I_TAG: visited twice")
+               ! call warn("[cg_level_connected:vertical_b_prep] I_TAG: visited twice")
                b = b + 1
             endif
          enddo
@@ -1483,9 +1484,9 @@ contains
 
       nullify(lev_p)
       curl => base_level
-      if (level_id >= base_level%level_id) then
+      if (level_id >= base_level%l%id) then
          do while (associated(curl))
-            if (curl%level_id == level_id) then
+            if (curl%l%id == level_id) then
                lev_p => curl
                exit
             endif
@@ -1493,7 +1494,7 @@ contains
          enddo
       else
          do while (associated(curl))
-            if (curl%level_id == level_id) then
+            if (curl%l%id == level_id) then
                lev_p => curl
                exit
             endif

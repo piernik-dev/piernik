@@ -1,0 +1,23 @@
+# sha1 of the gold commit
+# Note: update only when absolutely necessary
+GOLD_COMMIT=8fcf05bbd76c9162eb1999d620b59dd0966e0f8e
+# 8fcf05bbd76c9162eb1999d620b59dd0966e0f8e - several fixups needed for Jenkins on Fedora 24
+# b39c890f49f76f59d8115b255581d5e04c7e4645 - Merge pull request #173 from gawrysz/IO_naming_fix: removed adding "final" to the output filename
+# c21d1c15102bd2372d1006d89937a5748449403f - gdf_distance relies on GDF 1.1 (output v. 2.01)
+# 1a944b96f840531f51dc638a302da42666841369 r7815 - h5 files are now in single precision
+# r5880 - change due to dbl() -> real(,kind=8) conversion, differences at the round-off error level
+# r4643 - change due to unnecessary dt=0 step
+# r4476 - initial revision
+
+# name of the problem to be compiled
+PROBLEM_NAME=tearing
+
+# options for setup call
+# Cannot rely on --linkexe here as long as we rely on revisions that don't have e2cc4da91b37238bf61cb86f258f4a0e4a1abd6a in ancestors
+SETUP_PARAMS="--param problem.par.build --debug"
+
+# options for running gold test
+GOLD_PARAMS="-n '&OUTPUT_CONTROL dt_res=0. /'"
+
+# which file to compare
+OUTPUT=tearing_tst_0001.h5

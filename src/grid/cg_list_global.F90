@@ -226,7 +226,7 @@ contains
 
    subroutine register_fluids(this)
 
-      use constants,  only: wa_n, fluid_n, uh_n, mag_n, u0_n, b0_n, ndims, AT_NO_B, AT_OUT_B, VAR_XFACE, VAR_YFACE, VAR_ZFACE, PIERNIK_INIT_FLUIDS
+      use constants,  only: wa_n, fluid_n, uh_n, mag_n, mag_cc_n, u0_n, b0_n, ndims, AT_NO_B, AT_OUT_B, VAR_XFACE, VAR_YFACE, VAR_ZFACE, PIERNIK_INIT_FLUIDS
       use dataio_pub, only: die, code_progress
       use fluidindex, only: flind
       use global,     only: repeat_step
@@ -258,6 +258,7 @@ contains
            .false., &
 #endif /* MAGNETIC */
            restart_mode = AT_OUT_B, dim4 = ndims, position=pia)                                            !! Main array of magnetic field's components, "b"
+      call this%reg_var(mag_cc_n, vital = .false.,                        dim4 = ndims) ! cell-centered magnetic field
       if (repeat_step) then
          call this%reg_var(u0_n,                                          dim4 = flind%all)                !! Copy of main array of all fluids' components
          call this%reg_var(b0_n,                                          dim4 = ndims, position=pia)      !! Copy of main array of magnetic field's components
@@ -301,7 +302,7 @@ contains
                         write(msg,'(3a,i10)')"[cg_list_global:check_na] qna%lst(",i,"_, named '",qna%lst(i)%name,"' has dim4 set to ",qna%lst(i)%dim4
                         call die(msg)
                      endif
-                     if (associated(cgl%cg%q(i)%arr) .and. cgl%cg%level_id < base_level_id .and. .not. qna%lst(i)%multigrid) then
+                     if (associated(cgl%cg%q(i)%arr) .and. cgl%cg%l%id < base_level_id .and. .not. qna%lst(i)%multigrid) then
                         write(msg,'(a,i3,3a)')"[cg_list_global:check_na] non-multigrid cgl%cg%q(",i,"), named '",qna%lst(i)%name,"' allocated on coarse level"
                         call die(msg)
                      endif
@@ -318,13 +319,13 @@ contains
                else
                   do i = lbound(wna%lst(:), dim=1), ubound(wna%lst(:), dim=1)
                      bad = .false.
-                     if (associated(cgl%cg%w(i)%arr)) bad = wna%lst(i)%dim4 /= size(cgl%cg%w(i)%arr, dim=1) .and. cgl%cg%level_id >= base_level_id
+                     if (associated(cgl%cg%w(i)%arr)) bad = wna%lst(i)%dim4 /= size(cgl%cg%w(i)%arr, dim=1) .and. cgl%cg%l%id >= base_level_id
                      if (wna%lst(i)%dim4 <= 0 .or. bad) then
                         write(msg,'(a,i3,2a,2(a,i7))')"[cg_list_global:check_na] wna%lst(",i,"_ named '",wna%lst(i)%name,"' has inconsistent dim4: ",&
                              &         wna%lst(i)%dim4," /= ",size(cgl%cg%w(i)%arr, dim=1)
                         call die(msg)
                      endif
-                     if (associated(cgl%cg%w(i)%arr) .and. cgl%cg%level_id < base_level_id) then
+                     if (associated(cgl%cg%w(i)%arr) .and. cgl%cg%l%id < base_level_id) then
                         write(msg,'(a,i3,3a)')"[cg_list_global:check_na] cgl%cg%w(",i,"), named '",wna%lst(i)%name,"' allocated on coarse level"
                         call die(msg)
                      endif
@@ -378,7 +379,7 @@ contains
             cgl => all_lists%entries(i)%lp%first
             do while (associated(cgl))
                if (cgl%cg%membership == VERY_INVALID) then
-                  write(msg, '(a,i7,a,i3,a)')"[cg_list_global:mark_orphans] Grid #",cgl%cg%grid_id, " at level ",cgl%cg%level_id," is hidden."
+                  write(msg, '(a,i7,a,i3,a)')"[cg_list_global:mark_orphans] Grid #",cgl%cg%grid_id, " at level ",cgl%cg%l%id," is hidden."
                   call warn(msg)
                   cgl%cg%membership = 0
                endif
@@ -404,7 +405,7 @@ contains
       do while (associated(cgl))
          if (associated(cgl%cg)) then
             if (cgl%cg%membership < 1) then
-               write(msg, '(a,i7,a,i3,a)')"[cg_list_global:mark_orphans] Grid #",cgl%cg%grid_id, " at level ",cgl%cg%level_id," is orphaned."
+               write(msg, '(a,i7,a,i3,a)')"[cg_list_global:mark_orphans] Grid #",cgl%cg%grid_id, " at level ",cgl%cg%l%id," is orphaned."
                call warn(msg)
             endif
          endif

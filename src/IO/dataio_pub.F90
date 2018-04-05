@@ -67,7 +67,7 @@ module dataio_pub
    integer                     :: tsl_lun                        !< logical unit number for timeslice file
    integer                     :: log_lun                        !< logical unit number for log file
    integer(kind=4)             :: nend                           !< number of the step to end simulation
-   integer(kind=4), save       :: cbline = 1                     !< current buffer line
+   integer(kind=4), save       :: cbline = 0                     !< current buffer line
    integer                     :: nstep_start                    !< number of start timestep
    integer(kind=4)             :: nhdf                           !< current number of hdf file
    integer(kind=4)             :: nres                           !< current number of restart file
@@ -237,13 +237,7 @@ contains
       character(len=msg_type_len)   :: msg_type_str
       integer(kind=4)               :: proc
       integer                       :: outunit
-      logical, save                 :: frun = .true.
       character(len=idlen)          :: adv
-
-      if (frun) then
-         call set_colors(.false.)
-         frun = .false.
-      endif
 
 !      write(stdout,*) ansi_red, "Red ", ansi_green, "Green ", ansi_yellow, "Yellow ", ansi_blue, "Blue ", ansi_magenta, "Magenta ", ansi_cyan, "Cyan ", ansi_white, "White ", ansi_black
       adv = 'yes'
@@ -307,15 +301,19 @@ contains
 #endif /* !__INTEL_COMPILER */
          endif
          if (proc == 0 .and. mode == T_ERR) write(log_lun,'(/,a,/)')"###############     Crashing     ###############"
-         if (cbline <= bufferlines) then
-            write(logbuffer(cbline), '(2a,i5,2a)') msg_type_str," @", proc, ': ', trim(nm)
+         if (cbline < size(logbuffer)) then
             cbline = cbline + I_ONE
-         else
+            write(logbuffer(cbline), '(2a,i5,2a)') msg_type_str," @", proc, ': ', trim(nm)
+         endif
+         if (cbline >= size(logbuffer)) then
             call flush_to_log
-            cbline = 1
+            cbline = 0
          endif
          if (mode == T_ERR) call flush_to_log
          if (.not. log_file_initialized) close(log_lun)
+      else
+         if (mode == T_SILENT) &
+            write(stderr,'(a,a," @",a,i5,2a)', advance=adv) trim(ansi_red), "not logged", ansi_black, proc, ': ', trim(nm)
       endif
 
    end subroutine colormessage
@@ -324,7 +322,7 @@ contains
       implicit none
       integer :: line
 
-      do line = 1, min(cbline, bufferlines)
+      do line = 1, min(cbline, size(logbuffer, kind=4))
 #if defined(__INTEL_COMPILER)
          write(log_lun, '(a)') trim(logbuffer(line))
 #else /* __INTEL_COMPILER */

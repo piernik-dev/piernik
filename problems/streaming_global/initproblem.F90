@@ -45,7 +45,6 @@ module initproblem
    real                     :: d0, r_in, r_out, f_in, f_out
    real                     :: dens_exp      !< exponent in profile density \f$\rho(R) = \rho_0 R^{-k}\f$
    real                     :: eps           !< dust to gas ratio
-   integer(kind=4)          :: cutoff_ncells !< width of cut-off profile
    real, save               :: T_inner = 0.0 !< Orbital period at the inner boundary
    real, save               :: max_vy = -HUGE(1.0) !< Maximum tangential dust velocity
    integer(kind=4), save    :: noise_added = NOT_ADDED !< whether noise has been already added
@@ -357,7 +356,8 @@ contains
 
       implicit none
 
-      integer                         :: i, j, k, kmid, p
+      integer                         :: j, k, kmid, p
+      integer(kind=4)                 :: i
       real                            :: xi, yj, zk, rc, vz, sqr_gm, vr, vphi
       real                            :: gprim, H2
 
@@ -366,7 +366,8 @@ contains
       type(cg_list_element),  pointer :: cgl
       type(grid_container),   pointer :: cg
 
-      integer :: xl, xr, ind
+      integer :: xl, xr
+      integer(kind=4) :: ind
       logical, save :: first_run = .true.
 
 !   Secondary parameters
@@ -405,10 +406,10 @@ contains
 
                xl = cg%lhn(xdim, LO)
                xr = cg%lhn(xdim, HI)
-               if (.not.allocated(grav)) allocate(grav(xl:xr))
-               if (size(ln_dens_der) /= xr-xl+1) deallocate(ln_dens_der)
-               allocate(ln_dens_der(xl:xr))
-               if (.not.allocated(dens_prof)) allocate(dens_prof(xl:xr))
+               if (allocated(grav)) deallocate(grav)
+               if (allocated(dens_prof)) deallocate(dens_prof)
+               if (allocated(ln_dens_der)) deallocate(ln_dens_der)
+               allocate(grav(xl:xr), ln_dens_der(xl:xr), dens_prof(xl:xr))
 
                grav = compute_gravaccelR(cg)
                ! ---
@@ -483,10 +484,7 @@ contains
 
                enddo
                cg%w(wna%ind(inid_n))%arr(:,:,:,:) = cg%u(:,:,:,:)
-               cg%b(:,:,:,:) = 0.0
-               if (allocated(grav)) deallocate(grav)
-               if (allocated(dens_prof)) deallocate(dens_prof)
-               if (allocated(ln_dens_der)) deallocate(ln_dens_der)
+               call cg%set_constant_b_field([0., 0., 0.])
             else
                call die("[initproblem:problem_initial_conditions] I don't know what to do... :/")
             endif
@@ -508,9 +506,10 @@ contains
 
                xl = cg%lhn(xdim, LO)
                xr = cg%lhn(xdim, HI)
-               if (.not.allocated(grav)) allocate(grav(xl:xr))
-               if (.not.allocated(ln_dens_der)) allocate(ln_dens_der(xl:xr))
-               if (.not.allocated(dens_prof)) allocate(dens_prof(xl:xr))
+               if (allocated(grav)) deallocate(grav)
+               if (allocated(dens_prof)) deallocate(dens_prof)
+               if (allocated(ln_dens_der)) deallocate(ln_dens_der)
+               allocate(grav(xl:xr), ln_dens_der(xl:xr), dens_prof(xl:xr))
 
                do k = cg%lhn(zdim, LO), cg%lhn(zdim, HI)
                   zk = cg%z(k)
@@ -545,15 +544,17 @@ contains
                   enddo
                enddo
             enddo
-            if (allocated(grav)) deallocate(grav)
-            if (allocated(dens_prof)) deallocate(dens_prof)
-            if (allocated(ln_dens_der)) deallocate(ln_dens_der)
             max_vy = max(max_vy, maxval(abs(cg%u(flind%dst%imy,:,:,:))/cg%u(flind%dst%idn,:,:,:)) )
             cgl => cgl%nxt
          enddo
          call piernik_MPI_Allreduce(max_vy, pMAX)
       endif
       first_run = .false.
+
+      !cleanup
+      if (allocated(grav)) deallocate(grav)
+      if (allocated(dens_prof)) deallocate(dens_prof)
+      if (allocated(ln_dens_der)) deallocate(ln_dens_der)
 
    end subroutine problem_initial_conditions
 !-----------------------------------------------------------------------------------------------------------------------

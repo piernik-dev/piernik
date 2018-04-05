@@ -757,7 +757,7 @@ contains
 
       implicit none
 
-      class(box_T),              intent(inout) :: patch
+      class(box_T),              intent(inout) :: patch       !< object invoking type-bound procedure
       integer(kind=4), optional, intent(in)    :: n_cg        !< how many segments
 
       integer                                  :: p, nseg

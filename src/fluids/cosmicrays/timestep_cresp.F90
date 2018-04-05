@@ -6,9 +6,9 @@ module timestep_cresp
 
       implicit none
     private
-    public :: dt_cre, cresp_timestep
+    public :: dt_cre, cresp_timestep, dt_cre_min_ub, dt_cre_min_ud
 
-    real(kind=8) :: dt_cre
+    real(kind=8) :: dt_cre, dt_cre_min_ub, dt_cre_min_ud
 
 !----------------------------------------------------------------------------------------------------
 !
@@ -17,30 +17,44 @@ module timestep_cresp
 !----------------------------------------------------------------------------------------------------
 
   function approximate_p_up(n_cell, e_cell, cell_i_up)
-   use initcrspectrum, only: p_fix
+   use initcrspectrum, only: p_fix, ncre
    use cresp_NR_method, only: intpol_pf_from_NR_grids
    use units, only: clight
    implicit none
     integer(kind=4), intent(in)            :: cell_i_up
     real(kind=8), dimension(:), intent(in) :: n_cell, e_cell
-    real(kind=8) :: approximate_p_up, alpha_bnd, n_bnd
+    real(kind=8) :: approximate_p_up, alpha_bnd, n_bnd, e_bnd
     real(kind=8), dimension(1:2) :: pf_ratio
     character(len=2) :: which_bound="up"
     logical :: interpolation_successful, intpol_fail
         intpol_fail = .true.
+        approximate_p_up = p_fix(ncre-1)
         if (cell_i_up .ne. 1) then
-            alpha_bnd = (e_cell(cell_i_up)/(n_cell(cell_i_up)*clight*p_fix(cell_i_up-1)))
-            n_bnd     = n_cell(cell_i_up)
+            alpha_bnd = abs(e_cell(cell_i_up)/(n_cell(cell_i_up)*clight*p_fix(cell_i_up-1))) ! must remain absolute value until treatment against
+            n_bnd     = abs(n_cell(cell_i_up))                                               ! negative values due to diffusion is introduced
             pf_ratio  = intpol_pf_from_NR_grids(which_bound, alpha_bnd, n_bnd, interpolation_successful, intpol_fail) ! we use just an interpolated ratio
-            if ( intpol_fail ) then
-                approximate_p_up = p_fix(cell_i_up) ! if interpolation fails, upper p_fix boundary is provided - might cause problems with p_up moving beyond p_fix
-                return
+            if ( .not. interpolation_successful ) then ! if interpolation fails once, we suppose bin deactivation might take place
+                if (cell_i_up .gt. 3) then
+                    n_bnd     = abs(n_cell(cell_i_up) + n_cell(cell_i_up-1)) ! must remain absolute value until treatment against
+                    e_bnd     = e_cell(cell_i_up) + e_cell(cell_i_up-1)      ! negative values due to diffusion is introduced
+                    alpha_bnd = abs(e_bnd/(n_bnd*clight*p_fix(cell_i_up-2)))
+                    pf_ratio  = intpol_pf_from_NR_grids(which_bound, alpha_bnd, n_bnd, interpolation_successful, intpol_fail)
+                    if ( .not. interpolation_successful ) then
+                        approximate_p_up = p_fix(min(cell_i_up+1, ncre-1)) ! if interpolation fails, upper p_fix boundary is provided
+                        return
+                    else
+                        approximate_p_up = pf_ratio(1) * p_fix(cell_i_up-2)
+                        return
+                    endif
+                else
+                    approximate_p_up = p_fix(min(cell_i_up, ncre-1))
+                endif
             else
                 approximate_p_up = pf_ratio(1) * p_fix(cell_i_up-1)
                 return
             endif
         else
-            approximate_p_up = p_fix(cell_i_up) ! approximate_p_up = pf_ratio(1) * p_fix(cell_i_up-1)
+            approximate_p_up = p_fix(min(cell_i_up, ncre-1)) ! p_fix(0,ncre) is zero, but cell_i_up > 0 is satisfied
         endif
   end function approximate_p_up
 !----------------------------------------------------------------------------------------------------
@@ -50,11 +64,12 @@ module timestep_cresp
   implicit none
     real(kind=8), dimension(:), intent(in) :: e_cell, n_cell
     integer :: evaluate_i_up, i
+        evaluate_i_up = 0
         do i=ncre, 1, -1  ! we start counting from ncre since upper cutoff is rather expected at higher index numbers. Might change it though.
             if (e_cell(i) .gt. e_small .and. n_cell(i) .gt. zero) then ! better compare to zero or to eps?
                 evaluate_i_up = i
-                return
-            endif  ! no need for other conditions - if there IS a bin that has literally no energy, the algorithm will most likely crash.
+                return ! if cell is empty, evaluate_i_up returns 0, which is handled by cresp_timestep
+            endif
         enddo
   end function evaluate_i_up
 
@@ -75,17 +90,21 @@ module timestep_cresp
         i_up_cell = I_ZERO
         dt_cre_ud = huge(one)
         dt_cre_ub = huge(one)
-        if (maxval(e_cell) .gt. e_small) then ! any timestep evaluation makes sense only if there's any information to be migrated between bins
+        i_up_cell = evaluate_i_up(e_cell, n_cell)
+! cell is assumed empty if evaluate_i_up over whole ncre range returns 0 -> nothing to do here
+        if (i_up_cell .gt. 0) then
 ! Adiabatic cooling timestep:
-            if (abs(sptab%ud) .gt. zero) then
+            if (abs(sptab%ud) .ne. zero) then
                 dt_cre_ud = cfl_cre * w / sptab%ud
                 dt_cre_ud = abs(dt_cre_ud)
+                dt_cre_min_ud = min(dt_cre_ud, dt_cre_min_ud)
             endif
 ! Synchrotron cooling timestep (is dependant only on p_up, highest value of p):
             if (sptab%ub .gt. zero) then
-                i_up_cell = evaluate_i_up(e_cell, n_cell)
-                p_u = approximate_p_up(n_cell, e_cell, i_up_cell)
+!                 i_up_cell = evaluate_i_up(e_cell, n_cell)
+                p_u = abs(approximate_p_up(n_cell, e_cell, i_up_cell)) ! TODO: fix problems with negative p_u
                 dt_cre_ub = cfl_cre * w / (p_u * sptab%ub)
+                dt_cre_min_ub = min(dt_cre_ub, dt_cre_min_ub)
             endif
         endif
 ! Here shortest among calculated timesteps is chosen.

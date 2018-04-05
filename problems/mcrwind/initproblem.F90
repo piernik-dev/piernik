@@ -182,6 +182,17 @@ contains
 #ifdef COSM_RAYS_SOURCES
       use cr_data,        only: cr_sigma, icr_N14, icr_O16
 #endif /* COSM_RAYS_SOURCES */
+#ifdef COSM_RAY_ELECTRONS
+      use cresp_crspectrum,only: e_tot_2_f_init_params, cresp_init_powl_spectrum, cresp_init_state, e_tot_2_en_powl_init_params
+      use cresp_NR_method, only: cresp_initialize_guess_grids
+      use cresp_grid,      only: cresp_init_grid
+      use initcrspectrum,  only: taylor_coeff_2nd, taylor_coeff_3rd, expan_order
+      use initcosmicrays,  only: iarr_cre_n, iarr_cre_e
+#ifdef SN_GALAXY
+      use initcrspectrum,  only: cresp
+#endif /* SN_GALAXY */
+      use dataio_pub,      only: msg, printinfo
+#endif /* COSM_RAY_ELECTRONS */
       implicit none
 
       class(component_fluid), pointer :: fl
@@ -191,6 +202,9 @@ contains
       type(grid_container),   pointer :: cg
 #ifdef SN_GALAXY
       real                            :: decr, x1, x2, y1, y2, z1
+#ifdef COSM_RAY_ELECTRONS
+      real                            :: e_tot_sn
+#endif /* COSM_RAY_ELECTRONS */
 #endif /* SN_GALAXY */
 
 #ifdef COSM_RAYS_SOURCES
@@ -202,6 +216,11 @@ contains
 #ifdef GRAV
       call grav_pot_3d
 #endif /* GRAV */
+
+#ifdef COSM_RAY_ELECTRONS
+      call cresp_initialize_guess_grids
+      call cresp_init_grid
+#endif /* COSM_RAY_ELECTRONS */
 
 !   Secondary parameters
       fl => flind%ion
@@ -237,6 +256,10 @@ contains
 #ifdef COSM_RAYS
                   cg%u(iarr_crn,i,j,k)  = 0.0
                   cg%u(iarr_crn(1),i,j,k) = beta_cr*fl%cs2 * cg%u(fl%idn,i,j,k)/( gamma_crn(1) - 1.0 )
+#ifdef COSM_RAY_ELECTRONS
+                  cg%u(iarr_cre_n,i,j,k) = 0.0
+                  cg%u(iarr_cre_e,i,j,k) = 0.0
+#endif /* COSM_RAY_ELECTRONS */
 #ifdef SN_GALAXY
 ! Single SN explosion in x0,y0,z0 at t = 0 if amp_cr /= 0
                   if (any([eCRSP(icr_H1), eCRSP(icr_C12)])) then
@@ -247,6 +270,16 @@ contains
                   endif
                   if (eCRSP(icr_H1 )) cg%u(iarr_crn(cr_table(icr_H1 )),i,j,k)= cg%u(iarr_crn(cr_table(icr_H1 )),i,j,k) +     decr
                   if (eCRSP(icr_C12)) cg%u(iarr_crn(cr_table(icr_C12)),i,j,k)= cg%u(iarr_crn(cr_table(icr_C12)),i,j,k) + 0.1*decr
+#ifdef COSM_RAY_ELECTRONS
+                  e_tot_sn = decr * cre_eff
+                  cresp%n = 0.0 ;  cresp%e = 0.0
+                  if (e_tot_sn .gt. e_small) then     ! early phase - fill cells only when total passed energy is greater than e_small
+                        call cresp_init_state(cresp%n,cresp%e, e_tot_2_f_init_params(e_tot_sn))  ! initializes whole spectrum, accounts for "widening" due to e_small approximation
+                  endif                                                                                ! distribution function amplitude computed from total explosion energy multiplied by factor cre_eff
+                  cg%u(iarr_cre_n,i,j,k) = cg%u(iarr_cre_n,i,j,k) + cresp%n
+                  cg%u(iarr_cre_e,i,j,k) = cg%u(iarr_cre_e,i,j,k) + cresp%e
+
+#endif /* COSM_RAY_ELECTRONS */
 #endif /* SN_GALAXY */
 #endif /* COSM_RAYS */
                enddo
@@ -278,6 +311,12 @@ contains
 
          cgl => cgl%nxt
       enddo
+#ifdef COSM_RAY_ELECTRONS
+      write(msg,*) '[initproblem:problem_initial_conditions]: Taylor_exp._ord. (cresp)    = ', expan_order
+      call printinfo(msg)
+      write(msg,*) '[initproblem:problem_initial conditions]: Taylor_exp._coeff.(2nd,3rd) = ', taylor_coeff_2nd, taylor_coeff_3rd
+      call printinfo(msg)
+#endif /* COSM_RAY_ELECTRONS */
 
    end subroutine problem_initial_conditions
 
@@ -462,7 +501,11 @@ contains
 #ifdef SHEAR
       use snsources,      only: sn_shear
 #endif /* SHEAR */
-
+#ifdef COSM_RAY_ELECTRONS
+      use cresp_crspectrum,only: e_tot_2_f_init_params, cresp_init_state, e_tot_2_en_powl_init_params
+      use initcrspectrum,  only: cresp, cre_eff, e_small
+      use initcosmicrays,  only: iarr_cre_n, iarr_cre_e
+#endif /* COSM_RAY_ELECTRONS */
       implicit none
 
       real, dimension(ndims), intent(in) :: pos
@@ -473,11 +516,13 @@ contains
 #ifdef SHEAR
       real, dimension(3)                 :: ysnoi
 #endif /* SHEAR */
+#ifdef COSM_RAY_ELECTRONS
+      real          :: e_tot_sn
+#endif /* COSM_RAY_ELECTRONS */
 
       xsn = pos(xdim)
       ysn = pos(ydim)
       zsn = pos(zdim)
-
       cgl => leaves%first
       do while (associated(cgl))
          cg => cgl%cg
@@ -515,13 +560,21 @@ contains
                   !> \deprecated BEWARE: following lines are inconsistent with the gold for some reason
 !                  if (eCRSP(icr_N14)) cg%u(iarr_crn(cr_table(icr_N14)),i,j,k) = cg%u(iarr_crn(cr_table(icr_N14)),i,j,k) + cr_primary(cr_table(icr_N14))*14*decr
 !                  if (eCRSP(icr_O16)) cg%u(iarr_crn(cr_table(icr_O16)),i,j,k) = cg%u(iarr_crn(cr_table(icr_O16)),i,j,k) + cr_primary(cr_table(icr_O16))*16*decr
+#ifdef COSM_RAY_ELECTRONS
+                  e_tot_sn = decr * cre_eff
+                  cresp%n = 0.0 ;  cresp%e = 0.0
+                  if (e_tot_sn .gt. e_small) then     ! early phase - fill cells only when total passed energy is greater than e_small, amplitude computed from total explosion energy multiplied by factor cre_eff
+                        call cresp_init_state(cresp%n,cresp%e, e_tot_2_f_init_params(e_tot_sn))  ! initializes whole spectrum, accounts for "widening" due to e_small approximation
+                  endif
+                  cg%u(iarr_cre_n,i,j,k) = cg%u(iarr_cre_n,i,j,k) + cresp%n
+                  cg%u(iarr_cre_e,i,j,k) = cg%u(iarr_cre_e,i,j,k) + cresp%e
+#endif /* COSM_RAY_ELECTRONS */
 #endif /* COSM_RAYS_SOURCES */
                enddo ! i
             enddo ! j
          enddo ! k
          cgl => cgl%nxt
       enddo
-
    end subroutine cr_sn_beware
 #endif /* CR_SN */
 end module initproblem

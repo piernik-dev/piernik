@@ -79,7 +79,7 @@ contains
 
       implicit none
 
-      class(grid_piece),                 intent(inout) :: this
+      class(grid_piece),                 intent(inout) :: this  !< object invoking type-bound procedure
       integer(kind=8), dimension(ndims), intent(in)    :: off   !< offset
       integer(kind=4), dimension(ndims), intent(in)    :: n_b   !< size
       integer(kind=4),                   intent(in)    :: gid   !< current grid_id
@@ -102,7 +102,7 @@ contains
 
       implicit none
 
-      class(grid_piece_list), intent(inout) :: this
+      class(grid_piece_list), intent(inout) :: this  !< object invoking type-bound procedure
       integer(kind=4),        intent(in)    :: size
 
       allocate(this%list(size))
@@ -115,7 +115,7 @@ contains
 
       implicit none
 
-      class(grid_piece_list), intent(inout) :: this
+      class(grid_piece_list), intent(inout) :: this  !< object invoking type-bound procedure
 
       if (allocated(this%list)) deallocate(this%list)
 
@@ -129,8 +129,8 @@ contains
 
       implicit none
 
-      class(grid_piece_list),            intent(inout) :: this
-      integer(kind=8), dimension(ndims), intent(in)    :: off  !< offset of the level
+      class(grid_piece_list),            intent(inout) :: this  !< object invoking type-bound procedure
+      integer(kind=8), dimension(ndims), intent(in)    :: off   !< offset of the level
 
       integer :: s
 
@@ -148,7 +148,7 @@ contains
 
       implicit none
 
-      class(grid_piece_list), intent(inout) :: this
+      class(grid_piece_list), intent(inout) :: this !< object invoking type-bound procedure
 
       integer :: s
       integer(kind=8) :: cc, c
@@ -177,7 +177,7 @@ contains
 
       implicit none
 
-      class(grid_piece_list), intent(inout) :: this
+      class(grid_piece_list), intent(inout) :: this !< object invoking type-bound procedure
       integer,                intent(in)    :: a, b
 
       if (a == b) then
@@ -205,7 +205,7 @@ contains
 
       implicit none
 
-      class(grid_piece_list), intent(inout) :: this
+      class(grid_piece_list), intent(inout) :: this !< object invoking type-bound procedure
       integer,                intent(in)    :: a, b
 
       if (a == b) return
@@ -226,7 +226,7 @@ contains
 
       implicit none
 
-      class(grid_piece_list), intent(in) :: this
+      class(grid_piece_list), intent(in) :: this !< object invoking type-bound procedure
 
       l_bound = lbound(this%list, dim=1)
 
@@ -238,7 +238,7 @@ contains
 
       implicit none
 
-      class(grid_piece_list), intent(in) :: this
+      class(grid_piece_list), intent(in) :: this !< object invoking type-bound procedure
 
       u_bound = ubound(this%list, dim=1)
 

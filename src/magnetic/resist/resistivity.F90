@@ -49,11 +49,14 @@ module resistivity
    real                                  :: jc2                            !< squared critical value of current density
    real                                  :: deint_max                      !< COMMENT ME
    integer(kind=4)                       :: eta_scale                      !< COMMENT ME
-   real                                  :: dt_resist, dt_eint
+   real                                  :: dt_resist
    real(kind=8)                          :: d_eta_factor
    type(value)                           :: etamax, cu2max, deimin
    logical, save                         :: eta1_active = .true.           !< resistivity off-switcher while eta_1 == 0.0
    character(len=dsetnamelen), parameter :: eta_n = "eta", wb_n = "wb", eh_n = "eh", dbx_n = "dbx", dby_n = "dby", dbz_n = "dbz"
+#ifndef ISO
+   real                                  :: dt_eint
+#endif /* !ISO */
 
 contains
 
@@ -271,7 +274,13 @@ contains
             wb = wb + eh**2
          endif
 
-         eta(:,:,:) = eta_0 + eta_1 * sqrt( max(0.0,wb(:,:,:)- jc2 ))
+!        eta(:,:,:) = eta_0 + eta_1 * sqrt( max(0.0,wb(:,:,:)- jc2 ))
+!        the above may cause FPE because compiler may transform it to max(0.0, sqrt(wb(:,:,:)- jc2 ))
+         where (wb(:,:,:)- jc2 > 0.)
+            eta(:,:,:) = eta_0 + eta_1 * sqrt(wb(:,:,:)- jc2)
+         elsewhere
+            eta(:,:,:) = eta_0
+         endwhere
 
          eh = 0.0
          if (dom%has_dir(xdim)) then
