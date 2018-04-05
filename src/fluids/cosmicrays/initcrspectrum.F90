@@ -33,6 +33,8 @@ module initcrspectrum
    integer(kind=1)    :: e_small_approx_p_up         !< 0,1 - turns off/on energy (e_small) approximated upper cutoff momentum in isolated case
    integer(kind=1)    :: e_small_approx_init_cond    !< 0,1 - turns off/on energy (e_small) approximated momenta at initialization
    integer(kind=1)    :: add_spectrum_base           !< adds base to spectrum of any type of e_small value
+   real(kind=8)       :: smallecrn                   !< floor value for CRESP number density
+   real(kind=8)       :: smallecre                   !< floor value for CRESP energy density
 
    real(kind=8)       :: max_p_ratio                 !< maximal ratio of momenta for solution grids resolved at initialization via cresp_NR_method
    integer(kind=2)    :: NR_iter_limit               !< maximal number of iterations for NR algorithm
@@ -132,7 +134,8 @@ module initcrspectrum
       NR_run_refine_pf  = .false.
       NR_refine_solution_q  = .false.
       NR_refine_solution_pf = .false.
-
+      smallecrn         = 0.0
+      smallecre         = 0.0
       prevent_neg_en    = .true.
       test_spectrum_break    = .false.
       magnetic_energy_scaler = 0.001
