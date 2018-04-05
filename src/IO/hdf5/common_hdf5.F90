@@ -247,25 +247,39 @@ contains
 #endif /* COSM_RAYS */
 #ifdef COSM_RAY_ELECTRONS
             case ('cren') !< CRESP number density fields
-               do k = 1, ncre ! size(iarr_all_cre,1)   !!!
+               do k = 1, ncre
                   if (k<=99) then
-                    write(aux,'(A4,I2.2)') 'cren', k !!!
-                    hdf_vars(j) = aux ; j = j + 1  !!!
+                    write(aux,'(A4,I2.2)') 'cren', k
+                    hdf_vars(j) = aux ; j = j + 1
                   else
                      write(msg, '(a,i3)')"[common_hdf5:init_hdf5] Cannot create name for CRESP number density component #", k
                      call warn(msg)
                   endif
-               enddo    !!!
+               enddo
+               do k = 1, len(vars)
+                    if (vars(i) .eq. 'cree') exit
+                    if (k .eq. len(vars)) then
+                        write(msg, '(a)')"[common_hdf5:init_hdf5] CRESP 'cren' field created, but 'cree' not defined: reconstruction of spectrum from hdf files requires both."
+                        call warn(msg)
+                    endif
+               enddo
             case ('cree') !< CRESP energy density fields
-               do k = 1, ncre ! size(iarr_all_cre,1) !!!
+               do k = 1, ncre
                   if (k<=99) then
-                    write(aux,'(A4,I2.2)') 'cree', k !!!
-                    hdf_vars(j) = aux ; j = j + 1 !!!
+                    write(aux,'(A4,I2.2)') 'cree', k
+                    hdf_vars(j) = aux ; j = j + 1
                   else
                      write(msg, '(a,i3)')"[common_hdf5:init_hdf5] Cannot create name for CRESP energy density component #", k
                      call warn(msg)
                   endif
-               enddo    !!!
+               enddo
+               do k = 1, len(vars)
+                    if (vars(i) .eq. 'cren') exit
+                    if (k .eq. len(vars)) then
+                        write(msg, '(a)')"[common_hdf5:init_hdf5] CRESP 'cree' field created, but 'cren' not defined: reconstruction of spectrum from hdf files requires both."
+                        call warn(msg)
+                    endif
+               enddo
 #endif /* COSM_RAY_ELECTRONS */
 #ifdef GRAV
             case ('gpot')
