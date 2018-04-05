@@ -100,14 +100,16 @@ contains
       use fluids_pub, only: has_ion, has_dst, has_neu
 #ifdef COSM_RAYS
       use dataio_pub, only: warn, msg
-#ifdef COSM_RAY_ELECTRONS
-      use fluidindex, only: iarr_all_cre, iarr_all_crn
-      use initcrspectrum, only: ncre
-#else /* !COSM_RAY_ELECTRONS */
+#ifndef COSM_RAY_ELECTRONS
       use fluidindex, only: iarr_all_crs
-#endif /* COSM_RAY_ELECTRONS */
+#else /* COSM_RAY_ELECTRONS */
+      use fluidindex, only: iarr_all_crn
+#endif /* !COSM_RAY_ELECTRONS */
 #endif /* COSM_RAYS */
-
+#ifdef COSM_RAY_ELECTRONS
+      use initcosmicrays, only: iarr_cre_e, iarr_cre_n
+      use initcrspectrum, only: ncre
+#endif /* COSM_RAY_ELECTRONS */
       implicit none
 
       character(len=dsetnamelen), dimension(:), intent(in) :: vars  !< quantities to be plotted, see dataio::vars
@@ -153,11 +155,17 @@ contains
             case ('encr')
 #ifdef COSM_RAY_ELECTRONS
                nhdf_vars = nhdf_vars + size(iarr_all_crn,1)
-               nhdf_vars = nhdf_vars + size(iarr_all_cre,1)
 #else /* !COSM_RAY_ELECTRONS */
                nhdf_vars = nhdf_vars + size(iarr_all_crs,1)
 #endif /* COSM_RAY_ELECTRONS */
 #endif /* COSM_RAYS */
+
+#ifdef COSM_RAY_ELECTRONS
+            case ('cren')
+                nhdf_vars = nhdf_vars + size(iarr_cre_n)
+            case ('cree')
+                nhdf_vars = nhdf_vars + size(iarr_cre_e)
+#endif /* COSM_RAY_ELECTRONS */
 
 #ifdef TRACER
             case ('trcr')
@@ -224,24 +232,6 @@ contains
                      call warn(msg)
                   endif
                enddo
-               do k = 1, ncre ! size(iarr_all_cre,1)   !!!
-                  if (k<=99) then
-                    write(aux,'(A4,I2.2)') 'cren', k !!!
-                    hdf_vars(j) = aux ; j = j + 1  !!!
-                  else
-                     write(msg, '(a,i3)')"[common_hdf5:init_hdf5] Cannot create name for CRESP number density component #", k
-                     call warn(msg)
-                  endif
-               enddo    !!!
-               do k = 1, ncre ! size(iarr_all_cre,1) !!!
-                  if (k<=99) then
-                    write(aux,'(A4,I2.2)') 'cree', k !!!
-                    hdf_vars(j) = aux ; j = j + 1 !!!
-                  else
-                     write(msg, '(a,i3)')"[common_hdf5:init_hdf5] Cannot create name for CRESP energy density component #", k
-                     call warn(msg)
-                  endif
-               enddo    !!!
 #else /* !COSM_RAY_ELECTRONS */
                do k = 1, size(iarr_all_crs,1)
                   if (k<=9) then
@@ -255,7 +245,28 @@ contains
                enddo
 #endif /* COSM_RAY_ELECTRONS */
 #endif /* COSM_RAYS */
-
+#ifdef COSM_RAY_ELECTRONS
+            case ('cren') !< CRESP number density fields
+               do k = 1, ncre ! size(iarr_all_cre,1)   !!!
+                  if (k<=99) then
+                    write(aux,'(A4,I2.2)') 'cren', k !!!
+                    hdf_vars(j) = aux ; j = j + 1  !!!
+                  else
+                     write(msg, '(a,i3)')"[common_hdf5:init_hdf5] Cannot create name for CRESP number density component #", k
+                     call warn(msg)
+                  endif
+               enddo    !!!
+            case ('cree') !< CRESP energy density fields
+               do k = 1, ncre ! size(iarr_all_cre,1) !!!
+                  if (k<=99) then
+                    write(aux,'(A4,I2.2)') 'cree', k !!!
+                    hdf_vars(j) = aux ; j = j + 1 !!!
+                  else
+                     write(msg, '(a,i3)')"[common_hdf5:init_hdf5] Cannot create name for CRESP energy density component #", k
+                     call warn(msg)
+                  endif
+               enddo    !!!
+#endif /* COSM_RAY_ELECTRONS */
 #ifdef GRAV
             case ('gpot')
                hdf_vars(j) = 'gpot' ; j = j + 1
