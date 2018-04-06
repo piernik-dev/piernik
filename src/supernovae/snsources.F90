@@ -186,7 +186,7 @@ contains
       use domain,         only: dom
       use grid_cont,      only: grid_container
 #ifdef COSM_RAYS_SOURCES
-      use cr_data,        only: icr_H1, icr_C12, icr_N14, icr_O16, cr_table, cr_primary, eCRSP
+      use cr_data,        only: cr_table, cr_primary, eCRSP, icr_H1, icr_C12, icr_N14, icr_O16
       use initcosmicrays, only: iarr_crn
 #endif /* COSM_RAYS_SOURCES */
 
