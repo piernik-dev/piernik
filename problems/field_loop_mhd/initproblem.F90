@@ -37,7 +37,7 @@ module initproblem
   private
   public :: read_problem_par, problem_initial_conditions, problem_pointers
 
-  real   :: uni_dens, uni_pres, v0, sinalpha, cosalpha
+  real   :: uni_dens, uni_pres, v0, sinalpha, cosalpha, A0, R
   
   namelist /PROBLEM_CONTROL/ uni_dens, uni_pres, v0, sinalpha, cosalpha, A0, R
 
