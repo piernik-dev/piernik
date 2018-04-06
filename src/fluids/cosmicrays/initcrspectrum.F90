@@ -98,26 +98,27 @@ module initcrspectrum
 !
 !====================================================================================================
    subroutine init_cresp
-      use constants,             only: I_ZERO, zero, ten
-      use diagnostics,           only: my_allocate_with_index
+      use constants,            only: I_ZERO, zero, ten
+      use dataio_pub,           only: printinfo, warn, msg, die
+      use diagnostics,          only: my_allocate_with_index
       implicit none
       integer                  :: i       ! enumerator
       logical, save            :: first_run = .true.
 
 ! Default values
       use_cresp = .true.
-      ncre      = 0
-      p_min_fix = 1.5e1
-      p_max_fix = 1.65e4
-      p_lo_init = 1.5e1
-      p_up_init = 7.5e2
+      ncre        = 0
+      p_min_fix   = 1.5e1
+      p_max_fix   = 1.65e4
+      p_lo_init   = 1.5e1
+      p_up_init   = 7.5e2
       initial_condition = "powl"
-      f_init    = 1.0
-      q_init    = 2.5
-      bump_amp  = 0.5d0
-      q_big     = 30.0d0
-      cfl_cre   = 0.4
-      cre_eff   = 0.01
+      f_init      = 1.0
+      q_init      = 2.5
+      bump_amp    = 0.5d0
+      q_big       = 30.0d0
+      cfl_cre     = 0.1
+      cre_eff     = 0.01
       K_cre_paral_1 = 0
       K_cre_perp_1  = 0
       K_cre_pow     = 0
@@ -152,43 +153,73 @@ module initcrspectrum
       tol_x_1D = 1.0e-14
       arr_dim = 200
 
-      call cresp_read_nml_module
+      call read_problem_par
 
-      open(10, file='crs.dat',status='replace',position='rewind')     ! diagnostic files
-      open(11, file='crs_ne.dat',status='replace',position='rewind')  ! diagnostic files
+!!\deprecated
+!       open(10, file='crs.dat',status='replace',position='rewind')     ! diagnostic files
+!       open(11, file='crs_ne.dat',status='replace',position='rewind')  ! diagnostic files
 
       if (first_run .eqv. .true.) then
          if (ncre .ne. I_ZERO)  then
-               print *,'[@init_cresp] Initial CRESP parameters read:'
-               print '(A15, 1I3)'   ,'ncre        = ', ncre
-               print '(A15, 1E15.7)','p_min_fix   = ', p_min_fix
-               print '(A15, 1E15.7)','p_max_fix   = ', p_max_fix
-               print '(A15, 1E15.7)','p_lo_init   = ', p_lo_init
-               print '(A15, 1E15.7)','p_up_init   = ', p_up_init
-               print '(A15, 1F15.7)','f_init      = ', f_init
-               print '(A15, 1F15.7)','q_init      = ', q_init
-               print '(A15, 1F15.7)','q_big       = ', q_big
-               print '(A15, 1F15.7)','cfl_cre     = ', cfl_cre
-               print '(A25, 1I3)'    ,'Taylor expansion order =', expan_order
-               print '(A15, 10E15.7)','K_cre_paral_1=', K_cre_paral_1
-               print '(A15, 10E15.7)','K_cre_perp_1 =', K_cre_perp_1
-               print '(A15, 10E15.7)','K_cre_pow    =', K_cre_pow
-               print '(A15, 1E15.7)', 'e_small      =', e_small
-               print '(A20, A5)',    'initial_condition =' , initial_condition
-               print '(A17, 1E15.7)','bump amplitude =', bump_amp
-               print '(A27, I1)','e_small_approx_init_cond =', e_small_approx_init_cond
-               print '(A22, I1)','e_small_approx_p_lo =', e_small_approx_p_lo
-               print '(A22, I1)','e_small_approx_p_up =', e_small_approx_p_up
-               print '(A22, I1)','add_spectrum_base   =', add_spectrum_base
-               print '(A22, 1F15.7 )','max_p_ratio =', max_p_ratio
-               print '(A22, L2 )' ,'force_init_NR   = ', force_init_NR
-               print '(A22, I4)', 'NR_iter_limit  = ', NR_iter_limit
-               print '(A22, 1E15.7)','epsilon(eps) = ', eps
+#ifdef VERBOSE
+               write (msg,'(A)')            '[initcrspectrum:init_cresp] Initial CRESP parameters read:'
+               call printinfo(msg)
+               write (msg, '(A, 1I3)')      '[initcrspectrum:init_cresp] ncre        = ', ncre
+               call printinfo(msg)
+               write (msg, '(A, 1E15.7)')   '[initcrspectrum:init_cresp] p_min_fix   = ', p_min_fix
+               call printinfo(msg)
+               write (msg, '(A, 1E15.7)')   '[initcrspectrum:init_cresp] p_max_fix   = ', p_max_fix
+               call printinfo(msg)
+               write (msg, '(A, 1E15.7)')   '[initcrspectrum:init_cresp] p_lo_init   = ', p_lo_init
+               call printinfo(msg)
+               write (msg, '(A, 1E15.7)')   '[initcrspectrum:init_cresp] p_up_init   = ', p_up_init
+               call printinfo(msg)
+               write (msg, '(A, 1F15.7)')   '[initcrspectrum:init_cresp] q_init      = ', q_init
+               call printinfo(msg)
+               write (msg, '(A, 1F15.7)')   '[initcrspectrum:init_cresp] q_big       = ', q_big
+               call printinfo(msg)
+               write (msg, '(A, 1F15.7)')   '[initcrspectrum:init_cresp] cfl_cre     = ', cfl_cre
+               call printinfo(msg)
+               write (msg, '(A, 1I3)')      '[initcrspectrum:init_cresp] Taylor expansion order =', expan_order
+               call printinfo(msg)
+               write (msg, '(A, 10E15.7)')  '[initcrspectrum:init_cresp] K_cre_paral1 = ', K_cre_paral_1
+               call printinfo(msg)
+               write (msg, '(A, 10E15.7)')  '[initcrspectrum:init_cresp] K_cre_perp_1 =', K_cre_perp_1
+               call printinfo(msg)
+               write (msg, '(A, 10E15.7)')  '[initcrspectrum:init_cresp] K_cre_pow    =', K_cre_pow
+               call printinfo(msg)
+               write (msg, '(A, 1E15.7)')   '[initcrspectrum:init_cresp] e_small      =', e_small
+               call printinfo(msg)
+               write (msg, '(A, A5)')       '[initcrspectrum:init_cresp] initial_condition =' , initial_condition
+               call printinfo(msg)
+               write (msg, '(A, 1E15.7)')   '[initcrspectrum:init_cresp] bump amplitude =', bump_amp
+               call printinfo(msg)
+               write (msg, '(A, I1)')       '[initcrspectrum:init_cresp] Approximate cutoff momenta at initialization: e_small_approx_init_cond =', e_small_approx_init_cond
+               call printinfo(msg)
+               write (msg, '(A, I1)')       '[initcrspectrum:init_cresp] Approximate lower momentum cutoff: e_small_approx_p_lo =', e_small_approx_p_lo
+               call printinfo(msg)
+               write (msg, '(A, I1)')       '[initcrspectrum:init_cresp] Approximate upper momentum cutoff: e_small_approx_p_up =', e_small_approx_p_up
+               call printinfo(msg)
+               write (msg, '(A, I1)')       '[initcrspectrum:init_cresp] add_spectrum_base   =', add_spectrum_base
+               call printinfo(msg)
+               write (msg, '(A, 1F10.5 )')  '[initcrspectrum:init_cresp] max_p_ratio =', max_p_ratio
+               call printinfo(msg)
+               write (msg, '(A, L2 )' )     '[initcrspectrum:init_cresp] force_init_NR   = ', force_init_NR
+               call printinfo(msg)
+               write (msg, '(A, I4)')       '[initcrspectrum:init_cresp] NR_iter_limit  = ', NR_iter_limit
+               call printinfo(msg)
+               write (msg, '(A, 1E15.7)')   '[initcrspectrum:init_cresp] epsilon(eps) = ', eps
+               call printinfo(msg)
+#endif /* VERBOSE */
+               if (ncre .lt. 3) then
+                  write (msg,'(A)') "[initcrspectrum:init_cresp] CRESP algorithm currently requires at least 3 bins (ncre) in order to work properly, check your parameters."
+                  call die(msg)
+               endif
 
                if ( (e_small_approx_p_lo+e_small_approx_p_up) .gt. 0 .and. e_small_approx_init_cond .lt. 1) then
                   e_small_approx_init_cond = 1  !
-                  print *, "[WARNING] @initcrspectrum: chosen approximation of boundary momenta"
-                  print *, " >>> Modifying e_small_approx_init_cond to 1 "
+                  write (msg,'(A)') "[initcrspectrum:init_cresp] Approximation of boundary momenta is active -> modifying e_small_approx_init_cond to 1."
+                  call warn(msg)
                   call sleep(1)
                endif
 ! countermeasure - in case unrecognized or invalid parameters are provided
@@ -197,8 +228,8 @@ module initcrspectrum
                if ( e_small_approx_init_cond .gt. 0 ) then ; e_small_approx_init_cond = 1 ; else ; e_small_approx_init_cond = 0 ; endif
 
                if (e_small_approx_p_lo+e_small_approx_p_up .eq. 0) then
-                  NR_refine_solution_q = .true. ! for testing we leave precise solutions of q (especially for outer momenta)
-                  e_small = zero                ! no threshold energy for bin activation necessary
+                  NR_refine_solution_q = .true. !< for testing we leave precise solutions of q (especially for outer momenta)
+                  e_small = zero                !< no threshold energy for bin activation necessary
                endif
 ! arrays initialization
                call my_allocate_with_index(p_fix,ncre,0)
@@ -209,82 +240,113 @@ module initcrspectrum
                cresp_all_edges = (/ (i,i=0,ncre) /)
                cresp_all_bins  = (/ (i,i=1,ncre) /)
 
+!!\brief for now algorithm requires at least 3 bins
                p_fix = zero 
                w  = (log10(p_max_fix/p_min_fix))/real(ncre-2,kind=8)
                p_fix(1:ncre-1)  =  p_min_fix*ten**(w* real((cresp_all_edges(1:ncre-1)-1),kind=8) )
                p_fix(0)    = zero
                p_fix(ncre) = zero
                p_fix_ratio = ten**w
-               write (*,'(A22, 50E15.7)') 'Fixed momentum grid: ', p_fix
-               write (*,'(A22, 50E15.7)') 'Bin p-width (log10): ', w
 
                p_mid_fix = 0.0
                p_mid_fix(2:ncre-1) = sqrt(p_fix(1:ncre-2)*p_fix(2:ncre-1))
                p_mid_fix(1)    = p_mid_fix(2) / p_fix_ratio
                p_mid_fix(ncre) = p_mid_fix(ncre-1) * p_fix_ratio
-               write (*,'(A22, 50E15.7)') 'Fixed mid momenta:   ',p_mid_fix(1:ncre)
+#ifdef VERBOSE
+               write (msg,'(A, 50E15.7)') '[initcrspectrum:init_cresp] Fixed momentum grid: ', p_fix
+               call printinfo(msg)
+               write (msg,'(A, 50E15.7)') '[initcrspectrum:init_cresp] Bin p-width (log10): ', w
+               call printinfo(msg)
+               write (msg,'(A, 50E15.7)') '[initcrspectrum:init_cresp] Fixed momentum grid (bin middle):   ',p_mid_fix(1:ncre)
+               call printinfo(msg)
+#endif /* VERBOSE */
 
 ! Input parameters check
                else
-                  write (*,"(A10,I4,A96)") 'ncre   = ', ncre, &
+                  write (msg,"(A,I4,A)") '[initcrspectrum:init_cresp] ncre   = ', ncre, &
                         '; cr-electrons NOT initnialized. If COSM_RAY_ELECTRONS flag is on, please check your parameters.'
-                  stop
+                  call die(msg)
                endif
-! Description of initial_condition - spectrum types: powl - pure power-law like, brpl - broken power-law like (with break in the first bin, making it easier for NR algorithm to find solution of lower cutoff momentum), bump - gaussian-like spectrum, syme - symmetric energy distribution relative to the middle of the initial spectrum, symf - similar, but symmetric in distribution function
+!>
+!!\brief Correctness of "initial_condition" is checked here
+!!
+!! Description of initial_condition keywords: powl - pure power-law like distribution function,
+!! brpl - broken power-law like (with break in the first bin, making it easier for NR algorithm
+!! to find solution of lower cutoff momentum), bump - gaussian-like spectrum,
+!! \deprecated syme - symmetric energy distribution relative to the middle of the initial spectrum,
+!! \deprecated symf - similar, but symmetric in distribution function.
+!<
                if (initial_condition .ne. 'powl' .and. initial_condition .ne. 'bump' .and. initial_condition .ne. 'brpl' &
                            .and. initial_condition .ne. 'symf' .and. initial_condition .ne. 'syme' ) then
-                  write(*,"(A41,A4,A47)") "Provided unrecognized initial_condition (",initial_condition,&
+                  write(msg,"(A,A,A)") "[initcrspectrum:init_cresp] Provided unrecognized initial_condition (",initial_condition,&
                                                    "). Make sure that value is correctly provided."
-                  stop
+                  call die(msg)
                endif
                if ( f_init .lt. eps) then
                   if (initial_condition == 'powl' .or. initial_condition == 'brpl') then
-                  write (*,"(A34,A4,A63)") "Provided power law type spectrum (",initial_condition &
+                  write (msg,"(A,A,A)") "[initcrspectrum:init_cresp] Provided power law type spectrum (",initial_condition &
                      ,") with initial amplitude f_init ~ zero. Check your parameters."
-                  stop
+                  call die(msg)
                endif
          endif
 
          if (initial_condition == 'bump' .and. bump_amp .lt. eps ) then
-               write (*,"(A73,E16.8,A27)") "Provided gaussian type energy spectrum with initial amplitude bump_amp =",bump_amp, &
+               write (msg,"(A,E16.8,A)") "[initcrspectrum:init_cresp] Provided gaussian type energy spectrum with initial amplitude bump_amp =",bump_amp, &
                                     "~ 0. Check your parameters."
-               stop
+               call die(msg)
          endif
          if (add_spectrum_base .gt. 0 ) then
-               write (*,"(A73,E16.8,A27)") "add_spectrum_base is nonzero -> will assure energy .ge. e_small at initialization"
+               write (msg,"(A)") "[initcrspectrum:init_cresp] add_spectrum_base is nonzero -> will assure energy .ge. e_small at initialization"
                if (add_spectrum_base .ne. 1) then
                   add_spectrum_base = 1
                endif
+               call warn(msg)
          else
-               write (*,"(A73,E16.8,A27)") "add_spectrum_base is zero -> will NOT assure energy.ge. e_small at initialization"
+               write (msg,"(A)") "[initcrspectrum:init_cresp] add_spectrum_base is zero -> will NOT assure energy.ge. e_small at initialization"
                if (add_spectrum_base .ne. 0) then
                   add_spectrum_base = 0
                endif
+               call warn(msg)
          endif
 
          if (magnetic_energy_scaler .le. 0.0) magnetic_energy_scaler = abs(magnetic_energy_scaler)
          if (magnetic_energy_scaler .gt. 1.0) magnetic_energy_scaler = 1.0
          if (magnetic_energy_scaler .eq. 0.0) synch_active = .false. !< reduction magnetic energy to 0 naturally implies that
 
-         taylor_coeff_2nd = int(mod(2,expan_order) / 2 + mod(3,expan_order),kind=2 ) ! coefficient which is always equal 1 when order =2 or =3 and 0 if order = 1
-         taylor_coeff_3rd = int((expan_order - 1)*(expan_order- 2) / 2,kind=2)        ! coefficient which is equal to 1 only when order = 3
-         print '(A15, 2I3)', 'Taylor coeffs:', taylor_coeff_2nd, taylor_coeff_3rd
+         taylor_coeff_2nd = int(mod(2,expan_order) / 2 + mod(3,expan_order),kind=2 )  !< coefficient which is always equal 1 when order =2 or =3 and 0 if order = 1
+         taylor_coeff_3rd = int((expan_order - 1)*(expan_order- 2) / 2,kind=2)        !< coefficient which is equal to 1 only when order = 3
          call init_cresp_types
       endif
    end subroutine init_cresp
 !---------------------------------------------------------------------------------------------------- 
-   subroutine cresp_read_nml_module
+   subroutine read_problem_par
+      use dataio_pub,    only: nh
+      use mpisetup,     only: master
       implicit none
       namelist /COSMIC_RAY_SPECTRUM/ cfl_cre, p_lo_init, p_up_init, f_init, q_init, q_big, ncre, initial_condition, &
       &                         p_min_fix, p_max_fix, cre_eff, K_cre_paral_1, K_cre_perp_1, cre_active, &
       &                         K_cre_pow, expan_order, e_small, bump_amp, cre_gpcr_ess, use_cresp, &
       &                         e_small_approx_init_cond, e_small_approx_p_lo, e_small_approx_p_up, force_init_NR,&
-      &                         NR_iter_limit, max_p_ratio, add_spectrum_base, synch_active, adiab_active !, arr_dim
+      &                         NR_iter_limit, max_p_ratio, add_spectrum_base, synch_active, adiab_active, arr_dim
 
-         open(unit=101, file="problem.par", status="unknown")
-         read(unit=101, nml=COSMIC_RAY_SPECTRUM)
-         close(unit=101)
-   end subroutine cresp_read_nml_module
+      if (master) then
+         open(newunit=nh%lun, file=nh%tmp1, status="unknown")
+         write(nh%lun,nml=COSMIC_RAY_SPECTRUM)
+         close(nh%lun)
+         open(newunit=nh%lun, file=nh%par_file)
+         nh%errstr=""
+         read(unit=nh%lun, nml=COSMIC_RAY_SPECTRUM, iostat=nh%ierrh, iomsg=nh%errstr)
+         close(nh%lun)
+         call nh%namelist_errh(nh%ierrh, "COSMIC_RAY_SPECTRUM")
+         read(nh%cmdl_nml,nml=COSMIC_RAY_SPECTRUM, iostat=nh%ierrh)
+         call nh%namelist_errh(nh%ierrh, "COSMIC_RAY_SPECTRUM", .true.)
+         open(newunit=nh%lun, file=nh%tmp2, status="unknown")
+         write(nh%lun,nml=COSMIC_RAY_SPECTRUM)
+         close(nh%lun)
+         call nh%compare_namelist()
+      endif
+
+   end subroutine read_problem_par
 !----------------------------------------------------------------------------------------------------
    subroutine init_cresp_types
       use constants,               only: zero, I_ZERO
