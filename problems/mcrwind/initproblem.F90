@@ -454,7 +454,7 @@ contains
 
       use cg_leaves,      only: leaves
       use cg_list,        only: cg_list_element
-      use constants,      only: xdim, ydim, zdim, ndims, LO, HI
+      use constants,      only: ndims, xdim, ydim, zdim, LO, HI
       use domain,         only: dom
       use grid_cont,      only: grid_container
 #ifdef COSM_RAYS_SOURCES
@@ -507,9 +507,8 @@ contains
 !                     decr = amp_ecr_sn * ethu  &
                         decr = decr + exp(-((cg%x(i)-xsn +real(ipm)*dom%L_(xdim))**2  &
                              +              (cg%y(j)-ysna+real(jpm)*dom%L_(ydim))**2 + zr)/r_sn**2)
-
-                     enddo ! jpm
-                  enddo ! ipm
+                     enddo
+                  enddo
                   decr = decr * amp_cr
 #ifdef COSM_RAYS_SOURCES
 !                     cg%u(iarr_crn,i,j,k) = cg%u(iarr_crn,i,j,k) + max(decr,1e-10) * [1., primary_C12*12., primary_N14*14., primary_O16*16.]
@@ -519,9 +518,11 @@ contains
 !                  if (eCRSP(icr_N14)) cg%u(iarr_crn(cr_table(icr_N14)),i,j,k) = cg%u(iarr_crn(cr_table(icr_N14)),i,j,k) + cr_primary(cr_table(icr_N14))*14*decr
 !                  if (eCRSP(icr_O16)) cg%u(iarr_crn(cr_table(icr_O16)),i,j,k) = cg%u(iarr_crn(cr_table(icr_O16)),i,j,k) + cr_primary(cr_table(icr_O16))*16*decr
 #endif /* COSM_RAYS_SOURCES */
-               enddo ! i
-            enddo ! j
-         enddo ! k
+
+               enddo
+            enddo
+         enddo
+
          cgl => cgl%nxt
       enddo
 
