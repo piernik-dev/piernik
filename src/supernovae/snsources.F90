@@ -182,7 +182,7 @@ contains
 
       use cg_leaves,      only: leaves
       use cg_list,        only: cg_list_element
-      use constants,      only: xdim, ydim, zdim, LO, HI
+      use constants,      only: ndims, xdim, ydim, zdim, LO, HI
       use domain,         only: dom
       use grid_cont,      only: grid_container
 #ifdef COSM_RAYS_SOURCES
@@ -192,24 +192,24 @@ contains
 
       implicit none
 
-      real, dimension(3), intent(in) :: pos
+      real, dimension(ndims), intent(in) :: pos
       integer                        :: i, j, k, ipm, jpm
       real                           :: decr, xsn, ysn, zsn, ysna, zr
       type(cg_list_element), pointer :: cgl
       type(grid_container),  pointer :: cg
 
-      xsn = pos(1)
-      ysn = pos(2)
-      zsn = pos(3)
+      xsn = pos(xdim)
+      ysn = pos(ydim)
+      zsn = pos(zdim)
 
       cgl => leaves%first
       do while (associated(cgl))
          cg => cgl%cg
 
-         do k=cg%lhn(zdim, LO), cg%lhn(zdim, HI)
+         do k = cg%lhn(zdim,LO), cg%lhn(zdim,HI)
             zr = (cg%z(k)-zsn)**2
-            do j=cg%lhn(ydim, LO), cg%lhn(ydim, HI)
-               do i=cg%lhn(xdim, LO), cg%lhn(xdim, HI)
+            do j = cg%lhn(ydim,LO), cg%lhn(ydim,HI)
+               do i = cg%lhn(xdim,LO), cg%lhn(xdim,HI)
 
                   decr = 0.0
                   do ipm=-1,1
