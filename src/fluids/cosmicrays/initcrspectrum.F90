@@ -79,6 +79,7 @@ module initcrspectrum
       real(kind=8),allocatable,dimension(:)   :: n
    end type cr_spectrum
    type(cr_spectrum) cresp
+   type(cr_spectrum) norm_init_spectrum
    type(bin_old) crel
 ! For passing terms to compute energy sources / sinks
    type spec_mod_trms
@@ -86,7 +87,8 @@ module initcrspectrum
       real(kind=8)    :: ud
       real(kind=8)    :: ucmb
    end type spec_mod_trms
-  
+
+   real(kind=8)     :: total_init_cree
    real(kind=8), allocatable, dimension(:,:,:,:) :: virtual_n, virtual_e ! arrays for storing n and e in bins that receive particles but are not yet activated, i.e. where the energy is less than e_small
    integer(kind=4)  :: taylor_coeff_2nd, taylor_coeff_3rd
    real(kind=8)     :: p_fix_ratio
@@ -353,14 +355,17 @@ module initcrspectrum
       use diagnostics,   only: my_allocate_with_index
       implicit none
 
-      call my_allocate_with_index(crel%p,ncre,0)
-      call my_allocate_with_index(crel%f,ncre,0)
-      call my_allocate_with_index(crel%q,ncre,1)
-      call my_allocate_with_index(crel%e,ncre,1)
-      call my_allocate_with_index(crel%n,ncre,1)
+      if(.not. allocated(crel%p)) call my_allocate_with_index(crel%p,ncre,0)
+      if(.not. allocated(crel%f)) call my_allocate_with_index(crel%f,ncre,0)
+      if(.not. allocated(crel%q)) call my_allocate_with_index(crel%q,ncre,1)
+      if(.not. allocated(crel%n)) call my_allocate_with_index(crel%n,ncre,1)
+      if(.not. allocated(crel%e)) call my_allocate_with_index(crel%e,ncre,1)
 
-      call my_allocate_with_index(cresp%n,ncre,1)
-      call my_allocate_with_index(cresp%e,ncre,1)
+      if(.not. allocated(cresp%n)) call my_allocate_with_index(cresp%n,ncre,1)
+      if(.not. allocated(cresp%e)) call my_allocate_with_index(cresp%e,ncre,1)
+      if(.not. allocated(norm_init_spectrum%n)) call my_allocate_with_index(norm_init_spectrum%n,ncre,1)
+      if(.not. allocated(norm_init_spectrum%e)) call my_allocate_with_index(norm_init_spectrum%e,ncre,1)
+
       crel%p = zero
       crel%q = zero
       crel%f = zero
@@ -372,6 +377,8 @@ module initcrspectrum
       cresp%e = zero
       cresp%n = zero
 
+      norm_init_spectrum%n = zero
+      norm_init_spectrum%e = zero
    end subroutine init_cresp_types
 !----------------------------------------------------------------------------------------------------
    subroutine cleanup_cresp_virtual_en_arrays
@@ -383,6 +390,8 @@ module initcrspectrum
 
       if (allocated(cresp%n))   call my_deallocate(cresp%n)
       if (allocated(cresp%e))   call my_deallocate(cresp%e)
+      if (allocated(norm_init_spectrum%n))   call my_deallocate(norm_init_spectrum%n)
+      if (allocated(norm_init_spectrum%e))   call my_deallocate(norm_init_spectrum%e)
 
       if (allocated(p_fix)) call my_deallocate(p_fix)
       if (allocated(p_mid_fix)) call my_deallocate(p_mid_fix)

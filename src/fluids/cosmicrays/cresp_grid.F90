@@ -68,10 +68,10 @@ contains
    use cg_list_global,     only: all_cg
    use cg_list,            only: cg_list_element
    use grid_cont,          only: grid_container
-   use initcrspectrum,     only: e_small, e_small_approx_p_lo, e_small_approx_p_up
+   use initcrspectrum,     only: e_small, e_small_approx_p_lo, e_small_approx_p_up, norm_init_spectrum, spec_mod_trms, f_init
    use initcosmicrays,     only: iarr_cre_n, iarr_cre_e
-   use cresp_crspectrum,   only: cresp_allocate_all, e_threshold_lo, e_threshold_up, &
-                                 fail_count_interpol, fail_count_no_sol, fail_count_NR_2dim, fail_count_comp_q, second_fail
+   use cresp_crspectrum,   only: cresp_allocate_all, e_threshold_lo, e_threshold_up, fail_count_interpol, fail_count_no_sol, &
+                                 & fail_count_NR_2dim, fail_count_comp_q, second_fail, cresp_init_state
    use cresp_NR_method,    only: cresp_initialize_guess_grids
    use dataio_pub,         only: warn, printinfo
    use named_array_list,   only: wna
@@ -106,8 +106,10 @@ contains
             cgl => cgl%nxt
          enddo
 
+         call cresp_init_state(norm_init_spectrum%n, norm_init_spectrum%e, f_init)   !< initialize spectrum here, f_init should be 1.0
+
          call printinfo(" [cresp_grid:cresp_init_grid] CRESP initialized")
-         first_run = .false. ! FIXME uncommenting results inf SIGFPE for some reason; whole subroutine is called twice.
+         first_run = .false.
       endif
       if (first_run)  call warn("[cresp_grid:cresp_init_grid] CRESP might not be initialized!")
       if (not_zeroed) call warn("[cresp_grid:cresp_init_grid] CRESP virtual arrays might not be initialized properly!")
