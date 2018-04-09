@@ -55,7 +55,7 @@ contains
 
   subroutine read_problem_par
 
-    use data_pub, only: nh
+    use dataio_pub, only: nh
     use mpisetup, only: rbuff, master, slave, PIERNIK_MPI_Bcast
 
     implicit none
@@ -118,6 +118,7 @@ contains
 
     use cg_leaves,   only: leaves
     use cg_list,     only: cg_list_element
+    use constants,   only: xdim, ydim, zdim
     use grid_cont,   only: grid_container
     use fluidindex,  only: flind
     use fluidtypes,  only: component_fluid
@@ -129,6 +130,8 @@ contains
     type(cg_list_element),  pointer :: cgl
     type(grid_container),   pointer :: cg
     class(component_fluid), pointer :: fl
+
+    integer :: i, j, k
 
     fl => flind%ion
     cgl => leaves%first
@@ -156,12 +159,15 @@ contains
                 endif
                 cg%b(zdim,i,j,k) = zero
                 ! Pressure/Energy
-                cg%fl(ien,i,j,k) = uni_pres/fl%gam_1 + ekin(cg%u(fl%imx,i,j,k),cg%u(fl%imy,i,j,k),cg%u(fl%imz,i,j,k)) + &
-                                             emag(cg%b(xdim,i,j,k),cg%b(ydim,i,j,k),cg%b(zdim,i,j,k))
+                cg%u(fl%ien,i,j,k) = uni_pres/fl%gam_1 + ekin(cg%u(fl%imx,i,j,k), cg%u(fl%imy,i,j,k), cg%u(fl%imz,i,j,k), cg%u(fl%idn,i,j,k)) + &
+                                             emag(cg%b(xdim,i,j,k), cg%b(ydim,i,j,k), cg%b(zdim,i,j,k))
 
              enddo
           enddo
        enddo
+
+       cgl => cgl%nxt
+    enddo
 
   end subroutine problem_initial_conditions
 

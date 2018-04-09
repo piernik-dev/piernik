@@ -1,4 +1,4 @@
-$BASE DOMAIN
+$BASE_DOMAIN
       n_d = 128, 64, 1
       bnd_xl = 'per'
       bnd_xr = 'per'
@@ -29,20 +29,22 @@ $RESTART_CONTROL
 
 $END_CONTROL
    tend = 2.0
+/
 
 $OUTPUT_CONTROL
    problem_name	= 'field_loop_mhd'
-   run_id       = 'flm1'
+   run_id       = 'fl1'
    dt_hdf       = 0.1
    dt_res       = 0.0
    dt_log       = 0.00001
    dt_tsl       = 0.00001
-   vars(1:)     = 'magx', 'dens', 'magz', 'pres', 'velx', 'vely', 'velz'
+   vars(1:)     = 'dens', 'magx', 'magy', 'magz', 'pres', 'velx', 'vely'
 /
 
 $FLUID_IONIZED
    gamma     = 1.666666666
-   self_grav = .false.
+   selfgrav = .false.
+/
 
 $FLUID_NEUTRAL
 /
