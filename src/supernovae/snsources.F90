@@ -35,9 +35,8 @@ module snsources
    public ::  random_sn, init_snsources, r_sn
 #ifdef SHEAR
    public :: sn_shear
-
-   real, dimension(3) :: ysnoi
 #endif /* SHEAR */
+
    integer, save      :: nsn, nsn_last
 
    real, parameter    :: ethu = 7.0**2/(5.0/3.0-1.0) * 1.0    !< thermal energy unit=0.76eV/cm**3 for c_si= 7km/s, n=1/cm^3 gamma=5/3
@@ -197,6 +196,9 @@ contains
       real                           :: decr, xsn, ysn, zsn, ysna, zr
       type(cg_list_element), pointer :: cgl
       type(grid_container),  pointer :: cg
+#ifdef SHEAR
+      real, dimension(3)             :: ysnoi
+#endif /* SHEAR */
 
       xsn = pos(xdim)
       ysn = pos(ydim)
@@ -205,6 +207,11 @@ contains
       cgl => leaves%first
       do while (associated(cgl))
          cg => cgl%cg
+
+#ifdef SHEAR
+         ysnoi(2) = ysn
+         call sn_shear(cg, ysnoi)
+#endif /* SHEAR */
 
          do k = cg%lhn(zdim,LO), cg%lhn(zdim,HI)
             zr = (cg%z(k)-zsn)**2
@@ -250,16 +257,9 @@ contains
 
       use constants,   only: xdim, ydim, zdim, LO
       use domain,      only: dom
-#ifdef SHEAR
-      use cg_leaves,   only: leaves
-      use grid_cont,   only: grid_container
-#endif /* SHEAR */
 
       implicit none
 
-#ifdef SHEAR
-      type(grid_container), pointer   :: cg
-#endif /* SHEAR */
       real, dimension(3), intent(out) :: pos
       real, dimension(4)              :: rand
       real                            :: xsn, ysn, zsn, znorm
@@ -274,12 +274,6 @@ contains
       else
          zsn = 0.0
       endif
-
-#ifdef SHEAR
-      cg => leaves%first%cg
-      ysnoi = 0.0 ; ysnoi(2) = ysn
-      call sn_shear(cg, ysnoi)
-#endif /* SHEAR */
 
       pos(1) = xsn
       pos(2) = ysn
