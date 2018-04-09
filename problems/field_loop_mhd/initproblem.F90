@@ -23,10 +23,10 @@
 !             for original source code "mhd.f90"
 !
 !    For full list of developers see $PIERNIK_HOME/license/pdt.txt
-!    
+!
 !    Two-dimensional magentic field loop advection test problem
 !    Implementation: Dr. Varadarajan Parthasarathy, CAMK (Warszawa)
-!    Read info for details of the test problem. 
+!    Read info for details of the test problem.
 !
 #include "piernik.h"
 
@@ -38,7 +38,7 @@ module initproblem
   public :: read_problem_par, problem_initial_conditions, problem_pointers
 
   real   :: uni_dens, uni_pres, v0, sinalpha, cosalpha, A0, R
-  
+
   namelist /PROBLEM_CONTROL/ uni_dens, uni_pres, v0, sinalpha, cosalpha, A0, R
 
 contains
@@ -94,11 +94,11 @@ contains
          rbuff(6) = A0
          rbuff(7) = R
 
-      end if
+      endif
 
       call piernik_MPI_Bcast(rbuff)
 
-      if(slave) then
+      if (slave) then
 
          uni_dens = rbuff(1)
          uni_pres = rbuff(2)
@@ -108,7 +108,7 @@ contains
          A0       = rbuff(6)
          R        = rbuff(7)
 
-      end if
+      endif
 
   end subroutine read_problem_par
 
@@ -124,7 +124,7 @@ contains
     use func,        only: ekin, emag
     use constants,   only: zero
 
-    implicit none 
+    implicit none
 
     type(cg_list_element),  pointer :: cgl
     type(grid_container),   pointer :: cg
@@ -134,7 +134,7 @@ contains
     cgl => leaves%first
     do while (associated(cgl))
        cg => cgl%cg
-       
+
        do k = cg%ks, cg%ke
           do j = cg%js, cg%je
              do i = cg%is, cg%ie
@@ -146,22 +146,22 @@ contains
                 cg%u(fl%imy,i,j,k) = v0*sinalpha*cg%u(fl%idn,i,j,k)
                 cg%u(fl%imz,i,j,k) = zero
                 ! Mangetic field
-                if( sqrt(cg%x(i)*cg%x(i) + cg%y(j)*cg%y(j) ) .le. R ) then
+                if ( sqrt(cg%x(i)*cg%x(i) + cg%y(j)*cg%y(j) ) .le. R ) then
 
                    cg%b(xdim,i,j,k) = -A0*cg%y(j)/(sqrt(cg%x(i)*cg%x(i) + cg%y(j)*cg%y(j) )) !  dA_z/dy
                    cg%b(ydim,i,j,k) =  A0*cg%x(i)/(sqrt(cg%x(i)*cg%x(i) + cg%y(j)*cg%y(j) )) ! -dA_z/dx
-                else 
+                else
                    cg%b(xdim,i,j,k) = zero
                    cg%b(ydim,i,j,k) = zero
-                end if
+                endif
                 cg%b(zdim,i,j,k) = zero
                 ! Pressure/Energy
                 cg%fl(ien,i,j,k) = uni_pres/fl%gam_1 + ekin(cg%u(fl%imx,i,j,k),cg%u(fl%imy,i,j,k),cg%u(fl%imz,i,j,k)) + &
                                              emag(cg%b(xdim,i,j,k),cg%b(ydim,i,j,k),cg%b(zdim,i,j,k))
 
-             end do
-          end do
-       end do
+             enddo
+          enddo
+       enddo
 
   end subroutine problem_initial_conditions
 
