@@ -260,7 +260,7 @@ contains
       enddo
 
 #ifdef CR_SN
-      call cr_sn_beware(sn_pos)
+      call cr_sn_beware(sn_pos,amp_cr)
 #endif /* CR_SN */
 
 
@@ -450,7 +450,7 @@ contains
 !! BEWARE: the code is very similar to snsources:cr_sn . Merge?
 !!
 !<
-   subroutine cr_sn_beware(pos)
+   subroutine cr_sn_beware(pos,ampl)
 
       use cg_leaves,      only: leaves
       use cg_list,        only: cg_list_element
@@ -469,6 +469,7 @@ contains
       implicit none
 
       real, dimension(ndims), intent(in) :: pos
+      real,                   intent(in) :: ampl
       integer                            :: i, j, k, ipm, jpm
       real                               :: decr, xsn, ysn, zsn, ysna, zr
       type(cg_list_element), pointer     :: cgl
@@ -488,7 +489,7 @@ contains
 #ifdef SHEAR
          ysnoi(2) = ysn
          call sn_shear(cg, ysnoi)
-#endif /* !SHEAR */
+#endif /* SHEAR */
 
          do k = cg%lhn(zdim,LO), cg%lhn(zdim,HI)
             zr = (cg%z(k)-zsn)**2
@@ -503,13 +504,12 @@ contains
                      ysna = ysn
 #endif /* !SHEAR */
                      do jpm=-1,1
-
-!                     decr = amp_ecr_sn * ethu  &
                         decr = decr + exp(-((cg%x(i)-xsn +real(ipm)*dom%L_(xdim))**2  &
                              +              (cg%y(j)-ysna+real(jpm)*dom%L_(ydim))**2 + zr)/r_sn**2)
                      enddo
                   enddo
-                  decr = decr * amp_cr
+                  decr = decr * ampl
+
 #ifdef COSM_RAYS_SOURCES
 !                     cg%u(iarr_crn,i,j,k) = cg%u(iarr_crn,i,j,k) + max(decr,1e-10) * [1., primary_C12*12., primary_N14*14., primary_O16*16.]
                   if (eCRSP(icr_H1 )) cg%u(iarr_crn(cr_table(icr_H1 )),i,j,k) = cg%u(iarr_crn(cr_table(icr_H1 )),i,j,k) + decr

@@ -32,7 +32,7 @@ module snsources
 ! pulled by SN_SRC
    implicit none
    private
-   public ::  random_sn, init_snsources, r_sn
+   public ::  random_sn, init_snsources, r_sn, amp_cr_sn
 #ifdef SHEAR
    public :: sn_shear
 #endif /* SHEAR */
@@ -42,6 +42,7 @@ module snsources
    real, parameter    :: ethu = 7.0**2/(5.0/3.0-1.0) * 1.0    !< thermal energy unit=0.76eV/cm**3 for c_si= 7km/s, n=1/cm^3 gamma=5/3
 
    real               :: amp_ecr_sn          !< cosmic ray explosion amplitude in units: e_0 = 1/(5/3-1)*rho_0*c_s0**2  rho_0=1.67e-24g/cm**3, c_s0 = 7km/s
+   real               :: amp_cr_sn           !< default aplitude of CR in SN bursts
    real               :: f_sn                !< frequency of SN
    real               :: f_sn_kpc2           !< frequency of SN per kpc^2
    real               :: h_sn                !< galactic height in SN gaussian distribution ?
@@ -122,6 +123,7 @@ contains
 
 #ifdef COSM_RAYS
       amp_ecr_sn = 4.96e6*cr_eff/r_sn**3
+      amp_cr_sn  = amp_ecr_sn *ethu
 #endif /* COSM_RAYS */
 
       if (dom%has_dir(xdim)) then
@@ -164,7 +166,7 @@ contains
          call rand_coords(snpos)
 
 #ifdef COSM_RAYS
-         call cr_sn(snpos)
+         call cr_sn(snpos,amp_cr_sn)
 #endif /* COSM_RAYS */
 
       enddo ! isn
@@ -177,7 +179,7 @@ contains
 !! \brief Routine that inserts an amount of cosmic ray energy around the position of supernova
 !! \param pos real, dimension(3), array of supernova position components
 !<
-   subroutine cr_sn(pos)
+   subroutine cr_sn(pos,ampl)
 
       use cg_leaves,      only: leaves
       use cg_list,        only: cg_list_element
@@ -192,6 +194,7 @@ contains
       implicit none
 
       real, dimension(ndims), intent(in) :: pos
+      real,                   intent(in) :: ampl
       integer                        :: i, j, k, ipm, jpm
       real                           :: decr, xsn, ysn, zsn, ysna, zr
       type(cg_list_element), pointer :: cgl
@@ -230,7 +233,7 @@ contains
                              +              (cg%y(j)-ysna+real(jpm)*dom%L_(ydim))**2 + zr)/r_sn**2)
                      enddo
                   enddo
-                  decr = decr * amp_ecr_sn *ethu
+                  decr = decr * ampl
 
 #ifdef COSM_RAYS_SOURCES
                   if (eCRSP(icr_H1 )) cg%u(iarr_crn(cr_table(icr_H1 )),i,j,k) = cg%u(iarr_crn(cr_table(icr_H1 )),i,j,k) + decr
