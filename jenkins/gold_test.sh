@@ -59,6 +59,7 @@ rsync -Icvxa --no-t ${OBJ_PREFIX}$TEST_OBJ $TMP_DIR
 
 git clone $PIERNIK_REPO $GOLD_DIR
 [ -e .setuprc ] && cp .setuprc $GOLD_DIR
+cp python/piernik_setup.py ${GOLD_DIR}/python
 (
     cd $GOLD_DIR
     git fetch $PIERNIK_REPO +refs/pull/*:refs/remotes/origin/pr/*

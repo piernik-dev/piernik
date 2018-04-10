@@ -243,20 +243,18 @@ contains
    subroutine datafields_hdf5(var, tab, ierrh, cg)
 
       use common_hdf5, only: common_shortcuts
-      use constants,   only: dsetnamelen, xdim, ydim, zdim, half, two, I_TWO, I_FOUR, I_SIX
-      use domain,      only: dom
+      use constants,   only: dsetnamelen
       use fluidtypes,  only: component_fluid
       use func,        only: ekin, emag
       use grid_cont,   only: grid_container
       use mpisetup,    only: proc
-#ifndef ISO
-      use constants,   only: ydim, zdim
-#endif /* !ISO */
 #if defined(COSM_RAYS) || defined(TRACER) || !defined(ISO)
       use fluidindex,  only: flind
 #endif /* COSM_RAYS || TRACER || !ISO */
 #ifdef MAGNETIC
       use div_B,       only: divB_c_IO
+      use domain,      only: dom
+      use constants,   only: xdim, ydim, zdim, half, two, I_TWO, I_FOUR, I_SIX
 #endif /* MAGNETIC */
 
       implicit none
@@ -322,10 +320,12 @@ contains
 #endif /* !ISO */
          case ("pmag%")
 #ifndef ISO
+#ifdef IONIZED
             tab(:,:,:) = real(emag_f_c, kind=4) / &
                  &      (real(flind%ion%gam_1, kind=4) * real( cg%u(flind%ion%ien, RNG) - &
                  &       ekin(cg%u(flind%ion%imx, RNG), cg%u(flind%ion%imy, RNG), cg%u(flind%ion%imz, RNG), cg%u(flind%ion%idn, RNG)) - emag_f_c, kind=4) + &
                  &       real(emag_f_c, kind=4))
+#endif /* IONIZED */
 #endif /* !ISO */
         case ("ethn")
 #ifndef ISO

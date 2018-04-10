@@ -58,10 +58,10 @@ implicit_save = re.compile('''
 not_param_nor_save = re.compile("(?!.*(parameter|save))", re.IGNORECASE)
 
 nasty_spaces = [
-    re.compile("end\s{1,}do", re.IGNORECASE), "enddo",
-    re.compile("end\s{1,}if", re.IGNORECASE), "endif",
-    re.compile("end\s{1,}while", re.IGNORECASE), "endwhile",
-    re.compile("end\s{1,}where", re.IGNORECASE), "endwhere",
+    re.compile("^([\s0-9]*)end\s{1,}do", re.IGNORECASE), r"\1enddo",
+    re.compile("^([\s0-9]*)end\s{1,}if", re.IGNORECASE), r"\1endif",
+    re.compile("^([\s0-9]*)end\s{1,}while", re.IGNORECASE), r"\1endwhile",
+    re.compile("^([\s0-9]*)end\s{1,}where", re.IGNORECASE), r"\1endwhere",
     re.compile("only\s{1,}:", re.IGNORECASE), "only:",
     re.compile("\sif(|\s{2,})\(", re.IGNORECASE), " if (",
     re.compile("\swhere(|\s{2,})\(", re.IGNORECASE), " where (",
