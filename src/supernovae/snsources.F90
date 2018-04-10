@@ -33,6 +33,9 @@ module snsources
    implicit none
    private
    public ::  random_sn, init_snsources, r_sn, amp_cr_sn
+#ifdef COSM_RAYS
+   public :: cr_sn
+#endif /* COSM_RAYS */
 #ifdef SHEAR
    public :: sn_shear
 #endif /* SHEAR */
