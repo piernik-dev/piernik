@@ -365,7 +365,7 @@ contains
          vel_sweep = u1(:, iarr_all_mx) / u1(:, iarr_all_dn)
       endif ! (n > 1)
 
-      
+
 
 ! Source terms -------------------------------------
       if (sources) call all_sources(n, u, u0, u1, cg, istep, sweep, i1, i2, rk2coef(integration_order,istep)*dt, pressure, vel_sweep)

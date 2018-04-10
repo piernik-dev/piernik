@@ -419,7 +419,7 @@ contains
             usrc(:,iarr_all_mx(tfl(i))) = drag(:) * delta(:) * ( u0(:, iarr_all_dn(tfl(i)))*u0(:, iarr_all_mx(inv(i))) - u0(:, iarr_all_dn(inv(i)))*u0(:, iarr_all_mx(tfl(i))) &
                                                                + u1(:, iarr_all_dn(tfl(i)))*u1(:, iarr_all_mx(inv(i))) - u1(:, iarr_all_dn(inv(i)))*u1(:, iarr_all_mx(tfl(i))) )
          endif
-      enddo 
+      enddo
       ! usrc should be used to update u1 in all_sources procedure: u1 = u1 + rk2factror*usrc*dt
       return
    end function balsara_based_interactions_function
