@@ -260,7 +260,12 @@ contains
       enddo
 
 #ifdef CR_SN
+      !> \deprecated BEWARE: following lines seems to be a workaround for the gold (lines inconsistent with the gold for some reason from cr_sn_beware)
+      eCRSP_N14 = eCRSP(icr_N14) ; eCRSP(icr_N14) = .false.
+      eCRSP_O16 = eCRSP(icr_O16) ; eCRSP(icr_O16) = .false.
       call cr_sn_beware(sn_pos,amp_cr)
+      eCRSP(icr_N14) = eCRSP_N14
+      eCRSP(icr_O16) = eCRSP_O16
 #endif /* CR_SN */
 
 
@@ -458,7 +463,7 @@ contains
       use domain,         only: dom
       use grid_cont,      only: grid_container
 #ifdef COSM_RAYS_SOURCES
-      use cr_data,        only: cr_table, cr_primary, eCRSP, icr_H1, icr_C12 !, icr_N14, icr_O16
+      use cr_data,        only: cr_table, cr_primary, eCRSP, icr_H1, icr_C12, icr_N14, icr_O16
       use initcosmicrays, only: iarr_crn
 #endif /* COSM_RAYS_SOURCES */
       use snsources,      only: r_sn
@@ -511,12 +516,10 @@ contains
                   decr = decr * ampl
 
 #ifdef COSM_RAYS_SOURCES
-!                     cg%u(iarr_crn,i,j,k) = cg%u(iarr_crn,i,j,k) + max(decr,1e-10) * [1., primary_C12*12., primary_N14*14., primary_O16*16.]
                   if (eCRSP(icr_H1 )) cg%u(iarr_crn(cr_table(icr_H1 )),i,j,k) = cg%u(iarr_crn(cr_table(icr_H1 )),i,j,k) + decr
                   if (eCRSP(icr_C12)) cg%u(iarr_crn(cr_table(icr_C12)),i,j,k) = cg%u(iarr_crn(cr_table(icr_C12)),i,j,k) + cr_primary(cr_table(icr_C12))*12*decr
-                  !> \deprecated BEWARE: following lines are inconsistent with the gold for some reason
-!                  if (eCRSP(icr_N14)) cg%u(iarr_crn(cr_table(icr_N14)),i,j,k) = cg%u(iarr_crn(cr_table(icr_N14)),i,j,k) + cr_primary(cr_table(icr_N14))*14*decr
-!                  if (eCRSP(icr_O16)) cg%u(iarr_crn(cr_table(icr_O16)),i,j,k) = cg%u(iarr_crn(cr_table(icr_O16)),i,j,k) + cr_primary(cr_table(icr_O16))*16*decr
+                  if (eCRSP(icr_N14)) cg%u(iarr_crn(cr_table(icr_N14)),i,j,k) = cg%u(iarr_crn(cr_table(icr_N14)),i,j,k) + cr_primary(cr_table(icr_N14))*14*decr
+                  if (eCRSP(icr_O16)) cg%u(iarr_crn(cr_table(icr_O16)),i,j,k) = cg%u(iarr_crn(cr_table(icr_O16)),i,j,k) + cr_primary(cr_table(icr_O16))*16*decr
 #endif /* COSM_RAYS_SOURCES */
 
                enddo
