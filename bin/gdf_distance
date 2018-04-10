@@ -271,8 +271,8 @@ def piernik_gdf_compare(fname1, fname2):
 if __name__ == "__main__":
     import sys
     if (len(sys.argv) < 3):
-        print >> sys.stderr, "Error: too few arguments.\nUsage: " + \
-            sys.argv[0] + " piernik_data_hdf_file1 piernik_data_hdf_file2"
+        sys.stderr.write("Error: too few arguments.\nUsage: " +
+              sys.argv[0] + " piernik_data_hdf_file1 piernik_data_hdf_file2\n")
         exit(1)
 
     if (is_comparable(sys.argv[1], sys.argv[2])):
