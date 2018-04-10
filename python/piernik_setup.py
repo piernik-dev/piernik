@@ -259,7 +259,8 @@ def setup_piernik(data=None):
         sys.exit()
 
     if (len(args) < 1):
-        parser.error("incorrect number of arguments")
+        sys.stderr.write("incorrect number of arguments\n")
+        exit()
 
     # set problem dir
     probdir = 'problems/' + args[0] + '/'
@@ -667,7 +668,7 @@ def setup_piernik(data=None):
             makejobs, objdir)
         output = sp.Popen(
             makecmd, shell=True, stderr=sp.PIPE, stdout=sp.PIPE).communicate()
-        if re.search(r"Circular", output[1]):
+        if re.search(r"Circular", output[1].decode("ascii")):
             print('\033[91m' +
                   "Circular dependencies foud in '%s'." % objdir + '\033[0m')
     else:
