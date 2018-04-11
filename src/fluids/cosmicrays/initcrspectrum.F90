@@ -24,8 +24,8 @@ module initcrspectrum
    real(kind=8)       :: q_big                       !< maximal amplitude of q
    real(kind=8)       :: cfl_cre                     !< CFL parameter  for cr electrons
    real(kind=8)       :: cre_eff                     !< fraction of energy passed to cr-electrons by nucleons (mainly protons)
-   real(kind=8)       :: K_cre_paral_1               !< parallell diffusion coefficient
-   real(kind=8)       :: K_cre_perp_1                !< perpendicular diffusion coefficient
+   real(kind=8)       :: K_cre_paral_1               !< maximal parallell diffusion coefficient value
+   real(kind=8)       :: K_cre_perp_1                !< maximal perpendicular diffusion coefficient value
    real(kind=8)       :: K_cre_pow                   !< exponent for power law-like diffusion-energy dependance
    integer(kind=4)    :: expan_order                 !< 1,2,3 order of Taylor expansion for p_update (cresp_crspectrum)
    real(kind=8)       :: e_small                     !< lower energy cutoff for energy-approximated cutoff momenta
