@@ -309,7 +309,7 @@ contains
 
 #ifdef MAGNETIC
                   call cg%set_constant_b_field([0., 0., 0.])
-                  cg%u(fl%ien,i,j,k)        = cg%u(fl%ien,i,j,k) + emag(cg%b(xdim,i,j,k)), cg%b(ydim,i,j,k), cg%b(zdim,i,j,k)
+                  cg%u(fl%ien,i,j,k)        = cg%u(fl%ien,i,j,k) + emag(cg%b(xdim,i,j,k), cg%b(ydim,i,j,k), cg%b(zdim,i,j,k))
 #endif /* MAGNETIC */
 #endif /* !ISO */
                enddo

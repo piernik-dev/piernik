@@ -4,7 +4,7 @@
    This is a .c file to make sure that #error directive stops the make process.
 */
 
-#include "piernik.def"
+#include "piernik.h"
 
 /*
   Freezing speed
