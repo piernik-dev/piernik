@@ -198,42 +198,40 @@ contains
 
       real, dimension(ndims), intent(in) :: pos
       real,                   intent(in) :: ampl
-      integer                        :: i, j, k, ipm, jpm
-      real                           :: decr, xsn, ysn, zsn, ysna, zr
-      type(cg_list_element), pointer :: cgl
-      type(grid_container),  pointer :: cg
+      integer                            :: i, j, k, ipm, jpm
+      real                               :: decr, ysna, xr, yr, zr
+      type(cg_list_element), pointer     :: cgl
+      type(grid_container),  pointer     :: cg
 #ifdef SHEAR
-      real, dimension(3)             :: ysnoi
+      real, dimension(3)                 :: ysnoi
 #endif /* SHEAR */
-
-      xsn = pos(xdim)
-      ysn = pos(ydim)
-      zsn = pos(zdim)
 
       cgl => leaves%first
       do while (associated(cgl))
          cg => cgl%cg
 
 #ifdef SHEAR
-         ysnoi(2) = ysn
+         ysnoi(2) = pos(ydim)
          call sn_shear(cg, ysnoi)
-#endif /* SHEAR */
+#else /* !SHEAR */
+         ysna = pos(ydim)
+#endif /* !SHEAR */
 
          do k = cg%lhn(zdim,LO), cg%lhn(zdim,HI)
-            zr = (cg%z(k)-zsn)**2
+            zr = ((cg%z(k)-pos(zdim))/r_sn)**2
             do j = cg%lhn(ydim,LO), cg%lhn(ydim,HI)
                do i = cg%lhn(xdim,LO), cg%lhn(xdim,HI)
 
                   decr = 0.0
-                  do ipm=-1,1
+                  do ipm = -1, 1
+                     xr = ((cg%x(i)-pos(xdim) + real(ipm)*dom%L_(xdim))/r_sn)**2
 #ifdef SHEAR
                      ysna = ysnoi(ipm+2)
-#else /* !SHEAR */
-                     ysna = ysn
-#endif /* !SHEAR */
-                     do jpm=-1,1
-                        decr = decr + exp(-((cg%x(i)-xsn +real(ipm)*dom%L_(xdim))**2  &
-                             +              (cg%y(j)-ysna+real(jpm)*dom%L_(ydim))**2 + zr)/r_sn**2)
+#endif /* SHEAR */
+                     do jpm = -1, 1
+                        yr = ((cg%y(j)-ysna + real(jpm)*dom%L_(ydim))/r_sn)**2
+                        ! BEWARE:  for num < -744.6 the exp(num) is the underflow
+                        decr = decr + exp(-(xr + yr + zr))
                      enddo
                   enddo
                   decr = decr * ampl
