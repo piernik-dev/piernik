@@ -101,12 +101,18 @@ module initcrspectrum
 !====================================================================================================
    subroutine init_cresp
       use constants,            only: I_ZERO, zero, ten
-      use dataio_pub,           only: printinfo, warn, msg, die
+      use dataio_pub,           only: printinfo, warn, msg, die, nh
       use diagnostics,          only: my_allocate_with_index
       use mpisetup,             only: rbuff, ibuff, lbuff, cbuff, master, slave, piernik_MPI_Bcast
       implicit none
       integer                  :: i       ! enumerator
       logical, save            :: first_run = .true.
+
+      namelist /COSMIC_RAY_SPECTRUM/ cfl_cre, p_lo_init, p_up_init, f_init, q_init, q_big, ncre, initial_condition, &
+      &                         p_min_fix, p_max_fix, cre_eff, K_cre_paral_1, K_cre_perp_1, cre_active, &
+      &                         K_cre_pow, expan_order, e_small, bump_amp, cre_gpcr_ess, use_cresp, &
+      &                         e_small_approx_init_cond, e_small_approx_p_lo, e_small_approx_p_up, force_init_NR,&
+      &                         NR_iter_limit, max_p_ratio, add_spectrum_base, synch_active, adiab_active, arr_dim
 
 ! Default values
       use_cresp = .true.
@@ -156,7 +162,24 @@ module initcrspectrum
       tol_x_1D = 1.0e-14
       arr_dim = 200
 
-      call read_problem_par
+      if (master) then
+         open(newunit=nh%lun, file=nh%tmp1, status="unknown")
+         write(nh%lun,nml=COSMIC_RAY_SPECTRUM)
+         close(nh%lun)
+         open(newunit=nh%lun, file=nh%par_file)
+         nh%errstr=""
+         read(unit=nh%lun, nml=COSMIC_RAY_SPECTRUM, iostat=nh%ierrh, iomsg=nh%errstr)
+         close(nh%lun)
+         call nh%namelist_errh(nh%ierrh, "COSMIC_RAY_SPECTRUM")
+         read(nh%cmdl_nml,nml=COSMIC_RAY_SPECTRUM, iostat=nh%ierrh)
+         call nh%namelist_errh(nh%ierrh, "COSMIC_RAY_SPECTRUM", .true.)
+         open(newunit=nh%lun, file=nh%tmp2, status="unknown")
+         write(nh%lun,nml=COSMIC_RAY_SPECTRUM)
+         close(nh%lun)
+         call nh%compare_namelist()
+      endif
+
+      rbuff(:)   = huge(1.)                         ! mark unused entries to allow automatic determination of nn
 
       if (master) then
          ibuff(1)  = ncre
@@ -435,35 +458,6 @@ module initcrspectrum
          call init_cresp_types
       endif
    end subroutine init_cresp
-!---------------------------------------------------------------------------------------------------- 
-   subroutine read_problem_par
-      use dataio_pub,    only: nh
-      use mpisetup,     only: master
-      implicit none
-      namelist /COSMIC_RAY_SPECTRUM/ cfl_cre, p_lo_init, p_up_init, f_init, q_init, q_big, ncre, initial_condition, &
-      &                         p_min_fix, p_max_fix, cre_eff, K_cre_paral_1, K_cre_perp_1, cre_active, &
-      &                         K_cre_pow, expan_order, e_small, bump_amp, cre_gpcr_ess, use_cresp, &
-      &                         e_small_approx_init_cond, e_small_approx_p_lo, e_small_approx_p_up, force_init_NR,&
-      &                         NR_iter_limit, max_p_ratio, add_spectrum_base, synch_active, adiab_active, arr_dim
-
-      if (master) then
-         open(newunit=nh%lun, file=nh%tmp1, status="unknown")
-         write(nh%lun,nml=COSMIC_RAY_SPECTRUM)
-         close(nh%lun)
-         open(newunit=nh%lun, file=nh%par_file)
-         nh%errstr=""
-         read(unit=nh%lun, nml=COSMIC_RAY_SPECTRUM, iostat=nh%ierrh, iomsg=nh%errstr)
-         close(nh%lun)
-         call nh%namelist_errh(nh%ierrh, "COSMIC_RAY_SPECTRUM")
-         read(nh%cmdl_nml,nml=COSMIC_RAY_SPECTRUM, iostat=nh%ierrh)
-         call nh%namelist_errh(nh%ierrh, "COSMIC_RAY_SPECTRUM", .true.)
-         open(newunit=nh%lun, file=nh%tmp2, status="unknown")
-         write(nh%lun,nml=COSMIC_RAY_SPECTRUM)
-         close(nh%lun)
-         call nh%compare_namelist()
-      endif
-
-   end subroutine read_problem_par
 !----------------------------------------------------------------------------------------------------
    subroutine init_cresp_types
       use constants,               only: zero, I_ZERO
