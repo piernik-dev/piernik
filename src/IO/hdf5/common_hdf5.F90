@@ -150,7 +150,7 @@ contains
 #endif /* GRAV */
             case ('magx', 'magy', 'magz', 'pres')
                nhdf_vars = nhdf_vars + 1
-               
+
 #ifdef COSM_RAYS
             case ('encr')
 #ifdef COSM_RAY_ELECTRONS
@@ -178,8 +178,8 @@ contains
       allocate(hdf_vars_avail(nhdf_vars))
       hdf_vars_avail = .true.
       allocate(hdf_vars(nhdf_vars)); j = 1
-      
-      
+
+
 !allocating:
 
       do i = 1, nvars
@@ -256,9 +256,9 @@ contains
                      call warn(msg)
                   endif
                enddo
-               do k = 1, len(vars)
-                    if (vars(i) .eq. 'cree') exit
-                    if (k .eq. len(vars)) then
+               do k = 1, nvars
+                    if (vars(k) .eq. 'cree') exit
+                    if (k .eq. nvars) then
                         write(msg, '(a)')"[common_hdf5:init_hdf5] CRESP 'cren' field created, but 'cree' not defined: reconstruction of spectrum from hdf files requires both."
                         call warn(msg)
                     endif
@@ -273,9 +273,9 @@ contains
                      call warn(msg)
                   endif
                enddo
-               do k = 1, len(vars)
-                    if (vars(i) .eq. 'cren') exit
-                    if (k .eq. len(vars)) then
+               do k = 1, nvars
+                    if (vars(k) .eq. 'cren') exit
+                    if (k .eq. nvars) then
                         write(msg, '(a)')"[common_hdf5:init_hdf5] CRESP 'cree' field created, but 'cren' not defined: reconstruction of spectrum from hdf files requires both."
                         call warn(msg)
                     endif
