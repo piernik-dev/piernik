@@ -179,7 +179,7 @@ contains
 
       class(component_fluid), pointer :: fl
       integer                         :: i, j, k, icr, ipm, jpm, kpm
-      real                            :: cs_iso, xsn, ysn, zsn, r2, maxv, e_tot
+      real                            :: cs_iso, xsn, ysn, zsn, r2, maxv
       real                            :: sn_exp, sn_rdist2
       type(cg_list_element),  pointer :: cgl
       type(grid_container),   pointer :: cg
@@ -187,6 +187,9 @@ contains
 #ifndef COSM_RAYS_SOURCES
       integer, parameter              :: icr_H1 = 1, icr_C12 = 2
 #endif /* !COSM_RAYS_SOURCES */
+#ifdef COSM_RAY_ELECTRONS
+      real                            :: e_tot
+#endif /* COSM_RAY_ELECTRONS */
 
      if (first_run .eqv. .true.) then
       fl => flind%ion
