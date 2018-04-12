@@ -183,11 +183,9 @@ contains
       use cr_data,        only: cr_sigma, icr_N14, icr_O16
 #endif /* COSM_RAYS_SOURCES */
 #ifdef COSM_RAY_ELECTRONS
-      use cresp_crspectrum,only: e_tot_2_f_init_params, cresp_init_powl_spectrum, cresp_init_state, e_tot_2_en_powl_init_params
-      use cresp_NR_method, only: cresp_initialize_guess_grids
-      use cresp_grid,      only: cresp_init_grid
-      use initcrspectrum,  only: taylor_coeff_2nd, taylor_coeff_3rd, expan_order
-      use initcosmicrays,  only: iarr_cre_n, iarr_cre_e
+      use cresp_crspectrum,   only: cresp_get_scaled_init_spectrum
+      use initcrspectrum,     only: taylor_coeff_2nd, taylor_coeff_3rd, expan_order
+      use initcosmicrays,     only: iarr_cre_n, iarr_cre_e
 #ifdef SN_GALAXY
       use initcrspectrum,  only: cresp
 #endif /* SN_GALAXY */
@@ -216,11 +214,6 @@ contains
 #ifdef GRAV
       call grav_pot_3d
 #endif /* GRAV */
-
-#ifdef COSM_RAY_ELECTRONS
-      call cresp_initialize_guess_grids
-      call cresp_init_grid
-#endif /* COSM_RAY_ELECTRONS */
 
 !   Secondary parameters
       fl => flind%ion
@@ -274,7 +267,7 @@ contains
                   e_tot_sn = decr * cre_eff
                   cresp%n = 0.0 ;  cresp%e = 0.0
                   if (e_tot_sn .gt. e_small) then     ! early phase - fill cells only when total passed energy is greater than e_small
-                        call cresp_init_state(cresp%n,cresp%e, e_tot_2_f_init_params(e_tot_sn))  ! initializes whole spectrum, accounts for "widening" due to e_small approximation
+                        call cresp_get_scaled_init_spectrum(cresp%n,cresp%e,e_tot_sn)
                   endif                                                                                ! distribution function amplitude computed from total explosion energy multiplied by factor cre_eff
                   cg%u(iarr_cre_n,i,j,k) = cg%u(iarr_cre_n,i,j,k) + cresp%n
                   cg%u(iarr_cre_e,i,j,k) = cg%u(iarr_cre_e,i,j,k) + cresp%e
@@ -502,9 +495,9 @@ contains
       use snsources,      only: sn_shear
 #endif /* SHEAR */
 #ifdef COSM_RAY_ELECTRONS
-      use cresp_crspectrum,only: e_tot_2_f_init_params, cresp_init_state, e_tot_2_en_powl_init_params
-      use initcrspectrum,  only: cresp, cre_eff, e_small
-      use initcosmicrays,  only: iarr_cre_n, iarr_cre_e
+      use initcrspectrum,     only: cresp, cre_eff, e_small
+      use initcosmicrays,     only: iarr_cre_n, iarr_cre_e
+      use cresp_crspectrum,   only: cresp_get_scaled_init_spectrum
 #endif /* COSM_RAY_ELECTRONS */
       implicit none
 
@@ -563,9 +556,11 @@ contains
 #ifdef COSM_RAY_ELECTRONS
                   e_tot_sn = decr * cre_eff
                   cresp%n = 0.0 ;  cresp%e = 0.0
+
                   if (e_tot_sn .gt. e_small) then     ! early phase - fill cells only when total passed energy is greater than e_small, amplitude computed from total explosion energy multiplied by factor cre_eff
-                        call cresp_init_state(cresp%n,cresp%e, e_tot_2_f_init_params(e_tot_sn))  ! initializes whole spectrum, accounts for "widening" due to e_small approximation
+                    call cresp_get_scaled_init_spectrum(cresp%n, cresp%e, e_tot_sn)
                   endif
+
                   cg%u(iarr_cre_n,i,j,k) = cg%u(iarr_cre_n,i,j,k) + cresp%n
                   cg%u(iarr_cre_e,i,j,k) = cg%u(iarr_cre_e,i,j,k) + cresp%e
 #endif /* COSM_RAY_ELECTRONS */

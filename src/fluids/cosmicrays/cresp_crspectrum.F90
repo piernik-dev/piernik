@@ -1,7 +1,7 @@
 module cresp_crspectrum
 ! pulled by COSM_RAY_ELECTRONS
  implicit none
-  public :: cresp_update_cell, cresp_init_state, printer, fail_count_interpol, fail_count_no_sol, fail_count_NR_2dim, &
+  public :: cresp_update_cell, cresp_init_state, printer, fail_count_interpol, fail_count_no_sol, fail_count_NR_2dim, cresp_get_scaled_init_spectrum, &
       &   cleanup_cresp, cresp_accuracy_test, b_losses, cresp_allocate_all, cresp_deallocate_all, e_threshold_lo, e_threshold_up, &
       &   fail_count_comp_q, second_fail, src_gpcresp, cresp_init_powl_spectrum, get_powl_f_ampl, e_tot_2_f_init_params, e_tot_2_en_powl_init_params
   private ! most of it
@@ -89,7 +89,7 @@ contains
    use constants, only: zero, one
    implicit none
     real(kind=8), dimension(1:2), intent(inout), optional :: p_out
-    real(kind=8), dimension(1:2), intent(inout) :: v_n, v_e
+    real(kind=8), dimension(:), pointer, intent(inout) :: v_n, v_e
     logical, intent(inout)                      :: cfl_cresp_violation
     real(kind=8), intent(in)  :: dt
     real(kind=8), dimension(1:ncre), intent(inout)   :: n_inout, e_inout
@@ -519,10 +519,10 @@ contains
 !
 !-------------------------------------------------------------------------------------------------
   subroutine cresp_init_state(init_n, init_e, f_amplitude, sptab)
-   use initcrspectrum, only: ncre, spec_mod_trms, q_init, p_lo_init, p_up_init, initial_condition, allow_source_spectrum_break, & ! f_init, bump_amp
-                        e_small_approx_init_cond, e_small_approx_p_lo, e_small_approx_p_up, crel, p_fix, w,&
+   use initcrspectrum,  only: ncre, spec_mod_trms, q_init, p_lo_init, p_up_init, initial_condition, allow_source_spectrum_break, & ! f_init, bump_amp
+                        e_small_approx_init_cond, e_small_approx_p_lo, e_small_approx_p_up, crel, p_fix, w, total_init_cree, &
                         p_min_fix, p_max_fix, add_spectrum_base, e_small, test_spectrum_break, cresp_all_bins
-   use cresp_NR_method,only: e_small_to_f
+   use cresp_NR_method, only: e_small_to_f
    use constants, only: zero, I_ONE, fpi
    use cresp_variables, only: clight ! use units, only: clight
    implicit none
@@ -744,6 +744,7 @@ contains
         init_n = n
         init_e = e
 
+        total_init_cree = sum(e) !< total_init_cree value is used for initial spectrum scaling when spectrum is injected by source.
 #ifdef VERBOSE   
         print *, ''
         print *, 'n_tot0 =', n_tot0
@@ -799,6 +800,17 @@ contains
          call my_deallocate(act_bins)
          call my_deallocate(act_edges)
   end subroutine cresp_init_powl_spectrum
+!-------------------------------------------------------------------------------------------------
+   subroutine cresp_get_scaled_init_spectrum(n_inout, e_inout, e_in_total) !< Using n,e spectrum obtained at initialization, obtain injected spectrum at given cell
+      use initcrspectrum, only: norm_init_spectrum, total_init_cree, ncre  !< WARNING: cre_eff multiplication not done here!
+      implicit none
+      real(kind=8), dimension(1:ncre), intent(inout) :: n_inout, e_inout
+      real(kind=8), intent(in)                       :: e_in_total
+
+      n_inout = norm_init_spectrum%n * e_in_total / total_init_cree
+      e_inout = norm_init_spectrum%e * e_in_total / total_init_cree
+
+   end subroutine cresp_get_scaled_init_spectrum
 !-------------------------------------------------------------------------------------------------
   subroutine e_tot_2_en_powl_init_params(n_inout, e_inout, e_in_total)
    use initcrspectrum, only: ncre, p_lo_init, p_up_init, q_init
@@ -1246,9 +1258,9 @@ contains
 ! distribution function value on left bin edge "f"
 !---------------------------------------------------------------------------------------------------
   subroutine get_fqp_up(exit_code)
-   use initcrspectrum, only: e_small, q_big, p_fix, NR_refine_solution_pf
-   use constants, only: zero, one, two
-   use cresp_NR_method,only: intpol_pf_from_NR_grids, alpha, n_in, selected_function_2D, fvec_up, &
+   use initcrspectrum,  only: e_small, q_big, p_fix, NR_refine_solution_pf
+   use constants,       only: zero, one, two
+   use cresp_NR_method, only: intpol_pf_from_NR_grids, alpha, n_in, selected_function_2D, fvec_up, &
             NR_algorithm, e_small_to_f, q_ratios
    use cresp_variables, only: clight ! use units, only: clight
    implicit none

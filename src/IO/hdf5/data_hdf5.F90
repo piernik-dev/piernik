@@ -301,19 +301,20 @@ contains
          case ("cr01" : "cr99")
             read(var,'(A2,I2.2)') aux, i !> \deprecated BEWARE 0 <= i <= 99, no other indices can be dumped to hdf file
             tab(:,:,:) = real(cg%u(flind%crn%beg+i-1, RNG), kind=4)
-         case ("cren01" : "cren99")
-            read(var,'(A4,I2.2)') aux, i !> \deprecated BEWARE 0 <= i <= 99, no other indices can be dumped to hdf file
-            tab(:,:,:) = real(cg%u(flind%cre%nbeg+i-1, RNG), kind=4)
-         case ("cree01" : "cree99")
-            read(var,'(A4,I2.2)') aux, i !> \deprecated BEWARE 0 <= i <= 99, no other indices can be dumped to hdf file
-            tab(:,:,:) = real(cg%u(flind%cre%ebeg+i-1, RNG), kind=4) ! this is consistent with the quantity of ncre variables, tested
 #else /* ! COSM_RAY_ELECTRONS */
          case ("cr1" : "cr9")
             read(var,'(A2,I1.1)') aux, i !> \deprecated BEWARE 0 <= i <= 99, no other indices can be dumped to hdf file
             tab(:,:,:) = real(cg%u(flind%crs%beg+i-1, RNG), kind=4)
 #endif /* COSM_RAY_ELECTRONS */
 #endif /* COSM_RAYS */
-
+#ifdef COSM_RAY_ELECTRONS
+         case ("cren01" : "cren99")
+            read(var,'(A4,I2.2)') aux, i !> \deprecated BEWARE 0 <= i <= 99, no other indices can be dumped to hdf file
+            tab(:,:,:) = real(cg%u(flind%cre%nbeg+i-1, RNG), kind=4)
+         case ("cree01" : "cree99")
+            read(var,'(A4,I2.2)') aux, i !> \deprecated BEWARE 0 <= i <= 99, no other indices can be dumped to hdf file
+            tab(:,:,:) = real(cg%u(flind%cre%ebeg+i-1, RNG), kind=4) ! this is consistent with the quantity of ncre variables, tested
+#endif /* COSM_RAY_ELECTRONS */
 #ifdef TRACER
          case ("trcr")
             tab(:,:,:) = real(cg%u(flind%trc%beg, RNG),4)

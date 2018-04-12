@@ -170,11 +170,9 @@ contains
       use cr_data,        only: icr_H1, icr_C12, cr_table
 #endif /* COSM_RAYS_SOURCES */
 #ifdef COSM_RAY_ELECTRONS
-     use initcosmicrays,  only: ncrn, iarr_cre_e, iarr_cre_n
-     use initcrspectrum,  only: expan_order, taylor_coeff_2nd, taylor_coeff_3rd, e_small, cresp, cre_eff
-     use cresp_crspectrum,only: e_tot_2_f_init_params, cresp_init_powl_spectrum, cresp_init_state, e_tot_2_en_powl_init_params
-     use cresp_grid,     only: cresp_init_grid
-     use cresp_NR_method,only: cresp_initialize_guess_grids
+     use initcosmicrays,   only: ncrn, iarr_cre_e, iarr_cre_n
+     use initcrspectrum,   only: expan_order, taylor_coeff_2nd, taylor_coeff_3rd, e_small, cresp, cre_eff
+     use cresp_crspectrum, only: cresp_get_scaled_init_spectrum
 #endif /* COSM_RAY_ELECTRONS */
 
       implicit none
@@ -233,11 +231,6 @@ contains
          enddo
 #endif /* !ISO */
 
-#ifdef COSM_RAY_ELECTRONS
-      call cresp_initialize_guess_grids
-      call cresp_init_grid
-#endif /* COSM_RAY_ELECTRONS */
-
 #ifdef COSM_RAYS
          do icr = 1, flind%crs%all
             cg%u(iarr_crs(icr), :, :, :) =  beta_cr*fl%cs2 * cg%u(fl%idn, :, :, :)/(gamma_crn(icr)-1.0)
@@ -293,17 +286,12 @@ contains
                         enddo
                      enddo
                   enddo
-                  cresp%n = cg%u(iarr_cre_n,i,j,k) ;  cresp%e = cg%u(iarr_cre_e,i,j,k) ; e_tot = e_tot * cre_eff
-                  if (first_run) then
-                     if (e_tot .gt. e_small) then     ! early phase - fill cells only when total passed energy is greater than e_small, amplitude computed from total explosion energy multiplied by factor cre_eff
-                        call cresp_init_state(cresp%n,cresp%e, e_tot_2_f_init_params(e_tot))  ! initializes whole spectrum, accounts for "widening" due to e_small approximation
-                     endif
-                  else
-                     call e_tot_2_en_powl_init_params(cresp%n, cresp%e, e_tot)
+                  cresp%n = 0.0 ;  cresp%e = 0.0 ; e_tot = e_tot * cre_eff
+                  if (e_tot .gt. e_small) then     ! early phase - fill cells only when total passed energy is greater than e_small, amplitude computed from total explosion energy multiplied by factor cre_eff
+                    call cresp_get_scaled_init_spectrum(cresp%n, cresp%e, e_tot)
+                    cg%u(iarr_cre_n,i,j,k) = cg%u(iarr_cre_n,i,j,k) + cresp%n
+                    cg%u(iarr_cre_e,i,j,k) = cg%u(iarr_cre_e,i,j,k) + cresp%e
                   endif
-                  cg%u(iarr_cre_n,i,j,k) = cg%u(iarr_cre_n,i,j,k) + cresp%n
-                  cg%u(iarr_cre_e,i,j,k) = cg%u(iarr_cre_e,i,j,k) + cresp%e
-
                enddo
             enddo
          enddo
