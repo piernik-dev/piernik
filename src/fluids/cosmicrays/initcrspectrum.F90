@@ -1,13 +1,7 @@
-module initcrspectrum  
-! pulled by COSM_RAYS
+module initcrspectrum
+! pulled by COSM_RAY_ELECTRONS
 
-#ifdef COSM_RAY_ELECTRONS
    public ! QA_WARN no secrets are kept here
-#endif /* COSM_RAY_ELECTRONS */
-#ifndef COSM_RAY_ELECTRONS
-   public ncre, p_min_fix, p_max_fix, f_init, q_init, q_big, p_lo_init, p_up_init, cfl_cre, cre_eff, K_cre_paral_1, K_cre_perp_1, &
-      & K_cre_pow, p_mid_fix, expan_order
-#endif /* not COSM_RAY_ELECTRONS */
 
 ! contains routines reading namelist in problem.par file dedicated to cosmic ray electron spectrum and initializes types used.
 ! available via namelist COSMIC_RAY_SPECTRUM
@@ -63,7 +57,7 @@ module initcrspectrum
 !----------------------------------
    real(kind=8),allocatable, dimension(:) :: p_fix, p_mid_fix
    real(kind=8)       :: w
-! Types used in module: 
+! Types used in module:
    type bin_old
       integer                           :: i_lo
       integer                           :: i_up
@@ -95,7 +89,7 @@ module initcrspectrum
    integer,allocatable, dimension(:) :: cresp_all_edges, cresp_all_bins
 
 !====================================================================================================
-!  
+!
  contains
 !
 !====================================================================================================
@@ -381,7 +375,7 @@ module initcrspectrum
                cresp_all_bins  = (/ (i,i=1,ncre) /)
 
 !!\brief for now algorithm requires at least 3 bins
-               p_fix = zero 
+               p_fix = zero
                w  = (log10(p_max_fix/p_min_fix))/real(ncre-2,kind=8)
                p_fix(1:ncre-1)  =  p_min_fix*ten**(w* real((cresp_all_edges(1:ncre-1)-1),kind=8) )
                p_fix(0)    = zero
