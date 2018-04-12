@@ -38,9 +38,7 @@ module initcosmicrays
 ! pulled by COSM_RAYS
    use constants, only: cbuff_len
 #ifdef COSM_RAY_ELECTRONS
-   use initcrspectrum, only: ncre, p_min_fix, p_max_fix, f_init, q_init, q_big, p_lo_init, p_up_init,  &
-                          cfl_cre, cre_eff, K_cre_paral_1, K_cre_perp_1, K_cre_pow, p_mid_fix, &
-                          expan_order, cre_gpcr_ess, init_cresp
+   use initcrspectrum, only: ncre, K_cre_paral_1, K_cre_perp_1, K_cre_pow, p_mid_fix, cre_gpcr_ess
 #endif /* COSM_RAY_ELECTRONS */
    implicit none
 
@@ -206,19 +204,6 @@ contains
          rbuff(2)   = smallecr
          rbuff(3)   = cr_active
          rbuff(4)   = cr_eff
-#ifdef COSM_RAY_ELECTRONS
-         rbuff(5)   = p_lo_init   !!!
-         rbuff(6)   = p_up_init   !!!
-         rbuff(7)   = f_init      !!!
-         rbuff(8)   = q_init      !!!
-         rbuff(9)   = p_min_fix
-         rbuff(10)  = p_max_fix
-         rbuff(11)  = cfl_cre     !!!
-         rbuff(12)  = cre_eff
-         rbuff(13)  = K_cre_paral_1 !!!
-         rbuff(14)  = K_cre_perp_1 !!!
-         rbuff(15)  = K_cre_pow !!!
-#endif /* COSM_RAY_ELECTRONS */
 
          lbuff(1)   = use_split
 
@@ -259,25 +244,15 @@ contains
       if (slave) then
 
          ncrn       = int(ibuff(1), kind=4)
+#ifndef COSM_RAY_ELECTRONS
          ncre       = int(ibuff(2), kind=4)
+#endif /* COSM_RAY_ELECTRONS */
 
          cfl_cr     = rbuff(1)
          smallecr   = rbuff(2)
          cr_active  = rbuff(3)
          cr_eff     = rbuff(4)
-#ifdef COSM_RAY_ELECTRONS
-         p_lo_init  = rbuff(5)   !!!
-         p_up_init  = rbuff(6)   !!!
-         f_init     = rbuff(7)   !!!
-         q_init     = rbuff(8)   !!!
-         p_min_fix  = rbuff(9)   !!!
-         p_max_fix  = rbuff(10)  !!!
-         cfl_cre    = rbuff(11)  !!!
-         cre_eff    = rbuff(12)  !!!
-         K_cre_paral_1 = rbuff(13) !!!
-         K_cre_perp_1 = rbuff(14) !!!
-         K_cre_pow  = rbuff(15) !!!
-#endif /* COSM_RAY_ELECTRONS */
+
          use_split  = lbuff(1)
 
          nn         = ibuff(ubound(ibuff, 1))    ! this must match the last rbuff() index above
@@ -332,7 +307,7 @@ contains
       if (ncre > 0) then
          K_crs_paral(ncrn+1:ncrn+ncre) = K_cre_paral_1  * (p_mid_fix**K_cre_pow)/(maxval(p_mid_fix)**K_cre_pow)          !< CRESP number density K
          K_crs_paral(ncrn+1+ncre:ncrn+2*ncre) = K_cre_paral_1 * (p_mid_fix**K_cre_pow)/(maxval(p_mid_fix)**K_cre_pow)    !< CRESP energy density K
-         K_crs_perp(ncrn+1:ncrn+ncre) = K_cre_perp_1 * (p_mid_fix**K_cre_pow)/(maxval(p_mid_fix)**K_cre_pow)             !< CRESP number density K
+         K_crs_perp(ncrn+1:ncrn+ncre)  = K_cre_perp_1 * (p_mid_fix**K_cre_pow)/(maxval(p_mid_fix)**K_cre_pow)             !< CRESP number density K
          K_crs_perp(ncrn+ncre+1:ncrn+2*ncre) = K_cre_perp_1 * (p_mid_fix**K_cre_pow)/(maxval(p_mid_fix)**K_cre_pow)      !< CRESP energy density K
 
          K_cre_paral(1:ncre)        =  K_crs_paral(ncrn+1:ncrn+ncre)               !< CRESP number density K

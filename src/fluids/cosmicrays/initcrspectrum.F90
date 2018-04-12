@@ -103,6 +103,7 @@ module initcrspectrum
       use constants,            only: I_ZERO, zero, ten
       use dataio_pub,           only: printinfo, warn, msg, die
       use diagnostics,          only: my_allocate_with_index
+      use mpisetup,             only: rbuff, ibuff, lbuff, cbuff, master, slave, piernik_MPI_Bcast
       implicit none
       integer                  :: i       ! enumerator
       logical, save            :: first_run = .true.
@@ -157,10 +158,124 @@ module initcrspectrum
 
       call read_problem_par
 
+      if (master) then
+         ibuff(1)  = ncre
+         ibuff(2)  = expan_order
+
+         ibuff(3)  = e_small_approx_p_lo
+         ibuff(4)  = e_small_approx_p_up
+         ibuff(5)  = e_small_approx_init_cond
+         ibuff(6)  = add_spectrum_base
+
+         ibuff(7)  =  NR_iter_limit
+         ibuff(8)  =  arr_dim
+
+         lbuff(1)  =  use_cresp
+         lbuff(2)  =  cre_gpcr_ess
+         lbuff(3)  =  prevent_neg_en
+         lbuff(4)  =  allow_source_spectrum_break
+         lbuff(5)  =  synch_active
+         lbuff(6)  =  adiab_active
+         lbuff(7)  =  test_spectrum_break
+
+         lbuff(8)  =  force_init_NR
+         lbuff(9)  =  NR_run_refine_pf
+         lbuff(10) =  NR_refine_solution_q
+         lbuff(11) =  NR_refine_solution_pf
+
+         rbuff(1)  = cfl_cre
+         rbuff(2)  = cre_eff
+         rbuff(3)  = smallecrn
+         rbuff(4)  = smallecre
+         rbuff(5)  = cre_active
+         rbuff(6)  = p_lo_init
+         rbuff(7)  = p_up_init
+         rbuff(8)  = f_init
+         rbuff(9)  = q_init
+         rbuff(19) = q_big
+         rbuff(11) = p_min_fix
+         rbuff(12) = p_max_fix
+         rbuff(13) = K_cre_paral_1
+         rbuff(14) = K_cre_perp_1
+         rbuff(15) = K_cre_pow
+         rbuff(16) = bump_amp
+
+         rbuff(17) = e_small
+         rbuff(18) = max_p_ratio
+
+         rbuff(19) = magnetic_energy_scaler
+
+         rbuff(20) = tol_f
+         rbuff(21) = tol_x
+         rbuff(22) = tol_f_1D
+         rbuff(23) = tol_x_1D
+
+         cbuff(1)  = initial_condition
+      endif
+
+      call piernik_MPI_Bcast(ibuff)
+      call piernik_MPI_Bcast(rbuff)
+      call piernik_MPI_Bcast(lbuff)
+      call piernik_MPI_Bcast(cbuff,len(initial_condition))
+
 !!\deprecated
 !       open(10, file='crs.dat',status='replace',position='rewind')     ! diagnostic files
 !       open(11, file='crs_ne.dat',status='replace',position='rewind')  ! diagnostic files
 
+      if (slave) then
+         ncre                         = int(ibuff(1),kind=4)
+         expan_order                  = int(ibuff(2),kind=4)
+
+         e_small_approx_p_lo          = int(ibuff(3),kind=1)
+         e_small_approx_p_up          = int(ibuff(4),kind=1)
+         e_small_approx_init_cond     = int(ibuff(5),kind=1)
+         add_spectrum_base            = int(ibuff(6),kind=1)
+
+         NR_iter_limit               = int(ibuff(7),kind=2)
+         arr_dim                     = int(ibuff(8),kind=4)
+
+         use_cresp                   = lbuff(1)
+         cre_gpcr_ess                = lbuff(2)
+         prevent_neg_en              = lbuff(3)
+         allow_source_spectrum_break = lbuff(4)
+         synch_active                = lbuff(5)
+         adiab_active                = lbuff(6)
+         test_spectrum_break         = lbuff(7)
+
+         force_init_NR               = lbuff(8)
+         NR_run_refine_pf            = lbuff(9)
+         NR_refine_solution_q        = lbuff(10)
+         NR_refine_solution_pf       = lbuff(11)
+
+         cfl_cre                      = rbuff(1)
+         cre_eff                      = rbuff(2)
+         smallecrn                    = rbuff(3)
+         smallecre                    = rbuff(4)
+         cre_active                   = rbuff(5)
+         p_lo_init                    = rbuff(6)
+         p_up_init                    = rbuff(7)
+         f_init                       = rbuff(8)
+         q_init                       = rbuff(9)
+         q_big                        = rbuff(19)
+         p_min_fix                    = rbuff(11)
+         p_max_fix                    = rbuff(12)
+         K_cre_paral_1                = rbuff(13)
+         K_cre_perp_1                 = rbuff(14)
+         K_cre_pow                    = rbuff(15)
+         bump_amp                     = rbuff(16)
+
+         e_small                      = rbuff(17)
+         max_p_ratio                  = rbuff(18)
+
+         magnetic_energy_scaler       = rbuff(19)
+
+         tol_f                        = rbuff(20)
+         tol_x                        = rbuff(21)
+         tol_f_1D                     = rbuff(22)
+         tol_x_1D                     = rbuff(23)
+
+         initial_condition            = cbuff(1)
+      endif
       if (first_run .eqv. .true.) then
          if (ncre .ne. I_ZERO)  then
 #ifdef VERBOSE
