@@ -1018,16 +1018,15 @@ contains
 #endif /* !ISO */
 
 #ifdef COSM_RAYS
-               tot_q(T_ENCR) = tot_q(T_ENCR) + cg%dvol * (sum(sum(pu(iarr_all_crn,:,:,:), dim=1), mask=cg%leafmap))
-               tot_q(T_ENER) = tot_q(T_ENER) + tot_q(T_ENCR)
 #ifdef COSM_RAY_ELECTRONS
+               tot_q(T_ENCR)  = tot_q(T_ENCR)  + cg%dvol * (sum(sum(pu(iarr_all_crn,:,:,:), dim=1), mask=cg%leafmap))
                tot_q(T_DCRE)  = tot_q(T_DCRE)  + cg%dvol * (sum(sum(pu(iarr_cre_n,:,:,:), dim=1), mask=cg%leafmap))
                tot_q(T_ENCRE) = tot_q(T_ENCRE) + cg%dvol * (sum(sum(pu(iarr_cre_e,:,:,:), dim=1), mask=cg%leafmap))
-               tot_q(T_ENER)  = tot_q(T_ENER)  + tot_q(T_ENCRE)
+               tot_q(T_ENCR)  = tot_q(T_ENCR)  + tot_q(T_ENCRE)
 #else /* !COSM_RAY_ELECTRONS */
-               tot_q(T_ENCR)  = tot_q(T_ENCR)  + cg%dvol * (sum(sum(pu(iarr_all_cre,:,:,:), dim=1), mask=cg%leafmap))
-               tot_q(T_ENER)  = tot_q(T_ENER)  + tot_q(T_ENCR)
+               tot_q(T_ENCR) = tot_q(T_ENCR) + cg%dvol * (sum(sum(pu(iarr_all_crs,:,:,:), dim=1), mask=cg%leafmap))
 #endif /* COSM_RAY_ELECTRONS */
+               tot_q(T_ENER) = tot_q(T_ENER) + tot_q(T_ENCR)
 #endif /* COSM_RAYS */
 
             case (GEO_RPZ)
@@ -1060,15 +1059,17 @@ contains
 #endif /* !ISO */
 
 #ifdef COSM_RAYS
-!                   tot_q(T_ENCR) = tot_q(T_ENCR) + drvol * sum(sum(pu(iarr_all_crs, ii, :, :), dim=1), mask=cg%leafmap(i, :, :))
-                  tot_q(T_ENCR) = tot_q(T_ENCR) + drvol *( sum(sum(pu(iarr_all_crn, ii, :, :), dim=1), mask=cg%leafmap(i, :, :))) !!!
-                  tot_q(T_ENER) = tot_q(T_ENER) + tot_q(T_ENCR)
-#endif /* COSM_RAYS */
 #ifdef COSM_RAY_ELECTRONS
-               tot_q(T_DCRE)  = tot_q(T_DCRE)  + cg%dvol * (sum(sum(pu(iarr_cre_n,ii,:,:), dim=1), mask=cg%leafmap(i, :, :)))
-               tot_q(T_ENCRE) = tot_q(T_ENCRE) + cg%dvol * (sum(sum(pu(iarr_cre_e,ii,:,:), dim=1), mask=cg%leafmap(i, :, :)))
-               tot_q(T_ENER)  = tot_q(T_ENER)  + tot_q(T_ENCRE)
+                  tot_q(T_ENCR)  = tot_q(T_ENCR)  + drvol * (sum(sum(pu(iarr_all_crn, ii, :, :), dim=1), mask=cg%leafmap(i, :, :))) !!!
+                  tot_q(T_DCRE)  = tot_q(T_DCRE)  + drvol * (sum(sum(pu(iarr_cre_n,ii,:,:), dim=1), mask=cg%leafmap(i, :, :)))
+                  tot_q(T_ENCRE) = tot_q(T_ENCRE) + drvol * (sum(sum(pu(iarr_cre_e,ii,:,:), dim=1), mask=cg%leafmap(i, :, :)))
+                  tot_q(T_ENCR)  = tot_q(T_ENCR)  + tot_q(T_ENCRE)
+#else /* !COSM_RAY_ELECTRONS */
+                  tot_q(T_ENCR) = tot_q(T_ENCR) + drvol * sum(sum(pu(iarr_all_crs, ii, :, :), dim=1), mask=cg%leafmap(i, :, :))
 #endif /* COSM_RAY_ELECTRONS */
+                  tot_q(T_ENER) = tot_q(T_ENER) + tot_q(T_ENCRE)
+#endif /* COSM_RAYS */
+
                enddo
 
          end select
