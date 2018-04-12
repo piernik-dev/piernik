@@ -868,11 +868,11 @@ contains
       use fluidindex,       only: iarr_all_en
 #endif /* !ISO */
 #ifdef COSM_RAYS
-      use fluidindex,       only: iarr_all_crn !,iarr_all_crs - /deprecated !!!
 #ifdef COSM_RAY_ELECTRONS
+      use fluidindex,       only: iarr_all_crn
       use initcosmicrays,   only: iarr_cre_e, iarr_cre_n
 #else
-      use fluidindex,       only: iarr_all_cre
+      use fluidindex,       only: iarr_all_crs
 #endif /* COSM_RAY_ELECTRONS */
 #endif /* COSM_RAYS */
 #ifdef RESISTIVE
@@ -1060,14 +1060,14 @@ contains
 
 #ifdef COSM_RAYS
 #ifdef COSM_RAY_ELECTRONS
-                  tot_q(T_ENCR)  = tot_q(T_ENCR)  + drvol * (sum(sum(pu(iarr_all_crn, ii, :, :), dim=1), mask=cg%leafmap(i, :, :))) !!!
+                  tot_q(T_ENCR)  = tot_q(T_ENCR)  + drvol * (sum(sum(pu(iarr_all_crn, ii, :, :), dim=1), mask=cg%leafmap(i, :, :)))
                   tot_q(T_DCRE)  = tot_q(T_DCRE)  + drvol * (sum(sum(pu(iarr_cre_n,ii,:,:), dim=1), mask=cg%leafmap(i, :, :)))
                   tot_q(T_ENCRE) = tot_q(T_ENCRE) + drvol * (sum(sum(pu(iarr_cre_e,ii,:,:), dim=1), mask=cg%leafmap(i, :, :)))
                   tot_q(T_ENCR)  = tot_q(T_ENCR)  + tot_q(T_ENCRE)
 #else /* !COSM_RAY_ELECTRONS */
                   tot_q(T_ENCR) = tot_q(T_ENCR) + drvol * sum(sum(pu(iarr_all_crs, ii, :, :), dim=1), mask=cg%leafmap(i, :, :))
 #endif /* COSM_RAY_ELECTRONS */
-                  tot_q(T_ENER) = tot_q(T_ENER) + tot_q(T_ENCRE)
+                  tot_q(T_ENER) = tot_q(T_ENER) + tot_q(T_ENCR)
 #endif /* COSM_RAYS */
 
                enddo
@@ -1635,7 +1635,7 @@ contains
       call leaves%get_extremum(qna%wai, MAXL, encre_max)
       call leaves%get_extremum(qna%wai, MINL, encre_min)
       cgl => leaves%first
-      
+
       cgl => leaves%first
       do while (associated(cgl))
          p => cgl%cg%q(qna%wai)%span(cgl%cg%ijkse)

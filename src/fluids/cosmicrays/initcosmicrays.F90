@@ -198,7 +198,9 @@ contains
       if (master) then
 
          ibuff(1)   = ncrn
-         ibuff(2)   = ncre ! should this still be here?
+#ifndef COSM_RAY_ELECTRONS
+         ibuff(2)   = ncre
+#endif /* COSM_RAY_ELECTRONS */
 
          rbuff(1)   = cfl_cr
          rbuff(2)   = smallecr
@@ -223,9 +225,9 @@ contains
          endif
 
          if (ncre > 0) then
-            rbuff(ne+1       :ne+ncre) = K_cre_paral(1:ncre)
-            rbuff(ne+1+ncre:ne+2*ncre) = K_cre_perp (1:ncre)
 #ifndef COSM_RAY_ELECTRONS
+            rbuff(ne+1       :ne+ncre) = K_cre_paral(1:ncre)  !< K_cre_paral explicitly defined & broadcasted if CRESP not in use
+            rbuff(ne+1+ncre:ne+2*ncre) = K_cre_perp (1:ncre)  !< K_cre_perp explicitly defined & broadcasted if CRESP not in use
             rbuff(ne+2*ncre+1:ne+3*ncre) = gamma_cre(1:ncre)  ! gamma_cre used only if CRESP module not used
             lbuff(ncrn+2:ncrn+1+ncre)    = cre_gpcr_ess(1:ncre)
 #else
@@ -268,9 +270,9 @@ contains
          endif
 
          if (ncre > 0) then
-            K_cre_paral(1:ncre) = rbuff(ne+1       :ne+ncre) ! deprecated
-            K_cre_perp (1:ncre) = rbuff(ne+1+ncre:ne+2*ncre) ! deprecated
 #ifndef COSM_RAY_ELECTRONS
+            K_cre_paral(1:ncre) = rbuff(ne+1       :ne+ncre)    !< K_cre_paral explicitly defined & broadcasted if CRESP not in use
+            K_cre_perp (1:ncre) = rbuff(ne+1+ncre:ne+2*ncre)    !< K_cre_perp explicitly defined & broadcasted if CRESP not in use
             gamma_cre(1:ncre)    = rbuff(ne+2*ncre+1:ne+3*ncre) ! gamma_cre used only if CRESP module not used
             cre_gpcr_ess(1:ncre) = lbuff(ncrn+2:ncrn+2+ncre)
 #else
@@ -303,7 +305,7 @@ contains
         K_crs_perp (1:ncrn) = K_crn_perp (1:ncrn)
       endif
 
-#ifdef COSM_RAY_ELECTRONS      
+#ifdef COSM_RAY_ELECTRONS
       if (ncre > 0) then
          K_crs_paral(ncrn+1:ncrn+ncre) = K_cre_paral_1  * (p_mid_fix**K_cre_pow)/(maxval(p_mid_fix)**K_cre_pow)          !< CRESP number density K
          K_crs_paral(ncrn+1+ncre:ncrn+2*ncre) = K_cre_paral_1 * (p_mid_fix**K_cre_pow)/(maxval(p_mid_fix)**K_cre_pow)    !< CRESP energy density K
@@ -383,7 +385,7 @@ contains
 
       flind%crn%all  = ncrn
 
-      if (ncre .le. 0) then 
+      if (ncre .le. 0) then
             flind%cre%all  = 0
       else
 #ifdef COSM_RAY_ELECTRONS
@@ -433,7 +435,7 @@ contains
         iarr_cre_n(icr) = flind%cre%nbeg - I_ONE + icr
         iarr_cre_e(icr) = flind%cre%ebeg - I_ONE + icr
      enddo
-#endif /* COSM_RAY_ELECTRONS */      
+#endif /* COSM_RAY_ELECTRONS */
 !      if ( ncre.eq.0) then
          iarr_crs_diff = iarr_crs
 !      endif
