@@ -63,7 +63,7 @@ if f_run == True:
     if len(var_names) == 0:
         print ("\033[93mEmpty list of parameter names provided: enter names of parameters to read\033[0m")
         var_names = read_h5.input_names_array()
-    
+
     var_array = read_h5.read_par(filename, var_names)
     for i in range(len(var_names)):
         exec( "%s=%s" %(var_names[i], var_array[i]))
@@ -107,11 +107,11 @@ if f_run == True:
                 print ("\033[93m[Empty / improper input]: Setting slice coordinate to %s kpc.\033[0m" %slice_coord)
     elif min(grid_dim) == 1:
         slice_coord = 0.0
-        if   grid_dim[0] == 1: 
+        if   grid_dim[0] == 1:
             slice_ax = 'x'
-        elif grid_dim[1] == 1: 
+        elif grid_dim[1] == 1:
             slice_ax = 'y'
-        else:                  
+        else:
             slice_ax = 'z'
     avail_dim = avail_dims_by_slice[dim_map[slice_ax]]
     print ("\033[92mSlice ax set to %s, coordinate = %f \033[0m" %(slice_ax, slice_coord))
@@ -134,7 +134,7 @@ if f_run == True:
     dsSlice = h5ds.slice(slice_ax, slice_coord) #, plot_field)
     w = dom_r[avail_dim[0]] + abs(dom_l[avail_dim[0]])
     h = dom_r[avail_dim[1]] + abs(dom_l[avail_dim[1]])
-    
+
     frb = np.array(dsSlice.to_frb(w, resolution, height=h)[plot_field])
     plt.xlabel("Domain cooridnates ("+dim_map.keys()[dim_map.values().index(avail_dim[0])]+")" )
     plt.ylabel("Domain cooridnates ("+dim_map.keys()[dim_map.values().index(avail_dim[1])]+")" )
@@ -166,24 +166,21 @@ if f_run == True:
             coords[1] = click_coords[1]
 # ------------ preparing data and passing -------------------------
         ecrs = [] ; ncrs = []
-        position = h5ds.point(coords)
-        if len(position[plot_field]) > 0:
-            print ("\033[92mValue of %s at point [%f, %f, %f] = %f \033[0m" %(plot_field, coords[0], coords[1], coords[2], position[plot_field]))
-            for ind in range(1,ncre+1):
-                ecrs.append(float(str( position['cree'+str(ind).zfill(2)][0]).split(" ")[0]))
-                ncrs.append(float(str( position['cren'+str(ind).zfill(2)][0]).split(" ")[0]))
-            plot_var = "e"
-            fig2,exit_code = crs_h5.crs_plot_main(var_names, var_array, plot_var, ncrs, ecrs, field_max, time, coords)
-            if (exit_code != True):
-                s.savefig('results/'+filename_nam+'_'+plot_var+'_%04d.png' % image_number, transparent ='False',facecolor=s.get_facecolor())
-                print ("\033[92m  --->  Saved plot to: %s\033[0m" %str('results/'+filename_nam+'_'+plot_var+'_%04d.png' %image_number))
-                image_number=image_number+1
-            else:
-                print("\033[92m Empty cell, not saving.\033[0m")
-
-            if (f_run): f_run = False
+        position = h5ds.r[coords:coords]  # TODO .r can be replaced with .point once negative coordinates are supported YTPoint
+        print ("\033[92mValue of %s at point [%f, %f, %f] = %f \033[0m" %(plot_field, coords[0], coords[1], coords[2], position[plot_field]))
+        for ind in range(1,ncre+1):
+            ecrs.append(float(str( position['cree'+str(ind).zfill(2)][0]).split(" ")[0]))
+            ncrs.append(float(str( position['cren'+str(ind).zfill(2)][0]).split(" ")[0]))
+        plot_var = "e"
+        fig2,exit_code = crs_h5.crs_plot_main(var_names, var_array, plot_var, ncrs, ecrs, field_max, time, coords)
+        if (exit_code != True):
+            s.savefig('results/'+filename_nam+'_'+plot_var+'_%04d.png' % image_number, transparent ='False',facecolor=s.get_facecolor())
+            print ("\033[92m  --->  Saved plot to: %s\033[0m" %str('results/'+filename_nam+'_'+plot_var+'_%04d.png' %image_number))
+            image_number=image_number+1
         else:
-            print ("\033[91m***Negative coordinates not yet supported by YTPoint (coords = [%f, %f, %f])***\033[0m" %(coords[0], coords[1],coords[2]))
+            print("\033[92m Empty cell, not saving.\033[0m")
+
+        if (f_run): f_run = False
     cid = s.canvas.mpl_connect('button_press_event',read_click_and_plot)
 
     plt.show()
