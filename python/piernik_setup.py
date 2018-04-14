@@ -311,31 +311,53 @@ def setup_piernik(data=None):
         if(is_header.search(f)):
             allfiles.append(f)
 
-    for f in DirectoryWalker(probdir):
+    '''Take subproblem files, ignore subdirectories,
+    append files from parent directory if their names are new'''
+
+    probfiles = {}
+    pdir = os.path.dirname(probdir)  # strip trailing '/'
+    while (os.path.basename(pdir) not in ("..", "problems")):
+        for f in os.listdir(pdir):
+            if (os.path.basename(f) not in probfiles):
+                probfiles[os.path.basename(f)] = pdir + '/' + f
+        pdir = os.path.dirname(pdir)
+    for ff in probfiles:
+        f = probfiles[ff]
         if(is_f90.search(f)):
             f90files.append(f)
-        if(is_header.search(f)):
+        if(is_header.search(f) or ff == "piernik.def" or ff == options.param):
             allfiles.append(f)
 
-    pf = probdir + "info"
+    piernikdef = ""
+    problempar = ""
+    pf = probdir + "info"  # intended lack of inheritance from parent directory
     if (not os.path.isfile(pf)):
         print("\033[93mCannot find optional file " + pf + "\033[0m")
-    req_prob = ["piernik.def", "initproblem.F90", "problem.par"]
+    req_prob = ["piernik.def", "initproblem.F90", options.param]
     req_missing = False
     for pf in req_prob:
-        if (not os.path.isfile(probdir + pf)):
-            print("\033[91mCannot find required file " + probdir + pf + "\033[0m")
+        found = False
+        for lf in allfiles + f90files:
+            if (os.path.basename(lf) == pf):
+                if (not os.path.isfile(lf)):
+                    print("\033[91mRequired file " + lf + " is not a regular file\033[0m")
+                    req_missing = True
+                else:
+                    found = True
+                    if (pf == "piernik.def"):
+                        piernikdef = lf
+                    if (pf == options.param):
+                        problempar = lf
+        if not found:
             req_missing = True
+            print("\033[91mCannot find required file " + pf + "\033[0m")
     if (req_missing):
         sys.exit()
-
-    allfiles.append(probdir + "piernik.def")
-    allfiles.append(probdir + options.param)
 
     foo_fd, foo_path = tempfile.mkstemp(suffix=".f90", dir='.')
     cmd = "echo '#include \"%spiernik.h\"' > \"%s\"" % ('src/base/', foo_path)
     cmd += " && cpp %s -dM -I%s \"%s\" && rm \"%s\"" % (
-        cppflags, probdir, foo_path, foo_path)
+        cppflags, os.path.dirname(piernikdef), foo_path, foo_path)
     defines = get_stdout(cmd).rstrip().split("\n")
     if(options.verbose):
         print(cmd)
@@ -408,7 +430,7 @@ def setup_piernik(data=None):
                 (keys[1] == "||" and (keys[0] in our_defs or keys[2] in our_defs)))
 
         if(keys_logic1 or keys_logic2):
-            cmd = "cpp %s -I%s -I%s %s" % (cppflags, probdir, 'src/base', f)
+            cmd = "cpp %s -I%s -I%s -I%s %s" % (cppflags, probdir, 'src/base', os.path.dirname(piernikdef), f)
             # Scan preprocessed files
             lines = get_stdout(cmd).split('\n')
             for line in lines:
@@ -443,7 +465,7 @@ def setup_piernik(data=None):
 
     makefile_head = open('compilers/' + compiler, 'r').readlines()
     try:
-        makefile_problem = open(probdir + "Makefile.in", 'r').readlines()
+        makefile_problem = open(probdir + "Makefile.in", 'r').readlines()  # BEWARE: Makefile.in is not inherited from the parent problem yet
     except (IOError):
         makefile_problem = ""
     m = open(objdir + '/Makefile', 'w')
