@@ -24,8 +24,8 @@ except ImportError:
 
 columns = 90
 
-is_f90 = re.compile("f90$", re.IGNORECASE)
-is_header = re.compile("h$", re.IGNORECASE)
+is_f90 = re.compile("\.f90$", re.IGNORECASE)
+is_header = re.compile("\.h$", re.IGNORECASE)
 test = re.compile(r'pulled by', re.IGNORECASE).search
 overriding = re.compile(r'overrides', re.IGNORECASE).search
 have_use = re.compile(r"^\s*use\s", re.IGNORECASE).search
