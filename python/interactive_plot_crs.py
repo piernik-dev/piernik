@@ -16,11 +16,12 @@ try:
     import h5py
 except:
     sys.exit("\033[91mYou must make yt & h5py available somehow\033[0m")
-    
+
 plot_field = "cr01"
 
 f_run = True
 
+simple_plot = False
 plot_vel = False
 plot_mag = True
 logscale_colors = False
@@ -64,7 +65,7 @@ if f_run == True:
     if len(var_names) == 0:
         print ("\033[93mEmpty list of parameter names provided: enter names of parameters to read\033[0m")
         var_names = read_h5.input_names_array()
-    
+
     var_array = read_h5.read_par(filename, var_names)
     for i in range(len(var_names)):
         exec( "%s=%s" %(var_names[i], var_array[i]))
@@ -108,11 +109,11 @@ if f_run == True:
                 print ("\033[93m[Empty / improper input]: Setting slice coordinate to %i \033[0m" %slice_coord)
     elif min(grid_dim) == 1:
         slice_coord = 0
-        if   grid_dim[0] == 1: 
+        if   grid_dim[0] == 1:
             slice_ax = 'x'
-        elif grid_dim[1] == 1: 
+        elif grid_dim[1] == 1:
             slice_ax = 'y'
-        else:                  
+        else:
             slice_ax = 'z'
     avail_dim = avail_dims_by_slice[dim_map[slice_ax]]
     print ("\033[92mSlice ax set to %s, coordinate = %i \033[0m" %(slice_ax, slice_coord))
@@ -162,7 +163,7 @@ if f_run == True:
 
     valuesy = tuple(np.arange(0,grid_dim[avail_dim[1]], grid_dim[avail_dim[1]]/5.))# + (grid_dim[avail_dim[1]],)
     labelsy = tuple(np.arange(dom_l[avail_dim[1]], dom_r[avail_dim[1]], ((abs(dom_l[avail_dim[1]])+abs(dom_r[avail_dim[1]]))/5.)))# + (dom_r[avail_dim[1]],)
-    
+
     s1.set_yticks(valuesy)
     s1.set_yticklabels(labelsy)
 
@@ -190,7 +191,7 @@ if f_run == True:
             ecrs.append(h5File['data']['grid_0000000000']['cree'+str(ind).zfill(2)].value[coords[0],coords[1],coords[2]])
             ncrs.append(h5File['data']['grid_0000000000']['cren'+str(ind).zfill(2)].value[coords[0],coords[1],coords[2]])
         plot_var = "e"
-        fig2,exit_code = crs_h5.crs_plot_main(var_names, var_array, plot_var, ncrs, ecrs, field_max, time, coords)
+        fig2,exit_code = crs_h5.crs_plot_main(var_names, var_array, plot_var, ncrs, ecrs, field_max, time, coords, simple_plot)
         if (exit_code != True):
             s.savefig('results/'+filename_nam+'_'+plot_var+'_%04d.png' % image_number, transparent ='False',facecolor=s.get_facecolor())
             print ("\033[92m  --->  Saved plot to: %s\033[0m" %str('results/'+filename_nam+'_'+plot_var+'_%04d.png' %image_number))
@@ -200,6 +201,6 @@ if f_run == True:
         if (f_run): f_run = False
 
     cid = s.canvas.mpl_connect('button_press_event',read_click_and_plot)
-    
+
     plt.show()
     s.canvas.mpl_disconnect(cid)

@@ -20,6 +20,7 @@ plot_field = "cren_tot"
 
 f_run = True
 
+simple_plot = False
 plot_vel = False
 plot_mag = True
 logscale_colors = True #False
@@ -171,8 +172,8 @@ if f_run == True:
         for ind in range(1,ncre+1):
             ecrs.append(float(str( position['cree'+str(ind).zfill(2)][0]).split(" ")[0]))
             ncrs.append(float(str( position['cren'+str(ind).zfill(2)][0]).split(" ")[0]))
-        plot_var = "e"
-        fig2,exit_code = crs_h5.crs_plot_main(var_names, var_array, plot_var, ncrs, ecrs, field_max, time, coords)
+        plot_var = "n"
+        fig2,exit_code = crs_h5.crs_plot_main(var_names, var_array, plot_var, ncrs, ecrs, field_max, time, coords, simple_plot)
         if (exit_code != True):
             s.savefig('results/'+filename_nam+'_'+plot_var+'_%04d.png' % image_number, transparent ='False',facecolor=s.get_facecolor())
             print ("\033[92m  --->  Saved plot to: %s\033[0m" %str('results/'+filename_nam+'_'+plot_var+'_%04d.png' %image_number))
