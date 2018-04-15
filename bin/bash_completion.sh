@@ -1,5 +1,8 @@
 #/usr/bin/env bash
 
+# Call 'source bin/bash_completion.sh' to get bash autocompletion of problem names and setup options.
+# You can add it to your bash startup files too.
+
 _piernik_completions()
 {
   COMPREPLY=()
