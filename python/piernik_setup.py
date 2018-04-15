@@ -281,7 +281,7 @@ def setup_piernik(data=None):
         sys.exit()
 
     if(options.show_units):
-        print(get_stdout("grep uses ./src/base/constants.F90"))
+        print(get_stdout("grep uses ./src/base/units.F90"))
         sys.exit()
 
     if (len(args) < 1):
@@ -420,17 +420,20 @@ def setup_piernik(data=None):
                     if f90files.count(w) > 0:
                         o_cnt += 1
                         if (os.path.dirname(f).split("/").count("problems") < 1):
-                            print(
-                                '\033[93m' + "Warning:" + '\033[0m' + " Only user problems should use the override feature, not " + f)
+                            print('\033[93m' + "Warning:" + '\033[0m' +
+                                  " Only user problems should use the " +
+                                  "override feature, not " + f)
                         if os.path.basename(w) == os.path.basename(f):
                             f90files.remove(w)
                             print("Overriding " + w + " by " + f)
                         else:
-                            print('\033[93m' + "Warning:" + '\033[0m' + " Refused overriding " +
-                                  w + " by " + f + " due to basename mismatch. Expect errors.")
+                            print('\033[93m' + "Warning:" + '\033[0m' +
+                                  " Refused overriding " + w + " by " + f +
+                                  " due to basename mismatch. Expect errors.")
                 if (o_cnt == 0):
                     print('\033[93m' + "Warning:" + '\033[0m' +
-                          " No overridable target found for directive '" + line.rstrip() + "'. Expect errors.")
+                          " No overridable target found for directive '" +
+                          line.rstrip() + "'. Expect errors.")
 
     for f in f90files:
         keys_logic1 = False
@@ -453,7 +456,8 @@ def setup_piernik(data=None):
             keys_logic2 = (
                 (keys[1] == "&&" and
                  (keys[0] in our_defs and keys[2] in our_defs)) or
-                (keys[1] == "||" and (keys[0] in our_defs or keys[2] in our_defs)))
+                (keys[1] == "||" and (keys[0] in our_defs or
+                                      keys[2] in our_defs)))
 
         if(keys_logic1 or keys_logic2):
             cmd = "cpp %s -I%s -I%s -I%s %s" % (cppflags, probdir, 'src/base', os.path.dirname(piernikdef), f)
@@ -481,7 +485,8 @@ def setup_piernik(data=None):
             # Perhaps we should check for overwriting duplicates here too
         else:
             try:
-                os.symlink('../' + f, objdir + '/' + strip_leading_path([f])[0])
+                os.symlink('../' + f,
+                           objdir + '/' + strip_leading_path([f])[0])
             except:
                 print("Possible duplicate link or a name clash :", f)
                 raise
@@ -705,9 +710,9 @@ def setup_piernik(data=None):
         fatal_problem = True
 
     if (options.nocompile):
-        print('\033[93m' + "Compilation of '%s' skipped on request." % args[0] +
-              '\033[0m' +
-              " You may want to run 'make -C %s' before running the Piernik code."
+        print("\033[93mCompilation of '%s' skipped on request." % args[0] +
+              """
+\033[0mYou may want to run 'make -C %s' before running the Piernik code."""
               % objdir)
         makejobs = ""
         if (mp):
@@ -730,51 +735,65 @@ def setup_piernik(data=None):
 
 
 def piernik_parse_args(data=None):
-    epilog_help = "Frequently used options (like --linkexe, --laconic or \
-    -c <configuration>) can be stored in .setuprc and .setuprc.${HOSTNAME} files"
+    epilog_help = """Frequently used options (like --linkexe, --laconic or
+-c <configuration>) can be stored in .setuprc and .setuprc.${HOSTNAME} files"""
     usage = "usage: %prog [options] FILES"
     try:
         parser = OptionParser(usage=usage, epilog=epilog_help)
     except TypeError:
         parser = OptionParser(usage=usage)
+
     parser.add_option("-v", "--verbose", action="store_true", dest="verbose",
-                      default=False, help="try to confuse the user with some \
-    diagnostics ;-)")
+                      default=False, help="""try to confuse the user with some
+diagnostics ;-)""")
+
     parser.add_option("-q", "--laconic", action="store_true", dest="laconic",
                       default=False, help="compress stdout from make process")
+
     parser.add_option("--debug", action="store_true", dest="piernik_debug",
                       default=False, help="Use debug set of compiler flags")
-    parser.add_option(
-        "-n", "--nocompile", action="store_true", dest="nocompile",
-        default=False, help='''Create object directory, check for \
-    circular dependencies, but do not compile or prepare run directory. \
-    In combination with --copy will prepare portable object directory.''')
+
+    parser.add_option("-n", "--nocompile", action="store_true",
+                      dest="nocompile", default=False, help='''Create object
+directory, check for circular dependencies, but do not compile or prepare run
+directory. In combination with --copy will prepare portable object directory.
+''')
+
     parser.add_option("--problems", dest="show_problems", action="store_true",
                       help="print available problems and exit")
+
     parser.add_option("-u", "--units", dest="show_units", action="store_true",
                       help="print available units and exit")
+
     parser.add_option("--last", dest="recycle_cmd", action="store_true",
-                      default=False, help="call setup with last used options and \
-    arguments (require Pickles)")
+                      default=False, help="""call setup with last used options
+and arguments (require Pickles)""")
+
     parser.add_option("--copy", dest="hard_copy", action="store_true",
                       help="hard-copy source files instead of linking them")
+
     parser.add_option("-l", "--linkexe", dest="link_exe", action="store_true",
-                      help="do not copy obj/piernik to runs/<problem> but link it \
-    instead")
+                      help="""do not copy obj/piernik to runs/<problem> but link
+it instead""")
+
     parser.add_option("-p", "--param", dest="param", metavar="FILE",
-                      help="use FILE instead problem.par", default="problem.par")
-    parser.add_option("-d", "--define", dest="cppflags", metavar="CPPFLAGS", action="append",
-                      help="add precompiler directives, '-d DEF1,DEF2' is equivalent to '-d DEF1 -d DEF2' or '--define DEF1 -d DEF2'")
+                      help="use FILE instead problem.par",
+                      default="problem.par")
+
+    parser.add_option("-d", "--define", dest="cppflags", metavar="CPPFLAGS",
+                      action="append", help="""add precompiler directives, '-d
+DEF1,DEF2' is equivalent to '-d DEF1 -d DEF2' or '--define DEF1 -d DEF2'""")
+
     parser.add_option("--f90flags", dest="f90flags", metavar="F90FLAGS",
                       help="pass additional compiler flags to F90FLAGS")
-    parser.add_option(
-        "-c", "--compiler", dest="compiler", default="default.in",
-        help="choose specified config from compilers directory",
-        metavar="FILE")
-    parser.add_option(
-        "-o", "--obj", dest="objdir", metavar="POSTFIX", default='',
-        help="use obj_POSTFIX directory instead of obj/ and \
-    runs/<problem>_POSTFIX rather than runs/<problem>")
+
+    parser.add_option("-c", "--compiler", dest="compiler",
+                      default="default.in", help="""choose specified config from
+compilers directory""", metavar="FILE")
+
+    parser.add_option("-o", "--obj", dest="objdir", metavar="POSTFIX",
+                      default='', help="""use obj_POSTFIX directory instead of obj/ and
+runs/<problem>_POSTFIX rather than runs/<problem>""")
 
     if data is None:
         all_args = []

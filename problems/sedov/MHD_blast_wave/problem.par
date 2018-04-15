@@ -4,8 +4,9 @@
 ! https://academic.oup.com/mnras/article/455/1/51/983632/Accurate-meshless-methods-for-magnetohydrodynamics
 ! for more inspiration
 
-! The setup mostly follows the Athena approach except that we have different resolution and square domain here
-! use
+! The setup mostly follows the Athena approach except that we have different resolution and square domain.
+!
+! To mimic their setup use
 ! n_d = 400, 600, 1
 ! ymin = -0.75
 ! ymax =  0.75
@@ -14,7 +15,6 @@
 
  $BASE_DOMAIN
     n_d = 512, 512, 1
-! n_d =2*256, 1
     bnd_xl = 'per'
     bnd_xr = 'per'
     bnd_yl = 'per'
@@ -44,14 +44,13 @@
  /
 
  $OUTPUT_CONTROL
-!    colormode = .false.
     problem_name = 'sedov'
     run_id =  'tst'
     dt_hdf  = 2.0e-2
     dt_res  = 1e-1
     dt_log  = 1.0e-4
     dt_tsl  = 1.0e-4
-    vars(1:) = 'ener', 'dens', 'magx', 'magy', 'magz', 'velx', 'vely', 'velz', 'ethr', 'magB', "pres"
+    vars(1:) = 'ener', 'dens', 'magx', 'magy', 'magz', 'velx', 'vely', 'ethr', 'magB', "pres", "divbf", "divbf4", "divbc", "divbc4"
  /
 
  $FLUID_IONIZED
@@ -66,7 +65,6 @@
     cfl    = 0.7
     smalld = 1.e-3
     smallei= 1.e-5
-!    h_solver='rk2'
  /
 
  $GRAVITY

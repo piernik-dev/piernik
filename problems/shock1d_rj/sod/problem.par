@@ -39,7 +39,7 @@ $OUTPUT_CONTROL
    dt_res = 0.0
    dt_log = 0.02
    dt_tsl = 0.02
-   vars(1:) = 'dens', 'ener', 'velx', 'vely', 'velz'
+   vars(1:) = 'dens', 'ener', 'velx', 'pres'
 /
 
 $FLUID_NEUTRAL
