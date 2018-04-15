@@ -255,7 +255,7 @@ def setup_piernik(data=None):
         sys.exit()
 
     if(options.show_units):
-        print(get_stdout("grep uses ./src/base/constants.F90"))
+        print(get_stdout("grep uses ./src/base/units.F90"))
         sys.exit()
 
     if (len(args) < 1):
