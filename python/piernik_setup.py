@@ -278,15 +278,19 @@ def setup_piernik(data=None):
             maxlen = max(maxlen, len(p[0]))
         for p in tp:
             print("%-*s : %s" % (maxlen, p[0], p[1]))
-        sys.exit()
 
     if(options.show_units):
         print(get_stdout("grep uses ./src/base/units.F90"))
+
+    if(options.show_units or options.show_problems):
         sys.exit()
 
     if (len(args) < 1):
-        sys.stderr.write("incorrect number of arguments\n")
+        sys.stderr.write('\033[91m' + "\nNo problem_name has been provided" + '\033[0m' + "\n")
         exit()
+
+    if (len(args) > 1):
+        sys.stderr.write('\033[93m' + "Ignored spurious arguments: " + '\033[0m' + "%s\n" % args[1:])
 
     # set problem dir
     probdir = 'problems/' + args[0] + '/'
@@ -735,9 +739,11 @@ def setup_piernik(data=None):
 
 
 def piernik_parse_args(data=None):
-    epilog_help = """Frequently used options (like --linkexe, --laconic or
--c <configuration>) can be stored in .setuprc and .setuprc.${HOSTNAME} files"""
-    usage = "usage: %prog [options] FILES"
+    epilog_help = """Call 'source bin/bash_completion.sh' for some
+autocompletion. Frequently used options (like --linkexe, --laconic or
+-c <configuration>) can be stored in .setuprc and .setuprc.${HOSTNAME} files.
+"""
+    usage = "usage: %prog [problem_name|--last|--problems|--units|--help] [options ...]"
     try:
         parser = OptionParser(usage=usage, epilog=epilog_help)
     except TypeError:
@@ -804,11 +810,16 @@ runs/<problem>_POSTFIX rather than runs/<problem>""")
         except IOError:
             pass
         all_args += sys.argv[1:]
-        (options, args) = parser.parse_args(all_args)
-        return options, args, all_args, sys.argv
     else:
-        (options, args) = parser.parse_args(data.split())
-        return options, args, data.split(), []
+        all_args = data.split()
+
+    (options, args) = parser.parse_args(all_args)
+    if (len(args) < 1 and not (options.recycle_cmd or
+                               options.show_problems or
+                               options.show_units)):
+        parser.print_help()
+
+    return options, args, all_args, sys.argv if data is None else []
 
 
 if __name__ == "__main__":
