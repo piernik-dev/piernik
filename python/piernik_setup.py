@@ -224,6 +224,27 @@ def get_stdout(cmd):
         return process.communicate()[0]
 
 
+def list_info(dir, indent):
+    tab = []
+    name = " " * (2 * indent) + os.path.basename(dir)
+    try:
+        file = open(dir + "/info", "r")
+        il = 0
+        for l in file:
+            tab.append([name if (il == 0) else "", l.strip()])
+            il += 1
+        if (il == 0):
+            tab.append([name, '\033[93m' + "empty info" + '\033[0m'])
+        file.close()
+    except IOError:
+        if (dir != "problems"):
+            tab.append([name, '\033[91m' + "no info" + '\033[0m'])
+    for f in sorted(os.listdir(dir)):
+        if (os.path.isdir(dir + "/" + f)):
+            tab += list_info(dir + "/" + f, indent + 1)
+    return tab
+
+
 def setup_piernik(data=None):
     options, args, all_args, sys_args = piernik_parse_args(data)
     if(options.recycle_cmd):
@@ -251,7 +272,12 @@ def setup_piernik(data=None):
         print(args)
 
     if(options.show_problems):
-        print(get_stdout("cat problems/*/info"))
+        tp = list_info("problems", -1)
+        maxlen = 0
+        for p in tp:
+            maxlen = max(maxlen, len(p[0]))
+        for p in tp:
+            print("%-*s : %s" % (maxlen, p[0], p[1]))
         sys.exit()
 
     if(options.show_units):
