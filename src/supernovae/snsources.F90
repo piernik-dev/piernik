@@ -32,17 +32,20 @@ module snsources
 ! pulled by SN_SRC
    implicit none
    private
-   public ::  random_sn, init_snsources, r_sn
+   public ::  random_sn, init_snsources, r_sn, amp_cr_sn
+#ifdef COSM_RAYS
+   public :: cr_sn
+#endif /* COSM_RAYS */
 #ifdef SHEAR
    public :: sn_shear
-
-   real, dimension(3) :: ysnoi
 #endif /* SHEAR */
+
    integer, save      :: nsn, nsn_last
 
    real, parameter    :: ethu = 7.0**2/(5.0/3.0-1.0) * 1.0    !< thermal energy unit=0.76eV/cm**3 for c_si= 7km/s, n=1/cm^3 gamma=5/3
 
    real               :: amp_ecr_sn          !< cosmic ray explosion amplitude in units: e_0 = 1/(5/3-1)*rho_0*c_s0**2  rho_0=1.67e-24g/cm**3, c_s0 = 7km/s
+   real               :: amp_cr_sn           !< default aplitude of CR in SN bursts
    real               :: f_sn                !< frequency of SN
    real               :: f_sn_kpc2           !< frequency of SN per kpc^2
    real               :: h_sn                !< galactic height in SN gaussian distribution ?
@@ -123,6 +126,7 @@ contains
 
 #ifdef COSM_RAYS
       amp_ecr_sn = 4.96e6*cr_eff/r_sn**3
+      amp_cr_sn  = amp_ecr_sn *ethu
 #endif /* COSM_RAYS */
 
       if (dom%has_dir(xdim)) then
@@ -165,7 +169,7 @@ contains
          call rand_coords(snpos)
 
 #ifdef COSM_RAYS
-         call cr_sn(snpos)
+         call cr_sn(snpos,amp_cr_sn)
 #endif /* COSM_RAYS */
 
       enddo ! isn
@@ -178,52 +182,59 @@ contains
 !! \brief Routine that inserts an amount of cosmic ray energy around the position of supernova
 !! \param pos real, dimension(3), array of supernova position components
 !<
-   subroutine cr_sn(pos)
+   subroutine cr_sn(pos,ampl)
 
       use cg_leaves,      only: leaves
       use cg_list,        only: cg_list_element
-      use constants,      only: xdim, ydim, zdim, LO, HI
+      use constants,      only: ndims, xdim, ydim, zdim, LO, HI
       use domain,         only: dom
       use grid_cont,      only: grid_container
 #ifdef COSM_RAYS_SOURCES
-      use cr_data,        only: icr_H1, icr_C12, icr_N14, icr_O16, cr_table, cr_primary, eCRSP
+      use cr_data,        only: cr_table, cr_primary, eCRSP, icr_H1, icr_C12, icr_N14, icr_O16
       use initcosmicrays, only: iarr_crn
 #endif /* COSM_RAYS_SOURCES */
 
       implicit none
 
-      real, dimension(3), intent(in) :: pos
-      integer                        :: i, j, k, ipm, jpm
-      real                           :: decr, xsn, ysn, zsn, ysna, zr
-      type(cg_list_element), pointer :: cgl
-      type(grid_container),  pointer :: cg
-
-      xsn = pos(1)
-      ysn = pos(2)
-      zsn = pos(3)
+      real, dimension(ndims), intent(in) :: pos
+      real,                   intent(in) :: ampl
+      integer                            :: i, j, k, ipm, jpm
+      real                               :: decr, ysna, xr, yr, zr
+      type(cg_list_element), pointer     :: cgl
+      type(grid_container),  pointer     :: cg
+#ifdef SHEAR
+      real, dimension(3)                 :: ysnoi
+#endif /* SHEAR */
 
       cgl => leaves%first
       do while (associated(cgl))
          cg => cgl%cg
 
-         do k=cg%lhn(zdim, LO), cg%lhn(zdim, HI)
-            zr = (cg%z(k)-zsn)**2
-            do j=cg%lhn(ydim, LO), cg%lhn(ydim, HI)
-               do i=cg%lhn(xdim, LO), cg%lhn(xdim, HI)
+#ifdef SHEAR
+         ysnoi(2) = pos(ydim)
+         call sn_shear(cg, ysnoi)
+#else /* !SHEAR */
+         ysna = pos(ydim)
+#endif /* !SHEAR */
+
+         do k = cg%lhn(zdim,LO), cg%lhn(zdim,HI)
+            zr = ((cg%z(k)-pos(zdim))/r_sn)**2
+            do j = cg%lhn(ydim,LO), cg%lhn(ydim,HI)
+               do i = cg%lhn(xdim,LO), cg%lhn(xdim,HI)
 
                   decr = 0.0
-                  do ipm=-1,1
+                  do ipm = -1, 1
+                     xr = ((cg%x(i)-pos(xdim) + real(ipm)*dom%L_(xdim))/r_sn)**2
 #ifdef SHEAR
                      ysna = ysnoi(ipm+2)
-#else /* !SHEAR */
-                     ysna = ysn
-#endif /* !SHEAR */
-                     do jpm=-1,1
-                        decr = decr + exp(-((cg%x(i)-xsn +real(ipm)*dom%L_(xdim))**2  &
-                             +              (cg%y(j)-ysna+real(jpm)*dom%L_(ydim))**2 + zr)/r_sn**2)
+#endif /* SHEAR */
+                     do jpm = -1, 1
+                        yr = ((cg%y(j)-ysna + real(jpm)*dom%L_(ydim))/r_sn)**2
+                        ! BEWARE:  for num < -744.6 the exp(num) is the underflow
+                        decr = decr + exp(-(xr + yr + zr))
                      enddo
                   enddo
-                  decr = decr * amp_ecr_sn *ethu
+                  decr = decr * ampl
 
 #ifdef COSM_RAYS_SOURCES
                   if (eCRSP(icr_H1 )) cg%u(iarr_crn(cr_table(icr_H1 )),i,j,k) = cg%u(iarr_crn(cr_table(icr_H1 )),i,j,k) + decr
@@ -250,16 +261,9 @@ contains
 
       use constants,   only: xdim, ydim, zdim, LO
       use domain,      only: dom
-#ifdef SHEAR
-      use cg_leaves,   only: leaves
-      use grid_cont,   only: grid_container
-#endif /* SHEAR */
 
       implicit none
 
-#ifdef SHEAR
-      type(grid_container), pointer   :: cg
-#endif /* SHEAR */
       real, dimension(3), intent(out) :: pos
       real, dimension(4)              :: rand
       real                            :: xsn, ysn, zsn, znorm
@@ -274,12 +278,6 @@ contains
       else
          zsn = 0.0
       endif
-
-#ifdef SHEAR
-      cg => leaves%first%cg
-      ysnoi = 0.0 ; ysnoi(2) = ysn
-      call sn_shear(cg, ysnoi)
-#endif /* SHEAR */
 
       pos(1) = xsn
       pos(2) = ysn
