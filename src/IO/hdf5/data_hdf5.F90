@@ -109,15 +109,23 @@ contains
             f%f2cgs = 1.0 / (fpi * sqrt(cm / (miu0 * gram)) * sek * cm)
          case ("magdir")
             f%fu = "\rm{radians}"
+#ifdef COSM_RAYS
+#ifdef COSM_RAY_ELECTRONS
          case ("cr01" : "cr99")
             f%fu = "\rm{erg}/\rm{cm}^3"
             f%f2cgs = 1.0 / (erg/cm**3)
          case ("cren01" : "cren99")
             f%fu = "1/\rm{cm}^3"
-            f%f2cgs = 1.0 / (erg/cm**3)
+            f%f2cgs = 1.0 / (1.0/cm**3) ! number density
          case ("cree01" : "cree99")
             f%fu = "\rm{erg}/\rm{cm}^3"
             f%f2cgs = 1.0 / (erg/cm**3)
+#else /* !COSM_RAY_ELECTRONS */
+         case ("cr1" : "cr9")
+            f%fu = "\rm{erg}/\rm{cm}^3"
+            f%f2cgs = 1.0 / (erg/cm**3)
+#endif /* COSM_RAY_ELECTRONS */
+#endif /* COSM_RAYS */
          case ("gpot", "sgpt")
             f%fu = "\rm{cm}^2 / \rm{s}^2"
             f%f2cgs = 1.0 / (cm**2 / sek**2)
@@ -254,9 +262,6 @@ contains
 #ifndef ISO
       use constants,   only: ydim, zdim
 #endif /* !ISO */
-#ifdef COSM_RAY_ELECTRONS
-      use initcosmicrays, only: ncre
-#endif /* COSM_RAY_ELECTRONS */
 #if defined(COSM_RAYS) || defined(TRACER) || !defined(ISO)
       use fluidindex,  only: flind
 #endif /* COSM_RAYS || TRACER || !ISO */
@@ -292,11 +297,16 @@ contains
 #endif /* !MAGNETIC */
       select case (var)
 #ifdef COSM_RAYS
+#ifdef COSM_RAY_ELECTRONS
          case ("cr01" : "cr99")
             read(var,'(A2,I2.2)') aux, i !> \deprecated BEWARE 0 <= i <= 99, no other indices can be dumped to hdf file
             tab(:,:,:) = real(cg%u(flind%crn%beg+i-1, RNG), kind=4)
+#else /* ! COSM_RAY_ELECTRONS */
+         case ("cr1" : "cr9")
+            read(var,'(A2,I1.1)') aux, i !> \deprecated BEWARE 0 <= i <= 99, no other indices can be dumped to hdf file
+            tab(:,:,:) = real(cg%u(flind%crs%beg+i-1, RNG), kind=4)
+#endif /* COSM_RAY_ELECTRONS */
 #endif /* COSM_RAYS */
-
 #ifdef COSM_RAY_ELECTRONS
          case ("cren01" : "cren99")
             read(var,'(A4,I2.2)') aux, i !> \deprecated BEWARE 0 <= i <= 99, no other indices can be dumped to hdf file
@@ -304,8 +314,7 @@ contains
          case ("cree01" : "cree99")
             read(var,'(A4,I2.2)') aux, i !> \deprecated BEWARE 0 <= i <= 99, no other indices can be dumped to hdf file
             tab(:,:,:) = real(cg%u(flind%cre%ebeg+i-1, RNG), kind=4) ! this is consistent with the quantity of ncre variables, tested
-#endif /* COSM_RAY_ELECTRONS */            
-
+#endif /* COSM_RAY_ELECTRONS */
 #ifdef TRACER
          case ("trcr")
             tab(:,:,:) = real(cg%u(flind%trc%beg, RNG),4)

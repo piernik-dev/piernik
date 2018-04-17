@@ -119,6 +119,9 @@ contains
 #ifdef COSM_RAYS
       use initcosmicrays, only: init_cosmicrays
 #endif /* COSM_RAYS */
+#ifdef COSM_RAY_ELECTRONS
+      use initcrspectrum, only: init_cresp
+#endif /* COSM_RAY_ELECTRONS */
 #ifdef TRACER
       use inittracer,     only: init_tracer
 #endif /* TRACER */
@@ -139,6 +142,9 @@ contains
       if (has_ion) call init_ionized
       if (has_neu) call init_neutral
       if (has_dst) call init_dust
+#ifdef COSM_RAY_ELECTRONS
+      call init_cresp
+#endif /* COSM_RAY_ELECTRONS */
 #ifdef COSM_RAYS
       call init_cosmicrays
 #endif /* COSM_RAYS */

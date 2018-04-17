@@ -164,17 +164,15 @@ contains
       use fluidtypes,     only: component_fluid
       use func,           only: ekin, emag, operator(.equals.), operator(.notequals.)
       use grid_cont,      only: grid_container
-      use initcosmicrays, only: iarr_crn, iarr_crs, gamma_crn, K_crn_paral, K_crn_perp !, iarr_cre
+      use initcosmicrays, only: iarr_crn, iarr_crs, gamma_crn, K_crn_paral, K_crn_perp
       use mpisetup,       only: master, piernik_MPI_Allreduce
 #ifdef COSM_RAYS_SOURCES
       use cr_data,        only: icr_H1, icr_C12, cr_table
 #endif /* COSM_RAYS_SOURCES */
 #ifdef COSM_RAY_ELECTRONS
-     use initcosmicrays, only: ncrn !, iarr_cre_pl, iarr_cre_pu ! DEPRECATED
-     use initcrspectrum, only: q_init, f_init, p_lo_init, p_up_init, p_min_fix, p_max_fix, ncre, &
-                                 expan_order, taylor_coeff_2nd, taylor_coeff_3rd
-     use cresp_grid,     only: cresp_init_grid
-     use cresp_NR_method,only: cresp_initialize_guess_grids
+     use initcosmicrays,   only: ncrn, iarr_cre_e, iarr_cre_n
+     use initcrspectrum,   only: expan_order, taylor_coeff_2nd, taylor_coeff_3rd, e_small, cresp, cre_eff
+     use cresp_crspectrum, only: cresp_get_scaled_init_spectrum
 #endif /* COSM_RAY_ELECTRONS */
 
       implicit none
@@ -189,6 +187,9 @@ contains
 #ifndef COSM_RAYS_SOURCES
       integer, parameter              :: icr_H1 = 1, icr_C12 = 2
 #endif /* !COSM_RAYS_SOURCES */
+#ifdef COSM_RAY_ELECTRONS
+      real                            :: e_tot
+#endif /* COSM_RAY_ELECTRONS */
 
      if (first_run .eqv. .true.) then
       fl => flind%ion
@@ -247,7 +248,6 @@ contains
                      do ipm=-1,1
                         do jpm=-1,1
                            do kpm=-1,1
-
                               r2 = (cg%x(i)-xsn+real(ipm)*dom%L_(xdim))**2+(cg%y(j)-ysn+real(jpm)*dom%L_(ydim))**2+(cg%z(k)-zsn+real(kpm)*dom%L_(zdim))**2
                               sn_rdist2 = r2/r0**2
                               sn_exp = 0.0
@@ -261,39 +261,75 @@ contains
                               else
                                  cg%u(iarr_crn(icr), i, j, k) = 0.0
                               endif
-
                            enddo
                         enddo
                      enddo
+
                   enddo
                enddo
             enddo
          enddo
+#ifdef COSM_RAY_ELECTRONS
+! Explosions @CRESP independent of cr nucleons
+         do k = cg%ks, cg%ke
+            do j = cg%js, cg%je
+               do i = cg%is, cg%ie
+
+                  e_tot = 0.0
+                  do ipm=-1,1
+                     do jpm=-1,1
+                        do kpm=-1,1
+                           r2 = (cg%x(i)-xsn+real(ipm)*dom%L_(xdim))**2+(cg%y(j)-ysn+real(jpm)*dom%L_(ydim))**2+(cg%z(k)-zsn+real(kpm)*dom%L_(zdim))**2
+                           sn_rdist2 = r2/r0**2
+                           sn_exp = 0.0
+                           if(sn_rdist2 <= 10.0) then
+                              sn_exp = exp(-sn_rdist2)
+                           endif
+                           e_tot = e_tot + amp_cr*sn_exp
+                        enddo
+                     enddo
+                  enddo
+                  cresp%n = 0.0 ;  cresp%e = 0.0 ; e_tot = e_tot * cre_eff
+                  if (e_tot .gt. e_small) then     ! early phase - fill cells only when total passed energy is greater than e_small, amplitude computed from total explosion energy multiplied by factor cre_eff
+                    call cresp_get_scaled_init_spectrum(cresp%n, cresp%e, e_tot)
+                    cg%u(iarr_cre_n,i,j,k) = cg%u(iarr_cre_n,i,j,k) + cresp%n
+                    cg%u(iarr_cre_e,i,j,k) = cg%u(iarr_cre_e,i,j,k) + cresp%e
+                  endif
+               enddo
+            enddo
+         enddo
+#endif /* COSM_RAY_ELECTRONS */
          cgl => cgl%nxt
       enddo
-
       cg => leaves%first%cg
+
       if (is_multicg) call die("[initproblem:problem_initial_conditions] multiple grid pieces per procesor not implemented yet") !nontrivial maxv
 
       do icr = 1, flind%crs%all
          maxv = maxval(cg%u(iarr_crs(icr),:,:,:))
          call piernik_MPI_Allreduce(maxv, pMAX)
          if (master) then
+#ifdef COSM_RAY_ELECTRONS
+            if (icr .lt. flind%cre%nbeg) then
+               write(msg,*) '[initproblem:problem_initial_conditions] icr(nuc)  =',icr,' maxecr(nuc) =',maxv
+            else if (icr .lt. flind%cre%ebeg .and. icr .ge. flind%cre%nbeg) then
+               write(msg,*) '[initproblem:problem_initial_conditions] icr(cre_n)=',icr,' maxncr(cre) =',maxv
+            else
+               write(msg,*) '[initproblem:problem_initial_conditions] icr(cre_e)=',icr,' maxecr(cre) =',maxv
+            endif
+#else
             write(msg,*) '[initproblem:problem_initial_conditions] icr=',icr,' maxecr =',maxv
+#endif /* COSM_RAY_ELECTRONS */
             call printinfo(msg)
          endif
       enddo
 
 #endif /* COSM_RAYS */
-
 #ifdef COSM_RAY_ELECTRONS
       write(msg,*) '[initproblem:problem_initial_conditions]: Taylor_exp._ord. (cresp)    = ', expan_order
       call printinfo(msg)
       write(msg,*) '[initproblem:problem_initial conditions]: Taylor_exp._coeff.(2nd,3rd) = ', taylor_coeff_2nd, taylor_coeff_3rd
       call printinfo(msg)
-
-      call cresp_initialize_guess_grids
-      call cresp_init_grid
 #endif /* COSM_RAY_ELECTRONS */
 
 ! Velocity field
@@ -329,6 +365,5 @@ contains
 
       first_run = .false.
     endif
-
    end subroutine problem_initial_conditions
 end module initproblem

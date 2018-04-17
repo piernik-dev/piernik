@@ -96,6 +96,9 @@ contains
 #ifdef COSM_RAYS
       use crdiffusion,           only: init_crdiffusion
 #endif /* COSM_RAYS */
+#ifdef COSM_RAY_ELECTRONS
+      use cresp_grid,            only: cresp_init_grid
+#endif /* COSM_RAY_ELECTRONS */
 #ifdef PIERNIK_OPENCL
       use piernikcl,             only: init_opencl
 #endif /* PIERNIK_OPENCL */
@@ -185,6 +188,9 @@ contains
       call init_grid                         ! Most of the cg's vars are now initialized, only arrays left
       code_progress = PIERNIK_INIT_GRID      ! Now we can initialize things that depend on all the above fundamental calls
 
+#ifdef COSM_RAY_ELECTRONS
+      call cresp_init_grid                   ! depends on cg
+#endif /* COSM_RAY_ELECTRONS */
 #ifdef SHEAR
       call init_shear                        ! depends on fluids
 #endif /* SHEAR */

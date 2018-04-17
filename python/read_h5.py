@@ -13,14 +13,15 @@ import sys
 # searches for variable name, if found splits and appends the value ----------
 def append_split_var(line, variable_name, var_array_to_append, param_found):
     for word in line.split(' '):
-        if word == variable_name: 
+        if word == variable_name:
             line_fragment = line.split('=')
-            tmp_str = str(line_fragment[1])
-            tmp_str = tmp_str.split('!')
-            var_value = tmp_str[0]
-            var_value = determine_type_append(var_value)
-            var_array_to_append.append(var_value)
-            param_found = True
+            if str(line_fragment[0].strip(' ')) == str(variable_name):
+                tmp_str = str(line_fragment[1])
+                tmp_str = tmp_str.split('!')
+                var_value = tmp_str[0]
+                var_value = determine_type_append(var_value)
+                var_array_to_append.append(var_value)
+                param_found = True
     return var_array_to_append, param_found
 
 # reads problem.par file embedded in PIERNIK h5 file --------------------------
@@ -37,8 +38,8 @@ def read_par(hdf5_filename, var_nam): #, var_array):
             h5File = h5py.File(hdf5_filename,'r')
             parfile = h5File['problem.par']
             for line in parfile:
-                value, found_parameter[i] = append_split_var(line, var_nam[i], var_array, found_parameter[i])
-        
+                if found_parameter[i] == False:
+                    value, found_parameter[i] = append_split_var(line, var_nam[i], var_array, found_parameter[i])
         for i in range(len(var_nam)):
             if found_parameter[i] == False:
                 sys.exit("Exiting: some parameters were not included in problem.par, i.e: %s " %var_nam[i])
@@ -48,9 +49,12 @@ def read_par(hdf5_filename, var_nam): #, var_array):
 # No lists or arrays so far.
 def determine_type_append(var):
     try:
-        int(var)
-        var = int(var)
-        return var
+        if ("." in var and ("e" in var or "E" in var )) or ("." in var): # "." and "e" or just "." means that var is float or fortran boolean
+            raise ValueError
+        else:
+            int(var)
+            var = int(var)
+            return var
     except ValueError :
         try: 
             float(var)

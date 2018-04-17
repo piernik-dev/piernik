@@ -187,6 +187,11 @@ contains
       use cr_data,        only: icr_H1, icr_C12, icr_N14, icr_O16, cr_table, cr_primary, eCRSP
       use initcosmicrays, only: iarr_crn
 #endif /* COSM_RAYS_SOURCES */
+#ifdef COSM_RAY_ELECTRONS
+      use cresp_crspectrum,   only: cresp_get_scaled_init_spectrum
+      use initcrspectrum,     only: cresp, cre_eff, e_small
+      use initcosmicrays,     only: iarr_cre_n, iarr_cre_e
+#endif /* COSM_RAY_ELECTRONS */
 
       implicit none
 
@@ -195,11 +200,13 @@ contains
       real                           :: decr, xsn, ysn, zsn, ysna, zr
       type(cg_list_element), pointer :: cgl
       type(grid_container),  pointer :: cg
+#ifdef COSM_RAY_ELECTRONS
+      real                           :: e_tot_sn
+#endif /* COSM_RAY_ELECTRONS */
 
       xsn = pos(1)
       ysn = pos(2)
       zsn = pos(3)
-
       cgl => leaves%first
       do while (associated(cgl))
          cg => cgl%cg
@@ -229,6 +236,15 @@ contains
                   if (eCRSP(icr_N14)) cg%u(iarr_crn(cr_table(icr_N14)),i,j,k) = cg%u(iarr_crn(cr_table(icr_N14)),i,j,k) + cr_primary(cr_table(icr_N14))*14*decr
                   if (eCRSP(icr_O16)) cg%u(iarr_crn(cr_table(icr_O16)),i,j,k) = cg%u(iarr_crn(cr_table(icr_O16)),i,j,k) + cr_primary(cr_table(icr_O16))*16*decr
 #endif /* COSM_RAYS_SOURCES */
+#ifdef COSM_RAY_ELECTRONS
+                  e_tot_sn = decr * cre_eff
+                  cresp%n =  0.0;  cresp%e = 0.0
+                  if (e_tot_sn .gt. e_small) then     !< fill cells only when total passed energy is greater than e_small
+                     call cresp_get_scaled_init_spectrum(cresp%n, cresp%e, e_tot_sn) !< injecting source spectrum scaled with e_tot_sn
+                  endif
+                  cg%u(iarr_cre_n,i,j,k) = cg%u(iarr_cre_n,i,j,k) + cresp%n
+                  cg%u(iarr_cre_e,i,j,k) = cg%u(iarr_cre_e,i,j,k) + cresp%e
+#endif /* COSM_RAY_ELECTRONS */
 
                enddo
             enddo
@@ -236,7 +252,6 @@ contains
 
          cgl => cgl%nxt
       enddo
-
    end subroutine cr_sn
 #endif /* COSM_RAYS */
 !--------------------------------------------------------------------------

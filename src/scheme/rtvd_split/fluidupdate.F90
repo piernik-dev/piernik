@@ -115,7 +115,8 @@ contains
       use global,      only: dt, dtm, t
       use mass_defect, only: update_magic_mass
 #ifdef COSM_RAY_ELECTRONS
-      use cresp_grid, only: cresp_update_grid
+      use cresp_grid,      only: cresp_update_grid
+      use initcrspectrum,  only: use_cresp
 #endif /* COSM_RAY_ELECTRONS */
 
       implicit none
@@ -129,7 +130,7 @@ contains
 ! Sources should be hooked to problem_customize_solution with forward argument
 
 #ifdef COSM_RAY_ELECTRONS
-     call cresp_update_grid     ! updating number density and energy density of cosmic ray electrons via CRESP module
+      if (use_cresp) call cresp_update_grid     ! updating number density and energy density of cosmic ray electrons via CRESP module
 #endif /* COSM_RAY_ELECTRONS */
 
       halfstep = .true.
@@ -159,7 +160,6 @@ contains
 #if defined(COSM_RAYS) 
       use all_boundaries,      only: all_fluid_boundaries
       use initcosmicrays,      only: use_split
-      use initcosmicrays,      only: ncrn
       use fluidindex,          only: flind
 #if defined(MULTIGRID)
       use multigrid_diffusion, only: multigrid_solve_diff
@@ -193,8 +193,9 @@ contains
          call multigrid_solve_diff
          call all_fluid_boundaries
 #endif /* MULTIGRID */
-      else
 
+      else
+         if (forward) then
             do icrc=1, flind%crn%all
                do s = xdim, zdim
                   if (.not.skip_sweep(s)) call make_diff_sweep(icrc, s)
@@ -203,13 +204,30 @@ contains
 #ifdef COSM_RAY_ELECTRONS
             do icrc= flind%crn%all + 1, flind%crn%all + ncre
                do s = xdim, zdim
-                  if (.not.skip_sweep(s)) call make_diff_sweep(icrc, s)
-               enddo
-               do s = xdim, zdim
-                  if (.not.skip_sweep(s)) call make_diff_sweep(ncre + icrc, s)
+                  if (.not.skip_sweep(s)) then
+                     call make_diff_sweep(icrc, s)
+                     call make_diff_sweep(ncre + icrc, s)
+                  endif
                enddo
             enddo
 #endif /* COSM_RAY_ELECTRONS */
+         else! not forward
+            do icrc=1, flind%crn%all
+               do s = zdim, xdim, -I_ONE
+                  if (.not.skip_sweep(s)) call make_diff_sweep(icrc, s)
+               enddo
+            enddo
+#ifdef COSM_RAY_ELECTRONS
+            do icrc= flind%crn%all + 1, flind%crn%all + ncre
+               do s = zdim, xdim, -I_ONE
+                  if (.not.skip_sweep(s)) then
+                     call make_diff_sweep(icrc, s)
+                     call make_diff_sweep(ncre + icrc, s)
+                  endif
+               enddo
+            enddo
+#endif /* COSM_RAY_ELECTRONS */
+         endif
       endif
 #endif /* COSM_RAYS */
 

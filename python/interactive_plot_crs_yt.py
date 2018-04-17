@@ -10,25 +10,24 @@ import sys
 import read_h5
 import crs_h5
 import re
-
 try:
     import yt
     import h5py
 except:
     sys.exit("\033[91mYou must make yt & h5py available somehow\033[0m")
 
-plot_field = "cr01"
+plot_field = "cren_tot"
 
 f_run = True
 
 simple_plot = False
 plot_vel = False
 plot_mag = True
-logscale_colors = False
+logscale_colors = True #False
 
 def _total_cree(field,data):
    list_cree = []
-   for element in ds.field_list:
+   for element in h5ds.field_list:
       if re.search("cree",str(element[1])):
          list_cree.append(element[1])
    cree_tot = data[str(list_cree[0])]
@@ -38,7 +37,7 @@ def _total_cree(field,data):
 
 def _total_cren(field,data):
    list_cren = []
-   for element in ds.field_list:
+   for element in h5ds.field_list:
       if re.search("cren",str(element[1])):
          list_cren.append(element[1])
    cren_tot = data[str(list_cren[0])]
@@ -76,10 +75,10 @@ if f_run == True:
         print ( " %20s =  %8s ( %15s  ) " %(var_names[i], var_array[i], type(var_array[i])))
     print ""
 #---------- Open file
-    h5File = h5py.File(filename,"r")
+    h5File = h5py.File(filename,"r") # sorry, I'm not sure how to access timestep via yt
     h5ds = yt.load(filename)
 #---------- bounds on domain size
-    grid_dim = h5File['grid_dimensions'][0][:]
+    grid_dim = h5ds.domain_dimensions
     dim_map  = {'x':0,'y':1,'z':2}
     dom_l = np.array(h5ds.domain_left_edge[0:3])
     dom_r = np.array(h5ds.domain_right_edge[0:3])
@@ -101,14 +100,14 @@ if f_run == True:
         slice_coord = ""
         while slice_ax not in dim_map.keys():
             slice_ax    = raw_input("\033[92mChoose slice ax (x, y, z)      : \033[0m")
-        while slice_coord > grid_dim[dim_map[slice_ax]] or slice_coord < 0:
+        while (slice_coord < dom_l[dim_map[slice_ax]]) or (slice_coord > dom_r[dim_map[slice_ax]]): # or slice_coord < -10000:
             try:
-                slice_coord = int(raw_input("\033[92mChoose slice coordinate (%d:%d) (if empty, middle is assumed): \033[0m" % (0,grid_dim[dim_map[slice_ax]]) ))
+                slice_coord = float(raw_input("\033[92mChoose slice coordinate (%d:%d) (if empty, middle is assumed): \033[0m" % (dom_l[dim_map[slice_ax]],dom_r[dim_map[slice_ax]]) ))
             except:
-                slice_coord = int(grid_dim[dim_map[slice_ax]]/2.)
-                print ("\033[93m[Empty / improper input]: Setting slice coordinate to %i \033[0m" %slice_coord)
+                slice_coord = (dom_l[dim_map[slice_ax]] + dom_r[dim_map[slice_ax]]) / 2.
+                print ("\033[93m[Empty / improper input]: Setting slice coordinate to %s kpc.\033[0m" %slice_coord)
     elif min(grid_dim) == 1:
-        slice_coord = 0
+        slice_coord = 0.0
         if   grid_dim[0] == 1:
             slice_ax = 'x'
         elif grid_dim[1] == 1:
@@ -116,81 +115,64 @@ if f_run == True:
         else:
             slice_ax = 'z'
     avail_dim = avail_dims_by_slice[dim_map[slice_ax]]
-    print ("\033[92mSlice ax set to %s, coordinate = %i \033[0m" %(slice_ax, slice_coord))
+    print ("\033[92mSlice ax set to %s, coordinate = %f \033[0m" %(slice_ax, slice_coord))
+    resolution = [grid_dim[avail_dim[0]],grid_dim[avail_dim[1]]]
 
 #--------- Preparing clickable image
-    s = plt.figure(figsize=(12,6),dpi=80)
+    s = plt.figure(figsize=(12,8),dpi=80)
     s1 = plt.subplot(121)
-
-    dset = h5File['data']['grid_0000000000'][plot_field]
-
-    click_coords = [0, 0]
-    image_number = 0
-
-    field_max = h5ds.find_max("cr01")[0]
 
     if (plot_field == "cree_tot" ):
       h5ds.add_field(("gdf","cree_tot"), units="",function=_total_cree, display_name="Total cr electron enden")
     if (plot_field == "cren_tot" ):
       h5ds.add_field(("gdf","cren_tot"), units="",function=_total_cren, display_name="Total cr electron numden")
 
-    if (slice_ax == "x"):
-      fig1 = plt.imshow(dset[:,:,slice_coord], origin="lower")
-      field_max = np.max(dset[:,:,slice_coord])
-      if logscale_colors == True:
-        plt.pcolor(dset[:,:,slice_coord], norm=LogNorm(vmin=dset[:,:,slice_coord].min(), vmax=dset[:,:,slice_coord].max()), cmap='viridis')
-    elif (slice_ax == "y"):
-      fig1 = plt.imshow(dset[:,slice_coord,:], origin="lower")
-      field_max = np.max(dset[:,slice_coord,:])
-      if logscale_colors == True:
-        plt.pcolor(dset[:,slice_coord,:], norm=LogNorm(vmin=dset[:,slice_coord,:].min(), vmax=dset[:,slice_coord,:].max()), cmap='viridis')
+    click_coords = [0, 0]
+    image_number = 0
+
+    field_max = h5ds.find_max("cr01")[0]
+
+    dsSlice = h5ds.slice(slice_ax, slice_coord) #, plot_field)
+    w = dom_r[avail_dim[0]] + abs(dom_l[avail_dim[0]])
+    h = dom_r[avail_dim[1]] + abs(dom_l[avail_dim[1]])
+
+    frb = np.array(dsSlice.to_frb(w, resolution, height=h)[plot_field])
+    plt.xlabel("Domain cooridnates ("+dim_map.keys()[dim_map.values().index(avail_dim[0])]+")" )
+    plt.ylabel("Domain cooridnates ("+dim_map.keys()[dim_map.values().index(avail_dim[1])]+")" )
+    plt.colormap="plasma"
+    if (logscale_colors):
+        plt.imshow(frb,extent=[dom_l[avail_dim[0]], dom_r[avail_dim[0]], dom_l[avail_dim[1]], dom_r[avail_dim[1]] ], origin="lower" ,norm=LogNorm())
     else:
-      fig1 = plt.imshow(dset[slice_coord,:,:], origin="lower")
-      field_max = np.max(dset[slice_coord,:,:])
-      if logscale_colors == True:
-        plt.pcolor(dset[slice_coord,:,:], norm=LogNorm(vmin=dset[slice_coord,:,:].min(), vmax=dset[slice_coord,:,:].max()), cmap='viridis')
-    plt.title("Component name: "+plot_field+" | Time = %f Myr"  %time,y=1.07)
-    plt.ylabel("Physical domain ("+dim_map.keys()[dim_map.values().index(avail_dim[1])]+") [kpc]" )
-    plt.xlabel("Physical domain ("+dim_map.keys()[dim_map.values().index(avail_dim[0])]+") [kpc]" )
-
-    plt.colorbar(shrink=0.9, pad=0.18)
-
-    valuesx = tuple(np.arange(0,grid_dim[avail_dim[0]], grid_dim[avail_dim[0]]/5.))# + (grid_dim[avail_dim[0]],)
-    labelsx = tuple(np.arange(dom_l[avail_dim[0]], dom_r[avail_dim[0]], ((abs(dom_l[avail_dim[0]])+abs(dom_r[avail_dim[0]]))/5.)))# + (dom_r[avail_dim[0]],)
-
-    s1.set_xticks(valuesx)
-    s1.set_xticklabels(labelsx)
-
-    valuesy = tuple(np.arange(0,grid_dim[avail_dim[1]], grid_dim[avail_dim[1]]/5.))# + (grid_dim[avail_dim[1]],)
-    labelsy = tuple(np.arange(dom_l[avail_dim[1]], dom_r[avail_dim[1]], ((abs(dom_l[avail_dim[1]])+abs(dom_r[avail_dim[1]]))/5.)))# + (dom_r[avail_dim[1]],)
-
-    s1.set_yticks(valuesy)
-    s1.set_yticklabels(labelsy)
+        plt.imshow(frb,extent=[dom_l[avail_dim[0]], dom_r[avail_dim[0]], dom_l[avail_dim[1]], dom_r[avail_dim[1]] ], origin="lower")
+    plt.title("Component name: "+plot_field+" | time = %f Myr"  %time)
+    cbar = plt.colorbar(shrink=0.9, pad=0.18)
+    frb1 = np.array(dsSlice.to_frb(w, resolution, height=h)[plot_field])
 
     print ""
 #---------
     def read_click_and_plot(event):
         global click_coords, image_number, f_run
         exit_code = True
-        click_coords = [ int(round(event.xdata)), int(round(event.ydata)) ]
-        point = s1.plot(event.xdata,event.ydata, marker="+", color="red")
+        click_coords = [ event.xdata, event.ydata ]
+        point = s1.plot(event.xdata,event.ydata, marker="x", color="red")
         coords = [slice_coord, slice_coord, slice_coord]
         if slice_ax == "x":
             coords[1] = click_coords[0]
-            coords[0] = click_coords[1]
+            coords[2] = click_coords[1]
         elif slice_ax == "y":
-            coords[0] = click_coords[1]
-            coords[2] = click_coords[0]
+            coords[0] = click_coords[0]
+            coords[2] = click_coords[1]
         else: # slice_ax = "z"
-            coords[2] = click_coords[0]
+            coords[0] = click_coords[0]
             coords[1] = click_coords[1]
 # ------------ preparing data and passing -------------------------
         ecrs = [] ; ncrs = []
-        print ("\033[92mValue of %s at point [%i, %i, %i] = %f \033[0m" %(plot_field, coords[0], coords[1], coords[2], h5File['data']['grid_0000000000'][plot_field].value[coords[0],coords[1],coords[2]]))
+        position = h5ds.r[coords:coords]  # TODO .r can be replaced with .point once negative coordinates are supported YTPoint
+        print ("\033[92mValue of %s at point [%f, %f, %f] = %f \033[0m" %(plot_field, coords[0], coords[1], coords[2], position[plot_field]))
         for ind in range(1,ncre+1):
-            ecrs.append(h5File['data']['grid_0000000000']['cree'+str(ind).zfill(2)].value[coords[0],coords[1],coords[2]])
-            ncrs.append(h5File['data']['grid_0000000000']['cren'+str(ind).zfill(2)].value[coords[0],coords[1],coords[2]])
-        plot_var = "e"
+            ecrs.append(float(str( position['cree'+str(ind).zfill(2)][0]).split(" ")[0]))
+            ncrs.append(float(str( position['cren'+str(ind).zfill(2)][0]).split(" ")[0]))
+        plot_var = "n"
         fig2,exit_code = crs_h5.crs_plot_main(var_names, var_array, plot_var, ncrs, ecrs, field_max, time, coords, simple_plot)
         if (exit_code != True):
             s.savefig('results/'+filename_nam+'_'+plot_var+'_%04d.png' % image_number, transparent ='False',facecolor=s.get_facecolor())
@@ -198,8 +180,8 @@ if f_run == True:
             image_number=image_number+1
         else:
             print("\033[92m Empty cell, not saving.\033[0m")
-        if (f_run): f_run = False
 
+        if (f_run): f_run = False
     cid = s.canvas.mpl_connect('button_press_event',read_click_and_plot)
 
     plt.show()
