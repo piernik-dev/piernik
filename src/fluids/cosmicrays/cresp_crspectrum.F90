@@ -1265,7 +1265,7 @@ contains
 !---------------------------------------------------------------------------------------------------
   subroutine get_fqp_up(exit_code)
    use initcrspectrum,  only: e_small, q_big, p_fix, NR_refine_solution_pf
-   use constants,       only: zero, one, two
+   use constants,       only: zero, one
    use cresp_NR_method, only: intpol_pf_from_NR_grids, alpha, n_in, selected_function_2D, fvec_up, &
             NR_algorithm, e_small_to_f, q_ratios
    use cresp_variables, only: clight ! use units, only: clight
@@ -1312,7 +1312,7 @@ contains
         p(i_up)   = p_up
         f(i_up-1) = e_small_to_f(p_up)/x_NR(2)
         q(i_up)   = q_ratios(x_NR(2), x_NR(1))
-        if (abs(q(i_up)) .gt. two * q_big ) q(i_up) = sign(one, q(i_up)) * q_big
+        if (abs(q(i_up)) .gt. q_big ) q(i_up) = sign(one, q(i_up)) * q_big
 #ifdef VERBOSE
         write (*,"(A1)") " "
         write (*,"(A26,2E22.15)") " >>> Obtained (p_up, f_l):", p_up, f(i_up-1) &
@@ -1372,7 +1372,7 @@ contains
         p(i_lo)   = p_lo
         f(i_lo)   = e_small_to_f(p_lo)
         q(i_lo+1) = q_ratios(x_NR(2), x_NR(1))
-        if (abs(q(i_lo+1)) .gt. 2 * q_big ) q(i_lo+1) = sign(one, q(i_lo+1)) * q_big
+        if (abs(q(i_lo+1)) .gt. q_big ) q(i_lo+1) = sign(one, q(i_lo+1)) * q_big
 #ifdef VERBOSE
         write (*,"(A1)") " "
         write (*,"(A26,2E22.15)") " >>> Obtained (p_lo, f_r):", p_lo, x_NR(2)*f(i_lo) &
