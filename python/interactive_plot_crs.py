@@ -13,10 +13,11 @@ import re
 try:
     import yt
     import h5py
+    from yt.units import dimensions
 except:
     sys.exit("\033[91mYou must make yt & h5py available somehow\033[0m")
 
-plot_field = "cren_tot"
+plot_field = "cree_tot"
 
 f_run = True
 
@@ -121,18 +122,40 @@ if f_run == True:
 #--------- Preparing clickable image
     s = plt.figure(figsize=(12,8),dpi=80)
     s1 = plt.subplot(121)
+    dsSlice = h5ds.slice(slice_ax, slice_coord)
 
     if (plot_field == "cree_tot" ):
-      h5ds.add_field(("gdf","cree_tot"), units="",function=_total_cree, display_name="Total cr electron enden")
+      if str(dsSlice["cree01"].units) is "dimensionless":
+         try:
+            h5ds.add_field(("gdf","cree_tot"), units="",function=_total_cree, display_name="Total cr electron energy density")
+         except:
+            sys.exit("\033[91mFailed to construct field %s\033[0m", plot_field)
+      else:
+         try:
+            h5ds.add_field(("gdf","cree_tot"), units="auto",function=_total_cree, display_name="Total cr electron energy density", dimensions=dimensions.energy/dimensions.volume)
+         except:
+            sys.exit("\033[91mFailed to construct field %s\033[0m", plot_field)
+
+
     if (plot_field == "cren_tot" ):
-      h5ds.add_field(("gdf","cren_tot"), units="",function=_total_cren, display_name="Total cr electron numden")
+      if str(dsSlice["cren01"].units) is "dimensionless":
+         try:
+            h5ds.add_field(("gdf","cren_tot"), units="",function=_total_cren, display_name="Total cr electron number density")
+         except:
+            sys.exit("\033[91mFailed to construct field %s\033[0m", plot_field)
+
+      else: # dimensions defined
+         try:
+            h5ds.add_field(("gdf","cren_tot"), units="auto",function=_total_cren, display_name="Total cr electron number density", dimensions=dimensions.energy/dimensions.volume)
+         except:
+            sys.exit("\033[91mFailed to construct field %s\033[0m", plot_field)
+
 
     click_coords = [0, 0]
     image_number = 0
 
-    field_max = h5ds.find_max("cr01")[0]
+    field_max = float(h5ds.find_max("cr01")[0]) # WARNING - this strips makes field_max unitless
 
-    dsSlice = h5ds.slice(slice_ax, slice_coord) #, plot_field)
     w = dom_r[avail_dim[0]] + abs(dom_l[avail_dim[0]])
     h = dom_r[avail_dim[1]] + abs(dom_l[avail_dim[1]])
 
