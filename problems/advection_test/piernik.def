@@ -2,7 +2,7 @@
 !
 ! Use advection_test/magnetized_advection_test if you want to play with magnetized advection test.
 !
-! Alternatively, you can add "-d MAGNETIC,IONIZED" to your setup call.
+! Alternatively, you can add '-d MAGNETIC,IONIZED' to your setup call.
 !
 #endif
 
