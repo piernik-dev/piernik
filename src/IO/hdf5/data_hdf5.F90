@@ -104,7 +104,7 @@ contains
             f%fu = "\rm{Gs}"
             f%f2cgs = 1.0 / (fpi * sqrt(cm / (miu0 * gram)) * sek)
             f%stag = 1
-         case ("divbc", "divbf", "divbc4", "divbf4", "divbc6", "divbf6")
+         case ("divbc", "divbf", "divbc4", "divbf4", "divbc6", "divbf6", "divbc8", "divbf8")
             f%fu= "\rm{Gs}/\rm{cm}" ! I'm not sure if it is a best description
             f%f2cgs = 1.0 / (fpi * sqrt(cm / (miu0 * gram)) * sek * cm)
          case ("magdir")
@@ -151,6 +151,8 @@ contains
                write(newname, '("magnetic_field_divergence_",A1,"_O(4)")') var(5:5)
             case ("divbc6", "divbf6")
                write(newname, '("magnetic_field_divergence_",A1,"_O(6)")') var(5:5)
+            case ("divbc8", "divbf8")
+               write(newname, '("magnetic_field_divergence_",A1,"_O(8)")') var(5:5)
             case ("pmag%")
                newname = "p_mag_to_p_tot_ratio"
             case ("magB")
@@ -254,7 +256,7 @@ contains
 #ifdef MAGNETIC
       use div_B,       only: divB_c_IO
       use domain,      only: dom
-      use constants,   only: xdim, ydim, zdim, half, two, I_TWO, I_FOUR, I_SIX
+      use constants,   only: xdim, ydim, zdim, half, two, I_TWO, I_FOUR, I_SIX, I_EIGHT
 #endif /* MAGNETIC */
 
       implicit none
@@ -354,6 +356,8 @@ contains
             tab(:,:,:) = divB_c_IO(cg, I_FOUR, .false.)
          case ("divbf6")
             tab(:,:,:) = divB_c_IO(cg, I_SIX,  .false.)
+         case ("divbf8")
+            tab(:,:,:) = divB_c_IO(cg, I_EIGHT,.false.)
 !! cell-centered div(B): RIEMANN dith divergence cleaning
          case ("divbc")
             tab(:,:,:) = divB_c_IO(cg, I_TWO,  .true.)
@@ -361,6 +365,8 @@ contains
             tab(:,:,:) = divB_c_IO(cg, I_FOUR, .true.)
          case ("divbc6")
             tab(:,:,:) = divB_c_IO(cg, I_SIX,  .true.)
+         case ("divbc8")
+            tab(:,:,:) = divB_c_IO(cg, I_EIGHT,.true.)
 #endif /* MAGNETIC */
          case ("gpot")
             if (associated(cg%gpot)) tab(:,:,:) = real(cg%gpot(RNG), kind=4)
