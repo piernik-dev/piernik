@@ -408,15 +408,15 @@ contains
                            ! setting up a div(B)-free field in flattened domain requires careful choice of kk(:)
                            if (ccB) then
                               cg%b(:, i, j, k) = cg%b(:, i, j, k) + divB0_amp * [ &
-                                   kk(ydim)*sx*cy*sz - kk(zdim)*sx*sy*cz, &
-                                   kk(zdim)*sx*sy*cz - kk(xdim)*cx*sy*sz, &
-                                   kk(xdim)*cx*sy*sz - kk(ydim)*sx*cy*sz ] + &
+                                   kk(ydim)*cx*sy*cz - kk(zdim)*cx*cy*sz, &
+                                   kk(zdim)*cx*cy*sz - kk(xdim)*sx*cy*cz, &
+                                   kk(xdim)*sx*cy*cz - kk(ydim)*cx*sy*cz ] + &
                                    divBs_amp * [ kk(xdim)*cx*sy*sz, kk(ydim)*sx*cy*sz, kk(zdim)*sx*sy*cz ]
                            else
                               cg%b(:, i, j, k) = cg%b(:, i, j, k) + divB0_amp * [ &
-                                   kk(ydim)*sfx*cy*sz - kk(zdim)*sfx*sy*cz, &
-                                   kk(zdim)*sx*sfy*cz - kk(xdim)*cx*sfy*sz, &
-                                   kk(xdim)*cx*sy*sfz - kk(ydim)*sx*cy*sfz ] + &
+                                   kk(ydim)*cfx*sy*cz - kk(zdim)*cfx*cy*sz, &
+                                   kk(zdim)*cx*cfy*sz - kk(xdim)*sx*cfy*cz, &
+                                   kk(xdim)*sx*cy*cfz - kk(ydim)*cx*sy*cfz ] + &
                                    divBs_amp * [ kk(xdim)*cfx*sy*sz, kk(ydim)*sx*cfy*sz, kk(zdim)*sx*sy*cfz ]
                            endif
                         case default
