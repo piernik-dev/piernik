@@ -54,9 +54,11 @@ module initproblem
    real                   :: divBbX_amp  !< Amplitude of x-component blob of divergence (should behave well on periodic domains)
    real                   :: divBbY_amp  !< Amplitude of y-component blob of divergence (should behave well on periodic domains)
    real                   :: divBbZ_amp  !< Amplitude of z-component blob of divergence (should behave well on periodic domains)
+   integer, dimension(ndims) :: divB_k      !< wave numbers for creating initial field
    logical                :: ccB         !< true for cell-cntered initial magnetic field
 
-   namelist /PROBLEM_CONTROL/  pulse_size, pulse_off, pulse_vel, pulse_amp, pulse_pres, norm_step, nflip, flipratio, ref_thr, deref_thr, usedust, divB0_amp, divBc_amp, divBs_amp, divBbX_amp, divBbY_amp, divBbZ_amp, ccB
+   namelist /PROBLEM_CONTROL/  pulse_size, pulse_off, pulse_vel, pulse_amp, pulse_pres, norm_step, nflip, flipratio, ref_thr, deref_thr, usedust, &
+        &                      divB0_amp, divBc_amp, divBs_amp, divBbX_amp, divBbY_amp, divBbZ_amp, divB_k, ccB
 
    ! other private data
    real, dimension(ndims, LO:HI) :: pulse_edge
@@ -122,6 +124,7 @@ contains
       divBbX_amp    = 0.                   !< unphysical, only for testing
       divBbY_amp    = 0.                   !< unphysical, only for testing
       divBbZ_amp    = 0.                   !< unphysical, only for testing
+      divB_k(:)     = [ 1, 1, 1 ]
       ccB           = .false.              !< defaulting to face-centered initial field
 
       if (master) then
@@ -159,6 +162,7 @@ contains
 
          ibuff(1)   = norm_step
          ibuff(2)   = nflip
+         ibuff(10+xdim:10+zdim) = divB_k(:)
 
          lbuff(1)   = usedust
          lbuff(2)   = ccB
@@ -188,6 +192,7 @@ contains
 
          norm_step  = int(ibuff(1), kind=4)
          nflip      = ibuff(2)
+         divB_k(:)  = ibuff(10+xdim:10+zdim)
 
          usedust    = lbuff(1)
          ccB        = lbuff(2)
@@ -293,7 +298,7 @@ contains
       real :: r02, rr02
 
       kk = 0.
-      where (dom%D_ > 0) kk = dpi / dom%L_
+      where (dom%D_ > 0) kk = divB_k * dpi / dom%L_
       right_face = 1
       if (ccB) right_face = 0
       r02 = huge(1.)
