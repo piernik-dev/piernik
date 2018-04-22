@@ -365,7 +365,10 @@ contains
                                  cg%b(:, i, j, k) = cg%b(:, i, j, k) + divBs_amp * [ 1., 1., kk(zdim)*cfz ]
                               endif
                            endif
-                        case (I_TWO) ! [sin(x)*sin(y), cos(x)*cos(y), 0] should produce divB == 0. for XY case
+                        case (I_TWO)
+                           ! [sin(x)*sin(y), cos(x)*cos(y), 0] should produce divB == 0. for XY case (curl([0, 0, -sin(x)*cos(y)]))
+                           ! The div(B) is really close to numerical noise around 0 only in the case of exactly the same resolution per sine wave in all directions.
+                           ! If the resolutions of sine waves don't match, then numerical estimates of mixed derivatives of the vector potential don't cancel out and only high-order estimates of div(b) are close to 0.
                            if (ccB) then
                               if (dom%D_z == 0) then
                                  cg%b(:, i, j, k) = cg%b(:, i, j, k) + &
@@ -395,7 +398,9 @@ contains
                                       divBs_amp * [ 1., kk(ydim)*cfy*sz, kk(zdim)*sy*cfz ]
                               endif
                            endif
-                        case (I_THREE) ! curl([sin(x)*sin(y)*sin(z), sin(x)*sin(y)*sin(z), sin(x)*sin(y)*sin(z)])
+                        case (I_THREE)
+                           ! curl([sin(x)*sin(y)*sin(z), sin(x)*sin(y)*sin(z), sin(x)*sin(y)*sin(z)]) shoudl produce div(B) == 0, but see the notes for 2D case.
+                           ! setting up a div(B)-free field in flattened domain requires careful choice of kk(:)
                            if (ccB) then
                               cg%b(:, i, j, k) = cg%b(:, i, j, k) + divB0_amp * [ &
                                    kk(ydim)*sx*cy*sz - kk(zdim)*sx*sy*cz, &
