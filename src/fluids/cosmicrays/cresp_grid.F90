@@ -3,204 +3,230 @@ module cresp_grid
 
 ! This module contains routines necessary to initialize, compute timestep for cre bins and to update spectrum in the whole domain
 ! as the crspectrum module operates on a single grid cell.
+
+   use global,          only: dt, t
    use initcosmicrays,  only: iarr_cre_e, iarr_cre_n
    use initcrspectrum,  only: ncre
-   use global,          only: dt, t
 
-      private
-      public        dt_cre, cresp_update_grid, cresp_init_grid, grid_cresp_timestep, cfl_cresp_violation
+   private
+   public        dt_cre, cresp_update_grid, cresp_init_grid, grid_cresp_timestep, cfl_cresp_violation
 
-      real(kind=8)                    :: dt_cre
-      logical                         :: cfl_cresp_violation
-      integer(kind=4), save           :: i_up_max_prev
+   real(kind=8)                    :: dt_cre
+   logical                         :: cfl_cresp_violation
+   integer(kind=4), save           :: i_up_max_prev
 ! CRESP names
-      character(len=*), parameter :: vn_n = "vn" !< helping array for CRESP number density
-      character(len=*), parameter :: ve_n = "ve" !< helping array for CRESP energy density
-contains
+   character(len=*), parameter :: vn_n = "vn" !< helping array for CRESP number density
+   character(len=*), parameter :: ve_n = "ve" !< helping array for CRESP energy density
 
- subroutine cresp_update_grid
-  use cg_leaves,        only: leaves
-  use cg_list,          only: cg_list_element
-  use constants,        only: xdim, ydim, zdim
-  use grid_cont,        only: grid_container
-  use cresp_crspectrum, only:cresp_update_cell, printer
-  use initcrspectrum,   only: spec_mod_trms, synch_active, adiab_active, cresp, magnetic_energy_scaler
-  use named_array_list, only: qna, wna
-  use crhelpers,        only: divv_n
-  use func,             only: emag, ekin, operator(.equals.), operator(.notequals.)
-  implicit none
-    real(kind=8), dimension(:) ,pointer :: virtual_e => null(), virtual_n => null()
-    integer                         :: i, j, k
-    type(cg_list_element),  pointer :: cgl
-    type(grid_container),   pointer :: cg
-    type(spec_mod_trms)  :: sptab
-        i = 0; j = 0;  k = 0
-        cgl => leaves%first
-        cfl_cresp_violation = .false.
-        do while (associated(cgl))
-            cg => cgl%cg
-            do k = cg%ks, cg%ke
-                do j = cg%js, cg%je
-                    do i = cg%is, cg%ie
-                        sptab%ud = 0.0 ; sptab%ub = 0.0 ; sptab%ucmb = 0.0
-                        cresp%n    = cg%u(iarr_cre_n, i, j, k)
-                        cresp%e    = cg%u(iarr_cre_e, i, j, k)
-                        virtual_n  => cg%w(wna%ind(vn_n))%point([i,j,k])
-                        virtual_e  => cg%w(wna%ind(ve_n))%point([i,j,k])
-                        if (synch_active) sptab%ub = emag(cg%b(xdim,i,j,k), cg%b(ydim,i,j,k), cg%b(zdim,i,j,k)) * magnetic_energy_scaler
-                        if (adiab_active) sptab%ud = cg%q(qna%ind(divv_n))%point([i,j,k])
+   contains
+
+
+   subroutine cresp_update_grid
+
+      use cg_leaves,        only: leaves
+      use cg_list,          only: cg_list_element
+      use constants,        only: xdim, ydim, zdim
+      use cresp_crspectrum, only:cresp_update_cell, printer
+      use crhelpers,        only: divv_n
+      use func,             only: emag, ekin, operator(.equals.), operator(.notequals.)
+      use grid_cont,        only: grid_container
+      use initcrspectrum,   only: spec_mod_trms, synch_active, adiab_active, cresp, magnetic_energy_scaler
+      use named_array,      only: p4
+      use named_array_list, only: qna, wna
+
+      implicit none
+
+      real(kind=8), dimension(:) ,pointer :: virtual_e => null(), virtual_n => null()
+      integer                         :: i, j, k
+      type(cg_list_element),  pointer :: cgl
+      type(grid_container),   pointer :: cg
+      type(spec_mod_trms)  :: sptab
+
+      i = 0; j = 0;  k = 0
+      cgl => leaves%first
+      cfl_cresp_violation = .false.
+
+      do while (associated(cgl))
+         cg => cgl%cg
+         p4 => cg%w(wna%fi)%arr
+         do k = cg%ks, cg%ke
+            do j = cg%js, cg%je
+               do i = cg%is, cg%ie
+                  sptab%ud = 0.0 ; sptab%ub = 0.0 ; sptab%ucmb = 0.0
+                  cresp%n    = p4(iarr_cre_n, i, j, k)
+                  cresp%e    = p4(iarr_cre_e, i, j, k)
+                  virtual_n  => cg%w(wna%ind(vn_n))%point([i,j,k])
+                  virtual_e  => cg%w(wna%ind(ve_n))%point([i,j,k])
+                  if (synch_active) sptab%ub = emag(cg%b(xdim,i,j,k), cg%b(ydim,i,j,k), cg%b(zdim,i,j,k)) * magnetic_energy_scaler
+                  if (adiab_active) sptab%ud = cg%q(qna%ind(divv_n))%point([i,j,k])
 #ifdef VERBOSE
-                        print *, 'Output of cosmic ray electrons module for grid cell with coordinates i,j,k:', i, j, k
+                  print *, 'Output of cosmic ray electrons module for grid cell with coordinates i,j,k:', i, j, k
 #endif /* VERBOSE */
-                        call cresp_update_cell(2*dt, cresp%n, cresp%e, sptab, virtual_n, virtual_e, cfl_cresp_violation)
-                        if ( cfl_cresp_violation ) return ! nothing to do here!
-                        cg%u(iarr_cre_n, i, j, k) = cresp%n
-                        cg%u(iarr_cre_e, i, j, k) = cresp%e
-                    enddo
-                enddo
+                  call cresp_update_cell(2*dt, cresp%n, cresp%e, sptab, virtual_n, virtual_e, cfl_cresp_violation)
+                  if ( cfl_cresp_violation ) return ! nothing to do here!
+                  p4(iarr_cre_n, i, j, k) = cresp%n
+                  p4(iarr_cre_e, i, j, k) = cresp%e
+               enddo
             enddo
-            cgl=>cgl%nxt
-        enddo
-  end subroutine cresp_update_grid
-!----------------------------------------------------------------------------------------------------
-  subroutine cresp_init_grid
-   use cg_leaves,          only: leaves
-   use cg_list_global,     only: all_cg
-   use cg_list,            only: cg_list_element
-   use grid_cont,          only: grid_container
-   use initcrspectrum,     only: e_small, e_small_approx_p_lo, e_small_approx_p_up, norm_init_spectrum, spec_mod_trms, f_init
-   use initcosmicrays,     only: iarr_cre_n, iarr_cre_e
-   use cresp_crspectrum,   only: cresp_allocate_all, e_threshold_lo, e_threshold_up, fail_count_interpol, fail_count_no_sol, &
-                                 & fail_count_NR_2dim, fail_count_comp_q, second_fail, cresp_init_state
-   use cresp_NR_method,    only: cresp_initialize_guess_grids
-   use dataio_pub,         only: warn, printinfo
-   use named_array_list,   only: wna
-   implicit none
-    type(cg_list_element),  pointer :: cgl
-    type(grid_container),   pointer :: cg
-    logical, save :: first_run = .true., not_zeroed = .true.
-      if (first_run .eqv. .true.) then
-        call cresp_initialize_guess_grids
-        call cresp_allocate_all
-
-        fail_count_interpol = 0
-        fail_count_no_sol   = 0
-        fail_count_NR_2dim  = 0
-        second_fail         = 0
-        fail_count_comp_q   = 0
-
-        e_threshold_lo = e_small * e_small_approx_p_lo
-        e_threshold_up = e_small * e_small_approx_p_up
-
-        call all_cg%reg_var(vn_n, dim4=2) !< registering helper virtual arrays for CRESP number density
-        call all_cg%reg_var(ve_n, dim4=2) !< registering helper virtual arrays for CRESP energy density
-
-        cgl => leaves%first
-        do while (associated(cgl))
-            cg => cgl%cg
-               cg%u(iarr_cre_n,:,:,:)  = 0.0
-               cg%u(iarr_cre_e,:,:,:)  = 0.0
-               cg%w(wna%ind(vn_n))%arr = 0.0
-               cg%w(wna%ind(ve_n))%arr = 0.0
-               not_zeroed = .false.
-            cgl => cgl%nxt
          enddo
+         cgl=>cgl%nxt
+      enddo
 
-         call cresp_init_state(norm_init_spectrum%n, norm_init_spectrum%e, f_init)   !< initialize spectrum here, f_init should be 1.0
+   end subroutine cresp_update_grid
+!----------------------------------------------------------------------------------------------------
+   subroutine cresp_init_grid
 
-         call printinfo(" [cresp_grid:cresp_init_grid] CRESP initialized")
-         first_run = .false.
+      use cg_leaves,          only: leaves
+      use cg_list,            only: cg_list_element
+      use cg_list_global,     only: all_cg
+      use cresp_crspectrum,   only: cresp_allocate_all, e_threshold_lo, e_threshold_up, fail_count_interpol, fail_count_no_sol, &
+                                    & fail_count_NR_2dim, fail_count_comp_q, second_fail, cresp_init_state
+      use cresp_NR_method,    only: cresp_initialize_guess_grids
+      use dataio_pub,         only: warn, printinfo
+      use grid_cont,          only: grid_container
+      use initcosmicrays,     only: iarr_cre_n, iarr_cre_e
+      use initcrspectrum,     only: e_small, e_small_approx_p_lo, e_small_approx_p_up, norm_init_spectrum, spec_mod_trms, f_init
+      use named_array_list,   only: wna
+
+      implicit none
+
+      type(cg_list_element),  pointer :: cgl
+      type(grid_container),   pointer :: cg
+      logical, save :: first_run = .true., not_zeroed = .true.
+
+      if (first_run .eqv. .true.) then
+         call cresp_initialize_guess_grids
+         call cresp_allocate_all
+
+         fail_count_interpol = 0
+         fail_count_no_sol   = 0
+         fail_count_NR_2dim  = 0
+         second_fail         = 0
+         fail_count_comp_q   = 0
+
+         e_threshold_lo = e_small * e_small_approx_p_lo
+         e_threshold_up = e_small * e_small_approx_p_up
+
+         call all_cg%reg_var(vn_n, dim4=2) !< registering helper virtual arrays for CRESP number density
+         call all_cg%reg_var(ve_n, dim4=2) !< registering helper virtual arrays for CRESP energy density
+
+         cgl => leaves%first
+         do while (associated(cgl))
+               cg => cgl%cg
+                  cg%u(iarr_cre_n,:,:,:)  = 0.0
+                  cg%u(iarr_cre_e,:,:,:)  = 0.0
+                  cg%w(wna%ind(vn_n))%arr = 0.0
+                  cg%w(wna%ind(ve_n))%arr = 0.0
+                  not_zeroed = .false.
+               cgl => cgl%nxt
+            enddo
+
+            call cresp_init_state(norm_init_spectrum%n, norm_init_spectrum%e, f_init)   !< initialize spectrum here, f_init should be 1.0
+
+            call printinfo(" [cresp_grid:cresp_init_grid] CRESP initialized")
+            first_run = .false.
       endif
       if (first_run)  call warn("[cresp_grid:cresp_init_grid] CRESP might not be initialized!")
       if (not_zeroed) call warn("[cresp_grid:cresp_init_grid] CRESP virtual arrays might not be initialized properly!")
 
-  end subroutine cresp_init_grid
+   end subroutine cresp_init_grid
 !----------------------------------------------------------------------------------------------------
-  subroutine grid_cresp_timestep
-   use cg_leaves,          only: leaves
-   use cg_list,            only: cg_list_element
-   use crhelpers,          only: divv_n
-   use func,               only: emag !, operator(.equals.), operator(.notequals.)
-   use grid_cont,          only: grid_container
-   use constants,          only: xdim, ydim, zdim
-   use named_array_list,   only: qna
-   use constants,          only: one, half
-   use initcrspectrum,     only: spec_mod_trms, cfl_cre, synch_active, adiab_active, magnetic_energy_scaler
-   use initcosmicrays,     only: K_cre_paral, K_cre_perp
-   use timestep_cresp,     only: cresp_timestep, dt_cre_min_ub, dt_cre_min_ud
-   implicit none
-    integer(kind=4)                 :: i, j, k, i_up_max, i_up_max_tmp
-    type(grid_container), pointer   :: cg
-    type(cg_list_element), pointer  :: cgl
-    real(kind=8)                    :: dt_cre_tmp, K_cre_max_sum
-    real(kind=8),save               :: dt_cre_K
-    type(spec_mod_trms)             :: sptab
-        i_up_max     = 1
-        i_up_max_tmp = 1
+   subroutine grid_cresp_timestep
 
-        dt_cre = huge(one)
-        dt_cre_tmp = huge(one)
-        dt_cre_min_ub = huge(one)
-        dt_cre_min_ud = huge(one)
+      use cg_leaves,          only: leaves
+      use cg_list,            only: cg_list_element
+      use constants,          only: xdim, ydim, zdim, one, half
+      use crhelpers,          only: divv_n
+      use func,               only: emag !, operator(.equals.), operator(.notequals.)
+      use grid_cont,          only: grid_container
+      use initcosmicrays,     only: K_cre_paral, K_cre_perp
+      use initcrspectrum,     only: spec_mod_trms, cfl_cre, synch_active, adiab_active, magnetic_energy_scaler
+      use named_array_list,   only: qna
+      use timestep_cresp,     only: cresp_timestep, dt_cre_min_ub, dt_cre_min_ud
 
-        cgl => leaves%first
-        do while (associated(cgl))
-            cg => cgl%cg
-            do k = cg%ks, cg%ke
-                do j = cg%js, cg%je
-                    do i = cg%is, cg%ie
-                        sptab%ud = 0.0 ; sptab%ub = 0.0 ; sptab%ucmb = 0.0
-                        if (synch_active) sptab%ub = emag(cg%b(xdim,i,j,k), cg%b(ydim,i,j,k), cg%b(zdim,i,j,k)) * magnetic_energy_scaler
-                        if (adiab_active) sptab%ud = cg%q(qna%ind(divv_n))%point([i,j,k])
-                        call cresp_timestep(dt_cre_tmp, sptab, cg%u(iarr_cre_n, i, j, k), cg%u(iarr_cre_e, i, j, k), i_up_max_tmp) ! gives dt_cre for the whole domain, but is unefficient
-                        dt_cre = min(dt_cre, dt_cre_tmp)
-                        i_up_max = max(i_up_max, i_up_max_tmp)
-                    enddo
-                enddo
+      implicit none
+
+      integer(kind=4)                 :: i, j, k, i_up_max, i_up_max_tmp
+      type(grid_container), pointer   :: cg
+      type(cg_list_element), pointer  :: cgl
+      real(kind=8)                    :: dt_cre_tmp, K_cre_max_sum
+      real(kind=8),save               :: dt_cre_K
+      type(spec_mod_trms)             :: sptab
+
+      i_up_max     = 1
+      i_up_max_tmp = 1
+
+      dt_cre = huge(one)
+      dt_cre_tmp = huge(one)
+      dt_cre_min_ub = huge(one)
+      dt_cre_min_ud = huge(one)
+
+      cgl => leaves%first
+      do while (associated(cgl))
+         cg => cgl%cg
+         do k = cg%ks, cg%ke
+            do j = cg%js, cg%je
+               do i = cg%is, cg%ie
+                  sptab%ud = 0.0 ; sptab%ub = 0.0 ; sptab%ucmb = 0.0
+                  if (synch_active) sptab%ub = emag(cg%b(xdim,i,j,k), cg%b(ydim,i,j,k), cg%b(zdim,i,j,k)) * magnetic_energy_scaler
+                  if (adiab_active) sptab%ud = cg%q(qna%ind(divv_n))%point([i,j,k])
+
+                  call cresp_timestep(dt_cre_tmp, sptab, cg%u(iarr_cre_n, i, j, k), cg%u(iarr_cre_e, i, j, k), i_up_max_tmp) ! gives dt_cre for the whole domain, but is unefficient
+
+                  dt_cre = min(dt_cre, dt_cre_tmp)
+                  i_up_max = max(i_up_max, i_up_max_tmp)
+               enddo
             enddo
-            cgl=>cgl%nxt
-        enddo
+         enddo
+         cgl=>cgl%nxt
+      enddo
 
-        if ( i_up_max_prev .ne. i_up_max ) then ! dt_cre_K saved, computed again only if in the whole domain highest i_up changes.
-            i_up_max_prev = i_up_max
-            K_cre_max_sum = K_cre_paral(i_up_max) + K_cre_perp(i_up_max) ! assumes the same K for energy and number density
-            if ( K_cre_max_sum <= 0) then                                ! K_cre dependent on momentum - maximal for highest bin number
-                dt_cre_K = huge(one)
-            else
-                dt_cre_K = cfl_cre * half / K_cre_max_sum
-                if (cg%dxmn < sqrt(huge(one))/dt_cre_K) then
-                    dt_cre_K = dt_cre_K * cg%dxmn**2
-                endif
+      if ( i_up_max_prev .ne. i_up_max ) then ! dt_cre_K saved, computed again only if in the whole domain highest i_up changes.
+         i_up_max_prev = i_up_max
+         K_cre_max_sum = K_cre_paral(i_up_max) + K_cre_perp(i_up_max) ! assumes the same K for energy and number density
+         if ( K_cre_max_sum <= 0) then                                ! K_cre dependent on momentum - maximal for highest bin number
+            dt_cre_K = huge(one)
+         else
+            dt_cre_K = cfl_cre * half / K_cre_max_sum
+            if (cg%dxmn < sqrt(huge(one))/dt_cre_K) then
+                  dt_cre_K = dt_cre_K * cg%dxmn**2
             endif
-        endif
-        dt_cre = min(dt_cre, dt_cre_K)
-        dt_cre = half * dt_cre ! dt comes in to cresp_crspectrum with factor * 2
+         endif
+      endif
 
-  end subroutine grid_cresp_timestep
+      dt_cre = min(dt_cre, dt_cre_K)
+      dt_cre = half * dt_cre ! dt comes in to cresp_crspectrum with factor * 2
+
+   end subroutine grid_cresp_timestep
 !----------------------------------------------------------------------------------------------------
- subroutine append_dissipative_terms(i,j,k) ! To be fixed
-  use initcrspectrum,   only: spec_mod_trms
-  use named_array_list, only: qna
-  use crhelpers,        only: divv_n
-  use func,             only: emag
-  use grid_cont,        only: grid_container
-  use cg_list,          only: cg_list_element
-  use constants,        only: xdim, ydim, zdim
-  use cg_leaves,        only: leaves
-  implicit none
-    type(spec_mod_trms)  :: sptab
-    type(grid_container), pointer :: cg
-    type(cg_list_element), pointer:: cgl
-    integer :: i,j,k
+   subroutine append_dissipative_terms(i,j,k) ! To be fixed
+
+      use cg_leaves,        only: leaves
+      use cg_list,          only: cg_list_element
+      use constants,        only: xdim, ydim, zdim
+      use crhelpers,        only: divv_n
+      use func,             only: emag
+      use grid_cont,        only: grid_container
+      use initcrspectrum,   only: spec_mod_trms
+      use named_array_list, only: qna
+
+      implicit none
+
+      type(spec_mod_trms)  :: sptab
+      type(grid_container), pointer :: cg
+      type(cg_list_element), pointer:: cgl
+      integer :: i,j,k
 !Below - magnetic energy density and velocity divergence values are passed to sptab
-        cgl => leaves%first
-        do while (associated(cgl))
-            cg => cgl%cg
-            sptab%ub = emag(cg%b(xdim,i,j,k), cg%b(ydim,i,j,k), cg%b(zdim,i,j,k))
-            sptab%ud = cg%q(qna%ind(divv_n))%point([i,j,k])
-            sptab%ucmb = 0.0 ! Not included yet
-            cgl =>cgl%nxt
-        enddo
- end subroutine append_dissipative_terms
+
+      cgl => leaves%first
+      do while (associated(cgl))
+         cg => cgl%cg
+         sptab%ub = emag(cg%b(xdim,i,j,k), cg%b(ydim,i,j,k), cg%b(zdim,i,j,k))
+         sptab%ud = cg%q(qna%ind(divv_n))%point([i,j,k])
+         sptab%ucmb = 0.0 ! Not included yet
+         cgl =>cgl%nxt
+      enddo
+
+   end subroutine append_dissipative_terms
 
 end module cresp_grid
