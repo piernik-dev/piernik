@@ -48,7 +48,7 @@ contains
                         virtual_n  => cg%w(wna%ind(vn_n))%point([i,j,k])
                         virtual_e  => cg%w(wna%ind(ve_n))%point([i,j,k])
                         if (synch_active) sptab%ub = emag(cg%b(xdim,i,j,k), cg%b(ydim,i,j,k), cg%b(zdim,i,j,k)) * magnetic_energy_scaler
-                        if (synch_active) sptab%ud = cg%q(qna%ind(divv_n))%point([i,j,k])
+                        if (adiab_active) sptab%ud = cg%q(qna%ind(divv_n))%point([i,j,k])
 #ifdef VERBOSE
                         print *, 'Output of cosmic ray electrons module for grid cell with coordinates i,j,k:', i, j, k
 #endif /* VERBOSE */
@@ -94,7 +94,7 @@ contains
 
         call all_cg%reg_var(vn_n, dim4=2) !< registering helper virtual arrays for CRESP number density
         call all_cg%reg_var(ve_n, dim4=2) !< registering helper virtual arrays for CRESP energy density
-        
+
         cgl => leaves%first
         do while (associated(cgl))
             cg => cgl%cg
@@ -175,7 +175,7 @@ contains
         endif
         dt_cre = min(dt_cre, dt_cre_K)
         dt_cre = half * dt_cre ! dt comes in to cresp_crspectrum with factor * 2
-        
+
   end subroutine grid_cresp_timestep
 !----------------------------------------------------------------------------------------------------
  subroutine append_dissipative_terms(i,j,k) ! To be fixed
