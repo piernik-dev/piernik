@@ -257,6 +257,7 @@ contains
       use div_B,       only: divB_c_IO
       use domain,      only: dom
       use constants,   only: xdim, ydim, zdim, half, two, I_TWO, I_FOUR, I_SIX, I_EIGHT
+      use global,      only: force_cc_mag
 #endif /* MAGNETIC */
 
       implicit none
@@ -281,11 +282,15 @@ contains
       tab = 0.0
 
 #ifdef MAGNETIC
-      associate(emag_f_c => emag(half*(cg%b(xdim, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) + cg%b(xdim, cg%is+dom%D_x:cg%ie+dom%D_x, cg%js        :cg%je,         cg%ks        :cg%ke        )), &
-           &                     half*(cg%b(ydim, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) + cg%b(ydim, cg%is        :cg%ie,         cg%js+dom%D_y:cg%je+dom%D_y, cg%ks        :cg%ke        )), &
-           &                     half*(cg%b(zdim, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) + cg%b(zdim, cg%is        :cg%ie,         cg%js        :cg%je,         cg%ks+dom%D_z:cg%ke+dom%D_z))) )
+      associate(emag_c => merge(emag(cg%b(xdim, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), &
+           &                         cg%b(ydim, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), &
+           &                         cg%b(zdim, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)), &
+           &                    emag(half*(cg%b(xdim, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) + cg%b(xdim, cg%is+dom%D_x:cg%ie+dom%D_x, cg%js        :cg%je,         cg%ks        :cg%ke        )), &
+           &                         half*(cg%b(ydim, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) + cg%b(ydim, cg%is        :cg%ie,         cg%js+dom%D_y:cg%je+dom%D_y, cg%ks        :cg%ke        )), &
+           &                         half*(cg%b(zdim, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) + cg%b(zdim, cg%is        :cg%ie,         cg%js        :cg%je,         cg%ks+dom%D_z:cg%ke+dom%D_z))), &
+           &                    force_cc_mag))  ! fortran way of constructing ternary operators
 #else /* !MAGNETIC */
-      associate(emag_f_c => 0.)
+      associate(emag_c => 0.)
 #endif /* !MAGNETIC */
       select case (var)
 #ifdef COSM_RAYS
@@ -318,15 +323,15 @@ contains
 #ifndef ISO
             tab(:,:,:) = real(flind%ion%gam_1, kind=4) * real( cg%u(flind%ion%ien, RNG) - &
                  &       ekin(cg%u(flind%ion%imx, RNG), cg%u(flind%ion%imy, RNG), cg%u(flind%ion%imz, RNG), cg%u(flind%ion%idn, RNG)), kind=4) - &
-                 &       real(flind%ion%gam_1*emag_f_c, kind=4)
+                 &       real(flind%ion%gam_1*emag_c, kind=4)
 #endif /* !ISO */
          case ("pmag%")
 #ifndef ISO
 #ifdef IONIZED
-            tab(:,:,:) = real(emag_f_c, kind=4) / &
+            tab(:,:,:) = real(emag_c, kind=4) / &
                  &      (real(flind%ion%gam_1, kind=4) * real( cg%u(flind%ion%ien, RNG) - &
-                 &       ekin(cg%u(flind%ion%imx, RNG), cg%u(flind%ion%imy, RNG), cg%u(flind%ion%imz, RNG), cg%u(flind%ion%idn, RNG)) - emag_f_c, kind=4) + &
-                 &       real(emag_f_c, kind=4))
+                 &       ekin(cg%u(flind%ion%imx, RNG), cg%u(flind%ion%imy, RNG), cg%u(flind%ion%imz, RNG), cg%u(flind%ion%idn, RNG)) - emag_c, kind=4) + &
+                 &       real(emag_c, kind=4))
 #endif /* IONIZED */
 #endif /* !ISO */
         case ("ethn")
@@ -339,13 +344,13 @@ contains
 #ifndef ISO
             tab(:,:,:) = real( (cg%u(flind%ion%ien, RNG) - &
                  &       ekin(cg%u(flind%ion%imx, RNG), cg%u(flind%ion%imy, RNG), cg%u(flind%ion%imz, RNG), cg%u(flind%ion%idn, RNG)) -          &
-                 &       emag_f_c) / cg%u(flind%ion%idn, RNG), kind=4)
+                 &       emag_c) / cg%u(flind%ion%idn, RNG), kind=4)
 #endif /* !ISO */
 #ifdef MAGNETIC
          case ("magx", "magy", "magz")
             tab(:,:,:) = real(cg%b(xdim + i_xyz, RNG), kind=4) ! beware: these are "raw", face-centered. Use them with care when you process plotfiles
          case ("magB")
-            tab(:,:,:) = real(sqrt(two * emag_f_c), kind=4)
+            tab(:,:,:) = real(sqrt(two * emag_c), kind=4)
          case ("magdir")
             tab(:,:,:) = real(atan2(cg%b(ydim, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) + cg%b(ydim, cg%is        :cg%ie,         cg%js+dom%D_y:cg%je+dom%D_y, cg%ks        :cg%ke        ), &
                  &                  cg%b(xdim, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) + cg%b(xdim, cg%is+dom%D_x:cg%ie+dom%D_x, cg%js        :cg%je,         cg%ks        :cg%ke        )), kind=4)
