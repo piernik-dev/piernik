@@ -56,7 +56,7 @@ module initcrspectrum
 
    real(kind=8),parameter  :: eps = 1.0e-15          !< epsilon parameter for real number comparisons
 !----------------------------------
-   real(kind=8),allocatable, dimension(:) :: p_fix, p_mid_fix
+   real(kind=8),allocatable, dimension(:) :: p_fix, p_mid_fix, n_small_bin
    real(kind=8)       :: w
 
    real(kind=8),allocatable, dimension(:) :: mom_cre_fix, mom_mid_cre_fix, Gamma_fix, Gamma_mid_fix, gamma_beta_c_fix
@@ -105,6 +105,8 @@ module initcrspectrum
       use diagnostics,          only: my_allocate_with_index
       use mpisetup,             only: rbuff, ibuff, lbuff, cbuff, master, slave, piernik_MPI_Bcast
       use units,                only: me
+      use cresp_variables,      only: clight ! use units,   only: clight
+
       implicit none
       logical, save            :: first_run = .true.
       integer                  :: i       ! enumerator
@@ -140,7 +142,7 @@ module initcrspectrum
       e_small_approx_p_lo = 1
       e_small_approx_p_up = 1
       e_small_approx_init_cond = 1
-      add_spectrum_base = 1
+      add_spectrum_base = 0
       max_p_ratio       = 2.5
       NR_iter_limit     = 100
       force_init_NR     = .false.
@@ -218,7 +220,7 @@ module initcrspectrum
          rbuff(7)  = p_up_init
          rbuff(8)  = f_init
          rbuff(9)  = q_init
-         rbuff(19) = q_big
+         rbuff(10) = q_big
          rbuff(11) = p_min_fix
          rbuff(12) = p_max_fix
          rbuff(13) = K_cre_paral_1
@@ -285,7 +287,7 @@ module initcrspectrum
          p_up_init                    = rbuff(7)
          f_init                       = rbuff(8)
          q_init                       = rbuff(9)
-         q_big                        = rbuff(19)
+         q_big                        = rbuff(10)
          p_min_fix                    = rbuff(11)
          p_max_fix                    = rbuff(12)
          K_cre_paral_1                = rbuff(13)
@@ -389,6 +391,7 @@ module initcrspectrum
                call my_allocate_with_index(p_mid_fix,ncre,1)
                call my_allocate_with_index(cresp_all_edges,ncre,0)
                call my_allocate_with_index(cresp_all_bins, ncre,1)
+               call my_allocate_with_index(n_small_bin,ncre,1)
 
                call my_allocate_with_index(Gamma_fix,ncre,0)
                call my_allocate_with_index(Gamma_mid_fix,ncre,1)
@@ -427,6 +430,9 @@ module initcrspectrum
                mom_mid_cre_fix  = (/ (cresp_get_mom(Gamma_mid_fix(i),me), i=1,ncre ) /)
 
                gamma_beta_c_fix = mom_cre_fix / me
+
+               n_small_bin(:) = e_small / (p_mid_fix(:) * clight)
+
 #ifdef VERBOSE
                write (msg,'(A, 50I3)')    '[initcrspectrum:init_cresp] fixed all edges: ', cresp_all_edges
                call printinfo(msg)

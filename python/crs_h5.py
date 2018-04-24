@@ -13,7 +13,7 @@ ncre      = 45
 p_min_fix = 0.4e0  #
 p_max_fix = 1.65e4 #
 cre_eff = 0.01
-c = 1.0
+c = 1.0 # 0.3066067E+06  # PSM -> 0.3066067E+06, SI -> 0.2997925E+09
 
 first_run = True
 fixed_width = True
