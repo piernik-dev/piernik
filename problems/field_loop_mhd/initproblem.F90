@@ -188,7 +188,7 @@ contains
                    r2 = sum([cg%coord(LEFT, xdim)%r(i), cg%y(j)]**2)
                    if (r2 <= R**2) cg%b(xdim, i, j, k) = -A0 * cg%y(j) / sqrt(r2) !  dA_z/dy
                    r2 = sum([cg%x(i), cg%coord(LEFT, ydim)%r(j)]**2)
-                   if (r2 <= R**2) cg%b(ydim, i, j, k) = -A0 * cg%x(i) / sqrt(r2) ! -dA_z/dx
+                   if (r2 <= R**2) cg%b(ydim, i, j, k) =  A0 * cg%x(i) / sqrt(r2) ! -dA_z/dx
                 endif
 
                 ! Pressure/Energy
