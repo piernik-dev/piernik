@@ -55,7 +55,7 @@ module initcrspectrum
 
    real(kind=8),parameter  :: eps = 1.0e-15          !< epsilon parameter for real number comparisons
 !----------------------------------
-   real(kind=8),allocatable, dimension(:) :: p_fix, p_mid_fix
+   real(kind=8),allocatable, dimension(:) :: p_fix, p_mid_fix, n_small_bin
    real(kind=8)       :: w
 ! Types used in module:
    type bin_old
@@ -98,6 +98,7 @@ module initcrspectrum
       use dataio_pub,           only: printinfo, warn, msg, die, nh
       use diagnostics,          only: my_allocate_with_index
       use mpisetup,             only: rbuff, ibuff, lbuff, cbuff, master, slave, piernik_MPI_Bcast
+      use cresp_variables,      only: clight ! use units,   only: clight
       implicit none
       integer                  :: i       ! enumerator
       logical, save            :: first_run = .true.
@@ -131,7 +132,7 @@ module initcrspectrum
       e_small_approx_p_lo = 1
       e_small_approx_p_up = 1
       e_small_approx_init_cond = 1
-      add_spectrum_base = 1
+      add_spectrum_base = 0
       max_p_ratio       = 2.5
       NR_iter_limit     = 100
       force_init_NR     = .false.
@@ -209,7 +210,7 @@ module initcrspectrum
          rbuff(7)  = p_up_init
          rbuff(8)  = f_init
          rbuff(9)  = q_init
-         rbuff(19) = q_big
+         rbuff(10) = q_big
          rbuff(11) = p_min_fix
          rbuff(12) = p_max_fix
          rbuff(13) = K_cre_paral_1
@@ -273,7 +274,7 @@ module initcrspectrum
          p_up_init                    = rbuff(7)
          f_init                       = rbuff(8)
          q_init                       = rbuff(9)
-         q_big                        = rbuff(19)
+         q_big                        = rbuff(10)
          p_min_fix                    = rbuff(11)
          p_max_fix                    = rbuff(12)
          K_cre_paral_1                = rbuff(13)
@@ -370,6 +371,7 @@ module initcrspectrum
                call my_allocate_with_index(p_mid_fix,ncre,1)
                call my_allocate_with_index(cresp_all_edges,ncre,0)
                call my_allocate_with_index(cresp_all_bins, ncre,1)
+               call my_allocate_with_index(n_small_bin,ncre,1)
 
                cresp_all_edges = (/ (i,i=0,ncre) /)
                cresp_all_bins  = (/ (i,i=1,ncre) /)
@@ -386,6 +388,8 @@ module initcrspectrum
                p_mid_fix(2:ncre-1) = sqrt(p_fix(1:ncre-2)*p_fix(2:ncre-1))
                p_mid_fix(1)    = p_mid_fix(2) / p_fix_ratio
                p_mid_fix(ncre) = p_mid_fix(ncre-1) * p_fix_ratio
+
+               n_small_bin(:) = e_small / (p_mid_fix(:) * clight)
 #ifdef VERBOSE
                write (msg,'(A, 50E15.7)') '[initcrspectrum:init_cresp] Fixed momentum grid: ', p_fix
                call printinfo(msg)
