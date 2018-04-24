@@ -21,7 +21,7 @@ plot_field = "cree_tot"
 
 f_run = True
 
-simple_plot = False
+simple_plot = True
 plot_vel = False
 plot_mag = True
 logscale_colors = True #False
@@ -132,7 +132,7 @@ if f_run == True:
             sys.exit("\033[91mFailed to construct field %s\033[0m", plot_field)
       else:
          try:
-            h5ds.add_field(("gdf","cree_tot"), units="auto",function=_total_cree, display_name="Total cr electron energy density", dimensions=dimensions.energy/dimensions.volume)
+            h5ds.add_field(("gdf","cree_tot"), units="Msun/(Myr**2*pc)",function=_total_cree, display_name="Total cr electron energy density", dimensions=dimensions.energy/dimensions.volume)
          except:
             sys.exit("\033[91mFailed to construct field %s\033[0m", plot_field)
 
@@ -146,7 +146,7 @@ if f_run == True:
 
       else: # dimensions defined
          try:
-            h5ds.add_field(("gdf","cren_tot"), units="auto",function=_total_cren, display_name="Total cr electron number density", dimensions=dimensions.energy/dimensions.volume)
+            h5ds.add_field(("gdf","cren_tot"), units="1/(pc**3)",function=_total_cren, display_name="Total cr electron number density", dimensions=dimensions.energy/dimensions.volume)
          except:
             sys.exit("\033[91mFailed to construct field %s\033[0m", plot_field)
 
@@ -154,7 +154,11 @@ if f_run == True:
     click_coords = [0, 0]
     image_number = 0
 
-    field_max = float(h5ds.find_max("cr01")[0]) # WARNING - this strips makes field_max unitless
+    field_max  = float(h5ds.find_max("cr01")[0]) # WARNING - this makes field_max unitless
+
+    plot_max   = h5ds.find_max(plot_field)[0]
+    plot_units = str(plot_max).split(' ')[1]
+    plot_max   = float(plot_max)
 
     w = dom_r[avail_dim[0]] + abs(dom_l[avail_dim[0]])
     h = dom_r[avail_dim[1]] + abs(dom_l[avail_dim[1]])
@@ -164,11 +168,11 @@ if f_run == True:
     plt.ylabel("Domain cooridnates ("+dim_map.keys()[dim_map.values().index(avail_dim[1])]+")" )
     plt.colormap="plasma"
     if (logscale_colors):
-        plt.imshow(frb,extent=[dom_l[avail_dim[0]], dom_r[avail_dim[0]], dom_l[avail_dim[1]], dom_r[avail_dim[1]] ], origin="lower" ,norm=LogNorm())
+        plt.imshow(frb,extent=[dom_l[avail_dim[0]], dom_r[avail_dim[0]], dom_l[avail_dim[1]], dom_r[avail_dim[1]] ], origin="lower" ,norm=LogNorm(vmin=1.e-15, vmax=plot_max))
     else:
         plt.imshow(frb,extent=[dom_l[avail_dim[0]], dom_r[avail_dim[0]], dom_l[avail_dim[1]], dom_r[avail_dim[1]] ], origin="lower")
     plt.title("Component name: "+plot_field+" | time = %f Myr"  %time)
-    cbar = plt.colorbar(shrink=0.9, pad=0.18)
+    cbar = plt.colorbar(shrink=0.9, pad=0.01,label=plot_units)
     frb1 = np.array(dsSlice.to_frb(w, resolution, height=h)[plot_field])
 
     print ""
@@ -195,7 +199,7 @@ if f_run == True:
         for ind in range(1,ncre+1):
             ecrs.append(float(str( position['cree'+str(ind).zfill(2)][0]).split(" ")[0]))
             ncrs.append(float(str( position['cren'+str(ind).zfill(2)][0]).split(" ")[0]))
-        plot_var = "n"
+        plot_var = "e"
         fig2,exit_code = crs_h5.crs_plot_main(var_names, var_array, plot_var, ncrs, ecrs, field_max, time, coords, simple_plot)
         if (exit_code != True):
             s.savefig('results/'+filename_nam+'_'+plot_var+'_%04d.png' % image_number, transparent ='False',facecolor=s.get_facecolor())
