@@ -145,12 +145,12 @@ contains
 
     use cg_leaves,   only: leaves
     use cg_list,     only: cg_list_element
-    use constants,   only: xdim, ydim, zdim
+    use constants,   only: xdim, ydim, zdim, zero, LEFT
     use grid_cont,   only: grid_container
     use fluidindex,  only: flind
     use fluidtypes,  only: component_fluid
     use func,        only: ekin, emag
-    use constants,   only: zero
+    use global,      only: force_cc_mag
 
     implicit none
 
@@ -159,11 +159,14 @@ contains
     class(component_fluid), pointer :: fl
 
     integer :: i, j, k
+    real :: r2
 
     fl => flind%ion
     cgl => leaves%first
     do while (associated(cgl))
        cg => cgl%cg
+
+       call cg%set_constant_b_field([0., 0., 0.])
 
        do k = cg%ks, cg%ke
           do j = cg%js, cg%je
@@ -176,15 +179,18 @@ contains
                 cg%u(fl%imy,i,j,k) = v0*sinalpha*cg%u(fl%idn,i,j,k)
                 cg%u(fl%imz,i,j,k) = zero
                 ! Mangetic field
-                if ( sqrt(cg%x(i)*cg%x(i) + cg%y(j)*cg%y(j) ) .le. R ) then
-
-                   cg%b(xdim,i,j,k) = -A0*cg%y(j)/(sqrt(cg%x(i)*cg%x(i) + cg%y(j)*cg%y(j) )) !  dA_z/dy
-                   cg%b(ydim,i,j,k) =  A0*cg%x(i)/(sqrt(cg%x(i)*cg%x(i) + cg%y(j)*cg%y(j) )) ! -dA_z/dx
-                else
-                   cg%b(xdim,i,j,k) = zero
-                   cg%b(ydim,i,j,k) = zero
+                if (force_cc_mag) then
+                   if ( sqrt(cg%x(i)*cg%x(i) + cg%y(j)*cg%y(j) ) .le. R ) then
+                      cg%b(xdim,i,j,k) = -A0*cg%y(j)/(sqrt(cg%x(i)*cg%x(i) + cg%y(j)*cg%y(j) )) !  dA_z/dy
+                      cg%b(ydim,i,j,k) =  A0*cg%x(i)/(sqrt(cg%x(i)*cg%x(i) + cg%y(j)*cg%y(j) )) ! -dA_z/dx
+                   endif
+                else  ! face-centered components
+                   r2 = sum([cg%coord(LEFT, xdim)%r(i), cg%y(j)]**2)
+                   if (r2 <= R**2) cg%b(xdim, i, j, k) = -A0 * cg%y(j) / sqrt(r2) !  dA_z/dy
+                   r2 = sum([cg%x(i), cg%coord(LEFT, ydim)%r(j)]**2)
+                   if (r2 <= R**2) cg%b(ydim, i, j, k) = -A0 * cg%x(i) / sqrt(r2) ! -dA_z/dx
                 endif
-                cg%b(zdim,i,j,k) = zero
+
                 ! Pressure/Energy
                 cg%u(fl%ien,i,j,k) = uni_pres/fl%gam_1 + ekin(cg%u(fl%imx,i,j,k), cg%u(fl%imy,i,j,k), cg%u(fl%imz,i,j,k), cg%u(fl%idn,i,j,k)) + &
                                              emag(cg%b(xdim,i,j,k), cg%b(ydim,i,j,k), cg%b(zdim,i,j,k))
