@@ -29,8 +29,10 @@ module initcrspectrum
    integer(kind=1)    :: add_spectrum_base           !< adds base to spectrum of any type of e_small value
    real(kind=8)       :: smallecrn                   !< floor value for CRESP number density
    real(kind=8)       :: smallecre                   !< floor value for CRESP energy density
-   real(kind=8)       :: Gamma_min                   ! < min of relativistic Gamma factor, Gamma = 1/sqrt(1-(v/c)**2) - lower range of CRESP fixed grid
-   real(kind=8)       :: Gamma_max                   ! < max value of relativistic Gamma factor, Gamma = 1/sqrt(1-(v/c)**2) - upper range of CRESP fixed grid
+   real(kind=8)       :: Gamma_min_fix               ! < min of Lorentzs' Gamma factor, lower range of CRESP fixed grid
+   real(kind=8)       :: Gamma_max_fix               ! < max of Lorentzs' Gamma factor, upper range of CRESP fixed grid
+   real(kind=8)       :: Gamma_lo_init               ! < min of Lorentzs' Gamma factor, lower range of initial spectrum
+   real(kind=8)       :: Gamma_up_init               ! < max of Lorentzs' Gamma factor, upper range of initial spectrum
    real(kind=8)       :: max_p_ratio                 !< maximal ratio of momenta for solution grids resolved at initialization via cresp_NR_method
    integer(kind=2)    :: NR_iter_limit               !< maximal number of iterations for NR algorithm
    logical            :: force_init_NR               !< forces resolving new ratio solution grids at initialization
@@ -115,7 +117,8 @@ module initcrspectrum
       &                         p_min_fix, p_max_fix, cre_eff, K_cre_paral_1, K_cre_perp_1, cre_active, &
       &                         K_cre_pow, expan_order, e_small, bump_amp, cre_gpcr_ess, use_cresp, &
       &                         e_small_approx_init_cond, e_small_approx_p_lo, e_small_approx_p_up, force_init_NR,&
-      &                         NR_iter_limit, max_p_ratio, add_spectrum_base, synch_active, adiab_active, arr_dim
+      &                         NR_iter_limit, max_p_ratio, add_spectrum_base, synch_active, adiab_active, arr_dim, &
+      &                         Gamma_min_fix, Gamma_max_fix, Gamma_lo_init, Gamma_up_init
 
 ! Default values
       use_cresp = .true.
@@ -135,8 +138,10 @@ module initcrspectrum
       K_cre_perp_1  = 0
       K_cre_pow     = 0
       expan_order   = 1
-      Gamma_min     = 1.5
-      Gamma_max     = 1000.0
+      Gamma_min_fix     = 2.5
+      Gamma_max_fix     = 1000.0
+      Gamma_lo_init     = 10.0
+      Gamma_up_init     = 200.0
 
       e_small       = 1.0e-5
       e_small_approx_p_lo = 1
@@ -238,8 +243,10 @@ module initcrspectrum
          rbuff(22) = tol_f_1D
          rbuff(23) = tol_x_1D
 
-         rbuff(24) = Gamma_min
-         rbuff(25) = Gamma_max
+         rbuff(24) = Gamma_min_fix
+         rbuff(25) = Gamma_max_fix
+         rbuff(26) = Gamma_lo_init
+         rbuff(27) = Gamma_up_init
 
          cbuff(1)  = initial_condition
       endif
@@ -305,8 +312,10 @@ module initcrspectrum
          tol_f_1D                     = rbuff(22)
          tol_x_1D                     = rbuff(23)
 
-         Gamma_min                    = rbuff(24)
-         Gamma_max                    = rbuff(25)
+         Gamma_min_fix                = rbuff(24)
+         Gamma_max_fix                = rbuff(25)
+         Gamma_lo_init                = rbuff(26)
+         Gamma_up_init                = rbuff(27)
 
          initial_condition            = cbuff(1)
       endif
@@ -361,9 +370,13 @@ module initcrspectrum
                call printinfo(msg)
                write (msg, '(A, 1E15.7)')   '[initcrspectrum:init_cresp] epsilon(eps) = ', eps
                call printinfo(msg)
-               write (msg, '(A, 1E15.7)')   '[initcrspectrum:init_cresp] Gamma_min    =', Gamma_min
+               write (msg, '(A, 1E15.7)')   '[initcrspectrum:init_cresp] Gamma_min_fix    =', Gamma_min_fix
                call printinfo(msg)
-               write (msg, '(A, 1E15.7)')   '[initcrspectrum:init_cresp] Gamma_max    =', Gamma_max
+               write (msg, '(A, 1E15.7)')   '[initcrspectrum:init_cresp] Gamma_max_fix    =', Gamma_max_fix
+               call printinfo(msg)
+               write (msg, '(A, 1E15.7)')   '[initcrspectrum:init_cresp] Gamma_lo_init    =', Gamma_lo_init
+               call printinfo(msg)
+               write (msg, '(A, 1E15.7)')   '[initcrspectrum:init_cresp] Gamma_up_init    =', Gamma_up_init
                call printinfo(msg)
 #endif /* VERBOSE */
                if (ncre .lt. 3) then
@@ -417,8 +430,8 @@ module initcrspectrum
 
 !> set Gamma arrays, analogically to p_fix arrays, that will be constructed using Gamma arrays
                Gamma_fix            = one             !< Gamma factor obviously cannot be lower than 1
-               G_w                  = (log10(Gamma_max/Gamma_min))/real(ncre-2,kind=8)
-               Gamma_fix(1:ncre-1)  = Gamma_min * ten**(G_w * real((cresp_all_edges(1:ncre-1)-1),kind=8))
+               G_w                  = (log10(Gamma_max_fix/Gamma_min_fix))/real(ncre-2,kind=8)
+               Gamma_fix(1:ncre-1)  = Gamma_min_fix * ten**(G_w * real((cresp_all_edges(1:ncre-1)-1),kind=8))
                Gamma_fix_ratio      = ten**w
 
                Gamma_mid_fix = one
