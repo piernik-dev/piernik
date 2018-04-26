@@ -38,7 +38,8 @@ $OUTPUT_CONTROL
    dt_res       = 0.0
    dt_log       = 0.00001
    dt_tsl       = 0.00001
-   vars(1:)     = 'dens', 'magx', 'magy', 'magz', 'pres', 'velx', 'vely'
+   vars(1:)     = 'dens', 'magx', 'magy', 'magz', 'pres', 'velx', 'vely', 'magB', 'divbf', 'divbf4', 'divbf6', 'psi', 'pmag%', 'pres', 'ethr'
+   h5_64bit     = .true.
 /
 
 $FLUID_IONIZED
