@@ -173,7 +173,7 @@ contains
       integration_order  = 2
       use_fargo   = .false.
       skip_sweep  = .false.
-      print_divB  = 0
+      print_divB  = 100
 
       if (master) then
          if (.not.nh%initialized) call nh%init()
