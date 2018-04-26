@@ -129,7 +129,7 @@ contains
 !>
 !! \brief Calculate divB of requested order
 !!
-!! BEWARE: do not use this routie in datafields_hdf5 calls because it may result in terribly slow IO in heavy-AMR simulations. Use divB_c_IO instead.
+!! BEWARE: do not use this routine in datafields_hdf5 calls because it may result in terribly slow IO in heavy-AMR simulations. Use divB_c_IO instead.
 !! BEWARE: magic integers
 !<
 
@@ -246,7 +246,7 @@ contains
       integer(kind=4),               intent(in) :: ord
       logical,                       intent(in) :: cell_centered
 
-      real(kind=4), dimension(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) :: divB_c_IO
+      real, dimension(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) :: divB_c_IO
 
       integer(kind=4) :: o, i
       real, dimension(max_c) :: coeff
@@ -260,9 +260,9 @@ contains
          coeff = coeff_f(:, o)
       endif
 
-      divB_c_IO = real(sixpoint(cg, coeff(I_ONE), I_ONE, cell_centered), kind=4)
+      divB_c_IO = sixpoint(cg, coeff(I_ONE), I_ONE, cell_centered)
       do i = I_TWO, max_c
-         if (coeff(i) .notequals. 0.) divB_c_IO = divB_c_IO + real(sixpoint(cg, coeff(i), i, cell_centered), kind=4)
+         if (coeff(i) .notequals. 0.) divB_c_IO = divB_c_IO + sixpoint(cg, coeff(i), i, cell_centered)
       enddo
 
    end function divB_c_IO
