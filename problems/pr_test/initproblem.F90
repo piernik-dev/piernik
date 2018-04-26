@@ -151,9 +151,10 @@ contains
 
       use cg_level_base,      only: base
       use cg_level_connected, only: cg_level_connected_T
-      use dataio_pub,    only: printinfo, warn, msg
-      use mpisetup,      only: master, proc
-      use named_array_list, only: qna
+      use constants,          only: FP_REAL
+      use dataio_pub,         only: printinfo, warn, msg
+      use mpisetup,           only: master, proc
+      use named_array_list,   only: qna
 
       implicit none
 
@@ -168,7 +169,7 @@ contains
          call printinfo(msg)
       endif
 
-      call clear_fld(huge(1_4))
+      call clear_fld(huge(1_FP_REAL))
       call set_up_fld(lev)
       if (point) then
          write(msg,*)"ip:pf set ^",lev
@@ -228,7 +229,7 @@ contains
       use cg_list,            only: cg_list_element
       use cg_level_base,      only: base
       use cg_level_connected, only: cg_level_connected_T
-      use constants,          only: xdim, ydim, zdim, ndims, LO, HI
+      use constants,          only: xdim, ydim, zdim, ndims, LO, HI, INT4
       use dataio_pub,         only: msg, warn
       use domain,             only: dom
       use fluidindex,         only: iarr_all_dn
@@ -268,17 +269,17 @@ contains
          cg%q(qna%ind(fld_n))%arr(cg%is, cg%js, cg%ks) = cg%grid_id * 1.1
 
          if (all(cg%n_b > 3 .or. .not. dom%has_dir(:))) then
-            ijk = min( cg%ijkse(:, LO) + 3_4*dom%D_(:), cg%ijkse(:, HI) )
+            ijk = min( cg%ijkse(:, LO) + 3_INT4 * dom%D_(:), cg%ijkse(:, HI) )
             cg%q(qna%ind(fld_n))%arr(ijk(xdim), ijk(ydim), ijk(zdim)) = cg%grid_id * 1.2
          endif
 
          if (all(cg%n_b > 7 .or. .not. dom%has_dir(:))) then
-            ijk = min( cg%ijkse(:, LO) + 7_4*dom%D_(:), cg%ijkse(:, HI) )
+            ijk = min( cg%ijkse(:, LO) + 7_INT4 * dom%D_(:), cg%ijkse(:, HI) )
             cg%q(qna%ind(fld_n))%arr(ijk(xdim), ijk(ydim), cg%ks:cg%ke) = cg%grid_id * 1.4
          endif
 
          if (all(cg%n_b > 11 .or. .not. dom%has_dir(:))) then
-            ijk = min( cg%ijkse(:, LO) + 11_4*dom%D_(:), cg%ijkse(:, HI) )
+            ijk = min( cg%ijkse(:, LO) + 11_INT4 * dom%D_(:), cg%ijkse(:, HI) )
             cg%q(qna%ind(fld_n))%arr(ijk(xdim), cg%js:cg%je, cg%ks:cg%ke) = cg%grid_id * 1.8
          endif
 
