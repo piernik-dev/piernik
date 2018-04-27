@@ -58,14 +58,11 @@ module cresp_grid
                   cresp%e    = p4(iarr_cre_e, i, j, k)
                   virtual_n  => cg%w(wna%ind(vn_n))%point([i,j,k])
                   virtual_e  => cg%w(wna%ind(ve_n))%point([i,j,k])
-                  if (synch_active) sptab%ub = emag(cg%b(xdim,i,j,k), cg%b(ydim,i,j,k), cg%b(zdim,i,j,k)) * bb_to_ub
+                  if (synch_active) sptab%ub = emag(cg%b(xdim,i,j,k), cg%b(ydim,i,j,k), cg%b(zdim,i,j,k)) * bb_to_ub    !< WARNING assusmes that b is in mGs
                   if (adiab_active) sptab%ud = cg%q(qna%ind(divv_n))%point([i,j,k]) * onet
 #ifdef VERBOSE
                   print *, 'Output of cosmic ray electrons module for grid cell with coordinates i,j,k:', i, j, k
 #endif /* VERBOSE */
-                  if (i .eq. 25 .and. j .eq. 25 .and. k .eq. 0)  then ! temporarily here
-                     call printer(t)
-                  endif
                   call cresp_update_cell(2 * dt, cresp%n, cresp%e, sptab, virtual_n, virtual_e, cfl_cresp_violation)
                   if ( cfl_cresp_violation ) return ! nothing to do here!
                   p4(iarr_cre_n, i, j, k) = cresp%n
@@ -99,7 +96,7 @@ module cresp_grid
       type(cg_list_element),  pointer :: cgl
       type(grid_container),   pointer :: cg
       logical, save                   :: first_run = .true., not_zeroed = .true.
-      real(kind=8)                    :: sigma_T_cm2
+      real(kind=8)                    :: sigma_T_cgs, me_cgs, myr_cgs, mGs_cgs, c_cgs
 
       if (first_run .eqv. .true.) then
          call cresp_initialize_guess_grids
@@ -118,17 +115,18 @@ module cresp_grid
          call all_cg%reg_var(ve_n, dim4=2) !< registering helper virtual arrays for CRESP energy density
 
 
-         sigma_T_cm2 = 6.65245871571e-25 * (cm ** 2)  ! < TODO: put this in the units module?
+         sigma_T_cgs = 6.65245871571e-25 ! (cm ** 2)  ! < TODO: put this in the units module?
+         me_cgs      = 9.1093835611e-28  ! g          ! TODO: "unitize" these quantities
+         myr_cgs     = 3.1556952e+13     ! s          ! TODO: "unitize" these quantities
+         mGs_cgs     = 1.0e-6            ! Gs         ! TODO: "unitize" these quantities
+         c_cgs       = 29979245800.      ! cm/s       ! TODO: "unitize" these quantities
 
          if ( .not. ((trim(units_set) == "psm" ) .or. (trim(units_set) == "PSM")) ) then
             write(msg, *) "[cresp_grid:cresp_init_grid] units_set is not PSM. CRESP only works with PSM, other unit sets might cause crash."
             call warn(msg)
          endif
 
-         write (msg, *) "[cresp_grid:cresp_init_grid] 4/3 * sigma_T / ( me * 8 *  pi) * (1.0e-6)      * myr = ", (4. / 3. ) * sigma_T_cm2 / (me * 8. * pi) * (1.0e-6)**2 * myr
-         call printinfo(msg)
-         bb_to_ub =  (4. / 3. ) * sigma_T_cm2 / (me * 8. * pi) * (Gs * 1.0e-6)**2 * myr
-         write (msg, *) "[cresp_grid:cresp_init_grid] 4/3 * sigma_T / ( me * 8 *  pi) * (Gs * 1.0e-6) * myr = ", bb_to_ub, " = bb_to_ub"
+         write (msg, *) "[cresp_grid:cresp_init_grid] 4/3 * sigma_T_cgs / ( me_cgs * c * 8 *  pi) * (mGs_cgs)**2  * myr_cgs = ", bb_to_ub         ! TODO: "unitize" these quantities
          call printinfo(msg)
 
          cgl => leaves%first
@@ -189,11 +187,10 @@ module cresp_grid
             do j = cg%js, cg%je
                do i = cg%is, cg%ie
                   sptab%ud = 0.0 ; sptab%ub = 0.0 ; sptab%ucmb = 0.0
-                  if (synch_active) sptab%ub = emag(cg%b(xdim,i,j,k), cg%b(ydim,i,j,k), cg%b(zdim,i,j,k)) * bb_to_ub
+                  if (synch_active) sptab%ub = emag(cg%b(xdim,i,j,k), cg%b(ydim,i,j,k), cg%b(zdim,i,j,k)) * bb_to_ub         !< WARNING assusmes that b is in mGs
                   if (adiab_active) sptab%ud = cg%q(qna%ind(divv_n))%point([i,j,k]) * onet
 
                   call cresp_timestep(dt_cre_tmp, sptab, cg%u(iarr_cre_n, i, j, k), cg%u(iarr_cre_e, i, j, k), i_up_max_tmp) ! gives dt_cre for the whole domain, but is unefficient
-
                   dt_cre = min(dt_cre, dt_cre_tmp)
                   i_up_max = max(i_up_max, i_up_max_tmp)
                enddo
