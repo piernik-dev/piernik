@@ -130,7 +130,7 @@ def plot_data(plot_var, pl, pr, fl, fr, q, time, location, i_lo_cut, i_up_cut):
 def simple_plot_data(plot_var, p, var_array, time, location, i_lo_cut, i_up_cut):
    global first_run, plot_p_min, plot_p_max, fixed_width
    p_lo_cut = p[0] ;   p_up_cut = p[-1]
-
+   var_array = var_array / p # does this do the trick with correct q?
    s = plt.subplot(122)
    plt.cla()
    s.set_xscale('log')
@@ -144,7 +144,7 @@ def simple_plot_data(plot_var, p, var_array, time, location, i_lo_cut, i_up_cut)
       plot_var_min = 0.1*e_small
       first_run = False
       if (plot_var == "e"):
-        plot_var_min = 0.1 * e_small
+        plot_var_min = e_small
       elif (plot_var == "f" ):
         plot_var_min = e_small / (4*pi * (c ** 2)  * p_max_fix **3) /10.
       elif (plot_var == "n" ):
@@ -165,10 +165,10 @@ def simple_plot_data(plot_var, p, var_array, time, location, i_lo_cut, i_up_cut)
    p_range = linspace(s.get_xlim()[0],s.get_xlim()[1])
    e_smalls = zeros(len(p_range))
    e_smalls[:] = e_small
-   if (plot_var == "e"):
-      plt.plot(p_range, e_smalls, color="green", label="$e_{small}$")
-   elif(plot_var == "n"):
-      plt.plot(p_range, e_small/(c*p_range), color="green",label="$n_{small}$")
+   #if (plot_var == "e"):
+      #plt.plot(p_range, e_smalls, color="green", label="$e_{small}$")
+   #elif(plot_var == "n"):
+      #plt.plot(p_range, e_small/(c*p_range), color="green",label="$n_{small}$")
 
    s.set_facecolor('white')
    plt.title(" %s(p) \n Time = %7.3f | location: %7.2f %7.2f %7.2f " % (plot_var, time, location[0],location[1],location[2]) )
@@ -246,6 +246,7 @@ def crs_plot_main(parameter_names, parameter_values, plot_var, ncrs, ecrs, field
     frn  = array(fln)
     frn  = frn * (prn/pln) ** (-q_nr)
     plot = False
+
     if empty_cell==False:
          if (use_simple):
             var_array = zeros(ncre)
