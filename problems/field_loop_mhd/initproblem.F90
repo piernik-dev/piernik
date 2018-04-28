@@ -64,9 +64,9 @@ module initproblem
   private
   public :: read_problem_par, problem_initial_conditions, problem_pointers
 
-  real   :: uni_dens, uni_pres, v0, sinalpha, cosalpha, A0, R
+  real   :: uni_dens, uni_pres, vx, vy, A0, R
 
-  namelist /PROBLEM_CONTROL/ uni_dens, uni_pres, v0, sinalpha, cosalpha, A0, R
+  namelist /PROBLEM_CONTROL/ uni_dens, uni_pres, vx, vy, A0, R
 
 contains
 
@@ -89,9 +89,8 @@ contains
 
     uni_dens = 1.0
     uni_pres = 1.0
-    v0       = sqrt(5.0)
-    sinalpha = 1.0/sqrt(5.0)
-    cosalpha = 2.0/sqrt(5.0)
+    vx       = 2.
+    vy       = 1.
     A0       = 1.e-3
     R        = 0.3
 
@@ -115,11 +114,10 @@ contains
 
          rbuff(1) = uni_dens
          rbuff(2) = uni_pres
-         rbuff(3) = v0
-         rbuff(4) = sinalpha
-         rbuff(5) = cosalpha
-         rbuff(6) = A0
-         rbuff(7) = R
+         rbuff(3) = vx
+         rbuff(4) = vy
+         rbuff(5) = A0
+         rbuff(6) = R
 
       endif
 
@@ -129,11 +127,10 @@ contains
 
          uni_dens = rbuff(1)
          uni_pres = rbuff(2)
-         v0       = rbuff(3)
-         sinalpha = rbuff(4)
-         cosalpha = rbuff(5)
-         A0       = rbuff(6)
-         R        = rbuff(7)
+         vx       = rbuff(3)
+         vy       = rbuff(4)
+         A0       = rbuff(5)
+         R        = rbuff(6)
 
       endif
 
@@ -175,8 +172,8 @@ contains
                 ! Density
                 cg%u(fl%idn,i,j,k) = uni_dens
                 ! Velocity
-                cg%u(fl%imx,i,j,k) = v0*cosalpha*cg%u(fl%idn,i,j,k)
-                cg%u(fl%imy,i,j,k) = v0*sinalpha*cg%u(fl%idn,i,j,k)
+                cg%u(fl%imx,i,j,k) = vx*cg%u(fl%idn,i,j,k)
+                cg%u(fl%imy,i,j,k) = vy*cg%u(fl%idn,i,j,k)
                 cg%u(fl%imz,i,j,k) = zero
                 ! Mangetic field
                 if (force_cc_mag) then
