@@ -16,17 +16,23 @@ try:
     from yt.units import dimensions
 except:
     sys.exit("\033[91mYou must make yt & h5py available somehow\033[0m")
+######### USER PARAMETERS ###########
 
 plot_field = "cree_tot"
 plot_var = "e"
 
-f_run = True
-
 simple_plot = True
 plot_vel = False
 plot_mag = True
-logscale_colors = True #False
 
+user_limits = False # use values below as limits for clickable plot
+plot_user_min = 0.001
+plot_user_max = 30.0
+use_logscale  = True #False
+
+#####################################
+
+f_run = True
 def _total_cree(field,data):
    list_cree = []
    for element in h5ds.field_list:
@@ -49,11 +55,13 @@ def _total_cren(field,data):
 
 def en_ratio(field,data):
    bin_nr = field.name[1][-2:]
-   for element in ds.field_list:
+   for element in h5ds.field_list:
       if re.search("cree"+str(bin_nr.zfill(2)),str(element[1])):
          cren_data = data["cren"+str(bin_nr.zfill(2))]
          cren_data[cren_data == 0.0 ] = 1.0e-15 # necessary to avoid FPEs
-         en_ratio=data["cree"+str(bin_nr.zfill(2))]/ cren_data
+         cree_data = data["cree"+str(bin_nr.zfill(2))]
+         cree_data[cree_data == 0.0 ] = 1.0e-15 # necessary to avoid FPEs
+         en_ratio=cree_data / cren_data #data["cree"+str(bin_nr.zfill(2))]/ cren_data
    return en_ratio
 
 #---------- reading parameters
@@ -160,14 +168,17 @@ if f_run == True:
          except:
             sys.exit("\033[91mFailed to construct field %s\033[0m", plot_field)
 
-      if ( plot_field[0:-2] == "en_ratio"):
+    if ( plot_field[0:-2] == "en_ratio"):
+      if str(dsSlice["cren01"].units) is "dimensionless":
          try:
-            ds.add_field(("gdf",plot_field), units="Msun*pc**2/Myr**2", function=en_ratio, display_name="Ratio e/n in %i-th bin" %int(plot_field[-2:]),dimensions=dimensions.energy)
+            h5ds.add_field(("gdf",plot_field), units="", function=en_ratio, display_name="Ratio e/n in %i-th bin" %int(plot_field[-2:]))
          except:
-            print "en_ratio: trying to load field as dimensionless..."
-            ds.add_field(("gdf",plot_field), units="", function=en_ratio, display_name="Ratio e/n in %i-th bin" %int(plot_field[-2:]))
-
-
+            sys.exit("\033[91mFailed to construct field %s\033[0m", plot_field)
+      else:
+         try:
+            h5ds.add_field(("gdf",plot_field), units="Msun*pc**2/Myr**2", function=en_ratio, display_name="Ratio e/n in %i-th bin" %int(plot_field[-2:]),dimensions=dimensions.energy)
+         except:
+            sys.exit("\033[91mFailed to construct field %s\033[0m", plot_field)
 
     click_coords = [0, 0]
     image_number = 0
@@ -182,18 +193,24 @@ if f_run == True:
       plot_units = str(plot_max).split(' ')[1]
       plot_min = 1.0e-5
     else:
-      frb = np.array(dsSlice.to_frb(w, resolution, height=h)["cree"+str(plot_field[-2:])])
-      plot_max   = np.amax(frb)
+      frb = np.array(dsSlice.to_frb(w, resolution, height=h)[plot_field])
+      plot_min = h5ds.find_min(plot_field)[0]
+      plot_max = h5ds.find_max(plot_field)[0]
       h5ds.find_max("cre"+plot_var+str(plot_field[-2:]))[0]
-      plot_min   = max(np.amin(frb),1.0e-5)
       plot_units = "Msun*pc**2/Myr**2"
 
-    plot_max   = float(plot_max)
     plt.xlabel("Domain cooridnates ("+dim_map.keys()[dim_map.values().index(avail_dim[0])]+")" )
     plt.ylabel("Domain cooridnates ("+dim_map.keys()[dim_map.values().index(avail_dim[1])]+")" )
     plt.colormap="plasma"
-    if (logscale_colors):
-        plt.imshow(frb,extent=[dom_l[avail_dim[0]], dom_r[avail_dim[0]], dom_l[avail_dim[1]], dom_r[avail_dim[1]] ], origin="lower" ,norm=LogNorm(vmin=plot_min, vmax=2*plot_max))
+    if (user_limits == True): # Overwrites previously found values
+       plot_min = plot_user_min
+       plot_max = plot_user_max
+
+    plot_max   = float(plot_max)
+    plot_min   = float(plot_min)
+
+    if (use_logscale):
+        plt.imshow(frb,extent=[dom_l[avail_dim[0]], dom_r[avail_dim[0]], dom_l[avail_dim[1]], dom_r[avail_dim[1]] ], origin="lower" ,norm=LogNorm(vmin=plot_min, vmax=plot_max))
     else:
         plt.imshow(frb,extent=[dom_l[avail_dim[0]], dom_r[avail_dim[0]], dom_l[avail_dim[1]], dom_r[avail_dim[1]] ], origin="lower")
     plt.title("Component: "+plot_field+" | t = %9.3f Myr"  %time)
