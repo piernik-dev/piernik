@@ -219,7 +219,7 @@ contains
      use fluidindex, only: flind
      use fluids_pub, only: has_ion
      use fluidtypes, only: component_fluid
-     use global,     only: use_eglm
+     use global,     only: use_eglm, dt
      use grid_cont,  only: grid_container
      use named_array_list, only: qna
 
@@ -260,21 +260,21 @@ contains
 
                        !Sources
 
-                       ! momentum = momentum -divB*B
-                       cgl%cg%u(fl%imx:fl%imz,i,j,k) = cgl%cg%u(fl%imx:fl%imz,i,j,k) - cg%q(idivB)%arr(i,j,k)*(cgl%cg%b(xdim:zdim,i,j,k))
+                       ! momentum = momentum - dt*divB*B
+                       cgl%cg%u(fl%imx:fl%imz,i,j,k) = cgl%cg%u(fl%imx:fl%imz,i,j,k) - dt*cg%q(idivB)%arr(i,j,k)*(cgl%cg%b(xdim:zdim,i,j,k))
 
-                       ! B = B -divB*u
-                       cgl%cg%b(xdim:zdim,i,j,k) = cgl%cg%b(xdim:zdim,i,j,k) - cg%q(idivB)%arr(i,j,k)*(cgl%cg%u(fl%imx:fl%imz,i,j,k)/cgl%cg%u(fl%idn,i,j,k))
+                       ! B = B - dt*divB*u
+                       cgl%cg%b(xdim:zdim,i,j,k) = cgl%cg%b(xdim:zdim,i,j,k) - dt*cg%q(idivB)%arr(i,j,k)*(cgl%cg%u(fl%imx:fl%imz,i,j,k)/cgl%cg%u(fl%idn,i,j,k))
 
-                       ! e = e - divB*u.B - B.grad(psi)
+                       ! e = e - dt*divB*u.B - B.grad(psi)
 
                        cgl%cg%u(fl%ien,i,j,k) = cgl%cg%u(fl%ien,i,j,k) - &
-                            cg%q(idivB)%arr(i,j,k)*dot_product(cgl%cg%u(fl%imx:fl%imz,i,j,k)/cgl%cg%u(fl%idn,i,j,k),cgl%cg%b(xdim:zdim,i,j,k)) - &
+                            dt*cg%q(idivB)%arr(i,j,k)*dot_product(cgl%cg%u(fl%imx:fl%imz,i,j,k)/cgl%cg%u(fl%idn,i,j,k),cgl%cg%b(xdim:zdim,i,j,k)) - &
                             dot_product(cgl%cg%b(xdim:zdim,i,j,k),cg%w(igp)%arr(xdim:zdim,i,j,k))
 
-                       ! psi = psi - u.grad(psi), other term is calculated in damping
+                       ! psi = psi - dt*u.grad(psi), other term is calculated in damping
                        cgl%cg%q(qna%ind(psi_n))%arr(i,j,k) =  cgl%cg%q(qna%ind(psi_n))%arr(i,j,k) - &
-                            dot_product(cgl%cg%u(fl%imx:fl%imz,i,j,k)/cgl%cg%u(fl%idn,i,j,k),cg%w(igp)%arr(xdim:zdim,i,j,k))
+                            dt*dot_product(cgl%cg%u(fl%imx:fl%imz,i,j,k)/cgl%cg%u(fl%idn,i,j,k),cg%w(igp)%arr(xdim:zdim,i,j,k))
 
                     end associate
                  enddo
