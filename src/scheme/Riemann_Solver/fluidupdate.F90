@@ -526,7 +526,7 @@ contains
      real, dimension(size(psi,1),size(psi,2))           :: psi__l, psi__r, dpsi1, dpsi2, dpsi3
      real, dimension(size(psi,1),size(psi,2)), target   :: psi_l, psi_r
      real, dimension(size(psi,1),size(psi,2)),target    :: psi_cc
-     
+
 
      integer                                            :: nx
 
@@ -845,7 +845,7 @@ contains
               endif
 
               call riemann_hlld(nx, p_flx, p_ql, p_qr, p_bcc, p_bccl, p_bccr, fl%gam) ! whole mag_cc is not needed now for simple schemes but rk2 and rk4 still rely on it
-enddo
+           enddo
         end subroutine riemann_wrap
 
         subroutine update(weights)
@@ -854,7 +854,7 @@ enddo
            use hdc,              only: chspeed
            use fluidindex,       only: flind
            use global,           only: divB_0_method, glm_iter, use_hdc_1D, glm_alpha !cfl
-           
+
 #ifdef COSM_RAYS
            use fluidindex,       only: iarr_all_dn, iarr_all_mx, iarr_all_en
            use global,           only: dt
@@ -926,7 +926,7 @@ enddo
 
                  !damping
                  psi = psi*exp(-glm_alpha*chspeed*dtodx)
-                 
+
               enddo
            endif
 
