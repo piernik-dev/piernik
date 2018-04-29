@@ -1,6 +1,7 @@
 # sha1 of the gold commit
 # Note: update only when absolutely necessary
-GOLD_COMMIT=a814eac4c121262092a72a53b7378e00a1ac95e4
+GOLD_COMMIT=2d84935c0665426247309775c20d722fd5db5f95
+# 2d84935c0665426247309775c20d722fd5db5f95 - 64-bit plotfiles for gold configs
 # a814eac4c121262092a72a53b7378e00a1ac95e4 - more restrictive norm_tol for CR diffusion
 # 8fcf05bbd76c9162eb1999d620b59dd0966e0f8e - several fixups needed for Jenkins on Fedora 24
 # c21d1c15102bd2372d1006d89937a5748449403f - gdf_distance relies on GDF 1.1 (output v. 2.01)
