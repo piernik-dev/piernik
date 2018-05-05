@@ -135,7 +135,7 @@ contains
 !!   <tr><td>divB_0           </td><td>CT     </td><td>string                               </td><td>\copydoc global::divB_0           </td></tr>
 !!   <tr><td>glm_alpha        </td><td>0.1    </td><td>real value                           </td><td>\copydoc global::glm_alpha        </td></tr>
 !!   <tr><td>use_eglm         </td><td>false  </td><td>logical value                        </td><td>\copydoc global::use_eglm         </td></tr>
-!!   <tr><td>print_divB       </td><td>0      </td><td>integer value                        </td><td>\copydoc global::print_divB       </td></tr>
+!!   <tr><td>print_divB       </td><td>100    </td><td>integer value                        </td><td>\copydoc global::print_divB       </td></tr>
 !!   <tr><td>ch_grid          </td><td>false  </td><td>logical value                        </td><td>\copydoc global::ch_grid          </td></tr>
 !!   <tr><td>w_epsilon        </td><td>1e-10  </td><td>real                                 </td><td>\copydoc global::w_epsilon        </td></tr>
 !!   <tr><td>psi_bnd_str      </td><td>"default" </td><td>string                            </td><td>\copydoc global::psi_bnd_str      </td></tr>
