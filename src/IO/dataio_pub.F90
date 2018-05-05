@@ -51,6 +51,7 @@ module dataio_pub
    logical                     :: can_i_write                    !< .true. for processes allowed to write
    logical                     :: enable_compression             !< set to .true. to enable automatic compression (test I/O performance before use, avoid on serial I/O)
    integer(kind=4)             :: gzip_level                     !< gzip compression strength: 1 - lowest and fast, 9 - best and slow
+   logical                     :: h5_64bit                       !< single or double precision plotfiles
 
    ! Buffer lengths used only in I/O routines
    integer, parameter          :: msglen = 1024                  !< 1kB for a message ought to be enough for anybody ;-)
