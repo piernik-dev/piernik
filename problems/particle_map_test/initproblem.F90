@@ -65,7 +65,7 @@ contains
       implicit none
 
       character(len=*),               intent(in)    :: var
-      real(kind=4), dimension(:,:,:), intent(inout) :: tab
+      real, dimension(:,:,:),         intent(inout) :: tab
       integer,                        intent(inout) :: ierrh
       type(grid_container), pointer,  intent(in)    :: cg
 
@@ -73,13 +73,13 @@ contains
       select case (trim(var))
          case ("ngp")
             call pset%map_ngp(qna%ind(ngp_n), 1.0)
-            tab(:,:,:) = real(cg%q(qna%ind(ngp_n))%span(cg%ijkse), kind=4)
+            tab(:,:,:) = real(cg%q(qna%ind(ngp_n))%span(cg%ijkse), kind(tab))
          case ("cic")
             call pset%map_cic(qna%ind(cic_n), 1.0)
-            tab(:,:,:) = real(cg%q(qna%ind(cic_n))%span(cg%ijkse), kind=4)
+            tab(:,:,:) = real(cg%q(qna%ind(cic_n))%span(cg%ijkse), kind(tab))
          case ("tsc")
             call pset%map_tsc(qna%ind(tsc_n), 1.0)
-            tab(:,:,:) = real(cg%q(qna%ind(tsc_n))%span(cg%ijkse), kind=4)
+            tab(:,:,:) = real(cg%q(qna%ind(tsc_n))%span(cg%ijkse), kind(tab))
          case default
             ierrh = -1
       end select

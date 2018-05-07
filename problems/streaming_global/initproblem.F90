@@ -571,7 +571,7 @@ contains
 
       use cg_leaves,        only: leaves
       use cg_list,          only: cg_list_element
-      use constants,        only: b0_n, fluid_n
+      use constants,        only: fluid_n
       use all_boundaries,   only: all_fluid_boundaries
       use named_array_list, only: wna
       use grid_cont,        only: grid_container
@@ -596,7 +596,6 @@ contains
          cg => cgl%cg
          cg%u  => cg%w(wna%ind(inid_n))%arr  ! BEWARE: Don't do things like that without parental supervision
          cg%b = 0.0
-         cg%w(wna%ind(b0_n))%arr = 0.0
          cgl => cgl%nxt
       enddo
 
@@ -806,14 +805,14 @@ contains
       implicit none
 
       character(len=*),               intent(in)    :: var
-      real(kind=4), dimension(:,:,:), intent(inout) :: tab
+      real, dimension(:,:,:),         intent(inout) :: tab
       integer,                        intent(inout) :: ierrh
       type(grid_container), pointer,  intent(in)    :: cg
 
       ierrh = 0
       select case (trim(var))
          case ("tauf")
-            tab(:,:,:) = real(epstein_factor(flind%neu%pos) / cg%u(flind%neu%idn,cg%is:cg%ie,cg%js:cg%je,cg%ks:cg%ke), 4)
+            tab(:,:,:) = epstein_factor(flind%neu%pos) / cg%u(flind%neu%idn,cg%is:cg%ie,cg%js:cg%je,cg%ks:cg%ke)
          case default
             ierrh = -1
       end select

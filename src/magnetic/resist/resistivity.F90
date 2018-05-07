@@ -193,6 +193,8 @@ contains
          d_eta_factor = 1./(dims_twice+real(eta_scale, kind=8))
       endif
 
+      dt_resist = huge(1.)
+
    end subroutine init_resistivity
 
 !>
@@ -203,12 +205,12 @@ contains
 
       use cg_leaves,        only: leaves
       use cg_list,          only: cg_list_element
-      use constants,        only: xdim, ydim, zdim, MAXL, oneq, LO, HI, GEO_XYZ
+      use constants,        only: xdim, ydim, zdim, MAXL, oneq, LO, HI, GEO_XYZ, pMIN
       use dataio_pub,       only: die
       use domain,           only: dom, is_multicg
       use func,             only: ekin, emag
       use grid_cont,        only: grid_container
-      use mpisetup,         only: piernik_MPI_Bcast
+      use mpisetup,         only: piernik_MPI_Bcast, piernik_MPI_Allreduce
       use named_array_list, only: qna
 #ifndef ISO
       use constants,        only: small, MINL
@@ -308,9 +310,9 @@ contains
       call leaves%get_extremum(qna%ind(eta_n), MAXL, etamax)
       call piernik_MPI_Bcast(etamax%val)
       call leaves%get_extremum(qna%ind(wb_n), MAXL, cu2max)
-      etamax%assoc = dt_resist ; cu2max%assoc = dt_resist
 
 #ifndef ISO
+      dt_eint = huge(1.)
       cgl => leaves%first
       do while (associated(cgl))
          cg => cgl%cg
@@ -318,14 +320,25 @@ contains
          wb => cg%q(qna%ind(wb_n))%arr
          wb = (cg%u(flind%ion%ien,:,:,:) - ekin(cg%u(flind%ion%imx,:,:,:), cg%u(flind%ion%imy,:,:,:), cg%u(flind%ion%imz,:,:,:), cg%u(flind%ion%idn,:,:,:)) - &
               emag(cg%b(xdim,:,:,:), cg%b(ydim,:,:,:), cg%b(zdim,:,:,:)))/ (eta(:,:,:) * wb+small)
-         dt_eint = deint_max * abs(minval(cg%q(qna%ind(wb_n))%span(cg%ijkse)))
+         dt_eint = min(dt_eint, deint_max * abs(minval(cg%q(qna%ind(wb_n))%span(cg%ijkse))))
          cgl => cgl%nxt
       enddo
+      call piernik_MPI_Allreduce(dt_eint, pMIN)
 
       call leaves%get_extremum(qna%ind(wb_n), MINL, deimin)
       deimin%assoc = dt_eint
 #endif /* !ISO */
       NULLIFY(p)
+
+      dt_resist = huge(1.)
+      cgl => leaves%first
+      do while (associated(cgl))
+         call timestep_resist(cgl%cg)
+         cgl => cgl%nxt
+      enddo
+      call piernik_MPI_Allreduce(dt_resist, pMIN)
+
+      etamax%assoc = dt_resist ; cu2max%assoc = dt_resist
 
    end subroutine compute_resist
 
@@ -333,25 +346,22 @@ contains
 
    subroutine timestep_resist(cg)
 
-      use constants, only: big, pMIN, zero
+      use constants, only: big, zero
       use grid_cont, only: grid_container
       use func,      only: operator(.notequals.)
-      use mpisetup,  only: piernik_MPI_Allreduce
 
       implicit none
 
       type(grid_container), pointer, intent(in) :: cg
 
       if (etamax%val .notequals. zero) then
-         dt_resist = cfl_resist * cg%dxmn**2 / (2. * etamax%val)
+         dt_resist = min(dt_resist, cfl_resist * cg%dxmn**2 / (2. * etamax%val))
 #ifndef ISO
          dt_resist = min(dt_resist,dt_eint)
 #endif /* !ISO */
       else
          dt_resist = big
       endif
-
-      call piernik_MPI_Allreduce(dt_resist, pMIN)
 
    end subroutine timestep_resist
 

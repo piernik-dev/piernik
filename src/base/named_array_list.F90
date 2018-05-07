@@ -45,7 +45,7 @@ module named_array_list
    implicit none
 
    private
-   public :: na_var, qna, wna
+   public :: na_var, na_var_list, na_var_list_q, na_var_list_w, qna, wna
 
    !> \brief Common properties of 3D and 4D named arrays
    type :: na_var
@@ -85,8 +85,8 @@ module named_array_list
       integer(kind=4) :: bcci                                  !< cc-magnetic field : cg%w(wna%bcci)
    end type na_var_list_w
 
-   type(na_var_list_q) :: qna !< list of registered 3D named arrays
-   type(na_var_list_w) :: wna !< list of registered 4D named arrays
+   type(na_var_list_q), target :: qna !< list of registered 3D named arrays
+   type(na_var_list_w), target :: wna !< list of registered 4D named arrays
 
 contains
 
@@ -266,9 +266,19 @@ contains
             write(msg,'(3a,l2,a,i2,a,l2,2(a,i2))')"'", this%lst(i)%name, "', vital=", this%lst(i)%vital, ", restart_mode=", this%lst(i)%restart_mode, &
                  &                                ", multigrid=", this%lst(i)%multigrid, ", ord_prolong=", this%lst(i)%ord_prolong, ", position=", this%lst(i)%position(:)
          else
-            write(msg,'(3a,l2,a,i2,a,l2,2(a,i2),a,100i2)')"'", this%lst(i)%name, "', vital=", this%lst(i)%vital, ", restart_mode=", this%lst(i)%restart_mode, &
-                 &                                        ", multigrid=", this%lst(i)%multigrid, ", ord_prolong=", this%lst(i)%ord_prolong, &
-                 &                                        ", components=", this%lst(i)%dim4, ", position=", this%lst(i)%position(:)
+            write(msg,'(3a,l2,a,i2,a,l2,a,i2,a,i3,a)')"'", this%lst(i)%name, "', vital=", this%lst(i)%vital, ", restart_mode=", this%lst(i)%restart_mode, &
+                 &                                    ", multigrid=", this%lst(i)%multigrid, ", ord_prolong=", this%lst(i)%ord_prolong, &
+                 &                                    ", components=", this%lst(i)%dim4, ", position="
+            if (any(this%lst(i)%position /= 0)) then
+               ! theoretically we can print even about (len(msg) - len_trim(msg))/2 ~= 452 entries for position
+               if (size(this%lst(i)%position) <= 400) then  ! hardcoded integer here and in the formats below
+                  write(msg, '(a,400i2)') trim(msg), this%lst(i)%position(:)
+               else
+                  write(msg, '(a,400i2,a)') trim(msg), this%lst(i)%position(:400), " ... ??? ..."
+               endif
+            else
+               write(msg, '(2a,i4,a)') trim(msg), "[ ", size(this%lst(i)%position), " * 0 ]"
+            endif
          endif
          call printinfo(msg, to_stdout)
       enddo

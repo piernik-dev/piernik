@@ -79,6 +79,9 @@ contains
       x0     = 0.0
       y0     = 0.0
       z0     = 0.0
+      alpha  = 0.0
+      amp_cr = 0.0
+      beta_cr= 0.0
 
       if (master) then
 

@@ -36,7 +36,7 @@
 
 module dataio
 
-   use dataio_pub, only: domain_dump, fmin, fmax, vizit, nend, tend, wend, new_id, nrestart, problem_name, run_id, multiple_h5files, use_v2_io, nproc_io, enable_compression, gzip_level, gdf_strict
+   use dataio_pub, only: domain_dump, fmin, fmax, vizit, nend, tend, wend, new_id, nrestart, problem_name, run_id, multiple_h5files, use_v2_io, nproc_io, enable_compression, gzip_level, gdf_strict, h5_64bit
    use constants,  only: cwdlen, fmt_len, cbuff_len, dsetnamelen, RES, TSL
    use timer,      only: wallclock
 
@@ -102,7 +102,7 @@ module dataio
    namelist /OUTPUT_CONTROL/  problem_name, run_id, dt_hdf, dt_res, dt_tsl, dt_log, tsl_with_mom, tsl_with_ptc, &
                               domain_dump, vars, mag_center, vizit, fmin, fmax, user_message_file, system_message_file, &
                               multiple_h5files, use_v2_io, nproc_io, enable_compression, gzip_level, initial_hdf_dump, &
-                              colormode, wdt_res, gdf_strict
+                              colormode, wdt_res, gdf_strict, h5_64bit
 
 contains
 
@@ -158,6 +158,7 @@ contains
 !! <tr><td>enable_compression </td><td>.false.            </td><td>logical   </td><td>\copydoc dataio_pub::enable_compression</td></tr>
 !! <tr><td>gzip_level         </td><td>9                  </td><td>integer   </td><td>\copydoc dataio_pub::gzip_level   </td></tr>
 !! <tr><td>colormode          </td><td>.true.             </td><td>logical   </td><td>\copydoc dataio_pub::colormode    </td></tr>
+!! <tr><td>h5_64bit           </td><td>.false.            </td><td>logical   </td><td>\copydoc dataio_pub::h5_64bit     </td></tr>
 !! </table>
 !! \n \n
 !<
@@ -254,11 +255,13 @@ contains
    subroutine dataio_par_io
 
       use constants,  only: idlen, cbuff_len, INT4
-      use dataio_pub, only: nres, nrestart, warn, nhdf, wd_rd, multiple_h5files, warn
+      use dataio_pub, only: nres, nrestart, warn, nhdf, wd_rd, multiple_h5files, warn, msg, h5_64bit
       use dataio_pub, only: nh, set_colors  ! QA_WARN required for diff_nml
       use mpisetup,   only: lbuff, ibuff, rbuff, cbuff, master, slave, nproc, piernik_MPI_Bcast
 
       implicit none
+
+      integer :: i, j
 
       problem_name = "nameless"
       run_id       = "___"
@@ -303,6 +306,7 @@ contains
       wend = huge(1.0)
 
       colormode = .true.
+      h5_64bit = .false.
 
       if (master) then
 
@@ -362,6 +366,18 @@ contains
 
          endif
 
+         do i = 1, nvarsmx - 1
+            if (len_trim(vars(i)) > 0) then
+               do j = i+1, nvarsmx
+                  if (trim(vars(i)) == trim(vars(j))) then
+                     write(msg, '(3a,2i3,a)')"[dataio:init_dataio_parameters] duplicate vars: ", trim(vars(i)), " at positions ", i, j, ". Fixing."
+                     call warn(msg)
+                     vars(j)=""
+                  endif
+               enddo
+            endif
+         enddo
+
          if (gzip_level < 1 .or. gzip_level > 9) then
             call warn("[dataio:init_dataio_parameters] invalid compression level")
             gzip_level = 9
@@ -384,7 +400,7 @@ contains
 !   namelist /OUTPUT_CONTROL/  problem_name, run_id, dt_hdf, dt_res, dt_tsl, dt_log, tsl_with_mom, tsl_with_ptc, &
 !                              domain_dump, vars, mag_center, vizit, fmin, fmax, user_message_file, system_message_file, &
 !                              multiple_h5files, use_v2_io, nproc_io, enable_compression, gzip_level, initial_hdf_dump, &
-!                              colormode, wdt_res, gdf_strict
+!                              colormode, wdt_res, gdf_strict, h5_64bit
          ibuff(43) = nproc_io
          ibuff(44) = gzip_level
 
@@ -405,6 +421,7 @@ contains
          lbuff(7)  = tsl_with_ptc
          lbuff(8)  = colormode
          lbuff(9)  = gdf_strict
+         lbuff(10) = h5_64bit
 
          cbuff(31) = problem_name
          cbuff(32) = run_id
@@ -464,6 +481,7 @@ contains
          tsl_with_ptc        = lbuff(7)
          colormode           = lbuff(8)
          gdf_strict          = lbuff(9)
+         h5_64bit            = lbuff(10)
 
          problem_name        = cbuff(31)
          run_id              = cbuff(32)(1:idlen)
