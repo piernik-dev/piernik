@@ -1,15 +1,12 @@
 #if 0
-! IONIZED usually makes sense when MAGNETIC is also set up. Add
 !
-!     -d MAGNETIC,IONIZED
+! Use sedov/MHD_blast_wave if you want to play with magnetized sedov explosions.
 !
-! to your setup call if you want to play with magnetized sedov explosions.
 #endif
 
 #if !defined IONIZED
 #  define  NEUTRAL
 #endif
-
 
 #if !defined GLOBAL_FR_SPEED
 #  define LOCAL_FR_SPEED

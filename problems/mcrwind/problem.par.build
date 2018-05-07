@@ -42,7 +42,8 @@
     dt_log       = 1. !e-6
     dt_tsl       = 1.0e-6
     vars(1:) = 'encr', 'dens', 'magx', 'magy', 'magz', 'velx', 'vely', 'velz'
- /
+    h5_64bit = .true.
+/
 
  $FLUID_IONIZED
     gamma = 1.66666667

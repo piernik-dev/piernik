@@ -58,6 +58,10 @@ program piernik
 #if defined DEBUG && defined GRAV
    use particle_pub,      only: pset
 #endif /* DEBUG && GRAV */
+#ifdef MAGNETIC
+   use div_B,             only: print_divB_norm
+   use global,            only: print_divB
+#endif /* MAGNETIC */
 
    implicit none
 
@@ -105,6 +109,9 @@ program piernik
    endif
 
    call print_progress(nstep)
+#ifdef MAGNETIC
+   if (print_divB > 0) call print_divB_norm
+#endif
 
    do while (t < tend .and. nstep < nend .and. .not.(end_sim)) ! main loop
 
@@ -153,6 +160,12 @@ program piernik
          try_rebalance = .false.
       endif
 
+#ifdef MAGNETIC
+      if (print_divB > 0) then
+         if (mod(nstep, print_divB) == 0) call print_divB_norm
+      endif
+#endif
+
       if (master) tleft = walltime_end%time_left()
       call piernik_MPI_Bcast(tleft)
 
@@ -160,6 +173,11 @@ program piernik
 
       first_step = .false.
    enddo ! main loop
+#ifdef MAGNETIC
+      if (print_divB > 0) then
+         if (mod(nstep, print_divB) /= 0) call print_divB_norm ! print the norm at the end, if it wasn't printed inside the loop above
+      endif
+#endif
 
    code_progress = PIERNIK_FINISHED
 

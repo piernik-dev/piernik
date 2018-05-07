@@ -64,6 +64,7 @@ contains
       bxn    = 0.0
       byn    = 1.0
       bzn    = 0.0
+      alpha  = 0.0
 
       if (master) then
 
