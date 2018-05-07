@@ -511,6 +511,7 @@ contains
          case ("magx", "magy", "magz")
             val = lmtvB(U_MAG)
             write(s_val, '(a)') trim(s_lmtvB(U_MAG))
+#ifndef COSM_RAY_ELECTRONS
          case ("cr1" : "cr9")
             val = lmtvB(U_MASS) / lmtvB(U_LEN) / lmtvB(U_TIME) ** 2
             if (trim(s_lmtvB(U_ENER)) /= "complex") then
@@ -518,6 +519,25 @@ contains
             else
                write(s_val, '(a, "/", a, " /",a,"**2")') trim(s_lmtvB(U_MASS)), trim(s_lmtvB(U_LEN)), trim(s_lmtvB(U_TIME))
             endif
+#else
+         case ("cr01" : "cr99")
+            val = lmtvB(U_MASS) / lmtvB(U_LEN) / lmtvB(U_TIME) ** 2
+            if (trim(s_lmtvB(U_ENER)) /= "complex") then
+               write(s_val, '(a, "/", a,"**3")') trim(s_lmtvB(U_ENER)), trim(s_lmtvB(U_LEN))
+            else
+               write(s_val, '(a, "/", a, " /",a,"**2")') trim(s_lmtvB(U_MASS)), trim(s_lmtvB(U_LEN)), trim(s_lmtvB(U_TIME))
+            endif
+         case ("cren01" : "cren99")
+            val = 1.0 / lmtvB(U_LEN)**3                             !< CRESP number density
+            write(s_val, '( "1  /", a,"**3")') trim(s_lmtvB(U_LEN))
+         case ("cree01" : "cree9")
+            val = lmtvB(U_MASS) / lmtvB(U_LEN) / lmtvB(U_TIME) ** 2 !< CRESP energy density
+            if (trim(s_lmtvB(U_ENER)) /= "complex") then
+               write(s_val, '(a, "/", a,"**3")') trim(s_lmtvB(U_ENER)), trim(s_lmtvB(U_LEN))
+            else
+               write(s_val, '(a, "/", a, " /",a,"**2")') trim(s_lmtvB(U_MASS)), trim(s_lmtvB(U_LEN)), trim(s_lmtvB(U_TIME))
+            endif
+#endif /* COSM_RAY_ELECTRONS */
          case ("gpot", "sgpt")
             val = lmtvB(U_VEL) ** 2
             write(s_val, '(a,"**2")') trim(s_lmtvB(U_VEL))

@@ -188,7 +188,7 @@ contains
       use initcosmicrays, only: iarr_crn
 #endif /* COSM_RAYS_SOURCES */
 #ifdef COSM_RAY_ELECTRONS
-      use cresp_crspectrum,   only: e_tot_2_f_init_params, cresp_init_state, e_tot_2_en_powl_init_params
+      use cresp_crspectrum,   only: cresp_get_scaled_init_spectrum
       use initcrspectrum,     only: cresp, cre_eff, e_small
       use initcosmicrays,     only: iarr_cre_n, iarr_cre_e
 #endif /* COSM_RAY_ELECTRONS */
@@ -239,8 +239,8 @@ contains
 #ifdef COSM_RAY_ELECTRONS
                   e_tot_sn = decr * cre_eff
                   cresp%n =  0.0;  cresp%e = 0.0
-                  if (e_tot_sn .gt. e_small) then     ! early phase - fill cells only when total passed energy is greater than e_small
-                     call e_tot_2_en_powl_init_params(cresp%n, cresp%e, e_tot_sn) ! distribution function amplitude computed from total explosion energy multiplied by factor cre_eff
+                  if (e_tot_sn .gt. e_small) then     !< fill cells only when total passed energy is greater than e_small
+                     call cresp_get_scaled_init_spectrum(cresp%n, cresp%e, e_tot_sn) !< injecting source spectrum scaled with e_tot_sn
                   endif
                   cg%u(iarr_cre_n,i,j,k) = cg%u(iarr_cre_n,i,j,k) + cresp%n
                   cg%u(iarr_cre_e,i,j,k) = cg%u(iarr_cre_e,i,j,k) + cresp%e
@@ -252,7 +252,6 @@ contains
 
          cgl => cgl%nxt
       enddo
-
    end subroutine cr_sn
 #endif /* COSM_RAYS */
 !--------------------------------------------------------------------------

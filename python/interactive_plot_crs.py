@@ -10,24 +10,32 @@ import sys
 import read_h5
 import crs_h5
 import re
-
 try:
     import yt
     import h5py
+    from yt.units import dimensions
 except:
     sys.exit("\033[91mYou must make yt & h5py available somehow\033[0m")
-    
-plot_field = "cr01"
+######### USER PARAMETERS ###########
 
-f_run = True
+plot_field = "cree_tot"
+plot_var = "e"
 
+simple_plot = True
 plot_vel = False
 plot_mag = True
-logscale_colors = False
 
+user_limits = False # use values below as limits for clickable plot
+plot_user_min = 0.001
+plot_user_max = 30.0
+use_logscale  = True #False
+
+#####################################
+
+f_run = True
 def _total_cree(field,data):
    list_cree = []
-   for element in ds.field_list:
+   for element in h5ds.field_list:
       if re.search("cree",str(element[1])):
          list_cree.append(element[1])
    cree_tot = data[str(list_cree[0])]
@@ -37,13 +45,24 @@ def _total_cree(field,data):
 
 def _total_cren(field,data):
    list_cren = []
-   for element in ds.field_list:
+   for element in h5ds.field_list:
       if re.search("cren",str(element[1])):
          list_cren.append(element[1])
    cren_tot = data[str(list_cren[0])]
    for element in list_cren[1:]:
       cren_tot = cren_tot + data[element]
    return cren_tot
+
+def en_ratio(field,data):
+   bin_nr = field.name[1][-2:]
+   for element in h5ds.field_list:
+      if re.search("cree"+str(bin_nr.zfill(2)),str(element[1])):
+         cren_data = data["cren"+str(bin_nr.zfill(2))]
+         cren_data[cren_data == 0.0 ] = 1.0e-15 # necessary to avoid FPEs
+         cree_data = data["cree"+str(bin_nr.zfill(2))]
+         cree_data[cree_data == 0.0 ] = 1.0e-15 # necessary to avoid FPEs
+         en_ratio=cree_data / cren_data #data["cree"+str(bin_nr.zfill(2))]/ cren_data
+   return en_ratio
 
 #---------- reading parameters
 filename=sys.argv[-1]
@@ -64,7 +83,7 @@ if f_run == True:
     if len(var_names) == 0:
         print ("\033[93mEmpty list of parameter names provided: enter names of parameters to read\033[0m")
         var_names = read_h5.input_names_array()
-    
+
     var_array = read_h5.read_par(filename, var_names)
     for i in range(len(var_names)):
         exec( "%s=%s" %(var_names[i], var_array[i]))
@@ -75,10 +94,10 @@ if f_run == True:
         print ( " %20s =  %8s ( %15s  ) " %(var_names[i], var_array[i], type(var_array[i])))
     print ""
 #---------- Open file
-    h5File = h5py.File(filename,"r")
+    h5File = h5py.File(filename,"r") # sorry, I'm not sure how to access timestep via yt
     h5ds = yt.load(filename)
 #---------- bounds on domain size
-    grid_dim = h5File['grid_dimensions'][0][:]
+    grid_dim = h5ds.domain_dimensions
     dim_map  = {'x':0,'y':1,'z':2}
     dom_l = np.array(h5ds.domain_left_edge[0:3])
     dom_r = np.array(h5ds.domain_right_edge[0:3])
@@ -100,106 +119,145 @@ if f_run == True:
         slice_coord = ""
         while slice_ax not in dim_map.keys():
             slice_ax    = raw_input("\033[92mChoose slice ax (x, y, z)      : \033[0m")
-        while slice_coord > grid_dim[dim_map[slice_ax]] or slice_coord < 0:
+        while (slice_coord < dom_l[dim_map[slice_ax]]) or (slice_coord > dom_r[dim_map[slice_ax]]): # or slice_coord < -10000:
             try:
-                slice_coord = int(raw_input("\033[92mChoose slice coordinate (%d:%d) (if empty, middle is assumed): \033[0m" % (0,grid_dim[dim_map[slice_ax]]) ))
+                slice_coord = float(raw_input("\033[92mChoose slice coordinate (%d:%d) (if empty, middle is assumed): \033[0m" % (dom_l[dim_map[slice_ax]],dom_r[dim_map[slice_ax]]) ))
             except:
-                slice_coord = int(grid_dim[dim_map[slice_ax]]/2.)
-                print ("\033[93m[Empty / improper input]: Setting slice coordinate to %i \033[0m" %slice_coord)
+                slice_coord = (dom_l[dim_map[slice_ax]] + dom_r[dim_map[slice_ax]]) / 2.
+                print ("\033[93m[Empty / improper input]: Setting slice coordinate to %s kpc.\033[0m" %slice_coord)
     elif min(grid_dim) == 1:
-        slice_coord = 0
-        if   grid_dim[0] == 1: 
+        slice_coord = 0.0
+        if   grid_dim[0] == 1:
             slice_ax = 'x'
-        elif grid_dim[1] == 1: 
+        elif grid_dim[1] == 1:
             slice_ax = 'y'
-        else:                  
+        else:
             slice_ax = 'z'
     avail_dim = avail_dims_by_slice[dim_map[slice_ax]]
-    print ("\033[92mSlice ax set to %s, coordinate = %i \033[0m" %(slice_ax, slice_coord))
+    print ("\033[92mSlice ax set to %s, coordinate = %f \033[0m" %(slice_ax, slice_coord))
+    resolution = [grid_dim[avail_dim[0]],grid_dim[avail_dim[1]]]
 
 #--------- Preparing clickable image
-    s = plt.figure(figsize=(12,6),dpi=80)
+    s = plt.figure(figsize=(12,8),dpi=80)
     s1 = plt.subplot(121)
+    dsSlice = h5ds.slice(slice_ax, slice_coord)
 
-    dset = h5File['data']['grid_0000000000'][plot_field]
+    if (plot_field == "cree_tot" ):
+      if str(dsSlice["cree01"].units) is "dimensionless":
+         try:
+            h5ds.add_field(("gdf","cree_tot"), units="",function=_total_cree, display_name="Total cr electron energy density")
+         except:
+            sys.exit("\033[91mFailed to construct field %s\033[0m", plot_field)
+      else:
+         try:
+            h5ds.add_field(("gdf","cree_tot"), units="Msun/(Myr**2*pc)",function=_total_cree, display_name="Total cr electron energy density", dimensions=dimensions.energy/dimensions.volume)
+         except:
+            sys.exit("\033[91mFailed to construct field %s\033[0m", plot_field)
+
+
+    if (plot_field == "cren_tot" ):
+      if str(dsSlice["cren01"].units) is "dimensionless":
+         try:
+            h5ds.add_field(("gdf","cren_tot"), units="",function=_total_cren, display_name="Total cr electron number density")
+         except:
+            sys.exit("\033[91mFailed to construct field %s\033[0m", plot_field)
+
+      else: # dimensions defined
+         try:
+            h5ds.add_field(("gdf","cren_tot"), units="1/(pc**3)",function=_total_cren, display_name="Total cr electron number density", dimensions=dimensions.energy/dimensions.volume)
+         except:
+            sys.exit("\033[91mFailed to construct field %s\033[0m", plot_field)
+
+    if ( plot_field[0:-2] == "en_ratio"):
+      if str(dsSlice["cren01"].units) is "dimensionless":
+         try:
+            h5ds.add_field(("gdf",plot_field), units="", function=en_ratio, display_name="Ratio e/n in %i-th bin" %int(plot_field[-2:]))
+         except:
+            sys.exit("\033[91mFailed to construct field %s\033[0m", plot_field)
+      else:
+         try:
+            h5ds.add_field(("gdf",plot_field), units="Msun*pc**2/Myr**2", function=en_ratio, display_name="Ratio e/n in %i-th bin" %int(plot_field[-2:]),dimensions=dimensions.energy)
+         except:
+            sys.exit("\033[91mFailed to construct field %s\033[0m", plot_field)
 
     click_coords = [0, 0]
     image_number = 0
 
-    field_max = h5ds.find_max("cr01")[0]
+    field_max  = float(h5ds.find_max("cr01")[0]) # WARNING - this makes field_max unitless
 
-    if (plot_field == "cree_tot" ):
-      h5ds.add_field(("gdf","cree_tot"), units="",function=_total_cree, display_name="Total cr electron enden")
-    if (plot_field == "cren_tot" ):
-      h5ds.add_field(("gdf","cren_tot"), units="",function=_total_cren, display_name="Total cr electron numden")
-
-    if (slice_ax == "x"):
-      fig1 = plt.imshow(dset[:,:,slice_coord], origin="lower")
-      field_max = np.max(dset[:,:,slice_coord])
-      if logscale_colors == True:
-        plt.pcolor(dset[:,:,slice_coord], norm=LogNorm(vmin=dset[:,:,slice_coord].min(), vmax=dset[:,:,slice_coord].max()), cmap='viridis')
-    elif (slice_ax == "y"):
-      fig1 = plt.imshow(dset[:,slice_coord,:], origin="lower")
-      field_max = np.max(dset[:,slice_coord,:])
-      if logscale_colors == True:
-        plt.pcolor(dset[:,slice_coord,:], norm=LogNorm(vmin=dset[:,slice_coord,:].min(), vmax=dset[:,slice_coord,:].max()), cmap='viridis')
+    w = dom_r[avail_dim[0]] + abs(dom_l[avail_dim[0]])
+    h = dom_r[avail_dim[1]] + abs(dom_l[avail_dim[1]])
+    if (plot_field[0:-2] != "en_ratio"):
+      frb = np.array(dsSlice.to_frb(w, resolution, height=h)[plot_field])
+      plot_max   = h5ds.find_max(plot_field)[0]
+      plot_units = str(plot_max).split(' ')[1]
+      plot_min = 1.0e-5
     else:
-      fig1 = plt.imshow(dset[slice_coord,:,:], origin="lower")
-      field_max = np.max(dset[slice_coord,:,:])
-      if logscale_colors == True:
-        plt.pcolor(dset[slice_coord,:,:], norm=LogNorm(vmin=dset[slice_coord,:,:].min(), vmax=dset[slice_coord,:,:].max()), cmap='viridis')
-    plt.title("Component name: "+plot_field+" | Time = %f Myr"  %time,y=1.07)
-    plt.ylabel("Physical domain ("+dim_map.keys()[dim_map.values().index(avail_dim[1])]+") [kpc]" )
-    plt.xlabel("Physical domain ("+dim_map.keys()[dim_map.values().index(avail_dim[0])]+") [kpc]" )
+      frb = np.array(dsSlice.to_frb(w, resolution, height=h)[plot_field])
+      plot_min = h5ds.find_min(plot_field)[0]
+      plot_max = h5ds.find_max(plot_field)[0]
+      h5ds.find_max("cre"+plot_var+str(plot_field[-2:]))[0]
+      plot_units = "Msun*pc**2/Myr**2"
 
-    plt.colorbar(shrink=0.9, pad=0.18)
+    plt.xlabel("Domain cooridnates ("+dim_map.keys()[dim_map.values().index(avail_dim[0])]+")" )
+    plt.ylabel("Domain cooridnates ("+dim_map.keys()[dim_map.values().index(avail_dim[1])]+")" )
+    plt.colormap="plasma"
+    if (user_limits == True): # Overwrites previously found values
+       plot_min = plot_user_min
+       plot_max = plot_user_max
 
-    valuesx = tuple(np.arange(0,grid_dim[avail_dim[0]], grid_dim[avail_dim[0]]/5.))# + (grid_dim[avail_dim[0]],)
-    labelsx = tuple(np.arange(dom_l[avail_dim[0]], dom_r[avail_dim[0]], ((abs(dom_l[avail_dim[0]])+abs(dom_r[avail_dim[0]]))/5.)))# + (dom_r[avail_dim[0]],)
+    plot_max   = float(plot_max)
+    plot_min   = float(plot_min)
 
-    s1.set_xticks(valuesx)
-    s1.set_xticklabels(labelsx)
+    if (use_logscale):
+        plt.imshow(frb,extent=[dom_l[avail_dim[0]], dom_r[avail_dim[0]], dom_l[avail_dim[1]], dom_r[avail_dim[1]] ], origin="lower" ,norm=LogNorm(vmin=plot_min, vmax=plot_max))
+    else:
+        plt.imshow(frb,extent=[dom_l[avail_dim[0]], dom_r[avail_dim[0]], dom_l[avail_dim[1]], dom_r[avail_dim[1]] ], origin="lower")
+    plt.title("Component: "+plot_field+" | t = %9.3f Myr"  %time)
 
-    valuesy = tuple(np.arange(0,grid_dim[avail_dim[1]], grid_dim[avail_dim[1]]/5.))# + (grid_dim[avail_dim[1]],)
-    labelsy = tuple(np.arange(dom_l[avail_dim[1]], dom_r[avail_dim[1]], ((abs(dom_l[avail_dim[1]])+abs(dom_r[avail_dim[1]]))/5.)))# + (dom_r[avail_dim[1]],)
-    
-    s1.set_yticks(valuesy)
-    s1.set_yticklabels(labelsy)
+    try:
+       cbar = plt.colorbar(shrink=0.9, pad=0.01,label=plot_units)
+    except:
+       sys.exit("\033[91mAn empty field might have been picked.\033[0m")
 
     print ""
 #---------
     def read_click_and_plot(event):
         global click_coords, image_number, f_run
         exit_code = True
-        click_coords = [ int(round(event.xdata)), int(round(event.ydata)) ]
-        point = s1.plot(event.xdata,event.ydata, marker="+", color="red")
+        click_coords = [ event.xdata, event.ydata ]
+        point = s1.plot(event.xdata,event.ydata, marker="x", color="red")
         coords = [slice_coord, slice_coord, slice_coord]
         if slice_ax == "x":
             coords[1] = click_coords[0]
-            coords[0] = click_coords[1]
+            coords[2] = click_coords[1]
         elif slice_ax == "y":
-            coords[0] = click_coords[1]
-            coords[2] = click_coords[0]
+            coords[0] = click_coords[0]
+            coords[2] = click_coords[1]
         else: # slice_ax = "z"
-            coords[2] = click_coords[0]
+            coords[0] = click_coords[0]
             coords[1] = click_coords[1]
 # ------------ preparing data and passing -------------------------
         ecrs = [] ; ncrs = []
-        print ("\033[92mValue of %s at point [%i, %i, %i] = %f \033[0m" %(plot_field, coords[0], coords[1], coords[2], h5File['data']['grid_0000000000'][plot_field].value[coords[0],coords[1],coords[2]]))
+        position = h5ds.r[coords:coords]  # TODO .r can be replaced with .point once negative coordinates are supported YTPoint
+        if ( plot_field[0:-2] != "en_ratio"):
+           print ("\033[92mValue of %s at point [%f, %f, %f] = %f \033[0m" %(plot_field, coords[0], coords[1], coords[2], position[plot_field]))
+        else:
+           print ("\033[92mValue of %s at point [%f, %f, %f] = %f \033[0m" %(plot_field, coords[0], coords[1], coords[2], position["cree"+str(plot_field[-2:])]/position["cren"+str(plot_field[-2:])]))
+           plot_max   = h5ds.find_max("cre"+plot_var+str(plot_field[-2:]))[0] # once again appended - needed as ylimit for the plot
         for ind in range(1,ncre+1):
-            ecrs.append(h5File['data']['grid_0000000000']['cree'+str(ind).zfill(2)].value[coords[0],coords[1],coords[2]])
-            ncrs.append(h5File['data']['grid_0000000000']['cren'+str(ind).zfill(2)].value[coords[0],coords[1],coords[2]])
-        plot_var = "e"
-        fig2,exit_code = crs_h5.crs_plot_main(var_names, var_array, plot_var, ncrs, ecrs, field_max, time, coords)
+            ecrs.append(float(str( position['cree'+str(ind).zfill(2)][0]).split(" ")[0]))
+            ncrs.append(float(str( position['cren'+str(ind).zfill(2)][0]).split(" ")[0]))
+        fig2,exit_code = crs_h5.crs_plot_main(var_names, var_array, plot_var, ncrs, ecrs, field_max, time, coords, simple_plot)
         if (exit_code != True):
             s.savefig('results/'+filename_nam+'_'+plot_var+'_%04d.png' % image_number, transparent ='False',facecolor=s.get_facecolor())
             print ("\033[92m  --->  Saved plot to: %s\033[0m" %str('results/'+filename_nam+'_'+plot_var+'_%04d.png' %image_number))
             image_number=image_number+1
         else:
             print("\033[92m Empty cell, not saving.\033[0m")
-        if (f_run): f_run = False
 
+        if (f_run): f_run = False
     cid = s.canvas.mpl_connect('button_press_event',read_click_and_plot)
-    
+
     plt.show()
     s.canvas.mpl_disconnect(cid)

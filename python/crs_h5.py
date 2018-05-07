@@ -1,7 +1,7 @@
 #!/usr/bin/python
 from pylab import zeros, sqrt, size
 import matplotlib.pyplot as plt
-from numpy import log10, log, pi, asfarray, array
+from numpy import log10, log, pi, asfarray, array, linspace
 import h5py
 import os
 import sys
@@ -13,9 +13,10 @@ ncre      = 45
 p_min_fix = 0.4e0  #
 p_max_fix = 1.65e4 #
 cre_eff = 0.01
-c = 1.0
+c = 1.0 # 0.3066067E+06  # PSM -> 0.3066067E+06, SI -> 0.2997925E+09
+
 first_run = True
-fixed_width = 1
+fixed_width = True
 
 def nq2f(n,q,p_l,p_r):
       if p_r> 0.0 and p_l > 0 :
@@ -53,14 +54,14 @@ def nr_get_q(alpha, p_ratio):
 # function used to find q: ----------------------
 def fun(x, alpha, p_ratio):
       if abs(x - 3.0) < 1.0e-3:
-         fun = -alpha + (-1.0 + p_ratio)/log(p_ratio) 
+         fun = -alpha + (-1.0 + p_ratio)/log(p_ratio)
       elif abs(x - 4.0) < 1.0e-3:
          fun = -alpha + p_ratio*log(p_ratio)/(p_ratio - 1.0)
       else:
          fun = -alpha + ((3.0-x)/(4.0-x))*((p_ratio**(4.0-x)-1.0)/(p_ratio**(3.0-x)-1.0))
       return fun
 
-# plot data ------------------------------------  
+# plot data ------------------------------------
 def plot_data(plot_var, pl, pr, fl, fr, q, time, location, i_lo_cut, i_up_cut):
    global first_run
    f_lo_cut = fl[0] ;      f_up_cut = fr[-1]
@@ -101,12 +102,21 @@ def plot_data(plot_var, pl, pr, fl, fr, q, time, location, i_lo_cut, i_up_cut):
       elif (plot_var == "n" ):
         plot_var_min = 0.1 / (4*pi * p_max_fix ** 2)
 
-   if fixed_width == 1:
-      plt.xlim (0.1 * plot_p_min   ,  10.*plot_p_max ) 
+   if fixed_width == True:
+      plt.xlim (0.1 * plot_p_min   ,  10.*plot_p_max )
       plt.xlim
-   
-   plt.ylim (plot_var_min , plot_ymax)   
+
+   plt.ylim (plot_var_min , plot_ymax)
    plt.grid()
+
+#plot floor value
+   p_range = linspace(s.get_xlim()[0],s.get_xlim()[1])
+   e_smalls = zeros(len(p_range))
+   e_smalls[:] = e_small
+   if (plot_var == "e"):
+      plt.plot(p_range, e_smalls, color="green", label="$e_{small}$")
+   elif(plot_var == "n"):
+      plt.plot(p_range, e_small/(c*p_range), color="green",label="$n_{small}$")
 
    for i in range(0, size(fr)) :
       plt.plot([pl[i],pr[i]],[plot_var_l[i],plot_var_r[i]],color='r')
@@ -116,9 +126,57 @@ def plot_data(plot_var, pl, pr, fl, fr, q, time, location, i_lo_cut, i_up_cut):
    plt.title("Spectrum of %s(p) \n Time = %7.3f | location: %7.2f %7.2f %7.2f " % (plot_var, time, location[0],location[1],location[2]) )
 
    return s
+
+def simple_plot_data(plot_var, p, var_array, time, location, i_lo_cut, i_up_cut):
+   global first_run, plot_p_min, plot_p_max, fixed_width
+   p_lo_cut = p[0] ;   p_up_cut = p[-1]
+   var_array = var_array / p # does this do the trick with correct q?
+   s = plt.subplot(122)
+   plt.cla()
+   s.set_xscale('log')
+   s.set_yscale('log')
+   plt.xlabel('p')
+   plt.ylabel(plot_var)
+
+   if first_run :
+      plot_p_min    =  p_lo_cut
+      plot_p_max    =  p_up_cut
+      plot_var_min = 0.1*e_small
+      first_run = False
+      if (plot_var == "e"):
+        plot_var_min = e_small
+      elif (plot_var == "f" ):
+        plot_var_min = e_small / (4*pi * (c ** 2)  * p_max_fix **3) /10.
+      elif (plot_var == "n" ):
+        plot_var_min = 0.1 / (4*pi * p_max_fix ** 2)
+
+   if fixed_width == True:
+      plt.xlim (0.25 * plot_p_min   ,  5.*plot_p_max )
+      plt.xlim
+
+   plt.ylim (plot_var_min , plot_ymax)
+   plt.grid()
+
+   plt.plot(p,var_array,color='r')
+   for i in range(i_lo_cut,i_up_cut):
+       plt.plot([p[i],p[i]],[plot_var_min, var_array[i]],color="r")
+
+#plot floor values
+   p_range = linspace(s.get_xlim()[0],s.get_xlim()[1])
+   e_smalls = zeros(len(p_range))
+   e_smalls[:] = e_small
+   #if (plot_var == "e"):
+      #plt.plot(p_range, e_smalls, color="green", label="$e_{small}$")
+   #elif(plot_var == "n"):
+      #plt.plot(p_range, e_small/(c*p_range), color="green",label="$n_{small}$")
+
+   s.set_facecolor('white')
+   plt.title(" %s(p) \n Time = %7.3f | location: %7.2f %7.2f %7.2f " % (plot_var, time, location[0],location[1],location[2]) )
+
+   return s
 #-----------------------------------------------------------------
 
-def crs_plot_main(parameter_names, parameter_values, plot_var, ncrs, ecrs, field_max, time, location):
+def crs_plot_main(parameter_names, parameter_values, plot_var, ncrs, ecrs, field_max, time, location, use_simple):
     global first_run
 
     try:
@@ -127,18 +185,20 @@ def crs_plot_main(parameter_names, parameter_values, plot_var, ncrs, ecrs, field
     except:
         print "Exiting: len(names) not equal len(values)"
         sys.exit()
+
 # TODO -------- do it under *args TODO
-    fixed_width = 1  
+    fixed_width = True
 # TODO -------- do it under *args TODO
 
     first_run = True
 # -------------------
     global plot_ymax
-    plot_ymax = cre_eff * field_max
+    plot_ymax = field_max * cre_eff
     edges = []
     p_fix = []
     edges[0:ncre] = range(0,ncre+1, 1)
     p_fix[0:ncre] = zeros(ncre+1)
+
 # WARNING !!! cutoff momenta are not precisely described here !!! WARNING
     log_width   = (log10(p_max_fix/p_min_fix))/(ncre-2.0)
 # TODO: do it in the first run / calling script TODO
@@ -150,14 +210,19 @@ def crs_plot_main(parameter_names, parameter_values, plot_var, ncrs, ecrs, field
             p_fix[ncre]    = ( sqrt(p_fix[ncre-2]* p_fix[ncre-1]) ) * p_fix_ratio
             p_fix = asfarray(p_fix)
 
+    p_mid_fix = zeros(ncre)
+    p_mid_fix[1:ncre-1] = sqrt(p_fix[1:ncre-1]*p_fix[2:ncre])
+    p_mid_fix[0]        = p_mid_fix[1] / p_fix_ratio
+    p_mid_fix[ncre-1]   = p_mid_fix[ncre-2] * p_fix_ratio
+    p_mid_fix = asfarray(p_mid_fix)
     i_lo = 0
     i_up = ncre
     empty_cell = True
-    
+
 #------------ locate cutoff indices
     for i in range(1,ncre):
         i_lo = i
-        if ecrs[i] >= e_small: 
+        if ecrs[i] >= e_small:
             empty_cell = False # not plotting if empty
             break
     for i in range(ncre,1,-1):
@@ -181,7 +246,18 @@ def crs_plot_main(parameter_names, parameter_values, plot_var, ncrs, ecrs, field
     frn  = array(fln)
     frn  = frn * (prn/pln) ** (-q_nr)
     plot = False
+
     if empty_cell==False:
-        plot = plot_data(plot_var, pln, prn, fln, frn, q_nr, time, location, i_lo, i_up)
+         if (use_simple):
+            var_array = zeros(ncre)
+            if (plot_var == "e"):
+               var_array = array(ecrs)
+            elif (plot_var == "n"):
+               var_array = array(ncrs)
+            else: # plotvar == "f"
+               var_array = array(fln) # TODO not fully prepared
+            plot = simple_plot_data(plot_var, p_mid_fix, var_array, time, location, i_lo, i_up)
+         else:
+            plot = plot_data(plot_var, pln, prn, fln, frn, q_nr, time, location, i_lo, i_up)
 
     return plot, empty_cell
