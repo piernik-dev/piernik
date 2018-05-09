@@ -275,20 +275,20 @@ contains
                     !Sources
 
                     ! momentum = momentum - dt*divB*B
-                    cgl%cg%u(fl%imx:fl%imz,i,j,k) = cgl%cg%u(fl%imx:fl%imz,i,j,k) - dt*cg%q(idivB)%arr(i,j,k)*(cgl%cg%b(xdim:zdim,i,j,k))
+                    cgl%cg%u(fl%imx:fl%imz,i,j,k) = cgl%cg%u(fl%imx:fl%imz,i,j,k) - dt * cg%q(idivB)%arr(i,j,k) * (cgl%cg%b(xdim:zdim,i,j,k))
 
                     ! B = B - dt*divB*u
-                    cgl%cg%b(xdim:zdim,i,j,k) = cgl%cg%b(xdim:zdim,i,j,k) - dt*cg%q(idivB)%arr(i,j,k)*(cgl%cg%u(fl%imx:fl%imz,i,j,k)/cgl%cg%u(fl%idn,i,j,k))
+                    cgl%cg%b(xdim:zdim,i,j,k) = cgl%cg%b(xdim:zdim,i,j,k) - dt * cg%q(idivB)%arr(i,j,k) * (cgl%cg%u(fl%imx:fl%imz,i,j,k) / cgl%cg%u(fl%idn,i,j,k))
 
-                    ! e = e - dt*divB*u.B - B.grad(psi)
+                    ! e = e - dt* (divB*u.B - B.grad(psi))
 
-                    cgl%cg%u(fl%ien,i,j,k) = cgl%cg%u(fl%ien,i,j,k) - &
-                         dt*cg%q(idivB)%arr(i,j,k)*dot_product(cgl%cg%u(fl%imx:fl%imz,i,j,k)/cgl%cg%u(fl%idn,i,j,k),cgl%cg%b(xdim:zdim,i,j,k)) - &
-                         dot_product(cgl%cg%b(xdim:zdim,i,j,k),cg%w(igp)%arr(xdim:zdim,i,j,k))
+                    cgl%cg%u(fl%ien,i,j,k) = cgl%cg%u(fl%ien,i,j,k) - dt * ( &
+                         cg%q(idivB)%arr(i,j,k) * dot_product(cgl%cg%u(fl%imx:fl%imz,i,j,k) / cgl%cg%u(fl%idn,i,j,k), cgl%cg%b(xdim:zdim,i,j,k)) - &
+                         dot_product(cgl%cg%b(xdim:zdim,i,j,k), cg%w(igp)%arr(xdim:zdim,i,j,k)) )
 
                     ! psi = psi - dt*u.grad(psi), other term is calculated in damping
-                    cgl%cg%q(qna%ind(psi_n))%arr(i,j,k) =  cgl%cg%q(qna%ind(psi_n))%arr(i,j,k) - &
-                         dt*dot_product(cgl%cg%u(fl%imx:fl%imz,i,j,k)/cgl%cg%u(fl%idn,i,j,k),cg%w(igp)%arr(xdim:zdim,i,j,k))
+                    cgl%cg%q(ipsi)%arr(i,j,k) =  cgl%cg%q(ipsi)%arr(i,j,k) - &
+                         dt * dot_product(cgl%cg%u(fl%imx:fl%imz,i,j,k) / cgl%cg%u(fl%idn,i,j,k), cg%w(igp)%arr(xdim:zdim,i,j,k))
 
                  enddo
               enddo
