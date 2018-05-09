@@ -90,13 +90,14 @@ contains
 
       use cg_leaves,  only: leaves
       use cg_list,    only: cg_list_element
-      use constants,  only: GEO_XYZ, small
+      use constants,  only: GEO_XYZ, small, pMAX
       use dataio_pub, only: die
       use domain,     only: dom
       use fluidindex, only: flind
       use fluids_pub, only: has_ion
       use fluidtypes, only: component_fluid
       use global,     only: use_fargo
+      use mpisetup,   only: piernik_MPI_Allreduce
 
       implicit none
 
@@ -125,7 +126,7 @@ contains
          enddo
       endif
 
-    return
+      call piernik_MPI_Allreduce(chspeed, pMAX)
 
   end subroutine update_chspeed
 !--------------------------------------------------------------------------------------------------------------
@@ -257,26 +258,38 @@ contains
                             (cg%q(ipsi)%arr(i,j,kp1) - cg%q(ipsi)%arr(i,j,km1)) &
                             ] / cg%dl
 
+                   end associate
+                 enddo
+              enddo
+           enddo
+           cgl=>cgl%nxt
+        enddo
 
-                       !Sources
+        ! don't fuse these loops - w(igp) depends on psi and then modifies psi
 
-                       ! momentum = momentum - dt*divB*B
-                       cgl%cg%u(fl%imx:fl%imz,i,j,k) = cgl%cg%u(fl%imx:fl%imz,i,j,k) - dt*cg%q(idivB)%arr(i,j,k)*(cgl%cg%b(xdim:zdim,i,j,k))
+        do while (associated(cgl))
+           cg => cgl%cg
+           do k = cgl%cg%ks, cgl%cg%ke
+              do j = cgl%cg%js, cgl%cg%je
+                 do i = cgl%cg%is, cgl%cg%ie
+                    !Sources
 
-                       ! B = B - dt*divB*u
-                       cgl%cg%b(xdim:zdim,i,j,k) = cgl%cg%b(xdim:zdim,i,j,k) - dt*cg%q(idivB)%arr(i,j,k)*(cgl%cg%u(fl%imx:fl%imz,i,j,k)/cgl%cg%u(fl%idn,i,j,k))
+                    ! momentum = momentum - dt*divB*B
+                    cgl%cg%u(fl%imx:fl%imz,i,j,k) = cgl%cg%u(fl%imx:fl%imz,i,j,k) - dt*cg%q(idivB)%arr(i,j,k)*(cgl%cg%b(xdim:zdim,i,j,k))
 
-                       ! e = e - dt*divB*u.B - B.grad(psi)
+                    ! B = B - dt*divB*u
+                    cgl%cg%b(xdim:zdim,i,j,k) = cgl%cg%b(xdim:zdim,i,j,k) - dt*cg%q(idivB)%arr(i,j,k)*(cgl%cg%u(fl%imx:fl%imz,i,j,k)/cgl%cg%u(fl%idn,i,j,k))
 
-                       cgl%cg%u(fl%ien,i,j,k) = cgl%cg%u(fl%ien,i,j,k) - &
-                            dt*cg%q(idivB)%arr(i,j,k)*dot_product(cgl%cg%u(fl%imx:fl%imz,i,j,k)/cgl%cg%u(fl%idn,i,j,k),cgl%cg%b(xdim:zdim,i,j,k)) - &
-                            dot_product(cgl%cg%b(xdim:zdim,i,j,k),cg%w(igp)%arr(xdim:zdim,i,j,k))
+                    ! e = e - dt*divB*u.B - B.grad(psi)
 
-                       ! psi = psi - dt*u.grad(psi), other term is calculated in damping
-                       cgl%cg%q(qna%ind(psi_n))%arr(i,j,k) =  cgl%cg%q(qna%ind(psi_n))%arr(i,j,k) - &
-                            dt*dot_product(cgl%cg%u(fl%imx:fl%imz,i,j,k)/cgl%cg%u(fl%idn,i,j,k),cg%w(igp)%arr(xdim:zdim,i,j,k))
+                    cgl%cg%u(fl%ien,i,j,k) = cgl%cg%u(fl%ien,i,j,k) - &
+                         dt*cg%q(idivB)%arr(i,j,k)*dot_product(cgl%cg%u(fl%imx:fl%imz,i,j,k)/cgl%cg%u(fl%idn,i,j,k),cgl%cg%b(xdim:zdim,i,j,k)) - &
+                         dot_product(cgl%cg%b(xdim:zdim,i,j,k),cg%w(igp)%arr(xdim:zdim,i,j,k))
 
-                    end associate
+                    ! psi = psi - dt*u.grad(psi), other term is calculated in damping
+                    cgl%cg%q(qna%ind(psi_n))%arr(i,j,k) =  cgl%cg%q(qna%ind(psi_n))%arr(i,j,k) - &
+                         dt*dot_product(cgl%cg%u(fl%imx:fl%imz,i,j,k)/cgl%cg%u(fl%idn,i,j,k),cg%w(igp)%arr(xdim:zdim,i,j,k))
+
                  enddo
               enddo
            enddo
@@ -284,7 +297,6 @@ contains
         enddo
      endif
 
-     return
    end subroutine eglm
 
   subroutine glm_3D
