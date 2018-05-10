@@ -201,7 +201,7 @@ contains
       glm_alpha   = 0.1
       skip_sweep  = .false.
       use_eglm    = .false.
-      print_divB  = 0
+      print_divB  = 100
 
       if (master) then
          if (.not.nh%initialized) call nh%init()

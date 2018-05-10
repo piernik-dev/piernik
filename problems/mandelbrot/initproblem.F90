@@ -284,17 +284,17 @@ contains
 
       implicit none
 
-      character(len=*), intent(in)                    :: var
-      real(kind=4), dimension(:,:,:), intent(inout)   :: tab
-      integer, intent(inout)                          :: ierrh
-      type(grid_container), pointer, intent(in)       :: cg
+      character(len=*),              intent(in)    :: var
+      real, dimension(:,:,:),        intent(inout) :: tab
+      integer,                       intent(inout) :: ierrh
+      type(grid_container), pointer, intent(in)    :: cg
 
       ierrh = 0
       select case (trim(var))
          case ("distance", "dist") ! Supply the alternative name to comply with the old 4-letter limit
-            tab(:,:,:) = real(log(sqrt(cg%q(qna%ind(re_n))%span(cg%ijkse)**2 + cg%q(qna%ind(imag_n))%span(cg%ijkse)**2)), kind=4)
+            tab(:,:,:) = log(sqrt(cg%q(qna%ind(re_n))%span(cg%ijkse)**2 + cg%q(qna%ind(imag_n))%span(cg%ijkse)**2))
          case ("angle", "ang")
-            tab(:,:,:) = real(atan2(cg%q(qna%ind(imag_n))%span(cg%ijkse), cg%q(qna%ind(re_n))%span(cg%ijkse)), kind=4)
+            tab(:,:,:) = atan2(cg%q(qna%ind(imag_n))%span(cg%ijkse), cg%q(qna%ind(re_n))%span(cg%ijkse))
          case default
             ierrh = -1
       end select
