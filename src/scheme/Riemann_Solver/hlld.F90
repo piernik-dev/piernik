@@ -136,8 +136,9 @@ contains
 
     ! external procedures
 
-    use constants,  only: half, zero, one, xdim, ydim, zdim, idn, imx, imy, imz, ien
+    use constants,  only: half, zero, one, xdim, ydim, zdim, idn, imx, imy, imz, ien, DIVB_HDC
     use func,       only: operator(.notequals.), operator(.equals.)
+    use global,     only: divB_0_method
 
     ! arguments
 
@@ -174,7 +175,7 @@ contains
 
     ! SOLVER
 
-    b_cc(xdim,:) = 0.
+    if (divB_0_method /= DIVB_HDC) b_cc(xdim,:) = 0.
     has_energy = (ubound(ul, dim=1) >= ien)
     ue = 0.
 

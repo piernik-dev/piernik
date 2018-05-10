@@ -871,7 +871,6 @@ contains
            real, optional, dimension(:), intent(in) :: weights
 
            real, dimension(:), allocatable :: w
-           integer :: i
            integer :: iend  !< last component of any fluid (i.e. exclude CR or tracers here)
 
 #ifdef COSM_RAYS
@@ -905,30 +904,24 @@ contains
            if (size(w)>=2)  b_cc(ydim:zdim,2:nx) = b_cc(ydim:zdim,2:nx) + w(2) * db1(ydim:zdim,2:nx)
            if (size(w)>=3)  b_cc(ydim:zdim,2:nx) = b_cc(ydim:zdim,2:nx) + w(3) * db2(ydim:zdim,2:nx)
            if (size(w)>=4)  b_cc(ydim:zdim,2:nx) = b_cc(ydim:zdim,2:nx) + w(4) * db3(ydim:zdim,2:nx)
-           b_cc(ydim:zdim,1) = b_cc(ydim:zdim,2)
-           b_cc(ydim:zdim,nx) = b_cc(ydim:zdim,nx-1)
 
            if (divB_0_method == DIVB_HDC .and. use_hdc_1D) then
-              do i=1, glm_iter
-                 b_cc(xdim, 2:nx-1) = b_cc(xdim, 2:nx-1) + dtodx * 0.5 * ( &
-                      (psi(1, 1:nx-2) - psi(1, 3:nx)) - &
-                      (2*b_cc(xdim, 2:nx-1) - b_cc(xdim, 1:nx-2) - b_cc(xdim, 3:nx)) * chspeed)
+              !do i=1, glm_iter  ! GLM substepping ignored for now
 
-                 b_cc(xdim,1) = b_cc(xdim,2)
-                 b_cc(xdim,nx) = b_cc(xdim,nx-1)
+              b_cc(xdim, 2:nx) = b_cc(xdim, 2:nx) + dtodx * (mag_cc(xdim, 1:nx-1) - mag_cc(xdim, 2:nx))
 
-                 psi(1, 2:nx-1) = psi(1, 2:nx-1) + dtodx * 0.5 * chspeed * ( &
-                      chspeed * (b_cc(xdim, 1:nx-2) - b_cc(xdim, 3:nx)) - &
-                      (2*psi(1, 2:nx-1) - psi(1, 1:nx-2) - psi(1, 3:nx)))
+              psi(1, 2:nx) = psi(1, 2:nx) + dtodx * (psi_cc(1, 1:nx-1) - psi_cc(1, 2:nx))
+              psi(:,1) = psi(:,2)
+              psi(:,nx) = psi(:, nx-1)
 
-                 psi(:,1) = psi(:,2)
-                 psi(:,nx) = psi(:,nx-1)
+              !damping
+              psi = psi*exp(-glm_alpha*chspeed*dtodx)
 
-                 !damping
-                 psi = psi*exp(-glm_alpha*chspeed*dtodx)
-
-              enddo
+              !enddo
            endif
+
+           b_cc(:, 1)  = b_cc(:, 2)
+           b_cc(:, nx) = b_cc(:, nx-1)
 
 ! This is lowest order implementation of CR
 ! It agrees with the implementation in RTVD in the limit of small CR energy amounts
