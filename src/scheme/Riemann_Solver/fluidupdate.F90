@@ -908,9 +908,15 @@ contains
            if (divB_0_method == DIVB_HDC .and. use_hdc_1D) then
               !do i=1, glm_iter  ! GLM substepping ignored for now
 
-              b_cc(xdim, 2:nx) = b_cc(xdim, 2:nx) + dtodx * (mag_cc(xdim, 1:nx-1) - mag_cc(xdim, 2:nx))
+              b_cc(xdim, 2:nx) = b_cc(xdim, 2:nx) + w(1) * dtodx * (mag_cc(xdim, 1:nx-1) - mag_cc(xdim, 2:nx))
+              if (size(w)>=2)  b_cc(xdim,2:nx) = b_cc(xdim,2:nx) + w(2) * db1(xdim,2:nx)
+              if (size(w)>=3)  b_cc(xdim,2:nx) = b_cc(xdim,2:nx) + w(3) * db2(xdim,2:nx)
+              if (size(w)>=4)  b_cc(xdim,2:nx) = b_cc(xdim,2:nx) + w(4) * db3(xdim,2:nx)
 
-              psi(1, 2:nx) = psi(1, 2:nx) + dtodx * (psi_cc(1, 1:nx-1) - psi_cc(1, 2:nx))
+              psi(1, 2:nx) = psi(1, 2:nx) + w(1) * dtodx * (psi_cc(1, 1:nx-1) - psi_cc(1, 2:nx))
+              if (size(w)>=2)  psi_cc(1,2:nx) = psi_cc(1,2:nx) + w(2) * dpsi1(1,2:nx)
+              if (size(w)>=3)  psi_cc(1,2:nx) = psi_cc(1,2:nx) + w(3) * dpsi2(1,2:nx)
+              if (size(w)>=4)  psi_cc(1,2:nx) = psi_cc(1,2:nx) + w(4) * dpsi3(1,2:nx)
               psi(:,1) = psi(:,2)
               psi(:,nx) = psi(:, nx-1)
 
