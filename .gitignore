@@ -8,5 +8,5 @@ html/
 dep.png
 *.ignore
 *.gold_log
-gold_dir/
+*gold_dir/
 doc/latex/
