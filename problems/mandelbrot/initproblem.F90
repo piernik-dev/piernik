@@ -26,7 +26,19 @@
 !
 #include "piernik.h"
 
-!> Brief calculate the lovely shape of the Mandelbrot set. Refine on the set to follow the interesting details.
+!>
+!! \brief calculate the lovely shape of the Mandelbrot set.  Refine on the
+!! set to follow the interesting details.
+!!
+!! The Mandelbrot problem is intended for stress testing of the AMR
+!! subsystem. There are more efficient fractal generators around but
+!! one may consider some fun ideas:
+!! * Use some multipresicion or implement own fixed point, optimized for
+!!   these calculations.
+!! * Use speedup tricks like these in fast deep zoom programs.
+!! * Detect interior of minibrotsfor further speedups (already sort of works
+!!   as it dos not get refined too much.
+!<
 
 module initproblem
 
@@ -272,17 +284,17 @@ contains
 
       implicit none
 
-      character(len=*), intent(in)                    :: var
-      real(kind=4), dimension(:,:,:), intent(inout)   :: tab
-      integer, intent(inout)                          :: ierrh
-      type(grid_container), pointer, intent(in)       :: cg
+      character(len=*),              intent(in)    :: var
+      real, dimension(:,:,:),        intent(inout) :: tab
+      integer,                       intent(inout) :: ierrh
+      type(grid_container), pointer, intent(in)    :: cg
 
       ierrh = 0
       select case (trim(var))
          case ("distance", "dist") ! Supply the alternative name to comply with the old 4-letter limit
-            tab(:,:,:) = real(log(sqrt(cg%q(qna%ind(re_n))%span(cg%ijkse)**2 + cg%q(qna%ind(imag_n))%span(cg%ijkse)**2)), kind=4)
+            tab(:,:,:) = log(sqrt(cg%q(qna%ind(re_n))%span(cg%ijkse)**2 + cg%q(qna%ind(imag_n))%span(cg%ijkse)**2))
          case ("angle", "ang")
-            tab(:,:,:) = real(atan2(cg%q(qna%ind(imag_n))%span(cg%ijkse), cg%q(qna%ind(re_n))%span(cg%ijkse)), kind=4)
+            tab(:,:,:) = atan2(cg%q(qna%ind(imag_n))%span(cg%ijkse), cg%q(qna%ind(re_n))%span(cg%ijkse))
          case default
             ierrh = -1
       end select

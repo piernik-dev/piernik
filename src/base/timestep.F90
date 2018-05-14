@@ -69,6 +69,7 @@ contains
 
       if (code_progress < PIERNIK_INIT_GLOBAL) call die("[timestep:init_time_step] globals not initialized.")
 
+      c_all_old = 0. ! safe initial value
       select case (cflcontrol)
          case ('warn')
             cfl_manager => cfl_warn

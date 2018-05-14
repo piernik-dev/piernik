@@ -96,7 +96,6 @@ contains
 
             ! Warning: 2.5D MHD may need all directional calls anyway
             if (.not. skip_sweep(ddim)) call sweep_dsplit(cgl%cg,dt,ddim)
-            if (associated(problem_customize_solution)) call problem_customize_solution(.true.)
             cgl => cgl%nxt
          enddo
          call all_bnd
@@ -105,6 +104,7 @@ contains
 #endif /* MAGNETIC */
       endif
     enddo
+    if (associated(problem_customize_solution)) call problem_customize_solution(.true.)
 
     t = t + dt
     dtm = dt
@@ -120,12 +120,12 @@ contains
           do while (associated(cgl))
 
              if (.not. skip_sweep(ddim)) call sweep_dsplit(cgl%cg,dt,ddim)
-             if (associated(problem_customize_solution)) call problem_customize_solution(.false.)
              cgl => cgl%nxt
           enddo
           call all_bnd
        endif
     enddo
+    if (associated(problem_customize_solution)) call problem_customize_solution(.false.)
 
     if (first_run) first_run = .false.
 
@@ -136,7 +136,7 @@ contains
 #ifdef MAGNETIC
    subroutine magfield(dir)
 
-      use ct,     only: advectb, ctb
+      use ct,          only: advectb
       use constants,   only: ndims, I_ONE
 #ifdef RESISTIVE
       use resistivity, only: diffuseb

@@ -97,6 +97,8 @@ contains
           else
              f(fl%imx,:)  =  u(fl%imx,:)*vx(:) + pr(:)  ! b_cc does not contribute in the limit of vanishing magnetic fields. Hydro part is recovered trivially.
           endif
+       else
+          f(fl%imx,:)  =  u(fl%imx,:)*vx(:)
        endif
        if (fl%is_magnetized) then
           f(fl%imy,:)  =  u(fl%imy,:)*vx(:) - b_cc(xdim,:)*b_cc(ydim,:)
@@ -160,10 +162,14 @@ contains
     real, dimension(xdim:zdim)                   :: v_2star, v_starl, v_starr
     real, dimension(xdim:zdim)                   :: b_cclf, b_ccrf
     real, dimension(xdim:zdim)                   :: b_starl, b_starr, b_2star
+    logical                                      :: has_energy
+    real                                         :: ue
 
     ! SOLVER
 
     b_cc(xdim,:) = 0.
+    has_energy = (ubound(ul, dim=1) >= ien)
+    ue = 0.
 
     do i = 1,n
 
@@ -175,19 +181,34 @@ contains
        ! Left and right states of total pressure
        ! From fluidupdate.F90, utoq() (1) is used in hydro regime and (2) in MHD regime. In case of vanishing magnetic fields the magnetic components do not contribute and hydro results are obtained trivially.
 
-       prl = ul(ien,i) + magprl ! ul(ien,i) is the left state of gas pressure
-       prr = ur(ien,i) + magprr ! ur(ien,i) is the right state of gas pressure
+       if (has_energy) then
 
-       ! Left and right states of energy Eq. 2.
+          prl = ul(ien,i) + magprl ! ul(ien,i) is the left state of gas pressure
+          prr = ur(ien,i) + magprr ! ur(ien,i) is the right state of gas pressure
 
-       enl = (ul(ien,i)/(gamma -one)) + half*ul(idn,i)*sum(ul(imx:imz,i)**2) + half*sum(b_ccl(xdim:zdim,i)**2)
-       enr = (ur(ien,i)/(gamma -one)) + half*ur(idn,i)*sum(ur(imx:imz,i)**2) + half*sum(b_ccr(xdim:zdim,i)**2)
+          ! Left and right states of energy Eq. 2.
 
-       ! Left and right states of gamma*p_gas
+          enl = (ul(ien,i)/(gamma -one)) + half*ul(idn,i)*sum(ul(imx:imz,i)**2) + half*sum(b_ccl(xdim:zdim,i)**2)
+          enr = (ur(ien,i)/(gamma -one)) + half*ur(idn,i)*sum(ur(imx:imz,i)**2) + half*sum(b_ccr(xdim:zdim,i)**2)
 
-       gampr_l = gamma*ul(ien,i)
-       gampr_r = gamma*ur(ien,i)
+          ! Left and right states of gamma*p_gas
 
+          gampr_l = gamma*ul(ien,i)
+          gampr_r = gamma*ur(ien,i)
+
+       else ! this is for DUST (presureless fluid)
+
+          ! check if it is consistent
+          prl = magprl
+          prr = magprr
+
+          enl = half*ul(idn,i)*sum(ul(imx:imz,i)**2) + half*sum(b_ccl(xdim:zdim,i)**2)
+          enr = half*ur(idn,i)*sum(ur(imx:imz,i)**2) + half*sum(b_ccr(xdim:zdim,i)**2)
+
+          gampr_l = 0.
+          gampr_r = 0.
+
+       endif
 
        ! Left and right states of fast magnetosonic waves Eq. 3
 
@@ -205,7 +226,7 @@ contains
        fl(idn) = ul(idn,i)*ul(imx,i)
        fl(imx) = ul(idn,i)*ul(imx,i)**2 + prl - b_ccl(xdim,i)**2  ! Total left state of pressure, so prl
        fl(imy:imz) = ul(idn,i)*ul(imy:imz,i)*ul(imx,i) - b_ccl(xdim,i)*b_ccl(ydim:zdim,i)
-       fl(ien) = (enl + prl)*ul(imx,i) - b_ccl(xdim,i)*(sum(ul(imx:imz,i)*b_ccl(xdim:zdim,i))) ! Total left state of pressure, so prl
+       if (has_energy) fl(ien) = (enl + prl)*ul(imx,i) - b_ccl(xdim,i)*(sum(ul(imx:imz,i)*b_ccl(xdim:zdim,i))) ! Total left state of pressure, so prl
        b_cclf(ydim:zdim) = b_ccl(ydim:zdim,i)*ul(imx,i) - b_ccl(xdim,i)*ul(imy:imz,i)
 
        ! Right flux
@@ -213,7 +234,7 @@ contains
        fr(idn) = ur(idn,i)*ur(imx,i)
        fr(imx) = ur(idn,i)*ur(imx,i)**2 + prr - b_ccr(xdim,i)**2  ! Total right state of pressure, so prl
        fr(imy:imz) = ur(idn,i)*ur(imy:imz,i)*ur(imx,i) - b_ccr(xdim,i)*b_ccr(ydim:zdim,i)
-       fr(ien) = (enr + prr)*ur(imx,i) - b_ccr(xdim,i)*(sum(ur(imx:imz,i)*b_ccr(xdim:zdim,i)))  ! Total right state of pressure, so prl
+       if (has_energy) fr(ien) = (enr + prr)*ur(imx,i) - b_ccr(xdim,i)*(sum(ur(imx:imz,i)*b_ccr(xdim:zdim,i)))  ! Total right state of pressure, so prl
        b_ccrf(ydim:zdim) = b_ccr(ydim:zdim,i)*ur(imx,i) - b_ccr(xdim,i)*ur(imy:imz,i)
 
        ! HLLD fluxes
@@ -271,7 +292,8 @@ contains
 
           ! Transversal components of magnetic field for left states (Eq. 45 & 47), taking degeneracy into account
           coeff_1  =  dn_l*slsm - b_lr
-          if ((coeff_1 .notequals. zero) .and. b_lrgam .le. ul(ien,i)) then  ! Left state of gas pressure, so ul(ien,i)
+          if (has_energy) ue = ul(ien,i)
+          if ((coeff_1 .notequals. zero) .and. b_lrgam .le. ue) then  ! Left state of gas pressure, so ul(ien,i)
              b_starl(ydim:zdim) = b_ccl(ydim:zdim,i) * (dn_l*slvxl - b_lr)/coeff_1
           else
              ! Calculate HLL left states
@@ -279,7 +301,8 @@ contains
           endif
 
           coeff_1  =  dn_r*srsm - b_lr
-          if ((coeff_1 .notequals. zero) .and. b_lrgam .le. ur(ien,i)) then  ! Right state of gas pressure, so ur(ien,i)
+          if (has_energy) ue = ur(ien,i)
+          if ((coeff_1 .notequals. zero) .and. b_lrgam .le. ue) then  ! Right state of gas pressure, so ur(ien,i)
              b_starr(ydim:zdim) = b_ccr(ydim:zdim,i) * (dn_r*srvxr - b_lr)/coeff_1
           else
              ! Calculate HLL right states
@@ -312,8 +335,10 @@ contains
 
           ! Total energy of left and right intermediate states Eq. (48)
 
-          u_starl(ien) = (slvxl*enl - prl*ul(imx,i) + prt_star*sm + b_ccl(xdim,i)*(vb_l - vb_starl))/slsm  ! Total left state of pressure
-          u_starr(ien) = (srvxr*enr - prr*ur(imx,i) + prt_star*sm + b_ccr(xdim,i)*(vb_r - vb_starr))/srsm  ! Total right state of pressure
+          if (has_energy) then
+             u_starl(ien) = (slvxl*enl - prl*ul(imx,i) + prt_star*sm + b_ccl(xdim,i)*(vb_l - vb_starl))/slsm  ! Total left state of pressure
+             u_starr(ien) = (srvxr*enr - prr*ur(imx,i) + prt_star*sm + b_ccr(xdim,i)*(vb_r - vb_starr))/srsm  ! Total right state of pressure
+          endif
 
           ! Cases for B_x .ne. and .eq. zero
 
@@ -382,7 +407,7 @@ contains
                    u_2starl(imx:imz)  =  u_starl(idn)*v_2star
 
                    ! Energy of Alfven intermediate state Eq. 63
-                   u_2starl(ien)  =  u_starl(ien) - b_sig*dn_lsqt*(vb_starl - vb_2star)
+                   if (has_energy) u_2starl(ien)  =  u_starl(ien) - b_sig*dn_lsqt*(vb_starl - vb_2star)
                 endif
 
                 if (sm <= zero) then
@@ -391,7 +416,7 @@ contains
                    u_2starr(imx:imz)  =  u_starr(idn)*v_2star
 
                    ! Energy of Alfven intermediate state Eq. 63
-                   u_2starr(ien)  =  u_starr(ien) + b_sig*dn_rsqt*(vb_starr - vb_2star)
+                   if (has_energy) u_2starr(ien)  =  u_starr(ien) + b_sig*dn_rsqt*(vb_starr - vb_2star)
                 endif
 
                 if (sm > zero) then

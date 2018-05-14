@@ -58,15 +58,15 @@ implicit_save = re.compile('''
 not_param_nor_save = re.compile("(?!.*(parameter|save))", re.IGNORECASE)
 
 nasty_spaces = [
-    re.compile("end\s{1,}do", re.IGNORECASE), "enddo",
-    re.compile("end\s{1,}if", re.IGNORECASE), "endif",
-    re.compile("end\s{1,}while", re.IGNORECASE), "endwhile",
-    re.compile("end\s{1,}where", re.IGNORECASE), "endwhere",
+    re.compile("^([\s0-9]*)end\s{1,}do", re.IGNORECASE), r"\1enddo",
+    re.compile("^([\s0-9]*)end\s{1,}if", re.IGNORECASE), r"\1endif",
+    re.compile("^([\s0-9]*)end\s{1,}while", re.IGNORECASE), r"\1endwhile",
+    re.compile("^([\s0-9]*)end\s{1,}where", re.IGNORECASE), r"\1endwhere",
     re.compile("only\s{1,}:", re.IGNORECASE), "only:",
-    re.compile("if(|\s{2,})\(", re.IGNORECASE), "if (",
-    re.compile("where(|\s{2,})\(", re.IGNORECASE), "where (",
-    re.compile("while(|\s{2,})\(", re.IGNORECASE), "while (",
-    re.compile("forall(|\s{2,})\(", re.IGNORECASE), "forall (",
+    re.compile("\sif(|\s{2,})\(", re.IGNORECASE), " if (",
+    re.compile("\swhere(|\s{2,})\(", re.IGNORECASE), " where (",
+    re.compile("\swhile(|\s{2,})\(", re.IGNORECASE), " while (",
+    re.compile("\sforall(|\s{2,})\(", re.IGNORECASE), " forall (",
     re.compile("\scase(|\s{2,})\(", re.IGNORECASE), " case ("
 ]
 
@@ -201,8 +201,8 @@ def qa_checks(files, options):
             # things done in "in-place"
             line = line.rstrip()    # that removes trailing spaces
             for i in range(0, len(nasty_spaces), 2):
-                line = re.sub(nasty_spaces[i], nasty_spaces[
-                              i + 1], line)   # remove nasty spaces
+                line = re.sub(nasty_spaces[i], nasty_spaces[i + 1], line)
+                # remove nasty spaces
             pfile.append(line)
 
         if lines != [line + '\n' for line in pfile]:
@@ -214,8 +214,7 @@ def qa_checks(files, options):
                     diff_cnt += 1
             if diff_cnt:
                 print give_warn("QA:  ") + \
-                    "Whistespace changes found in file '%s' " + \
-                    "(%d lines changed)" % (f, diff_cnt)
+                    "Whitespace changes found in file '%s' (%d lines changed)" % (f, diff_cnt)
             fp = open(f, 'w')
             for line in pfile:
                 fp.write(line + '\n')

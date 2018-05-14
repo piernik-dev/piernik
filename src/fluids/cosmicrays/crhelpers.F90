@@ -47,7 +47,7 @@ module crhelpers
          use grid_cont, only: grid_container
          implicit none
          integer(kind=4),               intent(in)    :: ifluid
-         type(grid_container), pointer, intent(inout) :: cg
+         type(grid_container), pointer, intent(in)    :: cg
       end subroutine div_v_func
    end interface
 
@@ -91,7 +91,7 @@ contains
       implicit none
 
       integer(kind=4),               intent(in)    :: ifluid
-      type(grid_container), pointer, intent(inout) :: cg
+      type(grid_container), pointer, intent(in)    :: cg
 
       select case (trim(divv_scheme))
          case ("6lp", "6th_order_legandre")
@@ -115,7 +115,7 @@ contains
       integer(kind=4),               intent(in)    :: dir
       integer,                       intent(in)    :: i1, i2
       real, dimension(:),   pointer, intent(inout) :: p
-      type(grid_container), pointer, intent(inout) :: cg
+      type(grid_container), pointer, intent(in)    :: cg
 
       if (.not. qna%exists(divv_n)) call die("[crhelpers:set_div_v1d] cannot get divvel")
       p => cg%q(qna%ind(divv_n))%get_sweep(dir, i1, i2)
@@ -145,7 +145,7 @@ contains
       implicit none
 
       integer(kind=4),               intent(in)    :: ifluid
-      type(grid_container), pointer, intent(inout) :: cg
+      type(grid_container), pointer, intent(in)    :: cg
       real, dimension(:),   pointer                :: divvel, mom, dens
       integer(kind=4)                              :: dir
       integer                                      :: i2, i3
@@ -201,7 +201,7 @@ contains
       implicit none
 
       integer(kind=4),               intent(in)    :: ifluid
-      type(grid_container), pointer, intent(inout) :: cg
+      type(grid_container), pointer, intent(in)    :: cg
       real, dimension(:),   pointer                :: divvel, mom, dn
       integer(kind=4)                              :: dir
       integer                                      :: i2, i3

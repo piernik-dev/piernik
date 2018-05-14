@@ -58,7 +58,7 @@ module cg_list_neighbors
    !<
    type, extends(cg_list_rebalance_T), abstract :: cg_list_neighbors_T
    contains
-      procedure          :: find_neighbors            !< Choose between more general nad fast routine for neighbor searching
+      procedure          :: find_neighbors            !< Choose between more general and fast routine for neighbor searching
       procedure, private :: find_neighbors_SFC        !< Make full description of intra-level communication with neighbors. Approach exploiting strict SFC distribution.
       procedure, private :: find_neighbors_bruteforce !< Make full description of intra-level communication with neighbors. Brute-force approach.
    end type cg_list_neighbors_T

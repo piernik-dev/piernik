@@ -51,6 +51,7 @@ module dataio_pub
    logical                     :: can_i_write                    !< .true. for processes allowed to write
    logical                     :: enable_compression             !< set to .true. to enable automatic compression (test I/O performance before use, avoid on serial I/O)
    integer(kind=4)             :: gzip_level                     !< gzip compression strength: 1 - lowest and fast, 9 - best and slow
+   logical                     :: h5_64bit                       !< single or double precision plotfiles
 
    ! Buffer lengths used only in I/O routines
    integer, parameter          :: msglen = 1024                  !< 1kB for a message ought to be enough for anybody ;-)
@@ -95,9 +96,9 @@ module dataio_pub
    integer                     :: code_progress                  !< rough estimate of code execution progress
 
    ! storage for the problem.par
-   integer, parameter          :: maxparfilelen   = 128          !< max length of line in problem.par file
+   integer, parameter          :: maxparfilelen   = 500          !< max length of line in problem.par file
    integer, parameter          :: maxparfilelines = 256          !< max number of lines in problem.par
-   integer(kind=4), parameter  :: bufferlines = 128              !< max number of lines in problem.par
+   integer(kind=4), parameter  :: bufferlines = 128              !< max number of lines in the log buffer
    character(len=maxparfilelen), dimension(maxparfilelines) :: parfile !< contents of the parameter file
    character(len=msglen), dimension(bufferlines) :: logbuffer    !< buffer for log I/O
    integer, save               :: parfilelines = 0               !< number of lines in the parameter file

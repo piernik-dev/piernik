@@ -55,7 +55,7 @@ contains
 !!
 !! \details Multigrid levels are always created on all processes, so no need to fix anything on the bottom of the hierarchy
 !!
-!! \todo When global top level do not have any blocks then destroy it.
+!! \todo When global top level does not have any blocks then destroy it.
 !<
 
    subroutine equalize(this)

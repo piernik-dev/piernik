@@ -16,6 +16,7 @@ for i in GOLD_COMMIT PROBLEM_NAME SETUP_PARAMS GOLD_PARAMS OUTPUT; do
     fi
 done
 
+PIERNIK_REPO="http://github.com/piernik-dev/piernik"
 PIERNIK=piernik
 GOLD_DIR=${PROBLEM_NAME}_gold_dir
 OBJ_PREFIX=obj_
@@ -24,6 +25,7 @@ TEST_OBJ=${PROBLEM_NAME}_test
 GOLD_LOG=${PROBLEM_NAME}.gold_log
 TMP_DIR=/tmp/jenkins_gold/
 RUNS_DIR=$TMP_DIR
+GOLD_SHA_FILE=__sha__
 
 [ ! -d $TMP_DIR ] && mkdir -p $TMP_DIR
 cp Makefile $TMP_DIR
@@ -37,10 +39,12 @@ done
 python setup $PROBLEM_NAME $SETUP_PARAMS -n --copy -o $TEST_OBJ
 rsync -Icvxaq --no-t ${OBJ_PREFIX}$TEST_OBJ $TMP_DIR
 
-git clone -q http://github.com/piernik-dev/piernik $GOLD_DIR
+git clone -q $PIERNIK_REPO $GOLD_DIR
 [ -e .setuprc ] && cp .setuprc $GOLD_DIR
+cp python/piernik_setup.py ${GOLD_DIR}/python
 (
     cd $GOLD_DIR
+    git fetch $PIERNIK_REPO +refs/pull/*:refs/remotes/origin/pr/*
     git checkout -q $GOLD_COMMIT
     rsync -avxq --delete ../compilers/ ./compilers
     python setup $PROBLEM_NAME $SETUP_PARAMS -n --copy -o $GOLD_OBJ
@@ -67,7 +71,18 @@ done
 
 (
     cd ${RUNS_DIR}/${PROBLEM_NAME}_$GOLD_OBJ
-    [ ! -e ${OUTPUT} ] && eval $RUN_COMMAND ./${PIERNIK} $GOLD_PARAMS > ${PROBLEM_NAME}.gold_stdout
+    # skip recalculating gold outpuf if and only if we know for sure that $GOLD_COMMIT did not change
+    if [ ! -e $GOLD_SHA_FILE ] ; then
+	[ -e ${OUTPUT} ] && rm ${OUTPUT}
+    else
+	if [ $( cat $GOLD_SHA_FILE  ) != $GOLD_COMMIT ] ; then
+	   [ -e ${OUTPUT} ] && rm ${OUTPUT}
+	fi
+    fi
+    if [ ! -e ${OUTPUT} ] ; then
+       eval $RUN_COMMAND ./${PIERNIK} $GOLD_PARAMS > ${PROBLEM_NAME}.gold_stdout
+       echo $GOLD_COMMIT > $GOLD_SHA_FILE
+    fi
 ) &
 
 wait
