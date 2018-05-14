@@ -44,7 +44,7 @@ git clone -q $PIERNIK_REPO $GOLD_DIR
 cp python/piernik_setup.py ${GOLD_DIR}/python
 (
     cd $GOLD_DIR
-    git fetch $PIERNIK_REPO +refs/pull/*:refs/remotes/origin/pr/*
+    git fetch -q $PIERNIK_REPO +refs/pull/*:refs/remotes/origin/pr/*
     git checkout -q $GOLD_COMMIT
     rsync -avxq --delete ../compilers/ ./compilers
     python setup $PROBLEM_NAME $SETUP_PARAMS -n --copy -o $GOLD_OBJ
@@ -56,6 +56,7 @@ cp runs/${PROBLEM_NAME}_${TEST_OBJ}/problem.par ${RUNS_DIR}/${PROBLEM_NAME}_${TE
 
 (
     cd $TMP_DIR
+    sed -i 's/-fcheck=all/& -fcheck=no-array-temps/' ${OBJ_PREFIX}$GOLD_OBJ"/Makefile" ${OBJ_PREFIX}$TEST_OBJ"/Makefile"
     make -j ${OBJ_PREFIX}$GOLD_OBJ ${OBJ_PREFIX}$TEST_OBJ > ${PROBLEM_NAME}.make_stdout 2>&1
 )
 
