@@ -2,11 +2,12 @@
 
 if [ $# -lt 1 ]; then
     echo "Usage: $0 config_file"
-    echo "or somethink like: RUN_COMMAND=\"mpirun -np 2\" $0 config_file"
     exit 1
 fi
 
-for i in GOLD_COMMIT PROBLEM_NAME SETUP_PARAMS GOLD_PARAMS OUTPUT; do
+# serial run by default
+NTHR=1
+for i in GOLD_COMMIT PROBLEM_NAME SETUP_PARAMS GOLD_PARAMS OUTPUT NTHR; do
     eval $( sed -n '/^'"$i"'=/p' $1 )
     if [ -z ${!i+x} ] ; then
 	echo "$i not set"
@@ -15,6 +16,7 @@ for i in GOLD_COMMIT PROBLEM_NAME SETUP_PARAMS GOLD_PARAMS OUTPUT; do
 	echo $i"  =  "${!i}
     fi
 done
+RUN_COMMAND="mpirun -np $NTHR"
 
 PIERNIK_REPO="http://github.com/piernik-dev/piernik"
 PIERNIK=piernik

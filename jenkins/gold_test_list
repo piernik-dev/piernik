@@ -1,7 +1,7 @@
-RUN_COMMAND="mpirun -np 1" ./jenkins/gold_test.sh ./jenkins/gold_configs/mcrtest_new &
-RUN_COMMAND="mpirun -np 4" ./jenkins/gold_test.sh ./jenkins/gold_configs/mcrwind &
-RUN_COMMAND="mpirun -np 1" ./jenkins/gold_test.sh ./jenkins/gold_configs/resist &
-RUN_COMMAND="mpirun -np 4" ./jenkins/gold_test.sh ./jenkins/gold_configs/streaming_instability &
+./jenkins/gold_test.sh ./jenkins/gold_configs/mcrtest_new &
+./jenkins/gold_test.sh ./jenkins/gold_configs/mcrwind &
+./jenkins/gold_test.sh ./jenkins/gold_configs/resist &
+./jenkins/gold_test.sh ./jenkins/gold_configs/streaming_instability &
 
 wait
 tail -n 1 *.gold_log
