@@ -69,7 +69,7 @@ done
 
 (
     cd ${RUNS_DIR}/${PROBLEM_NAME}_$TEST_OBJ
-    eval $RUN_COMMAND ./${PIERNIK} > ${PROBLEM_NAME}.test_stdout
+    eval TMPDIR="." $RUN_COMMAND ./${PIERNIK} > ${PROBLEM_NAME}.test_stdout
 ) &
 
 (
@@ -83,7 +83,7 @@ done
 	fi
     fi
     if [ ! -e ${OUTPUT} ] ; then
-       eval $RUN_COMMAND ./${PIERNIK} $GOLD_PARAMS > ${PROBLEM_NAME}.gold_stdout
+       eval TMPDIR="." $RUN_COMMAND ./${PIERNIK} $GOLD_PARAMS > ${PROBLEM_NAME}.gold_stdout
        echo $GOLD_COMMIT > $GOLD_SHA_FILE
     fi
 ) &

@@ -1,7 +1,4 @@
-./jenkins/gold_test.sh ./jenkins/gold_configs/mcrtest_new &
-./jenkins/gold_test.sh ./jenkins/gold_configs/mcrwind &
-./jenkins/gold_test.sh ./jenkins/gold_configs/resist &
-./jenkins/gold_test.sh ./jenkins/gold_configs/streaming_instability &
 
-wait
+parallel --load 70% --delay 5 eval "./jenkins/gold_test.sh {} > {/.}'_gold_stdout'" ::: ./jenkins/gold_configs/*.config
+
 tail -n 1 *.gold_log
