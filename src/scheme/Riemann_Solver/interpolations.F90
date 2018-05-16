@@ -33,58 +33,99 @@ module interpolations
 
   implicit none
   private
-  public :: set_interpolations, interpol
+  public :: set_interpolations, interpol, linear
 
   interface
-     subroutine interpolation(n,f,fl,fr)
+     subroutine interpolation(prim_var,prim_var_l,prim_var_r)
        
        implicit none
+       
+       real, dimension(:,:), intent(in)  :: prim_var
+       real, dimension(:,:), intent(out) :: prim_var_l
+       real, dimension(:,:), intent(out) :: prim_var_r
 
-       integer(kind=4),      intent(in)  :: n
-       real, dimension(:,:), intent(in)  :: f
-       real, dimension(:,:), intent(out) :: fl
-       real, dimension(:,:), intent(out) ::fr
+     end subroutine interpolation
 
-    end interface
+  end interface
 
-    procedure(interpolation), pointer :: interpol => null()
+  procedure(interpolation), pointer :: interpol => null()
 
-  contains
+contains
 
 
-    subroutine set_interpolations(interpol_str)
+  subroutine set_interpolations(interpol_str)
 
-      use dataio_pub, only: die
+    use dataio_pub, only: die
 
-      implicit none
+    implicit none
 
-      character(len=*), intent(in) :: interpol_str
+    character(len=*), intent(in) :: interpol_str
 
-      if (associated(interp)) call die("[interpolations:set_interpolations] interpol already associated")
-      interpol => set_interpolation(interpol_str)
+    if (associated(interpol)) call die("[interpolations:set_interpolations] interpol already associated")
+    interpol => set_interpolation(interpol_str)
       
-    end subroutine set_interpolations
+  end subroutine set_interpolations
 
-    function set_interpolation(interp_str) result(interp)
+  function set_interpolation(interp_str) result(interp)
 
-      use dataio_pub, only: msg, die
+    use dataio_pub, only: msg, die
 
-      implicit none
+    implicit none
 
-      character(len=*), intent(in) :: interp_str
+    character(len=*), intent(in) :: interp_str
+    
+    procedure(interpolation), pointer :: interp
 
-      procedure(interpolation), pointer :: interp
+    select case(interp_str)
+    case('linear', 'LINEAR')
+       interp => linear
+    case default
+       write(msg,'(2a)') "[interpolations:set_interpolation] unknown interpolation ", interp_str 
+       call die(msg)
+       interp => null()
+    end select
+    
+  end function set_interpolation
 
-      select case(interp_str)
-         case('linear', 'LINEAR')
-            inetrp => linear_interpolation
-         case default
-            write(msg,'(2a)') "[interpolations:set_interpolation] unknown interpolation ", interp_str 
-            call die(msg)
-            inter => null()
-         end select
-
-    end function set_interpolation
+  subroutine linear(q,ql,qr)
+    
+    use fluxlimiters, only: set_limiters,flimiter,blimiter
+    use domain,       only: dom
+    use constants,    only: half, GEO_XYZ
+    use dataio_pub,   only: die
       
+    implicit none
+
+    real, dimension(:,:), intent(in)     :: q
+    real, dimension(:,:), intent(out)    :: ql
+    real, dimension(:,:), intent(out)    :: qr
+
+    real, dimension(size(q,1),size(q,2)) :: dq_lim, dq_interp
+
+    integer                              :: im1
+    integer                              :: n 
+    n = size(q,2)
+      
+    dq_lim = flimiter(q)
+
+    if (dom%geometry_type /= GEO_XYZ) call die("[interpolations:linear] non-cartesian geometry not implemented yet.")
+
+    dq_interp = half*dq_lim
+    
+    ql = q + dq_interp
+    qr = q - dq_interp
+
+    im1 = max(1,n-1) ! neighbouring indices
+    !associate(im1 => i - Dom%D_x)
+    ! shfit right state
+    qr(:,1:im1) = qr(:,2:n)
+
+
+    ! interpolation for the first and last points
+    
+    ql(:,1) = q(:,1)
+    qr(:,n) = q(:,n)  
+      
+  end subroutine linear
     
 end module interpolations
