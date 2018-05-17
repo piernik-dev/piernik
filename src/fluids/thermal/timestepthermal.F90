@@ -25,34 +25,39 @@
 !    For full list of developers see $PIERNIK_HOME/license/pdt.txt
 !
 #include "piernik.h"
+
 !>
 !! \brief Module containing a routine to compute upper limit of %timestep due to fluids %interactions.
 !<
+
 module timestepthermal
 ! pulled by THERM
+
    implicit none
+
    private
    public :: timestep_thermal
 
 contains
+
 !>
 !! \brief Routine that computes upper limit of %timestep due to cooling or heating processes.
 !<
    real function timestep_thermal(cg) result(dt)
-      use grid_cont,    only: grid_container
-      use constants,    only: small, I_ONE
-      use grid_cont,    only: grid_container
-      use mpi,          only: MPI_MIN, MPI_DOUBLE_PRECISION
-      use mpisetup,     only: comm, mpi_err, FIRST, piernik_MPI_Bcast
-      use thermal,      only: maxdeint, cfl_coolheat, thermal_active
+
+      use constants, only: small, I_ONE
+      use grid_cont, only: grid_container
+      use mpi,       only: MPI_MIN, MPI_DOUBLE_PRECISION
+      use mpisetup,  only: comm, mpi_err, FIRST, piernik_MPI_Bcast
+      use thermal,   only: maxdeint, cfl_coolheat, thermal_active
 
       implicit none
+
+      type(grid_container), pointer, intent(in) :: cg
 
       real :: dt_coolheat_proc        !< timestep due to cooling or heating processes for the current process (MPI block) only
       real :: dt_coolheat_all         !< timestep due to cooling or heating processes for all MPI blocks
       real :: mxdeint
-
-      type(grid_container), pointer, intent(in) :: cg
 
       if (thermal_active) then
          call maxdeint(cg, mxdeint)
@@ -63,6 +68,7 @@ contains
       else
          dt = huge(1.)
       endif
-    end function timestep_thermal
+
+   end function timestep_thermal
 
 end module timestepthermal

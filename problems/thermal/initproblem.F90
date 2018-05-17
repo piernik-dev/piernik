@@ -35,7 +35,7 @@ module initproblem
    private
    public  :: read_problem_par, problem_initial_conditions, problem_pointers
 
-   real            :: d0, T0, bx0, by0, bz0, pertamp
+   real    :: d0, T0, bx0, by0, bz0, pertamp
 
    namelist /PROBLEM_CONTROL/ d0, T0, bx0, by0, bz0, pertamp
 
@@ -50,27 +50,25 @@ contains
 
       implicit none
 
-      user_tsl                => thermal_tsl
-      user_vars_hdf5          => crtest_analytic_ecr1
+      user_tsl       => thermal_tsl
+      user_vars_hdf5 => crtest_analytic_ecr1
 
    end subroutine problem_pointers
 
 !-----------------------------------------------------------------------------
 
    subroutine read_problem_par
-      use dataio_pub,       only: nh      ! QA_WARN required for diff_nml
-      use dataio_pub,       only: msg
-      use mpisetup,         only: ibuff, rbuff, master, slave, piernik_MPI_Bcast
+
+      use dataio_pub, only: nh
+      use mpisetup,   only: ibuff, rbuff, master, slave, piernik_MPI_Bcast
 
       implicit none
 
-      integer :: p, id
-
       T0      = 1.0e0
       d0      = 1.0
-      bx0     =   0.
-      by0     =   0.
-      bz0     =   0.
+      bx0     = 0.
+      by0     = 0.
+      bz0     = 0.
       pertamp = 0.
 
       if (master) then
@@ -131,10 +129,9 @@ contains
       implicit none
 
       integer                         :: i, j, k, p
+      real                            :: cs, p0
       type(cg_list_element),  pointer :: cgl
       type(grid_container),   pointer :: cg
-      real :: x, y, z
-      real :: cs, p0
 
       do p = 1, flind%energ
          associate(fl => flind%all_fluids(p)%fl)
@@ -217,24 +214,24 @@ contains
 
    subroutine crtest_analytic_ecr1(var, tab, ierrh, cg)
 
-      use grid_cont,        only: grid_container
-      use units,            only: kboltz, mH
-      use func,             only: emag, ekin
-      use fluidindex,       only: flind
-      use named_array_list, only: wna
-      use fluidtypes,       only: component_fluid
       use constants,        only: xdim, ydim, zdim
+      use fluidindex,       only: flind
+      use fluidtypes,       only: component_fluid
+      use func,             only: emag, ekin
+      use grid_cont,        only: grid_container
+      use named_array_list, only: wna
+      use units,            only: kboltz, mH
 
       implicit none
 
-      character(len=*),               intent(in)                  :: var
-      real(kind=4), dimension(:,:,:), intent(inout)               :: tab
-      integer,                        intent(inout)               :: ierrh
-      type(grid_container), pointer,  intent(in)                  :: cg
-      real, dimension(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)      :: eint, kin_ener, mag_ener, dens, temp
-      class(component_fluid), pointer                             :: pfl
+      character(len=*),               intent(in)             :: var
+      real(kind=4), dimension(:,:,:), intent(inout)          :: tab
+      integer,                        intent(inout)          :: ierrh
+      type(grid_container), pointer,  intent(in)             :: cg
+      real, dimension(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) :: eint, kin_ener, mag_ener, temp
+      class(component_fluid), pointer                        :: pfl
 
-! WARNING !!! ONLY ONE FLUID IS USED.
+      !> \warning ONLY ONE FLUID IS USED!!!
       pfl => flind%all_fluids(1)%fl
       if (pfl%has_energy) then
             kin_ener = ekin(cg%w(wna%fi)%span(pfl%imx,cg%ijkse), cg%w(wna%fi)%span(pfl%imy,cg%ijkse), cg%w(wna%fi)%span(pfl%imz,cg%ijkse), cg%w(wna%fi)%span(pfl%idn,cg%ijkse))
@@ -246,8 +243,7 @@ contains
             endif
       endif
 
-      dens = cg%w(wna%fi)%span(pfl%idn,cg%ijkse)
-      temp = (pfl%gam-1)*mH/kboltz*eint/dens
+      temp = (pfl%gam-1)*mH/kboltz*eint/cg%w(wna%fi)%span(pfl%idn,cg%ijkse)
 
       ierrh = 0
       select case (trim(var))
