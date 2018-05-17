@@ -33,7 +33,7 @@ module interpolations
 
   implicit none
   private
-  public :: set_interpolations, interpol, linear
+  public :: set_interpolations, interpol
 
   interface
      subroutine interpolation(prim_var,prim_var_l,prim_var_r)
@@ -48,44 +48,90 @@ module interpolations
 
   end interface
 
-  procedure(interpolation), pointer :: interpol => null()
+  procedure(interpolation), pointer :: interp => null()
 
 contains
 
+   function utoq(u,b_cc) result(q)
 
-  subroutine set_interpolations(interpol_str)
+     use constants,  only: half, xdim, zdim
+     use fluidindex, only: flind
+     use fluidtypes, only: component_fluid
+     use func,       only: ekin
 
-    use dataio_pub, only: die
+     implicit none
+
+     real, dimension(:,:),   intent(in)    :: u , b_cc
+
+     real, dimension(size(u,1),size(u,2))  :: q
+     integer  :: p
+
+     class(component_fluid), pointer       :: fl
+
+     do p = 1, flind%fluids
+        fl => flind%all_fluids(p)%fl
+
+        q(fl%idn,:) =  u(fl%idn,:)
+        q(fl%imx,:) =  u(fl%imx,:)/u(fl%idn,:)
+        q(fl%imy,:) =  u(fl%imy,:)/u(fl%idn,:)
+        q(fl%imz,:) =  u(fl%imz,:)/u(fl%idn,:)
+        ! J.CoPhy 208 (2005),Pg 317, Eq. 2. Gas pressure: p = (gamma-1)*(e-half*rho*v^2-half*B^2) and Total pressure: p_T = p + half*B^2. (1) and (2) are markers for HD and MHD.
+        if (fl%has_energy) then
+            q(fl%ien,:) =  fl%gam_1*(u(fl%ien,:) - ekin(u(fl%imx,:), u(fl%imy,:), u(fl%imz,:), u(fl%idn,:))) ! Primitive variable for gas pressure (p) without magnetic fields. (1)
+            if (fl%is_magnetized) then
+               q(fl%ien,:) =  q(fl%ien,:) - half*fl%gam_1*sum(b_cc(xdim:zdim,:)**2, dim=1) ! Primitive variable for gas pressure (p) with magnetic fields. The requirement of total pressure is dealt in the fluxes and hlld routines. (2)
+            endif
+        endif
+
+     enddo
+
+   end function utoq
+
+  subroutine interpol(u, bcc, psi, ql, qr, bccl, bccr, psil, psir)
 
     implicit none
 
-    character(len=*), intent(in) :: interpol_str
+    real, dimension(:,:), intent(in)     :: u
+    real, dimension(:,:), intent(out)    :: ql
+    real, dimension(:,:), intent(out)    :: qr
 
-    if (associated(interpol)) call die("[interpolations:set_interpolations] interpol already associated")
-    interpol => set_interpolation(interpol_str)
-      
-  end subroutine set_interpolations
+    real, dimension(:,:), intent(in)     :: bcc
+    real, dimension(:,:), intent(out)    :: bccl
+    real, dimension(:,:), intent(out)    :: bccr
 
-  function set_interpolation(interp_str) result(interp)
+    real, dimension(:,:), intent(in)     :: psi
+    real, dimension(:,:), intent(out)    :: psil
+    real, dimension(:,:), intent(out)    :: psir
+
+    real, dimension(size(u, 1), size(u, 2)) :: q
+
+    q = utoq(u, bcc)
+    call interp(q, ql, qr)
+    call interp(bcc, bccl, bccr)
+    call interp(psi, psil, psir)
+
+  end subroutine interpol
+
+  subroutine set_interpolations(interpol_str)
 
     use dataio_pub, only: msg, die
 
     implicit none
 
-    character(len=*), intent(in) :: interp_str
-    
-    procedure(interpolation), pointer :: interp
+    character(len=*), intent(in) :: interpol_str
 
-    select case(interp_str)
+    if (associated(interp)) call die("[interpolations:set_interpolations] interp already associated")
+    
+    select case(interpol_str)
     case('linear', 'LINEAR')
        interp => linear
     case default
-       write(msg,'(2a)') "[interpolations:set_interpolation] unknown interpolation ", interp_str 
+       write(msg,'(2a)') "[interpolations:set_interpolations] unknown interpolation ", interpol_str 
        call die(msg)
        interp => null()
     end select
     
-  end function set_interpolation
+  end subroutine set_interpolations
 
   subroutine linear(q,ql,qr)
     
