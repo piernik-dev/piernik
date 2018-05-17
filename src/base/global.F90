@@ -44,7 +44,7 @@ module global
         &    integration_order, limiter, limiter_b, smalld, smallei, smallp, use_smalld, h_solver, &
         &    relax_time, grace_period_passed, cfr_smooth, repeat_step, skip_sweep, geometry25D, &
         &    dirty_debug, do_ascii_dump, show_n_dirtys, no_dirty_checks, sweeps_mgu, use_fargo, print_divB, &
-        &    divB_0_method, force_cc_mag, psi_0, glm_alpha, use_eglm, use_hdc_3D, use_hdc_1D, glm_iter
+        &    divB_0_method, force_cc_mag, psi_0, glm_alpha, use_eglm
 
    real, parameter :: dt_default_grow = 2.
    logical         :: cfl_violated             !< True when cfl condition is violated
@@ -90,13 +90,10 @@ module global
    real                          :: psi_0             !< initial value for the psi field used in divergence cleaning
    real                          :: glm_alpha         !< damping factor for the psi field
    logical                       :: use_eglm          !< use E-GLM?
-   logical                       :: use_hdc_3D        !< use HDC outside of 1D MHD solver
-   logical                       :: use_hdc_1D        !< use HDC inside 1D MHD solver
-   integer(kind=4)               :: glm_iter          !< repeat HDC this many times per timestep
 
    namelist /NUMERICAL_SETUP/ cfl, cflcontrol, cfl_max, use_smalld, smalld, smallei, smallc, smallp, dt_initial, dt_max_grow, dt_min, &
         &                     repeat_step, limiter, limiter_b, relax_time, integration_order, cfr_smooth, skip_sweep, geometry25D, sweeps_mgu, print_divB, &
-        &                     use_fargo, h_solver, divB_0, psi_0, glm_alpha, use_eglm, use_hdc_3D, use_hdc_1D, glm_iter
+        &                     use_fargo, h_solver, divB_0, psi_0, glm_alpha, use_eglm
 
 contains
 
@@ -133,9 +130,6 @@ contains
 !!   <tr><td>psi_0            </td><td>0.     </td><td>real value                           </td><td>\copydoc global::psi_0            </td></tr>
 !!   <tr><td>glm_alpha        </td><td>0.1    </td><td>real value                           </td><td>\copydoc global::glm_alpha        </td></tr>
 !!   <tr><td>use_eglm         </td><td>false  </td><td>logical value                        </td><td>\copydoc global::use_eglm         </td></tr>
-!!   <tr><td>use_hdc_3D       </td><td>true   </td><td>logical value                        </td><td>\copydoc global::use_hdc_3D       </td></tr>
-!!   <tr><td>use_hdc_1D       </td><td>false  </td><td>logical value                        </td><td>\copydoc global::use_hdc_1D       </td></tr>
-!!   <tr><td>glm_iter         </td><td>2      </td><td>integer value                        </td><td>\copydoc global::glm_iter         </td></tr>
 !!   <tr><td>print_divB       </td><td>0      </td><td>integer value                        </td><td>\copydoc global::print_divB       </td></tr>
 !! </table>
 !! \n \n
@@ -161,16 +155,10 @@ contains
       limiter     = 'minmod'    ! 'vanleer' is a 2nd choice for otvortex
       limiter_b   = 'superbee'  ! 'moncen' and 'vanleer' were also performing well
       divB_0      = "HDC"
-      use_hdc_3D  = .true.
-      use_hdc_1D  = .false.
-      glm_iter    = 2           ! it looks like two iterations per step gives the required damping
 #else /* ! RIEMANN */
       limiter     = 'vanleer'
       limiter_b   = limiter
       divB_0      = "CT"
-      use_hdc_3D  = .false.
-      use_hdc_1D  = .false.
-      glm_iter    = INVALID
 #endif /* RIEMANN */
       cflcontrol  = 'warn'
       h_solver    = 'muscl'
@@ -244,7 +232,6 @@ contains
 
          ibuff(1) = integration_order
          ibuff(2) = print_divB
-         ibuff(3) = glm_iter
 
          rbuff( 1) = smalld
          rbuff( 2) = smallc
@@ -267,8 +254,6 @@ contains
          lbuff(7)   = sweeps_mgu
          lbuff(8)   = use_fargo
          lbuff(9)   = use_eglm
-         lbuff(10)  = use_hdc_3D
-         lbuff(11)  = use_hdc_1D
 
       endif
 
@@ -286,8 +271,6 @@ contains
          sweeps_mgu    = lbuff(7)
          use_fargo     = lbuff(8)
          use_eglm      = lbuff(9)
-         use_hdc_3D    = lbuff(10)
-         use_hdc_1D    = lbuff(11)
 
          smalld      = rbuff( 1)
          smallc      = rbuff( 2)
@@ -311,7 +294,6 @@ contains
 
          integration_order = ibuff(1)
          print_divB        = ibuff(2)
-         glm_iter          = ibuff(3)
 
       endif
 
@@ -330,12 +312,8 @@ contains
       select case (divB_0_method)
          case (DIVB_HDC)
             force_cc_mag = .true.
-            if (glm_iter < 1) call warn("[global:init_global] glm_iter < 1 implies HDC switched off.")
-            if (.not. any([use_hdc_1D, use_hdc_3D])) call warn("[global:init_global] use_glm_* = .false. implies HDC switched off.")
-            if (all([use_hdc_1D, use_hdc_3D])) call warn("[global:init_global] both 1D and 3D HDC turned on.")
          case (DIVB_CT)
             force_cc_mag = .false.
-            if (any([use_hdc_1D, use_hdc_3D])) call warn("[global:init_global] use_glm_* = .true. ignored for CT.")
          case default
             call die("[global:init_global] unrecognized divergence cleaning method.")
       end select

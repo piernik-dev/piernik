@@ -43,7 +43,7 @@ module hdc
   character(len=dsetnamelen), parameter :: gradpsi_n = "grad_psi"
 
   private
-  public :: chspeed, update_chspeed, init_psi, glm_mhd, glmdamping, glm_3D, eglm
+  public :: chspeed, update_chspeed, init_psi, glm_mhd, glmdamping, eglm
 
 contains
 
@@ -298,138 +298,6 @@ contains
      endif
 
    end subroutine eglm
-
-  subroutine glm_3D
-
-#ifdef MAGNETIC
-     use all_boundaries,   only: all_mag_boundaries
-     use cg_leaves,        only: leaves
-     use cg_list,          only: cg_list_element
-     use constants,        only: xdim, ydim, zdim, LO, HI, psi_n
-     use domain,           only: dom
-     use grid_cont,        only: grid_container
-     use named_array_list, only: qna
-     use global,           only: dt, glm_iter
-#endif /* MAGNETIC */
-
-     implicit none
-
-#ifdef MAGNETIC
-     integer :: ig, psii
-     type(cg_list_element), pointer :: cgl
-     type(grid_container),  pointer :: cg
-     real, dimension(:,:,:), allocatable :: bbx, bby, bbz, pp
-
-     psii = qna%ind(psi_n)
-
-     do ig = 1, glm_iter
-        call glmdamping
-        call leaves%leaf_arr3d_boundaries(psii)
-        call all_mag_boundaries
-        cgl => leaves%first
-        do while (associated(cgl))
-           cg => cgl%cg
-           allocate(bbx(cg%lhn(xdim, LO):cg%lhn(xdim, HI), cg%lhn(ydim, LO):cg%lhn(ydim, HI), cg%lhn(zdim, LO):cg%lhn(zdim, HI)), &
-                &   bby(cg%lhn(xdim, LO):cg%lhn(xdim, HI), cg%lhn(ydim, LO):cg%lhn(ydim, HI), cg%lhn(zdim, LO):cg%lhn(zdim, HI)), &
-                &   bbz(cg%lhn(xdim, LO):cg%lhn(xdim, HI), cg%lhn(ydim, LO):cg%lhn(ydim, HI), cg%lhn(zdim, LO):cg%lhn(zdim, HI)), &
-                &    pp(cg%lhn(xdim, LO):cg%lhn(xdim, HI), cg%lhn(ydim, LO):cg%lhn(ydim, HI), cg%lhn(zdim, LO):cg%lhn(zdim, HI)))
-           associate ( xs => cg%lhn(xdim, LO)+1, xe => cg%lhn(xdim, HI)-1, &
-                &      ys => cg%lhn(ydim, LO)+1, ye => cg%lhn(ydim, HI)-1, &
-                &      zs => cg%lhn(zdim, LO)+1, ze => cg%lhn(zdim, HI)-1 )
-
-              pp(:,:,:) = cg%q(psii)%arr(:,:,:)
-              if (dom%has_dir(xdim)) then
-                 bbx(                  xs  :xe,   :, :) = &
-                      &     cg%b(xdim, xs  :xe,   :, :) + dt/cg%dl(xdim) * 0.5 * ( &
-                      ( cg%q(psii)%arr(xs-1:xe-1, :, :) - &
-                      & cg%q(psii)%arr(xs+1:xe+1, :, :)) - &
-                      ( 2*  cg%b(xdim, xs  :xe,   :, :) - &
-                      &     cg%b(xdim, xs-1:xe-1, :, :) - &
-                      &     cg%b(xdim, xs+1:xe+1, :, :)) * chspeed)
-
-                 bbx(xs-1, :, :) = bbx(xs, :, :)
-                 bbx(xe+1, :, :) = bbx(xe, :, :)
-              endif
-              if (dom%has_dir(xdim)) then
-                 pp(                      xs  :xe,   :, :) = &
-                      &      pp(          xs  :xe,   :, :) + dt/cg%dl(xdim) * 0.5 * chspeed * ( &
-                      (        cg%b(xdim, xs-1:xe-1, :, :) - &
-                      &        cg%b(xdim, xs+1:xe+1, :, :)) * chspeed - &
-                      ( 2* cg%q(psii)%arr(xs  :xe,   :, :) - &
-                      &    cg%q(psii)%arr(xs-1:xe-1, :, :) - &
-                      &    cg%q(psii)%arr(xs+1:xe+1, :, :)))
-
-                 pp(xs-1, :, :) = pp(xs, :, :)
-                 pp(xe+1, :, :) = pp(xe, :, :)
-              endif
-              if (dom%has_dir(xdim)) cg%q(psii)%arr(:,:,:) = pp (:,:,:)
-              if (dom%has_dir(xdim)) cg%b(xdim, :, :, :) = bbx(:,:,:)
-
-              if (dom%has_dir(ydim)) then
-                 bby(                  :, ys  :ye,   :) = &
-                      &     cg%b(ydim, :, ys  :ye,   :) + dt/cg%dl(ydim) * 0.5 * ( &
-                      ( cg%q(psii)%arr(:, ys-1:ye-1, :) - &
-                      & cg%q(psii)%arr(:, ys+1:ye+1, :)) - &
-                      ( 2*  cg%b(ydim, :, ys  :ye,   :) - &
-                      &     cg%b(ydim, :, ys-1:ye-1, :) - &
-                      &     cg%b(ydim, :, ys+1:ye+1, :)) * chspeed)
-
-                 bby(:, ys-1, :) = bby(:, ys, :)
-                 bby(:, ye+1, :) = bby(:, ye, :)
-              endif
-              if (dom%has_dir(ydim)) then
-                 pp(                      :, ys  :ye,   :) = &
-                      &      pp(          :, ys  :ye,   :) + dt/cg%dl(ydim) * 0.5 * chspeed * ( &
-                      (        cg%b(ydim, :, ys-1:ye-1, :) - &
-                      &        cg%b(ydim, :, ys+1:ye+1, :)) * chspeed - &
-                      ( 2* cg%q(psii)%arr(:, ys  :ye,   :) - &
-                      &    cg%q(psii)%arr(:, ys-1:ye-1, :) - &
-                      &    cg%q(psii)%arr(:, ys+1:ye+1, :)))
-
-                 pp(:, ys-1, :) = pp(:, ys, :)
-                 pp(:, ye+1, :) = pp(:, ye, :)
-              endif
-              if (dom%has_dir(ydim)) cg%q(psii)%arr(:,:,:) = pp (:,:,:)
-              if (dom%has_dir(ydim)) cg%b(ydim, :, :, :) = bby(:,:,:)
-
-              if (dom%has_dir(zdim)) then
-                 bbz(                  :, :, zs  :ze  ) = &
-                      &     cg%b(zdim, :, :, zs  :ze  ) + dt/cg%dl(zdim) * 0.5 * ( &
-                      ( cg%q(psii)%arr(:, :, zs-1:ze-1) - &
-                      & cg%q(psii)%arr(:, :, zs+1:ze+1)) - &
-                      ( 2*  cg%b(zdim, :, :, zs  :ze  ) - &
-                      &     cg%b(zdim, :, :, zs-1:ze-1) - &
-                      &     cg%b(zdim, :, :, zs+1:ze+1)) * chspeed)
-
-                 bbz(:, :, zs-1) = bbz(:, :, zs)
-                 bbz(:, :, ze+1) = bbz(:, :, ze)
-              endif
-              if (dom%has_dir(zdim)) then
-                 pp(                      :, :, zs  :ze  ) = &
-                      pp(                 :, :, zs  :ze  ) + dt/cg%dl(zdim) * 0.5 * chspeed * ( &
-                      (        cg%b(zdim, :, :, zs-1:ze-1) - &
-                      &        cg%b(zdim, :, :, zs+1:ze+1)) * chspeed - &
-                      ( 2* cg%q(psii)%arr(:, :, zs  :ze  ) - &
-                      &    cg%q(psii)%arr(:, :, zs-1:ze-1) - &
-                      &    cg%q(psii)%arr(:, :, zs+1:ze+1)))
-
-                 pp(:, :, zs-1) = pp(:, :, zs)
-                 pp(:, :, ze+1) = pp(:, :, ze)
-              endif
-              if (dom%has_dir(zdim)) cg%q(psii)%arr(:,:,:) = pp (:,:,:)
-              if (dom%has_dir(zdim)) cg%b(zdim, :, :, :) = bbz(:,:,:)
-
-           end associate
-           deallocate(bbx, bby, bbz, pp)
-
-           cgl => cgl%nxt
-        enddo
-     enddo
-     call leaves%leaf_arr3d_boundaries(psii)
-     call all_mag_boundaries
-#endif /* MAGNETIC */
-
-  end subroutine glm_3D
 
 end module hdc
 

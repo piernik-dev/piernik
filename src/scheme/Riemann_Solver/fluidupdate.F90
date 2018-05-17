@@ -112,8 +112,8 @@ contains
   subroutine make_3sweeps(forward)
 
     use constants,      only: xdim, zdim, I_ONE, DIVB_HDC
-    use global,         only: divB_0_method, use_hdc_3D
-    use hdc,            only: eglm, glm_3D
+    use global,         only: divB_0_method
+    use hdc,            only: eglm
     use user_hooks,     only: problem_customize_solution
 #if defined(COSM_RAYS) && defined(MULTIGRID)
     use all_boundaries,      only: all_fluid_boundaries
@@ -145,10 +145,7 @@ contains
     endif
     if (associated(problem_customize_solution)) call problem_customize_solution(forward)
 
-    if (divB_0_method == DIVB_HDC) then
-       if (use_hdc_3D) call glm_3D
-       call eglm
-    endif
+    if (divB_0_method == DIVB_HDC) call eglm
 
   end subroutine make_3sweeps
 
@@ -861,7 +858,7 @@ contains
            use constants,        only: xdim, ydim, zdim, DIVB_HDC
            use hdc,              only: chspeed
            use fluidindex,       only: flind
-           use global,           only: divB_0_method, glm_iter, use_hdc_1D, glm_alpha !cfl
+           use global,           only: divB_0_method, glm_alpha !cfl
 
 #ifdef COSM_RAYS
            use fluidindex,       only: iarr_all_dn, iarr_all_mx, iarr_all_en
@@ -913,8 +910,7 @@ contains
            if (size(w)>=3)  b_cc(ydim:zdim,2:nx) = b_cc(ydim:zdim,2:nx) + w(3) * db2(ydim:zdim,2:nx)
            if (size(w)>=4)  b_cc(ydim:zdim,2:nx) = b_cc(ydim:zdim,2:nx) + w(4) * db3(ydim:zdim,2:nx)
 
-           if (divB_0_method == DIVB_HDC .and. use_hdc_1D) then
-              !do i=1, glm_iter  ! GLM substepping ignored for now
+           if (divB_0_method == DIVB_HDC) then
 
               b_cc(xdim, 2:nx) = b_cc(xdim, 2:nx) + w(1) * dtodx * (mag_cc(xdim, 1:nx-1) - mag_cc(xdim, 2:nx))
               if (size(w)>=2)  b_cc(xdim,2:nx) = b_cc(xdim,2:nx) + w(2) * db1(xdim,2:nx)
@@ -931,7 +927,6 @@ contains
               !damping
               psi = psi*exp(-glm_alpha*chspeed*dtodx)
 
-              !enddo
            endif
 
            b_cc(:, 1)  = b_cc(:, 2)
