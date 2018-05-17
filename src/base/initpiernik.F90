@@ -69,6 +69,7 @@ contains
       use user_hooks,            only: problem_post_restart, problem_post_IC
 #ifdef RIEMANN
       use hdc,                   only: init_psi
+      use interpolations,        only: set_interpolations
 #endif /* RIEMANN */
 #if defined MAGNETIC && defined RESISTIVE
       use resistivity,           only: init_resistivity, compute_resist
@@ -149,7 +150,7 @@ contains
       call init_default_fluidboundaries
 
       call problem_pointers                  ! set up problem-specific pointers as early as possible to allow implementation of problem-specific hacks also during the initialization
-
+      call set_interpolations("linear")
       call init_global
       code_progress = PIERNIK_INIT_GLOBAL    ! Global parameters are set up
 
