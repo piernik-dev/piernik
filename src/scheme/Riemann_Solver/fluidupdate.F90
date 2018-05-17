@@ -509,6 +509,7 @@ contains
      use constants,  only: half
      use dataio_pub, only: die
      use global,     only: h_solver
+     use interpolations, only: interpol
 
      implicit none
 
@@ -537,6 +538,13 @@ contains
      ! Only muscl and rk2 schemes should be considered for production use.
      ! Other schemes are left here for educational purposes, just to show how to construct alternative approaches.
      select case (h_solver)
+        case ("rk2i")
+           call interpol(u,b_cc,psi,ql,qr,b_cc_l,b_cc_r,psi_l,psi_r)
+           call riemann_wrap                   ! Now we advance the left and right states by a timestep.
+           call du_db(du1, db1,dpsi1)
+           call interpol(u+half*du1,b_cc+half*db1,psi+half*dpsi1,ql,qr,b_cc_l,b_cc_r,psi_l,psi_r)
+           call riemann_wrap                   ! second call for Riemann problem uses states evolved to half timestep
+           call update
         case ("muscl")
            call slope
            call ulr_fluxes_qlr
