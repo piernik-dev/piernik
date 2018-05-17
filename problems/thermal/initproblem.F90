@@ -44,7 +44,7 @@ contains
 !-----------------------------------------------------------------------------
 
    subroutine problem_pointers
-      
+
       use dataio_user, only: user_vars_hdf5
       use dataio_user, only: user_tsl
 
@@ -58,30 +58,20 @@ contains
 !-----------------------------------------------------------------------------
 
    subroutine read_problem_par
-#ifdef THERM
-      use thermal,          only: cool_heat
-#endif /*THERM*/
-      use constants,        only: DST
       use dataio_pub,       only: nh      ! QA_WARN required for diff_nml
-      use dataio_pub,       only: msg, printinfo, die
-      use domain,           only: dom
-      use fluidindex,       only: flind
+      use dataio_pub,       only: msg
       use mpisetup,         only: ibuff, rbuff, master, slave, piernik_MPI_Bcast
 
-
-      
       implicit none
-    
+
       integer :: p, id
-      
-!      call cool_heat(sweep, i1, i2, n, dens, eint,  esrc)
+
       T0      = 1.0e0
       d0      = 1.0
       bx0     =   0.
       by0     =   0.
       bz0     =   0.
       pertamp = 0.
-
 
       if (master) then
 
@@ -145,14 +135,10 @@ contains
       type(grid_container),   pointer :: cg
       real :: x, y, z
       real :: cs, p0
-      
-
-      write(*,*), "kboltz/mH =", kboltz/mH
-      write(*,*), "p0 = ", p0
 
       do p = 1, flind%energ
          associate(fl => flind%all_fluids(p)%fl)
-         
+
          p0 = d0/mH*kboltz*T0
          cs = sqrt(fl%gam*T0*kboltz/mH)
 
@@ -173,7 +159,7 @@ contains
                      cg%u(fl%imz,i,j,k) = 0.0
                      cg%u(fl%ien,i,j,k) = p0/(fl%gam_1)
 ! Perturbation
-                     
+
                      cg%u(fl%imx,i,j,k) = cg%u(fl%imx,i,j,k) + pertamp*cg%u(fl%idn,i,j,k)*cs*sin(2.*pi*cg%x(i)/dom%L_(xdim))*cos(2.*pi*cg%y(j)/dom%L_(ydim))*cos(2.*pi*cg%z(k)/dom%L_(zdim))
                      cg%u(fl%imy,i,j,k) = cg%u(fl%imy,i,j,k) + pertamp*cg%u(fl%idn,i,j,k)*cs*cos(2.*pi*cg%x(i)/dom%L_(xdim))*sin(2.*pi*cg%y(j)/dom%L_(ydim))*cos(2.*pi*cg%z(k)/dom%L_(zdim))
                      cg%u(fl%imz,i,j,k) = cg%u(fl%imz,i,j,k) + pertamp*cg%u(fl%idn,i,j,k)*cs*cos(2.*pi*cg%x(i)/dom%L_(xdim))*cos(2.*pi*cg%y(j)/dom%L_(ydim))*sin(2.*pi*cg%z(k)/dom%L_(zdim))
@@ -194,7 +180,7 @@ contains
                enddo
             endif
 
-! Add perturbation 
+! Add perturbation
 
             cgl => cgl%nxt
          enddo
@@ -231,7 +217,6 @@ contains
 
    subroutine crtest_analytic_ecr1(var, tab, ierrh, cg)
 
-      use dataio_pub,       only: die
       use grid_cont,        only: grid_container
       use units,            only: kboltz, mH
       use func,             only: emag, ekin
@@ -249,7 +234,6 @@ contains
       real, dimension(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)      :: eint, kin_ener, mag_ener, dens, temp
       class(component_fluid), pointer                             :: pfl
 
-      
 ! WARNING !!! ONLY ONE FLUID IS USED.
       pfl => flind%all_fluids(1)%fl
       if (pfl%has_energy) then
@@ -264,7 +248,7 @@ contains
 
       dens = cg%w(wna%fi)%span(pfl%idn,cg%ijkse)
       temp = (pfl%gam-1)*mH/kboltz*eint/dens
-      
+
       ierrh = 0
       select case (trim(var))
          case ("temp")

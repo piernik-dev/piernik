@@ -123,9 +123,9 @@ contains
       use dataio_pub,           only: printinfo
       use piernikdebug,         only: has_const_dt, constant_dt
 #endif /* DEBUG */
-#ifdef THERM 
+#ifdef THERM
       use timestepthermal,      only: timestep_thermal
-#endif /*THERM*/
+#endif /* THERM */
       implicit none
 
       real,              intent(inout) :: dt    !< the timestep
@@ -171,7 +171,7 @@ contains
 #endif /* BALSARA */
 #ifdef THERM
          dt = min(dt,timestep_thermal(cg))
-#endif /*THERM*/
+#endif /* THERM */
          if (use_fargo) dt = min(dt, timestep_fargo(cg, dt))
          cgl => cgl%nxt
       enddo
