@@ -191,7 +191,7 @@ contains
             enddo
          enddo
       enddo
-      max_deint = MAXVAL(ABS(deint))
+      max_deint = maxval(abs(deint))
 
    end subroutine maxdeint
 
