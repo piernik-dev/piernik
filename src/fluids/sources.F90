@@ -74,9 +74,9 @@ contains
 !! \todo Do not pass i1 and i2, pass optional pointer to gravacc instead
 !<
 !*/
-   subroutine all_sources(n, u, u0, u1, cg, istep, sweep, i1, i2, coeffdt, pressure, vel_sweep)
+   subroutine all_sources(n, u, u0, u1, bb, cg, istep, sweep, i1, i2, coeffdt, pressure, vel_sweep)
 
-      use fluidindex,       only: flind
+      use fluidindex,       only: flind, nmag
       use grid_cont,        only: grid_container
       use gridgeometry,     only: geometry_source_terms_exec
 #ifdef BALSARA
@@ -102,6 +102,13 @@ contains
 #ifdef SHEAR
       use shear,            only: shear_acc
 #endif /* SHEAR */
+#ifdef THERM
+      use constants,        only: xdim, ydim, zdim
+      use domain,           only: dom
+      use fluidtypes,       only: component_fluid
+      use func,             only: emag, ekin
+      use thermal,          only: cool_heat, thermal_active
+#endif /* THERM */
 
       implicit none
 
@@ -109,6 +116,7 @@ contains
       real, dimension(n, flind%all), intent(in)    :: u                  !< vector of conservative variables
       real, dimension(n, flind%all), intent(in)    :: u0                 !< vector of conservative variables
       real, dimension(n, flind%all), intent(inout) :: u1                 !< updated vector of conservative variables (after one timestep in second order scheme)
+      real, dimension(n, nmag),      intent(in)    :: bb                 !< local copy of magnetic field
       type(grid_container), pointer, intent(in)    :: cg                 !< current grid piece
       integer,                       intent(in)    :: istep              !< step number in the time integration scheme
       integer(kind=4),               intent(in)    :: sweep              !< direction (x, y or z) we are doing calculations for
@@ -121,6 +129,12 @@ contains
 !locals
       real, dimension(n, flind%all)                 :: usrc, newsrc       !< u array update from sources
       real, dimension(:,:),            pointer      :: vx
+
+#ifdef THERM
+      real, dimension(n)                            :: eint_src, kin_ener, int_ener, mag_ener
+      class(component_fluid), pointer :: pfl
+      integer :: ifl
+#endif /* THERM */
 
       vx   => vel_sweep
 
@@ -157,6 +171,26 @@ contains
       usrc(:,:) = usrc(:,:) + newsrc(:,:)
 #endif /* COSM_RAYS_SOURCES */
 #endif /* COSM_RAYS && IONIZED */
+#ifdef THERM
+      if(thermal_active) then
+         do ifl = 1, flind%fluids
+            pfl => flind%all_fluids(ifl)%fl
+            if (pfl%has_energy) then
+               kin_ener = ekin(u1(:, pfl%imx), u1(:, pfl%imy), u1(:, pfl%imz), u1(:, pfl%idn))
+               if (pfl%is_magnetized) then
+                  mag_ener = emag(bb(:, xdim), bb(:, ydim), bb(:, zdim))
+                  int_ener = u1(:, pfl%ien) - kin_ener - mag_ener
+               else
+                  int_ener = u1(:, pfl%ien) - kin_ener
+               endif
+               call cool_heat(pfl%gam, n, u1(:,pfl%idn), int_ener, eint_src)
+               u1(:, pfl%ien) = u1(:, pfl%ien) + 1./dom%eff_dim* eint_src * coeffdt
+!               int_ener = max(int_ener, smallei)
+               if (pfl%is_magnetized) u1(:, pfl%ien) = u1(:, pfl%ien) + mag_ener
+            endif
+         enddo
+      endif
+#endif /* THERM */
 
 ! --------------------------------------------------
 

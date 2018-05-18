@@ -246,9 +246,6 @@ contains
       use grid_cont,    only: grid_container
       use gridgeometry, only: gc, GC1, GC2, GC3
       use sources,      only: all_sources
-#ifdef THERM
-      use thermal,      only: cool_heat, thermal_active
-#endif /* THERM */
 
       implicit none
 
@@ -280,10 +277,6 @@ contains
       real, dimension(n, flind%fluids), target      :: pressure           !< gas pressure
       real, dimension(n, flind%fluids), target      :: vel_sweep          !< velocity in the direction of current sweep
       logical                                       :: full_dim
-
-#ifdef THERM
-      real, dimension(n)                            :: eint_src, kin_ener, int_ener, mag_ener
-#endif /* THERM */
 
       real, dimension(2,2), parameter              :: rk2coef = reshape( [ one, half, zero, one ], [ 2, 2 ] )
 
@@ -372,32 +365,8 @@ contains
          vel_sweep = u1(:, iarr_all_mx) / u1(:, iarr_all_dn)
       endif ! (n > 1)
 
-
-
 ! Source terms -------------------------------------
-      if (sources) call all_sources(n, u, u0, u1, cg, istep, sweep, i1, i2, rk2coef(integration_order,istep)*dt, pressure, vel_sweep)
-#ifdef THERM
-      if (sources) then
-         if(thermal_active) then
-            do ifl = 1, flind%fluids
-               pfl => flind%all_fluids(ifl)%fl
-               if (pfl%has_energy) then
-                  kin_ener = ekin(u1(:, pfl%imx), u1(:, pfl%imy), u1(:, pfl%imz), u1(:, pfl%idn))
-                  if (pfl%is_magnetized) then
-                     mag_ener = emag(bb(:, xdim), bb(:, ydim), bb(:, zdim))
-                     int_ener = u1(:, pfl%ien) - kin_ener - mag_ener
-                  else
-                     int_ener = u1(:, pfl%ien) - kin_ener
-                  endif
-                  call cool_heat(pfl%gam, n, u1(:,pfl%idn), int_ener, eint_src)
-                  u1(:, pfl%ien) = u1(:, pfl%ien) + 1./dom%eff_dim*rk2coef(integration_order,istep)* eint_src * dt
-!                  int_ener = max(int_ener, smallei)
-                  if (pfl%is_magnetized) u1(:, pfl%ien) = u1(:, pfl%ien) + mag_ener
-               endif
-            enddo
-         endif
-      endif ! sources
-#endif /* THERM */
+      if (sources) call all_sources(n, u, u0, u1, bb, cg, istep, sweep, i1, i2, rk2coef(integration_order,istep)*dt, pressure, vel_sweep)
 
       call care_for_positives(n, u1, bb, cg, sweep, i1, i2)
 
