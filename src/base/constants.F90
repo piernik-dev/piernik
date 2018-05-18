@@ -39,10 +39,18 @@ module constants
    public                                                ! QA_WARN no secrets are kept here
 
    ! precision
-   integer, parameter :: pk = selected_real_kind(8)   !< Default kind of floats
-   integer, parameter :: LONG = selected_int_kind(16)    ! We need at least 8-byte integers to count to 10**16, it is much more clear to type 0_LONG than 0_8
-   integer, parameter :: INT4 = selected_int_kind(9)     ! Assume that all MPI and HDF5 calls expect 4-byte integers
-   ! \todo define 1- and 2-byte integers and short (4-byte), long double (10-byte) or quad_precision (16-byte) reals if needed,
+   integer, parameter :: FP_REAL   = selected_real_kind(5)   ! this should be 32-bit single presicion
+   integer, parameter :: FP_DOUBLE = selected_real_kind(12)  ! this should be 64-bit double precision
+   integer, parameter :: FP_EXT    = selected_real_kind(17)  ! this should be 80-bit extended precision
+   integer, parameter :: FP_QUAD   = selected_real_kind(30)  ! this should be 128-bit quad precision (don't expect hardware support in CPU)
+
+   integer, parameter :: INT128 = selected_int_kind(30)      ! this should be 128-bit integer (don't expect hardware support in CPU)
+   integer, parameter :: LONG   = selected_int_kind(16)      ! We need at least 8-byte integers to count to 10**16, it is much more clear to type 0_LONG than 0_8
+   integer, parameter :: INT4   = selected_int_kind(9)       ! Assume that all MPI and HDF5 calls expect 4-byte integers
+   ! \todo define:
+   !     1-byte integer (selected_int_kind(1))
+   !     2-byte integer (selected_int_kind(3))
+   ! if needed
 
    ! integers and rationals
    real, parameter :: zero       = 0.0                   !< zero

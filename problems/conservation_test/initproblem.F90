@@ -260,16 +260,16 @@ contains
 
       implicit none
 
-      character(len=*), intent(in)                    :: var
-      real(kind=4), dimension(:,:,:), intent(inout)   :: tab
-      integer, intent(inout)                          :: ierrh
-      type(grid_container), pointer, intent(in)       :: cg
+      character(len=*),              intent(in)    :: var
+      real, dimension(:,:,:),        intent(inout) :: tab
+      integer,                       intent(inout) :: ierrh
+      type(grid_container), pointer, intent(in)    :: cg
 
       call analytic_solution(t) ! cannot handle this automagically because here we modify it
 
       ierrh = 0
       if (qna%exists(var)) then
-         tab(:,:,:) = real(cg%q(qna%ind(var))%span(cg%ijkse), 4)
+         tab(:,:,:) = real(cg%q(qna%ind(var))%span(cg%ijkse), kind(tab))
       else
          ierrh = -1
       endif

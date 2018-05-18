@@ -54,9 +54,11 @@ module initproblem
    real                   :: divBbX_amp  !< Amplitude of x-component blob of divergence (should behave well on periodic domains)
    real                   :: divBbY_amp  !< Amplitude of y-component blob of divergence (should behave well on periodic domains)
    real                   :: divBbZ_amp  !< Amplitude of z-component blob of divergence (should behave well on periodic domains)
+   integer, dimension(ndims) :: divB_k      !< wave numbers for creating initial field
    logical                :: ccB         !< true for cell-cntered initial magnetic field
 
-   namelist /PROBLEM_CONTROL/  pulse_size, pulse_off, pulse_vel, pulse_amp, pulse_pres, norm_step, nflip, flipratio, ref_thr, deref_thr, usedust, divB0_amp, divBc_amp, divBs_amp, divBbX_amp, divBbY_amp, divBbZ_amp, ccB
+   namelist /PROBLEM_CONTROL/  pulse_size, pulse_off, pulse_vel, pulse_amp, pulse_pres, norm_step, nflip, flipratio, ref_thr, deref_thr, usedust, &
+        &                      divB0_amp, divBc_amp, divBs_amp, divBbX_amp, divBbY_amp, divBbZ_amp, divB_k, ccB
 
    ! other private data
    real, dimension(ndims, LO:HI) :: pulse_edge
@@ -122,6 +124,7 @@ contains
       divBbX_amp    = 0.                   !< unphysical, only for testing
       divBbY_amp    = 0.                   !< unphysical, only for testing
       divBbZ_amp    = 0.                   !< unphysical, only for testing
+      divB_k(:)     = [ 1, 1, 1 ]
       ccB           = .false.              !< defaulting to face-centered initial field
 
       if (master) then
@@ -159,6 +162,7 @@ contains
 
          ibuff(1)   = norm_step
          ibuff(2)   = nflip
+         ibuff(10+xdim:10+zdim) = divB_k(:)
 
          lbuff(1)   = usedust
          lbuff(2)   = ccB
@@ -188,6 +192,7 @@ contains
 
          norm_step  = int(ibuff(1), kind=4)
          nflip      = ibuff(2)
+         divB_k(:)  = ibuff(10+xdim:10+zdim)
 
          usedust    = lbuff(1)
          ccB        = lbuff(2)
@@ -293,7 +298,7 @@ contains
       real :: r02, rr02
 
       kk = 0.
-      where (dom%D_ > 0) kk = dpi / dom%L_
+      where (dom%D_ > 0) kk = divB_k * dpi / dom%L_
       right_face = 1
       if (ccB) right_face = 0
       r02 = huge(1.)
@@ -365,7 +370,10 @@ contains
                                  cg%b(:, i, j, k) = cg%b(:, i, j, k) + divBs_amp * [ 1., 1., kk(zdim)*cfz ]
                               endif
                            endif
-                        case (I_TWO) ! [sin(x)*sin(y), cos(x)*cos(y), 0] should produce divB == 0. for XY case
+                        case (I_TWO)
+                           ! [sin(x)*sin(y), cos(x)*cos(y), 0] should produce divB == 0. for XY case (curl([0, 0, -sin(x)*cos(y)]))
+                           ! The div(B) is really close to numerical noise around 0 only in the case of exactly the same resolution per sine wave in all directions.
+                           ! If the resolutions of sine waves don't match, then numerical estimates of mixed derivatives of the vector potential don't cancel out and only high-order estimates of div(b) are close to 0.
                            if (ccB) then
                               if (dom%D_z == 0) then
                                  cg%b(:, i, j, k) = cg%b(:, i, j, k) + &
@@ -395,18 +403,20 @@ contains
                                       divBs_amp * [ 1., kk(ydim)*cfy*sz, kk(zdim)*sy*cfz ]
                               endif
                            endif
-                        case (I_THREE) ! curl([sin(x)*sin(y)*sin(z), sin(x)*sin(y)*sin(z), sin(x)*sin(y)*sin(z)])
+                        case (I_THREE)
+                           ! curl([sin(x)*sin(y)*sin(z), sin(x)*sin(y)*sin(z), sin(x)*sin(y)*sin(z)]) shoudl produce div(B) == 0, but see the notes for 2D case.
+                           ! setting up a div(B)-free field in flattened domain requires careful choice of kk(:)
                            if (ccB) then
                               cg%b(:, i, j, k) = cg%b(:, i, j, k) + divB0_amp * [ &
-                                   kk(ydim)*sx*cy*sz - kk(zdim)*sx*sy*cz, &
-                                   kk(zdim)*sx*sy*cz - kk(xdim)*cx*sy*sz, &
-                                   kk(xdim)*cx*sy*sz - kk(ydim)*sx*cy*sz ] + &
+                                   kk(ydim)*cx*sy*cz - kk(zdim)*cx*cy*sz, &
+                                   kk(zdim)*cx*cy*sz - kk(xdim)*sx*cy*cz, &
+                                   kk(xdim)*sx*cy*cz - kk(ydim)*cx*sy*cz ] + &
                                    divBs_amp * [ kk(xdim)*cx*sy*sz, kk(ydim)*sx*cy*sz, kk(zdim)*sx*sy*cz ]
                            else
                               cg%b(:, i, j, k) = cg%b(:, i, j, k) + divB0_amp * [ &
-                                   kk(ydim)*sfx*cy*sz - kk(zdim)*sfx*sy*cz, &
-                                   kk(zdim)*sx*sfy*cz - kk(xdim)*cx*sfy*sz, &
-                                   kk(xdim)*cx*sy*sfz - kk(ydim)*sx*cy*sfz ] + &
+                                   kk(ydim)*cfx*sy*cz - kk(zdim)*cfx*cy*sz, &
+                                   kk(zdim)*cx*cfy*sz - kk(xdim)*sx*cfy*cz, &
+                                   kk(xdim)*sx*cy*cfz - kk(ydim)*cx*sy*cfz ] + &
                                    divBs_amp * [ kk(xdim)*cfx*sy*sz, kk(ydim)*sx*cfy*sz, kk(zdim)*sx*sy*cfz ]
                            endif
                         case default
@@ -497,16 +507,16 @@ contains
 
       implicit none
 
-      character(len=*), intent(in)                    :: var
-      real(kind=4), dimension(:,:,:), intent(inout)   :: tab
-      integer, intent(inout)                          :: ierrh
-      type(grid_container), pointer, intent(in)       :: cg
+      character(len=*),              intent(in)    :: var
+      real, dimension(:,:,:),        intent(inout) :: tab
+      integer,                       intent(inout) :: ierrh
+      type(grid_container), pointer, intent(in)    :: cg
 
       call analytic_solution(t) ! cannot handle this automagically because here we modify it
 
       ierrh = 0
       if (qna%exists(var)) then
-         tab(:,:,:) = real(cg%q(qna%ind(var))%span(cg%ijkse), 4)
+         tab(:,:,:) = real(cg%q(qna%ind(var))%span(cg%ijkse), kind(tab))
       else
          ierrh = -1
       endif

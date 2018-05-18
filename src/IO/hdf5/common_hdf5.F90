@@ -618,7 +618,7 @@ contains
 !> \brief Create an empty double precision dataset of given dimensions. Use compression if available.
    subroutine create_empty_cg_dataset(cg_g_id, name, ddims, Z_avail, otype)
 
-      use dataio_pub, only: enable_compression, gzip_level, die
+      use dataio_pub, only: enable_compression, gzip_level, die, h5_64bit
       use hdf5,       only: HID_T, HSIZE_T, H5P_DATASET_CREATE_F, H5T_NATIVE_REAL, H5T_NATIVE_DOUBLE, &
          &                  h5dcreate_f, h5dclose_f, h5screate_simple_f, h5sclose_f, h5pcreate_f, h5pclose_f, h5pset_deflate_f, &
          &                  h5pset_shuffle_f, h5pset_chunk_f
@@ -644,7 +644,11 @@ contains
      if (otype == O_RES) then
         dtype = H5T_NATIVE_DOUBLE
      else if (otype == O_OUT) then
-        dtype = H5T_NATIVE_REAL
+        if (h5_64bit) then
+           dtype = H5T_NATIVE_DOUBLE
+        else
+           dtype = H5T_NATIVE_REAL
+        endif
      else
         call die("[common_hdf5:create_empty_cg_dataset] Unknown output time")
      endif
