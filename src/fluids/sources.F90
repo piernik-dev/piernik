@@ -185,8 +185,6 @@ contains
                endif
                call cool_heat(pfl%gam, n, u1(:,pfl%idn), int_ener, eint_src)
                u1(:, pfl%ien) = u1(:, pfl%ien) + 1./dom%eff_dim* eint_src * coeffdt
-!               int_ener = max(int_ener, smallei)
-               if (pfl%is_magnetized) u1(:, pfl%ien) = u1(:, pfl%ien) + mag_ener
             endif
          enddo
       endif
