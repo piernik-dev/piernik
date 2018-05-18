@@ -41,7 +41,7 @@ module thermal
    implicit none
 
    private
-   public ::  maxdeint, cool_heat, init_thermal, cool_model, heat_model, A_heat, A_cool, alpha_cool, thermal_active, cfl_coolheat, beta_cool
+   public ::  maxdeint, cool_heat, init_thermal, cool_model, heat_model, A_heat, A_cool, alpha_cool, thermal_active, cfl_coolheat, beta_cool, src_thermal_exec
 
    character(len=cbuff_len) :: cool_model, heat_model
    logical                  :: thermal_active
@@ -127,6 +127,50 @@ contains
       endif
 
    end subroutine init_thermal
+
+!>
+!! \brief Computation of cooling and heating source terms
+!<
+   subroutine src_thermal_exec(uu, nn, bb, usrc)
+
+      use constants,  only: xdim, ydim, zdim
+      use domain,     only: dom
+      use fluidindex, only: flind, nmag
+      use fluidtypes, only: component_fluid
+      use func,       only: emag, ekin
+
+      implicit none
+
+      integer(kind=4),                intent(in)  :: nn                 !< array size
+      real, dimension(nn, flind%all), intent(in)  :: uu                 !< vector of conservative variables
+      real, dimension(nn, nmag),      intent(in)  :: bb                 !< local copy of magnetic field
+      real, dimension(nn, flind%all), intent(out) :: usrc               !< u array update component for sources
+!locals
+
+      real, dimension(nn)                         :: eint_src, kin_ener, int_ener, mag_ener
+      class(component_fluid), pointer             :: pfl
+      integer                                     :: ifl
+
+      usrc = 0.0
+      if (.not.thermal_active) return
+
+      do ifl = 1, flind%fluids
+         pfl => flind%all_fluids(ifl)%fl
+         if (pfl%has_energy) then
+            kin_ener = ekin(uu(:, pfl%imx), uu(:, pfl%imy), uu(:, pfl%imz), uu(:, pfl%idn))
+            if (pfl%is_magnetized) then
+               mag_ener = emag(bb(:, xdim), bb(:, ydim), bb(:, zdim))
+               int_ener = uu(:, pfl%ien) - kin_ener - mag_ener
+            else
+               int_ener = uu(:, pfl%ien) - kin_ener
+            endif
+            call cool_heat(pfl%gam, nn, uu(:,pfl%idn), int_ener, eint_src)
+            usrc(:, pfl%ien) = usrc(:, pfl%ien) + 1./dom%eff_dim * eint_src
+         endif
+      enddo
+
+   end subroutine src_thermal_exec
+
 
    subroutine cool_heat(gamma, n, dens, eint, esrc)
 

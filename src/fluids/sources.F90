@@ -103,11 +103,7 @@ contains
       use shear,            only: shear_acc
 #endif /* SHEAR */
 #ifdef THERM
-      use constants,        only: xdim, ydim, zdim
-      use domain,           only: dom
-      use fluidtypes,       only: component_fluid
-      use func,             only: emag, ekin
-      use thermal,          only: cool_heat, thermal_active
+      use thermal,          only: src_thermal_exec
 #endif /* THERM */
 
       implicit none
@@ -129,12 +125,6 @@ contains
 !locals
       real, dimension(n, flind%all)                 :: usrc, newsrc       !< u array update from sources
       real, dimension(:,:),            pointer      :: vx
-
-#ifdef THERM
-      real, dimension(n)                            :: eint_src, kin_ener, int_ener, mag_ener
-      class(component_fluid), pointer :: pfl
-      integer :: ifl
-#endif /* THERM */
 
       vx   => vel_sweep
 
@@ -172,22 +162,8 @@ contains
 #endif /* COSM_RAYS_SOURCES */
 #endif /* COSM_RAYS && IONIZED */
 #ifdef THERM
-      if(thermal_active) then
-         do ifl = 1, flind%fluids
-            pfl => flind%all_fluids(ifl)%fl
-            if (pfl%has_energy) then
-               kin_ener = ekin(u(:, pfl%imx), u(:, pfl%imy), u(:, pfl%imz), u(:, pfl%idn))
-               if (pfl%is_magnetized) then
-                  mag_ener = emag(bb(:, xdim), bb(:, ydim), bb(:, zdim))
-                  int_ener = u(:, pfl%ien) - kin_ener - mag_ener
-               else
-                  int_ener = u(:, pfl%ien) - kin_ener
-               endif
-               call cool_heat(pfl%gam, n, u(:,pfl%idn), int_ener, eint_src)
-               usrc(:, pfl%ien) = usrc(:, pfl%ien) + 1./dom%eff_dim * eint_src
-            endif
-         enddo
-      endif
+      call src_thermal_exec(u, n, bb, newsrc)
+      usrc(:,:) = usrc(:,:) + newsrc(:,:)
 #endif /* THERM */
 
 ! --------------------------------------------------
