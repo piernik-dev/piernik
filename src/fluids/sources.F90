@@ -176,15 +176,15 @@ contains
          do ifl = 1, flind%fluids
             pfl => flind%all_fluids(ifl)%fl
             if (pfl%has_energy) then
-               kin_ener = ekin(u1(:, pfl%imx), u1(:, pfl%imy), u1(:, pfl%imz), u1(:, pfl%idn))
+               kin_ener = ekin(u(:, pfl%imx), u(:, pfl%imy), u(:, pfl%imz), u(:, pfl%idn))
                if (pfl%is_magnetized) then
                   mag_ener = emag(bb(:, xdim), bb(:, ydim), bb(:, zdim))
-                  int_ener = u1(:, pfl%ien) - kin_ener - mag_ener
+                  int_ener = u(:, pfl%ien) - kin_ener - mag_ener
                else
-                  int_ener = u1(:, pfl%ien) - kin_ener
+                  int_ener = u(:, pfl%ien) - kin_ener
                endif
-               call cool_heat(pfl%gam, n, u1(:,pfl%idn), int_ener, eint_src)
-               u1(:, pfl%ien) = u1(:, pfl%ien) + 1./dom%eff_dim* eint_src * coeffdt
+               call cool_heat(pfl%gam, n, u(:,pfl%idn), int_ener, eint_src)
+               usrc(:, pfl%ien) = usrc(:, pfl%ien) + 1./dom%eff_dim * eint_src
             endif
          enddo
       endif
