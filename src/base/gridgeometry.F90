@@ -37,7 +37,7 @@ module gridgeometry
    implicit none
 
    private
-   public   :: gc, GC1, GC2, GC3, init_geometry, set_geo_coeffs, geometry_source_terms
+   public   :: gc, GC1, GC2, GC3, init_geometry, set_geo_coeffs, geometry_source_terms_exec
 
    real, dimension(:,:,:), pointer :: gc            !< array of geometrical coefficients, \todo move it to the grid container
    enum, bind(C)
@@ -270,5 +270,26 @@ contains
       endif
 
    end function cyl_geometry_source_terms
+
+!>
+!! \brief Detailed execution of geometry source terms designed to use in sources module
+!<
+   subroutine geometry_source_terms_exec(u, pressure, sweep, cg, usrc)
+
+      use fluidindex, only: iarr_all_mx
+      use grid_cont,  only: grid_container
+
+      implicit none
+
+      real, dimension(:, :),         intent(in)  :: u                  !< vector of conservative variables
+      real, dimension(:, :),         intent(in)  :: pressure           !< gas pressure
+      integer(kind=4),               intent(in)  :: sweep              !< direction (x, y or z) we are doing calculations for
+      type(grid_container), pointer, intent(in)  :: cg                 !< current grid piece
+      real, dimension(:, :),         intent(out) :: usrc               !< u array update component for sources
+
+      usrc = 0.0
+      usrc(:, iarr_all_mx) = geometry_source_terms(u, pressure, sweep, cg)
+
+   end subroutine geometry_source_terms_exec
 
 end module gridgeometry

@@ -114,22 +114,22 @@ contains
       character(len=dsetnamelen)                           :: aux
 #endif /* COSM_RAYS */
 
-      nvars = 1
-      do while ( len(trim(vars(nvars))) > 1)
-         nvars = nvars + 1
+      nvars = 0
+      do i = lbound(vars, 1), ubound(vars, 1)
+         if (len_trim(vars(i)) > 0) nvars = nvars + 1
       enddo
-      nvars = nvars - 1
 
       nhdf_vars = 0
-      do i = 1, nvars
-         select case (vars(i))
+      do i = lbound(vars, 1), ubound(vars, 1)
+         select case (trim(vars(i)))
+            case ('')
             case ('dens')
                nhdf_vars = nhdf_vars + size(iarr_all_dn,1)
-            case ('velx')
+            case ('velx', 'momx')
                nhdf_vars = nhdf_vars + size(iarr_all_mx,1)
-            case ('vely')
+            case ('vely', 'momy')
                nhdf_vars = nhdf_vars + size(iarr_all_my,1)
-            case ('velz')
+            case ('velz', 'momz')
                nhdf_vars = nhdf_vars + size(iarr_all_mz,1)
             case ('ener')
                nhdf_vars = nhdf_vars + size(iarr_all_mz,1)
@@ -159,8 +159,9 @@ contains
       allocate(hdf_vars_avail(nhdf_vars))
       hdf_vars_avail = .true.
       allocate(hdf_vars(nhdf_vars)); j = 1
-      do i = 1, nvars
-         select case (vars(i))
+      do i = lbound(vars, 1), ubound(vars, 1)
+         select case (trim(vars(i)))
+            case ('')
             case ('dens')
                if (has_dst) then ; hdf_vars(j) = 'dend' ; j = j + 1 ; endif
                if (has_neu) then ; hdf_vars(j) = 'denn' ; j = j + 1 ; endif
@@ -177,6 +178,18 @@ contains
                if (has_dst) then ; hdf_vars(j) = 'vlzd' ; j = j + 1 ; endif
                if (has_neu) then ; hdf_vars(j) = 'vlzn' ; j = j + 1 ; endif
                if (has_ion) then ; hdf_vars(j) = 'vlzi' ; j = j + 1 ; endif
+            case ('momx')
+               if (has_dst) then ; hdf_vars(j) = 'momxd' ; j = j + 1 ; endif
+               if (has_neu) then ; hdf_vars(j) = 'momxn' ; j = j + 1 ; endif
+               if (has_ion) then ; hdf_vars(j) = 'momxi' ; j = j + 1 ; endif
+            case ('momy')
+               if (has_dst) then ; hdf_vars(j) = 'momyd' ; j = j + 1 ; endif
+               if (has_neu) then ; hdf_vars(j) = 'momyn' ; j = j + 1 ; endif
+               if (has_ion) then ; hdf_vars(j) = 'momyi' ; j = j + 1 ; endif
+            case ('momz')
+               if (has_dst) then ; hdf_vars(j) = 'momzd' ; j = j + 1 ; endif
+               if (has_neu) then ; hdf_vars(j) = 'momzn' ; j = j + 1 ; endif
+               if (has_ion) then ; hdf_vars(j) = 'momzi' ; j = j + 1 ; endif
             case ('ener')
                if (has_neu) then ; hdf_vars(j) = 'enen' ; j = j + 1 ; endif
                if (has_ion) then ; hdf_vars(j) = 'enei' ; j = j + 1 ; endif
@@ -273,12 +286,21 @@ contains
             case ("i")
                fl_dni => flind%ion
          end select
+      else if (any([ "momx", "momy", "momz" ] == var(1:4))) then
+         select case (var(5:5))
+            case ("d")
+               fl_dni => flind%dst
+            case ("n")
+               fl_dni => flind%neu
+            case ("i")
+               fl_dni => flind%ion
+         end select
       endif
 
       i_xyz = huge(1_INT4)
       if (var(1:2) == "vl") then
          dc = var(3:3)
-      else if (var(1:3) == "mag") then
+      else if (var(1:3) == "mag" .or. var(1:3) == "mom") then
          dc = var(4:4)
       else
          dc = '_'
@@ -292,6 +314,10 @@ contains
 !!
 !! \details Write real, integer and character attributes. Store contents of problem.par and env files.
 !! Other common elements may also be moved here.
+!!
+!! \ToDo figure out if it is of use for us:
+!! http://computation.llnl.gov/projects/floating-point-compression/zfp-and-derivatives
+!! https://github.com/LLNL/H5Z-ZFP
 !<
    subroutine set_common_attributes(filename)
 
@@ -592,7 +618,7 @@ contains
 !> \brief Create an empty double precision dataset of given dimensions. Use compression if available.
    subroutine create_empty_cg_dataset(cg_g_id, name, ddims, Z_avail, otype)
 
-      use dataio_pub, only: enable_compression, gzip_level, die
+      use dataio_pub, only: enable_compression, gzip_level, die, h5_64bit
       use hdf5,       only: HID_T, HSIZE_T, H5P_DATASET_CREATE_F, H5T_NATIVE_REAL, H5T_NATIVE_DOUBLE, &
          &                  h5dcreate_f, h5dclose_f, h5screate_simple_f, h5sclose_f, h5pcreate_f, h5pclose_f, h5pset_deflate_f, &
          &                  h5pset_shuffle_f, h5pset_chunk_f
@@ -618,7 +644,11 @@ contains
      if (otype == O_RES) then
         dtype = H5T_NATIVE_DOUBLE
      else if (otype == O_OUT) then
-        dtype = H5T_NATIVE_REAL
+        if (h5_64bit) then
+           dtype = H5T_NATIVE_DOUBLE
+        else
+           dtype = H5T_NATIVE_REAL
+        endif
      else
         call die("[common_hdf5:create_empty_cg_dataset] Unknown output time")
      endif
@@ -939,8 +969,8 @@ contains
 
       integer(kind=4), dimension(:),     pointer, intent(inout) :: cg_rl            !< list of refinement levels from all cgs/procs
       integer(kind=4), dimension(:,:),   pointer, intent(inout) :: cg_n_b           !< list of n_b from all cgs/procs
-      integer(kind=4), dimension(:,:),   pointer, intent(inout) :: cg_n_o           !< list of grid dimnsions with external guardcells from all cgs/procs
-      integer(kind=8), dimension(:,:),   pointer, intent(inout) :: cg_off           !< list of offsets from all cgs/procs
+      integer(kind=4), dimension(:,:),   pointer, intent(inout) :: cg_n_o           !< list of grid dimensions with external guardcells from all cgs/procs
+      integer(kind=8), dimension(:,:),   pointer, intent(inout) :: cg_off           !< list of offsets from all cgs/procs with respect to level offset (lose level offset in the restart)
       real(kind=8),    dimension(:,:,:), pointer, intent(inout) :: dbuf
       integer(kind=4),                            intent(in)    :: otype            !< Output type (restart, data)
 
@@ -977,7 +1007,7 @@ contains
       use mpisetup, only: comm
 
       implicit none
-      integer(kind=4), intent(in) :: h5p
+      integer(HID_T),  intent(in) :: h5p
       integer(kind=4), intent(in) :: nproc_io
       integer(HID_T)              :: plist_id
       integer(kind=4)             :: error

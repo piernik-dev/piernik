@@ -1,5 +1,17 @@
 
+/* spelling workaround */
+
+#ifdef IONISED
+#  define IONIZED
+#endif /* IONISED */
+
 #include "piernik.def"
+
+#ifdef IONIZED
+#  ifndef NONMAGNETIC
+#    define MAGNETIC
+#  endif /* !NONMAGNETIC */
+#endif /* IONIZED */
 
 #if defined(MULTIGRID) && defined(GRAV)
 #define SELF_GRAV
@@ -14,7 +26,7 @@
 #undef HDF5
 #endif
 
-#if !defined(RTVD) && !defined(HLLC)
+#if !defined(RTVD) && !defined(HLLC) && !defined(RIEMANN)
 #define RTVD
-/* #  warning no hydro solver defined, possible choices { RTVD, HLLC }, defaulting to RTVD */
+/* #  warning no hydro solver defined, possible choices { RTVD, HLLC, RIEMANN }, defaulting to RTVD */
 #endif

@@ -160,7 +160,7 @@ contains
          enddo
          v_red(I_V) = prop%val;
       else
-         v_red(I_V) = -prop%val   !! No cgl means nothing to do there
+         v_red(I_V) = prop%val   !! No cgl means nothing to do there
       endif
 
       v_red(I_P) = real(proc)

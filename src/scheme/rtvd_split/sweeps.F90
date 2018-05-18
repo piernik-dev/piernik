@@ -266,9 +266,7 @@ contains
       use mpisetup,           only: mpi_err, req, status
       use named_array_list,   only: qna, wna
       use rtvd,               only: relaxing_tvd
-#ifdef COSM_RAYS
-      use crhelpers,          only: div_v, set_div_v1d
-#endif /* COSM_RAYS */
+      use sources,            only: prepare_sources
 #ifdef MAGNETIC
       use fluidindex,         only: iarr_mag_swp
 #endif /* MAGNETIC */
@@ -288,7 +286,7 @@ contains
 #ifdef MAGNETIC
       real, dimension(:,:),  pointer    :: pb
 #endif /* MAGNETIC */
-      real, dimension(:),    pointer    :: div_v1d => null(), cs2
+      real, dimension(:),    pointer    :: cs2
       type(cg_list_element), pointer    :: cgl
       type(grid_container),  pointer    :: cg
       type(ext_fluxes)                  :: eflx
@@ -352,9 +350,7 @@ contains
                      u(:,:) = 0.0
 
                      if (istep == 1) then
-#ifdef COSM_RAYS
-                        call div_v(flind%ion%pos, cg)
-#endif /* COSM_RAYS */
+                        call prepare_sources(cg)
                         cg%w(uhi)%arr = cg%u
                      endif
 
@@ -376,9 +372,6 @@ contains
 #endif /* MAGNETIC */
 
                            call set_geo_coeffs(cdim, flind, i1, i2, cg)
-#ifdef COSM_RAYS
-                           call set_div_v1d(div_v1d, cdim, i1, i2, cg)
-#endif /* COSM_RAYS */
 
                            pu                     => cg%w(wna%fi   )%get_sweep(cdim,i1,i2)
                            pu0                    => cg%w(uhi      )%get_sweep(cdim,i1,i2)
@@ -406,9 +399,9 @@ contains
 
                            call cg%set_fluxpointers(cdim, i1, i2, eflx)
                            if (use_fargo .and. cdim == ydim) then
-                              call relaxing_tvd(cg%n_(cdim), u, u0, b, div_v1d, cs2, istep, cdim, i1, i2, cg%dl(cdim), dt, cg, eflx, sources, vx)
+                              call relaxing_tvd(cg%n_(cdim), u, u0, b, cs2, istep, cdim, i1, i2, dt, cg, eflx, sources, vx)
                            else
-                              call relaxing_tvd(cg%n_(cdim), u, u0, b, div_v1d, cs2, istep, cdim, i1, i2, cg%dl(cdim), dt, cg, eflx, sources)
+                              call relaxing_tvd(cg%n_(cdim), u, u0, b, cs2, istep, cdim, i1, i2, dt, cg, eflx, sources)
                            endif
                            call cg%save_outfluxes(cdim, i1, i2, eflx)
 
