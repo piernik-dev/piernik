@@ -225,7 +225,7 @@ contains
       implicit none
 
       character(len=*),               intent(in)             :: var
-      real(kind=4), dimension(:,:,:), intent(inout)          :: tab
+      real, dimension(:,:,:),         intent(inout)          :: tab
       integer,                        intent(inout)          :: ierrh
       type(grid_container), pointer,  intent(in)             :: cg
       real, dimension(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) :: eint, kin_ener, mag_ener, temp
