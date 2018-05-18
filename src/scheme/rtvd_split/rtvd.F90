@@ -279,7 +279,7 @@ contains
 #endif /* SHEAR */
 #ifdef THERM
       use thermal,          only: cool_heat, thermal_active
-#endif /*THERM*/
+#endif /* THERM */
 
       implicit none
 
@@ -334,7 +334,7 @@ contains
       real, dimension(n)              :: kin_ener, int_ener, mag_ener
 #ifdef THERM
       real, dimension(n)              :: eint_src
-#endif /*THERM*/
+#endif /* THERM */
 
       real, dimension(2,2), parameter              :: rk2coef = reshape( [ one, half, zero, one ], [ 2, 2 ] )
 
@@ -547,7 +547,7 @@ contains
          endif
       enddo
    endif
-#endif /*THERM*/
+#endif /* THERM */
       endif ! sources
 
       do ifl = 1, flind%fluids
