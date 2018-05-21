@@ -28,18 +28,23 @@
 
 #include "piernik.def"
 
+!>
+!!  \brief This module implements interpolation of left and right face states for cell-centered vectors of conservative variables.
+!<
+
 module interpolations
 ! pulled by RIEMANN
 
   implicit none
+
   private
   public :: set_interpolations, interpol
 
   interface
-     subroutine interpolation(prim_var,prim_var_l,prim_var_r)
-       
+     subroutine interpolation(prim_var, prim_var_l, prim_var_r)
+
        implicit none
-       
+
        real, dimension(:,:), intent(in)  :: prim_var
        real, dimension(:,:), intent(out) :: prim_var_l
        real, dimension(:,:), intent(out) :: prim_var_r
@@ -52,7 +57,11 @@ module interpolations
 
 contains
 
-   function utoq(u,b_cc) result(q)
+!>
+!! \brief Convert a vector of conservarive variables to primitive ones.
+!<
+
+   function utoq(u, b_cc) result(q)
 
      use constants,  only: half, xdim, zdim
      use fluidindex, only: flind
@@ -63,29 +72,32 @@ contains
 
      real, dimension(:,:),   intent(in)    :: u , b_cc
 
-     real, dimension(size(u,1),size(u,2))  :: q
+     real, dimension(size(u, 1), size(u, 2))  :: q
      integer  :: p
-
      class(component_fluid), pointer       :: fl
 
      do p = 1, flind%fluids
         fl => flind%all_fluids(p)%fl
 
-        q(fl%idn,:) =  u(fl%idn,:)
-        q(fl%imx,:) =  u(fl%imx,:)/u(fl%idn,:)
-        q(fl%imy,:) =  u(fl%imy,:)/u(fl%idn,:)
-        q(fl%imz,:) =  u(fl%imz,:)/u(fl%idn,:)
-        ! J.CoPhy 208 (2005),Pg 317, Eq. 2. Gas pressure: p = (gamma-1)*(e-half*rho*v^2-half*B^2) and Total pressure: p_T = p + half*B^2. (1) and (2) are markers for HD and MHD.
+        q(fl%idn, :) =  u(fl%idn, :)
+        q(fl%imx, :) =  u(fl%imx, :)/u(fl%idn, :)
+        q(fl%imy, :) =  u(fl%imy, :)/u(fl%idn, :)
+        q(fl%imz, :) =  u(fl%imz, :)/u(fl%idn, :)
+        ! J.CoPhy 208 (2005), Pg 317, Eq. 2. Gas pressure: p = (gamma-1)*(e-half*rho*v^2-half*B^2) and Total pressure: p_T = p + half*B^2. (1) and (2) are markers for HD and MHD.
         if (fl%has_energy) then
-            q(fl%ien,:) =  fl%gam_1*(u(fl%ien,:) - ekin(u(fl%imx,:), u(fl%imy,:), u(fl%imz,:), u(fl%idn,:))) ! Primitive variable for gas pressure (p) without magnetic fields. (1)
+            q(fl%ien, :) =  fl%gam_1*(u(fl%ien, :) - ekin(u(fl%imx, :), u(fl%imy, :), u(fl%imz, :), u(fl%idn, :))) ! Primitive variable for gas pressure (p) without magnetic fields. (1)
             if (fl%is_magnetized) then
-               q(fl%ien,:) =  q(fl%ien,:) - half*fl%gam_1*sum(b_cc(xdim:zdim,:)**2, dim=1) ! Primitive variable for gas pressure (p) with magnetic fields. The requirement of total pressure is dealt in the fluxes and hlld routines. (2)
+               q(fl%ien, :) =  q(fl%ien, :) - half*fl%gam_1*sum(b_cc(xdim:zdim, :)**2, dim=1) ! Primitive variable for gas pressure (p) with magnetic fields. The requirement of total pressure is dealt in the fluxes and hlld routines. (2)
             endif
         endif
 
      enddo
 
    end function utoq
+
+!<
+!! \brief Apply chosen interpolation scheme to obtain estimates of left and right state for the Riemann solver.
+!>
 
   subroutine interpol(u, bcc, psi, ql, qr, bccl, bccr, psil, psir)
 
@@ -112,6 +124,10 @@ contains
 
   end subroutine interpol
 
+!>
+!! \brief Interpret and set desired interpolation scheme.
+!<
+
   subroutine set_interpolations(interpol_str)
 
     use dataio_pub, only: msg, die
@@ -121,57 +137,60 @@ contains
     character(len=*), intent(in) :: interpol_str
 
     if (associated(interp)) call die("[interpolations:set_interpolations] interp already associated")
-    
-    select case(interpol_str)
-    case('linear', 'LINEAR')
+
+    select case (interpol_str)
+    case ('linear', 'LINEAR', 'lin', '1')
        interp => linear
     case default
-       write(msg,'(2a)') "[interpolations:set_interpolations] unknown interpolation ", interpol_str 
+       write(msg, '(2a)') "[interpolations:set_interpolations] unknown interpolation ", interpol_str
        call die(msg)
        interp => null()
     end select
-    
+
   end subroutine set_interpolations
 
-  subroutine linear(q,ql,qr)
-    
-    use fluxlimiters, only: set_limiters,flimiter,blimiter
+!>
+!! \brief Linear interpolation scheme for estimating left and right states on cell interfaces.
+!<
+
+  subroutine linear(q, ql, qr)
+
+    use fluxlimiters, only: set_limiters, flimiter, blimiter
     use domain,       only: dom
     use constants,    only: half, GEO_XYZ
     use dataio_pub,   only: die
-      
+
     implicit none
 
     real, dimension(:,:), intent(in)     :: q
     real, dimension(:,:), intent(out)    :: ql
     real, dimension(:,:), intent(out)    :: qr
 
-    real, dimension(size(q,1),size(q,2)) :: dq_lim, dq_interp
+    real, dimension(size(q, 1), size(q, 2)) :: dq_lim, dq_interp
+    integer                                 :: im1
+    integer                                 :: n
 
-    integer                              :: im1
-    integer                              :: n 
-    n = size(q,2)
-      
+    n = size(q, 2)
+
     dq_lim = flimiter(q)
 
     if (dom%geometry_type /= GEO_XYZ) call die("[interpolations:linear] non-cartesian geometry not implemented yet.")
 
     dq_interp = half*dq_lim
-    
+
     ql = q + dq_interp
     qr = q - dq_interp
 
-    im1 = max(1,n-1) ! neighbouring indices
+    im1 = max(1, n-1) ! neighbouring indices
     !associate(im1 => i - Dom%D_x)
     ! shfit right state
-    qr(:,1:im1) = qr(:,2:n)
-
+    qr(:, 1:im1) = qr(:, 2:n)
 
     ! interpolation for the first and last points
-    
-    ql(:,1) = q(:,1)
-    qr(:,n) = q(:,n)  
-      
+
+    ql(:, 1) = q(:, 1)
+    qr(:, n) = q(:, n)
+
   end subroutine linear
-    
+
 end module interpolations
