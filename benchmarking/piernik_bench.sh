@@ -11,7 +11,7 @@ fi
 
 SCALE=${BIG:=1}
 
-[ $SCALE -ne 1 ] && echo "# test domains are scaled by factor of $SCALE"
+[ "$SCALE" != "1" ] && echo "# test domains are scaled by factor of $SCALE"
 
 # create list of thread count to be tested
 if [ $# -lt 1 ] ; then
@@ -126,7 +126,7 @@ for p in $B_PROBLEM_LIST ; do
 		done
 		case $p in
 		    sedov)
-			NX=$(( 64 * $SCALE ))
+			NX=$( echo 64 $SCALE | awk '{print int($1*$2)}')
 			if [ $t == flood ] ; then
 			    for j in $( seq $i ) ; do
 				cd $j
@@ -150,7 +150,7 @@ for p in $B_PROBLEM_LIST ; do
 			fi
 			echo ;;
 		    crtest)
-			NX=$(( 32 * $SCALE ))
+			NX=$( echo 32 $SCALE | awk '{print int($1*$2)}')
 			if [ $t == flood ] ; then
 			    for j in $( seq $i ) ; do
 				cd $j
@@ -177,7 +177,7 @@ for p in $B_PROBLEM_LIST ; do
 			echo ;;
 		    maclaurin)
 			if [ $t == flood ] ; then
-			    NX=$(( 64 * $SCALE ))
+			    NX=$( echo 64 $SCALE | awk '{print int($1*$2)}')
 			    for j in $( seq $i ) ; do
 				cd $j
 				rm *log 2> /dev/null
@@ -194,10 +194,10 @@ for p in $B_PROBLEM_LIST ; do
 			    echo -n $i
 			    case $t in
 				weak)
-				    NX=$(( 64 * $SCALE ))
+				    NX=$( echo 64 $SCALE | awk '{print int($1*$2)}')
 				    mpirun -np $i ./piernik -n '&BASE_DOMAIN n_d = '$(( $i * $NX ))', 2*'$NX' xmin = -'$(( $i * 2 ))' xmax = '$(( $i * 2 ))' / &MPI_BLOCKS AMR_bsize = 3*32 /' 2> /dev/null ;;
 				strong)
-				    NX=$(( 128 * $SCALE ))
+				    NX=$( echo 128 $SCALE | awk '{print int($1*$2)}')
 				    mpirun -np $i ./piernik -n '&BASE_DOMAIN n_d = 3*'$NX' / &MPI_BLOCKS AMR_bsize = 3*32 /' 2> /dev/null ;;
 			    esac | grep cycles | awk '{printf("%7.3f %7.3f ", $5, $8)}'
 			    awk '/Spent/ { printf("%s ", $5) }' *log
