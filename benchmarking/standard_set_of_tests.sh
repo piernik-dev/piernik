@@ -32,4 +32,5 @@ echo "starting from $N"
 for i in $( seq $N $(( $N + 2 )) ) ; do
   ./benchmarking/piernik_bench.sh | tee $1/${i}
 done
+BIG=1.5 ./benchmarking/piernik_bench.sh | tee $1/${N}_big1.5
 BIG=2 ./benchmarking/piernik_bench.sh | tee $1/${N}_big2
