@@ -35,9 +35,61 @@ module sources
    implicit none
 
    private
-   public  :: all_sources, prepare_sources, timestep_sources
+   public  :: all_sources, init_sources, prepare_sources, timestep_sources
 
 contains
+
+!/*
+!>
+!! \brief Subroutine computes any scheme sources (yet, now it is based on rtvd scheme)
+!!
+!! \todo Do not pass i1 and i2, pass optional pointer to gravacc instead
+!<
+!*/
+   subroutine init_sources
+
+      use interactions, only: init_interactions
+#ifdef CORIOLIS
+      use coriolis,     only: init_coriolis
+#endif /* CORIOLIS */
+#ifdef NON_INERTIAL
+      use non_inertial, only: init_non_inertial
+#endif /* NON_INERTIAL */
+#ifdef SHEAR
+      use shear,        only: init_shear
+#endif /* SHEAR */
+#ifdef SN_SRC
+      use snsources,    only: init_snsources
+#endif /* SN_SRC */
+#ifdef THERM
+      use thermal,      only: init_thermal
+#endif /* THERM */
+
+      implicit none
+
+      call init_interactions                 ! requires flind and units
+
+#ifdef CORIOLIS
+      call init_coriolis                     ! depends on geometry
+#endif /* CORIOLIS */
+
+#ifdef NON_INERTIAL
+      call init_non_inertial                 ! depends on geometry
+#endif /* NON_INERTIAL */
+
+#ifdef SHEAR
+      call init_shear                        ! depends on fluids
+#endif /* SHEAR */
+
+#ifdef SN_SRC
+      call init_snsources                    ! depends on grid and fluids/cosmicrays
+#endif /* SN_SRC */
+
+#ifdef THERM
+      call init_thermal
+#endif /* THERM */
+
+   end subroutine init_sources
 
 !/*
 !>
@@ -56,10 +108,10 @@ contains
 
       implicit none
 
-      type(grid_container), pointer, intent(in)    :: cg                 !< current grid piece
+      type(grid_container), pointer, intent(in) :: cg                 !< current grid piece
 
 #ifdef COSM_RAYS
-                        call div_v(flind%ion%pos, cg)
+      call div_v(flind%ion%pos, cg)
 #endif /* COSM_RAYS */
       if (.false. .and. cg%is_old) return ! to supress compiler warnings
 

@@ -58,24 +58,18 @@ contains
       use grid_container_ext,    only: cg_extptrs
       use gridgeometry,          only: init_geometry
       use initfluids,            only: init_fluids, sanitize_smallx_checks
-      use interactions,          only: init_interactions
       use initproblem,           only: problem_initial_conditions, read_problem_par, problem_pointers
       use mpisetup,              only: init_mpi, master
       use refinement,            only: init_refinement
       use refinement_flag,       only: level_max
       use refinement_update,     only: update_refinement
+      use sources,               only: init_sources
       use timer,                 only: set_timer
       use units,                 only: init_units
       use user_hooks,            only: problem_post_restart, problem_post_IC
 #if defined MAGNETIC && defined RESISTIVE
       use resistivity,           only: init_resistivity, compute_resist
 #endif /* MAGNETIC && RESISTIVE */
-#ifdef SHEAR
-      use shear,                 only: init_shear
-#endif /* SHEAR */
-#ifdef THERM
-      use thermal,               only: init_thermal
-#endif /* THERM */
 #ifdef GRAV
       use gravity,               only: init_grav, init_grav_ext, manage_grav_pot_3d, sum_potential
       use hydrostatic,           only: init_hydrostatic, cleanup_hydrostatic
@@ -83,19 +77,10 @@ contains
 #ifdef MULTIGRID
       use multigrid,             only: init_multigrid, init_multigrid_ext, multigrid_par
 #endif /* MULTIGRID */
-#ifdef SN_SRC
-      use snsources,             only: init_snsources
-#endif /* SN_SRC */
 #ifdef DEBUG
       use piernikdebug,          only: init_piernikdebug
       use piernikiodebug,        only: init_piernikiodebug
 #endif /* DEBUG */
-#ifdef CORIOLIS
-      use coriolis,              only: init_coriolis
-#endif /* CORIOLIS */
-#ifdef NON_INERTIAL
-      use non_inertial,          only: init_non_inertial
-#endif /* NON_INERTIAL */
 #ifdef COSM_RAYS
       use crdiffusion,           only: init_crdiffusion
 #endif /* COSM_RAYS */
@@ -171,11 +156,6 @@ contains
       call init_crdiffusion                  ! depends on fluids
 #endif /* COSM_RAYS */
 
-      call init_interactions                 ! requires flind and units
-#ifdef THERM
-      call init_thermal
-#endif /* THERM */
-
       call init_refinement
 
       call init_decomposition
@@ -191,10 +171,6 @@ contains
       call init_grid                         ! Most of the cg's vars are now initialized, only arrays left
       code_progress = PIERNIK_INIT_GRID      ! Now we can initialize things that depend on all the above fundamental calls
 
-#ifdef SHEAR
-      call init_shear                        ! depends on fluids
-#endif /* SHEAR */
-
 #ifdef RESISTIVE
       call init_resistivity                  ! depends on grid
 #endif /* RESISTIVE */
@@ -204,17 +180,7 @@ contains
       call init_hydrostatic
 #endif /* GRAV */
 
-#ifdef CORIOLIS
-      call init_coriolis                     ! depends on geometry
-#endif /* CORIOLIS */
-
-#ifdef NON_INERTIAL
-      call init_non_inertial                 ! depends on geometry
-#endif /* NON_INERTIAL */
-
-#ifdef SN_SRC
-      call init_snsources                    ! depends on grid and fluids/cosmicrays
-#endif /* SN_SRC */
+      call init_sources                      ! depends on: geomety, fluids, grid
 
 #ifdef MULTIGRID
       call init_multigrid                    ! depends on grid, geometry, units and arrays
