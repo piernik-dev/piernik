@@ -26,9 +26,7 @@
 !
 #include "piernik.h"
 !>
-!! \brief This module implements relaxing TVD scheme
-!!
-!! The implementation was based on TVD split MHD code by Pen et al. (2003).
+!! \brief This module collect all sources to be added to an integration scheme
 !<
 module sources
 
@@ -37,7 +35,7 @@ module sources
    implicit none
 
    private
-   public  :: all_sources, prepare_sources, timestep_src
+   public  :: all_sources, prepare_sources, timestep_sources
 
 contains
 
@@ -205,7 +203,7 @@ contains
 !! \brief Subroutine collects dt limits estimations from sources
 !<
 !*/
-   subroutine timestep_src(dt, cg)
+   subroutine timestep_sources(dt, cg)
 
       use grid_cont,            only: grid_container
 #ifndef BALSARA
@@ -227,7 +225,7 @@ contains
          dt = min(dt,timestep_thermal(cg))
 #endif /* THERM */
 
-   end subroutine timestep_src
+   end subroutine timestep_sources
 
 !==========================================================================================
 end module sources

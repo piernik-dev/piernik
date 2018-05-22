@@ -112,7 +112,7 @@ contains
       use global,               only: t, dt_old, dt_max_grow, dt_initial, dt_min, nstep, use_fargo
       use grid_cont,            only: grid_container
       use mpisetup,             only: master, piernik_MPI_Allreduce
-      use sources,              only: timestep_src
+      use sources,              only: timestep_sources
       use timestep_pub,         only: c_all
 #ifdef COSM_RAYS
       use timestepcosmicrays,   only: timestep_crs, dt_crs
@@ -164,7 +164,7 @@ contains
          dt = min(dt, dt_resist)
 #endif /* RESISTIVE */
 
-         call timestep_src(dt, cg)
+         call timestep_sources(dt, cg)
 
          if (use_fargo) dt = min(dt, timestep_fargo(cg, dt))
          cgl => cgl%nxt
