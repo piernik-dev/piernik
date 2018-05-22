@@ -37,7 +37,7 @@ module sources
    implicit none
 
    private
-   public  :: all_sources, prepare_sources
+   public  :: all_sources, prepare_sources, timestep_src
 
 contains
 
@@ -199,6 +199,35 @@ contains
 #endif /* !ISO */
 
    end subroutine get_updates_from_acc
+
+!/*
+!>
+!! \brief Subroutine collects dt limits estimations from sources
+!<
+!*/
+   subroutine timestep_src(dt, cg)
+
+      use grid_cont,            only: grid_container
+#ifndef BALSARA
+      use timestepinteractions, only: timestep_interactions
+#endif /* !BALSARA */
+#ifdef THERM
+      use timestepthermal,      only: timestep_thermal
+#endif /* THERM */
+
+      implicit none
+
+      real,                          intent(inout) :: dt
+      type(grid_container), pointer, intent(in)    :: cg
+
+#ifndef BALSARA
+         dt = min(dt,timestep_interactions(cg))
+#endif /* !BALSARA */
+#ifdef THERM
+         dt = min(dt,timestep_thermal(cg))
+#endif /* THERM */
+
+   end subroutine timestep_src
 
 !==========================================================================================
 end module sources
