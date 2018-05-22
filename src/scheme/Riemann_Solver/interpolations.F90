@@ -41,13 +41,16 @@ module interpolations
   public :: set_interpolations, interpol
 
   interface
-     subroutine interpolation(prim_var, prim_var_l, prim_var_r)
+     subroutine interpolation(prim_var, prim_var_l, prim_var_r, f_limiter)
+
+       use fluxlimiters, only: limiter
 
        implicit none
 
-       real, dimension(:,:), intent(in)  :: prim_var
-       real, dimension(:,:), intent(out) :: prim_var_l
-       real, dimension(:,:), intent(out) :: prim_var_r
+       real, dimension(:,:),        intent(in)  :: prim_var
+       real, dimension(:,:),        intent(out) :: prim_var_l
+       real, dimension(:,:),        intent(out) :: prim_var_r
+       procedure(limiter), pointer, intent(in)  :: f_limiter
 
      end subroutine interpolation
 
@@ -101,6 +104,8 @@ contains
 
   subroutine interpol(u, bcc, psi, ql, qr, bccl, bccr, psil, psir)
 
+    use fluxlimiters, only: flimiter, blimiter
+
     implicit none
 
     real, dimension(:,:), intent(in)     :: u
@@ -118,9 +123,9 @@ contains
     real, dimension(size(u, 1), size(u, 2)) :: q
 
     q = utoq(u, bcc)
-    call interp(q, ql, qr)
-    call interp(bcc, bccl, bccr)
-    call interp(psi, psil, psir)
+    call interp(q,   ql,   qr,   flimiter)
+    call interp(bcc, bccl, bccr, blimiter)
+    call interp(psi, psil, psir, blimiter)
 
   end subroutine interpol
 
@@ -153,18 +158,19 @@ contains
 !! \brief Linear interpolation scheme for estimating left and right states on cell interfaces.
 !<
 
-  subroutine linear(q, ql, qr)
+  subroutine linear(q, ql, qr, f_limiter)
 
-    use fluxlimiters, only: set_limiters, flimiter, blimiter
+    use fluxlimiters, only: limiter
     use domain,       only: dom
     use constants,    only: half, GEO_XYZ
     use dataio_pub,   only: die
 
     implicit none
 
-    real, dimension(:,:), intent(in)     :: q
-    real, dimension(:,:), intent(out)    :: ql
-    real, dimension(:,:), intent(out)    :: qr
+    real, dimension(:,:),        intent(in)  :: q
+    real, dimension(:,:),        intent(out) :: ql
+    real, dimension(:,:),        intent(out) :: qr
+    procedure(limiter), pointer, intent(in)  :: f_limiter
 
     real, dimension(size(q, 1), size(q, 2)) :: dq_lim, dq_interp
     integer                                 :: im1
@@ -172,7 +178,7 @@ contains
 
     n = size(q, 2)
 
-    dq_lim = flimiter(q)
+    dq_lim = f_limiter(q)
 
     if (dom%geometry_type /= GEO_XYZ) call die("[interpolations:linear] non-cartesian geometry not implemented yet.")
 
