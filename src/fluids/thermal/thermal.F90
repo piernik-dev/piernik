@@ -41,11 +41,11 @@ module thermal
    implicit none
 
    private
-   public ::  maxdeint, cool_heat, init_thermal, cool_model, heat_model, A_heat, A_cool, alpha_cool, thermal_active, cfl_coolheat, beta_cool, src_thermal_exec
+   public ::  maxdeint, cool_heat, init_thermal, cool_model, heat_model, A_heat, A_cool, alpha_cool, thermal_active, cfl_coolheat, beta_heat, src_thermal_exec
 
    character(len=cbuff_len) :: cool_model, heat_model
    logical                  :: thermal_active
-   real                     :: A_cool, A_heat, alpha_cool, beta_cool, cfl_coolheat
+   real                     :: A_cool, A_heat, alpha_cool, beta_heat, cfl_coolheat
 
 contains
 
@@ -59,7 +59,7 @@ contains
 
       implicit none
 
-      namelist /THERMAL/ thermal_active, cool_model, heat_model, A_cool, A_heat, alpha_cool, beta_cool, cfl_coolheat
+      namelist /THERMAL/ thermal_active, cool_model, heat_model, A_cool, A_heat, alpha_cool, beta_heat, cfl_coolheat
 
       if (code_progress < PIERNIK_INIT_MPI) call die("[thermal:init_thermal] mpi not initialized.")
 
@@ -73,7 +73,7 @@ contains
       A_cool         = 1.0
       A_heat         = 1.0
       alpha_cool     = 1.0
-      beta_cool      = 1.0
+      beta_heat      = 1.0
       cfl_coolheat   = 0.1
 
       if (master) then
@@ -97,7 +97,7 @@ contains
          rbuff(1) = A_cool
          rbuff(2) = alpha_cool
          rbuff(3) = A_heat
-         rbuff(4) = beta_cool
+         rbuff(4) = beta_heat
          rbuff(5) = cfl_coolheat
 
          lbuff(1) = thermal_active
@@ -121,7 +121,7 @@ contains
          A_cool         = rbuff(1)
          alpha_cool     = rbuff(2)
          A_heat         = rbuff(3)
-         beta_cool      = rbuff(4)
+         beta_heat      = rbuff(4)
          cfl_coolheat   = rbuff(5)
 
       endif
@@ -276,7 +276,7 @@ contains
 
       select case (heat_model)
         case ('beta_coef')
-          heatf =  A_heat * dens**beta_cool  !> \todo trzeba dodac czytanie parametrow grzania z problem.par
+          heatf =  A_heat * dens**beta_heat  !> \todo trzeba dodac czytanie parametrow grzania z problem.par
         case ('null')
           return
         case default

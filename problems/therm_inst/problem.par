@@ -61,7 +61,7 @@
     A_cool         = 1.0
     A_heat         = 1.0
     alpha_cool     = 1.0
-    beta_cool      = 1.0
+    beta_heat      = 1.0
     cfl_coolheat   = 0.1
  /
  $PROBLEM_CONTROL
