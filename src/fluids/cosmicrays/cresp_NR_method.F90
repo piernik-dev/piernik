@@ -1511,6 +1511,7 @@ end subroutine
     call piernik_MPI_Bcast(p_ratios_up)
     call piernik_MPI_Bcast(f_ratios_lo)
     call piernik_MPI_Bcast(f_ratios_up)
+    call piernik_MPI_Bcast(q_grid)
     call piernik_MPI_Bcast(n_tab_lo)
     call piernik_MPI_Bcast(n_tab_up)
     call piernik_MPI_Bcast(alpha_tab_up)
