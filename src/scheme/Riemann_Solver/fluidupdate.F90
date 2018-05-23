@@ -52,13 +52,12 @@ contains
   subroutine fluid_update
 
     use constants,    only: GEO_XYZ, DIVB_HDC
-    use dataio_pub,   only: halfstep, die, warn
+    use dataio_pub,   only: halfstep, die
     use domain,       only: dom, is_refined
     use fluidindex,   only: flind
     use fluxlimiters, only: set_limiters
     use global,       only: dt, dtm, t, limiter, limiter_b, divB_0_method
     use mass_defect,  only: update_magic_mass
-    use mpisetup,     only: master
     use hdc,          only: update_chspeed
 
     implicit none
@@ -88,7 +87,6 @@ contains
     if (first_run) then
        dtm = 0.0
        call set_limiters(limiter, limiter_b)
-       if (master) call warn("[fluid_update] This is an experimental implementation of the Riemann solver. Expect unexpected.")
     else
        dtm = dt
     endif

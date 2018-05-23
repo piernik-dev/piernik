@@ -121,7 +121,7 @@ contains
 !!   <tr><td>dt_max_grow      </td><td>2.     </td><td>real value > 1.1                     </td><td>\copydoc global::dt_max_grow      </td></tr>
 !!   <tr><td>dt_min           </td><td>0.     </td><td>positive real value                  </td><td>\copydoc global::dt_min           </td></tr>
 !!   <tr><td>limiter          </td><td>vanleer</td><td>string                               </td><td>\copydoc global::limiter          </td></tr>
-!!   <tr><td>limiter_b        </td><td>vanleer</td><td>string                               </td><td>\copydoc global::limiter_b        </td></tr>
+!!   <tr><td>limiter_b        </td><td>moncen </td><td>string                               </td><td>\copydoc global::limiter_b        </td></tr>
 !!   <tr><td>relax_time       </td><td>0.0    </td><td>real value                           </td><td>\copydoc global::relax_time       </td></tr>
 !!   <tr><td>skip_sweep       </td><td>F, F, F</td><td>logical array                        </td><td>\copydoc global::skip_sweep       </td></tr>
 !!   <tr><td>geometry25D      </td><td>F      </td><td>logical value                        </td><td>\copydoc global::geometry25d      </td></tr>
@@ -151,9 +151,9 @@ contains
       ! Begin processing of namelist parameters
 
 #ifdef RIEMANN
-      ! these limiters were performing best in the Otszag-Tang test (otvortex problem)
-      limiter     = 'minmod'    ! 'vanleer' is a 2nd choice for otvortex
-      limiter_b   = 'superbee'  ! 'moncen' and 'vanleer' were also performing well
+      ! 'moncen' and 'vanleer' seem to be best for emag conservation with GLM for b_limiter
+      limiter_b   = 'moncen'
+      limiter     = limiter_b
       divB_0      = "HDC"
 #else /* ! RIEMANN */
       limiter     = 'vanleer'
@@ -161,7 +161,7 @@ contains
       divB_0      = "CT"
 #endif /* RIEMANN */
       cflcontrol  = 'warn'
-      h_solver    = 'muscl'
+      h_solver    = 'rk2i'
       repeat_step = .true.
       geometry25D = .false.
       no_dirty_checks = .false.
@@ -219,8 +219,8 @@ contains
             dt_max_grow = dt_default_grow
          endif
 
-         if (h_solver /= "muscl" .and. h_solver /= "rk2") then
-            write(msg, *)"[fluidupdate:sweep_dsplit:warn_experimental] The scheme '", trim(h_solver), "' is experimental. Use 'muscl' or 'rk2' for production runs."
+         if (h_solver /= "muscli" .and. h_solver /= "rk2i") then
+            write(msg, *)"[fluidupdate:sweep_dsplit:warn_experimental] The scheme '", trim(h_solver), "' is experimental. Use 'muscli' or 'rk2i' for production runs."
             call warn(msg)
          endif
 
