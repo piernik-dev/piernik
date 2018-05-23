@@ -96,7 +96,7 @@ contains
       use fluidindex, only: flind
       use fluids_pub, only: has_ion
       use fluidtypes, only: component_fluid
-      use global,     only: use_fargo
+      use global,     only: use_fargo, cfl_glm
       use mpisetup,   only: piernik_MPI_Allreduce
 
       implicit none
@@ -116,7 +116,7 @@ contains
             do k = cgl%cg%ks, cgl%cg%ke
                do j = cgl%cg%js, cgl%cg%je
                   do i = cgl%cg%is, cgl%cg%ie
-                     chspeed = max(chspeed, maxval(abs(cgl%cg%u(fl%imx:fl%imz, i, j, k) / cgl%cg%u(fl%idn, i, j, k)) + fl%get_cs(i, j, k, cgl%cg%u, cgl%cg%b, cgl%cg%cs_iso2)))
+                     chspeed = max(chspeed, cfl_glm * maxval(abs(cgl%cg%u(fl%imx:fl%imz, i, j, k) / cgl%cg%u(fl%idn, i, j, k)) + fl%get_cs(i, j, k, cgl%cg%u, cgl%cg%b, cgl%cg%cs_iso2)))
                      ! for AMR or POLAR it may be better to have explicit dependence on cg%dl(:) here
                      ! OPT: it will also be cheaper
                   enddo
