@@ -185,6 +185,10 @@ contains
    !<
    subroutine eglm
 
+     use all_boundaries, only: all_fluid_boundaries
+#ifdef MAGNETIC
+     use all_boundaries, only: all_mag_boundaries
+#endif /* MAGNETIC */
      use cg_leaves,  only: leaves
      use cg_list,    only: cg_list_element
      use constants,  only: xdim, zdim, psi_n, GEO_XYZ, half
@@ -209,7 +213,6 @@ contains
 
      if (igp == INVALID) call aux_var
      ipsi = qna%ind(psi_n)
-
      call divB
 
      if (has_ion) then
@@ -250,13 +253,12 @@ contains
                     !Sources
 
                     ! momentum = momentum - dt*divB*B
-                    cgl%cg%u(fl%imx:fl%imz,i,j,k) = cgl%cg%u(fl%imx:fl%imz,i,j,k) - dt * cg%q(idivB)%arr(i,j,k) * (cgl%cg%b(xdim:zdim,i,j,k))
+                    cgl%cg%u(fl%imx:fl%imz,i,j,k) = cgl%cg%u(fl%imx:fl%imz,i,j,k) - dt * cg%q(idivB)%arr(i,j,k) * cgl%cg%b(xdim:zdim,i,j,k)
 
                     ! B = B - dt*divB*u
                     cgl%cg%b(xdim:zdim,i,j,k) = cgl%cg%b(xdim:zdim,i,j,k) - dt * cg%q(idivB)%arr(i,j,k) * (cgl%cg%u(fl%imx:fl%imz,i,j,k) / cgl%cg%u(fl%idn,i,j,k))
 
                     ! e = e - dt* (divB*u.B - B.grad(psi))
-
                     cgl%cg%u(fl%ien,i,j,k) = cgl%cg%u(fl%ien,i,j,k) - dt * ( &
                          cg%q(idivB)%arr(i,j,k) * dot_product(cgl%cg%u(fl%imx:fl%imz,i,j,k) / cgl%cg%u(fl%idn,i,j,k), cgl%cg%b(xdim:zdim,i,j,k)) - &
                          dot_product(cgl%cg%b(xdim:zdim,i,j,k), cg%w(igp)%arr(xdim:zdim,i,j,k)) )
@@ -271,6 +273,15 @@ contains
            cgl=>cgl%nxt
         enddo
      endif
+
+     ! OPT: to avoid these boundary exchanges one must provide div(B) and grad(psi) on bigger area and alter whole blocks.
+     ! Thi may require extra guardcells
+     ! Beware: highre orders of div(B) and grad(psi) may require boundary update at the beginning too
+     call all_fluid_boundaries
+     call leaves%leaf_arr3d_boundaries(ipsi)
+#ifdef MAGNETIC
+     call all_mag_boundaries
+#endif /* MAGNETIC */
 
    end subroutine eglm
 
