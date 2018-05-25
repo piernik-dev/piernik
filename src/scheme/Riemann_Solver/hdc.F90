@@ -241,6 +241,7 @@ contains
 
         ! don't fuse these loops - w(igp) depends on psi and then modifies psi
 
+        cgl => leaves%first
         do while (associated(cgl))
            cg => cgl%cg
            do k = cgl%cg%ks, cgl%cg%ke
