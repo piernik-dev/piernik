@@ -151,18 +151,20 @@ contains
 
   subroutine make_sweep(dir, forward)
 
-    use all_boundaries, only: all_bnd
-    use cg_leaves,      only: leaves
-    use cg_list,        only: cg_list_element
-    use domain,         only: dom
-    use global,         only: skip_sweep, dt, force_cc_mag
+    use all_boundaries,   only: all_bnd
+    use cg_leaves,        only: leaves
+    use cg_list,          only: cg_list_element
+    use constants,        only: psi_n
+    use domain,           only: dom
+    use global,           only: skip_sweep, dt, force_cc_mag
+    use named_array_list, only: qna
 #ifdef COSM_RAYS
-    use crdiffusion,    only: cr_diff
-    use initcosmicrays, only: use_split
+    use crdiffusion,      only: cr_diff
+    use initcosmicrays,   only: use_split
 #endif /* COSM_RAYS */
 #ifdef MAGNETIC
-    use constants,      only: DIVB_CT
-    use global,         only: divB_0_method
+    use constants,        only: DIVB_CT
+    use global,           only: divB_0_method
 #endif /* MAGNETIC */
 
     implicit none
@@ -192,6 +194,7 @@ contains
           if (.not. skip_sweep(dir)) call sweep_dsplit(cgl%cg,dt,dir)
           cgl => cgl%nxt
        enddo
+       if (qna%exists(psi_n)) call leaves%leaf_arr3d_boundaries(qna%ind(psi_n))
 
        call all_bnd
        if (forward) then
@@ -433,7 +436,6 @@ contains
     use global,           only: force_cc_mag
     use grid_cont,        only: grid_container
     use named_array_list, only: wna, qna
-    use cg_leaves,        only: leaves
 #ifdef COSM_RAYS
     use crhelpers,        only: div_v, set_div_v1d
     use fluidindex,       only: flind
@@ -491,9 +493,6 @@ contains
           pb(:,:) = b_cc1d(iarr_mag_swp(ddim,:),:) ! ToDo figure out how to manage CT energy fixup without extra storage
        enddo
     enddo
-
-    if (qna%exists(psi_n)) call leaves%leaf_arr3d_boundaries(qna%ind(psi_n))
-    !! ToDo: check if it can be called less often and without corners
 
   end subroutine sweep_dsplit
 
