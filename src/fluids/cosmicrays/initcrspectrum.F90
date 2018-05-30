@@ -102,7 +102,7 @@ module initcrspectrum
 !
 !====================================================================================================
    subroutine init_cresp
-      use constants,            only: I_ZERO, zero, one, ten
+      use constants,            only: cbuff_len, I_ZERO, zero, one, ten
       use dataio_pub,           only: printinfo, warn, msg, die, nh
       use diagnostics,          only: my_allocate_with_index
       use mpisetup,             only: rbuff, ibuff, lbuff, cbuff, master, slave, piernik_MPI_Bcast
@@ -254,7 +254,7 @@ module initcrspectrum
       call piernik_MPI_Bcast(ibuff)
       call piernik_MPI_Bcast(rbuff)
       call piernik_MPI_Bcast(lbuff)
-      call piernik_MPI_Bcast(cbuff,len(initial_condition))
+      call piernik_MPI_Bcast(cbuff, cbuff_len)
 
 !!\deprecated
       open(10, file='crs.dat',status='replace',position='rewind')     ! diagnostic files
@@ -317,7 +317,7 @@ module initcrspectrum
          Gamma_lo_init                = rbuff(26)
          Gamma_up_init                = rbuff(27)
 
-         initial_condition            = cbuff(1)
+         initial_condition            = trim(cbuff(1))
       endif
       if (first_run .eqv. .true.) then
          if (ncre .ne. I_ZERO)  then
@@ -557,7 +557,7 @@ module initcrspectrum
    end subroutine init_cresp_types
 !----------------------------------------------------------------------------------------------------
    function cresp_get_mom(gamma, particle_mass)
-   use constants, only: zero, one, I_TWO
+   use constants, only: zero, one
    use units,     only: clight
    real(kind=8)            :: gamma
    real(kind=8), optional  :: particle_mass
