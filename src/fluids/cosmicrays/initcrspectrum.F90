@@ -175,6 +175,7 @@ module initcrspectrum
       arr_dim = 200
 
       if (master) then
+         if (.not.nh%initialized) call nh%init()
          open(newunit=nh%lun, file=nh%tmp1, status="unknown")
          write(nh%lun,nml=COSMIC_RAY_SPECTRUM)
          close(nh%lun)
