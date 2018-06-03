@@ -78,7 +78,7 @@ contains
 !----- main subroutine -----
 
   subroutine cresp_update_cell(dt, n_inout, e_inout, sptab, v_n, v_e, cfl_cresp_violation, p_out) !, p_lo_cell, p_up_cell)
-   use initcrspectrum, only: ncre, spec_mod_trms, e_small_approx_p_lo, e_small_approx_p_up, e_small_approx_init_cond, crel, p_mid_fix
+   use initcrspectrum, only: ncre, spec_mod_trms, e_small_approx_p_lo, e_small_approx_p_up, e_small_approx_init_cond, crel, p_mid_fix, nullify_empty_bins
 ! #ifdef VERBOSE
    use initcrspectrum, only: p_fix
 ! #endif /* VERBOSE */
@@ -121,7 +121,13 @@ contains
         vrtl_n = v_n
 
         call find_i_bound(empty_cell)
-        if ( empty_cell ) return             ! if grid cell contains empty bins, no action is taken
+        if ( empty_cell ) then
+         if (nullify_empty_bins) then
+            n_inout = zero
+            e_inout = zero
+         endif
+         return             ! if grid cell contains empty bins, no action is taken
+        endif
         call cresp_find_active_bins
         call cresp_organize_p
 
@@ -337,7 +343,7 @@ contains
   subroutine cresp_find_active_bins
    use constants,      only: I_ZERO, zero
    use diagnostics,    only: my_allocate_with_index
-   use initcrspectrum, only: ncre, e_small, cresp_all_edges, cresp_all_bins
+   use initcrspectrum, only: ncre, e_small, cresp_all_edges, cresp_all_bins, nullify_empty_bins
    implicit none
       if(allocated(active_bins))  deallocate(active_bins)
       if(allocated(active_edges)) deallocate(active_edges)
@@ -373,10 +379,12 @@ contains
         print "(2(A9,i3))", "i_lo =", i_lo, ", i_up = ", i_up
 #endif /* VERBOSE */
 ! cleaning (TEST)
-        e(:i_lo) = zero
-        n(:i_lo) = zero
-        e(i_up+1:) = zero
-        n(i_up+1:) = zero
+        if (nullify_empty_bins) then
+            e(:i_lo) = zero
+            n(:i_lo) = zero
+            e(i_up+1:) = zero
+            n(i_up+1:) = zero
+        endif
 
       endif
   end subroutine cresp_find_active_bins
