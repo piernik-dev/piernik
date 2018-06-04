@@ -1137,7 +1137,7 @@ contains
       elsewhere
          r_den = log(p(bins)/p(bins-1))
       end where
-      where (r_num .ne. zero .and. r_den .ne. zero)
+      where (abs(r_num) .gt. eps .and. abs(r_den) .gt. eps)
       r(bins) = u_d + u_b * r_num/r_den   !!! all cooling effects will come here
       end where
 
