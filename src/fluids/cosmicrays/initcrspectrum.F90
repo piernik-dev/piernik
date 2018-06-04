@@ -1,6 +1,6 @@
 module initcrspectrum
 ! pulled by COSM_RAY_ELECTRONS
-
+   use constants,       only: cbuff_len
    public ! QA_WARN no secrets are kept here
 
 ! contains routines reading namelist in problem.par file dedicated to cosmic ray electron spectrum and initializes types used.
@@ -11,7 +11,7 @@ module initcrspectrum
    real(kind=8)       :: p_max_fix                   !< fixed momentum grid upper cutoff
    real(kind=8)       :: p_lo_init                   !< initial lower cutoff momentum
    real(kind=8)       :: p_up_init                   !< initial upper cutoff momentum
-   character(len=4)   :: initial_condition           !< available types: bump, powl, brpl, symf, syme. Description below.
+   character(len=cbuff_len) :: initial_condition     !< available types: bump, powl, brpl, symf, syme. Description below.
    real(kind=8)       :: f_init                      !< initial value of distr. func. for isolated case
    real(kind=8)       :: q_init                      !< initial value of power law-like spectrum exponent
    real(kind=8)       :: bump_amp                    !< bump amplitude for gaussian-like energy spectrum
@@ -40,10 +40,9 @@ module initcrspectrum
    logical            :: NR_refine_solution_q        !< enables NR_1D refinement for value of interpolated "q" value
    logical            :: NR_refine_solution_pf       !< enables NR_2D refinement for interpolated values of "p" and "f". Note - algorithm tries to refine values if interpolation was unsuccessful.
 
-   logical            :: nullify_empty_bins            !< nullifies empty bins when entering CRESP module / exiting empty cell.
+   logical            :: nullify_empty_bins          !< nullifies empty bins when entering CRESP module / exiting empty cell.
    logical            :: prevent_neg_en              !< forces e,n=eps where e or n drops below zero due to diffusion algorithm (TEMP workaround)
    logical            :: test_spectrum_break         !< introduce break in the middle of the spectrum (to see how algorithm handles it), TEMP
-   real(kind=8)       :: magnetic_energy_scaler      !< decreases magnetic energy amplitude at CRESP, TEMP
    logical            :: allow_source_spectrum_break !< allow extension of spectrum to adjacent bins if momenta found exceed set p_fix
    logical            :: synch_active                !< TEST feature - turns on / off synchrotron cooling @ CRESP
    logical            :: adiab_active                !< TEST feature - turns on / off adiabatic   cooling @ CRESP
@@ -155,12 +154,11 @@ module initcrspectrum
       NR_run_refine_pf  = .false.
       NR_refine_solution_q  = .false.
       NR_refine_solution_pf = .false.
-      nullify_empty_bins      = .true.
+      nullify_empty_bins    = .true.
       smallecrn         = 0.0
       smallecre         = 0.0
       prevent_neg_en    = .true.
       test_spectrum_break    = .false.
-      magnetic_energy_scaler = 0.001
       allow_source_spectrum_break  = .false.
       synch_active = .true.
       adiab_active = .true.
@@ -240,17 +238,15 @@ module initcrspectrum
          rbuff(17) = e_small
          rbuff(18) = max_p_ratio
 
-         rbuff(19) = magnetic_energy_scaler
+         rbuff(19) = tol_f
+         rbuff(20) = tol_x
+         rbuff(21) = tol_f_1D
+         rbuff(22) = tol_x_1D
 
-         rbuff(20) = tol_f
-         rbuff(21) = tol_x
-         rbuff(22) = tol_f_1D
-         rbuff(23) = tol_x_1D
-
-         rbuff(24) = Gamma_min_fix
-         rbuff(25) = Gamma_max_fix
-         rbuff(26) = Gamma_lo_init
-         rbuff(27) = Gamma_up_init
+         rbuff(23) = Gamma_min_fix
+         rbuff(24) = Gamma_max_fix
+         rbuff(25) = Gamma_lo_init
+         rbuff(26) = Gamma_up_init
 
          cbuff(1)  = initial_condition
       endif
@@ -258,7 +254,7 @@ module initcrspectrum
       call piernik_MPI_Bcast(ibuff)
       call piernik_MPI_Bcast(rbuff)
       call piernik_MPI_Bcast(lbuff)
-      call piernik_MPI_Bcast(cbuff,len(initial_condition))
+      call piernik_MPI_Bcast(cbuff, cbuff_len)
 
 !!\deprecated
       open(10, file='crs.dat',status='replace',position='rewind')     ! diagnostic files
@@ -310,17 +306,15 @@ module initcrspectrum
          e_small                      = rbuff(17)
          max_p_ratio                  = rbuff(18)
 
-         magnetic_energy_scaler       = rbuff(19)
+         tol_f                        = rbuff(19)
+         tol_x                        = rbuff(20)
+         tol_f_1D                     = rbuff(21)
+         tol_x_1D                     = rbuff(22)
 
-         tol_f                        = rbuff(20)
-         tol_x                        = rbuff(21)
-         tol_f_1D                     = rbuff(22)
-         tol_x_1D                     = rbuff(23)
-
-         Gamma_min_fix                = rbuff(24)
-         Gamma_max_fix                = rbuff(25)
-         Gamma_lo_init                = rbuff(26)
-         Gamma_up_init                = rbuff(27)
+         Gamma_min_fix                = rbuff(23)
+         Gamma_max_fix                = rbuff(24)
+         Gamma_lo_init                = rbuff(25)
+         Gamma_up_init                = rbuff(26)
 
          initial_condition            = cbuff(1)
       endif
@@ -520,10 +514,6 @@ module initcrspectrum
                call warn(msg)
          endif
 
-         if (magnetic_energy_scaler .le. 0.0) magnetic_energy_scaler = abs(magnetic_energy_scaler)
-         if (magnetic_energy_scaler .gt. 1.0) magnetic_energy_scaler = 1.0
-         if (magnetic_energy_scaler .eq. 0.0) synch_active = .false. !< reduction magnetic energy to 0 naturally implies that
-
          taylor_coeff_2nd = int(mod(2,expan_order) / 2 + mod(3,expan_order),kind=2 )  !< coefficient which is always equal 1 when order =2 or =3 and 0 if order = 1
          taylor_coeff_3rd = int((expan_order - 1)*(expan_order- 2) / 2,kind=2)        !< coefficient which is equal to 1 only when order = 3
          call init_cresp_types
@@ -570,7 +560,7 @@ module initcrspectrum
 
    cresp_get_mom = zero
    if ( (gamma - one) .gt. eps ) then
-      cresp_get_mom = gamma * particle_mass * sqrt(one - one/(gamma**2)) * clight
+      cresp_get_mom = gamma * particle_mass * sqrt(one - one/(gamma**I_TWO)) * clight
    endif
 
    end function cresp_get_mom
