@@ -149,12 +149,14 @@ module cresp_NR_method
   end subroutine NR_algorithm_1D
 !----------------------------------------------------------------------------------------------------
   function derivative_1D(x) ! via finite difference method
-  use constants, only: half
+  use constants,       only: half
+  use initcrspectrum,  only: eps
    implicit none
     real(kind=8),intent(in) :: x
     real(kind=8)            :: dx, derivative_1D
     real(kind=8)            :: dx_par = 1.0e-4
-        dx = min(max(x*dx_par, eps), dx_par)
+        dx = sign(1.0, x) * min(abs(x*dx_par), dx_par)
+        dx = sign(1.0, x) * max(abs(dx), eps) ! dx = 0.0 must not be allowed
         derivative_1D = half * (selected_function_1D(x+dx) - selected_function_1D(x-dx))/dx
   end function derivative_1D
 !----------------------------------------------------------------------------------------------------
@@ -237,7 +239,7 @@ module cresp_NR_method
     logical  :: exit_code
     real(kind=8) :: a_min_lo=huge(one), a_max_lo=tiny(one), a_min_up=huge(one), a_max_up=tiny(one),&
                     n_min_lo=huge(one), n_max_lo=tiny(one), n_min_up=huge(one), n_max_up=tiny(one),&
-                    a_max_q=tiny(one)
+                    a_min_q=tiny(one),  a_max_q=tiny(one)
         q_space = zero
         do i=1, int(half*helper_arr_dim)
             q_space(i) = ln_eval_array_val(i, q_big, real(0.05,kind=8), int(1,kind=4), int(half*helper_arr_dim,kind=4))
@@ -313,16 +315,16 @@ module cresp_NR_method
             call save_NR_guess_grid(f_ratios_lo,"f_ratios_lo")
         enddo
 
+        a_min_q = 1.000005
         a_max_q = 10.0 * p_fix_ratio / clight
-        j = arr_dim - int(arr_dim/(arr_dim/10),kind=4)
-        do while (q_grid(j) .le. (-2*q_big) .and. (q_grid(arr_dim) .le. (-2*q_big)) )
-            a_max_q = a_max_q - a_max_q*0.1
+        j = arr_dim - int(arr_dim/(arr_dim/8),kind=4)
+        do while (q_grid(j) .le. (-q_big) .and. (q_grid(arr_dim) .le. (-2*q_big)) )
+            a_max_q = a_max_q - a_max_q*0.025
             do i=1,arr_dim
-                alpha_tab_q(i)  = ind_to_flog(i,a_min_up,a_max_q)
+                alpha_tab_q(i)  = ind_to_flog(i,a_min_q,a_max_q)
             enddo
-            call fill_q_grid(1) ! computing q_grid takes so little time, that saving the grid is not necessary.
+            call fill_q_grid(i_incr=1) ! computing q_grid takes so little time, that saving the grid is not necessary.
         enddo
-
 #ifdef VERBOSE
         print *,"alpha_tab_lo(i),      alpha_tab_up(i),        n_tab_lo(i),        n_tab_up(i)  |       p_space(i),     q_space(i)"
         do i = 1, arr_dim
@@ -1511,6 +1513,7 @@ end subroutine
     call piernik_MPI_Bcast(p_ratios_up)
     call piernik_MPI_Bcast(f_ratios_lo)
     call piernik_MPI_Bcast(f_ratios_up)
+    call piernik_MPI_Bcast(q_grid)
     call piernik_MPI_Bcast(n_tab_lo)
     call piernik_MPI_Bcast(n_tab_up)
     call piernik_MPI_Bcast(alpha_tab_up)

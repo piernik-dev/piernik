@@ -120,15 +120,15 @@ contains
       character(len=dsetnamelen)                           :: aux
 #endif /* COSM_RAYS */
 
-      nvars = 1
-      do while ( len(trim(vars(nvars))) > 1)
-         nvars = nvars + 1
+      nvars = 0
+      do i = lbound(vars, 1), ubound(vars, 1)
+         if (len_trim(vars(i)) > 0) nvars = nvars + 1
       enddo
-      nvars = nvars - 1
 
       nhdf_vars = 0
-      do i = 1, nvars
-         select case (vars(i))
+      do i = lbound(vars, 1), ubound(vars, 1)
+         select case (trim(vars(i)))
+            case ('')
             case ('dens')
                nhdf_vars = nhdf_vars + size(iarr_all_dn,1)
             case ('velx', 'momx')
@@ -178,12 +178,9 @@ contains
       allocate(hdf_vars_avail(nhdf_vars))
       hdf_vars_avail = .true.
       allocate(hdf_vars(nhdf_vars)); j = 1
-
-
-!allocating:
-
-      do i = 1, nvars
-         select case (vars(i))
+      do i = lbound(vars, 1), ubound(vars, 1)
+         select case (trim(vars(i)))
+            case ('')
             case ('dens')
                if (has_dst) then ; hdf_vars(j) = 'dend' ; j = j + 1 ; endif
                if (has_neu) then ; hdf_vars(j) = 'denn' ; j = j + 1 ; endif
@@ -385,6 +382,10 @@ contains
 !!
 !! \details Write real, integer and character attributes. Store contents of problem.par and env files.
 !! Other common elements may also be moved here.
+!!
+!! \ToDo figure out if it is of use for us:
+!! http://computation.llnl.gov/projects/floating-point-compression/zfp-and-derivatives
+!! https://github.com/LLNL/H5Z-ZFP
 !<
    subroutine set_common_attributes(filename)
 
@@ -685,7 +686,7 @@ contains
 !> \brief Create an empty double precision dataset of given dimensions. Use compression if available.
    subroutine create_empty_cg_dataset(cg_g_id, name, ddims, Z_avail, otype)
 
-      use dataio_pub, only: enable_compression, gzip_level, die
+      use dataio_pub, only: enable_compression, gzip_level, die, h5_64bit
       use hdf5,       only: HID_T, HSIZE_T, H5P_DATASET_CREATE_F, H5T_NATIVE_REAL, H5T_NATIVE_DOUBLE, &
          &                  h5dcreate_f, h5dclose_f, h5screate_simple_f, h5sclose_f, h5pcreate_f, h5pclose_f, h5pset_deflate_f, &
          &                  h5pset_shuffle_f, h5pset_chunk_f
@@ -711,7 +712,11 @@ contains
      if (otype == O_RES) then
         dtype = H5T_NATIVE_DOUBLE
      else if (otype == O_OUT) then
-        dtype = H5T_NATIVE_REAL
+        if (h5_64bit) then
+           dtype = H5T_NATIVE_DOUBLE
+        else
+           dtype = H5T_NATIVE_REAL
+        endif
      else
         call die("[common_hdf5:create_empty_cg_dataset] Unknown output time")
      endif
@@ -1032,8 +1037,8 @@ contains
 
       integer(kind=4), dimension(:),     pointer, intent(inout) :: cg_rl            !< list of refinement levels from all cgs/procs
       integer(kind=4), dimension(:,:),   pointer, intent(inout) :: cg_n_b           !< list of n_b from all cgs/procs
-      integer(kind=4), dimension(:,:),   pointer, intent(inout) :: cg_n_o           !< list of grid dimnsions with external guardcells from all cgs/procs
-      integer(kind=8), dimension(:,:),   pointer, intent(inout) :: cg_off           !< list of offsets from all cgs/procs
+      integer(kind=4), dimension(:,:),   pointer, intent(inout) :: cg_n_o           !< list of grid dimensions with external guardcells from all cgs/procs
+      integer(kind=8), dimension(:,:),   pointer, intent(inout) :: cg_off           !< list of offsets from all cgs/procs with respect to level offset (lose level offset in the restart)
       real(kind=8),    dimension(:,:,:), pointer, intent(inout) :: dbuf
       integer(kind=4),                            intent(in)    :: otype            !< Output type (restart, data)
 
@@ -1070,7 +1075,7 @@ contains
       use mpisetup, only: comm
 
       implicit none
-      integer(kind=4), intent(in) :: h5p
+      integer(HID_T),  intent(in) :: h5p
       integer(kind=4), intent(in) :: nproc_io
       integer(HID_T)              :: plist_id
       integer(kind=4)             :: error

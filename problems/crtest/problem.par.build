@@ -70,7 +70,7 @@
 !    diff_explicit = .true.
     diff_theta     = 0.5
     diff_tstep_fac = 91.0222223 !45.511112
-    norm_tol = 1e-3
+    norm_tol = 1e-5
     nsmoob = 4
     max_cycles = 50
  /

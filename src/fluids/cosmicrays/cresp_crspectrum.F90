@@ -5,10 +5,6 @@ module cresp_crspectrum
       &   cleanup_cresp, cresp_accuracy_test, b_losses, cresp_allocate_all, cresp_deallocate_all, e_threshold_lo, e_threshold_up, &
       &   fail_count_comp_q, second_fail, src_gpcresp, cresp_init_powl_spectrum, get_powl_f_ampl, e_tot_2_f_init_params, e_tot_2_en_powl_init_params
   private ! most of it
-  real(kind=8)     , parameter      :: three   = 3.e0
-  real(kind=8)     , parameter      :: four    = 4.e0
-  real(kind=8)     , parameter      :: five    = 5.e0
-  real(kind=8)     , parameter      :: ten     = 10.e0
 
   integer, dimension(1:2), save     :: fail_count_NR_2dim, fail_count_interpol, fail_count_no_sol, second_fail
   integer, allocatable, save   :: fail_count_comp_q(:)
@@ -82,7 +78,7 @@ contains
 !----- main subroutine -----
 
   subroutine cresp_update_cell(dt, n_inout, e_inout, sptab, v_n, v_e, cfl_cresp_violation, p_out) !, p_lo_cell, p_up_cell)
-   use initcrspectrum, only: ncre, spec_mod_trms, e_small_approx_p_lo, e_small_approx_p_up, e_small_approx_init_cond, crel, p_mid_fix
+   use initcrspectrum, only: ncre, spec_mod_trms, e_small_approx_p_lo, e_small_approx_p_up, e_small_approx_init_cond, crel, p_mid_fix, nullify_empty_bins
 ! #ifdef VERBOSE
    use initcrspectrum, only: p_fix
 ! #endif /* VERBOSE */
@@ -125,7 +121,13 @@ contains
         vrtl_n = v_n
 
         call find_i_bound(empty_cell)
-        if ( empty_cell ) return             ! if grid cell contains empty bins, no action is taken
+        if ( empty_cell ) then
+         if (nullify_empty_bins) then
+            n_inout = zero
+            e_inout = zero
+         endif
+         return             ! if grid cell contains empty bins, no action is taken
+        endif
         call cresp_find_active_bins
         call cresp_organize_p
 
@@ -341,7 +343,7 @@ contains
   subroutine cresp_find_active_bins
    use constants,      only: I_ZERO, zero
    use diagnostics,    only: my_allocate_with_index
-   use initcrspectrum, only: ncre, e_small, cresp_all_edges, cresp_all_bins
+   use initcrspectrum, only: ncre, e_small, cresp_all_edges, cresp_all_bins, nullify_empty_bins
    implicit none
       if(allocated(active_bins))  deallocate(active_bins)
       if(allocated(active_edges)) deallocate(active_edges)
@@ -377,10 +379,12 @@ contains
         print "(2(A9,i3))", "i_lo =", i_lo, ", i_up = ", i_up
 #endif /* VERBOSE */
 ! cleaning (TEST)
-        e(:i_lo) = zero
-        n(:i_lo) = zero
-        e(i_up+1:) = zero
-        n(i_up+1:) = zero
+        if (nullify_empty_bins) then
+            e(:i_lo) = zero
+            n(:i_lo) = zero
+            e(i_up+1:) = zero
+            n(i_up+1:) = zero
+        endif
 
       endif
   end subroutine cresp_find_active_bins
@@ -943,7 +947,7 @@ contains
 
    function fq_to_e(p_l, p_r, f_l, q, bins)
     use initcrspectrum, only: ncre, eps
-    use constants, only: zero, one, fpi
+    use constants, only: zero, one, four, fpi
     use cresp_variables, only: clight ! use units, only: clight
       implicit none
       real(kind=8), dimension(:), intent (in)  :: p_l, p_r, f_l, q
@@ -971,7 +975,7 @@ contains
 
    function fq_to_n(p_l, p_r, f_l, q, bins)
     use initcrspectrum, only: ncre, eps
-    use constants, only: zero, one, fpi
+    use constants, only: zero, one, three, fpi
       implicit none
       real(kind=8), dimension(:), intent(in) :: p_l, p_r, f_l, q
       integer, dimension(:), intent(in)     :: bins
@@ -1015,7 +1019,7 @@ contains
 !-------------------------------------------------------------------------------------------------
    subroutine cresp_compute_fluxes(ce,he)
     use initcrspectrum, only: ncre, eps, cresp_all_bins
-    use constants, only: zero, one, fpi
+    use constants, only: zero, one, three, four, fpi
     use cresp_variables, only: clight ! use units, only: clight
       implicit none
       integer, dimension(:), intent(in) :: ce, he    ! cooling edges, heating edges
@@ -1115,7 +1119,7 @@ contains
 
    subroutine cresp_compute_r(p, bins)
     use initcrspectrum, only: ncre, eps
-    use constants, only: zero
+    use constants, only: zero, four, five
     implicit none
       real(kind=8), dimension(0:ncre), intent(in) :: p
       integer, dimension(:), intent(in)     :: bins
@@ -1196,7 +1200,7 @@ contains
 ! -------------------------------------------------------------------------------------------------
   function nq_to_f(p_l, p_r, n, q, bins)
    use initcrspectrum, only: ncre, eps
-   use constants, only: zero, one, fpi
+   use constants, only: zero, one, three, fpi
    implicit none
     integer, dimension(:)                 :: bins
     real(kind=8), dimension(1:ncre)       :: p_l, p_r, n, q
@@ -1222,7 +1226,7 @@ contains
 !---------------------------------------------------------------------------------------------------
    function get_pcresp(p_l, p_r, f_l, q, bins)
     use initcrspectrum, only: ncre, eps
-    use constants, only: zero, one, three, fpi
+    use constants, only: zero, one, three, four, fpi
     use cresp_variables, only: clight ! use units, only: clight
       implicit none
       real(kind=8), dimension(:), intent (in)  :: p_l, p_r, f_l, q

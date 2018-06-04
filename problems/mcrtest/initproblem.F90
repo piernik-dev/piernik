@@ -158,8 +158,8 @@ contains
       use cg_leaves,      only: leaves
       use cg_list,        only: cg_list_element
       use constants,      only: xdim, ydim, zdim, LO, HI, pMAX
-      use dataio_pub,     only: msg, warn, printinfo, die
-      use domain,         only: dom, is_multicg
+      use dataio_pub,     only: msg, warn, printinfo
+      use domain,         only: dom
       use fluidindex,     only: flind
       use fluidtypes,     only: component_fluid
       use func,           only: ekin, emag, operator(.equals.), operator(.notequals.)
@@ -301,12 +301,16 @@ contains
 #endif /* COSM_RAY_ELECTRONS */
          cgl => cgl%nxt
       enddo
-      cg => leaves%first%cg
-
-      if (is_multicg) call die("[initproblem:problem_initial_conditions] multiple grid pieces per procesor not implemented yet") !nontrivial maxv
 
       do icr = 1, flind%crs%all
-         maxv = maxval(cg%u(iarr_crs(icr),:,:,:))
+
+         maxv = - huge(1.)
+         cgl => leaves%first
+         do while (associated(cgl))
+            maxv = max(maxv, maxval(cgl%cg%u(iarr_crs(icr),:,:,:)))
+            cgl => cgl%nxt
+         enddo
+
          call piernik_MPI_Allreduce(maxv, pMAX)
          if (master) then
 #ifdef COSM_RAY_ELECTRONS
@@ -322,6 +326,7 @@ contains
 #endif /* COSM_RAY_ELECTRONS */
             call printinfo(msg)
          endif
+
       enddo
 
 #endif /* COSM_RAYS */

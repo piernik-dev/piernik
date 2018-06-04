@@ -626,7 +626,7 @@ contains
       implicit none
 
       character(len=*),               intent(in)    :: var
-      real(kind=4), dimension(:,:,:), intent(inout) :: tab
+      real, dimension(:,:,:),         intent(inout) :: tab
       integer,                        intent(inout) :: ierrh
       type(grid_container), pointer,  intent(in)    :: cg
 
@@ -635,16 +635,16 @@ contains
       ierrh = 0
       select case (trim(var))
          case ("errp")
-            tab(:,:,:) = real(cg%q(qna%ind(apot_n))%span(cg%ijkse) - cg%sgp(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), 4)
+            tab(:,:,:) = cg%q(qna%ind(apot_n))%span(cg%ijkse) - cg%sgp(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)
          case ("relerr")
             where (cg%q(qna%ind(apot_n))%span(cg%ijkse) .notequals. 0.)
-               tab(:,:,:) = real(cg%sgp(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)/cg%q(qna%ind(apot_n))%span(cg%ijkse) -1., 4)
+               tab(:,:,:) = cg%sgp(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)/cg%q(qna%ind(apot_n))%span(cg%ijkse) -1.
             elsewhere
                tab(:,:,:) = 0.
             endwhere
 #ifdef MACLAURIN_PROBLEM
          case ("a-pt")
-            tab(:,:,:) = real(cg%q(qna%ind(apot_n))%span(cg%ijkse) - cg%q(qna%ind(apt_n))%span(cg%ijkse), 4)
+            tab(:,:,:) = cg%q(qna%ind(apot_n))%span(cg%ijkse) - cg%q(qna%ind(apt_n))%span(cg%ijkse)
 #endif /* MACLAURIN_PROBLEM */
          case default
             ierrh = -1
