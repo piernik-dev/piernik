@@ -78,8 +78,8 @@ module timestep_cresp
 !----------------------------------------------------------------------------------------------------
 
   subroutine cresp_timestep(dt_comp, sptab, n_cell, e_cell, i_up_cell)
-   use initcrspectrum,   only: spec_mod_trms, ncre, w, e_small
-   use constants, only: zero, I_ZERO
+   use initcrspectrum,   only: spec_mod_trms, ncre, w, e_small, eps
+   use constants, only: I_ZERO
    implicit none
     real(kind=8), intent(out)  :: dt_comp
     real(kind=8)               :: dt_cre_ud, dt_cre_ub
@@ -94,13 +94,13 @@ module timestep_cresp
 ! cell is assumed empty if evaluate_i_up over whole ncre range returns 0 -> nothing to do here
         if (i_up_cell .gt. 0) then
 ! Adiabatic cooling timestep:
-            if (abs(sptab%ud) .ne. zero) then
+            if (abs(sptab%ud) .gt. eps) then
                 dt_cre_ud = cfl_cre * w / sptab%ud
                 dt_cre_ud = abs(dt_cre_ud)
                 dt_cre_min_ud = min(dt_cre_ud, dt_cre_min_ud)
             endif
 ! Synchrotron cooling timestep (is dependant only on p_up, highest value of p):
-            if (sptab%ub .gt. zero) then
+            if (sptab%ub .gt. eps) then
 !                 i_up_cell = evaluate_i_up(e_cell, n_cell)
                 p_u = abs(approximate_p_up(n_cell, e_cell, i_up_cell)) ! TODO: fix problems with negative p_u
                 dt_cre_ub = cfl_cre * w / (p_u * sptab%ub)
