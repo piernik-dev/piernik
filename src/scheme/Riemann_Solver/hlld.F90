@@ -195,7 +195,7 @@ contains
        b_ccr(xdim,:)    = glm_gfb(xdim,:)
        psil(1,:)        = glm_gfp(1,:)
        psir(1,:)        = glm_gfp(1,:)
-    else 
+    else if (divB_0_method /= DIVB_HDC) then
        b_cc(xdim,:) = 0.
     end if
 
