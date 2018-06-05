@@ -805,7 +805,6 @@ contains
            use fluidtypes, only: component_fluid
            use global,     only: divB_0_method
            use hlld,       only: riemann_hlld
-           use hdc,        only: glm_mhd
 
            implicit none
 

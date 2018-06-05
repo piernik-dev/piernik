@@ -43,7 +43,7 @@ module hdc
   character(len=dsetnamelen), parameter :: gradpsi_n = "grad_psi"
 
   private
-  public :: chspeed, update_chspeed, init_psi, glm_mhd, glmdamping, eglm
+  public :: chspeed, update_chspeed, init_psi, glmdamping, eglm
 
 contains
 
@@ -142,37 +142,6 @@ contains
      if (qna%exists(psi_n)) call leaves%set_q_value(qna%ind(psi_n), psi_0)
 
   end subroutine init_psi
-  !---------------------------------------------------------------------------------------------------------------
-
-!>
-!! \brief calculate vector of fluxes for B_x and psi
-!!
-!! \details This follows Dedner et al. (2002), Eq. 42.
-!! The result is already simplified: flux of B_x = psi_m and flux of psi = c_h^2 * B_x
-!<
-
-  subroutine glm_mhd(psi_l, psi_r, b_ccl, b_ccr, b_cc, psif)
-
-    ! external procedures
-
-    use constants,  only: half
-
-    ! arguments
-
-    implicit none
-
-    real, dimension(:), intent(out) :: psif
-    real, dimension(:), intent(in) :: psi_l
-    real, dimension(:), intent(in) :: psi_r
-    real, dimension(:), intent(out) :: b_cc
-    real, dimension(:), intent(in) :: b_ccl
-    real, dimension(:), intent(in) :: b_ccr
-
-    b_cc = half * ((psi_r + psi_l) - chspeed * (b_ccr - b_ccl))
-    psif = half * chspeed * (chspeed * (b_ccl + b_ccr) - (psi_r - psi_l))
-
-  end subroutine glm_mhd
-
 !-----------------------------------------------------------------------------------------------------------
 
 !>
