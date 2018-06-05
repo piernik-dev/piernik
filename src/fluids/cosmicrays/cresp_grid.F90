@@ -126,6 +126,7 @@ module cresp_grid
             call warn(msg)
          endif
 
+         bb_to_ub =  (4. / 3. ) * sigma_T_cgs / (me_cgs * c_cgs * 8. * pi) * (mGs_cgs)**2 * myr_cgs
          write (msg, *) "[cresp_grid:cresp_init_grid] 4/3 * sigma_T_cgs / ( me_cgs * c * 8 *  pi) * (mGs_cgs)**2  * myr_cgs = ", bb_to_ub         ! TODO: "unitize" these quantities
          call printinfo(msg)
 
@@ -211,7 +212,6 @@ module cresp_grid
             endif
          endif
       endif
-
       dt_cre = min(dt_cre, dt_cre_K)
       dt_cre = half * dt_cre ! dt comes in to cresp_crspectrum with factor * 2
 
