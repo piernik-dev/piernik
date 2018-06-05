@@ -183,6 +183,10 @@ contains
 
     ! SOLVER
 
+    b_cclf = 0.
+    b_ccrf = 0.
+    psilf = 0.
+    psirf = 0.
     !if (divB_0_method /= DIVB_HDC) b_cc(xdim,:) = 0.
     has_energy = (ubound(ul, dim=1) >= ien)
     ue = 0.
