@@ -825,7 +825,12 @@ contains
                  p_bccl => b_cc_l(xdim:zdim,:)
                  p_bccr => b_cc_r(xdim:zdim,:)
                  p_bcc  => mag_cc(xdim:zdim,:)
-              else ! ignore all magnetic field
+                 if (divB_0_method == DIVB_HDC) then
+                    p_psi_l => psi_l(:,:)
+                    p_psi_r => psi_r(:,:)
+                    p_psif  => psi_cc(:,:)
+                 endif
+             else ! ignore all magnetic field
                  b0 = 0.
                  p_bccl => b0
                  p_bccr => b0
