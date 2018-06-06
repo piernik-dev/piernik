@@ -3,7 +3,7 @@ module cresp_crspectrum
  implicit none
   public :: cresp_update_cell, cresp_init_state, printer, fail_count_interpol, fail_count_no_sol, fail_count_NR_2dim, cresp_get_scaled_init_spectrum, &
       &   cleanup_cresp, cresp_accuracy_test, b_losses, cresp_allocate_all, cresp_deallocate_all, e_threshold_lo, e_threshold_up, &
-      &   fail_count_comp_q, second_fail, src_gpcresp, cresp_init_powl_spectrum, get_powl_f_ampl, e_tot_2_f_init_params, e_tot_2_en_powl_init_params
+      &   fail_count_comp_q, second_fail, src_gpcresp, cresp_init_powl_spectrum, get_powl_f_ampl, e_tot_2_f_init_params, e_tot_2_en_powl_init_params, detect_clean_spectrum
   private ! most of it
 
   integer, dimension(1:2), save     :: fail_count_NR_2dim, fail_count_interpol, fail_count_no_sol, second_fail
@@ -112,22 +112,23 @@ contains
         f = zero
         q = zero
 
-        n = n_inout     ! number density of electrons passed to cresp module by the external module / grid
-        e = e_inout     ! energy density of electrons passed to cresp module by the external module / grid
         u_b = sptab%ub
         u_d = sptab%ud
 
         vrtl_e = v_e
         vrtl_n = v_n
 
-        call find_i_bound(empty_cell)
+        call find_i_bound(n_inout, e_inout, empty_cell)
         if ( empty_cell ) then
          if (nullify_empty_bins) then
-            n_inout = zero
-            e_inout = zero
+            call nullify_all_bins(n_inout, e_inout)
          endif
          return             ! if grid cell contains empty bins, no action is taken
         endif
+! We pass values of external n_inout and e_inout to n and e after these've been prepprocessed
+        n = n_inout     ! number density of electrons passed to cresp module by the external module / grid
+        e = e_inout     ! energy density of electrons passed to cresp module by the external module / grid
+
         call cresp_find_active_bins
         call cresp_organize_p
 
@@ -289,15 +290,56 @@ contains
         endif
         call deallocate_active_arrays
   end subroutine cresp_update_cell
+!----------------------------------------------------------------------------------------------------
+   subroutine detect_clean_spectrum(ext_n, ext_e, empty_cell)
+   use initcrspectrum,      only: ncre, nullify_empty_bins
+   implicit none
+   real(kind=8), dimension(ncre), intent(inout) :: ext_n, ext_e
+   logical, intent(inout)  :: empty_cell
+
+      call find_i_bound(ext_n, ext_e, empty_cell)
+
+      if (empty_cell) then
+         if (nullify_empty_bins) then
+            call nullify_all_bins(ext_n, ext_e)
+         endif
+      endif
+      if (nullify_empty_bins) then
+            call nullify_inactive_bins(ext_n, ext_e)
+      endif
+
+   end subroutine detect_clean_spectrum
+!----------------------------------------------------------------------------------------------------
+   subroutine nullify_inactive_bins(ext_n, ext_e)
+   use initcrspectrum,      only: ncre
+   use constants,           only: zero
+   implicit none
+   real(kind=8), dimension(ncre), intent(inout) :: ext_n, ext_e
+      ext_e(:i_lo)   = zero
+      ext_n(:i_lo)   = zero
+      ext_e(i_up+1:) = zero
+      ext_n(i_up+1:) = zero
+   end subroutine nullify_inactive_bins
+
+   subroutine nullify_all_bins(ext_n, ext_e)
+   use initcrspectrum,      only: ncre
+   use constants,           only: zero
+   implicit none
+   real(kind=8), dimension(ncre), intent(inout) :: ext_n, ext_e
+      ext_e(:)   = zero
+      ext_n(:)   = zero
+   end subroutine nullify_all_bins
+
 !-------------------------------------------------------------------------------------------------
 ! all the procedures below are called by cresp_update_cell subroutine or the driver
 !-------------------------------------------------------------------------------------------------
-  subroutine find_i_bound(exit_code)
+  subroutine find_i_bound(ext_n, ext_e, exit_code)
   use initcrspectrum, only: ncre, e_small
   use constants, only: zero
   implicit none
     integer(kind=4) :: i
     logical :: i_lo_changed, i_up_changed, exit_code
+    real(kind=8), dimension(ncre), intent(inout) :: ext_n, ext_e
         i_lo_changed = .false.
         i_up_changed = .false.
         exit_code    = .true.
@@ -305,8 +347,8 @@ contains
         i_lo = 0
         do i = 1, ncre                        ! if energy density is nonzero, so should be the number density
             i_lo = i-1
-            if ( e(i) .gt. e_threshold_lo) then
-               if (n(i) .gt. zero) then
+            if ( ext_e(i) .gt. e_threshold_lo) then
+               if (ext_n(i) .gt. zero) then
                   exit_code = .false.
                   exit
                endif
@@ -318,23 +360,23 @@ contains
         i_up = ncre
         do i = ncre, 1,-1
             i_up = i
-            if (e(i) .gt. e_threshold_up ) then   ! if energy density is nonzero, so should be the number density
-               if( n(i) .gt. zero ) then
+            if (ext_e(i) .gt. e_threshold_up ) then   ! if energy density is nonzero, so should be the number density
+               if( ext_n(i) .gt. zero ) then
                   exit
                endif
             endif
         enddo
-        if ((e(i_lo+1)+vrtl_e(1)) .gt. e_small .and. vrtl_e(1) .gt. zero) then
-            call transfer_quantities(e(i_lo+1), vrtl_e(1))
-            call transfer_quantities(n(i_lo+1), vrtl_n(1))
+        if ((ext_e(i_lo+1)+vrtl_e(1)) .gt. e_small .and. vrtl_e(1) .gt. zero) then
+            call transfer_quantities(ext_e(i_lo+1), vrtl_e(1))
+            call transfer_quantities(ext_n(i_lo+1), vrtl_n(1))
         endif
-        if ((e(i_up)+vrtl_e(2)) .gt. e_small .and. vrtl_e(2) .gt. zero) then
-            call transfer_quantities(e(i_up), vrtl_e(2))
-            call transfer_quantities(n(i_up), vrtl_n(2))
+        if ((ext_e(i_up)+vrtl_e(2)) .gt. e_small .and. vrtl_e(2) .gt. zero) then
+            call transfer_quantities(ext_e(i_up), vrtl_e(2))
+            call transfer_quantities(ext_n(i_up), vrtl_n(2))
         endif
         if ( (approx_p_lo .eq. 1) .or. (approx_p_up .eq. 1) ) then ! TODO - this might need slight change of condition
-            call threshold_energy_check_lo(e, n, i_lo_changed, .false.)
-            call threshold_energy_check_up(e, n, i_up_changed, .false.)
+            call threshold_energy_check_lo(ext_e, ext_n, i_lo_changed, .false.)
+            call threshold_energy_check_up(ext_e, ext_n, i_up_changed, .false.)
             if (i_lo_changed) i_lo = i_lo + 1
             if (i_up_changed) i_up = i_up - 1
         endif
@@ -378,14 +420,6 @@ contains
 #ifdef VERBOSE
         print "(2(A9,i3))", "i_lo =", i_lo, ", i_up = ", i_up
 #endif /* VERBOSE */
-! cleaning (TEST)
-        if (nullify_empty_bins) then
-            e(:i_lo) = zero
-            n(:i_lo) = zero
-            e(i_up+1:) = zero
-            n(i_up+1:) = zero
-        endif
-
       endif
   end subroutine cresp_find_active_bins
 !---------------! Compute p for all active edges !---------------------------------------------------
