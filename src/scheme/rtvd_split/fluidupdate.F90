@@ -220,7 +220,7 @@ contains
       use global,      only: dt, dtm, t
       use mass_defect, only: update_magic_mass
 #ifdef COSM_RAY_ELECTRONS
-      use cresp_grid,      only: cresp_update_grid
+      use cresp_grid,      only: cresp_update_grid, cresp_clean_grid
       use initcrspectrum,  only: use_cresp
 #endif /* COSM_RAY_ELECTRONS */
 
@@ -243,6 +243,7 @@ contains
       dtm = dt
       call make_3sweeps(.false.) ! Z -> Y -> X
       call update_magic_mass
+      call cresp_clean_grid ! BEWARE: due to diffusion some junk remains in the grid - this nullifies all inactive bins.
 
    end subroutine fluid_update
 
@@ -262,7 +263,7 @@ contains
       use gravity,             only: source_terms_grav
       use particle_pub,        only: pset, psolver
 #endif /* GRAV */
-#if defined(COSM_RAYS) 
+#if defined(COSM_RAYS)
       use all_boundaries,      only: all_fluid_boundaries
       use initcosmicrays,      only: use_split
       use fluidindex,          only: flind
@@ -291,7 +292,7 @@ contains
       call source_terms_grav
 #endif /* GRAV */
 
-#if defined(COSM_RAYS) 
+#if defined(COSM_RAYS)
 
       if (.not. use_split) then
 #if defined(MULTIGRID)
@@ -356,7 +357,7 @@ contains
       if (associated(psolver)) call pset%evolve(psolver, t-dt, dt)
 #endif /* GRAV */
       if (associated(problem_customize_solution)) call problem_customize_solution(forward)
-      
+
 
    end subroutine make_3sweeps
 

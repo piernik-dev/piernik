@@ -9,7 +9,7 @@ module cresp_grid
    use initcrspectrum,  only: ncre
 
    private
-   public        dt_cre, cresp_update_grid, cresp_init_grid, grid_cresp_timestep, cfl_cresp_violation
+   public        dt_cre, cresp_update_grid, cresp_init_grid, grid_cresp_timestep, cfl_cresp_violation, cresp_clean_grid
 
    real(kind=8)                    :: dt_cre
    real(kind=8)                    :: bb_to_ub
@@ -75,6 +75,50 @@ module cresp_grid
 
    end subroutine cresp_update_grid
 !----------------------------------------------------------------------------------------------------
+   subroutine cresp_clean_grid
+
+      use cg_leaves,        only: leaves
+      use cg_list,          only: cg_list_element
+      use constants,        only: xdim, ydim, zdim
+      use cresp_crspectrum, only: cresp_update_cell, detect_clean_spectrum
+      use grid_cont,        only: grid_container
+      use initcrspectrum,   only: cresp, nullify_empty_bins
+      use named_array,      only: p4
+      use named_array_list, only: wna
+
+      implicit none
+
+      integer                         :: i, j, k
+      type(cg_list_element),  pointer :: cgl
+      type(grid_container),   pointer :: cg
+      logical                         :: empty_cell
+
+      if (nullify_empty_bins) then ! else nothing is done here
+         i = 0; j = 0;  k = 0
+         cgl => leaves%first
+         do while (associated(cgl))
+            cg => cgl%cg
+            p4 => cg%w(wna%fi)%arr
+            do k = cg%ks, cg%ke
+               do j = cg%js, cg%je
+                  do i = cg%is, cg%ie
+                     cresp%n    = p4(iarr_cre_n, i, j, k)
+                     cresp%e    = p4(iarr_cre_e, i, j, k)
+                     empty_cell = .true.
+
+                     call detect_clean_spectrum(cresp%n, cresp%e, empty_cell)
+
+                     p4(iarr_cre_n, i, j, k) = cresp%n
+                     p4(iarr_cre_e, i, j, k) = cresp%e
+                  enddo
+               enddo
+            enddo
+            cgl=>cgl%nxt
+         enddo
+      endif
+
+   end subroutine cresp_clean_grid
+!----------------------------------------------------------------------------------------------------
    subroutine cresp_init_grid
 
       use cg_leaves,          only: leaves
@@ -125,6 +169,7 @@ module cresp_grid
             call warn(msg)
          endif
 
+         bb_to_ub =  (4. / 3. ) * sigma_T_cgs / (me_cgs * c_cgs * 8. * pi) * (mGs_cgs)**2 * myr_cgs
          write (msg, *) "[cresp_grid:cresp_init_grid] 4/3 * sigma_T_cgs / ( me_cgs * c * 8 *  pi) * (mGs_cgs)**2  * myr_cgs = ", bb_to_ub         ! TODO: "unitize" these quantities
          call printinfo(msg)
 
@@ -210,7 +255,6 @@ module cresp_grid
             endif
          endif
       endif
-
       dt_cre = min(dt_cre, dt_cre_K)
       dt_cre = half * dt_cre ! dt comes in to cresp_crspectrum with factor * 2
 

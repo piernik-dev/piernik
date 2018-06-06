@@ -40,6 +40,7 @@ module initcrspectrum
    logical            :: NR_refine_solution_q        !< enables NR_1D refinement for value of interpolated "q" value
    logical            :: NR_refine_solution_pf       !< enables NR_2D refinement for interpolated values of "p" and "f". Note - algorithm tries to refine values if interpolation was unsuccessful.
 
+   logical            :: nullify_empty_bins            !< nullifies empty bins when entering CRESP module / exiting empty cell.
    logical            :: prevent_neg_en              !< forces e,n=eps where e or n drops below zero due to diffusion algorithm (TEMP workaround)
    logical            :: test_spectrum_break         !< introduce break in the middle of the spectrum (to see how algorithm handles it), TEMP
    real(kind=8)       :: magnetic_energy_scaler      !< decreases magnetic energy amplitude at CRESP, TEMP
@@ -118,7 +119,7 @@ module initcrspectrum
       &                         K_cre_pow, expan_order, e_small, bump_amp, cre_gpcr_ess, use_cresp, &
       &                         e_small_approx_init_cond, e_small_approx_p_lo, e_small_approx_p_up, force_init_NR,&
       &                         NR_iter_limit, max_p_ratio, add_spectrum_base, synch_active, adiab_active, arr_dim, &
-      &                         Gamma_min_fix, Gamma_max_fix, Gamma_lo_init, Gamma_up_init
+      &                         Gamma_min_fix, Gamma_max_fix, Gamma_lo_init, Gamma_up_init, nullify_empty_bins
 
 ! Default values
       use_cresp = .true.
@@ -134,9 +135,9 @@ module initcrspectrum
       q_big       = 30.0d0
       cfl_cre     = 0.1
       cre_eff     = 0.01
-      K_cre_paral_1 = 0
-      K_cre_perp_1  = 0
-      K_cre_pow     = 0
+      K_cre_paral_1 = 0.
+      K_cre_perp_1  = 0.
+      K_cre_pow     = 0.
       expan_order   = 1
       Gamma_min_fix     = 2.5
       Gamma_max_fix     = 1000.0
@@ -154,6 +155,7 @@ module initcrspectrum
       NR_run_refine_pf  = .false.
       NR_refine_solution_q  = .false.
       NR_refine_solution_pf = .false.
+      nullify_empty_bins      = .true.
       smallecrn         = 0.0
       smallecre         = 0.0
       prevent_neg_en    = .true.
@@ -173,6 +175,7 @@ module initcrspectrum
       arr_dim = 200
 
       if (master) then
+         if (.not.nh%initialized) call nh%init()
          open(newunit=nh%lun, file=nh%tmp1, status="unknown")
          write(nh%lun,nml=COSMIC_RAY_SPECTRUM)
          close(nh%lun)
@@ -215,6 +218,7 @@ module initcrspectrum
          lbuff(9)  =  NR_run_refine_pf
          lbuff(10) =  NR_refine_solution_q
          lbuff(11) =  NR_refine_solution_pf
+         lbuff(12) =  nullify_empty_bins
 
          rbuff(1)  = cfl_cre
          rbuff(2)  = cre_eff
@@ -284,6 +288,7 @@ module initcrspectrum
          NR_run_refine_pf            = lbuff(9)
          NR_refine_solution_q        = lbuff(10)
          NR_refine_solution_pf       = lbuff(11)
+         nullify_empty_bins          = lbuff(12)
 
          cfl_cre                      = rbuff(1)
          cre_eff                      = rbuff(2)
