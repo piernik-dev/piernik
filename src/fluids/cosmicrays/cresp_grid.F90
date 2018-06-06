@@ -204,7 +204,7 @@ module cresp_grid
       use func,               only: emag !, operator(.equals.), operator(.notequals.)
       use grid_cont,          only: grid_container
       use initcosmicrays,     only: K_cre_paral, K_cre_perp
-      use initcrspectrum,     only: spec_mod_trms, cfl_cre, synch_active, adiab_active
+      use initcrspectrum,     only: spec_mod_trms, cfl_cre, synch_active, adiab_active, use_cresp
       use named_array_list,   only: qna
       use timestep_cresp,     only: cresp_timestep, dt_cre_min_ub, dt_cre_min_ud
 
@@ -225,40 +225,41 @@ module cresp_grid
       dt_cre_min_ub = huge(one)
       dt_cre_min_ud = huge(one)
 
-      cgl => leaves%first
-      do while (associated(cgl))
-         cg => cgl%cg
-         do k = cg%ks, cg%ke
-            do j = cg%js, cg%je
-               do i = cg%is, cg%ie
-                  sptab%ud = 0.0 ; sptab%ub = 0.0 ; sptab%ucmb = 0.0
-                  if (synch_active) sptab%ub = emag(cg%b(xdim,i,j,k), cg%b(ydim,i,j,k), cg%b(zdim,i,j,k)) * bb_to_ub         !< WARNING assusmes that b is in mGs
-                  if (adiab_active) sptab%ud = cg%q(qna%ind(divv_n))%point([i,j,k]) * onet
+      if (use_cresp) then
+         cgl => leaves%first
+         do while (associated(cgl))
+            cg => cgl%cg
+            do k = cg%ks, cg%ke
+               do j = cg%js, cg%je
+                  do i = cg%is, cg%ie
+                     sptab%ud = 0.0 ; sptab%ub = 0.0 ; sptab%ucmb = 0.0
+                     if (synch_active) sptab%ub = emag(cg%b(xdim,i,j,k), cg%b(ydim,i,j,k), cg%b(zdim,i,j,k)) * bb_to_ub         !< WARNING assusmes that b is in mGs
+                     if (adiab_active) sptab%ud = cg%q(qna%ind(divv_n))%point([i,j,k]) * onet
 
-                  call cresp_timestep(dt_cre_tmp, sptab, cg%u(iarr_cre_n, i, j, k), cg%u(iarr_cre_e, i, j, k), i_up_max_tmp) ! gives dt_cre for the whole domain, but is unefficient
-                  dt_cre = min(dt_cre, dt_cre_tmp)
-                  i_up_max = max(i_up_max, i_up_max_tmp)
+                     call cresp_timestep(dt_cre_tmp, sptab, cg%u(iarr_cre_n, i, j, k), cg%u(iarr_cre_e, i, j, k), i_up_max_tmp) ! gives dt_cre for the whole domain, but is unefficient
+                     dt_cre = min(dt_cre, dt_cre_tmp)
+                     i_up_max = max(i_up_max, i_up_max_tmp)
+                  enddo
                enddo
             enddo
+            cgl=>cgl%nxt
          enddo
-         cgl=>cgl%nxt
-      enddo
 
-      if ( i_up_max_prev .ne. i_up_max ) then ! dt_cre_K saved, computed again only if in the whole domain highest i_up changes.
-         i_up_max_prev = i_up_max
-         K_cre_max_sum = K_cre_paral(i_up_max) + K_cre_perp(i_up_max) ! assumes the same K for energy and number density
-         if ( K_cre_max_sum <= 0) then                                ! K_cre dependent on momentum - maximal for highest bin number
-            dt_cre_K = huge(one)
-         else
-            dt_cre_K = cfl_cre * half / K_cre_max_sum
-            if (cg%dxmn < sqrt(huge(one))/dt_cre_K) then
-                  dt_cre_K = dt_cre_K * cg%dxmn**2
+         if ( i_up_max_prev .ne. i_up_max ) then ! dt_cre_K saved, computed again only if in the whole domain highest i_up changes.
+            i_up_max_prev = i_up_max
+            K_cre_max_sum = K_cre_paral(i_up_max) + K_cre_perp(i_up_max) ! assumes the same K for energy and number density
+            if ( K_cre_max_sum <= 0) then                                ! K_cre dependent on momentum - maximal for highest bin number
+               dt_cre_K = huge(one)
+            else
+               dt_cre_K = cfl_cre * half / K_cre_max_sum
+               if (cg%dxmn < sqrt(huge(one))/dt_cre_K) then
+                     dt_cre_K = dt_cre_K * cg%dxmn**2
+               endif
             endif
          endif
+         dt_cre = min(dt_cre, dt_cre_K)
+         dt_cre = half * dt_cre ! dt comes in to cresp_crspectrum with factor * 2
       endif
-      dt_cre = min(dt_cre, dt_cre_K)
-      dt_cre = half * dt_cre ! dt comes in to cresp_crspectrum with factor * 2
-
    end subroutine grid_cresp_timestep
 !----------------------------------------------------------------------------------------------------
    subroutine append_dissipative_terms(i,j,k) ! To be fixed
