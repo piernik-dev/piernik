@@ -216,11 +216,11 @@ contains
 
    subroutine fluid_update
 
-      use all_boundaries,    only: all_fluid_boundaries
       use dataio_pub,  only: halfstep
       use global,      only: dt, dtm, t
       use mass_defect, only: update_magic_mass
 #ifdef COSM_RAY_ELECTRONS
+      use all_boundaries,  only: all_fluid_boundaries
       use cresp_grid,      only: cresp_update_grid, cresp_clean_grid
       use initcrspectrum,  only: use_cresp
 #endif /* COSM_RAY_ELECTRONS */
@@ -237,7 +237,7 @@ contains
 
 #ifdef COSM_RAY_ELECTRONS
       if (use_cresp) then
-         call cresp_update_grid     ! updating number density and energy density of cosmic ray electrons via CRESP module\
+         call cresp_update_grid     ! updating number density and energy density of cosmic ray electrons via CRESP module
          call all_fluid_boundaries
       endif
 #endif /* COSM_RAY_ELECTRONS */
