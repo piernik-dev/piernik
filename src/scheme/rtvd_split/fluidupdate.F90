@@ -216,6 +216,7 @@ contains
 
    subroutine fluid_update
 
+      use all_boundaries,    only: all_fluid_boundaries
       use dataio_pub,  only: halfstep
       use global,      only: dt, dtm, t
       use mass_defect, only: update_magic_mass
@@ -235,7 +236,10 @@ contains
 ! Sources should be hooked to problem_customize_solution with forward argument
 
 #ifdef COSM_RAY_ELECTRONS
-      if (use_cresp) call cresp_update_grid     ! updating number density and energy density of cosmic ray electrons via CRESP module
+      if (use_cresp) then
+         call cresp_update_grid     ! updating number density and energy density of cosmic ray electrons via CRESP module\
+         call all_fluid_boundaries
+      endif
 #endif /* COSM_RAY_ELECTRONS */
 
       halfstep = .true.
