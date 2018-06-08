@@ -128,7 +128,7 @@ contains
 ! We pass values of external n_inout and e_inout to n and e after these've been prepprocessed
         n = n_inout     ! number density of electrons passed to cresp module by the external module / grid
         e = e_inout     ! energy density of electrons passed to cresp module by the external module / grid
-
+        call check_boundary_bins
         call cresp_find_active_bins
         call cresp_organize_p
 
@@ -366,21 +366,36 @@ contains
                endif
             endif
         enddo
-        if ((ext_e(i_lo+1)+vrtl_e(1)) .gt. e_small .and. vrtl_e(1) .gt. zero) then
-            call transfer_quantities(ext_e(i_lo+1), vrtl_e(1))
-            call transfer_quantities(ext_n(i_lo+1), vrtl_n(1))
-        endif
-        if ((ext_e(i_up)+vrtl_e(2)) .gt. e_small .and. vrtl_e(2) .gt. zero) then
-            call transfer_quantities(ext_e(i_up), vrtl_e(2))
-            call transfer_quantities(ext_n(i_up), vrtl_n(2))
-        endif
-        if ( (approx_p_lo .eq. 1) .or. (approx_p_up .eq. 1) ) then ! TODO - this might need slight change of condition
-            call threshold_energy_check_lo(ext_e, ext_n, i_lo_changed, .false.)
-            call threshold_energy_check_up(ext_e, ext_n, i_up_changed, .false.)
-            if (i_lo_changed) i_lo = i_lo + 1
-            if (i_up_changed) i_up = i_up - 1
-        endif
   end subroutine find_i_bound
+!-------------------------------------------------------------------------------------------------
+   subroutine check_boundary_bins
+
+      use initcrspectrum,  only: e_small
+      use constants,       only: zero
+
+      implicit none
+
+      logical :: i_lo_changed, i_up_changed
+
+         i_lo_changed = .false.
+         i_up_changed = .false.
+
+         if ((e(i_lo+1)+vrtl_e(1)) .gt. e_small .and. vrtl_e(1) .gt. zero) then
+            call transfer_quantities(e(i_lo+1), vrtl_e(1))
+            call transfer_quantities(n(i_lo+1), vrtl_n(1))
+         endif
+         if ((e(i_up)+vrtl_e(2)) .gt. e_small .and. vrtl_e(2) .gt. zero) then
+            call transfer_quantities(e(i_up), vrtl_e(2))
+            call transfer_quantities(n(i_up), vrtl_n(2))
+         endif
+         if ( (approx_p_lo .eq. 1) .or. (approx_p_up .eq. 1) ) then ! TODO - this might need slight change of condition
+            call threshold_energy_check_lo(e, n, i_lo_changed, .false.)
+            call threshold_energy_check_up(e, n, i_up_changed, .false.)
+         endif
+
+         if (i_lo_changed) i_lo = i_lo + 1
+         if (i_up_changed) i_up = i_up - 1
+   end subroutine check_boundary_bins
 !-------------------------------------------------------------------------------------------------
   subroutine cresp_find_active_bins
    use constants,      only: I_ZERO, zero
