@@ -63,6 +63,7 @@ module cresp_crspectrum
 
 ! in-algorithm energy & number density
   real(kind=8), allocatable, dimension(:)  :: n, e ! dimension(1:ncre)
+  real(kind=8), allocatable, dimension(:)  :: e_amplitudes_l, e_amplitudes_r
 ! virtual e,n arrays for cutoff, for cases when bins are only slightly filled and p ~ p_fix - it might not be possible to find solution via NR
   real(kind=8), dimension(1:2) :: vrtl_n, vrtl_e
 ! lower / upper energy needed for bin activation
@@ -118,26 +119,29 @@ contains
         vrtl_e = v_e
         vrtl_n = v_n
 
-        call find_i_bound(n_inout, e_inout, empty_cell)
+        call cresp_find_prepare_spectrum(n_inout, e_inout, empty_cell) ! EXPERIMENTAL
+        if ( empty_cell )  return             ! if grid cell contains empty bins, no action is taken
+
         if ( empty_cell ) then
          if (nullify_empty_bins) then
             call nullify_all_bins(n_inout, e_inout)
          endif
          return             ! if grid cell contains empty bins, no action is taken
         endif
+
+        if (nullify_empty_bins) call nullify_inactive_bins(n_inout, e_inout)
 ! We pass values of external n_inout and e_inout to n and e after these've been prepprocessed
         n = n_inout     ! number density of electrons passed to cresp module by the external module / grid
         e = e_inout     ! energy density of electrons passed to cresp module by the external module / grid
         call check_boundary_bins
-        call cresp_find_active_bins
         call cresp_organize_p
 
 ! Compute power indexes for each bin at [t] and f on left bin faces at [t]
-        f = zero; q=zero
-        call ne_to_q(n, e, q, active_bins)
+!         f = zero; q=zero ! done in cresp_find_prepare_spectrum already
+!         call ne_to_q(n, e, q, active_bins) ! done in cresp_find_prepare_spectrum already
 
 ! Here values of distribution function f for active left edges (excluding upper momentum boundary) are computed
-        f = nq_to_f(p(0:ncre-1), p(1:ncre), n(1:ncre), q(1:ncre), active_bins)
+!         f = nq_to_f(p(0:ncre-1), p(1:ncre), n(1:ncre), q(1:ncre), active_bins)
 
         if (approx_p_up .gt. 0) then         ! momenta values stored only within module - for tests; will not work in PIERNIK
             if (i_up .gt. 1) then
@@ -220,6 +224,7 @@ contains
         call cresp_compute_fluxes(cooling_edges_next,heating_edges_next)
 
 ! Computing e and n at [t+dt]
+
         ndt(1:ncre) = n(1:ncre)  - (nflux(1:ncre) - nflux(0:ncre-1))
         edt(1:ncre) = e(1:ncre)  - (eflux(1:ncre) - eflux(0:ncre-1))
 
@@ -264,6 +269,7 @@ contains
             print '(A36,   100I5)', "NR_2dim:inpl/solve  q(bin) failure:", fail_count_comp_q
         endif
 #endif /* VERBOSE */
+
         n = ndt
         e = edt
         call cresp_detect_negative_content ! for testing
@@ -338,10 +344,8 @@ contains
   use constants, only: zero
   implicit none
     integer(kind=4) :: i
-    logical :: i_lo_changed, i_up_changed, exit_code
+    logical :: exit_code
     real(kind=8), dimension(ncre), intent(inout) :: ext_n, ext_e
-        i_lo_changed = .false.
-        i_up_changed = .false.
         exit_code    = .true.
 ! ! Locate cut-ofs before current timestep: indices are found without use of p_lo nor p_up and point to boundary edges
         i_lo = 0
@@ -437,6 +441,166 @@ contains
 #endif /* VERBOSE */
       endif
   end subroutine cresp_find_active_bins
+
+!-------------------------------------------------------------------------------------------------
+   subroutine cresp_find_prepare_spectrum(n, e, empty_cell) ! EXPERIMENTAL
+
+      use constants,      only: I_ZERO, zero
+      use diagnostics,    only: incr_vec
+      use initcrspectrum, only: ncre, e_small, cresp_all_edges, cresp_all_bins, p_fix, p_mid_fix
+
+      implicit none
+
+      integer(kind=8), dimension(:), allocatable :: nonempty_bins
+      logical, dimension(ncre) :: has_n_gt_zero, has_e_gt_zero
+      logical                  :: empty_cell
+      integer(kind=4)          :: i, pre_i_lo, pre_i_up, num_has_gt_zero, approx_p_lo_tmp, approx_p_up_tmp
+      real(kind=8), dimension(ncre), intent(inout)   :: n, e
+
+      has_n_gt_zero(:) = .false. ; has_e_gt_zero(:)  = .false.
+      num_has_gt_zero   = 0      ; num_active_bins = 0
+      pre_i_lo      = 0       ; pre_i_up       = ncre
+
+      if (allocated(nonempty_bins)) deallocate(nonempty_bins)
+      if (allocated(active_bins))   deallocate(active_bins)
+! Detect where bins have nonzero values for both n and e; num_has_gt_zero stores preliminary active bins
+      do i = 1, ncre
+         has_n_gt_zero(i) = (n(i) .gt. zero)
+         has_e_gt_zero(i) = (e(i) .gt. zero)
+         if (has_n_gt_zero(i) .and. has_e_gt_zero(i)) then
+            num_has_gt_zero = num_has_gt_zero + 1
+            call incr_vec(nonempty_bins, 1)
+            nonempty_bins(num_has_gt_zero) = i
+         endif
+      enddo
+#ifdef VERBOSE
+      print *, "@find_active_bins_v1: pre_i_lo, pre_i_up", max(nonempty_bins(1) - 1, 0), nonempty_bins(num_has_gt_zero)
+#endif /* VERBOSE */
+! If cell is not empty, assume preliminary i_lo and i_up
+      if (num_has_gt_zero .eq. 0) then
+         empty_cell = .true.
+         return
+      else
+         pre_i_lo = max(int(nonempty_bins(1) - 1,kind=4), 0)
+         pre_i_up = int(nonempty_bins(num_has_gt_zero),kind=4) !ubound(nonempty_bins,dim=1)
+      endif
+! Prepare p array
+      p(pre_i_lo:pre_i_up) = p_fix(pre_i_lo:pre_i_up)
+      p(pre_i_lo) = max(p_fix(pre_i_lo), p_mid_fix(1))      ! do not want to have zero here
+
+      if (pre_i_up .lt. ncre) then
+         p(pre_i_up) = p_fix(pre_i_up)                      ! do not want to have zero here
+      else ! (pre_i_up .eq. ncre)
+         p(pre_i_up) = p_mid_fix(pre_i_up)
+      endif
+! preliminary allocation of active_bins
+      allocate(active_bins(num_has_gt_zero))
+      active_bins = int(nonempty_bins(:), kind=4)
+! compute q and f for all bins (also boundary bins - approximation temporarily disabled)
+      approx_p_lo_tmp = approx_p_lo
+      approx_p_up_tmp = approx_p_up
+      approx_p_lo = 0
+      approx_p_up = 0
+
+      call ne_to_q(n,e,q,active_bins)
+
+      f = nq_to_f(p(0:ncre-1), p(1:ncre), n(1:ncre), q(1:ncre), active_bins)
+
+      approx_p_lo = approx_p_lo_tmp
+      approx_p_up = approx_p_up_tmp
+! compute energy density amplitudes
+      e_amplitudes_l = zero   ;  e_amplitudes_r = zero
+      do i = active_bins(1), active_bins(num_has_gt_zero) ! safe: we'd have returned empty_cell if no active_bins present
+         e_amplitudes_l(i) = fp_to_e_ampl(p(i-1), f(i-1))
+      enddo
+
+      do i = active_bins(1), active_bins(num_has_gt_zero) ! safe: we'd have returned empty_cell if no active_bins present
+         e_amplitudes_r(i) = fp_to_e_ampl(p(i), f(i-1) * (p(i) / p(i-1))**(-q(i)) )
+      enddo
+#ifdef VERBOSE
+      print "(A,50E12.4)", "find_active_bins_v1 e  :   ",e
+      print "(A,50E12.4)", "find_active_bins_v1 e_l:",e_amplitudes_l
+      print "(A,50E12.4)", "find_active_bins_v1 e_r:      ",e_amplitudes_r
+#endif /* VERBOSE */
+
+! Find active bins
+      is_active_bin = .false.
+
+! find the rest of active bins, accounts for a possible break in the spectrum ! TODO
+      where (e_amplitudes_l .gt. e_small .and. e_amplitudes_r .gt. e_small) ! this should take care of break in the spectrum
+            is_active_bin = .true.
+      endwhere
+
+      pre_i_lo = 0 ; pre_i_up = ncre
+! find i_lo (compare right bin face e amplitudes against e_small)
+      do i = 1, ncre
+         pre_i_lo = i
+         if (e_amplitudes_r(pre_i_lo) .gt. e_small) then
+            is_active_bin(pre_i_lo) = .true.
+            exit
+         endif
+      enddo
+! If cell empty, leave
+      if (pre_i_lo .eq. ncre) then
+         empty_cell = .true.
+         return
+      endif
+! find i_up (compare left bin face e amplitudes against e_small)
+      do i = ncre,1,-1
+         pre_i_up = i
+         if (e_amplitudes_l(pre_i_up) .gt. e_small) then
+            is_active_bin(pre_i_up) = .true.
+            exit
+         endif
+      enddo
+
+      pre_i_lo = pre_i_lo - 1
+
+      is_active_bin(:i_lo) = .false.
+      is_active_bin(i_up:) = .false.
+
+      num_active_bins = count(is_active_bin)
+
+      if (num_active_bins .gt. 1) then
+         i_lo = pre_i_lo;   i_up = pre_i_up
+      else if (num_active_bins .eq. 1) then
+         i_lo = pre_i_lo;   i_up = i_lo+1
+      else
+         empty_cell = .true.
+         return
+      endif
+
+#ifdef VERBOSE
+      print *, "find_active_bins_v1 is_active_bin:",is_active_bin, "|", count(is_active_bin), num_has_gt_zero
+      print *, "find_active_bins_v1 i_lo, i_up:", i_lo, i_up
+#endif /* VERBOSE */
+      if(allocated(active_bins))  deallocate(active_bins)
+      if(allocated(active_edges)) deallocate(active_edges)
+! allocate and prepare active bins for spectrum evolution
+      if (num_active_bins .gt. I_ZERO) then
+        allocate(active_bins(num_active_bins))
+        active_bins = I_ZERO
+        active_bins = pack(cresp_all_bins, is_active_bin)
+
+! Construct index arrays for fixed edges betwen p_lo and p_up, active edges
+! before timestep
+        is_fixed_edge = .false.
+        is_fixed_edge(i_lo+1:i_up-1) = .true.
+        num_fixed_edges = count(is_fixed_edge)
+        allocate(fixed_edges(num_fixed_edges))
+        fixed_edges = pack(cresp_all_edges, is_fixed_edge)
+
+        is_active_edge = .false.
+        is_active_edge(i_lo:i_up) = .true.
+        num_active_edges = count(is_active_edge)
+        allocate(active_edges(i_lo:i_up))
+        active_edges = pack(cresp_all_edges, is_active_edge)
+#ifdef VERBOSE
+        print "(2(A9,i3))", "i_lo =", i_lo, ", i_up = ", i_up
+#endif /* VERBOSE */
+      endif
+  end subroutine cresp_find_prepare_spectrum
+
 !---------------! Compute p for all active edges !---------------------------------------------------
   subroutine cresp_organize_p
   use initcrspectrum, only: p_fix, ncre
@@ -1015,6 +1179,25 @@ contains
       fq_to_e(bins) = e_bins
 
    end function fq_to_e
+!-------------------------------------------------------------------------------------------------
+!
+! Compute edge values (amplitudes) of e
+!
+!-------------------------------------------------------------------------------------------------
+
+   function fp_to_e_ampl(p_1, f_1)
+      use initcrspectrum,     only: ncre
+      use constants,          only: zero, fpi
+      use cresp_variables,    only: clight
+
+      implicit none
+
+      real(kind=8), intent(in)    :: p_1, f_1
+      real(kind=8)                :: fp_to_e_ampl
+
+      fp_to_e_ampl = fpi * clight**2 * f_1 * p_1**3
+
+   end function fp_to_e_ampl
 
 !-------------------------------------------------------------------------------------------------
 !
@@ -1212,7 +1395,7 @@ contains
     logical :: exit_code
 
     q = zero
-    do i_active = 1 + approx_p_lo, size(active_bins) - approx_p_up
+    do i_active = 1 + approx_p_lo, size(bins) - approx_p_up
         i = bins(i_active)
         if (e(i) .gt. e_small .and. p(i-1) .gt. zero) then
           exit_code = .true.
@@ -1369,7 +1552,8 @@ contains
 #ifdef VERBOSE
         write (*,"(A1)") " "
         write (*,"(A26,2E22.15)") " >>> Obtained (p_up, f_l):", p_up, f(i_up-1) &
-                                 ,"     Corresponding ratios:", x_NR(1), x_NR(2)
+                                 ,"     Corresponding ratios:", x_NR(1), x_NR(2) &
+                                 ,"alpha = ", alpha
 #endif /* VERBOSE */
   end subroutine get_fqp_up
 !--------------------------------------------------------------------------------------------------
@@ -1565,6 +1749,8 @@ contains
 
    call my_allocate_with_index(n,ma1d,1)   !:: n, e, r
    call my_allocate_with_index(e,ma1d,1)
+   call my_allocate_with_index(e_amplitudes_l,ma1d,1)   !:: n, e, r
+   call my_allocate_with_index(e_amplitudes_r,ma1d,1)
    call my_allocate_with_index(r,ma1d,1)
    call my_allocate_with_index(q,ma1d,1)
 
