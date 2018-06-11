@@ -70,6 +70,8 @@ module cresp_grid
                enddo
             enddo
          enddo
+         cg%u(iarr_cre_n, :,:,:) = p4(iarr_cre_n, :,:,:)
+         cg%u(iarr_cre_e, :,:,:) = p4(iarr_cre_e, :,:,:)
          cgl=>cgl%nxt
       enddo
 
@@ -113,6 +115,8 @@ module cresp_grid
                   enddo
                enddo
             enddo
+            cg%u(iarr_cre_n, :,:,:) = p4(iarr_cre_n, :,:,:)
+            cg%u(iarr_cre_e, :,:,:) = p4(iarr_cre_e, :,:,:)
             cgl=>cgl%nxt
          enddo
       endif
@@ -140,7 +144,7 @@ module cresp_grid
       type(cg_list_element),  pointer :: cgl
       type(grid_container),   pointer :: cg
       logical, save                   :: first_run = .true., not_zeroed = .true.
-      real(kind=8)                    :: sigma_T_cgs, me_cgs, myr_cgs, mGs_cgs, c_cgs
+      real(kind=8)                    :: sigma_T_cgs, me_cgs, myr_cgs, mGs_cgs, c_cgs, B_code_cgs_conversion
 
       if (first_run .eqv. .true.) then
          call cresp_initialize_guess_grids
@@ -164,13 +168,14 @@ module cresp_grid
          myr_cgs     = 3.1556952e+13     ! s          ! TODO: "unitize" these quantities
          mGs_cgs     = 1.0e-6            ! Gs         ! TODO: "unitize" these quantities
          c_cgs       = 29979245800.      ! cm/s       ! TODO: "unitize" these quantities
+         B_code_cgs_conversion = 2.84
 
          if ( .not. ((trim(units_set) == "psm" ) .or. (trim(units_set) == "PSM")) ) then
             write(msg, *) "[cresp_grid:cresp_init_grid] units_set is not PSM. CRESP only works with PSM, other unit sets might cause crash."
             call warn(msg)
          endif
 
-         bb_to_ub =  (4. / 3. ) * sigma_T_cgs / (me_cgs * c_cgs * 8. * pi) * (mGs_cgs)**2 * myr_cgs
+         bb_to_ub =  (4. / 3. ) * sigma_T_cgs / (me_cgs * c_cgs * 8. * pi) * (mGs_cgs)**2 * myr_cgs * B_code_cgs_conversion ** 2
          write (msg, *) "[cresp_grid:cresp_init_grid] 4/3 * sigma_T_cgs / ( me_cgs * c * 8 *  pi) * (mGs_cgs)**2  * myr_cgs = ", bb_to_ub         ! TODO: "unitize" these quantities
          call printinfo(msg)
 
