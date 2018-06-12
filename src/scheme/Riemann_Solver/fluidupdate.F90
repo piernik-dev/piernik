@@ -504,6 +504,10 @@ contains
      use dataio_pub, only: die
      use global,     only: h_solver
      use interpolations, only: interpol
+     use hlld,       only: musclflx
+     use fluidindex, only: flind
+     use fluidtypes, only: component_fluid
+     
 
      implicit none
 
@@ -514,488 +518,445 @@ contains
      real, dimension(:), pointer, intent(in) :: div_v1d
 
      real, dimension(size(b_cc,1),size(b_cc,2)), target :: b_cc_l, b_cc_r, mag_cc
-     real, dimension(size(b_cc,1),size(b_cc,2))         :: b_ccl, b_ccr, db1, db2, db3
+     real, dimension(size(b_cc,1),size(b_cc,2))         :: bclflx, bcrflx, db1, db2, db3 
      real, dimension(size(u,1),size(u,2)), target       :: flx, ql, qr
-     real, dimension(size(u,1),size(u,2))               :: ul, ur, du1, du2, du3
+     real, dimension(size(u,1),size(u,2))               :: flx_l, flx_r
+     real, dimension(size(u,1),size(u,2))               :: du1, du2, du3 !ul, ur, 
 
-     real, dimension(size(psi,1),size(psi,2))           :: psi__l, psi__r, dpsi1, dpsi2, dpsi3
+     real, dimension(size(psi,1),size(psi,2))           :: psilflx, psirflx, dpsi1, dpsi2, dpsi3 
      real, dimension(size(psi,1),size(psi,2)), target   :: psi_l, psi_r
      real, dimension(size(psi,1),size(psi,2)),target    :: psi_cc
-
+     class(component_fluid),                 pointer    :: fl
 
      integer                                            :: nx
+     integer                                            :: i
 
      nx  = size(u,2)
      if (size(b_cc,2) /= nx) call die("[fluidupdate:rk2] size b_cc and u mismatch")
      mag_cc = huge(1.)
 
+     do i = 1, flind%fluids
+        fl    => flind%all_fluids(i)%fl
+     end do
      ! Only muscl and rk2 schemes should be considered for production use.
      ! Other schemes are left here for educational purposes, just to show how to construct alternative approaches.
      select case (h_solver)
-        case ("rk2i")
-           call interpol(u,b_cc,psi,ql,qr,b_cc_l,b_cc_r,psi_l,psi_r)
-           call riemann_wrap                   ! Now we advance the left and right states by a timestep.
-           call du_db(du1, db1,dpsi1)
-           call interpol(u+half*du1,b_cc+half*db1,psi+half*dpsi1,ql,qr,b_cc_l,b_cc_r,psi_l,psi_r)
-           call riemann_wrap                   ! second call for Riemann problem uses states evolved to half timestep
-           call update
-        case ("muscl")
-           call slope
-           call ulr_fluxes_qlr
-           call riemann_wrap
-           call update
-        case ("rk2")
-           call slope
-           call ulr_to_qlr                     ! Just the slope is used to feed 1st call to Riemann solver
-           call riemann_wrap                   ! Now we advance the left and right states by half timestep.
-           call du_db(du1, db1,dpsi1)               ! The slope is already calculated and can be reused
-           call ulr_to_qlr(half*du1, half*db1,half*dpsi1)
-           call riemann_wrap                   ! second call for Riemann problem uses states evolved to half timestep
-           call update
-        case ("rk2_s")                         ! RK2 with alternative approach to calculating slopes for 2nd step
-           call slope
-           call ulr_to_qlr
-           call riemann_wrap
-           call du_db(du1, db1,dpsi1)
-           call slope(half*du1, half*db1,half*dpsi1)
-           call ulr_to_qlr
-           call riemann_wrap
-           call update
-        case ("rk2_muscl")
-           call slope
-           call ulr_fluxes_qlr
-           call riemann_wrap                   ! MUSCL-Hancock is used to feed 1st call to Riemann solver
-           call du_db(du1, db1,dpsi1)          ! Now we can calculate state for half-timestep and recalculate slopes
-           call ulr_to_qlr(half*du1, half*db1,half*dpsi1)
-           call riemann_wrap                   ! second call for Riemann problem needs just the slope from states evolved to half timestep
-           call update
-        case ("rk2_muscl_s")                   ! MUSCL-RK2 with alternative approach to calculating slopes for 2nd step
-           call slope
-           call ulr_fluxes_qlr
-           call riemann_wrap
-           call du_db(du1, db1,dpsi1)
-           call slope(half*du1,half*db1,half*dpsi1)
-           call ulr_to_qlr
-           call riemann_wrap
-           call update
-        case ("euler")                         ! Gives quite sharp advection, especially for CFL=0.5, but it is unstable and produces a lot of noise. Do not use, except for educational purposes.
-           call slope
-           call ulr_to_qlr
-           call riemann_wrap
-           call update
-        case ("heun")
-           call slope
-           call ulr_to_qlr
-           call riemann_wrap
-           call du_db(du1, db1,dpsi1)
-           call ulr_to_qlr(du1, db1,dpsi1)
-           call riemann_wrap
-           call update([1., 1.])
-        case ("rk4")
-           call slope
-           call ulr_to_qlr
-           call riemann_wrap
-           call du_db(du1, db1,dpsi1)
-           call ulr_to_qlr(half*du1, half*db1,half*dpsi1)
-           call riemann_wrap
-           call du_db(du2, db2,dpsi2)
-           call ulr_to_qlr(half*du2, half*db2,half*dpsi2)
-           call riemann_wrap
-           call du_db(du3, db3,dpsi3)
-           call ulr_to_qlr(du3, db3,dpsi3)
-           call riemann_wrap
-           call update([1., 1., 2., 2.])
-        case ("rk4_s")                         ! RK4 with alternative approach to calculating slopes for 2nd-4th step
-           call slope
-           call ulr_to_qlr
-           call riemann_wrap
-           call du_db(du1, db1,dpsi1)
-           call slope(half*du1, half*db1, half*dpsi1)
-           call ulr_to_qlr
-           call riemann_wrap
-           call du_db(du2, db2,dpsi2)
-           call slope(half*du2, half*db2, half*dpsi2)
-           call ulr_to_qlr
-           call riemann_wrap
-           call du_db(du3, db3, dpsi3)
-           call slope(du3, db3, dpsi3)
-           call ulr_to_qlr
-           call riemann_wrap
-           call update([1., 1., 2., 2.])
-        case default
-           call die("[fluidupdate:sweep_dsplit] No recognized solver")
+     case ("rk2i")
+        call interpol(u,b_cc,psi,ql,qr,b_cc_l,b_cc_r,psi_l,psi_r)
+        call riemann_wrap                   ! Now we advance the left and right states by a timestep.
+        call du_db(du1, db1,dpsi1)
+        call interpol(u+half*du1,b_cc+half*db1,psi+half*dpsi1,ql,qr,b_cc_l,b_cc_r,psi_l,psi_r)
+        call riemann_wrap                   ! second call for Riemann problem uses states evolved to half timestep
+        call update
+     case ("muscl")
+        call interpol(u,b_cc,psi,ql,qr,b_cc_l,b_cc_r,psi_l,psi_r)
+        call musclflx(nx,fl%gam,ql,qr,b_cc_l,b_cc_r,psi_l,psi_r,flx_l,flx_r,bclflx,bcrflx,psilflx,psirflx)
+        call riemann_wrap
+        call update
+     case default
+        call die("[fluidupdate:sweep_dsplit] No recognized solver")
      end select
 
-     contains
+   contains
 
-       ! some shortcuts
+        ! some shortcuts
+        
+     subroutine du_db(du, db, dpsi)
 
-        subroutine slope(uu, bb, pp)
+       use constants,  only: DIVB_HDC
+       use global,     only: divB_0_method
 
-           use constants,    only: half, xdim, DIVB_HDC
-           use dataio_pub,   only: die
-           use fluxlimiters, only: flimiter, blimiter
-           use global,       only: divB_0_method
+       implicit none
+       
+       real, dimension(size(u,1),size(u,2)),       intent(out) :: du
+       real, dimension(size(b_cc,1),size(b_cc,2)), intent(out) :: db
+       real, dimension(size(psi,1),size(psi,2)),   intent(out) :: dpsi
+       
+       du(:,2:nx) = dtodx*(flx(:,1:nx-1) - flx(:,2:nx))
+       du(:,1) = du(:,2)
+       
+       db(:,2:nx) = dtodx*(mag_cc(:,1:nx-1) - mag_cc(:,2:nx))
+       db(:,1) = db(:,2)
+       
+       if (divB_0_method == DIVB_HDC) then
+          dpsi(:,2:nx) = dtodx*(psi_cc(:,1:nx-1) - psi_cc(:,2:nx))
+          dpsi(:,1) = dpsi(:,2)
+       else
+          dpsi = 0.
+       endif
 
-           implicit none
+     end subroutine du_db
 
-           real, optional, dimension(size(u,1),size(u,2)),       intent(in) :: uu
-           real, optional, dimension(size(b_cc,1),size(b_cc,2)), intent(in) :: bb
-           real, optional, dimension(size(psi,1),size(psi,2)),   intent(in) :: pp
+     subroutine riemann_wrap()
+       
+       use constants,  only: xdim, zdim, DIVB_HDC
+       use fluidindex, only: flind
+       use fluidtypes, only: component_fluid
+       use global,     only: divB_0_method
+       use hlld,       only: riemann_hlld
 
+       implicit none
 
-           real, dimension(size(u,1),size(u,2))       :: du
-           real, dimension(size(b_cc,1),size(b_cc,2)) :: db
-
-           if ((present(uu) .neqv. present(bb)) .or. (present(bb) .neqv. present(pp))) &
-                call die("[fluidupdate:solve:slope] either none or all optional arguments must be present")
-
-           if (present(uu)) then
-              du  = flimiter(u + uu)
-              ul  = u + uu - half*du
-              ur  = u + uu + half*du
-           else
-              du  = flimiter(u)
-              ul  = u - half*du
-              ur  = u + half*du
-           endif
-
-           if (present(bb)) then
-              db  = blimiter(b_cc + bb)
-              b_ccl = b_cc + bb - half*db
-              b_ccr = b_cc + bb + half*db
-           else
-              db  = blimiter(b_cc)
-              b_ccl = b_cc - half*db
-              b_ccr = b_cc + half*db
-           endif
-
-           if (divB_0_method == DIVB_HDC) then
-              if (present(pp)) then
-                 psi__l = psi + pp
-              else
-                 psi__l = psi
-              endif
-              psi__r = psi__l
-              if (present(bb)) then
-                 b_ccl(xdim, :) = b_cc(xdim, :) + bb(xdim, :)
-              else
-                 b_ccl(xdim, :) = b_cc(xdim, :)
-              endif
-              b_ccr(xdim, :) = b_ccl(xdim, :)
-           endif
-
-
-        end subroutine slope
-
-        subroutine ulr_to_qlr(du, db, dpsi)
-
-           use constants,  only: DIVB_HDC
-           use dataio_pub, only: die
-           use global,     only: divB_0_method
-
-           implicit none
-
-           real, optional, dimension(size(u,1),size(u,2)),       intent(in) :: du
-           real, optional, dimension(size(b_cc,1),size(b_cc,2)), intent(in) :: db
-           real, optional, dimension(size(psi,1),size(psi,2)),   intent(in) :: dpsi
-
-           real, dimension(size(u,1),size(u,2))               :: u_l, u_r
-
-           if ((present(du) .neqv. present(db)) .or. (present(db) .neqv. present(dpsi))) &
-                call die("[fluidupdate:solve:slope] either none or all optional arguments must be present")
-
-           if (present(du)) then
-              u_l = ur + du
-              u_r(:,1:nx-1) = ul(:,2:nx) + du(:,2:nx)
-           else
-              u_l = ur
-              u_r(:,1:nx-1) = ul(:,2:nx)
-           endif
-           u_r(:,nx) = u_r(:,nx-1)
-
-           if (present(db)) then
-              b_cc_l = b_ccr + db
-              b_cc_r(:,1:nx-1) = b_ccl(:,2:nx) + db(:,2:nx)
-           else
-              b_cc_l = b_ccr
-              b_cc_r(:,1:nx-1) = b_ccl(:,2:nx)
-           endif
-           b_cc_r(:,nx) = b_cc_r(:,nx-1)
-
-           if (divB_0_method == DIVB_HDC) then
-              if (present(dpsi)) then
-                 psi_l = psi__r + dpsi
-                 psi_r(:,1:nx-1) = psi__l(:,2:nx) + dpsi(:,2:nx)
-              else
-                 psi_l = psi__r
-                 psi_r(:,1:nx-1) = psi__l(:,2:nx)
-              endif
-              psi_r(:,nx) = psi_r(:,nx-1)
-           endif
-
-           ql = utoq(u_l,b_cc_l)
-           qr = utoq(u_r,b_cc_r)
-
-        end subroutine ulr_to_qlr
-
-        subroutine ulr_fluxes_qlr
-
-           use constants,  only: DIVB_HDC
-           use hlld,       only: fluxes
-           use global,     only: divB_0_method
-
-           implicit none
-
-           real, dimension(size(u,1)+size(b_cc,1)+size(psi,1),size(u,2)), target :: flx
-           real, dimension(size(u,1),size(u,2))                                  :: u_l, u_r
-
-           flx  = fluxes(ul,b_ccl,psi__l) - fluxes(ur,b_ccr,psi__r)
-
-           u_l = ur + half*dtodx*flx(:size(u,1),:)
-           u_r(:,1:nx-1) = ul(:,2:nx) + half*dtodx*flx(:size(u,1),2:nx)
-           u_r(:,nx) = u_r(:,nx-1)
-
-           b_cc_l(:,2:nx) = b_ccr(:,2:nx) + half*dtodx*flx(size(u,1)+1:size(u,1)+size(b_cc,1),2:nx)
-           b_cc_l(:,1) = b_cc_l(:,2)
-           b_cc_r(:,1:nx-1) = b_ccl(:,2:nx) + half*dtodx*flx(size(u,1)+1:size(u,1)+size(b_cc,1),2:nx)
-           b_cc_r(:,nx) = b_cc_r(:,nx-1)
-
-           if (divB_0_method == DIVB_HDC) then
-              psi_l(1,2:nx) = psi__r(1,2:nx) + half*dtodx*flx(size(u,1)+size(b_cc,1)+1,2:nx)
-              psi_l(:,1) = psi_l(:,2)
-              psi_r(1,1:nx-1) = psi__l(1,2:nx) + half*dtodx*flx(size(u,1)+size(b_cc,1)+1,2:nx)
-              psi_r(:,nx) = psi_r(:,nx-1)
-           endif
-           ql = utoq(u_l,b_cc_l)
-           qr = utoq(u_r,b_cc_r)
-
-        end subroutine ulr_fluxes_qlr
-
-        subroutine du_db(du, db, dpsi)
-
-           use constants,  only: DIVB_HDC
-           use global,     only: divB_0_method
-
-           implicit none
-
-           real, dimension(size(u,1),size(u,2)),       intent(out) :: du
-           real, dimension(size(b_cc,1),size(b_cc,2)), intent(out) :: db
-           real, dimension(size(psi,1),size(psi,2)),   intent(out) :: dpsi
-
-           du(:,2:nx) = dtodx*(flx(:,1:nx-1) - flx(:,2:nx))
-           du(:,1) = du(:,2)
-
-           db(:,2:nx) = dtodx*(mag_cc(:,1:nx-1) - mag_cc(:,2:nx))
-           db(:,1) = db(:,2)
-
-           if (divB_0_method == DIVB_HDC) then
-              dpsi(:,2:nx) = dtodx*(psi_cc(:,1:nx-1) - psi_cc(:,2:nx))
-              dpsi(:,1) = dpsi(:,2)
-           else
-              dpsi = 0.
-           endif
-
-        end subroutine du_db
-
-        subroutine riemann_wrap()
-
-           use constants,  only: xdim, zdim, DIVB_HDC
-           use fluidindex, only: flind
-           use fluidtypes, only: component_fluid
-           use global,     only: divB_0_method
-           use hlld,       only: riemann_hlld
-
-           implicit none
-
-           integer :: i
-           class(component_fluid), pointer :: fl
-           real, dimension(size(b_cc,1),size(b_cc,2)), target :: b0, bf0
-           real, dimension(:,:), pointer :: p_flx, p_bcc, p_bccl, p_bccr, p_ql, p_qr
-           real, dimension(size(psi,1),size(psi,2)), target ::  p0, pf0
-           real, dimension(:,:), pointer :: p_psif, p_psi_l, p_psi_r
-
-           do i = 1, flind%fluids
-              fl    => flind%all_fluids(i)%fl
-              p_flx => flx(fl%beg:fl%end,:)
-              p_ql  => ql(fl%beg:fl%end,:)
-              p_qr  => qr(fl%beg:fl%end,:)
-              if (fl%is_magnetized) then
-                 p_bccl => b_cc_l(xdim:zdim,:)
-                 p_bccr => b_cc_r(xdim:zdim,:)
-                 p_bcc  => mag_cc(xdim:zdim,:)
-                 if (divB_0_method == DIVB_HDC) then
-                    p_psi_l => psi_l(:,:)
-                    p_psi_r => psi_r(:,:)
-                    p_psif  => psi_cc(:,:)
-                 endif
-             else ! ignore all magnetic field
-                 b0 = 0.
-                 p_bccl => b0
-                 p_bccr => b0
-                 p_bcc  => bf0
-                 if (divB_0_method == DIVB_HDC) then
-                    p0 = 0.
-                    p_psi_l => p0
-                    p_psi_r => p0
-                    p_psif  => pf0
-                 endif
-              endif
-
-              call riemann_hlld(nx, p_flx, p_ql, p_qr, p_bcc, p_bccl, p_bccr, p_psi_l, p_psi_r, p_psif, fl%gam) ! whole mag_cc is not needed now for simple schemes but rk2 and rk4 still rely on it
-           enddo
-        end subroutine riemann_wrap
-
-        subroutine update(weights)
-
-           use constants,        only: xdim, ydim, zdim, DIVB_HDC
-           use hdc,              only: chspeed
-           use fluidindex,       only: flind
-           use global,           only: divB_0_method, glm_alpha !cfl
-
+       integer :: i
+       !class(component_fluid), pointer :: fl
+       real, dimension(size(b_cc,1),size(b_cc,2)), target :: b0, bf0
+       real, dimension(:,:), pointer :: p_flx, p_bcc, p_bccl, p_bccr, p_ql, p_qr
+       real, dimension(size(psi,1),size(psi,2)), target ::  p0, pf0
+       real, dimension(:,:), pointer :: p_psif, p_psi_l, p_psi_r
+       
+       do i = 1, flind%fluids
+          fl    => flind%all_fluids(i)%fl
+          p_flx => flx(fl%beg:fl%end,:)
+          p_ql  => ql(fl%beg:fl%end,:)
+          p_qr  => qr(fl%beg:fl%end,:)
+          if (fl%is_magnetized) then
+             p_bccl => b_cc_l(xdim:zdim,:)
+             p_bccr => b_cc_r(xdim:zdim,:)
+             p_bcc  => mag_cc(xdim:zdim,:)
+             if (divB_0_method == DIVB_HDC) then
+                p_psi_l => psi_l(:,:)
+                p_psi_r => psi_r(:,:)
+                p_psif  => psi_cc(:,:)
+             endif
+          else ! ignore all magnetic field
+             b0 = 0.
+             p_bccl => b0
+             p_bccr => b0
+             p_bcc  => bf0
+             if (divB_0_method == DIVB_HDC) then
+                p0 = 0.
+                p_psi_l => p0
+                p_psi_r => p0
+                p_psif  => pf0
+             endif
+          endif
+          
+          call riemann_hlld(nx, p_flx, p_ql, p_qr, p_bcc, p_bccl, p_bccr, p_psi_l, p_psi_r, p_psif, fl%gam) ! whole mag_cc is not needed now for simple schemes but rk2 and rk4 still rely on it
+       enddo
+     end subroutine riemann_wrap
+     
+     subroutine update(weights)
+       
+       use constants,        only: xdim, ydim, zdim, DIVB_HDC
+       use hdc,              only: chspeed
+       use fluidindex,       only: flind
+       use global,           only: divB_0_method, glm_alpha !cfl
+       
 #ifdef COSM_RAYS
-           use fluidindex,       only: iarr_all_dn, iarr_all_mx, iarr_all_en
-           use global,           only: dt
-           use initcosmicrays,   only: iarr_crs, smallecr
-           use sourcecosmicrays, only: src_gpcr
+       use fluidindex,       only: iarr_all_dn, iarr_all_mx, iarr_all_en
+       use global,           only: dt
+       use initcosmicrays,   only: iarr_crs, smallecr
+       use sourcecosmicrays, only: src_gpcr
 #ifdef COSM_RAYS_SOURCES
-           use initcosmicrays,   only: iarr_crn
-           use sourcecosmicrays, only: src_crn
+       use initcosmicrays,   only: iarr_crn
+       use sourcecosmicrays, only: src_crn
 #endif /* COSM_RAYS_SOURCES */
 #endif /* COSM_RAYS */
-
-           implicit none
-
-           real, optional, dimension(:), intent(in) :: weights
-
-           real, dimension(:), allocatable :: w
-           integer :: iend  !< last component of any fluid (i.e. exclude CR or tracers here)
-
+       
+       implicit none
+       
+       real, optional, dimension(:), intent(in) :: weights
+       
+       real, dimension(:), allocatable :: w
+       integer :: iend  !< last component of any fluid (i.e. exclude CR or tracers here)
+       
 #ifdef COSM_RAYS
-           real, dimension(size(u,2),size(u,1))           :: u1
-           real, dimension(nx, flind%fluids), target      :: vx
-           real, dimension(nx)                            :: grad_pcr
-           real, dimension(nx, flind%crs%all)             :: decr
+       real, dimension(size(u,2),size(u,1))           :: u1
+       real, dimension(nx, flind%fluids), target      :: vx
+       real, dimension(nx)                            :: grad_pcr
+       real, dimension(nx, flind%crs%all)             :: decr
 #ifdef COSM_RAYS_SOURCES
-           real, dimension(nx, flind%crn%all)             :: srccrn
+       real, dimension(nx, flind%crn%all)             :: srccrn
 #endif /* COSM_RAYS_SOURCES */
 #endif /* COSM_RAYS */
-
-           iend = flind%all_fluids(flind%fluids)%fl%end
-
-           if (present(weights)) then
-              allocate(w(size(weights)))
-              w = weights/sum(weights)
-           else
-              allocate(w(1))
-              w(1) = 1.
-           endif
-
-           u(:iend,2:nx) = u(:iend,2:nx) + w(1) * dtodx * (flx(:iend,1:nx-1) - flx(:iend,2:nx))
-           if (size(w)>=2) u(:iend,2:nx) = u(:iend,2:nx) + w(2) * du1(:iend,2:nx)
-           if (size(w)>=3) u(:iend,2:nx) = u(:iend,2:nx) + w(3) * du2(:iend,2:nx)
-           if (size(w)>=4) u(:iend,2:nx) = u(:iend,2:nx) + w(4) * du3(:iend,2:nx)
-           u(:iend,1) = u(:iend,2)
-           u(:iend,nx) = u(:iend,nx-1)
-
-           b_cc(ydim:zdim,2:nx) = b_cc(ydim:zdim,2:nx) + w(1) * dtodx * (mag_cc(ydim:zdim,1:nx-1) - mag_cc(ydim:zdim,2:nx))
-           if (size(w)>=2)  b_cc(ydim:zdim,2:nx) = b_cc(ydim:zdim,2:nx) + w(2) * db1(ydim:zdim,2:nx)
-           if (size(w)>=3)  b_cc(ydim:zdim,2:nx) = b_cc(ydim:zdim,2:nx) + w(3) * db2(ydim:zdim,2:nx)
-           if (size(w)>=4)  b_cc(ydim:zdim,2:nx) = b_cc(ydim:zdim,2:nx) + w(4) * db3(ydim:zdim,2:nx)
-
-           if (divB_0_method == DIVB_HDC) then
-
-              b_cc(xdim, 2:nx) = b_cc(xdim, 2:nx) + w(1) * dtodx * (mag_cc(xdim, 1:nx-1) - mag_cc(xdim, 2:nx))
-              if (size(w)>=2)  b_cc(xdim,2:nx) = b_cc(xdim,2:nx) + w(2) * db1(xdim,2:nx)
-              if (size(w)>=3)  b_cc(xdim,2:nx) = b_cc(xdim,2:nx) + w(3) * db2(xdim,2:nx)
-              if (size(w)>=4)  b_cc(xdim,2:nx) = b_cc(xdim,2:nx) + w(4) * db3(xdim,2:nx)
-
-              psi(1, 2:nx) = psi(1, 2:nx) + w(1) * dtodx * (psi_cc(1, 1:nx-1) - psi_cc(1, 2:nx))
-              if (size(w)>=2)  psi_cc(1,2:nx) = psi_cc(1,2:nx) + w(2) * dpsi1(1,2:nx)
-              if (size(w)>=3)  psi_cc(1,2:nx) = psi_cc(1,2:nx) + w(3) * dpsi2(1,2:nx)
-              if (size(w)>=4)  psi_cc(1,2:nx) = psi_cc(1,2:nx) + w(4) * dpsi3(1,2:nx)
-              psi(:,1) = psi(:,2)
-              psi(:,nx) = psi(:, nx-1)
-
-              !damping
-              psi = psi*exp(-glm_alpha*chspeed*dtodx)
-
-           endif
-
-           b_cc(:, 1)  = b_cc(:, 2)
-           b_cc(:, nx) = b_cc(:, nx-1)
-
-! This is lowest order implementation of CR
-! It agrees with the implementation in RTVD in the limit of small CR energy amounts
-! ToDo: integrate it into h_solver schemes
+       
+       iend = flind%all_fluids(flind%fluids)%fl%end
+       
+       if (present(weights)) then
+          allocate(w(size(weights)))
+          w = weights/sum(weights)
+       else
+          allocate(w(1))
+          w(1) = 1.
+       endif
+       
+       u(:iend,2:nx) = u(:iend,2:nx) + w(1) * dtodx * (flx(:iend,1:nx-1) - flx(:iend,2:nx))
+       if (size(w)>=2) u(:iend,2:nx) = u(:iend,2:nx) + w(2) * du1(:iend,2:nx)
+       if (size(w)>=3) u(:iend,2:nx) = u(:iend,2:nx) + w(3) * du2(:iend,2:nx)
+       if (size(w)>=4) u(:iend,2:nx) = u(:iend,2:nx) + w(4) * du3(:iend,2:nx)
+       u(:iend,1) = u(:iend,2)
+       u(:iend,nx) = u(:iend,nx-1)
+       
+       b_cc(ydim:zdim,2:nx) = b_cc(ydim:zdim,2:nx) + w(1) * dtodx * (mag_cc(ydim:zdim,1:nx-1) - mag_cc(ydim:zdim,2:nx))
+       if (size(w)>=2)  b_cc(ydim:zdim,2:nx) = b_cc(ydim:zdim,2:nx) + w(2) * db1(ydim:zdim,2:nx)
+       if (size(w)>=3)  b_cc(ydim:zdim,2:nx) = b_cc(ydim:zdim,2:nx) + w(3) * db2(ydim:zdim,2:nx)
+       if (size(w)>=4)  b_cc(ydim:zdim,2:nx) = b_cc(ydim:zdim,2:nx) + w(4) * db3(ydim:zdim,2:nx)
+       
+       if (divB_0_method == DIVB_HDC) then
+          
+          b_cc(xdim, 2:nx) = b_cc(xdim, 2:nx) + w(1) * dtodx * (mag_cc(xdim, 1:nx-1) - mag_cc(xdim, 2:nx))
+          if (size(w)>=2)  b_cc(xdim,2:nx) = b_cc(xdim,2:nx) + w(2) * db1(xdim,2:nx)
+          if (size(w)>=3)  b_cc(xdim,2:nx) = b_cc(xdim,2:nx) + w(3) * db2(xdim,2:nx)
+          if (size(w)>=4)  b_cc(xdim,2:nx) = b_cc(xdim,2:nx) + w(4) * db3(xdim,2:nx)
+          
+          psi(1, 2:nx) = psi(1, 2:nx) + w(1) * dtodx * (psi_cc(1, 1:nx-1) - psi_cc(1, 2:nx))
+          if (size(w)>=2)  psi_cc(1,2:nx) = psi_cc(1,2:nx) + w(2) * dpsi1(1,2:nx)
+          if (size(w)>=3)  psi_cc(1,2:nx) = psi_cc(1,2:nx) + w(3) * dpsi2(1,2:nx)
+          if (size(w)>=4)  psi_cc(1,2:nx) = psi_cc(1,2:nx) + w(4) * dpsi3(1,2:nx)
+          psi(:,1) = psi(:,2)
+          psi(:,nx) = psi(:, nx-1)
+          
+          !damping
+          psi = psi*exp(-glm_alpha*chspeed*dtodx)
+          
+       endif
+       
+       b_cc(:, 1)  = b_cc(:, 2)
+       b_cc(:, nx) = b_cc(:, nx-1)
+       
+       ! This is lowest order implementation of CR
+       ! It agrees with the implementation in RTVD in the limit of small CR energy amounts
+       ! ToDo: integrate it into h_solver schemes
 #if defined COSM_RAYS && defined IONIZED
-
-           if (nx > 1) then
-              ! transposition for compatibility with RTVD-based routines
-              u1 = transpose(u)
-
-              vx = u1(:, iarr_all_mx) / u1(:, iarr_all_dn) ! this may also be useful for gravitational acceleration
-              ! Replace dt/dtodx by dx == cg%dl(ddim)
-              call src_gpcr(u1, nx, dt/dtodx, div_v1d, decr, grad_pcr)
-              u1(:, iarr_crs(:)) = u1(:, iarr_crs(:)) + decr(:,:) * dt
-              u1(:, iarr_crs(:)) = max(smallecr, u1(:, iarr_crs(:)))
-              u1(:, iarr_all_mx(flind%ion%pos)) = u1(:, iarr_all_mx(flind%ion%pos)) + grad_pcr * dt
+       
+       if (nx > 1) then
+          ! transposition for compatibility with RTVD-based routines
+          u1 = transpose(u)
+          
+          vx = u1(:, iarr_all_mx) / u1(:, iarr_all_dn) ! this may also be useful for gravitational acceleration
+          ! Replace dt/dtodx by dx == cg%dl(ddim)
+          call src_gpcr(u1, nx, dt/dtodx, div_v1d, decr, grad_pcr)
+          u1(:, iarr_crs(:)) = u1(:, iarr_crs(:)) + decr(:,:) * dt
+          u1(:, iarr_crs(:)) = max(smallecr, u1(:, iarr_crs(:)))
+          u1(:, iarr_all_mx(flind%ion%pos)) = u1(:, iarr_all_mx(flind%ion%pos)) + grad_pcr * dt
 #ifndef ISO
-              u1(:, iarr_all_en(flind%ion%pos)) = u1(:, iarr_all_en(flind%ion%pos)) + vx(:, flind%ion%pos) * grad_pcr * dt
+          u1(:, iarr_all_en(flind%ion%pos)) = u1(:, iarr_all_en(flind%ion%pos)) + vx(:, flind%ion%pos) * grad_pcr * dt
 #endif /* !ISO */
-           endif
+       endif
 #ifdef COSM_RAYS_SOURCES
-           call src_crn(u1, nx, srccrn, dt) ! n safe
-           u1(:, iarr_crn) = u1(:, iarr_crn) + srccrn(:,:)*dt
+       call src_crn(u1, nx, srccrn, dt) ! n safe
+       u1(:, iarr_crn) = u1(:, iarr_crn) + srccrn(:,:)*dt
 #endif /* COSM_RAYS_SOURCES */
-
-           u = transpose(u1)
-
+       
+       u = transpose(u1)
+       
 #else
-           if (.false.) div_v1d = div_v1d + 0.  ! suppress compiler warnings
+       if (.false.) div_v1d = div_v1d + 0.  ! suppress compiler warnings
 #endif /* COSM_RAYS && IONIZED */
-
-           deallocate(w)
-
-        end subroutine update
-
-  end subroutine solve
+       
+       deallocate(w)
+       
+     end subroutine update
+     
+   end subroutine solve
 
 !--------------------------------------------------------------------------------------------------------------
 
-   function utoq(u,b_cc) result(q)
+ end module fluidupdate
 
-     use constants,  only: half, xdim, zdim
-     use fluidindex, only: flind
-     use fluidtypes, only: component_fluid
-     use func,       only: ekin
+! function utoq(u,b_cc) result(q)
 
-     implicit none
+   !   use constants,  only: half, xdim, zdim
+   !   use fluidindex, only: flind
+   !   use fluidtypes, only: component_fluid
+   !   use func,       only: ekin
 
-     real, dimension(:,:),   intent(in)    :: u , b_cc
+   !   implicit none
 
-     real, dimension(size(u,1),size(u,2))  :: q
-     integer  :: p
+   !   real, dimension(:,:),   intent(in)    :: u , b_cc
 
-     class(component_fluid), pointer       :: fl
+   !   real, dimension(size(u,1),size(u,2))  :: q
+   !   integer  :: p
 
-     do p = 1, flind%fluids
-        fl => flind%all_fluids(p)%fl
+   !   class(component_fluid), pointer       :: fl
 
-        q(fl%idn,:) =  u(fl%idn,:)
-        q(fl%imx,:) =  u(fl%imx,:)/u(fl%idn,:)
-        q(fl%imy,:) =  u(fl%imy,:)/u(fl%idn,:)
-        q(fl%imz,:) =  u(fl%imz,:)/u(fl%idn,:)
-        ! J.CoPhy 208 (2005),Pg 317, Eq. 2. Gas pressure: p = (gamma-1)*(e-half*rho*v^2-half*B^2) and Total pressure: p_T = p + half*B^2. (1) and (2) are markers for HD and MHD.
-        if (fl%has_energy) then
-            q(fl%ien,:) =  fl%gam_1*(u(fl%ien,:) - ekin(u(fl%imx,:), u(fl%imy,:), u(fl%imz,:), u(fl%idn,:))) ! Primitive variable for gas pressure (p) without magnetic fields. (1)
-            if (fl%is_magnetized) then
-               q(fl%ien,:) =  q(fl%ien,:) - half*fl%gam_1*sum(b_cc(xdim:zdim,:)**2, dim=1) ! Primitive variable for gas pressure (p) with magnetic fields. The requirement of total pressure is dealt in the fluxes and hlld routines. (2)
-            endif
-        endif
+   !   do p = 1, flind%fluids
+   !      fl => flind%all_fluids(p)%fl
 
-     enddo
+   !      q(fl%idn,:) =  u(fl%idn,:)
+   !      q(fl%imx,:) =  u(fl%imx,:)/u(fl%idn,:)
+   !      q(fl%imy,:) =  u(fl%imy,:)/u(fl%idn,:)
+   !      q(fl%imz,:) =  u(fl%imz,:)/u(fl%idn,:)
+   !      ! J.CoPhy 208 (2005),Pg 317, Eq. 2. Gas pressure: p = (gamma-1)*(e-half*rho*v^2-half*B^2) and Total pressure: p_T = p + half*B^2. (1) and (2) are markers for HD and MHD.
+   !      if (fl%has_energy) then
+   !          q(fl%ien,:) =  fl%gam_1*(u(fl%ien,:) - ekin(u(fl%imx,:), u(fl%imy,:), u(fl%imz,:), u(fl%idn,:))) ! Primitive variable for gas pressure (p) without magnetic fields. (1)
+   !          if (fl%is_magnetized) then
+   !             q(fl%ien,:) =  q(fl%ien,:) - half*fl%gam_1*sum(b_cc(xdim:zdim,:)**2, dim=1) ! Primitive variable for gas pressure (p) with magnetic fields. The requirement of total pressure is dealt in the fluxes and hlld routines. (2)
+   !          endif
+   !      endif
 
-   end function utoq
+   !   enddo
 
-end module fluidupdate
+   ! end function utoq
+
+
+! case ("euler")                         ! Gives quite sharp advection, especially for CFL=0.5, but it is unstable and produces a lot of noise. Do not use, except for educational purposes.
+        !    call slope
+        !    call ulr_to_qlr
+        !    call riemann_wrap
+        !    call update
+        ! case ("heun")
+        !    call slope
+        !    call ulr_to_qlr
+        !    call riemann_wrap
+        !    call du_db(du1, db1,dpsi1)
+        !    call ulr_to_qlr(du1, db1,dpsi1)
+        !    call riemann_wrap
+        !    call update([1., 1.])
+        ! case ("rk4")
+        !    call slope
+        !    call ulr_to_qlr
+        !    call riemann_wrap
+        !    call du_db(du1, db1,dpsi1)
+        !    call ulr_to_qlr(half*du1, half*db1,half*dpsi1)
+        !    call riemann_wrap
+        !    call du_db(du2, db2,dpsi2)
+        !    call ulr_to_qlr(half*du2, half*db2,half*dpsi2)
+        !    call riemann_wrap
+        !    call du_db(du3, db3,dpsi3)
+        !    call ulr_to_qlr(du3, db3,dpsi3)
+        !    call riemann_wrap
+        !    call update([1., 1., 2., 2.])
+
+
+! subroutine slope(uu, bb, pp)
+
+        !    use constants,    only: half, xdim, DIVB_HDC
+        !    use dataio_pub,   only: die
+        !    use fluxlimiters, only: flimiter, blimiter
+        !    use global,       only: divB_0_method
+
+        !    implicit none
+
+        !    real, optional, dimension(size(u,1),size(u,2)),       intent(in) :: uu
+        !    real, optional, dimension(size(b_cc,1),size(b_cc,2)), intent(in) :: bb
+        !    real, optional, dimension(size(psi,1),size(psi,2)),   intent(in) :: pp
+
+
+        !    real, dimension(size(u,1),size(u,2))       :: du
+        !    real, dimension(size(b_cc,1),size(b_cc,2)) :: db
+
+        !    if ((present(uu) .neqv. present(bb)) .or. (present(bb) .neqv. present(pp))) &
+        !         call die("[fluidupdate:solve:slope] either none or all optional arguments must be present")
+
+        !    if (present(uu)) then
+        !       du  = flimiter(u + uu)
+        !       ul  = u + uu - half*du
+        !       ur  = u + uu + half*du
+        !    else
+        !       du  = flimiter(u)
+        !       ul  = u - half*du
+        !       ur  = u + half*du
+        !    endif
+
+        !    if (present(bb)) then
+        !       db  = blimiter(b_cc + bb)
+        !       b_ccl = b_cc + bb - half*db
+        !       b_ccr = b_cc + bb + half*db
+        !    else
+        !       db  = blimiter(b_cc)
+        !       b_ccl = b_cc - half*db
+        !       b_ccr = b_cc + half*db
+        !    endif
+
+        !    if (divB_0_method == DIVB_HDC) then
+        !       if (present(pp)) then
+        !          psi__l = psi + pp
+        !       else
+        !          psi__l = psi
+        !       endif
+        !       psi__r = psi__l
+        !       if (present(bb)) then
+        !          b_ccl(xdim, :) = b_cc(xdim, :) + bb(xdim, :)
+        !       else
+        !          b_ccl(xdim, :) = b_cc(xdim, :)
+        !       endif
+        !       b_ccr(xdim, :) = b_ccl(xdim, :)
+        !    endif
+
+
+        ! end subroutine slope
+
+        ! subroutine ulr_to_qlr(du, db, dpsi)
+
+        !    use constants,  only: DIVB_HDC
+        !    use dataio_pub, only: die
+        !    use global,     only: divB_0_method
+
+        !    implicit none
+
+        !    real, optional, dimension(size(u,1),size(u,2)),       intent(in) :: du
+        !    real, optional, dimension(size(b_cc,1),size(b_cc,2)), intent(in) :: db
+        !    real, optional, dimension(size(psi,1),size(psi,2)),   intent(in) :: dpsi
+
+        !    real, dimension(size(u,1),size(u,2))               :: u_l, u_r
+
+        !    if ((present(du) .neqv. present(db)) .or. (present(db) .neqv. present(dpsi))) &
+        !         call die("[fluidupdate:solve:slope] either none or all optional arguments must be present")
+
+        !    if (present(du)) then
+        !       u_l = ur + du
+        !       u_r(:,1:nx-1) = ul(:,2:nx) + du(:,2:nx)
+        !    else
+        !       u_l = ur
+        !       u_r(:,1:nx-1) = ul(:,2:nx)
+        !    endif
+        !    u_r(:,nx) = u_r(:,nx-1)
+
+        !    if (present(db)) then
+        !       b_cc_l = b_ccr + db
+        !       b_cc_r(:,1:nx-1) = b_ccl(:,2:nx) + db(:,2:nx)
+        !    else
+        !       b_cc_l = b_ccr
+        !       b_cc_r(:,1:nx-1) = b_ccl(:,2:nx)
+        !    endif
+        !    b_cc_r(:,nx) = b_cc_r(:,nx-1)
+
+        !    if (divB_0_method == DIVB_HDC) then
+        !       if (present(dpsi)) then
+        !          psi_l = psi__r + dpsi
+        !          psi_r(:,1:nx-1) = psi__l(:,2:nx) + dpsi(:,2:nx)
+        !       else
+        !          psi_l = psi__r
+        !          psi_r(:,1:nx-1) = psi__l(:,2:nx)
+        !       endif
+        !       psi_r(:,nx) = psi_r(:,nx-1)
+        !    endif
+
+        !    ql = utoq(u_l,b_cc_l)
+        !    qr = utoq(u_r,b_cc_r)
+
+        ! end subroutine ulr_to_qlr
+
+        ! subroutine ulr_fluxes_qlr
+
+        !    use constants,  only: DIVB_HDC
+        !    use hlld,       only: fluxes
+        !    use global,     only: divB_0_method
+
+        !    implicit none
+
+        !    real, dimension(size(u,1)+size(b_cc,1)+size(psi,1),size(u,2)), target :: flx
+        !    real, dimension(size(u,1),size(u,2))                                  :: u_l, u_r
+
+        !    flx  = fluxes(ul,b_ccl,psi__l) - fluxes(ur,b_ccr,psi__r)
+
+        !    u_l = ur + half*dtodx*flx(:size(u,1),:)
+        !    u_r(:,1:nx-1) = ul(:,2:nx) + half*dtodx*flx(:size(u,1),2:nx)
+        !    u_r(:,nx) = u_r(:,nx-1)
+
+        !    b_cc_l(:,2:nx) = b_ccr(:,2:nx) + half*dtodx*flx(size(u,1)+1:size(u,1)+size(b_cc,1),2:nx)
+        !    b_cc_l(:,1) = b_cc_l(:,2)
+        !    b_cc_r(:,1:nx-1) = b_ccl(:,2:nx) + half*dtodx*flx(size(u,1)+1:size(u,1)+size(b_cc,1),2:nx)
+        !    b_cc_r(:,nx) = b_cc_r(:,nx-1)
+
+        !    if (divB_0_method == DIVB_HDC) then
+        !       psi_l(1,2:nx) = psi__r(1,2:nx) + half*dtodx*flx(size(u,1)+size(b_cc,1)+1,2:nx)
+        !       psi_l(:,1) = psi_l(:,2)
+        !       psi_r(1,1:nx-1) = psi__l(1,2:nx) + half*dtodx*flx(size(u,1)+size(b_cc,1)+1,2:nx)
+        !       psi_r(:,nx) = psi_r(:,nx-1)
+        !    endif
+        !    ql = utoq(u_l,b_cc_l)
+        !    qr = utoq(u_r,b_cc_r)
+
+        ! end subroutine ulr_fluxes_qlr
