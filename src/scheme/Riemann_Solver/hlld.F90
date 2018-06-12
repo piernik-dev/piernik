@@ -46,89 +46,68 @@ module hlld
   implicit none
 
   private
-  public :: riemann_hlld, fluxes
+  public :: riemann_hlld, musclflx
 
 contains
 
-  function fluxes(u, b_cc, psi) result(f) ! This function is called by muscl and rk2muscl
+  subroutine musclflx(n,gamma,ql,qr,b_ccl,b_ccr,psil,psir,flt,frt,bclf,bcrf,psilf,psirf)
 
-    use constants,  only: half, xdim, ydim, zdim, I_ONE, DIVB_HDC
-    use fluidindex, only: flind
+    use constants,  only: one, half, xdim, ydim, zdim, idn, imx, imy, imz, ien, DIVB_HDC
     use fluidtypes, only: component_fluid
     use func,       only: ekin
     use global,     only: divB_0_method
     use hdc,        only: chspeed
-
+    
     implicit none
 
-    real, dimension(:,:), intent(in) :: u
-    real, dimension(:,:), intent(in) :: b_cc
-    real, dimension(:,:), intent(in) :: psi
+    integer,              intent(in)  :: n
+    real,                 intent(in)  :: gamma
+    real, dimension(:,:), intent(in)  :: ql, qr
+    real, dimension(:,:), intent(in)  :: b_ccl, b_ccr
+    real, dimension(:,:), intent(in)  :: psil, psir
+    real, dimension(:,:), intent(out) :: flt, frt
+    real, dimension(:,:), intent(out) :: bclf, bcrf, psilf, psirf
 
-    real, dimension(size(u,1) + size(b_cc,1)+ size(psi,1), size(u,2)) :: f
-    real, dimension(size(u,2))                           :: vx, vy, vz, pr
-    integer                                              :: ip, boff, psioff
-    class(component_fluid), pointer                      :: fl
+    real                              :: enl, enr
+    integer                           :: i
 
-    boff = size(u, 1) ! assume xdim == 1
-    psioff = size(u, 1) + size(b_cc, 1) + I_ONE
-    f(boff+xdim:,:) = 0.  ! clear B and psi fluxes
+    do i = 1, n
+       
+    ! Left flux
 
-    do ip = 1, flind%fluids
+    flt(idn,i) = ql(idn,i)*ql(imx,i)
+    flt(imx,i) = ql(idn,i)*ql(imx,i)*ql(imx,i) + ( ql(ien,i) + half*sum(b_ccl(xdim:zdim,i)**2,dim=1)) - b_ccl(xdim,i)**2
+    flt(imy,i) = ql(idn,i)*ql(imx,i)*ql(imy,i) - b_ccl(xdim,i)*b_ccl(ydim,i)
+    flt(imz,i) = ql(idn,i)*ql(imx,i)*ql(imz,i) - b_ccl(xdim,i)*b_ccl(zdim,i)
+    if(divB_0_method .eq. DIVB_HDC) then
+       bclf(xdim,i) = half*((psir(1,i)+psil(1,i)) - chspeed*(b_ccr(xdim,i)-b_ccl(xdim,i)))
+       psilf(1,i)   = (chspeed**2)*half*((b_ccr(xdim,i)+b_ccl(xdim,i)) - (psir(1,i)-psil(1,i)/chspeed))
+    end if
+    bclf(ydim,i) = b_ccl(ydim,i)*ql(imx,i) - b_ccl(xdim,i)*ql(imy,i)
+    bclf(zdim,i) = b_ccl(zdim,i)*ql(imx,i) - b_ccl(xdim,i)*ql(imz,i)
 
-       fl => flind%all_fluids(ip)%fl
+    enl = (ql(ien,i)/(gamma - one)) + half*ql(idn,i)*sum(ql(imx:imz,i)**2) + half*sum(b_ccl(xdim:zdim,i)**2)
+    flt(ien,i) = (enl + (ql(ien,i) + half*sum(b_ccl(xdim:zdim,i)**2,dim=1))  )*ql(imx,i) - b_ccl(xdim,i)*dot_product(ql(imx:imz,i),b_ccl(xdim:zdim,i))
+       
+    ! Right flux
 
-       vx  =  u(fl%imx,:)/u(fl%idn,:)
-       vy  =  u(fl%imy,:)/u(fl%idn,:)
-       vz  =  u(fl%imz,:)/u(fl%idn,:)
+    frt(idn,i) = qr(idn,i)*qr(imx,i)
+    frt(imx,i) = qr(idn,i)*qr(imx,i)*qr(imx,i) + ( qr(ien,i) + half*sum(b_ccr(xdim:zdim,i)**2,dim=1)) - b_ccr(xdim,i)**2
+    frt(imy,i) = qr(idn,i)*qr(imx,i)*qr(imy,i) - b_ccr(xdim,i)*b_ccr(ydim,i)
+    frt(imz,i) = qr(idn,i)*qr(imx,i)*qr(imz,i) - b_ccr(xdim,i)*b_ccr(zdim,i)
+    if(divB_0_method .eq. DIVB_HDC) then
+       bcrf(xdim,i) = half*((psir(1,i)+psil(1,i)) - chspeed*(b_ccr(xdim,i)-b_ccl(xdim,i)))
+       psirf(1,i)   = (chspeed**2)*half*((b_ccr(xdim,i)+b_ccl(xdim,i)) - (psir(1,i)-psil(1,i)/chspeed))
+    end if
+    bcrf(ydim,i) = b_ccr(ydim,i)*qr(imx,i) - b_ccr(xdim,i)*qr(imy,i)
+    bcrf(zdim,i) = b_ccr(zdim,i)*qr(imx,i) - b_ccr(xdim,i)*qr(imz,i)
+    
+    enr = (qr(ien,i)/(gamma - one)) + half*qr(idn,i)*sum(qr(imx:imz,i)**2) + half*sum(b_ccr(xdim:zdim,i)**2)
+    frt(ien,i) = (enr + (qr(ien,i) + half*sum(b_ccr(xdim:zdim,i)**2,dim=1))  )*qr(imx,i) - b_ccr(xdim,i)*dot_product(qr(imx:imz,i),b_ccr(xdim:zdim,i))
 
-       if (fl%has_energy) then
-          ! Gas pressure without magnetic fields. Pg 317, Eq. 2. (1) and (2) are markers for HD and MHD
-          pr = fl%gam_1*(u(fl%ien,:) - ekin(u(fl%imx,:), u(fl%imy,:), u(fl%imz,:), u(fl%idn,:))) ! (1)
-          if (fl%is_magnetized) then
-             ! Gas pressure with magnetic fields. Pg 317, Eq. 2.
-             pr = pr - half*fl%gam_1*sum(b_cc(xdim:zdim,:)**2, dim=1) ! (2)
-          endif
-       else
-          ! Dust
-          pr = 0.
-       endif
-
-       f(fl%idn,:)  =  u(fl%imx,:)
-       if (fl%has_energy) then
-          if (fl%is_magnetized) then
-             f(fl%imx,:)  =  u(fl%imx,:)*vx(:) + (pr(:)+half*sum(b_cc(xdim:zdim,:)**2,dim=1)) - b_cc(xdim,:)**2 ! Eq. 2 Pg 317
-          else
-             f(fl%imx,:)  =  u(fl%imx,:)*vx(:) + pr(:)  ! b_cc does not contribute in the limit of vanishing magnetic fields. Hydro part is recovered trivially.
-          endif
-       else
-          f(fl%imx,:)  =  u(fl%imx,:)*vx(:)
-       endif
-       if (fl%is_magnetized) then
-          f(fl%imy,:)  =  u(fl%imy,:)*vx(:) - b_cc(xdim,:)*b_cc(ydim,:)
-          f(fl%imz,:)  =  u(fl%imz,:)*vx(:) - b_cc(xdim,:)*b_cc(zdim,:)
-          f(boff+ydim,:) =  b_cc(ydim,:)*vx(:) - b_cc(xdim,:)*vy(:)
-          f(boff+zdim,:) =  b_cc(zdim,:)*vx(:) - b_cc(xdim,:)*vz(:)
-          if (divB_0_method == DIVB_HDC) then
-             f(boff+xdim,:) = psi(1,:) ! Check this with MUSCL
-             f(psioff,:)    = chspeed*2*b_cc(xdim,:) ! Check this with MUSCL
-          endif
-       else
-          f(fl%imy,:)  =  u(fl%imy,:)*vx(:)
-          f(fl%imz,:)  =  u(fl%imz,:)*vx(:)
-       endif
-       if (fl%has_energy) then
-          f(fl%ien,:)  =  (u(fl%ien,:) + pr(:))*vx(:) ! Hydro regime. Eq. 2, Pg 317. Takes pr (1)
-          if (fl%is_magnetized) then
-             f(fl%ien,:) =  (u(fl%ien,:) + (pr(:)+half*sum(b_cc(xdim:zdim,:)**2,dim=1)))*vx(:) - b_cc(xdim,:)*(b_cc(xdim,:)*vx(:) + b_cc(ydim,:)*vy(:) + b_cc(zdim,:)*vz(:)) ! MHD regime. Eq. 2, Pg 317. Takes pr (2)
-          endif
-       endif
-
-    enddo
-
-    return
-
-  end function fluxes
+ end do
+  end subroutine musclflx
+  
 
   !------------------------------------------------------------------------------------------------------------------------------------------------
 
