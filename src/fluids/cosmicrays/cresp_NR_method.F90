@@ -266,14 +266,23 @@ module cresp_NR_method
             enddo
         enddo
 
-        a_min_lo = 0.8 * a_min_lo / clight
-        a_max_lo = 0.999999 / clight !1 * a_max_lo
-        a_min_up = 1.000005 / clight  ! 0.8 * a_min_up
-        a_max_up = 1.1 * a_max_up / clight
-        n_min_lo = 0.001 * n_min_lo
-        n_max_lo = 1.1 * n_max_lo
-        n_min_up = 0.001 * n_min_up
-        n_max_up = 1.1 * n_max_up
+!         a_min_lo = 0.8 * a_min_lo / clight
+!         a_max_lo = 0.999999 / clight !1 * a_max_lo
+!         a_min_up = 1.000005 / clight  ! 0.8 * a_min_up
+!         a_max_up = 1.1 * a_max_up / clight
+!         n_min_lo = 0.001 * n_min_lo
+!         n_max_lo = 1.1 * n_max_lo
+!         n_min_up = 0.001 * n_min_up
+!         n_max_up = 1.1 * n_max_up
+
+        a_min_lo = 0.2
+        a_max_lo = 0.999999
+        a_min_up = 1.000005
+        a_max_up = 200.0
+        n_min_lo = 1.0e-11
+        n_max_lo = 5000.0
+        n_min_up = 1.0e-12
+        n_max_up = 1000.0
 
         do i=1, arr_dim
             alpha_tab_lo(i) = ind_to_flog(i,a_min_lo,a_max_lo) ! a_min_lo * ten**((log10(a_max_lo/a_min_lo))/real(arr_dim-1,kind=8)*real((i-1),kind=8))
