@@ -130,7 +130,7 @@ module initcrspectrum
       p_up_init   = 7.5e2
       initial_condition = "powl"
       f_init      = 1.0
-      q_init      = 2.5
+      q_init      = 4.1
       bump_amp    = 0.5d0
       q_big       = 30.0d0
       cfl_cre     = 0.1
