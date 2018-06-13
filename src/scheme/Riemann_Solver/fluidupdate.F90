@@ -546,7 +546,8 @@ contains
         call update
      case ("muscl")
         call interpol(u,b_cc,psi,ql,qr,b_cc_l,b_cc_r,psi_l,psi_r)
-        call musclflx(nx,ql,qr,b_cc_l,b_cc_r,psi_l,psi_r,flx_l,flx_r,bclflx,bcrflx,psilflx,psirflx)
+        call musclflx(nx, ql, b_cc_l, psi_l, flx_l, bclflx, psilflx)
+        call musclflx(nx, qr, b_cc_r, psi_r, flx_r, bcrflx, psirflx)
         call ulr_fluxes_qlr
         call riemann_wrap
         call update
