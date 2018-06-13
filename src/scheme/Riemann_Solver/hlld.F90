@@ -68,7 +68,7 @@ contains
     real, dimension(:,:), intent(out) :: b_ccf, psif
 
     class(component_fluid), pointer   :: fl
-    real                              :: enl
+    real                              :: en
     integer                           :: ip, i
 
     qf    = zero
@@ -83,32 +83,34 @@ contains
 
           qf(fl%idn,i) = q(fl%idn,i)*q(fl%imx,i)
           if (fl%has_energy) then
-             qf(fl%imx,i) = q(fl%idn,i)*q(fl%imx,i)*q(fl%imx,i) + q(fl%ien,i)
              if (fl%is_magnetized) then
                 qf(fl%imx,i) = q(fl%idn,i)*q(fl%imx,i)*q(fl%imx,i) + (q(fl%ien,i) + half*sum(b_cc(xdim:zdim,i)**2,dim=1)) - b_cc(xdim,i)**2
+             else
+                qf(fl%imx,i) = q(fl%idn,i)*q(fl%imx,i)*q(fl%imx,i) + q(fl%ien,i)
              endif
+          else
+             qf(fl%imx,i) = q(fl%idn,i)*q(fl%imx,i)*q(fl%imx,i)
           endif
-          qf(fl%imy,i) = q(fl%idn,i)*q(fl%imx,i)*q(fl%imy,i)
-          qf(fl%imz,i) = q(fl%idn,i)*q(fl%imx,i)*q(fl%imz,i)
           if (fl%is_magnetized) then
              qf(fl%imy,i) = q(fl%idn,i)*q(fl%imx,i)*q(fl%imy,i) - b_cc(xdim,i)*b_cc(ydim,i)
              qf(fl%imz,i) = q(fl%idn,i)*q(fl%imx,i)*q(fl%imz,i) - b_cc(xdim,i)*b_cc(zdim,i)
              b_ccf(ydim,i)  = b_cc(ydim,i)*q(fl%imx,i) - b_cc(xdim,i)*q(fl%imy,i)
              b_ccf(zdim,i)  = b_cc(zdim,i)*q(fl%imx,i) - b_cc(xdim,i)*q(fl%imz,i)
              if (divB_0_method .eq. DIVB_HDC) then
-                ! We only need the flux, not the Riemann problem
-                !b_ccf(xdim,i) = half*((psir(1,i)+psi(1,i)) - chspeed*(b_ccr(xdim,i)-b_cc(xdim,i)))
-                !psif(1,i)   = (chspeed**2)*half*((b_ccr(xdim,i)+b_cc(xdim,i)) - (psir(1,i)-psi(1,i)/chspeed))
                 b_ccf(xdim,i) = psi(1,i)
                 psif(1,i)   = (chspeed**2)*b_cc(xdim,i)
              endif
+          else
+             qf(fl%imy,i) = q(fl%idn,i)*q(fl%imx,i)*q(fl%imy,i)
+             qf(fl%imz,i) = q(fl%idn,i)*q(fl%imx,i)*q(fl%imz,i)
           endif
           if (fl%has_energy) then
-             enl = (q(fl%ien,i)/(fl%gam_1)) + half*q(fl%idn,i)*sum(q(fl%imx:fl%imz,i)**2)
-             qf(fl%ien,i) = (enl + (q(fl%ien,i)))*q(fl%imx,i)
              if (fl%is_magnetized) then
-                enl = (q(fl%ien,i)/(fl%gam_1)) + half*q(fl%idn,i)*sum(q(fl%imx:fl%imz,i)**2) + half*sum(b_cc(xdim:zdim,i)**2)
-                qf(fl%ien,i) = (enl + (q(fl%ien,i) + half*sum(b_cc(xdim:zdim,i)**2,dim=1)))*q(fl%imx,i) - b_cc(xdim,i)*dot_product(q(fl%imx:fl%imz,i),b_cc(xdim:zdim,i))
+                en = (q(fl%ien,i)/(fl%gam_1)) + half*q(fl%idn,i)*sum(q(fl%imx:fl%imz,i)**2) + half*sum(b_cc(xdim:zdim,i)**2)
+                qf(fl%ien,i) = (en + (q(fl%ien,i) + half*sum(b_cc(xdim:zdim,i)**2,dim=1)))*q(fl%imx,i) - b_cc(xdim,i)*dot_product(q(fl%imx:fl%imz,i),b_cc(xdim:zdim,i))
+             else
+                en = (q(fl%ien,i)/(fl%gam_1)) + half*q(fl%idn,i)*sum(q(fl%imx:fl%imz,i)**2)
+                qf(fl%ien,i) = (en + (q(fl%ien,i)))*q(fl%imx,i)
              endif
           endif
 
