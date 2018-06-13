@@ -459,7 +459,7 @@ contains
 
       has_n_gt_zero(:) = .false. ; has_e_gt_zero(:)  = .false.
       num_has_gt_zero   = 0      ; num_active_bins = 0
-      pre_i_lo      = 0       ; pre_i_up       = ncre
+      pre_i_lo      = 0          ; pre_i_up       = ncre
 
       if (allocated(nonempty_bins)) deallocate(nonempty_bins)
       if (allocated(active_bins))   deallocate(active_bins)
@@ -527,39 +527,28 @@ contains
       is_active_bin = .false.
 
 ! find the rest of active bins, accounts for a possible break in the spectrum ! TODO
-      where (e_amplitudes_l .gt. e_small .and. e_amplitudes_r .gt. e_small) ! this should take care of break in the spectrum
+      where (e_amplitudes_l .gt. e_small .or. e_amplitudes_r .gt. e_small) ! this should take care of break in the spectrum
             is_active_bin = .true.
       endwhere
 
       pre_i_lo = 0 ; pre_i_up = ncre
-! find i_lo (compare right bin face e amplitudes against e_small)
+
       do i = 1, ncre
          pre_i_lo = i
-         if (e_amplitudes_r(pre_i_lo) .gt. e_small) then
-            is_active_bin(pre_i_lo) = .true.
-            exit
-         endif
+         if (is_active_bin(i)) exit
       enddo
 ! If cell empty, leave
       if (pre_i_lo .eq. ncre) then
          empty_cell = .true.
          return
       endif
-! find i_up (compare left bin face e amplitudes against e_small)
+
       do i = ncre,1,-1
          pre_i_up = i
-         if (e_amplitudes_l(pre_i_up) .gt. e_small) then
-            is_active_bin(pre_i_up) = .true.
-            exit
-         endif
+         if (is_active_bin(i)) exit
       enddo
 
       pre_i_lo = pre_i_lo - 1
-
-      is_active_bin(:i_lo) = .false.
-      is_active_bin(i_up:) = .false.
-
-      num_active_bins = count(is_active_bin)
 
       if (num_active_bins .gt. 1) then
          i_lo = pre_i_lo;   i_up = pre_i_up
@@ -569,6 +558,11 @@ contains
          empty_cell = .true.
          return
       endif
+
+      if (i_lo .gt. 0)     is_active_bin(:i_lo) = .false.
+      if (i_up .lt. ncre ) is_active_bin(i_up+1:) = .false.
+
+      num_active_bins = count(is_active_bin)
 
 #ifdef VERBOSE
       print *, "find_active_bins_v1 is_active_bin:",is_active_bin, "|", count(is_active_bin), num_has_gt_zero
