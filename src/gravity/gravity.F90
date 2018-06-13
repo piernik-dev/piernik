@@ -43,6 +43,7 @@ module gravity
    private
    public :: init_grav, init_grav_ext, grav_accel, source_terms_grav, grav_pot2accel, grav_pot_3d, grav_type, get_gprofs, grav_accel2pot, sum_potential, manage_grav_pot_3d, update_gp
    public :: r_gc, ptmass, ptm_x, ptm_y, ptm_z, r_smooth, nsub, tune_zeq, tune_zeq_bnd, r_grav, n_gravr, user_grav, gprofs_target, ptm2_x
+   public :: grav_pot_3d_called, variable_gp
 
    integer, parameter         :: gp_stat_len   = 9
    integer, parameter         :: gproft_len    = 5
