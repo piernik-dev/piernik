@@ -111,7 +111,7 @@ contains
 
     use constants,      only: xdim, zdim, I_ONE, DIVB_HDC
     use global,         only: divB_0_method
-    use hdc,            only: eglm
+    use hdc,            only: glmdamping!,eglm
     use user_hooks,     only: problem_customize_solution
 #if defined(COSM_RAYS) && defined(MULTIGRID)
     use all_boundaries,      only: all_fluid_boundaries
@@ -143,8 +143,11 @@ contains
     endif
     if (associated(problem_customize_solution)) call problem_customize_solution(forward)
 
-    if (divB_0_method == DIVB_HDC) call eglm
-
+    if (divB_0_method == DIVB_HDC) then
+      
+       call glmdamping
+      
+    end if
   end subroutine make_3sweeps
 
 !-------------------------------------------------------------------------------------------------------------------
@@ -505,10 +508,7 @@ contains
      use global,     only: h_solver
      use interpolations, only: interpol
      use hlld,       only: musclflx
-     use fluidindex, only: flind
-     use fluidtypes, only: component_fluid
-     
-
+ 
      implicit none
 
      real, dimension(:,:), intent(inout) :: u
@@ -521,27 +521,23 @@ contains
      real, dimension(size(b_cc,1),size(b_cc,2))         :: bclflx, bcrflx, db1, db2, db3 
      real, dimension(size(u,1),size(u,2)), target       :: flx, ql, qr
      real, dimension(size(u,1),size(u,2))               :: flx_l, flx_r
-     real, dimension(size(u,1),size(u,2))               :: du1, du2, du3 !ul, ur, 
+     real, dimension(size(u,1),size(u,2))               :: du1, du2, du3 
 
      real, dimension(size(psi,1),size(psi,2))           :: psilflx, psirflx, dpsi1, dpsi2, dpsi3 
      real, dimension(size(psi,1),size(psi,2)), target   :: psi_l, psi_r
      real, dimension(size(psi,1),size(psi,2)),target    :: psi_cc
-     class(component_fluid),                 pointer    :: fl
+     
 
      integer                                            :: nx
-     integer                                            :: i
-
+     
      nx  = size(u,2)
      if (size(b_cc,2) /= nx) call die("[fluidupdate:rk2] size b_cc and u mismatch")
      mag_cc = huge(1.)
 
-     do i = 1, flind%fluids
-        fl    => flind%all_fluids(i)%fl
-     end do
      ! Only muscl and rk2 schemes should be considered for production use.
      ! Other schemes are left here for educational purposes, just to show how to construct alternative approaches.
      select case (h_solver)
-     case ("rk2i")
+     case ("rk2")
         call interpol(u,b_cc,psi,ql,qr,b_cc_l,b_cc_r,psi_l,psi_r)
         call riemann_wrap                   ! Now we advance the left and right states by a timestep.
         call du_db(du1, db1,dpsi1)
@@ -550,7 +546,7 @@ contains
         call update
      case ("muscl")
         call interpol(u,b_cc,psi,ql,qr,b_cc_l,b_cc_r,psi_l,psi_r)
-        call musclflx(nx,fl%gam,ql,qr,b_cc_l,b_cc_r,psi_l,psi_r,flx_l,flx_r,bclflx,bcrflx,psilflx,psirflx)
+        call musclflx(nx,ql,qr,b_cc_l,b_cc_r,psi_l,psi_r,flx_l,flx_r,bclflx,bcrflx,psilflx,psirflx)
         call riemann_wrap
         call update
      case default
@@ -598,7 +594,7 @@ contains
        implicit none
 
        integer :: i
-       !class(component_fluid), pointer :: fl
+       class(component_fluid), pointer :: fl
        real, dimension(size(b_cc,1),size(b_cc,2)), target :: b0, bf0
        real, dimension(:,:), pointer :: p_flx, p_bcc, p_bccl, p_bccr, p_ql, p_qr
        real, dimension(size(psi,1),size(psi,2)), target ::  p0, pf0
@@ -638,7 +634,7 @@ contains
      subroutine update(weights)
        
        use constants,        only: xdim, ydim, zdim, DIVB_HDC
-       use hdc,              only: chspeed
+       !use hdc,              only: chspeed!,glmdamping
        use fluidindex,       only: flind
        use global,           only: divB_0_method, glm_alpha !cfl
        
@@ -707,8 +703,8 @@ contains
           psi(:,nx) = psi(:, nx-1)
           
           !damping
-          psi = psi*exp(-glm_alpha*chspeed*dtodx)
-          
+          !psi = psi*exp(-glm_alpha*chspeed*dtodx)
+
        endif
        
        b_cc(:, 1)  = b_cc(:, 2)
