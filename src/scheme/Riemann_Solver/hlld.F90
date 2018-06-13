@@ -46,82 +46,9 @@ module hlld
   implicit none
 
   private
-  public :: riemann_hlld, musclflx
+  public :: riemann_hlld
 
 contains
-
-  subroutine musclflx(n, q, b_cc, psi, qf, b_ccf, psif)
-
-    use constants,  only: half, xdim, ydim, zdim, DIVB_HDC, zero
-    use fluidindex, only: flind
-    use fluidtypes, only: component_fluid
-    use global,     only: divB_0_method
-    use hdc,        only: chspeed
-
-    implicit none
-
-    integer,              intent(in)  :: n
-    real, dimension(:,:), intent(in)  :: q
-    real, dimension(:,:), intent(in)  :: b_cc
-    real, dimension(:,:), intent(in)  :: psi
-    real, dimension(:,:), intent(out) :: qf
-    real, dimension(:,:), intent(out) :: b_ccf, psif
-
-    class(component_fluid), pointer   :: fl
-    real                              :: en
-    integer                           :: ip, i
-
-    qf    = zero
-    b_ccf = zero
-    psif  = zero
-
-    do ip = 1, flind%fluids
-
-       fl => flind%all_fluids(ip)%fl
-
-       do i = 1, n
-
-          qf(fl%idn,i) = q(fl%idn,i)*q(fl%imx,i)
-          if (fl%has_energy) then
-             if (fl%is_magnetized) then
-                qf(fl%imx,i) = q(fl%idn,i)*q(fl%imx,i)*q(fl%imx,i) + (q(fl%ien,i) + half*sum(b_cc(xdim:zdim,i)**2,dim=1)) - b_cc(xdim,i)**2
-             else
-                qf(fl%imx,i) = q(fl%idn,i)*q(fl%imx,i)*q(fl%imx,i) + q(fl%ien,i)
-             endif
-          else
-             qf(fl%imx,i) = q(fl%idn,i)*q(fl%imx,i)*q(fl%imx,i)
-          endif
-          if (fl%is_magnetized) then
-             qf(fl%imy,i) = q(fl%idn,i)*q(fl%imx,i)*q(fl%imy,i) - b_cc(xdim,i)*b_cc(ydim,i)
-             qf(fl%imz,i) = q(fl%idn,i)*q(fl%imx,i)*q(fl%imz,i) - b_cc(xdim,i)*b_cc(zdim,i)
-             b_ccf(ydim,i)  = b_cc(ydim,i)*q(fl%imx,i) - b_cc(xdim,i)*q(fl%imy,i)
-             b_ccf(zdim,i)  = b_cc(zdim,i)*q(fl%imx,i) - b_cc(xdim,i)*q(fl%imz,i)
-             if (divB_0_method .eq. DIVB_HDC) then
-                b_ccf(xdim,i) = psi(1,i)
-                psif(1,i)   = (chspeed**2)*b_cc(xdim,i)
-             endif
-          else
-             qf(fl%imy,i) = q(fl%idn,i)*q(fl%imx,i)*q(fl%imy,i)
-             qf(fl%imz,i) = q(fl%idn,i)*q(fl%imx,i)*q(fl%imz,i)
-          endif
-          if (fl%has_energy) then
-             if (fl%is_magnetized) then
-                en = (q(fl%ien,i)/(fl%gam_1)) + half*q(fl%idn,i)*sum(q(fl%imx:fl%imz,i)**2) + half*sum(b_cc(xdim:zdim,i)**2)
-                qf(fl%ien,i) = (en + (q(fl%ien,i) + half*sum(b_cc(xdim:zdim,i)**2,dim=1)))*q(fl%imx,i) - b_cc(xdim,i)*dot_product(q(fl%imx:fl%imz,i),b_cc(xdim:zdim,i))
-             else
-                en = (q(fl%ien,i)/(fl%gam_1)) + half*q(fl%idn,i)*sum(q(fl%imx:fl%imz,i)**2)
-                qf(fl%ien,i) = (en + (q(fl%ien,i)))*q(fl%imx,i)
-             endif
-          endif
-
-       enddo
-
-    enddo
-
-  end subroutine musclflx
-
-
-  !------------------------------------------------------------------------------------------------------------------------------------------------
 
   subroutine riemann_hlld(n,f,ul,ur,b_cc,b_ccl,b_ccr,psil,psir,psi,gamma)
 
