@@ -81,7 +81,6 @@ module cresp_grid
 
       use cg_leaves,        only: leaves
       use cg_list,          only: cg_list_element
-      use constants,        only: xdim, ydim, zdim
       use cresp_crspectrum, only: cresp_update_cell, detect_clean_spectrum
       use grid_cont,        only: grid_container
       use initcrspectrum,   only: cresp, nullify_empty_bins
