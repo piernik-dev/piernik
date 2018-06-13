@@ -547,6 +547,7 @@ contains
      case ("muscl")
         call interpol(u,b_cc,psi,ql,qr,b_cc_l,b_cc_r,psi_l,psi_r)
         call musclflx(nx,ql,qr,b_cc_l,b_cc_r,psi_l,psi_r,flx_l,flx_r,bclflx,bcrflx,psilflx,psirflx)
+        call ulr_fluxes_qlr
         call riemann_wrap
         call update
      case default
@@ -582,6 +583,39 @@ contains
        endif
 
      end subroutine du_db
+
+     subroutine ulr_fluxes_qlr
+
+        use constants, only: DIVB_HDC
+        use global,    only: divB_0_method
+
+        implicit none
+
+        call addflux(ql, flx_l, half * dtodx, nx)
+        call addflux(qr, flx_r, half * dtodx, nx)
+        call addflux(b_cc_l, bclflx, half * dtodx, nx)
+        call addflux(b_cc_r, bcrflx, half * dtodx, nx)
+
+        if (divB_0_method == DIVB_HDC) then
+           call addflux(psi_l, psilflx, half * dtodx, nx)
+           call addflux(psi_r, psirflx, half * dtodx, nx)
+        endif
+
+     end subroutine ulr_fluxes_qlr
+
+     subroutine addflux(a, fa, dt, nx)
+
+        implicit none
+
+        real, dimension(:,:), intent(inout) :: a
+        real, dimension(:,:), intent(in)    :: fa
+        real                                :: dt
+        integer                             :: nx
+
+        a(:, 2:nx) = a(:, 2:nx) + dt * (fa(:, 1:nx-1) - fa(:, 2:nx))
+        a(:, 1) = a(:, 2)
+
+     end subroutine addflux
 
      subroutine riemann_wrap()
 
