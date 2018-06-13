@@ -126,6 +126,7 @@ contains
 !!   <tr><td>skip_sweep       </td><td>F, F, F</td><td>logical array                        </td><td>\copydoc global::skip_sweep       </td></tr>
 !!   <tr><td>geometry25D      </td><td>F      </td><td>logical value                        </td><td>\copydoc global::geometry25d      </td></tr>
 !!   <tr><td>sweeps_mgu       </td><td>F      </td><td>logical value                        </td><td>\copydoc global::sweeps_mgu       </td></tr>
+!!   <tr><td>h_solver         </td><td>"rk2"  </td><td>string                               </td><td>\copydoc global::h_solver         </td></tr>
 !!   <tr><td>divB_0           </td><td>CT     </td><td>string                               </td><td>\copydoc global::divB_0           </td></tr>
 !!   <tr><td>psi_0            </td><td>0.     </td><td>real value                           </td><td>\copydoc global::psi_0            </td></tr>
 !!   <tr><td>glm_alpha        </td><td>0.1    </td><td>real value                           </td><td>\copydoc global::glm_alpha        </td></tr>
@@ -161,7 +162,7 @@ contains
       divB_0      = "CT"
 #endif /* RIEMANN */
       cflcontrol  = 'warn'
-      h_solver    = 'rk2i'
+      h_solver    = 'rk2'
       repeat_step = .true.
       geometry25D = .false.
       no_dirty_checks = .false.
@@ -219,8 +220,8 @@ contains
             dt_max_grow = dt_default_grow
          endif
 
-         if (h_solver /= "muscli" .and. h_solver /= "rk2i") then
-            write(msg, *)"[fluidupdate:sweep_dsplit:warn_experimental] The scheme '", trim(h_solver), "' is experimental. Use 'muscli' or 'rk2i' for production runs."
+         if (h_solver /= "muscl" .and. h_solver /= "rk2") then
+            write(msg, *)"[fluidupdate:sweep_dsplit:warn_experimental] The scheme '", trim(h_solver), "' is experimental. Use 'muscl' or 'rk2' for production runs."
             call warn(msg)
          endif
 
