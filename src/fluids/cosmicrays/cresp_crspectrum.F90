@@ -133,8 +133,9 @@ contains
 ! We pass values of external n_inout and e_inout to n and e after these've been prepprocessed
         n = n_inout     ! number density of electrons passed to cresp module by the external module / grid
         e = e_inout     ! energy density of electrons passed to cresp module by the external module / grid
-        call check_boundary_bins
-        call cresp_organize_p
+
+!         call check_boundary_bins     ! with cresp_find_prepare_spectrum we might not need this
+!         call cresp_organize_p        ! with cresp_find_prepare_spectrum we might not need this
 
 ! Compute power indexes for each bin at [t] and f on left bin faces at [t]
 !         f = zero; q=zero ! done in cresp_find_prepare_spectrum already
@@ -210,7 +211,7 @@ contains
                 p(i_up) = p_up
                 second_fail(2) = second_fail(2)+1
             endif
-            call cresp_find_active_bins
+            call cresp_find_prepare_spectrum(n_inout, e_inout, empty_cell)
         endif
 
         call cresp_update_bin_index(dt, p_lo, p_up, p_lo_next, p_up_next, cfl_cresp_violation)      ! FIXME - must be modified in the future if this branch is connected to Piernik
@@ -550,6 +551,8 @@ contains
 
       pre_i_lo = pre_i_lo - 1
 
+      num_active_bins = count(is_active_bin)
+
       if (num_active_bins .gt. 1) then
          i_lo = pre_i_lo;   i_up = pre_i_up
       else if (num_active_bins .eq. 1) then
@@ -559,7 +562,8 @@ contains
          return
       endif
 
-      if (i_lo .gt. 0)     is_active_bin(:i_lo) = .false.
+      if (i_lo .gt. 1)  is_active_bin(:i_lo) = .false.
+
       if (i_up .lt. ncre ) is_active_bin(i_up+1:) = .false.
 
       num_active_bins = count(is_active_bin)
@@ -592,6 +596,10 @@ contains
 #ifdef VERBOSE
         print "(2(A9,i3))", "i_lo =", i_lo, ", i_up = ", i_up
 #endif /* VERBOSE */
+
+         p(fixed_edges) = p_fix(fixed_edges)
+
+         p(i_lo) = max(p_fix(i_lo), p_mid_fix(1))      ! do not want to have zero here
       endif
   end subroutine cresp_find_prepare_spectrum
 
