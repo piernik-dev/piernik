@@ -396,7 +396,10 @@ module cresp_NR_method
  subroutine fill_boundary_grid(bound_case, fill_p, fill_f) ! to be paralelized
   use constants, only: zero
   implicit none
-  real(kind=8), dimension(1:2) :: x_vec, prev_solution, prev_solution_1, x_in, x_step
+  real(kind=8), dimension(1:2) :: x_vec, prev_solution, prev_solution_1, x_step
+#ifdef VERBOSE
+  real(kind=8), dimension(1:2) :: x_in
+#endif /* VERBOSE */
   real(kind=8), dimension(:,:) :: fill_p, fill_f
   integer(kind=4) :: i, j, is, js
   logical         :: exit_code, new_line

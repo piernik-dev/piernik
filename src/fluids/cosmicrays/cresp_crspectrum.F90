@@ -1181,7 +1181,7 @@ contains
 
    function fp_to_e_ampl(p_1, f_1)
       use initcrspectrum,     only: ncre
-      use constants,          only: zero, fpi
+      use constants,          only: fpi
       use cresp_variables,    only: clight
 
       implicit none

@@ -288,7 +288,10 @@ contains
 
       logical, intent(in) :: forward  !< If .true. then do X->Y->Z sweeps, if .false. then reverse that order
 
-      integer(kind=4) :: s, icrc      ! index of cr component in iarr_crs
+      integer(kind=4) :: s
+#ifdef COSM_RAY_ELECTRONS
+      integer(kind=4) :: icrc      ! index of cr component in iarr_crs
+#endif /* COSM_RAY_ELECTRONS */
 
 #ifdef SHEAR
       call shear_3sweeps
@@ -419,10 +422,10 @@ contains
 !<
    subroutine make_diff_sweep(icrc, dir)
 
-      use domain,         only: dom
       use sweeps,         only: sweep
 #ifdef COSM_RAYS
       use crdiffusion,    only: cr_diff
+      use domain,         only: dom
       use initcosmicrays, only: use_split
 #endif /* COSM_RAYS */
 #ifdef DEBUG
