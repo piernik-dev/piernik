@@ -37,11 +37,11 @@ module cresp_grid
 
       implicit none
 
-      real(kind=8), dimension(:) ,pointer :: virtual_e => null(), virtual_n => null()
-      integer                         :: i, j, k
-      type(cg_list_element),  pointer :: cgl
-      type(grid_container),   pointer :: cg
-      type(spec_mod_trms)  :: sptab
+      real(kind=8), dimension(:), pointer :: virtual_e => null(), virtual_n => null()
+      integer                             :: i, j, k
+      type(cg_list_element), pointer      :: cgl
+      type(grid_container), pointer       :: cg
+      type(spec_mod_trms)                 :: sptab
 
       i = 0; j = 0;  k = 0
       cgl => leaves%first
@@ -279,10 +279,10 @@ module cresp_grid
 
       implicit none
 
-      type(spec_mod_trms)  :: sptab
-      type(grid_container), pointer :: cg
-      type(cg_list_element), pointer:: cgl
-      integer :: i,j,k
+      type(spec_mod_trms)            :: sptab
+      type(grid_container),  pointer :: cg
+      type(cg_list_element), pointer :: cgl
+      integer                        :: i,j,k
 !Below - magnetic energy density and velocity divergence values are passed to sptab
 
       cgl => leaves%first

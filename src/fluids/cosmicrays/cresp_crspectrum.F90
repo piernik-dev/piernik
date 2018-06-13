@@ -1,16 +1,18 @@
 module cresp_crspectrum
 ! pulled by COSM_RAY_ELECTRONS
- implicit none
-  public :: cresp_update_cell, cresp_init_state, printer, fail_count_interpol, fail_count_no_sol, fail_count_NR_2dim, cresp_get_scaled_init_spectrum, &
-      &   cleanup_cresp, cresp_accuracy_test, b_losses, cresp_allocate_all, cresp_deallocate_all, e_threshold_lo, e_threshold_up, &
-      &   fail_count_comp_q, second_fail, src_gpcresp, cresp_init_powl_spectrum, get_powl_f_ampl, e_tot_2_f_init_params, e_tot_2_en_powl_init_params, detect_clean_spectrum
-  private ! most of it
 
-  integer, dimension(1:2), save     :: fail_count_NR_2dim, fail_count_interpol, fail_count_no_sol, second_fail
-  integer, allocatable, save   :: fail_count_comp_q(:)
+   implicit none
+
+   private ! most of it
+   public :: cresp_update_cell, cresp_init_state, printer, fail_count_interpol, fail_count_no_sol, fail_count_NR_2dim, cresp_get_scaled_init_spectrum, &
+      &      cleanup_cresp, cresp_accuracy_test, b_losses, cresp_allocate_all, cresp_deallocate_all, e_threshold_lo, e_threshold_up, &
+      &      fail_count_comp_q, second_fail, src_gpcresp, cresp_init_powl_spectrum, get_powl_f_ampl, e_tot_2_f_init_params, e_tot_2_en_powl_init_params, detect_clean_spectrum
+
+   integer, dimension(1:2), save      :: fail_count_NR_2dim, fail_count_interpol, fail_count_no_sol, second_fail
+   integer, allocatable, save         :: fail_count_comp_q(:)
 
 ! variables informing about change of bins
-  integer                           :: del_i_lo, del_i_up
+   integer                            :: del_i_lo, del_i_up
 
 ! logical arrays / arrays determining use of p/n/e in some lines
    logical, allocatable, dimension(:) :: is_fixed_edge,   is_fixed_edge_next
@@ -21,27 +23,27 @@ module cresp_crspectrum
    logical, allocatable, dimension(:) :: not_spectrum_break
 
 ! counters
-  integer                           :: num_fixed_edges,   num_fixed_edges_next
-  integer                           :: num_active_edges,  num_active_edges_next
-  integer                           :: num_active_bins,   num_active_bins_next
-  integer                           :: num_cooling_edges_next
-  integer                           :: num_heating_edges_next
+   integer                            :: num_fixed_edges,   num_fixed_edges_next
+   integer                            :: num_active_edges,  num_active_edges_next
+   integer                            :: num_active_bins,   num_active_bins_next
+   integer                            :: num_cooling_edges_next
+   integer                            :: num_heating_edges_next
 !   integer                           :: num_not_spectrum_break
 
 ! dynamic arrays
-  integer, allocatable              :: fixed_edges(:),   fixed_edges_next(:)
-  integer, allocatable              :: active_edges(:),  active_edges_next(:)
-  integer, allocatable              :: active_bins(:),   active_bins_next(:)
-  integer, allocatable              :: cooling_edges_next(:)
-  integer, allocatable              :: heating_edges_next(:)
+   integer, allocatable               :: fixed_edges(:),   fixed_edges_next(:)
+   integer, allocatable               :: active_edges(:),  active_edges_next(:)
+   integer, allocatable               :: active_bins(:),   active_bins_next(:)
+   integer, allocatable               :: cooling_edges_next(:)
+   integer, allocatable               :: heating_edges_next(:)
 
    real(kind=8), allocatable, dimension(:) :: r  ! r term for energy losses (Miniati 2001, eqn. 25)
    real(kind=8), allocatable, dimension(:) :: q  ! power-law exponent array
 
 ! power-law
-   real(kind=8)                      :: p_lo_next, p_up_next, p_lo, p_up !, p_lo_bef, p_up_bef
-   integer                           :: i_lo
-   integer                           :: i_up
+   real(kind=8)                       :: p_lo_next, p_up_next, p_lo, p_up !, p_lo_bef, p_up_bef
+   integer                            :: i_lo
+   integer                            :: i_up
    real(kind=8), dimension(:), allocatable   :: p ! momentum table for piecewise power-law spectru intervals
    real(kind=8), dimension(:), allocatable   :: f ! distribution function for piecewise power-law spectrum
 
@@ -56,20 +58,20 @@ module cresp_crspectrum
    real(kind=8)                 :: u_b_0
 
 ! in-algorithm energy dissipation terms
-  real(kind=8)              :: u_b, u_d
+   real(kind=8)              :: u_b, u_d
 
 ! work array of number density and energy during algorithm execution
-  real(kind=8),allocatable, dimension(:)    :: ndt, edt
+   real(kind=8),allocatable, dimension(:)    :: ndt, edt
 
 ! in-algorithm energy & number density
-  real(kind=8), allocatable, dimension(:)  :: n, e ! dimension(1:ncre)
-  real(kind=8), allocatable, dimension(:)  :: e_amplitudes_l, e_amplitudes_r
+   real(kind=8), allocatable, dimension(:)  :: n, e ! dimension(1:ncre)
+   real(kind=8), allocatable, dimension(:)  :: e_amplitudes_l, e_amplitudes_r
 ! virtual e,n arrays for cutoff, for cases when bins are only slightly filled and p ~ p_fix - it might not be possible to find solution via NR
-  real(kind=8), dimension(1:2) :: vrtl_n, vrtl_e
+   real(kind=8), dimension(1:2) :: vrtl_n, vrtl_e
 ! lower / upper energy needed for bin activation
-  real(kind=8), save :: e_threshold_lo, e_threshold_up
+   real(kind=8), save :: e_threshold_lo, e_threshold_up
 ! if one bin, switch off cutoff p approximation
-  integer  :: approx_p_lo, approx_p_up
+   integer  :: approx_p_lo, approx_p_up
 !-------------------------------------------------------------------------------------------------
 !
 contains
@@ -78,63 +80,64 @@ contains
 
 !----- main subroutine -----
 
-  subroutine cresp_update_cell(dt, n_inout, e_inout, sptab, v_n, v_e, cfl_cresp_violation, p_out) !, p_lo_cell, p_up_cell)
-   use initcrspectrum, only: ncre, spec_mod_trms, e_small_approx_p_lo, e_small_approx_p_up, e_small_approx_init_cond, crel, p_mid_fix, nullify_empty_bins
-! #ifdef VERBOSE
-   use initcrspectrum, only: p_fix
-! #endif /* VERBOSE */
-   use constants, only: zero, one
-   implicit none
-    real(kind=8), dimension(1:2), intent(inout), optional :: p_out
-    real(kind=8), dimension(:), pointer, intent(inout) :: v_n, v_e
-    logical, intent(inout)                      :: cfl_cresp_violation
-    real(kind=8), intent(in)  :: dt
-    real(kind=8), dimension(1:ncre), intent(inout)   :: n_inout, e_inout
-    type(spec_mod_trms), intent(in)       :: sptab
-    logical :: solve_fail_lo, solve_fail_up, index_changed, empty_cell
-        e = zero; n = zero; edt = zero; ndt = zero
-        solve_fail_lo = .false.
-        solve_fail_up = .false.
-        index_changed = .false.
-        empty_cell    = .false.
-        cfl_cresp_violation = .false.
+   subroutine cresp_update_cell(dt, n_inout, e_inout, sptab, v_n, v_e, cfl_cresp_violation, p_out) !, p_lo_cell, p_up_cell)
 
-        approx_p_lo = e_small_approx_p_lo
-        approx_p_up = e_small_approx_p_up
+      use constants,      only: zero, one
+      use initcrspectrum, only: ncre, spec_mod_trms, e_small_approx_p_lo, e_small_approx_p_up, e_small_approx_init_cond, crel, p_mid_fix, nullify_empty_bins, p_fix
 
-        p_lo_next = zero
-        p_up_next = zero
-        if (present(p_out)) then
-            p_lo = p_out(1)
-            p_up = p_out(2)
-        endif
+      implicit none
 
-        r = zero
-        f = zero
-        q = zero
+      real(kind=8),                           intent(in)    :: dt
+      real(kind=8), dimension(1:ncre),        intent(inout) :: n_inout, e_inout
+      type(spec_mod_trms),                    intent(in)    :: sptab
+      real(kind=8), dimension(:), pointer,    intent(inout) :: v_n, v_e
+      logical,                                intent(inout) :: cfl_cresp_violation
+      real(kind=8), dimension(1:2), optional, intent(inout) :: p_out
+      logical                                               :: solve_fail_lo, solve_fail_up, index_changed, empty_cell
 
-        u_b = sptab%ub
-        u_d = sptab%ud
+      e = zero; n = zero; edt = zero; ndt = zero
+      solve_fail_lo = .false.
+      solve_fail_up = .false.
+      index_changed = .false.
+      empty_cell    = .false.
+      cfl_cresp_violation = .false.
 
-        vrtl_e = v_e
-        vrtl_n = v_n
+      approx_p_lo = e_small_approx_p_lo
+      approx_p_up = e_small_approx_p_up
 
-        call cresp_find_prepare_spectrum(n_inout, e_inout, empty_cell) ! EXPERIMENTAL
-        if ( empty_cell )  return             ! if grid cell contains empty bins, no action is taken
+      p_lo_next = zero
+      p_up_next = zero
+      if (present(p_out)) then
+         p_lo = p_out(1)
+         p_up = p_out(2)
+      endif
 
-        if ( empty_cell ) then
+      r = zero
+      f = zero
+      q = zero
+
+      u_b = sptab%ub
+      u_d = sptab%ud
+
+      vrtl_e = v_e
+      vrtl_n = v_n
+
+      call cresp_find_prepare_spectrum(n_inout, e_inout, empty_cell) ! EXPERIMENTAL
+      if ( empty_cell )  return             ! if grid cell contains empty bins, no action is taken
+
+      if ( empty_cell ) then
          if (nullify_empty_bins) then
             call nullify_all_bins(n_inout, e_inout)
          endif
          return             ! if grid cell contains empty bins, no action is taken
-        endif
+      endif
 
-        if (nullify_empty_bins) call nullify_inactive_bins(n_inout, e_inout)
+      if (nullify_empty_bins) call nullify_inactive_bins(n_inout, e_inout)
 ! We pass values of external n_inout and e_inout to n and e after these've been prepprocessed
-        n = n_inout     ! number density of electrons passed to cresp module by the external module / grid
-        e = e_inout     ! energy density of electrons passed to cresp module by the external module / grid
-        call check_boundary_bins
-        call cresp_organize_p
+      n = n_inout     ! number density of electrons passed to cresp module by the external module / grid
+      e = e_inout     ! energy density of electrons passed to cresp module by the external module / grid
+      call check_boundary_bins
+      call cresp_organize_p
 
 ! Compute power indexes for each bin at [t] and f on left bin faces at [t]
 !         f = zero; q=zero ! done in cresp_find_prepare_spectrum already
@@ -143,165 +146,170 @@ contains
 ! Here values of distribution function f for active left edges (excluding upper momentum boundary) are computed
 !         f = nq_to_f(p(0:ncre-1), p(1:ncre), n(1:ncre), q(1:ncre), active_bins)
 
-        if (approx_p_up .gt. 0) then         ! momenta values stored only within module - for tests; will not work in PIERNIK
-            if (i_up .gt. 1) then
-                call get_fqp_up(solve_fail_up)
-            else                                                   ! spectrum beyond the fixed momentum grid
-                p_up = p_fix(i_up)
-                p(i_up) = p_fix(i_up)
-                solve_fail_up = .false.
+      if (approx_p_up .gt. 0) then         ! momenta values stored only within module - for tests; will not work in PIERNIK
+         if (i_up .gt. 1) then
+            call get_fqp_up(solve_fail_up)
+         else                                                   ! spectrum beyond the fixed momentum grid
+            p_up = p_fix(i_up)
+            p(i_up) = p_fix(i_up)
+            solve_fail_up = .false.
+         endif
+      endif
+      if (approx_p_lo .gt. 0) then  ! momenta values stored only within module - for tests; will not work in PIERNIK
+         if ((i_lo+1) .ne. ncre) then
+            call get_fqp_lo(solve_fail_lo)
+         else                                                   ! spectrum beyond the fixed momentum grid
+            p_lo = p_fix(i_lo)
+            p(i_lo) = p_fix(i_lo)
+            solve_fail_lo = .false.
+         endif                                                  ! countermeasure against failure in finding boundary momentum
+      endif
+      if ((solve_fail_lo .eqv. .true.) .or. (solve_fail_up .eqv. .true.)) then
+         call deallocate_active_arrays
+         if (solve_fail_lo) then
+            if (i_lo .gt. 0 .and. i_lo .lt. ncre-3) then
+               call transfer_quantities(e(i_lo+2),e(i_lo+1))
+               call transfer_quantities(n(i_lo+2),n(i_lo+1))
+               i_lo = i_lo + 1
+               call get_fqp_lo(solve_fail_lo)
+            else
+               call transfer_quantities(vrtl_e(1),e(i_lo+1))
+               call transfer_quantities(vrtl_n(1),n(i_lo+1))
+               i_lo = i_lo+1
+               p_lo = p_fix(i_lo) ; p(i_lo) = p_fix(i_lo)
             endif
-        endif
-        if (approx_p_lo .gt. 0) then  ! momenta values stored only within module - for tests; will not work in PIERNIK
-            if ((i_lo+1) .ne. ncre) then
-                call get_fqp_lo(solve_fail_lo)
-            else                                                   ! spectrum beyond the fixed momentum grid
-                p_lo = p_fix(i_lo)
-                p(i_lo) = p_fix(i_lo)
-                solve_fail_lo = .false.
-            endif                                                  ! countermeasure against failure in finding boundary momentum
-        endif
-        if ((solve_fail_lo .eqv. .true.) .or. (solve_fail_up .eqv. .true.)) then
-            call deallocate_active_arrays
-            if (solve_fail_lo) then
-                if (i_lo .gt. 0 .and. i_lo .lt. ncre-3) then
-                    call transfer_quantities(e(i_lo+2),e(i_lo+1))
-                    call transfer_quantities(n(i_lo+2),n(i_lo+1))
-                    i_lo = i_lo + 1
-                    call get_fqp_lo(solve_fail_lo)
-                else
-                    call transfer_quantities(vrtl_e(1),e(i_lo+1))
-                    call transfer_quantities(vrtl_n(1),n(i_lo+1))
-                    i_lo = i_lo+1
-                    p_lo = p_fix(i_lo) ; p(i_lo) = p_fix(i_lo)
-                endif
+         endif
+         if (solve_fail_up) then
+            if (i_up .lt. ncre) then
+               call transfer_quantities(e(i_up-1),e(i_up)) ! instead of moving quantities to virtual
+               call transfer_quantities(n(i_up-1),n(i_up)) ! instead of moving quantities to virtual
+               i_up = i_up - 1
+               if (i_up .gt. 1) then
+                  call get_fqp_up(solve_fail_up)
+               else
+                  p_up = p_fix(i_up); p(i_up) = p_fix(i_up)
+               endif
+            else
+               call transfer_quantities(vrtl_e(2),e(i_up))
+               call transfer_quantities(vrtl_n(2),n(i_up))
             endif
-            if (solve_fail_up) then
-                if (i_up .lt. ncre) then
-                    call transfer_quantities(e(i_up-1),e(i_up)) ! instead of moving quantities to virtual
-                    call transfer_quantities(n(i_up-1),n(i_up)) ! instead of moving quantities to virtual
-                    i_up = i_up - 1
-                    if (i_up .gt. 1) then
-                        call get_fqp_up(solve_fail_up)
-                    else
-                        p_up = p_fix(i_up); p(i_up) = p_fix(i_up)
-                    endif
-                else
-                    call transfer_quantities(vrtl_e(2),e(i_up))
-                    call transfer_quantities(vrtl_n(2),n(i_up))
-                endif
+         endif
+         if (i_up .eq. i_lo) then
+            if (solve_fail_lo .and. solve_fail_up .eqv. .false.) then
+               i_lo = i_up - 1 ; p_lo = p_fix(i_up) ; p(i_lo) = p_fix(i_up)
+            else if (solve_fail_up .and. solve_fail_lo .eqv. .false.) then
+               i_up = i_lo + 1 ; p_up = p_fix(i_lo) ; p(i_lo) = p_fix(i_lo)
+            else
+               i_lo = i_up +1 ; p_lo = p_fix(i_lo) ; p(i_lo) = p_fix(i_lo) ; p_up = p_fix(i_up) ; p(i_up) = p_fix(i_up)
             endif
-            if (i_up .eq. i_lo) then
-                if (solve_fail_lo .and. solve_fail_up .eqv. .false.) then
-                    i_lo = i_up - 1 ; p_lo = p_fix(i_up) ; p(i_lo) = p_fix(i_up)
-                else if (solve_fail_up .and. solve_fail_lo .eqv. .false.) then
-                    i_up = i_lo + 1 ; p_up = p_fix(i_lo) ; p(i_lo) = p_fix(i_lo)
-                else
-                    i_lo = i_up +1 ; p_lo = p_fix(i_lo) ; p(i_lo) = p_fix(i_lo) ; p_up = p_fix(i_up) ; p(i_up) = p_fix(i_up)
-                endif
-            endif
-            if (p_lo .le. zero) then ! in case of second failure
-                p_lo = p_mid_fix(i_lo)
-                p(i_lo) = p_lo
-                second_fail(1) = second_fail(1)+1
-            endif
-            if (p_up .le. zero) then ! in case of second failure
-                p_up = p_mid_fix(i_up)
-                p(i_up) = p_up
-                second_fail(2) = second_fail(2)+1
-            endif
-            call cresp_find_active_bins
-        endif
+         endif
+         if (p_lo .le. zero) then ! in case of second failure
+            p_lo = p_mid_fix(i_lo)
+            p(i_lo) = p_lo
+            second_fail(1) = second_fail(1)+1
+         endif
+         if (p_up .le. zero) then ! in case of second failure
+            p_up = p_mid_fix(i_up)
+            p(i_up) = p_up
+            second_fail(2) = second_fail(2)+1
+         endif
+         call cresp_find_active_bins
+      endif
 
-        call cresp_update_bin_index(dt, p_lo, p_up, p_lo_next, p_up_next, cfl_cresp_violation)      ! FIXME - must be modified in the future if this branch is connected to Piernik
-        if ( cfl_cresp_violation ) then
-            call deallocate_active_arrays
-            return
-        endif
+      call cresp_update_bin_index(dt, p_lo, p_up, p_lo_next, p_up_next, cfl_cresp_violation)      ! FIXME - must be modified in the future if this branch is connected to Piernik
+      if ( cfl_cresp_violation ) then
+         call deallocate_active_arrays
+         return
+      endif
 ! Compute fluxes through fixed edges in time period [t,t+dt], using f, q, p_lo and p_up at [t]
 ! Note that new [t+dt] values of p_lo and p_up in case new fixed edges appear or disappear.
 ! fill new bins
-        call cresp_compute_fluxes(cooling_edges_next,heating_edges_next)
+      call cresp_compute_fluxes(cooling_edges_next,heating_edges_next)
 
 ! Computing e and n at [t+dt]
 
-        ndt(1:ncre) = n(1:ncre)  - (nflux(1:ncre) - nflux(0:ncre-1))
-        edt(1:ncre) = e(1:ncre)  - (eflux(1:ncre) - eflux(0:ncre-1))
+      ndt(1:ncre) = n(1:ncre)  - (nflux(1:ncre) - nflux(0:ncre-1))
+      edt(1:ncre) = e(1:ncre)  - (eflux(1:ncre) - eflux(0:ncre-1))
 
 !         call boundary_flux_check ! If relative error between boundary momenta and p_fix is not tolerable, boundary fluxes are moved to "virtual" bins, preventing premature activation of new bins and associated numerical errors.
 
 ! edt(1:ncre) = e(1:ncre) *(one-0.5*dt*r(1:ncre)) - (eflux(1:ncre) - eflux(0:ncre-1))/(one+0.5*dt*r(1:ncre))   !!! oryginalnie u Miniatiego
 ! Compute coefficients R_i needed to find energy in [t,t+dt]
-        call cresp_compute_r(p_next, active_bins_next)                 ! new active bins already received some particles, Ri is needed for those bins too
+      call cresp_compute_r(p_next, active_bins_next)                 ! new active bins already received some particles, Ri is needed for those bins too
 
-        edt(1:ncre) = edt(1:ncre) *(one-dt*r(1:ncre))
+      edt(1:ncre) = edt(1:ncre) *(one-dt*r(1:ncre))
 
-        p_lo = p_lo_next
-        p_up = p_up_next
+      p_lo = p_lo_next
+      p_up = p_up_next
 
 #ifdef VERBOSE
-        write (*,'(A5, 50E18.9)') "p_fix", p_fix
-        write (*,'(A5, 50E18.9)') "p_act", p
-        write (*,'(A5, 50E18.9)') "p_nex", p_next
-        write (*,'(A5, 50E18.9)') "p_upw", p_upw
-        print '(A6, 1EN22.9, A9, 1EN22.9)', "p_lo ", p_lo, ",  p_up ", p_up
+      write (*,'(A5, 50E18.9)') "p_fix", p_fix
+      write (*,'(A5, 50E18.9)') "p_act", p
+      write (*,'(A5, 50E18.9)') "p_nex", p_next
+      write (*,'(A5, 50E18.9)') "p_upw", p_upw
+      print '(A6, 1EN22.9, A9, 1EN22.9)', "p_lo ", p_lo, ",  p_up ", p_up
 
-        print *, " "
-        write (*,'(A5, 50E18.9)') "    n", n
-        write (*,'(A5, 50E18.9)') "nflux", nflux
-        write (*,'(A5, 50E18.9)') "  ndt", ndt
+      print *, " "
+      write (*,'(A5, 50E18.9)') "    n", n
+      write (*,'(A5, 50E18.9)') "nflux", nflux
+      write (*,'(A5, 50E18.9)') "  ndt", ndt
 
-        print *, " "
-        write (*,'(A5, 50E18.9)') "    e", e
-        write (*,'(A5, 50E18.9)') "eflux", eflux
-        write (*,'(A5, 50E18.9)') "  edt", edt
+      print *, " "
+      write (*,'(A5, 50E18.9)') "    e", e
+      write (*,'(A5, 50E18.9)') "eflux", eflux
+      write (*,'(A5, 50E18.9)') "  edt", edt
 
-        print *, " "
-        write (*,'(A5, 50E18.9)') "    r", r
-        write (*,'(A5, 50E18.9)') "    q", q
-        write (*,'(A5, 50E18.9)') "    f", f
-        write (*,'(A15,2E18.9,A3,2E18.9)') "virtual e & n", vrtl_e, " | ", vrtl_n
-        print *, " "
-        if ( (approx_p_lo+approx_p_up) .gt. 0 ) then
-            print '(A36,I5,A6,I3)', "NR_2dim:  convergence failure: p_lo", fail_count_NR_2dim(1), ", p_up", fail_count_NR_2dim(2)
-            print '(A36,I5,A6,I3)', "NR_2dim:interpolation failure: p_lo", fail_count_interpol(1), ", p_up", fail_count_interpol(2)
-            print '(A36,I5,A6,I3)', "NR_2dim:  no solution failure: p_lo", fail_count_no_sol(1), ", p_up", fail_count_no_sol(2)
-            print '(A36,   100I5)', "NR_2dim:inpl/solve  q(bin) failure:", fail_count_comp_q
-        endif
+      print *, " "
+      write (*,'(A5, 50E18.9)') "    r", r
+      write (*,'(A5, 50E18.9)') "    q", q
+      write (*,'(A5, 50E18.9)') "    f", f
+      write (*,'(A15,2E18.9,A3,2E18.9)') "virtual e & n", vrtl_e, " | ", vrtl_n
+      print *, " "
+      if ( (approx_p_lo+approx_p_up) .gt. 0 ) then
+         print '(A36,I5,A6,I3)', "NR_2dim:  convergence failure: p_lo", fail_count_NR_2dim(1), ", p_up", fail_count_NR_2dim(2)
+         print '(A36,I5,A6,I3)', "NR_2dim:interpolation failure: p_lo", fail_count_interpol(1), ", p_up", fail_count_interpol(2)
+         print '(A36,I5,A6,I3)', "NR_2dim:  no solution failure: p_lo", fail_count_no_sol(1), ", p_up", fail_count_no_sol(2)
+         print '(A36,   100I5)', "NR_2dim:inpl/solve  q(bin) failure:", fail_count_comp_q
+      endif
 #endif /* VERBOSE */
 
-        n = ndt
-        e = edt
-        call cresp_detect_negative_content ! for testing
+      n = ndt
+      e = edt
+      call cresp_detect_negative_content ! for testing
 ! --- for testing
-        n_tot = sum(n)
-        e_tot = sum(e)
+      n_tot = sum(n)
+      e_tot = sum(e)
 
-        crel%p = p
-        crel%f = f
-        crel%q = q
-        crel%e = e
-        crel%n = n
-        crel%i_lo = i_lo
-        crel%i_up = i_up
+      crel%p = p
+      crel%f = f
+      crel%q = q
+      crel%e = e
+      crel%n = n
+      crel%i_lo = i_lo
+      crel%i_up = i_up
 ! --- saving the data to output arrays
-        n_inout  = n  ! number density of electrons per bin passed back to the external module
-        e_inout  = e  ! energy density of electrons per bin passed back to the external module
-        v_e = vrtl_e
-        v_n = vrtl_n
+      n_inout  = n  ! number density of electrons per bin passed back to the external module
+      e_inout  = e  ! energy density of electrons per bin passed back to the external module
+      v_e = vrtl_e
+      v_n = vrtl_n
 
-        if (present(p_out)) then
-            p_out(1) = p_lo
-            p_out(2) = p_up
-        endif
-        call deallocate_active_arrays
-  end subroutine cresp_update_cell
+      if (present(p_out)) then
+         p_out(1) = p_lo
+         p_out(2) = p_up
+      endif
+      call deallocate_active_arrays
+
+   end subroutine cresp_update_cell
+
 !----------------------------------------------------------------------------------------------------
    subroutine detect_clean_spectrum(ext_n, ext_e, empty_cell)
-   use initcrspectrum,      only: ncre, nullify_empty_bins
-   implicit none
-   real(kind=8), dimension(ncre), intent(inout) :: ext_n, ext_e
-   logical, intent(inout)  :: empty_cell
+
+      use initcrspectrum,      only: ncre, nullify_empty_bins
+
+      implicit none
+
+      real(kind=8), dimension(ncre), intent(inout) :: ext_n, ext_e
+      logical, intent(inout)  :: empty_cell
 
       call find_i_bound(ext_n, ext_e, empty_cell)
 
@@ -311,67 +319,84 @@ contains
          endif
       endif
       if (nullify_empty_bins) then
-            call nullify_inactive_bins(ext_n, ext_e)
+         call nullify_inactive_bins(ext_n, ext_e)
       endif
 
    end subroutine detect_clean_spectrum
+
 !----------------------------------------------------------------------------------------------------
+
    subroutine nullify_inactive_bins(ext_n, ext_e)
-   use initcrspectrum,      only: ncre
-   use constants,           only: zero
-   implicit none
-   real(kind=8), dimension(ncre), intent(inout) :: ext_n, ext_e
+
+      use initcrspectrum,      only: ncre
+      use constants,           only: zero
+
+      implicit none
+
+      real(kind=8), dimension(ncre), intent(inout) :: ext_n, ext_e
+
       ext_e(:i_lo)   = zero
       ext_n(:i_lo)   = zero
       ext_e(i_up+1:) = zero
       ext_n(i_up+1:) = zero
+
    end subroutine nullify_inactive_bins
 
    subroutine nullify_all_bins(ext_n, ext_e)
-   use initcrspectrum,      only: ncre
-   use constants,           only: zero
-   implicit none
-   real(kind=8), dimension(ncre), intent(inout) :: ext_n, ext_e
+
+      use initcrspectrum,      only: ncre
+      use constants,           only: zero
+
+      implicit none
+
+      real(kind=8), dimension(ncre), intent(inout) :: ext_n, ext_e
+
       ext_e(:)   = zero
       ext_n(:)   = zero
+
    end subroutine nullify_all_bins
 
 !-------------------------------------------------------------------------------------------------
 ! all the procedures below are called by cresp_update_cell subroutine or the driver
 !-------------------------------------------------------------------------------------------------
-  subroutine find_i_bound(ext_n, ext_e, exit_code)
-  use initcrspectrum, only: ncre, e_small
-  use constants, only: zero
-  implicit none
-    integer(kind=4) :: i
-    logical :: exit_code
-    real(kind=8), dimension(ncre), intent(inout) :: ext_n, ext_e
-        exit_code    = .true.
+   subroutine find_i_bound(ext_n, ext_e, exit_code)
+
+      use initcrspectrum, only: ncre, e_small
+      use constants, only: zero
+
+      implicit none
+
+      integer(kind=4) :: i
+      logical :: exit_code
+      real(kind=8), dimension(ncre), intent(inout) :: ext_n, ext_e
+
+      exit_code    = .true.
 ! ! Locate cut-ofs before current timestep: indices are found without use of p_lo nor p_up and point to boundary edges
-        i_lo = 0
-        do i = 1, ncre                        ! if energy density is nonzero, so should be the number density
-            i_lo = i-1
-            if ( ext_e(i) .gt. e_threshold_lo) then
-               if (ext_n(i) .gt. zero) then
-                  exit_code = .false.
-                  exit
-               endif
-            endif
-        enddo
+      i_lo = 0
+      do i = 1, ncre                        ! if energy density is nonzero, so should be the number density
+         i_lo = i-1
+         if ( ext_e(i) .gt. e_threshold_lo) then
+           if (ext_n(i) .gt. zero) then
+              exit_code = .false.
+              exit
+           endif
+        endif
+     enddo
 
-        if ( exit_code .eqv. .true.) return   ! empty cell - nothing to do here!
+     if ( exit_code .eqv. .true.) return   ! empty cell - nothing to do here!
 
-        i_up = ncre
-        do i = ncre, 1,-1
-            i_up = i
-            if (ext_e(i) .gt. e_threshold_up ) then   ! if energy density is nonzero, so should be the number density
-               if( ext_n(i) .gt. zero ) then
-                  exit
-               endif
-            endif
-        enddo
-  end subroutine find_i_bound
+     i_up = ncre
+     do i = ncre, 1,-1
+        i_up = i
+        if (ext_e(i) .gt. e_threshold_up ) then   ! if energy density is nonzero, so should be the number density
+           if( ext_n(i) .gt. zero ) exit
+        endif
+     enddo
+
+   end subroutine find_i_bound
+
 !-------------------------------------------------------------------------------------------------
+
    subroutine check_boundary_bins
 
       use initcrspectrum,  only: e_small
@@ -381,31 +406,37 @@ contains
 
       logical :: i_lo_changed, i_up_changed
 
-         i_lo_changed = .false.
-         i_up_changed = .false.
+      i_lo_changed = .false.
+      i_up_changed = .false.
 
-         if ((e(i_lo+1)+vrtl_e(1)) .gt. e_small .and. vrtl_e(1) .gt. zero) then
-            call transfer_quantities(e(i_lo+1), vrtl_e(1))
-            call transfer_quantities(n(i_lo+1), vrtl_n(1))
-         endif
-         if ((e(i_up)+vrtl_e(2)) .gt. e_small .and. vrtl_e(2) .gt. zero) then
-            call transfer_quantities(e(i_up), vrtl_e(2))
-            call transfer_quantities(n(i_up), vrtl_n(2))
-         endif
-         if ( (approx_p_lo .eq. 1) .or. (approx_p_up .eq. 1) ) then ! TODO - this might need slight change of condition
-            call threshold_energy_check_lo(e, n, i_lo_changed, .false.)
-            call threshold_energy_check_up(e, n, i_up_changed, .false.)
-         endif
+      if ((e(i_lo+1)+vrtl_e(1)) .gt. e_small .and. vrtl_e(1) .gt. zero) then
+         call transfer_quantities(e(i_lo+1), vrtl_e(1))
+         call transfer_quantities(n(i_lo+1), vrtl_n(1))
+      endif
+      if ((e(i_up)+vrtl_e(2)) .gt. e_small .and. vrtl_e(2) .gt. zero) then
+         call transfer_quantities(e(i_up), vrtl_e(2))
+         call transfer_quantities(n(i_up), vrtl_n(2))
+      endif
+      if ( (approx_p_lo .eq. 1) .or. (approx_p_up .eq. 1) ) then ! TODO - this might need slight change of condition
+         call threshold_energy_check_lo(e, n, i_lo_changed, .false.)
+         call threshold_energy_check_up(e, n, i_up_changed, .false.)
+      endif
 
-         if (i_lo_changed) i_lo = i_lo + 1
-         if (i_up_changed) i_up = i_up - 1
+      if (i_lo_changed) i_lo = i_lo + 1
+      if (i_up_changed) i_up = i_up - 1
+
    end subroutine check_boundary_bins
+
 !-------------------------------------------------------------------------------------------------
-  subroutine cresp_find_active_bins
-   use constants,      only: I_ZERO, zero
-   use diagnostics,    only: my_allocate_with_index
-   use initcrspectrum, only: ncre, e_small, cresp_all_edges, cresp_all_bins, nullify_empty_bins
-   implicit none
+
+   subroutine cresp_find_active_bins
+
+      use constants,      only: I_ZERO, zero
+      use diagnostics,    only: my_allocate_with_index
+      use initcrspectrum, only: ncre, e_small, cresp_all_edges, cresp_all_bins, nullify_empty_bins
+
+      implicit none
+
       if(allocated(active_bins))  deallocate(active_bins)
       if(allocated(active_edges)) deallocate(active_edges)
 
@@ -414,35 +445,37 @@ contains
 
       num_active_bins = count(is_active_bin)
       if (num_active_bins .gt. I_ZERO) then
-        allocate(active_bins(num_active_bins))
-        not_spectrum_break(:) = .false.
-        where (e .gt. e_small .and. n .gt. zero)
+         allocate(active_bins(num_active_bins))
+         not_spectrum_break(:) = .false.
+         where (e .gt. e_small .and. n .gt. zero)
             not_spectrum_break = .true.
-        endwhere
-        active_bins = I_ZERO
+         endwhere
+         active_bins = I_ZERO
 !         active_bins = pack(all_bins, is_active_bin)
-        active_bins = pack(cresp_all_bins, not_spectrum_break)   ! not to iterate over spectrum break
+         active_bins = pack(cresp_all_bins, not_spectrum_break)   ! not to iterate over spectrum break
 
 ! Construct index arrays for fixed edges betwen p_lo and p_up, active edges
 ! before timestep
-        is_fixed_edge = .false.
-        is_fixed_edge(i_lo+1:i_up-1) = .true.
-        num_fixed_edges = count(is_fixed_edge)
-        allocate(fixed_edges(num_fixed_edges))
-        fixed_edges = pack(cresp_all_edges, is_fixed_edge)
+         is_fixed_edge = .false.
+         is_fixed_edge(i_lo+1:i_up-1) = .true.
+         num_fixed_edges = count(is_fixed_edge)
+         allocate(fixed_edges(num_fixed_edges))
+         fixed_edges = pack(cresp_all_edges, is_fixed_edge)
 
-        is_active_edge = .false.
-        is_active_edge(i_lo:i_up) = .true.
-        num_active_edges = count(is_active_edge)
-        allocate(active_edges(i_lo:i_up))
-        active_edges = pack(cresp_all_edges, is_active_edge)
+         is_active_edge = .false.
+         is_active_edge(i_lo:i_up) = .true.
+         num_active_edges = count(is_active_edge)
+         allocate(active_edges(i_lo:i_up))
+         active_edges = pack(cresp_all_edges, is_active_edge)
 #ifdef VERBOSE
-        print "(2(A9,i3))", "i_lo =", i_lo, ", i_up = ", i_up
+         print "(2(A9,i3))", "i_lo =", i_lo, ", i_up = ", i_up
 #endif /* VERBOSE */
       endif
-  end subroutine cresp_find_active_bins
+
+   end subroutine cresp_find_active_bins
 
 !-------------------------------------------------------------------------------------------------
+
    subroutine cresp_find_prepare_spectrum(n, e, empty_cell) ! EXPERIMENTAL
 
       use constants,      only: I_ZERO, zero
@@ -528,7 +561,7 @@ contains
 
 ! find the rest of active bins, accounts for a possible break in the spectrum ! TODO
       where (e_amplitudes_l .gt. e_small .or. e_amplitudes_r .gt. e_small) ! this should take care of break in the spectrum
-            is_active_bin = .true.
+         is_active_bin = .true.
       endwhere
 
       pre_i_lo = 0 ; pre_i_up = ncre
@@ -572,164 +605,191 @@ contains
       if(allocated(active_edges)) deallocate(active_edges)
 ! allocate and prepare active bins for spectrum evolution
       if (num_active_bins .gt. I_ZERO) then
-        allocate(active_bins(num_active_bins))
-        active_bins = I_ZERO
-        active_bins = pack(cresp_all_bins, is_active_bin)
+         allocate(active_bins(num_active_bins))
+         active_bins = I_ZERO
+         active_bins = pack(cresp_all_bins, is_active_bin)
 
 ! Construct index arrays for fixed edges betwen p_lo and p_up, active edges
 ! before timestep
-        is_fixed_edge = .false.
-        is_fixed_edge(i_lo+1:i_up-1) = .true.
-        num_fixed_edges = count(is_fixed_edge)
-        allocate(fixed_edges(num_fixed_edges))
-        fixed_edges = pack(cresp_all_edges, is_fixed_edge)
+         is_fixed_edge = .false.
+         is_fixed_edge(i_lo+1:i_up-1) = .true.
+         num_fixed_edges = count(is_fixed_edge)
+         allocate(fixed_edges(num_fixed_edges))
+         fixed_edges = pack(cresp_all_edges, is_fixed_edge)
 
-        is_active_edge = .false.
-        is_active_edge(i_lo:i_up) = .true.
-        num_active_edges = count(is_active_edge)
-        allocate(active_edges(i_lo:i_up))
-        active_edges = pack(cresp_all_edges, is_active_edge)
+         is_active_edge = .false.
+         is_active_edge(i_lo:i_up) = .true.
+         num_active_edges = count(is_active_edge)
+         allocate(active_edges(i_lo:i_up))
+         active_edges = pack(cresp_all_edges, is_active_edge)
 #ifdef VERBOSE
-        print "(2(A9,i3))", "i_lo =", i_lo, ", i_up = ", i_up
+         print "(2(A9,i3))", "i_lo =", i_lo, ", i_up = ", i_up
 #endif /* VERBOSE */
       endif
-  end subroutine cresp_find_prepare_spectrum
+
+   end subroutine cresp_find_prepare_spectrum
 
 !---------------! Compute p for all active edges !---------------------------------------------------
-  subroutine cresp_organize_p
-  use initcrspectrum, only: p_fix, ncre
-  use constants, only: zero
-  implicit none
-        p = zero
-        p(fixed_edges) = p_fix(fixed_edges)
-        p(i_lo) = p_lo * (1 - approx_p_lo ); p_lo = p(i_lo)
-        p(i_up) = p_up * (1 - approx_p_up ); p_up = p(i_up) ! cutoff momenta are going to be evaluated with use of get_fqp_lo and get_fqp_up if e_small_approx_* is set
-        if ( num_active_bins .eq. 1 .and. (i_lo .gt. 0 .and. i_up .lt. ncre) ) then
-            approx_p_lo = 0
-            approx_p_up = 0
-            p_lo = p_fix(i_lo) ; p(i_lo) = p_fix(i_lo) ! one bin -> momentum fixed grid to boundary momenta
-            p_up = p_fix(i_up) ; p(i_up) = p_fix(i_up) ! one bin -> momentum fixed grid to boundary momenta
-        endif
-  end subroutine cresp_organize_p
+
+   subroutine cresp_organize_p
+
+      use initcrspectrum, only: p_fix, ncre
+      use constants, only: zero
+
+      implicit none
+
+      p = zero
+      p(fixed_edges) = p_fix(fixed_edges)
+      p(i_lo) = p_lo * (1 - approx_p_lo ); p_lo = p(i_lo)
+      p(i_up) = p_up * (1 - approx_p_up ); p_up = p(i_up) ! cutoff momenta are going to be evaluated with use of get_fqp_lo and get_fqp_up if e_small_approx_* is set
+      if ( num_active_bins .eq. 1 .and. (i_lo .gt. 0 .and. i_up .lt. ncre) ) then
+         approx_p_lo = 0
+         approx_p_up = 0
+         p_lo = p_fix(i_lo) ; p(i_lo) = p_fix(i_lo) ! one bin -> momentum fixed grid to boundary momenta
+         p_up = p_fix(i_up) ; p(i_up) = p_fix(i_up) ! one bin -> momentum fixed grid to boundary momenta
+      endif
+
+   end subroutine cresp_organize_p
+
 !-----------------------------------------------------------------------
-  subroutine cresp_detect_negative_content ! Diagnostic measure - negative values should not show up:
-   use initcrspectrum, only: ncre
-   use constants, only: zero
-   implicit none                       ! if they do, there's something wrong with last code modifications
-    integer :: i
-        do i = 1, ncre
-            if (e(i) .lt. zero .or. n(i) .lt. zero .or. edt(i) .lt. zero .or. ndt(i) .lt. zero) then
+
+   subroutine cresp_detect_negative_content ! Diagnostic measure - negative values should not show up:
+
+      use initcrspectrum, only: ncre
+      use constants, only: zero
+
+      implicit none                       ! if they do, there's something wrong with last code modifications
+
+      integer :: i
+
+      do i = 1, ncre
+         if (e(i) .lt. zero .or. n(i) .lt. zero .or. edt(i) .lt. zero .or. ndt(i) .lt. zero) then
 !                 print *,'Negative value detected:',  'i=', i,'n(i)=', n(i), 'e(i)=',e(i)
 !                 print *,'Negative value detected:',  'i=', i,'ndt(i)=', ndt(i), 'edt(i)=',edt(i)
 !             call sleep(1)
-            endif
-        enddo
-  end subroutine cresp_detect_negative_content
-!----------------------------------------------------------------------------------------------------
-  subroutine cresp_update_bin_index(dt, p_lo, p_up, p_lo_next, p_up_next, dt_too_high) ! evaluates only "next" momenta and is called after finding outer cutoff momenta
-   use constants, only: zero, I_ZERO, one
-   use initcrspectrum, only: ncre, p_fix, w, cresp_all_bins, cresp_all_edges
-   implicit none
-    real(kind=8), intent(in)  :: dt
-    real(kind=8), intent(in)  :: p_lo, p_up
-    real(kind=8), intent(out) :: p_lo_next, p_up_next
-    logical,      intent(out) :: dt_too_high
-    integer                   :: i_lo_next, i_up_next
-        dt_too_high = .false.
-! Compute p_lo and p_up at [t+dt]
-        call p_update(dt, p_lo, p_lo_next)
-        call p_update(dt, p_up, p_up_next)
-        p_lo_next = abs(p_lo_next)
-        p_up_next = abs(p_up_next)
-! Locate cut-ofs after current timestep
-        i_lo_next = int(floor(log10(p_lo_next/p_fix(1))/w)) + 1
-        i_lo_next = max(0, i_lo_next, i_lo-1)
-        i_lo_next = min(i_lo_next, ncre - 1, i_lo+1)
+         endif
+      enddo
 
-        i_up_next = int(floor(log10(p_up_next/p_fix(1))/w)) + 2
-        i_up_next = max(1,i_up_next, i_up-1)
-        i_up_next = min(i_up_next,ncre,i_up+1)
-        if ( p_up_next .lt. p_fix(i_up_next-1) ) then ! if no solution is found at the first try, approximation usually causes p_up to jump
-            dt_too_high = .true.                 ! towards higher values, which for sufficiently high dt can cause p_up_next to even
-            return                               ! become negative. As p_up would propagate more than one bin this is clearly cfl violation.
-        endif
+   end subroutine cresp_detect_negative_content
+
+!----------------------------------------------------------------------------------------------------
+
+   subroutine cresp_update_bin_index(dt, p_lo, p_up, p_lo_next, p_up_next, dt_too_high) ! evaluates only "next" momenta and is called after finding outer cutoff momenta
+
+      use constants, only: zero, I_ZERO, one
+      use initcrspectrum, only: ncre, p_fix, w, cresp_all_bins, cresp_all_edges
+
+      implicit none
+
+      real(kind=8), intent(in)  :: dt
+      real(kind=8), intent(in)  :: p_lo, p_up
+      real(kind=8), intent(out) :: p_lo_next, p_up_next
+      logical,      intent(out) :: dt_too_high
+      integer                   :: i_lo_next, i_up_next
+
+      dt_too_high = .false.
+! Compute p_lo and p_up at [t+dt]
+      call p_update(dt, p_lo, p_lo_next)
+      call p_update(dt, p_up, p_up_next)
+      p_lo_next = abs(p_lo_next)
+      p_up_next = abs(p_up_next)
+! Locate cut-ofs after current timestep
+      i_lo_next = int(floor(log10(p_lo_next/p_fix(1))/w)) + 1
+      i_lo_next = max(0, i_lo_next, i_lo-1)
+      i_lo_next = min(i_lo_next, ncre - 1, i_lo+1)
+
+      i_up_next = int(floor(log10(p_up_next/p_fix(1))/w)) + 2
+      i_up_next = max(1,i_up_next, i_up-1)
+      i_up_next = min(i_up_next,ncre,i_up+1)
+      if ( p_up_next .lt. p_fix(i_up_next-1) ) then ! if no solution is found at the first try, approximation usually causes p_up to jump
+         dt_too_high = .true.                 ! towards higher values, which for sufficiently high dt can cause p_up_next to even
+         return                               ! become negative. As p_up would propagate more than one bin this is clearly cfl violation.
+      endif
 ! Detect changes in positions of lower an upper cut-ofs
-        del_i_lo = i_lo_next - i_lo
-        del_i_up = i_up_next - i_up
+      del_i_lo = i_lo_next - i_lo
+      del_i_up = i_up_next - i_up
 
 ! Construct index arrays for fixed edges betwen p_lo and p_up, active edges
 ! after timestep
-        is_fixed_edge_next = .false.
-        is_fixed_edge_next(i_lo_next+1:i_up_next-1) = .true.
-        num_fixed_edges_next = count(is_fixed_edge_next)
-        allocate(fixed_edges_next(num_fixed_edges_next))
-        fixed_edges_next = pack(cresp_all_edges, is_fixed_edge_next)
+      is_fixed_edge_next = .false.
+      is_fixed_edge_next(i_lo_next+1:i_up_next-1) = .true.
+      num_fixed_edges_next = count(is_fixed_edge_next)
+      allocate(fixed_edges_next(num_fixed_edges_next))
+      fixed_edges_next = pack(cresp_all_edges, is_fixed_edge_next)
 
-        is_active_edge_next = .false.
-        is_active_edge_next(i_lo_next:i_up_next) = .true.
-        num_active_edges_next = count(is_active_edge_next)
-        allocate(active_edges_next(num_active_edges_next))
-        active_edges_next = pack(cresp_all_edges, is_active_edge_next)
+      is_active_edge_next = .false.
+      is_active_edge_next(i_lo_next:i_up_next) = .true.
+      num_active_edges_next = count(is_active_edge_next)
+      allocate(active_edges_next(num_active_edges_next))
+      active_edges_next = pack(cresp_all_edges, is_active_edge_next)
 
 ! Active bins after timestep
-        is_active_bin_next = .false.
-        is_active_bin_next(i_lo_next+1:i_up_next) = .true.
-        num_active_bins_next = count(is_active_bin_next)
-        allocate(active_bins_next(num_active_bins_next))
-        active_bins_next = pack(cresp_all_bins, is_active_bin_next)
+      is_active_bin_next = .false.
+      is_active_bin_next(i_lo_next+1:i_up_next) = .true.
+      num_active_bins_next = count(is_active_bin_next)
+      allocate(active_bins_next(num_active_bins_next))
+      active_bins_next = pack(cresp_all_bins, is_active_bin_next)
 
-        p_next = zero
-        p_next(fixed_edges_next) = p_fix(fixed_edges_next)
-        p_next(i_lo_next) = p_lo_next
-        p_next(i_up_next) = p_up_next
+      p_next = zero
+      p_next(fixed_edges_next) = p_fix(fixed_edges_next)
+      p_next(i_lo_next) = p_lo_next
+      p_next(i_up_next) = p_up_next
 
 ! Compute upwind momentum p_upw for all fixed edges
-        p_upw = zero
-        p_upw(1:ncre) = p_fix(1:ncre)*(one+p_upw_rch(dt,p_fix(1:ncre)))
+      p_upw = zero
+      p_upw(1:ncre) = p_fix(1:ncre)*(one+p_upw_rch(dt,p_fix(1:ncre)))
 
 #ifdef VERBOSE
-        print*, 'Change of  cut index lo,up:', del_i_lo, del_i_up
+      print*, 'Change of  cut index lo,up:', del_i_lo, del_i_up
 #endif /* VERBOSE */
 
 ! Detect cooling edges and heating edges
-        is_cooling_edge_next = .false. ; num_cooling_edges_next = I_ZERO
-        is_cooling_edge_next(fixed_edges_next)   = (p_upw(fixed_edges_next) &
+      is_cooling_edge_next = .false. ; num_cooling_edges_next = I_ZERO
+      is_cooling_edge_next(fixed_edges_next)   = (p_upw(fixed_edges_next) &
                                                          > p_fix(fixed_edges_next))
-        num_cooling_edges_next = count(is_cooling_edge_next)
-        allocate(cooling_edges_next(num_cooling_edges_next))
-        cooling_edges_next = pack(cresp_all_edges, is_cooling_edge_next)
+      num_cooling_edges_next = count(is_cooling_edge_next)
+      allocate(cooling_edges_next(num_cooling_edges_next))
+      cooling_edges_next = pack(cresp_all_edges, is_cooling_edge_next)
 
-        is_heating_edge_next = .false. ; num_heating_edges_next = I_ZERO
-        is_heating_edge_next(fixed_edges_next) = (p_upw(fixed_edges_next) &
+      is_heating_edge_next = .false. ; num_heating_edges_next = I_ZERO
+      is_heating_edge_next(fixed_edges_next) = (p_upw(fixed_edges_next) &
                                                          < p_fix(fixed_edges_next))
-        num_heating_edges_next = count(is_heating_edge_next)
-        allocate(heating_edges_next(num_heating_edges_next))
-        heating_edges_next = pack(cresp_all_edges, is_heating_edge_next)
+      num_heating_edges_next = count(is_heating_edge_next)
+      allocate(heating_edges_next(num_heating_edges_next))
+      heating_edges_next = pack(cresp_all_edges, is_heating_edge_next)
 #ifdef VERBOSE
-        print *, 'In update_bin_index'
-        print *, 'p_lo_next, p_up_next:', p_lo_next, p_up_next
-        write (*,"(A15,50L2, 50I3)") 'active_edges: ', is_active_edge, active_edges
-        write (*,"(A15,50L2, 50I3)") 'active edgesN:', is_active_edge_next, active_edges_next
-        write (*,"(A15,50L2, 50I3)") 'active binsN :', is_active_bin_next , active_bins_next
-        write (*,"(A15,50L2, 50I3)") 'fixed  edges: ', is_fixed_edge_next,  fixed_edges_next
-        write (*,"(A15,50L2, 50I3)") 'cooling edges:', is_cooling_edge_next,  cooling_edges_next
-        write (*,"(A15,50L2, 50I3)") 'heating edges:', is_heating_edge_next,  heating_edges_next
+      print *, 'In update_bin_index'
+      print *, 'p_lo_next, p_up_next:', p_lo_next, p_up_next
+      write (*,"(A15,50L2, 50I3)") 'active_edges: ', is_active_edge, active_edges
+      write (*,"(A15,50L2, 50I3)") 'active edgesN:', is_active_edge_next, active_edges_next
+      write (*,"(A15,50L2, 50I3)") 'active binsN :', is_active_bin_next , active_bins_next
+      write (*,"(A15,50L2, 50I3)") 'fixed  edges: ', is_fixed_edge_next,  fixed_edges_next
+      write (*,"(A15,50L2, 50I3)") 'cooling edges:', is_cooling_edge_next,  cooling_edges_next
+      write (*,"(A15,50L2, 50I3)") 'heating edges:', is_heating_edge_next,  heating_edges_next
 #endif /* VERBOSE */
 
-  end subroutine cresp_update_bin_index
+   end subroutine cresp_update_bin_index
+
 !-------------------------------------------------------------------------------------------------
 !
 ! update p_range
 !
 !-------------------------------------------------------------------------------------------------
-  subroutine p_update(dt, p_old,  p_new)
-   use constants, only: one
-   implicit none
-    real(kind=8), intent(in)  :: dt
-    real(kind=8), intent(in)  :: p_old
-    real(kind=8), intent(out) :: p_new
-        p_new = p_old*(one + p_rch(dt, p_old)) ! changed from - to + for the sake of intuitiveness in p_rch subroutine
-  end subroutine p_update
+
+   subroutine p_update(dt, p_old,  p_new)
+
+      use constants, only: one
+
+      implicit none
+
+      real(kind=8), intent(in)  :: dt
+      real(kind=8), intent(in)  :: p_old
+      real(kind=8), intent(out) :: p_new
+
+      p_new = p_old*(one + p_rch(dt, p_old)) ! changed from - to + for the sake of intuitiveness in p_rch subroutine
+
+   end subroutine p_update
+
 !-------------------------------------------------------------------------------------------------
 !
 ! arrays initialization | TODO: reorganize cresp_init_state
