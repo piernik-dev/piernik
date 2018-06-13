@@ -50,9 +50,10 @@ module hlld
 
 contains
 
-  subroutine musclflx(n,gamma,ql,qr,b_ccl,b_ccr,psil,psir,flt,frt,bclf,bcrf,psilf,psirf)
+  subroutine musclflx(n,ql,qr,b_ccl,b_ccr,psil,psir,flt,frt,bclf,bcrf,psilf,psirf)
 
-    use constants,  only: one, half, xdim, ydim, zdim, idn, imx, imy, imz, ien, DIVB_HDC
+    use constants,  only: half, xdim, ydim, zdim, DIVB_HDC, zero
+    use fluidindex, only: flind
     use fluidtypes, only: component_fluid
     use func,       only: ekin
     use global,     only: divB_0_method
@@ -61,51 +62,99 @@ contains
     implicit none
 
     integer,              intent(in)  :: n
-    real,                 intent(in)  :: gamma
     real, dimension(:,:), intent(in)  :: ql, qr
     real, dimension(:,:), intent(in)  :: b_ccl, b_ccr
     real, dimension(:,:), intent(in)  :: psil, psir
     real, dimension(:,:), intent(out) :: flt, frt
     real, dimension(:,:), intent(out) :: bclf, bcrf, psilf, psirf
 
+    class(component_fluid), pointer   :: fl
     real                              :: enl, enr
-    integer                           :: i
+    integer                           :: ip, i
 
-    do i = 1, n
-       
-    ! Left flux
-
-    flt(idn,i) = ql(idn,i)*ql(imx,i)
-    flt(imx,i) = ql(idn,i)*ql(imx,i)*ql(imx,i) + ( ql(ien,i) + half*sum(b_ccl(xdim:zdim,i)**2,dim=1)) - b_ccl(xdim,i)**2
-    flt(imy,i) = ql(idn,i)*ql(imx,i)*ql(imy,i) - b_ccl(xdim,i)*b_ccl(ydim,i)
-    flt(imz,i) = ql(idn,i)*ql(imx,i)*ql(imz,i) - b_ccl(xdim,i)*b_ccl(zdim,i)
-    if(divB_0_method .eq. DIVB_HDC) then
-       bclf(xdim,i) = half*((psir(1,i)+psil(1,i)) - chspeed*(b_ccr(xdim,i)-b_ccl(xdim,i)))
-       psilf(1,i)   = (chspeed**2)*half*((b_ccr(xdim,i)+b_ccl(xdim,i)) - (psir(1,i)-psil(1,i)/chspeed))
-    end if
-    bclf(ydim,i) = b_ccl(ydim,i)*ql(imx,i) - b_ccl(xdim,i)*ql(imy,i)
-    bclf(zdim,i) = b_ccl(zdim,i)*ql(imx,i) - b_ccl(xdim,i)*ql(imz,i)
-
-    enl = (ql(ien,i)/(gamma - one)) + half*ql(idn,i)*sum(ql(imx:imz,i)**2) + half*sum(b_ccl(xdim:zdim,i)**2)
-    flt(ien,i) = (enl + (ql(ien,i) + half*sum(b_ccl(xdim:zdim,i)**2,dim=1))  )*ql(imx,i) - b_ccl(xdim,i)*dot_product(ql(imx:imz,i),b_ccl(xdim:zdim,i))
-       
-    ! Right flux
-
-    frt(idn,i) = qr(idn,i)*qr(imx,i)
-    frt(imx,i) = qr(idn,i)*qr(imx,i)*qr(imx,i) + ( qr(ien,i) + half*sum(b_ccr(xdim:zdim,i)**2,dim=1)) - b_ccr(xdim,i)**2
-    frt(imy,i) = qr(idn,i)*qr(imx,i)*qr(imy,i) - b_ccr(xdim,i)*b_ccr(ydim,i)
-    frt(imz,i) = qr(idn,i)*qr(imx,i)*qr(imz,i) - b_ccr(xdim,i)*b_ccr(zdim,i)
-    if(divB_0_method .eq. DIVB_HDC) then
-       bcrf(xdim,i) = half*((psir(1,i)+psil(1,i)) - chspeed*(b_ccr(xdim,i)-b_ccl(xdim,i)))
-       psirf(1,i)   = (chspeed**2)*half*((b_ccr(xdim,i)+b_ccl(xdim,i)) - (psir(1,i)-psil(1,i)/chspeed))
-    end if
-    bcrf(ydim,i) = b_ccr(ydim,i)*qr(imx,i) - b_ccr(xdim,i)*qr(imy,i)
-    bcrf(zdim,i) = b_ccr(zdim,i)*qr(imx,i) - b_ccr(xdim,i)*qr(imz,i)
+    flt   = zero
+    frt   = zero
+    bclf  = zero
+    bcrf  = zero
+    psilf = zero
+    psirf = zero
     
-    enr = (qr(ien,i)/(gamma - one)) + half*qr(idn,i)*sum(qr(imx:imz,i)**2) + half*sum(b_ccr(xdim:zdim,i)**2)
-    frt(ien,i) = (enr + (qr(ien,i) + half*sum(b_ccr(xdim:zdim,i)**2,dim=1))  )*qr(imx,i) - b_ccr(xdim,i)*dot_product(qr(imx:imz,i),b_ccr(xdim:zdim,i))
+    do ip = 1, flind%fluids
 
- end do
+       fl => flind%all_fluids(ip)%fl
+
+       do i = 1, n
+       
+          ! Left flux
+
+          flt(fl%idn,i) = ql(fl%idn,i)*ql(fl%imx,i)
+          if(fl%has_energy) then 
+             flt(fl%imx,i) = ql(fl%idn,i)*ql(fl%imx,i)*ql(fl%imx,i) + ql(fl%ien,i)
+             if(fl%is_magnetized) then
+                flt(fl%imx,i) = ql(fl%idn,i)*ql(fl%imx,i)*ql(fl%imx,i) + (ql(fl%ien,i) + half*sum(b_ccl(xdim:zdim,i)**2,dim=1)) - b_ccl(xdim,i)**2
+             end if
+          end if
+          flt(fl%imy,i) = ql(fl%idn,i)*ql(fl%imx,i)*ql(fl%imy,i)
+          flt(fl%imz,i) = ql(fl%idn,i)*ql(fl%imx,i)*ql(fl%imz,i)
+          if(fl%is_magnetized) then
+             flt(fl%imy,i) = ql(fl%idn,i)*ql(fl%imx,i)*ql(fl%imy,i) - b_ccl(xdim,i)*b_ccl(ydim,i)
+             flt(fl%imz,i) = ql(fl%idn,i)*ql(fl%imx,i)*ql(fl%imz,i) - b_ccl(xdim,i)*b_ccl(zdim,i)
+             bclf(ydim,i)  = b_ccl(ydim,i)*ql(fl%imx,i) - b_ccl(xdim,i)*ql(fl%imy,i)
+             bclf(zdim,i)  = b_ccl(zdim,i)*ql(fl%imx,i) - b_ccl(xdim,i)*ql(fl%imz,i)
+             if(divB_0_method .eq. DIVB_HDC) then
+                ! We only need the flux, not the Riemann problem
+                !bclf(xdim,i) = half*((psir(1,i)+psil(1,i)) - chspeed*(b_ccr(xdim,i)-b_ccl(xdim,i)))
+                !psilf(1,i)   = (chspeed**2)*half*((b_ccr(xdim,i)+b_ccl(xdim,i)) - (psir(1,i)-psil(1,i)/chspeed))
+                bclf(xdim,i) = psil(1,i)
+                psilf(1,i)   = (chspeed**2)*b_ccl(xdim,i)
+             end if
+          end if
+          if(fl%has_energy) then
+             enl = (ql(fl%ien,i)/(fl%gam_1)) + half*ql(fl%idn,i)*sum(ql(fl%imx:fl%imz,i)**2)
+             flt(fl%ien,i) = (enl + (ql(fl%ien,i)))*ql(fl%imx,i) 
+             if(fl%is_magnetized) then
+                enl = (ql(fl%ien,i)/(fl%gam_1)) + half*ql(fl%idn,i)*sum(ql(fl%imx:fl%imz,i)**2) + half*sum(b_ccl(xdim:zdim,i)**2)
+                flt(fl%ien,i) = (enl + (ql(fl%ien,i) + half*sum(b_ccl(xdim:zdim,i)**2,dim=1)))*ql(fl%imx,i) - b_ccl(xdim,i)*dot_product(ql(fl%imx:fl%imz,i),b_ccl(xdim:zdim,i))
+             end if
+          end if
+       
+          ! Right flux
+       
+          frt(fl%idn,i) = qr(fl%idn,i)*qr(fl%imx,i)
+          if(fl%has_energy) then 
+             frt(fl%imx,i) = qr(fl%idn,i)*qr(fl%imx,i)*qr(fl%imx,i) + qr(fl%ien,i)
+             if(fl%is_magnetized) then
+                frt(fl%imx,i) = qr(fl%idn,i)*qr(fl%imx,i)*qr(fl%imx,i) + (qr(fl%ien,i) + half*sum(b_ccr(xdim:zdim,i)**2,dim=1)) - b_ccr(xdim,i)**2
+             end if
+          end if
+          frt(fl%imy,i) = qr(fl%idn,i)*qr(fl%imx,i)*qr(fl%imy,i)
+          frt(fl%imz,i) = qr(fl%idn,i)*qr(fl%imx,i)*qr(fl%imz,i)
+          if(fl%is_magnetized) then
+             frt(fl%imy,i) = qr(fl%idn,i)*qr(fl%imx,i)*qr(fl%imy,i) - b_ccr(xdim,i)*b_ccr(ydim,i)
+             frt(fl%imz,i) = qr(fl%idn,i)*qr(fl%imx,i)*qr(fl%imz,i) - b_ccr(xdim,i)*b_ccr(zdim,i)
+             bcrf(ydim,i)  = b_ccr(ydim,i)*qr(fl%imx,i) - b_ccr(xdim,i)*qr(fl%imy,i)
+             bcrf(zdim,i)  = b_ccr(zdim,i)*qr(fl%imx,i) - b_ccr(xdim,i)*qr(fl%imz,i)
+             if(divB_0_method .eq. DIVB_HDC) then
+                ! We only need the flux, not the Riemann problem
+                !bcrf(xdim,i) = half*((psir(1,i)+psil(1,i)) - chspeed*(b_ccr(xdim,i)-b_ccl(xdim,i)))
+                !psirf(1,i)   = (chspeed**2)*half*((b_ccr(xdim,i)+b_ccl(xdim,i)) - (psir(1,i)-psil(1,i)/chspeed))
+                bcrf(xdim,i) = psir(1,i)
+                psirf(1,i)   = (chspeed**2)*b_ccr(xdim,i)
+             end if
+          end if
+          if(fl%has_energy) then
+             enr = (qr(fl%ien,i)/(fl%gam_1)) + half*qr(fl%idn,i)*sum(qr(fl%imx:fl%imz,i)**2)
+             frt(fl%ien,i) = (enr + (qr(fl%ien,i)))*qr(fl%imx,i) 
+             if(fl%is_magnetized) then
+                enr = (qr(fl%ien,i)/(fl%gam_1)) + half*qr(fl%idn,i)*sum(qr(fl%imx:fl%imz,i)**2) + half*sum(b_ccr(xdim:zdim,i)**2)
+                frt(fl%ien,i) = (enr + (qr(fl%ien,i) + half*sum(b_ccr(xdim:zdim,i)**2,dim=1)))*qr(fl%imx,i) - b_ccr(xdim,i)*dot_product(qr(fl%imx:fl%imz,i),b_ccr(xdim:zdim,i))
+             end if
+          end if
+          
+       end do
+       
+    end do
+
   end subroutine musclflx
   
 
