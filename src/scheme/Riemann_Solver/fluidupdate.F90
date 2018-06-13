@@ -144,10 +144,10 @@ contains
     if (associated(problem_customize_solution)) call problem_customize_solution(forward)
 
     if (divB_0_method == DIVB_HDC) then
-      
+
        call glmdamping
-      
-    end if
+
+    endif
   end subroutine make_3sweeps
 
 !-------------------------------------------------------------------------------------------------------------------
@@ -508,7 +508,7 @@ contains
      use global,     only: h_solver
      use interpolations, only: interpol
      use hlld,       only: musclflx
- 
+
      implicit none
 
      real, dimension(:,:), intent(inout) :: u
@@ -518,18 +518,18 @@ contains
      real, dimension(:), pointer, intent(in) :: div_v1d
 
      real, dimension(size(b_cc,1),size(b_cc,2)), target :: b_cc_l, b_cc_r, mag_cc
-     real, dimension(size(b_cc,1),size(b_cc,2))         :: bclflx, bcrflx, db1, db2, db3 
+     real, dimension(size(b_cc,1),size(b_cc,2))         :: bclflx, bcrflx, db1, db2, db3
      real, dimension(size(u,1),size(u,2)), target       :: flx, ql, qr
      real, dimension(size(u,1),size(u,2))               :: flx_l, flx_r
-     real, dimension(size(u,1),size(u,2))               :: du1, du2, du3 
+     real, dimension(size(u,1),size(u,2))               :: du1, du2, du3
 
-     real, dimension(size(psi,1),size(psi,2))           :: psilflx, psirflx, dpsi1, dpsi2, dpsi3 
+     real, dimension(size(psi,1),size(psi,2))           :: psilflx, psirflx, dpsi1, dpsi2, dpsi3
      real, dimension(size(psi,1),size(psi,2)), target   :: psi_l, psi_r
      real, dimension(size(psi,1),size(psi,2)),target    :: psi_cc
-     
+
 
      integer                                            :: nx
-     
+
      nx  = size(u,2)
      if (size(b_cc,2) /= nx) call die("[fluidupdate:rk2] size b_cc and u mismatch")
      mag_cc = huge(1.)
@@ -556,24 +556,24 @@ contains
    contains
 
         ! some shortcuts
-        
+
      subroutine du_db(du, db, dpsi)
 
        use constants,  only: DIVB_HDC
        use global,     only: divB_0_method
 
        implicit none
-       
+
        real, dimension(size(u,1),size(u,2)),       intent(out) :: du
        real, dimension(size(b_cc,1),size(b_cc,2)), intent(out) :: db
        real, dimension(size(psi,1),size(psi,2)),   intent(out) :: dpsi
-       
+
        du(:,2:nx) = dtodx*(flx(:,1:nx-1) - flx(:,2:nx))
        du(:,1) = du(:,2)
-       
+
        db(:,2:nx) = dtodx*(mag_cc(:,1:nx-1) - mag_cc(:,2:nx))
        db(:,1) = db(:,2)
-       
+
        if (divB_0_method == DIVB_HDC) then
           dpsi(:,2:nx) = dtodx*(psi_cc(:,1:nx-1) - psi_cc(:,2:nx))
           dpsi(:,1) = dpsi(:,2)
@@ -584,7 +584,7 @@ contains
      end subroutine du_db
 
      subroutine riemann_wrap()
-       
+
        use constants,  only: xdim, zdim, DIVB_HDC
        use fluidindex, only: flind
        use fluidtypes, only: component_fluid
@@ -599,7 +599,7 @@ contains
        real, dimension(:,:), pointer :: p_flx, p_bcc, p_bccl, p_bccr, p_ql, p_qr
        real, dimension(size(psi,1),size(psi,2)), target ::  p0, pf0
        real, dimension(:,:), pointer :: p_psif, p_psi_l, p_psi_r
-       
+
        do i = 1, flind%fluids
           fl    => flind%all_fluids(i)%fl
           p_flx => flx(fl%beg:fl%end,:)
@@ -626,18 +626,17 @@ contains
                 p_psif  => pf0
              endif
           endif
-          
+
           call riemann_hlld(nx, p_flx, p_ql, p_qr, p_bcc, p_bccl, p_bccr, p_psi_l, p_psi_r, p_psif, fl%gam) ! whole mag_cc is not needed now for simple schemes but rk2 and rk4 still rely on it
        enddo
      end subroutine riemann_wrap
-     
+
      subroutine update(weights)
-       
+
        use constants,        only: xdim, ydim, zdim, DIVB_HDC
-       !use hdc,              only: chspeed!,glmdamping
        use fluidindex,       only: flind
-       use global,           only: divB_0_method, glm_alpha !cfl
-       
+       use global,           only: divB_0_method
+
 #ifdef COSM_RAYS
        use fluidindex,       only: iarr_all_dn, iarr_all_mx, iarr_all_en
        use global,           only: dt
@@ -648,14 +647,14 @@ contains
        use sourcecosmicrays, only: src_crn
 #endif /* COSM_RAYS_SOURCES */
 #endif /* COSM_RAYS */
-       
+
        implicit none
-       
+
        real, optional, dimension(:), intent(in) :: weights
-       
+
        real, dimension(:), allocatable :: w
        integer :: iend  !< last component of any fluid (i.e. exclude CR or tracers here)
-       
+
 #ifdef COSM_RAYS
        real, dimension(size(u,2),size(u,1))           :: u1
        real, dimension(nx, flind%fluids), target      :: vx
@@ -665,9 +664,9 @@ contains
        real, dimension(nx, flind%crn%all)             :: srccrn
 #endif /* COSM_RAYS_SOURCES */
 #endif /* COSM_RAYS */
-       
+
        iend = flind%all_fluids(flind%fluids)%fl%end
-       
+
        if (present(weights)) then
           allocate(w(size(weights)))
           w = weights/sum(weights)
@@ -675,50 +674,50 @@ contains
           allocate(w(1))
           w(1) = 1.
        endif
-       
+
        u(:iend,2:nx) = u(:iend,2:nx) + w(1) * dtodx * (flx(:iend,1:nx-1) - flx(:iend,2:nx))
        if (size(w)>=2) u(:iend,2:nx) = u(:iend,2:nx) + w(2) * du1(:iend,2:nx)
        if (size(w)>=3) u(:iend,2:nx) = u(:iend,2:nx) + w(3) * du2(:iend,2:nx)
        if (size(w)>=4) u(:iend,2:nx) = u(:iend,2:nx) + w(4) * du3(:iend,2:nx)
        u(:iend,1) = u(:iend,2)
        u(:iend,nx) = u(:iend,nx-1)
-       
+
        b_cc(ydim:zdim,2:nx) = b_cc(ydim:zdim,2:nx) + w(1) * dtodx * (mag_cc(ydim:zdim,1:nx-1) - mag_cc(ydim:zdim,2:nx))
        if (size(w)>=2)  b_cc(ydim:zdim,2:nx) = b_cc(ydim:zdim,2:nx) + w(2) * db1(ydim:zdim,2:nx)
        if (size(w)>=3)  b_cc(ydim:zdim,2:nx) = b_cc(ydim:zdim,2:nx) + w(3) * db2(ydim:zdim,2:nx)
        if (size(w)>=4)  b_cc(ydim:zdim,2:nx) = b_cc(ydim:zdim,2:nx) + w(4) * db3(ydim:zdim,2:nx)
-       
+
        if (divB_0_method == DIVB_HDC) then
-          
+
           b_cc(xdim, 2:nx) = b_cc(xdim, 2:nx) + w(1) * dtodx * (mag_cc(xdim, 1:nx-1) - mag_cc(xdim, 2:nx))
           if (size(w)>=2)  b_cc(xdim,2:nx) = b_cc(xdim,2:nx) + w(2) * db1(xdim,2:nx)
           if (size(w)>=3)  b_cc(xdim,2:nx) = b_cc(xdim,2:nx) + w(3) * db2(xdim,2:nx)
           if (size(w)>=4)  b_cc(xdim,2:nx) = b_cc(xdim,2:nx) + w(4) * db3(xdim,2:nx)
-          
+
           psi(1, 2:nx) = psi(1, 2:nx) + w(1) * dtodx * (psi_cc(1, 1:nx-1) - psi_cc(1, 2:nx))
           if (size(w)>=2)  psi_cc(1,2:nx) = psi_cc(1,2:nx) + w(2) * dpsi1(1,2:nx)
           if (size(w)>=3)  psi_cc(1,2:nx) = psi_cc(1,2:nx) + w(3) * dpsi2(1,2:nx)
           if (size(w)>=4)  psi_cc(1,2:nx) = psi_cc(1,2:nx) + w(4) * dpsi3(1,2:nx)
           psi(:,1) = psi(:,2)
           psi(:,nx) = psi(:, nx-1)
-          
+
           !damping
           !psi = psi*exp(-glm_alpha*chspeed*dtodx)
 
        endif
-       
+
        b_cc(:, 1)  = b_cc(:, 2)
        b_cc(:, nx) = b_cc(:, nx-1)
-       
+
        ! This is lowest order implementation of CR
        ! It agrees with the implementation in RTVD in the limit of small CR energy amounts
        ! ToDo: integrate it into h_solver schemes
 #if defined COSM_RAYS && defined IONIZED
-       
+
        if (nx > 1) then
           ! transposition for compatibility with RTVD-based routines
           u1 = transpose(u)
-          
+
           vx = u1(:, iarr_all_mx) / u1(:, iarr_all_dn) ! this may also be useful for gravitational acceleration
           ! Replace dt/dtodx by dx == cg%dl(ddim)
           call src_gpcr(u1, nx, dt/dtodx, div_v1d, decr, grad_pcr)
@@ -733,17 +732,17 @@ contains
        call src_crn(u1, nx, srccrn, dt) ! n safe
        u1(:, iarr_crn) = u1(:, iarr_crn) + srccrn(:,:)*dt
 #endif /* COSM_RAYS_SOURCES */
-       
+
        u = transpose(u1)
-       
+
 #else
        if (.false.) div_v1d = div_v1d + 0.  ! suppress compiler warnings
 #endif /* COSM_RAYS && IONIZED */
-       
+
        deallocate(w)
-       
+
      end subroutine update
-     
+
    end subroutine solve
 
 !--------------------------------------------------------------------------------------------------------------

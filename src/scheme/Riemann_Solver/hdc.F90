@@ -149,7 +149,7 @@ contains
 !<
   subroutine glmdamping
 
-     use global,           only: glm_alpha, dt, cfl
+     use global,           only: glm_alpha, dt !, cfl
      use cg_list,          only: cg_list_element
      use grid_cont,        only: grid_container
      use cg_leaves,        only: leaves
