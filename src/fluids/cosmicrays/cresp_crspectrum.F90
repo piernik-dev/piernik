@@ -3,7 +3,8 @@ module cresp_crspectrum
  implicit none
   public :: cresp_update_cell, cresp_init_state, printer, fail_count_interpol, fail_count_no_sol, fail_count_NR_2dim, cresp_get_scaled_init_spectrum, &
       &   cleanup_cresp, cresp_accuracy_test, b_losses, cresp_allocate_all, cresp_deallocate_all, e_threshold_lo, e_threshold_up, &
-      &   fail_count_comp_q, second_fail, src_gpcresp, cresp_init_powl_spectrum, get_powl_f_ampl, e_tot_2_f_init_params, e_tot_2_en_powl_init_params, detect_clean_spectrum
+      &   fail_count_comp_q, second_fail, src_gpcresp, cresp_init_powl_spectrum, get_powl_f_ampl, e_tot_2_f_init_params, e_tot_2_en_powl_init_params, &
+      &   detect_clean_spectrum, cresp_find_prepare_spectrum
   private ! most of it
 
   integer, dimension(1:2), save     :: fail_count_NR_2dim, fail_count_interpol, fail_count_no_sol, second_fail
@@ -444,7 +445,7 @@ contains
   end subroutine cresp_find_active_bins
 
 !-------------------------------------------------------------------------------------------------
-   subroutine cresp_find_prepare_spectrum(n, e, empty_cell) ! EXPERIMENTAL
+   subroutine cresp_find_prepare_spectrum(n, e, empty_cell, i_up_out) ! EXPERIMENTAL
 
       use constants,      only: I_ZERO, zero
       use diagnostics,    only: incr_vec
@@ -456,6 +457,7 @@ contains
       logical, dimension(ncre) :: has_n_gt_zero, has_e_gt_zero
       logical                  :: empty_cell
       integer(kind=4)          :: i, pre_i_lo, pre_i_up, num_has_gt_zero, approx_p_lo_tmp, approx_p_up_tmp
+      integer(kind=4), optional:: i_up_out
       real(kind=8), dimension(ncre), intent(inout)   :: n, e
 
       has_n_gt_zero(:) = .false. ; has_e_gt_zero(:)  = .false.
@@ -565,6 +567,11 @@ contains
       if (i_lo .gt. 1)  is_active_bin(:i_lo) = .false.
 
       if (i_up .lt. ncre ) is_active_bin(i_up+1:) = .false.
+
+      if (present(i_up_out)) then
+         i_up_out = i_up
+         return
+      endif
 
       num_active_bins = count(is_active_bin)
 

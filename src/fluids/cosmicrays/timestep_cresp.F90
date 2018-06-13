@@ -55,18 +55,24 @@ module timestep_cresp
 
   subroutine cresp_timestep(dt_comp, sptab, n_cell, e_cell, i_up_cell)
    use initcrspectrum,   only: spec_mod_trms, ncre, w, eps
+   use cresp_crspectrum, only: cresp_find_prepare_spectrum
    use constants, only: zero, I_ZERO
    implicit none
     real(kind=8), intent(out)  :: dt_comp
     real(kind=8)               :: dt_cre_ud, dt_cre_ub
     real(kind=8) :: p_u
     real(kind=8), dimension(:), intent(in) :: n_cell, e_cell
+    real(kind=8), dimension(ncre)          :: n_inout, e_inout
     integer(kind=4), intent(inout) :: i_up_cell
     type(spec_mod_trms) sptab
+    logical      :: empty_cell
+        empty_cell = .true.
+        n_inout = n_cell
+        e_inout = e_cell
         i_up_cell = I_ZERO
         dt_cre_ud = huge(one)
         dt_cre_ub = huge(one)
-        i_up_cell = evaluate_i_up(e_cell, n_cell)
+        call cresp_find_prepare_spectrum(n_inout, e_inout, empty_cell, i_up_cell)
 ! cell is assumed empty if evaluate_i_up over whole ncre range returns 0 -> nothing to do here
         if (i_up_cell .gt. 0) then
 ! Adiabatic cooling timestep:
