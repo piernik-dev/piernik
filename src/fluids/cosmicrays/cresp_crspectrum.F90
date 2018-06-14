@@ -500,6 +500,7 @@ contains
       if (allocated(nonempty_bins)) deallocate(nonempty_bins)
       if (allocated(active_bins))   deallocate(active_bins)
 ! Detect where bins have nonzero values for both n and e; num_has_gt_zero stores preliminary active bins
+      allocate(nonempty_bins(0))
       do i = 1, ncre
          has_n_gt_zero(i) = (n(i) .gt. zero)
          has_e_gt_zero(i) = (e(i) .gt. zero)
