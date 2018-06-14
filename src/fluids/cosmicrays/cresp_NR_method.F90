@@ -458,8 +458,14 @@ module cresp_NR_method
                     enddo
                 enddo
             else
-                prev_solution(1) = fill_p(i,j)
-                prev_solution(2) = fill_f(i,j)
+               if (prev_solution(1) .le. eps ) then
+                  prev_solution(1) = prev_solution_1(1)
+               else if (prev_solution(2) .le. eps) then
+                  prev_solution(2) = prev_solution_1(2)
+               else
+                  prev_solution(1) = fill_p(i,j)
+                  prev_solution(2) = fill_f(i,j)
+               endif
             endif
 #ifdef VERBOSE
             if (exit_code .eqv. .true.) print *,""
@@ -840,7 +846,7 @@ end subroutine
    real(kind=8), parameter          :: dx_par = 1.0e-4
    integer(kind=2) :: j
         do j = 1,size(x)
-            dx(:) = min(max(x(:)*dx_par,eps),dx_par) ! the value of dx is scaled not to go over value of x
+            dx(:) = min(max(x(:)*dx_par,x(:)*eps),dx_par) ! the value of dx is scaled not to go over value of x
             xp = x ; xm = x
             xp(j) = x(j) - dx(j) ;  xm(j) = x(j) + dx(j)
             jac_fin_diff(:,j)  = half*( selected_function_2D(xp) - selected_function_2D(xm)) / dx(j)
