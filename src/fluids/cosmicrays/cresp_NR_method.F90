@@ -161,10 +161,10 @@ module cresp_NR_method
   end function derivative_1D
 !----------------------------------------------------------------------------------------------------
   subroutine cresp_initialize_guess_grids
-   use constants,      only: zero
-   use initcrspectrum, only: e_small, q_big, max_p_ratio !, p_fix
-   use cresp_variables,only: clight ! use units, only: clight
-   use mpisetup,       only: master
+   use constants,       only: zero
+   use initcrspectrum,  only: e_small, q_big, max_p_ratio !, p_fix
+   use cresp_variables, only: clight ! use units, only: clight
+   use mpisetup,        only: master
    implicit none
     logical   :: first_run = .true. , save_to_log = .false.
     character(8)  :: date
@@ -396,7 +396,10 @@ module cresp_NR_method
  subroutine fill_boundary_grid(bound_case, fill_p, fill_f) ! to be paralelized
   use constants, only: zero
   implicit none
-  real(kind=8), dimension(1:2) :: x_vec, prev_solution, prev_solution_1, x_in, x_step
+  real(kind=8), dimension(1:2) :: x_vec, prev_solution, prev_solution_1, x_step
+#ifdef VERBOSE
+  real(kind=8), dimension(1:2) :: x_in
+#endif /* VERBOSE */
   real(kind=8), dimension(:,:) :: fill_p, fill_f
   integer(kind=4) :: i, j, is, js
   logical         :: exit_code, new_line
@@ -419,7 +422,9 @@ module cresp_NR_method
             exit_code = .true.
             alpha = p_a(i)
             n_in  = p_n(j)
+#ifdef VERBOSE
             write(*,"(A14,A2,A2,2I4,A9,I4,A1)",advance="no") "Now solving (",bound_case,") ",i,j,", sized ",arr_dim," "
+#endif /* VERBOSE */
             call seek_solution_prev(fill_p(i,j), fill_f(i,j), prev_solution, nam, exit_code)
             if (exit_code .eqv. .false. .and. new_line .eqv. .true.) then
                 prev_solution_1 = prev_solution
@@ -444,7 +449,9 @@ module cresp_NR_method
                                 fill_p(i,j) = x_vec(1) ! i index - alpha, j index - n_in
                                 fill_f(i,j) = x_vec(2)
                                 prev_solution = x_vec
+#ifdef VERBOSE
                                 call msg_success("    ",nam,x_in, x_vec)
+#endif /* VERBOSE */
                                 exit
                             endif
                         endif
@@ -454,12 +461,16 @@ module cresp_NR_method
                 prev_solution(1) = fill_p(i,j)
                 prev_solution(2) = fill_f(i,j)
             endif
+#ifdef VERBOSE
             if (exit_code .eqv. .true.) print *,""
+#endif /* VERBOSE */
         enddo
     enddo
     fill_p = abs(fill_p)
     fill_f = abs(fill_f)
+#ifdef VERBOSE
     print *,""
+#endif /* VERBOSE */
   end subroutine
 !----------------------------------------------------------------------------------------------------
  subroutine step_seek(x_step, prev_sol, ii, jj, i_sol, j_sol, exit_code, nstep)
@@ -601,7 +612,9 @@ module cresp_NR_method
             call NR_algorithm(x_vec, exit_code)
             if (exit_code .eqv. .false.) then
                 x_vec = abs(x_vec)
+#ifdef VERBOSE
                 call msg_success("extr", sought_by,x_in,x_vec)
+#endif /* VERBOSE */
                 p3(3) = x_vec(1)
                 f3(3) = x_vec(2)
                 return
@@ -634,7 +647,9 @@ module cresp_NR_method
                 call NR_algorithm(x_vec, exit_code)
                 if (exit_code .eqv. .false.) then ! first iteration is a simple extrapolation
                     x_vec = abs(x_vec)
+#ifdef VERBOSE
                     call msg_success("inpl", sought_by, x_in, x_vec)
+#endif /* VERBOSE */
                     p3(2) = x_vec(1)
                     f3(2) = x_vec(2)
                     return
@@ -645,6 +660,7 @@ module cresp_NR_method
     endif
  end subroutine step_inpl
 !----------------------------------------------------------------------------------------------------
+#ifdef VERBOSE
  subroutine msg_success(met_name, sought_by, x_in, x_out)
  implicit none
   real(kind=8), dimension(1:), intent(in)  :: x_in
@@ -655,6 +671,7 @@ module cresp_NR_method
     write (*, "(A5,A4,A42, 2E19.10e3)",advance="no") " -> (",met_name,") solution obtained, (p_ratio, f_ratio) = ", x_out
     write (*, "(A21, 2E17.10)",advance="no") ", provided input:", x_in ; print *,""
 end subroutine
+#endif /* VERBOSE */
 !----------------------------------------------------------------------------------------------------
  function lin_interpolation_1D(fun, arg, arg_mid)
  use constants, only: one
@@ -679,7 +696,9 @@ end subroutine
                 x_vec = abs(x_vec)
                 p2ref = x_vec(1)
                 f2ref = x_vec(2)
+#ifdef VERBOSE
                 call msg_success("prev", sought_by, prev_solution, x_vec)
+#endif /* VERBOSE */
                 prev_solution = x_vec
                 return
             endif
@@ -705,7 +724,9 @@ end subroutine
                         p2ref = x_step(1)
                         f2ref = x_step(2)
                         prev_solution = x_step
+#ifdef VERBOSE
                         call msg_success("step", sought_by, x_step, x_vec)
+#endif /* VERBOSE */
                         return
                     endif
                 enddo

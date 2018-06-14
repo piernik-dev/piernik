@@ -216,11 +216,11 @@ contains
 
    subroutine fluid_update
 
-      use all_boundaries,    only: all_fluid_boundaries
       use dataio_pub,  only: halfstep
       use global,      only: dt, dtm, t
       use mass_defect, only: update_magic_mass
 #ifdef COSM_RAY_ELECTRONS
+      use all_boundaries,  only: all_fluid_boundaries
       use cresp_grid,      only: cresp_update_grid, cresp_clean_grid
       use initcrspectrum,  only: use_cresp
 #endif /* COSM_RAY_ELECTRONS */
@@ -237,7 +237,7 @@ contains
 
 #ifdef COSM_RAY_ELECTRONS
       if (use_cresp) then
-         call cresp_update_grid     ! updating number density and energy density of cosmic ray electrons via CRESP module\
+         call cresp_update_grid     ! updating number density and energy density of cosmic ray electrons via CRESP module
          call all_fluid_boundaries
       endif
 #endif /* COSM_RAY_ELECTRONS */
@@ -247,7 +247,9 @@ contains
       dtm = dt
       call make_3sweeps(.false.) ! Z -> Y -> X
       call update_magic_mass
+#ifdef COSM_RAY_ELECTRONS
       call cresp_clean_grid ! BEWARE: due to diffusion some junk remains in the grid - this nullifies all inactive bins.
+#endif /* COSM_RAY_ELECTRONS */
 
    end subroutine fluid_update
 
@@ -286,7 +288,10 @@ contains
 
       logical, intent(in) :: forward  !< If .true. then do X->Y->Z sweeps, if .false. then reverse that order
 
-      integer(kind=4) :: s, icrc      ! index of cr component in iarr_crs
+      integer(kind=4) :: s
+#ifdef COSM_RAY_ELECTRONS
+      integer(kind=4) :: icrc      ! index of cr component in iarr_crs
+#endif /* COSM_RAY_ELECTRONS */
 
 #ifdef SHEAR
       call shear_3sweeps
@@ -417,10 +422,10 @@ contains
 !<
    subroutine make_diff_sweep(icrc, dir)
 
-      use domain,         only: dom
       use sweeps,         only: sweep
 #ifdef COSM_RAYS
       use crdiffusion,    only: cr_diff
+      use domain,         only: dom
       use initcosmicrays, only: use_split
 #endif /* COSM_RAYS */
 #ifdef DEBUG
