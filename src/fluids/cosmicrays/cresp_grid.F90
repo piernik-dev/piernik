@@ -81,7 +81,7 @@ module cresp_grid
 
       use cg_leaves,        only: leaves
       use cg_list,          only: cg_list_element
-      use cresp_crspectrum, only: cresp_update_cell, detect_clean_spectrum
+      use cresp_crspectrum, only: detect_clean_spectrum
       use grid_cont,        only: grid_container
       use initcrspectrum,   only: cresp, nullify_empty_bins
       use named_array,      only: p4
@@ -204,7 +204,8 @@ module cresp_grid
       use cg_leaves,          only: leaves
       use cg_list,            only: cg_list_element
       use constants,          only: xdim, ydim, zdim, one, half, onet
-      use crhelpers,          only: divv_n
+      use crhelpers,          only: div_v, divv_n
+      use fluidindex,         only: flind
       use func,               only: emag !, operator(.equals.), operator(.notequals.)
       use grid_cont,          only: grid_container
       use initcosmicrays,     only: K_cre_paral, K_cre_perp
@@ -233,6 +234,7 @@ module cresp_grid
          cgl => leaves%first
          do while (associated(cgl))
             cg => cgl%cg
+            if (adiab_active) call div_v(flind%ion%pos, cg)
             do k = cg%ks, cg%ke
                do j = cg%js, cg%je
                   do i = cg%is, cg%ie
