@@ -60,9 +60,9 @@ module cresp_grid
                   virtual_e  => cg%w(wna%ind(ve_n))%point([i,j,k])
                   if (synch_active) sptab%ub = emag(cg%b(xdim,i,j,k), cg%b(ydim,i,j,k), cg%b(zdim,i,j,k)) * bb_to_ub    !< WARNING assusmes that b is in mGs
                   if (adiab_active) sptab%ud = cg%q(qna%ind(divv_n))%point([i,j,k]) * onet
-#ifdef VERBOSE
+#ifdef CRESP_VERBOSED
                   print *, 'Output of cosmic ray electrons module for grid cell with coordinates i,j,k:', i, j, k
-#endif /* VERBOSE */
+#endif /* CRESP_VERBOSED */
                   call cresp_update_cell(2 * dt, cresp%n, cresp%e, sptab, virtual_n, virtual_e, cfl_cresp_violation)
                   if ( cfl_cresp_violation ) return ! nothing to do here!
                   p4(iarr_cre_n, i, j, k) = cresp%n
