@@ -27,7 +27,7 @@ module cresp_grid
       use cg_leaves,        only: leaves
       use cg_list,          only: cg_list_element
       use constants,        only: xdim, ydim, zdim, onet
-      use cresp_crspectrum, only: cresp_update_cell, printer
+      use cresp_crspectrum, only: cresp_update_cell
       use crhelpers,        only: divv_n
       use func,             only: emag, ekin, operator(.equals.), operator(.notequals.)
       use grid_cont,        only: grid_container

@@ -170,9 +170,7 @@ module cresp_NR_method
     character(8)  :: date
     character(9) :: time
       call initialize_arrays
-      if (master) then
-        open(15, file="log_NR_solve",position="append")
-        if (first_run .eqv. .true. ) then
+      if ((master) .and. (first_run .eqv. .true. )) then
             helper_arr_dim = int(arr_dim/4,kind=4)
             if (.not. allocated(p_space))     allocate(p_space(1:helper_arr_dim)) ! these will be deallocated once initialization is over
             if (.not. allocated(q_space))     allocate(q_space(1:helper_arr_dim)) ! these will be deallocated once initialization is over
@@ -198,6 +196,7 @@ module cresp_NR_method
             print *, "Count of array elements:", size(p_ratios_lo)
             print *,"----------"
             if (save_to_log) then
+                open(15, file="log_NR_solve",position="append")
                 write (15,*) "------------------------------------------"
                 write (15,"(A,2x,A,2x)") "Run on: ", date, "at: ", time
                 write (15,*) "For set of parameters: e_small, size(NR_guess_grid,dim=1), size(NR_guess_grid, dim=2),", &
@@ -215,6 +214,7 @@ module cresp_NR_method
                                  real(count(f_ratios_lo.le.zero))/real(size(f_ratios_lo)) * 100.0,"%"
                 write (15,*) "Count of array elements:", size(p_ratios_lo)
                 write (15,*) "----------"
+                close(15)
             else
                 print *, "!!! Warning: save_to_log = F; result will not be registered in LOG file !!!"
             endif
@@ -223,8 +223,6 @@ module cresp_NR_method
             if (allocated(q_space)) deallocate(q_space)
 
             first_run = .false.
-        endif
-        close(15)
       endif
       call cresp_NR_mpi_exchange
 
