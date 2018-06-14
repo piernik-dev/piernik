@@ -299,7 +299,7 @@ contains
       call piernik_MPI_Allreduce (iC,   pSUM)
       call piernik_MPI_Allreduce (Msph, pSUM)
       if (master .and. verbose) then
-         write(msg,'(a,es13.7,a,i7,a)')"[initproblem:problem_initial_conditions] Starting with uniform sphere with M = ", Msph, " (", iC, " cells)"
+         write(msg,'(a,es14.7,a,i7,a)')"[initproblem:problem_initial_conditions] Starting with uniform sphere with M = ", Msph, " (", iC, " cells)"
          call printinfo(msg, .true.)
       endif
 
@@ -502,9 +502,9 @@ contains
       call piernik_MPI_Allreduce(dmax, pMAX)
 
       if (master) then
-         write(msg, '(a,g13.7)')"[initproblem:problem_initial_conditions] Relaxation finished. Largest orbital period: ",2.*pi*sqrt( (minval(dom%L_(:))/2.)**3/(newtong * clump_mass) )
+         write(msg, '(a,g14.7)')"[initproblem:problem_initial_conditions] Relaxation finished. Largest orbital period: ",2.*pi*sqrt( (minval(dom%L_(:))/2.)**3/(newtong * clump_mass) )
          call printinfo(msg, .true.)
-         write(msg, '(a,g13.7)')"[initproblem:problem_initial_conditions] Peak density ", dmax
+         write(msg, '(a,g14.7)')"[initproblem:problem_initial_conditions] Peak density ", dmax
          call printinfo(msg)
       endif
 
