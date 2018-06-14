@@ -60,7 +60,7 @@ contains
          call warn("[crdiffusion:init_crdiffusion] No CR species to diffuse")
       endif
       call all_cg%reg_var(divv_n)
-      
+
    end subroutine init_crdiffusion
 
 !>
