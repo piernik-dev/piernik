@@ -84,7 +84,7 @@
  $COSMIC_RAY_SPECTRUM
     use_cresp   = .true.   ! enables usage of cresp_update_grid @fluidupdate
     cre_eff     = 0.01     ! factor scaling sn explosion energy to total spectrum energy
-    cfl_cre = 0.5
+    cfl_cre = 0.2
     ncre      = 15      ! number of cr electron spectrum bins (including cutoff bins)
     p_min_fix = 1.e0    ! momentum fixed grid
     p_max_fix = 1.e6    ! momentum fixed grid
@@ -102,7 +102,7 @@
     NR_iter_limit = 50
     synch_active  = .true.
     adiab_active  = .true.
-    nullify_empty_bins = .false.
+    nullify_empty_bins = .true.
  /
 
  $CR_SPECIES
@@ -129,7 +129,7 @@
  $PROBLEM_CONTROL
     d0           =  5.0     ! density in galactic plane
     bxn          =  0.0     !
-    byn          =  1.0     ! __direction__ of B field
+    byn          =  10.0     ! __direction__ of B field
     bzn          =  0.0     !
     x0           =  0.0     ! coordinates of single expl with amplitude
     y0           =  0.0     ! that is set in problem_initial_conditions (testing purpose)

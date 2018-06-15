@@ -75,7 +75,7 @@ $BASE_DOMAIN
  $COSMIC_RAY_SPECTRUM
     use_cresp   = .true.   ! enables usage of cresp_update_grid @fluidupdate
     cre_eff     = 0.01     ! factor scaling sn explosion energy to total spectrum energy
-    cfl_cre     = 0.4
+    cfl_cre     = 0.1
     ncre        = 15    ! number of spectrum bins (including cutoff bins)
     p_min_fix = 1.0     ! momentum fixed grid
     p_max_fix = 1.0e6   ! momentum fixed grid
@@ -95,7 +95,7 @@ $BASE_DOMAIN
     NR_iter_limit = 50
     adiab_active  = .true.
     synch_active  = .true.
-    nullify_empty_bins = .false.
+    nullify_empty_bins = .true.
  /
 
  $CR_SPECIES
