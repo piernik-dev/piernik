@@ -64,7 +64,7 @@ clean:
 	@CL=1 $(MAKE) -k all
 
 allsetup:
-	for i in problems/* ; do \
+	for i in $$( find problems/* -type d ) ; do \
 		if [ ! -e $$i/OBSOLETE ] ; then \
 			if [ $$( dirname $$( dirname $$i ) ) == "." ] ; then \
 				nm=$$( basename $$i ); \
