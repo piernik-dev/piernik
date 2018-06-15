@@ -182,7 +182,7 @@ contains
 
       integer :: i, j
       character(len=dsetnamelen) :: rname
-      integer, dimension(:), pointer :: p_pos
+      integer(kind=4), dimension(:), allocatable, target :: pos_copy
 
       if (.not. associated(na_lists(1)%p)) na_lists(1)%p => qna
       if (.not. associated(na_lists(2)%p)) na_lists(2)%p => wna
@@ -198,12 +198,14 @@ contains
                         write(msg,'(3a)')"[fluidupdate:restart_arrays] creating backup field '", rname, "'"
                         call printinfo(msg)
                      endif
-                     p_pos => na%lst(i)%position
+                     allocate(pos_copy(size(na%lst(i)%position)))
+                     pos_copy = na%lst(i)%position
                      if (na%lst(i)%dim4 /= INVALID) then
-                        call all_cg%reg_var(rname, dim4=na%lst(i)%dim4, position=p_pos, multigrid=na%lst(i)%multigrid)
+                        call all_cg%reg_var(rname, dim4=na%lst(i)%dim4, position=pos_copy, multigrid=na%lst(i)%multigrid)
                      else
-                        call all_cg%reg_var(rname,                      position=p_pos, multigrid=na%lst(i)%multigrid)
+                        call all_cg%reg_var(rname,                      position=pos_copy, multigrid=na%lst(i)%multigrid)
                      endif
+                     deallocate(pos_copy)
                   endif
                endif
             enddo
