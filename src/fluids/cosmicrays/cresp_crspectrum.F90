@@ -522,6 +522,7 @@ contains
          pre_i_up = int(nonempty_bins(num_has_gt_zero),kind=4) !ubound(nonempty_bins,dim=1)
       endif
 ! Prepare p array
+      p = 0.0
       p(pre_i_lo:pre_i_up) = p_fix(pre_i_lo:pre_i_up)
       p(pre_i_lo) = max(p_fix(pre_i_lo), p_mid_fix(1))      ! do not want to have zero here
 
@@ -554,6 +555,7 @@ contains
       do i = active_bins(1), active_bins(num_has_gt_zero) ! safe: we'd have returned empty_cell if no active_bins present
          e_amplitudes_r(i) = fp_to_e_ampl(p(i), f(i-1) * (p(i) / p(i-1))**(-q(i)) )
       enddo
+
 #ifdef VERBOSE
       print "(A,50E12.4)", "find_active_bins_v1 e  :   ",e
       print "(A,50E12.4)", "find_active_bins_v1 e_l:",e_amplitudes_l
@@ -638,7 +640,11 @@ contains
          print "(2(A9,i3))", "i_lo =", i_lo, ", i_up = ", i_up
 #endif /* VERBOSE */
 
-         p(fixed_edges) = p_fix(fixed_edges)
+         p = 0.0
+         p(i_lo:i_up)   = p_fix(i_lo:i_up)
+         q(:i_lo+1) = 0.0
+         q(i_up:)   = 0.0
+!          p(fixed_edges) = p_fix(fixed_edges)
 
          p(i_lo) = max(p_fix(i_lo), p_mid_fix(1))      ! do not want to have zero here
       endif
@@ -671,7 +677,7 @@ contains
 
    subroutine cresp_detect_negative_content ! Diagnostic measure - negative values should not show up:
 
-      use initcrspectrum, only: ncre
+      use initcrspectrum, only: ncre, p_fix
       use constants, only: zero
 
       implicit none                       ! if they do, there's something wrong with last code modifications
@@ -680,8 +686,8 @@ contains
 
       do i = 1, ncre
          if (e(i) .lt. zero .or. n(i) .lt. zero .or. edt(i) .lt. zero .or. ndt(i) .lt. zero) then
-!                 print *,'Negative value detected:',  'i=', i,'n(i)=', n(i), 'e(i)=',e(i)
-!                 print *,'Negative value detected:',  'i=', i,'ndt(i)=', ndt(i), 'edt(i)=',edt(i)
+                print '(A25,A5,I2,A5,E18.9,A5,E18.9)','Negative value detected:',  'i=', i,'n(i)=', n(i), 'e(i)=',e(i)
+                print '(A25,A5,I2,A5,E18.9,A5,E18.9)','Negative value detected:',  'i=', i,'ndt(i)=', ndt(i), 'edt(i)=',edt(i)
 !             call sleep(1)
          endif
       enddo
