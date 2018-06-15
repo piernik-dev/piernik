@@ -911,11 +911,11 @@ contains
       call MPI_Send(str, buf, MPI_CHARACTER, FIRST, tag, intercomm, mpi_err)
    end subroutine report_string_to_master
 
-   integer function abort_sigint(signum)
+   integer(kind=4) function abort_sigint(signum)
 
       implicit none
 
-      integer, intent(in) :: signum !< signal identifier
+      integer(kind=4), intent(in) :: signum !< signal identifier
 
       if (master) print *, "[mpisetup:abort_sigint] CTRL-C caught, calling abort"
       ! As per MPI documentation for MPI_Abort():
