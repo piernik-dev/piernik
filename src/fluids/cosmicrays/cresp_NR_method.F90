@@ -1,47 +1,50 @@
 module cresp_NR_method
 ! pulled by COSM_RAY_ELECTRONS
- use initcrspectrum, only: max_p_ratio, eps, arr_dim
- implicit none
 
-  private
-  public :: alpha, n_in, NR_algorithm, NR_algorithm_1D, compute_q, intpol_pf_from_NR_grids, selected_function_1D, &
-          &    selected_function_2D, selected_value_check_1D, initialize_arrays, e_small_to_f, q_ratios, fvec_lo, &
-          &    fvec_up, fvec_test, cresp_initialize_guess_grids, &
-          &    NR_get_solution_lo, & ! DEPRECATED
-          &    NR_get_solution_up    ! DEPRECATED
-  public :: e_in, nr_test, nr_test_1D, p_ip1, n_tab_up, alpha_tab_up, n_tab_lo, alpha_tab_lo, alpha_tab_q, q_control, & ! list for NR driver
-          &    p_a, p_n, p_ratios_lo, f_ratios_lo, p_ratios_up, f_ratios_up, q_grid, lin_interpol_1D, alpha_to_q,   &   ! can be commented out for CRESP and PIERNIK
-          &    lin_extrapol_1D, lin_interpolation_1D, find_indices_1D, nearest_solution
+   use initcrspectrum, only: max_p_ratio, eps, arr_dim
 
-  integer, parameter :: ndim = 2
-  real(kind=8), dimension(:), allocatable :: p_space, q_space
-  real(kind=8) :: alpha, p_ratio_4_q, n_in, e_in, p_im1, p_ip1
-  real(kind=8), allocatable, dimension(:), target          :: alpha_tab_lo, alpha_tab_up, n_tab_lo, n_tab_up, alpha_tab_q, q_grid
-  real(kind=8), allocatable, dimension(:,:),target :: p_ratios_lo, f_ratios_lo, p_ratios_up, f_ratios_up
-  integer(kind=4) :: helper_arr_dim
-  real(kind=8) :: eps_det = eps * 1.0e-15
-  real(kind=8) :: small_eps = 1.0e-25
-  real(kind=8), pointer, dimension(:)   :: p_a => null(), p_n => null() ! pointers for alpha_tab_(lo,up) and n_tab_(lo,up) or optional - other 1-dim arrays
-  real(kind=8), pointer, dimension(:,:) :: p_p => null(), p_f => null() ! pointers for p_ratios_(lo,up) and f_ratios_(lo,up)
+   implicit none
 
-  abstract interface
-    function function_pointer_1D(z)
-      real(kind=8) :: function_pointer_1D
-      real(kind=8) :: z
-    end function function_pointer_1D
-    subroutine value_control_1D(z, exit_code)
-      logical      :: exit_code
-      real(kind=8) :: z
-    end subroutine value_control_1D
-    function function_pointer_2D(z)
-      real(kind=8),dimension(2) :: function_pointer_2D
-      real(kind=8),dimension(2) :: z
-    end function function_pointer_2D
-  end interface
 
-  procedure (function_pointer_1D), pointer :: selected_function_1D => null()
-  procedure (value_control_1D), pointer    :: selected_value_check_1D  => null()
-  procedure (function_pointer_2D), pointer :: selected_function_2D => null()
+   private
+   public :: alpha, n_in, NR_algorithm, NR_algorithm_1D, compute_q, intpol_pf_from_NR_grids, selected_function_1D, &
+           &    selected_function_2D, selected_value_check_1D, initialize_arrays, e_small_to_f, q_ratios, fvec_lo, &
+           &    fvec_up, fvec_test, cresp_initialize_guess_grids, &
+           &    NR_get_solution_lo, & ! DEPRECATED
+           &    NR_get_solution_up    ! DEPRECATED
+   public :: e_in, nr_test, nr_test_1D, p_ip1, n_tab_up, alpha_tab_up, n_tab_lo, alpha_tab_lo, alpha_tab_q, q_control, & ! list for NR driver
+           &    p_a, p_n, p_ratios_lo, f_ratios_lo, p_ratios_up, f_ratios_up, q_grid, lin_interpol_1D, alpha_to_q,   &   ! can be commented out for CRESP and PIERNIK
+           &    lin_extrapol_1D, lin_interpolation_1D, find_indices_1D, nearest_solution
+
+   integer, parameter :: ndim = 2
+   real(kind=8), dimension(:), allocatable :: p_space, q_space
+   real(kind=8) :: alpha, p_ratio_4_q, n_in, e_in, p_im1, p_ip1
+   real(kind=8), allocatable, dimension(:), target          :: alpha_tab_lo, alpha_tab_up, n_tab_lo, n_tab_up, alpha_tab_q, q_grid
+   real(kind=8), allocatable, dimension(:,:),target :: p_ratios_lo, f_ratios_lo, p_ratios_up, f_ratios_up
+   integer(kind=4) :: helper_arr_dim
+   real(kind=8) :: eps_det = eps * 1.0e-15
+   real(kind=8) :: small_eps = 1.0e-25
+   real(kind=8), pointer, dimension(:)   :: p_a => null(), p_n => null() ! pointers for alpha_tab_(lo,up) and n_tab_(lo,up) or optional - other 1-dim arrays
+   real(kind=8), pointer, dimension(:,:) :: p_p => null(), p_f => null() ! pointers for p_ratios_(lo,up) and f_ratios_(lo,up)
+
+   abstract interface
+      function function_pointer_1D(z)
+         real(kind=8) :: function_pointer_1D
+         real(kind=8) :: z
+      end function function_pointer_1D
+      subroutine value_control_1D(z, exit_code)
+         logical      :: exit_code
+         real(kind=8) :: z
+      end subroutine value_control_1D
+      function function_pointer_2D(z)
+         real(kind=8),dimension(2) :: function_pointer_2D
+         real(kind=8),dimension(2) :: z
+      end function function_pointer_2D
+   end interface
+
+   procedure (function_pointer_1D), pointer :: selected_function_1D => null()
+   procedure (value_control_1D), pointer    :: selected_value_check_1D  => null()
+   procedure (function_pointer_2D), pointer :: selected_function_2D => null()
 
 !----------------------------------------------------------------------------------------------------
 
