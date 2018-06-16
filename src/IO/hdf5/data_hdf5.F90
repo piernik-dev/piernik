@@ -345,6 +345,7 @@ contains
          case ("magdir")
             tab(:,:,:) = atan2(cg%b(ydim, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) + cg%b(ydim, cg%is        :cg%ie,         cg%js+dom%D_y:cg%je+dom%D_y, cg%ks        :cg%ke        ), &
                  &             cg%b(xdim, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) + cg%b(xdim, cg%is+dom%D_x:cg%ie+dom%D_x, cg%js        :cg%je,         cg%ks        :cg%ke        ))
+!! ToDo: autodetect centering, add option for dumping both just in case
 !! face-centered div(B): RTVD and RIEMANN, both with constrained transport
          case ("divbf")
             tab(:,:,:) = divB_c_IO(cg, I_TWO,  .false.)
