@@ -29,6 +29,12 @@ module_body = re.compile(
     '''^(module|contains|program)''', re.VERBOSE)
 just_end = re.compile('''^\s{0,9}end''', re.IGNORECASE)
 
+bad_kind = re.compile('''kind\s*=\s*[0-9]''', re.IGNORECASE)
+# other cases:
+# git grep ", *int(.*, *[0-9][0-9]* *)"
+# integer(4)
+# 0_8
+
 have_implicit = re.compile('''implicit\snone''', re.IGNORECASE)
 have_privpub = re.compile('''^\s{0,9}(public|private)''', re.VERBOSE)
 have_pub = re.compile('''^\s{0,9}public''', re.VERBOSE)
@@ -226,6 +232,7 @@ def qa_checks(files, options):
         qa_labels(np.array(pfile), '', errors, f)
         qa_crude_write(np.array(pfile), '', warns, f)
         qa_magic_integers(np.array(pfile), '', warns, f)
+        too_explicit_kinds(np.array(pfile), '', warns, f)
         # checks that require parsing f90 files
         clean_ind = []
         pfile = np.array(pfile)
@@ -292,6 +299,20 @@ def qa_have_priv_pub(lines, name, warns, fname):
             warns.append(give_warn("QA:  ") +
                          "module [%s:%s] is completely public." %
                          (fname, name))
+
+
+def too_explicit_kinds(lines, rname, store, fname):
+    for f in filter(remove_warn.match, filter(bad_kind.search, lines)):
+        hits = np.where(lines == f)[0]
+        if(len(hits) > 1):
+            for i in hits:
+                warn = give_warn("magic kind") + wtf(i, f, rname, fname)
+                if(warn not in store):
+                    store.append(warn)
+        else:
+            warn = give_warn("magic kind") + wtf(lines, f, rname, fname)
+            if(warn not in store):
+                store.append(warn)
 
 
 def qa_crude_write(lines, rname, store, fname):
