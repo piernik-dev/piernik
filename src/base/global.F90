@@ -304,6 +304,7 @@ contains
             divB_0_method = DIVB_CT
          case ("HDC", "hdc", "GLM", "glm", "divergence cleaning", "divergence diffusion")
             divB_0_method = DIVB_HDC
+            if (master .and. cfl > 0.3) call warn("[global] To avoid unphisical instabilities with GLM divergence cleaning consider reducing CFL factor to 0.3.")
          case default
             call die("[global:init_global] unrecognized divergence cleaning description.")
       end select
