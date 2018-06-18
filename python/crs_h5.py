@@ -1,22 +1,29 @@
 #!/usr/bin/python
 from pylab import zeros, sqrt, size
 import matplotlib.pyplot as plt
-from numpy import log10, log, pi, asfarray, array, linspace
+from numpy import log10, log, pi, asfarray, array, linspace, sign
 import h5py
 import os
 import sys
 
 #------ default values of parameters --------
-e_small = 1.0e-5
+e_small = 1.0e-6
 eps     = 1.0e-15
 ncre      = 45
-p_min_fix = 0.4e0  #
-p_max_fix = 1.65e4 #
+p_min_fix = 0.4e0
+p_max_fix = 1.65e4
 cre_eff = 0.01
+q_big   = 30.
+
+arr_dim = 200
+helper_arr_dim = int(arr_dim / 4)
+
 c = 1.0 # 0.3066067E+06  # PSM -> 0.3066067E+06, SI -> 0.2997925E+09
 
 first_run = True
 fixed_width = True
+got_q_tabs = False
+q_explicit = True
 
 def nq2f(n,q,p_l,p_r):
       if p_r> 0.0 and p_l > 0 :
@@ -29,27 +36,28 @@ def nq2f(n,q,p_l,p_r):
       return nq2f
 # 1D Newton-Raphson algorithm (to find q):
 #
-def nr_get_q(alpha, p_ratio):
-  q_big = 30.0
-  exit_code = True
+def nr_get_q(q_start, alpha, p_ratio,exit_code):
   iter_limit = 30
   tol_f      = 1.0e-9
-  x = 5.0
+  x = q_start
   df = 1.0
   for i in range(iter_limit):
         if abs(x) >= q_big:
            x = (x/abs(x)) * q_big
+           exit_code = True
            break
-        dx = min(max(x*1e-3,1.0e-5),10e-2)
+        dx = min(x*1e-3,10e-2)
+        dx = sign(dx) * max(abs(dx), 1.0e-10)
         df = 0.5*(fun(x+dx, alpha, p_ratio)-fun(x-dx, alpha, p_ratio))/dx
         delta = -fun(x, alpha, p_ratio)/df
         if abs(delta) <= tol_f:
             exit_code = False
-            return x
+            return x, exit_code
         else:
             x = x + delta
   nr_get_q = x
-  return nr_get_q
+
+  return nr_get_q, exit_code
 
 # function used to find q: ----------------------
 def fun(x, alpha, p_ratio):
@@ -61,9 +69,71 @@ def fun(x, alpha, p_ratio):
          fun = -alpha + ((3.0-x)/(4.0-x))*((p_ratio**(4.0-x)-1.0)/(p_ratio**(3.0-x)-1.0))
       return fun
 
+def prepare_q_tabs():
+   global alpha_tab_q, q_grid, q_big, q_space
+   q_grid = zeros(arr_dim) # for later interpolation
+   q_space= zeros(helper_arr_dim) # for start values
+
+   q_grid[:]      = q_big
+   q_grid[int(arr_dim/2):] = -q_big
+
+   def ln_eval_array_val(i, arr_min, arr_max, min_i, max_i):
+      b = (log(float(max_i)) -log(float(min_i)))/ (arr_max - arr_min)
+      ln_eval_array_val = (arr_min-log(float(min_i))/b ) + log(float(i)) / b
+      return ln_eval_array_val
+
+   for i in range(1,int(0.5*helper_arr_dim)):
+      q_space[i-1] = ln_eval_array_val(i, q_big, float(0.05), 1 , int(0.5*helper_arr_dim -1))
+
+   for i in range(0, int(0.5*helper_arr_dim)+1):
+      q_space[int(0.5 * helper_arr_dim)+i-1] = -q_space[int(0.5 * helper_arr_dim)-i]
+
+   a_max_q     = 10. #* p_fix_ratio# / clight
+   a_min_q     = 1.00000005
+   alpha_tab_q = zeros(arr_dim)
+   alpha_tab_q[:] = a_min_q
+
+   j = arr_dim - int(arr_dim/(arr_dim/10.))
+   while (q_grid[j] <= (-q_big) and (q_grid[arr_dim-1] <= (-q_big)) ):
+      a_max_q = a_max_q * 0.95
+      for i in range(0,arr_dim):
+         alpha_tab_q[i]  = a_min_q * 10.0**((log10(a_max_q/a_min_q))/float(arr_dim)*float(i))
+      fill_q_grid() # computing q_grid takes so little time, that saving the grid is not necessary.
+   return
+
+def fill_q_grid():
+   global q_grid, alpha_tab_q, p_fix_ratio, arr_dim, helper_arr_dim, q_space
+   previous_solution = q_grid[int(len(q_grid)/2)]
+   exit_code         = True
+   x                 = previous_solution
+   for i in range(1,arr_dim,1):
+      x,exit_code = nr_get_q(previous_solution, alpha_tab_q[i],p_fix_ratio, exit_code)
+      if exit_code == True: # == True
+         for j in range(1,helper_arr_dim,1):
+            x = q_space[j]
+            x,exit_code = nr_get_q(x,alpha_tab_q[i],p_fix_ratio, exit_code)
+            if exit_code == False:
+               q_grid[i] = x
+               prev_solution = x
+      else: # exit_code == false
+         q_grid[i]         = x
+         previous_solution = x
+   return
+
+def interpolate_q(alpha):
+   global arr_dim, alpha_tab_q, q_grid
+   index = int((log10(alpha/alpha_tab_q[0])/log10(alpha_tab_q[-1]/alpha_tab_q[0])) * (arr_dim - 1))# + 1
+   if (index < 0 or index > arr_dim-1):
+      index = max(0, min(arr_dim-1, index))
+      q_out = q_grid[index]
+   else:
+      index2 = index+1
+      q_out  = q_grid[index] + (alpha - alpha_tab_q[index]) * ( q_grid[index] - q_grid[index2]) / (alpha_tab_q[index] - alpha_tab_q[index2])
+
+   return q_out
 # plot data ------------------------------------
 def plot_data(plot_var, pl, pr, fl, fr, q, time, location, i_lo_cut, i_up_cut):
-   global first_run
+   global first_run, e_small
    f_lo_cut = fl[0] ;      f_up_cut = fr[-1]
    p_lo_cut = pl[0] ;   p_up_cut = pr[-1]
 
@@ -96,7 +166,7 @@ def plot_data(plot_var, pl, pr, fl, fr, q, time, location, i_lo_cut, i_up_cut):
       plot_var_min = 0.1*e_small
       first_run = False
       if (plot_var == "e"):
-        plot_var_min = 0.1 * e_small
+        plot_var_min = 1.0e-4 * e_small
       elif (plot_var == "f" ):
         plot_var_min = e_small / (4*pi * (c ** 2)  * p_max_fix **3) /10.
       elif (plot_var == "n" ):
@@ -165,10 +235,6 @@ def simple_plot_data(plot_var, p, var_array, time, location, i_lo_cut, i_up_cut)
    p_range = linspace(s.get_xlim()[0],s.get_xlim()[1])
    e_smalls = zeros(len(p_range))
    e_smalls[:] = e_small
-   #if (plot_var == "e"):
-      #plt.plot(p_range, e_smalls, color="green", label="$e_{small}$")
-   #elif(plot_var == "n"):
-      #plt.plot(p_range, e_small/(c*p_range), color="green",label="$n_{small}$")
 
    s.set_facecolor('white')
    plt.title(" %s(p) \n Time = %7.3f | location: %7.2f %7.2f %7.2f " % (plot_var, time, location[0],location[1],location[2]) )
@@ -177,7 +243,7 @@ def simple_plot_data(plot_var, p, var_array, time, location, i_lo_cut, i_up_cut)
 #-----------------------------------------------------------------
 
 def crs_plot_main(parameter_names, parameter_values, plot_var, ncrs, ecrs, field_max, time, location, use_simple):
-    global first_run
+    global first_run, got_q_tabs
 
     try:
         for i in range(len(parameter_names)):
@@ -192,7 +258,7 @@ def crs_plot_main(parameter_names, parameter_values, plot_var, ncrs, ecrs, field
 
     first_run = True
 # -------------------
-    global plot_ymax
+    global plot_ymax, p_fix_ratio
     plot_ymax = field_max * cre_eff
     edges = []
     p_fix = []
@@ -219,6 +285,7 @@ def crs_plot_main(parameter_names, parameter_values, plot_var, ncrs, ecrs, field
     i_up = ncre
     empty_cell = True
 
+    e_small = e_small / 10.
 #------------ locate cutoff indices
     for i in range(1,ncre):
         i_lo = i
@@ -237,9 +304,28 @@ def crs_plot_main(parameter_names, parameter_values, plot_var, ncrs, ecrs, field
     ncrs_act = ncrs[i_lo-2:i_up-2]
     ecrs_act = ecrs[i_lo-2:i_up-2]
     q_nr = [] ; fln = [] ; frn = []
+
+    if (not got_q_tabs):
+      prepare_q_tabs()
+      got_q_tabs = True
+    if (not q_explicit):
+       print "Spectral indices q will be interpolated"
+    else:
+       print "Spectral indices q will be obtained explicitly"
+
+    print "n = ", ncrs
+    print "e = ", ecrs
+
     for i in range(0,i_up - i_lo):
-        q_nr.append(nr_get_q(ecrs[i+i_lo]/(ncrs[i+i_lo]*c*pln[i]), prn[i]/pln[i], ))
-        fln.append(nq2f(ncrs[i+i_lo], q_nr[-1], pln[i], prn[i]))
+         if (q_explicit == True):
+            q_tmp = 3.5 ; exit_code = False
+            q_tmp, exit_code = nr_get_q(q_tmp, ecrs[i+i_lo]/(ncrs[i+i_lo]*c*pln[i]), prn[i]/pln[i], exit_code)
+         else:
+            q_tmp = interpolate_q(ecrs[i+i_lo]/(ncrs[i+i_lo]*c*pln[i]))
+         q_nr.append(q_tmp)
+         fln.append(nq2f(ncrs[i+i_lo], q_nr[-1], pln[i], prn[i]))
+
+    print "q = ", q_nr
 
     q_nr = array(q_nr)
     fln  = array(fln)

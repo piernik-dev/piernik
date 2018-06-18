@@ -28,7 +28,7 @@ def append_split_var(line, variable_name, var_array_to_append, param_found):
 def read_par(hdf5_filename, var_nam): #, var_array):
         if len(hdf5_filename)   <= 1:
             sys.exit("Exiting: no filename provided")
-        if len(str(var_nam[0])) <= 1 and len(var_nam) <= 1: 
+        if len(str(var_nam[0])) <= 1 and len(var_nam) <= 1:
             sys.exit("Exiting: no variables to read provided")
 
         found_parameter = [False]*len(var_nam)
@@ -42,10 +42,12 @@ def read_par(hdf5_filename, var_nam): #, var_array):
                     value, found_parameter[i] = append_split_var(line, var_nam[i], var_array, found_parameter[i])
         for i in range(len(var_nam)):
             if found_parameter[i] == False:
-                sys.exit("Exiting: some parameters were not included in problem.par, i.e: %s " %var_nam[i])
+                print("Warning: some parameters were not included in problem.par, i.e: %s . Please provide it:" %var_nam[i])
+                value = input_names_array()
+                var_array.append(value)
         return var_array
 # for given string value it determines the type of value and returns it -------
-# Value types supported: integer, float, boolean and string. 
+# Value types supported: integer, float, boolean and string.
 # No lists or arrays so far.
 def determine_type_append(var):
     try:
@@ -56,7 +58,7 @@ def determine_type_append(var):
             var = int(var)
             return var
     except ValueError :
-        try: 
+        try:
             float(var)
             var = float(var)
             return var

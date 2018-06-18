@@ -21,7 +21,7 @@ except:
 plot_field = "cree_tot"
 plot_var = "e"
 
-simple_plot = True
+simple_plot = False # True
 plot_vel = False
 plot_mag = True
 
@@ -79,7 +79,7 @@ if f_run :
 var_array = []
 if f_run == True:
     var_names = []
-    var_names = [ "ncre", "p_min_fix", "p_max_fix", "e_small", "cre_eff"]
+    var_names = [ "ncre", "p_min_fix", "p_max_fix", "e_small", "cre_eff", "q_big"]
     if len(var_names) == 0:
         print ("\033[93mEmpty list of parameter names provided: enter names of parameters to read\033[0m")
         var_names = read_h5.input_names_array()
@@ -191,7 +191,7 @@ if f_run == True:
       frb = np.array(dsSlice.to_frb(w, resolution, height=h)[plot_field])
       plot_max   = h5ds.find_max(plot_field)[0]
       plot_units = str(plot_max).split(' ')[1]
-      plot_min = 1.0e-5
+      plot_min = 1.0e-15
     else:
       frb = np.array(dsSlice.to_frb(w, resolution, height=h)[plot_field])
       plot_min = h5ds.find_min(plot_field)[0]
