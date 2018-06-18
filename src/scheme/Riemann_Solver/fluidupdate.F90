@@ -111,7 +111,7 @@ contains
 
     use constants,      only: xdim, zdim, I_ONE, DIVB_HDC
     use global,         only: divB_0_method
-    use hdc,            only: glmdamping!,eglm
+    use hdc,            only: glmdamping, eglm
     use user_hooks,     only: problem_customize_solution
 #if defined(COSM_RAYS) && defined(MULTIGRID)
     use all_boundaries,      only: all_fluid_boundaries
@@ -143,11 +143,9 @@ contains
     endif
     if (associated(problem_customize_solution)) call problem_customize_solution(forward)
 
-    if (divB_0_method == DIVB_HDC) then
+    call eglm
+    if (divB_0_method == DIVB_HDC) call glmdamping
 
-       call glmdamping
-
-    endif
   end subroutine make_3sweeps
 
 !-------------------------------------------------------------------------------------------------------------------
