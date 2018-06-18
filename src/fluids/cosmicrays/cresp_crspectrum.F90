@@ -643,7 +643,9 @@ contains
          p = 0.0
          p(i_lo:i_up)   = p_fix(i_lo:i_up)
          q(:i_lo+1) = 0.0
+         f(:i_lo)   = 0.0
          q(i_up:)   = 0.0
+         f(i_up:)   = 0.0
 !          p(fixed_edges) = p_fix(fixed_edges)
 
          p(i_lo) = max(p_fix(i_lo), p_mid_fix(1))      ! do not want to have zero here
