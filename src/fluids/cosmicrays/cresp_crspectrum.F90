@@ -680,7 +680,7 @@ contains
    subroutine cresp_detect_negative_content(location) ! Diagnostic measure - negative values should not show up:
       use constants,       only: zero, ndims
       use dataio_pub,      only: warn, msg
-      use initcrspectrum,  only: ncre, p_fix
+      use initcrspectrum,  only: ncre
 
       implicit none                       ! if they do, there's something wrong with last code modifications
 
@@ -697,7 +697,6 @@ contains
             endif
             call warn(msg)
          endif
-
 
       enddo
 
@@ -1433,16 +1432,19 @@ contains
 ! compute R (eq. 25)
 !
 !-------------------------------------------------------------------------------------------------
-
    subroutine cresp_compute_r(p, bins)
-    use initcrspectrum, only: ncre, eps
-    use constants, only: zero, four, five
-    implicit none
-      real(kind=8), dimension(0:ncre), intent(in) :: p
-      integer, dimension(:), intent(in)     :: bins
-      real(kind=8), dimension(size(bins)) :: r_num, r_den
+
+      use constants, only: zero, four, five
+      use initcrspectrum, only: ncre, eps
+
+      implicit none
+
+      integer, dimension(:), intent(in)            :: bins
+      real(kind=8), dimension(0:ncre), intent(in)  :: p
+      real(kind=8), dimension(size(bins))          :: r_num, r_den
 
       r = zero
+
       where(abs(q(bins) - five) .gt. eps)
          r_num = (p(bins)**(five-q(bins)) - p(bins-1)**(five-q(bins)))/(five - q(bins))
       elsewhere
@@ -1454,8 +1456,9 @@ contains
       elsewhere
          r_den = log(p(bins)/p(bins-1))
       end where
-      where (r_num .ne. zero .and. r_den .ne. zero)
-      r(bins) = u_d + u_b * r_num/r_den   !!! all cooling effects will come here
+
+      where ( abs(r_num) .gt. eps .and. abs(r_den) .gt. eps )
+         r(bins) = u_d + u_b * r_num/r_den   !!! all cooling effects will come here
       end where
 
    end subroutine cresp_compute_r
