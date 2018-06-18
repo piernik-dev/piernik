@@ -1469,78 +1469,92 @@ contains
 !
 !-------------------------------------------------------------------------------------------------
 
-  subroutine ne_to_q(n, e, q, bins)
-   use initcrspectrum, only: ncre, e_small
-   use constants, only: zero
-   use cresp_variables, only: clight ! use units, only: clight
-   use cresp_NR_method, only: compute_q
-   implicit none
-    real(kind=8), dimension(1:ncre), intent(in)  :: n, e !
-    real(kind=8), dimension(1:ncre), intent(out) :: q
-    integer(kind=4), dimension(:), intent(in)    :: bins
-    integer          :: i, i_active
-    real(kind=8)     :: alpha_in
-    logical :: exit_code
+   subroutine ne_to_q(n, e, q, bins)
 
-    q = zero
-    do i_active = 1 + approx_p_lo, size(bins) - approx_p_up
-        i = bins(i_active)
-        if (e(i) .gt. e_small .and. p(i-1) .gt. zero) then
-          exit_code = .true.
-          alpha_in = e(i)/(n(i)*p(i-1)*clight)
-          if ((i .eq. i_lo+1) .or. (i .eq. i_up)) then ! for boudary case, when momenta are not approximated
-            q(i) = compute_q(alpha_in, exit_code, p(i)/p(i-1))
-          else
-            q(i) = compute_q(alpha_in, exit_code)
-          endif
-        else
+      use constants, only: zero
+      use cresp_NR_method, only: compute_q
+      use cresp_variables, only: clight ! use units, only: clight
+      use initcrspectrum, only: ncre, e_small
+
+      implicit none
+
+      integer(kind=4), dimension(:), intent(in)    :: bins
+      integer          :: i, i_active
+      real(kind=8)     :: alpha_in
+      real(kind=8), dimension(1:ncre), intent(in)  :: n, e !
+      real(kind=8), dimension(1:ncre), intent(out) :: q
+      logical :: exit_code
+
+      q = zero
+
+      do i_active = 1 + approx_p_lo, size(bins) - approx_p_up
+         i = bins(i_active)
+         if (e(i) .gt. e_small .and. p(i-1) .gt. zero) then
+            exit_code = .true.
+            alpha_in = e(i)/(n(i)*p(i-1)*clight)
+            if ((i .eq. i_lo+1) .or. (i .eq. i_up)) then ! for boudary case, when momenta are not approximated
+               q(i) = compute_q(alpha_in, exit_code, p(i)/p(i-1))
+            else
+               q(i) = compute_q(alpha_in, exit_code)
+            endif
+         else
             q(i) = zero
         endif
         if ( exit_code .eqv. .true. ) fail_count_comp_q(i) = fail_count_comp_q(i) + 1
-    enddo
-  end subroutine ne_to_q
+      enddo
+
+   end subroutine ne_to_q
 
 !-------------------------------------------------------------------------------------------------
 ! Function used to obtain q for one cell out of f and p values - used to compute q after finding p_up
 !-------------------------------------------------------------------------------------------------
-  function pf_to_q(p_l, p_r, f_l, f_r)
-   implicit none
-   real(kind=8), intent(in)   :: p_l, p_r, f_l, f_r
-   real(kind=8)               :: pf_to_q
+   function pf_to_q(p_l, p_r, f_l, f_r)
 
-    pf_to_q = 0.0
-    pf_to_q = -log(f_r/f_l)/log(p_r/p_l) ! append value of q for given p_up
+      implicit none
+      real(kind=8), intent(in)   :: p_l, p_r, f_l, f_r
+      real(kind=8)               :: pf_to_q
 
-  end function pf_to_q
+      pf_to_q = 0.0
+      pf_to_q = -log(f_r/f_l)/log(p_r/p_l) ! append value of q for given p_up
+
+   end function pf_to_q
 
 ! -------------------------------------------------------------------------------------------------
 !
 ! distribution function amplitudes (eq. 9)
 !
 ! -------------------------------------------------------------------------------------------------
-  function nq_to_f(p_l, p_r, n, q, bins)
-   use initcrspectrum, only: ncre, eps
-   use constants, only: zero, one, three, fpi
-   implicit none
-    integer, dimension(:)                 :: bins
-    real(kind=8), dimension(1:ncre)       :: p_l, p_r, n, q
-    real(kind=8), dimension(size(bins))   :: f_bins
-    real(kind=8), dimension(0:ncre)       :: nq_to_f
-    real(kind=8), dimension(0:ncre)   :: pr_by_pl   ! the array of values of p_r/p_l to avoid FPEs
-        nq_to_f= zero
-        f_bins = zero
-        pr_by_pl = one
-        where (p_r(bins).gt. zero .and. p_l(bins) .gt. zero ) ! p(i) = 0 in inactive bins. This condition should be met by providing proper "bins" range - FIXME
-            pr_by_pl(bins) = p_r(bins) / p_l(bins)                     ! + comparing reals with zero is still risky
-            f_bins = n(bins) / (fpi*p_l(bins)**3)
-            where(abs(q(bins)-three) .gt. eps)
-                f_bins = f_bins*(three - q(bins)) /((pr_by_pl(bins))**(three-q(bins)) - one)
-            elsewhere
-                f_bins = f_bins/log((p_r(bins)/p_l(bins)))
-            end where
-        end where
-        nq_to_f(bins-1) = f_bins
+   function nq_to_f(p_l, p_r, n, q, bins)
+
+      use initcrspectrum, only: ncre, eps
+      use constants, only: zero, one, three, fpi
+
+      implicit none
+
+      integer, dimension(:)                 :: bins
+      real(kind=8), dimension(1:ncre)       :: p_l, p_r, n, q
+      real(kind=8), dimension(size(bins))   :: f_bins
+      real(kind=8), dimension(0:ncre)       :: nq_to_f
+      real(kind=8), dimension(0:ncre)   :: pr_by_pl   ! the array of values of p_r/p_l to avoid FPEs
+
+      nq_to_f= zero
+      f_bins = zero
+      pr_by_pl = one
+
+      where (p_r(bins).gt. zero .and. p_l(bins) .gt. zero ) ! p(i) = 0 in inactive bins. This condition should be met by providing proper "bins" range - FIXME
+         pr_by_pl(bins) = p_r(bins) / p_l(bins)                     ! + comparing reals with zero is still risky
+         f_bins = n(bins) / (fpi*p_l(bins)**3)
+         where(abs(q(bins)-three) .gt. eps)
+            f_bins = f_bins*(three - q(bins)) /((pr_by_pl(bins))**(three-q(bins)) - one)
+         elsewhere
+            f_bins = f_bins/log((p_r(bins)/p_l(bins)))
+         end where
+      end where
+
+      nq_to_f(bins-1) = f_bins
+
    end function nq_to_f
+
 !---------------------------------------------------------------------------------------------------
 ! Computing cosmic ray pressure (eq. 44)
 !---------------------------------------------------------------------------------------------------
