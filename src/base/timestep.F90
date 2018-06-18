@@ -159,7 +159,7 @@ contains
          enddo
 #ifdef COSM_RAY_ELECTRONS
          call grid_cresp_timestep
-         dt = min(dt, dt_crs, dt_cre)
+         dt = min(dt, dt_cre)
 #endif /* COSM_RAY_ELECTRONS */
 
 #ifdef COSM_RAYS

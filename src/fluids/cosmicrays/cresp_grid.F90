@@ -27,7 +27,7 @@ module cresp_grid
       use cg_leaves,        only: leaves
       use cg_list,          only: cg_list_element
       use constants,        only: xdim, ydim, zdim, onet
-      use cresp_crspectrum, only: cresp_update_cell, printer
+      use cresp_crspectrum, only: cresp_update_cell
       use crhelpers,        only: divv_n
       use func,             only: emag, ekin, operator(.equals.), operator(.notequals.)
       use grid_cont,        only: grid_container
@@ -60,9 +60,9 @@ module cresp_grid
                   virtual_e  => cg%w(wna%ind(ve_n))%point([i,j,k])
                   if (synch_active) sptab%ub = emag(cg%b(xdim,i,j,k), cg%b(ydim,i,j,k), cg%b(zdim,i,j,k)) * bb_to_ub    !< WARNING assusmes that b is in mGs
                   if (adiab_active) sptab%ud = cg%q(qna%ind(divv_n))%point([i,j,k]) * onet
-#ifdef VERBOSE
+#ifdef CRESP_VERBOSED
                   print *, 'Output of cosmic ray electrons module for grid cell with coordinates i,j,k:', i, j, k
-#endif /* VERBOSE */
+#endif /* CRESP_VERBOSED */
                   call cresp_update_cell(2 * dt, cresp%n, cresp%e, sptab, virtual_n, virtual_e, cfl_cresp_violation)
                   if ( cfl_cresp_violation ) return ! nothing to do here!
                   p4(iarr_cre_n, i, j, k) = cresp%n
@@ -81,7 +81,7 @@ module cresp_grid
 
       use cg_leaves,        only: leaves
       use cg_list,          only: cg_list_element
-      use cresp_crspectrum, only: cresp_update_cell, detect_clean_spectrum
+      use cresp_crspectrum, only: detect_clean_spectrum
       use grid_cont,        only: grid_container
       use initcrspectrum,   only: cresp, nullify_empty_bins
       use named_array,      only: p4
@@ -204,7 +204,8 @@ module cresp_grid
       use cg_leaves,          only: leaves
       use cg_list,            only: cg_list_element
       use constants,          only: xdim, ydim, zdim, one, half, onet
-      use crhelpers,          only: divv_n
+      use crhelpers,          only: div_v, divv_n
+      use fluidindex,         only: flind
       use func,               only: emag !, operator(.equals.), operator(.notequals.)
       use grid_cont,          only: grid_container
       use initcosmicrays,     only: K_cre_paral, K_cre_perp
@@ -233,6 +234,7 @@ module cresp_grid
          cgl => leaves%first
          do while (associated(cgl))
             cg => cgl%cg
+            if (adiab_active) call div_v(flind%ion%pos, cg)
             do k = cg%ks, cg%ke
                do j = cg%js, cg%je
                   do i = cg%is, cg%ie
