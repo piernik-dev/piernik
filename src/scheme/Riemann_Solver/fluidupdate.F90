@@ -717,18 +717,21 @@ contains
                 p_psi_l => psi_l(:,:)
                 p_psi_r => psi_r(:,:)
                 p_psif  => psi_cc(:,:)
-             endif
+             else  ! CT
+                p0 = 0.
+                p_psi_l => p0
+                p_psi_r => p0
+                p_psif  => pf0
+            endif
           else ! ignore all magnetic field
              b0 = 0.
              p_bccl => b0
              p_bccr => b0
              p_bcc  => bf0
-             if (divB_0_method == DIVB_HDC) then
-                p0 = 0.
-                p_psi_l => p0
-                p_psi_r => p0
-                p_psif  => pf0
-             endif
+             p0 = 0.
+             p_psi_l => p0
+             p_psi_r => p0
+             p_psif  => pf0
           endif
 
           call riemann_hlld(nx, p_flx, p_ql, p_qr, p_bcc, p_bccl, p_bccr, p_psi_l, p_psi_r, p_psif, fl%gam) ! whole mag_cc is not needed now for simple schemes but rk2 and rk4 still rely on it

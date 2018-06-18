@@ -138,7 +138,7 @@ contains
    subroutine init_global
 
       use constants,  only: big_float, PIERNIK_INIT_MPI, INVALID, DIVB_CT, DIVB_HDC
-      use dataio_pub, only: die, msg, warn, code_progress
+      use dataio_pub, only: die, msg, warn, code_progress, printinfo
       use dataio_pub, only: nh  ! QA_WARN required for diff_nml
       use mpisetup,   only: cbuff, ibuff, lbuff, rbuff, master, slave, piernik_MPI_Bcast
 
@@ -304,6 +304,7 @@ contains
             divB_0_method = DIVB_CT
          case ("HDC", "hdc", "GLM", "glm", "divergence cleaning", "divergence diffusion")
             divB_0_method = DIVB_HDC
+            if (master .and. cfl > 0.3) call warn("[global] To avoid unphisical instabilities with GLM divergence cleaning consider reducing CFL factor to 0.3.")
          case default
             call die("[global:init_global] unrecognized divergence cleaning description.")
       end select
@@ -318,6 +319,35 @@ contains
          case default
             call die("[global:init_global] unrecognized divergence cleaning method.")
       end select
+
+#ifdef RTVD
+      if (master) call printinfo("    (M)HD solver: RTVD.")
+#endif /* RTVD */
+#ifdef HLLC
+      if (master) call printinfo("    HD solver: HLLC.")
+#endif /*HLLC */
+#ifdef RIEMANN
+      if (master) call printinfo("    (M)HD solver: Riemann.")
+#endif /* RIEMANN */
+
+#ifdef MAGNETIC
+      if (master) then
+         select case (divB_0_method)
+             case (DIVB_HDC)
+                call printinfo("    The div(B) constraint is maintaineded by Hyperbolic Cleaning (GLM).")
+             case (DIVB_CT)
+                call printinfo("    The div(B) constraint is maintaineded by Constrained Transport (2nd order).")
+             case default
+                call die("    The div(B) constraint is maintaineded by Uknown Something.")
+         end select
+
+         if (force_cc_mag) then
+            call printinfo("    Magnetic field is cell-centered.")
+         else
+            call printinfo("    Magnetic field is face-centered (staggered).")
+         endif
+      endif
+#endif /* MAGNETIC */
 
    end subroutine init_global
 
