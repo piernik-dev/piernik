@@ -7,7 +7,7 @@ module cresp_crspectrum
    public :: cresp_update_cell, cresp_init_state, printer, fail_count_interpol, fail_count_no_sol, fail_count_NR_2dim, cresp_get_scaled_init_spectrum, &
       &      cleanup_cresp, cresp_accuracy_test, b_losses, cresp_allocate_all, cresp_deallocate_all, e_threshold_lo, e_threshold_up, &
       &      fail_count_comp_q, second_fail, src_gpcresp, cresp_init_powl_spectrum, get_powl_f_ampl, e_tot_2_f_init_params, e_tot_2_en_powl_init_params, &
-      &      detect_clean_spectrum, cresp_find_prepare_spectrum
+      &      detect_clean_spectrum, cresp_find_prepare_spectrum, cresp_detect_negative_content
 
    integer, dimension(1:2), save      :: fail_count_NR_2dim, fail_count_interpol, fail_count_no_sol, second_fail
    integer, allocatable, save         :: fail_count_comp_q(:)
@@ -274,9 +274,9 @@ contains
          print '(A36,I5,A6,I3)', "NR_2dim:  no solution failure: p_lo", fail_count_no_sol(1), ", p_up", fail_count_no_sol(2)
          print '(A36,   100I5)', "NR_2dim:inpl/solve  q(bin) failure:", fail_count_comp_q
       endif
-#endif /* CRESP_VERBOSED */
 
       call cresp_detect_negative_content ! for testing
+#endif /* CRESP_VERBOSED */
 
       n = ndt
       e = edt
@@ -677,21 +677,28 @@ contains
 
 !-----------------------------------------------------------------------
 
-   subroutine cresp_detect_negative_content ! Diagnostic measure - negative values should not show up:
-      use constants,       only: zero
+   subroutine cresp_detect_negative_content(location) ! Diagnostic measure - negative values should not show up:
+      use constants,       only: zero, ndims
       use dataio_pub,      only: warn, msg
       use initcrspectrum,  only: ncre, p_fix
 
       implicit none                       ! if they do, there's something wrong with last code modifications
 
       integer :: i
+      integer, dimension(ndims),optional      :: location
 
       do i = 1, ncre
          if (e(i) .lt. zero .or. n(i) .lt. zero .or. edt(i) .lt. zero .or. ndt(i) .lt. zero) then
-            write(msg,'(A25,A7,I4,A9,E18.9,A9,E18.9,A3,A9,I4,A9,E18.9,A9,E18.9)') 'Negative value detected:',  &
+            if (present(location)) then
+               write(msg,'(A37,3I3,A7,I4,A9,E18.9,A9,E18.9)') 'Negative value detected (i j k ) = (',location, '): i=', i,': n(i)=', n(i), ', e(i)=',e(i)
+            else
+               write(msg,'(A25,A7,I4,A9,E18.9,A9,E18.9,A3,A9,I4,A9,E18.9,A9,E18.9)') 'Negative value detected:',  &
                            'i=', i,': n(i)=', n(i), ', e(i)=',e(i), "|", 'i=', i,': ndt(i)=', ndt(i), ', edt(i)=',edt(i)
+            endif
             call warn(msg)
          endif
+
+
       enddo
 
    end subroutine cresp_detect_negative_content

@@ -28,6 +28,9 @@ module cresp_grid
       use cg_list,          only: cg_list_element
       use constants,        only: xdim, ydim, zdim, onet
       use cresp_crspectrum, only: cresp_update_cell
+! #ifdef DEBUG
+      use cresp_crspectrum, only: cresp_detect_negative_content
+! #endif /* DEBUG */
       use crhelpers,        only: divv_n
       use func,             only: emag, ekin, operator(.equals.), operator(.notequals.)
       use grid_cont,        only: grid_container
@@ -64,6 +67,9 @@ module cresp_grid
                   print *, 'Output of cosmic ray electrons module for grid cell with coordinates i,j,k:', i, j, k
 #endif /* CRESP_VERBOSED */
                   call cresp_update_cell(2 * dt, cresp%n, cresp%e, sptab, virtual_n, virtual_e, cfl_cresp_violation)
+! #ifdef /* DEBUG */
+                  call cresp_detect_negative_content( (/ i, j, k /))
+! #endif /* DEBUG */
                   if ( cfl_cresp_violation ) return ! nothing to do here!
                   p4(iarr_cre_n, i, j, k) = cresp%n
                   p4(iarr_cre_e, i, j, k) = cresp%e
