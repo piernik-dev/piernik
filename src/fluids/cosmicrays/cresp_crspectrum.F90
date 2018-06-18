@@ -276,9 +276,10 @@ contains
       endif
 #endif /* CRESP_VERBOSED */
 
+      call cresp_detect_negative_content ! for testing
+
       n = ndt
       e = edt
-      call cresp_detect_negative_content ! for testing
 ! --- for testing
       n_tot = sum(n)
       e_tot = sum(e)
@@ -677,9 +678,9 @@ contains
 !-----------------------------------------------------------------------
 
    subroutine cresp_detect_negative_content ! Diagnostic measure - negative values should not show up:
-
-      use initcrspectrum, only: ncre, p_fix
-      use constants, only: zero
+      use constants,       only: zero
+      use dataio_pub,      only: warn, msg
+      use initcrspectrum,  only: ncre, p_fix
 
       implicit none                       ! if they do, there's something wrong with last code modifications
 
@@ -687,9 +688,9 @@ contains
 
       do i = 1, ncre
          if (e(i) .lt. zero .or. n(i) .lt. zero .or. edt(i) .lt. zero .or. ndt(i) .lt. zero) then
-                print '(A25,A5,I2,A5,E18.9,A5,E18.9)','Negative value detected:',  'i=', i,'n(i)=', n(i), 'e(i)=',e(i)
-                print '(A25,A5,I2,A5,E18.9,A5,E18.9)','Negative value detected:',  'i=', i,'ndt(i)=', ndt(i), 'edt(i)=',edt(i)
-!             call sleep(1)
+            write(msg,'(A25,A7,I4,A9,E18.9,A9,E18.9,A3,A9,I4,A9,E18.9,A9,E18.9)') 'Negative value detected:',  &
+                           'i=', i,': n(i)=', n(i), ', e(i)=',e(i), "|", 'i=', i,': ndt(i)=', ndt(i), ', edt(i)=',edt(i)
+            call warn(msg)
          endif
       enddo
 
