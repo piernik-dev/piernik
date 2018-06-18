@@ -135,6 +135,7 @@ module cresp_grid
       use grid_cont,          only: grid_container
       use initcosmicrays,     only: iarr_cre_n, iarr_cre_e
       use initcrspectrum,     only: e_small, e_small_approx_p_lo, e_small_approx_p_up, norm_init_spectrum, spec_mod_trms, f_init
+      use mpisetup,           only: master
       use named_array_list,   only: wna
       use units,              only: cm, units_set
 
@@ -171,12 +172,12 @@ module cresp_grid
 
          if ( .not. ((trim(units_set) == "psm" ) .or. (trim(units_set) == "PSM")) ) then
             write(msg, *) "[cresp_grid:cresp_init_grid] units_set is not PSM. CRESP only works with PSM, other unit sets might cause crash."
-            call warn(msg)
+            if (master) call warn(msg)
          endif
 
          bb_to_ub =  (4. / 3. ) * sigma_T_cgs / (me_cgs * c_cgs * 8. * pi) * (mGs_cgs)**2 * myr_cgs * B_code_cgs_conversion ** 2
          write (msg, *) "[cresp_grid:cresp_init_grid] 4/3 * sigma_T_cgs / ( me_cgs * c * 8 *  pi) * (mGs_cgs)**2  * myr_cgs = ", bb_to_ub         ! TODO: "unitize" these quantities
-         call printinfo(msg)
+         if (master) call printinfo(msg)
 
          cgl => leaves%first
          do while (associated(cgl))
@@ -191,11 +192,13 @@ module cresp_grid
 
             call cresp_init_state(norm_init_spectrum%n, norm_init_spectrum%e, f_init)   !< initialize spectrum here, f_init should be 1.0
 
-            call printinfo(" [cresp_grid:cresp_init_grid] CRESP initialized")
+            if (master) call printinfo(" [cresp_grid:cresp_init_grid] CRESP initialized")
             first_run = .false.
       endif
-      if (first_run)  call warn("[cresp_grid:cresp_init_grid] CRESP might not be initialized!")
-      if (not_zeroed) call warn("[cresp_grid:cresp_init_grid] CRESP virtual arrays might not be initialized properly!")
+      if (master) then
+         if (first_run)  call warn("[cresp_grid:cresp_init_grid] CRESP might not be initialized!")
+         if (not_zeroed) call warn("[cresp_grid:cresp_init_grid] CRESP virtual arrays might not be initialized properly!")
+      endif
 
    end subroutine cresp_init_grid
 !----------------------------------------------------------------------------------------------------
