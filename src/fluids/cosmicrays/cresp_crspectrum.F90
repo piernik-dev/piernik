@@ -690,9 +690,10 @@ contains
       do i = 1, ncre
          if (e(i) .lt. zero .or. n(i) .lt. zero .or. edt(i) .lt. zero .or. ndt(i) .lt. zero) then
             if (present(location)) then
-               write(msg,'(A37,3I3,A7,I4,A9,E18.9,A9,E18.9)') 'Negative value detected (i j k ) = (',location, '): i=', i,': n(i)=', n(i), ', e(i)=',e(i)
+               write(msg,'(A80,3I3,A7,I4,A9,E18.9,A9,E18.9)') '[cresp_detect_negative_content:cresp_crspectrum] Negative values @ (i j k ) = (', &
+                           location, '): i=', i,': n(i)=', n(i), ', e(i)=',e(i)
             else
-               write(msg,'(A25,A7,I4,A9,E18.9,A9,E18.9,A3,A9,I4,A9,E18.9,A9,E18.9)') 'Negative value detected:',  &
+               write(msg,'(A65,A7,I4,A9,E18.9,A9,E18.9,A3,A9,I4,A9,E18.9,A9,E18.9)') '[cresp_detect_negative_content:cresp_crspectrum] Negative values:',  &
                            'i=', i,': n(i)=', n(i), ', e(i)=',e(i), "|", 'i=', i,': ndt(i)=', ndt(i), ', edt(i)=',edt(i)
             endif
             call warn(msg)
@@ -1558,11 +1559,14 @@ contains
 !---------------------------------------------------------------------------------------------------
 ! Computing cosmic ray pressure (eq. 44)
 !---------------------------------------------------------------------------------------------------
-   function get_pcresp(p_l, p_r, f_l, q, bins)
-    use initcrspectrum, only: ncre, eps
-    use constants, only: zero, one, three, four, fpi
-    use cresp_variables, only: clight ! use units, only: clight
+   function get_pcresp(p_l, p_r, f_l, q, bins) ! computes cre pressure, not used currently
+
+      use constants, only: zero, one, three, four, fpi
+      use cresp_variables, only: clight ! use units, only: clight
+      use initcrspectrum, only: ncre, eps
+
       implicit none
+
       real(kind=8), dimension(:), intent (in)  :: p_l, p_r, f_l, q
       integer, dimension(:), intent(in)        :: bins
       real(kind=8), dimension(size(bins))  :: p_cresp
@@ -1570,33 +1574,41 @@ contains
 
       get_pcresp = zero
       p_cresp = (fpi/three) * clight*f_l(bins)*p_l(bins)**4
+
       where(abs(q(bins) - four) .gt. eps)
          p_cresp = p_cresp*((p_r(bins)/p_l(bins))**(four-q(bins)) - one)/(four - q(bins))
       elsewhere
          p_cresp = p_cresp*log(p_r(bins)/p_l(bins))
       end where
-    get_pcresp = sum(p_cresp)
+
+      get_pcresp = sum(p_cresp)
 
    end function get_pcresp
 !---------------------------------------------------------------------------------------------------
 ! Computing cosmic ray spectrum component pressure gradient
 !---------------------------------------------------------------------------------------------------
-  subroutine src_gpcresp(u, n, dx, grad_pcresp)
-   use initcrspectrum, only: ncre, cre_active, cre_gpcr_ess
-   use constants, only: onet
-    implicit none
-    integer(kind=4), intent(in) :: n
-    real(kind=8), intent(in)                       :: dx
-    real(kind=8), dimension(n, 1:ncre), intent(in) :: u
-    real(kind=8), dimension(n), intent(out)        :: grad_pcresp
-    real(kind=8), dimension(n)                     :: P_cresp_r, P_cresp_l
-!     if (ultrarelativistic) then
-    grad_pcresp = 0.0 ;  P_cresp_l = 0.0 ;  P_cresp_r = 0.0
-    P_cresp_l(1:n-2) = onet * sum(u(1:n-2, :),dim=2)
-    P_cresp_r(3:n)   = onet * sum(u(3:n,   :),dim=2)
-    if (cre_gpcr_ess) grad_pcresp(2:n-1) = cre_active * (P_cresp_l(1:n-2) - P_cresp_r(3:n) )/(2.*dx)
-!     endif
- end subroutine src_gpcresp
+   subroutine src_gpcresp(u, n, dx, grad_pcresp)
+
+      use constants, only: onet
+      use initcrspectrum, only: ncre, cre_active, cre_gpcr_ess
+
+      implicit none
+
+      integer(kind=4), intent(in) :: n
+      real(kind=8), intent(in)                       :: dx
+      real(kind=8), dimension(n, 1:ncre), intent(in) :: u
+      real(kind=8), dimension(n), intent(out)        :: grad_pcresp
+      real(kind=8), dimension(n)                     :: P_cresp_r, P_cresp_l
+
+      grad_pcresp = 0.0 ;  P_cresp_l = 0.0 ;  P_cresp_r = 0.0
+
+      if (cre_gpcr_ess) then
+!        (ultrarelativistic)
+         P_cresp_l(1:n-2) = onet * sum(u(1:n-2, :),dim=2)
+         P_cresp_r(3:n)   = onet * sum(u(3:n,   :),dim=2)
+         grad_pcresp(2:n-1) = cre_active * (P_cresp_l(1:n-2) - P_cresp_r(3:n) )/(2.*dx)
+      endif
+   end subroutine src_gpcresp
 !---------------------------------------------------------------------------------------------------
 ! Preparation and computatuon of upper boundary momentum "p_up" and and upper boundary
 ! distribution function value on left bin edge "f"
