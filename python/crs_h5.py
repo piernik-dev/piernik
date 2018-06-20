@@ -166,7 +166,7 @@ def plot_data(plot_var, pl, pr, fl, fr, q, time, location, i_lo_cut, i_up_cut):
       plot_var_min = 0.1*e_small
       first_run = False
       if (plot_var == "e"):
-        plot_var_min = 1.0e-4 * e_small
+        plot_var_min = 1.0e-2 * e_small
       elif (plot_var == "f" ):
         plot_var_min = e_small / (4*pi * (c ** 2)  * p_max_fix **3) /10.
       elif (plot_var == "n" ):
@@ -241,6 +241,64 @@ def simple_plot_data(plot_var, p, var_array, time, location, i_lo_cut, i_up_cut)
 
    return s
 #-----------------------------------------------------------------
+def detect_active_bins_new(n_in, e_in):
+   global e_small, c, q_big, p_fix, ncre
+   global num_active_bins
+
+   num_active_bins = 0
+
+   ne_gt_zero = []
+   f_gt_zero  = []
+   q_gt_zero = []
+   e_ampl_l  = []
+   e_ampl_r  = []
+   active_bins_new = []
+   i_lo_tmp = 0 ; i_up_tmp = ncre
+
+   for i in range(0,ncre):
+      if ( n_in[i] > 0.0 and e_in[i] > 0.0 ):
+         ne_gt_zero.append(i)
+         num_active_bins = num_active_bins + 1
+
+   if num_active_bins == 0: return active_bins_new, i_lo_tmp, i_up_tmp
+
+   i_lo_tmp = max(ne_gt_zero[0]-1,0)
+   i_up_tmp = num_active_bins #  ne_gt_zero[-1]
+
+   pln = p_fix[i_lo_tmp:i_up_tmp]
+   prn = p_fix[i_lo_tmp+1:i_up_tmp+1]
+
+   n_act = []
+   e_act = []
+
+   for i in range(0, num_active_bins):
+      n_act.append(n_in[ne_gt_zero[i]])
+      e_act.append(e_in[ne_gt_zero[i]])
+
+   num_active_bins = 0
+
+   for i in range(0,i_up_tmp - i_lo_tmp):
+      q_tmp = 3.5 ; exit_code = False
+      q_tmp, exit_code = nr_get_q(q_tmp, e_in[i+i_lo_tmp]/(n_in[i+i_lo_tmp]*c*pln[i]), prn[i]/pln[i], exit_code)
+      q_gt_zero.append(q_tmp)
+      f_gt_zero.append(nq2f(n_in[i+i_lo_tmp], q_gt_zero[-1], pln[i], prn[i]))
+      e_ampl_l.append(4*pi * c**2 * f_gt_zero[-1] * pln[i]**3)
+      e_ampl_r.append(4*pi * c**2 * f_gt_zero[-1] * (prn[i] / pln[i])**(-q_tmp) **3)
+      if (e_ampl_l[-1] > e_small or e_ampl_r[-1] > e_small):
+         if not (abs(q_gt_zero[-1]) >= q_big ) : # does not work
+            active_bins_new.append(ne_gt_zero[i]+1)
+            num_active_bins = num_active_bins +1
+
+
+   if num_active_bins == 0: return active_bins_new, i_lo_tmp, i_up_tmp
+
+
+   i_lo_tmp = max(active_bins_new[0]-1,0)
+   i_up_tmp = min(active_bins_new[-1],ncre)
+   print "active_bins: ", num_active_bins, " | cutoff indices:", i_lo_tmp, i_up_tmp
+   return active_bins_new, i_lo_tmp, i_up_tmp
+
+#------------------------------------------
 
 def crs_plot_main(parameter_names, parameter_values, plot_var, ncrs, ecrs, field_max, time, location, use_simple):
     global first_run, got_q_tabs, e_small, p_min_fix, p_max_fix, ncre, cre_eff
@@ -261,7 +319,7 @@ def crs_plot_main(parameter_names, parameter_values, plot_var, ncrs, ecrs, field
 
     first_run = True
 # -------------------
-    global plot_ymax, p_fix_ratio
+    global plot_ymax, p_fix_ratio, p_fix
     plot_ymax = field_max * cre_eff
     edges = []
     p_fix = []
@@ -288,16 +346,8 @@ def crs_plot_main(parameter_names, parameter_values, plot_var, ncrs, ecrs, field
     i_up = ncre
     empty_cell = True
 
-    e_small = e_small / 10.
-#------------ locate cutoff indices
-    for i in range(1,ncre):
-        i_lo = i
-        if ecrs[i] >= e_small:
-            empty_cell = False # not plotting if empty
-            break
-    for i in range(ncre,1,-1):
-        i_up = i
-        if ecrs[i-1] >= e_small: break
+    active_bins, i_lo, i_up = detect_active_bins_new(ncrs, ecrs)
+    if num_active_bins > 0: empty_cell = False
 
     sys.stdout.write('Time = %6.2f |  i_lo = %2d, i_up = %2d, %11s.'%(time, i_lo if not empty_cell else 0, i_up if not empty_cell else 0, '(empty cell)' if empty_cell else ' '))
     pln = p_fix[i_lo:i_up]
@@ -322,9 +372,9 @@ def crs_plot_main(parameter_names, parameter_values, plot_var, ncrs, ecrs, field
     for i in range(0,i_up - i_lo):
          if (q_explicit == True):
             q_tmp = 3.5 ; exit_code = False
-            q_tmp, exit_code = nr_get_q(q_tmp, ecrs[i+i_lo]/(ncrs[i+i_lo]*c*pln[i]), prn[i]/pln[i], exit_code)
+            q_tmp, exit_code = nr_get_q(q_tmp, ecrs[i+i_lo]/(ncrs[i+i_lo]*c*pln[i]), prn[i]/pln[i], exit_code) # this instruction is duplicated, TODO return it via detect_active_bins_new()
          else:
-            q_tmp = interpolate_q(ecrs[i+i_lo]/(ncrs[i+i_lo]*c*pln[i]))
+            q_tmp = interpolate_q(ecrs[i+i_lo]/(ncrs[i+i_lo]*c*pln[i]))# this instruction is duplicated, TODO return it via detect_active_bins_new()
          q_nr.append(q_tmp)
          fln.append(nq2f(ncrs[i+i_lo], q_nr[-1], pln[i], prn[i]))
 
