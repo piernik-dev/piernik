@@ -7,7 +7,7 @@ import os
 import sys
 
 #------ default values of parameters --------
-e_small = 1.0e-6
+e_small = 1e-6
 eps     = 1.0e-15
 ncre      = 45
 p_min_fix = 0.4e0
@@ -243,14 +243,17 @@ def simple_plot_data(plot_var, p, var_array, time, location, i_lo_cut, i_up_cut)
 #-----------------------------------------------------------------
 
 def crs_plot_main(parameter_names, parameter_values, plot_var, ncrs, ecrs, field_max, time, location, use_simple):
-    global first_run, got_q_tabs
+    global first_run, got_q_tabs, e_small, p_min_fix, p_max_fix, ncre, cre_eff
 
+    print e_small, p_min_fix, p_max_fix, ncre
     try:
         for i in range(len(parameter_names)):
-            exec("%s = %s" %(parameter_names[i], parameter_values[i]))
+            exec("%s = %s" %(parameter_names[i], parameter_values[i]),globals())
     except:
         print "Exiting: len(names) not equal len(values)"
         sys.exit()
+
+    print e_small, p_min_fix, p_max_fix, ncre
 
 # TODO -------- do it under *args TODO
     fixed_width = True
@@ -305,11 +308,11 @@ def crs_plot_main(parameter_names, parameter_values, plot_var, ncrs, ecrs, field
     ecrs_act = ecrs[i_lo-2:i_up-2]
     q_nr = [] ; fln = [] ; frn = []
 
-    if (not got_q_tabs):
-      prepare_q_tabs()
-      got_q_tabs = True
     if (not q_explicit):
        print "Spectral indices q will be interpolated"
+       if (not got_q_tabs):
+         prepare_q_tabs()
+         got_q_tabs = True
     else:
        print "Spectral indices q will be obtained explicitly"
 
