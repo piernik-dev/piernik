@@ -349,6 +349,8 @@ def crs_plot_main(parameter_names, parameter_values, plot_var, ncrs, ecrs, field
     active_bins, i_lo, i_up = detect_active_bins_new(ncrs, ecrs)
     if num_active_bins > 0: empty_cell = False
 
+    i_lo = max(i_lo,1) # temporarily do not display the leftmost bin
+
     sys.stdout.write('Time = %6.2f |  i_lo = %2d, i_up = %2d, %11s.'%(time, i_lo if not empty_cell else 0, i_up if not empty_cell else 0, '(empty cell)' if empty_cell else ' '))
     pln = p_fix[i_lo:i_up]
     prn = p_fix[i_lo+1:i_up+1]
