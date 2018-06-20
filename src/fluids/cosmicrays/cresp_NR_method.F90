@@ -16,16 +16,16 @@ module cresp_NR_method
            &    p_a, p_n, p_ratios_lo, f_ratios_lo, p_ratios_up, f_ratios_up, q_grid, lin_interpol_1D, alpha_to_q,   &   ! can be commented out for CRESP and PIERNIK
            &    lin_extrapol_1D, lin_interpolation_1D, find_indices_1D, nearest_solution
 
-   integer, parameter :: ndim = 2
-   real(kind=8), dimension(:), allocatable :: p_space, q_space
-   real(kind=8) :: alpha, p_ratio_4_q, n_in, e_in, p_im1, p_ip1
-   real(kind=8), allocatable, dimension(:), target          :: alpha_tab_lo, alpha_tab_up, n_tab_lo, n_tab_up, alpha_tab_q, q_grid
+   integer, parameter                               :: ndim = 2
+   real(kind=8), allocatable, dimension(:)          :: p_space, q_space
+   real(kind=8)                                     :: alpha, p_ratio_4_q, n_in, e_in, p_im1, p_ip1
+   real(kind=8), allocatable, dimension(:), target  :: alpha_tab_lo, alpha_tab_up, n_tab_lo, n_tab_up, alpha_tab_q, q_grid
    real(kind=8), allocatable, dimension(:,:),target :: p_ratios_lo, f_ratios_lo, p_ratios_up, f_ratios_up
-   integer(kind=4) :: helper_arr_dim
-   real(kind=8) :: eps_det = eps * 1.0e-15
-   real(kind=8) :: small_eps = 1.0e-25
-   real(kind=8), pointer, dimension(:)   :: p_a => null(), p_n => null() ! pointers for alpha_tab_(lo,up) and n_tab_(lo,up) or optional - other 1-dim arrays
-   real(kind=8), pointer, dimension(:,:) :: p_p => null(), p_f => null() ! pointers for p_ratios_(lo,up) and f_ratios_(lo,up)
+   integer(kind=4)                                  :: helper_arr_dim
+   real(kind=8)                                     :: eps_det = eps * 1.0e-15
+   real(kind=8)                                     :: small_eps = 1.0e-25
+   real(kind=8), pointer, dimension(:)              :: p_a => null(), p_n => null() ! pointers for alpha_tab_(lo,up) and n_tab_(lo,up) or optional - other 1-dim arrays
+   real(kind=8), pointer, dimension(:,:)            :: p_p => null(), p_f => null() ! pointers for p_ratios_(lo,up) and f_ratios_(lo,up)
 
    abstract interface
       function function_pointer_1D(z)
@@ -42,140 +42,161 @@ module cresp_NR_method
       end function function_pointer_2D
    end interface
 
+   procedure (value_control_1D), pointer    :: selected_value_check_1D => null()
    procedure (function_pointer_1D), pointer :: selected_function_1D => null()
-   procedure (value_control_1D), pointer    :: selected_value_check_1D  => null()
    procedure (function_pointer_2D), pointer :: selected_function_2D => null()
 
 !----------------------------------------------------------------------------------------------------
 
-  contains !  -------*--------
+contains
 
-  subroutine NR_algorithm(x,exit_code)
-  use initcrspectrum, only: NR_iter_limit, tol_f, tol_x
-  implicit none
-    real(kind=8),dimension(ndim),intent(inout) :: x
-    real(kind=8),dimension(ndim)   :: fun_vec_value
-    real(kind=8),dimension(1:ndim) :: cor
-    real(kind=8), dimension(size(x),size(x)) :: fun_vec_jac, fun_vec_inv_jac
-    real(kind=8) :: err_f, err_x
-    real(kind=8) :: det
-    logical,intent(out)  :: exit_code
-    integer(kind=2) :: i , j
+   subroutine NR_algorithm(x,exit_code)
 
-    err_f = tol_f
-    err_x = tol_x
-    exit_code=.true.
+      use initcrspectrum, only: NR_iter_limit, tol_f, tol_x
 
-    fun_vec_value = selected_function_2D(x)
-    if (maxval(abs(fun_vec_value)) < 0.01 * err_f) then ! in case when f converges at initialization
-            exit_code=.false.
-!             write(*,"(A33,2E22.15)")"Convergence (f) at initialization", x
-            return
-    endif
-  do j = 1, 3 ! if it is not possible to find solution with demanded precision.
-    do i = 1, NR_iter_limit
-        if (maxval(abs(fun_vec_value)) < err_f ) then    ! For convergence via value of f
-            exit_code=.false.
+      implicit none
+
+      real(kind=8), dimension(ndim), intent(inout) :: x
+      logical,                       intent(out)   :: exit_code
+      real(kind=8), dimension(ndim)                :: fun_vec_value
+      real(kind=8), dimension(1:ndim)              :: cor
+      real(kind=8), dimension(size(x),size(x))     :: fun_vec_jac, fun_vec_inv_jac
+      real(kind=8)                                 :: err_f, err_x, det
+      integer(kind=2)                              :: i, j
+
+      err_f = tol_f
+      err_x = tol_x
+      exit_code = .true.
+
+      fun_vec_value = selected_function_2D(x)
+      if (maxval(abs(fun_vec_value)) < 0.01 * err_f) then ! in case when f converges at initialization
+         exit_code=.false.
+!         write(*,"(A33,2E22.15)")"Convergence (f) at initialization", x
+         return
+      endif
+      do j = 1, 3 ! if it is not possible to find solution with demanded precision.
+         do i = 1, NR_iter_limit
+            if (maxval(abs(fun_vec_value)) < err_f ) then    ! For convergence via value of f
+               exit_code=.false.
 #ifdef CRESP_VERBOSED
-            write(*,"(A47,I4,A12)",advance="no") "Convergence via value of fun_vec_value after ",i, " iterations."!, x, fun_vec_value
+               write(*,"(A47,I4,A12)",advance="no") "Convergence via value of fun_vec_value after ",i, " iterations."!, x, fun_vec_value
 #endif /* CRESP_VERBOSED */
+               return
+            endif
+
+            fun_vec_value = selected_function_2D(x)
+            fun_vec_jac = jac_fin_diff(x)                    ! function vector already explicitly provided to jac_fin_diff (finite difference method)
+
+            det = determinant_2d_real(fun_vec_jac)           ! WARNING - algorithm is used for ndim = 2. For more dimensions LU or other methods should be implemented.
+            if (abs(det) .lt. eps_det) then              ! Countermeasure against determinant = zero
+!               write (*,"(A20)") "WARNING: det ~ 0.0"
+               exit_code = .true.
+               return
+            endif
+            fun_vec_inv_jac = invert_2d_matrix(fun_vec_jac,det)
+
+            cor(1) = fun_vec_inv_jac(1,1) *fun_vec_value(1) + fun_vec_inv_jac(1,2) * fun_vec_value(2)
+            cor(2) = fun_vec_inv_jac(2,1) *fun_vec_value(1) + fun_vec_inv_jac(2,2) * fun_vec_value(2)
+            x = x+cor
+!            write(*,'(A20, 2E35.25, A5, 2E22.14)') "Obtained values (x): " , x,' | ', sum(abs(cor)), sum(abs(fun_vec_value))! ,maxval(abs(fun_vec_value)), maxval(abs(cor)),
+            if (maxval(abs(cor)) < err_x) then                 ! For convergence via value of correction (cor) table.
+#ifdef CRESP_VERBOSED
+               write(*,"(A47,I4,A12)",advance="no") "Convergence via value of cor array     after ",i," iterations."
+#endif /* CRESP_VERBOSED */
+               exit_code = .false.
+               return
+            endif
+         enddo
+         err_f = 5.0*err_f
+         err_x = 5.0*err_x ! changing tolerance so that more solutions can be found
+      enddo
+!      write(*,"(A45,I4,A24)") "  ... WARNING: Maximum number of iterations (",NR_iter_limit,") exceeded @global_newt!"
+      exit_code = .true.
+
+   end subroutine NR_algorithm
+
+!----------------------------------------------------------------------------------------------------
+
+   subroutine NR_algorithm_1D(x, exit_code)
+
+      use initcrspectrum, only: NR_iter_limit, tol_f_1D, tol_x_1D
+
+      implicit none
+
+      integer          :: i
+      real(kind=8)     :: x, delta, dfun_1D, fun1D_val
+      logical          :: exit_code, func_check
+
+      delta = huge(1.0)
+      func_check = .false.
+
+      do i = 1, NR_iter_limit
+         fun1D_val = selected_function_1D(x)
+         if ((abs(fun1D_val) .le. tol_f_1D) .and. (abs(delta) .le. tol_f_1D)) then ! delta .le. tol_f acceptable as in case of f convergence we must only check if the algorithm hasn't wandered astray
+            exit_code = .false.
             return
-        endif
+         endif
 
-        fun_vec_value = selected_function_2D(x)
-        fun_vec_jac = jac_fin_diff(x)                    ! function vector already explicitly provided to jac_fin_diff (finite difference method)
+         dfun_1D = derivative_1D(x)
 
-        det = determinant_2d_real(fun_vec_jac)           ! WARNING - algorithm is used for ndim = 2. For more dimensions LU or other methods should be implemented.
-        if (abs(det) .lt. eps_det) then              ! Countermeasure against determinant = zero
-!     write (*,"(A20)") "WARNING: det ~ 0.0"
+         if ( abs(dfun_1D) .lt. small_eps ) then
             exit_code = .true.
             return
-        endif
-        fun_vec_inv_jac = invert_2d_matrix(fun_vec_jac,det)
+         endif
 
-        cor(1) = fun_vec_inv_jac(1,1) *fun_vec_value(1) + fun_vec_inv_jac(1,2) * fun_vec_value(2)
-        cor(2) = fun_vec_inv_jac(2,1) *fun_vec_value(1) + fun_vec_inv_jac(2,2) * fun_vec_value(2)
-        x = x+cor
-!         write(*,'(A20, 2E35.25, A5, 2E22.14)') "Obtained values (x): " , x,' | ', sum(abs(cor)), sum(abs(fun_vec_value))! ,maxval(abs(fun_vec_value)), maxval(abs(cor)),
-        if (maxval(abs(cor)) < err_x) then                 ! For convergence via value of correction (cor) table.
-#ifdef CRESP_VERBOSED
-           write(*,"(A47,I4,A12)",advance="no") "Convergence via value of cor array     after ",i," iterations."
-#endif /* CRESP_VERBOSED */
-           exit_code = .false.
-           return
-        endif
-    enddo
-  err_f = 5.0*err_f
-  err_x = 5.0*err_x ! changing tolerance so that more solutions can be found
-  enddo
-!     write(*,"(A45,I4,A24)") "  ... WARNING: Maximum number of iterations (",NR_iter_limit,") exceeded @global_newt!"
-    exit_code = .true.
+         delta   = fun1D_val / derivative_1D(x)
 
-  end subroutine NR_algorithm
+         x = x - delta
+         if(abs(delta) .lt. tol_x_1D) then
+            exit_code = .false.
+            return
+         endif
+         call selected_value_check_1D(x, func_check)  ! necessary in some cases, when maximal value x can take is defined, for other cases dummy_check_1D function defined
+         if ( func_check .eqv. .true. ) return
+      enddo
+
+      exit_code = .true. ! if all fails
+
+   end subroutine NR_algorithm_1D
+
 !----------------------------------------------------------------------------------------------------
-  subroutine NR_algorithm_1D(x, exit_code)
-   use initcrspectrum, only: NR_iter_limit, tol_f_1D, tol_x_1D
-   implicit none
-    integer          :: i
-    real(kind=8)     :: x, delta
-    real(kind=8)     :: dfun_1D, fun1D_val
-    logical :: exit_code, func_check
-        delta = huge(1.0)
-        func_check = .false.
 
-        do i = 1, NR_iter_limit
-            fun1D_val = selected_function_1D(x)
-            if ((abs(fun1D_val) .le. tol_f_1D) .and. (abs(delta) .le. tol_f_1D)) then ! delta .le. tol_f acceptable as in case of f convergence we must only check if the algorithm hasn't wandered astray
-                exit_code = .false.
-                return
-            endif
+   function derivative_1D(x) ! via finite difference method
 
-            dfun_1D = derivative_1D(x)
+      use constants,       only: half
+      use initcrspectrum,  only: eps
 
-            if ( abs(dfun_1D) .lt. small_eps ) then
-                exit_code = .true.
-                return
-            endif
+      implicit none
 
-            delta   = fun1D_val / derivative_1D(x)
+      real(kind=8),intent(in) :: x
+      real(kind=8)            :: dx, derivative_1D
+      real(kind=8)            :: dx_par = 1.0e-4
 
-            x = x - delta
-            if(abs(delta) .lt. tol_x_1D) then
-                exit_code = .false.
-                return
-            endif
-            call selected_value_check_1D(x, func_check)  ! necessary in some cases, when maximal value x can take is defined, for other cases dummy_check_1D function defined
-            if ( func_check .eqv. .true. ) return
-        enddo
+      dx = sign(1.0, x) * min(abs(x*dx_par), dx_par)
+      dx = sign(1.0, x) * max(abs(dx), eps) ! dx = 0.0 must not be allowed
+      derivative_1D = half * (selected_function_1D(x+dx) - selected_function_1D(x-dx))/dx
 
-        exit_code = .true. ! if all fails
-  end subroutine NR_algorithm_1D
+   end function derivative_1D
+
 !----------------------------------------------------------------------------------------------------
-  function derivative_1D(x) ! via finite difference method
-  use constants,       only: half
-  use initcrspectrum,  only: eps
-   implicit none
-    real(kind=8),intent(in) :: x
-    real(kind=8)            :: dx, derivative_1D
-    real(kind=8)            :: dx_par = 1.0e-4
-        dx = sign(1.0, x) * min(abs(x*dx_par), dx_par)
-        dx = sign(1.0, x) * max(abs(dx), eps) ! dx = 0.0 must not be allowed
-        derivative_1D = half * (selected_function_1D(x+dx) - selected_function_1D(x-dx))/dx
-  end function derivative_1D
-!----------------------------------------------------------------------------------------------------
-  subroutine cresp_initialize_guess_grids
-   use constants,       only: zero
-   use initcrspectrum,  only: e_small, q_big, max_p_ratio !, p_fix
-   use cresp_variables, only: clight ! use units, only: clight
-   use mpisetup,        only: master
-   implicit none
-    logical   :: first_run = .true. , save_to_log = .false.
-    character(8)  :: date
-    character(9) :: time
+
+   subroutine cresp_initialize_guess_grids
+
+      use constants,       only: zero
+      use initcrspectrum,  only: e_small, q_big, max_p_ratio !, p_fix
+      use cresp_variables, only: clight ! use units, only: clight
+      use mpisetup,        only: master
+
+      implicit none
+
+      logical   :: first_run = .true. , save_to_log = .false.
+      character(8)  :: date
+      character(9) :: time
+
       call initialize_arrays
       if ((master) .and. (first_run .eqv. .true. )) then
-            helper_arr_dim = int(arr_dim/4,kind=4)
-            if (.not. allocated(p_space))     allocate(p_space(1:helper_arr_dim)) ! these will be deallocated once initialization is over
+         helper_arr_dim = int(arr_dim/4,kind=4)
+         if (.not. allocated(p_space))     allocate(p_space(1:helper_arr_dim)) ! these will be deallocated once initialization is over
             if (.not. allocated(q_space))     allocate(q_space(1:helper_arr_dim)) ! these will be deallocated once initialization is over
             call date_and_time(date,time)
             call date_and_time(DATE=date)
@@ -230,7 +251,9 @@ module cresp_NR_method
       call cresp_NR_mpi_exchange
 
   end subroutine cresp_initialize_guess_grids
+
 !----------------------------------------------------------------------------------------------------
+
   subroutine fill_guess_grids
    use constants, only: zero, one, half
    use cresp_variables, only: clight ! use units,   only: clight
