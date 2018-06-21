@@ -24,6 +24,7 @@ plot_var = "e"
 simple_plot = False # True
 plot_vel = False
 plot_mag = True
+save_spectrum = True
 
 user_limits = False # use values below as limits for clickable plot
 plot_user_min = 0.001
@@ -108,8 +109,9 @@ if f_run == True:
     time = t.in_units('Myr')
 
 #------------ Organizing domain data
+    length_unit = 'pc'
     print ("\033[92mDomain shape of in provided file            (i, j, k): [%i,%i,%i] \033[0m" %(grid_dim[0], grid_dim[1], grid_dim[2]) )
-    print ("\033[92mDomain physical dimensions in provided file (x, y, z): [%f,%f,%f]:[%f,%f,%f] \033[0m" %(dom_l[0], dom_l[1], dom_l[2], dom_r[0], dom_r[1], dom_r[2]))
+    print ("\033[92mDomain physical dimensions in provided file (x, y, z): [%f,%f,%f]:[%f,%f,%f] %s \033[0m" %(dom_l[0], dom_l[1], dom_l[2], dom_r[0], dom_r[1], dom_r[2], length_unit))
 
     avail_dim = [0,1,2]
     avail_dims_by_slice = [[1,2],[0,2],[0,1]]
@@ -121,10 +123,10 @@ if f_run == True:
             slice_ax    = raw_input("\033[92mChoose slice ax (x, y, z)      : \033[0m")
         while (slice_coord < dom_l[dim_map[slice_ax]]) or (slice_coord > dom_r[dim_map[slice_ax]]): # or slice_coord < -10000:
             try:
-                slice_coord = float(raw_input("\033[92mChoose slice coordinate (%d:%d) (if empty, middle is assumed): \033[0m" % (dom_l[dim_map[slice_ax]],dom_r[dim_map[slice_ax]]) ))
+                slice_coord = float(raw_input("\033[92mChoose slice coordinate (%d:%d %s ) (if empty, middle is assumed): \033[0m" % (dom_l[dim_map[slice_ax]],dom_r[dim_map[slice_ax]], length_unit) ))
             except:
                 slice_coord = (dom_l[dim_map[slice_ax]] + dom_r[dim_map[slice_ax]]) / 2.
-                print ("\033[93m[Empty / improper input]: Setting slice coordinate to %s kpc.\033[0m" %slice_coord)
+                print ("\033[93m[Empty / improper input]: Setting slice coordinate to %s %s.\033[0m" %(slice_coord, length_unit))
     elif min(grid_dim) == 1:
         slice_coord = 0.0
         if   grid_dim[0] == 1:
@@ -134,11 +136,11 @@ if f_run == True:
         else:
             slice_ax = 'z'
     avail_dim = avail_dims_by_slice[dim_map[slice_ax]]
-    print ("\033[92mSlice ax set to %s, coordinate = %f \033[0m" %(slice_ax, slice_coord))
+    print ("\033[92mSlice ax set to %s, coordinate = %f %s \033[0m" %(slice_ax, slice_coord, length_unit))
     resolution = [grid_dim[avail_dim[0]],grid_dim[avail_dim[1]]]
 
 #--------- Preparing clickable image
-    s = plt.figure(figsize=(12,8),dpi=80)
+    s = plt.figure(figsize=(12,8),dpi=100)
     s1 = plt.subplot(121)
     dsSlice = h5ds.slice(slice_ax, slice_coord)
 
@@ -199,8 +201,8 @@ if f_run == True:
       h5ds.find_max("cre"+plot_var+str(plot_field[-2:]))[0]
       plot_units = "Msun*pc**2/Myr**2"
 
-    plt.xlabel("Domain cooridnates ("+dim_map.keys()[dim_map.values().index(avail_dim[0])]+")" )
-    plt.ylabel("Domain cooridnates ("+dim_map.keys()[dim_map.values().index(avail_dim[1])]+")" )
+    plt.xlabel("Domain cooridnates "+dim_map.keys()[dim_map.values().index(avail_dim[0])]+" ("+length_unit+")" )
+    plt.ylabel("Domain cooridnates "+dim_map.keys()[dim_map.values().index(avail_dim[1])]+" ("+length_unit+")" )
     plt.colormap="plasma"
     if (user_limits == True): # Overwrites previously found values
        plot_min = plot_user_min
@@ -221,6 +223,7 @@ if f_run == True:
        sys.exit("\033[91mAn empty field might have been picked.\033[0m")
 
     print ""
+    plt.subplots_adjust(left=0.075,right=0.975, hspace=0.12)
 #---------
     def read_click_and_plot(event):
         global click_coords, image_number, f_run
@@ -253,6 +256,11 @@ if f_run == True:
             s.savefig('results/'+filename_nam+'_'+plot_var+'_%04d.png' % image_number, transparent ='False',facecolor=s.get_facecolor())
             print ("\033[92m  --->  Saved plot to: %s\033[0m" %str('results/'+filename_nam+'_'+plot_var+'_%04d.png' %image_number))
             image_number=image_number+1
+#              ------------- saving just the spectrum
+            if (save_spectrum):
+               extent = fig2.get_window_extent().transformed(s.dpi_scale_trans.inverted())
+               s.savefig('results/'+filename_nam+'_'+plot_var+'_spectrum_%04d.png' % image_number, transparent ='False',facecolor=s.get_facecolor(), bbox_inches=extent.expanded(1.3, 1.2))
+               print ("\033[92m  --->  Saved plot to: %s\033[0m" %str('results/'+filename_nam+'_'+plot_var+'_spectrum_%04d.png' %image_number))
         else:
             print("\033[92m Empty cell, not saving.\033[0m")
 
