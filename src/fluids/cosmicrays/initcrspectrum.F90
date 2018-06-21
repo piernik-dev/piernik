@@ -14,7 +14,7 @@ module initcrspectrum
    character(len=cbuff_len) :: initial_condition     !< available types: bump, powl, brpl, symf, syme. Description below.
    real(kind=8)       :: f_init                      !< initial value of distr. func. for isolated case
    real(kind=8)       :: q_init                      !< initial value of power law-like spectrum exponent
-   real(kind=8)       :: bump_amp                    !< bump amplitude for gaussian-like energy spectrum
+   real(kind=8)       :: bump_amp                    !< bump amplitude for gaussian-like energy spectrum  # DEPRECATED
    real(kind=8)       :: q_big                       !< maximal amplitude of q
    real(kind=8)       :: cfl_cre                     !< CFL parameter  for cr electrons
    real(kind=8)       :: cre_eff                     !< fraction of energy passed to cr-electrons by nucleons (mainly protons)
@@ -43,6 +43,7 @@ module initcrspectrum
    logical            :: nullify_empty_bins          !< nullifies empty bins when entering CRESP module / exiting empty cell.
    logical            :: prevent_neg_en              !< forces e,n=eps where e or n drops below zero due to diffusion algorithm (TEMP workaround)
    logical            :: test_spectrum_break         !< introduce break in the middle of the spectrum (to see how algorithm handles it), TEMP
+   real(kind=8)       :: magnetic_energy_scaler      !< decreases magnetic energy amplitude at CRESP, TEMP  # DEPRECATED
    logical            :: allow_source_spectrum_break !< allow extension of spectrum to adjacent bins if momenta found exceed set p_fix
    logical            :: synch_active                !< TEST feature - turns on / off synchrotron cooling @ CRESP
    logical            :: adiab_active                !< TEST feature - turns on / off adiabatic   cooling @ CRESP
@@ -56,45 +57,48 @@ module initcrspectrum
    real(kind=8)       :: tol_x_1D                    !< tolerance for x abs. error in NR algorithm (1D)
    integer(kind=4)    :: arr_dim
 
-   real(kind=8),parameter  :: eps = 1.0e-15          !< epsilon parameter for real number comparisons
+   real(kind=8), parameter  :: eps = 1.0e-15          !< epsilon parameter for real number comparisons
 !----------------------------------
-   real(kind=8),allocatable, dimension(:) :: p_fix, p_mid_fix, n_small_bin
-   real(kind=8)       :: w
+   real(kind=8), allocatable, dimension(:) :: p_fix, p_mid_fix, n_small_bin
+   real(kind=8)                            :: w
 
-   real(kind=8),allocatable, dimension(:) :: mom_cre_fix, mom_mid_cre_fix, Gamma_fix, Gamma_mid_fix, gamma_beta_c_fix
-   real(kind=8)       :: Gamma_fix_ratio
-   real(kind=8)       :: G_w
+   real(kind=8), allocatable, dimension(:) :: mom_cre_fix, mom_mid_cre_fix, Gamma_fix, Gamma_mid_fix, gamma_beta_c_fix
+   real(kind=8)                            :: Gamma_fix_ratio
+   real(kind=8)                            :: G_w
 
 ! Types used in module:
    type bin_old
-      integer                           :: i_lo
-      integer                           :: i_up
-      real(kind=8),allocatable,dimension(:)   :: p
-      real(kind=8),allocatable,dimension(:)   :: f
-      real(kind=8),allocatable,dimension(:)   :: q
-      real(kind=8),allocatable,dimension(:)   :: e
-      real(kind=8),allocatable,dimension(:)   :: n
-      real(kind=8) :: dt
+      integer                                :: i_lo
+      integer                                :: i_up
+      real(kind=8), allocatable,dimension(:) :: p
+      real(kind=8), allocatable,dimension(:) :: f
+      real(kind=8), allocatable,dimension(:) :: q
+      real(kind=8), allocatable,dimension(:) :: e
+      real(kind=8), allocatable,dimension(:) :: n
+      real(kind=8)                           :: dt
    end type bin_old
+
    type cr_spectrum
-      real(kind=8),allocatable,dimension(:)   :: e
-      real(kind=8),allocatable,dimension(:)   :: n
+      real(kind=8), allocatable,dimension(:) :: e
+      real(kind=8), allocatable,dimension(:) :: n
    end type cr_spectrum
+
    type(cr_spectrum) cresp
    type(cr_spectrum) norm_init_spectrum
    type(bin_old) crel
 ! For passing terms to compute energy sources / sinks
+
    type spec_mod_trms
-      real(kind=8)    :: ub
-      real(kind=8)    :: ud
-      real(kind=8)    :: ucmb
+      real(kind=8) :: ub
+      real(kind=8) :: ud
+      real(kind=8) :: ucmb
    end type spec_mod_trms
 
    real(kind=8)     :: total_init_cree
    real(kind=8), allocatable, dimension(:,:,:,:) :: virtual_n, virtual_e ! arrays for storing n and e in bins that receive particles but are not yet activated, i.e. where the energy is less than e_small
    integer(kind=4)  :: taylor_coeff_2nd, taylor_coeff_3rd
    real(kind=8)     :: p_fix_ratio
-   integer,allocatable, dimension(:) :: cresp_all_edges, cresp_all_bins
+   integer, allocatable, dimension(:) :: cresp_all_edges, cresp_all_bins
 
 !====================================================================================================
 !
@@ -102,14 +106,16 @@ module initcrspectrum
 !
 !====================================================================================================
    subroutine init_cresp
-      use constants,            only: I_ZERO, zero, one, ten
-      use dataio_pub,           only: printinfo, warn, msg, die, nh
-      use diagnostics,          only: my_allocate_with_index
-      use mpisetup,             only: rbuff, ibuff, lbuff, cbuff, master, slave, piernik_MPI_Bcast
-      use units,                only: me
-      use cresp_variables,      only: clight ! use units,   only: clight
+
+      use constants,       only: cbuff_len, I_ZERO, zero, one, ten
+      use cresp_variables, only: clight ! use units,   only: clight
+      use dataio_pub,      only: printinfo, warn, msg, die, nh
+      use diagnostics,     only: my_allocate_with_index
+      use mpisetup,        only: rbuff, ibuff, lbuff, cbuff, master, slave, piernik_MPI_Bcast
+      use units,           only: me
 
       implicit none
+
       logical, save            :: first_run = .true.
       integer                  :: i       ! enumerator
 
@@ -121,29 +127,29 @@ module initcrspectrum
       &                         Gamma_min_fix, Gamma_max_fix, Gamma_lo_init, Gamma_up_init, nullify_empty_bins
 
 ! Default values
-      use_cresp = .true.
-      ncre        = 0
-      p_min_fix   = 1.5e1
-      p_max_fix   = 1.65e4
-      p_lo_init   = 1.5e1
-      p_up_init   = 7.5e2
+      use_cresp         = .true.
+      ncre              = 0
+      p_min_fix         = 1.5e1
+      p_max_fix         = 1.65e4
+      p_lo_init         = 1.5e1
+      p_up_init         = 7.5e2
       initial_condition = "powl"
-      f_init      = 1.0
-      q_init      = 2.5
-      bump_amp    = 0.5d0
-      q_big       = 30.0d0
-      cfl_cre     = 0.1
-      cre_eff     = 0.01
-      K_cre_paral_1 = 0.
-      K_cre_perp_1  = 0.
-      K_cre_pow     = 0.
-      expan_order   = 1
+      f_init            = 1.0
+      q_init            = 4.1
+      bump_amp          = 0.5d0
+      q_big             = 30.0d0
+      cfl_cre           = 0.1
+      cre_eff           = 0.01
+      K_cre_paral_1     = 0.
+      K_cre_perp_1      = 0.
+      K_cre_pow         = 0.
+      expan_order       = 1
       Gamma_min_fix     = 2.5
       Gamma_max_fix     = 1000.0
       Gamma_lo_init     = 10.0
       Gamma_up_init     = 200.0
 
-      e_small       = 1.0e-5
+      e_small           = 1.0e-5
       e_small_approx_p_lo = 1
       e_small_approx_p_up = 1
       e_small_approx_init_cond = 1
@@ -152,12 +158,12 @@ module initcrspectrum
       NR_iter_limit     = 100
       force_init_NR     = .false.
       NR_run_refine_pf  = .false.
-      NR_refine_solution_q  = .false.
-      NR_refine_solution_pf = .false.
-      nullify_empty_bins    = .true.
-      smallecrn         = 0.0
-      smallecre         = 0.0
-      prevent_neg_en    = .true.
+      NR_refine_solution_q   = .false.
+      NR_refine_solution_pf  = .false.
+      nullify_empty_bins     = .true.
+      smallecrn              = 0.0
+      smallecre              = 0.0
+      prevent_neg_en         = .true.
       test_spectrum_break    = .false.
       allow_source_spectrum_break  = .false.
       synch_active = .true.
@@ -170,7 +176,7 @@ module initcrspectrum
       tol_x    = 1.0e-11
       tol_f_1D = 1.0e-14
       tol_x_1D = 1.0e-14
-      arr_dim = 200
+      arr_dim  = 200
 
       if (master) then
          if (.not.nh%initialized) call nh%init()
@@ -257,17 +263,17 @@ module initcrspectrum
       call piernik_MPI_Bcast(cbuff, cbuff_len)
 
 !!\deprecated
-      open(10, file='crs.dat',status='replace',position='rewind')     ! diagnostic files
-      open(11, file='crs_ne.dat',status='replace',position='rewind')  ! diagnostic files
+!      open(10, file='crs.dat',status='replace',position='rewind')     ! diagnostic files
+!      open(11, file='crs_ne.dat',status='replace',position='rewind')  ! diagnostic files
 
       if (slave) then
-         ncre                         = int(ibuff(1),kind=4)
-         expan_order                  = int(ibuff(2),kind=4)
+         ncre                        = int(ibuff(1),kind=4)
+         expan_order                 = int(ibuff(2),kind=4)
 
-         e_small_approx_p_lo          = int(ibuff(3),kind=1)
-         e_small_approx_p_up          = int(ibuff(4),kind=1)
-         e_small_approx_init_cond     = int(ibuff(5),kind=1)
-         add_spectrum_base            = int(ibuff(6),kind=1)
+         e_small_approx_p_lo         = int(ibuff(3),kind=1)
+         e_small_approx_p_up         = int(ibuff(4),kind=1)
+         e_small_approx_init_cond    = int(ibuff(5),kind=1)
+         add_spectrum_base           = int(ibuff(6),kind=1)
 
          NR_iter_limit               = int(ibuff(7),kind=2)
          arr_dim                     = int(ibuff(8),kind=4)
@@ -286,42 +292,47 @@ module initcrspectrum
          NR_refine_solution_pf       = lbuff(11)
          nullify_empty_bins          = lbuff(12)
 
-         cfl_cre                      = rbuff(1)
-         cre_eff                      = rbuff(2)
-         smallecrn                    = rbuff(3)
-         smallecre                    = rbuff(4)
-         cre_active                   = rbuff(5)
-         p_lo_init                    = rbuff(6)
-         p_up_init                    = rbuff(7)
-         f_init                       = rbuff(8)
-         q_init                       = rbuff(9)
-         q_big                        = rbuff(10)
-         p_min_fix                    = rbuff(11)
-         p_max_fix                    = rbuff(12)
-         K_cre_paral_1                = rbuff(13)
-         K_cre_perp_1                 = rbuff(14)
-         K_cre_pow                    = rbuff(15)
-         bump_amp                     = rbuff(16)
+         cfl_cre                     = rbuff(1)
+         cre_eff                     = rbuff(2)
+         smallecrn                   = rbuff(3)
+         smallecre                   = rbuff(4)
+         cre_active                  = rbuff(5)
+         p_lo_init                   = rbuff(6)
+         p_up_init                   = rbuff(7)
+         f_init                      = rbuff(8)
+         q_init                      = rbuff(9)
+         q_big                       = rbuff(10)
+         p_min_fix                   = rbuff(11)
+         p_max_fix                   = rbuff(12)
+         K_cre_paral_1               = rbuff(13)
+         K_cre_perp_1                = rbuff(14)
+         K_cre_pow                   = rbuff(15)
+         bump_amp                    = rbuff(16)
 
-         e_small                      = rbuff(17)
-         max_p_ratio                  = rbuff(18)
+         e_small                     = rbuff(17)
+         max_p_ratio                 = rbuff(18)
 
-         tol_f                        = rbuff(19)
-         tol_x                        = rbuff(20)
-         tol_f_1D                     = rbuff(21)
-         tol_x_1D                     = rbuff(22)
+         magnetic_energy_scaler      = rbuff(19)
 
-         Gamma_min_fix                = rbuff(23)
-         Gamma_max_fix                = rbuff(24)
-         Gamma_lo_init                = rbuff(25)
-         Gamma_up_init                = rbuff(26)
+         tol_f                       = rbuff(20)
+         tol_x                       = rbuff(21)
+         tol_f_1D                    = rbuff(22)
+         tol_x_1D                    = rbuff(23)
 
-         initial_condition            = cbuff(1)
+         Gamma_min_fix               = rbuff(24)
+         Gamma_max_fix               = rbuff(25)
+         Gamma_lo_init               = rbuff(26)
+         Gamma_up_init               = rbuff(27)
+
+         initial_condition           = trim(cbuff(1))
+
       endif
       if (first_run .eqv. .true.) then
          if (ncre .ne. I_ZERO)  then
 #ifdef VERBOSE
                write (msg,'(A)')            '[initcrspectrum:init_cresp] Initial CRESP parameters read:'
+               call printinfo(msg)
+               write (msg, '(A, L1)')       '[initcrspectrum:init_cresp] use_cresp   = ', use_cresp
                call printinfo(msg)
                write (msg, '(A, 1I3)')      '[initcrspectrum:init_cresp] ncre        = ', ncre
                call printinfo(msg)
@@ -351,7 +362,11 @@ module initcrspectrum
                call printinfo(msg)
                write (msg, '(A, A5)')       '[initcrspectrum:init_cresp] initial_condition =' , initial_condition
                call printinfo(msg)
-               write (msg, '(A, 1E15.7)')   '[initcrspectrum:init_cresp] bump amplitude =', bump_amp
+               write (msg, '(A, L1)')       '[initcrspectrum:init_cresp] cre_gpcr_ess = ', cre_gpcr_ess
+               call printinfo(msg)
+               write (msg, '(A, L1)')       '[initcrspectrum:init_cresp] cre_active   = ', cre_active
+               call printinfo(msg)
+               write (msg, '(A, 1E15.7)')   '[initcrspectrum:init_cresp] bump amplitude    =', bump_amp
                call printinfo(msg)
                write (msg, '(A, I1)')       '[initcrspectrum:init_cresp] Approximate cutoff momenta at initialization: e_small_approx_init_cond =', e_small_approx_init_cond
                call printinfo(msg)
@@ -361,13 +376,13 @@ module initcrspectrum
                call printinfo(msg)
                write (msg, '(A, I1)')       '[initcrspectrum:init_cresp] add_spectrum_base   =', add_spectrum_base
                call printinfo(msg)
-               write (msg, '(A, 1F10.5 )')  '[initcrspectrum:init_cresp] max_p_ratio =', max_p_ratio
+               write (msg, '(A, 1F10.5 )')  '[initcrspectrum:init_cresp] max_p_ratio      =', max_p_ratio
                call printinfo(msg)
-               write (msg, '(A, L2 )' )     '[initcrspectrum:init_cresp] force_init_NR   = ', force_init_NR
+               write (msg, '(A, L2 )' )     '[initcrspectrum:init_cresp] force_init_NR    = ', force_init_NR
                call printinfo(msg)
-               write (msg, '(A, I4)')       '[initcrspectrum:init_cresp] NR_iter_limit  = ', NR_iter_limit
+               write (msg, '(A, I4)')       '[initcrspectrum:init_cresp] NR_iter_limit    = ', NR_iter_limit
                call printinfo(msg)
-               write (msg, '(A, 1E15.7)')   '[initcrspectrum:init_cresp] epsilon(eps) = ', eps
+               write (msg, '(A, 1E15.7)')   '[initcrspectrum:init_cresp] epsilon(eps)     = ', eps
                call printinfo(msg)
                write (msg, '(A, 1E15.7)')   '[initcrspectrum:init_cresp] Gamma_min_fix    =', Gamma_min_fix
                call printinfo(msg)
@@ -377,6 +392,23 @@ module initcrspectrum
                call printinfo(msg)
                write (msg, '(A, 1E15.7)')   '[initcrspectrum:init_cresp] Gamma_up_init    =', Gamma_up_init
                call printinfo(msg)
+               write (msg,'(A, L1)')        '[initcrspectrum:init_cresp] nullify_empty_bins =', nullify_empty_bins
+               call printinfo(msg)
+               write (msg, '(A, 1E15.7)')   '[initcrspectrum:init_cresp] smallecrn        = ', smallecrn
+               call printinfo(msg)
+               write (msg, '(A, 1E15.7)')   '[initcrspectrum:init_cresp] smallecre        = ', smallecre
+               call printinfo(msg)
+               write (msg, '(A, L1)')       '[initcrspectrum:init_cresp] prevent_neg_en   = ', prevent_neg_en
+               call printinfo(msg)
+               write (msg, '(A, L1)')       '[initcrspectrum:init_cresp] test_spectrum_break    = ', test_spectrum_break
+               call printinfo(msg)
+               write (msg, '(A, L1)')       '[initcrspectrum:init_cresp] allow_source_spectrum_break =', allow_source_spectrum_break
+               call printinfo(msg)
+               write (msg, '(A, L1)')       '[initcrspectrum:init_cresp] synch_active = ', synch_active
+               call printinfo(msg)
+               write (msg, '(A, L1)')       '[initcrspectrum:init_cresp] adiab_active = ', adiab_active
+               call printinfo(msg)
+
 #endif /* VERBOSE */
                if (ncre .lt. 3) then
                   write (msg,'(A)') "[initcrspectrum:init_cresp] CRESP algorithm currently requires at least 3 bins (ncre) in order to work properly, check your parameters."
@@ -386,7 +418,7 @@ module initcrspectrum
                if ( (e_small_approx_p_lo+e_small_approx_p_up) .gt. 0 .and. e_small_approx_init_cond .lt. 1) then
                   e_small_approx_init_cond = 1  !
                   write (msg,'(A)') "[initcrspectrum:init_cresp] Approximation of boundary momenta is active -> modifying e_small_approx_init_cond to 1."
-                  call warn(msg)
+                  if (master) call warn(msg)
                   call sleep(1)
                endif
 ! countermeasure - in case unrecognized or invalid parameters are provided
@@ -511,18 +543,23 @@ module initcrspectrum
                if (add_spectrum_base .ne. 0) then
                   add_spectrum_base = 0
                endif
-               call warn(msg)
+               if (master) call warn(msg)
          endif
 
          taylor_coeff_2nd = int(mod(2,expan_order) / 2 + mod(3,expan_order),kind=2 )  !< coefficient which is always equal 1 when order =2 or =3 and 0 if order = 1
          taylor_coeff_3rd = int((expan_order - 1)*(expan_order- 2) / 2,kind=2)        !< coefficient which is equal to 1 only when order = 3
          call init_cresp_types
       endif
+
    end subroutine init_cresp
+
 !----------------------------------------------------------------------------------------------------
+
    subroutine init_cresp_types
-      use constants,               only: zero, I_ZERO
-      use diagnostics,   only: my_allocate_with_index
+
+      use constants,   only: zero, I_ZERO
+      use diagnostics, only: my_allocate_with_index
+
       implicit none
 
       if(.not. allocated(crel%p)) call my_allocate_with_index(crel%p,ncre,0)
@@ -549,25 +586,34 @@ module initcrspectrum
 
       norm_init_spectrum%n = zero
       norm_init_spectrum%e = zero
-   end subroutine init_cresp_types
-!----------------------------------------------------------------------------------------------------
-   function cresp_get_mom(gamma, particle_mass)
-   use constants, only: zero, one, I_TWO
-   use units,     only: clight
-   real(kind=8)            :: gamma
-   real(kind=8), optional  :: particle_mass
-   real(kind=8)            :: cresp_get_mom
 
-   cresp_get_mom = zero
-   if ( (gamma - one) .gt. eps ) then
-      cresp_get_mom = gamma * particle_mass * sqrt(one - one/(gamma**I_TWO)) * clight
-   endif
+   end subroutine init_cresp_types
+
+!----------------------------------------------------------------------------------------------------
+
+   function cresp_get_mom(gamma, particle_mass)
+
+      use constants, only: zero, one
+      use units,     only: clight
+
+      real(kind=8)           :: gamma
+      real(kind=8), optional :: particle_mass
+      real(kind=8)           :: cresp_get_mom
+
+      cresp_get_mom = zero
+      if ( (gamma - one) .gt. eps ) then
+         cresp_get_mom = gamma * particle_mass * sqrt(one - one/(gamma**2)) * clight
+      endif
 
    end function cresp_get_mom
+
 !----------------------------------------------------------------------------------------------------
+
    subroutine cleanup_cresp_virtual_en_arrays
-   use diagnostics, only: my_deallocate
-   implicit none
+
+      use diagnostics, only: my_deallocate
+
+      implicit none
 
       if (allocated(virtual_e)) call my_deallocate(virtual_e)
       if (allocated(virtual_n)) call my_deallocate(virtual_n)
@@ -588,5 +634,7 @@ module initcrspectrum
       if (allocated(crel%n)) call my_deallocate(crel%n)
 
    end subroutine cleanup_cresp_virtual_en_arrays
+
 !----------------------------------------------------------------------------------------------------
+
 end module initcrspectrum

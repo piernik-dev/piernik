@@ -28,7 +28,7 @@
 module diagnostics
 
    implicit none
-   
+
    interface my_allocate_with_index  ! < works only for 1D arrays!
      module procedure allocate_1D_arr_w_ind_int4        ! < not in PIERNIK
      module procedure allocate_1D_arr_w_ind_real8       ! < not in PIERNIK
@@ -70,7 +70,7 @@ module diagnostics
    end interface pop_vector
 
    private
-   public :: diagnose_arrays, ma1d, ma2d, ma3d, ma4d, ma5d, my_allocate, my_allocate_with_index, my_deallocate, pop_vector, check_environment, cleanup_diagnostics
+   public :: diagnose_arrays, ma1d, ma2d, ma3d, ma4d, ma5d, my_allocate, my_allocate_with_index, my_deallocate, pop_vector, check_environment, cleanup_diagnostics, incr_vec
 
    integer(kind=8), parameter :: i4_s=4, r8_s=8, bool_s=1 ! sizeof(int(kind=4)), sizeof(double)
 !   real,    parameter :: MiB = 8./1048576.  ! sizeof(double) / 2**20
@@ -397,11 +397,11 @@ contains
       if (allocated(array)) deallocate(array)
 
    end subroutine deallocate_array_5D_real
-   
+
    subroutine deallocate_array_1D_logical(array)
     implicit none
     logical, dimension(:), allocatable, intent(inout) :: array
-  
+
         if (allocated(array)) deallocate(array)
         used_memory = used_memory - size(array)*bool_s
    end subroutine deallocate_array_1D_logical
@@ -557,7 +557,7 @@ contains
       if (present(aname)) call keep_track_of_arrays(size(array)*r8_s,aname)
 
    end subroutine allocate_array_5D_real
-   
+
    ! Dropping usage of keep_track_of_arrays for now, as the names are not usually provided
   subroutine allocate_1D_arr_w_ind_int4(array, as, a_ind_beg)
   implicit none
@@ -574,9 +574,9 @@ contains
     integer(kind=4), intent(in), optional :: a_ind_beg
     integer(kind=4), intent(in)   :: as
     real(kind=8), allocatable, dimension(:), intent(inout) :: array
-    
+
         if(.not. allocated(array)) allocate(array(a_ind_beg:as))
-        used_memory = used_memory + size(array)*i4_s    
+        used_memory = used_memory + size(array)*i4_s
   end subroutine allocate_1D_arr_w_ind_real8
 !----------------------------------------------------------------------------------------------------
   subroutine allocate_1D_arr_w_ind_logical(array,as,a_ind_beg)
@@ -584,7 +584,7 @@ contains
     integer(kind=4), intent(in), optional :: a_ind_beg
     integer(kind=4), intent(in)   :: as
     logical, allocatable, dimension(:), intent(inout) :: array
-  
+
         if (.not. allocated(array)) allocate(array(a_ind_beg:as))
         used_memory = used_memory + size(array)*bool_s
   end subroutine allocate_1D_arr_w_ind_logical

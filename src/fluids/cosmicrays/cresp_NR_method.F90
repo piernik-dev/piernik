@@ -1,47 +1,50 @@
 module cresp_NR_method
 ! pulled by COSM_RAY_ELECTRONS
- use initcrspectrum, only: max_p_ratio, eps, arr_dim
- implicit none
 
-  private
-  public :: alpha, n_in, NR_algorithm, NR_algorithm_1D, compute_q, intpol_pf_from_NR_grids, selected_function_1D, &
-          &    selected_function_2D, selected_value_check_1D, initialize_arrays, e_small_to_f, q_ratios, fvec_lo, &
-          &    fvec_up, fvec_test, cresp_initialize_guess_grids, &
-          &    NR_get_solution_lo, & ! DEPRECATED
-          &    NR_get_solution_up    ! DEPRECATED
-  public :: e_in, nr_test, nr_test_1D, p_ip1, n_tab_up, alpha_tab_up, n_tab_lo, alpha_tab_lo, alpha_tab_q, q_control, & ! list for NR driver
-          &    p_a, p_n, p_ratios_lo, f_ratios_lo, p_ratios_up, f_ratios_up, q_grid, lin_interpol_1D, alpha_to_q,   &   ! can be commented out for CRESP and PIERNIK
-          &    lin_extrapol_1D, lin_interpolation_1D, find_indices_1D, nearest_solution
+   use initcrspectrum, only: max_p_ratio, eps, arr_dim
 
-  integer, parameter :: ndim = 2
-  real(kind=8), dimension(:), allocatable :: p_space, q_space
-  real(kind=8) :: alpha, p_ratio_4_q, n_in, e_in, p_im1, p_ip1
-  real(kind=8), allocatable, dimension(:), target          :: alpha_tab_lo, alpha_tab_up, n_tab_lo, n_tab_up, alpha_tab_q, q_grid
-  real(kind=8), allocatable, dimension(:,:),target :: p_ratios_lo, f_ratios_lo, p_ratios_up, f_ratios_up
-  integer(kind=4) :: helper_arr_dim
-  real(kind=8) :: eps_det = eps * 1.0e-15
-  real(kind=8) :: small_eps = 1.0e-25
-  real(kind=8), pointer, dimension(:)   :: p_a => null(), p_n => null() ! pointers for alpha_tab_(lo,up) and n_tab_(lo,up) or optional - other 1-dim arrays
-  real(kind=8), pointer, dimension(:,:) :: p_p => null(), p_f => null() ! pointers for p_ratios_(lo,up) and f_ratios_(lo,up)
+   implicit none
 
-  abstract interface
-    function function_pointer_1D(z)
-      real(kind=8) :: function_pointer_1D
-      real(kind=8) :: z
-    end function function_pointer_1D
-    subroutine value_control_1D(z, exit_code)
-      logical      :: exit_code
-      real(kind=8) :: z
-    end subroutine value_control_1D
-    function function_pointer_2D(z)
-      real(kind=8),dimension(2) :: function_pointer_2D
-      real(kind=8),dimension(2) :: z
-    end function function_pointer_2D
-  end interface
 
-  procedure (function_pointer_1D), pointer :: selected_function_1D => null()
-  procedure (value_control_1D), pointer    :: selected_value_check_1D  => null()
-  procedure (function_pointer_2D), pointer :: selected_function_2D => null()
+   private
+   public :: alpha, n_in, NR_algorithm, NR_algorithm_1D, compute_q, intpol_pf_from_NR_grids, selected_function_1D, &
+           &    selected_function_2D, selected_value_check_1D, initialize_arrays, e_small_to_f, q_ratios, fvec_lo, &
+           &    fvec_up, fvec_test, cresp_initialize_guess_grids, &
+           &    NR_get_solution_lo, & ! DEPRECATED
+           &    NR_get_solution_up    ! DEPRECATED
+   public :: e_in, nr_test, nr_test_1D, p_ip1, n_tab_up, alpha_tab_up, n_tab_lo, alpha_tab_lo, alpha_tab_q, q_control, & ! list for NR driver
+           &    p_a, p_n, p_ratios_lo, f_ratios_lo, p_ratios_up, f_ratios_up, q_grid, lin_interpol_1D, alpha_to_q,   &   ! can be commented out for CRESP and PIERNIK
+           &    lin_extrapol_1D, lin_interpolation_1D, find_indices_1D, nearest_solution
+
+   integer, parameter :: ndim = 2
+   real(kind=8), dimension(:), allocatable :: p_space, q_space
+   real(kind=8) :: alpha, p_ratio_4_q, n_in, e_in, p_im1, p_ip1
+   real(kind=8), allocatable, dimension(:), target          :: alpha_tab_lo, alpha_tab_up, n_tab_lo, n_tab_up, alpha_tab_q, q_grid
+   real(kind=8), allocatable, dimension(:,:),target :: p_ratios_lo, f_ratios_lo, p_ratios_up, f_ratios_up
+   integer(kind=4) :: helper_arr_dim
+   real(kind=8) :: eps_det = eps * 1.0e-15
+   real(kind=8) :: small_eps = 1.0e-25
+   real(kind=8), pointer, dimension(:)   :: p_a => null(), p_n => null() ! pointers for alpha_tab_(lo,up) and n_tab_(lo,up) or optional - other 1-dim arrays
+   real(kind=8), pointer, dimension(:,:) :: p_p => null(), p_f => null() ! pointers for p_ratios_(lo,up) and f_ratios_(lo,up)
+
+   abstract interface
+      function function_pointer_1D(z)
+         real(kind=8) :: function_pointer_1D
+         real(kind=8) :: z
+      end function function_pointer_1D
+      subroutine value_control_1D(z, exit_code)
+         logical      :: exit_code
+         real(kind=8) :: z
+      end subroutine value_control_1D
+      function function_pointer_2D(z)
+         real(kind=8),dimension(2) :: function_pointer_2D
+         real(kind=8),dimension(2) :: z
+      end function function_pointer_2D
+   end interface
+
+   procedure (function_pointer_1D), pointer :: selected_function_1D => null()
+   procedure (value_control_1D), pointer    :: selected_value_check_1D  => null()
+   procedure (function_pointer_2D), pointer :: selected_function_2D => null()
 
 !----------------------------------------------------------------------------------------------------
 
@@ -73,9 +76,9 @@ module cresp_NR_method
     do i = 1, NR_iter_limit
         if (maxval(abs(fun_vec_value)) < err_f ) then    ! For convergence via value of f
             exit_code=.false.
-#ifdef VERBOSE
+#ifdef CRESP_VERBOSED
             write(*,"(A47,I4,A12)",advance="no") "Convergence via value of fun_vec_value after ",i, " iterations."!, x, fun_vec_value
-#endif /* VERBOSE */
+#endif /* CRESP_VERBOSED */
             return
         endif
 
@@ -95,9 +98,9 @@ module cresp_NR_method
         x = x+cor
 !         write(*,'(A20, 2E35.25, A5, 2E22.14)') "Obtained values (x): " , x,' | ', sum(abs(cor)), sum(abs(fun_vec_value))! ,maxval(abs(fun_vec_value)), maxval(abs(cor)),
         if (maxval(abs(cor)) < err_x) then                 ! For convergence via value of correction (cor) table.
-#ifdef VERBOSE
+#ifdef CRESP_VERBOSED
            write(*,"(A47,I4,A12)",advance="no") "Convergence via value of cor array     after ",i," iterations."
-#endif /* VERBOSE */
+#endif /* CRESP_VERBOSED */
            exit_code = .false.
            return
         endif
@@ -161,18 +164,16 @@ module cresp_NR_method
   end function derivative_1D
 !----------------------------------------------------------------------------------------------------
   subroutine cresp_initialize_guess_grids
-   use constants,      only: zero
-   use initcrspectrum, only: e_small, q_big, max_p_ratio !, p_fix
-   use cresp_variables,only: clight ! use units, only: clight
-   use mpisetup,       only: master
+   use constants,       only: zero
+   use initcrspectrum,  only: e_small, q_big, max_p_ratio !, p_fix
+   use cresp_variables, only: clight ! use units, only: clight
+   use mpisetup,        only: master
    implicit none
     logical   :: first_run = .true. , save_to_log = .false.
     character(8)  :: date
     character(9) :: time
       call initialize_arrays
-      if (master) then
-        open(15, file="log_NR_solve",position="append")
-        if (first_run .eqv. .true. ) then
+      if ((master) .and. (first_run .eqv. .true. )) then
             helper_arr_dim = int(arr_dim/4,kind=4)
             if (.not. allocated(p_space))     allocate(p_space(1:helper_arr_dim)) ! these will be deallocated once initialization is over
             if (.not. allocated(q_space))     allocate(q_space(1:helper_arr_dim)) ! these will be deallocated once initialization is over
@@ -198,6 +199,7 @@ module cresp_NR_method
             print *, "Count of array elements:", size(p_ratios_lo)
             print *,"----------"
             if (save_to_log) then
+                open(15, file="log_NR_solve",position="append")
                 write (15,*) "------------------------------------------"
                 write (15,"(A,2x,A,2x)") "Run on: ", date, "at: ", time
                 write (15,*) "For set of parameters: e_small, size(NR_guess_grid,dim=1), size(NR_guess_grid, dim=2),", &
@@ -215,6 +217,7 @@ module cresp_NR_method
                                  real(count(f_ratios_lo.le.zero))/real(size(f_ratios_lo)) * 100.0,"%"
                 write (15,*) "Count of array elements:", size(p_ratios_lo)
                 write (15,*) "----------"
+                close(15)
             else
                 print *, "!!! Warning: save_to_log = F; result will not be registered in LOG file !!!"
             endif
@@ -223,8 +226,6 @@ module cresp_NR_method
             if (allocated(q_space)) deallocate(q_space)
 
             first_run = .false.
-        endif
-        close(15)
       endif
       call cresp_NR_mpi_exchange
 
@@ -266,14 +267,23 @@ module cresp_NR_method
             enddo
         enddo
 
-        a_min_lo = 0.8 * a_min_lo / clight
-        a_max_lo = 0.999999 / clight !1 * a_max_lo
-        a_min_up = 1.000005 / clight  ! 0.8 * a_min_up
-        a_max_up = 1.1 * a_max_up / clight
-        n_min_lo = 0.001 * n_min_lo
-        n_max_lo = 1.1 * n_max_lo
-        n_min_up = 0.001 * n_min_up
-        n_max_up = 1.1 * n_max_up
+!         a_min_lo = 0.8 * a_min_lo / clight
+!         a_max_lo = 0.999999 / clight !1 * a_max_lo
+!         a_min_up = 1.000005 / clight  ! 0.8 * a_min_up
+!         a_max_up = 1.1 * a_max_up / clight
+!         n_min_lo = 0.001 * n_min_lo
+!         n_max_lo = 1.1 * n_max_lo
+!         n_min_up = 0.001 * n_min_up
+!         n_max_up = 1.1 * n_max_up
+
+        a_min_lo = 0.2
+        a_max_lo = 0.999999
+        a_min_up = 1.000005
+        a_max_up = 200.0
+        n_min_lo = 1.0e-11
+        n_max_lo = 5000.0
+        n_min_up = 1.0e-12
+        n_max_up = 1000.0
 
         do i=1, arr_dim
             alpha_tab_lo(i) = ind_to_flog(i,a_min_lo,a_max_lo) ! a_min_lo * ten**((log10(a_max_lo/a_min_lo))/real(arr_dim-1,kind=8)*real((i-1),kind=8))
@@ -325,7 +335,7 @@ module cresp_NR_method
             enddo
             call fill_q_grid(i_incr=1) ! computing q_grid takes so little time, that saving the grid is not necessary.
         enddo
-#ifdef VERBOSE
+#ifdef CRESP_VERBOSED
         print *,"alpha_tab_lo(i),      alpha_tab_up(i),        n_tab_lo(i),        n_tab_up(i)  |       p_space(i),     q_space(i)"
         do i = 1, arr_dim
           if (i .le. helper_arr_dim) then
@@ -337,7 +347,7 @@ module cresp_NR_method
           endif
         enddo
         print *, "-----------"
-#endif /* VERBOSE */
+#endif /* CRESP_VERBOSED */
 
  end subroutine fill_guess_grids
 !----------------------------------------------------------------------------------------------------
@@ -387,7 +397,10 @@ module cresp_NR_method
  subroutine fill_boundary_grid(bound_case, fill_p, fill_f) ! to be paralelized
   use constants, only: zero
   implicit none
-  real(kind=8), dimension(1:2) :: x_vec, prev_solution, prev_solution_1, x_in, x_step
+  real(kind=8), dimension(1:2) :: x_vec, prev_solution, prev_solution_1, x_step
+#ifdef CRESP_VERBOSED
+  real(kind=8), dimension(1:2) :: x_in
+#endif /* CRESP_VERBOSED */
   real(kind=8), dimension(:,:) :: fill_p, fill_f
   integer(kind=4) :: i, j, is, js
   logical         :: exit_code, new_line
@@ -410,7 +423,9 @@ module cresp_NR_method
             exit_code = .true.
             alpha = p_a(i)
             n_in  = p_n(j)
+#ifdef CRESP_VERBOSED
             write(*,"(A14,A2,A2,2I4,A9,I4,A1)",advance="no") "Now solving (",bound_case,") ",i,j,", sized ",arr_dim," "
+#endif /* CRESP_VERBOSED */
             call seek_solution_prev(fill_p(i,j), fill_f(i,j), prev_solution, nam, exit_code)
             if (exit_code .eqv. .false. .and. new_line .eqv. .true.) then
                 prev_solution_1 = prev_solution
@@ -435,22 +450,34 @@ module cresp_NR_method
                                 fill_p(i,j) = x_vec(1) ! i index - alpha, j index - n_in
                                 fill_f(i,j) = x_vec(2)
                                 prev_solution = x_vec
+#ifdef CRESP_VERBOSED
                                 call msg_success("    ",nam,x_in, x_vec)
+#endif /* CRESP_VERBOSED */
                                 exit
                             endif
                         endif
                     enddo
                 enddo
             else
-                prev_solution(1) = fill_p(i,j)
-                prev_solution(2) = fill_f(i,j)
+               if (prev_solution(1) .le. eps ) then
+                  prev_solution(1) = prev_solution_1(1)
+               else if (prev_solution(2) .le. eps) then
+                  prev_solution(2) = prev_solution_1(2)
+               else
+                  prev_solution(1) = fill_p(i,j)
+                  prev_solution(2) = fill_f(i,j)
+               endif
             endif
+#ifdef CRESP_VERBOSED
             if (exit_code .eqv. .true.) print *,""
+#endif /* CRESP_VERBOSED */
         enddo
     enddo
     fill_p = abs(fill_p)
     fill_f = abs(fill_f)
+#ifdef CRESP_VERBOSED
     print *,""
+#endif /* CRESP_VERBOSED */
   end subroutine
 !----------------------------------------------------------------------------------------------------
  subroutine step_seek(x_step, prev_sol, ii, jj, i_sol, j_sol, exit_code, nstep)
@@ -592,7 +619,9 @@ module cresp_NR_method
             call NR_algorithm(x_vec, exit_code)
             if (exit_code .eqv. .false.) then
                 x_vec = abs(x_vec)
+#ifdef CRESP_VERBOSED
                 call msg_success("extr", sought_by,x_in,x_vec)
+#endif /* CRESP_VERBOSED */
                 p3(3) = x_vec(1)
                 f3(3) = x_vec(2)
                 return
@@ -625,7 +654,9 @@ module cresp_NR_method
                 call NR_algorithm(x_vec, exit_code)
                 if (exit_code .eqv. .false.) then ! first iteration is a simple extrapolation
                     x_vec = abs(x_vec)
+#ifdef CRESP_VERBOSED
                     call msg_success("inpl", sought_by, x_in, x_vec)
+#endif /* CRESP_VERBOSED */
                     p3(2) = x_vec(1)
                     f3(2) = x_vec(2)
                     return
@@ -636,6 +667,7 @@ module cresp_NR_method
     endif
  end subroutine step_inpl
 !----------------------------------------------------------------------------------------------------
+#ifdef CRESP_VERBOSED
  subroutine msg_success(met_name, sought_by, x_in, x_out)
  implicit none
   real(kind=8), dimension(1:), intent(in)  :: x_in
@@ -646,6 +678,7 @@ module cresp_NR_method
     write (*, "(A5,A4,A42, 2E19.10e3)",advance="no") " -> (",met_name,") solution obtained, (p_ratio, f_ratio) = ", x_out
     write (*, "(A21, 2E17.10)",advance="no") ", provided input:", x_in ; print *,""
 end subroutine
+#endif /* CRESP_VERBOSED */
 !----------------------------------------------------------------------------------------------------
  function lin_interpolation_1D(fun, arg, arg_mid)
  use constants, only: one
@@ -670,7 +703,9 @@ end subroutine
                 x_vec = abs(x_vec)
                 p2ref = x_vec(1)
                 f2ref = x_vec(2)
+#ifdef CRESP_VERBOSED
                 call msg_success("prev", sought_by, prev_solution, x_vec)
+#endif /* CRESP_VERBOSED */
                 prev_solution = x_vec
                 return
             endif
@@ -696,7 +731,9 @@ end subroutine
                         p2ref = x_step(1)
                         f2ref = x_step(2)
                         prev_solution = x_step
+#ifdef CRESP_VERBOSED
                         call msg_success("step", sought_by, x_step, x_vec)
+#endif /* CRESP_VERBOSED */
                         return
                     endif
                 enddo
@@ -721,9 +758,9 @@ end subroutine
     do i = i_beg, i_end, i_incr
         exit_code = .true.
         alpha = alpha_tab_q(i)
-#ifdef VERBOSE
+#ifdef CRESP_VERBOSED
         write(*,"(A25,1I4,A9,I4,A10,1E16.9)",advance="no") "Now solving (q_grid) no.",i,", sized ",arr_dim ,", (alpha): ",alpha
-#endif /* VERBOSE */
+#endif /* CRESP_VERBOSED */
         x = prev_solution
         call NR_algorithm_1D(x, exit_code)
         if ( exit_code .eqv. .true. ) then
@@ -734,21 +771,21 @@ end subroutine
                     if ( exit_code .eqv. .false.) then
                         q_grid(i) = x
                         prev_solution = x
-#ifdef VERBOSE
+#ifdef CRESP_VERBOSED
                         write (*, "(A44, 2E22.15)",advance="no") " ->        solution obtained, q_grid = ", x
-#endif /* VERBOSE */
+#endif /* CRESP_VERBOSED */
                     endif
                 endif
             enddo
         else
-#ifdef VERBOSE
+#ifdef CRESP_VERBOSED
             write (*, "(A44, 1E22.15)",advance="no") " -> (prev) solution obtained, q_grid = ", x
-#endif /* VERBOSE */
+#endif /* CRESP_VERBOSED */
             q_grid(i) = x
         endif
-#ifdef VERBOSE
+#ifdef CRESP_VERBOSED
         print *,""
-#endif /* VERBOSE */
+#endif /* CRESP_VERBOSED */
     enddo
  end subroutine fill_q_grid
  !----------------------------------------------------------------------------------------------------
@@ -810,7 +847,7 @@ end subroutine
    real(kind=8), parameter          :: dx_par = 1.0e-4
    integer(kind=2) :: j
         do j = 1,size(x)
-            dx(:) = min(max(x(:)*dx_par,eps),dx_par) ! the value of dx is scaled not to go over value of x
+            dx(:) = min(max(x(:)*dx_par,x(:)*eps),dx_par) ! the value of dx is scaled not to go over value of x
             xp = x ; xm = x
             xp(j) = x(j) - dx(j) ;  xm(j) = x(j) + dx(j)
             jac_fin_diff(:,j)  = half*( selected_function_2D(xp) - selected_function_2D(xm)) / dx(j)
@@ -1265,22 +1302,22 @@ end subroutine
     character(len=2),intent(inout) :: which_bound ! "lo" or "up"
     logical :: exit_code, find_failure
     logical, intent(out) :: interpolation_successful, not_interpolated
-#ifdef VERBOSE
+#ifdef CRESP_VERBOSED
         write (*,"(A30,A2,A4)",advance="no") "Determining indices for case: ",which_bound, "... "
-#endif /* VERBOSE */
+#endif /* CRESP_VERBOSED */
         exit_code = .false.; find_failure = .false. ; not_interpolated = .false.
         call associate_NR_pointers(which_bound)
         call determine_loc(a_val, n_val, loc1, loc2, loc_no_ip, exit_code)
 !         call find_both_indexes(loc1, loc2, a_val, n_val, loc_no_ip, exit_code)
-#ifdef VERBOSE
+#ifdef CRESP_VERBOSED
         call save_loc(which_bound,loc1(1),loc1(2))
         call save_loc(which_bound,loc2(1),loc2(2))
-#endif /* VERBOSE */
+#endif /* CRESP_VERBOSED */
             if (find_failure .eqv. .true.) then
                 not_interpolated = .true.
-#ifdef VERBOSE
+#ifdef CRESP_VERBOSED
                 print *, "Not interpolated successfully, returning"
-#endif /* VERBOSE */
+#endif /* CRESP_VERBOSED */
                 return
             else
                 if (exit_code .eqv. .true. ) then ! interpolation won't work in this case, choosing closest values that have solutions.
@@ -1314,9 +1351,9 @@ end subroutine
         if ( (minval(loc1) .ge. 1 .and. maxval(loc1) .le. arr_dim-1)) then ! only need to test loc1
             if (p_p(loc1(1),loc1(2)) .gt. zero ) then
                 loc2 = loc1+1
-#ifdef VERBOSE
+#ifdef CRESP_VERBOSED
                 write(*,"(A19, 2I8, A3, 2I8)") "Obtained indices:", loc1, " | ", loc2
-#endif /* VERBOSE */
+#endif /* CRESP_VERBOSED */
                 return        ! normal exit
             else
                 exit_code = .true.
@@ -1327,20 +1364,20 @@ end subroutine
         endif
 
         if ( exit_code ) then ! namely if ((minval(loc1) .le. 0 .or. maxval(loc1) .ge. arr_dim))
-            loc1(1) = max(0,min(loc1(1),arr_dim))   ! Here we either give algorithm closest nonzero value relative to a row
-            loc1(2) = max(0,min(loc1(2),arr_dim))   ! that was in the proper range or we just feed the algorithm ANY nonzero
+            loc1(1) = max(1,min(loc1(1),arr_dim))   ! Here we either give algorithm closest nonzero value relative to a row
+            loc1(2) = max(1,min(loc1(2),arr_dim))   ! that was in the proper range or we just feed the algorithm ANY nonzero
             exit_code = .true.                      ! initial vector that will prevent it from crashing.
             loc2 = loc1
             if (loc1(1) .eq. arr_dim .or. hit_zero) then
                 call nearest_solution(p_p(:,loc1(2)), loc1(1), 1, loc1(1), hit_zero)
             endif
-            if (loc1(1) .le. 0 .or. hit_zero) then
+            if (loc1(1) .le. 1 .or. hit_zero) then
                 call nearest_solution(p_p(:,loc1(2)), max(1,loc1(1)), arr_dim, loc1(1), hit_zero)
             endif
             if (loc1(2) .eq. arr_dim.or. hit_zero) then
                 call nearest_solution(p_p(loc1(1),:), loc1(2), 1, loc1(2), hit_zero)
             endif
-            if (loc1(2) .le. 0 .or. hit_zero) then
+            if (loc1(2) .le. 1 .or. hit_zero) then
                 call nearest_solution(p_p(loc1(1),:), max(1,loc1(2)), arr_dim, loc1(2), hit_zero)
             endif
             loc_panic = loc1
