@@ -234,8 +234,6 @@ contains
       ndt(1:ncre) = n(1:ncre)  - (nflux(1:ncre) - nflux(0:ncre-1))
       edt(1:ncre) = e(1:ncre)  - (eflux(1:ncre) - eflux(0:ncre-1))
 
-!         call boundary_flux_check ! If relative error between boundary momenta and p_fix is not tolerable, boundary fluxes are moved to "virtual" bins, preventing premature activation of new bins and associated numerical errors.
-
 ! edt(1:ncre) = e(1:ncre) *(one-0.5*dt*r(1:ncre)) - (eflux(1:ncre) - eflux(0:ncre-1))/(one+0.5*dt*r(1:ncre))   !!! oryginalnie u Miniatiego
 ! Compute coefficients R_i needed to find energy in [t,t+dt]
       call cresp_compute_r(p_next, active_bins_next)                 ! new active bins already received some particles, Ri is needed for those bins too
@@ -834,7 +832,7 @@ contains
       use cresp_NR_method, only: e_small_to_f
       use cresp_variables, only: clight ! use units, only: clight
       use dataio_pub,      only: warn, msg
-      use initcrspectrum,  only: ncre, spec_mod_trms, q_init, p_lo_init, p_up_init, initial_condition, &
+      use initcrspectrum,  only: ncre, spec_mod_trms, q_init, p_lo_init, p_up_init, initial_condition, eps, &
                                  &  allow_source_spectrum_break, e_small_approx_init_cond, e_small_approx_p_lo, &
                                  &  e_small_approx_p_up, crel, p_fix, w, total_init_cree, p_min_fix, p_max_fix, &
                                  &  add_spectrum_base, e_small, test_spectrum_break, cresp_all_bins
@@ -899,13 +897,13 @@ contains
       i_up = max(1,i_up)
       i_up = min(i_up,ncre)
 
-      if (p_lo_init .eq. p_fix(i_lo)) then
-         write(msg, *) "[cresp_crspectrum:initcrspectrum] p_lo_init = p_fix(i_lo): incrementing i_lo index to avoid FPE"
+      if (abs(p_lo_init - p_fix(i_lo)) .le. eps ) then
+         write(msg, *) "[cresp_crspectrum:initcrspectrum] p_lo_init = p_fix(i_lo):  i ncrementing i_lo index to avoid FPE"
          if (master) call warn(msg)
          i_lo = i_lo+1
       endif
 
-      if (p_up_init .eq. p_fix(i_up-1)) then
+      if (abs(p_up_init - p_fix(i_up-1)) .le. eps ) then
          write(msg, *) "[cresp_crspectrum:initcrspectrum] p_up_init = p_fix(i_up-1): decrementing i_up index to avoid FPE"
          if (master) call warn(msg)
          i_up = i_up-1
@@ -1794,42 +1792,6 @@ contains
                                      + taylor_coeff_3rd *(sixth*u_d**3 + u_b**3 * p**3)*dt**3 ! analitycally correct
   end function p_upw_rch
 
-!----------------------------------------------------------------------------------------------------
-  subroutine boundary_flux_check
-   use constants, only: I_ZERO, zero
-   use initcrspectrum, only: p_fix
-   implicit none
-
-     if ( abs(p_up_next - p_fix(i_up))/p_fix(i_up) .lt. 3.0e-3 .and. del_i_up .ne. I_ZERO ) then
-! If the difference of neighbouring momenta is too small, zero flux is assumed to avoid numerical errrors, and these quantities are moved to "virtual" array, postponing new bin activation, until
-! the condition is satisfied; q can be therefore assumed zero as the bin not be subject to any energy losses.
-       vrtl_n(2) = vrtl_n(2) + ndt(i_up+1) ; ndt(i_up+1) = zero
-       vrtl_e(2) = vrtl_e(2) + edt(i_up+1) ; edt(i_up+1) = zero
-!#ifdef VERBOSE
-!        print *, "(p_up) relative momentum error exceeded, activating virtual n and e"
-!        print *, "virtual n up", vrtl_n(2), "virtual n up", vrtl_e(2)
-!#endif /* VERBOSE */
-       q(i_up+1) = zero
-    else
-       ndt(i_up) = ndt(i_up) + vrtl_n(2) ; vrtl_n(2) = zero
-       edt(i_up) = edt(i_up) + vrtl_e(2) ; vrtl_e(2) = zero
-    endif
-
-   if ( abs(p_lo_next - p_fix(i_lo))/p_fix(i_lo) .lt. 3.0e-3 .and. del_i_lo .ne. I_ZERO ) then
-! If the difference of neighbouring momenta is too small, zero flux is assumed to avoid numerical errors, and these quantities are moved to "virtual" array, postponing new bins activation, until
-! the condition is satisfied; q can be therefore assumed zero as the bin not be subject to any energy losses.
-       vrtl_n(1) = vrtl_n(1) + ndt(i_lo) ; ndt(i_lo) = zero
-       vrtl_e(1) = vrtl_e(1) + edt(i_lo) ; edt(i_lo) = zero
-!#ifdef VERBOSE
-!        print *, "(p_lo,p_fix) relative error exceeded, activating virtual n and e"
-!        print *, "virtual n lo", vrtl_n(1), "virtual e lo", vrtl_e(1)
-!#endif /* VERBOSE */
-       q(i_lo+1) = zero
-    else
-       ndt(i_lo+1) = ndt(i_lo+1) + vrtl_n(1) ; vrtl_n(1) = zero
-       edt(i_lo+1) = edt(i_lo+1) + vrtl_e(1) ; vrtl_e(1) = zero
-    endif
-  end subroutine boundary_flux_check
 !----------------------------------------------------------------------------------------------------
   subroutine transfer_quantities(give_to, take_from)
   use constants, only: zero
