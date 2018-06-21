@@ -14,7 +14,7 @@ module initcrspectrum
    character(len=4)   :: initial_condition           !< available types: bump, powl, brpl, symf, syme. Description below.
    real(kind=8)       :: f_init                      !< initial value of distr. func. for isolated case
    real(kind=8)       :: q_init                      !< initial value of power law-like spectrum exponent
-   real(kind=8)       :: bump_amp                    !< bump amplitude for gaussian-like energy spectrum
+   real(kind=8)       :: bump_amp                    !< bump amplitude for gaussian-like energy spectrum  # DEPRECATED
    real(kind=8)       :: q_big                       !< maximal amplitude of q
    real(kind=8)       :: cfl_cre                     !< CFL parameter  for cr electrons
    real(kind=8)       :: cre_eff                     !< fraction of energy passed to cr-electrons by nucleons (mainly protons)
@@ -40,10 +40,10 @@ module initcrspectrum
    logical            :: NR_refine_solution_q        !< enables NR_1D refinement for value of interpolated "q" value
    logical            :: NR_refine_solution_pf       !< enables NR_2D refinement for interpolated values of "p" and "f". Note - algorithm tries to refine values if interpolation was unsuccessful.
 
-   logical            :: nullify_empty_bins            !< nullifies empty bins when entering CRESP module / exiting empty cell.
+   logical            :: nullify_empty_bins          !< nullifies empty bins when entering CRESP module / exiting empty cell.
    logical            :: prevent_neg_en              !< forces e,n=eps where e or n drops below zero due to diffusion algorithm (TEMP workaround)
    logical            :: test_spectrum_break         !< introduce break in the middle of the spectrum (to see how algorithm handles it), TEMP
-   real(kind=8)       :: magnetic_energy_scaler      !< decreases magnetic energy amplitude at CRESP, TEMP
+   real(kind=8)       :: magnetic_energy_scaler      !< decreases magnetic energy amplitude at CRESP, TEMP  # DEPRECATED
    logical            :: allow_source_spectrum_break !< allow extension of spectrum to adjacent bins if momenta found exceed set p_fix
    logical            :: synch_active                !< TEST feature - turns on / off synchrotron cooling @ CRESP
    logical            :: adiab_active                !< TEST feature - turns on / off adiabatic   cooling @ CRESP
@@ -334,6 +334,8 @@ module initcrspectrum
 #ifdef VERBOSE
                write (msg,'(A)')            '[initcrspectrum:init_cresp] Initial CRESP parameters read:'
                call printinfo(msg)
+               write (msg, '(A, L1)')       '[initcrspectrum:init_cresp] use_cresp   = ', use_cresp
+               call printinfo(msg)
                write (msg, '(A, 1I3)')      '[initcrspectrum:init_cresp] ncre        = ', ncre
                call printinfo(msg)
                write (msg, '(A, 1E15.7)')   '[initcrspectrum:init_cresp] p_min_fix   = ', p_min_fix
@@ -362,7 +364,11 @@ module initcrspectrum
                call printinfo(msg)
                write (msg, '(A, A5)')       '[initcrspectrum:init_cresp] initial_condition =' , initial_condition
                call printinfo(msg)
-               write (msg, '(A, 1E15.7)')   '[initcrspectrum:init_cresp] bump amplitude =', bump_amp
+               write (msg, '(A, L1)')       '[initcrspectrum:init_cresp] cre_gpcr_ess = ', cre_gpcr_ess
+               call printinfo(msg)
+               write (msg, '(A, L1)')       '[initcrspectrum:init_cresp] cre_active   = ', cre_active
+               call printinfo(msg)
+               write (msg, '(A, 1E15.7)')   '[initcrspectrum:init_cresp] bump amplitude    =', bump_amp
                call printinfo(msg)
                write (msg, '(A, I1)')       '[initcrspectrum:init_cresp] Approximate cutoff momenta at initialization: e_small_approx_init_cond =', e_small_approx_init_cond
                call printinfo(msg)
@@ -372,13 +378,13 @@ module initcrspectrum
                call printinfo(msg)
                write (msg, '(A, I1)')       '[initcrspectrum:init_cresp] add_spectrum_base   =', add_spectrum_base
                call printinfo(msg)
-               write (msg, '(A, 1F10.5 )')  '[initcrspectrum:init_cresp] max_p_ratio =', max_p_ratio
+               write (msg, '(A, 1F10.5 )')  '[initcrspectrum:init_cresp] max_p_ratio      =', max_p_ratio
                call printinfo(msg)
-               write (msg, '(A, L2 )' )     '[initcrspectrum:init_cresp] force_init_NR   = ', force_init_NR
+               write (msg, '(A, L2 )' )     '[initcrspectrum:init_cresp] force_init_NR    = ', force_init_NR
                call printinfo(msg)
-               write (msg, '(A, I4)')       '[initcrspectrum:init_cresp] NR_iter_limit  = ', NR_iter_limit
+               write (msg, '(A, I4)')       '[initcrspectrum:init_cresp] NR_iter_limit    = ', NR_iter_limit
                call printinfo(msg)
-               write (msg, '(A, 1E15.7)')   '[initcrspectrum:init_cresp] epsilon(eps) = ', eps
+               write (msg, '(A, 1E15.7)')   '[initcrspectrum:init_cresp] epsilon(eps)     = ', eps
                call printinfo(msg)
                write (msg, '(A, 1E15.7)')   '[initcrspectrum:init_cresp] Gamma_min_fix    =', Gamma_min_fix
                call printinfo(msg)
@@ -388,6 +394,23 @@ module initcrspectrum
                call printinfo(msg)
                write (msg, '(A, 1E15.7)')   '[initcrspectrum:init_cresp] Gamma_up_init    =', Gamma_up_init
                call printinfo(msg)
+               write (msg,'(A, L1)')        '[initcrspectrum:init_cresp] nullify_empty_bins =', nullify_empty_bins
+               call printinfo(msg)
+               write (msg, '(A, 1E15.7)')   '[initcrspectrum:init_cresp] smallecrn        = ', smallecrn
+               call printinfo(msg)
+               write (msg, '(A, 1E15.7)')   '[initcrspectrum:init_cresp] smallecre        = ', smallecre
+               call printinfo(msg)
+               write (msg, '(A, L1)')       '[initcrspectrum:init_cresp] prevent_neg_en   = ', prevent_neg_en
+               call printinfo(msg)
+               write (msg, '(A, L1)')       '[initcrspectrum:init_cresp] test_spectrum_break    = ', test_spectrum_break
+               call printinfo(msg)
+               write (msg, '(A, L1)')       '[initcrspectrum:init_cresp] allow_source_spectrum_break =', allow_source_spectrum_break
+               call printinfo(msg)
+               write (msg, '(A, L1)')       '[initcrspectrum:init_cresp] synch_active = ', synch_active
+               call printinfo(msg)
+               write (msg, '(A, L1)')       '[initcrspectrum:init_cresp] adiab_active = ', adiab_active
+               call printinfo(msg)
+
 #endif /* VERBOSE */
                if (ncre .lt. 3) then
                   write (msg,'(A)') "[initcrspectrum:init_cresp] CRESP algorithm currently requires at least 3 bins (ncre) in order to work properly, check your parameters."
