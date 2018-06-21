@@ -595,7 +595,9 @@ contains
       if (num_active_bins .gt. 1) then
          i_lo = pre_i_lo;   i_up = pre_i_up
       else if (num_active_bins .eq. 1) then
-         i_lo = pre_i_lo;   i_up = i_lo+1
+         i_up = active_bins(num_active_bins)
+         i_lo = i_up -1
+         approx_p_lo = 0
       else
          empty_cell = .true.
          return
