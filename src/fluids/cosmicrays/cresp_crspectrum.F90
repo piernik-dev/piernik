@@ -831,10 +831,12 @@ contains
       use constants, only: zero, I_ONE, fpi
       use cresp_NR_method, only: e_small_to_f
       use cresp_variables, only: clight ! use units, only: clight
+      use dataio_pub,      only: warn, msg
       use initcrspectrum,  only: ncre, spec_mod_trms, q_init, p_lo_init, p_up_init, initial_condition, &
                                  &  allow_source_spectrum_break, e_small_approx_init_cond, e_small_approx_p_lo, &
                                  &  e_small_approx_p_up, crel, p_fix, w, total_init_cree, p_min_fix, p_max_fix, &
                                  &  add_spectrum_base, e_small, test_spectrum_break, cresp_all_bins
+      use mpisetup,        only: master
 
 
       implicit none
@@ -894,6 +896,18 @@ contains
       i_up = int(floor(log10(p_up/p_fix(1))/w)) + 2
       i_up = max(1,i_up)
       i_up = min(i_up,ncre)
+
+      if (p_lo_init .eq. p_fix(i_lo)) then
+         write(msg, *) "[cresp_crspectrum:initcrspectrum] p_lo_init = p_fix(i_lo): incrementing i_lo index to avoid FPE"
+         if (master) call warn(msg)
+         i_lo = i_lo+1
+      endif
+
+      if (p_up_init .eq. p_fix(i_up-1)) then
+         write(msg, *) "[cresp_crspectrum:initcrspectrum] p_up_init = p_fix(i_up-1): decrementing i_up index to avoid FPE"
+         if (master) call warn(msg)
+         i_up = i_up-1
+      endif
 
       is_active_bin = .false.
       is_active_bin(i_lo+1:i_up) = .true.
