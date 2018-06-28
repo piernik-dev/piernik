@@ -1092,47 +1092,52 @@ contains
 ! Assumes power-law spectrum, without breaks. In principle the same thing is done in cresp_init_state, but
 ! init_state cannot be called from "outside".
 !-------------------------------------------------------------------------------------------------
-  subroutine cresp_init_powl_spectrum(n_inout, e_inout, f_in, q_in, p_dist_lo, p_dist_up)
-   use constants,      only: zero
-   use initcrspectrum, only: ncre, p_fix, w, cresp_all_bins, cresp_all_edges
-   use diagnostics,    only: my_deallocate
-   implicit none
-     real(kind=8), dimension(1:ncre), intent(inout) :: n_inout, e_inout
-     real(kind=8), intent(in) ::     f_in, q_in, p_dist_lo, p_dist_up
-     real(kind=8), dimension(1:ncre) :: n_add, e_add, q_add
-     real(kind=8), dimension(0:ncre) :: p_range_add , f_add
-     integer(kind=4), allocatable, dimension(:) :: act_bins, act_edges
-     integer(kind=4) :: i_l, i_u !, n_bins
-         n_add = zero  ; e_add = zero  ; q_add = zero  ; f_add = zero  ; p_range_add = zero
+   subroutine cresp_init_powl_spectrum(n_inout, e_inout, f_in, q_in, p_dist_lo, p_dist_up)
 
-         i_l = int(floor(log10(p_dist_lo/p_fix(1))/w)) + 1
-         i_l = max(0, i_l)
-         i_l = min(i_l, ncre - 1)
+      use constants,      only: zero
+      use diagnostics,    only: my_deallocate
+      use initcrspectrum, only: ncre, p_fix, w, cresp_all_bins, cresp_all_edges
 
-         i_u = int(floor(log10(p_dist_up/p_fix(1))/w)) + 2
-         i_u = max(1,i_u)
-         i_u = min(i_u,ncre)
+      implicit none
 
-         p_range_add(i_l:i_u) = p_fix(i_l:i_u)
-         p_range_add(i_l) = p_dist_lo
-         p_range_add(i_u) = p_dist_up
-         if (.not.allocated(act_edges)) allocate(act_edges(i_u - i_l  ))
-         if (.not.allocated(act_bins )) allocate( act_bins(i_u - i_l+1))
-         act_edges =  cresp_all_edges(i_l  :i_u)
-         act_bins  =   cresp_all_bins(i_l+1:i_u)
-         q_add(act_bins) = q_in
+      real(kind=8), dimension(1:ncre), intent(inout) :: n_inout, e_inout
+      real(kind=8), intent(in) ::     f_in, q_in, p_dist_lo, p_dist_up
+      real(kind=8), dimension(1:ncre) :: n_add, e_add, q_add
+      real(kind=8), dimension(0:ncre) :: p_range_add , f_add
+      integer(kind=4), allocatable, dimension(:) :: act_bins, act_edges
+      integer(kind=4) :: i_l, i_u !, n_bins
 
-         f_add(act_edges) = f_in * (p_range_add(act_edges)/p_dist_lo)**(-q_in)
+      n_add = zero  ; e_add = zero  ; q_add = zero  ; f_add = zero  ; p_range_add = zero
 
-         n_add = fq_to_n(p_range_add(0:ncre-1), p_range_add(1:ncre), f_add(0:ncre-1), q_add(1:ncre), act_bins)
-         e_add = fq_to_e(p_range_add(0:ncre-1), p_range_add(1:ncre), f_add(0:ncre-1), q_add(1:ncre), act_bins)
+      i_l = int(floor(log10(p_dist_lo/p_fix(1))/w)) + 1
+      i_l = max(0, i_l)
+      i_l = min(i_l, ncre - 1)
 
-         n_inout = n_inout + n_add
-         e_inout = e_inout + e_add
+      i_u = int(floor(log10(p_dist_up/p_fix(1))/w)) + 2
+      i_u = max(1,i_u)
+      i_u = min(i_u,ncre)
 
-         call my_deallocate(act_bins)
-         call my_deallocate(act_edges)
-  end subroutine cresp_init_powl_spectrum
+      p_range_add(i_l:i_u) = p_fix(i_l:i_u)
+      p_range_add(i_l) = p_dist_lo
+      p_range_add(i_u) = p_dist_up
+      if (.not.allocated(act_edges)) allocate(act_edges(i_u - i_l  ))
+      if (.not.allocated(act_bins )) allocate( act_bins(i_u - i_l+1))
+      act_edges =  cresp_all_edges(i_l  :i_u)
+      act_bins  =   cresp_all_bins(i_l+1:i_u)
+      q_add(act_bins) = q_in
+
+      f_add(act_edges) = f_in * (p_range_add(act_edges)/p_dist_lo)**(-q_in)
+
+      n_add = fq_to_n(p_range_add(0:ncre-1), p_range_add(1:ncre), f_add(0:ncre-1), q_add(1:ncre), act_bins)
+      e_add = fq_to_e(p_range_add(0:ncre-1), p_range_add(1:ncre), f_add(0:ncre-1), q_add(1:ncre), act_bins)
+
+      n_inout = n_inout + n_add
+      e_inout = e_inout + e_add
+
+      call my_deallocate(act_bins)
+      call my_deallocate(act_edges)
+
+   end subroutine cresp_init_powl_spectrum
 !-------------------------------------------------------------------------------------------------
    subroutine cresp_get_scaled_init_spectrum(n_inout, e_inout, e_in_total) !< Using n,e spectrum obtained at initialization, obtain injected spectrum at given cell
       use initcrspectrum, only: norm_init_spectrum, total_init_cree, ncre  !< WARNING: cre_eff multiplication not done here!
@@ -1145,47 +1150,65 @@ contains
 
    end subroutine cresp_get_scaled_init_spectrum
 !-------------------------------------------------------------------------------------------------
-  subroutine e_tot_2_en_powl_init_params(n_inout, e_inout, e_in_total)
-   use initcrspectrum, only: ncre, p_lo_init, p_up_init, q_init
-   use diagnostics,    only: my_deallocate
+   subroutine e_tot_2_en_powl_init_params(n_inout, e_inout, e_in_total)
+
+      use initcrspectrum, only: ncre, p_lo_init, p_up_init, q_init
+      use diagnostics,    only: my_deallocate
+
+      implicit none
+
       real(kind=8), dimension(1:ncre), intent(inout):: n_inout, e_inout
       real(kind=8), intent(inout)     :: e_in_total
       real(kind=8) :: f_amplitude
          f_amplitude = get_powl_f_ampl(e_in_total, p_lo_init, p_up_init, q_init)
          call cresp_init_powl_spectrum(n_inout, e_inout, f_amplitude, q_init, p_lo_init, p_up_init)
-  end subroutine e_tot_2_en_powl_init_params
+   end subroutine e_tot_2_en_powl_init_params
 !-------------------------------------------------------------------------------------------------
-  function get_powl_f_ampl(e_tot, p_dist_lo, p_dist_up, q_dist)
-  use constants,       only: zero, I_ONE, I_FOUR, fpi
-  use cresp_variables, only: clight ! use units,    only: clight
-    real(kind=8), intent(in) :: e_tot, p_dist_lo, p_dist_up, q_dist
-    real(kind=8)             :: get_powl_f_ampl
-        get_powl_f_ampl = zero
-        get_powl_f_ampl = (e_tot / (fpi * clight * p_dist_lo ** I_FOUR) ) * ((I_FOUR - q_dist) / &
+   function get_powl_f_ampl(e_tot, p_dist_lo, p_dist_up, q_dist)
+
+      use constants,       only: zero, I_ONE, I_FOUR, fpi
+      use cresp_variables, only: clight ! use units,    only: clight
+
+      implicit none
+
+      real(kind=8), intent(in) :: e_tot, p_dist_lo, p_dist_up, q_dist
+      real(kind=8)             :: get_powl_f_ampl
+
+      get_powl_f_ampl = zero
+      get_powl_f_ampl = (e_tot / (fpi * clight * p_dist_lo ** I_FOUR) ) * ((I_FOUR - q_dist) / &
                           ((p_dist_up/p_dist_lo)**(I_FOUR - q_dist) - I_ONE  ))
-  end function get_powl_f_ampl
+   end function get_powl_f_ampl
 !-------------------------------------------------------------------------------------------------
-  function e_tot_2_f_init_params(e_in_total)
-   use initcrspectrum, only: p_lo_init, p_up_init, q_init
-   real(kind=8), intent(in) :: e_in_total
-   real(kind=8) :: e_tot_2_f_init_params
+   function e_tot_2_f_init_params(e_in_total)
+
+      use initcrspectrum, only: p_lo_init, p_up_init, q_init
+
+      implicit none
+
+      real(kind=8), intent(in) :: e_in_total
+      real(kind=8) :: e_tot_2_f_init_params
+
       e_tot_2_f_init_params = get_powl_f_ampl(e_in_total, p_lo_init, p_up_init, q_init)
-  end function e_tot_2_f_init_params
+
+   end function e_tot_2_f_init_params
 !-------------------------------------------------------------------------------------------------
-! Testing p_up / p_lo finding algorithm, p_up -> p_u to avoid collisions with p_up values.
+! Testing p_up / p_lo finding algorithm, p_up -> p_u to avoid collisions with p_up values. ! DEPRECATED
 !-------------------------------------------------------------------------------------------------
 ! #ifdef TEST_CRESP
    subroutine p_algorithm_accuracy_test
-   use initcrspectrum, only: ncre
-   use cresp_NR_method, only : NR_get_solution_lo, NR_get_solution_up, e_small_to_f
-    implicit none
-     real(kind=8),dimension(1) :: q_up, q_lo   ! value of exponent to power law to be obtained using valus of f & p
-     real(kind=8),dimension(1) :: f_l, f_r, p_l, p_r, q_new !, f_floor ! given "left" and "right" values of f & p
-     real(kind=8), dimension(ncre) :: n, e, n_new, e_new   ! obtained from given, size necessary
-     integer(kind=4), dimension(1) :: one_bin  ! 1-dim array, necessary to use existing functions & subroutines
-     real(kind=8), dimension(2) :: sought_vars ! p_r and f_l vector
-     real(kind=8), dimension(0:ncre)::  f_l_new
-     logical :: exit_code
+
+      use cresp_NR_method, only : NR_get_solution_lo, NR_get_solution_up, e_small_to_f
+      use initcrspectrum,  only: ncre
+
+      implicit none
+
+      real(kind=8),dimension(1) :: q_up, q_lo   ! value of exponent to power law to be obtained using valus of f & p
+      real(kind=8),dimension(1) :: f_l, f_r, p_l, p_r, q_new !, f_floor ! given "left" and "right" values of f & p
+      real(kind=8), dimension(ncre) :: n, e, n_new, e_new   ! obtained from given, size necessary
+      integer(kind=4), dimension(1) :: one_bin  ! 1-dim array, necessary to use existing functions & subroutines
+      real(kind=8), dimension(2) :: sought_vars ! p_r and f_l vector
+      real(kind=8), dimension(0:ncre)::  f_l_new
+      logical :: exit_code
 
       one_bin = 1 ! simplest case
       e = 0.0; n = 0.0; e_new = 0.0; n_new = 0.0;
@@ -1246,7 +1269,7 @@ contains
       sought_vars(2) = real(f_l(1)*2d4,kind=8)
       print *, "init_nr_2dim params:", sought_vars
 
-       call NR_get_solution_lo(sought_vars, p_r(1), e(1), n(1), exit_code)
+      call NR_get_solution_lo(sought_vars, p_r(1), e(1), n(1), exit_code)
 
       p_l = sought_vars(1);  f_r = sought_vars(2) ;  f_l = e_small_to_f(p_l(1))
       print *, p_l(1), p_r(1), f_l(1), f_r(1)
@@ -1269,10 +1292,12 @@ contains
 !-------------------------------------------------------------------------------------------------
 
    function fq_to_e(p_l, p_r, f_l, q, bins)
-    use initcrspectrum, only: ncre, eps
-    use constants, only: zero, one, four, fpi
-    use cresp_variables, only: clight ! use units, only: clight
+      use constants, only: zero, one, four, fpi
+      use cresp_variables, only: clight ! use units, only: clight
+      use initcrspectrum, only: ncre, eps
+
       implicit none
+
       real(kind=8), dimension(:), intent (in)  :: p_l, p_r, f_l, q
       integer, dimension(:), intent(in)        :: bins
       real(kind=8), dimension(size(bins))  :: e_bins
@@ -1316,11 +1341,13 @@ contains
 !-------------------------------------------------------------------------------------------------
 
    function fq_to_n(p_l, p_r, f_l, q, bins)
-    use initcrspectrum, only: ncre, eps
-    use constants, only: zero, one, three, fpi
+      use constants, only: zero, one, three, fpi
+      use initcrspectrum, only: ncre, eps
+
       implicit none
+
+      integer, dimension(:), intent(in)      :: bins
       real(kind=8), dimension(:), intent(in) :: p_l, p_r, f_l, q
-      integer, dimension(:), intent(in)     :: bins
       real(kind=8), dimension(size(bins))   :: n_bins
       real(kind=8), dimension(1:ncre)       :: fq_to_n
 
@@ -1343,6 +1370,7 @@ contains
    subroutine deallocate_active_arrays
 
       implicit none
+
       if(allocated(fixed_edges)) deallocate(fixed_edges)
       if(allocated(fixed_edges_next)) deallocate(fixed_edges_next)
       if(allocated(active_edges)) deallocate(active_edges)
@@ -1360,13 +1388,14 @@ contains
 !
 !-------------------------------------------------------------------------------------------------
    subroutine cresp_compute_fluxes(ce,he)
-    use initcrspectrum, only: ncre, eps, cresp_all_bins
-    use constants, only: zero, one, three, four, fpi
-    use cresp_variables, only: clight ! use units, only: clight
+      use constants, only: zero, one, three, four, fpi
+      use cresp_variables, only: clight ! use units, only: clight
+      use initcrspectrum, only: ncre, eps, cresp_all_bins
+
       implicit none
+
       integer, dimension(:), intent(in) :: ce, he    ! cooling edges, heating edges
       real(kind=8), dimension(1:ncre-1) :: pimh, pimth, fimh,fimth  ! *imh = i_minus_half, *imth = i_minus_third
-
       real(kind=8), dimension(1:ncre-1) :: dn_upw, de_upw, qi,qim1  ! *im1 = i_minus_one
 
       pimh(1:ncre-1) = p(1:ncre-1)
@@ -1406,14 +1435,14 @@ contains
 
 ! filling empty empty bin - switch of upper boundary, condition is checked only once per flux computation and is very rarely satisfied.
       if (nflux(i_up) .gt. zero) then             ! If flux is greater than zero it will go through right edge, activating next bin in the next timestep.
-        if ( cresp_all_bins(i_up+1) .eq. i_up+1 ) then  ! But it shuld only happen if there is bin with index i_up+1
-         ndt(i_up+1) = nflux(i_up)
-         edt(i_up+1) = eflux(i_up)
+         if ( cresp_all_bins(i_up+1) .eq. i_up+1 ) then  ! But it shuld only happen if there is bin with index i_up+1
+            ndt(i_up+1) = nflux(i_up)
+            edt(i_up+1) = eflux(i_up)
 #ifdef CRESP_VERBOSED
-         print *, ' **** UPPER BOUND +1 ****'
+            print *, ' **** UPPER BOUND +1 ****'
 #endif /* CRESP_VERBOSED */
-         del_i_up = +1
-        endif
+            del_i_up = +1
+         endif
       endif
 
       if ( nflux(i_up-1)+n(i_up) .le. zero) then ! If flux is equal or greater than energy / density in a given bin,  these both shall migrate
@@ -1638,319 +1667,370 @@ contains
 ! Preparation and computatuon of upper boundary momentum "p_up" and and upper boundary
 ! distribution function value on left bin edge "f"
 !---------------------------------------------------------------------------------------------------
-  subroutine get_fqp_up(exit_code)
-   use initcrspectrum,  only: e_small, q_big, p_fix, NR_refine_solution_pf
-   use constants,       only: zero, one
-   use cresp_NR_method, only: intpol_pf_from_NR_grids, alpha, n_in, selected_function_2D, fvec_up, &
-            NR_algorithm, e_small_to_f, q_ratios
-   use cresp_variables, only: clight ! use units, only: clight
-   implicit none
-    real(kind=8), dimension(1:2) :: x_NR, x_NR_init
-    logical :: exit_code, interpolated, intpol_fail
-    character(len=2) :: bound = "up"
-        x_NR = zero
-        alpha = (e(i_up)/(n(i_up)*clight*p_fix(i_up-1)))
-        n_in  = n(i_up)
-        x_NR = intpol_pf_from_NR_grids(bound, alpha, n_in, interpolated, intpol_fail)
-        if (intpol_fail) then
-            exit_code = .true.
-            fail_count_no_sol(2) = fail_count_no_sol(2) + 1
-            return
-        endif
-        x_NR_init = x_NR
-        selected_function_2D => fvec_up
+   subroutine get_fqp_up(exit_code)
+      use constants,       only: zero, one
+      use cresp_variables, only: clight ! use units, only: clight
+      use cresp_NR_method, only: intpol_pf_from_NR_grids, alpha, n_in, selected_function_2D, fvec_up, &
+                           &     NR_algorithm, e_small_to_f, q_ratios
+      use initcrspectrum,  only: e_small, q_big, p_fix, NR_refine_solution_pf
+
+      implicit none
+
+      real(kind=8), dimension(1:2) :: x_NR, x_NR_init
+      logical :: exit_code, interpolated, intpol_fail
+      character(len=2) :: bound = "up"
+
+      x_NR = zero
+      alpha = (e(i_up)/(n(i_up)*clight*p_fix(i_up-1)))
+      n_in  = n(i_up)
+      x_NR = intpol_pf_from_NR_grids(bound, alpha, n_in, interpolated, intpol_fail)
+      if (intpol_fail) then
+         exit_code = .true.
+         fail_count_no_sol(2) = fail_count_no_sol(2) + 1
+         return
+      endif
+      x_NR_init = x_NR
+      selected_function_2D => fvec_up
+
 #ifdef CRESP_VERBOSED
-        write (*,"(A31,2E22.15)" ) "Input ratios(p, f) for NR (up):", x_NR
+      write (*,"(A31,2E22.15)" ) "Input ratios(p, f) for NR (up):", x_NR
 #endif /* CRESP_VERBOSED */
-        if ( (NR_refine_solution_pf .eqv. .true.) .or. (interpolated .eqv. .false.)) then
-            if (interpolated .eqv. .false.) fail_count_interpol(2) = fail_count_interpol(2) +1
-            call NR_algorithm(x_NR, exit_code)
-            if (exit_code .eqv. .true.) then ! some failures still take place
-                if (interpolated .eqv. .false.) then
-                    exit_code = .true.
+
+      if ( (NR_refine_solution_pf .eqv. .true.) .or. (interpolated .eqv. .false.)) then
+
+         if (interpolated .eqv. .false.) fail_count_interpol(2) = fail_count_interpol(2) +1
+
+         call NR_algorithm(x_NR, exit_code)
+         if (exit_code .eqv. .true.) then ! some failures still take place
+            if (interpolated .eqv. .false.) then
+               exit_code = .true.
 #ifdef CRESP_VERBOSED
-                    print *, " Interpolation AND NR failure (up)", alpha, n_in, x_NR_init
+               print *, " Interpolation AND NR failure (up)", alpha, n_in, x_NR_init
 #endif /* CRESP_VERBOSED */
-                    return
-                endif
-                fail_count_NR_2dim(2) = fail_count_NR_2dim(2) +1
-                x_NR = x_NR_init
-                print *, "Interpolated?", interpolated, "NR_refine_solution_pf?", NR_refine_solution_pf,"solved?", exit_code
+               return
             endif
-        endif
-        x_NR = abs(x_NR) ! negative values cannot be allowed
-        if (x_NR(1) .lt. 1.0) then
-            exit_code = .true.
-            return
-        endif
-        p_up      = p_fix(i_up-1)*x_NR(1)
-        p(i_up)   = p_up
-        f(i_up-1) = e_small_to_f(p_up)/x_NR(2)
-        q(i_up)   = q_ratios(x_NR(2), x_NR(1))
-        if (abs(q(i_up)) .gt. q_big ) q(i_up) = sign(one, q(i_up)) * q_big
+            fail_count_NR_2dim(2) = fail_count_NR_2dim(2) +1
+            x_NR = x_NR_init
+            print *, "Interpolated?", interpolated, "NR_refine_solution_pf?", NR_refine_solution_pf,"solved?", exit_code
+         endif
+      endif
+
+      x_NR = abs(x_NR) ! negative values cannot be allowed
+
+      if (x_NR(1) .lt. 1.0) then
+         exit_code = .true.
+         return
+      endif
+
+      p_up      = p_fix(i_up-1)*x_NR(1)
+      p(i_up)   = p_up
+      f(i_up-1) = e_small_to_f(p_up)/x_NR(2)
+      q(i_up)   = q_ratios(x_NR(2), x_NR(1))
+
+      if (abs(q(i_up)) .gt. q_big ) q(i_up) = sign(one, q(i_up)) * q_big
 #ifdef CRESP_VERBOSED
-        write (*,"(A1)") " "
-        write (*,"(A26,2E22.15)") " >>> Obtained (p_up, f_l):", p_up, f(i_up-1) &
+      write (*,"(A1)") " "
+      write (*,"(A26,2E22.15)") " >>> Obtained (p_up, f_l):", p_up, f(i_up-1) &
                                  ,"     Corresponding ratios:", x_NR(1), x_NR(2) &
                                  ,"alpha = ", alpha
 #endif /* CRESP_VERBOSED */
-  end subroutine get_fqp_up
+
+   end subroutine get_fqp_up
 !--------------------------------------------------------------------------------------------------
 ! Preparation and computation of upper boundary momentum "p_lo" and and upper boundary
 ! distribution function value on the right bin edge "f"
 !--------------------------------------------------------------------------------------------------
-  subroutine get_fqp_lo(exit_code)
-   use initcrspectrum, only: e_small, q_big, p_fix, NR_refine_solution_pf
-   use constants, only: zero, one
-   use cresp_NR_method, only: intpol_pf_from_NR_grids, alpha, n_in, selected_function_2D, fvec_lo, &
-                NR_algorithm, e_small_to_f, q_ratios
-   use cresp_variables, only: clight ! use units, only: clight
-   implicit none
-    real(kind=8), dimension(1:2) :: x_NR, x_NR_init
-    logical :: exit_code, interpolated, intpol_fail
-    character(len=2) :: bound = "lo"
-        x_NR = zero
-        alpha = (e(i_lo+1)/(n(i_lo+1)*clight*p_fix(i_lo+1)))
-        n_in  = n(i_lo+1)
-        x_NR = intpol_pf_from_NR_grids(bound, alpha, n_in, interpolated, intpol_fail)
-        if (intpol_fail) then
-            exit_code = .true.
-            fail_count_no_sol(1) = fail_count_no_sol(1) + 1
-            return
-        endif
-        x_NR_init = x_NR
-        selected_function_2D => fvec_lo
+   subroutine get_fqp_lo(exit_code)
+
+      use constants, only: zero, one
+      use cresp_NR_method, only: intpol_pf_from_NR_grids, alpha, n_in, selected_function_2D, fvec_lo, &
+                  NR_algorithm, e_small_to_f, q_ratios
+      use cresp_variables, only: clight ! use units, only: clight
+      use initcrspectrum, only: e_small, q_big, p_fix, NR_refine_solution_pf
+
+      implicit none
+
+      real(kind=8), dimension(1:2) :: x_NR, x_NR_init
+      logical :: exit_code, interpolated, intpol_fail
+      character(len=2) :: bound = "lo"
+
+      x_NR = zero
+      alpha = (e(i_lo+1)/(n(i_lo+1)*clight*p_fix(i_lo+1)))
+      n_in  = n(i_lo+1)
+      x_NR = intpol_pf_from_NR_grids(bound, alpha, n_in, interpolated, intpol_fail)
+      if (intpol_fail) then
+         exit_code = .true.
+         fail_count_no_sol(1) = fail_count_no_sol(1) + 1
+         return
+      endif
+      x_NR_init = x_NR
+      selected_function_2D => fvec_lo
+
 #ifdef CRESP_VERBOSED
-        write (*,"(A31,2E22.15)" ) "Input ratios(p, f) for NR (lo):", x_NR
+      write (*,"(A31,2E22.15)" ) "Input ratios(p, f) for NR (lo):", x_NR
 #endif /* CRESP_VERBOSED */
-        if ( (NR_refine_solution_pf .eqv. .true.) .or. (interpolated .eqv. .false.)) then
-            if (interpolated .eqv. .false.) fail_count_interpol(1) = fail_count_interpol(1) +1
-            call NR_algorithm(x_NR, exit_code)
-            if (exit_code .eqv. .true.) then ! some failures still take place
-                if (interpolated .eqv. .false.) then
-                    exit_code = .true.
+      if ( (NR_refine_solution_pf .eqv. .true.) .or. (interpolated .eqv. .false.)) then
+
+      if (interpolated .eqv. .false.) fail_count_interpol(1) = fail_count_interpol(1) +1
+
+      call NR_algorithm(x_NR, exit_code)
+         if (exit_code .eqv. .true.) then ! some failures still take place
+            if (interpolated .eqv. .false.) then
+               exit_code = .true.
 #ifdef CRESP_VERBOSED
-                    print *, " Interpolation AND NR failure (lo)", alpha, n_in
+               print *, " Interpolation AND NR failure (lo)", alpha, n_in
 #endif /* CRESP_VERBOSED */
-                    return
-                endif
-                fail_count_NR_2dim(1) = fail_count_NR_2dim(1) +1
-                x_NR = x_NR_init
-                print *, "Interpolated?", interpolated, "NR_refine_solution_pf?", NR_refine_solution_pf,"solved?", exit_code
+               return
             endif
-        endif
-        x_NR = abs(x_NR) ! negative values cannot be allowed
-        if (x_NR(1) .lt. 1.0) then
-            exit_code = .true.
-            return
-        endif
-        p_lo      = p_fix(i_lo+1)/ x_NR(1)
-        p(i_lo)   = p_lo
-        f(i_lo)   = e_small_to_f(p_lo)
-        q(i_lo+1) = q_ratios(x_NR(2), x_NR(1))
-        if (abs(q(i_lo+1)) .gt. q_big ) q(i_lo+1) = sign(one, q(i_lo+1)) * q_big
+            fail_count_NR_2dim(1) = fail_count_NR_2dim(1) +1
+            x_NR = x_NR_init
+            print *, "Interpolated?", interpolated, "NR_refine_solution_pf?", NR_refine_solution_pf,"solved?", exit_code
+         endif
+      endif
+
+      x_NR = abs(x_NR) ! negative values cannot be allowed
+      if (x_NR(1) .lt. 1.0) then
+         exit_code = .true.
+         return
+      endif
+
+      p_lo      = p_fix(i_lo+1)/ x_NR(1)
+      p(i_lo)   = p_lo
+      f(i_lo)   = e_small_to_f(p_lo)
+      q(i_lo+1) = q_ratios(x_NR(2), x_NR(1))
+
+      if (abs(q(i_lo+1)) .gt. q_big ) q(i_lo+1) = sign(one, q(i_lo+1)) * q_big
 #ifdef CRESP_VERBOSED
-        write (*,"(A1)") " "
-        write (*,"(A26,2E22.15)") " >>> Obtained (p_lo, f_r):", p_lo, x_NR(2)*f(i_lo) &
+      write (*,"(A1)") " "
+      write (*,"(A26,2E22.15)") " >>> Obtained (p_lo, f_r):", p_lo, x_NR(2)*f(i_lo) &
                                  ,"     Corresponding ratios:", x_NR(1), x_NR(2)
 #endif /* CRESP_VERBOSED */
-        alpha = zero ;  n_in = zero
-  end subroutine get_fqp_lo
+      alpha = zero ;  n_in = zero
+
+   end subroutine get_fqp_lo
 !----------------------------------------------------------------------------------------------------
-  function b_losses(p)
-   implicit none
-    real(kind=8), dimension(:), intent(in)  :: p
-    real(kind=8), dimension(size(p)) :: b_losses
-        b_losses = u_b*p**2  !!! b_sync_ic = 8.94e-25*(u_b+u_cmb)*gamma_l**2 ! erg/cm
-  end function b_losses
+   function b_losses(p)
+      implicit none
+
+      real(kind=8), dimension(:), intent(in)  :: p
+      real(kind=8), dimension(size(p)) :: b_losses
+
+      b_losses = u_b*p**2  !!! b_sync_ic = 8.94e-25*(u_b+u_cmb)*gamma_l**2 ! erg/cm
+
+   end function b_losses
 !-------------------------------------------------------------------------------------------------
 !
 ! relative change of momentum due to losses (u_b*p*dt) and compression u_d*dt (Taylor expansion up to 3rd order)
 !
 !-------------------------------------------------------------------------------------------------
-  function p_rch(dt, p)
-   use initcrspectrum, only: taylor_coeff_2nd, taylor_coeff_3rd
-   use constants, only: half, sixth
-   implicit none
-    real(kind=8), intent(in)  :: dt
-    real(kind=8), intent(in)  :: p
-    real(kind=8)              :: p_rch
-   !p_rch =  (u_b*p + u_d) * dt !!! b_sync_ic = 8.94e-25*(u_b+u_cmb)*gamma_l**2 ! erg/cm
-        p_rch = (- u_d - p * u_b ) *  dt  + taylor_coeff_2nd *( half*u_d**2 + u_b**2 * p**2)*dt**2 &
-                                     + taylor_coeff_3rd *(-sixth*u_d**3 - u_b**3 * p**3)*dt**3 ! analitycally correct solution
+
+   function p_rch(dt, p)
+      use constants,    only: half, sixth
+      use initcrspectrum, only: taylor_coeff_2nd, taylor_coeff_3rd
+
+      implicit none
+
+      real(kind=8), intent(in)  :: dt
+      real(kind=8), intent(in)  :: p
+      real(kind=8)              :: p_rch
+
+      !p_rch =  (u_b*p + u_d) * dt !!! b_sync_ic = 8.94e-25*(u_b+u_cmb)*gamma_l**2 ! erg/cm
+      p_rch = (- u_d - p * u_b ) *  dt  + taylor_coeff_2nd *( half*u_d**2 + u_b**2 * p**2)*dt**2 &
+                                       + taylor_coeff_3rd *(-sixth*u_d**3 - u_b**3 * p**3)*dt**3 ! analitycally correct solution
   end function p_rch
 !-------------------------------------------------------------------------------------------------
   function p_upw_rch(dt, p)
-   use initcrspectrum, only: taylor_coeff_2nd, taylor_coeff_3rd
-   use constants, only: half, sixth
-   implicit none
-    real(kind=8), intent(in)  :: dt
-    real(kind=8), dimension(:), intent(in) :: p
-    real(kind=8), dimension(size(p))  :: p_upw_rch
-   !p_upw_rch =  (u_b*p + u_d) * dt      !!! b_sync_ic = 8.94e-25*(u_b+u_cmb)*gamma_l**2 ! erg/cm
-        p_upw_rch = (u_d + p * u_b) * dt + taylor_coeff_2nd * (half*u_d**2 + u_b**2 * p**2)*dt**2 &
+      use constants, only: half, sixth
+      use initcrspectrum, only: taylor_coeff_2nd, taylor_coeff_3rd
+
+      implicit none
+
+      real(kind=8), intent(in)  :: dt
+      real(kind=8), dimension(:), intent(in) :: p
+      real(kind=8), dimension(size(p))  :: p_upw_rch
+
+      !p_upw_rch =  (u_b*p + u_d) * dt      !!! b_sync_ic = 8.94e-25*(u_b+u_cmb)*gamma_l**2 ! erg/cm
+      p_upw_rch = (u_d + p * u_b) * dt + taylor_coeff_2nd * (half*u_d**2 + u_b**2 * p**2)*dt**2 &
                                      + taylor_coeff_3rd *(sixth*u_d**3 + u_b**3 * p**3)*dt**3 ! analitycally correct
-  end function p_upw_rch
+   end function p_upw_rch
 
 !----------------------------------------------------------------------------------------------------
-  subroutine transfer_quantities(give_to, take_from)
-  use constants, only: zero
-  implicit none
-    real(kind=8), intent(inout) :: give_to, take_from
-        give_to = give_to + take_from
-        take_from = zero
-  end subroutine transfer_quantities
+   subroutine transfer_quantities(give_to, take_from)
+      use constants, only: zero
+
+      implicit none
+
+      real(kind=8), intent(inout) :: give_to, take_from
+
+      give_to = give_to + take_from
+      take_from = zero
+
+   end subroutine transfer_quantities
 !----------------------------------------------------------------------------------------------------
-  subroutine threshold_energy_check_lo(e_tab, n_tab, e_lo_lt_e_small, solution_failed)
-  use initcrspectrum, only: e_small
-  use constants, only: zero
-  implicit none
-    real(kind=8), dimension(:), intent(inout) :: e_tab, n_tab
-    logical :: e_lo_lt_e_small, solution_failed
+   subroutine threshold_energy_check_lo(e_tab, n_tab, e_lo_lt_e_small, solution_failed)
+      use constants, only: zero
+      use initcrspectrum, only: e_small
+
+      implicit none
+
+      real(kind=8), dimension(:), intent(inout) :: e_tab, n_tab
+      logical :: e_lo_lt_e_small, solution_failed
+
       if ( solution_failed .or. ((e_tab(i_lo+1) .le. e_small) .and. (approx_p_lo .eq. 1))) then
-        vrtl_e(1) = vrtl_e(1) + e_tab(i_lo+1)  ; e_tab(i_lo+1) = zero
-        vrtl_n(1) = vrtl_n(1) + n_tab(i_lo+1)  ; n_tab(i_lo+1) = zero
+         vrtl_e(1) = vrtl_e(1) + e_tab(i_lo+1)  ; e_tab(i_lo+1) = zero
+         vrtl_n(1) = vrtl_n(1) + n_tab(i_lo+1)  ; n_tab(i_lo+1) = zero
 !         print *, "e_tab(i_lo+1) close to e_small, activating virtual n and e"
 !         print *, "virtual n lo", vrtl_n(1), "virtual e lo", vrtl_e(1)
-        e_lo_lt_e_small = .true.
-    else
+         e_lo_lt_e_small = .true.
+      else
 !         print *, "virtual n lo", vrtl_n(1), "virtual e lo", vrtl_e(1), "e, n: ", e_tab(i_lo+1), n_tab(i_lo+1)
-        e_tab(i_lo+1) = e_tab(i_lo+1) + vrtl_e(1) ; vrtl_e(1) = zero
-        n_tab(i_lo+1) = n_tab(i_lo+1) + vrtl_n(1) ; vrtl_n(1) = zero
-        e_lo_lt_e_small = .false.
-    endif
-  end subroutine threshold_energy_check_lo
+         e_tab(i_lo+1) = e_tab(i_lo+1) + vrtl_e(1) ; vrtl_e(1) = zero
+         n_tab(i_lo+1) = n_tab(i_lo+1) + vrtl_n(1) ; vrtl_n(1) = zero
+         e_lo_lt_e_small = .false.
+      endif
+   end subroutine threshold_energy_check_lo
 !----------------------------------------------------------------------------------------------------
-  subroutine threshold_energy_check_up(e_tab, n_tab, e_up_lt_e_small, solution_failed)
-  use initcrspectrum, only: e_small
-  use constants, only: zero
-  implicit none
-    real(kind=8), dimension(:), intent(inout) :: e_tab, n_tab
-    logical :: e_up_lt_e_small, solution_failed
-    if ( solution_failed .or. ((e_tab(i_up) .le. e_small) .and. (approx_p_up .eq. 1))) then
-        vrtl_e(2) = vrtl_e(2) + e_tab(i_up)  ; e_tab(i_up) = zero
-        vrtl_n(2) = vrtl_n(2) + n_tab(i_up)  ; n_tab(i_up) = zero
+   subroutine threshold_energy_check_up(e_tab, n_tab, e_up_lt_e_small, solution_failed)
+      use constants, only: zero
+      use initcrspectrum, only: e_small
+
+      implicit none
+
+      real(kind=8), dimension(:), intent(inout) :: e_tab, n_tab
+      logical :: e_up_lt_e_small, solution_failed
+
+      if ( solution_failed .or. ((e_tab(i_up) .le. e_small) .and. (approx_p_up .eq. 1))) then
+         vrtl_e(2) = vrtl_e(2) + e_tab(i_up)  ; e_tab(i_up) = zero
+         vrtl_n(2) = vrtl_n(2) + n_tab(i_up)  ; n_tab(i_up) = zero
 !         print *, "e_tab(i_up) close to e_small, activating virtual n and e"
 !         print *, "virtual n up", vrtl_n(2), "virtual e up", vrtl_e(2)
-        e_up_lt_e_small = .true.
-    else
+         e_up_lt_e_small = .true.
+      else
 !         print *, "virtual n up", vrtl_n(2), "virtual e up", vrtl_e(2), "e, n: ", e_tab(i_up), n_tab(i_up)
-        e_tab(i_up) = e_tab(i_up) + vrtl_e(2) ; vrtl_e(2) = zero
-        n_tab(i_up) = n_tab(i_up) + vrtl_n(2) ; vrtl_n(2) = zero
-        e_up_lt_e_small = .false.
-    endif
-  end subroutine threshold_energy_check_up
+         e_tab(i_up) = e_tab(i_up) + vrtl_e(2) ; vrtl_e(2) = zero
+         n_tab(i_up) = n_tab(i_up) + vrtl_n(2) ; vrtl_n(2) = zero
+         e_up_lt_e_small = .false.
+      endif
+   end subroutine threshold_energy_check_up
 !----------------------------------------------------------------------------------------------------
-  subroutine cresp_allocate_all
-   use initcrspectrum, only: ncre
-   use diagnostics, only: my_allocate_with_index
-   implicit none
-     integer(kind = 4)          :: ma1d
+   subroutine cresp_allocate_all
+      use diagnostics, only: my_allocate_with_index
+      use initcrspectrum, only: ncre
 
-   ma1d = ncre
-   call my_allocate_with_index(fail_count_comp_q,ma1d,1)
+      implicit none
 
-   call my_allocate_with_index(n,ma1d,1)   !:: n, e, r
-   call my_allocate_with_index(e,ma1d,1)
-   call my_allocate_with_index(e_amplitudes_l,ma1d,1)   !:: n, e, r
-   call my_allocate_with_index(e_amplitudes_r,ma1d,1)
-   call my_allocate_with_index(r,ma1d,1)
-   call my_allocate_with_index(q,ma1d,1)
+      integer(kind = 4)          :: ma1d
 
-   call my_allocate_with_index(f,ma1d,0)
-   call my_allocate_with_index(p,ma1d,0)
+      ma1d = ncre
+      call my_allocate_with_index(fail_count_comp_q,ma1d,1)
 
-   call my_allocate_with_index(edt,ma1d,1)
-   call my_allocate_with_index(ndt,ma1d,1)
+      call my_allocate_with_index(n,ma1d,1)   !:: n, e, r
+      call my_allocate_with_index(e,ma1d,1)
+      call my_allocate_with_index(e_amplitudes_l,ma1d,1)   !:: n, e, r
+      call my_allocate_with_index(e_amplitudes_r,ma1d,1)
+      call my_allocate_with_index(r,ma1d,1)
+      call my_allocate_with_index(q,ma1d,1)
 
-   call my_allocate_with_index(p_next,ma1d,0)
-   call my_allocate_with_index(p_upw,ma1d,0)
-   call my_allocate_with_index(nflux,ma1d,0)
-   call my_allocate_with_index(eflux,ma1d,0)
+      call my_allocate_with_index(f,ma1d,0)
+      call my_allocate_with_index(p,ma1d,0)
 
-   call my_allocate_with_index(is_fixed_edge,ma1d,0)
-   call my_allocate_with_index(is_fixed_edge_next,ma1d,0)
-   call my_allocate_with_index(is_active_edge,ma1d,0)
-   call my_allocate_with_index(is_active_edge_next,ma1d,0)
-   call my_allocate_with_index(is_cooling_edge,ma1d,0)
-   call my_allocate_with_index(is_cooling_edge_next,ma1d,0)
-   call my_allocate_with_index(is_heating_edge,ma1d,0)
-   call my_allocate_with_index(is_heating_edge_next,ma1d,0)
-   call my_allocate_with_index(is_active_bin,ma1d,1)
-   call my_allocate_with_index(is_active_bin_next,ma1d,1)
-   call my_allocate_with_index(not_spectrum_break,ma1d,1)
+      call my_allocate_with_index(edt,ma1d,1)
+      call my_allocate_with_index(ndt,ma1d,1)
 
-  end subroutine cresp_allocate_all
+      call my_allocate_with_index(p_next,ma1d,0)
+      call my_allocate_with_index(p_upw,ma1d,0)
+      call my_allocate_with_index(nflux,ma1d,0)
+      call my_allocate_with_index(eflux,ma1d,0)
 
-  subroutine cresp_deallocate_all! called by driver
-  use diagnostics, only: my_deallocate
-  implicit none
+      call my_allocate_with_index(is_fixed_edge,ma1d,0)
+      call my_allocate_with_index(is_fixed_edge_next,ma1d,0)
+      call my_allocate_with_index(is_active_edge,ma1d,0)
+      call my_allocate_with_index(is_active_edge_next,ma1d,0)
+      call my_allocate_with_index(is_cooling_edge,ma1d,0)
+      call my_allocate_with_index(is_cooling_edge_next,ma1d,0)
+      call my_allocate_with_index(is_heating_edge,ma1d,0)
+      call my_allocate_with_index(is_heating_edge_next,ma1d,0)
+      call my_allocate_with_index(is_active_bin,ma1d,1)
+      call my_allocate_with_index(is_active_bin_next,ma1d,1)
+      call my_allocate_with_index(not_spectrum_break,ma1d,1)
 
-   call my_deallocate(n)   !:: n, e, r
-   call my_deallocate(e)
-   call my_deallocate(r)
-   call my_deallocate(q)
-   call my_deallocate(f)
-   call my_deallocate(p)
+   end subroutine cresp_allocate_all
+!----------------------------------------------------------------------------------------------------
+   subroutine cresp_deallocate_all! called by driver
+      use diagnostics, only: my_deallocate
+      implicit none
 
-   call my_deallocate(edt)
-   call my_deallocate(ndt)
+      call my_deallocate(n)
+      call my_deallocate(e)
+      call my_deallocate(r)
+      call my_deallocate(q)
+      call my_deallocate(f)
+      call my_deallocate(p)
 
-   call my_deallocate(p_next)
-   call my_deallocate(p_upw)
-   call my_deallocate(nflux)
-   call my_deallocate(eflux)
+      call my_deallocate(edt)
+      call my_deallocate(ndt)
 
-   call my_deallocate(is_fixed_edge)
-   call my_deallocate(is_fixed_edge_next)
-   call my_deallocate(is_active_edge)
-   call my_deallocate(is_active_edge_next)
-   call my_deallocate(is_cooling_edge)
-   call my_deallocate(is_cooling_edge_next)
-   call my_deallocate(is_heating_edge)
-   call my_deallocate(is_heating_edge_next)
-   call my_deallocate(is_active_bin)
-   call my_deallocate(is_active_bin_next)
+      call my_deallocate(p_next)
+      call my_deallocate(p_upw)
+      call my_deallocate(nflux)
+      call my_deallocate(eflux)
 
-   call deallocate_active_arrays ! optional
+      call my_deallocate(is_fixed_edge)
+      call my_deallocate(is_fixed_edge_next)
+      call my_deallocate(is_active_edge)
+      call my_deallocate(is_active_edge_next)
+      call my_deallocate(is_cooling_edge)
+      call my_deallocate(is_cooling_edge_next)
+      call my_deallocate(is_heating_edge)
+      call my_deallocate(is_heating_edge_next)
+      call my_deallocate(is_active_bin)
+      call my_deallocate(is_active_bin_next)
 
-  end subroutine cresp_deallocate_all
+      call deallocate_active_arrays ! optional
 
-! !---------------------------------------------------------------------------------------------
+   end subroutine cresp_deallocate_all
+
+!---------------------------------------------------------------------------------------------
    subroutine cresp_accuracy_test(t)
-     implicit none
-     real(kind=8), intent(in)   :: t
+      implicit none
 
-   print *, " -------------------------- "
+      real(kind=8), intent(in)   :: t
 
-   print*, 'Accuracy test for adabatic compression/expansion:'
-   print*, 'n_tot = ', n_tot, 'n_tot0 = ', n_tot0, 'rel error = ', (n_tot - n_tot0)/n_tot0
-   print*, 'e_tot = ', e_tot, 'e_anal = ', e_tot0*exp(-u_d_0*t), 'rel error = ',(e_tot-e_tot0*exp(-u_d_0*t))/(e_tot0*exp(-u_d_0*t))
-   print*, 'e_tot0= ', e_tot0
-   print *, '=================================='
-   print*,  '! End of iteration               !'
-   print *, '=================================='
-   print*
-   print*
-   print*,'--------------------'
-   print *,''
+      print *, " -------------------------- "
+
+      print*, 'Accuracy test for adabatic compression/expansion:'
+      print*, 'n_tot = ', n_tot, 'n_tot0 = ', n_tot0, 'rel error = ', (n_tot - n_tot0)/n_tot0
+      print*, 'e_tot = ', e_tot, 'e_anal = ', e_tot0*exp(-u_d_0*t), 'rel error = ',(e_tot-e_tot0*exp(-u_d_0*t))/(e_tot0*exp(-u_d_0*t))
+      print*, 'e_tot0= ', e_tot0
+      print *, '=================================='
+      print*,  '! End of iteration               !'
+      print *, '=================================='
+      print*
+      print*
+      print*,'--------------------'
+      print *,''
 
    end subroutine cresp_accuracy_test
 !----------------------------------------------------------------------------------------------------
- subroutine cleanup_cresp
-  implicit none
-        print '(A36,I6,A6,I6)', "NR_2dim:  convergence failure: p_lo", fail_count_NR_2dim(1), ", p_up", fail_count_NR_2dim(2)
-        print '(A36,I6,A6,I6)', "NR_2dim:interpolation failure: p_lo", fail_count_interpol(1), ", p_up", fail_count_interpol(2)
-        print '(A36,I6,A6,I6)', "NR_2dim:  no solution failure: p_lo", fail_count_no_sol(1), ", p_up", fail_count_no_sol(2)
-        print '(A36,I6,A6,I6)', "NR_2dim: second try failure  : p_lo", second_fail(1), ", p_up", second_fail(2)
-        print '(A36,   100I5)', "NR_2dim:inpl/solve  q(bin) failure:", fail_count_comp_q
-        call cresp_deallocate_all
- end subroutine cleanup_cresp
+   subroutine cleanup_cresp
+      implicit none
+
+      print '(A36,I6,A6,I6)', "NR_2dim:  convergence failure: p_lo", fail_count_NR_2dim(1), ", p_up", fail_count_NR_2dim(2)
+      print '(A36,I6,A6,I6)', "NR_2dim:interpolation failure: p_lo", fail_count_interpol(1), ", p_up", fail_count_interpol(2)
+      print '(A36,I6,A6,I6)', "NR_2dim:  no solution failure: p_lo", fail_count_no_sol(1), ", p_up", fail_count_no_sol(2)
+      print '(A36,I6,A6,I6)', "NR_2dim: second try failure  : p_lo", second_fail(1), ", p_up", second_fail(2)
+      print '(A36,   100I5)', "NR_2dim:inpl/solve  q(bin) failure:", fail_count_comp_q
+      call cresp_deallocate_all
+
+   end subroutine cleanup_cresp
 !----------------------------------------------------------------------------------------------------
    subroutine printer(t)
-   use initcrspectrum, only: ncre, crel
-   implicit none
-     real(kind = 8)   :: t
+      use initcrspectrum, only: ncre, crel
+
+      implicit none
+
+      real(kind = 8)   :: t
+
       open(10, file="crs.dat", position='append')
       write(10, '(2e16.9, 3(1x,i8), 200(1x,ES18.9E3))') t, crel%dt, ncre, crel%i_lo, crel%i_up, crel%p, crel%f, crel%q
       close(10)
@@ -1959,8 +2039,8 @@ contains
       write(11, '(2I5,4x, e16.9, 100(1x,F18.9))') del_i_lo, del_i_up, t, crel%dt, crel%p(i_lo), crel%p(i_up), crel%n, crel%e
       close(11)
 
-      end subroutine printer
+   end subroutine printer
 
-! --------------------
+!----------------------------------------------------------------------------------------------------
 
 end module cresp_crspectrum
