@@ -44,7 +44,7 @@ module global
         &    integration_order, limiter, limiter_b, smalld, smallei, smallp, use_smalld, h_solver, &
         &    relax_time, grace_period_passed, cfr_smooth, repeat_step, skip_sweep, geometry25D, &
         &    dirty_debug, do_ascii_dump, show_n_dirtys, no_dirty_checks, sweeps_mgu, use_fargo, print_divB, &
-        &    divB_0_method, force_cc_mag, psi_0, glm_alpha, use_eglm, cfl_glm
+        &    divB_0_method, force_cc_mag, psi_0, glm_alpha, use_eglm, cfl_glm, ch_grid
 
    real, parameter :: dt_default_grow = 2.
    logical         :: cfl_violated             !< True when cfl condition is violated
@@ -91,10 +91,11 @@ module global
    real                          :: glm_alpha         !< damping factor for the psi field
    logical                       :: use_eglm          !< use E-GLM?
    real                          :: cfl_glm           !< "CFL" for chspeed in divergence cleaning
+   logical                       :: ch_grid           !< When true use grid properties to estimate ch (psi wave propagation speed). Use gas properties otherwise.
 
    namelist /NUMERICAL_SETUP/ cfl, cflcontrol, cfl_max, use_smalld, smalld, smallei, smallc, smallp, dt_initial, dt_max_grow, dt_min, &
         &                     repeat_step, limiter, limiter_b, relax_time, integration_order, cfr_smooth, skip_sweep, geometry25D, sweeps_mgu, print_divB, &
-        &                     use_fargo, h_solver, divB_0, psi_0, glm_alpha, use_eglm, cfl_glm
+        &                     use_fargo, h_solver, divB_0, psi_0, glm_alpha, use_eglm, cfl_glm, ch_grid
 
 contains
 
@@ -133,6 +134,7 @@ contains
 !!   <tr><td>glm_alpha        </td><td>0.1    </td><td>real value                           </td><td>\copydoc global::glm_alpha        </td></tr>
 !!   <tr><td>use_eglm         </td><td>false  </td><td>logical value                        </td><td>\copydoc global::use_eglm         </td></tr>
 !!   <tr><td>print_divB       </td><td>0      </td><td>integer value                        </td><td>\copydoc global::print_divB       </td></tr>
+!!   <tr><td>ch_grid          </td><td>true   </td><td>logical value                        </td><td>\copydoc global::ch_grid          </td></tr>
 !! </table>
 !! \n \n
 !<
@@ -193,6 +195,7 @@ contains
       use_eglm    = .false.
       print_divB  = 100
       cfl_glm     = 1.
+      ch_grid     = .true.
 
       if (master) then
          if (.not.nh%initialized) call nh%init()
@@ -258,6 +261,7 @@ contains
          lbuff(7)   = sweeps_mgu
          lbuff(8)   = use_fargo
          lbuff(9)   = use_eglm
+         lbuff(10)  = ch_grid
 
       endif
 
@@ -275,6 +279,7 @@ contains
          sweeps_mgu    = lbuff(7)
          use_fargo     = lbuff(8)
          use_eglm      = lbuff(9)
+         ch_grid       = lbuff(10)
 
          smalld      = rbuff( 1)
          smallc      = rbuff( 2)
