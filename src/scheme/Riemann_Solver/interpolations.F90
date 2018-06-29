@@ -156,6 +156,8 @@ contains
 
 !>
 !! \brief Linear interpolation scheme for estimating left and right states on cell interfaces.
+!!
+!! Note that the arrays with left and right states are one cell shorter because we don't have enough knowledge to compute complete interface states at both vector ends.
 !<
 
   subroutine linear(q, ql, qr, f_limiter)
@@ -163,7 +165,7 @@ contains
     use fluxlimiters, only: limiter
     use domain,       only: dom
     use constants,    only: half, GEO_XYZ
-    use dataio_pub,   only: die
+    use dataio_pub,   only: die, msg
 
     implicit none
 
@@ -172,30 +174,25 @@ contains
     real, dimension(:,:),        intent(out) :: qr
     procedure(limiter), pointer, intent(in)  :: f_limiter
 
-    real, dimension(size(q, 1), size(q, 2)) :: dq_lim, dq_interp
-    integer                                 :: im1
+    real, dimension(size(q, 1), size(q, 2)) :: dq_interp
     integer                                 :: n
-
-    n = size(q, 2)
-
-    dq_lim = f_limiter(q)
+    integer, parameter                      :: in = 2  ! index for cells
 
     if (dom%geometry_type /= GEO_XYZ) call die("[interpolations:linear] non-cartesian geometry not implemented yet.")
+    if (size(q, in) - size(ql, in) /= 1) then
+       write(msg, '(2(a,2i7),a)')"[interpolations:linear] face vector of wrong length: ", size(q, in), size(ql, in), " (expecting: ", size(q, in), size(q, in)-1, ")"
+       call die(msg)
+    endif
+    if (any(shape(ql) /= shape(qr))) call die("[interpolations:linear] face vectors of different lengths")
 
-    dq_interp = half*dq_lim
+    n = size(q, in)
 
-    ql = q + dq_interp
-    qr = q - dq_interp
+    dq_interp = half * f_limiter(q) ! interpolate by half of cell
 
-    im1 = max(1, n-1) ! neighbouring indices
-    !associate(im1 => i - Dom%D_x)
-    ! shfit right state
-    qr(:, 1:im1) = qr(:, 2:n)
-
-    ! interpolation for the first and last points
-
-    ql(:, 1) = q(:, 1)
-    qr(:, n) = q(:, n)
+    ! interpolate from i-th cell center to its right face to get left state at interface i
+    ql = q(:, :n-1) + dq_interp(:, :n-1)
+    ! the right state at interface i comes from cell (i+1) and we have to obtain interpolation towards its left face
+    qr = q(:, 2:) - dq_interp(:, 2:)
 
   end subroutine linear
 
