@@ -192,9 +192,9 @@ contains
     ! shfit right state
     qr(:, 1:im1) = qr(:, 2:n)
 
-    ! interpolation for the first and last points
-
-    ql(:, 1) = q(:, 1)
+    ! This is supposed to mask problems with FPE exceptions occuring on the ends of vectors.
+    ! The real solution could be either reducing the range or adjusting array sizes
+    ql(:, n) = q(:, n)
     qr(:, n) = q(:, n)
 
   end subroutine linear
