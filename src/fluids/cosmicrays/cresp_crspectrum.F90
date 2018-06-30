@@ -6,7 +6,7 @@ module cresp_crspectrum
    private ! most of it
    public :: cresp_update_cell, cresp_init_state, printer, fail_count_interpol, fail_count_no_sol, fail_count_NR_2dim, cresp_get_scaled_init_spectrum, &
       &      cleanup_cresp, cresp_accuracy_test, b_losses, cresp_allocate_all, cresp_deallocate_all, e_threshold_lo, e_threshold_up, &
-      &      fail_count_comp_q, second_fail, src_gpcresp, cresp_init_powl_spectrum, get_powl_f_ampl, e_tot_2_f_init_params, e_tot_2_en_powl_init_params, &
+      &      fail_count_comp_q, second_fail, src_gpcresp, cresp_init_powl_spectrum,  &
       &      detect_clean_spectrum, cresp_find_prepare_spectrum, cresp_detect_negative_content
 
    integer, dimension(1:2), save      :: fail_count_NR_2dim, fail_count_interpol, fail_count_no_sol, second_fail
@@ -343,7 +343,7 @@ contains
       ext_n(i_up+1:) = zero
 
    end subroutine nullify_inactive_bins
-
+!----------------------------------------------------------------------------------------------------
    subroutine nullify_all_bins(ext_n, ext_e)
 
       use initcrspectrum,      only: ncre
@@ -1149,48 +1149,6 @@ contains
       e_inout = norm_init_spectrum%e * e_in_total / total_init_cree
 
    end subroutine cresp_get_scaled_init_spectrum
-!-------------------------------------------------------------------------------------------------
-   subroutine e_tot_2_en_powl_init_params(n_inout, e_inout, e_in_total)
-
-      use initcrspectrum, only: ncre, p_lo_init, p_up_init, q_init
-      use diagnostics,    only: my_deallocate
-
-      implicit none
-
-      real(kind=8), dimension(1:ncre), intent(inout):: n_inout, e_inout
-      real(kind=8), intent(inout)     :: e_in_total
-      real(kind=8) :: f_amplitude
-         f_amplitude = get_powl_f_ampl(e_in_total, p_lo_init, p_up_init, q_init)
-         call cresp_init_powl_spectrum(n_inout, e_inout, f_amplitude, q_init, p_lo_init, p_up_init)
-   end subroutine e_tot_2_en_powl_init_params
-!-------------------------------------------------------------------------------------------------
-   function get_powl_f_ampl(e_tot, p_dist_lo, p_dist_up, q_dist)
-
-      use constants,       only: zero, I_ONE, I_FOUR, fpi
-      use cresp_variables, only: clight ! use units,    only: clight
-
-      implicit none
-
-      real(kind=8), intent(in) :: e_tot, p_dist_lo, p_dist_up, q_dist
-      real(kind=8)             :: get_powl_f_ampl
-
-      get_powl_f_ampl = zero
-      get_powl_f_ampl = (e_tot / (fpi * clight * p_dist_lo ** I_FOUR) ) * ((I_FOUR - q_dist) / &
-                          ((p_dist_up/p_dist_lo)**(I_FOUR - q_dist) - I_ONE  ))
-   end function get_powl_f_ampl
-!-------------------------------------------------------------------------------------------------
-   function e_tot_2_f_init_params(e_in_total)
-
-      use initcrspectrum, only: p_lo_init, p_up_init, q_init
-
-      implicit none
-
-      real(kind=8), intent(in) :: e_in_total
-      real(kind=8) :: e_tot_2_f_init_params
-
-      e_tot_2_f_init_params = get_powl_f_ampl(e_in_total, p_lo_init, p_up_init, q_init)
-
-   end function e_tot_2_f_init_params
 
 !-------------------------------------------------------------------------------------------------
 !
