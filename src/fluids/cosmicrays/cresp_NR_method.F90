@@ -9,9 +9,7 @@ module cresp_NR_method
    private
    public :: alpha, n_in, NR_algorithm, NR_algorithm_1D, compute_q, intpol_pf_from_NR_grids, selected_function_1D, &
            &    selected_function_2D, selected_value_check_1D, initialize_arrays, e_small_to_f, q_ratios, fvec_lo, &
-           &    fvec_up, fvec_test, cresp_initialize_guess_grids, &
-           &    NR_get_solution_lo, & ! DEPRECATED
-           &    NR_get_solution_up    ! DEPRECATED
+           &    fvec_up, fvec_test, cresp_initialize_guess_grids
    public :: e_in, nr_test, nr_test_1D, p_ip1, n_tab_up, alpha_tab_up, n_tab_lo, alpha_tab_lo, alpha_tab_q, q_control, & ! list for NR driver
            &    p_a, p_n, p_ratios_lo, f_ratios_lo, p_ratios_up, f_ratios_up, q_grid, lin_interpol_1D, alpha_to_q,   &   ! can be commented out for CRESP and PIERNIK
            &    lin_extrapol_1D, lin_interpolation_1D, find_indices_1D, nearest_solution
@@ -1120,47 +1118,8 @@ module cresp_NR_method
       endif
 
    end function n_func_2_zero_lo
-!====================================================================================================
-! Functions below are used to solve eqns 9 and 29 for p_up and f_l or p_lo and f_r
-! (value of f_r doesn't appear in the f array of cresp_crspectrum module, but is used to estimate q).
 !----------------------------------------------------------------------------------------------------
-   subroutine NR_get_solution_up(x, p_l, e_input, n_input, exit_code)
-      use constants,       only: zero
-      use cresp_variables, only: clight ! use units, only: clight
-
-      implicit none
-
-      real(kind=8) :: p_l, e_input, n_input
-      real(kind=8), dimension(ndim) :: x, x_init
-      logical :: exit_code
-      integer :: k
-
-      alpha = e_input / (n_input * clight * p_l)
-      n_in  = n_input
-      p_im1 = p_l
-      x_init = x
-      k = 1
-      print *, " Determining p_up @ NR_get_solution_up"
-      selected_function_2D => func_val_vec_up_bnd
-
-      do while(k .le. 5)
-         call NR_algorithm(x, exit_code)
-         if (exit_code .eqv. .false. ) then
-            print *, "  NR root search done for p_up, exit_code 0"
-            alpha = zero ;  p_im1 = zero; n_in = zero
-            return
-         else
-            print *, "   CONVERGENCE FAILURE @ NR_get_solution_up"
-            x = modify_params_up(x_init, k)
-         endif
-      enddo
-! in cases when no solutions found:
-      print *, "   CONVERGENCE FAILURE @ NR_get_solution_up, assuming initial parameters."
-      x = x_init  ; call sleep(1)
-
-   end subroutine NR_get_solution_up
-!----------------------------------------------------------------------------------------------------
-   function func_val_vec_up_bnd(x) ! called by cresp_crspectrum module via NR_get_solution_up
+   function func_val_vec_up_bnd(x) ! called by cresp_crspectrum
       implicit none
 
       real(kind=8), dimension(ndim) :: x
@@ -1170,62 +1129,6 @@ module cresp_NR_method
       func_val_vec_up_bnd(2) = fun5_up(x(1), x(2), p_im1, n_in)
 
    end function func_val_vec_up_bnd
-
-!----------------------------------------------------------------------------------------------------
-   function modify_params_up(x_init, k)
-      use constants, only: zero
-
-      implicit none
-
-      real(kind=8), dimension(ndim), intent(in) :: x_init
-      real(kind=8), dimension(ndim)             :: modify_params_up
-      integer, intent(inout)   :: k
-
-      modify_params_up = zero
-      write(*,'(A48,I3)')    " Modifying parameters - det = 0, counter = ", k
-      modify_params_up(1) = (x_init(1) * (1.0+k*0.005))
-      modify_params_up(2) = (x_init(2) * (1.0 + 0.01*k) )
-      write(*,'(A45,2E17.9)')" NR_algorithm new input (log10_p_r,log10_f_l) =", modify_params_up
-      k=k+1
-
-   end function modify_params_up
-
-!----------------------------------------------------------------------------------------------------
-   subroutine NR_get_solution_lo(x, p_r, e_input, n_input, exit_code)
-      use constants,       only: zero
-      use cresp_variables, only: clight ! use units, only: clight
-
-      implicit none
-
-      real(kind=8) :: p_r, e_input, n_input
-      real(kind=8), dimension(ndim) :: x, x_init
-      integer :: k
-      logical :: exit_code
-
-      alpha = e_input / (n_input * clight)
-      n_in  = n_input
-      p_ip1 = p_r
-      x_init = x
-      k = 1
-      print *, " Determining p_lo @ NR_get_solution_lo"
-      selected_function_2D => func_val_vec_lo_bnd
-      do while(k .le. 5)
-         call NR_algorithm(x, exit_code)
-         if (exit_code .eqv. .false. ) then
-            print *, " NR root search done for p_lo, exit_code 0"
-            alpha = zero; p_ip1 = zero ; n_in = zero
-            x = abs(x)
-            return
-         else
-            print *, "   CONVERGENCE FAILURE @ NR_get_solution_lo"
-            x = modify_params_lo(x_init, k)
-         endif
-      enddo
-! in cases when no solutions found:
-      print *, "   CONVERGENCE FAILURE @ NR_get_solution_lo, assuming initial parameters."
-      x = x_init  ; call sleep(1)
-
-   end subroutine NR_get_solution_lo
 
 !----------------------------------------------------------------------------------------------------
    function func_val_vec_lo_bnd(x) ! called by cresp_crspectrum module via NR_get_solution_lo
@@ -1239,25 +1142,6 @@ module cresp_NR_method
       func_val_vec_lo_bnd(2) = fun5_lo(x(1), x(2), p_ip1, n_in)
 
    end function func_val_vec_lo_bnd
-
-!----------------------------------------------------------------------------------------------------
-   function modify_params_lo(x_init, k)
-      use constants, only: zero
-
-      implicit none
-
-      real(kind=8), dimension(ndim), intent(in) :: x_init
-      real(kind=8), dimension(ndim)             :: modify_params_lo
-      integer, intent(inout)   :: k
-
-      modify_params_lo = zero
-      write(*,'(A48,I3)')    "Modifying parameters - det = 0, counter = ", k
-      modify_params_lo(1) = (x_init(1)/(1 + k*0.025)  )
-      modify_params_lo(2) = (x_init(2) *( 1.0 + 0.01*k ))
-      write(*,'(A45,2E17.9)')"NR_algorithm new input (log10_p_l,log10_f_r) =", modify_params_lo
-      k=k+1
-
-   end function modify_params_lo
 
 !---------------------------------------------------------------------------------------------------
 ! fun3_up - Alternative function introduced to find p_up using integrals of n, e and p_fix value.
