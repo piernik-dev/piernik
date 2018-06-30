@@ -579,26 +579,26 @@ contains
 !! so we can reliably calculate the update for cells 2 .. (n-1).
 !<
 
-     subroutine du_db(du, db, dpsi, fac)
+     subroutine du_db(u_new, b_new, psi_new, fac)
 
        use constants,  only: DIVB_HDC
        use global,     only: divB_0_method
 
        implicit none
 
-       real, dimension(size(u,   1), 2:size(u,   2)-1), intent(out) :: du
-       real, dimension(size(b_cc,1), 2:size(b_cc,2)-1), intent(out) :: db
-       real, dimension(size(psi, 1), 2:size(psi, 2)-1), intent(out) :: dpsi
+       real, dimension(size(u,   1), 2:size(u,   2)-1), intent(out) :: u_new
+       real, dimension(size(b_cc,1), 2:size(b_cc,2)-1), intent(out) :: b_new
+       real, dimension(size(psi, 1), 2:size(psi, 2)-1), intent(out) :: psi_new
        real, intent(in) :: fac
 
        ! shape(flx) = shape(u) - [ 0, 1 ] = [ n_variables, nx-1 ]
-       du = u(:, 2:nx-1) + fac * (flx(:, :nx-2) - flx(:, 2:))
-       db = b_cc(:, 2:nx-1) + fac * (mag_cc(:, :nx-2) - mag_cc(:, 2:))
+       u_new = u(:, 2:nx-1) + fac * (flx(:, :nx-2) - flx(:, 2:))
+       b_new = b_cc(:, 2:nx-1) + fac * (mag_cc(:, :nx-2) - mag_cc(:, 2:))
 
        if (divB_0_method == DIVB_HDC) then
-          dpsi = psi(:, 2:nx-1) + fac * (psi_cc(:, :nx-2) - psi_cc(:, 2:))
+          psi_new = psi(:, 2:nx-1) + fac * (psi_cc(:, :nx-2) - psi_cc(:, 2:))
        else
-          dpsi = 0.
+          psi_new = 0.
        endif
 
      end subroutine du_db
