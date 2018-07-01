@@ -46,40 +46,9 @@ module hlld
    implicit none
 
    private
-   public :: riemann_cc, riemann_wrap
+   public :: riemann_wrap
 
 contains
-
-!>
-!! \brief Take n cell-centered values, return n-1 fluxes between these cells.
-!<
-
-   subroutine riemann_cc(u, b_cc, psi, flx, mag_cc, psi_cc)
-
-      use interpolations, only: interpol
-
-      implicit none
-
-      ! quantities in cells 1 .. n
-      real, dimension(:,:), intent(in) :: u
-      real, dimension(:,:), intent(in) :: b_cc
-      real, dimension(:,:), intent(in) :: psi
-
-      ! fluxes through interfaces 1 .. n-1
-      real, dimension(size(u,   1), size(u,   2)-1), intent(out) :: flx
-      real, dimension(size(b_cc,1), size(b_cc,2)-1), intent(out) :: mag_cc
-      real, dimension(size(psi, 1), size(psi, 2)-1), intent(out) :: psi_cc
-
-      ! left and right states at interfaces 1 .. n-1
-      real, dimension(size(u,   1), size(u,   2)-1) :: ql, qr
-      real, dimension(size(b_cc,1), size(b_cc,2)-1) :: b_cc_l, b_cc_r
-      real, dimension(size(psi, 1), size(psi, 2)-1) :: psi_l, psi_r
-
-      call interpol(u, b_cc, psi, ql, qr, b_cc_l, b_cc_r, psi_l, psi_r)
-      call riemann_wrap(ql, qr, b_cc_l, b_cc_r, psi_l, psi_r, flx, mag_cc, psi_cc)
-
-   end subroutine riemann_cc
-
 !>
 !! \brief Wrapper for the Riemann solver that takes care of fluid differences
 !!

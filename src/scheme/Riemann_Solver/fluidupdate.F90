@@ -505,7 +505,7 @@ contains
      use constants,  only: half
      use dataio_pub, only: die
      use global,     only: h_solver
-     use hlld,           only: riemann_wrap, riemann_cc
+     use hlld,           only: riemann_wrap
      use interpolations, only: interpol
 
      implicit none
@@ -553,9 +553,11 @@ contains
      ! Other schemes are left here for educational purposes, just to show how to construct alternative approaches.
      select case (h_solver)
      case ("rk2")
-        call riemann_cc(u, b_cc, psi, flx, mag_cc, psi_cc)  ! Now we advance the left and right states by a timestep.
+        call interpol(u, b_cc, psi, ql, qr, b_cc_l, b_cc_r, psi_l, psi_r)
+        call riemann_wrap(ql, qr, b_cc_l, b_cc_r, psi_l, psi_r, flx, mag_cc, psi_cc) ! Now we advance the left and right states by a timestep.
         call du_db(u1, b1, psi1, half * dtodx)
-        call riemann_cc(u1, b1, psi1, flx1, mag_cc1, psi_cc1)  ! second call for Riemann problem uses states evolved to half timestep
+        call interpol(u1, b1, psi1, ql(:,2:nx-2), qr(:,2:nx-2), b_cc_l(:,2:nx-2), b_cc_r(:,2:nx-2), psi_l(:,2:nx-2), psi_r(:,2:nx-2))
+        call riemann_wrap(ql(:,2:nx-2), qr(:,2:nx-2), b_cc_l(:,2:nx-2), b_cc_r(:,2:nx-2), psi_l(:,2:nx-2), psi_r(:,2:nx-2), flx1, mag_cc1, psi_cc1) ! second call for Riemann problem uses states evolved to half timestep
         call update
      case ("muscl")
         call interpol(u,b_cc,psi,ql,qr,b_cc_l,b_cc_r,psi_l,psi_r)
