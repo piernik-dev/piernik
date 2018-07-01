@@ -186,8 +186,8 @@ contains
     real, dimension(xdim:zdim)                   :: b_cclf, b_ccrf
     real                                         :: psilf, psirf
     real, dimension(xdim:zdim)                   :: b_starl, b_starr, b_2star
-    real, dimension(xdim,size(b_cc,2))           :: glm_gfb
-    real, dimension(size(psi,1),size(psi,2))     :: glm_gfp
+    real, dimension(xdim,size(b_ccl,2))          :: glm_gfb
+    real, dimension(size(psil,1),size(psil,2))   :: glm_gfp
     real                                         :: psi_starl, psi_starr, psi_2star
     logical                                      :: has_energy
     real                                         :: ue

@@ -516,11 +516,6 @@ contains
      real, dimension(:,:), intent(inout) :: psi
      real, dimension(:), pointer, intent(in) :: div_v1d
 
-     real, dimension(size(b_cc,1),size(b_cc,2))         :: bclflx, bcrflx
-     real, dimension(size(u,1),size(u,2))               :: flx_l, flx_r
-
-     real, dimension(size(psi,1),size(psi,2))           :: psilflx, psirflx
-
      ! left and right states at interfaces 1 .. n-1
      real, dimension(size(u,   1), size(u,   2)-1), target :: ql, qr
      real, dimension(size(b_cc,1), size(b_cc,2)-1), target :: b_cc_l, b_cc_r
@@ -530,6 +525,11 @@ contains
      real, dimension(size(u,   1), size(u,   2)-1), target :: flx
      real, dimension(size(b_cc,1), size(b_cc,2)-1), target :: mag_cc
      real, dimension(size(psi, 1), size(psi, 2)-1), target :: psi_cc
+
+     ! left and right MUSCL fluxes
+     real, dimension(size(u,   1),size(u,   2)-1)          :: flx_l, flx_r
+     real, dimension(size(b_cc,1),size(b_cc,2)-1)          :: bclflx, bcrflx
+     real, dimension(size(psi, 1),size(psi, 2)-1)          :: psilflx, psirflx
 
      ! left and right states for cells 2 .. n-1
      real, dimension(size(u,   1), 2:size(u,   2)-1)       :: u1    !, du2, du3
@@ -559,10 +559,10 @@ contains
         call update
      case ("muscl")
         call interpol(u,b_cc,psi,ql,qr,b_cc_l,b_cc_r,psi_l,psi_r)
-        call musclflx(nx, ql, b_cc_l, psi_l, flx_l, bclflx, psilflx)
-        call musclflx(nx, qr, b_cc_r, psi_r, flx_r, bcrflx, psirflx)
+        call musclflx(ql, b_cc_l, psi_l, flx_l, bclflx, psilflx)
+        call musclflx(qr, b_cc_r, psi_r, flx_r, bcrflx, psirflx)
         call ulr_fluxes_qlr
-        call riemann_wrap(ql, qr, b_cc_l, b_cc_r, psi_l, psi_r, flx, mag_cc, psi_cc)
+        call riemann_wrap(ql(:,2:), qr(:,2:), b_cc_l(:,2:), b_cc_r(:,2:), psi_l(:,2:), psi_r(:,2:), flx1, mag_cc1, psi_cc1)
         call update
      case default
         call die("[fluidupdate:sweep_dsplit] No recognized solver")
@@ -610,33 +610,31 @@ contains
 
         implicit none
 
-        call addflux(ql, flx_l, half * dtodx, nx)
-        call addflux(qr, flx_r, half * dtodx, nx)
-        call addflux(b_cc_l, bclflx, half * dtodx, nx)
-        call addflux(b_cc_r, bcrflx, half * dtodx, nx)
+        call addflux(ql, flx_l, half * dtodx)
+        call addflux(qr, flx_r, half * dtodx)
+        call addflux(b_cc_l, bclflx, half * dtodx)
+        call addflux(b_cc_r, bcrflx, half * dtodx)
 
         if (divB_0_method == DIVB_HDC) then
-           call addflux(psi_l, psilflx, half * dtodx, nx)
-           call addflux(psi_r, psirflx, half * dtodx, nx)
+           call addflux(psi_l, psilflx, half * dtodx)
+           call addflux(psi_r, psirflx, half * dtodx)
         endif
 
      end subroutine ulr_fluxes_qlr
 
-     subroutine addflux(a, fa, dt, nx)
+     subroutine addflux(a, fa, fac)
 
         implicit none
 
         real, dimension(:,:), intent(inout) :: a
         real, dimension(:,:), intent(in)    :: fa
-        real                                :: dt
-        integer                             :: nx
+        real                                :: fac
 
-        a(:, 2:nx) = a(:, 2:nx) + dt * (fa(:, 1:nx-1) - fa(:, 2:nx))
-        a(:, 1) = a(:, 2)
+        a(:, 2:nx-1) = a(:, 2:nx-1) + fac * (fa(:, :nx-2) - fa(:, 2:))
 
      end subroutine addflux
 
-     subroutine musclflx(n, q, b_cc, psi, qf, b_ccf, psif)
+     subroutine musclflx(q, b_cc, psi, qf, b_ccf, psif)
 
         use constants,  only: half, xdim, ydim, zdim, DIVB_HDC, zero
         use fluidindex, only: flind
@@ -646,7 +644,6 @@ contains
 
         implicit none
 
-        integer,              intent(in)  :: n
         real, dimension(:,:), intent(in)  :: q
         real, dimension(:,:), intent(in)  :: b_cc
         real, dimension(:,:), intent(in)  :: psi
@@ -665,7 +662,7 @@ contains
 
            fl => flind%all_fluids(ip)%fl
 
-           do i = 1, n
+           do i = 1, size(q, 2)
 
               qf(fl%idn,i) = q(fl%idn,i)*q(fl%imx,i)
               if (fl%has_energy) then
