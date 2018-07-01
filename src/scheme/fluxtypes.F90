@@ -178,6 +178,9 @@ contains
       type(fluxpoint) :: fp
 
       fp%index = this%index(   i1, i2)
+
+      ! It looks like a bogus detection of -Wmaybe-uninitialized that occurs only with -O0.
+
       if (allocated(this%uflx)) then
          fp%uflx  = this%uflx (:, i1, i2)
       else
