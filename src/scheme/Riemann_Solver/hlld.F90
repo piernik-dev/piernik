@@ -43,14 +43,77 @@
 module hlld
 ! pulled by RIEMANN
 
-  implicit none
+   implicit none
 
-  private
-  public :: riemann_hlld
+   private
+   public :: riemann_wrap
 
 contains
+!>
+!! \brief Wrapper for the Riemann solver that takes care of fluid differences
+!!
+!! OPT: check if passing pointers here will improve performance
+!<
 
-  subroutine riemann_hlld(n,f,ul,ur,b_cc,b_ccl,b_ccr,psil,psir,psi,gamma)
+   subroutine riemann_wrap(ql, qr, b_cc_l, b_cc_r, psi_l, psi_r, flx, mag_cc, psi_cc)
+
+      use constants,  only: xdim, zdim, DIVB_HDC
+      use fluidindex, only: flind
+      use fluidtypes, only: component_fluid
+      use global,     only: divB_0_method
+
+      implicit none
+
+      real, dimension(:,:), target, intent(in)  :: ql, qr          ! left and right fluid states
+      real, dimension(:,:), target, intent(in)  :: b_cc_l, b_cc_r  ! left and right magnetic field states (relevant only for IONIZED fluid)
+      real, dimension(:,:), target, intent(in)  :: psi_l, psi_r    ! left and right psi field states (relevant only for GLM method)
+      real, dimension(:,:), target, intent(out) :: flx, mag_cc, psi_cc ! output fluxes: fluid, magnetic field and psi
+
+      integer :: i
+      class(component_fluid), pointer :: fl
+
+      real, dimension(size(b_cc_l,1), size(b_cc_l,2)), target :: b0, bf0
+      real, dimension(size(psi_l, 1), size(psi_l, 2)), target :: p0, pf0
+      real, dimension(:,:), pointer :: p_flx, p_ql, p_qr
+      real, dimension(:,:), pointer :: p_bcc, p_bccl, p_bccr
+      real, dimension(:,:), pointer :: p_psif, p_psi_l, p_psi_r
+
+      do i = 1, flind%fluids
+         fl    => flind%all_fluids(i)%fl
+         p_flx => flx(fl%beg:fl%end,:)
+         p_ql  => ql(fl%beg:fl%end,:)
+         p_qr  => qr(fl%beg:fl%end,:)
+         if (fl%is_magnetized) then
+            p_bccl => b_cc_l(xdim:zdim,:)
+            p_bccr => b_cc_r(xdim:zdim,:)
+            p_bcc  => mag_cc(xdim:zdim,:)
+            if (divB_0_method == DIVB_HDC) then
+               p_psi_l => psi_l(:,:)
+               p_psi_r => psi_r(:,:)
+               p_psif  => psi_cc(:,:)
+            else  ! CT
+               p0 = 0.
+               p_psi_l => p0
+               p_psi_r => p0
+               p_psif  => pf0
+            endif
+         else ! ignore all magnetic field
+            b0 = 0.
+            p_bccl => b0
+            p_bccr => b0
+            p_bcc  => bf0
+            p0 = 0.
+            p_psi_l => p0
+            p_psi_r => p0
+            p_psif  => pf0
+         endif
+
+         call riemann_hlld(p_flx, p_ql, p_qr, p_bcc, p_bccl, p_bccr, p_psi_l, p_psi_r, p_psif, fl%gam)
+      enddo
+
+   end subroutine riemann_wrap
+
+   subroutine riemann_hlld(f,ul,ur,b_cc,b_ccl,b_ccr,psil,psir,psi,gamma)
 
     ! external procedures
 
@@ -63,7 +126,6 @@ contains
 
     implicit none
 
-    integer,                       intent(in)    :: n
     real, dimension(:,:), pointer, intent(out)   :: f
     real, dimension(:,:), pointer, intent(in)    :: ul, ur
     real, dimension(:,:), pointer, intent(out)   :: b_cc
@@ -93,8 +155,8 @@ contains
     real, dimension(xdim:zdim)                   :: b_cclf, b_ccrf
     real                                         :: psilf, psirf
     real, dimension(xdim:zdim)                   :: b_starl, b_starr, b_2star
-    real, dimension(xdim,size(b_cc,2))           :: glm_gfb
-    real, dimension(size(psi,1),size(psi,2))     :: glm_gfp
+    real, dimension(xdim,size(b_ccl,2))          :: glm_gfb
+    real, dimension(size(psil,1),size(psil,2))   :: glm_gfp
     real                                         :: psi_starl, psi_starr, psi_2star
     logical                                      :: has_energy
     real                                         :: ue
@@ -125,7 +187,7 @@ contains
        b_cc(xdim,:) = 0.
     endif
 
-    do i = 1,n
+    do i = 1, size(f, 2)
 
        ! Left and right states of magnetic pressure
 
