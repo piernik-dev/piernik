@@ -146,6 +146,8 @@ contains
     select case (interpol_str)
     case ('linear', 'LINEAR', 'lin', '1')
        interp => linear
+    case('weno3', 'WENO3', 'wo3', '2')
+       interp => weno3
     case default
        write(msg, '(2a)') "[interpolations:set_interpolations] unknown interpolation ", interpol_str
        call die(msg)
@@ -196,6 +198,6 @@ contains
 
   end subroutine linear
 
-! Will add new interpolation ...
+! Will add new interpolation ... possibly weno3
 
 end module interpolations
