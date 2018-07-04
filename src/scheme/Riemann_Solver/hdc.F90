@@ -86,8 +86,6 @@ contains
   !! Values 0.4 and 0.3 are chosen from experience and sanity choice.
   !! Yet to test RJ tube and other tests.
   !!---------------------------------------------------------------
-  !! h_solver and interpol_str values can be reversed in problem.par
-  !! This is not acceptable.
 !<
 
    subroutine aux_var
