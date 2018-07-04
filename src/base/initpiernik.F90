@@ -150,11 +150,11 @@ contains
       call init_default_fluidboundaries
 
       call problem_pointers                  ! set up problem-specific pointers as early as possible to allow implementation of problem-specific hacks also during the initialization
-#ifdef RIEMANN
-      call set_interpolations("linear")
-#endif /* RIEMANN */
       call init_global
       code_progress = PIERNIK_INIT_GLOBAL    ! Global parameters are set up
+#ifdef RIEMANN
+      call set_interpolations
+#endif /* RIEMANN */
 
       call init_domain
       code_progress = PIERNIK_INIT_DOMAIN    ! Base domain is known and initial domain decomposition is known

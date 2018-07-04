@@ -133,13 +133,12 @@ contains
 !! \brief Interpret and set desired interpolation scheme.
 !<
 
-  subroutine set_interpolations(interpol_str)
+  subroutine set_interpolations
 
     use dataio_pub, only: msg, die
+    use global,     only: interpol_str
 
     implicit none
-
-    character(len=*), intent(in) :: interpol_str
 
     if (associated(interp)) call die("[interpolations:set_interpolations] interp already associated")
 
@@ -149,7 +148,7 @@ contains
     case('weno3', 'WENO3', 'wo3', '2')
        interp => weno3
     case default
-       write(msg, '(2a)') "[interpolations:set_interpolations] unknown interpolation ", interpol_str
+       write(msg, '(3a)') "[interpolations:set_interpolations] unknown interpolation '", interpol_str, "'"
        call die(msg)
        interp => null()
     end select
@@ -301,6 +300,8 @@ contains
     ql(:,1) = q(:,1)
     qr(:,n) = ql(:,n)
     
+    if (.false.) qr = f_limiter(q)  ! suppress compiler worning on argument needed for other interpolation scheme
+
   end subroutine weno3
 
 end module interpolations
