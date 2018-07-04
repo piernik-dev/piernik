@@ -41,7 +41,7 @@ module global
    public :: cleanup_global, init_global, &
         &    cfl, cfl_max, cflcontrol, cfl_violated, &
         &    dt, dt_initial, dt_max_grow, dt_min, dt_old, dtm, t, t_saved, nstep, nstep_saved, &
-        &    integration_order, limiter, limiter_b, smalld, smallei, smallp, use_smalld, h_solver, &
+        &    integration_order, limiter, limiter_b, smalld, smallei, smallp, use_smalld, h_solver, interpol_str, &
         &    relax_time, grace_period_passed, cfr_smooth, repeat_step, skip_sweep, geometry25D, &
         &    dirty_debug, do_ascii_dump, show_n_dirtys, no_dirty_checks, sweeps_mgu, use_fargo, print_divB, &
         &    divB_0_method, force_cc_mag, psi_0, glm_alpha, use_eglm, cfl_glm, ch_grid
@@ -81,6 +81,7 @@ module global
    character(len=cbuff_len)      :: limiter_b         !< type of flux limiter for magnetic field in the Riemann solver
    character(len=cbuff_len)      :: cflcontrol        !< type of cfl control just before each sweep (possibilities: 'none', 'main', 'user')
    character(len=cbuff_len)      :: h_solver          !< type of hydro solver
+   character(len=cbuff_len)      :: interpol_str      !< type of interpolation
    character(len=cbuff_len)      :: divB_0            !< human-readable method of making div(B) = 0 (currently CT or HDC)
    logical                       :: repeat_step       !< repeat fluid step if cfl condition is violated (significantly increases mem usage)
    logical, dimension(xdim:zdim) :: skip_sweep        !< allows to skip sweep in chosen direction
@@ -95,7 +96,7 @@ module global
 
    namelist /NUMERICAL_SETUP/ cfl, cflcontrol, cfl_max, use_smalld, smalld, smallei, smallc, smallp, dt_initial, dt_max_grow, dt_min, &
         &                     repeat_step, limiter, limiter_b, relax_time, integration_order, cfr_smooth, skip_sweep, geometry25D, sweeps_mgu, print_divB, &
-        &                     use_fargo, h_solver, divB_0, psi_0, glm_alpha, use_eglm, cfl_glm, ch_grid
+        &                     use_fargo, h_solver, divB_0, psi_0, glm_alpha, use_eglm, cfl_glm, ch_grid, interpol_str
 
 contains
 
@@ -166,6 +167,7 @@ contains
 #endif /* RIEMANN */
       cflcontrol  = 'warn'
       h_solver    = 'rk2'
+      interpol_str = 'linear'
       repeat_step = .true.
       geometry25D = .false.
       no_dirty_checks = .false.
@@ -235,6 +237,7 @@ contains
          cbuff(3) = cflcontrol
          cbuff(4) = h_solver
          cbuff(5) = divB_0
+         cbuff(6) = interpol_str
 
          ibuff(1) = integration_order
          ibuff(2) = print_divB
@@ -301,6 +304,7 @@ contains
          cflcontrol = cbuff(3)
          h_solver   = cbuff(4)
          divB_0     = cbuff(5)
+         interpol_str = cbuff(6)
 
          integration_order = ibuff(1)
          print_divB        = ibuff(2)
