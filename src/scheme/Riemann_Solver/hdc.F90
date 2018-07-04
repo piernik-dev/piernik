@@ -61,6 +61,35 @@ contains
 !! These arrays will be automagically freed with destruction of grid containers.
 !<
 
+!>
+  !! Acceptable values
+  !!----------------------------------------------------------------
+  !! Otvortex
+  !! WENO3
+  !! rk2: cfl = cfl_glm = 0.4 (check this: [divB:print_divB_norm])
+  !! muscl_ : cfl = cfl_glm = 0.3
+  !! LINEAR
+  !! rk2: cfl = cfl_glm = 0.4 (check this: [divB:print_divB_norm])
+  !! muscl_ : cfl = cfl_glm = 0.3
+  !!---------------------------------------------------------------
+  !! Field loop advection
+  !! WENO3
+  !! rk2: cfl = cfl_glm = 0.4
+  !! muscl_ : cfl = cfl_glm = 0.3
+  !! LINEAR
+  !! rk2 : cfl = cfl_glm = 0.4
+  !! muscl_ : cfl = cfl_glm = 0.3
+  !!---------------------------------------------------------------
+  !! c_h := cfl * \Delta l_min / \Delta t^n
+  !! cfl = cfl_glm makes sense in lines 147 and 153
+  !!---------------------------------------------------------------
+  !! Values 0.4 and 0.3 are chosen from experience and sanity choice.
+  !! Yet to test RJ tube and other tests.
+  !!---------------------------------------------------------------
+  !! h_solver and interpol_str values can be reversed in problem.par
+  !! This is not acceptable.
+!<
+
    subroutine aux_var
 
       use cg_list_global,   only: all_cg
