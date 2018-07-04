@@ -198,6 +198,37 @@ contains
 
   end subroutine linear
 
-! Will add new interpolation ... possibly weno3
+!>
+!! \brief Weighted Essentially Non-oscillatory 3rd order (WENO3) interpolation.
+!! Based on Yamaleev N. K., Carpenter M. H., Journal of Computational Physics 228 (2009) 3025-3047.
+!<
+
+  subroutine weno3(q, ql, qr, f_limiter)
+
+    use fluxlimiters, only: limiter
+    use domain,       only: dom
+    use constants,    only: half, GEO_XYZ
+    use dataio_pub,   only: die, msg
+    
+    implicit none
+
+    real, dimension(:,:),        intent(in)  :: q
+    real, dimension(:,:),        intent(out) :: ql
+    real, dimension(:,:),        intent(out) :: qr
+    procedure(limiter), pointer, intent(in)  :: f_limiter
+
+    integer                                  :: n
+    integer, parameter                       :: in = 2  ! index for cells
+
+    if (dom%geometry_type /= GEO_XYZ) call die("[interpolations:linear] non-cartesian geometry not implemented yet.")
+    if (size(q, in) - size(ql, in) /= 1) then
+       write(msg, '(2(a,2i7),a)')"[interpolations:linear] face vector of wrong length: ", size(q, in), size(ql, in), " (expecting: ", size(q, in), size(q, in)-1, ")"
+       call die(msg)
+    endif
+    if (any(shape(ql) /= shape(qr))) call die("[interpolations:linear] face vectors of different lengths")
+
+    n = size(q, in)
+    
+  end subroutine weno3
 
 end module interpolations
