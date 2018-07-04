@@ -205,10 +205,14 @@ contains
 
   subroutine weno3(q, ql, qr, f_limiter)
 
+    use cg_leaves,    only: leaves
+    use cg_list,      only: cg_list_element
+    use domain,       only: dom
     use fluxlimiters, only: limiter
     use domain,       only: dom
-    use constants,    only: half, GEO_XYZ
+    use constants,    only: GEO_XYZ
     use dataio_pub,   only: die, msg
+    use constants,    only: one, two
     
     implicit none
 
@@ -217,9 +221,22 @@ contains
     real, dimension(:,:),        intent(out) :: qr
     procedure(limiter), pointer, intent(in)  :: f_limiter
 
+    ! WENO3 definitions
+    ! Artur check this routine very carefully!
+
+    real, dimension(size(q,1),size(q,2))     :: w0, w1
+    real, dimension(size(q,1),size(q,2))     :: alpha0, alpha1
+    real, dimension(size(q,1),size(q,2))     :: beta0, beta1
+    real, dimension(size(q,1),size(q,2))     :: flux0l, flux1l, flux0r, flux1r
+    real, dimension(size(q,1),size(q,2))     :: tau
+    real                                     :: d0,d1
+    real                                     :: epsilon
+
+    type(cg_list_element), pointer           :: cgl
     integer                                  :: n
     integer, parameter                       :: in = 2  ! index for cells
 
+    
     if (dom%geometry_type /= GEO_XYZ) call die("[interpolations:linear] non-cartesian geometry not implemented yet.")
     if (size(q, in) - size(ql, in) /= 1) then
        write(msg, '(2(a,2i7),a)')"[interpolations:linear] face vector of wrong length: ", size(q, in), size(ql, in), " (expecting: ", size(q, in), size(q, in)-1, ")"
@@ -228,6 +245,61 @@ contains
     if (any(shape(ql) /= shape(qr))) call die("[interpolations:linear] face vectors of different lengths")
 
     n = size(q, in)
+
+    ! Eq. 19
+    d0 = two/3.0
+    d1 = one/3.0
+
+    ! Eq. 20
+    beta0 = (q(:,:n+1) - q(:,:n))
+    beta0 = beta0*beta0
+    beta1 = (q(:,:n) - q(:,:n-1))
+    beta1 = beta1*beta1
+    
+    ! Eq. 22
+    tau = (q(:,:n+1) - two*q(:,:n) + q(:,:n-1))
+    tau = tau*tau
+
+    epsilon = 0.0 ! if not for this declaration, epsilon goes unints in alpha0 or alpha1
+    ! epsilon depends on dx
+    cgl => leaves%first
+    do while(associated(cgl))
+       epsilon = minval(cgl%cg%dl,mask=dom%has_dir) ! check for correctness
+       epsilon = epsilon*epsilon
+       cgl => cgl%nxt
+    end do
+
+    ! Eq. 21 improved version compared to Eq. 19
+    alpha0 = d0*(one + tau/(epsilon + beta0))
+    alpha1 = d1*(one + tau/(epsilon + beta1))
+
+    ! Eq. 18
+    w0 = alpha0/(alpha0 + alpha1)
+    w1 = alpha1/(alpha0 + alpha1)
+
+    ! Left state interpolation, Eq. 15
+    
+    flux0l = 0.5*(q(:,:n) + q(:,:n+1))
+    flux1l = 0.5*(-q(:,:n-1) + 3.0*q(:,:n))
+
+    ! WENO3 flux, Eq. 14
+    ql = w0*flux0l + w1*flux1l
+
+    ! Right state interpolation, Eq. 15
+
+    flux0r = 0.5*(q(:,:n) + q(:,:n-1))
+    flux1r = 0.5*(-q(:,:n+1) + 3.0*q(:,:n))
+
+    ! WENO3 flux, Eq. 14
+    qr = w0*flux0r + w1*flux1r
+
+    ! Shift right state
+
+    qr(:,:n-1) = qr(:,:n)
+
+    ! Update interpolation for first and last points, may be redundant
+    ql(:,1) = q(:,1)
+    qr(:,n) = ql(:,n)
     
   end subroutine weno3
 
