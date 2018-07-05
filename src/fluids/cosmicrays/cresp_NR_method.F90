@@ -1538,7 +1538,7 @@ module cresp_NR_method
    end subroutine nearest_solution
 !----------------------------------------------------------------------------------------------------
    function compute_q(alpha_in, exit_code, outer_p_ratio)
-      use constants, only: one
+      use constants, only: one, I_ZERO, I_ONE
       use initcrspectrum, only: NR_refine_solution_q, q_big, p_fix_ratio
 
       implicit none
@@ -1558,15 +1558,16 @@ module cresp_NR_method
       if (present(outer_p_ratio)) p_ratio_4_q = outer_p_ratio
       loc_1 = inverse_f_to_ind(alpha_in, alpha_tab_q(1), alpha_tab_q(arr_dim_q), arr_dim_q)
 
-      if (loc_1 .le. 0 .or. (loc_1 .ge. arr_dim_q)) then
-         loc_1 = minloc(abs(alpha_tab_q-alpha),dim=1) ! slow, but always finds something
-         compute_q = q_grid(loc_1)
-         call NR_algorithm_1D(compute_q, exit_code)
-         if (abs(compute_q) .gt. q_big) compute_q = sign(one, compute_q) * q_big
-         return                      ! returns compute_q withh exit_code = .true. which can be used to warn. Usually occurs for q.gt.2*q_big
+      if ((loc_1 .le. I_ZERO) .or. (loc_1 .ge. arr_dim_q)) then
+         if (loc_1 .le. I_ZERO) then
+            compute_q = q_big ! < should be consistent with compute_q = q_grid(1)
+         else ! hence if (loc_1 .ge. arr_dim_q)
+            compute_q = -q_big ! < should be consistent with compute_q = q_grid(arr_dim_q)
+         endif
+         return                ! < returns compute_q withh exit_code = .true.
       endif
 
-      loc_2 = loc_1 + 1
+      loc_2 = loc_1 + I_ONE
       compute_q = lin_interpol_1D(loc_1, loc_2, alpha_in)
 
       if (NR_refine_solution_q) then
