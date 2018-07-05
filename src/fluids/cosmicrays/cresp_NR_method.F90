@@ -1,7 +1,7 @@
 module cresp_NR_method
 ! pulled by COSM_RAY_ELECTRONS
 
-   use initcrspectrum, only: max_p_ratio, eps, arr_dim
+   use initcrspectrum, only: max_p_ratio, eps, arr_dim, arr_dim_q
 
    implicit none
 
@@ -198,7 +198,7 @@ module cresp_NR_method
          p_ratios_up = zero ; f_ratios_up = zero
          p_ratios_lo = zero ; f_ratios_lo = zero
 
-         q_grid      = 2*q_big; q_grid(int(arr_dim/2):) = -2*q_big ! if crash, factor 2 must be removed
+         q_grid      = 2*q_big; q_grid(int(arr_dim_q/2):) = -2*q_big ! if crash, factor 2 must be removed
 !             if (maxval(p_fix)**q_grid(1) .gt. huge(q_grid(1))) then
 !                 write (msg,"(A100)") "p**q may result in FPE, check your parameters" ! use msg
 !             endif
@@ -306,10 +306,10 @@ module cresp_NR_method
       n_max_up = 1000.0
 
       do i=1, arr_dim
-         alpha_tab_lo(i) = ind_to_flog(i,a_min_lo,a_max_lo) ! a_min_lo * ten**((log10(a_max_lo/a_min_lo))/real(arr_dim-1,kind=8)*real((i-1),kind=8))
-         alpha_tab_up(i) = ind_to_flog(i,a_min_up,a_max_up) ! a_min_up * ten**((log10(a_max_up/a_min_up))/real(arr_dim-1,kind=8)*real((i-1),kind=8))
-         n_tab_lo(i)     = ind_to_flog(i,n_min_lo,n_max_lo) ! n_min_lo * ten**((log10(n_max_lo/n_min_lo))/real(arr_dim-1,kind=8)*real((i-1),kind=8))
-         n_tab_up(i)     = ind_to_flog(i,n_min_up,n_max_up) ! n_min_up * ten**((log10(n_max_up/n_min_up))/real(arr_dim-1,kind=8)*real((i-1),kind=8))
+         alpha_tab_lo(i) = ind_to_flog(i, a_min_lo, a_max_lo, arr_dim) ! a_min_lo * ten**((log10(a_max_lo/a_min_lo))/real(arr_dim-1,kind=8)*real((i-1),kind=8))
+         alpha_tab_up(i) = ind_to_flog(i, a_min_up, a_max_up, arr_dim) ! a_min_up * ten**((log10(a_max_up/a_min_up))/real(arr_dim-1,kind=8)*real((i-1),kind=8))
+         n_tab_lo(i)     = ind_to_flog(i, n_min_lo, n_max_lo, arr_dim) ! n_min_lo * ten**((log10(n_max_lo/n_min_lo))/real(arr_dim-1,kind=8)*real((i-1),kind=8))
+         n_tab_up(i)     = ind_to_flog(i, n_min_up, n_max_up, arr_dim) ! n_min_up * ten**((log10(n_max_up/n_min_up))/real(arr_dim-1,kind=8)*real((i-1),kind=8))
       enddo
 
       write (*, "(A36)", advance="no") "Reading (up) boundary ratio files..."
@@ -353,17 +353,21 @@ module cresp_NR_method
          call save_NR_guess_grid(f_ratios_lo,"f_ratios_lo")
       enddo
 
-      a_min_q = 1.000005
-      a_max_q = 10.0 * p_fix_ratio / clight
-      j = arr_dim - int(arr_dim/(arr_dim/8),kind=4)
-      do while (q_grid(j) .le. (-q_big) .and. (q_grid(arr_dim) .le. (-2*q_big)) )
-         a_max_q = a_max_q - a_max_q*0.025
-         do i=1,arr_dim
-            alpha_tab_q(i)  = ind_to_flog(i,a_min_q,a_max_q)
+      a_min_q = 1.0005
+      a_max_q = 1.5 * p_fix_ratio
+      j = arr_dim_q - int(arr_dim_q/25 ,kind=4)
+      do while (q_grid(j) .le. (-q_big) .and. (q_grid(arr_dim_q) .le. (-2*q_big)) )
+         a_max_q = a_max_q - a_max_q*0.005
+         do i = 1, arr_dim_q
+            alpha_tab_q(i)  = ind_to_flog(i, a_min_q, a_max_q, arr_dim_q)
          enddo
          call fill_q_grid(i_incr=1) ! computing q_grid takes so little time, that saving the grid is not necessary.
       enddo
+
 #ifdef CRESP_VERBOSED
+      do i = 1, arr_dim_q
+         print "(A1,I3,A7,2F18.12)", "[ ", i,"] a : q ", q_grid(i), alpha_tab_q(i)
+      enddo
       print *,"alpha_tab_lo(i),      alpha_tab_up(i),        n_tab_lo(i),        n_tab_up(i)  |       p_space(i),     q_space(i)"
       do i = 1, arr_dim
          if (i .le. helper_arr_dim) then
@@ -843,7 +847,8 @@ module cresp_NR_method
       selected_function_1D => alpha_to_q
       selected_value_check_1D  => q_control
 
-      call prepare_indices(i_incr, i_beg, i_end)
+      i_beg = 1
+      i_end = arr_dim_q
 
       p_ratio_4_q = p_fix_ratio
 
@@ -853,7 +858,7 @@ module cresp_NR_method
          exit_code = .true.
          alpha = alpha_tab_q(i)
 #ifdef CRESP_VERBOSED
-         write(*,"(A25,1I4,A9,I4,A10,1E16.9)",advance="no") "Now solving (q_grid) no.",i,", sized ",arr_dim ,", (alpha): ",alpha
+         write(*,"(A25,1I4,A9,I4,A10,1E16.9)",advance="no") "Now solving (q_grid) no.",i,", sized ",arr_dim_q ,", (alpha): ",alpha
 #endif /* CRESP_VERBOSED */
          x = prev_solution
          call NR_algorithm_1D(x, exit_code)
@@ -1466,8 +1471,8 @@ module cresp_NR_method
       logical                :: hit_zero !, no_solution
 
       hit_zero = .false.
-      loc1(1) = inverse_f_to_ind(a_val, p_a(1), p_a(arr_dim))
-      loc1(2) = inverse_f_to_ind(n_val, p_n(1), p_n(arr_dim))
+      loc1(1) = inverse_f_to_ind(a_val, p_a(1), p_a(arr_dim), arr_dim)
+      loc1(2) = inverse_f_to_ind(n_val, p_n(1), p_n(arr_dim), arr_dim)
 
       if ( (minval(loc1) .ge. 1 .and. maxval(loc1) .le. arr_dim-1)) then ! only need to test loc1
          if (p_p(loc1(1),loc1(2)) .gt. zero ) then
@@ -1551,9 +1556,9 @@ module cresp_NR_method
 
       p_ratio_4_q = p_fix_ratio
       if (present(outer_p_ratio)) p_ratio_4_q = outer_p_ratio
-      loc_1 = inverse_f_to_ind(alpha_in, alpha_tab_q(1), alpha_tab_q(arr_dim))
+      loc_1 = inverse_f_to_ind(alpha_in, alpha_tab_q(1), alpha_tab_q(arr_dim_q), arr_dim_q)
 
-      if (loc_1 .le. 0 .or. (loc_1 .ge. arr_dim)) then
+      if (loc_1 .le. 0 .or. (loc_1 .ge. arr_dim_q)) then
          loc_1 = minloc(abs(alpha_tab_q-alpha),dim=1) ! slow, but always finds something
          compute_q = q_grid(loc_1)
          call NR_algorithm_1D(compute_q, exit_code)
@@ -1678,28 +1683,28 @@ module cresp_NR_method
    end function logical_2_int
 
 !----------------------------------------------------------------------------------------------------
-   function ind_to_flog(ind,min_in, max_in)
+   function ind_to_flog(ind,min_in, max_in, length)
       use constants, only: I_ONE, ten
 
       implicit none
 
       real(kind=8) :: min_in, max_in
-      integer(kind=4) :: ind
+      integer(kind=4) :: ind, length
       real(kind=8) :: ind_to_flog
 
-      ind_to_flog = min_in * ten**(((log10(max_in/min_in))/real(arr_dim-I_ONE,kind=8))*real((ind-I_ONE),kind=8))
+      ind_to_flog = min_in * ten**(((log10(max_in/min_in))/real(length-I_ONE,kind=8))*real((ind-I_ONE),kind=8))
 
    end function ind_to_flog
 !----------------------------------------------------------------------------------------------------
-   function inverse_f_to_ind(value, min_in, max_in) ! returns lower index for a given value, will need limiter
+   function inverse_f_to_ind(value, min_in, max_in, length) ! returns lower index for a given value, will need limiter
       use constants, only: I_ONE
 
       implicit none
 
-      integer(kind=4) :: inverse_f_to_ind
+      integer(kind=4) :: inverse_f_to_ind, length
       real(kind=8)    :: value, min_in, max_in
 
-         inverse_f_to_ind = int((log10(value/min_in)/log10(max_in/min_in)) * (arr_dim - I_ONE )) + I_ONE
+         inverse_f_to_ind = int((log10(value/min_in)/log10(max_in/min_in)) * (length - I_ONE )) + I_ONE
 
    end function inverse_f_to_ind
 !----------------------------------------------------------------------------------------------------
@@ -1814,12 +1819,12 @@ module cresp_NR_method
       ma1d = arr_dim
       ma2d = [arr_dim, arr_dim]
 
-      call my_allocate_with_index(alpha_tab_lo,arr_dim,1)
-      call my_allocate_with_index(alpha_tab_up,arr_dim,1)
-      call my_allocate_with_index(n_tab_lo,arr_dim,1)
-      call my_allocate_with_index(n_tab_up,arr_dim,1)
-      call my_allocate_with_index(alpha_tab_q,arr_dim,1)
-      call my_allocate_with_index(q_grid,arr_dim,1)
+      call my_allocate_with_index(alpha_tab_lo, arr_dim, 1)
+      call my_allocate_with_index(alpha_tab_up, arr_dim, 1)
+      call my_allocate_with_index(n_tab_lo, arr_dim, 1)
+      call my_allocate_with_index(n_tab_up, arr_dim, 1)
+      call my_allocate_with_index(alpha_tab_q, arr_dim_q, 1)
+      call my_allocate_with_index(q_grid, arr_dim_q, 1)
       call my_allocate(p_ratios_lo, ma2d )
       call my_allocate(f_ratios_lo, ma2d )
       call my_allocate(p_ratios_up, ma2d )

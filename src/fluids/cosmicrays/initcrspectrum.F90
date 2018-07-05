@@ -53,7 +53,7 @@ module initcrspectrum
    real(kind=8)       :: tol_x                       !< tolerance for x abs. error in NR algorithm
    real(kind=8)       :: tol_f_1D                    !< tolerance for f abs. error in NR algorithm (1D)
    real(kind=8)       :: tol_x_1D                    !< tolerance for x abs. error in NR algorithm (1D)
-   integer(kind=4)    :: arr_dim
+   integer(kind=4)    :: arr_dim, arr_dim_q
 
    real(kind=8), parameter  :: eps = 1.0e-15          !< epsilon parameter for real number comparisons
 !----------------------------------
@@ -120,8 +120,8 @@ module initcrspectrum
       namelist /COSMIC_RAY_SPECTRUM/ cfl_cre, p_lo_init, p_up_init, f_init, q_init, q_big, ncre, initial_condition, &
       &                         p_min_fix, p_max_fix, cre_eff, K_cre_paral_1, K_cre_perp_1, cre_active, &
       &                         K_cre_pow, expan_order, e_small, cre_gpcr_ess, use_cresp, e_small_approx_init_cond, &
-      &                         e_small_approx_p_lo, e_small_approx_p_up, force_init_NR,&
-      &                         NR_iter_limit, max_p_ratio, add_spectrum_base, synch_active, adiab_active, arr_dim, &
+      &                         e_small_approx_p_lo, e_small_approx_p_up, force_init_NR, NR_iter_limit, max_p_ratio,&
+      &                         add_spectrum_base, synch_active, adiab_active, arr_dim, arr_dim_q, &
       &                         Gamma_min_fix, Gamma_max_fix, Gamma_lo_init, Gamma_up_init, nullify_empty_bins
 
 ! Default values
@@ -174,6 +174,7 @@ module initcrspectrum
       tol_f_1D = 1.0e-14
       tol_x_1D = 1.0e-14
       arr_dim  = 200
+      arr_dim_q = 500
 
       if (master) then
          if (.not.nh%initialized) call nh%init()
@@ -206,6 +207,7 @@ module initcrspectrum
 
          ibuff(7)  =  NR_iter_limit
          ibuff(8)  =  arr_dim
+         ibuff(9)  =  arr_dim_q
 
          lbuff(1)  =  use_cresp
          lbuff(2)  =  cre_gpcr_ess
@@ -273,6 +275,7 @@ module initcrspectrum
 
          NR_iter_limit               = int(ibuff(7),kind=2)
          arr_dim                     = int(ibuff(8),kind=4)
+         arr_dim_q                   = int(ibuff(9),kind=4)
 
          use_cresp                   = lbuff(1)
          cre_gpcr_ess                = lbuff(2)
