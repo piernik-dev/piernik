@@ -244,7 +244,7 @@ contains
 
     n = size(q, in)
 
-    ip1 = min(1,n+1)
+    ip1 = min(n,n+1)
     im1 = max(1,n-1)
     
     ! Eq. 19
@@ -299,11 +299,11 @@ contains
        
     ! Shift right state
     
-    !qr(:,1:im1) = qr(:,1:n)
+    !qr(:,1:im1) = qr(:,2:n)
 
     ! Update interpolation for first and last points, may be redundant
     !ql(:,1) = q(:,1)
-    !qr(:,n-2) = ql(:,n-2)
+    !qr(:,n) = q(:,n)
        
     if (.false.) qr = f_limiter(q)  ! suppress compiler worning on argument needed for other interpolation scheme
 
