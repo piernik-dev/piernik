@@ -566,13 +566,6 @@ contains
         call ulr_fluxes_qlr
         call riemann_wrap(ql(:,2:nx-2), qr(:,2:nx-2), b_cc_l(:,2:nx-2), b_cc_r(:,2:nx-2), psi_l(:,2:nx-2), psi_r(:,2:nx-2), flx(:,2:nx-2), mag_cc(:,2:nx-2), psi_cc(:,2:nx-2)) ! 2:nx-1 should be possible here
         call update
-     case ("muscl_")
-        call interpol(u,b_cc,psi,ql,qr,b_cc_l,b_cc_r,psi_l,psi_r)
-        call musclflx(ql, b_cc_l, psi_l, flx_l, bclflx, psilflx)
-        call musclflx(qr, b_cc_r, psi_r, flx_r, bcrflx, psirflx)
-        call ulr_fluxes_qlr_
-        call riemann_wrap(ql(:,2:nx-2), qr(:,2:nx-2), b_cc_l(:,2:nx-2), b_cc_r(:,2:nx-2), psi_l(:,2:nx-2), psi_r(:,2:nx-2), flx(:,2:nx-2), mag_cc(:,2:nx-2), psi_cc(:,2:nx-2)) ! 2:nx-1 should be possible here
-        call update
      case default
         call die("[fluidupdate:sweep_dsplit] No recognized solver")
      end select
@@ -612,32 +605,6 @@ contains
 
      end subroutine du_db
 
-     subroutine ulr_fluxes_qlr_
-
-        use constants, only: DIVB_HDC
-        use global,    only: divB_0_method
-
-        implicit none
-
-!        call addflux(ql, flx_l, half * dtodx)
-!        call addflux(qr, flx_r, half * dtodx)
-        ql(:, 2:nx-2) = ql(:, 2:nx-2) + half * dtodx * (flx_r(:, 1:nx-3) - flx_l(:, 2:nx-2))
-        qr(:, 2:nx-2) = qr(:, 2:nx-2) + half * dtodx * (flx_r(:, 2:nx-2) - flx_l(:, 3:nx-1))
-
-!        call addflux(b_cc_l, bclflx, half * dtodx)
-!        call addflux(b_cc_r, bcrflx, half * dtodx)
-        b_cc_l(:, 2:nx-2) = b_cc_l(:, 2:nx-2) + half * dtodx * (bcrflx(:, 1:nx-3) - bclflx(:, 2:nx-2))
-        b_cc_r(:, 2:nx-2) = b_cc_r(:, 2:nx-2) + half * dtodx * (bcrflx(:, 2:nx-2) - bclflx(:, 3:nx-1))
-
-        if (divB_0_method == DIVB_HDC) then
-!           call addflux(psi_l, psilflx, half * dtodx)
-!           call addflux(psi_r, psirflx, half * dtodx)
-           psi_l(:, 2:nx-2) = psi_l(:, 2:nx-2) + half * dtodx * (psirflx(:, 1:nx-3) - psilflx(:, 2:nx-2))
-           psi_r(:, 2:nx-2) = psi_r(:, 2:nx-2) + half * dtodx * (psirflx(:, 2:nx-2) - psilflx(:, 3:nx-1))
-        endif
-
-     end subroutine ulr_fluxes_qlr_
-
      subroutine ulr_fluxes_qlr
 
         use constants, only: DIVB_HDC
@@ -645,29 +612,18 @@ contains
 
         implicit none
 
-        call addflux(ql, flx_l, half * dtodx)
-        call addflux(qr, flx_r, half * dtodx)
-        call addflux(b_cc_l, bclflx, half * dtodx)
-        call addflux(b_cc_r, bcrflx, half * dtodx)
+        ql(:, 2:nx-2) = ql(:, 2:nx-2) + half * dtodx * (flx_r(:, 1:nx-3) - flx_l(:, 2:nx-2))
+        qr(:, 2:nx-2) = qr(:, 2:nx-2) + half * dtodx * (flx_r(:, 2:nx-2) - flx_l(:, 3:nx-1))
+
+        b_cc_l(:, 2:nx-2) = b_cc_l(:, 2:nx-2) + half * dtodx * (bcrflx(:, 1:nx-3) - bclflx(:, 2:nx-2))
+        b_cc_r(:, 2:nx-2) = b_cc_r(:, 2:nx-2) + half * dtodx * (bcrflx(:, 2:nx-2) - bclflx(:, 3:nx-1))
 
         if (divB_0_method == DIVB_HDC) then
-           call addflux(psi_l, psilflx, half * dtodx)
-           call addflux(psi_r, psirflx, half * dtodx)
+           psi_l(:, 2:nx-2) = psi_l(:, 2:nx-2) + half * dtodx * (psirflx(:, 1:nx-3) - psilflx(:, 2:nx-2))
+           psi_r(:, 2:nx-2) = psi_r(:, 2:nx-2) + half * dtodx * (psirflx(:, 2:nx-2) - psilflx(:, 3:nx-1))
         endif
 
      end subroutine ulr_fluxes_qlr
-
-     subroutine addflux(a, fa, fac)
-
-        implicit none
-
-        real, dimension(:,:), intent(inout) :: a
-        real, dimension(:,:), intent(in)    :: fa
-        real                                :: fac
-
-        a(:, 2:nx-1) = a(:, 2:nx-1) + fac * (fa(:, :nx-2) - fa(:, 2:))
-
-     end subroutine addflux
 
      subroutine musclflx(q, b_cc, psi, qf, b_ccf, psif)
 
