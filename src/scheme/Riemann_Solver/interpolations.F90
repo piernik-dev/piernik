@@ -232,7 +232,7 @@ contains
     real                                     :: epsilon
 
     type(cg_list_element), pointer           :: cgl
-    integer                                  :: n
+    integer                                  :: n, ip1, im1
     integer, parameter                       :: in = 2  ! index for cells
 
     
@@ -245,19 +245,27 @@ contains
 
     n = size(q, in)
 
+    ip1 = min(1,n+1)
+    im1 = max(1,n-1)
+    
     ! Eq. 19
     d0 = two/3.0
     d1 = one/3.0
 
     ! Eq. 20
-    beta0 = (q(:,:n+1) - q(:,:n))
+    
+    beta0 = (q(:,1:ip1) - q(:,1:n))
     beta0 = beta0*beta0
-    beta1 = (q(:,:n) - q(:,:n-1))
+    beta1 = (q(:,1:n) - q(:,1:im1))
     beta1 = beta1*beta1
+
+    !beta0 = (q(:,:n+1) - q(:,1:n))
+    !beta1 = (q(:,:n) - q(:,:n-1))
     
     ! Eq. 22
-    tau = (q(:,:n+1) - two*q(:,:n) + q(:,:n-1))
+    tau = (q(:,1:ip1) - two*q(:,1:n) + q(:,1:im1))
     tau = tau*tau
+    !tau = (q(:,:n+1) - two*q(:,:n) + q(:,:n-1))
 
     epsilon = 0.0 ! if not for this declaration, epsilon goes unints in alpha0 or alpha1
     ! epsilon depends on dx
@@ -266,42 +274,55 @@ contains
        epsilon = minval(cgl%cg%dl,mask=dom%has_dir) ! check for correctness
        epsilon = epsilon*epsilon
        cgl => cgl%nxt
-    end do
+    end do ! please check if this is correct. Constant value for epislon like 1.d-6 can be used for test.
+       
 
     ! Eq. 21 improved version compared to Eq. 19
+    
     alpha0 = d0*(one + tau/(epsilon + beta0))
     alpha1 = d1*(one + tau/(epsilon + beta1))
+    
+    !alpha0 = d0*(one + tau/(0.00001 + beta0))
+    !alpha1 = d1*(one + tau/(0.00001 + beta1))
 
     ! Eq. 18
     w0 = alpha0/(alpha0 + alpha1)
     w1 = alpha1/(alpha0 + alpha1)
-
+    
     ! Left state interpolation, Eq. 15
     
-    flux0l = 0.5*(q(:,:n) + q(:,:n+1))
-    flux1l = 0.5*(-q(:,:n-1) + 3.0*q(:,:n))
+    flux0l = 0.5*(q(:,1:n) + q(:,1:ip1))
+    flux1l = 0.5*(-q(:,1:im1) + 3.0*q(:,1:n))
+
+    !flux1l = 0.5*(-q(:,:n-1) + 3.0*q(:,:n))
+    !flux0l = 0.5*(q(:,:n) + q(:,:n+1))
 
     ! WENO3 flux, Eq. 14
     ql = w0*flux0l + w1*flux1l
 
     ! Right state interpolation, Eq. 15
 
-    flux0r = 0.5*(q(:,:n) + q(:,:n-1))
-    flux1r = 0.5*(-q(:,:n+1) + 3.0*q(:,:n))
+    flux0r = 0.5*(q(:,1:n) + q(:,1:im1))
+    flux1r = 0.5*(-q(:,1:ip1) + 3.0*q(:,1:n))
 
+    !flux0r = 0.5*(q(:,:n) + q(:,:n-1))
+    !flux1r = 0.5*(-q(:,:n+1) + 3.0*q(:,:n))
+    
     ! WENO3 flux, Eq. 14
     qr = w0*flux0r + w1*flux1r
-
+       
     ! Shift right state
 
-    qr(:,:n-1) = qr(:,:n)
+    !qr(:,:n-1) = qr(:,:n)
+    qr(:,1:im1) = qr(:,1:n)
 
     ! Update interpolation for first and last points, may be redundant
     ql(:,1) = q(:,1)
     qr(:,n) = ql(:,n)
-    
+       
     if (.false.) qr = f_limiter(q)  ! suppress compiler worning on argument needed for other interpolation scheme
 
+       
   end subroutine weno3
 
 end module interpolations
