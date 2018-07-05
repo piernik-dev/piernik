@@ -221,8 +221,7 @@ contains
     procedure(limiter), pointer, intent(in)  :: f_limiter
 
     ! WENO3 definitions
-    ! Artur check this routine very carefully!
-
+   
     real, dimension(size(q,1),size(q,2))     :: w0, w1
     real, dimension(size(q,1),size(q,2))     :: alpha0, alpha1
     real, dimension(size(q,1),size(q,2))     :: beta0, beta1
@@ -258,15 +257,11 @@ contains
     beta0 = beta0*beta0
     beta1 = (q(:,1:n) - q(:,1:im1))
     beta1 = beta1*beta1
-
-    !beta0 = (q(:,:n+1) - q(:,1:n))
-    !beta1 = (q(:,:n) - q(:,:n-1))
     
     ! Eq. 22
     tau = (q(:,1:ip1) - two*q(:,1:n) + q(:,1:im1))
     tau = tau*tau
-    !tau = (q(:,:n+1) - two*q(:,:n) + q(:,:n-1))
-
+   
     epsilon = 0.0 ! if not for this declaration, epsilon goes unints in alpha0 or alpha1
     ! epsilon depends on dx
     cgl => leaves%first
@@ -281,9 +276,6 @@ contains
     
     alpha0 = d0*(one + tau/(epsilon + beta0))
     alpha1 = d1*(one + tau/(epsilon + beta1))
-    
-    !alpha0 = d0*(one + tau/(0.00001 + beta0))
-    !alpha1 = d1*(one + tau/(0.00001 + beta1))
 
     ! Eq. 18
     w0 = alpha0/(alpha0 + alpha1)
@@ -294,9 +286,6 @@ contains
     flux0l = 0.5*(q(:,1:n) + q(:,1:ip1))
     flux1l = 0.5*(-q(:,1:im1) + 3.0*q(:,1:n))
 
-    !flux1l = 0.5*(-q(:,:n-1) + 3.0*q(:,:n))
-    !flux0l = 0.5*(q(:,:n) + q(:,:n+1))
-
     ! WENO3 flux, Eq. 14
     ql = w0*flux0l + w1*flux1l
 
@@ -305,20 +294,16 @@ contains
     flux0r = 0.5*(q(:,1:n) + q(:,1:im1))
     flux1r = 0.5*(-q(:,1:ip1) + 3.0*q(:,1:n))
 
-    !flux0r = 0.5*(q(:,:n) + q(:,:n-1))
-    !flux1r = 0.5*(-q(:,:n+1) + 3.0*q(:,:n))
-    
     ! WENO3 flux, Eq. 14
     qr = w0*flux0r + w1*flux1r
        
     ! Shift right state
-
-    !qr(:,:n-1) = qr(:,:n)
-    qr(:,1:im1) = qr(:,1:n)
+    
+    !qr(:,1:im1) = qr(:,1:n)
 
     ! Update interpolation for first and last points, may be redundant
-    ql(:,1) = q(:,1)
-    qr(:,n) = ql(:,n)
+    !ql(:,1) = q(:,1)
+    !qr(:,n-2) = ql(:,n-2)
        
     if (.false.) qr = f_limiter(q)  ! suppress compiler worning on argument needed for other interpolation scheme
 
