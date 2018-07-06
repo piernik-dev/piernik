@@ -12,8 +12,10 @@ module initcrspectrum
    real(kind=8)       :: p_lo_init                   !< initial lower cutoff momentum
    real(kind=8)       :: p_up_init                   !< initial upper cutoff momentum
    character(len=cbuff_len) :: initial_condition     !< available types: bump, powl, brpl, symf, syme. Description below.
+   real(kind=8)       :: p_br_init                   !< initial low energy break
    real(kind=8)       :: f_init                      !< initial value of distr. func. for isolated case
    real(kind=8)       :: q_init                      !< initial value of power law-like spectrum exponent
+   real(kind=8)       :: q_br_init                   !< initial q for low energy break
    real(kind=8)       :: q_big                       !< maximal amplitude of q
    real(kind=8)       :: cfl_cre                     !< CFL parameter  for cr electrons
    real(kind=8)       :: cre_eff                     !< fraction of energy passed to cr-electrons by nucleons (mainly protons)
@@ -116,12 +118,13 @@ module initcrspectrum
 
       logical, save            :: first_run = .true.
       integer                  :: i       ! enumerator
+      real(kind=8)             :: p_br_def, q_br_def
 
       namelist /COSMIC_RAY_SPECTRUM/ cfl_cre, p_lo_init, p_up_init, f_init, q_init, q_big, ncre, initial_condition, &
-      &                         p_min_fix, p_max_fix, cre_eff, K_cre_paral_1, K_cre_perp_1, cre_active, &
+      &                         p_min_fix, p_max_fix, cre_eff, K_cre_paral_1, K_cre_perp_1, cre_active, p_br_init,  &
       &                         K_cre_pow, expan_order, e_small, cre_gpcr_ess, use_cresp, e_small_approx_init_cond, &
       &                         e_small_approx_p_lo, e_small_approx_p_up, force_init_NR, NR_iter_limit, max_p_ratio,&
-      &                         add_spectrum_base, synch_active, adiab_active, arr_dim, arr_dim_q, &
+      &                         add_spectrum_base, synch_active, adiab_active, arr_dim, arr_dim_q, q_br_init,       &
       &                         Gamma_min_fix, Gamma_max_fix, Gamma_lo_init, Gamma_up_init, nullify_empty_bins
 
 ! Default values
@@ -131,10 +134,14 @@ module initcrspectrum
       p_max_fix         = 1.65e4
       p_lo_init         = 1.5e1
       p_up_init         = 7.5e2
+      p_br_def          = p_lo_init
       initial_condition = "powl"
       f_init            = 1.0
       q_init            = 4.1
+      q_br_def          = q_init
       q_big             = 30.0d0
+      p_br_init         = p_br_def ! < in case it was not provided "powl" is assumed
+      q_br_init         = q_br_def ! < in case it was not provided "powl" is assumed
       cfl_cre           = 0.1
       cre_eff           = 0.01
       K_cre_paral_1     = 0.
@@ -252,6 +259,9 @@ module initcrspectrum
          rbuff(24) = Gamma_lo_init
          rbuff(25) = Gamma_up_init
 
+         rbuff(26) = p_br_init
+         rbuff(27) = q_br_init
+
          cbuff(1)  = initial_condition
       endif
 
@@ -261,8 +271,8 @@ module initcrspectrum
       call piernik_MPI_Bcast(cbuff, cbuff_len)
 
 !!\deprecated
-!      open(10, file='crs.dat',status='replace',position='rewind')     ! diagnostic files
-!      open(11, file='crs_ne.dat',status='replace',position='rewind')  ! diagnostic files
+     open(10, file='crs.dat',status='replace',position='rewind')     ! diagnostic files
+     open(11, file='crs_ne.dat',status='replace',position='rewind')  ! diagnostic files
 
       if (slave) then
          ncre                        = int(ibuff(1),kind=4)
@@ -319,6 +329,9 @@ module initcrspectrum
          Gamma_max_fix               = rbuff(23)
          Gamma_lo_init               = rbuff(24)
          Gamma_up_init               = rbuff(25)
+
+         p_br_init                   = rbuff(26)
+         q_br_init                   = rbuff(27)
 
          initial_condition           = trim(cbuff(1))
 
@@ -535,11 +548,29 @@ module initcrspectrum
                if (master) call warn(msg)
          endif
 
+         if (initial_condition .eq. "brpl" ) then ! FIXME TODO
+            if (abs(p_br_init - p_br_def) .le. eps) then
+               write (msg,"(A)") "[initcrspectrum:init_cresp] Parameter for 'brpl' spectrum: p_br_init has default value (probably unitialized). Assuming p_lo_init value ('powl' spectrum)."
+               if (master) call warn(msg)
+            else
+!>
+!! \brief p_br_init should be equal to one of p_fix values
+!<
+               i = minloc(abs(p_fix - p_br_init),dim=1)-1
+               write (msg,"(A,E14.7,1A)") "[initcrspectrum:init_cresp] p_br_init was set, but should be equal to one of p_fix. Assuming p_br_init =", p_fix(i),"."
+               p_br_init = p_fix(i)
+               if (master) call warn(msg)
+            endif
+            if (abs(q_br_init - q_br_def) .le. eps) then
+               write (msg,"(A)") "[initcrspectrum:init_cresp] Parameter for 'brpl' spectrum: q_br_init has default value (probably unitialized). Assuming q_init value    ('powl' spectrum)."
+               if (master) call warn(msg)
+            endif
+         endif
+
          taylor_coeff_2nd = int(mod(2,expan_order) / 2 + mod(3,expan_order),kind=2 )  !< coefficient which is always equal 1 when order =2 or =3 and 0 if order = 1
          taylor_coeff_3rd = int((expan_order - 1)*(expan_order- 2) / 2,kind=2)        !< coefficient which is equal to 1 only when order = 3
          call init_cresp_types
       endif
-
    end subroutine init_cresp
 
 !----------------------------------------------------------------------------------------------------

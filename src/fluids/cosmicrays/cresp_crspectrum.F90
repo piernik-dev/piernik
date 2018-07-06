@@ -1,5 +1,5 @@
 module cresp_crspectrum
-! pulled by COSM_RAY_ELECTRONS
+   ! pulled by COSM_RAY_ELECTRONS
 
    implicit none
 
@@ -832,12 +832,11 @@ contains
       use cresp_NR_method, only: e_small_to_f
       use cresp_variables, only: clight ! use units, only: clight
       use dataio_pub,      only: warn, msg
-      use initcrspectrum,  only: ncre, spec_mod_trms, q_init, p_lo_init, p_up_init, initial_condition, eps, &
-                                 &  allow_source_spectrum_break, e_small_approx_init_cond, e_small_approx_p_lo, &
-                                 &  e_small_approx_p_up, crel, p_fix, w, total_init_cree, p_min_fix, p_max_fix, &
-                                 &  add_spectrum_base, e_small, test_spectrum_break, cresp_all_bins
+      use initcrspectrum,  only: ncre, spec_mod_trms, q_init, p_lo_init, p_up_init, initial_condition, eps, p_fix, w,   &
+                              &  allow_source_spectrum_break, e_small_approx_init_cond, e_small_approx_p_lo, p_min_fix, &
+                              &  e_small_approx_p_up, crel, total_init_cree,  p_max_fix, add_spectrum_base, e_small,    &
+                              &  test_spectrum_break, cresp_all_bins, q_br_init, p_br_init
       use mpisetup,        only: master
-
 
       implicit none
 
@@ -933,11 +932,15 @@ contains
       if (initial_condition == "powl") call cresp_init_powl_spectrum(n, e, f_amplitude, q_init, p_lo_init, p_up_init)
 
       if (initial_condition == 'brpl') then
-! Power law with a break at p_lo_init initial condition
-! In this case initial spectrum with a break at p_min_fix is assumed, the initial slope
-! on the left side of the break is just -q_init for simplicity.
-         q(i_lo+1) = -q_init
-         f(i_lo)   = f(i_lo+1) * (p(i_lo+1)/p_lo_init) ** q(i_lo+1)
+!>
+!!/brief Power-law like spectrum with break at p_br_init
+!! In this case initial spectrum with a break at p_min_fix is assumed, the initial slope
+!! on the left side of the break is q_br_init. If initial_condition = "brpl", but parameters
+!! are not defined in problem.par, "powl" spectrum is initialized with a warning issued.
+!<
+         i_br = minloc(abs(p_fix - p_br_init),dim=1)-1
+         q(:i_br) = q_br_init ; q(i_br+1:) = q_init
+         f(i_lo:i_br-1) = f(i_br) * (p(i_lo:i_br-1) / p(i_br)) ** (-q_br_init)
          e = fq_to_e(p(0:ncre-1), p(1:ncre), f(0:ncre-1), q(1:ncre), active_bins)
          n = fq_to_n(p(0:ncre-1), p(1:ncre), f(0:ncre-1), q(1:ncre), active_bins)
       endif
