@@ -249,20 +249,27 @@ contains
     d0 = two/3.0
     d1 = one/3.0
 
+    ! remove this, or make it dirty
+    beta0  = 0.
+    beta1  = 0.
+    tau    = 0.
+    flux0l = 0.
+    flux0r = 0.
+    flux1l = 0.
+    flux1r = 0.
+
     ! Eq. 20
-    beta0 = (q(:,:n+1) - q(:,:n))
-    beta0 = beta0*beta0
-    beta1 = (q(:,:n) - q(:,:n-1))
-    beta1 = beta1*beta1
-    
+    beta0(:, :n-1) = (q(:, 2:) - q(:, :n-1))**2
+    beta1(:, 2:)   = (q(:, 2:) - q(:, :n-1))**2
+
     ! Eq. 22
-    tau = (q(:,:n+1) - two*q(:,:n) + q(:,:n-1))
-    tau = tau*tau
+    tau(:, 2:n-1) = (q(:, 3:n) - two*q(:, 2:n-1) + q(:, :n-2))**2
 
     epsilon = 0.0 ! if not for this declaration, epsilon goes unints in alpha0 or alpha1
     ! epsilon depends on dx
     cgl => leaves%first
     do while(associated(cgl))
+       ! AJG: I think this should be local parameter, depending only on current block and perhaps also on current direction
        epsilon = minval(cgl%cg%dl,mask=dom%has_dir) ! check for correctness
        epsilon = epsilon*epsilon
        cgl => cgl%nxt
@@ -278,27 +285,27 @@ contains
 
     ! Left state interpolation, Eq. 15
     
-    flux0l = 0.5*(q(:,:n) + q(:,:n+1))
-    flux1l = 0.5*(-q(:,:n-1) + 3.0*q(:,:n))
+    flux0l(:, :n-1) = 0.5*(q(:, :n-1) + q(:, 2:))
+    flux1l(:, 2:) = 0.5*(-q(:, :n-1) + 3.0*q(:, 2:))
 
     ! WENO3 flux, Eq. 14
-    ql = w0*flux0l + w1*flux1l
+    ql = w0(:, :n-1)*flux0l(:, :n-1) + w1(:, :n-1)*flux1l(:, :n-1)
 
     ! Right state interpolation, Eq. 15
 
-    flux0r = 0.5*(q(:,:n) + q(:,:n-1))
-    flux1r = 0.5*(-q(:,:n+1) + 3.0*q(:,:n))
+    flux0r(:, 2:) = 0.5*(q(:, 2:) + q(:,:n-1))
+    flux1r(:, :n-1) = 0.5*(-q(:, 2:) + 3.0*q(:, :n-1))
 
     ! WENO3 flux, Eq. 14
-    qr = w0*flux0r + w1*flux1r
+    qr = w0(:, :n-1)*flux0r (:, :n-1)+ w1(:, :n-1)*flux1r(:, :n-1)
 
     ! Shift right state
 
-    qr(:,:n-1) = qr(:,:n)
+    qr(:,:n-2) = qr(:, 2:n-1)
 
     ! Update interpolation for first and last points, may be redundant
     ql(:,1) = q(:,1)
-    qr(:,n) = ql(:,n)
+    qr(:,n-1) = ql(:,n-1)
     
     if (.false.) qr = f_limiter(q)  ! suppress compiler worning on argument needed for other interpolation scheme
 
