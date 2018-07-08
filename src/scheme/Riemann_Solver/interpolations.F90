@@ -201,11 +201,14 @@ contains
 !! \brief Weighted Essentially Non-oscillatory 3rd order (WENO3) interpolation.
 !! Based on Yamaleev N. K., Carpenter M. H., Journal of Computational Physics 228 (2009) 3025-3047.
 !<
+#undef EPS
 
   subroutine weno3(q, ql, qr, f_limiter)
 
+#ifdef EPS
     use cg_leaves,    only: leaves
     use cg_list,      only: cg_list_element
+#endif
     use domain,       only: dom
     use fluxlimiters, only: limiter
     use domain,       only: dom
@@ -231,7 +234,9 @@ contains
     real                                     :: d0,d1
     real                                     :: epsilon
 
+#ifdef EPS
     type(cg_list_element), pointer           :: cgl
+#endif
     integer                                  :: n
     integer, parameter                       :: in = 2  ! index for cells
 
@@ -259,13 +264,16 @@ contains
     flux1r = 0.
 
     ! Eq. 20
-    beta0(:, :n-1) = (q(:, 2:) - q(:, :n-1))**2
-    beta1(:, 2:)   = (q(:, 2:) - q(:, :n-1))**2
+    beta0(:, :n-1) = (q(:, 2:) - q(:, :n-1))**2  ! beta_0(j) = (u(j+1) - u(j))**2
+    beta1(:, 2:)   = (q(:, 2:) - q(:, :n-1))**2  ! beta_1(j) = (u(j) - u(j-1))**2
 
     ! Eq. 22
-    tau(:, 2:n-1) = (q(:, 3:n) - two*q(:, 2:n-1) + q(:, :n-2))**2
+    tau(:, 2:n-1) = (q(:, 3:) - two*q(:, 2:n-1) + q(:, :n-2))**2  ! tau(j) = (u(j+1) - 2 * u(j) + u(j-1))**2
 
-    epsilon = 0.0 ! if not for this declaration, epsilon goes unints in alpha0 or alpha1
+    epsilon = 1e-6 ! if not for this declaration, epsilon goes unints in alpha0 or alpha1
+
+#ifdef EPS
+    ! let's debug other things first
     ! epsilon depends on dx
     cgl => leaves%first
     do while(associated(cgl))
@@ -274,27 +282,33 @@ contains
        epsilon = epsilon*epsilon
        cgl => cgl%nxt
     end do
+#endif
 
     ! Eq. 21 improved version compared to Eq. 19
-    alpha0 = d0*(one + tau/(epsilon + beta0))
+    alpha0 = d0*(one + tau/(epsilon + beta0))  ! alpha_r(j) = d_r(j) * ( 1. + tau(j) / (epsilon + beta_r(j)) ) , r = 0, 1
     alpha1 = d1*(one + tau/(epsilon + beta1))
 
     ! Eq. 18
-    w0 = alpha0/(alpha0 + alpha1)
-    w1 = alpha1/(alpha0 + alpha1)
+    w0 = alpha0/(alpha0 + alpha1)  ! w_r(j) = alpha_r(j) / (alpha_0(j) + alpha_1(j)) , r = 0, 1
+    w1 = alpha1/(alpha0 + alpha1)  ! w_r(j) is positioned at right face of u(j); w^r_{j+1/2}  in the paper
 
     ! Left state interpolation, Eq. 15
     
-    flux0l(:, :n-1) = 0.5*(q(:, :n-1) + q(:, 2:))
-    flux1l(:, 2:) = 0.5*(-q(:, :n-1) + 3.0*q(:, 2:))
+    flux0l(:, :n-1) = 0.5*(q(:, :n-1) + q(:, 2:))     ! f_0(j) = 1/2 * (  q(j) + q(j+1)) ; face at position j+1/2
+    flux1l(:, 2:) = 0.5*(-q(:, :n-1) + 3.0*q(:, 2:))  ! f_1(j) = 1/2 * (3*q(j) - q(j-1))
 
     ! WENO3 flux, Eq. 14
-    ql = w0(:, :n-1)*flux0l(:, :n-1) + w1(:, :n-1)*flux1l(:, :n-1)
+    ql = w0(:, :n-1)*flux0l(:, :n-1) + w1(:, :n-1)*flux1l(:, :n-1)  ! f_W(j) = w_0(j) * f_0(j) + w_1(j) * f_1(j) ; face at position j+1/2
 
     ! Right state interpolation, Eq. 15
 
-    flux0r(:, 2:) = 0.5*(q(:, 2:) + q(:,:n-1))
-    flux1r(:, :n-1) = 0.5*(-q(:, 2:) + 3.0*q(:, :n-1))
+
+    ! it is messed up!
+    ! don't know yet whether we can recycle weights for the left state
+    ! most likely we have to construct them symmetrically
+
+    flux0r(:, 2:) = 0.5*(q(:, 2:) + q(:,:n-1))          ! f_0(j) = 1/2 * (  q(j) + q(j-1)) ; face at position j+1/2
+    flux1r(:, :n-1) = 0.5*(-q(:, 2:) + 3.0*q(:, :n-1))  ! f_1(j) = 1/2 * (3*q(j) - q(j+1))
 
     ! WENO3 flux, Eq. 14
     qr = w0(:, :n-1)*flux0r (:, :n-1)+ w1(:, :n-1)*flux1r(:, :n-1)
