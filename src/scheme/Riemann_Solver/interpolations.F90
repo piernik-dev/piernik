@@ -301,26 +301,14 @@ contains
     ql = w0(:, :n-1)*flux0l(:, :n-1) + w1(:, :n-1)*flux1l(:, :n-1)  ! f_W(j) = w_0(j) * f_0(j) + w_1(j) * f_1(j) ; face at position j+1/2
 
     ! Right state interpolation, Eq. 15
-
-
-    ! it is messed up!
-    ! don't know yet whether we can recycle weights for the left state
-    ! most likely we have to construct them symmetrically
+    ! we have to construct the right state symmetrically
 
     flux0r(:, 2:) = 0.5*(q(:, 2:) + q(:,:n-1))          ! f_0(j) = 1/2 * (  q(j) + q(j-1)) ; face at position j+1/2
     flux1r(:, :n-1) = 0.5*(-q(:, 2:) + 3.0*q(:, :n-1))  ! f_1(j) = 1/2 * (3*q(j) - q(j+1))
 
-    ! WENO3 flux, Eq. 14
-    qr = w0(:, :n-1)*flux0r (:, :n-1)+ w1(:, :n-1)*flux1r(:, :n-1)
+    ! WENO3 flux, Eq. 14, already shifted
+    qr = w1(:, 2:)*flux0r (:, 2:)+ w0(:, 2:)*flux1r(:, 2:)  ! similar as for left state, but swapped weights
 
-    ! Shift right state
-
-    qr(:,:n-2) = qr(:, 2:n-1)
-
-    ! Update interpolation for first and last points, may be redundant
-    ql(:,1) = q(:,1)
-    qr(:,n-1) = ql(:,n-1)
-    
     if (.false.) qr = f_limiter(q)  ! suppress compiler worning on argument needed for other interpolation scheme
 
   end subroutine weno3
