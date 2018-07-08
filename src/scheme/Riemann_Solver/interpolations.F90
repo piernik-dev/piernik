@@ -229,7 +229,7 @@ contains
     real, dimension(size(q,1),size(q,2))     :: w0, w1
     real, dimension(size(q,1),size(q,2))     :: alpha0, alpha1
     real, dimension(size(q,1),size(q,2))     :: beta0, beta1
-    real, dimension(size(q,1),size(q,2))     :: flux0l, flux1l, flux0r, flux1r
+    real, dimension(size(q,1),size(q,2))     :: flux0, flux1
     real, dimension(size(q,1),size(q,2))     :: tau
     real                                     :: d0,d1
     real                                     :: epsilon
@@ -258,10 +258,8 @@ contains
     beta0  = 0.
     beta1  = 0.
     tau    = 0.
-    flux0l = 0.
-    flux0r = 0.
-    flux1l = 0.
-    flux1r = 0.
+    flux0 = 0.
+    flux0 = 0.
 
     ! Eq. 20
     beta0(:, :n-1) = (q(:, 2:) - q(:, :n-1))**2  ! beta_0(j) = (u(j+1) - u(j))**2
@@ -294,20 +292,20 @@ contains
 
     ! Left state interpolation, Eq. 15
     
-    flux0l(:, :n-1) = 0.5*(q(:, :n-1) + q(:, 2:))     ! f_0(j) = 1/2 * (  q(j) + q(j+1)) ; face at position j+1/2
-    flux1l(:, 2:) = 0.5*(-q(:, :n-1) + 3.0*q(:, 2:))  ! f_1(j) = 1/2 * (3*q(j) - q(j-1))
+    flux0(:, :n-1) = 0.5*(q(:, :n-1) + q(:, 2:))     ! f_0(j) = 1/2 * (  q(j) + q(j+1)) ; face at position j+1/2
+    flux1(:, 2:) = 0.5*(-q(:, :n-1) + 3.0*q(:, 2:))  ! f_1(j) = 1/2 * (3*q(j) - q(j-1))
 
     ! WENO3 flux, Eq. 14
-    ql = w0(:, :n-1)*flux0l(:, :n-1) + w1(:, :n-1)*flux1l(:, :n-1)  ! f_W(j) = w_0(j) * f_0(j) + w_1(j) * f_1(j) ; face at position j+1/2
+    ql = w0(:, :n-1)*flux0(:, :n-1) + w1(:, :n-1)*flux1(:, :n-1)  ! f_W(j) = w_0(j) * f_0(j) + w_1(j) * f_1(j) ; face at position j+1/2
 
     ! Right state interpolation, Eq. 15
     ! we have to construct the right state symmetrically
 
-    flux0r(:, 2:) = 0.5*(q(:, 2:) + q(:,:n-1))          ! f_0(j) = 1/2 * (  q(j) + q(j-1)) ; face at position j+1/2
-    flux1r(:, :n-1) = 0.5*(-q(:, 2:) + 3.0*q(:, :n-1))  ! f_1(j) = 1/2 * (3*q(j) - q(j+1))
+    flux0(:, 2:) = 0.5*(q(:, 2:) + q(:,:n-1))          ! f_0(j) = 1/2 * (  q(j) + q(j-1)) ; face at position j+1/2 from the other side
+    flux1(:, :n-1) = 0.5*(-q(:, 2:) + 3.0*q(:, :n-1))  ! f_1(j) = 1/2 * (3*q(j) - q(j+1))
 
     ! WENO3 flux, Eq. 14, already shifted
-    qr = w1(:, 2:)*flux0r (:, 2:)+ w0(:, 2:)*flux1r(:, 2:)  ! similar as for left state, but swapped weights
+    qr = w1(:, 2:)*flux0(:, 2:)+ w0(:, 2:)*flux1(:, 2:)  ! similar as for left state, but swapped weights
 
     if (.false.) qr = f_limiter(q)  ! suppress compiler worning on argument needed for other interpolation scheme
 
