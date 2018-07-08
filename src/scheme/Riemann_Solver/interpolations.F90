@@ -201,7 +201,7 @@ contains
 !! \brief Weighted Essentially Non-oscillatory 3rd order (WENO3) interpolation.
 !! Based on Yamaleev N. K., Carpenter M. H., Journal of Computational Physics 228 (2009) 3025-3047.
 !<
-#undef EPS
+#define EPS
 
   subroutine weno3(q, ql, qr, f_limiter)
 
@@ -273,15 +273,15 @@ contains
     epsilon = 1e-6 ! if not for this declaration, epsilon goes unints in alpha0 or alpha1
 
 #ifdef EPS
-    ! let's debug other things first
+    epsilon = huge(1.)
     ! epsilon depends on dx
     cgl => leaves%first
     do while(associated(cgl))
        ! AJG: I think this should be local parameter, depending only on current block and perhaps also on current direction
-       epsilon = minval(cgl%cg%dl,mask=dom%has_dir) ! check for correctness
-       epsilon = epsilon*epsilon
+       epsilon = min(epsilon, minval(cgl%cg%dl,mask=dom%has_dir)) ! check for correctness
        cgl => cgl%nxt
     end do
+    epsilon = epsilon*epsilon
 #endif
 
     ! Eq. 21 improved version compared to Eq. 19
