@@ -239,7 +239,6 @@ contains
 #endif
     integer                                  :: n
     integer, parameter                       :: in = 2  ! index for cells
-
     
     if (dom%geometry_type /= GEO_XYZ) call die("[interpolations:linear] non-cartesian geometry not implemented yet.")
     if (size(q, in) - size(ql, in) /= 1) then
@@ -301,11 +300,17 @@ contains
     ! Right state interpolation, Eq. 15
     ! we have to construct the right state symmetrically
 
+    alpha0 = d0*(one + tau/(epsilon + beta1))  ! alpha_r(j) = d_r(j) * ( 1. + tau(j) / (epsilon + beta_r(1-j)) ) , r = 0, 1
+    alpha1 = d1*(one + tau/(epsilon + beta0))  ! we use opposite beta to interpolate from the opposite side
+
+    w0 = alpha0/(alpha0 + alpha1)  ! w_r(j) = alpha_r(j) / (alpha_0(j) + alpha_1(j)) , r = 0, 1
+    w1 = alpha1/(alpha0 + alpha1)
+
     flux0(:, 2:) = 0.5*(q(:, 2:) + q(:,:n-1))          ! f_0(j) = 1/2 * (  q(j) + q(j-1)) ; face at position j+1/2 from the other side
     flux1(:, :n-1) = 0.5*(-q(:, 2:) + 3.0*q(:, :n-1))  ! f_1(j) = 1/2 * (3*q(j) - q(j+1))
 
     ! WENO3 flux, Eq. 14, already shifted
-    qr = w1(:, 2:)*flux0(:, 2:)+ w0(:, 2:)*flux1(:, 2:)  ! similar as for left state, but swapped weights
+    qr = w0(:, 2:)*flux0(:, 2:)+ w1(:, 2:)*flux1(:, 2:)  ! similar as for left state, but weights are constructed from symmetric stencil
 
     if (.false.) qr = f_limiter(q)  ! suppress compiler worning on argument needed for other interpolation scheme
 
