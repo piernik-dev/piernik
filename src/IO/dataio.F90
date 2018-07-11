@@ -1810,10 +1810,17 @@ contains
       character(len=*), parameter, dimension(n_msg_origin) :: msg_origin = [ "user  ", "system" ]
 
       character(len=cwdlen), dimension(n_msg_origin), save :: fname
-      integer                                              :: unlink_stat, io, sz, sts, i
+      integer                                              :: unlink_stat, io, sz, i
+#ifdef __GFORTRAN__
       integer, dimension(13)                               :: stat_buff
+#else /* !__GFORTRAN__ */
+      integer(kind=4), dimension(13)                       :: stat_buff
+#endif /* !__GFORTRAN__ */
       logical                                              :: msg_param_read = .false., ex
       integer, dimension(n_msg_origin), save               :: last_msg_stamp
+#ifdef __GFORTRAN__
+      integer                                              :: sts
+#endif /* __GFORTRAN__ */
 #if defined(__INTEL_COMPILER)
       integer(kind=4) :: jhandle, ierror
 #endif /* __INTEL_COMPILER */

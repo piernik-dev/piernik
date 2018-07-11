@@ -44,9 +44,9 @@ module signalhandler
    integer(kind=4), parameter :: SIGTERM = 15
 
    interface
-      integer function signal_handler(signum)
+      integer(kind=4) function signal_handler(signum)
          implicit none
-         integer, intent(in) :: signum
+         integer(kind=4), intent(in) :: signum
       end function
    end interface
 
