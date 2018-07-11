@@ -535,6 +535,12 @@ contains
      real, dimension(size(u,   1), 2:size(u,   2)-1)       :: u1    !, du2, du3
      real, dimension(size(b_cc,1), 2:size(b_cc,2)-1)       :: b1    !, db2, db3
      real, dimension(size(psi, 1), 2:size(psi, 2)-1)       :: psi1  !, dpsi2, dpsi3
+
+     ! left and right states for cells (RK3)
+     ! real, dimension(size(u,   1), :) :: u2
+     ! real, dimension(size(b_cc,1), :) :: b2
+     ! real, dimension(size(psi, 1), :) :: psi1
+     
      ! updates required for higher order of integration will likely have shorter length
 
 !!$     ! fluxes through interfaces 2 .. n-2
@@ -550,7 +556,7 @@ contains
      mag_cc = huge(1.)
 
      ! Only muscl and rk2 schemes should be considered for production use.
-     ! Other schemes are left here for educational purposes, just to show how to construct alternative approaches.
+     ! RK(N) with N .GE. 3 could be helpful for WENO3 
      select case (h_solver)
      case ("rk2")
         call interpol(u, b_cc, psi, ql, qr, b_cc_l, b_cc_r, psi_l, psi_r)
@@ -559,6 +565,16 @@ contains
         call interpol(u1, b1, psi1, ql(:,2:nx-2), qr(:,2:nx-2), b_cc_l(:,2:nx-2), b_cc_r(:,2:nx-2), psi_l(:,2:nx-2), psi_r(:,2:nx-2))
         call riemann_wrap(ql(:,2:nx-2), qr(:,2:nx-2), b_cc_l(:,2:nx-2), b_cc_r(:,2:nx-2), psi_l(:,2:nx-2), psi_r(:,2:nx-2), flx(:,2:nx-2), mag_cc(:,2:nx-2), psi_cc(:,2:nx-2)) ! second call for Riemann problem uses states evolved to half timestep
         call update  ! ToDo tell explicitly what range to update
+     ! case("rk3")
+     !    call interpol(u, b_cc, psi, ql, qr, b_cc_l, b_cc_r, psi_l, psi_r)
+     !    call riemann_wrap(ql, qr, b_cc_l, b_cc_r, psi_l, psi_r, flx, mag_cc, psi_cc) ! Now we advance the left and right states by a timestep.
+     !    call du_db(u1, b1, psi1, half * dtodx)
+     !    call interpol(u1, b1, psi1, ql(:,2:nx-2), qr(:,2:nx-2), b_cc_l(:,2:nx-2), b_cc_r(:,2:nx-2), psi_l(:,2:nx-2), psi_r(:,2:nx-2))
+     !    call riemann_wrap(ql(:,2:nx-2), qr(:,2:nx-2), b_cc_l(:,2:nx-2), b_cc_r(:,2:nx-2), psi_l(:,2:nx-2), psi_r(:,2:nx-2), flx(:,2:nx-2), mag_cc(:,2:nx-2), psi_cc(:,2:nx-2)) ! second call for Riemann problem uses states evolved to half timestep
+     !    call du_db(u2,b2,psi2,half * dtodx)
+     !    call interpol(u2, b2, psi2,ql(:, : ), qr(:, : ), b_cc_l(:, : ), b_cc_r(:, : ), psi_l(:, : ), psi_r(:, : ))
+     !    call riemann_wrap(ql(:, : ), qr(:, : ), b_cc_l(:, : ), b_cc_r(:, : ), psi_l(:, : ), psi_r(:, : ), flx(:, : ), mag_cc(:, : ), psi_cc(:, : ))
+     !    call update
      case ("muscl")
         call interpol(u,b_cc,psi,ql,qr,b_cc_l,b_cc_r,psi_l,psi_r)
         call musclflx(ql, b_cc_l, psi_l, flx_l, bclflx, psilflx)
