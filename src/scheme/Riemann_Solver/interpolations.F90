@@ -201,20 +201,15 @@ contains
 !! \brief Weighted Essentially Non-oscillatory 3rd order (WENO3) interpolation.
 !! Based on Yamaleev N. K., Carpenter M. H., Journal of Computational Physics 228 (2009) 3025-3047.
 !<
-#define EPS
 
   subroutine weno3(q, ql, qr, f_limiter)
 
-#ifdef EPS
-    use cg_leaves,    only: leaves
-    use cg_list,      only: cg_list_element
-#endif
     use domain,       only: dom
     use fluxlimiters, only: limiter
     use domain,       only: dom
-    use constants,    only: GEO_XYZ
+    use constants,    only: GEO_XYZ, one, two, zero, onet, twot
     use dataio_pub,   only: die, msg
-    use constants,    only: one, two
+    use global,       only: t
     
     implicit none
 
@@ -230,12 +225,10 @@ contains
     real, dimension(size(q,1),size(q,2))     :: beta0, beta1
     real, dimension(size(q,1),size(q,2))     :: flux0, flux1
     real, dimension(size(q,1),size(q,2))     :: tau
+    real, dimension(size(q,1),size(q,2))     :: epsilon
+    real                                     :: Delta_xi, Delta_xi2
     real                                     :: d0,d1
-    real                                     :: epsilon
 
-#ifdef EPS
-    type(cg_list_element), pointer           :: cgl
-#endif
     integer                                  :: n
     integer, parameter                       :: in = 2  ! index for cells
     
@@ -248,16 +241,17 @@ contains
 
     n = size(q, in)
     
-    ! Eq. 19
-    d0 = two/3.0
-    d1 = one/3.0
-
     ! remove this, or make it dirty
     beta0  = 0.
     beta1  = 0.
     tau    = 0.
-    flux0 = 0.
-    flux0 = 0.
+    flux0  = 0.
+    flux1  = 0.
+    epsilon = 0.
+    
+    ! Eq. 19
+    d0 = twot
+    d1 = onet
 
     ! Eq. 20
     beta0(:, :n-1) = (q(:, 2:) - q(:, :n-1))**2  ! beta_0(j) = (u(j+1) - u(j))**2
@@ -266,20 +260,42 @@ contains
     ! Eq. 22
     tau(:, 2:n-1) = (q(:, 3:) - two*q(:, 2:n-1) + q(:, :n-2))**2  ! tau(j) = (u(j+1) - 2 * u(j) + u(j-1))**2
 
-    epsilon = 1e-6 ! if not for this declaration, epsilon goes unints in alpha0 or alpha1
+    
+    !>
+    !! The WENO scheme is self-similar. The same applies to ESWENO.
+    !! The grid spacing \Delta x is replaced with the grid spacing
+    !! in the computational domain \Delta xi = 1/j, where j is the
+    !! total number of gird cells. 
+    !<
 
-#ifdef EPS
-    epsilon = huge(1.)
-    ! epsilon depends on dx
-    cgl => leaves%first
-    do while(associated(cgl))
-       ! AJG: I think this should be local parameter, depending only on current block and perhaps also on current direction
-       epsilon = min(epsilon, minval(cgl%cg%dl,mask=dom%has_dir)) ! check for correctness
-       cgl => cgl%nxt
-    end do
-    epsilon = epsilon*epsilon
-#endif
+    ! \Delta xi is mentioned before Eq. 63
+    Delta_xi = one/n
+    Delta_xi2 = Delta_xi*Delta_xi
 
+    !>
+    !! Sec 4.3
+    !! The term epsilon in Eq. 21 (or Eq. 19) is added with beta_r.
+    !! Hence, epsilon should be scaled consistently. The terms beta_r
+    !! are ~ u_\xi^2 \Delta xi^2 near smooth regions and ~ u^2 near 
+    !! unresolved regions. Therefore, epsilon can be chosen as:
+    !! epsilon = max( L1norm(u_0^2), L1norm(u_0_\xi^2))*\Delta xi^2, 
+    !! where \xi != \xi_d, and L1_norm = sum ( abs(x(:)) ). The terms 
+    !! u_0 is the "initial condition", and u_0_\xi^2 is the "initial condition"
+    !! discarding the set of points \xi_d where it is discontinuous.
+    !! The term epsilon should be calculated only once, and same value is used
+    !! during the entire calculation.
+    !! DrDan feels that the purpose to choose L1_norm is due to the fact that
+    !! ESWENO is "linearly" stable in the energy norm for continuous as well
+    !! discontinuous solutions. The reason to choose \xi != \xi_d could be
+    !! that the ESWENO scheme is 3rd order accurate and gives non-oscillatory
+    !! solutions for problems with strong discontinuities. 
+    !<
+
+    ! Eq. 65
+    !if(t.eq.zero) epsilon  = max(sum(abs(q(:, 2:n-1)**2)),sum(abs(q(:, ?:? )**2)))*Delta_xi**2 ! Actual formulation that depends on initial condition
+
+    epsilon = max( sum( abs( q**2  )  )  , one )*Delta_xi2 ! Ad-hoc
+    
     ! Eq. 21 improved version compared to Eq. 19
     alpha0 = d0*(one + tau/(epsilon + beta0))  ! alpha_r(j) = d_r(j) * ( 1. + tau(j) / (epsilon + beta_r(j)) ) , r = 0, 1
     alpha1 = d1*(one + tau/(epsilon + beta1))
