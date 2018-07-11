@@ -102,7 +102,7 @@
     NR_iter_limit = 50
     synch_active  = .true.
     adiab_active  = .true.
-    nullify_empty_bins = .true.
+    nullify_empty_bins = .false.
  /
 
  $CR_SPECIES

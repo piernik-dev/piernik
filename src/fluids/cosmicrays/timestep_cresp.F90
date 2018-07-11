@@ -84,14 +84,17 @@ module timestep_cresp
       dt_cre_ud = huge(one)
       dt_cre_ub = huge(one)
       call cresp_find_prepare_spectrum(n_inout, e_inout, empty_cell, i_up_cell)
+
 ! cell is assumed empty if evaluate_i_up over whole ncre range returns 0 -> nothing to do here
       if (i_up_cell .gt. 0) then
 ! Adiabatic cooling timestep:
+
          if ( abs(sptab%ud) .gt. eps) then
             dt_cre_ud = cfl_cre * w / sptab%ud
             dt_cre_ud = abs(dt_cre_ud)
             dt_cre_min_ud = min(dt_cre_ud, dt_cre_min_ud)
          endif
+
 ! Synchrotron cooling timestep (is dependant only on p_up, highest value of p):
          if (sptab%ub .gt. zero) then
 !           i_up_cell = evaluate_i_up(e_cell, n_cell)
@@ -100,6 +103,7 @@ module timestep_cresp
             dt_cre_min_ub = min(dt_cre_ub, dt_cre_min_ub)
          endif
       endif
+
 ! Here shortest among calculated timesteps is chosen.
       dt_comp = min(dt_cre_ud, dt_cre_ub)
 

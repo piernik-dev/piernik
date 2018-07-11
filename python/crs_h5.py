@@ -263,7 +263,7 @@ def detect_active_bins_new(n_in, e_in):
    if num_active_bins == 0: return active_bins_new, i_lo_tmp, i_up_tmp
 
    i_lo_tmp = max(ne_gt_zero[0]-1,0)
-   i_up_tmp = num_active_bins #  ne_gt_zero[-1]
+   i_up_tmp = ne_gt_zero[num_active_bins-1] #  ne_gt_zero[-1]
 
    pln = p_fix[i_lo_tmp:i_up_tmp]
    prn = p_fix[i_lo_tmp+1:i_up_tmp+1]
@@ -289,13 +289,13 @@ def detect_active_bins_new(n_in, e_in):
             active_bins_new.append(ne_gt_zero[i]+1)
             num_active_bins = num_active_bins +1
 
-
    if num_active_bins == 0: return active_bins_new, i_lo_tmp, i_up_tmp
 
 
    i_lo_tmp = max(active_bins_new[0]-1,0)
    i_up_tmp = min(active_bins_new[-1],ncre)
-   print "active_bins: ", num_active_bins, " | cutoff indices:", i_lo_tmp, i_up_tmp
+   print "active_bins",  active_bins_new
+   print "n active_bins: ", num_active_bins, " | cutoff indices:", i_lo_tmp, i_up_tmp
    return active_bins_new, i_lo_tmp, i_up_tmp
 
 #------------------------------------------
