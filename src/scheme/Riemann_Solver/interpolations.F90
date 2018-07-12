@@ -145,8 +145,10 @@ contains
     select case (interpol_str)
     case ('linear', 'LINEAR', 'lin', '1')
        interp => linear
-    case('weno3', 'WENO3', 'wo3', '2')
+    case ('weno3', 'WENO3', 'wo3', '2')
        interp => weno3
+    case ('weno3l', 'WENO3L', 'wo3l', '2l')
+       interp => weno3_loop
     case default
        write(msg, '(3a)') "[interpolations:set_interpolations] unknown interpolation '", interpol_str, "'"
        call die(msg)
@@ -210,7 +212,7 @@ contains
     use constants,    only: GEO_XYZ, one, two, zero, onet, twot, half
     use dataio_pub,   only: die, msg
     use global,       only: t
-    
+
     implicit none
 
     real, dimension(:,:),        intent(in)  :: q
@@ -231,7 +233,7 @@ contains
 
     integer                                  :: n
     integer, parameter                       :: in = 2  ! index for cells
-    
+
     if (dom%geometry_type /= GEO_XYZ) call die("[interpolations:linear] non-cartesian geometry not implemented yet.")
     if (size(q, in) - size(ql, in) /= 1) then
        write(msg, '(2(a,2i7),a)')"[interpolations:linear] face vector of wrong length: ", size(q, in), size(ql, in), " (expecting: ", size(q, in), size(q, in)-1, ")"
@@ -301,7 +303,7 @@ contains
     w1 = alpha1/(alpha0 + alpha1)  ! w_r(j) is positioned at right face of u(j); w^r_{j+1/2}  in the paper
 
     ! Left state interpolation, Eq. 15
-    
+
     flux0(:, :n-1) = 0.5*(q(:, :n-1) + q(:, 2:))     ! f_0(j) = 1/2 * (  q(j) + q(j+1)) ; face at position j+1/2
     flux1(:, 2:) = 0.5*(-q(:, :n-1) + 3.0*q(:, 2:))  ! f_1(j) = 1/2 * (3*q(j) - q(j-1))
 
@@ -327,5 +329,115 @@ contains
 
        
   end subroutine weno3
+
+  subroutine weno3_loop(q, ql, qr, f_limiter)
+
+#ifdef EPS
+    use cg_leaves,    only: leaves
+    use cg_list,      only: cg_list_element
+#endif
+    use domain,       only: dom
+    use fluxlimiters, only: limiter
+    use domain,       only: dom
+    use constants,    only: GEO_XYZ
+    use dataio_pub,   only: die, msg
+    use constants,    only: one, two
+
+    implicit none
+
+    real, dimension(:,:),        intent(in)  :: q
+    real, dimension(:,:),        intent(out) :: ql
+    real, dimension(:,:),        intent(out) :: qr
+    procedure(limiter), pointer, intent(in)  :: f_limiter
+
+    ! WENO3 definitions
+    ! Artur check this routine very carefully!
+
+    real, dimension(size(q,1))               :: w0, w1
+    real, dimension(size(q,1))               :: alpha0, alpha1
+    real, dimension(size(q,1))               :: beta0, beta1
+    real, dimension(size(q,1))               :: flux0, flux1
+    real, dimension(size(q,1))               :: tau
+    real                                     :: d0,d1
+    real                                     :: epsilon
+
+#ifdef EPS
+    type(cg_list_element), pointer           :: cgl
+#endif
+    integer                                  :: n
+    integer, parameter                       :: in = 2  ! index for cells
+    integer :: i
+
+    if (dom%geometry_type /= GEO_XYZ) call die("[interpolations:linear] non-cartesian geometry not implemented yet.")
+    if (size(q, in) - size(ql, in) /= 1) then
+       write(msg, '(2(a,2i7),a)')"[interpolations:linear] face vector of wrong length: ", size(q, in), size(ql, in), " (expecting: ", size(q, in), size(q, in)-1, ")"
+       call die(msg)
+    endif
+    if (any(shape(ql) /= shape(qr))) call die("[interpolations:linear] face vectors of different lengths")
+
+    n = size(q, in)
+
+    ! Eq. 19
+    d0 = two/3.0
+    d1 = one/3.0
+
+    do i = 2, n-1
+       ! Eq. 20
+       beta0 = (q(:, i+1) - q(:, i))**2  ! beta_0(j) = (u(j+1) - u(j))**2
+       beta1 = (q(:, i) - q(:, i-1))**2  ! beta_1(j) = (u(j) - u(j-1))**2
+
+       ! Eq. 22
+       tau = (q(:, i+1) - two*q(:, i) + q(:, i-1))**2  ! tau(j) = (u(j+1) - 2 * u(j) + u(j-1))**2
+
+       epsilon = 1e-6 ! if not for this declaration, epsilon goes unints in alpha0 or alpha1
+
+#ifdef EPS
+       epsilon = huge(1.)
+       ! epsilon depends on dx
+       cgl => leaves%first
+       do while (associated(cgl))
+          ! AJG: I think this should be local parameter, depending only on current block and perhaps also on current direction
+          epsilon = min(epsilon, minval(cgl%cg%dl,mask=dom%has_dir)) ! check for correctness
+          cgl => cgl%nxt
+       enddo
+       epsilon = epsilon*epsilon
+#endif
+
+       ! Eq. 21 improved version compared to Eq. 19
+       alpha0 = d0*(one + tau/(epsilon + beta0))  ! alpha_r(j) = d_r(j) * ( 1. + tau(j) / (epsilon + beta_r(j)) ) , r = 0, 1
+       alpha1 = d1*(one + tau/(epsilon + beta1))
+
+       ! Eq. 18
+       w0 = alpha0/(alpha0 + alpha1)  ! w_r(j) = alpha_r(j) / (alpha_0(j) + alpha_1(j)) , r = 0, 1
+       w1 = alpha1/(alpha0 + alpha1)  ! w_r(j) is positioned at right face of u(j); w^r_{j+1/2}  in the paper
+
+       ! Left state interpolation, Eq. 15
+
+       flux0 = 0.5*(q(:, i) + q(:, i+1))     ! f_0(j) = 1/2 * (  q(j) + q(j+1)) ; face at position j+1/2
+       flux1 = 0.5*(-q(:, i-1) + 3.0*q(:, i))  ! f_1(j) = 1/2 * (3*q(j) - q(j-1))
+
+       ! WENO3 flux, Eq. 14
+       ql(:, i) = w0*flux0 + w1*flux1  ! f_W(j) = w_0(j) * f_0(j) + w_1(j) * f_1(j) ; face at position j+1/2
+
+       ! Right state interpolation, Eq. 15
+       ! we have to construct the right state symmetrically
+
+       alpha0 = d0*(one + tau/(epsilon + beta1))  ! alpha_r(j) = d_r(j) * ( 1. + tau(j) / (epsilon + beta_r(1-j)) ) , r = 0, 1
+       alpha1 = d1*(one + tau/(epsilon + beta0))  ! we use opposite beta to interpolate from the opposite side
+
+       w0 = alpha0/(alpha0 + alpha1)  ! w_r(j) = alpha_r(j) / (alpha_0(j) + alpha_1(j)) , r = 0, 1
+       w1 = alpha1/(alpha0 + alpha1)
+
+       flux0 = 0.5*(q(:, i) + q(:, i-1))          ! f_0(j) = 1/2 * (  q(j) + q(j-1)) ; face at position j+1/2 from the other side
+       flux1 = 0.5*(-q(:, i+1) + 3.0*q(:, i))  ! f_1(j) = 1/2 * (3*q(j) - q(j+1))
+
+       ! WENO3 flux, Eq. 14, already shifted
+       qr(:, i-1) = w0*flux0 + w1*flux1  ! similar as for left state, but weights are constructed from symmetric stencil
+
+       if (.false.) qr = f_limiter(q)  ! suppress compiler worning on argument needed for other interpolation scheme
+
+    enddo
+
+  end subroutine weno3_loop
 
 end module interpolations
