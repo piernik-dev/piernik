@@ -426,6 +426,11 @@ contains
 
     enddo
 
+    ! Q&D: fix for FPE
+    ! ToDo: handle it properly
+    ql(:, 1) = q(:, 1)
+    qr(:, n-1) = q(:, n)
+
   end subroutine weno3_loop
 
 end module interpolations
