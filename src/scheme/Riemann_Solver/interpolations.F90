@@ -147,8 +147,6 @@ contains
        interp => linear
     case ('weno3', 'WENO3', 'wo3', '2')
        interp => weno3
-    case ('weno3l', 'WENO3L', 'wo3l', '2l')
-       interp => weno3_loop
     case default
        write(msg, '(3a)') "[interpolations:set_interpolations] unknown interpolation '", interpol_str, "'"
        call die(msg)
@@ -205,14 +203,13 @@ contains
 !<
 
   subroutine weno3(q, ql, qr, f_limiter)
-
+    
     use domain,       only: dom
     use fluxlimiters, only: limiter
     use domain,       only: dom
-    use constants,    only: GEO_XYZ, one, two, zero, onet, twot, half
+    use constants,    only: GEO_XYZ, onet, twot, one, two
     use dataio_pub,   only: die, msg
-    use global,       only: t
-
+    
     implicit none
 
     real, dimension(:,:),        intent(in)  :: q
@@ -221,139 +218,7 @@ contains
     procedure(limiter), pointer, intent(in)  :: f_limiter
 
     ! WENO3 definitions
-   
-    real, dimension(size(q,1),size(q,2))     :: w0, w1
-    real, dimension(size(q,1),size(q,2))     :: alpha0, alpha1
-    real, dimension(size(q,1),size(q,2))     :: beta0, beta1
-    real, dimension(size(q,1),size(q,2))     :: flux0, flux1
-    real, dimension(size(q,1),size(q,2))     :: tau
-    real                                     :: epsilon
-    real                                     :: Delta_xi, Delta_xi2
-    real                                     :: d0,d1
-
-    integer                                  :: n
-    integer, parameter                       :: in = 2  ! index for cells
-
-    if (dom%geometry_type /= GEO_XYZ) call die("[interpolations:linear] non-cartesian geometry not implemented yet.")
-    if (size(q, in) - size(ql, in) /= 1) then
-       write(msg, '(2(a,2i7),a)')"[interpolations:linear] face vector of wrong length: ", size(q, in), size(ql, in), " (expecting: ", size(q, in), size(q, in)-1, ")"
-       call die(msg)
-    endif
-    if (any(shape(ql) /= shape(qr))) call die("[interpolations:linear] face vectors of different lengths")
-
-    n = size(q, in)
     
-    ! remove this, or make it dirty
-    beta0  = 0.
-    beta1  = 0.
-    tau    = 0.
-    flux0  = 0.
-    flux1  = 0.
-    epsilon = 0.
-    
-    ! Eq. 19
-    d0 = twot
-    d1 = onet
-
-    ! Eq. 20
-    beta0(:, :n-1) = (q(:, 2:) - q(:, :n-1))**2  ! beta_0(j) = (u(j+1) - u(j))**2
-    beta1(:, 2:)   = (q(:, 2:) - q(:, :n-1))**2  ! beta_1(j) = (u(j) - u(j-1))**2
-
-    ! Eq. 22
-    tau(:, 2:n-1) = (q(:, 3:) - two*q(:, 2:n-1) + q(:, :n-2))**2  ! tau(j) = (u(j+1) - 2 * u(j) + u(j-1))**2
-
-    
-    !>
-    !! The WENO scheme is self-similar. The same applies to ESWENO.
-    !! The grid spacing \Delta x is replaced with the grid spacing
-    !! in the computational domain \Delta xi = 1/j, where j is the
-    !! total number of gird cells. 
-    !<
-
-    ! \Delta xi is mentioned before Eq. 63
-    Delta_xi = one/n
-    Delta_xi2 = Delta_xi*Delta_xi
-
-    !>
-    !! Sec 4.3
-    !! The value of the tuning parameter "epsilon" is based on
-    !! truncation error analysis. In Eq. 21 (or Eq. 19) this 
-    !! term epsilon is added with beta_r. Hence, it should be 
-    !! scaled consistently. The terms beta_r are ~ u_\xi^2 \Delta xi^2
-    !! near smooth regions and ~ u^2 near unresolved regions.
-    !! Therefore, epsilon can be chosen as:
-    !! epsilon = max( L1norm(u_0^2), L1norm(u_0_\xi^2))*\Delta xi^2, 
-    !! where \xi != \xi_d, and L1_norm = sum ( abs(x(:)) ). The terms 
-    !! u_0 is the "initial condition", and u_0_\xi^2 is the "initial condition"
-    !! discarding the set of points \xi_d where it is discontinuous.
-    !! The term epsilon is calculated only once, and same value is used
-    !! during the entire calculation to reduce CPU time. But, this could be
-    !! relaxed, and possibly epsilon may be calculated at every time step.
-    !<
-
-    ! Eq. 65
-    epsilon   = max( sum( abs( q(:,2:n-1)**2 ) ), one  )*Delta_xi2 ! Ad-hoc
-    !epsilon   = max( sum( abs( q_0**2  )  )  , sum( abs( q_xi_0**2 ) ) )*Delta_xi2 ! Actual formulation
-    
-    ! Eq. 21 improved version compared to Eq. 19
-    alpha0 = d0*(one + tau/(epsilon + beta0))  ! alpha_r(j) = d_r(j) * ( 1. + tau(j) / (epsilon + beta_r(j)) ) , r = 0, 1
-    alpha1 = d1*(one + tau/(epsilon + beta1))
-
-    ! Eq. 18
-    w0 = alpha0/(alpha0 + alpha1)  ! w_r(j) = alpha_r(j) / (alpha_0(j) + alpha_1(j)) , r = 0, 1
-    w1 = alpha1/(alpha0 + alpha1)  ! w_r(j) is positioned at right face of u(j); w^r_{j+1/2}  in the paper
-
-    ! Left state interpolation, Eq. 15
-
-    flux0(:, :n-1) = 0.5*(q(:, :n-1) + q(:, 2:))     ! f_0(j) = 1/2 * (  q(j) + q(j+1)) ; face at position j+1/2
-    flux1(:, 2:) = 0.5*(-q(:, :n-1) + 3.0*q(:, 2:))  ! f_1(j) = 1/2 * (3*q(j) - q(j-1))
-
-    ! WENO3 flux, Eq. 14
-    ql = w0(:, :n-1)*flux0(:, :n-1) + w1(:, :n-1)*flux1(:, :n-1)  ! f_W(j) = w_0(j) * f_0(j) + w_1(j) * f_1(j) ; face at position j+1/2
-
-    ! Right state interpolation, Eq. 15
-    ! we have to construct the right state symmetrically
-
-    alpha0 = d0*(one + tau/(epsilon + beta1))  ! alpha_r(j) = d_r(j) * ( 1. + tau(j) / (epsilon + beta_r(1-j)) ) , r = 0, 1
-    alpha1 = d1*(one + tau/(epsilon + beta0))  ! we use opposite beta to interpolate from the opposite side
-
-    w0 = alpha0/(alpha0 + alpha1)  ! w_r(j) = alpha_r(j) / (alpha_0(j) + alpha_1(j)) , r = 0, 1
-    w1 = alpha1/(alpha0 + alpha1)
-
-    flux0(:, 2:) = 0.5*(q(:, 2:) + q(:,:n-1))          ! f_0(j) = 1/2 * (  q(j) + q(j-1)) ; face at position j+1/2 from the other side
-    flux1(:, :n-1) = 0.5*(-q(:, 2:) + 3.0*q(:, :n-1))  ! f_1(j) = 1/2 * (3*q(j) - q(j+1))
-
-    ! WENO3 flux, Eq. 14, already shifted
-    qr = w0(:, 2:)*flux0(:, 2:)+ w1(:, 2:)*flux1(:, 2:)  ! similar as for left state, but weights are constructed from symmetric stencil
-
-    if (.false.) qr = f_limiter(q)  ! suppress compiler worning on argument needed for other interpolation scheme
-
-       
-  end subroutine weno3
-
-  subroutine weno3_loop(q, ql, qr, f_limiter)
-
-#ifdef EPS
-    use cg_leaves,    only: leaves
-    use cg_list,      only: cg_list_element
-#endif
-    use domain,       only: dom
-    use fluxlimiters, only: limiter
-    use domain,       only: dom
-    use constants,    only: GEO_XYZ
-    use dataio_pub,   only: die, msg
-    use constants,    only: one, two
-
-    implicit none
-
-    real, dimension(:,:),        intent(in)  :: q
-    real, dimension(:,:),        intent(out) :: ql
-    real, dimension(:,:),        intent(out) :: qr
-    procedure(limiter), pointer, intent(in)  :: f_limiter
-
-    ! WENO3 definitions
-    ! Artur check this routine very carefully!
-
     real, dimension(size(q,1))               :: w0, w1
     real, dimension(size(q,1))               :: alpha0, alpha1
     real, dimension(size(q,1))               :: beta0, beta1
@@ -361,13 +226,10 @@ contains
     real, dimension(size(q,1))               :: tau
     real                                     :: d0,d1
     real                                     :: epsilon
-
-#ifdef EPS
-    type(cg_list_element), pointer           :: cgl
-#endif
+    real                                     :: Delta_xi, Delta_xi2
     integer                                  :: n
     integer, parameter                       :: in = 2  ! index for cells
-    integer :: i
+    integer                                  :: i
 
     if (dom%geometry_type /= GEO_XYZ) call die("[interpolations:linear] non-cartesian geometry not implemented yet.")
     if (size(q, in) - size(ql, in) /= 1) then
@@ -379,10 +241,11 @@ contains
     n = size(q, in)
 
     ! Eq. 19
-    d0 = two/3.0
-    d1 = one/3.0
+    d0 = twot
+    d1 = onet
 
     do i = 2, n-1
+
        ! Eq. 20
        beta0 = (q(:, i+1) - q(:, i))**2  ! beta_0(j) = (u(j+1) - u(j))**2
        beta1 = (q(:, i) - q(:, i-1))**2  ! beta_1(j) = (u(j) - u(j-1))**2
@@ -390,19 +253,37 @@ contains
        ! Eq. 22
        tau = (q(:, i+1) - two*q(:, i) + q(:, i-1))**2  ! tau(j) = (u(j+1) - 2 * u(j) + u(j-1))**2
 
-       epsilon = 1e-6 ! if not for this declaration, epsilon goes unints in alpha0 or alpha1
+       !>
+       !! The WENO scheme is self-similar. The same applies to ESWENO.
+       !! The grid spacing \Delta x is replaced with the grid spacing
+       !! in the computational domain \Delta xi = 1/j, where j is the
+       !! total number of gird cells. 
+       !<
 
-#ifdef EPS
-       epsilon = huge(1.)
-       ! epsilon depends on dx
-       cgl => leaves%first
-       do while (associated(cgl))
-          ! AJG: I think this should be local parameter, depending only on current block and perhaps also on current direction
-          epsilon = min(epsilon, minval(cgl%cg%dl,mask=dom%has_dir)) ! check for correctness
-          cgl => cgl%nxt
-       enddo
-       epsilon = epsilon*epsilon
-#endif
+       ! \Delta xi is mentioned before Eq. 63
+       Delta_xi = one/i
+       Delta_xi2 = Delta_xi*Delta_xi
+
+       !>
+       !! Sec 4.3
+       !! The value of the tuning parameter "epsilon" is based on
+       !! truncation error analysis. In Eq. 21 (or Eq. 19) this 
+       !! term epsilon is added with beta_r. Hence, it should be 
+       !! scaled consistently. The terms beta_r are ~ u_\xi^2 \Delta xi^2
+       !! near smooth regions and ~ u^2 near unresolved regions.
+       !! Therefore, epsilon can be chosen as:
+       !! epsilon = max( L1norm(u_0^2), L1norm(u_0_\xi^2))*\Delta xi^2, 
+       !! where \xi != \xi_d, and L1_norm = sum ( abs(x(:)) ). The terms 
+       !! u_0 is the "initial condition", and u_0_\xi^2 is the "initial condition"
+       !! discarding the set of points \xi_d where it is discontinuous.
+       !! The term epsilon is calculated only once, and same value is used
+       !! during the entire calculation to reduce CPU time. But, this could be
+       !! relaxed, and possibly epsilon may be calculated at every time step.
+       !<
+
+       ! Eq. 65
+       epsilon   = max( sum( abs( q**2 ) ), one  )*Delta_xi2 ! Ad-hoc for making it work, but not correct!
+       !epsilon   = max( sum( abs( u0^2  )  )  , sum( abs( u0_xi^2 ) ) )*Delta_xi2 ! Actual formulation, \xi != \xi_d --> points of discontinuity.
 
        ! Eq. 21 improved version compared to Eq. 19
        alpha0 = d0*(one + tau/(epsilon + beta0))  ! alpha_r(j) = d_r(j) * ( 1. + tau(j) / (epsilon + beta_r(j)) ) , r = 0, 1
@@ -444,6 +325,6 @@ contains
     ql(:, 1) = q(:, 1)
     qr(:, n-1) = q(:, n)
 
-  end subroutine weno3_loop
+  end subroutine weno3
 
 end module interpolations
