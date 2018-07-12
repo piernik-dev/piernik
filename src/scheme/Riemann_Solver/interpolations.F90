@@ -145,7 +145,7 @@ contains
     select case (interpol_str)
     case ('linear', 'LINEAR', 'lin', '1')
        interp => linear
-    case('weno3', 'WENO3', 'wo3', '2')
+    case ('weno3', 'WENO3', 'wo3', '2')
        interp => weno3
     case default
        write(msg, '(3a)') "[interpolations:set_interpolations] unknown interpolation '", interpol_str, "'"
@@ -215,7 +215,7 @@ contains
     use constants,    only: GEO_XYZ
     use dataio_pub,   only: die, msg
     use constants,    only: one, two
-    
+
     implicit none
 
     real, dimension(:,:),        intent(in)  :: q
@@ -239,7 +239,7 @@ contains
 #endif
     integer                                  :: n
     integer, parameter                       :: in = 2  ! index for cells
-    
+
     if (dom%geometry_type /= GEO_XYZ) call die("[interpolations:linear] non-cartesian geometry not implemented yet.")
     if (size(q, in) - size(ql, in) /= 1) then
        write(msg, '(2(a,2i7),a)')"[interpolations:linear] face vector of wrong length: ", size(q, in), size(ql, in), " (expecting: ", size(q, in), size(q, in)-1, ")"
@@ -258,7 +258,7 @@ contains
     beta1  = 0.
     tau    = 0.
     flux0 = 0.
-    flux0 = 0.
+    flux1 = 0.
 
     ! Eq. 20
     beta0(:, :n-1) = (q(:, 2:) - q(:, :n-1))**2  ! beta_0(j) = (u(j+1) - u(j))**2
@@ -273,11 +273,11 @@ contains
     epsilon = huge(1.)
     ! epsilon depends on dx
     cgl => leaves%first
-    do while(associated(cgl))
+    do while (associated(cgl))
        ! AJG: I think this should be local parameter, depending only on current block and perhaps also on current direction
        epsilon = min(epsilon, minval(cgl%cg%dl,mask=dom%has_dir)) ! check for correctness
        cgl => cgl%nxt
-    end do
+    enddo
     epsilon = epsilon*epsilon
 #endif
 
@@ -290,7 +290,7 @@ contains
     w1 = alpha1/(alpha0 + alpha1)  ! w_r(j) is positioned at right face of u(j); w^r_{j+1/2}  in the paper
 
     ! Left state interpolation, Eq. 15
-    
+
     flux0(:, :n-1) = 0.5*(q(:, :n-1) + q(:, 2:))     ! f_0(j) = 1/2 * (  q(j) + q(j+1)) ; face at position j+1/2
     flux1(:, 2:) = 0.5*(-q(:, :n-1) + 3.0*q(:, 2:))  ! f_1(j) = 1/2 * (3*q(j) - q(j-1))
 
