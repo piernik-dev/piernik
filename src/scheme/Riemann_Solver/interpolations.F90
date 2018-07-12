@@ -286,8 +286,9 @@ contains
     !! where \xi != \xi_d, and L1_norm = sum ( abs(x(:)) ). The terms 
     !! u_0 is the "initial condition", and u_0_\xi^2 is the "initial condition"
     !! discarding the set of points \xi_d where it is discontinuous.
-    !! The term epsilon should be calculated only once, and same value is used
-    !! during the entire calculation.
+    !! The term epsilon is calculated only once, and same value is used
+    !! during the entire calculation to reduce CPU time. But, this could be
+    !! relaxed, and possibly epsilon may be calculated at every time step.
     !<
 
     ! Eq. 65
