@@ -207,7 +207,7 @@ contains
     use domain,       only: dom
     use fluxlimiters, only: limiter
     use domain,       only: dom
-    use constants,    only: GEO_XYZ, one, two, zero, onet, twot
+    use constants,    only: GEO_XYZ, one, two, zero, onet, twot, half
     use dataio_pub,   only: die, msg
     use global,       only: t
     
@@ -225,7 +225,7 @@ contains
     real, dimension(size(q,1),size(q,2))     :: beta0, beta1
     real, dimension(size(q,1),size(q,2))     :: flux0, flux1
     real, dimension(size(q,1),size(q,2))     :: tau
-    real, dimension(size(q,1),size(q,2))     :: epsilon
+    real                                     :: epsilon
     real                                     :: Delta_xi, Delta_xi2
     real                                     :: d0,d1
 
@@ -274,27 +274,23 @@ contains
 
     !>
     !! Sec 4.3
-    !! The term epsilon in Eq. 21 (or Eq. 19) is added with beta_r.
-    !! Hence, epsilon should be scaled consistently. The terms beta_r
-    !! are ~ u_\xi^2 \Delta xi^2 near smooth regions and ~ u^2 near 
-    !! unresolved regions. Therefore, epsilon can be chosen as:
+    !! The value of the tuning parameter "epsilon" is based on
+    !! truncation error analysis. In Eq. 21 (or Eq. 19) this 
+    !! term epsilon is added with beta_r. Hence, it should be 
+    !! scaled consistently. The terms beta_r are ~ u_\xi^2 \Delta xi^2
+    !! near smooth regions and ~ u^2 near unresolved regions.
+    !! Therefore, epsilon can be chosen as:
     !! epsilon = max( L1norm(u_0^2), L1norm(u_0_\xi^2))*\Delta xi^2, 
     !! where \xi != \xi_d, and L1_norm = sum ( abs(x(:)) ). The terms 
     !! u_0 is the "initial condition", and u_0_\xi^2 is the "initial condition"
     !! discarding the set of points \xi_d where it is discontinuous.
     !! The term epsilon should be calculated only once, and same value is used
     !! during the entire calculation.
-    !! DrDan feels that the purpose to choose L1_norm is due to the fact that
-    !! ESWENO is "linearly" stable in the energy norm for continuous as well
-    !! discontinuous solutions. The reason to choose \xi != \xi_d could be
-    !! that the ESWENO scheme is 3rd order accurate and gives non-oscillatory
-    !! solutions for problems with strong discontinuities. 
     !<
 
     ! Eq. 65
-    !if(t.eq.zero) epsilon  = max(sum(abs(q(:, 2:n-1)**2)),sum(abs(q(:, ?:? )**2)))*Delta_xi**2 ! Actual formulation that depends on initial condition
-
-    epsilon = max( sum( abs( q**2  )  )  , one )*Delta_xi2 ! Ad-hoc
+    epsilon   = max( sum( abs( q(:,2:n-1)**2 ) ), one  )*Delta_xi2 ! Ad-hoc
+    !epsilon   = max( sum( abs( q_0**2  )  )  , sum( abs( q_xi_0**2 ) ) )*Delta_xi2 ! Actual formulation
     
     ! Eq. 21 improved version compared to Eq. 19
     alpha0 = d0*(one + tau/(epsilon + beta0))  ! alpha_r(j) = d_r(j) * ( 1. + tau(j) / (epsilon + beta_r(j)) ) , r = 0, 1
