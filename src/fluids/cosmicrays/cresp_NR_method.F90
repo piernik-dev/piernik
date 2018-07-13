@@ -143,7 +143,7 @@ module cresp_NR_method
           delta   = fun1D_val / derivative_1D(x)
 
           x = x - delta
-          if(abs(delta) .lt. tol_x_1D) then
+          if (abs(delta) .lt. tol_x_1D) then
               exit_code = .false.
               return
           endif
@@ -1212,7 +1212,7 @@ module cresp_NR_method
       f_l = e_small_to_f(p_l)
       q_bin = q_ratios(f_r/f_l,p_r/p_l)
 
-      if   ( abs(q_bin - three) .lt. eps) then
+      if ( abs(q_bin - three) .lt. eps) then
          fun3_lo = -alpha/p_l + (-one + p_r/p_l)/log(p_r/p_l)
       else if ( abs(q_bin - four) .lt. eps) then
          fun3_lo = -alpha/p_l + (p_r/p_l)*log(p_r/p_l)/(p_r/p_l - one)
