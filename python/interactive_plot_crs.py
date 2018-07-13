@@ -5,6 +5,7 @@ from matplotlib.colors import LogNorm
 import numpy as np
 from math import pi
 from numpy import log, log10
+import crs_pf
 import os, weakref
 import sys
 import read_h5
@@ -34,6 +35,7 @@ use_logscale  = True #False
 #####################################
 
 f_run = True
+pf_initialized = False
 def _total_cree(field,data):
    list_cree = []
    for element in h5ds.field_list:
@@ -94,6 +96,8 @@ if f_run == True:
     for i in range(len(var_names)):
         print ( " %20s =  %8s ( %15s  ) " %(var_names[i], var_array[i], type(var_array[i])))
     print ""
+
+    crs_pf.initialize_pf_arrays(pf_initialized)
 #---------- Open file
     h5File = h5py.File(filename,"r") # sorry, I'm not sure how to access timestep via yt
     h5ds = yt.load(filename)
