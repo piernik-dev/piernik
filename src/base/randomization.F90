@@ -34,7 +34,7 @@ module randomization
    implicit none
 
    private
-   public :: initseed, redoseed, seed_size, init_randomization, cleanup_randomization, read_current_seed_from_restart, write_current_seed_to_restart
+   public :: initseed, redoseed, seed_size, init_randomization, cleanup_randomization, randoms_redostep, read_current_seed_from_restart, write_current_seed_to_restart
 
    integer, dimension(:), allocatable :: initseed, redoseed
    integer                            :: seed_size
@@ -73,13 +73,17 @@ contains
 
    end subroutine cleanup_randomization
 
-   subroutine randoms_redostep
-
-      use mpisetup, only: master
+   subroutine randoms_redostep(dorepeat)
 
       implicit none
 
-      if (master) call random_seed(put=redoseed)
+      logical, intent(in) :: dorepeat
+
+      if (dorepeat) then
+         call random_seed(put=redoseed)
+      else
+         call random_seed(get=redoseed)
+      endif
 
    end subroutine randoms_redostep
 
