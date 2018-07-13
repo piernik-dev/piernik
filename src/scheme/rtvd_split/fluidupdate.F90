@@ -95,9 +95,9 @@ contains
       implicit none
 
       type(cg_list_element), pointer :: cgl
-      integer(kind=4) :: no_hist_count
-      integer :: i, j
-      character(len=dsetnamelen) :: rname
+      integer(kind=4)                :: no_hist_count
+      integer                        :: i, j
+      character(len=dsetnamelen)     :: rname
 
       if (.not.repeat_step) return
 
@@ -108,6 +108,8 @@ contains
          t = t_saved
          nstep = nstep_saved
          dt = dtm/dt_max_grow**2
+         call downgrade_magic_mass
+         if (associated(user_reaction_to_redo_step)) call user_reaction_to_redo_step
       else
          nstep_saved = nstep
          t_saved = t
@@ -137,8 +139,6 @@ contains
                         else
                            no_hist_count = no_hist_count + I_ONE
                         endif
-                        call downgrade_magic_mass
-                        if (associated(user_reaction_to_redo_step)) call user_reaction_to_redo_step
                      else
                         select type(na)
                            type is (na_var_list_q)
