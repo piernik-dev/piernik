@@ -479,6 +479,9 @@ contains
       use mpi,              only: MPI_INFO_NULL
       use mpisetup,         only: comm, master, piernik_MPI_Bcast, ibuff, rbuff, cbuff, slave
       use named_array_list, only: qna, wna
+#ifdef RANDOMIZE
+      use randomization,    only: initseed, seed_size
+#endif /* RANDOMIZE */
 
       implicit none
 
@@ -598,6 +601,9 @@ contains
          call h5ltget_attribute_int_f(file_id,"/","nstep", ibuf, error) ; nstep = ibuf(1)
          call h5ltget_attribute_int_f(file_id,"/","nres",  ibuf, error) ; nres  = ibuf(1)
          call h5ltget_attribute_int_f(file_id,"/","nhdf",  ibuf, error) ; nhdf  = ibuf(1)
+#ifdef RANDOMIZE
+         call h5ltget_attribute_int_f(file_id,"/","current_seed", ibuf, error) ; initseed = ibuf(:seed_size)
+#endif /* RANDOMIZE */
 
          call h5ltget_attribute_string_f(file_id,"/","problem_name", problem_name, error)
          call h5ltget_attribute_string_f(file_id,"/","domain",       domain_dump,  error)
@@ -626,6 +632,9 @@ contains
          ibuff(2) = nres
          ibuff(3) = nhdf
          if (restart_hdf5_version > 1.11) ibuff(5) = require_problem_IC
+#ifdef RANDOMIZE
+         ibuff(6:seed_size+5) = initseed
+#endif /* RANDOMIZE */
 
          rbuff(1) = last_log_time
          rbuff(2) = last_tsl_time
@@ -648,6 +657,9 @@ contains
          nres = ibuff(2)
          nhdf = ibuff(3)
          if (restart_hdf5_version > 1.11) require_problem_IC = ibuff(5)
+#ifdef RANDOMIZE
+         initseed = ibuff(6:seed_size+5)
+#endif /* RANDOMIZE */
 
          last_log_time = rbuff(1)
          last_tsl_time = rbuff(2)
@@ -661,6 +673,9 @@ contains
          run_id = cbuff(3)(1:idlen)
 
       endif
+#ifdef RANDOMIZE
+      call random_seed(put=initseed)
+#endif /* RANDOMIZE */
 
    end subroutine read_restart_hdf5_v1
 

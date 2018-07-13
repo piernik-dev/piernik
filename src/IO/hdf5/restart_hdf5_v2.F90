@@ -512,6 +512,9 @@ contains
       use mass_defect,        only: magic_mass
       use mpisetup,           only: master, piernik_MPI_Barrier
       use read_attr,          only: read_attribute
+#ifdef RANDOMIZE
+      use randomization,      only: read_current_seed_from_restart
+#endif /* RANDOMIZE */
 
       implicit none
 
@@ -630,6 +633,9 @@ contains
             end select
       enddo
       deallocate(ibuf)
+#ifdef RANDOMIZE
+      call read_current_seed_from_restart(file_id)
+#endif /* RANDOMIZE */
 
       do ia = lbound(str_attrs, dim=1), ubound(str_attrs, dim=1)
          cbuf=''

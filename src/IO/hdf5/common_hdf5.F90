@@ -321,15 +321,18 @@ contains
 !<
    subroutine set_common_attributes(filename)
 
-      use constants,   only: I_ONE
-      use dataio_pub,  only: use_v2_io, parfile, parfilelines, gzip_level
-      use dataio_user, only: user_attrs_wr, user_attrs_pre
-      use hdf5,        only: HID_T, SIZE_T, HSIZE_T, H5F_ACC_TRUNC_F, H5T_NATIVE_CHARACTER, H5Z_FILTER_DEFLATE_F, &
+      use constants,     only: I_ONE
+      use dataio_pub,    only: use_v2_io, parfile, parfilelines, gzip_level
+      use dataio_user,   only: user_attrs_wr, user_attrs_pre
+      use hdf5,          only: HID_T, SIZE_T, HSIZE_T, H5F_ACC_TRUNC_F, H5T_NATIVE_CHARACTER, H5Z_FILTER_DEFLATE_F, &
          & H5P_DATASET_CREATE_F, h5open_f, h5fcreate_f, h5fclose_f, H5Zfilter_avail_f, H5Pcreate_f, H5Pset_deflate_f, &
          & H5Pset_chunk_f, h5tcopy_f, h5tset_size_f, h5screate_simple_f, H5Dcreate_f, H5Dwrite_f, H5Dclose_f, &
          & H5Sclose_f, H5Tclose_f, H5Pclose_f, h5close_f
-      use mpisetup,    only: slave
-      use version,     only: env, nenv
+      use mpisetup,      only: slave
+      use version,       only: env, nenv
+#ifdef RANDOMIZE
+      use randomization, only: write_current_seed_to_restart
+#endif /* RANDOMIZE */
 
       implicit none
 
@@ -387,6 +390,9 @@ contains
       call H5Tclose_f(type_id, error)
       call H5Pclose_f(prp_id, error)
 
+#ifdef RANDOMIZE
+      call write_current_seed_to_restart(file_id)
+#endif /* RANDOMIZE */
       if (associated(user_attrs_wr)) call user_attrs_wr(file_id)
 
       call h5fclose_f(file_id, error)
@@ -538,7 +544,7 @@ contains
       ibuffer(2) = nres                  ; ibuffer_name(2) = "nres" !rr2
       ibuffer(3) = nhdf                  ; ibuffer_name(3) = "nhdf" !rr2
       ibuffer(4) = -1                    ; ibuffer_name(4) = "nimg" !rr2 !FIXME
-      ibuffer(5) = require_problem_IC     ; ibuffer_name(5) = "require_problem_IC" !rr2
+      ibuffer(5) = require_problem_IC    ; ibuffer_name(5) = "require_problem_IC" !rr2
 
       !> \todo  add number of pieces in the restart point/data dump
 

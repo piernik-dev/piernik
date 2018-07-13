@@ -96,6 +96,9 @@ contains
 #ifdef COSM_RAYS
       use crdiffusion,           only: init_crdiffusion
 #endif /* COSM_RAYS */
+#ifdef RANDOMIZE
+      use randomization,         only: init_randomization
+#endif /* RANDOMIZE */
 #ifdef PIERNIK_OPENCL
       use piernikcl,             only: init_opencl
 #endif /* PIERNIK_OPENCL */
@@ -142,6 +145,10 @@ contains
       call init_dataio_parameters            ! Required very early to call colormessage without side-effects
 
       call init_units
+
+#ifdef RANDOMIZE
+      call init_randomization
+#endif /* RANDOMIZE */
 
       call init_default_fluidboundaries
 
