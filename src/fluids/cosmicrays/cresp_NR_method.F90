@@ -1599,7 +1599,7 @@ module cresp_NR_method
             &     "Saved below: e_small, size(NR_guess_grid,dim=1), size(NR_guess_grid,dim=2), max_p_ratio, q_big,  clight. &
             &      Do not remove content from this file"
          write(31, "(1E15.8, 2I10,10E22.15)") e_small, size(NR_guess_grid,dim=1), size(NR_guess_grid, dim=2), &
-            &     max_p_ratio, q_big, clight
+            &     max_p_ratio, q_big, clight              ! TODO: remove max_p_ratio, swap cols, rows with just arr_dim
          write(31, "(A1)") " "                            ! Blank line for
 
          do j=1, size(NR_guess_grid,dim=2)
@@ -1626,6 +1626,7 @@ module cresp_NR_method
 !----------------------------------------------------------------------------------------------------
    subroutine read_NR_guess_grid(NR_guess_grid, var_name, exit_code) ! must be improved, especially for cases when files do not exist
       use cresp_variables, only: clight ! use units, only: clight
+      use func,            only: operator(.equals.)
       use initcrspectrum, only: e_small, q_big, max_p_ratio
 
       implicit none
@@ -1648,9 +1649,9 @@ module cresp_NR_method
       else
          read(31,*) ! Skipping comment line
          read(31,"(1E15.8,2I10,10E22.15)") svd_e_sm, svd_rows, svd_cols, svd_max_p_r, svd_q_big, svd_clight
-         if ( abs(svd_e_sm-e_small)/e_small .le. 1.0e-6 .and. svd_rows .eq. size(NR_guess_grid,dim=1) &
-            &  .and. svd_cols .eq. size(NR_guess_grid,dim=2) .and. abs(max_p_ratio-svd_max_p_r)/max_p_ratio .le. 1.0e-6 &
-            &  .and. abs(q_big-svd_q_big)/q_big .le. 1.0e-6 .and. abs(clight-svd_clight)/clight .le. 1.0e-6 ) then ! This saves a lot of time
+         if ( (svd_e_sm .equals. e_small) .and. (svd_rows .eq. size(NR_guess_grid, dim=1)) .and. &
+           &  (svd_cols .eq. size(NR_guess_grid, dim=2)) .and. &       ! TODO: swap rows and cols with just arr_dim, drop max_p_ratio
+           &  (svd_max_p_r .equals. max_p_ratio) .and. (svd_q_big .equals. q_big) .and. (svd_clight .equals. clight) ) then ! This saves a lot of time
             read(31, *)
 
             do j=1, size(NR_guess_grid,dim=2)
