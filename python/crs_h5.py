@@ -349,6 +349,8 @@ def crs_plot_main(parameter_names, parameter_values, plot_var, ncrs, ecrs, field
     active_bins, i_lo, i_up = detect_active_bins_new(ncrs, ecrs)
     if num_active_bins > 0:
        empty_cell = False
+    else:
+       return plt.subplot(122), empty_cell
 
     i_lo = max(i_lo,1) # temporarily do not display the leftmost bin
 
