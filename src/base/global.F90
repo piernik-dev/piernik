@@ -44,7 +44,7 @@ module global
         &    integration_order, limiter, limiter_b, smalld, smallei, smallp, use_smalld, h_solver, interpol_str, &
         &    relax_time, grace_period_passed, cfr_smooth, repeat_step, skip_sweep, geometry25D, &
         &    dirty_debug, do_ascii_dump, show_n_dirtys, no_dirty_checks, sweeps_mgu, use_fargo, print_divB, &
-        &    divB_0_method, force_cc_mag, psi_0, glm_alpha, use_eglm, cfl_glm, ch_grid
+        &    divB_0_method, force_cc_mag, psi_0, glm_alpha, use_eglm, cfl_glm, ch_grid, w_epsilon
 
    real, parameter :: dt_default_grow = 2.
    logical         :: cfl_violated             !< True when cfl condition is violated
@@ -93,10 +93,11 @@ module global
    logical                       :: use_eglm          !< use E-GLM?
    real                          :: cfl_glm           !< "CFL" for chspeed in divergence cleaning
    logical                       :: ch_grid           !< When true use grid properties to estimate ch (psi wave propagation speed). Use gas properties otherwise.
+   real                          :: w_epsilon         !< small number for safe evaluation of weights in WENO interpolation
 
    namelist /NUMERICAL_SETUP/ cfl, cflcontrol, cfl_max, use_smalld, smalld, smallei, smallc, smallp, dt_initial, dt_max_grow, dt_min, &
         &                     repeat_step, limiter, limiter_b, relax_time, integration_order, cfr_smooth, skip_sweep, geometry25D, sweeps_mgu, print_divB, &
-        &                     use_fargo, h_solver, divB_0, psi_0, glm_alpha, use_eglm, cfl_glm, ch_grid, interpol_str
+        &                     use_fargo, h_solver, divB_0, psi_0, glm_alpha, use_eglm, cfl_glm, ch_grid, interpol_str, w_epsilon
 
 contains
 
@@ -136,6 +137,7 @@ contains
 !!   <tr><td>use_eglm         </td><td>false  </td><td>logical value                        </td><td>\copydoc global::use_eglm         </td></tr>
 !!   <tr><td>print_divB       </td><td>0      </td><td>integer value                        </td><td>\copydoc global::print_divB       </td></tr>
 !!   <tr><td>ch_grid          </td><td>true   </td><td>logical value                        </td><td>\copydoc global::ch_grid          </td></tr>
+!!   <tr><td>w_epsilon        </td><td>1e-10  </td><td>real                                 </td><td>\copydoc global::w_epsilon        </td></tr>
 !! </table>
 !! \n \n
 !<
@@ -198,6 +200,7 @@ contains
       print_divB  = 100
       cfl_glm     = 1.
       ch_grid     = .true.
+      w_epsilon   = 1e-10
 
       if (master) then
          if (.not.nh%initialized) call nh%init()
@@ -256,6 +259,7 @@ contains
          rbuff(12) = psi_0
          rbuff(13) = glm_alpha
          rbuff(14) = cfl_glm
+         rbuff(15) = w_epsilon
 
          lbuff(1)   = use_smalld
          lbuff(2)   = repeat_step
@@ -298,6 +302,7 @@ contains
          psi_0       = rbuff(12)
          glm_alpha   = rbuff(13)
          cfl_glm     = rbuff(14)
+         w_epsilon   = rbuff(15)
 
          limiter    = cbuff(1)
          limiter_b  = cbuff(2)

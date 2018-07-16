@@ -204,11 +204,11 @@ contains
 
   subroutine weno3(q, ql, qr, f_limiter)
     
-    use domain,       only: dom
-    use fluxlimiters, only: limiter
-    use domain,       only: dom
     use constants,    only: GEO_XYZ, onet, twot, one, two
     use dataio_pub,   only: die, msg
+    use domain,       only: dom
+    use fluxlimiters, only: limiter
+    use global,       only: w_epsilon
     
     implicit none
 
@@ -225,8 +225,7 @@ contains
     real, dimension(size(q,1))               :: flux0, flux1
     real, dimension(size(q,1))               :: tau
     real                                     :: d0,d1
-    real                                     :: epsilon
-    real                                     :: Delta_xi, Delta_xi2
+    !real                                     :: Delta_xi, Delta_xi2
     integer                                  :: n
     integer, parameter                       :: in = 2  ! index for cells
     integer                                  :: i
@@ -261,8 +260,8 @@ contains
        !<
 
        ! \Delta xi is mentioned before Eq. 63
-       Delta_xi = one/i
-       Delta_xi2 = Delta_xi*Delta_xi
+       ! Delta_xi = one/n
+       ! Delta_xi2 = Delta_xi*Delta_xi
 
        !>
        !! Sec 4.3
@@ -282,12 +281,14 @@ contains
        !<
 
        ! Eq. 65
-       epsilon   = max( sum( abs( q**2 ) ), one  )*Delta_xi2 ! Ad-hoc for making it work, but not correct!
-       !epsilon   = max( sum( abs( u0^2  )  )  , sum( abs( u0_xi^2 ) ) )*Delta_xi2 ! Actual formulation, \xi != \xi_d --> points of discontinuity.
+       !w_epsilon   = max( sum( abs( q**2 ) ), one  )*Delta_xi2 ! Ad-hoc for making it work, but not correct!
+       !w_epsilon   = max( sum( abs( u0^2  )  )  , sum( abs( u0_xi^2 ) ) )*Delta_xi2 ! Actual formulation, \xi != \xi_d --> points of discontinuity.
+
+       ! For simplicity here we use just constant small epsilon from NUMERICAL_SETUP.
 
        ! Eq. 21 improved version compared to Eq. 19
-       alpha0 = d0*(one + tau/(epsilon + beta0))  ! alpha_r(j) = d_r(j) * ( 1. + tau(j) / (epsilon + beta_r(j)) ) , r = 0, 1
-       alpha1 = d1*(one + tau/(epsilon + beta1))
+       alpha0 = d0*(one + tau/(w_epsilon + beta0))  ! alpha_r(j) = d_r(j) * ( 1. + tau(j) / (epsilon + beta_r(j)) ) , r = 0, 1
+       alpha1 = d1*(one + tau/(w_epsilon + beta1))
 
        ! Eq. 18
        w0 = alpha0/(alpha0 + alpha1)  ! w_r(j) = alpha_r(j) / (alpha_0(j) + alpha_1(j)) , r = 0, 1
@@ -304,8 +305,8 @@ contains
        ! Right state interpolation, Eq. 15
        ! we have to construct the right state symmetrically
 
-       alpha0 = d0*(one + tau/(epsilon + beta1))  ! alpha_r(j) = d_r(j) * ( 1. + tau(j) / (epsilon + beta_r(1-j)) ) , r = 0, 1
-       alpha1 = d1*(one + tau/(epsilon + beta0))  ! we use opposite beta to interpolate from the opposite side
+       alpha0 = d0*(one + tau/(w_epsilon + beta1))  ! alpha_r(j) = d_r(j) * ( 1. + tau(j) / (epsilon + beta_r(1-j)) ) , r = 0, 1
+       alpha1 = d1*(one + tau/(w_epsilon + beta0))  ! we use opposite beta to interpolate from the opposite side
 
        w0 = alpha0/(alpha0 + alpha1)  ! w_r(j) = alpha_r(j) / (alpha_0(j) + alpha_1(j)) , r = 0, 1
        w1 = alpha1/(alpha0 + alpha1)
