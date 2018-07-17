@@ -1531,22 +1531,24 @@ contains
 ! distribution function value on left bin edge "f"
 !---------------------------------------------------------------------------------------------------
    subroutine get_fqp_up(exit_code)
-      use constants,       only: zero, one, I_TWO
+      use constants,       only: zero, one
       use cresp_variables, only: clight ! use units, only: clight
       use cresp_NR_method, only: intpol_pf_from_NR_grids, alpha, n_in, selected_function_2D, fvec_up, &
-                           &     NR_algorithm, e_small_to_f, q_ratios
+                           &     NR_algorithm, e_small_to_f, q_ratios, assoc_pointers_up
       use initcrspectrum,  only: e_small, q_big, p_fix, NR_refine_solution_pf
 
       implicit none
 
       real(kind=8), dimension(1:2) :: x_NR, x_NR_init
       logical :: exit_code, interpolated, intpol_fail
-      character(len=I_TWO) :: bound = "up"
 
       x_NR = zero
       alpha = (e(i_up)/(n(i_up)*clight*p_fix(i_up-1)))
       n_in  = n(i_up)
-      x_NR = intpol_pf_from_NR_grids(bound, alpha, n_in, interpolated, intpol_fail)
+
+      call assoc_pointers_up
+
+      x_NR = intpol_pf_from_NR_grids(alpha, n_in, interpolated, intpol_fail)
       if (intpol_fail) then
          exit_code = .true.
          fail_count_no_sol(2) = fail_count_no_sol(2) + 1
@@ -1604,9 +1606,9 @@ contains
 !--------------------------------------------------------------------------------------------------
    subroutine get_fqp_lo(exit_code)
 
-      use constants, only: zero, one, I_TWO
+      use constants, only: zero, one
       use cresp_NR_method, only: intpol_pf_from_NR_grids, alpha, n_in, selected_function_2D, fvec_lo, &
-                  NR_algorithm, e_small_to_f, q_ratios
+                  NR_algorithm, e_small_to_f, q_ratios, assoc_pointers_lo
       use cresp_variables, only: clight ! use units, only: clight
       use initcrspectrum, only: e_small, q_big, p_fix, NR_refine_solution_pf
 
@@ -1614,12 +1616,14 @@ contains
 
       real(kind=8), dimension(1:2) :: x_NR, x_NR_init
       logical :: exit_code, interpolated, intpol_fail
-      character(len=I_TWO) :: bound = "lo"
 
       x_NR = zero
       alpha = (e(i_lo+1)/(n(i_lo+1)*clight*p_fix(i_lo+1)))
       n_in  = n(i_lo+1)
-      x_NR = intpol_pf_from_NR_grids(bound, alpha, n_in, interpolated, intpol_fail)
+
+      call assoc_pointers_lo
+
+      x_NR = intpol_pf_from_NR_grids(alpha, n_in, interpolated, intpol_fail)
       if (intpol_fail) then
          exit_code = .true.
          fail_count_no_sol(1) = fail_count_no_sol(1) + 1
