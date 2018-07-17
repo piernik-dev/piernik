@@ -12,7 +12,7 @@ module cresp_NR_method
            &    fvec_up, fvec_test, cresp_initialize_guess_grids
    public :: e_in, nr_test, nr_test_1D, p_ip1, n_tab_up, alpha_tab_up, n_tab_lo, alpha_tab_lo, alpha_tab_q, q_control, & ! list for NR driver
            &    p_a, p_n, p_ratios_lo, f_ratios_lo, p_ratios_up, f_ratios_up, q_grid, lin_interpol_1D, alpha_to_q,   &   ! can be commented out for CRESP and PIERNIK
-           &    lin_extrapol_1D, lin_interpolation_1D, find_indices_1D, nearest_solution
+           &    lin_extrapol_1D, lin_interpolation_1D, nearest_solution
 
    integer, parameter :: ndim = 2
    real(kind=8), dimension(:), allocatable :: p_space, q_space
@@ -21,7 +21,6 @@ module cresp_NR_method
    real(kind=8), allocatable, dimension(:,:),target :: p_ratios_lo, f_ratios_lo, p_ratios_up, f_ratios_up
    integer(kind=4) :: helper_arr_dim
    real(kind=8) :: eps_det = eps * 1.0e-15
-   real(kind=8) :: small_eps = 1.0e-25
    real(kind=8), pointer, dimension(:)   :: p_a => null(), p_n => null() ! pointers for alpha_tab_(lo,up) and n_tab_(lo,up) or optional - other 1-dim arrays
    real(kind=8), pointer, dimension(:,:) :: p_p => null(), p_f => null() ! pointers for p_ratios_(lo,up) and f_ratios_(lo,up)
 
@@ -114,7 +113,9 @@ module cresp_NR_method
    end subroutine NR_algorithm
 !----------------------------------------------------------------------------------------------------
    subroutine NR_algorithm_1D(x, exit_code)
+      use constants,      only: zero
       use initcrspectrum, only: NR_iter_limit, tol_f_1D, tol_x_1D
+      use func,           only: operator(.equals.)
 
       implicit none
 
@@ -135,7 +136,7 @@ module cresp_NR_method
 
           dfun_1D = derivative_1D(x)
 
-          if ( abs(dfun_1D) .lt. small_eps ) then
+          if ( abs(dfun_1D) .equals. zero ) then
               exit_code = .true.
               return
           endif
@@ -173,9 +174,9 @@ module cresp_NR_method
    end function derivative_1D
 !----------------------------------------------------------------------------------------------------
    subroutine cresp_initialize_guess_grids
-      use constants,       only: zero
+      use constants,       only: zero, I_FOUR
       use cresp_variables, only: clight ! use units, only: clight
-      use initcrspectrum,  only: e_small, q_big, max_p_ratio !, p_fix
+      use initcrspectrum,  only: e_small, q_big, max_p_ratio
       use mpisetup,        only: master
 
       implicit none
@@ -186,7 +187,7 @@ module cresp_NR_method
 
       call initialize_arrays
       if ((master) .and. (first_run .eqv. .true. )) then
-         helper_arr_dim = int(arr_dim/4,kind=4)
+         helper_arr_dim = int(arr_dim/I_FOUR,kind=4)
 
          if (.not. allocated(p_space))     allocate(p_space(1:helper_arr_dim)) ! these will be deallocated once initialization is over
          if (.not. allocated(q_space))     allocate(q_space(1:helper_arr_dim)) ! these will be deallocated once initialization is over
@@ -198,10 +199,7 @@ module cresp_NR_method
          p_ratios_up = zero ; f_ratios_up = zero
          p_ratios_lo = zero ; f_ratios_lo = zero
 
-         q_grid      = 2*q_big; q_grid(int(arr_dim_q/2):) = -2*q_big ! if crash, factor 2 must be removed
-!             if (maxval(p_fix)**q_grid(1) .gt. huge(q_grid(1))) then
-!                 write (msg,"(A100)") "p**q may result in FPE, check your parameters" ! use msg
-!             endif
+         q_grid      = 2*q_big; q_grid(int(arr_dim_q/2):) = -2*q_big ! if crash, factor 2 must be removed ! BEWARE: magic number
 
          call fill_guess_grids
 
@@ -249,7 +247,6 @@ module cresp_NR_method
 !----------------------------------------------------------------------------------------------------
    subroutine fill_guess_grids
       use constants, only: zero, one, half
-      use cresp_variables, only: clight ! use units,   only: clight
       use initcrspectrum,  only: q_big, force_init_NR, NR_run_refine_pf, p_fix_ratio
 
       implicit none
@@ -262,7 +259,7 @@ module cresp_NR_method
 
       q_space = zero
       do i=1, int(half*helper_arr_dim)
-         q_space(i) = ln_eval_array_val(i, q_big, real(0.05,kind=8), int(1,kind=4), int(half*helper_arr_dim,kind=4))
+         q_space(i) = ln_eval_array_val(i, q_big, real(0.05,kind=8), int(1,kind=4), int(half*helper_arr_dim,kind=4)) ! BEWARE: magic number
       enddo
 
       do i= 1, int(half*helper_arr_dim)!, arr_dim
@@ -287,16 +284,7 @@ module cresp_NR_method
          enddo
       enddo
 
-!         a_min_lo = 0.8 * a_min_lo / clight
-!         a_max_lo = 0.999999 / clight !1 * a_max_lo
-!         a_min_up = 1.000005 / clight  ! 0.8 * a_min_up
-!         a_max_up = 1.1 * a_max_up / clight
-!         n_min_lo = 0.001 * n_min_lo
-!         n_max_lo = 1.1 * n_max_lo
-!         n_min_up = 0.001 * n_min_up
-!         n_max_up = 1.1 * n_max_up
-
-      a_min_lo = 0.2
+      a_min_lo = 0.2       ! BEWARE: magic numbers!
       a_max_lo = 0.999999
       a_min_up = 1.000005
       a_max_up = 200.0
@@ -353,11 +341,11 @@ module cresp_NR_method
          call save_NR_guess_grid(f_ratios_lo,"f_ratios_lo")
       enddo
 
-      a_min_q = 1.0005
+      a_min_q = 1.0005 ! BEWARE: magic number
       a_max_q = 1.5 * p_fix_ratio
       j = arr_dim_q - int(arr_dim_q/25 ,kind=4)
       do while (q_grid(j) .le. (-q_big) .and. (q_grid(arr_dim_q) .le. (-2*q_big)) )
-         a_max_q = a_max_q - a_max_q*0.005
+         a_max_q = a_max_q - a_max_q*0.005 ! BEWARE: magic number
          do i = 1, arr_dim_q
             alpha_tab_q(i)  = ind_to_flog(i, a_min_q, a_max_q, arr_dim_q)
          enddo
@@ -464,8 +452,8 @@ module cresp_NR_method
       call sleep(1)
 
       fill_p = zero ; fill_f = zero
-      x_step = 0.0
-! TODO FIX THE INDENTATIONS
+      x_step = zero
+
       do i =1, arr_dim
          new_line = .true.
          prev_solution = prev_solution_1 ! easier to find when not searching from the top
@@ -686,7 +674,7 @@ module cresp_NR_method
          delta(1) = lin_extrapol_1D(p3(1:2), arg(1:2), arg(3)) - p3(2) ! direction is not relevant in this case
          delta(2) = lin_extrapol_1D(f3(1:2), arg(1:2), arg(3)) - f3(2)
          delta = delta/nstep
-         do k = 0, nstep*2
+         do k = 0, nstep
             x_vec = x_vec_0 + delta * k ! first iteration is a simple extrapolation
             x_in = x_vec
             call NR_algorithm(x_vec, exit_code)
@@ -706,15 +694,15 @@ module cresp_NR_method
 
 !----------------------------------------------------------------------------------------------------
    subroutine step_inpl(p3, f3, incr, args, sought_by, exit_code) ! checked
-!  use initcrspectrum, only: NR_iter_limit
-      use constants, only: zero
+
+   use constants, only: zero
 
       implicit none
 
       real(kind=8), dimension(1:2) :: x_vec, x_vec_0, delta, x_in
       real(kind=8), dimension(1:3), intent(inout) :: p3, f3
       real(kind=8), dimension(1:3), intent(in) :: args
-      integer(kind=4) :: k, incr, nstep = 100 ! int(NR_iter_limit/15)
+      integer(kind=4) :: k, incr, nstep = 100
       character(len=6), intent(inout) :: sought_by
       logical,intent(inout) :: exit_code
 !         alpha and n are set !
@@ -726,7 +714,7 @@ module cresp_NR_method
             delta(2) = lin_interpolation_1D( (/ f3(2-incr), f3(2+incr) /), (/ args(2-incr), args(2+incr) /), args(2) ) - f3(1)
             x_in = x_vec_0 + delta ! gives the interpolated value as starting one
             delta = delta/nstep
-            do k = 0, nstep*2
+            do k = 0, nstep
                x_vec = x_vec_0 + delta * k
                x_in = x_vec
                call NR_algorithm(x_vec, exit_code)
@@ -804,12 +792,12 @@ module cresp_NR_method
    end subroutine seek_solution_prev
 !----------------------------------------------------------------------------------------------------
    subroutine seek_solution_step(p2ref, f2ref, prev_solution, i_obt, j_obt, sought_by, exit_code)
-!  use initcrspectrum, only: NR_iter_limit
+
       implicit none
 
       real(kind=8), dimension(1:2) :: x_vec, x_step, prev_solution
       real(kind=8), intent(out):: p2ref, f2ref
-      integer(kind=4) :: i_obt, j_obt, ii, jj, nstep = 3 ! int(NR_iter_limit/15)
+      integer(kind=4) :: i_obt, j_obt, ii, jj, nstep = 3
       character(len=6), intent(inout) :: sought_by
       logical :: exit_code
 !    alpha and n are set !
@@ -981,7 +969,6 @@ module cresp_NR_method
       real(kind=8) :: determinant_2d_real
 
       determinant_2d_real = matrix_2d_real(1,1) * matrix_2d_real (2,2) - ( matrix_2d_real(2,1) * matrix_2d_real(1,2) )
-! in case determinant_2d_real = zero, algorithm will return exit_code=1 and new attempt to solve may take place
 
    end function determinant_2d_real
 !----------------------------------------------------------------------------------------------------
@@ -1262,108 +1249,6 @@ module cresp_NR_method
 
    end function e_small_to_f
 !----------------------------------------------------------------------------------------------------
-   subroutine find_both_indexes(l_min1, l_min2, alpha_val, n_val, l_panic, exit_code)                                 ! DEPRECATED ?
-      use constants, only: zero
-
-      implicit none
-
-      integer(kind=4), dimension(1:2) :: l_min1, l_min2, l_panic
-      integer(kind=4) :: i, j, i_prev
-      real(kind=8)    :: min_alpha, min_n, min2_alpha, min2_n, d_alpha, d_n
-      real(kind=8)    :: alpha_val, n_val
-      logical :: exit_code
-
-      min_alpha = huge(min_alpha); min_n = huge(min_n) ; min2_alpha = -huge(min2_alpha); min2_n = -huge(min2_n)
-      i_prev = 0
-      l_min1 = 1 ; l_min2 = 1
-      do i = 1, arr_dim
-         do j = 1, arr_dim
-            if (p_p(i,j) .gt. zero ) then
-               d_n     = p_n(j) - n_val
-               if ( i_prev .ne. i) then ! already checked, this omition should save up to 1/3 time needed for search each time this function is called
-                  d_alpha = p_a(i) - alpha_val
-                  call get_index_min_hi( d_alpha, min_alpha,  i, l_min1(1))
-                  call get_index_min_lo( d_alpha, min2_alpha, i, l_min2(1))
-               endif
-               call get_index_min_hi(d_n, min_n,  j, l_min1(2))
-               call get_index_min_lo(d_n, min2_n, j, l_min2(2))
-               i_prev = i
-            endif
-         enddo
-      enddo
-
-      if (l_min1(1) .eq. l_min2(1) .or. l_min1(2) .eq. l_min2(2)) then
-         exit_code = .true.
-         l_panic(1) = find_indexes_panic(l_min1(1), l_min2(1), min_alpha, min2_alpha)
-         l_panic(2) = find_indexes_panic(l_min1(2), l_min2(2), min_n, min2_n)
-      endif
-
-   end subroutine find_both_indexes
-!----------------------------------------------------------------------------------------------------
-   subroutine find_indices_1D(loc_min1, loc_min2, alpha_val)                                          ! DEPRECATED ?
-
-      implicit none
-
-      integer(kind=4) :: loc_min1, loc_min2, i
-      real(kind=8)    :: alpha_val, min_alpha, min2_alpha, d_alpha
-
-      loc_min1 = 1 ; loc_min2 = 2; min_alpha = huge(min2_alpha); min2_alpha = -huge(min2_alpha)
-      do i = 1,arr_dim
-         d_alpha = p_a(i) - alpha_val
-         call get_index_min_hi(d_alpha, min_alpha, i, loc_min1)
-         call get_index_min_lo(d_alpha, min2_alpha, i, loc_min2)
-      enddo
-
-   end subroutine find_indices_1D
-!----------------------------------------------------------------------------------------------------
-   subroutine get_index_min_hi(delta, current_min_val, current_index, min_index)
-      use constants, only: zero
-
-      implicit none
-
-      real(kind=8)    :: current_min_val, delta
-      integer(kind=4) :: current_index, min_index
-
-      min_index = min_index
-      if (delta .lt. current_min_val .and. delta .gt. zero) then
-         current_min_val = delta
-         min_index = current_index
-      endif
-
-   end subroutine get_index_min_hi
-!----------------------------------------------------------------------------------------------------
-   subroutine get_index_min_lo(delta, current_min_val, current_index, min_index)
-      use constants, only: zero
-
-      implicit none
-
-      real(kind=8)    :: current_min_val, delta
-      integer(kind=4) :: current_index, min_index
-
-      min_index = min_index
-      if (delta .gt. current_min_val .and. delta .lt. zero) then
-         current_min_val = delta
-         min_index = current_index
-      endif
-
-   end subroutine get_index_min_lo
-!----------------------------------------------------------------------------------------------------
-   function find_indexes_panic(index_hi, index_lo, min_pos, min_neg)                                 ! DEPRECATED ?
-
-      implicit none
-
-      integer(kind=4) :: index_hi, index_lo
-      integer(kind=4) :: find_indexes_panic
-      real(kind=8)    :: min_pos, min_neg
-
-      if ( min_pos .lt. abs(min_neg) ) then
-         find_indexes_panic = index_hi
-      else
-         find_indexes_panic = index_lo
-      endif
-
-   end function find_indexes_panic
-!----------------------------------------------------------------------------------------------------
    function bl_interpol(y11,y12,y21,y22,t,u) ! for details see paragraph "Bilinear interpolation" in Numerical Recipes for F77, page 117, eqn. 3.6.5
       use constants, only: one
 
@@ -1427,7 +1312,6 @@ module cresp_NR_method
       exit_code = .false.; find_failure = .false. ; not_interpolated = .false.
       call associate_NR_pointers(which_bound)
       call determine_loc(a_val, n_val, loc1, loc2, loc_no_ip, exit_code)
-!       call find_both_indexes(loc1, loc2, a_val, n_val, loc_no_ip, exit_code)
 
 #ifdef CRESP_VERBOSED
       call save_loc(which_bound,loc1(1),loc1(2))
@@ -1460,7 +1344,7 @@ module cresp_NR_method
 
    end function intpol_pf_from_NR_grids
 !----------------------------------------------------------------------------------------------------
-   subroutine determine_loc(a_val, n_val, loc1, loc2, loc_panic, exit_code) !, no_solution)
+   subroutine determine_loc(a_val, n_val, loc1, loc2, loc_panic, exit_code)
       use constants, only: zero
 
       implicit none
@@ -1547,7 +1431,7 @@ module cresp_NR_method
       real(kind=8), optional :: outer_p_ratio
       real(kind=8), intent(inout) :: alpha_in
       integer(kind=4) :: loc_1, loc_2
-      logical, intent(inout) :: exit_code ! is provided with value .true. by caller (cresp_crspectrum)
+      logical, intent(inout) :: exit_code ! value should be .true. at input
 
       p_a => alpha_tab_q
       p_n => q_grid
@@ -1811,12 +1695,9 @@ module cresp_NR_method
    end subroutine dummy_check_1D
  !----------------------------------------------------------------------------------------------------
    subroutine initialize_arrays
-      use diagnostics, only: my_allocate_with_index, my_allocate
+      use diagnostics, only: my_allocate_with_index, my_allocate, ma1d, ma2d
 
       implicit none
-
-      integer(kind=4), dimension(1) :: ma1d ! TODO: proper import
-      integer(kind=4), dimension(2) :: ma2d ! TODO: proper import from diagnostics
 
       ma1d = arr_dim
       ma2d = [arr_dim, arr_dim]
