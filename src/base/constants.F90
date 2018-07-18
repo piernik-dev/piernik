@@ -61,6 +61,7 @@ module constants
    real, parameter :: twot       = 2./3.                 !< two thirds
    real, parameter :: oneq       = 1./4.                 !< one fourth
    real, parameter :: thrq       = 3./4.                 !< three fourths
+   real, parameter :: onesth     = 1./6.                 !< one sixth
 
    enum, bind(C)
       enumerator :: idn = 1, imx, imy, imz, ien
