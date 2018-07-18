@@ -117,7 +117,7 @@ contains
 
       use cg_leaves,  only: leaves
       use cg_list,    only: cg_list_element
-      use constants,  only: GEO_XYZ, pMAX
+      use constants,  only: GEO_XYZ, pMAX, small
       use dataio_pub, only: die
       use domain,     only: dom
       use fluidindex, only: flind
@@ -136,18 +136,19 @@ contains
       if (has_ion) then
          if (use_fargo) call die("[hdc:update_chspeed] FARGO is not implemented here yet.")
          if (dom%geometry_type /= GEO_XYZ) call die("[hdc:update_chspeed] non-cartesian geometry not implemented yet.")
+         chspeed = small
          fl => flind%ion
          cgl => leaves%first
          do while (associated(cgl))
             if (ch_grid) then
                ! Rely only on grid properties. Psi is an artificial field and psi waves have to propagate as fast as stability permits.
-               chspeed = min(chspeed, cfl_glm * minval(cgl%cg%dl, mask=dom%has_dir) / dt)
+               chspeed = max(chspeed, cfl_glm * minval(cgl%cg%dl, mask=dom%has_dir) / dt)
             else
                ! Bind chspeed to fastest possible gas waves. Beware: this may not always work well with AMR.
                do k = cgl%cg%ks, cgl%cg%ke
                   do j = cgl%cg%js, cgl%cg%je
                      do i = cgl%cg%is, cgl%cg%ie
-                        chspeed = min(chspeed, cfl_glm * minval(abs(cgl%cg%u(fl%imx:fl%imz, i, j, k) / cgl%cg%u(fl%idn, i, j, k)) + fl%get_cs(i, j, k, cgl%cg%u, cgl%cg%b, cgl%cg%cs_iso2)))
+                        chspeed = max(chspeed, cfl_glm * maxval(abs(cgl%cg%u(fl%imx:fl%imz, i, j, k) / cgl%cg%u(fl%idn, i, j, k)) + fl%get_cs(i, j, k, cgl%cg%u, cgl%cg%b, cgl%cg%cs_iso2)))
                      enddo
                   enddo
                enddo
