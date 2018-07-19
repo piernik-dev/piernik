@@ -1026,8 +1026,8 @@ contains
 
    function output_fname(wr_rd, ext, no, bcast, prefix) result(filename)
 
-      use constants,  only: cwdlen, RD, WR, I_FOUR, fnamelen
-      use dataio_pub, only: problem_name, run_id, wd_wr, wd_rd, warn, die, msg
+      use constants,  only: cwdlen, idlen, RD, WR, I_FOUR, fnamelen
+      use dataio_pub, only: problem_name, run_id, res_id, wd_wr, wd_rd, warn, die, msg
       use mpisetup,   only: master, piernik_MPI_Bcast
 
       implicit none
@@ -1037,6 +1037,7 @@ contains
       logical,               intent(in), optional :: bcast
       character(len=*),      intent(in), optional :: prefix
       character(len=cwdlen)                       :: filename, temp  ! File name
+      character(len=idlen)                        :: file_id
 
 
       ! Sanity checks go here
@@ -1052,11 +1053,17 @@ contains
          endif
       endif
 
+      if ((wr_rd == RD) .and. (res_id /= '')) then
+         file_id = res_id
+      else
+         file_id = run_id
+      endif
+
       if (master) then
          if (present(prefix)) then
-            write(temp,'(2(a,"_"),a3,"_",i4.4,a4)') trim(prefix), trim(problem_name), run_id, no, ext
+            write(temp,'(2(a,"_"),a3,"_",i4.4,a4)') trim(prefix), trim(problem_name), file_id, no, ext
          else
-            write(temp,'(a,"_",a3,"_",i4.4,a4)') trim(problem_name), run_id, no, ext
+            write(temp,'(a,"_",a3,"_",i4.4,a4)') trim(problem_name), file_id, no, ext
          endif
          select case (wr_rd)
             case (RD)
