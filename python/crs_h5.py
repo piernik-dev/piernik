@@ -5,6 +5,7 @@ from numpy import log10, log, pi, asfarray, array, linspace, sign
 import h5py
 import os
 import sys
+import crs_pf
 
 #------ default values of parameters --------
 e_small = 1e-6
@@ -24,6 +25,7 @@ first_run = True
 fixed_width = True
 got_q_tabs = False
 q_explicit = True
+interpolate_cutoffs = True
 
 def nq2f(n,q,p_l,p_r):
       if p_r> 0.0 and p_l > 0 :
@@ -263,7 +265,7 @@ def detect_active_bins_new(n_in, e_in):
    if num_active_bins == 0: return active_bins_new, i_lo_tmp, i_up_tmp
 
    i_lo_tmp = max(ne_gt_zero[0]-1,0)
-   i_up_tmp = ne_gt_zero[num_active_bins-1] #  ne_gt_zero[-1]
+   i_up_tmp = ne_gt_zero[num_active_bins-1]
 
    pln = p_fix[i_lo_tmp:i_up_tmp]
    prn = p_fix[i_lo_tmp+1:i_up_tmp+1]
@@ -283,9 +285,10 @@ def detect_active_bins_new(n_in, e_in):
       q_gt_zero.append(q_tmp)
       f_gt_zero.append(nq2f(n_in[i+i_lo_tmp], q_gt_zero[-1], pln[i], prn[i]))
       e_ampl_l.append(4*pi * c**2 * f_gt_zero[-1] * pln[i]**3)
-      e_ampl_r.append(4*pi * c**2 * f_gt_zero[-1] * (prn[i] / pln[i])**(-q_tmp) **3)
+      e_ampl_r.append(4*pi * c**2 * f_gt_zero[-1] * ((prn[i] / pln[i])**(q_tmp)) **3)
+
       if (e_ampl_l[-1] > e_small or e_ampl_r[-1] > e_small):
-         if not (abs(q_gt_zero[-1]) >= q_big ) : # does not work
+         #if not (abs(q_gt_zero[-1]) >= q_big ) : #
             active_bins_new.append(ne_gt_zero[i]+1)
             num_active_bins = num_active_bins +1
 
@@ -294,8 +297,6 @@ def detect_active_bins_new(n_in, e_in):
 
    i_lo_tmp = max(active_bins_new[0]-1,0)
    i_up_tmp = min(active_bins_new[-1],ncre)
-   print "active_bins",  active_bins_new
-   print "n active_bins: ", num_active_bins, " | cutoff indices:", i_lo_tmp, i_up_tmp
    return active_bins_new, i_lo_tmp, i_up_tmp
 
 #------------------------------------------
@@ -303,7 +304,7 @@ def detect_active_bins_new(n_in, e_in):
 def crs_plot_main(parameter_names, parameter_values, plot_var, ncrs, ecrs, field_max, time, location, use_simple):
     global first_run, got_q_tabs, e_small, p_min_fix, p_max_fix, ncre, cre_eff
 
-    print e_small, p_min_fix, p_max_fix, ncre
+    #print e_small, p_min_fix, p_max_fix, ncre
     try:
         for i in range(len(parameter_names)):
             exec("%s = %s" %(parameter_names[i], parameter_values[i]),globals())
@@ -311,7 +312,7 @@ def crs_plot_main(parameter_names, parameter_values, plot_var, ncrs, ecrs, field
         print "Exiting: len(names) not equal len(values)"
         sys.exit()
 
-    print e_small, p_min_fix, p_max_fix, ncre
+    #print e_small, p_min_fix, p_max_fix, ncre
 
 # TODO -------- do it under *args TODO
     fixed_width = True
@@ -326,7 +327,6 @@ def crs_plot_main(parameter_names, parameter_values, plot_var, ncrs, ecrs, field
     edges[0:ncre] = range(0,ncre+1, 1)
     p_fix[0:ncre] = zeros(ncre+1)
 
-# WARNING !!! cutoff momenta are not precisely described here !!! WARNING
     log_width   = (log10(p_max_fix/p_min_fix))/(ncre-2.0)
 # TODO: do it in the first run / calling script TODO
     if first_run:
@@ -347,9 +347,23 @@ def crs_plot_main(parameter_names, parameter_values, plot_var, ncrs, ecrs, field
     empty_cell = True
 
     active_bins, i_lo, i_up = detect_active_bins_new(ncrs, ecrs)
-    if num_active_bins > 0: empty_cell = False
+    if num_active_bins > 0:
+       empty_cell = False
+    else:
+       return plt.subplot(122), empty_cell
 
     i_lo = max(i_lo,1) # temporarily do not display the leftmost bin
+
+    exit_code = False
+    if interpolate_cutoffs:
+       exit_code_lo = True
+       pf_ratio_lo = 0.0
+       pf_ratio_lo, exit_code_lo = crs_pf.get_interpolated_ratios("lo", ecrs[i_lo]/(ncrs[i_lo]*c*p_fix[i_lo+1]), ncrs[i_lo], exit_code_lo)
+
+       exit_code_up = True
+       pf_ratio_up = 0.0
+       if ecrs[i_up] == 0.0 or ncrs[i_up] == 0.0: i_up = i_up - 1
+       pf_ratio_up, exit_code_up = crs_pf.get_interpolated_ratios("up", ecrs[i_up]/(ncrs[i_up]*c*p_fix[i_up-1]), ncrs[i_up], exit_code_up)
 
     sys.stdout.write('Time = %6.2f |  i_lo = %2d, i_up = %2d, %11s.'%(time, i_lo if not empty_cell else 0, i_up if not empty_cell else 0, '(empty cell)' if empty_cell else ' '))
     pln = p_fix[i_lo:i_up]
@@ -359,6 +373,15 @@ def crs_plot_main(parameter_names, parameter_values, plot_var, ncrs, ecrs, field
     ncrs_act = ncrs[i_lo-2:i_up-2]
     ecrs_act = ecrs[i_lo-2:i_up-2]
     q_nr = [] ; fln = [] ; frn = []
+    if interpolate_cutoffs:
+       if exit_code_lo == True:
+         print "Failed to extract boundary p and f from e, n: pf_ratio_lo = ", pf_ratio_lo # p_fix assumed
+       else:
+         pln[0]      = p_fix[i_lo+1] / pf_ratio_lo[0]
+       if exit_code_up == True:
+         print "Failed to extract boundary p and f from e, n: pf_ratio_up = ", pf_ratio_up # p_fix assumed
+       else:
+         prn[-1]     = p_fix[i_up-1] * pf_ratio_up[0]
 
     if (not q_explicit):
        print "Spectral indices q will be interpolated"
@@ -370,13 +393,12 @@ def crs_plot_main(parameter_names, parameter_values, plot_var, ncrs, ecrs, field
 
     print "n = ", ncrs
     print "e = ", ecrs
-
     for i in range(0,i_up - i_lo):
          if (q_explicit == True):
             q_tmp = 3.5 ; exit_code = False
             q_tmp, exit_code = nr_get_q(q_tmp, ecrs[i+i_lo]/(ncrs[i+i_lo]*c*pln[i]), prn[i]/pln[i], exit_code) # this instruction is duplicated, TODO return it via detect_active_bins_new()
          else:
-            q_tmp = interpolate_q(ecrs[i+i_lo]/(ncrs[i+i_lo]*c*pln[i]))# this instruction is duplicated, TODO return it via detect_active_bins_new()
+            q_tmp = interpolate_q(ecrs[i+i_lo]/(ncrs[i+i_lo]*c*pln[i])) # this instruction is duplicated, TODO return it via detect_active_bins_new()
          q_nr.append(q_tmp)
          fln.append(nq2f(ncrs[i+i_lo], q_nr[-1], pln[i], prn[i]))
 

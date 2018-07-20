@@ -195,7 +195,7 @@ contains
 #endif /* COSM_RAYS_SOURCES */
 #ifdef COSM_RAY_ELECTRONS
       use cresp_crspectrum,   only: cresp_get_scaled_init_spectrum
-      use initcrspectrum,     only: cresp, cre_eff, e_small
+      use initcrspectrum,     only: cresp, cre_eff, smallecre
       use initcosmicrays,     only: iarr_cre_n, iarr_cre_e
 #endif /* COSM_RAY_ELECTRONS */
 
@@ -253,7 +253,7 @@ contains
 #ifdef COSM_RAY_ELECTRONS
                   e_tot_sn = decr * cre_eff
                   cresp%n =  0.0;  cresp%e = 0.0
-                  if (e_tot_sn .gt. e_small) then     !< fill cells only when total passed energy is greater than e_small
+                  if (e_tot_sn .gt. smallecre) then
                      call cresp_get_scaled_init_spectrum(cresp%n, cresp%e, e_tot_sn) !< injecting source spectrum scaled with e_tot_sn
                   endif
                   cg%u(iarr_cre_n,i,j,k) = cg%u(iarr_cre_n,i,j,k) + cresp%n

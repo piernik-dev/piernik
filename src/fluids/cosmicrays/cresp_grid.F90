@@ -1,15 +1,18 @@
 module cresp_grid
 ! pulled by COSM_RAY_ELECTRONS
 
-! This module contains routines necessary to initialize, compute timestep for cre bins and to update spectrum in the whole domain
-! as the crspectrum module operates on a single grid cell.
-
+!>
+!!\brief cresp_grid purpose is to iterate single-cell routines over whole grid
+!! This module contains routines necessary to initialize, compute timestep for cre bins and to update spectrum in the whole domain
+!! as the crspectrum module operates on a single grid cell.
+!<
    use global,          only: dt, t
    use initcosmicrays,  only: iarr_cre_e, iarr_cre_n
-   use initcrspectrum,  only: ncre
+
+   implicit none
 
    private
-   public        dt_cre, cresp_update_grid, cresp_init_grid, grid_cresp_timestep, cfl_cresp_violation, cresp_clean_grid
+   public   :: dt_cre, cresp_update_grid, cresp_init_grid, grid_cresp_timestep, cfl_cresp_violation, cresp_clean_grid
 
    real(kind=8)                    :: dt_cre
    real(kind=8)                    :: bb_to_ub
@@ -32,7 +35,7 @@ module cresp_grid
       use cresp_crspectrum, only: cresp_detect_negative_content
 ! #endif /* DEBUG */
       use crhelpers,        only: divv_n
-      use func,             only: emag, ekin, operator(.equals.), operator(.notequals.)
+      use func,             only: emag
       use grid_cont,        only: grid_container
       use initcrspectrum,   only: spec_mod_trms, synch_active, adiab_active, cresp
       use named_array,      only: p4
@@ -140,10 +143,10 @@ module cresp_grid
       use dataio_pub,         only: warn, printinfo, msg
       use grid_cont,          only: grid_container
       use initcosmicrays,     only: iarr_cre_n, iarr_cre_e
-      use initcrspectrum,     only: e_small, e_small_approx_p_lo, e_small_approx_p_up, norm_init_spectrum, spec_mod_trms, f_init
+      use initcrspectrum,     only: e_small, e_small_approx_p_lo, e_small_approx_p_up, norm_init_spectrum, f_init
       use mpisetup,           only: master
       use named_array_list,   only: wna
-      use units,              only: cm, units_set
+      use units,              only: units_set
 
       implicit none
 
@@ -215,7 +218,7 @@ module cresp_grid
       use constants,          only: xdim, ydim, zdim, one, half, onet
       use crhelpers,          only: div_v, divv_n
       use fluidindex,         only: flind
-      use func,               only: emag !, operator(.equals.), operator(.notequals.)
+      use func,               only: emag
       use grid_cont,          only: grid_container
       use initcosmicrays,     only: K_cre_paral, K_cre_perp
       use initcrspectrum,     only: spec_mod_trms, cfl_cre, synch_active, adiab_active, use_cresp
