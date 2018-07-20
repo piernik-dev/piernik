@@ -36,7 +36,7 @@
 
 module dataio
 
-   use dataio_pub, only: domain_dump, fmin, fmax, vizit, nend, tend, wend, new_id, nrestart, problem_name, run_id, multiple_h5files, use_v2_io, nproc_io, enable_compression, gzip_level, gdf_strict, h5_64bit
+   use dataio_pub, only: domain_dump, fmin, fmax, vizit, nend, tend, wend, res_id, nrestart, problem_name, run_id, multiple_h5files, use_v2_io, nproc_io, enable_compression, gzip_level, gdf_strict, h5_64bit
    use constants,  only: cwdlen, fmt_len, cbuff_len, dsetnamelen, RES, TSL
    use timer,      only: wallclock
 
@@ -98,7 +98,7 @@ module dataio
    end type tsl_container
 
    namelist /END_CONTROL/     nend, tend, wend
-   namelist /RESTART_CONTROL/ restart, new_id, nrestart, resdel
+   namelist /RESTART_CONTROL/ restart, res_id, nrestart, resdel
    namelist /OUTPUT_CONTROL/  problem_name, run_id, dt_hdf, dt_res, dt_tsl, dt_log, tsl_with_mom, tsl_with_ptc, &
                               domain_dump, vars, mag_center, vizit, fmin, fmax, user_message_file, system_message_file, &
                               multiple_h5files, use_v2_io, nproc_io, enable_compression, gzip_level, initial_hdf_dump, &
@@ -125,7 +125,7 @@ contains
 !! <table border="+1">
 !! <tr><td width="150pt"><b>parameter</b></td><td width="135pt"><b>default value</b></td><td width="200pt"><b>possible values</b></td><td width="315pt"> <b>description</b></td></tr>
 !! <tr><td>restart </td><td>'last'</td><td>'last' or another string of characters</td><td>\copydoc dataio::restart     </td></tr>
-!! <tr><td>new_id  </td><td>''    </td><td>string of characters                  </td><td>\copydoc dataio_pub::new_id  </td></tr>
+!! <tr><td>res_id  </td><td>''    </td><td>string of characters                  </td><td>\copydoc dataio_pub::res_id  </td></tr>
 !! <tr><td>nrestart</td><td>3     </td><td>integer                               </td><td>\copydoc dataio_pub::nrestart</td></tr>
 !! <tr><td>resdel  </td><td>0     </td><td>integer                               </td><td>\copydoc dataio::resdel      </td></tr>
 !! </table>
@@ -267,7 +267,7 @@ contains
       run_id       = "___"
       restart      = 'last'   ! 'last': automatic choice of the last restart file regardless of "nrestart" value;
                               ! if something else is set: "nrestart" value is fixing
-      new_id       = ''
+      res_id       = ''
       nrestart     = 3
       resdel       = 0
 
@@ -390,9 +390,9 @@ contains
          rbuff(2)  = wend
 
 
-!   namelist /RESTART_CONTROL/ restart, new_id, nrestart, resdel
+!   namelist /RESTART_CONTROL/ restart, res_id, nrestart, resdel
          cbuff(20) = restart
-         cbuff(21) = new_id
+         cbuff(21) = res_id
 
          ibuff(20) = nrestart
          ibuff(21) = resdel
@@ -449,9 +449,9 @@ contains
          tend                = rbuff(1)
          wend                = rbuff(2)
 
-!   namelist /RESTART_CONTROL/ restart, new_id, nrestart, resdel
+!   namelist /RESTART_CONTROL/ restart, res_id, nrestart, resdel
          restart             = trim(cbuff(20))
-         new_id              = trim(cbuff(21))
+         res_id              = trim(cbuff(21))
 
          nrestart            = int(ibuff(20), kind=4)
          resdel              = ibuff(21)
@@ -563,7 +563,6 @@ contains
          t_start     = t
          nres_start  = nrestart
          nhdf_start  = nhdf-1
-         if (new_id /= '') run_id=new_id
 #else /* !HDF5 */
          call die("[dataio:init_dataio] cannot use restart without HDF5")
 #endif /* !HDF5 */
@@ -1683,10 +1682,17 @@ contains
       character(len=*), parameter, dimension(n_msg_origin) :: msg_origin = [ "user  ", "system" ]
 
       character(len=cwdlen), dimension(n_msg_origin), save :: fname
-      integer                                              :: unlink_stat, io, sz, sts, i
+      integer                                              :: unlink_stat, io, sz, i
+#ifdef __GFORTRAN__
       integer, dimension(13)                               :: stat_buff
+#else /* !__GFORTRAN__ */
+      integer(kind=4), dimension(13)                       :: stat_buff
+#endif /* !__GFORTRAN__ */
       logical                                              :: msg_param_read = .false., ex
       integer, dimension(n_msg_origin), save               :: last_msg_stamp
+#ifdef __GFORTRAN__
+      integer                                              :: sts
+#endif /* __GFORTRAN__ */
 #if defined(__INTEL_COMPILER)
       integer(kind=4) :: jhandle, ierror
 #endif /* __INTEL_COMPILER */

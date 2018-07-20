@@ -161,11 +161,11 @@ contains
       use ifposix, only: pxffileno
 #endif /* __INTEL_COMPILER */
       implicit none
-      integer, intent(in) :: lunit  !< Fortran logical unit
+      integer(kind=4), intent(in) :: lunit  !< Fortran logical unit
       integer(kind=4) :: piernik_fnum
 
 #if defined(__INTEL_COMPILER) || defined(_CRAYFTN)
-      integer :: fd, ierror
+      integer(kind=4) :: fd, ierror
       call pxffileno(lunit, fd, ierror)
       piernik_fnum = fd
 #else /* __INTEL_COMPILER || _CRAYFTN */
