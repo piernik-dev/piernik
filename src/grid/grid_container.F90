@@ -544,11 +544,13 @@ contains
          ! The problem may arise when initial conditions are comparing coordinates to set something on the left or right side of some line.
          ! When the cell size is too small compared to the coordinates, such line cannot be properly calculated
          ! Note that since we force real kind=8, we can use a named constant instead of epsilon
-         if ( any(this%coord(CENTER, d)%r(:) .equals. this%coord(LEFT,  d)%r(:)) .or. &
-              any(this%coord(CENTER, d)%r(:) .equals. this%coord(RIGHT, d)%r(:)) ) call die("[grid_container:set_coords] cannot distinguish between center and face coordinates of a cell")
-         if ( any(abs(this%coord(CENTER, d)%r(:)-this%coord(LEFT,  d)%r(:)) < safety_warn_factor*epsilon(this%coord(CENTER, d)%r(:))*this%coord(CENTER, d)%r(:)) .or. &
-              any(abs(this%coord(CENTER, d)%r(:)-this%coord(RIGHT, d)%r(:)) < safety_warn_factor*epsilon(this%coord(CENTER, d)%r(:))*this%coord(CENTER, d)%r(:))) &
-              call warn("[grid_container:set_coords] cell sizes are much smaller than coordinates. Inaccuracies in setting the initial conditions may happen.")
+         if (dom%has_dir(d)) then
+            if ( any(this%coord(CENTER, d)%r(:) .equals. this%coord(LEFT,  d)%r(:)) .or. &
+                 any(this%coord(CENTER, d)%r(:) .equals. this%coord(RIGHT, d)%r(:)) ) call die("[grid_container:set_coords] cannot distinguish between center and face coordinates of a cell")
+            if ( any(abs(this%coord(CENTER, d)%r(:)-this%coord(LEFT,  d)%r(:)) < safety_warn_factor*epsilon(this%coord(CENTER, d)%r(:))*this%coord(CENTER, d)%r(:)) .or. &
+                 any(abs(this%coord(CENTER, d)%r(:)-this%coord(RIGHT, d)%r(:)) < safety_warn_factor*epsilon(this%coord(CENTER, d)%r(:))*this%coord(CENTER, d)%r(:))) &
+                 call warn("[grid_container:set_coords] cell sizes are much smaller than coordinates. Inaccuracies in setting the initial conditions may happen.")
+         endif
       enddo
 
       !--- Shortcuts --------------------
