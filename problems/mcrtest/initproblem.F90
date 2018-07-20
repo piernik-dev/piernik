@@ -170,8 +170,8 @@ contains
       use cr_data,        only: icr_H1, icr_C12, cr_table
 #endif /* COSM_RAYS_SOURCES */
 #ifdef COSM_RAY_ELECTRONS
-     use initcosmicrays,   only: ncrn, iarr_cre_e, iarr_cre_n
-     use initcrspectrum,   only: expan_order, taylor_coeff_2nd, taylor_coeff_3rd, e_small, cresp, cre_eff
+     use initcosmicrays,   only: iarr_cre_e, iarr_cre_n
+     use initcrspectrum,   only: expan_order, taylor_coeff_2nd, taylor_coeff_3rd, smallecre, cresp, cre_eff
      use cresp_crspectrum, only: cresp_get_scaled_init_spectrum
 #endif /* COSM_RAY_ELECTRONS */
 
@@ -251,7 +251,7 @@ contains
                               r2 = (cg%x(i)-xsn+real(ipm)*dom%L_(xdim))**2+(cg%y(j)-ysn+real(jpm)*dom%L_(ydim))**2+(cg%z(k)-zsn+real(kpm)*dom%L_(zdim))**2
                               sn_rdist2 = r2/r0**2
                               sn_exp = 0.0
-                              if(sn_rdist2 <= 10.0) then
+                              if (sn_rdist2 <= 10.0) then
                                  sn_exp = exp(-sn_rdist2)
                               endif
                               if (icr == cr_table(icr_H1)) then
@@ -282,7 +282,7 @@ contains
                            r2 = (cg%x(i)-xsn+real(ipm)*dom%L_(xdim))**2+(cg%y(j)-ysn+real(jpm)*dom%L_(ydim))**2+(cg%z(k)-zsn+real(kpm)*dom%L_(zdim))**2
                            sn_rdist2 = r2/r0**2
                            sn_exp = 0.0
-                           if(sn_rdist2 <= 10.0) then
+                           if (sn_rdist2 <= 10.0) then
                               sn_exp = exp(-sn_rdist2)
                            endif
                            e_tot = e_tot + amp_cr*sn_exp
@@ -290,7 +290,7 @@ contains
                      enddo
                   enddo
                   cresp%n = 0.0 ;  cresp%e = 0.0 ; e_tot = e_tot * cre_eff
-                  if (e_tot .gt. e_small) then     ! early phase - fill cells only when total passed energy is greater than e_small, amplitude computed from total explosion energy multiplied by factor cre_eff
+                  if (e_tot .gt. smallecre) then
                     call cresp_get_scaled_init_spectrum(cresp%n, cresp%e, e_tot)
                     cg%u(iarr_cre_n,i,j,k) = cg%u(iarr_cre_n,i,j,k) + cresp%n
                     cg%u(iarr_cre_e,i,j,k) = cg%u(iarr_cre_e,i,j,k) + cresp%e
@@ -341,7 +341,7 @@ contains
       cgl => leaves%first
       do while (associated(cgl))
         cg => cgl%cg
-        if (expansion_cnst .ne. 0.0 ) then ! adiabatic expansion / compression
+        if (expansion_cnst .notequals. 0.0 ) then ! adiabatic expansion / compression
          write(msg,*) '[initproblem:problem_initial_conditions] setting up expansion/compression, expansion_cnst=',expansion_cnst
 #ifdef IONIZED
 ! Ionized

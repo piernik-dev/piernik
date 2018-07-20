@@ -275,7 +275,7 @@ contains
 #ifdef COSM_RAY_ELECTRONS
                   e_tot_sn = decr * cre_eff
                   cresp%n = 0.0 ;  cresp%e = 0.0
-                  if (e_tot_sn .gt. e_small) then     ! early phase - fill cells only when total passed energy is greater than e_small
+                  if (e_tot_sn .gt. smallecre) then
                         call cresp_get_scaled_init_spectrum(cresp%n,cresp%e,e_tot_sn)
                   endif                                                                                ! distribution function amplitude computed from total explosion energy multiplied by factor cre_eff
                   cg%u(iarr_cre_n,i,j,k) = cg%u(iarr_cre_n,i,j,k) + cresp%n

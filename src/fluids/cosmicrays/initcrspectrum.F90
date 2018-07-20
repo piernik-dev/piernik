@@ -1,6 +1,9 @@
 module initcrspectrum
 ! pulled by COSM_RAY_ELECTRONS
    use constants,       only: cbuff_len
+
+   implicit none
+
    public ! QA_WARN no secrets are kept here
 
 ! contains routines reading namelist in problem.par file dedicated to cosmic ray electron spectrum and initializes types used.
@@ -582,16 +585,16 @@ module initcrspectrum
 
       implicit none
 
-      if(.not. allocated(crel%p)) call my_allocate_with_index(crel%p,ncre,0)
-      if(.not. allocated(crel%f)) call my_allocate_with_index(crel%f,ncre,0)
-      if(.not. allocated(crel%q)) call my_allocate_with_index(crel%q,ncre,1)
-      if(.not. allocated(crel%n)) call my_allocate_with_index(crel%n,ncre,1)
-      if(.not. allocated(crel%e)) call my_allocate_with_index(crel%e,ncre,1)
+      if (.not. allocated(crel%p)) call my_allocate_with_index(crel%p,ncre,0)
+      if (.not. allocated(crel%f)) call my_allocate_with_index(crel%f,ncre,0)
+      if (.not. allocated(crel%q)) call my_allocate_with_index(crel%q,ncre,1)
+      if (.not. allocated(crel%n)) call my_allocate_with_index(crel%n,ncre,1)
+      if (.not. allocated(crel%e)) call my_allocate_with_index(crel%e,ncre,1)
 
-      if(.not. allocated(cresp%n)) call my_allocate_with_index(cresp%n,ncre,1)
-      if(.not. allocated(cresp%e)) call my_allocate_with_index(cresp%e,ncre,1)
-      if(.not. allocated(norm_init_spectrum%n)) call my_allocate_with_index(norm_init_spectrum%n,ncre,1)
-      if(.not. allocated(norm_init_spectrum%e)) call my_allocate_with_index(norm_init_spectrum%e,ncre,1)
+      if (.not. allocated(cresp%n)) call my_allocate_with_index(cresp%n,ncre,1)
+      if (.not. allocated(cresp%e)) call my_allocate_with_index(cresp%e,ncre,1)
+      if (.not. allocated(norm_init_spectrum%n)) call my_allocate_with_index(norm_init_spectrum%n,ncre,1)
+      if (.not. allocated(norm_init_spectrum%e)) call my_allocate_with_index(norm_init_spectrum%e,ncre,1)
 
       crel%p = zero
       crel%q = zero
@@ -615,6 +618,8 @@ module initcrspectrum
 
       use constants, only: zero, one
       use units,     only: clight
+
+      implicit none
 
       real(kind=8)           :: gamma
       real(kind=8), optional :: particle_mass

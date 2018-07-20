@@ -1,5 +1,5 @@
 module cresp_crspectrum
-   ! pulled by COSM_RAY_ELECTRONS
+! pulled by COSM_RAY_ELECTRONS
 
    implicit none
 
@@ -73,6 +73,7 @@ module cresp_crspectrum
    real(kind=8), save :: e_threshold_lo, e_threshold_up
 ! if one bin, switch off cutoff p approximation
    integer  :: approx_p_lo, approx_p_up
+
 !-------------------------------------------------------------------------------------------------
 !
 contains
@@ -84,7 +85,7 @@ contains
    subroutine cresp_update_cell(dt, n_inout, e_inout, sptab, v_n, v_e, cfl_cresp_violation, p_out) !, p_lo_cell, p_up_cell)
 
       use constants,      only: zero, one
-      use initcrspectrum, only: ncre, spec_mod_trms, e_small_approx_p_lo, e_small_approx_p_up, e_small_approx_init_cond, crel, p_mid_fix, nullify_empty_bins, p_fix
+      use initcrspectrum, only: ncre, spec_mod_trms, e_small_approx_p_lo, e_small_approx_p_up, crel, p_mid_fix, nullify_empty_bins, p_fix
 
       implicit none
 
@@ -244,27 +245,27 @@ contains
       p_up = p_up_next
 
 #ifdef CRESP_VERBOSED
-      write (*,'(A5, 50E18.9)') "p_fix", p_fix
-      write (*,'(A5, 50E18.9)') "p_act", p
-      write (*,'(A5, 50E18.9)') "p_nex", p_next
-      write (*,'(A5, 50E18.9)') "p_upw", p_upw
+      print *, '(A5, 50E18.9)', "p_fix", p_fix
+      print *, '(A5, 50E18.9)', "p_act", p
+      print *, '(A5, 50E18.9)', "p_nex", p_next
+      print *, '(A5, 50E18.9)', "p_upw", p_upw
       print '(A6, 1EN22.9, A9, 1EN22.9)', "p_lo ", p_lo, ",  p_up ", p_up
 
       print *, " "
-      write (*,'(A5, 50E18.9)') "    n", n
-      write (*,'(A5, 50E18.9)') "nflux", nflux
-      write (*,'(A5, 50E18.9)') "  ndt", ndt
+      print *, '(A5, 50E18.9)', "    n", n
+      print *, '(A5, 50E18.9)', "nflux", nflux
+      print *, '(A5, 50E18.9)', "  ndt", ndt
 
       print *, " "
-      write (*,'(A5, 50E18.9)') "    e", e
-      write (*,'(A5, 50E18.9)') "eflux", eflux
-      write (*,'(A5, 50E18.9)') "  edt", edt
+      print *, '(A5, 50E18.9)', "    e", e
+      print *, '(A5, 50E18.9)', "eflux", eflux
+      print *, '(A5, 50E18.9)', "  edt", edt
 
       print *, " "
-      write (*,'(A5, 50E18.9)') "    r", r
-      write (*,'(A5, 50E18.9)') "    q", q
-      write (*,'(A5, 50E18.9)') "    f", f
-      write (*,'(A15,2E18.9,A3,2E18.9)') "virtual e & n", vrtl_e, " | ", vrtl_n
+      print *, '(A5, 50E18.9)', "    r", r
+      print *, '(A5, 50E18.9)', "    q", q
+      print *, '(A5, 50E18.9)', "    f", f
+      print *, '(A15,2E18.9,A3,2E18.9)', "virtual e & n", vrtl_e, " | ", vrtl_n
       print *, " "
       if ( (approx_p_lo+approx_p_up) .gt. 0 ) then
          print '(A36,I5,A6,I3)', "NR_2dim:  convergence failure: p_lo", fail_count_NR_2dim(1), ", p_up", fail_count_NR_2dim(2)
@@ -304,7 +305,7 @@ contains
    end subroutine cresp_update_cell
 
 !----------------------------------------------------------------------------------------------------
-   subroutine detect_clean_spectrum(ext_n, ext_e, empty_cell)
+   subroutine detect_clean_spectrum(ext_n, ext_e, empty_cell) ! DEPRECATED
 
       use initcrspectrum,      only: ncre, nullify_empty_bins
 
@@ -361,9 +362,9 @@ contains
 !-------------------------------------------------------------------------------------------------
 ! all the procedures below are called by cresp_update_cell subroutine or the driver
 !-------------------------------------------------------------------------------------------------
-   subroutine find_i_bound(ext_n, ext_e, exit_code)
+   subroutine find_i_bound(ext_n, ext_e, exit_code) ! DEPRECATED
 
-      use initcrspectrum, only: ncre, e_small
+      use initcrspectrum, only: ncre
       use constants, only: zero
 
       implicit none
@@ -391,7 +392,7 @@ contains
      do i = ncre, 1,-1
         i_up = i
         if (ext_e(i) .gt. e_threshold_up ) then   ! if energy density is nonzero, so should be the number density
-           if( ext_n(i) .gt. zero ) exit
+           if ( ext_n(i) .gt. zero ) exit
         endif
      enddo
 
@@ -431,16 +432,15 @@ contains
 
 !-------------------------------------------------------------------------------------------------
 
-   subroutine cresp_find_active_bins
+   subroutine cresp_find_active_bins ! DEPRECATED
 
       use constants,      only: I_ZERO, zero
-      use diagnostics,    only: my_allocate_with_index
-      use initcrspectrum, only: ncre, e_small, cresp_all_edges, cresp_all_bins, nullify_empty_bins
+      use initcrspectrum, only: e_small, cresp_all_edges, cresp_all_bins
 
       implicit none
 
-      if(allocated(active_bins))  deallocate(active_bins)
-      if(allocated(active_edges)) deallocate(active_edges)
+      if (allocated(active_bins))  deallocate(active_bins)
+      if (allocated(active_edges)) deallocate(active_edges)
 
       is_active_bin = .false.
       is_active_bin(i_lo+1:i_up) = .true. ! unused if we use "not_spectrum_break"
@@ -616,8 +616,8 @@ contains
       print *, "find_active_bins_v1 is_active_bin:",is_active_bin, "|", count(is_active_bin), num_has_gt_zero
       print *, "find_active_bins_v1 i_lo, i_up:", i_lo, i_up
 #endif /* CRESP_VERBOSED */
-      if(allocated(active_bins))  deallocate(active_bins)
-      if(allocated(active_edges)) deallocate(active_edges)
+      if (allocated(active_bins))  deallocate(active_bins)
+      if (allocated(active_edges)) deallocate(active_edges)
 ! allocate and prepare active bins for spectrum evolution
       if (num_active_bins .gt. I_ZERO) then
          allocate(active_bins(num_active_bins))
@@ -791,12 +791,12 @@ contains
 #ifdef CRESP_VERBOSED
       print *, 'In update_bin_index'
       print *, 'p_lo_next, p_up_next:', p_lo_next, p_up_next
-      write (*,"(A15,50L2, 50I3)") 'active_edges: ', is_active_edge, active_edges
-      write (*,"(A15,50L2, 50I3)") 'active edgesN:', is_active_edge_next, active_edges_next
-      write (*,"(A15,50L2, 50I3)") 'active binsN :', is_active_bin_next , active_bins_next
-      write (*,"(A15,50L2, 50I3)") 'fixed  edges: ', is_fixed_edge_next,  fixed_edges_next
-      write (*,"(A15,50L2, 50I3)") 'cooling edges:', is_cooling_edge_next,  cooling_edges_next
-      write (*,"(A15,50L2, 50I3)") 'heating edges:', is_heating_edge_next,  heating_edges_next
+      print *, "(A15,50L2, 50I3)", 'active_edges: ', is_active_edge, active_edges
+      print *, "(A15,50L2, 50I3)", 'active edgesN:', is_active_edge_next, active_edges_next
+      print *, "(A15,50L2, 50I3)", 'active binsN :', is_active_bin_next , active_bins_next
+      print *, "(A15,50L2, 50I3)", 'fixed  edges: ', is_fixed_edge_next,  fixed_edges_next
+      print *, "(A15,50L2, 50I3)", 'cooling edges:', is_cooling_edge_next,  cooling_edges_next
+      print *, "(A15,50L2, 50I3)", 'heating edges:', is_heating_edge_next,  heating_edges_next
 #endif /* CRESP_VERBOSED */
 
    end subroutine cresp_update_bin_index
@@ -833,9 +833,9 @@ contains
       use cresp_variables, only: clight ! use units, only: clight
       use dataio_pub,      only: warn, msg
       use initcrspectrum,  only: ncre, spec_mod_trms, q_init, p_lo_init, p_up_init, initial_condition, eps, p_fix, w,   &
-                              &  allow_source_spectrum_break, e_small_approx_init_cond, e_small_approx_p_lo, p_min_fix, &
-                              &  e_small_approx_p_up, crel, total_init_cree,  p_max_fix, add_spectrum_base, e_small,    &
-                              &  test_spectrum_break, cresp_all_bins, q_br_init, p_br_init
+                              &  allow_source_spectrum_break, e_small_approx_init_cond, e_small_approx_p_lo, crel,      &
+                              &  e_small_approx_p_up, total_init_cree,  add_spectrum_base, e_small, cresp_all_bins,     &
+                              &  test_spectrum_break, q_br_init, p_br_init
       use mpisetup,        only: master
 
       implicit none
@@ -849,8 +849,8 @@ contains
 
       u_b = zero ; u_d = zero
 
-      if(present(sptab)) u_b = sptab%ub
-      if(present(sptab)) u_d = sptab%ud
+      if (present(sptab)) u_b = sptab%ub
+      if (present(sptab)) u_d = sptab%ud
 
       approx_p_lo = e_small_approx_p_lo
       approx_p_up = e_small_approx_p_up
@@ -858,8 +858,8 @@ contains
       init_e = zero
       init_n = zero
 
-      if(present(sptab)) u_b_0 = u_b
-      if(present(sptab)) u_d_0 = u_d
+      if (present(sptab)) u_b_0 = u_b
+      if (present(sptab)) u_d_0 = u_d
 
       f = zero ; q = zero ; p = zero ; n = zero ; e = zero
 
@@ -914,10 +914,6 @@ contains
       allocate(active_bins(num_active_bins))
       active_bins = pack(cresp_all_bins, is_active_bin)
 
-! TESTING ALGORITHM (finding p_lo and p_up using e_small)
-#ifdef TEST_CRESP
-!      call p_algorithm_accuracy_test  ! tests accuracy of algorithm which later seeks value of p_up using n, e, f and e_small
-#endif /* TEST_CRESP */
 ! Pure power law spectrum initial condition (default case)
       q = q_init
       f = zero
@@ -972,7 +968,7 @@ contains
          n = fq_to_n(p(0:ncre-1), p(1:ncre), f(0:ncre-1), q(1:ncre), active_bins)
      endif
 
-     if(initial_condition == 'bump') then  ! TODO - @cresp_grid energy normalization and integral to scale cosmic ray electrons with nucleon energy density!
+     if (initial_condition == 'bump') then  ! TODO - @cresp_grid energy normalization and integral to scale cosmic ray electrons with nucleon energy density!
 ! Gaussian bump-type initial condition for energy distribution
 #ifdef CRESP_VERBOSED
          print *, 'init_state:',sqrt(p_lo_init*p_up_init/1.) !,sp_init_width
@@ -1051,7 +1047,7 @@ contains
             is_active_bin = .false.
             is_active_bin(i_lo+1:i_up) = .true.
             num_active_bins = count(is_active_bin) ! active arrays must be reevaluated - number of active bins and edges might have changed
-            if(allocated(active_bins)) deallocate(active_bins)
+            if (allocated(active_bins)) deallocate(active_bins)
             allocate(active_bins(num_active_bins)) ! active arrays must be reevaluated - number of active bins and edges might have changed
             active_bins = pack(cresp_all_bins, is_active_bin)
 
@@ -1173,11 +1169,11 @@ contains
 
       fq_to_e = zero
       e_bins = fpi*clight*f_l(bins)*p_l(bins)**4
-      where(abs(q(bins) - four) .gt. eps)
+      where (abs(q(bins) - four) .gt. eps)
          e_bins = e_bins*((p_r(bins)/p_l(bins))**(four-q(bins)) - one)/(four - q(bins))
       elsewhere
          e_bins = e_bins*log(p_r(bins)/p_l(bins))
-      end where
+      endwhere
 
       fq_to_e(bins) = e_bins
 
@@ -1189,7 +1185,6 @@ contains
 !-------------------------------------------------------------------------------------------------
 
    function fp_to_e_ampl(p_1, f_1)
-      use initcrspectrum,     only: ncre
       use constants,          only: fpi
       use cresp_variables,    only: clight
 
@@ -1222,11 +1217,11 @@ contains
       n_bins = zero
 
       n_bins = fpi*f_l(bins)*p_l(bins)**3
-      where(abs(q(bins) - three) .gt. eps)
+      where (abs(q(bins) - three) .gt. eps)
          n_bins = n_bins*((p_r(bins)/p_l(bins))**(three-q(bins)) - one)/(three - q(bins))
       elsewhere
          n_bins = n_bins*log((p_r(bins)/p_l(bins)))
-      end where
+      endwhere
 
       fq_to_n = zero
       fq_to_n(bins) = n_bins
@@ -1239,14 +1234,14 @@ contains
 
       implicit none
 
-      if(allocated(fixed_edges)) deallocate(fixed_edges)
-      if(allocated(fixed_edges_next)) deallocate(fixed_edges_next)
-      if(allocated(active_edges)) deallocate(active_edges)
-      if(allocated(active_edges_next)) deallocate(active_edges_next)
-      if(allocated(active_bins)) deallocate(active_bins)
-      if(allocated(active_bins_next)) deallocate(active_bins_next)
-      if(allocated(cooling_edges_next)) deallocate(cooling_edges_next)
-      if(allocated(heating_edges_next)) deallocate(heating_edges_next)
+      if (allocated(fixed_edges)) deallocate(fixed_edges)
+      if (allocated(fixed_edges_next)) deallocate(fixed_edges_next)
+      if (allocated(active_edges)) deallocate(active_edges)
+      if (allocated(active_edges_next)) deallocate(active_edges_next)
+      if (allocated(active_bins)) deallocate(active_bins)
+      if (allocated(active_bins_next)) deallocate(active_bins_next)
+      if (allocated(cooling_edges_next)) deallocate(cooling_edges_next)
+      if (allocated(heating_edges_next)) deallocate(heating_edges_next)
 
    end subroutine deallocate_active_arrays
 
@@ -1281,22 +1276,22 @@ contains
       eflux  = zero
 
       dn_upw(ce) = fpi*fimh(ce)*pimh(ce)**3
-      where(abs( qi(ce) - three ) .gt. eps)
+      where (abs( qi(ce) - three ) .gt. eps)
          dn_upw(ce) = dn_upw(ce)*((p_upw(ce)/pimh(ce))**(three-qi(ce)) - one)/(three - qi(ce))
       elsewhere
          dn_upw(ce) = dn_upw(ce)*log((p_upw(ce)/pimh(ce)))
-      end where
+      endwhere
       nflux(ce) = - dn_upw(ce)
 
       de_upw(ce) = fpi*clight*fimh(ce)*pimh(ce)**4
-      where(abs(qi(ce) - four) .gt. eps)
+      where (abs(qi(ce) - four) .gt. eps)
          de_upw(ce) = de_upw(ce)*((p_upw(ce)/pimh(ce))**(four-qi(ce)) - one)/(four - qi(ce))
       elsewhere
          de_upw(ce) = de_upw(ce)*log(p_upw(ce)/pimh(ce))
-      end where
+      endwhere
       eflux(ce) =  - de_upw(ce)
 
-      if(del_i_up == -1) then
+      if (del_i_up == -1) then
          nflux(i_up-1) = -n(i_up)
          eflux(i_up-1) = -e(i_up  )
       endif
@@ -1323,22 +1318,22 @@ contains
       endif
 
       dn_upw(he) = fpi*fimth(he)*p_upw(he)**3*(pimth(he)/p_upw(he))**qim1(he)
-      where(abs(qim1(he) - three) .gt. eps )
+      where (abs(qim1(he) - three) .gt. eps )
          dn_upw(he) = dn_upw(he)*((pimh(he)/p_upw(he))**(three-qim1(he)) - one)/(three - qim1(he))
       elsewhere
          dn_upw(he) = dn_upw(he)*log((pimh(he)/p_upw(he)))
-      end where
+      endwhere
       nflux(he) = dn_upw(he)
 
       de_upw(he) = fpi*clight*fimth(he)*p_upw(he)**4*(pimth(he)/p_upw(he))**qim1(he)
-      where(abs(qi(he) - four) .gt. eps)
+      where (abs(qi(he) - four) .gt. eps)
          de_upw(he) = de_upw(he)*((pimh(he)/p_upw(he))**(four-qim1(he)) - one)/(four - qim1(he))
       elsewhere
          de_upw(he) = de_upw(he)*log(pimh(he)/p_upw(he))
-      end where
+      endwhere
       eflux(he) = de_upw(he)
 
-      if(del_i_lo == 1 .or. nflux(i_lo+1) .ge. n(i_lo+1) ) then
+      if (del_i_lo == 1 .or. nflux(i_lo+1) .ge. n(i_lo+1) ) then
          nflux(i_lo+1) = n(i_lo+1)
          eflux(i_lo+1) = e(i_lo+1)
 ! emptying lower boundary bins - in cases when flux gets greater than energy or number density
@@ -1368,21 +1363,21 @@ contains
 
       r = zero
 
-      where(abs(q(bins) - five) .gt. eps)
+      where (abs(q(bins) - five) .gt. eps)
          r_num = (p(bins)**(five-q(bins)) - p(bins-1)**(five-q(bins)))/(five - q(bins))
       elsewhere
          r_num = log(p(bins)/p(bins-1))
-      end where
+      endwhere
 
-      where(abs(q(bins) - four) .gt. eps)
+      where (abs(q(bins) - four) .gt. eps)
          r_den = (p(bins)**(four-q(bins)) - p(bins-1)**(four-q(bins)))/(four - q(bins))
       elsewhere
          r_den = log(p(bins)/p(bins-1))
-      end where
+      endwhere
 
       where ( abs(r_num) .gt. eps .and. abs(r_den) .gt. eps )
          r(bins) = u_d + u_b * r_num/r_den   !!! all cooling effects will come here
-      end where
+      endwhere
 
    end subroutine cresp_compute_r
 
@@ -1467,12 +1462,12 @@ contains
       where (p_r(bins).gt. zero .and. p_l(bins) .gt. zero ) ! p(i) = 0 in inactive bins. This condition should be met by providing proper "bins" range - FIXME
          pr_by_pl(bins) = p_r(bins) / p_l(bins)                     ! + comparing reals with zero is still risky
          f_bins = n(bins) / (fpi*p_l(bins)**3)
-         where(abs(q(bins)-three) .gt. eps)
+         where (abs(q(bins)-three) .gt. eps)
             f_bins = f_bins*(three - q(bins)) /((pr_by_pl(bins))**(three-q(bins)) - one)
          elsewhere
             f_bins = f_bins/log((p_r(bins)/p_l(bins)))
-         end where
-      end where
+         endwhere
+      endwhere
 
       nq_to_f(bins-1) = f_bins
 
@@ -1483,9 +1478,9 @@ contains
 !---------------------------------------------------------------------------------------------------
    function get_pcresp(p_l, p_r, f_l, q, bins) ! computes cre pressure, not used currently
 
-      use constants, only: zero, one, three, four, fpi
+      use constants,       only: zero, one, three, four, fpi
       use cresp_variables, only: clight ! use units, only: clight
-      use initcrspectrum, only: ncre, eps
+      use initcrspectrum,  only: eps
 
       implicit none
 
@@ -1497,11 +1492,11 @@ contains
       get_pcresp = zero
       p_cresp = (fpi/three) * clight*f_l(bins)*p_l(bins)**4
 
-      where(abs(q(bins) - four) .gt. eps)
+      where (abs(q(bins) - four) .gt. eps)
          p_cresp = p_cresp*((p_r(bins)/p_l(bins))**(four-q(bins)) - one)/(four - q(bins))
       elsewhere
          p_cresp = p_cresp*log(p_r(bins)/p_l(bins))
-      end where
+      endwhere
 
       get_pcresp = sum(p_cresp)
 
@@ -1539,19 +1534,21 @@ contains
       use constants,       only: zero, one
       use cresp_variables, only: clight ! use units, only: clight
       use cresp_NR_method, only: intpol_pf_from_NR_grids, alpha, n_in, selected_function_2D, fvec_up, &
-                           &     NR_algorithm, e_small_to_f, q_ratios
+                           &     NR_algorithm, e_small_to_f, q_ratios, assoc_pointers_up
       use initcrspectrum,  only: e_small, q_big, p_fix, NR_refine_solution_pf
 
       implicit none
 
       real(kind=8), dimension(1:2) :: x_NR, x_NR_init
       logical :: exit_code, interpolated, intpol_fail
-      character(len=2) :: bound = "up"
 
       x_NR = zero
       alpha = (e(i_up)/(n(i_up)*clight*p_fix(i_up-1)))
       n_in  = n(i_up)
-      x_NR = intpol_pf_from_NR_grids(bound, alpha, n_in, interpolated, intpol_fail)
+
+      call assoc_pointers_up
+
+      x_NR = intpol_pf_from_NR_grids(alpha, n_in, interpolated, intpol_fail)
       if (intpol_fail) then
          exit_code = .true.
          fail_count_no_sol(2) = fail_count_no_sol(2) + 1
@@ -1561,7 +1558,7 @@ contains
       selected_function_2D => fvec_up
 
 #ifdef CRESP_VERBOSED
-      write (*,"(A31,2E22.15)" ) "Input ratios(p, f) for NR (up):", x_NR
+      print *,"(A31,2E22.15)", "Input ratios(p, f) for NR (up):", x_NR
 #endif /* CRESP_VERBOSED */
 
       if ( (NR_refine_solution_pf .eqv. .true.) .or. (interpolated .eqv. .false.)) then
@@ -1597,10 +1594,9 @@ contains
 
       if (abs(q(i_up)) .gt. q_big ) q(i_up) = sign(one, q(i_up)) * q_big
 #ifdef CRESP_VERBOSED
-      write (*,"(A1)") " "
-      write (*,"(A26,2E22.15)") " >>> Obtained (p_up, f_l):", p_up, f(i_up-1) &
-                                 ,"     Corresponding ratios:", x_NR(1), x_NR(2) &
-                                 ,"alpha = ", alpha
+      print *,"(A1)", " "
+      print *,"(A26,2E22.15)", " >>> Obtained (p_up, f_l):", p_up, f(i_up-1) &
+                             , "     Corresponding ratios:", x_NR(1), x_NR(2)
 #endif /* CRESP_VERBOSED */
 
    end subroutine get_fqp_up
@@ -1612,7 +1608,7 @@ contains
 
       use constants, only: zero, one
       use cresp_NR_method, only: intpol_pf_from_NR_grids, alpha, n_in, selected_function_2D, fvec_lo, &
-                  NR_algorithm, e_small_to_f, q_ratios
+                  NR_algorithm, e_small_to_f, q_ratios, assoc_pointers_lo
       use cresp_variables, only: clight ! use units, only: clight
       use initcrspectrum, only: e_small, q_big, p_fix, NR_refine_solution_pf
 
@@ -1620,12 +1616,14 @@ contains
 
       real(kind=8), dimension(1:2) :: x_NR, x_NR_init
       logical :: exit_code, interpolated, intpol_fail
-      character(len=2) :: bound = "lo"
 
       x_NR = zero
       alpha = (e(i_lo+1)/(n(i_lo+1)*clight*p_fix(i_lo+1)))
       n_in  = n(i_lo+1)
-      x_NR = intpol_pf_from_NR_grids(bound, alpha, n_in, interpolated, intpol_fail)
+
+      call assoc_pointers_lo
+
+      x_NR = intpol_pf_from_NR_grids(alpha, n_in, interpolated, intpol_fail)
       if (intpol_fail) then
          exit_code = .true.
          fail_count_no_sol(1) = fail_count_no_sol(1) + 1
@@ -1635,7 +1633,7 @@ contains
       selected_function_2D => fvec_lo
 
 #ifdef CRESP_VERBOSED
-      write (*,"(A31,2E22.15)" ) "Input ratios(p, f) for NR (lo):", x_NR
+      print *,"(A31,2E22.15)", "Input ratios(p, f) for NR (lo):", x_NR
 #endif /* CRESP_VERBOSED */
       if ( (NR_refine_solution_pf .eqv. .true.) .or. (interpolated .eqv. .false.)) then
 
@@ -1669,9 +1667,9 @@ contains
 
       if (abs(q(i_lo+1)) .gt. q_big ) q(i_lo+1) = sign(one, q(i_lo+1)) * q_big
 #ifdef CRESP_VERBOSED
-      write (*,"(A1)") " "
-      write (*,"(A26,2E22.15)") " >>> Obtained (p_lo, f_r):", p_lo, x_NR(2)*f(i_lo) &
-                                 ,"     Corresponding ratios:", x_NR(1), x_NR(2)
+      print *,"(A1)", " "
+      print *,"(A26,2E22.15)", " >>> Obtained (p_lo, f_r):", p_lo, x_NR(2)*f(i_lo) &
+                             , "     Corresponding ratios:", x_NR(1), x_NR(2)
 #endif /* CRESP_VERBOSED */
       alpha = zero ;  n_in = zero
 
