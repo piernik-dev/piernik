@@ -499,7 +499,7 @@ contains
            &                        cg_size_aname, cg_offset_aname, cg_lev_aname, base_d_gname, cg_cnt_aname, data_gname, &
            &                        output_fname, STAT_OK
       use constants,          only: cwdlen, dsetnamelen, cbuff_len, ndims, xdim, zdim, INVALID, RD, LO, HI
-      use dataio_pub,         only: die, warn, printio, msg, last_hdf_time, last_res_time, last_log_time, last_tsl_time, problem_name, new_id, domain_dump, &
+      use dataio_pub,         only: die, warn, printio, msg, last_hdf_time, last_res_time, last_log_time, last_tsl_time, problem_name, res_id, domain_dump, &
            &                        require_problem_IC, piernik_hdf5_version2, nres, nhdf, fix_string
       use dataio_user,        only: user_reg_var_restart, user_attrs_rd
       use domain,             only: dom
@@ -641,7 +641,7 @@ contains
             case ("domain")
                domain_dump = fix_string(trim(cbuf(:len(domain_dump))))
             case ("run_id")
-               new_id = fix_string(trim(cbuf(:len(new_id))))
+               res_id = fix_string(trim(cbuf(:len(res_id))))
             case default
                write(msg,'(3a,i14,a)')"[restart_hdf5_v2:read_restart_hdf5_v2] String attribute '",trim(real_attrs(ia)),"' with value = ",cbuf," was ignored"
                call warn(msg)

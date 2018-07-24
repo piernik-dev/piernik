@@ -150,10 +150,10 @@ contains
          tot_ts = tot_ts + ts
          loc_ts = loc_ts + ts
          if (norm_old/norm_lhs < 1e6) then
-            write(msg,'(a,i3,a,f12.8,a,f9.2,a,f11.7,g14.6,a,f8.3)')"MG-PCG: ", k, " lhs/rhs= ",norm_lhs/norm_rhs, " improvement= ",norm_old/norm_lhs, &
+            write(msg,'(a,i3,a,f12.8,a,f10.2,a,f11.7,g14.6,a,f8.3)')"MG-PCG: ", k, " lhs/rhs= ",norm_lhs/norm_rhs, " improvement= ",norm_old/norm_lhs, &
                  &                                                 " a,b= ", alpha, beta, " time=", ts
          else
-            write(msg,'(a,i3,a,f12.8,a,es9.3,a,f11.7,g14.6,a,f8.3)')"MG-PCG: ", k, " lhs/rhs= ",norm_lhs/norm_rhs, " improvement= ",norm_old/norm_lhs, &
+            write(msg,'(a,i3,a,f12.8,a,es10.3,a,f11.7,g14.6,a,f8.3)')"MG-PCG: ", k, " lhs/rhs= ",norm_lhs/norm_rhs, " improvement= ",norm_old/norm_lhs, &
                  &                                                 " a,b= ", alpha, beta, " time=", ts
          endif
          if (master) call printinfo(msg)

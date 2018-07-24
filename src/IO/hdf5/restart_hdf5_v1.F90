@@ -466,7 +466,7 @@ contains
       use common_hdf5,      only: output_fname
       use constants,        only: cwdlen, cbuff_len, domlen, idlen, xdim, ydim, zdim, LO, HI, RD
       use dataio_pub,       only: msg, warn, die, printio, require_problem_IC, problem_name, piernik_hdf5_version, fix_string, &
-           &                      domain_dump, last_hdf_time, last_res_time, last_log_time, last_tsl_time, nhdf, nres, new_id
+           &                      domain_dump, last_hdf_time, last_res_time, last_log_time, last_tsl_time, nhdf, nres, res_id
       use dataio_user,      only: user_reg_var_restart, user_attrs_rd
       use domain,           only: dom
       use fluidindex,       only: flind
@@ -601,7 +601,7 @@ contains
 
          call h5ltget_attribute_string_f(file_id,"/","problem_name", problem_name, error)
          call h5ltget_attribute_string_f(file_id,"/","domain",       domain_dump,  error)
-         call h5ltget_attribute_string_f(file_id,"/","run_id",       new_id,       error)
+         call h5ltget_attribute_string_f(file_id,"/","run_id",       res_id,       error)
 
          if (restart_hdf5_version > 1.11) then
             call h5ltget_attribute_int_f(file_id,"/","require_problem_IC", ibuf, error)
@@ -609,7 +609,7 @@ contains
          endif
 
          problem_name = fix_string(problem_name)   !> \deprecated BEWARE: >=HDF5-1.8.4 has weird issues with strings
-         new_id  = fix_string(new_id)    !> \deprecated   this bit hacks it around
+         res_id  = fix_string(res_id)    !> \deprecated   this bit hacks it around
          domain_dump  = fix_string(domain_dump)
 
          call h5fclose_f(file_id, error)
@@ -636,7 +636,7 @@ contains
 
          cbuff(1) = problem_name
          cbuff(2)(1:domlen) = domain_dump
-         cbuff(3)(1:idlen)  = new_id
+         cbuff(3)(1:idlen)  = res_id
       endif
 
       call piernik_MPI_Bcast(ibuff)
@@ -658,7 +658,7 @@ contains
 
          problem_name = cbuff(1)
          domain_dump = cbuff(2)(1:domlen)
-         new_id = cbuff(3)(1:idlen)
+         res_id = cbuff(3)(1:idlen)
 
       endif
 
