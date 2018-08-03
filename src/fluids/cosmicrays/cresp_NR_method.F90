@@ -1072,9 +1072,9 @@ contains
       real(kind=8) :: encp_func_2_zero_lo
 
       if (abs(q_in - three) .lt. eps) then
-         encp_func_2_zero_lo = -alpha_cnst + ((- one + p_ratio)/log(p_ratio)) / p_ratio
+         encp_func_2_zero_lo = -alpha_cnst + ((one - p_ratio)/log(p_ratio)) / p_ratio
       else if (abs(q_in - four) .lt. eps) then
-         encp_func_2_zero_lo = -alpha_cnst + log(p_ratio)/(p_ratio - one) / p_ratio
+         encp_func_2_zero_lo = -alpha_cnst + log(p_ratio)/(p_ratio - one)
       else
          encp_func_2_zero_lo = -alpha_cnst + ((three - q_in)/(four - q_in))*((p_ratio **(four - q_in) - one)/ &
                            &   (p_ratio **(three - q_in) - one)) / p_ratio
