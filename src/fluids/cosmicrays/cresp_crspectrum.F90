@@ -1,5 +1,6 @@
 module cresp_crspectrum
 ! pulled by COSM_RAY_ELECTRONS
+   use dataio_pub,      only: msg, die, warn, printinfo
 
    implicit none
 
@@ -125,7 +126,6 @@ contains
       vrtl_n = v_n
 
       call cresp_find_prepare_spectrum(n_inout, e_inout, empty_cell) ! EXPERIMENTAL
-      if ( empty_cell )  return             ! if grid cell contains empty bins, no action is taken
 
       if ( empty_cell ) then
          if (nullify_empty_bins) then
@@ -216,8 +216,15 @@ contains
             p(i_up) = p_up
             second_fail(2) = second_fail(2)+1
          endif
-         call cresp_find_prepare_spectrum(n_inout, e_inout, empty_cell)
-!          call cresp_find_active_bins
+
+         call cresp_find_prepare_spectrum(n, e, empty_cell)
+         if ( empty_cell ) then
+            if (nullify_empty_bins) then
+               call nullify_all_bins(n_inout, e_inout)
+            endif
+            return
+         endif
+
       endif
 
       call cresp_update_bin_index(dt, p_lo, p_up, p_lo_next, p_up_next, cfl_cresp_violation)      ! FIXME - must be modified in the future if this branch is connected to Piernik
@@ -245,33 +252,32 @@ contains
       p_up = p_up_next
 
 #ifdef CRESP_VERBOSED
-      print *, '(A5, 50E18.9)', "p_fix", p_fix
-      print *, '(A5, 50E18.9)', "p_act", p
-      print *, '(A5, 50E18.9)', "p_nex", p_next
-      print *, '(A5, 50E18.9)', "p_upw", p_upw
-      print '(A6, 1EN22.9, A9, 1EN22.9)', "p_lo ", p_lo, ",  p_up ", p_up
+      print a b c ! it aint compiling
+      write (msg, "A") "[@cresp_crspectrum:cresp_update_cell] :"                 ; call printinfo(msg)
+      write (msg, '(A5, 50E18.9)') "p_fix", p_fix      ; call printinfo(msg)
+      write (msg, '(A5, 50E18.9)') "p_act", p          ; call printinfo(msg)
+      write (msg, '(A5, 50E18.9)') "p_nex", p_next     ; call printinfo(msg)
+      write (msg, '(A5, 50E18.9)') "p_upw", p_upw      ; call printinfo(msg)
+      write (msg, '(A6, 1EN22.9, A9, 1EN22.9)') "p_lo ", p_lo, ",  p_up ", p_up  ; call printinfo(msg)
 
-      print *, " "
-      print *, '(A5, 50E18.9)', "    n", n
-      print *, '(A5, 50E18.9)', "nflux", nflux
-      print *, '(A5, 50E18.9)', "  ndt", ndt
+      write (msg, '(A5, 50E18.9)') "    n", n          ; call printinfo(msg)
+      write (msg, '(A5, 50E18.9)') "nflux", nflux      ; call printinfo(msg)
+      write (msg, '(A5, 50E18.9)') "  ndt", ndt        ; call printinfo(msg)
 
-      print *, " "
-      print *, '(A5, 50E18.9)', "    e", e
-      print *, '(A5, 50E18.9)', "eflux", eflux
-      print *, '(A5, 50E18.9)', "  edt", edt
+      write (msg, '(A5, 50E18.9)') "    e", e          ; call printinfo(msg)
+      write (msg, '(A5, 50E18.9)') "eflux", eflux      ; call printinfo(msg)
+      write (msg, '(A5, 50E18.9)') "  edt", edt        ; call printinfo(msg)
 
-      print *, " "
-      print *, '(A5, 50E18.9)', "    r", r
-      print *, '(A5, 50E18.9)', "    q", q
-      print *, '(A5, 50E18.9)', "    f", f
-      print *, '(A15,2E18.9,A3,2E18.9)', "virtual e & n", vrtl_e, " | ", vrtl_n
-      print *, " "
+      write (msg, '(A5, 50E18.9)') "    r", r          ; call printinfo(msg)
+      write (msg, '(A5, 50E18.9)') "    q", q          ; call printinfo(msg)
+      write (msg, '(A5, 50E18.9)') "    f", f          ; call printinfo(msg)
+      write (msg, '(A15,2E18.9,A3,2E18.9)') "virtual e & n", vrtl_e, " | ", vrtl_n     ; call printinfo(msg)
+
       if ( (approx_p_lo+approx_p_up) .gt. 0 ) then
-         print '(A36,I5,A6,I3)', "NR_2dim:  convergence failure: p_lo", fail_count_NR_2dim(1), ", p_up", fail_count_NR_2dim(2)
-         print '(A36,I5,A6,I3)', "NR_2dim:interpolation failure: p_lo", fail_count_interpol(1), ", p_up", fail_count_interpol(2)
-         print '(A36,I5,A6,I3)', "NR_2dim:  no solution failure: p_lo", fail_count_no_sol(1), ", p_up", fail_count_no_sol(2)
-         print '(A36,   100I5)', "NR_2dim:inpl/solve  q(bin) failure:", fail_count_comp_q
+         write (msg, '(A36,I5,A6,I3)') "NR_2dim:  convergence failure: p_lo", fail_count_NR_2dim(1), ", p_up", fail_count_NR_2dim(2)      ; call printinfo(msg)
+         write (msg, '(A36,I5,A6,I3)') "NR_2dim:interpolation failure: p_lo", fail_count_interpol(1), ", p_up", fail_count_interpol(2)    ; call printinfo(msg)
+         write (msg, '(A36,I5,A6,I3)') "NR_2dim:  no solution failure: p_lo", fail_count_no_sol(1), ", p_up", fail_count_no_sol(2)        ; call printinfo(msg)
+         write (msg, '(A36,   100I5)') "NR_2dim:inpl/solve  q(bin) failure:", fail_count_comp_q                                           ; call printinfo(msg)
       endif
 
       call cresp_detect_negative_content ! for testing
@@ -470,7 +476,7 @@ contains
          allocate(active_edges(i_lo:i_up))
          active_edges = pack(cresp_all_edges, is_active_edge)
 #ifdef CRESP_VERBOSED
-         print "(2(A9,i3))", "i_lo =", i_lo, ", i_up = ", i_up
+         write(msg,"(2(A9,i3))") "i_lo =", i_lo, ", i_up = ", i_up      ; call printinfo(msg)
 #endif /* CRESP_VERBOSED */
       endif
 
@@ -510,7 +516,7 @@ contains
          endif
       enddo
 #ifdef CRESP_VERBOSED
-      print *, "@find_active_bins_v1: pre_i_lo, pre_i_up", max(nonempty_bins(1) - 1, 0), nonempty_bins(num_has_gt_zero)
+      write (msg, *) "@find_active_bins_v1: pre_i_lo, pre_i_up", max(nonempty_bins(1) - 1, 0), nonempty_bins(num_has_gt_zero)    ; call printinfo(msg)
 #endif /* CRESP_VERBOSED */
 ! If cell is not empty, assume preliminary i_lo and i_up
       if (num_has_gt_zero .eq. 0) then
@@ -556,9 +562,9 @@ contains
       enddo
 
 #ifdef CRESP_VERBOSED
-      print "(A,50E12.4)", "find_active_bins_v1 e  :   ",e
-      print "(A,50E12.4)", "find_active_bins_v1 e_l:",e_amplitudes_l
-      print "(A,50E12.4)", "find_active_bins_v1 e_r:      ",e_amplitudes_r
+      write (msg, "(A,50E12.4)") "find_active_bins_v1 e  :   ",e                   ; call printinfo(msg)
+      write (msg, "(A,50E12.4)") "find_active_bins_v1 e_l:",      e_amplitudes_l   ; call printinfo(msg)
+      write (msg, "(A,50E12.4)") "find_active_bins_v1 e_r:      ",e_amplitudes_r   ; call printinfo(msg)
 #endif /* CRESP_VERBOSED */
 
 ! Find active bins
@@ -613,8 +619,8 @@ contains
       num_active_bins = count(is_active_bin)
 
 #ifdef CRESP_VERBOSED
-      print *, "find_active_bins_v1 is_active_bin:",is_active_bin, "|", count(is_active_bin), num_has_gt_zero
-      print *, "find_active_bins_v1 i_lo, i_up:", i_lo, i_up
+      write (msg, *) "find_active_bins_v1 is_active_bin: ", is_active_bin, "|", count(is_active_bin), num_has_gt_zero      ; call printinfo(msg)
+      write (msg, *) "find_active_bins_v1 i_lo, i_up:    ", i_lo, i_up
 #endif /* CRESP_VERBOSED */
       if (allocated(active_bins))  deallocate(active_bins)
       if (allocated(active_edges)) deallocate(active_edges)
@@ -638,7 +644,7 @@ contains
          allocate(active_edges(i_lo:i_up))
          active_edges = pack(cresp_all_edges, is_active_edge)
 #ifdef CRESP_VERBOSED
-         print "(2(A9,i3))", "i_lo =", i_lo, ", i_up = ", i_up
+         write (msg, "(2(A9,i3))") "i_lo =", i_lo, ", i_up = ", i_up    ; call printinfo(msg)
 #endif /* CRESP_VERBOSED */
 
          p = 0.0
@@ -690,10 +696,10 @@ contains
       do i = 1, ncre
          if (e(i) .lt. zero .or. n(i) .lt. zero .or. edt(i) .lt. zero .or. ndt(i) .lt. zero) then
             if (present(location)) then
-               write(msg,'(A80,3I3,A7,I4,A9,E18.9,A9,E18.9)') '[cresp_detect_negative_content:cresp_crspectrum] Negative values @ (i j k ) = (', &
+               write(msg,'(A81,3I3,A7,I4,A9,E18.9,A9,E18.9)') '[@cresp_crspectrum:cresp_detect_negative_content] Negative values @ (i j k ) = (', &
                            location, '): i=', i,': n(i)=', n(i), ', e(i)=',e(i)
             else
-               write(msg,'(A65,A7,I4,A9,E18.9,A9,E18.9,A3,A9,I4,A9,E18.9,A9,E18.9)') '[cresp_detect_negative_content:cresp_crspectrum] Negative values:',  &
+               write(msg,'(A66,A7,I4,A9,E18.9,A9,E18.9,A3,A9,I4,A9,E18.9,A9,E18.9)') '[@cresp_crspectrum:cresp_detect_negative_content] Negative values:',  &
                            'i=', i,': n(i)=', n(i), ', e(i)=',e(i), "|", 'i=', i,': ndt(i)=', ndt(i), ', edt(i)=',edt(i)
             endif
             call warn(msg)
@@ -771,7 +777,7 @@ contains
       p_upw(1:ncre) = p_fix(1:ncre)*(one+p_upw_rch(dt,p_fix(1:ncre)))
 
 #ifdef CRESP_VERBOSED
-      print*, 'Change of  cut index lo,up:', del_i_lo, del_i_up
+      write (msg, "A, 2I3") 'Change of  cut index lo,up:', del_i_lo, del_i_up    ; call printinfo(msg)
 #endif /* CRESP_VERBOSED */
 
 ! Detect cooling edges and heating edges
@@ -789,14 +795,14 @@ contains
       allocate(heating_edges_next(num_heating_edges_next))
       heating_edges_next = pack(cresp_all_edges, is_heating_edge_next)
 #ifdef CRESP_VERBOSED
-      print *, 'In update_bin_index'
-      print *, 'p_lo_next, p_up_next:', p_lo_next, p_up_next
-      print *, "(A15,50L2, 50I3)", 'active_edges: ', is_active_edge, active_edges
-      print *, "(A15,50L2, 50I3)", 'active edgesN:', is_active_edge_next, active_edges_next
-      print *, "(A15,50L2, 50I3)", 'active binsN :', is_active_bin_next , active_bins_next
-      print *, "(A15,50L2, 50I3)", 'fixed  edges: ', is_fixed_edge_next,  fixed_edges_next
-      print *, "(A15,50L2, 50I3)", 'cooling edges:', is_cooling_edge_next,  cooling_edges_next
-      print *, "(A15,50L2, 50I3)", 'heating edges:', is_heating_edge_next,  heating_edges_next
+      write (msg, "A")      'In update_bin_index'        ; call printinfo(msg)
+      write (msg, "A,2I3")  'p_lo_next, p_up_next:', p_lo_next, p_up_next     ; call printinfo(msg)
+      write (msg, "A,50L2") "(A15,50L2, 50I3)", 'active_edges: ', is_active_edge, active_edges     ; call printinfo(msg)
+      write (msg, "(A15,50L2, 50I3)") 'active edgesN:', is_active_edge_next, active_edges_next     ; call printinfo(msg)
+      write (msg, "(A15,50L2, 50I3)") 'active binsN :', is_active_bin_next , active_bins_next      ; call printinfo(msg)
+      write (msg, "(A15,50L2, 50I3)") 'fixed  edges: ', is_fixed_edge_next,  fixed_edges_next      ; call printinfo(msg)
+      write (msg, "(A15,50L2, 50I3)") 'cooling edges:', is_cooling_edge_next,  cooling_edges_next  ; call printinfo(msg)
+      write (msg, "(A15,50L2, 50I3)") 'heating edges:', is_heating_edge_next,  heating_edges_next  ; call printinfo(msg)
 #endif /* CRESP_VERBOSED */
 
    end subroutine cresp_update_bin_index
@@ -897,7 +903,7 @@ contains
       i_up = min(i_up,ncre)
 
       if (abs(p_lo_init - p_fix(i_lo)) .le. eps ) then
-         write(msg, *) "[cresp_crspectrum:initcrspectrum] p_lo_init = p_fix(i_lo):  i ncrementing i_lo index to avoid FPE"
+         write(msg, *) "[cresp_crspectrum:initcrspectrum] p_lo_init = p_fix(i_lo):  incrementing i_lo index to avoid FPE"
          if (master) call warn(msg)
          i_lo = i_lo+1
       endif
@@ -970,11 +976,6 @@ contains
 
      if (initial_condition == 'bump') then  ! TODO - @cresp_grid energy normalization and integral to scale cosmic ray electrons with nucleon energy density!
 ! Gaussian bump-type initial condition for energy distribution
-#ifdef CRESP_VERBOSED
-         print *, 'init_state:',sqrt(p_lo_init*p_up_init/1.) !,sp_init_width
-         print *, 'init_state:',log(p/sqrt(p_lo_init*p_up_init/1.))
-#endif /* CRESP_VERBOSED */
-!      f = f_amplitude * exp(-(2.5*log(p/sqrt(p_lo_init*p_up_init/1.))**2))
          f = f_amplitude * exp(-(4*log(2.0)*log(p/sqrt(p_lo_init*p_up_init/1.))**2)) ! FWHM
          f(0:ncre-1) = f(0:ncre-1) / (fpi * clight * p(0:ncre-1)**(3.0)) ! without this spectrum is gaussian for distribution function
          if (add_spectrum_base .gt. 0) then
@@ -1025,7 +1026,7 @@ contains
                f(i) = f(i_lo_ch) * (p_fix(i)/p(i_lo_ch))**(-q(i_lo_ch+1))
                q(i+1) = q(i_lo_ch+1)
 #ifdef CRESP_VERBOSED
-               print *, 'Extending the range of lower boundary bin after NR_2dim momentum search'
+               write (msg, "A") 'Extending the range of lower boundary bin after NR_2dim momentum search'   ; call printinfo(msg)
 #endif /* CRESP_VERBOSED */
             enddo
 
@@ -1034,11 +1035,11 @@ contains
                f(i) = f(i_up-1)* (p_fix(i)/p_fix(i_up-1))**(-q(i_up))
                q(i) = q(i_up)
 #ifdef CRESP_VERBOSED
-               print *, 'Extending the range of upper boundary bin after NR_2dim momentum search'
+               write (msg, "A") 'Extending the range of upper boundary bin after NR_2dim momentum search'   ; call printinfo(msg)
 #endif /* CRESP_VERBOSED */
             enddo
 #ifdef CRESP_VERBOSED
-            print *, "Boundary bins now (i_lo_new i_lo | i_up_new i_up)",  i_lo_ch, i_lo, ' |', i_up_ch, i_up
+            write (msg,"A,I3,A,I3") "Boundary bins now (i_lo_new i_lo | i_up_new i_up)",  i_lo_ch, i_lo, ' |', i_up_ch, i_up     ; call printinfo(msg)
 #endif /* CRESP_VERBOSED */
             i_lo = i_lo_ch   ;   i_up = i_up_ch
             q(i_up_ch) = q(i_up)
@@ -1077,12 +1078,6 @@ contains
       init_e = e
 
       total_init_cree = sum(e) !< total_init_cree value is used for initial spectrum scaling when spectrum is injected by source.
-#ifdef CRESP_VERBOSED
-      print *, ''
-      print *, 'n_tot0 =', n_tot0
-      print *, 'e_tot0 =', e_tot0
-      print *, 'Initialization finished'
-#endif /* CRESP_VERBOSED */
       call deallocate_active_arrays
 
    end subroutine cresp_init_state
@@ -1301,9 +1296,6 @@ contains
          if ( cresp_all_bins(i_up+1) .eq. i_up+1 ) then  ! But it shuld only happen if there is bin with index i_up+1
             ndt(i_up+1) = nflux(i_up)
             edt(i_up+1) = eflux(i_up)
-#ifdef CRESP_VERBOSED
-            print *, ' **** UPPER BOUND +1 ****'
-#endif /* CRESP_VERBOSED */
             del_i_up = +1
          endif
       endif
@@ -1311,9 +1303,6 @@ contains
       if ( nflux(i_up-1)+n(i_up) .le. zero) then ! If flux is equal or greater than energy / density in a given bin,  these both shall migrate
          nflux(i_up-1) =  -n(i_up)                   ! to an adjacent bin, thus making given bin detected as inactive (empty) in the next timestep
          eflux(i_up-1) =  -e(i_up)
-#ifdef CRESP_VERBOSED
-         print *, " **** UPPER BOUND -1 **** "
-#endif /* CRESP_VERBOSED */
          del_i_up = -1
       endif
 
@@ -1337,9 +1326,6 @@ contains
          nflux(i_lo+1) = n(i_lo+1)
          eflux(i_lo+1) = e(i_lo+1)
 ! emptying lower boundary bins - in cases when flux gets greater than energy or number density
-#ifdef CRESP_VERBOSED
-         print *, ' **** LOWER BOUND +1 ****'
-#endif /* CRESP_VERBOSED */
          del_i_lo = 1   ! in case it hasn't yet been modified
       endif
 
@@ -1535,7 +1521,7 @@ contains
       use cresp_variables, only: clight ! use units, only: clight
       use cresp_NR_method, only: intpol_pf_from_NR_grids, alpha, n_in, selected_function_2D, fvec_up, &
                            &     NR_algorithm, e_small_to_f, q_ratios, assoc_pointers_up
-      use initcrspectrum,  only: e_small, q_big, p_fix, NR_refine_solution_pf
+      use initcrspectrum,  only: e_small, q_big, p_fix, NR_refine_pf_up
 
       implicit none
 
@@ -1558,10 +1544,10 @@ contains
       selected_function_2D => fvec_up
 
 #ifdef CRESP_VERBOSED
-      print *,"(A31,2E22.15)", "Input ratios(p, f) for NR (up):", x_NR
+      write(msg,"(A31,2E22.15)") "Input ratios(p, f) for NR (up):", x_NR      ; call printinfo(msg)
 #endif /* CRESP_VERBOSED */
 
-      if ( (NR_refine_solution_pf .eqv. .true.) .or. (interpolated .eqv. .false.)) then
+      if ( (NR_refine_pf_up .eqv. .true.) .or. (interpolated .eqv. .false.)) then
 
          if (interpolated .eqv. .false.) fail_count_interpol(2) = fail_count_interpol(2) +1
 
@@ -1570,13 +1556,12 @@ contains
             if (interpolated .eqv. .false.) then
                exit_code = .true.
 #ifdef CRESP_VERBOSED
-               print *, " Interpolation AND NR failure (up)", alpha, n_in, x_NR_init
+               write(msg,"A,E18.9") " Interpolation AND NR failure (up)", alpha, n_in, x_NR_init      ; call printinfo(msg)
 #endif /* CRESP_VERBOSED */
                return
             endif
             fail_count_NR_2dim(2) = fail_count_NR_2dim(2) +1
             x_NR = x_NR_init
-            print *, "Interpolated?", interpolated, "NR_refine_solution_pf?", NR_refine_solution_pf,"solved?", exit_code
          endif
       endif
 
@@ -1594,9 +1579,9 @@ contains
 
       if (abs(q(i_up)) .gt. q_big ) q(i_up) = sign(one, q(i_up)) * q_big
 #ifdef CRESP_VERBOSED
-      print *,"(A1)", " "
-      print *,"(A26,2E22.15)", " >>> Obtained (p_up, f_l):", p_up, f(i_up-1) &
+      write(msg, "(A26,2E22.15)") " >>> Obtained (p_up, f_l):", p_up, f(i_up-1) &
                              , "     Corresponding ratios:", x_NR(1), x_NR(2)
+      call printinfo(msg)
 #endif /* CRESP_VERBOSED */
 
    end subroutine get_fqp_up
@@ -1610,7 +1595,7 @@ contains
       use cresp_NR_method, only: intpol_pf_from_NR_grids, alpha, n_in, selected_function_2D, fvec_lo, &
                   NR_algorithm, e_small_to_f, q_ratios, assoc_pointers_lo
       use cresp_variables, only: clight ! use units, only: clight
-      use initcrspectrum, only: e_small, q_big, p_fix, NR_refine_solution_pf
+      use initcrspectrum, only: e_small, q_big, p_fix, NR_refine_pf_lo
 
       implicit none
 
@@ -1633,9 +1618,9 @@ contains
       selected_function_2D => fvec_lo
 
 #ifdef CRESP_VERBOSED
-      print *,"(A31,2E22.15)", "Input ratios(p, f) for NR (lo):", x_NR
+      write (msg, "(A31,2E22.15)") "Input ratios(p, f) for NR (lo):", x_NR    ; call printinfo(msg)
 #endif /* CRESP_VERBOSED */
-      if ( (NR_refine_solution_pf .eqv. .true.) .or. (interpolated .eqv. .false.)) then
+      if ( (NR_refine_pf_lo .eqv. .true.) .or. (interpolated .eqv. .false.)) then
 
       if (interpolated .eqv. .false.) fail_count_interpol(1) = fail_count_interpol(1) +1
 
@@ -1644,13 +1629,12 @@ contains
             if (interpolated .eqv. .false.) then
                exit_code = .true.
 #ifdef CRESP_VERBOSED
-               print *, " Interpolation AND NR failure (lo)", alpha, n_in
+               write (msg, "A,3E18.9") " Interpolation AND NR failure (lo)", alpha, n_in     ; call printinfo(msg)
 #endif /* CRESP_VERBOSED */
                return
             endif
             fail_count_NR_2dim(1) = fail_count_NR_2dim(1) +1
             x_NR = x_NR_init
-            print *, "Interpolated?", interpolated, "NR_refine_solution_pf?", NR_refine_solution_pf,"solved?", exit_code
          endif
       endif
 
@@ -1667,9 +1651,9 @@ contains
 
       if (abs(q(i_lo+1)) .gt. q_big ) q(i_lo+1) = sign(one, q(i_lo+1)) * q_big
 #ifdef CRESP_VERBOSED
-      print *,"(A1)", " "
-      print *,"(A26,2E22.15)", " >>> Obtained (p_lo, f_r):", p_lo, x_NR(2)*f(i_lo) &
-                             , "     Corresponding ratios:", x_NR(1), x_NR(2)
+      write (msg, "A26,2E22.15") " >>> Obtained (p_lo, f_r):", p_lo, x_NR(2)*f(i_lo) &
+                             ,   "     Corresponding ratios:", x_NR(1), x_NR(2)
+      call printinfo(msg)
 #endif /* CRESP_VERBOSED */
       alpha = zero ;  n_in = zero
 
@@ -1745,11 +1729,8 @@ contains
       if ( solution_failed .or. ((e_tab(i_lo+1) .le. e_small) .and. (approx_p_lo .eq. 1))) then
          vrtl_e(1) = vrtl_e(1) + e_tab(i_lo+1)  ; e_tab(i_lo+1) = zero
          vrtl_n(1) = vrtl_n(1) + n_tab(i_lo+1)  ; n_tab(i_lo+1) = zero
-!         print *, "e_tab(i_lo+1) close to e_small, activating virtual n and e"
-!         print *, "virtual n lo", vrtl_n(1), "virtual e lo", vrtl_e(1)
          e_lo_lt_e_small = .true.
       else
-!         print *, "virtual n lo", vrtl_n(1), "virtual e lo", vrtl_e(1), "e, n: ", e_tab(i_lo+1), n_tab(i_lo+1)
          e_tab(i_lo+1) = e_tab(i_lo+1) + vrtl_e(1) ; vrtl_e(1) = zero
          n_tab(i_lo+1) = n_tab(i_lo+1) + vrtl_n(1) ; vrtl_n(1) = zero
          e_lo_lt_e_small = .false.
@@ -1768,11 +1749,8 @@ contains
       if ( solution_failed .or. ((e_tab(i_up) .le. e_small) .and. (approx_p_up .eq. 1))) then
          vrtl_e(2) = vrtl_e(2) + e_tab(i_up)  ; e_tab(i_up) = zero
          vrtl_n(2) = vrtl_n(2) + n_tab(i_up)  ; n_tab(i_up) = zero
-!         print *, "e_tab(i_up) close to e_small, activating virtual n and e"
-!         print *, "virtual n up", vrtl_n(2), "virtual e up", vrtl_e(2)
          e_up_lt_e_small = .true.
       else
-!         print *, "virtual n up", vrtl_n(2), "virtual e up", vrtl_e(2), "e, n: ", e_tab(i_up), n_tab(i_up)
          e_tab(i_up) = e_tab(i_up) + vrtl_e(2) ; vrtl_e(2) = zero
          n_tab(i_up) = n_tab(i_up) + vrtl_n(2) ; vrtl_n(2) = zero
          e_up_lt_e_small = .false.
@@ -1857,12 +1835,10 @@ contains
    end subroutine cresp_deallocate_all
 
 !---------------------------------------------------------------------------------------------
-   subroutine cresp_accuracy_test(t)
+   subroutine cresp_accuracy_test(t) ! Not for use with PIERNIK
       implicit none
 
       real(kind=8), intent(in)   :: t
-
-      print *, " -------------------------- "
 
       print*, 'Accuracy test for adabatic compression/expansion:'
       print*, 'n_tot = ', n_tot, 'n_tot0 = ', n_tot0, 'rel error = ', (n_tot - n_tot0)/n_tot0
@@ -1881,11 +1857,11 @@ contains
    subroutine cleanup_cresp
       implicit none
 
-      print '(A36,I6,A6,I6)', "NR_2dim:  convergence failure: p_lo", fail_count_NR_2dim(1), ", p_up", fail_count_NR_2dim(2)
-      print '(A36,I6,A6,I6)', "NR_2dim:interpolation failure: p_lo", fail_count_interpol(1), ", p_up", fail_count_interpol(2)
-      print '(A36,I6,A6,I6)', "NR_2dim:  no solution failure: p_lo", fail_count_no_sol(1), ", p_up", fail_count_no_sol(2)
-      print '(A36,I6,A6,I6)', "NR_2dim: second try failure  : p_lo", second_fail(1), ", p_up", second_fail(2)
-      print '(A36,   100I5)', "NR_2dim:inpl/solve  q(bin) failure:", fail_count_comp_q
+      write (msg, '(A36,I6,A6,I6)') "NR_2dim:  convergence failure: p_lo", fail_count_NR_2dim(1), ", p_up", fail_count_NR_2dim(2)   ; call printinfo(msg)
+      write (msg, '(A36,I6,A6,I6)') "NR_2dim:interpolation failure: p_lo", fail_count_interpol(1), ", p_up", fail_count_interpol(2) ; call printinfo(msg)
+      write (msg, '(A36,I6,A6,I6)') "NR_2dim:  no solution failure: p_lo", fail_count_no_sol(1), ", p_up", fail_count_no_sol(2)     ; call printinfo(msg)
+      write (msg, '(A36,I6,A6,I6)') "NR_2dim: second try failure  : p_lo", second_fail(1), ", p_up", second_fail(2)                 ; call printinfo(msg)
+      write (msg, '(A36,   100I5)') "NR_2dim:inpl/solve  q(bin) failure:", fail_count_comp_q    ; call printinfo(msg)
       call cresp_deallocate_all
 
    end subroutine cleanup_cresp

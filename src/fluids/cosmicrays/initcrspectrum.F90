@@ -42,7 +42,8 @@ module initcrspectrum
    logical            :: force_init_NR               !< forces resolving new ratio solution grids at initialization
    logical            :: NR_run_refine_pf            !< enables "refine_grids" subroutines that fill empty spaces on the solution grid
    logical            :: NR_refine_solution_q        !< enables NR_1D refinement for value of interpolated "q" value
-   logical            :: NR_refine_solution_pf       !< enables NR_2D refinement for interpolated values of "p" and "f". Note - algorithm tries to refine values if interpolation was unsuccessful.
+   logical            :: NR_refine_pf_lo             !< enables NR_2D refinement for interpolated values of "p" and "f" for lower cutoff. Note - algorithm tries to refine values if interpolation was unsuccessful.
+   logical            :: NR_refine_pf_up             !< enables NR_2D refinement for interpolated values of "p" and "f" for upper cutoff. Note - algorithm tries to refine values if interpolation was unsuccessful.
 
    logical            :: nullify_empty_bins          !< nullifies empty bins when entering CRESP module / exiting empty cell.
    logical            :: prevent_neg_en              !< forces e,n=eps where e or n drops below zero due to diffusion algorithm (TEMP workaround)
@@ -128,7 +129,8 @@ module initcrspectrum
       &                         K_cre_pow, expan_order, e_small, cre_gpcr_ess, use_cresp, e_small_approx_init_cond, &
       &                         e_small_approx_p_lo, e_small_approx_p_up, force_init_NR, NR_iter_limit, max_p_ratio,&
       &                         add_spectrum_base, synch_active, adiab_active, arr_dim, arr_dim_q, q_br_init,       &
-      &                         Gamma_min_fix, Gamma_max_fix, Gamma_lo_init, Gamma_up_init, nullify_empty_bins
+      &                         Gamma_min_fix, Gamma_max_fix, Gamma_lo_init, Gamma_up_init, nullify_empty_bins,     &
+      &                         NR_refine_solution_q, NR_refine_pf_lo, NR_refine_pf_up
 
 ! Default values
       use_cresp         = .true.
@@ -166,8 +168,9 @@ module initcrspectrum
       force_init_NR     = .false.
       NR_run_refine_pf  = .false.
       NR_refine_solution_q   = .false.
-      NR_refine_solution_pf  = .false.
-      nullify_empty_bins     = .true.
+      NR_refine_pf_lo   = .false.
+      NR_refine_pf_up   = .false.
+      nullify_empty_bins     = .false.
       smallecrn              = 0.0
       smallecre              = 0.0
       prevent_neg_en         = .true.
@@ -230,8 +233,9 @@ module initcrspectrum
          lbuff(8)  =  force_init_NR
          lbuff(9)  =  NR_run_refine_pf
          lbuff(10) =  NR_refine_solution_q
-         lbuff(11) =  NR_refine_solution_pf
-         lbuff(12) =  nullify_empty_bins
+         lbuff(11) =  NR_refine_pf_lo
+         lbuff(12) =  NR_refine_pf_up
+         lbuff(13) =  nullify_empty_bins
 
          rbuff(1)  = cfl_cre
          rbuff(2)  = cre_eff
@@ -301,8 +305,9 @@ module initcrspectrum
          force_init_NR               = lbuff(8)
          NR_run_refine_pf            = lbuff(9)
          NR_refine_solution_q        = lbuff(10)
-         NR_refine_solution_pf       = lbuff(11)
-         nullify_empty_bins          = lbuff(12)
+         NR_refine_pf_lo             = lbuff(11)
+         NR_refine_pf_up             = lbuff(12)
+         nullify_empty_bins          = lbuff(13)
 
          cfl_cre                     = rbuff(1)
          cre_eff                     = rbuff(2)
