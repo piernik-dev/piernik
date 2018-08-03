@@ -131,6 +131,9 @@ contains
          if (nullify_empty_bins) then
             call nullify_all_bins(n_inout, e_inout)
          endif
+#ifdef CRESP_VERBOSED
+         write (msg, "(A)") "[cresp_crspectrum:cresp_update_cell] EMPTY CELL, returning"   ;  call printinfo(msg)
+#endif /* CRESP_VERBOSED */
          return             ! if grid cell contains empty bins, no action is taken
       endif
 
@@ -230,6 +233,9 @@ contains
       call cresp_update_bin_index(dt, p_lo, p_up, p_lo_next, p_up_next, cfl_cresp_violation)      ! FIXME - must be modified in the future if this branch is connected to Piernik
       if ( cfl_cresp_violation ) then
          call deallocate_active_arrays
+#ifdef CRESP_VERBOSED
+         write (msg, "(A)") "[cresp_crspectrum:cresp_update_cell] EMPTY CELL, returning"   ;  call printinfo(msg)
+#endif /* CRESP_VERBOSED */
          return
       endif
 ! Compute fluxes through fixed edges in time period [t,t+dt], using f, q, p_lo and p_up at [t]
@@ -252,8 +258,7 @@ contains
       p_up = p_up_next
 
 #ifdef CRESP_VERBOSED
-      print a b c ! it aint compiling
-      write (msg, "A") "[@cresp_crspectrum:cresp_update_cell] :"                 ; call printinfo(msg)
+      write (msg, "(A)") "[@cresp_crspectrum:cresp_update_cell] :"               ; call printinfo(msg)
       write (msg, '(A5, 50E18.9)') "p_fix", p_fix      ; call printinfo(msg)
       write (msg, '(A5, 50E18.9)') "p_act", p          ; call printinfo(msg)
       write (msg, '(A5, 50E18.9)') "p_nex", p_next     ; call printinfo(msg)
@@ -515,12 +520,10 @@ contains
             nonempty_bins(num_has_gt_zero) = i
          endif
       enddo
-#ifdef CRESP_VERBOSED
-      write (msg, *) "@find_active_bins_v1: pre_i_lo, pre_i_up", max(nonempty_bins(1) - 1, 0), nonempty_bins(num_has_gt_zero)    ; call printinfo(msg)
-#endif /* CRESP_VERBOSED */
 ! If cell is not empty, assume preliminary i_lo and i_up
       if (num_has_gt_zero .eq. 0) then
          empty_cell = .true.
+
          return
       else
          pre_i_lo = max(int(nonempty_bins(1) - 1,kind=4), 0)
@@ -562,9 +565,9 @@ contains
       enddo
 
 #ifdef CRESP_VERBOSED
-      write (msg, "(A,50E12.4)") "find_active_bins_v1 e  :   ",e                   ; call printinfo(msg)
-      write (msg, "(A,50E12.4)") "find_active_bins_v1 e_l:",      e_amplitudes_l   ; call printinfo(msg)
-      write (msg, "(A,50E12.4)") "find_active_bins_v1 e_r:      ",e_amplitudes_r   ; call printinfo(msg)
+      write (msg, "(A,50E12.4)") "[cresp_find_prepare_spectrum] e  :   ",e                   ; call printinfo(msg)
+      write (msg, "(A,50E12.4)") "[cresp_find_prepare_spectrum] e_l:",      e_amplitudes_l   ; call printinfo(msg)
+      write (msg, "(A,50E12.4)") "[cresp_find_prepare_spectrum] e_r:      ",e_amplitudes_r   ; call printinfo(msg)
 #endif /* CRESP_VERBOSED */
 
 ! Find active bins
@@ -777,7 +780,7 @@ contains
       p_upw(1:ncre) = p_fix(1:ncre)*(one+p_upw_rch(dt,p_fix(1:ncre)))
 
 #ifdef CRESP_VERBOSED
-      write (msg, "A, 2I3") 'Change of  cut index lo,up:', del_i_lo, del_i_up    ; call printinfo(msg)
+      write (msg, "(A, 2I3)") 'Change of  cut index lo,up:', del_i_lo, del_i_up    ; call printinfo(msg)
 #endif /* CRESP_VERBOSED */
 
 ! Detect cooling edges and heating edges
@@ -795,9 +798,9 @@ contains
       allocate(heating_edges_next(num_heating_edges_next))
       heating_edges_next = pack(cresp_all_edges, is_heating_edge_next)
 #ifdef CRESP_VERBOSED
-      write (msg, "A")      'In update_bin_index'        ; call printinfo(msg)
-      write (msg, "A,2I3")  'p_lo_next, p_up_next:', p_lo_next, p_up_next     ; call printinfo(msg)
-      write (msg, "A,50L2") "(A15,50L2, 50I3)", 'active_edges: ', is_active_edge, active_edges     ; call printinfo(msg)
+      write (msg, "(A)")      'In update_bin_index'        ; call printinfo(msg)
+      write (msg, "(A,2EN22.9)")  'p_lo_next, p_up_next:', p_lo_next, p_up_next     ; call printinfo(msg)
+      write (msg, "(A,50L2)") "(A15,50L2, 50I3)", 'active_edges: ', is_active_edge, active_edges     ; call printinfo(msg)
       write (msg, "(A15,50L2, 50I3)") 'active edgesN:', is_active_edge_next, active_edges_next     ; call printinfo(msg)
       write (msg, "(A15,50L2, 50I3)") 'active binsN :', is_active_bin_next , active_bins_next      ; call printinfo(msg)
       write (msg, "(A15,50L2, 50I3)") 'fixed  edges: ', is_fixed_edge_next,  fixed_edges_next      ; call printinfo(msg)
@@ -1026,7 +1029,7 @@ contains
                f(i) = f(i_lo_ch) * (p_fix(i)/p(i_lo_ch))**(-q(i_lo_ch+1))
                q(i+1) = q(i_lo_ch+1)
 #ifdef CRESP_VERBOSED
-               write (msg, "A") 'Extending the range of lower boundary bin after NR_2dim momentum search'   ; call printinfo(msg)
+               write (msg, "(A)") 'Extending the range of lower boundary bin after NR_2dim momentum search'   ; call printinfo(msg)
 #endif /* CRESP_VERBOSED */
             enddo
 
@@ -1035,11 +1038,11 @@ contains
                f(i) = f(i_up-1)* (p_fix(i)/p_fix(i_up-1))**(-q(i_up))
                q(i) = q(i_up)
 #ifdef CRESP_VERBOSED
-               write (msg, "A") 'Extending the range of upper boundary bin after NR_2dim momentum search'   ; call printinfo(msg)
+               write (msg, "(A)") 'Extending the range of upper boundary bin after NR_2dim momentum search'   ; call printinfo(msg)
 #endif /* CRESP_VERBOSED */
             enddo
 #ifdef CRESP_VERBOSED
-            write (msg,"A,I3,A,I3") "Boundary bins now (i_lo_new i_lo | i_up_new i_up)",  i_lo_ch, i_lo, ' |', i_up_ch, i_up     ; call printinfo(msg)
+            write (msg,"(A,I3,A,I3)") "Boundary bins now (i_lo_new i_lo | i_up_new i_up)",  i_lo_ch, i_lo, ' |', i_up_ch, i_up     ; call printinfo(msg)
 #endif /* CRESP_VERBOSED */
             i_lo = i_lo_ch   ;   i_up = i_up_ch
             q(i_up_ch) = q(i_up)
@@ -1556,7 +1559,7 @@ contains
             if (interpolated .eqv. .false.) then
                exit_code = .true.
 #ifdef CRESP_VERBOSED
-               write(msg,"A,E18.9") " Interpolation AND NR failure (up)", alpha, n_in, x_NR_init      ; call printinfo(msg)
+               write(msg,"(A,4E18.9)") " Interpolation AND NR failure (up)", alpha, n_in, x_NR_init      ; call printinfo(msg)
 #endif /* CRESP_VERBOSED */
                return
             endif
@@ -1579,9 +1582,8 @@ contains
 
       if (abs(q(i_up)) .gt. q_big ) q(i_up) = sign(one, q(i_up)) * q_big
 #ifdef CRESP_VERBOSED
-      write(msg, "(A26,2E22.15)") " >>> Obtained (p_up, f_l):", p_up, f(i_up-1) &
-                             , "     Corresponding ratios:", x_NR(1), x_NR(2)
-      call printinfo(msg)
+      write(msg, "(A26,2E22.15)") " >>> Obtained (p_up, f_l):", p_up, f(i_up-1)     ; call printinfo(msg)
+      write(msg, "(A26,2E22.15)") "     Corresponding ratios:", x_NR(1), x_NR(2)    ; call printinfo(msg)
 #endif /* CRESP_VERBOSED */
 
    end subroutine get_fqp_up
@@ -1629,7 +1631,7 @@ contains
             if (interpolated .eqv. .false.) then
                exit_code = .true.
 #ifdef CRESP_VERBOSED
-               write (msg, "A,3E18.9") " Interpolation AND NR failure (lo)", alpha, n_in     ; call printinfo(msg)
+               write (msg, "(A,3E18.9)") " Interpolation AND NR failure (lo)", alpha, n_in     ; call printinfo(msg)
 #endif /* CRESP_VERBOSED */
                return
             endif
@@ -1651,8 +1653,8 @@ contains
 
       if (abs(q(i_lo+1)) .gt. q_big ) q(i_lo+1) = sign(one, q(i_lo+1)) * q_big
 #ifdef CRESP_VERBOSED
-      write (msg, "A26,2E22.15") " >>> Obtained (p_lo, f_r):", p_lo, x_NR(2)*f(i_lo) &
-                             ,   "     Corresponding ratios:", x_NR(1), x_NR(2)
+      write (msg, "(A26,2E22.15)") " >>> Obtained (p_lo, f_r):", p_lo, x_NR(2)*f(i_lo)    ; call printinfo(msg)
+      write (msg, "(A26,2E22.15)") "     Corresponding ratios:", x_NR(1), x_NR(2)         ; call printinfo(msg)
       call printinfo(msg)
 #endif /* CRESP_VERBOSED */
       alpha = zero ;  n_in = zero

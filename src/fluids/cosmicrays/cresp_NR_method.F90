@@ -23,6 +23,9 @@ module cresp_NR_method
    real(kind=8)                                     :: eps_det = eps * 1.0e-15
    real(kind=8), pointer, dimension(:)              :: p_a => null(), p_n => null() ! pointers for alpha_tab_(lo,up) and n_tab_(lo,up) or optional - other 1-dim arrays
    real(kind=8), pointer, dimension(:,:)            :: p_p => null(), p_f => null() ! pointers for p_ratios_(lo,up) and f_ratios_(lo,up)
+#ifdef CRESP_VERBOSED
+   character(len=2)                                 :: current_bound
+#endif /* CRESP_VERBOSED */
 
    abstract interface
       function function_pointer_1D(z)
@@ -419,6 +422,10 @@ contains
       p_f => f_ratios_lo
       selected_function_2D => fvec_lo
 
+#ifdef CRESP_VERBOSED
+      current_bound = "lo"
+#endif /* CRESP_VERBOSED */
+
    end subroutine assoc_pointers_lo
 !----------------------------------------------------------------------------------------------------s
    subroutine assoc_pointers_up
@@ -430,6 +437,10 @@ contains
       p_p => p_ratios_up
       p_f => f_ratios_up
       selected_function_2D => fvec_up
+
+#ifdef CRESP_VERBOSED
+      current_bound = "up"
+#endif /* CRESP_VERBOSED */
 
    end subroutine assoc_pointers_up
 
@@ -1314,16 +1325,16 @@ contains
       logical              :: exit_code, find_failure
       logical, intent(out) :: interpolation_successful, not_interpolated
 
-#ifdef CRESP_VERBOSED
-      write (*,"(A30,A2,A4)",advance="no") "Determining indices for case: ",which_bound, "... "
-#endif /* CRESP_VERBOSED */
       exit_code = .false.; find_failure = .false. ; not_interpolated = .false.
 
+#ifdef CRESP_VERBOSED
+      write (*,"(A30,A2,A4)",advance="no") "Determining indices for case: ", current_bound, "... "
+#endif /* CRESP_VERBOSED */
       call determine_loc(a_val, n_val, loc1, loc2, loc_no_ip, exit_code)
 
 #ifdef CRESP_VERBOSED
-      call save_loc(which_bound,loc1(1),loc1(2))
-      call save_loc(which_bound,loc2(1),loc2(2))
+      call save_loc(current_bound, loc1(1), loc1(2))
+      call save_loc(current_bound, loc2(1), loc2(2))
 #endif /* CRESP_VERBOSED */
 
       if (find_failure .eqv. .true.) then
