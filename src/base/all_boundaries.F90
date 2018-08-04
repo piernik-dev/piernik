@@ -98,22 +98,26 @@ contains
 
       use cg_leaves,        only: leaves
       use cg_list_global,   only: all_cg
-      use constants,        only: xdim, zdim
+      use constants,        only: xdim, zdim, psi_n, BND_ZERO
       use domain,           only: dom
-      use named_array_list, only: wna
+      use named_array_list, only: wna, qna
 
       implicit none
 
       integer(kind=4) :: dir
 
       do dir = xdim, zdim
-         if (dom%has_dir(dir)) call all_cg%internal_boundaries_4d(wna%bi, dir=dir) ! should be more selective (modified leaves?)
+         if (dom%has_dir(dir)) then
+            call all_cg%internal_boundaries_4d(wna%bi, dir=dir) ! should be more selective (modified leaves?)
+            if (qna%exists(psi_n)) call all_cg%internal_boundaries_3d(qna%ind(psi_n), dir=dir)
+         endif
       enddo
 
       ! Do not fuse these loops
       do dir = xdim, zdim
          if (dom%has_dir(dir)) call leaves%bnd_b(dir)
       enddo
+      if (qna%exists(psi_n)) call leaves%external_boundaries(qna%ind(psi_n), bnd_type=BND_ZERO)
 
    end subroutine all_mag_boundaries
 #endif /* MAGNETIC */
