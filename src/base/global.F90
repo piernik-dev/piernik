@@ -44,7 +44,7 @@ module global
         &    integration_order, limiter, limiter_b, smalld, smallei, smallp, use_smalld, h_solver, interpol_str, &
         &    relax_time, grace_period_passed, cfr_smooth, repeat_step, skip_sweep, geometry25D, &
         &    dirty_debug, do_ascii_dump, show_n_dirtys, no_dirty_checks, sweeps_mgu, use_fargo, print_divB, &
-        &    divB_0_method, force_cc_mag, psi_0, glm_alpha, use_eglm, cfl_glm, ch_grid, w_epsilon
+        &    divB_0_method, force_cc_mag, glm_alpha, use_eglm, cfl_glm, ch_grid, w_epsilon
 
    real, parameter :: dt_default_grow = 2.
    logical         :: cfl_violated             !< True when cfl condition is violated
@@ -88,7 +88,6 @@ module global
    logical                       :: sweeps_mgu        !< Mimimal Guardcell Update in sweeps
    logical                       :: use_fargo         !< use Fast Eulerian Transport for differentially rotating disks
    integer(kind=4)               :: print_divB        !< if >0 then print div(B) estimates each print_divB steps
-   real                          :: psi_0             !< initial value for the psi field used in divergence cleaning
    real                          :: glm_alpha         !< damping factor for the psi field
    logical                       :: use_eglm          !< use E-GLM?
    real                          :: cfl_glm           !< "CFL" for chspeed in divergence cleaning
@@ -97,7 +96,7 @@ module global
 
    namelist /NUMERICAL_SETUP/ cfl, cflcontrol, cfl_max, use_smalld, smalld, smallei, smallc, smallp, dt_initial, dt_max_grow, dt_min, &
         &                     repeat_step, limiter, limiter_b, relax_time, integration_order, cfr_smooth, skip_sweep, geometry25D, sweeps_mgu, print_divB, &
-        &                     use_fargo, h_solver, divB_0, psi_0, glm_alpha, use_eglm, cfl_glm, ch_grid, interpol_str, w_epsilon
+        &                     use_fargo, h_solver, divB_0, glm_alpha, use_eglm, cfl_glm, ch_grid, interpol_str, w_epsilon
 
 contains
 
@@ -132,7 +131,6 @@ contains
 !!   <tr><td>sweeps_mgu       </td><td>F      </td><td>logical value                        </td><td>\copydoc global::sweeps_mgu       </td></tr>
 !!   <tr><td>h_solver         </td><td>"rk2"  </td><td>string                               </td><td>\copydoc global::h_solver         </td></tr>
 !!   <tr><td>divB_0           </td><td>CT     </td><td>string                               </td><td>\copydoc global::divB_0           </td></tr>
-!!   <tr><td>psi_0            </td><td>0.     </td><td>real value                           </td><td>\copydoc global::psi_0            </td></tr>
 !!   <tr><td>glm_alpha        </td><td>0.1    </td><td>real value                           </td><td>\copydoc global::glm_alpha        </td></tr>
 !!   <tr><td>use_eglm         </td><td>false  </td><td>logical value                        </td><td>\copydoc global::use_eglm         </td></tr>
 !!   <tr><td>print_divB       </td><td>0      </td><td>integer value                        </td><td>\copydoc global::print_divB       </td></tr>
@@ -193,7 +191,6 @@ contains
       relax_time  = 0.
       integration_order  = 2
       use_fargo   = .false.
-      psi_0       = 0.
       glm_alpha   = 0.1
       skip_sweep  = .false.
       use_eglm    = .false.
@@ -256,10 +253,9 @@ contains
          rbuff( 9) = dt_min
          rbuff(10) = cfl_max
          rbuff(11) = relax_time
-         rbuff(12) = psi_0
-         rbuff(13) = glm_alpha
-         rbuff(14) = cfl_glm
-         rbuff(15) = w_epsilon
+         rbuff(12) = glm_alpha
+         rbuff(13) = cfl_glm
+         rbuff(14) = w_epsilon
 
          lbuff(1)   = use_smalld
          lbuff(2)   = repeat_step
@@ -299,10 +295,9 @@ contains
          dt_min      = rbuff( 9)
          cfl_max     = rbuff(10)
          relax_time  = rbuff(11)
-         psi_0       = rbuff(12)
-         glm_alpha   = rbuff(13)
-         cfl_glm     = rbuff(14)
-         w_epsilon   = rbuff(15)
+         glm_alpha   = rbuff(12)
+         cfl_glm     = rbuff(13)
+         w_epsilon   = rbuff(14)
 
          limiter    = cbuff(1)
          limiter_b  = cbuff(2)

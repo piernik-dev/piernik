@@ -164,12 +164,11 @@ contains
 
      use cg_leaves,        only: leaves
      use constants,        only: psi_n
-     use global,           only: psi_0
      use named_array_list, only: qna
 
      implicit none
 
-     if (qna%exists(psi_n)) call leaves%set_q_value(qna%ind(psi_n), psi_0)
+     if (qna%exists(psi_n)) call leaves%set_q_value(qna%ind(psi_n), 0.)
 
   end subroutine init_psi
 !-----------------------------------------------------------------------------------------------------------
