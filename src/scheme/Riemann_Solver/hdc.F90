@@ -117,12 +117,13 @@ contains
 
       use cg_leaves,  only: leaves
       use cg_list,    only: cg_list_element
-      use constants,  only: GEO_XYZ, pMAX, small
+      use constants,  only: GEO_XYZ, pMAX, small, xdim, ydim, zdim, half
       use dataio_pub, only: die
       use domain,     only: dom
       use fluidindex, only: flind
       use fluids_pub, only: has_ion
       use fluidtypes, only: component_fluid
+      use func,       only: emag, ekin
       use global,     only: use_fargo, cfl_glm, ch_grid, dt
       use mpisetup,   only: piernik_MPI_Allreduce
 
@@ -130,7 +131,8 @@ contains
 
       type(cg_list_element), pointer  :: cgl
       class(component_fluid), pointer :: fl
-      integer                         :: i, j, k
+      integer                         :: i, j, k, d
+      real                            :: pmag, pgam
 
       chspeed = huge(1.)
       if (has_ion) then
@@ -149,7 +151,19 @@ contains
                do k = cgl%cg%ks, cgl%cg%ke
                   do j = cgl%cg%js, cgl%cg%je
                      do i = cgl%cg%is, cgl%cg%ie
-                        chspeed = max(chspeed, cfl_glm * maxval(abs(cgl%cg%u(fl%imx:fl%imz, i, j, k) / cgl%cg%u(fl%idn, i, j, k)) + fl%get_cs(i, j, k, cgl%cg%u, cgl%cg%b, cgl%cg%cs_iso2)))
+                        pmag = emag(cgl%cg%b(xdim, i, j, k), cgl%cg%b(ydim, i, j, k), cgl%cg%b(zdim, i, j, k))  ! 1/2 |B|**2
+                        pgam = half * fl%gam * fl%gam_1 * (cgl%cg%u(fl%ien, i, j, k) - ekin(cgl%cg%u(fl%imx, i, j, k), cgl%cg%u(fl%imy, i, j, k), cgl%cg%u(fl%imz, i, j, k), cgl%cg%u(fl%idn, i, j, k)) - pmag)
+                        ! pgam = 1/2 * gamma * p = 1/2 * gamma * (gamma - 1) * (e - 1/2 * rho * |v|**2 - 1/2 * |B|**2)
+                        do d = xdim, zdim
+                           if (dom%has_dir(d)) then
+                              chspeed = max(chspeed, cfl_glm * ( &
+                                   abs(cgl%cg%u(fl%imx + d - xdim, i, j, k) / cgl%cg%u(fl%idn, i, j, k)) + &
+                                   sqrt(abs( (pgam + pmag + sqrt( (pgam + pmag)**2 - 2 * pgam * cgl%cg%b(d, i, j, k)**2) ) / cgl%cg%u(fl%idn, i, j, k) ) ) &
+                                   ) )
+                              ! abs() above looks a bit like cheating - negative values mean troubles anyway
+                              ! fl%get_cs(i, j, k, cgl%cg%u, cgl%cg%b, cgl%cg%cs_iso2) returns upper estimate of fast magnetosonic wave
+                           end if
+                        enddo
                      enddo
                   enddo
                enddo

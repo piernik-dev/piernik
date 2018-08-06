@@ -195,7 +195,7 @@ contains
       skip_sweep  = .false.
       use_eglm    = .false.
       print_divB  = 100
-      cfl_glm     = 1.
+      cfl_glm     = cfl
       ch_grid     = .false.
       w_epsilon   = 1e-10
 
