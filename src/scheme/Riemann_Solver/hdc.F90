@@ -142,6 +142,7 @@ contains
          do while (associated(cgl))
             if (ch_grid) then
                ! Rely only on grid properties. Psi is an artificial field and psi waves have to propagate as fast as stability permits.
+               ! It leads to very bad values when time step drops suddenly (like on last timestep)
                chspeed = max(chspeed, cfl_glm * minval(cgl%cg%dl, mask=dom%has_dir) / dt)
             else
                ! Bind chspeed to fastest possible gas waves. Beware: this may not always work well with AMR.

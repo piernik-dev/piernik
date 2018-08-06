@@ -134,7 +134,7 @@ contains
 !!   <tr><td>glm_alpha        </td><td>0.1    </td><td>real value                           </td><td>\copydoc global::glm_alpha        </td></tr>
 !!   <tr><td>use_eglm         </td><td>false  </td><td>logical value                        </td><td>\copydoc global::use_eglm         </td></tr>
 !!   <tr><td>print_divB       </td><td>0      </td><td>integer value                        </td><td>\copydoc global::print_divB       </td></tr>
-!!   <tr><td>ch_grid          </td><td>true   </td><td>logical value                        </td><td>\copydoc global::ch_grid          </td></tr>
+!!   <tr><td>ch_grid          </td><td>false  </td><td>logical value                        </td><td>\copydoc global::ch_grid          </td></tr>
 !!   <tr><td>w_epsilon        </td><td>1e-10  </td><td>real                                 </td><td>\copydoc global::w_epsilon        </td></tr>
 !! </table>
 !! \n \n
@@ -196,7 +196,7 @@ contains
       use_eglm    = .false.
       print_divB  = 100
       cfl_glm     = 1.
-      ch_grid     = .true.
+      ch_grid     = .false.
       w_epsilon   = 1e-10
 
       if (master) then
@@ -327,6 +327,7 @@ contains
       select case (divB_0_method)
          case (DIVB_HDC)
             force_cc_mag = .true.
+            if (ch_grid .and. master) call warn("[global] ch_grid = .true. is risky")
          case (DIVB_CT)
             force_cc_mag = .false.
          case default
