@@ -158,9 +158,11 @@ contains
                            if (dom%has_dir(d)) then
                               chspeed = max(chspeed, cfl_glm * ( &
                                    abs(cgl%cg%u(fl%imx + d - xdim, i, j, k) / cgl%cg%u(fl%idn, i, j, k)) + &
-                                   sqrt(abs( (pgam + pmag + sqrt( (pgam + pmag)**2 - 2 * pgam * cgl%cg%b(d, i, j, k)**2) ) / cgl%cg%u(fl%idn, i, j, k) ) ) &
+                                   sqrt( (pgam + pmag + sqrt( (pgam + pmag)**2 - 2 * pgam * cgl%cg%b(d, i, j, k)**2) ) / cgl%cg%u(fl%idn, i, j, k)  ) &
                                    ) )
-                              ! abs() above looks a bit like cheating - negative values mean troubles anyway
+                              ! Eqs. (14) and (15) JCoPh 229 (2010) 2117-2138
+                              ! c_h = cfl * \frac{\Delta l_min}{\Delta t}, where cfl = cfl_glm (or)
+                              ! c_h = cfl * max (fastest signal in the domain).
                               ! fl%get_cs(i, j, k, cgl%cg%u, cgl%cg%b, cgl%cg%cs_iso2) returns upper estimate of fast magnetosonic wave
                            end if
                         enddo
