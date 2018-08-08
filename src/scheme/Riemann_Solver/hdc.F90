@@ -164,7 +164,7 @@ contains
                               ! c_h = cfl * \frac{\Delta l_min}{\Delta t}, where cfl = cfl_glm (or)
                               ! c_h = cfl * max (fastest signal in the domain).
                               ! fl%get_cs(i, j, k, cgl%cg%u, cgl%cg%b, cgl%cg%cs_iso2) returns upper estimate of fast magnetosonic wave
-                           end if
+                           endif
                         enddo
                      enddo
                   enddo
