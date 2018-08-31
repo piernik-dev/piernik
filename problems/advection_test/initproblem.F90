@@ -48,6 +48,7 @@ module initproblem
    real                   :: ref_thr     !< refinement threshold
    real                   :: deref_thr   !< derefinement threshold
    logical                :: usedust     !< If .false. then do not set velocity for dust
+   real, dimension(ndims) :: B_const     !<  constant-B somponent strength
    real                   :: divB0_amp   !< Amplitude of the non-divergent component of the magnetic field
    real                   :: divBc_amp   !< Amplitude of constant-divergence component of the magnetic field (has artifacts on periodic domains due to nondifferentiability)
    real                   :: divBs_amp   !< Amplitude of sine-wave divergence component of the magnetic field (should behave well on periodic domains)
@@ -58,7 +59,7 @@ module initproblem
    logical                :: ccB         !< true for cell-cntered initial magnetic field
 
    namelist /PROBLEM_CONTROL/  pulse_size, pulse_off, pulse_vel, pulse_amp, pulse_pres, norm_step, nflip, flipratio, ref_thr, deref_thr, usedust, &
-        &                      divB0_amp, divBc_amp, divBs_amp, divBbX_amp, divBbY_amp, divBbZ_amp, divB_k, ccB
+        &                      divB0_amp, divBc_amp, divBs_amp, divBbX_amp, divBbY_amp, divBbZ_amp, divB_k, ccB, B_const
 
    ! other private data
    real, dimension(ndims, LO:HI) :: pulse_edge
@@ -126,6 +127,7 @@ contains
       divBbZ_amp    = 0.                   !< unphysical, only for testing
       divB_k(:)     = [ 1, 1, 1 ]
       ccB           = .false.              !< defaulting to face-centered initial field
+      B_const       = 0.
 
       if (master) then
 
@@ -159,6 +161,7 @@ contains
          rbuff(23+xdim:23+zdim) = pulse_vel(:)
          rbuff(26+xdim:26+zdim) = pulse_off(:)
          rbuff(29)              = pulse_pres
+         rbuff(30+xdim:30+zdim) = B_const(:)
 
          ibuff(1)   = norm_step
          ibuff(2)   = nflip
@@ -189,6 +192,7 @@ contains
          pulse_vel  = rbuff(23+xdim:23+zdim)
          pulse_off  = rbuff(26+xdim:26+zdim)
          pulse_pres = rbuff(29)
+         B_const    = rbuff(30+xdim:30+zdim)
 
          norm_step  = int(ibuff(1), kind=4)
          nflip      = ibuff(2)
@@ -341,7 +345,7 @@ contains
                      sfx = sin(kk(xdim) * (cg%x(i) - cg%dx/2.))
                      cfx = cos(kk(xdim) * (cg%x(i) - cg%dx/2.))
 
-                     cg%b(:, i, j, k) = divBc_amp * [cg%x(i), cg%y(j), cg%z(k)] ! slight offset between cell- and face-centered is unimportant here
+                     cg%b(:, i, j, k) = B_const(:) + divBc_amp * [cg%x(i), cg%y(j), cg%z(k)] ! slight offset between cell- and face-centered is unimportant here
 
                      ! div B pulse, as described in Tricco, Price & Bate, https://arxiv.org/abs/1607.02394
                      rr02 = sum(([cg%x(i), cg%y(j), cg%z(k)] - dom%C_)**2, mask=dom%has_dir)/r02
