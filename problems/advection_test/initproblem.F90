@@ -275,13 +275,14 @@ contains
       use domain,           only: dom
       use fluidindex,       only: flind
       use func,             only: operator(.notequals.), emag
-      use global,           only: smallei, t, force_cc_mag
+      use global,           only: smallei, t
       use grid_cont,        only: grid_container
       use named_array_list, only: qna
       use non_inertial,     only: get_omega
 #ifdef MAGNETIC
       use constants,        only: ndims, I_ONE, I_TWO, I_THREE, dpi, half
       use div_B,            only: print_divB_norm
+      use global,           only: force_cc_mag
 #endif /* MAGNETIC */
 
       implicit none
