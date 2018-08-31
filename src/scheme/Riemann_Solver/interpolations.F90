@@ -203,13 +203,13 @@ contains
 !<
 
   subroutine weno3(q, ql, qr, f_limiter)
-    
+
     use constants,    only: GEO_XYZ, onet, twot, one, two
     use dataio_pub,   only: die, msg
     use domain,       only: dom
     use fluxlimiters, only: limiter
     use global,       only: w_epsilon
-    
+
     implicit none
 
     real, dimension(:,:),        intent(in)  :: q
@@ -218,7 +218,7 @@ contains
     procedure(limiter), pointer, intent(in)  :: f_limiter
 
     ! WENO3 definitions
-    
+
     real, dimension(size(q,1))               :: w0, w1
     real, dimension(size(q,1))               :: alpha0, alpha1
     real, dimension(size(q,1))               :: beta0, beta1
@@ -256,7 +256,7 @@ contains
        !! The WENO scheme is self-similar. The same applies to ESWENO.
        !! The grid spacing \Delta x is replaced with the grid spacing
        !! in the computational domain \Delta xi = 1/j, where j is the
-       !! total number of gird cells. 
+       !! total number of gird cells.
        !<
 
        ! \Delta xi is mentioned before Eq. 63
@@ -266,13 +266,13 @@ contains
        !>
        !! Sec 4.3
        !! The value of the tuning parameter "epsilon" is based on
-       !! truncation error analysis. In Eq. 21 (or Eq. 19) this 
-       !! term epsilon is added with beta_r. Hence, it should be 
+       !! truncation error analysis. In Eq. 21 (or Eq. 19) this
+       !! term epsilon is added with beta_r. Hence, it should be
        !! scaled consistently. The terms beta_r are ~ u_\xi^2 \Delta xi^2
        !! near smooth regions and ~ u^2 near unresolved regions.
        !! Therefore, epsilon can be chosen as:
-       !! epsilon = max( L1norm(u_0^2), L1norm(u_0_\xi^2))*\Delta xi^2, 
-       !! where \xi != \xi_d, and L1_norm = sum ( abs(x(:)) ). The terms 
+       !! epsilon = max( L1norm(u_0^2), L1norm(u_0_\xi^2))*\Delta xi^2,
+       !! where \xi != \xi_d, and L1_norm = sum ( abs(x(:)) ). The terms
        !! u_0 is the "initial condition", and u_0_\xi^2 is the "initial condition"
        !! discarding the set of points \xi_d where it is discontinuous.
        !! The term epsilon is calculated only once, and same value is used

@@ -541,7 +541,7 @@ contains
      real, dimension(size(u,   1), 2:size(u,  2 )-2)        :: u2
      real, dimension(size(b_cc,1), 2:size(b_cc,2)-2)        :: b2
      real, dimension(size(psi, 1), 2:size(psi, 2)-2)        :: psi2
-     
+
      ! updates required for higher order of integration will likely have shorter length
 
 !!$     ! fluxes through interfaces 2 .. n-2
@@ -580,7 +580,7 @@ contains
         call interpol(u1, b1, psi1, ql(:,2:nx-2), qr(:,2:nx-2), b_cc_l(:,2:nx-2), b_cc_r(:,2:nx-2), psi_l(:,2:nx-2), psi_r(:,2:nx-2))
         call riemann_wrap(ql(:,2:nx-2), qr(:,2:nx-2), b_cc_l(:,2:nx-2), b_cc_r(:,2:nx-2), psi_l(:,2:nx-2), psi_r(:,2:nx-2), flx(:,2:nx-2), mag_cc(:,2:nx-2), psi_cc(:,2:nx-2)) ! second call for Riemann problem uses states evolved to half timestep
         call update  ! ToDo tell explicitly what range to update
-      case("rk3") ! " to be checked "
+      case ("rk3") ! " to be checked "
          call interpol(u, b_cc, psi, ql, qr, b_cc_l, b_cc_r, psi_l, psi_r)
          call riemann_wrap(ql, qr, b_cc_l, b_cc_r, psi_l, psi_r, flx, mag_cc, psi_cc) ! Now we advance the left and right states by a timestep.
          call du_db(u1, b1, psi1, oneq * dtodx)
