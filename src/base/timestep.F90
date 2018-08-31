@@ -109,7 +109,7 @@ contains
       use dataio_pub,           only: tend, msg, warn
       use fargo,                only: timestep_fargo, fargo_mean_omega
       use fluidtypes,           only: var_numbers
-      use global,               only: t, dt_old, dt_max_grow, dt_initial, dt_min, nstep, use_fargo
+      use global,               only: t, dt_old, dt_max_grow, dt_initial, dt_min, dt_max, nstep, use_fargo
       use grid_cont,            only: grid_container
       use mpisetup,             only: master, piernik_MPI_Allreduce
       use timestep_pub,         only: c_all
@@ -194,7 +194,7 @@ contains
          call write_crashed("[timestep:time_step] dt < dt_min")
       endif
 
-      dt = min(dt, (half*(tend-t)) + (two*epsilon(one)*((tend-t))))
+      dt = min(min(dt, dt_max), (half*(tend-t)) + (two*epsilon(one)*((tend-t))))
 #ifdef DEBUG
       ! We still need all above for c_all
       if (has_const_dt) then

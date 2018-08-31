@@ -40,7 +40,7 @@ module global
    private
    public :: cleanup_global, init_global, &
         &    cfl, cfl_max, cflcontrol, cfl_violated, &
-        &    dt, dt_initial, dt_max_grow, dt_min, dt_old, dtm, t, t_saved, nstep, nstep_saved, &
+        &    dt, dt_initial, dt_max_grow, dt_min, dt_max, dt_old, dtm, t, t_saved, nstep, nstep_saved, &
         &    integration_order, limiter, limiter_b, smalld, smallei, smallp, use_smalld, h_solver, interpol_str, &
         &    relax_time, grace_period_passed, cfr_smooth, repeat_step, skip_sweep, geometry25D, &
         &    dirty_debug, do_ascii_dump, show_n_dirtys, no_dirty_checks, sweeps_mgu, use_fargo, print_divB, &
@@ -63,6 +63,7 @@ module global
    real    :: dt_initial               !< initial timestep
    real    :: dt_max_grow              !< maximum timestep growth rate
    real    :: dt_min                   !< minimum allowed timestep
+   real    :: dt_max                   !< maximum allowed timestep
    real    :: cfl                      !< desired Courant–Friedrichs–Lewy number
    real    :: cfl_max                  !< warning threshold for the effective CFL number achieved
    logical :: use_smalld               !< correct density when it gets lower than smalld
@@ -96,7 +97,7 @@ module global
    logical                       :: ch_grid           !< When true use grid properties to estimate ch (psi wave propagation speed). Use gas properties otherwise.
    real                          :: w_epsilon         !< small number for safe evaluation of weights in WENO interpolation
 
-   namelist /NUMERICAL_SETUP/ cfl, cflcontrol, cfl_max, use_smalld, smalld, smallei, smallc, smallp, dt_initial, dt_max_grow, dt_min, &
+   namelist /NUMERICAL_SETUP/ cfl, cflcontrol, cfl_max, use_smalld, smalld, smallei, smallc, smallp, dt_initial, dt_max_grow, dt_min, dt_max, &
         &                     repeat_step, limiter, limiter_b, relax_time, integration_order, cfr_smooth, skip_sweep, geometry25D, sweeps_mgu, print_divB, &
         &                     use_fargo, h_solver, divB_0, glm_alpha, use_eglm, cfl_glm, ch_grid, interpol_str, w_epsilon, psi_bnd_str
 
@@ -125,6 +126,7 @@ contains
 !!   <tr><td>dt_initial       </td><td>-1.    </td><td>positive real value or -1.           </td><td>\copydoc global::dt_initial       </td></tr>
 !!   <tr><td>dt_max_grow      </td><td>2.     </td><td>real value > 1.1                     </td><td>\copydoc global::dt_max_grow      </td></tr>
 !!   <tr><td>dt_min           </td><td>0.     </td><td>positive real value                  </td><td>\copydoc global::dt_min           </td></tr>
+!!   <tr><td>dt_max           </td><td>0.     </td><td>positive real value                  </td><td>\copydoc global::dt_max           </td></tr>
 !!   <tr><td>limiter          </td><td>vanleer</td><td>string                               </td><td>\copydoc global::limiter          </td></tr>
 !!   <tr><td>limiter_b        </td><td>moncen </td><td>string                               </td><td>\copydoc global::limiter_b        </td></tr>
 !!   <tr><td>relax_time       </td><td>0.0    </td><td>real value                           </td><td>\copydoc global::relax_time       </td></tr>
@@ -192,6 +194,7 @@ contains
       dt_initial  = -1.              !< negative value indicates automatic choice of initial timestep
       dt_max_grow = dt_default_grow  !< for sensitive setups consider setting this as low as 1.1
       dt_min      = tiny(1.)
+      dt_max      = huge(1.)
       relax_time  = 0.
       integration_order  = 2
       use_fargo   = .false.
@@ -257,11 +260,12 @@ contains
          rbuff( 7) = dt_initial
          rbuff( 8) = dt_max_grow
          rbuff( 9) = dt_min
-         rbuff(10) = cfl_max
-         rbuff(11) = relax_time
-         rbuff(12) = glm_alpha
-         rbuff(13) = cfl_glm
-         rbuff(14) = w_epsilon
+         rbuff(10) = dt_max
+         rbuff(11) = cfl_max
+         rbuff(12) = relax_time
+         rbuff(13) = glm_alpha
+         rbuff(14) = cfl_glm
+         rbuff(15) = w_epsilon
 
          lbuff(1)   = use_smalld
          lbuff(2)   = repeat_step
@@ -299,11 +303,12 @@ contains
          dt_initial  = rbuff( 7)
          dt_max_grow = rbuff( 8)
          dt_min      = rbuff( 9)
-         cfl_max     = rbuff(10)
-         relax_time  = rbuff(11)
-         glm_alpha   = rbuff(12)
-         cfl_glm     = rbuff(13)
-         w_epsilon   = rbuff(14)
+         dt_max      = rbuff(10)
+         cfl_max     = rbuff(11)
+         relax_time  = rbuff(12)
+         glm_alpha   = rbuff(13)
+         cfl_glm     = rbuff(14)
+         w_epsilon   = rbuff(15)
 
          limiter    = cbuff(1)
          limiter_b  = cbuff(2)

@@ -68,24 +68,23 @@ contains
       character(len=*), intent(in) :: flim_str, blim_str
 
       if (associated(flimiter)) call die("[fluxlimiters:set_limiters] flimiter already associated")
-      flimiter => set_limiter(flim_str)
+      call set_limiter(flim_str, flimiter)
 
       if (associated(blimiter)) call die("[fluxlimiters:set_limiters] blimiter already associated")
-      blimiter => set_limiter(blim_str)
+      call set_limiter(blim_str, blimiter)
 
    end subroutine set_limiters
 
 !!!-------------------------------------------------------------------------------
 
-   function set_limiter(lim_str) result(lim)
+   subroutine set_limiter(lim_str, lim)
 
       use dataio_pub, only: msg, die
 
       implicit none
 
-      character(len=*), intent(in) :: lim_str
-
-      procedure(limiter), pointer :: lim
+      character(len=*),            intent(in)  :: lim_str
+      procedure(limiter), pointer, intent(out) :: lim
 
       select case (lim_str)
          case ('vanleer', 'VANLEER')
@@ -102,7 +101,7 @@ contains
             lim => null()
       end select
 
-   end function set_limiter
+   end subroutine set_limiter
 
 !!!-------------------------------------------------------------------------------
 
