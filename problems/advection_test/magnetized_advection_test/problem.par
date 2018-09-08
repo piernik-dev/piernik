@@ -82,10 +82,6 @@
     divBc_amp = 0.  ! nearly-everywhere constant div(B) (with huge jump at domain boundaries)
     divBs_amp = 0.  ! sine-wave div(B)
 
-    ! A blob of div(B)
-    divBbx_amp = 0.  ! 0.28209479177387814 !  1/sqrt(4 * pi)
-    divBby_amp = 0.  ! 0.28209479177387814 !  1/sqrt(4 * pi)
-    divBbz_amp = 0.  ! 0.28209479177387814 !  1/sqrt(4 * pi)
  /
 
  $NONINERTIAL
