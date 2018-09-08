@@ -315,7 +315,7 @@ contains
 #endif /* !ISO */
          case ("prei")
 #ifndef ISO
-            tab(:,:,:) = flind%ion%gam_1 * (cg%u(flind%ion%ien, RNG) - ekin(cg%u(flind%ion%imx, RNG), cg%u(flind%ion%imy, RNG), cg%u(flind%ion%imz, RNG), cg%u(flind%ion%idn, RNG))) - emag_f_c
+            tab(:,:,:) = flind%ion%gam_1 * (cg%u(flind%ion%ien, RNG) - ekin(cg%u(flind%ion%imx, RNG), cg%u(flind%ion%imy, RNG), cg%u(flind%ion%imz, RNG), cg%u(flind%ion%idn, RNG)) - emag_f_c)
 #endif /* !ISO */
          case ("pmag%")
 #ifndef ISO
