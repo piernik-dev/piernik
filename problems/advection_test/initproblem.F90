@@ -280,7 +280,10 @@ contains
       use named_array_list, only: qna
       use non_inertial,     only: get_omega
 #ifdef MAGNETIC
-      use constants,        only: ndims, I_ONE, I_TWO, I_THREE, dpi, half
+#ifdef IONIZED
+      use constants,        only: half
+#endif /* IONIZED */
+      use constants,        only: ndims, I_ONE, I_TWO, I_THREE, dpi
       use div_B,            only: print_divB_norm
       use global,           only: force_cc_mag
 #endif /* MAGNETIC */
@@ -468,7 +471,7 @@ contains
          ! Set up the internal energy
          cg%u(fl%ien,:,:,:) = max(smallei, pulse_pres / fl%gam_1 + 0.5 * sum(cg%u(fl%imx:fl%imz,:,:,:)**2,1) / cg%u(fl%idn,:,:,:))
 
-#ifdef MAGNETIC
+#if defined MAGNETIC && defined IONIZED
          if (force_cc_mag) then
             cg%u(fl%ien,:,:,:) = cg%u(fl%ien,:,:,:) + emag(cg%b(xdim,:,:,:), cg%b(ydim,:,:,:), cg%b(zdim,:,:,:))
          else
@@ -477,7 +480,7 @@ contains
                  &    half*(cg%b(ydim, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) + cg%b(ydim, cg%is        :cg%ie,         cg%js+dom%D_y:cg%je+dom%D_y, cg%ks        :cg%ke        )), &
                  &    half*(cg%b(zdim, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) + cg%b(zdim, cg%is        :cg%ie,         cg%js        :cg%je,         cg%ks+dom%D_z:cg%ke+dom%D_z)))
          endif
-#endif  /* !MAGNETIC */
+#endif  /* MAGNETIC && IONIZED */
 
          if (associated(flind%dst)) then
             cg%u(flind%dst%idn, :, :, :) = cg%u(fl%idn, :, :, :)
