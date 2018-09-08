@@ -190,7 +190,7 @@ contains
                         enddo
                      else
                         call die("[hdc:update_chspeed] Don't know what to do with chspeed without ION, NEU and DST")
-                     end if
+                     endif
                   enddo
                enddo
             enddo
