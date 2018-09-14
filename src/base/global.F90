@@ -329,7 +329,8 @@ contains
             divB_0_method = DIVB_CT
          case ("HDC", "hdc", "GLM", "glm", "divergence cleaning", "divergence diffusion")
             divB_0_method = DIVB_HDC
-            if (master .and. cfl * cfl_glm**2 > 0.25) call warn("[global] To avoid unphysical instabilities with GLM divergence cleaning consider reducing CFL or CFL_GLM, so CFL * CFL_GLM**2 would be < 0.25.")
+            if (master .and. .false.) call warn("[global] In case of problems with stability connected with checkerboard pattern in the psi field consider reducing CFL parameter (or just CFL_GLM). This solver also doesn't like sudden changes of timestep length.")
+            ! ToDo: create a way to add this to the crash message.
          case default
             call die("[global:init_global] unrecognized divergence cleaning description.")
       end select
