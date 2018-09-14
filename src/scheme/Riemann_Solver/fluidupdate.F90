@@ -500,9 +500,15 @@ contains
 !! k-th interface is between k-th cell and (k+1)-th cell
 !! We don't calculate n-th interface because it is as incomplete as 0-th interface
 
+#undef RK_HIGH
+!! Disabled rk3 as high orders require more careful approach to guardcells and valid ranges
+
   subroutine solve(u, b_cc, dtodx, psi, div_v1d)
 
-     use constants,  only: half, oneq, twot
+     use constants,  only: half
+#ifdef RK_HIGH
+     use constants,  only: oneq, twot
+#endif /* RK_HIGH */
      use dataio_pub, only: die
      use global,     only: h_solver
      use hlld,           only: riemann_wrap
@@ -536,11 +542,13 @@ contains
      real, dimension(size(b_cc,1), 2:size(b_cc,2)-1)       :: b1    !, db2, db3
      real, dimension(size(psi, 1), 2:size(psi, 2)-1)       :: psi1  !, dpsi2, dpsi3
 
+#ifdef RK_HIGH
      ! left and right states for cells (RK3)
      ! " to be checked "
      real, dimension(size(u,   1), 2:size(u,  2 )-2)        :: u2
      real, dimension(size(b_cc,1), 2:size(b_cc,2)-2)        :: b2
      real, dimension(size(psi, 1), 2:size(psi, 2)-2)        :: psi2
+#endif /* RK_HIGH */
 
      ! updates required for higher order of integration will likely have shorter length
 
@@ -580,7 +588,7 @@ contains
         call interpol(u1, b1, psi1, ql(:,2:nx-2), qr(:,2:nx-2), b_cc_l(:,2:nx-2), b_cc_r(:,2:nx-2), psi_l(:,2:nx-2), psi_r(:,2:nx-2))
         call riemann_wrap(ql(:,2:nx-2), qr(:,2:nx-2), b_cc_l(:,2:nx-2), b_cc_r(:,2:nx-2), psi_l(:,2:nx-2), psi_r(:,2:nx-2), flx(:,2:nx-2), mag_cc(:,2:nx-2), psi_cc(:,2:nx-2)) ! second call for Riemann problem uses states evolved to half timestep
         call update  ! ToDo tell explicitly what range to update
-#if 0
+#if RK_HIGH
       case ("rk3") ! " to be checked "
          call interpol(u, b_cc, psi, ql, qr, b_cc_l, b_cc_r, psi_l, psi_r)
          call riemann_wrap(ql, qr, b_cc_l, b_cc_r, psi_l, psi_r, flx, mag_cc, psi_cc) ! Now we advance the left and right states by a timestep.
@@ -598,7 +606,7 @@ contains
         !! high order temporal integration schemes will need reliable, automatic estimate of required
         !! minimal number of guardcells.
 
-#endif
+#endif /* RK_HIGH */
      case ("muscl")
         call interpol(u,b_cc,psi,ql,qr,b_cc_l,b_cc_r,psi_l,psi_r)
         call musclflx(ql, b_cc_l, psi_l, flx_l, bclflx, psilflx)
