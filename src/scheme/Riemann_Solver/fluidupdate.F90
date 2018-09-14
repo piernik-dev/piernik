@@ -580,6 +580,7 @@ contains
         call interpol(u1, b1, psi1, ql(:,2:nx-2), qr(:,2:nx-2), b_cc_l(:,2:nx-2), b_cc_r(:,2:nx-2), psi_l(:,2:nx-2), psi_r(:,2:nx-2))
         call riemann_wrap(ql(:,2:nx-2), qr(:,2:nx-2), b_cc_l(:,2:nx-2), b_cc_r(:,2:nx-2), psi_l(:,2:nx-2), psi_r(:,2:nx-2), flx(:,2:nx-2), mag_cc(:,2:nx-2), psi_cc(:,2:nx-2)) ! second call for Riemann problem uses states evolved to half timestep
         call update  ! ToDo tell explicitly what range to update
+#if 0
       case ("rk3") ! " to be checked "
          call interpol(u, b_cc, psi, ql, qr, b_cc_l, b_cc_r, psi_l, psi_r)
          call riemann_wrap(ql, qr, b_cc_l, b_cc_r, psi_l, psi_r, flx, mag_cc, psi_cc) ! Now we advance the left and right states by a timestep.
@@ -590,6 +591,14 @@ contains
          call interpol(u1, b1, psi1, ql(:,2:nx-2), qr(:,2:nx-2), b_cc_l(:,2:nx-2), b_cc_r(:,2:nx-2), psi_l(:,2:nx-2), psi_r(:,2:nx-2))
          call riemann_wrap(ql(:,2:nx-2), qr(:,2:nx-2), b_cc_l(:,2:nx-2), b_cc_r(:,2:nx-2), psi_l(:,2:nx-2), psi_r(:,2:nx-2), flx(:,2:nx-2), mag_cc(:,2:nx-2), psi_cc(:,2:nx-2))
         call update
+
+        !! rk3 and most other possible schemes will need more sophisticated update routine.
+
+        !! Beware: weno3, ppm (and other high spatial order of reconstruction) in conjunction with
+        !! high order temporal integration schemes will need reliable, automatic estimate of required
+        !! minimal number of guardcells.
+
+#endif
      case ("muscl")
         call interpol(u,b_cc,psi,ql,qr,b_cc_l,b_cc_r,psi_l,psi_r)
         call musclflx(ql, b_cc_l, psi_l, flx_l, bclflx, psilflx)
@@ -794,9 +803,6 @@ contains
 !          if (size(w)>=4)  psi_cc(1,2:nx) = psi_cc(1,2:nx) + w(4) * dpsi3(1,2:nx)
 !          psi(:,1) = psi(:,2)
 !          psi(:,nx) = psi(:, nx-1)
-
-          !damping
-          !psi = psi*exp(-glm_alpha*chspeed*dtodx)
 
        endif
 
