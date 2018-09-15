@@ -153,11 +153,9 @@ contains
     real, dimension(size(f, 1))                  :: u_starl, u_starr, u_2starl, u_2starr
     real, dimension(xdim:zdim)                   :: v_2star, v_starl, v_starr
     real, dimension(xdim:zdim)                   :: b_cclf, b_ccrf
-    real                                         :: psilf, psirf
     real, dimension(xdim:zdim)                   :: b_starl, b_starr, b_2star
-    real, dimension(xdim,size(b_ccl,2))          :: glm_gfb
-    real, dimension(size(psil,1),size(psil,2))   :: glm_gfp
-    real                                         :: psi_starl, psi_starr, psi_2star
+    real, dimension(size(b_ccl,2))               :: glm_gfb
+    real, dimension(size(psil,2))                :: glm_gfp
     logical                                      :: has_energy
     real                                         :: ue
 
@@ -166,28 +164,33 @@ contains
     ! suppress complains caused by -Wmaybe-uninitialized
     b_cclf = 0.
     b_ccrf = 0.
-    psilf = 0.
-    psirf = 0.
-    psi_starl = 0.
-    psi_starr = 0.
-    psi_2star = 0.
     !if (divB_0_method /= DIVB_HDC) b_cc(xdim,:) = 0.
     has_energy = (ubound(ul, dim=1) >= ien)
     ue = 0.
 
     ! Eq. 42, Dedner et al.
     if (divB_0_method .eq. DIVB_HDC) then
-       glm_gfb(xdim,:)  = half*((b_ccr(xdim,:)+b_ccl(xdim,:)) - (psir(1,:)-psil(1,:))/chspeed)
-       glm_gfp(1,:)     = half*((psir(1,:)+psil(1,:)) - chspeed*(b_ccr(xdim,:)-b_ccl(xdim,:)))
-       b_ccl(xdim,:)    = glm_gfb(xdim,:)
-       b_ccr(xdim,:)    = glm_gfb(xdim,:)
-       psil(1,:)        = glm_gfp(1,:)
-       psir(1,:)        = glm_gfp(1,:)
+       glm_gfb(:)       = half*((b_ccr(xdim,:)+b_ccl(xdim,:)) - (psir(1,:)-psil(1,:))/chspeed)
+       glm_gfp(:)       = half*((psir(1,:)+psil(1,:)) - chspeed*(b_ccr(xdim,:)-b_ccl(xdim,:)))
+       b_ccl(xdim,:)    = glm_gfb(:)  ! why we need to modify the input left and right state here ???
+       b_ccr(xdim,:)    = glm_gfb(:)  ! ???
     else if (divB_0_method /= DIVB_HDC) then
        b_cc(xdim,:) = 0.
     endif
 
     do i = 1, size(f, 2)
+
+       if (divB_0_method .eq. DIVB_HDC) then
+          psi(1,i) = chspeed*chspeed*glm_gfb(i)
+          b_cc(xdim,i) = glm_gfp(i)
+          b_starl(xdim) = glm_gfb(i)
+          b_starr(xdim) = glm_gfb(i)
+          b_2star(xdim) = glm_gfb(i)
+       else
+          b_starl(xdim) = b_ccl(xdim,i)
+          b_starr(xdim) = b_ccr(xdim,i)
+          b_2star(xdim) = b_ccl(xdim,i) ! this may break symmetry, perhaps it should be half * (b_ccl(xdim,i) + b_ccr(xdim,i)) ???
+       endif
 
        ! Left and right states of magnetic pressure
 
@@ -244,10 +247,6 @@ contains
        fl(imy:imz) = ul(idn,i)*ul(imy:imz,i)*ul(imx,i) - b_ccl(xdim,i)*b_ccl(ydim:zdim,i)
        if (has_energy) fl(ien) = (enl + prl)*ul(imx,i) - b_ccl(xdim,i)*(sum(ul(imx:imz,i)*b_ccl(xdim:zdim,i))) ! Total left state of pressure, so prl
        b_cclf(ydim:zdim) = b_ccl(ydim:zdim,i)*ul(imx,i) - b_ccl(xdim,i)*ul(imy:imz,i)
-       if (divB_0_method .eq. DIVB_HDC) then
-          b_cclf(xdim) = psil(1,i)
-          psilf        = chspeed*chspeed*b_ccl(xdim,i)
-       endif
 
        ! Right flux
 
@@ -256,31 +255,15 @@ contains
        fr(imy:imz) = ur(idn,i)*ur(imy:imz,i)*ur(imx,i) - b_ccr(xdim,i)*b_ccr(ydim:zdim,i)
        if (has_energy) fr(ien) = (enr + prr)*ur(imx,i) - b_ccr(xdim,i)*(sum(ur(imx:imz,i)*b_ccr(xdim:zdim,i)))  ! Total right state of pressure, so prl
        b_ccrf(ydim:zdim) = b_ccr(ydim:zdim,i)*ur(imx,i) - b_ccr(xdim,i)*ur(imy:imz,i)
-       if (divB_0_method .eq. DIVB_HDC) then
-          b_ccrf(xdim) = psir(1,i)
-          psirf        = chspeed*chspeed*b_ccr(xdim,i)
-       endif
 
        ! HLLD fluxes
 
        if (sl .ge.  zero) then
           f(:,i)  =  fl
           b_cc(ydim:zdim,i) = b_cclf(ydim:zdim)
-          ! GLM
-          if (divB_0_method .eq. DIVB_HDC) then
-             b_cc(xdim,i) = b_cclf(xdim)
-             psi(1,i)     = psilf
-          endif
-
        else if (sr .le.  zero) then
           f(:,i)  =  fr
           b_cc(ydim:zdim,i) = b_ccrf(ydim:zdim)
-          ! GLM
-          if (divB_0_method .eq. DIVB_HDC) then
-             b_cc(xdim,i) = b_ccrf(xdim)
-             psi(1,i)     = psirf
-          endif
-
        else
 
           ! Speed of contact discontinuity Eq. 38
@@ -323,9 +306,6 @@ contains
 
           v_starl(xdim)  =  sm
           v_starr(xdim)  =  sm
-
-          b_starl(xdim)  =  b_ccl(xdim,i)
-          b_starr(xdim)  =  b_ccr(xdim,i)
 
           ! Transversal components of magnetic field for left states (Eq. 45 & 47), taking degeneracy into account
           coeff_1  =  dn_l*slsm - b_lr
@@ -377,12 +357,6 @@ contains
              u_starr(ien) = (srvxr*enr - prr*ur(imx,i) + prt_star*sm + b_ccr(xdim,i)*(vb_r - vb_starr))/srsm  ! Total right state of pressure
           endif
 
-          ! GLM
-          if (divB_0_method .eq. DIVB_HDC) then
-             psi_starl = psil(1,i)
-             psi_starr = psir(1,i)
-          endif
-
           ! Cases for B_x .ne. and .eq. zero
 
           if (abs(b_ccl(xdim,i)) > zero) then
@@ -403,11 +377,6 @@ contains
 
                 f(:,i) = fl + sl*(u_starl - [ ul(idn,i), ul(idn,i)*ul(imx:imz,i), enl ] )
                 b_cc(ydim:zdim,i) = b_cclf(ydim:zdim) + sl*(b_starl(ydim:zdim) - b_ccl(ydim:zdim,i))
-                ! GLM
-                if (divB_0_method .eq. DIVB_HDC) then
-                   b_cc(xdim,i) = b_cclf(xdim) + sl*(b_starl(xdim) - b_ccl(xdim,i))
-                   psi(1,i)     = psilf + sl*(psi_starl-psil(1,i))
-                endif
 
              else if (alfven_r < zero) then
 
@@ -415,11 +384,6 @@ contains
 
                 f(:,i) = fr + sr*(u_starr - [ ur(idn,i), ur(idn,i)*ur(imx:imz,i), enr ] )
                 b_cc(ydim:zdim,i) = b_ccrf(ydim:zdim) + sr*(b_starr(ydim:zdim) - b_ccr(ydim:zdim,i))
-                ! GLM
-                if (divB_0_method .eq. DIVB_HDC) then
-                   b_cc(xdim,i) = b_ccrf(xdim) + sr*(b_starr(xdim) - b_ccr(xdim,i))
-                   psi(1,i)     = psirf + sr*(psi_starr - psir(1,i))
-                endif
 
              else ! alfven_l .le. zero .le. alfven_r
 
@@ -445,7 +409,6 @@ contains
                 v_2star(xdim)      = sm
                 v_2star(ydim:zdim) = ((dn_lsqt*v_starl(ydim:zdim) + dn_rsqt*v_starr(ydim:zdim)) + b_sig*(b_starr(ydim:zdim) - b_starl(ydim:zdim)))/add_dnsq
 
-                b_2star(xdim)      = b_ccl(xdim,i)
                 b_2star(ydim:zdim) = ((dn_lsqt*b_starr(ydim:zdim) + dn_rsqt*b_starl(ydim:zdim)) + b_sig*mul_dnsq*(v_starr(ydim:zdim) - v_starl(ydim:zdim)))/add_dnsq
 
                 ! Dot product of velocity and magnetic field
@@ -464,11 +427,6 @@ contains
 
                 endif
 
-                 ! GLM
-                   if (divB_0_method .eq. DIVB_HDC) then
-                      psi_2star = psil(1,i)
-                   endif
-
                 if (sm <= zero) then
                    ! Conservative variables for right Alfven intermediate state
                    u_2starr(idn)  =  u_starr(idn)
@@ -479,30 +437,16 @@ contains
 
                 endif
 
-                ! GLM
-                   if (divB_0_method .eq. DIVB_HDC) then
-                      psi_2star = psir(1,i)
-                   endif
-
                 if (sm > zero) then
                    ! Left Alfven intermediate flux Eq. 65
                    f(:,i) = fl + alfven_l*u_2starl - (alfven_l - sl)*u_starl - sl* [ ul(idn,i), ul(idn,i)*ul(imx:imz,i), enl ]
                    b_cc(ydim:zdim,i) = b_cclf(ydim:zdim) + alfven_l*b_2star(ydim:zdim) - (alfven_l - sl)*b_starl(ydim:zdim) - sl*b_ccl(ydim:zdim,i)
-                   ! GLM
-                   if (divB_0_method .eq. DIVB_HDC) then
-                      b_cc(xdim,i) = b_cclf(xdim) + alfven_l*b_2star(xdim) - (alfven_l - sl)*b_starl(xdim) - sl*b_ccl(xdim,i)
-                      psi(1,i) = psilf + alfven_l*psi_2star - (alfven_l - sl)*psi_starl - sl*psil(1,i)
-                   endif
 
                 else if (sm < zero) then
                    ! Right Alfven intermediate flux Eq. 65
                    f(:,i) = fr + alfven_r*u_2starr - (alfven_r - sr)*u_starr - sr* [ ur(idn,i), ur(idn,i)*ur(imx:imz,i), enr ]
                    b_cc(ydim:zdim,i) = b_ccrf(ydim:zdim) + alfven_r*b_2star(ydim:zdim) - (alfven_r - sr)*b_starr(ydim:zdim) - sr*b_ccr(ydim:zdim,i)
-                   ! GLM
-                   if (divB_0_method .eq. DIVB_HDC) then
-                      b_cc(xdim,i) = b_ccrf(xdim) + alfven_r*b_2star(xdim) - (alfven_r - sr)*b_starr(xdim) - sr*b_ccr(xdim,i)
-                      psi(1,i) = psirf + alfven_r*psi_2star - (alfven_r - sr)*psi_starr - sr*psir(1,i)
-                   endif
+
                 else ! sm = 0
 
                    ! Left and right Alfven intermediate flux Eq. 65
@@ -513,16 +457,6 @@ contains
                    b_cc(ydim:zdim,i) = half*( &
                         (b_cclf(ydim:zdim) + alfven_l*b_2star(ydim:zdim) - (alfven_l - sl)*b_starl(ydim:zdim) - sl*b_ccl(ydim:zdim,i)) + &
                         (b_ccrf(ydim:zdim) + alfven_r*b_2star(ydim:zdim) - (alfven_r - sr)*b_starr(ydim:zdim) - sr*b_ccr(ydim:zdim,i)))
-
-                   ! GLM
-                    if (divB_0_method .eq. DIVB_HDC) then
-                       b_cc(xdim,i) = half*( &
-                            (b_cclf(xdim) + alfven_l*b_2star(xdim) - (alfven_l - sl)*b_starl(xdim) - sl*b_ccl(xdim,i)) + &
-                            (b_ccrf(xdim) + alfven_r*b_2star(xdim) - (alfven_r - sr)*b_starr(xdim) - sr*b_ccr(xdim,i)))
-                       psi(1,i) = half*(&
-                            (psilf + alfven_l*psi_2star - (alfven_l - sl)*psi_starl - sl*psil(1,i)) + &
-                            (psirf + alfven_r*psi_2star - (alfven_r - sr)*psi_starr - sr*psir(1,i)))
-                    endif
 
                 endif  ! sm = 0
 
@@ -538,21 +472,11 @@ contains
 
                 f(:,i)  =  fl + sl*(u_starl - [ ul(idn,i), ul(idn,i)*ul(imx:imz,i), enl ])
                 b_cc(ydim:zdim,i) = b_cclf(ydim:zdim) + sl*(b_starl(ydim:zdim) - b_ccl(ydim:zdim,i))
-                ! GLM
-                if (divB_0_method .eq. DIVB_HDC) then
-                   b_cc(xdim,i) = b_cclf(xdim) + sl*(b_starl(xdim) - b_ccl(xdim,i))
-                   psi(1,i) = psilf + sl*(psi_starl - psil(1,i))
-                endif
 
              else if (sm < zero) then
 
                 f(:,i)  =  fr + sr*(u_starr - [ ur(idn,i), ur(idn,i)*ur(imx:imz,i), enr ])
                 b_cc(ydim:zdim,i) = b_ccrf(ydim:zdim) + sr*(b_starr(ydim:zdim) - b_ccr(ydim:zdim,i))
-                ! GLM
-                if (divB_0_method .eq. DIVB_HDC) then
-                   b_cc(xdim,i) = b_ccrf(xdim) + sr*(b_starr(xdim) - b_ccr(xdim,i))
-                   psi(1,i) = psirf + sr*(psi_starr - psir(1,i))
-                endif
 
              else ! sm = 0
 
@@ -562,14 +486,6 @@ contains
                      &           fr + sr*(u_starr - [ ur(idn,i), ur(idn,i)*ur(imx:imz,i), enr ]))
                 b_cc(ydim:zdim,i) = half*(b_cclf(ydim:zdim) + sl*(b_starl(ydim:zdim) - b_ccl(ydim:zdim,i)) + &
                      &                    b_ccrf(ydim:zdim) + sr*(b_starr(ydim:zdim) - b_ccr(ydim:zdim,i)))
-                ! GLM
-                if (divB_0_method .eq. DIVB_HDC) then
-                   b_cc(xdim,i) = half*(b_cclf(xdim) + sl*(b_starl(xdim) - b_ccl(xdim,i)) + &
-                        &               b_ccrf(xdim) + sr*(b_starr(xdim) - b_ccr(xdim,i)))
-                   psi(1,i) = half*(psilf + sl*(psi_starl - psil(1,i)) + &
-                        &           psirf + sr*(psi_starr - psir(1,i)))
-
-                endif
 
              endif  ! sm = 0
 
