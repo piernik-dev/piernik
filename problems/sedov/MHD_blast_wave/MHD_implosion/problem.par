@@ -47,7 +47,7 @@
     dt_res  = 0
     dt_log  = 1.0e-4
     dt_tsl  = 1.0e-4
-    vars(1:) = 'ener', 'dens', 'magx', 'magy', 'magz', 'velx', 'vely', 'velz', 'ethr', 'magB', "pres", "divbf", "divbf4", "divbc", "divbc4"
+    vars(1:) = 'ener', 'dens', 'magx', 'magy', 'magz', 'velx', 'vely', 'velz', 'ethr', 'magB', "pres", "divbc", "divbc4", "psi"
  /
 
  $FLUID_IONIZED
@@ -59,7 +59,7 @@
  /
 
  $NUMERICAL_SETUP
-    cfl    = 0.05 
+    cfl    = 0.25  ! should be sufficient till t = 6e-3
     smalld = 1.e-3
     smallei= 1.e-5
 !    h_solver="muscl"  ! may require use lower CFL than for "rk2"

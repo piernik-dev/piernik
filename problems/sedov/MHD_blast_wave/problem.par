@@ -50,7 +50,7 @@
     dt_res  = 1e-1
     dt_log  = 1.0e-4
     dt_tsl  = 1.0e-4
-    vars(1:) = 'ener', 'dens', 'magx', 'magy', 'magz', 'velx', 'vely', 'ethr', 'magB', "pres", "divbf", "divbf4", "divbc", "divbc4"
+    vars(1:) = 'ener', 'dens', 'magx', 'magy', 'magz', 'velx', 'vely', 'ethr', 'magB', "pres", "divbc",  "divbc4", "psi"
  /
 
  $FLUID_IONIZED
@@ -62,9 +62,10 @@
  /
 
  $NUMERICAL_SETUP
-    cfl    = 0.3  ! 0.31 works, 0.32 crashes
+    cfl    = 0.6
     smalld = 1.e-3
     smallei= 1.e-5
+    print_divb = 10
  /
 
  $GRAVITY
