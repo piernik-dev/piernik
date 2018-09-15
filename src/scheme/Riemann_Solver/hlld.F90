@@ -154,8 +154,6 @@ contains
     real, dimension(xdim:zdim)                   :: v_2star, v_starl, v_starr
     real, dimension(xdim:zdim)                   :: b_cclf, b_ccrf
     real, dimension(xdim:zdim)                   :: b_starl, b_starr, b_2star
-    real, dimension(size(b_ccl,2))               :: glm_gfb
-    real, dimension(size(psil,2))                :: glm_gfp
     logical                                      :: has_energy
     real                                         :: ue
 
@@ -170,27 +168,17 @@ contains
 
     ! Eq. 42, Dedner et al.
     if (divB_0_method .eq. DIVB_HDC) then
-       glm_gfb(:)       = half*((b_ccr(xdim,:)+b_ccl(xdim,:)) - (psir(1,:)-psil(1,:))/chspeed)
-       glm_gfp(:)       = half*((psir(1,:)+psil(1,:)) - chspeed*(b_ccr(xdim,:)-b_ccl(xdim,:)))
-       b_ccl(xdim,:)    = glm_gfb(:)  ! why we need to modify the input left and right state here ???
-       b_ccr(xdim,:)    = glm_gfb(:)  ! ???
-    else if (divB_0_method /= DIVB_HDC) then
+       psi(1,:)     = chspeed * chspeed * half*((b_ccr(xdim,:)+b_ccl(xdim,:)) - (psir(1,:)-psil(1,:))/chspeed)
+       b_cc(xdim,:) = half*((psir(1,:)+psil(1,:)) - chspeed*(b_ccr(xdim,:)-b_ccl(xdim,:)))
+    else
        b_cc(xdim,:) = 0.
     endif
 
     do i = 1, size(f, 2)
 
-       if (divB_0_method .eq. DIVB_HDC) then
-          psi(1,i) = chspeed*chspeed*glm_gfb(i)
-          b_cc(xdim,i) = glm_gfp(i)
-          b_starl(xdim) = glm_gfb(i)
-          b_starr(xdim) = glm_gfb(i)
-          b_2star(xdim) = glm_gfb(i)
-       else
-          b_starl(xdim) = b_ccl(xdim,i)
-          b_starr(xdim) = b_ccr(xdim,i)
-          b_2star(xdim) = b_ccl(xdim,i) ! this may break symmetry, perhaps it should be half * (b_ccl(xdim,i) + b_ccr(xdim,i)) ???
-       endif
+       b_starl(xdim) = b_ccl(xdim,i)
+       b_starr(xdim) = b_ccr(xdim,i)
+       b_2star(xdim) = half * (b_ccl(xdim,i) + b_ccr(xdim,i))
 
        ! Left and right states of magnetic pressure
 
