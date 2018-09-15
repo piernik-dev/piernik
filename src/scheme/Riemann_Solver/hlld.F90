@@ -177,7 +177,7 @@ contains
 
     ! Eq. 42, Dedner et al.
     if (divB_0_method .eq. DIVB_HDC) then
-       glm_gfb(xdim,:)  = half*((b_ccr(xdim,:)+b_ccl(xdim,:)) - (psir(1,:)-psil(1,:)/chspeed))
+       glm_gfb(xdim,:)  = half*((b_ccr(xdim,:)+b_ccl(xdim,:)) - (psir(1,:)-psil(1,:))/chspeed)
        glm_gfp(1,:)     = half*((psir(1,:)+psil(1,:)) - chspeed*(b_ccr(xdim,:)-b_ccl(xdim,:)))
        b_ccl(xdim,:)    = glm_gfb(xdim,:)
        b_ccr(xdim,:)    = glm_gfb(xdim,:)
