@@ -165,7 +165,7 @@ contains
     !if (divB_0_method /= DIVB_HDC) b_cc(xdim,:) = 0.
     has_energy = (ubound(ul, dim=1) >= ien)
     ue = 0.
-
+    
     ! Eq. 42, Dedner et al.
     if (divB_0_method .eq. DIVB_HDC) then
        psi(1,:)     = chspeed * chspeed * half*((b_ccr(xdim,:)+b_ccl(xdim,:)) - (psir(1,:)-psil(1,:))/chspeed)
@@ -175,10 +175,6 @@ contains
     endif
 
     do i = 1, size(f, 2)
-
-       b_starl(xdim) = b_ccl(xdim,i)
-       b_starr(xdim) = b_ccr(xdim,i)
-       b_2star(xdim) = half * (b_ccl(xdim,i) + b_ccr(xdim,i))
 
        ! Left and right states of magnetic pressure
 
@@ -295,6 +291,9 @@ contains
           v_starl(xdim)  =  sm
           v_starr(xdim)  =  sm
 
+          b_starl(xdim)  =  b_ccl(xdim,i)
+          b_starr(xdim)  =  b_ccr(xdim,i)
+
           ! Transversal components of magnetic field for left states (Eq. 45 & 47), taking degeneracy into account
           coeff_1  =  dn_l*slsm - b_lr
           if (has_energy) ue = ul(ien,i)
@@ -396,6 +395,8 @@ contains
 
                 v_2star(xdim)      = sm
                 v_2star(ydim:zdim) = ((dn_lsqt*v_starl(ydim:zdim) + dn_rsqt*v_starr(ydim:zdim)) + b_sig*(b_starr(ydim:zdim) - b_starl(ydim:zdim)))/add_dnsq
+
+                b_2star(xdim)      = half * (b_ccl(xdim,i) + b_ccr(xdim,i))
 
                 b_2star(ydim:zdim) = ((dn_lsqt*b_starr(ydim:zdim) + dn_rsqt*b_starl(ydim:zdim)) + b_sig*mul_dnsq*(v_starr(ydim:zdim) - v_starl(ydim:zdim)))/add_dnsq
 
