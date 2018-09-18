@@ -41,11 +41,11 @@ module thermal
    implicit none
 
    private
-   public ::  maxdeint, cool_heat, init_thermal, cool_model, heat_model, A_heat, A_cool, alpha_cool, thermal_active, cfl_coolheat, beta_heat, src_thermal_exec
+   public ::  maxdeint, init_thermal, thermal_active, cfl_coolheat, src_thermal_exec
 
    character(len=cbuff_len) :: cool_model, heat_model
    logical                  :: thermal_active
-   real                     :: A_cool, A_heat, alpha_cool, beta_heat, cfl_coolheat
+   real                     :: alpha_cool, L0_cool, G0_heat, G1_heat, G2_heat, cfl_coolheat
 
 contains
 
@@ -56,10 +56,15 @@ contains
       use constants,      only: PIERNIK_INIT_MPI
       use dataio_pub,     only: code_progress, die, nh, printinfo
       use mpisetup,       only: cbuff, lbuff, rbuff, master, slave, piernik_MPI_Bcast
+      use units,          only: cm, erg, sek, mH, units_set, pc, Msun, gram
 
       implicit none
 
-      namelist /THERMAL/ thermal_active, cool_model, heat_model, A_cool, A_heat, alpha_cool, beta_heat, cfl_coolheat
+      real :: G0, G1, G2 !> standard heating model coefficients in cgs units
+      real :: Lambda0    !> power law cooling model coefficient in cgs units
+      real :: x_ion      !> ionization degree
+
+      namelist /THERMAL/ thermal_active, cool_model, heat_model, Lambda0, alpha_cool, G0, G1, G2, x_ion, cfl_coolheat
 
       if (code_progress < PIERNIK_INIT_MPI) call die("[thermal:init_thermal] mpi not initialized.")
 
@@ -69,11 +74,13 @@ contains
 
       thermal_active = .True.
       cool_model     = 'power_law'
-      heat_model     = 'beta_coef'
-      A_cool         = 1.0
-      A_heat         = 1.0
+      heat_model     = 'G012'
       alpha_cool     = 1.0
-      beta_heat      = 1.0
+      Lambda0        = 1.0e-25
+      G0             = 1.0e-25
+      G1             = 1.0e-25
+      G2             = 1.0e-27
+      x_ion          = 1.0
       cfl_coolheat   = 0.1
 
       if (master) then
@@ -94,11 +101,13 @@ contains
          close(nh%lun)
          call nh%compare_namelist()
 
-         rbuff(1) = A_cool
+         rbuff(1) = Lambda0
          rbuff(2) = alpha_cool
-         rbuff(3) = A_heat
-         rbuff(4) = beta_heat
-         rbuff(5) = cfl_coolheat
+         rbuff(3) = G0
+         rbuff(4) = G1
+         rbuff(5) = G2
+         rbuff(6) = x_ion
+         rbuff(7) = cfl_coolheat
 
          lbuff(1) = thermal_active
 
@@ -118,13 +127,20 @@ contains
 
          thermal_active = lbuff(1)
 
-         A_cool         = rbuff(1)
+         Lambda0        = rbuff(1)
          alpha_cool     = rbuff(2)
-         A_heat         = rbuff(3)
-         beta_heat      = rbuff(4)
-         cfl_coolheat   = rbuff(5)
+         G0             = rbuff(3)
+         G1             = rbuff(4)
+         G2             = rbuff(5)
+         x_ion          = rbuff(6)
+         cfl_coolheat   = rbuff(7)
 
       endif
+
+      G0_heat = G0      * erg / sek * cm**3 / mH**2 * x_ion**2
+      G1_heat = G1      * erg / sek         / mH    * x_ion
+      G2_heat = G2      * erg / sek / cm**3
+      L0_cool = Lambda0 * erg / sek * cm**3 / mH**2 * x_ion**2
 
    end subroutine init_thermal
 
@@ -219,8 +235,8 @@ contains
 
       do ifl = 1, flind%fluids
          pfl => flind%all_fluids(ifl)%fl
-         do j=cg%js,cg%je
-            do i=cg%is,cg%ie
+         do j = cg%js, cg%je
+            do i = cg%is, cg%ie
                if (pfl%has_energy) then
                   kin_ener = ekin(cg%u(pfl%imx,i,j,cg%ks:cg%ke), cg%u(pfl%imy,i,j,cg%ks:cg%ke), cg%u(pfl%imz,i,j,cg%ks:cg%ke), cg%u(pfl%idn,i,j,cg%ks:cg%ke))
                   if (pfl%is_magnetized) then
@@ -253,7 +269,7 @@ contains
 
       select case (cool_model)
          case ('power_law')
-            coolf = -A_cool * temp**(alpha_cool)
+            coolf = -L0_cool * temp**(alpha_cool)
          case ('null')
             return
         case default
@@ -275,8 +291,8 @@ contains
       real, dimension(n), intent(out) :: heatf
 
       select case (heat_model)
-        case ('beta_coef')
-          heatf =  A_heat * dens**beta_heat  !> \todo trzeba dodac czytanie parametrow grzania z problem.par
+        case ('G012')
+          heatf =  G0_heat * dens**2 + G1_heat * dens + G2_heat  !> \todo trzeba dodac czytanie parametrow grzania z problem.par
         case ('null')
           return
         case default

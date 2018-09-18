@@ -57,11 +57,13 @@
  $THERMAL
     thermal_active = .TRUE.
     cool_model     = 'power_law'
-    heat_model     = 'beta_coef'
-    A_cool         = 1.0
-    A_heat         = 1.0
+    heat_model     = 'G012'
     alpha_cool     = 1.0
-    beta_heat      = 1.0
+    Lambda0        = 1.0e-25
+    G0             = 1.0e-24
+    G1             = 1.0e-25
+    G2             = 1.0e-27
+    x_ion          = 1.0
     cfl_coolheat   = 0.1
  /
  $PROBLEM_CONTROL
