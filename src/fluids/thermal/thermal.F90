@@ -56,7 +56,7 @@ contains
       use constants,      only: PIERNIK_INIT_MPI
       use dataio_pub,     only: code_progress, die, nh, printinfo
       use mpisetup,       only: cbuff, lbuff, rbuff, master, slave, piernik_MPI_Bcast
-      use units,          only: cm, erg, sek, mH, units_set, pc, Msun, gram
+      use units,          only: cm, erg, sek, mH
 
       implicit none
 
