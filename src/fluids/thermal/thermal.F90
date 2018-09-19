@@ -292,7 +292,7 @@ contains
 
       select case (heat_model)
         case ('G012')
-          heatf =  G0_heat * dens**2 + G1_heat * dens + G2_heat  !> \todo trzeba dodac czytanie parametrow grzania z problem.par
+          heatf =  G0_heat * dens**2 + G1_heat * dens + G2_heat
         case ('null')
           return
         case default

@@ -18,6 +18,7 @@
  /
 
  $UNITS
+    units_set = 'PSM'
  /
 
  $RESTART_CONTROL
