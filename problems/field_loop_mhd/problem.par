@@ -54,7 +54,7 @@ $FLUID_DUST
 /
 
 $NUMERICAL_SETUP
-   cfl     = 0.4
+   cfl     = 0.7
    smalld  = 1.e-4
    smallei = 1.e-5
 /

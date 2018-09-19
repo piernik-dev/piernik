@@ -165,7 +165,7 @@ contains
     !if (divB_0_method /= DIVB_HDC) b_cc(xdim,:) = 0.
     has_energy = (ubound(ul, dim=1) >= ien)
     ue = 0.
-    
+
     ! Eq. 42, Dedner et al.
     if (divB_0_method .eq. DIVB_HDC) then
        psi(1,:)     = chspeed * chspeed * half*((b_ccr(xdim,:)+b_ccl(xdim,:)) - (psir(1,:)-psil(1,:))/chspeed)

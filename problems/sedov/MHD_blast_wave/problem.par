@@ -62,7 +62,7 @@
  /
 
  $NUMERICAL_SETUP
-    cfl    = 0.6
+    cfl    = 0.7
     smalld = 1.e-3
     smallei= 1.e-5
     print_divb = 10
