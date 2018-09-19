@@ -60,6 +60,7 @@
     cool_model     = 'power_law'
     heat_model     = 'G012'
     alpha_cool     = 1.0
+    T0             = 1000.0
     Lambda0        = 1.0e-25
     G0             = 1.0e-24
     G1             = 1.0e-25
