@@ -46,7 +46,7 @@ module thermal
    character(len=cbuff_len) :: cool_model, heat_model
    logical                  :: thermal_active
    real                     :: alpha_cool, L0_cool, G0_heat, G1_heat, G2_heat, cfl_coolheat
-   real                     :: T0         !> temperature of cooling / heating equilibrium
+   real                     :: Teql         !> temperature of cooling / heating equilibrium
 
 contains
 
@@ -65,7 +65,7 @@ contains
       real :: Lambda0    !> power law cooling model coefficient in cgs units
       real :: x_ion      !> ionization degree
 
-      namelist /THERMAL/ thermal_active, cool_model, heat_model, Lambda0, alpha_cool, T0, G0, G1, G2, x_ion, cfl_coolheat
+      namelist /THERMAL/ thermal_active, cool_model, heat_model, Lambda0, alpha_cool, Teql, G0, G1, G2, x_ion, cfl_coolheat
 
       if (code_progress < PIERNIK_INIT_MPI) call die("[thermal:init_thermal] mpi not initialized.")
 
@@ -77,7 +77,7 @@ contains
       cool_model     = 'power_law'
       heat_model     = 'G012'
       alpha_cool     = 1.0
-      T0             = 1000.0
+      Teql           = 1000.0
       Lambda0        = 1.0e-25
       G0             = 1.0e-25
       G1             = 1.0e-25
@@ -105,7 +105,7 @@ contains
 
          rbuff(1) = Lambda0
          rbuff(2) = alpha_cool
-         rbuff(3) = T0
+         rbuff(3) = Teql
          rbuff(4) = G0
          rbuff(5) = G1
          rbuff(6) = G2
@@ -132,7 +132,7 @@ contains
 
          Lambda0        = rbuff(1)
          alpha_cool     = rbuff(2)
-         T0             = rbuff(3)
+         Teql           = rbuff(3)
          G0             = rbuff(4)
          G1             = rbuff(5)
          G2             = rbuff(6)
@@ -273,7 +273,7 @@ contains
 
       select case (cool_model)
          case ('power_law')
-            coolf = -L0_cool * (temp/T0)**(alpha_cool)
+            coolf = -L0_cool * (temp/Teql)**(alpha_cool)
          case ('null')
             return
         case default
