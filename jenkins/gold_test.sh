@@ -93,12 +93,12 @@ for i in $GOLD_OBJ $TEST_OBJ $RIEM_OBJ ; do
 done
 
 for i in $TEST_OBJ $RIEM_OBJ ; do
-    (
-	cd ${RUNS_DIR}/${PROBLEM_NAME}_$i
-	rm *.h5 2> /dev/null
-	eval $RUN_COMMAND ./${PIERNIK}
-    )
+    cd ${RUNS_DIR}/${PROBLEM_NAME}_$i
+    rm *.h5 2> /dev/null
+    eval $RUN_COMMAND ./${PIERNIK} &
+    cd -
 done
+wait
 
 (
     cd ${RUNS_DIR}/${PROBLEM_NAME}_$GOLD_OBJ
