@@ -187,7 +187,7 @@ contains
       limiter_b   = limiter
 
       cflcontrol  = 'warn'
-      interpol_str = 'linear'
+      interpol_str = 'weno3'
       repeat_step = .true.
       geometry25D = .false.
       no_dirty_checks = .false.
