@@ -202,7 +202,7 @@ contains
       limiter_b   = limiter
 
       cflcontrol  = 'warn'
-      interpol_str = 'linear'
+      interpol_str = 'weno3'
 
 #ifdef NBODY
       repeat_step = .false.
