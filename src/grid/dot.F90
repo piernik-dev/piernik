@@ -36,7 +36,8 @@
 
 module dot
 
-   use decomposition,   only: cuboid
+   use constants,     only: FP_DOUBLE
+   use decomposition, only: cuboid
 
    implicit none
 
@@ -73,7 +74,7 @@ module dot
       procedure :: find_grid            !< Find process and grid_id using SFC_id
    end type dot_T
 
-   integer(kind=8), parameter :: huge_SFC = huge(1_8)
+   integer(kind=8), parameter :: huge_SFC = huge(1_FP_DOUBLE)
 
 contains
 
