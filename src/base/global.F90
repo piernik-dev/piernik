@@ -172,7 +172,7 @@ contains
       divB_0      = "CT"
 #endif /* RIEMANN */
       cflcontrol  = 'warn'
-      h_solver    = 'rk2'
+      h_solver    = 'muscl'
       interpol_str = 'linear'
       repeat_step = .true.
       geometry25D = .false.
