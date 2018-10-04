@@ -67,6 +67,10 @@ contains
       use timer,                 only: set_timer
       use units,                 only: init_units
       use user_hooks,            only: problem_post_restart, problem_post_IC
+#ifdef RIEMANN
+      use hdc,                   only: init_psi
+      use interpolations,        only: set_interpolations
+#endif /* RIEMANN */
 #if defined MAGNETIC && defined RESISTIVE
       use resistivity,           only: init_resistivity, compute_resist
 #endif /* MAGNETIC && RESISTIVE */
@@ -146,9 +150,11 @@ contains
       call init_default_fluidboundaries
 
       call problem_pointers                  ! set up problem-specific pointers as early as possible to allow implementation of problem-specific hacks also during the initialization
-
       call init_global
       code_progress = PIERNIK_INIT_GLOBAL    ! Global parameters are set up
+#ifdef RIEMANN
+      call set_interpolations
+#endif /* RIEMANN */
 
       call init_domain
       code_progress = PIERNIK_INIT_DOMAIN    ! Base domain is known and initial domain decomposition is known
@@ -261,6 +267,9 @@ contains
          nit = 0
          finished = .false.
          call problem_initial_conditions ! may depend on anything
+#ifdef RIEMANN
+         call init_psi ! initialize the auxiliary field for divergence cleaning when needed
+#endif /* RIEMANN */
 
          write(msg, '(a,f10.2)')"[initpiernik] IC on base level, time elapsed: ",set_timer(tmr_fu)
          if (master) call printinfo(msg)

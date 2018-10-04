@@ -41,9 +41,10 @@ module global
    public :: cleanup_global, init_global, &
         &    cfl, cfl_max, cflcontrol, cfl_violated, &
         &    dt, dt_initial, dt_max_grow, dt_min, dt_max, dt_old, dtm, t, t_saved, nstep, nstep_saved, &
-        &    integration_order, limiter, limiter_b, smalld, smallei, smallp, use_smalld, h_solver, &
+        &    integration_order, limiter, limiter_b, smalld, smallei, smallp, use_smalld, h_solver, interpol_str, &
         &    relax_time, grace_period_passed, cfr_smooth, repeat_step, skip_sweep, geometry25D, &
-        &    dirty_debug, do_ascii_dump, show_n_dirtys, no_dirty_checks, sweeps_mgu, use_fargo, print_divB
+        &    dirty_debug, do_ascii_dump, show_n_dirtys, no_dirty_checks, sweeps_mgu, use_fargo, print_divB, &
+        &    divB_0_method, force_cc_mag, glm_alpha, use_eglm, cfl_glm, ch_grid, w_epsilon, psi_bnd
 
    real, parameter :: dt_default_grow = 2.
    logical         :: cfl_violated             !< True when cfl condition is violated
@@ -53,6 +54,9 @@ module global
    logical         :: no_dirty_checks          !< Temporarily disable dirty checks
    integer(kind=4) :: nstep, nstep_saved
    real            :: t, dt, dt_old, dtm, t_saved
+   integer         :: divB_0_method            !< encoded method of making div(B) = 0 (currently DIVB_CT or DIVB_HDC)
+   logical         :: force_cc_mag             !< treat magnetic field as cell-centered in the Riemann solver (temporary hack)
+   integer         :: psi_bnd                  !< BND_INVALID or enforce some other psi boundary
 
    ! Namelist variables
 
@@ -79,15 +83,23 @@ module global
    character(len=cbuff_len)      :: limiter_b         !< type of flux limiter for magnetic field in the Riemann solver
    character(len=cbuff_len)      :: cflcontrol        !< type of cfl control just before each sweep (possibilities: 'none', 'main', 'user')
    character(len=cbuff_len)      :: h_solver          !< type of hydro solver
+   character(len=cbuff_len)      :: interpol_str      !< type of interpolation
+   character(len=cbuff_len)      :: divB_0            !< human-readable method of making div(B) = 0 (currently CT or HDC)
+   character(len=cbuff_len)      :: psi_bnd_str       !< "default" for general boundaries or override ith something special
    logical                       :: repeat_step       !< repeat fluid step if cfl condition is violated (significantly increases mem usage)
    logical, dimension(xdim:zdim) :: skip_sweep        !< allows to skip sweep in chosen direction
    logical                       :: sweeps_mgu        !< Mimimal Guardcell Update in sweeps
    logical                       :: use_fargo         !< use Fast Eulerian Transport for differentially rotating disks
    integer(kind=4)               :: print_divB        !< if >0 then print div(B) estimates each print_divB steps
+   real                          :: glm_alpha         !< damping factor for the psi field
+   logical                       :: use_eglm          !< use E-GLM?
+   real                          :: cfl_glm           !< "CFL" for chspeed in divergence cleaning
+   logical                       :: ch_grid           !< When true use grid properties to estimate ch (psi wave propagation speed). Use gas properties otherwise.
+   real                          :: w_epsilon         !< small number for safe evaluation of weights in WENO interpolation
 
    namelist /NUMERICAL_SETUP/ cfl, cflcontrol, cfl_max, use_smalld, smalld, smallei, smallc, smallp, dt_initial, dt_max_grow, dt_min, dt_max, &
         &                     repeat_step, limiter, limiter_b, relax_time, integration_order, cfr_smooth, skip_sweep, geometry25D, sweeps_mgu, print_divB, &
-        &                     use_fargo, h_solver
+        &                     use_fargo, h_solver, divB_0, glm_alpha, use_eglm, cfl_glm, ch_grid, interpol_str, w_epsilon, psi_bnd_str
 
 contains
 
@@ -116,19 +128,27 @@ contains
 !!   <tr><td>dt_min           </td><td>0.     </td><td>positive real value                  </td><td>\copydoc global::dt_min           </td></tr>
 !!   <tr><td>dt_max           </td><td>0.     </td><td>positive real value                  </td><td>\copydoc global::dt_max           </td></tr>
 !!   <tr><td>limiter          </td><td>vanleer</td><td>string                               </td><td>\copydoc global::limiter          </td></tr>
-!!   <tr><td>limiter_b        </td><td>vanleer</td><td>string                               </td><td>\copydoc global::limiter_b        </td></tr>
+!!   <tr><td>limiter_b        </td><td>moncen </td><td>string                               </td><td>\copydoc global::limiter_b        </td></tr>
 !!   <tr><td>relax_time       </td><td>0.0    </td><td>real value                           </td><td>\copydoc global::relax_time       </td></tr>
 !!   <tr><td>skip_sweep       </td><td>F, F, F</td><td>logical array                        </td><td>\copydoc global::skip_sweep       </td></tr>
 !!   <tr><td>geometry25D      </td><td>F      </td><td>logical value                        </td><td>\copydoc global::geometry25d      </td></tr>
 !!   <tr><td>sweeps_mgu       </td><td>F      </td><td>logical value                        </td><td>\copydoc global::sweeps_mgu       </td></tr>
-!!   <tr><td>print_divB       </td><td>0      </td><td>integer value                        </td><td>\copydoc global::print_divB       </td></tr>
+!!   <tr><td>h_solver         </td><td>"rk2"  </td><td>string                               </td><td>\copydoc global::h_solver         </td></tr>
+!!   <tr><td>divB_0           </td><td>CT     </td><td>string                               </td><td>\copydoc global::divB_0           </td></tr>
+!!   <tr><td>glm_alpha        </td><td>0.1    </td><td>real value                           </td><td>\copydoc global::glm_alpha        </td></tr>
+!!   <tr><td>use_eglm         </td><td>false  </td><td>logical value                        </td><td>\copydoc global::use_eglm         </td></tr>
+!!   <tr><td>print_divB       </td><td>100    </td><td>integer value                        </td><td>\copydoc global::print_divB       </td></tr>
+!!   <tr><td>ch_grid          </td><td>false  </td><td>logical value                        </td><td>\copydoc global::ch_grid          </td></tr>
+!!   <tr><td>w_epsilon        </td><td>1e-10  </td><td>real                                 </td><td>\copydoc global::w_epsilon        </td></tr>
+!!   <tr><td>psi_bnd_str      </td><td>"default" </td><td>string                            </td><td>\copydoc global::psi_bnd_str      </td></tr>
 !! </table>
 !! \n \n
 !<
    subroutine init_global
 
-      use constants,  only: big_float, PIERNIK_INIT_MPI
-      use dataio_pub, only: die, msg, warn, code_progress
+      use constants,  only: big_float, PIERNIK_INIT_MPI, INVALID, DIVB_CT, DIVB_HDC, &
+           &                BND_INVALID, BND_ZERO, BND_REF, BND_OUT
+      use dataio_pub, only: die, msg, warn, code_progress, printinfo
       use dataio_pub, only: nh  ! QA_WARN required for diff_nml
       use mpisetup,   only: cbuff, ibuff, lbuff, rbuff, master, slave, piernik_MPI_Bcast
 
@@ -142,15 +162,18 @@ contains
       ! Begin processing of namelist parameters
 
 #ifdef RIEMANN
-      ! these limiters were performing best in the Otszag-Tang test (otvortex problem)
-      limiter     = 'minmod'    ! 'vanleer' is a 2nd choice for otvortex
-      limiter_b   = 'superbee'  ! 'moncen' and 'vanleer' were also performing well
+      ! 'moncen' and 'vanleer' seem to be best for emag conservation with GLM for b_limiter
+      limiter_b   = 'moncen'
+      limiter     = limiter_b
+      divB_0      = "HDC"
 #else /* ! RIEMANN */
       limiter     = 'vanleer'
       limiter_b   = limiter
+      divB_0      = "CT"
 #endif /* RIEMANN */
       cflcontrol  = 'warn'
-      h_solver    = 'muscl'
+      h_solver    = 'rk2'
+      interpol_str = 'linear'
       repeat_step = .true.
       geometry25D = .false.
       no_dirty_checks = .false.
@@ -175,8 +198,14 @@ contains
       relax_time  = 0.
       integration_order  = 2
       use_fargo   = .false.
+      glm_alpha   = 0.1
       skip_sweep  = .false.
+      use_eglm    = .false.
       print_divB  = 100
+      cfl_glm     = cfl
+      ch_grid     = .false.
+      w_epsilon   = 1e-10
+      psi_bnd_str = "default"
 
       if (master) then
          if (.not.nh%initialized) call nh%init()
@@ -206,8 +235,8 @@ contains
             dt_max_grow = dt_default_grow
          endif
 
-         if (h_solver /= "muscl" .and. h_solver /= "rk2") then
-            write(msg, *)"[fluidupdate:sweep_dsplit:warn_experimental] The scheme '", trim(h_solver), "' is experimental. Use 'muscl' or 'rk2' for production runs."
+         if (h_solver /= "muscl" .and. h_solver /= "rk2" .and. h_solver /= "rk3" ) then
+            write(msg, *)"[fluidupdate:sweep_dsplit:warn_experimental] The scheme '", trim(h_solver), "' is experimental. Use 'muscl' or 'rk(n)' for production runs."
             call warn(msg)
          endif
 
@@ -215,6 +244,9 @@ contains
          cbuff(2) = limiter_b
          cbuff(3) = cflcontrol
          cbuff(4) = h_solver
+         cbuff(5) = divB_0
+         cbuff(6) = interpol_str
+         cbuff(7) = psi_bnd_str
 
          ibuff(1) = integration_order
          ibuff(2) = print_divB
@@ -231,6 +263,9 @@ contains
          rbuff(10) = dt_max
          rbuff(11) = cfl_max
          rbuff(12) = relax_time
+         rbuff(13) = glm_alpha
+         rbuff(14) = cfl_glm
+         rbuff(15) = w_epsilon
 
          lbuff(1)   = use_smalld
          lbuff(2)   = repeat_step
@@ -238,6 +273,8 @@ contains
          lbuff(6)   = geometry25D
          lbuff(7)   = sweeps_mgu
          lbuff(8)   = use_fargo
+         lbuff(9)   = use_eglm
+         lbuff(10)  = ch_grid
 
       endif
 
@@ -254,6 +291,8 @@ contains
          geometry25D   = lbuff(6)
          sweeps_mgu    = lbuff(7)
          use_fargo     = lbuff(8)
+         use_eglm      = lbuff(9)
+         ch_grid       = lbuff(10)
 
          smalld      = rbuff( 1)
          smallc      = rbuff( 2)
@@ -267,16 +306,88 @@ contains
          dt_max      = rbuff(10)
          cfl_max     = rbuff(11)
          relax_time  = rbuff(12)
+         glm_alpha   = rbuff(13)
+         cfl_glm     = rbuff(14)
+         w_epsilon   = rbuff(15)
 
          limiter    = cbuff(1)
          limiter_b  = cbuff(2)
          cflcontrol = cbuff(3)
          h_solver   = cbuff(4)
+         divB_0     = cbuff(5)
+         interpol_str = cbuff(6)
+         psi_bnd_str = cbuff(7)
 
          integration_order = ibuff(1)
          print_divB        = ibuff(2)
 
       endif
+
+      divB_0_method = INVALID
+      select case (divB_0)
+         case ("CT", "ct", "constrained transport", "Constrained Transport")
+            divB_0_method = DIVB_CT
+         case ("HDC", "hdc", "GLM", "glm", "divergence cleaning", "divergence diffusion")
+            divB_0_method = DIVB_HDC
+            if (master .and. .false.) call warn("[global] In case of problems with stability connected with checkerboard pattern in the psi field consider reducing CFL parameter (or just CFL_GLM). This solver also doesn't like sudden changes of timestep length.")
+            ! ToDo: create a way to add this to the crash message.
+         case default
+            call die("[global:init_global] unrecognized divergence cleaning description.")
+      end select
+
+      !> reshape_b should carefully check things here
+      force_cc_mag = .false.
+      select case (divB_0_method)
+         case (DIVB_HDC)
+            force_cc_mag = .true.
+            if (ch_grid .and. master) call warn("[global] ch_grid = .true. is risky")
+         case (DIVB_CT)
+            force_cc_mag = .false.
+         case default
+            call die("[global:init_global] unrecognized divergence cleaning method.")
+      end select
+
+      select case (psi_bnd_str)
+         case ('default')
+            psi_bnd = BND_INVALID  ! special value,; means: do not override domain boundaries
+         case ('zero')
+            psi_bnd = BND_ZERO
+         case ('ref', 'refl', 'reflecting')
+            psi_bnd = BND_REF
+         case ('out', 'free')
+            psi_bnd = BND_OUT
+         case default
+            call die("[global:init_global] unrecognized psi boundaries")
+      end select
+
+#ifdef RTVD
+      if (master) call printinfo("    (M)HD solver: RTVD.")
+#endif /* RTVD */
+#ifdef HLLC
+      if (master) call printinfo("    HD solver: HLLC.")
+#endif /*HLLC */
+#ifdef RIEMANN
+      if (master) call printinfo("    (M)HD solver: Riemann.")
+#endif /* RIEMANN */
+
+#ifdef MAGNETIC
+      if (master) then
+         select case (divB_0_method)
+             case (DIVB_HDC)
+                call printinfo("    The div(B) constraint is maintaineded by Hyperbolic Cleaning (GLM).")
+             case (DIVB_CT)
+                call printinfo("    The div(B) constraint is maintaineded by Constrained Transport (2nd order).")
+             case default
+                call die("    The div(B) constraint is maintaineded by Uknown Something.")
+         end select
+
+         if (force_cc_mag) then
+            call printinfo("    Magnetic field is cell-centered.")
+         else
+            call printinfo("    Magnetic field is face-centered (staggered).")
+         endif
+      endif
+#endif /* MAGNETIC */
 
    end subroutine init_global
 

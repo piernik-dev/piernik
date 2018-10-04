@@ -39,7 +39,7 @@ module fluxlimiters
 
    implicit none
    private
-   public :: set_limiters, flimiter, blimiter, calculate_slope_vanleer, slope_limiter_minmod, slope_limiter_moncen, slope_limiter_superbee
+   public :: set_limiters, limiter, flimiter, blimiter
 
    interface
       function limiter(q) result(dq)
