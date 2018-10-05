@@ -48,7 +48,7 @@ module initproblem
    real                   :: ref_thr     !< refinement threshold
    real                   :: deref_thr   !< derefinement threshold
    logical                :: usedust     !< If .false. then do not set velocity for dust
-   real, dimension(ndims) :: B_const     !<  constant-B somponent strength
+   real, dimension(ndims) :: B_const     !<  constant-B component strength
    real                   :: divB0_amp   !< Amplitude of the non-divergent component of the magnetic field
    real                   :: divBc_amp   !< Amplitude of constant-divergence component of the magnetic field (has artifacts on periodic domains due to nondifferentiability)
    real                   :: divBs_amp   !< Amplitude of sine-wave divergence component of the magnetic field (should behave well on periodic domains)
@@ -56,10 +56,9 @@ module initproblem
    real                   :: divBbY_amp  !< Amplitude of y-component blob of divergence (should behave well on periodic domains)
    real                   :: divBbZ_amp  !< Amplitude of z-component blob of divergence (should behave well on periodic domains)
    integer, dimension(ndims) :: divB_k      !< wave numbers for creating initial field
-   logical                :: ccB         !< true for cell-cntered initial magnetic field
 
    namelist /PROBLEM_CONTROL/  pulse_size, pulse_off, pulse_vel, pulse_amp, pulse_pres, norm_step, nflip, flipratio, ref_thr, deref_thr, usedust, &
-        &                      divB0_amp, divBc_amp, divBs_amp, divBbX_amp, divBbY_amp, divBbZ_amp, divB_k, ccB, B_const
+        &                      divB0_amp, divBc_amp, divBs_amp, divBbX_amp, divBbY_amp, divBbZ_amp, divB_k, B_const
 
    ! other private data
    real, dimension(ndims, LO:HI) :: pulse_edge
@@ -126,7 +125,6 @@ contains
       divBbY_amp    = 0.                   !< unphysical, only for testing
       divBbZ_amp    = 0.                   !< unphysical, only for testing
       divB_k(:)     = [ 1, 1, 1 ]
-      ccB           = .false.              !< defaulting to face-centered initial field
       B_const       = 0.
 
       if (master) then
@@ -168,7 +166,6 @@ contains
          ibuff(10+xdim:10+zdim) = divB_k(:)
 
          lbuff(1)   = usedust
-         lbuff(2)   = ccB
 
       endif
 
@@ -199,7 +196,6 @@ contains
          divB_k(:)  = ibuff(10+xdim:10+zdim)
 
          usedust    = lbuff(1)
-         ccB        = lbuff(2)
 
       endif
 
@@ -265,6 +261,7 @@ contains
          call warn("[initproblem:read_problem_par] Ignoring magnetic field amplitudes")
 #endif /* !MAGNETIC */
       endif
+
    end subroutine read_problem_par
 
 !-----------------------------------------------------------------------------
@@ -283,8 +280,12 @@ contains
       use named_array_list, only: qna
       use non_inertial,     only: get_omega
 #ifdef MAGNETIC
-      use constants,        only: ndims, I_ONE, I_TWO, I_THREE, dpi, half
+#ifdef IONIZED
+      use constants,        only: half
+#endif /* IONIZED */
+      use constants,        only: ndims, I_ONE, I_TWO, I_THREE, dpi
       use div_B,            only: print_divB_norm
+      use global,           only: force_cc_mag
 #endif /* MAGNETIC */
 
       implicit none
@@ -304,7 +305,7 @@ contains
       kk = 0.
       where (dom%D_ > 0) kk = divB_k * dpi / dom%L_
       right_face = 1
-      if (ccB) right_face = 0
+      if (force_cc_mag) right_face = 0
       r02 = huge(1.)
       if (dom%D_x == 1) then
          r02 = dom%L_(xdim)**2
@@ -357,7 +358,7 @@ contains
                      select case (dom%eff_dim)
                         case (I_ONE) ! can't do anything fancy, just set up something non-zero
                            cg%b(:, i, j, k) = cg%b(:, i, j, k) + divB0_amp
-                           if (ccB) then
+                           if (force_cc_mag) then
                               if (dom%D_x == 1) then
                                  cg%b(:, i, j, k) = cg%b(:, i, j, k) + divBs_amp * [ kk(xdim)*cx, 1., 1. ]
                               else if (dom%D_y == 1) then
@@ -378,7 +379,7 @@ contains
                            ! [sin(x)*sin(y), cos(x)*cos(y), 0] should produce divB == 0. for XY case (curl([0, 0, -sin(x)*cos(y)]))
                            ! The div(B) is really close to numerical noise around 0 only in the case of exactly the same resolution per sine wave in all directions.
                            ! If the resolutions of sine waves don't match, then numerical estimates of mixed derivatives of the vector potential don't cancel out and only high-order estimates of div(b) are close to 0.
-                           if (ccB) then
+                           if (force_cc_mag) then
                               if (dom%D_z == 0) then
                                  cg%b(:, i, j, k) = cg%b(:, i, j, k) + &
                                       divB0_amp * [ kk(ydim)*sx*sy, kk(xdim)*cx*cy, 1. ] + &
@@ -410,7 +411,7 @@ contains
                         case (I_THREE)
                            ! curl([sin(x)*sin(y)*sin(z), sin(x)*sin(y)*sin(z), sin(x)*sin(y)*sin(z)]) shoudl produce div(B) == 0, but see the notes for 2D case.
                            ! setting up a div(B)-free field in flattened domain requires careful choice of kk(:)
-                           if (ccB) then
+                           if (force_cc_mag) then
                               cg%b(:, i, j, k) = cg%b(:, i, j, k) + divB0_amp * [ &
                                    kk(ydim)*cx*sy*cz - kk(zdim)*cx*cy*sz, &
                                    kk(zdim)*cx*cy*sz - kk(xdim)*sx*cy*cz, &
@@ -470,16 +471,16 @@ contains
          ! Set up the internal energy
          cg%u(fl%ien,:,:,:) = max(smallei, pulse_pres / fl%gam_1 + 0.5 * sum(cg%u(fl%imx:fl%imz,:,:,:)**2,1) / cg%u(fl%idn,:,:,:))
 
-#ifdef MAGNETIC
-         if (ccB) then
-            cg%u(fl%ien,:,:,:) = cg%u(fl%ien,:,:,:) + emag(cg%b(xdim,:,:,:), cg%b(ydim,:,:,:), cg%b(zdim,:,:,:))  ! beware: this is for cell-centered B
+#if defined MAGNETIC && defined IONIZED
+         if (force_cc_mag) then
+            cg%u(fl%ien,:,:,:) = cg%u(fl%ien,:,:,:) + emag(cg%b(xdim,:,:,:), cg%b(ydim,:,:,:), cg%b(zdim,:,:,:))
          else
             cg%u(fl%ien, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = cg%u(fl%ien, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) + &
                  emag(half*(cg%b(xdim, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) + cg%b(xdim, cg%is+dom%D_x:cg%ie+dom%D_x, cg%js        :cg%je,         cg%ks        :cg%ke        )), &
                  &    half*(cg%b(ydim, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) + cg%b(ydim, cg%is        :cg%ie,         cg%js+dom%D_y:cg%je+dom%D_y, cg%ks        :cg%ke        )), &
                  &    half*(cg%b(zdim, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) + cg%b(zdim, cg%is        :cg%ie,         cg%js        :cg%je,         cg%ks+dom%D_z:cg%ke+dom%D_z)))
          endif
-#endif  /* !MAGNETIC */
+#endif  /* MAGNETIC && IONIZED */
 
          if (associated(flind%dst)) then
             cg%u(flind%dst%idn, :, :, :) = cg%u(fl%idn, :, :, :)

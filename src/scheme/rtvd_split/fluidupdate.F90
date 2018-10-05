@@ -316,8 +316,10 @@ contains
 !<
    subroutine make_sweep(dir, forward)
 
+      use constants,      only: DIVB_CT
+      use dataio_pub,     only: die
       use domain,         only: dom
-      use global,         only: geometry25D
+      use global,         only: geometry25D, divB_0_method
       use sweeps,         only: sweep
 #ifdef COSM_RAYS
       use crdiffusion,    only: cr_diff
@@ -331,6 +333,8 @@ contains
 
       integer(kind=4), intent(in) :: dir      !< direction, one of xdim, ydim, zdim
       logical,         intent(in) :: forward  !< if .false. then reverse operation order in the sweep
+
+      if (divB_0_method /= DIVB_CT) call die("[fluidupdate:make_sweep] only CT is implemented in RTVD")
 
       if (dom%has_dir(dir)) then
          if (.not. forward) then
