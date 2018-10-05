@@ -58,6 +58,7 @@
     dt_tsl  = 0.001
     vars(1:) = 'ener', 'dens', 'velx', 'vely', 'velz', "magx", "magy", "magz", "magB", "magdir", "divbc", "divbf", "divbf4", "divbc4", "pmag%"
     gdf_strict = .false.
+    h5_64bit = T
  /
 
  $FLUID_NEUTRAL
@@ -76,10 +77,13 @@
  $PROBLEM_CONTROL
     pulse_vel = 2., -2., 2.
     pulse_size = 1., 1., 1.
+    pulse_pres = 1e-2
 
-    pulse_amp = 1.0  ! 1.0 means constant density
+    pulse_amp = 100.0  ! 1.0 means constant density
 
-    divB0_amp = 0.01  ! non-divergent magnetic field
+    B_const = .2, .3, .6
+
+    divB0_amp = 0.0  ! non-divergent magnetic field
     divBc_amp = 0.  ! nearly-everywhere constant div(B) (with huge jump at domain boundaries)
     divBs_amp = 0.  ! sine-wave div(B)
 
