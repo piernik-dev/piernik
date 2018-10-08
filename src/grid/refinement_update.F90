@@ -55,7 +55,7 @@ contains
       use constants,             only: pSUM
       use dataio_pub,            only: msg, printinfo
       use mpisetup,              only: master, piernik_MPI_Allreduce
-#endif
+#endif /* VERBOSE */
 
       implicit none
 
@@ -81,20 +81,20 @@ contains
          call problem_refine_derefine ! call user routine first, so it cannot alter flags set by automatic routines
 #ifdef VERBOSE
          call sanitize_all_ref_flags
-#endif
+#endif /* VERBOSE */
       endif
 
 #ifdef VERBOSE
       cnt(PROBLEM) = all_cg%count_ref_flags()
       call piernik_MPI_Allreduce(cnt(PROBLEM), pSUM)
-#endif
+#endif /* VERBOSE */
 
       call auto_refine_derefine(leaves)
 #ifdef VERBOSE
       call sanitize_all_ref_flags
       cnt(AUTO) = all_cg%count_ref_flags()
       call piernik_MPI_Allreduce(cnt(AUTO), pSUM)
-#endif
+#endif /* VERBOSE */
 
       call mark_all_primitives
       call sanitize_all_ref_flags
@@ -106,7 +106,7 @@ contains
               &                cnt(PROBLEM), cnt(AUTO)-cnt(PROBLEM), cnt(PRIMITIVES)-cnt(AUTO)," block(s) for refinement, respectively."
          if (master) call printinfo(msg)
       endif
-#endif
+#endif /* VERBOSE */
       call ref_flags_to_ref_list
 
    end subroutine scan_for_refinements
@@ -610,7 +610,7 @@ contains
 
 #ifdef DEBUG_DUMPS
       call piernik_MPI_Allreduce(failed, pLOR)
-#endif
+#endif /* DEBUG_DUMPS */
       if (failed) then
 #ifdef DEBUG_DUMPS
          call write_hdf5
