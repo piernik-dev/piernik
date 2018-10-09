@@ -111,7 +111,7 @@ program piernik
    call print_progress(nstep)
 #ifdef MAGNETIC
    if (print_divB > 0) call print_divB_norm
-#endif
+#endif /* MAGNETIC */
 
    do while (t < tend .and. nstep < nend .and. .not.(end_sim)) ! main loop
 
@@ -164,7 +164,7 @@ program piernik
       if (print_divB > 0) then
          if (mod(nstep, print_divB) == 0) call print_divB_norm
       endif
-#endif
+#endif /* MAGNETIC */
 
       if (master) tleft = walltime_end%time_left()
       call piernik_MPI_Bcast(tleft)
@@ -177,7 +177,7 @@ program piernik
       if (print_divB > 0) then
          if (mod(nstep, print_divB) /= 0) call print_divB_norm ! print the norm at the end, if it wasn't printed inside the loop above
       endif
-#endif
+#endif /* MAGNETIC */
 
    code_progress = PIERNIK_FINISHED
 
