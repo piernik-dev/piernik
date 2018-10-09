@@ -37,7 +37,7 @@ module refinement_update
 
 contains
 
-#define VERBOSE
+#define VERBOSED_REFINEMENTS
 
 !> \brief Apply all (de)refinement criteria: user, automatic and by primitive geometric shapes
 
@@ -51,11 +51,11 @@ contains
       use refinement,            only: auto_refine_derefine
       use refinement_primitives, only: mark_all_primitives
       use user_hooks,            only: problem_refine_derefine
-#ifdef VERBOSE
+#ifdef VERBOSED_REFINEMENTS
       use constants,             only: pSUM
       use dataio_pub,            only: msg, printinfo
       use mpisetup,              only: master, piernik_MPI_Allreduce
-#endif
+#endif /* VERBOSED_REFINEMENTS */
 
       implicit none
 
@@ -79,26 +79,26 @@ contains
 
       if (associated(problem_refine_derefine)) then
          call problem_refine_derefine ! call user routine first, so it cannot alter flags set by automatic routines
-#ifdef VERBOSE
+#ifdef VERBOSED_REFINEMENTS
          call sanitize_all_ref_flags
-#endif
+#endif /* VERBOSED_REFINEMENTS */
       endif
 
-#ifdef VERBOSE
+#ifdef VERBOSED_REFINEMENTS
       cnt(PROBLEM) = all_cg%count_ref_flags()
       call piernik_MPI_Allreduce(cnt(PROBLEM), pSUM)
-#endif
+#endif /* VERBOSED_REFINEMENTS */
 
       call auto_refine_derefine(leaves)
-#ifdef VERBOSE
+#ifdef VERBOSED_REFINEMENTS
       call sanitize_all_ref_flags
       cnt(AUTO) = all_cg%count_ref_flags()
       call piernik_MPI_Allreduce(cnt(AUTO), pSUM)
-#endif
+#endif /* VERBOSED_REFINEMENTS */
 
       call mark_all_primitives
       call sanitize_all_ref_flags
-#ifdef VERBOSE
+#ifdef VERBOSED_REFINEMENTS
       cnt(PRIMITIVES) = all_cg%count_ref_flags()
       call piernik_MPI_Allreduce(cnt(PRIMITIVES), pSUM)
       if (cnt(ubound(cnt, dim=1)) > 0) then
@@ -106,7 +106,7 @@ contains
               &                cnt(PROBLEM), cnt(AUTO)-cnt(PROBLEM), cnt(PRIMITIVES)-cnt(AUTO)," block(s) for refinement, respectively."
          if (master) call printinfo(msg)
       endif
-#endif
+#endif /* VERBOSED_REFINEMENTS */
       call ref_flags_to_ref_list
 
    end subroutine scan_for_refinements
@@ -610,7 +610,7 @@ contains
 
 #ifdef DEBUG_DUMPS
       call piernik_MPI_Allreduce(failed, pLOR)
-#endif
+#endif /* DEBUG_DUMPS */
       if (failed) then
 #ifdef DEBUG_DUMPS
          call write_hdf5

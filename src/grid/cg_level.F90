@@ -181,9 +181,9 @@ contains
             else
                header = repeat(" ", hl)
             endif
-            if (maxval(this%n_d(:)) < 1000000) then
+            if (maxval(this%l%n_d(:)) < 1000000) then
                write(msg,'(2a,2(3i7,a),i8,a)') header(:hl), " : [", this%dot%gse(p)%c(i)%se(:, LO), "] : [", this%dot%gse(p)%c(i)%se(:, HI), "] #", ccnt, " cells"
-            else if (maxval(this%n_d(:)) < 1000000000) then
+            else if (maxval(this%l%n_d(:)) < 1000000000) then
                write(msg,'(2a,2(3i10,a),i8,a)') header(:hl), " : [", this%dot%gse(p)%c(i)%se(:, LO), "] : [", this%dot%gse(p)%c(i)%se(:, HI), "] #", ccnt, " cells"
             else
                write(msg,'(2a,2(3i18,a),i8,a)') header(:hl), " : [", this%dot%gse(p)%c(i)%se(:, LO), "] : [", this%dot%gse(p)%c(i)%se(:, HI), "] #", ccnt, " cells"

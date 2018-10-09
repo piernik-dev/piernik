@@ -498,7 +498,7 @@ contains
 
 #ifdef MAGNETIC
       call print_divB_norm
-#endif
+#endif /* MAGNETIC */
 
    end subroutine problem_initial_conditions
 
@@ -647,7 +647,7 @@ contains
 
 #ifdef MAGNETIC
       call print_divB_norm
-#endif
+#endif /* MAGNETIC */
 
    end subroutine calculate_error_norm
 
