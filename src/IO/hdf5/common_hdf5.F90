@@ -333,6 +333,9 @@ contains
 #ifdef RANDOMIZE
       use randomization, only: write_current_seed_to_restart
 #endif /* RANDOMIZE */
+#ifdef SN_SRC
+      use snsources,     only: write_snsources_to_restart
+#endif /* SN_SRC */
 
       implicit none
 
@@ -393,6 +396,9 @@ contains
 #ifdef RANDOMIZE
       call write_current_seed_to_restart(file_id)
 #endif /* RANDOMIZE */
+#ifdef SN_SRC
+      call write_snsources_to_restart(file_id)
+#endif /* SN_SRC */
       if (associated(user_attrs_wr)) call user_attrs_wr(file_id)
 
       call h5fclose_f(file_id, error)

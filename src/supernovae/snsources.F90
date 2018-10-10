@@ -32,7 +32,7 @@ module snsources
 ! pulled by SN_SRC
    implicit none
    private
-   public ::  random_sn, init_snsources, r_sn, amp_cr_sn
+   public ::  random_sn, init_snsources, r_sn, amp_cr_sn, nsn_last, read_snsources_from_restart, write_snsources_to_restart
 #ifdef COSM_RAYS
    public :: cr_sn
 #endif /* COSM_RAYS */
@@ -150,6 +150,7 @@ contains
    subroutine random_sn
 
       use constants, only: small
+      use dataio_pub, only: msg, printinfo
       use global,    only: t
 
       implicit none
@@ -163,10 +164,14 @@ contains
       nsn = int(t/dt_sn)
       nsn_per_timestep = nsn - nsn_last
       nsn_last = nsn
+      write(msg,*) '[random_sn] nsn_per_timestep, nsn_last, nsn = ', nsn_per_timestep, nsn_last, nsn
+      call printinfo(msg)
 
       do isn = 1, nsn_per_timestep
 
          call rand_coords(snpos)
+         write(msg,*) '[random_sn] snpos = ', snpos
+         call printinfo(msg)
 
 #ifdef COSM_RAYS
          call cr_sn(snpos,amp_cr_sn)
@@ -369,5 +374,45 @@ contains
          endif
 
       end function gasdev
+
+   subroutine write_snsources_to_restart(file_id)
+
+      use hdf5, only: HID_T, SIZE_T
+      use h5lt, only: h5ltset_attribute_int_f
+
+      implicit none
+
+      integer(HID_T), intent(in) :: file_id
+      integer(SIZE_T)            :: bufsize
+      integer(kind=4)            :: error
+      integer, dimension(1)      :: lnsnbuf
+
+      bufsize = 1
+      lnsnbuf(bufsize) = nsn_last
+      call h5ltset_attribute_int_f(file_id, "/", "nsn_last", lnsnbuf, bufsize, error)
+
+   end subroutine write_snsources_to_restart
+
+!-----------------------------------------------------------------------------
+
+   subroutine read_snsources_from_restart(file_id)
+
+      use cmp_1D_mpi, only: compare_array1D
+      use hdf5,       only: HID_T
+      use h5lt,       only: h5ltget_attribute_int_f
+
+      implicit none
+
+      integer(HID_T), intent(in)         :: file_id
+      integer(kind=4)                    :: error
+      integer, dimension(:), allocatable :: lnsnbuf
+
+      if (.not.allocated(lnsnbuf)) allocate(lnsnbuf(1))
+      call h5ltget_attribute_int_f(file_id, "/", "nsn_last", lnsnbuf, error)
+      call compare_array1D(lnsnbuf)
+      nsn_last = lnsnbuf(1)
+      deallocate(lnsnbuf)
+
+   end subroutine read_snsources_from_restart
 
 end module snsources
