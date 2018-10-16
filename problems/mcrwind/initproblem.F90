@@ -186,7 +186,7 @@ contains
       use gravity,        only: grav_pot_3d
 #endif /* GRAV */
 #ifdef COSM_RAYS_SOURCES
-      use cr_data,        only: cr_sigma, icr_N14, icr_O16
+      use cr_data,        only: cr_sigma, icr_O16
 #endif /* COSM_RAYS_SOURCES */
       implicit none
 
@@ -198,13 +198,9 @@ contains
 #ifdef SN_GALAXY
       real                            :: decr, x1, x2, y1, y2, z1
 #endif /* SN_GALAXY */
-#ifdef CR_SN
-      logical                         :: eCRSP_N14, eCRSP_O16
-#endif /* CR_SN */
 
 #ifdef COSM_RAYS_SOURCES
 ! really workaround for the gold
-      if (eCRSP(icr_N14)) cr_sigma(cr_table(icr_N14),:) = 0.0
       if (eCRSP(icr_O16)) cr_sigma(cr_table(icr_O16),:) = 0.0
 #endif /* COSM_RAYS_SOURCES */
 
@@ -266,12 +262,7 @@ contains
       enddo
 
 #ifdef CR_SN
-      !> \deprecated BEWARE: following lines seems to be a workaround for the gold (lines inconsistent with the gold for some reason from cr_sn_beware)
-      eCRSP_N14 = eCRSP(icr_N14) ; eCRSP(icr_N14) = .false.
-      eCRSP_O16 = eCRSP(icr_O16) ; eCRSP(icr_O16) = .false.
       call cr_sn(sn_pos,amp_cr)
-      eCRSP(icr_N14) = eCRSP_N14
-      eCRSP(icr_O16) = eCRSP_O16
 #endif /* CR_SN */
 
 
