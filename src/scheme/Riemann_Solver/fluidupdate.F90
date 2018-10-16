@@ -51,7 +51,7 @@ contains
 
   subroutine fluid_update
 
-    use constants,    only: GEO_XYZ, DIVB_HDC
+    use constants,    only: GEO_XYZ, DIVB_HDC, I_ZERO, I_ONE
     use dataio_pub,   only: halfstep, die
     use domain,       only: dom, is_refined
     use fluidindex,   only: flind
@@ -74,9 +74,9 @@ contains
 #ifdef ISO
 #  error Isothermal EOS is not implemented yet in this Riemann solver.
 #endif /* ISO */
-    nmag = 0
+    nmag = I_ZERO
     do i = 1, flind%fluids
-       if (flind%all_fluids(i)%fl%is_magnetized) nmag = nmag + 1
+       if (flind%all_fluids(i)%fl%is_magnetized) nmag = nmag + I_ONE
     enddo
     if (nmag > 1) call die("[fluidupdate:fluid_update] At most one magnetized fluid is implemented")
 

@@ -277,7 +277,8 @@ contains
      class(component_fluid), pointer  :: fl
      type(cg_list_element),  pointer  :: cgl
      type(grid_container),   pointer  :: cg
-     integer                          :: i, j, k, ipsi
+     integer                          :: i, j, k
+     integer(kind=4)                  :: ipsi
 
      if (.not. use_eglm) return
 
