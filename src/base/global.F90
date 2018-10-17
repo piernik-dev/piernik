@@ -56,7 +56,7 @@ module global
    real            :: t, dt, dt_old, dtm, t_saved
    integer         :: divB_0_method            !< encoded method of making div(B) = 0 (currently DIVB_CT or DIVB_HDC)
    logical         :: force_cc_mag             !< treat magnetic field as cell-centered in the Riemann solver (temporary hack)
-   integer         :: psi_bnd                  !< BND_INVALID or enforce some other psi boundary
+   integer(kind=4) :: psi_bnd                  !< BND_INVALID or enforce some other psi boundary
 
    ! Namelist variables
 
