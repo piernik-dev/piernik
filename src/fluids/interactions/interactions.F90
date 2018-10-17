@@ -290,20 +290,19 @@ contains
 !! Balsara Dinshaw S., Tilley David A., Rettig Terrence, Brittain Sean D. MNRAS (2009) 397: 24.
 !! Tilley, David A., Balsara, Dinshaw S. MNRAS (2008) 389: 1058.
 !<
-   subroutine balsara_implicit_interactions(u1, u0, vx, istep, sweep, i1, i2, cg)
+   subroutine balsara_implicit_interactions(u1, vx, istep, sweep, i1, i2, cg)
 
-      use constants,        only: half, one, zero, I_ONE, I_TWO, LO, HI, cs_i2_n
+      use constants,        only: half, one, zero, I_ONE, I_TWO, LO, HI, cs_i2_n, uh_n
       use dataio_pub,       only: msg, warn
-      use fluidindex,       only: iarr_all_dn, iarr_all_mx, flind
+      use fluidindex,       only: flind, iarr_all_dn, iarr_all_mx, iarr_all_swp
       use global,           only: dt
       use grid_cont,        only: grid_container
       use mpisetup,         only: master
-      use named_array_list, only: qna
+      use named_array_list, only: qna, wna
 
       implicit none
 
       real, dimension(:,:), intent(inout)        :: u1
-      real, dimension(:,:), intent(in)           :: u0
       real, dimension(:,:), intent(in)           :: vx
       integer, intent(in)                        :: istep
       integer(kind=4),               intent(in)  :: sweep              !< direction (x, y or z) we are doing calculations for
@@ -313,6 +312,7 @@ contains
 
       real, dimension(:), pointer                :: cs_iso2
       real, dimension(size(u1, 1), flind%fluids) :: vprim
+      real, dimension(size(u1, 1), flind%all)    :: u0
       real, dimension(size(u1, 1))               :: delta, drag
       integer, dimension(2)                      :: tfl
       character(len=*), dimension(3), parameter  :: flns = ['ION', 'NEU', 'DST'] !< \todo move this to fluids modules
@@ -343,6 +343,7 @@ contains
          vprim(:, tfl(LO)) =  delta(:)*( (1./u1(:, iarr_all_dn(tfl(LO))) + drag(:))*u1(:, iarr_all_mx(tfl(LO))) + drag(:)*u1(:, iarr_all_mx(tfl(HI))) )
          vprim(:, tfl(HI)) =  delta(:)*( (1./u1(:, iarr_all_dn(tfl(HI))) + drag(:))*u1(:, iarr_all_mx(tfl(HI))) + drag(:)*u1(:, iarr_all_mx(tfl(LO))) )
       else
+         u0(:, iarr_all_swp(sweep,:)) = transpose(cg%w(wna%ind(uh_n))%get_sweep(sweep,i1,i2))
          vprim(:, tfl(HI)) =  delta(:)*( drag(:)*( u0(:, iarr_all_dn(tfl(HI)))/u1(:, iarr_all_dn(tfl(HI)))*u0(:, iarr_all_mx(tfl(LO))) &
                                                  - u0(:, iarr_all_dn(tfl(LO)))/u1(:, iarr_all_dn(tfl(HI)))*u0(:, iarr_all_mx(tfl(HI))) &
                                                  + u1(:, iarr_all_mx(tfl(LO))) ) + u1(:, iarr_all_mx(tfl(HI))) * ( 1./u1(:, iarr_all_dn(tfl(HI))) + drag(:) )  )

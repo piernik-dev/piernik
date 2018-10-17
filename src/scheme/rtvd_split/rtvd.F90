@@ -366,7 +366,7 @@ contains
       endif ! (n > 1)
 
 ! Source terms -------------------------------------
-      if (sources) call all_sources(n, u, u0, u1, bb, cg, istep, sweep, i1, i2, rk2coef(integration_order,istep)*dt, pressure, vel_sweep)
+      if (sources) call all_sources(n, u, u1, bb, cg, istep, sweep, i1, i2, rk2coef(integration_order,istep)*dt, pressure, vel_sweep)
 
       call care_for_positives(n, u1, bb, cg, sweep, i1, i2)
 

@@ -125,7 +125,7 @@ contains
 !! \todo Do not pass i1 and i2, pass optional pointer to gravacc instead
 !<
 !*/
-   subroutine all_sources(n, u, u0, u1, bb, cg, istep, sweep, i1, i2, coeffdt, pressure, vel_sweep)
+   subroutine all_sources(n, u, u1, bb, cg, istep, sweep, i1, i2, coeffdt, pressure, vel_sweep)
 
       use fluidindex,       only: flind, nmag
       use grid_cont,        only: grid_container
@@ -161,7 +161,6 @@ contains
 
       integer(kind=4),               intent(in)    :: n                  !< array size
       real, dimension(n, flind%all), intent(in)    :: u                  !< vector of conservative variables
-      real, dimension(n, flind%all), intent(in)    :: u0                 !< vector of conservative variables
       real, dimension(n, flind%all), intent(inout) :: u1                 !< updated vector of conservative variables (after one timestep in second order scheme)
       real, dimension(n, nmag),      intent(in)    :: bb                 !< local copy of magnetic field
       type(grid_container), pointer, intent(in)    :: cg                 !< current grid piece
@@ -187,7 +186,7 @@ contains
 #ifndef BALSARA
       call get_updates_from_acc(n, u, usrc, fluid_interactions_exec(n, u, vx))  ! n safe
 #else /* !BALSARA */
-      call balsara_implicit_interactions(u1, u0, vx, istep, sweep, i1, i2, cg) ! n safe
+      call balsara_implicit_interactions(u1, vx, istep, sweep, i1, i2, cg) ! n safe
 #endif /* !BALSARA */
 #ifdef SHEAR
       call get_updates_from_acc(n, u, usrc, shear_acc(sweep,u)) ! n safe
