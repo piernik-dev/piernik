@@ -16,6 +16,6 @@
 #define GRAV
 
 #define SN_SRC
-
+#define RANDOMIZE
 
 #define MULTIGRID
