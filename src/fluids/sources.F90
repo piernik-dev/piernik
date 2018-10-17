@@ -30,12 +30,13 @@
 !<
 module sources
 
-! pulled by RTVD
-
    implicit none
 
    private
-   public  :: all_sources, init_sources, prepare_sources, timestep_sources
+   public :: all_sources, care_for_positives, init_sources, prepare_sources, timestep_sources
+#if defined COSM_RAYS && defined IONIZED
+   public :: limit_minimal_ecr
+#endif /* COSM_RAYS && IONIZED */
 
 contains
 
@@ -250,6 +251,8 @@ contains
 
    end subroutine get_updates_from_acc
 
+!==========================================================================================
+
 !/*
 !>
 !! \brief Subroutine collects dt limits estimations from sources
@@ -278,6 +281,154 @@ contains
 #endif /* THERM */
 
    end subroutine timestep_sources
+
+!==========================================================================================
+   subroutine care_for_positives(n, u1, bb, cg, sweep, i1, i2)
+
+      use fluidindex,       only: flind, nmag
+      use grid_cont,        only: grid_container
+
+      implicit none
+
+      integer(kind=4),               intent(in)    :: n                  !< array size
+      real, dimension(n, flind%all), intent(inout) :: u1                 !< updated vector of conservative variables (after one timestep in second order scheme)
+      real, dimension(n, nmag),      intent(in)    :: bb                 !< local copy of magnetic field
+      type(grid_container), pointer, intent(in)    :: cg                 !< current grid piece
+      integer(kind=4),               intent(in)    :: sweep              !< direction (x, y or z) we are doing calculations for
+      integer,                       intent(in)    :: i1                 !< coordinate of sweep in the 1st remaining direction
+      integer,                       intent(in)    :: i2                 !< coordinate of sweep in the 2nd remaining direction
+!locals
+      logical                                      :: full_dim
+
+      full_dim = n > 1
+
+      call limit_minimal_density(n, u1, cg, sweep, i1, i2)
+      call limit_minimal_intener(n, bb, u1)
+#if defined COSM_RAYS && defined IONIZED
+      if (full_dim) call limit_minimal_ecr(n, u1)
+#endif /* COSM_RAYS && IONIZED */
+
+   end subroutine care_for_positives
+
+!==========================================================================================
+   subroutine limit_minimal_density(n, u1, cg, sweep, i1, i2)
+
+      use constants,        only: GEO_XYZ, GEO_RPZ, xdim, ydim, zdim
+      use dataio_pub,       only: msg, die
+      use domain,           only: dom
+      use fluidindex,       only: flind, iarr_all_dn
+      use global,           only: smalld, use_smalld
+      use grid_cont,        only: grid_container
+      use mass_defect,      only: local_magic_mass
+
+      implicit none
+
+      integer(kind=4),               intent(in)    :: n                  !< array size
+      real, dimension(n, flind%all), intent(inout) :: u1                 !< updated vector of conservative variables (after one timestep in second order scheme)
+      type(grid_container), pointer, intent(in)    :: cg                 !< current grid piece
+      integer(kind=4),               intent(in)    :: sweep              !< direction (x, y or z) we are doing calculations for
+      integer,                       intent(in)    :: i1                 !< coordinate of sweep in the 1st remaining direction
+      integer,                       intent(in)    :: i2                 !< coordinate of sweep in the 2nd remaining direction
+
+!locals
+
+      integer :: ifl
+
+      if (use_smalld) then
+         ! This is needed e.g. for outflow boundaries in presence of perp. gravity
+         select case (dom%geometry_type)
+            case (GEO_XYZ)
+               local_magic_mass(:) = local_magic_mass(:) - sum(u1(dom%nb+1:n-dom%nb, iarr_all_dn), dim=1) * cg%dvol
+               u1(:, iarr_all_dn) = max(u1(:, iarr_all_dn),smalld)
+               local_magic_mass(:) = local_magic_mass(:) + sum(u1(dom%nb+1:n-dom%nb, iarr_all_dn), dim=1) * cg%dvol
+            case (GEO_RPZ)
+               select case (sweep)
+                  case (xdim)
+                     do ifl = lbound(iarr_all_dn, dim=1), ubound(iarr_all_dn, dim=1)
+                        local_magic_mass(ifl) = local_magic_mass(ifl) - sum(u1(dom%nb+1:n-dom%nb, iarr_all_dn(ifl)) * cg%x(cg%is:cg%ie)) * cg%dvol
+                     enddo
+                     u1(:, iarr_all_dn) = max(u1(:, iarr_all_dn),smalld)
+                     do ifl = lbound(iarr_all_dn, dim=1), ubound(iarr_all_dn, dim=1)
+                        local_magic_mass(ifl) = local_magic_mass(ifl) + sum(u1(dom%nb+1:n-dom%nb, iarr_all_dn(ifl)) * cg%x(cg%is:cg%ie)) * cg%dvol
+                     enddo
+                  case (ydim)
+                     local_magic_mass(:) = local_magic_mass(:) - sum(u1(dom%nb+1:n-dom%nb, iarr_all_dn), dim=1) * cg%dvol * cg%x(i2)
+                     u1(:, iarr_all_dn) = max(u1(:, iarr_all_dn),smalld)
+                     local_magic_mass(:) = local_magic_mass(:) + sum(u1(dom%nb+1:n-dom%nb, iarr_all_dn), dim=1) * cg%dvol * cg%x(i2)
+                  case (zdim)
+                     local_magic_mass(:) = local_magic_mass(:) - sum(u1(dom%nb+1:n-dom%nb, iarr_all_dn), dim=1) * cg%dvol * cg%x(i1)
+                     u1(:, iarr_all_dn) = max(u1(:, iarr_all_dn),smalld)
+                     local_magic_mass(:) = local_magic_mass(:) + sum(u1(dom%nb+1:n-dom%nb, iarr_all_dn), dim=1) * cg%dvol * cg%x(i1)
+               end select
+            case default
+               call die("[rtvd:relaxing_tvd] Unsupported geometry")
+         end select
+      else
+         if (any(u1(:, iarr_all_dn) < 0.0)) then
+            write(msg,'(3A,I4,1X,I4,A)') "[rtvd:relaxing_tvd] negative density in sweep ",sweep,"( ", i1, i2, " )"
+            call die(msg)
+         endif
+      endif
+
+   end subroutine limit_minimal_density
+
+!==========================================================================================
+   subroutine limit_minimal_intener(n, bb, u1)
+
+      use constants,        only: xdim, ydim, zdim
+      use fluidindex,       only: flind, nmag
+      use fluidtypes,       only: component_fluid
+      use func,             only: emag, ekin
+      use global,           only: smallei
+
+      implicit none
+
+      integer(kind=4),               intent(in)    :: n                  !< array size
+      real, dimension(n, nmag),      intent(in)    :: bb                 !< local copy of magnetic field
+      real, dimension(n, flind%all), intent(inout) :: u1                 !< updated vector of conservative variables (after one timestep in second order scheme)
+
+!locals
+
+      real, dimension(n)              :: kin_ener, int_ener, mag_ener
+
+      class(component_fluid), pointer :: pfl
+      integer :: ifl
+
+      do ifl = 1, flind%fluids
+         pfl => flind%all_fluids(ifl)%fl
+         if (pfl%has_energy) then
+            kin_ener = ekin(u1(:, pfl%imx), u1(:, pfl%imy), u1(:, pfl%imz), u1(:, pfl%idn))
+            if (pfl%is_magnetized) then
+               mag_ener = emag(bb(:, xdim), bb(:, ydim), bb(:, zdim))
+               int_ener = u1(:, pfl%ien) - kin_ener - mag_ener
+            else
+               int_ener = u1(:, pfl%ien) - kin_ener
+            endif
+
+            int_ener = max(int_ener, smallei)
+
+            u1(:, pfl%ien) = int_ener + kin_ener
+            if (pfl%is_magnetized) u1(:, pfl%ien) = u1(:, pfl%ien) + mag_ener
+         endif
+      enddo
+
+   end subroutine limit_minimal_intener
+
+#if defined COSM_RAYS && defined IONIZED
+   subroutine limit_minimal_ecr(n, u1)
+
+      use fluidindex,       only: flind
+      use initcosmicrays,   only: iarr_crs, smallecr
+
+      implicit none
+
+      integer(kind=4),               intent(in)    :: n                  !< array size
+      real, dimension(n, flind%all), intent(inout) :: u1                 !< updated vector of conservative variables (after one timestep in second order scheme)
+
+      u1(:, iarr_crs(:)) = max(smallecr, u1(:, iarr_crs(:)))
+
+   end subroutine limit_minimal_ecr
+#endif /* COSM_RAYS && IONIZED */
 
 !==========================================================================================
 end module sources
