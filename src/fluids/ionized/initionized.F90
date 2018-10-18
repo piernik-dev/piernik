@@ -256,7 +256,7 @@ contains
 !<
 !*/
 #define RNG 2:nm
-   subroutine flux_ion(this, flux, cfr, uu, n, vx, ps, bb, cs_iso2, use_vx)
+   subroutine flux_ion(this, flux, cfr, uu, n, vx, ps, bb, cs_iso2)
 
       use constants,    only: xdim, ydim, zdim, idn, imx, imy, imz
 #ifndef ISO
@@ -275,11 +275,10 @@ contains
       real, dimension(:,:), intent(inout), pointer :: flux      !< flux of ionized fluid
       real, dimension(:,:), intent(inout), pointer :: cfr       !< freezing speed for ionized fluid
       real, dimension(:,:), intent(in),    pointer :: uu        !< part of u for ionized fluid
-      real, dimension(:),   intent(inout), pointer :: vx        !< velocity of ionized fluid for current sweep
+      real, dimension(:),   intent(in),    pointer :: vx        !< velocity of ionized fluid for current sweep
       real, dimension(:),   intent(inout), pointer :: ps        !< pressure of ionized fluid for current sweep
       real, dimension(:,:), intent(in),    pointer :: bb        !< magnetic field x,y,z-components table
       real, dimension(:),   intent(in),    pointer :: cs_iso2   !< local isothermal sound speed squared (optional)
-      logical,              intent(in)             :: use_vx    !< use provided vx instead of computing it
 
       ! locals
       real, dimension(n) :: p           !< thermal pressure of ionized fluid
@@ -298,11 +297,6 @@ contains
 #else /* !MAGNETIC */
       pmag(:) = 0.0
 #endif /* !MAGNETIC */
-      if (.not. use_vx) then
-         vx(RNG) = uu(RNG, imx) / uu(RNG, idn)
-         vx(1) = vx(2)
-         vx(n) = vx(nm)
-      endif
 
 #ifndef ISO
       if (associated(cs_iso2)) call die("[initionized:flux_ion] cs_iso2 should not be present")

@@ -152,7 +152,7 @@ module fluidtypes
          character(len=idlen)   :: tag
       end function tag
 
-      subroutine flux_interface(this, flux, cfr, uu, n, vx, ps, bb, cs_iso2, use_vx)
+      subroutine flux_interface(this, flux, cfr, uu, n, vx, ps, bb, cs_iso2)
          import
          implicit none
          class(component_fluid), intent(in)           :: this
@@ -161,10 +161,9 @@ module fluidtypes
          real, dimension(:,:), intent(in),    pointer :: uu        !< part of u for fluid
          real, dimension(:,:), intent(inout), pointer :: cfr       !< freezing speed for fluid
          real, dimension(:,:), intent(in),    pointer :: bb        !< magnetic field x,y,z-components table
-         real, dimension(:),   intent(inout), pointer :: vx        !< velocity of fluid for current sweep
+         real, dimension(:),   intent(in),    pointer :: vx        !< velocity of fluid for current sweep
          real, dimension(:),   intent(inout), pointer :: ps        !< pressure of fluid for current sweep
          real, dimension(:),   intent(in),    pointer :: cs_iso2   !< isothermal sound speed squared
-         logical,              intent(in)             :: use_vx    !< use provided vx instead of computing it
       end subroutine flux_interface
    end interface
 

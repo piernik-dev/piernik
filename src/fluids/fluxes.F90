@@ -71,10 +71,9 @@ contains
 !! \param n number of cells in the current sweep
 !! \param cs_iso2 isothermal sound speed squared
 !! \param pp presure
-!! \param use_vx use provided vx instead of computing it
 !<
 
-   subroutine all_fluxes(n, flux, cfr, uu, bb, pp, vx, cs_iso2, use_vx)
+   subroutine all_fluxes(n, flux, cfr, uu, bb, pp, vx, cs_iso2)
       use fluidtypes,     only: component_fluid
 #ifdef COSM_RAYS
       use fluxcosmicrays, only: flux_crs
@@ -92,10 +91,9 @@ contains
       real, dimension(n, flind%all),    target,  intent(out)   :: cfr      !< array storing all freezing speeds
       real, dimension(n, flind%all),    target,  intent(out)   :: uu       !< array with current fluid state
       real, dimension(n, nmag),         target,  intent(in)    :: bb       !< array with current magnetic field state
-      real, dimension(n, flind%fluids), target,  intent(inout) :: vx       !< array storing velocity in current sweep direction (reused later)
+      real, dimension(n, flind%fluids), target,  intent(in)    :: vx       !< array storing velocity in current sweep direction (reused later)
       real, dimension(n, flind%fluids), target,  intent(out)   :: pp       !< array storing pressure in current sweep (reused later)
       real, dimension(:),               pointer, intent(in)    :: cs_iso2  !< array with current sound speed squared
-      logical,                                   intent(in)    :: use_vx   !< use provided vx instead of computing it
 
       real, dimension(:,:),             pointer                :: pflux, pcfr, puu, pbb
       real, dimension(:),               pointer                :: pvx, ppp
@@ -119,7 +117,7 @@ contains
          pvx   =>   vx(:, pfl%pos)
          ppp   =>   pp(:, pfl%pos)
 
-         call pfl%compute_flux(pflux, pcfr, puu, n, pvx, ppp, pbb, cs_iso2, use_vx)
+         call pfl%compute_flux(pflux, pcfr, puu, n, pvx, ppp, pbb, cs_iso2)
       enddo
 
 #ifdef COSM_RAYS

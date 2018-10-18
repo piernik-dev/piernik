@@ -235,11 +235,11 @@ contains
 ! OPT: we may also try to work on bigger parts of the u(:,:,:,:) at a time , but the exact amount may depend on size of the L2 cache
 ! OPT: try an explicit loop over n to see if better pipelining can be achieved
 
-   subroutine relaxing_tvd(n, u, u0, bb, cs_iso2, istep, sweep, i1, i2, dt, cg, eflx, sources, adv_vel)
+   subroutine relaxing_tvd(n, u, u0, vel_sweep, bb, cs_iso2, istep, sweep, i1, i2, dt, cg, eflx, sources)
 
       use constants,    only: one, zero, half, GEO_XYZ, GEO_RPZ, LO, ydim, zdim
       use domain,       only: dom
-      use fluidindex,   only: iarr_all_dn, iarr_all_mx, iarr_all_my, flind, nmag
+      use fluidindex,   only: iarr_all_mx, iarr_all_my, flind, nmag
       use fluxes,       only: flimiter, all_fluxes
       use fluxtypes,    only: ext_fluxes
       use global,       only: integration_order
@@ -249,36 +249,35 @@ contains
 
       implicit none
 
-      integer(kind=4),               intent(in)    :: n                  !< array size
-      real, dimension(n, flind%all), intent(inout) :: u                  !< vector of conservative variables
-      real, dimension(n, flind%all), intent(in)    :: u0                 !< vector of conservative variables
-      real, dimension(n, nmag),      intent(in)    :: bb                 !< local copy of magnetic field
-      real, dimension(:), pointer,   intent(in)    :: cs_iso2            !< square of local isothermal sound speed
-      integer,                       intent(in)    :: istep              !< step number in the time integration scheme
-      integer(kind=4),               intent(in)    :: sweep              !< direction (x, y or z) we are doing calculations for
-      integer,                       intent(in)    :: i1                 !< coordinate of sweep in the 1st remaining direction
-      integer,                       intent(in)    :: i2                 !< coordinate of sweep in the 2nd remaining direction
-      real,                          intent(in)    :: dt                 !< time step
-      type(grid_container), pointer, intent(in)    :: cg                 !< current grid piece
-      type(ext_fluxes),              intent(inout) :: eflx               !< external fluxes
-      logical,                       intent(in)    :: sources            !< apply source terms
-      real, dimension(n, flind%fluids), intent(in), optional :: adv_vel  !< advection velocity
+      integer(kind=4),                  intent(in)    :: n                  !< array size
+      real, dimension(n, flind%all),    intent(inout) :: u                  !< vector of conservative variables
+      real, dimension(n, flind%all),    intent(in)    :: u0                 !< vector of conservative variables
+      real, dimension(n, flind%fluids), intent(in)    :: vel_sweep          !< velocity in the direction of current sweep
+      real, dimension(n, nmag),         intent(in)    :: bb                 !< local copy of magnetic field
+      real, dimension(:), pointer,      intent(in)    :: cs_iso2            !< square of local isothermal sound speed
+      integer,                          intent(in)    :: istep              !< step number in the time integration scheme
+      integer(kind=4),                  intent(in)    :: sweep              !< direction (x, y or z) we are doing calculations for
+      integer,                          intent(in)    :: i1                 !< coordinate of sweep in the 1st remaining direction
+      integer,                          intent(in)    :: i2                 !< coordinate of sweep in the 2nd remaining direction
+      real,                             intent(in)    :: dt                 !< time step
+      type(grid_container), pointer,    intent(in)    :: cg                 !< current grid piece
+      type(ext_fluxes),                 intent(inout) :: eflx               !< external fluxes
+      logical,                          intent(in)    :: sources            !< apply source terms
 
-      real                                          :: dtx                !< dt/dx (dt/cg%dl(sweep))
-      real, dimension(n, flind%all)                 :: cfr                !< freezing speed
+      real                                            :: dtx                !< dt/dx (dt/cg%dl(sweep))
+      real, dimension(n, flind%all)                   :: cfr                !< freezing speed
 !locals
-      real, dimension(n, flind%all)                 :: w                  !< auxiliary vector to calculate fluxes
-      real, dimension(n, flind%all)                 :: fr                 !< flux of the right-moving waves
-      real, dimension(n, flind%all)                 :: fl                 !< flux of the left-moving waves
-      real, dimension(n, flind%all)                 :: fu                 !< sum of fluxes of right- and left-moving waves
-      real, dimension(n, flind%all)                 :: dfp                !< second order correction of left/right-moving waves flux on the right cell boundary
-      real, dimension(n, flind%all)                 :: dfm                !< second order correction of left/right-moving waves flux on the left cell boundary
-      real, dimension(n, flind%all)                 :: u1                 !< updated vector of conservative variables (after one timestep in second order scheme)
-      real, dimension(n, flind%fluids), target      :: pressure           !< gas pressure
-      real, dimension(n, flind%fluids), target      :: vel_sweep          !< velocity in the direction of current sweep
-      logical                                       :: full_dim
+      real, dimension(n, flind%all)                   :: w                  !< auxiliary vector to calculate fluxes
+      real, dimension(n, flind%all)                   :: fr                 !< flux of the right-moving waves
+      real, dimension(n, flind%all)                   :: fl                 !< flux of the left-moving waves
+      real, dimension(n, flind%all)                   :: fu                 !< sum of fluxes of right- and left-moving waves
+      real, dimension(n, flind%all)                   :: dfp                !< second order correction of left/right-moving waves flux on the right cell boundary
+      real, dimension(n, flind%all)                   :: dfm                !< second order correction of left/right-moving waves flux on the left cell boundary
+      real, dimension(n, flind%all)                   :: u1                 !< updated vector of conservative variables (after one timestep in second order scheme)
+      real, dimension(n, flind%fluids), target        :: pressure           !< gas pressure
+      logical                                         :: full_dim
 
-      real, dimension(2,2), parameter              :: rk2coef = reshape( [ one, half, zero, one ], [ 2, 2 ] )
+      real, dimension(2,2), parameter                 :: rk2coef = reshape( [ one, half, zero, one ], [ 2, 2 ] )
 
       !OPT: try to avoid these explicit initializations of u1(:,:) and u0(:,:)
       dtx      = dt / cg%dl(sweep)
@@ -286,11 +285,9 @@ contains
 
       u1 = u
 
-      if (present(adv_vel)) vel_sweep = adv_vel !TODO can be done better
-
       if (full_dim) then
          ! Fluxes calculation for cells centers
-         call all_fluxes(n, w, cfr, u1, bb, pressure, vel_sweep, cs_iso2, present(adv_vel))
+         call all_fluxes(n, w, cfr, u1, bb, pressure, vel_sweep, cs_iso2)
          ! Right and left fluxes decoupling
 
          ! original code
@@ -359,10 +356,6 @@ contains
             u1(2:n, :) = u0(2:n, :) - rk2coef(integration_order,istep) * gc(GC1,2:n, :) * dtx * ( gc(GC2,2:n, :)*fu(2:n, :) - gc(GC3,2:n, :)*fu(1:n-1, :) )
          endif
          u1(1, :)   = u1(2, :)
-      else
-         ! normally vx => vel_sweep is calculated in fluxes, since we don't go
-         ! there we need to do it manually here
-         vel_sweep = u1(:, iarr_all_mx) / u1(:, iarr_all_dn)
       endif ! (n > 1)
 
 ! Source terms -------------------------------------

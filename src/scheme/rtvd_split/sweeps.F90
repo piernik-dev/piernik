@@ -301,7 +301,6 @@ contains
       if (use_fargo .and. cdim == ydim .and. .not. present(fargo_vel)) then
          call die("[sweeps:sweep] FARGO velocity keyword not present in y sweep")
       endif
-      allocate(vx(0, 0)) ! suppress compiler warnings
 
       cn_ = 0
       full_dim = dom%has_dir(cdim)
@@ -337,12 +336,9 @@ contains
                         if (allocated(b))  deallocate(b)
                         if (allocated(u))  deallocate(u)
                         if (allocated(u0)) deallocate(u0)
-                     endif
-                     if (.not. allocated(u)) allocate(b(cg%n_(cdim), nmag), u(cg%n_(cdim), flind%all), u0(cg%n_(cdim), flind%all))
-                     if (use_fargo .and. cdim == ydim) then
                         if (allocated(vx)) deallocate(vx)
-                        allocate(vx(cg%n_(cdim), flind%fluids))
                      endif
+                     if (.not. allocated(u))  allocate( b(cg%n_(cdim), nmag), u(cg%n_(cdim), flind%all), u0(cg%n_(cdim), flind%all), vx(cg%n_(cdim), flind%fluids))
 
                      cn_ = cg%n_(cdim)
 
@@ -395,14 +391,15 @@ contains
                               endif
                            else
                               sources = .true.
+                              vx(:,:) = u(:,iarr_all_mx(:)) / u(:,iarr_all_dn(:))
+                              if (full_dim) then
+                                 vx(1,:) = vx(2,:)
+                                 vx(cg%n_(cdim),:) = vx(cg%n_(cdim)-1,:)
+                              endif
                            endif
 
                            call cg%set_fluxpointers(cdim, i1, i2, eflx)
-                           if (use_fargo .and. cdim == ydim) then
-                              call relaxing_tvd(cg%n_(cdim), u, u0, b, cs2, istep, cdim, i1, i2, dt, cg, eflx, sources, vx)
-                           else
-                              call relaxing_tvd(cg%n_(cdim), u, u0, b, cs2, istep, cdim, i1, i2, dt, cg, eflx, sources)
-                           endif
+                           call relaxing_tvd(cg%n_(cdim), u, u0, vx, b, cs2, istep, cdim, i1, i2, dt, cg, eflx, sources)
                            call cg%save_outfluxes(cdim, i1, i2, eflx)
 
                            pu(:,:) = transpose(u(:, iarr_all_swp(cdim,:)))
@@ -412,7 +409,7 @@ contains
 
                      call send_cg_coarsebnd(cdim, cg, nr)
 
-                     deallocate(b, u, u0)
+                     deallocate(b, u, u0, vx)
 
                      cg%processed = .true.
                      blocks_done = blocks_done + 1
@@ -459,6 +456,7 @@ contains
       if (allocated(b))  deallocate(b)
       if (allocated(u))  deallocate(u)
       if (allocated(u0)) deallocate(u0)
+      if (allocated(vx)) deallocate(vx)
 
    end subroutine sweep
 
