@@ -9,7 +9,9 @@
 
 #ifdef IONIZED
 #  ifndef NONMAGNETIC
-#    define MAGNETIC
+#    ifndef MAGNETIC
+#      define MAGNETIC
+#    endif /* !MAGNETIC */
 #  endif /* !NONMAGNETIC */
 #endif /* IONIZED */
 
