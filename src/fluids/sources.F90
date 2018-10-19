@@ -125,7 +125,7 @@ contains
 !! \todo Do not pass i1 and i2, pass optional pointer to gravacc instead
 !<
 !*/
-   subroutine all_sources(n, u, u1, bb, cg, istep, sweep, i1, i2, coeffdt, pressure, vel_sweep)
+   subroutine all_sources(n, u, u1, bb, cg, istep, sweep, i1, i2, coeffdt, vel_sweep)
 
       use fluidindex,       only: flind, nmag
       use grid_cont,        only: grid_container
@@ -159,28 +159,27 @@ contains
 
       implicit none
 
-      integer(kind=4),               intent(in)    :: n                  !< array size
-      real, dimension(n, flind%all), intent(in)    :: u                  !< vector of conservative variables
-      real, dimension(n, flind%all), intent(inout) :: u1                 !< updated vector of conservative variables (after one timestep in second order scheme)
-      real, dimension(n, nmag),      intent(in)    :: bb                 !< local copy of magnetic field
-      type(grid_container), pointer, intent(in)    :: cg                 !< current grid piece
-      integer,                       intent(in)    :: istep              !< step number in the time integration scheme
-      integer(kind=4),               intent(in)    :: sweep              !< direction (x, y or z) we are doing calculations for
-      integer,                       intent(in)    :: i1                 !< coordinate of sweep in the 1st remaining direction
-      integer,                       intent(in)    :: i2                 !< coordinate of sweep in the 2nd remaining direction
-      real,                          intent(in)    :: coeffdt            !< time step times scheme coefficient
-      real, dimension(n, flind%fluids), intent(in) :: pressure           !< gas pressure
-      real, dimension(n, flind%fluids), target, intent(in) :: vel_sweep  !< velocity in the direction of current sweep
+      integer(kind=4),                          intent(in)    :: n                  !< array size
+      real, dimension(n, flind%all),            intent(in)    :: u                  !< vector of conservative variables
+      real, dimension(n, flind%all),            intent(inout) :: u1                 !< updated vector of conservative variables (after one timestep in second order scheme)
+      real, dimension(n, nmag),                 intent(in)    :: bb                 !< local copy of magnetic field
+      type(grid_container), pointer,            intent(in)    :: cg                 !< current grid piece
+      integer,                                  intent(in)    :: istep              !< step number in the time integration scheme
+      integer(kind=4),                          intent(in)    :: sweep              !< direction (x, y or z) we are doing calculations for
+      integer,                                  intent(in)    :: i1                 !< coordinate of sweep in the 1st remaining direction
+      integer,                                  intent(in)    :: i2                 !< coordinate of sweep in the 2nd remaining direction
+      real,                                     intent(in)    :: coeffdt            !< time step times scheme coefficient
+      real, dimension(n, flind%fluids), target, intent(in)    :: vel_sweep          !< velocity in the direction of current sweep
 
 !locals
-      real, dimension(n, flind%all)                 :: usrc, newsrc       !< u array update from sources
-      real, dimension(:,:),            pointer      :: vx
+      real, dimension(n, flind%all)                           :: usrc, newsrc       !< u array update from sources
+      real, dimension(:,:), pointer                           :: vx
 
       vx   => vel_sweep
 
       usrc = 0.0
 
-      call geometry_source_terms_exec(u, sweep, cg, newsrc)  ! n safe
+      call geometry_source_terms_exec(u, bb, sweep, i1, i2, cg, newsrc)  ! n safe
       usrc(:,:) = usrc(:,:) + newsrc(:,:)
 
 #ifndef BALSARA
@@ -219,6 +218,9 @@ contains
 ! --------------------------------------------------
 
       u1(:,:) = u1(:,:) + usrc(:,:) * coeffdt
+
+      return
+      if (.false.) write(0,*) bb, istep
 
    end subroutine all_sources
 

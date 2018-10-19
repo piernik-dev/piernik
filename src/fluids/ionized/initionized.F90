@@ -257,7 +257,7 @@ contains
 !<
 !*/
 #define RNG 2:nm
-   subroutine flux_ion(this, flux, cfr, uu, n, vx, ps, bb, cs_iso2)
+   subroutine flux_ion(this, flux, cfr, uu, n, vx, bb, cs_iso2)
 
       use constants,    only: xdim, ydim, zdim, idn, imx, imy, imz
 #ifndef ISO
@@ -276,11 +276,11 @@ contains
       real, dimension(:,:), intent(inout), pointer :: cfr       !< freezing speed for ionized fluid
       real, dimension(:,:), intent(in),    pointer :: uu        !< part of u for ionized fluid
       real, dimension(:),   intent(in),    pointer :: vx        !< velocity of ionized fluid for current sweep
-      real, dimension(:),   intent(inout), pointer :: ps        !< pressure of ionized fluid for current sweep
       real, dimension(:,:), intent(in),    pointer :: bb        !< magnetic field x,y,z-components table
       real, dimension(:),   intent(in),    pointer :: cs_iso2   !< local isothermal sound speed squared (optional)
 
       ! locals
+      real, dimension(:), pointer :: ps        !< pressure of ionized fluid for current sweep
       real, dimension(n) :: p           !< thermal pressure of ionized fluid
       real, dimension(n) :: pmag        !< pressure of magnetic field
       integer            :: nm

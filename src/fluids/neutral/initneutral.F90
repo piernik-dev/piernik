@@ -225,7 +225,7 @@ contains
 !<
 !*/
 #define RNG 2:nm
-   subroutine flux_neu(this, flux, cfr, uu, n, vx, ps, bb, cs_iso2)
+   subroutine flux_neu(this, flux, cfr, uu, n, vx, bb, cs_iso2)
 
       use constants,    only: idn, imx, imy, imz
       use func,         only: ekin
@@ -248,11 +248,11 @@ contains
       real, dimension(:,:), intent(inout), pointer :: cfr       !< freezing speed for neutral fluid
       real, dimension(:,:), intent(in),    pointer :: uu        !< part of u for neutral fluid
       real, dimension(:),   intent(in),    pointer :: vx        !< velocity of neutral fluid for current sweep
-      real, dimension(:),   intent(inout), pointer :: ps        !< pressure of neutral fluid for current sweep
       real, dimension(:,:), intent(in),    pointer :: bb        !< magnetic field x,y,z-components table
       real, dimension(:),   intent(in),    pointer :: cs_iso2   !< isothermal sound speed squared
 
       ! locals
+      real, dimension(:), pointer :: ps        !< pressure of neutral fluid for current sweep
       integer            :: nm
 #ifdef LOCAL_FR_SPEED
       integer            :: i

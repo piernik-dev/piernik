@@ -274,7 +274,6 @@ contains
       real, dimension(n, flind%all)                   :: dfp                !< second order correction of left/right-moving waves flux on the right cell boundary
       real, dimension(n, flind%all)                   :: dfm                !< second order correction of left/right-moving waves flux on the left cell boundary
       real, dimension(n, flind%all)                   :: u1                 !< updated vector of conservative variables (after one timestep in second order scheme)
-      real, dimension(n, flind%fluids), target        :: pressure           !< gas pressure
       logical                                         :: full_dim
 
       real, dimension(2,2), parameter                 :: rk2coef = reshape( [ one, half, zero, one ], [ 2, 2 ] )
@@ -287,7 +286,7 @@ contains
 
       if (full_dim) then
          ! Fluxes calculation for cells centers
-         call all_fluxes(n, w, cfr, u1, bb, pressure, vel_sweep, cs_iso2)
+         call all_fluxes(n, w, cfr, u1, bb, vel_sweep, cs_iso2)
          ! Right and left fluxes decoupling
 
          ! original code
@@ -359,7 +358,7 @@ contains
       endif ! (n > 1)
 
 ! Source terms -------------------------------------
-      if (sources) call all_sources(n, u, u1, bb, cg, istep, sweep, i1, i2, rk2coef(integration_order,istep)*dt, pressure, vel_sweep)
+      if (sources) call all_sources(n, u, u1, bb, cg, istep, sweep, i1, i2, rk2coef(integration_order,istep)*dt, vel_sweep)
 
       call care_for_positives(n, u1, bb, cg, sweep, i1, i2)
 
