@@ -98,6 +98,7 @@ module fluidtypes
       procedure(tag),          nopass, deferred :: get_tag
       procedure(cs_get),         pass, deferred :: get_cs
       procedure(flux_interface), pass, deferred :: compute_flux
+      procedure(pres_interface), pass, deferred :: compute_pres
       procedure(pass_flind),     pass, deferred :: initialize_indices
    end type component_fluid
 
@@ -156,7 +157,7 @@ module fluidtypes
          import
          implicit none
          class(component_fluid), intent(in)           :: this
-         integer(kind=4), intent(in)                  :: n         !< number of cells in the current sweep
+         integer(kind=4),        intent(in)           :: n         !< number of cells in the current sweep
          real, dimension(:,:), intent(inout), pointer :: flux      !< flux of fluid
          real, dimension(:,:), intent(in),    pointer :: uu        !< part of u for fluid
          real, dimension(:,:), intent(inout), pointer :: cfr       !< freezing speed for fluid
@@ -165,6 +166,17 @@ module fluidtypes
          real, dimension(:),   intent(inout), pointer :: ps        !< pressure of fluid for current sweep
          real, dimension(:),   intent(in),    pointer :: cs_iso2   !< isothermal sound speed squared
       end subroutine flux_interface
+
+      subroutine pres_interface(this, n, uu, bb, cs_iso2, ps)
+         import
+         implicit none
+         class(component_fluid), intent(in)           :: this
+         integer(kind=4),        intent(in)           :: n         !< number of cells in the current sweep
+         real, dimension(:,:),   intent(in),  pointer :: uu        !< part of u for fluid
+         real, dimension(:,:),   intent(in),  pointer :: bb        !< magnetic field x,y,z-components table
+         real, dimension(:),     intent(in),  pointer :: cs_iso2   !< isothermal sound speed squared
+         real, dimension(:),     intent(out), pointer :: ps        !< pressure of fluid for current sweep
+      end subroutine pres_interface
    end interface
 
 contains

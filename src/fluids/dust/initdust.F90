@@ -50,6 +50,7 @@ module initdust
          procedure, nopass :: get_tag
          procedure, pass   :: get_cs => dust_cs
          procedure, pass   :: compute_flux => flux_dust
+         procedure, pass   :: compute_pres => pres_dust
          procedure, pass   :: initialize_indices => initialize_dust_indices
    end type dust_fluid
 
@@ -249,4 +250,23 @@ contains
       if (.false.) write(0,*) bb, cs_iso2, this%all
 
    end subroutine flux_dust
+
+   subroutine pres_dust(this, n, uu, bb, cs_iso2, ps)
+
+      implicit none
+
+      class(dust_fluid),    intent(in)           :: this
+      integer(kind=4),      intent(in)           :: n         !< number of cells in the current sweep
+      real, dimension(:,:), intent(in),  pointer :: uu        !< part of u for ionized fluid
+      real, dimension(:,:), intent(in),  pointer :: bb        !< magnetic field x,y,z-components table
+      real, dimension(:),   intent(in),  pointer :: cs_iso2   !< local isothermal sound speed squared (optional)
+      real, dimension(:),   intent(out), pointer :: ps        !< pressure of ionized fluid for current sweep
+
+      ps(:) = 0.0
+
+      return
+      if (.false.) write(0,*) this%gam, n, uu, bb, cs_iso2
+
+   end subroutine pres_dust
+
 end module initdust

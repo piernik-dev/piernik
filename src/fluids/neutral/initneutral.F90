@@ -53,6 +53,7 @@ module initneutral
          procedure, nopass :: get_tag
          procedure, pass   :: get_cs => neu_cs
          procedure, pass   :: compute_flux => flux_neu
+         procedure, pass   :: compute_pres => pres_neu
          procedure, pass   :: initialize_indices => initialize_neu_indices
    end type neutral_fluid
 
@@ -261,12 +262,7 @@ contains
 #endif /* LOCAL_FR_SPEED */
 
       nm = n-1
-#ifdef ISO
-      ps(RNG) = cs_iso2(RNG) * uu(RNG, idn) ; ps(1) = ps(2); ps(n) = ps(nm)
-#else /* !ISO */
-      ps(RNG) = (uu(RNG, ien) - ekin(uu(RNG, imx),uu(RNG, imy),uu(RNG, imz),uu(RNG, idn)) )*(this%gam_1)
-      ps(RNG) = max(ps(RNG), smallp)
-#endif /* !ISO */
+      call pres_neu(this, n, uu, bb, cs_iso2, ps)
 
       flux(RNG, idn)=uu(RNG, idn)*vx(RNG)
       flux(RNG, imx)=uu(RNG, imx)*vx(RNG)+ps(RNG)
@@ -314,11 +310,49 @@ contains
       cfr(:,:) = c_all
 #endif /* GLOBAL_FR_SPEED */
       return
-      if (.false.) write(0,*) bb, cs_iso2
 #if defined(LOCAL_FR_SPEED) || defined(ISO)
       if (.false.) print *, this%all
 #endif /* defined(LOCAL_FR_SPEED) || defined(ISO) */
 
    end subroutine flux_neu
+
+   subroutine pres_neu(this, n, uu, bb, cs_iso2, ps)
+
+      use constants,    only: idn
+#ifndef ISO
+      use constants,    only: imx, imy, imz, ien
+      use dataio_pub,   only: die
+      use func,         only: ekin
+      use global,       only: smallp
+#endif /* !ISO */
+
+      implicit none
+
+      class(neutral_fluid), intent(in)           :: this
+      integer(kind=4),      intent(in)           :: n         !< number of cells in the current sweep
+      real, dimension(:,:), intent(in),  pointer :: uu        !< part of u for neutral fluid
+      real, dimension(:,:), intent(in),  pointer :: bb        !< magnetic field x,y,z-components table
+      real, dimension(:),   intent(in),  pointer :: cs_iso2   !< local isothermal sound speed squared (optional)
+      real, dimension(:),   intent(out), pointer :: ps        !< pressure of neutral fluid for current sweep
+
+      ! locals
+      integer            :: nm
+
+      nm = n-1
+#ifdef ISO
+      ps(RNG) = cs_iso2(RNG) * uu(RNG, idn) ; ps(1) = ps(2); ps(n) = ps(nm)
+#else /* !ISO */
+      if (associated(cs_iso2)) call die("[initionized:pres_neu] cs_iso2 should not be present")
+      ps(RNG) = (uu(RNG, ien) - ekin(uu(RNG, imx),uu(RNG, imy),uu(RNG, imz),uu(RNG, idn)) )*(this%gam_1)
+      ps(RNG) = max(ps(RNG), smallp)
+#endif /* !ISO */
+
+      return
+      if (.false.) write(0,*) bb
+#ifdef ISO
+      if (.false.) write(0,*) this%gam
+#endif /* ISO */
+
+   end subroutine pres_neu
 
 end module initneutral
