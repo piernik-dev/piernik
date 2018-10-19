@@ -180,7 +180,7 @@ contains
 
       usrc = 0.0
 
-      call geometry_source_terms_exec(u, pressure, sweep, cg, newsrc)  ! n safe
+      call geometry_source_terms_exec(u, sweep, cg, newsrc)  ! n safe
       usrc(:,:) = usrc(:,:) + newsrc(:,:)
 
 #ifndef BALSARA
