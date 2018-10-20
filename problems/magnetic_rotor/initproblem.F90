@@ -141,7 +141,7 @@ contains
     use fluidindex,  only: flind
     use fluidtypes,  only: component_fluid
     use func,        only: ekin, emag
-    use global,      only: force_cc_mag
+!    use global,      only: force_cc_mag
 
     implicit none
 
@@ -173,8 +173,8 @@ contains
                    ! Density
                    cg%u(fl%idn,i,j,k) = 10.0
                    ! Velocity
-                   cg%u(fl%imx,i,j,k) = -omega*cg%y(j)/cg%u(fl%idn,i,j,k)
-                   cg%u(fl%imy,i,j,k) = omega*cg%x(i)/cg%u(fl%idn,i,j,k)
+                   cg%u(fl%imx,i,j,k) = -omega*cg%y(j) * cg%u(fl%idn,i,j,k)
+                   cg%u(fl%imy,i,j,k) =  omega*cg%x(i) * cg%u(fl%idn,i,j,k)
                    cg%u(fl%imz,i,j,k) = zero
 
                 else if ( sqrt( cg%x(i)*cg%x(i)+cg%y(j)*cg%y(j) ) < r1 ) then ! r< r1
@@ -182,8 +182,8 @@ contains
                    ! Density
                    cg%u(fl%idn,i,j,k) = one + 9.0*f_taper
                    ! Velocity
-                   cg%u(fl%imx,i,j,k) = -f_taper*omega*cg%y(j)*r0_r/cg%u(fl%idn,i,j,k)
-                   cg%u(fl%imy,i,j,k) = f_taper*omega*cg%x(i)*r0_r/cg%u(fl%idn,i,j,k)
+                   cg%u(fl%imx,i,j,k) = -f_taper*omega*cg%y(j)*r0_r * cg%u(fl%idn,i,j,k)
+                   cg%u(fl%imy,i,j,k) =  f_taper*omega*cg%x(i)*r0_r * cg%u(fl%idn,i,j,k)
                    cg%u(fl%imz,i,j,k) = zero
 
                 else ! r > r1
@@ -201,14 +201,14 @@ contains
                 cg%u(fl%ien,i,j,k) = uni_pres/fl%gam_1 + ekin(cg%u(fl%imx,i,j,k), cg%u(fl%imy,i,j,k), cg%u(fl%imz,i,j,k), cg%u(fl%idn,i,j,k)) + &
                                              emag(cg%b(xdim,i,j,k), cg%b(ydim,i,j,k), cg%b(zdim,i,j,k))
 
-                 if (force_cc_mag) then
+                !if (force_cc_mag) then
 
                     cg%b(xdim,i,j,k) = Bx
                     cg%b(ydim,i,j,k) = zero
                     cg%b(zdim,i,j,k) = zero
 
-                 endif
-                 ! For CT, with face-centered A_{z} = Bx*y
+                !endif
+                ! For CT, with face-centered A_{z} = Bx*y
 
              enddo
           enddo
