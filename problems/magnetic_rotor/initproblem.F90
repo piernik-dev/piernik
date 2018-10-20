@@ -33,24 +33,24 @@
 !!
 !! \details The two dimensional rotor problem is implemented
 !! to PIERNIK following Journal of Computational Physics 229 (2010) 2117–2138, Mignone. A, Tzeferacos. P, Sec. 4.6.
-!! Such an implementation can be found in the PLUTO code. 
+!! Such an implementation can be found in the PLUTO code.
 !!
 !! This test problem consists of a dense disk rotating in an ambient medium, which is initially static, and threaded
 !! by an initially uniform magnetic field. Due to the spin of the rotor, the magnetic field is wrapped around the
 !! disk creating torsional Alfven waves. The interaction of the torsional waves with the disk extracts the angular
 !! momentum. Also, the buid-up of the magnetic pressure leads to the compression of the rotor.
 !!
-!! The box size is given by (x,y):([-0.5,0.5],[-0.5,0.5]) discretized on on N_x = N_y = 400 grid cells. 
+!! The box size is given by (x,y):([-0.5,0.5],[-0.5,0.5]) discretized on on N_x = N_y = 400 grid cells.
 !! At t=0,
 !! (\rho,v_{x},v_{y}) = \begin{cases}
 !!                        (10,-\omega y, \omega x) & \text{if} r \leq r_{0} \\
 !!                        (1 + 9f,-f \omega y \frac{r_{0}}{r}, f \omega x \frac{r_{0}}{r}) & \text{if} r_{0} \le r \le r_{1} \\
-!!                        (1,0,0) & \text{if} r \geq r_{1},  
+!!                        (1,0,0) & \text{if} r \geq r_{1},
 !!                      \end{cases}
 !! where \omega = 20, r_{0} = 1, r_{1} = 0.115, r = \sqrt{x^{2} + y^{2}}. The taper function is f = (r_{1} - r)/(r_{1} - r_{0}).
 !! Thermal pressure is unifrom at t=0, and set to 1 (\gamma = 1.4 is used). The only non-vanishing component of the magnetic
 !! field, B_{x} = 5/\sqrt{4\pi}.
-!! Outflow boundary conditions are used in both the directions.  
+!! Outflow boundary conditions are used in both the directions.
 !<
 
 module initproblem
@@ -90,7 +90,7 @@ contains
     uni_pres = 1.0
     Bx       = 5.0/sqrt(4.0*pi)
 
-    if(master) then
+    if (master) then
 
        if (.not.nh%initialized) call nh%init()
          open(newunit=nh%lun, file=nh%tmp1, status="unknown")
@@ -114,19 +114,19 @@ contains
          rbuff(4) = uni_pres
          rbuff(5) = Bx
 
-    end if
-    
+    endif
+
     call piernik_MPI_Bcast(rbuff)
 
-    if(slave) then
-       
+    if (slave) then
+
        omega    = rbuff(1)
        r0       = rbuff(2)
        r1       = rbuff(3)
        uni_pres = rbuff(4)
        Bx       = rbuff(5)
 
-    end if
+    endif
 
   end subroutine read_problem_par
 
@@ -136,7 +136,7 @@ contains
 
     use cg_leaves,   only: leaves
     use cg_list,     only: cg_list_element
-    use constants,   only: xdim, ydim, zdim, one, zero, LEFT
+    use constants,   only: xdim, ydim, zdim, one, zero
     use grid_cont,   only: grid_container
     use fluidindex,  only: flind
     use fluidtypes,  only: component_fluid
@@ -164,11 +164,11 @@ contains
              do i = cg%is, cg%ie
 
                 ! r = sqrt( cg%x(i)*cg%x(i)+cg%y(j)*cg%y(j) )
- 
+
                 f_taper = ( r1 - sqrt( cg%x(i)*cg%x(i)+cg%y(j)*cg%y(j) ) )/( r1 - r0 )
                 r0_r    = r0/sqrt( cg%x(i)*cg%x(i)+cg%y(j)*cg%y(j) )
 
-                if( sqrt( cg%x(i)*cg%x(i)+cg%y(j)*cg%y(j) ) <= r0 ) then ! r <= r0
+                if ( sqrt( cg%x(i)*cg%x(i)+cg%y(j)*cg%y(j) ) <= r0 ) then ! r <= r0
 
                    ! Density
                    cg%u(fl%idn,i,j,k) = 10.0
@@ -177,17 +177,17 @@ contains
                    cg%u(fl%imy,i,j,k) = omega*cg%x(i)/cg%u(fl%idn,i,j,k)
                    cg%u(fl%imz,i,j,k) = zero
 
-                else if( sqrt( cg%x(i)*cg%x(i)+cg%y(j)*cg%y(j) ) < r1 ) then ! r< r1
+                else if ( sqrt( cg%x(i)*cg%x(i)+cg%y(j)*cg%y(j) ) < r1 ) then ! r< r1
 
                    ! Density
-                   cg%u(fl%idn,i,j,k) = one + 9.0*f_taper 
+                   cg%u(fl%idn,i,j,k) = one + 9.0*f_taper
                    ! Velocity
                    cg%u(fl%imx,i,j,k) = -f_taper*omega*cg%y(j)*r0_r/cg%u(fl%idn,i,j,k)
                    cg%u(fl%imy,i,j,k) = f_taper*omega*cg%x(i)*r0_r/cg%u(fl%idn,i,j,k)
                    cg%u(fl%imz,i,j,k) = zero
-                
+
                 else ! r > r1
-                   
+
                    ! Density
                    cg%u(fl%idn,i,j,k) = 1.0
                    ! Velocity
@@ -195,27 +195,27 @@ contains
                    cg%u(fl%imy,i,j,k) = zero
                    cg%u(fl%imz,i,j,k) = zero
 
-                end if
+                endif
 
                 ! Pressure/Energy
                 cg%u(fl%ien,i,j,k) = uni_pres/fl%gam_1 + ekin(cg%u(fl%imx,i,j,k), cg%u(fl%imy,i,j,k), cg%u(fl%imz,i,j,k), cg%u(fl%idn,i,j,k)) + &
-                                             emag(cg%b(xdim,i,j,k), cg%b(ydim,i,j,k), cg%b(zdim,i,j,k)) 
-                
+                                             emag(cg%b(xdim,i,j,k), cg%b(ydim,i,j,k), cg%b(zdim,i,j,k))
+
                  if (force_cc_mag) then
-                    
+
                     cg%b(xdim,i,j,k) = Bx
                     cg%b(ydim,i,j,k) = zero
                     cg%b(zdim,i,j,k) = zero
-                    
-                 end if 
+
+                 endif
                  ! For CT, with face-centered A_{z} = Bx*y
 
-             end do
-          end do
-       end do
+             enddo
+          enddo
+       enddo
 
        cgl => cgl%nxt
-    end do
+    enddo
 
   end subroutine problem_initial_conditions
 
