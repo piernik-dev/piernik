@@ -228,7 +228,6 @@ contains
    subroutine flux_neu(this, flux, cfr, uu, n, vx, bb, cs_iso2)
 
       use constants,    only: idn, imx, imy, imz
-      use func,         only: ekin
 #ifdef LOCAL_FR_SPEED
       use constants,    only: small, half
       use global,       only: cfr_smooth
@@ -238,7 +237,6 @@ contains
 #endif /* GLOBAL_FR_SPEED */
 #ifndef ISO
       use constants,    only: ien
-      use global,       only: smallp
 #endif /* !ISO */
 
       implicit none
