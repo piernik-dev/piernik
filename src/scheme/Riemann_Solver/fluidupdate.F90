@@ -68,9 +68,6 @@ contains
     ! is_multicg should be safe
     if (is_refined) call die("[fluid_update] This Rieman solver is not compatible with mesh refinements yet!")
     if (dom%geometry_type /= GEO_XYZ) call die("[fluid_update] Non-cartesian geometry is not implemented yet in this Riemann solver.")
-#ifdef GRAV
-#  error Graviy is not implemented yet in this Riemann solver.
-#endif /* GRAV */
 #ifdef ISO
 #  error Isothermal EOS is not implemented yet in this Riemann solver.
 #endif /* ISO */
