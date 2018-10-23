@@ -281,6 +281,9 @@ contains
          dt = min(dt,timestep_thermal(cg))
 #endif /* THERM */
 
+      return
+      if (.false.) write(0,*) dt, cg%inv_x(1)
+
    end subroutine timestep_sources
 
 !==========================================================================================
