@@ -261,13 +261,11 @@ contains
       use common_hdf5, only: common_shortcuts
       use constants,   only: dsetnamelen, I_ONE
       use fluids_pub,  only: has_ion, has_neu, has_dst
+      use fluidindex,  only: flind
       use fluidtypes,  only: component_fluid
       use func,        only: ekin, emag, sq_sum3
       use grid_cont,   only: grid_container
       use mpisetup,    only: proc
-#if defined(COSM_RAYS) || defined(TRACER) || !defined(ISO)
-      use fluidindex,  only: flind
-#endif /* COSM_RAYS || TRACER || !ISO */
 #ifdef MAGNETIC
       use div_B,       only: divB_c_IO
       use domain,      only: dom
