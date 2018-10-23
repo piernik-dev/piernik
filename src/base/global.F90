@@ -179,8 +179,10 @@ contains
       no_dirty_checks = .false.
 #ifdef MAGNETIC
       sweeps_mgu  = .false.
+      print_divB  = 100
 #else /* !MAGNETIC */
       sweeps_mgu  = .true.
+      print_divB  = 0
 #endif /* !MAGNETIC */
 
       cfl         = 0.7
@@ -201,7 +203,6 @@ contains
       glm_alpha   = 0.1
       skip_sweep  = .false.
       use_eglm    = .false.
-      print_divB  = 100
       cfl_glm     = cfl
       ch_grid     = .false.
       w_epsilon   = 1e-10
