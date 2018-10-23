@@ -99,6 +99,7 @@ contains
       use constants,  only: dsetnamelen
       use fluidindex, only: iarr_all_dn, iarr_all_mx, iarr_all_my, iarr_all_mz
       use fluids_pub, only: has_ion, has_dst, has_neu
+      use global,     only: force_cc_mag
 #ifdef COSM_RAYS
       use dataio_pub, only: warn, msg
       use fluidindex, only: iarr_all_crs
@@ -109,9 +110,10 @@ contains
       character(len=dsetnamelen), dimension(:), intent(in) :: vars  !< quantities to be plotted, see dataio::vars
 
       integer                                              :: nvars, i, j
+      character                                            :: fc, ord
+      character(len=dsetnamelen)                           :: aux
 #if defined COSM_RAYS
       integer                                              :: k
-      character(len=dsetnamelen)                           :: aux
 #endif /* COSM_RAYS */
 
       nvars = 0
@@ -142,7 +144,7 @@ contains
                nhdf_vars = nhdf_vars + 1
 #endif /* MULTIGRID */
 #endif /* GRAV */
-            case ('magx', 'magy', 'magz', 'pres')
+            case ('magx', 'magy', 'magz', 'pres', 'divb', 'divb4', 'divb6', 'divb8')
                nhdf_vars = nhdf_vars + 1
 #ifdef COSM_RAYS
             case ('encr')
@@ -198,6 +200,22 @@ contains
                if (has_ion) then ; hdf_vars(j) = 'ethi' ; j = j + 1 ; endif
             case ("magx", "magy", "magz")
                hdf_vars(j) = vars(i) ; j = j + 1
+            case ("divb", "divB")
+               if (force_cc_mag) then
+                  hdf_vars(j) = "divbc"
+               else
+                  hdf_vars(j) = "divbf"
+               endif
+               j = j + 1
+            case ("divb4", "divb6", "divb8")
+               if (force_cc_mag) then
+                  fc = "c"
+               else
+                  fc = "f"
+               endif
+               read(vars(i), '(a4,a1)') aux, ord
+               write(hdf_vars(j), '(3a)') "divb", fc, ord
+               j = j + 1
 #ifdef COSM_RAYS
             case ('encr')
                do k = 1, size(iarr_all_crs,1)

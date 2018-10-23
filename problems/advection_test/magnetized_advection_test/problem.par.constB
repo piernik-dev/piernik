@@ -56,7 +56,7 @@
     dt_res  = 0.0
     dt_log  = 0.001
     dt_tsl  = 0.001
-    vars(1:) = 'ener', 'dens', 'velx', 'vely', 'velz', "magx", "magy", "magz", "magB", "magdir", "divbc", "divbf", "divbf4", "divbc4", "pmag%"
+    vars(1:) = 'ener', 'dens', 'velx', 'vely', 'velz', "magx", "magy", "magz", "magB", "magdir", "divb", "divb4", "pmag%"
     gdf_strict = .false.
     h5_64bit = T
  /
