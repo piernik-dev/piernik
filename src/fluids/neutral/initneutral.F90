@@ -250,7 +250,8 @@ contains
       real, dimension(:),   intent(in),    pointer :: cs_iso2   !< isothermal sound speed squared
 
       ! locals
-      real, dimension(:), pointer :: ps        !< pressure of neutral fluid for current sweep
+      real, dimension(n), target  :: ps         !< pressure of neutral fluid for current sweep
+      real, dimension(:), pointer :: pps
       integer            :: nm
 #ifdef LOCAL_FR_SPEED
       integer            :: i
@@ -260,7 +261,8 @@ contains
 #endif /* LOCAL_FR_SPEED */
 
       nm = n-1
-      call pres_neu(this, n, uu, bb, cs_iso2, ps)
+      pps => ps
+      call pres_neu(this, n, uu, bb, cs_iso2, pps)
 
       flux(RNG, idn)=uu(RNG, idn)*vx(RNG)
       flux(RNG, imx)=uu(RNG, imx)*vx(RNG)+ps(RNG)

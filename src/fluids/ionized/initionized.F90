@@ -280,7 +280,8 @@ contains
       real, dimension(:),   intent(in),    pointer :: cs_iso2   !< local isothermal sound speed squared (optional)
 
       ! locals
-      real, dimension(:), pointer :: ps        !< pressure of ionized fluid for current sweep
+      real, dimension(n), target  :: ps        !< pressure of ionized fluid for current sweep
+      real, dimension(:), pointer :: pps
       real, dimension(n) :: p           !< thermal pressure of ionized fluid
       real, dimension(n) :: pmag        !< pressure of magnetic field
       integer            :: nm
@@ -292,7 +293,8 @@ contains
 #endif /* LOCAL_FR_SPEED */
 
       nm = n-1
-      call all_pres_ion(uu, n, bb, cs_iso2, this%gam, this%gam_1, pmag, p, ps)
+      pps => ps
+      call all_pres_ion(uu, n, bb, cs_iso2, this%gam, this%gam_1, pmag, p, pps)
 
       flux(RNG, idn)=uu(RNG, idn)*vx(RNG)
       flux(RNG, imx)=uu(RNG, imx)*vx(RNG)+ps(RNG) - bb(RNG, xdim)**2
