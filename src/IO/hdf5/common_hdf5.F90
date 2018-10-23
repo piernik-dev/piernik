@@ -136,26 +136,13 @@ contains
             case ('ener')
                nhdf_vars = nhdf_vars + size(iarr_all_mz,1)
                if (has_dst) nhdf_vars = nhdf_vars - 1
-#ifdef GRAV
-            case ('gpot')
-               nhdf_vars = nhdf_vars + 1
-#ifdef MULTIGRID
-            case ('sgpt')
-               nhdf_vars = nhdf_vars + 1
-#endif /* MULTIGRID */
-#endif /* GRAV */
-            case ('magx', 'magy', 'magz', 'pres', 'divb', 'divb4', 'divb6', 'divb8')
-               nhdf_vars = nhdf_vars + 1
 #ifdef COSM_RAYS
             case ('encr')
                nhdf_vars = nhdf_vars + size(iarr_all_crs,1)
 #endif /* COSM_RAYS */
-#ifdef TRACER
-            case ('trcr')
-               nhdf_vars = nhdf_vars + 1
-#endif /* TRACER */
             case default
                nhdf_vars = nhdf_vars + 1
+               ! all known and unknown field descriptions that add just one field
          end select
       enddo
       allocate(hdf_vars_avail(nhdf_vars))
@@ -198,8 +185,6 @@ contains
             case ('ethr')
                if (has_neu) then ; hdf_vars(j) = 'ethn' ; j = j + 1 ; endif
                if (has_ion) then ; hdf_vars(j) = 'ethi' ; j = j + 1 ; endif
-            case ("magx", "magy", "magz")
-               hdf_vars(j) = vars(i) ; j = j + 1
             case ("divb", "divB")
                if (force_cc_mag) then
                   hdf_vars(j) = "divbc"
@@ -228,23 +213,12 @@ contains
                   endif
                enddo
 #endif /* COSM_RAYS */
-#ifdef GRAV
-            case ('gpot')
-               hdf_vars(j) = 'gpot' ; j = j + 1
-#ifdef MULTIGRID
-            case ('sgpt')
-               hdf_vars(j) = 'sgpt' ; j = j + 1
-#endif /* MULTIGRID */
-#endif /* GRAV */
-#ifdef TRACER
-            case ('trcr')
-               hdf_vars(j) = 'trcr' ; j = j + 1
-#endif /* TRACER */
             case ('pres')
                if (has_neu) then ; hdf_vars(j) = 'pren' ; j = j + 1 ; endif
                if (has_ion) then ; hdf_vars(j) = 'prei' ; j = j + 1 ; endif
             case default
                hdf_vars(j) = trim(vars(i)) ; j = j + 1
+               ! all known and unknown field descriptions that add just one field
          end select
       enddo
 
