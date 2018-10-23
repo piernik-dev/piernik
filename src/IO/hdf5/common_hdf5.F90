@@ -96,7 +96,7 @@ contains
 
    subroutine init_hdf5(vars)
 
-      use constants,  only: dsetnamelen
+      use constants,  only: dsetnamelen, singlechar
       use fluidindex, only: iarr_all_dn, iarr_all_mx, iarr_all_my, iarr_all_mz
       use fluids_pub, only: has_ion, has_dst, has_neu
       use global,     only: force_cc_mag
@@ -110,7 +110,7 @@ contains
       character(len=dsetnamelen), dimension(:), intent(in) :: vars  !< quantities to be plotted, see dataio::vars
 
       integer                                              :: nvars, i, j
-      character                                            :: fc, ord
+      character(len=singlechar)                            :: fc, ord
       character(len=dsetnamelen)                           :: aux
 #if defined COSM_RAYS
       integer                                              :: k
