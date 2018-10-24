@@ -52,6 +52,7 @@ module initneutral
       contains
          procedure, nopass :: get_tag
          procedure, pass   :: get_cs => neu_cs
+         procedure, pass   :: get_mach => neu_mach
          procedure, pass   :: compute_flux => flux_neu
          procedure, pass   :: compute_pres => pres_neu
          procedure, pass   :: initialize_indices => initialize_neu_indices
@@ -100,6 +101,23 @@ contains
 #endif /* !ISO */
       if (.false.) print *, u(:, i, j, k), b(:, i, j, k), cs_iso2(i, j, k), this%cs
    end function neu_cs
+
+!>
+!! \brief An estimate of Mach number
+!!
+!! The same code is used for ionized fluid for now.
+!<
+
+   real function neu_mach(this, i, j, k, u, b, cs_iso2)
+      use func, only: sq_sum3
+      implicit none
+      class(neutral_fluid),              intent(in) :: this
+      integer,                           intent(in) :: i, j, k
+      real, dimension(:,:,:,:), pointer, intent(in) :: u       !< pointer to array of fluid properties
+      real, dimension(:,:,:,:), pointer, intent(in) :: b       !< pointer to array of magnetic fields (used for ionized fluid with MAGNETIC #defined)
+      real, dimension(:,:,:),   pointer, intent(in) :: cs_iso2 !< pointer to array of isothermal sound speeds (used when ISO was #defined)
+      neu_mach = sqrt(sq_sum3(u(this%imx, i, j, k), u(this%imy, i, j, k), u(this%imz, i, j, k)))/u(this%idn, i, j, k) / this%get_cs(i, j, k, u, b, cs_iso2)
+   end function neu_mach
 
    function get_tag() result(tag)
       use constants, only: idlen

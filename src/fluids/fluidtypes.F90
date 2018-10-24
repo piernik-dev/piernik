@@ -97,6 +97,7 @@ module fluidtypes
       procedure :: info    => printinfo_component_fluid
       procedure(tag),          nopass, deferred :: get_tag
       procedure(cs_get),         pass, deferred :: get_cs
+      procedure(cs_get),         pass, deferred :: get_mach
       procedure(flux_interface), pass, deferred :: compute_flux
       procedure(pres_interface), pass, deferred :: compute_pres
       procedure(pass_flind),     pass, deferred :: initialize_indices

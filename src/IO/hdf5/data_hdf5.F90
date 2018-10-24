@@ -88,7 +88,7 @@ contains
          case ("dend", "deni", "denn")
             f%fu = "\rm{g}/\rm{cm}^3"
             f%f2cgs = 1.0 / (gram/cm**3)
-         case ("vlxd", "vlxn", "vlxi", "vlyd", "vlyn", "vlyi", "vlzd", "vlzn", "vlzi")
+         case ("vlxd", "vlxn", "vlxi", "vlyd", "vlyn", "vlyi", "vlzd", "vlzn", "vlzi", "v", "c_s", "cs")
             f%fu = "\rm{cm}/\rm{s}"
             f%f2cgs = 1.0 / (cm/sek)
          case ("enen", "enei")
@@ -159,6 +159,20 @@ contains
                newname = "magnetic_field_magnitude"
             case ("magdir")
                newname = "magnetic_field_direction"
+            case ("v")
+               newname = "total_velocity"
+            case ("cs", "c_s")
+#ifdef MAGNETIC
+               newname = "fast_magnetosonic_speed"
+#else /* !MAGNETIC */
+               newname = "sound_speed"
+#endif /* MAGNETIC */
+            case ("Mach", "mach")
+#ifdef MAGNETIC
+               newname = "Mach_number_(fast)"
+#else /* !MAGNETIC */
+               newname = "Mach_number"
+#endif /* MAGNETIC */
             case default
                write(newname, '(A)') trim(var)
          end select
@@ -245,14 +259,13 @@ contains
    subroutine datafields_hdf5(var, tab, ierrh, cg)
 
       use common_hdf5, only: common_shortcuts
-      use constants,   only: dsetnamelen
+      use constants,   only: dsetnamelen, I_ONE
+      use fluids_pub,  only: has_ion, has_neu, has_dst
+      use fluidindex,  only: flind
       use fluidtypes,  only: component_fluid
-      use func,        only: ekin, emag
+      use func,        only: ekin, emag, sq_sum3
       use grid_cont,   only: grid_container
       use mpisetup,    only: proc
-#if defined(COSM_RAYS) || defined(TRACER) || !defined(ISO)
-      use fluidindex,  only: flind
-#endif /* COSM_RAYS || TRACER || !ISO */
 #ifdef MAGNETIC
       use div_B,       only: divB_c_IO
       use domain,      only: dom
@@ -267,8 +280,9 @@ contains
       integer,                        intent(out) :: ierrh
       type(grid_container),  pointer, intent(in)  :: cg
 
-      class(component_fluid), pointer             :: fl_dni
+      class(component_fluid), pointer             :: fl_dni, fl_mach
       integer(kind=4)                             :: i_xyz
+      integer                                     :: ii, jj, kk
 #ifdef COSM_RAYS
       integer                                     :: i
       integer, parameter                          :: auxlen = dsetnamelen - 1
@@ -370,6 +384,55 @@ contains
          case ("divbc8")
             tab(:,:,:) = divB_c_IO(cg, I_EIGHT,.true.)
 #endif /* MAGNETIC */
+         case ("v") ! perhaps this should be expanded to vi, vd or vd, depending on fluids present
+            nullify(fl_mach)
+            if (has_ion) then
+               fl_mach => flind%ion
+            else if (has_neu) then
+               fl_mach => flind%neu
+            else if (has_dst) then
+               fl_mach => flind%dst
+            endif
+            tab(:,:,:) = sqrt(sq_sum3(cg%u(fl_mach%imx, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), &
+                 &                    cg%u(fl_mach%imy, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), &
+                 &                    cg%u(fl_mach%imz, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke))) / &
+                 &                    cg%u(fl_mach%idn, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)
+         case ("cs", "c_s")
+            nullify(fl_mach)
+            if (has_ion) then
+               fl_mach => flind%ion
+            else if (has_neu) then
+               fl_mach => flind%neu
+            endif
+            if (associated(fl_mach)) then
+               do kk = cg%ks, cg%ke
+                  do jj = cg%js, cg%je
+                     do ii = cg%is, cg%ie
+                        tab(ii - cg%is + I_ONE, jj - cg%js + I_ONE, kk - cg%ks + I_ONE) = fl_mach%get_cs(ii, jj, kk, cg%u, cg%b, cg%cs_iso2)
+                     enddo
+                  enddo
+               enddo
+            else
+               tab(:,:,:) = 0.
+            endif
+         case ("mach", "Mach")
+            nullify(fl_mach)
+            if (has_ion) then
+               fl_mach => flind%ion
+            else if (has_neu) then
+               fl_mach => flind%neu
+            endif
+            if (associated(fl_mach)) then
+               do kk = cg%ks, cg%ke
+                  do jj = cg%js, cg%je
+                     do ii = cg%is, cg%ie
+                        tab(ii - cg%is + I_ONE, jj - cg%js + I_ONE, kk - cg%ks + I_ONE) = fl_mach%get_mach(ii, jj, kk, cg%u, cg%b, cg%cs_iso2)
+                     enddo
+                  enddo
+               enddo
+            else
+               tab(:,:,:) = 0.
+            endif
          case ("gpot")
             if (associated(cg%gpot)) tab(:,:,:) = cg%gpot(RNG)
          case ("sgpt")
@@ -629,6 +692,7 @@ contains
       use dataio_user,      only: user_vars_hdf5
       use grid_cont,        only: grid_container
       use named_array_list, only: qna
+      use mpisetup,         only: master
 
       implicit none
 
@@ -637,10 +701,8 @@ contains
       real, dimension(:,:,:), pointer, intent(inout) :: tab
 
       integer :: ierrh
-      logical :: ok_var
 
       ierrh = 0
-      ok_var = .false.
 
       ! Try some default names first
       call datafields_hdf5(hdf_var, tab, ierrh, cg)
@@ -653,15 +715,12 @@ contains
          if (qna%exists(hdf_var)) then
             tab(:,:,:) = real(cg%q(qna%ind(hdf_var))%span(cg%ijkse), kind(tab))
             ierrh = 0
-         else
-            ierrh = -1
          endif
       endif
 
-      if (ierrh>=0) ok_var = .true.
-      if (.not.ok_var) then
+      if (ierrh /= 0) then
          write(msg,'(3a)') "[data_hdf5:get_data_from_cg]: ", hdf_var," is not recognized as a name of defined variables/fields, not defined in datafields_hdf5 and not found in user_vars_hdf5."
-         call warn(msg)
+         if (master) call warn(msg)
          call cancel_hdf_var(hdf_var)
       endif
 

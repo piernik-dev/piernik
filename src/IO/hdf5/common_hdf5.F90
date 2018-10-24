@@ -96,9 +96,10 @@ contains
 
    subroutine init_hdf5(vars)
 
-      use constants,  only: dsetnamelen
+      use constants,  only: dsetnamelen, singlechar
       use fluidindex, only: iarr_all_dn, iarr_all_mx, iarr_all_my, iarr_all_mz
       use fluids_pub, only: has_ion, has_dst, has_neu
+      use global,     only: force_cc_mag
 #ifdef COSM_RAYS
       use dataio_pub, only: warn, msg
       use fluidindex, only: iarr_all_crs
@@ -109,9 +110,10 @@ contains
       character(len=dsetnamelen), dimension(:), intent(in) :: vars  !< quantities to be plotted, see dataio::vars
 
       integer                                              :: nvars, i, j
+      character(len=singlechar)                            :: fc, ord
+      character(len=dsetnamelen)                           :: aux
 #if defined COSM_RAYS
       integer                                              :: k
-      character(len=dsetnamelen)                           :: aux
 #endif /* COSM_RAYS */
 
       nvars = 0
@@ -134,26 +136,13 @@ contains
             case ('ener')
                nhdf_vars = nhdf_vars + size(iarr_all_mz,1)
                if (has_dst) nhdf_vars = nhdf_vars - 1
-#ifdef GRAV
-            case ('gpot')
-               nhdf_vars = nhdf_vars + 1
-#ifdef MULTIGRID
-            case ('sgpt')
-               nhdf_vars = nhdf_vars + 1
-#endif /* MULTIGRID */
-#endif /* GRAV */
-            case ('magx', 'magy', 'magz', 'pres')
-               nhdf_vars = nhdf_vars + 1
 #ifdef COSM_RAYS
             case ('encr')
                nhdf_vars = nhdf_vars + size(iarr_all_crs,1)
 #endif /* COSM_RAYS */
-#ifdef TRACER
-            case ('trcr')
-               nhdf_vars = nhdf_vars + 1
-#endif /* TRACER */
             case default
                nhdf_vars = nhdf_vars + 1
+               ! all known and unknown field descriptions that add just one field
          end select
       enddo
       allocate(hdf_vars_avail(nhdf_vars))
@@ -196,8 +185,22 @@ contains
             case ('ethr')
                if (has_neu) then ; hdf_vars(j) = 'ethn' ; j = j + 1 ; endif
                if (has_ion) then ; hdf_vars(j) = 'ethi' ; j = j + 1 ; endif
-            case ("magx", "magy", "magz")
-               hdf_vars(j) = vars(i) ; j = j + 1
+            case ("divb", "divB")
+               if (force_cc_mag) then
+                  hdf_vars(j) = "divbc"
+               else
+                  hdf_vars(j) = "divbf"
+               endif
+               j = j + 1
+            case ("divb4", "divb6", "divb8")
+               if (force_cc_mag) then
+                  fc = "c"
+               else
+                  fc = "f"
+               endif
+               read(vars(i), '(a4,a1)') aux, ord
+               write(hdf_vars(j), '(3a)') "divb", fc, ord
+               j = j + 1
 #ifdef COSM_RAYS
             case ('encr')
                do k = 1, size(iarr_all_crs,1)
@@ -210,23 +213,12 @@ contains
                   endif
                enddo
 #endif /* COSM_RAYS */
-#ifdef GRAV
-            case ('gpot')
-               hdf_vars(j) = 'gpot' ; j = j + 1
-#ifdef MULTIGRID
-            case ('sgpt')
-               hdf_vars(j) = 'sgpt' ; j = j + 1
-#endif /* MULTIGRID */
-#endif /* GRAV */
-#ifdef TRACER
-            case ('trcr')
-               hdf_vars(j) = 'trcr' ; j = j + 1
-#endif /* TRACER */
             case ('pres')
                if (has_neu) then ; hdf_vars(j) = 'pren' ; j = j + 1 ; endif
                if (has_ion) then ; hdf_vars(j) = 'prei' ; j = j + 1 ; endif
             case default
                hdf_vars(j) = trim(vars(i)) ; j = j + 1
+               ! all known and unknown field descriptions that add just one field
          end select
       enddo
 
