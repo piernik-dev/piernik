@@ -1,3 +1,35 @@
+!
+! PIERNIK Code Copyright (C) 2006 Michal Hanasz
+!
+!    This file is part of PIERNIK code.
+!
+!    PIERNIK is free software: you can redistribute it and/or modify
+!    it under the terms of the GNU General Public License as published by
+!    the Free Software Foundation, either version 3 of the License, or
+!    (at your option) any later version.
+!
+!    PIERNIK is distributed in the hope that it will be useful,
+!    but WITHOUT ANY WARRANTY; without even the implied warranty of
+!    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+!    GNU General Public License for more details.
+!
+!    You should have received a copy of the GNU General Public License
+!    along with PIERNIK.  If not, see <http://www.gnu.org/licenses/>.
+!
+!    Initial implementation of PIERNIK code was based on TVD split MHD code by
+!    Ue-Li Pen
+!        see: Pen, Arras & Wong (2003) for algorithm and
+!             http://www.cita.utoronto.ca/~pen/MHD
+!             for original source code "mhd.f90"
+!
+!    For full list of developers see $PIERNIK_HOME/license/pdt.txt
+!
+#include "piernik.h"
+
+!>
+!! \brief This module contains Newton-Raphson 1,2-dim alhorithms, functions for use with these and used by CRESP.
+!<
+
 module cresp_NR_method
 ! pulled by COSM_RAY_ELECTRONS
 
@@ -23,6 +55,9 @@ module cresp_NR_method
    real(kind=8)                                     :: eps_det = eps * 1.0e-15
    real(kind=8), pointer, dimension(:)              :: p_a => null(), p_n => null() ! pointers for alpha_tab_(lo,up) and n_tab_(lo,up) or optional - other 1-dim arrays
    real(kind=8), pointer, dimension(:,:)            :: p_p => null(), p_f => null() ! pointers for p_ratios_(lo,up) and f_ratios_(lo,up)
+#ifdef CRESP_VERBOSED
+   character(len=2)                                 :: current_bound
+#endif /* CRESP_VERBOSED */
 
    abstract interface
       function function_pointer_1D(z)
@@ -419,6 +454,10 @@ contains
       p_f => f_ratios_lo
       selected_function_2D => fvec_lo
 
+#ifdef CRESP_VERBOSED
+      current_bound = "lo"
+#endif /* CRESP_VERBOSED */
+
    end subroutine assoc_pointers_lo
 !----------------------------------------------------------------------------------------------------s
    subroutine assoc_pointers_up
@@ -430,6 +469,10 @@ contains
       p_p => p_ratios_up
       p_f => f_ratios_up
       selected_function_2D => fvec_up
+
+#ifdef CRESP_VERBOSED
+      current_bound = "up"
+#endif /* CRESP_VERBOSED */
 
    end subroutine assoc_pointers_up
 
@@ -1072,9 +1115,9 @@ contains
       real(kind=8) :: encp_func_2_zero_lo
 
       if (abs(q_in - three) .lt. eps) then
-         encp_func_2_zero_lo = -alpha_cnst + ((- one + p_ratio)/log(p_ratio)) / p_ratio
+         encp_func_2_zero_lo = -alpha_cnst + ((one - p_ratio)/log(p_ratio)) / p_ratio
       else if (abs(q_in - four) .lt. eps) then
-         encp_func_2_zero_lo = -alpha_cnst + log(p_ratio)/(p_ratio - one) / p_ratio
+         encp_func_2_zero_lo = -alpha_cnst + log(p_ratio)/(p_ratio - one)
       else
          encp_func_2_zero_lo = -alpha_cnst + ((three - q_in)/(four - q_in))*((p_ratio **(four - q_in) - one)/ &
                            &   (p_ratio **(three - q_in) - one)) / p_ratio
@@ -1314,16 +1357,16 @@ contains
       logical              :: exit_code, find_failure
       logical, intent(out) :: interpolation_successful, not_interpolated
 
-#ifdef CRESP_VERBOSED
-      write (*,"(A30,A2,A4)",advance="no") "Determining indices for case: ",which_bound, "... "
-#endif /* CRESP_VERBOSED */
       exit_code = .false.; find_failure = .false. ; not_interpolated = .false.
 
+#ifdef CRESP_VERBOSED
+      write (*,"(A30,A2,A4)",advance="no") "Determining indices for case: ", current_bound, "... "
+#endif /* CRESP_VERBOSED */
       call determine_loc(a_val, n_val, loc1, loc2, loc_no_ip, exit_code)
 
 #ifdef CRESP_VERBOSED
-      call save_loc(which_bound,loc1(1),loc1(2))
-      call save_loc(which_bound,loc2(1),loc2(2))
+      call save_loc(current_bound, loc1(1), loc1(2))
+      call save_loc(current_bound, loc2(1), loc2(2))
 #endif /* CRESP_VERBOSED */
 
       if (find_failure .eqv. .true.) then
