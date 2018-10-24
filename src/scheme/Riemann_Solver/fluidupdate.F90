@@ -110,17 +110,33 @@ contains
     use global,         only: divB_0_method
     use hdc,            only: glmdamping, eglm
     use user_hooks,     only: problem_customize_solution
+#ifdef GRAV
+      use global,              only: t, dt
+      use gravity,             only: source_terms_grav
+      use particle_pub,        only: pset, psolver
+#endif /* GRAV */
 #if defined(COSM_RAYS) && defined(MULTIGRID)
     use all_boundaries,      only: all_fluid_boundaries
     use initcosmicrays,      only: use_split
     use multigrid_diffusion, only: multigrid_solve_diff
 #endif /* COSM_RAYS && MULTIGRID */
+#ifdef SHEAR
+      use shear,               only: shear_3sweeps
+#endif /* SHEAR */
 
     implicit none
 
     logical, intent(in) :: forward  !< If .true. then do X->Y->Z sweeps, if .false. then reverse that order
 
     integer(kind=4)                 :: ddim
+
+#ifdef SHEAR
+      call shear_3sweeps
+#endif /* SHEAR */
+
+#ifdef GRAV
+      call source_terms_grav
+#endif /* GRAV */
 
 #if defined(COSM_RAYS) && defined(MULTIGRID)
     if (.not. use_split) then
@@ -138,7 +154,10 @@ contains
           call make_sweep(ddim, forward)
        enddo
     endif
-    if (associated(problem_customize_solution)) call problem_customize_solution(forward)
+#ifdef GRAV
+      if (associated(psolver)) call pset%evolve(psolver, t-dt, dt)
+#endif /* GRAV */
+   if (associated(problem_customize_solution)) call problem_customize_solution(forward)
 
     call eglm
     if (divB_0_method == DIVB_HDC) call glmdamping
@@ -453,8 +472,9 @@ contains
     integer                                    :: bi
     real, dimension(:), pointer                :: ppsi
     integer                                    :: psii
-    real, dimension(size(u1d,2),size(u1d,1))           :: u1
+    real, dimension(size(u1d,2),size(u1d,1))           :: u1, u0
     real, dimension(size(u1d,2), flind%fluids), target :: vx
+    real, dimension(size(u1d,2), xdim:zdim) :: bt
 
     if (force_cc_mag) then
        bi = wna%bi
@@ -489,9 +509,15 @@ contains
        ! ToDo: integrate it into h_solver schemes
 
        ! transposition for compatibility with RTVD-based routines
+          u0 = transpose(pu)
        u1 = transpose(u1d)
+       bt = transpose(pb)
        vx = u1(:, iarr_all_mx) / u1(:, iarr_all_dn) ! this may also be useful for gravitational acceleration
-       call all_sources(size(u1d, 2), pu, u1, pb, cg, 1, ddim, i1, i2, dt, vx)
+       call all_sources(size(u1d, 2), u0, u1, bt, cg, 1, ddim, i1, i2, dt, vx)
+
+       ! Beware: this is bypassing integration scheme, so the source terms are applied in lowest order fashion.
+       ! See the results of Jeans test with RTVD and RIEMANN for comparision.
+
 #if defined COSM_RAYS && defined IONIZED
        if (size(u1d, 2) > 1) call limit_minimal_ecr(size(u1d, 2), u1)
 #endif /* COSM_RAYS && IONIZED */
