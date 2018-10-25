@@ -203,10 +203,8 @@ contains
 #endif /* !GRAV */
 
 #if defined COSM_RAYS && defined IONIZED
-      if (n > 1) then
-         call src_gpcr_exec(u, n, newsrc, sweep, i1, i2, cg, vx)
-         usrc(:,:) = usrc(:,:) + newsrc(:,:)
-      endif
+      call src_gpcr_exec(u, n, newsrc, sweep, i1, i2, cg, vx)
+      usrc(:,:) = usrc(:,:) + newsrc(:,:)
 #ifdef COSM_RAYS_SOURCES
       call src_crn_exec(u, n, newsrc, coeffdt) ! n safe
       usrc(:,:) = usrc(:,:) + newsrc(:,:)
