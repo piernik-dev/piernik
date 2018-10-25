@@ -181,6 +181,9 @@ contains
 
       call geometry_source_terms_exec(u, bb, sweep, i1, i2, cg, newsrc)  ! n safe
       usrc(:,:) = usrc(:,:) + newsrc(:,:)
+      ! following two lines are temporal, only because of streaming_global gold tests
+      u1(:,:) = u1(:,:) + usrc(:,:) * coeffdt
+      usrc = 0.0
 
 #ifndef BALSARA
       call get_updates_from_acc(n, u, usrc, fluid_interactions_exec(n, u, vx))  ! n safe
