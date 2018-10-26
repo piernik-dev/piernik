@@ -181,9 +181,6 @@ contains
 
       call geometry_source_terms_exec(u, bb, sweep, i1, i2, cg, newsrc)  ! n safe
       usrc(:,:) = usrc(:,:) + newsrc(:,:)
-      ! following two lines are temporal, only because of streaming_global gold tests
-      u1(:,:) = u1(:,:) + usrc(:,:) * coeffdt
-      usrc = 0.0
 
 #ifndef BALSARA
       call get_updates_from_acc(n, u, usrc, fluid_interactions_exec(n, u, vx))  ! n safe
@@ -203,18 +200,11 @@ contains
 #ifdef GRAV
       call grav_src_exec(n, u, cg, sweep, i1, i2, istep, newsrc)
       usrc(:,:) = usrc(:,:) + newsrc(:,:)
-      ! following two lines are temporal, only because of mcrwind gold tests
-      u1(:,:) = u1(:,:) + usrc(:,:) * coeffdt
-      usrc = 0.0
 #endif /* !GRAV */
 
 #if defined COSM_RAYS && defined IONIZED
       call src_gpcr_exec(u, n, newsrc, sweep, i1, i2, cg, vx)
       usrc(:,:) = usrc(:,:) + newsrc(:,:)
-      ! following three lines are temporal, only because of mcrtest gold tests
-      u1(:,:) = u1(:,:) + usrc(:,:) * coeffdt
-      usrc = 0.0
-      if (n > 1) call limit_minimal_ecr(n, u1)
 #ifdef COSM_RAYS_SOURCES
       call src_crn_exec(u, n, newsrc, coeffdt) ! n safe
       usrc(:,:) = usrc(:,:) + newsrc(:,:)
@@ -319,8 +309,7 @@ contains
       call limit_minimal_density(n, u1, cg, sweep, i1, i2)
       call limit_minimal_intener(n, bb, u1)
 #if defined COSM_RAYS && defined IONIZED
-      ! following line is commented out temporarily, only because of mcrtest gold tests
-      !if (full_dim) call limit_minimal_ecr(n, u1)
+      if (full_dim) call limit_minimal_ecr(n, u1)
 #endif /* COSM_RAYS && IONIZED */
 
    end subroutine care_for_positives
