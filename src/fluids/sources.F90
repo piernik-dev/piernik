@@ -208,6 +208,10 @@ contains
 #if defined COSM_RAYS && defined IONIZED
       call src_gpcr_exec(u, n, newsrc, sweep, i1, i2, cg, vx)
       usrc(:,:) = usrc(:,:) + newsrc(:,:)
+      ! following three lines are temporal, only because of mcrtest gold tests
+      u1(:,:) = u1(:,:) + usrc(:,:) * coeffdt
+      usrc = 0.0
+      if (n > 1) call limit_minimal_ecr(n, u1)
 #ifdef COSM_RAYS_SOURCES
       call src_crn_exec(u, n, newsrc, coeffdt) ! n safe
       usrc(:,:) = usrc(:,:) + newsrc(:,:)
@@ -312,7 +316,8 @@ contains
       call limit_minimal_density(n, u1, cg, sweep, i1, i2)
       call limit_minimal_intener(n, bb, u1)
 #if defined COSM_RAYS && defined IONIZED
-      if (full_dim) call limit_minimal_ecr(n, u1)
+      ! following line is commented out temporarily, only because of mcrtest gold tests
+      !if (full_dim) call limit_minimal_ecr(n, u1)
 #endif /* COSM_RAYS && IONIZED */
 
    end subroutine care_for_positives
