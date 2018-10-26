@@ -203,6 +203,9 @@ contains
 #ifdef GRAV
       call grav_src_exec(n, u, cg, sweep, i1, i2, istep, newsrc)
       usrc(:,:) = usrc(:,:) + newsrc(:,:)
+      ! following two lines are temporal, only because of mcrwind gold tests
+      u1(:,:) = u1(:,:) + usrc(:,:) * coeffdt
+      usrc = 0.0
 #endif /* !GRAV */
 
 #if defined COSM_RAYS && defined IONIZED
