@@ -692,6 +692,7 @@ contains
       use dataio_user,      only: user_vars_hdf5
       use grid_cont,        only: grid_container
       use named_array_list, only: qna
+      use mpisetup,         only: master
 
       implicit none
 
@@ -700,10 +701,8 @@ contains
       real, dimension(:,:,:), pointer, intent(inout) :: tab
 
       integer :: ierrh
-      logical :: ok_var
 
       ierrh = 0
-      ok_var = .false.
 
       ! Try some default names first
       call datafields_hdf5(hdf_var, tab, ierrh, cg)
@@ -716,15 +715,12 @@ contains
          if (qna%exists(hdf_var)) then
             tab(:,:,:) = real(cg%q(qna%ind(hdf_var))%span(cg%ijkse), kind(tab))
             ierrh = 0
-         else
-            ierrh = -1
          endif
       endif
 
-      if (ierrh>=0) ok_var = .true.
-      if (.not.ok_var) then
+      if (ierrh /= 0) then
          write(msg,'(3a)') "[data_hdf5:get_data_from_cg]: ", hdf_var," is not recognized as a name of defined variables/fields, not defined in datafields_hdf5 and not found in user_vars_hdf5."
-         call warn(msg)
+         if (master) call warn(msg)
          call cancel_hdf_var(hdf_var)
       endif
 

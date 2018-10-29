@@ -50,7 +50,7 @@
     dt_res  = 1e-1
     dt_log  = 1.0e-4
     dt_tsl  = 1.0e-4
-    vars(1:) = 'ener', 'dens', 'magx', 'magy', 'magz', 'velx', 'vely', 'ethr', 'magB', "pres", "divbc",  "divbc4", "psi"
+    vars(1:) = 'ener', 'dens', 'magx', 'magy', 'magz', 'velx', 'vely', 'ethr', 'magB', "pres", "divb", "divb4", "psi"
  /
 
  $FLUID_IONIZED
