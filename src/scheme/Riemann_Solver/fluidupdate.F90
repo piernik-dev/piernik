@@ -68,9 +68,6 @@ contains
     ! is_multicg should be safe
     if (is_refined) call die("[fluid_update] This Rieman solver is not compatible with mesh refinements yet!")
     if (dom%geometry_type /= GEO_XYZ) call die("[fluid_update] Non-cartesian geometry is not implemented yet in this Riemann solver.")
-#ifdef GRAV
-#  error Graviy is not implemented yet in this Riemann solver.
-#endif /* GRAV */
 #ifdef ISO
 #  error Isothermal EOS is not implemented yet in this Riemann solver.
 #endif /* ISO */
@@ -113,17 +110,33 @@ contains
     use global,         only: divB_0_method
     use hdc,            only: glmdamping, eglm
     use user_hooks,     only: problem_customize_solution
+#ifdef GRAV
+      use global,              only: t, dt
+      use gravity,             only: source_terms_grav
+      use particle_pub,        only: pset, psolver
+#endif /* GRAV */
 #if defined(COSM_RAYS) && defined(MULTIGRID)
     use all_boundaries,      only: all_fluid_boundaries
     use initcosmicrays,      only: use_split
     use multigrid_diffusion, only: multigrid_solve_diff
 #endif /* COSM_RAYS && MULTIGRID */
+#ifdef SHEAR
+      use shear,               only: shear_3sweeps
+#endif /* SHEAR */
 
     implicit none
 
     logical, intent(in) :: forward  !< If .true. then do X->Y->Z sweeps, if .false. then reverse that order
 
     integer(kind=4)                 :: ddim
+
+#ifdef SHEAR
+      call shear_3sweeps
+#endif /* SHEAR */
+
+#ifdef GRAV
+      call source_terms_grav
+#endif /* GRAV */
 
 #if defined(COSM_RAYS) && defined(MULTIGRID)
     if (.not. use_split) then
@@ -141,7 +154,10 @@ contains
           call make_sweep(ddim, forward)
        enddo
     endif
-    if (associated(problem_customize_solution)) call problem_customize_solution(forward)
+#ifdef GRAV
+      if (associated(psolver)) call pset%evolve(psolver, t-dt, dt)
+#endif /* GRAV */
+   if (associated(problem_customize_solution)) call problem_customize_solution(forward)
 
     call eglm
     if (divB_0_method == DIVB_HDC) call glmdamping
@@ -433,15 +449,15 @@ contains
   subroutine sweep_dsplit(cg, dt, ddim)
 
     use constants,        only: pdims, xdim, zdim, ORTHO1, ORTHO2, LO, HI, psi_n, INVALID
-    use fluidindex,       only: iarr_all_swp, iarr_mag_swp
+    use fluidindex,       only: flind, iarr_all_dn, iarr_all_mx, iarr_all_swp, iarr_mag_swp
     use global,           only: force_cc_mag
     use grid_cont,        only: grid_container
     use named_array_list, only: wna, qna
-#ifdef COSM_RAYS
-    use crhelpers,        only: div_v, set_div_v1d
-    use fluidindex,       only: flind
-#endif /* COSM_RAYS */
+    use sources,          only: prepare_sources, all_sources
 
+#ifdef COSM_RAYS
+    use sources,          only: limit_minimal_ecr
+#endif /* COSM_RAYS */
     implicit none
 
     type(grid_container), pointer, intent(in) :: cg
@@ -456,7 +472,9 @@ contains
     integer                                    :: bi
     real, dimension(:), pointer                :: ppsi
     integer                                    :: psii
-    real, dimension(:), pointer                :: div_v1d => null()
+    real, dimension(size(u1d,2),size(u1d,1))           :: u1, u0
+    real, dimension(size(u1d,2), flind%fluids), target :: vx
+    real, dimension(size(u1d,2), xdim:zdim) :: bt
 
     if (force_cc_mag) then
        bi = wna%bi
@@ -469,9 +487,7 @@ contains
     psi_d = 0.
     nullify(ppsi)
 
-#ifdef COSM_RAYS
-    call div_v(flind%ion%pos, cg)
-#endif /* COSM_RAYS */
+    call prepare_sources(cg)
 
     do i2 = cg%lhn(pdims(ddim, ORTHO2), LO), cg%lhn(pdims(ddim,ORTHO2), HI)
        do i1 = cg%lhn(pdims(ddim, ORTHO1), LO), cg%lhn(pdims(ddim, ORTHO1), HI)
@@ -479,17 +495,35 @@ contains
           u1d(iarr_all_swp(ddim,:),:) = pu(:,:)
           pb => cg%w(bi)%get_sweep(ddim,i1,i2)
           b_cc1d(iarr_mag_swp(ddim,:),:) = pb(:,:)
-#ifdef COSM_RAYS
-          call set_div_v1d(div_v1d, ddim, i1, i2, cg)
-#endif /* COSM_RAYS */
           if (psii /= INVALID) then
              ppsi => cg%q(psii)%get_sweep(ddim,i1,i2)
              psi_d(1, :) = ppsi(:)
-             call solve(u1d, b_cc1d, dt/cg%dl(ddim), psi_d, div_v1d)
+             call solve(u1d, b_cc1d, dt/cg%dl(ddim), psi_d)
              ppsi(:) = psi_d(1,:)
           else
-             call solve(u1d, b_cc1d, dt/cg%dl(ddim), psi_d, div_v1d)
+             call solve(u1d, b_cc1d, dt/cg%dl(ddim), psi_d)
           endif
+
+       ! This is lowest order implementation of CR
+       ! It agrees with the implementation in RTVD in the limit of small CR energy amounts
+       ! ToDo: integrate it into h_solver schemes
+
+       ! transposition for compatibility with RTVD-based routines
+          u0 = transpose(pu)
+       u1 = transpose(u1d)
+       bt = transpose(pb)
+       vx = u1(:, iarr_all_mx) / u1(:, iarr_all_dn) ! this may also be useful for gravitational acceleration
+       call all_sources(size(u1d, 2), u0, u1, bt, cg, 1, ddim, i1, i2, dt, vx)
+
+       ! Beware: this is bypassing integration scheme, so the source terms are applied in lowest order fashion.
+       ! See the results of Jeans test with RTVD and RIEMANN for comparision.
+
+#if defined COSM_RAYS && defined IONIZED
+       if (size(u1d, 2) > 1) call limit_minimal_ecr(size(u1d, 2), u1)
+#endif /* COSM_RAYS && IONIZED */
+       u1d = transpose(u1)
+
+
           pu(:,:) = u1d(iarr_all_swp(ddim,:),:)
           pb(:,:) = b_cc1d(iarr_mag_swp(ddim,:),:) ! ToDo figure out how to manage CT energy fixup without extra storage
        enddo
@@ -503,7 +537,7 @@ contains
 #undef RK_HIGH
 !! Disabled rk3 as high orders require more careful approach to guardcells and valid ranges
 
-  subroutine solve(u, b_cc, dtodx, psi, div_v1d)
+  subroutine solve(u, b_cc, dtodx, psi)
 
      use constants,  only: half
 #ifdef RK_HIGH
@@ -520,7 +554,6 @@ contains
      real, dimension(:,:), intent(inout) :: b_cc
      real,                 intent(in)    :: dtodx
      real, dimension(:,:), intent(inout) :: psi
-     real, dimension(:), pointer, intent(in) :: div_v1d
 
      ! left and right states at interfaces 1 .. n-1
      real, dimension(size(u,   1), size(u,   2)-1), target :: ql, qr
@@ -744,20 +777,9 @@ contains
 
      subroutine update !(weights)
 
-       use constants,        only: xdim, ydim, zdim, DIVB_HDC
-       use fluidindex,       only: flind
-       use global,           only: divB_0_method
-
-#ifdef COSM_RAYS
-       use fluidindex,       only: iarr_all_dn, iarr_all_mx, iarr_all_en
-       use global,           only: dt
-       use initcosmicrays,   only: iarr_crs, smallecr
-       use sourcecosmicrays, only: src_gpcr
-#ifdef COSM_RAYS_SOURCES
-       use initcosmicrays,   only: iarr_crn
-       use sourcecosmicrays, only: src_crn
-#endif /* COSM_RAYS_SOURCES */
-#endif /* COSM_RAYS */
+       use constants,  only: xdim, ydim, zdim, DIVB_HDC
+       use fluidindex, only: flind
+       use global,     only: divB_0_method
 
        implicit none
 
@@ -766,15 +788,6 @@ contains
 !       real, dimension(:), allocatable :: w
        integer :: iend  !< last component of any fluid (i.e. exclude CR or tracers here)
 
-#ifdef COSM_RAYS
-       real, dimension(size(u,2),size(u,1))           :: u1
-       real, dimension(nx, flind%fluids), target      :: vx
-       real, dimension(nx)                            :: grad_pcr
-       real, dimension(nx, flind%crs%all)             :: decr
-#ifdef COSM_RAYS_SOURCES
-       real, dimension(nx, flind%crn%all)             :: srccrn
-#endif /* COSM_RAYS_SOURCES */
-#endif /* COSM_RAYS */
 
        iend = flind%all_fluids(flind%fluids)%fl%end
 
@@ -816,36 +829,6 @@ contains
 
 !       b_cc(:, 1)  = b_cc(:, 2)
 !       b_cc(:, nx) = b_cc(:, nx-1)
-
-       ! This is lowest order implementation of CR
-       ! It agrees with the implementation in RTVD in the limit of small CR energy amounts
-       ! ToDo: integrate it into h_solver schemes
-#if defined COSM_RAYS && defined IONIZED
-
-       if (nx > 1) then
-          ! transposition for compatibility with RTVD-based routines
-          u1 = transpose(u)
-
-          vx = u1(:, iarr_all_mx) / u1(:, iarr_all_dn) ! this may also be useful for gravitational acceleration
-          ! Replace dt/dtodx by dx == cg%dl(ddim)
-          call src_gpcr(u1, nx, dt/dtodx, div_v1d, decr, grad_pcr)
-          u1(:, iarr_crs(:)) = u1(:, iarr_crs(:)) + decr(:,:) * dt
-          u1(:, iarr_crs(:)) = max(smallecr, u1(:, iarr_crs(:)))
-          u1(:, iarr_all_mx(flind%ion%pos)) = u1(:, iarr_all_mx(flind%ion%pos)) + grad_pcr * dt
-#ifndef ISO
-          u1(:, iarr_all_en(flind%ion%pos)) = u1(:, iarr_all_en(flind%ion%pos)) + vx(:, flind%ion%pos) * grad_pcr * dt
-#endif /* !ISO */
-       endif
-#ifdef COSM_RAYS_SOURCES
-       call src_crn(u1, nx, srccrn, dt) ! n safe
-       u1(:, iarr_crn) = u1(:, iarr_crn) + srccrn(:,:)*dt
-#endif /* COSM_RAYS_SOURCES */
-
-       u = transpose(u1)
-
-#else
-       if (.false.) div_v1d = div_v1d + 0.  ! suppress compiler warnings
-#endif /* COSM_RAYS && IONIZED */
 
 !       deallocate(w)
 

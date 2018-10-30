@@ -54,6 +54,7 @@ module initneutral
          procedure, pass   :: get_cs => neu_cs
          procedure, pass   :: get_mach => neu_mach
          procedure, pass   :: compute_flux => flux_neu
+         procedure, pass   :: compute_pres => pres_neu
          procedure, pass   :: initialize_indices => initialize_neu_indices
    end type neutral_fluid
 
@@ -242,10 +243,9 @@ contains
 !<
 !*/
 #define RNG 2:nm
-   subroutine flux_neu(this, flux, cfr, uu, n, vx, ps, bb, cs_iso2, use_vx)
+   subroutine flux_neu(this, flux, cfr, uu, n, vx, bb, cs_iso2)
 
       use constants,    only: idn, imx, imy, imz
-      use func,         only: ekin
 #ifdef LOCAL_FR_SPEED
       use constants,    only: small, half
       use global,       only: cfr_smooth
@@ -255,7 +255,6 @@ contains
 #endif /* GLOBAL_FR_SPEED */
 #ifndef ISO
       use constants,    only: ien
-      use global,       only: smallp
 #endif /* !ISO */
 
       implicit none
@@ -264,13 +263,13 @@ contains
       real, dimension(:,:), intent(inout), pointer :: flux      !< flux of neutral fluid
       real, dimension(:,:), intent(inout), pointer :: cfr       !< freezing speed for neutral fluid
       real, dimension(:,:), intent(in),    pointer :: uu        !< part of u for neutral fluid
-      real, dimension(:),   intent(inout), pointer :: vx        !< velocity of neutral fluid for current sweep
-      real, dimension(:),   intent(inout), pointer :: ps        !< pressure of neutral fluid for current sweep
+      real, dimension(:),   intent(in),    pointer :: vx        !< velocity of neutral fluid for current sweep
       real, dimension(:,:), intent(in),    pointer :: bb        !< magnetic field x,y,z-components table
       real, dimension(:),   intent(in),    pointer :: cs_iso2   !< isothermal sound speed squared
-      logical,              intent(in)             :: use_vx    !< use provided vx instead of computing it
 
       ! locals
+      real, dimension(n), target  :: ps         !< pressure of neutral fluid for current sweep
+      real, dimension(:), pointer :: pps
       integer            :: nm
 #ifdef LOCAL_FR_SPEED
       integer            :: i
@@ -280,17 +279,8 @@ contains
 #endif /* LOCAL_FR_SPEED */
 
       nm = n-1
-      if (.not. use_vx) then
-         vx(RNG) = uu(RNG, imx) / uu(RNG, idn)
-         vx(1) = vx(2)
-         vx(n) = vx(nm)
-      endif
-#ifdef ISO
-      ps(RNG) = cs_iso2(RNG) * uu(RNG, idn) ; ps(1) = ps(2); ps(n) = ps(nm)
-#else /* !ISO */
-      ps(RNG) = (uu(RNG, ien) - ekin(uu(RNG, imx),uu(RNG, imy),uu(RNG, imz),uu(RNG, idn)) )*(this%gam_1)
-      ps(RNG) = max(ps(RNG), smallp)
-#endif /* !ISO */
+      pps => ps
+      call pres_neu(this, n, uu, bb, cs_iso2, pps)
 
       flux(RNG, idn)=uu(RNG, idn)*vx(RNG)
       flux(RNG, imx)=uu(RNG, imx)*vx(RNG)+ps(RNG)
@@ -338,11 +328,49 @@ contains
       cfr(:,:) = c_all
 #endif /* GLOBAL_FR_SPEED */
       return
-      if (.false.) write(0,*) bb, cs_iso2
 #if defined(LOCAL_FR_SPEED) || defined(ISO)
       if (.false.) print *, this%all
 #endif /* defined(LOCAL_FR_SPEED) || defined(ISO) */
 
    end subroutine flux_neu
+
+   subroutine pres_neu(this, n, uu, bb, cs_iso2, ps)
+
+      use constants,    only: idn
+#ifndef ISO
+      use constants,    only: imx, imy, imz, ien
+      use dataio_pub,   only: die
+      use func,         only: ekin
+      use global,       only: smallp
+#endif /* !ISO */
+
+      implicit none
+
+      class(neutral_fluid), intent(in)           :: this
+      integer(kind=4),      intent(in)           :: n         !< number of cells in the current sweep
+      real, dimension(:,:), intent(in),  pointer :: uu        !< part of u for neutral fluid
+      real, dimension(:,:), intent(in),  pointer :: bb        !< magnetic field x,y,z-components table
+      real, dimension(:),   intent(in),  pointer :: cs_iso2   !< local isothermal sound speed squared (optional)
+      real, dimension(:),   intent(out), pointer :: ps        !< pressure of neutral fluid for current sweep
+
+      ! locals
+      integer            :: nm
+
+      nm = n-1
+#ifdef ISO
+      ps(RNG) = cs_iso2(RNG) * uu(RNG, idn) ; ps(1) = ps(2); ps(n) = ps(nm)
+#else /* !ISO */
+      if (associated(cs_iso2)) call die("[initionized:pres_neu] cs_iso2 should not be present")
+      ps(RNG) = (uu(RNG, ien) - ekin(uu(RNG, imx),uu(RNG, imy),uu(RNG, imz),uu(RNG, idn)) )*(this%gam_1)
+      ps(RNG) = max(ps(RNG), smallp)
+#endif /* !ISO */
+
+      return
+      if (.false.) write(0,*) bb
+#ifdef ISO
+      if (.false.) write(0,*) this%gam
+#endif /* ISO */
+
+   end subroutine pres_neu
 
 end module initneutral

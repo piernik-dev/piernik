@@ -51,6 +51,7 @@ module initdust
          procedure, pass   :: get_cs => dust_cs
          procedure, pass   :: get_mach => dust_mach
          procedure, pass   :: compute_flux => flux_dust
+         procedure, pass   :: compute_pres => pres_dust
          procedure, pass   :: initialize_indices => initialize_dust_indices
    end type dust_fluid
 
@@ -194,7 +195,7 @@ contains
 !!
 !<
 !*/
-   subroutine flux_dust(this, flux, cfr, uu, n, vx, ps, bb, cs_iso2, use_vx)
+   subroutine flux_dust(this, flux, cfr, uu, n, vx, bb, cs_iso2)
 
       use constants, only: idn, imx, imy, imz
 #ifdef GLOBAL_FR_SPEED
@@ -207,11 +208,9 @@ contains
       real, dimension(:,:), intent(inout), pointer :: flux      !< flux of dust
       real, dimension(:,:), intent(inout), pointer :: cfr       !< freezing speed for dust
       real, dimension(:,:), intent(in),    pointer :: uu        !< part of u for dust
-      real, dimension(:),   intent(inout), pointer :: vx        !< velocity of dust fluid for current sweep
-      real, dimension(:),   intent(inout), pointer :: ps        !< pressure of dust fluid for current sweep
+      real, dimension(:),   intent(in),    pointer :: vx        !< velocity of dust fluid for current sweep
       real, dimension(:,:), intent(in),    pointer :: bb        !< magnetic field x,y,z-components table
       real, dimension(:),   intent(in),    pointer :: cs_iso2   !< local isothermal sound speed squared (optional)
-      logical,              intent(in)             :: use_vx    !< use provided vx instead of computing it
 
       ! locals
 !      real               :: minvx, maxvx, amp
@@ -221,13 +220,6 @@ contains
       integer                   :: nm
 
       nm = n-1
-
-      ps(:)  = 0.0
-      if (.not. use_vx) then
-         vx(RNG) = uu(RNG, imx) / uu(RNG, idn)
-         vx(1) = vx(2)
-         vx(n) = vx(nm)
-      endif
 
       flux(RNG, idn)=uu(RNG, idn)*vx(RNG)
       flux(RNG, imx)=uu(RNG, imx)*vx(RNG)
@@ -267,4 +259,23 @@ contains
       if (.false.) write(0,*) bb, cs_iso2, this%all
 
    end subroutine flux_dust
+
+   subroutine pres_dust(this, n, uu, bb, cs_iso2, ps)
+
+      implicit none
+
+      class(dust_fluid),    intent(in)           :: this
+      integer(kind=4),      intent(in)           :: n         !< number of cells in the current sweep
+      real, dimension(:,:), intent(in),  pointer :: uu        !< part of u for ionized fluid
+      real, dimension(:,:), intent(in),  pointer :: bb        !< magnetic field x,y,z-components table
+      real, dimension(:),   intent(in),  pointer :: cs_iso2   !< local isothermal sound speed squared (optional)
+      real, dimension(:),   intent(out), pointer :: ps        !< pressure of ionized fluid for current sweep
+
+      ps(:) = 0.0
+
+      return
+      if (.false.) write(0,*) this%gam, n, uu, bb, cs_iso2
+
+   end subroutine pres_dust
+
 end module initdust

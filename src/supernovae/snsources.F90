@@ -150,7 +150,6 @@ contains
    subroutine random_sn
 
       use constants, only: small
-      use dataio_pub, only: msg, printinfo
       use global,    only: t
 
       implicit none
@@ -164,14 +163,10 @@ contains
       nsn = int(t/dt_sn)
       nsn_per_timestep = nsn - nsn_last
       nsn_last = nsn
-      write(msg,*) '[random_sn] nsn_per_timestep, nsn_last, nsn = ', nsn_per_timestep, nsn_last, nsn
-      call printinfo(msg)
 
       do isn = 1, nsn_per_timestep
 
          call rand_coords(snpos)
-         write(msg,*) '[random_sn] snpos = ', snpos
-         call printinfo(msg)
 
 #ifdef COSM_RAYS
          call cr_sn(snpos,amp_cr_sn)
