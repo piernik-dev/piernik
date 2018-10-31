@@ -34,7 +34,10 @@ module randomization
    implicit none
 
    private
-   public :: initseed, redoseed, seed_size, init_randomization, cleanup_randomization, randoms_redostep, read_current_seed_from_restart, write_current_seed_to_restart
+   public :: initseed, redoseed, seed_size, init_randomization, cleanup_randomization, randoms_redostep
+#ifdef HDF5
+   public :: read_current_seed_from_restart, write_current_seed_to_restart
+#endif /* HDF5 */
 
    integer, dimension(:), allocatable :: initseed, redoseed
    integer                            :: seed_size
@@ -87,6 +90,7 @@ contains
 
    end subroutine randoms_redostep
 
+#ifdef HDF5
    subroutine write_current_seed_to_restart(file_id)
 
       use hdf5, only: HID_T, SIZE_T
@@ -127,5 +131,6 @@ contains
       deallocate(resseed)
 
    end subroutine read_current_seed_from_restart
+#endif /* HDF5 */
 
 end module randomization
