@@ -35,7 +35,7 @@
     dt_res  = 1.0
     dt_log  = 0.00001
     dt_tsl  = 0.00001
-    vars(1:) = 'magx', 'dens', 'magy', 'magz', 'pres', 'velx', 'vely', 'velz', 'divbf', "pmag%", "magB", "magdir"
+    vars(1:) = 'magx', 'dens', 'magy', 'magz', 'pres', 'velx', 'vely', 'velz', 'divb', "pmag%", "magB", "magdir"
  /
 
  $FLUID_IONIZED

@@ -10,4 +10,4 @@
 #define MAGNETIC
 #define RESISTIVE
 
-#define GRAV
+#undef GRAV

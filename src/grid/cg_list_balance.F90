@@ -54,7 +54,7 @@ module cg_list_balance
       type(patch_list_T)                :: plist            !< list of patches that exist on the current level
       type(dot_T)                       :: dot              !< depiction of topology
       logical                           :: recently_changed !< .true. when anything was added to or deleted from this level
-      type(level_T), pointer            :: l                !< single place to store off, n_d and id
+      class(level_T), pointer           :: l                !< single place to store off, n_d and id
    contains
       procedure          :: balance_new          !< Routine selector for moving proposed grids between processes
       procedure, private :: balance_strict_SFC   !< Routine for moving proposed grids between processes: keep strict SFC ordering

@@ -61,6 +61,7 @@ module constants
    real, parameter :: twot       = 2./3.                 !< two thirds
    real, parameter :: oneq       = 1./4.                 !< one fourth
    real, parameter :: thrq       = 3./4.                 !< three fourths
+   real, parameter :: onesth     = 1./6.                 !< one sixth
 
    enum, bind(C)
       enumerator :: idn = 1, imx, imy, imz, ien
@@ -181,6 +182,7 @@ module constants
    character(len=dsetnamelen), parameter :: cs_i2_n = "cs_iso2" !< map of imposed isothermal sound speed
    character(len=dsetnamelen), parameter :: wcr_n   = "wcr"     !< auxiliary array for CR diffusion
    character(len=dsetnamelen), parameter :: wa_n    = "wa"      !< general-purpose auxiliary 3D array
+   character(len=dsetnamelen), parameter :: psi_n   = "psi"     !< auxiliary 3D array for divergence cleaning
 
    ! timer names
    character(len=*), parameter :: tmr_fu  = "fluid_update"   !< main timer used to measure fluid_update step
@@ -245,6 +247,12 @@ module constants
       enumerator :: I_NGP   ! Nearest grid point
       enumerator :: I_CIC   ! Cloud in cell
       enumerator :: I_TSC   ! Triangular shaped cloud
+   end enum
+
+   ! divB=0 constraining method
+   enum, bind(C)
+      enumerator :: DIVB_CT   ! Constrained Transport
+      enumerator :: DIVB_HDC  ! Hyperbolic Divergence Cleaning (div(B) diffusion, GLM)
    end enum
 
    ! -1, 0, 1

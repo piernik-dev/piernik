@@ -91,13 +91,16 @@ contains
       use mpisetup,         only: master, piernik_MPI_Allreduce
       use named_array_list, only: qna, wna, na_var_list_q, na_var_list_w
       use user_hooks,       only: user_reaction_to_redo_step
+#ifdef RANDOMIZE
+      use randomization,    only: randoms_redostep
+#endif /* RANDOMIZE */
 
       implicit none
 
       type(cg_list_element), pointer :: cgl
-      integer(kind=4) :: no_hist_count
-      integer :: i, j
-      character(len=dsetnamelen) :: rname
+      integer(kind=4)                :: no_hist_count
+      integer                        :: i, j
+      character(len=dsetnamelen)     :: rname
 
       if (.not.repeat_step) return
 
@@ -108,9 +111,17 @@ contains
          t = t_saved
          nstep = nstep_saved
          dt = dtm/dt_max_grow**2
+         call downgrade_magic_mass
+#ifdef RANDOMIZE
+         call randoms_redostep(.true.)
+#endif /* RANDOMIZE */
+         if (associated(user_reaction_to_redo_step)) call user_reaction_to_redo_step
       else
          nstep_saved = nstep
          t_saved = t
+#ifdef RANDOMIZE
+         call randoms_redostep(.false.)
+#endif /* RANDOMIZE */
       endif
 
       no_hist_count = 0
@@ -137,8 +148,6 @@ contains
                         else
                            no_hist_count = no_hist_count + I_ONE
                         endif
-                        call downgrade_magic_mass
-                        if (associated(user_reaction_to_redo_step)) call user_reaction_to_redo_step
                      else
                         select type(na)
                            type is (na_var_list_q)
@@ -182,6 +191,7 @@ contains
 
       integer :: i, j
       character(len=dsetnamelen) :: rname
+      integer(kind=4), dimension(:), allocatable, target :: pos_copy
 
       if (.not. associated(na_lists(1)%p)) na_lists(1)%p => qna
       if (.not. associated(na_lists(2)%p)) na_lists(2)%p => wna
@@ -197,11 +207,14 @@ contains
                         write(msg,'(3a)')"[fluidupdate:restart_arrays] creating backup field '", rname, "'"
                         call printinfo(msg)
                      endif
+                     allocate(pos_copy(size(na%lst(i)%position)))
+                     pos_copy = na%lst(i)%position
                      if (na%lst(i)%dim4 /= INVALID) then
-                        call all_cg%reg_var(rname, dim4=na%lst(i)%dim4, position=na%lst(i)%position, multigrid=na%lst(i)%multigrid)
+                        call all_cg%reg_var(rname, dim4=na%lst(i)%dim4, position=pos_copy, multigrid=na%lst(i)%multigrid)
                      else
-                        call all_cg%reg_var(rname,                      position=na%lst(i)%position, multigrid=na%lst(i)%multigrid)
+                        call all_cg%reg_var(rname,                      position=pos_copy, multigrid=na%lst(i)%multigrid)
                      endif
+                     deallocate(pos_copy)
                   endif
                endif
             enddo
@@ -312,8 +325,10 @@ contains
 !<
    subroutine make_sweep(dir, forward)
 
+      use constants,      only: DIVB_CT
+      use dataio_pub,     only: die
       use domain,         only: dom
-      use global,         only: geometry25D
+      use global,         only: geometry25D, divB_0_method
       use sweeps,         only: sweep
 #ifdef COSM_RAYS
       use crdiffusion,    only: cr_diff
@@ -327,6 +342,8 @@ contains
 
       integer(kind=4), intent(in) :: dir      !< direction, one of xdim, ydim, zdim
       logical,         intent(in) :: forward  !< if .false. then reverse operation order in the sweep
+
+      if (divB_0_method /= DIVB_CT) call die("[fluidupdate:make_sweep] only CT is implemented in RTVD")
 
       if (dom%has_dir(dir)) then
          if (.not. forward) then

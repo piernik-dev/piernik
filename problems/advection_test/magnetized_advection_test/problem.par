@@ -40,7 +40,7 @@
 
  $RESTART_CONTROL
     restart  = 'last'
-    new_id   = ''
+    res_id   = ''
     nrestart = 0
  /
 
@@ -56,7 +56,7 @@
     dt_res  = 0.0
     dt_log  = 0.001
     dt_tsl  = 0.001
-    vars(1:) = 'ener', 'dens', 'velx', 'vely', 'velz', "magx", "magy", "magz", "magB", "magdir", "divbc", "divbf", "divbf4", "divbc4", "pmag%"
+    vars(1:) = 'ener', 'dens', 'velx', 'vely', 'velz', "magx", "magy", "magz", "magB", "magdir", "divb", "divb4", "pmag%"
     gdf_strict = .false.
  /
 
@@ -70,6 +70,7 @@
     smalld = 1.e-5
     smallei= 1.e-5
     limiter= 'vanleer'
+    h_solver = "rk2"
  /
 
  $PROBLEM_CONTROL
@@ -85,7 +86,7 @@
     ! A blob of div(B)
     divBbx_amp = 0.  ! 0.28209479177387814 !  1/sqrt(4 * pi)
     divBby_amp = 0.  ! 0.28209479177387814 !  1/sqrt(4 * pi)
-    divBby_amp = 0.  ! 0.28209479177387814 !  1/sqrt(4 * pi)
+    divBbz_amp = 0.  ! 0.28209479177387814 !  1/sqrt(4 * pi)
  /
 
  $NONINERTIAL

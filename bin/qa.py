@@ -12,8 +12,8 @@ typ1 = np.dtype([('name', 'a50'), ('beg', 'i'), ('end', 'i'), ('type', 'a4')])
 # starts with spaces or spaces and one of { 'end', 'pure', ... }
 # if function it can have a type next goes subroutine or function or type
 test_for_routines = re.compile('''
-      ^\s{0,12}(|end|pure|elemental|recursive|real|logical|integer)\s
-      (|pure|elemental|recursive|real|logical|integer)(|\s)
+      ^\s{0,12}(|end|pure|elemental|recursive|((type|real|logical|integer)(|\([^(]*\))))(|\s)
+      (|pure|elemental|recursive|((type|real|logical|integer)(|\([^(]*\))))(|\s)
       (subroutine|function|type(,|\s))
    ''', re.VERBOSE)
 # starts with spaces or spaces and one of { 'end', 'pure', ... }
@@ -145,7 +145,11 @@ def parse_f90file(lines, fname, store):
         if (just_end.match(f)):
             word = f.strip().split(' ')
             subs_types.insert(0, word[1])
-            subs_names.append(word[2])
+            if (len(word) >= 3):
+                subs_names.append(word[2])
+            else:
+                store.append(give_warn("QA:  ") + '[%s] "%s" without %s name' %
+                             (fname, f.strip(), word[1] if (len(word) > 1) else "any"))
     for f in subs_names:
         cur_sub = filter(re.compile(f).search, subs)
         if (len(cur_sub) > 2):

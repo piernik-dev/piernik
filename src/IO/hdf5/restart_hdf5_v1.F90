@@ -466,7 +466,7 @@ contains
       use common_hdf5,      only: output_fname
       use constants,        only: cwdlen, cbuff_len, domlen, idlen, xdim, ydim, zdim, LO, HI, RD
       use dataio_pub,       only: msg, warn, die, printio, require_problem_IC, problem_name, piernik_hdf5_version, fix_string, &
-           &                      domain_dump, last_hdf_time, last_res_time, last_log_time, last_tsl_time, nhdf, nres, new_id
+           &                      domain_dump, last_hdf_time, last_res_time, last_log_time, last_tsl_time, nhdf, nres, res_id
       use dataio_user,      only: user_reg_var_restart, user_attrs_rd
       use domain,           only: dom
       use fluidindex,       only: flind
@@ -479,6 +479,12 @@ contains
       use mpi,              only: MPI_INFO_NULL
       use mpisetup,         only: comm, master, piernik_MPI_Bcast, ibuff, rbuff, cbuff, slave
       use named_array_list, only: qna, wna
+#ifdef RANDOMIZE
+      use randomization,    only: initseed, seed_size
+#endif /* RANDOMIZE */
+#ifdef SN_SRC
+      use snsources,        only: nsn_last
+#endif /* SN_SRC */
 
       implicit none
 
@@ -598,10 +604,16 @@ contains
          call h5ltget_attribute_int_f(file_id,"/","nstep", ibuf, error) ; nstep = ibuf(1)
          call h5ltget_attribute_int_f(file_id,"/","nres",  ibuf, error) ; nres  = ibuf(1)
          call h5ltget_attribute_int_f(file_id,"/","nhdf",  ibuf, error) ; nhdf  = ibuf(1)
+#ifdef RANDOMIZE
+         call h5ltget_attribute_int_f(file_id,"/","current_seed", ibuf, error) ; initseed = ibuf(:seed_size)
+#endif /* RANDOMIZE */
+#ifdef SN_SRC
+         call h5ltget_attribute_int_f(file_id,"/","nsn_last", ibuf, error) ; nsn_last = ibuf(1)
+#endif /* SN_SRC */
 
          call h5ltget_attribute_string_f(file_id,"/","problem_name", problem_name, error)
          call h5ltget_attribute_string_f(file_id,"/","domain",       domain_dump,  error)
-         call h5ltget_attribute_string_f(file_id,"/","run_id",       new_id,       error)
+         call h5ltget_attribute_string_f(file_id,"/","run_id",       res_id,       error)
 
          if (restart_hdf5_version > 1.11) then
             call h5ltget_attribute_int_f(file_id,"/","require_problem_IC", ibuf, error)
@@ -609,7 +621,7 @@ contains
          endif
 
          problem_name = fix_string(problem_name)   !> \deprecated BEWARE: >=HDF5-1.8.4 has weird issues with strings
-         new_id  = fix_string(new_id)    !> \deprecated   this bit hacks it around
+         res_id  = fix_string(res_id)    !> \deprecated   this bit hacks it around
          domain_dump  = fix_string(domain_dump)
 
          call h5fclose_f(file_id, error)
@@ -626,6 +638,12 @@ contains
          ibuff(2) = nres
          ibuff(3) = nhdf
          if (restart_hdf5_version > 1.11) ibuff(5) = require_problem_IC
+#ifdef SN_SRC
+         ibuff(6) = nsn_last
+#endif /* SN_SRC */
+#ifdef RANDOMIZE
+         ibuff(7:seed_size+6) = initseed
+#endif /* RANDOMIZE */
 
          rbuff(1) = last_log_time
          rbuff(2) = last_tsl_time
@@ -636,7 +654,7 @@ contains
 
          cbuff(1) = problem_name
          cbuff(2)(1:domlen) = domain_dump
-         cbuff(3)(1:idlen)  = new_id
+         cbuff(3)(1:idlen)  = res_id
       endif
 
       call piernik_MPI_Bcast(ibuff)
@@ -645,22 +663,31 @@ contains
 
       if (slave) then
          nstep = ibuff(1)
-         nres = ibuff(2)
-         nhdf = ibuff(3)
+         nres  = ibuff(2)
+         nhdf  = ibuff(3)
          if (restart_hdf5_version > 1.11) require_problem_IC = ibuff(5)
+#ifdef SN_SRC
+         nsn_last = ibuff(6)
+#endif /* SN_SRC */
+#ifdef RANDOMIZE
+         initseed = ibuff(7:seed_size+6)
+#endif /* RANDOMIZE */
 
          last_log_time = rbuff(1)
          last_tsl_time = rbuff(2)
          last_hdf_time = rbuff(3)
          last_res_time = rbuff(4)
-         t = rbuff(6)
-         dt = rbuff(7)
+         t             = rbuff(6)
+         dt            = rbuff(7)
 
          problem_name = cbuff(1)
-         domain_dump = cbuff(2)(1:domlen)
-         new_id = cbuff(3)(1:idlen)
+         domain_dump  = cbuff(2)(1:domlen)
+         res_id       = cbuff(3)(1:idlen)
 
       endif
+#ifdef RANDOMIZE
+      call random_seed(put=initseed)
+#endif /* RANDOMIZE */
 
    end subroutine read_restart_hdf5_v1
 

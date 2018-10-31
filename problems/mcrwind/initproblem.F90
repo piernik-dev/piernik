@@ -28,9 +28,6 @@
 #if defined GALAXY && defined SN_SRC
 #define SN_GALAXY
 #endif /* GALAXY && SN_SRC */
-#if defined COSM_RAYS_SOURCES || defined SN_GALAXY
-#define CRS_GALAXY
-#endif /* COSM_RAYS_SOURCES || SN_GALAXY */
 #if defined COSM_RAYS && defined SN_SRC
 #define CR_SN
 #endif /* COSM_RAYS && SN_SRC */
@@ -170,11 +167,8 @@ contains
 #endif /* SHEAR */
 #ifdef COSM_RAYS
       use initcosmicrays, only: gamma_crn, iarr_crn
-#ifdef CRS_GALAXY
-      use cr_data,        only: eCRSP, cr_table
-#endif /* CRS_GALAXY */
 #ifdef SN_GALAXY
-      use cr_data,        only: icr_H1, icr_C12
+      use cr_data,        only: eCRSP, cr_table, icr_H1, icr_C12
       use domain,         only: dom
       use snsources,      only: r_sn
 #endif /* SN_GALAXY */
@@ -185,9 +179,7 @@ contains
 #ifdef GRAV
       use gravity,        only: grav_pot_3d
 #endif /* GRAV */
-#ifdef COSM_RAYS_SOURCES
-      use cr_data,        only: cr_sigma, icr_N14, icr_O16
-#endif /* COSM_RAYS_SOURCES */
+
       implicit none
 
       class(component_fluid), pointer :: fl
@@ -198,15 +190,6 @@ contains
 #ifdef SN_GALAXY
       real                            :: decr, x1, x2, y1, y2, z1
 #endif /* SN_GALAXY */
-#ifdef CR_SN
-      logical                         :: eCRSP_N14, eCRSP_O16
-#endif /* CR_SN */
-
-#ifdef COSM_RAYS_SOURCES
-! really workaround for the gold
-      if (eCRSP(icr_N14)) cr_sigma(cr_table(icr_N14),:) = 0.0
-      if (eCRSP(icr_O16)) cr_sigma(cr_table(icr_O16),:) = 0.0
-#endif /* COSM_RAYS_SOURCES */
 
 #ifdef GRAV
       call grav_pot_3d
@@ -266,12 +249,7 @@ contains
       enddo
 
 #ifdef CR_SN
-      !> \deprecated BEWARE: following lines seems to be a workaround for the gold (lines inconsistent with the gold for some reason from cr_sn_beware)
-      eCRSP_N14 = eCRSP(icr_N14) ; eCRSP(icr_N14) = .false.
-      eCRSP_O16 = eCRSP(icr_O16) ; eCRSP(icr_O16) = .false.
       call cr_sn(sn_pos,amp_cr)
-      eCRSP(icr_N14) = eCRSP_N14
-      eCRSP(icr_O16) = eCRSP_O16
 #endif /* CR_SN */
 
 

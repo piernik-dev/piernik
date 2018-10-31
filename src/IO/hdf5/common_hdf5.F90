@@ -96,9 +96,10 @@ contains
 
    subroutine init_hdf5(vars)
 
-      use constants,  only: dsetnamelen
+      use constants,  only: dsetnamelen, singlechar
       use fluidindex, only: iarr_all_dn, iarr_all_mx, iarr_all_my, iarr_all_mz
       use fluids_pub, only: has_ion, has_dst, has_neu
+      use global,     only: force_cc_mag
 #ifdef COSM_RAYS
       use dataio_pub, only: warn, msg
       use fluidindex, only: iarr_all_crs
@@ -109,9 +110,10 @@ contains
       character(len=dsetnamelen), dimension(:), intent(in) :: vars  !< quantities to be plotted, see dataio::vars
 
       integer                                              :: nvars, i, j
+      character(len=singlechar)                            :: fc, ord
+      character(len=dsetnamelen)                           :: aux
 #if defined COSM_RAYS
       integer                                              :: k
-      character(len=dsetnamelen)                           :: aux
 #endif /* COSM_RAYS */
 
       nvars = 0
@@ -134,26 +136,13 @@ contains
             case ('ener')
                nhdf_vars = nhdf_vars + size(iarr_all_mz,1)
                if (has_dst) nhdf_vars = nhdf_vars - 1
-#ifdef GRAV
-            case ('gpot')
-               nhdf_vars = nhdf_vars + 1
-#ifdef MULTIGRID
-            case ('sgpt')
-               nhdf_vars = nhdf_vars + 1
-#endif /* MULTIGRID */
-#endif /* GRAV */
-            case ('magx', 'magy', 'magz', 'pres')
-               nhdf_vars = nhdf_vars + 1
 #ifdef COSM_RAYS
             case ('encr')
                nhdf_vars = nhdf_vars + size(iarr_all_crs,1)
 #endif /* COSM_RAYS */
-#ifdef TRACER
-            case ('trcr')
-               nhdf_vars = nhdf_vars + 1
-#endif /* TRACER */
             case default
                nhdf_vars = nhdf_vars + 1
+               ! all known and unknown field descriptions that add just one field
          end select
       enddo
       allocate(hdf_vars_avail(nhdf_vars))
@@ -196,8 +185,22 @@ contains
             case ('ethr')
                if (has_neu) then ; hdf_vars(j) = 'ethn' ; j = j + 1 ; endif
                if (has_ion) then ; hdf_vars(j) = 'ethi' ; j = j + 1 ; endif
-            case ("magx", "magy", "magz")
-               hdf_vars(j) = vars(i) ; j = j + 1
+            case ("divb", "divB")
+               if (force_cc_mag) then
+                  hdf_vars(j) = "divbc"
+               else
+                  hdf_vars(j) = "divbf"
+               endif
+               j = j + 1
+            case ("divb4", "divb6", "divb8")
+               if (force_cc_mag) then
+                  fc = "c"
+               else
+                  fc = "f"
+               endif
+               read(vars(i), '(a4,a1)') aux, ord
+               write(hdf_vars(j), '(3a)') "divb", fc, ord
+               j = j + 1
 #ifdef COSM_RAYS
             case ('encr')
                do k = 1, size(iarr_all_crs,1)
@@ -210,23 +213,12 @@ contains
                   endif
                enddo
 #endif /* COSM_RAYS */
-#ifdef GRAV
-            case ('gpot')
-               hdf_vars(j) = 'gpot' ; j = j + 1
-#ifdef MULTIGRID
-            case ('sgpt')
-               hdf_vars(j) = 'sgpt' ; j = j + 1
-#endif /* MULTIGRID */
-#endif /* GRAV */
-#ifdef TRACER
-            case ('trcr')
-               hdf_vars(j) = 'trcr' ; j = j + 1
-#endif /* TRACER */
             case ('pres')
                if (has_neu) then ; hdf_vars(j) = 'pren' ; j = j + 1 ; endif
                if (has_ion) then ; hdf_vars(j) = 'prei' ; j = j + 1 ; endif
             case default
                hdf_vars(j) = trim(vars(i)) ; j = j + 1
+               ! all known and unknown field descriptions that add just one field
          end select
       enddo
 
@@ -321,15 +313,21 @@ contains
 !<
    subroutine set_common_attributes(filename)
 
-      use constants,   only: I_ONE
-      use dataio_pub,  only: use_v2_io, parfile, parfilelines, gzip_level
-      use dataio_user, only: user_attrs_wr, user_attrs_pre
-      use hdf5,        only: HID_T, SIZE_T, HSIZE_T, H5F_ACC_TRUNC_F, H5T_NATIVE_CHARACTER, H5Z_FILTER_DEFLATE_F, &
+      use constants,     only: I_ONE
+      use dataio_pub,    only: use_v2_io, parfile, parfilelines, gzip_level
+      use dataio_user,   only: user_attrs_wr, user_attrs_pre
+      use hdf5,          only: HID_T, SIZE_T, HSIZE_T, H5F_ACC_TRUNC_F, H5T_NATIVE_CHARACTER, H5Z_FILTER_DEFLATE_F, &
          & H5P_DATASET_CREATE_F, h5open_f, h5fcreate_f, h5fclose_f, H5Zfilter_avail_f, H5Pcreate_f, H5Pset_deflate_f, &
          & H5Pset_chunk_f, h5tcopy_f, h5tset_size_f, h5screate_simple_f, H5Dcreate_f, H5Dwrite_f, H5Dclose_f, &
          & H5Sclose_f, H5Tclose_f, H5Pclose_f, h5close_f
-      use mpisetup,    only: slave
-      use version,     only: env, nenv
+      use mpisetup,      only: slave
+      use version,       only: env, nenv
+#ifdef RANDOMIZE
+      use randomization, only: write_current_seed_to_restart
+#endif /* RANDOMIZE */
+#ifdef SN_SRC
+      use snsources,     only: write_snsources_to_restart
+#endif /* SN_SRC */
 
       implicit none
 
@@ -387,6 +385,12 @@ contains
       call H5Tclose_f(type_id, error)
       call H5Pclose_f(prp_id, error)
 
+#ifdef RANDOMIZE
+      call write_current_seed_to_restart(file_id)
+#endif /* RANDOMIZE */
+#ifdef SN_SRC
+      call write_snsources_to_restart(file_id)
+#endif /* SN_SRC */
       if (associated(user_attrs_wr)) call user_attrs_wr(file_id)
 
       call h5fclose_f(file_id, error)
@@ -538,7 +542,7 @@ contains
       ibuffer(2) = nres                  ; ibuffer_name(2) = "nres" !rr2
       ibuffer(3) = nhdf                  ; ibuffer_name(3) = "nhdf" !rr2
       ibuffer(4) = -1                    ; ibuffer_name(4) = "nimg" !rr2 !FIXME
-      ibuffer(5) = require_problem_IC     ; ibuffer_name(5) = "require_problem_IC" !rr2
+      ibuffer(5) = require_problem_IC    ; ibuffer_name(5) = "require_problem_IC" !rr2
 
       !> \todo  add number of pieces in the restart point/data dump
 
@@ -1026,8 +1030,8 @@ contains
 
    function output_fname(wr_rd, ext, no, bcast, prefix) result(filename)
 
-      use constants,  only: cwdlen, RD, WR, I_FOUR, fnamelen
-      use dataio_pub, only: problem_name, run_id, wd_wr, wd_rd, warn, die, msg
+      use constants,  only: cwdlen, idlen, RD, WR, I_FOUR, fnamelen
+      use dataio_pub, only: problem_name, run_id, res_id, wd_wr, wd_rd, warn, die, msg
       use mpisetup,   only: master, piernik_MPI_Bcast
 
       implicit none
@@ -1037,6 +1041,7 @@ contains
       logical,               intent(in), optional :: bcast
       character(len=*),      intent(in), optional :: prefix
       character(len=cwdlen)                       :: filename, temp  ! File name
+      character(len=idlen)                        :: file_id
 
 
       ! Sanity checks go here
@@ -1052,11 +1057,17 @@ contains
          endif
       endif
 
+      if ((wr_rd == RD) .and. (res_id /= '')) then
+         file_id = res_id
+      else
+         file_id = run_id
+      endif
+
       if (master) then
          if (present(prefix)) then
-            write(temp,'(2(a,"_"),a3,"_",i4.4,a4)') trim(prefix), trim(problem_name), run_id, no, ext
+            write(temp,'(2(a,"_"),a3,"_",i4.4,a4)') trim(prefix), trim(problem_name), file_id, no, ext
          else
-            write(temp,'(a,"_",a3,"_",i4.4,a4)') trim(problem_name), run_id, no, ext
+            write(temp,'(a,"_",a3,"_",i4.4,a4)') trim(problem_name), file_id, no, ext
          endif
          select case (wr_rd)
             case (RD)
