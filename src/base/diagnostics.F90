@@ -69,8 +69,13 @@ module diagnostics
       module procedure pop_real_vector
    end interface pop_vector
 
+   interface decr_vec
+      module procedure decrease_vector_int4
+   end interface decr_vec
+
+
    private
-   public :: diagnose_arrays, ma1d, ma2d, ma3d, ma4d, ma5d, my_allocate, my_allocate_with_index, my_deallocate, pop_vector, check_environment, cleanup_diagnostics, incr_vec
+   public :: diagnose_arrays, ma1d, ma2d, ma3d, ma4d, ma5d, my_allocate, my_allocate_with_index, my_deallocate, pop_vector, check_environment, cleanup_diagnostics, incr_vec, decr_vec
 
    integer(kind=8), parameter :: i4_s=4, r8_s=8, bool_s=1 ! sizeof(int(kind=4)), sizeof(double)
 !   real,    parameter :: MiB = 8./1048576.  ! sizeof(double) / 2**20
@@ -323,6 +328,28 @@ contains
          deallocate(temp)
       endif
    end subroutine increase_int8_vector
+
+   subroutine decrease_vector_int4(vec, ind_no)
+
+      implicit none
+
+      integer(kind=4), dimension(:), allocatable, intent(inout) :: vec  !< vector that will be decreased by one item
+      integer(kind=4), dimension(:), allocatable                :: temp
+      integer, intent(in)  :: ind_no                     !< index of element to decreased by
+      integer              :: old_size
+
+      if (allocated(vec)) then
+         old_size = size(vec)
+         allocate(temp(old_size))
+         temp = vec
+         deallocate(vec)
+         allocate(vec(old_size-1))
+         vec = 0
+         vec = [temp(:ind_no-1), temp(ind_no+1:)]
+         deallocate(temp)
+      endif
+
+   end subroutine decrease_vector_int4
 
    ! GOD I NEED TEMPLATES IN FORTRAN!!!!
 

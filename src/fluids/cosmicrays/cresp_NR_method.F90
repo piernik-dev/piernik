@@ -240,7 +240,7 @@ contains
          p_ratios_up = zero ; f_ratios_up = zero
          p_ratios_lo = zero ; f_ratios_lo = zero
 
-         q_grid      = 2*q_big; q_grid(int(arr_dim_q/2):) = -2*q_big ! if crash, factor 2 must be removed ! BEWARE: magic number
+         q_grid      = q_big; q_grid(int(arr_dim_q/2):) = -q_big
 
          call fill_guess_grids
 
@@ -288,8 +288,8 @@ contains
 !----------------------------------------------------------------------------------------------------
 
    subroutine fill_guess_grids
-      use constants, only: zero, one, half
-      use initcrspectrum,  only: q_big, force_init_NR, NR_run_refine_pf, p_fix_ratio
+      use constants, only: zero, one, I_ONE, half
+      use initcrspectrum,  only: q_big, force_init_NR, NR_run_refine_pf, p_fix_ratio, e_small_approx_p_lo, e_small_approx_p_up
 
       implicit none
 
@@ -342,52 +342,58 @@ contains
          n_tab_up(i)     = ind_to_flog(i, n_min_up, n_max_up, arr_dim) ! n_min_up * ten**((log10(n_max_up/n_min_up))/real(arr_dim-1,kind=8)*real((i-1),kind=8))
       enddo
 
-      write (*, "(A36)", advance="no") "Reading (up) boundary ratio files..."
-      do j = 1,2
-         call read_NR_guess_grid(p_ratios_up, "p_ratios_up", exit_code) ;  int_logical_p = logical_2_int(exit_code)
-         call read_NR_guess_grid(f_ratios_up, "f_ratios_up", exit_code) ;  int_logical_f = logical_2_int(exit_code)
+      if (e_small_approx_p_up .ge. 1) then
+         write (*, "(A36)", advance="no") "Reading (up) boundary ratio files..."
+         do j = 1,2
+            call read_NR_guess_grid(p_ratios_up, "p_ratios_up", exit_code) ;  int_logical_p = logical_2_int(exit_code)
+            call read_NR_guess_grid(f_ratios_up, "f_ratios_up", exit_code) ;  int_logical_f = logical_2_int(exit_code)
 
-         if ( int_logical_f + int_logical_p .gt. 0 .or. force_init_NR .eqv. .true.) then
-! Setting up the "guess grid" for p_up case
-            call fill_boundary_grid("up", p_ratios_up, f_ratios_up)
-         else
-            print *," >> Will not solve ratios table (up), reading data from file instead."
-         endif
+            if ( int_logical_f + int_logical_p .gt. 0 .or. force_init_NR .eqv. .true.) then
+   ! Setting up the "guess grid" for p_up case
+               call fill_boundary_grid("up", p_ratios_up, f_ratios_up)
+            else
+               print *," >> Will not solve ratios table (up), reading data from file instead."
+            endif
 
-         if ( NR_run_refine_pf .eqv. .true.) then
-            call refine_all_directions("up")
-         endif
+            if ( NR_run_refine_pf .eqv. .true.) then
+               call assoc_pointers_up
+               call refine_all_directions("up")
+            endif
 
-         call save_NR_guess_grid(p_ratios_up,"p_ratios_up")
-         call save_NR_guess_grid(f_ratios_up,"f_ratios_up")
-      enddo
+            call save_NR_guess_grid(p_ratios_up,"p_ratios_up")
+            call save_NR_guess_grid(f_ratios_up,"f_ratios_up")
+         enddo
+      endif
 
-      write (*, "(A36)", advance="no") "Reading (lo) boundary ratio files"
+      if (e_small_approx_p_lo .ge. 1) then
+         write (*, "(A36)", advance="no") "Reading (lo) boundary ratio files"
+         do j = 1,2
+            call read_NR_guess_grid(p_ratios_lo, "p_ratios_lo", exit_code) ;   int_logical_p = logical_2_int(exit_code)
+            call read_NR_guess_grid(f_ratios_lo, "f_ratios_lo", exit_code) ;   int_logical_f = logical_2_int(exit_code)
 
-      do j = 1,2
-         call read_NR_guess_grid(p_ratios_lo, "p_ratios_lo", exit_code) ;   int_logical_p = logical_2_int(exit_code)
-         call read_NR_guess_grid(f_ratios_lo, "f_ratios_lo", exit_code) ;   int_logical_f = logical_2_int(exit_code)
+            if ( int_logical_f + int_logical_p .gt. 0 .or. force_init_NR .eqv. .true.) then
+   ! Setting up the "guess grid" for p_lo case
+               call fill_boundary_grid("lo", p_ratios_lo, f_ratios_lo)
+            else
+               print *," >> Will not solve ratios table (lo), reading data from file instead."
+            endif
 
-         if ( int_logical_f + int_logical_p .gt. 0 .or. force_init_NR .eqv. .true.) then
-! Setting up the "guess grid" for p_lo case
-            call fill_boundary_grid("lo", p_ratios_lo, f_ratios_lo)
-         else
-            print *," >> Will not solve ratios table (lo), reading data from file instead."
-         endif
+            if (NR_run_refine_pf .eqv. .true.) then
+               call assoc_pointers_lo
+               call refine_all_directions("lo")
+            endif
 
-         if (NR_run_refine_pf .eqv. .true.) then
-            call refine_all_directions("lo")
-         endif
+            call save_NR_guess_grid(p_ratios_lo,"p_ratios_lo")
+            call save_NR_guess_grid(f_ratios_lo,"f_ratios_lo")
+         enddo
+      endif
 
-      call save_NR_guess_grid(p_ratios_lo,"p_ratios_lo")
-         call save_NR_guess_grid(f_ratios_lo,"f_ratios_lo")
-      enddo
+      a_min_q = one  + epsilon(one)
+      a_max_q = (one + epsilon(one)) * p_fix_ratio
+      j = min(arr_dim_q - int(arr_dim_q/100 ,kind=4), arr_dim_q - I_ONE)               ! BEWARE: magic number
 
-      a_min_q = 1.0005 ! BEWARE: magic number
-      a_max_q = 1.5 * p_fix_ratio
-      j = arr_dim_q - int(arr_dim_q/25 ,kind=4)
-      do while (q_grid(j) .le. (-q_big) .and. (q_grid(arr_dim_q) .le. (-2*q_big)) )
-         a_max_q = a_max_q - a_max_q*0.005 ! BEWARE: magic number
+      do while (q_grid(j) .le. (-q_big) .and. (q_grid(arr_dim_q) .le. (-q_big)) )
+         a_max_q = a_max_q - a_max_q*0.005                                             ! BEWARE: magic number
          do i = 1, arr_dim_q
             alpha_tab_q(i)  = ind_to_flog(i, a_min_q, a_max_q, arr_dim_q)
          enddo
@@ -398,6 +404,7 @@ contains
       do i = 1, arr_dim_q
          print "(A1,I3,A7,2F18.12)", "[ ", i,"] a : q ", q_grid(i), alpha_tab_q(i)
       enddo
+
       print *,"alpha_tab_lo(i),      alpha_tab_up(i),        n_tab_lo(i),        n_tab_up(i)  |       p_space(i),     q_space(i)"
       do i = 1, arr_dim
          if (i .le. helper_arr_dim) then
@@ -419,14 +426,16 @@ contains
       implicit none
       character(len=2) :: bound_case
 
-      call refine_ij(bound_case, p_p, p_f,1,-1)
-      call refine_ji(bound_case, p_p, p_f,1, -1)
-      call refine_ij(bound_case, p_p, p_f,-1,-1)
-      call refine_ji(bound_case, p_p, p_f,-1, -1)
-      call refine_ij(bound_case, p_p, p_f,1,1)
-      call refine_ji(bound_case, p_p, p_f, 1, 1)
-      call refine_ij(bound_case, p_p, p_f,-1,1)
-      call refine_ji(bound_case, p_p, p_f,-1, 1)
+      print *,"Running refine for:", bound_case, " boundary"
+
+      call refine_ij(p_p, p_f,1,-1)
+      call refine_ji(p_p, p_f,1, -1)
+      call refine_ij(p_p, p_f,-1,-1)
+      call refine_ji(p_p, p_f,-1, -1)
+      call refine_ij(p_p, p_f,1,1)
+      call refine_ji(p_p, p_f, 1, 1)
+      call refine_ij(p_p, p_f,-1,1)
+      call refine_ji(p_p, p_f,-1, 1)
 
    end subroutine refine_all_directions
 
@@ -598,7 +607,7 @@ contains
    end subroutine step_seek
 
 !----------------------------------------------------------------------------------------------------
-   subroutine refine_ji(bound_case, ref_p, ref_f, i_incr, j_incr) ! ref_f and ref_p should already be partially filled with solutions
+   subroutine refine_ji(ref_p, ref_f, i_incr, j_incr) ! ref_f and ref_p should already be partially filled with solutions
       use constants, only: zero
 
       implicit none
@@ -607,17 +616,12 @@ contains
       integer(kind=4),intent(in)   :: i_incr, j_incr
       real(kind=8), dimension(:,:), intent(inout) :: ref_p, ref_f
       real(kind=8), dimension(1:2) :: prev_solution
-      character(len=2), intent(in) :: bound_case
       character(len=6) :: nam = "Refine"
       logical :: exit_code, new_line
-
-      if (bound_case == "lo") call assoc_pointers_lo
-      if (bound_case == "up") call assoc_pointers_up
 
       if (allocated(p_space) .and. allocated(q_space)) then
          prev_solution(1) = p_space(1)              ! refine must be called before these are deallocated
          prev_solution(2) = p_space(1)**q_space(1)
-         print *,"Running refine for:", bound_case, " boundary"
          call prepare_indices(i_incr, i_beg, i_end)
          call prepare_indices(j_incr, j_beg, j_end)
          do j = j_beg, j_end, j_incr
@@ -653,7 +657,7 @@ contains
    end subroutine refine_ji
 
 !----------------------------------------------------------------------------------------------------
-   subroutine refine_ij(bound_case, ref_p, ref_f, i_incr, j_incr) ! ref_f and ref_p should already be partially filled with solutions
+   subroutine refine_ij(ref_p, ref_f, i_incr, j_incr) ! ref_f and ref_p should already be partially filled with solutions
       use constants, only: zero
 
       implicit none
@@ -662,17 +666,12 @@ contains
       integer(kind=4),intent(in)   :: i_incr, j_incr
       real(kind=8), dimension(:,:), intent(inout) :: ref_p, ref_f
       real(kind=8), dimension(1:2) :: prev_solution
-      character(len=2), intent(in) :: bound_case
       character(len=6) :: nam = "Refine"
       logical :: exit_code, new_line, i_primary
-
-      if (bound_case == "lo") call assoc_pointers_lo
-      if (bound_case == "up") call assoc_pointers_up
 
       if (allocated(p_space) .and. allocated(q_space)) then
          prev_solution(1) = p_space(1)              ! refine must be called before these are deallocated
          prev_solution(2) = p_space(1)**q_space(1)
-         print *,"Running refine for:", bound_case, " boundary"
          i_primary = .true.
          call prepare_indices(i_incr, i_beg, i_end)
          call prepare_indices(j_incr, j_beg, j_end)
@@ -937,8 +936,8 @@ contains
 
       real(kind=8)  :: x
       logical :: exit_code
-      if ( abs(x) .ge. q_big *2 ) then
-         x = sign(one, x) * q_big *2
+      if ( abs(x) .ge. q_big ) then
+         x = sign(one, x) * q_big
          exit_code = .true.
          return
       endif
@@ -1001,11 +1000,12 @@ contains
       real(kind=8), dimension(ndim) :: x, xp, xm
       real(kind=8), dimension(size(x),size(x)) :: jac_fin_diff
       real(kind=8), dimension(size(x)) :: dx
-      real(kind=8), parameter          :: dx_par = 1.0e-4
+      real(kind=8), parameter          :: dx_par = 1.0e-4, dx_min = epsilon(dx_par)
       integer(kind=2) :: j
 
       do j = 1,size(x)
-         dx(:) = min(max(x(:)*dx_par,x(:)*eps),dx_par) ! the value of dx is scaled not to go over value of x
+         dx(j) = max(x(j), dx_min )          ! assure dx > zero
+         dx(j) = min(dx(j)*dx_par, dx_par)   ! the value of dx is scaled not to go over value of x
          xp = x ; xm = x
          xp(j) = x(j) - dx(j) ;  xm(j) = x(j) + dx(j)
          jac_fin_diff(:,j)  = half*( selected_function_2D(xp) - selected_function_2D(xm)) / dx(j)
@@ -1347,17 +1347,17 @@ contains
 
    end function lin_extrapol_1D
 !----------------------------------------------------------------------------------------------------
-  function intpol_pf_from_NR_grids(a_val, n_val, interpolation_successful, not_interpolated) ! for details see paragraph "Bilinear interpolation" in Numerical Recipes for F77, page 117, eqn. 3.6.4
+  function intpol_pf_from_NR_grids(a_val, n_val, interpolation_successful) ! for details see paragraph "Bilinear interpolation" in Numerical Recipes for F77, page 117, eqn. 3.6.4
 
       implicit none                                              ! should return exit code as well
 
       real(kind=8), dimension(2) :: intpol_pf_from_NR_grids ! indexes with best match and having solutions are chosen.
       integer(kind=4), dimension(1:2) :: loc1, loc2, loc_no_ip ! loc1, loc2 - indexes that points where alpha_tab_ and up nad n_tab_ and up are closest in value to a_val and n_val - indexes point to
       real(kind=8),intent(inout) :: a_val, n_val  ! ratios arrays (p,f: lo and up), for which solutions have been obtained. loc_no_ip - in case when interpolation is not possible,
-      logical              :: exit_code, find_failure
-      logical, intent(out) :: interpolation_successful, not_interpolated
+      logical              :: exit_code
+      logical, intent(out) :: interpolation_successful
 
-      exit_code = .false.; find_failure = .false. ; not_interpolated = .false.
+      exit_code = .false.
 
 #ifdef CRESP_VERBOSED
       write (*,"(A30,A2,A4)",advance="no") "Determining indices for case: ", current_bound, "... "
@@ -1369,28 +1369,20 @@ contains
       call save_loc(current_bound, loc2(1), loc2(2))
 #endif /* CRESP_VERBOSED */
 
-      if (find_failure .eqv. .true.) then
-         not_interpolated = .true.
-#ifdef CRESP_VERBOSED
-         print *, "Not interpolated successfully, returning"
-#endif /* CRESP_VERBOSED */
+      if (exit_code .eqv. .true. ) then ! interpolation won't work in this case, choosing closest values that have solutions.
+         intpol_pf_from_NR_grids(1) = p_p(loc_no_ip(1),loc_no_ip(2)) ! this countermeasure wont work = loc_no_ip not initialized !
+         intpol_pf_from_NR_grids(2) = p_f(loc_no_ip(1),loc_no_ip(2))
+         interpolation_successful = .false.
          return
       else
-         if (exit_code .eqv. .true. ) then ! interpolation won't work in this case, choosing closest values that have solutions.
-            intpol_pf_from_NR_grids(1) = p_p(loc_no_ip(1),loc_no_ip(2)) ! this countermeasure wont work = loc_no_ip not initialized !
-            intpol_pf_from_NR_grids(2) = p_f(loc_no_ip(1),loc_no_ip(2))
-            interpolation_successful = .false.
-            return
-         else
-            intpol_pf_from_NR_grids(1) = bl_interpol(p_p(loc1(1),loc1(2)),p_p(loc1(1),loc2(2)), &
-                  &  p_p(loc2(1),loc1(2)),p_p(loc2(1),loc2(2)), bl_in_tu(p_a(loc1(1)), a_val, p_a(loc2(1))), &
-                  &  bl_in_tu(p_n(loc1(2)), n_val, p_n(loc2(2))) )
-            intpol_pf_from_NR_grids(2) = bl_interpol(p_f(loc1(1),loc1(2)),p_f(loc1(1),loc2(2)), &
-                  &  p_f(loc2(1),loc1(2)),p_f(loc2(1),loc2(2)), bl_in_tu(p_a(loc1(1)), a_val, p_a(loc2(1))), &
-                  &  bl_in_tu(p_n(loc1(2)), n_val, p_n(loc2(2))) )
-            interpolation_successful = .true.
-            return
-         endif
+         intpol_pf_from_NR_grids(1) = bl_interpol(p_p(loc1(1),loc1(2)),p_p(loc1(1),loc2(2)), &
+               &  p_p(loc2(1),loc1(2)),p_p(loc2(1),loc2(2)), bl_in_tu(p_a(loc1(1)), a_val, p_a(loc2(1))), &
+               &  bl_in_tu(p_n(loc1(2)), n_val, p_n(loc2(2))) )
+         intpol_pf_from_NR_grids(2) = bl_interpol(p_f(loc1(1),loc1(2)),p_f(loc1(1),loc2(2)), &
+               &  p_f(loc2(1),loc1(2)),p_f(loc2(1),loc2(2)), bl_in_tu(p_a(loc1(1)), a_val, p_a(loc2(1))), &
+               &  bl_in_tu(p_n(loc1(2)), n_val, p_n(loc2(2))) )
+         interpolation_successful = .true.
+         return
       endif
 
    end function intpol_pf_from_NR_grids
@@ -1473,8 +1465,8 @@ contains
    end subroutine nearest_solution
 !----------------------------------------------------------------------------------------------------
    function compute_q(alpha_in, exit_code, outer_p_ratio)
-      use constants, only: one, I_ZERO, I_ONE
-      use initcrspectrum, only: NR_refine_solution_q, q_big, p_fix_ratio
+      use constants,       only: zero, one, I_ZERO, I_ONE
+      use initcrspectrum,  only: NR_refine_solution_q, q_big, p_fix_ratio
 
       implicit none
 
@@ -1489,17 +1481,22 @@ contains
       selected_function_1D => alpha_to_q
       selected_value_check_1D => q_control
 
-      p_ratio_4_q = p_fix_ratio
-      if (present(outer_p_ratio)) p_ratio_4_q = outer_p_ratio
+      compute_q = zero
+      if (present(outer_p_ratio)) then
+         p_ratio_4_q = outer_p_ratio
+      else
+         p_ratio_4_q = p_fix_ratio
+      endif
+
       loc_1 = inverse_f_to_ind(alpha_in, alpha_tab_q(1), alpha_tab_q(arr_dim_q), arr_dim_q)
 
       if ((loc_1 .le. I_ZERO) .or. (loc_1 .ge. arr_dim_q)) then
          if (loc_1 .le. I_ZERO) then
-            compute_q = q_big ! < should be consistent with compute_q = q_grid(1)
-         else ! hence if (loc_1 .ge. arr_dim_q)
-            compute_q = -q_big ! < should be consistent with compute_q = q_grid(arr_dim_q)
+            compute_q = q_big          !< should be consistent with q_grid(1)
+         else
+            compute_q = -q_big         !< should be consistent with q_grid(arr_dim_q)
          endif
-         return                ! < returns compute_q withh exit_code = .true.
+         return                        ! < returns compute_q withh exit_code = .true.
       endif
 
       loc_2 = loc_1 + I_ONE
@@ -1508,9 +1505,9 @@ contains
       if (NR_refine_solution_q) then
          alpha = alpha_in
          call q_control(compute_q,exit_code)
-         call NR_algorithm_1D(compute_q, exit_code) ! this might not even be necessary
+         call NR_algorithm_1D(compute_q, exit_code)
       endif
-      exit_code = .false.
+
       if (abs(compute_q) .gt. q_big) compute_q = sign(one, compute_q) * q_big
 
    end function compute_q

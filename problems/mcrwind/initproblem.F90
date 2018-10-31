@@ -190,7 +190,7 @@ contains
 #endif /* COSM_RAYS_SOURCES */
 #ifdef COSM_RAY_ELECTRONS
       use cresp_crspectrum,   only: cresp_get_scaled_init_spectrum
-      use initcrspectrum,     only: taylor_coeff_2nd, taylor_coeff_3rd, expan_order
+      use initcrspectrum,     only: expan_order
       use initcosmicrays,     only: iarr_cre_n, iarr_cre_e
 #ifdef SN_GALAXY
       use initcrspectrum,  only: cresp
@@ -320,8 +320,6 @@ contains
       enddo
 #ifdef COSM_RAY_ELECTRONS
       write(msg,*) '[initproblem:problem_initial_conditions]: Taylor_exp._ord. (cresp)    = ', expan_order
-      call printinfo(msg)
-      write(msg,*) '[initproblem:problem_initial conditions]: Taylor_exp._coeff.(2nd,3rd) = ', taylor_coeff_2nd, taylor_coeff_3rd
       call printinfo(msg)
 #endif /* COSM_RAY_ELECTRONS */
 
