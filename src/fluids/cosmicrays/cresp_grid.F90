@@ -70,7 +70,6 @@ module cresp_grid
 
       implicit none
 
-      real(kind=8), dimension(:), pointer :: virtual_e => null(), virtual_n => null()
       integer                             :: i, j, k
       type(cg_list_element), pointer      :: cgl
       type(grid_container), pointer       :: cg
@@ -89,14 +88,12 @@ module cresp_grid
                   sptab%ud = 0.0 ; sptab%ub = 0.0 ; sptab%ucmb = 0.0
                   cresp%n    = p4(iarr_cre_n, i, j, k)
                   cresp%e    = p4(iarr_cre_e, i, j, k)
-                  virtual_n  => cg%w(wna%ind(vn_n))%point([i,j,k])
-                  virtual_e  => cg%w(wna%ind(ve_n))%point([i,j,k])
                   if (synch_active) sptab%ub = emag(cg%b(xdim,i,j,k), cg%b(ydim,i,j,k), cg%b(zdim,i,j,k)) * bb_to_ub    !< WARNING assusmes that b is in mGs
                   if (adiab_active) sptab%ud = cg%q(qna%ind(divv_n))%point([i,j,k]) * onet
 #ifdef CRESP_VERBOSED
                   print *, 'Output of cosmic ray electrons module for grid cell with coordinates i,j,k:', i, j, k
 #endif /* CRESP_VERBOSED */
-                  call cresp_update_cell(2 * dt, cresp%n, cresp%e, sptab, virtual_n, virtual_e, cfl_cresp_violation)
+                  call cresp_update_cell(2 * dt, cresp%n, cresp%e, sptab, cfl_cresp_violation)
 ! #ifdef /* DEBUG */
                   call cresp_detect_negative_content( (/ i, j, k /))
 ! #endif /* DEBUG */
@@ -162,17 +159,15 @@ module cresp_grid
 
       use cg_leaves,          only: leaves
       use cg_list,            only: cg_list_element
-      use cg_list_global,     only: all_cg
       use constants,          only: pi
-      use cresp_crspectrum,   only: cresp_allocate_all, e_threshold_lo, e_threshold_up, fail_count_interpol, fail_count_no_sol, &
-                                    & fail_count_NR_2dim, fail_count_comp_q, second_fail, cresp_init_state
+      use cresp_crspectrum,   only: cresp_allocate_all, e_threshold_lo, e_threshold_up, fail_count_interpol, &
+                              &     fail_count_NR_2dim, fail_count_comp_q, cresp_init_state, p_rch_init
       use cresp_NR_method,    only: cresp_initialize_guess_grids
       use dataio_pub,         only: warn, printinfo, msg
       use grid_cont,          only: grid_container
       use initcosmicrays,     only: iarr_cre_n, iarr_cre_e
       use initcrspectrum,     only: e_small, e_small_approx_p_lo, e_small_approx_p_up, norm_init_spectrum, f_init
       use mpisetup,           only: master
-      use named_array_list,   only: wna
       use units,              only: units_set
 
       implicit none
@@ -187,17 +182,11 @@ module cresp_grid
          call cresp_allocate_all
 
          fail_count_interpol = 0
-         fail_count_no_sol   = 0
          fail_count_NR_2dim  = 0
-         second_fail         = 0
          fail_count_comp_q   = 0
 
          e_threshold_lo = e_small * e_small_approx_p_lo
          e_threshold_up = e_small * e_small_approx_p_up
-
-         call all_cg%reg_var(vn_n, dim4=2) !< registering helper virtual arrays for CRESP number density
-         call all_cg%reg_var(ve_n, dim4=2) !< registering helper virtual arrays for CRESP energy density
-
 
          sigma_T_cgs = 6.65245871571e-25 ! (cm ** 2)  ! < TODO: put this in the units module?
          me_cgs      = 9.1093835611e-28  ! g          ! TODO: "unitize" these quantities
@@ -220,11 +209,11 @@ module cresp_grid
                cg => cgl%cg
                   cg%u(iarr_cre_n,:,:,:)  = 0.0
                   cg%u(iarr_cre_e,:,:,:)  = 0.0
-                  cg%w(wna%ind(vn_n))%arr = 0.0
-                  cg%w(wna%ind(ve_n))%arr = 0.0
                   not_zeroed = .false.
                cgl => cgl%nxt
             enddo
+
+            call p_rch_init               !< sets the right pointer for p_rch function, based on used Taylor expansion coefficient
 
             call cresp_init_state(norm_init_spectrum%n, norm_init_spectrum%e, f_init)   !< initialize spectrum here, f_init should be 1.0
 
@@ -233,7 +222,6 @@ module cresp_grid
       endif
       if (master) then
          if (first_run)  call warn("[cresp_grid:cresp_init_grid] CRESP might not be initialized!")
-         if (not_zeroed) call warn("[cresp_grid:cresp_init_grid] CRESP virtual arrays might not be initialized properly!")
       endif
 
    end subroutine cresp_init_grid

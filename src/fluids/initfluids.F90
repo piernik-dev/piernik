@@ -185,7 +185,7 @@ contains
 #endif /* COSM_RAYS */
 #ifdef COSM_RAY_ELECTRONS
       use cresp_crspectrum, only: cleanup_cresp
-      use initcrspectrum,   only: cleanup_cresp_virtual_en_arrays
+      use initcrspectrum,   only: cleanup_cresp_work_arrays
 #endif /* COSM_RAY_ELECTRONS */
 
       implicit none
@@ -197,7 +197,7 @@ contains
 
 #ifdef COSM_RAY_ELECTRONS
       call cleanup_cresp
-      call cleanup_cresp_virtual_en_arrays
+      call cleanup_cresp_work_arrays
 #endif /* COSM_RAY_ELECTRONS */
       call cleanup_magic_mass
 
