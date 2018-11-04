@@ -910,6 +910,7 @@ contains
          cpl%index = this%coarsebnd(cdim, LO)%index(i1, i2)
          if (.not. allocated(cpl%uflx)) call cpl%fpinit
          eflx%lo => cpl
+         eflx%lo%index = eflx%lo%index - this%lhn(cdim, LO)
       else
          nullify(eflx%lo)
       endif
@@ -917,6 +918,7 @@ contains
          cpr%index = this%coarsebnd(cdim, HI)%index(i1, i2)
          if (.not. allocated(cpr%uflx)) call cpr%fpinit
          eflx%ro => cpr
+         eflx%ro%index = eflx%ro%index - this%lhn(cdim, LO) + 1
       else
          nullify(eflx%ro)
       endif
@@ -936,8 +938,14 @@ contains
       integer,               intent(in)    :: i2
       type(ext_fluxes),      intent(inout) :: eflx
 
-      if (associated(eflx%lo)) call this%coarsebnd(cdim, LO)%fp2fa(eflx%lo, i1, i2)
-      if (associated(eflx%ro)) call this%coarsebnd(cdim, HI)%fp2fa(eflx%ro, i1, i2)
+      if (associated(eflx%lo)) then
+         eflx%lo%index = eflx%lo%index + this%lhn(cdim, LO)
+         call this%coarsebnd(cdim, LO)%fp2fa(eflx%lo, i1, i2)
+      endif
+      if (associated(eflx%ro)) then
+         eflx%ro%index = eflx%ro%index + this%lhn(cdim, LO) - 1
+         call this%coarsebnd(cdim, HI)%fp2fa(eflx%ro, i1, i2)
+      endif
 
    end subroutine save_outfluxes
 
