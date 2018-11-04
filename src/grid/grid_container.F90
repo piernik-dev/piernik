@@ -893,6 +893,7 @@ contains
          fpl = this%finebnd(cdim, LO)%fa2fp(i1, i2)
          if (.not. allocated(fpl%uflx)) call fpl%fpinit
          eflx%li => fpl
+         eflx%li%index = eflx%li%index - this%lhn(cdim, LO) + 1
       else
          nullify(eflx%li)
       endif
@@ -900,6 +901,7 @@ contains
          fpr = this%finebnd(cdim, HI)%fa2fp(i1, i2)
          if (.not. allocated(fpr%uflx)) call fpr%fpinit
          eflx%ri => fpr
+         eflx%ri%index = eflx%ri%index - this%lhn(cdim, LO)
       else
          nullify(eflx%ri)
       endif
