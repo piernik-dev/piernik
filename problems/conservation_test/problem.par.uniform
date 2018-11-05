@@ -1,5 +1,5 @@
  $BASE_DOMAIN
-    n_d = 64, 64, 1
+    n_d = 512, 512, 1
     bnd_xl = 'per'
     bnd_xr = 'per'
     bnd_yl = 'per'
@@ -15,7 +15,6 @@
  /
 
  $MPI_BLOCKS
-    AMR_bsize = 3*16
  /
 
  $UNITS
@@ -30,7 +29,7 @@
 
  $END_CONTROL
     tend   = 1.0
-    nend   = 1000
+    nend   = 10000
  /
 
  $OUTPUT_CONTROL
@@ -40,7 +39,7 @@
     dt_res  = 0.0
     dt_log  = 0.001
     dt_tsl  = 0.001
-    vars(1:) = 'ener', 'dens', 'velx', 'vely', 'velz'
+    vars(1:) = 'dens', 'velx', 'vely', 'velz', "v"
  /
 
  $FLUID_NEUTRAL
@@ -49,7 +48,7 @@
  /
 
  $NUMERICAL_SETUP
-    cfl    = 0.7
+    cfl    = 0.4
     smalld = 1.e-5
     smallei= 1.e-5
     limiter= 'vanleer'
@@ -64,6 +63,4 @@
  /
 
  $AMR
-    level_max = 1
-    refine_boxes(1) = 2, -.45, -.45, -.45, .45, .45, .45
  /
