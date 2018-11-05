@@ -401,7 +401,7 @@ contains
       p(RNG)  = cs_iso2(RNG) * uu(RNG, idn)
       ps(RNG) = p(RNG) + pmag(RNG)
 #else /* !ISO */
-      if (associated(cs_iso2)) call die("[initionized:all_pres_ion] cs_iso2 should not be present")
+      if (associated(cs_iso2)) call die("[initionized:all_pres_ion] cs_iso2 should not be associated")
       ps(RNG) = (uu(RNG, ien) - ekin(uu(RNG, imx),uu(RNG, imy),uu(RNG, imz),uu(RNG, idn)) )*(gam1) &
            & + (2.0 - gam)*pmag(RNG)
       p(RNG) = ps(RNG)- pmag(RNG);  p(1) = p(2); p(n) = p(nm)
