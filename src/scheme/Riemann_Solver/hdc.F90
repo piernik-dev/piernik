@@ -61,33 +61,6 @@ contains
 !! These arrays will be automagically freed with destruction of grid containers.
 !<
 
-!>
-  !! Acceptable values
-  !!----------------------------------------------------------------
-  !! Otvortex
-  !! WENO3
-  !! rk2: cfl = cfl_glm = 0.4 (check this: [divB:print_divB_norm])
-  !! muscl_ : cfl = cfl_glm = 0.3
-  !! LINEAR
-  !! rk2: cfl = cfl_glm = 0.4 (check this: [divB:print_divB_norm])
-  !! muscl_ : cfl = cfl_glm = 0.3
-  !!---------------------------------------------------------------
-  !! Field loop advection
-  !! WENO3
-  !! rk2: cfl = cfl_glm = 0.4
-  !! muscl_ : cfl = cfl_glm = 0.3
-  !! LINEAR
-  !! rk2 : cfl = cfl_glm = 0.4
-  !! muscl_ : cfl = cfl_glm = 0.3
-  !!---------------------------------------------------------------
-  !! c_h := cfl * \Delta l_min / \Delta t^n
-  !! cfl = cfl_glm makes sense in lines 147 and 153
-  !!---------------------------------------------------------------
-  !! Values 0.4 and 0.3 are chosen from experience and sanity choice.
-  !! Yet to test RJ tube and other tests.
-  !!---------------------------------------------------------------
-!<
-
    subroutine aux_var
 
       use cg_list_global,   only: all_cg
@@ -146,7 +119,7 @@ contains
             ! It leads to very bad values when time step drops suddenly (like on last timestep)
             chspeed = max(chspeed, cfl_glm * minval(cgl%cg%dl, mask=dom%has_dir) / dt)
          else
-            ! Bind chspeed to fastest possible gas waves. Beware: this may not always work well with AMR.
+            ! Bind chspeed to fastest possible gas waves. Beware: checkwhether this works well with AMR.
             do k = cgl%cg%ks, cgl%cg%ke
                do j = cgl%cg%js, cgl%cg%je
                   do i = cgl%cg%is, cgl%cg%ie
@@ -219,7 +192,7 @@ contains
 !<
   subroutine glmdamping
 
-     use global,           only: glm_alpha, dt !, cfl
+     use global,           only: glm_alpha, dt
      use cg_list,          only: cg_list_element
      use grid_cont,        only: grid_container
      use cg_leaves,        only: leaves
@@ -236,8 +209,6 @@ contains
         cgl => leaves%first
         do while (associated(cgl))
            cg => cgl%cg
-           !cgl%cg%q(qna%ind(psi_n))%arr =  cgl%cg%q(qna%ind(psi_n))%arr * exp(-glm_alpha*cfl)
-           ! minval(cg%dl,mask=dom%has_dir)
            cgl%cg%q(qna%ind(psi_n))%arr =  cgl%cg%q(qna%ind(psi_n))%arr * exp(-glm_alpha*chspeed/(minval(cg%dl,mask=dom%has_dir)/dt))
            cgl => cgl%nxt
         enddo
@@ -357,6 +328,3 @@ contains
    end subroutine eglm
 
 end module hdc
-
-!--------------------------------------------------------------------------------------------
-
