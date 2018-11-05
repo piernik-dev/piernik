@@ -333,17 +333,11 @@ contains
          if (dom%geometry_type == GEO_RPZ) then
             if (sweep == ydim) then
                !> BEWARE: iarr_all_mx points to the y-momentum in y-sweep
-               if (associated(eflx%li)) fu(eflx%li%index, iarr_all_mx) = eflx%li%uflx(iarr_all_mx) / cg%x(i2)
-               if (associated(eflx%ri)) fu(eflx%ri%index, iarr_all_mx) = eflx%ri%uflx(iarr_all_mx) / cg%x(i2)
                if (associated(eflx%lo)) eflx%lo%uflx(iarr_all_mx) = fu(eflx%lo%index, iarr_all_mx) * cg%x(i2)
                if (associated(eflx%ro)) eflx%ro%uflx(iarr_all_mx) = fu(eflx%ro%index, iarr_all_mx) * cg%x(i2)
             else if (sweep == zdim) then
-               if (associated(eflx%li)) fu(eflx%li%index, :) = eflx%li%uflx / cg%x(i1)
-               if (associated(eflx%ri)) fu(eflx%ri%index, :) = eflx%ri%uflx / cg%x(i1)
                if (associated(eflx%lo)) eflx%lo%uflx = fu(eflx%lo%index, :) * cg%x(i1)
                if (associated(eflx%ro)) eflx%ro%uflx = fu(eflx%ro%index, :) * cg%x(i1)
-               if (associated(eflx%li)) fu(eflx%li%index, iarr_all_my) = eflx%li%uflx(iarr_all_my) / cg%x(i1)**2
-               if (associated(eflx%ri)) fu(eflx%ri%index, iarr_all_my) = eflx%ri%uflx(iarr_all_my) / cg%x(i1)**2
                if (associated(eflx%lo)) eflx%lo%uflx(iarr_all_my) = fu(eflx%lo%index, iarr_all_my) * cg%x(i1)**2
                if (associated(eflx%ro)) eflx%ro%uflx(iarr_all_my) = fu(eflx%ro%index, iarr_all_my) * cg%x(i1)**2
             endif

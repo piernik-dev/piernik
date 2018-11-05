@@ -878,7 +878,9 @@ contains
 
    subroutine set_fluxpointers(this, cdim, i1, i2, eflx)
 
-      use constants,  only: LO, HI
+      use constants,  only: LO, HI, ydim, zdim, GEO_RPZ
+      use domain,     only: dom
+      use fluidindex, only: iarr_all_mx, iarr_all_my
       use fluxtypes,  only: ext_fluxes
 
       implicit none
@@ -904,6 +906,19 @@ contains
          eflx%ri%index = eflx%ri%index - this%lhn(cdim, LO)
       else
          nullify(eflx%ri)
+      endif
+
+      if (dom%geometry_type == GEO_RPZ) then
+         if (cdim == ydim) then
+            !> BEWARE: iarr_all_mx points to the y-momentum in y-sweep
+            if (associated(eflx%li)) eflx%li%uflx(iarr_all_mx) = eflx%li%uflx(iarr_all_mx) / this%x(i2)
+            if (associated(eflx%ri)) eflx%ri%uflx(iarr_all_mx) = eflx%ri%uflx(iarr_all_mx) / this%x(i2)
+         else if (cdim == zdim) then
+            if (associated(eflx%li)) eflx%li%uflx = eflx%li%uflx / this%x(i1)
+            if (associated(eflx%li)) eflx%li%uflx(iarr_all_my) = eflx%li%uflx(iarr_all_my) / this%x(i1) ! that makes this%x(i1)**2
+            if (associated(eflx%ri)) eflx%ri%uflx = eflx%ri%uflx / this%x(i1)
+            if (associated(eflx%ri)) eflx%ri%uflx(iarr_all_my) = eflx%ri%uflx(iarr_all_my) / this%x(i1) ! that makes this%x(i1)**2
+         endif
       endif
 
       if (this%coarsebnd(cdim, LO)%index(i1, i2) >= this%ijkse(cdim, LO)) then
