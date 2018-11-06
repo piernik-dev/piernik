@@ -281,7 +281,7 @@ contains
       integer                           :: i_cs_iso2
       logical                           :: full_dim
       real, dimension(:,:), allocatable :: b
-      real, dimension(:,:), allocatable :: u, u0, vx
+      real, dimension(:,:), allocatable :: u, u0, u1, vx
       real, dimension(:,:),  pointer    :: pu, pu0
 #ifdef MAGNETIC
       real, dimension(:,:),  pointer    :: pb
@@ -336,9 +336,10 @@ contains
                         if (allocated(b))  deallocate(b)
                         if (allocated(u))  deallocate(u)
                         if (allocated(u0)) deallocate(u0)
+                        if (allocated(u1)) deallocate(u1) !< updated vector of conservative variables (after one timestep in second order scheme)
                         if (allocated(vx)) deallocate(vx)
                      endif
-                     if (.not. allocated(u))  allocate( b(cg%n_(cdim), nmag), u(cg%n_(cdim), flind%all), u0(cg%n_(cdim), flind%all), vx(cg%n_(cdim), flind%fluids))
+                     if (.not. allocated(u))  allocate( b(cg%n_(cdim), nmag), u(cg%n_(cdim), flind%all), u0(cg%n_(cdim), flind%all), u1(cg%n_(cdim), flind%all), vx(cg%n_(cdim), flind%fluids))
 
                      cn_ = cg%n_(cdim)
 
@@ -399,7 +400,10 @@ contains
                            endif
 
                            call cg%set_fluxpointers(cdim, i1, i2, eflx)
-                           call relaxing_tvd(cg%n_(cdim), u, u0, vx, b, cs2, istep, cdim, i1, i2, dt, cg, eflx, apply_sources)
+                           !OPT: try to avoid these explicit initializations of u1(:,:)
+                           u1 = u
+                           call relaxing_tvd(cg%n_(cdim), u, u0, u1, vx, b, cs2, istep, cdim, i1, i2, dt, cg, eflx, apply_sources)
+                           u(:,:) = u1(:,:)
                            call cg%save_outfluxes(cdim, i1, i2, eflx)
 
                            pu(:,:) = transpose(u(:, iarr_all_swp(cdim,:)))
@@ -409,7 +413,7 @@ contains
 
                      call send_cg_coarsebnd(cdim, cg, nr)
 
-                     deallocate(b, u, u0, vx)
+                     deallocate(b, u, u0, u1, vx)
 
                      cg%processed = .true.
                      blocks_done = blocks_done + 1
@@ -456,6 +460,7 @@ contains
       if (allocated(b))  deallocate(b)
       if (allocated(u))  deallocate(u)
       if (allocated(u0)) deallocate(u0)
+      if (allocated(u1)) deallocate(u1)
       if (allocated(vx)) deallocate(vx)
 
    end subroutine sweep

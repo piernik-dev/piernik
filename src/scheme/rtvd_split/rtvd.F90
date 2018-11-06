@@ -235,7 +235,7 @@ contains
 ! OPT: we may also try to work on bigger parts of the u(:,:,:,:) at a time , but the exact amount may depend on size of the L2 cache
 ! OPT: try an explicit loop over n to see if better pipelining can be achieved
 
-   subroutine relaxing_tvd(n, u, u0, vel_sweep, bb, cs_iso2, istep, sweep, i1, i2, dt, cg, eflx, apply_sources)
+   subroutine relaxing_tvd(n, u, u0, u1, vel_sweep, bb, cs_iso2, istep, sweep, i1, i2, dt, cg, eflx, apply_sources)
 
       use constants,    only: one, zero, half, GEO_XYZ
       use domain,       only: dom
@@ -252,6 +252,7 @@ contains
       integer(kind=4),                  intent(in)    :: n                  !< array size
       real, dimension(n, flind%all),    intent(inout) :: u                  !< vector of conservative variables
       real, dimension(n, flind%all),    intent(in)    :: u0                 !< vector of conservative variables
+      real, dimension(n, flind%all),    intent(inout) :: u1                 !< vector of conservative variables
       real, dimension(n, flind%fluids), intent(in)    :: vel_sweep          !< velocity in the direction of current sweep
       real, dimension(n, nmag),         intent(in)    :: bb                 !< local copy of magnetic field
       real, dimension(:), pointer,      intent(in)    :: cs_iso2            !< square of local isothermal sound speed
@@ -273,16 +274,13 @@ contains
       real, dimension(n, flind%all)                   :: fu                 !< sum of fluxes of right- and left-moving waves
       real, dimension(n, flind%all)                   :: dfp                !< second order correction of left/right-moving waves flux on the right cell boundary
       real, dimension(n, flind%all)                   :: dfm                !< second order correction of left/right-moving waves flux on the left cell boundary
-      real, dimension(n, flind%all)                   :: u1                 !< updated vector of conservative variables (after one timestep in second order scheme)
       logical                                         :: full_dim
 
       real, dimension(2,2), parameter                 :: rk2coef = reshape( [ one, half, zero, one ], [ 2, 2 ] )
 
-      !OPT: try to avoid these explicit initializations of u1(:,:) and u0(:,:)
+      !OPT: try to avoid these explicit initializations of u0(:,:)
       dtx      = dt / cg%dl(sweep)
       full_dim = n > 1
-
-      u1 = u
 
       if (full_dim) then
          ! Fluxes calculation for cells centers
@@ -341,8 +339,6 @@ contains
       if (apply_sources) call all_sources(n, u, u1, bb, cg, istep, sweep, i1, i2, rk2coef(integration_order,istep)*dt, vel_sweep)
 
       call care_for_positives(n, u1, bb, cg, sweep, i1, i2)
-
-      u(:,:) = u1(:,:)
 
    end subroutine relaxing_tvd
 
