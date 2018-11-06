@@ -255,7 +255,7 @@ contains
       use cg_leaves,          only: leaves
       use cg_level_connected, only: cg_level_connected_T, find_level
       use cg_list,            only: cg_list_element
-      use constants,          only: pdims, LO, HI, uh_n, cs_i2_n, ORTHO1, ORTHO2, VEL_CR, VEL_RES, ydim
+      use constants,          only: pdims, LO, HI, uh_n, cs_i2_n, ORTHO1, ORTHO2, VEL_CR, VEL_RES, ydim, one, zero, half
       use domain,             only: dom
       use dataio_pub,         only: die
       use fluidindex,         only: flind, iarr_all_swp, nmag, iarr_all_dn, iarr_all_mx
@@ -266,7 +266,7 @@ contains
       use mpisetup,           only: mpi_err, req, status
       use named_array_list,   only: qna, wna
       use rtvd,               only: relaxing_tvd
-      use sources,            only: prepare_sources
+      use sources,            only: prepare_sources, all_sources, care_for_positives
 #ifdef MAGNETIC
       use fluidindex,         only: iarr_mag_swp
 #endif /* MAGNETIC */
@@ -297,6 +297,7 @@ contains
       integer :: cn_
       logical :: apply_sources
       type(cg_level_connected_T), pointer :: curl
+      real, dimension(2,2), parameter :: rk2coef = reshape( [ one, half, zero, one ], [ 2, 2 ] )
 
       if (use_fargo .and. cdim == ydim .and. .not. present(fargo_vel)) then
          call die("[sweeps:sweep] FARGO velocity keyword not present in y sweep")
@@ -389,6 +390,7 @@ contains
                                  apply_sources = .false.
                               else
                                  call die("[sweeps:sweep] Unknown FARGO_VEL")
+                                 apply_sources = .false.
                               endif
                            else
                               apply_sources = .true.
@@ -402,7 +404,11 @@ contains
                            call cg%set_fluxpointers(cdim, i1, i2, eflx)
                            !OPT: try to avoid these explicit initializations of u1(:,:)
                            u1 = u
-                           call relaxing_tvd(cg%n_(cdim), u, u0, u1, vx, b, cs2, istep, cdim, i1, i2, dt, cg, eflx, apply_sources)
+                           call relaxing_tvd(cg%n_(cdim), u0, u1, vx, b, cs2, istep, cdim, dt, cg, eflx)
+! Source terms -------------------------------------
+                           if (apply_sources) call all_sources(cg%n_(cdim), u, u1, b, cg, istep, cdim, i1, i2, rk2coef(integration_order,istep)*dt, vx)
+
+                           call care_for_positives(cg%n_(cdim), u1, b, cg, cdim, i1, i2)
                            u(:,:) = u1(:,:)
                            call cg%save_outfluxes(cdim, i1, i2, eflx)
 

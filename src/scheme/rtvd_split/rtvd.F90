@@ -235,7 +235,7 @@ contains
 ! OPT: we may also try to work on bigger parts of the u(:,:,:,:) at a time , but the exact amount may depend on size of the L2 cache
 ! OPT: try an explicit loop over n to see if better pipelining can be achieved
 
-   subroutine relaxing_tvd(n, u, u0, u1, vel_sweep, bb, cs_iso2, istep, sweep, i1, i2, dt, cg, eflx, apply_sources)
+   subroutine relaxing_tvd(n, u0, u1, vel_sweep, bb, cs_iso2, istep, sweep, dt, cg, eflx)
 
       use constants,    only: one, zero, half, GEO_XYZ
       use domain,       only: dom
@@ -245,12 +245,10 @@ contains
       use global,       only: integration_order
       use grid_cont,    only: grid_container
       use gridgeometry, only: gc, GC1, GC2, GC3
-      use sources,      only: all_sources, care_for_positives
 
       implicit none
 
       integer(kind=4),                  intent(in)    :: n                  !< array size
-      real, dimension(n, flind%all),    intent(inout) :: u                  !< vector of conservative variables
       real, dimension(n, flind%all),    intent(in)    :: u0                 !< vector of conservative variables
       real, dimension(n, flind%all),    intent(inout) :: u1                 !< vector of conservative variables
       real, dimension(n, flind%fluids), intent(in)    :: vel_sweep          !< velocity in the direction of current sweep
@@ -258,12 +256,9 @@ contains
       real, dimension(:), pointer,      intent(in)    :: cs_iso2            !< square of local isothermal sound speed
       integer,                          intent(in)    :: istep              !< step number in the time integration scheme
       integer(kind=4),                  intent(in)    :: sweep              !< direction (x, y or z) we are doing calculations for
-      integer,                          intent(in)    :: i1                 !< coordinate of sweep in the 1st remaining direction
-      integer,                          intent(in)    :: i2                 !< coordinate of sweep in the 2nd remaining direction
       real,                             intent(in)    :: dt                 !< time step
       type(grid_container), pointer,    intent(in)    :: cg                 !< current grid piece
       type(ext_fluxes),                 intent(inout) :: eflx               !< external fluxes
-      logical,                          intent(in)    :: apply_sources      !< apply source terms
 
       real                                            :: dtx                !< dt/dx (dt/cg%dl(sweep))
       real, dimension(n, flind%all)                   :: cfr                !< freezing speed
@@ -334,11 +329,6 @@ contains
          endif
          u1(1, :)   = u1(2, :)
       endif ! (n > 1)
-
-! Source terms -------------------------------------
-      if (apply_sources) call all_sources(n, u, u1, bb, cg, istep, sweep, i1, i2, rk2coef(integration_order,istep)*dt, vel_sweep)
-
-      call care_for_positives(n, u1, bb, cg, sweep, i1, i2)
 
    end subroutine relaxing_tvd
 
