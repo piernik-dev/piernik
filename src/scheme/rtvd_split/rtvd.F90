@@ -235,15 +235,13 @@ contains
 ! OPT: we may also try to work on bigger parts of the u(:,:,:,:) at a time , but the exact amount may depend on size of the L2 cache
 ! OPT: try an explicit loop over n to see if better pipelining can be achieved
 
-   subroutine relaxing_tvd(n, u0, u1, vel_sweep, bb, cs_iso2, istep, sweep, dt, cg, eflx)
+   subroutine relaxing_tvd(n, u0, u1, vel_sweep, bb, cs_iso2, istep, dtx, eflx)
 
-      use constants,    only: one, zero, half, GEO_XYZ
+      use constants,    only: half, GEO_XYZ
       use domain,       only: dom
       use fluidindex,   only: flind, nmag
       use fluxes,       only: flimiter, all_fluxes
       use fluxtypes,    only: ext_fluxes
-      use global,       only: integration_order
-      use grid_cont,    only: grid_container
       use gridgeometry, only: gc, GC1, GC2, GC3
 
       implicit none
@@ -255,12 +253,9 @@ contains
       real, dimension(n, nmag),         intent(in)    :: bb                 !< local copy of magnetic field
       real, dimension(:), pointer,      intent(in)    :: cs_iso2            !< square of local isothermal sound speed
       integer,                          intent(in)    :: istep              !< step number in the time integration scheme
-      integer(kind=4),                  intent(in)    :: sweep              !< direction (x, y or z) we are doing calculations for
-      real,                             intent(in)    :: dt                 !< time step
-      type(grid_container), pointer,    intent(in)    :: cg                 !< current grid piece
+      real,                             intent(in)    :: dtx                !< RK_coeff * time step / dx
       type(ext_fluxes),                 intent(inout) :: eflx               !< external fluxes
 
-      real                                            :: dtx                !< dt/dx (dt/cg%dl(sweep))
       real, dimension(n, flind%all)                   :: cfr                !< freezing speed
 !locals
       real, dimension(n, flind%all)                   :: w                  !< auxiliary vector to calculate fluxes
@@ -271,10 +266,7 @@ contains
       real, dimension(n, flind%all)                   :: dfm                !< second order correction of left/right-moving waves flux on the left cell boundary
       logical                                         :: full_dim
 
-      real, dimension(2,2), parameter                 :: rk2coef = reshape( [ one, half, zero, one ], [ 2, 2 ] )
-
       !OPT: try to avoid these explicit initializations of u0(:,:)
-      dtx      = dt / cg%dl(sweep)
       full_dim = n > 1
 
       if (full_dim) then
@@ -323,9 +315,9 @@ contains
          if (associated(eflx%ro)) eflx%ro%uflx = fu(eflx%ro%index, :)
 
          if (dom%geometry_type == GEO_XYZ) then
-            u1(2:n, :) = u0(2:n, :) - rk2coef(integration_order,istep) *                  dtx * (                fu(2:n, :) -                fu(1:n-1, :) )
+            u1(2:n, :) = u0(2:n, :) -                  dtx * (                fu(2:n, :) -                fu(1:n-1, :) )
          else
-            u1(2:n, :) = u0(2:n, :) - rk2coef(integration_order,istep) * gc(GC1,2:n, :) * dtx * ( gc(GC2,2:n, :)*fu(2:n, :) - gc(GC3,2:n, :)*fu(1:n-1, :) )
+            u1(2:n, :) = u0(2:n, :) - gc(GC1,2:n, :) * dtx * ( gc(GC2,2:n, :)*fu(2:n, :) - gc(GC3,2:n, :)*fu(1:n-1, :) )
          endif
          u1(1, :)   = u1(2, :)
       endif ! (n > 1)

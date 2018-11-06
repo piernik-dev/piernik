@@ -404,7 +404,8 @@ contains
                            call cg%set_fluxpointers(cdim, i1, i2, eflx)
                            !OPT: try to avoid these explicit initializations of u1(:,:)
                            u1 = u
-                           call relaxing_tvd(cg%n_(cdim), u0, u1, vx, b, cs2, istep, cdim, dt, cg, eflx)
+
+                           call relaxing_tvd(cg%n_(cdim), u0, u1, vx, b, cs2, istep, rk2coef(integration_order,istep) * dt / cg%dl(cdim), eflx)
 ! Source terms -------------------------------------
                            if (apply_sources) call all_sources(cg%n_(cdim), u, u1, b, cg, istep, cdim, i1, i2, rk2coef(integration_order,istep)*dt, vx)
 
