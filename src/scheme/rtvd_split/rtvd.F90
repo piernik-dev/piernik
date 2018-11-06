@@ -235,7 +235,7 @@ contains
 ! OPT: we may also try to work on bigger parts of the u(:,:,:,:) at a time , but the exact amount may depend on size of the L2 cache
 ! OPT: try an explicit loop over n to see if better pipelining can be achieved
 
-   subroutine relaxing_tvd(n, u, u0, vel_sweep, bb, cs_iso2, istep, sweep, i1, i2, dt, cg, eflx, sources)
+   subroutine relaxing_tvd(n, u, u0, vel_sweep, bb, cs_iso2, istep, sweep, i1, i2, dt, cg, eflx, apply_sources)
 
       use constants,    only: one, zero, half, GEO_XYZ
       use domain,       only: dom
@@ -262,7 +262,7 @@ contains
       real,                             intent(in)    :: dt                 !< time step
       type(grid_container), pointer,    intent(in)    :: cg                 !< current grid piece
       type(ext_fluxes),                 intent(inout) :: eflx               !< external fluxes
-      logical,                          intent(in)    :: sources            !< apply source terms
+      logical,                          intent(in)    :: apply_sources      !< apply source terms
 
       real                                            :: dtx                !< dt/dx (dt/cg%dl(sweep))
       real, dimension(n, flind%all)                   :: cfr                !< freezing speed
@@ -338,7 +338,7 @@ contains
       endif ! (n > 1)
 
 ! Source terms -------------------------------------
-      if (sources) call all_sources(n, u, u1, bb, cg, istep, sweep, i1, i2, rk2coef(integration_order,istep)*dt, vel_sweep)
+      if (apply_sources) call all_sources(n, u, u1, bb, cg, istep, sweep, i1, i2, rk2coef(integration_order,istep)*dt, vel_sweep)
 
       call care_for_positives(n, u1, bb, cg, sweep, i1, i2)
 

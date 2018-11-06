@@ -295,7 +295,7 @@ contains
       integer                           :: g, nr, nr_recv, ifl, icg
       integer(kind=4), dimension(:, :), pointer :: mpistatus
       integer :: cn_
-      logical :: sources
+      logical :: apply_sources
       type(cg_level_connected_T), pointer :: curl
 
       if (use_fargo .and. cdim == ydim .and. .not. present(fargo_vel)) then
@@ -380,17 +380,17 @@ contains
                                  do ifl = 1, flind%fluids
                                     vx(:, ifl) = u(:, iarr_all_mx(ifl)) / u(:, iarr_all_dn(ifl)) - curl%omega_mean(i2, ifl) * cg%x(i2)
                                  enddo
-                                 sources = .true.
+                                 apply_sources = .true.
                               elseif (fargo_vel == VEL_CR) then
                                  do ifl = 1, flind%fluids
                                     vx(:, ifl) = curl%omega_cr(i2, ifl) * cg%x(i2)
                                  enddo
-                                 sources = .false.
+                                 apply_sources = .false.
                               else
                                  call die("[sweeps:sweep] Unknown FARGO_VEL")
                               endif
                            else
-                              sources = .true.
+                              apply_sources = .true.
                               vx(:,:) = u(:,iarr_all_mx(:)) / u(:,iarr_all_dn(:))
                               if (full_dim) then
                                  vx(1,:) = vx(2,:)
@@ -399,7 +399,7 @@ contains
                            endif
 
                            call cg%set_fluxpointers(cdim, i1, i2, eflx)
-                           call relaxing_tvd(cg%n_(cdim), u, u0, vx, b, cs2, istep, cdim, i1, i2, dt, cg, eflx, sources)
+                           call relaxing_tvd(cg%n_(cdim), u, u0, vx, b, cs2, istep, cdim, i1, i2, dt, cg, eflx, apply_sources)
                            call cg%save_outfluxes(cdim, i1, i2, eflx)
 
                            pu(:,:) = transpose(u(:, iarr_all_swp(cdim,:)))
