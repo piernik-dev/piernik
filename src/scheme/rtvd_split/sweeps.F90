@@ -266,9 +266,7 @@ contains
       use mpisetup,           only: mpi_err, req, status
       use named_array_list,   only: qna, wna
       use rtvd,               only: relaxing_tvd
-#ifdef COSM_RAYS
-      use crhelpers,          only: div_v, set_div_v1d
-#endif /* COSM_RAYS */
+      use sources,            only: prepare_sources
 #ifdef MAGNETIC
       use fluidindex,         only: iarr_mag_swp
 #endif /* MAGNETIC */
@@ -288,7 +286,7 @@ contains
 #ifdef MAGNETIC
       real, dimension(:,:),  pointer    :: pb
 #endif /* MAGNETIC */
-      real, dimension(:),    pointer    :: div_v1d => null(), cs2
+      real, dimension(:),    pointer    :: cs2
       type(cg_list_element), pointer    :: cgl
       type(grid_container),  pointer    :: cg
       type(ext_fluxes)                  :: eflx
@@ -303,7 +301,6 @@ contains
       if (use_fargo .and. cdim == ydim .and. .not. present(fargo_vel)) then
          call die("[sweeps:sweep] FARGO velocity keyword not present in y sweep")
       endif
-      allocate(vx(0, 0)) ! suppress compiler warnings
 
       cn_ = 0
       full_dim = dom%has_dir(cdim)
@@ -339,12 +336,9 @@ contains
                         if (allocated(b))  deallocate(b)
                         if (allocated(u))  deallocate(u)
                         if (allocated(u0)) deallocate(u0)
-                     endif
-                     if (.not. allocated(u)) allocate(b(cg%n_(cdim), nmag), u(cg%n_(cdim), flind%all), u0(cg%n_(cdim), flind%all))
-                     if (use_fargo .and. cdim == ydim) then
                         if (allocated(vx)) deallocate(vx)
-                        allocate(vx(cg%n_(cdim), flind%fluids))
                      endif
+                     if (.not. allocated(u))  allocate( b(cg%n_(cdim), nmag), u(cg%n_(cdim), flind%all), u0(cg%n_(cdim), flind%all), vx(cg%n_(cdim), flind%fluids))
 
                      cn_ = cg%n_(cdim)
 
@@ -352,9 +346,7 @@ contains
                      u(:,:) = 0.0
 
                      if (istep == 1) then
-#ifdef COSM_RAYS
-                        call div_v(flind%ion%pos, cg)
-#endif /* COSM_RAYS */
+                        call prepare_sources(cg)
                         cg%w(uhi)%arr = cg%u
                      endif
 
@@ -376,9 +368,6 @@ contains
 #endif /* MAGNETIC */
 
                            call set_geo_coeffs(cdim, flind, i1, i2, cg)
-#ifdef COSM_RAYS
-                           call set_div_v1d(div_v1d, cdim, i1, i2, cg)
-#endif /* COSM_RAYS */
 
                            pu                     => cg%w(wna%fi   )%get_sweep(cdim,i1,i2)
                            pu0                    => cg%w(uhi      )%get_sweep(cdim,i1,i2)
@@ -402,14 +391,15 @@ contains
                               endif
                            else
                               sources = .true.
+                              vx(:,:) = u(:,iarr_all_mx(:)) / u(:,iarr_all_dn(:))
+                              if (full_dim) then
+                                 vx(1,:) = vx(2,:)
+                                 vx(cg%n_(cdim),:) = vx(cg%n_(cdim)-1,:)
+                              endif
                            endif
 
                            call cg%set_fluxpointers(cdim, i1, i2, eflx)
-                           if (use_fargo .and. cdim == ydim) then
-                              call relaxing_tvd(cg%n_(cdim), u, u0, b, div_v1d, cs2, istep, cdim, i1, i2, cg%dl(cdim), dt, cg, eflx, sources, vx)
-                           else
-                              call relaxing_tvd(cg%n_(cdim), u, u0, b, div_v1d, cs2, istep, cdim, i1, i2, cg%dl(cdim), dt, cg, eflx, sources)
-                           endif
+                           call relaxing_tvd(cg%n_(cdim), u, u0, vx, b, cs2, istep, cdim, i1, i2, dt, cg, eflx, sources)
                            call cg%save_outfluxes(cdim, i1, i2, eflx)
 
                            pu(:,:) = transpose(u(:, iarr_all_swp(cdim,:)))
@@ -419,7 +409,7 @@ contains
 
                      call send_cg_coarsebnd(cdim, cg, nr)
 
-                     deallocate(b, u, u0)
+                     deallocate(b, u, u0, vx)
 
                      cg%processed = .true.
                      blocks_done = blocks_done + 1
@@ -466,6 +456,7 @@ contains
       if (allocated(b))  deallocate(b)
       if (allocated(u))  deallocate(u)
       if (allocated(u0)) deallocate(u0)
+      if (allocated(vx)) deallocate(vx)
 
    end subroutine sweep
 

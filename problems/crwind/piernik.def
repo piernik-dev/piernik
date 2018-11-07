@@ -16,4 +16,4 @@
 
 #define GALAXY
 #define SN_SRC
-
+#define RANDOMIZE

@@ -49,7 +49,7 @@ module multigrid_gravity
    implicit none
 
    private
-   public :: multigrid_grav_par, init_multigrid_grav, cleanup_multigrid_grav, multigrid_solve_grav, init_multigrid_grav_ext, invalidate_history
+   public :: multigrid_grav_par, init_multigrid_grav, cleanup_multigrid_grav, multigrid_solve_grav, init_multigrid_grav_ext
 
    include "fftw3.f"
    ! constants from fftw3.f

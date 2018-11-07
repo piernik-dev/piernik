@@ -1,6 +1,8 @@
 # sha1 of the gold commit
 # Note: update only when absolutely necessary
-GOLD_COMMIT=2d84935c0665426247309775c20d722fd5db5f95
+GOLD_COMMIT=799877d5cc8594a75e1452071ade3c96f46688e2
+# 799877d5cc8594a75e1452071ade3c96f46688e2 - [sources] collect changes from all sources once and limit ecr after doing sources
+# e08c628a46b5b6245df9dde0c64153c522d45084 - random_utils for seed control and reproducible random numbers
 # 2d84935c0665426247309775c20d722fd5db5f95 - 64-bit plotfiles for gold configs
 # e3ab64f5a94c7ee289e622078d98f5bc41eeb5ca - unifying and optimizing cr_sn procedures
 # 8fcf05bbd76c9162eb1999d620b59dd0966e0f8e - several fixups needed for Jenkins on Fedora 24

@@ -1,0 +1,91 @@
+ $BASE_DOMAIN
+    n_d = 64, 64, 1
+    bnd_xl = 'per'
+    bnd_xr = 'per'
+    bnd_yl = 'per'
+    bnd_yr = 'per'
+    bnd_zl = 'per'
+    bnd_zr = 'per'
+    xmin   =-1.0
+    xmax   = 1.0
+    ymin   =-1.0
+    ymax   = 1.0
+    zmin   =-1.0
+    zmax   = 1.0
+ /
+
+ $MPI_BLOCKS
+ /
+
+ $UNITS
+    units_set = 'PSM'
+ /
+
+ $RESTART_CONTROL
+ /
+
+ $END_CONTROL
+    tend   = 1.0e0
+ /
+
+ $OUTPUT_CONTROL
+    colormode = .false.
+    problem_name = 'thermal'
+    run_id =  'tst'
+    dt_hdf  = 1.0e-1
+    dt_res  = 0.0
+    dt_log  = 1.0e-4
+    dt_tsl  = 1.0e-4
+    vars(1:) = 'ener', 'dens', 'magx', 'magy', 'magz', 'velx', 'vely', 'velz', 'temp'
+ /
+
+ $FLUID_IONIZED
+    gamma  = 1.666666666
+ /
+
+ $FLUID_NEUTRAL
+    gamma = 1.666666666
+ /
+
+ $NUMERICAL_SETUP
+    cfl    = 0.8
+    smalld = 1.e-3
+    smallei= 1.e-5
+ /
+
+ $GRAVITY
+ /
+ $THERMAL
+    thermal_active = .TRUE.
+    cool_model     = 'power_law'
+    heat_model     = 'G012'
+    alpha_cool     = 1.0
+    Teql           = 1000.0
+    Lambda0        = 1.0e-25
+    G0             = 1.0e-24
+    G1             = 1.0e-25
+    G2             = 1.0e-27
+    x_ion          = 1.0
+    cfl_coolheat   = 0.1
+ /
+ $PROBLEM_CONTROL
+    d0     = 1.0
+    T0     = 1.0
+    bx0    = 0.0
+    by0    = 0.0
+    bz0    = 0.0
+    pertamp = 1.0e-2
+ /
+
+ $MULTIGRID_SOLVER
+ /
+
+ $INTERACTIONS
+ /
+
+
+ $FLUID_TRACER
+ /
+
+ $AMR
+ /

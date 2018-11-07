@@ -43,104 +43,95 @@
 module hlld
 ! pulled by RIEMANN
 
-  implicit none
+   implicit none
 
-  private
-  public :: riemann_hlld, fluxes
+   private
+   public :: riemann_wrap
 
 contains
+!>
+!! \brief Wrapper for the Riemann solver that takes care of fluid differences
+!!
+!! OPT: check if passing pointers here will improve performance
+!<
 
-  function fluxes(u, b_cc) result(f) ! This function is called by muscl and rk2muscl
+   subroutine riemann_wrap(ql, qr, b_cc_l, b_cc_r, psi_l, psi_r, flx, mag_cc, psi_cc)
 
-    use constants,  only: half, xdim, ydim, zdim
-    use fluidindex, only: flind
-    use fluidtypes, only: component_fluid
-    use func,       only: ekin
+      use constants,  only: xdim, zdim, DIVB_HDC
+      use fluidindex, only: flind
+      use fluidtypes, only: component_fluid
+      use global,     only: divB_0_method
 
-    implicit none
+      implicit none
 
-    real, dimension(:,:), intent(in) :: u
-    real, dimension(:,:), intent(in) :: b_cc
+      real, dimension(:,:), target, intent(in)  :: ql, qr          ! left and right fluid states
+      real, dimension(:,:), target, intent(in)  :: b_cc_l, b_cc_r  ! left and right magnetic field states (relevant only for IONIZED fluid)
+      real, dimension(:,:), target, intent(in)  :: psi_l, psi_r    ! left and right psi field states (relevant only for GLM method)
+      real, dimension(:,:), target, intent(out) :: flx, mag_cc, psi_cc ! output fluxes: fluid, magnetic field and psi
 
-    real, dimension(size(u,1) + size(b_cc,1), size(u,2)) :: f
-    real, dimension(size(u,2))                           :: vx, vy, vz, pr
-    integer                                              :: ip, boff
-    class(component_fluid), pointer                      :: fl
+      integer :: i
+      class(component_fluid), pointer :: fl
 
-    boff = size(u, 1) ! assume xdim == 1
-    f(boff+xdim:,:) = 0.
+      real, dimension(size(b_cc_l,1), size(b_cc_l,2)), target :: b0, bf0
+      real, dimension(size(psi_l, 1), size(psi_l, 2)), target :: p0, pf0
+      real, dimension(:,:), pointer :: p_flx, p_ql, p_qr
+      real, dimension(:,:), pointer :: p_bcc, p_bccl, p_bccr
+      real, dimension(:,:), pointer :: p_psif, p_psi_l, p_psi_r
 
-    do ip = 1, flind%fluids
+      do i = 1, flind%fluids
+         fl    => flind%all_fluids(i)%fl
+         p_flx => flx(fl%beg:fl%end,:)
+         p_ql  => ql(fl%beg:fl%end,:)
+         p_qr  => qr(fl%beg:fl%end,:)
+         if (fl%is_magnetized) then
+            p_bccl => b_cc_l(xdim:zdim,:)
+            p_bccr => b_cc_r(xdim:zdim,:)
+            p_bcc  => mag_cc(xdim:zdim,:)
+            if (divB_0_method == DIVB_HDC) then
+               p_psi_l => psi_l(:,:)
+               p_psi_r => psi_r(:,:)
+               p_psif  => psi_cc(:,:)
+            else  ! CT
+               p0 = 0.
+               p_psi_l => p0
+               p_psi_r => p0
+               p_psif  => pf0
+            endif
+         else ! ignore all magnetic field
+            b0 = 0.
+            p_bccl => b0
+            p_bccr => b0
+            p_bcc  => bf0
+            p0 = 0.
+            p_psi_l => p0
+            p_psi_r => p0
+            p_psif  => pf0
+         endif
 
-       fl => flind%all_fluids(ip)%fl
+         call riemann_hlld(p_flx, p_ql, p_qr, p_bcc, p_bccl, p_bccr, p_psi_l, p_psi_r, p_psif, fl%gam)
+      enddo
 
-       vx  =  u(fl%imx,:)/u(fl%idn,:)
-       vy  =  u(fl%imy,:)/u(fl%idn,:)
-       vz  =  u(fl%imz,:)/u(fl%idn,:)
+   end subroutine riemann_wrap
 
-       if (fl%has_energy) then
-          ! Gas pressure without magnetic fields. Pg 317, Eq. 2. (1) and (2) are markers for HD and MHD
-          pr = fl%gam_1*(u(fl%ien,:) - ekin(u(fl%imx,:), u(fl%imy,:), u(fl%imz,:), u(fl%idn,:))) ! (1)
-          if (fl%is_magnetized) then
-             ! Gas pressure with magnetic fields. Pg 317, Eq. 2.
-             pr = pr - half*fl%gam_1*sum(b_cc(xdim:zdim,:)**2, dim=1) ! (2)
-          endif
-       else
-          ! Dust
-          pr = 0.
-       endif
-
-       f(fl%idn,:)  =  u(fl%imx,:)
-       if (fl%has_energy) then
-          if (fl%is_magnetized) then
-             f(fl%imx,:)  =  u(fl%imx,:)*vx(:) + (pr(:)+half*sum(b_cc(xdim:zdim,:)**2,dim=1)) - b_cc(xdim,:)**2 ! Eq. 2 Pg 317
-          else
-             f(fl%imx,:)  =  u(fl%imx,:)*vx(:) + pr(:)  ! b_cc does not contribute in the limit of vanishing magnetic fields. Hydro part is recovered trivially.
-          endif
-       else
-          f(fl%imx,:)  =  u(fl%imx,:)*vx(:)
-       endif
-       if (fl%is_magnetized) then
-          f(fl%imy,:)  =  u(fl%imy,:)*vx(:) - b_cc(xdim,:)*b_cc(ydim,:)
-          f(fl%imz,:)  =  u(fl%imz,:)*vx(:) - b_cc(xdim,:)*b_cc(zdim,:)
-          f(boff+ydim,:) =  b_cc(ydim,:)*vx(:) - b_cc(xdim,:)*vy(:)
-          f(boff+zdim,:) =  b_cc(zdim,:)*vx(:) - b_cc(xdim,:)*vz(:)
-       else
-          f(fl%imy,:)  =  u(fl%imy,:)*vx(:)
-          f(fl%imz,:)  =  u(fl%imz,:)*vx(:)
-       endif
-       if (fl%has_energy) then
-          f(fl%ien,:)  =  (u(fl%ien,:) + pr(:))*vx(:) ! Hydro regime. Eq. 2, Pg 317. Takes pr (1)
-          if (fl%is_magnetized) then
-             f(fl%ien,:) =  (u(fl%ien,:) + (pr(:)+half*sum(b_cc(xdim:zdim,:)**2,dim=1)))*vx(:) - b_cc(xdim,:)*(b_cc(xdim,:)*vx(:) + b_cc(ydim,:)*vy(:) + b_cc(zdim,:)*vz(:)) ! MHD regime. Eq. 2, Pg 317. Takes pr (2)
-          endif
-       endif
-
-    enddo
-
-    return
-
-  end function fluxes
-
- !-------------------------------------------------------------------------------------------------------------------------------------------------
-
-
-  subroutine riemann_hlld(n,f,ul,ur,b_cc,b_ccl,b_ccr,gamma)
+   subroutine riemann_hlld(f,ul,ur,b_cc,b_ccl,b_ccr,psil,psir,psi,gamma)
 
     ! external procedures
 
-    use constants,  only: half, zero, one, xdim, ydim, zdim, idn, imx, imy, imz, ien
+    use constants,  only: half, zero, one, xdim, ydim, zdim, idn, imx, imy, imz, ien, DIVB_HDC
     use func,       only: operator(.notequals.), operator(.equals.)
+    use global,     only: divB_0_method
+    use hdc,        only: chspeed
 
     ! arguments
 
     implicit none
 
-    integer,                       intent(in)    :: n
     real, dimension(:,:), pointer, intent(out)   :: f
     real, dimension(:,:), pointer, intent(in)    :: ul, ur
     real, dimension(:,:), pointer, intent(out)   :: b_cc
     real, dimension(:,:), pointer, intent(in)    :: b_ccl, b_ccr
+    real, dimension(:,:), pointer, intent(in)    :: psil, psir
+    real, dimension(:,:), pointer, intent(out)   :: psi
     real,                          intent(in)    :: gamma
 
     ! Local variables
@@ -155,6 +146,7 @@ contains
     real                                         :: vb_l, vb_starl, vb_r, vb_starr, vb_2star
     real                                         :: prl, prr
 
+
     ! Local arrays
 
     real, dimension(size(f, 1))                  :: fl, fr
@@ -167,11 +159,22 @@ contains
 
     ! SOLVER
 
-    b_cc(xdim,:) = 0.
+    ! suppress complains caused by -Wmaybe-uninitialized
+    b_cclf = 0.
+    b_ccrf = 0.
+    !if (divB_0_method /= DIVB_HDC) b_cc(xdim,:) = 0.
     has_energy = (ubound(ul, dim=1) >= ien)
     ue = 0.
 
-    do i = 1,n
+    ! Eq. 42, Dedner et al.
+    if (divB_0_method .eq. DIVB_HDC) then
+       psi(1,:)     = chspeed * chspeed * half*((b_ccr(xdim,:)+b_ccl(xdim,:)) - (psir(1,:)-psil(1,:))/chspeed)
+       b_cc(xdim,:) = half*((psir(1,:)+psil(1,:)) - chspeed*(b_ccr(xdim,:)-b_ccl(xdim,:)))
+    else
+       b_cc(xdim,:) = 0.
+    endif
+
+    do i = 1, size(f, 2)
 
        ! Left and right states of magnetic pressure
 
@@ -212,7 +215,7 @@ contains
 
        ! Left and right states of fast magnetosonic waves Eq. 3
 
-        c_fastm = sqrt(half*max( &
+       c_fastm = sqrt(half*max( &
              ((gampr_l+sum(b_ccl(xdim:zdim,i)**2)) + sqrt((gampr_l+sum(b_ccl(xdim:zdim,i)**2))**2-(four*gampr_l*b_ccl(xdim,i)**2)))/ul(idn,i), &
              ((gampr_r+sum(b_ccr(xdim:zdim,i)**2)) + sqrt((gampr_r+sum(b_ccr(xdim:zdim,i)**2))**2-(four*gampr_r*b_ccr(xdim,i)**2)))/ur(idn,i)) )
 
@@ -249,6 +252,7 @@ contains
 
           ! Speed of contact discontinuity Eq. 38
           ! Total left and right states of pressure, so prr and prl sm_nr/sm_dr
+
           if ((sr - ur(imx,i))*ur(idn,i) .equals. (sl - ul(imx,i))*ul(idn,i)) then
              sm = (sl + sr) / 2.
           else
@@ -392,7 +396,8 @@ contains
                 v_2star(xdim)      = sm
                 v_2star(ydim:zdim) = ((dn_lsqt*v_starl(ydim:zdim) + dn_rsqt*v_starr(ydim:zdim)) + b_sig*(b_starr(ydim:zdim) - b_starl(ydim:zdim)))/add_dnsq
 
-                b_2star(xdim)      = b_ccl(xdim,i)
+                b_2star(xdim)      = half * (b_ccl(xdim,i) + b_ccr(xdim,i))
+
                 b_2star(ydim:zdim) = ((dn_lsqt*b_starr(ydim:zdim) + dn_rsqt*b_starl(ydim:zdim)) + b_sig*mul_dnsq*(v_starr(ydim:zdim) - v_starl(ydim:zdim)))/add_dnsq
 
                 ! Dot product of velocity and magnetic field
@@ -408,6 +413,7 @@ contains
 
                    ! Energy of Alfven intermediate state Eq. 63
                    if (has_energy) u_2starl(ien)  =  u_starl(ien) - b_sig*dn_lsqt*(vb_starl - vb_2star)
+
                 endif
 
                 if (sm <= zero) then
@@ -417,17 +423,21 @@ contains
 
                    ! Energy of Alfven intermediate state Eq. 63
                    if (has_energy) u_2starr(ien)  =  u_starr(ien) + b_sig*dn_rsqt*(vb_starr - vb_2star)
+
                 endif
 
                 if (sm > zero) then
                    ! Left Alfven intermediate flux Eq. 65
                    f(:,i) = fl + alfven_l*u_2starl - (alfven_l - sl)*u_starl - sl* [ ul(idn,i), ul(idn,i)*ul(imx:imz,i), enl ]
                    b_cc(ydim:zdim,i) = b_cclf(ydim:zdim) + alfven_l*b_2star(ydim:zdim) - (alfven_l - sl)*b_starl(ydim:zdim) - sl*b_ccl(ydim:zdim,i)
+
                 else if (sm < zero) then
                    ! Right Alfven intermediate flux Eq. 65
                    f(:,i) = fr + alfven_r*u_2starr - (alfven_r - sr)*u_starr - sr* [ ur(idn,i), ur(idn,i)*ur(imx:imz,i), enr ]
                    b_cc(ydim:zdim,i) = b_ccrf(ydim:zdim) + alfven_r*b_2star(ydim:zdim) - (alfven_r - sr)*b_starr(ydim:zdim) - sr*b_ccr(ydim:zdim,i)
+
                 else ! sm = 0
+
                    ! Left and right Alfven intermediate flux Eq. 65
                    f(:,i) = half*( &
                         (fl + alfven_l*u_2starl - (alfven_l - sl)*u_starl - sl* [ ul(idn,i), ul(idn,i)*ul(imx:imz,i), enl ]) + &
@@ -436,6 +446,7 @@ contains
                    b_cc(ydim:zdim,i) = half*( &
                         (b_cclf(ydim:zdim) + alfven_l*b_2star(ydim:zdim) - (alfven_l - sl)*b_starl(ydim:zdim) - sl*b_ccl(ydim:zdim,i)) + &
                         (b_ccrf(ydim:zdim) + alfven_r*b_2star(ydim:zdim) - (alfven_r - sr)*b_starr(ydim:zdim) - sr*b_ccr(ydim:zdim,i)))
+
                 endif  ! sm = 0
 
              endif  ! alfven_l .le. 0 and alfven_r .ge. 0

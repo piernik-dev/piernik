@@ -1059,8 +1059,12 @@ contains
       contains
 
          subroutine outflow_b(cg, dir, side)
+
+            ! use global,                only: force_cc_mag
             use grid_cont,             only: grid_container
+
             implicit none
+
             type(grid_container), pointer    :: cg
             integer(kind=4),      intent(in) :: dir
             integer(kind=4),      intent(in) :: side
@@ -1071,6 +1075,19 @@ contains
 
             pm_one = I_THREE - I_TWO * side
             pm_two = 2 * pm_one
+
+            ! Apparently this is already written for cell-centered magnetic field.
+
+            ! Simulations with Constrained Transport may exhibit slight assymetries because
+            ! rightmost face is reset here while leftmost is not. Use expressions like
+            !
+            !   it = cg%ijkse(dir, side) - pm_one * i + (side - LO)
+            !
+            ! when force_cc_mag is .false. in evaluation of dir-component of magnetic field
+            ! for more strict external boundary treatment.
+
+            ! BEWARE: this kind of boundaries does not guarantee div(B) == 0 .
+            ! Expect div(B) growing proportionally to the distance from the domain boundary.
 
             select case (dir)
                case (xdim)
@@ -1095,6 +1112,7 @@ contains
                      cg%b(ydim, :, :, it) = cg%b(ydim, :, :, it + pm_one)
                   enddo
             end select
+
          end subroutine outflow_b
 
    end subroutine bnd_b
