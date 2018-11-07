@@ -109,11 +109,11 @@ contains
       use dataio_pub,           only: tend, msg, warn
       use fargo,                only: timestep_fargo, fargo_mean_omega
       use fluidtypes,           only: var_numbers
-      use global,               only: t, dt_old, dt_max_grow, dt_initial, dt_min, nstep, use_fargo
+      use global,               only: t, dt_old, dt_max_grow, dt_initial, dt_min, dt_max, nstep, use_fargo
       use grid_cont,            only: grid_container
       use mpisetup,             only: master, piernik_MPI_Allreduce
+      use sources,              only: timestep_sources
       use timestep_pub,         only: c_all
-      use timestepinteractions, only: timestep_interactions
 #ifdef COSM_RAYS
       use timestepcosmicrays,   only: timestep_crs, dt_crs
 #endif /* COSM_RAYS */
@@ -127,7 +127,6 @@ contains
       use dataio_pub,           only: printinfo
       use piernikdebug,         only: has_const_dt, constant_dt
 #endif /* DEBUG */
-
       implicit none
 
       real,              intent(inout) :: dt    !< the timestep
@@ -172,9 +171,7 @@ contains
          dt = min(dt, dt_resist)
 #endif /* RESISTIVE */
 
-#ifndef BALSARA
-         dt = min(dt,timestep_interactions(cg))
-#endif /* BALSARA */
+         call timestep_sources(dt, cg)
 
          if (use_fargo) dt = min(dt, timestep_fargo(cg, dt))
          cgl => cgl%nxt
@@ -201,7 +198,7 @@ contains
          call write_crashed("[timestep:time_step] dt < dt_min")
       endif
 
-      dt = min(dt, (half*(tend-t)) + (two*epsilon(one)*((tend-t))))
+      dt = min(min(dt, dt_max), (half*(tend-t)) + (two*epsilon(one)*((tend-t))))
 #ifdef DEBUG
       ! We still need all above for c_all
       if (has_const_dt) then
