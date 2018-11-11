@@ -262,7 +262,7 @@ def piernik_gdf_compare(fname1, fname2):
                 tot_datanorm = 1. - (1. - tot_datanorm) * (1. - norm)
             print("All datafield difference: %g" % tot_datanorm)
         else:
-            print("Comparing domains of different size or resolution is not implementsd yet")
+            print("Comparing domains of different size or resolution is not implemented yet")
             exit(31)
 
     return norms
