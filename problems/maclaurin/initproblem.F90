@@ -67,14 +67,18 @@ contains
 
    subroutine problem_pointers
 
-      use dataio_user, only: user_vars_hdf5, user_attrs_wr
       use user_hooks,  only: finalize_problem
+#ifdef HDF5
+      use dataio_user, only: user_vars_hdf5, user_attrs_wr
+#endif /* HDF5 */
 
       implicit none
 
-      user_attrs_wr    => problem_initial_conditions_attrs
       finalize_problem => finalize_problem_maclaurin
+#ifdef HDF5
+      user_attrs_wr    => problem_initial_conditions_attrs
       user_vars_hdf5   => maclaurin_error_vars
+#endif /* HDF5 */
 
    end subroutine problem_pointers
 

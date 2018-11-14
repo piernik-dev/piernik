@@ -49,16 +49,20 @@ contains
 
    subroutine problem_pointers
 
-      use dataio_user, only: user_vars_hdf5, user_attrs_wr, user_attrs_rd
       use user_hooks,  only: late_initial_conditions, problem_domain_update
+#ifdef HDF5
+      use dataio_user, only: user_vars_hdf5, user_attrs_wr, user_attrs_rd
+#endif /* HDF5 */
 
       implicit none
 
       late_initial_conditions => sg_late_init
       problem_domain_update => sg_dist_to_edge
+#ifdef HDF5
       user_attrs_wr => sg_attrs_wr
       user_attrs_rd => sg_attrs_rd
       user_vars_hdf5 => sg_vars
+#endif /* HDF5 */
 
    end subroutine problem_pointers
 

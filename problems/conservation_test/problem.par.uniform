@@ -1,5 +1,5 @@
  $BASE_DOMAIN
-    n_d = 64, 64, 1
+    n_d = 512, 512, 1
     bnd_xl = 'per'
     bnd_xr = 'per'
     bnd_yl = 'per'
@@ -15,10 +15,6 @@
  /
 
  $MPI_BLOCKS
-    allow_uneven = .true.
-    allow_noncart = .true.
-    dd_unif_quality = 1.1
-    dd_rect_quality = 1.1
  /
 
  $UNITS
@@ -33,18 +29,17 @@
 
  $END_CONTROL
     tend   = 1.0
-    nend   = 1000
+    nend   = 10000
  /
 
  $OUTPUT_CONTROL
     problem_name ='moving_pulse'
     run_id =  'ts1'
-    dt_hdf  = .1
+    dt_hdf  = 0.2
     dt_res  = 0.0
     dt_log  = 0.001
     dt_tsl  = 0.001
-    vars(1:) = 'ener', 'dens', 'velx', 'vely', 'velz', "inid"
-    gdf_strict = .false.
+    vars(1:) = 'dens', 'velx', 'vely', 'velz', "v"
  /
 
  $FLUID_NEUTRAL
@@ -53,23 +48,15 @@
  /
 
  $NUMERICAL_SETUP
-    cfl    = 0.7
+    cfl    = 0.4
     smalld = 1.e-5
     smallei= 1.e-5
     limiter= 'vanleer'
-	! Workaround for a too big initial guess of timestep for some choices of parameters
-	! ToDo: fix it
-	DT_INITIAL=0.05
-	DT_MAX_GROW=1.
  /
 
  $PROBLEM_CONTROL
-    pulse_vel = 0., 0., 0. !2., -2., 2.
+    pulse_vel = 2., -2., 2.
     pulse_size = 1., 1., 1.
- /
-
- $NONINERTIAL
-    omega = 1.5707963267949 ! pi/2
  /
 
  $INTERACTIONS

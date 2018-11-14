@@ -372,11 +372,11 @@ contains
                      local_magic_mass(:) = local_magic_mass(:) + sum(u1(dom%nb+1:n-dom%nb, iarr_all_dn), dim=1) * cg%dvol * cg%x(i1)
                end select
             case default
-               call die("[rtvd:relaxing_tvd] Unsupported geometry")
+               call die("[sources:limit_minimal_density] Unsupported geometry")
          end select
       else
          if (any(u1(:, iarr_all_dn) < 0.0)) then
-            write(msg,'(3A,I4,1X,I4,A)') "[rtvd:relaxing_tvd] negative density in sweep ",sweep,"( ", i1, i2, " )"
+            write(msg,'(3A,I4,1X,I4,A)') "[sources:limit_minimal_density] negative density in sweep ",sweep,"( ", i1, i2, " )"
             call die(msg)
          endif
       endif

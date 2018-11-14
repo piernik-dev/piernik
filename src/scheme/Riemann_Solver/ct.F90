@@ -166,7 +166,7 @@ contains
       elseif (mod(3+vdir-bdir,3) == 2) then !  odd permutation
          i1 => ii(bdir) ; i1m => im(bdir) ; i2 => ii(rdir) ; i2m => ii(rdir)
       else
-         call die('[advects:advectb] neither even nor odd permutation.')
+         call die('[ct:advectb] neither even nor odd permutation.')
          i1 => ii(rdir) ; i1m => ii(rdir) ; i2 => ii(rdir) ; i2m => ii(rdir) ! suppress compiler warnings
       endif
 
@@ -174,7 +174,7 @@ contains
       do while (associated(cgl))
          cg => cgl%cg
 
-         if (any([allocated(vv), allocated(vv0)])) call die("[advects:advectb] vv or vv0 already allocated")
+         if (any([allocated(vv), allocated(vv0)])) call die("[ct:advectb] vv or vv0 already allocated")
          allocate(vv(cg%n_(vdir)), vv0(cg%n_(vdir)))
 
          im(bdir) = cg%lhn(bdir, LO)

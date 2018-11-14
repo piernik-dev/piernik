@@ -60,10 +60,11 @@ module dataio
    character(len=cwdlen)    :: system_message_file   !< path to possible system (UPS) message file containing orders to dump/stop/end simulation
    integer                  :: iv                    !< work index to count successive variables to dump in hdf files
    character(len=dsetnamelen), dimension(nvarsmx) :: vars !< array of 4-character strings standing for variables to dump in hdf files
-
+#ifdef HDF5
    integer                  :: nhdf_start            !< number of hdf file for the first hdf dump in simulation run
    integer                  :: nres_start            !< number of restart file for the first restart dump in simulation run
    real                     :: t_start               !< time in simulation of start simulation run
+#endif /* HDF5 */
    logical                  :: tsl_firstcall         !< logical value to start a new timeslice file
    logical                  :: tsl_with_mom          !< place momentum integrals in timeslice file
    logical                  :: tsl_with_ptc          !< place pressure, temperature and sound speed extrema in timeslice file (even if ISO while they are constant or only density dependent)
@@ -509,18 +510,19 @@ contains
    subroutine init_dataio
 
       use constants,    only: PIERNIK_INIT_IO_IC
-      use dataio_pub,   only: nres, nrestart, printinfo, nhdf, nstep_start, die, code_progress, gdf_strict, warn, msg
+      use dataio_pub,   only: code_progress, die, nres, nrestart, printinfo, warn
       use domain,       only: dom
-      use fluidindex,   only: flind
-      use global,       only: t, nstep
       use mpisetup,     only: master
       use timer,        only: walltime_end
       use user_hooks,   only: user_vars_arr_in_restart
       use version,      only: nenv,env, init_version
 #ifdef HDF5
       use common_hdf5,  only: init_hdf5
-      use restart_hdf5, only: read_restart_hdf5
       use data_hdf5,    only: init_data
+      use dataio_pub,   only: gdf_strict, msg, nhdf, nstep_start
+      use fluidindex,   only: flind
+      use global,       only: t, nstep
+      use restart_hdf5, only: read_restart_hdf5
 #endif /* HDF5 */
 
       implicit none
@@ -716,20 +718,22 @@ contains
 !
    subroutine write_data(output)
 
-      use constants,    only: FINAL_DUMP, HDF, LOGF
-      use dataio_pub,   only: last_res_time, last_hdf_time
+      use constants,    only: FINAL_DUMP, LOGF
       use dataio_user,  only: user_post_write_data
-      use mpisetup,     only: master, piernik_MPI_Bcast
 #ifdef HDF5
+      use constants,    only: HDF
       use data_hdf5,    only: write_hdf5
+      use dataio_pub,   only: last_res_time, last_hdf_time
+      use mpisetup,     only: master, piernik_MPI_Bcast
       use restart_hdf5, only: write_restart_hdf5
 #endif /* HDF5 */
 
       implicit none
 
       integer(kind=4), intent(in) :: output
+#ifdef HDF5
       logical :: tleft
-
+#endif /* HDF5 */
 !- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
       dump(LOGF) = (output == LOGF .or. output == FINAL_DUMP) ; if (dump(LOGF)) call write_log

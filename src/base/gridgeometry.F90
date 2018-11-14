@@ -271,7 +271,11 @@ contains
 
       if (sweep == xdim) then
          pbb   =>   bb(:,:)
-         if (qna%exists(cs_i2_n)) cs2 => cg%q(qna%ind(cs_i2_n))%get_sweep(sweep,i1,i2)
+         if (qna%exists(cs_i2_n)) then
+            cs2 => cg%q(qna%ind(cs_i2_n))%get_sweep(sweep,i1,i2)
+         else
+            cs2 => null()
+         endif
          do ifl = 1, flind%fluids
             pfl   => flind%all_fluids(ifl)%fl
             puu   =>    u(:, pfl%beg:pfl%end)
