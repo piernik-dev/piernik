@@ -360,7 +360,7 @@ contains
 #ifdef ISO
       ps(RNG) = cs_iso2(RNG) * uu(RNG, idn) ; ps(1) = ps(2); ps(n) = ps(nm)
 #else /* !ISO */
-      if (associated(cs_iso2)) call die("[initionized:pres_neu] cs_iso2 should not be present")
+      if (associated(cs_iso2)) call die("[initneutral:pres_neu] cs_iso2 should not be associated")
       ps(RNG) = (uu(RNG, ien) - ekin(uu(RNG, imx),uu(RNG, imy),uu(RNG, imz),uu(RNG, idn)) )*(this%gam_1)
       ps(RNG) = max(ps(RNG), smallp)
 #endif /* !ISO */
