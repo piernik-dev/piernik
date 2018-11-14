@@ -17,7 +17,7 @@ F90FLAGS  = -fdefault-real-8 -ffree-form -std=gnu -fimplicit-none -ffree-line-le
 F90FLAGS += -O3 -funroll-loops -fno-stack-arrays
 F90FLAGS += -Wall -Wextra -W -Wsurprising -Wcharacter-truncation -Wno-unused-function -pedantic
 F90FLAGS += -fbacktrace -ggdb
-F90FLAGS += -fcheck=all
+F90FLAGS += -fcheck=all -fmodule-private
 
 ifdef I64
   F90FLAGS += -fdefault-integer-8

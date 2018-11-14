@@ -32,10 +32,13 @@ module snsources
 ! pulled by SN_SRC
    implicit none
    private
-   public ::  random_sn, init_snsources, r_sn, amp_cr_sn, nsn_last, read_snsources_from_restart, write_snsources_to_restart
+   public :: random_sn, init_snsources, r_sn, amp_cr_sn, nsn_last
 #ifdef COSM_RAYS
    public :: cr_sn
 #endif /* COSM_RAYS */
+#ifdef HDF5
+   public :: read_snsources_from_restart, write_snsources_to_restart
+#endif /* HDF5 */
 #ifdef SHEAR
    public :: sn_shear
 #endif /* SHEAR */
@@ -370,6 +373,7 @@ contains
 
       end function gasdev
 
+#ifdef HDF5
    subroutine write_snsources_to_restart(file_id)
 
       use hdf5, only: HID_T, SIZE_T
@@ -409,5 +413,6 @@ contains
       deallocate(lnsnbuf)
 
    end subroutine read_snsources_from_restart
+#endif /* HDF5 */
 
 end module snsources

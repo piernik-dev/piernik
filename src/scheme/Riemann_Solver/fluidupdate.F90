@@ -513,7 +513,7 @@ contains
        u1 = transpose(u1d)
        bt = transpose(pb)
        vx = u1(:, iarr_all_mx) / u1(:, iarr_all_dn) ! this may also be useful for gravitational acceleration
-       call all_sources(size(u1d, 2), u0, u1, bt, cg, 1, ddim, i1, i2, dt, vx)
+       call all_sources(size(u1d, 2, kind=4), u0, u1, bt, cg, 1, ddim, i1, i2, dt, vx)
 
        ! Beware: this is bypassing integration scheme, so the source terms are applied in lowest order fashion.
        ! See the results of Jeans test with RTVD and RIEMANN for comparision.
