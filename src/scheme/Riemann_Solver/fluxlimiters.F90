@@ -112,12 +112,14 @@ contains
       real, dimension(:,:), intent(in)     :: u
 
       real, dimension(size(u,1),size(u,2)) :: dlft, drgt, dcen, dq
-      integer :: n
+      integer :: n, v
 
       n = size(u,1)
 
-      dlft(2:n, :)   = (u(2:n, :) - u(1:n-1, :)) ; dlft(1, :) = dlft(2, :)    ! (14.38)
-      drgt(1:n-1, :) = dlft(2:n, :) ;             drgt(n, :) = drgt(n-1, :)
+      do v = lbound(u,2), ubound(u,2)
+         dlft(2:n, v)   = (u(2:n, v) - u(1:n-1, v)) ; dlft(1, v) = dlft(2, v)    ! (14.38)
+         drgt(1:n-1, v) = dlft(2:n, v) ;             drgt(n, v) = drgt(n-1, v)
+      enddo
 
       dcen = dlft*drgt
 
@@ -142,12 +144,14 @@ contains
       real, dimension(:,:), intent(in)     :: u
 
       real, dimension(size(u,1),size(u,2)) :: dlft, drgt, dq
-      integer :: n
+      integer :: n, v
 
       n = size(u,1)
 
-      dlft(2:n, :)   = (u(2:n, :) - u(1:n-1, :)) ; dlft(1, :) = dlft(2, :)
-      drgt(1:n-1, :) = dlft(2:n, :) ;             drgt(n, :) = drgt(n-1, :)
+      do v = lbound(u,2), ubound(u,2)
+         dlft(2:n, v)   = (u(2:n, v) - u(1:n-1, v)) ; dlft(1, v) = dlft(2, v)
+         drgt(1:n-1, v) = dlft(2:n, v) ;             drgt(n, v) = drgt(n-1, v)
+      enddo
 
       dq = (sign(one, dlft) + sign(one, drgt))*min(abs(dlft),abs(drgt))*half
 
@@ -166,12 +170,14 @@ contains
       real, dimension(:,:), intent(in)     :: u
 
       real, dimension(size(u,1),size(u,2)) :: dlft, drgt, dq
-      integer :: n
+      integer :: n, v
 
       n = size(u,1)
 
-      dlft(2:n, :)   = (u(2:n, :) - u(1:n-1, :)) ; dlft(1, :) = dlft(2, :)
-      drgt(1:n-1, :) = dlft(2:n, :) ;             drgt(n, :) = drgt(n-1, :)
+      do v = lbound(u,2), ubound(u,2)
+         dlft(2:n, v)   = (u(2:n, v) - u(1:n-1, v)) ; dlft(1, v) = dlft(2, v)
+         drgt(1:n-1, v) = dlft(2:n, v) ;             drgt(n, v) = drgt(n-1, v)
+      enddo
 
       dq = (sign(one,dlft)+sign(one,drgt))*min(two*abs(dlft),two*abs(drgt),half*abs(dlft+drgt))*half
 
@@ -189,12 +195,14 @@ contains
       real, dimension(:,:), intent(in)     :: u
 
       real, dimension(size(u,1),size(u,2)) :: dlft, drgt, dq
-      integer :: n
+      integer :: n, v
 
       n = size(u,1)
 
-      dlft(2:n, :)   = (u(2:n, :) - u(1:n-1, :)) ; dlft(1, :) = dlft(2, :)
-      drgt(1:n-1, :) = dlft(2:n, :) ;             drgt(n, :) = drgt(n-1, :)
+      do v = lbound(u,2), ubound(u,2)
+         dlft(2:n, v)   = (u(2:n, v) - u(1:n-1, v)) ; dlft(1, v) = dlft(2, v)
+         drgt(1:n-1, v) = dlft(2:n, v) ;             drgt(n, v) = drgt(n-1, v)
+      enddo
 
       where (abs(dlft) > abs(drgt))
          dq = (sign(one,dlft)+sign(one,drgt))*min(abs(dlft), abs(two*drgt))*half
