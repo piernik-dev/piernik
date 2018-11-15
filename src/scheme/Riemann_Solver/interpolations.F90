@@ -82,15 +82,15 @@ contains
      do p = 1, flind%fluids
         fl => flind%all_fluids(p)%fl
 
-        q(fl%idn, :) =  u(fl%idn, :)
-        q(fl%imx, :) =  u(fl%imx, :)/u(fl%idn, :)
-        q(fl%imy, :) =  u(fl%imy, :)/u(fl%idn, :)
-        q(fl%imz, :) =  u(fl%imz, :)/u(fl%idn, :)
+        q(:, fl%idn) =  u(:, fl%idn)
+        q(:, fl%imx) =  u(:, fl%imx)/u(:, fl%idn)
+        q(:, fl%imy) =  u(:, fl%imy)/u(:, fl%idn)
+        q(:, fl%imz) =  u(:, fl%imz)/u(:, fl%idn)
         ! J.CoPhy 208 (2005), Pg 317, Eq. 2. Gas pressure: p = (gamma-1)*(e-half*rho*v^2-half*B^2) and Total pressure: p_T = p + half*B^2. (1) and (2) are markers for HD and MHD.
         if (fl%has_energy) then
-            q(fl%ien, :) =  fl%gam_1*(u(fl%ien, :) - ekin(u(fl%imx, :), u(fl%imy, :), u(fl%imz, :), u(fl%idn, :))) ! Primitive variable for gas pressure (p) without magnetic fields. (1)
+            q(:, fl%ien) =  fl%gam_1*(u(:, fl%ien) - ekin(u(:, fl%imx), u(:, fl%imy), u(:, fl%imz), u(:, fl%idn))) ! Primitive variable for gas pressure (p) without magnetic fields. (1)
             if (fl%is_magnetized) then
-               q(fl%ien, :) =  q(fl%ien, :) - half*fl%gam_1*sum(b_cc(xdim:zdim, :)**2, dim=1) ! Primitive variable for gas pressure (p) with magnetic fields. The requirement of total pressure is dealt in the fluxes and hlld routines. (2)
+               q(:, fl%ien) =  q(:, fl%ien) - half*fl%gam_1*sum(b_cc(:, xdim:zdim)**2, dim=2) ! Primitive variable for gas pressure (p) with magnetic fields. The requirement of total pressure is dealt in the fluxes and hlld routines. (2)
             endif
         endif
 
@@ -177,7 +177,7 @@ contains
 
     real, dimension(size(q, 1), size(q, 2)) :: dq_interp
     integer                                 :: n
-    integer, parameter                      :: in = 2  ! index for cells
+    integer, parameter                      :: in = 1  ! index for cells
 
     if (dom%geometry_type /= GEO_XYZ) call die("[interpolations:linear] non-cartesian geometry not implemented yet.")
     if (size(q, in) - size(ql, in) /= 1) then
@@ -191,9 +191,9 @@ contains
     dq_interp = half * f_limiter(q) ! interpolate by half of cell
 
     ! interpolate from i-th cell center to its right face to get left state at interface i
-    ql = q(:, :n-1) + dq_interp(:, :n-1)
+    ql = q(:n-1, :) + dq_interp(:n-1, :)
     ! the right state at interface i comes from cell (i+1) and we have to obtain interpolation towards its left face
-    qr = q(:, 2:) - dq_interp(:, 2:)
+    qr = q(2:, :) - dq_interp(2:, :)
 
   end subroutine linear
 
@@ -219,15 +219,15 @@ contains
 
     ! WENO3 definitions
 
-    real, dimension(size(q,1))               :: w0, w1
-    real, dimension(size(q,1))               :: alpha0, alpha1
-    real, dimension(size(q,1))               :: beta0, beta1
-    real, dimension(size(q,1))               :: flux0, flux1
-    real, dimension(size(q,1))               :: tau
+    real, dimension(size(q,2))               :: w0, w1
+    real, dimension(size(q,2))               :: alpha0, alpha1
+    real, dimension(size(q,2))               :: beta0, beta1
+    real, dimension(size(q,2))               :: flux0, flux1
+    real, dimension(size(q,2))               :: tau
     real                                     :: d0,d1
     !real                                     :: Delta_xi, Delta_xi2
     integer                                  :: n
-    integer, parameter                       :: in = 2  ! index for cells
+    integer, parameter                       :: in = 1  ! index for cells
     integer                                  :: i
 
     if (dom%geometry_type /= GEO_XYZ) call die("[interpolations:linear] non-cartesian geometry not implemented yet.")
@@ -246,11 +246,11 @@ contains
     do i = 2, n-1
 
        ! Eq. 20
-       beta0 = (q(:, i+1) - q(:, i))**2  ! beta_0(j) = (u(j+1) - u(j))**2
-       beta1 = (q(:, i) - q(:, i-1))**2  ! beta_1(j) = (u(j) - u(j-1))**2
+       beta0 = (q(i+1, :) - q(i, :))**2  ! beta_0(j) = (u(j+1) - u(j))**2
+       beta1 = (q(i, :) - q(i-1, :))**2  ! beta_1(j) = (u(j) - u(j-1))**2
 
        ! Eq. 22
-       tau = (q(:, i+1) - two*q(:, i) + q(:, i-1))**2  ! tau(j) = (u(j+1) - 2 * u(j) + u(j-1))**2
+       tau = (q(i+1, :) - two*q(i, :) + q(i-1, :))**2  ! tau(j) = (u(j+1) - 2 * u(j) + u(j-1))**2
 
        !>
        !! The WENO scheme is self-similar. The same applies to ESWENO.
@@ -296,11 +296,11 @@ contains
 
        ! Left state interpolation, Eq. 15
 
-       flux0 = 0.5*(q(:, i) + q(:, i+1))     ! f_0(j) = 1/2 * (  q(j) + q(j+1)) ; face at position j+1/2
-       flux1 = 0.5*(-q(:, i-1) + 3.0*q(:, i))  ! f_1(j) = 1/2 * (3*q(j) - q(j-1))
+       flux0 = 0.5*(q(i, :) + q(i+1, :))     ! f_0(j) = 1/2 * (  q(j) + q(j+1)) ; face at position j+1/2
+       flux1 = 0.5*(-q(i-1, :) + 3.0*q(i, :))  ! f_1(j) = 1/2 * (3*q(j) - q(j-1))
 
        ! WENO3 flux, Eq. 14
-       ql(:, i) = w0*flux0 + w1*flux1  ! f_W(j) = w_0(j) * f_0(j) + w_1(j) * f_1(j) ; face at position j+1/2
+       ql(i, :) = w0*flux0 + w1*flux1  ! f_W(j) = w_0(j) * f_0(j) + w_1(j) * f_1(j) ; face at position j+1/2
 
        ! Right state interpolation, Eq. 15
        ! we have to construct the right state symmetrically
@@ -311,11 +311,11 @@ contains
        w0 = alpha0/(alpha0 + alpha1)  ! w_r(j) = alpha_r(j) / (alpha_0(j) + alpha_1(j)) , r = 0, 1
        w1 = alpha1/(alpha0 + alpha1)
 
-       flux0 = 0.5*(q(:, i) + q(:, i-1))          ! f_0(j) = 1/2 * (  q(j) + q(j-1)) ; face at position j+1/2 from the other side
-       flux1 = 0.5*(-q(:, i+1) + 3.0*q(:, i))  ! f_1(j) = 1/2 * (3*q(j) - q(j+1))
+       flux0 = 0.5*(q(i, :) + q(i-1, :))          ! f_0(j) = 1/2 * (  q(j) + q(j-1)) ; face at position j+1/2 from the other side
+       flux1 = 0.5*(-q(i+1, :) + 3.0*q(i, :))  ! f_1(j) = 1/2 * (3*q(j) - q(j+1))
 
        ! WENO3 flux, Eq. 14, already shifted
-       qr(:, i-1) = w0*flux0 + w1*flux1  ! similar as for left state, but weights are constructed from symmetric stencil
+       qr(i-1, :) = w0*flux0 + w1*flux1  ! similar as for left state, but weights are constructed from symmetric stencil
 
        if (.false.) qr = f_limiter(q)  ! suppress compiler worning on argument needed for other interpolation scheme
 
@@ -323,8 +323,8 @@ contains
 
     ! Q&D: fix for FPE
     ! ToDo: handle it properly
-    ql(:, 1) = q(:, 1)
-    qr(:, n-1) = q(:, n)
+    ql(1, :) = q(1, :)
+    qr(n-1, :) = q(n, :)
 
   end subroutine weno3
 

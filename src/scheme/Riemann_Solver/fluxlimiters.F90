@@ -114,10 +114,10 @@ contains
       real, dimension(size(u,1),size(u,2)) :: dlft, drgt, dcen, dq
       integer :: n
 
-      n = size(u,2)
+      n = size(u,1)
 
-      dlft(:,2:n)   = (u(:,2:n) - u(:,1:n-1)) ; dlft(:,1) = dlft(:,2)    ! (14.38)
-      drgt(:,1:n-1) = dlft(:,2:n) ;             drgt(:,n) = drgt(:,n-1)
+      dlft(2:n, :)   = (u(2:n, :) - u(1:n-1, :)) ; dlft(1, :) = dlft(2, :)    ! (14.38)
+      drgt(1:n-1, :) = dlft(2:n, :) ;             drgt(n, :) = drgt(n-1, :)
 
       dcen = dlft*drgt
 
@@ -144,10 +144,10 @@ contains
       real, dimension(size(u,1),size(u,2)) :: dlft, drgt, dq
       integer :: n
 
-      n = size(u,2)
+      n = size(u,1)
 
-      dlft(:,2:n)   = (u(:,2:n) - u(:,1:n-1)) ; dlft(:,1) = dlft(:,2)
-      drgt(:,1:n-1) = dlft(:,2:n) ;             drgt(:,n) = drgt(:,n-1)
+      dlft(2:n, :)   = (u(2:n, :) - u(1:n-1, :)) ; dlft(1, :) = dlft(2, :)
+      drgt(1:n-1, :) = dlft(2:n, :) ;             drgt(n, :) = drgt(n-1, :)
 
       dq = (sign(one, dlft) + sign(one, drgt))*min(abs(dlft),abs(drgt))*half
 
@@ -168,10 +168,10 @@ contains
       real, dimension(size(u,1),size(u,2)) :: dlft, drgt, dq
       integer :: n
 
-      n = size(u,2)
+      n = size(u,1)
 
-      dlft(:,2:n)   = (u(:,2:n) - u(:,1:n-1)) ; dlft(:,1) = dlft(:,2)
-      drgt(:,1:n-1) = dlft(:,2:n) ;             drgt(:,n) = drgt(:,n-1)
+      dlft(2:n, :)   = (u(2:n, :) - u(1:n-1, :)) ; dlft(1, :) = dlft(2, :)
+      drgt(1:n-1, :) = dlft(2:n, :) ;             drgt(n, :) = drgt(n-1, :)
 
       dq = (sign(one,dlft)+sign(one,drgt))*min(two*abs(dlft),two*abs(drgt),half*abs(dlft+drgt))*half
 
@@ -191,10 +191,10 @@ contains
       real, dimension(size(u,1),size(u,2)) :: dlft, drgt, dq
       integer :: n
 
-      n = size(u,2)
+      n = size(u,1)
 
-      dlft(:,2:n)   = (u(:,2:n) - u(:,1:n-1)) ; dlft(:,1) = dlft(:,2)
-      drgt(:,1:n-1) = dlft(:,2:n) ;             drgt(:,n) = drgt(:,n-1)
+      dlft(2:n, :)   = (u(2:n, :) - u(1:n-1, :)) ; dlft(1, :) = dlft(2, :)
+      drgt(1:n-1, :) = dlft(2:n, :) ;             drgt(n, :) = drgt(n-1, :)
 
       where (abs(dlft) > abs(drgt))
          dq = (sign(one,dlft)+sign(one,drgt))*min(abs(dlft), abs(two*drgt))*half

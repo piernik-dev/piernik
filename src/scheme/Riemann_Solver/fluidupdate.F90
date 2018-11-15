@@ -464,17 +464,16 @@ contains
     real,                          intent(in) :: dt
     integer(kind=4),               intent(in) :: ddim
 
-    real, dimension(size(cg%u,1), cg%n_(ddim)) :: u1d
-    real, dimension(xdim:zdim, cg%n_(ddim))    :: b_cc1d
-    real, dimension(1, cg%n_(ddim))            :: psi_d ! artificial rank-2 to conform to flux limiter interface
+    real, dimension(cg%n_(ddim), size(cg%u,1)) :: u1d
+    real, dimension(cg%n_(ddim), xdim:zdim)    :: b_cc1d
+    real, dimension(cg%n_(ddim), 1)            :: psi_d ! artificial rank-2 to conform to flux limiter interface
     real, dimension(:,:), pointer              :: pu, pb
     integer                                    :: i1, i2
     integer                                    :: bi
     real, dimension(:), pointer                :: ppsi
     integer                                    :: psii
-    real, dimension(size(u1d,2),size(u1d,1))           :: u1, u0
-    real, dimension(size(u1d,2), flind%fluids), target :: vx
-    real, dimension(size(u1d,2), xdim:zdim) :: bt
+    real, dimension(size(u1d,1),size(u1d,2))           :: u0
+    real, dimension(size(u1d,1), flind%fluids), target :: vx
 
     if (force_cc_mag) then
        bi = wna%bi
@@ -492,14 +491,15 @@ contains
     do i2 = cg%lhn(pdims(ddim, ORTHO2), LO), cg%lhn(pdims(ddim,ORTHO2), HI)
        do i1 = cg%lhn(pdims(ddim, ORTHO1), LO), cg%lhn(pdims(ddim, ORTHO1), HI)
           pu => cg%w(wna%fi)%get_sweep(ddim,i1,i2)
-          u1d(iarr_all_swp(ddim,:),:) = pu(:,:)
+          u1d(:, iarr_all_swp(ddim,:)) = transpose(pu(:,:))
           pb => cg%w(bi)%get_sweep(ddim,i1,i2)
-          b_cc1d(iarr_mag_swp(ddim,:),:) = pb(:,:)
-          if (psii /= INVALID) then
+          b_cc1d(:, iarr_mag_swp(ddim,:)) = transpose(pb(:,:))
+
+         if (psii /= INVALID) then
              ppsi => cg%q(psii)%get_sweep(ddim,i1,i2)
-             psi_d(1, :) = ppsi(:)
+             psi_d(:, 1) = ppsi(:)
              call solve(u1d, b_cc1d, dt/cg%dl(ddim), psi_d)
-             ppsi(:) = psi_d(1,:)
+             ppsi(:) = psi_d(:,1)
           else
              call solve(u1d, b_cc1d, dt/cg%dl(ddim), psi_d)
           endif
@@ -509,23 +509,19 @@ contains
        ! ToDo: integrate it into h_solver schemes
 
        ! transposition for compatibility with RTVD-based routines
-          u0 = transpose(pu)
-       u1 = transpose(u1d)
-       bt = transpose(pb)
-       vx = u1(:, iarr_all_mx) / u1(:, iarr_all_dn) ! this may also be useful for gravitational acceleration
-       call all_sources(size(u1d, 2, kind=4), u0, u1, bt, cg, 1, ddim, i1, i2, dt, vx)
+       u0 = transpose(pu)
+       vx = u1d(:, iarr_all_mx) / u1d(:, iarr_all_dn) ! this may also be useful for gravitational acceleration
+       call all_sources(size(u1d, 1, kind=4), u0, u1d, b_cc1d, cg, 1, ddim, i1, i2, dt, vx)
 
        ! Beware: this is bypassing integration scheme, so the source terms are applied in lowest order fashion.
        ! See the results of Jeans test with RTVD and RIEMANN for comparision.
 
 #if defined COSM_RAYS && defined IONIZED
-       if (size(u1d, 2) > 1) call limit_minimal_ecr(size(u1d, 2), u1)
+       if (size(u1d, 1) > 1) call limit_minimal_ecr(size(u1d, 1), u1d)
 #endif /* COSM_RAYS && IONIZED */
-       u1d = transpose(u1)
 
-
-          pu(:,:) = u1d(iarr_all_swp(ddim,:),:)
-          pb(:,:) = b_cc1d(iarr_mag_swp(ddim,:),:) ! ToDo figure out how to manage CT energy fixup without extra storage
+          pu(:,:) = transpose(u1d(:,iarr_all_swp(ddim,:)))
+          pb(:,:) = transpose(b_cc1d(:, iarr_mag_swp(ddim,:))) ! ToDo figure out how to manage CT energy fixup without extra storage
        enddo
     enddo
 
@@ -556,31 +552,31 @@ contains
      real, dimension(:,:), intent(inout) :: psi
 
      ! left and right states at interfaces 1 .. n-1
-     real, dimension(size(u,   1), size(u,   2)-1), target :: ql, qr
-     real, dimension(size(b_cc,1), size(b_cc,2)-1), target :: b_cc_l, b_cc_r
-     real, dimension(size(psi, 1), size(psi, 2)-1), target :: psi_l, psi_r
+     real, dimension(size(u,   1)-1, size(u,   2)), target :: ql, qr
+     real, dimension(size(b_cc,1)-1, size(b_cc,2)), target :: b_cc_l, b_cc_r
+     real, dimension(size(psi, 1)-1, size(psi, 2)), target :: psi_l, psi_r
 
      ! fluxes through interfaces 1 .. n-1
-     real, dimension(size(u,   1), size(u,   2)-1), target :: flx
-     real, dimension(size(b_cc,1), size(b_cc,2)-1), target :: mag_cc
-     real, dimension(size(psi, 1), size(psi, 2)-1), target :: psi_cc
+     real, dimension(size(u,   1)-1, size(u,   2)), target :: flx
+     real, dimension(size(b_cc,1)-1, size(b_cc,2)), target :: mag_cc
+     real, dimension(size(psi, 1)-1, size(psi, 2)), target :: psi_cc
 
      ! left and right MUSCL fluxes at interfaces 1 .. n-1
-     real, dimension(size(u,   1),size(u,   2)-1)          :: flx_l, flx_r
-     real, dimension(size(b_cc,1),size(b_cc,2)-1)          :: bclflx, bcrflx
-     real, dimension(size(psi, 1),size(psi, 2)-1)          :: psilflx, psirflx
+     real, dimension(size(u,   1)-1,size(u,   2))          :: flx_l, flx_r
+     real, dimension(size(b_cc,1)-1,size(b_cc,2))          :: bclflx, bcrflx
+     real, dimension(size(psi, 1)-1,size(psi, 2))          :: psilflx, psirflx
 
      ! left and right states for cells 2 .. n-1
-     real, dimension(size(u,   1), 2:size(u,   2)-1)       :: u1    !, du2, du3
-     real, dimension(size(b_cc,1), 2:size(b_cc,2)-1)       :: b1    !, db2, db3
-     real, dimension(size(psi, 1), 2:size(psi, 2)-1)       :: psi1  !, dpsi2, dpsi3
+     real, dimension(2:size(u,   1)-1, size(u,   2))       :: u1    !, du2, du3
+     real, dimension(2:size(b_cc,1)-1, size(b_cc,2))       :: b1    !, db2, db3
+     real, dimension(2:size(psi, 1)-1, size(psi, 2))       :: psi1  !, dpsi2, dpsi3
 
 #ifdef RK_HIGH
      ! left and right states for cells (RK3)
      ! " to be checked "
-     real, dimension(size(u,   1), 2:size(u,  2 )-2)        :: u2
-     real, dimension(size(b_cc,1), 2:size(b_cc,2)-2)        :: b2
-     real, dimension(size(psi, 1), 2:size(psi, 2)-2)        :: psi2
+     real, dimension(2:size(u,   1)-2, size(u,  2 ))        :: u2
+     real, dimension(2:size(b_cc,1)-2, size(b_cc,2))        :: b2
+     real, dimension(2:size(psi, 1)-2, size(psi, 2))        :: psi2
 #endif /* RK_HIGH */
 
      ! updates required for higher order of integration will likely have shorter length
@@ -590,7 +586,7 @@ contains
 !!$     real, dimension(size(b_cc,1), 2:size(b_cc,2)-2), target :: mag_cc1
 !!$     real, dimension(size(psi, 1), 2:size(psi, 2)-2), target :: psi_cc1
 
-     integer, parameter                                    :: in = 2  ! index for cells
+     integer, parameter                                    :: in = 1  ! index for cells
      integer                                               :: nx
 
      nx  = size(u, in)
@@ -618,19 +614,19 @@ contains
         call interpol(u, b_cc, psi, ql, qr, b_cc_l, b_cc_r, psi_l, psi_r)
         call riemann_wrap(ql, qr, b_cc_l, b_cc_r, psi_l, psi_r, flx, mag_cc, psi_cc) ! Now we advance the left and right states by a timestep.
         call du_db(u1, b1, psi1, half * dtodx)
-        call interpol(u1, b1, psi1, ql(:,2:nx-2), qr(:,2:nx-2), b_cc_l(:,2:nx-2), b_cc_r(:,2:nx-2), psi_l(:,2:nx-2), psi_r(:,2:nx-2))
-        call riemann_wrap(ql(:,2:nx-2), qr(:,2:nx-2), b_cc_l(:,2:nx-2), b_cc_r(:,2:nx-2), psi_l(:,2:nx-2), psi_r(:,2:nx-2), flx(:,2:nx-2), mag_cc(:,2:nx-2), psi_cc(:,2:nx-2)) ! second call for Riemann problem uses states evolved to half timestep
+        call interpol(u1, b1, psi1, ql(2:nx-2,:), qr(2:nx-2,:), b_cc_l(2:nx-2,:), b_cc_r(2:nx-2,:), psi_l(2:nx-2,:), psi_r(2:nx-2,:))
+        call riemann_wrap(ql(2:nx-2,:), qr(2:nx-2,:), b_cc_l(2:nx-2,:), b_cc_r(2:nx-2,:), psi_l(2:nx-2,:), psi_r(2:nx-2,:), flx(2:nx-2,:), mag_cc(2:nx-2,:), psi_cc(2:nx-2,:)) ! second call for Riemann problem uses states evolved to half timestep
         call update  ! ToDo tell explicitly what range to update
 #if RK_HIGH
       case ("rk3") ! " to be checked "
          call interpol(u, b_cc, psi, ql, qr, b_cc_l, b_cc_r, psi_l, psi_r)
          call riemann_wrap(ql, qr, b_cc_l, b_cc_r, psi_l, psi_r, flx, mag_cc, psi_cc) ! Now we advance the left and right states by a timestep.
          call du_db(u1, b1, psi1, oneq * dtodx)
-         call interpol(u1, b1, psi1, ql(:,2:nx-2), qr(:,2:nx-2), b_cc_l(:,2:nx-2), b_cc_r(:,2:nx-2), psi_l(:,2:nx-2), psi_r(:,2:nx-2))
-         call riemann_wrap(ql(:,2:nx-2), qr(:,2:nx-2), b_cc_l(:,2:nx-2), b_cc_r(:,2:nx-2), psi_l(:,2:nx-2), psi_r(:,2:nx-2), flx(:,2:nx-2), mag_cc(:,2:nx-2), psi_cc(:,2:nx-2)) ! second call for Riemann problem uses states evolved to half timestep
+         call interpol(u1, b1, psi1, ql(2:nx-2,:), qr(2:nx-2,:), b_cc_l(2:nx-2,:), b_cc_r(2:nx-2,:), psi_l(2:nx-2,:), psi_r(2:nx-2,:))
+         call riemann_wrap(ql(2:nx-2,:), qr(2:nx-2,:), b_cc_l(2:nx-2,:), b_cc_r(2:nx-2,:), psi_l(2:nx-2,:), psi_r(2:nx-2),:, flx(2:nx-2,:), mag_cc(2:nx-2,:), psi_cc(2:nx-2,:)) ! second call for Riemann problem uses states evolved to half timestep
          call du_db(u2,b2,psi2, twot * dtodx)
-         call interpol(u1, b1, psi1, ql(:,2:nx-2), qr(:,2:nx-2), b_cc_l(:,2:nx-2), b_cc_r(:,2:nx-2), psi_l(:,2:nx-2), psi_r(:,2:nx-2))
-         call riemann_wrap(ql(:,2:nx-2), qr(:,2:nx-2), b_cc_l(:,2:nx-2), b_cc_r(:,2:nx-2), psi_l(:,2:nx-2), psi_r(:,2:nx-2), flx(:,2:nx-2), mag_cc(:,2:nx-2), psi_cc(:,2:nx-2))
+         call interpol(u1, b1, psi1, ql(2:nx-2,:), qr(2:nx-2,:), b_cc_l(2:nx-2,:), b_cc_r(2:nx-2,:), psi_l(2:nx-2,:), psi_r(2:nx-2,:))
+         call riemann_wrap(ql(2:nx-2,:), qr(2:nx-2,:), b_cc_l(2:nx-2,:), b_cc_r(2:nx-2,:), psi_l(2:nx-2,:), psi_r(2:nx-2,:), flx(2:nx-2,:), mag_cc(2:nx-2,:),:, psi_cc(2:nx-2,:))
         call update
 
         !! rk3 and most other possible schemes will need more sophisticated update routine.
@@ -645,7 +641,7 @@ contains
         call musclflx(ql, b_cc_l, psi_l, flx_l, bclflx, psilflx)
         call musclflx(qr, b_cc_r, psi_r, flx_r, bcrflx, psirflx)
         call ulr_fluxes_qlr
-        call riemann_wrap(ql(:,2:nx-2), qr(:,2:nx-2), b_cc_l(:,2:nx-2), b_cc_r(:,2:nx-2), psi_l(:,2:nx-2), psi_r(:,2:nx-2), flx(:,2:nx-2), mag_cc(:,2:nx-2), psi_cc(:,2:nx-2)) ! 2:nx-1 should be possible here
+        call riemann_wrap(ql(2:nx-2,:), qr(2:nx-2,:), b_cc_l(2:nx-2,:), b_cc_r(2:nx-2,:), psi_l(2:nx-2,:), psi_r(2:nx-2,:), flx(2:nx-2,:), mag_cc(2:nx-2,:), psi_cc(2:nx-2,:)) ! 2:nx-1 should be possible here
         call update
      case default
         call die("[fluidupdate:sweep_dsplit] No recognized solver")
@@ -669,17 +665,17 @@ contains
 
        implicit none
 
-       real, dimension(size(u,   1), 2:size(u,   2)-1), intent(out) :: u_new
-       real, dimension(size(b_cc,1), 2:size(b_cc,2)-1), intent(out) :: b_new
-       real, dimension(size(psi, 1), 2:size(psi, 2)-1), intent(out) :: psi_new
+       real, dimension(2:size(u,   1)-1, size(u,   2)), intent(out) :: u_new
+       real, dimension(2:size(b_cc,1)-1, size(b_cc,2)), intent(out) :: b_new
+       real, dimension(2:size(psi, 1)-1, size(psi, 2)), intent(out) :: psi_new
        real, intent(in) :: fac
 
        ! shape(flx) = shape(u) - [ 0, 1 ] = [ n_variables, nx-1 ]
-       u_new = u(:, 2:nx-1) + fac * (flx(:, :nx-2) - flx(:, 2:))
-       b_new = b_cc(:, 2:nx-1) + fac * (mag_cc(:, :nx-2) - mag_cc(:, 2:))
+       u_new = u(2:nx-1, :) + fac * (flx(:nx-2, :) - flx(2:, :))
+       b_new = b_cc(2:nx-1, :) + fac * (mag_cc(:nx-2, :) - mag_cc(2:, :))
 
        if (divB_0_method == DIVB_HDC) then
-          psi_new = psi(:, 2:nx-1) + fac * (psi_cc(:, :nx-2) - psi_cc(:, 2:))
+          psi_new = psi(2:nx-1, :) + fac * (psi_cc(:nx-2, :) - psi_cc(2:, :))
        else
           psi_new = 0.
        endif
@@ -693,15 +689,15 @@ contains
 
         implicit none
 
-        ql(:, 2:nx-2) = ql(:, 2:nx-2) + half * dtodx * (flx_r(:, 1:nx-3) - flx_l(:, 2:nx-2))
-        qr(:, 2:nx-2) = qr(:, 2:nx-2) + half * dtodx * (flx_r(:, 2:nx-2) - flx_l(:, 3:nx-1))
+        ql(2:nx-2, :) = ql(2:nx-2, :) + half * dtodx * (flx_r(1:nx-3, :) - flx_l(2:nx-2, :))
+        qr(2:nx-2, :) = qr(2:nx-2, :) + half * dtodx * (flx_r(2:nx-2, :) - flx_l(3:nx-1, :))
 
-        b_cc_l(:, 2:nx-2) = b_cc_l(:, 2:nx-2) + half * dtodx * (bcrflx(:, 1:nx-3) - bclflx(:, 2:nx-2))
-        b_cc_r(:, 2:nx-2) = b_cc_r(:, 2:nx-2) + half * dtodx * (bcrflx(:, 2:nx-2) - bclflx(:, 3:nx-1))
+        b_cc_l(2:nx-2, :) = b_cc_l(2:nx-2, :) + half * dtodx * (bcrflx(1:nx-3, :) - bclflx(2:nx-2, :))
+        b_cc_r(2:nx-2, :) = b_cc_r(2:nx-2, :) + half * dtodx * (bcrflx(2:nx-2, :) - bclflx(3:nx-1, :))
 
         if (divB_0_method == DIVB_HDC) then
-           psi_l(:, 2:nx-2) = psi_l(:, 2:nx-2) + half * dtodx * (psirflx(:, 1:nx-3) - psilflx(:, 2:nx-2))
-           psi_r(:, 2:nx-2) = psi_r(:, 2:nx-2) + half * dtodx * (psirflx(:, 2:nx-2) - psilflx(:, 3:nx-1))
+           psi_l(2:nx-2, :) = psi_l(2:nx-2, :) + half * dtodx * (psirflx(1:nx-3, :) - psilflx(2:nx-2, :))
+           psi_r(2:nx-2, :) = psi_r(2:nx-2, :) + half * dtodx * (psirflx(2:nx-2, :) - psilflx(3:nx-1, :))
         endif
 
      end subroutine ulr_fluxes_qlr
@@ -734,38 +730,38 @@ contains
 
            fl => flind%all_fluids(ip)%fl
 
-           do i = 1, size(q, 2)
+           do i = 1, size(q, 1)
 
-              qf(fl%idn,i) = q(fl%idn,i)*q(fl%imx,i)
+              qf(i,fl%idn) = q(i,fl%idn)*q(i,fl%imx)
               if (fl%has_energy) then
                  if (fl%is_magnetized) then
-                    qf(fl%imx,i) = q(fl%idn,i)*q(fl%imx,i)*q(fl%imx,i) + (q(fl%ien,i) + half*sum(b_cc(xdim:zdim,i)**2,dim=1)) - b_cc(xdim,i)**2
+                    qf(i,fl%imx) = q(i,fl%idn)*q(i,fl%imx)*q(i,fl%imx) + (q(i,fl%ien) + half*sum(b_cc(i,xdim:zdim)**2)) - b_cc(i,xdim)**2
                  else
-                    qf(fl%imx,i) = q(fl%idn,i)*q(fl%imx,i)*q(fl%imx,i) + q(fl%ien,i)
+                    qf(i,fl%imx) = q(i,fl%idn)*q(i,fl%imx)*q(i,fl%imx) + q(i,fl%ien)
                  endif
               else
-                 qf(fl%imx,i) = q(fl%idn,i)*q(fl%imx,i)*q(fl%imx,i)
+                 qf(i,fl%imx) = q(i,fl%idn)*q(i,fl%imx)*q(i,fl%imx)
               endif
               if (fl%is_magnetized) then
-                 qf(fl%imy,i) = q(fl%idn,i)*q(fl%imx,i)*q(fl%imy,i) - b_cc(xdim,i)*b_cc(ydim,i)
-                 qf(fl%imz,i) = q(fl%idn,i)*q(fl%imx,i)*q(fl%imz,i) - b_cc(xdim,i)*b_cc(zdim,i)
-                 b_ccf(ydim,i)  = b_cc(ydim,i)*q(fl%imx,i) - b_cc(xdim,i)*q(fl%imy,i)
-                 b_ccf(zdim,i)  = b_cc(zdim,i)*q(fl%imx,i) - b_cc(xdim,i)*q(fl%imz,i)
+                 qf(i,fl%imy) = q(i,fl%idn)*q(i,fl%imx)*q(i,fl%imy) - b_cc(i,xdim)*b_cc(i,ydim)
+                 qf(i,fl%imz) = q(i,fl%idn)*q(i,fl%imx)*q(i,fl%imz) - b_cc(i,xdim)*b_cc(i,zdim)
+                 b_ccf(i,ydim)  = b_cc(i,ydim)*q(i,fl%imx) - b_cc(i,xdim)*q(i,fl%imy)
+                 b_ccf(i,zdim)  = b_cc(i,zdim)*q(i,fl%imx) - b_cc(i,xdim)*q(i,fl%imz)
                  if (divB_0_method .eq. DIVB_HDC) then
-                    b_ccf(xdim,i) = psi(1,i)
-                    psif(1,i)   = (chspeed**2)*b_cc(xdim,i)
+                    b_ccf(i,xdim) = psi(i,1)
+                    psif(i,1)   = (chspeed**2)*b_cc(i,xdim)
                  endif
               else
-                 qf(fl%imy,i) = q(fl%idn,i)*q(fl%imx,i)*q(fl%imy,i)
-                 qf(fl%imz,i) = q(fl%idn,i)*q(fl%imx,i)*q(fl%imz,i)
+                 qf(i,fl%imy) = q(i,fl%idn)*q(i,fl%imx)*q(i,fl%imy)
+                 qf(i,fl%imz) = q(i,fl%idn)*q(i,fl%imx)*q(i,fl%imz)
               endif
               if (fl%has_energy) then
                  if (fl%is_magnetized) then
-                    en = (q(fl%ien,i)/(fl%gam_1)) + half*q(fl%idn,i)*sum(q(fl%imx:fl%imz,i)**2) + half*sum(b_cc(xdim:zdim,i)**2)
-                    qf(fl%ien,i) = (en + (q(fl%ien,i) + half*sum(b_cc(xdim:zdim,i)**2,dim=1)))*q(fl%imx,i) - b_cc(xdim,i)*dot_product(q(fl%imx:fl%imz,i),b_cc(xdim:zdim,i))
+                    en = (q(i,fl%ien)/(fl%gam_1)) + half*q(i,fl%idn)*sum(q(i,fl%imx:fl%imz)**2) + half*sum(b_cc(i,xdim:zdim)**2)
+                    qf(i,fl%ien) = (en + (q(i,fl%ien) + half*sum(b_cc(i,xdim:zdim)**2)))*q(i,fl%imx) - b_cc(i,xdim)*dot_product(q(i,fl%imx:fl%imz),b_cc(i,xdim:zdim))
                  else
-                    en = (q(fl%ien,i)/(fl%gam_1)) + half*q(fl%idn,i)*sum(q(fl%imx:fl%imz,i)**2)
-                    qf(fl%ien,i) = (en + (q(fl%ien,i)))*q(fl%imx,i)
+                    en = (q(i,fl%ien)/(fl%gam_1)) + half*q(i,fl%idn)*sum(q(i,fl%imx:fl%imz)**2)
+                    qf(i,fl%ien) = (en + (q(i,fl%ien)))*q(i,fl%imx)
                  endif
               endif
 
@@ -799,36 +795,36 @@ contains
 !!$          w(1) = 1.
 !!$       endif
 
-       u(:iend, 3:nx-2) = u(:iend, 3:nx-2) + dtodx * (flx(:iend, 2:nx-3) - flx(:iend, 3:nx-2)) ! * w(1)
-!       if (size(w)>=2) u(:iend,2:nx) = u(:iend,2:nx) + w(2) * du1(:iend,2:nx)
-!       if (size(w)>=3) u(:iend,2:nx) = u(:iend,2:nx) + w(3) * du2(:iend,2:nx)
-!       if (size(w)>=4) u(:iend,2:nx) = u(:iend,2:nx) + w(4) * du3(:iend,2:nx)
-!       u(:iend,1) = u(:iend,2)
-!       u(:iend,nx) = u(:iend,nx-1)
+       u(3:nx-2, :iend) = u(3:nx-2, :iend) + dtodx * (flx(2:nx-3, :iend) - flx(3:nx-2, :iend)) ! * w(1)
+!       if (size(w)>=2) u(2:nx, :iend) = u(2:nx, :iend) + w(2) * du1(2:nx, :iend)
+!       if (size(w)>=3) u(2:nx, :iend) = u(2:nx, :iend) + w(3) * du2(2:nx, :iend)
+!       if (size(w)>=4) u(2:nx, :iend) = u(2:nx, :iend) + w(4) * du3(2:nx, :iend)
+!       u(1, :iend) = u(2, :iend)
+!       u(nx, :iend) = u(nx-1, :iend)
 
-       b_cc(ydim:zdim, 3:nx-2) = b_cc(ydim:zdim, 3:nx-2) + dtodx * (mag_cc(ydim:zdim, 2:nx-3) - mag_cc(ydim:zdim, 3:nx-2)) ! * w(1)
-!       if (size(w)>=2)  b_cc(ydim:zdim,2:nx) = b_cc(ydim:zdim,2:nx) + w(2) * db1(ydim:zdim,2:nx)
-!       if (size(w)>=3)  b_cc(ydim:zdim,2:nx) = b_cc(ydim:zdim,2:nx) + w(3) * db2(ydim:zdim,2:nx)
-!       if (size(w)>=4)  b_cc(ydim:zdim,2:nx) = b_cc(ydim:zdim,2:nx) + w(4) * db3(ydim:zdim,2:nx)
+       b_cc(3:nx-2, ydim:zdim) = b_cc(3:nx-2, ydim:zdim) + dtodx * (mag_cc(2:nx-3, ydim:zdim) - mag_cc(3:nx-2, ydim:zdim)) ! * w(1)
+!       if (size(w)>=2)  b_cc(2:nx, ydim:zdim) = b_cc(2:nx, ydim:zdim) + w(2) * db1(2:nx, ydim:zdim)
+!       if (size(w)>=3)  b_cc(2:nx, ydim:zdim) = b_cc(2:nx, ydim:zdim) + w(3) * db2(2:nx, ydim:zdim)
+!       if (size(w)>=4)  b_cc(2:nx, ydim:zdim) = b_cc(2:nx, ydim:zdim) + w(4) * db3(2:nx, ydim:zdim)
 
        if (divB_0_method == DIVB_HDC) then
 
-          b_cc(xdim, 3:nx-2) = b_cc(xdim, 3:nx-2) + dtodx * (mag_cc(xdim, 2:nx-3) - mag_cc(xdim, 3:nx-2)) ! * w(1)
-!          if (size(w)>=2)  b_cc(xdim,2:nx) = b_cc(xdim,2:nx) + w(2) * db1(xdim,2:nx)
-!          if (size(w)>=3)  b_cc(xdim,2:nx) = b_cc(xdim,2:nx) + w(3) * db2(xdim,2:nx)
-!          if (size(w)>=4)  b_cc(xdim,2:nx) = b_cc(xdim,2:nx) + w(4) * db3(xdim,2:nx)
+          b_cc(3:nx-2, xdim) = b_cc(3:nx-2, xdim) + dtodx * (mag_cc(2:nx-3, xdim) - mag_cc(3:nx-2, xdim)) ! * w(1)
+!          if (size(w)>=2)  b_cc(2:nx, xdim) = b_cc(2:nx, xdim) + w(2) * db1(2:nx, xdim)
+!          if (size(w)>=3)  b_cc(2:nx, xdim) = b_cc(2:nx, xdim) + w(3) * db2(2:nx, xdim)
+!          if (size(w)>=4)  b_cc(2:nx, xdim) = b_cc(2:nx, xdim) + w(4) * db3(2:nx, xdim)
 
-          psi(1, 3:nx-2) = psi(1, 3:nx-2) + dtodx * (psi_cc(1, 2:nx-3) - psi_cc(1, 3:nx-2)) ! * w(1)
-!          if (size(w)>=2)  psi_cc(1,2:nx) = psi_cc(1,2:nx) + w(2) * dpsi1(1,2:nx)
-!          if (size(w)>=3)  psi_cc(1,2:nx) = psi_cc(1,2:nx) + w(3) * dpsi2(1,2:nx)
-!          if (size(w)>=4)  psi_cc(1,2:nx) = psi_cc(1,2:nx) + w(4) * dpsi3(1,2:nx)
-!          psi(:,1) = psi(:,2)
-!          psi(:,nx) = psi(:, nx-1)
+          psi(3:nx-2, 1) = psi(3:nx-2, 1) + dtodx * (psi_cc(2:nx-3, 1) - psi_cc(3:nx-2, 1)) ! * w(1)
+!          if (size(w)>=2)  psi_cc(2:nx, 1) = psi_cc(2:nx, 1) + w(2) * dpsi1(2:nx, 1)
+!          if (size(w)>=3)  psi_cc(2:nx, 1) = psi_cc(2:nx, 1) + w(3) * dpsi2(2:nx, 1)
+!          if (size(w)>=4)  psi_cc(2:nx, 1) = psi_cc(2:nx, 1) + w(4) * dpsi3(2:nx, 1)
+!          psi(1, :) = psi(2, :)
+!          psi(nx, :) = psi(nx-1, :)
 
        endif
 
-!       b_cc(:, 1)  = b_cc(:, 2)
-!       b_cc(:, nx) = b_cc(:, nx-1)
+!       b_cc(1, :)  = b_cc(2, :)
+!       b_cc(nx, :) = b_cc(nx-1, :)
 
 !       deallocate(w)
 
