@@ -243,10 +243,10 @@ contains
        ! HLLD fluxes
 
        if (sl .ge.  zero) then
-          f(:,i)  =  fl
+          f(i,:)  =  fl
           b_cc(i, ydim:zdim) = b_cclf(ydim:zdim)
        else if (sr .le.  zero) then
-          f(:,i)  =  fr
+          f(i,:)  =  fr
           b_cc(i, ydim:zdim) = b_ccrf(ydim:zdim)
        else
 
