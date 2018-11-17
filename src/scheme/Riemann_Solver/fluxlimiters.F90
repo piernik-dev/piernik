@@ -112,22 +112,20 @@ contains
       real, dimension(:,:), intent(in)     :: u
 
       real, dimension(size(u,1),size(u,2)) :: dq
-      real, dimension(size(u,1)) :: dlft, drgt, dcen
-      integer :: n, v
+      real :: dlft, drgt, dcen
+      integer :: i, v
 
-      n = size(u,1)
+      dq(lbound(u,1),:) = 0. ! sanitizing endpoints
+      dq(ubound(u,1),:) = 0.
 
       do v = lbound(u,2), ubound(u,2)
-         dlft(2:n)   = (u(2:n, v) - u(1:n-1, v)) ; dlft(1) = dlft(2)    ! (14.38)
-         drgt(1:n-1) = dlft(2:n) ;                 drgt(n) = drgt(n-1)
-
-         dcen = dlft*drgt
-
-         where (dcen>0.0)
-            dq(:, v) = 2.0*dcen / (dlft+drgt)       ! (14.54)
-         elsewhere
-            dq(:, v) = 0.0
-         endwhere
+         dlft = u(lbound(u,1)+1, v) - u(lbound(u,1), v)
+         do i = lbound(u,1)+1, ubound(u,1)-1
+            drgt = u(i+1, v) - u(i, v)     ! (14.38)
+            dcen = dlft*drgt
+            dq(i, v) = merge(2.0*dcen / (dlft+drgt), 0., dcen>0.0) ! variable = merge(value if true, value if false, condition)
+            dlft = drgt
+         enddo
       enddo
 
    end function calculate_slope_vanleer
