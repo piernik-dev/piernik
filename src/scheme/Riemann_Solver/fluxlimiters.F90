@@ -111,23 +111,24 @@ contains
 
       real, dimension(:,:), intent(in)     :: u
 
-      real, dimension(size(u,1),size(u,2)) :: dlft, drgt, dcen, dq
+      real, dimension(size(u,1),size(u,2)) :: dq
+      real, dimension(size(u,1)) :: dlft, drgt, dcen
       integer :: n, v
 
       n = size(u,1)
 
       do v = lbound(u,2), ubound(u,2)
-         dlft(2:n, v)   = (u(2:n, v) - u(1:n-1, v)) ; dlft(1, v) = dlft(2, v)    ! (14.38)
-         drgt(1:n-1, v) = dlft(2:n, v) ;             drgt(n, v) = drgt(n-1, v)
+         dlft(2:n)   = (u(2:n, v) - u(1:n-1, v)) ; dlft(1) = dlft(2)    ! (14.38)
+         drgt(1:n-1) = dlft(2:n) ;                 drgt(n) = drgt(n-1)
+
+         dcen = dlft*drgt
+
+         where (dcen>0.0)
+            dq(:, v) = 2.0*dcen / (dlft+drgt)       ! (14.54)
+         elsewhere
+            dq(:, v) = 0.0
+         endwhere
       enddo
-
-      dcen = dlft*drgt
-
-      where (dcen>0.0)
-         dq = 2.0*dcen / (dlft+drgt)       ! (14.54)
-      elsewhere
-         dq = 0.0
-      endwhere
 
    end function calculate_slope_vanleer
 
@@ -143,17 +144,17 @@ contains
 
       real, dimension(:,:), intent(in)     :: u
 
-      real, dimension(size(u,1),size(u,2)) :: dlft, drgt, dq
+      real, dimension(size(u,1),size(u,2)) :: dq
+      real, dimension(size(u,1)) :: dlft, drgt
       integer :: n, v
 
       n = size(u,1)
 
       do v = lbound(u,2), ubound(u,2)
-         dlft(2:n, v)   = (u(2:n, v) - u(1:n-1, v)) ; dlft(1, v) = dlft(2, v)
-         drgt(1:n-1, v) = dlft(2:n, v) ;             drgt(n, v) = drgt(n-1, v)
+         dlft(2:n)   = (u(2:n, v) - u(1:n-1, v)) ; dlft(1) = dlft(2)
+         drgt(1:n-1) = dlft(2:n) ;                 drgt(n) = drgt(n-1)
+         dq(:, v) = (sign(one, dlft) + sign(one, drgt))*min(abs(dlft),abs(drgt))*half
       enddo
-
-      dq = (sign(one, dlft) + sign(one, drgt))*min(abs(dlft),abs(drgt))*half
 
    end function slope_limiter_minmod
 
@@ -169,17 +170,17 @@ contains
 
       real, dimension(:,:), intent(in)     :: u
 
-      real, dimension(size(u,1),size(u,2)) :: dlft, drgt, dq
+      real, dimension(size(u,1),size(u,2)) :: dq
+      real, dimension(size(u,1)) :: dlft, drgt
       integer :: n, v
 
       n = size(u,1)
 
       do v = lbound(u,2), ubound(u,2)
-         dlft(2:n, v)   = (u(2:n, v) - u(1:n-1, v)) ; dlft(1, v) = dlft(2, v)
-         drgt(1:n-1, v) = dlft(2:n, v) ;             drgt(n, v) = drgt(n-1, v)
+         dlft(2:n)   = (u(2:n, v) - u(1:n-1, v)) ; dlft(1) = dlft(2)
+         drgt(1:n-1) = dlft(2:n) ;                 drgt(n) = drgt(n-1)
+         dq(:, v) = (sign(one,dlft)+sign(one,drgt))*min(two*abs(dlft),two*abs(drgt),half*abs(dlft+drgt))*half
       enddo
-
-      dq = (sign(one,dlft)+sign(one,drgt))*min(two*abs(dlft),two*abs(drgt),half*abs(dlft+drgt))*half
 
    end function slope_limiter_moncen
 !-----------------------------------------------------------------------------------------------------------------------
@@ -194,21 +195,19 @@ contains
 
       real, dimension(:,:), intent(in)     :: u
 
-      real, dimension(size(u,1),size(u,2)) :: dlft, drgt, dq
+      real, dimension(size(u,1),size(u,2)) :: dq
+      real, dimension(size(u,1)) :: dlft, drgt
       integer :: n, v
 
       n = size(u,1)
 
       do v = lbound(u,2), ubound(u,2)
-         dlft(2:n, v)   = (u(2:n, v) - u(1:n-1, v)) ; dlft(1, v) = dlft(2, v)
-         drgt(1:n-1, v) = dlft(2:n, v) ;             drgt(n, v) = drgt(n-1, v)
-      enddo
+         dlft(2:n)   = (u(2:n, v) - u(1:n-1, v)) ; dlft(1) = dlft(2)
+         drgt(1:n-1) = dlft(2:n) ;                 drgt(n) = drgt(n-1)
 
-      where (abs(dlft) > abs(drgt))
-         dq = (sign(one,dlft)+sign(one,drgt))*min(abs(dlft), abs(two*drgt))*half
-      elsewhere
-         dq = (sign(one,dlft)+sign(one,drgt))*min(abs(two*dlft), abs(drgt))*half
-      endwhere
+         dq(:, v) = (sign(one,dlft)+sign(one,drgt))*half * &
+              merge(min(abs(dlft), abs(two*drgt)), min(abs(two*dlft), abs(drgt)), abs(dlft) > abs(drgt))
+      enddo
 
     end function slope_limiter_superbee
 
