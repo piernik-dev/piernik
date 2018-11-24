@@ -32,7 +32,7 @@
 !    The algorithm is simply present for experimental purposes.
 !--------------------------------------------------------------------------------------------------------------
 
-#include "piernik.def"
+#include "piernik.h"
 
 module fluxlimiters
 ! pulled by RIEMANN
