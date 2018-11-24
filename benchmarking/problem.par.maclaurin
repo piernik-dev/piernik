@@ -27,7 +27,6 @@
 
  $RESTART_CONTROL
     restart  = 'none'
-    new_id   = ''
     nrestart = 0
  /
 
@@ -55,7 +54,6 @@
     smalld = 1.e-20
     smallei= 1.e-20
     limiter= 'vanleer'
-    allow_FFTW_leaks = .true.
  /
 
  $GRAVITY

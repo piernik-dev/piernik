@@ -57,7 +57,7 @@ if [ $DO_MAKE == 1 ] ; then
     {
 	# create object and run directories
 	echo -n "Preparing objects                "
-	SETUP_PARAMS="-c ../benchmarking/benchmarking -n --linkexe"
+	SETUP_PARAMS="-c ../benchmarking/benchmarking -n --linkexe -d BENCHMARKING_HACK "
 	( time for i in $PROBLEM_LIST; do
 	./setup $i $SETUP_PARAMS -o "B_"$i > /dev/null
 	done ) 2>&1 | awkfor
