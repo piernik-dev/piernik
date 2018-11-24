@@ -26,7 +26,7 @@
 !
 !--------------------------------------------------------------------------------------------------------------
 
-#include "piernik.def"
+#include "piernik.h"
 
 !>
 !!  \brief This module implements interpolation of left and right face states for cell-centered vectors of conservative variables.

@@ -36,7 +36,7 @@
 !---------------------------------------------------------------------------------------------------------------------------
 
 
-#include "piernik.def"
+#include "piernik.h"
 !>
 !!  \brief This module implements HLLD Riemann solver following the work of Miyoshi & Kusano (2005)
 !<
