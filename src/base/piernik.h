@@ -18,3 +18,12 @@
 #define RTVD
 /* #  warning no hydro solver defined, possible choices { RTVD, HLLC }, defaulting to RTVD */
 #endif
+
+/*
+  Disable ISO EOS for benchmaring with Rieman solver because we don't support ISO there yet.
+
+  ToDo: Remove this hack as soon as we add ISO to the Riemann solver.
+*/
+#ifdef BENCHMARKING_HACK
+#  undef ISO
+#endif
