@@ -27,7 +27,11 @@
 #include "piernik.h"
 
 !>
-!! \brief COMMENT ME
+!! \brief Constrained Transport for face-centered magnetic field
+!!
+!! \details CT routines for RTVD and Riemann solvers.
+!!
+!! Beware: there is no support for AMR (and none planned).
 !<
 
 module ct
