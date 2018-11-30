@@ -31,7 +31,7 @@
 !<
 
 module ct
-! pulled by MAGNETIC && RTVD
+! pulled by MAGNETIC
 
    implicit none
 
