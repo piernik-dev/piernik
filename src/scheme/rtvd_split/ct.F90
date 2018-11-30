@@ -37,7 +37,6 @@ module ct
 
    private
    public :: magfield
-   real, dimension(:), pointer :: vibj => null()
 
 contains
 
@@ -249,6 +248,7 @@ contains
       real, dimension(:),    pointer    :: pm1, pm2, pd1, pd2
       type(cg_list_element), pointer    :: cgl
       type(grid_container),  pointer    :: cg
+      real, dimension(:), pointer       :: vibj => null()
 
       imom = flind%ion%idn + int(vdir, kind=4)
       rdir = sum([xdim,ydim,zdim]) - bdir - vdir
@@ -259,7 +259,7 @@ contains
       elseif (mod(3+vdir-bdir,3) == 2) then !  odd permutation
          i1 => ii(bdir) ; i1m => im(bdir) ; i2 => ii(rdir) ; i2m => ii(rdir)
       else
-         call die('[advects:advectb] neither even nor odd permutation.')
+         call die('[ct:advectb] neither even nor odd permutation.')
          i1 => ii(rdir) ; i1m => ii(rdir) ; i2 => ii(rdir) ; i2m => ii(rdir) ! suppress compiler warnings
       endif
 
@@ -267,7 +267,7 @@ contains
       do while (associated(cgl))
          cg => cgl%cg
 
-         if (any([allocated(vv), allocated(vv0)])) call die("[advects:advectb] vv or vv0 already allocated")
+         if (any([allocated(vv), allocated(vv0)])) call die("[ct:advectb] vv or vv0 already allocated")
          allocate(vv(cg%n_(vdir)), vv0(cg%n_(vdir)))
 
          im(bdir) = cg%lhn(bdir, LO)
@@ -337,7 +337,7 @@ contains
 #ifdef RESISTIVE
 ! DIFFUSION FULL STEP
          wcu => cg%q(qna%ind(wcu_n))%arr
-         if (is_multicg) call die("[fluidupdate:mag_add] multiple grid pieces per processor not implemented yet") ! not tested custom_emf_bnd
+         if (is_multicg) call die("[ct:mag_add] multiple grid pieces per processor not implemented yet") ! not tested custom_emf_bnd
          if (associated(custom_emf_bnd)) call custom_emf_bnd(wcu)
          cg%b(dim2,:,:,:) = cg%b(dim2,:,:,:) -              wcu*cg%idl(dim1)
          cg%b(dim2,:,:,:) = cg%b(dim2,:,:,:) + pshift(wcu,dim1)*cg%idl(dim1)
@@ -395,7 +395,7 @@ contains
       else if (d==3) then
          pshift(:,:,1:ll-1) = tab(:,:,2:ll); pshift(:,:,ll) = tab(:,:,1)
       else
-         call warn('[fluidupdate:pshift]: Dim ill defined in pshift!')
+         call warn('[ct:pshift]: Dim ill defined in pshift!')
       endif
 
       return
@@ -436,7 +436,7 @@ contains
       else if (d==3) then
          mshift(:,:,2:ll) = tab(:,:,1:ll-1); mshift(:,:,1) = tab(:,:,ll)
       else
-         call warn('[fluidupdate:mshift]: Dim ill defined in mshift!')
+         call warn('[ct:mshift]: Dim ill defined in mshift!')
       endif
 
       return
