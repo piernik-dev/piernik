@@ -36,11 +36,10 @@ module ct
    implicit none
 
    private
-   public :: magfield
+   public  :: magfield
 
 contains
 
-!/*
 !>
 !! \brief Subroutine computes magnetic field evolution
 !!
@@ -106,7 +105,7 @@ contains
 !!
 !!Analogous procedure applies to remaining EMF components.
 !<
-!*/
+
    subroutine tvdb(vibj, b, vg, n, dt, idi)
 
       use constants, only: big, half
@@ -183,9 +182,13 @@ contains
       return
    end subroutine tvdb
 
+!-------------------------------------------------------------------------------------------------------------------
+
    subroutine magfield(dir)
 
       use constants,   only: ndims, I_ONE
+      use dataio_pub,  only: die
+      use global,      only: force_cc_mag
 #ifdef RESISTIVE
       use resistivity, only: diffuseb
 #endif /* RESISTIVE */
@@ -195,6 +198,8 @@ contains
       integer(kind=4), intent(in) :: dir
 
       integer(kind=4)             :: bdir, dstep
+
+      if (force_cc_mag) call die("[ct:magfield] forcing cell-centered magnetic field is not allowed for constrained transport")
 
       do dstep = 0, 1
          bdir  = I_ONE + mod(dir+dstep,ndims)
@@ -307,10 +312,14 @@ contains
 
    end subroutine advectb
 
+!-------------------------------------------------------------------------------------------------------------------
+
    subroutine mag_add(dim1, dim2)
 
       use cg_leaves,        only: leaves
       use cg_list,          only: cg_list_element
+      use dataio_pub,       only: die
+      use global,           only: force_cc_mag
       use grid_cont,        only: grid_container
       use all_boundaries,   only: all_mag_boundaries
       use user_hooks,       only: custom_emf_bnd
@@ -330,6 +339,8 @@ contains
 #ifdef RESISTIVE
       real, dimension(:,:,:), pointer :: wcu
 #endif /* RESISTIVE */
+
+      if (force_cc_mag) call die("[ct:mag_add] forcing cell-centered magnetic field is not allowed for constrained transport")
 
       cgl => leaves%first
       do while (associated(cgl))
@@ -358,7 +369,8 @@ contains
       call all_mag_boundaries
 
    end subroutine mag_add
-!------------------------------------------------------------------------------------------
+
+!-------------------------------------------------------------------------------------------------------------------
 
 !>
 !! \brief Function pshift makes one-cell, forward circular shift of 3D array in any direction

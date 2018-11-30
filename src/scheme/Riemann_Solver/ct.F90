@@ -27,10 +27,12 @@
 #include "piernik.h"
 
 !>
-!! \todo remove workaround for http://gcc.gnu.org/bugzilla/show_bug.cgi?id=48955
+!! \brief COMMENT ME
 !<
+
 module ct
 ! pulled by MAGNETIC && RIEMANN
+
    implicit none
 
    private
@@ -39,24 +41,78 @@ module ct
 contains
 
 !>
-!!   advectby_x --> advectb(bdir=ydim, vdir=xdim, emf='vxby')
-!!   advectbz_x --> advectb(bdir=zdim, vdir=xdim, emf='vxbz')
-!!   advectbx_y --> advectb(bdir=xdim, vdir=ydim, emf='vybx')
-!!   advectbz_y --> advectb(bdir=zdim, vdir=ydim, emf='vybz')
-!!   advectbx_z --> advectb(bdir=xdim, vdir=zdim, emf='vzbx')
-!!   advectby_z --> advectb(bdir=ydim, vdir=zdim, emf='vzby')
-
+!! \brief Subroutine computes magnetic field evolution
+!!
+!! The original RTVD MHD scheme incorporates magnetic field evolution via the Constrained transport (CT)
+!! algorithm by Evans & Hawley (1988). The idea behind the CT scheme is to integrate numerically the induction equation
+!! \f{equation}
+!! \frac{\partial\vec{B}}{\partial t} = \nabla\times (\vec{v}  \times \vec{B}),
+!! \f}
+!! in a manner ensuring that the condition
+!! \f{equation}
+!! \nabla \cdot \vec{B} = 0,
+!! \f}
+!! is fulfilled to the machine accuracy.
+!!
+!! The divergence-free evolution of magnetic-field on a discrete computational
+!! grid can be realized if the last equation holds for the discrete representation of the initial
+!! condition, and that subsequent updates of \f$B\f$ do not change the total magnetic
+!! flux threading cell faces.
+!!
+!! Time variations of magnetic flux threading surface \f$S\f$ bounded by contour \f$C\f$, due to Stokes theorem, can be written as
+!! \f{equation}
+!! \frac{\partial\Phi_S}{\partial t} = \frac{\partial}{\partial t} \int_S \vec{B} \cdot \vec{d\sigma} = \int_S \nabla \times ( \vec{v} \times \vec{B})\cdot \vec{d \sigma} =  \oint_{C} (\vec{v} \times \vec{B}) \cdot \vec{dl},
+!! \f}
+!! where \f$\vec{E}= \vec{v} \times \vec{B}\f$ is electric field, named also electromotive force (EMF).
+!!
+!! In a discrete representation variations of magnetic %fluxes, in %timestep \f$\Delta t\f$, threading faces of cell \f$(i,j,k)\f$ are
+!! given by
+!! \f{eqnarray}
+!! \frac{\Phi^{x,n+1}_{i+1/2,j,k} - \Phi^{x,n}_{i+1/2,j,k}}{\Delta t} &=&
+!! {E}^y_{i+1/2,j,k-1/2} \Delta y + {E}^z_{i+1/2,j+1/2,k} \Delta z     \nonumber\\
+!! &-&{E}^y_{i+1/2,j,k+1/2} \Delta y - {E}^z_{i+1/2,j-1/2,k} \Delta z,  \nonumber
+!! \f}
+!! \f{eqnarray}
+!! \frac{\Phi^{y,n+1}_{i,j+1/2,k} - \Phi^{y,n}_{i,j+1/2,k}}{\Delta t} &=&
+!! {E}^x_{i,j+1/2,k+1/2} \Delta x + {E}^z_{i-1/2,j+1/2,k} \Delta z      \nonumber\\
+!! &-&{E}^x_{i,j+1/2,k-1/2} \Delta x - {E}^z_{i+1/2,j+1/2,k} \Delta z,  \nonumber
+!! \f}
+!! \f{eqnarray}
+!! \frac{\Phi^{z,n+1}_{i,j,k+1/2} - \Phi^{z,n}_{i,j,k+1/2}}{\Delta t} &=&
+!! {E}^x_{i,j-1/2,k+1/2} \Delta x + {E}^y_{i+1/2,j,k+1/2} \Delta y      \nonumber\\
+!! &-&{E}^x_{i,j+1/2,k+1/2} \Delta x - {E}^y_{i-1/2,j,k+1/2} \Delta y,  \nonumber
+!! \f}
+!! Variations of magnetic flux threading remaining three faces of cell \f$(i,j,k)\f$ can be written in a similar manner. We note that each EMF
+!! contribution appears twice with opposite sign. Thus, the total change of magnetic flux, piercing all cell-faces, vanishes to machine accuracy.
+!!
+!! To present the idea in a slightly different way, following Pen et al. (2003),  we consider the three components of the induction
+!! equation written in the explicit form:
+!! \f{eqnarray}
+!! \partial_t B_x &=& \partial_y (\mathrm{v_x B_y}) + \partial_z (v_x B_z) - \partial_y (v_y B_x) - \partial_z (v_z B_x),\\
+!! \partial_t B_y &=& \partial_x (v_y B_x) + \partial_z (v_y B_z) - \partial_x (\mathrm{v_x B_y}) - \partial_z (v_z B_y),\\
+!! \partial_t B_z &=& \partial_x (v_z B_x) + \partial_y (v_z B_y) - \partial_x (v_x B_z) - \partial_y (v_y B_z).
+!! \f}
+!!
+!!We note that each combination of \f$v_a B_b\f$ appears twice in these equations. Let us consider \f$v_x B_y\f$.
+!!Once  \f$v_x B_y\f$ is computed for numerical integration of the second equation, it should be also used for
+!!integration of the first equation, to ensure cancellation of electromotive forces contributing to the total change of magnetic flux threading
+!!cell faces.
+!!
+!!The scheme proposed by Pen et al. (2003), consists of the following steps:
+!!\n (1) Computation of the edge-centered EMF component \f$ v_x B_y\f$.
+!!\n (2) Update of \f$B_y\f$, according to the equation \f$\partial_t B_y = \partial_x (v_x B_y)\f$.
+!!\n (3) Update of \f$B_x\f$, according to the equation \f$\partial_t B_x = \partial_y (v_x B_y)\f$.
+!!
+!!Analogous procedure applies to remaining EMF components.
 !<
 
-!---------------------------------------------------------------------------------------------------------------------
+   subroutine tvdb(vibj, b, vg, n, dt, idi)
 
-  subroutine ctb(vibj, b, vg, n, dt, idi)
+      use constants, only: big, half
 
-    use constants, only: big, half
+      implicit none
 
-    implicit none
-
-    integer(kind=4),               intent(in)    :: n       !< array size
+      integer(kind=4),             intent(in)    :: n       !< array size
       real,                        intent(in)    :: dt      !< time step
       real,                        intent(in)    :: idi     !< cell length, depends on direction x, y or z
       real, dimension(:), pointer, intent(inout) :: vibj    !< face-centered electromotive force components (b*vg)
@@ -124,8 +180,8 @@ contains
          vibj(i) = (w + dw) * dt
       enddo
       return
+   end subroutine tvdb
 
-    end subroutine ctb
 !-------------------------------------------------------------------------------------------------------------------
 
    subroutine magfield(dir)
@@ -137,17 +193,17 @@ contains
       use resistivity, only: diffuseb
 #endif /* RESISTIVE */
 
-       implicit none
+      implicit none
 
-       integer(kind=4), intent(in) :: dir
+      integer(kind=4), intent(in) :: dir
 
-       integer(kind=4)             :: bdir, dstep
+      integer(kind=4)             :: bdir, dstep
 
-       if (force_cc_mag) call die("[fluidupdate:magfield] forcing cell-centered magnetic field is not allowed for constrained transport")
+      if (force_cc_mag) call die("[ct:magfield] forcing cell-centered magnetic field is not allowed for constrained transport")
 
-       do dstep = 0, 1
-          bdir  = I_ONE + mod(dir+dstep,ndims)
-          call advectb(bdir, dir)
+      do dstep = 0, 1
+         bdir  = I_ONE + mod(dir+dstep,ndims)
+         call advectb(bdir, dir)
 #ifdef RESISTIVE
          call diffuseb(bdir, dir)
 #endif /* RESISTIVE */
@@ -156,8 +212,22 @@ contains
 
    end subroutine magfield
 
-!---------------------------------------------------------------------------------------------------------------------
-   subroutine advectb(bdir, vdir)
+!------------------------------------------------------------------------------------------
+
+!>
+!!   advectby_x --> advectb(bdir=ydim, vdir=xdim, emf='vxby')
+!!   advectbz_x --> advectb(bdir=zdim, vdir=xdim, emf='vxbz')
+!!   advectbx_y --> advectb(bdir=xdim, vdir=ydim, emf='vybx')
+!!   advectbz_y --> advectb(bdir=zdim, vdir=ydim, emf='vybz')
+!!   advectbx_z --> advectb(bdir=xdim, vdir=zdim, emf='vzbx')
+!!   advectby_z --> advectb(bdir=ydim, vdir=zdim, emf='vzby')
+!<
+
+!>
+!! \todo remove workaround for http://gcc.gnu.org/bugzilla/show_bug.cgi?id=48955
+!<
+
+  subroutine advectb(bdir, vdir)
 
       use cg_leaves,        only: leaves
       use cg_list,          only: cg_list_element
@@ -184,7 +254,6 @@ contains
       type(cg_list_element), pointer    :: cgl
       type(grid_container),  pointer    :: cg
       real, dimension(:), pointer       :: vibj => null()
-
 
       imom = flind%ion%idn + int(vdir, kind=4)
       rdir = sum([xdim,ydim,zdim]) - bdir - vdir
@@ -224,7 +293,7 @@ contains
                vv(cg%n_(vdir)) = vv(cg%n_(vdir)-1)
 
                vibj => cg%q(qna%wai)%get_sweep(vdir,i1,i2)
-               call ctb(vibj, cg%w(wna%bi)%get_sweep(vdir,bdir,i1,i2), vv, cg%n_(vdir),dt, cg%idl(vdir))
+               call tvdb(vibj, cg%w(wna%bi)%get_sweep(vdir,bdir,i1,i2), vv, cg%n_(vdir),dt, cg%idl(vdir))
                NULLIFY(pm1, pm2, pd1, pd2)
 
             enddo
@@ -245,7 +314,7 @@ contains
 
 !-------------------------------------------------------------------------------------------------------------------
 
- subroutine mag_add(dim1, dim2)
+   subroutine mag_add(dim1, dim2)
 
       use cg_leaves,        only: leaves
       use cg_list,          only: cg_list_element
@@ -255,10 +324,10 @@ contains
       use all_boundaries,   only: all_mag_boundaries
       use user_hooks,       only: custom_emf_bnd
 #ifdef RESISTIVE
-     use constants,        only: wcu_n
-     use dataio_pub,       only: die
-     use domain,           only: is_multicg
-     use named_array_list, only: qna
+      use constants,        only: wcu_n
+      use dataio_pub,       only: die
+      use domain,           only: is_multicg
+      use named_array_list, only: qna
 #endif /* RESISTIVE */
 
       implicit none
@@ -271,7 +340,7 @@ contains
       real, dimension(:,:,:), pointer :: wcu
 #endif /* RESISTIVE */
 
-      if (force_cc_mag) call die("[fluidupdate:mag_add] forcing cell-centered magnetic field is not allowed for constrained transport")
+      if (force_cc_mag) call die("[ct:mag_add] forcing cell-centered magnetic field is not allowed for constrained transport")
 
       cgl => leaves%first
       do while (associated(cgl))
@@ -279,7 +348,7 @@ contains
 #ifdef RESISTIVE
 ! DIFFUSION FULL STEP
          wcu => cg%q(qna%ind(wcu_n))%arr
-         if (is_multicg) call die("[fluidupdate:mag_add] multiple grid pieces per processor not implemented yet") ! not tested custom_emf_bnd
+         if (is_multicg) call die("[ct:mag_add] multiple grid pieces per processor not implemented yet") ! not tested custom_emf_bnd
          if (associated(custom_emf_bnd)) call custom_emf_bnd(wcu)
          cg%b(dim2,:,:,:) = cg%b(dim2,:,:,:) -              wcu*cg%idl(dim1)
          cg%b(dim2,:,:,:) = cg%b(dim2,:,:,:) + pshift(wcu,dim1)*cg%idl(dim1)
@@ -338,7 +407,7 @@ contains
       else if (d==3) then
          pshift(:,:,1:ll-1) = tab(:,:,2:ll); pshift(:,:,ll) = tab(:,:,1)
       else
-         call warn('[fluidupdate:pshift]: Dim ill defined in pshift!')
+         call warn('[ct:pshift]: Dim ill defined in pshift!')
       endif
 
       return
@@ -379,11 +448,10 @@ contains
       else if (d==3) then
          mshift(:,:,2:ll) = tab(:,:,1:ll-1); mshift(:,:,1) = tab(:,:,ll)
       else
-         call warn('[fluidupdate:mshift]: Dim ill defined in mshift!')
+         call warn('[ct:mshift]: Dim ill defined in mshift!')
       endif
 
       return
    end function mshift
 
- end module ct
-
+end module ct
