@@ -50,7 +50,7 @@ contains
       use cg_list,          only: cg_list_element
       use constants,        only: psi_n
       use dataio_pub,       only: die
-      use global,           only: skip_sweep, dt, use_fargo
+      use global,           only: skip_sweep, use_fargo
       use named_array_list, only: qna
 
       implicit none
@@ -66,7 +66,7 @@ contains
       cgl => leaves%first
       do while (associated(cgl))
          ! Warning: 2.5D MHD may need all directional calls anyway
-         if (.not. skip_sweep(cdim)) call sweep_dsplit(cgl%cg, dt, cdim)
+         if (.not. skip_sweep(cdim)) call sweep_dsplit(cgl%cg, cdim)
          cgl => cgl%nxt
       enddo
       if (qna%exists(psi_n)) call leaves%leaf_arr3d_boundaries(qna%ind(psi_n))
@@ -77,11 +77,11 @@ contains
 
    end subroutine sweep
 
-   subroutine sweep_dsplit(cg, dt, ddim)
+   subroutine sweep_dsplit(cg, ddim)
 
       use constants,        only: pdims, xdim, zdim, ORTHO1, ORTHO2, LO, HI, psi_n, INVALID
       use fluidindex,       only: flind, iarr_all_dn, iarr_all_mx, iarr_all_swp, iarr_mag_swp
-      use global,           only: force_cc_mag
+      use global,           only: dt, force_cc_mag
       use grid_cont,        only: grid_container
       use named_array_list, only: wna, qna
       use sources,          only: prepare_sources, all_sources
@@ -92,7 +92,6 @@ contains
       implicit none
 
       type(grid_container), pointer, intent(in) :: cg
-      real,                          intent(in) :: dt
       integer(kind=4),               intent(in) :: ddim
 
       real, dimension(cg%n_(ddim), size(cg%u,1)) :: u1d
