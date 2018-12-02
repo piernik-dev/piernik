@@ -377,16 +377,52 @@ contains
       cg%processed = .true.
 
    end subroutine process_cg
+
+!>
+!! \brief Call all boundaries, try to avoid unnecessary parts.
+!!
+!! For some reasons dir=cdim affect mcrwind tests if sweeps_mgu
+!! \todo Find out why. Is it related to position of magnetic field components?
+!!
+!! \todo Once it gets simplified enough merge it back to sweep.
+!<
+
+   subroutine update_boundaries(cdim, istep)
+
+      use all_boundaries, only: all_fluid_boundaries
+      use domain,         only: dom
+      use global,         only: sweeps_mgu
+
+      implicit none
+
+      integer(kind=4), intent(in) :: cdim
+      integer,         intent(in) :: istep
+
+      if (dom%has_dir(cdim)) then
+         if (sweeps_mgu) then
+            if (istep == 1) then
+               call all_fluid_boundaries(nocorners = .true., dir = cdim)
+            else
+               call all_fluid_boundaries(nocorners = .true.)
+            endif
+         else
+            if (istep == 1) then
+               call all_fluid_boundaries(nocorners = .true.)
+            else
+               call all_fluid_boundaries
+            endif
+         endif
+      endif
+
+   end subroutine update_boundaries
 !------------------------------------------------------------------------------------------
    subroutine sweep(cdim, fargo_vel)
 
-      use all_boundaries,     only: all_fluid_boundaries
       use cg_leaves,          only: leaves
       use cg_list,            only: cg_list_element
       use constants,          only: ydim
       use dataio_pub,         only: die
-      use domain,             only: dom
-      use global,             only: integration_order, sweeps_mgu, use_fargo
+      use global,             only: integration_order, use_fargo
       use grid_cont,          only: grid_container
       use mpisetup,           only: mpi_err, req, status
 
@@ -445,23 +481,7 @@ contains
             call MPI_Waitall(nr, req(:nr), mpistatus, mpi_err)
          endif
 
-         if (dom%has_dir(cdim)) then
-            if (sweeps_mgu) then
-               if (istep == 1) then
-                  call all_fluid_boundaries(nocorners = .true., dir = cdim)
-                  ! For some reasons dir=cdim here affect mcrwind tests. \todo Find out why. Is it related to position of magnetic field components?
-               else
-                  call all_fluid_boundaries(nocorners = .true.)
-                  ! For some reasons nocorners here affect mcrwind tests. \todo Find out why. Is it related to position of magnetic field components?
-               endif
-            else
-               if (istep == 1) then
-                  call all_fluid_boundaries(nocorners = .true.)
-               else
-                  call all_fluid_boundaries
-               endif
-            endif
-         endif
+         call update_boundaries(cdim, istep)
       enddo
 
    end subroutine sweep
