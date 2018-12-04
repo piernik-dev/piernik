@@ -802,8 +802,11 @@ contains
          vstat%cprefix = ""
 #endif /* !COSM_RAYS */
       endif
+
       call init_source(i_all_dens)
+
       call poisson_solver(inner)
+
       call leaves%q_copy(solution, qna%ind(sgp_n))
 
       if (grav_bnd_global == bnd_isolated) then
@@ -812,10 +815,13 @@ contains
          vstat%cprefix = "Go-"
          call multipole_solver
          call init_source(empty_array)
+
          call poisson_solver(outer)
+
          call leaves%q_add(solution, qna%ind(sgp_n)) ! add solution to sgp
+
       endif
- 
+
       grav_bnd = grav_bnd_global
       ts = set_timer("multigrid")
       tot_ts = tot_ts + ts
