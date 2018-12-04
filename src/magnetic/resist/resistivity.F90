@@ -49,11 +49,14 @@ module resistivity
    real                                  :: jc2                            !< squared critical value of current density
    real                                  :: deint_max                      !< COMMENT ME
    integer(kind=4)                       :: eta_scale                      !< COMMENT ME
-   real                                  :: dt_resist, dt_eint
+   real                                  :: dt_resist
    real(kind=8)                          :: d_eta_factor
    type(value)                           :: etamax, cu2max, deimin
    logical, save                         :: eta1_active = .true.           !< resistivity off-switcher while eta_1 == 0.0
    character(len=dsetnamelen), parameter :: eta_n = "eta", wb_n = "wb", eh_n = "eh", dbx_n = "dbx", dby_n = "dby", dbz_n = "dbz"
+#ifndef ISO
+   real                                  :: dt_eint
+#endif /* !ISO */
 
 contains
 
@@ -190,6 +193,8 @@ contains
          d_eta_factor = 1./(dims_twice+real(eta_scale, kind=8))
       endif
 
+      dt_resist = huge(1.)
+
    end subroutine init_resistivity
 
 !>
@@ -200,12 +205,12 @@ contains
 
       use cg_leaves,        only: leaves
       use cg_list,          only: cg_list_element
-      use constants,        only: xdim, ydim, zdim, MAXL, oneq, LO, HI, GEO_XYZ
+      use constants,        only: xdim, ydim, zdim, MAXL, oneq, LO, HI, GEO_XYZ, pMIN
       use dataio_pub,       only: die
       use domain,           only: dom, is_multicg
       use func,             only: ekin, emag
       use grid_cont,        only: grid_container
-      use mpisetup,         only: piernik_MPI_Bcast
+      use mpisetup,         only: piernik_MPI_Bcast, piernik_MPI_Allreduce
       use named_array_list, only: qna
 #ifndef ISO
       use constants,        only: small, MINL
@@ -271,7 +276,13 @@ contains
             wb = wb + eh**2
          endif
 
-         eta(:,:,:) = eta_0 + eta_1 * sqrt( max(0.0,wb(:,:,:)- jc2 ))
+!        eta(:,:,:) = eta_0 + eta_1 * sqrt( max(0.0,wb(:,:,:)- jc2 ))
+!        the above may cause FPE because compiler may transform it to max(0.0, sqrt(wb(:,:,:)- jc2 ))
+         where (wb(:,:,:)- jc2 > 0.)
+            eta(:,:,:) = eta_0 + eta_1 * sqrt(wb(:,:,:)- jc2)
+         elsewhere
+            eta(:,:,:) = eta_0
+         endwhere
 
          eh = 0.0
          if (dom%has_dir(xdim)) then
@@ -299,9 +310,9 @@ contains
       call leaves%get_extremum(qna%ind(eta_n), MAXL, etamax)
       call piernik_MPI_Bcast(etamax%val)
       call leaves%get_extremum(qna%ind(wb_n), MAXL, cu2max)
-      etamax%assoc = dt_resist ; cu2max%assoc = dt_resist
 
 #ifndef ISO
+      dt_eint = huge(1.)
       cgl => leaves%first
       do while (associated(cgl))
          cg => cgl%cg
@@ -309,14 +320,25 @@ contains
          wb => cg%q(qna%ind(wb_n))%arr
          wb = (cg%u(flind%ion%ien,:,:,:) - ekin(cg%u(flind%ion%imx,:,:,:), cg%u(flind%ion%imy,:,:,:), cg%u(flind%ion%imz,:,:,:), cg%u(flind%ion%idn,:,:,:)) - &
               emag(cg%b(xdim,:,:,:), cg%b(ydim,:,:,:), cg%b(zdim,:,:,:)))/ (eta(:,:,:) * wb+small)
-         dt_eint = deint_max * abs(minval(cg%q(qna%ind(wb_n))%span(cg%ijkse)))
+         dt_eint = min(dt_eint, deint_max * abs(minval(cg%q(qna%ind(wb_n))%span(cg%ijkse))))
          cgl => cgl%nxt
       enddo
+      call piernik_MPI_Allreduce(dt_eint, pMIN)
 
       call leaves%get_extremum(qna%ind(wb_n), MINL, deimin)
       deimin%assoc = dt_eint
 #endif /* !ISO */
       NULLIFY(p)
+
+      dt_resist = huge(1.)
+      cgl => leaves%first
+      do while (associated(cgl))
+         call timestep_resist(cgl%cg)
+         cgl => cgl%nxt
+      enddo
+      call piernik_MPI_Allreduce(dt_resist, pMIN)
+
+      etamax%assoc = dt_resist ; cu2max%assoc = dt_resist
 
    end subroutine compute_resist
 
@@ -324,25 +346,22 @@ contains
 
    subroutine timestep_resist(cg)
 
-      use constants, only: big, pMIN, zero
+      use constants, only: big, zero
       use grid_cont, only: grid_container
       use func,      only: operator(.notequals.)
-      use mpisetup,  only: piernik_MPI_Allreduce
 
       implicit none
 
       type(grid_container), pointer, intent(in) :: cg
 
       if (etamax%val .notequals. zero) then
-         dt_resist = cfl_resist * cg%dxmn**2 / (2. * etamax%val)
+         dt_resist = min(dt_resist, cfl_resist * cg%dxmn**2 / (2. * etamax%val))
 #ifndef ISO
          dt_resist = min(dt_resist,dt_eint)
 #endif /* !ISO */
       else
          dt_resist = big
       endif
-
-      call piernik_MPI_Allreduce(dt_resist, pMIN)
 
    end subroutine timestep_resist
 

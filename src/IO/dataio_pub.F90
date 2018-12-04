@@ -51,6 +51,7 @@ module dataio_pub
    logical                     :: can_i_write                    !< .true. for processes allowed to write
    logical                     :: enable_compression             !< set to .true. to enable automatic compression (test I/O performance before use, avoid on serial I/O)
    integer(kind=4)             :: gzip_level                     !< gzip compression strength: 1 - lowest and fast, 9 - best and slow
+   logical                     :: h5_64bit                       !< single or double precision plotfiles
 
    ! Buffer lengths used only in I/O routines
    integer, parameter          :: msglen = 1024                  !< 1kB for a message ought to be enough for anybody ;-)
@@ -59,7 +60,7 @@ module dataio_pub
    ! Simulation control
    character(len=cbuff_len)    :: problem_name                   !< The problem name
    character(len=idlen)        :: run_id                         !< Auxiliary run identifier
-   character(len=idlen)        :: new_id                         !< Auxiliary new run identifier to change run_id when restarting simulation (e.g. to avoid overwriting of the output from the previous (pre-restart) simulation; if new_id = '' then run_id is still used)
+   character(len=idlen)        :: res_id                         !< Auxiliary run to restart identifier, yet different then current run_id of restarted simulation (e.g. to avoid overwriting of the output from the previous (pre-restart) simulation; if res_id = '' then run_id is used also for reading restart file)
    real                        :: tend                           !< simulation time to end
    real                        :: wend                           !< wall clock time to end (in hours)
 
@@ -67,7 +68,7 @@ module dataio_pub
    integer                     :: tsl_lun                        !< logical unit number for timeslice file
    integer                     :: log_lun                        !< logical unit number for log file
    integer(kind=4)             :: nend                           !< number of the step to end simulation
-   integer(kind=4), save       :: cbline = 1                     !< current buffer line
+   integer(kind=4), save       :: cbline = 0                     !< current buffer line
    integer                     :: nstep_start                    !< number of start timestep
    integer(kind=4)             :: nhdf                           !< current number of hdf file
    integer(kind=4)             :: nres                           !< current number of restart file
@@ -95,9 +96,9 @@ module dataio_pub
    integer                     :: code_progress                  !< rough estimate of code execution progress
 
    ! storage for the problem.par
-   integer, parameter          :: maxparfilelen   = 128          !< max length of line in problem.par file
+   integer, parameter          :: maxparfilelen   = 500          !< max length of line in problem.par file
    integer, parameter          :: maxparfilelines = 256          !< max number of lines in problem.par
-   integer(kind=4), parameter  :: bufferlines = 128              !< max number of lines in problem.par
+   integer(kind=4), parameter  :: bufferlines = 128              !< max number of lines in the log buffer
    character(len=maxparfilelen), dimension(maxparfilelines) :: parfile !< contents of the parameter file
    character(len=msglen), dimension(bufferlines) :: logbuffer    !< buffer for log I/O
    integer, save               :: parfilelines = 0               !< number of lines in the parameter file
@@ -123,7 +124,6 @@ module dataio_pub
    character(len=msglen)       :: msg                            !< buffer for messages
    character(len=ansirst)      :: ansi_black
    character(len=ansilen)      :: ansi_red, ansi_green, ansi_yellow, ansi_blue, ansi_magenta, ansi_cyan, ansi_white
-   character(len=*),parameter  :: tmr_hdf = "hdf_dump"
    real                        :: thdf                           !< hdf dump wallclock
 
    ! Per suggestion of ZEUS sysops:
@@ -157,9 +157,9 @@ module dataio_pub
       integer, pointer               :: lun        !< current free logical unit
       procedure(namelist_errh_P), nopass, pointer    :: namelist_errh
       logical :: initialized = .false.
-      contains
-         procedure :: init => namelist_handler_T_init
-         procedure :: compare_namelist
+   contains
+      procedure :: init => namelist_handler_T_init
+      procedure :: compare_namelist
    end type namelist_handler_T
 
    type(namelist_handler_T) :: nh
@@ -238,13 +238,7 @@ contains
       character(len=msg_type_len)   :: msg_type_str
       integer(kind=4)               :: proc
       integer                       :: outunit
-      logical, save                 :: frun = .true.
       character(len=idlen)          :: adv
-
-      if (frun) then
-         call set_colors(.false.)
-         frun = .false.
-      endif
 
 !      write(stdout,*) ansi_red, "Red ", ansi_green, "Green ", ansi_yellow, "Yellow ", ansi_blue, "Blue ", ansi_magenta, "Magenta ", ansi_cyan, "Cyan ", ansi_white, "White ", ansi_black
       adv = 'yes'
@@ -308,15 +302,19 @@ contains
 #endif /* !__INTEL_COMPILER */
          endif
          if (proc == 0 .and. mode == T_ERR) write(log_lun,'(/,a,/)')"###############     Crashing     ###############"
-         if (cbline <= bufferlines) then
-            write(logbuffer(cbline), '(2a,i5,2a)') msg_type_str," @", proc, ': ', trim(nm)
+         if (cbline < size(logbuffer)) then
             cbline = cbline + I_ONE
-         else
+            write(logbuffer(cbline), '(2a,i5,2a)') msg_type_str," @", proc, ': ', trim(nm)
+         endif
+         if (cbline >= size(logbuffer)) then
             call flush_to_log
-            cbline = 1
+            cbline = 0
          endif
          if (mode == T_ERR) call flush_to_log
          if (.not. log_file_initialized) close(log_lun)
+      else
+         if (mode == T_SILENT) &
+            write(stderr,'(a,a," @",a,i5,2a)', advance=adv) trim(ansi_red), "not logged", ansi_black, proc, ': ', trim(nm)
       endif
 
    end subroutine colormessage
@@ -325,7 +323,7 @@ contains
       implicit none
       integer :: line
 
-      do line = 1, min(cbline, bufferlines)
+      do line = 1, min(cbline, size(logbuffer, kind=4))
 #if defined(__INTEL_COMPILER)
          write(log_lun, '(a)') trim(logbuffer(line))
 #else /* __INTEL_COMPILER */

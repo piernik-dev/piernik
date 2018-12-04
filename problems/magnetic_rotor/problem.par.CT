@@ -1,0 +1,84 @@
+$BASE_DOMAIN
+      n_d = 400, 400, 1
+      bnd_xl = 'out'
+      bnd_xr = 'out'
+      bnd_yl = 'out'
+      bnd_yr = 'out'
+      bnd_zl = 'out'
+      bnd_zr = 'out'
+      xmin   = -0.5
+      xmax   =  0.5
+      ymin   = -0.5
+      ymax   =  0.5
+      zmin   =  0.0
+      zmax   =  1.0
+/
+
+$MPI_BLOCKS
+/
+
+$UNITS
+   units_set = "cgs"
+/
+
+$RESTART_CONTROL
+   restart  = 'last'
+   res_id   = ''
+   nrestart = 0
+/
+
+$END_CONTROL
+   tend = 0.15
+/
+
+$OUTPUT_CONTROL
+   problem_name	= 'magnetic_rotor'
+   run_id       = 'mr1'
+   dt_hdf       = 0.1
+   dt_res       = 0.0
+   dt_log       = 0.00001
+   dt_tsl       = 0.00001
+   vars(1:)     = 'dens', 'magx', 'magy', 'pres', 'velx', 'vely', 'magB',  'divbc', 'divbc4', 'divbc6', 'psi', 'pmag%', 'pres', 'ethr'
+   h5_64bit     = .true.
+/
+
+$FLUID_IONIZED
+   gamma     = 1.4
+   selfgrav = .false.
+/
+
+$FLUID_NEUTRAL
+/
+
+$FLUID_DUST
+/
+
+$NUMERICAL_SETUP
+   cfl     = 0.7
+   smalld  = 1.e-4
+   smallei = 1.e-5
+   divB_0 = "CT"
+/
+
+$GRAVITY
+/
+
+$RESISTIVITY
+   eta_0      = 1.0e-4
+   cfl_resist = 0.5
+   eta_1      = 0.0
+   j_crit     = 1.0
+   deint_max  = 0.01
+/
+
+$PROBLEM_CONTROL
+/
+
+$SHEARING
+/
+
+$INTERACTIONS
+/
+
+$AMR
+/

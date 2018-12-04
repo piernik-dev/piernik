@@ -30,11 +30,12 @@
 
 module grid_cont
 
-   use constants,   only: xdim, zdim, ndims, LO, HI, CENTER, INV_CENTER
-   use fluxtypes,   only: fluxarray, fluxpoint
-   use named_array, only: named_array4d, named_array3d
-   use refinement,  only: ref_flag
-   use real_vector, only: real_vec_T
+   use constants,        only: xdim, zdim, ndims, LO, HI, CENTER, INV_CENTER
+   use fluxtypes,        only: fluxarray, fluxpoint
+   use level_essentials, only: level_T
+   use named_array,      only: named_array4d, named_array3d
+   use refinement_flag,  only: ref_flag
+   use real_vector,      only: real_vec_T
 
    implicit none
 
@@ -132,7 +133,7 @@ module grid_cont
       integer(kind=4) :: nxb                                     !< number of %grid cells in one block (without boundary cells) in x-direction
       integer(kind=4) :: nyb                                     !< number of %grid cells in one block (without boundary cells) in y-direction
       integer(kind=4) :: nzb                                     !< number of %grid cells in one block (without boundary cells) in z-direction
-      integer(kind=4) :: level_id                                !< level id (number); do not use it without a good reason, use cg_level_T%lev where possible instead
+      class(level_T), pointer :: l                               !< level essential data
 
       ! shortcuts
       !> \todo Change kind from 4 to 8 to allow really deep refinements (effective resolution > 2**31, perhaps the other requirement will be default integer  kind = 8)
@@ -149,9 +150,9 @@ module grid_cont
       integer(kind=4), dimension(ndims, LO:HI)  :: ijkseb        !< [[isb, jsb, ksb], [ieb, jeb, keb]]
       integer(kind=4), dimension(ndims, LO:HI)  :: lh1           !< [[il1, jl1, kl1], [ih1, jh1, kh1]]
       integer(kind=4), dimension(ndims, LO:HI)  :: lhn           !< [[iln, jln, kln], [ihn, jhn, khn]]
-      integer(kind=8), dimension(ndims)         :: h_cor1        !< offsets of the corner opposite to the one defined by off(:) + 1, a shortcut to be compared with dom%n_d(:) DEPRECATED will be equivalent to ijkse(:, HI)+1
+      integer(kind=4), dimension(ndims, LO:HI)  :: lh_out        !< ijkse expanded at the external boundaries to include external guardcells for contexts where AT_OUT_B is used
       integer(kind=4), dimension(ndims)         :: n_            !< number of %grid cells in one block in x-, y- and z-directions (n_b(:) + 2 * nb)
-      integer(kind=8), dimension(ndims, LO:HI) :: my_se          !< own segment. my_se(:,LO) = 0; my_se(:,HI) = dom%n_d(:) - 1 would cover entire domain on a base level
+      integer(kind=8), dimension(ndims, LO:HI)  :: my_se         !< own segment. my_se(:,LO) = 0; my_se(:,HI) = dom%n_d(:) - 1 would cover entire domain on a base level
                                                                  !! my_se(:,LO) = 0; my_se(:,HI) = finest%level%n_d(:) -1 would cover entire domain on the most refined level
                                                                  !! DEPRECATED: will be equivalent to ijkse(:,:)
 
@@ -190,6 +191,7 @@ module grid_cont
       real, allocatable, dimension(:,:,:) :: prolong_, prolong_x, prolong_xy !< auxiliary prolongation arrays for intermediate results
       real, dimension(:,:,:), pointer ::  prolong_xyz             !< auxiliary prolongation array for final result. OPT: Valgrind indicates that operations on array allocated on pointer might be slower than on ordinary arrays due to poorer L2 cache utilization
       logical, allocatable, dimension(:,:,:) :: leafmap           !< .true. when a cell is not covered by finer cells, .false. otherwise
+      logical, allocatable, dimension(:,:,:) :: refinemap         !< .true. when a cell triggers refinement criteria, .false. otherwise
 
       ! Non-cartesian geometrical factors
 
@@ -247,6 +249,8 @@ module grid_cont
       procedure          :: set_fluxpointers
       procedure          :: save_outfluxes
       procedure          :: prolong                              !< perform prolongation of the data stored in this%prolong_
+      procedure          :: refinemap2SFC_list                   !< create list of SFC indices to be created from refine flags
+      procedure          :: set_constant_b_field                 !< set constant magnetic field on whole block
 
    end type grid_container
 
@@ -262,55 +266,57 @@ contains
 !! \details This method sets up the grid container variables, coordinates and allocates basic arrays.
 !! Everything related to the interior of grid container should be set here.
 !! Things that are related to communication with other grid containers or global properties are set up in cg_level::init_all_new_cg.
+!!
+!! BEWARE: things like off and n_d are replicated across level (it was a cheap workaround for circular dependencies)
+!! \todo invent something better that avoids both circular dependencies and replication of same data
 !<
 
-   subroutine init_gc(this, n_d, off, my_se, grid_id, level_id)
+   subroutine init_gc(this, my_se, grid_id, l)
 
-      use constants,     only: PIERNIK_INIT_DOMAIN, xdim, ydim, zdim, ndims, big_float, LO, HI, I_ONE, I_TWO, BND_MPI, BND_COR, GEO_XYZ, GEO_RPZ, dpi
-      use dataio_pub,    only: die, warn, code_progress
-      use domain,        only: dom
-      use grid_helpers,  only: f2c
-      use ordering,      only: SFC_order
-      use refinement,    only: ref_flag
+      use constants,        only: PIERNIK_INIT_DOMAIN, xdim, ydim, zdim, ndims, big_float, &
+           &                      LO, HI, I_ONE, I_TWO, BND_MPI, BND_COR, GEO_XYZ, GEO_RPZ, dpi
+      use dataio_pub,       only: die, warn, code_progress
+      use domain,           only: dom
+      use func,             only: operator(.equals.)
+      use grid_helpers,     only: f2c
+      use level_essentials, only: level_T
+      use ordering,         only: SFC_order
 
       implicit none
 
-      class(grid_container), target,   intent(inout) :: this ! intent(out) would silently clear everything, that was already set
-                                                             ! (also the fields in types derived from grid_container)
-      integer(kind=8), dimension(:),   intent(in) :: n_d     !< max resolution of my level
-      integer(kind=8), dimension(:),   intent(in) :: off     !< offset of my level
-      integer(kind=8), dimension(:,:), intent(in) :: my_se   !< my segment
-      integer,                         intent(in) :: grid_id
-      integer(kind=4),                 intent(in) :: level_id
+      class(grid_container), target,   intent(inout) :: this  ! intent(out) would silently clear everything, that was already set
+                                                              ! (also the fields in types derived from grid_container)
+      integer(kind=8), dimension(:,:), intent(in) :: my_se    !< my segment
+      integer,                         intent(in) :: grid_id  !< ID which should be unique across level
+      class(level_T), pointer,         intent(in) :: l        !< level essential data
 
       integer :: i
       integer(kind=8), dimension(ndims, LO:HI) :: rn
 
       if (code_progress < PIERNIK_INIT_DOMAIN) call die("[grid_container:init_gc] MPI not initialized.")
 
+      this%l          => l
       this%membership = 1
       this%grid_id    = grid_id
       this%my_se(:,:) = my_se(:, :)
-      this%h_cor1(:)  = this%my_se(:, HI) + I_ONE
       this%n_b(:)     = int(this%my_se(:, HI) - this%my_se(:, LO) + I_ONE, 4) ! Block 'physical' grid sizes
-      this%level_id   = level_id
-      this%SFC_id     = SFC_order(this%my_se(:, LO) - off)
+      this%SFC_id     = SFC_order(this%my_se(:, LO) - l%off)
 
       if (any(this%n_b(:) <= 0)) call die("[grid_container:init_gc] Mixed positive and non-positive grid sizes")
 
       ! Inherit the boundaries from the domain, then set MPI or SHEAR boundaries where applicable
       this%bnd(:,:) = dom%bnd(:,:)
-      where (my_se(:, LO)   /= off(:)         ) this%bnd(:, LO) = BND_MPI
-      where (this%h_cor1(:) /= off(:) + n_d(:)) this%bnd(:, HI) = BND_MPI
+      where (my_se(:, LO)         /= l%off(:)           ) this%bnd(:, LO) = BND_MPI
+      where (my_se(:, HI) + I_ONE /= l%off(:) + l%n_d(:)) this%bnd(:, HI) = BND_MPI
       ! For periodic boundaries do not set BND_MPI when local domain spans through the whole computational domain in given direction.
-      where (dom%periodic(:) .and. this%h_cor1(:)    /= n_d(:)) this%bnd(:, LO) = BND_MPI
-      where (dom%periodic(:) .and. this%my_se(:, LO) /= 0)      this%bnd(:, HI) = BND_MPI
+      where (dom%periodic(:) .and. this%my_se(:, HI) + I_ONE /= l%n_d(:)) this%bnd(:, LO) = BND_MPI
+      where (dom%periodic(:) .and. this%my_se(:, LO)         /= 0       ) this%bnd(:, HI) = BND_MPI
 
       this%ext_bnd(:, :) = .false.
       do i = xdim, zdim
          if (dom%has_dir(i) .and. .not. dom%periodic(i)) then
-            this%ext_bnd(i, LO) = (my_se(i, LO)   == off(i))
-            this%ext_bnd(i, HI) = (this%h_cor1(i) == off(i) + n_d(i)) !! \warning not true on AMR
+            this%ext_bnd(i, LO) = (my_se(i, LO)         == l%off(i))
+            this%ext_bnd(i, HI) = (my_se(i, HI) + I_ONE == l%off(i) + l%n_d(i))
          endif
       enddo
 
@@ -344,9 +350,9 @@ contains
          this%lh1(:,HI)    = this%ijkse(:, HI) + I_ONE
          this%lhn(:,LO)    = this%ijkse(:, LO) - dom%nb
          this%lhn(:,HI)    = this%ijkse(:, HI) + dom%nb
-         this%dl(:)        = dom%L_(:) / n_d(:)
-         this%fbnd(:, LO)  = dom%edge(:, LO) + this%dl(:) * (this%my_se(:, LO) - off(:))
-         this%fbnd(:, HI)  = dom%edge(:, LO) + this%dl(:) * (this%h_cor1(:) - off(:))
+         this%dl(:)        = dom%L_(:) / l%n_d(:)
+         this%fbnd(:, LO)  = dom%edge(:, LO) + this%dl(:) * (this%my_se(:, LO)         - l%off(:))
+         this%fbnd(:, HI)  = dom%edge(:, LO) + this%dl(:) * (this%my_se(:, HI) + I_ONE - l%off(:))
       elsewhere
          this%n_(:)        = 1
          this%ijkse(:, LO) = 0
@@ -361,6 +367,16 @@ contains
          this%fbnd(:, LO)  = dom%edge(:, LO)
          this%fbnd(:, HI)  = dom%edge(:, HI)
       endwhere
+
+      ! Compute indices that include external boundary cells
+      ! Strangely, we ignore periodicity here, following what we had in restart_hdf5_v1::set_dims_for_restart
+
+      this%lh_out = this%ijkse
+      where (dom%has_dir(:) .and. (my_se(:, LO) == l%off(:)                   )) this%lh_out(:, LO) = this%lh_out(:, LO) - dom%nb
+      where (dom%has_dir(:) .and. (my_se(:, HI) == l%off(:) + l%n_d(:) - I_ONE)) this%lh_out(:, HI) = this%lh_out(:, HI) + dom%nb
+      !> \todo make sure the above works correctly with refinements
+
+      if (any(this%dl .equals. 0.)) call die("[grid_container:init_gc] found cell size equal to 0.")
 
       this%isb = this%ijkseb(xdim, LO)
       this%ieb = this%ijkseb(xdim, HI)
@@ -460,14 +476,16 @@ contains
            &   this%prolong_x  (this%lhn(xdim, LO):this%lhn(xdim, HI),       rn(ydim, LO):      rn(ydim, HI),       rn(zdim, LO):      rn(zdim, HI)), &
            &   this%prolong_xy (this%lhn(xdim, LO):this%lhn(xdim, HI), this%lhn(ydim, LO):this%lhn(ydim, HI),       rn(zdim, LO):      rn(zdim, HI)), &
            &   this%prolong_xyz(this%lhn(xdim, LO):this%lhn(xdim, HI), this%lhn(ydim, LO):this%lhn(ydim, HI), this%lhn(zdim, LO):this%lhn(zdim, HI)))
-      allocate(this%leafmap(this%ijkse(xdim, LO):this%ijkse(xdim, HI), this%ijkse(ydim, LO):this%ijkse(ydim, HI), this%ijkse(zdim, LO):this%ijkse(zdim, HI)))
+      allocate(this%leafmap  (this%ijkse(xdim, LO):this%ijkse(xdim, HI), this%ijkse(ydim, LO):this%ijkse(ydim, HI), this%ijkse(zdim, LO):this%ijkse(zdim, HI)), &
+           &   this%refinemap(this%ijkse(xdim, LO):this%ijkse(xdim, HI), this%ijkse(ydim, LO):this%ijkse(ydim, HI), this%ijkse(zdim, LO):this%ijkse(zdim, HI)))
 
       this%prolong_   (:, :, :) = big_float
       this%prolong_x  (:, :, :) = big_float
       this%prolong_xy (:, :, :) = big_float
       this%prolong_xyz(:, :, :) = big_float
       this%leafmap    (:, :, :) = .true.
-      this%refine_flags = ref_flag(.false., .false.)
+      this%refinemap  (:, :, :) = .false.
+      call this%refine_flags%init
       this%ignore_prolongation = .false.
       this%is_old = .false.
       this%has_previous_timestep = .false.
@@ -496,15 +514,16 @@ contains
    subroutine set_coords(this)
 
       use constants,  only: LO, HI, half, one, zero, xdim, ydim, zdim, CENTER, LEFT, RIGHT, INV_CENTER
-      use dataio_pub, only: die
+      use dataio_pub, only: die, warn
       use domain,     only: dom
-      use func,       only: operator(.notequals.)
+      use func,       only: operator(.notequals.), operator(.equals.)
 
       implicit none
 
       class(grid_container), intent(inout) :: this !< grid container, where the arrays have to be set
 
       integer :: d, i
+      integer, parameter :: safety_warn_factor = 1000 ! warn if a cell size is smaller than this * epsilon(coordinates)
 
       do d = xdim, zdim
          do i = CENTER, INV_CENTER
@@ -527,6 +546,17 @@ contains
             this%coord(INV_CENTER, d)%r(:) = zero
          endwhere
 
+         ! Generally nobody should substract one cell coordinate from another in code solvers. One should use cell sizes instead.
+         ! The problem may arise when initial conditions are comparing coordinates to set something on the left or right side of some line.
+         ! When the cell size is too small compared to the coordinates, such line cannot be properly calculated
+         ! Note that since we force real kind=8, we can use a named constant instead of epsilon
+         if (dom%has_dir(d)) then
+            if ( any(this%coord(CENTER, d)%r(:) .equals. this%coord(LEFT,  d)%r(:)) .or. &
+                 any(this%coord(CENTER, d)%r(:) .equals. this%coord(RIGHT, d)%r(:)) ) call die("[grid_container:set_coords] cannot distinguish between center and face coordinates of a cell")
+            if ( any(abs(this%coord(CENTER, d)%r(:)-this%coord(LEFT,  d)%r(:)) < safety_warn_factor*epsilon(this%coord(CENTER, d)%r(:))*this%coord(CENTER, d)%r(:)) .or. &
+                 any(abs(this%coord(CENTER, d)%r(:)-this%coord(RIGHT, d)%r(:)) < safety_warn_factor*epsilon(this%coord(CENTER, d)%r(:))*this%coord(CENTER, d)%r(:))) &
+                 call warn("[grid_container:set_coords] cell sizes are much smaller than coordinates. Inaccuracies in setting the initial conditions may happen.")
+         endif
       enddo
 
       !--- Shortcuts --------------------
@@ -552,7 +582,8 @@ contains
 
       implicit none
 
-      class(grid_container), intent(inout) :: this
+      class(grid_container), intent(inout) :: this !< object invoking type-bound procedure
+
       integer :: d, g, b, cdim
       integer, parameter :: nseg = 4*2
       type(tgt_list), dimension(nseg) :: rpio_tgt
@@ -617,6 +648,7 @@ contains
       if (allocated(this%prolong_x))    deallocate(this%prolong_x)
       if (allocated(this%prolong_))     deallocate(this%prolong_)
       if (allocated(this%leafmap))      deallocate(this%leafmap)
+      if (allocated(this%refinemap))    deallocate(this%refinemap)
       do d = xdim, zdim
          do g = LO, HI
             call this%finebnd  (d, g)%facleanup
@@ -707,7 +739,7 @@ contains
 
       implicit none
 
-      class(grid_container), intent(inout) :: this
+      class(grid_container), intent(inout) :: this  !< object invoking type-bound procedure
 
       integer :: i
 
@@ -745,7 +777,7 @@ contains
 
       implicit none
 
-      class(grid_container), intent(inout) :: this
+      class(grid_container), intent(inout) :: this          !< object invoking type-bound procedure
       logical,               intent(in)    :: multigrid     !< If .true. then cg%q(:)%arr and cg%w(:)%arr are allocated also below base level
 
       type(named_array3d), allocatable, dimension(:) :: tmp
@@ -758,7 +790,7 @@ contains
          call move_alloc(from=tmp, to=this%q)
       endif
 
-      if (multigrid .or. this%level_id >= base_level_id) call this%q(ubound(this%q(:), dim=1))%init(this%lhn(:, LO), this%lhn(:, HI))
+      if (multigrid .or. this%l%id >= base_level_id) call this%q(ubound(this%q(:), dim=1))%init(this%lhn(:, LO), this%lhn(:, HI))
 
    end subroutine add_na
 
@@ -775,7 +807,7 @@ contains
 
       implicit none
 
-      class(grid_container), intent(inout) :: this
+      class(grid_container), intent(inout) :: this         !< object invoking type-bound procedure
       integer(kind=4),       intent(in)    :: n            !< Length of the vector quantity to be stored (first dimension of the array)
 
       type(named_array4d), allocatable, dimension(:) :: tmp
@@ -788,7 +820,7 @@ contains
          call move_alloc(from=tmp, to=this%w)
       endif
 
-      if (this%level_id >= base_level_id) call this%w(ubound(this%w(:), dim=1))%init( [1_INT4, this%lhn(:, LO)], [n, this%lhn(:, HI)] ) !< \deprecated magic integer
+      if (this%l%id >= base_level_id) call this%w(ubound(this%w(:), dim=1))%init( [1_INT4, this%lhn(:, LO)], [n, this%lhn(:, HI)] ) !< \deprecated magic integer
 
    end subroutine add_na_4d
 
@@ -800,7 +832,7 @@ contains
 
       implicit none
 
-      class(grid_container), intent(inout) :: this
+      class(grid_container), intent(inout) :: this !< object invoking type-bound procedure
 
       integer(kind=8), dimension(xdim:zdim, LO:HI) :: se
       integer :: g
@@ -823,10 +855,10 @@ contains
 
       implicit none
 
-      class(bnd_list),                              intent(inout) :: this
-      integer,                                      intent(in)    :: proc
-      integer(kind=8), dimension(xdim:zdim, LO:HI), intent(in)    :: se
-      integer(kind=4),                              intent(in)    :: tag
+      class(bnd_list),                              intent(inout) :: this !< object invoking type-bound procedure
+      integer,                                      intent(in)    :: proc !< process to be communicated
+      integer(kind=8), dimension(xdim:zdim, LO:HI), intent(in)    :: se   !< segment definition
+      integer(kind=4),                              intent(in)    :: tag  !< tag for MPI calls
 
       type(segment), dimension(:), allocatable :: tmp
       integer :: g
@@ -852,20 +884,24 @@ contains
 
    subroutine set_fluxpointers(this, cdim, i1, i2, eflx)
 
-      use constants,  only: LO, HI
+      use constants,  only: LO, HI, ydim, zdim, GEO_RPZ
+      use domain,     only: dom
+      use fluidindex, only: iarr_all_mx, iarr_all_my
       use fluxtypes,  only: ext_fluxes
 
       implicit none
 
-      class(grid_container), intent(in)    :: this
-      integer(kind=4),       intent(in)    :: cdim
-      integer,               intent(in)    :: i1, i2
+      class(grid_container), intent(in)    :: this    !< object invoking type-bound procedure
+      integer(kind=4),       intent(in)    :: cdim    !< direction of the flux
+      integer,               intent(in)    :: i1      !< coordinate
+      integer,               intent(in)    :: i2      !< coordinate
       type(ext_fluxes),      intent(inout) :: eflx
 
       if (this%finebnd(cdim, LO)%index(i1, i2) >= this%ijkse(cdim, LO)) then
          fpl = this%finebnd(cdim, LO)%fa2fp(i1, i2)
          if (.not. allocated(fpl%uflx)) call fpl%fpinit
          eflx%li => fpl
+         eflx%li%index = eflx%li%index - this%lhn(cdim, LO) + 1
       else
          nullify(eflx%li)
       endif
@@ -873,14 +909,29 @@ contains
          fpr = this%finebnd(cdim, HI)%fa2fp(i1, i2)
          if (.not. allocated(fpr%uflx)) call fpr%fpinit
          eflx%ri => fpr
+         eflx%ri%index = eflx%ri%index - this%lhn(cdim, LO)
       else
          nullify(eflx%ri)
+      endif
+
+      if (dom%geometry_type == GEO_RPZ) then
+         if (cdim == ydim) then
+            !> BEWARE: iarr_all_mx points to the y-momentum in y-sweep
+            if (associated(eflx%li)) eflx%li%uflx(iarr_all_mx) = eflx%li%uflx(iarr_all_mx) / this%x(i2)
+            if (associated(eflx%ri)) eflx%ri%uflx(iarr_all_mx) = eflx%ri%uflx(iarr_all_mx) / this%x(i2)
+         else if (cdim == zdim) then
+            if (associated(eflx%li)) eflx%li%uflx = eflx%li%uflx / this%x(i1)
+            if (associated(eflx%li)) eflx%li%uflx(iarr_all_my) = eflx%li%uflx(iarr_all_my) / this%x(i1) ! that makes this%x(i1)**2
+            if (associated(eflx%ri)) eflx%ri%uflx = eflx%ri%uflx / this%x(i1)
+            if (associated(eflx%ri)) eflx%ri%uflx(iarr_all_my) = eflx%ri%uflx(iarr_all_my) / this%x(i1) ! that makes this%x(i1)**2
+         endif
       endif
 
       if (this%coarsebnd(cdim, LO)%index(i1, i2) >= this%ijkse(cdim, LO)) then
          cpl%index = this%coarsebnd(cdim, LO)%index(i1, i2)
          if (.not. allocated(cpl%uflx)) call cpl%fpinit
          eflx%lo => cpl
+         eflx%lo%index = eflx%lo%index - this%lhn(cdim, LO)
       else
          nullify(eflx%lo)
       endif
@@ -888,6 +939,7 @@ contains
          cpr%index = this%coarsebnd(cdim, HI)%index(i1, i2)
          if (.not. allocated(cpr%uflx)) call cpr%fpinit
          eflx%ro => cpr
+         eflx%ro%index = eflx%ro%index - this%lhn(cdim, LO) + 1
       else
          nullify(eflx%ro)
       endif
@@ -896,18 +948,47 @@ contains
 
    subroutine save_outfluxes(this, cdim, i1, i2, eflx)
 
-      use constants,  only: LO, HI
+      use constants,  only: LO, HI, ydim, zdim, GEO_RPZ
+      use domain,     only: dom
+      use fluidindex, only: iarr_all_mx, iarr_all_my
       use fluxtypes,  only: ext_fluxes
 
       implicit none
 
-      class(grid_container), intent(inout) :: this
+      class(grid_container), intent(inout) :: this    !< object invoking type-bound procedure
       integer(kind=4),       intent(in)    :: cdim
-      integer,               intent(in)    :: i1, i2
+      integer,               intent(in)    :: i1
+      integer,               intent(in)    :: i2
       type(ext_fluxes),      intent(inout) :: eflx
 
-      if (associated(eflx%lo)) call this%coarsebnd(cdim, LO)%fp2fa(eflx%lo, i1, i2)
-      if (associated(eflx%ro)) call this%coarsebnd(cdim, HI)%fp2fa(eflx%ro, i1, i2)
+
+      if (associated(eflx%lo)) then
+         eflx%lo%index = eflx%lo%index + this%lhn(cdim, LO)
+         if (dom%geometry_type == GEO_RPZ) then
+            if (cdim == ydim) then
+               !> BEWARE: iarr_all_mx points to the y-momentum in y-sweep
+               eflx%lo%uflx(iarr_all_mx) = eflx%lo%uflx(iarr_all_mx) * this%x(i2)
+            else if (cdim == zdim) then
+               eflx%lo%uflx = eflx%lo%uflx * this%x(i1)
+               eflx%lo%uflx(iarr_all_my) = eflx%lo%uflx(iarr_all_my) * this%x(i1) ! that makes this%x(i1)**2
+            endif
+         endif
+         call this%coarsebnd(cdim, LO)%fp2fa(eflx%lo, i1, i2)
+      endif
+
+      if (associated(eflx%ro)) then
+         eflx%ro%index = eflx%ro%index + this%lhn(cdim, LO) - 1
+         if (dom%geometry_type == GEO_RPZ) then
+            if (cdim == ydim) then
+               !> BEWARE: iarr_all_mx points to the y-momentum in y-sweep
+               eflx%ro%uflx(iarr_all_mx) = eflx%ro%uflx(iarr_all_mx) * this%x(i2)
+            else if (cdim == zdim) then
+               eflx%ro%uflx = eflx%ro%uflx * this%x(i1)
+               eflx%ro%uflx(iarr_all_my) = eflx%ro%uflx(iarr_all_my) * this%x(i1) ! that makes this%x(i1)**2
+            endif
+         endif
+         call this%coarsebnd(cdim, HI)%fp2fa(eflx%ro, i1, i2)
+      endif
 
    end subroutine save_outfluxes
 
@@ -982,7 +1063,7 @@ contains
 
       implicit none
 
-      class(grid_container),                        intent(inout) :: this
+      class(grid_container),                        intent(inout) :: this  !< object invoking type-bound procedure
       integer(kind=4),                              intent(in)    :: ind   !< index of cg%q(:) 3d array - variable to be prolonged
       integer(kind=8), dimension(xdim:zdim, LO:HI), intent(in)    :: cse   !< coarse segment
       logical,                                      intent(in)    :: p_xyz !< store the result in this%prolong_xyz when true, in this%q(ind)%arr otherwise
@@ -1198,5 +1279,91 @@ contains
       ! Alternatively, an FFT convolution may be employed after injection. No idea at what stencil size the FFT is faster. It is finite size for sure :-)
 
    end subroutine prolong
+
+!< \brief Create list of SFC indices to be created from refine flags
+
+   subroutine refinemap2SFC_list(this)
+
+      use constants,  only: refinement_factor, xdim, ydim, zdim, I_ONE
+      use dataio_pub, only: die, warn
+      use domain,     only: AMR_bsize
+
+      implicit none
+
+      class(grid_container), intent(inout) :: this !< object invoking type-bound procedure
+
+      integer :: i, j, k, ifs, ife, jfs, jfe, kfs, kfe
+      enum, bind(C)
+         enumerator :: NONE, REFINE, LEAF
+      end enum
+      integer :: type
+      logical, save :: warned = .false.
+
+      this%refinemap = this%refinemap .and. this%leafmap
+      type = NONE
+      if (any(this%refinemap)) then
+         type = REFINE
+      else if (this%refine_flags%refine) then
+         type = LEAF
+         if (.not. warned) then
+            warned = .true.
+            call warn("[grid_container:refinemap2SFC_list] direct use of cg%refine_flags%refine is deprecated")
+         endif
+      endif
+
+      if (type == NONE) return
+
+      if (any(AMR_bsize == 0)) return ! this routine works only with blocky AMR
+
+      do i = int(((this%is - this%l%off(xdim))*refinement_factor) / AMR_bsize(xdim)), int(((this%ie - this%l%off(xdim))*refinement_factor + I_ONE) / AMR_bsize(xdim))
+         ifs = max(int(this%is), int(this%l%off(xdim)) + (i*AMR_bsize(xdim))/refinement_factor)
+         ife = min(int(this%ie), int(this%l%off(xdim)) + ((i+I_ONE)*AMR_bsize(xdim)-I_ONE)/refinement_factor)
+
+         do j = int(((this%js - this%l%off(ydim))*refinement_factor) / AMR_bsize(ydim)), int(((this%je - this%l%off(ydim))*refinement_factor + I_ONE) / AMR_bsize(ydim))
+            jfs = max(int(this%js), int(this%l%off(ydim)) + (j*AMR_bsize(ydim))/refinement_factor)
+            jfe = min(int(this%je), int(this%l%off(ydim)) + ((j+I_ONE)*AMR_bsize(ydim)-I_ONE)/refinement_factor)
+
+            do k = int(((this%ks - this%l%off(zdim))*refinement_factor) / AMR_bsize(zdim)), int(((this%ke - this%l%off(zdim))*refinement_factor + I_ONE) / AMR_bsize(zdim))
+               kfs = max(int(this%ks), int(this%l%off(zdim)) + (k*AMR_bsize(zdim))/refinement_factor)
+               kfe = min(int(this%ke), int(this%l%off(zdim)) + ((k+I_ONE)*AMR_bsize(zdim)-I_ONE)/refinement_factor)
+               select case (type)
+                  case (REFINE)
+                     if (any(this%refinemap(ifs:ife, jfs:jfe, kfs:kfe))) call this%refine_flags%add(this%l%id+I_ONE, int([i, j, k]*AMR_bsize, kind=8)+refinement_factor*this%l%off, refinement_factor*this%l%off)
+                  case (LEAF)
+                     if (all(this%leafmap(ifs:ife, jfs:jfe, kfs:kfe))) then
+                        call this%refine_flags%add(this%l%id+I_ONE, int([i, j, k]*AMR_bsize, kind=8)+refinement_factor*this%l%off, refinement_factor*this%l%off)
+                     else if (any(this%leafmap(ifs:ife, jfs:jfe, kfs:kfe))) then
+                        call die("[grid_container:refinemap2SFC_list] cannot refine partially leaf parf of the grid")
+                     endif
+                  case default
+                     call die("[grid_container:refinemap2SFC_list] invalid type")
+               end select
+            enddo
+         enddo
+      enddo
+      this%refinemap = .false.
+
+   end subroutine refinemap2SFC_list
+
+!< \brief set constant magnetic field on whole block
+
+   subroutine set_constant_b_field(this, b)
+
+      use constants,  only: xdim, zdim
+
+      implicit none
+
+      class(grid_container),      intent(inout) :: this !< object invoking type-bound procedure
+      real, dimension(xdim:zdim), intent(in)    :: b    !< the value of the magnetic field vector in whole block
+
+      integer :: d
+
+      if (associated(this%b)) then
+         do d = xdim, zdim
+            this%b(d, this%is:this%ie, this%js:this%je, this%ks:this%ke) = b(d)
+         enddo
+      endif
+
+   end subroutine set_constant_b_field
 
 end module grid_cont

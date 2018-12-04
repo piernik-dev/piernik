@@ -2,8 +2,10 @@
 #undef MAGNETIC
 #undef NEUTRAL
 #define DUST
-#define LOCAL_FR_SPEED
-#define RTVD
+
+#if !defined GLOBAL_FR_SPEED
+#  define LOCAL_FR_SPEED
+#endif
 
 #undef ISO
 

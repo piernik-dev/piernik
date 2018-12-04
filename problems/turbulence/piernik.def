@@ -3,10 +3,12 @@
 #define NEUTRAL
 #define TRACER
 
-#define LOCAL_FR_SPEED
+
+#if !defined GLOBAL_FR_SPEED
+#  define LOCAL_FR_SPEED
+#endif
 #undef  GLOBAL_FR_SPEED
 
 #undef RESIST
 
 #undef GRAV
-#define RTVD

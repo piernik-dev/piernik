@@ -46,7 +46,6 @@ module initproblem
    real                     :: dens_exp      !< exponent in profile density \f$\rho(R) = \rho_0 R^{-k}\f$
    real                     :: eps           !< dust to gas ratio
    real                     :: amplify       !< relative amplitude of radial bar (build test only)
-   integer(kind=4)          :: cutoff_ncells !< width of cut-off profile
    real, save               :: T_inner = 0.0 !< Orbital period at the inner boundary
    real, save               :: max_vy = -HUGE(1.0) !< Maximum tangential dust velocity
    integer(kind=4), save    :: noise_added = NOT_ADDED !< whether noise has been already added
@@ -69,22 +68,21 @@ contains
 !-----------------------------------------------------------------------------------------------------------------------
    subroutine problem_pointers
 
-      use dataio_user,           only: user_attrs_wr, user_attrs_rd
       use user_hooks,            only: problem_customize_solution, problem_grace_passed, problem_post_restart
       use gravity,               only: grav_pot_3d
 #ifdef HDF5
-      use dataio_user,           only: user_vars_hdf5
+      use dataio_user,           only: user_attrs_wr, user_attrs_rd, user_vars_hdf5
 #endif /* HDF5 */
 
       implicit none
 
-      user_attrs_wr => my_attrs_wr
-      user_attrs_rd => my_attrs_rd
       problem_customize_solution => problem_customize_solution_kepler
       problem_grace_passed => si_grace_passed
       problem_post_restart => kepler_problem_post_restart
       grav_pot_3d => my_grav_pot_3d
 #ifdef HDF5
+      user_attrs_wr => my_attrs_wr
+      user_attrs_rd => my_attrs_rd
       user_vars_hdf5 => prob_vars_hdf5
 #endif /* HDF5 */
 
@@ -336,7 +334,6 @@ contains
       integer :: xl, xr
 
 !   Secondary parameters
-      allocate(ln_dens_der(0)) ! suppress compiler warnings
       cgl => leaves%first
       do while (associated(cgl))
          cg => cgl%cg
@@ -370,10 +367,10 @@ contains
 
             xl = cg%lhn(xdim, LO)
             xr = cg%lhn(xdim, HI)
-            if (.not.allocated(grav)) allocate(grav(xl:xr))
-            if (size(ln_dens_der) /= xr-xl+1) deallocate(ln_dens_der)
-            allocate(ln_dens_der(xl:xr))
-            if (.not.allocated(dens_prof)) allocate(dens_prof(xl:xr))
+            if (allocated(grav)) deallocate(grav)
+            if (allocated(dens_prof)) deallocate(dens_prof)
+            if (allocated(ln_dens_der)) deallocate(ln_dens_der)
+            allocate(grav(xl:xr), ln_dens_der(xl:xr), dens_prof(xl:xr))
 
             grav = compute_gravaccelR(cg)
             dens_prof(:) = d0 * cg%x(:)**(-dens_exp)  * gram / cm**2
@@ -441,7 +438,7 @@ contains
 
             enddo
             cg%w(wna%ind(inid_n))%arr(:,:,:,:) = cg%u(:,:,:,:)
-            cg%b(:,:,:,:) = 0.0
+            call cg%set_constant_b_field([0., 0., 0.])
             if (allocated(grav)) deallocate(grav)
             if (allocated(dens_prof)) deallocate(dens_prof)
             if (allocated(ln_dens_der)) deallocate(ln_dens_der)
@@ -469,7 +466,7 @@ contains
 
       use cg_leaves,        only: leaves
       use cg_list,          only: cg_list_element
-      use constants,        only: b0_n, fluid_n
+      use constants,        only: fluid_n
       use all_boundaries,   only: all_fluid_boundaries
       use named_array_list, only: wna
       use grid_cont,        only: grid_container
@@ -494,7 +491,6 @@ contains
          cg => cgl%cg
          cg%u  => cg%w(wna%ind(inid_n))%arr  ! BEWARE: Don't do things like that without parental supervision
          cg%b = 0.0
-         cg%w(wna%ind(b0_n))%arr = 0.0
          cgl => cgl%nxt
       enddo
 
@@ -730,14 +726,14 @@ contains
       implicit none
 
       character(len=*),               intent(in)    :: var
-      real(kind=4), dimension(:,:,:), intent(inout) :: tab
+      real, dimension(:,:,:),         intent(inout) :: tab
       integer,                        intent(inout) :: ierrh
       type(grid_container), pointer,  intent(in)    :: cg
 
       ierrh = 0
       select case (trim(var))
          case ("tauf")
-            tab(:,:,:) = real(epstein_factor(flind%neu%pos) / cg%u(flind%neu%idn,cg%is:cg%ie,cg%js:cg%je,cg%ks:cg%ke), 4)
+            tab(:,:,:) = epstein_factor(flind%neu%pos) / cg%u(flind%neu%idn,cg%is:cg%ie,cg%js:cg%je,cg%ks:cg%ke)
          case default
             ierrh = -1
       end select

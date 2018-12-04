@@ -1,13 +1,21 @@
-#undef IONIZED
-#undef MAGNETIC
-#define NEUTRAL
+#if 0
+!
+! Use advection_test/magnetized_advection_test if you want to play with magnetized advection test.
+!
+! Alternatively, you can add '-d MAGNETIC,IONIZED' to your setup call.
+!
+#endif
+
+#if !defined IONIZED
+#  define  NEUTRAL
+#endif
+
 #define DUST
-#define LOCAL_FR_SPEED
+
+#if !defined GLOBAL_FR_SPEED
+#  define LOCAL_FR_SPEED
+#endif
 
 #undef ISO
 
 #undef GRAV
-
-#if !(defined(HLLC))
-#define RTVD
-#endif

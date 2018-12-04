@@ -26,7 +26,19 @@
 !
 #include "piernik.h"
 
-!> Brief calculate the lovely shape of the Mandelbrot set. Refine on the set to follow the interesting details.
+!>
+!! \brief calculate the lovely shape of the Mandelbrot set.  Refine on the
+!! set to follow the interesting details.
+!!
+!! The Mandelbrot problem is intended for stress testing of the AMR
+!! subsystem. There are more efficient fractal generators around but
+!! one may consider some fun ideas:
+!! * Use some multipresicion or implement own fixed point, optimized for
+!!   these calculations.
+!! * Use speedup tricks like these in fast deep zoom programs.
+!! * Detect interior of minibrotsfor further speedups (already sort of works
+!!   as it dos not get refined too much.
+!<
 
 module initproblem
 
@@ -41,10 +53,14 @@ module initproblem
    integer(kind=4) :: order   !< Order of mandelbrot set
    integer(kind=4) :: maxiter !< Maximum number of iterations
    logical :: smooth_map      !< Try continuous colouring
+   logical :: log_polar       !< Use polar mapping around x_polar + i * y_polar
+   real :: x_polar            !< x-coordinate for polar mode
+   real :: y_polar            !< y-coordinate for polar mode
+   real :: c_polar            !< correct colouring with x-coordinate multiplied by this factor
    real :: ref_thr            !< threshold for refining a grid
    real :: deref_thr          !< threshold for derefining a grid
 
-   namelist /PROBLEM_CONTROL/  order, maxiter, smooth_map, ref_thr, deref_thr
+   namelist /PROBLEM_CONTROL/  order, maxiter, smooth_map, log_polar, x_polar, y_polar, c_polar, ref_thr, deref_thr
 
    ! other private data
    character(len=dsetnamelen), parameter :: mand_n = "mand", re_n = "real", imag_n = "imag"
@@ -70,6 +86,7 @@ contains
 
    subroutine read_problem_par
 
+      use constants,  only: ydim, LO, HI, dpi
       use dataio_pub, only: nh      ! QA_WARN required for diff_nml
       use dataio_pub, only: warn, die
       use domain,     only: dom
@@ -81,8 +98,12 @@ contains
       order = 2
       maxiter = 100
       smooth_map = .true.
-      ref_thr = 5.
-      deref_thr = 2.
+      log_polar = .false.
+      x_polar = 0.
+      y_polar = 0.
+      c_polar = 0.
+      ref_thr = 1.
+      deref_thr = .2
 
       if (master) then
 
@@ -106,9 +127,13 @@ contains
          ibuff(2) = maxiter
 
          lbuff(1) = smooth_map
+         lbuff(2) = log_polar
 
          rbuff(1) = ref_thr
          rbuff(2) = deref_thr
+         rbuff(3) = x_polar
+         rbuff(4) = y_polar
+         rbuff(5) = c_polar
 
       endif
 
@@ -122,9 +147,13 @@ contains
          maxiter    = ibuff(2)
 
          smooth_map = lbuff(1)
+         log_polar  = lbuff(2)
 
          ref_thr    = rbuff(1)
          deref_thr  = rbuff(2)
+         x_polar    = rbuff(3)
+         y_polar    = rbuff(4)
+         c_polar    = rbuff(5)
 
       endif
 
@@ -132,11 +161,16 @@ contains
            call die("[initproblem:read_problem_par] Mandelbrot is supposed to by run only with XY plane and without Z-direction present")
 
       if (order /= 2) then
-         call warn("[initproblem:read_problem_par] Only order == 2 is supported at the moment")
+         if (master) call warn("[initproblem:read_problem_par] Only order == 2 is supported at the moment")
          order = 2
       endif
 
       if (ref_thr <= deref_thr) call die("[initproblem:read_problem_par] ref_thr <= deref_thr")
+
+      if (log_polar .and. master) then
+         if (dom%edge(ydim, HI) - dom%edge(ydim, LO) < 0.999*dpi) call warn("[initproblem:read_problem_par] not covering full angle")
+         if (dom%edge(ydim, HI) - dom%edge(ydim, LO) > 1.001*dpi) call warn("[initproblem:read_problem_par] covering more than full angle")
+      endif
 
       call register_user_var
 
@@ -160,52 +194,65 @@ contains
       type(grid_container), pointer :: cg
       integer :: i, j, k, nit
       real, dimension(:,:,:), pointer :: mand, r__l, imag
-      real, parameter :: bailout2 = 10.
-      real :: zx, zy, zt, cx, cy, rnit
+      real, parameter :: bailout2 = 10., min_log_mand = 0.1
+      real :: zx, zy, zt, cx, cy, rnit, r, f
 
       ! Create the initial density arrays
       cgl => leaves%first
       do while (associated(cgl))
          cg => cgl%cg
+         if (.not. cg%is_old) then
 
-         cg%b(:, :, :, :) = 0.
-         cg%u(:, :, :, :) = 0.
+            call cg%set_constant_b_field([0., 0., 0.])
+            cg%u(:, :, :, :) = 0.
 
-         mand => cg%q(qna%ind(mand_n))%arr
-         r__l => cg%q(qna%ind(re_n  ))%arr
-         imag => cg%q(qna%ind(imag_n))%arr
-         if (.not. associated(mand) .or. .not. associated(r__l) .or. .not. associated(imag)) then
-            if (master) call warn("[initproblem:analytic_solution] Cannot store the set")
-            return
-         endif
+            mand => cg%q(qna%ind(mand_n))%arr
+            r__l => cg%q(qna%ind(re_n  ))%arr
+            imag => cg%q(qna%ind(imag_n))%arr
+            if (.not. associated(mand) .or. .not. associated(r__l) .or. .not. associated(imag)) then
+               if (master) call warn("[initproblem:analytic_solution] Cannot store the set")
+               return
+            endif
 
-         do k = cg%ks, cg%ke
-            do j = cg%js, cg%je
-               cy = cg%y(j)
-               do i = cg%is, cg%ie
-                  cx = cg%x(i)
+            do k = cg%ks, cg%ke
+               do j = cg%js, cg%je
+                  do i = cg%is, cg%ie
+                     if (log_polar) then
+                        r = 10**cg%x(i)
+                        f = cg%y(j)
+                        cx = x_polar + r*cos(f)
+                        cy = y_polar + r*sin(f)
+                     else
+                        cx = cg%x(i)
+                        cy = cg%y(j)
+                     endif
 
-                  zx = cx
-                  zy = cy
-                  nit = 0
-                  do while (zx*zx + zy*zy < bailout2 .and. nit < maxiter)
-                     zt = zx*zx - zy*zy + cx
-                     zy = 2*zx*zy + cy
-                     zx = zt
-                     nit = nit + 1
+                     zx = cx
+                     zy = cy
+                     nit = 1
+                     do while (zx*zx + zy*zy < bailout2 .and. nit < maxiter)
+                        zt = zx*zx - zy*zy + cx
+                        zy = 2*zx*zy + cy
+                        zx = zt
+                        nit = nit + 1
+                     enddo
+
+                     rnit = nit
+                     if (smooth_map .and. zx*zx + zy*zy > bailout2) rnit = rnit + 1 - log(log(sqrt(zx*zx + zy*zy)))/log(2.)
+
+                     if (nit >= maxiter) then
+                        mand(i, j, k) = min_log_mand ! increase contrast between interior and exterior
+                     else
+                        mand(i, j, k) = max(min_log_mand, log(max(rnit, min_log_mand)) + c_polar * cg%x(i))
+                     endif
+                     r__l(i, j, k) = zx
+                     imag(i, j, k) = zy
+
                   enddo
-
-                  rnit = nit
-                  if (smooth_map .and. zx*zx + zy*zy > bailout2) rnit = rnit + 1 - log(log(sqrt(zx*zx + zy*zy)))/log(2.)
-
-                  mand(i, j, k) = log(rnit)
-                  r__l(i, j, k) = zx
-                  imag(i, j, k) = zy
-
                enddo
             enddo
-         enddo
 
+         endif
          cgl => cgl%nxt
       enddo
 
@@ -237,17 +284,17 @@ contains
 
       implicit none
 
-      character(len=*), intent(in)                    :: var
-      real(kind=4), dimension(:,:,:), intent(inout)   :: tab
-      integer, intent(inout)                          :: ierrh
-      type(grid_container), pointer, intent(in)       :: cg
+      character(len=*),              intent(in)    :: var
+      real, dimension(:,:,:),        intent(inout) :: tab
+      integer,                       intent(inout) :: ierrh
+      type(grid_container), pointer, intent(in)    :: cg
 
       ierrh = 0
       select case (trim(var))
          case ("distance", "dist") ! Supply the alternative name to comply with the old 4-letter limit
-            tab(:,:,:) = real(log(sqrt(cg%q(qna%ind(re_n))%span(cg%ijkse)**2 + cg%q(qna%ind(imag_n))%span(cg%ijkse)**2)), kind=4)
+            tab(:,:,:) = log(sqrt(cg%q(qna%ind(re_n))%span(cg%ijkse)**2 + cg%q(qna%ind(imag_n))%span(cg%ijkse)**2))
          case ("angle", "ang")
-            tab(:,:,:) = real(atan2(cg%q(qna%ind(imag_n))%span(cg%ijkse), cg%q(qna%ind(re_n))%span(cg%ijkse)), kind=4)
+            tab(:,:,:) = atan2(cg%q(qna%ind(imag_n))%span(cg%ijkse), cg%q(qna%ind(re_n))%span(cg%ijkse))
          case default
             ierrh = -1
       end select
@@ -258,18 +305,16 @@ contains
 
    subroutine mark_the_set
 
-      use cg_list,          only: cg_list_element
-      use cg_leaves,        only: leaves
-      use fluidindex,       only: iarr_all_dn
-      use named_array_list, only: wna
-      use refinement,       only: ref_flag
+      use cg_list,    only: cg_list_element
+      use cg_leaves,  only: leaves
+      use domain,     only: dom
+      use fluidindex, only: iarr_all_dn
 
       implicit none
 
       type(cg_list_element), pointer :: cgl
-      real :: nitd
-
-      !call leaves%leaf_arr3d_boundaries(qna%ind(mand_n))
+      real :: nitd, diffmax
+      integer :: i, j, k
 
       cgl => leaves%first
       do while (associated(cgl))
@@ -281,9 +326,28 @@ contains
             ! * do not call problem_refine_derefine twice in update_refinement
 !!$            nitd = exp(maxval(cgl%cg%q(qna%ind(mand_n))%span(cgl%cg%ijkse), mask=cgl%cg%leafmap)) - &
 !!$                 & exp(minval(cgl%cg%q(qna%ind(mand_n))%span(cgl%cg%ijkse), mask=cgl%cg%leafmap))
-             nitd = exp(maxval(cgl%cg%w(wna%fi)%arr(iarr_all_dn(1), cgl%cg%is:cgl%cg%ie, cgl%cg%js:cgl%cg%je, cgl%cg%ks:cgl%cg%ke), mask=cgl%cg%leafmap)) - &
-                  & exp(minval(cgl%cg%w(wna%fi)%arr(iarr_all_dn(1), cgl%cg%is:cgl%cg%ie, cgl%cg%js:cgl%cg%je, cgl%cg%ks:cgl%cg%ke), mask=cgl%cg%leafmap))
-            cgl%cg%refine_flags = ref_flag( nitd >= ref_thr, nitd < deref_thr )
+
+            diffmax = -huge(1.)
+            ! Look one cell beyond boundary to prevent unnecessary derefinements
+            do i = cgl%cg%is-dom%D_x, cgl%cg%ie+dom%D_x
+               do j = cgl%cg%js-dom%D_y, cgl%cg%je+dom%D_y
+                  do k = cgl%cg%ks-dom%D_z, cgl%cg%ke+dom%D_z
+                     nitd = maxval(abs(exp(cgl%cg%u(iarr_all_dn(1), i, j, k)) - [ &
+                          &            exp(cgl%cg%u(iarr_all_dn(1), i+dom%D_x, j, k)), &
+                          &            exp(cgl%cg%u(iarr_all_dn(1), i-dom%D_x, j, k)), &
+                          &            exp(cgl%cg%u(iarr_all_dn(1), i, j+dom%D_y, k)), &
+                          &            exp(cgl%cg%u(iarr_all_dn(1), i, j-dom%D_y, k)), &
+                          &            exp(cgl%cg%u(iarr_all_dn(1), i, j, k+dom%D_z)), &
+                          &            exp(cgl%cg%u(iarr_all_dn(1), i, j, k-dom%D_z)) ] ) )
+                     if ( i >= cgl%cg%is .and. i <= cgl%cg%ie .and. &
+                          j >= cgl%cg%js .and. j <= cgl%cg%je .and. &
+                          k >= cgl%cg%ks .and. k <= cgl%cg%ke) cgl%cg%refinemap(i, j, k) = (nitd >= ref_thr)
+                     diffmax = max(diffmax, nitd)
+                  enddo
+               enddo
+            enddo
+            cgl%cg%refine_flags%derefine = (diffmax <  deref_thr)
+
          endif
          cgl => cgl%nxt
       enddo

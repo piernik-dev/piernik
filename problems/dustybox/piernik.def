@@ -5,5 +5,7 @@
 #define ISO
 #define BALSARA
 
-#define LOCAL_FR_SPEED
-#define RTVD
+
+#if !defined GLOBAL_FR_SPEED
+#  define LOCAL_FR_SPEED
+#endif

@@ -28,7 +28,8 @@
 
 module initproblem
 
-   use constants, only: dsetnamelen, ndims, LO, HI
+   use constants,  only: dsetnamelen, ndims, LO, HI
+   use fluidtypes, only: component_fluid
 
    implicit none
 
@@ -40,19 +41,30 @@ module initproblem
    real, dimension(ndims) :: pulse_off   !< offset of the pulse
    real                   :: pulse_amp   !< amplitude of the density pulse compared to the ambient level
    real, dimension(ndims) :: pulse_vel   !< uniform velocity components
+   real                   :: pulse_pres  !< pulse pressure
    integer(kind=4)        :: norm_step   !< how often to calculate the L2-norm
    integer(kind=4)        :: nflip       !< how often to call refine/derefine routine
    real                   :: flipratio   !< percentage of blocks on each level to be refined on flip
    real                   :: ref_thr     !< refinement threshold
    real                   :: deref_thr   !< derefinement threshold
    logical                :: usedust     !< If .false. then do not set velocity for dust
+   real, dimension(ndims) :: B_const     !<  constant-B component strength
+   real                   :: divB0_amp   !< Amplitude of the non-divergent component of the magnetic field
+   real                   :: divBc_amp   !< Amplitude of constant-divergence component of the magnetic field (has artifacts on periodic domains due to nondifferentiability)
+   real                   :: divBs_amp   !< Amplitude of sine-wave divergence component of the magnetic field (should behave well on periodic domains)
+   real                   :: divBbX_amp  !< Amplitude of x-component blob of divergence (should behave well on periodic domains)
+   real                   :: divBbY_amp  !< Amplitude of y-component blob of divergence (should behave well on periodic domains)
+   real                   :: divBbZ_amp  !< Amplitude of z-component blob of divergence (should behave well on periodic domains)
+   integer, dimension(ndims) :: divB_k      !< wave numbers for creating initial field
 
-   namelist /PROBLEM_CONTROL/  pulse_size, pulse_off, pulse_vel, pulse_amp, norm_step, nflip, flipratio, ref_thr, deref_thr, usedust
+   namelist /PROBLEM_CONTROL/  pulse_size, pulse_off, pulse_vel, pulse_amp, pulse_pres, norm_step, nflip, flipratio, ref_thr, deref_thr, usedust, &
+        &                      divB0_amp, divBc_amp, divBs_amp, divBbX_amp, divBbY_amp, divBbZ_amp, divB_k, B_const
 
    ! other private data
    real, dimension(ndims, LO:HI) :: pulse_edge
-   real :: pulse_low_density, pulse_pressure
+   real :: pulse_low_density
    character(len=dsetnamelen), parameter :: inid_n = "inid"
+   class(component_fluid), pointer :: fl  !< will point either to neutral or ionized fluid
 
 contains
 
@@ -75,29 +87,45 @@ contains
 
    subroutine read_problem_par
 
-      use constants,  only: I_ONE, xdim, zdim
-      use dataio_pub, only: nh      ! QA_WARN required for diff_nml
-      use dataio_pub, only: warn, die
-      use domain,     only: dom
-      use fluidindex, only: flind
-      use global,     only: smalld, smallei
-      use mpisetup,   only: rbuff, ibuff, lbuff, master, slave, proc, have_mpi, LAST, piernik_MPI_Bcast
-      use refinement, only: set_n_updAMR, n_updAMR
-      use user_hooks, only: problem_refine_derefine
+      use constants,        only: I_ONE, xdim, zdim
+      use dataio_pub,       only: nh      ! QA_WARN required for diff_nml
+      use dataio_pub,       only: warn, die
+      use domain,           only: dom
+      use fluidindex,       only: flind, iarr_all_dn
+      use func,             only: operator(.notequals.)
+      use global,           only: smalld, smallei
+      use mpisetup,         only: rbuff, ibuff, lbuff, master, slave, proc, have_mpi, LAST, piernik_MPI_Bcast
+      use named_array_list, only: wna
+      use refinement,       only: set_n_updAMR, n_updAMR, user_ref2list
+      use user_hooks,       only: problem_refine_derefine
+#ifdef MAGNETIC
+      use constants,        only: GEO_XYZ
+#endif /* MAGNETIC */
 
       implicit none
+
+      integer(kind=4) :: id
 
       ! namelist default parameter values
       pulse_size(:) = 1.0                  !< size of the pulse
       pulse_off(:)  = 0.0                  !< center of the pulse
       pulse_vel(:)  = 0.0                  !< pulse velocity
       pulse_amp     = 2.0                  !< pulse relative amplitude
+      pulse_pres    = smallei * 67.  !< pulse pressure, mimic the old hardcoded default
       norm_step     = 5
       nflip         = 0
       ref_thr       = 0.1
       deref_thr     = 0.01
       flipratio     = 1.
       usedust       = .false.
+      divB0_amp     = 0.                   !< should be safe to set non-0
+      divBc_amp     = 0.                   !< unphysical, only for testing
+      divBs_amp     = 0.                   !< unphysical, only for testing
+      divBbX_amp    = 0.                   !< unphysical, only for testing
+      divBbY_amp    = 0.                   !< unphysical, only for testing
+      divBbZ_amp    = 0.                   !< unphysical, only for testing
+      divB_k(:)     = [ 1, 1, 1 ]
+      B_const       = 0.
 
       if (master) then
 
@@ -121,12 +149,21 @@ contains
          rbuff(2)   = ref_thr
          rbuff(3)   = deref_thr
          rbuff(4)   = flipratio
+         rbuff(5)   = divB0_amp
+         rbuff(6)   = divBc_amp
+         rbuff(7)   = divBs_amp
+         rbuff(8)   = divBbX_amp
+         rbuff(9)   = divBbY_amp
+         rbuff(10)  = divBbZ_amp
          rbuff(20+xdim:20+zdim) = pulse_size(:)
          rbuff(23+xdim:23+zdim) = pulse_vel(:)
          rbuff(26+xdim:26+zdim) = pulse_off(:)
+         rbuff(29)              = pulse_pres
+         rbuff(30+xdim:30+zdim) = B_const(:)
 
          ibuff(1)   = norm_step
          ibuff(2)   = nflip
+         ibuff(10+xdim:10+zdim) = divB_k(:)
 
          lbuff(1)   = usedust
 
@@ -142,12 +179,21 @@ contains
          ref_thr    = rbuff(2)
          deref_thr  = rbuff(3)
          flipratio  = rbuff(4)
+         divB0_amp  = rbuff(5)
+         divBc_amp  = rbuff(6)
+         divBs_amp  = rbuff(7)
+         divBbX_amp = rbuff(8)
+         divBbY_amp = rbuff(9)
+         divBbZ_amp = rbuff(10)
          pulse_size = rbuff(20+xdim:20+zdim)
          pulse_vel  = rbuff(23+xdim:23+zdim)
          pulse_off  = rbuff(26+xdim:26+zdim)
+         pulse_pres = rbuff(29)
+         B_const    = rbuff(30+xdim:30+zdim)
 
          norm_step  = int(ibuff(1), kind=4)
          nflip      = ibuff(2)
+         divB_k(:)  = ibuff(10+xdim:10+zdim)
 
          usedust    = lbuff(1)
 
@@ -173,9 +219,16 @@ contains
          pulse_edge(:, HI) =  huge(1.)
       endwhere
 
+      if (associated(flind%neu)) then
+         fl => flind%neu
+      else if (associated(flind%ion)) then
+         fl => flind%ion
+      else
+         call die("[initproblem] current implementation requires either ionized or neutral fluid to be defined")
+      endif
+
       !BEWARE: hardcoded magic numbers
       pulse_low_density = smalld * 1e5
-      pulse_pressure = smallei * flind%neu%gam_1 * 1e2
 
       if (norm_step <= 0) norm_step = huge(I_ONE)
 
@@ -187,7 +240,26 @@ contains
          if (n_updAMR /= nflip .and. master) call warn("[initproblem:read_problem_par] Forcing n_updAMR == nflip")
          call set_n_updAMR(nflip)
       else
-         problem_refine_derefine => mark_surface
+         ! Automatic refinement criteria
+         do id = lbound(iarr_all_dn, dim=1, kind=4), ubound(iarr_all_dn, dim=1, kind=4)
+            call user_ref2list(wna%fi, id, ref_thr*pulse_amp, deref_thr*pulse_amp, 0., "grad")
+         enddo
+      endif
+
+      if (any([divB0_amp, divBc_amp, divBs_amp, divBbX_amp, divBbY_amp, divBbZ_amp] .notequals. 0.)) then
+#ifdef MAGNETIC
+         if (dom%geometry_type /= GEO_XYZ) then
+            call warn("[initproblem:read_problem_par] Only cartesian formulas for magnetic field is implemented. Forcing all amplitudes to 0.")
+            divB0_amp     = 0.
+            divBc_amp     = 0.
+            divBs_amp     = 0.
+            divBbX_amp    = 0.
+            divBbY_amp    = 0.
+            divBbZ_amp    = 0.
+         endif
+#else
+         call warn("[initproblem:read_problem_par] Ignoring magnetic field amplitudes")
+#endif /* !MAGNETIC */
       endif
 
    end subroutine read_problem_par
@@ -202,9 +274,19 @@ contains
       use dataio_pub,       only: die
       use domain,           only: dom
       use fluidindex,       only: flind
+      use func,             only: operator(.notequals.), emag
       use global,           only: smallei, t
       use grid_cont,        only: grid_container
       use named_array_list, only: qna
+      use non_inertial,     only: get_omega
+#ifdef MAGNETIC
+#ifdef IONIZED
+      use constants,        only: half
+#endif /* IONIZED */
+      use constants,        only: ndims, I_ONE, I_TWO, I_THREE, dpi
+      use div_B,            only: print_divB_norm
+      use global,           only: force_cc_mag
+#endif /* MAGNETIC */
 
       implicit none
 
@@ -212,6 +294,31 @@ contains
       type(grid_container), pointer :: cg
 
       integer :: i, j, k
+      real    :: om
+#ifdef MAGNETIC
+      real, dimension(ndims) :: kk !< wavenumbers to fit one sine wave inside domain
+      real :: sx, sy, sz, cx, cy, cz !< precomputed values of sine and cosine at cell centers
+      real :: sfx, sfy, sfz, cfx, cfy, cfz !< precomputed values of sine and cosine at cell left faces
+      integer :: right_face
+      real :: r02, rr02
+
+      kk = 0.
+      where (dom%D_ > 0) kk = divB_k * dpi / dom%L_
+      right_face = 1
+      if (force_cc_mag) right_face = 0
+      r02 = huge(1.)
+      if (dom%D_x == 1) then
+         r02 = dom%L_(xdim)**2
+      else if (dom%D_y == 1) then
+         r02 = dom%L_(ydim)**2
+      else
+         r02 = dom%L_(zdim)**2
+      endif
+      r02 = r02 / 32. ! this should match the blob size of Tricco, Price & Bate when domain size is 2
+
+#endif /* MAGNETIC */
+
+      om = get_omega()
 
       call analytic_solution(t)
 
@@ -219,44 +326,179 @@ contains
       do while (associated(cgl))
          cg => cgl%cg
 
-         cg%b(:, :, :, :) = 0.
+#ifdef MAGNETIC
+         if (dom%geometry_type /= GEO_XYZ) then
+            call cg%set_constant_b_field([0., 0., 0.])
+         else
+            do k = cg%ks, cg%ke + right_face * dom%D_z
+               sz = sin(kk(zdim) * cg%z(k))
+               cz = cos(kk(zdim) * cg%z(k))
+               sfz = sin(kk(zdim) * (cg%z(k) - cg%dz/2.))
+               cfz = cos(kk(zdim) * (cg%z(k) - cg%dz/2.))
+               do j = cg%js, cg%je + right_face * dom%D_y
+                  sy = sin(kk(ydim) * cg%y(j))
+                  cy = cos(kk(ydim) * cg%y(j))
+                  sfy = sin(kk(ydim) * (cg%y(j) - cg%dy/2.))
+                  cfy = cos(kk(ydim) * (cg%y(j) - cg%dy/2.))
+                  do i = cg%is, cg%ie + right_face * dom%D_x
+                     sx = sin(kk(xdim) * cg%x(i))
+                     cx = cos(kk(xdim) * cg%x(i))
+                     sfx = sin(kk(xdim) * (cg%x(i) - cg%dx/2.))
+                     cfx = cos(kk(xdim) * (cg%x(i) - cg%dx/2.))
 
-         cg%u(flind%neu%idn, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = cg%q(qna%ind(inid_n))%arr(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)
+                     cg%b(:, i, j, k) = B_const(:) + divBc_amp * [cg%x(i), cg%y(j), cg%z(k)] ! slight offset between cell- and face-centered is unimportant here
+
+                     ! div B pulse, as described in Tricco, Price & Bate, https://arxiv.org/abs/1607.02394
+                     rr02 = sum(([cg%x(i), cg%y(j), cg%z(k)] - dom%C_)**2, mask=dom%has_dir)/r02
+                     if (rr02 > 1.) rr02 = 1.
+
+                     if (dom%has_dir(xdim)) cg%b(xdim, i, j, k) = cg%b(xdim, i, j, k) + divBbX_amp * (rr02**4 - 2 *rr02**2 + 1)
+                     if (dom%has_dir(ydim)) cg%b(ydim, i, j, k) = cg%b(ydim, i, j, k) + divBbY_amp * (rr02**4 - 2 *rr02**2 + 1)
+                     if (dom%has_dir(zdim)) cg%b(zdim, i, j, k) = cg%b(zdim, i, j, k) + divBbZ_amp * (rr02**4 - 2 *rr02**2 + 1)
+                     select case (dom%eff_dim)
+                        case (I_ONE) ! can't do anything fancy, just set up something non-zero
+                           cg%b(:, i, j, k) = cg%b(:, i, j, k) + divB0_amp
+                           if (force_cc_mag) then
+                              if (dom%D_x == 1) then
+                                 cg%b(:, i, j, k) = cg%b(:, i, j, k) + divBs_amp * [ kk(xdim)*cx, 1., 1. ]
+                              else if (dom%D_y == 1) then
+                                 cg%b(:, i, j, k) = cg%b(:, i, j, k) + divBs_amp * [ 1., kk(ydim)*cy, 1. ]
+                              else
+                                 cg%b(:, i, j, k) = cg%b(:, i, j, k) + divBs_amp * [ 1., 1., kk(zdim)*cz ]
+                              endif
+                           else
+                              if (dom%D_x == 1) then
+                                 cg%b(:, i, j, k) = cg%b(:, i, j, k) + divBs_amp * [ kk(xdim)*cfx, 1., 1. ]
+                              else if (dom%D_y == 1) then
+                                 cg%b(:, i, j, k) = cg%b(:, i, j, k) + divBs_amp * [ 1., kk(ydim)*cfy, 1. ]
+                              else
+                                 cg%b(:, i, j, k) = cg%b(:, i, j, k) + divBs_amp * [ 1., 1., kk(zdim)*cfz ]
+                              endif
+                           endif
+                        case (I_TWO)
+                           ! [sin(x)*sin(y), cos(x)*cos(y), 0] should produce divB == 0. for XY case (curl([0, 0, -sin(x)*cos(y)]))
+                           ! The div(B) is really close to numerical noise around 0 only in the case of exactly the same resolution per sine wave in all directions.
+                           ! If the resolutions of sine waves don't match, then numerical estimates of mixed derivatives of the vector potential don't cancel out and only high-order estimates of div(b) are close to 0.
+                           if (force_cc_mag) then
+                              if (dom%D_z == 0) then
+                                 cg%b(:, i, j, k) = cg%b(:, i, j, k) + &
+                                      divB0_amp * [ kk(ydim)*sx*sy, kk(xdim)*cx*cy, 1. ] + &
+                                      divBs_amp * [ kk(xdim)*cx*sy, kk(ydim)*sx*cy, 1. ]
+                              else if (dom%D_y == 0) then
+                                 cg%b(:, i, j, k) = cg%b(:, i, j, k) + &
+                                      divB0_amp * [ kk(zdim)*sx*sz, 1., kk(xdim)*cx*cz ] + &
+                                      divBs_amp * [ kk(xdim)*cx*sz, 1., kk(zdim)*sx*cz ]
+                              else
+                                 cg%b(:, i, j, k) = cg%b(:, i, j, k) + &
+                                      divB0_amp * [ 1., kk(zdim)*sy*sz, kk(ydim)*cy*cz ] + &
+                                      divBs_amp * [ 1., kk(ydim)*cy*sz, kk(zdim)*sy*cz ]
+                              endif
+                           else
+                              if (dom%D_z == 0) then
+                                 cg%b(:, i, j, k) = cg%b(:, i, j, k) + &
+                                      divB0_amp * [ kk(ydim)*sfx*sy, kk(xdim)*cx*cfy, 1. ] + &
+                                      divBs_amp * [ kk(xdim)*cfx*sy, kk(ydim)*sx*cfy, 1. ]
+                              else if (dom%D_y == 0) then
+                                 cg%b(:, i, j, k) = cg%b(:, i, j, k) + &
+                                      divB0_amp * [ kk(zdim)*sfx*sz, 1., kk(xdim)*cx*cfz ] + &
+                                      divBs_amp * [ kk(xdim)*cfx*sz, 1., kk(zdim)*sx*cfz ]
+                              else
+                                 cg%b(:, i, j, k) = cg%b(:, i, j, k) + &
+                                      divB0_amp * [ 1., kk(zdim)*sfy*sz, kk(ydim)*cy*cfz ] + &
+                                      divBs_amp * [ 1., kk(ydim)*cfy*sz, kk(zdim)*sy*cfz ]
+                              endif
+                           endif
+                        case (I_THREE)
+                           ! curl([sin(x)*sin(y)*sin(z), sin(x)*sin(y)*sin(z), sin(x)*sin(y)*sin(z)]) shoudl produce div(B) == 0, but see the notes for 2D case.
+                           ! setting up a div(B)-free field in flattened domain requires careful choice of kk(:)
+                           if (force_cc_mag) then
+                              cg%b(:, i, j, k) = cg%b(:, i, j, k) + divB0_amp * [ &
+                                   kk(ydim)*cx*sy*cz - kk(zdim)*cx*cy*sz, &
+                                   kk(zdim)*cx*cy*sz - kk(xdim)*sx*cy*cz, &
+                                   kk(xdim)*sx*cy*cz - kk(ydim)*cx*sy*cz ] + &
+                                   divBs_amp * [ kk(xdim)*cx*sy*sz, kk(ydim)*sx*cy*sz, kk(zdim)*sx*sy*cz ]
+                           else
+                              cg%b(:, i, j, k) = cg%b(:, i, j, k) + divB0_amp * [ &
+                                   kk(ydim)*cfx*sy*cz - kk(zdim)*cfx*cy*sz, &
+                                   kk(zdim)*cx*cfy*sz - kk(xdim)*sx*cfy*cz, &
+                                   kk(xdim)*sx*cy*cfz - kk(ydim)*cx*sy*cfz ] + &
+                                   divBs_amp * [ kk(xdim)*cfx*sy*sz, kk(ydim)*sx*cfy*sz, kk(zdim)*sx*sy*cfz ]
+                           endif
+                        case default
+                           call die("[initproblem:problem_initial_conditions] unsupported dimensionality")
+                     end select
+                  enddo
+               enddo
+            enddo
+         endif
+#else /* !MAGNETIC */
+         call cg%set_constant_b_field([0., 0., 0.])
+#endif /* !MAGNETIC */
+
+         cg%u(fl%idn, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = cg%q(qna%ind(inid_n))%arr(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)
 
          select case (dom%geometry_type)
             case (GEO_XYZ)
-               ! Make uniform, completely boring flow
-               cg%u(flind%neu%imx, :, :, :) = pulse_vel(xdim) * cg%u(flind%neu%idn, :, :, :)
-               cg%u(flind%neu%imy, :, :, :) = pulse_vel(ydim) * cg%u(flind%neu%idn, :, :, :)
-               cg%u(flind%neu%imz, :, :, :) = pulse_vel(zdim) * cg%u(flind%neu%idn, :, :, :)
+               if (om .notequals. 0.) then
+                  ! Include rotation for pulse_vel = 0., 0., 0. case
+                  do i = cg%is, cg%ie
+                     do j = cg%js, cg%je
+                        cg%u(fl%imx, i, j, :) = - om*cg%y(j) * cg%u(fl%idn, i, j, :)
+                        cg%u(fl%imy, i, j, :) = + om*cg%x(i) * cg%u(fl%idn, i, j, :)
+                     enddo
+                  enddo
+                  cg%u(fl%imz, :, :, :) = pulse_vel(zdim) * cg%u(fl%idn, :, :, :)
+               else
+                  ! Make uniform, completely boring flow
+                  cg%u(fl%imx, :, :, :) = pulse_vel(xdim) * cg%u(fl%idn, :, :, :)
+                  cg%u(fl%imy, :, :, :) = pulse_vel(ydim) * cg%u(fl%idn, :, :, :)
+                  cg%u(fl%imz, :, :, :) = pulse_vel(zdim) * cg%u(fl%idn, :, :, :)
+               endif
             case (GEO_RPZ)
                do k = cg%ks, cg%ke
                   do j = cg%js, cg%je
                      do i = cg%is, cg%ie
-                        cg%u(flind%neu%imx, i, j, k) = ( pulse_vel(xdim)*cos(cg%y(j)) + pulse_vel(ydim)*sin(cg%y(j))) * cg%u(flind%neu%idn, i, j, k)
-                        cg%u(flind%neu%imy, i, j, k) = (-pulse_vel(xdim)*sin(cg%y(j)) + pulse_vel(ydim)*cos(cg%y(j))) * cg%u(flind%neu%idn, i, j, k)
+                        cg%u(fl%imx, i, j, k) = ( pulse_vel(xdim)*cos(cg%y(j)) + pulse_vel(ydim)*sin(cg%y(j))) * cg%u(fl%idn, i, j, k)
+                        cg%u(fl%imy, i, j, k) = (-pulse_vel(xdim)*sin(cg%y(j)) + pulse_vel(ydim)*cos(cg%y(j))) * cg%u(fl%idn, i, j, k)
                      enddo
                   enddo
                enddo
-               cg%u(flind%neu%imz, :, :, :) = pulse_vel(zdim) * cg%u(flind%neu%idn, :, :, :)
+               cg%u(fl%imz, :, :, :) = pulse_vel(zdim) * cg%u(fl%idn, :, :, :)
             case default
                call die("[initproblem:problem_initial_conditions] only cartesian and cylindrical geometries are supported")
          end select
 
          ! Set up the internal energy
-         cg%u(flind%neu%ien,:,:,:) = max(smallei, pulse_pressure / flind%neu%gam_1 + 0.5 * sum(cg%u(flind%neu%imx:flind%neu%imz,:,:,:)**2,1) / cg%u(flind%neu%idn,:,:,:))
+         cg%u(fl%ien,:,:,:) = max(smallei, pulse_pres / fl%gam_1 + 0.5 * sum(cg%u(fl%imx:fl%imz,:,:,:)**2,1) / cg%u(fl%idn,:,:,:))
 
-         cg%u(flind%dst%idn, :, :, :) = cg%u(flind%neu%idn, :, :, :)
-         if (usedust) then
-            cg%u(flind%dst%imx, :, :, :) = cg%u(flind%neu%imx, :, :, :)
-            cg%u(flind%dst%imy, :, :, :) = cg%u(flind%neu%imy, :, :, :)
-            cg%u(flind%dst%imz, :, :, :) = cg%u(flind%neu%imz, :, :, :)
+#if defined MAGNETIC && defined IONIZED
+         if (force_cc_mag) then
+            cg%u(fl%ien,:,:,:) = cg%u(fl%ien,:,:,:) + emag(cg%b(xdim,:,:,:), cg%b(ydim,:,:,:), cg%b(zdim,:,:,:))
          else
-            cg%u(flind%dst%imx:flind%dst%imz, :, :, :) = 0.
+            cg%u(fl%ien, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = cg%u(fl%ien, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) + &
+                 emag(half*(cg%b(xdim, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) + cg%b(xdim, cg%is+dom%D_x:cg%ie+dom%D_x, cg%js        :cg%je,         cg%ks        :cg%ke        )), &
+                 &    half*(cg%b(ydim, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) + cg%b(ydim, cg%is        :cg%ie,         cg%js+dom%D_y:cg%je+dom%D_y, cg%ks        :cg%ke        )), &
+                 &    half*(cg%b(zdim, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) + cg%b(zdim, cg%is        :cg%ie,         cg%js        :cg%je,         cg%ks+dom%D_z:cg%ke+dom%D_z)))
+         endif
+#endif  /* MAGNETIC && IONIZED */
+
+         if (associated(flind%dst)) then
+            cg%u(flind%dst%idn, :, :, :) = cg%u(fl%idn, :, :, :)
+            if (usedust) then
+               cg%u(flind%dst%imx, :, :, :) = cg%u(fl%imx, :, :, :)
+               cg%u(flind%dst%imy, :, :, :) = cg%u(fl%imy, :, :, :)
+               cg%u(flind%dst%imz, :, :, :) = cg%u(fl%imz, :, :, :)
+            else
+               cg%u(flind%dst%imx:flind%dst%imz, :, :, :) = 0.
+            endif
          endif
 
          cgl => cgl%nxt
       enddo
+
+#ifdef MAGNETIC
+      call print_divB_norm
+#endif /* MAGNETIC */
 
    end subroutine problem_initial_conditions
 
@@ -270,16 +512,16 @@ contains
 
       implicit none
 
-      character(len=*), intent(in)                    :: var
-      real(kind=4), dimension(:,:,:), intent(inout)   :: tab
-      integer, intent(inout)                          :: ierrh
-      type(grid_container), pointer, intent(in)       :: cg
+      character(len=*),              intent(in)    :: var
+      real, dimension(:,:,:),        intent(inout) :: tab
+      integer,                       intent(inout) :: ierrh
+      type(grid_container), pointer, intent(in)    :: cg
 
       call analytic_solution(t) ! cannot handle this automagically because here we modify it
 
       ierrh = 0
       if (qna%exists(var)) then
-         tab(:,:,:) = real(cg%q(qna%ind(var))%span(cg%ijkse), 4)
+         tab(:,:,:) = real(cg%q(qna%ind(var))%span(cg%ijkse), kind(tab))
       else
          ierrh = -1
       endif
@@ -318,10 +560,14 @@ contains
       use constants,        only: PIERNIK_FINISHED, pSUM, pMIN, pMAX, idlen
       use dataio_pub,       only: code_progress, halfstep, msg, printinfo, warn
       use fluidindex,       only: flind
+      use func,             only: operator(.notequals.)
       use global,           only: t, nstep
       use grid_cont,        only: grid_container
       use mpisetup,         only: master, piernik_MPI_Allreduce
       use named_array_list, only: qna
+#ifdef MAGNETIC
+      use div_B,            only: print_divB_norm
+#endif /* MAGNETIC */
 
       implicit none
 
@@ -329,10 +575,10 @@ contains
          enumerator :: N_D, N_2
       end enum
       enum, bind(C)
-         enumerator :: NEU, DST
+         enumerator :: GAS, DST
       end enum
-      real, dimension(N_D:N_2, NEU:DST) :: norm
-      real, dimension(NEU:DST)          :: neg_err, pos_err
+      real, dimension(N_D:N_2, GAS:DST) :: norm
+      real, dimension(GAS:DST)          :: neg_err, pos_err
       type(cg_list_element),  pointer   :: cgl
       type(grid_container),   pointer   :: cg
       real, dimension(:,:,:), pointer   :: inid
@@ -357,22 +603,24 @@ contains
             return
          endif
 
-         cg%wa(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = inid(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) - cg%u(flind%neu%idn, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)
-         norm(N_D, NEU) = norm(N_D, NEU) + sum(cg%wa(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)**2, mask=cg%leafmap)
-         norm(N_2, NEU) = norm(N_2, NEU) + sum(inid( cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)**2, mask=cg%leafmap)
-         neg_err(NEU) = min(neg_err(NEU), minval(cg%wa(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), mask=cg%leafmap))
-         pos_err(NEU) = max(pos_err(NEU), maxval(cg%wa(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), mask=cg%leafmap))
+         cg%wa(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = inid(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) - cg%u(fl%idn, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)
+         norm(N_D, GAS) = norm(N_D, GAS) + sum(cg%wa(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)**2, mask=cg%leafmap)
+         norm(N_2, GAS) = norm(N_2, GAS) + sum(inid( cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)**2, mask=cg%leafmap)
+         neg_err(GAS) = min(neg_err(GAS), minval(cg%wa(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), mask=cg%leafmap))
+         pos_err(GAS) = max(pos_err(GAS), maxval(cg%wa(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), mask=cg%leafmap))
 
-         cg%wa(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = inid(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) - cg%u(flind%dst%idn, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)
-         norm(N_D, DST) = norm(N_D, DST) + sum(cg%wa(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)**2, mask=cg%leafmap)
-         norm(N_2, DST) = norm(N_2, DST) + sum(inid( cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)**2, mask=cg%leafmap)
-         neg_err(DST) = min(neg_err(DST), minval(cg%wa(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), mask=cg%leafmap))
-         pos_err(DST) = max(pos_err(DST), maxval(cg%wa(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), mask=cg%leafmap))
+         if (associated(flind%dst)) then
+            cg%wa(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = inid(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) - cg%u(flind%dst%idn, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)
+            norm(N_D, DST) = norm(N_D, DST) + sum(cg%wa(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)**2, mask=cg%leafmap)
+            norm(N_2, DST) = norm(N_2, DST) + sum(inid( cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)**2, mask=cg%leafmap)
+            neg_err(DST) = min(neg_err(DST), minval(cg%wa(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), mask=cg%leafmap))
+            pos_err(DST) = max(pos_err(DST), maxval(cg%wa(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), mask=cg%leafmap))
+         endif
 
          cgl => cgl%nxt
       enddo
 
-      do i = NEU, DST
+      do i = GAS, DST
          do j = N_D, N_2
             call piernik_MPI_Allreduce(norm(j, i), pSUM)
          enddo
@@ -381,19 +629,25 @@ contains
       enddo
 
       if (master) then
-         do i = NEU, DST
+         do i = GAS, DST
             if (i == DST .and. .not. usedust) exit
             select case (i)
-               case (NEU)
-                  descr = "NEU"
+               case (GAS)
+                  descr = "GAS"
                case (DST)
                   descr = "DST"
             end select
-            write(msg,'(3a,f12.6,a,2f15.6)')"[initproblem:calculate_error_norm] L2 error norm (",descr,") = ", sqrt(norm(N_D, i)/norm(N_2, i)), &
-                 ", min and max error = ", neg_err(i), pos_err(i)
-            call printinfo(msg)
+            if (norm(N_2, i) .notequals. 0.) then
+               write(msg,'(3a,f12.6,a,2f15.6)')"[initproblem:calculate_error_norm] L2 error norm (",descr,") = ", sqrt(norm(N_D, i)/norm(N_2, i)), &
+                    ", min and max error = ", neg_err(i), pos_err(i)
+               call printinfo(msg)
+            endif
          enddo
       endif
+
+#ifdef MAGNETIC
+      call print_divB_norm
+#endif /* MAGNETIC */
 
    end subroutine calculate_error_norm
 
@@ -407,10 +661,12 @@ contains
 
       use cg_list,          only: cg_list_element
       use cg_leaves,        only: leaves
-      use constants,        only: xdim, zdim, ndims, GEO_XYZ, GEO_RPZ
+      use constants,        only: xdim, ydim, zdim, ndims, GEO_XYZ, GEO_RPZ
       use dataio_pub,       only: warn, die
       use domain,           only: dom
+      use func,             only: operator(.notequals.)
       use grid_cont,        only: grid_container
+      use non_inertial,     only: get_omega
       use mpisetup,         only: master
       use named_array_list, only: qna
 
@@ -422,10 +678,16 @@ contains
       integer                         :: i, j, k, d
       type(cg_list_element),  pointer :: cgl
       type(grid_container),   pointer :: cg
-      real, dimension(:,:,:), pointer :: inid
+      real, dimension(:,:,:), pointer :: inid !< analytic solution
       real, dimension(ndims)          :: pos
+      real, dimension(xdim:ydim)      :: paux
+      real                            :: om, cot, sot
 
       pos = 0. ! suppres compiler warning
+      om = get_omega()
+      cot = cos(om * t)
+      sot = sin(om * t)
+
       cgl => leaves%first
       do while (associated(cgl))
          cg => cgl%cg
@@ -442,7 +704,12 @@ contains
 
                   select case (dom%geometry_type)
                      case (GEO_XYZ)
-                        pos = [cg%x(i), cg%y(j), cg%z(k)] - t * pulse_vel(:)
+                        pos = [cg%x(i), cg%y(j), cg%z(k)]
+                        if (om .notequals. 0.) then
+                           paux = [ pos(xdim) * cot - pos(ydim) * sot, pos(xdim) * sot + pos(ydim) * cot ]
+                           pos(xdim:ydim) = paux
+                        endif
+                        pos = pos - t * pulse_vel(:)
                      case (GEO_RPZ)
                         pos = [cg%x(i)*cos(cg%y(j)), cg%x(i)*sin(cg%y(j)), cg%z(k)] - t * pulse_vel(:)
                      case default
@@ -517,66 +784,5 @@ contains
       enddo
 
    end subroutine flip_flop
-
-!> \brief Request refinement along the surface of the pulse. Derefine inside and outside the pulse if possible.
-
-   subroutine mark_surface
-
-      use cg_leaves,        only: leaves
-      use cg_list,          only: cg_list_element
-      use constants,        only: LO, HI, xdim, ydim, zdim
-      use fluidindex,       only: iarr_all_dn
-      use func,             only: operator(.equals.)
-      use named_array_list, only: wna, qna
-
-      implicit none
-
-      type(cg_list_element), pointer :: cgl
-      real :: dmin, dmax
-      integer :: id
-      real, parameter :: flag = 1.
-
-      ! make sure that density is communicated
-      !> \todo set up a flag that tells whether this is required or the data has been recently exchanged
-      call leaves%internal_boundaries_4d(wna%fi)
-
-      ! fill cg%wa with its guardcells with values corresponding to cgl%cg%leafmap
-      !> \todo Consider extending cgl%cg%leafmap into guardcells if it will be helpful in other places too
-      cgl => leaves%first
-      do while (associated(cgl))
-         cgl%cg%wa = 0.
-         where (cgl%cg%leafmap(:,:,:)) cgl%cg%wa(cgl%cg%is:cgl%cg%ie, cgl%cg%js:cgl%cg%je, cgl%cg%ks:cgl%cg%ke) = flag
-         cgl => cgl%nxt
-      enddo
-      call leaves%internal_boundaries_3d(qna%wai)
-
-      ! Detect the edge of the density pulse using density values relative to initial values
-      !> \deprecated this method may refine the whole domain when the pulse gets diffused enough
-      !> \todo replace with some slope filter
-      cgl => leaves%first
-      do while (associated(cgl))
-         dmax = -huge(1.)
-         dmin =  huge(1.)
-         do id = lbound(iarr_all_dn, dim=1), ubound(iarr_all_dn, dim=1)
-            ! Look one cell beyond local boundary
-            dmax = max(dmax, maxval(cgl%cg%u(id, cgl%cg%lh1(xdim, LO):cgl%cg%lh1(xdim, HI), &
-                 &                               cgl%cg%lh1(ydim, LO):cgl%cg%lh1(ydim, HI), &
-                 &                               cgl%cg%lh1(zdim, LO):cgl%cg%lh1(zdim, HI)), mask = (cgl%cg%wa( &
-                 &                               cgl%cg%lh1(xdim, LO):cgl%cg%lh1(xdim, HI), &
-                 &                               cgl%cg%lh1(ydim, LO):cgl%cg%lh1(ydim, HI), &
-                 &                               cgl%cg%lh1(zdim, LO):cgl%cg%lh1(zdim, HI)) .equals. flag)))
-            dmin = min(dmin, minval(cgl%cg%u(id, cgl%cg%lh1(xdim, LO):cgl%cg%lh1(xdim, HI), &
-                 &                               cgl%cg%lh1(ydim, LO):cgl%cg%lh1(ydim, HI), &
-                 &                               cgl%cg%lh1(zdim, LO):cgl%cg%lh1(zdim, HI)), mask = (cgl%cg%wa( &
-                 &                               cgl%cg%lh1(xdim, LO):cgl%cg%lh1(xdim, HI), &
-                 &                               cgl%cg%lh1(ydim, LO):cgl%cg%lh1(ydim, HI), &
-                 &                               cgl%cg%lh1(zdim, LO):cgl%cg%lh1(zdim, HI)) .equals. flag)))
-         enddo
-         cgl%cg%refine_flags%derefine = (dmax < (1+deref_thr)*pulse_low_density .or.  dmin > pulse_low_density * (pulse_amp - deref_thr))
-         cgl%cg%refine_flags%refine   = (dmax > (1+  ref_thr)*pulse_low_density .and. dmin < pulse_low_density * (pulse_amp -   ref_thr))
-         cgl => cgl%nxt
-      enddo
-
-   end subroutine mark_surface
 
 end module initproblem

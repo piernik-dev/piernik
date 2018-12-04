@@ -38,7 +38,7 @@ module multigrid_helpers
    public :: all_dirty, set_relax_boundaries, copy_and_max
    private
 
- contains
+contains
 
 !>
 !! \brief Put insane FP values into all multigrid working arrays
@@ -145,7 +145,7 @@ module multigrid_helpers
       cgl => curl%first
       do while (associated(cgl))
          associate (cg => cgl%cg)
-         cg%prolong_xyz(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = cg%q(soln)%arr(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)
+         cgl%cg%prolong_xyz(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = cgl%cg%q(soln)%arr(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)
          max_in = max(max_in, maxval(abs(cg%prolong_xyz( cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke))))
          end associate
          cgl => cgl%nxt

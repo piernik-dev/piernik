@@ -128,9 +128,7 @@ contains
       use mpi,           only: MPI_COMM_WORLD, MPI_CHARACTER, MPI_INTEGER, MPI_COMM_NULL
       use dataio_pub,    only: die, printinfo, msg, ansi_white, ansi_black, tmp_log_file
       use dataio_pub,    only: par_file, lun
-#if defined(__INTEL_COMPILER) || defined(__GFORTRAN__)
       use signalhandler, only: SIGINT, register_sighandler
-#endif /* ! __INTEL_COMPILER || __GFORTRAN__ */
 
       implicit none
 
@@ -233,7 +231,7 @@ contains
 
       implicit none
 
-      integer, intent(in) :: nreq
+      integer, intent(in) :: nreq !< expected maximum number of concurrent MPI requests in non-blocking parts of the code
 
       integer :: sreq
 
@@ -913,11 +911,11 @@ contains
       call MPI_Send(str, buf, MPI_CHARACTER, FIRST, tag, intercomm, mpi_err)
    end subroutine report_string_to_master
 
-   integer function abort_sigint(signum)
+   integer(kind=4) function abort_sigint(signum)
 
       implicit none
 
-      integer, intent(in) :: signum
+      integer(kind=4), intent(in) :: signum !< signal identifier
 
       if (master) print *, "[mpisetup:abort_sigint] CTRL-C caught, calling abort"
       ! As per MPI documentation for MPI_Abort():

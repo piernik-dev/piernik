@@ -66,13 +66,12 @@ contains
    subroutine problem_pointers
 
       use dataio_user, only: user_vars_hdf5
-      use user_hooks,  only: finalize_problem, problem_refine_derefine
+      use user_hooks,  only: finalize_problem
 
       implicit none
 
       finalize_problem => finalize_problem_app
       user_vars_hdf5   => app_error_vars
-      problem_refine_derefine => mark_surface
 
    end subroutine problem_pointers
 
@@ -80,12 +79,14 @@ contains
 
    subroutine read_problem_par
 
-      use cg_list_global, only: all_cg
-      use constants,      only: INVALID, cbuff_len, pi
-      use dataio_pub,     only: nh      ! QA_WARN required for diff_nml
-      use dataio_pub,     only: die, msg
-      use mpisetup,       only: rbuff, ibuff, cbuff, master, slave, piernik_MPI_Bcast
-      use multigridvars,  only: ord_prolong
+      use cg_list_global,   only: all_cg
+      use constants,        only: INVALID, cbuff_len, pi
+      use dataio_pub,       only: nh      ! QA_WARN required for diff_nml
+      use dataio_pub,       only: die, msg
+      use mpisetup,         only: rbuff, ibuff, cbuff, master, slave, piernik_MPI_Bcast
+      use multigridvars,    only: ord_prolong
+      use named_array_list, only: qna
+      use refinement,       only: user_ref2list
 
       implicit none
 
@@ -94,8 +95,8 @@ contains
       a          = 0.
       kx(:)      = pi
       n          = 0
-      ref_thr    = 1e-2     !< Refine if density difference is greater than this value
-      deref_thr  = 1e-4     !< Derefine if density difference is smaller than this value
+      ref_thr    = 3e-2     !< Refine if density difference is greater than this value
+      deref_thr  = 1e-3     !< Derefine if density difference is smaller than this value
 
       if (master) then
 
@@ -163,6 +164,8 @@ contains
       call all_cg%reg_var(ares_n)
       call all_cg%reg_var(asrc_n)
 
+      call user_ref2list(qna%ind(apot_n), INVALID, ref_thr, deref_thr, 0., "grad")
+
    end subroutine read_problem_par
 
 !> \brief Set up the initial conditions. Note that this routine can be called multiple times during initial iterations of refinement structure
@@ -228,7 +231,7 @@ contains
          cg%u(iarr_all_mz, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = 0.0
 
 #ifdef MAGNETIC
-         cg%b(:, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = 0.0
+         call cg%set_constant_b_field([0., 0., 0.])
 #endif /* MAGNETIC */
 
          cgl => cgl%nxt
@@ -412,7 +415,7 @@ contains
       implicit none
 
       character(len=*),               intent(in)    :: var
-      real(kind=4), dimension(:,:,:), intent(inout) :: tab
+      real, dimension(:,:,:),         intent(inout) :: tab
       integer,                        intent(inout) :: ierrh
       type(grid_container), pointer,  intent(in)    :: cg
 
@@ -421,10 +424,10 @@ contains
       ierrh = 0
       select case (trim(var))
          case ("errp")
-            tab(:,:,:) = real(cg%q(qna%ind(apot_n))%span(cg%ijkse) - cg%sgp(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), 4)
+            tab(:,:,:) = cg%q(qna%ind(apot_n))%span(cg%ijkse) - cg%sgp(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)
          case ("relerr")
             where (cg%q(qna%ind(apot_n))%span(cg%ijkse) .notequals. 0.)
-               tab(:,:,:) = real(cg%sgp(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)/cg%q(qna%ind(apot_n))%span(cg%ijkse) -1., 4)
+               tab(:,:,:) = cg%sgp(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)/cg%q(qna%ind(apot_n))%span(cg%ijkse) -1.
             elsewhere
                tab(:,:,:) = 0.
             endwhere
@@ -433,34 +436,5 @@ contains
       end select
 
    end subroutine app_error_vars
-
-!> \brief Request refinement along the surface of the ellipsoid. Derefine inside and outside the ellipsoid if possible.
-
-   subroutine mark_surface
-
-      use cg_leaves,        only: leaves
-      use cg_list,          only: cg_list_element
-      use named_array_list, only: qna
-      use refinement,       only: ref_flag
-
-      implicit none
-
-      type(cg_list_element), pointer :: cgl
-      real :: delta_pot
-
-!      call leaves%internal_boundaries_4d(wna%fi) !< enable it as soon as c2f and f2c routines will work
-
-      cgl => leaves%first
-      do while (associated(cgl))
-         if (any(cgl%cg%leafmap)) then
-            delta_pot = maxval(cgl%cg%q(qna%ind(apot_n))%span(cgl%cg%ijkse), mask=cgl%cg%leafmap) - minval(cgl%cg%q(qna%ind(apot_n))%span(cgl%cg%ijkse), mask=cgl%cg%leafmap)
-            cgl%cg%refine_flags = ref_flag( delta_pot >= ref_thr, delta_pot < deref_thr )
-         else
-            cgl%cg%refine_flags = ref_flag( .false., .false. )
-         endif
-         cgl => cgl%nxt
-      enddo
-
-   end subroutine mark_surface
 
 end module initproblem

@@ -58,7 +58,7 @@ module cg_list_neighbors
    !<
    type, extends(cg_list_rebalance_T), abstract :: cg_list_neighbors_T
    contains
-      procedure          :: find_neighbors            !< Choose between more general nad fast routine for neighbor searching
+      procedure          :: find_neighbors            !< Choose between more general and fast routine for neighbor searching
       procedure, private :: find_neighbors_SFC        !< Make full description of intra-level communication with neighbors. Approach exploiting strict SFC distribution.
       procedure, private :: find_neighbors_bruteforce !< Make full description of intra-level communication with neighbors. Brute-force approach.
    end type cg_list_neighbors_T
@@ -177,10 +177,10 @@ contains
                   if (any( [ ix, iy, iz ] /= 0)) then
                      ! find their SFC_id (take care about periodicity)
                      n_off = cg%my_se(:, LO) + [ ix, iy, iz ] * cg%n_b
-                     where (dom%periodic) n_off = mod(n_off + this%n_d - this%off, this%n_d) + this%off
+                     where (dom%periodic) n_off = mod(n_off + this%l%n_d - this%l%off, this%l%n_d) + this%l%off
                      n_id = INVALID
-                     if ( all(n_off >= this%off          .or. .not. dom%has_dir) .and. &
-                          all(n_off <  this%off+this%n_d .or. .not. dom%has_dir)) then ! it is internal boundary
+                     if ( all(n_off >= this%l%off            .or. .not. dom%has_dir) .and. &
+                          all(n_off <  this%l%off+this%l%n_d .or. .not. dom%has_dir)) then ! it is internal boundary
 
                         n_dd = INVALID
                         if (count([ix, iy, iz] /= 0) > 1) then
@@ -194,7 +194,7 @@ contains
                         endif
                         if (n_dd == INVALID) call die("[cg_list_neighbors:find_neighbors_SFC] undefined direction")
 
-                        n_id = SFC_order(n_off-this%off)
+                        n_id = SFC_order(n_off-this%l%off)
                         call this%dot%find_grid(n_id, n_p, n_grid_id) ! find on what process they may reside
                         if (n_grid_id == INVALID) then ! find if they really occur on that process
                            ! if it not occurs set cg%bnd(d, lh) to BND_FC or BND_MPI_FC
@@ -317,7 +317,7 @@ contains
          allocate(cg%i_bnd(xdim:cor_dim), cg%o_bnd(xdim:cor_dim))
 
          per(:) = 0
-         where (dom%periodic(:)) per(:) = this%n_d(:)
+         where (dom%periodic(:)) per(:) = this%l%n_d(:)
 
          ! Create maps to mark neighbouring face cells
          do d = xdim, zdim

@@ -2,9 +2,11 @@
 
 #define ISO
 
-#define LOCAL_FR_SPEED
+
+#if !defined GLOBAL_FR_SPEED
+#  define LOCAL_FR_SPEED
+#endif
 
 #define MAGNETIC
 
 #define GRAV
-#define RTVD

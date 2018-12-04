@@ -41,7 +41,7 @@ module gravity
    implicit none
 
    private
-   public :: init_grav, init_grav_ext, grav_accel, source_terms_grav, grav_pot2accel, grav_pot_3d, grav_type, get_gprofs, grav_accel2pot, sum_potential, manage_grav_pot_3d, update_gp
+   public :: init_grav, init_grav_ext, grav_accel, source_terms_grav, grav_src_exec, grav_pot_3d, grav_type, get_gprofs, grav_accel2pot, sum_potential, manage_grav_pot_3d, update_gp
    public :: r_gc, ptmass, ptm_x, ptm_y, ptm_z, r_smooth, nsub, tune_zeq, tune_zeq_bnd, r_grav, n_gravr, user_grav, gprofs_target, ptm2_x
 
    integer, parameter         :: gp_stat_len   = 9
@@ -350,7 +350,7 @@ contains
 
       type(grid_container), pointer,  intent(inout) :: cg
 
-      if (cg%level_id >= base_level_id) then
+      if (cg%l%id >= base_level_id) then
 
          cg%gpot  => cg%q(qna%ind( gpot_n))%arr
          cg%hgpot => cg%q(qna%ind(hgpot_n))%arr
@@ -1008,6 +1008,43 @@ contains
       end select
 
    end subroutine grav_pot2accel_ord4
+
+!--------------------------------------------------------------------------
+!>
+!! \brief Routine that is an interface between grav_pot2accel and all_sources
+!<
+   subroutine grav_src_exec(n, u, cg, sweep, i1, i2, istep, gravsrc)
+
+      use fluidindex, only: flind, iarr_all_dn, iarr_all_mx
+#ifndef ISO
+      use fluidindex, only: iarr_all_en
+#endif /* !ISO */
+      use grid_cont,  only: grid_container
+
+      implicit none
+
+      integer(kind=4),               intent(in)  :: n          !< array size
+      real, dimension(n, flind%all), intent(in)  :: u          !< vector of conservative variables
+      type(grid_container), pointer, intent(in)  :: cg         !< current grid_container
+      integer(kind=4),               intent(in)  :: sweep      !< string of characters that points out the current sweep direction
+      integer,                       intent(in)  :: i1         !< number of column in the first direction after one pointed out by sweep
+      integer,                       intent(in)  :: i2         !< number of column in the second direction after one pointed out by sweep
+      integer,                       intent(in)  :: istep      !< istep=1 for halfstep, istep=2 for fullstep
+      real, dimension(n, flind%all), intent(out) :: gravsrc    !< u array update from sources
+      real, dimension(n)                         :: gravacc    !< acceleration caused by gravitation
+      logical                                    :: full_dim
+
+      full_dim = n > 1
+      gravsrc = 0.0
+      if (.not.full_dim) return
+
+      call grav_pot2accel(sweep, i1, i2, n, gravacc, istep, cg)
+      gravsrc(:, iarr_all_mx) = spread(gravacc,2,flind%fluids) * u(:, iarr_all_dn)
+#ifndef ISO
+      gravsrc(:, iarr_all_en) = spread(gravacc,2,flind%fluids) * u(:, iarr_all_mx)
+#endif /* !ISO */
+
+   end subroutine grav_src_exec
 
 !--------------------------------------------------------------------------
 !>

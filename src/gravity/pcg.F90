@@ -67,7 +67,7 @@ contains
       use domain,           only: AMR_bsize
       use mpisetup,         only: master
       use named_array_list, only: qna
-      use refinement,       only: level_max
+      use refinement_flag,  only: level_max
 
       implicit none
 
@@ -112,6 +112,7 @@ contains
 
       use cg_leaves,          only: leaves
       use cg_list_dataop,     only: ind_val
+      use constants,          only: tmr_mg
       use dataio_pub,         only: msg, printinfo
       use mpisetup,           only: master
       use multigrid_Laplace,  only: residual, vT_A_v
@@ -145,14 +146,14 @@ contains
          !OPT: Use {A d}_k computed in vT_A_v_order to avoid communication required for residual (costs memory for storing one field, risk of drift due to boundary values)
          !OPT: Alternatively pass a flag to the residual routine that effectively switches off guardcell update as they're already have been updated by vT_A_v_order
          norm_lhs = leaves%norm_sq(defect)
-         ts = set_timer("multigrid")
+         ts = set_timer(tmr_mg)
          tot_ts = tot_ts + ts
          loc_ts = loc_ts + ts
          if (norm_old/norm_lhs < 1e6) then
-            write(msg,'(a,i3,a,f12.8,a,f9.2,a,f11.7,g14.6,a,f8.3)')"MG-PCG: ", k, " lhs/rhs= ",norm_lhs/norm_rhs, " improvement= ",norm_old/norm_lhs, &
+            write(msg,'(a,i3,a,f12.8,a,f10.2,a,f11.7,g14.6,a,f8.3)')"MG-PCG: ", k, " lhs/rhs= ",norm_lhs/norm_rhs, " improvement= ",norm_old/norm_lhs, &
                  &                                                 " a,b= ", alpha, beta, " time=", ts
          else
-            write(msg,'(a,i3,a,f12.8,a,es9.3,a,f11.7,g14.6,a,f8.3)')"MG-PCG: ", k, " lhs/rhs= ",norm_lhs/norm_rhs, " improvement= ",norm_old/norm_lhs, &
+            write(msg,'(a,i3,a,f12.8,a,es10.3,a,f11.7,g14.6,a,f8.3)')"MG-PCG: ", k, " lhs/rhs= ",norm_lhs/norm_rhs, " improvement= ",norm_old/norm_lhs, &
                  &                                                 " a,b= ", alpha, beta, " time=", ts
          endif
          if (master) call printinfo(msg)
@@ -166,7 +167,7 @@ contains
 
       enddo
 
-      ts = set_timer("multigrid")
+      ts = set_timer(tmr_mg)
       tot_ts = tot_ts + ts
       loc_ts = loc_ts + ts
       write(msg, '(a,i4,a,f8.3)')"MG-PCG: ",k," iterations, total time spent =", loc_ts

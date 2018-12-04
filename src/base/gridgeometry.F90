@@ -24,7 +24,7 @@
 !
 !    For full list of developers see $PIERNIK_HOME/license/pdt.txt
 !
-#include "piernik.def"
+#include "piernik.h"
 !>
 !! \brief Module that sets coordinate system
 !! \date December 2010
@@ -37,7 +37,7 @@ module gridgeometry
    implicit none
 
    private
-   public   :: gc, GC1, GC2, GC3, init_geometry, set_geo_coeffs, geometry_source_terms
+   public   :: gc, GC1, GC2, GC3, init_geometry, set_geo_coeffs, geometry_source_terms_exec
 
    real, dimension(:,:,:), pointer :: gc            !< array of geometrical coefficients, \todo move it to the grid container
    enum, bind(C)
@@ -68,18 +68,21 @@ module gridgeometry
       !!
       !! Currently, gsrc function returns accelerations
       !<
-      function gsrc(u, p, sweep, cg) result(res)
+      function gsrc(u, b, sweep, i1, i2, cg) result(res)
 
+         use fluidindex, only: flind
          use grid_cont, only: grid_container
 
          implicit none
 
-         integer(kind=4), intent(in)      :: sweep !< direction (x, y or z) we are doing calculations for
-         real, dimension(:,:), intent(in) :: u     !< sweep of fluid conservative variables
-         real, dimension(:,:), intent(in) :: p     !< sweep of pressure
-         type(grid_container), intent(in) :: cg    !< current grid container
+         integer(kind=4),               intent(in) :: sweep !< direction (x, y or z) we are doing calculations for
+         integer,                       intent(in) :: i1    !< coordinate of sweep in the 1st remaining direction
+         integer,                       intent(in) :: i2    !< coordinate of sweep in the 2nd remaining direction
+         real, dimension(:,:), target,  intent(in) :: u     !< sweep of fluid conservative variables
+         real, dimension(:,:), target,  intent(in) :: b     !< local copy of magnetic field
+         type(grid_container), pointer, intent(in) :: cg    !< current grid container
 
-         real, dimension(size(p,1),size(p,2)) :: res   !< output sweep of accelerations
+         real, dimension(size(u,1),flind%fluids)   :: res   !< output sweep of accelerations
 
       end function gsrc
 
@@ -222,44 +225,64 @@ contains
 !>
 !! \brief routine calculating geometrical source term for cartesian grid
 !<
-   function cart_geometry_source_terms(u, p, sweep, cg) result(res)
+   function cart_geometry_source_terms(u, bb, sweep, i1, i2, cg) result(res)
 
+      use fluidindex, only: flind
       use grid_cont,  only: grid_container
 
       implicit none
 
-      integer(kind=4), intent(in)      :: sweep
-      real, dimension(:,:), intent(in) :: u, p
-      type(grid_container), intent(in) :: cg
+      integer(kind=4),               intent(in) :: sweep
+      integer,                       intent(in) :: i1, i2
+      real, dimension(:,:), target,  intent(in) :: u, bb
+      type(grid_container), pointer, intent(in) :: cg
 
-      real, dimension(size(p,1),size(p,2))   :: res
+      real, dimension(size(u,1),flind%fluids)   :: res
 
       res = 0.0
       return
-      if (.false.) write(0,*) sweep, u, p, cg%inv_x(1)
+      if (.false.) write(0,*) sweep, i1, i2, u, bb, cg%inv_x(1)
 
    end function cart_geometry_source_terms
 !>
 !! \brief routine calculating geometrical source term for cylindrical grid
 !<
-   function cyl_geometry_source_terms(u, p, sweep, cg) result(res)
+   function cyl_geometry_source_terms(u, bb, sweep, i1, i2, cg) result(res)
 
-      use constants,  only: xdim
-      use fluidindex, only: iarr_all_dn, iarr_all_my
-      use grid_cont,  only: grid_container
+      use constants,        only: cs_i2_n, xdim
+      use fluidindex,       only: flind, iarr_all_dn, iarr_all_my
+      use fluidtypes,       only: component_fluid
+      use grid_cont,        only: grid_container
+      use named_array_list, only: qna
 
       implicit none
 
-      integer(kind=4), intent(in)      :: sweep
-      real, dimension(:,:), intent(in) :: u, p
-      type(grid_container), intent(in) :: cg
+      integer(kind=4),               intent(in) :: sweep
+      integer,                       intent(in) :: i1, i2
+      real, dimension(:,:), target,  intent(in) :: u, bb
+      type(grid_container), pointer, intent(in) :: cg
 
-      real, dimension(size(p,1),size(p,2)) :: res
-      integer :: i
+      real, dimension(size(u,1),flind%fluids)         :: res
+      real, dimension(size(u,1),flind%fluids), target :: pp       !< array storing pressure in current sweep (reused later)
+      class(component_fluid), pointer                 :: pfl
+      real, dimension(:,:),   pointer                 :: puu, pbb
+      real, dimension(:),     pointer                 :: ppp, cs2
+      integer :: ifl
 
       if (sweep == xdim) then
-         do i = 1, size(iarr_all_dn)
-            res(:, i) = cg%inv_x(:) * (u(:, iarr_all_my(i))**2 / u(:, iarr_all_dn(i)) + p(:, i))
+         pbb   =>   bb(:,:)
+         if (qna%exists(cs_i2_n)) then
+            cs2 => cg%q(qna%ind(cs_i2_n))%get_sweep(sweep,i1,i2)
+         else
+            cs2 => null()
+         endif
+         do ifl = 1, flind%fluids
+            pfl   => flind%all_fluids(ifl)%fl
+            puu   =>    u(:, pfl%beg:pfl%end)
+            ppp   =>   pp(:, pfl%pos)
+
+            call pfl%compute_pres(cg%n_(sweep), puu, pbb, cs2, ppp)
+            res(:, ifl) = cg%inv_x(:) * (u(:, iarr_all_my(ifl))**2 / u(:, iarr_all_dn(ifl)) + ppp(:))
          enddo
       else
          ! Note that there's no additional source term for angular momentum since we're using
@@ -270,5 +293,27 @@ contains
       endif
 
    end function cyl_geometry_source_terms
+
+!>
+!! \brief Detailed execution of geometry source terms designed to use in sources module
+!<
+   subroutine geometry_source_terms_exec(u, bb, sweep, i1, i2, cg, usrc)
+
+      use fluidindex, only: iarr_all_mx
+      use grid_cont,  only: grid_container
+
+      implicit none
+
+      integer(kind=4),               intent(in)  :: sweep              !< direction (x, y or z) we are doing calculations for
+      integer,                       intent(in)  :: i1, i2
+      real, dimension(:, :),         intent(in)  :: u                  !< vector of conservative variables
+      real, dimension(:, :),         intent(in)  :: bb                 !< local copy of magnetic field
+      type(grid_container), pointer, intent(in)  :: cg                 !< current grid piece
+      real, dimension(:, :),         intent(out) :: usrc               !< u array update component for sources
+
+      usrc = 0.0
+      usrc(:, iarr_all_mx) = geometry_source_terms(u, bb, sweep, i1, i2, cg)
+
+   end subroutine geometry_source_terms_exec
 
 end module gridgeometry

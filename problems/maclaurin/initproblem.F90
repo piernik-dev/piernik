@@ -40,7 +40,7 @@ module initproblem
    ! namelist parameters
    real :: x0     !< X-position of the spheroid
    real :: y0     !< Y-position of the spheroid
-   real :: z0     !< Z-position of the spherodi
+   real :: z0     !< Z-position of the spheroid
    real :: d0     !< density of the spheroid
    real :: a1     !< equatorial radius of the spheroid
    real :: e      !< polar eccentricity of the spheroid; e>0 gives oblate object, e<0 gives prolate object
@@ -55,7 +55,7 @@ module initproblem
    real :: p0 !< pressure
    real :: a3 !< length of polar radius of the spheroid
    character(len=dsetnamelen), parameter :: apot_n = "apot" !< name of the analytical potential field
-   character(len=dsetnamelen), parameter :: asrc_n = "asrc" !< name of the source fiels used for "ares" calculation (auxiliary space)
+   character(len=dsetnamelen), parameter :: asrc_n = "asrc" !< name of the source field used for "ares" calculation (auxiliary space)
    character(len=dsetnamelen), parameter :: ares_n = "ares" !< name of the numerical residuum with respect to analytical potential field
 #ifdef MACLAURIN_PROBLEM
    character(len=dsetnamelen), parameter :: apt_n  = "apt"  !< name of the potential as it was due to point-like source
@@ -67,15 +67,18 @@ contains
 
    subroutine problem_pointers
 
+      use user_hooks,  only: finalize_problem
+#ifdef HDF5
       use dataio_user, only: user_vars_hdf5, user_attrs_wr
-      use user_hooks,  only: finalize_problem, problem_refine_derefine
+#endif /* HDF5 */
 
       implicit none
 
-      user_attrs_wr    => problem_initial_conditions_attrs
       finalize_problem => finalize_problem_maclaurin
+#ifdef HDF5
+      user_attrs_wr    => problem_initial_conditions_attrs
       user_vars_hdf5   => maclaurin_error_vars
-      problem_refine_derefine => mark_surface
+#endif /* HDF5 */
 
    end subroutine problem_pointers
 
@@ -83,20 +86,25 @@ contains
 
    subroutine read_problem_par
 
-      use cg_list_global, only: all_cg
-      use constants,      only: pi, GEO_XYZ, GEO_RPZ, xdim, ydim, LO, HI
-      use dataio_pub,     only: nh      ! QA_WARN required for diff_nml
-      use dataio_pub,     only: die, warn, msg, printinfo
-      use domain,         only: dom
-      use global,         only: smalld
-      use func,           only: operator(.equals.)
-      use mpisetup,       only: rbuff, ibuff, master, slave, piernik_MPI_Bcast
-      use multigridvars,  only: ord_prolong
-      use particle_pub,   only: pset
+      use cg_list_global,   only: all_cg
+      use constants,        only: pi, GEO_XYZ, GEO_RPZ, xdim, ydim, LO, HI
+      use dataio_pub,       only: nh      ! QA_WARN required for diff_nml
+      use dataio_pub,       only: die, warn, msg, printinfo
+      use domain,           only: dom
+      use fluidindex,       only: iarr_all_dn
+      use global,           only: smalld
+      use func,             only: operator(.equals.)
+      use mpisetup,         only: rbuff, ibuff, master, slave, piernik_MPI_Bcast
+      use multigridvars,    only: ord_prolong
+      use named_array_list, only: wna
+      use particle_pub,     only: pset
+      use refinement,       only: user_ref2list
 
       implicit none
 
       integer, parameter :: maxsub = 10  !< upper limit for subsampling
+      integer(kind=4) :: id
+
       d1 = smalld                  ! ambient density
 
       ! namelist default parameter values
@@ -213,6 +221,12 @@ contains
       call all_cg%reg_var(apt_n)
 #endif /* MACLAURIN_PROBLEM */
 
+      ! Set up automatic refinement criteria on densities
+      do id = lbound(iarr_all_dn, dim=1, kind=4), ubound(iarr_all_dn, dim=1, kind=4)
+         !> \warning only selfgravitating fluids should be added
+         call user_ref2list(wna%fi, id, ref_thr*d0, deref_thr*d0, 0., "grad")
+      enddo
+
    end subroutine read_problem_par
 
 !> \brief Set up the initial conditions. Note that this routine can be called multiple times during initial iterations of refinement structure
@@ -296,7 +310,7 @@ contains
          cg%u(iarr_all_mz, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = 0.0
 
 #ifdef MAGNETIC
-         cg%b(:, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = 0.0
+         call cg%set_constant_b_field([0., 0., 0.])
 #endif /* MAGNETIC */
 
          cgl => cgl%nxt
@@ -616,7 +630,7 @@ contains
       implicit none
 
       character(len=*),               intent(in)    :: var
-      real(kind=4), dimension(:,:,:), intent(inout) :: tab
+      real, dimension(:,:,:),         intent(inout) :: tab
       integer,                        intent(inout) :: ierrh
       type(grid_container), pointer,  intent(in)    :: cg
 
@@ -625,57 +639,21 @@ contains
       ierrh = 0
       select case (trim(var))
          case ("errp")
-            tab(:,:,:) = real(cg%q(qna%ind(apot_n))%span(cg%ijkse) - cg%sgp(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), 4)
+            tab(:,:,:) = cg%q(qna%ind(apot_n))%span(cg%ijkse) - cg%sgp(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)
          case ("relerr")
             where (cg%q(qna%ind(apot_n))%span(cg%ijkse) .notequals. 0.)
-               tab(:,:,:) = real(cg%sgp(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)/cg%q(qna%ind(apot_n))%span(cg%ijkse) -1., 4)
+               tab(:,:,:) = cg%sgp(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)/cg%q(qna%ind(apot_n))%span(cg%ijkse) -1.
             elsewhere
                tab(:,:,:) = 0.
             endwhere
 #ifdef MACLAURIN_PROBLEM
          case ("a-pt")
-            tab(:,:,:) = real(cg%q(qna%ind(apot_n))%span(cg%ijkse) - cg%q(qna%ind(apt_n))%span(cg%ijkse), 4)
+            tab(:,:,:) = cg%q(qna%ind(apot_n))%span(cg%ijkse) - cg%q(qna%ind(apt_n))%span(cg%ijkse)
 #endif /* MACLAURIN_PROBLEM */
          case default
             ierrh = -1
       end select
 
    end subroutine maclaurin_error_vars
-
-!> \brief Request refinement along the surface of the ellipsoid. Derefine inside and outside the ellipsoid if possible.
-
-   subroutine mark_surface
-
-      use cg_leaves,        only: leaves
-      use cg_list,          only: cg_list_element
-      use fluidindex,       only: iarr_all_dn
-!      use named_array_list, only: wna
-      use refinement,       only: ref_flag
-
-      implicit none
-
-      type(cg_list_element), pointer :: cgl
-      real :: delta_dens, dmin, dmax
-      integer :: id
-
-!      call leaves%internal_boundaries_4d(wna%fi) !< enable it as soon as c2f and f2c routines will work
-
-      cgl => leaves%first
-      do while (associated(cgl))
-         if (any(cgl%cg%leafmap)) then
-            dmax = -huge(1.)
-            dmin =  huge(1.)
-            do id = lbound(iarr_all_dn, dim=1), ubound(iarr_all_dn, dim=1)
-               dmax = max(dmax, maxval(cgl%cg%u(id, cgl%cg%is:cgl%cg%ie, cgl%cg%js:cgl%cg%je, cgl%cg%ks:cgl%cg%ke), mask=cgl%cg%leafmap))
-               dmin = min(dmin, minval(cgl%cg%u(id, cgl%cg%is:cgl%cg%ie, cgl%cg%js:cgl%cg%je, cgl%cg%ks:cgl%cg%ke), mask=cgl%cg%leafmap))
-            enddo
-            delta_dens = dmax - dmin
-            !> \warning only selfgravitating fluids should be checked
-            cgl%cg%refine_flags = ref_flag( delta_dens >= ref_thr*d0, delta_dens < deref_thr*d0 )
-         endif
-         cgl => cgl%nxt
-      enddo
-
-   end subroutine mark_surface
 
 end module initproblem

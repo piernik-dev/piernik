@@ -110,7 +110,7 @@ module particle_types
       end subroutine map_scheme
    end interface
 
-   type(particle_set), target :: pset !< default particle list
+!   type(particle_set), target :: pset !< default particle list
 
 contains
 
@@ -391,7 +391,7 @@ contains
                      endif
                      ijkp(cdim, HI) = ijkp(cdim, LO) + 1
                   else
-                     ijkp(cdim, :) = 1
+                     ijkp(cdim, :) = cgl%cg%ijkse(cdim, :)
                   endif
                enddo
                do i = ijkp(xdim, LO), ijkp(xdim, HI)
@@ -450,11 +450,13 @@ contains
 
                do cdim = xdim, zdim
                   if (dom%has_dir(cdim)) then
-                     ijkp(cdim, I0) = nint((part%pos(cdim) - cgl%cg%coord(CENTER, cdim)%r(1))*cgl%cg%idl(cdim)) + 1
-                     ijkp(cdim, IM) = ijkp(cdim, I0) - 1
-                     ijkp(cdim, IP) = ijkp(cdim, I0) + 1
+                     ijkp(cdim, I0) = nint((part%pos(cdim) - cgl%cg%coord(CENTER, cdim)%r(1))*cgl%cg%idl(cdim)) + 1   !!! BEWARE hardcoded magic
+                     ijkp(cdim, IM) = max(ijkp(cdim, I0) - 1, int(cgl%cg%lhn(cdim, LO), kind=8))
+                     ijkp(cdim, IP) = min(ijkp(cdim, I0) + 1, int(cgl%cg%lhn(cdim, HI), kind=8))
                   else
-                     ijkp(cdim, :) = 1
+                     ijkp(cdim, IM) = cgl%cg%ijkse(cdim, LO)
+                     ijkp(cdim, I0) = cgl%cg%ijkse(cdim, LO)
+                     ijkp(cdim, IP) = cgl%cg%ijkse(cdim, HI)
                   endif
                enddo
                a = 0.0
@@ -468,7 +470,7 @@ contains
                         do cdim = xdim, zdim
                            if (.not.dom%has_dir(cdim)) cycle
                            delta_x = ( part%pos(cdim) - cgl%cg%coord(CENTER, cdim)%r(cur_ind(cdim)) ) * idl(cdim)
-                           if (cur_ind(cdim) /= ijkp(cdim, 0)) then
+                           if (cur_ind(cdim) /= ijkp(cdim, 0)) then   !!! BEWARE hardcoded magic
                               weight_tmp = 1.125 - 1.5 * abs(delta_x) + 0.5 * delta_x**2
                            else
                               weight_tmp = 0.75 - delta_x**2

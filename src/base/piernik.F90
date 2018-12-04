@@ -37,18 +37,19 @@ program piernik
    use constants,         only: PIERNIK_START, PIERNIK_INITIALIZED, PIERNIK_FINISHED, PIERNIK_CLEANUP, fplen, stdout, I_ONE, CHK, FINAL_DUMP
    use dataio,            only: write_data, user_msg_handler, check_log, check_tsl, dump
    use dataio_pub,        only: nend, tend, msg, printinfo, warn, die, code_progress
+   use div_B,             only: print_divB_norm
    use finalizepiernik,   only: cleanup_piernik
    use fluidindex,        only: flind
    use fluidupdate,       only: fluid_update
    use func,              only: operator(.equals.)
-   use global,            only: t, nstep, dt, dtm, cfl_violated
+   use global,            only: t, nstep, dt, dtm, cfl_violated, print_divB
    use initpiernik,       only: init_piernik
    use list_of_cg_lists,  only: all_lists
    use mpisetup,          only: master, piernik_MPI_Barrier, piernik_MPI_Bcast
    use named_array_list,  only: qna, wna
    use refinement,        only: emergency_fix
    use refinement_update, only: update_refinement
-   use timer,             only: walltime_end, set_timer, tmr_fu
+   use timer,             only: walltime_end
    use timestep,          only: time_step
    use user_hooks,        only: finalize_problem, problem_domain_update
 #ifdef PERFMON
@@ -65,12 +66,10 @@ program piernik
    logical, save        :: tleft = .true.      !< Used in main loop, to test whether to stop simulation or not
    character(len=fplen) :: nstr, tstr
    logical, save        :: first_step = .true.
-   real                 :: ts                  !< Timestep wallclock
    real                 :: tlast
    logical              :: try_rebalance
 
    try_rebalance = .false.
-   ts=set_timer(tmr_fu,.true.)
    tlast = 0.0
 
    code_progress = PIERNIK_START
@@ -107,6 +106,7 @@ program piernik
    endif
 
    call print_progress(nstep)
+   if (print_divB > 0) call print_divB_norm
 
    do while (t < tend .and. nstep < nend .and. .not.(end_sim)) ! main loop
 
@@ -155,6 +155,10 @@ program piernik
          try_rebalance = .false.
       endif
 
+      if (print_divB > 0) then
+         if (mod(nstep, print_divB) == 0) call print_divB_norm
+      endif
+
       if (master) tleft = walltime_end%time_left()
       call piernik_MPI_Bcast(tleft)
 
@@ -162,6 +166,11 @@ program piernik
 
       first_step = .false.
    enddo ! main loop
+
+   if (print_divB > 0) then
+      if (mod(nstep, print_divB) /= 0) call print_divB_norm ! print the norm at the end, if it wasn't printed inside the loop above
+   endif
+
 
    code_progress = PIERNIK_FINISHED
 
@@ -218,9 +227,10 @@ contains
 
    subroutine print_progress(nstep)
 
+      use constants,  only: tmr_fu
       use dataio_pub, only: printinfo, msg
       use global,     only: dt, t
-      use timer,      only: set_timer, tmr_fu, get_timestamp
+      use timer,      only: set_timer, get_timestamp
 
       implicit none
 

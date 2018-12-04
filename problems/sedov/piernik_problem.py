@@ -3,6 +3,7 @@ from yt.mods import \
 
 FIELDS = ['denn', 'enen']
 
+
 def visualize(files):
     output = []
     for fn in parallel_objects(files, njobs=-1):

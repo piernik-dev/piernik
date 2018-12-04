@@ -28,7 +28,7 @@
 
  $RESTART_CONTROL
     restart  = 'last'
-    new_id   = 'foo'
+    res_id   = 'foo'
     nrestart = 0
  /
 
@@ -49,6 +49,7 @@
     dt_log  = 0.0
     dt_tsl  = 0.0
     vars(1:) = 'dens', 'velx', 'vely', 'velz'
+    gdf_strict = .false.
  /
 
  $FLUID_NEUTRAL

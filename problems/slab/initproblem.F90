@@ -35,7 +35,6 @@ module initproblem
 
    real               :: d0, r0, bx0, by0, bz0
    integer, parameter :: one = 1
-   character(len=one) :: dir
 
    namelist /PROBLEM_CONTROL/  d0, r0, bx0, by0, bz0
 
@@ -133,6 +132,7 @@ contains
       do while (associated(cgl))
          cg => cgl%cg
 
+         call cg%set_constant_b_field([bx0, by0, bz0])
          do j = 1, cg%n_(ydim)
             yj = cg%y(j)
             do i = 1, cg%n_(xdim)
@@ -158,14 +158,9 @@ contains
 #ifndef ISO
                   cg%u(fl%ien,i,j,k) = 1.0/fl%gam_1 !*cg%u(fl%idn,i,j,k)
                   cg%u(fl%ien,i,j,k) = max(cg%u(fl%ien,i,j,k), smallei)
-                  cg%u(fl%ien,i,j,k) = cg%u(fl%ien,i,j,k) + ekin(cg%u(fl%imx,i,j,k), cg%u(fl%imy,i,j,k), cg%u(fl%imz,i,j,k), cg%u(fl%idn,i,j,k))
-#endif /* !ISO */
-                  cg%b(xdim,i,j,k)   =  bx0
-                  cg%b(ydim,i,j,k)   =  by0
-                  cg%b(zdim,i,j,k)   =  bz0
-
-#ifndef ISO
-                  cg%u(fl%ien,i,j,k)   = cg%u(fl%ien,i,j,k) + emag(cg%b(xdim,i,j,k), cg%b(ydim,i,j,k), cg%b(zdim,i,j,k))
+                  cg%u(fl%ien,i,j,k) = cg%u(fl%ien,i,j,k) + &
+                       ekin(cg%u(fl%imx,i,j,k), cg%u(fl%imy,i,j,k), cg%u(fl%imz,i,j,k), cg%u(fl%idn,i,j,k)) + &
+                       emag(cg%b(xdim,i,j,k), cg%b(ydim,i,j,k), cg%b(zdim,i,j,k))
 #endif /* !ISO */
                enddo
             enddo

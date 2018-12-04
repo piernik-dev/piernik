@@ -39,10 +39,18 @@ module constants
    public                                                ! QA_WARN no secrets are kept here
 
    ! precision
-   integer, parameter :: pk = selected_real_kind(8)   !< Default kind of floats
-   integer, parameter :: LONG = selected_int_kind(16)    ! We need at least 8-byte integers to count to 10**16, it is much more clear to type 0_LONG than 0_8
-   integer, parameter :: INT4 = selected_int_kind(9)     ! Assume that all MPI and HDF5 calls expect 4-byte integers
-   ! \todo define 1- and 2-byte integers and short (4-byte), long double (10-byte) or quad_precision (16-byte) reals if needed,
+   integer, parameter :: FP_REAL   = selected_real_kind(5)   ! this should be 32-bit single presicion
+   integer, parameter :: FP_DOUBLE = selected_real_kind(12)  ! this should be 64-bit double precision
+   integer, parameter :: FP_EXT    = selected_real_kind(17)  ! this should be 80-bit extended precision
+   integer, parameter :: FP_QUAD   = selected_real_kind(30)  ! this should be 128-bit quad precision (don't expect hardware support in CPU)
+
+   integer, parameter :: INT128 = selected_int_kind(30)      ! this should be 128-bit integer (don't expect hardware support in CPU)
+   integer, parameter :: LONG   = selected_int_kind(16)      ! We need at least 8-byte integers to count to 10**16, it is much more clear to type 0_LONG than 0_8
+   integer, parameter :: INT4   = selected_int_kind(9)       ! Assume that all MPI and HDF5 calls expect 4-byte integers
+   ! \todo define:
+   !     1-byte integer (selected_int_kind(1))
+   !     2-byte integer (selected_int_kind(3))
+   ! if needed
 
    ! integers and rationals
    real, parameter :: zero       = 0.0                   !< zero
@@ -53,6 +61,7 @@ module constants
    real, parameter :: twot       = 2./3.                 !< two thirds
    real, parameter :: oneq       = 1./4.                 !< one fourth
    real, parameter :: thrq       = 3./4.                 !< three fourths
+   real, parameter :: onesth     = 1./6.                 !< one sixth
 
    enum, bind(C)
       enumerator :: idn = 1, imx, imy, imz, ien
@@ -60,6 +69,11 @@ module constants
 
    enum, bind(C)
       enumerator :: I_ZERO = 0, I_ONE, I_TWO, I_THREE, I_FOUR, I_FIVE, I_SIX, I_SEVEN, I_EIGHT, I_NINE, I_TEN
+   end enum
+
+   ! enumerator for length/mass/time/velocity/magnetic field units
+   enum, bind(C)
+      enumerator :: U_LEN = 1, U_MASS, U_TIME, U_VEL, U_MAG, U_ENER
    end enum
 
    ! irrational number approximations
@@ -102,9 +116,10 @@ module constants
    integer, parameter :: fmt_len = 128                   !< length of format string
    integer, parameter :: fnamelen = 128                  !< length of output filename
    integer, parameter :: cbuff_len = 32                  !< length for problem parameters
+   integer, parameter :: units_len = 5 * cbuff_len       !< length for unit strings
    integer, parameter :: fplen = 24                      !< length of buffer for printed FP or integer number
    integer, parameter :: domlen = 16                     !< should be <= cbuff_len
-   integer, parameter :: dsetnamelen = 16                !< length of dataset name and state variable names in hdf files
+   integer, parameter :: dsetnamelen = cbuff_len         !< length of dataset name and state variable names in hdf files
    integer, parameter :: idlen = 3                       !< COMMENT ME
    integer, parameter :: singlechar = 1                  !< a single character
 
@@ -153,10 +168,9 @@ module constants
    ! fluids
    character(len=dsetnamelen), parameter :: fluid_n = "fluid"   !< main array
    character(len=dsetnamelen), parameter :: uh_n    = "uh"      !< auxiliary array for half-step values
-   character(len=dsetnamelen), parameter :: u0_n    = "u0"      !< backup copy for timestep retrying
    ! magnetic field
    character(len=dsetnamelen), parameter :: mag_n   = "mag"     !< main array
-   character(len=dsetnamelen), parameter :: b0_n    = "b0"      !< backup copy for timestep retrying
+   character(len=dsetnamelen), parameter :: mag_cc_n = "magcc"  !< cell-centered magnetic field for temporarystorage
    ! gravitational potential
    character(len=dsetnamelen), parameter :: gp_n    = "gp"      !< static, external field, must be explicitly set to 0. if no external fields are applied
    character(len=dsetnamelen), parameter :: sgp_n   = "sgp"     !< current field from self-gravity
@@ -171,6 +185,13 @@ module constants
 #ifdef NBODY
    character(len=dsetnamelen), parameter :: nbody_dens_n = "nbody_dens"   !< density  from particles
 #endif /* NBODY */
+   character(len=dsetnamelen), parameter :: psi_n   = "psi"     !< auxiliary 3D array for divergence cleaning
+
+   ! timer names
+   character(len=*), parameter :: tmr_fu  = "fluid_update"   !< main timer used to measure fluid_update step
+   character(len=*), parameter :: tmr_hdf = "hdf_dump"       !< timer for I/O operations
+   character(len=*), parameter :: tmr_mg  = "multigrid"      !< timer for gravity multigrid solver
+   character(len=*), parameter :: tmr_mgd = "multigrid_diff" !< timer for gravityCR diffusion multigrid solver
 
    ! Handling boundary cells in the output
    enum, bind(C)
@@ -229,6 +250,12 @@ module constants
       enumerator :: I_NGP   ! Nearest grid point
       enumerator :: I_CIC   ! Cloud in cell
       enumerator :: I_TSC   ! Triangular shaped cloud
+   end enum
+
+   ! divB=0 constraining method
+   enum, bind(C)
+      enumerator :: DIVB_CT   ! Constrained Transport
+      enumerator :: DIVB_HDC  ! Hyperbolic Divergence Cleaning (div(B) diffusion, GLM)
    end enum
 
    ! -1, 0, 1

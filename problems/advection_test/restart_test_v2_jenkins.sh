@@ -1,35 +1,26 @@
 #!/bin/bash
-set -e
 
-export PYTHONPATH=/mnt/xarth/local/lib/python2.7/site-packages:$PYTHONPATH
-export PATH=/mnt/xarth/local/bin:$PATH
+rm -rf runs/advection_test 2> /dev/null
 
-rm -rf runs/advection_test
+./setup advection_test -p problem.par.restart_test_v2 
 
-echo "Compilation started"
-./setup advection_test -p problem.par.restart_test_v2 -c gnu47 &> /dev/null
-echo "Compilation finished"
+(
+    cd runs/advection_test
 
-cp problems/advection_test/*py runs/advection_test
+    echo "run_id = ts1"
+    echo "Start:   t = 0.0, nproc = 1"
+    mpiexec -n 1 ./piernik > ts1.out
+    echo "Restart: t = 1.0, nproc = 1"
+    mpiexec -n 1 ./piernik -n '$END_CONTROL tend = 2.0 /' >> ts1.out
+    echo "Finish:  t = 2.0"
+    echo
+    echo "run_is = ts2"
+    echo "Start:   t = 0.0, nproc = 5"
+    mpiexec -n 5 ./piernik -n '$OUTPUT_CONTROL run_id = "ts2" /' > ts2.out
+    echo "Restart: t = 1.0, nproc = 3"
+    mpiexec -n 3 ./piernik -n '$END_CONTROL tend = 2.0 /' -n '$OUTPUT_CONTROL run_id = "ts2" /' >> ts2.out
+    echo "Finish:  t = 2.0"
+)
 
-cd runs/advection_test
-echo "Starting run for tend = 1.0 and nproc = 1 run_id = ts1"
-mpiexec -n 1 ./piernik > /dev/null
-echo "Finished run for tend = 1.0 and nproc = 1 run_id = ts1"
-
-echo "Starting run for tend = 2.0 and nproc = 1 run_id = ts1"
-mpiexec -n 1 ./piernik -n '$END_CONTROL tend = 2.0 /' > /dev/null
-echo "Finished run for tend = 2.0 and nproc = 1 run_id = ts1"
-
-echo "Starting run for tend = 1.0 and nproc = 5 run_id = ts2"
-mpiexec -n 5 ./piernik -n '$OUTPUT_CONTROL run_id = "ts2" /' > /dev/null
-echo "Finished run for tend = 1.0 and nproc = 5 run_id = ts2"
-
-echo "Starting run for tend = 2.0 and nproc = 3 run_id = ts2"
-mpiexec -n 3 ./piernik -n '$END_CONTROL tend = 2.0 /' \
-   -n '$OUTPUT_CONTROL run_id = "ts2" /' > /dev/null
-echo "Finished run for tend = 2.0 and nproc = 3 run_id = ts2"
-
-echo "Starting testsuite"
-python advection_test.py
-echo "Testsuite finished"
+[ ! -z $YT ] && source $YT
+./bin/gdf_distance runs/advection_test/moving_pulse_ts{1,2}_0002.h5 | tee compare.log

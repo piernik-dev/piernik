@@ -321,7 +321,7 @@ contains
          do i = cgl%cg%is, cgl%cg%ie
             do j = cgl%cg%js, cgl%cg%je
                do k = cgl%cg%ks, cgl%cg%ke
-                  write(fu, '(3i4,i6,3es20.11e3)', advance='no') i, j, k, cgl%cg%level_id, cgl%cg%x(i), cgl%cg%y(j), cgl%cg%z(k)
+                  write(fu, '(3i4,i6,3es20.11e3)', advance='no') i, j, k, cgl%cg%l%id, cgl%cg%x(i), cgl%cg%y(j), cgl%cg%z(k)
                   do q = lbound(qlst(:), dim=1), ubound(qlst(:), dim=1)
                      write(fu, '(es20.11e3)', advance='no') cgl%cg%q(qlst(q))%arr(i, j, k)
                   enddo
@@ -454,8 +454,7 @@ contains
 
       cgl => this%first
       do while (associated(cgl))
-         cgl%cg%refine_flags%refine   = .false.
-         cgl%cg%refine_flags%derefine = .false.
+         call cgl%cg%refine_flags%init
          cgl => cgl%nxt
       enddo
 
@@ -475,7 +474,7 @@ contains
       cnt = 0
       cgl => this%first
       do while (associated(cgl))
-         if (cgl%cg%refine_flags%refine) cnt = cnt + 1
+         if ( cgl%cg%refine_flags%refine .or. size(cgl%cg%refine_flags%SFC_refine_list) > 0) cnt = cnt + 1
          cgl => cgl%nxt
       enddo
 

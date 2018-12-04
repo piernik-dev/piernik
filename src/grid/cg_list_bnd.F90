@@ -344,7 +344,7 @@ contains
                if (tgt3d) then
                   allocate(this%ms%sl(p, IN )%buf(this%ms%sl(p, IN )%total_size))
                   allocate(this%ms%sl(p, OUT)%buf(this%ms%sl(p, OUT)%total_size))
-                  do i = lbound(this%ms%sl(p, OUT)%list, dim=1), ubound(this%ms%sl(p, OUT)%list, dim=1)
+                  do i = lbound(this%ms%sl(p, OUT)%list, dim=1), this%ms%sl(p, OUT)%cur_last
                      if (dmask( this%ms%sl(p, OUT)%list(i)%dir)) then
                         this     %ms%sl(p, OUT)%buf( &
                              this%ms%sl(p, OUT)%list(i)%offset: &
@@ -363,7 +363,7 @@ contains
                else
                   allocate(this%ms%sl(p, IN )%buf(this%ms%sl(p, IN )%total_size*wna%lst(ind)%dim4))
                   allocate(this%ms%sl(p, OUT)%buf(this%ms%sl(p, OUT)%total_size*wna%lst(ind)%dim4))
-                  do i = lbound(this%ms%sl(p, OUT)%list, dim=1), ubound(this%ms%sl(p, OUT)%list, dim=1)
+                  do i = lbound(this%ms%sl(p, OUT)%list, dim=1), this%ms%sl(p, OUT)%cur_last
                      if (dmask( this%ms%sl(p, OUT)%list(i)%dir)) then
                         this     %ms%sl(p, OUT)%buf( &
                             (this%ms%sl(p, OUT)%list(i)%offset - I_ONE) * wna%lst(ind)%dim4 + I_ONE : &
@@ -398,7 +398,7 @@ contains
          if (p /= proc) then
             if (this%ms%sl(p, IN)%total_size /= 0) then ! we have something received from process p
                if (tgt3d) then
-                  do i = lbound(this%ms%sl(p, IN)%list, dim=1), ubound(this%ms%sl(p, IN)%list, dim=1)
+                  do i = lbound(this%ms%sl(p, IN)%list, dim=1), this%ms%sl(p, IN)%cur_last
                      if (dmask( this%ms%sl(p, IN)%list(i)%dir)) then
                         this     %ms%sl(p, IN)%list(i)%cg%q(ind)%arr( &
                              this%ms%sl(p, IN)%list(i)%se(xdim, LO): &
@@ -419,7 +419,7 @@ contains
                      endif
                   enddo
                else
-                  do i = lbound(this%ms%sl(p, IN)%list, dim=1), ubound(this%ms%sl(p, IN)%list, dim=1)
+                  do i = lbound(this%ms%sl(p, IN)%list, dim=1), this%ms%sl(p, IN)%cur_last
                      if (dmask( this%ms%sl(p, IN)%list(i)%dir)) then
                         this     %ms%sl(p, IN)%list(i)%cg%w(ind)%arr( &
                              1:wna%lst(ind)%dim4, &
@@ -454,7 +454,7 @@ contains
 !! \brief This routine exchanges guardcells with remote blocks for BND_MPI and BND_PER boundaries on rank-3 and
 !! rank-4 arrays. There is one message per each piece of boundary.
 !!
-!! \detail This routine will exchange local blocks as well (which would degrade the performance a bit) where the
+!! \details This routine will exchange local blocks as well (which would degrade the performance a bit) where the
 !! pointer in cg%i_bnd(:)%seg(:)%local is not set.
 !<
 
@@ -806,7 +806,7 @@ contains
    subroutine bnd_u(this, dir)
 
       use cg_list,               only: cg_list_element
-      use constants,             only: ndims, xdim, ydim, zdim, LO, HI, INT4, &
+      use constants,             only: ndims, xdim, ydim, zdim, LO, HI, INT4, I_ONE, &
            &                           BND_MPI, BND_FC, BND_MPI_FC, BND_PER, BND_REF, BND_OUT, BND_OUTD, BND_COR, BND_SHE, BND_USER
       use dataio_pub,            only: msg, warn, die
       use domain,                only: dom
@@ -819,13 +819,13 @@ contains
       use fluidindex,            only: iarr_all_crs
 #endif /* COSM_RAYS */
 #ifdef GRAV
-      use constants,             only: BND_OUTH, BND_OUTHD, I_ONE, I_ZERO
+      use constants,             only: BND_OUTH, BND_OUTHD, I_ZERO
 #endif /* GRAV */
 
       implicit none
 
-      class(cg_list_bnd_T), intent(in) :: this       !< the list on which to perform the boundary exchange
-      integer(kind=4),      intent(in) :: dir
+      class(cg_list_bnd_T), intent(in) :: this !< the list on which to perform the boundary exchange
+      integer(kind=4),      intent(in) :: dir  !< the direction in which we perform fluid boundary update (xdim, ydim or zdim)
 
       type(grid_container), pointer           :: cg
       integer(kind=4), dimension(ndims,LO:HI) :: l, r
@@ -838,6 +838,7 @@ contains
       if (frun) then
          call init_fluidboundaries
          frun = .false.
+         if (HI-LO /= I_ONE) call die("[cg_list_bnd:bnd_u] HI-LO /= I_ONE")
       endif
 
       cgl => this%first
@@ -852,7 +853,7 @@ contains
                case (BND_USER)
                   call user_fluidbnd(dir, side, cg, wn=wna%fi)
                case (BND_REF)
-                  ssign = 2_INT4*side-3_INT4
+                  ssign = lh_2_pm1(side)
                   do ib=1_INT4, dom%nb
                      l(dir,:) = cg%ijkse(dir,side)+ssign*ib ; r(dir,:) = cg%ijkse(dir,side)+ssign*(1_INT4-ib)
                      cg%u(:,l(xdim,LO):l(xdim,HI),l(ydim,LO):l(ydim,HI),l(zdim,LO):l(zdim,HI)) = cg%u(:,r(xdim,LO):r(xdim,HI),r(ydim,LO):r(ydim,HI),r(zdim,LO):r(zdim,HI))
@@ -860,7 +861,7 @@ contains
                   enddo
                case (BND_OUT)
                   r(dir,:) = cg%ijkse(dir,side)
-                  ssign = 2_INT4*side-3_INT4
+                  ssign = lh_2_pm1(side)
                   do ib=1_INT4, dom%nb
                      l(dir,:) = cg%ijkse(dir,side)+ssign*ib
                      cg%u(:,l(xdim,LO):l(xdim,HI),l(ydim,LO):l(ydim,HI),l(zdim,LO):l(zdim,HI)) = cg%u(:,r(xdim,LO):r(xdim,HI),r(ydim,LO):r(ydim,HI),r(zdim,LO):r(zdim,HI))
@@ -870,7 +871,7 @@ contains
                   enddo
                case (BND_OUTD)
                   r(dir,:) = cg%ijkse(dir,side)
-                  ssign = 2_INT4*side-3_INT4
+                  ssign = lh_2_pm1(side)
                   do ib=1_INT4, dom%nb
                      l(dir,:) = cg%ijkse(dir,side)+ssign*ib
                      cg%u(:,l(xdim,LO):l(xdim,HI),l(ydim,LO):l(ydim,HI),l(zdim,LO):l(zdim,HI)) = cg%u(:,r(xdim,LO):r(xdim,HI),r(ydim,LO):r(ydim,HI),r(zdim,LO):r(zdim,HI))
@@ -879,7 +880,7 @@ contains
                      cg%u(iarr_all_crs,l(xdim,LO):l(xdim,HI),l(ydim,LO):l(ydim,HI),l(zdim,LO):l(zdim,HI)) = smallecr
 #endif /* COSM_RAYS */
                   enddo
-                  l(dir,:) = [1_INT4, dom%nb] + cg%ijkse(dir,side)*(side-1_INT4)
+                  l(dir,:) = cg%ijkse(dir,side) - [dom%nb, 1_INT4] +(dom%nb+1_INT4)*(side-LO)
                   if (side == LO) then
                      cg%u(iarr_all_dn+dir,l(xdim,LO):l(xdim,HI),l(ydim,LO):l(ydim,HI),l(zdim,LO):l(zdim,HI)) = min(cg%u(iarr_all_dn+dir,l(xdim,LO):l(xdim,HI),l(ydim,LO):l(ydim,HI),l(zdim,LO):l(zdim,HI)),0.0)
                   else
@@ -901,6 +902,22 @@ contains
       enddo
 
    contains
+
+!> \brief convert [ LO, HI ] to [ -1, 1 ]. Assumes HI-LO == 1
+
+      elemental function lh_2_pm1(lh)
+
+         use constants, only: LO, HI, I_TWO
+
+         implicit none
+
+         integer(kind=4), intent(in) :: lh
+
+         integer(kind=4) :: lh_2_pm1
+
+         lh_2_pm1 = I_TWO*lh - (LO+HI)
+
+      end function lh_2_pm1
 
 !> \brief Perform some checks
 
@@ -983,8 +1000,8 @@ contains
 
       implicit none
 
-      class(cg_list_bnd_T), intent(in) :: this       !< the list on which to perform the boundary exchange
-      integer(kind=4),      intent(in) :: dir
+      class(cg_list_bnd_T), intent(in) :: this !< the list on which to perform the boundary exchange
+      integer(kind=4),      intent(in) :: dir  !< the direction in which we perform magnetic boundary update (xdim, ydim or zdim)
 
       type(grid_container), pointer           :: cg
       integer(kind=4)                         :: side
@@ -1040,8 +1057,12 @@ contains
       contains
 
          subroutine outflow_b(cg, dir, side)
+
+            ! use global,                only: force_cc_mag
             use grid_cont,             only: grid_container
+
             implicit none
+
             type(grid_container), pointer    :: cg
             integer(kind=4),      intent(in) :: dir
             integer(kind=4),      intent(in) :: side
@@ -1052,6 +1073,19 @@ contains
 
             pm_one = I_THREE - I_TWO * side
             pm_two = 2 * pm_one
+
+            ! Apparently this is already written for cell-centered magnetic field.
+
+            ! Simulations with Constrained Transport may exhibit slight assymetries because
+            ! rightmost face is reset here while leftmost is not. Use expressions like
+            !
+            !   it = cg%ijkse(dir, side) - pm_one * i + (side - LO)
+            !
+            ! when force_cc_mag is .false. in evaluation of dir-component of magnetic field
+            ! for more strict external boundary treatment.
+
+            ! BEWARE: this kind of boundaries does not guarantee div(B) == 0 .
+            ! Expect div(B) growing proportionally to the distance from the domain boundary.
 
             select case (dir)
                case (xdim)
@@ -1076,6 +1110,7 @@ contains
                      cg%b(ydim, :, :, it) = cg%b(ydim, :, :, it + pm_one)
                   enddo
             end select
+
          end subroutine outflow_b
 
    end subroutine bnd_b

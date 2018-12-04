@@ -45,9 +45,9 @@ contains
       use all_boundaries,        only: all_bnd
       use cg_level_finest,       only: finest
       use cg_list_global,        only: all_cg
-      use constants,             only: PIERNIK_INIT_MPI, PIERNIK_INIT_GLOBAL, PIERNIK_INIT_FLUIDS, PIERNIK_INIT_DOMAIN, PIERNIK_INIT_GRID, PIERNIK_INIT_IO_IC, INCEPTIVE
+      use constants,             only: PIERNIK_INIT_MPI, PIERNIK_INIT_GLOBAL, PIERNIK_INIT_FLUIDS, PIERNIK_INIT_DOMAIN, PIERNIK_INIT_GRID, PIERNIK_INIT_IO_IC, INCEPTIVE, tmr_fu
       use dataio,                only: init_dataio, init_dataio_parameters, write_data
-      use dataio_pub,            only: nrestart, wd_rd, par_file, tmp_log_file, msg, printio, printinfo, warn, require_problem_IC, problem_name, run_id, code_progress, log_wr
+      use dataio_pub,            only: nrestart, wd_rd, par_file, tmp_log_file, msg, printio, printinfo, warn, require_problem_IC, problem_name, run_id, code_progress, log_wr, set_colors
       use decomposition,         only: init_decomposition
       use domain,                only: init_domain
       use diagnostics,           only: diagnose_arrays, check_environment
@@ -58,19 +58,22 @@ contains
       use grid_container_ext,    only: cg_extptrs
       use gridgeometry,          only: init_geometry
       use initfluids,            only: init_fluids, sanitize_smallx_checks
-      use interactions,          only: init_interactions
       use initproblem,           only: problem_initial_conditions, read_problem_par, problem_pointers
       use mpisetup,              only: init_mpi, master
-      use refinement,            only: init_refinement, level_max
+      use refinement,            only: init_refinement
+      use refinement_flag,       only: level_max
       use refinement_update,     only: update_refinement
+      use sources,               only: init_sources
+      use timer,                 only: set_timer
       use units,                 only: init_units
-      use user_hooks,            only: problem_post_restart
+      use user_hooks,            only: problem_post_restart, problem_post_IC
+#ifdef RIEMANN
+      use hdc,                   only: init_psi
+      use interpolations,        only: set_interpolations
+#endif /* RIEMANN */
 #if defined MAGNETIC && defined RESISTIVE
       use resistivity,           only: init_resistivity, compute_resist
 #endif /* MAGNETIC && RESISTIVE */
-#ifdef SHEAR
-      use shear,                 only: init_shear
-#endif /* SHEAR */
 #ifdef GRAV
       use gravity,               only: init_grav, init_grav_ext, manage_grav_pot_3d, sum_potential
       use hydrostatic,           only: init_hydrostatic, cleanup_hydrostatic
@@ -78,19 +81,16 @@ contains
 #ifdef MULTIGRID
       use multigrid,             only: init_multigrid, init_multigrid_ext, multigrid_par
 #endif /* MULTIGRID */
-#ifdef SN_SRC
-      use snsources,             only: init_snsources
-#endif /* SN_SRC */
 #ifdef DEBUG
       use piernikdebug,          only: init_piernikdebug
       use piernikiodebug,        only: init_piernikiodebug
 #endif /* DEBUG */
-#ifdef CORIOLIS
-      use coriolis,              only: init_coriolis
-#endif /* CORIOLIS */
 #ifdef COSM_RAYS
       use crdiffusion,           only: init_crdiffusion
 #endif /* COSM_RAYS */
+#ifdef RANDOMIZE
+      use randomization,         only: init_randomization
+#endif /* RANDOMIZE */
 #ifdef PIERNIK_OPENCL
       use piernikcl,             only: init_opencl
 #endif /* PIERNIK_OPENCL */
@@ -105,8 +105,11 @@ contains
       implicit none
 
       integer :: nit, ac
+      real    :: ts                  !< Timestep wallclock
       logical :: finished
       integer, parameter :: nit_over = 5 ! maximum number of auxiliary iterations after reaching level_max
+
+      call set_colors(.false.)               ! Make sure that we won't emit colorful messages before we are allowed to do so
 
       call parse_cmdline
       write(par_file,'(2a)') trim(wd_rd),'problem.par'
@@ -114,6 +117,10 @@ contains
 
       call init_mpi                          ! First, we must initialize the communication (and things that do not depend on init_mpi if there are any)
       code_progress = PIERNIK_INIT_MPI       ! Now we can initialize grid and everything that depends at most on init_mpi. All calls prior to PIERNIK_INIT_GRID can be reshuffled when necessary
+
+      ! Timers should not be started before initializing MPI
+      ts=set_timer(tmr_fu,.true.)
+
       call check_environment
 
 #ifdef PIERNIK_OPENCL
@@ -131,12 +138,18 @@ contains
 
       call init_units
 
+#ifdef RANDOMIZE
+      call init_randomization
+#endif /* RANDOMIZE */
+
       call init_default_fluidboundaries
 
       call problem_pointers                  ! set up problem-specific pointers as early as possible to allow implementation of problem-specific hacks also during the initialization
-
       call init_global
       code_progress = PIERNIK_INIT_GLOBAL    ! Global parameters are set up
+#ifdef RIEMANN
+      call set_interpolations
+#endif /* RIEMANN */
 
       call init_domain
       code_progress = PIERNIK_INIT_DOMAIN    ! Base domain is known and initial domain decomposition is known
@@ -156,8 +169,6 @@ contains
       call init_crdiffusion                  ! depends on fluids
 #endif /* COSM_RAYS */
 
-      call init_interactions                 ! requires flind and units
-
       call init_refinement
 
       call init_decomposition
@@ -173,10 +184,6 @@ contains
       call init_grid                         ! Most of the cg's vars are now initialized, only arrays left
       code_progress = PIERNIK_INIT_GRID      ! Now we can initialize things that depend on all the above fundamental calls
 
-#ifdef SHEAR
-      call init_shear                        ! depends on fluids
-#endif /* SHEAR */
-
 #ifdef RESISTIVE
       call init_resistivity                  ! depends on grid
 #endif /* RESISTIVE */
@@ -186,13 +193,7 @@ contains
       call init_hydrostatic
 #endif /* GRAV */
 
-#ifdef CORIOLIS
-      call init_coriolis                     ! depends on geometry
-#endif /* CORIOLIS */
-
-#ifdef SN_SRC
-      call init_snsources                    ! depends on grid and fluids/cosmicrays
-#endif /* SN_SRC */
+      call init_sources                      ! depends on: geomety, fluids, grid
 
 #ifdef MULTIGRID
       call init_multigrid                    ! depends on grid, geometry, units and arrays
@@ -210,6 +211,8 @@ contains
       call read_problem_par                  ! may depend on anything but init_dataio, \todo add checks against PIERNIK_INIT_IO_IC to all initproblem::read_problem_par
 
       call init_dataio                       ! depends on units, fluids (through common_hdf5), fluidboundaries, arrays, grid and shear (through magboundaries::bnd_b or fluidboundaries::bnd_u) \todo split me
+      ! Initial conditions are read here from a restart file if possible
+
 #if defined(GRAV) && !defined(SELF_GRAV)
       call sum_potential                     ! for the proper tsl&log data gpot array has to be fill in using gp array values after restart read
                                              !> \todo check and fulfil this requirement for SELF_GRAV defined (should source_terms_grav be called here?)
@@ -243,6 +246,13 @@ contains
          nit = 0
          finished = .false.
          call problem_initial_conditions ! may depend on anything
+#ifdef RIEMANN
+         call init_psi ! initialize the auxiliary field for divergence cleaning when needed
+#endif /* RIEMANN */
+
+         write(msg, '(a,f10.2)')"[initpiernik] IC on base level, time elapsed: ",set_timer(tmr_fu)
+         if (master) call printinfo(msg)
+
          do while (.not. finished)
 
             call all_bnd !> \warning Never assume that problem_initial_conditions set guardcells correctly
@@ -256,13 +266,15 @@ contains
 
             call problem_initial_conditions ! reset initial conditions after possible changes of refinement structure
             nit = nit + 1
+            write(msg, '(2(a,i3),a,f10.2)')"[initpiernik] IC iteration: ",nit,", finest level:",finest%level%l%id,", time elapsed: ",set_timer(tmr_fu)
+            if (master) call printinfo(msg)
          enddo
 
          if (ac /= 0 .and. master) call warn("[initpiernik:init_piernik] The refinement structure does not seem to converge. Your refinement criteria may lead to oscillations of refinement structure. Bailing out.")
-
+         if (associated(problem_post_IC)) call problem_post_IC
       endif
 
-      write(msg, '(a,3i8,a,i3)')"[initinitpiernik:init_piernik] Effective resolution is [", finest%level%n_d(:), " ] at level ", finest%level%level_id
+      write(msg, '(a,3i8,a,i3)')"[initpiernik:init_piernik] Effective resolution is [", finest%level%l%n_d(:), " ] at level ", finest%level%l%id
       !> \todo Do an MPI_Reduce in case the master process don't have any part of the globally finest level or ensure it is empty in such case
       if (master) call printinfo(msg)
 
@@ -281,8 +293,8 @@ contains
 !-----------------------------------------------------------------------------
    subroutine parse_cmdline
 
-      use constants,  only: stdout, cwdlen, INT4
-      use dataio_pub, only: cmdl_nml, wd_rd, wd_wr, piernik_hdf5_version, log_wr
+      use constants,  only: stdout, cwdlen
+      use dataio_pub, only: cmdl_nml, wd_rd, wd_wr, piernik_hdf5_version, piernik_hdf5_version2, log_wr
       use version,    only: nenv,env, init_version
 
       implicit none
@@ -293,10 +305,7 @@ contains
       character(len=10)           :: time   ! QA_WARN len defined by ISO standard
       character(len=5)            :: zone   ! QA_WARN len defined by ISO standard
       character(len=cwdlen)       :: arg
-!      character(len=*), parameter :: cmdlversion = '1.0'
       logical, save               :: do_time = .false.
-      integer(kind=4), dimension(:), allocatable :: revision
-      character(len=cwdlen)       :: aaa
 
       skip_next = .false.
 
@@ -309,35 +318,25 @@ contains
 
          select case (arg)
          case ('-v', '--version')
-!            print '(2a)', 'cmdline version ', cmdlversion
             call init_version
-            allocate(revision(nenv)) ; revision = 0_INT4
-            do j = 2, nenv
-               read(env(j),'(a37,1x,i4)') aaa(1:37), revision(j)
-            enddo
-            write(stdout, '(a,i6)') 'code revision: ', maxval(revision)
-            deallocate(revision)
-            write(stdout, '(a,f5.2)') 'output version: ',piernik_hdf5_version
-            write(stdout,'(a)') "###############     Source configuration     ###############"
+            write(stdout, '(a,f5.2)') 'GDF output version: ',piernik_hdf5_version2
+            write(stdout, '(a,f5.2)') 'old output version: ',piernik_hdf5_version
+            write(stdout,'(/,a)') "###############     Source configuration     ###############"
             do j = 1, nenv
                write(stdout,'(a)') env(j)
             enddo
             stop
          case ('-p', '--param')
-            call get_command_argument(i+1,arg)
-            write(wd_rd,'(a)') arg
+            write(wd_rd,'(a)') get_next_arg(i+1, arg)
             skip_next = .true.
          case ('-w', '--write')
-            call get_command_argument(i+1,arg)
-            write(wd_wr,'(a)') arg
+            write(wd_wr,'(a)') get_next_arg(i+1, arg)
             skip_next = .true.
          case ('-l', '--log')
-            call get_command_argument(i+1,arg)
-            write(log_wr,'(a)') arg
+            write(log_wr,'(a)') get_next_arg(i+1, arg)
             skip_next = .true.
          case ('-n', '--namelist')
-            call get_command_argument(i+1,arg)
-            write(cmdl_nml, '(3A)') cmdl_nml(1:len_trim(cmdl_nml)), " ", trim(arg)
+            write(cmdl_nml, '(3A)') cmdl_nml(1:len_trim(cmdl_nml)), " ", trim(get_next_arg(i+1, arg))
             skip_next = .true.
          case ('-h', '--help')
             call print_help()
@@ -361,6 +360,30 @@ contains
          write (stdout, '(1x,a,":",a,1x,a)') time(1:2), time(3:4), zone
          stop
       endif
+
+   contains
+
+      function get_next_arg(n, arg) result(param)
+
+         use constants,  only: stderr
+
+         implicit none
+
+         integer,               intent(in) :: n
+         character(len=cwdlen), intent(in) :: arg
+
+         character(len=cwdlen) :: param
+
+         if (n > command_argument_count()) then
+            write(stderr, '(2a)')"[initpiernik:parse_cmdline:get_next_arg] cannot find argument for option ", arg
+            stop
+         endif
+
+         call get_command_argument(n, param)
+
+      end function get_next_arg
+
+
    end subroutine parse_cmdline
 !-----------------------------------------------------------------------------
    subroutine print_help

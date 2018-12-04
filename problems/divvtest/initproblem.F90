@@ -38,7 +38,6 @@ module initproblem
 
    integer(kind=4) :: norm_step
    real            :: t_sn
-   integer         :: n_sn
    real            :: d0, p0, r0, beta_cr, amp_cr
    real, dimension(ndims) :: c_exp, c_rot, b0, sn_pos
 
@@ -181,9 +180,7 @@ contains
       do while (associated(cgl))
          cg => cgl%cg
 
-         cg%b(xdim, :, :, :) = b0(xdim)
-         cg%b(ydim, :, :, :) = b0(ydim)
-         cg%b(zdim, :, :, :) = b0(zdim)
+         call cg%set_constant_b_field(b0)
          cg%u(fl%idn, :, :, :) = d0
          cg%u(fl%imx:fl%imz, :, :, :) = 0.0
 

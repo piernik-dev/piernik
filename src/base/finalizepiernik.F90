@@ -53,10 +53,14 @@ contains
       use initfluids,         only: cleanup_fluids
       use interactions,       only: cleanup_interactions
       use mpisetup,           only: cleanup_mpi
+      use refinement,         only: cleanup_refinement
       use sortable_list,      only: cleanup_sortable_list
       use tag_pool,           only: t_pool
       use timer,              only: cleanup_timers
       use user_hooks,         only: cleanup_problem
+#ifdef RANDOMIZE
+      use randomization,      only: cleanup_randomization
+#endif /* RANDOMIZE */
 #ifdef MULTIGRID
       use multigrid,          only: cleanup_multigrid
 #endif /* MULTIGRID */
@@ -73,6 +77,7 @@ contains
       implicit none
 
       if (associated(cleanup_problem)) call cleanup_problem; call nextdot(.false.)
+      call cleanup_refinement;     call nextdot(.false.)
       call t_pool%cleanup;         call nextdot(.false.)
       call cleanup_interactions;   call nextdot(.false.)
       call cleanup_dataio;         call nextdot(.false.)
@@ -99,6 +104,9 @@ contains
 #ifdef PIERNIK_OPENCL
       call cleanup_opencl;         call nextdot(.false.)
 #endif /* PIERNIK_OPENCL */
+#ifdef RANDOMIZE
+      call cleanup_randomization;  call nextdot(.false.)
+#endif /* RANDOMIZE */
       call cleanup_mpi;            call nextdot(.true.)
 
    end subroutine cleanup_piernik
@@ -109,8 +117,8 @@ contains
    subroutine nextdot(advance, print_t)
 
       use mpisetup,  only: master
-      use constants, only: stdout
-      use timer,     only: set_timer, tmr_fu
+      use constants, only: stdout, tmr_fu
+      use timer,     only: set_timer
 
       implicit none
 

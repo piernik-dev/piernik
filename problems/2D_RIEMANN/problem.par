@@ -1,0 +1,86 @@
+ $BASE_DOMAIN
+    n_d = 2*256, 1
+    bnd_xl = 'out'
+    bnd_xr = 'out'
+    bnd_yl = 'out'
+    bnd_yr = 'out'
+    bnd_zl = 'out'
+    bnd_zr = 'out'
+    xmin   = -1.
+    xmax   =  1.
+    ymin   = -1.
+    ymax   =  1.
+    zmin   =  0.
+    zmax   =  1.
+ /
+
+ $MPI_BLOCKS
+ /
+
+ $UNITS
+    units_set = "cgs"
+ /
+
+ $RESTART_CONTROL
+    restart  = 'last'
+    res_id   = ''
+    nrestart = 0
+ /
+
+ $END_CONTROL
+   tend  = 1.0
+   nend  = 10000
+ /
+
+ $OUTPUT_CONTROL
+   problem_name  = '2d_riemann'
+   run_id        = 'tst'
+   dt_hdf        = 0.1
+   dt_res        = 10.
+   dt_log        = 0.1
+   dt_tsl        = 0.1
+   vars(1:)      = 'ener', 'dens', 'velx', 'vely', 'pres'
+ /
+
+ $FLUID_NEUTRAL
+   gamma    = 1.4
+   selfgrav = .false.
+ /
+
+ $FLUID_IONIZED
+   gamma    = 1.4
+   selfgrav = .false.
+ /
+
+ $NUMERICAL_SETUP
+   cfl     = 0.75
+   smalld  = 1e-7
+   smallei = 1e-7
+   limiter = 'vanleer'
+ /
+
+ $PROBLEM_CONTROL
+! default values:
+!    den_pp  = 1.5
+!    p_pp    = 1.5
+!    velx_pp = 0.0
+!    vely_pp = 0.0
+!    den_mp  = 0.5323
+!    p_mp    = 0.3
+!    velx_mp = 1.206
+!    vely_mp = 0.0
+!    den_mm  = 0.138
+!    p_mm    = 0.029
+!    velx_mm = 1.206
+!    vely_mm = 1.206
+!    den_pm  = 0.5323
+!    p_pm    = 0.3
+!    velx_pm = 0.0
+!    vely_pm = 1.206
+/
+
+ $INTERACTIONS
+ /
+
+ $AMR
+ /

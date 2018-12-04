@@ -36,7 +36,6 @@ module initproblem
 
    integer(kind=4)    :: norm_step
    real               :: t_sn
-   integer            :: n_sn
    real               :: d0, p0, bx0, by0, bz0, x0, y0, z0, r0, beta_cr, amp_cr
 
    namelist /PROBLEM_CONTROL/ d0, p0, bx0, by0, bz0, x0, y0, z0, r0, beta_cr, amp_cr, norm_step
@@ -147,8 +146,8 @@ contains
       use cg_leaves,      only: leaves
       use cg_list,        only: cg_list_element
       use constants,      only: xdim, ydim, zdim, LO, HI, pMAX
-      use dataio_pub,     only: msg, warn, printinfo, die
-      use domain,         only: dom, is_multicg
+      use dataio_pub,     only: msg, warn, printinfo
+      use domain,         only: dom
       use fluidindex,     only: flind
       use fluidtypes,     only: component_fluid
       use func,           only: ekin, emag, operator(.equals.), operator(.notequals.)
@@ -196,9 +195,7 @@ contains
       do while (associated(cgl))
          cg => cgl%cg
 
-         cg%b(xdim, :, :, :) = bx0
-         cg%b(ydim, :, :, :) = by0
-         cg%b(zdim, :, :, :) = bz0
+         call cg%set_constant_b_field([bx0, by0, bz0])
          cg%u(fl%idn, :, :, :) = d0
          cg%u(fl%imx:fl%imz, :, :, :) = 0.0
 
@@ -249,16 +246,21 @@ contains
          cgl => cgl%nxt
       enddo
 
-      cg => leaves%first%cg
-      if (is_multicg) call die("[initproblem:problem_initial_conditions] multiple grid pieces per procesor not implemented yet") !nontrivial maxv
-
       do icr = 1, flind%crs%all
-         maxv = maxval(cg%u(iarr_crs(icr),:,:,:))
+
+         maxv = - huge(1.)
+         cgl => leaves%first
+         do while (associated(cgl))
+            maxv = max(maxv, maxval(cgl%cg%u(iarr_crs(icr),:,:,:)))
+            cgl => cgl%nxt
+         enddo
+
          call piernik_MPI_Allreduce(maxv, pMAX)
          if (master) then
             write(msg,*) '[initproblem:problem_initial_conditions] icr=',icr,' maxecr =',maxv
             call printinfo(msg)
          endif
+
       enddo
 #endif /* COSM_RAYS */
 

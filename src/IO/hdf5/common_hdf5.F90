@@ -41,10 +41,10 @@ module common_hdf5
 
    private
    public :: init_hdf5, cleanup_hdf5, set_common_attributes, common_shortcuts, write_to_hdf5_v2, set_h5_properties
-   public :: nhdf_vars, hdf_vars, hdf_vars_avail, cancel_hdf_var, d_gname, base_d_gname, d_fc_aname, d_size_aname, d_edge_apname, d_bnd_apname, &
-      cg_gname, cg_cnt_aname, cg_lev_aname, cg_size_aname, cg_offset_aname, n_cg_name, dir_pref, cg_ledge_aname, &
-      cg_redge_aname, cg_dl_aname, O_OUT, O_RES, create_empty_cg_dataset, get_nth_cg, data_gname, output_fname, &
-      cg_output
+   public :: nhdf_vars, hdf_vars, hdf_vars_avail, cancel_hdf_var, d_gname, base_d_gname, d_fc_aname, d_size_aname, &
+        d_edge_apname, d_bnd_apname, cg_gname, cg_cnt_aname, cg_lev_aname, cg_size_aname, cg_offset_aname, &
+        n_cg_name, dir_pref, cg_ledge_aname, cg_redge_aname, cg_dl_aname, O_OUT, O_RES, STAT_OK, STAT_INV, &
+        create_empty_cg_dataset, get_nth_cg, data_gname, output_fname, cg_output
 
    character(len=dsetnamelen), allocatable, dimension(:), protected :: hdf_vars  !< dataset names for hdf files
    logical,                    allocatable, dimension(:), protected :: hdf_vars_avail
@@ -61,6 +61,12 @@ module common_hdf5
    enum, bind(c)
       enumerator :: O_RES
       enumerator :: O_OUT
+   end enum
+
+   ! indicate success or failure
+   enum, bind(C)
+      enumerator :: STAT_OK = 0
+      enumerator :: STAT_INV = -1
    end enum
 
    enum, bind(c)
@@ -90,9 +96,10 @@ contains
 
    subroutine init_hdf5(vars)
 
-      use constants,  only: dsetnamelen
-      use fluidindex, only: iarr_all_dn, iarr_all_mx, iarr_all_my, iarr_all_mz
+      use constants,  only: dsetnamelen, singlechar
+      use fluidindex, only: iarr_all_dn, iarr_all_mx, iarr_all_my, iarr_all_mz, iarr_all_en
       use fluids_pub, only: has_ion, has_dst, has_neu
+      use global,     only: force_cc_mag
 #ifdef COSM_RAYS
       use dataio_pub, only: warn, msg
       use fluidindex, only: iarr_all_crs
@@ -103,54 +110,46 @@ contains
       character(len=dsetnamelen), dimension(:), intent(in) :: vars  !< quantities to be plotted, see dataio::vars
 
       integer                                              :: nvars, i, j
+      character(len=singlechar)                            :: fc, ord
+      character(len=dsetnamelen)                           :: aux
 #if defined COSM_RAYS
       integer                                              :: k
-      character(len=dsetnamelen)                           :: aux
 #endif /* COSM_RAYS */
 
-      nvars = 1
-      do while ( len(trim(vars(nvars))) > 1)
-         nvars = nvars + 1
+      nvars = 0
+      do i = lbound(vars, 1), ubound(vars, 1)
+         if (len_trim(vars(i)) > 0) nvars = nvars + 1
       enddo
-      nvars = nvars - 1
 
       nhdf_vars = 0
-      do i = 1, nvars
-         select case (vars(i))
+      do i = lbound(vars, 1), ubound(vars, 1)
+         select case (trim(vars(i)))
+            case ('')
             case ('dens')
                nhdf_vars = nhdf_vars + size(iarr_all_dn,1)
-            case ('velx')
+            case ('velx', 'momx')
                nhdf_vars = nhdf_vars + size(iarr_all_mx,1)
-            case ('vely')
+            case ('vely', 'momy')
                nhdf_vars = nhdf_vars + size(iarr_all_my,1)
-            case ('velz')
+            case ('velz', 'momz')
                nhdf_vars = nhdf_vars + size(iarr_all_mz,1)
-            case ('ener')
-               nhdf_vars = nhdf_vars + size(iarr_all_mz,1)
-               if (has_dst) nhdf_vars = nhdf_vars - 1
-#ifdef GRAV
-            case ('gpot')
-               nhdf_vars = nhdf_vars + 1
-#endif /* GRAV */
-            case ('magx', 'magy', 'magz', 'pres')
-               nhdf_vars = nhdf_vars + 1
+            case ('ener', 'ethr', 'pres')
+               nhdf_vars = nhdf_vars + size(iarr_all_en,1)
 #ifdef COSM_RAYS
             case ('encr')
                nhdf_vars = nhdf_vars + size(iarr_all_crs,1)
 #endif /* COSM_RAYS */
-#ifdef TRACER
-            case ('trcr')
-               nhdf_vars = nhdf_vars + 1
-#endif /* TRACER */
             case default
                nhdf_vars = nhdf_vars + 1
+               ! all known and unknown field descriptions that add just one field
          end select
       enddo
       allocate(hdf_vars_avail(nhdf_vars))
       hdf_vars_avail = .true.
       allocate(hdf_vars(nhdf_vars)); j = 1
-      do i = 1, nvars
-         select case (vars(i))
+      do i = lbound(vars, 1), ubound(vars, 1)
+         select case (trim(vars(i)))
+            case ('')
             case ('dens')
                if (has_dst) then ; hdf_vars(j) = 'dend' ; j = j + 1 ; endif
                if (has_neu) then ; hdf_vars(j) = 'denn' ; j = j + 1 ; endif
@@ -167,11 +166,40 @@ contains
                if (has_dst) then ; hdf_vars(j) = 'vlzd' ; j = j + 1 ; endif
                if (has_neu) then ; hdf_vars(j) = 'vlzn' ; j = j + 1 ; endif
                if (has_ion) then ; hdf_vars(j) = 'vlzi' ; j = j + 1 ; endif
+            case ('momx')
+               if (has_dst) then ; hdf_vars(j) = 'momxd' ; j = j + 1 ; endif
+               if (has_neu) then ; hdf_vars(j) = 'momxn' ; j = j + 1 ; endif
+               if (has_ion) then ; hdf_vars(j) = 'momxi' ; j = j + 1 ; endif
+            case ('momy')
+               if (has_dst) then ; hdf_vars(j) = 'momyd' ; j = j + 1 ; endif
+               if (has_neu) then ; hdf_vars(j) = 'momyn' ; j = j + 1 ; endif
+               if (has_ion) then ; hdf_vars(j) = 'momyi' ; j = j + 1 ; endif
+            case ('momz')
+               if (has_dst) then ; hdf_vars(j) = 'momzd' ; j = j + 1 ; endif
+               if (has_neu) then ; hdf_vars(j) = 'momzn' ; j = j + 1 ; endif
+               if (has_ion) then ; hdf_vars(j) = 'momzi' ; j = j + 1 ; endif
             case ('ener')
                if (has_neu) then ; hdf_vars(j) = 'enen' ; j = j + 1 ; endif
                if (has_ion) then ; hdf_vars(j) = 'enei' ; j = j + 1 ; endif
-            case ("magx", "magy", "magz")
-               hdf_vars(j) = vars(i) ; j = j + 1
+            case ('ethr')
+               if (has_neu) then ; hdf_vars(j) = 'ethn' ; j = j + 1 ; endif
+               if (has_ion) then ; hdf_vars(j) = 'ethi' ; j = j + 1 ; endif
+            case ("divb", "divB")
+               if (force_cc_mag) then
+                  hdf_vars(j) = "divbc"
+               else
+                  hdf_vars(j) = "divbf"
+               endif
+               j = j + 1
+            case ("divb4", "divb6", "divb8")
+               if (force_cc_mag) then
+                  fc = "c"
+               else
+                  fc = "f"
+               endif
+               read(vars(i), '(a4,a1)') aux, ord
+               write(hdf_vars(j), '(3a)') "divb", fc, ord
+               j = j + 1
 #ifdef COSM_RAYS
             case ('encr')
                do k = 1, size(iarr_all_crs,1)
@@ -184,19 +212,12 @@ contains
                   endif
                enddo
 #endif /* COSM_RAYS */
-#ifdef GRAV
-            case ('gpot')
-               hdf_vars(j) = 'gpot' ; j = j + 1
-#endif /* GRAV */
-#ifdef TRACER
-            case ('trcr')
-               hdf_vars(j) = 'trcr' ; j = j + 1
-#endif /* TRACER */
             case ('pres')
                if (has_neu) then ; hdf_vars(j) = 'pren' ; j = j + 1 ; endif
                if (has_ion) then ; hdf_vars(j) = 'prei' ; j = j + 1 ; endif
             case default
                hdf_vars(j) = trim(vars(i)) ; j = j + 1
+               ! all known and unknown field descriptions that add just one field
          end select
       enddo
 
@@ -256,12 +277,21 @@ contains
             case ("i")
                fl_dni => flind%ion
          end select
+      else if (any([ "momx", "momy", "momz" ] == var(1:4))) then
+         select case (var(5:5))
+            case ("d")
+               fl_dni => flind%dst
+            case ("n")
+               fl_dni => flind%neu
+            case ("i")
+               fl_dni => flind%ion
+         end select
       endif
 
       i_xyz = huge(1_INT4)
       if (var(1:2) == "vl") then
          dc = var(3:3)
-      else if (var(1:3) == "mag") then
+      else if (var(1:3) == "mag" .or. var(1:3) == "mom") then
          dc = var(4:4)
       else
          dc = '_'
@@ -275,18 +305,28 @@ contains
 !!
 !! \details Write real, integer and character attributes. Store contents of problem.par and env files.
 !! Other common elements may also be moved here.
+!!
+!! \ToDo figure out if it is of use for us:
+!! http://computation.llnl.gov/projects/floating-point-compression/zfp-and-derivatives
+!! https://github.com/LLNL/H5Z-ZFP
 !<
    subroutine set_common_attributes(filename)
 
-      use constants,   only: I_ONE
-      use dataio_pub,  only: use_v2_io, parfile, parfilelines, gzip_level
-      use dataio_user, only: user_attrs_wr, user_attrs_pre
-      use hdf5,        only: HID_T, SIZE_T, HSIZE_T, H5F_ACC_TRUNC_F, H5T_NATIVE_CHARACTER, H5Z_FILTER_DEFLATE_F, &
+      use constants,     only: I_ONE
+      use dataio_pub,    only: use_v2_io, parfile, parfilelines, gzip_level
+      use dataio_user,   only: user_attrs_wr, user_attrs_pre
+      use hdf5,          only: HID_T, SIZE_T, HSIZE_T, H5F_ACC_TRUNC_F, H5T_NATIVE_CHARACTER, H5Z_FILTER_DEFLATE_F, &
          & H5P_DATASET_CREATE_F, h5open_f, h5fcreate_f, h5fclose_f, H5Zfilter_avail_f, H5Pcreate_f, H5Pset_deflate_f, &
          & H5Pset_chunk_f, h5tcopy_f, h5tset_size_f, h5screate_simple_f, H5Dcreate_f, H5Dwrite_f, H5Dclose_f, &
          & H5Sclose_f, H5Tclose_f, H5Pclose_f, h5close_f
-      use mpisetup,    only: slave
-      use version,     only: env, nenv
+      use mpisetup,      only: slave
+      use version,       only: env, nenv
+#ifdef RANDOMIZE
+      use randomization, only: write_current_seed_to_restart
+#endif /* RANDOMIZE */
+#ifdef SN_SRC
+      use snsources,     only: write_snsources_to_restart
+#endif /* SN_SRC */
 
       implicit none
 
@@ -344,6 +384,12 @@ contains
       call H5Tclose_f(type_id, error)
       call H5Pclose_f(prp_id, error)
 
+#ifdef RANDOMIZE
+      call write_current_seed_to_restart(file_id)
+#endif /* RANDOMIZE */
+#ifdef SN_SRC
+      call write_snsources_to_restart(file_id)
+#endif /* SN_SRC */
       if (associated(user_attrs_wr)) call user_attrs_wr(file_id)
 
       call h5fclose_f(file_id, error)
@@ -421,7 +467,7 @@ contains
       !! \todo check if finest is complete, if not then find finest complete level
       !! (see data_hdf5::h5_write_to_single_file_v1)
       !<
-      ibuffer(5:7) = int(finest%level%n_d(:), kind=4) ; ibuffer_name(5:7) = [ "nxd", "nyd", "nzd" ] !rr1
+      ibuffer(5:7) = int(finest%level%l%n_d(:), kind=4) ; ibuffer_name(5:7) = [ "nxd", "nyd", "nzd" ] !rr1
       ibuffer(8)   = dom%nb                  ; ibuffer_name(8)   = "nb"
       ibuffer(9)   = require_problem_IC      ; ibuffer_name(9)   = "require_problem_IC" !rr2
 
@@ -495,7 +541,7 @@ contains
       ibuffer(2) = nres                  ; ibuffer_name(2) = "nres" !rr2
       ibuffer(3) = nhdf                  ; ibuffer_name(3) = "nhdf" !rr2
       ibuffer(4) = -1                    ; ibuffer_name(4) = "nimg" !rr2 !FIXME
-      ibuffer(5) = require_problem_IC     ; ibuffer_name(5) = "require_problem_IC" !rr2
+      ibuffer(5) = require_problem_IC    ; ibuffer_name(5) = "require_problem_IC" !rr2
 
       !> \todo  add number of pieces in the restart point/data dump
 
@@ -575,7 +621,7 @@ contains
 !> \brief Create an empty double precision dataset of given dimensions. Use compression if available.
    subroutine create_empty_cg_dataset(cg_g_id, name, ddims, Z_avail, otype)
 
-      use dataio_pub, only: enable_compression, gzip_level, die
+      use dataio_pub, only: enable_compression, gzip_level, die, h5_64bit
       use hdf5,       only: HID_T, HSIZE_T, H5P_DATASET_CREATE_F, H5T_NATIVE_REAL, H5T_NATIVE_DOUBLE, &
          &                  h5dcreate_f, h5dclose_f, h5screate_simple_f, h5sclose_f, h5pcreate_f, h5pclose_f, h5pset_deflate_f, &
          &                  h5pset_shuffle_f, h5pset_chunk_f
@@ -601,7 +647,11 @@ contains
      if (otype == O_RES) then
         dtype = H5T_NATIVE_DOUBLE
      else if (otype == O_OUT) then
-        dtype = H5T_NATIVE_REAL
+        if (h5_64bit) then
+           dtype = H5T_NATIVE_DOUBLE
+        else
+           dtype = H5T_NATIVE_REAL
+        endif
      else
         call die("[common_hdf5:create_empty_cg_dataset] Unknown output time")
      endif
@@ -639,11 +689,12 @@ contains
    subroutine write_to_hdf5_v2(filename, otype, create_empty_cg_datasets, write_cg_to_hdf5)
 
       use cg_leaves,    only: leaves
-      use constants,    only: cwdlen, dsetnamelen, xdim, zdim, ndims, I_ONE, I_TWO, I_THREE, INT4, LO, HI
-      use dataio_pub,   only: die, nproc_io, can_i_write, domain_dump
+      use constants,    only: cwdlen, dsetnamelen, xdim, zdim, ndims, I_ONE, I_TWO, I_THREE, I_FOUR, INT4, LO, HI, &
+         &                    GEO_XYZ, GEO_RPZ
+      use dataio_pub,   only: die, nproc_io, can_i_write, domain_dump, msg
       use domain,       only: dom
       use gdf,          only: gdf_create_format_stamp, gdf_create_simulation_parameters, gdf_create_root_datasets, &
-         &                    gdf_root_datasets_T, gdf_parameters_T
+         &                    gdf_root_datasets_T, gdf_parameters_T, GDF_CARTESIAN, GDF_POLAR
       use global,       only: t
       use hdf5,         only: HID_T, H5F_ACC_RDWR_F, H5P_FILE_ACCESS_F, H5P_GROUP_ACCESS_F, H5Z_FILTER_DEFLATE_F, &
          &                    h5open_f, h5close_f, h5fopen_f, h5fclose_f, h5gcreate_f, h5gopen_f, h5gclose_f, h5pclose_f, &
@@ -651,7 +702,6 @@ contains
       use helpers_hdf5, only: create_attribute!, create_corefile
       use mpi,          only: MPI_INTEGER, MPI_INTEGER8, MPI_STATUS_IGNORE, MPI_REAL8
       use mpisetup,     only: comm, FIRST, LAST, master, mpi_err, piernik_MPI_Bcast
-      use units,        only: cm, sek
 
       implicit none
 
@@ -661,24 +711,25 @@ contains
          !>
          !! Function responsible for creating empty datasets, called by master
          !<
-         subroutine create_empty_cg_datasets(cgl_g_id, cg_n_b, Z_avail, g)
+         subroutine create_empty_cg_datasets(cgl_g_id, cg_n_b, cg_n_o, Z_avail)
             use hdf5, only: HID_T
             implicit none
-            integer(HID_T),                           intent(in) :: cgl_g_id
-            integer(kind=4), dimension(:,:), pointer, intent(in) :: cg_n_b
-            logical(kind=4),                          intent(in) :: Z_avail
-            integer,                                  intent(in) :: g
+            integer(HID_T),                intent(in) :: cgl_g_id
+            integer(kind=4), dimension(:), intent(in) :: cg_n_b
+            integer(kind=4), dimension(:), intent(in) :: cg_n_o
+            logical(kind=4),               intent(in) :: Z_avail
          end subroutine create_empty_cg_datasets
 
          !>
          !! Function that performs actual I/O, called by all
          !<
-         subroutine write_cg_to_hdf5(cgl_g_id, cg_n, cg_all_n_b)
+         subroutine write_cg_to_hdf5(cgl_g_id, cg_n, cg_all_n_b, cg_all_n_o)
             use hdf5, only: HID_T
             implicit none
             integer(HID_T),                           intent(in) :: cgl_g_id
             integer(kind=4), dimension(:),   pointer, intent(in) :: cg_n
             integer(kind=4), dimension(:,:), pointer, intent(in) :: cg_all_n_b
+            integer(kind=4), dimension(:,:), pointer, intent(in) :: cg_all_n_o
          end subroutine write_cg_to_hdf5
       end interface
 
@@ -693,8 +744,10 @@ contains
       integer, parameter                            :: tag = I_ONE
       integer(kind=4),  dimension(:),   pointer     :: cg_n             !< offset for cg group numbering
       integer(kind=4),  dimension(:,:), pointer     :: cg_all_n_b       !< sizes of all cg
+      integer(kind=4),  dimension(:,:), pointer     :: cg_all_n_o       !< sizes of all cg, expanded by external boundaries
       integer(kind=4),  dimension(:),   pointer     :: cg_rl            !< list of refinement levels from all cgs/procs
       integer(kind=4),  dimension(:,:), pointer     :: cg_n_b           !< list of n_b from all cgs/procs
+      integer(kind=4),  dimension(:,:), pointer     :: cg_n_o           !< list of grid dimnsions with external guardcells from all cgs/procs
       integer(kind=8),  dimension(:,:), pointer     :: cg_off           !< list of offsets from all cgs/procs
 
       !>
@@ -716,7 +769,7 @@ contains
       allocate(cg_n(FIRST:LAST))
       call MPI_Allgather(leaves%cnt, I_ONE, MPI_INTEGER, cg_n, I_ONE, MPI_INTEGER, comm, mpi_err)
       cg_cnt = sum(cg_n(:))
-      allocate(cg_all_n_b(ndims, cg_cnt))
+      allocate(cg_all_n_b(ndims, cg_cnt), cg_all_n_o(ndims, cg_cnt))
 
       if (master) then
          call rd%init(cg_cnt)
@@ -731,9 +784,20 @@ contains
          if (otype == O_OUT) then
             call gdf_create_format_stamp(file_id)
             call gdf_sp%init()
-            gdf_sp%current_time = t/sek
-            gdf_sp%domain_left_edge = dom%edge(:, LO) / cm
-            gdf_sp%domain_right_edge = dom%edge(:, HI) / cm
+            gdf_sp%current_time = t
+            select case (dom%geometry_type)
+               case (GEO_XYZ)
+                  gdf_sp%domain_left_edge = dom%edge(:, LO)
+                  gdf_sp%domain_right_edge = dom%edge(:, HI)
+                  gdf_sp%geometry = GDF_CARTESIAN
+               case (GEO_RPZ)
+                  gdf_sp%domain_left_edge = dom%edge(:, LO)
+                  gdf_sp%domain_right_edge = dom%edge(:, HI)
+                  gdf_sp%geometry = GDF_POLAR
+               case default
+                  write(msg,'(a,i3)') "[common_hdf5:write_to_hdf5_v2] Unknown system of coordinates ", dom%geometry_type
+                  call die(msg)
+            end select
             gdf_sp%field_ordering = 1
             gdf_sp%boundary_conditions = int([0,0,0,0,0,0], kind=4)  !! \todo fix hardcoded integers
             gdf_sp%refine_by = int([2], kind=8) !! \todo fix hardcoded integers
@@ -764,34 +828,40 @@ contains
          ! Do not assume that the master knows all the lists
          do p = FIRST, LAST
             allocate(cg_rl(cg_n(p)), cg_n_b(cg_n(p), ndims), cg_off(cg_n(p), ndims))
+            nullify(dbuf)
             if (otype == O_OUT) allocate(dbuf(cg_le:cg_dl, cg_n(p), ndims))
+            nullify(cg_n_o)
+            if (otype == O_RES) allocate(cg_n_o(cg_n(p), ndims))
             if (p == FIRST) then
-               call collect_cg_data(cg_rl, cg_n_b, cg_off, dbuf, otype)
+               call collect_cg_data(cg_rl, cg_n_b, cg_n_o, cg_off, dbuf, otype)
             else
                call MPI_Recv(cg_rl,  size(cg_rl),  MPI_INTEGER,  p, tag,         comm, MPI_STATUS_IGNORE, mpi_err)
                call MPI_Recv(cg_n_b, size(cg_n_b), MPI_INTEGER,  p, tag+I_ONE,   comm, MPI_STATUS_IGNORE, mpi_err)
                call MPI_Recv(cg_off, size(cg_off), MPI_INTEGER8, p, tag+I_TWO,   comm, MPI_STATUS_IGNORE, mpi_err)
                if (otype == O_OUT) &
-                  & call MPI_Recv(dbuf,   size(dbuf) ,  MPI_REAL8,    p, tag+I_THREE, comm, MPI_STATUS_IGNORE, mpi_err)
+                  & call MPI_Recv(dbuf,   size(dbuf),   MPI_REAL8,    p, tag+I_THREE, comm, MPI_STATUS_IGNORE, mpi_err)
+               if (otype == O_RES) &
+                  & call MPI_Recv(cg_n_o, size(cg_n_o), MPI_INTEGER,  p, tag+I_FOUR,  comm, MPI_STATUS_IGNORE, mpi_err)
             endif
 
             do g = 1, cg_n(p)
-               call h5gcreate_f(cgl_g_id, n_cg_name(sum(cg_n(:p))-cg_n(p)+g), cg_g_id, error) ! create "/cg/cg_%08d"
+               call h5gcreate_f(cgl_g_id, n_cg_name(sum(cg_n(:p))-cg_n(p)+g), cg_g_id, error) ! create "/data/grid_%08d"
 
-               call create_attribute(cg_g_id, cg_lev_aname, [ cg_rl(g) ] )                ! create "/cg/cg_%08d/level"
+               call create_attribute(cg_g_id, cg_lev_aname, [ cg_rl(g) ] )                ! create "/data/grid_%08d/level"
                temp = cg_n_b(g, :)
-               call create_attribute(cg_g_id, cg_size_aname, temp)                        ! create "/cg/cg_%08d/n_b"
-               call create_attribute(cg_g_id, cg_offset_aname, int(cg_off(g, :), kind=4)) ! create "/cg/cg_%08d/off"
+               call create_attribute(cg_g_id, cg_size_aname, temp)                        ! create "/data/grid_%08d/n_b"
+               call create_attribute(cg_g_id, cg_offset_aname, int(cg_off(g, :), kind=4)) ! create "/data/grid_%08d/off"
                if (otype == O_OUT) then
                   temp(:) = dbuf(cg_le, g, :)
-                  call create_attribute(cg_g_id, cg_ledge_aname, temp)  ! create "/cg/cg_%08d/left_edge"
+                  call create_attribute(cg_g_id, cg_ledge_aname, temp)  ! create "/data/grid_%08d/left_edge"
                   temp(:) = dbuf(cg_re, g, :)
-                  call create_attribute(cg_g_id, cg_redge_aname, temp)  ! create "/cg/cg_%08d/right_edge"
+                  call create_attribute(cg_g_id, cg_redge_aname, temp)  ! create "/data/grid_%08d/right_edge"
                   temp(:) = dbuf(cg_dl, g, :)
-                  call create_attribute(cg_g_id, cg_dl_aname, temp)     ! create "/cg/cg_%08d/dl"
+                  call create_attribute(cg_g_id, cg_dl_aname, temp)     ! create "/data/grid_%08d/dl"
                endif
 
                cg_all_n_b(:, sum(cg_n(:p))-cg_n(p)+g) = cg_n_b(g, :)
+               if (associated(cg_n_o)) cg_all_n_o(:, sum(cg_n(:p))-cg_n(p)+g) = cg_n_o(g, :)
                if (otype == O_OUT) then
                   indx = int(sum(cg_n(:p))-cg_n(p)+g, kind=4)
                   rd%grid_level(indx) = cg_rl(g)
@@ -803,13 +873,14 @@ contains
                if (any(cg_off(g, :) > 2.**31)) &
                   & call die("[common_hdf5:write_to_hdf5_v2] large offsets require better treatment")
 
-               call create_empty_cg_datasets(cg_g_id, cg_n_b, Z_avail, g) !!!!!
+               call create_empty_cg_datasets(cg_g_id, cg_n_b(g, :), cg_n_o(g, :), Z_avail) !!!!!
 
                call h5gclose_f(cg_g_id, error)
             enddo
 
             deallocate(cg_rl, cg_n_b, cg_off)
             if (associated(dbuf)) deallocate(dbuf)
+            if (associated(cg_n_o)) deallocate(cg_n_o)
          enddo
          rd%grid_dimensions = cg_all_n_b
 
@@ -849,17 +920,23 @@ contains
          call rd%cleanup()
       else ! send all the necessary information to the master
          allocate(cg_rl(leaves%cnt), cg_n_b(leaves%cnt, ndims), cg_off(leaves%cnt, ndims))
+         nullify(dbuf)
          if (otype == O_OUT) allocate(dbuf(cg_le:cg_dl, leaves%cnt, ndims))
-         call collect_cg_data(cg_rl, cg_n_b, cg_off, dbuf, otype)
+         nullify(cg_n_o)
+         if (otype == O_RES) allocate(cg_n_o(leaves%cnt, ndims))
+         call collect_cg_data(cg_rl, cg_n_b, cg_n_o, cg_off, dbuf, otype)
          call MPI_Send(cg_rl,  size(cg_rl),  MPI_INTEGER,  FIRST, tag,         comm, mpi_err)
          call MPI_Send(cg_n_b, size(cg_n_b), MPI_INTEGER,  FIRST, tag+I_ONE,   comm, mpi_err)
          call MPI_Send(cg_off, size(cg_off), MPI_INTEGER8, FIRST, tag+I_TWO,   comm, mpi_err)
          if (otype == O_OUT) call MPI_Send(dbuf,   size(dbuf),   MPI_REAL8,    FIRST, tag+I_THREE, comm, mpi_err)
+         if (otype == O_RES) call MPI_Send(cg_n_o, size(cg_n_o), MPI_INTEGER,  FIRST, tag+I_FOUR,  comm, mpi_err)
          deallocate(cg_rl, cg_n_b, cg_off)
          if (associated(dbuf)) deallocate(dbuf)
+         if (associated(cg_n_o)) deallocate(cg_n_o)
       endif
 
       call piernik_MPI_Bcast(cg_all_n_b)
+      call piernik_MPI_Bcast(cg_all_n_o)
       ! Reopen the HDF5 file for parallel write
       call h5open_f(error)
       if (can_i_write) then
@@ -871,7 +948,7 @@ contains
          call h5pclose_f(plist_id, error)
       endif
 
-      call write_cg_to_hdf5(cgl_g_id, cg_n, cg_all_n_b) !!!!!
+      call write_cg_to_hdf5(cgl_g_id, cg_n, cg_all_n_b, cg_all_n_o) !!!!!
 
       if (can_i_write) then
          call h5gclose_f(cgl_g_id, error)
@@ -880,22 +957,23 @@ contains
 
       call h5close_f(error)            ! Close HDF5 stuff
 
-      deallocate(cg_n, cg_all_n_b)
+      deallocate(cg_n, cg_all_n_b, cg_all_n_o)
 
    end subroutine write_to_hdf5_v2
 
-   subroutine collect_cg_data(cg_rl, cg_n_b, cg_off, dbuf, otype)
+   subroutine collect_cg_data(cg_rl, cg_n_b, cg_n_o, cg_off, dbuf, otype)
 
       use cg_level_base,      only: base
       use cg_level_connected, only: cg_level_connected_T
       use cg_list,            only: cg_list_element
-      use constants,          only: LO, HI
+      use constants,          only: LO, HI, I_ONE
 
       implicit none
 
       integer(kind=4), dimension(:),     pointer, intent(inout) :: cg_rl            !< list of refinement levels from all cgs/procs
       integer(kind=4), dimension(:,:),   pointer, intent(inout) :: cg_n_b           !< list of n_b from all cgs/procs
-      integer(kind=8), dimension(:,:),   pointer, intent(inout) :: cg_off           !< list of offsets from all cgs/procs
+      integer(kind=4), dimension(:,:),   pointer, intent(inout) :: cg_n_o           !< list of grid dimensions with external guardcells from all cgs/procs
+      integer(kind=8), dimension(:,:),   pointer, intent(inout) :: cg_off           !< list of offsets from all cgs/procs with respect to level offset (lose level offset in the restart)
       real(kind=8),    dimension(:,:,:), pointer, intent(inout) :: dbuf
       integer(kind=4),                            intent(in)    :: otype            !< Output type (restart, data)
 
@@ -908,14 +986,15 @@ contains
       do while (associated(curl))
          cgl => curl%first
          do while (associated(cgl))
-            cg_rl (g   ) = int(cgl%cg%level_id, kind=4)
+            cg_rl (g   ) = int(cgl%cg%l%id, kind=4)
             cg_n_b(g, :) = cgl%cg%n_b(:)
-            cg_off(g, :) = cgl%cg%my_se(:, LO) - curl%off(:)
+            cg_off(g, :) = cgl%cg%my_se(:, LO) - curl%l%off(:)
             if (otype == O_OUT) then
                dbuf(cg_le, g, :)  = cgl%cg%fbnd(:, LO)
                dbuf(cg_re, g, :)  = cgl%cg%fbnd(:, HI)
                dbuf(cg_dl, g, :)  = cgl%cg%dl
             endif
+            if (otype == O_RES) cg_n_o(g, :) = cgl%cg%lh_out(:, HI) - cgl%cg%lh_out(:, LO) + I_ONE
             g = g + 1
             cgl => cgl%nxt
          enddo
@@ -931,7 +1010,7 @@ contains
       use mpisetup, only: comm
 
       implicit none
-      integer(kind=4), intent(in) :: h5p
+      integer(HID_T),  intent(in) :: h5p
       integer(kind=4), intent(in) :: nproc_io
       integer(HID_T)              :: plist_id
       integer(kind=4)             :: error
@@ -950,8 +1029,8 @@ contains
 
    function output_fname(wr_rd, ext, no, bcast, prefix) result(filename)
 
-      use constants,  only: cwdlen, RD, WR, I_FOUR, fnamelen
-      use dataio_pub, only: problem_name, run_id, wd_wr, wd_rd, warn, die, msg
+      use constants,  only: cwdlen, idlen, RD, WR, I_FOUR, fnamelen
+      use dataio_pub, only: problem_name, run_id, res_id, wd_wr, wd_rd, warn, die, msg
       use mpisetup,   only: master, piernik_MPI_Bcast
 
       implicit none
@@ -961,6 +1040,7 @@ contains
       logical,               intent(in), optional :: bcast
       character(len=*),      intent(in), optional :: prefix
       character(len=cwdlen)                       :: filename, temp  ! File name
+      character(len=idlen)                        :: file_id
 
 
       ! Sanity checks go here
@@ -976,11 +1056,17 @@ contains
          endif
       endif
 
+      if ((wr_rd == RD) .and. (res_id /= '')) then
+         file_id = res_id
+      else
+         file_id = run_id
+      endif
+
       if (master) then
          if (present(prefix)) then
-            write(temp,'(2(a,"_"),a3,"_",i4.4,a4)') trim(prefix), trim(problem_name), run_id, no, ext
+            write(temp,'(2(a,"_"),a3,"_",i4.4,a4)') trim(prefix), trim(problem_name), file_id, no, ext
          else
-            write(temp,'(a,"_",a3,"_",i4.4,a4)') trim(problem_name), run_id, no, ext
+            write(temp,'(a,"_",a3,"_",i4.4,a4)') trim(problem_name), file_id, no, ext
          endif
          select case (wr_rd)
             case (RD)

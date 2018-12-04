@@ -55,7 +55,7 @@ contains
 !!
 !! \details Multigrid levels are always created on all processes, so no need to fix anything on the bottom of the hierarchy
 !!
-!! \todo When global top level do not have any blocks then destroy it.
+!! \todo When global top level does not have any blocks then destroy it.
 !<
 
    subroutine equalize(this)
@@ -70,17 +70,17 @@ contains
 
       integer(kind=4) :: g_finest_id
 
-      g_finest_id = this%level%level_id
+      g_finest_id = this%level%l%id
       call piernik_MPI_Allreduce(g_finest_id, pMAX)
 
-      do while (g_finest_id > this%level%level_id)
+      do while (g_finest_id > this%level%l%id)
          call this%add_finer
       enddo
 
-      g_finest_id = this%level%level_id
+      g_finest_id = this%level%l%id
       call piernik_MPI_Allreduce(g_finest_id, pMAX)
 
-      if (g_finest_id /= this%level%level_id) call die("[cg_level_finest:equalize] failure")
+      if (g_finest_id /= this%level%l%id) call die("[cg_level_finest:equalize] failure")
 
    end subroutine equalize
 
@@ -90,7 +90,6 @@ contains
 
       use constants,        only: INVALID, I_ONE, refinement_factor
       use dataio_pub,       only: die, msg
-      use domain,           only: dom
       use grid_helpers,     only: c2f_o
       use list_of_cg_lists, only: all_lists
 
@@ -102,17 +101,14 @@ contains
 
       allocate(new_lev)
       call new_lev%init_level
-      new_lev%n_d(:) = 1
 
       if (associated(this%level%finer)) call die("[cg_level_finest:add_finer] finer level already exists")
 
-      new_lev%level_id = this%level%level_id + I_ONE
-      new_lev%off = c2f_o(this%level%off)
-      where (dom%has_dir(:)) new_lev%n_d(:) = this%level%n_d(:) * refinement_factor
+      call new_lev%l%init(this%level%l%id+I_ONE, this%level%l%n_d*refinement_factor, c2f_o(this%level%l%off))
 
       !! make sure that vertical_prep will be called where necessary
       this%level%ord_prolong_set = INVALID
-      write(msg, '(a,i3)')"level ",new_lev%level_id
+      write(msg, '(a,i3)')"level ",new_lev%l%id
       call all_lists%register(new_lev, msg)
 
       this%level%finer => new_lev

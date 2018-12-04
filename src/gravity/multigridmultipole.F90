@@ -231,7 +231,7 @@ contains
                CoM(ydim) = 0.
             endif
             CoM(zdim) = dom%C_(zdim)
-            zaxis_inside = dom%edge(xdim, LO) <= dom%L_(xdim)/finest%level%n_d(xdim) ! lmpole
+            zaxis_inside = dom%edge(xdim, LO) <= dom%L_(xdim)/finest%level%l%n_d(xdim) ! lmpole
             if (master) then
                if (zaxis_inside) call warn("[multigridmultipole:refresh_multipole] Setups with Z-axis at the edge of the domain may not work as expected yet.")
                if (use_point_monopole) call warn("[multigridmultipole:refresh_multipole] Point-like monopole is not implemented.")

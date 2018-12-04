@@ -22,7 +22,7 @@
 
  $RESTART_CONTROL
     restart  = 'last'
-    new_id   = 'new'
+    res_id   = 'new'
     nrestart = 0
  /
 
@@ -32,6 +32,7 @@
  /
 
  $OUTPUT_CONTROL
+    gdf_strict = .false.
     problem_name = 'tearing'
     run_id       = 'tst'
     dt_hdf  = 0.01
@@ -39,13 +40,14 @@
     dt_tsl  = 0.1
     dt_res  = 3.0
     vars(1:) = 'ener', 'dens', 'magx', 'magy', 'magz', 'velx', 'vely', 'velz'
+    h5_64bit = .true.
  /
 
  $FLUID_IONIZED
     gamma  = 1.666666666
  /
 
-  $NUMERICAL_SETUP
+ $NUMERICAL_SETUP
     cfl    = 0.4
     smalld = 1.e-5
     smallei= 1.e-5

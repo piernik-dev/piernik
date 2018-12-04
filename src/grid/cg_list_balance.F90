@@ -31,10 +31,11 @@
 
 module cg_list_balance
 
-   use cg_list_bnd, only: cg_list_bnd_T
-   use constants,   only: ndims, I_ONE
-   use dot,         only: dot_T
-   use patch_list,  only: patch_list_T
+   use cg_list_bnd,      only: cg_list_bnd_T
+   use constants,        only: ndims, I_ONE
+   use dot,              only: dot_T
+   use level_essentials, only: level_T
+   use patch_list,       only: patch_list_T
 
    implicit none
 
@@ -52,8 +53,8 @@ module cg_list_balance
    type, extends(cg_list_bnd_T), abstract :: cg_list_balance_T
       type(patch_list_T)                :: plist            !< list of patches that exist on the current level
       type(dot_T)                       :: dot              !< depiction of topology
-      integer(kind=8), dimension(ndims) :: off              !< offset of the level
       logical                           :: recently_changed !< .true. when anything was added to or deleted from this level
+      class(level_T), pointer           :: l                !< single place to store off, n_d and id
    contains
       procedure          :: balance_new          !< Routine selector for moving proposed grids between processes
       procedure, private :: balance_strict_SFC   !< Routine for moving proposed grids between processes: keep strict SFC ordering
@@ -76,18 +77,17 @@ contains
 !! * All blocks (existing and new) have recalculated assignment and can be migrated to other processes. Most advanced. Should be used after reading restart data.
 !<
 
-   subroutine balance_new(this, prevent_rebalancing)
+   subroutine balance_new(this)
 
       use refinement, only: strict_SFC_ordering
 
       implicit none
 
       class(cg_list_balance_T), intent(inout) :: this
-      logical, optional,        intent(in)    :: prevent_rebalancing !< if present and .true. then do not allow rebalancing during addition of new grids
 
       ! The only available strategy ATM
       if (strict_SFC_ordering) then
-         call this%balance_strict_SFC(prevent_rebalancing)
+         call this%balance_strict_SFC
       else
          call this%balance_fill_lowest ! never rebalances
       endif
@@ -97,14 +97,15 @@ contains
 !>
 !! \brief Routine for moving proposed grids between processes: keep strict SFC ordering
 !!
-!! \details Starts with list of already allocated blocks and list of patches which are not yet turned into blocks on a given level.
-!! Assume that the existing blocks are distributed according to Space-Filling curve ordering: maximum id for process p is always lower than minimum id for process p+1.
-!! Add new grids in a way that keeps the strict SFC ordering property even if it may introduce imbalance
+!! \details Starts with list of already allocated blocks and list of patches which are not yet turned into blocks
+!! on a given level. Assume that the existing blocks are distributed according to Space-Filling curve ordering:
+!! maximum id for process p is always lower than minimum id for process p+1. Add new grids in a way that keeps the
+!! strict SFC ordering property even if it may introduce imbalance.
 !!
-!! \todo do a global rebalance if it is allowed and worth the effort
+!! \todo Do a global rebalance if it is allowed and worth the effort.
 !<
 
-   subroutine balance_strict_SFC(this, prevent_rebalancing)
+   subroutine balance_strict_SFC(this)
 
       use constants,       only: pSUM, LO, HI, I_ONE
       use dataio_pub,      only: warn
@@ -114,19 +115,13 @@ contains
       implicit none
 
       class(cg_list_balance_T), intent(inout) :: this
-      logical, optional,        intent(in)    :: prevent_rebalancing !< if present and .true. then do not allow rebalancing during addition of new grids
 
-      logical :: rebalance
       type(grid_piece_list) :: gp
       integer(kind=4) :: ls, s, i, p
       integer(kind=4), dimension(FIRST:LAST+1) :: from
 
-      rebalance = .true.
-      if (present(prevent_rebalancing)) rebalance = .not. prevent_rebalancing
-
-      call this%dot%update_SFC_id_range(this%off)
+      call this%dot%update_SFC_id_range(this%l%off)
       if (.not. this%dot%is_strict_SFC) then
-!!$         if (.not. rebalance) call die("[cg_list_balance:balance_strict_SFC] Cannot rebalence messy grid distribution.")
 !!$         ! call reshuffle
 !!$         call die("[cg_list_balance:balance_strict_SFC] reshuffling not implemented.")
          if (master) call warn("[cg_list_balance:balance_strict_SFC] non-SFC ordering!") ! May happen after resizing domain on the left sides
@@ -141,12 +136,10 @@ contains
       if (master) call gp%init(s)
       call this%patches_to_list(gp, ls)
 
-      ! if (rebalance) gather existing grids id
-
       ! sort id
       if (master) then !> \warning Antiparallel
          ! apply unique numbers to the grids and sort the list
-         call gp%set_id(this%off)
+         call gp%set_id(this%l%off)
          call gp%sort
 
          ! calculate patch distribution
@@ -186,7 +179,6 @@ contains
             enddo
          endif
       endif
-      ! if (rebalance) call reshuffle(distribution)
 
       ! send to slaves
       call this%distribute_patches(gp, from)
@@ -253,7 +245,7 @@ contains
 
       if (master) then !> \warning Antiparallel
          ! apply unique numbers to the grids and sort the list
-         call gp%set_id(this%off)
+         call gp%set_id(this%l%off)
          call gp%sort
 
          ! measure their weight (unused yet)
@@ -271,10 +263,10 @@ contains
          p = LAST
          do while (p >= FIRST .and. i /= 0)
             if (i<0) then
-               if (from(p+1)>0) then
+               do while (from(p+1)>0 .and. i<0)
                   from(p+1) = from(p+1) - I_ONE
                   i = i + 1
-               endif
+               enddo
             else if (i>0) then
                !> \deprecated this approach may result in building a small imbalance in favour of process with low id.
                if (cnt_existing(p) <= s) then
@@ -321,7 +313,7 @@ contains
 
       integer(kind=8), dimension(:,:), allocatable :: gptemp
       integer :: i
-      integer(kind=4) :: p, ss
+      integer(kind=4) :: p, ss, rls
       integer, parameter :: nreq = 1
       integer(kind=4), parameter :: tag_ls = 1, tag_gpt = tag_ls+1
 
@@ -342,14 +334,14 @@ contains
          i = ls
          deallocate(gptemp)
          do p = FIRST + 1, LAST
-            call MPI_Recv(ls, I_ONE, MPI_INTEGER, p, tag_ls, comm, MPI_STATUS_IGNORE, mpi_err)
-            if (ls > 0) then
-               allocate(gptemp(I_OFF:I_END,ls))
+            call MPI_Recv(rls, I_ONE, MPI_INTEGER, p, tag_ls, comm, MPI_STATUS_IGNORE, mpi_err)
+            if (rls > 0) then
+               allocate(gptemp(I_OFF:I_END, rls))
                call MPI_Recv(gptemp, size(gptemp), MPI_INTEGER8, p, tag_gpt, comm, MPI_STATUS_IGNORE, mpi_err)
-               do ss = 1, ls
+               do ss = 1, rls
                   call gp%list(i+ss)%set_gp(gptemp(I_OFF:I_OFF+ndims-1, ss), int(gptemp(I_N_B:I_N_B+ndims-1, ss), kind=4), INVALID, p)
                enddo
-               i = i + ls
+               i = i + rls
                deallocate(gptemp)
             endif
          enddo

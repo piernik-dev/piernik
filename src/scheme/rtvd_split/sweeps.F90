@@ -255,7 +255,7 @@ contains
       use cg_leaves,          only: leaves
       use cg_level_connected, only: cg_level_connected_T, find_level
       use cg_list,            only: cg_list_element
-      use constants,          only: pdims, LO, HI, uh_n, cs_i2_n, ORTHO1, ORTHO2, VEL_CR, VEL_RES, ydim
+      use constants,          only: pdims, LO, HI, uh_n, cs_i2_n, ORTHO1, ORTHO2, VEL_CR, VEL_RES, ydim, one, zero, half
       use domain,             only: dom
       use dataio_pub,         only: die
       use fluidindex,         only: flind, iarr_all_swp, nmag, iarr_all_dn, iarr_all_mx
@@ -266,9 +266,7 @@ contains
       use mpisetup,           only: mpi_err, req, status
       use named_array_list,   only: qna, wna
       use rtvd,               only: relaxing_tvd
-#ifdef COSM_RAYS
-      use crhelpers,          only: div_v, set_div_v1d
-#endif /* COSM_RAYS */
+      use sources,            only: prepare_sources, all_sources, care_for_positives
 #ifdef MAGNETIC
       use fluidindex,         only: iarr_mag_swp
 #endif /* MAGNETIC */
@@ -283,12 +281,12 @@ contains
       integer                           :: i_cs_iso2
       logical                           :: full_dim
       real, dimension(:,:), allocatable :: b
-      real, dimension(:,:), allocatable :: u, u0, vx
+      real, dimension(:,:), allocatable :: u, u0, u1, vx
       real, dimension(:,:),  pointer    :: pu, pu0
 #ifdef MAGNETIC
       real, dimension(:,:),  pointer    :: pb
 #endif /* MAGNETIC */
-      real, dimension(:),    pointer    :: div_v1d => null(), cs2
+      real, dimension(:),    pointer    :: cs2
       type(cg_list_element), pointer    :: cgl
       type(grid_container),  pointer    :: cg
       type(ext_fluxes)                  :: eflx
@@ -297,13 +295,13 @@ contains
       integer                           :: g, nr, nr_recv, ifl, icg
       integer(kind=4), dimension(:, :), pointer :: mpistatus
       integer :: cn_
-      logical :: sources
+      logical :: apply_sources
       type(cg_level_connected_T), pointer :: curl
+      real, dimension(2,2), parameter :: rk2coef = reshape( [ one, half, zero, one ], [ 2, 2 ] )
 
       if (use_fargo .and. cdim == ydim .and. .not. present(fargo_vel)) then
          call die("[sweeps:sweep] FARGO velocity keyword not present in y sweep")
       endif
-      allocate(vx(0, 0)) ! suppress compiler warnings
 
       cn_ = 0
       full_dim = dom%has_dir(cdim)
@@ -339,12 +337,10 @@ contains
                         if (allocated(b))  deallocate(b)
                         if (allocated(u))  deallocate(u)
                         if (allocated(u0)) deallocate(u0)
-                     endif
-                     if (.not. allocated(u)) allocate(b(cg%n_(cdim), nmag), u(cg%n_(cdim), flind%all), u0(cg%n_(cdim), flind%all))
-                     if (use_fargo .and. cdim == ydim) then
+                        if (allocated(u1)) deallocate(u1) !< updated vector of conservative variables (after one timestep in second order scheme)
                         if (allocated(vx)) deallocate(vx)
-                        allocate(vx(cg%n_(cdim), flind%fluids))
                      endif
+                     if (.not. allocated(u))  allocate( b(cg%n_(cdim), nmag), u(cg%n_(cdim), flind%all), u0(cg%n_(cdim), flind%all), u1(cg%n_(cdim), flind%all), vx(cg%n_(cdim), flind%fluids))
 
                      cn_ = cg%n_(cdim)
 
@@ -352,15 +348,13 @@ contains
                      u(:,:) = 0.0
 
                      if (istep == 1) then
-#ifdef COSM_RAYS
-                        call div_v(flind%ion%pos, cg)
-#endif /* COSM_RAYS */
+                        call prepare_sources(cg)
                         cg%w(uhi)%arr = cg%u
                      endif
 
                      !> \todo OPT: use cg%leafmap to skip lines fully covered by finer grids
                      ! it should be also possible to compute only parts of lines that aren't covered by finer grids
-                     curl => find_level(cg%level_id)
+                     curl => find_level(cg%l%id)
 
                      cs2 => null()
                      do i2 = cg%ijkse(pdims(cdim, ORTHO2), LO), cg%ijkse(pdims(cdim, ORTHO2), HI)
@@ -376,9 +370,6 @@ contains
 #endif /* MAGNETIC */
 
                            call set_geo_coeffs(cdim, flind, i1, i2, cg)
-#ifdef COSM_RAYS
-                           call set_div_v1d(div_v1d, cdim, i1, i2, cg)
-#endif /* COSM_RAYS */
 
                            pu                     => cg%w(wna%fi   )%get_sweep(cdim,i1,i2)
                            pu0                    => cg%w(uhi      )%get_sweep(cdim,i1,i2)
@@ -391,25 +382,35 @@ contains
                                  do ifl = 1, flind%fluids
                                     vx(:, ifl) = u(:, iarr_all_mx(ifl)) / u(:, iarr_all_dn(ifl)) - curl%omega_mean(i2, ifl) * cg%x(i2)
                                  enddo
-                                 sources = .true.
+                                 apply_sources = .true.
                               elseif (fargo_vel == VEL_CR) then
                                  do ifl = 1, flind%fluids
                                     vx(:, ifl) = curl%omega_cr(i2, ifl) * cg%x(i2)
                                  enddo
-                                 sources = .false.
+                                 apply_sources = .false.
                               else
                                  call die("[sweeps:sweep] Unknown FARGO_VEL")
+                                 apply_sources = .false.
                               endif
                            else
-                              sources = .true.
+                              apply_sources = .true.
+                              vx(:,:) = u(:,iarr_all_mx(:)) / u(:,iarr_all_dn(:))
+                              if (full_dim) then
+                                 vx(1,:) = vx(2,:)
+                                 vx(cg%n_(cdim),:) = vx(cg%n_(cdim)-1,:)
+                              endif
                            endif
 
                            call cg%set_fluxpointers(cdim, i1, i2, eflx)
-                           if (use_fargo .and. cdim == ydim) then
-                              call relaxing_tvd(cg%n_(cdim), u, u0, b, div_v1d, cs2, istep, cdim, i1, i2, cg%dl(cdim), dt, cg, eflx, sources, vx)
-                           else
-                              call relaxing_tvd(cg%n_(cdim), u, u0, b, div_v1d, cs2, istep, cdim, i1, i2, cg%dl(cdim), dt, cg, eflx, sources)
-                           endif
+                           !OPT: try to avoid these explicit initializations of u1(:,:)
+                           u1 = u
+
+                           call relaxing_tvd(cg%n_(cdim), u0, u1, vx, b, cs2, istep, rk2coef(integration_order,istep) * dt / cg%dl(cdim), eflx)
+! Source terms -------------------------------------
+                           if (apply_sources) call all_sources(cg%n_(cdim), u, u1, b, cg, istep, cdim, i1, i2, rk2coef(integration_order,istep)*dt, vx)
+
+                           call care_for_positives(cg%n_(cdim), u1, b, cg, cdim, i1, i2)
+                           u(:,:) = u1(:,:)
                            call cg%save_outfluxes(cdim, i1, i2, eflx)
 
                            pu(:,:) = transpose(u(:, iarr_all_swp(cdim,:)))
@@ -419,7 +420,7 @@ contains
 
                      call send_cg_coarsebnd(cdim, cg, nr)
 
-                     deallocate(b, u, u0)
+                     deallocate(b, u, u0, u1, vx)
 
                      cg%processed = .true.
                      blocks_done = blocks_done + 1
@@ -466,6 +467,8 @@ contains
       if (allocated(b))  deallocate(b)
       if (allocated(u))  deallocate(u)
       if (allocated(u0)) deallocate(u0)
+      if (allocated(u1)) deallocate(u1)
+      if (allocated(vx)) deallocate(vx)
 
    end subroutine sweep
 

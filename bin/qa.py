@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 import re
 import sys
 import hashlib
@@ -12,8 +12,8 @@ typ1 = np.dtype([('name', 'a50'), ('beg', 'i'), ('end', 'i'), ('type', 'a4')])
 # starts with spaces or spaces and one of { 'end', 'pure', ... }
 # if function it can have a type next goes subroutine or function or type
 test_for_routines = re.compile('''
-      ^\s{0,12}(|end|pure|elemental|recursive|real|logical|integer)\s
-      (|pure|elemental|recursive|real|logical|integer)(|\s)
+      ^\s{0,12}(|end|pure|elemental|recursive|((type|real|logical|integer)(|\([^(]*\))))(|\s)
+      (|pure|elemental|recursive|((type|real|logical|integer)(|\([^(]*\))))(|\s)
       (subroutine|function|type(,|\s))
    ''', re.VERBOSE)
 # starts with spaces or spaces and one of { 'end', 'pure', ... }
@@ -22,11 +22,11 @@ test_for_interfaces = re.compile('''
       ^\s{0,12}(|end|abstract)\s
       interface
    ''', re.VERBOSE)
-#test_for_routines  = re.compile('''
+# test_for_routines  = re.compile('''
 #       ^(?!\s{0,9}!).*(subroutine|function|type(,|\s::))
 #   ''',re.VERBOSE)
 module_body = re.compile(
-    '''^\s{0,3}(module|contains|program)''', re.VERBOSE)
+    '''^(module|contains|program)''', re.VERBOSE)
 just_end = re.compile('''^\s{0,9}end''', re.IGNORECASE)
 
 have_implicit = re.compile('''implicit\snone''', re.IGNORECASE)
@@ -58,15 +58,15 @@ implicit_save = re.compile('''
 not_param_nor_save = re.compile("(?!.*(parameter|save))", re.IGNORECASE)
 
 nasty_spaces = [
-    re.compile("end\s{1,}do", re.IGNORECASE), "enddo",
-    re.compile("end\s{1,}if", re.IGNORECASE), "endif",
-    re.compile("end\s{1,}while", re.IGNORECASE), "endwhile",
-    re.compile("end\s{1,}where", re.IGNORECASE), "endwhere",
+    re.compile("^([\s0-9]*)end\s{1,}do", re.IGNORECASE), r"\1enddo",
+    re.compile("^([\s0-9]*)end\s{1,}if", re.IGNORECASE), r"\1endif",
+    re.compile("^([\s0-9]*)end\s{1,}while", re.IGNORECASE), r"\1endwhile",
+    re.compile("^([\s0-9]*)end\s{1,}where", re.IGNORECASE), r"\1endwhere",
     re.compile("only\s{1,}:", re.IGNORECASE), "only:",
-    re.compile("if(|\s{2,})\(", re.IGNORECASE), "if (",
-    re.compile("where(|\s{2,})\(", re.IGNORECASE), "where (",
-    re.compile("while(|\s{2,})\(", re.IGNORECASE), "while (",
-    re.compile("forall(|\s{2,})\(", re.IGNORECASE), "forall (",
+    re.compile("\sif(|\s{2,})\(", re.IGNORECASE), " if (",
+    re.compile("\swhere(|\s{2,})\(", re.IGNORECASE), " where (",
+    re.compile("\swhile(|\s{2,})\(", re.IGNORECASE), " while (",
+    re.compile("\sforall(|\s{2,})\(", re.IGNORECASE), " forall (",
     re.compile("\scase(|\s{2,})\(", re.IGNORECASE), " case ("
 ]
 
@@ -109,7 +109,7 @@ def select_sources(files):
 
 
 def wtf(lines, line, rname, fname):
-    if(type(lines) == np.ndarray):
+    if(isinstance(lines, np.ndarray)):
         linenum = line_num(lines, line)
     else:
         linenum = lines
@@ -126,11 +126,11 @@ def line_num(lines, line):
 
 
 def give_warn(s):
-    return b.WARNING + s + b.ENDC
+    return b.WARNING + "Warning: " + s + b.ENDC
 
 
 def give_err(s):
-    return b.FAIL + s + b.ENDC
+    return b.FAIL + "Error:   " + s + b.ENDC
 
 
 def parse_f90file(lines, fname, store):
@@ -145,15 +145,21 @@ def parse_f90file(lines, fname, store):
         if (just_end.match(f)):
             word = f.strip().split(' ')
             subs_types.insert(0, word[1])
-            subs_names.append(word[2])
+            if (len(word) >= 3):
+                subs_names.append(word[2])
+            else:
+                store.append(give_warn("QA:  ") + '[%s] "%s" without %s name' %
+                             (fname, f.strip(), word[1] if (len(word) > 1) else "any"))
     for f in subs_names:
         cur_sub = filter(re.compile(f).search, subs)
         if (len(cur_sub) > 2):
             if (debug):
                 print "[parse_f90file] f, cur_sub = ", f, cur_sub
             for index in range(0, len(cur_sub)):
-                if just_end.match(cur_sub[index]) and \
-                    cur_sub[index][-len(f):] == f: break
+                if just_end.match(cur_sub[index]):
+                    if cur_sub[index].split()[1] == subs_types[-1] and \
+                            cur_sub[index][-len(f):] == f:
+                        break
         else:
             index = 1
         obj = (f, line_num(lines, cur_sub[index - 1]), line_num(
@@ -165,41 +171,21 @@ def parse_f90file(lines, fname, store):
         print "[parse_f90file] subs_names = ", subs_names
 
     mod = filter(module_body.match, lines)
-    if (len(mod) > 1):
+    if (len(mod) <= 0):
+        store.append(
+            give_warn("QA:  ") + "[%s] => module body not found!" % fname)
+    else:
+        if (len(mod) > 1):
+            endline = line_num(lines, mod[1])
+        else:
+            endline = len(lines)
         obj = (mod[0].strip().split(" ")[1],
                line_num(lines, mod[0]),
-               line_num(lines, mod[1]),
+               endline,
                mod[0].strip().split(" ")[0][0:3]
                )
         subs_array = np.append(subs_array, np.array([obj], dtype=typ1))
-    elif (len(mod) == 1):
-        obj = (mod[0].strip(
-        ).split(" ")[1], line_num(lines, mod[0]), len(lines), 'mod')
-        subs_array = np.append(subs_array, np.array([obj], dtype=typ1))
-    else:
-        store.append(
-            give_warn("QA:  ") + "[%s] => module body not found!" % fname)
     return subs_array
-
-
-def qa_check_id(store, fname):
-    client = pysvn.Client()
-    entry = client.info('.')
-
-    try:
-        for f in client.proplist(fname):
-            pname, props = f
-            fail = False
-            if 'svn:keywords' in props:
-                if 'Id' not in props['svn:keywords']:
-                    fail = True
-            else:
-                fail = True
-            if fail:
-                store.append(
-                    give_err("QA:  ") + "%s lacks svn:keywords Id" % (pname))
-    except:
-        return 0
 
 
 def qa_checks(files, options):
@@ -213,24 +199,32 @@ def qa_checks(files, options):
     warns = []
     errors = []
     for f in f90files:
-#        qa_check_id(errors, f)
         pfile = []
         lines = open(f, 'r').readlines()
         for line in lines:
             # things done in "in-place"
             line = line.rstrip()    # that removes trailing spaces
             for i in range(0, len(nasty_spaces), 2):
-                line = re.sub(nasty_spaces[i], nasty_spaces[
-                              i + 1], line)   # remove nasty spaces
+                line = re.sub(nasty_spaces[i], nasty_spaces[i + 1], line)
+                # remove nasty spaces
             pfile.append(line)
 
         if lines != [line + '\n' for line in pfile]:
+            diff_cnt = 1 if (len(lines) != len(pfile)) else 0
+            if diff_cnt:
+                print give_warn("Line count changed") + " in file '%s'" % f
+            for i in range(min(len(lines), len(pfile))):
+                if (lines[i] != pfile[i] + '\n'):
+                    diff_cnt += 1
+            if diff_cnt:
+                print give_warn("QA:  ") + \
+                    "Whitespace changes found in file '%s' (%d lines changed)" % (f, diff_cnt)
             fp = open(f, 'w')
             for line in pfile:
                 fp.write(line + '\n')
             fp.close()
 
-        #f = f.split('/')[-1]
+        # f = f.split('/')[-1]
         # checks for f90 file as whole
         qa_nonconforming_tabs(np.array(pfile), '', errors, f)
         qa_labels(np.array(pfile), '', errors, f)
@@ -253,8 +247,8 @@ def qa_checks(files, options):
             if (debug):
                 print '[qa_checks] obj =', obj
             part = pfile[obj['beg']:obj['end']]
-#         if (debug):
-#            for f in part: print f
+            #         if (debug):
+            #            for f in part: print f
             # False refs need to be done before removal of types in module body
             qa_false_refs(part, obj['name'], warns, f)
             if(obj['type'] == 'mod'):
@@ -270,28 +264,19 @@ def qa_checks(files, options):
                 qa_have_implicit(part, obj['name'], errors, f)
                 qa_implicit_saves(part, obj['name'], errors, f)
 
-    for warning in warns:
-        print warning
-    for error in errors:
-        print error
+    if (len(warns)):
+        print b.WARNING + "%i warning(s) detected. " % len(warns) + b.ENDC
+        for warning in warns:
+            print warning
 
     if (len(errors)):
-        print give_err("%i error(s) detected! " % len(
-            errors)) + "I will not let you commit unless you force me!!!"
-        if options.force:
-            print "Damn! You are determined to make low quality commit :-("
-        else:
-            exit()
+        print b.FAIL + "%i error(s) detected! " % len(errors) + b.ENDC
+        for error in errors:
+            print error
     else:
         print b.OKGREEN + "Yay! No errors!!! " + b.ENDC
 
-    if (len(warns)):
-        s = give_warn("%i warnings detected. " % len(warns)) + \
-            "Do you wish to proceed? (y/N) "
-        if(raw_input(s) != 'y'):
-            print "See you later!"
-            exit()
-    else:
+    if (len(errors) == 0 and len(warns) == 0):
         print b.OKGREEN + "No warnings detected. " + b.ENDC + \
             "If everyone were like you, I'd be out of business!"
 
@@ -300,24 +285,24 @@ def qa_have_priv_pub(lines, name, warns, fname):
     if(not filter(have_privpub.search, lines)):
         warns.append(give_warn("QA:  ") +
                      "module [%s:%s] lacks public/private keywords." %
-                     (fname, give_err(name)))
+                     (fname, name))
     else:
         if(filter(remove_warn.match, filter(have_priv.search, lines))):
             warns.append(give_warn("QA:  ") +
                          "module [%s:%s] have selective private." %
-                         (fname, give_err(name)))
+                         (fname, name))
         if(filter(remove_warn.match,
                   filter(have_global_public.search, lines))):
             warns.append(give_warn("QA:  ") +
                          "module [%s:%s] is completely public." %
-                         (fname, give_err(name)))
+                         (fname, name))
 
 
 def qa_crude_write(lines, rname, store, fname):
     warning = 0
     for f in filter(remove_warn.match, filter(crude_write.search, lines)):
         store.append(
-            give_warn("!! crude write  ") + wtf(lines, f, rname, fname))
+            give_warn("crude write  ") + wtf(lines, f, rname, fname))
 
 
 def qa_magic_integers(lines, rname, store, fname):
@@ -325,44 +310,44 @@ def qa_magic_integers(lines, rname, store, fname):
         hits = np.where(lines == f)[0]
         if(len(hits) > 1):
             for i in hits:
-                warn = give_warn("!! magic integer") + wtf(i, f, rname, fname)
+                warn = give_warn("magic integer") + wtf(i, f, rname, fname)
                 if(warn not in store):
                     store.append(warn)
         else:
-            warn = give_warn("!! magic integer") + wtf(lines, f, rname, fname)
+            warn = give_warn("magic integer") + wtf(lines, f, rname, fname)
             if(warn not in store):
                 store.append(warn)
 
 
 def qa_nonconforming_tabs(lines, rname, store, fname):
     for f in filter(tab_char.search, lines):
-        store.append(give_err("QA:  ") + "non conforming tab detected " +
+        store.append(give_err("non conforming tab detected ") +
                      wtf(lines, f, rname, fname))
 
 
 def qa_labels(lines, rname, store, fname):
     for f in filter(have_label.search, lines):
-        store.append(give_err("QA:  ") + "label detected              " +
+        store.append(give_err("label detected              ") +
                      wtf(lines, f, rname, fname))
 
 
 def qa_depreciated_syntax(lines, rname, store, fname):
-#    print b.OKGREEN + "QA: " + b.ENDC + "Checking for depreciated syntax"
+    #    print b.OKGREEN + "QA: " + b.ENDC + "Checking for depreciated syntax"
     for f in filter(not_function.match, filter(depr_syntax_1.search, lines)):
         store.append(
-            give_warn("!! lacking ::   ") + wtf(lines, f, rname, fname))
+            give_warn("lacking ::   ") + wtf(lines, f, rname, fname))
     for f in filter(remove_warn.match, filter(depr_syntax_2.search, lines)):
         store.append(
-            give_warn("!! greedy use   ") + wtf(lines, f, rname, fname))
+            give_warn("greedy use   ") + wtf(lines, f, rname, fname))
     for f in filter(depr_syntax_3.search, lines):
         store.append(
-            give_warn("!! wrong syntax ") + wtf(lines, f, rname, fname))
+            give_warn("wrong syntax ") + wtf(lines, f, rname, fname))
 
 
 def qa_have_implicit(lines, name, store, fname):
     if(not filter(have_implicit.search, lines)):
-        store.append(give_err(
-            "QA:  ") + "missing 'implicit none'      [%s:%s]" % (fname, name))
+        store.append(give_err("missing 'implicit none'      ") +
+                     "[%s:%s]" % (fname, name))
 
 
 def remove_amp(lines, strip):
@@ -390,6 +375,13 @@ def qa_false_refs(lines, name, store, fname):
         to_check = [f.strip() for f in item.split("only:")[1].split(',')]
         to_check = [re.sub('&', '', f).lstrip(
         ) for f in to_check]     # additional sanitization
+        # remove operator keyword from import
+        for ino, item in enumerate(to_check):
+            try:
+                new_item = re.search('operator\((.+?)\)', item).group(1)
+            except AttributeError:
+                new_item = item
+            to_check[ino] = new_item
         for func in to_check:
             pattern = re.compile(func, re.IGNORECASE)
             # stupid but seems to work
@@ -400,12 +392,12 @@ def qa_false_refs(lines, name, store, fname):
 
 
 def qa_implicit_saves(lines, name, store, fname):
-#   print b.OKGREEN + "QA: " + b.ENDC + "Checking for implicit saves"
+    #   print b.OKGREEN + "QA: " + b.ENDC + "Checking for implicit saves"
     impl = filter(not_param_nor_save.match, filter(implicit_save.search,
                   remove_amp(filter(remove_warn.match, lines), True)))
     if(len(impl)):
-        store.append(give_err(
-            "QA:  ") + "implicit saves detected in   [%s:%s]" % (fname, name))
+        store.append(give_err("implicit saves detected in   ") +
+                     "[%s:%s]" % (fname, name))
     for line in impl:
         store.append(line.strip())
 
@@ -416,9 +408,6 @@ if __name__ == "__main__":
     parser.add_option("-v", "--verbose",
                       action="store_true", dest="debug", default=False,
                       help="make lots of noise [default]")
-    parser.add_option("-f", "--force",
-                      action="store_true", dest="force",
-                      help="commit despite errors (It will be logged)")
     (options, args) = parser.parse_args()
 
     debug = options.debug

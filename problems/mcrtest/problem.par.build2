@@ -23,7 +23,7 @@
 
  $RESTART_CONTROL
     restart  = 'last'
-    new_id   = ''
+    res_id   = ''
     nrestart = 0
  /
 
@@ -33,6 +33,7 @@
  /
 
  $OUTPUT_CONTROL
+    gdf_strict = .false.
     problem_name = 'mcr'
     run_id = 'tst'
     dt_hdf  = 1.0
@@ -40,6 +41,7 @@
     dt_log  = 0.00001
     dt_tsl  = 0.00001
     vars(1:) = 'ener', 'dens', 'magx', 'magy', 'magz', 'encr', 'velx', 'vely', 'velz'
+    h5_64bit = .true.
  /
 
  $NUMERICAL_SETUP
@@ -87,7 +89,7 @@
 !    diff_explicit = .true.
     diff_theta     = 0.5
     diff_tstep_fac = 91.0222223 !45.511112
-    norm_tol = 1e-3
+    norm_tol = 1e-5
     nsmoob = 4
     max_cycles = 50
  /

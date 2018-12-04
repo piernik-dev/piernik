@@ -23,7 +23,7 @@
 !! Such approach allows implementation of problem-specific hacks also during the initialization of the Piernik code.
 !! In extreme cases it is possible to change behavior of the Piernik code quite radically, without precompiler directives.
 !!
-!! There are to sets of procedure pointers for users: @n @n
+!! There are two sets of procedure pointers for users: @n @n
 !! imported from user_hooks module: @n @n
 !! \b problem_customize_solution - \copydoc user_hooks::problem_customize_solution @n @n
 !! \b problem_grace_passed       - \copydoc user_hooks::problem_grace_passed @n @n

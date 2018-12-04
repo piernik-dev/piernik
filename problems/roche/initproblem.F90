@@ -33,7 +33,7 @@ module initproblem
    private
    public :: read_problem_par, problem_initial_conditions, problem_pointers
 
-   real :: dblob, xblob, yblob, zblob, dnamb, rclear, pblob, dnblob, dnin, vxfac, p0ambfac, dnambfac, taucool, Tblob, pamb
+   real :: dblob, xblob, yblob, zblob, dnamb, rclear, pblob, dnblob, vxfac, p0ambfac, dnambfac, taucool, Tblob, pamb
 
    namelist /PROBLEM_CONTROL/  dnblob,xblob,yblob,zblob,rclear,Tblob,dblob, &
                                vxfac, p0ambfac, taucool, dnambfac
@@ -161,10 +161,10 @@ contains
       do while (associated(cgl))
          cg => cgl%cg
 
-         do j = cg%lhn(xdim,LO), cg%lhn(xdim,HI)
-            yj = cg%y(j)
-            do i = cg%lhn(ydim,LO), cg%lhn(ydim,HI)
-               xi = cg%x(i)
+         do i = cg%lhn(xdim,LO), cg%lhn(xdim,HI)
+            xi = cg%x(i)
+            do j = cg%lhn(ydim,LO), cg%lhn(ydim,HI)
+               yj = cg%y(j)
                do k = cg%lhn(zdim,LO), cg%lhn(zdim,HI)
                   zk = cg%z(k)
 !blob

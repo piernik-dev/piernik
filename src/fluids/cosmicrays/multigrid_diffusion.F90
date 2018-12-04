@@ -87,7 +87,7 @@ contains
 !! \n \n
 !! <table border="+1">
 !! <tr><td width="150pt"><b>parameter</b></td><td width="135pt"><b>default value</b></td><td width="200pt"><b>possible values</b></td><td width="315pt"> <b>description</b></td></tr>
-!! <tr><td>norm_tol      </td><td>1.e-2  </td><td>real value     </td><td>\copydoc multigrid_diffusion::norm_tol      </td></tr>
+!! <tr><td>norm_tol      </td><td>1.e-5  </td><td>real value     </td><td>\copydoc multigrid_diffusion::norm_tol      </td></tr>
 !! <tr><td>vcycle_abort  </td><td>2.0    </td><td>real value     </td><td>\copydoc multigrid_diffusion::vcycle_abort  </td></tr>
 !! <tr><td>max_cycles    </td><td>20     </td><td>integer value  </td><td>\copydoc multigrid_diffusion::max_cycles    </td></tr>
 !! <tr><td>nsmool        </td><td>4      </td><td>integer value  </td><td>\copydoc multigrid_diffusion::nsmool        </td></tr>
@@ -120,6 +120,7 @@ contains
       logical, save :: frun = .true.          !< First run flag
       integer(kind=4), dimension(I_ONE), target :: pos
       integer(kind=4), dimension(:), pointer :: pia      ! the pia pointer is used as a workaround for compiler warnings about possibly uninitialized variable in reg_var
+      real, parameter :: warn_norm_tol = 1e-3
 
       namelist /MULTIGRID_DIFFUSION/ norm_tol, vcycle_abort, max_cycles, nsmool, nsmoob, overrelax, &
            &                         diff_theta, diff_tstep_fac, diff_explicit, allow_explicit, diff_bnd_str
@@ -129,7 +130,7 @@ contains
       if (dom%geometry_type /= GEO_XYZ) call die("[multigrid_gravity:init_multigrid_gravdiffusion:multigrid_diff_par] non-cartesian geometry not implemented yet.")
 
       ! Default values for namelist variables
-      norm_tol       = 1.e-2
+      norm_tol       = 1.e-5
       vcycle_abort   = 2.    ! unused as yet
       diff_theta     = 1.
       diff_tstep_fac = 1.
@@ -198,6 +199,16 @@ contains
 
          diff_bnd_str   = cbuff(1)(1:len(diff_bnd_str))
 
+      endif
+
+      if (master) then
+         if (norm_tol < 100.*epsilon(1.)) then
+            write(msg,'(a,g12.4,a)')"[multigrid_diffusion:multigrid_diff_par] such small norm_tol may result in problems with convergence (",norm_tol,")"
+            call warn(msg)
+         else if (norm_tol > warn_norm_tol) then
+            write(msg,'(a,g12.4,a)')"[multigrid_diffusion:multigrid_diff_par] such big norm_tol may result in problems with accuracy (",norm_tol,")"
+            call warn(msg)
+         endif
       endif
 
       ! boundaries
@@ -272,7 +283,7 @@ contains
 
    subroutine multigrid_solve_diff
 
-      use constants,         only: xdim, ydim, zdim, zero
+      use constants,         only: xdim, ydim, zdim, zero, tmr_mgd
       use crdiffusion,       only: cr_diff
       use dataio_pub,        only: halfstep, warn, printinfo, msg
       use fluidindex,        only: flind
@@ -288,7 +299,7 @@ contains
       logical, save :: frun = .true.
       integer       :: cr_id         ! maybe we should make this variable global in the module and do not pass it as an argument?
 
-      ts =  set_timer("multigrid_diffusion", .true.)
+      ts =  set_timer(tmr_mgd, .true.)
       call all_dirty
 
       if (diff_explicit .or. (allow_explicit .and. dt/diff_dt_crs_orig<1)) then
@@ -340,7 +351,7 @@ contains
          enddo
 
       endif
-      ts = set_timer("multigrid_diffusion")
+      ts = set_timer(tmr_mgd)
       tot_ts = tot_ts + ts
 
    end subroutine multigrid_solve_diff
@@ -370,7 +381,7 @@ contains
 
       integer, intent(in) :: cr_id !< CR component index
 
-      if (finest%level%level_id /= base_level_id) call die("[multigrid_diffusion:init_source] refinements not implemented yet")
+      if (finest%level%l%id /= base_level_id) call die("[multigrid_diffusion:init_source] refinements not implemented yet")
 
       call all_cg%set_dirty(source)
       call all_cg%set_dirty(correction)
@@ -491,7 +502,7 @@ contains
       use cg_level_finest,    only: finest
       use cg_list_dataop,     only: ind_val, dirty_label
       use cg_list_global,     only: all_cg
-      use constants,          only: base_level_id, zero
+      use constants,          only: base_level_id, zero, tmr_mgd
       use dataio_pub,         only: msg, warn, die
       use global,             only: do_ascii_dump
       use func,               only: operator(.notequals.)
@@ -522,7 +533,7 @@ contains
       norm_rhs = leaves%norm_sq(solution)
       norm_old = norm_rhs
 
-      if (finest%level%level_id /= base_level_id) call die("[multigrid_diffusion:vcycle_hg] refinements not implemented yet")
+      if (finest%level%l%id /= base_level_id) call die("[multigrid_diffusion:vcycle_hg] refinements not implemented yet")
 
       do v = 0, max_cycles
 
@@ -530,7 +541,7 @@ contains
 
          call residual(finest%level, source, solution, defect, cr_id) ! leaves?
          norm_lhs = leaves%norm_sq(defect)
-         ts = set_timer("multigrid_diffusion")
+         ts = set_timer(tmr_mgd)
          tot_ts = tot_ts + ts
 
          vstat%count = v

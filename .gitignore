@@ -2,7 +2,11 @@ obj*/
 runs/
 *~
 .lastsetup
-python/DirWalk.pyc
+*.pyc
 .setuprc
 html/
 dep.png
+*.ignore
+*.gold_log
+gold_dir/
+doc/latex/

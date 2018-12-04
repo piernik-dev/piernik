@@ -69,6 +69,7 @@ contains
 
       if (code_progress < PIERNIK_INIT_GLOBAL) call die("[timestep:init_time_step] globals not initialized.")
 
+      c_all_old = 0. ! safe initial value
       select case (cflcontrol)
          case ('warn')
             cfl_manager => cfl_warn
@@ -108,11 +109,11 @@ contains
       use dataio_pub,           only: tend, msg, warn
       use fargo,                only: timestep_fargo, fargo_mean_omega
       use fluidtypes,           only: var_numbers
-      use global,               only: t, dt_old, dt_max_grow, dt_initial, dt_min, nstep, use_fargo
+      use global,               only: t, dt_old, dt_max_grow, dt_initial, dt_min, dt_max, nstep, use_fargo
       use grid_cont,            only: grid_container
       use mpisetup,             only: master, piernik_MPI_Allreduce
+      use sources,              only: timestep_sources
       use timestep_pub,         only: c_all
-      use timestepinteractions, only: timestep_interactions
 #ifdef COSM_RAYS
       use timestepcosmicrays,   only: timestep_crs, dt_crs
 #endif /* COSM_RAYS */
@@ -131,8 +132,8 @@ contains
 
       implicit none
 
-      real,              intent(inout) :: dt !< the timestep
-      type(var_numbers), intent(in)    :: flind
+      real,              intent(inout) :: dt    !< the timestep
+      type(var_numbers), intent(in)    :: flind !< the structure with all fluid indices
 
       type(cg_list_element), pointer   :: cgl
       type(grid_container),  pointer   :: cg
@@ -169,9 +170,7 @@ contains
          dt = min(dt, dt_resist)
 #endif /* RESISTIVE */
 
-#ifndef BALSARA
-         dt = min(dt,timestep_interactions(cg))
-#endif /* BALSARA */
+         call timestep_sources(dt, cg)
 
 #ifdef NBODY
          write(*,*) "[timestep]:dt przed nbody=", dt
@@ -208,7 +207,7 @@ contains
          call write_crashed("[timestep:time_step] dt < dt_min")
       endif
 
-      dt = min(dt, (half*(tend-t)) + (two*epsilon(one)*((tend-t))))
+      dt = min(min(dt, dt_max), (half*(tend-t)) + (two*epsilon(one)*((tend-t))))
 #ifdef DEBUG
       ! We still need all above for c_all
       if (has_const_dt) then
@@ -351,7 +350,7 @@ contains
       integer                :: i, j, k, d
       type(cg_level_connected_T), pointer :: curl
 
-      curl => find_level(cg%level_id)
+      curl => find_level(cg%l%id)
 
       c_fl = small
       dt_proc(:) = huge(1.)
