@@ -846,8 +846,10 @@ contains
             select case (external_gp)
                case ("null", "grav_null", "GRAV_NULL")
                   call grav_null(cg%gp, ax, cg%lhn)                     ; grav_type => grav_null
+#ifdef NBODY
                case ("ptmass_pot")
                   call point_mass_pot(cg%gpot, ax, cg%lhn)              ; grav_type => point_mass_pot
+#endif /* NBODY */
                case ("linear", "grav_lin", "GRAV_LINEAR")
                   call grav_linear(cg%gp, ax, cg%lhn)                   ; grav_type => grav_linear
                case ("uniform", "grav_unif", "GRAV_UNIFORM")
@@ -1047,6 +1049,7 @@ contains
 
    end subroutine grav_accel2pot
 
+#ifdef NBODY
    subroutine point_mass_pot(gp, ax, lhn, flatten)
 
       use axes_M,     only: axes
@@ -1102,5 +1105,6 @@ contains
       end function phi_pm
 
    end subroutine point_mass_pot
+#endif /* NBODY */
 
 end module gravity

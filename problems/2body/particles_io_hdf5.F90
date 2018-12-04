@@ -1,5 +1,6 @@
 #include "piernik.h"
 module particles_io_hdf5
+! pulled by NBODY
 
    implicit none
 

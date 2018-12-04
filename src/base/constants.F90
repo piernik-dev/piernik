@@ -168,7 +168,9 @@ module constants
    character(len=dsetnamelen), parameter :: cs_i2_n = "cs_iso2" !< map of imposed isothermal sound speed
    character(len=dsetnamelen), parameter :: wcr_n   = "wcr"     !< auxiliary array for CR diffusion
    character(len=dsetnamelen), parameter :: wa_n    = "wa"      !< general-purpose auxiliary 3D array
+#ifdef NBODY
    character(len=dsetnamelen), parameter :: nbody_dens_n = "nbody_dens"   !< density  from particles
+#endif /* NBODY */
 
    ! Handling boundary cells in the output
    enum, bind(C)

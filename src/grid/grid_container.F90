@@ -210,7 +210,9 @@ module grid_cont
       real, dimension(:,:,:), pointer :: sgpm    => null()       !< Array for gravitational potential from multigrid or FFT solver at previous timestep saved by source_terms_grav.
       real, dimension(:,:,:), pointer :: cs_iso2 => null()       !< COMMENT ME
       real, dimension(:,:,:), pointer :: wa      => null()       !< Temporary array used for different purposes, usually has dimension (grid::nx, grid::ny, grid::nz)
+#ifdef NBODY
       real, dimension(:,:,:), pointer :: nbody_dens => null()       !< Array of density from particles
+#endif /* NBODY */
 
       ! handy shortcuts to some entries in w(:)
       real, dimension(:,:,:,:), pointer :: u     => null()       !< Main array of all fluids' components
@@ -229,7 +231,10 @@ module grid_cont
       logical :: is_old                                          !< .true. if a given grid existed prior to  upgrade_refinement call
       logical :: processed                                       !< for use in sweeps.F90
       logical :: has_previous_timestep                           !< used to prevent timestep retries on freshly created blocks
+#ifdef NBODY
       !real , dimension(:) :: gx, gy, gz                           !< Gravitational potential on right borders of cells
+#endif /* NBODY */
+
    contains
 
       procedure          :: init_gc                              !< Initialization

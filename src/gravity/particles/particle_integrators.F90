@@ -41,17 +41,21 @@ module particle_integrators
 
    private
    public :: hermit4
+#ifdef NBODY
    public :: leapfrog2, acc_interp_method, lf_c, get_timestep_nbody, dt_nbody
+#endif /* NBODY */
 
    type, extends(particle_solver_T) :: hermit4_T
    contains
       procedure, nopass :: evolve => hermit_4ord
    end type hermit4_T
 
+#ifdef NBODY
    type, extends(particle_solver_T) :: leapfrog2_T
    contains
       procedure, nopass :: evolve => leapfrog2ord
    end type leapfrog2_T
+#endif /* NBODY */
 
    type(hermit4_T), target :: hermit4
 #ifdef NBODY
@@ -75,7 +79,11 @@ contains
       class(particle_set), intent(inout) :: pset  !< particle list
       real, intent(in) :: t_glob, dt_tot
 
+#ifdef NBODY
       real, parameter :: dt_param = 0.0001      ! control parameter to determine time step size
+#else /* !NBODY */
+      real, parameter :: dt_param = 0.03        ! control parameter to determine time step size
+#endif /* !NBODY */
       real, parameter :: dt_dia = 1             ! time interval between diagnostics output
       real, parameter :: dt_out = 0.01          ! time interval between output of snapshots
 
@@ -116,7 +124,12 @@ contains
 
       do
          do while (t < t_dia .and. t < t_out .and. t < t_end)
+#ifdef NBODY
             dt = dt_param              !constant timestep
+#else /* !NBODY */
+            !variable timestep
+            dt = dt_param * coll_time
+#endif /* !NBODY */
             call evolve_step(mass, pos, vel, acc, jerk, n, t, dt, epot, coll_time)
             nsteps = nsteps + 1
          enddo
@@ -132,9 +145,13 @@ contains
             t_out = t_out + dt_out
          endif
          if (t >= t_end) exit
+#ifdef NBODY
          print *, "Hermit dt=", dt
+#endif /* NBODY */
       enddo
+#ifdef NBODY
       print *, "Hermit nsteps=", nsteps
+#endif /* NBODY */
 
       do ndim = xdim, zdim
          pset%p(:)%pos(ndim) = pos(:, ndim)
@@ -176,6 +193,7 @@ contains
 
    end subroutine hermit_4ord
 
+#ifdef NBODY
    subroutine leapfrog2ord(pset, t_glob, dt_tot)
 
       use cg_list,        only: cg_list_element
@@ -627,6 +645,7 @@ contains
       enddo
 
    end subroutine get_acc_pot
+#endif /* NBODY */
 
    subroutine evolve_step(mass, pos, vel, acc, jerk, n, t, dt, epot, coll_time)
       use constants, only: ndims

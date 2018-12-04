@@ -217,7 +217,9 @@ contains
          call printinfo(msg)
       endif
 #endif /* DEBUG */
+#ifdef NBODY
    write(*,*) "[timestep]: dt=", dt, "!!!"
+#endif /* NBODY */
 
    end subroutine time_step
 

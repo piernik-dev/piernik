@@ -36,8 +36,10 @@ module particle_types
 
    private
    public :: particle_set, particle_solver_T
+#ifdef NBODY
    public :: ht_integrator
    logical :: ht_integrator
+#endif /* NBODY */
 
    !>
    !! \brief simple particle: just mass and position
@@ -48,16 +50,20 @@ module particle_types
       real                   :: mass       !< mass of the particle
       real, dimension(ndims) :: pos        !< physical position
       real, dimension(ndims) :: vel        !< particle velocity
+#ifdef NBODY
       real, dimension(ndims) :: acc        !< acceleration of the particle
       real                   :: energy     !< total energy of particle
+#endif /* NBODY */
       logical                :: outside    !< this flag is true if the particle is outside the domain
    contains
       procedure :: is_outside              !< compute the outside flag
    end type particle
 
+#ifdef NBODY
    !type, extends (particle) :: particle_pot
             !real  :: pot                           !< gravitational potential in pos
    !end type particle_pot
+#endif /* NBODY */
    !> \brief A list of particles and some associated methods
 
    type :: particle_set
@@ -196,18 +202,28 @@ contains
 
 !> \brief Add a particle to the list
 
+#ifdef NBODY
    subroutine add_using_basic_types(this, mass, pos, vel, acc, energy)
+#else /* !NBODY */
+   subroutine add_using_basic_types(this, mass, pos, vel)
+#endif /* !NBODY */
 
       implicit none
 
       class(particle_set),    intent(inout) :: this     !< an object invoking the type-bound procedure
       real,                   intent(in)    :: mass     !< mass of the particle (negative values are allowed just in case someone wants to calculate electric potential)
       real, dimension(:), intent(in)    :: pos      !< physical position
+#ifdef NBODY
       real, dimension(:), intent(in)    :: vel      !< particle velocity
       real, dimension(:), intent(in)    :: acc      !< particle acceleration
       real, intent(in)                  :: energy   !< total energy of particle
 
       call this%add(particle(mass, pos, vel, acc, energy, .false.))
+#else /* !NBODY */
+      real, dimension(:), intent(in)    :: vel      !< particle velosity
+
+      call this%add(particle(mass, pos, vel, .false.))
+#endif /* !NBODY */
 
    end subroutine add_using_basic_types
 
@@ -357,10 +373,12 @@ contains
                   part  => this%p(p), &
                   idl   => cgl%cg%idl &
             )
+#ifdef NBODY
             if(p == 1) then
                write(*,*) "czastka 1 ", p, "-zerowanie"
                field = 1.0e-6
             endif
+#endif /* NBODY */
                if (any(part%pos < cgl%cg%fbnd(:,LO)) .or. any(part%pos > cgl%cg%fbnd(:,HI))) cycle
 
                do cdim = xdim, zdim
@@ -391,7 +409,9 @@ contains
                enddo
             end associate
          enddo
-         !print *, sum(cgl%cg%q(iv)%arr)
+#ifndef NBODY
+         print *, sum(cgl%cg%q(iv)%arr)
+#endif /* !NBODY */
          cgl => cgl%nxt
       enddo
 

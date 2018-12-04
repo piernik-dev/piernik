@@ -52,8 +52,9 @@ contains
    subroutine read_problem_par
 
       implicit none
-
+#ifdef NBODY
       !call print_essential_units
+#endif /* NBODY */
 
    end subroutine read_problem_par
 !-----------------------------------------------------------------------------
@@ -65,16 +66,20 @@ contains
       use dataio_pub,   only: printinfo
       use fluidindex,   only: flind
       use particle_pub, only: pset
+#ifdef NBODY
       use particle_types, only: ht_integrator
       !use particles_io_hdf5
+#endif /* NBODY */
 
       implicit none
 
       integer                         :: i, j, k, p
+#ifdef NBODY
       integer                         :: n_particles        !< number of particles
       real                            :: e                  !< orbit eccentricity
       logical,save                    :: first_run = .true.
       character(len=2)                :: plane
+#endif /* NBODY */
       type(cg_list_element),  pointer :: cgl
 
       do p = lbound(flind%all_fluids, dim=1), ubound(flind%all_fluids, dim=1)
@@ -85,7 +90,11 @@ contains
                   do j = cg%lhn(ydim,LO), cg%lhn(ydim,HI)
                      do i = cg%lhn(xdim,LO), cg%lhn(xdim,HI)
                         associate( fl => flind%all_fluids(p)%fl )
+#ifdef NBODY
                            cg%u(fl%idn,i,j,k) = 1.0e-6
+#else /* !NBODY */
+                           cg%u(fl%idn,i,j,k) = 1.0
+#endif /* !NBODY */
                            cg%u(fl%imx,i,j,k) = 0.0
                            cg%u(fl%imy,i,j,k) = 0.0
                            cg%u(fl%imz,i,j,k) = 0.0
@@ -98,6 +107,16 @@ contains
          enddo
       enddo
 
+#ifndef NBODY
+      call pset%add(1.0, [ 0.9700436,  -0.24308753,  0.0], [ 0.466203685,  0.43236573, 0.0])
+      call pset%add(1.0, [-0.9700436,   0.24308753,  0.0], [ 0.466203685,  0.43236573, 0.0])
+      call pset%add(1.0, [ 0.0,         0.0,         0.0], [-0.932407370, -0.86473146, 0.0])
+      call printinfo('To see results type: gnuplot -p -e ''plot "nbody_out.log" u 2:3'' ')
+
+   end subroutine problem_initial_conditions
+#endif /* !NBODY */
+
+#ifdef NBODY
       if (ht_integrator) then
          if(first_run) then
             call pset%add(1.0, [ 0.9700436, -0.24308753, 0.0], [ 0.466203685, 0.43236573, 0.0], [0.0, 0.0, 0.0],0.0)
@@ -498,5 +517,6 @@ contains
       close(2)
 
    end subroutine read_buildgal
+#endif /* NBODY */
 !-----------------------------------------------------------------------------
 end module initproblem

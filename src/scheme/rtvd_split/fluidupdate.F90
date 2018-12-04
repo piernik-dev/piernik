@@ -115,40 +115,53 @@ contains
       use global,      only: dt, dtm, t
       use mass_defect, only: update_magic_mass
 #ifdef GRAV
-      use gravity,             only: source_terms_grav
-      use particle_pub,        only: pset, psolver
+      use gravity,      only: source_terms_grav
+#ifdef NBODY
+      use particle_pub, only: pset, psolver
+#endif /* NBODY */
 #endif /* GRAV */
+
       implicit none
 
-!      call repeat_fluidstep
+#ifdef NBODY
       !write(*,*) "[fl_upd]: Pierwszy, dt=", dt
+#else /* !NBODY */
+      call repeat_fluidstep
+#endif /* !NBODY */
 
       halfstep = .false.
       t=t+dt
+#ifdef NBODY
       !t=t+2.0*dt
+#endif /* NBODY */
 #ifdef GRAV
       call source_terms_grav
 #ifdef NBODY
       if (associated(psolver)) call pset%evolve(psolver, t-dt, dt)
 #endif /* NBODY */
 #endif /* GRAV */
-
-      !call make_3sweeps(.true.) ! X -> Y -> Z
+#ifndef NBODY
+      call make_3sweeps(.true.) ! X -> Y -> Z
+#endif /* !NBODY */
 
 ! Sources should be hooked to problem_customize_solution with forward argument
 
       halfstep = .true.
+#ifdef NBODY
       !write(*,*) "[fl_upd]: Drugi   , dt=", dt
-      !t=t+dt
+#else /* !NBODY */
+      t=t+dt
+#endif /* !NBODY */
       dtm = dt
+#ifdef NBODY
 !#ifdef GRAV
 !      call source_terms_grav
-!#ifdef NBODY
 !      if (associated(psolver)) call pset%evolve(psolver, t-dt, dt)
-!#endif /* NBODY */
 !#endif /* GRAV */
-      !call make_3sweeps(.false.) ! Z -> Y -> X
-      !call update_magic_mass
+#else /* !NBODY */
+      call make_3sweeps(.false.) ! Z -> Y -> X
+      call update_magic_mass
+#endif /* !NBODY */
 
    end subroutine fluid_update
 
@@ -165,11 +178,12 @@ contains
       use user_hooks,          only: problem_customize_solution
 #ifdef GRAV
       use global,              only: t, dt
-!      use gravity,             only: source_terms_grav
-      !use particle_pub,        only: pset, psolver
-!#ifdef NBODY
+#ifdef NBODY
 !      use global,              only: dt_old
-!#endif /* NBODY */
+#else /* !NBODY */
+      use gravity,             only: source_terms_grav
+      use particle_pub,        only: pset, psolver
+#endif /* !NBODY */
 #endif /* GRAV */
 #if defined(COSM_RAYS) && defined(MULTIGRID)
       use all_boundaries,      only: all_fluid_boundaries
@@ -186,17 +200,19 @@ contains
 
       integer(kind=4) :: s
 
-!#ifdef NBODY
+#ifdef NBODY
 !      logical, save     :: psolver_one_time = .false.
-!#endif /* NBODY */
+#endif /* NBODY */
 
 #ifdef SHEAR
       call shear_3sweeps
 #endif /* SHEAR */
 
-!#ifdef GRAV
-!      call source_terms_grav
-!#endif /* GRAV */
+#ifndef NBODY
+#ifdef GRAV
+      call source_terms_grav
+#endif /* GRAV */
+#endif /* NBODY */
 
 #if defined(COSM_RAYS) && defined(MULTIGRID)
       if (.not. use_split) then
@@ -222,17 +238,17 @@ contains
          endif
       endif
 #ifdef GRAV
+#ifdef NBODY
 write(*,*) "3sweeps, dt=", dt
-!#ifdef NBODY
 !      if(psolver_one_time) then                    !this condition prevent to calling particle solver twice (with halfsteps)
 !         if (associated(psolver)) call pset%evolve(psolver, t-2.0*dt, 2.0*dt)
 !         psolver_one_time = .false.
 !      else
 !         psolver_one_time = .true.
 !      endif
-!#else /* !NBODY */
-!      if (associated(psolver)) call pset%evolve(psolver, t-dt, dt)
-!#endif /* NBODY */
+#else /* !NBODY */
+      if (associated(psolver)) call pset%evolve(psolver, t-dt, dt)
+#endif /* !NBODY */
 #endif /* GRAV */
       if (associated(problem_customize_solution)) call problem_customize_solution(forward)
 
