@@ -44,7 +44,6 @@ module particle_pub
    type(particle_set) :: pset !< default particle list
    class(particle_solver_T), pointer :: psolver
 
-
 contains
 
 !> \brief Read namelist and initialize pset with 0 particles
@@ -54,10 +53,11 @@ contains
       use constants,             only: cbuff_len, I_NGP, I_CIC, I_TSC
       use dataio_pub,            only: nh  ! QA_WARN required for diff_nml
       use dataio_pub,            only: msg, die
-      use mpisetup,              only: master, slave, cbuff, rbuff, piernik_mpi_bcast
-      use particle_integrators,  only: hermit4, leapfrog2, acc_interp_method, lf_c
+      use mpisetup,              only: master, slave, cbuff, piernik_mpi_bcast
+      use particle_integrators,  only: hermit4
+      use mpisetup,              only: rbuff
+      use particle_integrators,  only: leapfrog2, acc_interp_method, lf_c
       use particle_types,        only: ht_integrator
-
 
       implicit none
       character(len=cbuff_len) :: time_integrator
@@ -65,10 +65,9 @@ contains
       character(len=cbuff_len), parameter :: default_ti = "none"
       character(len=cbuff_len), parameter :: default_is = "ngp"
 
-
       namelist /PARTICLES/ time_integrator, interpolation_scheme, acc_interp_method, lf_c
 
-      time_integrator      = default_ti
+      time_integrator = default_ti
       interpolation_scheme = default_is
       acc_interp_method    = 'cic'
       lf_c                 = 1.0
@@ -99,10 +98,10 @@ contains
       call piernik_MPI_Bcast(cbuff, cbuff_len)
 
       if (slave) then
-         time_integrator      = cbuff(1)
+         time_integrator = cbuff(1)
          interpolation_scheme = cbuff(2)
          acc_interp_method    = cbuff(3)
-         lf_c                 = rbuff(1) 
+         lf_c                 = rbuff(1)
       endif
 
       psolver => null()
@@ -145,6 +144,5 @@ contains
      call pset%cleanup
 
    end subroutine cleanup_particles
-   
 
 end module particle_pub

@@ -35,21 +35,22 @@ module particle_types
    implicit none
 
    private
-   public :: particle_set, particle_solver_T, ht_integrator
+   public :: particle_set, particle_solver_T
+   public :: ht_integrator
    logical :: ht_integrator
-   
+
    !>
    !! \brief simple particle: just mass and position
    !!
    !! \todo Extend it a bit
    !<
    type :: particle
-      real                    :: mass      !< mass of the particle
-      real, dimension(ndims) :: pos      !< physical position
-      real, dimension(ndims) :: vel       !< particle velocity
-      real, dimension(ndims) :: acc       !< acceleration of the particle
-      real                    :: energy    !< total energy of particle
-      logical                 :: outside    !< this flag is true if the particle is outside the domain
+      real                   :: mass       !< mass of the particle
+      real, dimension(ndims) :: pos        !< physical position
+      real, dimension(ndims) :: vel        !< particle velocity
+      real, dimension(ndims) :: acc        !< acceleration of the particle
+      real                   :: energy     !< total energy of particle
+      logical                :: outside    !< this flag is true if the particle is outside the domain
    contains
       procedure :: is_outside              !< compute the outside flag
    end type particle
@@ -204,7 +205,7 @@ contains
       real, dimension(:), intent(in)    :: pos      !< physical position
       real, dimension(:), intent(in)    :: vel      !< particle velocity
       real, dimension(:), intent(in)    :: acc      !< particle acceleration
-      real, intent(in)                   :: energy   ! total energy of particle
+      real, intent(in)                  :: energy   !< total energy of particle
 
       call this%add(particle(mass, pos, vel, acc, energy, .false.))
 
@@ -493,6 +494,5 @@ contains
       call func%evolve(this, t, dt)
 
    end subroutine particle_set_evolve
-
 
 end module particle_types
