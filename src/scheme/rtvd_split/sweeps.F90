@@ -252,7 +252,8 @@ contains
    subroutine process_cg(cg, cdim, istep, fargo_vel)
 
       use cg_level_connected, only: cg_level_connected_T, find_level
-      use constants,          only: pdims, LO, HI, uh_n, cs_i2_n, ORTHO1, ORTHO2, VEL_CR, VEL_RES, ydim, one, zero, half
+      use constants,          only: pdims, LO, HI, uh_n, cs_i2_n, ORTHO1, ORTHO2, VEL_CR, VEL_RES, ydim, rk_coef, first_stage
+      use dataio_pub,         only: die
       use domain,             only: dom
       use fluidindex,         only: flind, iarr_all_swp, nmag, iarr_all_dn, iarr_all_mx
       use fluxtypes,          only: ext_fluxes
@@ -270,7 +271,7 @@ contains
 
       type(grid_container), pointer, intent(inout) :: cg
       integer(kind=4),               intent(in)    :: cdim
-      integer,                       intent(in)    :: istep
+      integer,                       intent(in)    :: istep     ! stage in the time integration scheme
       integer(kind=4), optional,     intent(in)    :: fargo_vel
 
       real, dimension(:,:), allocatable :: b, u, u0, u1, vx
@@ -284,7 +285,6 @@ contains
 #endif /* MAGNETIC */
       real, dimension(:),    pointer    :: cs2
       logical :: apply_sources
-      real, dimension(2,2), parameter :: rk2coef = reshape( [ one, half, zero, one ], [ 2, 2 ] )
       type(cg_level_connected_T), pointer :: curl
 
       uhi = wna%ind(uh_n)
@@ -301,7 +301,7 @@ contains
       b(:,:) = 0.0
       u(:,:) = 0.0
 
-      if (istep == 1) then
+      if (istep == first_stage(integration_order)) then
          call prepare_sources(cg)
          cg%w(uhi)%arr = cg%u
       endif
@@ -359,9 +359,11 @@ contains
             !OPT: try to avoid these explicit initializations of u1(:,:)
             u1 = u
 
-            call relaxing_tvd(cg%n_(cdim), u0, u1, vx, b, cs2, istep, rk2coef(integration_order,istep) * dt / cg%dl(cdim), eflx)
+            call relaxing_tvd(cg%n_(cdim), u0, u1, vx, b, cs2, istep, rk_coef(istep) * dt / cg%dl(cdim), eflx)
+            ! RTVD needs istep only to do something in 2nd stage of RK2
 ! Source terms -------------------------------------
-            if (apply_sources) call all_sources(cg%n_(cdim), u, u1, b, cg, istep, cdim, i1, i2, rk2coef(integration_order,istep)*dt, vx)
+            if (apply_sources) call all_sources(cg%n_(cdim), u, u1, b, cg, istep, cdim, i1, i2, rk_coef(istep) * dt, vx)
+            ! istep is important only for balsara and selfgravity
 
             call care_for_positives(cg%n_(cdim), u1, b, cg, cdim, i1, i2)
             u(:,:) = u1(:,:)
@@ -390,8 +392,9 @@ contains
    subroutine update_boundaries(cdim, istep)
 
       use all_boundaries, only: all_fluid_boundaries
+      use constants,      only: first_stage
       use domain,         only: dom
-      use global,         only: sweeps_mgu
+      use global,         only: sweeps_mgu, integration_order
 
       implicit none
 
@@ -400,13 +403,13 @@ contains
 
       if (dom%has_dir(cdim)) then
          if (sweeps_mgu) then
-            if (istep == 1) then
+            if (istep == first_stage(integration_order)) then
                call all_fluid_boundaries(nocorners = .true., dir = cdim)
             else
                call all_fluid_boundaries(nocorners = .true.)
             endif
          else
-            if (istep == 1) then
+            if (istep == first_stage(integration_order)) then
                call all_fluid_boundaries(nocorners = .true.)
             else
                call all_fluid_boundaries
@@ -420,7 +423,7 @@ contains
 
       use cg_leaves,          only: leaves
       use cg_list,            only: cg_list_element
-      use constants,          only: ydim
+      use constants,          only: ydim, first_stage, last_stage
       use dataio_pub,         only: die
       use global,             only: integration_order, use_fargo
       use grid_cont,          only: grid_container
@@ -439,9 +442,13 @@ contains
       integer                        :: g, nr, nr_recv
       integer(kind=4), dimension(:,:), pointer :: mpistatus
 
-      if (use_fargo .and. cdim == ydim .and. .not. present(fargo_vel)) call die("[sweeps:sweep] FARGO velocity keyword not present in y sweep")
+      if (use_fargo .and. cdim == ydim .and. .not. present(fargo_vel)) &
+           call die("[sweeps:sweep] FARGO velocity keyword not present in y sweep")
 
-      do istep = 1, integration_order
+      if (integration_order < lbound(first_stage, 1) .or. integration_order > ubound(first_stage, 1)) &
+           call die("[sweeps:sweep] unknown integration_order")
+
+      do istep = first_stage(integration_order), last_stage(integration_order)
          nr_recv = compute_nr_recv(cdim)
          nr = nr_recv
          all_processed = .false.
@@ -457,7 +464,7 @@ contains
                   call recv_cg_finebnd(cdim, cg, all_received)
 
                   if (all_received) then
-                     call process_cg(cg, cdim, istep)
+                     call process_cg(cg, cdim, istep, fargo_vel)
                      call send_cg_coarsebnd(cdim, cg, nr)
                      blocks_done = blocks_done + 1
                   else

@@ -237,7 +237,8 @@ contains
 
    subroutine relaxing_tvd(n, u0, u1, vel_sweep, bb, cs_iso2, istep, dtx, eflx)
 
-      use constants,    only: half, GEO_XYZ
+      use constants,    only: half, GEO_XYZ, RK2_1, RK2_2
+      use dataio_pub,   only: die
       use domain,       only: dom
       use fluidindex,   only: flind, nmag
       use fluxes,       only: flimiter, all_fluxes
@@ -252,7 +253,7 @@ contains
       real, dimension(n, flind%fluids), intent(in)    :: vel_sweep          !< velocity in the direction of current sweep
       real, dimension(n, nmag),         intent(in)    :: bb                 !< local copy of magnetic field
       real, dimension(:), pointer,      intent(in)    :: cs_iso2            !< square of local isothermal sound speed
-      integer,                          intent(in)    :: istep              !< step number in the time integration scheme
+      integer,                          intent(in)    :: istep              !< stage in the time integration scheme
       real,                             intent(in)    :: dtx                !< RK_coeff * time step / dx
       type(ext_fluxes),                 intent(inout) :: eflx               !< external fluxes
 
@@ -284,9 +285,10 @@ contains
          fr(2:n, :) = fl(1:n-1, :) + w(2:n, :)
          fr(1, :) = fr(2, :)
 
-         if (istep == 2) then
-
+         select case (istep)
+         case (RK2_2)
             ! Second order flux corrections
+
             dfp(1:n-1, :) = half * (fr(2:n, :) - fr(1:n-1, :)); dfp(n, :) = dfp(n-1, :)
             dfm(2:n, :)   = dfp(1:n-1, :);                      dfm(1, :) = dfm(2, :)
             ! Flux limiter application
@@ -297,7 +299,10 @@ contains
             call flimiter(fl, dfm, dfp)
             !OPT 60% of D1mr and 40% D1mw occurred in few above lines (D1mr = 0.1% Dr, D1mw = 0.5% Dw)
             ! That ^^ should be fixed now, please confirm
-         endif
+         case (RK2_1)
+         case default
+            call die("[rtvd:relaxing_tvd] Unsupported substep")
+         end select
 
          ! u update
          fu = fr - fl

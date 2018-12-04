@@ -164,6 +164,18 @@ module constants
       enumerator :: BND_INVALID = BND_MPI - 1 !! non-recognized boundary
    end enum
 
+   ! enumerate stages of Runge-Kutta method in an unique way, so istep will contain information both about stage and method
+   enum, bind(C)
+      enumerator :: EULER = 10000  !! integration_order == 1
+      enumerator :: RK2_1          !! halfstep RK2
+      enumerator :: RK2_2          !! fullstep RK2
+   end enum
+   integer, parameter :: n_schemes = 2
+   integer, dimension(n_schemes), parameter :: first_stage = [ EULER, RK2_1 ], &
+        &                                      last_stage  = [ EULER, RK2_2 ]
+   real, dimension(EULER:RK2_2), parameter :: rk_coef = [ one, &      !! EULER
+        &                                                 half, one ] !! RK2
+
    ! 3D and 4D array names
    ! fluids
    character(len=dsetnamelen), parameter :: fluid_n = "fluid"   !< main array
