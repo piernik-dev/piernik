@@ -116,7 +116,6 @@ module gravity
          type(grid_container), pointer, intent(in)  :: cg         !< current grid_container
       end subroutine grav_pot2accel_T
 
-
    end interface
 
    procedure(user_grav_pot_3d), pointer :: grav_pot_3d => NULL()
@@ -124,7 +123,6 @@ module gravity
    procedure(gprofs_default),   pointer :: get_gprofs  => NULL()
    procedure(grav_types),       pointer :: grav_type   => NULL()
    procedure(grav_pot2accel_T), pointer :: grav_pot2accel => NULL()
-
 
 contains
 
@@ -202,7 +200,6 @@ contains
 
       gprofs_target = 'extgp'
       external_gp   = 'null'
-      
 
       user_grav     = .false.
       variable_gp   = .false.
@@ -1052,56 +1049,58 @@ contains
 
    subroutine point_mass_pot(gp, ax, lhn, flatten)
 
-      use units,     only: newtong
-      use axes_M,    only: axes
-      use domain,    only: dom
-      use constants, only: xdim, ydim, zdim, LO, HI, GEO_XYZ
+      use axes_M,     only: axes
+      use constants,  only: xdim, ydim, zdim, LO, HI, GEO_XYZ
       use dataio_pub, only: die
+      use domain,     only: dom
+      use units,      only: newtong
 
       implicit none
 
-      real, dimension(:,:,:), pointer                       :: gp
-      type(axes),                              intent(in)    :: ax
-      integer(kind=4), dimension(ndims,LO:HI), intent(in)  :: lhn
-      logical,                       optional, intent(in)   :: flatten
-
+      real, dimension(:,:,:), pointer                     :: gp
+      type(axes),                              intent(in) :: ax
+      integer(kind=4), dimension(ndims,LO:HI), intent(in) :: lhn
+      logical,                       optional, intent(in) :: flatten
 
       integer :: i, j, k
-      real :: eps, GM, r
+      real    :: eps, GM, r
+
       eps = 0.0
       GM = newtong*ptmass
 
       if (dom%geometry_type /= GEO_XYZ) call die("[gravity:point_mass_pot] Non-cartesian geometry is not implemented yet.")
 
-      if (.false. .and. flatten) i=0 ! suppress compiler warnings on unused arguments
+      if (.false. .and. flatten) i = 0 ! suppress compiler warnings on unused arguments
       write(*,*) "Obliczanie potencjalu grawitacyjnego masy punktowej."
 
-
-         do i = lhn(xdim,LO), lhn(xdim,HI)
-            do j = lhn(ydim,LO), lhn(ydim,HI)
-               do k = lhn(zdim,LO), lhn(zdim,HI)
-                  r = sqrt(ax%x(i)**2 + ax%y(j)**2 + ax%z(k)**2)
-                     gp(i, j, k) = -GM/r
-                     
-               enddo
+      do i = lhn(xdim,LO), lhn(xdim,HI)
+         do j = lhn(ydim,LO), lhn(ydim,HI)
+            do k = lhn(zdim,LO), lhn(zdim,HI)
+               r = sqrt(ax%x(i)**2 + ax%y(j)**2 + ax%z(k)**2)
+               gp(i, j, k) = -GM/r
             enddo
          enddo
+      enddo
 
    contains
 
       function phi_pm(x, y, z, eps)
-         use units,    only: newtong
+
+         use units, only: newtong
+
          implicit none
-            real, intent(in) :: x, y, z, eps
-            real :: r, phi_pm, G,M, mu
-            G = 1.0
-            M = 1.0
-            mu = newtong*M
-            r = sqrt(x**2 + y**2 + z**2 + eps**2)
-            phi_pm = -mu / r
+
+         real, intent(in) :: x, y, z, eps
+         real             :: r, phi_pm, G,M, mu
+
+         G = 1.0
+         M = 1.0
+         mu = newtong*M
+         r = sqrt(x**2 + y**2 + z**2 + eps**2)
+         phi_pm = -mu / r
+
       end function phi_pm
 
    end subroutine point_mass_pot
-
 
 end module gravity
