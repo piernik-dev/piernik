@@ -123,11 +123,10 @@ contains
       use dataio_pub,           only: printinfo
       use piernikdebug,         only: has_const_dt, constant_dt
 #endif /* DEBUG */
-
 #ifdef NBODY
-      use particle_pub,         only: pset
-      use particle_integrators, only: get_timestep_nbody, dt_nbody
       use func,                 only: operator(.notequals.)
+      use particle_integrators, only: get_timestep_nbody, dt_nbody
+      use particle_pub,         only: pset
 #endif /* NBODY */
 
       implicit none
@@ -178,12 +177,11 @@ contains
          write(*,*) "[timestep]:dt przed nbody=", dt
          call get_timestep_nbody(dt_nbody, pset)
          write(*,*) "[timestep]:dt_nbody      =", dt_nbody
-         if(dt_nbody.notequals. 0.0) then
-            dt = min(dt, dt_nbody) 
+         if (dt_nbody .notequals. 0.0) then
+            dt = min(dt, dt_nbody)
          endif
          write(*,*) "[timestep]:dt  po   nbody=", dt
 #endif /* NBODY */
-
 
          if (use_fargo) dt = min(dt, timestep_fargo(cg, dt))
          cgl => cgl%nxt
@@ -220,6 +218,7 @@ contains
       endif
 #endif /* DEBUG */
    write(*,*) "[timestep]: dt=", dt, "!!!"
+
    end subroutine time_step
 
 !------------------------------------------------------------------------------------------
