@@ -295,10 +295,11 @@ contains
       use sweeps,              only: sweep
       use user_hooks,          only: problem_customize_solution
 #ifdef GRAV
-      use global,              only: t, dt
+      use global,              only: dt
 #ifdef NBODY
 !      use global,              only: dt_old
 #else /* !NBODY */
+      use global,              only: t
       use gravity,             only: source_terms_grav
       use particle_pub,        only: pset, psolver
 #endif /* !NBODY */

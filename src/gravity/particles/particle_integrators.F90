@@ -197,7 +197,7 @@ contains
    subroutine leapfrog2ord(pset, t_glob, dt_tot)
 
       use cg_list,        only: cg_list_element
-      use constants,      only: zero, ndims
+      use constants,      only: ndims
       use dataio_pub,     only: die, printinfo
       use domain,         only: is_refined, is_multicg
       use func,           only: operator(.equals.)
@@ -214,11 +214,11 @@ contains
       real, dimension(:), allocatable    :: mass                 !< 1D array of mass of the particles
       real                               :: dt_tot_h             !< half of timestep, dt_tot_h = 0.5*dt_tot
       real                               :: total_energy         !< total energy of set of the particles
-      real, save                         :: initial_energy       !< total initial energy of set of the particles
-      real                               :: d_energy             !< error of energy of set of the particles in succeeding timesteps
+      !real, save                         :: initial_energy       !< total initial energy of set of the particles
+      !real                               :: d_energy             !< error of energy of set of the particles in succeeding timesteps
       real                               :: ang_momentum         !< angular momentum of set of the particles
-      real, save                         :: init_ang_momentum    !< initial angular momentum of set of the particles
-      real                               :: d_ang_momentum       !< error of angular momentum in succeeding timensteps
+      !real, save                         :: init_ang_momentum    !< initial angular momentum of set of the particles
+      !real                               :: d_ang_momentum       !< error of angular momentum in succeeding timensteps
       integer                            :: i
       integer                            :: n                    !< number of particles
       logical                            :: external_pot         !< if .true. gravitational potential will be deleted and replaced by external potential of point mass
