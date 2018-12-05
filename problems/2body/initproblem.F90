@@ -51,9 +51,6 @@ contains
    subroutine read_problem_par
 
       implicit none
-#ifdef NBODY
-      !call print_essential_units
-#endif /* NBODY */
 
    end subroutine read_problem_par
 !-----------------------------------------------------------------------------
@@ -169,7 +166,7 @@ contains
          real               :: r        !< lenght of radius vector
          real               :: e
          real               :: mu
-         real, parameter    :: M=10.0
+         real, parameter    :: M = 10.0
          real               :: lenght  !usunac
 
          mu = newtong*M
@@ -248,6 +245,7 @@ contains
 
       subroutine twobodies(n_particles, e, first_run, plane)
 
+         use dataio_pub,   only: msg, printinfo
          use particle_pub, only: pset
 
          implicit none
@@ -259,7 +257,8 @@ contains
          real, dimension(3)              :: init_pos_body_one, init_pos_body_two, init_vel_body_one, init_vel_body_two
          real                            :: m1, m2
 
-         write(*,*) "Number of particles: ", n_particles
+         write(msg,'(a,i6)') '[initproblem:twobodies] Number of particles: ', n_particles
+         call printinfo(msg)
 
          m1 = 10.0
          init_pos_body_one = 0.0
@@ -332,8 +331,9 @@ contains
 
       subroutine orbits(n_particles, e, first_run, plane)
 
+         !use constants,    only: dpi
+         use dataio_pub,   only: msg, printinfo
          use particle_pub, only: pset
-         use constants,    only: dpi
 
          implicit none
 
@@ -342,11 +342,12 @@ contains
          logical,          intent(inout) :: first_run
          character(len=2), intent(in)    :: plane
          real, dimension(3)              :: pos_init, vel_init
-         real                            :: dtheta
+         !real                            :: dtheta
 
-         write(*,*) "Number of particles: ", n_particles
+         write(msg,'(a,i6)') '[initproblem:orbits] Number of particles that will be added: ', n_particles
+         call printinfo(msg)
 
-         dtheta = dpi/n_particles
+         !dtheta = dpi/n_particles
 
          pos_init(1) = 2.0
          pos_init(2) = 1.0
@@ -354,7 +355,6 @@ contains
 
          !vel_init = velocities(pos_init, e)
          vel_init = [-0.5, 0.0, 0.0]
-         write(*,*) "vel_init", vel_init
 
          if(first_run) then
             !call pset%add(1.0, [ 0.9700436, -0.24308753, 0.0], [ 0.466203685, 0.43236573, 0.0], [0.0, 0.0, 0.0], 0.0)
@@ -374,8 +374,12 @@ contains
 
             first_run = .false.
 
-            write(*,*) "Obliczono pozycje czastek "
-            write(*,*) "Dodano czastki do domeny: ", size(pset%p, dim=1)
+            write(msg,'(a,i6)') '[initproblem:orbits] Number of particles added to the domain: ', size(pset%p, dim=1)
+            call printinfo(msg)
+            write(msg,'(a,3f5.2)') '[initproblem:orbits] Initial position of the particle: ', pos_init
+            call printinfo(msg)
+            write(msg,'(a,3f5.2)') '[initproblem:orbits] Initial velocity of the particle: ', vel_init
+            call printinfo(msg)
 
          endif
       end subroutine orbits
@@ -383,27 +387,23 @@ contains
 !< \brief create a set of particles at random positions inside a sphere
       subroutine relax_time(n_particles, first_run)
 
-         use particle_pub, only: pset
+         use dataio_pub,        only: msg, printinfo
+         use particle_pub,      only: pset
 #ifdef HDF5
          use particles_io_hdf5, only: write_hdf5, read_hdf5
 #endif /* HDF5 */
 
          implicit none
 
-         integer                         :: i, j
-         integer, parameter              :: seed = 86437
-         integer, intent(in)             :: n_particles
-         logical, intent(inout)          :: first_run
+         integer, intent(in)            :: n_particles
+         logical, intent(inout)         :: first_run
 
-         real, dimension(n_particles, 3) :: pos_init !, pos_init2!,vel_init
-         real, dimension(3, 2)           :: domain
-
-         real                            :: factor, r_dom
-         real, parameter                 :: onesixth = 1.0/6.0
-
-#ifdef HDF5
-         real, dimension(n_particles, 3) :: pos2hdf5 !, vel2hdf5
-#endif /* HDF5 */
+         integer                        :: i, j
+         integer, parameter             :: seed = 86437
+         real, dimension(n_particles,3) :: pos_init
+         real, dimension(3,2)           :: domain
+         real                           :: factor, r_dom
+         real, parameter                :: onesixth = 1.0/6.0
 
          domain(1,1) = -5.0
          domain(2,1) = -5.0
@@ -412,7 +412,8 @@ contains
          domain(2,2) = 5.0
          domain(3,2) = 5.0
 
-         write(*,*) "Number of particles: ", n_particles
+         write(msg,'(a,i6)') '[initproblem:relax_time] Number of particles: ', n_particles
+         call printinfo(msg)
 
          call srand(seed)
          r_dom = onesixth*sqrt(domain(1,2)**2 + domain(2,2)**2 + domain(3,2)**2)
@@ -427,60 +428,19 @@ contains
                   enddo
                   r = sqrt(pos_init(i,1)**2 + pos_init(i,2)**2 + pos_init(i,3)**2)
                enddo
-#ifdef HDF5
-               pos2hdf5(i, :) = pos_init(i,:)
-#endif /* HDF5 */
                call pset%add(1.0, pos_init(i,:), [0.0,0.0,0.0],[0.0, 0.0, 0.0],0.0 )
             enddo
             first_run = .false.
-            write(*,*) "Obliczono pozycje czastek"
+            write(msg,'(a,i6)') '[initproblem:relax_time] Particles position computed'
+            call printinfo(msg)
 #ifdef HDF5
             call write_hdf5(pos_init, n_particles)
-            !call read_hdf5(pos_init2, n_particles)
 #endif /* HDF5 */
          endif
 
       end subroutine relax_time
 
    end subroutine problem_initial_conditions
-
-
-   subroutine print_essential_units
-
-      use dataio_pub, only: msg, printinfo
-      use mpisetup,   only: master
-      use units,      only: units_set, s_len_u, s_time_u, s_mass_u, miu0, km, au, lyr, mH, gmu, erg, eV, clight, Gs, mGs, cm, ppcm2, ppcm3
-
-      implicit none
-
-      if (master) then
-
-         call printinfo('VINE to PIERNIK convertion of units done:')
-         write(msg,'(a,a28       )') units_set, ' is used in this simulation.'                         ; call printinfo(msg)
-         write(msg,'(a16,3a      )') 'It is based on: ', trim(s_len_u), trim(s_time_u), trim(s_mass_u) ; call printinfo(msg)
-         write(msg,'(a30,e22.15  )') '                       miu0 = ', miu0                            ; call printinfo(msg)
-         call printinfo('Some essential units for this set:')
-         write(msg,'(a30,e22.15,a)') '                         km = ', km, s_len_u                     ; call printinfo(msg)
-         write(msg,'(a30,e22.15,a)') '                         AU = ', au, s_len_u                     ; call printinfo(msg)
-         write(msg,'(a30,e22.15,a)') '                        lyr = ', lyr, s_len_u                    ; call printinfo(msg)
-         write(msg,'(a30,e22.15,a)') 'hydrogen atom mass:      mH = ', mH, s_mass_u                    ; call printinfo(msg)
-         write(msg,'(a30,e22.15,a)') 'galactic mass unit:     gmu = ', gmu, s_mass_u                   ; call printinfo(msg)
-         write(msg,'(a30,e22.15  )') '    hydrogen atoms / cm2    = ', mH/cm**2                        ; call printinfo(msg)
-         write(msg,'(a30,e22.15  )') '    hydrogen atoms / cm3    = ', mH/cm**3                        ; call printinfo(msg)
-         write(msg,'(a30,e22.15  )') 'averaged particles / cm2    = ', ppcm2                           ; call printinfo(msg)
-         write(msg,'(a30,e22.15  )') 'averaged particles / cm3    = ', ppcm3                           ; call printinfo(msg)
-         write(msg,'(a30,e22.15  )') '                        erg = ', erg                             ; call printinfo(msg)
-         write(msg,'(a30,e22.15  )') '                         eV = ', eV                              ; call printinfo(msg)
-         write(msg,'(a30,e22.15  )') '                  erg / cm3 = ', erg/cm**3                       ; call printinfo(msg)
-         write(msg,'(a30,e22.15  )') '                   eV / cm3 = ', eV/cm**3                        ; call printinfo(msg)
-         write(msg,'(a30,e22.15  )') 'speed of light in vacuum: c = ', clight                          ; call printinfo(msg)
-         write(msg,'(a30,e22.15  )') 'magnetic induction unit: Gs = ', Gs                              ; call printinfo(msg)
-         write(msg,'(a30,e22.15  )') '                    microGs = ', mGs                             ; call printinfo(msg)
-
-         write(msg,*) '                    rho = ',  cm**3/mH                                          ; call printinfo(msg)
-      endif
-
-   end subroutine print_essential_units
 
    subroutine read_buildgal
 

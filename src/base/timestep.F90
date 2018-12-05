@@ -172,17 +172,21 @@ contains
 
          call timestep_sources(dt, cg)
 
+         if (use_fargo) dt = min(dt, timestep_fargo(cg, dt))
+
 #ifdef NBODY
-         write(*,*) "[timestep]:dt przed nbody=", dt
+         write(msg,'(a,f8.5)') '[timestep:time_step] dt of hydro part: ', dt
+         call warn(msg)
          call get_timestep_nbody(dt_nbody, pset)
-         write(*,*) "[timestep]:dt_nbody      =", dt_nbody
+         write(msg,'(a,f8.5)') '[timestep:time_step] dt for nbody:     ', dt_nbody
+         call warn(msg)
          if (dt_nbody .notequals. 0.0) then
             dt = min(dt, dt_nbody)
          endif
-         write(*,*) "[timestep]:dt  po   nbody=", dt
+         write(msg,'(a,f8.5)') '[timestep:time_step] dt  for both:     ', dt
+         call warn(msg)
 #endif /* NBODY */
 
-         if (use_fargo) dt = min(dt, timestep_fargo(cg, dt))
          cgl => cgl%nxt
       enddo
 
@@ -216,9 +220,6 @@ contains
          call printinfo(msg)
       endif
 #endif /* DEBUG */
-#ifdef NBODY
-   write(*,*) "[timestep]: dt=", dt, "!!!"
-#endif /* NBODY */
 
    end subroutine time_step
 

@@ -776,6 +776,7 @@ contains
    subroutine get_timestep_nbody(dt_nbody, pset)
 
       use constants,      only: ndims, zero
+      use dataio_pub,     only: msg, printinfo
       use cg_leaves,      only: leaves
       use cg_list,        only: cg_list_element
       use grid_cont,      only: grid_container
@@ -837,13 +838,15 @@ contains
       procedure(d2dxixj), pointer :: d2f_dxdy_p => NULL(), &
                                      d2f_dxdz_p => NULL(), &
                                      d2f_dydz_p => NULL()
-
-      write(*,*) "Poszukiwanie kroku nbody"
+#ifdef VERBOSE
+      call printinfo('[particle_integrators:get_timestep_nbody] Commencing get_timestep_nbody')
+#endif /* VERBOSE */
       eta = 1.0
       eps = 1.0e-4
       !write(*,*) "Przed n_part"
       n_part = size(pset%p, dim=1)
-      write(*,*) "Number of particles: ", n_part
+      write(msg,'(a,i6)') '[particle_integrator:get_timestep_nbody] Number of particles: ', n_part
+      call printinfo(msg)
       allocate(cells(n_part, ndims), dist(n_part, ndims))
 
       !write(*,*) "Przed cg"
@@ -890,7 +893,9 @@ contains
       !write(*,*) "[get_timestep_nbody]:  lf_c  =", lf_c
 
       call get_var_timestep_c(dt_nbody, eta, eps, max_acc, lf_c, pset, cg)
-      write(*,*) "Koniec szukania kroku nbody"
+#ifdef VERBOSE
+      call printinfo('[particle_integrators:get_timestep_nbody] Finish get_timestep_nbody')
+#endif /* VERBOSE */
 
    contains
 
@@ -1651,8 +1656,9 @@ contains
 
       subroutine save_pot(save_potential, finish, cg, numer1, numer2)
 
-         use constants, only: xdim, ydim, zdim, CENTER
-         use grid_cont, only: grid_container
+         use constants,  only: xdim, ydim, zdim, CENTER
+         use dataio_pub, only: printinfo
+         use grid_cont,  only: grid_container
 
          implicit none
 
@@ -1662,7 +1668,7 @@ contains
          integer                                   :: i, j
 
          if (save_potential) then
-            write(*,*) "Zapis potencjalu do pliku"
+            call printinfo('[particle_integrators:save_pot] Writing potential to a file')
             open(unit=88, file='potencjal1.dat')
             open(unit=89, file='potencjal2.dat')
                do i = lbound(cg%gpot,dim=1), ubound(cg%gpot,dim=1)
@@ -1679,7 +1685,7 @@ contains
             close(89)
 
             if (finish) then
-               write(*,*) "Warunek zakonczenia-zatrzymano"
+               call printinfo('[particle_integrators:save_pot] Condition to end - finishing.')
                stop
             endif
          endif
@@ -1689,6 +1695,7 @@ contains
       subroutine save_pot_pset(save_potential, finish, cg, numer1, numer2, pset)
 
          use constants,      only: xdim, ydim, zdim, CENTER
+         use dataio_pub,     only: printinfo
          use grid_cont,      only: grid_container
          use particle_types, only: particle_set
 
@@ -1708,7 +1715,7 @@ contains
             enddo
          close(90)
          if (save_potential) then
-            write(*,*) "Zapis potencjalu do pliku"
+            call printinfo('[particle_integrators:save_pot_pset] Writing potential to a file')
             open(unit=88, file='potencjal1.dat')
             open(unit=89, file='potencjal2.dat')
                do i = lbound(cg%gpot,dim=1), ubound(cg%gpot,dim=1)
@@ -1725,7 +1732,7 @@ contains
             close(89)
 
             if (finish) then
-               write(*,*) "Warunek zakonczenia-zatrzymano"
+               call printinfo('[particle_integrators:save_pot_pset] Condition to end - finishing.')
                stop
             endif
          endif

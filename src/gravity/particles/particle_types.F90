@@ -210,17 +210,16 @@ contains
 
       implicit none
 
-      class(particle_set),    intent(inout) :: this     !< an object invoking the type-bound procedure
-      real,                   intent(in)    :: mass     !< mass of the particle (negative values are allowed just in case someone wants to calculate electric potential)
-      real, dimension(:), intent(in)    :: pos      !< physical position
+      class(particle_set), intent(inout) :: this     !< an object invoking the type-bound procedure
+      real,                intent(in)    :: mass     !< mass of the particle (negative values are allowed just in case someone wants to calculate electric potential)
+      real, dimension(:),  intent(in)    :: pos      !< physical position
+      real, dimension(:),  intent(in)    :: vel      !< particle velocity
 #ifdef NBODY
-      real, dimension(:), intent(in)    :: vel      !< particle velocity
-      real, dimension(:), intent(in)    :: acc      !< particle acceleration
-      real, intent(in)                  :: energy   !< total energy of particle
+      real, dimension(:),  intent(in)    :: acc      !< particle acceleration
+      real,                intent(in)    :: energy   !< total energy of particle
 
       call this%add(particle(mass, pos, vel, acc, energy, .false.))
 #else /* !NBODY */
-      real, dimension(:), intent(in)    :: vel      !< particle velosity
 
       call this%add(particle(mass, pos, vel, .false.))
 #endif /* !NBODY */
