@@ -895,34 +895,14 @@ contains
 
    contains
 
-      function phi_pm(x, y, z, eps)
-
-         use units, only: newtong
-
-         implicit none
-
-         real, intent(in) :: x, y, z, eps
-         real             :: r, phi_pm, G,M, mu
-
-         G = 1.0
-         M = 1.0
-         mu = newtong*M
-         !write(*,*) "[phi_pm: newtong=]", newtong
-         !write(*,*) "[phi_pm: mu     =]", mu
-         r = sqrt(x**2 + y**2 + z**2 + eps**2)
-         !stop
-         phi_pm = -mu / r
-
-      end function phi_pm
-
       function phi_pm_part(x, y, z, eps, mass)
 
          use units, only: newtong
 
          implicit none
 
-         real, intent(in) :: x, y, z, eps
-         real             :: r, phi_pm_part, mass, mu
+         real, intent(in) :: x, y, z, eps, mass
+         real             :: r, phi_pm_part, mu
 
          mu = newtong*mass
          !write(*,*) "[phi_pm: newtong=]", newtong
@@ -947,9 +927,9 @@ contains
          do i = lbound(cg%gpot, dim=1), ubound(cg%gpot, dim=1)
             do j = lbound(cg%gpot, dim=2), ubound(cg%gpot, dim=2)
                do k = lbound(cg%gpot, dim=3), ubound(cg%gpot, dim=3)
-                  cg%gpot(i,j,k) = phi_pm(cg%coord(CENTER,xdim)%r(i), &
+                  cg%gpot(i,j,k) = phi_pm_part(cg%coord(CENTER,xdim)%r(i), &
                                           cg%coord(CENTER,ydim)%r(j), &
-                                          cg%coord(CENTER,zdim)%r(k),eps2)
+                                          cg%coord(CENTER,zdim)%r(k), eps2, 1.0)
                enddo
             enddo
          enddo
