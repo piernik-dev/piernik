@@ -858,12 +858,8 @@ contains
 
       !if (kroki == 0) then
          save_potential = .true.
-         !save_potential = .false.
-         !finish         = .true.
-         !finish         = .false.
-         !call save_pot(save_potential, finish, cg, 64, 20)
+         finish         = .false.
          call save_pot_pset(save_potential, finish, cg, 64, 20, pset)
-         !finish         = .true.
       !endif
       kroki = kroki + 1
       write(*,*) "++++++++KROKI+++++++: ", kroki
@@ -1653,44 +1649,6 @@ contains
          write(*,*) "[get_var_timestep_c]: dt_nbody =", dt_nbody
 
       end subroutine get_var_timestep_c
-
-      subroutine save_pot(save_potential, finish, cg, numer1, numer2)
-
-         use constants,  only: xdim, ydim, zdim, CENTER
-         use dataio_pub, only: printinfo
-         use grid_cont,  only: grid_container
-
-         implicit none
-
-         type(grid_container), pointer, intent(in) :: cg
-         logical                                   :: save_potential, finish
-         integer,                       intent(in) :: numer1, numer2
-         integer                                   :: i, j
-
-         if (save_potential) then
-            call printinfo('[particle_integrators:save_pot] Writing potential to a file')
-            open(unit=88, file='potencjal1.dat')
-            open(unit=89, file='potencjal2.dat')
-               do i = lbound(cg%gpot,dim=1), ubound(cg%gpot,dim=1)
-                  do j = lbound(cg%gpot,dim=2), ubound(cg%gpot,dim=2)
-                     !do k=lbound(cg%gpot,dim=3),ubound(cg%gpot,dim=3)
-                     write(88,*) i, j, numer1, cg%coord(CENTER, xdim)%r(i), cg%coord(CENTER, ydim)%r(j), cg%coord(CENTER, zdim)%r(numer1), cg%gpot(i,j,numer1)
-                     write(89,*) i, j, numer2, cg%coord(CENTER, xdim)%r(i), cg%coord(CENTER, ydim)%r(j), cg%coord(CENTER, zdim)%r(numer2), cg%gpot(i,j,numer2)
-                     !enddo
-                  enddo
-                  write(88,*)
-                  write(89,*)
-               enddo
-            close(88)
-            close(89)
-
-            if (finish) then
-               call printinfo('[particle_integrators:save_pot] Condition to end - finishing.')
-               stop
-            endif
-         endif
-
-      end subroutine save_pot
 
       subroutine save_pot_pset(save_potential, finish, cg, numer1, numer2, pset)
 
