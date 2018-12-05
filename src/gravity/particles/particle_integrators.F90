@@ -42,7 +42,7 @@ module particle_integrators
    private
    public :: hermit4
 #ifdef NBODY
-   public :: leapfrog2, acc_interp_method, lf_c, get_timestep_nbody, dt_nbody
+   public :: leapfrog2, acc_interp_method, lf_c, timestep_nbody, dt_nbody
 #endif /* NBODY */
 
    type, extends(particle_solver_T) :: hermit4_T
@@ -773,7 +773,7 @@ contains
    end subroutine get_acc_jerk_pot_coll
 
 #ifdef NBODY
-   subroutine get_timestep_nbody(dt_nbody, pset)
+   subroutine timestep_nbody(dt_nbody, pset)
 
       use constants,      only: ndims, zero
       use dataio_pub,     only: msg, printinfo
@@ -839,13 +839,13 @@ contains
                                      d2f_dxdz_p => NULL(), &
                                      d2f_dydz_p => NULL()
 #ifdef VERBOSE
-      call printinfo('[particle_integrators:get_timestep_nbody] Commencing get_timestep_nbody')
+      call printinfo('[particle_integrators:timestep_nbody] Commencing timestep_nbody')
 #endif /* VERBOSE */
       eta = 1.0
       eps = 1.0e-4
       !write(*,*) "Przed n_part"
       n_part = size(pset%p, dim=1)
-      write(msg,'(a,i6)') '[particle_integrator:get_timestep_nbody] Number of particles: ', n_part
+      write(msg,'(a,i6)') '[particle_integrator:timestep_nbody] Number of particles: ', n_part
       call printinfo(msg)
       allocate(cells(n_part, ndims), dist(n_part, ndims))
 
@@ -887,14 +887,14 @@ contains
       end select
 
       call get_acc_max(pset, n_part, max_acc)
-      !write(*,*) "[get_timestep_nbody]: max_acc=", max_acc
-      !write(*,*) "[get_timestep_nbody]:  eta   =", eta
-      !write(*,*) "[get_timestep_nbody]:  eps   =", eps
-      !write(*,*) "[get_timestep_nbody]:  lf_c  =", lf_c
+      !write(*,*) "[timestep_nbody]: max_acc=", max_acc
+      !write(*,*) "[timestep_nbody]:  eta   =", eta
+      !write(*,*) "[timestep_nbody]:  eps   =", eps
+      !write(*,*) "[timestep_nbody]:  lf_c  =", lf_c
 
       call get_var_timestep_c(dt_nbody, eta, eps, max_acc, lf_c, pset, cg)
 #ifdef VERBOSE
-      call printinfo('[particle_integrators:get_timestep_nbody] Finish get_timestep_nbody')
+      call printinfo('[particle_integrators:timestep_nbody] Finish timestep_nbody')
 #endif /* VERBOSE */
 
    contains
@@ -1739,7 +1739,7 @@ contains
 
       end subroutine save_pot_pset
 
-   end subroutine get_timestep_nbody
+   end subroutine timestep_nbody
 #endif /* NBODY */
 
 end module particle_integrators

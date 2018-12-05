@@ -126,7 +126,7 @@ contains
 #endif /* DEBUG */
 #ifdef NBODY
       use func,                 only: operator(.notequals.)
-      use particle_integrators, only: get_timestep_nbody, dt_nbody
+      use particle_integrators, only: timestep_nbody, dt_nbody
       use particle_pub,         only: pset
 #endif /* NBODY */
 
@@ -177,7 +177,7 @@ contains
 #ifdef NBODY
          write(msg,'(a,f8.5)') '[timestep:time_step] dt of hydro part: ', dt
          call warn(msg)
-         call get_timestep_nbody(dt_nbody, pset)
+         call timestep_nbody(dt_nbody, pset)
          write(msg,'(a,f8.5)') '[timestep:time_step] dt for nbody:     ', dt_nbody
          call warn(msg)
          if (dt_nbody .notequals. 0.0) then
