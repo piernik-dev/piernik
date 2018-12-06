@@ -511,21 +511,22 @@ contains
 
          end subroutine get_acc_model
 
-         function phi_pm(x, y, z, eps)
+         function phi_pm(pos, eps)
 
-            use units,    only: newtong
+            use constants, only: xdim, ydim, zdim
+            use units,     only: newtong
 
             implicit none
 
-            real, intent(in) :: x, y, z, eps
-            real             :: r, phi_pm, G,M, mu
+            real, dimension(ndims), intent(in) :: pos
+            real,                   intent(in) :: eps
+            real                               :: r, phi_pm, M, mu
 
-            G = 1.0
             M = 10.0
             mu = newtong*M
             !write(*,*) "[phi_pm: newtong=]", newtong
             !write(*,*) "[phi_pm: mu     =]", mu
-            r = sqrt(x**2 + y**2 + z**2 + eps**2)
+            r = sqrt(pos(xdim)**2 + pos(ydim)**2 + pos(zdim)**2 + eps**2)
             !stop
 
             phi_pm = -mu / r
@@ -534,45 +535,45 @@ contains
 
       function der_x(pos, d, eps)
 
+         use constants, only: ndims, xdim, ydim, zdim
+
          implicit none
 
-         real(kind=8)                :: x, y, z, der_x, d, eps
-         real(kind=8),dimension(1,3) :: pos
+         real(kind=8),dimension(1,ndims), intent(in) :: pos
+         real(kind=8),                    intent(in) :: d, eps
+         real(kind=8)                                :: x, y, z, der_x
 
-         x = pos(1,1)
-         y = pos(1,2)
-         z = pos(1,3)
-         der_x = ( phi_pm(x+d, y, z, eps) - phi_pm(x-d, y, z, eps) ) / (2.0*d)
+         der_x = ( phi_pm([pos(1,xdim)+d, pos(1,ydim), pos(1,zdim)], eps) - phi_pm([pos(1,xdim)-d, pos(1,ydim), pos(1,zdim)], eps) ) / (2.0*d)
 
       end function der_x
 
       !Pochodna wzgledem y
       function der_y(pos, d, eps)
 
+         use constants, only: ndims, xdim, ydim, zdim
+
          implicit none
 
-         real(kind=8)                 :: x, y, z, der_y, d, eps
-         real(kind=8), dimension(1,3) :: pos
+         real(kind=8),dimension(1,ndims), intent(in) :: pos
+         real(kind=8),                    intent(in) :: d, eps
+         real(kind=8)                                :: x, y, z, der_y
 
-         x = pos(1,1)
-         y = pos(1,2)
-         z = pos(1,3)
-         der_y = ( phi_pm(x, y+d, z, eps) - phi_pm(x, y-d, z, eps) ) / (2.0*d)
+         der_y = ( phi_pm([pos(1,xdim), pos(1,ydim)+d, pos(1,zdim)], eps) - phi_pm([pos(1,xdim), pos(1,ydim)-d, pos(1,zdim)], eps) ) / (2.0*d)
 
       end function der_y
 
       !Pochodna wzgledem z
       function der_z(pos, d, eps)
 
+         use constants, only: ndims, xdim, ydim, zdim
+
          implicit none
 
-         real(kind=8)                :: x, y, z, der_z, d, eps
-         real(kind=8),dimension(1,3) :: pos
+         real(kind=8),dimension(1,ndims), intent(in) :: pos
+         real(kind=8),                    intent(in) :: d, eps
+         real(kind=8)                                :: x, y, z, der_z
 
-         x = pos(1,1)
-         y = pos(1,2)
-         z = pos(1,3)
-         der_z = ( phi_pm(x, y, z+d, eps) - phi_pm(x, y, z-d, eps) ) / (2.0*d)
+         der_z = ( phi_pm([pos(1,xdim), pos(1,ydim), pos(1,zdim)+d], eps) - phi_pm([pos(1,xdim), pos(1,ydim), pos(1,zdim)-d], eps) ) / (2.0*d)
 
       end function der_z
 
@@ -928,8 +929,8 @@ contains
             do j = lbound(cg%gpot, dim=2), ubound(cg%gpot, dim=2)
                do k = lbound(cg%gpot, dim=3), ubound(cg%gpot, dim=3)
                   cg%gpot(i,j,k) = phi_pm_part(cg%coord(CENTER,xdim)%r(i), &
-                                          cg%coord(CENTER,ydim)%r(j), &
-                                          cg%coord(CENTER,zdim)%r(k), eps2, 1.0)
+                                               cg%coord(CENTER,ydim)%r(j), &
+                                               cg%coord(CENTER,zdim)%r(k), eps2, 1.0)
                enddo
             enddo
          enddo
