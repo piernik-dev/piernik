@@ -450,28 +450,6 @@ contains
 
          end subroutine get_acc_model
 
-         function phi_pm(pos, eps)
-
-            use constants, only: xdim, ydim, zdim
-            use units,     only: newtong
-
-            implicit none
-
-            real, dimension(ndims), intent(in) :: pos
-            real,                   intent(in) :: eps
-            real                               :: r, phi_pm, M, mu
-
-            M = 10.0
-            mu = newtong*M
-            !write(*,*) "[phi_pm: newtong=]", newtong
-            !write(*,*) "[phi_pm: mu     =]", mu
-            r = sqrt(pos(xdim)**2 + pos(ydim)**2 + pos(zdim)**2 + eps**2)
-            !stop
-
-            phi_pm = -mu / r
-
-      end function phi_pm
-
       function der_xyz(pos, d, eps, dir)
 
          use constants, only: idm, ndims
@@ -483,7 +461,7 @@ contains
          integer(kind=4),                 intent(in) :: dir
          real(kind=8)                                :: der_xyz
 
-         der_xyz = ( phi_pm(pos(1,:)+real(idm(dir,:))*d, eps) - phi_pm(pos(1,:)-real(idm(dir,:))*d, eps) ) / (2.0*d)
+         der_xyz = ( phi_pm_part(pos(1,:)+real(idm(dir,:))*d, eps, 10.0) - phi_pm_part(pos(1,:)-real(idm(dir,:))*d, eps, 10.0) ) / (2.0*d)
 
       end function der_xyz
 
@@ -512,6 +490,22 @@ contains
       end subroutine get_ang_momentum_2
 
    end subroutine leapfrog2ord
+
+   function phi_pm_part(pos, eps, mass)
+
+      use constants, only: ndims, xdim, ydim, zdim
+      use units,     only: newtong
+
+      implicit none
+
+      real, dimension(ndims), intent(in) :: pos
+      real,                   intent(in) :: eps, mass
+      real                               :: r, phi_pm_part
+
+      r = sqrt(pos(xdim)**2 + pos(ydim)**2 + pos(zdim)**2 + eps**2)
+      phi_pm_part = -newtong*mass / r
+
+   end function phi_pm_part
 
    subroutine get_acc_pot(mass, pos, acc, n, epot)
 
@@ -802,24 +796,6 @@ contains
 
    contains
 
-      function phi_pm_part(x, y, z, eps, mass)
-
-         use units, only: newtong
-
-         implicit none
-
-         real, intent(in) :: x, y, z, eps, mass
-         real             :: r, phi_pm_part, mu
-
-         mu = newtong*mass
-         !write(*,*) "[phi_pm: newtong=]", newtong
-         !write(*,*) "[phi_pm: mu     =]", mu
-         r = sqrt(x**2 + y**2 + z**2 + eps**2)
-         !stop
-         phi_pm_part = -mu / r
-
-      end function phi_pm_part
-
       subroutine pot2grid(cg, eps2)
 
          use constants, only: xdim, ydim, zdim, CENTER
@@ -834,9 +810,9 @@ contains
          do i = lbound(cg%gpot, dim=1), ubound(cg%gpot, dim=1)
             do j = lbound(cg%gpot, dim=2), ubound(cg%gpot, dim=2)
                do k = lbound(cg%gpot, dim=3), ubound(cg%gpot, dim=3)
-                  cg%gpot(i,j,k) = phi_pm_part(cg%coord(CENTER,xdim)%r(i), &
-                                               cg%coord(CENTER,ydim)%r(j), &
-                                               cg%coord(CENTER,zdim)%r(k), eps2, 1.0)
+                  cg%gpot(i,j,k) = phi_pm_part([cg%coord(CENTER,xdim)%r(i), &
+                                                cg%coord(CENTER,ydim)%r(j), &
+                                                cg%coord(CENTER,zdim)%r(k)], eps2, 1.0)
                enddo
             enddo
          enddo
@@ -864,9 +840,9 @@ contains
                do i = lbound(cg%gpot, dim=1), ubound(cg%gpot, dim=1)
                   do j = lbound(cg%gpot, dim=2), ubound(cg%gpot, dim=2)
                      do k = lbound(cg%gpot, dim=3), ubound(cg%gpot, dim=3)
-                        cg%gpot(i,j,k) = cg%gpot(i,j,k) + phi_pm_part(cg%coord(CENTER,xdim)%r(i) - pset%p(p)%pos(xdim), &
-                                                                      cg%coord(CENTER,ydim)%r(j) - pset%p(p)%pos(ydim), &
-                                                                      cg%coord(CENTER,zdim)%r(k) - pset%p(p)%pos(zdim), eps2, pset%p(p)%mass)
+                        cg%gpot(i,j,k) = cg%gpot(i,j,k) + phi_pm_part([cg%coord(CENTER,xdim)%r(i) - pset%p(p)%pos(xdim), &
+                                                                       cg%coord(CENTER,ydim)%r(j) - pset%p(p)%pos(ydim), &
+                                                                       cg%coord(CENTER,zdim)%r(k) - pset%p(p)%pos(zdim)], eps2, pset%p(p)%mass)
                      enddo
                   enddo
                enddo
