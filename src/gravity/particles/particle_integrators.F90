@@ -1040,52 +1040,52 @@ contains
 
       function df_dx_o2(cell, cg)
 
-         use constants, only: ndims, xdim, ydim, zdim
-         use grid_cont, only: grid_container
+         use constants,        only: gpot_n, idm, ndims, xdim
+         use grid_cont,        only: grid_container
+         use named_array_list, only: qna
 
          implicit none
 
-         type(grid_container), pointer, intent(in) :: cg
          integer, dimension(ndims),     intent(in) :: cell
+         type(grid_container), pointer, intent(in) :: cg
          real, target                              :: df_dx_o2
 
          !o(R^2)
-         df_dx_o2 = (cg%gpot(cell(xdim)+1, cell(ydim), cell(zdim)) - &
-                     cg%gpot(cell(xdim)-1, cell(ydim), cell(zdim)) ) / (2.0*cg%dx)
+         df_dx_o2 = (cg%q(qna%ind( gpot_n))%point(cell+idm(xdim,:)) - cg%q(qna%ind( gpot_n))%point(cell-idm(xdim,:)) ) / (2.0*cg%dl(xdim))
 
       end function df_dx_o2
 
       function df_dy_o2(cell, cg)
 
-         use constants, only: ndims, xdim, ydim, zdim
-         use grid_cont, only: grid_container
+         use constants,        only: gpot_n, idm, ndims, ydim
+         use grid_cont,        only: grid_container
+         use named_array_list, only: qna
 
          implicit none
 
-         type(grid_container), pointer, intent(in) :: cg
          integer, dimension(ndims),     intent(in) :: cell
+         type(grid_container), pointer, intent(in) :: cg
          real, target                              :: df_dy_o2
 
          !o(R^2)
-         df_dy_o2 = (cg%gpot(cell(xdim), cell(ydim)+1, cell(zdim)) - &
-                     cg%gpot(cell(xdim), cell(ydim)-1, cell(zdim)) ) / (2.0*cg%dy)
+         df_dy_o2 = (cg%q(qna%ind( gpot_n))%point(cell+idm(ydim,:)) - cg%q(qna%ind( gpot_n))%point(cell-idm(ydim,:)) ) / (2.0*cg%dl(ydim))
 
       end function df_dy_o2
 
       function df_dz_o2(cell, cg)
 
-         use constants, only: ndims, xdim, ydim, zdim
-         use grid_cont, only: grid_container
+         use constants,        only: gpot_n, idm, ndims, zdim
+         use grid_cont,        only: grid_container
+         use named_array_list, only: qna
 
          implicit none
 
-         type(grid_container), pointer, intent(in) :: cg
          integer, dimension(ndims),     intent(in) :: cell
+         type(grid_container), pointer, intent(in) :: cg
          real, target                              :: df_dz_o2
 
          !o(R^2)
-         df_dz_o2 = (cg%gpot(cell(xdim), cell(ydim), cell(zdim)+1) - &
-                     cg%gpot(cell(xdim), cell(ydim), cell(zdim)-1) ) / (2.0*cg%dz)
+         df_dz_o2 = (cg%q(qna%ind( gpot_n))%point(cell+idm(zdim,:)) - cg%q(qna%ind( gpot_n))%point(cell-idm(zdim,:)) ) / (2.0*cg%dl(zdim))
 
       end function df_dz_o2
 
@@ -1202,58 +1202,55 @@ contains
 
       function df_dx_o4(cell, cg)
 
-         use constants, only: ndims, xdim, ydim, zdim
-         use grid_cont, only: grid_container
+         use constants,        only: gpot_n, idm, ndims, xdim
+         use grid_cont,        only: grid_container
+         use named_array_list, only: qna
 
          implicit none
 
-         type(grid_container), pointer, intent(in) :: cg
          integer, dimension(ndims),     intent(in) :: cell
+         type(grid_container), pointer, intent(in) :: cg
          real, target                              :: df_dx_o4
 
          !o(R^4)
-         df_dx_o4 = 2.0 * (cg%gpot(cell(xdim)+1, cell(ydim), cell(zdim)) - &
-                           cg%gpot(cell(xdim)-1, cell(ydim), cell(zdim)) ) / (3.0*cg%dx) - &
-                          (cg%gpot(cell(xdim)+2, cell(ydim), cell(zdim)) - &
-                           cg%gpot(cell(xdim)-2, cell(ydim), cell(zdim)) ) / (12.0*cg%dx)
+         df_dx_o4 = 2.0 * (cg%q(qna%ind( gpot_n))%point(cell +   idm(xdim,:)) - cg%q(qna%ind( gpot_n))%point(cell -   idm(xdim,:)) ) / ( 3.0*cg%dl(xdim)) - &
+                          (cg%q(qna%ind( gpot_n))%point(cell + 2*idm(xdim,:)) - cg%q(qna%ind( gpot_n))%point(cell - 2*idm(xdim,:)) ) / (12.0*cg%dl(xdim))
 
       end function df_dx_o4
 
       function df_dy_o4(cell, cg)
 
-         use constants, only: ndims, xdim, ydim, zdim
-         use grid_cont, only: grid_container
+         use constants,        only: gpot_n, idm, ndims, ydim
+         use grid_cont,        only: grid_container
+         use named_array_list, only: qna
 
          implicit none
 
-         type(grid_container), pointer, intent(in) :: cg
          integer, dimension(ndims),     intent(in) :: cell
+         type(grid_container), pointer, intent(in) :: cg
          real, target                              :: df_dy_o4
 
          !o(R^4)
-         df_dy_o4 = 2.0 * (cg%gpot(cell(xdim), cell(ydim)+1, cell(zdim)) - &
-                           cg%gpot(cell(xdim), cell(ydim)-1, cell(zdim)) ) / (3.0*cg%dy) - &
-                          (cg%gpot(cell(xdim), cell(ydim)+2, cell(zdim)) - &
-                           cg%gpot(cell(xdim), cell(ydim)-2, cell(zdim)) ) / (12.0*cg%dy)
+         df_dy_o4 = 2.0 * (cg%q(qna%ind( gpot_n))%point(cell +   idm(ydim,:)) - cg%q(qna%ind( gpot_n))%point(cell -   idm(ydim,:)) ) / ( 3.0*cg%dl(ydim)) - &
+                          (cg%q(qna%ind( gpot_n))%point(cell + 2*idm(ydim,:)) - cg%q(qna%ind( gpot_n))%point(cell - 2*idm(ydim,:)) ) / (12.0*cg%dl(ydim))
 
       end function df_dy_o4
 
       function df_dz_o4(cell, cg)
 
-         use constants, only: ndims, xdim, ydim, zdim
-         use grid_cont, only: grid_container
+         use constants,        only: gpot_n, idm, ndims, zdim
+         use grid_cont,        only: grid_container
+         use named_array_list, only: qna
 
          implicit none
 
-         type(grid_container), pointer, intent(in) :: cg
          integer, dimension(ndims),     intent(in) :: cell
+         type(grid_container), pointer, intent(in) :: cg
          real, target                              :: df_dz_o4
 
          !o(R^4)
-         df_dz_o4 = 2.0 * (cg%gpot(cell(xdim), cell(ydim), cell(zdim)+1) - &
-                           cg%gpot(cell(xdim), cell(ydim), cell(zdim)-1) ) / (3.0*cg%dz) - &
-                          (cg%gpot(cell(xdim), cell(ydim), cell(zdim)+2) - &
-                           cg%gpot(cell(xdim), cell(ydim), cell(zdim)-2) ) / (12.0*cg%dz)
+         df_dz_o4 = 2.0 * (cg%q(qna%ind( gpot_n))%point(cell +   idm(zdim,:)) - cg%q(qna%ind( gpot_n))%point(cell -   idm(zdim,:)) ) / ( 3.0*cg%dl(zdim)) - &
+                          (cg%q(qna%ind( gpot_n))%point(cell + 2*idm(zdim,:)) - cg%q(qna%ind( gpot_n))%point(cell - 2*idm(zdim,:)) ) / (12.0*cg%dl(zdim))
 
       end function df_dz_o4
 
