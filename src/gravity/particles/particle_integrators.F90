@@ -492,8 +492,8 @@ contains
 
          subroutine get_acc_model(pset, acc2, eps, n)
 
-            use constants, only: ndims, xdim, ydim, zdim
-            use grid_cont,  only: grid_container
+            use constants, only: ndims, xdim, zdim
+            use grid_cont, only: grid_container
 
             implicit none
 
@@ -502,11 +502,12 @@ contains
             real,                     intent(in)  :: eps
             real, dimension(n,ndims), intent(out) :: acc2
             integer                               :: p
+            integer(kind=4)                       :: dir
 
             do p = 1, n
-               acc2(p, xdim) = -der_x(pset%p(p)%pos, 1.0e-8, eps)
-               acc2(p, ydim) = -der_y(pset%p(p)%pos, 1.0e-8, eps)
-               acc2(p, zdim) = -der_z(pset%p(p)%pos, 1.0e-8, eps)
+               do dir = xdim, zdim
+               acc2(p, dir) = -der_xyz(pset%p(p)%pos, 1.0e-8, eps, dir)
+               enddo
             enddo
 
          end subroutine get_acc_model
@@ -533,49 +534,20 @@ contains
 
       end function phi_pm
 
-      function der_x(pos, d, eps)
+      function der_xyz(pos, d, eps, dir)
 
-         use constants, only: idm, ndims, xdim, ydim, zdim
-
-         implicit none
-
-         real(kind=8),dimension(1,ndims), intent(in) :: pos
-         real(kind=8),                    intent(in) :: d, eps
-         real(kind=8)                                :: x, y, z, der_x
-
-         der_x = ( phi_pm(pos(1,:)+real(idm(xdim,:))*d, eps) - phi_pm(pos(1,:)-real(idm(xdim,:))*d, eps) ) / (2.0*d)
-
-      end function der_x
-
-      !Pochodna wzgledem y
-      function der_y(pos, d, eps)
-
-         use constants, only: idm, ndims, xdim, ydim, zdim
+         use constants, only: idm, ndims
 
          implicit none
 
          real(kind=8),dimension(1,ndims), intent(in) :: pos
          real(kind=8),                    intent(in) :: d, eps
-         real(kind=8)                                :: x, y, z, der_y
+         integer(kind=4),                 intent(in) :: dir
+         real(kind=8)                                :: der_xyz
 
-         der_y = ( phi_pm(pos(1,:)+real(idm(ydim,:))*d, eps) - phi_pm(pos(1,:)-real(idm(ydim,:))*d, eps) ) / (2.0*d)
+         der_xyz = ( phi_pm(pos(1,:)+real(idm(dir,:))*d, eps) - phi_pm(pos(1,:)-real(idm(dir,:))*d, eps) ) / (2.0*d)
 
-      end function der_y
-
-      !Pochodna wzgledem z
-      function der_z(pos, d, eps)
-
-         use constants, only: idm, ndims, xdim, ydim, zdim
-
-         implicit none
-
-         real(kind=8),dimension(1,ndims), intent(in) :: pos
-         real(kind=8),                    intent(in) :: d, eps
-         real(kind=8)                                :: x, y, z, der_z
-
-         der_z = ( phi_pm(pos(1,:)+real(idm(zdim,:))*d, eps) - phi_pm(pos(1,:)-real(idm(zdim,:))*d, eps) ) / (2.0*d)
-
-      end function der_z
+      end function der_xyz
 
       subroutine get_ang_momentum_2(pset, n, ang_momentum)
 
