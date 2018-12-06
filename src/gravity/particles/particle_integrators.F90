@@ -690,33 +690,33 @@ contains
       implicit none
 
       interface
-         function dxi(cell, cg, dir)
+         function dxi(cell, cg, ig, dir)
             use constants, only: ndims
             use grid_cont, only: grid_container
             implicit none
             integer, dimension(ndims),     intent(in) :: cell
             type(grid_container), pointer, intent(in) :: cg
-            integer(kind=4),               intent(in) :: dir
+            integer(kind=4),               intent(in) :: ig, dir
             real                                      :: dxi
          end function dxi
 
-         function d2dxi2(cell, cg, dir)
+         function d2dxi2(cell, cg, ig, dir)
             use constants, only: ndims
             use grid_cont, only: grid_container
             implicit none
             integer, dimension(ndims),     intent(in) :: cell
             type(grid_container), pointer, intent(in) :: cg
-            integer(kind=4),               intent(in) :: dir
+            integer(kind=4),               intent(in) :: ig, dir
             real                                      :: d2dxi2
          end function d2dxi2
 
-         function d2dxixj(cell, cg, dir1, dir2)
+         function d2dxixj(cell, cg, ig, dir1, dir2)
             use constants, only: ndims
             use grid_cont, only: grid_container
             implicit none
             integer, dimension(ndims),     intent(in) :: cell
             type(grid_container), pointer, intent(in) :: cg
-            integer(kind=4),               intent(in) :: dir1, dir2
+            integer(kind=4),               intent(in) :: ig, dir1, dir2
             real                                      :: d2dxixj
          end function d2dxixj
 
@@ -908,8 +908,9 @@ contains
 
       subroutine potential2(pset, cg, cells, dist, n_part)
 
-         use constants,    only: ndims, half, xdim, ydim, zdim
-         use grid_cont,    only: grid_container
+         use constants,        only: gpot_n, ndims, half, xdim, ydim, zdim
+         use grid_cont,        only: grid_container
+         use named_array_list, only: qna
 
          implicit none
 
@@ -919,149 +920,139 @@ contains
          integer, dimension(n_part,ndims), intent(in)    :: cells
          real,    dimension(n_part,ndims), intent(in)    :: dist
          integer                                         :: p
+         integer(kind=4)                                 :: ig
          real, dimension(n_part)                         :: dpot, d2pot
 
+         ig = qna%ind(gpot_n)
          do p = 1, n_part
-            dpot(p) = df_d_o2([cells(p, :)], cg, xdim) * dist(p, xdim) + &
-                      df_d_o2([cells(p, :)], cg, ydim) * dist(p, ydim) + &
-                      df_d_o2([cells(p, :)], cg, zdim) * dist(p, zdim)
+            dpot(p) = df_d_o2([cells(p, :)], cg, ig, xdim) * dist(p, xdim) + &
+                      df_d_o2([cells(p, :)], cg, ig, ydim) * dist(p, ydim) + &
+                      df_d_o2([cells(p, :)], cg, ig, zdim) * dist(p, zdim)
 
-            d2pot(p) = d2f_d2_o2([cells(p, :)], cg, xdim) * dist(p, xdim)**2 + &
-                       d2f_d2_o2([cells(p, :)], cg, ydim) * dist(p, ydim)**2 + &
-                       d2f_d2_o2([cells(p, :)], cg, zdim) * dist(p, zdim)**2 + &
-                       2.0*d2f_dd_o2([cells(p, :)], cg, xdim, ydim) * dist(p, xdim)*dist(p, ydim) + &
-                       2.0*d2f_dd_o2([cells(p, :)], cg, xdim, zdim) * dist(p, xdim)*dist(p, zdim)
+            d2pot(p) = d2f_d2_o2([cells(p, :)], cg, ig, xdim) * dist(p, xdim)**2 + &
+                       d2f_d2_o2([cells(p, :)], cg, ig, ydim) * dist(p, ydim)**2 + &
+                       d2f_d2_o2([cells(p, :)], cg, ig, zdim) * dist(p, zdim)**2 + &
+                       2.0*d2f_dd_o2([cells(p, :)], cg, ig, xdim, ydim) * dist(p, xdim)*dist(p, ydim) + &
+                       2.0*d2f_dd_o2([cells(p, :)], cg, ig, xdim, zdim) * dist(p, xdim)*dist(p, zdim)
             pset%p(p)%energy = cg%gpot(cells(p, xdim), cells(p, ydim), cells(p, zdim)) + dpot(p) + half * d2pot(p)
          enddo
 
       end subroutine potential2
 
-      function df_d_o2(cell, cg, dir)
+      function df_d_o2(cell, cg, ig, dir)
 
-         use constants,        only: gpot_n, idm, ndims
-         use grid_cont,        only: grid_container
-         use named_array_list, only: qna
+         use constants, only: idm, ndims
+         use grid_cont, only: grid_container
 
          implicit none
 
          integer, dimension(ndims),     intent(in) :: cell
          type(grid_container), pointer, intent(in) :: cg
-         integer(kind=4),               intent(in) :: dir
+         integer(kind=4),               intent(in) :: ig, dir
          real, target                              :: df_d_o2
 
          !o(R^2)
-         df_d_o2 = (cg%q(qna%ind(gpot_n))%point(cell+idm(dir,:)) - cg%q(qna%ind(gpot_n))%point(cell-idm(dir,:)) ) / (2.0*cg%dl(dir))
+         df_d_o2 = (cg%q(ig)%point(cell+idm(dir,:)) - cg%q(ig)%point(cell-idm(dir,:)) ) / (2.0*cg%dl(dir))
 
       end function df_d_o2
 
-      function d2f_d2_o2(cell, cg, dir)
+      function d2f_d2_o2(cell, cg, ig, dir)
 
-         use constants,        only: gpot_n, idm, ndims
-         use grid_cont,        only: grid_container
-         use named_array_list, only: qna
+         use constants, only: idm, ndims
+         use grid_cont, only: grid_container
 
          implicit none
 
          integer, dimension(ndims),     intent(in) :: cell
          type(grid_container), pointer, intent(in) :: cg
-         integer(kind=4),               intent(in) :: dir
+         integer(kind=4),               intent(in) :: ig, dir
          real, target                              :: d2f_d2_o2
 
          !o(R^2)
-         d2f_d2_o2 = (cg%q(qna%ind(gpot_n))%point(cell+idm(dir,:)) - 2.0*cg%q(qna%ind(gpot_n))%point(cell) + &
-                      cg%q(qna%ind(gpot_n))%point(cell-idm(dir,:)) ) / (cg%dl(dir)**2)
+         d2f_d2_o2 = (cg%q(ig)%point(cell+idm(dir,:)) - 2.0*cg%q(ig)%point(cell) + cg%q(ig)%point(cell-idm(dir,:)) ) / (cg%dl(dir)**2)
 
       end function d2f_d2_o2
 
-      function d2f_dd_o2(cell, cg, dir1, dir2)
+      function d2f_dd_o2(cell, cg, ig, dir1, dir2)
 
-         use constants,        only: gpot_n, idm, ndims
-         use grid_cont,        only: grid_container
-         use named_array_list, only: qna
+         use constants, only: idm, ndims
+         use grid_cont, only: grid_container
 
          implicit none
 
          integer, dimension(ndims),     intent(in) :: cell
          type(grid_container), pointer, intent(in) :: cg
-         integer(kind=4),               intent(in) :: dir1, dir2
+         integer(kind=4),               intent(in) :: ig, dir1, dir2
          real, target                              :: d2f_dd_o2
 
          !o(R^2)
-         d2f_dd_o2 = (cg%q(qna%ind(gpot_n))%point(cell+idm(dir1,:)+idm(dir2,:)) - cg%q(qna%ind(gpot_n))%point(cell+idm(dir1,:)-idm(dir2,:)) + &
-                      cg%q(qna%ind(gpot_n))%point(cell-idm(dir1,:)-idm(dir2,:)) - cg%q(qna%ind(gpot_n))%point(cell-idm(dir1,:)+idm(dir2,:)) ) / (4.0*cg%dl(dir1)*cg%dl(dir2))
+         d2f_dd_o2 = (cg%q(ig)%point(cell+idm(dir1,:)+idm(dir2,:)) - cg%q(ig)%point(cell+idm(dir1,:)-idm(dir2,:)) + &
+                      cg%q(ig)%point(cell-idm(dir1,:)-idm(dir2,:)) - cg%q(ig)%point(cell-idm(dir1,:)+idm(dir2,:)) ) / (4.0*cg%dl(dir1)*cg%dl(dir2))
 
       end function d2f_dd_o2
 
-      function df_d_o4(cell, cg, dir)
+      function df_d_o4(cell, cg, ig, dir)
 
-         use constants,        only: gpot_n, idm, ndims
-         use grid_cont,        only: grid_container
-         use named_array_list, only: qna
+         use constants, only: idm, ndims
+         use grid_cont, only: grid_container
 
          implicit none
 
          integer, dimension(ndims),     intent(in) :: cell
          type(grid_container), pointer, intent(in) :: cg
-         integer(kind=4),               intent(in) :: dir
+         integer(kind=4),               intent(in) :: ig, dir
          real, target                              :: df_d_o4
 
          !o(R^4)
-         df_d_o4 = 2.0 * (cg%q(qna%ind(gpot_n))%point(cell +   idm(dir,:)) - cg%q(qna%ind(gpot_n))%point(cell -   idm(dir,:)) ) / ( 3.0*cg%dl(dir)) - &
-                         (cg%q(qna%ind(gpot_n))%point(cell + 2*idm(dir,:)) - cg%q(qna%ind(gpot_n))%point(cell - 2*idm(dir,:)) ) / (12.0*cg%dl(dir))
+         df_d_o4 = 2.0 * (cg%q(ig)%point(cell +   idm(dir,:)) - cg%q(ig)%point(cell -   idm(dir,:)) ) / ( 3.0*cg%dl(dir)) - &
+                         (cg%q(ig)%point(cell + 2*idm(dir,:)) - cg%q(ig)%point(cell - 2*idm(dir,:)) ) / (12.0*cg%dl(dir))
 
       end function df_d_o4
 
-      function d2f_d2_o4(cell, cg, dir)
+      function d2f_d2_o4(cell, cg, ig, dir)
 
-         use constants,        only: gpot_n, idm, ndims
-         use grid_cont,        only: grid_container
-         use named_array_list, only: qna
+         use constants, only: idm, ndims
+         use grid_cont, only: grid_container
 
          implicit none
 
          integer, dimension(ndims),     intent(in) :: cell
          type(grid_container), pointer, intent(in) :: cg
-         integer(kind=4),               intent(in) :: dir
+         integer(kind=4),               intent(in) :: ig, dir
          real, target                              :: d2f_d2_o4
 
          !o(R^4)
-         d2f_d2_o4 = 4.0 * (cg%q(qna%ind(gpot_n))%point(cell +   idm(dir,:)) + cg%q(qna%ind(gpot_n))%point(cell -   idm(dir,:)) - &
-                     2.0 *  cg%q(qna%ind(gpot_n))%point(cell)) / (3.0*cg%dl(dir)**2) - &
-                           (cg%q(qna%ind(gpot_n))%point(cell + 2*idm(dir,:)) + cg%q(qna%ind(gpot_n))%point(cell - 2*idm(dir,:)) - &
-                     2.0 *  cg%q(qna%ind(gpot_n))%point(cell)) / (12.0*cg%dl(dir)**2)
+         d2f_d2_o4 = 4.0 * (cg%q(ig)%point(cell +   idm(dir,:)) + cg%q(ig)%point(cell -   idm(dir,:)) - 2.0 *  cg%q(ig)%point(cell)) / ( 3.0*cg%dl(dir)**2) - &
+                           (cg%q(ig)%point(cell + 2*idm(dir,:)) + cg%q(ig)%point(cell - 2*idm(dir,:)) - 2.0 *  cg%q(ig)%point(cell)) / (12.0*cg%dl(dir)**2)
 
       end function d2f_d2_o4
 
-      function d2f_dd_o4(cell, cg, dir1, dir2)
+      function d2f_dd_o4(cell, cg, ig, dir1, dir2)
 
-         use constants,        only: gpot_n, idm, ndims
-         use grid_cont,        only: grid_container
-         use named_array_list, only: qna
+         use constants, only: idm, ndims
+         use grid_cont, only: grid_container
 
          implicit none
 
          integer, dimension(ndims),     intent(in) :: cell
          type(grid_container), pointer, intent(in) :: cg
-         integer(kind=4),               intent(in) :: dir1, dir2
+         integer(kind=4),               intent(in) :: ig, dir1, dir2
          real, target                              :: d2f_dd_o4
 
          !o(R^4)
-         d2f_dd_o4 = (cg%q(qna%ind(gpot_n))%point(cell +   idm(dir1,:) +   idm(dir2,:)) + &
-                      cg%q(qna%ind(gpot_n))%point(cell -   idm(dir1,:) -   idm(dir2,:)) - &
-                      cg%q(qna%ind(gpot_n))%point(cell +   idm(dir1,:) -   idm(dir2,:)) - &
-                      cg%q(qna%ind(gpot_n))%point(cell -   idm(dir1,:) +   idm(dir2,:)) ) / (3.0*cg%dl(dir1)*cg%dl(dir2)) - &
-                     (cg%q(qna%ind(gpot_n))%point(cell + 2*idm(dir1,:) + 2*idm(dir2,:)) + &
-                      cg%q(qna%ind(gpot_n))%point(cell - 2*idm(dir1,:) - 2*idm(dir2,:)) - &
-                      cg%q(qna%ind(gpot_n))%point(cell + 2*idm(dir1,:) - 2*idm(dir2,:)) - &
-                      cg%q(qna%ind(gpot_n))%point(cell - 2*idm(dir1,:) + 2*idm(dir2,:)) ) / (48.0*cg%dl(dir1)*cg%dl(dir2))
+         d2f_dd_o4 = (cg%q(ig)%point(cell +   idm(dir1,:) +   idm(dir2,:)) + cg%q(ig)%point(cell -   idm(dir1,:) -   idm(dir2,:)) - &
+                      cg%q(ig)%point(cell +   idm(dir1,:) -   idm(dir2,:)) - cg%q(ig)%point(cell -   idm(dir1,:) +   idm(dir2,:)) ) / (3.0*cg%dl(dir1)*cg%dl(dir2)) - &
+                     (cg%q(ig)%point(cell + 2*idm(dir1,:) + 2*idm(dir2,:)) + cg%q(ig)%point(cell - 2*idm(dir1,:) - 2*idm(dir2,:)) - &
+                      cg%q(ig)%point(cell + 2*idm(dir1,:) - 2*idm(dir2,:)) - cg%q(ig)%point(cell - 2*idm(dir1,:) + 2*idm(dir2,:)) ) / (48.0*cg%dl(dir1)*cg%dl(dir2))
 
       end function d2f_dd_o4
 
       subroutine get_acc_int(cells, dist, pset, cg, n_part, df_d_p, d2f_d2_p, d2f_dd_p)
 
-         use constants,      only: ndims, xdim, ydim, zdim
-         use grid_cont,      only: grid_container
-         use particle_types, only: particle_set
+         use constants,        only: gpot_n, ndims, xdim, ydim, zdim
+         use grid_cont,        only: grid_container
+         use named_array_list, only: qna
+         use particle_types,   only: particle_set
 
          implicit none
 
@@ -1072,27 +1063,29 @@ contains
          real, dimension(n_part, ndims),   intent(in)    :: dist
          integer                                         :: i
 
-         procedure(dxi),     pointer, intent(in) :: df_d_p
-         procedure(d2dxi2),  pointer, intent(in) :: d2f_d2_p
-         procedure(d2dxixj), pointer, intent(in) :: d2f_dd_p
+         procedure(dxi),          pointer, intent(in)    :: df_d_p
+         procedure(d2dxi2),       pointer, intent(in)    :: d2f_d2_p
+         procedure(d2dxixj),      pointer, intent(in)    :: d2f_dd_p
 
+         integer(kind=4)                         :: ig
 
+         ig = qna%ind(gpot_n)
          do i = 1, n_part
             if ( (pset%p(i)%outside) .eqv. .false.) then
-               pset%p(i)%acc(xdim) = - (df_d_p([cells(i, :)], cg, xdim) + &
-                                      d2f_d2_p([cells(i, :)], cg, xdim)       * dist(i, xdim) + &
-                                      d2f_dd_p([cells(i, :)], cg, xdim, ydim) * dist(i, ydim) + &
-                                      d2f_dd_p([cells(i, :)], cg, xdim, zdim) * dist(i, zdim))
+               pset%p(i)%acc(xdim) = - (df_d_p([cells(i, :)], cg, ig, xdim) + &
+                                      d2f_d2_p([cells(i, :)], cg, ig, xdim)       * dist(i, xdim) + &
+                                      d2f_dd_p([cells(i, :)], cg, ig, xdim, ydim) * dist(i, ydim) + &
+                                      d2f_dd_p([cells(i, :)], cg, ig, xdim, zdim) * dist(i, zdim))
 
-               pset%p(i)%acc(ydim) = -( df_d_p([cells(i, :)], cg, ydim) + &
-                                      d2f_d2_p([cells(i, :)], cg, ydim)       * dist(i, ydim) + &
-                                      d2f_dd_p([cells(i, :)], cg, xdim, ydim) * dist(i, xdim) + &
-                                      d2f_dd_p([cells(i, :)], cg, ydim, zdim) * dist(i, zdim))
+               pset%p(i)%acc(ydim) = -( df_d_p([cells(i, :)], cg, ig, ydim) + &
+                                      d2f_d2_p([cells(i, :)], cg, ig, ydim)       * dist(i, ydim) + &
+                                      d2f_dd_p([cells(i, :)], cg, ig, xdim, ydim) * dist(i, xdim) + &
+                                      d2f_dd_p([cells(i, :)], cg, ig, ydim, zdim) * dist(i, zdim))
 
-               pset%p(i)%acc(zdim) = -( df_d_p([cells(i, :)], cg, zdim) + &
-                                      d2f_d2_p([cells(i, :)], cg, zdim)       * dist(i, zdim) + &
-                                      d2f_dd_p([cells(i, :)], cg, xdim, zdim) * dist(i, xdim) + &
-                                      d2f_dd_p([cells(i, :)], cg, ydim, zdim) * dist(i, ydim))
+               pset%p(i)%acc(zdim) = -( df_d_p([cells(i, :)], cg, ig, zdim) + &
+                                      d2f_d2_p([cells(i, :)], cg, ig, zdim)       * dist(i, zdim) + &
+                                      d2f_dd_p([cells(i, :)], cg, ig, xdim, zdim) * dist(i, xdim) + &
+                                      d2f_dd_p([cells(i, :)], cg, ig, ydim, zdim) * dist(i, ydim))
             !else
             !   call !funkcja liczaca pochodne z potencjalu policzonego z rozwiniecia multipolowego
             endif
