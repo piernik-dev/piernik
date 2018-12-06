@@ -1065,8 +1065,9 @@ contains
 
       function d2f_dxdy_o2(cell, cg)
 
-         use constants, only: ndims, xdim, ydim, zdim
-         use grid_cont, only: grid_container
+         use constants,        only: gpot_n, idm, ndims, xdim, ydim
+         use grid_cont,        only: grid_container
+         use named_array_list, only: qna
 
          implicit none
 
@@ -1075,17 +1076,16 @@ contains
          real, target                              :: d2f_dxdy_o2
 
          !o(R^2)
-         d2f_dxdy_o2 = (cg%gpot(cell(xdim)+1, cell(ydim)+1, cell(zdim)) - &
-                        cg%gpot(cell(xdim)+1, cell(ydim)-1, cell(zdim)) - &
-                        cg%gpot(cell(xdim)-1, cell(ydim)+1, cell(zdim)) + &
-                        cg%gpot(cell(xdim)-1, cell(ydim)-1, cell(zdim)) ) / (4.0*cg%dx*cg%dy)
+         d2f_dxdy_o2 = (cg%q(qna%ind(gpot_n))%point(cell+idm(xdim,:)+idm(ydim,:)) - cg%q(qna%ind(gpot_n))%point(cell+idm(xdim,:)-idm(ydim,:)) + &
+                        cg%q(qna%ind(gpot_n))%point(cell-idm(xdim,:)-idm(ydim,:)) - cg%q(qna%ind(gpot_n))%point(cell-idm(xdim,:)+idm(ydim,:)) ) / (4.0*cg%dl(xdim)*cg%dl(ydim))
 
       end function d2f_dxdy_o2
 
       function d2f_dxdz_o2(cell, cg)
 
-         use constants, only: ndims, xdim, ydim, zdim
-         use grid_cont, only: grid_container
+         use constants,        only: gpot_n, idm, ndims, xdim, zdim
+         use grid_cont,        only: grid_container
+         use named_array_list, only: qna
 
          implicit none
 
@@ -1094,17 +1094,16 @@ contains
          real, target                              :: d2f_dxdz_o2
 
          !o(R^2)
-         d2f_dxdz_o2 = (cg%gpot(cell(xdim)+1, cell(ydim), cell(zdim)+1) - &
-                        cg%gpot(cell(xdim)+1, cell(ydim), cell(zdim)-1) - &
-                        cg%gpot(cell(xdim)-1, cell(ydim), cell(zdim)+1) + &
-                        cg%gpot(cell(xdim)-1, cell(ydim), cell(zdim)-1) ) / (4.0*cg%dx*cg%dz)
+         d2f_dxdz_o2 = (cg%q(qna%ind(gpot_n))%point(cell+idm(xdim,:)+idm(zdim,:)) - cg%q(qna%ind(gpot_n))%point(cell+idm(xdim,:)-idm(zdim,:)) + &
+                        cg%q(qna%ind(gpot_n))%point(cell-idm(xdim,:)-idm(zdim,:)) - cg%q(qna%ind(gpot_n))%point(cell-idm(xdim,:)+idm(zdim,:)) ) / (4.0*cg%dl(xdim)*cg%dl(zdim))
 
       end function d2f_dxdz_o2
 
       function d2f_dydz_o2(cell, cg)
 
-         use constants, only: ndims, xdim, ydim, zdim
-         use grid_cont, only: grid_container
+         use constants,        only: gpot_n, idm, ndims, ydim, zdim
+         use grid_cont,        only: grid_container
+         use named_array_list, only: qna
 
          implicit none
 
@@ -1113,10 +1112,8 @@ contains
          real, target                              :: d2f_dydz_o2
 
          !o(R^2)
-         d2f_dydz_o2 = (cg%gpot(cell(xdim), cell(ydim)+1, cell(zdim)+1) - &
-                        cg%gpot(cell(xdim), cell(ydim)+1, cell(zdim)-1) - &
-                        cg%gpot(cell(xdim), cell(ydim)-1, cell(zdim)+1) + &
-                        cg%gpot(cell(xdim), cell(ydim)-1, cell(zdim)-1) ) / (4.0*cg%dy*cg%dz)
+         d2f_dydz_o2 = (cg%q(qna%ind(gpot_n))%point(cell+idm(ydim,:)+idm(zdim,:)) - cg%q(qna%ind(gpot_n))%point(cell+idm(ydim,:)-idm(zdim,:)) + &
+                        cg%q(qna%ind(gpot_n))%point(cell-idm(ydim,:)-idm(zdim,:)) - cg%q(qna%ind(gpot_n))%point(cell-idm(ydim,:)+idm(zdim,:)) ) / (4.0*cg%dl(ydim)*cg%dl(zdim))
 
       end function d2f_dydz_o2
 
@@ -1162,8 +1159,9 @@ contains
 
       function d2f_dxdy_o4(cell, cg)
 
-         use constants, only: ndims, xdim, ydim, zdim
-         use grid_cont, only: grid_container
+         use constants,        only: gpot_n, idm, ndims, xdim, ydim
+         use grid_cont,        only: grid_container
+         use named_array_list, only: qna
 
          implicit none
 
@@ -1172,21 +1170,22 @@ contains
          real, target                              :: d2f_dxdy_o4
 
          !o(R^4)
-         d2f_dxdy_o4 = (cg%gpot(cell(xdim)+1, cell(ydim)+1, cell(zdim)) + &
-                        cg%gpot(cell(xdim)-1, cell(ydim)-1, cell(zdim)) - &
-                        cg%gpot(cell(xdim)+1, cell(ydim)-1, cell(zdim)) - &
-                        cg%gpot(cell(xdim)-1, cell(ydim)+1, cell(zdim)) ) / (3.0*cg%dx*cg%dy) - &
-                       (cg%gpot(cell(xdim)+2, cell(ydim)+2, cell(zdim)) + &
-                        cg%gpot(cell(xdim)-2, cell(ydim)-2, cell(zdim)) - &
-                        cg%gpot(cell(xdim)+2, cell(ydim)-2, cell(zdim)) - &
-                        cg%gpot(cell(xdim)-2, cell(ydim)+2, cell(zdim)) ) / (48.0*cg%dx*cg%dy)
+         d2f_dxdy_o4 = (cg%q(qna%ind(gpot_n))%point(cell +   idm(xdim,:) +   idm(ydim,:)) + &
+                        cg%q(qna%ind(gpot_n))%point(cell -   idm(xdim,:) -   idm(ydim,:)) - &
+                        cg%q(qna%ind(gpot_n))%point(cell +   idm(xdim,:) -   idm(ydim,:)) - &
+                        cg%q(qna%ind(gpot_n))%point(cell -   idm(xdim,:) +   idm(ydim,:)) ) / (3.0*cg%dl(xdim)*cg%dl(ydim)) - &
+                       (cg%q(qna%ind(gpot_n))%point(cell + 2*idm(xdim,:) + 2*idm(ydim,:)) + &
+                        cg%q(qna%ind(gpot_n))%point(cell - 2*idm(xdim,:) - 2*idm(ydim,:)) - &
+                        cg%q(qna%ind(gpot_n))%point(cell + 2*idm(xdim,:) - 2*idm(ydim,:)) - &
+                        cg%q(qna%ind(gpot_n))%point(cell - 2*idm(xdim,:) + 2*idm(ydim,:)) ) / (48.0*cg%dl(xdim)*cg%dl(ydim))
 
       end function d2f_dxdy_o4
 
       function d2f_dxdz_o4(cell, cg)
 
-         use constants, only: ndims, xdim, ydim, zdim
-         use grid_cont, only: grid_container
+         use constants,        only: gpot_n, idm, ndims, xdim, zdim
+         use grid_cont,        only: grid_container
+         use named_array_list, only: qna
 
          implicit none
 
@@ -1195,21 +1194,22 @@ contains
          real, target                              :: d2f_dxdz_o4
 
          !o(R^4)
-         d2f_dxdz_o4 = (cg%gpot(cell(xdim)+1, cell(ydim), cell(zdim)+1) + &
-                        cg%gpot(cell(xdim)-1, cell(ydim), cell(zdim)-1) - &
-                        cg%gpot(cell(xdim)+1, cell(ydim), cell(zdim)-1) - &
-                        cg%gpot(cell(xdim)-1, cell(ydim), cell(zdim)+1) ) / (3.0*cg%dx*cg%dz) - &
-                       (cg%gpot(cell(xdim)+2, cell(ydim), cell(zdim)+2) + &
-                        cg%gpot(cell(xdim)-2, cell(ydim), cell(zdim)-2) - &
-                        cg%gpot(cell(xdim)+2, cell(ydim), cell(zdim)-2) - &
-                        cg%gpot(cell(xdim)-2, cell(ydim), cell(zdim)+2) ) / (48.0*cg%dx*cg%dz)
+         d2f_dxdz_o4 = (cg%q(qna%ind(gpot_n))%point(cell +   idm(xdim,:) +   idm(zdim,:)) + &
+                        cg%q(qna%ind(gpot_n))%point(cell -   idm(xdim,:) -   idm(zdim,:)) - &
+                        cg%q(qna%ind(gpot_n))%point(cell +   idm(xdim,:) -   idm(zdim,:)) - &
+                        cg%q(qna%ind(gpot_n))%point(cell -   idm(xdim,:) +   idm(zdim,:)) ) / (3.0*cg%dl(xdim)*cg%dl(zdim)) - &
+                       (cg%q(qna%ind(gpot_n))%point(cell + 2*idm(xdim,:) + 2*idm(zdim,:)) + &
+                        cg%q(qna%ind(gpot_n))%point(cell - 2*idm(xdim,:) - 2*idm(zdim,:)) - &
+                        cg%q(qna%ind(gpot_n))%point(cell + 2*idm(xdim,:) - 2*idm(zdim,:)) - &
+                        cg%q(qna%ind(gpot_n))%point(cell - 2*idm(xdim,:) + 2*idm(zdim,:)) ) / (48.0*cg%dl(xdim)*cg%dl(zdim))
 
       end function d2f_dxdz_o4
 
       function d2f_dydz_o4(cell, cg)
 
-         use constants, only: ndims, xdim, ydim, zdim
-         use grid_cont, only: grid_container
+         use constants,        only: gpot_n, idm, ndims, ydim, zdim
+         use grid_cont,        only: grid_container
+         use named_array_list, only: qna
 
          implicit none
 
@@ -1218,14 +1218,14 @@ contains
          real, target                              :: d2f_dydz_o4
 
          !o(R^4)
-         d2f_dydz_o4 = (cg%gpot(cell(xdim), cell(ydim)+1, cell(zdim)+1) + &
-                        cg%gpot(cell(xdim), cell(ydim)-1, cell(zdim)-1) - &
-                        cg%gpot(cell(xdim), cell(ydim)+1, cell(zdim)-1) - &
-                        cg%gpot(cell(xdim), cell(ydim)-1, cell(zdim)+1) ) / (3.0*cg%dy*cg%dz) - &
-                       (cg%gpot(cell(xdim), cell(ydim)+2, cell(zdim)+2) + &
-                        cg%gpot(cell(xdim), cell(ydim)-2, cell(zdim)-2) - &
-                        cg%gpot(cell(xdim), cell(ydim)+2, cell(zdim)-2) - &
-                        cg%gpot(cell(xdim), cell(ydim)-2, cell(zdim)+2) ) / (48.0*cg%dy*cg%dz)
+         d2f_dydz_o4 = (cg%q(qna%ind(gpot_n))%point(cell +   idm(ydim,:) +   idm(zdim,:)) + &
+                        cg%q(qna%ind(gpot_n))%point(cell -   idm(ydim,:) -   idm(zdim,:)) - &
+                        cg%q(qna%ind(gpot_n))%point(cell +   idm(ydim,:) -   idm(zdim,:)) - &
+                        cg%q(qna%ind(gpot_n))%point(cell -   idm(ydim,:) +   idm(zdim,:)) ) / (3.0*cg%dl(ydim)*cg%dl(zdim)) - &
+                       (cg%q(qna%ind(gpot_n))%point(cell + 2*idm(ydim,:) + 2*idm(zdim,:)) + &
+                        cg%q(qna%ind(gpot_n))%point(cell - 2*idm(ydim,:) - 2*idm(zdim,:)) - &
+                        cg%q(qna%ind(gpot_n))%point(cell + 2*idm(ydim,:) - 2*idm(zdim,:)) - &
+                        cg%q(qna%ind(gpot_n))%point(cell - 2*idm(ydim,:) + 2*idm(zdim,:)) ) / (48.0*cg%dl(ydim)*cg%dl(zdim))
 
       end function d2f_dydz_o4
 
