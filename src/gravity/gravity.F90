@@ -1122,25 +1122,6 @@ contains
          enddo
       enddo
 
-   contains
-
-      function phi_pm(x, y, z, eps)
-
-         use units, only: newtong
-
-         implicit none
-
-         real, intent(in) :: x, y, z, eps
-         real             :: r, phi_pm, G,M, mu
-
-         G = 1.0
-         M = 1.0
-         mu = newtong*M
-         r = sqrt(x**2 + y**2 + z**2 + eps**2)
-         phi_pm = -mu / r
-
-      end function phi_pm
-
    end subroutine point_mass_pot
 #endif /* NBODY */
 
