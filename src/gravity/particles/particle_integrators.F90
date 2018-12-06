@@ -428,68 +428,6 @@ contains
 
          end subroutine save_particles
 
-!         subroutine potential(pset, cg, cells, dist, n)!poprawic te funcje, bo teraz nie dziala prawidlowo :/
-!            use constants, only: ndims, half, xdim, ydim, zdim
-!            use grid_cont, only: grid_container
-!            implicit none
-!            type(grid_container), pointer,    intent(in)    :: cg
-!            class(particle_set),              intent(inout) :: pset  !< particle list
-!            integer,                          intent(in)    :: n
-!            integer,      dimension(n,ndims), intent(in)    :: cells
-!            real(kind=8), dimension(n,ndims), intent(in)    :: dist
-!            integer                                         :: i
-!            integer(kind=8)                                 :: p, q, r
-!            real, dimension(n)                              :: dpot, d2pot
-
-!            do i = 1, n
-
-!               dpot(i) = df_d_o2([cells(i, :)], cg, xdim) * dist(i, xdim) + &
-!                         df_d_o2([cells(i, :)], cg, ydim) * dist(i, ydim) + &
-!                         df_d_o2([cells(i, :)], cg, zdim) * dist(i, zdim)
-!
-!               d2pot(i) = d2f_d2_o2([cells(i, :)], cg, xdim) * dist(i, xdim)**2 + &
-!                          d2f_d2_o2([cells(i, :)], cg, ydim) * dist(i, ydim)**2 + &
-!                          d2f_d2_o2([cells(i, :)], cg, zdim) * dist(i, zdim)**2 + &
-!                          2.0*d2f_dd_o2([cells(i, :)], cg, xdim, ydim) * dist(i, xdim)*dist(i, ydim) + &
-!                          2.0*d2f_dd_o2([cells(i, :)], cg, xdim, zdim) * dist(i, xdim)*dist(i, zdim)
-!            enddo
-
-!            do i = 1, n, 1
-!               p = cells(i, xdim)
-!               q = cells(i, ydim)
-!               r = cells(i, zdim)
-!               pset%p(i)%pot = cg%gpot(p, q, r) + dpot(i) + half * d2pot(i)
-!            enddo
-
-!         end subroutine potential
-
-!         subroutine get_energy(pset, cg, cells, dist, n, energy)
-!            use constants, only: ndims
-!            use grid_cont, only: grid_container
-!            implicit none
-!               type(grid_container), pointer,    intent(in)    :: cg
-!               class(particle_set),              intent(inout) :: pset  !< particle list
-!               integer,                          intent(in)    :: n
-!               integer,      dimension(n,ndims), intent(in)    :: cells
-!               real(kind=8), dimension(n,ndims), intent(in)    :: dist
-!               integer                                         :: i, j
-!               real, intent(out)                               :: energy
-!               real                                            :: velocity = 0.0
-
-!               call potential(pset, cg, cells, dist, n)
-
-!               energy = 0.0
-
-!               do i=1, n
-!                  do j=1, ndims
-!                     velocity = velocity + pset%p(i)%vel(j)**2
-!                  enddo
-!
-!                  energy = energy + 0.5*velocity + pset%p(i)%pot
-!                  velocity = 0.0
-!               enddo
-!         end subroutine get_energy
-
          subroutine get_acc_model(pset, acc2, eps, n)
 
             use constants, only: ndims, xdim, zdim
@@ -1183,23 +1121,6 @@ contains
             !   call !funkcja liczaca pochodne z potencjalu policzonego z rozwiniecia multipolowego
             endif
          enddo
-         !pset%p(1)%acc = 0.0
-
-         !stara wersja wykorzystujaca tablice
-         !acc(:, xdim) = -( df_d_p(cells, cg, n, xdim) + &
-         !            !   d2f_d2_p(cells, cg, n, xdim)       * dist(:, xdim) + &
-         !            !   d2f_dd_p(cells, cg, n, xdim, ydim) * dist(:, ydim) + &
-         !            !   d2f_dd_p(cells, cg, n, xdim, zdim) * dist(:, zdim))
-
-         !acc(:, ydim) = -( df_d_p(cells, cg, n, ydim) + &
-         !            !   d2f_d2_p(cells, cg, n, ydim)       * dist(:, ydim) + &
-         !            !   d2f_dd_p(cells, cg, n, xdim, ydim) * dist(:, xdim) + &
-         !            !   d2f_dd_p(cells, cg, n, ydim, zdim) * dist(:, zdim))
-
-         !acc(:, zdim) = -( df_d_p(cells, cg, n, zdim) + &
-         !            !   d2f_d2_p(cells, cg, n, zdim)       * dist(:, zdim) + &
-         !            !   d2f_dd_p(cells, cg, n, xdim, zdim) * dist(:, xdim) + &
-         !            !   d2f_dd_p(cells, cg, n, ydim, zdim) * dist(:, ydim))
 
       end subroutine get_acc_int
 
