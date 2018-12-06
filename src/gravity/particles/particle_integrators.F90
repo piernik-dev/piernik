@@ -535,7 +535,7 @@ contains
 
       function der_x(pos, d, eps)
 
-         use constants, only: ndims, xdim, ydim, zdim
+         use constants, only: idm, ndims, xdim, ydim, zdim
 
          implicit none
 
@@ -543,14 +543,14 @@ contains
          real(kind=8),                    intent(in) :: d, eps
          real(kind=8)                                :: x, y, z, der_x
 
-         der_x = ( phi_pm([pos(1,xdim)+d, pos(1,ydim), pos(1,zdim)], eps) - phi_pm([pos(1,xdim)-d, pos(1,ydim), pos(1,zdim)], eps) ) / (2.0*d)
+         der_x = ( phi_pm(pos(1,:)+real(idm(xdim,:))*d, eps) - phi_pm(pos(1,:)-real(idm(xdim,:))*d, eps) ) / (2.0*d)
 
       end function der_x
 
       !Pochodna wzgledem y
       function der_y(pos, d, eps)
 
-         use constants, only: ndims, xdim, ydim, zdim
+         use constants, only: idm, ndims, xdim, ydim, zdim
 
          implicit none
 
@@ -558,14 +558,14 @@ contains
          real(kind=8),                    intent(in) :: d, eps
          real(kind=8)                                :: x, y, z, der_y
 
-         der_y = ( phi_pm([pos(1,xdim), pos(1,ydim)+d, pos(1,zdim)], eps) - phi_pm([pos(1,xdim), pos(1,ydim)-d, pos(1,zdim)], eps) ) / (2.0*d)
+         der_y = ( phi_pm(pos(1,:)+real(idm(ydim,:))*d, eps) - phi_pm(pos(1,:)-real(idm(ydim,:))*d, eps) ) / (2.0*d)
 
       end function der_y
 
       !Pochodna wzgledem z
       function der_z(pos, d, eps)
 
-         use constants, only: ndims, xdim, ydim, zdim
+         use constants, only: idm, ndims, xdim, ydim, zdim
 
          implicit none
 
@@ -573,7 +573,7 @@ contains
          real(kind=8),                    intent(in) :: d, eps
          real(kind=8)                                :: x, y, z, der_z
 
-         der_z = ( phi_pm([pos(1,xdim), pos(1,ydim), pos(1,zdim)+d], eps) - phi_pm([pos(1,xdim), pos(1,ydim), pos(1,zdim)-d], eps) ) / (2.0*d)
+         der_z = ( phi_pm(pos(1,:)+real(idm(zdim,:))*d, eps) - phi_pm(pos(1,:)-real(idm(zdim,:))*d, eps) ) / (2.0*d)
 
       end function der_z
 
