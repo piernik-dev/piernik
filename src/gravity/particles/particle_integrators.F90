@@ -721,8 +721,7 @@ contains
       real,    dimension(:,:), allocatable :: dist
       integer, dimension(:,:), allocatable :: cells
       real                                 :: dt_nbody
-      logical                              :: save_potential, finish
-      integer, save :: kroki = 0
+      integer, save                        :: kroki = 0
 
 #ifdef VERBOSE
       call printinfo('[particle_integrators:timestep_nbody] Commencing timestep_nbody')
@@ -743,9 +742,7 @@ contains
       call pot2grid(cg, zero)
 
       !if (kroki == 0) then
-         save_potential = .true.
-         finish         = .false.
-         call save_pot_pset(save_potential, finish, cg, 64, 20, pset)
+      call save_pot_pset(cg, pset)
       !endif
       kroki = kroki + 1
       write(*,*) "++++++++KROKI+++++++: ", kroki
@@ -1096,7 +1093,7 @@ contains
 
       end subroutine get_var_timestep_c
 
-      subroutine save_pot_pset(save_potential, finish, cg, numer1, numer2, pset)
+      subroutine save_pot_pset(cg, pset)
 
          use constants,      only: xdim, ydim, zdim, CENTER
          use dataio_pub,     only: printinfo
@@ -1107,11 +1104,14 @@ contains
 
          class(particle_set),           intent(in) :: pset  !< particle list
          type(grid_container), pointer, intent(in) :: cg
-         integer,                       intent(in) :: numer1, numer2
-         logical                                   :: finish
-         logical                                   :: save_potential
-         integer                                   :: i, j, p
 
+         integer                                   :: numer1, numer2, i, j, p
+         logical                                   :: finish, save_potential
+
+         save_potential = .true.
+         finish         = .false.
+         numer1 = 64
+         numer2 = 20
 
          open(unit=90, file='pset.dat')
             do p=1, ubound(pset%p, dim=1)
