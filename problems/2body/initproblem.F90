@@ -63,7 +63,7 @@ contains
       use fluidindex,   only: flind
       use particle_pub, only: pset
 #ifdef NBODY
-      use particle_types, only: ht_integrator
+      use particle_pub, only: ht_integrator
       !use particles_io_hdf5
 #endif /* NBODY */
 

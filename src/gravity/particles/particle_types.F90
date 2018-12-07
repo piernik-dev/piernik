@@ -36,10 +36,6 @@ module particle_types
 
    private
    public :: particle_set, particle_solver_T
-#ifdef NBODY
-   public :: ht_integrator
-   logical :: ht_integrator
-#endif /* NBODY */
 
    !>
    !! \brief simple particle: just mass and position

@@ -40,8 +40,12 @@ module particle_pub
    implicit none
    private
    public :: pset, psolver, init_particles, cleanup_particles
+#ifdef NBODY
+   public :: ht_integrator
 
-   type(particle_set) :: pset !< default particle list
+   logical                           :: ht_integrator
+#endif /* NBODY */
+   type(particle_set)                :: pset !< default particle list
    class(particle_solver_T), pointer :: psolver
 
 contains
@@ -58,7 +62,6 @@ contains
 #ifdef NBODY
       use mpisetup,              only: rbuff
       use particle_integrators,  only: leapfrog2, acc_interp_method, lf_c
-      use particle_types,        only: ht_integrator
 #endif /* NBODY */
 
       implicit none
