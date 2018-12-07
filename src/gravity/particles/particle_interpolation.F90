@@ -48,10 +48,10 @@ contains
 
       implicit none
 
-      real, dimension (:,:,:,:), pointer, intent(in) :: f   !< field
-      real, dimension(ndims), intent(in)    :: dp           !< point position in [0,1] range
-      integer, dimension(ndims), intent(in) :: ijkp         !< nearest grid point where dp resides
-      real, dimension(size(f,1)) :: gp                      !< interpolated value
+      real, dimension (:,:,:,:), pointer, intent(in) :: f     !< field
+      real, dimension(ndims),             intent(in) :: dp    !< point position in [0,1] range
+      integer, dimension(ndims),          intent(in) :: ijkp  !< nearest grid point where dp resides
+      real, dimension(size(f,1))                     :: gp    !< interpolated value
 
       ! locals
       real, dimension(ndims, IM:IP) :: fac
