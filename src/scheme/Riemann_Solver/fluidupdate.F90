@@ -80,13 +80,9 @@ contains
 !!!call repeat_fluidstep
 
     if (divB_0_method == DIVB_HDC) call update_chspeed
+    if (first_run) call set_limiters(limiter, limiter_b)
+
     halfstep = .false.
-    if (first_run) then
-       dtm = 0.0
-       call set_limiters(limiter, limiter_b)
-    else
-       dtm = dt
-    endif
     t = t + dt
     call make_3sweeps(.true.) ! X -> Y -> Z
 
