@@ -51,10 +51,8 @@ contains
 
   subroutine fluid_update
 
-    use constants,    only: GEO_XYZ, DIVB_HDC, I_ZERO, I_ONE
-    use dataio_pub,   only: halfstep, die
-    use domain,       only: dom, is_refined
-    use fluidindex,   only: flind
+    use constants,    only: DIVB_HDC
+    use dataio_pub,   only: halfstep
     use fluxlimiters, only: set_limiters
     use global,       only: dt, dtm, t, limiter, limiter_b, divB_0_method
     use mass_defect,  only: update_magic_mass
@@ -62,20 +60,7 @@ contains
 
     implicit none
 
-    integer(kind=4) :: nmag, i
     logical, save   :: first_run = .true.
-
-    ! is_multicg should be safe
-    if (is_refined) call die("[fluid_update] This Rieman solver is not compatible with mesh refinements yet!")
-    if (dom%geometry_type /= GEO_XYZ) call die("[fluid_update] Non-cartesian geometry is not implemented yet in this Riemann solver.")
-#ifdef ISO
-#  error Isothermal EOS is not implemented yet in this Riemann solver.
-#endif /* ISO */
-    nmag = I_ZERO
-    do i = 1, flind%fluids
-       if (flind%all_fluids(i)%fl%is_magnetized) nmag = nmag + I_ONE
-    enddo
-    if (nmag > 1) call die("[fluidupdate:fluid_update] At most one magnetized fluid is implemented")
 
 !!!call repeat_fluidstep
 

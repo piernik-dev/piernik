@@ -79,7 +79,9 @@ contains
 
    subroutine sweep_dsplit(cg, ddim)
 
-      use constants,        only: pdims, xdim, zdim, ORTHO1, ORTHO2, LO, HI, psi_n, INVALID
+      use constants,        only: pdims, xdim, zdim, ORTHO1, ORTHO2, LO, HI, psi_n, INVALID, GEO_XYZ, I_ZERO, I_ONE
+      use dataio_pub,       only: die
+      use domain,           only: dom, is_refined
       use fluidindex,       only: flind, iarr_all_dn, iarr_all_mx, iarr_all_swp, iarr_mag_swp
       use global,           only: dt, force_cc_mag
       use grid_cont,        only: grid_container
@@ -104,6 +106,16 @@ contains
       integer                                    :: psii
       real, dimension(size(u1d,1),size(u1d,2))           :: u0
       real, dimension(size(u1d,1), flind%fluids), target :: vx
+      integer(kind=4)                            :: nmag, i
+
+      ! is_multicg should be safe
+      if (is_refined) call die("[sweeps:sweep_dsplit] This Rieman solver is not compatible with mesh refinements yet!")
+      if (dom%geometry_type /= GEO_XYZ) call die("[sweeps:sweep_dsplit] Non-cartesian geometry is not implemented yet in this Riemann solver.")
+      nmag = I_ZERO
+      do i = 1, flind%fluids
+         if (flind%all_fluids(i)%fl%is_magnetized) nmag = nmag + I_ONE
+      enddo
+      if (nmag > 1) call die("[sweeps:sweep_dsplit] At most one magnetized fluid is implemented")
 
       if (force_cc_mag) then
          bi = wna%bi
@@ -351,6 +363,10 @@ contains
          class(component_fluid), pointer   :: fl
          real                              :: en
          integer                           :: ip, i
+
+#ifdef ISO
+#  error Isothermal EOS is not implemented yet in musclflx
+#endif /* ISO */
 
          qf    = zero
          b_ccf = zero
