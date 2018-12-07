@@ -33,205 +33,22 @@
 module fluidupdate   ! SPLIT
 ! pulled by RTVD
 
-   use named_array_list, only: na_var_list
-
    implicit none
 
    private
    public :: fluid_update
 
-   ! for simplicity create an array of pointers to qna and wna
-   type :: na_p
-      class(na_var_list), pointer :: p => null()
-   end type na_p
-   type(na_p), dimension(2) :: na_lists  ! currently we have only 2 such lists, fna may join in the future
-
 contains
-
-!<
-!! \brief Find the name for backup field when repeating timestep is allowed.
-!>
-
-   function get_rname(name) result(rname)
-
-      use constants,  only: dsetnamelen
-      use dataio_pub, only: die, msg
-
-      implicit none
-
-      character(len=dsetnamelen), intent(in) :: name
-
-      character(len=dsetnamelen), parameter :: retry_n = '.retry'  !< append to mark an auto-generated copy for timestep retrying
-      character(len=dsetnamelen) :: rname
-
-      if (len_trim(name) + len_trim(retry_n) > dsetnamelen) then
-         write(msg,'(3a,i3,a)')"[fluidupdate:get_rname] field name '", name, "' is too long. Try to shorten it to ", dsetnamelen - len_trim(retry_n), " characters"
-         call die(msg)
-      endif
-      write(rname, '(2a)') trim(name), trim(retry_n)
-
-   end function get_rname
-
-!<
-!! \brief Save the current state after correct time-step or restore previously saved state and try a shorter timestep.
-!!
-!! \warning There might be other evolving variables (such as mass_defect::magic_mass) that should be added here
-!!
-!! \todo Move this routine somewhere else, because it should be available for all hydro schemes
-!>
-
-   subroutine repeat_fluidstep
-
-      use cg_leaves,        only: leaves
-      use cg_list,          only: cg_list_element
-      use constants,        only: pSUM, I_ONE, dsetnamelen, AT_IGNORE
-      use dataio_pub,       only: warn, msg, die
-      use global,           only: dt, dtm, t, t_saved, cfl_violated, nstep, nstep_saved, dt_max_grow, repeat_step
-      use mass_defect,      only: downgrade_magic_mass
-      use mpisetup,         only: master, piernik_MPI_Allreduce
-      use named_array_list, only: qna, wna, na_var_list_q, na_var_list_w
-      use user_hooks,       only: user_reaction_to_redo_step
-#ifdef RANDOMIZE
-      use randomization,    only: randoms_redostep
-#endif /* RANDOMIZE */
-
-      implicit none
-
-      type(cg_list_element), pointer :: cgl
-      integer(kind=4)                :: no_hist_count
-      integer                        :: i, j
-      character(len=dsetnamelen)     :: rname
-
-      if (.not.repeat_step) return
-
-      call restart_arrays
-
-      if (cfl_violated) then
-         if (master) call warn("[fluidupdate:fluid_update] Redoing previous step...")
-         t = t_saved
-         nstep = nstep_saved
-         dt = dtm/dt_max_grow**2
-         call downgrade_magic_mass
-#ifdef RANDOMIZE
-         call randoms_redostep(.true.)
-#endif /* RANDOMIZE */
-         if (associated(user_reaction_to_redo_step)) call user_reaction_to_redo_step
-      else
-         nstep_saved = nstep
-         t_saved = t
-#ifdef RANDOMIZE
-         call randoms_redostep(.false.)
-#endif /* RANDOMIZE */
-      endif
-
-      no_hist_count = 0
-      cgl => leaves%first
-      do while (associated(cgl))
-         ! No need to take care of any cgl%cg%q arrays as long as graity is extrapolated from the prefious timestep.
-
-         ! error checking should've been done in restart_arrays, called few lines earlier
-         do j = lbound(na_lists, dim=1), ubound(na_lists, dim=1)
-            associate (na => na_lists(j)%p)
-               do i = lbound(na%lst(:), dim=1), ubound(na%lst(:), dim=1)
-                  if (na%lst(i)%restart_mode /= AT_IGNORE) then
-                     rname = get_rname(na%lst(i)%name)
-                     if (cfl_violated) then
-                        if (cgl%cg%has_previous_timestep) then
-                           select type(na)  !! ToDo: unify qna and wna somehow at least in the grid_container
-                              type is (na_var_list_q)
-                                 cgl%cg%q(i)%arr = cgl%cg%q(qna%ind(rname))%arr
-                              type is (na_var_list_w)
-                                 cgl%cg%w(i)%arr = cgl%cg%w(wna%ind(rname))%arr
-                              class default
-                                 call die("[fluidupdate:repeat_fluidstep] unknown named array list type ->")
-                           end select
-                        else
-                           no_hist_count = no_hist_count + I_ONE
-                        endif
-                     else
-                        select type(na)
-                           type is (na_var_list_q)
-                              cgl%cg%q(qna%ind(rname))%arr = cgl%cg%q(i)%arr
-                           type is (na_var_list_w)
-                              cgl%cg%w(wna%ind(rname))%arr = cgl%cg%w(i)%arr
-                           class default
-                              call die("[fluidupdate:repeat_fluidstep] unknown named array list type <-")
-                        end select
-                        cgl%cg%has_previous_timestep = .true.
-                     endif
-                  endif
-               enddo
-            end associate
-         enddo
-         cgl => cgl%nxt
-      enddo
-      call piernik_MPI_Allreduce(no_hist_count, pSUM)
-      if (master .and. no_hist_count/=0) then
-         write(msg, '(a,i6,a)')"[fluidupdate:repeat_fluidstep] Warning: not reverted: ", no_hist_count, " grid pieces."
-         call die(msg)
-         ! AMR domains require careful treatment of timestep retries.
-         ! Going back past rebalancing or refinement change would require updating whole AMR structure, not just field values.
-      endif
-
-   end subroutine repeat_fluidstep
-
-!>
-!! \brief Check if the arrays exist and create them if needed
-!<
-
-   subroutine restart_arrays
-
-      use cg_list_global,   only: all_cg
-      use constants,        only: AT_IGNORE, dsetnamelen, INVALID
-      use dataio_pub,       only: printinfo, msg
-      use mpisetup,         only: master
-      use named_array_list, only: qna, wna
-
-      implicit none
-
-      integer :: i, j
-      character(len=dsetnamelen) :: rname
-      integer(kind=4), dimension(:), allocatable, target :: pos_copy
-
-      if (.not. associated(na_lists(1)%p)) na_lists(1)%p => qna
-      if (.not. associated(na_lists(2)%p)) na_lists(2)%p => wna
-
-      do j = lbound(na_lists, dim=1), ubound(na_lists, dim=1)
-         associate (na => na_lists(j)%p)
-
-            do i = lbound(na%lst(:), dim=1), ubound(na%lst(:), dim=1)
-               if (na%lst(i)%restart_mode /= AT_IGNORE) then
-                  rname = get_rname(na%lst(i)%name)
-                  if (.not. na%exists(rname)) then
-                     if (master) then
-                        write(msg,'(3a)')"[fluidupdate:restart_arrays] creating backup field '", rname, "'"
-                        call printinfo(msg)
-                     endif
-                     allocate(pos_copy(size(na%lst(i)%position)))
-                     pos_copy = na%lst(i)%position
-                     if (na%lst(i)%dim4 /= INVALID) then
-                        call all_cg%reg_var(rname, dim4=na%lst(i)%dim4, position=pos_copy, multigrid=na%lst(i)%multigrid)
-                     else
-                        call all_cg%reg_var(rname,                      position=pos_copy, multigrid=na%lst(i)%multigrid)
-                     endif
-                     deallocate(pos_copy)
-                  endif
-               endif
-            enddo
-         end associate
-      enddo
-
-   end subroutine restart_arrays
-
 !>
 !! \brief Advance the solution by two timesteps using directional splitting
 !<
 
    subroutine fluid_update
 
-      use dataio_pub,  only: halfstep
-      use global,      only: dt, dtm, t
-      use mass_defect, only: update_magic_mass
+      use dataio_pub,     only: halfstep
+      use global,         only: dt, dtm, t
+      use mass_defect,    only: update_magic_mass
+      use timestep_retry, only: repeat_fluidstep
 
       implicit none
 
