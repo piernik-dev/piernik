@@ -73,11 +73,14 @@ contains
    !<
 
    subroutine hermit_4ord(pset, t_glob, dt_tot)
+
       use constants, only: ndims, xdim, zdim
       use particle_types, only: particle_set
+
       implicit none
+
       class(particle_set), intent(inout) :: pset  !< particle list
-      real, intent(in) :: t_glob, dt_tot
+      real,                intent(in)    :: t_glob, dt_tot
 
 #ifdef NBODY
       real, parameter :: dt_param = 0.0001      ! control parameter to determine time step size
@@ -87,11 +90,11 @@ contains
       real, parameter :: dt_dia = 1             ! time interval between diagnostics output
       real, parameter :: dt_out = 0.01          ! time interval between output of snapshots
 
-      real, dimension(:), allocatable :: mass
+      real, dimension(:),    allocatable :: mass
       real, dimension(:, :), allocatable :: pos, vel, acc, jerk
 
-      real :: epot, coll_time
-      real :: t_dia, t_out, t_end, einit, dt, t
+      real    :: epot, coll_time
+      real    :: t_dia, t_out, t_end, einit, dt, t
       integer :: nsteps, n, ndim, lun_out, lun_err, i
 
       open(newunit=lun_out, file='nbody_out.log', status='unknown',  position='append')
@@ -166,13 +169,15 @@ contains
       contains
 
          subroutine write_diagnostics(mass, pos, vel, acc, jerk, n, t, epot, nsteps, einit, init_flag)
+
             implicit none
-            integer, intent(in) :: n, nsteps
-            real, intent(in) :: t, epot
-            real, intent(inout) :: einit
-            logical, intent(in) :: init_flag
-            real, dimension(n), intent(in) :: mass
-            real, dimension(n, ndims), intent(in) :: pos, vel, acc, jerk
+
+            integer,                   intent(in)    :: n, nsteps
+            real, dimension(n),        intent(in)    :: mass
+            real, dimension(n, ndims), intent(in)    :: pos, vel, acc, jerk
+            real,                      intent(in)    :: t, epot
+            real,                      intent(inout) :: einit
+            logical,                   intent(in)    :: init_flag
 
             real :: ekin, etot
 
@@ -553,14 +558,17 @@ contains
 #endif /* NBODY */
 
    subroutine evolve_step(mass, pos, vel, acc, jerk, n, t, dt, epot, coll_time)
+
       use constants, only: ndims
+
       implicit none
-      integer, intent(in) :: n
-      real, dimension(n), intent(in) :: mass
-      real, dimension(n, ndims), intent(out) :: vel, pos
-      real, intent(in) :: dt
-      real, intent(inout) :: t, epot, coll_time
+
+      integer,                   intent(in)    :: n
+      real, dimension(n),        intent(in)    :: mass
+      real, dimension(n, ndims), intent(out)   :: pos, vel
       real, dimension(n, ndims), intent(inout) :: acc, jerk
+      real,                      intent(in)    :: dt
+      real,                      intent(inout) :: t, epot, coll_time
 
       real, dimension(n, ndims) :: old_pos, old_vel, old_acc, old_jerk
 
@@ -578,34 +586,41 @@ contains
       contains
 
          subroutine predict_step(pos, vel, acc, jerk, n, dt)
+
+            use constants, only: half, onesth
+
             implicit none
-            integer, intent(in) :: n
-            real, intent(in) :: dt
-            real, dimension(n, ndims), intent(in) :: acc, jerk
-            real, dimension(n, ndims), intent(out) :: vel, pos
 
-            real :: hdt, hdt2
-            real, parameter :: sixth = 1./6.
+            integer,                   intent(in)  :: n
+            real, dimension(n, ndims), intent(out) :: pos, vel
+            real, dimension(n, ndims), intent(in)  :: acc, jerk
+            real,                      intent(in)  :: dt
 
-            hdt = 0.5*dt**2
-            hdt2 = dt**3 * sixth
+            real                                   :: hdt, hdt2
+
+            hdt  = half   * dt**2
+            hdt2 = onesth * dt**3
 
             pos(:,:) = pos(:,:) + vel(:,:)*dt + acc(:,:)*hdt + jerk(:,:)*hdt2
             vel(:,:) = vel(:,:) + acc(:,:)*dt + jerk(:,:)*hdt
+
          end subroutine predict_step
 
          subroutine correct_step(pos, vel, acc, jerk, old_pos, old_vel, old_acc, old_jerk, n, dt)
+
+            use constants, only: half, onet
+
             implicit none
-            integer, intent(in) :: n
-            real, intent(in) :: dt
-            real, dimension(n, ndims), intent(in) :: acc, jerk, old_pos, old_vel, old_acc, old_jerk
-            real, dimension(n, ndims), intent(out) :: vel, pos
 
-            real :: hdt, hdt2
-            real, parameter :: third = 1./3.
+            integer,                   intent(in)  :: n
+            real, dimension(n, ndims), intent(out) :: pos, vel
+            real, dimension(n, ndims), intent(in)  :: acc, jerk, old_pos, old_vel, old_acc, old_jerk
+            real,                      intent(in)  :: dt
 
-            hdt = 0.5*dt
-            hdt2 = hdt**2 * third
+            real                                   :: hdt, hdt2
+
+            hdt  = half * dt
+            hdt2 = onet * hdt**2
 
             vel(:,:) = old_vel(:,:) + (old_acc(:,:) + acc(:,:))*hdt + (old_jerk(:,:) - jerk(:,:)) * hdt2
             pos(:,:) = old_pos(:,:) + (old_vel(:,:) + vel(:,:))*hdt + (old_acc(:,:)  - acc(:,:) ) * hdt2
@@ -614,20 +629,23 @@ contains
    end subroutine evolve_step
 
    subroutine get_acc_jerk_pot_coll(mass, pos, vel, acc, jerk, n, epot, coll_time)
+
       use constants, only: ndims
+
       implicit none
-      integer, intent(in) :: n
-      real, dimension(n), intent(in) :: mass
-      real, dimension(n,ndims), intent(in) :: pos
-      real, dimension(n,ndims), intent(in) :: vel
+
+      integer,                  intent(in)  :: n
+      real, dimension(n),       intent(in)  :: mass
+      real, dimension(n,ndims), intent(in)  :: pos
+      real, dimension(n,ndims), intent(in)  :: vel
       real, dimension(n,ndims), intent(out) :: acc
       real, dimension(n,ndims), intent(out) :: jerk
-      real, intent(out) :: epot
-      real, intent(out) :: coll_time
+      real,                     intent(out) :: epot
+      real,                     intent(out) :: coll_time
 
-      real, dimension(ndims) :: rji, vji, da, dj
-      integer :: i, j
-      real :: coll_time_q  ! collision time to 4th power
+      real, dimension(ndims)                :: rji, vji, da, dj
+      integer                               :: i, j
+      real                                  :: coll_time_q  ! collision time to 4th power
 
       real :: r   ! | rji |
       real :: r2  ! | rji |^2
@@ -636,9 +654,9 @@ contains
       real :: rv_r2 ! ( rij . vij ) / | rji |^2
       real :: da2
 
-      acc(:,:) = 0.0
+      acc(:,:)  = 0.0
       jerk(:,:) = 0.0
-      epot = 0.0
+      epot      = 0.0
 
       coll_time_q = huge(1.0)  ! collision time to 4th power
 
@@ -675,6 +693,7 @@ contains
       enddo
       coll_time = sqrt(sqrt(coll_time_q))
       return
+
    end subroutine get_acc_jerk_pot_coll
 
 #ifdef NBODY
@@ -820,11 +839,9 @@ contains
 
          use constants, only: ndims, xdim, CENTER, LO, HI
          use grid_cont, only: grid_container
-         !use particle_types, only: particle_set
 
          implicit none
 
-         !class(particle_set)                          :: pset  !< particle list
          type(grid_container)                          :: cg
          integer,                          intent(in)  :: n_part
          integer, dimension(n_part,ndims), intent(out) :: cells
@@ -854,6 +871,7 @@ contains
          use constants,        only: gpot_n, ndims, half, xdim, ydim, zdim
          use grid_cont,        only: grid_container
          use named_array_list, only: qna
+         use particle_func,    only: df_d_o2, d2f_d2_o2, d2f_dd_o2
 
          implicit none
 
