@@ -898,7 +898,7 @@ contains
                   pset%p(i)%outside = .true.
                endif
 
-               cells(i, cdim) = int( 0.5 + (pset%p(i)%pos(cdim) - cg%coord(CENTER,cdim)%r(0)) / cg%dl(cdim) )
+               cells(i, cdim) = int( 0.5 + (pset%p(i)%pos(cdim) - cg%coord(CENTER,cdim)%r(0)) * cg%idl(cdim) )
 
                dist(i, cdim)  = pset%p(i)%pos(cdim) - ( cg%coord(CENTER, cdim)%r(0) + cells(i,cdim) * cg%dl(cdim) )
             enddo
@@ -941,7 +941,7 @@ contains
 
       function df_d_o2(cell, cg, ig, dir)
 
-         use constants, only: idm, ndims
+         use constants, only: idm, ndims, half
          use grid_cont, only: grid_container
 
          implicit none
@@ -952,13 +952,13 @@ contains
          real, target                              :: df_d_o2
 
          !o(R^2)
-         df_d_o2 = (cg%q(ig)%point(cell+idm(dir,:)) - cg%q(ig)%point(cell-idm(dir,:)) ) / (2.0*cg%dl(dir))
+         df_d_o2 = (cg%q(ig)%point(cell+idm(dir,:)) - cg%q(ig)%point(cell-idm(dir,:)) ) * half *cg%idl(dir)
 
       end function df_d_o2
 
       function d2f_d2_o2(cell, cg, ig, dir)
 
-         use constants, only: idm, ndims
+         use constants, only: idm, ndims, two
          use grid_cont, only: grid_container
 
          implicit none
@@ -969,13 +969,13 @@ contains
          real, target                              :: d2f_d2_o2
 
          !o(R^2)
-         d2f_d2_o2 = (cg%q(ig)%point(cell+idm(dir,:)) - 2.0*cg%q(ig)%point(cell) + cg%q(ig)%point(cell-idm(dir,:)) ) / (cg%dl(dir)**2)
+         d2f_d2_o2 = (cg%q(ig)%point(cell+idm(dir,:)) - two*cg%q(ig)%point(cell) + cg%q(ig)%point(cell-idm(dir,:)) ) * cg%idl(dir)**2
 
       end function d2f_d2_o2
 
       function d2f_dd_o2(cell, cg, ig, dir1, dir2)
 
-         use constants, only: idm, ndims
+         use constants, only: idm, ndims, oneq
          use grid_cont, only: grid_container
 
          implicit none
@@ -987,13 +987,13 @@ contains
 
          !o(R^2)
          d2f_dd_o2 = (cg%q(ig)%point(cell+idm(dir1,:)+idm(dir2,:)) - cg%q(ig)%point(cell+idm(dir1,:)-idm(dir2,:)) + &
-                      cg%q(ig)%point(cell-idm(dir1,:)-idm(dir2,:)) - cg%q(ig)%point(cell-idm(dir1,:)+idm(dir2,:)) ) / (4.0*cg%dl(dir1)*cg%dl(dir2))
+                      cg%q(ig)%point(cell-idm(dir1,:)-idm(dir2,:)) - cg%q(ig)%point(cell-idm(dir1,:)+idm(dir2,:)) ) * oneq*cg%idl(dir1)*cg%idl(dir2)
 
       end function d2f_dd_o2
 
       function df_d_o4(cell, cg, ig, dir)
 
-         use constants, only: idm, ndims
+         use constants, only: idm, ndims, onet
          use grid_cont, only: grid_container
 
          implicit none
@@ -1004,14 +1004,14 @@ contains
          real, target                              :: df_d_o4
 
          !o(R^4)
-         df_d_o4 = 2.0 * (cg%q(ig)%point(cell +   idm(dir,:)) - cg%q(ig)%point(cell -   idm(dir,:)) ) / ( 3.0*cg%dl(dir)) - &
-                         (cg%q(ig)%point(cell + 2*idm(dir,:)) - cg%q(ig)%point(cell - 2*idm(dir,:)) ) / (12.0*cg%dl(dir))
+         df_d_o4 = 2.0 * (cg%q(ig)%point(cell +   idm(dir,:)) - cg%q(ig)%point(cell -   idm(dir,:)) ) * cg%idl(dir) * onet - &
+                         (cg%q(ig)%point(cell + 2*idm(dir,:)) - cg%q(ig)%point(cell - 2*idm(dir,:)) ) * cg%idl(dir) / 12.0
 
       end function df_d_o4
 
       function d2f_d2_o4(cell, cg, ig, dir)
 
-         use constants, only: idm, ndims
+         use constants, only: idm, ndims, two, onet
          use grid_cont, only: grid_container
 
          implicit none
@@ -1022,14 +1022,14 @@ contains
          real, target                              :: d2f_d2_o4
 
          !o(R^4)
-         d2f_d2_o4 = 4.0 * (cg%q(ig)%point(cell +   idm(dir,:)) + cg%q(ig)%point(cell -   idm(dir,:)) - 2.0 *  cg%q(ig)%point(cell)) / ( 3.0*cg%dl(dir)**2) - &
-                           (cg%q(ig)%point(cell + 2*idm(dir,:)) + cg%q(ig)%point(cell - 2*idm(dir,:)) - 2.0 *  cg%q(ig)%point(cell)) / (12.0*cg%dl(dir)**2)
+         d2f_d2_o4 = 4.0 * (cg%q(ig)%point(cell +   idm(dir,:)) + cg%q(ig)%point(cell -   idm(dir,:)) - two *  cg%q(ig)%point(cell)) * cg%idl(dir)**2 * onet - &
+                           (cg%q(ig)%point(cell + 2*idm(dir,:)) + cg%q(ig)%point(cell - 2*idm(dir,:)) - two *  cg%q(ig)%point(cell)) * cg%idl(dir)**2 / 12.0
 
       end function d2f_d2_o4
 
       function d2f_dd_o4(cell, cg, ig, dir1, dir2)
 
-         use constants, only: idm, ndims
+         use constants, only: idm, ndims, onet
          use grid_cont, only: grid_container
 
          implicit none
@@ -1041,9 +1041,9 @@ contains
 
          !o(R^4)
          d2f_dd_o4 = (cg%q(ig)%point(cell +   idm(dir1,:) +   idm(dir2,:)) + cg%q(ig)%point(cell -   idm(dir1,:) -   idm(dir2,:)) - &
-                      cg%q(ig)%point(cell +   idm(dir1,:) -   idm(dir2,:)) - cg%q(ig)%point(cell -   idm(dir1,:) +   idm(dir2,:)) ) / (3.0*cg%dl(dir1)*cg%dl(dir2)) - &
+                      cg%q(ig)%point(cell +   idm(dir1,:) -   idm(dir2,:)) - cg%q(ig)%point(cell -   idm(dir1,:) +   idm(dir2,:)) ) * cg%idl(dir1)*cg%idl(dir2) * onet - &
                      (cg%q(ig)%point(cell + 2*idm(dir1,:) + 2*idm(dir2,:)) + cg%q(ig)%point(cell - 2*idm(dir1,:) - 2*idm(dir2,:)) - &
-                      cg%q(ig)%point(cell + 2*idm(dir1,:) - 2*idm(dir2,:)) - cg%q(ig)%point(cell - 2*idm(dir1,:) + 2*idm(dir2,:)) ) / (48.0*cg%dl(dir1)*cg%dl(dir2))
+                      cg%q(ig)%point(cell + 2*idm(dir1,:) - 2*idm(dir2,:)) - cg%q(ig)%point(cell - 2*idm(dir1,:) + 2*idm(dir2,:)) ) * cg%idl(dir1)*cg%idl(dir2) / 48.0
 
       end function d2f_dd_o4
 
