@@ -139,6 +139,9 @@ contains
       type(grid_container),  pointer   :: cg
       real                             :: c_, dt_
       integer                          :: ifl
+#ifdef NBODY
+      real                             :: dt_hydro
+#endif /* NBODY */
 
 ! Timestep computation
 
@@ -175,15 +178,12 @@ contains
          if (use_fargo) dt = min(dt, timestep_fargo(cg, dt))
 
 #ifdef NBODY
-         write(msg,'(a,f8.5)') '[timestep:time_step] dt of hydro part: ', dt
-         call warn(msg)
+         dt_hydro = dt
          call timestep_nbody(dt_nbody, pset)
-         write(msg,'(a,f8.5)') '[timestep:time_step] dt for nbody:     ', dt_nbody
-         call warn(msg)
          if (dt_nbody .notequals. 0.0) then
             dt = min(dt, dt_nbody)
          endif
-         write(msg,'(a,f8.5)') '[timestep:time_step] dt  for both:     ', dt
+         write(msg,'(a,3f8.5)') '[timestep:time_step] dt for hydro, nbody and both: ', dt_hydro, dt_nbody, dt
          call warn(msg)
 #endif /* NBODY */
 

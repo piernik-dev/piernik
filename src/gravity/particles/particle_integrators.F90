@@ -199,7 +199,7 @@ contains
 
       use cg_list,        only: cg_list_element
       use constants,      only: ndims
-      use dataio_pub,     only: die
+      use dataio_pub,     only: die, msg, printinfo
       use domain,         only: is_refined, is_multicg
       use func,           only: operator(.equals.)
       use global,         only: dt_old
@@ -253,10 +253,12 @@ contains
       external_pot = .false.
 
       call get_energy(pset, total_energy, n)
-      write(*,*) "Energia----------: ", total_energy
+      !write(*,*) "Energia----------: ", total_energy
 
       call get_ang_momentum_2(pset, n, ang_momentum)
-      write(*,*) "ANG_MOMENTUM-----: ", ang_momentum
+      !write(*,*) "ANG_MOMENTUM-----: ", ang_momentum
+      write(msg,'(a,2f8.5)') '[particle_integrators:leapfrog2ord] Energia, ANG_MOMENTUM----------: ', total_energy, ang_momentum
+      call printinfo(msg)
       !stop
 
       !if (first_run_lf) then
@@ -279,22 +281,28 @@ contains
       !   endif
       !endif
 
-      write(*,*) "1:", pset%p(1)%vel
+      write(msg,'(a,3f8.5)') '[particle_integrators:leapfrog2ord] pset%p(1)%pos = ', pset%p(1)%pos
+      call printinfo(msg)
+      write(msg,'(a,3f8.5)') '[particle_integrators:leapfrog2ord] pset%p(1)%vel = ', pset%p(1)%vel
+      call printinfo(msg)
+      !write(*,*) "1:", pset%p(1)%vel
       !write(*,*) "2:", pset%p(2)%vel
 
       counter = 1
 
       do i = 1, n
-      write(*,*) "n=",n," i=",i
+      !write(*,*) "n=",n," i=",i
          call get_acc_model(pset, acc2, 0.0, n)
          write(lun_out, '(I3,1X,19(E13.6,1X))') i, t_glob+dt_tot, dt_old, mass(i), pset%p(i)%pos, pset%p(i)%vel, pset%p(i)%acc, acc2(i,:)!, pset%p(i)%energy, total_energy, initial_energy, d_energy, ang_momentum, init_ang_momentum, d_ang_momentum
          !write(lun_out, '(I3,1X,19(E13.6,1X))') i, t_glob+dt_tot, dt_old, pset%p(i)%pos, pset%p(i)%vel, pset%p(i)%acc, acc2(i,:)!, pset%p(i)%energy, total_energy, initial_energy, d_energy, ang_momentum, init_ang_momentum, d_ang_momentum
       enddo
 
       !call save_particles(n, lf_t, mass, pset, counter)
-      write(*,*) "[p_i]:-----------------------------"
-      write(*,*) "[p_i]:dt_tot= ", dt_tot
-      write(*,*) "[p_i]:dt_old= ", dt_old
+      !write(*,*) "[p_i]:-----------------------------"
+      !write(*,*) "[p_i]:dt_tot= ", dt_tot
+      !write(*,*) "[p_i]:dt_old= ", dt_old
+      write(msg,'(a,2f8.5)') '[particle_integrators:leapfrog2ord] [p_i]: dt_tot, dt_old = ', dt_tot, dt_old
+      call printinfo(msg)
       dt_tot_h = 0.5*dt_tot
 
       if(first_run_lf) then
@@ -313,7 +321,7 @@ contains
       !call save_particles(n, lf_t, mass, pset, counter)
 
       close(lun_out)
-      write(*,*) "[p_i]:-----------------------------"
+      !write(*,*) "[p_i]:-----------------------------"
 
       contains
 
@@ -712,7 +720,7 @@ contains
 #endif /* VERBOSE */
 
       n_part = size(pset%p, dim=1)
-      write(msg,'(a,i6)') '[particle_integrator:timestep_nbody] Number of particles: ', n_part
+      !write(msg,'(a,i6)') '[particle_integrators:timestep_nbody] Number of particles: ', n_part
       call printinfo(msg)
       allocate(cells(n_part, ndims), dist(n_part, ndims))
 
@@ -724,7 +732,7 @@ contains
 
       call save_pot_pset(cg, pset)
       kroki = kroki + 1
-      write(*,*) "++++++++KROKI+++++++: ", kroki
+      !write(*,*) "++++++++KROKI+++++++: ", kroki
 
       call find_cells(n_part, cg, cells, dist)
 
@@ -952,7 +960,7 @@ contains
          real,            dimension(n_part,ndims)        :: dxyz
          real(kind=8),    dimension(n_part,8)            :: wijk, fx, fy, fz
 
-         write(*,*) "[get_acc_cic]: particles = ", n_part
+         !write(*,*) "[get_acc_cic]: particles = ", n_part
          do i = 1, n_part
             pset%p(i)%acc = zero
             if ((pset%p(i)%outside) .eqv. .false.) then
@@ -1060,7 +1068,7 @@ contains
          else
             dt_nbody = zero
          endif
-         write(*,*) "[get_var_timestep_c]: dt_nbody =", dt_nbody
+         !write(*,*) "[get_var_timestep_c]: dt_nbody =", dt_nbody
 
       end subroutine get_var_timestep_c
 
