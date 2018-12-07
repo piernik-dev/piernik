@@ -30,19 +30,15 @@
 
 module particle_integrators
 ! pulled by GRAV
+
    use particle_types, only: particle_solver_T
-#ifdef NBODY
-   use constants,      only: cbuff_len
-   use domain,         only: is_refined, is_multicg
-   use particle_types, only: particle_set
-#endif /* NBODY */
 
    implicit none
 
    private
    public :: hermit4
 #ifdef NBODY
-   public :: leapfrog2, acc_interp_method, lf_c, timestep_nbody, dt_nbody
+   public :: leapfrog2, lf_c, timestep_nbody, dt_nbody, is_setacc_cic, is_setacc_int
 #endif /* NBODY */
 
    type, extends(particle_solver_T) :: hermit4_T
@@ -57,12 +53,12 @@ module particle_integrators
    end type leapfrog2_T
 #endif /* NBODY */
 
-   type(hermit4_T), target :: hermit4
+   type(hermit4_T), target   :: hermit4
 #ifdef NBODY
    type(leapfrog2_T), target :: leapfrog2
-   character(len=cbuff_len)  :: acc_interp_method  !< acceleration interpolation method
-   real                       :: lf_c               !< timestep should depends of grid and velocities of particles (used to extrapolation of the gravitational potential)
-   real                       :: dt_nbody           !< timestep depends on particles
+   real                      :: lf_c               !< timestep should depends of grid and velocities of particles (used to extrapolation of the gravitational potential)
+   real                      :: dt_nbody           !< timestep depends on particles
+   logical                   :: is_setacc_cic, is_setacc_int
 #endif /* NBODY */
 
 contains
@@ -203,7 +199,7 @@ contains
 
       use cg_list,        only: cg_list_element
       use constants,      only: ndims
-      use dataio_pub,     only: die, printinfo
+      use dataio_pub,     only: die
       use domain,         only: is_refined, is_multicg
       use func,           only: operator(.equals.)
       use global,         only: dt_old
@@ -231,15 +227,6 @@ contains
       integer, save                      :: counter
       integer                            :: lun_out
       real, dimension(:,:), allocatable  :: acc2
-
-      if (first_run_lf) then
-         select case (acc_interp_method)
-            case('cic', 'CIC')
-               call printinfo("[particle_integrators:leapfrog2ord] Acceleration interpolation method: CIC")
-            case('lagrange', 'Lagrange')
-               call printinfo("[particle_integrators:leapfrog2ord] Acceleration interpolation method: Lagrange polynomials")
-         end select
-      endif
 
       open(newunit=lun_out, file='leapfrog_out.log', status='unknown',  position='append')
 
@@ -704,7 +691,6 @@ contains
       use cg_leaves,      only: leaves
       use cg_list,        only: cg_list_element
       use grid_cont,      only: grid_container
-      use particle_func,  only: check_ord
       use particle_types, only: particle_set
 
       implicit none
@@ -713,7 +699,6 @@ contains
       type(grid_container),  pointer       :: cg
       type(cg_list_element), pointer       :: cgl
 
-      integer                              :: order               !< order of Lagrange polynomials (if acc_interp_method = 'lagrange')
       integer                              :: n_part
       real                                 :: max_acc
 
@@ -741,21 +726,15 @@ contains
       kroki = kroki + 1
       write(*,*) "++++++++KROKI+++++++: ", kroki
 
-      if (acc_interp_method == 'lagrange') then
-         order = 4
-         call check_ord(order)
-      endif
-
       call find_cells(n_part, cg, cells, dist)
 
       call potential2(n_part, cg, cells, dist, pset)    !szukanie energii potencjalnej w punktach-polozeniach czastek
 
-      select case (acc_interp_method)
-         case('lagrange', 'Lagrange', 'polynomials')
-            call get_acc_int(n_part, cg, cells, dist, pset)
-         case('cic', 'CIC')
-            call get_acc_cic(n_part, cg, cells, pset)
-      end select
+      if (is_setacc_int) then
+         call get_acc_int(n_part, cg, cells, dist, pset)
+      elseif (is_setacc_cic) then
+         call get_acc_cic(n_part, cg, cells, pset)
+      endif
 
       call get_acc_max(n_part, pset, max_acc)
 

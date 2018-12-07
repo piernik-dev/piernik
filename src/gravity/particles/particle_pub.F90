@@ -60,8 +60,10 @@ contains
       use mpisetup,              only: master, slave, cbuff, piernik_mpi_bcast
       use particle_integrators,  only: hermit4
 #ifdef NBODY
+      use dataio_pub,            only: printinfo
       use mpisetup,              only: rbuff
-      use particle_integrators,  only: leapfrog2, acc_interp_method, lf_c
+      use particle_func,         only: check_ord
+      use particle_integrators,  only: leapfrog2, lf_c, is_setacc_cic, is_setacc_int
 #endif /* NBODY */
 
       implicit none
@@ -71,12 +73,15 @@ contains
       character(len=cbuff_len), parameter :: default_is = "ngp"
 
 #ifdef NBODY
+      character(len=cbuff_len) :: acc_interp_method  !< acceleration interpolation method
+      integer                  :: order              !< order of Lagrange polynomials (if acc_interp_method = 'lagrange')
+
       namelist /PARTICLES/ time_integrator, interpolation_scheme, acc_interp_method, lf_c
 #else /* !NBODY */
       namelist /PARTICLES/ time_integrator, interpolation_scheme
 #endif /* !NBODY */
 
-      time_integrator = default_ti
+      time_integrator      = default_ti
       interpolation_scheme = default_is
 #ifdef NBODY
       acc_interp_method    = 'cic'
@@ -149,6 +154,21 @@ contains
       end select
 
       call pset%init()
+
+#ifdef NBODY
+      is_setacc_int = .false.
+      is_setacc_cic = .false.
+      select case (acc_interp_method)
+         case('lagrange', 'Lagrange', 'polynomials')
+            is_setacc_int = .true.
+            order = 4
+            call check_ord(order)
+            call printinfo("[particle_integrators:leapfrog2ord] Acceleration interpolation method: Lagrange polynomials")
+         case('cic', 'CIC')
+            is_setacc_cic = .true.
+            call printinfo("[particle_integrators:leapfrog2ord] Acceleration interpolation method: CIC")
+      end select
+#endif /* NBODY */
 
    end subroutine init_particles
 
