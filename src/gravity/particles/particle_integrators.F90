@@ -563,23 +563,23 @@ contains
 
       implicit none
 
-      integer,                   intent(in)    :: n
-      real, dimension(n),        intent(in)    :: mass
-      real, dimension(n, ndims), intent(out)   :: pos, vel
-      real, dimension(n, ndims), intent(inout) :: acc, jerk
-      real,                      intent(in)    :: dt
-      real,                      intent(inout) :: t, epot, coll_time
+      integer,                  intent(in)    :: n
+      real, dimension(n),       intent(in)    :: mass
+      real, dimension(n,ndims), intent(out)   :: pos, vel
+      real, dimension(n,ndims), intent(inout) :: acc, jerk
+      real,                     intent(in)    :: dt
+      real,                     intent(inout) :: t, epot, coll_time
 
-      real, dimension(n, ndims) :: old_pos, old_vel, old_acc, old_jerk
+      real, dimension(n,ndims)                :: old_pos, old_vel, old_acc, old_jerk
 
       old_pos = pos
       old_vel = vel
       old_acc = acc
       old_jerk = jerk
 
-      call predict_step(pos, vel, acc, jerk, n, dt)
+      call predict_step(               pos, vel, acc, jerk, n, dt)
       call get_acc_jerk_pot_coll(mass, pos, vel, acc, jerk, n, epot, coll_time)
-      call correct_step(pos, vel, acc, jerk, old_pos, old_vel, old_acc, old_jerk, n, dt);
+      call correct_step(               pos, vel, acc, jerk, old_pos, old_vel, old_acc, old_jerk, n, dt);
 
       t = t + dt
 
@@ -755,18 +755,18 @@ contains
          call check_ord(order)
       endif
 
-      call find_cells(cells, dist, cg, n_part)
+      call find_cells(n_part, cg, cells, dist)
 
-      call potential2(pset, cg, cells, dist, n_part)    !szukanie energii potencjalnej w punktach-polozeniach czastek
+      call potential2(n_part, cg, cells, dist, pset)    !szukanie energii potencjalnej w punktach-polozeniach czastek
 
       select case (acc_interp_method)
          case('lagrange', 'Lagrange', 'polynomials')
-            call get_acc_int(cells, dist, pset, cg, n_part)
+            call get_acc_int(n_part, cg, cells, dist, pset)
          case('cic', 'CIC')
-            call get_acc_cic(pset, cg, cells, n_part)
+            call get_acc_cic(n_part, cg, cells, pset)
       end select
 
-      call get_acc_max(pset, n_part, max_acc)
+      call get_acc_max(n_part, pset, max_acc)
       !write(*,*) "[timestep_nbody]: max_acc=", max_acc
       !write(*,*) "[timestep_nbody]:  eta   =", eta
       !write(*,*) "[timestep_nbody]:  eps   =", eps
@@ -835,15 +835,15 @@ contains
 
       end subroutine pot_from_part
 
-      subroutine find_cells(cells, dist, cg, n_part)
+      subroutine find_cells(n_part, cg, cells, dist)
 
          use constants, only: ndims, xdim, CENTER, LO, HI
          use grid_cont, only: grid_container
 
          implicit none
 
-         type(grid_container)                          :: cg
          integer,                          intent(in)  :: n_part
+         type(grid_container),             intent(in)  :: cg
          integer, dimension(n_part,ndims), intent(out) :: cells
          real,    dimension(n_part,ndims), intent(out) :: dist
          integer                                       :: i, cdim
@@ -866,7 +866,7 @@ contains
 
       end subroutine find_cells
 
-      subroutine potential2(pset, cg, cells, dist, n_part)
+      subroutine potential2(n_part, cg, cells, dist, pset)
 
          use constants,        only: gpot_n, ndims, half, xdim, ydim, zdim
          use grid_cont,        only: grid_container
@@ -875,11 +875,11 @@ contains
 
          implicit none
 
-         type(grid_container), pointer,    intent(in)    :: cg
-         class(particle_set),              intent(inout) :: pset  !< particle list
          integer,                          intent(in)    :: n_part
+         type(grid_container), pointer,    intent(in)    :: cg
          integer, dimension(n_part,ndims), intent(in)    :: cells
          real,    dimension(n_part,ndims), intent(in)    :: dist
+         class(particle_set),              intent(inout) :: pset  !< particle list
          integer                                         :: p
          integer(kind=4)                                 :: ig
          real, dimension(n_part)                         :: dpot, d2pot
@@ -900,7 +900,7 @@ contains
 
       end subroutine potential2
 
-      subroutine get_acc_int(cells, dist, pset, cg, n_part)
+      subroutine get_acc_int(n_part, cg, cells, dist, pset)
 
          use constants,        only: gpot_n, ndims, xdim, ydim, zdim
          use grid_cont,        only: grid_container
@@ -910,11 +910,11 @@ contains
 
          implicit none
 
-         class(particle_set),              intent(inout) :: pset
-         type(grid_container), pointer,    intent(in)    :: cg
          integer,                          intent(in)    :: n_part
+         type(grid_container), pointer,    intent(in)    :: cg
          integer, dimension(n_part,ndims), intent(in)    :: cells
          real, dimension(n_part, ndims),   intent(in)    :: dist
+         class(particle_set),              intent(inout) :: pset
          integer                                         :: i
          integer(kind=4)                                 :: ig
 
@@ -942,15 +942,15 @@ contains
 
       end subroutine get_acc_int
 
-      subroutine get_acc_max(pset, n_part, max_acc)
+      subroutine get_acc_max(n_part, pset, max_acc)
 
          use constants,      only: xdim, ndims
          use particle_types, only: particle_set
 
          implicit none
 
-         class(particle_set), intent(inout) :: pset
          integer,             intent(in)    :: n_part
+         class(particle_set), intent(inout) :: pset
          real,                intent(out)   :: max_acc
          integer                            :: i, cdim
          real, dimension(n_part)            :: acc
@@ -967,7 +967,7 @@ contains
 
       end subroutine get_acc_max
 
-      subroutine get_acc_cic(pset, cg, cells, n_part)
+      subroutine get_acc_cic(n_part, cg, cells, pset)
 
          use constants,      only: ndims, CENTER, xdim, ydim, zdim, half, zero
          use grid_cont,      only: grid_container
@@ -975,16 +975,16 @@ contains
 
          implicit none
 
-         type(grid_container), pointer, intent(in)     :: cg
-         class(particle_set), intent(inout)            :: pset
+         integer,                          intent(in)    :: n_part
+         type(grid_container), pointer,    intent(in)    :: cg
+         integer, dimension(n_part,ndims), intent(in)    :: cells
+         class(particle_set),              intent(inout) :: pset
 
-         integer, intent(in)                           :: n_part
-         integer                                       :: i, j, k, c, cdim
-         integer                                       :: p
-         integer, dimension(n_part, ndims), intent(in) :: cells
-         integer(kind=8), dimension(n_part, ndims)     :: cic_cells
-         real, dimension(n_part, ndims)                :: dxyz
-         real(kind=8), dimension(n_part, 8)            :: wijk, fx, fy, fz
+         integer                                         :: i, j, k, c, cdim
+         integer                                         :: p
+         integer(kind=8), dimension(n_part,ndims)        :: cic_cells
+         real,            dimension(n_part,ndims)        :: dxyz
+         real(kind=8),    dimension(n_part,8)            :: wijk, fx, fy, fz
 
          write(*,*) "[get_acc_cic]: particles = ", n_part
          do i = 1, n_part
