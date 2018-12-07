@@ -714,7 +714,6 @@ contains
       type(cg_list_element), pointer       :: cgl
 
       integer                              :: order               !< order of Lagrange polynomials (if acc_interp_method = 'lagrange')
-      real                                 :: eta, eps
       integer                              :: n_part
       real                                 :: max_acc
 
@@ -726,24 +725,19 @@ contains
 #ifdef VERBOSE
       call printinfo('[particle_integrators:timestep_nbody] Commencing timestep_nbody')
 #endif /* VERBOSE */
-      eta = 1.0
-      eps = 1.0e-4
-      !write(*,*) "Przed n_part"
+
       n_part = size(pset%p, dim=1)
       write(msg,'(a,i6)') '[particle_integrator:timestep_nbody] Number of particles: ', n_part
       call printinfo(msg)
       allocate(cells(n_part, ndims), dist(n_part, ndims))
 
-      !write(*,*) "Przed cg"
       cgl => leaves%first
       cg  => cgl%cg
 
       !call pot_from_part(cg, zero, n_part, pset)
       call pot2grid(cg, zero)
 
-      !if (kroki == 0) then
       call save_pot_pset(cg, pset)
-      !endif
       kroki = kroki + 1
       write(*,*) "++++++++KROKI+++++++: ", kroki
 
@@ -764,12 +758,8 @@ contains
       end select
 
       call get_acc_max(n_part, pset, max_acc)
-      !write(*,*) "[timestep_nbody]: max_acc=", max_acc
-      !write(*,*) "[timestep_nbody]:  eta   =", eta
-      !write(*,*) "[timestep_nbody]:  eps   =", eps
-      !write(*,*) "[timestep_nbody]:  lf_c  =", lf_c
 
-      call get_var_timestep_c(dt_nbody, eta, eps, max_acc, lf_c, pset, cg)
+      call get_var_timestep_c(dt_nbody, max_acc, lf_c, pset, cg)
 #ifdef VERBOSE
       call printinfo('[particle_integrators:timestep_nbody] Finish timestep_nbody')
 #endif /* VERBOSE */
@@ -1043,7 +1033,7 @@ contains
 
       end subroutine get_acc_cic
 
-      subroutine get_var_timestep_c(dt_nbody, eta, eps, max_acc, lf_c, pset, cg)
+      subroutine get_var_timestep_c(dt_nbody, max_acc, lf_c, pset, cg)
 
          use constants,      only: ndims, xdim, zdim, big, one
          use func,           only: operator(.notequals.)
@@ -1054,12 +1044,14 @@ contains
 
          type(grid_container), pointer, intent(in)  :: cg
          class(particle_set),           intent(in)  :: pset  !< particle list
-         real,                          intent(in)  :: eta, eps, max_acc, lf_c
+         real,                          intent(in)  :: max_acc, lf_c
          real,                          intent(out) :: dt_nbody
-         real                                       :: factor
+         real                                       :: eta, eps, factor
          real, dimension(ndims)                     :: maxv, minv, max_v
          integer                                    :: cdim
 
+         eta = 1.0
+         eps = 1.0e-4
          factor = big
 
          if(max_acc.notequals.0.0) then
