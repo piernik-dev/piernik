@@ -24,6 +24,7 @@
 !
 !    For full list of developers see $PIERNIK_HOME/license/pdt.txt
 !
+
 #include "piernik.h"
 
 !>
@@ -31,7 +32,7 @@
 !<
 
 module fluidupdate   ! SPLIT
-! pulled by RTVD
+! pulled by RTVD || RIEMANN
 
    implicit none
 
@@ -39,6 +40,7 @@ module fluidupdate   ! SPLIT
    public :: fluid_update
 
 contains
+
 !>
 !! \brief Advance the solution by two timesteps using directional splitting
 !<
@@ -46,25 +48,40 @@ contains
    subroutine fluid_update
 
       use dataio_pub,     only: halfstep
-      use global,         only: dt, dtm, t
+      use global,         only: dt, dtm, t, limiter, limiter_b
       use mass_defect,    only: update_magic_mass
       use timestep_retry, only: repeat_fluidstep
+#ifdef RIEMANN
+      use constants,      only: DIVB_HDC
+      use global,         only: divB_0_method
+      use fluxlimiters,   only: set_limiters
+      use hdc,            only: update_chspeed
+#endif /* RIEMANN */
 
       implicit none
 
+      logical, save   :: first_run = .true.
+
       call repeat_fluidstep
 
+#ifdef RIEMANN
+      if (divB_0_method == DIVB_HDC) call update_chspeed
+      if (first_run) call set_limiters(limiter, limiter_b)
+#endif /* RIEMANN */
+
       halfstep = .false.
-      t=t+dt
+      t = t + dt
       call make_3sweeps(.true.) ! X -> Y -> Z
 
 ! Sources should be hooked to problem_customize_solution with forward argument
 
       halfstep = .true.
-      t=t+dt
+      t = t + dt
       dtm = dt
       call make_3sweeps(.false.) ! Z -> Y -> X
       call update_magic_mass
+
+      if (first_run) first_run = .false.
 
    end subroutine fluid_update
 
@@ -92,6 +109,11 @@ contains
 #ifdef SHEAR
       use shear,               only: shear_3sweeps
 #endif /* SHEAR */
+#ifdef RIEMANN
+      use constants,           only: DIVB_HDC
+      use global,              only: divB_0_method
+      use hdc,                 only: glmdamping, eglm
+#endif /* RIEMANN */
 
       implicit none
 
@@ -135,6 +157,11 @@ contains
 #endif /* GRAV */
       if (associated(problem_customize_solution)) call problem_customize_solution(forward)
 
+#ifdef RIEMANN
+      call eglm
+      if (divB_0_method == DIVB_HDC) call glmdamping
+#endif /* RIEMANN */
+
    end subroutine make_3sweeps
 
 !>
@@ -157,13 +184,24 @@ contains
 #ifdef MAGNETIC
       use ct,             only: magfield
 #endif /* MAGNETIC */
+#ifdef RIEMANN
+      use global,         only: force_cc_mag
+#endif /* RIEMANN */
 
       implicit none
 
       integer(kind=4), intent(in) :: dir      !< direction, one of xdim, ydim, zdim
       logical,         intent(in) :: forward  !< if .false. then reverse operation order in the sweep
 
+#ifdef RTVD
       if (divB_0_method /= DIVB_CT) call die("[fluidupdate:make_sweep] only CT is implemented in RTVD")
+#endif /* RTVD */
+
+      ! ToDo: check if changes of execution order here (block loop, direction loop, boundary update can change
+      ! cost or allow for reduction of required guardcells
+#ifdef RIEMANN
+      if (.not. force_cc_mag) call bfc2bcc
+#endif /* RIEMANN */
 
       if (dom%has_dir(dir)) then
          if (.not. forward) then
@@ -171,7 +209,7 @@ contains
             if (use_split) call cr_diff(dir)
 #endif /* COSM_RAYS */
 #ifdef MAGNETIC
-            call magfield(dir)
+            if (divB_0_method == DIVB_CT) call magfield(dir)
 #endif /* MAGNETIC */
          endif
 
@@ -179,7 +217,7 @@ contains
 
          if (forward) then
 #ifdef MAGNETIC
-            call magfield(dir)
+            if (divB_0_method == DIVB_CT) call magfield(dir)
 #endif /* MAGNETIC */
 #ifdef COSM_RAYS
             if (use_split) call cr_diff(dir)
@@ -194,5 +232,50 @@ contains
 #endif /* DEBUG */
 
    end subroutine make_sweep
+
+!-------------------------------------------------------------------------------------------------------------------
+
+#ifdef RIEMANN
+   subroutine bfc2bcc
+
+      use cg_leaves,        only: leaves
+      use cg_list,          only: cg_list_element
+      use constants,        only: xdim, ydim, zdim, LO, HI, half
+      use dataio_pub,       only: die
+      use domain,           only: dom
+      use global,           only: force_cc_mag
+      use grid_cont,        only: grid_container
+      use named_array_list, only: wna
+
+      implicit none
+
+      type(cg_list_element), pointer :: cgl
+      type(grid_container),  pointer :: cg
+
+      if (force_cc_mag) call die("[fluidupdate:bfc2bcc] no  point in converting cell-centered magnetic field to cell centers like it was face-centered")
+
+      cgl => leaves%first
+      do while (associated(cgl))
+         cg => cgl%cg
+
+         cg%w(wna%bcci)%arr(:,:,:,:) = half * cg%b(:, :, :, :)
+
+         cg%w(wna%bcci)%arr(xdim, cg%lhn(xdim, LO):cg%lhn(xdim, HI)-1, :, :) = &
+              cg%w(wna%bcci)%arr(xdim, cg%lhn(xdim, LO):cg%lhn(xdim, HI)-1, :, :) + &
+              half * cg%b(xdim, cg%lhn(xdim, LO)+dom%D_x:cg%lhn(xdim, HI)-1+dom%D_x, :, :)
+
+         cg%w(wna%bcci)%arr(ydim, :,cg%lhn(ydim, LO):cg%lhn(ydim, HI)-1, :) = &
+              cg%w(wna%bcci)%arr(ydim, :, cg%lhn(ydim, LO):cg%lhn(ydim, HI)-1, :) + &
+              half * cg%b(ydim, :, cg%lhn(ydim, LO)+dom%D_y:cg%lhn(ydim, HI)-1+dom%D_y, :)
+
+         cg%w(wna%bcci)%arr(zdim, :, :, cg%lhn(zdim, LO):cg%lhn(zdim, HI)-1) = &
+              cg%w(wna%bcci)%arr(zdim, :, :, cg%lhn(zdim, LO):cg%lhn(zdim, HI)-1) + &
+              half * cg%b(zdim, :, :, cg%lhn(zdim, LO)+dom%D_z:cg%lhn(zdim, HI)-1+dom%D_z)
+
+         cgl => cgl%nxt
+      enddo
+
+   end subroutine bfc2bcc
+#endif /* RIEMANN */
 
 end module fluidupdate

@@ -27,9 +27,14 @@
 #include "piernik.h"
 
 !>
-!! \brief Module that implements compatibility with fargo calls for RTVD
+!! \brief COMMENT ME
 !!
-!! \todo Integrate this solver as much as possible with RTVD and no such tricks will be necessary
+!!    HLLD Riemann solver for ideal magnetohydrodynamics
+!!    Varadarajan Parthasarathy, CAMK, Warszawa. 2015.
+!!    Dr. Artur Gawryszczak, CAMK, Warszawa.
+!!
+!!    Energy fix up routines for CT and its related comments are not used in the current version.
+!!    The algorithm is simply present for experimental purposes.
 !<
 
 module sweeps
