@@ -130,8 +130,8 @@ contains
 
       call prepare_sources(cg)
 
-      do i2 = cg%lhn(pdims(ddim, ORTHO2), LO), cg%lhn(pdims(ddim,ORTHO2), HI)
-         do i1 = cg%lhn(pdims(ddim, ORTHO1), LO), cg%lhn(pdims(ddim, ORTHO1), HI)
+      do i2 = cg%ijkse(pdims(ddim, ORTHO2), LO), cg%ijkse(pdims(ddim, ORTHO2), HI)
+         do i1 = cg%ijkse(pdims(ddim, ORTHO1), LO), cg%ijkse(pdims(ddim, ORTHO1), HI)
             pu => cg%w(wna%fi)%get_sweep(ddim,i1,i2)
             u1d(:, iarr_all_swp(ddim,:)) = transpose(pu(:,:))
             pb => cg%w(bi)%get_sweep(ddim,i1,i2)
