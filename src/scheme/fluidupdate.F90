@@ -48,25 +48,21 @@ contains
    subroutine fluid_update
 
       use dataio_pub,     only: halfstep
-      use global,         only: dt, dtm, t, limiter, limiter_b
+      use global,         only: dt, dtm, t
       use mass_defect,    only: update_magic_mass
       use timestep_retry, only: repeat_fluidstep
 #ifdef RIEMANN
       use constants,      only: DIVB_HDC
       use global,         only: divB_0_method
-      use fluxlimiters,   only: set_limiters
       use hdc,            only: update_chspeed
 #endif /* RIEMANN */
 
       implicit none
 
-      logical, save   :: first_run = .true.
-
       call repeat_fluidstep
 
 #ifdef RIEMANN
       if (divB_0_method == DIVB_HDC) call update_chspeed
-      if (first_run) call set_limiters(limiter, limiter_b)
 #endif /* RIEMANN */
 
       halfstep = .false.
@@ -80,8 +76,6 @@ contains
       dtm = dt
       call make_3sweeps(.false.) ! Z -> Y -> X
       call update_magic_mass
-
-      if (first_run) first_run = .false.
 
    end subroutine fluid_update
 
