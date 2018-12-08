@@ -38,7 +38,7 @@
 
 module sweeps
 
-! pulled by RTVD
+! pulled by RTVD || RIEMANN
 
    implicit none
 
@@ -46,7 +46,6 @@ module sweeps
    public  :: sweep
 
 contains
-!------------------------------------------------------------------------------------------
 !------------------------------------------------------------------------------------------
    !>
    !! TODO: comment me and change name if necessary
@@ -208,15 +207,27 @@ contains
 
    subroutine update_boundaries(cdim, istep)
 
-      use all_boundaries, only: all_fluid_boundaries
-      use constants,      only: first_stage
-      use domain,         only: dom
-      use global,         only: sweeps_mgu, integration_order
+      use all_boundaries,   only: all_fluid_boundaries
+      use cg_leaves,        only: leaves
+      use constants,        only: first_stage, DIVB_HDC, psi_n
+      use domain,           only: dom
+      use global,           only: sweeps_mgu, integration_order, divB_0_method
+      use named_array_list, only: qna
+#ifdef MAGNETIC
+      use all_boundaries,   only: all_mag_boundaries
+#endif /* MAGNETIC */
 
       implicit none
 
       integer(kind=4), intent(in) :: cdim
       integer,         intent(in) :: istep
+
+      if (divB_0_method == DIVB_HDC) then
+         if (qna%exists(psi_n)) call leaves%leaf_arr3d_boundaries(qna%ind(psi_n))
+#ifdef MAGNETIC
+         call all_mag_boundaries
+#endif /* MAGNETIC */
+      endif
 
       if (dom%has_dir(cdim)) then
          if (sweeps_mgu) then

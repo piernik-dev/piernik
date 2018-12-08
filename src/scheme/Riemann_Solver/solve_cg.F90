@@ -37,58 +37,24 @@
 !!    The algorithm is simply present for experimental purposes.
 !<
 
-module sweeps
+module solvecg
 
 ! pulled by RIEMANN
 
    implicit none
 
    private
-   public  :: sweep
+   public  :: solve_cg
 
 contains
 
-   subroutine sweep(cdim, fargo_vel)
+   subroutine solve_cg(cg, ddim, istep, fargo_vel)
 
-      use all_boundaries,   only: all_bnd
-      use cg_leaves,        only: leaves
-      use cg_list,          only: cg_list_element
-      use constants,        only: psi_n
-      use dataio_pub,       only: die
-      use global,           only: skip_sweep, use_fargo
-      use named_array_list, only: qna
-
-      implicit none
-
-      integer(kind=4), intent(in)           :: cdim
-      integer(kind=4), intent(in), optional :: fargo_vel
-
-      type(cg_list_element), pointer  :: cgl
-
-
-      if (use_fargo) call die("[sweeps:sweep] Fargo is not yet enabled for Riemann")
-
-      cgl => leaves%first
-      do while (associated(cgl))
-         ! Warning: 2.5D MHD may need all directional calls anyway
-         if (.not. skip_sweep(cdim)) call solve_cg(cgl%cg, cdim)
-         cgl => cgl%nxt
-      enddo
-      if (qna%exists(psi_n)) call leaves%leaf_arr3d_boundaries(qna%ind(psi_n))
-
-      call all_bnd
-
-      if (.false.) write(0,*) present(fargo_vel) ! suppress compiler warning on unused argument
-
-   end subroutine sweep
-
-   subroutine solve_cg(cg, ddim)
-
-      use constants,        only: pdims, xdim, zdim, ORTHO1, ORTHO2, LO, HI, psi_n, INVALID, GEO_XYZ, I_ZERO, I_ONE
+      use constants,        only: pdims, xdim, zdim, ORTHO1, ORTHO2, LO, HI, psi_n, INVALID, GEO_XYZ, I_ZERO, I_ONE, first_stage
       use dataio_pub,       only: die
       use domain,           only: dom, is_refined
       use fluidindex,       only: flind, iarr_all_dn, iarr_all_mx, iarr_all_swp, iarr_mag_swp
-      use global,           only: dt, force_cc_mag
+      use global,           only: dt, force_cc_mag, use_fargo, integration_order
       use grid_cont,        only: grid_container
       use named_array_list, only: wna, qna
       use sources,          only: prepare_sources, all_sources
@@ -100,6 +66,8 @@ contains
 
       type(grid_container), pointer, intent(in) :: cg
       integer(kind=4),               intent(in) :: ddim
+      integer,                       intent(in) :: istep     ! stage in the time integration scheme
+      integer(kind=4), optional,     intent(in) :: fargo_vel
 
       real, dimension(cg%n_(ddim), size(cg%u,1)) :: u1d
       real, dimension(cg%n_(ddim), xdim:zdim)    :: b_cc1d
@@ -114,13 +82,16 @@ contains
       integer(kind=4)                            :: nmag, i
 
       ! is_multicg should be safe
-      if (is_refined) call die("[sweeps:solve_cg] This Rieman solver is not compatible with mesh refinements yet!")
-      if (dom%geometry_type /= GEO_XYZ) call die("[sweeps:solve_cg] Non-cartesian geometry is not implemented yet in this Riemann solver.")
+      if (.false.) write(0,*) present(fargo_vel) ! suppress compiler warning on unused argument
+      if (istep /= first_stage(integration_order)) call die("[solve_cg:solve_cg] istep >1 not implemented yet")
+      if (use_fargo) call die("[solve_cg:solve_cg] Fargo is not yet enabled for Riemann")
+      if (is_refined) call die("[solve_cg:solve_cg] This Rieman solver is not compatible with mesh refinements yet!")
+      if (dom%geometry_type /= GEO_XYZ) call die("[solve_cg:solve_cg] Non-cartesian geometry is not implemented yet in this Riemann solver.")
       nmag = I_ZERO
       do i = 1, flind%fluids
          if (flind%all_fluids(i)%fl%is_magnetized) nmag = nmag + I_ONE
       enddo
-      if (nmag > 1) call die("[sweeps:solve_cg] At most one magnetized fluid is implemented")
+      if (nmag > 1) call die("[solve_cg:solve_cg] At most one magnetized fluid is implemented")
 
       if (force_cc_mag) then
          bi = wna%bi
@@ -237,7 +208,7 @@ contains
       integer                                               :: nx
 
       nx  = size(u, in)
-      if (size(b_cc, in) /= nx) call die("[sweeps:rk2] size b_cc and u mismatch")
+      if (size(b_cc, in) /= nx) call die("[solve_cg:solve] size b_cc and u mismatch")
       mag_cc = huge(1.)
 
       ! RK(N) with N .GE. 3 could be helpful for WENO3 ( this statement to be tested )
@@ -483,4 +454,4 @@ contains
 
    end subroutine solve
 
-end module sweeps
+end module solvecg

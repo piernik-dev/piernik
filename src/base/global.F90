@@ -166,10 +166,12 @@ contains
       limiter_b   = 'moncen'
       limiter     = limiter_b
       divB_0      = "HDC"
+      integration_order  = 1  ! temporary hack
 #else /* ! RIEMANN */
       limiter     = 'vanleer'
       limiter_b   = limiter
       divB_0      = "CT"
+      integration_order  = 2
 #endif /* RIEMANN */
       cflcontrol  = 'warn'
       h_solver    = 'rk2'
@@ -198,7 +200,6 @@ contains
       dt_min      = tiny(1.)
       dt_max      = huge(1.)
       relax_time  = 0.
-      integration_order  = 2
       use_fargo   = .false.
       glm_alpha   = 0.1
       skip_sweep  = .false.

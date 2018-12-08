@@ -51,14 +51,14 @@ contains
 
       implicit none
 
-      integer(kind=4),               intent(in)    :: cdim
-      type(grid_container), pointer, intent(inout) :: cg
-      integer,                       intent(in)    :: i1, i2
-      real, dimension(cg%n_(cdim), nmag)           :: b
+      integer(kind=4),               intent(in) :: cdim
+      type(grid_container), pointer, intent(in) :: cg
+      integer,                       intent(in) :: i1, i2
 
-      real, dimension(:), pointer                  :: pb, pb1
-      integer(kind=4)                              :: ibx, iby, ibz
-      integer                                      :: i1p, i2p
+      real, dimension(cg%n_(cdim), nmag)        :: b
+      real, dimension(:), pointer               :: pb, pb1
+      integer(kind=4)                           :: ibx, iby, ibz
+      integer                                   :: i1p, i2p
 
       !> OPTIMIZE ME
 
@@ -114,10 +114,10 @@ contains
 
       implicit none
 
-      type(grid_container), pointer, intent(inout) :: cg
-      integer(kind=4),               intent(in)    :: cdim
-      integer,                       intent(in)    :: istep     ! stage in the time integration scheme
-      integer(kind=4), optional,     intent(in)    :: fargo_vel
+      type(grid_container), pointer, intent(in) :: cg
+      integer(kind=4),               intent(in) :: cdim
+      integer,                       intent(in) :: istep     ! stage in the time integration scheme
+      integer(kind=4), optional,     intent(in) :: fargo_vel
 
       real, dimension(:,:), allocatable :: b, u, u0, u1, vx
       integer                           :: i1, i2, uhi, ifl
@@ -188,7 +188,7 @@ contains
                   enddo
                   apply_sources = .false.
                else
-                  call die("[sweeps:sweep] Unknown FARGO_VEL")
+                  call die("[solve_cg:solve_cg] Unknown FARGO_VEL")
                   apply_sources = .false.
                endif
             else
