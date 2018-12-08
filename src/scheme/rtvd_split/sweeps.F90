@@ -249,7 +249,7 @@ contains
       endif
    end subroutine send_cg_coarsebnd
 !------------------------------------------------------------------------------------------
-   subroutine process_cg(cg, cdim, istep, fargo_vel)
+   subroutine solve_cg(cg, cdim, istep, fargo_vel)
 
       use cg_level_connected, only: cg_level_connected_T, find_level
       use constants,          only: pdims, LO, HI, uh_n, cs_i2_n, ORTHO1, ORTHO2, VEL_CR, VEL_RES, ydim, rk_coef, first_stage
@@ -378,7 +378,7 @@ contains
 
       cg%processed = .true.
 
-   end subroutine process_cg
+   end subroutine solve_cg
 
 !>
 !! \brief Call all boundaries, try to avoid unnecessary parts.
@@ -464,7 +464,7 @@ contains
                   call recv_cg_finebnd(cdim, cg, all_received)
 
                   if (all_received) then
-                     call process_cg(cg, cdim, istep, fargo_vel)
+                     call solve_cg(cg, cdim, istep, fargo_vel)
                      call send_cg_coarsebnd(cdim, cg, nr)
                      blocks_done = blocks_done + 1
                   else

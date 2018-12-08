@@ -71,7 +71,7 @@ contains
       cgl => leaves%first
       do while (associated(cgl))
          ! Warning: 2.5D MHD may need all directional calls anyway
-         if (.not. skip_sweep(cdim)) call sweep_dsplit(cgl%cg, cdim)
+         if (.not. skip_sweep(cdim)) call solve_cg(cgl%cg, cdim)
          cgl => cgl%nxt
       enddo
       if (qna%exists(psi_n)) call leaves%leaf_arr3d_boundaries(qna%ind(psi_n))
@@ -82,7 +82,7 @@ contains
 
    end subroutine sweep
 
-   subroutine sweep_dsplit(cg, ddim)
+   subroutine solve_cg(cg, ddim)
 
       use constants,        only: pdims, xdim, zdim, ORTHO1, ORTHO2, LO, HI, psi_n, INVALID, GEO_XYZ, I_ZERO, I_ONE
       use dataio_pub,       only: die
@@ -114,13 +114,13 @@ contains
       integer(kind=4)                            :: nmag, i
 
       ! is_multicg should be safe
-      if (is_refined) call die("[sweeps:sweep_dsplit] This Rieman solver is not compatible with mesh refinements yet!")
-      if (dom%geometry_type /= GEO_XYZ) call die("[sweeps:sweep_dsplit] Non-cartesian geometry is not implemented yet in this Riemann solver.")
+      if (is_refined) call die("[sweeps:solve_cg] This Rieman solver is not compatible with mesh refinements yet!")
+      if (dom%geometry_type /= GEO_XYZ) call die("[sweeps:solve_cg] Non-cartesian geometry is not implemented yet in this Riemann solver.")
       nmag = I_ZERO
       do i = 1, flind%fluids
          if (flind%all_fluids(i)%fl%is_magnetized) nmag = nmag + I_ONE
       enddo
-      if (nmag > 1) call die("[sweeps:sweep_dsplit] At most one magnetized fluid is implemented")
+      if (nmag > 1) call die("[sweeps:solve_cg] At most one magnetized fluid is implemented")
 
       if (force_cc_mag) then
          bi = wna%bi
@@ -172,7 +172,7 @@ contains
          enddo
       enddo
 
-   end subroutine sweep_dsplit
+   end subroutine solve_cg
 
 !! k-th interface is between k-th cell and (k+1)-th cell
 !! We don't calculate n-th interface because it is as incomplete as 0-th interface
@@ -291,7 +291,7 @@ contains
             call riemann_wrap(ql(2:nx-2,:), qr(2:nx-2,:), b_cc_l(2:nx-2,:), b_cc_r(2:nx-2,:), psi_l(2:nx-2,:), psi_r(2:nx-2,:), flx(2:nx-2,:), mag_cc(2:nx-2,:), psi_cc(2:nx-2,:)) ! 2:nx-1 should be possible here
             call update
          case default
-            call die("[sweeps:sweep_dsplit] No recognized solver")
+            call die("[sweeps:solve_cg:solve] No recognized solver")
       end select
 
    contains
