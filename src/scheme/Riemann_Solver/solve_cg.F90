@@ -50,6 +50,7 @@ contains
 
    subroutine solve_cg(cg, ddim, istep, fargo_vel)
 
+      use bfc_bcc,          only: interpolate_mag_field
       use constants,        only: pdims, xdim, zdim, ORTHO1, ORTHO2, LO, HI, psi_n, INVALID, GEO_XYZ, I_ZERO, I_ONE, first_stage
       use dataio_pub,       only: die
       use domain,           only: dom, is_refined
@@ -74,7 +75,6 @@ contains
       real, dimension(cg%n_(ddim), 1)            :: psi_d ! artificial rank-2 to conform to flux limiter interface
       real, dimension(:,:), pointer              :: pu, pb
       integer                                    :: i1, i2
-      integer                                    :: bi
       real, dimension(:), pointer                :: ppsi
       integer                                    :: psii
       real, dimension(size(u1d,1),size(u1d,2))           :: u0
@@ -94,25 +94,26 @@ contains
       enddo
       if (nmag > 1) call die("[solve_cg:solve_cg] At most one magnetized fluid is implemented")
 
-      if (force_cc_mag) then
-         bi = wna%bi
-      else
-         bi = wna%bcci
-      endif
-
       psii = INVALID
       if (qna%exists(psi_n)) psii = qna%ind(psi_n)
       psi_d = 0.
       nullify(ppsi)
+      nullify(pb)
 
       call prepare_sources(cg)
 
       do i2 = cg%ijkse(pdims(ddim, ORTHO2), LO), cg%ijkse(pdims(ddim, ORTHO2), HI)
          do i1 = cg%ijkse(pdims(ddim, ORTHO1), LO), cg%ijkse(pdims(ddim, ORTHO1), HI)
+
             pu => cg%w(wna%fi)%get_sweep(ddim,i1,i2)
             u1d(:, iarr_all_swp(ddim,:)) = transpose(pu(:,:))
-            pb => cg%w(bi)%get_sweep(ddim,i1,i2)
-            b_cc1d(:, iarr_mag_swp(ddim,:)) = transpose(pb(:,:))
+
+            if (force_cc_mag) then
+               pb => cg%w(wna%bi)%get_sweep(ddim,i1,i2)
+               b_cc1d(:, iarr_mag_swp(ddim,:)) = transpose(pb(:,:))
+            else
+               b_cc1d(:, :) = interpolate_mag_field(ddim, cg, i1, i2)
+            endif
 
             if (psii /= INVALID) then
                ppsi => cg%q(psii)%get_sweep(ddim,i1,i2)
@@ -139,7 +140,7 @@ contains
 #endif /* COSM_RAYS && IONIZED */
 
             pu(:,:) = transpose(u1d(:,iarr_all_swp(ddim,:)))
-            pb(:,:) = transpose(b_cc1d(:, iarr_mag_swp(ddim,:))) ! ToDo figure out how to manage CT energy fixup without extra storage
+            if (force_cc_mag) pb(:,:) = transpose(b_cc1d(:, iarr_mag_swp(ddim,:))) ! ToDo figure out how to manage CT energy fixup without extra storage
          enddo
       enddo
 
