@@ -47,58 +47,6 @@ module sweeps
 
 contains
 !------------------------------------------------------------------------------------------
-   function interpolate_mag_field(cdim, cg, i1, i2) result (b)
-
-      use constants,        only: pdims, xdim, ydim, zdim, half, ORTHO1, ORTHO2
-      use domain,           only: dom
-      use fluidindex,       only: iarr_mag_swp, nmag
-      use grid_cont,        only: grid_container
-      use named_array_list, only: wna
-
-      implicit none
-
-      integer(kind=4),               intent(in)    :: cdim
-      type(grid_container), pointer, intent(inout) :: cg
-      integer,                       intent(in)    :: i1, i2
-      real, dimension(cg%n_(cdim), nmag)           :: b
-
-      real, dimension(:), pointer                  :: pb, pb1
-      integer(kind=4)                              :: ibx, iby, ibz
-      integer                                      :: i1p, i2p
-
-      !> OPTIMIZE ME
-
-      ibx = iarr_mag_swp(cdim,xdim)
-      iby = iarr_mag_swp(cdim,ydim)
-      ibz = iarr_mag_swp(cdim,zdim)
-
-      i1p = i1+dom%D_(pdims(cdim, ORTHO1))
-      i2p = i2+dom%D_(pdims(cdim, ORTHO2))
-
-      pb => cg%w(wna%bi)%get_sweep(cdim,ibx,i1,i2)
-      b(1:cg%n_(cdim)-1, ibx) = half*( pb(1:cg%n_(cdim)-1)+pb(2:cg%n_(cdim)) )
-      b(cg%n_(cdim),     ibx) = b(cg%n_(cdim)-1, ibx)
-
-      pb  => cg%w(wna%bi)%get_sweep(cdim,iby,i1,i2)
-      if (cdim == xdim) then
-         pb1 => cg%w(wna%bi)%get_sweep(cdim,iby,i1p,i2)
-      else
-         pb1 => cg%w(wna%bi)%get_sweep(cdim,iby,i1,i2p)
-      endif
-      b(:, iby) = half*(pb + pb1)
-
-      pb  => cg%w(wna%bi)%get_sweep(cdim,ibz,i1,i2)
-      if (cdim == xdim) then
-         pb1 => cg%w(wna%bi)%get_sweep(cdim,ibz,i1,i2p)
-      else
-         pb1 => cg%w(wna%bi)%get_sweep(cdim,ibz,i1p,i2)
-      endif
-      b(:, ibz) = half*(pb + pb1)
-
-      b(:, iarr_mag_swp(cdim,:)) = b(:,:)
-      nullify(pb,pb1)
-
-   end function interpolate_mag_field
 !------------------------------------------------------------------------------------------
    !>
    !! TODO: comment me and change name if necessary
@@ -249,137 +197,6 @@ contains
       endif
    end subroutine send_cg_coarsebnd
 !------------------------------------------------------------------------------------------
-   subroutine solve_cg(cg, cdim, istep, fargo_vel)
-
-      use cg_level_connected, only: cg_level_connected_T, find_level
-      use constants,          only: pdims, LO, HI, uh_n, cs_i2_n, ORTHO1, ORTHO2, VEL_CR, VEL_RES, ydim, rk_coef, first_stage
-      use dataio_pub,         only: die
-      use domain,             only: dom
-      use fluidindex,         only: flind, iarr_all_swp, nmag, iarr_all_dn, iarr_all_mx
-      use fluxtypes,          only: ext_fluxes
-      use global,             only: dt, integration_order, use_fargo
-      use grid_cont,          only: grid_container
-      use gridgeometry,       only: set_geo_coeffs
-      use named_array_list,   only: qna, wna
-      use rtvd,               only: relaxing_tvd
-      use sources,            only: prepare_sources, all_sources, care_for_positives
-#ifdef MAGNETIC
-      use fluidindex,         only: iarr_mag_swp
-#endif /* MAGNETIC */
-
-      implicit none
-
-      type(grid_container), pointer, intent(inout) :: cg
-      integer(kind=4),               intent(in)    :: cdim
-      integer,                       intent(in)    :: istep     ! stage in the time integration scheme
-      integer(kind=4), optional,     intent(in)    :: fargo_vel
-
-      real, dimension(:,:), allocatable :: b, u, u0, u1, vx
-      integer                           :: i1, i2, uhi, ifl
-      logical                           :: full_dim
-      type(ext_fluxes)                  :: eflx
-      real, dimension(:,:),  pointer    :: pu, pu0
-      integer                           :: i_cs_iso2
-#ifdef MAGNETIC
-      real, dimension(:,:),  pointer    :: pb
-#endif /* MAGNETIC */
-      real, dimension(:),    pointer    :: cs2
-      logical :: apply_sources
-      type(cg_level_connected_T), pointer :: curl
-
-      uhi = wna%ind(uh_n)
-      full_dim = dom%has_dir(cdim)
-      if (qna%exists(cs_i2_n)) then
-         i_cs_iso2 = qna%ind(cs_i2_n)
-      else
-         i_cs_iso2 = -1
-      endif
-      call eflx%init
-      allocate( b(cg%n_(cdim), nmag), u(cg%n_(cdim), flind%all), u0(cg%n_(cdim), flind%all), u1(cg%n_(cdim), flind%all), vx(cg%n_(cdim), flind%fluids))
-      !OPT for AMR it may be worthwhile to move it to global scope
-
-      b(:,:) = 0.0
-      u(:,:) = 0.0
-
-      if (istep == first_stage(integration_order)) then
-         call prepare_sources(cg)
-         cg%w(uhi)%arr = cg%u
-      endif
-
-      !> \todo OPT: use cg%leafmap to skip lines fully covered by finer grids
-      ! it should be also possible to compute only parts of lines that aren't covered by finer grids
-      curl => find_level(cg%l%id)
-
-      cs2 => null()
-      do i2 = cg%ijkse(pdims(cdim, ORTHO2), LO), cg%ijkse(pdims(cdim, ORTHO2), HI)
-         do i1 = cg%ijkse(pdims(cdim, ORTHO1), LO), cg%ijkse(pdims(cdim, ORTHO1), HI)
-
-#ifdef MAGNETIC
-            if (full_dim) then
-               b(:,:) = interpolate_mag_field(cdim, cg, i1, i2)
-            else
-               pb => cg%w(wna%bi)%get_sweep(cdim, i1, i2)   ! BEWARE: is it correct for 2.5D ?
-               b(:, iarr_mag_swp(cdim,:))  = transpose(pb(:,:))
-            endif
-#endif /* MAGNETIC */
-
-            call set_geo_coeffs(cdim, flind, i1, i2, cg)
-
-            pu                     => cg%w(wna%fi   )%get_sweep(cdim,i1,i2)
-            pu0                    => cg%w(uhi      )%get_sweep(cdim,i1,i2)
-            if (i_cs_iso2 > 0) cs2 => cg%q(i_cs_iso2)%get_sweep(cdim,i1,i2)
-
-            u (:, iarr_all_swp(cdim,:)) = transpose(pu (:,:))
-            u0(:, iarr_all_swp(cdim,:)) = transpose(pu0(:,:))
-            if (use_fargo .and. cdim == ydim) then
-               if (fargo_vel == VEL_RES) then
-                  do ifl = 1, flind%fluids
-                     vx(:, ifl) = u(:, iarr_all_mx(ifl)) / u(:, iarr_all_dn(ifl)) - curl%omega_mean(i2, ifl) * cg%x(i2)
-                  enddo
-                  apply_sources = .true.
-               elseif (fargo_vel == VEL_CR) then
-                  do ifl = 1, flind%fluids
-                     vx(:, ifl) = curl%omega_cr(i2, ifl) * cg%x(i2)
-                  enddo
-                  apply_sources = .false.
-               else
-                  call die("[sweeps:sweep] Unknown FARGO_VEL")
-                  apply_sources = .false.
-               endif
-            else
-               apply_sources = .true.
-               vx(:,:) = u(:,iarr_all_mx(:)) / u(:,iarr_all_dn(:))
-               if (full_dim) then
-                  vx(1,:) = vx(2,:)
-                  vx(cg%n_(cdim),:) = vx(cg%n_(cdim)-1,:)
-               endif
-            endif
-
-            call cg%set_fluxpointers(cdim, i1, i2, eflx)
-            !OPT: try to avoid these explicit initializations of u1(:,:)
-            u1 = u
-
-            call relaxing_tvd(cg%n_(cdim), u0, u1, vx, b, cs2, istep, rk_coef(istep) * dt / cg%dl(cdim), eflx)
-            ! RTVD needs istep only to do something in 2nd stage of RK2
-! Source terms -------------------------------------
-            if (apply_sources) call all_sources(cg%n_(cdim), u, u1, b, cg, istep, cdim, i1, i2, rk_coef(istep) * dt, vx)
-            ! istep is important only for balsara and selfgravity
-
-            call care_for_positives(cg%n_(cdim), u1, b, cg, cdim, i1, i2)
-            u(:,:) = u1(:,:)
-            call cg%save_outfluxes(cdim, i1, i2, eflx)
-
-            pu(:,:) = transpose(u(:, iarr_all_swp(cdim,:)))
-            nullify(pu,pu0,cs2)
-         enddo
-      enddo
-
-      deallocate(b, u, u0, u1, vx)
-
-      cg%processed = .true.
-
-   end subroutine solve_cg
-
 !>
 !! \brief Call all boundaries, try to avoid unnecessary parts.
 !!
@@ -421,13 +238,14 @@ contains
 !------------------------------------------------------------------------------------------
    subroutine sweep(cdim, fargo_vel)
 
-      use cg_leaves,          only: leaves
-      use cg_list,            only: cg_list_element
-      use constants,          only: ydim, first_stage, last_stage
-      use dataio_pub,         only: die
-      use global,             only: integration_order, use_fargo
-      use grid_cont,          only: grid_container
-      use mpisetup,           only: mpi_err, req, status
+      use cg_leaves,  only: leaves
+      use cg_list,    only: cg_list_element
+      use constants,  only: ydim, first_stage, last_stage
+      use dataio_pub, only: die
+      use global,     only: integration_order, use_fargo
+      use grid_cont,  only: grid_container
+      use mpisetup,   only: mpi_err, req, status
+      use solvecg,    only: solve_cg
 
       implicit none
 
