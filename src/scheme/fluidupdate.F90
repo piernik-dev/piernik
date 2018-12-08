@@ -52,8 +52,6 @@ contains
       use mass_defect,    only: update_magic_mass
       use timestep_retry, only: repeat_fluidstep
 #ifdef RIEMANN
-      use constants,      only: DIVB_HDC
-      use global,         only: divB_0_method
       use hdc,            only: update_chspeed
 #endif /* RIEMANN */
 
@@ -62,7 +60,7 @@ contains
       call repeat_fluidstep
 
 #ifdef RIEMANN
-      if (divB_0_method == DIVB_HDC) call update_chspeed
+      call update_chspeed
 #endif /* RIEMANN */
 
       halfstep = .false.
@@ -104,8 +102,6 @@ contains
       use shear,               only: shear_3sweeps
 #endif /* SHEAR */
 #ifdef RIEMANN
-      use constants,           only: DIVB_HDC
-      use global,              only: divB_0_method
       use hdc,                 only: glmdamping, eglm
 #endif /* RIEMANN */
 
@@ -153,7 +149,7 @@ contains
 
 #ifdef RIEMANN
       call eglm
-      if (divB_0_method == DIVB_HDC) call glmdamping
+      call glmdamping
 #endif /* RIEMANN */
 
    end subroutine make_3sweeps
