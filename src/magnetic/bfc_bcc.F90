@@ -32,7 +32,7 @@
 !<
 
 module bfc_bcc
-! pulled by MAGNETIC
+! pulled by RTVD || RIEMANN
 
    implicit none
 
