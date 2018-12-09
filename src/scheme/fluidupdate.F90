@@ -175,6 +175,7 @@ contains
       use ct,             only: magfield
 #endif /* MAGNETIC */
 #ifdef RIEMANN
+      use bfc_bcc,        only: bfc2bcc
       use global,         only: force_cc_mag
 #endif /* RIEMANN */
 
@@ -222,50 +223,5 @@ contains
 #endif /* DEBUG */
 
    end subroutine make_sweep
-
-!-------------------------------------------------------------------------------------------------------------------
-
-#ifdef RIEMANN
-   subroutine bfc2bcc
-
-      use cg_leaves,        only: leaves
-      use cg_list,          only: cg_list_element
-      use constants,        only: xdim, ydim, zdim, LO, HI, half
-      use dataio_pub,       only: die
-      use domain,           only: dom
-      use global,           only: force_cc_mag
-      use grid_cont,        only: grid_container
-      use named_array_list, only: wna
-
-      implicit none
-
-      type(cg_list_element), pointer :: cgl
-      type(grid_container),  pointer :: cg
-
-      if (force_cc_mag) call die("[fluidupdate:bfc2bcc] no  point in converting cell-centered magnetic field to cell centers like it was face-centered")
-
-      cgl => leaves%first
-      do while (associated(cgl))
-         cg => cgl%cg
-
-         cg%w(wna%bcci)%arr(:,:,:,:) = half * cg%b(:, :, :, :)
-
-         cg%w(wna%bcci)%arr(xdim, cg%lhn(xdim, LO):cg%lhn(xdim, HI)-1, :, :) = &
-              cg%w(wna%bcci)%arr(xdim, cg%lhn(xdim, LO):cg%lhn(xdim, HI)-1, :, :) + &
-              half * cg%b(xdim, cg%lhn(xdim, LO)+dom%D_x:cg%lhn(xdim, HI)-1+dom%D_x, :, :)
-
-         cg%w(wna%bcci)%arr(ydim, :,cg%lhn(ydim, LO):cg%lhn(ydim, HI)-1, :) = &
-              cg%w(wna%bcci)%arr(ydim, :, cg%lhn(ydim, LO):cg%lhn(ydim, HI)-1, :) + &
-              half * cg%b(ydim, :, cg%lhn(ydim, LO)+dom%D_y:cg%lhn(ydim, HI)-1+dom%D_y, :)
-
-         cg%w(wna%bcci)%arr(zdim, :, :, cg%lhn(zdim, LO):cg%lhn(zdim, HI)-1) = &
-              cg%w(wna%bcci)%arr(zdim, :, :, cg%lhn(zdim, LO):cg%lhn(zdim, HI)-1) + &
-              half * cg%b(zdim, :, :, cg%lhn(zdim, LO)+dom%D_z:cg%lhn(zdim, HI)-1+dom%D_z)
-
-         cgl => cgl%nxt
-      enddo
-
-   end subroutine bfc2bcc
-#endif /* RIEMANN */
 
 end module fluidupdate

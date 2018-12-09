@@ -40,62 +40,11 @@ module solvecg
    public  :: solve_cg
 
 contains
-!------------------------------------------------------------------------------------------
-   function interpolate_mag_field(cdim, cg, i1, i2) result (b)
 
-      use constants,        only: pdims, xdim, ydim, zdim, half, ORTHO1, ORTHO2
-      use domain,           only: dom
-      use fluidindex,       only: iarr_mag_swp, nmag
-      use grid_cont,        only: grid_container
-      use named_array_list, only: wna
-
-      implicit none
-
-      integer(kind=4),               intent(in) :: cdim
-      type(grid_container), pointer, intent(in) :: cg
-      integer,                       intent(in) :: i1, i2
-
-      real, dimension(cg%n_(cdim), nmag)        :: b
-      real, dimension(:), pointer               :: pb, pb1
-      integer(kind=4)                           :: ibx, iby, ibz
-      integer                                   :: i1p, i2p
-
-      !> OPTIMIZE ME
-
-      ibx = iarr_mag_swp(cdim,xdim)
-      iby = iarr_mag_swp(cdim,ydim)
-      ibz = iarr_mag_swp(cdim,zdim)
-
-      i1p = i1+dom%D_(pdims(cdim, ORTHO1))
-      i2p = i2+dom%D_(pdims(cdim, ORTHO2))
-
-      pb => cg%w(wna%bi)%get_sweep(cdim,ibx,i1,i2)
-      b(1:cg%n_(cdim)-1, ibx) = half*( pb(1:cg%n_(cdim)-1)+pb(2:cg%n_(cdim)) )
-      b(cg%n_(cdim),     ibx) = b(cg%n_(cdim)-1, ibx)
-
-      pb  => cg%w(wna%bi)%get_sweep(cdim,iby,i1,i2)
-      if (cdim == xdim) then
-         pb1 => cg%w(wna%bi)%get_sweep(cdim,iby,i1p,i2)
-      else
-         pb1 => cg%w(wna%bi)%get_sweep(cdim,iby,i1,i2p)
-      endif
-      b(:, iby) = half*(pb + pb1)
-
-      pb  => cg%w(wna%bi)%get_sweep(cdim,ibz,i1,i2)
-      if (cdim == xdim) then
-         pb1 => cg%w(wna%bi)%get_sweep(cdim,ibz,i1,i2p)
-      else
-         pb1 => cg%w(wna%bi)%get_sweep(cdim,ibz,i1p,i2)
-      endif
-      b(:, ibz) = half*(pb + pb1)
-
-      b(:, iarr_mag_swp(cdim,:)) = b(:,:)
-      nullify(pb,pb1)
-
-   end function interpolate_mag_field
 !------------------------------------------------------------------------------------------
    subroutine solve_cg(cg, cdim, istep, fargo_vel)
 
+      use bfc_bcc,            only: interpolate_mag_field
       use cg_level_connected, only: cg_level_connected_T, find_level
       use constants,          only: pdims, LO, HI, uh_n, cs_i2_n, ORTHO1, ORTHO2, VEL_CR, VEL_RES, ydim, rk_coef, first_stage
       use dataio_pub,         only: die
