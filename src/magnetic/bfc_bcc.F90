@@ -124,7 +124,7 @@ contains
       type(cg_list_element), pointer :: cgl
       type(grid_container),  pointer :: cg
 
-      if (force_cc_mag) call die("[fluidupdate:bfc2bcc] no  point in converting cell-centered magnetic field to cell centers like it was face-centered")
+      if (force_cc_mag) call die("[bfc_bcc:bfc2bcc] no  point in converting cell-centered magnetic field to cell centers like it was face-centered")
 
       cgl => leaves%first
       do while (associated(cgl))
