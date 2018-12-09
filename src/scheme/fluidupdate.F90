@@ -194,10 +194,6 @@ contains
 #ifdef MAGNETIC
       use ct,             only: magfield
 #endif /* MAGNETIC */
-#ifdef RIEMANN
-      use bfc_bcc,        only: bfc2bcc
-      use global,         only: force_cc_mag
-#endif /* RIEMANN */
 #if defined(RTVD) || defined (MAGNETIC)
       use constants,      only: DIVB_CT
       use global,         only: divB_0_method
@@ -214,9 +210,6 @@ contains
 
       ! ToDo: check if changes of execution order here (block loop, direction loop, boundary update can change
       ! cost or allow for reduction of required guardcells
-#ifdef RIEMANN
-      if (.not. force_cc_mag) call bfc2bcc
-#endif /* RIEMANN */
 
       if (dom%has_dir(dir)) then
          if (.not. forward) then

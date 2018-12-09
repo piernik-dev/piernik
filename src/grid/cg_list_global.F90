@@ -233,7 +233,7 @@ contains
       use constants,  only: cs_i2_n
 #endif /* ISO */
 #ifdef RIEMANN
-      use constants,  only: mag_cc_n, psi_n, psih_n
+      use constants,  only: psi_n, psih_n
       use global,     only: force_cc_mag
 #endif /* RIEMANN */
 
@@ -267,8 +267,6 @@ contains
       if (force_cc_mag) then
          call this%reg_var(psi_n,  vital = .false., restart_mode = AT_OUT_B) ! an array for div B cleaning
          call this%reg_var(psih_n, vital = .false.)                          ! its copy for use in RK2
-      else
-         call this%reg_var(mag_cc_n, vital = .false.,                        dim4 = ndims) ! cell-centered magnetic field
       endif
 #endif /* RIEMANN */
 #ifdef ISO
