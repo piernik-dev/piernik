@@ -241,17 +241,12 @@ contains
 
       implicit none
 
-#ifdef NBODY
-      !write(*,*) "[fl_upd]: Pierwszy, dt=", dt
-#else /* !NBODY */
+#ifndef NBODY
       call repeat_fluidstep
 #endif /* !NBODY */
 
       halfstep = .false.
       t=t+dt
-#ifdef NBODY
-      !t=t+2.0*dt
-#endif /* NBODY */
 #ifdef GRAV
       call source_terms_grav
 #ifdef NBODY
@@ -265,9 +260,7 @@ contains
 ! Sources should be hooked to problem_customize_solution with forward argument
 
       halfstep = .true.
-#ifdef NBODY
-      !write(*,*) "[fl_upd]: Drugi   , dt=", dt
-#else /* !NBODY */
+#ifndef NBODY
       t=t+dt
 #endif /* !NBODY */
       dtm = dt
@@ -296,9 +289,7 @@ contains
       use user_hooks,          only: problem_customize_solution
 #ifdef GRAV
       use global,              only: dt
-#ifdef NBODY
-!      use global,              only: dt_old
-#else /* !NBODY */
+#ifndef NBODY
       use global,              only: t
       use gravity,             only: source_terms_grav
       use particle_pub,        only: pset, psolver
