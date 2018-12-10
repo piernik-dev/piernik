@@ -1075,7 +1075,7 @@ contains
       subroutine save_pot_pset(cg, pset)
 
          use constants,      only: xdim, ydim, zdim, CENTER
-         use dataio_pub,     only: printinfo
+         use dataio_pub,     only: printio
          use grid_cont,      only: grid_container
          use particle_types, only: particle_set
 
@@ -1092,13 +1092,13 @@ contains
          numer1 = 64
          numer2 = 20
 
-         open(unit=90, file='pset.dat')
+         open(unit=90, file='pset.dat', action='write', position='append')
             do p=1, ubound(pset%p, dim=1)
                write(90,*) p, pset%p(p)%pos
             enddo
          close(90)
          if (save_potential) then
-            call printinfo('[particle_integrators:save_pot_pset] Writing potential to a file')
+            call printio('[particle_integrators:save_pot_pset] Writing potential to files: potencjal1.dat, potencjal2.dat')
             open(unit=88, file='potencjal1.dat')
             open(unit=89, file='potencjal2.dat')
                do i = lbound(cg%gpot,dim=1), ubound(cg%gpot,dim=1)
