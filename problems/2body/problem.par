@@ -63,6 +63,7 @@
     integration_order = 2
     limiter= 'vanleer'
     !cflcontrol = 'none'
+    skip_sweep = .true., .true., .true.
  /
 
  $GRAVITY

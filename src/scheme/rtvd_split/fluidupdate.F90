@@ -251,26 +251,21 @@ contains
       if (associated(psolver)) call pset%evolve(psolver, t-dt, dt)
 #endif /* NBODY */
 #endif /* GRAV */
-#ifndef NBODY
       call make_3sweeps(.true.) ! X -> Y -> Z
-#endif /* !NBODY */
 
 ! Sources should be hooked to problem_customize_solution with forward argument
 
       halfstep = .true.
-#ifndef NBODY
       t=t+dt
-#endif /* !NBODY */
       dtm = dt
 #ifdef NBODY
 !#ifdef GRAV
 !      call source_terms_grav
 !      if (associated(psolver)) call pset%evolve(psolver, t-dt, dt)
 !#endif /* GRAV */
-#else /* !NBODY */
+#endif /* NBODY */
       call make_3sweeps(.false.) ! Z -> Y -> X
       call update_magic_mass
-#endif /* !NBODY */
 
    end subroutine fluid_update
 
@@ -286,9 +281,8 @@ contains
       use sweeps,              only: sweep
       use user_hooks,          only: problem_customize_solution
 #ifdef GRAV
-      use global,              only: dt
 #ifndef NBODY
-      use global,              only: t
+      use global,              only: t, dt
       use gravity,             only: source_terms_grav
       use particle_pub,        only: pset, psolver
 #endif /* !NBODY */
@@ -343,7 +337,6 @@ contains
       endif
 #ifdef GRAV
 #ifdef NBODY
-write(*,*) "3sweeps, dt=", dt
 !      if(.not.forward) then                    !this condition prevent to calling particle solver twice (with halfsteps)
 !         if (associated(psolver)) call pset%evolve(psolver, t-2.0*dt, 2.0*dt)
 !      endif
