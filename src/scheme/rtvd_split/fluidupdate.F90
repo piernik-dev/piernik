@@ -241,9 +241,7 @@ contains
 
       implicit none
 
-#ifndef NBODY
       call repeat_fluidstep
-#endif /* !NBODY */
 
       halfstep = .false.
       t=t+dt

@@ -241,6 +241,13 @@ contains
             call warn(msg)
          endif
 
+#ifdef NBODY
+         if (repeat_step) then
+         repeat_step = .false.
+         call warn('[global:init_global] repeat_step unsupported by NBODY. Swithing off.')
+         endif
+#endif /* NBODY */
+
          cbuff(1) = limiter
          cbuff(2) = limiter_b
          cbuff(3) = cflcontrol
