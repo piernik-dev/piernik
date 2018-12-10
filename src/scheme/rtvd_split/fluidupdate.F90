@@ -319,10 +319,6 @@ contains
 
       integer(kind=4) :: s
 
-#ifdef NBODY
-!      logical, save     :: psolver_one_time = .false.
-#endif /* NBODY */
-
 #ifdef SHEAR
       call shear_3sweeps
 #endif /* SHEAR */
@@ -359,11 +355,8 @@ contains
 #ifdef GRAV
 #ifdef NBODY
 write(*,*) "3sweeps, dt=", dt
-!      if(psolver_one_time) then                    !this condition prevent to calling particle solver twice (with halfsteps)
+!      if(.not.forward) then                    !this condition prevent to calling particle solver twice (with halfsteps)
 !         if (associated(psolver)) call pset%evolve(psolver, t-2.0*dt, 2.0*dt)
-!         psolver_one_time = .false.
-!      else
-!         psolver_one_time = .true.
 !      endif
 #else /* !NBODY */
       if (associated(psolver)) call pset%evolve(psolver, t-dt, dt)
