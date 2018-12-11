@@ -164,7 +164,7 @@ contains
       real, dimension(n, flind%all),            intent(inout) :: u1                 !< updated vector of conservative variables (after one timestep in second order scheme)
       real, dimension(n, nmag),                 intent(in)    :: bb                 !< local copy of magnetic field
       type(grid_container), pointer,            intent(in)    :: cg                 !< current grid piece
-      integer,                                  intent(in)    :: istep              !< step number in the time integration scheme
+      integer,                                  intent(in)    :: istep              !< stage in the time integration scheme
       integer(kind=4),                          intent(in)    :: sweep              !< direction (x, y or z) we are doing calculations for
       integer,                                  intent(in)    :: i1                 !< coordinate of sweep in the 1st remaining direction
       integer,                                  intent(in)    :: i2                 !< coordinate of sweep in the 2nd remaining direction

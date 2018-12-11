@@ -135,8 +135,9 @@ contains
 
   subroutine set_interpolations
 
-    use dataio_pub, only: msg, die
-    use global,     only: interpol_str
+    use dataio_pub,   only: msg, die
+    use global,       only: interpol_str, limiter, limiter_b
+    use fluxlimiters, only: set_limiters
 
     implicit none
 
@@ -145,6 +146,7 @@ contains
     select case (interpol_str)
     case ('linear', 'LINEAR', 'lin', '1')
        interp => linear
+       call set_limiters(limiter, limiter_b)
     case ('weno3', 'WENO3', 'wo3', '2')
        interp => weno3
     case default
