@@ -695,11 +695,13 @@ contains
    subroutine timestep_nbody(dt_nbody, pset)
 
       use constants,      only: ndims, zero
-      use dataio_pub,     only: msg, printinfo
       use cg_leaves,      only: leaves
       use cg_list,        only: cg_list_element
       use grid_cont,      only: grid_container
       use particle_types, only: particle_set
+#ifdef VERBOSE
+      use dataio_pub,     only: printinfo
+#endif /* VERBOSE */
 
       implicit none
 
@@ -721,7 +723,7 @@ contains
 
       n_part = size(pset%p, dim=1)
       !write(msg,'(a,i6)') '[particle_integrators:timestep_nbody] Number of particles: ', n_part
-      call printinfo(msg)
+      !call printinfo(msg)
       allocate(cells(n_part, ndims), dist(n_part, ndims))
 
       cgl => leaves%first
@@ -822,8 +824,6 @@ contains
          real,    dimension(n_part,ndims), intent(out) :: dist
          integer                                       :: i, cdim
 
-         !write(*,*) "Finding cells"
-         !write(*,*) "[find_cells]: Particles =", n_part
          do i = 1, n_part
             do cdim = xdim, ndims
                if ((pset%p(i)%pos(cdim) >= cg%ijkse(cdim, LO)) .or. (pset%p(i)%pos(cdim) <= cg%ijkse(cdim, HI))) then
@@ -869,7 +869,7 @@ contains
                        d2f_d2_o2([cells(p, :)], cg, ig, zdim) * dist(p, zdim)**2 + &
                        2.0*d2f_dd_o2([cells(p, :)], cg, ig, xdim, ydim) * dist(p, xdim)*dist(p, ydim) + &
                        2.0*d2f_dd_o2([cells(p, :)], cg, ig, xdim, zdim) * dist(p, xdim)*dist(p, zdim)
-            pset%p(p)%energy = cg%gpot(cells(p, xdim), cells(p, ydim), cells(p, zdim)) + dpot(p) + half * d2pot(p)
+            pset%p(p)%energy = cg%q(ig)%point(cells(p,:)) + dpot(p) + half * d2pot(p)
          enddo
 
       end subroutine potential2
@@ -1075,7 +1075,7 @@ contains
       subroutine save_pot_pset(cg, pset)
 
          use constants,      only: xdim, ydim, zdim, CENTER
-         use dataio_pub,     only: printio
+         use dataio_pub,     only: printinfo, printio
          use grid_cont,      only: grid_container
          use particle_types, only: particle_set
 
