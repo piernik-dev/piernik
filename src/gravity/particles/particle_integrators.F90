@@ -68,7 +68,7 @@ contains
    !!  http://www.ids.ias.edu/~piet/act/comp/algorithms/starter/index.html
    !<
 
-   subroutine hermit_4ord(pset, t_glob, dt_tot)
+   subroutine hermit_4ord(pset, t_glob, dt_tot, forward)
 
       use constants, only: ndims, xdim, zdim
       use particle_types, only: particle_set
@@ -77,6 +77,7 @@ contains
 
       class(particle_set), intent(inout) :: pset  !< particle list
       real,                intent(in)    :: t_glob, dt_tot
+      logical, optional,   intent(in)    :: forward
 
 #ifdef NBODY
       real, parameter :: dt_param = 0.0001      ! control parameter to determine time step size
@@ -195,7 +196,7 @@ contains
    end subroutine hermit_4ord
 
 #ifdef NBODY
-   subroutine leapfrog2ord(pset, t_glob, dt_tot)
+   subroutine leapfrog2ord(pset, t_glob, dt_tot, forward)
 
       use cg_list,        only: cg_list_element
       use constants,      only: ndims, half
@@ -211,6 +212,7 @@ contains
       class(particle_set), intent(inout) :: pset                 !< particle list
       real,                intent(in)    :: t_glob               !< initial time of simulation
       real,                intent(in)    :: dt_tot               !< timestep of simulation
+      logical, optional,   intent(in)    :: forward
 
       !real, dimension(:), allocatable    :: mass                 !< 1D array of mass of the particles
       real                               :: total_energy         !< total energy of set of the particles

@@ -91,10 +91,11 @@ module particle_types
    end type particle_solver_T
 
    abstract interface
-      subroutine particle_solver_P(pset, t_glob, dt_tot)
+      subroutine particle_solver_P(pset, t_glob, dt_tot, forward)
          import :: particle_set
          class(particle_set), intent(inout) :: pset
-         real, intent(in) :: t_glob, dt_tot
+         real,                intent(in)    :: t_glob, dt_tot
+         logical, optional,   intent(in)    :: forward
       end subroutine particle_solver_P
 
       subroutine map_scheme(this, iv, factor)
