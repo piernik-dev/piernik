@@ -129,7 +129,7 @@ contains
             ! transposition for compatibility with RTVD-based routines
             u0 = transpose(pu)
             vx = u1d(:, iarr_all_mx) / u1d(:, iarr_all_dn) ! this may also be useful for gravitational acceleration
-            call all_sources(size(u1d, 1, kind=4), u0, u1d, b_cc1d, cg, 1, ddim, i1, i2, dt, vx)
+            call all_sources(size(u1d, 1, kind=4), u0, u1d, b_cc1d, cg, istep, ddim, i1, i2, dt, vx)
 
             ! Beware: this is bypassing integration scheme, so the source terms are applied in lowest order fashion.
             ! See the results of Jeans test with RTVD and RIEMANN for comparision.
