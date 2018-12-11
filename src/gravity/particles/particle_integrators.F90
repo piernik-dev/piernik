@@ -198,10 +198,10 @@ contains
    subroutine leapfrog2ord(pset, t_glob, dt_tot)
 
       use cg_list,        only: cg_list_element
-      use constants,      only: ndims
+      use constants,      only: ndims, half
       use dataio_pub,     only: die, msg, printinfo
       use domain,         only: is_refined, is_multicg
-      use func,           only: operator(.equals.)
+      !use func,           only: operator(.equals.)
       use global,         only: dt_old
       use grid_cont,      only: grid_container
       use particle_types, only: particle_set
@@ -212,8 +212,7 @@ contains
       real,                intent(in)    :: t_glob               !< initial time of simulation
       real,                intent(in)    :: dt_tot               !< timestep of simulation
 
-      real, dimension(:), allocatable    :: mass                 !< 1D array of mass of the particles
-      real                               :: dt_tot_h             !< half of timestep, dt_tot_h = 0.5*dt_tot
+      !real, dimension(:), allocatable    :: mass                 !< 1D array of mass of the particles
       real                               :: total_energy         !< total energy of set of the particles
       !real, save                         :: initial_energy       !< total initial energy of set of the particles
       !real                               :: d_energy             !< error of energy of set of the particles in succeeding timesteps
@@ -222,9 +221,9 @@ contains
       !real                               :: d_ang_momentum       !< error of angular momentum in succeeding timensteps
       integer                            :: i
       integer                            :: n                    !< number of particles
-      logical                            :: external_pot         !< if .true. gravitational potential will be deleted and replaced by external potential of point mass
+      !logical                            :: external_pot         !< if .true. gravitational potential will be deleted and replaced by external potential of point mass
       logical, save                      :: first_run_lf = .true.
-      integer, save                      :: counter
+      !integer, save                      :: counter
       integer                            :: lun_out
       real, dimension(:,:), allocatable  :: acc2
 
@@ -232,12 +231,10 @@ contains
 
       n = size(pset%p, dim=1)
 
-      allocate(mass(n))
+      !allocate(mass(n))
       allocate(acc2(n, ndims))
 
-      if (t_glob < 0.0) i=1 ! supress compiler warnings
-
-      mass(:) = pset%p(:)%mass
+      !mass(:) = pset%p(:)%mass
 
       !cgl => leaves%first
       if (is_refined) call die("[particle_integrators:leapfrog2ord] AMR not implemented for particles yet")
@@ -250,7 +247,7 @@ contains
 
       !obliczenie zewnętrznego potencjalu na siatce
       !external_pot = .true.
-      external_pot = .false.
+      !external_pot = .false.
 
       call get_energy(pset, total_energy, n)
       !write(*,*) "Energia----------: ", total_energy
@@ -288,12 +285,12 @@ contains
       !write(*,*) "1:", pset%p(1)%vel
       !write(*,*) "2:", pset%p(2)%vel
 
-      counter = 1
+      !counter = 1
 
       do i = 1, n
       !write(*,*) "n=",n," i=",i
          call get_acc_model(pset, acc2, 0.0, n)
-         write(lun_out, '(I3,1X,19(E13.6,1X))') i, t_glob+dt_tot, dt_old, mass(i), pset%p(i)%pos, pset%p(i)%vel, pset%p(i)%acc, acc2(i,:)!, pset%p(i)%energy, total_energy, initial_energy, d_energy, ang_momentum, init_ang_momentum, d_ang_momentum
+         write(lun_out, '(I3,1X,19(E13.6,1X))') i, t_glob+dt_tot, dt_old, pset%p(i)%mass, pset%p(i)%pos, pset%p(i)%vel, pset%p(i)%acc, acc2(i,:)!, pset%p(i)%energy, total_energy, initial_energy, d_energy, ang_momentum, init_ang_momentum, d_ang_momentum
          !write(lun_out, '(I3,1X,19(E13.6,1X))') i, t_glob+dt_tot, dt_old, pset%p(i)%pos, pset%p(i)%vel, pset%p(i)%acc, acc2(i,:)!, pset%p(i)%energy, total_energy, initial_energy, d_energy, ang_momentum, init_ang_momentum, d_ang_momentum
       enddo
 
@@ -303,16 +300,15 @@ contains
       !write(*,*) "[p_i]:dt_old= ", dt_old
       write(msg,'(a,2f8.5)') '[particle_integrators:leapfrog2ord] [p_i]: dt_tot, dt_old = ', dt_tot, dt_old
       call printinfo(msg)
-      dt_tot_h = 0.5*dt_tot
 
       if(first_run_lf) then
          first_run_lf = .false.
       else
          !3.kick(dt_old)
-         call kick(pset, 0.5*dt_old, n)
+         call kick(pset, half*dt_old, n)
       endif
-      !1. Kick (dt_tot_h)
-      call kick(pset, dt_tot_h, n)
+      !1. Kick (half*dt_tot)
+      call kick(pset, half*dt_tot, n)
 
       !2.drift(lf_dt)
       call drift(pset, dt_tot, n)
@@ -960,7 +956,6 @@ contains
          real,            dimension(n_part,ndims)        :: dxyz
          real(kind=8),    dimension(n_part,8)            :: wijk, fx, fy, fz
 
-         !write(*,*) "[get_acc_cic]: particles = ", n_part
          do i = 1, n_part
             pset%p(i)%acc = zero
             if ((pset%p(i)%outside) .eqv. .false.) then
@@ -1068,7 +1063,6 @@ contains
          else
             dt_nbody = zero
          endif
-         !write(*,*) "[get_var_timestep_c]: dt_nbody =", dt_nbody
 
       end subroutine get_var_timestep_c
 
