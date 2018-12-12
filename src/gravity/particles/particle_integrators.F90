@@ -323,13 +323,9 @@ contains
 #ifdef NBODY
    subroutine leapfrog2ord(pset, t_glob, dt_tot, forward)
 
-      use cg_list,        only: cg_list_element
-      use constants,      only: ndims, two
-      use dataio_pub,     only: die, msg, printinfo
+      use constants,      only: two
+      use dataio_pub,     only: die
       use domain,         only: is_refined, is_multicg
-      !use func,           only: operator(.equals.)
-      use global,         only: dt_old
-      use grid_cont,      only: grid_container
       use particle_types, only: particle_set
 
       implicit none
@@ -339,98 +335,22 @@ contains
       real,                intent(in)    :: dt_tot               !< timestep of simulation
       logical, optional,   intent(in)    :: forward
 
-      !real, dimension(:), allocatable    :: mass                 !< 1D array of mass of the particles
       real                               :: total_energy         !< total energy of set of the particles
-      !real, save                         :: initial_energy       !< total initial energy of set of the particles
-      !real                               :: d_energy             !< error of energy of set of the particles in succeeding timesteps
-      real                               :: ang_momentum         !< angular momentum of set of the particles
-      !real, save                         :: init_ang_momentum    !< initial angular momentum of set of the particles
-      !real                               :: d_ang_momentum       !< error of angular momentum in succeeding timensteps
       integer                            :: i
       integer                            :: n                    !< number of particles
-      !logical                            :: external_pot         !< if .true. gravitational potential will be deleted and replaced by external potential of point mass
-      !logical, save                      :: first_run_lf = .true.
       !integer, save                      :: counter
-      integer                            :: lun_out
-      real, dimension(:,:), allocatable  :: acc2
-      real                               :: t_glob_p, dt_tot_p
 
-      dt_tot_p = two * dt_tot
-      t_glob_p = t_glob - dt_tot
-
-      open(newunit=lun_out, file='leapfrog_out.log', status='unknown',  position='append')
-
-      n = size(pset%p, dim=1)
-
-      !allocate(mass(n))
-      allocate(acc2(n, ndims))
-
-      !mass(:) = pset%p(:)%mass
-
-      !cgl => leaves%first
       if (is_refined) call die("[particle_integrators:leapfrog2ord] AMR not implemented for particles yet")
       if (is_multicg) call die("[particle_integrators:leapfrog2ord] multi_cg not implemented for particles yet")
 
-      !do while (associated(cgl))
-         !cg => cgl%cg
-         !cgl => cgl%nxt
-      !enddo
-
-      !obliczenie zewnętrznego potencjalu na siatce
-      !external_pot = .true.
-      !external_pot = .false.
+      n = size(pset%p, dim=1)
 
       call get_energy(pset, total_energy, n)
-      !write(*,*) "Energia----------: ", total_energy
 
-      call get_ang_momentum_2(pset, n, ang_momentum)
-      !write(*,*) "ANG_MOMENTUM-----: ", ang_momentum
-      write(msg,'(a,2f8.5)') '[particle_integrators:leapfrog2ord] Energia, ANG_MOMENTUM----------: ', total_energy, ang_momentum
-      call printinfo(msg)
-      !stop
-
-      !if (first_run_lf) then
-      !   initial_energy = total_energy
-      !  d_energy       = 0.0
-      !   init_ang_momentum = ang_momentum
-      !   d_ang_momentum    = 0.0
-      !   write(*,*) "Pierwszy"
-      !else
-      !   d_energy = log(abs((total_energy - initial_energy)/initial_energy))
-      !   if (init_ang_momentum.equals. zero) then
-      !      d_ang_momentum = ang_momentum
-      !   else
-      !      d_ang_momentum = (ang_momentum - init_ang_momentum)/init_ang_momentum
-      !      if (d_ang_momentum.equals. zero) then
-      !         d_ang_momentum = 0.0
-      !      else
-      !         d_ang_momentum = log(abs(d_ang_momentum))
-      !      endif
-      !   endif
-      !endif
-
-      write(msg,'(a,3f8.5)') '[particle_integrators:leapfrog2ord] pset%p(1)%pos = ', pset%p(1)%pos
-      call printinfo(msg)
-      write(msg,'(a,3f8.5)') '[particle_integrators:leapfrog2ord] pset%p(1)%vel = ', pset%p(1)%vel
-      call printinfo(msg)
-      !write(*,*) "1:", pset%p(1)%vel
-      !write(*,*) "2:", pset%p(2)%vel
+      call leapfrog2_diagnostics(pset, n, total_energy)
 
       !counter = 1
-
-      do i = 1, n
-      !write(*,*) "n=",n," i=",i
-         call get_acc_model(pset, acc2, 0.0, n)
-         write(lun_out, '(I3,1X,19(E13.6,1X))') i, t_glob_p+dt_tot_p, dt_old, pset%p(i)%mass, pset%p(i)%pos, pset%p(i)%vel, pset%p(i)%acc, acc2(i,:)!, pset%p(i)%energy, total_energy, initial_energy, d_energy, ang_momentum, init_ang_momentum, d_ang_momentum
-         !write(lun_out, '(I3,1X,19(E13.6,1X))') i, t_glob_p+dt_tot_p, dt_old, pset%p(i)%pos, pset%p(i)%vel, pset%p(i)%acc, acc2(i,:)!, pset%p(i)%energy, total_energy, initial_energy, d_energy, ang_momentum, init_ang_momentum, d_ang_momentum
-      enddo
-
-      !call save_particles(n, lf_t, mass, pset, counter)
-      !write(*,*) "[p_i]:-----------------------------"
-      !write(*,*) "[p_i]:dt_tot_p= ", dt_tot_p
-      !write(*,*) "[p_i]:dt_old= ", dt_old
-      write(msg,'(a,2f8.5)') '[particle_integrators:leapfrog2ord] [p_i]: dt_tot_p, dt_old = ', dt_tot_p, dt_old
-      call printinfo(msg)
+      !call save_particles(n, lf_t, pset%p(:)%mass, pset, counter)
 
       if (forward) then
          call kick( pset,     dt_tot, n) !1. kick  (dt_hydro)
@@ -438,16 +358,11 @@ contains
          call drift(pset, two*dt_tot, n) !2. drift (2*dt_hydro)
          call kick( pset,     dt_tot, n) !3. kick  (dt_hydro)
       endif
-      !stop
 
-      !call save_particles(n, lf_t, mass, pset, counter)
-
-      close(lun_out)
-      !write(*,*) "[p_i]:-----------------------------"
+      !call save_particles(n, lf_t, pset%p(:)%mass, pset, counter)
 
       contains
 
-         !Kick
          subroutine kick(pset, t, n)
 
             use particle_types, only: particle_set
@@ -466,7 +381,6 @@ contains
 
          end subroutine kick
 
-         !Drift
          subroutine drift(pset, t, n)
 
             use particle_types, only: particle_set
@@ -510,6 +424,72 @@ contains
             enddo
 
          end subroutine get_energy
+
+         subroutine leapfrog2_diagnostics(pset, n, total_energy)
+
+            use constants,      only: ndims
+            use dataio_pub,     only: msg, printinfo
+            !use func,           only: operator(.equals.)
+            use particle_types, only: particle_set
+
+            implicit none
+
+            class(particle_set), intent(in)   :: pset                 !< particle list
+            integer,             intent(in)   :: n
+            real,                intent(in)   :: total_energy
+            real, dimension(:,:), allocatable :: acc2
+            real                              :: ang_momentum         !< angular momentum of set of the particles
+            integer                           :: lun_out
+            !real                              :: d_energy             !< error of energy of set of the particles in succeeding timesteps
+            !real                              :: d_ang_momentum       !< error of angular momentum in succeeding timensteps
+            !real, save                        :: initial_energy       !< total initial energy of set of the particles
+            !real, save                        :: init_ang_momentum    !< initial angular momentum of set of the particles
+            !logical, save                     :: first_run_lf = .true.
+
+            !write(*,*) "Energia----------: ", total_energy
+
+            call get_ang_momentum_2(pset, n, ang_momentum)
+            !write(*,*) "ANG_MOMENTUM-----: ", ang_momentum
+            write(msg,'(a,2f8.5)') '[particle_integrators:leapfrog2_diagnostics] Energia, ANG_MOMENTUM----------: ', total_energy, ang_momentum
+            call printinfo(msg)
+
+            !if (first_run_lf) then
+            !   initial_energy = total_energy
+            !   d_energy       = 0.0
+            !   init_ang_momentum = ang_momentum
+            !   d_ang_momentum    = 0.0
+            !   write(*,*) "Pierwszy"
+            !else
+            !   d_energy = log(abs((total_energy - initial_energy)/initial_energy))
+            !   if (init_ang_momentum .equals. zero) then
+            !      d_ang_momentum = ang_momentum
+            !   else
+            !      d_ang_momentum = (ang_momentum - init_ang_momentum)/init_ang_momentum
+            !      if (d_ang_momentum .equals. zero) then
+            !         d_ang_momentum = 0.0
+            !      else
+            !         d_ang_momentum = log(abs(d_ang_momentum))
+            !      endif
+            !   endif
+            !endif
+
+            write(msg,'(a,3f8.5)') '[particle_integrators:leapfrog2_diagnostics] pset%p(1)%pos = ', pset%p(1)%pos
+            call printinfo(msg)
+            write(msg,'(a,3f8.5)') '[particle_integrators:leapfrog2_diagnostics] pset%p(1)%vel = ', pset%p(1)%vel
+            call printinfo(msg)
+
+            allocate(acc2(n, ndims))
+            open(newunit=lun_out, file='leapfrog_out.log', status='unknown',  position='append')
+
+            do i = 1, n
+               call get_acc_model(pset, acc2, 0.0, n)
+               write(lun_out, '(I3,1X,19(E13.6,1X))') i, t_glob+dt_tot, dt_tot, pset%p(i)%mass, pset%p(i)%pos, pset%p(i)%vel, pset%p(i)%acc, acc2(i,:)!, pset%p(i)%energy, total_energy, initial_energy, d_energy, ang_momentum, init_ang_momentum, d_ang_momentum
+            enddo
+
+            close(lun_out)
+            deallocate(acc2)
+
+         end subroutine leapfrog2_diagnostics
 
          subroutine save_particles(n, lf_t, mass, pset, counter)
 
