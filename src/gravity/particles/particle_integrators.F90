@@ -162,6 +162,7 @@ contains
       close(lun_out)
       close(lun_err)
       return
+      if (forward) return ! suppress compiler warnings
 
       contains
 
@@ -199,7 +200,7 @@ contains
    subroutine leapfrog2ord(pset, t_glob, dt_tot, forward)
 
       use cg_list,        only: cg_list_element
-      use constants,      only: ndims, half
+      use constants,      only: ndims, half, two
       use dataio_pub,     only: die, msg, printinfo
       use domain,         only: is_refined, is_multicg
       !use func,           only: operator(.equals.)
@@ -228,6 +229,11 @@ contains
       !integer, save                      :: counter
       integer                            :: lun_out
       real, dimension(:,:), allocatable  :: acc2
+      real                               :: t_glob_p, dt_tot_p
+
+      if (forward) return                    !this condition prevent to calling particle solver twice (with halfsteps)
+      dt_tot_p = two * dt_tot
+      t_glob_p = t_glob - dt_tot
 
       open(newunit=lun_out, file='leapfrog_out.log', status='unknown',  position='append')
 
@@ -292,15 +298,15 @@ contains
       do i = 1, n
       !write(*,*) "n=",n," i=",i
          call get_acc_model(pset, acc2, 0.0, n)
-         write(lun_out, '(I3,1X,19(E13.6,1X))') i, t_glob+dt_tot, dt_old, pset%p(i)%mass, pset%p(i)%pos, pset%p(i)%vel, pset%p(i)%acc, acc2(i,:)!, pset%p(i)%energy, total_energy, initial_energy, d_energy, ang_momentum, init_ang_momentum, d_ang_momentum
-         !write(lun_out, '(I3,1X,19(E13.6,1X))') i, t_glob+dt_tot, dt_old, pset%p(i)%pos, pset%p(i)%vel, pset%p(i)%acc, acc2(i,:)!, pset%p(i)%energy, total_energy, initial_energy, d_energy, ang_momentum, init_ang_momentum, d_ang_momentum
+         write(lun_out, '(I3,1X,19(E13.6,1X))') i, t_glob_p+dt_tot_p, dt_old, pset%p(i)%mass, pset%p(i)%pos, pset%p(i)%vel, pset%p(i)%acc, acc2(i,:)!, pset%p(i)%energy, total_energy, initial_energy, d_energy, ang_momentum, init_ang_momentum, d_ang_momentum
+         !write(lun_out, '(I3,1X,19(E13.6,1X))') i, t_glob_p+dt_tot_p, dt_old, pset%p(i)%pos, pset%p(i)%vel, pset%p(i)%acc, acc2(i,:)!, pset%p(i)%energy, total_energy, initial_energy, d_energy, ang_momentum, init_ang_momentum, d_ang_momentum
       enddo
 
       !call save_particles(n, lf_t, mass, pset, counter)
       !write(*,*) "[p_i]:-----------------------------"
-      !write(*,*) "[p_i]:dt_tot= ", dt_tot
+      !write(*,*) "[p_i]:dt_tot_p= ", dt_tot_p
       !write(*,*) "[p_i]:dt_old= ", dt_old
-      write(msg,'(a,2f8.5)') '[particle_integrators:leapfrog2ord] [p_i]: dt_tot, dt_old = ', dt_tot, dt_old
+      write(msg,'(a,2f8.5)') '[particle_integrators:leapfrog2ord] [p_i]: dt_tot_p, dt_old = ', dt_tot_p, dt_old
       call printinfo(msg)
 
       if(first_run_lf) then
@@ -309,11 +315,11 @@ contains
          !3.kick(dt_old)
          call kick(pset, half*dt_old, n)
       endif
-      !1. Kick (half*dt_tot)
-      call kick(pset, half*dt_tot, n)
+      !1. Kick (half*dt_tot_p)
+      call kick(pset, half*dt_tot_p, n)
 
       !2.drift(lf_dt)
-      call drift(pset, dt_tot, n)
+      call drift(pset, dt_tot_p, n)
       !stop
 
       !call save_particles(n, lf_t, mass, pset, counter)

@@ -314,13 +314,7 @@ contains
          endif
       endif
 #ifdef GRAV
-#ifdef NBODY
-      if(.not.forward) then                    !this condition prevent to calling particle solver twice (with halfsteps)
-         if (associated(psolver)) call pset%evolve(psolver, t-2.0*dt, 2.0*dt)
-      endif
-#else /* !NBODY */
-      if (associated(psolver)) call pset%evolve(psolver, t-dt, dt)
-#endif /* !NBODY */
+      if (associated(psolver)) call pset%evolve(psolver, t-dt, dt, forward)
 #endif /* GRAV */
       if (associated(problem_customize_solution)) call problem_customize_solution(forward)
 
