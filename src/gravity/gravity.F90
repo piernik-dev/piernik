@@ -846,10 +846,6 @@ contains
             select case (external_gp)
                case ("null", "grav_null", "GRAV_NULL")
                   call grav_null(cg%gp, ax, cg%lhn)                     ; grav_type => grav_null
-#ifdef NBODY
-               case ("ptmass_pot")
-                  call point_mass_pot(cg%gpot, ax, cg%lhn)              ; grav_type => point_mass_pot
-#endif /* NBODY */
                case ("linear", "grav_lin", "GRAV_LINEAR")
                   call grav_linear(cg%gp, ax, cg%lhn)                   ; grav_type => grav_linear
                case ("uniform", "grav_unif", "GRAV_UNIFORM")
@@ -1085,44 +1081,5 @@ contains
       ! Find the maximum, and adjust cg%gp (call leaves%q_add_val(igp, -max))
 
    end subroutine grav_accel2pot
-
-#ifdef NBODY
-   subroutine point_mass_pot(gp, ax, lhn, flatten)
-
-      use axes_M,     only: axes
-      use constants,  only: xdim, ydim, zdim, LO, HI, GEO_XYZ
-      use dataio_pub, only: die
-      use domain,     only: dom
-      use units,      only: newtong
-
-      implicit none
-
-      real, dimension(:,:,:), pointer                     :: gp
-      type(axes),                              intent(in) :: ax
-      integer(kind=4), dimension(ndims,LO:HI), intent(in) :: lhn
-      logical,                       optional, intent(in) :: flatten
-
-      integer :: i, j, k
-      real    :: eps, GM, r
-
-      eps = 0.0
-      GM = newtong*ptmass
-
-      if (dom%geometry_type /= GEO_XYZ) call die("[gravity:point_mass_pot] Non-cartesian geometry is not implemented yet.")
-
-      if (.false. .and. flatten) i = 0 ! suppress compiler warnings on unused arguments
-      write(*,*) "Obliczanie potencjalu grawitacyjnego masy punktowej."
-
-      do i = lhn(xdim,LO), lhn(xdim,HI)
-         do j = lhn(ydim,LO), lhn(ydim,HI)
-            do k = lhn(zdim,LO), lhn(zdim,HI)
-               r = sqrt(ax%x(i)**2 + ax%y(j)**2 + ax%z(k)**2)
-               gp(i, j, k) = -GM/r
-            enddo
-         enddo
-      enddo
-
-   end subroutine point_mass_pot
-#endif /* NBODY */
 
 end module gravity

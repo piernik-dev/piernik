@@ -67,7 +67,7 @@
  /
 
  $GRAVITY
- !external_gp = 'ptmass_pot'
+ !external_gp = 'ptmass'
  !ptmass = 10.0
  /
 
