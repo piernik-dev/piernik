@@ -913,7 +913,7 @@ contains
 
       ! Gravitational acceleration is computed on right cell boundaries
 
-      ! For more general schemes (higher order than RK2, non-canonical choices of RK2) we will need timestep fraction provided by the solver,, not istep
+      ! For more general schemes (higher order than RK2, non-canonical choices of RK2) we will need timestep fraction provided by the solver, not istep
       select case (istep)
       case (RK2_1)
          select case (sweep)
