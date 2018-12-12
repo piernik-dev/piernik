@@ -324,8 +324,6 @@ contains
    subroutine leapfrog2ord(pset, t_glob, dt_tot, forward)
 
       use constants,      only: two
-      use dataio_pub,     only: die
-      use domain,         only: is_refined, is_multicg
       use particle_types, only: particle_set
 
       implicit none
@@ -339,9 +337,6 @@ contains
       integer                            :: i
       integer                            :: n                    !< number of particles
       !integer, save                      :: counter
-
-      if (is_refined) call die("[particle_integrators:leapfrog2ord] AMR not implemented for particles yet")
-      if (is_multicg) call die("[particle_integrators:leapfrog2ord] multi_cg not implemented for particles yet")
 
       n = size(pset%p, dim=1)
 
@@ -658,6 +653,8 @@ contains
       use constants,      only: ndims, zero
       use cg_leaves,      only: leaves
       use cg_list,        only: cg_list_element
+      use dataio_pub,     only: die
+      use domain,         only: is_refined, is_multicg
       use grid_cont,      only: grid_container
       use particle_types, only: particle_set
 #ifdef VERBOSE
@@ -687,6 +684,8 @@ contains
       !call printinfo(msg)
       allocate(cells(n_part, ndims), dist(n_part, ndims))
 
+      if (is_refined) call die("[particle_integrators:timestep_nbody] AMR not implemented for particles yet")
+      if (is_multicg) call die("[particle_integrators:timestep_nbody] multi_cg not implemented for particles yet")
       cgl => leaves%first
       cg  => cgl%cg
 
