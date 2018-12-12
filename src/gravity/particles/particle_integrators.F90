@@ -340,60 +340,60 @@ contains
 
       n = size(pset%p, dim=1)
 
-      call get_energy(pset, total_energy, n)
+      call get_energy(pset, n, total_energy)
 
       call leapfrog2_diagnostics(pset, n, total_energy)
 
       !counter = 1
-      !call save_particles(n, lf_t, pset%p(:)%mass, pset, counter)
+      !call save_particles(pset, n, lf_t, counter)
 
       if (forward) then
-         call kick( pset,     dt_tot, n) !1. kick  (dt_hydro)
+         call kick( pset, n,     dt_tot) !1. kick  (dt_hydro)
       else
-         call drift(pset, two*dt_tot, n) !2. drift (2*dt_hydro)
-         call kick( pset,     dt_tot, n) !3. kick  (dt_hydro)
+         call drift(pset, n, two*dt_tot) !2. drift (2*dt_hydro)
+         call kick( pset, n,     dt_tot) !3. kick  (dt_hydro)
       endif
 
-      !call save_particles(n, lf_t, pset%p(:)%mass, pset, counter)
+      !call save_particles(pset, n, lf_t, counter)
 
       contains
 
-         subroutine kick(pset, t, n)
+         subroutine kick(pset, n, kdt)
 
             use particle_types, only: particle_set
 
             implicit none
 
             class(particle_set), intent(inout) :: pset  !< particle list
-            real,                intent(in)    :: t
             integer,             intent(in)    :: n
+            real,                intent(in)    :: kdt
             integer                            :: i
 
             do i = 1, n
-               !pset%p(i)%vel = pset%p(i)%vel + pset%p(i)%acc * t
-               pset%p(i)%vel = pset%p(i)%vel + 0.0 * t
+               !pset%p(i)%vel = pset%p(i)%vel + pset%p(i)%acc * kdt
+               pset%p(i)%vel = pset%p(i)%vel + 0.0 * kdt
             enddo
 
          end subroutine kick
 
-         subroutine drift(pset, t, n)
+         subroutine drift(pset, n, ddt)
 
             use particle_types, only: particle_set
 
             implicit none
 
             class(particle_set), intent(inout) :: pset  !< particle list
-            real,                intent(in)    :: t
             integer,             intent(in)    :: n
+            real,                intent(in)    :: ddt
             integer                            :: i
 
             do i=1, n
-               pset%p(i)%pos = pset%p(i)%pos + pset%p(i)%vel * t
+               pset%p(i)%pos = pset%p(i)%pos + pset%p(i)%vel * ddt
             enddo
 
          end subroutine drift
 
-         subroutine get_energy(pset, total_energy, n)
+         subroutine get_energy(pset, n, total_energy)
 
             use constants,      only: ndims, half, zero
             use particle_types, only: particle_set
@@ -401,8 +401,8 @@ contains
             implicit none
 
             class(particle_set), intent(inout) :: pset         !< particle list
-            real,                intent(out)   :: total_energy !< total energy of set of particles
             integer,             intent(in)    :: n            !< number of particles
+            real,                intent(out)   :: total_energy !< total energy of set of particles
             integer                            :: cdim, p
             real, dimension(n)                 :: v            !< kwadraty predkosci czastek
 
@@ -477,7 +477,7 @@ contains
             open(newunit=lun_out, file='leapfrog_out.log', status='unknown',  position='append')
 
             do i = 1, n
-               call get_acc_model(pset, acc2, 0.0, n)
+               call get_acc_model(pset, n, 0.0, acc2)
                write(lun_out, '(I3,1X,19(E13.6,1X))') i, t_glob+dt_tot, dt_tot, pset%p(i)%mass, pset%p(i)%pos, pset%p(i)%vel, pset%p(i)%acc, acc2(i,:)!, pset%p(i)%energy, total_energy, initial_energy, d_energy, ang_momentum, init_ang_momentum, d_ang_momentum
             enddo
 
@@ -486,7 +486,7 @@ contains
 
          end subroutine leapfrog2_diagnostics
 
-         subroutine save_particles(n, lf_t, mass, pset, counter)
+         subroutine save_particles(pset, n, lf_t, counter)
 
             use particle_types, only: particle_set
 
@@ -495,7 +495,6 @@ contains
             class(particle_set), intent(in)    :: pset  !< particle list
             integer,             intent(in)    :: n
             real,                intent(in)    :: lf_t
-            real, dimension(n),  intent(in)    :: mass
             integer,             intent(inout) :: counter
             integer                            :: i, data_file = 757
             character(len=17)                  :: filename
@@ -517,7 +516,7 @@ contains
             open(unit = data_file, file=filename)
                write(data_file, *) "#t =", lf_t
                do i = 1, n
-                  write(data_file,*) i, mass(i), pset%p(i)%pos, pset%p(i)%vel
+                  write(data_file,*) i, pset%p(i)%mass, pset%p(i)%pos, pset%p(i)%vel
                enddo
             close(data_file)
 
@@ -525,7 +524,7 @@ contains
 
          end subroutine save_particles
 
-         subroutine get_acc_model(pset, acc2, eps, n)
+         subroutine get_acc_model(pset, n, eps, acc2)
 
             use constants, only: ndims, xdim, zdim
             use grid_cont, only: grid_container
