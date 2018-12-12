@@ -334,7 +334,6 @@ contains
       logical, optional,   intent(in)    :: forward
 
       real                               :: total_energy         !< total energy of set of the particles
-      integer                            :: i
       integer                            :: n                    !< number of particles
       !integer, save                      :: counter
 
@@ -370,8 +369,7 @@ contains
             integer                            :: i
 
             do i = 1, n
-               !pset%p(i)%vel = pset%p(i)%vel + pset%p(i)%acc * kdt
-               pset%p(i)%vel = pset%p(i)%vel + 0.0 * kdt
+               pset%p(i)%vel = pset%p(i)%vel + pset%p(i)%acc * kdt
             enddo
 
          end subroutine kick
@@ -434,7 +432,7 @@ contains
             real,                intent(in)   :: total_energy
             real, dimension(:,:), allocatable :: acc2
             real                              :: ang_momentum         !< angular momentum of set of the particles
-            integer                           :: lun_out
+            integer                           :: i, lun_out
             !real                              :: d_energy             !< error of energy of set of the particles in succeeding timesteps
             !real                              :: d_ang_momentum       !< error of angular momentum in succeeding timensteps
             !real, save                        :: initial_energy       !< total initial energy of set of the particles
