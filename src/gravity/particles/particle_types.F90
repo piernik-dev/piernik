@@ -500,7 +500,7 @@ contains
 
    end function particle_with_id_exists
 
-   subroutine particle_set_evolve(this, func, t, dt)
+   subroutine particle_set_evolve(this, func, t, dt, forward)
 
       implicit none
 
@@ -508,8 +508,9 @@ contains
       class(particle_solver_T), intent(inout) :: func
       real,                     intent(in)    :: t
       real,                     intent(in)    :: dt
+      logical, optional,        intent(in)    :: forward
 
-      call func%evolve(this, t, dt)
+      call func%evolve(this, t, dt, forward)
 
    end subroutine particle_set_evolve
 
