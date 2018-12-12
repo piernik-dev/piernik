@@ -232,12 +232,6 @@ contains
       use dataio_pub,  only: halfstep
       use global,      only: dt, dtm, t
       use mass_defect, only: update_magic_mass
-#ifdef GRAV
-      use gravity,      only: source_terms_grav
-#ifdef NBODY
-      use particle_pub, only: pset, psolver
-#endif /* NBODY */
-#endif /* GRAV */
 
       implicit none
 
@@ -245,12 +239,6 @@ contains
 
       halfstep = .false.
       t=t+dt
-#ifdef GRAV
-      call source_terms_grav
-#ifdef NBODY
-      if (associated(psolver)) call pset%evolve(psolver, t-dt, dt)
-#endif /* NBODY */
-#endif /* GRAV */
       call make_3sweeps(.true.) ! X -> Y -> Z
 
 ! Sources should be hooked to problem_customize_solution with forward argument
@@ -258,12 +246,6 @@ contains
       halfstep = .true.
       t=t+dt
       dtm = dt
-#ifdef NBODY
-!#ifdef GRAV
-!      call source_terms_grav
-!      if (associated(psolver)) call pset%evolve(psolver, t-dt, dt)
-!#endif /* GRAV */
-#endif /* NBODY */
       call make_3sweeps(.false.) ! Z -> Y -> X
       call update_magic_mass
 
@@ -281,11 +263,9 @@ contains
       use sweeps,              only: sweep
       use user_hooks,          only: problem_customize_solution
 #ifdef GRAV
-#ifndef NBODY
       use global,              only: t, dt
       use gravity,             only: source_terms_grav
       use particle_pub,        only: pset, psolver
-#endif /* !NBODY */
 #endif /* GRAV */
 #if defined(COSM_RAYS) && defined(MULTIGRID)
       use all_boundaries,      only: all_fluid_boundaries
@@ -306,11 +286,9 @@ contains
       call shear_3sweeps
 #endif /* SHEAR */
 
-#ifndef NBODY
 #ifdef GRAV
       call source_terms_grav
 #endif /* GRAV */
-#endif /* NBODY */
 
 #if defined(COSM_RAYS) && defined(MULTIGRID)
       if (.not. use_split) then
@@ -337,9 +315,9 @@ contains
       endif
 #ifdef GRAV
 #ifdef NBODY
-!      if(.not.forward) then                    !this condition prevent to calling particle solver twice (with halfsteps)
-!         if (associated(psolver)) call pset%evolve(psolver, t-2.0*dt, 2.0*dt)
-!      endif
+      if(.not.forward) then                    !this condition prevent to calling particle solver twice (with halfsteps)
+         if (associated(psolver)) call pset%evolve(psolver, t-2.0*dt, 2.0*dt)
+      endif
 #else /* !NBODY */
       if (associated(psolver)) call pset%evolve(psolver, t-dt, dt)
 #endif /* !NBODY */
