@@ -385,7 +385,7 @@ contains
             real,                intent(in)    :: ddt
             integer                            :: i
 
-            do i=1, n
+            do i = 1, n
                pset%p(i)%pos = pset%p(i)%pos + pset%p(i)%vel * ddt
             enddo
 
@@ -393,7 +393,7 @@ contains
 
          subroutine get_energy(pset, n, total_energy)
 
-            use constants,      only: ndims, half, zero
+            use constants,      only: half, zero, xdim, zdim
             use particle_types, only: particle_set
 
             implicit none
@@ -401,18 +401,19 @@ contains
             class(particle_set), intent(inout) :: pset         !< particle list
             integer,             intent(in)    :: n            !< number of particles
             real,                intent(out)   :: total_energy !< total energy of set of particles
-            integer                            :: cdim, p
-            real, dimension(n)                 :: v            !< kwadraty predkosci czastek
+            integer(kind=4)                    :: cdim
+            integer                            :: p
+            real                               :: v2           !< particle velocity squared
 
-            v = zero
             total_energy = zero
 
             do p = 1, n
-               do cdim = 1, ndims
-                  v(p) = v(p)+ pset%p(p)%vel(cdim)**2
+               v2 = zero
+               do cdim = xdim, zdim
+                  v2 = v2 + pset%p(p)%vel(cdim)**2
                enddo
                !energy       = 1/2  *      m         *  v**2 +     Ep(x,y,z)
-               pset%p(p)%energy = half * pset%p(p)%mass *  v(p) + pset%p(p)%energy
+               pset%p(p)%energy = half * pset%p(p)%mass * v2 + pset%p(p)%energy
                total_energy = total_energy + pset%p(p)%energy
             enddo
 
@@ -427,17 +428,17 @@ contains
 
             implicit none
 
-            class(particle_set), intent(in)   :: pset                 !< particle list
-            integer,             intent(in)   :: n
-            real,                intent(in)   :: total_energy
-            real, dimension(:,:), allocatable :: acc2
-            real                              :: ang_momentum         !< angular momentum of set of the particles
-            integer                           :: i, lun_out
-            !real                              :: d_energy             !< error of energy of set of the particles in succeeding timesteps
-            !real                              :: d_ang_momentum       !< error of angular momentum in succeeding timensteps
-            !real, save                        :: initial_energy       !< total initial energy of set of the particles
-            !real, save                        :: init_ang_momentum    !< initial angular momentum of set of the particles
-            !logical, save                     :: first_run_lf = .true.
+            class(particle_set), intent(in) :: pset                 !< particle list
+            integer,             intent(in) :: n
+            real,                intent(in) :: total_energy
+            real, dimension(ndims)          :: acc2
+            real                            :: ang_momentum         !< angular momentum of set of the particles
+            integer                         :: i, lun_out
+            !real                            :: d_energy             !< error of energy of set of the particles in succeeding timesteps
+            !real                            :: d_ang_momentum       !< error of angular momentum in succeeding timensteps
+            !real, save                      :: initial_energy       !< total initial energy of set of the particles
+            !real, save                      :: init_ang_momentum    !< initial angular momentum of set of the particles
+            !logical, save                   :: first_run_lf = .true.
 
             !write(*,*) "Energia----------: ", total_energy
 
@@ -471,16 +472,14 @@ contains
             write(msg,'(a,3f8.5)') '[particle_integrators:leapfrog2_diagnostics] pset%p(1)%vel = ', pset%p(1)%vel
             call printinfo(msg)
 
-            allocate(acc2(n, ndims))
             open(newunit=lun_out, file='leapfrog_out.log', status='unknown',  position='append')
 
             do i = 1, n
-               call get_acc_model(pset, n, 0.0, acc2)
-               write(lun_out, '(I3,1X,19(E13.6,1X))') i, t_glob+dt_tot, dt_tot, pset%p(i)%mass, pset%p(i)%pos, pset%p(i)%vel, pset%p(i)%acc, acc2(i,:)!, pset%p(i)%energy, total_energy, initial_energy, d_energy, ang_momentum, init_ang_momentum, d_ang_momentum
+               call get_acc_model(pset, i, 0.0, acc2)
+               write(lun_out, '(I3,1X,19(E13.6,1X))') i, t_glob+dt_tot, dt_tot, pset%p(i)%mass, pset%p(i)%pos, pset%p(i)%vel, pset%p(i)%acc, acc2(:)!, pset%p(i)%energy, total_energy, initial_energy, d_energy, ang_momentum, init_ang_momentum, d_ang_momentum
             enddo
 
             close(lun_out)
-            deallocate(acc2)
 
          end subroutine leapfrog2_diagnostics
 
@@ -522,24 +521,21 @@ contains
 
          end subroutine save_particles
 
-         subroutine get_acc_model(pset, n, eps, acc2)
+         subroutine get_acc_model(pset, p, eps, acc2)
 
             use constants, only: ndims, xdim, zdim
             use grid_cont, only: grid_container
 
             implicit none
 
-            class(particle_set),      intent(in)  :: pset  !< particle list
-            integer,                  intent(in)  :: n
-            real,                     intent(in)  :: eps
-            real, dimension(n,ndims), intent(out) :: acc2
-            integer                               :: p
-            integer(kind=4)                       :: dir
+            class(particle_set),    intent(in)  :: pset  !< particle list
+            integer,                intent(in)  :: p
+            real,                   intent(in)  :: eps
+            real, dimension(ndims), intent(out) :: acc2
+            integer(kind=4)                     :: dir
 
-            do p = 1, n
-               do dir = xdim, zdim
-               acc2(p, dir) = -der_xyz(pset%p(p)%pos, 1.0e-8, eps, dir)
-               enddo
+            do dir = xdim, zdim
+               acc2(dir) = -der_xyz(pset%p(p)%pos, 1.0e-8, eps, dir)
             enddo
 
          end subroutine get_acc_model
@@ -630,8 +626,7 @@ contains
             r = sqrt(r2)
             r3 = r * r2
 
-            ! add the {i,j} contribution to the total potential energy for the
-            ! system
+            ! add the {i,j} contribution to the total potential energy for the system
 
             epot = epot - mass(i) * mass(j)/r
 
