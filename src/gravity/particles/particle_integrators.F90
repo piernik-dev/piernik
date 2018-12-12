@@ -324,7 +324,7 @@ contains
    subroutine leapfrog2ord(pset, t_glob, dt_tot, forward)
 
       use cg_list,        only: cg_list_element
-      use constants,      only: ndims, half, two
+      use constants,      only: ndims, two
       use dataio_pub,     only: die, msg, printinfo
       use domain,         only: is_refined, is_multicg
       !use func,           only: operator(.equals.)
@@ -349,13 +349,12 @@ contains
       integer                            :: i
       integer                            :: n                    !< number of particles
       !logical                            :: external_pot         !< if .true. gravitational potential will be deleted and replaced by external potential of point mass
-      logical, save                      :: first_run_lf = .true.
+      !logical, save                      :: first_run_lf = .true.
       !integer, save                      :: counter
       integer                            :: lun_out
       real, dimension(:,:), allocatable  :: acc2
       real                               :: t_glob_p, dt_tot_p
 
-      if (forward) return                    !this condition prevent to calling particle solver twice (with halfsteps)
       dt_tot_p = two * dt_tot
       t_glob_p = t_glob - dt_tot
 
@@ -433,17 +432,12 @@ contains
       write(msg,'(a,2f8.5)') '[particle_integrators:leapfrog2ord] [p_i]: dt_tot_p, dt_old = ', dt_tot_p, dt_old
       call printinfo(msg)
 
-      if(first_run_lf) then
-         first_run_lf = .false.
+      if (forward) then
+         call kick( pset,     dt_tot, n) !1. kick  (dt_hydro)
       else
-         !3.kick(dt_old)
-         call kick(pset, half*dt_old, n)
+         call drift(pset, two*dt_tot, n) !2. drift (2*dt_hydro)
+         call kick( pset,     dt_tot, n) !3. kick  (dt_hydro)
       endif
-      !1. Kick (half*dt_tot_p)
-      call kick(pset, half*dt_tot_p, n)
-
-      !2.drift(lf_dt)
-      call drift(pset, dt_tot_p, n)
       !stop
 
       !call save_particles(n, lf_t, mass, pset, counter)
