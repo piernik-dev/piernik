@@ -79,11 +79,7 @@ contains
       real,                intent(in)    :: t_glob, dt_tot
       logical, optional,   intent(in)    :: forward
 
-#ifdef NBODY
-      real, parameter :: dt_param = 0.0001      ! control parameter to determine time step size
-#else /* !NBODY */
       real, parameter :: dt_param = 0.03        ! control parameter to determine time step size
-#endif /* !NBODY */
       real, parameter :: dt_dia = 1             ! time interval between diagnostics output
       real, parameter :: dt_out = 0.01          ! time interval between output of snapshots
 
@@ -124,12 +120,7 @@ contains
 
       do
          do while (t < t_dia .and. t < t_out .and. t < t_end)
-#ifdef NBODY
-            dt = dt_param              !constant timestep
-#else /* !NBODY */
-            !variable timestep
             dt = dt_param * coll_time
-#endif /* !NBODY */
             call evolve_step(mass, pos, vel, acc, jerk, n, t, dt, epot, coll_time)
             nsteps = nsteps + 1
          enddo
@@ -145,13 +136,7 @@ contains
             t_out = t_out + dt_out
          endif
          if (t >= t_end) exit
-#ifdef NBODY
-         print *, "Hermit dt=", dt
-#endif /* NBODY */
       enddo
-#ifdef NBODY
-      print *, "Hermit nsteps=", nsteps
-#endif /* NBODY */
 
       do ndim = xdim, zdim
          pset%p(:)%pos(ndim) = pos(:, ndim)
@@ -195,6 +180,145 @@ contains
          end subroutine write_diagnostics
 
    end subroutine hermit_4ord
+
+   subroutine evolve_step(mass, pos, vel, acc, jerk, n, t, dt, epot, coll_time)
+
+      use constants, only: ndims
+
+      implicit none
+
+      integer,                  intent(in)    :: n
+      real, dimension(n),       intent(in)    :: mass
+      real, dimension(n,ndims), intent(out)   :: pos, vel
+      real, dimension(n,ndims), intent(inout) :: acc, jerk
+      real,                     intent(in)    :: dt
+      real,                     intent(inout) :: t, epot, coll_time
+
+      real, dimension(n,ndims)                :: old_pos, old_vel, old_acc, old_jerk
+
+      old_pos = pos
+      old_vel = vel
+      old_acc = acc
+      old_jerk = jerk
+
+      call predict_step(               pos, vel, acc, jerk, n, dt)
+      call get_acc_jerk_pot_coll(mass, pos, vel, acc, jerk, n, epot, coll_time)
+      call correct_step(               pos, vel, acc, jerk, old_pos, old_vel, old_acc, old_jerk, n, dt);
+
+      t = t + dt
+
+      contains
+
+         subroutine predict_step(pos, vel, acc, jerk, n, dt)
+
+            use constants, only: half, onesth
+
+            implicit none
+
+            integer,                   intent(in)  :: n
+            real, dimension(n, ndims), intent(out) :: pos, vel
+            real, dimension(n, ndims), intent(in)  :: acc, jerk
+            real,                      intent(in)  :: dt
+
+            real                                   :: hdt, hdt2
+
+            hdt  = half   * dt**2
+            hdt2 = onesth * dt**3
+
+            pos(:,:) = pos(:,:) + vel(:,:)*dt + acc(:,:)*hdt + jerk(:,:)*hdt2
+            vel(:,:) = vel(:,:) + acc(:,:)*dt + jerk(:,:)*hdt
+
+         end subroutine predict_step
+
+         subroutine correct_step(pos, vel, acc, jerk, old_pos, old_vel, old_acc, old_jerk, n, dt)
+
+            use constants, only: half, onet
+
+            implicit none
+
+            integer,                   intent(in)  :: n
+            real, dimension(n, ndims), intent(out) :: pos, vel
+            real, dimension(n, ndims), intent(in)  :: acc, jerk, old_pos, old_vel, old_acc, old_jerk
+            real,                      intent(in)  :: dt
+
+            real                                   :: hdt, hdt2
+
+            hdt  = half * dt
+            hdt2 = onet * hdt**2
+
+            vel(:,:) = old_vel(:,:) + (old_acc(:,:) + acc(:,:))*hdt + (old_jerk(:,:) - jerk(:,:)) * hdt2
+            pos(:,:) = old_pos(:,:) + (old_vel(:,:) + vel(:,:))*hdt + (old_acc(:,:)  - acc(:,:) ) * hdt2
+         end subroutine correct_step
+
+   end subroutine evolve_step
+
+   subroutine get_acc_jerk_pot_coll(mass, pos, vel, acc, jerk, n, epot, coll_time)
+
+      use constants, only: ndims
+
+      implicit none
+
+      integer,                  intent(in)  :: n
+      real, dimension(n),       intent(in)  :: mass
+      real, dimension(n,ndims), intent(in)  :: pos
+      real, dimension(n,ndims), intent(in)  :: vel
+      real, dimension(n,ndims), intent(out) :: acc
+      real, dimension(n,ndims), intent(out) :: jerk
+      real,                     intent(out) :: epot
+      real,                     intent(out) :: coll_time
+
+      real, dimension(ndims)                :: rji, vji, da, dj
+      integer                               :: i, j
+      real                                  :: coll_time_q  ! collision time to 4th power
+
+      real :: r   ! | rji |
+      real :: r2  ! | rji |^2
+      real :: r3  ! | rji |^3
+      real :: v2  ! | vji |^2
+      real :: rv_r2 ! ( rij . vij ) / | rji |^2
+      real :: da2
+
+      acc(:,:)  = 0.0
+      jerk(:,:) = 0.0
+      epot      = 0.0
+
+      coll_time_q = huge(1.0)  ! collision time to 4th power
+
+      do i = 1, n
+         do j = i+1, n
+            rji(:) = pos(j, :) - pos(i, :)
+            vji(:) = vel(j, :) - vel(i, :)
+
+            r2 = sum(rji**2)
+            v2 = sum(vji**2)
+            rv_r2 = sum(rji*vji) / r2
+
+            r = sqrt(r2)
+            r3 = r * r2
+
+            ! add the {i,j} contribution to the total potential energy for the
+            ! system
+            epot = epot - mass(i) * mass(j) / r
+
+            da(:) = rji(:) / r3
+            dj(:) = (vji(:) - 3.0 * rv_r2 * rji(:)) / r3
+
+            acc(i,:) = acc(i,:) + mass(j) * da(:)
+            acc(j,:) = acc(j,:) - mass(i) * da(:)
+            jerk(i,:) = jerk(i,:) + mass(j) * dj(:)
+            jerk(j,:) = jerk(j,:) - mass(i) * dj(:)
+
+            if (v2 > 0.0) &
+               coll_time_q = min(coll_time_q, r2**2 / v2**2) ! first collision time estimate, based on unaccelerated linear motion
+
+            da2 = sum(da**2) * (mass(i) + mass(j))**2  ! square of the pair-wise acceleration between particles i and j
+            coll_time_q = min(coll_time_q, r2 / da2)   ! second collision time estimate, based on free fall
+         enddo
+      enddo
+      coll_time = sqrt(sqrt(coll_time_q))
+      return
+
+   end subroutine get_acc_jerk_pot_coll
 
 #ifdef NBODY
    subroutine leapfrog2ord(pset, t_glob, dt_tot, forward)
@@ -554,148 +678,7 @@ contains
       enddo
 
    end subroutine get_acc_pot
-#endif /* NBODY */
 
-   subroutine evolve_step(mass, pos, vel, acc, jerk, n, t, dt, epot, coll_time)
-
-      use constants, only: ndims
-
-      implicit none
-
-      integer,                  intent(in)    :: n
-      real, dimension(n),       intent(in)    :: mass
-      real, dimension(n,ndims), intent(out)   :: pos, vel
-      real, dimension(n,ndims), intent(inout) :: acc, jerk
-      real,                     intent(in)    :: dt
-      real,                     intent(inout) :: t, epot, coll_time
-
-      real, dimension(n,ndims)                :: old_pos, old_vel, old_acc, old_jerk
-
-      old_pos = pos
-      old_vel = vel
-      old_acc = acc
-      old_jerk = jerk
-
-      call predict_step(               pos, vel, acc, jerk, n, dt)
-      call get_acc_jerk_pot_coll(mass, pos, vel, acc, jerk, n, epot, coll_time)
-      call correct_step(               pos, vel, acc, jerk, old_pos, old_vel, old_acc, old_jerk, n, dt);
-
-      t = t + dt
-
-      contains
-
-         subroutine predict_step(pos, vel, acc, jerk, n, dt)
-
-            use constants, only: half, onesth
-
-            implicit none
-
-            integer,                   intent(in)  :: n
-            real, dimension(n, ndims), intent(out) :: pos, vel
-            real, dimension(n, ndims), intent(in)  :: acc, jerk
-            real,                      intent(in)  :: dt
-
-            real                                   :: hdt, hdt2
-
-            hdt  = half   * dt**2
-            hdt2 = onesth * dt**3
-
-            pos(:,:) = pos(:,:) + vel(:,:)*dt + acc(:,:)*hdt + jerk(:,:)*hdt2
-            vel(:,:) = vel(:,:) + acc(:,:)*dt + jerk(:,:)*hdt
-
-         end subroutine predict_step
-
-         subroutine correct_step(pos, vel, acc, jerk, old_pos, old_vel, old_acc, old_jerk, n, dt)
-
-            use constants, only: half, onet
-
-            implicit none
-
-            integer,                   intent(in)  :: n
-            real, dimension(n, ndims), intent(out) :: pos, vel
-            real, dimension(n, ndims), intent(in)  :: acc, jerk, old_pos, old_vel, old_acc, old_jerk
-            real,                      intent(in)  :: dt
-
-            real                                   :: hdt, hdt2
-
-            hdt  = half * dt
-            hdt2 = onet * hdt**2
-
-            vel(:,:) = old_vel(:,:) + (old_acc(:,:) + acc(:,:))*hdt + (old_jerk(:,:) - jerk(:,:)) * hdt2
-            pos(:,:) = old_pos(:,:) + (old_vel(:,:) + vel(:,:))*hdt + (old_acc(:,:)  - acc(:,:) ) * hdt2
-         end subroutine correct_step
-
-   end subroutine evolve_step
-
-   subroutine get_acc_jerk_pot_coll(mass, pos, vel, acc, jerk, n, epot, coll_time)
-
-      use constants, only: ndims
-
-      implicit none
-
-      integer,                  intent(in)  :: n
-      real, dimension(n),       intent(in)  :: mass
-      real, dimension(n,ndims), intent(in)  :: pos
-      real, dimension(n,ndims), intent(in)  :: vel
-      real, dimension(n,ndims), intent(out) :: acc
-      real, dimension(n,ndims), intent(out) :: jerk
-      real,                     intent(out) :: epot
-      real,                     intent(out) :: coll_time
-
-      real, dimension(ndims)                :: rji, vji, da, dj
-      integer                               :: i, j
-      real                                  :: coll_time_q  ! collision time to 4th power
-
-      real :: r   ! | rji |
-      real :: r2  ! | rji |^2
-      real :: r3  ! | rji |^3
-      real :: v2  ! | vji |^2
-      real :: rv_r2 ! ( rij . vij ) / | rji |^2
-      real :: da2
-
-      acc(:,:)  = 0.0
-      jerk(:,:) = 0.0
-      epot      = 0.0
-
-      coll_time_q = huge(1.0)  ! collision time to 4th power
-
-      do i = 1, n
-         do j = i+1, n
-            rji(:) = pos(j, :) - pos(i, :)
-            vji(:) = vel(j, :) - vel(i, :)
-
-            r2 = sum(rji**2)
-            v2 = sum(vji**2)
-            rv_r2 = sum(rji*vji) / r2
-
-            r = sqrt(r2)
-            r3 = r * r2
-
-            ! add the {i,j} contribution to the total potential energy for the
-            ! system
-            epot = epot - mass(i) * mass(j) / r
-
-            da(:) = rji(:) / r3
-            dj(:) = (vji(:) - 3.0 * rv_r2 * rji(:)) / r3
-
-            acc(i,:) = acc(i,:) + mass(j) * da(:)
-            acc(j,:) = acc(j,:) - mass(i) * da(:)
-            jerk(i,:) = jerk(i,:) + mass(j) * dj(:)
-            jerk(j,:) = jerk(j,:) - mass(i) * dj(:)
-
-            if (v2 > 0.0) &
-               coll_time_q = min(coll_time_q, r2**2 / v2**2) ! first collision time estimate, based on unaccelerated linear motion
-
-            da2 = sum(da**2) * (mass(i) + mass(j))**2  ! square of the pair-wise acceleration between particles i and j
-            coll_time_q = min(coll_time_q, r2 / da2)   ! second collision time estimate, based on free fall
-         enddo
-      enddo
-      coll_time = sqrt(sqrt(coll_time_q))
-      return
-
-   end subroutine get_acc_jerk_pot_coll
-
-#ifdef NBODY
    subroutine timestep_nbody(dt_nbody, pset)
 
       use constants,      only: ndims, zero
