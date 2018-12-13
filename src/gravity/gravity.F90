@@ -166,6 +166,9 @@ contains
 #ifdef SELF_GRAV
       use constants,      only: sgp_n, sgpm_n
 #endif /* SELF_GRAV */
+#ifdef NBODY
+      use constants,      only: nbgp_n
+#endif /* NBODY */
 #ifdef CORIOLIS
       use coriolis,       only: set_omega
 #endif /* CORIOLIS */
@@ -298,6 +301,9 @@ contains
       call all_cg%reg_var(sgp_n)
       call all_cg%reg_var(sgpm_n)
 #endif /* SELF_GRAV */
+#ifdef NBODY
+      call all_cg%reg_var(nbgp_n)
+#endif /* NBODY */
 
       if (.not.user_grav) then
          grav_pot_3d => default_grav_pot_3d
@@ -345,6 +351,9 @@ contains
 #ifdef SELF_GRAV
       use constants,          only: sgp_n, sgpm_n
 #endif /* SELF_GRAV */
+#ifdef NBODY
+      use constants,      only: nbgp_n
+#endif /* NBODY */
 
       implicit none
 
@@ -361,6 +370,9 @@ contains
          cg%sgp   => cg%q(qna%ind(  sgp_n))%arr
          cg%sgpm  => cg%q(qna%ind( sgpm_n))%arr
 #endif /* SELF_GRAV */
+#ifdef NBODY
+         cg%nbgp  => cg%q(qna%ind( nbgp_n))%arr
+#endif /* NBODY */
 
       endif
 

@@ -699,7 +699,7 @@ contains
 
       subroutine pot_from_part(n_part, pset, cg, eps2)
 
-         use constants,      only: xdim, ydim, zdim, CENTER
+         use constants,      only: CENTER, LO, HI, xdim, ydim, zdim, zero
          use grid_cont,      only: grid_container
          use particle_types, only: particle_set
 
@@ -711,14 +711,14 @@ contains
          real,                          intent(in)    :: eps2
          integer                                      :: i, j, k, p
 
-         cg%gpot = 0.0
+         cg%nbgp = zero
 
          open(unit=999, file='pset.dat', action='write', position='append')
             do p = 1, n_part
-               do i = lbound(cg%gpot, dim=1), ubound(cg%gpot, dim=1)
-                  do j = lbound(cg%gpot, dim=2), ubound(cg%gpot, dim=2)
-                     do k = lbound(cg%gpot, dim=3), ubound(cg%gpot, dim=3)
-                        cg%gpot(i,j,k) = cg%gpot(i,j,k) + phi_pm_part([cg%coord(CENTER,xdim)%r(i) - pset%p(p)%pos(xdim), &
+               do i = cg%lhn(xdim, LO), cg%lhn(xdim, HI)
+                  do j = cg%lhn(ydim, LO), cg%lhn(ydim, HI)
+                     do k = cg%lhn(zdim, LO), cg%lhn(zdim, HI)
+                        cg%nbgp(i,j,k) = cg%nbgp(i,j,k) + phi_pm_part([cg%coord(CENTER,xdim)%r(i) - pset%p(p)%pos(xdim), &
                                                                        cg%coord(CENTER,ydim)%r(j) - pset%p(p)%pos(ydim), &
                                                                        cg%coord(CENTER,zdim)%r(k) - pset%p(p)%pos(zdim)], eps2, pset%p(p)%mass)
                      enddo
@@ -970,7 +970,7 @@ contains
 
       subroutine save_pot_pset(cg, pset)
 
-         use constants,      only: xdim, ydim, zdim, CENTER
+         use constants,      only: CENTER, LO, HI, xdim, ydim, zdim
          use dataio_pub,     only: printinfo, printio
          use grid_cont,      only: grid_container
          use particle_types, only: particle_set
@@ -997,11 +997,11 @@ contains
             call printio('[particle_integrators:save_pot_pset] Writing potential to files: potencjal1.dat, potencjal2.dat')
             open(unit=88, file='potencjal1.dat')
             open(unit=89, file='potencjal2.dat')
-               do i = lbound(cg%gpot,dim=1), ubound(cg%gpot,dim=1)
-                  do j = lbound(cg%gpot,dim=2), ubound(cg%gpot,dim=2)
-                     !do k=lbound(cg%gpot,dim=3),ubound(cg%gpot,dim=3)
-                     write(88,*) i, j, numer1, cg%coord(CENTER, xdim)%r(i), cg%coord(CENTER, ydim)%r(j), cg%coord(CENTER, zdim)%r(numer1), cg%gpot(i,j,numer1)
-                     write(89,*) i, j, numer2, cg%coord(CENTER, xdim)%r(i), cg%coord(CENTER, ydim)%r(j), cg%coord(CENTER, zdim)%r(numer2), cg%gpot(i,j,numer2)
+               do i = cg%lhn(xdim, LO), cg%lhn(xdim, HI)
+                  do j = cg%lhn(ydim, LO), cg%lhn(ydim, HI)
+                     !do k = cg%lhn(zdim, LO), cg%lhn(zdim, HI)
+                     write(88,*) i, j, numer1, cg%coord(CENTER, xdim)%r(i), cg%coord(CENTER, ydim)%r(j), cg%coord(CENTER, zdim)%r(numer1), cg%nbgp(i,j,numer1)
+                     write(89,*) i, j, numer2, cg%coord(CENTER, xdim)%r(i), cg%coord(CENTER, ydim)%r(j), cg%coord(CENTER, zdim)%r(numer2), cg%nbgp(i,j,numer2)
                      !enddo
                   enddo
                   write(88,*)
