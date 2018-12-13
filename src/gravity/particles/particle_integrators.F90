@@ -660,19 +660,15 @@ contains
       type(cg_list_element), pointer       :: cgl
 
       integer                              :: n_part
-
       real,    dimension(:,:), allocatable :: dist
       integer, dimension(:,:), allocatable :: cells
       real                                 :: dt_nbody
-      integer, save                        :: kroki = 0
 
 #ifdef VERBOSE
       call printinfo('[particle_integrators:timestep_nbody] Commencing timestep_nbody')
 #endif /* VERBOSE */
 
       n_part = size(pset%p, dim=1)
-      !write(msg,'(a,i6)') '[particle_integrators:timestep_nbody] Number of particles: ', n_part
-      !call printinfo(msg)
       allocate(cells(n_part, ndims), dist(n_part, ndims))
 
       if (is_refined) call die("[particle_integrators:timestep_nbody] AMR not implemented for particles yet")
@@ -680,12 +676,9 @@ contains
       cgl => leaves%first
       cg  => cgl%cg
 
-      !call pot_from_part(cg, zero, n_part, pset)
-      call pot2grid(cg, zero)
+      call pot_from_part(n_part, pset, cg, zero)
 
       call save_pot_pset(cg, pset)
-      kroki = kroki + 1
-      !write(*,*) "++++++++KROKI+++++++: ", kroki
 
       call find_cells(n_part, cg, cells, dist)
 
@@ -704,30 +697,7 @@ contains
 
    contains
 
-      subroutine pot2grid(cg, eps2)
-
-         use constants, only: xdim, ydim, zdim, CENTER
-         use grid_cont, only: grid_container
-
-         implicit none
-
-         type(grid_container), pointer, intent(inout) :: cg
-         real,                          intent(in)    :: eps2
-         integer                                      :: i, j, k
-
-         do i = lbound(cg%gpot, dim=1), ubound(cg%gpot, dim=1)
-            do j = lbound(cg%gpot, dim=2), ubound(cg%gpot, dim=2)
-               do k = lbound(cg%gpot, dim=3), ubound(cg%gpot, dim=3)
-                  cg%gpot(i,j,k) = phi_pm_part([cg%coord(CENTER,xdim)%r(i), &
-                                                cg%coord(CENTER,ydim)%r(j), &
-                                                cg%coord(CENTER,zdim)%r(k)], eps2, 1.0)
-               enddo
-            enddo
-         enddo
-
-      end subroutine pot2grid
-
-      subroutine pot_from_part(cg, eps2, n_part, pset)
+      subroutine pot_from_part(n_part, pset, cg, eps2)
 
          use constants,      only: xdim, ydim, zdim, CENTER
          use grid_cont,      only: grid_container
@@ -735,15 +705,15 @@ contains
 
          implicit none
 
+         integer,                       intent(in)    :: n_part
          class(particle_set)                          :: pset  !< particle list
          type(grid_container), pointer, intent(inout) :: cg
          real,                          intent(in)    :: eps2
-         integer,                       intent(in)    :: n_part
          integer                                      :: i, j, k, p
 
          cg%gpot = 0.0
 
-         open(unit=999, file='pset.dat')
+         open(unit=999, file='pset.dat', action='write', position='append')
             do p = 1, n_part
                do i = lbound(cg%gpot, dim=1), ubound(cg%gpot, dim=1)
                   do j = lbound(cg%gpot, dim=2), ubound(cg%gpot, dim=2)
