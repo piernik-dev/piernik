@@ -660,7 +660,6 @@ contains
       type(cg_list_element), pointer       :: cgl
 
       integer                              :: n_part
-      real                                 :: max_acc
 
       real,    dimension(:,:), allocatable :: dist
       integer, dimension(:,:), allocatable :: cells
@@ -698,9 +697,7 @@ contains
          call get_acc_cic(n_part, cg, cells, pset)
       endif
 
-      call get_acc_max(n_part, pset, max_acc)
-
-      call get_var_timestep_c(dt_nbody, max_acc, lf_c, pset, cg)
+      call get_var_timestep_c(n_part, cg, pset, lf_c, dt_nbody)
 #ifdef VERBOSE
       call printinfo('[particle_integrators:timestep_nbody] Finish timestep_nbody')
 #endif /* VERBOSE */
@@ -868,31 +865,6 @@ contains
 
       end subroutine get_acc_int
 
-      subroutine get_acc_max(n_part, pset, max_acc)
-
-         use constants,      only: xdim, ndims
-         use particle_types, only: particle_set
-
-         implicit none
-
-         integer,             intent(in)    :: n_part
-         class(particle_set), intent(inout) :: pset
-         real,                intent(out)   :: max_acc
-         integer                            :: i, cdim
-         real, dimension(n_part)            :: acc
-
-         acc = 0.0
-
-         do i = 1, n_part
-            do cdim = xdim, ndims
-               acc(i) = acc(i) + pset%p(i)%acc(cdim)**2
-            enddo
-         enddo
-
-         max_acc = sqrt(maxval(acc))
-
-      end subroutine get_acc_max
-
       subroutine get_acc_cic(n_part, cg, cells, pset)
 
          use constants,      only: ndims, CENTER, xdim, ydim, zdim, half, zero
@@ -971,53 +943,57 @@ contains
 
       end subroutine get_acc_cic
 
-      subroutine get_var_timestep_c(dt_nbody, max_acc, lf_c, pset, cg)
+      subroutine get_var_timestep_c(n_part, cg, pset, lf_c, dt_nbody)
 
-         use constants,      only: ndims, xdim, zdim, big, one
+         use constants,      only: ndims, xdim, zdim, big, one, two, zero
          use func,           only: operator(.notequals.)
          use grid_cont,      only: grid_container
          use particle_types, only: particle_set
 
          implicit none
 
+         integer,                       intent(in)  :: n_part
          type(grid_container), pointer, intent(in)  :: cg
          class(particle_set),           intent(in)  :: pset  !< particle list
-         real,                          intent(in)  :: max_acc, lf_c
+         real,                          intent(in)  :: lf_c
          real,                          intent(out) :: dt_nbody
-         real                                       :: eta, eps, factor
-         real, dimension(ndims)                     :: maxv, minv, max_v
-         integer                                    :: cdim
+         real                                       :: acc2, max_acc, eta, eps, factor
+         real, dimension(ndims)                     :: max_v
+         integer(kind=4)                            :: cdim
+         integer                                    :: i
 
-         eta = 1.0
-         eps = 1.0e-4
-         factor = big
+         eta      = one
+         eps      = 1.0e-4
+         factor   = one
+         dt_nbody = big
+         max_acc  = zero
 
-         if(max_acc.notequals.0.0) then
-            dt_nbody = sqrt(2.0*eta*eps/max_acc)
+         do i = 1, n_part
+            acc2 = zero
+            do cdim = xdim, ndims
+               acc2 = acc2 + pset%p(i)%acc(cdim)**2
+            enddo
+            max_acc = max(acc2, max_acc)
+         enddo
+         max_acc = sqrt(max_acc)
+
+         if(max_acc .notequals. zero) then
+            dt_nbody = sqrt(two*eta*eps/max_acc)
 
             do cdim = xdim, zdim
-               maxv(cdim)  = abs(maxval(pset%p(:)%vel(cdim)))
-               minv(cdim)  = abs(minval(pset%p(:)%vel(cdim)))
-               max_v(cdim) = max(maxv(cdim), minv(cdim))
+               max_v(cdim)  = maxval(abs(pset%p(:)%vel(cdim)))
             enddo
 
-
             if (any(max_v*dt_nbody > cg%dl)) then
-
-               if (any(max_v.notequals.0.0)) then
-                  do cdim = xdim, zdim
-                     if ((max_v(cdim).notequals.0.0)) then
-                        factor = min(cg%dl(cdim)/max_v(cdim), factor)
-                     endif
-                  enddo
-               endif
-            else
-               factor = one
+               factor = big
+               do cdim = xdim, zdim
+                  if ((max_v(cdim) .notequals. zero)) then
+                     factor = min(cg%dl(cdim)/max_v(cdim), factor)
+                  endif
+               enddo
             endif
 
             dt_nbody  = lf_c * factor * dt_nbody
-         else
-            dt_nbody = zero
          endif
 
       end subroutine get_var_timestep_c
