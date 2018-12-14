@@ -591,10 +591,12 @@ contains
 
    subroutine timestep_nbody(dt_nbody, pset)
 
+      use constants,        only: ndims, xdim, zdim, big, one, two, zero
       use cg_leaves,        only: leaves
       use cg_list,          only: cg_list_element
       use dataio_pub,       only: die
       use domain,           only: is_refined, is_multicg
+      use func,             only: operator(.notequals.)
       use grid_cont,        only: grid_container
       use particle_gravity, only: update_particle_gravpot_and_acc
       use particle_types,   only: particle_set
@@ -609,7 +611,10 @@ contains
       type(grid_container),  pointer       :: cg
       type(cg_list_element), pointer       :: cgl
 
-      integer                              :: n_part
+      integer                              :: n_part, i
+      integer(kind=4)                      :: cdim
+      real                                 :: acc2, max_acc, eta, eps, factor
+      real, dimension(ndims)               :: max_v
 
 #ifdef VERBOSE
       call printinfo('[particle_integrators:timestep_nbody] Commencing timestep_nbody')
@@ -623,67 +628,43 @@ contains
 
       call update_particle_gravpot_and_acc(pset)
 
-      call get_var_timestep_c(n_part, cg, pset, lf_c, dt_nbody)
+      eta      = one
+      eps      = 1.0e-4
+      factor   = one
+      dt_nbody = big
+      max_acc  = zero
+
+      do i = 1, n_part
+         acc2 = zero
+         do cdim = xdim, ndims
+            acc2 = acc2 + pset%p(i)%acc(cdim)**2
+         enddo
+         max_acc = max(acc2, max_acc)
+      enddo
+      max_acc = sqrt(max_acc)
+
+      if(max_acc .notequals. zero) then
+         dt_nbody = sqrt(two*eta*eps/max_acc)
+
+         do cdim = xdim, zdim
+            max_v(cdim)  = maxval(abs(pset%p(:)%vel(cdim)))
+         enddo
+
+         if (any(max_v*dt_nbody > cg%dl)) then
+            factor = big
+            do cdim = xdim, zdim
+               if ((max_v(cdim) .notequals. zero)) then
+                  factor = min(cg%dl(cdim)/max_v(cdim), factor)
+               endif
+            enddo
+         endif
+
+         dt_nbody  = lf_c * factor * dt_nbody
+      endif
+
 #ifdef VERBOSE
       call printinfo('[particle_integrators:timestep_nbody] Finish timestep_nbody')
 #endif /* VERBOSE */
-
-   contains
-
-      subroutine get_var_timestep_c(n_part, cg, pset, lf_c, dt_nbody)
-
-         use constants,      only: ndims, xdim, zdim, big, one, two, zero
-         use func,           only: operator(.notequals.)
-         use grid_cont,      only: grid_container
-         use particle_types, only: particle_set
-
-         implicit none
-
-         integer,                       intent(in)  :: n_part
-         type(grid_container), pointer, intent(in)  :: cg
-         class(particle_set),           intent(in)  :: pset  !< particle list
-         real,                          intent(in)  :: lf_c
-         real,                          intent(out) :: dt_nbody
-         real                                       :: acc2, max_acc, eta, eps, factor
-         real, dimension(ndims)                     :: max_v
-         integer(kind=4)                            :: cdim
-         integer                                    :: i
-
-         eta      = one
-         eps      = 1.0e-4
-         factor   = one
-         dt_nbody = big
-         max_acc  = zero
-
-         do i = 1, n_part
-            acc2 = zero
-            do cdim = xdim, ndims
-               acc2 = acc2 + pset%p(i)%acc(cdim)**2
-            enddo
-            max_acc = max(acc2, max_acc)
-         enddo
-         max_acc = sqrt(max_acc)
-
-         if(max_acc .notequals. zero) then
-            dt_nbody = sqrt(two*eta*eps/max_acc)
-
-            do cdim = xdim, zdim
-               max_v(cdim)  = maxval(abs(pset%p(:)%vel(cdim)))
-            enddo
-
-            if (any(max_v*dt_nbody > cg%dl)) then
-               factor = big
-               do cdim = xdim, zdim
-                  if ((max_v(cdim) .notequals. zero)) then
-                     factor = min(cg%dl(cdim)/max_v(cdim), factor)
-                  endif
-               enddo
-            endif
-
-            dt_nbody  = lf_c * factor * dt_nbody
-         endif
-
-      end subroutine get_var_timestep_c
 
    end subroutine timestep_nbody
 #endif /* NBODY */
