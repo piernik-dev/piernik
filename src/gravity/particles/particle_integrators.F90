@@ -322,8 +322,9 @@ contains
 #ifdef NBODY
    subroutine leapfrog2ord(pset, t_glob, dt_tot, forward)
 
-      use constants,      only: two
-      use particle_types, only: particle_set
+      use constants,        only: two
+      use particle_gravity, only: update_particle_gravpot_and_acc
+      use particle_types,   only: particle_set
 
       implicit none
 
@@ -338,17 +339,21 @@ contains
 
       n = size(pset%p, dim=1)
 
-      call update_particle_kinetic_energy(pset, n, total_energy)
-      call leapfrog2_diagnostics(pset, n, total_energy)
-
       !counter = 1
       !call save_particles(pset, n, lf_t, counter)
 
       if (forward) then
-         call kick( pset, n,     dt_tot) !1. kick  (dt_hydro)
+         call kick                           (pset, n,     dt_tot) !1. kick  (dt_hydro)
       else
-         call drift(pset, n, two*dt_tot) !2. drift (2*dt_hydro)
-         call kick( pset, n,     dt_tot) !3. kick  (dt_hydro)
+         call drift                          (pset, n, two*dt_tot) !2. drift (2*dt_hydro)
+
+         call update_particle_gravpot_and_acc(pset)
+
+         call kick                           (pset, n,     dt_tot) !3. kick  (dt_hydro)
+
+         call update_particle_kinetic_energy (pset, n, total_energy)
+
+         call leapfrog2_diagnostics          (pset, n, total_energy)
       endif
 
       !call save_particles(pset, n, lf_t, counter)
@@ -591,17 +596,16 @@ contains
 
    subroutine timestep_nbody(dt_nbody, pset)
 
-      use constants,        only: ndims, xdim, zdim, big, one, two, zero
-      use cg_leaves,        only: leaves
-      use cg_list,          only: cg_list_element
-      use dataio_pub,       only: die
-      use domain,           only: is_refined, is_multicg
-      use func,             only: operator(.notequals.)
-      use grid_cont,        only: grid_container
-      use particle_gravity, only: update_particle_gravpot_and_acc
-      use particle_types,   only: particle_set
+      use constants,      only: ndims, xdim, zdim, big, one, two, zero
+      use cg_leaves,      only: leaves
+      use cg_list,        only: cg_list_element
+      use dataio_pub,     only: die
+      use domain,         only: is_refined, is_multicg
+      use func,           only: operator(.notequals.)
+      use grid_cont,      only: grid_container
+      use particle_types, only: particle_set
 #ifdef VERBOSE
-      use dataio_pub,       only: printinfo
+      use dataio_pub,     only: printinfo
 #endif /* VERBOSE */
 
       implicit none
@@ -625,8 +629,6 @@ contains
       if (is_multicg) call die("[particle_integrators:timestep_nbody] multi_cg not implemented for particles yet")
       cgl => leaves%first
       cg  => cgl%cg
-
-      call update_particle_gravpot_and_acc(pset)
 
       eta      = one
       eps      = 1.0e-4
