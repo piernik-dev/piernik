@@ -97,7 +97,7 @@ contains
       use mpisetup,         only: rbuff, ibuff, master, slave, piernik_MPI_Bcast
       use multigridvars,    only: ord_prolong
       use named_array_list, only: wna
-      use particle_pub,     only: pset
+      use particle_types,   only: pset
       use refinement,       only: user_ref2list
 
       implicit none

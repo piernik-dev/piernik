@@ -59,8 +59,8 @@ contains
    subroutine map_vars_hdf5(var, tab, ierrh, cg)
 
       use grid_cont,        only: grid_container
-      use particle_pub,     only: pset
       use named_array_list, only: qna
+      use particle_types,   only: pset
 
       implicit none
 

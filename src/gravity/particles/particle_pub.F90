@@ -35,7 +35,7 @@
 
 module particle_pub
 ! pulled by GRAV
-   use particle_types,  only: particle_set, particle_solver_T
+   use particle_types,  only: particle_set, particle_solver_T, pset
 
    implicit none
    private
@@ -46,7 +46,6 @@ module particle_pub
    logical                           :: ht_integrator
    real                              :: lf_c               !< timestep should depends of grid and velocities of particles (used to extrapolation of the gravitational potential)
 #endif /* NBODY */
-   type(particle_set)                :: pset               !< default particle list
    class(particle_solver_T), pointer :: psolver
 
 contains

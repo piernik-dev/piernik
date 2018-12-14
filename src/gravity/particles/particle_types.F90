@@ -35,7 +35,7 @@ module particle_types
    implicit none
 
    private
-   public :: particle_set, particle_solver_T
+   public :: particle_set, particle_solver_T, pset
 
    !>
    !! \brief simple particle: just mass and position
@@ -107,7 +107,7 @@ module particle_types
       end subroutine map_scheme
    end interface
 
-!   type(particle_set), target :: pset !< default particle list
+   type(particle_set), target :: pset !< default particle list
 
 contains
 

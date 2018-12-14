@@ -57,7 +57,7 @@ program piernik
    use timer,             only: timer_start, timer_stop
 #endif /* PERFMON */
 #if defined DEBUG && defined GRAV
-   use particle_pub,      only: pset
+   use particle_types,    only: pset
 #endif /* DEBUG && GRAV */
 
    implicit none

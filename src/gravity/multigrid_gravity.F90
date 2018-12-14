@@ -656,20 +656,20 @@ contains
 
    subroutine init_source(i_sg_dens)
 
-      use cg_list_global, only: all_cg
-      use constants,      only: GEO_RPZ, LO, HI, xdim, ydim, zdim, O_I4, zero
-      use dataio_pub,     only: die
-      use domain,         only: dom
-      use cg_list,        only: cg_list_element
-      use cg_leaves,      only: leaves
-      use grid_cont,      only: grid_container
-      use func,           only: operator(.notequals.), operator(.equals.)
-      use multigridvars,  only: source, bnd_periodic, bnd_dirichlet, bnd_givenval, grav_bnd
+      use cg_leaves,         only: leaves
+      use cg_list,           only: cg_list_element
+      use cg_list_global,    only: all_cg
+      use constants,         only: GEO_RPZ, LO, HI, xdim, ydim, zdim, O_I4, zero
+      use dataio_pub,        only: die
+      use domain,            only: dom
+      use func,              only: operator(.notequals.), operator(.equals.)
+      use grid_cont,         only: grid_container
+      use multigridvars,     only: source, bnd_periodic, bnd_dirichlet, bnd_givenval, grav_bnd
       use multigrid_Laplace, only: ord_laplacian_outer
-      use units,          only: fpiG
-      use particle_pub,   only: pset
+      use particle_types,    only: pset
+      use units,             only: fpiG
 #ifdef JEANS_PROBLEM
-      use problem_pub,    only: jeans_d0, jeans_mode ! hack for tests
+      use problem_pub,       only: jeans_d0, jeans_mode ! hack for tests
 #endif /* JEANS_PROBLEM */
 
       implicit none

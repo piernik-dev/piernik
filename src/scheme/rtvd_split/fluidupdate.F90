@@ -265,7 +265,8 @@ contains
 #ifdef GRAV
       use global,              only: t, dt
       use gravity,             only: source_terms_grav
-      use particle_pub,        only: pset, psolver
+      use particle_pub,        only: psolver
+      use particle_types,      only: pset
 #endif /* GRAV */
 #if defined(COSM_RAYS) && defined(MULTIGRID)
       use all_boundaries,      only: all_fluid_boundaries

@@ -47,12 +47,13 @@ contains
 
    subroutine timestep_nbody(cg)
 
-      use constants,    only: ndims, xdim, zdim, big, one, two, zero
-      use func,         only: operator(.notequals.)
-      use grid_cont,    only: grid_container
-      use particle_pub, only: pset, lf_c
+      use constants,      only: ndims, xdim, zdim, big, one, two, zero
+      use func,           only: operator(.notequals.)
+      use grid_cont,      only: grid_container
+      use particle_pub,   only: lf_c
+      use particle_types, only: pset
 #ifdef VERBOSE
-      use dataio_pub,   only: printinfo
+      use dataio_pub,     only: printinfo
 #endif /* VERBOSE */
 
       implicit none

@@ -56,14 +56,14 @@ contains
 !-----------------------------------------------------------------------------
    subroutine problem_initial_conditions
 
-      use cg_leaves,    only: leaves
-      use cg_list,      only: cg_list_element
-      use constants,    only: xdim, ydim, zdim, LO, HI
-      use dataio_pub,   only: printinfo
-      use fluidindex,   only: flind
-      use particle_pub, only: pset
+      use cg_leaves,      only: leaves
+      use cg_list,        only: cg_list_element
+      use constants,      only: xdim, ydim, zdim, LO, HI
+      use dataio_pub,     only: printinfo
+      use fluidindex,     only: flind
+      use particle_types, only: pset
 #ifdef NBODY
-      use particle_pub, only: ht_integrator
+      use particle_pub,   only: ht_integrator
       !use particles_io_hdf5
 #endif /* NBODY */
 
@@ -245,8 +245,8 @@ contains
 
       subroutine twobodies(n_particles, e, first_run, plane)
 
-         use dataio_pub,   only: msg, printinfo
-         use particle_pub, only: pset
+         use dataio_pub,     only: msg, printinfo
+         use particle_types, only: pset
 
          implicit none
 
@@ -331,9 +331,9 @@ contains
 
       subroutine orbits(n_particles, e, first_run, plane)
 
-         !use constants,    only: dpi
-         use dataio_pub,   only: msg, printinfo
-         use particle_pub, only: pset
+         !use constants,      only: dpi
+         use dataio_pub,     only: msg, printinfo
+         use particle_types, only: pset
 
          implicit none
 
@@ -388,7 +388,7 @@ contains
       subroutine relax_time(n_particles, first_run)
 
          use dataio_pub,        only: msg, printinfo
-         use particle_pub,      only: pset
+         use particle_types,    only: pset
 #ifdef HDF5
          use particles_io_hdf5, only: write_hdf5, read_hdf5
 #endif /* HDF5 */
@@ -444,7 +444,7 @@ contains
 
    subroutine read_buildgal
 
-      use particle_pub, only: pset
+      use particle_types, only: pset
 
       implicit none
 
