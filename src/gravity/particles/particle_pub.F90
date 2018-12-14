@@ -35,11 +35,11 @@
 
 module particle_pub
 ! pulled by GRAV
-   use particle_types,  only: particle_set, particle_solver_T, pset
+   use particle_types,  only: particle_solver_T, pset
 
    implicit none
    private
-   public :: pset, psolver, init_particles, cleanup_particles
+   public :: psolver, init_particles, cleanup_particles
 #ifdef NBODY
    public :: ht_integrator, lf_c
 

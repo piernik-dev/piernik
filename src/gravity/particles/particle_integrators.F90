@@ -338,36 +338,33 @@ contains
       n = size(pset%p, dim=1)
 
       !counter = 1
-      !call save_particles(pset, n, lf_t, counter)
+      !call save_particles(n, lf_t, counter)
 
       if (forward) then
-         call kick                           (pset, n,     dt_tot) !1. kick  (dt_hydro)
+         call kick                           (n,     dt_tot) !1. kick  (dt_hydro)
       else
-         call drift                          (pset, n, two*dt_tot) !2. drift (2*dt_hydro)
+         call drift                          (n, two*dt_tot) !2. drift (2*dt_hydro)
 
-         call update_particle_gravpot_and_acc(pset)
+         call update_particle_gravpot_and_acc
 
-         call kick                           (pset, n,     dt_tot) !3. kick  (dt_hydro)
+         call kick                           (n,     dt_tot) !3. kick  (dt_hydro)
 
-         call update_particle_kinetic_energy (pset, n, total_energy)
+         call update_particle_kinetic_energy (n, total_energy)
 
-         call leapfrog2_diagnostics          (pset, n, total_energy)
+         call leapfrog2_diagnostics          (n, total_energy)
       endif
 
-      !call save_particles(pset, n, lf_t, counter)
+      !call save_particles(n, lf_t, counter)
 
       contains
 
-         subroutine kick(pset, n, kdt)
-
-            use particle_types, only: particle_set
+         subroutine kick(n, kdt)
 
             implicit none
 
-            class(particle_set), intent(inout) :: pset  !< particle list
-            integer,             intent(in)    :: n
-            real,                intent(in)    :: kdt
-            integer                            :: i
+            integer, intent(in) :: n
+            real,    intent(in) :: kdt
+            integer             :: i
 
             do i = 1, n
                pset%p(i)%vel = pset%p(i)%vel + pset%p(i)%acc * kdt
@@ -375,16 +372,13 @@ contains
 
          end subroutine kick
 
-         subroutine drift(pset, n, ddt)
-
-            use particle_types, only: particle_set
+         subroutine drift(n, ddt)
 
             implicit none
 
-            class(particle_set), intent(inout) :: pset  !< particle list
-            integer,             intent(in)    :: n
-            real,                intent(in)    :: ddt
-            integer                            :: i
+            integer, intent(in) :: n
+            real,    intent(in) :: ddt
+            integer             :: i
 
             do i = 1, n
                pset%p(i)%pos = pset%p(i)%pos + pset%p(i)%vel * ddt
@@ -392,19 +386,17 @@ contains
 
          end subroutine drift
 
-         subroutine update_particle_kinetic_energy(pset, n, total_energy)
+         subroutine update_particle_kinetic_energy(n, total_energy)
 
-            use constants,      only: half, zero, xdim, zdim
-            use particle_types, only: particle_set
+            use constants, only: half, zero, xdim, zdim
 
             implicit none
 
-            class(particle_set), intent(inout) :: pset         !< particle list
-            integer,             intent(in)    :: n            !< number of particles
-            real,                intent(out)   :: total_energy !< total energy of set of particles
-            integer(kind=4)                    :: cdim
-            integer                            :: p
-            real                               :: v2           !< particle velocity squared
+            integer, intent(in)  :: n            !< number of particles
+            real,    intent(out) :: total_energy !< total energy of set of particles
+            integer(kind=4)      :: cdim
+            integer              :: p
+            real                 :: v2           !< particle velocity squared
 
             total_energy = zero
 
@@ -420,31 +412,29 @@ contains
 
          end subroutine update_particle_kinetic_energy
 
-         subroutine leapfrog2_diagnostics(pset, n, total_energy)
+         subroutine leapfrog2_diagnostics(n, total_energy)
 
             use constants,        only: ndims
             use dataio_pub,       only: msg, printinfo
             !use func,             only: operator(.equals.)
             use particle_gravity, only: get_acc_model
-            use particle_types,   only: particle_set
 
             implicit none
 
-            class(particle_set), intent(in) :: pset                 !< particle list
-            integer,             intent(in) :: n
-            real,                intent(in) :: total_energy
-            real, dimension(ndims)          :: acc2
-            real                            :: ang_momentum         !< angular momentum of set of the particles
-            integer                         :: i, lun_out
-            !real                            :: d_energy             !< error of energy of set of the particles in succeeding timesteps
-            !real                            :: d_ang_momentum       !< error of angular momentum in succeeding timensteps
-            !real, save                      :: initial_energy       !< total initial energy of set of the particles
-            !real, save                      :: init_ang_momentum    !< initial angular momentum of set of the particles
-            !logical, save                   :: first_run_lf = .true.
+            integer,    intent(in) :: n
+            real,       intent(in) :: total_energy
+            real, dimension(ndims) :: acc2
+            real                   :: ang_momentum         !< angular momentum of set of the particles
+            integer                :: i, lun_out
+            !real                   :: d_energy             !< error of energy of set of the particles in succeeding timesteps
+            !real                   :: d_ang_momentum       !< error of angular momentum in succeeding timensteps
+            !real, save             :: initial_energy       !< total initial energy of set of the particles
+            !real, save             :: init_ang_momentum    !< initial angular momentum of set of the particles
+            !logical, save          :: first_run_lf = .true.
 
             !write(*,*) "Energia----------: ", total_energy
 
-            call get_ang_momentum_2(pset, n, ang_momentum)
+            call get_ang_momentum_2(n, ang_momentum)
             !write(*,*) "ANG_MOMENTUM-----: ", ang_momentum
             write(msg,'(a,2f8.5)') '[particle_integrators:leapfrog2_diagnostics] Energia, ANG_MOMENTUM----------: ', total_energy, ang_momentum
             call printinfo(msg)
@@ -477,7 +467,7 @@ contains
             open(newunit=lun_out, file='leapfrog_out.log', status='unknown',  position='append')
 
             do i = 1, n
-               call get_acc_model(pset, i, 0.0, acc2)
+               call get_acc_model(i, 0.0, acc2)
                write(lun_out, '(I3,1X,19(E13.6,1X))') i, t_glob+dt_tot, dt_tot, pset%p(i)%mass, pset%p(i)%pos, pset%p(i)%vel, pset%p(i)%acc, acc2(:)!, pset%p(i)%energy, total_energy, initial_energy, d_energy, ang_momentum, init_ang_momentum, d_ang_momentum
             enddo
 
@@ -485,19 +475,16 @@ contains
 
          end subroutine leapfrog2_diagnostics
 
-         subroutine save_particles(pset, n, lf_t, counter)
-
-            use particle_types, only: particle_set
+         subroutine save_particles(n, lf_t, counter)
 
             implicit none
 
-            class(particle_set), intent(in)    :: pset  !< particle list
-            integer,             intent(in)    :: n
-            real,                intent(in)    :: lf_t
-            integer,             intent(inout) :: counter
-            integer                            :: i, data_file = 757
-            character(len=17)                  :: filename
-            character(len=3)                   :: counter_char
+            integer, intent(in)    :: n
+            real,    intent(in)    :: lf_t
+            integer, intent(inout) :: counter
+            integer                :: i, data_file = 757
+            character(len=17)      :: filename
+            character(len=3)       :: counter_char
 
             if(counter<10) then
                write(counter_char, '(I1)') counter
@@ -523,18 +510,16 @@ contains
 
          end subroutine save_particles
 
-         subroutine get_ang_momentum_2(pset, n, ang_momentum)
+         subroutine get_ang_momentum_2(n, ang_momentum)
 
-            use constants,      only: xdim, ydim, zdim
-            use particle_types, only: particle_set
+            use constants, only: xdim, ydim, zdim
 
             implicit none
 
-            class(particle_set), intent(in)  :: pset
-            integer,             intent(in)  :: n
-            real,                intent(out) :: ang_momentum
-            integer                          :: i
-            real                             :: L1, L2, L3
+            integer, intent(in)  :: n
+            real,    intent(out) :: ang_momentum
+            integer              :: i
+            real                 :: L1, L2, L3
 
             ang_momentum = 0.0
 

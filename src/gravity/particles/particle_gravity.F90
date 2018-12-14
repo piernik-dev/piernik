@@ -40,7 +40,7 @@ module particle_gravity
 
 contains
 
-   subroutine update_particle_gravpot_and_acc(pset)
+   subroutine update_particle_gravpot_and_acc
 
       use constants,      only: ndims, zero
       use cg_leaves,      only: leaves
@@ -48,14 +48,13 @@ contains
       use dataio_pub,     only: die
       use domain,         only: is_refined, is_multicg
       use grid_cont,      only: grid_container
-      use particle_types, only: particle_set
+      use particle_types, only: pset
 #ifdef VERBOSE
       use dataio_pub,     only: printinfo
 #endif /* VERBOSE */
 
       implicit none
 
-      class(particle_set),   intent(inout) :: pset
       type(grid_container),  pointer       :: cg
       type(cg_list_element), pointer       :: cgl
 
@@ -75,18 +74,18 @@ contains
       cgl => leaves%first
       cg  => cgl%cg
 
-      call update_gravpot_from_particles(n_part, pset, cg, zero)
+      call update_gravpot_from_particles(n_part, cg, zero)
 
-      call save_pot_pset(pset, cg)
+      call save_pot_pset(cg)
 
-      call locate_particles_in_cells(n_part, pset, cg, cells, dist)
+      call locate_particles_in_cells(n_part, cg, cells, dist)
 
-      call update_particle_potential_energy(n_part, pset, cg, cells, dist)    !szukanie energii potencjalnej w punktach-polozeniach czastek
+      call update_particle_potential_energy(n_part, cg, cells, dist)    !szukanie energii potencjalnej w punktach-polozeniach czastek
 
       if (is_setacc_int) then
-         call update_particle_acc_int(n_part, pset, cg, cells, dist)
+         call update_particle_acc_int(n_part, cg, cells, dist)
       elseif (is_setacc_cic) then
-         call update_particle_acc_cic(n_part, pset, cg, cells)
+         call update_particle_acc_cic(n_part, cg, cells)
       endif
 
 #ifdef VERBOSE
@@ -111,16 +110,15 @@ contains
 
    end function phi_pm_part
 
-   subroutine update_gravpot_from_particles(n_part, pset, cg, eps2)
+   subroutine update_gravpot_from_particles(n_part, cg, eps2)
 
       use constants,      only: CENTER, LO, HI, xdim, ydim, zdim, zero
       use grid_cont,      only: grid_container
-      use particle_types, only: particle_set
+      use particle_types, only: pset
 
       implicit none
 
       integer,                       intent(in)    :: n_part
-      class(particle_set),           intent(in)    :: pset  !< particle list
       type(grid_container), pointer, intent(inout) :: cg
       real,                          intent(in)    :: eps2
       integer                                      :: i, j, k, p
@@ -144,20 +142,19 @@ contains
 
    end subroutine update_gravpot_from_particles
 
-   subroutine locate_particles_in_cells(n_part, pset, cg, cells, dist)
+   subroutine locate_particles_in_cells(n_part, cg, cells, dist)
 
       use constants,      only: ndims, xdim, CENTER, LO, HI
       use grid_cont,      only: grid_container
-      use particle_types, only: particle_set
+      use particle_types, only: pset
 
       implicit none
 
-      integer,                          intent(in)    :: n_part
-      class(particle_set),              intent(inout) :: pset  !< particle list
-      type(grid_container),             intent(in)    :: cg
-      integer, dimension(n_part,ndims), intent(out)   :: cells
-      real,    dimension(n_part,ndims), intent(out)   :: dist
-      integer                                         :: i, cdim
+      integer,                          intent(in)  :: n_part
+      type(grid_container),             intent(in)  :: cg
+      integer, dimension(n_part,ndims), intent(out) :: cells
+      real,    dimension(n_part,ndims), intent(out) :: dist
+      integer                                       :: i, cdim
 
       do i = 1, n_part
          do cdim = xdim, ndims
@@ -175,24 +172,23 @@ contains
 
    end subroutine locate_particles_in_cells
 
-   subroutine update_particle_potential_energy(n_part, pset, cg, cells, dist)
+   subroutine update_particle_potential_energy(n_part, cg, cells, dist)
 
       use constants,        only: gpot_n, ndims, half, xdim, ydim, zdim
       use grid_cont,        only: grid_container
       use named_array_list, only: qna
       use particle_func,    only: df_d_o2, d2f_d2_o2, d2f_dd_o2
-      use particle_types,   only: particle_set
+      use particle_types,   only: pset
 
       implicit none
 
-      integer,                          intent(in)    :: n_part
-      class(particle_set),              intent(inout) :: pset  !< particle list
-      type(grid_container), pointer,    intent(in)    :: cg
-      integer, dimension(n_part,ndims), intent(in)    :: cells
-      real,    dimension(n_part,ndims), intent(in)    :: dist
-      integer                                         :: p
-      integer(kind=4)                                 :: ig
-      real, dimension(n_part)                         :: dpot, d2pot
+      integer,                          intent(in) :: n_part
+      type(grid_container), pointer,    intent(in) :: cg
+      integer, dimension(n_part,ndims), intent(in) :: cells
+      real,    dimension(n_part,ndims), intent(in) :: dist
+      integer                                      :: p
+      integer(kind=4)                              :: ig
+      real, dimension(n_part)                      :: dpot, d2pot
 
       ig = qna%ind(gpot_n)
       do p = 1, n_part
@@ -210,23 +206,22 @@ contains
 
    end subroutine update_particle_potential_energy
 
-   subroutine update_particle_acc_int(n_part, pset, cg, cells, dist)
+   subroutine update_particle_acc_int(n_part, cg, cells, dist)
 
       use constants,        only: gpot_n, ndims, xdim, ydim, zdim
       use grid_cont,        only: grid_container
       use named_array_list, only: qna
       use particle_func,    only: df_d_p, d2f_d2_p, d2f_dd_p
-      use particle_types,   only: particle_set
+      use particle_types,   only: pset
 
       implicit none
 
-      integer,                          intent(in)    :: n_part
-      class(particle_set),              intent(inout) :: pset
-      type(grid_container), pointer,    intent(in)    :: cg
-      integer, dimension(n_part,ndims), intent(in)    :: cells
-      real, dimension(n_part, ndims),   intent(in)    :: dist
-      integer                                         :: i
-      integer(kind=4)                                 :: ig
+      integer,                          intent(in) :: n_part
+      type(grid_container), pointer,    intent(in) :: cg
+      integer, dimension(n_part,ndims), intent(in) :: cells
+      real, dimension(n_part, ndims),   intent(in) :: dist
+      integer                                      :: i
+      integer(kind=4)                              :: ig
 
       ig = qna%ind(gpot_n)
       do i = 1, n_part
@@ -252,24 +247,23 @@ contains
 
    end subroutine update_particle_acc_int
 
-   subroutine update_particle_acc_cic(n_part, pset, cg, cells)
+   subroutine update_particle_acc_cic(n_part, cg, cells)
 
       use constants,      only: ndims, CENTER, xdim, ydim, zdim, half, zero
       use grid_cont,      only: grid_container
-      use particle_types, only: particle_set
+      use particle_types, only: pset
 
       implicit none
 
-      integer,                          intent(in)    :: n_part
-      class(particle_set),              intent(inout) :: pset
-      type(grid_container), pointer,    intent(in)    :: cg
-      integer, dimension(n_part,ndims), intent(in)    :: cells
+      integer,                          intent(in) :: n_part
+      type(grid_container), pointer,    intent(in) :: cg
+      integer, dimension(n_part,ndims), intent(in) :: cells
 
-      integer                                         :: i, j, k, c, cdim
-      integer                                         :: p
-      integer(kind=8), dimension(n_part,ndims)        :: cic_cells
-      real,            dimension(n_part,ndims)        :: dxyz
-      real(kind=8),    dimension(n_part,8)            :: wijk, fx, fy, fz
+      integer                                      :: i, j, k, c, cdim
+      integer                                      :: p
+      integer(kind=8), dimension(n_part,ndims)     :: cic_cells
+      real,            dimension(n_part,ndims)     :: dxyz
+      real(kind=8),    dimension(n_part,8)         :: wijk, fx, fy, fz
 
       do i = 1, n_part
          pset%p(i)%acc = zero
@@ -327,15 +321,14 @@ contains
 
    end subroutine update_particle_acc_cic
 
-   subroutine get_acc_model(pset, p, eps, acc2)
+   subroutine get_acc_model(p, eps, acc2)
 
       use constants,      only: ndims, xdim, zdim
       use grid_cont,      only: grid_container
-      use particle_types, only: particle_set
+      use particle_types, only: pset
 
       implicit none
 
-      class(particle_set),    intent(in)  :: pset  !< particle list
       integer,                intent(in)  :: p
       real,                   intent(in)  :: eps
       real, dimension(ndims), intent(out) :: acc2
@@ -362,16 +355,15 @@ contains
 
    end function der_xyz
 
-   subroutine save_pot_pset(pset, cg)
+   subroutine save_pot_pset(cg)
 
       use constants,      only: CENTER, LO, HI, xdim, ydim, zdim
       use dataio_pub,     only: printinfo, printio
       use grid_cont,      only: grid_container
-      use particle_types, only: particle_set
+      use particle_types, only: pset
 
       implicit none
 
-      class(particle_set),           intent(in) :: pset  !< particle list
       type(grid_container), pointer, intent(in) :: cg
 
       integer                                   :: numer1, numer2, i, j, p
