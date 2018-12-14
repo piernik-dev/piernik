@@ -179,7 +179,7 @@ contains
 
 #ifdef NBODY
          dt_hydro = dt
-         call timestep_nbody(dt_nbody, pset)
+         call timestep_nbody(dt_nbody, pset, cg)
          if (dt_nbody .notequals. 0.0) then
             dt = min(dt, dt_nbody)
          endif

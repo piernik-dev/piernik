@@ -525,29 +525,29 @@ contains
 
          end subroutine save_particles
 
-      subroutine get_ang_momentum_2(pset, n, ang_momentum)
+         subroutine get_ang_momentum_2(pset, n, ang_momentum)
 
-         use constants,      only: xdim, ydim, zdim
-         use particle_types, only: particle_set
+            use constants,      only: xdim, ydim, zdim
+            use particle_types, only: particle_set
 
-         implicit none
+            implicit none
 
-         class(particle_set), intent(in)  :: pset
-         integer,             intent(in)  :: n
-         real,                intent(out) :: ang_momentum
-         integer                          :: i
-         real                             :: L1, L2, L3
+            class(particle_set), intent(in)  :: pset
+            integer,             intent(in)  :: n
+            real,                intent(out) :: ang_momentum
+            integer                          :: i
+            real                             :: L1, L2, L3
 
-         ang_momentum = 0.0
+            ang_momentum = 0.0
 
-         do i = 1, n, 1
-            L1 = pset%p(i)%pos(ydim) * pset%p(i)%vel(zdim) - pset%p(i)%pos(zdim) * pset%p(i)%vel(ydim)
-            L2 = pset%p(i)%pos(zdim) * pset%p(i)%vel(xdim) - pset%p(i)%pos(xdim) * pset%p(i)%vel(zdim)
-            L3 = pset%p(i)%pos(xdim) * pset%p(i)%vel(ydim) - pset%p(i)%pos(ydim) * pset%p(i)%vel(xdim)
-            ang_momentum = ang_momentum + pset%p(i)%mass * sqrt(L1**2 + L2**2 + L3**2)
-         enddo
+            do i = 1, n, 1
+               L1 = pset%p(i)%pos(ydim) * pset%p(i)%vel(zdim) - pset%p(i)%pos(zdim) * pset%p(i)%vel(ydim)
+               L2 = pset%p(i)%pos(zdim) * pset%p(i)%vel(xdim) - pset%p(i)%pos(xdim) * pset%p(i)%vel(zdim)
+               L3 = pset%p(i)%pos(xdim) * pset%p(i)%vel(ydim) - pset%p(i)%pos(ydim) * pset%p(i)%vel(xdim)
+               ang_momentum = ang_momentum + pset%p(i)%mass * sqrt(L1**2 + L2**2 + L3**2)
+            enddo
 
-      end subroutine get_ang_momentum_2
+         end subroutine get_ang_momentum_2
 
    end subroutine leapfrog2ord
 
@@ -594,13 +594,9 @@ contains
 
    end subroutine get_acc_pot
 
-   subroutine timestep_nbody(dt_nbody, pset)
+   subroutine timestep_nbody(dt_nbody, pset, cg)
 
       use constants,      only: ndims, xdim, zdim, big, one, two, zero
-      use cg_leaves,      only: leaves
-      use cg_list,        only: cg_list_element
-      use dataio_pub,     only: die
-      use domain,         only: is_refined, is_multicg
       use func,           only: operator(.notequals.)
       use grid_cont,      only: grid_container
       use particle_types, only: particle_set
@@ -610,25 +606,20 @@ contains
 
       implicit none
 
-      real,                  intent(out)   :: dt_nbody
-      class(particle_set),   intent(inout) :: pset
-      type(grid_container),  pointer       :: cg
-      type(cg_list_element), pointer       :: cgl
+      real,                          intent(out)   :: dt_nbody
+      class(particle_set),           intent(inout) :: pset
+      type(grid_container), pointer, intent(in)    :: cg
 
-      integer                              :: n_part, i
-      integer(kind=4)                      :: cdim
-      real                                 :: acc2, max_acc, eta, eps, factor
-      real, dimension(ndims)               :: max_v
+      integer                                      :: n_part, i
+      integer(kind=4)                              :: cdim
+      real                                         :: acc2, max_acc, eta, eps, factor
+      real, dimension(ndims)                       :: max_v
 
 #ifdef VERBOSE
       call printinfo('[particle_integrators:timestep_nbody] Commencing timestep_nbody')
 #endif /* VERBOSE */
 
       n_part = size(pset%p, dim=1)
-      if (is_refined) call die("[particle_integrators:timestep_nbody] AMR not implemented for particles yet")
-      if (is_multicg) call die("[particle_integrators:timestep_nbody] multi_cg not implemented for particles yet")
-      cgl => leaves%first
-      cg  => cgl%cg
 
       eta      = one
       eps      = 1.0e-4
