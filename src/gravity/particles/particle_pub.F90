@@ -63,7 +63,8 @@ contains
       use dataio_pub,            only: printinfo
       use mpisetup,              only: rbuff
       use particle_func,         only: check_ord
-      use particle_integrators,  only: leapfrog2, lf_c, is_setacc_cic, is_setacc_int
+      use particle_gravity,      only: is_setacc_cic, is_setacc_int
+      use particle_integrators,  only: leapfrog2, lf_c
 #endif /* NBODY */
 
       implicit none
