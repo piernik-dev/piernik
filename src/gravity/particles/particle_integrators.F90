@@ -339,8 +339,7 @@ contains
 
       n = size(pset%p, dim=1)
 
-      call get_energy(pset, n, total_energy)
-
+      call update_particle_kinetic_energy(pset, n, total_energy)
       call leapfrog2_diagnostics(pset, n, total_energy)
 
       !counter = 1
@@ -391,7 +390,7 @@ contains
 
          end subroutine drift
 
-         subroutine get_energy(pset, n, total_energy)
+         subroutine update_particle_kinetic_energy(pset, n, total_energy)
 
             use constants,      only: half, zero, xdim, zdim
             use particle_types, only: particle_set
@@ -417,7 +416,7 @@ contains
                total_energy = total_energy + pset%p(p)%energy
             enddo
 
-         end subroutine get_energy
+         end subroutine update_particle_kinetic_energy
 
          subroutine leapfrog2_diagnostics(pset, n, total_energy)
 
@@ -676,18 +675,18 @@ contains
       cgl => leaves%first
       cg  => cgl%cg
 
-      call pot_from_part(n_part, pset, cg, zero)
+      call update_gravpot_from_particles(n_part, pset, cg, zero)
 
       call save_pot_pset(cg, pset)
 
-      call find_cells(n_part, cg, cells, dist)
+      call locate_particles_in_cells(n_part, cg, cells, dist)
 
-      call potential2(n_part, cg, cells, dist, pset)    !szukanie energii potencjalnej w punktach-polozeniach czastek
+      call update_particle_potential_energy(n_part, cg, cells, dist, pset)    !szukanie energii potencjalnej w punktach-polozeniach czastek
 
       if (is_setacc_int) then
-         call get_acc_int(n_part, cg, cells, dist, pset)
+         call update_particle_acc_int(n_part, cg, cells, dist, pset)
       elseif (is_setacc_cic) then
-         call get_acc_cic(n_part, cg, cells, pset)
+         call update_particle_acc_cic(n_part, cg, cells, pset)
       endif
 
       call get_var_timestep_c(n_part, cg, pset, lf_c, dt_nbody)
@@ -697,7 +696,7 @@ contains
 
    contains
 
-      subroutine pot_from_part(n_part, pset, cg, eps2)
+      subroutine update_gravpot_from_particles(n_part, pset, cg, eps2)
 
          use constants,      only: CENTER, LO, HI, xdim, ydim, zdim, zero
          use grid_cont,      only: grid_container
@@ -728,9 +727,9 @@ contains
             enddo
          close(999)
 
-      end subroutine pot_from_part
+      end subroutine update_gravpot_from_particles
 
-      subroutine find_cells(n_part, cg, cells, dist)
+      subroutine locate_particles_in_cells(n_part, cg, cells, dist)
 
          use constants, only: ndims, xdim, CENTER, LO, HI
          use grid_cont, only: grid_container
@@ -757,9 +756,9 @@ contains
             enddo
          enddo
 
-      end subroutine find_cells
+      end subroutine locate_particles_in_cells
 
-      subroutine potential2(n_part, cg, cells, dist, pset)
+      subroutine update_particle_potential_energy(n_part, cg, cells, dist, pset)
 
          use constants,        only: gpot_n, ndims, half, xdim, ydim, zdim
          use grid_cont,        only: grid_container
@@ -791,9 +790,9 @@ contains
             pset%p(p)%energy = cg%q(ig)%point(cells(p,:)) + dpot(p) + half * d2pot(p)
          enddo
 
-      end subroutine potential2
+      end subroutine update_particle_potential_energy
 
-      subroutine get_acc_int(n_part, cg, cells, dist, pset)
+      subroutine update_particle_acc_int(n_part, cg, cells, dist, pset)
 
          use constants,        only: gpot_n, ndims, xdim, ydim, zdim
          use grid_cont,        only: grid_container
@@ -833,9 +832,9 @@ contains
             endif
          enddo
 
-      end subroutine get_acc_int
+      end subroutine update_particle_acc_int
 
-      subroutine get_acc_cic(n_part, cg, cells, pset)
+      subroutine update_particle_acc_cic(n_part, cg, cells, pset)
 
          use constants,      only: ndims, CENTER, xdim, ydim, zdim, half, zero
          use grid_cont,      only: grid_container
@@ -906,12 +905,9 @@ contains
                pset%p(p)%acc(ydim) = pset%p(p)%acc(ydim) + wijk(p, c) * fy(p, c)
                pset%p(p)%acc(zdim) = pset%p(p)%acc(zdim) + wijk(p, c) * fz(p, c)
             enddo
-            !write(*,*) "------", p, pset%p(p)%acc(xdim), pset%p(p)%acc(ydim), pset%p(p)%acc(zdim)
          enddo
-         !czastka nr statyczna:
-         !pset%p(1)%acc = 0.0
 
-      end subroutine get_acc_cic
+      end subroutine update_particle_acc_cic
 
       subroutine get_var_timestep_c(n_part, cg, pset, lf_c, dt_nbody)
 
