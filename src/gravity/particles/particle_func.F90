@@ -36,170 +36,170 @@ module particle_func
    private
    public :: check_ord, df_d_p, d2f_d2_p, d2f_dd_p, df_d_o2, d2f_d2_o2, d2f_dd_o2
 
-      interface
-         function dxi(cell, cg, ig, dir)
-            use constants, only: ndims
-            use grid_cont, only: grid_container
-            implicit none
-            integer, dimension(ndims),     intent(in) :: cell
-            type(grid_container), pointer, intent(in) :: cg
-            integer(kind=4),               intent(in) :: ig, dir
-            real                                      :: dxi
-         end function dxi
+   interface
+      function dxi(cell, cg, ig, dir)
+         use constants, only: ndims
+         use grid_cont, only: grid_container
+         implicit none
+         integer, dimension(ndims),     intent(in) :: cell
+         type(grid_container), pointer, intent(in) :: cg
+         integer(kind=4),               intent(in) :: ig, dir
+         real                                      :: dxi
+      end function dxi
 
-         function d2dxi2(cell, cg, ig, dir)
-            use constants, only: ndims
-            use grid_cont, only: grid_container
-            implicit none
-            integer, dimension(ndims),     intent(in) :: cell
-            type(grid_container), pointer, intent(in) :: cg
-            integer(kind=4),               intent(in) :: ig, dir
-            real                                      :: d2dxi2
-         end function d2dxi2
+      function d2dxi2(cell, cg, ig, dir)
+         use constants, only: ndims
+         use grid_cont, only: grid_container
+         implicit none
+         integer, dimension(ndims),     intent(in) :: cell
+         type(grid_container), pointer, intent(in) :: cg
+         integer(kind=4),               intent(in) :: ig, dir
+         real                                      :: d2dxi2
+      end function d2dxi2
 
-         function d2dxixj(cell, cg, ig, dir1, dir2)
-            use constants, only: ndims
-            use grid_cont, only: grid_container
-            implicit none
-            integer, dimension(ndims),     intent(in) :: cell
-            type(grid_container), pointer, intent(in) :: cg
-            integer(kind=4),               intent(in) :: ig, dir1, dir2
-            real                                      :: d2dxixj
-         end function d2dxixj
+      function d2dxixj(cell, cg, ig, dir1, dir2)
+         use constants, only: ndims
+         use grid_cont, only: grid_container
+         implicit none
+         integer, dimension(ndims),     intent(in) :: cell
+         type(grid_container), pointer, intent(in) :: cg
+         integer(kind=4),               intent(in) :: ig, dir1, dir2
+         real                                      :: d2dxixj
+      end function d2dxixj
 
-      end interface
+   end interface
 
-      procedure(dxi),     pointer :: df_d_p   => NULL()
-      procedure(d2dxi2),  pointer :: d2f_d2_p => NULL()
-      procedure(d2dxixj), pointer :: d2f_dd_p => NULL()
+   procedure(dxi),     pointer :: df_d_p   => NULL()
+   procedure(d2dxi2),  pointer :: d2f_d2_p => NULL()
+   procedure(d2dxixj), pointer :: d2f_dd_p => NULL()
 
 contains
 
-      subroutine check_ord(order)
+   subroutine check_ord(order)
 
-         implicit none
+      implicit none
 
-         integer, intent(in)    :: order
+      integer, intent(in)    :: order
 
-         if (order == 2) then
-            df_d_p   => df_d_o2
-            d2f_d2_p => d2f_d2_o2
-            d2f_dd_p => d2f_dd_o2
-         else
-            df_d_p   => df_d_o4
-            d2f_d2_p => d2f_d2_o4
-            d2f_dd_p => d2f_dd_o4
-         endif
+      if (order == 2) then
+         df_d_p   => df_d_o2
+         d2f_d2_p => d2f_d2_o2
+         d2f_dd_p => d2f_dd_o2
+      else
+         df_d_p   => df_d_o4
+         d2f_d2_p => d2f_d2_o4
+         d2f_dd_p => d2f_dd_o4
+      endif
 
-      end subroutine check_ord
+   end subroutine check_ord
 
-      function df_d_o2(cell, cg, ig, dir)
+   function df_d_o2(cell, cg, ig, dir)
 
-         use constants, only: idm, ndims, half
-         use grid_cont, only: grid_container
+      use constants, only: idm, ndims, half
+      use grid_cont, only: grid_container
 
-         implicit none
+      implicit none
 
-         integer, dimension(ndims),     intent(in) :: cell
-         type(grid_container), pointer, intent(in) :: cg
-         integer(kind=4),               intent(in) :: ig, dir
-         real, target                              :: df_d_o2
+      integer, dimension(ndims),     intent(in) :: cell
+      type(grid_container), pointer, intent(in) :: cg
+      integer(kind=4),               intent(in) :: ig, dir
+      real, target                              :: df_d_o2
 
-         !o(R^2)
-         df_d_o2 = (cg%q(ig)%point(cell+idm(dir,:)) - cg%q(ig)%point(cell-idm(dir,:)) ) * half *cg%idl(dir)
+      !o(R^2)
+      df_d_o2 = (cg%q(ig)%point(cell+idm(dir,:)) - cg%q(ig)%point(cell-idm(dir,:)) ) * half *cg%idl(dir)
 
-      end function df_d_o2
+   end function df_d_o2
 
-      function d2f_d2_o2(cell, cg, ig, dir)
+   function d2f_d2_o2(cell, cg, ig, dir)
 
-         use constants, only: idm, ndims, two
-         use grid_cont, only: grid_container
+      use constants, only: idm, ndims, two
+      use grid_cont, only: grid_container
 
-         implicit none
+      implicit none
 
-         integer, dimension(ndims),     intent(in) :: cell
-         type(grid_container), pointer, intent(in) :: cg
-         integer(kind=4),               intent(in) :: ig, dir
-         real, target                              :: d2f_d2_o2
+      integer, dimension(ndims),     intent(in) :: cell
+      type(grid_container), pointer, intent(in) :: cg
+      integer(kind=4),               intent(in) :: ig, dir
+      real, target                              :: d2f_d2_o2
 
-         !o(R^2)
-         d2f_d2_o2 = (cg%q(ig)%point(cell+idm(dir,:)) - two*cg%q(ig)%point(cell) + cg%q(ig)%point(cell-idm(dir,:)) ) * cg%idl(dir)**2
+      !o(R^2)
+      d2f_d2_o2 = (cg%q(ig)%point(cell+idm(dir,:)) - two*cg%q(ig)%point(cell) + cg%q(ig)%point(cell-idm(dir,:)) ) * cg%idl(dir)**2
 
-      end function d2f_d2_o2
+   end function d2f_d2_o2
 
-      function d2f_dd_o2(cell, cg, ig, dir1, dir2)
+   function d2f_dd_o2(cell, cg, ig, dir1, dir2)
 
-         use constants, only: idm, ndims, oneq
-         use grid_cont, only: grid_container
+      use constants, only: idm, ndims, oneq
+      use grid_cont, only: grid_container
 
-         implicit none
+      implicit none
 
-         integer, dimension(ndims),     intent(in) :: cell
-         type(grid_container), pointer, intent(in) :: cg
-         integer(kind=4),               intent(in) :: ig, dir1, dir2
-         real, target                              :: d2f_dd_o2
+      integer, dimension(ndims),     intent(in) :: cell
+      type(grid_container), pointer, intent(in) :: cg
+      integer(kind=4),               intent(in) :: ig, dir1, dir2
+      real, target                              :: d2f_dd_o2
 
-         !o(R^2)
-         d2f_dd_o2 = (cg%q(ig)%point(cell+idm(dir1,:)+idm(dir2,:)) - cg%q(ig)%point(cell+idm(dir1,:)-idm(dir2,:)) + &
-                      cg%q(ig)%point(cell-idm(dir1,:)-idm(dir2,:)) - cg%q(ig)%point(cell-idm(dir1,:)+idm(dir2,:)) ) * oneq*cg%idl(dir1)*cg%idl(dir2)
+      !o(R^2)
+      d2f_dd_o2 = (cg%q(ig)%point(cell+idm(dir1,:)+idm(dir2,:)) - cg%q(ig)%point(cell+idm(dir1,:)-idm(dir2,:)) + &
+                   cg%q(ig)%point(cell-idm(dir1,:)-idm(dir2,:)) - cg%q(ig)%point(cell-idm(dir1,:)+idm(dir2,:)) ) * oneq*cg%idl(dir1)*cg%idl(dir2)
 
-      end function d2f_dd_o2
+   end function d2f_dd_o2
 
-      function df_d_o4(cell, cg, ig, dir)
+   function df_d_o4(cell, cg, ig, dir)
 
-         use constants, only: idm, ndims, onet
-         use grid_cont, only: grid_container
+      use constants, only: idm, ndims, onet
+      use grid_cont, only: grid_container
 
-         implicit none
+      implicit none
 
-         integer, dimension(ndims),     intent(in) :: cell
-         type(grid_container), pointer, intent(in) :: cg
-         integer(kind=4),               intent(in) :: ig, dir
-         real, target                              :: df_d_o4
+      integer, dimension(ndims),     intent(in) :: cell
+      type(grid_container), pointer, intent(in) :: cg
+      integer(kind=4),               intent(in) :: ig, dir
+      real, target                              :: df_d_o4
 
-         !o(R^4)
-         df_d_o4 = 2.0 * (cg%q(ig)%point(cell +   idm(dir,:)) - cg%q(ig)%point(cell -   idm(dir,:)) ) * cg%idl(dir) * onet - &
-                         (cg%q(ig)%point(cell + 2*idm(dir,:)) - cg%q(ig)%point(cell - 2*idm(dir,:)) ) * cg%idl(dir) / 12.0
+      !o(R^4)
+      df_d_o4 = 2.0 * (cg%q(ig)%point(cell +   idm(dir,:)) - cg%q(ig)%point(cell -   idm(dir,:)) ) * cg%idl(dir) * onet - &
+                      (cg%q(ig)%point(cell + 2*idm(dir,:)) - cg%q(ig)%point(cell - 2*idm(dir,:)) ) * cg%idl(dir) / 12.0
 
-      end function df_d_o4
+   end function df_d_o4
 
-      function d2f_d2_o4(cell, cg, ig, dir)
+   function d2f_d2_o4(cell, cg, ig, dir)
 
-         use constants, only: idm, ndims, two, onet
-         use grid_cont, only: grid_container
+      use constants, only: idm, ndims, two, onet
+      use grid_cont, only: grid_container
 
-         implicit none
+      implicit none
 
-         integer, dimension(ndims),     intent(in) :: cell
-         type(grid_container), pointer, intent(in) :: cg
-         integer(kind=4),               intent(in) :: ig, dir
-         real, target                              :: d2f_d2_o4
+      integer, dimension(ndims),     intent(in) :: cell
+      type(grid_container), pointer, intent(in) :: cg
+      integer(kind=4),               intent(in) :: ig, dir
+      real, target                              :: d2f_d2_o4
 
-         !o(R^4)
-         d2f_d2_o4 = 4.0 * (cg%q(ig)%point(cell +   idm(dir,:)) + cg%q(ig)%point(cell -   idm(dir,:)) - two *  cg%q(ig)%point(cell)) * cg%idl(dir)**2 * onet - &
-                           (cg%q(ig)%point(cell + 2*idm(dir,:)) + cg%q(ig)%point(cell - 2*idm(dir,:)) - two *  cg%q(ig)%point(cell)) * cg%idl(dir)**2 / 12.0
+      !o(R^4)
+      d2f_d2_o4 = 4.0 * (cg%q(ig)%point(cell +   idm(dir,:)) + cg%q(ig)%point(cell -   idm(dir,:)) - two *  cg%q(ig)%point(cell)) * cg%idl(dir)**2 * onet - &
+                        (cg%q(ig)%point(cell + 2*idm(dir,:)) + cg%q(ig)%point(cell - 2*idm(dir,:)) - two *  cg%q(ig)%point(cell)) * cg%idl(dir)**2 / 12.0
 
-      end function d2f_d2_o4
+   end function d2f_d2_o4
 
-      function d2f_dd_o4(cell, cg, ig, dir1, dir2)
+   function d2f_dd_o4(cell, cg, ig, dir1, dir2)
 
-         use constants, only: idm, ndims, onet
-         use grid_cont, only: grid_container
+      use constants, only: idm, ndims, onet
+      use grid_cont, only: grid_container
 
-         implicit none
+      implicit none
 
-         integer, dimension(ndims),     intent(in) :: cell
-         type(grid_container), pointer, intent(in) :: cg
-         integer(kind=4),               intent(in) :: ig, dir1, dir2
-         real, target                              :: d2f_dd_o4
+      integer, dimension(ndims),     intent(in) :: cell
+      type(grid_container), pointer, intent(in) :: cg
+      integer(kind=4),               intent(in) :: ig, dir1, dir2
+      real, target                              :: d2f_dd_o4
 
-         !o(R^4)
-         d2f_dd_o4 = (cg%q(ig)%point(cell +   idm(dir1,:) +   idm(dir2,:)) + cg%q(ig)%point(cell -   idm(dir1,:) -   idm(dir2,:)) - &
-                      cg%q(ig)%point(cell +   idm(dir1,:) -   idm(dir2,:)) - cg%q(ig)%point(cell -   idm(dir1,:) +   idm(dir2,:)) ) * cg%idl(dir1)*cg%idl(dir2) * onet - &
-                     (cg%q(ig)%point(cell + 2*idm(dir1,:) + 2*idm(dir2,:)) + cg%q(ig)%point(cell - 2*idm(dir1,:) - 2*idm(dir2,:)) - &
-                      cg%q(ig)%point(cell + 2*idm(dir1,:) - 2*idm(dir2,:)) - cg%q(ig)%point(cell - 2*idm(dir1,:) + 2*idm(dir2,:)) ) * cg%idl(dir1)*cg%idl(dir2) / 48.0
+      !o(R^4)
+      d2f_dd_o4 = (cg%q(ig)%point(cell +   idm(dir1,:) +   idm(dir2,:)) + cg%q(ig)%point(cell -   idm(dir1,:) -   idm(dir2,:)) - &
+                   cg%q(ig)%point(cell +   idm(dir1,:) -   idm(dir2,:)) - cg%q(ig)%point(cell -   idm(dir1,:) +   idm(dir2,:)) ) * cg%idl(dir1)*cg%idl(dir2) * onet - &
+                  (cg%q(ig)%point(cell + 2*idm(dir1,:) + 2*idm(dir2,:)) + cg%q(ig)%point(cell - 2*idm(dir1,:) - 2*idm(dir2,:)) - &
+                   cg%q(ig)%point(cell + 2*idm(dir1,:) - 2*idm(dir2,:)) - cg%q(ig)%point(cell - 2*idm(dir1,:) + 2*idm(dir2,:)) ) * cg%idl(dir1)*cg%idl(dir2) / 48.0
 
-      end function d2f_dd_o4
+   end function d2f_dd_o4
 
 
 end module particle_func
