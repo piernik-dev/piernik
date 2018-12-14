@@ -38,7 +38,7 @@ module particle_integrators
    private
    public :: hermit4
 #ifdef NBODY
-   public :: leapfrog2, lf_c, timestep_nbody, dt_nbody
+   public :: leapfrog2
 #endif /* NBODY */
 
    type, extends(particle_solver_T) :: hermit4_T
@@ -56,8 +56,6 @@ module particle_integrators
    type(hermit4_T), target   :: hermit4
 #ifdef NBODY
    type(leapfrog2_T), target :: leapfrog2
-   real                      :: lf_c               !< timestep should depends of grid and velocities of particles (used to extrapolation of the gravitational potential)
-   real                      :: dt_nbody           !< timestep depends on particles
 #endif /* NBODY */
 
 contains
@@ -593,73 +591,6 @@ contains
       enddo
 
    end subroutine get_acc_pot
-
-   subroutine timestep_nbody(dt_nbody, pset, cg)
-
-      use constants,      only: ndims, xdim, zdim, big, one, two, zero
-      use func,           only: operator(.notequals.)
-      use grid_cont,      only: grid_container
-      use particle_types, only: particle_set
-#ifdef VERBOSE
-      use dataio_pub,     only: printinfo
-#endif /* VERBOSE */
-
-      implicit none
-
-      real,                          intent(out)   :: dt_nbody
-      class(particle_set),           intent(inout) :: pset
-      type(grid_container), pointer, intent(in)    :: cg
-
-      integer                                      :: n_part, i
-      integer(kind=4)                              :: cdim
-      real                                         :: acc2, max_acc, eta, eps, factor
-      real, dimension(ndims)                       :: max_v
-
-#ifdef VERBOSE
-      call printinfo('[particle_integrators:timestep_nbody] Commencing timestep_nbody')
-#endif /* VERBOSE */
-
-      n_part = size(pset%p, dim=1)
-
-      eta      = one
-      eps      = 1.0e-4
-      factor   = one
-      dt_nbody = big
-      max_acc  = zero
-
-      do i = 1, n_part
-         acc2 = zero
-         do cdim = xdim, ndims
-            acc2 = acc2 + pset%p(i)%acc(cdim)**2
-         enddo
-         max_acc = max(acc2, max_acc)
-      enddo
-      max_acc = sqrt(max_acc)
-
-      if(max_acc .notequals. zero) then
-         dt_nbody = sqrt(two*eta*eps/max_acc)
-
-         do cdim = xdim, zdim
-            max_v(cdim)  = maxval(abs(pset%p(:)%vel(cdim)))
-         enddo
-
-         if (any(max_v*dt_nbody > cg%dl)) then
-            factor = big
-            do cdim = xdim, zdim
-               if ((max_v(cdim) .notequals. zero)) then
-                  factor = min(cg%dl(cdim)/max_v(cdim), factor)
-               endif
-            enddo
-         endif
-
-         dt_nbody  = lf_c * factor * dt_nbody
-      endif
-
-#ifdef VERBOSE
-      call printinfo('[particle_integrators:timestep_nbody] Finish timestep_nbody')
-#endif /* VERBOSE */
-
-   end subroutine timestep_nbody
 #endif /* NBODY */
 
 end module particle_integrators

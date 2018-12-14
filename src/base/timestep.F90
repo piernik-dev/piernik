@@ -126,8 +126,7 @@ contains
 #endif /* DEBUG */
 #ifdef NBODY
       use func,                 only: operator(.notequals.)
-      use particle_integrators, only: timestep_nbody, dt_nbody
-      use particle_pub,         only: pset
+      use particle_timestep,    only: timestep_nbody, dt_nbody
 #endif /* NBODY */
 
       implicit none
@@ -179,7 +178,7 @@ contains
 
 #ifdef NBODY
          dt_hydro = dt
-         call timestep_nbody(dt_nbody, pset, cg)
+         call timestep_nbody(cg)
          if (dt_nbody .notequals. 0.0) then
             dt = min(dt, dt_nbody)
          endif

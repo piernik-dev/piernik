@@ -41,11 +41,12 @@ module particle_pub
    private
    public :: pset, psolver, init_particles, cleanup_particles
 #ifdef NBODY
-   public :: ht_integrator
+   public :: ht_integrator, lf_c
 
    logical                           :: ht_integrator
+   real                              :: lf_c               !< timestep should depends of grid and velocities of particles (used to extrapolation of the gravitational potential)
 #endif /* NBODY */
-   type(particle_set)                :: pset !< default particle list
+   type(particle_set)                :: pset               !< default particle list
    class(particle_solver_T), pointer :: psolver
 
 contains
@@ -64,7 +65,7 @@ contains
       use mpisetup,              only: rbuff
       use particle_func,         only: check_ord
       use particle_gravity,      only: is_setacc_cic, is_setacc_int
-      use particle_integrators,  only: leapfrog2, lf_c
+      use particle_integrators,  only: leapfrog2
 #endif /* NBODY */
 
       implicit none
