@@ -28,7 +28,21 @@
 #include "piernik.h"
 
 !>
-!! \brief COMMENT ME
+!! \brief Here we perform pairs of timesteps
+!!
+!! \details Each pair of timesteps consists of two timesteps of equal length
+!! in order to maintain second order accuracy in time for (M)HD solver.
+!! In first timestep the sweeps are executed in order X->Y->Z, then in second
+!! timestep the order is reversed (Z->Y->X). The state of the fluid between
+!! sweeps X-Y and Y-Z has little physical sense because only selected terms of
+!! Navier-Stokes equation were applied.
+!!
+!! Excessive accelerations may cause violation of the CFL timestep. When timestep
+!! retry is enabled, the state of the simulation is rolled back to the beginning
+!! of the pair of timesteps.
+!!
+!! In order to maintain symmetry of the sweep operators we don't perform any
+!! refinement or derefinement in the middle of the pair of timesteps.
 !<
 
 module fluidupdate   ! SPLIT
@@ -126,7 +140,11 @@ contains
       endif
 #endif /* COSM_RAYS && MULTIGRID */
 
-      call expanded_domain%delete ! at this point everything should be initialized after domain expansion and we no longer need this list
+      ! At this point everything should be initialized after domain expansion and we no longer need this list.
+      call expanded_domain%delete
+
+      ! The following block of code may be treated as a 3D (M)HD solver.
+      ! Don't put anything inside unless you're sure it should belong to the (M)HD solver.
       if (use_fargo) then
          if (.not.skip_sweep(zdim)) call make_sweep(zdim, forward)
          if (.not.skip_sweep(xdim)) call make_sweep(xdim, forward)
@@ -142,6 +160,7 @@ contains
             enddo
          endif
       endif
+
 #ifdef GRAV
       if (associated(psolver)) call pset%evolve(psolver, t-dt, dt)
 #endif /* GRAV */
@@ -155,7 +174,9 @@ contains
    end subroutine make_3sweeps
 
 !>
-!! \brief Perform single sweep in forward or backward direction
+!! \brief Perform single sweep in forward or backward direction.
+!!
+!! \details Effectively this is a 3D (M)HD solver that applies only terms related to the direction dir/
 !<
    subroutine make_sweep(dir, forward)
 

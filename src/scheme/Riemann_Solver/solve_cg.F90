@@ -87,6 +87,7 @@ contains
       if (use_fargo) call die("[solve_cg:solve_cg] Fargo is not yet enabled for Riemann")
       if (is_refined) call die("[solve_cg:solve_cg] This Rieman solver is not compatible with mesh refinements yet!")
       if (dom%geometry_type /= GEO_XYZ) call die("[solve_cg:solve_cg] Non-cartesian geometry is not implemented yet in this Riemann solver.")
+
       nmag = I_ZERO
       do i = 1, flind%fluids
          if (flind%all_fluids(i)%fl%is_magnetized) nmag = nmag + I_ONE

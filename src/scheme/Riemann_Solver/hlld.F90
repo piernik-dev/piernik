@@ -113,6 +113,10 @@ contains
 
    end subroutine riemann_wrap
 
+!>
+!! \brief single-fluid HLLD Riemann solver
+!<
+
    subroutine riemann_hlld(f,ul,ur,b_cc,b_ccl,b_ccr,psil,psir,psi,gamma)
 
     ! external procedures
@@ -145,7 +149,6 @@ contains
     real                                         :: coeff_1, dn_lsqt, dn_rsqt, add_dnsq, mul_dnsq
     real                                         :: vb_l, vb_starl, vb_r, vb_starr, vb_2star
     real                                         :: prl, prr
-
 
     ! Local arrays
 
