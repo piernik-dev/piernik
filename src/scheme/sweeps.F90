@@ -249,14 +249,16 @@ contains
 !------------------------------------------------------------------------------------------
    subroutine sweep(cdim, fargo_vel)
 
-      use cg_leaves,  only: leaves
-      use cg_list,    only: cg_list_element
-      use constants,  only: ydim, first_stage, last_stage
-      use dataio_pub, only: die
-      use global,     only: integration_order, use_fargo
-      use grid_cont,  only: grid_container
-      use mpisetup,   only: mpi_err, req, status
-      use solvecg,    only: solve_cg
+      use cg_leaves,        only: leaves
+      use cg_list,          only: cg_list_element
+      use constants,        only: ydim, first_stage, last_stage, uh_n
+      use dataio_pub,       only: die
+      use global,           only: integration_order, use_fargo
+      use grid_cont,        only: grid_container
+      use mpisetup,         only: mpi_err, req, status
+      use named_array_list, only: wna
+      use solvecg,          only: solve_cg
+      use sources,          only: prepare_sources
 
       implicit none
 
@@ -269,6 +271,7 @@ contains
       logical                        :: all_processed, all_received
       integer                        :: blocks_done
       integer                        :: g, nr, nr_recv
+      integer                        :: uhi
       integer(kind=4), dimension(:,:), pointer :: mpistatus
 
       if (use_fargo .and. cdim == ydim .and. .not. present(fargo_vel)) &
@@ -276,6 +279,17 @@ contains
 
       if (integration_order < lbound(first_stage, 1) .or. integration_order > ubound(first_stage, 1)) &
            call die("[sweeps:sweep] unknown integration_order")
+
+      ! Despite of its name, cg%w(uhi) here contains unaltered fluid state right at
+      ! the beginning of the timestep, not at half-step.
+      ! For RK2, when istep==2, cg%u temporalily contains the state at half timestep.
+      uhi = wna%ind(uh_n)
+      cgl => leaves%first
+      do while (associated(cgl))
+         call prepare_sources(cgl%cg)
+         cgl%cg%w(uhi)%arr = cgl%cg%u
+         cgl => cgl%nxt
+      enddo
 
       do istep = first_stage(integration_order), last_stage(integration_order)
          nr_recv = compute_nr_recv(cdim)
