@@ -92,9 +92,6 @@ contains
       allocate( b(cg%n_(cdim), nmag), u(cg%n_(cdim), flind%all), u0(cg%n_(cdim), flind%all), u1(cg%n_(cdim), flind%all), vx(cg%n_(cdim), flind%fluids))
       !OPT for AMR it may be worthwhile to move it to global scope
 
-      b(:,:) = 0.0
-      u(:,:) = 0.0
-
       !> \todo OPT: use cg%leafmap to skip lines fully covered by finer grids
       ! it should be also possible to compute only parts of lines that aren't covered by finer grids
       curl => find_level(cg%l%id)
