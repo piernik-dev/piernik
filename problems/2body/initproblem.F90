@@ -331,9 +331,11 @@ contains
 
       subroutine orbits(n_particles, e, first_run, plane)
 
-         !use constants,      only: dpi
-         use dataio_pub,     only: msg, printinfo
-         use particle_types, only: pset
+         !use constants,        only: dpi
+         use dataio_pub,       only: msg, printinfo
+         use gravity,          only: sum_potential
+         use particle_gravity, only: update_particle_gravpot_and_acc
+         use particle_types,   only: pset
 
          implicit none
 
@@ -380,6 +382,9 @@ contains
             call printinfo(msg)
             write(msg,'(a,3f5.2)') '[initproblem:orbits] Initial velocity of the particle: ', vel_init
             call printinfo(msg)
+
+            call update_particle_gravpot_and_acc
+            call sum_potential
 
          endif
       end subroutine orbits
