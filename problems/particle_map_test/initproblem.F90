@@ -96,7 +96,7 @@ contains
       use constants,        only: xdim, ydim, zdim, LO, HI
       use fluidindex,       only: flind
       use named_array_list, only: qna
-      use particle_pub,     only: pset
+      use particle_types,   only: pset
 
       implicit none
 
