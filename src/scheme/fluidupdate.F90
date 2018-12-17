@@ -91,7 +91,8 @@ contains
 #ifdef GRAV
       use global,              only: t, dt
       use gravity,             only: source_terms_grav
-      use particle_pub,        only: pset, psolver
+      use particle_pub,        only: psolver
+      use particle_types,      only: pset
 #endif /* GRAV */
 #if defined(COSM_RAYS) && defined(MULTIGRID)
       use all_boundaries,      only: all_fluid_boundaries
@@ -143,7 +144,7 @@ contains
          endif
       endif
 #ifdef GRAV
-      if (associated(psolver)) call pset%evolve(psolver, t-dt, dt)
+      if (associated(psolver)) call pset%evolve(psolver, t-dt, dt, forward)
 #endif /* GRAV */
       if (associated(problem_customize_solution)) call problem_customize_solution(forward)
 
