@@ -479,6 +479,9 @@ contains
       use constants,        only: one, half, sgp_n, sgpm_n, zero
       use global,           only: dt, dtm
 #endif /* SELF_GRAV */
+#ifdef NBODY
+      use constants,        only: nbgp_n
+#endif /* NBODY */
 
       implicit none
 
@@ -491,13 +494,25 @@ contains
          h = 0.0
       endif
 
+#ifdef NBODY
+      !> \todo correct it
+      call leaves%q_lin_comb([ ind_val(qna%ind(gp_n), 1.), ind_val(qna%ind(nbgp_n), 1.), ind_val(qna%ind(sgp_n), one+h),      ind_val(qna%ind(sgpm_n), -h)     ], qna%ind(gpot_n))
+      call leaves%q_lin_comb([ ind_val(qna%ind(gp_n), 1.), ind_val(qna%ind(nbgp_n), 1.), ind_val(qna%ind(sgp_n), one+half*h), ind_val(qna%ind(sgpm_n), -half*h)], qna%ind(hgpot_n))
+#else /* !NBODY */
       call leaves%q_lin_comb([ ind_val(qna%ind(gp_n), 1.), ind_val(qna%ind(sgp_n), one+h),      ind_val(qna%ind(sgpm_n), -h)     ], qna%ind(gpot_n))
       call leaves%q_lin_comb([ ind_val(qna%ind(gp_n), 1.), ind_val(qna%ind(sgp_n), one+half*h), ind_val(qna%ind(sgpm_n), -half*h)], qna%ind(hgpot_n))
+#endif /* !NBODY */
 
 #else /* !SELF_GRAV */
       !> \deprecated BEWARE: as long as grav_pot_3d is called only in init_piernik this assignment probably don't need to be repeated more than once
+#ifdef NBODY
+      !> \todo correct it
+      call leaves%q_lin_comb([ ind_val(qna%ind(gp_n), 1.), ind_val(qna%ind(nbgp_n), 1.)], qna%ind(gpot_n))
+      call leaves%q_lin_comb([ ind_val(qna%ind(gp_n), 1.), ind_val(qna%ind(nbgp_n), 1.)], qna%ind(hgpot_n))
+#else /* !NBODY */
       call leaves%q_copy(qna%ind(gp_n), qna%ind(gpot_n))
       call leaves%q_copy(qna%ind(gp_n), qna%ind(hgpot_n))
+#endif /* !NBODY */
 #endif /* !SELF_GRAV */
 
    end subroutine sum_potential
