@@ -157,6 +157,10 @@ contains
     logical                                      :: has_energy
     real                                         :: ue
 
+#ifdef ISO
+#  error Isothermal EOS is not implemented yet in this Riemann solver.
+#endif /* ISO */
+
     ! SOLVER
 
     ! suppress complains caused by -Wmaybe-uninitialized

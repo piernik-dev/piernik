@@ -292,8 +292,8 @@ contains
 !<
    subroutine balsara_implicit_interactions(u1, vx, istep, sweep, i1, i2, cg)
 
-      use constants,        only: half, one, zero, I_ONE, I_TWO, LO, HI, cs_i2_n, uh_n
-      use dataio_pub,       only: msg, warn
+      use constants,        only: half, one, zero, I_ONE, I_TWO, LO, HI, cs_i2_n, uh_n, RK2_1, RK2_2
+      use dataio_pub,       only: msg, warn, die
       use fluidindex,       only: flind, iarr_all_dn, iarr_all_mx, iarr_all_swp
       use global,           only: dt
       use grid_cont,        only: grid_container
@@ -339,10 +339,12 @@ contains
       delta(:) = one + drag(:) * (u1(:, iarr_all_dn(tfl(LO))) + u1(:, iarr_all_dn(tfl(HI))))
       delta(:) = one/delta(:)
 
-      if (istep == 1) then
+      ! here istep is tightly bound to canonical RK2
+      select case (istep)
+      case (RK2_1)
          vprim(:, tfl(LO)) =  delta(:)*( (1./u1(:, iarr_all_dn(tfl(LO))) + drag(:))*u1(:, iarr_all_mx(tfl(LO))) + drag(:)*u1(:, iarr_all_mx(tfl(HI))) )
          vprim(:, tfl(HI)) =  delta(:)*( (1./u1(:, iarr_all_dn(tfl(HI))) + drag(:))*u1(:, iarr_all_mx(tfl(HI))) + drag(:)*u1(:, iarr_all_mx(tfl(LO))) )
-      else
+      case (RK2_2)
          u0(:, iarr_all_swp(sweep,:)) = transpose(cg%w(wna%ind(uh_n))%get_sweep(sweep,i1,i2))
          vprim(:, tfl(HI)) =  delta(:)*( drag(:)*( u0(:, iarr_all_dn(tfl(HI)))/u1(:, iarr_all_dn(tfl(HI)))*u0(:, iarr_all_mx(tfl(LO))) &
                                                  - u0(:, iarr_all_dn(tfl(LO)))/u1(:, iarr_all_dn(tfl(HI)))*u0(:, iarr_all_mx(tfl(HI))) &
@@ -350,7 +352,9 @@ contains
          vprim(:, tfl(LO)) =  delta(:)*( drag(:)*( u0(:, iarr_all_dn(tfl(LO)))/u1(:, iarr_all_dn(tfl(LO)))*u0(:, iarr_all_mx(tfl(HI))) &
                                                  - u0(:, iarr_all_dn(tfl(HI)))/u1(:, iarr_all_dn(tfl(LO)))*u0(:, iarr_all_mx(tfl(LO))) &
                                                  + u1(:, iarr_all_mx(tfl(HI))) ) + u1(:, iarr_all_mx(tfl(LO))) * ( 1./u1(:, iarr_all_dn(tfl(LO))) + drag(:) )  )
-      endif
+      case default
+         call die("[interactions:balsara_implicit_interactions] Unsupported substep")
+      end select
       u1(:, iarr_all_mx) = u1(:, iarr_all_dn) * vprim(:,:)
       return
    end subroutine balsara_implicit_interactions
@@ -363,8 +367,8 @@ contains
 !<
    function balsara_based_interactions_function(u1, u0, vx, istep, sweep, i1, i2, cg) result(usrc)
 
-      use constants,        only: half, one, zero, I_ONE, I_TWO, LO, HI, cs_i2_n
-      use dataio_pub,       only: msg, warn
+      use constants,        only: half, one, zero, I_ONE, I_TWO, LO, HI, cs_i2_n, RK2_1, RK2_2
+      use dataio_pub,       only: msg, warn, die
       use fluidindex,       only: iarr_all_dn, iarr_all_mx, flind
       use global,           only: dt
       use grid_cont,        only: grid_container
@@ -414,12 +418,16 @@ contains
       delta(:) = one/delta(:)
 
       do i = I_ONE, I_TWO
-         if (istep == 1) then
+         ! here istep is tightly bound to canonical RK2
+         select case (istep)
+         case (RK2_1)
             usrc(:,iarr_all_mx(tfl(i))) = drag(:) * ( u1(:, iarr_all_dn(tfl(i)))*u1(:, iarr_all_mx(inv(i))) - delta(:)*u1(:, iarr_all_dn(inv(i)))*u1(:, iarr_all_mx(tfl(i))) )
-         else
+         case (RK2_2)
             usrc(:,iarr_all_mx(tfl(i))) = drag(:) * delta(:) * ( u0(:, iarr_all_dn(tfl(i)))*u0(:, iarr_all_mx(inv(i))) - u0(:, iarr_all_dn(inv(i)))*u0(:, iarr_all_mx(tfl(i))) &
                                                                + u1(:, iarr_all_dn(tfl(i)))*u1(:, iarr_all_mx(inv(i))) - u1(:, iarr_all_dn(inv(i)))*u1(:, iarr_all_mx(tfl(i))) )
-         endif
+         case default
+            call die("[interactions:balsara_based_interactions_function] Unsupported substep")
+         end select
       enddo
       ! usrc should be used to update u1 in all_sources procedure: u1 = u1 + rk2factror*usrc*dt
       return

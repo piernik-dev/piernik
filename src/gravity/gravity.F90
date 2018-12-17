@@ -112,7 +112,7 @@ module gravity
          integer,                       intent(in)  :: i2         !< number of column in the second direction after one pointed out by sweep
          integer(kind=4),               intent(in)  :: n          !< number of elements of returned array grav \todo OPT: would size(grav) be faster a bit?
          real, dimension(n),            intent(out) :: grav       !< 1D array of gravitational acceleration values computed for positions from %xsw and returned by the routine
-         integer,                       intent(in)  :: istep      !< istep=1 for halfstep, istep=2 for fullstep
+         integer,                       intent(in)  :: istep      !< istep=RK2_1 for halfstep, istep=RK2_2 for fullstep in 2nd order Runge-Kutta method
          type(grid_container), pointer, intent(in)  :: cg         !< current grid_container
       end subroutine grav_pot2accel_T
 
@@ -923,7 +923,7 @@ contains
 !<
    subroutine grav_pot2accel_ord2(sweep, i1, i2, n, grav, istep, cg)
 
-      use constants,  only: xdim, ydim, zdim, half, LO, HI, GEO_XYZ, GEO_RPZ
+      use constants,  only: xdim, ydim, zdim, half, LO, HI, GEO_XYZ, GEO_RPZ, RK2_1, RK2_2
       use dataio_pub, only: die
       use domain,     only: dom
       use grid_cont,  only: grid_container
@@ -935,12 +935,14 @@ contains
       integer,                       intent(in)  :: i2         !< number of column in the second direction after one pointed out by sweep
       integer(kind=4),               intent(in)  :: n          !< number of elements of returned array grav \todo OPT: would size(grav) be faster a bit?
       real, dimension(n),            intent(out) :: grav       !< 1D array of gravitational acceleration values computed for positions from %xsw and returned by the routine
-      integer,                       intent(in)  :: istep      !< istep=1 for halfstep, istep=2 for fullstep
+      integer,                       intent(in)  :: istep      !< istep=RK2_1 for halfstep, istep=RK2_2 for fullstep in 2nd order Runge-Kutta method
       type(grid_container), pointer, intent(in)  :: cg         !< current grid_container
 
       ! Gravitational acceleration is computed on right cell boundaries
 
-      if (istep==1) then
+      ! For more general schemes (higher order than RK2, non-canonical choices of RK2) we will need timestep fraction provided by the solver,, not istep
+      select case (istep)
+      case (RK2_1)
          select case (sweep)
             case (xdim)
                grav(2:n-1) = half*(cg%hgpot(cg%lhn(xdim, LO):cg%lhn(xdim, HI)-2, i1, i2) - cg%hgpot(cg%lhn(xdim, LO)+2:cg%lhn(xdim, HI), i1, i2))/cg%dl(xdim)
@@ -949,8 +951,7 @@ contains
             case (zdim)
                grav(2:n-1) = half*(cg%hgpot(i1, i2, cg%lhn(zdim, LO):cg%lhn(zdim, HI)-2) - cg%hgpot(i1, i2, cg%lhn(zdim, LO)+2:cg%lhn(zdim, HI)))/cg%dl(zdim)
          end select
-
-      else
+      case (RK2_2)
          select case (sweep)
             case (xdim)
                grav(2:n-1) = half*(cg%gpot(cg%lhn(xdim, LO):cg%lhn(xdim, HI)-2, i1, i2) - cg%gpot(cg%lhn(xdim, LO)+2:cg%lhn(xdim, HI), i1, i2))/cg%dl(xdim)
@@ -959,7 +960,9 @@ contains
             case (zdim)
                grav(2:n-1) = half*(cg%gpot(i1, i2, cg%lhn(zdim, LO):cg%lhn(zdim, HI)-2) - cg%gpot(i1, i2, cg%lhn(zdim, LO)+2:cg%lhn(zdim, HI)))/cg%dl(zdim)
          end select
-      endif
+      case default
+         call die("[gravity:grav_pot2accel_ord2] Unsupported substep")
+      end select
 
       grav(1) = grav(2); grav(n) = grav(n-1)
 
@@ -968,14 +971,14 @@ contains
          case (GEO_RPZ)
             if (sweep == ydim) grav = grav / cg%x(i2)
          case default
-            call die("[gravity:grav_pot2accel] Unsupported geometry")
+            call die("[gravity:grav_pot2accel_ord2] Unsupported geometry")
       end select
 
    end subroutine grav_pot2accel_ord2
 
    subroutine grav_pot2accel_ord4(sweep, i1, i2, n, grav, istep, cg)
 
-      use constants,  only: xdim, ydim, zdim, LO, HI, GEO_XYZ, GEO_RPZ
+      use constants,  only: xdim, ydim, zdim, LO, HI, GEO_XYZ, GEO_RPZ, RK2_1, RK2_2
       use dataio_pub, only: die
       use domain,     only: dom
       use grid_cont,  only: grid_container
@@ -987,14 +990,15 @@ contains
       integer,                       intent(in)  :: i2         !< number of column in the second direction after one pointed out by sweep
       integer(kind=4),               intent(in)  :: n          !< number of elements of returned array grav \todo OPT: would size(grav) be faster a bit?
       real, dimension(n),            intent(out) :: grav       !< 1D array of gravitational acceleration values computed for positions from %xsw and returned by the routine
-      integer,                       intent(in)  :: istep      !< istep=1 for halfstep, istep=2 for fullstep
+      integer,                       intent(in)  :: istep      !< istep=RK2_1 for halfstep, istep=RK2_2 for fullstep in 2nd order Runge-Kutta method
       type(grid_container), pointer, intent(in)  :: cg         !< current grid_container
 
       real, parameter :: onetw = 1./12.
 
       ! Gravitational acceleration is computed on right cell boundaries
 
-      if (istep==1) then
+      select case (istep)
+      case (RK2_1)
          select case (sweep)
             case (xdim)
                grav(3:n-2) = onetw*(cg%hgpot(cg%lhn(xdim, LO)+4:cg%lhn(xdim, HI),i1,i2) - 8.*cg%hgpot(cg%lhn(xdim, LO)+3:cg%lhn(xdim, HI)-1,i1,i2) + &
@@ -1006,7 +1010,7 @@ contains
                grav(3:n-2) = onetw*(cg%hgpot(i1,i2,cg%lhn(zdim, LO)+4:cg%lhn(zdim, HI)) - 8.*cg%hgpot(i1,i2,cg%lhn(zdim, LO)+3:cg%lhn(zdim, HI)-1) + &
                                     8.*cg%hgpot(i1,i2,cg%lhn(zdim, LO)+1:cg%lhn(zdim, HI)-3) - cg%hgpot(i1,i2,cg%lhn(zdim, LO):cg%lhn(zdim, HI)-4)) / cg%dl(zdim)
          end select
-      else
+      case (RK2_2)
          select case (sweep)
             case (xdim)
                grav(3:n-2) = onetw*(cg%gpot(cg%lhn(xdim, LO)+4:cg%lhn(xdim, HI),i1,i2) - 8.*cg%gpot(cg%lhn(xdim, LO)+3:cg%lhn(xdim, HI)-1,i1,i2) + &
@@ -1018,7 +1022,10 @@ contains
                grav(3:n-2) = onetw*(cg%gpot(i1,i2,cg%lhn(zdim, LO)+4:cg%lhn(zdim, HI)) - 8.*cg%gpot(i1,i2,cg%lhn(zdim, LO)+3:cg%lhn(zdim, HI)-1) + &
                                     8.*cg%gpot(i1,i2,cg%lhn(zdim, LO)+1:cg%lhn(zdim, HI)-3) - cg%gpot(i1,i2,cg%lhn(zdim, LO):cg%lhn(zdim, HI)-4)) / cg%dl(zdim)
          end select
-      endif
+      case default
+         call die("[gravity:grav_pot2accel_ord4] Unsupported substep")
+      end select
+
       grav(2) = grav(3); grav(n-1) = grav(n-2)
       grav(1) = grav(2); grav(n) = grav(n-1)
 
@@ -1027,7 +1034,7 @@ contains
          case (GEO_RPZ)
             if (sweep == ydim) grav = grav / cg%x(i2)
          case default
-            call die("[gravity:grav_pot2accel] Unsupported geometry")
+            call die("[gravity:grav_pot2accel_ord4] Unsupported geometry")
       end select
 
    end subroutine grav_pot2accel_ord4
@@ -1052,7 +1059,7 @@ contains
       integer(kind=4),               intent(in)  :: sweep      !< string of characters that points out the current sweep direction
       integer,                       intent(in)  :: i1         !< number of column in the first direction after one pointed out by sweep
       integer,                       intent(in)  :: i2         !< number of column in the second direction after one pointed out by sweep
-      integer,                       intent(in)  :: istep      !< istep=1 for halfstep, istep=2 for fullstep
+      integer,                       intent(in)  :: istep      !< istep=RK2_1 for halfstep, istep=RK2_2 for fullstep in 2nd order Runge-Kutta method
       real, dimension(n, flind%all), intent(out) :: gravsrc    !< u array update from sources
       real, dimension(n)                         :: gravacc    !< acceleration caused by gravitation
       logical                                    :: full_dim
