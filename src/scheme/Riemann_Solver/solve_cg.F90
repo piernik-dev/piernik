@@ -125,7 +125,6 @@ contains
 
             ! This is lowest order implementation of CR
             ! It agrees with the implementation in RTVD in the limit of small CR energy amounts
-            ! ToDo: integrate it into h_solver schemes
 
             ! transposition for compatibility with RTVD-based routines
             u0 = transpose(pu)
@@ -149,17 +148,12 @@ contains
 !! k-th interface is between k-th cell and (k+1)-th cell
 !! We don't calculate n-th interface because it is as incomplete as 0-th interface
 
-#undef RK_HIGH
 !! Disabled rk3 as high orders require more careful approach to guardcells and valid ranges
 
    subroutine solve(u, b_cc, dtodx, psi)
 
       use constants,  only: half
-#ifdef RK_HIGH
-      use constants,  only: oneq, twot
-#endif /* RK_HIGH */
       use dataio_pub, only: die
-      use global,     only: h_solver
       use hlld,           only: riemann_wrap
       use interpolations, only: interpol
 
@@ -180,23 +174,10 @@ contains
       real, dimension(size(b_cc,1)-1, size(b_cc,2)), target :: mag_cc
       real, dimension(size(psi, 1)-1, size(psi, 2)), target :: psi_cc
 
-      ! left and right MUSCL fluxes at interfaces 1 .. n-1
-      real, dimension(size(u,   1)-1,size(u,   2))          :: flx_l, flx_r
-      real, dimension(size(b_cc,1)-1,size(b_cc,2))          :: bclflx, bcrflx
-      real, dimension(size(psi, 1)-1,size(psi, 2))          :: psilflx, psirflx
-
       ! left and right states for cells 2 .. n-1
       real, dimension(2:size(u,   1)-1, size(u,   2))       :: u1    !, du2, du3
       real, dimension(2:size(b_cc,1)-1, size(b_cc,2))       :: b1    !, db2, db3
       real, dimension(2:size(psi, 1)-1, size(psi, 2))       :: psi1  !, dpsi2, dpsi3
-
-#ifdef RK_HIGH
-      ! left and right states for cells (RK3)
-      ! " to be checked "
-      real, dimension(2:size(u,   1)-2, size(u,  2 ))        :: u2
-      real, dimension(2:size(b_cc,1)-2, size(b_cc,2))        :: b2
-      real, dimension(2:size(psi, 1)-2, size(psi, 2))        :: psi2
-#endif /* RK_HIGH */
 
       ! updates required for higher order of integration will likely have shorter length
 
@@ -228,43 +209,13 @@ contains
       !! u^(n+1) = 1/3 u^(n) + 2/3 u^(2) + 2/3 \Delta t (u^(2))
       !! ---------------------------------------------------------------------------
       !<
-      select case (h_solver)
-         case ("rk2")
-            call interpol(u, b_cc, psi, ql, qr, b_cc_l, b_cc_r, psi_l, psi_r)
-            call riemann_wrap(ql, qr, b_cc_l, b_cc_r, psi_l, psi_r, flx, mag_cc, psi_cc) ! Now we advance the left and right states by a timestep.
-            call du_db(u1, b1, psi1, half * dtodx)
-            call interpol(u1, b1, psi1, ql(2:nx-2,:), qr(2:nx-2,:), b_cc_l(2:nx-2,:), b_cc_r(2:nx-2,:), psi_l(2:nx-2,:), psi_r(2:nx-2,:))
-            call riemann_wrap(ql(2:nx-2,:), qr(2:nx-2,:), b_cc_l(2:nx-2,:), b_cc_r(2:nx-2,:), psi_l(2:nx-2,:), psi_r(2:nx-2,:), flx(2:nx-2,:), mag_cc(2:nx-2,:), psi_cc(2:nx-2,:)) ! second call for Riemann problem uses states evolved to half timestep
-            call update  ! ToDo tell explicitly what range to update
-#if RK_HIGH
-         case ("rk3") ! " to be checked "
-            call interpol(u, b_cc, psi, ql, qr, b_cc_l, b_cc_r, psi_l, psi_r)
-            call riemann_wrap(ql, qr, b_cc_l, b_cc_r, psi_l, psi_r, flx, mag_cc, psi_cc) ! Now we advance the left and right states by a timestep.
-            call du_db(u1, b1, psi1, oneq * dtodx)
-            call interpol(u1, b1, psi1, ql(2:nx-2,:), qr(2:nx-2,:), b_cc_l(2:nx-2,:), b_cc_r(2:nx-2,:), psi_l(2:nx-2,:), psi_r(2:nx-2,:))
-            call riemann_wrap(ql(2:nx-2,:), qr(2:nx-2,:), b_cc_l(2:nx-2,:), b_cc_r(2:nx-2,:), psi_l(2:nx-2,:), psi_r(2:nx-2),:, flx(2:nx-2,:), mag_cc(2:nx-2,:), psi_cc(2:nx-2,:)) ! second call for Riemann problem uses states evolved to half timestep
-            call du_db(u2,b2,psi2, twot * dtodx)
-            call interpol(u1, b1, psi1, ql(2:nx-2,:), qr(2:nx-2,:), b_cc_l(2:nx-2,:), b_cc_r(2:nx-2,:), psi_l(2:nx-2,:), psi_r(2:nx-2,:))
-            call riemann_wrap(ql(2:nx-2,:), qr(2:nx-2,:), b_cc_l(2:nx-2,:), b_cc_r(2:nx-2,:), psi_l(2:nx-2,:), psi_r(2:nx-2,:), flx(2:nx-2,:), mag_cc(2:nx-2,:),:, psi_cc(2:nx-2,:))
-            call update
 
-            !! rk3 and most other possible schemes will need more sophisticated update routine.
-
-            !! Beware: weno3, ppm (and other high spatial order of reconstruction) in conjunction with
-            !! high order temporal integration schemes will need reliable, automatic estimate of required
-            !! minimal number of guardcells.
-
-#endif /* RK_HIGH */
-         case ("muscl")
-            call interpol(u,b_cc,psi,ql,qr,b_cc_l,b_cc_r,psi_l,psi_r)
-            call musclflx(ql, b_cc_l, psi_l, flx_l, bclflx, psilflx)
-            call musclflx(qr, b_cc_r, psi_r, flx_r, bcrflx, psirflx)
-            call ulr_fluxes_qlr
-            call riemann_wrap(ql(2:nx-2,:), qr(2:nx-2,:), b_cc_l(2:nx-2,:), b_cc_r(2:nx-2,:), psi_l(2:nx-2,:), psi_r(2:nx-2,:), flx(2:nx-2,:), mag_cc(2:nx-2,:), psi_cc(2:nx-2,:)) ! 2:nx-1 should be possible here
-            call update
-         case default
-            call die("[sweeps:solve_cg:solve] No recognized solver")
-      end select
+      call interpol(u, b_cc, psi, ql, qr, b_cc_l, b_cc_r, psi_l, psi_r)
+      call riemann_wrap(ql, qr, b_cc_l, b_cc_r, psi_l, psi_r, flx, mag_cc, psi_cc) ! Now we advance the left and right states by a timestep.
+      call du_db(u1, b1, psi1, half * dtodx)
+      call interpol(u1, b1, psi1, ql(2:nx-2,:), qr(2:nx-2,:), b_cc_l(2:nx-2,:), b_cc_r(2:nx-2,:), psi_l(2:nx-2,:), psi_r(2:nx-2,:))
+      call riemann_wrap(ql(2:nx-2,:), qr(2:nx-2,:), b_cc_l(2:nx-2,:), b_cc_r(2:nx-2,:), psi_l(2:nx-2,:), psi_r(2:nx-2,:), flx(2:nx-2,:), mag_cc(2:nx-2,:), psi_cc(2:nx-2,:)) ! second call for Riemann problem uses states evolved to half timestep
+      call update  ! ToDo tell explicitly what range to update
 
    contains
 
@@ -300,99 +251,6 @@ contains
          endif
 
       end subroutine du_db
-
-      subroutine ulr_fluxes_qlr
-
-         use constants, only: DIVB_HDC
-         use global,    only: divB_0_method
-
-         implicit none
-
-         ql(2:nx-2, :) = ql(2:nx-2, :) + half * dtodx * (flx_r(1:nx-3, :) - flx_l(2:nx-2, :))
-         qr(2:nx-2, :) = qr(2:nx-2, :) + half * dtodx * (flx_r(2:nx-2, :) - flx_l(3:nx-1, :))
-
-         b_cc_l(2:nx-2, :) = b_cc_l(2:nx-2, :) + half * dtodx * (bcrflx(1:nx-3, :) - bclflx(2:nx-2, :))
-         b_cc_r(2:nx-2, :) = b_cc_r(2:nx-2, :) + half * dtodx * (bcrflx(2:nx-2, :) - bclflx(3:nx-1, :))
-
-         if (divB_0_method == DIVB_HDC) then
-            psi_l(2:nx-2, :) = psi_l(2:nx-2, :) + half * dtodx * (psirflx(1:nx-3, :) - psilflx(2:nx-2, :))
-            psi_r(2:nx-2, :) = psi_r(2:nx-2, :) + half * dtodx * (psirflx(2:nx-2, :) - psilflx(3:nx-1, :))
-         endif
-
-      end subroutine ulr_fluxes_qlr
-
-      subroutine musclflx(q, b_cc, psi, qf, b_ccf, psif)
-
-         use constants,  only: half, xdim, ydim, zdim, DIVB_HDC, zero
-         use fluidindex, only: flind
-         use fluidtypes, only: component_fluid
-         use global,     only: divB_0_method
-         use hdc,        only: chspeed
-
-         implicit none
-
-         real, dimension(:,:), intent(in)  :: q
-         real, dimension(:,:), intent(in)  :: b_cc
-         real, dimension(:,:), intent(in)  :: psi
-         real, dimension(:,:), intent(out) :: qf
-         real, dimension(:,:), intent(out) :: b_ccf, psif
-
-         class(component_fluid), pointer   :: fl
-         real                              :: en
-         integer                           :: ip, i
-
-#ifdef ISO
-#  error Isothermal EOS is not implemented yet in musclflx
-#endif /* ISO */
-
-         qf    = zero
-         b_ccf = zero
-         psif  = zero
-
-         do ip = 1, flind%fluids
-
-            fl => flind%all_fluids(ip)%fl
-
-            do i = 1, size(q, 1)
-
-               qf(i,fl%idn) = q(i,fl%idn)*q(i,fl%imx)
-               if (fl%has_energy) then
-                  if (fl%is_magnetized) then
-                     qf(i,fl%imx) = q(i,fl%idn)*q(i,fl%imx)*q(i,fl%imx) + (q(i,fl%ien) + half*sum(b_cc(i,xdim:zdim)**2)) - b_cc(i,xdim)**2
-                  else
-                     qf(i,fl%imx) = q(i,fl%idn)*q(i,fl%imx)*q(i,fl%imx) + q(i,fl%ien)
-                  endif
-               else
-                  qf(i,fl%imx) = q(i,fl%idn)*q(i,fl%imx)*q(i,fl%imx)
-               endif
-               if (fl%is_magnetized) then
-                  qf(i,fl%imy) = q(i,fl%idn)*q(i,fl%imx)*q(i,fl%imy) - b_cc(i,xdim)*b_cc(i,ydim)
-                  qf(i,fl%imz) = q(i,fl%idn)*q(i,fl%imx)*q(i,fl%imz) - b_cc(i,xdim)*b_cc(i,zdim)
-                  b_ccf(i,ydim)  = b_cc(i,ydim)*q(i,fl%imx) - b_cc(i,xdim)*q(i,fl%imy)
-                  b_ccf(i,zdim)  = b_cc(i,zdim)*q(i,fl%imx) - b_cc(i,xdim)*q(i,fl%imz)
-                  if (divB_0_method .eq. DIVB_HDC) then
-                     b_ccf(i,xdim) = psi(i,1)
-                     psif(i,1)   = (chspeed**2)*b_cc(i,xdim)
-                  endif
-               else
-                  qf(i,fl%imy) = q(i,fl%idn)*q(i,fl%imx)*q(i,fl%imy)
-                  qf(i,fl%imz) = q(i,fl%idn)*q(i,fl%imx)*q(i,fl%imz)
-               endif
-               if (fl%has_energy) then
-                  if (fl%is_magnetized) then
-                     en = (q(i,fl%ien)/(fl%gam_1)) + half*q(i,fl%idn)*sum(q(i,fl%imx:fl%imz)**2) + half*sum(b_cc(i,xdim:zdim)**2)
-                     qf(i,fl%ien) = (en + (q(i,fl%ien) + half*sum(b_cc(i,xdim:zdim)**2)))*q(i,fl%imx) - b_cc(i,xdim)*dot_product(q(i,fl%imx:fl%imz),b_cc(i,xdim:zdim))
-                  else
-                     en = (q(i,fl%ien)/(fl%gam_1)) + half*q(i,fl%idn)*sum(q(i,fl%imx:fl%imz)**2)
-                     qf(i,fl%ien) = (en + (q(i,fl%ien)))*q(i,fl%imx)
-                  endif
-               endif
-
-            enddo
-
-         enddo
-
-      end subroutine musclflx
 
       subroutine update !(weights)
 
