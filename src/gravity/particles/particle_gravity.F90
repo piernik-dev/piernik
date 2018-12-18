@@ -293,8 +293,6 @@ contains
 
       wijk = wijk/cg%dvol
 
-      mask_gpot1b = .true.
-
       if (mask_gpot1b) then
       do p = 1, n_part
 
