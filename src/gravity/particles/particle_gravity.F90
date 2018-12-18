@@ -369,7 +369,7 @@ contains
       integer                                   :: numer1, numer2, i, j, p
       logical                                   :: finish, save_potential
 
-      save_potential = .true.
+      save_potential = .false.
       finish         = .false.
       numer1 = 64
       numer2 = 20
