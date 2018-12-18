@@ -180,10 +180,9 @@ contains
 !<
    subroutine make_sweep(dir, forward)
 
-      use constants,      only: DIVB_CT
       use dataio_pub,     only: die
       use domain,         only: dom
-      use global,         only: geometry25D, divB_0_method
+      use global,         only: geometry25D
       use sweeps,         only: sweep
 #ifdef COSM_RAYS
       use crdiffusion,    only: cr_diff
@@ -199,6 +198,10 @@ contains
       use bfc_bcc,        only: bfc2bcc
       use global,         only: force_cc_mag
 #endif /* RIEMANN */
+#if defined(RTVD) || defined (MAGNETIC)
+      use constants,      only: DIVB_CT
+      use global,         only: divB_0_method
+#endif /* RTVD || MAGNETIC */
 
       implicit none
 
