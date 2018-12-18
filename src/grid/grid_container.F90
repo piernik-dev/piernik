@@ -214,6 +214,7 @@ module grid_cont
       real, dimension(:,:,:), pointer :: wa      => null()       !< Temporary array used for different purposes, usually has dimension (grid::nx, grid::ny, grid::nz)
 #ifdef NBODY
       real, dimension(:,:,:), pointer :: nbgp    => null()       !< Array of gravitational potential from particles
+      real, dimension(:,:,:), pointer :: gp1b    => null()       !< Array of gravitational potential from particles
       real, dimension(:,:,:), pointer :: nbody_dens => null()    !< Array of density from particles
 #endif /* NBODY */
 

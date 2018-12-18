@@ -191,6 +191,7 @@ module constants
    character(len=dsetnamelen), parameter :: hgpot_n = "hgpot"   !< sum of fields for half-step values
 #ifdef NBODY
    character(len=dsetnamelen), parameter :: nbgp_n  = "nbgp"    !< current gravity field from nbody
+   character(len=dsetnamelen), parameter :: gp1b_n  = "gp1b"    !< current gravity field from 1 body
    character(len=dsetnamelen), parameter :: nbody_dens_n = "nbody_dens"   !< density  from particles
 #endif /* NBODY */
    ! misc

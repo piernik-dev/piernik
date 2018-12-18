@@ -61,9 +61,9 @@ contains
       use particle_integrators,  only: hermit4
 #ifdef NBODY
       use dataio_pub,            only: printinfo
-      use mpisetup,              only: rbuff
+      use mpisetup,              only: lbuff, rbuff
       use particle_func,         only: check_ord
-      use particle_gravity,      only: is_setacc_cic, is_setacc_int
+      use particle_gravity,      only: is_setacc_cic, is_setacc_int, mask_gpot1b
       use particle_integrators,  only: leapfrog2
 #endif /* NBODY */
 
@@ -87,6 +87,7 @@ contains
 #ifdef NBODY
       acc_interp_method    = 'cic'
       lf_c                 = 1.0
+      mask_gpot1b          = .true.
 #endif /* NBODY */
 
       if (master) then
@@ -111,10 +112,15 @@ contains
 #ifdef NBODY
          cbuff(3) = acc_interp_method
          rbuff(1) = lf_c
+         lbuff(1) = mask_gpot1b
 #endif /* NBODY */
       endif
 
       call piernik_MPI_Bcast(cbuff, cbuff_len)
+#ifdef NBODY
+      call piernik_MPI_Bcast(lbuff)
+      call piernik_MPI_Bcast(rbuff)
+#endif /* NBODY */
 
       if (slave) then
          time_integrator = cbuff(1)
@@ -122,6 +128,7 @@ contains
 #ifdef NBODY
          acc_interp_method    = cbuff(3)
          lf_c                 = rbuff(1)
+         mask_gpot1b          = lbuff(1)
 #endif /* NBODY */
       endif
 

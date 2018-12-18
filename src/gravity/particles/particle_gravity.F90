@@ -34,9 +34,10 @@ module particle_gravity
    implicit none
 
    private
-   public :: update_particle_gravpot_and_acc, is_setacc_cic, is_setacc_int, phi_pm_part, get_acc_model
+   public :: update_particle_gravpot_and_acc, is_setacc_cic, is_setacc_int, mask_gpot1b, phi_pm_part, get_acc_model
 
-   logical :: is_setacc_cic, is_setacc_int
+   logical :: is_setacc_cic, is_setacc_int, mask_gpot1b
+
 
 contains
 
@@ -249,7 +250,7 @@ contains
 
    subroutine update_particle_acc_cic(n_part, cg, cells)
 
-      use constants,      only: ndims, CENTER, xdim, ydim, zdim, half, zero
+      use constants,      only: ndims, CENTER, LO, HI, xdim, ydim, zdim, half, zero
       use grid_cont,      only: grid_container
       use particle_types, only: pset
 
@@ -266,7 +267,6 @@ contains
       real(kind=8),    dimension(n_part,8)         :: wijk, fx, fy, fz
 
       do i = 1, n_part
-         pset%p(i)%acc = zero
          if ((pset%p(i)%outside) .eqv. .false.) then
             do cdim = xdim, ndims
                if (pset%p(i)%pos(cdim) < cg%coord(CENTER, cdim)%r(cells(i,cdim))) then
@@ -293,6 +293,36 @@ contains
 
       wijk = wijk/cg%dvol
 
+      mask_gpot1b = .true.
+
+      if (mask_gpot1b) then
+      do p = 1, n_part
+
+         do i = cg%lhn(xdim, LO), cg%lhn(xdim, HI)
+            do j = cg%lhn(ydim, LO), cg%lhn(ydim, HI)
+               do k = cg%lhn(zdim, LO), cg%lhn(zdim, HI)
+                  cg%gp1b(i,j,k) = cg%gp1b(i,j,k) + phi_pm_part([cg%coord(CENTER,xdim)%r(i) - pset%p(p)%pos(xdim), &
+                                                                 cg%coord(CENTER,ydim)%r(j) - pset%p(p)%pos(ydim), &
+                                                                 cg%coord(CENTER,zdim)%r(k) - pset%p(p)%pos(zdim)], 0.0, pset%p(p)%mass)
+               enddo
+            enddo
+         enddo
+         cg%gp1b = -cg%gp1b + cg%gpot
+         c = 1
+         do i = 0, 1
+            do j = 0, 1
+               do k = 0, 1
+                  fx(p, c) = -(cg%gp1b(cic_cells(p, xdim)+1+i, cic_cells(p, ydim)  +j, cic_cells(p, zdim)  +k) - cg%gp1b(cic_cells(p, xdim)-1+i, cic_cells(p, ydim)  +j, cic_cells(p, zdim)  +k))
+                  fy(p, c) = -(cg%gp1b(cic_cells(p, xdim)  +i, cic_cells(p, ydim)+1+j, cic_cells(p, zdim)  +k) - cg%gp1b(cic_cells(p, xdim)  +i, cic_cells(p, ydim)-1+j, cic_cells(p, zdim)  +k))
+                  fz(p, c) = -(cg%gp1b(cic_cells(p, xdim)  +i, cic_cells(p, ydim)  +j, cic_cells(p, zdim)+1+k) - cg%gp1b(cic_cells(p, xdim)  +i, cic_cells(p, ydim)  +j, cic_cells(p, zdim)-1+k))
+                  c = c + 1
+               enddo
+            enddo
+         enddo
+      enddo
+
+      else
+
       do p = 1, n_part
          c = 1
          do i = 0, 1
@@ -307,11 +337,14 @@ contains
          enddo
       enddo
 
+      endif
+
       fx = half*fx*cg%idx
       fy = half*fy*cg%idy
       fz = half*fz*cg%idz
 
       do p = 1, n_part
+         pset%p(p)%acc = zero
          do c = 1, 8
             pset%p(p)%acc(xdim) = pset%p(p)%acc(xdim) + wijk(p, c) * fx(p, c)
             pset%p(p)%acc(ydim) = pset%p(p)%acc(ydim) + wijk(p, c) * fy(p, c)
