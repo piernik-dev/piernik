@@ -269,12 +269,12 @@ contains
 
       use cg_leaves,        only: leaves
       use cg_list,          only: cg_list_element
-      use constants,        only: ydim, first_stage, last_stage, uh_n
+      use constants,        only: ydim, first_stage, last_stage, uh_n, magh_n, psih_n, psi_n, INVALID
       use dataio_pub,       only: die
       use global,           only: integration_order, use_fargo
       use grid_cont,        only: grid_container
       use mpisetup,         only: mpi_err, req, status
-      use named_array_list, only: wna
+      use named_array_list, only: qna, wna
       use solvecg,          only: solve_cg
       use sources,          only: prepare_sources
 
@@ -289,7 +289,7 @@ contains
       logical                        :: all_processed, all_received
       integer                        :: blocks_done
       integer                        :: g, nr, nr_recv
-      integer                        :: uhi
+      integer                        :: uhi, bhi, psii, psihi
       integer(kind=4), dimension(:,:), pointer :: mpistatus
 
       if (use_fargo .and. cdim == ydim .and. .not. present(fargo_vel)) &
@@ -302,10 +302,21 @@ contains
       ! the beginning of the timestep, not at half-step.
       ! For RK2, when istep==2, cg%u temporalily contains the state at half timestep.
       uhi = wna%ind(uh_n)
+      bhi = wna%ind(magh_n)
+      psii = INVALID
+      psihi = INVALID
+      if (qna%exists(psi_n)) then
+         psii = qna%ind(psi_n)
+         psihi = qna%ind(psih_n)
+      end if
+
+      ! for use with GLM divergence cleaning we also make a copy of b and psi fields
       cgl => leaves%first
       do while (associated(cgl))
          call prepare_sources(cgl%cg)
          cgl%cg%w(uhi)%arr = cgl%cg%u
+         cgl%cg%w(bhi)%arr = cgl%cg%b
+         if (psii /= INVALID) cgl%cg%q(psihi)%arr = cgl%cg%q(psii)%arr
          cgl => cgl%nxt
       enddo
 
