@@ -181,11 +181,6 @@ contains
 
       ! updates required for higher order of integration will likely have shorter length
 
-!!$     ! fluxes through interfaces 2 .. n-2
-!!$     real, dimension(size(u,   1), 2:size(u,   2)-2), target :: flx1
-!!$     real, dimension(size(b_cc,1), 2:size(b_cc,2)-2), target :: mag_cc1
-!!$     real, dimension(size(psi, 1), 2:size(psi, 2)-2), target :: psi_cc1
-
       integer, parameter                                    :: in = 1  ! index for cells
       integer                                               :: nx
 
@@ -252,7 +247,7 @@ contains
 
       end subroutine du_db
 
-      subroutine update !(weights)
+      subroutine update
 
          use constants,  only: xdim, ydim, zdim, DIVB_HDC
          use fluidindex, only: flind
@@ -260,54 +255,17 @@ contains
 
          implicit none
 
-!       real, optional, dimension(:), intent(in) :: weights
-
-!       real, dimension(:), allocatable :: w
          integer :: iend  !< last component of any fluid (i.e. exclude CR or tracers here)
-
 
          iend = flind%all_fluids(flind%fluids)%fl%end
 
-!!$       if (present(weights)) then
-!!$          allocate(w(size(weights)))
-!!$          w = weights/sum(weights)
-!!$       else
-!!$          allocate(w(1))
-!!$          w(1) = 1.
-!!$       endif
-
-         u(3:nx-2, :iend) = u(3:nx-2, :iend) + dtodx * (flx(2:nx-3, :iend) - flx(3:nx-2, :iend)) ! * w(1)
-!       if (size(w)>=2) u(2:nx, :iend) = u(2:nx, :iend) + w(2) * du1(2:nx, :iend)
-!       if (size(w)>=3) u(2:nx, :iend) = u(2:nx, :iend) + w(3) * du2(2:nx, :iend)
-!       if (size(w)>=4) u(2:nx, :iend) = u(2:nx, :iend) + w(4) * du3(2:nx, :iend)
-!       u(1, :iend) = u(2, :iend)
-!       u(nx, :iend) = u(nx-1, :iend)
-
-         b_cc(3:nx-2, ydim:zdim) = b_cc(3:nx-2, ydim:zdim) + dtodx * (mag_cc(2:nx-3, ydim:zdim) - mag_cc(3:nx-2, ydim:zdim)) ! * w(1)
-!       if (size(w)>=2)  b_cc(2:nx, ydim:zdim) = b_cc(2:nx, ydim:zdim) + w(2) * db1(2:nx, ydim:zdim)
-!       if (size(w)>=3)  b_cc(2:nx, ydim:zdim) = b_cc(2:nx, ydim:zdim) + w(3) * db2(2:nx, ydim:zdim)
-!       if (size(w)>=4)  b_cc(2:nx, ydim:zdim) = b_cc(2:nx, ydim:zdim) + w(4) * db3(2:nx, ydim:zdim)
+         u(3:nx-2, :iend) = u(3:nx-2, :iend) + dtodx * (flx(2:nx-3, :iend) - flx(3:nx-2, :iend))
+         b_cc(3:nx-2, ydim:zdim) = b_cc(3:nx-2, ydim:zdim) + dtodx * (mag_cc(2:nx-3, ydim:zdim) - mag_cc(3:nx-2, ydim:zdim))
 
          if (divB_0_method == DIVB_HDC) then
-
-            b_cc(3:nx-2, xdim) = b_cc(3:nx-2, xdim) + dtodx * (mag_cc(2:nx-3, xdim) - mag_cc(3:nx-2, xdim)) ! * w(1)
-!          if (size(w)>=2)  b_cc(2:nx, xdim) = b_cc(2:nx, xdim) + w(2) * db1(2:nx, xdim)
-!          if (size(w)>=3)  b_cc(2:nx, xdim) = b_cc(2:nx, xdim) + w(3) * db2(2:nx, xdim)
-!          if (size(w)>=4)  b_cc(2:nx, xdim) = b_cc(2:nx, xdim) + w(4) * db3(2:nx, xdim)
-
-            psi(3:nx-2, 1) = psi(3:nx-2, 1) + dtodx * (psi_cc(2:nx-3, 1) - psi_cc(3:nx-2, 1)) ! * w(1)
-!          if (size(w)>=2)  psi_cc(2:nx, 1) = psi_cc(2:nx, 1) + w(2) * dpsi1(2:nx, 1)
-!          if (size(w)>=3)  psi_cc(2:nx, 1) = psi_cc(2:nx, 1) + w(3) * dpsi2(2:nx, 1)
-!          if (size(w)>=4)  psi_cc(2:nx, 1) = psi_cc(2:nx, 1) + w(4) * dpsi3(2:nx, 1)
-!          psi(1, :) = psi(2, :)
-!          psi(nx, :) = psi(nx-1, :)
-
+            b_cc(3:nx-2, xdim) = b_cc(3:nx-2, xdim) + dtodx * (mag_cc(2:nx-3, xdim) - mag_cc(3:nx-2, xdim))
+            psi(3:nx-2, 1) = psi(3:nx-2, 1) + dtodx * (psi_cc(2:nx-3, 1) - psi_cc(3:nx-2, 1))
          endif
-
-!       b_cc(1, :)  = b_cc(2, :)
-!       b_cc(nx, :) = b_cc(nx-1, :)
-
-!       deallocate(w)
 
       end subroutine update
 
