@@ -279,36 +279,9 @@ contains
       integer                                         :: i, j, k, c, cdim
       integer                                         :: p
       integer(kind=4)                                 :: ig
-      integer,      dimension(n_part,ndims)           :: cic_cells
-      real,         dimension(n_part,ndims)           :: dxyz
-      real(kind=8), dimension(n_part,8)               :: wijk, fx, fy, fz
-
-      do i = 1, n_part
-         if ((pset%p(i)%outside) .eqv. .false.) then
-            do cdim = xdim, ndims
-               if (pset%p(i)%pos(cdim) < cg%coord(CENTER, cdim)%r(cells(i,cdim))) then
-                  cic_cells(i, cdim) = cells(i, cdim) - 1
-               else
-                  cic_cells(i, cdim) = cells(i, cdim)
-               endif
-               dxyz(i, cdim) = abs(pset%p(i)%pos(cdim) - cg%coord(CENTER, cdim)%r(cic_cells(i,cdim)))
-
-            enddo
-
-            wijk(i, 1) = (cg%dx - dxyz(i, xdim))*(cg%dy - dxyz(i, ydim))*(cg%dz - dxyz(i, zdim)) !a(i  ,j  ,k  )
-            wijk(i, 2) = (cg%dx - dxyz(i, xdim))*(cg%dy - dxyz(i, ydim))*         dxyz(i, zdim)  !a(i+1,j  ,k  )
-            wijk(i, 3) = (cg%dx - dxyz(i, xdim))*         dxyz(i, ydim) *(cg%dz - dxyz(i, zdim)) !a(i  ,j+1,k  )
-            wijk(i, 4) = (cg%dx - dxyz(i, xdim))*         dxyz(i, ydim) *         dxyz(i, zdim)  !a(i  ,j  ,k+1)
-            wijk(i, 5) =          dxyz(i, xdim) *(cg%dy - dxyz(i, ydim))*(cg%dz - dxyz(i, zdim)) !a(i+1,j+1,k  )
-            wijk(i, 6) =          dxyz(i, xdim) *(cg%dy - dxyz(i, ydim))*         dxyz(i, zdim)  !a(i  ,j+1,k+1)
-            wijk(i, 7) =          dxyz(i, xdim) *         dxyz(i, ydim) *(cg%dz - dxyz(i, zdim)) !a(i+1,j  ,k+1)
-            wijk(i, 8) =          dxyz(i, xdim) *         dxyz(i, ydim) *         dxyz(i, zdim)  !a(i+1,j+1,k+1)
-         !else multipole expansion for particles outside domain
-         endif
-
-      enddo
-
-      wijk = wijk/cg%dvol
+      integer,      dimension(ndims)                  :: cic_cells
+      real,         dimension(ndims)                  :: dxyz
+      real(kind=8), dimension(8)                      :: wijk, fx, fy, fz
 
       if (mask_gpot1b) then
          ig = qna%ind(gp1b_n)
@@ -317,6 +290,30 @@ contains
       endif
 
       do p = 1, n_part
+         if ((pset%p(p)%outside) .eqv. .false.) then
+            do cdim = xdim, ndims
+               if (pset%p(p)%pos(cdim) < cg%coord(CENTER, cdim)%r(cells(p,cdim))) then
+                  cic_cells(cdim) = cells(p, cdim) - 1
+               else
+                  cic_cells(cdim) = cells(p, cdim)
+               endif
+               dxyz(cdim) = abs(pset%p(p)%pos(cdim) - cg%coord(CENTER, cdim)%r(cic_cells(cdim)))
+
+            enddo
+
+            wijk(1) = (cg%dx - dxyz(xdim))*(cg%dy - dxyz(ydim))*(cg%dz - dxyz(zdim)) !a(i  ,j  ,k  )
+            wijk(2) = (cg%dx - dxyz(xdim))*(cg%dy - dxyz(ydim))*         dxyz(zdim)  !a(i+1,j  ,k  )
+            wijk(3) = (cg%dx - dxyz(xdim))*         dxyz(ydim) *(cg%dz - dxyz(zdim)) !a(i  ,j+1,k  )
+            wijk(4) = (cg%dx - dxyz(xdim))*         dxyz(ydim) *         dxyz(zdim)  !a(i  ,j  ,k+1)
+            wijk(5) =          dxyz(xdim) *(cg%dy - dxyz(ydim))*(cg%dz - dxyz(zdim)) !a(i+1,j+1,k  )
+            wijk(6) =          dxyz(xdim) *(cg%dy - dxyz(ydim))*         dxyz(zdim)  !a(i  ,j+1,k+1)
+            wijk(7) =          dxyz(xdim) *         dxyz(ydim) *(cg%dz - dxyz(zdim)) !a(i+1,j  ,k+1)
+            wijk(8) =          dxyz(xdim) *         dxyz(ydim) *         dxyz(zdim)  !a(i+1,j+1,k+1)
+         !else multipole expansion for particles outside domain
+         endif
+
+         wijk = wijk/cg%dvol
+
          if (mask_gpot1b) then
             cg%gp1b = zero
             call gravpot1b(p, cg, ig, zero)
@@ -327,25 +324,23 @@ contains
          do i = 0, 1
             do j = 0, 1
                do k = 0, 1
-                  fx(p, c) = -(cg%q(ig)%point(cic_cells(p,:)+idm(xdim,:)+[i,j,k]) - cg%q(ig)%point(cic_cells(p,:)-idm(xdim,:)+[i,j,k]))
-                  fy(p, c) = -(cg%q(ig)%point(cic_cells(p,:)+idm(ydim,:)+[i,j,k]) - cg%q(ig)%point(cic_cells(p,:)-idm(ydim,:)+[i,j,k]))
-                  fz(p, c) = -(cg%q(ig)%point(cic_cells(p,:)+idm(zdim,:)+[i,j,k]) - cg%q(ig)%point(cic_cells(p,:)-idm(zdim,:)+[i,j,k]))
+                  fx(c) = -(cg%q(ig)%point(cic_cells(:)+idm(xdim,:)+[i,j,k]) - cg%q(ig)%point(cic_cells(:)-idm(xdim,:)+[i,j,k]))
+                  fy(c) = -(cg%q(ig)%point(cic_cells(:)+idm(ydim,:)+[i,j,k]) - cg%q(ig)%point(cic_cells(:)-idm(ydim,:)+[i,j,k]))
+                  fz(c) = -(cg%q(ig)%point(cic_cells(:)+idm(zdim,:)+[i,j,k]) - cg%q(ig)%point(cic_cells(:)-idm(zdim,:)+[i,j,k]))
                   c = c + 1
                enddo
             enddo
          enddo
-      enddo
 
-      fx = half*fx*cg%idx
-      fy = half*fy*cg%idy
-      fz = half*fz*cg%idz
+         fx = half*fx*cg%idx
+         fy = half*fy*cg%idy
+         fz = half*fz*cg%idz
 
-      do p = 1, n_part
          pset%p(p)%acc = zero
          do c = 1, 8
-            pset%p(p)%acc(xdim) = pset%p(p)%acc(xdim) + wijk(p, c) * fx(p, c)
-            pset%p(p)%acc(ydim) = pset%p(p)%acc(ydim) + wijk(p, c) * fy(p, c)
-            pset%p(p)%acc(zdim) = pset%p(p)%acc(zdim) + wijk(p, c) * fz(p, c)
+            pset%p(p)%acc(xdim) = pset%p(p)%acc(xdim) + wijk(c) * fx(c)
+            pset%p(p)%acc(ydim) = pset%p(p)%acc(ydim) + wijk(c) * fy(c)
+            pset%p(p)%acc(zdim) = pset%p(p)%acc(zdim) + wijk(c) * fz(c)
          enddo
       enddo
 
