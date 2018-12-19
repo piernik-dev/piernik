@@ -459,16 +459,11 @@ contains
             !   endif
             !endif
 
-            write(msg,'(a,3f8.5)') '[particle_integrators:leapfrog2_diagnostics] pset%p(1)%pos = ', pset%p(1)%pos
-            call printinfo(msg)
-            write(msg,'(a,3f8.5)') '[particle_integrators:leapfrog2_diagnostics] pset%p(1)%vel = ', pset%p(1)%vel
-            call printinfo(msg)
-
             open(newunit=lun_out, file='leapfrog_out.log', status='unknown',  position='append')
 
             do i = 1, n
                call get_acc_model(i, 0.0, acc2)
-               write(lun_out, '(I3,1X,19(E13.6,1X))') i, t_glob+dt_tot, dt_tot, pset%p(i)%mass, pset%p(i)%pos, pset%p(i)%vel, pset%p(i)%acc, acc2(:)!, pset%p(i)%energy, total_energy, initial_energy, d_energy, ang_momentum, init_ang_momentum, d_ang_momentum
+               write(lun_out, '(a,I3.3,1X,19(E13.6,1X))') 'particle', i, t_glob+dt_tot, dt_tot, pset%p(i)%mass, pset%p(i)%pos, pset%p(i)%vel, pset%p(i)%acc, acc2(:)!, pset%p(i)%energy, total_energy, initial_energy, d_energy, ang_momentum, init_ang_momentum, d_ang_momentum
             enddo
 
             close(lun_out)
