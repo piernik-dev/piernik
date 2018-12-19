@@ -126,7 +126,6 @@ contains
 
       cg%nbgp = zero
 
-      open(unit=999, file='pset.dat', action='write', position='append')
          do p = 1, n_part
             do i = cg%lhn(xdim, LO), cg%lhn(xdim, HI)
                do j = cg%lhn(ydim, LO), cg%lhn(ydim, HI)
@@ -137,9 +136,7 @@ contains
                   enddo
                enddo
             enddo
-            write(999,*) p, pset%p(p)%pos
          enddo
-      close(999)
 
    end subroutine update_gravpot_from_particles
 
