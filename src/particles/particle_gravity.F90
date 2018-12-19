@@ -280,7 +280,7 @@ contains
       integer                                         :: p
       integer(kind=4)                                 :: ig, dir
       integer,      dimension(ndims)                  :: cic_cells
-      real,         dimension(ndims)                  :: dxyz
+      real,         dimension(ndims)                  :: dxyz, axyz
       real(kind=8), dimension(ndims,8)                :: fxyz
       real(kind=8), dimension(8)                      :: wijk
 
@@ -321,26 +321,20 @@ contains
             cg%gp1b = -cg%gp1b + cg%gpot
          endif
 
-         c = 1
-         do i = 0, 1
-            do j = 0, 1
-               do k = 0, 1
-                  do dir = xdim, zdim
-                  fxyz(dir,c) = -(cg%q(ig)%point(cic_cells(:)+idm(dir,:)+[i,j,k]) - cg%q(ig)%point(cic_cells(:)-idm(dir,:)+[i,j,k]))
+         do dir = xdim, zdim
+            c = 1
+            do i = 0, 1
+               do j = 0, 1
+                  do k = 0, 1
+                     fxyz(dir,c) = -(cg%q(ig)%point(cic_cells(:)+idm(dir,:)+[i,j,k]) - cg%q(ig)%point(cic_cells(:)-idm(dir,:)+[i,j,k]))
+                     c = c + 1
                   enddo
-                  c = c + 1
                enddo
             enddo
+            axyz(dir) = sum(fxyz(dir,:)*wijk(:))
          enddo
 
-         fxyz(xdim,:) = half*fxyz(xdim,:)*cg%idl(xdim)
-         fxyz(ydim,:) = half*fxyz(ydim,:)*cg%idl(ydim)
-         fxyz(zdim,:) = half*fxyz(zdim,:)*cg%idl(zdim)
-
-         pset%p(p)%acc = zero
-         do c = 1, 8
-            pset%p(p)%acc(:) = pset%p(p)%acc(:) + wijk(c) * fxyz(:,c)
-         enddo
+         pset%p(p)%acc(:) = half*axyz(:)*cg%idl(:)
       enddo
 
    end subroutine update_particle_acc_cic
