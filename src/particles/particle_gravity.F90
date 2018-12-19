@@ -111,32 +111,50 @@ contains
 
    end function phi_pm_part
 
-   subroutine update_gravpot_from_particles(n_part, cg, eps2)
+   subroutine gravpot1b(p, cg, ig, eps2)
 
-      use constants,      only: CENTER, LO, HI, xdim, ydim, zdim, zero
+      use constants,      only: CENTER, LO, HI, xdim, ydim, zdim
       use grid_cont,      only: grid_container
       use particle_types, only: pset
+
+      implicit none
+
+      integer,                       intent(in)    :: p
+      type(grid_container), pointer, intent(inout) :: cg
+      integer(kind=4),               intent(in)    :: ig
+      real,                          intent(in)    :: eps2
+      integer                                      :: i, j, k
+
+      do i = cg%lhn(xdim, LO), cg%lhn(xdim, HI)
+         do j = cg%lhn(ydim, LO), cg%lhn(ydim, HI)
+            do k = cg%lhn(zdim, LO), cg%lhn(zdim, HI)
+               cg%q(ig)%arr(i,j,k) = cg%q(ig)%arr(i,j,k) + phi_pm_part([cg%coord(CENTER,xdim)%r(i) - pset%p(p)%pos(xdim), &
+                                                                        cg%coord(CENTER,ydim)%r(j) - pset%p(p)%pos(ydim), &
+                                                                        cg%coord(CENTER,zdim)%r(k) - pset%p(p)%pos(zdim)], eps2, pset%p(p)%mass)
+            enddo
+         enddo
+      enddo
+
+   end subroutine gravpot1b
+
+   subroutine update_gravpot_from_particles(n_part, cg, eps2)
+
+      use constants,        only: nbgp_n, zero
+      use grid_cont,        only: grid_container
+      use named_array_list, only: qna
 
       implicit none
 
       integer,                       intent(in)    :: n_part
       type(grid_container), pointer, intent(inout) :: cg
       real,                          intent(in)    :: eps2
-      integer                                      :: i, j, k, p
+      integer                                      :: p
 
       cg%nbgp = zero
 
-         do p = 1, n_part
-            do i = cg%lhn(xdim, LO), cg%lhn(xdim, HI)
-               do j = cg%lhn(ydim, LO), cg%lhn(ydim, HI)
-                  do k = cg%lhn(zdim, LO), cg%lhn(zdim, HI)
-                     cg%nbgp(i,j,k) = cg%nbgp(i,j,k) + phi_pm_part([cg%coord(CENTER,xdim)%r(i) - pset%p(p)%pos(xdim), &
-                                                                    cg%coord(CENTER,ydim)%r(j) - pset%p(p)%pos(ydim), &
-                                                                    cg%coord(CENTER,zdim)%r(k) - pset%p(p)%pos(zdim)], eps2, pset%p(p)%mass)
-                  enddo
-               enddo
-            enddo
-         enddo
+      do p = 1, n_part
+         call gravpot1b(p, cg, qna%ind(nbgp_n), eps2)
+      enddo
 
    end subroutine update_gravpot_from_particles
 
@@ -247,21 +265,23 @@ contains
 
    subroutine update_particle_acc_cic(n_part, cg, cells)
 
-      use constants,      only: ndims, CENTER, LO, HI, xdim, ydim, zdim, half, zero
-      use grid_cont,      only: grid_container
-      use particle_types, only: pset
+      use constants,        only: ndims, CENTER, xdim, ydim, zdim, half, zero, gp1b_n, gpot_n
+      use grid_cont,        only: grid_container
+      use named_array_list, only: qna
+      use particle_types,   only: pset
 
       implicit none
 
-      integer,                          intent(in) :: n_part
-      type(grid_container), pointer,    intent(in) :: cg
-      integer, dimension(n_part,ndims), intent(in) :: cells
+      integer,                          intent(in)    :: n_part
+      type(grid_container), pointer,    intent(inout) :: cg
+      integer, dimension(n_part,ndims), intent(in)    :: cells
 
-      integer                                      :: i, j, k, c, cdim
-      integer                                      :: p
-      integer(kind=8), dimension(n_part,ndims)     :: cic_cells
-      real,            dimension(n_part,ndims)     :: dxyz
-      real(kind=8),    dimension(n_part,8)         :: wijk, fx, fy, fz
+      integer                                         :: i, j, k, c, cdim
+      integer                                         :: p
+      integer(kind=4)                                 :: ig
+      integer(kind=8), dimension(n_part,ndims)        :: cic_cells
+      real,            dimension(n_part,ndims)        :: dxyz
+      real(kind=8),    dimension(n_part,8)            :: wijk, fx, fy, fz
 
       do i = 1, n_part
          if ((pset%p(i)%outside) .eqv. .false.) then
@@ -291,48 +311,30 @@ contains
       wijk = wijk/cg%dvol
 
       if (mask_gpot1b) then
-      do p = 1, n_part
-
-         do i = cg%lhn(xdim, LO), cg%lhn(xdim, HI)
-            do j = cg%lhn(ydim, LO), cg%lhn(ydim, HI)
-               do k = cg%lhn(zdim, LO), cg%lhn(zdim, HI)
-                  cg%gp1b(i,j,k) = cg%gp1b(i,j,k) + phi_pm_part([cg%coord(CENTER,xdim)%r(i) - pset%p(p)%pos(xdim), &
-                                                                 cg%coord(CENTER,ydim)%r(j) - pset%p(p)%pos(ydim), &
-                                                                 cg%coord(CENTER,zdim)%r(k) - pset%p(p)%pos(zdim)], 0.0, pset%p(p)%mass)
-               enddo
-            enddo
-         enddo
-         cg%gp1b = -cg%gp1b + cg%gpot
-         c = 1
-         do i = 0, 1
-            do j = 0, 1
-               do k = 0, 1
-                  fx(p, c) = -(cg%gp1b(cic_cells(p, xdim)+1+i, cic_cells(p, ydim)  +j, cic_cells(p, zdim)  +k) - cg%gp1b(cic_cells(p, xdim)-1+i, cic_cells(p, ydim)  +j, cic_cells(p, zdim)  +k))
-                  fy(p, c) = -(cg%gp1b(cic_cells(p, xdim)  +i, cic_cells(p, ydim)+1+j, cic_cells(p, zdim)  +k) - cg%gp1b(cic_cells(p, xdim)  +i, cic_cells(p, ydim)-1+j, cic_cells(p, zdim)  +k))
-                  fz(p, c) = -(cg%gp1b(cic_cells(p, xdim)  +i, cic_cells(p, ydim)  +j, cic_cells(p, zdim)+1+k) - cg%gp1b(cic_cells(p, xdim)  +i, cic_cells(p, ydim)  +j, cic_cells(p, zdim)-1+k))
-                  c = c + 1
-               enddo
-            enddo
-         enddo
-      enddo
-
+         ig = qna%ind(gp1b_n)
       else
+         ig = qna%ind(gpot_n)
+      endif
 
       do p = 1, n_part
+         if (mask_gpot1b) then
+            cg%gp1b = zero
+            call gravpot1b(p, cg, ig, zero)
+            cg%gp1b = -cg%gp1b + cg%gpot
+         endif
+
          c = 1
          do i = 0, 1
             do j = 0, 1
                do k = 0, 1
-                  fx(p, c) = -(cg%gpot(cic_cells(p, xdim)+1+i, cic_cells(p, ydim)  +j, cic_cells(p, zdim)  +k) - cg%gpot(cic_cells(p, xdim)-1+i, cic_cells(p, ydim)  +j, cic_cells(p, zdim)  +k))
-                  fy(p, c) = -(cg%gpot(cic_cells(p, xdim)  +i, cic_cells(p, ydim)+1+j, cic_cells(p, zdim)  +k) - cg%gpot(cic_cells(p, xdim)  +i, cic_cells(p, ydim)-1+j, cic_cells(p, zdim)  +k))
-                  fz(p, c) = -(cg%gpot(cic_cells(p, xdim)  +i, cic_cells(p, ydim)  +j, cic_cells(p, zdim)+1+k) - cg%gpot(cic_cells(p, xdim)  +i, cic_cells(p, ydim)  +j, cic_cells(p, zdim)-1+k))
+                  fx(p, c) = -(cg%q(ig)%arr(cic_cells(p, xdim)+1+i, cic_cells(p, ydim)  +j, cic_cells(p, zdim)  +k) - cg%q(ig)%arr(cic_cells(p, xdim)-1+i, cic_cells(p, ydim)  +j, cic_cells(p, zdim)  +k))
+                  fy(p, c) = -(cg%q(ig)%arr(cic_cells(p, xdim)  +i, cic_cells(p, ydim)+1+j, cic_cells(p, zdim)  +k) - cg%q(ig)%arr(cic_cells(p, xdim)  +i, cic_cells(p, ydim)-1+j, cic_cells(p, zdim)  +k))
+                  fz(p, c) = -(cg%q(ig)%arr(cic_cells(p, xdim)  +i, cic_cells(p, ydim)  +j, cic_cells(p, zdim)+1+k) - cg%q(ig)%arr(cic_cells(p, xdim)  +i, cic_cells(p, ydim)  +j, cic_cells(p, zdim)-1+k))
                   c = c + 1
                enddo
             enddo
          enddo
       enddo
-
-      endif
 
       fx = half*fx*cg%idx
       fy = half*fy*cg%idy
