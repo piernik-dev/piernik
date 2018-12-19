@@ -102,7 +102,7 @@ contains
 
 #ifdef MAGNETIC
             if (full_dim) then
-               b(:,:) = interpolate_mag_field(cdim, cg, i1, i2)
+               b(:,:) = interpolate_mag_field(cdim, cg, i1, i2, wna%bi)
             else
                pb => cg%w(wna%bi)%get_sweep(cdim, i1, i2)   ! BEWARE: is it correct for 2.5D ?
                b(:, iarr_mag_swp(cdim,:))  = transpose(pb(:,:))

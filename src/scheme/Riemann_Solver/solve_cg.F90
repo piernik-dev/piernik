@@ -51,11 +51,11 @@ contains
    subroutine solve_cg(cg, ddim, istep, fargo_vel)
 
       use bfc_bcc,          only: interpolate_mag_field
-      use constants,        only: pdims, xdim, zdim, ORTHO1, ORTHO2, LO, HI, psi_n, INVALID, GEO_XYZ, I_ZERO, I_ONE, first_stage
+      use constants,        only: pdims, xdim, zdim, ORTHO1, ORTHO2, LO, HI, psi_n, uh_n, magh_n, psih_n, INVALID, GEO_XYZ, I_ZERO, I_ONE, rk_coef
       use dataio_pub,       only: die
       use domain,           only: dom, is_refined
       use fluidindex,       only: flind, iarr_all_dn, iarr_all_mx, iarr_all_swp, iarr_mag_swp
-      use global,           only: dt, force_cc_mag, use_fargo, integration_order
+      use global,           only: dt, force_cc_mag, use_fargo
       use grid_cont,        only: grid_container
       use named_array_list, only: wna, qna
       use sources,          only: prepare_sources, all_sources
@@ -70,33 +70,40 @@ contains
       integer,                       intent(in) :: istep     ! stage in the time integration scheme
       integer(kind=4), optional,     intent(in) :: fargo_vel
 
-      real, dimension(cg%n_(ddim), size(cg%u,1)) :: u1d
-      real, dimension(cg%n_(ddim), xdim:zdim)    :: b_cc1d
-      real, dimension(cg%n_(ddim), 1)            :: psi_d ! artificial rank-2 to conform to flux limiter interface
-      real, dimension(:,:), pointer              :: pu, pb
+      real, dimension(cg%n_(ddim), size(cg%u,1)) :: u
+      real, dimension(cg%n_(ddim), xdim:zdim)    :: b
+      real, dimension(cg%n_(ddim), 1)            :: psi ! artificial rank-2 to conform to flux limiter interface
+      real, dimension(:,:), pointer              :: pu, pu0, pb, pb0
       integer                                    :: i1, i2
-      real, dimension(:), pointer                :: ppsi
-      integer                                    :: psii
-      real, dimension(size(u1d,1),size(u1d,2))           :: u0
-      real, dimension(size(u1d,1), flind%fluids), target :: vx
+      real, dimension(:), pointer                :: ppsi, ppsi0
+      integer                                    :: psii, uhi, bhi, psihi
+      real, dimension(size(u,1),size(u,2))       :: u0, u1
+      real, dimension(size(b,1),size(b,2))       :: b0, b1
+      real, dimension(size(psi,1),size(psi,2))   :: psi0, psi1
+      real, dimension(size(u,1), flind%fluids), target :: vx
       integer(kind=4)                            :: nmag, i
 
       ! is_multicg should be safe
       if (.false.) write(0,*) present(fargo_vel) ! suppress compiler warning on unused argument
-      if (istep /= first_stage(integration_order)) call die("[solve_cg:solve_cg] istep >1 not implemented yet")
       if (use_fargo) call die("[solve_cg:solve_cg] Fargo is not yet enabled for Riemann")
       if (is_refined) call die("[solve_cg:solve_cg] This Rieman solver is not compatible with mesh refinements yet!")
       if (dom%geometry_type /= GEO_XYZ) call die("[solve_cg:solve_cg] Non-cartesian geometry is not implemented yet in this Riemann solver.")
 
+      uhi = wna%ind(uh_n)
+      bhi = wna%ind(magh_n)
       nmag = I_ZERO
       do i = 1, flind%fluids
          if (flind%all_fluids(i)%fl%is_magnetized) nmag = nmag + I_ONE
       enddo
       if (nmag > 1) call die("[solve_cg:solve_cg] At most one magnetized fluid is implemented")
 
-      psii = INVALID
-      if (qna%exists(psi_n)) psii = qna%ind(psi_n)
-      psi_d = 0.
+      psii  = INVALID
+      psihi = INVALID
+      if (qna%exists(psi_n)) then
+         psii = qna%ind(psi_n)
+         psihi = qna%ind(psih_n)
+      endif
+      psi = 0.
       nullify(ppsi)
       nullify(pb)
 
@@ -105,42 +112,53 @@ contains
       do i2 = cg%ijkse(pdims(ddim, ORTHO2), LO), cg%ijkse(pdims(ddim, ORTHO2), HI)
          do i1 = cg%ijkse(pdims(ddim, ORTHO1), LO), cg%ijkse(pdims(ddim, ORTHO1), HI)
 
+            ! transposition for compatibility with RTVD-based routines
+            pu0 => cg%w(uhi)%get_sweep(ddim,i1,i2)
+            u0(:, iarr_all_swp(ddim,:)) = transpose(pu0(:,:))
             pu => cg%w(wna%fi)%get_sweep(ddim,i1,i2)
-            u1d(:, iarr_all_swp(ddim,:)) = transpose(pu(:,:))
+            u(:, iarr_all_swp(ddim,:)) = transpose(pu(:,:))
 
             if (force_cc_mag) then
+               pb0 => cg%w(bhi)%get_sweep(ddim,i1,i2)
+               b0(:, iarr_mag_swp(ddim,:)) = transpose(pb0(:,:))
                pb => cg%w(wna%bi)%get_sweep(ddim,i1,i2)
-               b_cc1d(:, iarr_mag_swp(ddim,:)) = transpose(pb(:,:))
+               b(:, iarr_mag_swp(ddim,:)) = transpose(pb(:,:))
             else
-               b_cc1d(:, :) = interpolate_mag_field(ddim, cg, i1, i2)
+               b0(:, :) = interpolate_mag_field(ddim, cg, i1, i2, bhi)
+               b(:, :) = interpolate_mag_field(ddim, cg, i1, i2, wna%bi)
             endif
 
+            u1 = u
+            b1 = b
+            vx = u(:, iarr_all_mx) / u(:, iarr_all_dn) ! this may also be useful for gravitational acceleration
             if (psii /= INVALID) then
+               ppsi0 => cg%q(psihi)%get_sweep(ddim,i1,i2)
+               psi0(:, 1) = ppsi0(:)
                ppsi => cg%q(psii)%get_sweep(ddim,i1,i2)
-               psi_d(:, 1) = ppsi(:)
-               call solve(u1d, b_cc1d, dt/cg%dl(ddim), psi_d)
-               ppsi(:) = psi_d(:,1)
+               psi(:, 1) = ppsi(:)
+               psi1 = psi
+
+               call solve(u0, b0, psi0, u1, b1, psi1, rk_coef(istep) * dt/cg%dl(ddim))
+
             else
-               call solve(u1d, b_cc1d, dt/cg%dl(ddim), psi_d)
+               psi0 = psi
+               psi1 = psi
+               call solve(u0, b0, psi0, u1, b1, psi1, rk_coef(istep) * dt/cg%dl(ddim))
             endif
 
-            ! This is lowest order implementation of CR
-            ! It agrees with the implementation in RTVD in the limit of small CR energy amounts
-
-            ! transposition for compatibility with RTVD-based routines
-            u0 = transpose(pu)
-            vx = u1d(:, iarr_all_mx) / u1d(:, iarr_all_dn) ! this may also be useful for gravitational acceleration
-            call all_sources(size(u1d, 1, kind=4), u0, u1d, b_cc1d, cg, istep, ddim, i1, i2, dt, vx)
-
-            ! Beware: this is bypassing integration scheme, so the source terms are applied in lowest order fashion.
-            ! See the results of Jeans test with RTVD and RIEMANN for comparision.
+            call all_sources(size(u, 1, kind=4), u, u1, b, cg, istep, ddim, i1, i2, rk_coef(istep) * dt, vx)
+            ! See the results of Jeans test with RTVD and RIEMANN for estimate of accuracy.
 
 #if defined COSM_RAYS && defined IONIZED
-            if (size(u1d, 1) > 1) call limit_minimal_ecr(size(u1d, 1), u1d)
+            if (size(u, 1) > 1) call limit_minimal_ecr(size(u, 1), u)
 #endif /* COSM_RAYS && IONIZED */
+            u(:,:) = u1(:,:)
+            b(:,:) = b1(:,:)
+            if (psii /= INVALID) psi(:,:) = psi1(:,:)
 
-            pu(:,:) = transpose(u1d(:,iarr_all_swp(ddim,:)))
-            if (force_cc_mag) pb(:,:) = transpose(b_cc1d(:, iarr_mag_swp(ddim,:))) ! ToDo figure out how to manage CT energy fixup without extra storage
+            pu(:,:) = transpose(u(:, iarr_all_swp(ddim,:)))
+            if (force_cc_mag) pb(:,:) = transpose(b(:, iarr_mag_swp(ddim,:))) ! ToDo figure out how to manage CT energy fixup without extra storage
+            if (psii /= INVALID) ppsi(:) = psi(:,1)
          enddo
       enddo
 
@@ -149,21 +167,23 @@ contains
 !! k-th interface is between k-th cell and (k+1)-th cell
 !! We don't calculate n-th interface because it is as incomplete as 0-th interface
 
-!! Disabled rk3 as high orders require more careful approach to guardcells and valid ranges
+   subroutine solve(u, b_cc, psi, u1, b1, psi1, dtodx)
 
-   subroutine solve(u, b_cc, dtodx, psi)
-
-      use constants,  only: half
+      use constants,  only: DIVB_HDC, xdim, ydim, zdim
       use dataio_pub, only: die
+      use global,     only: divB_0_method
       use hlld,           only: riemann_wrap
       use interpolations, only: interpol
 
       implicit none
 
-      real, dimension(:,:), intent(inout) :: u
-      real, dimension(:,:), intent(inout) :: b_cc
+      real, dimension(:,:), intent(in) :: u
+      real, dimension(:,:), intent(in) :: b_cc
+      real, dimension(:,:), intent(in) :: psi
+      real, dimension(:,:), intent(inout) :: u1
+      real, dimension(:,:), intent(inout) :: b1
+      real, dimension(:,:), intent(inout) :: psi1
       real,                 intent(in)    :: dtodx
-      real, dimension(:,:), intent(inout) :: psi
 
       ! left and right states at interfaces 1 .. n-1
       real, dimension(size(u,   1)-1, size(u,   2)), target :: ql, qr
@@ -174,11 +194,6 @@ contains
       real, dimension(size(u,   1)-1, size(u,   2)), target :: flx
       real, dimension(size(b_cc,1)-1, size(b_cc,2)), target :: mag_cc
       real, dimension(size(psi, 1)-1, size(psi, 2)), target :: psi_cc
-
-      ! left and right states for cells 2 .. n-1
-      real, dimension(2:size(u,   1)-1, size(u,   2))       :: u1    !, du2, du3
-      real, dimension(2:size(b_cc,1)-1, size(b_cc,2))       :: b1    !, db2, db3
-      real, dimension(2:size(psi, 1)-1, size(psi, 2))       :: psi1  !, dpsi2, dpsi3
 
       ! updates required for higher order of integration will likely have shorter length
 
@@ -206,69 +221,18 @@ contains
       !! ---------------------------------------------------------------------------
       !<
 
-      call interpol(u, b_cc, psi, ql, qr, b_cc_l, b_cc_r, psi_l, psi_r)
+      call interpol(u1, b1, psi1, ql, qr, b_cc_l, b_cc_r, psi_l, psi_r)
       call riemann_wrap(ql, qr, b_cc_l, b_cc_r, psi_l, psi_r, flx, mag_cc, psi_cc) ! Now we advance the left and right states by a timestep.
-      call du_db(u1, b1, psi1, half * dtodx)
-      call interpol(u1, b1, psi1, ql(2:nx-2,:), qr(2:nx-2,:), b_cc_l(2:nx-2,:), b_cc_r(2:nx-2,:), psi_l(2:nx-2,:), psi_r(2:nx-2,:))
-      call riemann_wrap(ql(2:nx-2,:), qr(2:nx-2,:), b_cc_l(2:nx-2,:), b_cc_r(2:nx-2,:), psi_l(2:nx-2,:), psi_r(2:nx-2,:), flx(2:nx-2,:), mag_cc(2:nx-2,:), psi_cc(2:nx-2,:)) ! second call for Riemann problem uses states evolved to half timestep
-      call update  ! ToDo tell explicitly what range to update
 
-   contains
-
-      ! some shortcuts
-
-!>
-!! \brief calculate the change of cell state due to face fluxes (1-D)
-!!
-!! For cells 1 .. n we have 1 .. n-1 fluxes  (at all internal faces),
-!! so we can reliably calculate the update for cells 2 .. (n-1).
-!<
-
-      subroutine du_db(u_new, b_new, psi_new, fac)
-
-         use constants,  only: DIVB_HDC
-         use global,     only: divB_0_method
-
-         implicit none
-
-         real, dimension(2:size(u,   1)-1, size(u,   2)), intent(out) :: u_new
-         real, dimension(2:size(b_cc,1)-1, size(b_cc,2)), intent(out) :: b_new
-         real, dimension(2:size(psi, 1)-1, size(psi, 2)), intent(out) :: psi_new
-         real, intent(in) :: fac
-
-         ! shape(flx) = shape(u) - [ 0, 1 ] = [ n_variables, nx-1 ]
-         u_new = u(2:nx-1, :) + fac * (flx(:nx-2, :) - flx(2:, :))
-         b_new = b_cc(2:nx-1, :) + fac * (mag_cc(:nx-2, :) - mag_cc(2:, :))
-
-         if (divB_0_method == DIVB_HDC) then
-            psi_new = psi(2:nx-1, :) + fac * (psi_cc(:nx-2, :) - psi_cc(2:, :))
-         else
-            psi_new = 0.
-         endif
-
-      end subroutine du_db
-
-      subroutine update
-
-         use constants,  only: xdim, ydim, zdim, DIVB_HDC
-         use fluidindex, only: flind
-         use global,     only: divB_0_method
-
-         implicit none
-
-         integer :: iend  !< last component of any fluid (i.e. exclude CR or tracers here)
-
-         iend = flind%all_fluids(flind%fluids)%fl%end
-
-         u(3:nx-2, :iend) = u(3:nx-2, :iend) + dtodx * (flx(2:nx-3, :iend) - flx(3:nx-2, :iend))
-         b_cc(3:nx-2, ydim:zdim) = b_cc(3:nx-2, ydim:zdim) + dtodx * (mag_cc(2:nx-3, ydim:zdim) - mag_cc(3:nx-2, ydim:zdim))
-
-         if (divB_0_method == DIVB_HDC) then
-            b_cc(3:nx-2, xdim) = b_cc(3:nx-2, xdim) + dtodx * (mag_cc(2:nx-3, xdim) - mag_cc(3:nx-2, xdim))
-            psi(3:nx-2, 1) = psi(3:nx-2, 1) + dtodx * (psi_cc(2:nx-3, 1) - psi_cc(3:nx-2, 1))
-         endif
-
-      end subroutine update
+      u1(2:nx-1, :) = u(2:nx-1, :) + dtodx * (flx(:nx-2, :) - flx(2:, :))
+      b1(2:nx-1, ydim:zdim) = b_cc(2:nx-1, ydim:zdim) + dtodx * (mag_cc(:nx-2, ydim:zdim) - mag_cc(2:, ydim:zdim))
+      if (divB_0_method == DIVB_HDC) then
+         b1(2:nx-1, xdim) = b_cc(2:nx-1, xdim) + dtodx * (mag_cc(:nx-2, xdim) - mag_cc(2:, xdim))
+         psi1(2:nx-1, :) = psi(2:nx-1, :) + dtodx * (psi_cc(:nx-2, :) - psi_cc(2:, :))
+      else
+         b1(2:nx-1, xdim) = b_cc(2:nx-1, xdim)
+         psi1 = 0.
+      endif
 
    end subroutine solve
 

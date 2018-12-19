@@ -164,12 +164,10 @@ contains
       limiter_b   = 'moncen'
       limiter     = limiter_b
       divB_0      = "HDC"
-      integration_order  = 1  ! temporary hack
 #else /* ! RIEMANN */
       limiter     = 'vanleer'
       limiter_b   = limiter
       divB_0      = "CT"
-      integration_order  = 2
 #endif /* RIEMANN */
       cflcontrol  = 'warn'
       interpol_str = 'linear'
@@ -205,6 +203,7 @@ contains
       ch_grid     = .false.
       w_epsilon   = 1e-10
       psi_bnd_str = "default"
+      integration_order  = 2
 
       if (master) then
          if (.not.nh%initialized) call nh%init()

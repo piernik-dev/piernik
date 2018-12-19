@@ -45,19 +45,19 @@ contains
 !! \brief return 1D vector of magnetic field components from cg in direction cdim at indices i1 and i2.
 !<
 
-   function interpolate_mag_field(cdim, cg, i1, i2) result (b)
+   function interpolate_mag_field(cdim, cg, i1, i2, ind) result (b)
 
       use constants,        only: pdims, xdim, ydim, zdim, half, ORTHO1, ORTHO2
       use domain,           only: dom
       use fluidindex,       only: iarr_mag_swp, nmag
       use grid_cont,        only: grid_container
-      use named_array_list, only: wna
 
       implicit none
 
       integer(kind=4),               intent(in) :: cdim
       type(grid_container), pointer, intent(in) :: cg
       integer,                       intent(in) :: i1, i2
+      integer,                       intent(in) :: ind
 
       real, dimension(cg%n_(cdim), nmag)        :: b
       real, dimension(:), pointer               :: pb, pb1
@@ -73,23 +73,23 @@ contains
       i1p = i1+dom%D_(pdims(cdim, ORTHO1))
       i2p = i2+dom%D_(pdims(cdim, ORTHO2))
 
-      pb => cg%w(wna%bi)%get_sweep(cdim,ibx,i1,i2)
+      pb => cg%w(ind)%get_sweep(cdim,ibx,i1,i2)
       b(1:cg%n_(cdim)-1, ibx) = half*( pb(1:cg%n_(cdim)-1)+pb(2:cg%n_(cdim)) )
       b(cg%n_(cdim),     ibx) = b(cg%n_(cdim)-1, ibx)
 
-      pb  => cg%w(wna%bi)%get_sweep(cdim,iby,i1,i2)
+      pb  => cg%w(ind)%get_sweep(cdim,iby,i1,i2)
       if (cdim == xdim) then
-         pb1 => cg%w(wna%bi)%get_sweep(cdim,iby,i1p,i2)
+         pb1 => cg%w(ind)%get_sweep(cdim,iby,i1p,i2)
       else
-         pb1 => cg%w(wna%bi)%get_sweep(cdim,iby,i1,i2p)
+         pb1 => cg%w(ind)%get_sweep(cdim,iby,i1,i2p)
       endif
       b(:, iby) = half*(pb + pb1)
 
-      pb  => cg%w(wna%bi)%get_sweep(cdim,ibz,i1,i2)
+      pb  => cg%w(ind)%get_sweep(cdim,ibz,i1,i2)
       if (cdim == xdim) then
-         pb1 => cg%w(wna%bi)%get_sweep(cdim,ibz,i1,i2p)
+         pb1 => cg%w(ind)%get_sweep(cdim,ibz,i1,i2p)
       else
-         pb1 => cg%w(wna%bi)%get_sweep(cdim,ibz,i1p,i2)
+         pb1 => cg%w(ind)%get_sweep(cdim,ibz,i1p,i2)
       endif
       b(:, ibz) = half*(pb + pb1)
 
