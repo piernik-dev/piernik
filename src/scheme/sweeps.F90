@@ -237,11 +237,11 @@ contains
                call all_fluid_boundaries(nocorners = .true.)
             endif
          else
-            if (istep == first_stage(integration_order)) then
-               call all_fluid_boundaries(nocorners = .true.)
-            else
+            ! if (istep == first_stage(integration_order)) then
+            !    call all_fluid_boundaries(nocorners = .true.) ! nocorners was doing something bad to periodic boundaries in Riemann with CT
+            ! else
                call all_fluid_boundaries
-            endif
+            ! endif
          endif
       endif
 
