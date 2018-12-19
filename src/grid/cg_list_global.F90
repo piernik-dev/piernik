@@ -261,7 +261,7 @@ contains
            .false., &
 #endif /* MAGNETIC */
            restart_mode = AT_OUT_B, dim4 = ndims, position=pia)  !! Main array of magnetic field's components, "b"
-      call this%reg_var(magh_n,   vital = .false., dim4 = ndims) !! Array for copy of magnetic field's components, "b" uset in half-timestep in RK2
+      call this%reg_var(magh_n,   vital = .false., dim4 = ndims) !! Array for copy of magnetic field's components, "b" used in half-timestep in RK2
 
 #ifdef RIEMANN
       if (force_cc_mag) then

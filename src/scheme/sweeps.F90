@@ -308,7 +308,7 @@ contains
       if (qna%exists(psi_n)) then
          psii = qna%ind(psi_n)
          psihi = qna%ind(psih_n)
-      end if
+      endif
 
       ! for use with GLM divergence cleaning we also make a copy of b and psi fields
       cgl => leaves%first
