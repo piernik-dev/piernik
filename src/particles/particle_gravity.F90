@@ -278,10 +278,11 @@ contains
 
       integer                                         :: i, j, k, c, cdim
       integer                                         :: p
-      integer(kind=4)                                 :: ig
+      integer(kind=4)                                 :: ig, dir
       integer,      dimension(ndims)                  :: cic_cells
       real,         dimension(ndims)                  :: dxyz
-      real(kind=8), dimension(8)                      :: wijk, fx, fy, fz
+      real(kind=8), dimension(ndims,8)                :: fxyz
+      real(kind=8), dimension(8)                      :: wijk
 
       if (mask_gpot1b) then
          ig = qna%ind(gp1b_n)
@@ -324,23 +325,21 @@ contains
          do i = 0, 1
             do j = 0, 1
                do k = 0, 1
-                  fx(c) = -(cg%q(ig)%point(cic_cells(:)+idm(xdim,:)+[i,j,k]) - cg%q(ig)%point(cic_cells(:)-idm(xdim,:)+[i,j,k]))
-                  fy(c) = -(cg%q(ig)%point(cic_cells(:)+idm(ydim,:)+[i,j,k]) - cg%q(ig)%point(cic_cells(:)-idm(ydim,:)+[i,j,k]))
-                  fz(c) = -(cg%q(ig)%point(cic_cells(:)+idm(zdim,:)+[i,j,k]) - cg%q(ig)%point(cic_cells(:)-idm(zdim,:)+[i,j,k]))
+                  do dir = xdim, zdim
+                  fxyz(dir,c) = -(cg%q(ig)%point(cic_cells(:)+idm(dir,:)+[i,j,k]) - cg%q(ig)%point(cic_cells(:)-idm(dir,:)+[i,j,k]))
+                  enddo
                   c = c + 1
                enddo
             enddo
          enddo
 
-         fx = half*fx*cg%idx
-         fy = half*fy*cg%idy
-         fz = half*fz*cg%idz
+         fxyz(xdim,:) = half*fxyz(xdim,:)*cg%idl(xdim)
+         fxyz(ydim,:) = half*fxyz(ydim,:)*cg%idl(ydim)
+         fxyz(zdim,:) = half*fxyz(zdim,:)*cg%idl(zdim)
 
          pset%p(p)%acc = zero
          do c = 1, 8
-            pset%p(p)%acc(xdim) = pset%p(p)%acc(xdim) + wijk(c) * fx(c)
-            pset%p(p)%acc(ydim) = pset%p(p)%acc(ydim) + wijk(c) * fy(c)
-            pset%p(p)%acc(zdim) = pset%p(p)%acc(zdim) + wijk(c) * fz(c)
+            pset%p(p)%acc(:) = pset%p(p)%acc(:) + wijk(c) * fxyz(:,c)
          enddo
       enddo
 
