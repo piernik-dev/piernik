@@ -265,7 +265,7 @@ contains
 
    subroutine update_particle_acc_cic(n_part, cg, cells)
 
-      use constants,        only: ndims, CENTER, xdim, ydim, zdim, half, zero, gp1b_n, gpot_n
+      use constants,        only: idm, ndims, CENTER, xdim, ydim, zdim, half, zero, gp1b_n, gpot_n
       use grid_cont,        only: grid_container
       use named_array_list, only: qna
       use particle_types,   only: pset
@@ -279,9 +279,9 @@ contains
       integer                                         :: i, j, k, c, cdim
       integer                                         :: p
       integer(kind=4)                                 :: ig
-      integer(kind=8), dimension(n_part,ndims)        :: cic_cells
-      real,            dimension(n_part,ndims)        :: dxyz
-      real(kind=8),    dimension(n_part,8)            :: wijk, fx, fy, fz
+      integer,      dimension(n_part,ndims)           :: cic_cells
+      real,         dimension(n_part,ndims)           :: dxyz
+      real(kind=8), dimension(n_part,8)               :: wijk, fx, fy, fz
 
       do i = 1, n_part
          if ((pset%p(i)%outside) .eqv. .false.) then
@@ -327,9 +327,9 @@ contains
          do i = 0, 1
             do j = 0, 1
                do k = 0, 1
-                  fx(p, c) = -(cg%q(ig)%arr(cic_cells(p, xdim)+1+i, cic_cells(p, ydim)  +j, cic_cells(p, zdim)  +k) - cg%q(ig)%arr(cic_cells(p, xdim)-1+i, cic_cells(p, ydim)  +j, cic_cells(p, zdim)  +k))
-                  fy(p, c) = -(cg%q(ig)%arr(cic_cells(p, xdim)  +i, cic_cells(p, ydim)+1+j, cic_cells(p, zdim)  +k) - cg%q(ig)%arr(cic_cells(p, xdim)  +i, cic_cells(p, ydim)-1+j, cic_cells(p, zdim)  +k))
-                  fz(p, c) = -(cg%q(ig)%arr(cic_cells(p, xdim)  +i, cic_cells(p, ydim)  +j, cic_cells(p, zdim)+1+k) - cg%q(ig)%arr(cic_cells(p, xdim)  +i, cic_cells(p, ydim)  +j, cic_cells(p, zdim)-1+k))
+                  fx(p, c) = -(cg%q(ig)%point(cic_cells(p,:)+idm(xdim,:)+[i,j,k]) - cg%q(ig)%point(cic_cells(p,:)-idm(xdim,:)+[i,j,k]))
+                  fy(p, c) = -(cg%q(ig)%point(cic_cells(p,:)+idm(ydim,:)+[i,j,k]) - cg%q(ig)%point(cic_cells(p,:)-idm(ydim,:)+[i,j,k]))
+                  fz(p, c) = -(cg%q(ig)%point(cic_cells(p,:)+idm(zdim,:)+[i,j,k]) - cg%q(ig)%point(cic_cells(p,:)-idm(zdim,:)+[i,j,k]))
                   c = c + 1
                enddo
             enddo
