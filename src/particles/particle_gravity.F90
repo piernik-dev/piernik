@@ -68,18 +68,20 @@ contains
 #endif /* VERBOSE */
 
       n_part = size(pset%p, dim=1)
-      allocate(cells(n_part, ndims), dist(n_part, ndims))
 
       if (is_refined) call die("[particle_gravity:update_particle_gravpot_and_acc] AMR not implemented for particles yet")
       if (is_multicg) call die("[particle_gravity:update_particle_gravpot_and_acc] multi_cg not implemented for particles yet")
       cgl => leaves%first
       cg  => cgl%cg
 
+      allocate(cells(n_part, ndims), dist(n_part, ndims))
+      call locate_particles_in_cells(n_part, cg, cells, dist)
+
+      call update_particle_density_array(n_part, cg, cells)
+
       call update_gravpot_from_particles(n_part, cg, zero)
 
       call save_pot_pset(cg)
-
-      call locate_particles_in_cells(n_part, cg, cells, dist)
 
       call update_particle_potential_energy(n_part, cg, cells, dist)    !szukanie energii potencjalnej w punktach-polozeniach czastek
 
@@ -88,12 +90,40 @@ contains
       elseif (is_setacc_cic) then
          call update_particle_acc_cic(n_part, cg, cells)
       endif
+      deallocate(cells, dist)
 
 #ifdef VERBOSE
       call printinfo('[particle_gravity:update_particle_gravpot_and_acc] Finish update of particle gravpot & acceleration')
 #endif /* VERBOSE */
 
    end subroutine update_particle_gravpot_and_acc
+
+   subroutine update_particle_density_array(n_part, cg, cells)
+
+      use constants,        only: nbdn_n, prth_n, ndims, one, xdim, ydim, zdim
+      use grid_cont,        only: grid_container
+      use named_array_list, only: qna
+      use particle_types,   only: pset
+
+      implicit none
+
+      integer,                          intent(in)    :: n_part
+      type(grid_container), pointer,    intent(inout) :: cg
+      integer, dimension(n_part,ndims), intent(in)    :: cells
+      integer(kind=4)                                 :: ig
+      integer                                         :: p
+      real                                            :: factor
+
+      factor = 1.0
+      ig = qna%ind(nbdn_n)
+      call pset%map(ig,factor)
+
+      ig = qna%ind(prth_n)
+      do p = 1, n_part
+         cg%q(ig)%arr(cells(p,xdim),cells(p,ydim),cells(p,zdim)) = cg%q(ig)%point(cells(p,:)) + one
+      enddo
+
+   end subroutine update_particle_density_array
 
    function phi_pm_part(pos, eps, mass)
 
