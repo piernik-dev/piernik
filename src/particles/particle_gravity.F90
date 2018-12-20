@@ -276,13 +276,13 @@ contains
       type(grid_container), pointer,    intent(inout) :: cg
       integer, dimension(n_part,ndims), intent(in)    :: cells
 
-      integer                                         :: i, j, k, c, cdim
       integer                                         :: p
-      integer(kind=4)                                 :: ig, dir
-      integer,      dimension(ndims)                  :: cic_cells
-      real,         dimension(ndims)                  :: dxyz, axyz
-      real(kind=8), dimension(ndims,8)                :: fxyz
-      real(kind=8), dimension(8)                      :: wijk
+      integer(kind=4)                                 :: c, ig, cdim
+      integer(kind=4), dimension(ndims,8), parameter  :: cijk = reshape([[0,0,0], [1,0,0], [0,1,0], [0,0,1], [1,1,0], [0,1,1], [1,0,1], [1,1,1]], [ndims,8])
+      integer,         dimension(ndims)               :: cic_cells
+      real,            dimension(ndims)               :: dxyz, axyz
+      real(kind=8),    dimension(ndims,8)             :: fxyz
+      real(kind=8),    dimension(8)                   :: wijk
 
       if (mask_gpot1b) then
          ig = qna%ind(gp1b_n)
@@ -321,17 +321,11 @@ contains
             cg%gp1b = -cg%gp1b + cg%gpot
          endif
 
-         do dir = xdim, zdim
-            c = 1
-            do i = 0, 1
-               do j = 0, 1
-                  do k = 0, 1
-                     fxyz(dir,c) = -(cg%q(ig)%point(cic_cells(:)+idm(dir,:)+[i,j,k]) - cg%q(ig)%point(cic_cells(:)-idm(dir,:)+[i,j,k]))
-                     c = c + 1
-                  enddo
-               enddo
+         do cdim = xdim, zdim
+            do c = 1, 8
+               fxyz(cdim,c) = -(cg%q(ig)%point(cic_cells(:)+idm(cdim,:)+cijk(:,c)) - cg%q(ig)%point(cic_cells(:)-idm(cdim,:)+cijk(:,c)))
             enddo
-            axyz(dir) = sum(fxyz(dir,:)*wijk(:))
+            axyz(cdim) = sum(fxyz(cdim,:)*wijk(:))
          enddo
 
          pset%p(p)%acc(:) = half*axyz(:)*cg%idl(:)
