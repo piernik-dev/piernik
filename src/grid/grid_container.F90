@@ -213,6 +213,8 @@ module grid_cont
       real, dimension(:,:,:), pointer :: cs_iso2 => null()       !< COMMENT ME
       real, dimension(:,:,:), pointer :: wa      => null()       !< Temporary array used for different purposes, usually has dimension (grid::nx, grid::ny, grid::nz)
 #ifdef NBODY
+      real, dimension(:,:,:), pointer :: prth    => null()       !< Array for histogram of particles
+      real, dimension(:,:,:), pointer :: nbdn    => null()       !< Array of density from particles
       real, dimension(:,:,:), pointer :: nbgp    => null()       !< Array of gravitational potential from particles
       real, dimension(:,:,:), pointer :: gp1b    => null()       !< Array of gravitational potential from particles
       real, dimension(:,:,:), pointer :: nbody_dens => null()    !< Array of density from particles
@@ -235,9 +237,6 @@ module grid_cont
       logical :: is_old                                          !< .true. if a given grid existed prior to  upgrade_refinement call
       logical :: processed                                       !< for use in sweeps.F90
       logical :: has_previous_timestep                           !< used to prevent timestep retries on freshly created blocks
-#ifdef NBODY
-      !real , dimension(:) :: gx, gy, gz                           !< Gravitational potential on right borders of cells
-#endif /* NBODY */
 
    contains
 

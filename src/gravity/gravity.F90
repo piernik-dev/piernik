@@ -167,7 +167,7 @@ contains
       use constants,      only: sgp_n, sgpm_n
 #endif /* SELF_GRAV */
 #ifdef NBODY
-      use constants,      only: nbgp_n, gp1b_n
+      use constants,      only: nbgp_n, gp1b_n, nbdn_n, prth_n
 #endif /* NBODY */
 #ifdef CORIOLIS
       use coriolis,       only: set_omega
@@ -302,6 +302,8 @@ contains
       call all_cg%reg_var(sgpm_n)
 #endif /* SELF_GRAV */
 #ifdef NBODY
+      call all_cg%reg_var(prth_n)
+      call all_cg%reg_var(nbdn_n)
       call all_cg%reg_var(nbgp_n)
       call all_cg%reg_var(gp1b_n)
 #endif /* NBODY */
@@ -353,7 +355,7 @@ contains
       use constants,          only: sgp_n, sgpm_n
 #endif /* SELF_GRAV */
 #ifdef NBODY
-      use constants,      only: nbgp_n, gp1b_n
+      use constants,      only: nbgp_n, gp1b_n, nbdn_n, prth_n
 #endif /* NBODY */
 
       implicit none
@@ -372,6 +374,8 @@ contains
          cg%sgpm  => cg%q(qna%ind( sgpm_n))%arr
 #endif /* SELF_GRAV */
 #ifdef NBODY
+         cg%nbgp  => cg%q(qna%ind( prth_n))%arr
+         cg%nbgp  => cg%q(qna%ind( nbdn_n))%arr
          cg%nbgp  => cg%q(qna%ind( nbgp_n))%arr
          cg%gp1b  => cg%q(qna%ind( gp1b_n))%arr
 #endif /* NBODY */

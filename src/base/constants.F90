@@ -192,7 +192,8 @@ module constants
 #ifdef NBODY
    character(len=dsetnamelen), parameter :: nbgp_n  = "nbgp"    !< current gravity field from nbody
    character(len=dsetnamelen), parameter :: gp1b_n  = "gp1b"    !< current gravity field from 1 body
-   character(len=dsetnamelen), parameter :: nbody_dens_n = "nbody_dens"   !< density  from particles
+   character(len=dsetnamelen), parameter :: nbdn_n  = "nbdn"    !< density from particles
+   character(len=dsetnamelen), parameter :: prth_n  = "prth"    !< histogram of particles on the grid
 #endif /* NBODY */
    ! misc
    character(len=dsetnamelen), parameter :: wcu_n   = "wcu"     !< (resistivity) COMMENT ME
