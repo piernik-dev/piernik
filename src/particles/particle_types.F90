@@ -55,13 +55,7 @@ module particle_types
       procedure :: is_outside              !< compute the outside flag
    end type particle
 
-#ifdef NBODY
-   !type, extends (particle) :: particle_pot
-            !real  :: pot                           !< gravitational potential in pos
-   !end type particle_pot
-#endif /* NBODY */
    !> \brief A list of particles and some associated methods
-
    type :: particle_set
       type(particle), allocatable, dimension(:) :: p !< the list of particles
       procedure(map_scheme), pointer :: map
@@ -369,12 +363,6 @@ contains
                   part  => this%p(p), &
                   idl   => cgl%cg%idl &
             )
-#ifdef NBODY
-            if(p == 1) then
-               write(*,*) "czastka 1 ", p, "-zerowanie"
-               field = 1.0e-6
-            endif
-#endif /* NBODY */
                if (any(part%pos < cgl%cg%fbnd(:,LO)) .or. any(part%pos > cgl%cg%fbnd(:,HI))) cycle
 
                do cdim = xdim, zdim
@@ -405,9 +393,7 @@ contains
                enddo
             end associate
          enddo
-#ifndef NBODY
          print *, sum(cgl%cg%q(iv)%arr)
-#endif /* !NBODY */
          cgl => cgl%nxt
       enddo
 
