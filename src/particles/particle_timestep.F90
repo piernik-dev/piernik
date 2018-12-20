@@ -45,25 +45,24 @@ module particle_timestep
 
 contains
 
-   subroutine timestep_nbody(cg)
+   subroutine timestep_nbody(dt, cg)
 
       use constants,      only: ndims, xdim, zdim, big, one, two, zero
+      use dataio_pub,     only: msg, printinfo
       use func,           only: operator(.notequals.)
       use grid_cont,      only: grid_container
       use particle_pub,   only: lf_c
       use particle_types, only: pset
-#ifdef VERBOSE
-      use dataio_pub,     only: printinfo
-#endif /* VERBOSE */
 
       implicit none
 
-      type(grid_container), pointer, intent(in) :: cg
+      real,                          intent(inout) :: dt
+      type(grid_container), pointer, intent(in)    :: cg
 
-      integer                                   :: n_part, i
-      integer(kind=4)                           :: cdim
-      real                                      :: acc2, max_acc, eta, eps, factor
-      real, dimension(ndims)                    :: max_v
+      integer                                      :: n_part, i
+      integer(kind=4)                              :: cdim
+      real                                         :: acc2, max_acc, eta, eps, factor, dt_hydro
+      real, dimension(ndims)                       :: max_v
 
 #ifdef VERBOSE
       call printinfo('[particle_timestep:timestep_nbody] Commencing timestep_nbody')
@@ -89,6 +88,7 @@ contains
       if(max_acc .notequals. zero) then
          dt_nbody = sqrt(two*eta*eps/max_acc)
 
+         !> \todo following lines are related only to dust particles
          do cdim = xdim, zdim
             max_v(cdim)  = maxval(abs(pset%p(:)%vel(cdim)))
          enddo
@@ -103,7 +103,14 @@ contains
          endif
 
          dt_nbody  = lf_c * factor * dt_nbody
+
       endif
+
+      dt_hydro = dt
+      !> \todo verify this condition
+      if (dt_nbody .notequals. 0.0) dt = min(dt, dt_nbody)
+      write(msg,'(a,3f8.5)') '[particle_timestep:timestep_nbody] dt for hydro, nbody and both: ', dt_hydro, dt_nbody, dt
+      call printinfo(msg)
 
 #ifdef VERBOSE
       call printinfo('[particle_timestep:timestep_nbody] Finish timestep_nbody')
