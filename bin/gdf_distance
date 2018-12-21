@@ -190,6 +190,19 @@ def compare_dlists(h5f1, h5f2):
     return 1. - len(fc) / float(len(f1) + len(f2) - len(fc)), fc
 
 
+def compare_time(h5f1, h5f2):
+    time_key = "time"
+    t1 = h5f1.attrs[time_key][0]
+    t2 = h5f2.attrs[time_key][0]
+    if (t1 > 0. and t2 > 0.):
+        return abs(t1 - t2) / (t1 + t2)
+    else:
+        if (t1 == 0.):
+            return 0.
+        else:
+            return 1.
+
+
 def compare_data(ds1, ds2, f):
     import numpy
 
@@ -217,6 +230,9 @@ def piernik_gdf_compare(fname1, fname2):
     h5f2 = h5py.File(fname2, "r")
     # No error checking here, fail in ugly way when is_comparable does not
     # prevent attempt to open these files.
+
+    # compate time
+    norms["time"] = compare_time(h5f1, h5f2)
 
     # compare domains
     norms["domains"], dlo, dro = compare_domains(h5f1, h5f2)
@@ -309,7 +325,6 @@ if __name__ == "__main__":
             norms.update(norms13)
             norms.update(norms23)
             longestkey = len(max(norms, key=len))
-            failed = False
             print("\nFiles:")
             for i in (1, 2, 3):
                 print("  %d - %s" % (i, sys.argv[i]))
