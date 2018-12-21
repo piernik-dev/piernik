@@ -297,7 +297,7 @@ if __name__ == "__main__":
             tot_norm = 0.
             failed = False
             longestkey = len(max(norms, key=len))
-            for i in norms.keys():
+            for i in sorted(norms.keys()):
                 if (norms[i] >= 0. and norms[i] <= 1.):
                     print("Difference of %-*s: %g" % (longestkey + 1, i, norms[i]))
                     tot_norm = 1. - (1. - tot_norm) * (1. - norms[i])
