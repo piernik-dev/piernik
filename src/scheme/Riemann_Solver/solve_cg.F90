@@ -124,6 +124,11 @@ contains
                pb => cg%w(wna%bi)%get_sweep(ddim,i1,i2)
                b(:, iarr_mag_swp(ddim,:)) = transpose(pb(:,:))
             else
+               ! For CT we have small inconsequence here: we don't call magfield
+               ! and we discard transverse magnetic fluxes after first stage.
+               ! Same applies to RTVD + CT.
+               ! Beware: staggered grid will perhaps require magnetic boundary
+               ! exchange with corners every time.
                b0(:, :) = interpolate_mag_field(ddim, cg, i1, i2, bhi)
                b(:, :) = interpolate_mag_field(ddim, cg, i1, i2, wna%bi)
             endif
