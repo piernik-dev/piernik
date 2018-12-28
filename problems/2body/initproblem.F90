@@ -25,7 +25,6 @@
 !    For full list of developers see $PIERNIK_HOME/license/pdt.txt
 !
 #include "piernik.h"
-#define RNG is:ie, js:je, ks:ke
 module initproblem
 
 ! Initial condition for Sedov-Taylor explosion
@@ -110,7 +109,6 @@ contains
 
       integer                         :: i, j, k, p
 #ifdef NBODY
-      integer                         :: n_particles        !< number of particles
       real                            :: e                  !< orbit eccentricity
       character(len=2)                :: plane
 #endif /* NBODY */
@@ -155,18 +153,17 @@ contains
          call pset%add(1.0, [ 0.0,         0.0,         0.0], [-0.932407370, -0.86473146, 0.0], [0.0, 0.0, 0.0], 0.0)
       else
          e = 0.0
-         n_particles = 1
          plane = 'XY'
 
          select case (trim(topic_2body))
             case ('orbits')
-               call orbits(n_particles, e, plane)
+               call orbits(e, plane)
             case ('relaxtime')
-               call relax_time(n_particles)
+               call relax_time
             case ('buildgal')
                call read_buildgal
             case ('twobodies')
-               call twobodies(n_particles, e)
+               call twobodies(e)
             case default
                write(msg, '(3a)')"[initproblem:problem_initial_conditions] Unknown topic_2body '",trim(topic_2body),"'"
                call die(msg)
@@ -285,20 +282,15 @@ contains
 
    end function change_plane
 
-   subroutine twobodies(n_particles, e)
+   subroutine twobodies(e)
 
-      use dataio_pub,     only: msg, printinfo
       use particle_types, only: pset
 
       implicit none
 
-      integer,          intent(in)    :: n_particles
       real,             intent(in)    :: e
       real, dimension(3)              :: init_pos_body_one, init_pos_body_two, init_vel_body_one, init_vel_body_two
       real                            :: m1, m2
-
-      write(msg,'(a,i6)') '[initproblem:twobodies] Number of particles: ', n_particles
-      call printinfo(msg)
 
       m1 = 10.0
       init_pos_body_one = 0.0
@@ -366,31 +358,29 @@ contains
 
    end function vel_2bodies
 
-   subroutine orbits(n_particles, e, plane)
+   subroutine orbits(e, plane)
 
-      !use constants,        only: dpi
+      use constants,        only: ndims !, dpi
       use dataio_pub,       only: msg, printinfo
       use gravity,          only: sum_potential
       use particle_gravity, only: update_particle_gravpot_and_acc
+      use particle_pub,     only: npart
       use particle_types,   only: pset
 
       implicit none
 
-      integer,          intent(in)    :: n_particles
-      real,             intent(in)    :: e
-      character(len=2), intent(in)    :: plane
-      real, dimension(3)              :: pos_init, vel_init
-      !real                            :: dtheta
-      integer                         :: p
+      real,             intent(in) :: e
+      character(len=2), intent(in) :: plane
+      real, dimension(ndims)       :: pos_init, vel_init
+      !real                         :: dtheta
+      integer                      :: p
 
-      write(msg,'(a,i6)') '[initproblem:orbits] Number of particles that will be added: ', n_particles
+      write(msg,'(a,i6)') '[initproblem:orbits] Number of particles that will be added: ', npart
       call printinfo(msg)
 
-      !dtheta = dpi/n_particles
+      !dtheta = dpi/npart
 
-      pos_init(1) = 2.0
-      pos_init(2) = 1.0
-      pos_init(3) = 0.0
+      pos_init = [2.0, 1.0, 0.0]
 
       !vel_init = velocities(pos_init, e)
       vel_init = [-0.5, 0.0, 0.0]
@@ -398,7 +388,7 @@ contains
       !call pset%add(1.0, [ 0.9700436, -0.24308753, 0.0], [ 0.466203685, 0.43236573, 0.0], [0.0, 0.0, 0.0], 0.0)
       !call pset%add(1.0, [-0.9700436, 0.24308753, 0.0], [ 0.466203685, 0.43236573, 0.0], [0.0, 0.0, 0.0], 0.0)
       !call pset%add(1.0, [0.0, 0.0, 0.0], [-0.932407370, -0.86473146, 0.0], [0.0, 0.0, 0.0], 0.0 )
-      do p = 1, n_particles, 1
+      do p = 1, npart, 1
          call pset%add(1.0, pos_init, vel_init, [0.0, 0.0, 0.0], 0.0 ) !orbita eliptyczna
          !call pset%add(1.0, [4.0, 2.0, 0.0],[-0.5, 0.0, 0.0], [0.0, 0.0, 0.0], 0.0)
          !call pset%add(1.0, [3.0, 2.0, 0.0],[0.0, -1.0, 0.0],  [0.0, 0.0, 0.0], 0.0)
@@ -423,10 +413,11 @@ contains
    end subroutine orbits
 
 !< \brief create a set of particles at random positions inside a sphere
-   subroutine relax_time(n_particles)
+   subroutine relax_time
 
       use constants,         only: onesth
       use dataio_pub,        only: msg, printinfo
+      use particle_pub,      only: npart
       use particle_types,    only: pset
 #ifdef HDF5
       use particles_io_hdf5, only: write_hdf5, read_hdf5
@@ -434,24 +425,22 @@ contains
 
       implicit none
 
-      integer, intent(in)            :: n_particles
-
-      integer                        :: i, j
-      integer, parameter             :: seed = 86437
-      real, dimension(n_particles,3) :: pos_init
-      real, dimension(3,2)           :: domain
-      real                           :: factor, r_dom, r
+      integer                  :: i, j
+      integer, parameter       :: seed = 86437
+      real, dimension(npart,3) :: pos_init
+      real, dimension(3,2)     :: domain
+      real                     :: factor, r_dom, r
 
       domain(:,1) = -5.0
       domain(:,2) = 5.0
 
-      write(msg,'(a,i6)') '[initproblem:relax_time] Number of particles: ', n_particles
+      write(msg,'(a,i6)') '[initproblem:relax_time] Number of particles: ', npart
       call printinfo(msg)
 
       call srand(seed)
       r_dom = onesth*sqrt(domain(1,2)**2 + domain(2,2)**2 + domain(3,2)**2)
 
-      do i = 1, n_particles
+      do i = 1, npart
          r = r_dom
          do while ((r>=r_dom))
             do j = 1, 3
@@ -465,7 +454,7 @@ contains
       write(msg,'(a,i6)') '[initproblem:relax_time] Particles position computed'
       call printinfo(msg)
 #ifdef HDF5
-      call write_hdf5(pos_init, n_particles)
+      call write_hdf5(pos_init, npart)
 #endif /* HDF5 */
 
    end subroutine relax_time
