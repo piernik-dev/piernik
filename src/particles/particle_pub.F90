@@ -41,9 +41,10 @@ module particle_pub
    private
    public :: psolver, init_particles, cleanup_particles
 #ifdef NBODY
-   public :: ht_integrator, lf_c
+   public :: npart, ht_integrator, lf_c
 
    logical                           :: ht_integrator
+   integer                           :: npart              !< number of particles
    real                              :: lf_c               !< timestep should depends of grid and velocities of particles (used to extrapolation of the gravitational potential)
 #endif /* NBODY */
    class(particle_solver_T), pointer :: psolver
@@ -61,7 +62,7 @@ contains
       use particle_integrators,  only: hermit4
 #ifdef NBODY
       use dataio_pub,            only: printinfo
-      use mpisetup,              only: lbuff, rbuff
+      use mpisetup,              only: ibuff, lbuff, rbuff
       use particle_func,         only: check_ord
       use particle_gravity,      only: is_setacc_cic, is_setacc_int, mask_gpot1b
       use particle_integrators,  only: leapfrog2
@@ -77,7 +78,7 @@ contains
       character(len=cbuff_len) :: acc_interp_method  !< acceleration interpolation method
       integer                  :: order              !< order of Lagrange polynomials (if acc_interp_method = 'lagrange')
 
-      namelist /PARTICLES/ time_integrator, interpolation_scheme, acc_interp_method, lf_c
+      namelist /PARTICLES/ npart, time_integrator, interpolation_scheme, acc_interp_method, lf_c
 #else /* !NBODY */
       namelist /PARTICLES/ time_integrator, interpolation_scheme
 #endif /* !NBODY */
@@ -111,6 +112,7 @@ contains
          cbuff(2) = interpolation_scheme
 #ifdef NBODY
          cbuff(3) = acc_interp_method
+         ibuff(1) = npart
          rbuff(1) = lf_c
          lbuff(1) = mask_gpot1b
 #endif /* NBODY */
@@ -118,6 +120,7 @@ contains
 
       call piernik_MPI_Bcast(cbuff, cbuff_len)
 #ifdef NBODY
+      call piernik_MPI_Bcast(ibuff)
       call piernik_MPI_Bcast(lbuff)
       call piernik_MPI_Bcast(rbuff)
 #endif /* NBODY */
@@ -127,6 +130,7 @@ contains
          interpolation_scheme = cbuff(2)
 #ifdef NBODY
          acc_interp_method    = cbuff(3)
+         npart                = ibuff(1)
          lf_c                 = rbuff(1)
          mask_gpot1b          = lbuff(1)
 #endif /* NBODY */
