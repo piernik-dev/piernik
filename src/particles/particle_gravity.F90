@@ -116,9 +116,11 @@ contains
 
       factor = 1.0
       ig = qna%ind(nbdn_n)
+      cg%nbdn = 0.0
       call pset%map(ig,factor)
 
       ig = qna%ind(prth_n)
+      cg%prth = 0.0
       do p = 1, n_part
          cg%q(ig)%arr(cells(p,xdim),cells(p,ydim),cells(p,zdim)) = cg%q(ig)%point(cells(p,:)) + one
       enddo
