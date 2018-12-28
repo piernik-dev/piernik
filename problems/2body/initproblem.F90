@@ -31,14 +31,16 @@ module initproblem
 ! Initial condition for Sedov-Taylor explosion
 ! Written by: M. Hanasz, March 2006
 
+   use constants, only: cbuff_len
+
    implicit none
 
    private
    public  :: read_problem_par, problem_initial_conditions, problem_pointers
 
-   real            :: d0, r
+   character(len=cbuff_len) :: topic_2body
 
-   namelist /PROBLEM_CONTROL/ d0
+   namelist /PROBLEM_CONTROL/ topic_2body
 
 contains
 !-----------------------------------------------------------------------------
@@ -50,7 +52,43 @@ contains
 !-----------------------------------------------------------------------------
    subroutine read_problem_par
 
+      use dataio_pub, only: nh      ! QA_WARN required for diff_nml
+      use mpisetup,   only: cbuff, master, slave, piernik_MPI_Bcast
+
       implicit none
+
+      ! namelist default parameter values
+      topic_2body = 'default'
+
+      if (master) then
+
+         if (.not.nh%initialized) call nh%init()
+         open(newunit=nh%lun, file=nh%tmp1, status="unknown")
+         write(nh%lun,nml=PROBLEM_CONTROL)
+         close(nh%lun)
+         open(newunit=nh%lun, file=nh%par_file)
+         nh%errstr=""
+         read(unit=nh%lun, nml=PROBLEM_CONTROL, iostat=nh%ierrh, iomsg=nh%errstr)
+         close(nh%lun)
+         call nh%namelist_errh(nh%ierrh, "PROBLEM_CONTROL")
+         read(nh%cmdl_nml,nml=PROBLEM_CONTROL, iostat=nh%ierrh)
+         call nh%namelist_errh(nh%ierrh, "PROBLEM_CONTROL", .true.)
+         open(newunit=nh%lun, file=nh%tmp2, status="unknown")
+         write(nh%lun,nml=PROBLEM_CONTROL)
+         close(nh%lun)
+         call nh%compare_namelist()
+
+         cbuff(1) = topic_2body
+
+      endif
+
+      call piernik_MPI_Bcast(cbuff, cbuff_len)
+
+      if (slave) then
+
+         topic_2body = cbuff(1)
+
+      endif
 
    end subroutine read_problem_par
 !-----------------------------------------------------------------------------
@@ -63,6 +101,7 @@ contains
       use fluidindex,     only: flind
       use particle_types, only: pset
 #ifdef NBODY
+      use dataio_pub,     only: die, msg
       use particle_pub,   only: ht_integrator
       !use particles_io_hdf5
 #endif /* NBODY */
@@ -124,10 +163,21 @@ contains
          e = 0.0
          n_particles = 1
          plane = 'XY'
-         call orbits(n_particles, e, first_run, plane)
-         !call relax_time(n_particles, first_run)
-         !call read_buildgal
-         !call twobodies(n_particles, e, first_run, plane)
+
+      select case (trim(topic_2body))
+         case ('orbits')
+            call orbits(n_particles, e, first_run, plane)
+         case ('relaxtime')
+            call relax_time(n_particles, first_run)
+         case ('buildgal')
+            call read_buildgal
+         case ('twobodies')
+            call twobodies(n_particles, e, first_run, plane)
+         case default
+            write(msg, '(3a)')"[initproblem:problem_initial_conditions] Unknown topic_2body '",trim(topic_2body),"'"
+            call die(msg)
+      end select
+
       endif
 
       contains
@@ -407,7 +457,7 @@ contains
          integer, parameter             :: seed = 86437
          real, dimension(n_particles,3) :: pos_init
          real, dimension(3,2)           :: domain
-         real                           :: factor, r_dom
+         real                           :: factor, r_dom, r
          real, parameter                :: onesixth = 1.0/6.0
 
          domain(1,1) = -5.0

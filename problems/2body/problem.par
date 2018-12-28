@@ -75,6 +75,7 @@
 /
 
  $PROBLEM_CONTROL
+   topic_2body = 'orbits'
  /
 
  $MULTIGRID_SOLVER
