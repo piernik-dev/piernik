@@ -146,339 +146,329 @@ contains
       call pset%add(1.0, [-0.9700436,   0.24308753,  0.0], [ 0.466203685,  0.43236573, 0.0])
       call pset%add(1.0, [ 0.0,         0.0,         0.0], [-0.932407370, -0.86473146, 0.0])
       call printinfo('To see results type: gnuplot -p -e ''plot "nbody_out.log" u 2:3'' ')
-
-   end subroutine problem_initial_conditions
 #endif /* !NBODY */
 
 #ifdef NBODY
       if (ht_integrator) then
-         call pset%add(1.0, [ 0.9700436, -0.24308753, 0.0], [ 0.466203685, 0.43236573, 0.0], [0.0, 0.0, 0.0],0.0)
-         call pset%add(1.0, [-0.9700436, 0.24308753, 0.0], [ 0.466203685, 0.43236573, 0.0], [0.0, 0.0, 0.0],0.0)
-         call pset%add(1.0, [ 0.0, 0.0, 0.0], [-0.932407370, -0.86473146, 0.0], [0.0, 0.0, 0.0], 0.0 )
+         call pset%add(1.0, [ 0.9700436,  -0.24308753,  0.0], [ 0.466203685,  0.43236573, 0.0], [0.0, 0.0, 0.0], 0.0)
+         call pset%add(1.0, [-0.9700436,   0.24308753,  0.0], [ 0.466203685,  0.43236573, 0.0], [0.0, 0.0, 0.0], 0.0)
+         call pset%add(1.0, [ 0.0,         0.0,         0.0], [-0.932407370, -0.86473146, 0.0], [0.0, 0.0, 0.0], 0.0)
       else
          e = 0.0
          n_particles = 1
          plane = 'XY'
 
-      select case (trim(topic_2body))
-         case ('orbits')
-            call orbits(n_particles, e, plane)
-         case ('relaxtime')
-            call relax_time(n_particles)
-         case ('buildgal')
-            call read_buildgal
-         case ('twobodies')
-            call twobodies(n_particles, e, plane)
-         case default
-            write(msg, '(3a)')"[initproblem:problem_initial_conditions] Unknown topic_2body '",trim(topic_2body),"'"
-            call die(msg)
-      end select
-
+         select case (trim(topic_2body))
+            case ('orbits')
+               call orbits(n_particles, e, plane)
+            case ('relaxtime')
+               call relax_time(n_particles)
+            case ('buildgal')
+               call read_buildgal
+            case ('twobodies')
+               call twobodies(n_particles, e)
+            case default
+               write(msg, '(3a)')"[initproblem:problem_initial_conditions] Unknown topic_2body '",trim(topic_2body),"'"
+               call die(msg)
+         end select
       endif
+#endif /* NBODY */
 
-      contains
+   end subroutine problem_initial_conditions
 
+#ifdef NBODY
 !< \brief rotate (x,y,z) vector by an angle theta
-      function positions(dtheta, pos_init, plane)
+   function positions(dtheta, pos_init, plane)
 
-         implicit none
+      implicit none
 
-         real, dimension(3) :: positions, pos_init
-         real               :: dtheta
-         character(len=2)   :: plane
+      real, dimension(3) :: positions, pos_init
+      real               :: dtheta
+      character(len=2)   :: plane
 
-         positions = rotate(dtheta, pos_init, plane)
+      positions = rotate(dtheta, pos_init, plane)
 
-      end function positions
+   end function positions
 
 !<
 !! \brief compute velocity of particle
-!!
 !! \details compute velocity of particle with position pos_init and eccentricity e <0,1)
-!!
 !! \warning it works properly only in XY plane 
 !>
-      function velocities(pos_init, e)
+   function velocities(pos_init, e)
 
-         use constants,  only: zero, one, dpi
-         use dataio_pub, only: die
-         use func,       only: operator(.equals.)
-         use units,      only: newtong
+      use constants,  only: zero, one, dpi
+      use dataio_pub, only: die
+      use func,       only: operator(.equals.)
+      use units,      only: newtong
 
-         implicit none
+      implicit none
 
-         real, dimension(3) :: pos_init, velocities
-         real               :: a        !< semi-major axis of initial elliptical orbit of particle
-         real               :: r        !< lenght of radius vector
-         real               :: e
-         real               :: mu
-         real, parameter    :: M = 10.0
-         real               :: lenght  !usunac
+      real, dimension(3) :: pos_init, velocities
+      real               :: a        !< semi-major axis of initial elliptical orbit of particle
+      real               :: r        !< lenght of radius vector
+      real               :: e
+      real               :: mu
+      real, parameter    :: M = 10.0
+      real               :: lenght  !usunac
 
-         mu = newtong*M
+      mu = newtong*M
 
-         if( (e < zero) .or. (e >= one) ) then
-            call die("[initproblem:velocities] Invalid eccentricity")
+      if( (e < zero) .or. (e >= one) ) then
+         call die("[initproblem:velocities] Invalid eccentricity")
+      else
+         r = sqrt(pos_init(1)**2 + pos_init(2)**2 + pos_init(3)**2)
+
+         if (e.equals.0.0) then
+            velocities(2) = sqrt(mu/r)
+            write(*,*) "Orbita kolowa"
          else
-            r = sqrt(pos_init(1)**2 + pos_init(2)**2 + pos_init(3)**2)
+            a = r/(1.0 + e)
+            velocities(2) = sqrt(mu*(2.0/r - 1.0/a))
+            write(*,'(A11,F4.2,A3,F5.3,A3,F5.3)') "#Elipsa: e=", e, " a=",a, " b=", a*sqrt(1.0 - e**2)
 
-            if (e.equals.0.0) then
-               velocities(2) = sqrt(mu/r)
-               write(*,*) "Orbita kolowa"
-            else
-               a = r/(1.0 + e)
-               velocities(2) = sqrt(mu*(2.0/r - 1.0/a))
-               write(*,'(A11,F4.2,A3,F5.3,A3,F5.3)') "#Elipsa: e=", e, " a=",a, " b=", a*sqrt(1.0 - e**2)
-
-               lenght = dpi*sqrt((a**3)/mu)  !usunac
-               write(*,*) "lenght=", lenght
-            endif
+            lenght = dpi*sqrt((a**3)/mu)  !usunac
+            write(*,*) "lenght=", lenght
          endif
-         velocities(1) = 0.0
-         velocities(3) = 0.0
+      endif
+      velocities(1) = 0.0
+      velocities(3) = 0.0
 
-      end function velocities
+   end function velocities
 
 !< 
 !! \brief rotate vector over one of the axes by an angle theta
-!!
 !! \todo add to selection of axis (next variable)
 !>
-      function rotate (theta, vector, plane)
+   function rotate (theta, vector, plane)
 
-         implicit none
+      implicit none
 
-         real, dimension(3) :: vector, rotate
-         real               :: theta
-         character(len=2)   :: plane
+      real, dimension(3) :: vector, rotate
+      real               :: theta
+      character(len=2)   :: plane
 
-         select case (plane)
-            case('XY', 'YX', 'xy', 'yx')
-               rotate(1) = vector(1)*cos(theta) - vector(2)*sin(theta)
-               rotate(2) = vector(1)*sin(theta) + vector(2)*cos(theta)
-               rotate(3) = vector(3)
-            case('XZ', 'ZX', 'xz', 'zx')
-               rotate(1) = vector(1)*cos(theta) - vector(3)*sin(theta)
-               rotate(2) = vector(2)
-               rotate(3) = vector(1)*sin(theta) + vector(3)*cos(theta)
-            case('YZ', 'ZY', 'yz', 'zy')
-               rotate(1) = vector(1)
-               rotate(2) = vector(2)*cos(theta) - vector(3)*sin(theta)
-               rotate(3) = vector(2)*sin(theta) + vector(3)*cos(theta)
-         end select
+      select case (plane)
+         case('XY', 'YX', 'xy', 'yx')
+            rotate(1) = vector(1)*cos(theta) - vector(2)*sin(theta)
+            rotate(2) = vector(1)*sin(theta) + vector(2)*cos(theta)
+            rotate(3) = vector(3)
+         case('XZ', 'ZX', 'xz', 'zx')
+            rotate(1) = vector(1)*cos(theta) - vector(3)*sin(theta)
+            rotate(2) = vector(2)
+            rotate(3) = vector(1)*sin(theta) + vector(3)*cos(theta)
+         case('YZ', 'ZY', 'yz', 'zy')
+            rotate(1) = vector(1)
+            rotate(2) = vector(2)*cos(theta) - vector(3)*sin(theta)
+            rotate(3) = vector(2)*sin(theta) + vector(3)*cos(theta)
+      end select
 
-      end function rotate
+   end function rotate
 
-      function change_plane(vector, plane)
+   function change_plane(vector, plane)
 
-         implicit none
+      implicit none
 
-         real, dimension(3) :: vector, change_plane
-         character(len=2)   :: plane
+      real, dimension(3) :: vector, change_plane
+      character(len=2)   :: plane
 
-         select case (plane)
-            case('XZ', 'ZX', 'xz', 'zx')
-               change_plane(1) = vector(1)
-               change_plane(2) = vector(3)
-               change_plane(3) = vector(2)
-            case('YZ', 'ZY', 'yz', 'zy')
-               change_plane(3) = vector(2)
-               change_plane(2) = vector(1)
-               change_plane(1) = vector(3)
-         end select
+      select case (plane)
+         case('XZ', 'ZX', 'xz', 'zx')
+            change_plane(1) = vector(1)
+            change_plane(2) = vector(3)
+            change_plane(3) = vector(2)
+         case('YZ', 'ZY', 'yz', 'zy')
+            change_plane(3) = vector(2)
+            change_plane(2) = vector(1)
+            change_plane(1) = vector(3)
+      end select
 
-      end function change_plane
+   end function change_plane
 
-      subroutine twobodies(n_particles, e, plane)
+   subroutine twobodies(n_particles, e)
 
-         use dataio_pub,     only: msg, printinfo
-         use particle_types, only: pset
+      use dataio_pub,     only: msg, printinfo
+      use particle_types, only: pset
 
-         implicit none
+      implicit none
 
-         integer,          intent(in)    :: n_particles
-         real,             intent(in)    :: e
-         character(len=2), intent(in)    :: plane
-         real, dimension(3)              :: init_pos_body_one, init_pos_body_two, init_vel_body_one, init_vel_body_two
-         real                            :: m1, m2
+      integer,          intent(in)    :: n_particles
+      real,             intent(in)    :: e
+      real, dimension(3)              :: init_pos_body_one, init_pos_body_two, init_vel_body_one, init_vel_body_two
+      real                            :: m1, m2
 
-         write(msg,'(a,i6)') '[initproblem:twobodies] Number of particles: ', n_particles
-         call printinfo(msg)
+      write(msg,'(a,i6)') '[initproblem:twobodies] Number of particles: ', n_particles
+      call printinfo(msg)
 
-         m1 = 10.0
-         init_pos_body_one = 0.0
-         init_vel_body_one = 0.0
+      m1 = 10.0
+      init_pos_body_one = 0.0
+      init_vel_body_one = 0.0
 
-         m2 = 1.0
-         init_pos_body_two = [2.0, 0.0, 0.0]
-         init_vel_body_two = vel_2bodies(m1, init_pos_body_one, init_pos_body_two, e)
+      m2 = 1.0
+      init_pos_body_two = [2.0, 0.0, 0.0]
+      init_vel_body_two = vel_2bodies(m1, init_pos_body_one, init_pos_body_two, e)
 
-         !init_vel_body_two = 0.0
-         write(*,*) m1, " @ ", init_pos_body_one, ", with ", init_vel_body_one 
-         write(*,*) m2, " @ ", init_pos_body_two, ", with ", init_vel_body_two 
+      !init_vel_body_two = 0.0
+      write(*,*) m1, " @ ", init_pos_body_one, ", with ", init_vel_body_one
+      write(*,*) m2, " @ ", init_pos_body_two, ", with ", init_vel_body_two
 
-         call pset%add(m1, init_pos_body_one, init_vel_body_one, [0.0, 0.0, 0.0], 0.0) !dominujace cialo
-         call pset%add(m2, init_pos_body_two, init_vel_body_two, [0.0, 0.0, 0.0], 0.0)
-         !call pset%add(10.0, init_pos_body_one, init_vel_body_one, [0.0, 0.0, 0.0], 0.0) !dominujace cialo
-         write(*,*) "[2b]: Obliczono pozycje czastek "
+      call pset%add(m1, init_pos_body_one, init_vel_body_one, [0.0, 0.0, 0.0], 0.0) !dominujace cialo
+      call pset%add(m2, init_pos_body_two, init_vel_body_two, [0.0, 0.0, 0.0], 0.0)
+      !call pset%add(10.0, init_pos_body_one, init_vel_body_one, [0.0, 0.0, 0.0], 0.0) !dominujace cialo
+      write(*,*) "[2b]: Obliczono pozycje czastek "
 
-      end subroutine twobodies
+   end subroutine twobodies
 
-      function vel_2bodies(mass, init_pos_body_one, init_pos_body_two, e)
+   function vel_2bodies(mass, init_pos_body_one, init_pos_body_two, e)
 
-         use constants,  only: zero, one, dpi
-         use dataio_pub, only: die
-         use func,       only: operator(.equals.)
-         use units,      only: newtong
+      use constants,  only: zero, one, dpi
+      use dataio_pub, only: die
+      use func,       only: operator(.equals.)
+      use units,      only: newtong
 
-         implicit none
+      implicit none
 
-         real, dimension(3) :: init_pos_body_one, init_pos_body_two, vel_2bodies
-         real               :: a        !< semi-major axis of initial elliptical orbit of particle
-         real               :: r        !< lenght of radius vector
-         real               :: e
-         real               :: mu
-         real               :: mass
-         real               :: lenght  !usunac
+      real, dimension(3) :: init_pos_body_one, init_pos_body_two, vel_2bodies
+      real               :: a        !< semi-major axis of initial elliptical orbit of particle
+      real               :: r        !< lenght of radius vector
+      real               :: e
+      real               :: mu
+      real               :: mass
+      real               :: lenght  !usunac
 
-         mu = newtong * mass
-         write(*,*) "NEWTONG=", newtong, "mu=", mu
+      mu = newtong * mass
+      write(*,*) "NEWTONG=", newtong, "mu=", mu
 
-         if( (e < zero) .or. (e >= one) ) then
-            call die("[initproblem:velocities] Invalid eccentricity")
+      if( (e < zero) .or. (e >= one) ) then
+         call die("[initproblem:velocities] Invalid eccentricity")
+      else
+         r = sqrt((init_pos_body_one(1) - init_pos_body_two(1))**2 + &
+                  (init_pos_body_one(2) - init_pos_body_two(2))**2 + &
+                  (init_pos_body_one(3) - init_pos_body_two(3))**2)
+
+         if (e.equals.0.0) then
+            vel_2bodies(2) = sqrt(mu/r)
+            write(*,*) "Orbita kolowa"
          else
-            r = sqrt((init_pos_body_one(1) - init_pos_body_two(1))**2 + &
-                     (init_pos_body_one(2) - init_pos_body_two(2))**2 + &
-                     (init_pos_body_one(3) - init_pos_body_two(3))**2)
+            a = r/(1.0 + e)
+            vel_2bodies(2) = sqrt(mu*(2.0/r - 1.0/a))
+            write(*,*) "predkosc 1: ", vel_2bodies(2)
+            vel_2bodies(2) = sqrt((mu-mu*e)/r)
+            write(*,*) "predkosc 2: ", vel_2bodies(2)
 
-            if (e.equals.0.0) then
-               vel_2bodies(2) = sqrt(mu/r)
-               write(*,*) "Orbita kolowa"
-            else
-               a = r/(1.0 + e)
-               vel_2bodies(2) = sqrt(mu*(2.0/r - 1.0/a))
-               write(*,*) "predkosc 1: ", vel_2bodies(2)
-               vel_2bodies(2) = sqrt((mu-mu*e)/r)
-               write(*,*) "predkosc 2: ", vel_2bodies(2)
-
-               write(*,'(A11,F4.2,A3,F5.3,A3,F5.3)') "#Elipsa: e=", e, " a=",a, " b=", a*sqrt(1.0 - e**2)
-               lenght = dpi*sqrt((a**3)/mu)  !usunac
-               write(*,*) "lenght=", lenght
-            endif
+            write(*,'(A11,F4.2,A3,F5.3,A3,F5.3)') "#Elipsa: e=", e, " a=",a, " b=", a*sqrt(1.0 - e**2)
+            lenght = dpi*sqrt((a**3)/mu)  !usunac
+            write(*,*) "lenght=", lenght
          endif
-         vel_2bodies(1) = 0.0
-         vel_2bodies(3) = 0.0
+      endif
+      vel_2bodies(1) = 0.0
+      vel_2bodies(3) = 0.0
 
-      end function vel_2bodies
+   end function vel_2bodies
 
-      subroutine orbits(n_particles, e, plane)
+   subroutine orbits(n_particles, e, plane)
 
-         !use constants,        only: dpi
-         use dataio_pub,       only: msg, printinfo
-         use gravity,          only: sum_potential
-         use particle_gravity, only: update_particle_gravpot_and_acc
-         use particle_types,   only: pset
+      !use constants,        only: dpi
+      use dataio_pub,       only: msg, printinfo
+      use gravity,          only: sum_potential
+      use particle_gravity, only: update_particle_gravpot_and_acc
+      use particle_types,   only: pset
 
-         implicit none
+      implicit none
 
-         integer,          intent(in)    :: n_particles
-         real,             intent(in)    :: e
-         character(len=2), intent(in)    :: plane
-         real, dimension(3)              :: pos_init, vel_init
-         !real                            :: dtheta
+      integer,          intent(in)    :: n_particles
+      real,             intent(in)    :: e
+      character(len=2), intent(in)    :: plane
+      real, dimension(3)              :: pos_init, vel_init
+      !real                            :: dtheta
+      integer                         :: p
 
-         write(msg,'(a,i6)') '[initproblem:orbits] Number of particles that will be added: ', n_particles
-         call printinfo(msg)
+      write(msg,'(a,i6)') '[initproblem:orbits] Number of particles that will be added: ', n_particles
+      call printinfo(msg)
 
-         !dtheta = dpi/n_particles
+      !dtheta = dpi/n_particles
 
-         pos_init(1) = 2.0
-         pos_init(2) = 1.0
-         pos_init(3) = 0.0
+      pos_init(1) = 2.0
+      pos_init(2) = 1.0
+      pos_init(3) = 0.0
 
-         !vel_init = velocities(pos_init, e)
-         vel_init = [-0.5, 0.0, 0.0]
+      !vel_init = velocities(pos_init, e)
+      vel_init = [-0.5, 0.0, 0.0]
 
-         !call pset%add(1.0, [ 0.9700436, -0.24308753, 0.0], [ 0.466203685, 0.43236573, 0.0], [0.0, 0.0, 0.0], 0.0)
-         !call pset%add(1.0, [-0.9700436, 0.24308753, 0.0], [ 0.466203685, 0.43236573, 0.0], [0.0, 0.0, 0.0], 0.0)
-         !call pset%add(1.0, [0.0, 0.0, 0.0], [-0.932407370, -0.86473146, 0.0], [0.0, 0.0, 0.0], 0.0 )
-         do i = 1, n_particles, 1
-            call pset%add(1.0, pos_init, vel_init, [0.0, 0.0, 0.0], 0.0 ) !orbita eliptyczna
-            !call pset%add(1.0, [4.0, 2.0, 0.0],[-0.5, 0.0, 0.0], [0.0, 0.0, 0.0], 0.0)
-            !call pset%add(1.0, [3.0, 2.0, 0.0],[0.0, -1.0, 0.0],  [0.0, 0.0, 0.0], 0.0)
+      !call pset%add(1.0, [ 0.9700436, -0.24308753, 0.0], [ 0.466203685, 0.43236573, 0.0], [0.0, 0.0, 0.0], 0.0)
+      !call pset%add(1.0, [-0.9700436, 0.24308753, 0.0], [ 0.466203685, 0.43236573, 0.0], [0.0, 0.0, 0.0], 0.0)
+      !call pset%add(1.0, [0.0, 0.0, 0.0], [-0.932407370, -0.86473146, 0.0], [0.0, 0.0, 0.0], 0.0 )
+      do p = 1, n_particles, 1
+         call pset%add(1.0, pos_init, vel_init, [0.0, 0.0, 0.0], 0.0 ) !orbita eliptyczna
+         !call pset%add(1.0, [4.0, 2.0, 0.0],[-0.5, 0.0, 0.0], [0.0, 0.0, 0.0], 0.0)
+         !call pset%add(1.0, [3.0, 2.0, 0.0],[0.0, -1.0, 0.0],  [0.0, 0.0, 0.0], 0.0)
 
-            !pos_init = positions(dtheta, pos_init, plane)
-            !vel_init = rotate(dtheta, vel_init, plane)
-         enddo
+         !pos_init = positions(dtheta, pos_init, plane)
+         !vel_init = rotate(dtheta, vel_init, plane)
+      enddo
 
-         !call pset%add(10.0, [0.0,0.0,0.0],[0.0,0.0,0.0],[0.0,0.0,0.0],0.0)
-         !call pset%add(1.0, [0.0,0.0,0.0],[0.0,0.0,0.0],[0.0,0.0,0.0],0.0) ! to "dziala"
+      !call pset%add(10.0, [0.0,0.0,0.0],[0.0,0.0,0.0],[0.0,0.0,0.0],0.0)
+      !call pset%add(1.0, [0.0,0.0,0.0],[0.0,0.0,0.0],[0.0,0.0,0.0],0.0) ! to "dziala"
 
-         write(msg,'(a,i6)') '[initproblem:orbits] Number of particles added to the domain: ', size(pset%p, dim=1)
-         call printinfo(msg)
-         write(msg,'(a,3f5.2)') '[initproblem:orbits] Initial position of the particle: ', pos_init
-         call printinfo(msg)
-         write(msg,'(a,3f5.2)') '[initproblem:orbits] Initial velocity of the particle: ', vel_init
-         call printinfo(msg)
+      write(msg,'(a,i6)') '[initproblem:orbits] Number of particles added to the domain: ', size(pset%p, dim=1)
+      call printinfo(msg)
+      write(msg,'(a,3f5.2)') '[initproblem:orbits] Initial position of the particle: ', pos_init
+      call printinfo(msg)
+      write(msg,'(a,3f5.2)') '[initproblem:orbits] Initial velocity of the particle: ', vel_init
+      call printinfo(msg)
 
-         call update_particle_gravpot_and_acc
-         call sum_potential
+      call update_particle_gravpot_and_acc
+      call sum_potential
 
-      end subroutine orbits
+   end subroutine orbits
 
 !< \brief create a set of particles at random positions inside a sphere
-      subroutine relax_time(n_particles)
+   subroutine relax_time(n_particles)
 
-         use dataio_pub,        only: msg, printinfo
-         use particle_types,    only: pset
+      use constants,         only: onesth
+      use dataio_pub,        only: msg, printinfo
+      use particle_types,    only: pset
 #ifdef HDF5
-         use particles_io_hdf5, only: write_hdf5, read_hdf5
+      use particles_io_hdf5, only: write_hdf5, read_hdf5
 #endif /* HDF5 */
 
-         implicit none
+      implicit none
 
-         integer, intent(in)            :: n_particles
+      integer, intent(in)            :: n_particles
 
-         integer                        :: i, j
-         integer, parameter             :: seed = 86437
-         real, dimension(n_particles,3) :: pos_init
-         real, dimension(3,2)           :: domain
-         real                           :: factor, r_dom, r
-         real, parameter                :: onesixth = 1.0/6.0
+      integer                        :: i, j
+      integer, parameter             :: seed = 86437
+      real, dimension(n_particles,3) :: pos_init
+      real, dimension(3,2)           :: domain
+      real                           :: factor, r_dom, r
 
-         domain(1,1) = -5.0
-         domain(2,1) = -5.0
-         domain(3,1) = -5.0
-         domain(1,2) = 5.0
-         domain(2,2) = 5.0
-         domain(3,2) = 5.0
+      domain(:,1) = -5.0
+      domain(:,2) = 5.0
 
-         write(msg,'(a,i6)') '[initproblem:relax_time] Number of particles: ', n_particles
-         call printinfo(msg)
+      write(msg,'(a,i6)') '[initproblem:relax_time] Number of particles: ', n_particles
+      call printinfo(msg)
 
-         call srand(seed)
-         r_dom = onesixth*sqrt(domain(1,2)**2 + domain(2,2)**2 + domain(3,2)**2)
+      call srand(seed)
+      r_dom = onesth*sqrt(domain(1,2)**2 + domain(2,2)**2 + domain(3,2)**2)
 
-         do i = 1, n_particles
-            r = r_dom
-            do while ((r>=r_dom))
-               do j = 1, 3
-                  factor = rand(0)
-                  pos_init(i, j) = sign(rand(0)*domain(j, 2),factor-0.5)
-               enddo
-               r = sqrt(pos_init(i,1)**2 + pos_init(i,2)**2 + pos_init(i,3)**2)
+      do i = 1, n_particles
+         r = r_dom
+         do while ((r>=r_dom))
+            do j = 1, 3
+               factor = rand(0)
+               pos_init(i, j) = sign(rand(0)*domain(j, 2),factor-0.5)
             enddo
-            call pset%add(1.0, pos_init(i,:), [0.0,0.0,0.0],[0.0, 0.0, 0.0],0.0 )
+            r = sqrt(pos_init(i,1)**2 + pos_init(i,2)**2 + pos_init(i,3)**2)
          enddo
-         write(msg,'(a,i6)') '[initproblem:relax_time] Particles position computed'
-         call printinfo(msg)
+         call pset%add(1.0, pos_init(i,:), [0.0,0.0,0.0],[0.0, 0.0, 0.0],0.0 )
+      enddo
+      write(msg,'(a,i6)') '[initproblem:relax_time] Particles position computed'
+      call printinfo(msg)
 #ifdef HDF5
-         call write_hdf5(pos_init, n_particles)
+      call write_hdf5(pos_init, n_particles)
 #endif /* HDF5 */
 
-      end subroutine relax_time
-
-   end subroutine problem_initial_conditions
+   end subroutine relax_time
 
    subroutine read_buildgal
 
@@ -515,5 +505,5 @@ contains
 
    end subroutine read_buildgal
 #endif /* NBODY */
-!-----------------------------------------------------------------------------
+
 end module initproblem
