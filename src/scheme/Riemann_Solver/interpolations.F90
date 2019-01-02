@@ -102,7 +102,7 @@ contains
 !! \brief Apply chosen interpolation scheme to obtain estimates of left and right state for the Riemann solver.
 !>
 
-  subroutine interpol(u, bcc, psi, ql, qr, bccl, bccr, psil, psir)
+  subroutine interpol(u, bcc, ql, qr, bccl, bccr)
 
     use fluxlimiters, only: flimiter, blimiter
 
@@ -116,16 +116,11 @@ contains
     real, dimension(:,:), intent(out)    :: bccl
     real, dimension(:,:), intent(out)    :: bccr
 
-    real, dimension(:,:), intent(in)     :: psi
-    real, dimension(:,:), intent(out)    :: psil
-    real, dimension(:,:), intent(out)    :: psir
-
     real, dimension(size(u, 1), size(u, 2)) :: q
 
     q = utoq(u, bcc)
     call interp(q,   ql,   qr,   flimiter)
     call interp(bcc, bccl, bccr, blimiter)
-    call interp(psi, psil, psir, blimiter)
 
   end subroutine interpol
 

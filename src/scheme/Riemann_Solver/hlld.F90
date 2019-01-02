@@ -43,10 +43,14 @@
 module hlld
 ! pulled by RIEMANN
 
+   use constants, only: zdim
+
    implicit none
 
+   integer, parameter :: psidim = zdim + 1
+
    private
-   public :: riemann_wrap
+   public :: riemann_wrap, psidim
 
 contains
 !>
@@ -55,28 +59,23 @@ contains
 !! OPT: check if passing pointers here will improve performance
 !<
 
-   subroutine riemann_wrap(ql, qr, b_cc_l, b_cc_r, psi_l, psi_r, flx, mag_cc, psi_cc)
+   subroutine riemann_wrap(ql, qr, b_cc_l, b_cc_r, flx, mag_cc)
 
-      use constants,  only: xdim, zdim, DIVB_HDC
       use fluidindex, only: flind
       use fluidtypes, only: component_fluid
-      use global,     only: divB_0_method
 
       implicit none
 
       real, dimension(:,:), target, intent(in)  :: ql, qr          ! left and right fluid states
       real, dimension(:,:), target, intent(in)  :: b_cc_l, b_cc_r  ! left and right magnetic field states (relevant only for IONIZED fluid)
-      real, dimension(:,:), target, intent(in)  :: psi_l, psi_r    ! left and right psi field states (relevant only for GLM method)
-      real, dimension(:,:), target, intent(out) :: flx, mag_cc, psi_cc ! output fluxes: fluid, magnetic field and psi
+      real, dimension(:,:), target, intent(out) :: flx, mag_cc     ! output fluxes: fluid, magnetic field and psi
 
       integer :: i
       class(component_fluid), pointer :: fl
 
       real, dimension(size(b_cc_l,1), size(b_cc_l,2)), target :: b0, bf0
-      real, dimension(size(psi_l, 1), size(psi_l, 2)), target :: p0, pf0
       real, dimension(:,:), pointer :: p_flx, p_ql, p_qr
       real, dimension(:,:), pointer :: p_bcc, p_bccl, p_bccr
-      real, dimension(:,:), pointer :: p_psif, p_psi_l, p_psi_r
 
       do i = 1, flind%fluids
          fl    => flind%all_fluids(i)%fl
@@ -84,31 +83,17 @@ contains
          p_ql  => ql(:, fl%beg:fl%end)
          p_qr  => qr(:, fl%beg:fl%end)
          if (fl%is_magnetized) then
-            p_bccl => b_cc_l(:, xdim:zdim)
-            p_bccr => b_cc_r(:, xdim:zdim)
-            p_bcc  => mag_cc(:, xdim:zdim)
-            if (divB_0_method == DIVB_HDC) then
-               p_psi_l => psi_l(:,:)
-               p_psi_r => psi_r(:,:)
-               p_psif  => psi_cc(:,:)
-            else  ! CT
-               p0 = 0.
-               p_psi_l => p0
-               p_psi_r => p0
-               p_psif  => pf0
-            endif
+            p_bccl => b_cc_l(:, :)
+            p_bccr => b_cc_r(:, :)
+            p_bcc  => mag_cc(:, :)
          else ! ignore all magnetic field
             b0 = 0.
             p_bccl => b0
             p_bccr => b0
             p_bcc  => bf0
-            p0 = 0.
-            p_psi_l => p0
-            p_psi_r => p0
-            p_psif  => pf0
          endif
 
-         call riemann_hlld(p_flx, p_ql, p_qr, p_bcc, p_bccl, p_bccr, p_psi_l, p_psi_r, p_psif, fl%gam)
+         call riemann_hlld(p_flx, p_ql, p_qr, p_bcc, p_bccl, p_bccr, fl%gam)
       enddo
 
    end subroutine riemann_wrap
@@ -117,7 +102,7 @@ contains
 !! \brief single-fluid HLLD Riemann solver
 !<
 
-   subroutine riemann_hlld(f,ul,ur,b_cc,b_ccl,b_ccr,psil,psir,psi,gamma)
+   subroutine riemann_hlld(f, ul, ur, b_cc, b_ccl, b_ccr, gamma)
 
     ! external procedures
 
@@ -134,8 +119,6 @@ contains
     real, dimension(:,:), pointer, intent(in)    :: ul, ur
     real, dimension(:,:), pointer, intent(out)   :: b_cc
     real, dimension(:,:), pointer, intent(in)    :: b_ccl, b_ccr
-    real, dimension(:,:), pointer, intent(in)    :: psil, psir
-    real, dimension(:,:), pointer, intent(out)   :: psi
     real,                          intent(in)    :: gamma
 
     ! Local variables
@@ -175,8 +158,8 @@ contains
 
     ! Eq. 42, Dedner et al.
     if (divB_0_method .eq. DIVB_HDC) then
-       psi(:, 1)     = chspeed * chspeed * half*((b_ccr(:, xdim)+b_ccl(:, xdim)) - (psir(:, 1)-psil(:, 1))/chspeed)
-       b_cc(:, xdim) = half*((psir(:, 1)+psil(:, 1)) - chspeed*(b_ccr(:, xdim)-b_ccl(:, xdim)))
+       b_cc(:, psidim)     = chspeed * chspeed * half*((b_ccr(:, xdim)+b_ccl(:, xdim)) - (b_ccr(:, psidim)-b_ccl(:, psidim))/chspeed)
+       b_cc(:, xdim) = half*((b_ccr(:, psidim) + b_ccl(:, psidim)) - chspeed * (b_ccr(:, xdim) - b_ccl(:, xdim)))
     else
        b_cc(:, xdim) = 0.
     endif
@@ -328,8 +311,8 @@ contains
 
           ! Dot product of velocity and magnetic field
 
-          vb_l  =  sum(ul(i, imx:imz)*b_ccl(i, :))
-          vb_r  =  sum(ur(i, imx:imz)*b_ccr(i, :))
+          vb_l  =  sum(ul(i, imx:imz)*b_ccl(i, xdim:zdim))
+          vb_r  =  sum(ur(i, imx:imz)*b_ccr(i, xdim:zdim))
           vb_starl  =  sum(v_starl*b_starl)
           vb_starr  =  sum(v_starr*b_starr)
 
