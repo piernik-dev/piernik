@@ -41,9 +41,8 @@ module particle_pub
    private
    public :: psolver, init_particles, cleanup_particles
 #ifdef NBODY
-   public :: npart, ht_integrator, lf_c
+   public :: npart, lf_c
 
-   logical                           :: ht_integrator
    integer                           :: npart              !< number of particles
    real                              :: lf_c               !< timestep should depends of grid and velocities of particles (used to extrapolation of the gravitational potential)
 #endif /* NBODY */
@@ -142,10 +141,8 @@ contains
          case ('hermit4')
             psolver => hermit4
 #ifdef NBODY
-            ht_integrator = .true.
          case ('leapfrog2')
             psolver => leapfrog2
-            ht_integrator = .false.
 #endif /* NBODY */
          case (default_ti) ! be quiet
 #endif /* !_CRAYFTN */
