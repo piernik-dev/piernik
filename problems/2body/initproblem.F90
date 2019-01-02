@@ -96,22 +96,15 @@ contains
       use cg_leaves,      only: leaves
       use cg_list,        only: cg_list_element
       use constants,      only: xdim, ydim, zdim, LO, HI
-      use dataio_pub,     only: printinfo
+      use dataio_pub,     only: die, msg, printinfo
       use fluidindex,     only: flind
       use particle_types, only: pset
-#ifdef NBODY
-      use dataio_pub,     only: die, msg
-      use particle_pub,   only: ht_integrator
-      !use particles_io_hdf5
-#endif /* NBODY */
 
       implicit none
 
       integer                         :: i, j, k, p
-#ifdef NBODY
       real                            :: e                  !< orbit eccentricity
       character(len=2)                :: plane
-#endif /* NBODY */
       type(cg_list_element),  pointer :: cgl
 
       do p = lbound(flind%all_fluids, dim=1), ubound(flind%all_fluids, dim=1)
@@ -122,11 +115,7 @@ contains
                   do j = cg%lhn(ydim,LO), cg%lhn(ydim,HI)
                      do i = cg%lhn(xdim,LO), cg%lhn(xdim,HI)
                         associate( fl => flind%all_fluids(p)%fl )
-#ifdef NBODY
                            cg%u(fl%idn,i,j,k) = 1.0e-6
-#else /* !NBODY */
-                           cg%u(fl%idn,i,j,k) = 1.0
-#endif /* !NBODY */
                            cg%u(fl%imx,i,j,k) = 0.0
                            cg%u(fl%imy,i,j,k) = 0.0
                            cg%u(fl%imz,i,j,k) = 0.0
@@ -139,41 +128,25 @@ contains
          enddo
       enddo
 
-#ifndef NBODY
-      call pset%add(1.0, [ 0.9700436,  -0.24308753,  0.0], [ 0.466203685,  0.43236573, 0.0])
-      call pset%add(1.0, [-0.9700436,   0.24308753,  0.0], [ 0.466203685,  0.43236573, 0.0])
-      call pset%add(1.0, [ 0.0,         0.0,         0.0], [-0.932407370, -0.86473146, 0.0])
-      call printinfo('To see results type: gnuplot -p -e ''plot "nbody_out.log" u 2:3'' ')
-#endif /* !NBODY */
+      e = 0.0
+      plane = 'XY'
 
-#ifdef NBODY
-      if (ht_integrator) then
-         call pset%add(1.0, [ 0.9700436,  -0.24308753,  0.0], [ 0.466203685,  0.43236573, 0.0], [0.0, 0.0, 0.0], 0.0)
-         call pset%add(1.0, [-0.9700436,   0.24308753,  0.0], [ 0.466203685,  0.43236573, 0.0], [0.0, 0.0, 0.0], 0.0)
-         call pset%add(1.0, [ 0.0,         0.0,         0.0], [-0.932407370, -0.86473146, 0.0], [0.0, 0.0, 0.0], 0.0)
-      else
-         e = 0.0
-         plane = 'XY'
-
-         select case (trim(topic_2body))
-            case ('orbits')
-               call orbits(e, plane)
-            case ('relaxtime')
-               call relax_time
-            case ('buildgal')
-               call read_buildgal
-            case ('twobodies')
-               call twobodies(e)
-            case default
-               write(msg, '(3a)')"[initproblem:problem_initial_conditions] Unknown topic_2body '",trim(topic_2body),"'"
-               call die(msg)
-         end select
-      endif
-#endif /* NBODY */
+      select case (trim(topic_2body))
+         case ('orbits')
+            call orbits(e, plane)
+         case ('relaxtime')
+            call relax_time
+         case ('buildgal')
+            call read_buildgal
+         case ('twobodies')
+            call twobodies(e)
+         case default
+            write(msg, '(3a)')"[initproblem:problem_initial_conditions] Unknown topic_2body '",trim(topic_2body),"'"
+            call die(msg)
+      end select
 
    end subroutine problem_initial_conditions
 
-#ifdef NBODY
 !< \brief rotate (x,y,z) vector by an angle theta
    function positions(dtheta, pos_init, plane)
 
@@ -493,6 +466,5 @@ contains
       close(2)
 
    end subroutine read_buildgal
-#endif /* NBODY */
 
 end module initproblem

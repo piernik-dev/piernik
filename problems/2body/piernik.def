@@ -6,3 +6,4 @@
 #define RTVD
 #define REST
 #define MULTIGRID
+#define NBODY
