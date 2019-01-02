@@ -257,77 +257,64 @@ contains
 
    subroutine twobodies(e)
 
+      use constants,      only: ndims
       use particle_types, only: pset
 
       implicit none
 
-      real,             intent(in)    :: e
-      real, dimension(3)              :: init_pos_body_one, init_pos_body_two, init_vel_body_one, init_vel_body_two
-      real                            :: m1, m2
+      real,         intent(in) :: e
+      real, dimension(ndims,2) :: init_pos_body, init_vel_body
+      real, dimension(2)       :: m
 
-      m1 = 10.0
-      init_pos_body_one = 0.0
-      init_vel_body_one = 0.0
+      m = [10.0, 1.0]
+      init_pos_body = 0.0
+      init_vel_body = 0.0
 
-      m2 = 1.0
-      init_pos_body_two = [2.0, 0.0, 0.0]
-      init_vel_body_two = vel_2bodies(m1, init_pos_body_one, init_pos_body_two, e)
+      init_pos_body(:,2) = [2.0, 0.0, 0.0]
+      init_vel_body(:,2) = vel_2bodies(m(1), e, init_pos_body)
 
-      !init_vel_body_two = 0.0
-      write(*,*) m1, " @ ", init_pos_body_one, ", with ", init_vel_body_one
-      write(*,*) m2, " @ ", init_pos_body_two, ", with ", init_vel_body_two
-
-      call pset%add(m1, init_pos_body_one, init_vel_body_one, [0.0, 0.0, 0.0], 0.0) !dominujace cialo
-      call pset%add(m2, init_pos_body_two, init_vel_body_two, [0.0, 0.0, 0.0], 0.0)
-      !call pset%add(10.0, init_pos_body_one, init_vel_body_one, [0.0, 0.0, 0.0], 0.0) !dominujace cialo
-      write(*,*) "[2b]: Obliczono pozycje czastek "
+      do p = 1,2
+         write(*,*) m(p), " @ ", init_pos_body(:,p), ", with ", init_vel_body(:,p)
+         call pset%add(m(p), init_pos_body(:,p), init_vel_body(:,p), [0.0, 0.0, 0.0], 0.0)
+      enddo
 
    end subroutine twobodies
 
-   function vel_2bodies(mass, init_pos_body_one, init_pos_body_two, e)
+   function vel_2bodies(mass, e, init_pos_body)
 
-      use constants,  only: zero, one, dpi
+      use constants,  only: ndims, zero, one, two, dpi, ydim
       use dataio_pub, only: die
       use func,       only: operator(.equals.)
       use units,      only: newtong
 
       implicit none
 
-      real, dimension(3) :: init_pos_body_one, init_pos_body_two, vel_2bodies
-      real               :: a        !< semi-major axis of initial elliptical orbit of particle
-      real               :: r        !< lenght of radius vector
-      real               :: e
-      real               :: mu
-      real               :: mass
-      real               :: lenght  !usunac
+      real,                     intent(in) :: mass, e
+      real, dimension(ndims,2), intent(in) :: init_pos_body
+      real, dimension(ndims)               :: vel_2bodies
+      real                                 :: a        !< semi-major axis of initial elliptical orbit of particle
+      real                                 :: r        !< lenght of radius vector
+      real                                 :: mu
 
+      vel_2bodies = zero
       mu = newtong * mass
-      write(*,*) "NEWTONG=", newtong, "mu=", mu
 
       if( (e < zero) .or. (e >= one) ) then
-         call die("[initproblem:velocities] Invalid eccentricity")
+         call die("[initproblem:vel_2bodies] Invalid eccentricity")
+
+      r = sqrt(sum((init_pos_body(:,1) - init_pos_body(:,2))**2))
+
+      if (e .equals. zero) then
+         vel_2bodies(2) = sqrt(mu/r)
       else
-         r = sqrt((init_pos_body_one(1) - init_pos_body_two(1))**2 + &
-                  (init_pos_body_one(2) - init_pos_body_two(2))**2 + &
-                  (init_pos_body_one(3) - init_pos_body_two(3))**2)
+         a = r/(one + e)
+         vel_2bodies(ydim) = sqrt(mu*(two/r - one/a))
+         write(*,*) "predkosc 1: ", vel_2bodies(2)
+         vel_2bodies(ydim) = sqrt((mu-mu*e)/r)
+         write(*,*) "predkosc 2: ", vel_2bodies(2)
 
-         if (e.equals.0.0) then
-            vel_2bodies(2) = sqrt(mu/r)
-            write(*,*) "Orbita kolowa"
-         else
-            a = r/(1.0 + e)
-            vel_2bodies(2) = sqrt(mu*(2.0/r - 1.0/a))
-            write(*,*) "predkosc 1: ", vel_2bodies(2)
-            vel_2bodies(2) = sqrt((mu-mu*e)/r)
-            write(*,*) "predkosc 2: ", vel_2bodies(2)
-
-            write(*,'(A11,F4.2,A3,F5.3,A3,F5.3)') "#Elipsa: e=", e, " a=",a, " b=", a*sqrt(1.0 - e**2)
-            lenght = dpi*sqrt((a**3)/mu)  !usunac
-            write(*,*) "lenght=", lenght
-         endif
+         write(*,'(A11,F4.2,A3,F5.3,A3,F5.3)') "#Elipsa: e=", e, " a=",a, " b=", a*sqrt(one - e**2)
       endif
-      vel_2bodies(1) = 0.0
-      vel_2bodies(3) = 0.0
 
    end function vel_2bodies
 
@@ -393,7 +380,7 @@ contains
       use particle_pub,      only: npart
       use particle_types,    only: pset
 #ifdef HDF5
-      use particles_io_hdf5, only: write_hdf5, read_hdf5
+      use particles_io_hdf5, only: write_hdf5
 #endif /* HDF5 */
 
       implicit none
