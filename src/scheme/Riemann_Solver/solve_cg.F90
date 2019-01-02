@@ -73,7 +73,7 @@ contains
 
       real, dimension(cg%n_(ddim), size(cg%u,1)) :: u
       real, dimension(cg%n_(ddim), xdim:zdim)    :: b
-      real, dimension(cg%n_(ddim))               :: psi
+      real, dimension(cg%n_(ddim)), target       :: psi
       real, dimension(:,:), pointer              :: pu, pu0, pb, pb0
       integer                                    :: i1, i2
       real, dimension(:), pointer                :: ppsi, ppsi0
@@ -104,8 +104,8 @@ contains
          psihi = qna%ind(psih_n)
       endif
       psi = 0.
-      nullify(ppsi)
-      nullify(pb)
+
+      ppsi => psi ! suppress compiler complains on possibly uninitialized pointer
 
       call prepare_sources(cg)
 
@@ -118,10 +118,10 @@ contains
             pu => cg%w(wna%fi)%get_sweep(ddim,i1,i2)
             u(:, iarr_all_swp(ddim,:)) = transpose(pu(:,:))
 
+            pb => cg%w(wna%bi)%get_sweep(ddim,i1,i2)
             if (force_cc_mag) then
                pb0 => cg%w(bhi)%get_sweep(ddim,i1,i2)
                b0(:, iarr_mag_swp(ddim,:)) = transpose(pb0(:,:))
-               pb => cg%w(wna%bi)%get_sweep(ddim,i1,i2)
                b(:, iarr_mag_swp(ddim,:)) = transpose(pb(:,:))
             else
                ! For CT we have small inconsequence here: we don't call magfield
