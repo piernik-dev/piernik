@@ -282,10 +282,9 @@ contains
       real               :: a        !< semi-major axis of initial elliptical orbit of particle
       real               :: r        !< lenght of radius vector
       real               :: mu
-      real, parameter    :: M = 10.0
       real               :: lenght  !usunac
 
-      mu = newtong*M
+      mu = newtong*mass1
       velocities(:) = zero
 
       if( (e < zero) .or. (e >= one) ) then
