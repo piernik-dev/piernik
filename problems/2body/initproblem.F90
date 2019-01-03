@@ -200,7 +200,7 @@ contains
 
    subroutine orbits
 
-      use constants,        only: ndims !, dpi
+      use constants,        only: ndims !, dpi, zdim
       use dataio_pub,       only: msg, printinfo
       use gravity,          only: sum_potential
       use particle_gravity, only: update_particle_gravpot_and_acc
@@ -211,17 +211,10 @@ contains
 
       integer                :: p
       real, dimension(ndims) :: pos_init, vel_init
-      !real                   :: dtheta
-      !real                   :: e                  !< orbit eccentricity
-      !character(len=2)       :: plane
-
-      !dtheta = dpi/npart
-      !e = 0.0
-      !plane = 'XY'
 
       pos_init = [2.0, 1.0, 0.0]
 
-      !vel_init = velocities(pos_init, e)
+      !vel_init = velocities(pos_init)
       vel_init = [-0.5, 0.0, 0.0]
 
       !call pset%add(1.0, [ 0.9700436, -0.24308753, 0.0], [ 0.466203685, 0.43236573, 0.0], [0.0, 0.0, 0.0], 0.0)
@@ -232,8 +225,8 @@ contains
          !call pset%add(1.0, [4.0, 2.0, 0.0],[-0.5, 0.0, 0.0], [0.0, 0.0, 0.0], 0.0)
          !call pset%add(1.0, [3.0, 2.0, 0.0],[0.0, -1.0, 0.0],  [0.0, 0.0, 0.0], 0.0)
 
-         !pos_init = rotate(dtheta, pos_init, plane)
-         !vel_init = rotate(dtheta, vel_init, plane)
+         !pos_init = rotate(pos_init, dpi/npart, zdim)
+         !vel_init = rotate(vel_init, dpi/npart, zdim)
       enddo
 
       !call pset%add(10.0, [0.0,0.0,0.0],[0.0,0.0,0.0],[0.0,0.0,0.0],0.0)
@@ -256,9 +249,9 @@ contains
 !! \details compute velocity of particle with position pos_init and eccentricity e <0,1)
 !! \warning it works properly only in XY plane
 !>
-   function velocities(pos_init, e)
+   function velocities(pos_init)
 
-      use constants,  only: zero, one, dpi
+      use constants,  only: dpi, one, two, ydim, zero
       use dataio_pub, only: die
       use func,       only: operator(.equals.)
       use units,      only: newtong
@@ -268,32 +261,32 @@ contains
       real, dimension(3) :: pos_init, velocities
       real               :: a        !< semi-major axis of initial elliptical orbit of particle
       real               :: r        !< lenght of radius vector
-      real               :: e
+      real               :: e        !< orbit eccentricity
       real               :: mu
       real, parameter    :: M = 10.0
       real               :: lenght  !usunac
 
       mu = newtong*M
+      e = zero
+      velocities(:) = zero
 
       if( (e < zero) .or. (e >= one) ) then
          call die("[initproblem:velocities] Invalid eccentricity")
       else
-         r = sqrt(pos_init(1)**2 + pos_init(2)**2 + pos_init(3)**2)
+         r = sqrt(sum(pos_init(:)**2))
 
-         if (e.equals.0.0) then
-            velocities(2) = sqrt(mu/r)
+         if (e .equals. zero) then
+            velocities(ydim) = sqrt(mu/r)
             write(*,*) "Circular orbit"
          else
-            a = r/(1.0 + e)
-            velocities(2) = sqrt(mu*(2.0/r - 1.0/a))
-            write(*,'(A11,F4.2,A3,F5.3,A3,F5.3)') "#Ellipse: e=", e, " a=",a, " b=", a*sqrt(1.0 - e**2)
+            a = r/(one + e)
+            velocities(ydim) = sqrt(mu*(two/r - one/a))
+            write(*,'(A11,F4.2,A3,F5.3,A3,F5.3)') "#Ellipse: e=", e, " a=",a, " b=", a*sqrt(one - e**2)
 
             lenght = dpi*sqrt((a**3)/mu)  !usunac
             write(*,*) "lenght=", lenght
          endif
       endif
-      velocities(1) = 0.0
-      velocities(3) = 0.0
 
    end function velocities
 
@@ -301,28 +294,23 @@ contains
 !! \brief rotate vector over one of the axes by an angle theta
 !! \todo add to selection of axis (next variable)
 !>
-   function rotate (theta, vector, plane)
+   function rotate (vector, theta, dir)
+
+      use constants, only: ndims, xdim, ydim
 
       implicit none
 
-      real, dimension(3) :: vector, rotate
-      real               :: theta
-      character(len=2)   :: plane
+      real, dimension(ndims), intent(in) :: vector
+      real,                   intent(in) :: theta
+      integer(kind=4),        intent(in) :: dir
+      real, dimension(ndims)             :: rotate
+      integer(kind=4)                    :: dir1, dir2
 
-      select case (plane)
-         case('XY', 'YX', 'xy', 'yx')
-            rotate(1) = vector(1)*cos(theta) - vector(2)*sin(theta)
-            rotate(2) = vector(1)*sin(theta) + vector(2)*cos(theta)
-            rotate(3) = vector(3)
-         case('XZ', 'ZX', 'xz', 'zx')
-            rotate(1) = vector(1)*cos(theta) - vector(3)*sin(theta)
-            rotate(2) = vector(2)
-            rotate(3) = vector(1)*sin(theta) + vector(3)*cos(theta)
-         case('YZ', 'ZY', 'yz', 'zy')
-            rotate(1) = vector(1)
-            rotate(2) = vector(2)*cos(theta) - vector(3)*sin(theta)
-            rotate(3) = vector(2)*sin(theta) + vector(3)*cos(theta)
-      end select
+      rotate(dir) = vector(dir)
+      dir1 = mod(dir+xdim,ndims)
+      dir2 = mod(dir+ydim,ndims)
+      rotate(dir1) = vector(dir1)*cos(theta) - vector(dir2)*sin(theta)
+      rotate(dir2) = vector(dir1)*sin(theta) + vector(dir2)*cos(theta)
 
    end function rotate
 
