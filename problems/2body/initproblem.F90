@@ -134,114 +134,6 @@ contains
 
    end subroutine problem_initial_conditions
 
-!< \brief rotate (x,y,z) vector by an angle theta
-   function positions(dtheta, pos_init, plane)
-
-      implicit none
-
-      real, dimension(3) :: positions, pos_init
-      real               :: dtheta
-      character(len=2)   :: plane
-
-      positions = rotate(dtheta, pos_init, plane)
-
-   end function positions
-
-!<
-!! \brief compute velocity of particle
-!! \details compute velocity of particle with position pos_init and eccentricity e <0,1)
-!! \warning it works properly only in XY plane 
-!>
-   function velocities(pos_init, e)
-
-      use constants,  only: zero, one, dpi
-      use dataio_pub, only: die
-      use func,       only: operator(.equals.)
-      use units,      only: newtong
-
-      implicit none
-
-      real, dimension(3) :: pos_init, velocities
-      real               :: a        !< semi-major axis of initial elliptical orbit of particle
-      real               :: r        !< lenght of radius vector
-      real               :: e
-      real               :: mu
-      real, parameter    :: M = 10.0
-      real               :: lenght  !usunac
-
-      mu = newtong*M
-
-      if( (e < zero) .or. (e >= one) ) then
-         call die("[initproblem:velocities] Invalid eccentricity")
-      else
-         r = sqrt(pos_init(1)**2 + pos_init(2)**2 + pos_init(3)**2)
-
-         if (e.equals.0.0) then
-            velocities(2) = sqrt(mu/r)
-            write(*,*) "Orbita kolowa"
-         else
-            a = r/(1.0 + e)
-            velocities(2) = sqrt(mu*(2.0/r - 1.0/a))
-            write(*,'(A11,F4.2,A3,F5.3,A3,F5.3)') "#Elipsa: e=", e, " a=",a, " b=", a*sqrt(1.0 - e**2)
-
-            lenght = dpi*sqrt((a**3)/mu)  !usunac
-            write(*,*) "lenght=", lenght
-         endif
-      endif
-      velocities(1) = 0.0
-      velocities(3) = 0.0
-
-   end function velocities
-
-!< 
-!! \brief rotate vector over one of the axes by an angle theta
-!! \todo add to selection of axis (next variable)
-!>
-   function rotate (theta, vector, plane)
-
-      implicit none
-
-      real, dimension(3) :: vector, rotate
-      real               :: theta
-      character(len=2)   :: plane
-
-      select case (plane)
-         case('XY', 'YX', 'xy', 'yx')
-            rotate(1) = vector(1)*cos(theta) - vector(2)*sin(theta)
-            rotate(2) = vector(1)*sin(theta) + vector(2)*cos(theta)
-            rotate(3) = vector(3)
-         case('XZ', 'ZX', 'xz', 'zx')
-            rotate(1) = vector(1)*cos(theta) - vector(3)*sin(theta)
-            rotate(2) = vector(2)
-            rotate(3) = vector(1)*sin(theta) + vector(3)*cos(theta)
-         case('YZ', 'ZY', 'yz', 'zy')
-            rotate(1) = vector(1)
-            rotate(2) = vector(2)*cos(theta) - vector(3)*sin(theta)
-            rotate(3) = vector(2)*sin(theta) + vector(3)*cos(theta)
-      end select
-
-   end function rotate
-
-   function change_plane(vector, plane)
-
-      implicit none
-
-      real, dimension(3) :: vector, change_plane
-      character(len=2)   :: plane
-
-      select case (plane)
-         case('XZ', 'ZX', 'xz', 'zx')
-            change_plane(1) = vector(1)
-            change_plane(2) = vector(3)
-            change_plane(3) = vector(2)
-         case('YZ', 'ZY', 'yz', 'zy')
-            change_plane(3) = vector(2)
-            change_plane(2) = vector(1)
-            change_plane(1) = vector(3)
-      end select
-
-   end function change_plane
-
    subroutine twobodies
 
       use constants,      only: ndims
@@ -297,9 +189,9 @@ contains
       else
          a = r/(one + e)
          vel_2bodies(ydim) = sqrt(mu*(two/r - one/a))
-         write(*,*) "predkosc 1: ", vel_2bodies(2)
+         write(*,*) "velocity 1: ", vel_2bodies(2)
          vel_2bodies(ydim) = sqrt((mu-mu*e)/r)
-         write(*,*) "predkosc 2: ", vel_2bodies(2)
+         write(*,*) "velocity 2: ", vel_2bodies(2)
 
          write(*,'(A11,F4.2,A3,F5.3,A3,F5.3)') "#Elipsa: e=", e, " a=",a, " b=", a*sqrt(one - e**2)
       endif
@@ -323,9 +215,6 @@ contains
       !real                   :: e                  !< orbit eccentricity
       !character(len=2)       :: plane
 
-      write(msg,'(a,i6)') '[initproblem:orbits] Number of particles that will be added: ', npart
-      call printinfo(msg)
-
       !dtheta = dpi/npart
       !e = 0.0
       !plane = 'XY'
@@ -343,7 +232,7 @@ contains
          !call pset%add(1.0, [4.0, 2.0, 0.0],[-0.5, 0.0, 0.0], [0.0, 0.0, 0.0], 0.0)
          !call pset%add(1.0, [3.0, 2.0, 0.0],[0.0, -1.0, 0.0],  [0.0, 0.0, 0.0], 0.0)
 
-         !pos_init = positions(dtheta, pos_init, plane)
+         !pos_init = rotate(dtheta, pos_init, plane)
          !vel_init = rotate(dtheta, vel_init, plane)
       enddo
 
@@ -361,6 +250,81 @@ contains
       call sum_potential
 
    end subroutine orbits
+
+!<
+!! \brief compute velocity of particle
+!! \details compute velocity of particle with position pos_init and eccentricity e <0,1)
+!! \warning it works properly only in XY plane
+!>
+   function velocities(pos_init, e)
+
+      use constants,  only: zero, one, dpi
+      use dataio_pub, only: die
+      use func,       only: operator(.equals.)
+      use units,      only: newtong
+
+      implicit none
+
+      real, dimension(3) :: pos_init, velocities
+      real               :: a        !< semi-major axis of initial elliptical orbit of particle
+      real               :: r        !< lenght of radius vector
+      real               :: e
+      real               :: mu
+      real, parameter    :: M = 10.0
+      real               :: lenght  !usunac
+
+      mu = newtong*M
+
+      if( (e < zero) .or. (e >= one) ) then
+         call die("[initproblem:velocities] Invalid eccentricity")
+      else
+         r = sqrt(pos_init(1)**2 + pos_init(2)**2 + pos_init(3)**2)
+
+         if (e.equals.0.0) then
+            velocities(2) = sqrt(mu/r)
+            write(*,*) "Circular orbit"
+         else
+            a = r/(1.0 + e)
+            velocities(2) = sqrt(mu*(2.0/r - 1.0/a))
+            write(*,'(A11,F4.2,A3,F5.3,A3,F5.3)') "#Ellipse: e=", e, " a=",a, " b=", a*sqrt(1.0 - e**2)
+
+            lenght = dpi*sqrt((a**3)/mu)  !usunac
+            write(*,*) "lenght=", lenght
+         endif
+      endif
+      velocities(1) = 0.0
+      velocities(3) = 0.0
+
+   end function velocities
+
+!<
+!! \brief rotate vector over one of the axes by an angle theta
+!! \todo add to selection of axis (next variable)
+!>
+   function rotate (theta, vector, plane)
+
+      implicit none
+
+      real, dimension(3) :: vector, rotate
+      real               :: theta
+      character(len=2)   :: plane
+
+      select case (plane)
+         case('XY', 'YX', 'xy', 'yx')
+            rotate(1) = vector(1)*cos(theta) - vector(2)*sin(theta)
+            rotate(2) = vector(1)*sin(theta) + vector(2)*cos(theta)
+            rotate(3) = vector(3)
+         case('XZ', 'ZX', 'xz', 'zx')
+            rotate(1) = vector(1)*cos(theta) - vector(3)*sin(theta)
+            rotate(2) = vector(2)
+            rotate(3) = vector(1)*sin(theta) + vector(3)*cos(theta)
+         case('YZ', 'ZY', 'yz', 'zy')
+            rotate(1) = vector(1)
+            rotate(2) = vector(2)*cos(theta) - vector(3)*sin(theta)
+            rotate(3) = vector(2)*sin(theta) + vector(3)*cos(theta)
+      end select
+
+   end function rotate
 
 !< \brief create a set of particles at random positions inside a sphere
    subroutine relax_time
