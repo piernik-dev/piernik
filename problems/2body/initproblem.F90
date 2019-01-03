@@ -93,53 +93,40 @@ contains
 !-----------------------------------------------------------------------------
    subroutine problem_initial_conditions
 
-      use cg_leaves,      only: leaves
-      use cg_list,        only: cg_list_element
-      use constants,      only: xdim, ydim, zdim, LO, HI
-      use dataio_pub,     only: die, msg, printinfo
-      use fluidindex,     only: flind
-      use particle_types, only: pset
+      use cg_leaves,  only: leaves
+      use cg_list,    only: cg_list_element
+      use dataio_pub, only: die, msg, printinfo
+      use fluidindex, only: flind
 
       implicit none
 
-      integer                         :: i, j, k, p
-      real                            :: e                  !< orbit eccentricity
-      character(len=2)                :: plane
+      integer                         :: p
       type(cg_list_element),  pointer :: cgl
 
-      do p = lbound(flind%all_fluids, dim=1), ubound(flind%all_fluids, dim=1)
-         cgl => leaves%first
-         do while (associated(cgl))
-            associate(cg => cgl%cg)
-               do k = cg%lhn(zdim,LO), cg%lhn(zdim,HI)
-                  do j = cg%lhn(ydim,LO), cg%lhn(ydim,HI)
-                     do i = cg%lhn(xdim,LO), cg%lhn(xdim,HI)
-                        associate( fl => flind%all_fluids(p)%fl )
-                           cg%u(fl%idn,i,j,k) = 1.0e-6
-                           cg%u(fl%imx,i,j,k) = 0.0
-                           cg%u(fl%imy,i,j,k) = 0.0
-                           cg%u(fl%imz,i,j,k) = 0.0
-                        end associate
-                     enddo
-                  enddo
-               enddo
-            end associate
-            cgl => cgl%nxt
-         enddo
+      cgl => leaves%first
+      do while (associated(cgl))
+         associate(cg => cgl%cg)
+            do p = 1, flind%fluids
+               associate(fl => flind%all_fluids(p)%fl)
+                  cg%u(fl%idn,:,:,:) = 1.0e-6
+                  cg%u(fl%imx,:,:,:) = 0.0
+                  cg%u(fl%imy,:,:,:) = 0.0
+                  cg%u(fl%imz,:,:,:) = 0.0
+               end associate
+            enddo
+         end associate
+         cgl => cgl%nxt
       enddo
-
-      e = 0.0
-      plane = 'XY'
 
       select case (trim(topic_2body))
          case ('orbits')
-            call orbits(e, plane)
+            call orbits
          case ('relaxtime')
             call relax_time
          case ('buildgal')
             call read_buildgal
          case ('twobodies')
-            call twobodies(e)
+            call twobodies
          case default
             write(msg, '(3a)')"[initproblem:problem_initial_conditions] Unknown topic_2body '",trim(topic_2body),"'"
             call die(msg)
@@ -255,17 +242,19 @@ contains
 
    end function change_plane
 
-   subroutine twobodies(e)
+   subroutine twobodies
 
       use constants,      only: ndims
       use particle_types, only: pset
 
       implicit none
 
-      real,         intent(in) :: e
       real, dimension(ndims,2) :: init_pos_body, init_vel_body
       real, dimension(2)       :: m
+      real                     :: e                  !< orbit eccentricity
+      integer                  :: p
 
+      e = 0.0
       m = [10.0, 1.0]
       init_pos_body = 0.0
       init_vel_body = 0.0
@@ -273,7 +262,7 @@ contains
       init_pos_body(:,2) = [2.0, 0.0, 0.0]
       init_vel_body(:,2) = vel_2bodies(m(1), e, init_pos_body)
 
-      do p = 1,2
+      do p = 1, 2
          write(*,*) m(p), " @ ", init_pos_body(:,p), ", with ", init_vel_body(:,p)
          call pset%add(m(p), init_pos_body(:,p), init_vel_body(:,p), [0.0, 0.0, 0.0], 0.0)
       enddo
@@ -282,7 +271,7 @@ contains
 
    function vel_2bodies(mass, e, init_pos_body)
 
-      use constants,  only: ndims, zero, one, two, dpi, ydim
+      use constants,  only: ndims, zero, one, two, ydim
       use dataio_pub, only: die
       use func,       only: operator(.equals.)
       use units,      only: newtong
@@ -299,8 +288,7 @@ contains
       vel_2bodies = zero
       mu = newtong * mass
 
-      if( (e < zero) .or. (e >= one) ) then
-         call die("[initproblem:vel_2bodies] Invalid eccentricity")
+      if( (e < zero) .or. (e >= one) ) call die("[initproblem:vel_2bodies] Invalid eccentricity")
 
       r = sqrt(sum((init_pos_body(:,1) - init_pos_body(:,2))**2))
 
@@ -318,7 +306,7 @@ contains
 
    end function vel_2bodies
 
-   subroutine orbits(e, plane)
+   subroutine orbits
 
       use constants,        only: ndims !, dpi
       use dataio_pub,       only: msg, printinfo
@@ -329,16 +317,18 @@ contains
 
       implicit none
 
-      real,             intent(in) :: e
-      character(len=2), intent(in) :: plane
-      real, dimension(ndims)       :: pos_init, vel_init
-      !real                         :: dtheta
-      integer                      :: p
+      integer                :: p
+      real, dimension(ndims) :: pos_init, vel_init
+      !real                   :: dtheta
+      !real                   :: e                  !< orbit eccentricity
+      !character(len=2)       :: plane
 
       write(msg,'(a,i6)') '[initproblem:orbits] Number of particles that will be added: ', npart
       call printinfo(msg)
 
       !dtheta = dpi/npart
+      !e = 0.0
+      !plane = 'XY'
 
       pos_init = [2.0, 1.0, 0.0]
 
@@ -375,44 +365,44 @@ contains
 !< \brief create a set of particles at random positions inside a sphere
    subroutine relax_time
 
-      use constants,         only: onesth
-      use dataio_pub,        only: msg, printinfo
+      use constants,         only: ndims, onesth, one, two
+      use domain,            only: dom
       use particle_pub,      only: npart
       use particle_types,    only: pset
+#ifdef VERBOSE
+      use dataio_pub,        only: printinfo
+#endif /* VERBOSE */
 #ifdef HDF5
       use particles_io_hdf5, only: write_hdf5
 #endif /* HDF5 */
 
       implicit none
 
-      integer                  :: i, j
-      integer, parameter       :: seed = 86437
-      real, dimension(npart,3) :: pos_init
-      real, dimension(3,2)     :: domain
-      real                     :: factor, r_dom, r
+      integer                      :: i
+      real, dimension(npart,ndims) :: pos_init
+      real, dimension(ndims)       :: nrand
+      real                         :: r_dom
+      logical                      :: outsphere
+#ifndef RANDOMIZE
+      integer                      :: seed = 86437
 
-      domain(:,1) = -5.0
-      domain(:,2) = 5.0
+      call random_seed(seed)
+#endif /* !RANDOMIZE */
 
-      write(msg,'(a,i6)') '[initproblem:relax_time] Number of particles: ', npart
-      call printinfo(msg)
-
-      call srand(seed)
-      r_dom = onesth*sqrt(domain(1,2)**2 + domain(2,2)**2 + domain(3,2)**2)
+      r_dom = onesth*sqrt(sum(dom%L_(:)**2))
 
       do i = 1, npart
-         r = r_dom
-         do while ((r>=r_dom))
-            do j = 1, 3
-               factor = rand(0)
-               pos_init(i, j) = sign(rand(0)*domain(j, 2),factor-0.5)
-            enddo
-            r = sqrt(pos_init(i,1)**2 + pos_init(i,2)**2 + pos_init(i,3)**2)
+         outsphere = .true.
+         do while (outsphere)
+            call random_number(nrand)
+            pos_init(i,:) = dom%C_ + (two*nrand-one)*r_dom
+            outsphere = sqrt(sum(pos_init(i,:)**2)) >= r_dom
          enddo
-         call pset%add(1.0, pos_init(i,:), [0.0,0.0,0.0],[0.0, 0.0, 0.0],0.0 )
+         call pset%add(1.0, pos_init(i,:), [0.0,0.0,0.0], [0.0, 0.0, 0.0], 0.0)
       enddo
-      write(msg,'(a,i6)') '[initproblem:relax_time] Particles position computed'
-      call printinfo(msg)
+#ifdef VERBOSE
+      call printinfo('[initproblem:relax_time] Particles position computed')
+#endif /* VERBOSE */
 #ifdef HDF5
       call write_hdf5(pos_init, npart)
 #endif /* HDF5 */
