@@ -35,7 +35,7 @@ module initproblem
    implicit none
 
    private
-   public  :: read_problem_par, problem_initial_conditions, problem_pointers
+   public  :: read_problem_par, problem_initial_conditions, problem_initial_nbody, problem_pointers
 
    character(len=cbuff_len) :: topic_2body
    real                     :: fdens               !< fluid density
@@ -112,10 +112,7 @@ contains
 
       use cg_leaves,        only: leaves
       use cg_list,          only: cg_list_element
-      use dataio_pub,       only: die, msg, printinfo
       use fluidindex,       only: flind
-      use gravity,          only: sum_potential
-      use particle_gravity, only: update_particle_gravpot_and_acc
 
       implicit none
 
@@ -137,6 +134,17 @@ contains
          cgl => cgl%nxt
       enddo
 
+   end subroutine problem_initial_conditions
+
+   subroutine problem_initial_nbody
+
+      use dataio_pub,       only: die, msg
+      use gravity,          only: sum_potential
+      use particle_gravity, only: update_particle_gravpot_and_acc
+      use particle_types,   only: pset
+
+      implicit none
+
       select case (trim(topic_2body))
          case ('twobodies')
             call twobodies
@@ -154,7 +162,7 @@ contains
       call update_particle_gravpot_and_acc
       call sum_potential
 
-   end subroutine problem_initial_conditions
+   end subroutine problem_initial_nbody
 
    subroutine twobodies
 

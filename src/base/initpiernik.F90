@@ -78,6 +78,9 @@ contains
       use gravity,               only: init_grav, init_grav_ext, manage_grav_pot_3d, sum_potential
       use hydrostatic,           only: init_hydrostatic, cleanup_hydrostatic
       use particle_pub,          only: init_particles
+#ifdef NBODY
+      use initproblem,           only: problem_initial_nbody
+#endif /* NBODY */
 #endif /* GRAV */
 #ifdef MULTIGRID
       use multigrid,             only: init_multigrid, init_multigrid_ext, multigrid_par
@@ -177,6 +180,9 @@ contains
       call init_grav                         ! Has to be called before init_grid
       call init_grav_ext
       call init_particles
+#ifdef NBODY
+      call problem_initial_nbody
+#endif /* NBODY */
 #endif /* GRAV */
 #ifdef MULTIGRID
       call init_multigrid_ext                ! Has to be called before init_grid
