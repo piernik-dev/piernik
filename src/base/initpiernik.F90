@@ -78,10 +78,10 @@ contains
       use gravity,               only: init_grav, init_grav_ext, manage_grav_pot_3d, sum_potential
       use hydrostatic,           only: init_hydrostatic, cleanup_hydrostatic
       use particle_pub,          only: init_particles
+#endif /* GRAV */
 #ifdef NBODY
       use initproblem,           only: problem_initial_nbody
 #endif /* NBODY */
-#endif /* GRAV */
 #ifdef MULTIGRID
       use multigrid,             only: init_multigrid, init_multigrid_ext, multigrid_par
 #endif /* MULTIGRID */
@@ -180,9 +180,6 @@ contains
       call init_grav                         ! Has to be called before init_grid
       call init_grav_ext
       call init_particles
-#ifdef NBODY
-      call problem_initial_nbody
-#endif /* NBODY */
 #endif /* GRAV */
 #ifdef MULTIGRID
       call init_multigrid_ext                ! Has to be called before init_grid
@@ -221,6 +218,9 @@ contains
       call init_dataio                       ! depends on units, fluids (through common_hdf5), fluidboundaries, arrays, grid and shear (through magboundaries::bnd_b or fluidboundaries::bnd_u) \todo split me
       ! Initial conditions are read here from a restart file if possible
 
+#ifdef NBODY
+      if (nrestart > 0) call problem_initial_nbody
+#endif /* NBODY */
 #if defined(GRAV) && !defined(SELF_GRAV)
       call sum_potential                     ! for the proper tsl&log data gpot array has to be fill in using gp array values after restart read
                                              !> \todo check and fulfil this requirement for SELF_GRAV defined (should source_terms_grav be called here?)
