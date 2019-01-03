@@ -161,7 +161,6 @@ contains
       use dataio_pub,     only: nh    ! QA_WARN required for diff_nml
       use dataio_pub,     only: printinfo, warn, die, code_progress
       use mpisetup,       only: ibuff, rbuff, cbuff, master, slave, lbuff, piernik_MPI_Bcast
-      use particle_pub,   only: init_particles
       use units,          only: newtong
 #ifdef SELF_GRAV
       use constants,      only: sgp_n, sgpm_n
@@ -323,8 +322,6 @@ contains
          case default
             call die("[gravity:init_grav] Unknown gradient operator")
       end select
-
-      call init_particles
 
    end subroutine init_grav
 
