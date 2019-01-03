@@ -110,15 +110,17 @@ contains
 !-----------------------------------------------------------------------------
    subroutine problem_initial_conditions
 
-      use cg_leaves,  only: leaves
-      use cg_list,    only: cg_list_element
-      use dataio_pub, only: die, msg, printinfo
-      use fluidindex, only: flind
+      use cg_leaves,        only: leaves
+      use cg_list,          only: cg_list_element
+      use dataio_pub,       only: die, msg, printinfo
+      use fluidindex,       only: flind
+      use gravity,          only: sum_potential
+      use particle_gravity, only: update_particle_gravpot_and_acc
 
       implicit none
 
-      integer                         :: p
-      type(cg_list_element),  pointer :: cgl
+      integer                        :: p
+      type(cg_list_element), pointer :: cgl
 
       cgl => leaves%first
       do while (associated(cgl))
@@ -136,18 +138,21 @@ contains
       enddo
 
       select case (trim(topic_2body))
+         case ('twobodies')
+            call twobodies
          case ('orbits')
             call orbits
          case ('relaxtime')
             call relax_time
          case ('buildgal')
             call read_buildgal
-         case ('twobodies')
-            call twobodies
          case default
             write(msg, '(3a)')"[initproblem:problem_initial_conditions] Unknown topic_2body '",trim(topic_2body),"'"
             call die(msg)
       end select
+
+      call update_particle_gravpot_and_acc
+      call sum_potential
 
    end subroutine problem_initial_conditions
 
@@ -215,12 +220,10 @@ contains
 
    subroutine orbits
 
-      use constants,        only: ndims !, dpi, zdim
-      use dataio_pub,       only: msg, printinfo
-      use gravity,          only: sum_potential
-      use particle_gravity, only: update_particle_gravpot_and_acc
-      use particle_pub,     only: npart
-      use particle_types,   only: pset
+      use constants,      only: ndims !, dpi, zdim
+      use dataio_pub,     only: msg, printinfo
+      use particle_pub,   only: npart
+      use particle_types, only: pset
 
       implicit none
 
@@ -232,7 +235,7 @@ contains
       !vel_init = velocities(pos_init)
       vel_init = [-0.5, 0.0, 0.0]
 
-      do p = 1, npart, 1
+      do p = 1, npart
          call pset%add(mass2, pos_init, vel_init, [0.0, 0.0, 0.0], 0.0 ) !elliptical orbit
          !call pset%add(mass2, [4.0, 2.0, 0.0],[-0.5, 0.0, 0.0], [0.0, 0.0, 0.0], 0.0)
          !call pset%add(mass2, [3.0, 2.0, 0.0],[0.0, -1.0, 0.0],  [0.0, 0.0, 0.0], 0.0)
@@ -250,9 +253,6 @@ contains
       call printinfo(msg)
       write(msg,'(a,3f5.2)') '[initproblem:orbits] Initial velocity of the particle: ', vel_init
       call printinfo(msg)
-
-      call update_particle_gravpot_and_acc
-      call sum_potential
 
    end subroutine orbits
 
