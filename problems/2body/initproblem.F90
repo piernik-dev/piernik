@@ -38,8 +38,12 @@ module initproblem
    public  :: read_problem_par, problem_initial_conditions, problem_pointers
 
    character(len=cbuff_len) :: topic_2body
+   real                     :: fdens               !< fluid density
+   real                     :: e                   !< orbit eccentricity
+   real                     :: mass1               !< (higher) mass of the primary particle
+   real                     :: mass2               !< (lower) mass of secondary particles
 
-   namelist /PROBLEM_CONTROL/ topic_2body
+   namelist /PROBLEM_CONTROL/ topic_2body, fdens, e, mass1, mass2
 
 contains
 !-----------------------------------------------------------------------------
@@ -52,12 +56,16 @@ contains
    subroutine read_problem_par
 
       use dataio_pub, only: nh      ! QA_WARN required for diff_nml
-      use mpisetup,   only: cbuff, master, slave, piernik_MPI_Bcast
+      use mpisetup,   only: cbuff, rbuff, master, slave, piernik_MPI_Bcast
 
       implicit none
 
       ! namelist default parameter values
       topic_2body = 'default'
+      fdens       = 1.0e-6
+      e           = 0.0
+      mass1       = 10.0
+      mass2       = 1.0
 
       if (master) then
 
@@ -78,14 +86,23 @@ contains
          call nh%compare_namelist()
 
          cbuff(1) = topic_2body
+         rbuff(1) = fdens
+         rbuff(2) = e
+         rbuff(3) = mass1
+         rbuff(4) = mass2
 
       endif
 
       call piernik_MPI_Bcast(cbuff, cbuff_len)
+      call piernik_MPI_Bcast(rbuff)
 
       if (slave) then
 
          topic_2body = cbuff(1)
+         fdens       = rbuff(1)
+         e           = rbuff(2)
+         mass1       = rbuff(3)
+         mass2       = rbuff(4)
 
       endif
 
@@ -108,7 +125,7 @@ contains
          associate(cg => cgl%cg)
             do p = 1, flind%fluids
                associate(fl => flind%all_fluids(p)%fl)
-                  cg%u(fl%idn,:,:,:) = 1.0e-6
+                  cg%u(fl%idn,:,:,:) = fdens
                   cg%u(fl%imx,:,:,:) = 0.0
                   cg%u(fl%imy,:,:,:) = 0.0
                   cg%u(fl%imz,:,:,:) = 0.0
@@ -143,16 +160,14 @@ contains
 
       real, dimension(ndims,2) :: init_pos_body, init_vel_body
       real, dimension(2)       :: m
-      real                     :: e                  !< orbit eccentricity
       integer                  :: p
 
-      e = 0.0
-      m = [10.0, 1.0]
+      m = [mass1, mass2]
       init_pos_body = 0.0
       init_vel_body = 0.0
 
       init_pos_body(:,2) = [2.0, 0.0, 0.0]
-      init_vel_body(:,2) = vel_2bodies(m(1), e, init_pos_body)
+      init_vel_body(:,2) = vel_2bodies(m(1), init_pos_body)
 
       do p = 1, 2
          write(*,*) m(p), " @ ", init_pos_body(:,p), ", with ", init_vel_body(:,p)
@@ -161,7 +176,7 @@ contains
 
    end subroutine twobodies
 
-   function vel_2bodies(mass, e, init_pos_body)
+   function vel_2bodies(mass, init_pos_body)
 
       use constants,  only: ndims, zero, one, two, ydim
       use dataio_pub, only: die
@@ -170,7 +185,7 @@ contains
 
       implicit none
 
-      real,                     intent(in) :: mass, e
+      real,                     intent(in) :: mass
       real, dimension(ndims,2), intent(in) :: init_pos_body
       real, dimension(ndims)               :: vel_2bodies
       real                                 :: a        !< semi-major axis of initial elliptical orbit of particle
@@ -217,20 +232,17 @@ contains
       !vel_init = velocities(pos_init)
       vel_init = [-0.5, 0.0, 0.0]
 
-      !call pset%add(1.0, [ 0.9700436, -0.24308753, 0.0], [ 0.466203685, 0.43236573, 0.0], [0.0, 0.0, 0.0], 0.0)
-      !call pset%add(1.0, [-0.9700436, 0.24308753, 0.0], [ 0.466203685, 0.43236573, 0.0], [0.0, 0.0, 0.0], 0.0)
-      !call pset%add(1.0, [0.0, 0.0, 0.0], [-0.932407370, -0.86473146, 0.0], [0.0, 0.0, 0.0], 0.0 )
       do p = 1, npart, 1
-         call pset%add(1.0, pos_init, vel_init, [0.0, 0.0, 0.0], 0.0 ) !orbita eliptyczna
-         !call pset%add(1.0, [4.0, 2.0, 0.0],[-0.5, 0.0, 0.0], [0.0, 0.0, 0.0], 0.0)
-         !call pset%add(1.0, [3.0, 2.0, 0.0],[0.0, -1.0, 0.0],  [0.0, 0.0, 0.0], 0.0)
+         call pset%add(mass2, pos_init, vel_init, [0.0, 0.0, 0.0], 0.0 ) !elliptical orbit
+         !call pset%add(mass2, [4.0, 2.0, 0.0],[-0.5, 0.0, 0.0], [0.0, 0.0, 0.0], 0.0)
+         !call pset%add(mass2, [3.0, 2.0, 0.0],[0.0, -1.0, 0.0],  [0.0, 0.0, 0.0], 0.0)
 
          !pos_init = rotate(pos_init, dpi/npart, zdim)
          !vel_init = rotate(vel_init, dpi/npart, zdim)
       enddo
 
-      !call pset%add(10.0, [0.0,0.0,0.0],[0.0,0.0,0.0],[0.0,0.0,0.0],0.0)
-      !call pset%add(1.0, [0.0,0.0,0.0],[0.0,0.0,0.0],[0.0,0.0,0.0],0.0) ! to "dziala"
+      !call pset%add(mass1, [0.0,0.0,0.0],[0.0,0.0,0.0],[0.0,0.0,0.0],0.0)
+      !call pset%add(mass2, [0.0,0.0,0.0],[0.0,0.0,0.0],[0.0,0.0,0.0],0.0) ! it "works"
 
       write(msg,'(a,i6)') '[initproblem:orbits] Number of particles added to the domain: ', size(pset%p, dim=1)
       call printinfo(msg)
@@ -261,13 +273,11 @@ contains
       real, dimension(3) :: pos_init, velocities
       real               :: a        !< semi-major axis of initial elliptical orbit of particle
       real               :: r        !< lenght of radius vector
-      real               :: e        !< orbit eccentricity
       real               :: mu
       real, parameter    :: M = 10.0
       real               :: lenght  !usunac
 
       mu = newtong*M
-      e = zero
       velocities(:) = zero
 
       if( (e < zero) .or. (e >= one) ) then
@@ -350,7 +360,7 @@ contains
             pos_init(i,:) = dom%C_ + (two*nrand-one)*r_dom
             outsphere = sqrt(sum(pos_init(i,:)**2)) >= r_dom
          enddo
-         call pset%add(1.0, pos_init(i,:), [0.0,0.0,0.0], [0.0, 0.0, 0.0], 0.0)
+         call pset%add(mass2, pos_init(i,:), [0.0,0.0,0.0], [0.0, 0.0, 0.0], 0.0)
       enddo
 #ifdef VERBOSE
       call printinfo('[initproblem:relax_time] Particles position computed')
