@@ -81,6 +81,7 @@ contains
 #endif /* GRAV */
 #ifdef NBODY
       use initproblem,           only: problem_initial_nbody
+      use particle_gravity,      only: update_particle_gravpot_and_acc
 #endif /* NBODY */
 #ifdef MULTIGRID
       use multigrid,             only: init_multigrid, init_multigrid_ext, multigrid_par
@@ -220,10 +221,12 @@ contains
 
 #ifdef NBODY
       if (nrestart > 0) call problem_initial_nbody
+      call update_particle_gravpot_and_acc
 #endif /* NBODY */
 #if defined(GRAV) && !defined(SELF_GRAV)
       call sum_potential                     ! for the proper tsl&log data gpot array has to be fill in using gp array values after restart read
                                              !> \todo check and fulfil this requirement for SELF_GRAV defined (should source_terms_grav be called here?)
+                                             !> \todo this is necessary for NBODY
                                              !> \deprecated this probably should be guaranteed to be done elsewhere.
 #endif /* GRAV && !SELF_GRAV */
       if (nrestart /= 0) call all_bnd

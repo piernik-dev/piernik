@@ -139,9 +139,6 @@ contains
    subroutine problem_initial_nbody
 
       use dataio_pub,       only: die, msg
-      use gravity,          only: sum_potential
-      use particle_gravity, only: update_particle_gravpot_and_acc
-      use particle_types,   only: pset
 
       implicit none
 
@@ -158,9 +155,6 @@ contains
             write(msg, '(3a)')"[initproblem:problem_initial_conditions] Unknown topic_2body '",trim(topic_2body),"'"
             call die(msg)
       end select
-
-      call update_particle_gravpot_and_acc
-      call sum_potential
 
    end subroutine problem_initial_nbody
 
