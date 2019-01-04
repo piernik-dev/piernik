@@ -94,7 +94,7 @@ contains
       real(kind=8), dimension(1:ndim)              :: cor
       real(kind=8), dimension(size(x),size(x))     :: fun_vec_jac, fun_vec_inv_jac
       real(kind=8)                                 :: err_f, err_x, det
-      integer(kind=2)                              :: i, j
+      integer(kind=2)                              :: i
 
       err_f = tol_f
       err_x = tol_x
@@ -106,7 +106,8 @@ contains
 !         write(*,"(A33,2E22.15)")"Convergence (f) at initialization", x
          return
       endif
-      do j = 1, 3 ! if it is not possible to find solution with demanded precision.
+
+
          do i = 1, NR_iter_limit
             if (maxval(abs(fun_vec_value)) < err_f ) then    ! For convergence via value of f
                exit_code=.false.
@@ -139,9 +140,6 @@ contains
             return
          endif
       enddo
-      err_f = 5.0*err_f
-      err_x = 5.0*err_x ! changing tolerance so that more solutions can be found
-  enddo
 !       write(*,"(A45,I4,A24)") "  ... WARNING: Maximum number of iterations (",NR_iter_limit,") exceeded @global_newt!"
       exit_code = .true.
 
@@ -289,7 +287,7 @@ contains
 
    subroutine fill_guess_grids
       use constants, only: zero, one, I_ONE, half
-      use initcrspectrum,  only: q_big, force_init_NR, NR_run_refine_pf, p_fix_ratio, e_small_approx_p_lo, e_small_approx_p_up
+      use initcrspectrum,  only: q_big, force_init_NR, NR_run_refine_pf, p_fix_ratio, e_small_approx_init_cond
 
       implicit none
 
@@ -342,7 +340,7 @@ contains
          n_tab_up(i)     = ind_to_flog(i, n_min_up, n_max_up, arr_dim) ! n_min_up * ten**((log10(n_max_up/n_min_up))/real(arr_dim-1,kind=8)*real((i-1),kind=8))
       enddo
 
-      if (e_small_approx_p_up .ge. 1) then
+      if (e_small_approx_init_cond .eq. 1) then
          write (*, "(A36)", advance="no") "Reading (up) boundary ratio files..."
          do j = 1,2
             call read_NR_guess_grid(p_ratios_up, "p_ratios_up", exit_code) ;  int_logical_p = logical_2_int(exit_code)
@@ -363,9 +361,7 @@ contains
             call save_NR_guess_grid(p_ratios_up,"p_ratios_up")
             call save_NR_guess_grid(f_ratios_up,"f_ratios_up")
          enddo
-      endif
 
-      if (e_small_approx_p_lo .ge. 1) then
          write (*, "(A36)", advance="no") "Reading (lo) boundary ratio files"
          do j = 1,2
             call read_NR_guess_grid(p_ratios_lo, "p_ratios_lo", exit_code) ;   int_logical_p = logical_2_int(exit_code)
@@ -544,6 +540,9 @@ contains
                   do js = 1, helper_arr_dim
                      x_vec(1) = p_space(is)
                      x_vec(2) = p_space(is)**(-q_space(js))
+#ifdef CRESP_VERBOSED
+                     x_in = x_vec
+#endif /* CRESP_VERBOSED */
                      if (exit_code .eqv. .true.) then
                         call NR_algorithm(x_vec, exit_code)
                         if ( exit_code .eqv. .false. ) then
@@ -580,7 +579,7 @@ contains
 #ifdef CRESP_VERBOSED
       print *,""
 #endif /* CRESP_VERBOSED */
-   end subroutine
+   end subroutine fill_boundary_grid
 !----------------------------------------------------------------------------------------------------
    subroutine step_seek(x_step, prev_sol, ii, jj, i_sol, j_sol, exit_code, nstep)
       use constants, only: I_ONE
@@ -1000,12 +999,13 @@ contains
       real(kind=8), dimension(ndim) :: x, xp, xm
       real(kind=8), dimension(size(x),size(x)) :: jac_fin_diff
       real(kind=8), dimension(size(x)) :: dx
-      real(kind=8), parameter          :: dx_par = 1.0e-4, dx_min = epsilon(dx_par)
+      real(kind=8), parameter          :: dx_par = 1.0e-3, dx_min = epsilon(dx_par)
       integer(kind=2) :: j
 
       do j = 1,size(x)
          dx(j) = max(x(j), dx_min )          ! assure dx > zero
          dx(j) = min(dx(j)*dx_par, dx_par)   ! the value of dx is scaled not to go over value of x
+         if (x(j) .eq. dx(j)) dx(j) = half * dx(j)
          xp = x ; xm = x
          xp(j) = x(j) - dx(j) ;  xm(j) = x(j) + dx(j)
          jac_fin_diff(:,j)  = half*( selected_function_2D(xp) - selected_function_2D(xm)) / dx(j)
