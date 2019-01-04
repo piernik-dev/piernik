@@ -172,7 +172,7 @@ contains
             call nullify_all_bins(n_inout, e_inout)
          endif
 #ifdef CRESP_VERBOSED
-         write (msg, "(A)") "[cresp_crspectrum:cresp_update_cell] EMPTY CELL, returning"   ;  call printinfo(msg)
+         write (msg, "(A)") "[cresp_crspectrum:cresp_update_cell] EMPTY CELL, returning"  ;  call printinfo(msg)
 #endif /* CRESP_VERBOSED */
          return             ! if grid cell contains empty bins, no action is taken
       endif
@@ -246,7 +246,7 @@ contains
          approx_p_up = e_small_approx_p_up         !< restore approximation after momenta computed
          call deallocate_active_arrays
 #ifdef CRESP_VERBOSED
-         write (msg, "(A)") "[cresp_crspectrum:cresp_update_cell] EMPTY CELL, returning"   ;  call printinfo(msg)
+         write (msg, "(A)") "[cresp_crspectrum:cresp_update_cell] CFL violated, returning"   ;  call printinfo(msg)
 #endif /* CRESP_VERBOSED */
          return
       endif
@@ -272,6 +272,13 @@ contains
             call transfer_quantities(edt(i_up_next-1),edt(i_up_next))
          endif
       endif
+      if ((del_i_lo .eq. 0) .and. (approx_p_lo .gt. 0)) then
+         if (assert_active_bin_via_nei(ndt(i_lo_next+1), edt(i_lo_next+1), i_lo_next) .eqv. .false.) then
+            call transfer_quantities(ndt(i_lo_next+2),ndt(i_lo_next+1))
+            call transfer_quantities(edt(i_lo_next+2),edt(i_lo_next+1))
+         endif
+      endif
+
 
       approx_p_lo = e_small_approx_p_lo         !< restore approximation after momenta computed
       approx_p_up = e_small_approx_p_up         !< restore approximation after momenta computed
@@ -314,7 +321,7 @@ contains
       if ( cfl_cresp_violation ) then
          call deallocate_active_arrays
 #ifdef CRESP_VERBOSED
-         write (msg, "(A)") "[cresp_crspectrum:cresp_update_cell] EMPTY CELL, returning"
+         write (msg, "(A)") "[cresp_crspectrum:cresp_update_cell] CFL violated, returning"   ;  call printinfo(msg)
          call printinfo(msg)
 #endif /* CRESP_VERBOSED */
          return
@@ -342,12 +349,12 @@ contains
       if (present(p_out)) then
          p_out(1) = p_lo
          p_out(2) = p_up
+      else ! if unapproximated case - clean momenta
+         p_lo = zero
+         p_up = zero
       endif
 
       call deallocate_active_arrays
-
-      p_lo = zero
-      p_up = zero
 
    end subroutine cresp_update_cell
 
@@ -658,8 +665,7 @@ contains
       real(kind=8)                  :: e_amplitude_l, e_amplitude_r, alpha, e_in, n_in
       logical                       :: exit_code, assert_active_bin_via_nei
 
-
-      if (e_in .gt. zero .and. n_in .gt. zero .and. p_fix(i_cutoff-1) .gt. zero ) then
+      if (e_in .gt. zero .and. n_in .gt. zero .and. p_fix(max(i_cutoff-1,0)) .gt. zero ) then
          assert_active_bin_via_nei = .true.
 
          e_one(1) = e_in   ;   n_one(1) = n_in
@@ -1117,6 +1123,8 @@ contains
          endif
       endif
 
+      call check_init_spectrum(p_lo_init, p_up_init, f(i_lo), f(i_up-1))
+
       n_tot0 = sum(n)
       e_tot0 = sum(e)
 
@@ -1268,6 +1276,53 @@ contains
       fq_to_n(bins) = n_bins
 
    end function fq_to_n
+
+!---------------------------------------------------------------------------------------------------
+
+   subroutine check_init_spectrum(p_l, p_u, f_l, f_u)
+
+   use constants,             only: one, I_ONE
+   use initcrspectrum,        only: e_small, e_small_approx_p_lo, e_small_approx_p_up
+
+   implicit none
+
+   real(kind=8),intent(in) :: p_l, p_u, f_l, f_u
+   real(kind=8)            :: e_lo, e_up, e_small_safe, rel_lo, rel_up
+
+      e_small_safe = max(e_small, epsilon(e_small))
+
+      e_lo = fp_to_e_ampl(p_l, f_l)
+      e_up = fp_to_e_ampl(p_u, f_u)
+
+      write(msg,*) "[cresp_crspectrum:check_init_spectrum] Amplitude of low  energy spectrum cutoff:", e_lo
+      call printinfo(msg)
+
+      if (e_small_approx_p_up .eq. I_ONE) then
+         rel_lo   = (e_lo - e_small_safe) / e_small_safe
+         write(msg,*) "[cresp_crspectrum:check_init_spectrum] Relative to e_small(", e_small_safe ,"):", rel_lo
+         if (abs(rel_lo) .lt. one) then
+            call printinfo(msg)
+         else
+            call warn(msg)
+            call sleep(1)
+         endif
+      endif
+
+      write(msg,*) "[cresp_crspectrum:check_init_spectrum] Amplitude of high energy spectrum cutoff:", e_up
+      call printinfo(msg)
+
+      if (e_small_approx_p_up .eq. I_ONE) then
+         rel_up   = (e_small_safe - e_up) / e_up
+         write(msg,*) "[cresp_crspectrum:check_init_spectrum] Relative to e_small(", e_small_safe ,"): ", rel_up
+         if (abs(rel_up) .lt. one) then
+            call printinfo(msg)
+         else
+            call warn(msg)
+            call sleep(1)
+         endif
+      endif
+
+   end subroutine check_init_spectrum
 
 !-------------------------------------------------------------------------------------------------
 
@@ -1897,7 +1952,7 @@ contains
       close(10)
 
       open(11, file="crs_ne.dat", position='append')
-      write(11, '(2I5,4x, e16.9, 600(1x,F18.9))') del_i_lo, del_i_up, t, crel%dt, crel%p(i_lo), crel%p(i_up), crel%n, crel%e
+      write(11, '(2I5,4x, e16.9, 600(1x,ES18.9E3))') del_i_lo, del_i_up, t, crel%dt, crel%p(i_lo), crel%p(i_up), crel%n, crel%e
       close(11)
 
    end subroutine printer
