@@ -175,7 +175,7 @@ contains
       use constants,  only: DIVB_HDC, xdim, ydim, zdim
       use dataio_pub, only: die
       use global,     only: divB_0_method
-      use hlld,           only: riemann_wrap, psidim
+      use hlld,           only: riemann_wrap
       use interpolations, only: interpol
 
       implicit none
@@ -224,12 +224,12 @@ contains
       call riemann_wrap(ql, qr, b_cc_l, b_cc_r, flx, mag_cc) ! Now we advance the left and right states by a timestep.
 
       u1(2:nx-1, :) = u(2:nx-1, :) + dtodx * (flx(:nx-2, :) - flx(2:, :))
-      b1(2:nx-1, ydim:zdim) = b_cc(2:nx-1, ydim:zdim) + dtodx * (mag_cc(:nx-2, ydim:zdim) - mag_cc(2:, ydim:zdim))
       if (divB_0_method == DIVB_HDC) then
-         b1(2:nx-1, xdim) = b_cc(2:nx-1, xdim) + dtodx * (mag_cc(:nx-2, xdim) - mag_cc(2:, xdim))
-         b1(2:nx-1, psidim) = b_cc(2:nx-1, psidim) + dtodx * (mag_cc(:nx-2, psidim) - mag_cc(2:, psidim))
+         b1(2:nx-1, :) = b_cc(2:nx-1, :) + dtodx * (mag_cc(:nx-2, :) - mag_cc(2:, :))
       else
          b1(2:nx-1, xdim) = b_cc(2:nx-1, xdim)
+         b1(2:nx-1, ydim:zdim) = b_cc(2:nx-1, ydim:zdim) + dtodx * (mag_cc(:nx-2, ydim:zdim) - mag_cc(2:, ydim:zdim))
+         ! no psidim for CT
       endif
 
    end subroutine solve
