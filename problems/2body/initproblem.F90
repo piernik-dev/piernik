@@ -38,6 +38,7 @@ module initproblem
    public  :: read_problem_par, problem_initial_conditions, problem_initial_nbody, problem_pointers
 
    character(len=cbuff_len) :: topic_2body
+   character(len=cbuff_len) :: bgfile              !< buildgal file name
    real                     :: fdens               !< fluid density
    real                     :: e                   !< orbit eccentricity
    real                     :: mass1               !< (higher) mass of the primary particle
@@ -62,6 +63,7 @@ contains
 
       ! namelist default parameter values
       topic_2body = 'default'
+      bgfile      = 'SPIRAL'
       fdens       = 1.0e-6
       e           = 0.0
       mass1       = 10.0
@@ -86,6 +88,7 @@ contains
          call nh%compare_namelist()
 
          cbuff(1) = topic_2body
+         cbuff(2) = bgfile
          rbuff(1) = fdens
          rbuff(2) = e
          rbuff(3) = mass1
@@ -99,6 +102,7 @@ contains
       if (slave) then
 
          topic_2body = cbuff(1)
+         bgfile      = cbuff(2)
          fdens       = rbuff(1)
          e           = rbuff(2)
          mass1       = rbuff(3)
@@ -374,36 +378,44 @@ contains
 
    subroutine read_buildgal
 
+      use constants,      only: ndims
+      use dataio_pub,     only: msg, printio, warn
+      use particle_pub,   only: npart
       use particle_types, only: pset
 
       implicit none
 
-      integer                           :: i, j, nbodies, dims=3
+      integer                           :: i, j, nbodies
       integer                           :: galfile = 1
-      character(len=6)                  :: galname="SPIRAL"
       real, dimension(:,:), allocatable :: pos, vel
       real, dimension(:),   allocatable :: mass
 
-      open(unit=galfile,file=galname,action="read",status="old")
+      open(unit=galfile, file=bgfile, action='read', status='old')
          read(galfile,*) nbodies
-         write(*,*) "nbodies=",nbodies
+         write(msg,'(3a,i8,a)') 'Reading ', trim(bgfile), ' file with ', nbodies, ' particles'
+         call printio(msg)
 
-         allocate(mass(nbodies),pos(nbodies,3),vel(nbodies,3))
+         allocate(mass(nbodies),pos(nbodies,ndims),vel(nbodies,ndims))
 
-         read(galfile,*) (mass(i),i=1,nbodies), &
-         ((pos(i,j),j=1,dims),i=1,nbodies),&
-         ((vel(i,j),j=1,dims),i=1,nbodies)
+         read(galfile,*) (mass(i),i=1,nbodies), ((pos(i,j),j=1,ndims),i=1,nbodies), ((vel(i,j),j=1,ndims),i=1,nbodies)
 
       close(galfile)
-      
-      open(unit=2,file='galtest.dat')
-         do i = 1, nbodies
-            if (modulo(i, 1000) .eq. 0) then
-               write(*,*) i
-            endif
-            call pset%add(mass(i), pos(i,:), vel(i,:),[0.0, 0.0, 0.0], 0.0)
-         enddo
-      close(2)
+
+      if (nbodies /= npart) then
+         write(msg,'(a,i8,3a,i8,a)') 'Different number of particles declared in problem.par file (',npart,') then stored in ', trim(bgfile), ' (',nbodies,')'
+         call warn(msg)
+         nbodies = min(nbodies,npart)
+         write(msg,'(a,i8,a)') 'Reading ', nbodies, ' particles'
+         call printio(msg)
+      endif
+
+      do i = 1, nbodies
+#ifdef VERBOSE
+         if (modulo(i, 10000) .eq. 0) write(*,*) i, ' particles read'
+#endif /* VERBOSE */
+         call pset%add(mass(i), pos(i,:), vel(i,:),[0.0, 0.0, 0.0], 0.0)
+      enddo
+      deallocate(mass,pos,vel)
 
    end subroutine read_buildgal
 
