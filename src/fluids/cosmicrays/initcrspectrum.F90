@@ -59,6 +59,7 @@ module initcrspectrum
    real(kind=8)       :: K_cre_pow                   !< exponent for power law-like diffusion-energy dependance
    integer(kind=4)    :: expan_order                 !< 1,2,3 order of Taylor expansion for p_update (cresp_crspectrum)
    real(kind=8)       :: e_small                     !< lower energy cutoff for energy-approximated cutoff momenta
+   logical            :: approx_cutoffs              !< T,F - turns off/on all approximating terms
    integer(kind=1)    :: e_small_approx_p_lo         !< 0,1 - turns off/on energy (e_small) approximated lower cutoff momentum in isolated case
    integer(kind=1)    :: e_small_approx_p_up         !< 0,1 - turns off/on energy (e_small) approximated upper cutoff momentum in isolated case
    integer(kind=1)    :: e_small_approx_init_cond    !< 0,1 - turns off/on energy (e_small) approximated momenta at initialization
@@ -156,7 +157,7 @@ module initcrspectrum
       &                         K_cre_pow, expan_order, e_small, cre_gpcr_ess, use_cresp, e_small_approx_init_cond, &
       &                         e_small_approx_p_lo, e_small_approx_p_up, force_init_NR, NR_iter_limit, max_p_ratio,&
       &                         synch_active, adiab_active, arr_dim, arr_dim_q, q_br_init, Gamma_min_fix,           &
-      &                         Gamma_max_fix, Gamma_lo_init, Gamma_up_init, nullify_empty_bins,                    &
+      &                         Gamma_max_fix, Gamma_lo_init, Gamma_up_init, nullify_empty_bins, approx_cutoffs,    &
       &                         NR_run_refine_pf, NR_refine_solution_q, NR_refine_pf_lo, NR_refine_pf_up
 
 ! Default values
@@ -185,6 +186,7 @@ module initcrspectrum
       Gamma_lo_init     = 10.0
       Gamma_up_init     = 200.0
 
+      approx_cutoffs    = .true.
       e_small           = 1.0e-5
       e_small_approx_p_lo = 1
       e_small_approx_p_up = 1
@@ -257,6 +259,7 @@ module initcrspectrum
          lbuff(9)  =  NR_refine_pf_lo
          lbuff(10) =  NR_refine_pf_up
          lbuff(11) =  nullify_empty_bins
+         lbuff(12) =  approx_cutoffs
 
          rbuff(1)  = cfl_cre
          rbuff(2)  = cre_eff
@@ -326,6 +329,7 @@ module initcrspectrum
          NR_refine_pf_lo             = lbuff(9)
          NR_refine_pf_up             = lbuff(10)
          nullify_empty_bins          = lbuff(11)
+         approx_cutoffs              = lbuff(12)
 
          cfl_cre                     = rbuff(1)
          cre_eff                     = rbuff(2)
@@ -440,6 +444,15 @@ module initcrspectrum
                   call die(msg)
                endif
 
+               if (approx_cutoffs) then
+                  e_small_approx_p_lo = 1; e_small_approx_p_up = 1
+                  write (msg,'(A)') "[initcrspectrum:init_cresp] approx_cutoffs = .true. -- will use e_small to approximate spectrum cutoffs and initial state spectrum."
+               else
+                  e_small_approx_p_lo      = 0 ; e_small_approx_p_up = 0 ! e_small_approx_init_cond stays default, unless user changes.
+                  write (msg,'(A)') "[initcrspectrum:init_cresp] approx_cutoffs = .false. -- will not use e_small approximated cutoffs, but still approximate initial state. To turn it off use e_small_approx_init_cond = 0."
+               endif
+               call printinfo(msg)
+
                if ( (e_small_approx_p_lo+e_small_approx_p_up) .gt. 0 .and. e_small_approx_init_cond .lt. 1) then
                   e_small_approx_init_cond = 1  !
                   write (msg,'(A)') "[initcrspectrum:init_cresp] Approximation of boundary momenta is active -> modifying e_small_approx_init_cond to 1."
@@ -447,12 +460,16 @@ module initcrspectrum
                   call sleep(1)
                endif
 ! countermeasure - in case unrecognized or invalid parameters are provided
+
                if ( e_small_approx_p_lo .gt. 0 ) then ; e_small_approx_p_lo = 1 ; else ; e_small_approx_p_lo = 0 ; endif
                if ( e_small_approx_p_up .gt. 0 ) then ; e_small_approx_p_up = 1 ; else ; e_small_approx_p_up = 0 ; endif
                if ( e_small_approx_init_cond .gt. 0 ) then ; e_small_approx_init_cond = 1 ; else ; e_small_approx_init_cond = 0 ; endif
 
                if (e_small_approx_p_lo+e_small_approx_p_up .eq. 0) then
                   NR_refine_solution_q = .true. !< for testing we leave precise solutions of q (especially for outer momenta)
+               endif
+
+               if (e_small_approx_init_cond + e_small_approx_p_lo + e_small_approx_p_up .eq. 0) then
                   e_small = zero                !< no threshold energy for bin activation necessary
                endif
 ! arrays initialization
