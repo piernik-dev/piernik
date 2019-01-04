@@ -41,7 +41,10 @@ module solvecg
 
 contains
 
-!------------------------------------------------------------------------------------------
+!>
+!! \brief Apply MHD update + source terms to a single grid container, rely on properly updated guardcells, handle local fine-coarse fluxes.
+!<
+
    subroutine solve_cg(cg, cdim, istep, fargo_vel)
 
       use bfc_bcc,            only: interpolate_mag_field

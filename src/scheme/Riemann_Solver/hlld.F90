@@ -115,11 +115,11 @@ contains
 
     implicit none
 
-    real, dimension(:,:), pointer, intent(out)   :: f
-    real, dimension(:,:), pointer, intent(in)    :: ul, ur
-    real, dimension(:,:), pointer, intent(out)   :: b_cc
-    real, dimension(:,:), pointer, intent(in)    :: b_ccl, b_ccr
-    real,                          intent(in)    :: gamma
+    real, dimension(:,:), pointer, intent(out)   :: f             !< demsity, momentum and energy fluxes
+    real, dimension(:,:), pointer, intent(in)    :: ul, ur        !< left and right states of density, velocity and energy
+    real, dimension(:,:), pointer, intent(out)   :: b_cc          !< cell-centered magnetic field flux (including psi field when necessary)
+    real, dimension(:,:), pointer, intent(in)    :: b_ccl, b_ccr  !< left and right states of magnetic field (including psi field when necessary)
+    real,                          intent(in)    :: gamma         !< gamma of current gas type
 
     ! Local variables
 

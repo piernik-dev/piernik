@@ -27,14 +27,29 @@
 #include "piernik.h"
 
 !>
-!! \brief COMMENT ME
+!! \brief HLLD Riemann solver for ideal magnetohydrodynamics
 !!
-!!    HLLD Riemann solver for ideal magnetohydrodynamics
-!!    Varadarajan Parthasarathy, CAMK, Warszawa. 2015.
-!!    Dr. Artur Gawryszczak, CAMK, Warszawa.
+!! Varadarajan Parthasarathy, CAMK, Warszawa. 2015.
+!! Dr. Artur Gawryszczak, CAMK, Warszawa.
 !!
-!!    Energy fix up routines for CT and its related comments are not used in the current version.
-!!    The algorithm is simply present for experimental purposes.
+!! RK(N) with N .GE. 3 could be helpful for WENO3 ( this statement to be tested )
+!!
+!! Reference:Relativistic Hydrodynamics, L. Rezzolla, O. Zanotti
+!! ---------------------------------------------------------------------------
+!! L (or dtodx)--> discretization of spatial differential operator (Eq. 9.135)
+!! ---------------------------------------------------------------------------
+!! RK2 (Eq. 9.140)
+!! u^(1)   = u^(n) + \Delta t L(u^(n))
+!! u^(n+1) = 1/2 ( u^(n) + u^(1) + \Delta t L(u^(1)  )
+!! ---------------------------------------------------------------------------
+!! RK3 (Eq. 9.141)
+!! u^(1)   = u(n) + \Delta t L(u^(n))
+!! u^(2)   = 1/4 ( 3 u^(n) + u^(1) + \Delta t L(u^(1) ) )
+!! u^(n+1) = 1/3 u^(n) + 2/3 u^(2) + 2/3 \Delta t (u^(2))
+!! ---------------------------------------------------------------------------
+!!
+!! Energy fix up routines for CT and its related comments are not used in the current version.
+!! The algorithm is simply present for experimental purposes.
 !<
 
 module solvecg
@@ -47,6 +62,10 @@ module solvecg
    public  :: solve_cg
 
 contains
+
+!>
+!! \brief Apply MHD update + source terms to a single grid container, rely on properly updated guardcells.
+!<
 
    subroutine solve_cg(cg, ddim, istep, fargo_vel)
 
@@ -167,68 +186,57 @@ contains
 
    end subroutine solve_cg
 
+!>
+!! \brief Make an Euler step of length dtodx from state [u0, b0] to [u1, b1]
+!!
+!! This is a basic block that can be used for higher order Runge-Kutta schemes too.
+!!
 !! k-th interface is between k-th cell and (k+1)-th cell
 !! We don't calculate n-th interface because it is as incomplete as 0-th interface
+!<
 
-   subroutine solve(u, b_cc, u1, b1, dtodx)
+   subroutine solve(u0, b0, u1, b1, dtodx)
 
-      use constants,  only: DIVB_HDC, xdim, ydim, zdim
-      use dataio_pub, only: die
-      use global,     only: divB_0_method
+      use constants,      only: DIVB_HDC, xdim, ydim, zdim
+      use dataio_pub,     only: die
+      use global,         only: divB_0_method
       use hlld,           only: riemann_wrap
       use interpolations, only: interpol
 
       implicit none
 
-      real, dimension(:,:), intent(in) :: u
-      real, dimension(:,:), intent(in) :: b_cc
-      real, dimension(:,:), intent(inout) :: u1
-      real, dimension(:,:), intent(inout) :: b1
-      real,                 intent(in)    :: dtodx
+      real, dimension(:,:), intent(in)    :: u0     !< cell-centered initial fluid states
+      real, dimension(:,:), intent(in)    :: b0     !< cell-centered initial magnetic fiels states (including psi field when necessary)
+      real, dimension(:,:), intent(inout) :: u1     !< cell-centered intermediate fluid states
+      real, dimension(:,:), intent(inout) :: b1     !< cell-centered intermediate magnetic fiels states (including psi field when necessary)
+      real,                 intent(in)    :: dtodx  !< timestep advance: RK-factor * timestep / cell length
 
       ! left and right states at interfaces 1 .. n-1
-      real, dimension(size(u,   1)-1, size(u,   2)), target :: ql, qr
-      real, dimension(size(b_cc,1)-1, size(b_cc,2)), target :: b_cc_l, b_cc_r
+      real, dimension(size(u0, 1)-1, size(u0, 2)), target :: ql, qr
+      real, dimension(size(b0, 1)-1, size(b0, 2)), target :: bl, br
 
       ! fluxes through interfaces 1 .. n-1
-      real, dimension(size(u,   1)-1, size(u,   2)), target :: flx
-      real, dimension(size(b_cc,1)-1, size(b_cc,2)), target :: mag_cc
+      real, dimension(size(u0, 1)-1, size(u0, 2)), target :: flx
+      real, dimension(size(b0, 1)-1, size(b0, 2)), target :: mag_flx
 
       ! updates required for higher order of integration will likely have shorter length
 
-      integer, parameter                                    :: in = 1  ! index for cells
-      integer                                               :: nx
+      integer, parameter :: in = 1  ! index for cells
+      integer            :: nx
 
-      nx  = size(u, in)
-      if (size(b_cc, in) /= nx) call die("[solve_cg:solve] size b_cc and u mismatch")
-      mag_cc = huge(1.)
+      nx  = size(u0, in)
+      if (size(b0, in) /= nx) call die("[solve_cg:solve] size b0 and u0 mismatch")
+      mag_flx = huge(1.)
 
-      ! RK(N) with N .GE. 3 could be helpful for WENO3 ( this statement to be tested )
-      !>
-      !! Reference:Relativistic Hydrodynamics, L. Rezzolla, O. Zanotti
-      !! ---------------------------------------------------------------------------
-      !! L (or dtodx)--> discretization of spatial differential operator (Eq. 9.135)
-      !! ---------------------------------------------------------------------------
-      !! RK2 (Eq. 9.140)
-      !! u^(1)   = u^(n) + \Delta t L(u^(n))
-      !! u^(n+1) = 1/2 ( u^(n) + u^(1) + \Delta t L(u^(1)  )
-      !! ---------------------------------------------------------------------------
-      !! RK3 (Eq. 9.141)
-      !! u^(1)   = u(n) + \Delta t L(u^(n))
-      !! u^(2)   = 1/4 ( 3 u^(n) + u^(1) + \Delta t L(u^(1) ) )
-      !! u^(n+1) = 1/3 u^(n) + 2/3 u^(2) + 2/3 \Delta t (u^(2))
-      !! ---------------------------------------------------------------------------
-      !<
+      call interpol(u1, b1, ql, qr, bl, br)
+      call riemann_wrap(ql, qr, bl, br, flx, mag_flx) ! Now we advance the left and right states by a timestep.
 
-      call interpol(u1, b1, ql, qr, b_cc_l, b_cc_r)
-      call riemann_wrap(ql, qr, b_cc_l, b_cc_r, flx, mag_cc) ! Now we advance the left and right states by a timestep.
-
-      u1(2:nx-1, :) = u(2:nx-1, :) + dtodx * (flx(:nx-2, :) - flx(2:, :))
+      u1(2:nx-1, :) = u0(2:nx-1, :) + dtodx * (flx(:nx-2, :) - flx(2:, :))
       if (divB_0_method == DIVB_HDC) then
-         b1(2:nx-1, :) = b_cc(2:nx-1, :) + dtodx * (mag_cc(:nx-2, :) - mag_cc(2:, :))
+         b1(2:nx-1, :) = b0(2:nx-1, :) + dtodx * (mag_flx(:nx-2, :) - mag_flx(2:, :))
       else
-         b1(2:nx-1, xdim) = b_cc(2:nx-1, xdim)
-         b1(2:nx-1, ydim:zdim) = b_cc(2:nx-1, ydim:zdim) + dtodx * (mag_cc(:nx-2, ydim:zdim) - mag_cc(2:, ydim:zdim))
+         b1(2:nx-1, xdim) = b0(2:nx-1, xdim)
+         b1(2:nx-1, ydim:zdim) = b0(2:nx-1, ydim:zdim) + dtodx * (mag_flx(:nx-2, ydim:zdim) - mag_flx(2:, ydim:zdim))
          ! no psidim for CT
       endif
 
