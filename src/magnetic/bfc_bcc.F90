@@ -57,7 +57,7 @@ contains
       integer(kind=4),               intent(in) :: cdim
       type(grid_container), pointer, intent(in) :: cg
       integer,                       intent(in) :: i1, i2
-      integer,                       intent(in) :: ind
+      integer(kind=4),               intent(in) :: ind
 
       real, dimension(cg%n_(cdim), nmag)        :: b
       real, dimension(:), pointer               :: pb, pb1

@@ -96,7 +96,7 @@ contains
       real, dimension(:,:), pointer              :: pu, pu0, pb, pb0
       integer                                    :: i1, i2
       real, dimension(:), pointer                :: ppsi, ppsi0
-      integer                                    :: psii, uhi, bhi, psihi
+      integer(kind=4)                            :: psii, uhi, bhi, psihi
       real, dimension(size(u,1),size(u,2))       :: u0, u1
       real, dimension(size(b,1),size(b,2)+1)     :: b0, b1  ! Bx, By, Bz, psi
       real, dimension(size(u,1), flind%fluids), target :: vx
