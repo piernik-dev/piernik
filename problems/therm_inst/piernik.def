@@ -1,0 +1,5 @@
+#undef IONIZED
+#undef MAGNETIC
+#define  NEUTRAL
+#define LOCAL_FR_SPEED
+#define THERM

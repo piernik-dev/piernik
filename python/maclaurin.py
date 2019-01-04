@@ -37,7 +37,7 @@ def Maclaurin_test(file):
         return
 
     try:
-        h5f = h5.openFile(file, "r")
+        h5f = h5.open_file(file, "r")
     except:
         print "Cannot open '" + file + "' as HDF5"
         return

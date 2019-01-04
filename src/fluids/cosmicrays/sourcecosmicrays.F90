@@ -25,7 +25,6 @@
 !    For full list of developers see $PIERNIK_HOME/license/pdt.txt
 !
 #include "piernik.h"
-#define RNG 2:n-1
 
 !>
 !! \brief Computation of Cosmic Ray sources and pcr gradient pcr
@@ -37,9 +36,9 @@ module sourcecosmicrays
    implicit none
 
    private
-   public :: src_gpcr
+   public :: src_gpcr_exec
 #ifdef COSM_RAYS_SOURCES
-   public :: src_crn
+   public :: src_crn_exec
 #endif /* COSM_RAYS_SOURCES */
 
 contains
@@ -47,34 +46,117 @@ contains
 !>
 !! \brief Computation of Cosmic ray pressure gradient and pcr div v
 !<
-   subroutine src_gpcr(uu, nn, dx, divv, decr, grad_pcr)
+   subroutine src_gpcr(uu, nn, decr, grad_pcr, sweep, i1, i2, cg)
 
+      use crhelpers,      only: set_div_v1d
       use domain,         only: dom
       use fluidindex,     only: flind
-      use initcosmicrays, only: iarr_crn, gamma_crn, cr_active, gpcr_essential ! gamma_crs \deprecated
+      use grid_cont,      only: grid_container
+      use initcosmicrays, only: cr_active, gpcr_essential
+#ifndef COSM_RAY_ELECTRONS
+      use initcosmicrays, only: iarr_crs, gamma_crs
+#else
+      use initcosmicrays, only: iarr_crn, gamma_crn
+#endif /* ! COSM_RAY_ELECTRONS */
 
       implicit none
 
       integer(kind=4),                    intent(in)  :: nn                 !< array size
       real, dimension(nn, flind%all),     intent(in)  :: uu                 !< vector of conservative variables
-      real, dimension(:), pointer,        intent(in)  :: divv               !< vector of velocity divergence used in cosmic ray advection
-      real,                               intent(in)  :: dx                 !< cell length
       real, dimension(nn),                intent(out) :: grad_pcr
+#ifndef COSM_RAY_ELECTRONS
+      real, dimension(nn, flind%crs%all), intent(out) :: decr
+#else
       real, dimension(nn, flind%crn%all), intent(out) :: decr
+#endif /* !COSM_RAY_ELECTRONS */
+      integer(kind=4),                    intent(in)  :: sweep              !< direction (x, y or z) we are doing calculations for
+      integer,                            intent(in)  :: i1                 !< coordinate of sweep in the 1st remaining direction
+      integer,                            intent(in)  :: i2                 !< coordinate of sweep in the 2nd remaining direction
+      type(grid_container), pointer,      intent(in)  :: cg                 !< current grid piece
+      real, dimension(:), pointer                     :: divv               !< vector of velocity divergence used in cosmic ray advection
       integer                                         :: icr, jcr
 
-      do icr = 1, flind%crn%all
+      call set_div_v1d(divv, sweep, i1, i2, cg)
+#ifndef COSM_RAY_ELECTRONS
+      do icr = 1, flind%crs%all
          ! 1/eff_dim is because we compute the p_cr*dv in every sweep (3 times in 3D, twice in 2D and once in 1D experiments)
-         decr(:, icr)      = -1. / real(dom%eff_dim) * (gamma_crn(icr)-1.0) * uu(:, iarr_crn(icr))*divv(:)
+         decr(:, icr)      = -1. / real(dom%eff_dim) * (gamma_crs(icr)-1.0) * uu(:, iarr_crs(icr))*divv(:)
       enddo
+#else
+      do icr = 1, flind%crn%all
+         decr(:, icr)      = -1. / real(dom%eff_dim) * (gamma_crn(icr)-1.0) * uu(:, iarr_crn(icr))*divv(:)  !< as above, but only for crn
+      enddo
+#endif /* ! COSM_RAY_ELECTRONS */
+
       grad_pcr(:) = 0.0
-      do icr = 1, size(gpcr_essential)
+      do icr = 1, size(gpcr_essential)             !< gpcr_essential includes electrons only if COSM_RAY_ELECTRONS not defined and cre_gpcr_ess = .true.
          jcr = gpcr_essential(icr)
-         grad_pcr(2:nn-1) = grad_pcr(2:nn-1) + cr_active*(gamma_crn(jcr)-1.)*(uu(1:nn-2, iarr_crn(jcr)) - uu(3:nn, iarr_crn(jcr)))/(2.*dx)
+#ifndef COSM_RAY_ELECTRONS
+         grad_pcr(2:nn-1) = grad_pcr(2:nn-1) + cr_active*(gamma_crs(jcr)-1.)*(uu(1:nn-2, iarr_crs(jcr)) - uu(3:nn, iarr_crs(jcr)))/(2.*cg%dl(sweep))
+#else
+         grad_pcr(2:nn-1) = grad_pcr(2:nn-1) + cr_active*(gamma_crn(jcr)-1.)*(uu(1:nn-2, iarr_crn(jcr)) - uu(3:nn, iarr_crn(jcr)))/(2.*cg%dl(sweep))
+#endif /* ! COSM_RAY_ELECTRONS */
       enddo
       grad_pcr(1:2) = 0.0 ; grad_pcr(nn-1:nn) = 0.0
 
    end subroutine src_gpcr
+
+!>
+!! \brief Computation of Cosmic ray pressure gradient and pcr div v
+!<
+   subroutine src_gpcr_exec(uu, nn, usrc, sweep, i1, i2, cg, vx)
+
+      use fluidindex,     only: flind, iarr_all_mx, iarr_all_en
+      use grid_cont,      only: grid_container
+#ifndef COSM_RAY_ELECTRONS
+      use initcosmicrays, only: iarr_crs
+#else
+      use initcosmicrays, only: iarr_crn, iarr_cre_e
+      use cresp_crspectrum, only: src_gpcresp
+#endif /* ! COSM_RAY_ELECTRONS */
+
+      implicit none
+
+      integer(kind=4),                intent(in)  :: nn                 !< array size
+      real, dimension(nn, flind%all), intent(in)  :: uu                 !< vector of conservative variables
+      integer(kind=4),                intent(in)  :: sweep              !< direction (x, y or z) we are doing calculations for
+      integer,                        intent(in)  :: i1                 !< coordinate of sweep in the 1st remaining direction
+      integer,                        intent(in)  :: i2                 !< coordinate of sweep in the 2nd remaining direction
+      type(grid_container), pointer,  intent(in)  :: cg                 !< current grid piece
+      real, dimension(:,:), pointer,  intent(in)  :: vx
+      real, dimension(nn, flind%all), intent(out) :: usrc               !< u array update component for sources
+!locals
+      real, dimension(nn)                         :: grad_pcr
+#ifdef COSM_RAY_ELECTRONS
+      real, dimension(nn)                         :: grad_pcr_cresp
+      real, dimension(nn, flind%crn%all)          :: decr
+#else
+      real, dimension(nn, flind%crs%all)          :: decr
+#endif /* COSM_RAY_ELECTRONS */
+      logical                                     :: full_dim
+
+      full_dim = nn > 1
+
+      usrc = 0.0
+      if (.not.full_dim) return
+
+      call src_gpcr(uu, nn, decr, grad_pcr, sweep, i1, i2, cg)
+#ifndef COSM_RAY_ELECTRONS
+      usrc(:, iarr_crs(:)) = decr(:,:)
+#else
+      call src_gpcresp(uu(:,iarr_cre_e(:)), nn, cg%dl(sweep), grad_pcr_cresp)         !< cg%dl(sweep) = dx, contribution due to pressure acted upon spectrum components in CRESP via div_v
+      usrc(:, iarr_crn(:)) = decr(:,:)
+#endif /* !COSM_RAY_ELECTRONS */
+      usrc(:, iarr_all_mx(flind%ion%pos)) = grad_pcr
+#ifdef ISO
+      return
+#endif /* ISO */
+      usrc(:, iarr_all_en(flind%ion%pos)) = vx(:, flind%ion%pos) * grad_pcr
+#ifdef COSM_RAY_ELECTRONS
+      usrc(:, iarr_all_en(flind%ion%pos)) = usrc(:, iarr_all_en(flind%ion%pos)) + vx(:, flind%ion%pos) * grad_pcr_cresp !< BEWARE - check it
+#endif /* COSM_RAY_ELECTRONS */
+
+   end subroutine src_gpcr_exec
 
 !==========================================================================================
 
@@ -140,5 +222,28 @@ contains
       enddo
 
    end subroutine src_crn
+
+!>
+!! \brief Execution of src_crn procedure designed for sources module
+!<
+   subroutine src_crn_exec(uu, n, usrc, rk_coeff)
+
+      use fluidindex,     only: flind
+      use initcosmicrays, only: iarr_crn
+
+      implicit none
+
+      integer(kind=4),               intent(in)  :: n
+      real, dimension(n, flind%all), intent(in)  :: uu
+      real,                          intent(in)  :: rk_coeff   !< coeffecient used in RK step, while computing source term
+      real, dimension(n, flind%all), intent(out) :: usrc       !< u array update component for sources
+!locals
+      real, dimension(n, flind%crn%all)          :: srccrn
+
+      usrc = 0.0
+      call src_crn(uu, n, srccrn, rk_coeff) ! n safe
+      usrc(:, iarr_crn) = srccrn(:,:)
+
+   end subroutine src_crn_exec
 #endif /* COSM_RAYS_SOURCES */
 end module sourcecosmicrays

@@ -58,6 +58,9 @@ contains
       use tag_pool,           only: t_pool
       use timer,              only: cleanup_timers
       use user_hooks,         only: cleanup_problem
+#ifdef RANDOMIZE
+      use randomization,      only: cleanup_randomization
+#endif /* RANDOMIZE */
 #ifdef MULTIGRID
       use multigrid,          only: cleanup_multigrid
 #endif /* MULTIGRID */
@@ -101,6 +104,9 @@ contains
 #ifdef PIERNIK_OPENCL
       call cleanup_opencl;         call nextdot(.false.)
 #endif /* PIERNIK_OPENCL */
+#ifdef RANDOMIZE
+      call cleanup_randomization;  call nextdot(.false.)
+#endif /* RANDOMIZE */
       call cleanup_mpi;            call nextdot(.true.)
 
    end subroutine cleanup_piernik

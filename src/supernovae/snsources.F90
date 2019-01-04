@@ -32,10 +32,13 @@ module snsources
 ! pulled by SN_SRC
    implicit none
    private
-   public ::  random_sn, init_snsources, r_sn, amp_cr_sn
+   public :: random_sn, init_snsources, r_sn, amp_cr_sn, nsn_last
 #ifdef COSM_RAYS
    public :: cr_sn
 #endif /* COSM_RAYS */
+#ifdef HDF5
+   public :: read_snsources_from_restart, write_snsources_to_restart
+#endif /* HDF5 */
 #ifdef SHEAR
    public :: sn_shear
 #endif /* SHEAR */
@@ -385,5 +388,47 @@ contains
          endif
 
       end function gasdev
+
+#ifdef HDF5
+   subroutine write_snsources_to_restart(file_id)
+
+      use hdf5, only: HID_T, SIZE_T
+      use h5lt, only: h5ltset_attribute_int_f
+
+      implicit none
+
+      integer(HID_T), intent(in) :: file_id
+      integer(SIZE_T)            :: bufsize
+      integer(kind=4)            :: error
+      integer, dimension(1)      :: lnsnbuf
+
+      bufsize = 1
+      lnsnbuf(bufsize) = nsn_last
+      call h5ltset_attribute_int_f(file_id, "/", "nsn_last", lnsnbuf, bufsize, error)
+
+   end subroutine write_snsources_to_restart
+
+!-----------------------------------------------------------------------------
+
+   subroutine read_snsources_from_restart(file_id)
+
+      use cmp_1D_mpi, only: compare_array1D
+      use hdf5,       only: HID_T
+      use h5lt,       only: h5ltget_attribute_int_f
+
+      implicit none
+
+      integer(HID_T), intent(in)         :: file_id
+      integer(kind=4)                    :: error
+      integer, dimension(:), allocatable :: lnsnbuf
+
+      if (.not.allocated(lnsnbuf)) allocate(lnsnbuf(1))
+      call h5ltget_attribute_int_f(file_id, "/", "nsn_last", lnsnbuf, error)
+      call compare_array1D(lnsnbuf)
+      nsn_last = lnsnbuf(1)
+      deallocate(lnsnbuf)
+
+   end subroutine read_snsources_from_restart
+#endif /* HDF5 */
 
 end module snsources

@@ -1715,7 +1715,6 @@ contains
 !<
 !====================================================================================================
    function p_rch_ord_1(dt, p)
-      use constants,    only: half, sixth
 
       implicit none
 
@@ -1727,7 +1726,7 @@ contains
    end function p_rch_ord_1
 !-------------------------------------------------------------------------------------------------
    function p_rch_ord_2_1(dt, p)     !< adds 2nd term and calls 1st order
-      use constants,    only: half, sixth
+      use constants,    only: half
 
       implicit none
 
@@ -1739,14 +1738,14 @@ contains
    end function p_rch_ord_2_1
 !-------------------------------------------------------------------------------------------------
    function p_rch_ord_3_2_1(dt, p)     !< adds 3rd term and calls 2nd and 1st order
-      use constants,    only: half, sixth
+      use constants,    only: onesth
 
       implicit none
 
       real(kind=8), intent(in)  :: dt, p
       real(kind=8)              :: p_rch_ord_3_2_1
 
-      p_rch_ord_3_2_1 = p_rch_ord_2_1(dt, p) - sixth*(u_d * dt)**3 - (u_b * p * dt)**3
+      p_rch_ord_3_2_1 = p_rch_ord_2_1(dt, p) - onesth * (u_d * dt)**3 - (u_b * p * dt)**3
 
    end function p_rch_ord_3_2_1
 !----------------------------------------------------------------------------------------------------

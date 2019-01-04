@@ -28,9 +28,6 @@
 #if defined GALAXY && defined SN_SRC
 #define SN_GALAXY
 #endif /* GALAXY && SN_SRC */
-#if defined COSM_RAYS_SOURCES || defined SN_GALAXY
-#define CRS_GALAXY
-#endif /* COSM_RAYS_SOURCES || SN_GALAXY */
 #if defined COSM_RAYS && defined SN_SRC
 #define CR_SN
 #endif /* COSM_RAYS && SN_SRC */
@@ -170,13 +167,17 @@ contains
 #endif /* SHEAR */
 #ifdef COSM_RAYS
       use initcosmicrays, only: gamma_crn, iarr_crn
-#ifdef CRS_GALAXY
-      use cr_data,        only: eCRSP, cr_table
-#endif /* CRS_GALAXY */
+#ifdef COSM_RAY_ELECTRONS
+      use initcosmicrays,     only: iarr_cre_n, iarr_cre_e
+#endif /* COSM_RAY_ELECTRONS */
 #ifdef SN_GALAXY
-      use cr_data,        only: icr_H1, icr_C12
+      use cr_data,        only: eCRSP, cr_table, icr_H1, icr_C12
       use domain,         only: dom
       use snsources,      only: r_sn
+#ifdef COSM_RAY_ELECTRONS
+      use cresp_crspectrum,   only: cresp_get_scaled_init_spectrum
+      use initcrspectrum,     only: cresp
+#endif /* COSM_RAY_ELECTRONS */
 #endif /* SN_GALAXY */
 #ifdef CR_SN
       use snsources,      only: cr_sn
@@ -185,18 +186,7 @@ contains
 #ifdef GRAV
       use gravity,        only: grav_pot_3d
 #endif /* GRAV */
-#ifdef COSM_RAYS_SOURCES
-      use cr_data,        only: cr_sigma, icr_N14, icr_O16
-#endif /* COSM_RAYS_SOURCES */
-#ifdef COSM_RAY_ELECTRONS
-      use cresp_crspectrum,   only: cresp_get_scaled_init_spectrum
-      use initcrspectrum,     only: expan_order
-      use initcosmicrays,     only: iarr_cre_n, iarr_cre_e
-#ifdef SN_GALAXY
-      use initcrspectrum,  only: cresp
-#endif /* SN_GALAXY */
-      use dataio_pub,      only: msg, printinfo
-#endif /* COSM_RAY_ELECTRONS */
+
       implicit none
 
       class(component_fluid), pointer :: fl
@@ -206,19 +196,7 @@ contains
       type(grid_container),   pointer :: cg
 #ifdef SN_GALAXY
       real                            :: decr, x1, x2, y1, y2, z1
-#ifdef COSM_RAY_ELECTRONS
-      real                            :: e_tot_sn
-#endif /* COSM_RAY_ELECTRONS */
 #endif /* SN_GALAXY */
-#ifdef CR_SN
-      logical                         :: eCRSP_N14, eCRSP_O16
-#endif /* CR_SN */
-
-#ifdef COSM_RAYS_SOURCES
-! really workaround for the gold
-      if (eCRSP(icr_N14)) cr_sigma(cr_table(icr_N14),:) = 0.0
-      if (eCRSP(icr_O16)) cr_sigma(cr_table(icr_O16),:) = 0.0
-#endif /* COSM_RAYS_SOURCES */
 
 #ifdef GRAV
       call grav_pot_3d
@@ -273,14 +251,12 @@ contains
                   if (eCRSP(icr_H1 )) cg%u(iarr_crn(cr_table(icr_H1 )),i,j,k)= cg%u(iarr_crn(cr_table(icr_H1 )),i,j,k) +     decr
                   if (eCRSP(icr_C12)) cg%u(iarr_crn(cr_table(icr_C12)),i,j,k)= cg%u(iarr_crn(cr_table(icr_C12)),i,j,k) + 0.1*decr
 #ifdef COSM_RAY_ELECTRONS
-                  e_tot_sn = decr * cre_eff
                   cresp%n = 0.0 ;  cresp%e = 0.0
-                  if (e_tot_sn .gt. smallecre) then
-                        call cresp_get_scaled_init_spectrum(cresp%n,cresp%e,e_tot_sn)
+                  if (decr * cre_eff .gt. smallecre) then
+                        call cresp_get_scaled_init_spectrum(cresp%n, cresp%e, e_tot_sn * cre_eff)
                   endif                                                                                ! distribution function amplitude computed from total explosion energy multiplied by factor cre_eff
                   cg%u(iarr_cre_n,i,j,k) = cg%u(iarr_cre_n,i,j,k) + cresp%n
                   cg%u(iarr_cre_e,i,j,k) = cg%u(iarr_cre_e,i,j,k) + cresp%e
-
 #endif /* COSM_RAY_ELECTRONS */
 #endif /* SN_GALAXY */
 #endif /* COSM_RAYS */
@@ -292,12 +268,7 @@ contains
       enddo
 
 #ifdef CR_SN
-      !> \deprecated BEWARE: following lines seems to be a workaround for the gold (lines inconsistent with the gold for some reason from cr_sn_beware)
-      eCRSP_N14 = eCRSP(icr_N14) ; eCRSP(icr_N14) = .false.
-      eCRSP_O16 = eCRSP(icr_O16) ; eCRSP(icr_O16) = .false.
       call cr_sn(sn_pos,amp_cr)
-      eCRSP(icr_N14) = eCRSP_N14
-      eCRSP(icr_O16) = eCRSP_O16
 #endif /* CR_SN */
 
 
@@ -318,10 +289,6 @@ contains
 
          cgl => cgl%nxt
       enddo
-#ifdef COSM_RAY_ELECTRONS
-      write(msg,*) '[initproblem:problem_initial_conditions]: Taylor_exp._ord. (cresp)    = ', expan_order
-      call printinfo(msg)
-#endif /* COSM_RAY_ELECTRONS */
 
    end subroutine problem_initial_conditions
 

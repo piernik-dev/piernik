@@ -161,8 +161,8 @@ contains
       integer(kind=4),      intent(in)        :: sweep
 
       real, dimension(2)                      :: df                 !< \deprecated  additional acceleration term used in streaming problem
-      real, dimension(flind%fluids,size(u,2)) :: vy0
-      real, dimension(flind%fluids,size(u,2)) :: rotacc
+      real, dimension(size(u,1),size(u,2)) :: vy0
+      real, dimension(size(u,1),size(u,2)) :: rotacc
       integer :: ind
 
       df = 0.0
@@ -183,11 +183,11 @@ contains
 !           rotacc(ind,:) = 0.0
 !        endif
          if (sweep == xdim) then
-            rotacc(ind,:) =  2.0*omega*vy0(ind,:) + df(ind)  ! global_gradient
+            rotacc(:,ind) =  2.0*omega*vy0(:,ind) + df(ind)  ! global_gradient
          else if (sweep == ydim)  then
-            rotacc(ind,:) = (qshear - 2.0)*omega*vy0(ind,:)  ! with respect to global shear (2.5D)
+            rotacc(:,ind) = (qshear - 2.0)*omega*vy0(:,ind)  ! with respect to global shear (2.5D)
          else
-            rotacc(ind,:) = 0.0
+            rotacc(:,ind) = 0.0
          endif
       enddo
 
