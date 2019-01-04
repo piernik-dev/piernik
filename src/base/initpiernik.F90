@@ -220,7 +220,7 @@ contains
       ! Initial conditions are read here from a restart file if possible
 
 #ifdef NBODY
-      if (nrestart > 0) call problem_initial_nbody
+      if (nrestart == 0) call problem_initial_nbody
       call update_particle_gravpot_and_acc
 #endif /* NBODY */
 #if defined(GRAV) && !defined(SELF_GRAV)
