@@ -159,8 +159,7 @@ contains
                ppsi0 => cg%q(psihi)%get_sweep(ddim,i1,i2)
                b0(:, psidim) = ppsi0(:)
                ppsi => cg%q(psii)%get_sweep(ddim,i1,i2)
-               psi = ppsi
-               b1(:, psidim) = psi
+               b1(:, psidim) = ppsi(:)
 
                call solve(u0, b0, u1, b1, rk_coef(istep) * dt/cg%dl(ddim))
 
@@ -174,13 +173,10 @@ contains
 #if defined COSM_RAYS && defined IONIZED
             if (size(u, 1) > 1) call limit_minimal_ecr(size(u, 1), u)
 #endif /* COSM_RAYS && IONIZED */
-            u(:,:) = u1(:,:)
-            b(:,:) = b1(:, xdim:zdim)
-            if (psii /= INVALID) psi = b1(:, psidim)
 
-            pu(:,:) = transpose(u(:, iarr_all_swp(ddim,:)))
-            if (force_cc_mag) pb(:,:) = transpose(b(:, iarr_mag_swp(ddim,:))) ! ToDo figure out how to manage CT energy fixup without extra storage
-            if (psii /= INVALID) ppsi = psi
+            pu(:,:) = transpose(u1(:, iarr_all_swp(ddim,:)))
+            if (force_cc_mag) pb(:,:) = transpose(b1(:, iarr_mag_swp(ddim,:))) ! ToDo figure out how to manage CT energy fixup without extra storage
+            if (psii /= INVALID) ppsi = b1(:, psidim)
          enddo
       enddo
 
@@ -198,7 +194,6 @@ contains
    subroutine solve(u0, b0, u1, b1, dtodx)
 
       use constants,      only: DIVB_HDC, xdim, ydim, zdim
-      use dataio_pub,     only: die
       use global,         only: divB_0_method
       use hlld,           only: riemann_wrap
       use interpolations, only: interpol
@@ -222,23 +217,22 @@ contains
       ! updates required for higher order of integration will likely have shorter length
 
       integer, parameter :: in = 1  ! index for cells
-      integer            :: nx
 
-      nx  = size(u0, in)
-      if (size(b0, in) /= nx) call die("[solve_cg:solve] size b0 and u0 mismatch")
-      mag_flx = huge(1.)
+      associate (nx => size(u0, in))
+         mag_flx = huge(1.)
 
-      call interpol(u1, b1, ql, qr, bl, br)
-      call riemann_wrap(ql, qr, bl, br, flx, mag_flx) ! Now we advance the left and right states by a timestep.
+         call interpol(u1, b1, ql, qr, bl, br)
+         call riemann_wrap(ql, qr, bl, br, flx, mag_flx) ! Now we advance the left and right states by a timestep.
 
-      u1(2:nx-1, :) = u0(2:nx-1, :) + dtodx * (flx(:nx-2, :) - flx(2:, :))
-      if (divB_0_method == DIVB_HDC) then
-         b1(2:nx-1, :) = b0(2:nx-1, :) + dtodx * (mag_flx(:nx-2, :) - mag_flx(2:, :))
-      else
-         b1(2:nx-1, xdim) = b0(2:nx-1, xdim)
-         b1(2:nx-1, ydim:zdim) = b0(2:nx-1, ydim:zdim) + dtodx * (mag_flx(:nx-2, ydim:zdim) - mag_flx(2:, ydim:zdim))
-         ! no psidim for CT
-      endif
+         u1(2:nx-1, :) = u0(2:nx-1, :) + dtodx * (flx(:nx-2, :) - flx(2:, :))
+         if (divB_0_method == DIVB_HDC) then
+            b1(2:nx-1, :) = b0(2:nx-1, :) + dtodx * (mag_flx(:nx-2, :) - mag_flx(2:, :))
+         else
+            b1(2:nx-1, xdim) = b0(2:nx-1, xdim)
+            b1(2:nx-1, ydim:zdim) = b0(2:nx-1, ydim:zdim) + dtodx * (mag_flx(:nx-2, ydim:zdim) - mag_flx(2:, ydim:zdim))
+            ! no psidim for CT
+         endif
+      end associate
 
    end subroutine solve
 
