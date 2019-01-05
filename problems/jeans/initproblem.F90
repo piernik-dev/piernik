@@ -57,7 +57,7 @@ contains
 
    subroutine read_problem_par
 
-      use constants,   only: xdim, ydim, zdim, pi, zero
+      use constants,   only: xdim, ydim, zdim, pi
       use dataio_pub,  only: nh    ! QA_WARN required for diff_nml
       use dataio_pub,  only: tend, msg, die, warn, printinfo
       use domain,      only: dom
@@ -215,38 +215,61 @@ contains
 
          open(g_lun, file=plot_fname, status="unknown")
          write(g_lun,'(a)') "set sample 1000"
-         write(g_lun,'(a)') "set term png #font luximr"
-         write(g_lun,'(a)') "set output 'jeans.png'"
-         write(g_lun,'(a)') 'set title "Jeans oscillations"'
-         write(g_lun,'(3(a,/),a)') 'set ylabel "E_{int}"', 'set xtics 1', 'set mxtics 2', 'set mytics 2'
-         if ((Tamp_rounded .notequals. zero) .and. (Tamp > zero)) then
-            write(g_lun,'(a,g11.3)')'set ytics ',Tamp_rounded/2.
-            write(g_lun,'(2(a,g11.3),a)')'set yrange [ ',Tamp_rounded/(-4.),':',Tamp_rounded,']'
-         else
-            write(g_lun,'(a)')'set yrange [ * : * ]'
-         endif
+         write(g_lun,'(a)') 'set ylabel "E_{int}"'
+         write(g_lun,'(a)') 'set xlabel "time"'
+         write(g_lun,'(a)') 'file="jeans_ts1_000.tsl"' ! ToDo: use actual filename
          if (Tamp >0) then
             write(g_lun,'(a)') "set key left Left reverse bottom"
-            write(g_lun,'(a,g13.5)') "a = ", Tamp
-            write(g_lun,'(a,g13.5)') "b = ", omg
-            write(g_lun,'(a,g13.5)') "T = 2*pi/b"
-            write(g_lun,'(a,g13.5)') "y(x) = a * sin(b*x)**2"
-            write(g_lun,'(a)') 'set xlabel "time [periods]"'
+            write(g_lun,'(a,g13.5)') "aa = ", Tamp
+            write(g_lun,'(a,g13.5)') "bb = ", omg
+            write(g_lun,'(a)') "T = 2*pi/bb"
+            write(g_lun,'(a)') "y(x) = aa * sin(bb*x)**2"
+            write(g_lun,'(a)') 'a = aa'
+            write(g_lun,'(a)') 'b = bb'
+            write(g_lun,'(a)') 'c = -1e-3'
+            write(g_lun,'(a)') 'f(x) = a * sin(b*x)**2 * exp(c*x)'
+            write(g_lun,'(a)') 'fit f(x) file using 2:10 via a,b,c'
+            write(g_lun,'(a)') 'set term dumb'
+            write(g_lun,'(a)') 'set output "/dev/null"'
+            write(g_lun,'(a)') 'plot file using 2:10 t ""'
+            write(g_lun,'(a)') 'maxval = GPVAL_DATA_Y_MAX'
+            write(g_lun,'(a)') 'plot file using 2:(abs(f($2)-$10)) t ""'
+            write(g_lun,'(a)') 'maxres = GPVAL_DATA_Y_MAX'
+            write(g_lun,'(a)') 'plot file using 2:(abs(y($2)-$10)) t ""'
+            write(g_lun,'(a)') 'maxdiff = GPVAL_DATA_Y_MAX'
+            write(g_lun,'(a)') 'resfactor = 10**floor(log10(maxval/maxres))'
+            write(g_lun,'(a)') 'difffactor = 10**floor(log10(maxval/maxdiff))'
+            write(g_lun,'(a)') 'f_str = sprintf("%.5g * sin(%.5g * t)^2 * exp(%.5g * t)", a, b, c)'
             if (tend > pi/omg) then
-               write(g_lun,'(a,g11.3,a)')'set xrange [ 0 : int(',tend,'/T)]'
+               write(g_lun,'(a,g11.3,a)')'set xrange [ 0 : T*floor(',tend,'/T)]'
             else
                write(g_lun,'(a)')'set xrange [ * : * ]'
             endif
-            write(g_lun,'(a)') 'plot "jeans_ts1_000.tsl" u ($2/T):($10) w p t "calculated", "" u ($2/T):($10) smoo cspl t "" w l lt 1, y(x*T) t "analytical", "" u ($2/T):(10*(y($2)-$10)) t "10 * difference" w lp, 0 t "" w l lt 0'
-         else
-
+            write(g_lun,'(a)') 'set xtics T'
+            write(g_lun,'(a)') 'set title sprintf("Jeans oscillations, period=%g\nanalytical: %.5g * sin(%.5g * t)^2\nfit: %s\nrelative errors: amplitude = %.2g, period = %.2g", T, aa, bb, f_str, (1. - aa/a), (1- bb/b))'
+         else ! unstable
             write(g_lun,'(a,g13.5)') "a = ", amp**2 * omg**2 * 800000. !BEWARE: stronger dependence on omg, magic number 800000
             write(g_lun,'(a,g13.5)') "b = ", 2.0*omg
-            write(g_lun,'(a,g13.5)') "T = 2*pi/b"
-            write(g_lun,'(a,g13.5)') "y(x) = a * exp(b*x)"
+            write(g_lun,'(a)') "T = 2*pi/b"
+            write(g_lun,'(a)') "y(x) = a * exp(b*x)"
             write(g_lun,'(3(a,/),a)') 'set key left Left reverse top', 'set log y', 'set xlabel "time"', 'set xrange [ * : * ]'
+            write(g_lun,'(a)') 'set title "Jeans instability"'
+         endif
+
+         write(g_lun,'(a)') "set term png enhanced size 1280, 1024"
+         write(g_lun,'(a)') "set output 'jeans.png'"
+         if (Tamp >0) then
+            write(g_lun,'(a)') 'plot file using 2:10 w p t "simulation", "" u 2:10 smoo cspl t "" w l lt 1, y(x) t "analytical", "" u 2:(difffactor*(y($2)-$10)) t sprintf("%d",difffactor)." * analytical difference" w lp, "" u 2:(resfactor*(f($2)-$10)) t sprintf("%d", resfactor)." * residuals (simulation - fit)" w lp, 0 t "" w l lt 0'
+         else
             write(g_lun,'(a)') 'plot "jeans_ts1_000.tsl" u ($2):($10) w p t "calculated", y(x) t "exp(2 om T)"'
          endif
+         write(g_lun,'(a)') 'set output'
+
+         write(g_lun,'(a,2g13.5)') 'print "#analytical = ", aa, bb'
+         write(g_lun,'(a,2g13.5)') 'print "#fit = ", a, b, c'
+         write(g_lun,'(a,2g13.5)') 'print "#maxval = ", maxval'
+         write(g_lun,'(a,2g13.5)') 'print "#maxres = ", maxres'
+         write(g_lun,'(a,2g13.5)') 'print "#maxdiff = ", maxdiff'
          close(g_lun)
       endif
 
