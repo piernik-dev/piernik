@@ -73,6 +73,7 @@ contains
       class(component_fluid), pointer :: fl
       real                            :: kn, cs0, omg2, kJ, Tamp_rounded, Tamp_aux, Tamp, omg
       integer, parameter              :: g_lun = 137
+      character(len=*), parameter     :: plot_fname = "jeans.gnuplot"
 
       ! namelist default parameter values
       d0          = 1.0                   !< Average density of the medium (density bias required for correct EOS evaluation)
@@ -208,23 +209,15 @@ contains
          call printinfo('Divide T(t) for .tsl by L to get proper amplitude !', .true.)
          call printinfo('', .true.)
          call printinfo('To verify results, run:', .true.)
-#ifdef MULTIGRID
-         call printinfo(' % gnuplot verify.gpl; display jeans-mg.png', .true.)
-#else /* !MULTIGRID */
-         call printinfo(' % gnuplot verify.gpl; display jeans-fft.png', .true.)
-#endif /* !MULTIGRID */
+         write(msg, '(5a)')' % gnuplot ', plot_fname, '; display jeans.png'
+         call printinfo(msg, .true.)
          call printinfo('', .true.)
 
-         open(g_lun,file="verify.gpl",status="unknown")
+         open(g_lun, file=plot_fname, status="unknown")
          write(g_lun,'(a)') "set sample 1000"
          write(g_lun,'(a)') "set term png #font luximr"
-#ifdef MULTIGRID
-         write(g_lun,'(a)') "set output 'jeans-mg.png'"
-         write(g_lun,'(a)') 'set title "Jeans oscillations (multigrid)"'
-#else /* !MULTIGRID */
-         write(g_lun,'(a)') "set output 'jeans-fft.png'"
-         write(g_lun,'(a)') 'set title "Jeans oscillations (FFT)"'
-#endif /* !MULTIGRID */
+         write(g_lun,'(a)') "set output 'jeans.png'"
+         write(g_lun,'(a)') 'set title "Jeans oscillations"'
          write(g_lun,'(3(a,/),a)') 'set ylabel "E_{int}"', 'set xtics 1', 'set mxtics 2', 'set mytics 2'
          if ((Tamp_rounded .notequals. zero) .and. (Tamp > zero)) then
             write(g_lun,'(a,g11.3)')'set ytics ',Tamp_rounded/2.
