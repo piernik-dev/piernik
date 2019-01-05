@@ -31,7 +31,7 @@ class MakeTest(object):
                     xmlrpclib.Binary(open(self.runpath + '/' + file).read()))
 
     def testJeans(self):
-        sp.call(["gnuplot", "verify.gpl"])
+        sp.call(["gnuplot", "jeans.gnuplot"])
         self.put_png()
 
     def testMaclaurin(self):
