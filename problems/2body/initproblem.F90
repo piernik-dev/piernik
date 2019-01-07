@@ -378,8 +378,9 @@ contains
 
    subroutine read_buildgal
 
-      use constants,      only: ndims
+      use constants,      only: ndims, LO, HI
       use dataio_pub,     only: msg, printio, warn
+      use domain,         only: dom
       use particle_pub,   only: npart
       use particle_types, only: pset
 
@@ -409,7 +410,12 @@ contains
          call printio(msg)
       endif
 
-      do i = 1, nbodies
+      i = 0
+      do j = 1, nbodies
+         i = i + 1
+         do while (any(pos(i,:) < dom%edge(:,LO)) .or. any(pos(i,:) > dom%edge(:,HI)))
+            i = i + 1
+         enddo
 #ifdef VERBOSE
          if (modulo(i, 10000) .eq. 0) write(*,*) i, ' particles read'
 #endif /* VERBOSE */
