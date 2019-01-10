@@ -695,7 +695,9 @@ contains
          call leaves%set_q_value(source, 0.)
       endif
 
+#ifdef NBODY_MULTIGRID
       if (size(pset%p, dim=1) > 0) call pset%map(source, fpiG)
+#endif /* NBODY_MULTIGRID */
 
       select case (grav_bnd)
          case (bnd_periodic) ! probably also bnd_neumann

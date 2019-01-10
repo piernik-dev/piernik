@@ -190,9 +190,9 @@ module constants
    character(len=dsetnamelen), parameter :: gpot_n  = "gpot"    !< current sum of fields
    character(len=dsetnamelen), parameter :: hgpot_n = "hgpot"   !< sum of fields for half-step values
 #ifdef NBODY
-#ifndef MULTIGRID
+#ifdef NBODY_GRIDDIRECT
    character(len=dsetnamelen), parameter :: nbgp_n  = "nbgp"    !< current gravity field from nbody
-#endif /* !MULTIGRID */
+#endif /* NBODY_GRIDDIRECT */
    character(len=dsetnamelen), parameter :: gp1b_n  = "gp1b"    !< current gravity field from 1 body
    character(len=dsetnamelen), parameter :: nbdn_n  = "nbdn"    !< density from particles
    character(len=dsetnamelen), parameter :: prth_n  = "prth"    !< histogram of particles on the grid

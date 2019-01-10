@@ -7,3 +7,5 @@
 #define REST
 #define MULTIGRID
 #define NBODY
+#define NBODY_MULTIGRID
+#undef NBODY_GRIDDIRECT

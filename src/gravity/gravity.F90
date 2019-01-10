@@ -167,9 +167,9 @@ contains
 #endif /* SELF_GRAV */
 #ifdef NBODY
       use constants,      only: gp1b_n, nbdn_n, prth_n
-#ifndef MULTIGRID
+#ifdef NBODY_GRIDDIRECT
       use constants,      only: nbgp_n
-#endif /* !MULTIGRID */
+#endif /* NBODY_GRIDDIRECT */
 #endif /* NBODY */
 #ifdef CORIOLIS
       use coriolis,       only: set_omega
@@ -306,10 +306,10 @@ contains
 #ifdef NBODY
       call all_cg%reg_var(prth_n)
       call all_cg%reg_var(nbdn_n)
-#ifndef MULTIGRID
-      call all_cg%reg_var(nbgp_n)
-#endif /* !MULTIGRID */
       call all_cg%reg_var(gp1b_n)
+#ifdef NBODY_GRIDDIRECT
+      call all_cg%reg_var(nbgp_n)
+#endif /* NBODY_GRIDDIRECT */
 #endif /* NBODY */
 
       if (.not.user_grav) then
@@ -358,9 +358,9 @@ contains
 #endif /* SELF_GRAV */
 #ifdef NBODY
       use constants,          only: gp1b_n, nbdn_n, prth_n
-#ifndef MULTIGRID
+#ifdef NBODY_GRIDDIRECT
       use constants,          only: nbgp_n
-#endif /* !MULTIGRID */
+#endif /* NBODY_GRIDDIRECT */
 #endif /* NBODY */
 
       implicit none
@@ -381,10 +381,10 @@ contains
 #ifdef NBODY
          cg%prth  => cg%q(qna%ind( prth_n))%arr
          cg%nbdn  => cg%q(qna%ind( nbdn_n))%arr
-#ifndef MULTIGRID
-         cg%nbgp  => cg%q(qna%ind( nbgp_n))%arr
-#endif /* !MULTIGRID */
          cg%gp1b  => cg%q(qna%ind( gp1b_n))%arr
+#ifdef NBODY_GRIDDIRECT
+         cg%nbgp  => cg%q(qna%ind( nbgp_n))%arr
+#endif /* NBODY_GRIDDIRECT */
 #endif /* NBODY */
 
       endif
@@ -492,9 +492,9 @@ contains
       use constants,        only: one, half, sgp_n, sgpm_n, zero
       use global,           only: dt, dtm
 #endif /* SELF_GRAV */
-#if defined(NBODY) && !(defined(MULTIGRID))
+#ifdef NBODY_GRIDDIRECT
       use constants,        only: nbgp_n
-#endif /* NBODY && !MULTIGRID */
+#endif /* NBODY_GRIDDIRECT */
 
       implicit none
 
@@ -506,25 +506,25 @@ contains
       else
          h = 0.0
       endif
-#if defined(NBODY) && !(defined(MULTIGRID))
+#ifdef NBODY_GRIDDIRECT
       !> \todo correct it
       call leaves%q_lin_comb([ ind_val(qna%ind(gp_n), 1.), ind_val(qna%ind(nbgp_n), 1.), ind_val(qna%ind(sgp_n), one+h),      ind_val(qna%ind(sgpm_n), -h)     ], qna%ind(gpot_n))
       call leaves%q_lin_comb([ ind_val(qna%ind(gp_n), 1.), ind_val(qna%ind(nbgp_n), 1.), ind_val(qna%ind(sgp_n), one+half*h), ind_val(qna%ind(sgpm_n), -half*h)], qna%ind(hgpot_n))
-#else /* !NBODY || MULTIGRID */
+#else /* !NBODY_GRIDDIRECT */
       call leaves%q_lin_comb([ ind_val(qna%ind(gp_n), 1.), ind_val(qna%ind(sgp_n), one+h),      ind_val(qna%ind(sgpm_n), -h)     ], qna%ind(gpot_n))
       call leaves%q_lin_comb([ ind_val(qna%ind(gp_n), 1.), ind_val(qna%ind(sgp_n), one+half*h), ind_val(qna%ind(sgpm_n), -half*h)], qna%ind(hgpot_n))
-#endif /* !NBODY || MULTIGRID */
+#endif /* !NBODY_GRIDDIRECT */
 
 #else /* !SELF_GRAV */
       !> \deprecated BEWARE: as long as grav_pot_3d is called only in init_piernik this assignment probably don't need to be repeated more than once
-#if defined(NBODY) && !(defined(MULTIGRID))
+#ifdef NBODY_GRIDDIRECT
       !> \todo correct it
       call leaves%q_lin_comb([ ind_val(qna%ind(gp_n), 1.), ind_val(qna%ind(nbgp_n), 1.)], qna%ind(gpot_n))
       call leaves%q_lin_comb([ ind_val(qna%ind(gp_n), 1.), ind_val(qna%ind(nbgp_n), 1.)], qna%ind(hgpot_n))
-#else /* !NBODY || MULTIGRID */
+#else /* !NBODY_GRIDDIRECT */
       call leaves%q_copy(qna%ind(gp_n), qna%ind(gpot_n))
       call leaves%q_copy(qna%ind(gp_n), qna%ind(hgpot_n))
-#endif /* !NBODY || MULTIGRID */
+#endif /* !NBODY_GRIDDIRECT */
 #endif /* !SELF_GRAV */
 
    end subroutine sum_potential

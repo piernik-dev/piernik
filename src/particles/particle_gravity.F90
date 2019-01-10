@@ -50,9 +50,9 @@ contains
       use domain,         only: is_refined, is_multicg
       use grid_cont,      only: grid_container
       use particle_types, only: pset
-#ifndef MULTIGRID
+#ifdef NBODY_GRIDDIRECT
       use constants,      only: zero
-#endif /* !MULTIGRID */
+#endif /* NBODY_GRIDDIRECT */
 #ifdef VERBOSE
       use dataio_pub,     only: printinfo
 #endif /* VERBOSE */
@@ -82,10 +82,10 @@ contains
 
       call update_particle_density_array(n_part, cg, cells)
 
-#ifndef MULTIGRID
+#ifdef NBODY_GRIDDIRECT
       call update_gravpot_from_particles(n_part, cg, zero)
       call save_pot_pset(cg)
-#endif /* !MULTIGRID */
+#endif /* NBODY_GRIDDIRECT */
 
       call update_particle_potential_energy(n_part, cg, cells, dist)    !szukanie energii potencjalnej w punktach-polozeniach czastek
 
@@ -173,7 +173,7 @@ contains
 
    end subroutine gravpot1b
 
-#ifndef MULTIGRID
+#ifdef NBODY_GRIDDIRECT
    subroutine update_gravpot_from_particles(n_part, cg, eps2)
 
       use constants,        only: nbgp_n, zero
@@ -194,7 +194,7 @@ contains
       enddo
 
    end subroutine update_gravpot_from_particles
-#endif /* !MULTIGRID */
+#endif /* NBODY_GRIDDIRECT */
 
    subroutine locate_particles_in_cells(n_part, cg, cells, dist)
 
@@ -405,7 +405,7 @@ contains
 
    end function der_xyz
 
-#ifndef MULTIGRID
+#ifdef NBODY_GRIDDIRECT
    subroutine save_pot_pset(cg)
 
       use constants,      only: CENTER, LO, HI, xdim, ydim, zdim
@@ -454,6 +454,6 @@ contains
       endif
 
    end subroutine save_pot_pset
-#endif /* MULTIGRID */
+#endif /* NBODY_GRIDDIRECT */
 
 end module particle_gravity
