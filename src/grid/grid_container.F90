@@ -215,7 +215,9 @@ module grid_cont
 #ifdef NBODY
       real, dimension(:,:,:), pointer :: prth    => null()       !< Array for histogram of particles
       real, dimension(:,:,:), pointer :: nbdn    => null()       !< Array of density from particles
+#if defined(NBODY) && !(defined(MULTIGRID))
       real, dimension(:,:,:), pointer :: nbgp    => null()       !< Array of gravitational potential from particles
+#endif /* NBODY && !MULTIGRID */
       real, dimension(:,:,:), pointer :: gp1b    => null()       !< Array of gravitational potential from particles
       real, dimension(:,:,:), pointer :: nbody_dens => null()    !< Array of density from particles
 #endif /* NBODY */
