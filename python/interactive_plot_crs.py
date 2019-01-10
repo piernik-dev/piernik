@@ -160,7 +160,6 @@ if f_run == True:
          except:
             sys.exit("\033[91mFailed to construct field %s\033[0m", plot_field)
 
-
     if (plot_field == "cren_tot" ):
       if str(dsSlice["cren01"].units) is "dimensionless":
          try:
@@ -226,14 +225,22 @@ if f_run == True:
     except:
        sys.exit("\033[91mAn empty field might have been picked.\033[0m")
 
+    yt_data_plot = yt.SlicePlot(h5ds, slice_ax, plot_field)
+    if (plot_vel): yt_data_plot.annotate_velocity(factor=32)
+    if (plot_mag): yt_data_plot.annotate_magnetic_field(factor=32)
+    yt_data_plot.set_zlim(plot_field,plot_min,plot_max)
+    marker_l   = ["x", "+", "*", "X", ".","^", "v","<",">","1"]
+    m_size_l   = [100, 150, 100, 75, 300, 100, 100, 100, 100, 100]
+    marker_index = 0
+
     print ""
     plt.subplots_adjust(left=0.075,right=0.975, hspace=0.12)
 #---------
     def read_click_and_plot(event):
-        global click_coords, image_number, f_run
+        global click_coords, image_number, f_run, marker_index
         exit_code = True
+        if (marker_index == len(marker_l) or marker_index == len(m_size_l)): marker_index = 0
         click_coords = [ event.xdata, event.ydata ]
-        point = s1.plot(event.xdata,event.ydata, marker="x", color="red")
         coords = [slice_coord, slice_coord, slice_coord]
         if slice_ax == "x":
             coords[1] = click_coords[0]
@@ -257,14 +264,19 @@ if f_run == True:
             ncrs.append(float(str( position['cren'+str(ind).zfill(2)][0]).split(" ")[0]))
         fig2,exit_code = crs_h5.crs_plot_main(var_names, var_array, plot_var, ncrs, ecrs, field_max, time, coords, simple_plot)
         if (exit_code != True):
+            point = s1.plot(event.xdata,event.ydata, marker=marker_l[marker_index], color="red")   # plot point only, if cell not empty
             s.savefig('results/'+filename_nam+'_'+plot_var+'_%04d.png' % image_number, transparent ='False',facecolor=s.get_facecolor())
             print ("\033[92m  --->  Saved plot to: %s\033[0m" %str('results/'+filename_nam+'_'+plot_var+'_%04d.png' %image_number))
+
+            yt_data_plot.annotate_marker(coords, marker=marker_l[marker_index],  plot_args={'color':'red','s':m_size_l[marker_index]}) # cumulatively annotate all clicked coordinates
+            marker_index = marker_index + 1
+
             image_number=image_number+1
 #              ------------- saving just the spectrum
             if (save_spectrum):
                extent = fig2.get_window_extent().transformed(s.dpi_scale_trans.inverted())
                s.savefig('results/'+filename_nam+'_'+plot_var+'_spectrum_%04d.png' % image_number, transparent ='False',facecolor=s.get_facecolor(), bbox_inches=extent.expanded(1.3, 1.2))
-               print ("\033[92m  --->  Saved plot to: %s\033[0m" %str('results/'+filename_nam+'_'+plot_var+'_spectrum_%04d.png' %image_number))
+               print ("\033[92m  --->  Saved plot to: %s\033[0m. Press 'q' to quit and save yt.SlicePlot with marked coordinates." %str('results/'+filename_nam+'_'+plot_var+'_spectrum_%04d.png' %image_number))
         else:
             print("\033[92m Empty cell, not saving.\033[0m")
 
@@ -272,4 +284,5 @@ if f_run == True:
     cid = s.canvas.mpl_connect('button_press_event',read_click_and_plot)
 
     plt.show()
+    yt_data_plot.save('results/'+filename_nam+'_'+plot_var+'_sliceplot.png')  # save image when "q" pressed
     s.canvas.mpl_disconnect(cid)
