@@ -530,7 +530,7 @@ contains
          case ("cren01" : "cren99")
             val = 1.0 / lmtvB(U_LEN)**3                             !< CRESP number density
             write(s_val, '( "1  /", a,"**3")') trim(s_lmtvB(U_LEN))
-         case ("cree01" : "cree9")
+         case ("cree01" : "cree99")
             val = lmtvB(U_MASS) / lmtvB(U_LEN) / lmtvB(U_TIME) ** 2 !< CRESP energy density
             if (trim(s_lmtvB(U_ENER)) /= "complex") then
                write(s_val, '(a, "/", a,"**3")') trim(s_lmtvB(U_ENER)), trim(s_lmtvB(U_LEN))
