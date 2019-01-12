@@ -120,6 +120,15 @@ contains
          case ("cree01" : "cree99")
             f%fu = "\rm{erg}/\rm{cm}^3"
             f%f2cgs = 1.0 / (erg/cm**3)
+         case ("cref01" : "cref99")
+            f%fu = "\rm{s}^3/\rm{g}^2\rm{cm}^6"
+            f%f2cgs = sek**3 / gram**2 / cm**6
+         case ("crep01" : "crep02")     ! dimensionless, p treated as Lorentz's gamma
+            f%fu = ""
+            f%f2cgs = 1.0
+         case ("creq01" : "creq99")
+            f%fu = ""                   ! dimensionless q
+            f%f2cgs = 1.0
 #else /* !COSM_RAY_ELECTRONS */
          case ("cr1" : "cr9")
             f%fu = "\rm{erg}/\rm{cm}^3"
@@ -286,6 +295,10 @@ contains
       use constants,   only: xdim, ydim, zdim, half, two, I_TWO, I_FOUR, I_SIX, I_EIGHT
       use global,      only: force_cc_mag
 #endif /* MAGNETIC */
+#ifdef COSM_RAY_ELECTRONS
+      use initcrspectrum,     only: nam_cresp_f, nam_cresp_p, nam_cresp_q
+      use named_array_list,   only: wna
+#endif /* COSM_RAY_ELECTRONS */
 
       implicit none
 
@@ -340,6 +353,15 @@ contains
          case ("cree01" : "cree99")
             read(var,'(A4,I2.2)') aux, i !> \deprecated BEWARE 0 <= i <= 99, no other indices can be dumped to hdf file
             tab(:,:,:) = cg%u(flind%cre%ebeg+i-1, RNG)
+         case ("cref01" : "cref99")
+            read(var,'(A4,I2.2)') aux, i !> \deprecated BEWARE 0 <= i <= 99, no other indices can be dumped to hdf file
+            tab(:,:,:) = cg%w(wna%ind(nam_cresp_f))%arr(i,RNG)  !flind%cre%fbeg+i-1, RNG)
+         case ("crep01" : "crep02")
+            read(var,'(A4,I2.2)') aux, i !> \deprecated BEWARE 0 <= i <= 99, no other indices can be dumped to hdf file
+            tab(:,:,:) = cg%w(wna%ind(nam_cresp_p))%arr(i,RNG)  !flind%cre%fbeg+i-1, RNG)
+         case ("creq01" : "creq99")
+            read(var,'(A4,I2.2)') aux, i !> \deprecated BEWARE 0 <= i <= 99, no other indices can be dumped to hdf file
+            tab(:,:,:) = cg%w(wna%ind(nam_cresp_q))%arr(i,RNG)  !flind%cre%fbeg+i-1, RNG)
 #endif /* COSM_RAY_ELECTRONS */
 #ifdef TRACER
          case ("trcr")

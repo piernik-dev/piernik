@@ -43,11 +43,8 @@ module cresp_grid
 
    real(kind=8)                    :: dt_cre
    real(kind=8)                    :: bb_to_ub
-   logical                         :: cfl_cresp_violation
+   logical                         :: cfl_cresp_violation, register_p, register_q, register_f
    integer(kind=4), save           :: i_up_max_prev
-! CRESP names
-   character(len=*), parameter :: vn_n = "vn" !< helping array for CRESP number density
-   character(len=*), parameter :: ve_n = "ve" !< helping array for CRESP energy density
 
    contains
 
@@ -64,7 +61,8 @@ module cresp_grid
       use crhelpers,        only: divv_n
       use func,             only: emag
       use grid_cont,        only: grid_container
-      use initcrspectrum,   only: spec_mod_trms, synch_active, adiab_active, cresp
+      use initcrspectrum,   only: spec_mod_trms, synch_active, adiab_active, cresp, hdf_save_fpq, crel, &
+                                  nam_cresp_f, nam_cresp_p, nam_cresp_q
       use named_array,      only: p4
       use named_array_list, only: qna, wna
 
@@ -100,6 +98,11 @@ module cresp_grid
                   if ( cfl_cresp_violation ) return ! nothing to do here!
                   p4(iarr_cre_n, i, j, k) = cresp%n
                   p4(iarr_cre_e, i, j, k) = cresp%e
+                  if (hdf_save_fpq) then
+                     cg%w(wna%ind(nam_cresp_f))%arr(:, i, j, k) = crel%f
+                     cg%w(wna%ind(nam_cresp_p))%arr(:, i, j, k) = (/ crel%p(crel%i_lo), crel%p(crel%i_up) /)
+                     cg%w(wna%ind(nam_cresp_q))%arr(:, i, j, k) = crel%q
+                  endif
                enddo
             enddo
          enddo
@@ -159,6 +162,7 @@ module cresp_grid
 
       use cg_leaves,          only: leaves
       use cg_list,            only: cg_list_element
+      use cg_list_global,     only: all_cg
       use constants,          only: pi
       use cresp_crspectrum,   only: cresp_allocate_all, e_threshold_lo, e_threshold_up, fail_count_interpol, &
                               &     fail_count_NR_2dim, fail_count_comp_q, cresp_init_state, p_rch_init
@@ -166,8 +170,10 @@ module cresp_grid
       use dataio_pub,         only: warn, printinfo, msg
       use grid_cont,          only: grid_container
       use initcosmicrays,     only: iarr_cre_n, iarr_cre_e
-      use initcrspectrum,     only: e_small, e_small_approx_p_lo, e_small_approx_p_up, norm_init_spectrum, f_init
+      use initcrspectrum,     only: e_small, e_small_approx_p_lo, e_small_approx_p_up, norm_init_spectrum, f_init, &
+                                    ncre, hdf_save_fpq, nam_cresp_f, nam_cresp_p, nam_cresp_q
       use mpisetup,           only: master
+      use named_array_list,   only: wna
       use units,              only: units_set
 
       implicit none
@@ -178,6 +184,10 @@ module cresp_grid
       real(kind=8)                    :: sigma_T_cgs, me_cgs, myr_cgs, mGs_cgs, c_cgs, B_code_cgs_conversion
 
       if (first_run .eqv. .true.) then
+         register_f = .false.
+         register_p = .false.
+         register_q = .false.
+
          call cresp_initialize_guess_grids
          call cresp_allocate_all
 
@@ -204,21 +214,33 @@ module cresp_grid
          write (msg, *) "[cresp_grid:cresp_init_grid] 4/3 * sigma_T_cgs / ( me_cgs * c * 8 *  pi) * (mGs_cgs)**2  * myr_cgs = ", bb_to_ub         ! TODO: "unitize" these quantities
          if (master) call printinfo(msg)
 
+         if (hdf_save_fpq) then
+            call all_cg%reg_var(nam_cresp_f, dim4=ncre+1)
+            call all_cg%reg_var(nam_cresp_p, dim4=2)
+            call all_cg%reg_var(nam_cresp_q, dim4=ncre)
+         endif
+
          cgl => leaves%first
          do while (associated(cgl))
-               cg => cgl%cg
-                  cg%u(iarr_cre_n,:,:,:)  = 0.0
-                  cg%u(iarr_cre_e,:,:,:)  = 0.0
-                  not_zeroed = .false.
-               cgl => cgl%nxt
-            enddo
+            cg => cgl%cg
 
-            call p_rch_init               !< sets the right pointer for p_rch function, based on used Taylor expansion coefficient
+            cg%u(iarr_cre_n,:,:,:)  = 0.0
+            cg%u(iarr_cre_e,:,:,:)  = 0.0
 
-            call cresp_init_state(norm_init_spectrum%n, norm_init_spectrum%e, f_init)   !< initialize spectrum here, f_init should be 1.0
+            cg%w(wna%ind(nam_cresp_f))%arr = 0.0
+            cg%w(wna%ind(nam_cresp_p))%arr = 0.0
+            cg%w(wna%ind(nam_cresp_q))%arr = 0.0
+            not_zeroed = .false.
 
-            if (master) call printinfo(" [cresp_grid:cresp_init_grid] CRESP initialized")
-            first_run = .false.
+            cgl => cgl%nxt
+         enddo
+
+         call p_rch_init               !< sets the right pointer for p_rch function, based on used Taylor expansion coefficient
+
+         call cresp_init_state(norm_init_spectrum%n, norm_init_spectrum%e, f_init)   !< initialize spectrum here, f_init should be 1.0
+
+         if (master) call printinfo(" [cresp_grid:cresp_init_grid] CRESP initialized")
+         first_run = .false.
       endif
       if (master) then
          if (first_run)  call warn("[cresp_grid:cresp_init_grid] CRESP might not be initialized!")

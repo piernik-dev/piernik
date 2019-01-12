@@ -132,6 +132,13 @@ module initcrspectrum
    real(kind=8)     :: p_fix_ratio
    integer, allocatable, dimension(:) :: cresp_all_edges, cresp_all_bins
 
+! CRESP names
+   character(len=*), parameter :: nam_cresp_f = "cref" !< helping array for CRESP number density
+   character(len=*), parameter :: nam_cresp_p = "crep" !< helping array for CRESP energy density
+   character(len=*), parameter :: nam_cresp_q = "creq" !< helping array for CRESP energy density
+
+   logical          :: hdf_save_fpq                    ! diagnostic, if true - adding 'cref', 'crep', 'creq' to hdf_vars must follow
+
 !====================================================================================================
 !
  contains
@@ -158,7 +165,7 @@ module initcrspectrum
       &                         e_small_approx_p_lo, e_small_approx_p_up, force_init_NR, NR_iter_limit, max_p_ratio,&
       &                         synch_active, adiab_active, arr_dim, arr_dim_q, q_br_init, Gamma_min_fix,           &
       &                         Gamma_max_fix, Gamma_lo_init, Gamma_up_init, nullify_empty_bins, approx_cutoffs,    &
-      &                         NR_run_refine_pf, NR_refine_solution_q, NR_refine_pf_lo, NR_refine_pf_up
+      &                         NR_run_refine_pf, NR_refine_solution_q, NR_refine_pf_lo, NR_refine_pf_up, hdf_save_fpq
 
 ! Default values
       use_cresp         = .true.
@@ -215,6 +222,8 @@ module initcrspectrum
       arr_dim  = 200
       arr_dim_q = 500
 
+      hdf_save_fpq = .false.
+
       if (master) then
          if (.not.nh%initialized) call nh%init()
          open(newunit=nh%lun, file=nh%tmp1, status="unknown")
@@ -260,6 +269,8 @@ module initcrspectrum
          lbuff(10) =  NR_refine_pf_up
          lbuff(11) =  nullify_empty_bins
          lbuff(12) =  approx_cutoffs
+
+         lbuff(13) = hdf_save_fpq
 
          rbuff(1)  = cfl_cre
          rbuff(2)  = cre_eff
@@ -330,6 +341,8 @@ module initcrspectrum
          NR_refine_pf_up             = lbuff(10)
          nullify_empty_bins          = lbuff(11)
          approx_cutoffs              = lbuff(12)
+
+         hdf_save_fpq                = lbuff(13)
 
          cfl_cre                     = rbuff(1)
          cre_eff                     = rbuff(2)
@@ -458,6 +471,11 @@ module initcrspectrum
                   write (msg,'(A)') "[initcrspectrum:init_cresp] Approximation of boundary momenta is active -> modifying e_small_approx_init_cond to 1."
                   if (master) call warn(msg)
                   call sleep(1)
+               endif
+
+               if (hdf_save_fpq) then
+                  write(msg, '(A)') "[initcrspectrum:init_cresp] hdf_save_fpq is set. Adding 'cref', 'crep', 'creq' to hdf_vars must follow."
+                  call warn(msg)
                endif
 ! countermeasure - in case unrecognized or invalid parameters are provided
 

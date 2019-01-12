@@ -156,6 +156,12 @@ contains
                 nhdf_vars = nhdf_vars + size(iarr_cre_n)
             case ('cree')
                 nhdf_vars = nhdf_vars + size(iarr_cre_e)
+            case ('cref')                       !!!
+                nhdf_vars = nhdf_vars + size(iarr_cre_e) + 1
+            case ('crep')
+                nhdf_vars = nhdf_vars + 2       !!! only register cutoffs
+            case ('creq')                       !!!
+                nhdf_vars = nhdf_vars + size(iarr_cre_e)
 #endif /* COSM_RAY_ELECTRONS */
             case default
                nhdf_vars = nhdf_vars + 1
@@ -277,6 +283,36 @@ contains
                         call warn(msg)
                     endif
                enddo
+            case ('cref') !< CRESP distribution function
+               do k = 1, ncre+1
+                  if (k<=99) then
+                    write(aux,'(A4,I2.2)') 'cref', k
+                    hdf_vars(j) = aux ; j = j + 1
+                  else
+                     write(msg, '(a,i3)')"[common_hdf5:init_hdf5] Cannot create name for CRESP distribution function component #", k
+                     call warn(msg)
+                  endif
+               enddo
+            case ('crep') !< CRESP cutoff momenta
+               do k = 1, 2
+                  if (k<=99) then
+                    write(aux,'(A4,I2.2)') 'crep', k
+                    hdf_vars(j) = aux ; j = j + 1
+                  else
+                     write(msg, '(a,i3)')"[common_hdf5:init_hdf5] Cannot create name for CRESP cutoff momentum component #", k
+                     call warn(msg)
+                  endif
+               enddo
+            case ('creq') !< CRESP spectrum index
+               do k = 1, ncre
+                  if (k<=99) then
+                    write(aux,'(A4,I2.2)') 'creq', k
+                    hdf_vars(j) = aux ; j = j + 1
+                  else
+                     write(msg, '(a,i3)')"[common_hdf5:init_hdf5] Cannot create name for CRESP spectrum index component #", k
+                     call warn(msg)
+                  endif
+               enddo
 #endif /* COSM_RAY_ELECTRONS */
             case ('pres')
                if (has_neu) then ; hdf_vars(j) = 'pren' ; j = j + 1 ; endif
@@ -286,7 +322,6 @@ contains
                ! all known and unknown field descriptions that add just one field
          end select
       enddo
-
    end subroutine init_hdf5
 
 !> \brief Procedure finalizing HDF5 module
