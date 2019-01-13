@@ -66,7 +66,7 @@ contains
 
    function utoq(u, b_cc) result(q)
 
-     use constants,  only: half, xdim, zdim
+     use constants,  only: half, xdim, zdim, I_ONE
      use fluidindex, only: flind
      use fluidtypes, only: component_fluid
      use func,       only: ekin
@@ -95,6 +95,10 @@ contains
         endif
 
      enddo
+
+     associate (iend => flind%all_fluids(flind%fluids)%fl%end)
+        if (iend < flind%all) q(:, iend + I_ONE:) = u(:, iend + I_ONE:)
+     end associate
 
    end function utoq
 

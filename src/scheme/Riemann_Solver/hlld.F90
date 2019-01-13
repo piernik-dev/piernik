@@ -61,6 +61,7 @@ contains
 
    subroutine riemann_wrap(ql, qr, b_cc_l, b_cc_r, flx, mag_cc)
 
+      use constants,  only: I_ONE
       use fluidindex, only: flind
       use fluidtypes, only: component_fluid
 
@@ -76,6 +77,8 @@ contains
       real, dimension(size(b_cc_l,1), size(b_cc_l,2)), target :: b0, bf0
       real, dimension(:,:), pointer :: p_flx, p_ql, p_qr
       real, dimension(:,:), pointer :: p_bcc, p_bccl, p_bccr
+      real, dimension(:,:), pointer :: p_ct_flx, p_ctl, p_ctr  !< CR+tracers pointers: flux, left and right state
+
 
       do i = 1, flind%fluids
          fl    => flind%all_fluids(i)%fl
@@ -93,7 +96,17 @@ contains
             p_bcc  => bf0
          endif
 
-         call riemann_hlld(p_flx, p_ql, p_qr, p_bcc, p_bccl, p_bccr, fl%gam)
+         associate (iend => flind%all_fluids(flind%fluids)%fl%end)
+            ! If there are CR or tracers, then calculate their fluxes with first fluid (typically ionized).
+            if (i == 1 .and. iend < flind%all) then
+               p_ct_flx => flx(:, iend + I_ONE:)
+               p_ctl => ql(:, iend + I_ONE:)
+               p_ctr => qr(:, iend + I_ONE:)
+               call riemann_hlld(p_flx, p_ql, p_qr, p_bcc, p_bccl, p_bccr, fl%gam, p_ct_flx, p_ctl, p_ctr)
+            else
+               call riemann_hlld(p_flx, p_ql, p_qr, p_bcc, p_bccl, p_bccr, fl%gam)
+            endif
+         end associate
       enddo
 
    end subroutine riemann_wrap
@@ -102,7 +115,7 @@ contains
 !! \brief single-fluid HLLD Riemann solver
 !<
 
-   subroutine riemann_hlld(f, ul, ur, b_cc, b_ccl, b_ccr, gamma)
+   subroutine riemann_hlld(f, ul, ur, b_cc, b_ccl, b_ccr, gamma, p_ct_flx, p_ctl, p_ctr)
 
     ! external procedures
 
@@ -115,11 +128,13 @@ contains
 
     implicit none
 
-    real, dimension(:,:), pointer, intent(out)   :: f             !< demsity, momentum and energy fluxes
-    real, dimension(:,:), pointer, intent(in)    :: ul, ur        !< left and right states of density, velocity and energy
-    real, dimension(:,:), pointer, intent(out)   :: b_cc          !< cell-centered magnetic field flux (including psi field when necessary)
-    real, dimension(:,:), pointer, intent(in)    :: b_ccl, b_ccr  !< left and right states of magnetic field (including psi field when necessary)
-    real,                          intent(in)    :: gamma         !< gamma of current gas type
+    real, dimension(:,:), pointer,           intent(out) :: f             !< demsity, momentum and energy fluxes
+    real, dimension(:,:), pointer,           intent(in)  :: ul, ur        !< left and right states of density, velocity and energy
+    real, dimension(:,:), pointer,           intent(out) :: b_cc          !< cell-centered magnetic field flux (including psi field when necessary)
+    real, dimension(:,:), pointer,           intent(in)  :: b_ccl, b_ccr  !< left and right states of magnetic field (including psi field when necessary)
+    real, dimension(:,:), pointer, optional, intent(out) :: p_ct_flx      !< CR and tracers flux
+    real, dimension(:,:), pointer, optional, intent(in)  :: p_ctl, p_ctr  !< left and right states of CR and tracers
+    real,                                    intent(in)  :: gamma         !< gamma of current gas type
 
     ! Local variables
 
@@ -155,6 +170,8 @@ contains
     !if (divB_0_method /= DIVB_HDC) b_cc(xdim,:) = 0.
     has_energy = (ubound(ul, dim=2) >= ien)
     ue = 0.
+
+    if (present(p_ct_flx)) p_ct_flx = huge(1.)
 
     ! Eq. 42, Dedner et al.
     if (divB_0_method .eq. DIVB_HDC) then
@@ -235,9 +252,11 @@ contains
        if (sl .ge.  zero) then
           f(i,:)  =  fl
           b_cc(i, ydim:zdim) = b_cclf(ydim:zdim)
+          if (present(p_ct_flx)) p_ct_flx(i, :) = p_ctl(i, :) * ul(i, imx)
        else if (sr .le.  zero) then
           f(i,:)  =  fr
           b_cc(i, ydim:zdim) = b_ccrf(ydim:zdim)
+          if (present(p_ct_flx)) p_ct_flx(i, :) = p_ctr(i, :) * ur(i, imx)
        else
 
           ! Speed of contact discontinuity Eq. 38
@@ -354,6 +373,8 @@ contains
 
                 f(i, :) = fl + sl*(u_starl - [ ul(i, idn), ul(i, idn)*ul(i, imx:imz), enl ] )
                 b_cc(i, ydim:zdim) = b_cclf(ydim:zdim) + sl*(b_starl(ydim:zdim) - b_ccl(i, ydim:zdim))
+                if (present(p_ct_flx)) &
+                     p_ct_flx(i, :) = p_ctl(i, :) * (ul(i, imx) + sl * ( slvxl / slsm - 1. ))
 
              else if (alfven_r < zero) then
 
@@ -361,6 +382,8 @@ contains
 
                 f(i, :) = fr + sr*(u_starr - [ ur(i, idn), ur(i, idn)*ur(i, imx:imz), enr ] )
                 b_cc(i, ydim:zdim) = b_ccrf(ydim:zdim) + sr*(b_starr(ydim:zdim) - b_ccr(i, ydim:zdim))
+                if (present(p_ct_flx)) &
+                     p_ct_flx(i, :) = p_ctr(i, :) * (ur(i, imx) + sr * ( srvxr / srsm - 1. ))
 
              else ! alfven_l .le. zero .le. alfven_r
 
@@ -420,11 +443,17 @@ contains
                    ! Left Alfven intermediate flux Eq. 65
                    f(i, :) = fl + alfven_l*u_2starl - (alfven_l - sl)*u_starl - sl* [ ul(i, idn), ul(i, idn)*ul(i, imx:imz), enl ]
                    b_cc(i, ydim:zdim) = b_cclf(ydim:zdim) + alfven_l*b_2star(ydim:zdim) - (alfven_l - sl)*b_starl(ydim:zdim) - sl*b_ccl(i, ydim:zdim)
+                   if (present(p_ct_flx)) &
+                        p_ct_flx(i, :) = p_ctl(i, :) * (ul(i, imx) + sl * ( slvxl / slsm - 1. ))
+                   ! For CT and tracers u_2starl == u_starl, so it reduces to formula for alfven_l > 0 (duplicated code)
 
                 else if (sm < zero) then
                    ! Right Alfven intermediate flux Eq. 65
                    f(i, :) = fr + alfven_r*u_2starr - (alfven_r - sr)*u_starr - sr* [ ur(i, idn), ur(i, idn)*ur(i, imx:imz), enr ]
                    b_cc(i, ydim:zdim) = b_ccrf(ydim:zdim) + alfven_r*b_2star(ydim:zdim) - (alfven_r - sr)*b_starr(ydim:zdim) - sr*b_ccr(i, ydim:zdim)
+                   if (present(p_ct_flx)) &
+                        p_ct_flx(i, :) = p_ctr(i, :) * (ur(i, imx) + sr * ( srvxr / srsm - 1. ))
+                   ! For CT and tracers u_2starr == u_starr, so it reduces to formula for alfven_r > 0 (duplicated code)
 
                 else ! sm = 0
 
@@ -436,6 +465,11 @@ contains
                    b_cc(i, ydim:zdim) = half*( &
                         (b_cclf(ydim:zdim) + alfven_l*b_2star(ydim:zdim) - (alfven_l - sl)*b_starl(ydim:zdim) - sl*b_ccl(i, ydim:zdim)) + &
                         (b_ccrf(ydim:zdim) + alfven_r*b_2star(ydim:zdim) - (alfven_r - sr)*b_starr(ydim:zdim) - sr*b_ccr(i, ydim:zdim)))
+
+                   if (present(p_ct_flx)) &
+                        p_ct_flx(i, :) = half * ( &
+                        &                         p_ctl(i, :) * (ul(i, imx) + sl * ( slvxl / slsm - 1. )) + &
+                        &                         p_ctr(i, :) * (ur(i, imx) + sr * ( srvxr / srsm - 1. )) )
 
                 endif  ! sm = 0
 
@@ -451,11 +485,17 @@ contains
 
                 f(i, :)  =  fl + sl*(u_starl - [ ul(i, idn), ul(i, idn)*ul(i, imx:imz), enl ])
                 b_cc(i, ydim:zdim) = b_cclf(ydim:zdim) + sl*(b_starl(ydim:zdim) - b_ccl(i, ydim:zdim))
+                if (present(p_ct_flx)) &
+                     p_ct_flx(i, :) = p_ctl(i, :) * (ul(i, imx) + sl * ( slvxl / slsm - 1. ))
+                ! Beware: duplicated formulas, see "if (alfven_l > zero)"
 
              else if (sm < zero) then
 
                 f(i, :)  =  fr + sr*(u_starr - [ ur(i, idn), ur(i, idn)*ur(i, imx:imz), enr ])
                 b_cc(i, ydim:zdim) = b_ccrf(ydim:zdim) + sr*(b_starr(ydim:zdim) - b_ccr(i, ydim:zdim))
+                if (present(p_ct_flx)) &
+                     p_ct_flx(i, :) = p_ctr(i, :) * (ur(i, imx) + sr * ( srvxr / srsm - 1. ))
+                ! Beware: duplicated formulas, see "if (alfven_r > zero)"
 
              else ! sm = 0
 
@@ -465,6 +505,11 @@ contains
                      &           fr + sr*(u_starr - [ ur(i, idn), ur(i, idn)*ur(i, imx:imz), enr ]))
                 b_cc(i, ydim:zdim) = half*(b_cclf(ydim:zdim) + sl*(b_starl(ydim:zdim) - b_ccl(i, ydim:zdim)) + &
                      &                    b_ccrf(ydim:zdim) + sr*(b_starr(ydim:zdim) - b_ccr(i, ydim:zdim)))
+                if (present(p_ct_flx)) &
+                     p_ct_flx(i, :) = half * ( &
+                     &                         p_ctl(i, :) * (ul(i, imx) + sl * ( slvxl / slsm - 1. )) + &
+                     &                         p_ctr(i, :) * (ur(i, imx) + sr * ( srvxr / srsm - 1. )) )
+                ! Beware: duplicated formulas, see "else ! sm = 0"
 
              endif  ! sm = 0
 
