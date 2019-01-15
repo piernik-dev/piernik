@@ -22,10 +22,23 @@ helper_arr_dim = int(arr_dim / 4)
 c = 1.0 # 0.3066067E+06  # PSM -> 0.3066067E+06, SI -> 0.2997925E+09
 
 first_run = True
-fixed_width = True
 got_q_tabs = False
 q_explicit = True
 interpolate_cutoffs = True
+
+global par_visible_gridx, par_visible_gridy, par_vis_all_borders, par_visible_title, par_simple_title, par_alpha, \
+       par_alpha_diff, par_plot_e_small, par_plot_color, par_plot_width, par_fixed_dims
+
+par_visible_gridx  = False
+par_visible_gridy  = True
+par_vis_all_borders= False
+par_visible_title  = True
+par_simple_title   = True
+par_alpha          = 0.65
+par_alpha_diff     = 0.75
+par_plot_color     = "xkcd:darkblue"
+par_plot_width     = 2.5
+par_fixed_dims     = True
 
 def nq2f(n,q,p_l,p_r):
       if p_r> 0.0 and p_l > 0 :
@@ -159,48 +172,68 @@ def plot_data(plot_var, pl, pr, fl, fr, q, time, location, i_lo_cut, i_up_cut):
    plt.cla()
    s.set_xscale('log')
    s.set_yscale('log')
-   plt.xlabel('p')
-   plt.ylabel(plot_var)
+
+   plt.xlabel(r'$\gamma$',fontsize = 13, labelpad = 0.1)
+   plt.ylabel(plot_var+"($\gamma$)",fontsize = 13, labelpad=-7.)
+   plt.tick_params(axis='both', which='major', labelsize=12)
+
    global plot_p_min, plot_p_max, plot_var_min, plot_var_max
    if first_run :
       plot_p_min    =  p_lo_cut
       plot_p_max    =  p_up_cut
-      plot_var_min = 0.1*e_small
+
       first_run = False
       if (plot_var == "e"):
-        plot_var_min = 1.0e-2 * e_small
+        plot_var_min = 0.1 * e_small
       elif (plot_var == "f" ):
-        plot_var_min = e_small / (4*pi * (c ** 2)  * p_max_fix **3) /10.
+        plot_var_min = 0.1 * e_small / (4*pi * (c ** 2)  * p_max_fix **3)
       elif (plot_var == "n" ):
-        plot_var_min = 0.1 / (4*pi * p_max_fix ** 2)
+        plot_var_min = 0.1 * e_small / ( c * p_max_fix )
 
-   if fixed_width == True:
-      plt.xlim (0.1 * plot_p_min   ,  10.*plot_p_max )
-      plt.xlim
+   if par_fixed_dims: #overwrite
+      if (plot_var != "e"):
+         plt.ylim(9.5e-13,1.e-3)
+      else:
+         plt.ylim(e_small,1.e-3)
+      plt.xlim(p_fix[1], p_fix[-2])
 
-   plt.ylim (plot_var_min , plot_ymax)
-   plt.grid()
+
+   plt.ylim (10. * plot_var_min , 1.e-3)
+   if (par_vis_all_borders):
+      plt.grid()
+   else:
+      s.spines['top'].set_visible(False)
+      s.spines['right'].set_visible(False)
+
+   if (par_visible_gridy):
+      plt.grid(True, 'major', 'y', ls='--', lw=.5, c='k', alpha=.3)
+   if (par_visible_gridx):
+      plt.grid(True, 'major', 'x', ls='--', lw=.5, c='k', alpha=.3)
 
 #plot floor value
    p_range = linspace(s.get_xlim()[0],s.get_xlim()[1])
    e_smalls = zeros(len(p_range))
    e_smalls[:] = e_small
    if (plot_var == "e"):
-      plt.plot(p_range, e_smalls, color="green", label="$e_{small}$")
+      plt.plot(p_range, e_smalls, color="xkcd:azure", label="$e_{small}$")
    elif(plot_var == "n"):
-      plt.plot(p_range, e_small/(c*p_range), color="green",label="$n_{small}$")
+      plt.plot(p_range, e_small/(c*p_range), color="xkcd:azure", label="$n_{small}$")
 
    for i in range(0, size(fr)) :
-      plt.plot([pl[i],pr[i]],[plot_var_l[i],plot_var_r[i]],color='r')
-      plt.plot([pl[i],pl[i]], [plot_var_min,plot_var_l[i]],color='r')
-      plt.plot([pr[i],pr[i]], [plot_var_min,plot_var_r[i]],color='r')
-   s.set_facecolor('white')
-   plt.title("Spectrum of %s(p) \n Time = %7.3f | location: %7.2f %7.2f %7.2f " % (plot_var, time, location[0],location[1],location[2]) )
+      plt.plot([pl[i],pr[i]], [plot_var_l[i], plot_var_r[i]], lw=par_plot_width, color=par_plot_color)
+      plt.plot([pl[i],pl[i]], [plot_var_min, plot_var_l[i]], lw=par_plot_width, color=par_plot_color)
+      plt.plot([pr[i],pr[i]], [plot_var_min, plot_var_r[i]], lw=par_plot_width, color=par_plot_color)
+
+   if (par_visible_title):
+      if (par_simple_title):
+         plt.title("Spectrum of %s(p), Time = %7.3f" % (plot_var, time) )
+      else:
+         plt.title("Spectrum of %s(p) \n Time = %7.3f | location: %7.2f %7.2f %7.2f " % (plot_var, time, location[0],location[1],location[2]) )
 
    return s
 
 def simple_plot_data(plot_var, p, var_array, time, location, i_lo_cut, i_up_cut):
-   global first_run, plot_p_min, plot_p_max, fixed_width
+   global first_run, plot_p_min, plot_p_max
    p_lo_cut = p[0] ;   p_up_cut = p[-1]
    var_array = var_array / p # does this do the trick with correct q?
    s = plt.subplot(122)
@@ -222,7 +255,7 @@ def simple_plot_data(plot_var, p, var_array, time, location, i_lo_cut, i_up_cut)
       elif (plot_var == "n" ):
         plot_var_min = 0.1 / (4*pi * p_max_fix ** 2)
 
-   if fixed_width == True:
+   if par_fixed_dims == True:
       plt.xlim (0.25 * plot_p_min   ,  5.*plot_p_max )
       plt.xlim
 
@@ -231,7 +264,13 @@ def simple_plot_data(plot_var, p, var_array, time, location, i_lo_cut, i_up_cut)
 
    plt.plot(p,var_array,color='r')
    for i in range(i_lo_cut,i_up_cut):
-       plt.plot([p[i],p[i]],[plot_var_min, var_array[i]],color="r")
+       plt.plot([p[i],p[i]],[plot_var_min, var_array[i]],color=par_plot_color)
+
+   if (par_visible_gridy):
+      plt.grid(True, 'major', 'y', ls='--', lw=.5, c='k', alpha=.3)
+   if (par_visible_gridx):
+      plt.grid(True, 'major', 'x', ls='--', lw=.5, c='k', alpha=.3)
+
 
 #plot floor values
    p_range = linspace(s.get_xlim()[0],s.get_xlim()[1])
@@ -313,12 +352,6 @@ def crs_plot_main(parameter_names, parameter_values, plot_var, ncrs, ecrs, field
     except:
         print "Exiting: len(names) not equal len(values)"
         sys.exit()
-
-    #print e_small, p_min_fix, p_max_fix, ncre
-
-# TODO -------- do it under *args TODO
-    fixed_width = True
-# TODO -------- do it under *args TODO
 
     first_run = True
 # -------------------
@@ -476,10 +509,12 @@ def crs_plot_main_fpq(parameter_names, parameter_values, plot_var, fcrs, qcrs, p
           i_up = max(0, i+1)
           break
 
-    fln = array(fcrs[i_lo:i_up])
-    q   = array(qcrs[i_lo:i_up])
-    pln = p_fix[i_lo:i_up]
-    prn = p_fix[i_lo+1:i_up+1]
+    i_cor = 0
+    if (fcrs[i_lo] == 0.0): i_cor = 1
+    fln = array(fcrs[i_lo+i_cor:i_up])
+    q   = array(qcrs[i_lo+i_cor:i_up])
+    pln = p_fix[i_lo+i_cor:i_up]
+    prn = p_fix[i_lo+1+i_cor:i_up+1]
     pln[0]  = pcrs[0]
     prn[-1] = pcrs[-1]
 

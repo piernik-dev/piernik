@@ -275,7 +275,6 @@ if f_run == True:
            for ind in range(1, ncre+1):
                qcrs.append(float(str( position['creq'+str(ind).zfill(2)][0]).split(" ")[0]))
            pcut[:] = [ float(str( position['crep01'][0]).split(" ")[0]), float(str( position['crep02'][0]).split(" ")[0]) ]
-
            fig2,exit_code = crs_h5.crs_plot_main_fpq(var_names, var_array, plot_var, fcrs, qcrs, pcut, field_max, time, coords)
         if (exit_code != True):
             point = s1.plot(event.xdata,event.ydata, marker=marker_l[marker_index], color="red")   # plot point only, if cell not empty
@@ -289,7 +288,7 @@ if f_run == True:
 #              ------------- saving just the spectrum
             if (save_spectrum):
                extent = fig2.get_window_extent().transformed(s.dpi_scale_trans.inverted())
-               s.savefig('results/'+filename_nam+'_'+plot_var+'_spectrum_%04d.png' % image_number, transparent ='False',facecolor=s.get_facecolor(), bbox_inches=extent.expanded(1.3, 1.2))
+               s.savefig('results/'+filename_nam+'_'+plot_var+'_spectrum_%04d.png' % image_number, transparent ='True',facecolor=s.get_facecolor(), bbox_inches=extent.expanded(1.275, 1.15))
                print ("\033[92m  --->  Saved plot to: %s\033[0m. Press 'q' to quit and save yt.SlicePlot with marked coordinates." %str('results/'+filename_nam+'_'+plot_var+'_spectrum_%04d.png' %image_number))
         else:
             print("\033[92m Empty cell, not saving.\033[0m")
