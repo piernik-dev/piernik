@@ -161,6 +161,13 @@ contains
       else
          p_lo = zero
          p_up = zero
+         crel%p = zero
+         crel%f = zero
+         crel%q = zero
+         crel%e = zero
+         crel%n = zero
+         crel%i_lo = 0
+         crel%i_up = ncre
       endif
 
       call cresp_find_prepare_spectrum(n_inout, e_inout, empty_cell)
