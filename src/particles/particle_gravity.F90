@@ -104,7 +104,7 @@ contains
 
    subroutine update_particle_density_array(n_part, cg, cells)
 
-      use constants,        only: nbdn_n, prth_n, ndims, one, xdim, ydim, zdim
+      use constants,        only: nbdn_n, prth_n, ndims, one, zero, xdim, ydim, zdim
       use grid_cont,        only: grid_container
       use named_array_list, only: qna
       use particle_types,   only: pset
@@ -118,13 +118,13 @@ contains
       integer                                         :: p
       real                                            :: factor
 
-      factor = 1.0
+      factor = one
       ig = qna%ind(nbdn_n)
-      cg%nbdn = 0.0
+      cg%nbdn = zero
       call pset%map(ig,factor)
 
       ig = qna%ind(prth_n)
-      cg%prth = 0.0
+      cg%prth = zero
       do p = 1, n_part
          cg%q(ig)%arr(cells(p,xdim),cells(p,ydim),cells(p,zdim)) = cg%q(ig)%point(cells(p,:)) + one
       enddo
@@ -198,7 +198,7 @@ contains
 
    subroutine locate_particles_in_cells(n_part, cg, cells, dist)
 
-      use constants,      only: ndims, xdim, CENTER, LO, HI
+      use constants,      only: half, ndims, xdim, CENTER, LO, HI
       use grid_cont,      only: grid_container
       use particle_types, only: pset
 
@@ -218,7 +218,7 @@ contains
                pset%p(i)%outside = .true.
             endif
 
-            cells(i, cdim) = int( 0.5 + (pset%p(i)%pos(cdim) - cg%coord(CENTER,cdim)%r(0)) * cg%idl(cdim) )
+            cells(i, cdim) = int( half + (pset%p(i)%pos(cdim) - cg%coord(CENTER,cdim)%r(0)) * cg%idl(cdim) )
 
             dist(i, cdim)  = pset%p(i)%pos(cdim) - ( cg%coord(CENTER, cdim)%r(0) + cells(i,cdim) * cg%dl(cdim) )
          enddo
@@ -228,7 +228,7 @@ contains
 
    subroutine update_particle_potential_energy(n_part, cg, cells, dist)
 
-      use constants,        only: gpot_n, ndims, half, xdim, ydim, zdim
+      use constants,        only: gpot_n, ndims, half, two, xdim, ydim, zdim
       use grid_cont,        only: grid_container
       use named_array_list, only: qna
       use particle_func,    only: df_d_o2, d2f_d2_o2, d2f_dd_o2
@@ -253,8 +253,8 @@ contains
          d2pot(p) = d2f_d2_o2([cells(p, :)], cg, ig, xdim) * dist(p, xdim)**2 + &
                     d2f_d2_o2([cells(p, :)], cg, ig, ydim) * dist(p, ydim)**2 + &
                     d2f_d2_o2([cells(p, :)], cg, ig, zdim) * dist(p, zdim)**2 + &
-                    2.0*d2f_dd_o2([cells(p, :)], cg, ig, xdim, ydim) * dist(p, xdim)*dist(p, ydim) + &
-                    2.0*d2f_dd_o2([cells(p, :)], cg, ig, xdim, zdim) * dist(p, xdim)*dist(p, zdim)
+                two*d2f_dd_o2([cells(p, :)], cg, ig, xdim, ydim) * dist(p, xdim)*dist(p, ydim) + &
+                two*d2f_dd_o2([cells(p, :)], cg, ig, xdim, zdim) * dist(p, xdim)*dist(p, zdim)
          pset%p(p)%energy = cg%q(ig)%point(cells(p,:)) + dpot(p) + half * d2pot(p)
       enddo
 
@@ -392,7 +392,7 @@ contains
 
    function der_xyz(pos, d, eps, dir, mass)
 
-      use constants, only: idm, ndims
+      use constants, only: idm, ndims, two
 
       implicit none
 
@@ -402,7 +402,7 @@ contains
       real,                            intent(in) :: mass
       real(kind=8)                                :: der_xyz
 
-      der_xyz = ( phi_pm_part(pos(1,:)+real(idm(dir,:))*d, eps, mass) - phi_pm_part(pos(1,:)-real(idm(dir,:))*d, eps, mass) ) / (2.0*d)
+      der_xyz = ( phi_pm_part(pos(1,:)+real(idm(dir,:))*d, eps, mass) - phi_pm_part(pos(1,:)-real(idm(dir,:))*d, eps, mass) ) / (two*d)
 
    end function der_xyz
 
