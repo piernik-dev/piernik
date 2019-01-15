@@ -77,7 +77,7 @@ contains
       character(len=cbuff_len) :: acc_interp_method  !< acceleration interpolation method
       integer                  :: order              !< order of Lagrange polynomials (if acc_interp_method = 'lagrange')
 
-      namelist /PARTICLES/ npart, time_integrator, interpolation_scheme, acc_interp_method, lf_c
+      namelist /PARTICLES/ npart, time_integrator, interpolation_scheme, acc_interp_method, lf_c, mask_gpot1b
 #else /* !NBODY */
       namelist /PARTICLES/ time_integrator, interpolation_scheme
 #endif /* !NBODY */
@@ -87,7 +87,11 @@ contains
 #ifdef NBODY
       acc_interp_method    = 'cic'
       lf_c                 = 1.0
+#ifdef NBODY_GRIDDIRECT
       mask_gpot1b          = .true.
+#else /* !NBODY_GRIDDIRECT */
+      mask_gpot1b          = .false.
+#endif /* !NBODY_GRIDDIRECT */
 #endif /* NBODY */
 
       if (master) then
