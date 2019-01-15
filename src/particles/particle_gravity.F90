@@ -385,12 +385,12 @@ contains
       integer(kind=4)                     :: dir
 
       do dir = xdim, zdim
-         acc2(dir) = -der_xyz(pset%p(p)%pos, 1.0e-8, eps, dir)
+         acc2(dir) = -der_xyz(pset%p(p)%pos, 1.0e-8, eps, dir, pset%p(p)%mass)
       enddo
 
    end subroutine get_acc_model
 
-   function der_xyz(pos, d, eps, dir)
+   function der_xyz(pos, d, eps, dir, mass)
 
       use constants, only: idm, ndims
 
@@ -399,9 +399,10 @@ contains
       real(kind=8),dimension(1,ndims), intent(in) :: pos
       real(kind=8),                    intent(in) :: d, eps
       integer(kind=4),                 intent(in) :: dir
+      real,                            intent(in) :: mass
       real(kind=8)                                :: der_xyz
 
-      der_xyz = ( phi_pm_part(pos(1,:)+real(idm(dir,:))*d, eps, 10.0) - phi_pm_part(pos(1,:)-real(idm(dir,:))*d, eps, 10.0) ) / (2.0*d)
+      der_xyz = ( phi_pm_part(pos(1,:)+real(idm(dir,:))*d, eps, mass) - phi_pm_part(pos(1,:)-real(idm(dir,:))*d, eps, mass) ) / (2.0*d)
 
    end function der_xyz
 
