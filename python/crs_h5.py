@@ -296,7 +296,9 @@ def detect_active_bins_new(n_in, e_in):
 
 
    i_lo_tmp = max(active_bins_new[0]-1,0)
-   i_up_tmp = min(active_bins_new[-1],ncre)
+   i_lo_tmp = i_lo_tmp -2                       # temporary fix FIXME
+   i_up_tmp = min(active_bins_new[-1]+1, ncre)  # temporary fix FIXME
+
    return active_bins_new, i_lo_tmp, i_up_tmp
 
 #------------------------------------------
@@ -422,5 +424,76 @@ def crs_plot_main(parameter_names, parameter_values, plot_var, ncrs, ecrs, field
             plot = simple_plot_data(plot_var, p_mid_fix, var_array, time, location, i_lo, i_up)
          else:
             plot = plot_data(plot_var, pln, prn, fln, frn, q_nr, time, location, i_lo, i_up)
+
+    return plot, empty_cell
+
+
+def crs_plot_main_fpq(parameter_names, parameter_values, plot_var, fcrs, qcrs, pcrs, field_max, time, location):
+    global first_run, got_q_tabs, e_small, p_min_fix, p_max_fix, ncre, cre_eff
+
+    try:
+        for i in range(len(parameter_names)):
+            exec("%s = %s" %(parameter_names[i], parameter_values[i]),globals())
+    except:
+        print "Exiting: len(names) not equal len(values)"
+        sys.exit()
+
+# TODO -------- do it under *args TODO
+    fixed_width = True
+
+    first_run = True
+# -------------------
+    global plot_ymax, p_fix_ratio, p_fix
+    plot_ymax = field_max * cre_eff
+    edges = []
+    p_fix = []
+    edges[0:ncre] = range(0,ncre+1, 1)
+    p_fix[0:ncre] = zeros(ncre+1)
+
+    log_width   = (log10(p_max_fix/p_min_fix))/(ncre-2.0)
+
+    if first_run:
+        for i in range(0,ncre-1): # organize p_fix
+            p_fix[i+1]  = p_min_fix * 10.0**( log_width * edges[i])
+            p_fix_ratio = 10.0 ** log_width
+            p_fix[0]    = ( sqrt(p_fix[1] * p_fix[2]) ) / p_fix_ratio
+            p_fix[ncre]    = ( sqrt(p_fix[ncre-2]* p_fix[ncre-1]) ) * p_fix_ratio
+            p_fix = asfarray(p_fix)
+
+#   use_simple cut out
+    i_lo = 0
+    i_up = ncre
+    empty_cell = True
+
+    for i in range(ncre):
+       if fcrs[i] > 0.0:
+          i_lo = i-1
+          empty_cell = False
+          print i_lo
+          break
+    for i in range(ncre, 1, -1):
+       if fcrs[i] > 0.0:
+          i_up = max(0, i+1)
+          break
+
+    fln = array(fcrs[i_lo:i_up])
+    q   = array(qcrs[i_lo:i_up])
+    pln = p_fix[i_lo:i_up]
+    prn = p_fix[i_lo+1:i_up+1]
+    pln[0]  = pcrs[0]
+    prn[-1] = pcrs[-1]
+
+    frn  = fln * (prn/pln) ** (-q)
+
+    print "cutoff indices obtained (lo, up):", i_lo, i_up, "cutoffs (lo, up): ", pcrs
+    print "f", fln
+    print "q", q
+    print "q", qcrs
+
+    if (i_lo == ncre or i_up == 0): empty_cell = True
+
+    if (empty_cell==False):
+      plot = plot_data(plot_var, pln, prn, fln, frn, q, time, location, i_lo, i_up)
+
 
     return plot, empty_cell

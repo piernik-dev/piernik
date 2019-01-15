@@ -20,7 +20,7 @@ except:
 ######### USER PARAMETERS ###########
 
 plot_field = "cree_tot"
-plot_var = "e"
+plot_var = "n"
 
 simple_plot = False # True
 plot_vel = False
@@ -31,6 +31,7 @@ user_limits = False # use values below as limits for clickable plot
 plot_user_min = 0.001
 plot_user_max = 30.0
 use_logscale  = True #False
+hdf_save_fpq  = False
 
 #####################################
 
@@ -82,7 +83,7 @@ if f_run :
 var_array = []
 if f_run == True:
     var_names = []
-    var_names = [ "ncre", "p_min_fix", "p_max_fix", "e_small", "cre_eff", "q_big"]
+    var_names = [ "ncre", "p_min_fix", "p_max_fix", "e_small", "cre_eff", "q_big", "hdf_save_fpq"]
     if len(var_names) == 0:
         print ("\033[93mEmpty list of parameter names provided: enter names of parameters to read\033[0m")
         var_names = read_h5.input_names_array()
@@ -90,6 +91,8 @@ if f_run == True:
     var_array = read_h5.read_par(filename, var_names)
     for i in range(len(var_names)):
         exec( "%s=%s" %(var_names[i], var_array[i]))
+
+    if type(hdf_save_fpq) != type(False): hdf_save_fpq = False # if parameter not in problem.par - makes sure it's type is bool and set to False
 
     print ""
     print "*** Values read from problem.par@hdf5 file: *** "
@@ -252,17 +255,28 @@ if f_run == True:
             coords[0] = click_coords[0]
             coords[1] = click_coords[1]
 # ------------ preparing data and passing -------------------------
-        ecrs = [] ; ncrs = []
         position = h5ds.r[coords:coords]  # TODO .r can be replaced with .point once negative coordinates are supported YTPoint
         if ( plot_field[0:-2] != "en_ratio"):
-           print ("\033[92mValue of %s at point [%f, %f, %f] = %f \033[0m" %(plot_field, coords[0], coords[1], coords[2], position[plot_field]))
+           print ("\n\033[92mValue of %s at point [%f, %f, %f] = %f \033[0m" %(plot_field, coords[0], coords[1], coords[2], position[plot_field]))
         else:
            print ("\033[92mValue of %s at point [%f, %f, %f] = %f \033[0m" %(plot_field, coords[0], coords[1], coords[2], position["cree"+str(plot_field[-2:])]/position["cren"+str(plot_field[-2:])]))
            plot_max   = h5ds.find_max("cre"+plot_var+str(plot_field[-2:]))[0] # once again appended - needed as ylimit for the plot
-        for ind in range(1,ncre+1):
-            ecrs.append(float(str( position['cree'+str(ind).zfill(2)][0]).split(" ")[0]))
-            ncrs.append(float(str( position['cren'+str(ind).zfill(2)][0]).split(" ")[0]))
-        fig2,exit_code = crs_h5.crs_plot_main(var_names, var_array, plot_var, ncrs, ecrs, field_max, time, coords, simple_plot)
+        if (hdf_save_fpq != True):
+           ecrs = [] ; ncrs = []
+           for ind in range(1,ncre+1):
+               ecrs.append(float(str( position['cree'+str(ind).zfill(2)][0]).split(" ")[0]))
+               ncrs.append(float(str( position['cren'+str(ind).zfill(2)][0]).split(" ")[0]))
+
+           fig2,exit_code = crs_h5.crs_plot_main(var_names, var_array, plot_var, ncrs, ecrs, field_max, time, coords, simple_plot)
+        else:
+           fcrs = [] ; qcrs = [] ; pcut = [ 0., 0.]
+           for ind in range(1, ncre+2):
+               fcrs.append(float(str( position['cref'+str(ind).zfill(2)][0]).split(" ")[0]))
+           for ind in range(1, ncre+1):
+               qcrs.append(float(str( position['creq'+str(ind).zfill(2)][0]).split(" ")[0]))
+           pcut[:] = [ float(str( position['crep01'][0]).split(" ")[0]), float(str( position['crep02'][0]).split(" ")[0]) ]
+
+           fig2,exit_code = crs_h5.crs_plot_main_fpq(var_names, var_array, plot_var, fcrs, qcrs, pcut, field_max, time, coords)
         if (exit_code != True):
             point = s1.plot(event.xdata,event.ydata, marker=marker_l[marker_index], color="red")   # plot point only, if cell not empty
             s.savefig('results/'+filename_nam+'_'+plot_var+'_%04d.png' % image_number, transparent ='False',facecolor=s.get_facecolor())
