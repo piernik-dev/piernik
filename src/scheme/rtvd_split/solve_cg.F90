@@ -41,22 +41,25 @@ module solvecg
 
 contains
 
-!------------------------------------------------------------------------------------------
+!>
+!! \brief Apply MHD update + source terms to a single grid container, rely on properly updated guardcells, handle local fine-coarse fluxes.
+!<
+
    subroutine solve_cg(cg, cdim, istep, fargo_vel)
 
       use bfc_bcc,            only: interpolate_mag_field
       use cg_level_connected, only: cg_level_connected_T, find_level
-      use constants,          only: pdims, LO, HI, uh_n, cs_i2_n, ORTHO1, ORTHO2, VEL_CR, VEL_RES, ydim, rk_coef, first_stage
+      use constants,          only: pdims, LO, HI, uh_n, cs_i2_n, ORTHO1, ORTHO2, VEL_CR, VEL_RES, ydim, rk_coef
       use dataio_pub,         only: die
       use domain,             only: dom
       use fluidindex,         only: flind, iarr_all_swp, nmag, iarr_all_dn, iarr_all_mx
       use fluxtypes,          only: ext_fluxes
-      use global,             only: dt, integration_order, use_fargo
+      use global,             only: dt, use_fargo
       use grid_cont,          only: grid_container
       use gridgeometry,       only: set_geo_coeffs
       use named_array_list,   only: qna, wna
       use rtvd,               only: relaxing_tvd
-      use sources,            only: prepare_sources, all_sources, care_for_positives
+      use sources,            only: all_sources, care_for_positives
 #ifdef MAGNETIC
       use fluidindex,         only: iarr_mag_swp
 #endif /* MAGNETIC */
@@ -92,14 +95,6 @@ contains
       allocate( b(cg%n_(cdim), nmag), u(cg%n_(cdim), flind%all), u0(cg%n_(cdim), flind%all), u1(cg%n_(cdim), flind%all), vx(cg%n_(cdim), flind%fluids))
       !OPT for AMR it may be worthwhile to move it to global scope
 
-      b(:,:) = 0.0
-      u(:,:) = 0.0
-
-      if (istep == first_stage(integration_order)) then
-         call prepare_sources(cg)
-         cg%w(uhi)%arr = cg%u
-      endif
-
       !> \todo OPT: use cg%leafmap to skip lines fully covered by finer grids
       ! it should be also possible to compute only parts of lines that aren't covered by finer grids
       curl => find_level(cg%l%id)
@@ -110,7 +105,7 @@ contains
 
 #ifdef MAGNETIC
             if (full_dim) then
-               b(:,:) = interpolate_mag_field(cdim, cg, i1, i2)
+               b(:,:) = interpolate_mag_field(cdim, cg, i1, i2, wna%bi)
             else
                pb => cg%w(wna%bi)%get_sweep(cdim, i1, i2)   ! BEWARE: is it correct for 2.5D ?
                b(:, iarr_mag_swp(cdim,:))  = transpose(pb(:,:))

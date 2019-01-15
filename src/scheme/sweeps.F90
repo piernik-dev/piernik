@@ -29,11 +29,21 @@
 !>
 !! \brief Module that implements a single sweep
 !!
-!! \details This one is the most difficult to aggregate messages carrying flux data on fine/coarse interfaces as
-!! there are complicated dependencies between grids. It is possible to calculate which fine grids should be
-!! computed first in ourder to make critical fluxes available as early as possible.
+!! \details Here we communicate fine-coarse fluxes where needed and we perform
+!! 1D-solves on all blocks.
 !!
-!! OPT: some fluxes can be copied locally without invoking MPI
+!! When a given block has any boundary with the coarse region, all flux data
+!! that has to be sent right after calculation is finished. When a given block
+!! has any boundary with the finer region, its calculation is delayed untill all
+!! fine flux data is delivered. All communication is done quite asynchronously
+!! in hope that it will nicely overlap with calculations. In some pessimistic cases
+!! long stalls still may occur.
+!!
+!! This one is the most difficult to aggregate messages carrying flux data on fine/coarse interfaces as
+!! there are complicated dependencies between grids. It is possible to calculate which fine grids should be
+!! computed first in order to make critical fluxes available as early as possible.
+!!
+!! OPT: some fluxes can be copied locally without invoking MPI.
 !<
 
 module sweeps
@@ -46,10 +56,11 @@ module sweeps
    public  :: sweep
 
 contains
-!------------------------------------------------------------------------------------------
-   !>
-   !! TODO: comment me and change name if necessary
-   !<
+
+!>
+!! \brief Post a non-blocking MPI receives for all expected fluxes from fine grids.
+!<
+
    integer function compute_nr_recv(cdim) result(nr)
 
       use constants,        only: LO, HI, I_ONE
@@ -87,10 +98,11 @@ contains
          cgl => cgl%nxt
       enddo
    end function compute_nr_recv
-!------------------------------------------------------------------------------------------
-   !>
-   !! TODO: comment me and change name if necessary
-   !<
+
+!>
+!! \brief Test if expected fluxes from fine grids have already arrived.
+!<
+
    subroutine recv_cg_finebnd(cdim, cg, all_received)
       use constants,        only: LO, HI, INVALID, ORTHO1, ORTHO2, pdims
       use dataio_pub,       only: die
@@ -139,10 +151,11 @@ contains
       endif
       return
    end subroutine recv_cg_finebnd
-!------------------------------------------------------------------------------------------
-   !>
-   !! TODO: comment me and change name if necessary
-   !<
+
+!>
+!! \brief Do a non-blocking MPI Send of fluxes tfor coarse neighbors.
+!<
+
    subroutine send_cg_coarsebnd(cdim, cg, nr)
       use constants,        only: pdims, LO, HI, ORTHO1, ORTHO2, I_ONE, INVALID
       use dataio_pub,       only: die
@@ -195,7 +208,7 @@ contains
          end associate
       endif
    end subroutine send_cg_coarsebnd
-!------------------------------------------------------------------------------------------
+
 !>
 !! \brief Call all boundaries, try to avoid unnecessary parts.
 !!
@@ -237,26 +250,33 @@ contains
                call all_fluid_boundaries(nocorners = .true.)
             endif
          else
-            if (istep == first_stage(integration_order)) then
-               call all_fluid_boundaries(nocorners = .true.)
-            else
+            ! if (istep == first_stage(integration_order)) then
+            !    call all_fluid_boundaries(nocorners = .true.) ! nocorners was doing something bad to periodic boundaries in Riemann with CT
+            ! else
                call all_fluid_boundaries
-            endif
+            ! endif
          endif
       endif
 
    end subroutine update_boundaries
-!------------------------------------------------------------------------------------------
+
+!>
+!! \brief Perform 1D-solves on all blocks and send fine->coarse fluxes.
+!! Update boundaries. Perform Runge-Kutta substeps.
+!<
+
    subroutine sweep(cdim, fargo_vel)
 
-      use cg_leaves,  only: leaves
-      use cg_list,    only: cg_list_element
-      use constants,  only: ydim, first_stage, last_stage
-      use dataio_pub, only: die
-      use global,     only: integration_order, use_fargo
-      use grid_cont,  only: grid_container
-      use mpisetup,   only: mpi_err, req, status
-      use solvecg,    only: solve_cg
+      use cg_leaves,        only: leaves
+      use cg_list,          only: cg_list_element
+      use constants,        only: ydim, first_stage, last_stage, uh_n, magh_n, psih_n, psi_n, INVALID
+      use dataio_pub,       only: die
+      use global,           only: integration_order, use_fargo
+      use grid_cont,        only: grid_container
+      use mpisetup,         only: mpi_err, req, status
+      use named_array_list, only: qna, wna
+      use solvecg,          only: solve_cg
+      use sources,          only: prepare_sources
 
       implicit none
 
@@ -269,6 +289,7 @@ contains
       logical                        :: all_processed, all_received
       integer                        :: blocks_done
       integer                        :: g, nr, nr_recv
+      integer                        :: uhi, bhi, psii, psihi
       integer(kind=4), dimension(:,:), pointer :: mpistatus
 
       if (use_fargo .and. cdim == ydim .and. .not. present(fargo_vel)) &
@@ -277,6 +298,29 @@ contains
       if (integration_order < lbound(first_stage, 1) .or. integration_order > ubound(first_stage, 1)) &
            call die("[sweeps:sweep] unknown integration_order")
 
+      ! Despite of its name, cg%w(uhi) here contains unaltered fluid state right at
+      ! the beginning of the timestep, not at half-step.
+      ! For RK2, when istep==2, cg%u temporalily contains the state at half timestep.
+      uhi = wna%ind(uh_n)
+      bhi = wna%ind(magh_n)
+      psii = INVALID
+      psihi = INVALID
+      if (qna%exists(psi_n)) then
+         psii = qna%ind(psi_n)
+         psihi = qna%ind(psih_n)
+      endif
+
+      ! for use with GLM divergence cleaning we also make a copy of b and psi fields
+      cgl => leaves%first
+      do while (associated(cgl))
+         call prepare_sources(cgl%cg)
+         cgl%cg%w(uhi)%arr = cgl%cg%u
+         cgl%cg%w(bhi)%arr = cgl%cg%b
+         if (psii /= INVALID) cgl%cg%q(psihi)%arr = cgl%cg%q(psii)%arr
+         cgl => cgl%nxt
+      enddo
+
+      ! This is the loop over Runge-Kutta stages
       do istep = first_stage(integration_order), last_stage(integration_order)
          nr_recv = compute_nr_recv(cdim)
          nr = nr_recv

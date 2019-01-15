@@ -96,7 +96,7 @@ contains
 !! Assume that real Y_{l,m} harmonic was stored in Q(l, 2*|m|, :, :) for even (cosine, positive-m) harmonic, or in Q(l, 2*|m|-1, :, :) for odd (sine, negative-m) harmonic.
 !! Then consecutive entries in compressed Q(:, inout, r) array should be related to Y_{l,m} harmonics, starting from index 0 as follows
 !! Y_{0,0}, Y_{1,0}, ..., Y_{lmax, 0}, Y_{1,-1}, Y_{2,-1}, ..., Y_{lmax,-1}, Y_{1,1}, Y_{2,1}, ..., Y_{lmax,1}, Y_{2,-2}, Y_{3,-2}, ..., Y_{lmax,-2},
-!! Y_{2,2}, Y_{3,2}, ..., Y_{lmax,2}, ...,, Y(lmax-1,-(mmax-1)), Y(lmax,-(mmax-1)), Y(lmax-1,mmax-1), Y(lmax,mmax-1), Y(lmax,-mmax), Y(lmax,mmax)
+!! Y_{2,2}, Y_{3,2}, ..., Y_{lmax,2}, ..., Y(lmax-1,-(mmax-1)), Y(lmax,-(mmax-1)), Y(lmax-1,mmax-1), Y(lmax,mmax-1), Y(lmax,-mmax), Y(lmax,mmax)
 !! Does it looks a bit cryptic? I agree.
 !<
 

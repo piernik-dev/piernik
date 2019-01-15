@@ -38,9 +38,6 @@ module bfc_bcc
 
    private
    public :: interpolate_mag_field
-#ifdef RIEMANN
-   public :: bfc2bcc
-#endif /* RIEMANN */
 
 contains
 
@@ -48,19 +45,19 @@ contains
 !! \brief return 1D vector of magnetic field components from cg in direction cdim at indices i1 and i2.
 !<
 
-   function interpolate_mag_field(cdim, cg, i1, i2) result (b)
+   function interpolate_mag_field(cdim, cg, i1, i2, ind) result (b)
 
       use constants,        only: pdims, xdim, ydim, zdim, half, ORTHO1, ORTHO2
       use domain,           only: dom
       use fluidindex,       only: iarr_mag_swp, nmag
       use grid_cont,        only: grid_container
-      use named_array_list, only: wna
 
       implicit none
 
       integer(kind=4),               intent(in) :: cdim
       type(grid_container), pointer, intent(in) :: cg
       integer,                       intent(in) :: i1, i2
+      integer(kind=4),               intent(in) :: ind
 
       real, dimension(cg%n_(cdim), nmag)        :: b
       real, dimension(:), pointer               :: pb, pb1
@@ -76,23 +73,23 @@ contains
       i1p = i1+dom%D_(pdims(cdim, ORTHO1))
       i2p = i2+dom%D_(pdims(cdim, ORTHO2))
 
-      pb => cg%w(wna%bi)%get_sweep(cdim,ibx,i1,i2)
+      pb => cg%w(ind)%get_sweep(cdim,ibx,i1,i2)
       b(1:cg%n_(cdim)-1, ibx) = half*( pb(1:cg%n_(cdim)-1)+pb(2:cg%n_(cdim)) )
       b(cg%n_(cdim),     ibx) = b(cg%n_(cdim)-1, ibx)
 
-      pb  => cg%w(wna%bi)%get_sweep(cdim,iby,i1,i2)
+      pb  => cg%w(ind)%get_sweep(cdim,iby,i1,i2)
       if (cdim == xdim) then
-         pb1 => cg%w(wna%bi)%get_sweep(cdim,iby,i1p,i2)
+         pb1 => cg%w(ind)%get_sweep(cdim,iby,i1p,i2)
       else
-         pb1 => cg%w(wna%bi)%get_sweep(cdim,iby,i1,i2p)
+         pb1 => cg%w(ind)%get_sweep(cdim,iby,i1,i2p)
       endif
       b(:, iby) = half*(pb + pb1)
 
-      pb  => cg%w(wna%bi)%get_sweep(cdim,ibz,i1,i2)
+      pb  => cg%w(ind)%get_sweep(cdim,ibz,i1,i2)
       if (cdim == xdim) then
-         pb1 => cg%w(wna%bi)%get_sweep(cdim,ibz,i1,i2p)
+         pb1 => cg%w(ind)%get_sweep(cdim,ibz,i1,i2p)
       else
-         pb1 => cg%w(wna%bi)%get_sweep(cdim,ibz,i1p,i2)
+         pb1 => cg%w(ind)%get_sweep(cdim,ibz,i1p,i2)
       endif
       b(:, ibz) = half*(pb + pb1)
 
@@ -100,54 +97,5 @@ contains
       nullify(pb,pb1)
 
    end function interpolate_mag_field
-
-!------------------------------------------------------------------------------------------
-
-#ifdef RIEMANN
-!>
-!! \brief create full centered field on entire domain
-!<
-
-   subroutine bfc2bcc
-
-      use cg_leaves,        only: leaves
-      use cg_list,          only: cg_list_element
-      use constants,        only: xdim, ydim, zdim, LO, HI, half
-      use dataio_pub,       only: die
-      use domain,           only: dom
-      use global,           only: force_cc_mag
-      use grid_cont,        only: grid_container
-      use named_array_list, only: wna
-
-      implicit none
-
-      type(cg_list_element), pointer :: cgl
-      type(grid_container),  pointer :: cg
-
-      if (force_cc_mag) call die("[bfc_bcc:bfc2bcc] no  point in converting cell-centered magnetic field to cell centers like it was face-centered")
-
-      cgl => leaves%first
-      do while (associated(cgl))
-         cg => cgl%cg
-
-         cg%w(wna%bcci)%arr(:,:,:,:) = half * cg%b(:, :, :, :)
-
-         cg%w(wna%bcci)%arr(xdim, cg%lhn(xdim, LO):cg%lhn(xdim, HI)-1, :, :) = &
-              cg%w(wna%bcci)%arr(xdim, cg%lhn(xdim, LO):cg%lhn(xdim, HI)-1, :, :) + &
-              half * cg%b(xdim, cg%lhn(xdim, LO)+dom%D_x:cg%lhn(xdim, HI)-1+dom%D_x, :, :)
-
-         cg%w(wna%bcci)%arr(ydim, :,cg%lhn(ydim, LO):cg%lhn(ydim, HI)-1, :) = &
-              cg%w(wna%bcci)%arr(ydim, :, cg%lhn(ydim, LO):cg%lhn(ydim, HI)-1, :) + &
-              half * cg%b(ydim, :, cg%lhn(ydim, LO)+dom%D_y:cg%lhn(ydim, HI)-1+dom%D_y, :)
-
-         cg%w(wna%bcci)%arr(zdim, :, :, cg%lhn(zdim, LO):cg%lhn(zdim, HI)-1) = &
-              cg%w(wna%bcci)%arr(zdim, :, :, cg%lhn(zdim, LO):cg%lhn(zdim, HI)-1) + &
-              half * cg%b(zdim, :, :, cg%lhn(zdim, LO)+dom%D_z:cg%lhn(zdim, HI)-1+dom%D_z)
-
-         cgl => cgl%nxt
-      enddo
-
-   end subroutine bfc2bcc
-#endif /* RIEMANN */
 
 end module bfc_bcc
