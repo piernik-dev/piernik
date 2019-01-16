@@ -226,14 +226,14 @@ contains
 
    subroutine register_fluids(this)
 
-      use constants,  only: wa_n, fluid_n, uh_n, mag_n, ndims, AT_NO_B, AT_OUT_B, VAR_XFACE, VAR_YFACE, VAR_ZFACE, PIERNIK_INIT_FLUIDS
+      use constants,  only: wa_n, fluid_n, uh_n, mag_n, magh_n, ndims, AT_NO_B, AT_OUT_B, VAR_XFACE, VAR_YFACE, VAR_ZFACE, PIERNIK_INIT_FLUIDS
       use dataio_pub, only: die, code_progress
       use fluidindex, only: flind
 #ifdef ISO
       use constants,  only: cs_i2_n
 #endif /* ISO */
 #ifdef RIEMANN
-      use constants,  only: mag_cc_n, psi_n
+      use constants,  only: psi_n, psih_n
       use global,     only: force_cc_mag
 #endif /* RIEMANN */
 
@@ -260,12 +260,13 @@ contains
 #else /* !MAGNETIC */
            .false., &
 #endif /* MAGNETIC */
-           restart_mode = AT_OUT_B, dim4 = ndims, position=pia)                                            !! Main array of magnetic field's components, "b"
+           restart_mode = AT_OUT_B, dim4 = ndims, position=pia)  !! Main array of magnetic field's components, "b"
+      call this%reg_var(magh_n,   vital = .false., dim4 = ndims) !! Array for copy of magnetic field's components, "b" used in half-timestep in RK2
+
 #ifdef RIEMANN
       if (force_cc_mag) then
-         call this%reg_var(psi_n, vital = .false., restart_mode = AT_OUT_B) ! an array for div B cleaning
-      else
-         call this%reg_var(mag_cc_n, vital = .false.,                        dim4 = ndims) ! cell-centered magnetic field
+         call this%reg_var(psi_n,  vital = .false., restart_mode = AT_OUT_B) ! an array for div B cleaning
+         call this%reg_var(psih_n, vital = .false.)                          ! its copy for use in RK2
       endif
 #endif /* RIEMANN */
 #ifdef ISO

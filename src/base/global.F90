@@ -41,7 +41,7 @@ module global
    public :: cleanup_global, init_global, &
         &    cfl, cfl_max, cflcontrol, cfl_violated, &
         &    dt, dt_initial, dt_max_grow, dt_min, dt_max, dt_old, dtm, t, t_saved, nstep, nstep_saved, &
-        &    integration_order, limiter, limiter_b, smalld, smallei, smallp, use_smalld, h_solver, interpol_str, &
+        &    integration_order, limiter, limiter_b, smalld, smallei, smallp, use_smalld, interpol_str, &
         &    relax_time, grace_period_passed, cfr_smooth, repeat_step, skip_sweep, geometry25D, &
         &    dirty_debug, do_ascii_dump, show_n_dirtys, no_dirty_checks, sweeps_mgu, use_fargo, print_divB, &
         &    divB_0_method, force_cc_mag, glm_alpha, use_eglm, cfl_glm, ch_grid, w_epsilon, psi_bnd
@@ -78,11 +78,10 @@ module global
    !<
    real    :: cfr_smooth
    real    :: relax_time                              !< relaxation/grace time, additional physics will be turned off until global::t >= global::relax_time
-   integer(kind=4), protected    :: integration_order !< Runge-Kutta time integration order (1 - 1st order, 2 - 2nd order)
+   integer(kind=4), protected    :: integration_order !< Runge-Kutta time integration order (1 - 1st order (Euler), 2 - 2nd order (RK2))
    character(len=cbuff_len)      :: limiter           !< type of flux limiter
    character(len=cbuff_len)      :: limiter_b         !< type of flux limiter for magnetic field in the Riemann solver
    character(len=cbuff_len)      :: cflcontrol        !< type of cfl control just before each sweep (possibilities: 'none', 'main', 'user')
-   character(len=cbuff_len)      :: h_solver          !< type of hydro solver
    character(len=cbuff_len)      :: interpol_str      !< type of interpolation
    character(len=cbuff_len)      :: divB_0            !< human-readable method of making div(B) = 0 (currently CT or HDC)
    character(len=cbuff_len)      :: psi_bnd_str       !< "default" for general boundaries or override ith something special
@@ -99,7 +98,7 @@ module global
 
    namelist /NUMERICAL_SETUP/ cfl, cflcontrol, cfl_max, use_smalld, smalld, smallei, smallc, smallp, dt_initial, dt_max_grow, dt_min, dt_max, &
         &                     repeat_step, limiter, limiter_b, relax_time, integration_order, cfr_smooth, skip_sweep, geometry25D, sweeps_mgu, print_divB, &
-        &                     use_fargo, h_solver, divB_0, glm_alpha, use_eglm, cfl_glm, ch_grid, interpol_str, w_epsilon, psi_bnd_str
+        &                     use_fargo, divB_0, glm_alpha, use_eglm, cfl_glm, ch_grid, interpol_str, w_epsilon, psi_bnd_str
 
 contains
 
@@ -133,7 +132,6 @@ contains
 !!   <tr><td>skip_sweep       </td><td>F, F, F</td><td>logical array                        </td><td>\copydoc global::skip_sweep       </td></tr>
 !!   <tr><td>geometry25D      </td><td>F      </td><td>logical value                        </td><td>\copydoc global::geometry25d      </td></tr>
 !!   <tr><td>sweeps_mgu       </td><td>F      </td><td>logical value                        </td><td>\copydoc global::sweeps_mgu       </td></tr>
-!!   <tr><td>h_solver         </td><td>"rk2"  </td><td>string                               </td><td>\copydoc global::h_solver         </td></tr>
 !!   <tr><td>divB_0           </td><td>CT     </td><td>string                               </td><td>\copydoc global::divB_0           </td></tr>
 !!   <tr><td>glm_alpha        </td><td>0.1    </td><td>real value                           </td><td>\copydoc global::glm_alpha        </td></tr>
 !!   <tr><td>use_eglm         </td><td>false  </td><td>logical value                        </td><td>\copydoc global::use_eglm         </td></tr>
@@ -166,15 +164,12 @@ contains
       limiter_b   = 'moncen'
       limiter     = limiter_b
       divB_0      = "HDC"
-      integration_order  = 1  ! temporary hack
 #else /* ! RIEMANN */
       limiter     = 'vanleer'
       limiter_b   = limiter
       divB_0      = "CT"
-      integration_order  = 2
 #endif /* RIEMANN */
       cflcontrol  = 'warn'
-      h_solver    = 'rk2'
       interpol_str = 'linear'
       repeat_step = .true.
       geometry25D = .false.
@@ -208,6 +203,7 @@ contains
       ch_grid     = .false.
       w_epsilon   = 1e-10
       psi_bnd_str = "default"
+      integration_order  = 2
 
       if (master) then
          if (.not.nh%initialized) call nh%init()
@@ -237,11 +233,6 @@ contains
             dt_max_grow = dt_default_grow
          endif
 
-         if (h_solver /= "muscl" .and. h_solver /= "rk2" .and. h_solver /= "rk3" ) then
-            write(msg, *)"[fluidupdate:sweep_dsplit:warn_experimental] The scheme '", trim(h_solver), "' is experimental. Use 'muscl' or 'rk(n)' for production runs."
-            call warn(msg)
-         endif
-
 #ifdef NBODY
          if (repeat_step) then
          repeat_step = .false.
@@ -252,7 +243,6 @@ contains
          cbuff(1) = limiter
          cbuff(2) = limiter_b
          cbuff(3) = cflcontrol
-         cbuff(4) = h_solver
          cbuff(5) = divB_0
          cbuff(6) = interpol_str
          cbuff(7) = psi_bnd_str
@@ -322,7 +312,6 @@ contains
          limiter    = cbuff(1)
          limiter_b  = cbuff(2)
          cflcontrol = cbuff(3)
-         h_solver   = cbuff(4)
          divB_0     = cbuff(5)
          interpol_str = cbuff(6)
          psi_bnd_str = cbuff(7)

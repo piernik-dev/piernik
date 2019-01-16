@@ -935,7 +935,7 @@ contains
 !<
    subroutine grav_pot2accel_ord2(sweep, i1, i2, n, grav, istep, cg)
 
-      use constants,  only: xdim, ydim, zdim, half, LO, HI, GEO_XYZ, GEO_RPZ, RK2_1, RK2_2
+      use constants,  only: xdim, ydim, zdim, half, LO, HI, GEO_XYZ, GEO_RPZ, RK2_1, RK2_2, EULER
       use dataio_pub, only: die
       use domain,     only: dom
       use grid_cont,  only: grid_container
@@ -952,7 +952,7 @@ contains
 
       ! Gravitational acceleration is computed on right cell boundaries
 
-      ! For more general schemes (higher order than RK2, non-canonical choices of RK2) we will need timestep fraction provided by the solver,, not istep
+      ! For more general schemes (higher order than RK2, non-canonical choices of RK2) we will need timestep fraction provided by the solver, not istep
       select case (istep)
       case (RK2_1)
          select case (sweep)
@@ -963,7 +963,7 @@ contains
             case (zdim)
                grav(2:n-1) = half*(cg%hgpot(i1, i2, cg%lhn(zdim, LO):cg%lhn(zdim, HI)-2) - cg%hgpot(i1, i2, cg%lhn(zdim, LO)+2:cg%lhn(zdim, HI)))/cg%dl(zdim)
          end select
-      case (RK2_2)
+      case (RK2_2, EULER)
          select case (sweep)
             case (xdim)
                grav(2:n-1) = half*(cg%gpot(cg%lhn(xdim, LO):cg%lhn(xdim, HI)-2, i1, i2) - cg%gpot(cg%lhn(xdim, LO)+2:cg%lhn(xdim, HI), i1, i2))/cg%dl(xdim)
@@ -990,7 +990,7 @@ contains
 
    subroutine grav_pot2accel_ord4(sweep, i1, i2, n, grav, istep, cg)
 
-      use constants,  only: xdim, ydim, zdim, LO, HI, GEO_XYZ, GEO_RPZ, RK2_1, RK2_2
+      use constants,  only: xdim, ydim, zdim, LO, HI, GEO_XYZ, GEO_RPZ, RK2_1, RK2_2, EULER
       use dataio_pub, only: die
       use domain,     only: dom
       use grid_cont,  only: grid_container
@@ -1022,7 +1022,7 @@ contains
                grav(3:n-2) = onetw*(cg%hgpot(i1,i2,cg%lhn(zdim, LO)+4:cg%lhn(zdim, HI)) - 8.*cg%hgpot(i1,i2,cg%lhn(zdim, LO)+3:cg%lhn(zdim, HI)-1) + &
                                     8.*cg%hgpot(i1,i2,cg%lhn(zdim, LO)+1:cg%lhn(zdim, HI)-3) - cg%hgpot(i1,i2,cg%lhn(zdim, LO):cg%lhn(zdim, HI)-4)) / cg%dl(zdim)
          end select
-      case (RK2_2)
+      case (RK2_2, EULER)
          select case (sweep)
             case (xdim)
                grav(3:n-2) = onetw*(cg%gpot(cg%lhn(xdim, LO)+4:cg%lhn(xdim, HI),i1,i2) - 8.*cg%gpot(cg%lhn(xdim, LO)+3:cg%lhn(xdim, HI)-1,i1,i2) + &
