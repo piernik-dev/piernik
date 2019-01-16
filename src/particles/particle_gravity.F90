@@ -48,6 +48,7 @@ contains
       use cg_list,        only: cg_list_element
       use dataio_pub,     only: die
       use domain,         only: is_refined, is_multicg
+      use gravity,        only: source_terms_grav
       use grid_cont,      only: grid_container
       use particle_types, only: pset
 #ifdef NBODY_GRIDDIRECT
@@ -86,6 +87,7 @@ contains
       call update_gravpot_from_particles(n_part, cg, zero)
       call save_pot_pset(cg)
 #endif /* NBODY_GRIDDIRECT */
+      call source_terms_grav
 
       call update_particle_potential_energy(n_part, cg, cells, dist)    !szukanie energii potencjalnej w punktach-polozeniach czastek
 
