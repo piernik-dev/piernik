@@ -397,10 +397,7 @@ contains
             else if (has_dst) then
                fl_mach => flind%dst
             endif
-            tab(:,:,:) = sqrt(sq_sum3(cg%u(fl_mach%imx, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), &
-                 &                    cg%u(fl_mach%imy, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), &
-                 &                    cg%u(fl_mach%imz, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke))) / &
-                 &                    cg%u(fl_mach%idn, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)
+            tab(:,:,:) = sqrt(sq_sum3(cg%u(fl_mach%imx, RNG), cg%u(fl_mach%imy, RNG), cg%u(fl_mach%imz, RNG))) / cg%u(fl_mach%idn, RNG)
          case ("cs", "c_s")
             nullify(fl_mach)
             if (has_ion) then
