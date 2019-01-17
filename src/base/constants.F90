@@ -168,13 +168,25 @@ module constants
       enumerator :: BND_INVALID = BND_MPI - 1 !! non-recognized boundary
    end enum
 
+   ! enumerate stages of Runge-Kutta method in an unique way, so istep will contain information both about stage and method
+   enum, bind(C)
+      enumerator :: EULER = 10000  !! integration_order == 1
+      enumerator :: RK2_1          !! halfstep RK2
+      enumerator :: RK2_2          !! fullstep RK2
+   end enum
+   integer, parameter :: n_schemes = 2
+   integer, dimension(n_schemes), parameter :: first_stage = [ EULER, RK2_1 ], &
+        &                                      last_stage  = [ EULER, RK2_2 ]
+   real, dimension(EULER:RK2_2), parameter :: rk_coef = [ one, &      !! EULER
+        &                                                 half, one ] !! RK2
+
    ! 3D and 4D array names
    ! fluids
-   character(len=dsetnamelen), parameter :: fluid_n = "fluid"   !< main array
+   character(len=dsetnamelen), parameter :: fluid_n = "fluid"   !< main fluid array
    character(len=dsetnamelen), parameter :: uh_n    = "uh"      !< auxiliary array for half-step values
    ! magnetic field
-   character(len=dsetnamelen), parameter :: mag_n   = "mag"     !< main array
-   character(len=dsetnamelen), parameter :: mag_cc_n = "magcc"  !< cell-centered magnetic field for temporarystorage
+   character(len=dsetnamelen), parameter :: mag_n   = "mag"     !< main magnetic field array
+   character(len=dsetnamelen), parameter :: magh_n  = "magh"    !< auxiliary array for half-step values
    ! gravitational potential
    character(len=dsetnamelen), parameter :: gp_n    = "gp"      !< static, external field, must be explicitly set to 0. if no external fields are applied
    character(len=dsetnamelen), parameter :: sgp_n   = "sgp"     !< current field from self-gravity
@@ -187,6 +199,7 @@ module constants
    character(len=dsetnamelen), parameter :: wcr_n   = "wcr"     !< auxiliary array for CR diffusion
    character(len=dsetnamelen), parameter :: wa_n    = "wa"      !< general-purpose auxiliary 3D array
    character(len=dsetnamelen), parameter :: psi_n   = "psi"     !< auxiliary 3D array for divergence cleaning
+   character(len=dsetnamelen), parameter :: psih_n  = "psih"    !< auxiliary 3D array for divergence cleaning for half-step values
 
    ! timer names
    character(len=*), parameter :: tmr_fu  = "fluid_update"   !< main timer used to measure fluid_update step

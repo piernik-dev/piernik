@@ -37,151 +37,9 @@ module rtvd ! split orig
    implicit none
 
    private
-   public  :: tvdb, relaxing_tvd
+   public  :: relaxing_tvd
 
 contains
-!/*
-!>
-!! \brief Subroutine computes magnetic field evolution
-!!
-!! The original RTVD MHD scheme incorporates magnetic field evolution via the Constrained transport (CT)
-!! algorithm by Evans & Hawley (1988). The idea behind the CT scheme is to integrate numerically the induction equation
-!! \f{equation}
-!! \frac{\partial\vec{B}}{\partial t} = \nabla\times (\vec{v}  \times \vec{B}),
-!! \f}
-!! in a manner ensuring that the condition
-!! \f{equation}
-!! \nabla \cdot \vec{B} = 0,
-!! \f}
-!! is fulfilled to the machine accuracy.
-!!
-!! The divergence-free evolution of magnetic-field on a discrete computational
-!! grid can be realized if the last equation holds for the discrete representation of the initial
-!! condition, and that subsequent updates of \f$B\f$ do not change the total magnetic
-!! flux threading cell faces.
-!!
-!! Time variations of magnetic flux threading surface \f$S\f$ bounded by contour \f$C\f$, due to Stokes theorem, can be written as
-!! \f{equation}
-!! \frac{\partial\Phi_S}{\partial t} = \frac{\partial}{\partial t} \int_S \vec{B} \cdot \vec{d\sigma} = \int_S \nabla \times ( \vec{v} \times \vec{B})\cdot \vec{d \sigma} =  \oint_{C} (\vec{v} \times \vec{B}) \cdot \vec{dl},
-!! \f}
-!! where \f$\vec{E}= \vec{v} \times \vec{B}\f$ is electric field, named also electromotive force (EMF).
-!!
-!! In a discrete representation variations of magnetic %fluxes, in %timestep \f$\Delta t\f$, threading faces of cell \f$(i,j,k)\f$ are
-!! given by
-!! \f{eqnarray}
-!! \frac{\Phi^{x,n+1}_{i+1/2,j,k} - \Phi^{x,n}_{i+1/2,j,k}}{\Delta t} &=&
-!! {E}^y_{i+1/2,j,k-1/2} \Delta y + {E}^z_{i+1/2,j+1/2,k} \Delta z     \nonumber\\
-!! &-&{E}^y_{i+1/2,j,k+1/2} \Delta y - {E}^z_{i+1/2,j-1/2,k} \Delta z,  \nonumber
-!! \f}
-!! \f{eqnarray}
-!! \frac{\Phi^{y,n+1}_{i,j+1/2,k} - \Phi^{y,n}_{i,j+1/2,k}}{\Delta t} &=&
-!! {E}^x_{i,j+1/2,k+1/2} \Delta x + {E}^z_{i-1/2,j+1/2,k} \Delta z      \nonumber\\
-!! &-&{E}^x_{i,j+1/2,k-1/2} \Delta x - {E}^z_{i+1/2,j+1/2,k} \Delta z,  \nonumber
-!! \f}
-!! \f{eqnarray}
-!! \frac{\Phi^{z,n+1}_{i,j,k+1/2} - \Phi^{z,n}_{i,j,k+1/2}}{\Delta t} &=&
-!! {E}^x_{i,j-1/2,k+1/2} \Delta x + {E}^y_{i+1/2,j,k+1/2} \Delta y      \nonumber\\
-!! &-&{E}^x_{i,j+1/2,k+1/2} \Delta x - {E}^y_{i-1/2,j,k+1/2} \Delta y,  \nonumber
-!! \f}
-!! Variations of magnetic flux threading remaining three faces of cell \f$(i,j,k)\f$ can be written in a similar manner. We note that each EMF
-!! contribution appears twice with opposite sign. Thus, the total change of magnetic flux, piercing all cell-faces, vanishes to machine accuracy.
-!!
-!! To present the idea in a slightly different way, following Pen et al. (2003),  we consider the three components of the induction
-!! equation written in the explicit form:
-!! \f{eqnarray}
-!! \partial_t B_x &=& \partial_y (\mathrm{v_x B_y}) + \partial_z (v_x B_z) - \partial_y (v_y B_x) - \partial_z (v_z B_x),\\
-!! \partial_t B_y &=& \partial_x (v_y B_x) + \partial_z (v_y B_z) - \partial_x (\mathrm{v_x B_y}) - \partial_z (v_z B_y),\\
-!! \partial_t B_z &=& \partial_x (v_z B_x) + \partial_y (v_z B_y) - \partial_x (v_x B_z) - \partial_y (v_y B_z).
-!! \f}
-!!
-!!We note that each combination of \f$v_a B_b\f$ appears twice in these equations. Let us consider \f$v_x B_y\f$.
-!!Once  \f$v_x B_y\f$ is computed for numerical integration of the second equation, it should be also used for
-!!integration of the first equation, to ensure cancellation of electromotive forces contributing to the total change of magnetic flux threading
-!!cell faces.
-!!
-!!The scheme proposed by Pen et al. (2003), consists of the following steps:
-!!\n (1) Computation of the edge-centered EMF component \f$ v_x B_y\f$.
-!!\n (2) Update of \f$B_y\f$, according to the equation \f$\partial_t B_y = \partial_x (v_x B_y)\f$.
-!!\n (3) Update of \f$B_x\f$, according to the equation \f$\partial_t B_x = \partial_y (v_x B_y)\f$.
-!!
-!!Analogous procedure applies to remaining EMF components.
-!<
-!*/
-   subroutine tvdb(vibj, b, vg, n, dt, idi)
-
-      use constants, only: big, half
-
-      implicit none
-
-      integer(kind=4),             intent(in)    :: n       !< array size
-      real,                        intent(in)    :: dt      !< time step
-      real,                        intent(in)    :: idi     !< cell length, depends on direction x, y or z
-      real, dimension(:), pointer, intent(inout) :: vibj    !< face-centered electromotive force components (b*vg)
-      real, dimension(:), pointer, intent(in)    :: b       !< magnetic field
-      real, dimension(n),          intent(in)    :: vg      !< velocity in the center of cell boundary
-! locals
-      real, dimension(n)                         :: b1      !< magnetic field
-      real, dimension(n)                         :: vibj1   !< face-centered electromotive force (EMF) components (b*vg)
-      real, dimension(n)                         :: vh      !< velocity interpolated to the cell edges
-      real                                       :: dti     !< dt/di
-      real                                       :: v       !< auxiliary variable to compute EMF
-      real                                       :: w       !< EMF component
-      real                                       :: dw      !< The second-order correction to EMF component
-      real                                       :: dwm     !< face centered EMF interpolated to left cell-edge
-      real                                       :: dwp     !< face centered EMF interpolated to right cell-edge
-      integer                                    :: i       !< auxiliary array indicator
-      integer                                    :: ip      !< i+1
-      integer                                    :: ipp     !< i+2
-      integer                                    :: im      !< i-1
-
-! unlike the B field, the vibj lives on the right cell boundary
-      vh = 0.0
-
-! velocity interpolation to the cell boundaries
-
-      vh(1:n-1) =(vg(1:n-1)+ vg(2:n))*half;     vh(n) = vh(n-1)
-
-      dti = dt*idi
-
-! face-centered EMF components computation, depending on the sign of vh, the components are upwinded  to cell edges, leading to 1st order EMF
-
-      where (vh > 0.)
-         vibj1=b*vg
-      elsewhere
-         vibj1=eoshift(b*vg,1,boundary=big)
-      endwhere
-
-! values of magnetic field computation in Runge-Kutta half step
-
-      ! TODO: GEOFACTOR missing
-      b1(2:n) = b(2:n) - (vibj1(2:n) - vibj1(1:n-1)) * dti * half;    b1(1) = b(2)
-
-      do i = 3, n-3
-         ip  = i  + 1
-         ipp = ip + 1
-         im  = i  - 1
-         v   = vh(i)
-
-! recomputation of EMF components (w) with b1 and face centered EMF interpolation to cell-edges (dwp, dwm), depending on the sign of v.
-
-         if (v > 0.0) then
-            w   = vg(i) * b1(i)
-            dwp = (vg(ip) * b1(ip) - w) * half
-            dwm = (w - vg(im) * b1(im)) * half
-         else
-            w   = vg(ip) * b1(ip)
-            dwp = (w - vg(ipp) * b1(ipp)) * half
-            dwm = (vg(i) * b1(i) - w) * half
-         endif
-
-! the second-order corrections to the EMF components computation with the aid of the van Leer monotonic interpolation and 2nd order EMF computation
-
-         dw=0.0
-         if (dwm * dwp > 0.0) dw = 2.0 * dwm * dwp / (dwm + dwp)
-         vibj(i) = (w + dw) * dt
-      enddo
-      return
-   end subroutine tvdb
 !/*
 !>
 !! \brief Subroutine implements the Relaxing TVD scheme for conserved physical quantities
@@ -237,7 +95,8 @@ contains
 
    subroutine relaxing_tvd(n, u0, u1, vel_sweep, bb, cs_iso2, istep, dtx, eflx)
 
-      use constants,    only: half, GEO_XYZ
+      use constants,    only: half, GEO_XYZ, RK2_1, RK2_2
+      use dataio_pub,   only: die
       use domain,       only: dom
       use fluidindex,   only: flind, nmag
       use fluxes,       only: flimiter, all_fluxes
@@ -252,7 +111,7 @@ contains
       real, dimension(n, flind%fluids), intent(in)    :: vel_sweep          !< velocity in the direction of current sweep
       real, dimension(n, nmag),         intent(in)    :: bb                 !< local copy of magnetic field
       real, dimension(:), pointer,      intent(in)    :: cs_iso2            !< square of local isothermal sound speed
-      integer,                          intent(in)    :: istep              !< step number in the time integration scheme
+      integer,                          intent(in)    :: istep              !< stage in the time integration scheme
       real,                             intent(in)    :: dtx                !< RK_coeff * time step / dx
       type(ext_fluxes),                 intent(inout) :: eflx               !< external fluxes
 
@@ -284,9 +143,10 @@ contains
          fr(2:n, :) = fl(1:n-1, :) + w(2:n, :)
          fr(1, :) = fr(2, :)
 
-         if (istep == 2) then
-
+         select case (istep)
+         case (RK2_2)
             ! Second order flux corrections
+
             dfp(1:n-1, :) = half * (fr(2:n, :) - fr(1:n-1, :)); dfp(n, :) = dfp(n-1, :)
             dfm(2:n, :)   = dfp(1:n-1, :);                      dfm(1, :) = dfm(2, :)
             ! Flux limiter application
@@ -297,7 +157,10 @@ contains
             call flimiter(fl, dfm, dfp)
             !OPT 60% of D1mr and 40% D1mw occurred in few above lines (D1mr = 0.1% Dr, D1mw = 0.5% Dw)
             ! That ^^ should be fixed now, please confirm
-         endif
+         case (RK2_1)
+         case default
+            call die("[rtvd:relaxing_tvd] Unsupported substep")
+         end select
 
          ! u update
          fu = fr - fl

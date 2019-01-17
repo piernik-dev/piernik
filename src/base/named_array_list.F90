@@ -82,9 +82,6 @@ module named_array_list
    type, extends(na_var_list) :: na_var_list_w
       integer(kind=4) :: fi                                    !< fluid           : cg%w(wna%fi)
       integer(kind=4) :: bi                                    !< magnetic field  : cg%w(wna%bi)
-#ifdef RIEMANN
-      integer(kind=4) :: bcci                                  !< cc-magnetic field : cg%w(wna%bcci)
-#endif /* RIEMANN */
    end type na_var_list_w
 
    type(na_var_list_q), target :: qna !< list of registered 3D named arrays
@@ -171,9 +168,6 @@ contains
 
       use constants,  only: fluid_n, mag_n, wa_n
       use dataio_pub, only: die, msg
-#ifdef RIEMANN
-      use constants,  only: mag_cc_n
-#endif /* RIEMANN */
 
       implicit none
 
@@ -205,9 +199,6 @@ contains
          type is (na_var_list_w)
             if (element%name == fluid_n) this%fi  = ubound(this%lst(:), dim=1, kind=4)
             if (element%name == mag_n)   this%bi  = ubound(this%lst(:), dim=1, kind=4)
-#ifdef RIEMANN
-            if (element%name == mag_cc_n) this%bcci = ubound(this%lst(:), dim=1, kind=4)
-#endif /* RIEMANN */
         type is (na_var_list_q)
             if (element%name == wa_n)    this%wai = ubound(this%lst(:), dim=1, kind=4)
       end select

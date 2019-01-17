@@ -90,14 +90,14 @@ contains
 
       use cg_leaves,  only: leaves
       use cg_list,    only: cg_list_element
-      use constants,  only: GEO_XYZ, pMAX, small, xdim, ydim, zdim, half
+      use constants,  only: GEO_XYZ, pMAX, small, xdim, ydim, zdim, half, DIVB_HDC
       use dataio_pub, only: die
       use domain,     only: dom
       use fluidindex, only: flind
       use fluids_pub, only: has_ion, has_neu, has_dst
       use fluidtypes, only: component_fluid
       use func,       only: emag, ekin
-      use global,     only: use_fargo, cfl_glm, ch_grid, dt
+      use global,     only: use_fargo, cfl_glm, ch_grid, dt, divB_0_method
       use mpisetup,   only: piernik_MPI_Allreduce
 
       implicit none
@@ -106,6 +106,8 @@ contains
       class(component_fluid), pointer :: fl
       integer                         :: i, j, k, d
       real                            :: pmag, pgam
+
+      if (divB_0_method /= DIVB_HDC) return
 
       chspeed = huge(1.)
       if (use_fargo) call die("[hdc:update_chspeed] FARGO is not implemented here yet.")
@@ -192,18 +194,20 @@ contains
 !<
   subroutine glmdamping
 
-     use global,           only: glm_alpha, dt
-     use cg_list,          only: cg_list_element
-     use grid_cont,        only: grid_container
      use cg_leaves,        only: leaves
-     use constants,        only: psi_n
-     use named_array_list, only: qna
+     use cg_list,          only: cg_list_element
+     use constants,        only: psi_n, DIVB_HDC
      use domain,           only: dom
+     use global,           only: glm_alpha, dt, divB_0_method
+     use grid_cont,        only: grid_container
+     use named_array_list, only: qna
 
      implicit none
 
      type(cg_list_element), pointer :: cgl
      type(grid_container),  pointer :: cg
+
+     if (divB_0_method /= DIVB_HDC) return ! I think it is equivalent to qna%exists(psi_n)
 
      if (qna%exists(psi_n)) then
         cgl => leaves%first
