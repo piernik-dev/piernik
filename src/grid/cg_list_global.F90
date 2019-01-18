@@ -265,7 +265,7 @@ contains
 
 #ifdef RIEMANN
       if (force_cc_mag) then
-         call this%reg_var(psi_n,  vital = .false., restart_mode = AT_OUT_B) ! an array for div B cleaning
+         call this%reg_var(psi_n,  vital = .true., restart_mode = AT_OUT_B)  ! an array for div B cleaning
          call this%reg_var(psih_n, vital = .false.)                          ! its copy for use in RK2
       endif
 #endif /* RIEMANN */

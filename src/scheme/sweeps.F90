@@ -221,11 +221,10 @@ contains
    subroutine update_boundaries(cdim, istep)
 
       use all_boundaries,   only: all_fluid_boundaries
-      use cg_leaves,        only: leaves
-      use constants,        only: first_stage, DIVB_HDC, psi_n
+!      use cg_leaves,        only: leaves
+      use constants,        only: first_stage, DIVB_HDC
       use domain,           only: dom
       use global,           only: sweeps_mgu, integration_order, divB_0_method
-      use named_array_list, only: qna
 #ifdef MAGNETIC
       use all_boundaries,   only: all_mag_boundaries
 #endif /* MAGNETIC */
@@ -236,9 +235,8 @@ contains
       integer,         intent(in) :: istep
 
       if (divB_0_method == DIVB_HDC) then
-         if (qna%exists(psi_n)) call leaves%leaf_arr3d_boundaries(qna%ind(psi_n))
 #ifdef MAGNETIC
-         call all_mag_boundaries
+         call all_mag_boundaries ! ToDo: take care of psi boundaries
 #endif /* MAGNETIC */
       endif
 
@@ -329,6 +327,7 @@ contains
          do while (.not. all_processed)
             all_processed = .true.
             blocks_done = 0
+            ! OPT this loop should probably go from finest to coarsest for better compute-communicate overlap.
             cgl => leaves%first
             do while (associated(cgl))
                cg => cgl%cg

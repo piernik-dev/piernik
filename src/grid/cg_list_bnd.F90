@@ -994,6 +994,7 @@ contains
       use dataio_pub,            only: msg, warn, die
       use domain,                only: dom
       use fluidboundaries_funcs, only: user_fluidbnd
+      use global,                only: force_cc_mag
       use grid_cont,             only: grid_container
       use mpisetup,              only: master
       use named_array_list,      only: wna
@@ -1032,7 +1033,8 @@ contains
                case (BND_USER)
                   call user_fluidbnd(dir, side, cg, wn=wna%bi)
                case (BND_FC, BND_MPI_FC)
-                  call die("[cg_list_bnd:bnd_b] fine-coarse interfaces not implemented yet")
+                  if (.not. force_cc_mag) &
+                       call die("[cg_list_bnd:bnd_b] fine-coarse interfaces not implemented yet for face-centered B field.")
                case (BND_COR)
                   if (dir == zdim) then
                      write(msg,'(2(a,i3))') "[cg_list_bnd:bnd_b]: Boundary condition ",cg%bnd(dir, side)," not implemented in ",dir
