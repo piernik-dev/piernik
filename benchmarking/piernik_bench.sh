@@ -11,6 +11,19 @@ fi
 
 SCALE=${BIG:=1}
 
+MEMG=$( free -m | awk '/Mem/ {print $2/1024.}' )
+MEMM=$( free -m | awk '/Mem/ {print $2}' )
+# alternatively (should give value closer to the amount of physical RAM installed):
+#MEMG=0
+#for mem in /sys/devices/system/memory/memory*; do
+#    [[ "$(cat ${mem}/online)" == "1" ]] && MEMG=$(( MEMG+$((0x$(cat /sys/devices/system/memory/block_size_bytes)))))
+#done
+#MEMG=$( echo $MEMG | awk '{print $1 / 1024.**3 }' )
+
+echo "## "$( cat /proc/cpuinfo  | grep "model name" | uniq )
+echo "## Memory : $MEMG GB"
+
+
 [ "$SCALE" != "1" ] && echo "# test domains are scaled by factor of $SCALE"
 
 # create list of thread count to be tested
@@ -176,17 +189,23 @@ for p in $B_PROBLEM_LIST ; do
 			fi
 			echo ;;
 		    maclaurin)
+			SKIP=0
 			if [ $t == flood ] ; then
 			    NX=$( echo 64 $SCALE | awk '{print int($1*$2)}')
+			    REQMEM=$( echo $NX $i | awk '{print int($1**3 * $2 * 0.00060)}' )
 			    for j in $( seq $i ) ; do
 				cd $j
 				rm *log 2> /dev/null
-				./piernik -n '&BASE_DOMAIN n_d = 3*'$NX' / &MPI_BLOCKS AMR_bsize = 3*32 /' > _stdout_ 2> /dev/null &
+				if [ $MEMM -gt $REQMEM ] ; then
+				    ./piernik -n '&BASE_DOMAIN n_d = 3*'$NX' / &MPI_BLOCKS AMR_bsize = 3*32 /' > _stdout_ 2> /dev/null &
+				else
+				    SKIP=1
+				fi
 				cd - > /dev/null
 			    done
 			    wait
 			    sleep 1
-			    for j in $( seq $i ) ; do
+			    [ $SKIP == 0 ] && for j in $( seq $i ) ; do
 				grep cycles $j/_stdout_ | awk 'BEGIN {printf("%d", '$i');} {printf("%7.3f %7.3f ", $5, $8)}'
 				awk '/Spent/ { printf("%s\n",$5) }' $j/*log
 			    done
@@ -195,17 +214,30 @@ for p in $B_PROBLEM_LIST ; do
 			    case $t in
 				weak)
 				    NX=$( echo 64 $SCALE | awk '{print int($1*$2)}')
-				    mpirun -np $i ./piernik -n '&BASE_DOMAIN n_d = '$(( $i * $NX ))', 2*'$NX' xmin = -'$(( $i * 2 ))' xmax = '$(( $i * 2 ))' / &MPI_BLOCKS AMR_bsize = 3*32 /' 2> /dev/null ;;
+				    REQMEM=$( echo $NX $i | awk '{print int($1**3 * $2 * 0.00060)}' )
+				    if [ $MEMM -gt $REQMEM ] ; then
+					mpirun -np $i ./piernik -n '&BASE_DOMAIN n_d = '$(( $i * $NX ))', 2*'$NX' xmin = -'$(( $i * 2 ))' xmax = '$(( $i * 2 ))' / &MPI_BLOCKS AMR_bsize = 3*32 /' 2> /dev/null | grep cycles | awk '{printf("%7.3f %7.3f ", $5, $8)}'
+				    else
+					SKIP=1
+				    fi ;;
 				strong)
 				    NX=$( echo 128 $SCALE | awk '{print int($1*$2)}')
-				    mpirun -np $i ./piernik -n '&BASE_DOMAIN n_d = 3*'$NX' / &MPI_BLOCKS AMR_bsize = 3*32 /' 2> /dev/null ;;
-			    esac | grep cycles | awk '{printf("%7.3f %7.3f ", $5, $8)}'
-			    awk '/Spent/ { printf("%s ", $5) }' *log
+				    REQMEM=$( echo $NX | awk '{print int($1**3 * 0.00060)}' )
+				    if [ $MEMM -gt $REQMEM ] ; then
+					mpirun -np $i ./piernik -n '&BASE_DOMAIN n_d = 3*'$NX' / &MPI_BLOCKS AMR_bsize = 3*32 /' 2> /dev/null | grep cycles | awk '{printf("%7.3f %7.3f ", $5, $8)}'
+				    else
+					SKIP=1
+				    fi ;;
+			    esac
+			    [ $SKIP == 0 ] && awk '/Spent/ { printf("%s ", $5) }' *log
 			fi
+			[ $SKIP != 0 ] && echo " skipped $t : (RAM) $MEMM < $REQMEM ##"
 			echo ;;
 	        esac
 	    done
-	) | awk '{ if (substr($1,0,1) == "#") split($0,form); if (NF>0) {for (i=1;i<=NF;i++) printf("%-*s ",length(form[i]),$i); print ""; fflush()}}'
+	) | awk '{ if ($0 ~ "##") {print "## ", $0} else { if (substr($1,0,1) == "#") split($0,form); if (NF>0) {for (i=1;i<=NF;i++) printf("%-*s ",length(form[i]),$i); print ""; fflush()} } }'
 	echo
     done
 done
+
+# ToDo: fine tune the constant 0.00060 needed for $REQMEM for border cases on multicore machines
