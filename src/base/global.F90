@@ -59,7 +59,7 @@ module global
 
    ! Namelist variables
 
-   real    :: dt_initial               !< initial timestep
+   real    :: dt_initial               !< if >0. : initial timestep; if 0. or < -1. : automatic timestep; reduced automatic timestep otherwise
    real    :: dt_max_grow              !< maximum timestep growth rate
    real    :: dt_shrink                !< dt shrink rate when timestep retry is used
    real    :: dt_min                   !< minimum allowed timestep
@@ -122,7 +122,7 @@ contains
 !!   <tr><td>smallc           </td><td>1.e-10 </td><td>real value                           </td><td>\copydoc global::smallc           </td></tr>
 !!   <tr><td>integration_order</td><td>2      </td><td>1 or 2 (or 3 - currently unavailable)</td><td>\copydoc global::integration_order</td></tr>
 !!   <tr><td>cfr_smooth       </td><td>0.0    </td><td>real value                           </td><td>\copydoc global::cfr_smooth       </td></tr>
-!!   <tr><td>dt_initial       </td><td>-1.    </td><td>positive real value or -1.           </td><td>\copydoc global::dt_initial       </td></tr>
+!!   <tr><td>dt_initial       </td><td>-1.    </td><td>positive real value or -1. .. 0.     </td><td>\copydoc global::dt_initial       </td></tr>
 !!   <tr><td>dt_max_grow      </td><td>2.     </td><td>real value, should be > 1.           </td><td>\copydoc global::dt_max_grow      </td></tr>
 !!   <tr><td>dt_shrink        </td><td>0.5    </td><td>real value, should be < 1.           </td><td>\copydoc global::dt_shrink        </td></tr>
 !!   <tr><td>dt_min           </td><td>0.     </td><td>positive real value                  </td><td>\copydoc global::dt_min           </td></tr>
@@ -191,7 +191,7 @@ contains
       use_smalld  = .true.
       smallc      = 1.e-10
       smallei     = 1.e-10
-      dt_initial  = -1.              !< negative value indicates automatic choice of initial timestep
+      dt_initial  = -1.              !< -1. indicates automatic choice of initial timestep, -0.5 would give half of that
       dt_max_grow = 2.               !< for sensitive setups consider setting this as low as 1.1
       dt_shrink   = 0.5
       dt_min      = tiny(1.)

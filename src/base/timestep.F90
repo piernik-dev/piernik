@@ -175,7 +175,11 @@ contains
 
       ! finally apply some sanity factors
       if (nstep <=1) then
-         if (dt_initial > zero) dt = min(dt, dt_initial)
+         if (dt_initial > zero) then
+            dt = min(dt, dt_initial)
+         else if (dt_initial < zero) then ! extra factor for shortening first timestep
+            dt = min(dt, -dt_initial * dt)
+         endif
       else
          if (dt_old > zero) dt = min(dt, dt_old*dt_max_grow)
       endif
