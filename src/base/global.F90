@@ -46,7 +46,6 @@ module global
         &    dirty_debug, do_ascii_dump, show_n_dirtys, no_dirty_checks, sweeps_mgu, use_fargo, print_divB, &
         &    divB_0_method, force_cc_mag, glm_alpha, use_eglm, cfl_glm, ch_grid, w_epsilon, psi_bnd
 
-   real, parameter :: dt_default_grow = 2.
    logical         :: cfl_violated             !< True when cfl condition is violated
    logical         :: dirty_debug              !< Allow initializing arrays with some insane values and checking if these values can propagate
    integer(kind=4) :: show_n_dirtys            !< use to limit the amount of printed messages on dirty values found
@@ -123,7 +122,7 @@ contains
 !!   <tr><td>integration_order</td><td>2      </td><td>1 or 2 (or 3 - currently unavailable)</td><td>\copydoc global::integration_order</td></tr>
 !!   <tr><td>cfr_smooth       </td><td>0.0    </td><td>real value                           </td><td>\copydoc global::cfr_smooth       </td></tr>
 !!   <tr><td>dt_initial       </td><td>-1.    </td><td>positive real value or -1.           </td><td>\copydoc global::dt_initial       </td></tr>
-!!   <tr><td>dt_max_grow      </td><td>2.     </td><td>real value > 1.1                     </td><td>\copydoc global::dt_max_grow      </td></tr>
+!!   <tr><td>dt_max_grow      </td><td>2.     </td><td>real value, should be > 1.           </td><td>\copydoc global::dt_max_grow      </td></tr>
 !!   <tr><td>dt_min           </td><td>0.     </td><td>positive real value                  </td><td>\copydoc global::dt_min           </td></tr>
 !!   <tr><td>dt_max           </td><td>0.     </td><td>positive real value                  </td><td>\copydoc global::dt_max           </td></tr>
 !!   <tr><td>limiter          </td><td>vanleer</td><td>string                               </td><td>\copydoc global::limiter          </td></tr>
@@ -191,7 +190,7 @@ contains
       smallc      = 1.e-10
       smallei     = 1.e-10
       dt_initial  = -1.              !< negative value indicates automatic choice of initial timestep
-      dt_max_grow = dt_default_grow  !< for sensitive setups consider setting this as low as 1.1
+      dt_max_grow = 2.               !< for sensitive setups consider setting this as low as 1.1
       dt_min      = tiny(1.)
       dt_max      = huge(1.)
       relax_time  = 0.
@@ -227,10 +226,9 @@ contains
          cfl_max = min(max(cfl_max, min(cfl*1.1, cfl+0.05, (1.+cfl)/2.) ), 1.0) ! automatically sanitize cfl_max
          if (integration_order > 2) call die ('[global:init_global]: "ORIG" scheme integration_order must be 1 or 2')
 
-         if (dt_max_grow < 1.01) then
-            write(msg,'(2(a,g10.3))')"[global:init_global] dt_max_grow = ",dt_max_grow," is way too low. Resetting to ",dt_default_grow
+         if (dt_max_grow <= 1.01) then
+            write(msg,'(2(a,g10.3))')"[global:init_global] dt_max_grow = ",dt_max_grow," is low. Recommended values are in 1.1 .. 2.0 range."
             call warn(msg)
-            dt_max_grow = dt_default_grow
          endif
 
          cbuff(1) = limiter
