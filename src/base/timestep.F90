@@ -174,7 +174,7 @@ contains
       call piernik_MPI_Allreduce(c_all, pMAX)
 
       ! finally apply some sanity factors
-      if (nstep <=1) then
+      if (nstep < 1) then
          if (dt_initial > zero) then
             dt = min(dt, dt_initial)
          else if (dt_initial < zero) then ! extra factor for shortening first timestep
