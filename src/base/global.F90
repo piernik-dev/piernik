@@ -40,7 +40,7 @@ module global
    private
    public :: cleanup_global, init_global, &
         &    cfl, cfl_max, cflcontrol, cfl_violated, &
-        &    dt, dt_initial, dt_max_grow, dt_min, dt_max, dt_old, dtm, t, t_saved, nstep, nstep_saved, &
+        &    dt, dt_initial, dt_max_grow, dt_shrink, dt_min, dt_max, dt_old, dtm, t, t_saved, nstep, nstep_saved, &
         &    integration_order, limiter, limiter_b, smalld, smallei, smallp, use_smalld, interpol_str, &
         &    relax_time, grace_period_passed, cfr_smooth, repeat_step, skip_sweep, geometry25D, &
         &    dirty_debug, do_ascii_dump, show_n_dirtys, no_dirty_checks, sweeps_mgu, use_fargo, print_divB, &
@@ -61,6 +61,7 @@ module global
 
    real    :: dt_initial               !< initial timestep
    real    :: dt_max_grow              !< maximum timestep growth rate
+   real    :: dt_shrink                !< dt shrink rate when timestep retry is used
    real    :: dt_min                   !< minimum allowed timestep
    real    :: dt_max                   !< maximum allowed timestep
    real    :: cfl                      !< desired Courant–Friedrichs–Lewy number
@@ -95,7 +96,7 @@ module global
    logical                       :: ch_grid           !< When true use grid properties to estimate ch (psi wave propagation speed). Use gas properties otherwise.
    real                          :: w_epsilon         !< small number for safe evaluation of weights in WENO interpolation
 
-   namelist /NUMERICAL_SETUP/ cfl, cflcontrol, cfl_max, use_smalld, smalld, smallei, smallc, smallp, dt_initial, dt_max_grow, dt_min, dt_max, &
+   namelist /NUMERICAL_SETUP/ cfl, cflcontrol, cfl_max, use_smalld, smalld, smallei, smallc, smallp, dt_initial, dt_max_grow, dt_shrink, dt_min, dt_max, &
         &                     repeat_step, limiter, limiter_b, relax_time, integration_order, cfr_smooth, skip_sweep, geometry25D, sweeps_mgu, print_divB, &
         &                     use_fargo, divB_0, glm_alpha, use_eglm, cfl_glm, ch_grid, interpol_str, w_epsilon, psi_bnd_str
 
@@ -123,6 +124,7 @@ contains
 !!   <tr><td>cfr_smooth       </td><td>0.0    </td><td>real value                           </td><td>\copydoc global::cfr_smooth       </td></tr>
 !!   <tr><td>dt_initial       </td><td>-1.    </td><td>positive real value or -1.           </td><td>\copydoc global::dt_initial       </td></tr>
 !!   <tr><td>dt_max_grow      </td><td>2.     </td><td>real value, should be > 1.           </td><td>\copydoc global::dt_max_grow      </td></tr>
+!!   <tr><td>dt_shrink        </td><td>0.5    </td><td>real value, should be < 1.           </td><td>\copydoc global::dt_shrink        </td></tr>
 !!   <tr><td>dt_min           </td><td>0.     </td><td>positive real value                  </td><td>\copydoc global::dt_min           </td></tr>
 !!   <tr><td>dt_max           </td><td>0.     </td><td>positive real value                  </td><td>\copydoc global::dt_max           </td></tr>
 !!   <tr><td>limiter          </td><td>vanleer</td><td>string                               </td><td>\copydoc global::limiter          </td></tr>
@@ -191,6 +193,7 @@ contains
       smallei     = 1.e-10
       dt_initial  = -1.              !< negative value indicates automatic choice of initial timestep
       dt_max_grow = 2.               !< for sensitive setups consider setting this as low as 1.1
+      dt_shrink   = 0.5
       dt_min      = tiny(1.)
       dt_max      = huge(1.)
       relax_time  = 0.
@@ -227,7 +230,12 @@ contains
          if (integration_order > 2) call die ('[global:init_global]: "ORIG" scheme integration_order must be 1 or 2')
 
          if (dt_max_grow <= 1.01) then
-            write(msg,'(2(a,g10.3))')"[global:init_global] dt_max_grow = ",dt_max_grow," is low. Recommended values are in 1.1 .. 2.0 range."
+            write(msg,'(2(a,g10.3))')"[global:init_global] dt_max_grow = ", dt_max_grow, " is low. Recommended values are in 1.1 .. 2.0 range."
+            call warn(msg)
+         endif
+
+         if (dt_shrink > 0.99 .or. dt_shrink < 0.1) then
+            write(msg,'(2(a,g10.3))')"[global:init_global] dt_shrink = ", dt_shrink, " is strange. Recommended values are in 0.1 .. 0.9 range."
             call warn(msg)
          endif
 
@@ -256,6 +264,7 @@ contains
          rbuff(13) = glm_alpha
          rbuff(14) = cfl_glm
          rbuff(15) = w_epsilon
+         rbuff(16) = dt_shrink
 
          lbuff(1)   = use_smalld
          lbuff(2)   = repeat_step
@@ -299,6 +308,7 @@ contains
          glm_alpha   = rbuff(13)
          cfl_glm     = rbuff(14)
          w_epsilon   = rbuff(15)
+         dt_shrink   = rbuff(16)
 
          limiter    = cbuff(1)
          limiter_b  = cbuff(2)

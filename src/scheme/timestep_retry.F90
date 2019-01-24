@@ -86,7 +86,7 @@ contains
       use cg_list,          only: cg_list_element
       use constants,        only: pSUM, I_ONE, dsetnamelen, AT_IGNORE
       use dataio_pub,       only: warn, msg, die
-      use global,           only: dt, dtm, t, t_saved, cfl_violated, nstep, nstep_saved, dt_max_grow, repeat_step
+      use global,           only: dt, dtm, t, t_saved, cfl_violated, nstep, nstep_saved, dt_shrink, repeat_step
       use mass_defect,      only: downgrade_magic_mass
       use mpisetup,         only: master, piernik_MPI_Allreduce
       use named_array_list, only: qna, wna, na_var_list_q, na_var_list_w
@@ -110,7 +110,7 @@ contains
          if (master) call warn("[timestep_retry:repeat_fluidstep] Redoing previous step...")
          t = t_saved
          nstep = nstep_saved
-         dt = dtm/dt_max_grow**2
+         dt = dtm * dt_shrink
          call downgrade_magic_mass
 #ifdef RANDOMIZE
          call randoms_redostep(.true.)
@@ -127,7 +127,7 @@ contains
       no_hist_count = 0
       cgl => leaves%first
       do while (associated(cgl))
-         ! No need to take care of any cgl%cg%q arrays as long as graity is extrapolated from the prefious timestep.
+         ! No need to take care of any cgl%cg%q arrays as long as graity is extrapolated from the previous timestep.
 
          ! error checking should've been done in restart_arrays, called few lines earlier
          do j = lbound(na_lists, dim=1), ubound(na_lists, dim=1)
@@ -167,7 +167,7 @@ contains
       enddo
       call piernik_MPI_Allreduce(no_hist_count, pSUM)
       if (master .and. no_hist_count/=0) then
-         write(msg, '(a,i6,a)')"[timestep_retry:repeat_fluidstep] Warning: not reverted: ", no_hist_count, " grid pieces."
+         write(msg, '(a,i6,a)')"[timestep_retry:repeat_fluidstep] Error: not reverted: ", no_hist_count, " grid pieces."
          call die(msg)
          ! AMR domains require careful treatment of timestep retries.
          ! Going back past rebalancing or refinement change would require updating whole AMR structure, not just field values.
