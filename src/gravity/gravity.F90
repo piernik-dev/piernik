@@ -41,8 +41,8 @@ module gravity
    implicit none
 
    private
-   public :: init_grav, init_grav_ext, grav_accel, source_terms_grav, grav_src_exec, grav_pot_3d, grav_type, get_gprofs, grav_accel2pot, sum_potential, manage_grav_pot_3d, update_gp
-   public :: r_gc, ptmass, ptm_x, ptm_y, ptm_z, r_smooth, nsub, tune_zeq, tune_zeq_bnd, r_grav, n_gravr, user_grav, gprofs_target, ptm2_x
+   public :: init_grav, init_grav_ext, grav_accel, source_terms_grav, grav_src_exec, grav_pot_3d, grav_type, get_gprofs, grav_accel2pot, sum_potential, update_gp
+   public :: r_gc, ptmass, ptm_x, ptm_y, ptm_z, r_smooth, nsub, tune_zeq, tune_zeq_bnd, r_grav, n_gravr, user_grav, gprofs_target, ptm2_x, variable_gp
 
    integer, parameter         :: gp_stat_len   = 9
    integer, parameter         :: gproft_len    = 5
@@ -67,7 +67,6 @@ module gravity
    real                       :: cmass_x               !< center of mass for Roche potential
    real                       :: Omega                 !< corotational angular velocity for Roche potential
 
-   logical                    :: grav_pot_3d_called = .false.
    logical                    :: user_grav             !< use user defined grav_pot_3d
    logical                    :: variable_gp           !< if .true. then cg%gp is evaluated at every step
 
@@ -367,35 +366,6 @@ contains
       !> \todo Place a call to initialize gp here, not in default_grav_pot_3d
 
    end subroutine g_cg_init
-
-   subroutine manage_grav_pot_3d(first_approach, update_gp)
-
-      use dataio_pub, only: die
-#ifdef VERBOSE
-      use dataio_pub, only: warn
-#endif /* VERBOSE */
-
-      implicit none
-
-      logical, intent(in)           :: first_approach
-      logical, optional, intent(in) :: update_gp
-
-      if (associated(grav_pot_3d)) then
-         if (first_approach .or. .not. grav_pot_3d_called .or. update_gp) then
-            call grav_pot_3d
-            grav_pot_3d_called = .true.
-         endif
-      else
-#ifdef VERBOSE
-         if (first_approach) call warn("[gravity:manage_grav_pot_3d] grav_pot_3d is not associated! Will try to call it once more after problem_initial_conditions.")
-#endif /* VERBOSE */
-         if (.not.(first_approach .or. grav_pot_3d_called)) call die("[gravity:manage_grav_pot_3d] grav_pot_3d failed for the 2nd time!")
-      endif
-
-      if (.not.first_approach) call source_terms_grav ! make sure that all contributions to the gravitational potential are computed before first dump
-         ! Possible side-effects: if variable_gp then grav_pot_3d may be called twice (second call from source_terms_grav)
-
-   end subroutine manage_grav_pot_3d
 
    subroutine source_terms_grav
 
