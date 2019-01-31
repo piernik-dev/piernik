@@ -102,6 +102,12 @@ contains
       use fargo,               only: make_fargosweep
       use sweeps,              only: sweep
       use user_hooks,          only: problem_customize_solution
+#ifdef DEBUG
+      use dataio_pub,          only: msg, printinfo, halfstep
+      use global,              only: t, nstep
+      use mpisetup,            only: master
+      use piernikiodebug,      only: force_dumps
+#endif /* DEBUG */
 #ifdef GRAV
       use global,              only: t, dt
       use gravity,             only: source_terms_grav
@@ -124,6 +130,12 @@ contains
       logical, intent(in) :: forward  !< If .true. then do X->Y->Z sweeps, if .false. then reverse that order
 
       integer(kind=4) :: s
+
+#ifdef DEBUG
+      write(msg, '(a,es23.16,a,i7,a,l2)')"Forcing dumps at t=", t, " at nstep = ", nstep, " halfstep = ", halfstep
+      if (master) call printinfo(msg)
+      call force_dumps
+#endif /* DEBUG */
 
 #ifdef SHEAR
       call shear_3sweeps
@@ -189,6 +201,9 @@ contains
       use initcosmicrays, only: use_split
 #endif /* COSM_RAYS */
 #ifdef DEBUG
+      use dataio_pub,     only: printinfo, msg
+      use global,         only: t, nstep
+      use mpisetup,       only: master
       use piernikiodebug, only: force_dumps
 #endif /* DEBUG */
 #ifdef MAGNETIC
@@ -236,6 +251,8 @@ contains
       endif
 
 #ifdef DEBUG
+      write(msg, '(a,es23.16,a,i7,2a)')"Forcing dumps at t=", t, " nstep = ", nstep, " after sweep = ", char(ichar('X') + dir - 1)
+      if (master) call printinfo(msg)
       call force_dumps
 #endif /* DEBUG */
 
