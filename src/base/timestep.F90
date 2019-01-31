@@ -109,7 +109,7 @@ contains
       use dataio_pub,           only: tend, msg, warn
       use fargo,                only: timestep_fargo, fargo_mean_omega
       use fluidtypes,           only: var_numbers
-      use global,               only: t, dt_old, dt_max_grow, dt_initial, dt_min, dt_max, nstep, use_fargo
+      use global,               only: t, dt_old, dt_max_grow, dt_initial, dt_min, dt_max, nstep, use_fargo, cfl_violated
       use grid_cont,            only: grid_container
       use mpisetup,             only: master, piernik_MPI_Allreduce
       use sources,              only: timestep_sources
@@ -185,7 +185,7 @@ contains
       endif
 
       if (associated(cfl_manager)) call cfl_manager
-      c_all_old = c_all
+      if (.not.cfl_violated) c_all_old = c_all
 
       if (dt < dt_min) then ! something nasty had happened
          if (master) then
