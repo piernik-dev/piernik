@@ -1,3 +1,8 @@
+! This parameter file is intended for testing reproducibility of restarts
+! with selfgravity. Suggested setup call is:
+!
+! ./setup selfgrav_clump -o G_sgc -d DEBUG -p problem.par.restart_test
+
  $BASE_DOMAIN
     n_d = 64, 64, 64
     bnd_xl = 'out'
@@ -29,7 +34,7 @@
 
  $END_CONTROL
     tend   = 1.0
-    nend   = 1000
+    nend   = 2
  /
 
  $OUTPUT_CONTROL
@@ -80,7 +85,7 @@
  /
 
  $MULTIGRID_SOLVER
-!    stdout    = .true.
+    stdout    = .true.
     dirty_debug = .true.
  /
 
@@ -94,4 +99,9 @@
  /
 
  $AMR
+ /
+
+ $PIERNIK_IO_DEBUG
+    force_hdf5_dump = .true.
+    force_res_dump  = .true.
  /
