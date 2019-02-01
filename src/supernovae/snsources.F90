@@ -32,7 +32,7 @@ module snsources
 ! pulled by SN_SRC
    implicit none
    private
-   public :: random_sn, init_snsources, r_sn, amp_cr_sn, nsn_last
+   public :: random_sn, init_snsources, r_sn, amp_cr_sn, nsn
 #ifdef COSM_RAYS
    public :: cr_sn
 #endif /* COSM_RAYS */
@@ -53,6 +53,7 @@ module snsources
    real               :: f_sn_kpc2           !< frequency of SN per kpc^2
    real               :: h_sn                !< galactic height in SN gaussian distribution ?
    real               :: r_sn                !< radius of SN
+   real               :: dt_sn
 
 !   namelist /SN_SOURCES/ amp_ecr_sn, f_sn, h_sn, r_sn, f_sn_kpc2
    namelist /SN_SOURCES/ h_sn, r_sn, f_sn_kpc2
@@ -75,7 +76,7 @@ contains
 !<
    subroutine init_snsources
 
-      use constants,      only: PIERNIK_INIT_GRID, xdim, ydim
+      use constants,      only: PIERNIK_INIT_GRID, small, xdim, ydim
       use dataio_pub,     only: nh                  ! QA_WARN required for diff_nml
       use dataio_pub,     only: die, code_progress
       use domain,         only: dom
@@ -143,29 +144,30 @@ contains
       else
          f_sn = f_sn * 2.0*r_sn/1000.0
       endif
+      dt_sn = 1./(f_sn+small)
 
       nsn_last = 0
+      nsn      = 0
 
    end subroutine init_snsources
+
 !>
 !! \brief Main routine to insert one supernova event
 !<
    subroutine random_sn
 
-      use constants, only: small
-      use global,    only: t
+      use constants, only: ndims
+      use global,    only: t, cfl_violated
 
       implicit none
-      real :: dt_sn
-!      real, dimension(2) :: orient
-      real, dimension(3) :: snpos
-      integer :: isn, nsn_per_timestep
 
-      dt_sn = 1./(f_sn+small)
+      real, dimension(ndims) :: snpos
+      integer                :: isn, nsn_per_timestep
+
+      if (.not.cfl_violated) nsn_last = nsn
 
       nsn = int(t/dt_sn)
       nsn_per_timestep = nsn - nsn_last
-      nsn_last = nsn
 
       do isn = 1, nsn_per_timestep
 
@@ -387,8 +389,8 @@ contains
       integer, dimension(1)      :: lnsnbuf
 
       bufsize = 1
-      lnsnbuf(bufsize) = nsn_last
-      call h5ltset_attribute_int_f(file_id, "/", "nsn_last", lnsnbuf, bufsize, error)
+      lnsnbuf(bufsize) = nsn
+      call h5ltset_attribute_int_f(file_id, "/", "nsn", lnsnbuf, bufsize, error)
 
    end subroutine write_snsources_to_restart
 
@@ -407,9 +409,9 @@ contains
       integer, dimension(:), allocatable :: lnsnbuf
 
       if (.not.allocated(lnsnbuf)) allocate(lnsnbuf(1))
-      call h5ltget_attribute_int_f(file_id, "/", "nsn_last", lnsnbuf, error)
+      call h5ltget_attribute_int_f(file_id, "/", "nsn", lnsnbuf, error)
       call compare_array1D(lnsnbuf)
-      nsn_last = lnsnbuf(1)
+      nsn = lnsnbuf(1)
       deallocate(lnsnbuf)
 
    end subroutine read_snsources_from_restart
