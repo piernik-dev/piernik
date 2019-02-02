@@ -526,7 +526,11 @@ contains
       write(vstat%cprefix,'("C",i1,"-")') cr_id !> \deprecated BEWARE: this is another place with 0 <= cr_id <= 9 limit
       write(dirty_label, '("md_",i1,"_dump")')  cr_id
 
+#ifdef DEBUG
       inquire(file = "_dump_every_step_", EXIST=dump_every_step) ! use for debug only
+#else  /* !DEBUG */
+      dump_every_step = .false.
+#endif /* DEBUG */
       do_ascii_dump = do_ascii_dump .or. dump_every_step
 
       norm_lhs = 0.
