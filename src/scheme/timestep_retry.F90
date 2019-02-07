@@ -111,6 +111,7 @@ contains
          t = t_saved
          nstep = nstep_saved
          dt = dtm * dt_shrink
+         call reset_freezing_speed
          call downgrade_magic_mass
 #ifdef RANDOMIZE
          call randoms_redostep(.true.)
@@ -222,5 +223,19 @@ contains
       enddo
 
    end subroutine restart_arrays
+
+   subroutine reset_freezing_speed
+
+      use fluidindex, only: flind
+
+      implicit none
+
+      integer :: ifl
+
+      do ifl = lbound(flind%all_fluids, dim=1), ubound(flind%all_fluids, dim=1)
+         call flind%all_fluids(ifl)%fl%res_c
+      enddo
+
+   end subroutine reset_freezing_speed
 
 end module timestep_retry

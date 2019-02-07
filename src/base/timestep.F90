@@ -147,7 +147,6 @@ contains
       do while (associated(cgl))
          cg => cgl%cg
 
-         !> \todo make the timestep_* routines members of fluidtypes::component_fluid
          do ifl = lbound(flind%all_fluids, dim=1), ubound(flind%all_fluids, dim=1)
             call timestep_fluid(cg, flind%all_fluids(ifl)%fl, dt_, c_)
             dt    = min(dt, dt_)
