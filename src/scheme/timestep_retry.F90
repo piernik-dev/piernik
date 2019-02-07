@@ -84,9 +84,9 @@ contains
 
       use cg_leaves,        only: leaves
       use cg_list,          only: cg_list_element
-      use constants,        only: pSUM, I_ONE, dsetnamelen, AT_IGNORE
+      use constants,        only: pSUM, I_ZERO, I_ONE, dsetnamelen, AT_IGNORE
       use dataio_pub,       only: warn, msg, die
-      use global,           only: dt, dtm, t, t_saved, cfl_violated, nstep, nstep_saved, dt_shrink, repeat_step
+      use global,           only: dt, dtm, t, t_saved, cfl_violated, nstep, nstep_saved, dt_shrink, repeat_step, tstep_attempt
       use mass_defect,      only: downgrade_magic_mass
       use mpisetup,         only: master, piernik_MPI_Allreduce
       use named_array_list, only: qna, wna, na_var_list_q, na_var_list_w
@@ -107,7 +107,9 @@ contains
       call restart_arrays
 
       if (cfl_violated) then
-         if (master) call warn("[timestep_retry:repeat_fluidstep] Redoing previous step...")
+         tstep_attempt = tstep_attempt + I_ONE
+         write(msg, '(a,i2,a)') "[timestep_retry:repeat_fluidstep] Redoing previous step (", tstep_attempt, ")"
+         if (master) call warn(msg)
          t = t_saved
          nstep = nstep_saved
          dt = dtm * dt_shrink
@@ -118,6 +120,7 @@ contains
 #endif /* RANDOMIZE */
          if (associated(user_reaction_to_redo_step)) call user_reaction_to_redo_step
       else
+         tstep_attempt = I_ZERO
          nstep_saved = nstep
          t_saved = t
 #ifdef RANDOMIZE
