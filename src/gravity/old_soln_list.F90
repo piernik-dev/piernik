@@ -33,10 +33,15 @@
 
 module old_soln_list
 
+   use constants, only: dsetnamelen
+
    implicit none
 
    private
-   public :: old_soln
+   public :: old_soln, os_list_undef_T, os_list_T
+
+   real, parameter    :: invalid_time = -0.1 * huge(1.0)  !< don't trust too ancient solutions
+   integer, parameter :: too_long = 100                   !< escape from loops
 
    !< container for an old solution with its timestamp
    type :: old_soln
@@ -46,6 +51,307 @@ module old_soln_list
       type(old_soln), pointer :: later    !< a pointer to later solution
    end type old_soln
 
+   type, abstract :: os_list_AT
+      type(old_soln), pointer    :: latest    !< first (most recent) element of the chain of historical solutions
+      character(len=dsetnamelen) :: label     !< name of the list for diagnostic and identification purposes
+   contains
+      procedure :: cleanup                    !< deallocate memory
+      procedure :: last                       !< find the pointer to the last element
+      procedure :: cnt                        !< return length of the list
+      procedure :: print                      !< dump some info to stdout
+   end type os_list_AT
+
+   type, extends(os_list_AT) :: os_list_undef_T
+   contains
+      generic, public :: add => append
+      procedure :: append !< add a fresh element anywhere
+      procedure :: pick   !< unlink one slot and return it to the caller
+   end type os_list_undef_T
+
+   type, extends(os_list_AT) :: os_list_T
+   contains
+      generic, public :: add => new_head
+      procedure :: new_head  !< put an element to the front of the list
+      procedure :: trim_tail !< detach an element from the end of the list
+      procedure :: is_valid  !< can we trust this list?
+   end type os_list_T
+
 contains
+
+!> \brief Deallocate memory
+
+   subroutine cleanup(this)
+
+      implicit none
+
+      class(os_list_AT), intent(inout) :: this
+
+      type(old_soln), pointer :: os, prev
+
+      if (.not. associated(this%latest)) return
+
+      os => this%last()
+      do while (associated(os))
+         prev => os%later
+         deallocate(os)
+         os => prev
+      enddo
+
+   end subroutine cleanup
+
+!> \brief Find the pointer to the last element or return null()
+
+   function last(this) result(os)
+
+      use constants,  only: I_ZERO, I_ONE
+      use dataio_pub, only: die
+
+      implicit none
+
+      class(os_list_AT), intent(inout) :: this
+
+      type(old_soln), pointer :: os
+      integer :: cnt
+
+      if (.not. associated(this%latest)) then
+         os => null()
+         return
+      endif
+
+      cnt = I_ZERO
+      os => this%latest
+      do while (associated(os) .and. cnt <= too_long)
+         cnt = cnt + I_ONE
+         if (associated(os%earlier)) then
+            os => os%earlier
+         else
+            exit  ! quit with os pointing to the last element
+         endif
+      enddo
+
+      if (cnt > too_long) os => null()
+
+      if (associated(os)) then
+         if (associated(os%earlier)) call die("[old_soln_list:last] associated(os%earlier)")
+      endif
+
+   end function last
+
+!> \brief Return length of the list
+
+   function cnt(this)
+
+      use constants,  only: I_ZERO, I_ONE, INVALID
+
+      implicit none
+
+      class(os_list_AT), intent(in) :: this
+
+      type(old_soln), pointer :: os
+      integer :: cnt
+
+      cnt = I_ZERO
+      if (.not. associated(this%latest)) return
+
+      os => this%latest
+      do while (associated(os) .and. cnt <= too_long)
+         cnt = cnt + I_ONE
+         os => os%earlier
+      enddo
+
+      if (cnt > too_long) cnt = INVALID
+
+   end function cnt
+
+!> \brief Add a fresh element anywhere
+
+   subroutine append(this, ind)
+
+      implicit none
+
+      class(os_list_undef_T), intent(inout) :: this
+      integer, intent(in) :: ind
+
+      type(old_soln), pointer :: new
+
+      allocate(new)
+      new = old_soln(ind, invalid_time, this%latest, null())
+      if (associated(this%latest)) this%latest%later => new
+      this%latest => new
+
+   end subroutine append
+
+!> \brief Unlink one slot and return it to the caller
+
+   function pick(this) result(os)
+
+      implicit none
+
+      class(os_list_undef_T), intent(inout) :: this
+
+      type(old_soln), pointer :: os
+
+      if (.not. associated(this%latest)) then
+         os => null()
+         return
+      endif
+
+      os => this%latest
+      this%latest => this%latest%earlier
+      if (associated(this%latest)) this%latest%later => null()
+
+   end function pick
+
+!> \brief Put an element to the front of the list
+
+   subroutine new_head(this, os)
+
+      use global, only: t
+
+      implicit none
+
+      class(os_list_T),        intent(inout) :: this
+      type(old_soln), pointer, intent(in)    :: os
+
+      os%later => null()
+      os%earlier => this%latest
+      os%time = t
+      this%latest => os
+      if (associated(os%earlier)) os%earlier%later => os
+
+   end subroutine new_head
+
+!> \brief detach an element from the end of the list
+
+   function trim_tail(this) result(os)
+
+      use dataio_pub, only: warn, die
+      use mpisetup,   only: master
+
+      implicit none
+
+      class(os_list_T), intent(inout) :: this
+
+      type(old_soln), pointer :: os
+
+      if (.not. associated(this%latest)) then
+         if (master) call warn("[old_soln_list:trim_tail] no slot to pick")
+         os => null()
+         return
+      endif
+
+      os => this%last()
+
+      if (associated(os%later)) os%later%earlier => null()
+      if (associated(os%earlier)) call die("[old_soln_list:last] associated(last%earlier)")
+      os%time = invalid_time
+
+   end function trim_tail
+
+!> \brief Check consistency of this list
+
+   function is_valid(this)
+
+      use constants,  only: I_ZERO, I_ONE
+      use dataio_pub, only: warn, msglen
+      use global,     only: t
+      use mpisetup,   only: master
+
+      implicit none
+
+      class(os_list_T), intent(in) :: this
+
+      logical :: is_valid
+
+      type(old_soln), pointer :: os, prev
+      real :: time
+      integer :: cnt
+      character(len=msglen) :: msg !< private buffer for messages, don't use dataio_pub::msg to allow is_valid() calls in other writes
+
+      is_valid = .true.  ! treat empty list as consistent
+
+      cnt = I_ZERO
+      time = t
+      os => this%latest
+
+      if (associated(os)) then
+         if (associated(os%later)) then
+            is_valid = .false.
+            write(msg, '(a)')"[old_soln_list:is_valid] associated(this%latest%later)"
+            if (master) call warn(msg)
+         endif
+      endif
+
+      do while (associated(os) .and. is_valid)
+         cnt = cnt + I_ONE
+         if ((.not. associated(os, this%latest) .and. os%time >= time) .or. &
+              os%time > time .or. &
+              os%time <= invalid_time) then
+            is_valid = .false.
+            write(msg, '(a,i3,3(a,g14.6))')"[old_soln_list:is_valid] cnt= ", cnt, " time= ", time, " os%time= ", os%time, " invalid_time= ", invalid_time
+            if (master) call warn(msg)
+         endif
+         time = os%time
+         prev => os
+         os => os%earlier
+         if (associated(os)) then
+            if (.not. associated(os%later, prev)) then
+               is_valid = .false.
+               write(msg, '(a,i3,a,2i3)')"[old_soln_list:is_valid] cnt= ", cnt, " .not. associated(os%later, prev)", os%i_hist, prev%i_hist
+               if (master) call warn(msg)
+            endif
+         endif
+         if (cnt > too_long) then
+            is_valid = .false.
+            write(msg, '(2(a,i3))')"[old_soln_list:is_valid] cnt= ", cnt, " > too_long= ", too_long
+            if (master) call warn(msg)
+            os => null()
+         endif
+      enddo
+
+   end function is_valid
+
+!> \brief Dump some info to stdout
+
+   subroutine print(this)
+
+      use constants,  only: I_ZERO, I_ONE
+      use dataio_pub, only: msg, printinfo
+      use global,     only: t
+      use mpisetup,   only: master
+
+      implicit none
+
+      class(os_list_AT), intent(in) :: this
+
+      type(old_soln), pointer :: os
+      integer :: cnt
+
+      cnt = I_ZERO
+      os => this%latest
+      do while (associated(os))
+         cnt = cnt + I_ONE
+         select type(this)
+            type is (os_list_undef_T)
+               write(msg, '(2(a,i3))') "(Undef) soln# ", cnt, " qna_index: ", os%i_hist
+            type is (os_list_T)
+               write(msg, '(a,i3,a,g14.6,a,i3)') "(Old) soln# ", cnt, " time = ", os%time, " qna_index: ", os%i_hist
+            class default
+               write(msg, '(a,i3,a,g14.6,a,i3)') "(Other ?) soln# ", cnt, " time = ", os%time, " qna_index: ", os%i_hist
+         end select
+         if (master) call printinfo(msg)
+         os => os%earlier
+         if (cnt > too_long) os => null()
+      enddo
+
+      write(msg, '(a,g14.6,3a,2i3,a)') "[old_soln_list] t= ", t, " name: '", trim(this%label), "' contains ", cnt, this%cnt(), " elements"
+      select type(this)
+         type is (os_list_T)
+            write(msg, '(2a,l2)') trim(msg), " is valid? ", this%is_valid()
+         class default
+      end select
+      if (master) call printinfo(msg)
+
+   end subroutine print
 
 end module old_soln_list
