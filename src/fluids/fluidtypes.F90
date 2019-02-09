@@ -88,12 +88,14 @@ module fluidtypes
       type(phys_prop) :: snap
 
       real :: c !< COMMENT ME (this quantity was previously a member of phys_prop, but is used in completely different way than other phys_prop% members
+      real :: c_old
 
    contains
       procedure :: set_fluid_index
       procedure :: set_cs  => update_sound_speed
       procedure :: set_gam => update_adiabatic_index
       procedure :: set_c   => update_freezing_speed
+      procedure :: res_c   => reset_freezing_speed
       procedure :: info    => printinfo_component_fluid
       procedure(tag),          nopass, deferred :: get_tag
       procedure(cs_get),         pass, deferred :: get_cs
@@ -200,8 +202,16 @@ contains
          class(component_fluid) :: this
          real, intent(in)       :: new_c
 
-         this%c   = new_c
+         this%c_old = this%c
+         this%c     = new_c
       end subroutine update_freezing_speed
+
+      subroutine reset_freezing_speed(this)
+         implicit none
+         class(component_fluid) :: this
+
+         this%c     = this%c_old
+      end subroutine reset_freezing_speed
 
       subroutine update_sound_speed(this,new_cs)
          implicit none
