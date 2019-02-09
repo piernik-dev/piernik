@@ -32,6 +32,8 @@
 module multigrid_old_soln
 ! pulled by MULTIGRID && GRAV
 
+   use old_soln_list, only: old_soln
+
    implicit none
 
    private
@@ -39,11 +41,6 @@ module multigrid_old_soln
 
    ! solution recycling
    integer(kind=4), parameter :: nold_max=3                           !< maximum implemented extrapolation order
-
-   type :: old_soln                                                   !< container for an old solution with its timestamp
-      integer(kind=4) :: i_hist                                       !< index to the old solution
-      real :: time                                                    !< time of the old solution
-   end type old_soln
 
    type :: soln_history                                               !< container for a set of several old potential solutions
       type(old_soln), allocatable, dimension(:) :: old                !< indices and time points os stored solutions
@@ -85,7 +82,7 @@ contains
       do i = lbound(this%old, dim=1), ubound(this%old, dim=1)
          write(hname,'(2a,i2.2)')prefix,"-h-",i
          call all_cg%reg_var(hname, vital = .true., ord_prolong = ord_prolong) ! no need for multigrid attribute here because history is defined only on leaves
-         this%old(i) = old_soln(qna%ind(hname), -huge(1.0))
+         this%old(i) = old_soln(qna%ind(hname), -huge(1.0), null(), null())
       enddo
       this%valid = .false.
       this%last  = 1
