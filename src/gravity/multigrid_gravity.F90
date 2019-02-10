@@ -465,8 +465,6 @@ contains
       if (grav_bnd == bnd_isolated .and. firstcall) call init_multipole
       firstcall = .false.
 
-      call invalidate_history
-
    end subroutine init_multigrid_grav
 
 !> \brief Cleanup
@@ -634,17 +632,6 @@ contains
       if (cg%mg%plani /= 0) call dfftw_destroy_plan(cg%mg%plani)
 
    end subroutine mgg_cg_cleanup
-
-!> \brief Mark the historical solutions as invalid
-
-   subroutine invalidate_history
-
-      implicit none
-
-!!$      inner%valid = .false.
-!!$      outer%valid = .false.
-
-   end subroutine invalidate_history
 
 !>
 !! \brief Make a local copy of source (density) and multiply by 4 pi G
