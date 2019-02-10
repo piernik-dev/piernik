@@ -40,20 +40,21 @@ module multigrid_old_soln
    public :: nold_max, soln_history, ord_time_extrap
 
    ! solution recycling
-   integer(kind=4), parameter :: nold_max=3                           !< maximum implemented extrapolation order
+   integer(kind=4), parameter :: nold_max=3   !< maximum implemented extrapolation order
 
-   type :: soln_history                                               !< container for a set of several old potential solutions
-      type(os_list_undef_T) :: invalid                                !< a list of invalid slots ready to use
-      type(os_list_T) :: old                                          !< indices and time points of stored solutions
+   type :: soln_history                       !< container for a set of several old potential solutions
+      type(os_list_undef_T) :: invalid        !< a list of invalid slots ready to use
+      type(os_list_T) :: old                  !< indices and time points of stored solutions
     contains
-      procedure :: init_history                                       !< Allocate arrays, register fields
-      procedure :: cleanup_history                                    !< Deallocate arrays
-      procedure :: init_solution                                      !< Construct first guess of potential based on previously obtained solution, if any.
-      procedure :: store_solution                                     !< Manage old copies of potential for recycling.
+      procedure :: init_history               !< Allocate arrays, register fields
+      procedure :: cleanup_history            !< Deallocate arrays
+      procedure :: init_solution              !< Construct first guess of potential based on previously obtained solution, if any.
+      procedure :: store_solution             !< Manage old copies of potential for recycling.
+      procedure :: sanitize                   !< invalidate some stored solutions from the future i.e. when there was timestep retry
    end type soln_history
 
    ! Namelist parameter
-   integer(kind=4)    :: ord_time_extrap                              !< Order of temporal extrapolation for solution recycling; -1 means 0-guess, 2 does parabolic interpolation
+   integer(kind=4)    :: ord_time_extrap      !< Order of temporal extrapolation for solution recycling; -1 means 0-guess, 2 does parabolic interpolation
 
 contains
 
@@ -144,6 +145,8 @@ contains
 
       call all_cg%set_dirty(solution)
 
+      call this%sanitize
+
       ordt = min(this%old%cnt() - I_ONE, ord_time_extrap)
 
 #ifdef DEBUG
@@ -223,7 +226,7 @@ contains
 
       if (.not. associated(this%old%latest) .and. .not. associated(this%invalid%latest)) return
 
-      os => this%invalid%pick()
+      os => this%invalid%pick_head()
       if (.not. associated(os)) os => this%old%trim_tail()
       if (.not. associated(os)) then
          write(msg, '(4a)')"[multigrid_old_soln:store_solution] cannot get any slot from ", this%old%label, " or ", this%invalid%label
@@ -242,5 +245,40 @@ contains
 #endif /* DEBUG */
 
    end subroutine store_solution
+!> \brief Invalidate some stored solutions from the future i.e. when there was timestep retry
+
+   subroutine sanitize(this)
+
+      use dataio_pub, only: printinfo, msg
+      use global,     only: t
+      use mpisetup,   only: master
+
+      implicit none
+
+      class(soln_history), intent(inout) :: this !< potential history to be sanitized
+
+      type(old_soln), pointer :: os
+      integer :: cnt
+
+      cnt = this%old%cnt()
+      do while (associated(this%old%latest))
+         if (this%old%latest%time >= t) then
+            os => this%old%pick_head()
+            call this%invalid%new_head(os)
+         else
+            exit
+         endif
+      enddo
+
+      if (cnt /= this%old%cnt()) then
+         write(msg, '(a,g14.6,a,i2,a)')"[multigrid_old_soln:sanitize] sanitize solution history at time ", t, ", removed ", cnt - this%old%cnt(), " elements"
+         if (master) call printinfo(msg)
+#ifdef DEBUG
+         call this%old%print
+         call this%invalid%print
+#endif /* DEBUG */
+      endif
+
+   end subroutine sanitize
 
 end module multigrid_old_soln

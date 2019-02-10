@@ -55,24 +55,24 @@ module old_soln_list
       type(old_soln), pointer    :: latest    !< first (most recent) element of the chain of historical solutions
       character(len=dsetnamelen) :: label     !< name of the list for diagnostic and identification purposes
    contains
-      procedure :: cleanup                    !< deallocate memory
-      procedure :: last                       !< find the pointer to the last element
-      procedure :: cnt                        !< return length of the list
-      procedure :: print                      !< dump some info to stdout
+      procedure :: cleanup     !< deallocate memory
+      procedure :: last        !< find the pointer to the last element
+      procedure :: cnt         !< return length of the list
+      procedure :: print       !< dump some info to stdout
+      procedure :: pick_head   !< unlink head and return it to the caller
+      procedure :: new_head    !< put an element to the front of the list
    end type os_list_AT
 
    type, extends(os_list_AT) :: os_list_undef_T
    contains
       generic, public :: add => append
       procedure :: append !< add a fresh element anywhere
-      procedure :: pick   !< unlink one slot and return it to the caller
    end type os_list_undef_T
 
    type, extends(os_list_AT) :: os_list_T
    contains
       generic, public :: add => new_head
-      procedure :: new_head  !< put an element to the front of the list
-      procedure :: trim_tail !< detach an element from the end of the list
+      procedure :: trim_tail !< detach an element from the end of the list and return it to the caller
       procedure :: is_valid  !< can we trust this list?
    end type os_list_T
 
@@ -181,13 +181,13 @@ contains
 
    end subroutine append
 
-!> \brief Unlink one slot and return it to the caller
+!> \brief Unlink head and return it to the caller
 
-   function pick(this) result(os)
+   function pick_head(this) result(os)
 
       implicit none
 
-      class(os_list_undef_T), intent(inout) :: this
+      class(os_list_AT), intent(inout) :: this
 
       type(old_soln), pointer :: os
 
@@ -200,22 +200,29 @@ contains
       this%latest => this%latest%earlier
       if (associated(this%latest)) this%latest%later => null()
 
-   end function pick
+   end function pick_head
 
 !> \brief Put an element to the front of the list
 
    subroutine new_head(this, os)
 
-      use global, only: t
+      use dataio_pub, only: die
+      use global,     only: t
 
       implicit none
 
-      class(os_list_T),        intent(inout) :: this
+      class(os_list_AT),       intent(inout) :: this
       type(old_soln), pointer, intent(in)    :: os
 
       os%later => null()
       os%earlier => this%latest
-      os%time = t
+      select type(this)
+         type is (os_list_undef_T)
+         type is (os_list_T)
+            os%time = t
+         class default
+            call die("[old_soln_list:new_head] unknown type")
+      end select
       this%latest => os
       if (associated(os%earlier)) os%earlier%later => os
 
@@ -344,7 +351,7 @@ contains
          if (cnt > too_long) os => null()
       enddo
 
-      write(msg, '(a,g14.6,3a,2i3,a)') "[old_soln_list] t= ", t, " name: '", trim(this%label), "' contains ", cnt, this%cnt(), " elements"
+      write(msg, '(a,g14.6,3a,i3,a)') "[old_soln_list] t= ", t, " name: '", trim(this%label), "' contains ", this%cnt(), " elements"
       select type(this)
          type is (os_list_T)
             write(msg, '(2a,l2)') trim(msg), " is valid? ", this%is_valid()
