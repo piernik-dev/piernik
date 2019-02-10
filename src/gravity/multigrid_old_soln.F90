@@ -63,7 +63,7 @@ contains
    subroutine init_history(this, nold, prefix)
 
       use cg_list_global,   only: all_cg
-      use constants,        only: singlechar, dsetnamelen
+      use constants,        only: singlechar, dsetnamelen, I_TWO
       use dataio_pub,       only: die, msg
       use multigridvars,    only: ord_prolong
       use named_array_list, only: qna
@@ -77,11 +77,13 @@ contains
       integer :: i
       character(len=dsetnamelen) :: hname
 
+      if (nold <= 0) return
+
       if (associated(this%old%latest) .or. associated(this%invalid%latest)) then
          write(msg, '(3a)') "[multigrid_old_soln:init_history] ", prefix," already initialized."
          call die(msg)
       endif
-      do i = 1, nold
+      do i = 1, nold + I_TWO  ! extra two slots for seamless timestep retries
          write(hname,'(2a,i2.2)')prefix,"-h-",i
          call all_cg%reg_var(hname, vital = .true., ord_prolong = ord_prolong) ! no need for multigrid attribute here because history is defined only on leaves
          call this%invalid%new(qna%ind(hname))
