@@ -65,15 +65,13 @@ module old_soln_list
 
    type, extends(os_list_AT) :: os_list_undef_T
    contains
-      generic, public :: add => append
-      procedure :: append !< add a fresh element anywhere
+      procedure :: new         !< add a fresh element anywhere
    end type os_list_undef_T
 
    type, extends(os_list_AT) :: os_list_T
    contains
-      generic, public :: add => new_head
-      procedure :: trim_tail !< detach an element from the end of the list and return it to the caller
-      procedure :: is_valid  !< can we trust this list?
+      procedure :: trim_tail   !< detach an element from the end of the list and return it to the caller
+      procedure :: is_valid    !< can we trust this list?
    end type os_list_T
 
 contains
@@ -165,21 +163,21 @@ contains
 
 !> \brief Add a fresh element anywhere
 
-   subroutine append(this, ind)
+   subroutine new(this, ind)
 
       implicit none
 
       class(os_list_undef_T), intent(inout) :: this
       integer, intent(in) :: ind
 
-      type(old_soln), pointer :: new
+      type(old_soln), pointer :: n
 
-      allocate(new)
-      new = old_soln(ind, invalid_time, this%latest, null())
-      if (associated(this%latest)) this%latest%later => new
-      this%latest => new
+      allocate(n)
+      n = old_soln(ind, invalid_time, this%latest, null())
+      if (associated(this%latest)) this%latest%later => n
+      this%latest => n
 
-   end subroutine append
+   end subroutine new
 
 !> \brief Unlink head and return it to the caller
 

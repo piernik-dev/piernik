@@ -84,7 +84,7 @@ contains
       do i = 1, nold
          write(hname,'(2a,i2.2)')prefix,"-h-",i
          call all_cg%reg_var(hname, vital = .true., ord_prolong = ord_prolong) ! no need for multigrid attribute here because history is defined only on leaves
-         call this%invalid%add(qna%ind(hname))
+         call this%invalid%new(qna%ind(hname))
       enddo
 
       write(msg, '(2a)') prefix, "-invalid"
@@ -234,7 +234,7 @@ contains
       endif
 
       os%time = t
-      call this%old%add(os)
+      call this%old%new_head(os)
       call leaves%q_copy(solution, os%i_hist)
 
 #ifdef DEBUG
