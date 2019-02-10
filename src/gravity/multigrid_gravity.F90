@@ -641,8 +641,8 @@ contains
 
       implicit none
 
-      inner%valid = .false.
-      outer%valid = .false.
+!!$      inner%valid = .false.
+!!$      outer%valid = .false.
 
    end subroutine invalidate_history
 
