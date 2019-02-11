@@ -101,6 +101,7 @@ contains
       integer(kind=4)                :: no_hist_count
       integer                        :: i, j
       character(len=dsetnamelen)     :: rname
+      integer, parameter             :: max_attempts = 10  !< Something is terribly wrong if a single step requires too many reductions
 
       if (.not.repeat_step) return
 
@@ -108,6 +109,10 @@ contains
 
       if (cfl_violated) then
          tstep_attempt = tstep_attempt + I_ONE
+         if (tstep_attempt > max_attempts) then
+            write(msg, '(a,i2,a)')"[timestep_retry:repeat_fluidstep] tstep_attempt > ", max_attempts, " (hardcoded limit)"
+            call die(msg)
+         endif
          write(msg, '(a,i2,a)') "[timestep_retry:repeat_fluidstep] Redoing previous step (", tstep_attempt, ")"
          if (master) call warn(msg)
          t = t_saved
