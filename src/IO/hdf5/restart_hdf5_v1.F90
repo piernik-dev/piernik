@@ -483,7 +483,7 @@ contains
       use randomization,    only: initseed, seed_size
 #endif /* RANDOMIZE */
 #ifdef SN_SRC
-      use snsources,        only: nsn_last
+      use snsources,        only: nsn
 #endif /* SN_SRC */
 
       implicit none
@@ -608,7 +608,7 @@ contains
          call h5ltget_attribute_int_f(file_id,"/","current_seed", ibuf, error) ; initseed = ibuf(:seed_size)
 #endif /* RANDOMIZE */
 #ifdef SN_SRC
-         call h5ltget_attribute_int_f(file_id,"/","nsn_last", ibuf, error) ; nsn_last = ibuf(1)
+         call h5ltget_attribute_int_f(file_id,"/","nsn", ibuf, error) ; nsn = ibuf(1)
 #endif /* SN_SRC */
 
          call h5ltget_attribute_string_f(file_id,"/","problem_name", problem_name, error)
@@ -639,7 +639,7 @@ contains
          ibuff(3) = nhdf
          if (restart_hdf5_version > 1.11) ibuff(5) = require_problem_IC
 #ifdef SN_SRC
-         ibuff(6) = nsn_last
+         ibuff(6) = nsn
 #endif /* SN_SRC */
 #ifdef RANDOMIZE
          ibuff(7:seed_size+6) = initseed
@@ -667,7 +667,7 @@ contains
          nhdf  = ibuff(3)
          if (restart_hdf5_version > 1.11) require_problem_IC = ibuff(5)
 #ifdef SN_SRC
-         nsn_last = ibuff(6)
+         nsn   = ibuff(6)
 #endif /* SN_SRC */
 #ifdef RANDOMIZE
          initseed = ibuff(7:seed_size+6)

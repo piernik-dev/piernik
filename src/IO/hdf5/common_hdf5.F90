@@ -97,9 +97,12 @@ contains
    subroutine init_hdf5(vars)
 
       use constants,  only: dsetnamelen, singlechar
-      use fluidindex, only: iarr_all_dn, iarr_all_mx, iarr_all_my, iarr_all_mz, iarr_all_en
+      use fluidindex, only: iarr_all_dn, iarr_all_mx, iarr_all_my, iarr_all_mz
       use fluids_pub, only: has_ion, has_dst, has_neu
       use global,     only: force_cc_mag
+#ifndef ISO
+      use fluidindex, only: iarr_all_en
+#endif /* !ISO */
 #ifdef COSM_RAYS
       use dataio_pub, only: warn, msg
 #ifndef COSM_RAY_ELECTRONS
@@ -141,7 +144,12 @@ contains
             case ('velz', 'momz')
                nhdf_vars = nhdf_vars + size(iarr_all_mz,1)
             case ('ener', 'ethr', 'pres')
+#ifdef ISO
+               if (has_neu) nhdf_vars = nhdf_vars + 1
+               if (has_ion) nhdf_vars = nhdf_vars + 1
+#else /* !ISO */
                nhdf_vars = nhdf_vars + size(iarr_all_en,1)
+#endif /* !ISO */
 #ifdef COSM_RAYS
             case ('encr')
 #ifdef COSM_RAY_ELECTRONS
