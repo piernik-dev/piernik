@@ -342,14 +342,14 @@ contains
 
             enddo
 
-            wijk(1) = (cg%dx - dxyz(xdim))*(cg%dy - dxyz(ydim))*(cg%dz - dxyz(zdim)) !a(i  ,j  ,k  )
-            wijk(2) = (cg%dx - dxyz(xdim))*(cg%dy - dxyz(ydim))*         dxyz(zdim)  !a(i+1,j  ,k  )
-            wijk(3) = (cg%dx - dxyz(xdim))*         dxyz(ydim) *(cg%dz - dxyz(zdim)) !a(i  ,j+1,k  )
-            wijk(4) = (cg%dx - dxyz(xdim))*         dxyz(ydim) *         dxyz(zdim)  !a(i  ,j  ,k+1)
-            wijk(5) =          dxyz(xdim) *(cg%dy - dxyz(ydim))*(cg%dz - dxyz(zdim)) !a(i+1,j+1,k  )
-            wijk(6) =          dxyz(xdim) *(cg%dy - dxyz(ydim))*         dxyz(zdim)  !a(i  ,j+1,k+1)
-            wijk(7) =          dxyz(xdim) *         dxyz(ydim) *(cg%dz - dxyz(zdim)) !a(i+1,j  ,k+1)
-            wijk(8) =          dxyz(xdim) *         dxyz(ydim) *         dxyz(zdim)  !a(i+1,j+1,k+1)
+            wijk(1) = (cg%dx - dxyz(xdim))*(cg%dy - dxyz(ydim))*(cg%dz - dxyz(zdim))  !a(i  ,j  ,k  )
+            wijk(2) =          dxyz(xdim) *(cg%dy - dxyz(ydim))*(cg%dz - dxyz(zdim))  !a(i+1,j  ,k  )
+            wijk(3) = (cg%dx - dxyz(xdim))*         dxyz(ydim) *(cg%dz - dxyz(zdim))  !a(i  ,j+1,k  )
+            wijk(4) = (cg%dx - dxyz(xdim))*(cg%dy - dxyz(ydim))*         dxyz(zdim)   !a(i  ,j  ,k+1)
+            wijk(5) =          dxyz(xdim) *         dxyz(ydim) *(cg%dz - dxyz(zdim))  !a(i+1,j+1,k  )
+            wijk(6) = (cg%dx - dxyz(xdim))*         dxyz(ydim) *         dxyz(zdim)   !a(i  ,j+1,k+1)
+            wijk(7) =          dxyz(xdim) *(cg%dy - dxyz(ydim))*         dxyz(zdim)   !a(i+1,j  ,k+1)
+            wijk(8) =          dxyz(xdim) *         dxyz(ydim) *         dxyz(zdim)   !a(i+1,j+1,k+1)
          !else multipole expansion for particles outside domain
          endif
 
