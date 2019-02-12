@@ -20,17 +20,18 @@ except:
 ######### USER PARAMETERS ###########
 
 plot_field = "cree_tot"
+#plot_field = "cr01"
 plot_var = "n"
 
 simple_plot = False # True
-plot_vel = False
-plot_mag = True
+plot_vel = True
+plot_mag = False
 save_spectrum = True
 
-user_limits = False # use values below as limits for clickable plot
+user_limits   = False # use values below as limits for clickable plot
 plot_user_min = 0.001
 plot_user_max = 30.0
-use_logscale  = True #False
+use_logscale  = True
 hdf_save_fpq  = False
 
 #####################################
@@ -229,13 +230,18 @@ if f_run == True:
        sys.exit("\033[91mAn empty field might have been picked.\033[0m")
 
     yt_data_plot = yt.SlicePlot(h5ds, slice_ax, plot_field)
-    if (plot_vel): yt_data_plot.annotate_velocity(factor=32)
+
+    colormap_my  = plt.cm.viridis
+    colormap_my.set_bad(color=colormap_my(1.0e-15)) # masks bad values
+    yt_data_plot.set_cmap(field=plot_field, cmap = colormap_my)
+
+    if (plot_vel): yt_data_plot.annotate_velocity(factor=48)#, plot_args={"color":"white"})
     if (plot_mag): yt_data_plot.annotate_magnetic_field(factor=32)
     yt_data_plot.set_zlim(plot_field,plot_min,plot_max)
     marker_l   = ["x", "+", "*", "X", ".","^", "v","<",">","1"]
-    m_size_l   = [100, 150, 100, 75, 300, 100, 100, 100, 100, 100]
+    m_size_l   = [700, 500, 400, 400, 500, 300, 300, 300, 300, 500]
+    m_e_width  = 5
     marker_index = 0
-
     print ""
     plt.subplots_adjust(left=0.075,right=0.975, hspace=0.12)
 #---------
@@ -254,6 +260,7 @@ if f_run == True:
         else: # slice_ax = "z"
             coords[0] = click_coords[0]
             coords[1] = click_coords[1]
+
 # ------------ preparing data and passing -------------------------
         position = h5ds.r[coords:coords]  # TODO .r can be replaced with .point once negative coordinates are supported YTPoint
         if ( plot_field[0:-2] != "en_ratio"):
@@ -278,17 +285,17 @@ if f_run == True:
            fig2,exit_code = crs_h5.crs_plot_main_fpq(var_names, var_array, plot_var, fcrs, qcrs, pcut, field_max, time, coords)
         if (exit_code != True):
             point = s1.plot(event.xdata,event.ydata, marker=marker_l[marker_index], color="red")   # plot point only, if cell not empty
-            s.savefig('results/'+filename_nam+'_'+plot_var+'_%04d.png' % image_number, transparent ='False',facecolor=s.get_facecolor())
+            s.savefig('results/'+filename_nam+'_'+plot_var+'_%04d.png' % image_number, transparent ='True')
             print ("\033[92m  --->  Saved plot to: %s\033[0m" %str('results/'+filename_nam+'_'+plot_var+'_%04d.png' %image_number))
 
-            yt_data_plot.annotate_marker(coords, marker=marker_l[marker_index],  plot_args={'color':'red','s':m_size_l[marker_index]}) # cumulatively annotate all clicked coordinates
+            yt_data_plot.annotate_marker(coords, marker=marker_l[marker_index],  plot_args={'color':'red','s':m_size_l[marker_index],"lw":4}) # cumulatively annotate all clicked coordinates
             marker_index = marker_index + 1
 
             image_number=image_number+1
 #              ------------- saving just the spectrum
             if (save_spectrum):
                extent = fig2.get_window_extent().transformed(s.dpi_scale_trans.inverted())
-               s.savefig('results/'+filename_nam+'_'+plot_var+'_spectrum_%04d.png' % image_number, transparent ='True',facecolor=s.get_facecolor(), bbox_inches=extent.expanded(1.275, 1.15))
+               s.savefig('results/'+filename_nam+'_'+plot_var+'_spectrum_%04d.png' % image_number, transparent ='True', bbox_inches=extent.expanded(1.450, 1.195),quality=95,dpi=150)
                print ("\033[92m  --->  Saved plot to: %s\033[0m. Press 'q' to quit and save yt.SlicePlot with marked coordinates." %str('results/'+filename_nam+'_'+plot_var+'_spectrum_%04d.png' %image_number))
         else:
             print("\033[92m Empty cell, not saving.\033[0m")
@@ -297,5 +304,6 @@ if f_run == True:
     cid = s.canvas.mpl_connect('button_press_event',read_click_and_plot)
 
     plt.show()
+    yt_data_plot.set_font({'size':30})
     yt_data_plot.save('results/'+filename_nam+'_'+plot_var+'_sliceplot.png')  # save image when "q" pressed
     s.canvas.mpl_disconnect(cid)

@@ -32,11 +32,11 @@ global par_visible_gridx, par_visible_gridy, par_vis_all_borders, par_visible_ti
 par_visible_gridx  = False
 par_visible_gridy  = True
 par_vis_all_borders= False
-par_visible_title  = True
+par_visible_title  = False
 par_simple_title   = True
 par_alpha          = 0.65
 par_alpha_diff     = 0.75
-par_plot_color     = "xkcd:darkblue"
+par_plot_color     = "xkcd:blue"
 par_plot_width     = 2.5
 par_fixed_dims     = True
 
@@ -173,9 +173,9 @@ def plot_data(plot_var, pl, pr, fl, fr, q, time, location, i_lo_cut, i_up_cut):
    s.set_xscale('log')
    s.set_yscale('log')
 
-   plt.xlabel(r'$\gamma$',fontsize = 13, labelpad = 0.1)
-   plt.ylabel(plot_var+"($\gamma$)",fontsize = 13, labelpad=-7.)
-   plt.tick_params(axis='both', which='major', labelsize=12)
+   plt.xlabel(r'$\gamma$',fontsize = 23, labelpad = 0.1)
+   plt.ylabel(plot_var+"($\gamma$)",fontsize = 23, labelpad=-7.)
+   plt.tick_params(axis='both', which='major', labelsize=18)
 
    global plot_p_min, plot_p_max, plot_var_min, plot_var_max
    if first_run :
@@ -229,6 +229,7 @@ def plot_data(plot_var, pl, pr, fl, fr, q, time, location, i_lo_cut, i_up_cut):
          plt.title("Spectrum of %s(p), Time = %7.3f" % (plot_var, time) )
       else:
          plt.title("Spectrum of %s(p) \n Time = %7.3f | location: %7.2f %7.2f %7.2f " % (plot_var, time, location[0],location[1],location[2]) )
+   plt.tight_layout()
 
    return s
 
@@ -517,6 +518,11 @@ def crs_plot_main_fpq(parameter_names, parameter_values, plot_var, fcrs, qcrs, p
     prn = p_fix[i_lo+1+i_cor:i_up+1]
     pln[0]  = pcrs[0]
     prn[-1] = pcrs[-1]
+    plot = False # dummy variable until plot is made
+
+    if (i_lo == 0 or i_up == ncre):
+       empty_cell = True
+       return plot, empty_cell
 
     frn  = fln * (prn/pln) ** (-q)
 
@@ -524,8 +530,6 @@ def crs_plot_main_fpq(parameter_names, parameter_values, plot_var, fcrs, qcrs, p
     print "f", fln
     print "q", q
     print "q", qcrs
-
-    if (i_lo == ncre or i_up == 0): empty_cell = True
 
     if (empty_cell==False):
       plot = plot_data(plot_var, pln, prn, fln, frn, q, time, location, i_lo, i_up)
