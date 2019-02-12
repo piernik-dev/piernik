@@ -866,10 +866,11 @@ contains
 !<
    subroutine grav_pot2accel_ord2(sweep, i1, i2, n, grav, istep, cg)
 
-      use constants,  only: xdim, ydim, zdim, half, LO, HI, GEO_XYZ, GEO_RPZ, RK2_1, RK2_2, EULER
-      use dataio_pub, only: die
-      use domain,     only: dom
-      use grid_cont,  only: grid_container
+      use constants,        only: xdim, ydim, zdim, half, LO, HI, GEO_XYZ, GEO_RPZ, RK2_1, RK2_2, EULER, gpot_n, hgpot_n
+      use dataio_pub,       only: die
+      use domain,           only: dom
+      use grid_cont,        only: grid_container
+      use named_array_list, only: qna
 
       implicit none
 
@@ -881,30 +882,27 @@ contains
       integer,                       intent(in)  :: istep      !< istep=RK2_1 for halfstep, istep=RK2_2 for fullstep in 2nd order Runge-Kutta method
       type(grid_container), pointer, intent(in)  :: cg         !< current grid_container
 
+      integer(kind=4)                            :: ig
+
       ! Gravitational acceleration is computed on right cell boundaries
 
       ! For more general schemes (higher order than RK2, non-canonical choices of RK2) we will need timestep fraction provided by the solver, not istep
       select case (istep)
       case (RK2_1)
-         select case (sweep)
-            case (xdim)
-               grav(2:n-1) = half*(cg%hgpot(cg%lhn(xdim, LO):cg%lhn(xdim, HI)-2, i1, i2) - cg%hgpot(cg%lhn(xdim, LO)+2:cg%lhn(xdim, HI), i1, i2))/cg%dl(xdim)
-            case (ydim)
-               grav(2:n-1) = half*(cg%hgpot(i2, cg%lhn(ydim, LO):cg%lhn(ydim, HI)-2, i1) - cg%hgpot(i2, cg%lhn(ydim, LO)+2:cg%lhn(ydim, HI), i1))/cg%dl(ydim)
-            case (zdim)
-               grav(2:n-1) = half*(cg%hgpot(i1, i2, cg%lhn(zdim, LO):cg%lhn(zdim, HI)-2) - cg%hgpot(i1, i2, cg%lhn(zdim, LO)+2:cg%lhn(zdim, HI)))/cg%dl(zdim)
-         end select
+         ig = qna%ind(hgpot_n)
       case (RK2_2, EULER)
-         select case (sweep)
-            case (xdim)
-               grav(2:n-1) = half*(cg%gpot(cg%lhn(xdim, LO):cg%lhn(xdim, HI)-2, i1, i2) - cg%gpot(cg%lhn(xdim, LO)+2:cg%lhn(xdim, HI), i1, i2))/cg%dl(xdim)
-            case (ydim)
-               grav(2:n-1) = half*(cg%gpot(i2, cg%lhn(ydim, LO):cg%lhn(ydim, HI)-2, i1) - cg%gpot(i2, cg%lhn(ydim, LO)+2:cg%lhn(ydim, HI), i1))/cg%dl(ydim)
-            case (zdim)
-               grav(2:n-1) = half*(cg%gpot(i1, i2, cg%lhn(zdim, LO):cg%lhn(zdim, HI)-2) - cg%gpot(i1, i2, cg%lhn(zdim, LO)+2:cg%lhn(zdim, HI)))/cg%dl(zdim)
-         end select
+         ig = qna%ind(gpot_n)
       case default
          call die("[gravity:grav_pot2accel_ord2] Unsupported substep")
+      end select
+
+      select case (sweep)
+         case (xdim)
+            grav(2:n-1) = half*(cg%q(ig)%arr(cg%lhn(xdim, LO):cg%lhn(xdim, HI)-2, i1, i2) - cg%q(ig)%arr(cg%lhn(xdim, LO)+2:cg%lhn(xdim, HI), i1, i2))/cg%dl(xdim)
+         case (ydim)
+            grav(2:n-1) = half*(cg%q(ig)%arr(i2, cg%lhn(ydim, LO):cg%lhn(ydim, HI)-2, i1) - cg%q(ig)%arr(i2, cg%lhn(ydim, LO)+2:cg%lhn(ydim, HI), i1))/cg%dl(ydim)
+         case (zdim)
+            grav(2:n-1) = half*(cg%q(ig)%arr(i1, i2, cg%lhn(zdim, LO):cg%lhn(zdim, HI)-2) - cg%q(ig)%arr(i1, i2, cg%lhn(zdim, LO)+2:cg%lhn(zdim, HI)))/cg%dl(zdim)
       end select
 
       grav(1) = grav(2); grav(n) = grav(n-1)
@@ -921,10 +919,11 @@ contains
 
    subroutine grav_pot2accel_ord4(sweep, i1, i2, n, grav, istep, cg)
 
-      use constants,  only: xdim, ydim, zdim, LO, HI, GEO_XYZ, GEO_RPZ, RK2_1, RK2_2, EULER
-      use dataio_pub, only: die
-      use domain,     only: dom
-      use grid_cont,  only: grid_container
+      use constants,        only: xdim, ydim, zdim, LO, HI, GEO_XYZ, GEO_RPZ, RK2_1, RK2_2, EULER, gpot_n, hgpot_n
+      use dataio_pub,       only: die
+      use domain,           only: dom
+      use grid_cont,        only: grid_container
+      use named_array_list, only: qna
 
       implicit none
 
@@ -936,37 +935,30 @@ contains
       integer,                       intent(in)  :: istep      !< istep=RK2_1 for halfstep, istep=RK2_2 for fullstep in 2nd order Runge-Kutta method
       type(grid_container), pointer, intent(in)  :: cg         !< current grid_container
 
-      real, parameter :: onetw = 1./12.
+      integer(kind=4)                            :: ig
+      real, parameter                            :: onetw = 1./12.
 
       ! Gravitational acceleration is computed on right cell boundaries
 
       select case (istep)
       case (RK2_1)
-         select case (sweep)
-            case (xdim)
-               grav(3:n-2) = onetw*(cg%hgpot(cg%lhn(xdim, LO)+4:cg%lhn(xdim, HI),i1,i2) - 8.*cg%hgpot(cg%lhn(xdim, LO)+3:cg%lhn(xdim, HI)-1,i1,i2) + &
-                                    8.*cg%hgpot(cg%lhn(xdim, LO)+1:cg%lhn(xdim, HI)-3,i1,i2) - cg%hgpot(cg%lhn(xdim, LO):cg%lhn(xdim, HI)-4,i1,i2)) / cg%dl(xdim)
-            case (ydim)
-               grav(3:n-2) = onetw*(cg%hgpot(i2,cg%lhn(ydim, LO)+4:cg%lhn(ydim, HI),i1) - 8.*cg%hgpot(i2,cg%lhn(ydim, LO)+3:cg%lhn(ydim, HI)-1,i1) + &
-                                    8.*cg%hgpot(i2,cg%lhn(ydim, LO)+1:cg%lhn(ydim, HI)-3,i1) - cg%hgpot(i2,cg%lhn(ydim, LO):cg%lhn(ydim, HI)-4,i1)) / cg%dl(ydim)
-            case (zdim)
-               grav(3:n-2) = onetw*(cg%hgpot(i1,i2,cg%lhn(zdim, LO)+4:cg%lhn(zdim, HI)) - 8.*cg%hgpot(i1,i2,cg%lhn(zdim, LO)+3:cg%lhn(zdim, HI)-1) + &
-                                    8.*cg%hgpot(i1,i2,cg%lhn(zdim, LO)+1:cg%lhn(zdim, HI)-3) - cg%hgpot(i1,i2,cg%lhn(zdim, LO):cg%lhn(zdim, HI)-4)) / cg%dl(zdim)
-         end select
+         ig = qna%ind(hgpot_n)
       case (RK2_2, EULER)
-         select case (sweep)
-            case (xdim)
-               grav(3:n-2) = onetw*(cg%gpot(cg%lhn(xdim, LO)+4:cg%lhn(xdim, HI),i1,i2) - 8.*cg%gpot(cg%lhn(xdim, LO)+3:cg%lhn(xdim, HI)-1,i1,i2) + &
-                                    8.*cg%gpot(cg%lhn(xdim, LO)+1:cg%lhn(xdim, HI)-3,i1,i2) - cg%gpot(cg%lhn(xdim, LO):cg%lhn(xdim, HI)-4,i1,i2)) / cg%dl(xdim)
-            case (ydim)
-               grav(3:n-2) = onetw*(cg%gpot(i2,cg%lhn(ydim, LO)+4:cg%lhn(ydim, HI),i1) - 8.*cg%gpot(i2,cg%lhn(ydim, LO)+3:cg%lhn(ydim, HI)-1,i1) + &
-                                    8.*cg%gpot(i2,cg%lhn(ydim, LO)+1:cg%lhn(ydim, HI)-3,i1) - cg%gpot(i2,cg%lhn(ydim, LO):cg%lhn(ydim, HI)-4,i1)) / cg%dl(ydim)
-            case (zdim)
-               grav(3:n-2) = onetw*(cg%gpot(i1,i2,cg%lhn(zdim, LO)+4:cg%lhn(zdim, HI)) - 8.*cg%gpot(i1,i2,cg%lhn(zdim, LO)+3:cg%lhn(zdim, HI)-1) + &
-                                    8.*cg%gpot(i1,i2,cg%lhn(zdim, LO)+1:cg%lhn(zdim, HI)-3) - cg%gpot(i1,i2,cg%lhn(zdim, LO):cg%lhn(zdim, HI)-4)) / cg%dl(zdim)
-         end select
+         ig = qna%ind(gpot_n)
       case default
          call die("[gravity:grav_pot2accel_ord4] Unsupported substep")
+      end select
+
+      select case (sweep)
+         case (xdim)
+            grav(3:n-2) = onetw*(cg%q(ig)%arr(cg%lhn(xdim, LO)+4:cg%lhn(xdim, HI),  i1,i2) - 8.*cg%q(ig)%arr(cg%lhn(xdim, LO)+3:cg%lhn(xdim, HI)-1,i1,i2) + &
+                              8.*cg%q(ig)%arr(cg%lhn(xdim, LO)+1:cg%lhn(xdim, HI)-3,i1,i2) -    cg%q(ig)%arr(cg%lhn(xdim, LO)  :cg%lhn(xdim, HI)-4,i1,i2)) / cg%dl(xdim)
+         case (ydim)
+            grav(3:n-2) = onetw*(cg%q(ig)%arr(i2,cg%lhn(ydim, LO)+4:cg%lhn(ydim, HI),  i1) - 8.*cg%q(ig)%arr(i2,cg%lhn(ydim, LO)+3:cg%lhn(ydim, HI)-1,i1) + &
+                              8.*cg%q(ig)%arr(i2,cg%lhn(ydim, LO)+1:cg%lhn(ydim, HI)-3,i1) -    cg%q(ig)%arr(i2,cg%lhn(ydim, LO)  :cg%lhn(ydim, HI)-4,i1)) / cg%dl(ydim)
+         case (zdim)
+            grav(3:n-2) = onetw*(cg%q(ig)%arr(i1,i2,cg%lhn(zdim, LO)+4:cg%lhn(zdim, HI)  ) - 8.*cg%q(ig)%arr(i1,i2,cg%lhn(zdim, LO)+3:cg%lhn(zdim, HI)-1) + &
+                              8.*cg%q(ig)%arr(i1,i2,cg%lhn(zdim, LO)+1:cg%lhn(zdim, HI)-3) -    cg%q(ig)%arr(i1,i2,cg%lhn(zdim, LO)  :cg%lhn(zdim, HI)-4)) / cg%dl(zdim)
       end select
 
       grav(2) = grav(3); grav(n-1) = grav(n-2)
