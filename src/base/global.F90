@@ -39,7 +39,7 @@ module global
 
    private
    public :: cleanup_global, init_global, &
-        &    cfl, cfl_max, cflcontrol, cfl_violated, &
+        &    cfl, cfl_max, cflcontrol, cfl_violated, tstep_attempt, &
         &    dt, dt_initial, dt_max_grow, dt_shrink, dt_min, dt_max, dt_old, dtm, t, t_saved, nstep, nstep_saved, &
         &    integration_order, limiter, limiter_b, smalld, smallei, smallp, use_smalld, interpol_str, &
         &    relax_time, grace_period_passed, cfr_smooth, repeat_step, skip_sweep, geometry25D, &
@@ -56,6 +56,7 @@ module global
    integer         :: divB_0_method            !< encoded method of making div(B) = 0 (currently DIVB_CT or DIVB_HDC)
    logical         :: force_cc_mag             !< treat magnetic field as cell-centered in the Riemann solver (temporary hack)
    integer(kind=4) :: psi_bnd                  !< BND_INVALID or enforce some other psi boundary
+   integer         :: tstep_attempt            !< /= 0 when we retry timesteps
 
    ! Namelist variables
 
@@ -146,7 +147,7 @@ contains
    subroutine init_global
 
       use constants,  only: big_float, PIERNIK_INIT_MPI, INVALID, DIVB_CT, DIVB_HDC, &
-           &                BND_INVALID, BND_ZERO, BND_REF, BND_OUT
+           &                BND_INVALID, BND_ZERO, BND_REF, BND_OUT, I_ZERO
       use dataio_pub, only: die, msg, warn, code_progress, printinfo
       use dataio_pub, only: nh  ! QA_WARN required for diff_nml
       use mpisetup,   only: cbuff, ibuff, lbuff, rbuff, master, slave, piernik_MPI_Bcast
@@ -387,6 +388,8 @@ contains
          endif
       endif
 #endif /* MAGNETIC */
+
+      tstep_attempt = I_ZERO
 
    end subroutine init_global
 

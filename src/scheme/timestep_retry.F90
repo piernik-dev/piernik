@@ -84,9 +84,9 @@ contains
 
       use cg_leaves,        only: leaves
       use cg_list,          only: cg_list_element
-      use constants,        only: pSUM, I_ONE, dsetnamelen, AT_IGNORE
+      use constants,        only: pSUM, I_ZERO, I_ONE, dsetnamelen, AT_IGNORE
       use dataio_pub,       only: warn, msg, die
-      use global,           only: dt, dtm, t, t_saved, cfl_violated, nstep, nstep_saved, dt_shrink, repeat_step
+      use global,           only: dt, dtm, t, t_saved, cfl_violated, nstep, nstep_saved, dt_shrink, repeat_step, tstep_attempt
       use mass_defect,      only: downgrade_magic_mass
       use mpisetup,         only: master, piernik_MPI_Allreduce
       use named_array_list, only: qna, wna, na_var_list_q, na_var_list_w
@@ -101,22 +101,31 @@ contains
       integer(kind=4)                :: no_hist_count
       integer                        :: i, j
       character(len=dsetnamelen)     :: rname
+      integer, parameter             :: max_attempts = 10  !< Something is terribly wrong if a single step requires too many reductions
 
       if (.not.repeat_step) return
 
       call restart_arrays
 
       if (cfl_violated) then
-         if (master) call warn("[timestep_retry:repeat_fluidstep] Redoing previous step...")
+         tstep_attempt = tstep_attempt + I_ONE
+         if (tstep_attempt > max_attempts) then
+            write(msg, '(a,i2,a)')"[timestep_retry:repeat_fluidstep] tstep_attempt > ", max_attempts, " (hardcoded limit)"
+            call die(msg)
+         endif
+         write(msg, '(a,i2,a)') "[timestep_retry:repeat_fluidstep] Redoing previous step (", tstep_attempt, ")"
+         if (master) call warn(msg)
          t = t_saved
          nstep = nstep_saved
          dt = dtm * dt_shrink
+         call reset_freezing_speed
          call downgrade_magic_mass
 #ifdef RANDOMIZE
          call randoms_redostep(.true.)
 #endif /* RANDOMIZE */
          if (associated(user_reaction_to_redo_step)) call user_reaction_to_redo_step
       else
+         tstep_attempt = I_ZERO
          nstep_saved = nstep
          t_saved = t
 #ifdef RANDOMIZE
@@ -222,5 +231,19 @@ contains
       enddo
 
    end subroutine restart_arrays
+
+   subroutine reset_freezing_speed
+
+      use fluidindex, only: flind
+
+      implicit none
+
+      integer :: ifl
+
+      do ifl = lbound(flind%all_fluids, dim=1), ubound(flind%all_fluids, dim=1)
+         call flind%all_fluids(ifl)%fl%res_c
+      enddo
+
+   end subroutine reset_freezing_speed
 
 end module timestep_retry

@@ -109,7 +109,7 @@ contains
       use dataio_pub,           only: tend, msg, warn
       use fargo,                only: timestep_fargo, fargo_mean_omega
       use fluidtypes,           only: var_numbers
-      use global,               only: t, dt_old, dt_max_grow, dt_initial, dt_min, dt_max, nstep, use_fargo
+      use global,               only: t, dt_old, dt_max_grow, dt_initial, dt_min, dt_max, nstep, use_fargo, cfl_violated
       use grid_cont,            only: grid_container
       use mpisetup,             only: master, piernik_MPI_Allreduce
       use sources,              only: timestep_sources
@@ -147,7 +147,6 @@ contains
       do while (associated(cgl))
          cg => cgl%cg
 
-         !> \todo make the timestep_* routines members of fluidtypes::component_fluid
          do ifl = lbound(flind%all_fluids, dim=1), ubound(flind%all_fluids, dim=1)
             call timestep_fluid(cg, flind%all_fluids(ifl)%fl, dt_, c_)
             dt    = min(dt, dt_)
@@ -185,7 +184,7 @@ contains
       endif
 
       if (associated(cfl_manager)) call cfl_manager
-      c_all_old = c_all
+      if (.not.cfl_violated) c_all_old = c_all
 
       if (dt < dt_min) then ! something nasty had happened
          if (master) then

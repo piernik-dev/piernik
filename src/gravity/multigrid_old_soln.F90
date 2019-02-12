@@ -32,32 +32,29 @@
 module multigrid_old_soln
 ! pulled by MULTIGRID && GRAV
 
+   use old_soln_list, only: old_soln, os_list_undef_T, os_list_T
+
    implicit none
 
    private
    public :: nold_max, soln_history, ord_time_extrap
 
    ! solution recycling
-   integer(kind=4), parameter :: nold_max=3                           !< maximum implemented extrapolation order
+   integer(kind=4), parameter :: nold_max=3   !< maximum implemented extrapolation order
 
-   type :: old_soln                                                   !< container for an old solution with its timestamp
-      integer(kind=4) :: i_hist                                       !< index to the old solution
-      real :: time                                                    !< time of the old solution
-   end type old_soln
-
-   type :: soln_history                                               !< container for a set of several old potential solutions
-      type(old_soln), allocatable, dimension(:) :: old                !< indices and time points os stored solutions
-      integer :: last                                                 !< index of the last stored potential
-      logical :: valid                                                !< .true. when old(last) was properly initialized
+   type :: soln_history                       !< container for a set of several old potential solutions
+      type(os_list_undef_T) :: invalid        !< a list of invalid slots ready to use
+      type(os_list_T) :: old                  !< indices and time points of stored solutions
     contains
-      procedure :: init_history                                       !< Allocate arrays, register fields
-      procedure :: cleanup_history                                    !< Deallocate arrays
-      procedure :: init_solution                                      !< Construct first guess of potential based on previously obtained solution, if any.
-      procedure :: store_solution                                     !< Manage old copies of potential for recycling.
+      procedure :: init_history               !< Allocate arrays, register fields
+      procedure :: cleanup_history            !< Deallocate arrays
+      procedure :: init_solution              !< Construct first guess of potential based on previously obtained solution, if any.
+      procedure :: store_solution             !< Manage old copies of potential for recycling.
+      procedure :: sanitize                   !< invalidate some stored solutions from the future i.e. when there was timestep retry
    end type soln_history
 
    ! Namelist parameter
-   integer(kind=4)    :: ord_time_extrap                              !< Order of temporal extrapolation for solution recycling; -1 means 0-guess, 2 does parabolic interpolation
+   integer(kind=4)    :: ord_time_extrap      !< Order of temporal extrapolation for solution recycling; -1 means 0-guess, 2 does parabolic interpolation
 
 contains
 
@@ -66,8 +63,8 @@ contains
    subroutine init_history(this, nold, prefix)
 
       use cg_list_global,   only: all_cg
-      use constants,        only: singlechar, dsetnamelen
-      use dataio_pub,       only: die
+      use constants,        only: singlechar, dsetnamelen, I_TWO
+      use dataio_pub,       only: die, msg
       use multigridvars,    only: ord_prolong
       use named_array_list, only: qna
 
@@ -80,15 +77,23 @@ contains
       integer :: i
       character(len=dsetnamelen) :: hname
 
-      if (allocated(this%old)) call die("[multigrid_old_soln:init_history] Already allocated")
-      allocate(this%old(nold))
-      do i = lbound(this%old, dim=1), ubound(this%old, dim=1)
+      if (nold <= 0) return
+
+      if (associated(this%old%latest) .or. associated(this%invalid%latest)) then
+         write(msg, '(3a)') "[multigrid_old_soln:init_history] ", prefix," already initialized."
+         call die(msg)
+      endif
+      do i = 1, nold + I_TWO  ! extra two slots for seamless timestep retries
          write(hname,'(2a,i2.2)')prefix,"-h-",i
          call all_cg%reg_var(hname, vital = .true., ord_prolong = ord_prolong) ! no need for multigrid attribute here because history is defined only on leaves
-         this%old(i) = old_soln(qna%ind(hname), -huge(1.0))
+         call this%invalid%new(qna%ind(hname))
       enddo
-      this%valid = .false.
-      this%last  = 1
+
+      write(msg, '(2a)') prefix, "-invalid"
+      this%invalid%label = trim(msg)
+
+      write(msg, '(2a)') prefix, "-old"
+      this%old%label = trim(msg)
 
    end subroutine init_history
 
@@ -96,16 +101,12 @@ contains
 
    subroutine cleanup_history(this)
 
-      use constants, only: INVALID
-
       implicit none
 
       class(soln_history), intent(inout) :: this   !< Object invoking type-bound procedure
 
-      if (allocated(this%old)) deallocate(this%old)
-
-      this%valid = .false.
-      this%last  = INVALID
+      call this%old%cleanup
+      call this%invalid%cleanup
 
    end subroutine cleanup_history
 
@@ -128,7 +129,7 @@ contains
       use cg_list_dataop, only: ind_val
       use cg_leaves,      only: leaves
       use cg_list_global, only: all_cg
-      use constants,      only: INVALID, O_INJ, O_LIN, O_I2
+      use constants,      only: INVALID, O_INJ, O_LIN, O_I2, I_ONE
       use dataio_pub,     only: msg, die, printinfo
       use global,         only: t
       use mpisetup,       only: master
@@ -139,86 +140,69 @@ contains
       class(soln_history), intent(inout) :: this    !< inner or outer potential history for recycling
       character(len=*),    intent(in)    :: prefix  !< informational string to be printed
 
-      integer :: p0, p1, p2, ordt, h
+      integer :: ordt
       real, dimension(3) :: dt_fac
+
+      ! BEWARE selfgrav_clump/initproblem.F90 requires monotonic time sequence t > this%old(p0)%time > this%old(p1)%time > this%old(p2)%time
 
       call all_cg%set_dirty(solution)
 
-      p0 = this%last
+      call this%sanitize
 
-      associate (nold => size(this%old))
-      if (nold > 0) then
-         p1 = 1 + mod(p0 + nold - 2, nold) ! index of previous save
-         p2 = 1 + mod(p1 + nold - 2, nold)
-      else
-         p1 = p0
-         p2 = p0
-      endif
-      end associate
+      ordt = min(this%old%cnt() - I_ONE, ord_time_extrap)
 
-      ! selfgrav_clump/initproblem.F90 requires monotonic time sequence t > this%old(p0)%time > this%old(p1)%time > this%old(p2)%time
-      ordt = ord_time_extrap
-      if (this%valid) then
-         if ( this%old(p2)%time < this%old(p1)%time .and. &        ! quadratic interpolation
-              this%old(p1)%time < this%old(p0)%time .and. &
-              this%old(p0)%time < t) then
-            ordt = min(O_I2, ord_time_extrap)
-         else if (this%old(p1)%time < this%old(p0)%time .and. &
-              &   this%old(p0)%time < t) then                      ! linear extrapolation
-            ordt = min(O_LIN, ord_time_extrap)
-         else                                                      ! simple recycling
-            ordt = min(O_INJ, ord_time_extrap)
-         endif
-      else                                                         ! coldstart
-         ordt = min(INVALID, ord_time_extrap)
-      endif
+#ifdef DEBUG
+      write(msg, '(a,g14.6,a,i2)')"[multigrid_old_soln:init_solution] init solution at time: ", t, " order: ", ordt
+      if (master) call printinfo(msg)
+      call this%old%print
+      call this%invalid%print
+#endif /* DEBUG */
 
       select case (ordt)
          case (:INVALID)
             if (master .and. ord_time_extrap > ordt) then
-               write(msg, '(3a)')"[multigrid_old_soln:init_solution] Clearing ",trim(prefix),"solution."
+               write(msg, '(3a)')"[multigrid_old_soln:init_solution] Clearing ", trim(prefix), "solution."
                call printinfo(msg, stdout)
             endif
             call all_cg%set_q_value(solution, 0.)
-            if (allocated(this%old)) this%old(:)%time = -huge(1.0)
+            if (associated(this%old%latest)) call die("[multigrid_old_soln:init_solution] need to move %old to %invalid")
          case (O_INJ)
-            call leaves%check_dirty(this%old(p0)%i_hist, "history0")
-            call leaves%q_copy(this%old(p0)%i_hist, solution)
+            call leaves%check_dirty(this%old%latest%i_hist, "history0")
+            call leaves%q_copy(this%old%latest%i_hist, solution)
             if (master .and. ord_time_extrap > ordt) then
                write(msg, '(3a)')"[multigrid_old_soln:init_solution] No extrapolation of ",trim(prefix),"solution."
                call printinfo(msg, stdout)
             endif
          case (O_LIN)
-            call leaves%check_dirty(this%old(p0)%i_hist, "history0")
-            call leaves%check_dirty(this%old(p1)%i_hist, "history1")
-            dt_fac(1) = (t - this%old(p0)%time) / (this%old(p0)%time - this%old(p1)%time)
-            call leaves%q_lin_comb( [ ind_val(this%old(p0)%i_hist, (1.+dt_fac(1))), &
-                 &                    ind_val(this%old(p1)%i_hist,    -dt_fac(1) ) ], solution )
-            if (master .and. ord_time_extrap > ordt) then
-               write(msg, '(3a)')"[multigrid_old_soln:init_solution] Linear extrapolation of ",trim(prefix),"solution."
-               call printinfo(msg, stdout)
-            endif
-         case (O_I2)
-            call leaves%check_dirty(this%old(p0)%i_hist, "history0")
-            call leaves%check_dirty(this%old(p1)%i_hist, "history1")
-            call leaves%check_dirty(this%old(p2)%i_hist, "history2")
-            dt_fac(:) = (t - this%old([ p0, p1, p2 ])%time) / (this%old([ p1, p2, p0 ])%time - this%old([ p2, p0, p1 ])%time)
-            call leaves%q_lin_comb([ ind_val(this%old(p0)%i_hist, -dt_fac(2)*dt_fac(3)), &
-                 &                   ind_val(this%old(p1)%i_hist, -dt_fac(1)*dt_fac(3)), &
-                 &                   ind_val(this%old(p2)%i_hist, -dt_fac(1)*dt_fac(2)) ], solution )
+            associate( p0 => this%old%latest, &
+                 &     p1 => this%old%latest%earlier )
+               call leaves%check_dirty(p0%i_hist, "history0")
+               call leaves%check_dirty(p1%i_hist, "history1")
+               dt_fac(1) = (t - p0%time) / (p0%time - p1%time)
+               call leaves%q_lin_comb( [ ind_val(p0%i_hist, (1.+dt_fac(1))), &
+                    &                    ind_val(p1%i_hist,    -dt_fac(1) ) ], solution )
+               if (master .and. ord_time_extrap > ordt) then
+                  write(msg, '(3a)')"[multigrid_old_soln:init_solution] Linear extrapolation of ",trim(prefix),"solution."
+                  call printinfo(msg, stdout)
+               endif
+            end associate
+         case (O_I2:)
+            associate( p0 => this%old%latest, &
+                 &     p1 => this%old%latest%earlier, &
+                 &     p2 => this%old%latest%earlier%earlier )
+               call leaves%check_dirty(p0%i_hist, "history0")
+               call leaves%check_dirty(p1%i_hist, "history1")
+               call leaves%check_dirty(p2%i_hist, "history2")
+               dt_fac(:) = (t - [ p0%time, p1%time, p2%time ]) / ([ p1%time, p2%time, p0%time ] - [ p2%time, p0%time, p1%time ])
+               call leaves%q_lin_comb([ ind_val(p0%i_hist, -dt_fac(2)*dt_fac(3)), &
+                    &                   ind_val(p1%i_hist, -dt_fac(1)*dt_fac(3)), &
+                    &                   ind_val(p2%i_hist, -dt_fac(1)*dt_fac(2)) ], solution )
+            end associate
          case default
             call die("[multigrid_old_soln:init_solution] Extrapolation order not implemented")
       end select
 
       call leaves%check_dirty(solution, "init_soln")
-
-      if (.not. this%valid) then
-         if (allocated(this%old)) then
-            do h = lbound(this%old, dim=1), ubound(this%old, dim=1)
-               call leaves%set_q_value(this%old(h)%i_hist, 0.) ! set sane values for history to prevent spurious dirty exceptions in prolongation
-            enddo
-         endif
-      endif
 
    end subroutine init_solution
 
@@ -227,26 +211,76 @@ contains
    subroutine store_solution(this)
 
       use cg_leaves,     only: leaves
+      use dataio_pub,    only: die, msg
       use global,        only: t
       use multigridvars, only: solution
+      use old_soln_list, only: old_soln
+#ifdef DEBUG
+      use dataio_pub,    only: printinfo
+      use mpisetup,      only: master
+#endif /* DEBUG */
 
       implicit none
 
       class(soln_history), intent(inout) :: this !< inner or outer potential history to store recent solution
 
-      if (.not. allocated(this%old)) return
-      if (size(this%old) <= 0) return
+      type(old_soln), pointer :: os
 
-      if (this%valid) then
-         this%last = 1 + mod(this%last, size(this%old))
-      else
-         this%old(:)%time = t ! prevents extrapolation too early
+      if (.not. associated(this%old%latest) .and. .not. associated(this%invalid%latest)) return
+
+      os => this%invalid%pick_head()
+      if (.not. associated(os)) os => this%old%trim_tail()
+      if (.not. associated(os)) then
+         write(msg, '(4a)')"[multigrid_old_soln:store_solution] cannot get any slot from ", this%old%label, " or ", this%invalid%label
+         call die(msg)
       endif
 
-      call leaves%q_copy(solution, this%old(this%last)%i_hist)
-      this%old(this%last)%time = t
-      this%valid = .true.
+      os%time = t
+      call this%old%new_head(os)
+      call leaves%q_copy(solution, os%i_hist)
+
+#ifdef DEBUG
+      write(msg, '(a,g14.6)')"[multigrid_old_soln:store_solution] store solution at time ", t
+      if (master) call printinfo(msg)
+      call this%old%print
+      call this%invalid%print
+#endif /* DEBUG */
 
    end subroutine store_solution
+!> \brief Invalidate some stored solutions from the future i.e. when there was timestep retry
+
+   subroutine sanitize(this)
+
+      use dataio_pub, only: printinfo, msg
+      use global,     only: t
+      use mpisetup,   only: master
+
+      implicit none
+
+      class(soln_history), intent(inout) :: this !< potential history to be sanitized
+
+      type(old_soln), pointer :: os
+      integer :: cnt
+
+      cnt = this%old%cnt()
+      do while (associated(this%old%latest))
+         if (this%old%latest%time >= t) then
+            os => this%old%pick_head()
+            call this%invalid%new_head(os)
+         else
+            exit
+         endif
+      enddo
+
+      if (cnt /= this%old%cnt()) then
+         write(msg, '(a,g14.6,a,i2,a)')"[multigrid_old_soln:sanitize] sanitize solution history at time ", t, ", removed ", cnt - this%old%cnt(), " elements"
+         if (master) call printinfo(msg)
+#ifdef DEBUG
+         call this%old%print
+         call this%invalid%print
+#endif /* DEBUG */
+      endif
+
+   end subroutine sanitize
 
 end module multigrid_old_soln
