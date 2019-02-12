@@ -188,25 +188,23 @@ contains
       use crdiffusion,    only: cr_diff
       use initcosmicrays, only: use_split
 #endif /* COSM_RAYS */
+#ifdef MAGNETIC
+      use constants,      only: DIVB_CT
+      use ct,             only: magfield
+      use global,         only: divB_0_method
+#endif /* MAGNETIC */
 #ifdef DEBUG
       use piernikiodebug, only: force_dumps
 #endif /* DEBUG */
-#ifdef MAGNETIC
-      use ct,             only: magfield
-#endif /* MAGNETIC */
-#if defined(RTVD) || defined (MAGNETIC)
-      use constants,      only: DIVB_CT
-      use global,         only: divB_0_method
-#endif /* RTVD || MAGNETIC */
 
       implicit none
 
       integer(kind=4), intent(in) :: dir      !< direction, one of xdim, ydim, zdim
       logical,         intent(in) :: forward  !< if .false. then reverse operation order in the sweep
 
-#ifdef RTVD
+#if defined(RTVD) && defined(MAGNETIC)
       if (divB_0_method /= DIVB_CT) call die("[fluidupdate:make_sweep] only CT is implemented in RTVD")
-#endif /* RTVD */
+#endif /* RTVD && MAGNETIC */
 
       ! ToDo: check if changes of execution order here (block loop, direction loop, boundary update can change
       ! cost or allow for reduction of required guardcells
