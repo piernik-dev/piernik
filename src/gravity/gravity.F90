@@ -866,7 +866,7 @@ contains
 !<
    subroutine grav_pot2accel_ord2(sweep, i1, i2, n, grav, istep, cg)
 
-      use constants,        only: xdim, ydim, zdim, half, LO, HI, GEO_XYZ, GEO_RPZ, RK2_1, RK2_2, EULER, gpot_n, hgpot_n
+      use constants,        only: idm2, ndims, pdims, ydim, half, LO, HI, GEO_XYZ, GEO_RPZ, RK2_1, RK2_2, EULER, gpot_n, hgpot_n, NORMAL, ORTHO1, ORTHO2
       use dataio_pub,       only: die
       use domain,           only: dom
       use grid_cont,        only: grid_container
@@ -882,6 +882,7 @@ contains
       integer,                       intent(in)  :: istep      !< istep=RK2_1 for halfstep, istep=RK2_2 for fullstep in 2nd order Runge-Kutta method
       type(grid_container), pointer, intent(in)  :: cg         !< current grid_container
 
+      integer, dimension(ndims,LO:HI)            :: ispan
       integer(kind=4)                            :: ig
 
       ! Gravitational acceleration is computed on right cell boundaries
@@ -896,15 +897,11 @@ contains
          call die("[gravity:grav_pot2accel_ord2] Unsupported substep")
       end select
 
-      select case (sweep)
-         case (xdim)
-            grav(2:n-1) = half*(cg%q(ig)%arr(cg%lhn(xdim, LO):cg%lhn(xdim, HI)-2, i1, i2) - cg%q(ig)%arr(cg%lhn(xdim, LO)+2:cg%lhn(xdim, HI), i1, i2))/cg%dl(xdim)
-         case (ydim)
-            grav(2:n-1) = half*(cg%q(ig)%arr(i2, cg%lhn(ydim, LO):cg%lhn(ydim, HI)-2, i1) - cg%q(ig)%arr(i2, cg%lhn(ydim, LO)+2:cg%lhn(ydim, HI), i1))/cg%dl(ydim)
-         case (zdim)
-            grav(2:n-1) = half*(cg%q(ig)%arr(i1, i2, cg%lhn(zdim, LO):cg%lhn(zdim, HI)-2) - cg%q(ig)%arr(i1, i2, cg%lhn(zdim, LO)+2:cg%lhn(zdim, HI)))/cg%dl(zdim)
-      end select
+      ispan(pdims(sweep,ORTHO1),:) = i1
+      ispan(pdims(sweep,ORTHO2),:) = i2
+      ispan(pdims(sweep,NORMAL),LO:HI) = cg%lhn(sweep,LO:HI) + [2,0]
 
+      grav(2:n-1) = half*reshape(cg%q(ig)%span(ispan-2*idm2(sweep,:,:)) - cg%q(ig)%span(ispan),[n-2]) / cg%dl(sweep)
       grav(1) = grav(2); grav(n) = grav(n-1)
 
       select case (dom%geometry_type)
@@ -919,7 +916,7 @@ contains
 
    subroutine grav_pot2accel_ord4(sweep, i1, i2, n, grav, istep, cg)
 
-      use constants,        only: xdim, ydim, zdim, LO, HI, GEO_XYZ, GEO_RPZ, RK2_1, RK2_2, EULER, gpot_n, hgpot_n
+      use constants,        only: idm2, ndims, pdims, ydim, LO, HI, GEO_XYZ, GEO_RPZ, RK2_1, RK2_2, EULER, gpot_n, hgpot_n, NORMAL, ORTHO1, ORTHO2
       use dataio_pub,       only: die
       use domain,           only: dom
       use grid_cont,        only: grid_container
@@ -935,6 +932,7 @@ contains
       integer,                       intent(in)  :: istep      !< istep=RK2_1 for halfstep, istep=RK2_2 for fullstep in 2nd order Runge-Kutta method
       type(grid_container), pointer, intent(in)  :: cg         !< current grid_container
 
+      integer, dimension(ndims,LO:HI)            :: ispan
       integer(kind=4)                            :: ig
       real, parameter                            :: onetw = 1./12.
 
@@ -949,18 +947,12 @@ contains
          call die("[gravity:grav_pot2accel_ord4] Unsupported substep")
       end select
 
-      select case (sweep)
-         case (xdim)
-            grav(3:n-2) = onetw*(cg%q(ig)%arr(cg%lhn(xdim, LO)+4:cg%lhn(xdim, HI),  i1,i2) - 8.*cg%q(ig)%arr(cg%lhn(xdim, LO)+3:cg%lhn(xdim, HI)-1,i1,i2) + &
-                              8.*cg%q(ig)%arr(cg%lhn(xdim, LO)+1:cg%lhn(xdim, HI)-3,i1,i2) -    cg%q(ig)%arr(cg%lhn(xdim, LO)  :cg%lhn(xdim, HI)-4,i1,i2)) / cg%dl(xdim)
-         case (ydim)
-            grav(3:n-2) = onetw*(cg%q(ig)%arr(i2,cg%lhn(ydim, LO)+4:cg%lhn(ydim, HI),  i1) - 8.*cg%q(ig)%arr(i2,cg%lhn(ydim, LO)+3:cg%lhn(ydim, HI)-1,i1) + &
-                              8.*cg%q(ig)%arr(i2,cg%lhn(ydim, LO)+1:cg%lhn(ydim, HI)-3,i1) -    cg%q(ig)%arr(i2,cg%lhn(ydim, LO)  :cg%lhn(ydim, HI)-4,i1)) / cg%dl(ydim)
-         case (zdim)
-            grav(3:n-2) = onetw*(cg%q(ig)%arr(i1,i2,cg%lhn(zdim, LO)+4:cg%lhn(zdim, HI)  ) - 8.*cg%q(ig)%arr(i1,i2,cg%lhn(zdim, LO)+3:cg%lhn(zdim, HI)-1) + &
-                              8.*cg%q(ig)%arr(i1,i2,cg%lhn(zdim, LO)+1:cg%lhn(zdim, HI)-3) -    cg%q(ig)%arr(i1,i2,cg%lhn(zdim, LO)  :cg%lhn(zdim, HI)-4)) / cg%dl(zdim)
-      end select
+      ispan(pdims(sweep,ORTHO1),:) = i1
+      ispan(pdims(sweep,ORTHO2),:) = i2
+      ispan(pdims(sweep,NORMAL),LO:HI) = cg%lhn(sweep,LO:HI) + [2,-2]
 
+      grav(3:n-2) = onetw*reshape(cg%q(ig)%span(ispan+2*idm2(sweep,:,:)) - 8.*cg%q(ig)%span(ispan+  idm2(sweep,:,:)) + &
+                               8.*cg%q(ig)%span(ispan-  idm2(sweep,:,:)) -    cg%q(ig)%span(ispan-2*idm2(sweep,:,:)),[n-4]) / cg%dl(sweep)
       grav(2) = grav(3); grav(n-1) = grav(n-2)
       grav(1) = grav(2); grav(n) = grav(n-1)
 
