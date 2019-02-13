@@ -77,11 +77,12 @@ contains
 !<
    subroutine init_snsources
 
-      use constants,      only: PIERNIK_INIT_GRID, small, xdim, ydim
+      use constants,      only: PIERNIK_INIT_GRID, small, two, xdim, ydim
       use dataio_pub,     only: nh                  ! QA_WARN required for diff_nml
       use dataio_pub,     only: die, code_progress
       use domain,         only: dom
       use mpisetup,       only: rbuff, master, slave, piernik_MPI_Bcast
+      use units,          only: kpc
 #ifdef COSM_RAYS
       use initcosmicrays, only: cr_eff
 #endif /* COSM_RAYS */
@@ -133,15 +134,15 @@ contains
 #endif /* COSM_RAYS */
 
       if (dom%has_dir(xdim)) then
-         f_sn = f_sn_kpc2 * dom%L_(xdim)/1000.0 !\deprecated magic numbers
+         f_sn = f_sn_kpc2 * dom%L_(xdim)/kpc
       else
-         f_sn = f_sn_kpc2 * 2.0*r_sn/1000.0
+         f_sn = f_sn_kpc2 * two*r_sn/kpc
       endif
 
       if (dom%has_dir(ydim)) then
-         f_sn = f_sn * dom%L_(ydim)/1000.0
+         f_sn = f_sn * dom%L_(ydim)/kpc
       else
-         f_sn = f_sn * 2.0*r_sn/1000.0
+         f_sn = f_sn * two*r_sn/kpc
       endif
       dt_sn = 1./(f_sn+small)
 
@@ -176,8 +177,8 @@ contains
          call cr_sn(snpos,amp_cr_sn)
 #endif /* COSM_RAYS */
 
-      enddo ! isn
-      return
+      enddo
+
    end subroutine random_sn
 
 !--------------------------------------------------------------------------
