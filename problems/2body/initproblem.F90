@@ -206,7 +206,7 @@ contains
       vel_2bodies = zero
       mu = newtong * mass
 
-      if( (e < zero) .or. (e >= one) ) call die("[initproblem:vel_2bodies] Invalid eccentricity")
+      if ( (e < zero) .or. (e >= one) ) call die("[initproblem:vel_2bodies] Invalid eccentricity")
 
       r = sqrt(sum((init_pos_body(:,1) - init_pos_body(:,2))**2))
 
@@ -285,7 +285,7 @@ contains
       mu = newtong*mass1
       velocities(:) = zero
 
-      if( (e < zero) .or. (e >= one) ) then
+      if ( (e < zero) .or. (e >= one) ) then
          call die("[initproblem:velocities] Invalid eccentricity")
       else
          r = sqrt(sum(pos_init(:)**2))
