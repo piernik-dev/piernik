@@ -32,7 +32,7 @@ module snsources
 ! pulled by SN_SRC
    implicit none
    private
-   public :: random_sn, init_snsources, r_sn, amp_cr_sn, nsn
+   public :: random_sn, init_snsources, r_sn, nsn
 #ifdef COSM_RAYS
    public :: cr_sn
 #endif /* COSM_RAYS */
@@ -44,19 +44,19 @@ module snsources
 #endif /* SHEAR */
 
    integer, save      :: nsn, nsn_last
-
-   real, parameter    :: ethu = 7.0**2/(5.0/3.0-1.0) * 1.0    !< thermal energy unit=0.76eV/cm**3 for c_si= 7km/s, n=1/cm^3 gamma=5/3
-
-   real               :: amp_ecr_sn          !< cosmic ray explosion amplitude in units: e_0 = 1/(5/3-1)*rho_0*c_s0**2  rho_0=1.67e-24g/cm**3, c_s0 = 7km/s
-   real               :: amp_cr_sn           !< default aplitude of CR in SN bursts
+   real               :: e_sn                !< energy per supernova
    real               :: f_sn                !< frequency of SN
    real               :: f_sn_kpc2           !< frequency of SN per kpc^2
    real               :: h_sn                !< galactic height in SN gaussian distribution ?
    real               :: r_sn                !< radius of SN
    real               :: dt_sn
+#ifdef COSM_RAYS
+   real, parameter    :: ethu = 7.0**2/(5.0/3.0-1.0) * 1.0    !< thermal energy unit=0.76eV/cm**3 for c_si= 7km/s, n=1/cm^3 gamma=5/3
+   real               :: amp_ecr_sn          !< cosmic ray explosion amplitude in units: e_0 = 1/(5/3-1)*rho_0*c_s0**2  rho_0=1.67e-24g/cm**3, c_s0 = 7km/s
+   real               :: amp_cr_sn           !< default aplitude of CR in SN bursts
+#endif /* COSM_RAYS */
 
-!   namelist /SN_SOURCES/ amp_ecr_sn, f_sn, h_sn, r_sn, f_sn_kpc2
-   namelist /SN_SOURCES/ h_sn, r_sn, f_sn_kpc2
+   namelist /SN_SOURCES/ e_sn, h_sn, r_sn, f_sn_kpc2
 
 contains
 !>
@@ -67,9 +67,10 @@ contains
 !! \n \n
 !! <table border="+1">
 !! <tr><td width="150pt"><b>parameter</b></td><td width="135pt"><b>default value</b></td><td width="200pt"><b>possible values</b></td><td width="315pt"> <b>description</b></td></tr>
-!! <tr><td>h_sn     </td><td>0.0  </td><td>real value</td><td>\copydoc snsources::h_sn     </td></tr>
-!! <tr><td>r_sn     </td><td>0.0  </td><td>real value</td><td>\copydoc snsources::r_sn     </td></tr>
-!! <tr><td>f_sn_kpc2</td><td>0.0  </td><td>real value</td><td>\copydoc snsources::f_sn_kpc2</td></tr>
+!! <tr><td>e_sn     </td><td>4.96e6</td><td>real value</td><td>\copydoc snsources::e_sn     </td></tr>
+!! <tr><td>h_sn     </td><td>0.0   </td><td>real value</td><td>\copydoc snsources::h_sn     </td></tr>
+!! <tr><td>r_sn     </td><td>0.0   </td><td>real value</td><td>\copydoc snsources::r_sn     </td></tr>
+!! <tr><td>f_sn_kpc2</td><td>0.0   </td><td>real value</td><td>\copydoc snsources::f_sn_kpc2</td></tr>
 !! </table>
 !! The list is active while \b "SN_SRC" is defined.
 !! \n \n
@@ -89,11 +90,10 @@ contains
 
       if (code_progress < PIERNIK_INIT_GRID) call die("[snsources:init_snsources] grid or fluids/cosmicrays not initialized.")
 
-!      amp_ecr_sn = 0.0    !> \todo set sane default values
-      f_sn       = 0.0    !
-      h_sn       = 0.0
-      r_sn       = 0.0
-      f_sn_kpc2  = 0.0
+      e_sn      = 4.96e6
+      h_sn      = 0.0
+      r_sn      = 0.0
+      f_sn_kpc2 = 0.0
 
       if (master) then
          if (.not.nh%initialized) call nh%init()
@@ -111,25 +111,24 @@ contains
          write(nh%lun,nml=SN_SOURCES)
          close(nh%lun)
          call nh%compare_namelist()
-!         rbuff(1)   = amp_ecr_sn
-!         rbuff(2)   = f_sn
-         rbuff(3)   = h_sn
-         rbuff(4)   = r_sn
-         rbuff(5)   = f_sn_kpc2
+
+         rbuff(1) = e_sn
+         rbuff(2) = h_sn
+         rbuff(3) = r_sn
+         rbuff(4) = f_sn_kpc2
       endif
 
       call piernik_MPI_Bcast(rbuff)
 
       if (slave) then
-!        amp_ecr_sn  = rbuff(1)
-!        f_sn        = rbuff(2)
-         h_sn        = rbuff(3)
-         r_sn        = rbuff(4)
-         f_sn_kpc2   = rbuff(5)
+         e_sn      = rbuff(1)
+         h_sn      = rbuff(2)
+         r_sn      = rbuff(3)
+         f_sn_kpc2 = rbuff(4)
       endif
 
 #ifdef COSM_RAYS
-      amp_ecr_sn = 4.96e6*cr_eff/r_sn**3
+      amp_ecr_sn = e_sn*cr_eff/r_sn**3
       amp_cr_sn  = amp_ecr_sn *ethu
 #endif /* COSM_RAYS */
 
