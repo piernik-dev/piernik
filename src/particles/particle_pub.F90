@@ -85,6 +85,7 @@ contains
       time_integrator      = default_ti
       interpolation_scheme = default_is
 #ifdef NBODY
+      npart                = 0
       acc_interp_method    = 'cic'
       lf_c                 = 1.0
 #ifdef NBODY_GRIDDIRECT
