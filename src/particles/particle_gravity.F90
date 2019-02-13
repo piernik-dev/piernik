@@ -378,7 +378,6 @@ contains
    subroutine get_acc_model(p, eps, acc2)
 
       use constants,      only: ndims, xdim, zdim
-      use grid_cont,      only: grid_container
       use particle_types, only: pset
 
       implicit none

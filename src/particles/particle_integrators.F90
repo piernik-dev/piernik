@@ -432,10 +432,7 @@ contains
             !real, save             :: init_ang_momentum    !< initial angular momentum of set of the particles
             !logical, save          :: first_run_lf = .true.
 
-            !write(*,*) "Energia----------: ", total_energy
-
             call get_ang_momentum_2(n, ang_momentum)
-            !write(*,*) "ANG_MOMENTUM-----: ", ang_momentum
             write(msg,'(a,2f8.5)') '[particle_integrators:leapfrog2_diagnostics] Energia, ANG_MOMENTUM----------: ', total_energy, ang_momentum
             call printinfo(msg)
 
@@ -444,7 +441,6 @@ contains
             !   d_energy       = 0.0
             !   init_ang_momentum = ang_momentum
             !   d_ang_momentum    = 0.0
-            !   write(*,*) "Pierwszy"
             !else
             !   d_energy = log(abs((total_energy - initial_energy)/initial_energy))
             !   if (init_ang_momentum .equals. zero) then
@@ -479,20 +475,8 @@ contains
             integer, intent(inout) :: counter
             integer                :: i, data_file = 757
             character(len=17)      :: filename
-            character(len=3)       :: counter_char
 
-            if(counter<10) then
-               write(counter_char, '(I1)') counter
-               write(filename,'(A9,A3,A1,A4)') 'particles','_00',counter_char,".dat"
-            endif
-            if ((counter >=10) .and.(counter <100)) then
-               write(counter_char, '(I2)') counter
-               write(filename,'(A9,A2,A2,A4)') 'particles','_0',counter_char,".dat"
-            endif
-            if (counter >=100) then
-               write(counter_char, '(I3)') counter
-               write(filename,'(A9,A1,A3,A4)') 'particles','_',counter_char,".dat"
-            endif
+            write(filename,'(a10,i3.3,a4)') 'particles_',counter,'.dat'
 
             open(unit = data_file, file=filename)
                write(data_file, *) "#t =", lf_t

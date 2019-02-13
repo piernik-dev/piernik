@@ -85,7 +85,7 @@ contains
       enddo
       max_acc = sqrt(max_acc)
 
-      if(max_acc .notequals. zero) then
+      if (max_acc .notequals. zero) then
          dt_nbody = sqrt(two*eta*eps/max_acc)
 
          !> \todo following lines are related only to dust particles

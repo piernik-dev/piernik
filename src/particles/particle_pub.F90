@@ -35,7 +35,7 @@
 
 module particle_pub
 ! pulled by GRAV
-   use particle_types,  only: particle_solver_T, pset
+   use particle_types, only: particle_solver_T, pset
 
    implicit none
    private
@@ -155,6 +155,9 @@ contains
             write(msg, '(3a)')"[particle_pub:init_particles] Unknown integrator '",trim(time_integrator),"'"
             call die(msg)
       end select
+
+      call pset%init()
+
       select case (trim(interpolation_scheme))
          case ('ngp', 'NGP', 'neareast grid point')
             call pset%set_map(I_NGP)
@@ -167,18 +170,16 @@ contains
             call die(msg)
       end select
 
-      call pset%init()
-
 #ifdef NBODY
       is_setacc_int = .false.
       is_setacc_cic = .false.
       select case (acc_interp_method)
-         case('lagrange', 'Lagrange', 'polynomials')
+         case ('lagrange', 'Lagrange', 'polynomials')
             is_setacc_int = .true.
             order = 4
             call check_ord(order)
             call printinfo("[particle_integrators:leapfrog2ord] Acceleration interpolation method: Lagrange polynomials")
-         case('cic', 'CIC')
+         case ('cic', 'CIC')
             is_setacc_cic = .true.
             call printinfo("[particle_integrators:leapfrog2ord] Acceleration interpolation method: CIC")
       end select
