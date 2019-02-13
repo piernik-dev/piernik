@@ -106,6 +106,7 @@ contains
       bufsize = 1
       call random_seed(get=resseed)
       bufsize = seed_size
+      ! warning: this doesn't work with -fdefault-integer-8 because we don't have proper Fortran H5LT interface for 64-bit integer attributes and random_seed works with te default integer kind
       call h5ltset_attribute_int_f(file_id, "/", "current_seed", resseed, bufsize, error)
 
    end subroutine write_current_seed_to_restart
@@ -125,6 +126,7 @@ contains
       integer, dimension(:), allocatable :: resseed
 
       if (.not.allocated(resseed)) allocate(resseed(seed_size))
+      ! warning: this doesn't work with -fdefault-integer-8 because we don't have proper Fortran H5LT interface for 64-bit integer attributes and random_seed works with te default integer kind
       call h5ltget_attribute_int_f(file_id, "/", "current_seed", resseed, error)
       call compare_array1D(resseed)
       call random_seed(put=resseed)
