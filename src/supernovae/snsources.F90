@@ -295,7 +295,7 @@ contains
 #ifdef SHEAR
    subroutine sn_shear(cg, ysnoi)
 
-      use constants,   only: ydim, LO
+      use constants,   only: ydim, LO, HI
       use dataio_pub,  only: die
       use domain,      only: is_multicg, dom
       use grid_cont,   only: grid_container
@@ -319,14 +319,14 @@ contains
 !  outer boundary
       jremap = jsn - delj
       jremap = mod(mod(jremap, cg%nyb)+cg%nyb, cg%nyb)
-      if (jremap <= (cg%js-1)) jremap = jremap + cg%nyb
+      if (jremap <= (cg%lh1(ydim,LO))) jremap = jremap + cg%nyb
 
       ysnoi(1) = cg%y(jremap) + epso + dysn
 
 !  inner boundary
       jremap = jsn + delj
       jremap = mod(jremap, cg%nyb)+cg%nyb
-      if (jremap >= (cg%je+1)) jremap = jremap - cg%nyb
+      if (jremap >= (cg%lh1(ydim,HI))) jremap = jremap - cg%nyb
 
       ysnoi(3) = cg%y(jremap) + epsi + dysn
 
