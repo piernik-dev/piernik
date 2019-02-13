@@ -264,30 +264,22 @@ contains
 !<
    subroutine rand_coords(pos)
 
-      use constants,   only: xdim, ydim, zdim, LO
+      use constants,   only: ndims, xdim, ydim, zdim, LO
       use domain,      only: dom
 
       implicit none
 
-      real, dimension(3), intent(out) :: pos
-      real, dimension(4)              :: rand
-      real                            :: xsn, ysn, zsn, znorm
+      real, dimension(ndims), intent(out) :: pos
+      real, dimension(4)                  :: rand
 
       call random_number(rand)
-      xsn = dom%edge(xdim, LO)+ dom%L_(xdim)*rand(1)
-      ysn = dom%edge(ydim, LO)+ dom%L_(ydim)*rand(2)
+      pos(xdim:ydim) = dom%edge(xdim:ydim, LO)+ dom%L_(xdim:ydim)*rand(xdim:ydim)
 
       if (dom%has_dir(zdim)) then
-         znorm = gasdev(rand(3),rand(4))
-         zsn = h_sn*znorm
+         pos(zdim) = h_sn * gasdev(rand(3),rand(4))
       else
-         zsn = 0.0
+         pos(zdim) = 0.0
       endif
-
-      pos(1) = xsn
-      pos(2) = ysn
-      pos(3) = zsn
-      return
 
    end subroutine rand_coords
 
