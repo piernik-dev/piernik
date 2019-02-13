@@ -221,9 +221,9 @@ contains
                pset%p(i)%outside = .true.
             endif
 
-            cells(i, cdim) = int( half + (pset%p(i)%pos(cdim) - cg%coord(CENTER,cdim)%r(0)) * cg%idl(cdim) )
+            cells(i, cdim) = int( half + (pset%p(i)%pos(cdim) - cg%coord(CENTER,cdim)%r(cg%ijkse(cdim, LO))) * cg%idl(cdim) )
 
-            dist(i, cdim)  = pset%p(i)%pos(cdim) - ( cg%coord(CENTER, cdim)%r(0) + cells(i,cdim) * cg%dl(cdim) )
+            dist(i, cdim)  = pset%p(i)%pos(cdim) - ( cg%coord(CENTER, cdim)%r(cg%ijkse(cdim, LO)) + cells(i,cdim) * cg%dl(cdim) )
          enddo
       enddo
 
