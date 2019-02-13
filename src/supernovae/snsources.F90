@@ -49,7 +49,6 @@ module snsources
    real               :: f_sn_kpc2           !< frequency of SN per kpc^2
    real               :: h_sn                !< galactic height in SN gaussian distribution ?
    real               :: r_sn                !< radius of SN
-   real               :: dt_sn
 #ifdef COSM_RAYS
    real, parameter    :: ethu = 7.0**2/(5.0/3.0-1.0) * 1.0    !< thermal energy unit=0.76eV/cm**3 for c_si= 7km/s, n=1/cm^3 gamma=5/3
    real               :: amp_ecr_sn          !< cosmic ray explosion amplitude in units: e_0 = 1/(5/3-1)*rho_0*c_s0**2  rho_0=1.67e-24g/cm**3, c_s0 = 7km/s
@@ -77,7 +76,7 @@ contains
 !<
    subroutine init_snsources
 
-      use constants,      only: PIERNIK_INIT_GRID, small, two, xdim, ydim
+      use constants,      only: PIERNIK_INIT_GRID, two, xdim, ydim
       use dataio_pub,     only: nh                  ! QA_WARN required for diff_nml
       use dataio_pub,     only: die, code_progress
       use domain,         only: dom
@@ -144,7 +143,6 @@ contains
       else
          f_sn = f_sn * two*r_sn/kpc
       endif
-      dt_sn = 1./(f_sn+small)
 
       nsn_last = 0
       nsn      = 0
@@ -166,7 +164,7 @@ contains
 
       if (.not.cfl_violated) nsn_last = nsn
 
-      nsn = int(t/dt_sn)
+      nsn = int(t * f_sn)
       nsn_per_timestep = nsn - nsn_last
 
       do isn = 1, nsn_per_timestep
