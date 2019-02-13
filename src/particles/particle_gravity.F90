@@ -78,18 +78,18 @@ contains
       cgl => leaves%first
       cg  => cgl%cg
 
-      allocate(cells(n_part, ndims), dist(n_part, ndims))
-      call locate_particles_in_cells(n_part, cg, cells, dist)
-
-      call update_particle_density_array(n_part, cg, cells)
-
 #ifdef NBODY_GRIDDIRECT
       call update_gravpot_from_particles(n_part, cg, zero)
       call save_pot_pset(cg)
 #endif /* NBODY_GRIDDIRECT */
       call source_terms_grav
 
-      call update_particle_potential_energy(n_part, cg, cells, dist)    !szukanie energii potencjalnej w punktach-polozeniach czastek
+      allocate(cells(n_part, ndims), dist(n_part, ndims))
+      call locate_particles_in_cells(n_part, cg, cells, dist)
+
+      call update_particle_density_array(n_part, cg, cells)
+
+      call update_particle_potential_energy(n_part, cg, cells, dist)
 
       if (is_setacc_int) then
          call update_particle_acc_int(n_part, cg, cells, dist)
@@ -228,7 +228,8 @@ contains
 
    end subroutine locate_particles_in_cells
 
-   subroutine update_particle_potential_energy(n_part, cg, cells, dist)
+!> \brief Determine potential energy in particle positions
+    subroutine update_particle_potential_energy(n_part, cg, cells, dist)
 
       use constants,        only: gpot_n, ndims, half, two, xdim, ydim, zdim
       use grid_cont,        only: grid_container
