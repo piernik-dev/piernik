@@ -86,7 +86,7 @@
     K_crn_paral(7) = 10000.0
     K_crn_perp(1)  = 0
     smallecr       = 0.e-2
-    use_split   = .false.
+    use_CRsplit    = .false.
  /
 
  $CR_SPECIES

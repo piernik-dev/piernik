@@ -109,7 +109,7 @@ contains
 #endif /* GRAV */
 #if defined(COSM_RAYS) && defined(MULTIGRID)
       use all_boundaries,      only: all_fluid_boundaries
-      use initcosmicrays,      only: use_split
+      use initcosmicrays,      only: use_CRsplit
       use multigrid_diffusion, only: multigrid_solve_diff
 #endif /* COSM_RAYS && MULTIGRID */
 #ifdef SHEAR
@@ -134,7 +134,7 @@ contains
 #endif /* GRAV */
 
 #if defined(COSM_RAYS) && defined(MULTIGRID)
-      if (.not. use_split) then
+      if (.not. use_CRsplit) then
          call multigrid_solve_diff
          call all_fluid_boundaries
       endif
@@ -186,7 +186,7 @@ contains
       use sweeps,         only: sweep
 #ifdef COSM_RAYS
       use crdiffusion,    only: cr_diff
-      use initcosmicrays, only: use_split
+      use initcosmicrays, only: use_CRsplit
 #endif /* COSM_RAYS */
 #ifdef MAGNETIC
       use constants,      only: DIVB_CT
@@ -212,7 +212,7 @@ contains
       if (dom%has_dir(dir)) then
          if (.not. forward) then
 #ifdef COSM_RAYS
-            if (use_split) call cr_diff(dir)
+            if (use_CRsplit) call cr_diff(dir)
 #endif /* COSM_RAYS */
 #ifdef MAGNETIC
             if (divB_0_method == DIVB_CT) call magfield(dir)
@@ -226,7 +226,7 @@ contains
             if (divB_0_method == DIVB_CT) call magfield(dir)
 #endif /* MAGNETIC */
 #ifdef COSM_RAYS
-            if (use_split) call cr_diff(dir)
+            if (use_CRsplit) call cr_diff(dir)
 #endif /* COSM_RAYS */
          endif
       else
