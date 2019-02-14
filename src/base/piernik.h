@@ -15,10 +15,10 @@
 #  endif /* !NONMAGNETIC */
 #endif /* IONIZED */
 
-#ifndef MAGNETIC
+#if !defined(MAGNETIC) && defined(RESISTIVE)
 #define NOMAGNETICNORESIST
 #undef RESISTIVE
-#endif /* MAGNETIC */
+#endif /* !MAGNETIC && RESISTIVE */
 
 #if defined(MULTIGRID) && defined(GRAV)
 #define SELF_GRAV
