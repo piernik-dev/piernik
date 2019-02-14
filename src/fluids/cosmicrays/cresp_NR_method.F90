@@ -33,7 +33,7 @@
 module cresp_NR_method
 ! pulled by COSM_RAY_ELECTRONS
 
-   use initcrspectrum, only: max_p_ratio, eps, arr_dim, arr_dim_q
+   use initcrspectrum, only: eps
 
    implicit none
 
@@ -213,9 +213,10 @@ contains
 !----------------------------------------------------------------------------------------------------
 
    subroutine cresp_initialize_guess_grids
+
       use constants,       only: zero, I_FOUR
       use cresp_variables, only: clight ! use units, only: clight
-      use initcrspectrum,  only: e_small, q_big, max_p_ratio
+      use initcrspectrum,  only: e_small, q_big, max_p_ratio, arr_dim, arr_dim_q
       use mpisetup,        only: master
 
       implicit none
@@ -286,8 +287,9 @@ contains
 !----------------------------------------------------------------------------------------------------
 
    subroutine fill_guess_grids
-      use constants, only: zero, one, I_ONE, half
-      use initcrspectrum,  only: q_big, force_init_NR, NR_run_refine_pf, p_fix_ratio, e_small_approx_init_cond
+
+      use constants,      only: zero, one, I_ONE, half
+      use initcrspectrum, only: q_big, force_init_NR, NR_run_refine_pf, p_fix_ratio, e_small_approx_init_cond, arr_dim, arr_dim_q, max_p_ratio
 
       implicit none
 
@@ -483,7 +485,9 @@ contains
 
 !----------------------------------------------------------------------------------------------------
    subroutine fill_boundary_grid(bound_case, fill_p, fill_f) ! to be paralelized
-      use constants, only: zero
+
+      use constants,      only: zero
+      use initcrspectrum, only: arr_dim
 
       implicit none
 
@@ -607,7 +611,9 @@ contains
 
 !----------------------------------------------------------------------------------------------------
    subroutine refine_ji(ref_p, ref_f, i_incr, j_incr) ! ref_f and ref_p should already be partially filled with solutions
-      use constants, only: zero
+
+      use constants,      only: zero
+      use initcrspectrum, only: arr_dim
 
       implicit none
 
@@ -657,7 +663,9 @@ contains
 
 !----------------------------------------------------------------------------------------------------
    subroutine refine_ij(ref_p, ref_f, i_incr, j_incr) ! ref_f and ref_p should already be partially filled with solutions
-      use constants, only: zero
+
+      use constants,      only: zero
+      use initcrspectrum, only: arr_dim
 
       implicit none
 
@@ -874,7 +882,8 @@ contains
    end subroutine seek_solution_step
 !----------------------------------------------------------------------------------------------------
    subroutine fill_q_grid(i_incr)
-      use initcrspectrum, only: p_fix_ratio
+
+      use initcrspectrum, only: p_fix_ratio, arr_dim_q
 
       implicit none
 
@@ -962,6 +971,8 @@ contains
    end function alpha_to_q
 !----------------------------------------------------------------------------------------------------
    subroutine prepare_indices(ind_incr, ind_beg, ind_end)
+
+      use initcrspectrum, only: arr_dim
 
       implicit none
 
@@ -1388,7 +1399,9 @@ contains
    end function intpol_pf_from_NR_grids
 !----------------------------------------------------------------------------------------------------
    subroutine determine_loc(a_val, n_val, loc1, loc2, loc_panic, exit_code)
-      use constants, only: zero
+
+      use constants,      only: zero
+      use initcrspectrum, only: arr_dim
 
       implicit none
 
@@ -1465,8 +1478,9 @@ contains
    end subroutine nearest_solution
 !----------------------------------------------------------------------------------------------------
    function compute_q(alpha_in, exit_code, outer_p_ratio)
-      use constants,       only: zero, one, I_ZERO, I_ONE
-      use initcrspectrum,  only: NR_refine_solution_q, q_big, p_fix_ratio
+
+      use constants,      only: zero, one, I_ZERO, I_ONE
+      use initcrspectrum, only: NR_refine_solution_q, q_big, p_fix_ratio, arr_dim_q
 
       implicit none
 
@@ -1743,7 +1757,9 @@ contains
    end subroutine dummy_check_1D
  !----------------------------------------------------------------------------------------------------
    subroutine initialize_arrays
-      use diagnostics, only: my_allocate_with_index, my_allocate, ma1d, ma2d
+
+      use diagnostics,    only: my_allocate_with_index, my_allocate, ma1d, ma2d
+      use initcrspectrum, only: arr_dim, arr_dim_q
 
       implicit none
 

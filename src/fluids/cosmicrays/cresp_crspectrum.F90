@@ -33,7 +33,6 @@
 
 module cresp_crspectrum
 ! pulled by COSM_RAY_ELECTRONS
-   use dataio_pub,      only: msg, die, warn, printinfo
 
    implicit none
 
@@ -462,6 +461,7 @@ contains
    subroutine cresp_find_prepare_spectrum(n, e, empty_cell, i_up_out) ! EXPERIMENTAL
 
       use constants,      only: I_ZERO, zero, I_ONE
+      use dataio_pub,     only: msg, warn, printinfo
       use diagnostics,    only: incr_vec
       use initcrspectrum, only: ncre, e_small, cresp_all_edges, cresp_all_bins, p_fix, p_mid_fix
 
@@ -1288,8 +1288,9 @@ contains
 
    subroutine check_init_spectrum(p_l, p_u, f_l, f_u)
 
-   use constants,             only: one, I_ONE
-   use initcrspectrum,        only: e_small, e_small_approx_p_lo, e_small_approx_p_up
+   use constants,      only: one, I_ONE
+   use dataio_pub,     only: msg, warn, printinfo
+   use initcrspectrum, only: e_small, e_small_approx_p_up
 
    implicit none
 
@@ -1460,17 +1461,17 @@ contains
          r_num = (p(bins)**(five-q(bins)) - p(bins-1)**(five-q(bins)))/(five - q(bins))
       elsewhere
          r_num = log(p(bins)/p(bins-1))
-      end where
+      endwhere
 
       where (abs(q(bins) - four) .gt. eps)
          r_den = (p(bins)**(four-q(bins)) - p(bins-1)**(four-q(bins)))/(four - q(bins))
       else where
          r_den = log(p(bins)/p(bins-1))
-      end where
+      endwhere
 
       where ( abs(r_num) .gt. zero .and. abs(r_den) .gt. zero )                  !< BEWARE - regression: comparisons against
          r(bins) = u_d + u_b * r_num/r_den !all cooling effects will come here   !< eps and epsilon result in bad results;
-      end where                                                                  !< range of values ofr_num and r_den is very wide
+      endwhere                                                                  !< range of values ofr_num and r_den is very wide
 
    end subroutine cresp_compute_r
 
@@ -1599,7 +1600,7 @@ contains
 !---------------------------------------------------------------------------------------------------
    subroutine src_gpcresp(u, n, dx, grad_pcresp)
 
-      use constants, only: onet
+      use constants,      only: onet
       use initcrspectrum, only: ncre, cre_active, cre_gpcr_ess
 
       implicit none
@@ -1624,10 +1625,10 @@ contains
 ! distribution function value on left bin edge "f"
 !---------------------------------------------------------------------------------------------------
    subroutine get_fqp_up(exit_code)
+
       use constants,       only: zero, one
       use cresp_variables, only: clight ! use units, only: clight
-      use cresp_NR_method, only: intpol_pf_from_NR_grids, alpha, n_in, selected_function_2D, fvec_up, &
-                           &     NR_algorithm, e_small_to_f, q_ratios, assoc_pointers_up
+      use cresp_NR_method, only: intpol_pf_from_NR_grids, alpha, n_in, NR_algorithm, e_small_to_f, q_ratios, assoc_pointers_up
       use initcrspectrum,  only: e_small, q_big, p_fix, NR_refine_pf_up
 
       implicit none
@@ -1697,8 +1698,7 @@ contains
    subroutine get_fqp_lo(exit_code)
 
       use constants, only: zero, one
-      use cresp_NR_method, only: intpol_pf_from_NR_grids, alpha, n_in, selected_function_2D, fvec_lo, &
-                  NR_algorithm, e_small_to_f, q_ratios, assoc_pointers_lo
+      use cresp_NR_method, only: intpol_pf_from_NR_grids, alpha, n_in, NR_algorithm, e_small_to_f, q_ratios, assoc_pointers_lo
       use cresp_variables, only: clight ! use units, only: clight
       use initcrspectrum, only: e_small, q_big, p_fix, NR_refine_pf_lo
 
@@ -1812,16 +1812,18 @@ contains
    end function p_rch_ord_3_2_1
 !----------------------------------------------------------------------------------------------------
    subroutine p_rch_init
-      use initcrspectrum,  only: expan_order
+
+      use dataio_pub,     only: msg, die
+      use initcrspectrum, only: expan_order
 
       implicit none
 
-      select case(expan_order)
-         case(1)
+      select case (expan_order)
+         case (1)
             p_rch => p_rch_ord_1
-         case(2)
+         case (2)
             p_rch => p_rch_ord_2_1
-         case(3)
+         case (3)
             p_rch => p_rch_ord_3_2_1
          case default
             write (msg,*) '[cresp_crspectrum:p_rch_init] expan_order =',expan_order,': value incorrect (accepted values [1;3]).'
@@ -1938,6 +1940,9 @@ contains
    end subroutine cresp_accuracy_test
 !----------------------------------------------------------------------------------------------------
    subroutine cleanup_cresp
+
+      use dataio_pub, only: msg, printinfo
+
       implicit none
 
       write (msg, '(A36,I6,A6,I6)') "NR_2dim:  convergence failure: p_lo", fail_count_NR_2dim(1), ", p_up", fail_count_NR_2dim(2)   ; call printinfo(msg)
