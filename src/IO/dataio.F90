@@ -45,8 +45,6 @@ module dataio
    private
    public :: check_log, check_tsl, dump, write_data, write_crashed, cleanup_dataio, init_dataio, init_dataio_parameters, user_msg_handler
 
-!   integer                  :: istep                 !< current number of substep (related to integration order)
-
    integer, parameter       :: nvarsmx = 20          !< maximum number of variables to dump in hdf files
    character(len=cbuff_len) :: restart               !< choice of restart %file: if restart = 'last': automatic choice of the last restart file regardless of "nrestart" value; if something else is set: "nrestart" value is fixing
    logical                  :: mag_center            !< choice to dump magnetic fields values from cell centers or not (if not then values from cell borders, unused)

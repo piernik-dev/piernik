@@ -591,7 +591,7 @@ contains
     integer(kind=4), intent(in), optional :: a_ind_beg
     integer(kind=4), intent(in)   :: as
     integer(kind=4), allocatable, dimension(:), intent(inout) :: array
-        if(.not. allocated(array)) allocate(array(a_ind_beg:as))
+        if (.not. allocated(array)) allocate(array(a_ind_beg:as))
         used_memory = used_memory + size(array)*i4_s
   end subroutine allocate_1D_arr_w_ind_int4
 
@@ -602,7 +602,7 @@ contains
     integer(kind=4), intent(in)   :: as
     real(kind=8), allocatable, dimension(:), intent(inout) :: array
 
-        if(.not. allocated(array)) allocate(array(a_ind_beg:as))
+        if (.not. allocated(array)) allocate(array(a_ind_beg:as))
         used_memory = used_memory + size(array)*i4_s
   end subroutine allocate_1D_arr_w_ind_real8
 !----------------------------------------------------------------------------------------------------

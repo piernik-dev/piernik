@@ -55,7 +55,7 @@ contains
       has_cr = (flind%crs%all > 0)
 
       if (has_cr) then
-         call all_cg%reg_var(wcr_n, dim4 = flind%crs%all) ! 
+         call all_cg%reg_var(wcr_n, dim4 = flind%crs%all)
       else
          call warn("[crdiffusion:init_crdiffusion] No CR species to diffuse")
       endif
@@ -139,7 +139,7 @@ contains
       use domain,           only: dom
       use global,           only: dt
       use grid_cont,        only: grid_container
-      use initcosmicrays,   only: K_crn_paral, K_crn_perp, K_crs_paral, K_crs_perp, iarr_crs !, iarr_crn !!!
+      use initcosmicrays,   only: K_crs_paral, K_crs_perp, iarr_crs
       use named_array,      only: p3
       use named_array_list, only: wna
 
@@ -161,7 +161,7 @@ contains
       logical, dimension(ndims)            :: present_not_crdim
       real, dimension(:,:,:,:), pointer    :: wcr
       integer                              :: wcri
-      
+
       if (.not. has_cr) return
       if (.not.dom%has_dir(crdim)) return
 
@@ -171,9 +171,9 @@ contains
       decr(:)  = 0.             ;      bcomp(:)   = 0.                 ! essential where ( .not.dom%has_dir(dim) .and. (dim /= crdim) )
       present_not_crdim = dom%has_dir .and. ( [ xdim,ydim,zdim ] /= crdim )
       wcri = wna%ind(wcr_n)
-      
+
       icrs = iarr_crs(icrc)
-      
+
       cgl => leaves%first
       do while (associated(cgl))
          cg => cgl%cg

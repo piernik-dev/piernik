@@ -24,7 +24,7 @@
 !
 !    For full list of developers see $PIERNIK_HOME/license/pdt.txt
 !
-#include "piernik.def"
+#include "piernik.h"
 !>
 !! \brief Module that sets coordinate system
 !! \date December 2010

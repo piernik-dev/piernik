@@ -39,14 +39,13 @@ module global
 
    private
    public :: cleanup_global, init_global, &
-        &    cfl, cfl_max, cflcontrol, cfl_violated, &
-        &    dt, dt_initial, dt_max_grow, dt_min, dt_max, dt_old, dtm, t, t_saved, nstep, nstep_saved, &
-        &    integration_order, limiter, limiter_b, smalld, smallei, smallp, use_smalld, h_solver, interpol_str, &
+        &    cfl, cfl_max, cflcontrol, cfl_violated, tstep_attempt, &
+        &    dt, dt_initial, dt_max_grow, dt_shrink, dt_min, dt_max, dt_old, dtm, t, t_saved, nstep, nstep_saved, &
+        &    integration_order, limiter, limiter_b, smalld, smallei, smallp, use_smalld, interpol_str, &
         &    relax_time, grace_period_passed, cfr_smooth, repeat_step, skip_sweep, geometry25D, &
         &    dirty_debug, do_ascii_dump, show_n_dirtys, no_dirty_checks, sweeps_mgu, use_fargo, print_divB, &
         &    divB_0_method, force_cc_mag, glm_alpha, use_eglm, cfl_glm, ch_grid, w_epsilon, psi_bnd
 
-   real, parameter :: dt_default_grow = 2.
    logical         :: cfl_violated             !< True when cfl condition is violated
    logical         :: dirty_debug              !< Allow initializing arrays with some insane values and checking if these values can propagate
    integer(kind=4) :: show_n_dirtys            !< use to limit the amount of printed messages on dirty values found
@@ -57,11 +56,13 @@ module global
    integer         :: divB_0_method            !< encoded method of making div(B) = 0 (currently DIVB_CT or DIVB_HDC)
    logical         :: force_cc_mag             !< treat magnetic field as cell-centered in the Riemann solver (temporary hack)
    integer(kind=4) :: psi_bnd                  !< BND_INVALID or enforce some other psi boundary
+   integer         :: tstep_attempt            !< /= 0 when we retry timesteps
 
    ! Namelist variables
 
-   real    :: dt_initial               !< initial timestep
+   real    :: dt_initial               !< if >0. : initial timestep; if 0. or < -1. : automatic timestep; reduced automatic timestep otherwise
    real    :: dt_max_grow              !< maximum timestep growth rate
+   real    :: dt_shrink                !< dt shrink rate when timestep retry is used
    real    :: dt_min                   !< minimum allowed timestep
    real    :: dt_max                   !< maximum allowed timestep
    real    :: cfl                      !< desired Courant–Friedrichs–Lewy number
@@ -78,11 +79,10 @@ module global
    !<
    real    :: cfr_smooth
    real    :: relax_time                              !< relaxation/grace time, additional physics will be turned off until global::t >= global::relax_time
-   integer(kind=4), protected    :: integration_order !< Runge-Kutta time integration order (1 - 1st order, 2 - 2nd order)
+   integer(kind=4), protected    :: integration_order !< Runge-Kutta time integration order (1 - 1st order (Euler), 2 - 2nd order (RK2))
    character(len=cbuff_len)      :: limiter           !< type of flux limiter
    character(len=cbuff_len)      :: limiter_b         !< type of flux limiter for magnetic field in the Riemann solver
    character(len=cbuff_len)      :: cflcontrol        !< type of cfl control just before each sweep (possibilities: 'none', 'main', 'user')
-   character(len=cbuff_len)      :: h_solver          !< type of hydro solver
    character(len=cbuff_len)      :: interpol_str      !< type of interpolation
    character(len=cbuff_len)      :: divB_0            !< human-readable method of making div(B) = 0 (currently CT or HDC)
    character(len=cbuff_len)      :: psi_bnd_str       !< "default" for general boundaries or override ith something special
@@ -97,9 +97,9 @@ module global
    logical                       :: ch_grid           !< When true use grid properties to estimate ch (psi wave propagation speed). Use gas properties otherwise.
    real                          :: w_epsilon         !< small number for safe evaluation of weights in WENO interpolation
 
-   namelist /NUMERICAL_SETUP/ cfl, cflcontrol, cfl_max, use_smalld, smalld, smallei, smallc, smallp, dt_initial, dt_max_grow, dt_min, dt_max, &
+   namelist /NUMERICAL_SETUP/ cfl, cflcontrol, cfl_max, use_smalld, smalld, smallei, smallc, smallp, dt_initial, dt_max_grow, dt_shrink, dt_min, dt_max, &
         &                     repeat_step, limiter, limiter_b, relax_time, integration_order, cfr_smooth, skip_sweep, geometry25D, sweeps_mgu, print_divB, &
-        &                     use_fargo, h_solver, divB_0, glm_alpha, use_eglm, cfl_glm, ch_grid, interpol_str, w_epsilon, psi_bnd_str
+        &                     use_fargo, divB_0, glm_alpha, use_eglm, cfl_glm, ch_grid, interpol_str, w_epsilon, psi_bnd_str
 
 contains
 
@@ -123,8 +123,9 @@ contains
 !!   <tr><td>smallc           </td><td>1.e-10 </td><td>real value                           </td><td>\copydoc global::smallc           </td></tr>
 !!   <tr><td>integration_order</td><td>2      </td><td>1 or 2 (or 3 - currently unavailable)</td><td>\copydoc global::integration_order</td></tr>
 !!   <tr><td>cfr_smooth       </td><td>0.0    </td><td>real value                           </td><td>\copydoc global::cfr_smooth       </td></tr>
-!!   <tr><td>dt_initial       </td><td>-1.    </td><td>positive real value or -1.           </td><td>\copydoc global::dt_initial       </td></tr>
-!!   <tr><td>dt_max_grow      </td><td>2.     </td><td>real value > 1.1                     </td><td>\copydoc global::dt_max_grow      </td></tr>
+!!   <tr><td>dt_initial       </td><td>-1.    </td><td>positive real value or -1. .. 0.     </td><td>\copydoc global::dt_initial       </td></tr>
+!!   <tr><td>dt_max_grow      </td><td>2.     </td><td>real value, should be > 1.           </td><td>\copydoc global::dt_max_grow      </td></tr>
+!!   <tr><td>dt_shrink        </td><td>0.5    </td><td>real value, should be < 1.           </td><td>\copydoc global::dt_shrink        </td></tr>
 !!   <tr><td>dt_min           </td><td>0.     </td><td>positive real value                  </td><td>\copydoc global::dt_min           </td></tr>
 !!   <tr><td>dt_max           </td><td>0.     </td><td>positive real value                  </td><td>\copydoc global::dt_max           </td></tr>
 !!   <tr><td>limiter          </td><td>vanleer</td><td>string                               </td><td>\copydoc global::limiter          </td></tr>
@@ -133,7 +134,6 @@ contains
 !!   <tr><td>skip_sweep       </td><td>F, F, F</td><td>logical array                        </td><td>\copydoc global::skip_sweep       </td></tr>
 !!   <tr><td>geometry25D      </td><td>F      </td><td>logical value                        </td><td>\copydoc global::geometry25d      </td></tr>
 !!   <tr><td>sweeps_mgu       </td><td>F      </td><td>logical value                        </td><td>\copydoc global::sweeps_mgu       </td></tr>
-!!   <tr><td>h_solver         </td><td>"rk2"  </td><td>string                               </td><td>\copydoc global::h_solver         </td></tr>
 !!   <tr><td>divB_0           </td><td>CT     </td><td>string                               </td><td>\copydoc global::divB_0           </td></tr>
 !!   <tr><td>glm_alpha        </td><td>0.1    </td><td>real value                           </td><td>\copydoc global::glm_alpha        </td></tr>
 !!   <tr><td>use_eglm         </td><td>false  </td><td>logical value                        </td><td>\copydoc global::use_eglm         </td></tr>
@@ -147,7 +147,7 @@ contains
    subroutine init_global
 
       use constants,  only: big_float, PIERNIK_INIT_MPI, INVALID, DIVB_CT, DIVB_HDC, &
-           &                BND_INVALID, BND_ZERO, BND_REF, BND_OUT
+           &                BND_INVALID, BND_ZERO, BND_REF, BND_OUT, I_ZERO
       use dataio_pub, only: die, msg, warn, code_progress, printinfo
       use dataio_pub, only: nh  ! QA_WARN required for diff_nml
       use mpisetup,   only: cbuff, ibuff, lbuff, rbuff, master, slave, piernik_MPI_Bcast
@@ -172,7 +172,6 @@ contains
       divB_0      = "CT"
 #endif /* RIEMANN */
       cflcontrol  = 'warn'
-      h_solver    = 'rk2'
       interpol_str = 'linear'
       repeat_step = .true.
       geometry25D = .false.
@@ -193,12 +192,12 @@ contains
       use_smalld  = .true.
       smallc      = 1.e-10
       smallei     = 1.e-10
-      dt_initial  = -1.              !< negative value indicates automatic choice of initial timestep
-      dt_max_grow = dt_default_grow  !< for sensitive setups consider setting this as low as 1.1
+      dt_initial  = -1.              !< -1. indicates automatic choice of initial timestep, -0.5 would give half of that
+      dt_max_grow = 2.               !< for sensitive setups consider setting this as low as 1.1
+      dt_shrink   = 0.5
       dt_min      = tiny(1.)
       dt_max      = huge(1.)
       relax_time  = 0.
-      integration_order  = 2
       use_fargo   = .false.
       glm_alpha   = 0.1
       skip_sweep  = .false.
@@ -207,6 +206,7 @@ contains
       ch_grid     = .false.
       w_epsilon   = 1e-10
       psi_bnd_str = "default"
+      integration_order  = 2
 
       if (master) then
          if (.not.nh%initialized) call nh%init()
@@ -230,21 +230,19 @@ contains
          cfl_max = min(max(cfl_max, min(cfl*1.1, cfl+0.05, (1.+cfl)/2.) ), 1.0) ! automatically sanitize cfl_max
          if (integration_order > 2) call die ('[global:init_global]: "ORIG" scheme integration_order must be 1 or 2')
 
-         if (dt_max_grow < 1.01) then
-            write(msg,'(2(a,g10.3))')"[global:init_global] dt_max_grow = ",dt_max_grow," is way too low. Resetting to ",dt_default_grow
+         if (dt_max_grow <= 1.01) then
+            write(msg,'(2(a,g10.3))')"[global:init_global] dt_max_grow = ", dt_max_grow, " is low. Recommended values are in 1.1 .. 2.0 range."
             call warn(msg)
-            dt_max_grow = dt_default_grow
          endif
 
-         if (h_solver /= "muscl" .and. h_solver /= "rk2" .and. h_solver /= "rk3" ) then
-            write(msg, *)"[fluidupdate:sweep_dsplit:warn_experimental] The scheme '", trim(h_solver), "' is experimental. Use 'muscl' or 'rk(n)' for production runs."
+         if (dt_shrink > 0.99 .or. dt_shrink < 0.1) then
+            write(msg,'(2(a,g10.3))')"[global:init_global] dt_shrink = ", dt_shrink, " is strange. Recommended values are in 0.1 .. 0.9 range."
             call warn(msg)
          endif
 
          cbuff(1) = limiter
          cbuff(2) = limiter_b
          cbuff(3) = cflcontrol
-         cbuff(4) = h_solver
          cbuff(5) = divB_0
          cbuff(6) = interpol_str
          cbuff(7) = psi_bnd_str
@@ -267,6 +265,7 @@ contains
          rbuff(13) = glm_alpha
          rbuff(14) = cfl_glm
          rbuff(15) = w_epsilon
+         rbuff(16) = dt_shrink
 
          lbuff(1)   = use_smalld
          lbuff(2)   = repeat_step
@@ -310,11 +309,11 @@ contains
          glm_alpha   = rbuff(13)
          cfl_glm     = rbuff(14)
          w_epsilon   = rbuff(15)
+         dt_shrink   = rbuff(16)
 
          limiter    = cbuff(1)
          limiter_b  = cbuff(2)
          cflcontrol = cbuff(3)
-         h_solver   = cbuff(4)
          divB_0     = cbuff(5)
          interpol_str = cbuff(6)
          psi_bnd_str = cbuff(7)
@@ -389,6 +388,8 @@ contains
          endif
       endif
 #endif /* MAGNETIC */
+
+      tstep_attempt = I_ZERO
 
    end subroutine init_global
 

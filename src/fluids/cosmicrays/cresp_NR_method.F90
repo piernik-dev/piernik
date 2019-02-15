@@ -33,7 +33,7 @@
 module cresp_NR_method
 ! pulled by COSM_RAY_ELECTRONS
 
-   use initcrspectrum, only: max_p_ratio, eps, arr_dim, arr_dim_q
+   use initcrspectrum, only: eps
 
    implicit none
 
@@ -150,8 +150,8 @@ contains
    subroutine NR_algorithm_1D(x, exit_code)
 
       use constants,      only: zero
-      use initcrspectrum, only: NR_iter_limit, tol_f_1D, tol_x_1D
       use func,           only: operator(.equals.)
+      use initcrspectrum, only: NR_iter_limit, tol_f_1D, tol_x_1D
 
       implicit none
 
@@ -213,9 +213,10 @@ contains
 !----------------------------------------------------------------------------------------------------
 
    subroutine cresp_initialize_guess_grids
+
       use constants,       only: zero, I_FOUR
       use cresp_variables, only: clight ! use units, only: clight
-      use initcrspectrum,  only: e_small, q_big, max_p_ratio
+      use initcrspectrum,  only: e_small, q_big, max_p_ratio, arr_dim, arr_dim_q
       use mpisetup,        only: master
 
       implicit none
@@ -286,8 +287,9 @@ contains
 !----------------------------------------------------------------------------------------------------
 
    subroutine fill_guess_grids
-      use constants, only: zero, one, I_ONE, half
-      use initcrspectrum,  only: q_big, force_init_NR, NR_run_refine_pf, p_fix_ratio, e_small_approx_init_cond
+
+      use constants,      only: zero, one, I_ONE, half
+      use initcrspectrum, only: q_big, force_init_NR, NR_run_refine_pf, p_fix_ratio, e_small_approx_init_cond, arr_dim, arr_dim_q, max_p_ratio
 
       implicit none
 
@@ -420,6 +422,7 @@ contains
    subroutine refine_all_directions(bound_case)
 
       implicit none
+
       character(len=2) :: bound_case
 
       print *,"Running refine for:", bound_case, " boundary"
@@ -440,7 +443,7 @@ contains
 
       implicit none
 
-      real(kind=8) :: b, arr_min, arr_max, ln_eval_array_val
+      real(kind=8)    :: b, arr_min, arr_max, ln_eval_array_val
       integer(kind=4) :: i, max_i, min_i
 
       b = (log(real(max_i)) -log(real(min_i)))/ (arr_max - arr_min)
@@ -483,7 +486,9 @@ contains
 
 !----------------------------------------------------------------------------------------------------
    subroutine fill_boundary_grid(bound_case, fill_p, fill_f) ! to be paralelized
-      use constants, only: zero
+
+      use constants,      only: zero
+      use initcrspectrum, only: arr_dim
 
       implicit none
 
@@ -579,17 +584,20 @@ contains
 #ifdef CRESP_VERBOSED
       print *,""
 #endif /* CRESP_VERBOSED */
+
    end subroutine fill_boundary_grid
 !----------------------------------------------------------------------------------------------------
    subroutine step_seek(x_step, prev_sol, ii, jj, i_sol, j_sol, exit_code, nstep)
+
       use constants, only: I_ONE
 
       implicit none
 
-      real(kind=8), dimension(1:2) :: prev_sol, x_step
-      integer(kind=4) :: ii, jj, i_sol, j_sol, nstep
-      integer(kind=4) :: i, j
-      logical :: exit_code
+      real(kind=8), dimension(1:2), intent(in)    :: prev_sol
+      real(kind=8), dimension(1:2), intent(out)   :: x_step
+      integer(kind=4),              intent(in)    :: ii, jj, i_sol, j_sol, nstep
+      logical,                      intent(inout) :: exit_code
+      integer(kind=4)                             :: i, j
 
       do i = -1,1
          do j = -1,1
@@ -607,16 +615,18 @@ contains
 
 !----------------------------------------------------------------------------------------------------
    subroutine refine_ji(ref_p, ref_f, i_incr, j_incr) ! ref_f and ref_p should already be partially filled with solutions
-      use constants, only: zero
+
+      use constants,      only: zero
+      use initcrspectrum, only: arr_dim
 
       implicit none
 
-      integer(kind=4) :: i, j, i_beg, i_end, j_beg, j_end
-      integer(kind=4),intent(in)   :: i_incr, j_incr
+      integer(kind=4),              intent(in)    :: i_incr, j_incr
       real(kind=8), dimension(:,:), intent(inout) :: ref_p, ref_f
-      real(kind=8), dimension(1:2) :: prev_solution
-      character(len=6) :: nam = "Refine"
-      logical :: exit_code, new_line
+      integer(kind=4)                             :: i, j, i_beg, i_end, j_beg, j_end
+      real(kind=8), dimension(1:2)                :: prev_solution
+      character(len=6)                            :: nam = "Refine"
+      logical                                     :: exit_code, new_line
 
       if (allocated(p_space) .and. allocated(q_space)) then
          prev_solution(1) = p_space(1)              ! refine must be called before these are deallocated
@@ -657,16 +667,18 @@ contains
 
 !----------------------------------------------------------------------------------------------------
    subroutine refine_ij(ref_p, ref_f, i_incr, j_incr) ! ref_f and ref_p should already be partially filled with solutions
-      use constants, only: zero
+
+      use constants,      only: zero
+      use initcrspectrum, only: arr_dim
 
       implicit none
 
-      integer(kind=4) :: i, j, i_beg, i_end, j_beg, j_end
-      integer(kind=4),intent(in)   :: i_incr, j_incr
+      integer(kind=4),              intent(in)    :: i_incr, j_incr
       real(kind=8), dimension(:,:), intent(inout) :: ref_p, ref_f
-      real(kind=8), dimension(1:2) :: prev_solution
-      character(len=6) :: nam = "Refine"
-      logical :: exit_code, new_line, i_primary
+      integer(kind=4)                             :: i, j, i_beg, i_end, j_beg, j_end
+      real(kind=8), dimension(1:2)                :: prev_solution
+      character(len=6)                            :: nam = "Refine"
+      logical                                     :: exit_code, new_line, i_primary
 
       if (allocated(p_space) .and. allocated(q_space)) then
          prev_solution(1) = p_space(1)              ! refine must be called before these are deallocated
@@ -707,16 +719,17 @@ contains
    end subroutine refine_ij
  !----------------------------------------------------------------------------------------------------
    subroutine step_extr(p3, f3, arg, sought_by, exit_code) ! checked
+
       use constants, only: zero
 
       implicit none
 
-      real(kind=8), dimension(1:2) :: x_vec_0, x_vec, delta, x_in
       real(kind=8), dimension(1:3),intent(inout) :: f3, p3
-      real(kind=8), dimension(1:3),intent(in) :: arg
-      integer(kind=4) :: nstep = 100, k
-      character(len=6), intent(inout) :: sought_by
-      logical, intent(inout) :: exit_code
+      real(kind=8), dimension(1:3),intent(in)    :: arg
+      character(len=6),            intent(inout) :: sought_by
+      logical,                     intent(inout) :: exit_code
+      real(kind=8), dimension(1:2)               :: x_vec_0, x_vec, delta, x_in
+      integer(kind=4)                            :: nstep = 100, k
 !         alpha and n are set !
 
       if ( minval(p3(1:2)) .gt. tiny(zero) .and. p3(3) .le. zero ) then ! sometimes NaNs and numbers of order e-317 appear; must be looked into
@@ -740,6 +753,9 @@ contains
          enddo
       endif
 
+      return
+      if (.false.) k = len(sought_by) ! suppress compiler warnings
+
    end subroutine step_extr
 
 !----------------------------------------------------------------------------------------------------
@@ -749,12 +765,13 @@ contains
 
       implicit none
 
-      real(kind=8), dimension(1:2) :: x_vec, x_vec_0, delta, x_in
       real(kind=8), dimension(1:3), intent(inout) :: p3, f3
-      real(kind=8), dimension(1:3), intent(in) :: args
-      integer(kind=4) :: k, incr, nstep = 100
-      character(len=6), intent(inout) :: sought_by
-      logical,intent(inout) :: exit_code
+      integer(kind=4),              intent(in)    :: incr
+      real(kind=8), dimension(1:3), intent(in)    :: args
+      character(len=6),             intent(in)    :: sought_by
+      logical,                      intent(inout) :: exit_code
+      real(kind=8), dimension(1:2)                :: x_vec, x_vec_0, delta, x_in
+      integer(kind=4)                             :: k, nstep = 100
 !         alpha and n are set !
 
       if ( exit_code .eqv. .true.) then
@@ -782,6 +799,9 @@ contains
          endif
       endif
 
+      return
+      if (.false.) k = len(sought_by) ! suppress compiler warnings
+
    end subroutine step_inpl
 !----------------------------------------------------------------------------------------------------
 #ifdef CRESP_VERBOSED
@@ -802,6 +822,7 @@ contains
 #endif /* CRESP_VERBOSED */
 !----------------------------------------------------------------------------------------------------
    function lin_interpolation_1D(fun, arg, arg_mid)
+
       use constants, only: one
 
       implicit none
@@ -818,11 +839,11 @@ contains
 
       implicit none
 
-      real(kind=8), intent(inout) :: p2ref, f2ref
+      real(kind=8),                 intent(inout) :: p2ref, f2ref
       real(kind=8), dimension(1:2), intent(inout) :: prev_solution
-      real(kind=8), dimension(1:2) :: x_vec
-      character(len=6), intent(inout) :: sought_by
-      logical, intent(inout) :: exit_code
+      character(len=6),             intent(in)    :: sought_by
+      logical,                      intent(inout) :: exit_code
+      real(kind=8), dimension(1:2)                :: x_vec
 
       if (exit_code .eqv. .true.) then
          x_vec = prev_solution
@@ -839,17 +860,22 @@ contains
          endif
       endif
 
+      return
+      if (.false.) x_vec(1) = float(len(sought_by)) ! suppress compiler warnings
+
    end subroutine seek_solution_prev
 !----------------------------------------------------------------------------------------------------
    subroutine seek_solution_step(p2ref, f2ref, prev_solution, i_obt, j_obt, sought_by, exit_code)
 
       implicit none
 
-      real(kind=8), dimension(1:2) :: x_vec, x_step, prev_solution
-      real(kind=8), intent(out):: p2ref, f2ref
-      integer(kind=4) :: i_obt, j_obt, ii, jj, nstep = 3
-      character(len=6), intent(inout) :: sought_by
-      logical :: exit_code
+      real(kind=8),                 intent(out)   :: p2ref, f2ref
+      real(kind=8), dimension(1:2), intent(inout) :: prev_solution
+      integer(kind=4),              intent(in)    :: i_obt, j_obt
+      character(len=6),             intent(in)    :: sought_by
+      logical,                      intent(inout) :: exit_code
+      real(kind=8), dimension(1:2)                :: x_vec, x_step
+      integer(kind=4)                             :: ii, jj, nstep = 3
 !    alpha and n are set !
 
       if (exit_code .eqv. .true. ) then
@@ -871,10 +897,14 @@ contains
          enddo
       endif
 
+      return
+      if (.false.) ii = len(sought_by) ! suppress compiler warnings
+
    end subroutine seek_solution_step
 !----------------------------------------------------------------------------------------------------
    subroutine fill_q_grid(i_incr)
-      use initcrspectrum, only: p_fix_ratio
+
+      use initcrspectrum, only: p_fix_ratio, arr_dim_q
 
       implicit none
 
@@ -928,13 +958,15 @@ contains
    end subroutine fill_q_grid
 !----------------------------------------------------------------------------------------------------
    subroutine q_control(x, exit_code)
-      use constants, only: one
+
+      use constants,      only: one
       use initcrspectrum, only: q_big
 
       implicit none
 
-      real(kind=8)  :: x
-      logical :: exit_code
+      real(kind=8) :: x
+      logical      :: exit_code
+
       if ( abs(x) .ge. q_big ) then
          x = sign(one, x) * q_big
          exit_code = .true.
@@ -944,7 +976,8 @@ contains
    end subroutine q_control
  !----------------------------------------------------------------------------------------------------
    function alpha_to_q(x) ! this one (as of now) is only usable with fixed p_ratio_4_q bins (middle ones)
-      use constants, only: one, three, four
+
+      use constants,      only: one, three, four
       use initcrspectrum, only: eps
 
       implicit none
@@ -963,10 +996,12 @@ contains
 !----------------------------------------------------------------------------------------------------
    subroutine prepare_indices(ind_incr, ind_beg, ind_end)
 
+      use initcrspectrum, only: arr_dim
+
       implicit none
 
       integer(kind=4), intent(out) :: ind_beg, ind_end
-      integer(kind=4), intent(in) :: ind_incr
+      integer(kind=4), intent(in)  :: ind_incr
 
       if (ind_incr .eq. 1 ) then
          ind_beg = 1 ; ind_end = arr_dim
@@ -977,12 +1012,13 @@ contains
    end subroutine prepare_indices
  !----------------------------------------------------------------------------------------------------
    function q_ratios(f_ratio, p_ratio)
+
       use constants, only: zero
 
       implicit none
 
       real(kind=8), intent(in) :: f_ratio, p_ratio
-      real(kind=8) :: q_ratios
+      real(kind=8)             :: q_ratios
 
       q_ratios = zero
       q_ratios = -log10(f_ratio) / log10(p_ratio)
@@ -992,15 +1028,16 @@ contains
 ! Function estimating values of jacobian via finite difference method
 !---------------------------------------------------------------------------------------------------
    function jac_fin_diff(x) ! jacobian via finite difference method
+
       use constants, only: half
 
       implicit none
 
-      real(kind=8), dimension(ndim) :: x, xp, xm
+      real(kind=8), dimension(ndim)            :: x, xp, xm
       real(kind=8), dimension(size(x),size(x)) :: jac_fin_diff
-      real(kind=8), dimension(size(x)) :: dx
-      real(kind=8), parameter          :: dx_par = 1.0e-3, dx_min = epsilon(dx_par)
-      integer(kind=2) :: j
+      real(kind=8), dimension(size(x))         :: dx
+      real(kind=8), parameter                  :: dx_par = 1.0e-3, dx_min = epsilon(dx_par)
+      integer(kind=2)                          :: j
 
       do j = 1,size(x)
          dx(j) = max(x(j), dx_min )          ! assure dx > zero
@@ -1018,7 +1055,7 @@ contains
       implicit none
 
       real(kind=8), dimension(2,2), intent(in) :: matrix_2d_real
-      real(kind=8) :: determinant_2d_real
+      real(kind=8)                             :: determinant_2d_real
 
       determinant_2d_real = matrix_2d_real(1,1) * matrix_2d_real (2,2) - ( matrix_2d_real(2,1) * matrix_2d_real(1,2) )
 
@@ -1028,10 +1065,10 @@ contains
 
       implicit none
 
-      integer(kind=1),parameter :: m_dim = 2
+      integer(kind=1),parameter            :: m_dim = 2
       real(kind=8), dimension(m_dim,m_dim) :: matrix_2d_real
       real(kind=8), dimension(m_dim,m_dim) :: get_cofactor_matrix_2d_real
-      integer(kind=1) :: i,j
+      integer(kind=1)                      :: i,j
 
       do i = 1,m_dim
          do j = 1,m_dim
@@ -1042,6 +1079,7 @@ contains
    end function get_cofactor_matrix_2d_real
 !----------------------------------------------------------------------------------------------------
    function invert_2d_matrix(matrix,determinant)
+
       use constants, only: one
 
       implicit none
@@ -1087,6 +1125,7 @@ contains
    end function fvec_lo
 !----------------------------------------------------------------------------------------------------
    function encp_func_2_zero_up(p_ratio, alpha_cnst, q_in) ! from eqn. 29
+
       use constants,     only: one, three, four
 
       implicit none
@@ -1107,6 +1146,7 @@ contains
 
 !---------------------------------------------------------------------------------------------------
    function encp_func_2_zero_lo(p_ratio, alpha_cnst, q_in) ! from eqn. 29
+
       use constants,     only: one, three, four
 
       implicit none
@@ -1127,6 +1167,7 @@ contains
 
 !----------------------------------------------------------------------------------------------------
    function n_func_2_zero_up(p_ratio, f_ratio, n_cnst, q_in) ! from eqn. 9
+
       use constants,       only: one, two, three
       use cresp_variables, only: clight ! use units, only: clight
       use initcrspectrum,  only: e_small
@@ -1146,6 +1187,7 @@ contains
    end function n_func_2_zero_up
 !----------------------------------------------------------------------------------------------------
    function n_func_2_zero_lo(p_ratio, n_cnst,q_in) ! from eqn. 9
+
       use constants,       only: one, two, three
       use cresp_variables, only: clight ! use units, only: clight
       use initcrspectrum,  only: e_small
@@ -1164,6 +1206,7 @@ contains
    end function n_func_2_zero_lo
 !----------------------------------------------------------------------------------------------------
    function func_val_vec_up_bnd(x) ! called by cresp_crspectrum
+
       implicit none
 
       real(kind=8), dimension(ndim) :: x
@@ -1191,12 +1234,14 @@ contains
 ! fun3_up - Alternative function introduced to find p_up using integrals of n, e and p_fix value.
 !---------------------------------------------------------------------------------------------------
    function fun3_up(log10_p_r, log10_f_l, p_l, alpha ) ! used by func_val_vec_up_bnd to compute upper boundary p and f.                                 ! DEPRECATED ?
+
       use constants, only: three, four, one, ten
 
       implicit none
 
       real(kind=8),intent(in)   :: log10_p_r, log10_f_l
       real(kind=8) :: f_l, f_r, alpha, fun3_up, q_bin, p_l, p_r ! sought values will be x for single N-R and x, f_l_iup in NR-2dim
+
       p_r = ten **log10_p_r
       f_l = ten **log10_f_l
       f_r = e_small_to_f(p_r)
@@ -1216,6 +1261,7 @@ contains
 ! fun5_up - Function similar to nq_to_f subroutine, used by compute_fp_NR_2dim to estimate value of p_up and f_l_iup
 !---------------------------------------------------------------------------------------------------
    function fun5_up(log10_p_r, log10_f_l, p_l, n_in) ! used by func_val_vec_up_bnd to compute upper boundary p and f.                                 ! DEPRECATED ?
+
       use constants, only: three, ten, one, fpi
 
       implicit none
@@ -1240,9 +1286,11 @@ contains
 ! fun3_lo - Alternative function introduced to find p_up using integrals of n, e and p_fix value.
 !---------------------------------------------------------------------------------------------------
    function fun3_lo(log10_p_l, log10_f_r, p_r, alpha ) ! used by func_val_vec_lo_bnd to compute low boundary p and f.                                 ! DEPRECATED ?
+
       use constants, only: three, four, one, ten
 
       implicit none
+
       real(kind=8),intent(in)   :: log10_p_l, log10_f_r
       real(kind=8) :: f_l, f_r, alpha, fun3_lo, q_bin, p_r, p_l ! sought values will be x for single N-R and x, f_l_iup in NR-2dim
 
@@ -1265,6 +1313,7 @@ contains
 ! fun5_lo - Function similar to nq_to_f subroutine, used by compute_fp_NR_2dim to estimate value of p_lo and f_r_lo
 !---------------------------------------------------------------------------------------------------
    function fun5_lo(log10_p_l, log10_f_r, p_r, n_in) ! used by func_val_vec_lo_bnd to compute low boundary p and f.                                 ! DEPRECATED ?
+
       use constants, only: three, one, fpi, ten
 
       implicit none
@@ -1288,6 +1337,7 @@ contains
 ! Here - relaying e_small to f via its relation with momentum
 !----------------------------------------------------------------------------------------------------
    function e_small_to_f(p_outer) ! used by variety of procedures and functions
+
       use constants,       only: zero, three, two, fpi
       use cresp_variables, only: clight ! use units, only: clight
       use initcrspectrum,  only: e_small
@@ -1302,6 +1352,7 @@ contains
    end function e_small_to_f
 !----------------------------------------------------------------------------------------------------
    function bl_interpol(y11,y12,y21,y22,t,u) ! for details see paragraph "Bilinear interpolation" in Numerical Recipes for F77, page 117, eqn. 3.6.5
+
       use constants, only: one
 
       implicit none
@@ -1328,9 +1379,9 @@ contains
 
       implicit none
 
-      real(kind=8) :: lin_interpol_1D
-      real(kind=8), intent(in) :: value
       integer(kind=4), intent(in) :: loc_1, loc_2
+      real(kind=8),    intent(in) :: value
+      real(kind=8)                :: lin_interpol_1D
 
       lin_interpol_1D = p_n(loc_1) + (value - p_a(loc_1)) * ( p_n(loc_1) - p_n(loc_2) ) / (p_a(loc_1) - p_a(loc_2)) ! WARNING - uses p_a and p_n, that are usually used to point alpha and n arrays.
 
@@ -1339,9 +1390,10 @@ contains
    function lin_extrapol_1D(fun, arg, arg_out)
 
       implicit none
-      real(kind=8),intent(in)::   arg_out
-      real(kind=8)  :: lin_extrapol_1D
-      real(kind=8),dimension(1:2), intent(in) :: fun, arg
+
+      real(kind=8), dimension(1:2), intent(in) :: fun, arg
+      real(kind=8),                 intent(in) :: arg_out
+      real(kind=8)                             :: lin_extrapol_1D
 
       lin_extrapol_1D = fun(1) + (fun(2) - fun(1)) * (arg_out - arg(1))/(arg(2)-arg(1))
 
@@ -1351,11 +1403,11 @@ contains
 
       implicit none                                              ! should return exit code as well
 
-      real(kind=8), dimension(2) :: intpol_pf_from_NR_grids ! indexes with best match and having solutions are chosen.
+      real(kind=8),     intent(inout) :: a_val, n_val  ! ratios arrays (p,f: lo and up), for which solutions have been obtained. loc_no_ip - in case when interpolation is not possible,
+      logical,          intent(out)   :: interpolation_successful
+      real(kind=8), dimension(2)      :: intpol_pf_from_NR_grids ! indexes with best match and having solutions are chosen.
       integer(kind=4), dimension(1:2) :: loc1, loc2, loc_no_ip ! loc1, loc2 - indexes that points where alpha_tab_ and up nad n_tab_ and up are closest in value to a_val and n_val - indexes point to
-      real(kind=8),intent(inout) :: a_val, n_val  ! ratios arrays (p,f: lo and up), for which solutions have been obtained. loc_no_ip - in case when interpolation is not possible,
-      logical              :: exit_code
-      logical, intent(out) :: interpolation_successful
+      logical                         :: exit_code
 
       exit_code = .false.
 
@@ -1388,14 +1440,16 @@ contains
    end function intpol_pf_from_NR_grids
 !----------------------------------------------------------------------------------------------------
    subroutine determine_loc(a_val, n_val, loc1, loc2, loc_panic, exit_code)
-      use constants, only: zero
+
+      use constants,      only: zero
+      use initcrspectrum, only: arr_dim
 
       implicit none
 
-      integer(kind=4), dimension(1:2),intent(inout) :: loc1, loc2, loc_panic
-      real(kind=8),intent(inout) :: a_val, n_val
-      logical, intent(inout) :: exit_code
-      logical                :: hit_zero !, no_solution
+      real(kind=8),                    intent(inout) :: a_val, n_val
+      integer(kind=4), dimension(1:2), intent(inout) :: loc1, loc2, loc_panic
+      logical,                         intent(inout) :: exit_code
+      logical                                        :: hit_zero !, no_solution
 
       hit_zero = .false.
       loc1(1) = inverse_f_to_ind(a_val, p_a(1), p_a(arr_dim), arr_dim)
@@ -1443,6 +1497,7 @@ contains
    end subroutine determine_loc
 !----------------------------------------------------------------------------------------------------
    subroutine nearest_solution(arr_lin, i_beg, i_end, i_solution, hit_zero)
+
       use constants, only: zero
 
       implicit none
@@ -1465,8 +1520,9 @@ contains
    end subroutine nearest_solution
 !----------------------------------------------------------------------------------------------------
    function compute_q(alpha_in, exit_code, outer_p_ratio)
-      use constants,       only: zero, one, I_ZERO, I_ONE
-      use initcrspectrum,  only: NR_refine_solution_q, q_big, p_fix_ratio
+
+      use constants,      only: zero, one, I_ZERO, I_ONE
+      use initcrspectrum, only: NR_refine_solution_q, q_big, p_fix_ratio, arr_dim_q
 
       implicit none
 
@@ -1513,8 +1569,9 @@ contains
    end function compute_q
 !----------------------------------------------------------------------------------------------------
    subroutine save_NR_guess_grid(NR_guess_grid, var_name)
+
       use cresp_variables, only: clight ! use units, only: clight
-      use initcrspectrum, only: e_small, q_big, max_p_ratio
+      use initcrspectrum,  only: e_small, q_big, max_p_ratio
 
       implicit none
 
@@ -1557,9 +1614,10 @@ contains
    end subroutine save_loc
 !----------------------------------------------------------------------------------------------------
    subroutine read_NR_guess_grid(NR_guess_grid, var_name, exit_code) ! must be improved, especially for cases when files do not exist
+
       use cresp_variables, only: clight ! use units, only: clight
       use func,            only: operator(.equals.)
-      use initcrspectrum, only: e_small, q_big, max_p_ratio
+      use initcrspectrum,  only: e_small, q_big, max_p_ratio
 
       implicit none
 
@@ -1618,6 +1676,7 @@ contains
 
 !----------------------------------------------------------------------------------------------------
    function ind_to_flog(ind,min_in, max_in, length)
+
       use constants, only: I_ONE, ten
 
       implicit none
@@ -1643,7 +1702,8 @@ contains
    end function inverse_f_to_ind
 !----------------------------------------------------------------------------------------------------
    subroutine cresp_NR_mpi_exchange
-      use mpisetup,       only: piernik_MPI_Bcast
+
+      use mpisetup, only: piernik_MPI_Bcast
 
       implicit none
 
@@ -1686,6 +1746,7 @@ contains
    end subroutine nr_test
 !----------------------------------------------------------------------------------------------------
    function fvec_test(x)
+
       use constants, only: four
 
       implicit none
@@ -1702,6 +1763,7 @@ contains
    subroutine nr_test_1D
 
       implicit none
+
       real(kind=8) :: x
       logical      :: exit_code
 
@@ -1743,7 +1805,9 @@ contains
    end subroutine dummy_check_1D
  !----------------------------------------------------------------------------------------------------
    subroutine initialize_arrays
-      use diagnostics, only: my_allocate_with_index, my_allocate, ma1d, ma2d
+
+      use diagnostics,    only: my_allocate_with_index, my_allocate, ma1d, ma2d
+      use initcrspectrum, only: arr_dim, arr_dim_q
 
       implicit none
 

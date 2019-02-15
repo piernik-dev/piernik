@@ -29,11 +29,8 @@
 !>
 !! \brief Core of Cosmic Ray Energy SPectrum (CRESP) algorithm
 !<
-
-
 module cresp_crspectrum
 ! pulled by COSM_RAY_ELECTRONS
-   use dataio_pub,      only: msg, die, warn, printinfo
 
    implicit none
 
@@ -373,7 +370,7 @@ contains
       implicit none
 
       real(kind=8), dimension(ncre), intent(inout) :: ext_n, ext_e
-      logical, intent(inout)  :: empty_cell
+      logical,                       intent(inout) :: empty_cell
 
       call find_i_bound(ext_n, ext_e, empty_cell)
 
@@ -392,8 +389,8 @@ contains
 
    subroutine nullify_inactive_bins(ext_n, ext_e)
 
-      use initcrspectrum,      only: ncre
-      use constants,           only: zero
+      use constants,      only: zero
+      use initcrspectrum, only: ncre
 
       implicit none
 
@@ -408,15 +405,15 @@ contains
 !----------------------------------------------------------------------------------------------------
    subroutine nullify_all_bins(ext_n, ext_e)
 
-      use initcrspectrum,      only: ncre
-      use constants,           only: zero
+      use constants,      only: zero
+      use initcrspectrum, only: ncre
 
       implicit none
 
       real(kind=8), dimension(ncre), intent(inout) :: ext_n, ext_e
 
-      ext_e(:)   = zero
-      ext_n(:)   = zero
+      ext_e(:) = zero
+      ext_n(:) = zero
 
    end subroutine nullify_all_bins
 
@@ -425,16 +422,16 @@ contains
 !-------------------------------------------------------------------------------------------------
    subroutine find_i_bound(ext_n, ext_e, empty_cell) ! DEPRECATED
 
+      use constants,      only: zero
       use initcrspectrum, only: ncre
-      use constants, only: zero
 
       implicit none
 
-      integer(kind=4)   :: i
-      logical           :: empty_cell
       real(kind=8), dimension(ncre), intent(inout) :: ext_n, ext_e
+      logical,                       intent(out)   :: empty_cell
+      integer(kind=4)                              :: i
 
-      empty_cell    = .true.
+      empty_cell = .true.
 
       i_lo = 0
       do i = 1, ncre                        ! if energy density is nonzero, so should be the number density
@@ -462,17 +459,18 @@ contains
    subroutine cresp_find_prepare_spectrum(n, e, empty_cell, i_up_out) ! EXPERIMENTAL
 
       use constants,      only: I_ZERO, zero, I_ONE
+      use dataio_pub,     only: msg, warn, printinfo
       use diagnostics,    only: incr_vec
       use initcrspectrum, only: ncre, e_small, cresp_all_edges, cresp_all_bins, p_fix, p_mid_fix
 
       implicit none
 
-      integer(kind=8), dimension(:), allocatable :: nonempty_bins
-      logical, dimension(ncre) :: has_n_gt_zero, has_e_gt_zero
-      logical                  :: empty_cell
-      integer(kind=4)          :: i, pre_i_lo, pre_i_up, num_has_gt_zero, approx_p_lo_tmp, approx_p_up_tmp
-      integer(kind=4), optional:: i_up_out
-      real(kind=8), dimension(ncre), intent(inout)   :: n, e
+      real(kind=8), dimension(ncre), intent(inout) :: n, e
+      logical,                       intent(out)   :: empty_cell
+      integer(kind=4), optional,     intent(out)   :: i_up_out
+      integer(kind=8), dimension(:), allocatable   :: nonempty_bins
+      logical, dimension(ncre)                     :: has_n_gt_zero, has_e_gt_zero
+      integer(kind=4)                              :: i, pre_i_lo, pre_i_up, num_has_gt_zero, approx_p_lo_tmp, approx_p_up_tmp
 
       has_n_gt_zero(:) = .false. ; has_e_gt_zero(:)  = .false.
       is_active_bin(:) = .false. ; is_active_edge(:) = .false.
@@ -657,20 +655,22 @@ contains
 !----------------------------------------------------------------------------------------------------
 
    function assert_active_bin_via_nei(n_in, e_in, i_cutoff)
-      use initcrspectrum,  only: p_fix, ncre, e_small, eps
+
       use constants,       only: zero, fpi, one, three
       use cresp_variables, only: clight ! use units,     only: clight
       use cresp_NR_method, only: compute_q
+      use initcrspectrum,  only: p_fix, ncre, e_small, eps
 #ifdef CRESP_VERBOSED
       use dataio_pub,      only: printinfo, msg
 #endif /* CRESP_VERBOSED */
 
       implicit none
 
-      integer(kind=4),intent(in)    :: i_cutoff
-      real(kind=8), dimension(1)    :: e_one, n_one, f_one, q_one, p_l, p_r
-      real(kind=8)                  :: e_amplitude_l, e_amplitude_r, alpha, e_in, n_in
-      logical                       :: exit_code, assert_active_bin_via_nei
+      real(kind=8),    intent(in) :: n_in, e_in
+      integer(kind=4), intent(in) :: i_cutoff
+      real(kind=8), dimension(1)  :: e_one, n_one, f_one, q_one, p_l, p_r
+      real(kind=8)                :: e_amplitude_l, e_amplitude_r, alpha
+      logical                     :: exit_code, assert_active_bin_via_nei
 
       if (e_in .gt. zero .and. n_in .gt. zero .and. p_fix(max(i_cutoff-1,0)) .gt. zero ) then
          assert_active_bin_via_nei = .true.
@@ -718,14 +718,15 @@ contains
 !-----------------------------------------------------------------------
 
    subroutine cresp_detect_negative_content(location) ! Diagnostic measure - negative values should not show up:
-      use constants,       only: zero, ndims
-      use dataio_pub,      only: warn, msg
-      use initcrspectrum,  only: ncre
+
+      use constants,      only: zero, ndims
+      use dataio_pub,     only: warn, msg
+      use initcrspectrum, only: ncre
 
       implicit none                       ! if they do, there's something wrong with last code modifications
 
-      integer :: i
-      integer, dimension(ndims),optional      :: location
+      integer, dimension(ndims),optional :: location
+      integer                            :: i
 
       do i = 1, ncre
          if (e(i) .lt. zero .or. n(i) .lt. zero .or. edt(i) .lt. zero .or. ndt(i) .lt. zero) then
@@ -742,16 +743,18 @@ contains
 
    end subroutine cresp_detect_negative_content
 !----------------------------------------------------------------------------------------------------
-   subroutine check_cutoff_ne(n_bin, e_bin, i_bin, cfl_violated)     !< too high dt may result in negative edt, ndt (fluxes) -> cfl violation
-      use constants,       only: zero
+   subroutine check_cutoff_ne(n_bin, e_bin, i_bin, cfl_cresp_violated)     !< too high dt may result in negative edt, ndt (fluxes) -> cfl violation
+
+      use constants,  only: zero
 #ifdef CRESP_VERBOSED
-      use dataio_pub,      only: warn, msg
+      use dataio_pub, only: warn, msg
 #endif /* CRESP_VERBOSED */
+
       implicit none
 
-      logical                    :: cfl_violated
-      real(kind=8), intent(in)   :: n_bin, e_bin
-      integer(kind=4),intent(in) :: i_bin
+      real(kind=8),    intent(in)  :: n_bin, e_bin
+      integer(kind=4), intent(in)  :: i_bin
+      logical,         intent(out) :: cfl_cresp_violated
 
       if (e_bin .lt. zero .or. n_bin .lt. zero) then
 #ifdef CRESP_VERBOSED
@@ -759,8 +762,11 @@ contains
                                              &     ' n = ', n_bin, ', e = ', e_bin, i_bin
          call warn(msg)
 #endif /* CRESP_VERBOSED */
-         cfl_violated = .true.
+         cfl_cresp_violated = .true.
       endif
+
+      return
+      if (.false.) cfl_cresp_violated = cfl_cresp_violated .or. abs(i_bin) < zero ! suppress compiler warnings
 
    end subroutine check_cutoff_ne
 
@@ -768,7 +774,7 @@ contains
 
    subroutine cresp_update_bin_index(dt, p_lo, p_up, p_lo_next, p_up_next, dt_too_high) ! evaluates only "next" momenta and is called after finding outer cutoff momenta
 
-      use constants, only: zero, I_ZERO, one
+      use constants,      only: zero, I_ZERO, one
       use initcrspectrum, only: ncre, p_fix, w, cresp_all_bins, cresp_all_edges
 
       implicit none
@@ -1195,8 +1201,11 @@ contains
    end subroutine cresp_init_powl_spectrum
 !-------------------------------------------------------------------------------------------------
    subroutine cresp_get_scaled_init_spectrum(n_inout, e_inout, e_in_total) !< Using n,e spectrum obtained at initialization, obtain injected spectrum at given cell
+
       use initcrspectrum, only: norm_init_spectrum, total_init_cree, ncre
+
       implicit none
+
       real(kind=8), dimension(1:ncre), intent(inout) :: n_inout, e_inout
       real(kind=8), intent(in)                       :: e_in_total
 
@@ -1212,9 +1221,10 @@ contains
 !-------------------------------------------------------------------------------------------------
 
    function fq_to_e(p_l, p_r, f_l, q, bins)
-      use constants, only: zero, one, four, fpi
+
+      use constants,       only: zero, one, four, fpi
       use cresp_variables, only: clight ! use units, only: clight
-      use initcrspectrum, only: ncre, eps
+      use initcrspectrum,  only: ncre, eps
 
       implicit none
 
@@ -1241,8 +1251,9 @@ contains
 !-------------------------------------------------------------------------------------------------
 
    function fp_to_e_ampl(p_1, f_1)
-      use constants,          only: fpi
-      use cresp_variables,    only: clight
+
+      use constants,       only: fpi
+      use cresp_variables, only: clight
 
       implicit none
 
@@ -1260,7 +1271,8 @@ contains
 !-------------------------------------------------------------------------------------------------
 
    function fq_to_n(p_l, p_r, f_l, q, bins)
-      use constants, only: zero, one, three, fpi
+
+      use constants,      only: zero, one, three, fpi
       use initcrspectrum, only: ncre, eps
 
       implicit none
@@ -1288,8 +1300,9 @@ contains
 
    subroutine check_init_spectrum(p_l, p_u, f_l, f_u)
 
-   use constants,             only: one, I_ONE
-   use initcrspectrum,        only: e_small, e_small_approx_p_lo, e_small_approx_p_up
+   use constants,      only: one, I_ONE
+   use dataio_pub,     only: msg, warn, printinfo
+   use initcrspectrum, only: e_small, e_small_approx_p_up
 
    implicit none
 
@@ -1353,9 +1366,10 @@ contains
 !
 !-------------------------------------------------------------------------------------------------
    subroutine cresp_compute_fluxes(ce,he)
-      use constants, only: zero, one, three, four, fpi
+
+      use constants,       only: zero, one, three, four, fpi
       use cresp_variables, only: clight ! use units, only: clight
-      use initcrspectrum, only: ncre, eps, cresp_all_bins
+      use initcrspectrum,  only: ncre, eps, cresp_all_bins
 
       implicit none
 
@@ -1445,7 +1459,7 @@ contains
 !-------------------------------------------------------------------------------------------------
    subroutine cresp_compute_r(p, bins)
 
-      use constants, only: zero, four, five
+      use constants,      only: zero, four, five
       use initcrspectrum, only: ncre, eps
 
       implicit none
@@ -1460,17 +1474,17 @@ contains
          r_num = (p(bins)**(five-q(bins)) - p(bins-1)**(five-q(bins)))/(five - q(bins))
       elsewhere
          r_num = log(p(bins)/p(bins-1))
-      end where
+      endwhere
 
       where (abs(q(bins) - four) .gt. eps)
          r_den = (p(bins)**(four-q(bins)) - p(bins-1)**(four-q(bins)))/(four - q(bins))
       else where
          r_den = log(p(bins)/p(bins-1))
-      end where
+      endwhere
 
       where ( abs(r_num) .gt. zero .and. abs(r_den) .gt. zero )                  !< BEWARE - regression: comparisons against
          r(bins) = u_d + u_b * r_num/r_den !all cooling effects will come here   !< eps and epsilon result in bad results;
-      end where                                                                  !< range of values ofr_num and r_den is very wide
+      endwhere                                                                  !< range of values ofr_num and r_den is very wide
 
    end subroutine cresp_compute_r
 
@@ -1482,10 +1496,10 @@ contains
 
    subroutine ne_to_q(n, e, q, bins)
 
-      use constants, only: zero
+      use constants,       only: zero
       use cresp_NR_method, only: compute_q
       use cresp_variables, only: clight ! use units, only: clight
-      use initcrspectrum, only: ncre, e_small
+      use initcrspectrum,  only: ncre, e_small
 
       implicit none
 
@@ -1537,8 +1551,8 @@ contains
 ! -------------------------------------------------------------------------------------------------
    function nq_to_f(p_l, p_r, n, q, bins)
 
+      use constants,      only: zero, one, three, fpi
       use initcrspectrum, only: ncre, eps
-      use constants, only: zero, one, three, fpi
 
       implicit none
 
@@ -1599,7 +1613,7 @@ contains
 !---------------------------------------------------------------------------------------------------
    subroutine src_gpcresp(u, n, dx, grad_pcresp)
 
-      use constants, only: onet
+      use constants,      only: onet
       use initcrspectrum, only: ncre, cre_active, cre_gpcr_ess
 
       implicit none
@@ -1624,10 +1638,10 @@ contains
 ! distribution function value on left bin edge "f"
 !---------------------------------------------------------------------------------------------------
    subroutine get_fqp_up(exit_code)
+
       use constants,       only: zero, one
       use cresp_variables, only: clight ! use units, only: clight
-      use cresp_NR_method, only: intpol_pf_from_NR_grids, alpha, n_in, selected_function_2D, fvec_up, &
-                           &     NR_algorithm, e_small_to_f, q_ratios, assoc_pointers_up
+      use cresp_NR_method, only: intpol_pf_from_NR_grids, alpha, n_in, NR_algorithm, e_small_to_f, q_ratios, assoc_pointers_up
       use initcrspectrum,  only: e_small, q_big, p_fix, NR_refine_pf_up
 
       implicit none
@@ -1696,11 +1710,10 @@ contains
 !--------------------------------------------------------------------------------------------------
    subroutine get_fqp_lo(exit_code)
 
-      use constants, only: zero, one
-      use cresp_NR_method, only: intpol_pf_from_NR_grids, alpha, n_in, selected_function_2D, fvec_lo, &
-                  NR_algorithm, e_small_to_f, q_ratios, assoc_pointers_lo
+      use constants,       only: zero, one
+      use cresp_NR_method, only: intpol_pf_from_NR_grids, alpha, n_in, NR_algorithm, e_small_to_f, q_ratios, assoc_pointers_lo
       use cresp_variables, only: clight ! use units, only: clight
-      use initcrspectrum, only: e_small, q_big, p_fix, NR_refine_pf_lo
+      use initcrspectrum,  only: e_small, q_big, p_fix, NR_refine_pf_lo
 
       implicit none
 
@@ -1763,6 +1776,7 @@ contains
    end subroutine get_fqp_lo
 !----------------------------------------------------------------------------------------------------
    function b_losses(p)
+
       implicit none
 
       real(kind=8), dimension(:), intent(in)  :: p
@@ -1788,7 +1802,8 @@ contains
    end function p_rch_ord_1
 !-------------------------------------------------------------------------------------------------
    function p_rch_ord_2_1(dt, p)     !< adds 2nd term and calls 1st order
-      use constants,    only: half
+
+      use constants, only: half
 
       implicit none
 
@@ -1800,7 +1815,8 @@ contains
    end function p_rch_ord_2_1
 !-------------------------------------------------------------------------------------------------
    function p_rch_ord_3_2_1(dt, p)     !< adds 3rd term and calls 2nd and 1st order
-      use constants,    only: onesth
+
+      use constants, only: onesth
 
       implicit none
 
@@ -1812,16 +1828,18 @@ contains
    end function p_rch_ord_3_2_1
 !----------------------------------------------------------------------------------------------------
    subroutine p_rch_init
-      use initcrspectrum,  only: expan_order
+
+      use dataio_pub,     only: msg, die
+      use initcrspectrum, only: expan_order
 
       implicit none
 
-      select case(expan_order)
-         case(1)
+      select case (expan_order)
+         case (1)
             p_rch => p_rch_ord_1
-         case(2)
+         case (2)
             p_rch => p_rch_ord_2_1
-         case(3)
+         case (3)
             p_rch => p_rch_ord_3_2_1
          case default
             write (msg,*) '[cresp_crspectrum:p_rch_init] expan_order =',expan_order,': value incorrect (accepted values [1;3]).'
@@ -1830,6 +1848,7 @@ contains
    end subroutine p_rch_init
 !====================================================================================================
    subroutine transfer_quantities(give_to, take_from)
+
       use constants, only: zero
 
       implicit none
@@ -1842,7 +1861,8 @@ contains
    end subroutine transfer_quantities
 !----------------------------------------------------------------------------------------------------
    subroutine cresp_allocate_all
-      use diagnostics, only: my_allocate_with_index
+
+      use diagnostics,    only: my_allocate_with_index
       use initcrspectrum, only: ncre
 
       implicit none
@@ -1884,7 +1904,9 @@ contains
    end subroutine cresp_allocate_all
 !----------------------------------------------------------------------------------------------------
    subroutine cresp_deallocate_all
+
       use diagnostics, only: my_deallocate
+
       implicit none
 
       call my_deallocate(n)
@@ -1919,9 +1941,10 @@ contains
 
 !---------------------------------------------------------------------------------------------
    subroutine cresp_accuracy_test(t) ! Not for use with PIERNIK
+
       implicit none
 
-      real(kind=8), intent(in)   :: t
+      real(kind=8), intent(in) :: t
 
       print*, 'Accuracy test for adabatic compression/expansion:'
       print*, 'n_tot = ', n_tot, 'n_tot0 = ', n_tot0, 'rel error = ', (n_tot - n_tot0)/n_tot0
@@ -1938,6 +1961,9 @@ contains
    end subroutine cresp_accuracy_test
 !----------------------------------------------------------------------------------------------------
    subroutine cleanup_cresp
+
+      use dataio_pub, only: msg, printinfo
+
       implicit none
 
       write (msg, '(A36,I6,A6,I6)') "NR_2dim:  convergence failure: p_lo", fail_count_NR_2dim(1), ", p_up", fail_count_NR_2dim(2)   ; call printinfo(msg)
@@ -1948,6 +1974,7 @@ contains
    end subroutine cleanup_cresp
 !----------------------------------------------------------------------------------------------------
    subroutine printer(t)
+
       use initcrspectrum, only: ncre, crel
 
       implicit none
