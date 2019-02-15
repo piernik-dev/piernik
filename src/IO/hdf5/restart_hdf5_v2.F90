@@ -507,7 +507,7 @@ contains
       use global,             only: t, dt, nstep
       use grid_cont,          only: is_overlap
       use hdf5,               only: HID_T, H5F_ACC_RDONLY_F, h5open_f, h5close_f, h5fopen_f, h5fclose_f, h5gopen_f, h5gclose_f
-      use h5lt,               only: h5ltget_attribute_int_f, h5ltget_attribute_string_f
+      use h5lt,               only: h5ltget_attribute_string_f
       use mass_defect,        only: magic_mass
       use mpisetup,           only: master, piernik_MPI_Barrier
       use read_attr,          only: read_attribute
@@ -605,19 +605,16 @@ contains
                last_tsl_time = rbuf(1)
             case ("magic_mass")
                if (master) magic_mass(:) = rbuf(:)
-!               deallocate(rbuf) ; allocate(rbuf(1)) ! not necessary while magic_mass is the last issue in real_attrs
             case default
                write(msg,'(3a,g15.5,a)')"[restart_hdf5_v2:read_restart_hdf5_v2] Real attribute '",trim(real_attrs(ia)),"' with value = ",rbuf(1)," was ignored"
                call warn(msg)
          end select
-!         deallocate(rbuf)
+         deallocate(rbuf)
       enddo
-      deallocate(rbuf)
 
       nres_old = nres
-      allocate(ibuf(1))
       do ia = lbound(int_attrs, dim=1), ubound(int_attrs, dim=1)
-         call h5ltget_attribute_int_f(file_id, "/", trim(int_attrs(ia)), ibuf, error)
+         call get_attr(file_id, trim(int_attrs(ia)), ibuf)
          call compare_array1D(ibuf(:))
          select case (int_attrs(ia))
             case ("nstep")
@@ -631,9 +628,10 @@ contains
             case default
                write(msg,'(3a,i14,a)')"[restart_hdf5_v2:read_restart_hdf5_v2] Integer attribute '",trim(real_attrs(ia)),"' with value = ",ibuf(1)," was ignored"
                call warn(msg)
-            end select
+         end select
+         deallocate(ibuf)
       enddo
-      deallocate(ibuf)
+
 #ifdef RANDOMIZE
       call read_current_seed_from_restart(file_id)
 #endif /* RANDOMIZE */

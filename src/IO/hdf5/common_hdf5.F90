@@ -509,12 +509,12 @@ contains
 
    subroutine set_common_attributes_v2(file_id)
 
-      use constants,   only: cbuff_len, I_ONE
+      use constants,   only: I_ONE
       use dataio_pub,  only: require_problem_IC, piernik_hdf5_version2, problem_name, run_id, last_hdf_time, &
          &                   last_res_time, last_log_time, last_tsl_time, nres, nhdf, domain_dump
       use global,      only: t, dt, nstep
-      use hdf5,        only: HID_T, SIZE_T
-      use h5lt,        only: h5ltset_attribute_int_f, h5ltset_attribute_string_f
+      use hdf5,        only: HID_T
+      use h5lt,        only: h5ltset_attribute_string_f
       use mass_defect, only: magic_mass
       use set_get_attributes, only: set_attr
 
@@ -523,13 +523,9 @@ contains
       integer(HID_T), intent(in)                   :: file_id       !< File identifier
 
       integer(kind=4)                              :: fe
-      integer(SIZE_T)                              :: i
-      integer(SIZE_T), parameter                   :: bufsize = I_ONE
       integer(kind=4)                              :: error
-      integer, parameter                           :: buf_len = 50
-      integer(kind=4),          dimension(buf_len) :: ibuffer
-      character(len=cbuff_len), dimension(buf_len) :: ibuffer_name = ''
 
+      ! real attributes
       call set_attr(file_id, "time",          [t                     ]) !rr2
       call set_attr(file_id, "timestep",      [dt                    ]) !rr2
       call set_attr(file_id, "piernik",       [piernik_hdf5_version2 ]) !rr1, rr2
@@ -540,19 +536,13 @@ contains
       call set_attr(file_id, "last_plt_time", [-99999.99999          ]) !rr2 !FIXME
       call set_attr(file_id, "magic_mass",     magic_mass)
 
-      ibuffer(1) = nstep                 ; ibuffer_name(1) = "nstep" !rr2
-      ibuffer(2) = nres                  ; ibuffer_name(2) = "nres" !rr2
-      ibuffer(3) = nhdf                  ; ibuffer_name(3) = "nhdf" !rr2
-      ibuffer(4) = -1                    ; ibuffer_name(4) = "nimg" !rr2 !FIXME
-      ibuffer(5) = require_problem_IC    ; ibuffer_name(5) = "require_problem_IC" !rr2
-
+      ! integer attributes
+      call set_attr(file_id, "nstep",              [nstep                 ]) !rr2
+      call set_attr(file_id, "nres",               [nres                  ]) !rr2
+      call set_attr(file_id, "nhdf",               [nhdf                  ]) !rr2
+      call set_attr(file_id, "nimg",               [-I_ONE                ]) !rr2 !FIXME
+      call set_attr(file_id, "require_problem_IC", [require_problem_IC    ]) !rr2
       !> \todo  add number of pieces in the restart point/data dump
-
-      i = 1
-      do while (ibuffer_name(i) /= "")
-         call h5ltset_attribute_int_f(file_id, "/", ibuffer_name(i), ibuffer(i), bufsize, error)
-         i = i + bufsize
-      enddo
 
       fe = len_trim(problem_name, kind=4)
       call h5ltset_attribute_string_f(file_id, "/", "problem_name", problem_name(1:fe), error) !rr2
