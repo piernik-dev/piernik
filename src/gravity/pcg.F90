@@ -38,7 +38,7 @@
 !<
 
 module pcg
-! pulled by MULTIGRID && GRAV
+! pulled by MULTIGRID && SELF_GRAV
 
    use constants, only: cbuff_len, dsetnamelen
 

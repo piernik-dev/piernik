@@ -29,7 +29,7 @@
 
 !> \brief This module contains old solutions list and related methods
 
-! pulled by MULTIGRID && GRAV
+! pulled by MULTIGRID && SELF_GRAV
 
 module old_soln_list
 

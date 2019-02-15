@@ -40,7 +40,7 @@
 !<
 
 module multigrid_gravity
-! pulled by MULTIGRID && GRAV
+! pulled by MULTIGRID && SELF_GRAV
 
    use constants,          only: cbuff_len
    use multigrid_vstats,   only: vcycle_stats
@@ -110,7 +110,7 @@ contains
 !! <tr><td>grav_bnd_str          </td><td>"periodic"/"dirichlet"</td><td>string of chars</td><td>\copydoc multigrid_gravity::grav_bnd_str          </td></tr>
 !! <tr><td>preconditioner        </td><td>"HG_V-cycle"</td><td>string of chars</td><td>\copydoc multigrid_gravity::preconditioner   </td></tr>
 !! </table>
-!! The list is active while \b "GRAV" and \b "MULTIGRID" are defined.
+!! The list is active while \b "SELF_GRAV" and \b "MULTIGRID" are defined.
 !! \n \n
 !<
    subroutine multigrid_grav_par

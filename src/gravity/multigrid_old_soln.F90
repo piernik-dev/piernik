@@ -30,7 +30,7 @@
 !> \brief Multigrid historical solutions
 
 module multigrid_old_soln
-! pulled by MULTIGRID && GRAV
+! pulled by MULTIGRID && SELF_GRAV
 
    use old_soln_list, only: old_soln, os_list_undef_T, os_list_T
 

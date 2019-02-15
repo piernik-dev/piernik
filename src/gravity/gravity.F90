@@ -374,10 +374,8 @@ contains
       use cg_list_dataop,    only: expanded_domain
       use constants,         only: sgp_n, sgpm_n
       use fluidindex,        only: iarr_all_sg
-      use named_array_list,  only: qna
-#ifdef MULTIGRID
       use multigrid_gravity, only: multigrid_solve_grav
-#endif /* MULTIGRID */
+      use named_array_list,  only: qna
 #endif /* SELF_GRAV */
 
       implicit none
@@ -387,11 +385,7 @@ contains
 
       call leaves%q_copy(qna%ind(sgp_n), qna%ind(sgpm_n))
 
-#ifdef MULTIGRID
       call multigrid_solve_grav(iarr_all_sg)
-#else /* !MULTIGRID */
-#error [gravity:source_terms_grav] SELF_GRAV without MULTIGRID gives uninitialized gravitational potential
-#endif /* MULTIGRID */
 
       !> \todo Perhaps it should be called after call sum_potential but that may depend on grav_pot_3d and its potential dependency on selfgravity results
       call leaves%leaf_arr3d_boundaries(qna%ind(sgp_n)) !, nocorners=.true.)
@@ -429,12 +423,12 @@ contains
    subroutine sum_potential
 
       use cg_leaves,        only: leaves
-      use cg_list_dataop,   only: ind_val
       use constants,        only: gp_n, gpot_n, hgpot_n
-      use func,             only: operator(.notequals.)
       use named_array_list, only: qna
 #ifdef SELF_GRAV
+      use cg_list_dataop,   only: ind_val
       use constants,        only: one, half, sgp_n, sgpm_n, zero
+      use func,             only: operator(.notequals.)
       use global,           only: dt, dtm
 #endif /* SELF_GRAV */
 
