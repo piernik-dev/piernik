@@ -512,11 +512,11 @@ contains
       use constants,   only: cbuff_len, I_ONE
       use dataio_pub,  only: require_problem_IC, piernik_hdf5_version2, problem_name, run_id, last_hdf_time, &
          &                   last_res_time, last_log_time, last_tsl_time, nres, nhdf, domain_dump
-      use fluidindex,  only: flind
       use global,      only: t, dt, nstep
       use hdf5,        only: HID_T, SIZE_T
-      use h5lt,        only: h5ltset_attribute_double_f, h5ltset_attribute_int_f, h5ltset_attribute_string_f
+      use h5lt,        only: h5ltset_attribute_int_f, h5ltset_attribute_string_f
       use mass_defect, only: magic_mass
+      use set_get_attributes, only: set_attr
 
       implicit none
 
@@ -527,23 +527,18 @@ contains
       integer(SIZE_T), parameter                   :: bufsize = I_ONE
       integer(kind=4)                              :: error
       integer, parameter                           :: buf_len = 50
-      integer(SIZE_T),          dimension(buf_len) :: rbuffer_size
       integer(kind=4),          dimension(buf_len) :: ibuffer
-      real,                     dimension(buf_len) :: rbuffer
       character(len=cbuff_len), dimension(buf_len) :: ibuffer_name = ''
-      character(len=cbuff_len), dimension(buf_len) :: rbuffer_name = ''
 
-      rbuffer_size = bufsize
-      rbuffer(1) = t                     ; rbuffer_name(1) = "time" !rr2
-      rbuffer(2) = dt                    ; rbuffer_name(2) = "timestep" !rr2
-      rbuffer(3) = piernik_hdf5_version2 ; rbuffer_name(3) = "piernik" !rr1, rr2
-      rbuffer(4) = last_log_time         ; rbuffer_name(4) = "last_log_time" !rr2
-      rbuffer(5) = last_tsl_time         ; rbuffer_name(5) = "last_tsl_time" !rr2
-      rbuffer(6) = last_hdf_time         ; rbuffer_name(6) = "last_hdf_time" !rr2
-      rbuffer(7) = last_res_time         ; rbuffer_name(7) = "last_res_time" !rr2
-      rbuffer(8) = -99999.99999          ; rbuffer_name(8) = "last_plt_time" !rr2 !FIXME
-      rbuffer_size(9) = flind%fluids
-      rbuffer(9:8+rbuffer_size(9)) = magic_mass ; rbuffer_name(9:8+rbuffer_size(9)) = "magic_mass" !rr2
+      call set_attr(file_id, "time",          [t                     ]) !rr2
+      call set_attr(file_id, "timestep",      [dt                    ]) !rr2
+      call set_attr(file_id, "piernik",       [piernik_hdf5_version2 ]) !rr1, rr2
+      call set_attr(file_id, "last_log_time", [last_log_time         ]) !rr2
+      call set_attr(file_id, "last_tsl_time", [last_tsl_time         ]) !rr2
+      call set_attr(file_id, "last_hdf_time", [last_hdf_time         ]) !rr2
+      call set_attr(file_id, "last_res_time", [last_res_time         ]) !rr2
+      call set_attr(file_id, "last_plt_time", [-99999.99999          ]) !rr2 !FIXME
+      call set_attr(file_id, "magic_mass",     magic_mass)
 
       ibuffer(1) = nstep                 ; ibuffer_name(1) = "nstep" !rr2
       ibuffer(2) = nres                  ; ibuffer_name(2) = "nres" !rr2
@@ -552,12 +547,6 @@ contains
       ibuffer(5) = require_problem_IC    ; ibuffer_name(5) = "require_problem_IC" !rr2
 
       !> \todo  add number of pieces in the restart point/data dump
-
-      i = 1
-      do while (rbuffer_name(i) /= "")
-         call h5ltset_attribute_double_f(file_id, "/", rbuffer_name(i), rbuffer(i:i-I_ONE+rbuffer_size(i)), rbuffer_size(i), error)
-         i = i + rbuffer_size(i)
-      enddo
 
       i = 1
       do while (ibuffer_name(i) /= "")

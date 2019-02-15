@@ -503,15 +503,15 @@ contains
            &                        require_problem_IC, piernik_hdf5_version2, nres, nhdf, fix_string
       use dataio_user,        only: user_reg_var_restart, user_attrs_rd
       use domain,             only: dom
-      use fluidindex,         only: flind
       use func,               only: operator(.notequals.)
       use global,             only: t, dt, nstep
       use grid_cont,          only: is_overlap
       use hdf5,               only: HID_T, H5F_ACC_RDONLY_F, h5open_f, h5close_f, h5fopen_f, h5fclose_f, h5gopen_f, h5gclose_f
-      use h5lt,               only: h5ltget_attribute_double_f, h5ltget_attribute_int_f, h5ltget_attribute_string_f
+      use h5lt,               only: h5ltget_attribute_int_f, h5ltget_attribute_string_f
       use mass_defect,        only: magic_mass
       use mpisetup,           only: master, piernik_MPI_Barrier
       use read_attr,          only: read_attribute
+      use set_get_attributes, only: get_attr
 #ifdef RANDOMIZE
       use randomization,      only: read_current_seed_from_restart
 #endif /* RANDOMIZE */
@@ -566,10 +566,10 @@ contains
       call h5fopen_f(trim(filename), H5F_ACC_RDONLY_F, file_id, error)
 
       ! Check file format version first
-      allocate(rbuf(1))
 
-      call h5ltget_attribute_double_f(file_id, "/", "piernik", rbuf, error) !> \deprecated: magic string across multiple files
-      if (error /= 0) call die("[restart_hdf5_v2:read_restart_hdf5_v2] Cannot read 'piernik' attribute from the restart file. The file may be either damaged or incompatible")
+      call get_attr(file_id, "piernik", rbuf)
+
+      if (size(rbuf) /= 1) call die("[restart_hdf5_v2:read_restart_hdf5_v2] Cannot read 'piernik' attribute from the restart file. The file may be either damaged or incompatible")
       if (rbuf(1) > piernik_hdf5_version2) then
          write(msg,'(2(a,f5.2))')"[restart_hdf5_v2:read_restart_hdf5_v2] Cannot read future versions of the restart file: ", rbuf(1)," > ", piernik_hdf5_version2
          call die(msg)
@@ -588,10 +588,7 @@ contains
       ! Compare attributes in the root of the restart point file with values read from problem.par
       !> \todo merge this code somehow with set_common_attributes_v2
       do ia = lbound(real_attrs, dim=1), ubound(real_attrs, dim=1)
-         if (real_attrs(ia) == "magic_mass") then
-            deallocate(rbuf) ; allocate(rbuf(flind%fluids))
-         endif
-         call h5ltget_attribute_double_f(file_id, "/", trim(real_attrs(ia)), rbuf, error)
+         call get_attr(file_id, trim(real_attrs(ia)), rbuf)
          call compare_array1D(rbuf(:))
          select case (real_attrs(ia))
             case ("time")
@@ -613,6 +610,7 @@ contains
                write(msg,'(3a,g15.5,a)')"[restart_hdf5_v2:read_restart_hdf5_v2] Real attribute '",trim(real_attrs(ia)),"' with value = ",rbuf(1)," was ignored"
                call warn(msg)
          end select
+!         deallocate(rbuf)
       enddo
       deallocate(rbuf)
 
