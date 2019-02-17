@@ -416,6 +416,7 @@ contains
 !> \todo Set up an universal table(s) of attribute names for use by both set_common_attributes and read_restart_hdf5.
 !! Provide indices for critical attributes (rr1) and for runtime attributes (rr2).
 !!
+!! \ToDo convert to use "call set_attr", like in set_common_attributes_v2, then despaghettify.
 !<
 
    subroutine set_common_attributes_v1(file_id)
@@ -509,12 +510,12 @@ contains
 
    subroutine set_common_attributes_v2(file_id)
 
-      use constants,   only: I_ONE
-      use dataio_pub,  only: require_problem_IC, piernik_hdf5_version2, problem_name, run_id, last_hdf_time, &
-         &                   last_res_time, last_log_time, last_tsl_time, nres, nhdf, domain_dump
-      use global,      only: t, dt, nstep
-      use hdf5,        only: HID_T
-      use mass_defect, only: magic_mass
+      use constants,          only: I_ONE
+      use dataio_pub,         only: require_problem_IC, piernik_hdf5_version2, problem_name, run_id, last_hdf_time, &
+         &                          last_res_time, last_log_time, last_tsl_time, nres, nhdf, domain_dump
+      use global,             only: t, dt, nstep
+      use hdf5,               only: HID_T
+      use mass_defect,        only: magic_mass
       use set_get_attributes, only: set_attr
 
       implicit none
@@ -544,14 +545,6 @@ contains
       call set_attr(file_id, "problem_name", [trim(problem_name)]) !rr2
       call set_attr(file_id, "domain",       [trim(domain_dump) ]) !rr2
       call set_attr(file_id, "run_id",       [trim(run_id)      ]) !rr2
-
-      ! these values will go do  base domain description
-!!$      rbuffer(4:5) = dom%edge(xdim, :)       ; rbuffer_name(4:5) = [ "xmin", "xmax" ] !rr1
-!!$      rbuffer(6:7) = dom%edge(ydim, :)       ; rbuffer_name(6:7) = [ "ymin", "ymax" ] !rr1
-!!$      rbuffer(8:9) = dom%edge(zdim, :)       ; rbuffer_name(8:9) = [ "zmin", "zmax" ] !rr1
-!!$      ibuffer(6:8) = dom%n_d(:)              ; ibuffer_name(6:8) = [ "nxd", "nyd", "nzd" ] !rr1
-!!$      ibuffer(9)   = dom%nb                  ; ibuffer_name(9)   = "nb"
-!!$      external boundary types
 
    end subroutine set_common_attributes_v2
 

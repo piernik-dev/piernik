@@ -668,6 +668,8 @@ contains
          deallocate(cbuf)
       enddo
 
+      !> \ToDo: try to simplify the code below and use get_attr in place of read_attribute
+
       ! Read domain description
       call h5gopen_f(file_id, d_gname, doml_g_id, error)       ! open "/domains"
 

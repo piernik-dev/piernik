@@ -61,6 +61,8 @@ module set_get_attributes
       module procedure get_attr_C
    end interface get_attr
 
+!> \ToDo Add 64-bit integer attributes (can't use H5LT in fortran for this, need to follow {set,get}_attr_C)
+
 contains
 
 !> \brief Set a real attribute (by default in "/" if not specified otherwise), autodetect the size.
@@ -357,7 +359,6 @@ contains
          write(msg, '(2(a,i3),a)')"[set_get_attributes:find_rank_dims] too long attribute: len(element): ", tsize, " > ", cbuff_len, ". Truncating."
          call warn(msg)
       endif
-
 
    end subroutine find_rank_dims
 
