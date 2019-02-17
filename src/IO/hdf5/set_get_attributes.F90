@@ -91,8 +91,10 @@ contains
 
    subroutine get_attr_R(file_id, name, array, path)
 
-      use hdf5, only: HID_T, HSIZE_T
-      use h5lt, only: h5ltget_attribute_double_f
+      use cmp_1D_mpi, only: compare_array1D
+      use dataio_pub, only: msg, warn
+      use hdf5,       only: HID_T, HSIZE_T
+      use h5lt,       only: h5ltget_attribute_double_f
 
       implicit none
 
@@ -110,6 +112,8 @@ contains
       call find_rank_dims(file_id, path_, name, rank, dims)
       if (rank /= 1 .or. .not. allocated(dims)) then
          allocate(array(0))
+         write(msg, '(5a,i3,a,7i10)')"[set_get_attributes:get_attr_R] Failed to read attribute '", trim(name), " at '", trim(path_), "' rank = ", rank, " dims() = ", dims
+         call warn(msg)
          return
       endif
 
@@ -117,6 +121,8 @@ contains
       call h5ltget_attribute_double_f(file_id, path_, name, array, error)
 
       deallocate(dims)
+
+      call compare_array1D(array)
 
    end subroutine get_attr_R
 
@@ -152,8 +158,10 @@ contains
 
    subroutine get_attr_I(file_id, name, array, path)
 
-      use hdf5, only: HID_T, HSIZE_T
-      use h5lt, only: h5ltget_attribute_int_f
+      use cmp_1D_mpi, only: compare_array1D
+      use dataio_pub, only: msg, warn
+      use hdf5,       only: HID_T, HSIZE_T
+      use h5lt,       only: h5ltget_attribute_int_f
 
       implicit none
 
@@ -171,6 +179,8 @@ contains
       call find_rank_dims(file_id, path_, name, rank, dims)
       if (rank /= 1 .or. .not. allocated(dims)) then
          allocate(array(0))
+         write(msg, '(5a,i3,a,7i10)')"[set_get_attributes:get_attr_I] Failed to read attribute '", trim(name), " at '", trim(path_), "' rank = ", rank, " dims() = ", dims
+         call warn(msg)
          return
       endif
 
@@ -178,6 +188,8 @@ contains
       call h5ltget_attribute_int_f(file_id, path_, name, array, error)
 
       deallocate(dims)
+
+      call compare_array1D(array)
 
    end subroutine get_attr_I
 
@@ -188,9 +200,13 @@ contains
 
    subroutine set_attr_C(file_id, name, array, path)
 
+      use constants,  only: I_ONE
       use dataio_pub, only: die
-      use hdf5,       only: HID_T
-      use h5lt,       only: h5ltset_attribute_string_f
+      use hdf5,       only: HID_T, HSIZE_T, SIZE_T, H5T_FORTRAN_S1, &
+           &                h5acreate_f, h5aclose_f, h5awrite_f, &
+           &                h5gopen_f, h5gclose_f, &
+           &                h5screate_simple_f, h5sclose_f, &
+           &                h5tcopy_f, h5tset_size_f, h5tclose_f
 
       implicit none
 
@@ -199,12 +215,27 @@ contains
       character(len=*), dimension(:), intent(in) :: array    !< Array of values (should contain at least one element)
       character(len=*), optional,     intent(in) :: path     !< Path to attribute ("/" if not specified)
 
+      integer(kind=4), parameter         :: arank = I_ONE
+      integer(HID_T)                     :: aspace_id, attr_id, g_id, type_id
+      integer(kind=4)                    :: error
+      integer(HSIZE_T), dimension(arank) :: dims
+
       if (size(array) < 1) call die("[set_get_attributes:set_attr_C] empty input array")
 
       path_ = checkpath(root_path)
       if (present(path)) path_ = checkpath(path)
 
-      call h5ltset_attribute_string_f(file_id, path_, name, array(1), error)
+      dims = size(array)
+      call h5tcopy_f(H5T_FORTRAN_S1, type_id, error)
+      call h5tset_size_f(type_id, int(len(array), kind=SIZE_T), error)
+      call h5gopen_f(file_id, path_, g_id, error)
+      call h5screate_simple_f(arank, dims, aspace_id, error)
+      call h5acreate_f(g_id, name, type_id, aspace_id, attr_id, error)
+      call h5awrite_f(attr_id, type_id, array, dims, error)
+      call h5aclose_f(attr_id, error)
+      call h5sclose_f(aspace_id, error)
+      call h5gclose_f(g_id, error)
+      call h5tclose_f(type_id, error)
 
    end subroutine set_attr_C
 
@@ -212,34 +243,59 @@ contains
 
    subroutine get_attr_C(file_id, name, array, path)
 
-      use hdf5, only: HID_T, HSIZE_T
-      use h5lt, only: h5ltget_attribute_string_f
+      use constants,  only: cbuff_len
+      use cmp_1D_mpi, only: compare_array1D
+      use dataio_pub, only: msg, warn
+      use hdf5,       only: HID_T, HSIZE_T, SIZE_T, H5T_FORTRAN_S1, H5S_SCALAR_F, &
+           &                h5aopen_f, h5aclose_f, h5aread_f, &
+           &                h5gopen_f, h5gclose_f, &
+           &                h5tcopy_f, h5tset_size_f, h5tclose_f
+      use h5lt,       only: h5ltget_attribute_string_f
 
       implicit none
 
-      integer(HID_T),                              intent(in)  :: file_id  !< File identifier
-      character(len=*),                            intent(in)  :: name     !< Integer attribute name
-      character(len=*), allocatable, dimension(:), intent(out) :: array    !< Array of returned values (empty array marks an error)
-      character(len=*), optional,                  intent(in)  :: path     !< Path to attribute ("/" if not specified)
+      integer(HID_T),                                      intent(in)  :: file_id  !< File identifier
+      character(len=*),                                    intent(in)  :: name     !< Integer attribute name
+      character(len=cbuff_len), allocatable, dimension(:), intent(out) :: array    !< Array of returned values (empty array marks an error)
+      character(len=*), optional,                          intent(in)  :: path     !< Path to attribute ("/" if not specified)
 
-      integer(kind=4) :: rank
+      integer(kind=4)                             :: rank
       integer(HSIZE_T), dimension(:), allocatable :: dims
+      integer(HID_T)                              :: attr_id, g_id, type_id
+      integer(kind=4)                             :: error
+      integer                                     :: i
 
       path_ = checkpath(root_path)
       if (present(path)) path_ = checkpath(path)
 
       call find_rank_dims(file_id, path_, name, rank, dims)
-!!$      if (rank /= 1 .or. .not. allocated(dims)) then
-!!$         allocate(array(0))
-!!$         return
-!!$      endif
-!!$
-!!$      allocate(array(dims(1)))
+      if ((rank /= 1 .and. rank /= H5S_SCALAR_F) .or. .not. allocated(dims)) then
+         allocate(array(0))
+         write(msg, '(5a,i3,a,7i10)')"[set_get_attributes:get_attr_C] Failed to read attribute '", trim(name), " at '", trim(path_), "' rank = ", rank, " dims() = ", dims
+         call warn(msg)
+         return
+      endif
 
-      allocate(array(1))
-      call h5ltget_attribute_string_f(file_id, path_, name, array(1), error)
+      if (rank == H5S_SCALAR_F) then  ! keep compatibility with old restarts
+         allocate(array(1))
+         call h5ltget_attribute_string_f(file_id, path_, name, array(1), error)
+      else
+         allocate(array(dims(1)))
+         call h5tcopy_f(H5T_FORTRAN_S1, type_id, error)
+         call h5tset_size_f(type_id, int(len(array), kind=SIZE_T), error)
+         call h5gopen_f(file_id, path_, g_id, error)
+         call h5aopen_f(g_id, name, attr_id, error)
+         call h5aread_f(attr_id, type_id, array, dims, error)
+         call h5aclose_f(attr_id, error)
+         call h5gclose_f(g_id, error)
+         call h5tclose_f(type_id, error)
+      endif
 
-!!$      deallocate(dims)
+      deallocate(dims)
+
+      do i = lbound(array, 1), ubound(array, 1)
+         call compare_array1D(trim(array(i)))
+      enddo
 
    end subroutine get_attr_C
 
@@ -249,9 +305,9 @@ contains
 
    subroutine find_rank_dims(file_id, path, name, rank, dims)
 
-      use constants,  only: INVALID
+      use constants,  only: INVALID, cbuff_len
       use dataio_pub, only: msg, warn
-      use hdf5,       only: HID_T, HSIZE_T, SIZE_T
+      use hdf5,       only: HID_T, HSIZE_T, SIZE_T, H5T_STRING_F, H5S_SCALAR_F
       use h5lt,       only: h5ltget_attribute_ndims_f, h5ltget_attribute_info_f
 
       implicit none
@@ -281,14 +337,27 @@ contains
       endif
 
       deallocate(dims)
-      allocate(dims(rank))
+      if (rank  == H5S_SCALAR_F) then
+         allocate(dims(1))  ! promote scalar to an array for simplicity
+      else
+         allocate(dims(rank))
+      endif
       call h5ltget_attribute_info_f(file_id, path, name, dims, tclass, tsize, error)
+
       if (error /= 0) then
          write(msg, '(4a)')"[set_get_attributes:find_rank_dims] cannot read info of attribute '", trim(name), "' at ", trim(path)
          call warn(msg)  ! no need for if (master) here
          deallocate(dims)
          return
       endif
+
+      if (rank  == H5S_SCALAR_F) dims = 1   ! promote scalar to an array for simplicity
+
+      if (tclass == H5T_STRING_F .and. tsize > cbuff_len) then
+         write(msg, '(2(a,i3),a)')"[set_get_attributes:find_rank_dims] too long attribute: len(element): ", tsize, " > ", cbuff_len, ". Truncating."
+         call warn(msg)
+      endif
+
 
    end subroutine find_rank_dims
 

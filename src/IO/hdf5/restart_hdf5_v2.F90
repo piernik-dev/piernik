@@ -604,7 +604,6 @@ contains
       !> \todo merge this code somehow with set_common_attributes_v2
       do ia = lbound(real_attrs, dim=1), ubound(real_attrs, dim=1)
          call get_attr(file_id, trim(real_attrs(ia)), rbuf)
-         call compare_array1D(rbuf(:))
          select case (real_attrs(ia))
             case ("time")
                t = rbuf(1)
@@ -630,7 +629,6 @@ contains
       nres_old = nres
       do ia = lbound(int_attrs, dim=1), ubound(int_attrs, dim=1)
          call get_attr(file_id, trim(int_attrs(ia)), ibuf)
-         call compare_array1D(ibuf(:))
          select case (int_attrs(ia))
             case ("nstep")
                nstep = ibuf(1)
@@ -656,9 +654,6 @@ contains
 
       do ia = lbound(str_attrs, dim=1), ubound(str_attrs, dim=1)
          call get_attr(file_id, trim(str_attrs(ia)), cbuf)
-         do j = lbound(cbuf, 1), ubound(cbuf, 1)
-            call compare_array1D(trim(cbuf(j)))
-         enddo
          select case (str_attrs(ia))
             case ("problem_name")
                problem_name = fix_string(trim(cbuf(1)))
