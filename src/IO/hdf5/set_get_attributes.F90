@@ -51,14 +51,14 @@ module set_get_attributes
    interface set_attr
       module procedure set_attr_R
       module procedure set_attr_I
-!      module procedure set_attr_C
+      module procedure set_attr_C
    end interface set_attr
 
 !> \brief Get common types of attributes, autodetect data types and sizes
    interface get_attr
       module procedure get_attr_R
       module procedure get_attr_I
-!      module procedure get_attr_C
+      module procedure get_attr_C
    end interface get_attr
 
 contains
@@ -182,6 +182,67 @@ contains
    end subroutine get_attr_I
 
 !---------------------------------------------------------------------------
+!> \brief Set a character attribute (by default in "/" if not specified otherwise), autodetect the size.
+
+! semi-spaghetti, but can't yet figure out how to really exploit polymorphism here without using class(*) and risking ICE and other kinds of compiler faults
+
+   subroutine set_attr_C(file_id, name, array, path)
+
+      use dataio_pub, only: die
+      use hdf5,       only: HID_T
+      use h5lt,       only: h5ltset_attribute_string_f
+
+      implicit none
+
+      integer(HID_T),                 intent(in) :: file_id  !< File identifier
+      character(len=*),               intent(in) :: name     !< Integer attribute name
+      character(len=*), dimension(:), intent(in) :: array    !< Array of values (should contain at least one element)
+      character(len=*), optional,     intent(in) :: path     !< Path to attribute ("/" if not specified)
+
+      if (size(array) < 1) call die("[set_get_attributes:set_attr_C] empty input array")
+
+      path_ = checkpath(root_path)
+      if (present(path)) path_ = checkpath(path)
+
+      call h5ltset_attribute_string_f(file_id, path_, name, array(1), error)
+
+   end subroutine set_attr_C
+
+!> \brief Get an int32 attribute (by default in "/" if not specified otherwise), autodetect the size.
+
+   subroutine get_attr_C(file_id, name, array, path)
+
+      use hdf5, only: HID_T, HSIZE_T
+      use h5lt, only: h5ltget_attribute_string_f
+
+      implicit none
+
+      integer(HID_T),                              intent(in)  :: file_id  !< File identifier
+      character(len=*),                            intent(in)  :: name     !< Integer attribute name
+      character(len=*), allocatable, dimension(:), intent(out) :: array    !< Array of returned values (empty array marks an error)
+      character(len=*), optional,                  intent(in)  :: path     !< Path to attribute ("/" if not specified)
+
+      integer(kind=4) :: rank
+      integer(HSIZE_T), dimension(:), allocatable :: dims
+
+      path_ = checkpath(root_path)
+      if (present(path)) path_ = checkpath(path)
+
+      call find_rank_dims(file_id, path_, name, rank, dims)
+!!$      if (rank /= 1 .or. .not. allocated(dims)) then
+!!$         allocate(array(0))
+!!$         return
+!!$      endif
+!!$
+!!$      allocate(array(dims(1)))
+
+      allocate(array(1))
+      call h5ltget_attribute_string_f(file_id, path_, name, array(1), error)
+
+!!$      deallocate(dims)
+
+   end subroutine get_attr_C
+
 !---------------------------------------------------------------------------
 
 !> \brief Query attribute

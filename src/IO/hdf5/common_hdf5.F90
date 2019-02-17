@@ -514,16 +514,12 @@ contains
          &                   last_res_time, last_log_time, last_tsl_time, nres, nhdf, domain_dump
       use global,      only: t, dt, nstep
       use hdf5,        only: HID_T
-      use h5lt,        only: h5ltset_attribute_string_f
       use mass_defect, only: magic_mass
       use set_get_attributes, only: set_attr
 
       implicit none
 
       integer(HID_T), intent(in)                   :: file_id       !< File identifier
-
-      integer(kind=4)                              :: fe
-      integer(kind=4)                              :: error
 
       ! real attributes
       call set_attr(file_id, "time",          [t                     ]) !rr2
@@ -544,12 +540,10 @@ contains
       call set_attr(file_id, "require_problem_IC", [require_problem_IC    ]) !rr2
       !> \todo  add number of pieces in the restart point/data dump
 
-      fe = len_trim(problem_name, kind=4)
-      call h5ltset_attribute_string_f(file_id, "/", "problem_name", problem_name(1:fe), error) !rr2
-      fe = len_trim(domain_dump, kind=4)
-      call h5ltset_attribute_string_f(file_id, "/", "domain", domain_dump(1:fe), error) !rr2
-      fe = len_trim(run_id, kind=4)
-      call h5ltset_attribute_string_f(file_id, "/", "run_id", run_id(1:fe), error) !rr2
+      ! string attributes
+      call set_attr(file_id, "problem_name", [trim(problem_name)]) !rr2
+      call set_attr(file_id, "domain",       [trim(domain_dump) ]) !rr2
+      call set_attr(file_id, "run_id",       [trim(run_id)      ]) !rr2
 
       ! these values will go do  base domain description
 !!$      rbuffer(4:5) = dom%edge(xdim, :)       ; rbuffer_name(4:5) = [ "xmin", "xmax" ] !rr1
