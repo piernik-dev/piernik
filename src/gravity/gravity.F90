@@ -860,7 +860,7 @@ contains
 !<
    subroutine grav_pot2accel_ord2(sweep, i1, i2, n, grav, istep, cg)
 
-      use constants,        only: idm2, ndims, pdims, ydim, half, LO, HI, GEO_XYZ, GEO_RPZ, RK2_1, RK2_2, EULER, gpot_n, hgpot_n, NORMAL, ORTHO1, ORTHO2
+      use constants,        only: idm2, ndims, pdims, ydim, half, LO, HI, GEO_XYZ, GEO_RPZ, RK2_1, RK2_2, EULER, gpot_n, hgpot_n, NORMAL, ORTHO1, ORTHO2, INVALID
       use dataio_pub,       only: die
       use domain,           only: dom
       use grid_cont,        only: grid_container
@@ -889,6 +889,7 @@ contains
          ig = qna%ind(gpot_n)
       case default
          call die("[gravity:grav_pot2accel_ord2] Unsupported substep")
+         ig = INVALID  ! suppress compiler warning
       end select
 
       ispan(pdims(sweep,ORTHO1),:) = i1
@@ -910,7 +911,7 @@ contains
 
    subroutine grav_pot2accel_ord4(sweep, i1, i2, n, grav, istep, cg)
 
-      use constants,        only: idm2, ndims, pdims, ydim, LO, HI, GEO_XYZ, GEO_RPZ, RK2_1, RK2_2, EULER, gpot_n, hgpot_n, NORMAL, ORTHO1, ORTHO2
+      use constants,        only: idm2, ndims, pdims, ydim, LO, HI, GEO_XYZ, GEO_RPZ, RK2_1, RK2_2, EULER, gpot_n, hgpot_n, NORMAL, ORTHO1, ORTHO2, INVALID
       use dataio_pub,       only: die
       use domain,           only: dom
       use grid_cont,        only: grid_container
@@ -939,6 +940,7 @@ contains
          ig = qna%ind(gpot_n)
       case default
          call die("[gravity:grav_pot2accel_ord4] Unsupported substep")
+         ig = INVALID  ! suppress compiler warning
       end select
 
       ispan(pdims(sweep,ORTHO1),:) = i1
