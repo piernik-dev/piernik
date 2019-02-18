@@ -28,6 +28,7 @@
 #include "piernik.h"
 
 !> \brief Multigrid historical solutions
+!! Minimum restart version 2.02
 
 module multigrid_old_soln
 ! pulled by MULTIGRID && SELF_GRAV
@@ -50,7 +51,10 @@ module multigrid_old_soln
       procedure :: cleanup_history            !< Deallocate arrays
       procedure :: init_solution              !< Construct first guess of potential based on previously obtained solution, if any.
       procedure :: store_solution             !< Manage old copies of potential for recycling.
-      procedure :: sanitize                   !< invalidate some stored solutions from the future i.e. when there was timestep retry
+      procedure :: sanitize                   !< Invalidate some stored solutions from the future i.e. when there was timestep retry
+#ifdef HDF5
+      procedure :: mark_and_create_attribute  !< Mark some old solutions for restarts and set up necessary attributes
+#endif
    end type soln_history
 
    ! Namelist parameter
@@ -282,5 +286,57 @@ contains
       endif
 
    end subroutine sanitize
+
+#ifdef HDF5
+!> \brief Mark some old solutions for restarts and set up necessary attributes
+
+   subroutine mark_and_create_attribute(this, file_id)
+
+      use constants,          only: I_ONE, AT_IGNORE, AT_NO_B, cbuff_len
+      use hdf5,               only: HID_T
+      use named_array_list,   only: qna
+      use old_soln_list,      only: old_soln
+      use set_get_attributes, only: set_attr
+
+      implicit none
+
+      class(soln_history), intent(inout) :: this !< potential history to be registered for restarts
+      integer(HID_T),      intent(in)    :: file_id  !< File identifier
+
+      integer(kind=4) :: n, i, b
+      type(old_soln), pointer :: os
+      character(len=cbuff_len), allocatable, dimension(:) :: namelist
+      real, allocatable, dimension(:) :: timelist
+
+      n = min(this%old%cnt(), ord_time_extrap + I_ONE)
+
+      if (n <= 0) return
+
+      allocate(namelist(n), timelist(n))
+
+      ! set the flags to mark which fields should go to the restart
+      i = 1
+      os => this%old%latest
+      do while (associated(os))
+         b = AT_IGNORE
+         if (i <= n) then
+            b = AT_NO_B
+            namelist(i) = qna%lst(os%i_hist)%name
+            timelist(i) = os%time
+         endif
+         qna%lst(os%i_hist)%restart_mode = b
+         i = i + 1
+         os => os%earlier
+      enddo
+
+      call set_attr(file_id, this%old%label // "_names", namelist)
+      call set_attr(file_id, this%old%label // "_times", timelist)
+
+      deallocate(namelist)
+      deallocate(timelist)
+
+   end subroutine mark_and_create_attribute
+#endif /* HDF5 */
+
 
 end module multigrid_old_soln

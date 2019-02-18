@@ -335,6 +335,9 @@ contains
 #ifdef SN_SRC
       use snsources,     only: write_snsources_to_restart
 #endif /* SN_SRC */
+#if defined(MULTIGRID) && defined(SELF_GRAV)
+      use multigrid_gravity, only: write_oldsoln_to_restart
+#endif /* MULTIGRID && SELF_GRAV */
 
       implicit none
 
@@ -398,6 +401,9 @@ contains
 #ifdef SN_SRC
       call write_snsources_to_restart(file_id)
 #endif /* SN_SRC */
+#if defined(MULTIGRID) && defined(SELF_GRAV)
+      call write_oldsoln_to_restart(file_id)
+#endif /* MULTIGRID && SELF_GRAV */
       if (associated(user_attrs_wr)) call user_attrs_wr(file_id)
 
       call h5fclose_f(file_id, error)
