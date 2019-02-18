@@ -50,6 +50,10 @@ module helpers_hdf5
                                                           !< a file with the same name as the core file
 
 !> \brief Add an attribute (1D array) to the given _id and initialize its value
+
+!> \ToDo replace by {get,set}_attr
+! create_real_attribute_scalar is never used
+! create_int8_attribute can be used randomization.F90 for the case of -fdefault-integer-8
    interface create_attribute
       module procedure create_int_attribute
       module procedure create_str_attribute

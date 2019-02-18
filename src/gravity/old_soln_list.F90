@@ -146,7 +146,7 @@ contains
       class(os_list_AT), intent(in) :: this
 
       type(old_soln), pointer :: os
-      integer :: cnt
+      integer(kind=4) :: cnt
 
       cnt = I_ZERO
       if (.not. associated(this%latest)) return
@@ -168,7 +168,7 @@ contains
       implicit none
 
       class(os_list_undef_T), intent(inout) :: this
-      integer, intent(in) :: ind
+      integer(kind=4), intent(in) :: ind
 
       type(old_soln), pointer :: n
 
