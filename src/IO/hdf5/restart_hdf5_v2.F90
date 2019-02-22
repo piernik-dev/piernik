@@ -517,6 +517,9 @@ contains
 #ifdef SN_SRC
       use snsources,          only: read_snsources_from_restart
 #endif /* SN_SRC */
+#if defined(MULTIGRID) && defined(SELF_GRAV)
+      use multigrid_gravity,  only: read_oldsoln_from_restart
+#endif /* MULTIGRID && SELF_GRAV */
 
       implicit none
 
@@ -651,6 +654,9 @@ contains
 #ifdef SN_SRC
       call read_snsources_from_restart(file_id)
 #endif /* SN_SRC */
+#if defined(MULTIGRID) && defined(SELF_GRAV)
+      call read_oldsoln_from_restart(file_id)
+#endif /* MULTIGRID && SELF_GRAV */
 
       do ia = lbound(str_attrs, dim=1), ubound(str_attrs, dim=1)
          call get_attr(file_id, trim(str_attrs(ia)), cbuf)

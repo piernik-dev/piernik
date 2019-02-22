@@ -51,7 +51,7 @@ module multigrid_gravity
    private
    public :: multigrid_grav_par, init_multigrid_grav, cleanup_multigrid_grav, multigrid_solve_grav, init_multigrid_grav_ext
 #ifdef HDF5
-   public :: write_oldsoln_to_restart
+   public :: write_oldsoln_to_restart, read_oldsoln_from_restart
 #endif
 
    include "fftw3.f"
@@ -1033,6 +1033,20 @@ contains
       call outer%mark_and_create_attribute(file_id)
 
    end subroutine write_oldsoln_to_restart
+
+   subroutine read_oldsoln_from_restart(file_id)
+
+      use hdf5, only: HID_T
+
+      implicit none
+
+      integer(HID_T), intent(in) :: file_id  !< File identifier
+
+      call inner%read_os_attribute(file_id)
+      call outer%read_os_attribute(file_id)
+
+   end subroutine read_oldsoln_from_restart
+
 #endif
 
 end module multigrid_gravity

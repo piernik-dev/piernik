@@ -66,6 +66,7 @@ module old_soln_list
    type, extends(os_list_AT) :: os_list_undef_T
    contains
       procedure :: new         !< add a fresh element anywhere
+      procedure :: pick        !< unlink an element that is matching i_hist
    end type os_list_undef_T
 
    type, extends(os_list_AT) :: os_list_T
@@ -178,6 +179,42 @@ contains
       this%latest => n
 
    end subroutine new
+
+!> \brief Unlink head and return it to the caller
+
+   function pick(this, ind) result(os)
+
+      implicit none
+
+      class(os_list_undef_T), intent(inout) :: this
+      integer(kind=4),        intent(in)    :: ind
+
+      type(old_soln), pointer :: os, ose, osl
+
+      if (.not. associated(this%latest)) then
+         os => null()
+         return
+      endif
+
+      os => this%latest
+      do while (associated(os))
+         if (ind == os%i_hist) then
+            ose => os%earlier
+            osl => os%later
+            if (associated(osl)) then
+               osl%earlier => ose
+            else
+               this%latest => ose
+            endif
+            if (associated(ose)) ose%later => osl
+            return
+         endif
+         os => os%earlier
+      enddo
+
+      os => null()
+
+   end function pick
 
 !> \brief Unlink head and return it to the caller
 

@@ -55,6 +55,7 @@ module multigrid_old_soln
       procedure :: print                      !< Print the state of old solution list
 #ifdef HDF5
       procedure :: mark_and_create_attribute  !< Mark some old solutions for restarts and set up necessary attributes
+      procedure :: read_os_attribute          !< Read old solutions identifiers, their times, and initialize history
 #endif
    end type soln_history
 
@@ -314,8 +315,8 @@ contains
 
       implicit none
 
-      class(soln_history), intent(inout) :: this !< potential history to be registered for restarts
-      integer(HID_T),      intent(in)    :: file_id  !< File identifier
+      class(soln_history), intent(in) :: this !< potential history to be registered for restarts
+      integer(HID_T),      intent(in) :: file_id  !< File identifier
 
       integer(kind=4) :: n, i, b
       type(old_soln), pointer :: os
@@ -343,13 +344,92 @@ contains
          os => os%earlier
       enddo
 
-      call set_attr(file_id, this%old%label // "_names", namelist)
-      call set_attr(file_id, this%old%label // "_times", timelist)
+      call set_attr(file_id, trim(this%old%label) // "_names", namelist)
+      call set_attr(file_id, trim(this%old%label) // "_times", timelist)
 
       deallocate(namelist)
       deallocate(timelist)
 
    end subroutine mark_and_create_attribute
+
+   subroutine read_os_attribute(this, file_id)
+
+      use constants,          only: cbuff_len, AT_NO_B
+      use dataio_pub,         only: msg, die, printio
+      use hdf5,               only: HID_T, HSIZE_T, SIZE_T, &
+           &                        h5aexists_f, h5gopen_f, h5gclose_f
+      use h5lt,               only: h5ltget_attribute_ndims_f, h5ltget_attribute_info_f
+      use named_array_list,   only: qna
+      use set_get_attributes, only: get_attr
+
+      implicit none
+
+      class(soln_history), intent(inout) :: this !< potential history to be registered for restarts
+      integer(HID_T),      intent(in)    :: file_id  !< File identifier
+
+      integer(kind=4) :: rank, error
+      integer(HSIZE_T), dimension(1) :: dims
+      integer(kind=4) :: tclass
+      integer(SIZE_T) :: tsize
+      character(len=cbuff_len), allocatable, dimension(:) :: namelist
+      real, allocatable, dimension(:) :: timelist
+      character(len=*), parameter, dimension(2) :: nt = [ "_names", "_times" ]
+      logical :: a_exists
+      integer(HID_T) :: g_id
+      integer :: i
+      type(old_soln), pointer :: os
+
+      call h5gopen_f(file_id, "/", g_id, error)
+      do i = lbound(nt, 1), ubound(nt, 1)
+         call h5aexists_f(g_id, trim(this%old%label) // nt(i), a_exists, error)
+         if (.not. a_exists) then
+            call printio("[multigrid_old_soln:read_os_attribute] " // trim(this%old%label) // nt(i) // " does not exist. Coldboot")
+            return
+         endif
+      enddo
+      call h5gclose_f(g_id, error)
+
+      call h5ltget_attribute_ndims_f(file_id, "/", trim(this%old%label) // "_names", rank, error)
+      if (error /= 0 .or. rank /= 1) then
+         write(msg, '(2(a,i4))')"[multigrid_old_soln:read_os_attribute] " // trim(this%old%label) // "_names: need rank=1, got ", rank, " , error = ", error
+         call die(msg)
+      endif
+      call h5ltget_attribute_ndims_f(file_id, "/", trim(this%old%label) // "_times", rank, error)
+      if (error /= 0 .or. rank /= 1) then
+         write(msg, '(2(a,i4))')"[multigrid_old_soln:read_os_attribute] " // trim(this%old%label) // "_times: need rank=1, got ", rank, " , error = ", error
+         call die(msg)
+      endif
+      call h5ltget_attribute_info_f(file_id, "/", trim(this%old%label) // "_names", dims, tclass, tsize, error)
+      if (dims(1) <= 0) then
+         call printio("[multigrid_old_soln:read_os_attribute] No " // trim(this%old%label) // "_names to read. Coldboot.")
+         return
+      endif
+      allocate(namelist(dims(1)))
+      call get_attr(file_id, trim(this%old%label) // "_names", namelist)
+      call h5ltget_attribute_info_f(file_id, "/", trim(this%old%label) // "_times", dims, tclass, tsize, error)
+      if (dims(1) /= size(namelist)) call die("[multigrid_old_soln:read_os_attribute] size("// trim(this%old%label) // "_names) /= size("// trim(this%old%label) // "_times")
+      allocate(timelist(dims(1)))
+      call get_attr(file_id, trim(this%old%label) // "_times", timelist)
+
+      if (associated(this%old%latest)) call die("[multigrid_old_soln:read_os_attribute] " // trim(this%old%label) // "nonempty")
+      do i = ubound(namelist, 1), lbound(namelist, 1), -1  ! it is stored with most recent entriest first
+         if (qna%exists(trim(namelist(i)))) then
+            os => this%invalid%pick(qna%ind(namelist(i)))
+            if (associated(os)) then
+               call this%old%new_head(os)
+               os%time = timelist(i)  ! new_head did put current time, need to enforce it
+               qna%lst(os%i_hist)%restart_mode = AT_NO_B
+            else
+               call die("[multigrid_old_soln:read_os_attribute] Cannot find '" // trim(namelist(i)) // "' in free slots.")
+            endif
+         else
+            call die("[multigrid_old_soln:read_os_attribute] Cannot find '" // trim(namelist(i)) // "' in qna.")
+         endif
+
+      enddo
+
+   end subroutine read_os_attribute
+
 #endif /* HDF5 */
 
 
