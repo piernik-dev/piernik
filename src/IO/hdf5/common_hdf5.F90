@@ -327,7 +327,7 @@ contains
          & H5P_DATASET_CREATE_F, h5open_f, h5fcreate_f, h5fclose_f, H5Zfilter_avail_f, H5Pcreate_f, H5Pset_deflate_f, &
          & H5Pset_chunk_f, h5tcopy_f, h5tset_size_f, h5screate_simple_f, H5Dcreate_f, H5Dwrite_f, H5Dclose_f, &
          & H5Sclose_f, H5Tclose_f, H5Pclose_f, h5close_f
-      use mpisetup,      only: slave
+      use mpisetup,      only: master, slave
       use version,       only: env, nenv
 #ifdef RANDOMIZE
       use randomization, only: write_current_seed_to_restart
@@ -352,10 +352,16 @@ contains
 
       if (associated(user_attrs_pre)) call user_attrs_pre
 
-      if (slave) return ! This data need not be written in parallel.
+      if (master) then
+         call h5open_f(error)
+         call h5fcreate_f(filename, H5F_ACC_TRUNC_F, file_id, error)
+      endif
 
-      call h5open_f(error)
-      call h5fcreate_f(filename, H5F_ACC_TRUNC_F, file_id, error)
+#if defined(MULTIGRID) && defined(SELF_GRAV)
+      call write_oldsoln_to_restart(file_id)  ! Old solution fields have to be selectively marked for restart also on slaves
+#endif /* MULTIGRID && SELF_GRAV */
+
+      if (slave) return ! This data need not be written in parallel.
 
       if (use_v2_io) then
          call set_common_attributes_v2(file_id)
@@ -401,9 +407,6 @@ contains
 #ifdef SN_SRC
       call write_snsources_to_restart(file_id)
 #endif /* SN_SRC */
-#if defined(MULTIGRID) && defined(SELF_GRAV)
-      call write_oldsoln_to_restart(file_id)
-#endif /* MULTIGRID && SELF_GRAV */
       if (associated(user_attrs_wr)) call user_attrs_wr(file_id)
 
       call h5fclose_f(file_id, error)

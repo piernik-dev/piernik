@@ -53,6 +53,7 @@ module multigrid_old_soln
       procedure :: store_solution             !< Manage old copies of potential for recycling.
       procedure :: sanitize                   !< Invalidate some stored solutions from the future i.e. when there was timestep retry
       procedure :: print                      !< Print the state of old solution list
+      procedure :: unmark                     !< Reset restart flag of old soln
 #ifdef HDF5
       procedure :: mark_and_create_attribute  !< Mark some old solutions for restarts and set up necessary attributes
       procedure :: read_os_attribute          !< Read old solutions identifiers, their times, and initialize history
@@ -298,6 +299,30 @@ contains
       call this%invalid%print
 
    end subroutine print
+!>
+!! \brief Reset restart flag of old soln
+!!
+!! This is required to avoid creating .retry field for copies in case of timestep retry
+!<
+
+   subroutine unmark(this)
+
+      use constants,        only: AT_IGNORE
+      use named_array_list, only: qna
+
+      implicit none
+
+      class(soln_history), intent(inout) :: this !< potential history to be registered for restarts
+
+      type(old_soln), pointer :: os
+
+      os => this%old%latest
+      do while (associated(os))
+         qna%lst(os%i_hist)%restart_mode = AT_IGNORE
+         os => os%earlier
+      enddo
+
+   end subroutine unmark
 
 #ifdef HDF5
 !>
@@ -310,6 +335,7 @@ contains
       use constants,          only: I_ONE, AT_IGNORE, AT_NO_B, cbuff_len
       use hdf5,               only: HID_T
       use named_array_list,   only: qna
+      use mpisetup,           only: master
       use old_soln_list,      only: old_soln
       use set_get_attributes, only: set_attr
 
@@ -344,8 +370,10 @@ contains
          os => os%earlier
       enddo
 
-      call set_attr(file_id, trim(this%old%label) // "_names", namelist)
-      call set_attr(file_id, trim(this%old%label) // "_times", timelist)
+      if (master) then
+         call set_attr(file_id, trim(this%old%label) // "_names", namelist)
+         call set_attr(file_id, trim(this%old%label) // "_times", timelist)
+      endif
 
       deallocate(namelist)
       deallocate(timelist)

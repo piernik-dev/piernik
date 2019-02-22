@@ -49,7 +49,7 @@ module multigrid_gravity
    implicit none
 
    private
-   public :: multigrid_grav_par, init_multigrid_grav, cleanup_multigrid_grav, multigrid_solve_grav, init_multigrid_grav_ext
+   public :: multigrid_grav_par, init_multigrid_grav, cleanup_multigrid_grav, multigrid_solve_grav, init_multigrid_grav_ext, unmark_oldsoln
 #ifdef HDF5
    public :: write_oldsoln_to_restart, read_oldsoln_from_restart
 #endif
@@ -1015,10 +1015,18 @@ contains
 
    end subroutine vcycle_hg
 
-
 !>
 !! \brief Mark which old potential fields should be put into restart and dump appropriate attributes
 !<
+
+   subroutine unmark_oldsoln
+
+      implicit none
+
+      call inner%unmark
+      call outer%unmark
+
+   end subroutine unmark_oldsoln
 
 #ifdef HDF5
    subroutine write_oldsoln_to_restart(file_id)
