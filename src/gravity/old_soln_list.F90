@@ -320,10 +320,11 @@ contains
 
    subroutine print(this)
 
-      use constants,  only: I_ZERO, I_ONE
-      use dataio_pub, only: msg, printinfo
-      use global,     only: t
-      use mpisetup,   only: master
+      use constants,        only: I_ZERO, I_ONE
+      use dataio_pub,       only: msg, printinfo
+      use global,           only: t
+      use mpisetup,         only: master
+      use named_array_list, only: qna
 
       implicit none
 
@@ -338,11 +339,11 @@ contains
          cnt = cnt + I_ONE
          select type(this)
             type is (os_list_undef_T)
-               write(msg, '(2(a,i3))') "(Undef) soln# ", cnt, " qna_index: ", os%i_hist
+               write(msg, '(2(a,i3),2a)') "(Undef) soln# ", cnt, " qna_index: ", os%i_hist, " qna_name: ", qna%lst(os%i_hist)%name
             type is (os_list_T)
-               write(msg, '(a,i3,a,g14.6,a,i3)') "(Old) soln# ", cnt, " time = ", os%time, " qna_index: ", os%i_hist
+               write(msg, '(a,i3,a,g14.6,a,i3,2a)') "(Old) soln# ", cnt, " time = ", os%time, " qna_index: ", os%i_hist, " qna_name: ", qna%lst(os%i_hist)%name
             class default
-               write(msg, '(a,i3,a,g14.6,a,i3)') "(Other ?) soln# ", cnt, " time = ", os%time, " qna_index: ", os%i_hist
+               write(msg, '(a,i3,a,g14.6,a,i3,2a)') "(Other ?) soln# ", cnt, " time = ", os%time, " qna_index: ", os%i_hist, " qna_name: ", qna%lst(os%i_hist)%name
          end select
          if (master) call printinfo(msg)
          os => os%earlier

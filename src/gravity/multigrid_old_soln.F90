@@ -52,6 +52,7 @@ module multigrid_old_soln
       procedure :: init_solution              !< Construct first guess of potential based on previously obtained solution, if any.
       procedure :: store_solution             !< Manage old copies of potential for recycling.
       procedure :: sanitize                   !< Invalidate some stored solutions from the future i.e. when there was timestep retry
+      procedure :: print                      !< Print the state of old solution list
 #ifdef HDF5
       procedure :: mark_and_create_attribute  !< Mark some old solutions for restarts and set up necessary attributes
 #endif
@@ -158,8 +159,7 @@ contains
 #ifdef DEBUG
       write(msg, '(a,g14.6,a,i2)')"[multigrid_old_soln:init_solution] init solution at time: ", t, " order: ", ordt
       if (master) call printinfo(msg)
-      call this%old%print
-      call this%invalid%print
+      call this%print
 #endif /* DEBUG */
 
       select case (ordt)
@@ -246,8 +246,7 @@ contains
 #ifdef DEBUG
       write(msg, '(a,g14.6)')"[multigrid_old_soln:store_solution] store solution at time ", t
       if (master) call printinfo(msg)
-      call this%old%print
-      call this%invalid%print
+      call this%print
 #endif /* DEBUG */
 
    end subroutine store_solution
@@ -280,16 +279,31 @@ contains
          write(msg, '(a,g14.6,a,i2,a)')"[multigrid_old_soln:sanitize] sanitize solution history at time ", t, ", removed ", cnt - this%old%cnt(), " elements"
          if (master) call printinfo(msg)
 #ifdef DEBUG
-         call this%old%print
-         call this%invalid%print
+         call this%print
 #endif /* DEBUG */
       endif
 
    end subroutine sanitize
 
-#ifdef HDF5
-!> \brief Mark some old solutions for restarts and set up necessary attributes
+!> \brief Print the state of old solution list
 
+   subroutine print(this)
+
+      implicit none
+
+      class(soln_history), intent(in) :: this !< potential history to be printed
+
+      call this%old%print
+      call this%invalid%print
+
+   end subroutine print
+
+#ifdef HDF5
+!>
+!! \brief Mark some old solutions for restarts and set up necessary attributes
+!!
+!! This routine needs to be called before the datasets are written (before call write_restart_hdf5_v2).
+!<
    subroutine mark_and_create_attribute(this, file_id)
 
       use constants,          only: I_ONE, AT_IGNORE, AT_NO_B, cbuff_len
