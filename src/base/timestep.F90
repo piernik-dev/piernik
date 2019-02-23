@@ -104,6 +104,7 @@ contains
 
       use cg_leaves,            only: leaves
       use cg_list,              only: cg_list_element
+      use cmp_1D_mpi,           only: compare_array1D
       use constants,            only: one, two, zero, half, pMIN, pMAX
       use dataio,               only: write_crashed
       use dataio_pub,           only: tend, msg, warn
@@ -203,6 +204,7 @@ contains
          call printinfo(msg)
       endif
 #endif /* DEBUG */
+      call compare_array1D([dt])  ! just in case
 
    end subroutine time_step
 
@@ -257,8 +259,14 @@ contains
 
       implicit none
 
-      real, save :: stepcfl=zero, cfl_c=one
-      real       :: stepcfl_old
+      real, save    :: stepcfl=zero, cfl_c=one
+      real          :: stepcfl_old
+      logical, save :: frun = .true.
+
+      if (frun) then
+         if (master) call warn("[timestep:cfl_auto] Cannot guarantee repeatability over restarts unless one adds stepcfl and cfl_c to attributes")
+         frun = .false.
+      endif
 
       stepcfl_old = stepcfl
       stepcfl = cfl
