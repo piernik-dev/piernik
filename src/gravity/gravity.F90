@@ -373,8 +373,9 @@ contains
       use cg_leaves,         only: leaves
       use cg_list_dataop,    only: expanded_domain
       use constants,         only: sgp_n, sgpm_n
+      use dataio_pub,        only: warn
       use fluidindex,        only: iarr_all_sg
-      use multigrid_gravity, only: multigrid_solve_grav
+      use multigrid_gravity, only: multigrid_solve_grav, recover_sgpm
       use named_array_list,  only: qna
 #endif /* SELF_GRAV */
 
@@ -382,8 +383,16 @@ contains
 
 #ifdef SELF_GRAV
       logical, save :: frun = .true.
+      logical :: initialized
 
-      call leaves%q_copy(qna%ind(sgp_n), qna%ind(sgpm_n))
+      initialized = .true.
+      if (frun) then
+         ! try to recover sgpm from old soln
+         initialized = recover_sgpm()
+         frun = .false.
+      else
+         call leaves%q_copy(qna%ind(sgp_n), qna%ind(sgpm_n))
+      endif
 
       call multigrid_solve_grav(iarr_all_sg)
 
@@ -392,11 +401,13 @@ contains
       ! No solvers should requires corner values for the potential. Unfortunately some problems may relay on it indirectly (e.g. streaming_instability).
       !> \todo OPT: identify what relies on corner values of the potential and change it to work without corners. Then enable nocorners in the above call for some speedup.
 
-      if (frun) then
+      if (.not. initialized) then
          call leaves%q_copy(qna%ind(sgp_n), qna%ind(sgpm_n)) ! add fake history for selfgravitating potential: pretend that nothing was changing there until domain was created
-         !> \deprecated: restarted rund wil be slightly affected as the previous selfgravitating potential was forgotten
-         !> \todo find a way to properly restore previous potential from scratch
-         frun = .false.
+         !> Restarted runs will be slightly affected as the previous selfgravitating potential was forgotten
+         !> First step in highly dynamical setups will behave as the potential was frozen before first timestep
+         !> Solution? Take one step backwards just for calculating old potential? Sounds complicated.
+         !> Another solution: don't use extrapolation, exploit rich history instead and call multigrid more often.
+         call warn("[gravity:source_terms_grav] assigned sgpm = sgp")
       endif
 
       call expanded_domain%q_copy(qna%ind(sgp_n), qna%ind(sgpm_n)) ! add fake history for selfgravitating potential: pretend that nothing was changing there until domain expanded

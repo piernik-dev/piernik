@@ -125,7 +125,7 @@ program piernik
       call grace_period
 
       if (first_step) then
-         dtm = 0.0
+         dtm = dt
       else
          if (.not.cfl_violated) dtm = dt
       endif

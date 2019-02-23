@@ -49,7 +49,7 @@ module multigrid_gravity
    implicit none
 
    private
-   public :: multigrid_grav_par, init_multigrid_grav, cleanup_multigrid_grav, multigrid_solve_grav, init_multigrid_grav_ext, unmark_oldsoln
+   public :: multigrid_grav_par, init_multigrid_grav, cleanup_multigrid_grav, multigrid_solve_grav, init_multigrid_grav_ext, unmark_oldsoln, recover_sgpm
 #ifdef HDF5
    public :: write_oldsoln_to_restart, read_oldsoln_from_restart
 #endif
@@ -817,6 +817,39 @@ contains
       tot_ts = tot_ts + ts
 
    end subroutine multigrid_solve_grav
+
+!> \brief
+
+   function recover_sgpm() result(initialized)
+
+      use constants,        only: sgpm_n
+      use cg_leaves,        only: leaves
+      use dataio_pub,       only: warn
+      use multigridvars,    only: grav_bnd, bnd_isolated
+      use named_array_list, only: qna
+
+      implicit none
+
+      logical :: initialized
+
+      initialized = .false.
+      if (associated(inner%old%latest)) then
+         call leaves%q_copy(inner%old%latest%i_hist, qna%ind(sgpm_n))
+         initialized = .true.
+         if (grav_bnd == bnd_isolated) then
+            if (associated(outer%old%latest)) then
+               call leaves%q_add(outer%old%latest%i_hist, qna%ind(sgpm_n))
+            else
+               initialized = .false.
+               call warn("[multigrid_gravity:recover_sgpm] i-history without o-history available. Ignoring.")
+            endif
+         endif
+      else
+         call warn("[multigrid_gravity:recover_sgpm] no i-history available")
+      endif
+      call leaves%leaf_arr3d_boundaries(qna%ind(sgpm_n))
+
+   end function recover_sgpm
 
 !> \brief Chose the desired poisson solver
 
