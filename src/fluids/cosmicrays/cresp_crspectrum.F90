@@ -997,6 +997,22 @@ contains
 
       if (initial_condition == "powl") call cresp_init_powl_spectrum(n, e, f_amplitude, q_init, p_lo_init, p_up_init)
 
+      if (initial_condition == 'brpg') then
+!>
+!!/brief Power-law like spectrum with break at p_br_init
+!! In this case initial spectrum with a break at p_min_fix is assumed, the initial slope
+!! on the left side of the break is gaussian. q_br_init scales FWHM.
+!<
+         i_br = minloc(abs(p_fix - p_br_init),dim=1)-1
+         f(i_lo:i_br-1) = f(i_br-1) * exp(-(q_br_init*log(2.0) * log(p(i_lo:i_br-1)/sqrt(p_lo_init * p(i_br)))**2))
+         do i = 1, i_br
+            q(i) = pf_to_q(p(i-1),p(i),f(i-1),f(i))
+         enddo
+         e = fq_to_e(p(0:ncre-1), p(1:ncre), f(0:ncre-1), q(1:ncre), active_bins)
+         n = fq_to_n(p(0:ncre-1), p(1:ncre), f(0:ncre-1), q(1:ncre), active_bins)
+         call sleep(1)
+      endif
+
       if (initial_condition == 'brpl') then
 !>
 !!/brief Power-law like spectrum with break at p_br_init
