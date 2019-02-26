@@ -332,7 +332,7 @@ contains
 !<
    subroutine mark_and_create_attribute(this, file_id)
 
-      use constants,          only: I_ONE, AT_IGNORE, AT_NO_B, cbuff_len
+      use constants,          only: I_ONE, AT_IGNORE, AT_NO_B, cbuff_len, I_ONE
       use hdf5,               only: HID_T
       use named_array_list,   only: qna
       use mpisetup,           only: master
@@ -366,7 +366,7 @@ contains
             timelist(i) = os%time
          endif
          qna%lst(os%i_hist)%restart_mode = b
-         i = i + 1
+         i = i + I_ONE
          os => os%earlier
       enddo
 
@@ -402,7 +402,7 @@ contains
       character(len=cbuff_len), allocatable, dimension(:) :: namelist
       real, allocatable, dimension(:) :: timelist
       character(len=*), parameter, dimension(2) :: nt = [ "_names", "_times" ]
-      logical :: a_exists
+      logical(kind=4) :: a_exists
       integer(HID_T) :: g_id
       integer :: i
       type(old_soln), pointer :: os

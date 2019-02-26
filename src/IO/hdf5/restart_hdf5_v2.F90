@@ -626,7 +626,6 @@ contains
                last_tsl_time = rbuf(1)
             case ("c_all_old")
                c_all_old = rbuf(1)
-               write(*,*) 'czytam c_all_old', c_all_old
             case ("stepcfl")
                stepcfl = rbuf(1)
             case ("cfl_c")

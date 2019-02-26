@@ -825,6 +825,8 @@ contains
       use constants,        only: sgpm_n
       use cg_leaves,        only: leaves
       use dataio_pub,       only: warn
+      use global,           only: nstep
+      use mpisetup,         only: master
       use multigridvars,    only: grav_bnd, bnd_isolated
       use named_array_list, only: qna
 
@@ -845,7 +847,7 @@ contains
             endif
          endif
       else
-         call warn("[multigrid_gravity:recover_sgpm] no i-history available")
+         if (master .and. nstep > 0) call warn("[multigrid_gravity:recover_sgpm] no i-history available")
       endif
       call leaves%leaf_arr3d_boundaries(qna%ind(sgpm_n))
 

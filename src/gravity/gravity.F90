@@ -375,6 +375,7 @@ contains
       use constants,         only: sgp_n, sgpm_n
       use dataio_pub,        only: warn
       use fluidindex,        only: iarr_all_sg
+      use mpisetup,          only: master
       use multigrid_gravity, only: multigrid_solve_grav, recover_sgpm
       use named_array_list,  only: qna
 #endif /* SELF_GRAV */
@@ -407,7 +408,7 @@ contains
          !> First step in highly dynamical setups will behave as the potential was frozen before first timestep
          !> Solution? Take one step backwards just for calculating old potential? Sounds complicated.
          !> Another solution: don't use extrapolation, exploit rich history instead and call multigrid more often.
-         call warn("[gravity:source_terms_grav] assigned sgpm = sgp")
+         if (master) call warn("[gravity:source_terms_grav] assigned sgpm = sgp")
       endif
 
       call expanded_domain%q_copy(qna%ind(sgp_n), qna%ind(sgpm_n)) ! add fake history for selfgravitating potential: pretend that nothing was changing there until domain expanded
