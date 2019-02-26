@@ -1056,37 +1056,41 @@ contains
 
    subroutine unmark_oldsoln
 
+      use multigridvars, only: grav_bnd, bnd_isolated
+
       implicit none
 
       call inner%unmark
-      call outer%unmark
+      if (grav_bnd == bnd_isolated) call outer%unmark
 
    end subroutine unmark_oldsoln
 
 #ifdef HDF5
    subroutine write_oldsoln_to_restart(file_id)
 
-      use hdf5, only: HID_T
+      use hdf5,          only: HID_T
+      use multigridvars, only: grav_bnd, bnd_isolated
 
       implicit none
 
       integer(HID_T), intent(in) :: file_id  !< File identifier
 
       call inner%mark_and_create_attribute(file_id)
-      call outer%mark_and_create_attribute(file_id)
+      if (grav_bnd == bnd_isolated) call outer%mark_and_create_attribute(file_id)
 
    end subroutine write_oldsoln_to_restart
 
    subroutine read_oldsoln_from_restart(file_id)
 
-      use hdf5, only: HID_T
+      use hdf5,          only: HID_T
+      use multigridvars, only: grav_bnd, bnd_isolated
 
       implicit none
 
       integer(HID_T), intent(in) :: file_id  !< File identifier
 
       call inner%read_os_attribute(file_id)
-      call outer%read_os_attribute(file_id)
+      if (grav_bnd == bnd_isolated) call outer%read_os_attribute(file_id)
 
    end subroutine read_oldsoln_from_restart
 

@@ -303,6 +303,8 @@ contains
 !! \brief Reset restart flag of old soln
 !!
 !! This is required to avoid creating .retry field for copies in case of timestep retry
+!!
+!! This routine is safe to be called on uninitialized old_soln (.not. associated(this%old%latest))
 !<
 
    subroutine unmark(this)
@@ -329,6 +331,8 @@ contains
 !! \brief Mark some old solutions for restarts and set up necessary attributes
 !!
 !! This routine needs to be called before the datasets are written (before call write_restart_hdf5_v2).
+!!
+!! This routine is safe to be called on uninitialized old_soln (this%old%cnt() <= 0)
 !<
    subroutine mark_and_create_attribute(this, file_id)
 
@@ -379,6 +383,15 @@ contains
       deallocate(timelist)
 
    end subroutine mark_and_create_attribute
+
+!>
+!! \brief Read old solutions identifiers, their times, and initialize history
+!!
+!! This routine needs to be called before the datasets are read.
+!!
+!! Unlike mark_and_create_attribute and unmark this routine is NOT safe to be
+!! called on uninitialized old_soln (non-fatal errors will occur).
+!<
 
    subroutine read_os_attribute(this, file_id)
 
